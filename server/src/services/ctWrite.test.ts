@@ -12,7 +12,15 @@ import {
   createAbsence,
   deleteAbsence,
   fuerChurchTools,
+  createSong,
+  updateSong,
+  deleteSong,
+  createArrangement,
+  updateArrangement,
+  setDefaultArrangement,
+  deleteArrangement,
 } from './ctWrite.js';
+import * as ctWriteModul from './ctWrite.js';
 import { __resetSessionMemosForTests } from './ctSessionMemos.js';
 
 /**
@@ -20,7 +28,10 @@ import { __resetSessionMemosForTests } from './ctSessionMemos.js';
  * das Ritual – Token holen, mitschicken, bei 401/403 über `csrfWriteDenied` melden – **siebenmal
  * wortgleich** im Code. Seit #321 sind es acht – `uploadFile` kam als allgemeiner Datei-Upload hinzu.
  * Am 24.09.2026 kamen die beiden Abwesenheits-Schreiber dazu (#177), die hier bis dahin fehlten –
- * ausgerechnet in dem Test, der vor genau dieser Lücke warnt.
+ * ausgerechnet in dem Test, der vor genau dieser Lücke warnt. Dasselbe galt für die Lied- und
+ * Arrangement-Schreiber (#322, #396): Sie nutzen `schreibe` seit August, standen hier aber erst ab
+ * dem 07.10.2026. Damit die Liste nicht wieder still veraltet, prüft ein eigener Test unten, dass
+ * JEDE exportierte Funktion entweder hier steht oder ausdrücklich keine Schreiboperation ist.
  *
  * Dieser Test prüft die Regel für **jede einzelne** dieser Funktionen, nicht für eine
  * stellvertretend. Genau darum geht es: Die Fehlerklasse dieses Projekts ist „die Regel gilt für A, B,
@@ -35,6 +46,26 @@ const COOKIE = 'ChurchTools_sid=abc';
 /** Ein Ablaufpunkt, wie ChurchTools ihn liefert – reicht für die Nutzlast-Erzeugung. */
 const PUNKT = { id: 1, title: 'Lied', position: 0, type: 'song' };
 
+/** Das Lied #7 mit Arrangement #70 – `updateSong` und `updateArrangement` lesen es vor dem Schreiben. */
+const LIED = {
+  id: 7,
+  name: 'Treu',
+  category: { id: 0 },
+  arrangements: [
+    {
+      id: 70,
+      name: 'Standard',
+      key: 'C',
+      keyOfArrangement: 'C',
+      bpm: '120',
+      beat: '4/4',
+      duration: 300,
+      description: '',
+      files: [],
+    },
+  ],
+};
+
 function jsonRes(data: unknown, status = 200): Response {
   return new Response(JSON.stringify({ data }), {
     status,
@@ -43,7 +74,19 @@ function jsonRes(data: unknown, status = 200): Response {
 }
 
 /**
- * Beantwortet Token- und Ablauf-Abrufe normal, lässt aber **jeden Schreibvorgang** an einem 403
+ * **Lesen gelingt immer** – scheitern soll erst der Schreibvorgang. Einige Schreiber lesen vorher
+ * (Ablauf, Lied, Arrangement); scheiterte schon das Lesen, holte niemand ein Token, und der Test
+ * bewiese nichts über `schreibe`. Eine Stelle für beide Attrappen unten.
+ */
+function lesen(u: string, method: string): Response | null {
+  if (method !== 'GET') return null;
+  if (u.includes('/agenda')) return jsonRes({ items: [PUNKT] });
+  if (u.includes('/api/songs/')) return jsonRes(LIED);
+  return null;
+}
+
+/**
+ * Beantwortet Token- und Lese-Abrufe normal, lässt aber **jeden Schreibvorgang** an einem 403
  * scheitern. Zählt dabei mit, wie oft ein Token geholt wurde.
  */
 function mockMitAblehnung() {
@@ -55,9 +98,8 @@ function mockMitAblehnung() {
       zaehler.token++;
       return Promise.resolve(jsonRes(`token-${zaehler.token}`));
     }
-    if (method === 'GET' && u.includes('/agenda')) {
-      return Promise.resolve(jsonRes({ items: [PUNKT] }));
-    }
+    const gelesen = lesen(u, method);
+    if (gelesen) return Promise.resolve(gelesen);
     return Promise.resolve(jsonRes(null, 403)); // der eigentliche Schreibvorgang
   });
   return zaehler;
@@ -88,7 +130,54 @@ const SCHREIBER: Array<[string, () => Promise<void>]> = [
     },
   ],
   ['deleteAbsence', () => deleteAbsence(COOKIE, 5, 9)],
+  [
+    'createSong',
+    async () => {
+      await createSong(COOKIE, { name: 'Neu', categoryId: 1 });
+    },
+  ],
+  [
+    'updateSong',
+    async () => {
+      await updateSong(COOKIE, 7, { author: 'Anders' });
+    },
+  ],
+  ['deleteSong', () => deleteSong(COOKIE, 7)],
+  [
+    'createArrangement',
+    async () => {
+      await createArrangement(COOKIE, 7, { name: 'Akustik' });
+    },
+  ],
+  ['updateArrangement', () => updateArrangement(COOKIE, 7, 70, { tempo: 96 })],
+  ['setDefaultArrangement', () => setDefaultArrangement(COOKIE, 7, 70)],
+  ['deleteArrangement', () => deleteArrangement(COOKIE, 7, 70)],
+  // Läuft über `updateArrangement` – steht trotzdem drin, damit ein späterer Umbau auffällt.
+  ['updateArrangementTempo', () => updateArrangementTempo(COOKIE, 7, 70, 96)],
 ];
+
+/**
+ * Exporte von `ctWrite`, die **keine** Schreiboperation sind – jede andere Funktion gehört in
+ * `SCHREIBER`. `fuerChurchTools` formt nur einen Rumpf um und schreibt selbst nichts.
+ */
+const KEINE_SCHREIBER = ['fuerChurchTools'];
+
+/**
+ * **Die Liste selbst wird geprüft** (07.10.2026). Zweimal fehlten hier Schreiber, die längst über
+ * `schreibe` liefen (Abwesenheiten, Lieder/Arrangements) – der Test war grün, weil er nur kannte, was
+ * jemand von Hand eingetragen hatte. Jetzt fällt eine neue exportierte Funktion auf, bis sie hier
+ * eingeordnet ist: entweder als Schreiber mit Aufruf oder ausdrücklich als keiner.
+ */
+describe('SCHREIBER ist vollständig', () => {
+  it('jede exportierte Funktion aus ctWrite ist eingeordnet', () => {
+    const exportiert = Object.entries(ctWriteModul)
+      .filter(([, wert]) => typeof wert === 'function')
+      .map(([name]) => name)
+      .filter((name) => !KEINE_SCHREIBER.includes(name))
+      .sort();
+    expect(SCHREIBER.map(([name]) => name).sort()).toEqual(exportiert);
+  });
+});
 
 beforeEach(() => __resetSessionMemosForTests());
 afterEach(() => vi.restoreAllMocks());
@@ -116,9 +205,8 @@ describe('Ohne Ablehnung bleibt das Token liegen – sonst spart der Speicher ni
         zaehler.token++;
         return Promise.resolve(jsonRes(`token-${zaehler.token}`));
       }
-      if (method === 'GET' && u.includes('/agenda')) {
-        return Promise.resolve(jsonRes({ items: [PUNKT] }));
-      }
+      const gelesen = lesen(u, method);
+      if (gelesen) return Promise.resolve(gelesen);
       // Mit ID: Die Anlege-Funktionen verlangen sie (`neueId`), die übrigen übergehen sie.
       return Promise.resolve(jsonRes({ id: 1 }, 200));
     });

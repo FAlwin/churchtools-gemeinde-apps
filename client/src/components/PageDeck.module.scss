@@ -192,10 +192,10 @@
   pointer-events: all;
 }
 
-// Seiten-Anzeige unten rechts
+// Seiten-Anzeige unten rechts. `--blatt-unten-frei` setzt das Liedblatt im Vollbild (Home-Strich).
 .pageBadge {
   position: absolute;
-  bottom: 14px;
+  bottom: calc(14px + var(--blatt-unten-frei, 0px));
   right: 14px;
   z-index: 20;
   display: inline-flex;

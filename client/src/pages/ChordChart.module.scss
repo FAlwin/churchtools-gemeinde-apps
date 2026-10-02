@@ -472,6 +472,13 @@
   flex-direction: column;
 }
 
+// Vollbild: Die Blattfläche reicht bis an den unteren Bildschirmrand. Was dort unten sitzt (die
+// Seitenanzeige), muss über Home-Strich und runde Ecke rücken – sonst war es abgeschnitten
+// (Screenshot Alwin, 02.10.2026). Als Variable, weil `PageDeck` den Modus nicht kennt.
+.chartAreaVollbild {
+  --blatt-unten-frei: env(safe-area-inset-bottom, 0px);
+}
+
 // ── Chart-Body – horizontal blätternde Seiten ──
 .body {
   flex: 1;

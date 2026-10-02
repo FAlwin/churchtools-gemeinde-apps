@@ -31,6 +31,12 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Server sonst „läuft", obwohl er nicht lief – jetzt bricht er mit einer Meldung ab) und ein Test.
   Nebenbei liest Express 5 Adress-Parameter einfacher: Aus `?a[b]=1` wird kein Objekt mehr.
 
+### Behoben
+
+- **Im Vollbild war die Seitenanzeige unten abgeschnitten.** „Seite 1 / 2" saß fest am unteren Rand
+  der Blattfläche – im Vollbild also unter Home-Strich und runder Bildschirmecke des iPhones. Sie rückt
+  dort jetzt um den Sicherheitsabstand nach oben. (Bestand schon vor dieser Version.)
+
 ## [2.25.4] – 2026-09-24
 
 **Beim Update ist nichts zu tun.** Jede Person meldet sich nach dem Update **noch ein letztes Mal**

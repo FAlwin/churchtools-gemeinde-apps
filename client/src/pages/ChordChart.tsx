@@ -747,7 +747,10 @@ export function ChordChart({
         />
 
         {/* Anzeige-Bereich: EIN durchgehender Strom (Akkorde + Dokumente gemischt) */}
-        <div className={styles.chartArea} data-tour="chart-blaettern">
+        <div
+          className={`${styles.chartArea}${leistenAus ? ' ' + styles.chartAreaVollbild : ''}`}
+          data-tour="chart-blaettern"
+        >
           {songs.length > 0 ? (
             <PageDeck
               pages={pages}

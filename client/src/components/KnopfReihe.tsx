@@ -8,21 +8,51 @@ interface RundKnopfProps {
   title: string;
   /** Ziel der geführten Einführung (`utils/onboarding.ts`). */
   dataTour?: string;
+  /** Blau gefüllt: Hier läuft gerade etwas (Puls, Zeichnen, fremde Notizen). */
+  aktiv?: boolean;
+  /** Öffnet der Knopf ein Menü? Dann `aria-expanded` mit dessen Zustand. */
+  menuOffen?: boolean;
   children: ReactNode;
 }
 
-/** Ein runder Knopf der Reihe (Teilen, Bearbeiten …). */
-export function RundKnopf({ onClick, title, dataTour, children }: RundKnopfProps) {
+/** Ein runder Knopf (Teilen, Bearbeiten, Werkzeuge …) – Setlist und Liedblatt teilen ihn. */
+export function RundKnopf({
+  onClick,
+  title,
+  dataTour,
+  aktiv,
+  menuOffen,
+  children,
+}: RundKnopfProps) {
   return (
     <button
       type="button"
-      className={styles.knopf}
+      className={`${styles.knopf}${aktiv ? ' ' + styles.aktiv : ''}`}
       onClick={onClick}
       title={title}
       aria-label={title}
       data-tour={dataTour}
+      aria-haspopup={menuOffen === undefined ? undefined : 'menu'}
+      aria-expanded={menuOffen}
     >
       {children}
+    </button>
+  );
+}
+
+/**
+ * Der runde Zurück-Knopf – dunkel wie in den iPhone-Einstellungen. Eine Stelle für Setlist
+ * (`KnopfReihe`) und Liedblatt (`ChartHeader`); sichtbar ist nur der Pfeil, der Name nennt das Ziel.
+ */
+export function ZurueckKnopf({ onClick, ziel }: { onClick: () => void; ziel?: string }) {
+  return (
+    <button
+      type="button"
+      className={`${styles.knopf} ${styles.zurueck}`}
+      onClick={onClick}
+      aria-label={ziel ? `Zurück zu ${ziel}` : 'Zurück'}
+    >
+      <Icon name="chev-left" size={22} stroke={2.4} />
     </button>
   );
 }
@@ -49,16 +79,7 @@ export function KnopfReihe({ zurueck, zurueckLabel, aktionen }: KnopfReiheProps)
   return (
     <div className={styles.reihe}>
       <div className={styles.gruppe}>
-        {zurueck && (
-          <button
-            type="button"
-            className={`${styles.knopf} ${styles.zurueck}`}
-            onClick={zurueck}
-            aria-label={zurueckLabel ? `Zurück zu ${zurueckLabel}` : 'Zurück'}
-          >
-            <Icon name="chev-left" size={22} stroke={2.4} />
-          </button>
-        )}
+        {zurueck && <ZurueckKnopf onClick={zurueck} ziel={zurueckLabel} />}
       </div>
       <div className={styles.gruppe}>{aktionen}</div>
     </div>

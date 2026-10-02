@@ -14,6 +14,11 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   „‹ Termine", Teilen und Bearbeiten lag darin und wirkte milchig und verwaschen. Jetzt schweben
   dort **runde Knöpfe** direkt unter dem Band – wie in den iPhone-Einstellungen –, scharf, und sie
   bleiben beim Scrollen stehen.
+- **Das Liedblatt hat oben einen Knopf für alle Werkzeuge.** Auch hier lag der Kopf im milchigen
+  iOS-Band, und vier Werkzeug-Knöpfe nahmen dem Liedtitel den Platz. Jetzt: runder Zurück-Pfeil, der
+  Titel als Kapsel (deutlich länger lesbar) und **ein** Werkzeuge-Knopf mit Aussehen, Tempo, Anmerken
+  und – wenn freigeschaltet – „Notizen von …". Läuft der Puls, ist er blau; beim Zeichnen wird er zum
+  Haken, mit dem man fertig ist. Die Einführung zum Liedblatt erscheint dafür einmal neu.
 - **Umschalter sind als Knöpfe erkennbar.** Bei „Kommende | Vergangene" und den anderen Umschaltern
   sah der nicht gewählte Knopf aus wie bloßer Text: Die Schiene dahinter hatte genau die Farbe des
   Seitenhintergrunds. Sie ist jetzt grau wie beim iPhone. Die Abwesenheiten hatten einen eigenen,

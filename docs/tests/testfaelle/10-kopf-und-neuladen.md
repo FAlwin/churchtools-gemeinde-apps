@@ -29,19 +29,26 @@ des Bandes.
    **scharf**. Name und Datum des Gottesdienstes stehen groß darunter. Den Ablauf hochschieben: Die
    Knöpfe bleiben stehen, der Inhalt läuft unter ihnen durch. Der Pfeil führt zurück zu den
    Terminen (02.10.2026, Vorbild die iPhone-Einstellungen).
-5. **Ganz nach oben:** In einer langen Liste (z. B. Mehr) weit nach unten scrollen, dann unten auf
+5. **Ein Lied öffnen (Liedblatt):** Auch hier keine weiße Leiste. Unter dem Band: links der runde
+   Pfeil zurück, daneben eine weiße **Kapsel mit dem Liedtitel** (darunter Tonart, Fassung, Tempo),
+   rechts **ein** runder **Werkzeuge**-Knopf (drei Regler). Alles scharf, der Titel deutlich länger
+   lesbar als vorher. Werkzeuge antippen → Menü mit **Aussehen, Tempo, Anmerken** (mit Team-Recht
+   zusätzlich „Notizen von …", reingezoomt zusätzlich „Zoom zurücksetzen"). Puls einschalten → der
+   Knopf ist blau. **Anmerken** → der Knopf wird zum blauen Haken, ein Tipp darauf beendet das
+   Zeichnen. Beim ersten Öffnen erscheint die Einführung neu, mit einem Schritt „Werkzeuge".
+6. **Ganz nach oben:** In einer langen Liste (z. B. Mehr) weit nach unten scrollen, dann unten auf
    den **Tab tippen, in dem du schon bist** → die Ansicht springt an den Anfang. (Der Tipp auf die
    Uhrzeit oben tut in einer Web-App nichts – das kann iOS nicht weitergeben.)
-6. **Ganz nach unten (#408):** In Termine, Lieder, Abwesenheiten, Mehr und im Ablauf bis ans Ende
+7. **Ganz nach unten (#408):** In Termine, Lieder, Abwesenheiten, Mehr und im Ablauf bis ans Ende
    scrollen. Der letzte Eintrag steht überall mit **derselben** Luft über der Tab-Leiste bzw. dem
    Home-Strich; bei den Abwesenheiten verdeckt das Plus ihn nicht.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/SeitenGeruest.tsx`, `client/src/components/KnopfReihe.tsx`, `client/src/components/Segment.tsx`, `client/src/components/GrosseUeberschrift.tsx`, `client/src/components/Screen.tsx`, `client/src/components/Screen.module.scss`, `client/src/components/TabBar.tsx`, `client/index.html`, `client/src/styles/_variables.scss`
-- **Automatisiert:** teilweise – `client/src/components/SeitenGeruest.test.tsx` (Überschrift im Inhalt, runde Knöpfe nur mit Zurück/Aktionen und außerhalb des Scroll-Bereichs, Überlagerung ebenso), `client/src/components/Screen.zumAnfang.test.tsx` (aktiver Tab scrollt nach oben); von Hand bleibt, wie es unter dem echten Unschärfe-Band aussieht
-- **Historie:** Kopfzeilen-Umbau 21./22.09.2026; runde Knöpfe und sichtbare Umschalter-Schiene 02.10.2026 (am selben Tag am Gerät widerlegt: eine deckende Statusleiste beseitigt das milchige Band nicht)
+- **Betrifft:** `client/src/components/SeitenGeruest.tsx`, `client/src/components/KnopfReihe.tsx`, `client/src/components/ChartHeader.tsx`, `client/src/components/WerkzeugMenu.tsx`, `client/src/utils/onboarding.ts`, `client/src/components/Segment.tsx`, `client/src/components/GrosseUeberschrift.tsx`, `client/src/components/Screen.tsx`, `client/src/components/Screen.module.scss`, `client/src/components/TabBar.tsx`, `client/index.html`, `client/src/styles/_variables.scss`
+- **Automatisiert:** teilweise – `client/src/components/SeitenGeruest.test.tsx` (Überschrift im Inhalt, runde Knöpfe nur mit Zurück/Aktionen und außerhalb des Scroll-Bereichs, Überlagerung ebenso), `client/src/components/ChartHeader.test.tsx` (Werkzeuge-Menü je Bedingung, Haken beim Zeichnen, Personen-Knopf beim Ansehen, kein Schließen nach einem Eintrag), `e2e/chart-tempo.spec.ts` und `e2e/auth-flow.spec.ts` (Tempo und Anmerken über das Menü), `client/src/components/Screen.zumAnfang.test.tsx` (aktiver Tab scrollt nach oben); von Hand bleibt, wie es unter dem echten Unschärfe-Band aussieht
+- **Historie:** Kopfzeilen-Umbau 21./22.09.2026; runde Knöpfe, Liedblatt mit einem Werkzeuge-Knopf und sichtbare Umschalter-Schiene 02.10.2026 (am selben Tag am Gerät widerlegt: eine deckende Statusleiste beseitigt das milchige Band nicht)
 
 </details>
 

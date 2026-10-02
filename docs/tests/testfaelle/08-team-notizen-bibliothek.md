@@ -10,7 +10,8 @@ In Schritt 4 liegen beide übereinander. Nach Schritt 5 ist deren Version aktiv 
 und Schriftgröße übernommen – **deine Tonart und dein Kapo bleiben aber deine**.
 
 1. Das Lied öffnen.
-2. Oben rechts auf das **Personen-Symbol** tippen („Notizen von anderen ansehen").
+2. Oben rechts **Werkzeuge → Notizen von …** tippen. Solange man fremde Notizen ansieht, ist der
+   Knopf oben rechts ein **blaues Personen-Symbol** – ein Tipp darauf führt zurück zu den eigenen.
 3. Die Person auswählen und hinschauen.
 4. **Zusammenführen** einschalten und hinschauen.
 5. **Übernehmen** tippen.
@@ -29,8 +30,8 @@ und Schriftgröße übernommen – **deine Tonart und dein Kapo bleiben aber dei
 
 **Das brauchst du:** Ein Konto **ohne** das Team-Notizen-Recht.
 
-**Das muss passieren:** Das Personen-Symbol ist **gar nicht da**. Keine Fehlermeldung, kein leeres
-Menü.
+**Das muss passieren:** Im Werkzeuge-Menü fehlt **„Notizen von …"** ganz. Keine Fehlermeldung,
+kein leerer Eintrag.
 
 1. Mit diesem Konto anmelden.
 2. Ein Lied öffnen, bei dem jemand Notizen geteilt hat.
@@ -313,7 +314,7 @@ der Vorschau rechts gesehen hast. Sie steht auch oben in der Kopfzeile und im Ab
 **Eine Stelle ändert sich absichtlich NICHT:** Unter **Alle Lieder** steht weiter der Name, den das
 Lied in ChurchTools trägt. Das ist so gewollt und kein Fehler – die Liste kennt den Liedtext nicht.
 
-1. Das Lied öffnen und oben rechts auf den **Stift** tippen.
+1. Das Lied öffnen und oben rechts **Werkzeuge → Anmerken** tippen.
 2. In der Zeile `{title: …}` die Überschrift ändern, z. B. auf
    `{title: Mottosong AC26 - Auf dich will ich bauen}`.
 3. Die **Vorschau rechts** ansehen und dir die Überschrift merken.

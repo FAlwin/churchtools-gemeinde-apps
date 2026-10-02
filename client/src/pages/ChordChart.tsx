@@ -166,9 +166,11 @@ export function ChordChart({
    * wäre es die dritte Fassung geworden – und die Namen, die `ChartOverlays` gar nicht rendert
    * (`tempo`, `files`), stehen jetzt sichtbar getrennt statt in einer Liste vermischt.
    */
-  const [overlay, setOverlay] = useState<ChartOverlay | 'tempo' | 'files' | 'stammdaten'>(null);
+  const [overlay, setOverlay] = useState<
+    ChartOverlay | 'tempo' | 'files' | 'stammdaten' | 'werkzeuge'
+  >(null);
   /** Ein Overlay umschalten (nochmal derselbe Knopf schließt es). */
-  const toggleOverlay = (o: 'appearance' | 'menu' | 'tempo') =>
+  const toggleOverlay = (o: 'appearance' | 'menu' | 'tempo' | 'werkzeuge') =>
     setOverlay((cur) => (cur === o ? null : o));
 
   const { toast, showToast } = useToast();
@@ -611,7 +613,6 @@ export function ChordChart({
             }
             headInfo={headInfo}
             menuOpen={overlay === 'menu'}
-            appearanceOpen={overlay === 'appearance'}
             viewing={viewing !== null}
             showsDocument={activeDoc !== null}
             canUseGlobalNotes={canUseGlobalNotes}
@@ -622,15 +623,33 @@ export function ChordChart({
             klickBpm={klickTempo}
             taktStartMs={taktStart}
             schlaegeProTakt={schlaegeProTakt}
-            tempoOpen={overlay === 'tempo'}
+            werkzeugeOffen={overlay === 'werkzeuge'}
             tempoAktiv={bpmPulse || klickModus !== 'aus'}
-            onToggleTempo={() => toggleOverlay('tempo')}
             onBack={onBack}
             onToggleMenu={() => toggleOverlay('menu')}
-            onToggleAppearance={() => toggleOverlay('appearance')}
-            onResetZoom={() => setResetZoomSignal((n) => n + 1)}
-            onToggleTeamNotes={() => (viewing ? stopViewing() : openSharers())}
-            onToggleDraw={() => setDrawMode((d) => !d)}
+            onToggleWerkzeuge={() => toggleOverlay('werkzeuge')}
+            onCloseWerkzeuge={() => setOverlay(null)}
+            /*
+             * Aus dem Werkzeuge-Menü heraus: JEDER Eintrag setzt das Zustandsfeld genau einmal – auf
+             * das nächste Fenster oder auf `null`. Ein zusätzliches Schließen danach würde das gerade
+             * geöffnete Fenster sofort wieder zumachen (ein Feld für alle Overlays, Lehre vom
+             * 05.08.2026: Zusammengelegter Zustand macht die Reihenfolge der Setter bedeutsam).
+             */
+            onAppearance={() => setOverlay('appearance')}
+            onTempo={() => setOverlay('tempo')}
+            onResetZoom={() => {
+              setOverlay(null);
+              setResetZoomSignal((n) => n + 1);
+            }}
+            onToggleTeamNotes={() => {
+              setOverlay(null);
+              if (viewing) stopViewing();
+              else openSharers();
+            }}
+            onToggleDraw={() => {
+              setOverlay(null);
+              setDrawMode((d) => !d);
+            }}
           />
         )}
 
@@ -683,11 +702,16 @@ export function ChordChart({
         <ChartOverlays
           arrangements={arrangements.data ?? []}
           ablaufArrangementId={ablaufArrangement}
-          // Tempo-Menü und Dateiverwaltung sind bewusst KEINE `ChartOverlay`: Sie teilen sich zwar
-          // die Regel „höchstens eines offen", haben aber eine ganz andere Bedienung. Deshalb hier
-          // herausgefiltert, statt den Typ dort aufzuweichen.
+          // Tempo-Menü, Dateiverwaltung und Werkzeuge-Menü sind bewusst KEINE `ChartOverlay`: Sie
+          // teilen sich zwar die Regel „höchstens eines offen", haben aber eine ganz andere
+          // Bedienung. Deshalb hier herausgefiltert, statt den Typ dort aufzuweichen.
           overlay={
-            overlay === 'tempo' || overlay === 'files' || overlay === 'stammdaten' ? null : overlay
+            overlay === 'tempo' ||
+            overlay === 'files' ||
+            overlay === 'stammdaten' ||
+            overlay === 'werkzeuge'
+              ? null
+              : overlay
           }
           /* Eigener Pfeil statt `setOverlay`: Der Zustand kennt mehr Werte als `ChartOverlay`. */
           onOverlay={(o) => setOverlay(o)}

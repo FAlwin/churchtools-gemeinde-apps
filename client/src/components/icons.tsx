@@ -51,7 +51,8 @@ export type IconName =
   | 'align-right'
   | 'cloud-check'
   | 'cloud-download'
-  | 'user-slash';
+  | 'user-slash'
+  | 'regler';
 
 interface IconProps {
   name: IconName;
@@ -199,6 +200,17 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
         <svg {...p}>
           <path d="M21.17 6.81a1 1 0 0 0-3.98-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5Z" />
           <path d="m15 5 4 4" />
+        </svg>
+      );
+    // Werkzeuge des Liedblatts (02.10.2026): drei Regler wie in iOS – ein Knopf für Aussehen, Tempo,
+    // Notizen von anderen und Anmerken.
+    case 'regler':
+      return (
+        <svg {...p}>
+          <path d="M4 7h9M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1" />
+          <circle cx="15" cy="7" r="2" />
+          <circle cx="9" cy="12" r="2" />
+          <circle cx="17" cy="17" r="2" />
         </svg>
       );
     case 'columns':

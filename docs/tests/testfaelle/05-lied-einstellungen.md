@@ -3,7 +3,7 @@
 Zwei Menüs, die hier immer wieder vorkommen:
 
 - **Lied-Menü** – oben auf den **Liedtitel** tippen. Darin: Tonart, Kapo, Version, Transponieren.
-- **Darstellung** – oben rechts auf **Aa** tippen. Darin: Schriftgröße und Spalten.
+- **Darstellung** – oben rechts **Werkzeuge → Aussehen**. Darin: Schriftgröße und Spalten.
 
 ### TF-EINST-01 · Tonart und Kapo ändern
 
@@ -44,10 +44,10 @@ Tonart auf dem Blatt.
    antippen → Version).
 2. Tonart um +2 ändern.
 3. Kapo auf 2 setzen.
-4. Über **Aa** auf **2 Spalten** stellen.
+4. Über **Werkzeuge → Aussehen** auf **2 Spalten** stellen.
 5. Liedtitel antippen → **Version** → die zweite Fassung wählen. Hinschauen.
 6. Dort Kapo auf **4** setzen.
-7. Über **Aa** auf **1 Spalte** stellen.
+7. Über **Werkzeuge → Aussehen** auf **1 Spalte** stellen.
 8. Liedtitel antippen → **Version** → zurück auf **Original**. Hinschauen.
 
 <details><summary>Technisches</summary>
@@ -89,7 +89,7 @@ Seitenzahl unten rechts ändert sich entsprechend. „Nur Text" blendet die Akko
 bleibt vollständig.
 
 1. Ein mehrseitiges Lied öffnen und die Seitenzahl unten rechts merken.
-2. Oben rechts **Aa** → **2 Spalten**. Seitenzahl vergleichen.
+2. Oben rechts **Werkzeuge → Aussehen → 2 Spalten**. Seitenzahl vergleichen.
 3. Dreimal auf **A+** tippen. Seitenzahl vergleichen.
 4. Liedtitel antippen → **Nur Text** einschalten.
 

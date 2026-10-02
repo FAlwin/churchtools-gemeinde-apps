@@ -164,7 +164,7 @@ zeigt sich das Problem am deutlichsten.
 sichtbar, bis die neuen fertig sind. Die App darf nicht mehrere Sekunden stehen.
 
 1. Ein Lied öffnen.
-2. Oben rechts auf **Aa** tippen.
+2. Oben rechts **Werkzeuge → Aussehen** tippen.
 3. Fünfmal zügig hintereinander auf **A+** tippen.
 
 <details><summary>Technisches</summary>
@@ -185,8 +185,8 @@ Metronom (eine Handy-App genügt). Wenn möglich zusätzlich ein Lied **ohne** T
 genau im Takt des Lieds. Er ist **lautlos**. Die Kopfzeile darf dabei nicht wackeln oder umbrechen.
 
 1. Ein Lied mit Tempo öffnen. Vor der Zahl steht ein **Metronom-Symbol**, keine Note.
-2. Oben rechts auf das **Metronom** tippen → das Tempo-Menü geht auf. Unter **Sichtbarer Puls** auf
-   **An** – der Punkt beginnt zu pulsen, der Metronom-Knopf färbt sich.
+2. Oben rechts **Werkzeuge → Tempo** → das Tempo-Menü geht auf. Unter **Sichtbarer Puls** auf
+   **An** – der Punkt beginnt zu pulsen, der Werkzeuge-Knopf färbt sich blau.
 3. Das Metronom auf dasselbe Tempo stellen und **eine halbe Minute mitlaufen lassen**. Punkt und
    Metronom müssen zusammenbleiben – nicht auseinanderdriften.
 4. **Die Eins ist markiert:** Jeder vierte Blitz (im Dreivierteltakt jeder dritte) zieht sich
@@ -194,7 +194,7 @@ genau im Takt des Lieds. Er ist **lautlos**. Die Kopfzeile darf dabei nicht wack
    der Takt anfängt.
 5. Zum nächsten Lied blättern: Der Puls übernimmt dessen Tempo.
 6. Zu einem Lied **ohne** Tempo blättern: Der Punkt ist weg, das Feld im Menü ist leer, **An** und
-   die Klick-Knöpfe sind ausgegraut. Der Metronom-Knopf selbst bleibt da – über ihn trägt man ja
+   die Klick-Knöpfe sind ausgegraut. „Tempo" im Werkzeuge-Menü bleibt da – darüber trägt man ja
    gerade ein fehlendes Tempo nach. **Dort ein Tempo antippen, ohne zu speichern** → Zahl und Puls
    erscheinen sofort in der Kopfzeile. (Vorher sah man bis zum Speichern gar nichts.)
 7. Das Liederheft verlassen und neu öffnen: Der Puls ist **aus**.
@@ -264,7 +264,7 @@ bearbeiten darf. Zusätzlich ein Lied **ohne** hinterlegtes Tempo.
 − und +, Eintippen, Antippen. Puls und Klick laufen mit **diesem** Wert – man hört ein angetipptes
 Tempo also, bevor man es speichert. **Das Menü darf dabei nie seine Größe oder Stelle ändern.**
 
-1. Lied mit Tempo öffnen, auf das **Metronom** tippen. Das Feld zeigt das Tempo aus ChurchTools,
+1. Lied mit Tempo öffnen, **Werkzeuge → Tempo**. Das Feld zeigt das Tempo aus ChurchTools,
    „Zurücksetzen" und der Speichern-Knopf sind ausgegraut.
 2. Auf **+** tippen → die Zahl steigt um 1, und die **Kopfzeile zeigt sofort denselben Wert**.
    Speichern und Zurücksetzen werden anklickbar.
@@ -321,7 +321,7 @@ Wenn möglich auch eins im 3/4.
 wie schnell es dann tickt. Die Zahl im Tempo-Feld ändert sich dabei **nicht**; sie geht so nach
 ChurchTools.
 
-1. **6/8-Lied öffnen**, Metronom-Menü auf. Unter **Schläge je Takt** stehen **Auto · 6 · 3 · 2**,
+1. **6/8-Lied öffnen**, Tempo-Menü auf (Werkzeuge → Tempo). Unter **Schläge je Takt** stehen **Auto · 6 · 3 · 2**,
    „Auto" ist gewählt. Darunter steht „klickt … ×/min".
 2. Puls und Klick starten → **zwei** Schläge je Takt, nicht sechs, und die Eins fällt auf den
    Taktanfang. Gegen ein Metronom prüfen.

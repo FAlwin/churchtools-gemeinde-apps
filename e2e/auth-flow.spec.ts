@@ -73,7 +73,9 @@ test.describe('Auth-Flow mit ChurchTools-Stub', () => {
       { timeout: 20_000 },
     );
 
-    await page.getByTitle('Anmerkungen').click();
+    // Seit dem 02.10.2026 hinter dem Werkzeuge-Knopf (ein Knopf für alles).
+    await page.getByRole('button', { name: 'Werkzeuge' }).click();
+    await page.getByRole('menuitem', { name: /Anmerken/ }).click();
     const flaeche = seiten.first();
     const box = await flaeche.boundingBox();
     expect(box).not.toBeNull();

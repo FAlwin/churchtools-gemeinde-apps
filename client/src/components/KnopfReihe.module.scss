@@ -53,3 +53,9 @@
 .zurueck {
   color: var(--text);
 }
+
+// Hier läuft gerade etwas (Puls, Zeichnen, fremde Notizen) – sichtbar auch bei geschlossenem Menü.
+.aktiv {
+  background: var(--blue);
+  color: #fff;
+}

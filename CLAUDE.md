@@ -340,7 +340,12 @@ Einstellungen, Alwins Wahl „ohne kleinen Titel". **Am Gerät widerlegt (02.10.
 Statusleiste (`status-bar-style=default`) beseitigt das Band NICHT – nicht noch einmal versuchen. Die
 Abstände kommen aus `--inhalt-pad-top` / `--knopfreihe-hoehe` / `--bar-pad-top`
 (`styles/_variables.scss`), die App zeichnet hinter der Statusleiste (`black-translucent`,
-`client/index.html`). Der Chart-Kopf (`ChartHeader`) ist noch nicht umgebaut. Routing in `App.tsx` über `tab` + `view` (rechteabhängig).
+`client/index.html`). **Auch der Liedblatt-Kopf (`ChartHeader`) liegt seit dem 02.10.2026 unter dem
+Band:** runder Zurück-Pfeil, Titel als Kapsel, **ein** Werkzeuge-Knopf (`WerkzeugMenu`: Aussehen,
+Tempo, Zoom, Notizen von …, Anmerken – Alwins Wahl „ein Knopf für alles"). Der Knopf zeigt den Modus:
+blau bei Puls/Klick, Haken beim Zeichnen, Personen beim Ansehen fremder Notizen – sonst gäbe es aus
+beiden Modi keinen sichtbaren Ausweg. Menü-Einträge setzen das Overlay-Feld genau EINMAL (kein
+Schließen hinterher). Fenster unter dem Kopf hängen an `--chart-kopf-unten`. Routing in `App.tsx` über `tab` + `view` (rechteabhängig).
 
 **Abwesenheiten sind terminfein, nicht tagesfein (22.09.2026).** Ein Haken an einem Termin trägt in
 ChurchTools das **Zeitfenster dieses Termins** ein (`startTime`/`endTime`, ISO-Zeitpunkte) – nur so

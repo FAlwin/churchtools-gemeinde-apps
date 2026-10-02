@@ -18,7 +18,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   iOS-Band, und vier Werkzeug-Knöpfe nahmen dem Liedtitel den Platz. Jetzt: runder Zurück-Pfeil, der
   Titel als Kapsel (deutlich länger lesbar) und **ein** Werkzeuge-Knopf mit Aussehen, Tempo, Anmerken
   und – wenn freigeschaltet – „Notizen von …". Läuft der Puls, ist er blau; beim Zeichnen wird er zum
-  Haken, mit dem man fertig ist. Die Einführung zum Liedblatt erscheint dafür einmal neu.
+  Haken, mit dem man fertig ist. Ist ein Menü offen, sind sein Knopf bzw. die Titel-Kapsel hellblau
+  hinterlegt; Titel und Infos stehen mittig. Die Einführung zum Liedblatt erscheint dafür einmal neu.
 - **Umschalter sind als Knöpfe erkennbar.** Bei „Kommende | Vergangene" und den anderen Umschaltern
   sah der nicht gewählte Knopf aus wie bloßer Text: Die Schiene dahinter hatte genau die Farbe des
   Seitenhintergrunds. Sie ist jetzt grau wie beim iPhone. Die Abwesenheiten hatten einen eigenen,

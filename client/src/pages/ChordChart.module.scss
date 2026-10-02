@@ -32,7 +32,8 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  // Titel und Info-Zeile mittig (Alwin, 02.10.2026).
+  align-items: center;
   justify-content: center;
   gap: 1px;
   min-width: 0;
@@ -43,12 +44,19 @@
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.16);
   padding: 4px 14px;
   cursor: pointer;
-  text-align: left;
-  transition: opacity 0.12s;
+  text-align: center;
+  transition:
+    opacity 0.12s,
+    background 0.12s;
 
   &:active {
     opacity: 0.7;
   }
+}
+
+// Lied-Menü offen: Kapsel hellblau wie der Werkzeuge-Knopf mit offenem Fenster (02.10.2026).
+.menuBtnOffen {
+  background: var(--blue-tile);
 }
 
 .menuTitleRow {

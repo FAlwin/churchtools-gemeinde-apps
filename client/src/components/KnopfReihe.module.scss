@@ -54,6 +54,11 @@
   color: var(--text);
 }
 
+// Ein zugehöriges Fenster ist offen (Werkzeuge-Menü, Aussehen, Tempo) – hellblau, nicht voll blau.
+.offen {
+  background: var(--blue-tile);
+}
+
 // Hier läuft gerade etwas (Puls, Zeichnen, fremde Notizen) – sichtbar auch bei geschlossenem Menü.
 .aktiv {
   background: var(--blue);

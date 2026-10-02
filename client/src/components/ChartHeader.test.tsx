@@ -28,6 +28,8 @@ const props = {
   taktStartMs: null as number | null,
   schlaegeProTakt: 4,
   werkzeugeOffen: false,
+  werkzeugFensterOffen: false,
+  liedFensterOffen: false,
   tempoAktiv: false,
   onBack: vi.fn(),
   onToggleMenu: vi.fn(),
@@ -175,6 +177,18 @@ describe('ChartHeader – der Werkzeuge-Knopf', () => {
     zeige({ viewing: true, onToggleTeamNotes });
     fireEvent.click(screen.getByRole('button', { name: 'Zurück zu den eigenen Notizen' }));
     expect(onToggleTeamNotes).toHaveBeenCalledTimes(1);
+  });
+
+  it('ist hellblau, solange eines seiner Fenster offen ist – voll blau bleibt dem Puls vorbehalten', () => {
+    zeige({ werkzeugFensterOffen: true });
+    const knopf = screen.getByRole('button', { name: 'Werkzeuge' });
+    expect(knopf.className).toMatch(/offen/);
+    expect(knopf.className).not.toMatch(/aktiv/);
+  });
+
+  it('färbt auch die Titel-Kapsel, solange das Lied-Menü oder eines seiner Fenster offen ist', () => {
+    const { container } = zeige({ liedFensterOffen: true });
+    expect(container.querySelector('[data-tour="chart-lied"]')?.className).toMatch(/menuBtnOffen/);
   });
 
   it('leuchtet, solange Puls oder Klick laufen', () => {

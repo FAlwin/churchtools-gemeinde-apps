@@ -12,6 +12,11 @@ interface RundKnopfProps {
   aktiv?: boolean;
   /** Öffnet der Knopf ein Menü? Dann `aria-expanded` mit dessen Zustand. */
   menuOffen?: boolean;
+  /**
+   * Hellblau hinterlegt: Ein Fenster, das zu diesem Knopf gehört, ist offen (Alwin, 02.10.2026). Bewusst
+   * ein anderer Ton als `aktiv` (voll blau = es läuft etwas) – sonst sagte die Farbe zweierlei.
+   */
+  offen?: boolean;
   children: ReactNode;
 }
 
@@ -22,12 +27,13 @@ export function RundKnopf({
   dataTour,
   aktiv,
   menuOffen,
+  offen,
   children,
 }: RundKnopfProps) {
   return (
     <button
       type="button"
-      className={`${styles.knopf}${aktiv ? ' ' + styles.aktiv : ''}`}
+      className={`${styles.knopf}${aktiv ? ' ' + styles.aktiv : offen ? ' ' + styles.offen : ''}`}
       onClick={onClick}
       title={title}
       aria-label={title}

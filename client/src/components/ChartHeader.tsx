@@ -53,6 +53,13 @@ interface ChartHeaderProps {
   schlaegeProTakt: number;
   /** Ist das Werkzeuge-Menü offen? */
   werkzeugeOffen: boolean;
+  /**
+   * Ist ein Fenster offen, das über den Werkzeuge-Knopf geht (Menü, Aussehen, Tempo)? Dann ist der
+   * Knopf hellblau hinterlegt – man sieht, woher das offene Fenster kommt (Alwin, 02.10.2026).
+   */
+  werkzeugFensterOffen: boolean;
+  /** Dasselbe für die Titel-Kapsel: Lied-Menü oder eines seiner Fenster (Tonart, Kapo, Dateien …) offen. */
+  liedFensterOffen: boolean;
   /** Läuft irgendetwas Tempo-Bezogenes (Puls oder Klick)? Färbt den Metronom-Knopf. */
   tempoAktiv: boolean;
   onBack: () => void;
@@ -86,6 +93,8 @@ export function ChartHeader({
   taktStartMs,
   schlaegeProTakt,
   werkzeugeOffen,
+  werkzeugFensterOffen,
+  liedFensterOffen,
   tempoAktiv,
   onBack,
   onToggleMenu,
@@ -183,6 +192,7 @@ export function ChartHeader({
       title="Werkzeuge"
       dataTour="chart-werkzeuge"
       aktiv={tempoAktiv}
+      offen={werkzeugFensterOffen}
       menuOffen={werkzeugeOffen}
     >
       <Icon name="regler" size={21} stroke={2} />
@@ -194,7 +204,7 @@ export function ChartHeader({
       <div className={styles.hdr}>
         <ZurueckKnopf onClick={onBack} />
         <button
-          className={styles.menuBtn}
+          className={`${styles.menuBtn}${liedFensterOffen ? ' ' + styles.menuBtnOffen : ''}`}
           data-tour="chart-lied"
           onClick={() => !viewing && onToggleMenu()}
           aria-haspopup="menu"

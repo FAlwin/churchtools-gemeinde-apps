@@ -35,7 +35,9 @@ des Bandes.
    lesbar als vorher. Werkzeuge antippen → Menü mit **Aussehen, Tempo, Anmerken** (mit Team-Recht
    zusätzlich „Notizen von …", reingezoomt zusätzlich „Zoom zurücksetzen"). Puls einschalten → der
    Knopf ist blau. **Anmerken** → der Knopf wird zum blauen Haken, ein Tipp darauf beendet das
-   Zeichnen. Beim ersten Öffnen erscheint die Einführung neu, mit einem Schritt „Werkzeuge".
+   Zeichnen. Solange das Werkzeuge-Menü (oder Aussehen/Tempo) offen ist, ist der Knopf **hellblau**;
+   ebenso die Titel-Kapsel bei offenem Lied-Menü. Titel und Infos stehen in der Kapsel **mittig**.
+   Beim ersten Öffnen erscheint die Einführung neu, mit einem Schritt „Werkzeuge".
 6. **Ganz nach oben:** In einer langen Liste (z. B. Mehr) weit nach unten scrollen, dann unten auf
    den **Tab tippen, in dem du schon bist** → die Ansicht springt an den Anfang. (Der Tipp auf die
    Uhrzeit oben tut in einer Web-App nichts – das kann iOS nicht weitergeben.)

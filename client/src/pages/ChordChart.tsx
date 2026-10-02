@@ -624,6 +624,17 @@ export function ChordChart({
             taktStartMs={taktStart}
             schlaegeProTakt={schlaegeProTakt}
             werkzeugeOffen={overlay === 'werkzeuge'}
+            werkzeugFensterOffen={
+              overlay === 'werkzeuge' || overlay === 'appearance' || overlay === 'tempo'
+            }
+            liedFensterOffen={
+              overlay === 'menu' ||
+              overlay === 'key' ||
+              overlay === 'capo' ||
+              overlay === 'sec' ||
+              overlay === 'files' ||
+              overlay === 'stammdaten'
+            }
             tempoAktiv={bpmPulse || klickModus !== 'aus'}
             onBack={onBack}
             onToggleMenu={() => toggleOverlay('menu')}

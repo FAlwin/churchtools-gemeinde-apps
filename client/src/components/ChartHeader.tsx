@@ -211,10 +211,8 @@ export function ChartHeader({
           aria-expanded={menuOpen}
         >
           <span className={styles.menuTitleRow}>
+            {/* Ohne kleinen ▾-Pfeil (Alwin, 02.10.2026) – die Kapsel selbst ist der Knopf. */}
             <span className={styles.songTitle}>{songTitle}</span>
-            <span className={styles.menuChevron} aria-hidden="true">
-              ▾
-            </span>
           </span>
           {/* Auch dann zeigen, wenn das Lied selbst nichts mitbringt, aber ein Tempo eingestellt
               ist – sonst verschwände die frisch angetippte Angabe samt Puls wieder. */}

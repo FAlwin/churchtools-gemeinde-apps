@@ -25,8 +25,12 @@
 
 .knopf {
   pointer-events: auto;
-  width: 40px;
-  height: 40px;
+  // 44 px = iPhone-Standard für Tippflächen, und dieselbe Höhe wie die Titel-Kapsel des Liedblatts.
+  // `flex-shrink: 0`: Ein langer Liedtitel daneben quetschte die Kreise sonst zu Ovalen und schnitt
+  // den Zurück-Knopf an (Screenshot Alwin, 02.10.2026 – „In der Nacht vor seinem Tod").
+  width: var(--rundknopf);
+  height: var(--rundknopf);
+  flex-shrink: 0;
   border-radius: 50%;
   border: none;
   padding: 0;

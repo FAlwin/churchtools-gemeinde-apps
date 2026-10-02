@@ -106,7 +106,9 @@ html[data-theme='dark'] {
   --inhalt-pad-top: 12px;
   // Höhe der runden Knopfreihe (`KnopfReihe`) samt Luft zur Überschrift darunter – eine Quelle für
   // die Reihe selbst und den Abstand der Überschrift (02.10.2026).
-  --knopfreihe-hoehe: 48px;
+  --knopfreihe-hoehe: 52px;
+  // Durchmesser der runden Knöpfe = Höhe der Titel-Kapsel im Liedblatt (eine Zahl für beide).
+  --rundknopf: 44px;
   // Unterkante des Liedblatt-Kopfs (runde Knöpfe unter dem Band). Daran hängen die Fenster, die
   // unter dem Kopf aufgehen (Aussehen, Tempo, Werkzeuge, Lied-Menü) und der Hinweis „Ablauf
   // geändert". Bis zum 02.10.2026 stand dafür an vier Stellen je eine eigene Zahl (54, 58, 60 px).

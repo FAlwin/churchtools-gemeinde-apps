@@ -7,6 +7,11 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+## [2.26.0] – 2026-10-02
+
+**Beim Update ist nichts zu tun.** Die Einführung zum Liedblatt erscheint einmal neu, weil die
+Werkzeuge jetzt hinter einem Knopf stecken.
+
 ### Geändert
 
 - **Die Setlist hat oben keine milchige Leiste mehr.** Seit iOS 26/27 legt das iPhone über den

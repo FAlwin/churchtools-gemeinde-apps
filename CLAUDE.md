@@ -19,8 +19,8 @@
 - **Status:** Fertig & produktiv – auf dem Synology-NAS deployt, intern im WLAN **und**
   extern unter `https://musik.ecg-donrath.de` live.
 
-  **Stand 24.09.2026: Produktiv läuft `v2.25.3`** – am 23.09.2026 abends am Bundle **gemessen**, nicht
-  aus der Doku übernommen. **v2.25.4 ist getaggt, der Prod-Deploy liegt bei Alwin.** So misst man die laufende
+  **Stand 02.10.2026: Produktiv läuft `v2.25.4`** – am 24.09.2026 am Bundle **gemessen**, nicht aus der
+  Doku übernommen. **v2.26.0 ist getaggt, der Prod-Deploy liegt bei Alwin.** So misst man die laufende
   Version: Der Versionsstring steckt im ausgelieferten Bundle
   (`curl -s https://musik.ecg-donrath.de/ | grep -oE 'assets/index-[^"]+\.js'`, dann diese Datei holen
   und nach `v2.` greppen). `/api/health` nennt **keine** Version und taugt dafür nicht. Getestet wird
@@ -609,6 +609,16 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 ```
 
 ## Stand & nächster Schritt
+
+- **v2.26.0 (02.10.2026) = runde Knöpfe statt milchiger Leisten + Express 5** (PR #418 Squash
+  `11b2306`, PR #419 Squash `ffb57ff`; Staging `staging-c3d6a77` von Alwin am iPhone getestet, der Baum
+  von `main` ist identisch). Setlist und Liedblatt haben oben keine Leiste mehr, sondern runde Knöpfe
+  unter dem iOS-Band; das Liedblatt bündelt seine Werkzeuge hinter EINEM Knopf (`WerkzeugMenu`, Tour
+  `chart-v7`); Umschalter mit sichtbarer Schiene; Seitenanzeige im Vollbild über dem Home-Strich.
+  **Lehre:** Alwin wählt am Bild – drei Entwurfsrunden fürs Liedblatt, jede mit Mockup; und eine
+  deckende Statusleiste gegen das Band ist am Gerät widerlegt (nicht noch einmal versuchen). Offen:
+  Zweig `test/schreiber-token-vollstaendig` (lokal, vom alten main), dann #177 (Auslöser entschieden:
+  jede Minute 6–23 Uhr + Knopf, Sammelabruf `/api/groups/{id}/absences` belegt), dann Extension.
 
 - **v2.25.4 (24.09.2026) = angemeldet bleiben + Abwesenheiten mit Uhrzeit wieder möglich + #413/#414**
   (PR #416 Squash `7538cb9`, PR #417 Squash `77349bb`; Staging `staging-a60fbeb` von Alwin getestet,

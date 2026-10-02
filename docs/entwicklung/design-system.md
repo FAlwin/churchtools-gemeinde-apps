@@ -58,8 +58,9 @@ nutzt bewusst Monospace (`'JetBrains Mono', monospace`) für die Roh-Bearbeitung
   `@use '../styles/mixins' as m;` → `@include m.card-list;`.
 - **Komponenten:** `Segment` (Auswahl 2–3 Optionen), `NoteTile` (Noten-Kachel),
   `Icon` (`components/icons.tsx`, Line-Icons – keine Emojis in der UI), **`SeitenGeruest`** (das
-  Gerüst JEDES Bildschirms: Leiste, Überschrift, Scrollen, Neuladen – seit 22.09.2026 der Normalweg,
-  `Screen`/`Scroll`/`NavBar`/`GrosseUeberschrift` sind seine Bausteine), `TabBar`,
+  Gerüst JEDES Bildschirms: Überschrift, runde Knöpfe, Scrollen, Neuladen – seit 22.09.2026 der
+  Normalweg, `Screen`/`Scroll`/`GrosseUeberschrift`/`KnopfReihe` sind seine Bausteine; `RundKnopf`
+  für Aktionen in Detailansichten), `TabBar`,
   `Sheet`, `ConfirmDialog`, `SongFields` (die Stammdaten-Felder eines Liedes – von „Neues Lied" und
   „Stammdaten ändern" gemeinsam genutzt, damit es die fünf Felder nur einmal gibt).
 - **Lied suchen – ein Feld, eine Zeile, ein Angebot** (#378): `LiedSucheKopf` (nur das Suchfeld, Lupe
@@ -97,7 +98,7 @@ ihn senken (im Querformat gibt es oben oft keine Safe Area). Der `20px`-Boden f�
 Safari-Tab-Fall ab (`env()` ist dort immer `0`), `env()` bleibt Fallback, solange `--sat` noch nicht
 gemessen wurde → keine Regression auf Geräten ohne Safe Area.
 
-Betroffene Module: `components/NavBar.module.scss`, `components/AblaufChangedBanner.module.scss`,
+Betroffene Module: `styles/_variables.scss` (`--bar-pad-top`), `components/AblaufChangedBanner.module.scss`,
 `components/ChordEditor.module.scss`, `pages/ChordChart.module.scss` (Header + beide Dropdowns).
 
 ## Dialoge über der Tastatur (Safe Area unten) – verbindlich

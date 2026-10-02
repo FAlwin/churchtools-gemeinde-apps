@@ -1,13 +1,21 @@
 import type { HeadInfoPart } from '../utils/activeSongView';
 import { BpmPulse } from './BpmPulse';
 import { Icon } from './icons';
+import { RundKnopf, ZurueckKnopf } from './KnopfReihe';
+import { WerkzeugMenu, type Werkzeug } from './WerkzeugMenu';
 import styles from '../pages/ChordChart.module.scss';
 
 /**
  * Die Kopfzeile der Lied-Anzeige (#314 – vorher inline in `pages/ChordChart.tsx`).
  *
- * Links zurück, mittig der Lied-Knopf mit Info-Zeile, rechts die Werkzeuge. Welche Werkzeuge
- * überhaupt erscheinen, hängt an drei Zuständen, die sich gegenseitig ausschließen:
+ * Links zurück, daneben der Lied-Knopf mit Info-Zeile, rechts **ein** runder Knopf für alle
+ * Werkzeuge (02.10.2026, Alwin: „Ein Knopf für alles"). Der Kopf liegt unter dem Unschärfe-Band von
+ * iOS 26/27 – vorher stand er darin und war milchig, auch die Symbole. Der Werkzeuge-Knopf zeigt den
+ * Zustand, den früher die einzelnen Knöpfe zeigten: blau, solange Puls oder Klick laufen; beim
+ * Zeichnen wird er zum Haken „Anmerken beenden", beim Ansehen fremder Notizen zum Personen-Knopf
+ * zurück zu den eigenen – sonst gäbe es aus beiden Modi keinen sichtbaren Ausweg mehr.
+ *
+ * Welche Werkzeuge im Menü erscheinen, hängt an drei Zuständen, die sich gegenseitig ausschließen:
  *
  *  - **Ein Dokument statt Akkorden** → „Aussehen" und Team-Notizen entfallen; beide wirken auf den
  *    ChordPro-Satz, den es hier nicht gibt.
@@ -21,7 +29,6 @@ interface ChartHeaderProps {
   headInfo: HeadInfoPart[];
   /** Lied-Menü offen (für `aria-expanded`). */
   menuOpen: boolean;
-  appearanceOpen: boolean;
   /** Es werden gerade fremde Notizen angesehen. */
   viewing: boolean;
   /** Statt der Akkorde wird ein hochgeladenes Dokument gezeigt. */
@@ -44,14 +51,28 @@ interface ChartHeaderProps {
   taktStartMs: number | null;
   /** Länge des Takts in GEZÄHLTEN Schlägen – der Puls markiert damit die Eins. */
   schlaegeProTakt: number;
-  /** Ist das Tempo-Menü offen? */
-  tempoOpen: boolean;
+  /** Ist das Werkzeuge-Menü offen? */
+  werkzeugeOffen: boolean;
+  /**
+   * Ist ein Fenster offen, das über den Werkzeuge-Knopf geht (Menü, Aussehen, Tempo)? Dann ist der
+   * Knopf hellblau hinterlegt – man sieht, woher das offene Fenster kommt (Alwin, 02.10.2026).
+   */
+  werkzeugFensterOffen: boolean;
+  /** Dasselbe für die Titel-Kapsel: Lied-Menü oder eines seiner Fenster (Tonart, Kapo, Dateien …) offen. */
+  liedFensterOffen: boolean;
   /** Läuft irgendetwas Tempo-Bezogenes (Puls oder Klick)? Färbt den Metronom-Knopf. */
   tempoAktiv: boolean;
-  onToggleTempo: () => void;
   onBack: () => void;
   onToggleMenu: () => void;
-  onToggleAppearance: () => void;
+  onToggleWerkzeuge: () => void;
+  onCloseWerkzeuge: () => void;
+  /**
+   * Die Werkzeuge. **Jeder Aufruf schaltet das Fenster selbst um** – das Menü ruft danach NICHT
+   * noch `onCloseWerkzeuge`. Alle Fenster teilen sich ein Zustandsfeld (`overlay`); ein Schließen
+   * hinterher setzte das gerade geöffnete Fenster sofort wieder zurück (Lehre vom 05.08.2026).
+   */
+  onAppearance: () => void;
+  onTempo: () => void;
   onResetZoom: () => void;
   onToggleTeamNotes: () => void;
   onToggleDraw: () => void;
@@ -61,7 +82,6 @@ export function ChartHeader({
   songTitle,
   headInfo,
   menuOpen,
-  appearanceOpen,
   viewing,
   showsDocument,
   canUseGlobalNotes,
@@ -72,12 +92,16 @@ export function ChartHeader({
   klickBpm,
   taktStartMs,
   schlaegeProTakt,
-  tempoOpen,
+  werkzeugeOffen,
+  werkzeugFensterOffen,
+  liedFensterOffen,
   tempoAktiv,
-  onToggleTempo,
   onBack,
   onToggleMenu,
-  onToggleAppearance,
+  onToggleWerkzeuge,
+  onCloseWerkzeuge,
+  onAppearance,
+  onTempo,
   onResetZoom,
   onToggleTeamNotes,
   onToggleDraw,
@@ -110,24 +134,85 @@ export function ChartHeader({
    */
   const hatEigenesTempo = headInfo.some((p) => p.art === 'bpm');
 
+  /**
+   * Die Werkzeuge im Menü – dieselben Bedingungen wie früher bei den einzelnen Knöpfen. Beim Zeichnen
+   * und beim Ansehen fremder Notizen öffnet der Knopf das Menü gar nicht (siehe unten).
+   */
+  const werkzeuge: Werkzeug[] = [
+    ...(!showsDocument
+      ? [{ id: 'aussehen', label: 'Aussehen', symbol: <b>Aa</b>, onClick: onAppearance }]
+      : []),
+    // Tempo bewusst auch ohne gepflegtes Tempo (#145): Genau dann will man eins antippen.
+    {
+      id: 'tempo',
+      label: 'Tempo',
+      symbol: <Icon name="metronome" size={19} stroke={1.9} />,
+      onClick: onTempo,
+    },
+    ...(zoomed
+      ? [
+          {
+            id: 'zoom',
+            label: 'Zoom zurücksetzen',
+            symbol: <Icon name="zoom-reset" size={18} stroke={2} />,
+            onClick: onResetZoom,
+          },
+        ]
+      : []),
+    ...(canUseGlobalNotes && !showsDocument
+      ? [
+          {
+            id: 'team',
+            label: 'Notizen von …',
+            symbol: <Icon name="people" size={18} stroke={2} />,
+            onClick: onToggleTeamNotes,
+          },
+        ]
+      : []),
+    {
+      id: 'anmerken',
+      label: 'Anmerken',
+      symbol: <Icon name="pencil" size={18} stroke={2.2} />,
+      onClick: onToggleDraw,
+    },
+  ];
+
+  /** Der eine Knopf rechts – er zeigt, in welchem Modus man ist, und führt wieder heraus. */
+  const werkzeugKnopf = drawMode ? (
+    <RundKnopf onClick={onToggleDraw} title="Anmerken beenden" aktiv>
+      <Icon name="check" size={20} stroke={2.6} />
+    </RundKnopf>
+  ) : viewing ? (
+    <RundKnopf onClick={onToggleTeamNotes} title="Zurück zu den eigenen Notizen" aktiv>
+      <Icon name="people" size={19} stroke={2} />
+    </RundKnopf>
+  ) : (
+    <RundKnopf
+      onClick={onToggleWerkzeuge}
+      title="Werkzeuge"
+      dataTour="chart-werkzeuge"
+      aktiv={tempoAktiv}
+      offen={werkzeugFensterOffen}
+      menuOffen={werkzeugeOffen}
+    >
+      <Icon name="regler" size={21} stroke={2} />
+    </RundKnopf>
+  );
+
   return (
-    <div className={styles.hdr}>
-      <button className={styles.ibtn} onClick={onBack} aria-label="Zurück">
-        <Icon name="chev-left" size={22} stroke={2.4} />
-      </button>
-      <div className={styles.center}>
+    <>
+      <div className={styles.hdr}>
+        <ZurueckKnopf onClick={onBack} />
         <button
-          className={styles.menuBtn}
+          className={`${styles.menuBtn}${liedFensterOffen ? ' ' + styles.menuBtnOffen : ''}`}
           data-tour="chart-lied"
           onClick={() => !viewing && onToggleMenu()}
           aria-haspopup="menu"
           aria-expanded={menuOpen}
         >
           <span className={styles.menuTitleRow}>
+            {/* Ohne kleinen ▾-Pfeil (Alwin, 02.10.2026) – die Kapsel selbst ist der Knopf. */}
             <span className={styles.songTitle}>{songTitle}</span>
-            <span className={styles.menuChevron} aria-hidden="true">
-              ▾
-            </span>
           </span>
           {/* Auch dann zeigen, wenn das Lied selbst nichts mitbringt, aber ein Tempo eingestellt
               ist – sonst verschwände die frisch angetippte Angabe samt Puls wieder. */}
@@ -151,68 +236,11 @@ export function ChartHeader({
             </span>
           )}
         </button>
+        {werkzeugKnopf}
       </div>
-      <div className={styles.right}>
-        {!showsDocument && !viewing && (
-          <button
-            className={`${styles.toolBtn}${appearanceOpen ? ' ' + styles.on : ''}`}
-            data-tour="chart-aussehen"
-            onClick={onToggleAppearance}
-            title="Aussehen"
-          >
-            Aa
-          </button>
-        )}
-        {/* Tempo (#145) – öffnet das Menü mit Puls, Klick und Tempo-Antippen. Beschriftung ist wie
-            bei „Aa" reiner Text, kein Symbol; der Puls selbst sitzt unten bei der Tempo-Angabe.
-            **Bewusst auch ohne gepflegtes Tempo sichtbar:** Genau dann will man eins antippen und
-            speichern. Der Knopf färbt sich, wenn Puls oder Klick laufen – nicht schon, wenn nur
-            das Menü offen ist; sonst sagt die Farbe zweierlei. */}
-        {!viewing && (
-          <button
-            className={`${styles.toolBtn}${tempoAktiv ? ' ' + styles.on : ''}`}
-            data-tour="chart-tempo"
-            onClick={onToggleTempo}
-            title="Tempo"
-            aria-label="Tempo: Puls, Klick und Tempo antippen"
-            aria-expanded={tempoOpen}
-          >
-            <Icon name="metronome" size={20} stroke={1.9} />
-          </button>
-        )}
-        {zoomed && (
-          <button
-            className={styles.toolBtn}
-            onClick={onResetZoom}
-            title="Zoom zurücksetzen"
-            aria-label="Zoom zurücksetzen"
-          >
-            <Icon name="zoom-reset" size={18} stroke={2} />
-          </button>
-        )}
-        {/* Team-Notizen: geteilte Anmerkungen anderer ansehen (nur Berechtigte). */}
-        {canUseGlobalNotes && !showsDocument && (
-          <button
-            className={`${styles.toolBtn}${viewing ? ' ' + styles.on : ''}`}
-            data-tour="chart-team"
-            onClick={onToggleTeamNotes}
-            title="Notizen von …"
-            aria-label="Notizen von anderen ansehen"
-          >
-            <Icon name="people" size={18} stroke={2} />
-          </button>
-        )}
-        {!viewing && (
-          <button
-            className={`${styles.toolBtn}${drawMode ? ' ' + styles.on : ''}`}
-            data-tour="chart-anmerken"
-            onClick={onToggleDraw}
-            title="Anmerkungen"
-          >
-            <Icon name="pencil" size={18} stroke={2.2} />
-          </button>
-        )}
-      </div>
-    </div>
+      {werkzeugeOffen && !drawMode && !viewing && (
+        <WerkzeugMenu werkzeuge={werkzeuge} onClose={onCloseWerkzeuge} />
+      )}
+    </>
   );
 }

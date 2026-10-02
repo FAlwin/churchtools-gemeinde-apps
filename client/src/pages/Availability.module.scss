@@ -11,33 +11,6 @@
 }
 
 // Unterseiten-Schalter „Termine | Einträge" – wie <Segment>, nur mit Zähler.
-.seg {
-  display: flex;
-  background: var(--surface3);
-  border-radius: var(--r-ctrl);
-  padding: 3px;
-}
-.segBtn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  border: none;
-  background: transparent;
-  border-radius: calc(var(--r-ctrl) - 2px);
-  padding: 8px 6px;
-  font-family: var(--ui);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text2);
-  cursor: pointer;
-}
-.segAn {
-  background: var(--seg-on);
-  color: var(--text);
-  box-shadow: 0 1px 3px rgba(22, 33, 42, 0.12);
-}
 .zaehler {
   font-size: 11px;
   font-weight: 700;

@@ -102,7 +102,7 @@ Neu-Anmelden alles nur auf dem Gerät liegen – ohne jeden Hinweis, dass nichts
 
 1. Auf **Gerät A**: unten **Mehr** → **Abmelden**, dann sofort wieder anmelden. Die App dabei
    **nicht** schließen.
-2. Auf Gerät A ein Lied öffnen, oben rechts auf den **Stift** tippen und etwas malen.
+2. Auf Gerät A ein Lied öffnen, oben rechts **Werkzeuge → Anmerken** tippen und etwas malen.
 3. Auf den Liedtitel oben tippen und die **Tonart** ändern.
 4. Auf **Gerät B** die App schließen und neu öffnen, dasselbe Lied aufrufen.
 

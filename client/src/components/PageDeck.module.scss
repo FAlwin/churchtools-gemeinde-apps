@@ -2,7 +2,7 @@
   position: absolute;
   inset: 0;
   // Leicht graue Fläche um die (weiße) Seite – macht die Seitenränder beim Zeichnen sichtbar.
-  background: #e6e8ec;
+  background: var(--blatt-umgebung);
   overflow: hidden;
   // Keine Browser-Scroll-/Zoom-Gesten im Chart-Bereich (wir steuern Wischen/Zoom selbst).
   touch-action: none;
@@ -17,7 +17,7 @@
   inset: 0;
   z-index: 5;
   overflow: hidden;
-  background: #e6e8ec;
+  background: var(--blatt-umgebung);
   pointer-events: none;
 }
 // Jede Hälfte (alte/neue Seite) ist eine EIGENE bildschirmbreite Ebene, die einzeln geschoben
@@ -192,10 +192,10 @@
   pointer-events: all;
 }
 
-// Seiten-Anzeige unten rechts
+// Seiten-Anzeige unten rechts. `--blatt-unten-frei` setzt das Liedblatt im Vollbild (Home-Strich).
 .pageBadge {
   position: absolute;
-  bottom: 14px;
+  bottom: calc(14px + var(--blatt-unten-frei, 0px));
   right: 14px;
   z-index: 20;
   display: inline-flex;

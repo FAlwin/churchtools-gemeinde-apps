@@ -31,6 +31,16 @@
   --cp-dir: #0d7a6f; // ChordPro-Direktiven {…} im Editor (ChurchTools-passendes Teal)
 
   --seg-on: #ffffff; // aktives Segment / Toggle-Hintergrund
+  // Schiene der Umschalter (Kommende/Vergangene …). Eigene Farbe seit dem 02.10.2026: Sie war
+  // `--surface3` und damit exakt die Seitenfarbe `--bg` – der nicht gewählte Knopf sah aus wie
+  // bloßer Text (Alwin: „muss deutlicher werden als nur ein Text").
+  --seg-track: #dde2ea;
+  // Graue Fläche um die weiße Notenseite (Liedblatt, PDF-Vorschau). Bis zum 02.10.2026 stand der
+  // Wert dreimal von Hand im CSS. Im Dunklen bewusst gleich: Die Seite selbst bleibt weiß.
+  --blatt-umgebung: #e6e8ec;
+  // Grund des Liedblatt-Bildschirms – dort sitzt der Kopf. Hell = die Fläche um die Seite, damit
+  // Kopf und Blattfläche ohne Kante ineinander übergehen (02.10.2026).
+  --chart-grund: var(--blatt-umgebung);
   --track-off: #d1d5db; // Toggle-Schiene (aus)
   --scrim: rgba(15, 22, 28, 0.5); // Overlay hinter Sheets/Dialogen
 
@@ -77,6 +87,8 @@ html[data-theme='dark'] {
   --cp-dir: #5fd0c3; // Direktiven-Teal (heller für Dark Mode)
 
   --seg-on: #3a4d5e;
+  --seg-track: #2b3a49; // hebt sich im Dunklen schon als `--surface3` ab – unverändert
+  --chart-grund: var(--bg); // im Dunklen bleibt der Kopf auf dem dunklen Grund
   --track-off: #3a4856;
 
   // Leisten heller als die Basis → klar abgesetzt. Deckend und gleich der dunklen `theme-color`
@@ -92,6 +104,15 @@ html[data-theme='dark'] {
   // Bildschirme OHNE Leiste (große Überschrift im Inhalt): Abstand der Überschrift nach oben.
   // Im Safari-Tab reicht wenig (kein Band, keine Safe-Area).
   --inhalt-pad-top: 12px;
+  // Höhe der runden Knopfreihe (`KnopfReihe`) samt Luft zur Überschrift darunter – eine Quelle für
+  // die Reihe selbst und den Abstand der Überschrift (02.10.2026).
+  --knopfreihe-hoehe: 52px;
+  // Durchmesser der runden Knöpfe = Höhe der Titel-Kapsel im Liedblatt (eine Zahl für beide).
+  --rundknopf: 44px;
+  // Unterkante des Liedblatt-Kopfs (runde Knöpfe unter dem Band). Daran hängen die Fenster, die
+  // unter dem Kopf aufgehen (Aussehen, Tempo, Werkzeuge, Lied-Menü) und der Hinweis „Ablauf
+  // geändert". Bis zum 02.10.2026 stand dafür an vier Stellen je eine eigene Zahl (54, 58, 60 px).
+  --chart-kopf-unten: calc(var(--inhalt-pad-top) + var(--knopfreihe-hoehe));
 }
 
 /**

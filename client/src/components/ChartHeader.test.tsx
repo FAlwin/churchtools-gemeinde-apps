@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { ChartHeader } from './ChartHeader';
 import type { HeadInfoPart } from '../utils/activeSongView';
 
@@ -17,7 +17,6 @@ const props = {
   songTitle: 'Höher',
   headInfo: [] as HeadInfoPart[],
   menuOpen: false,
-  appearanceOpen: false,
   viewing: false,
   showsDocument: false,
   canUseGlobalNotes: false,
@@ -28,12 +27,16 @@ const props = {
   klickBpm: null as number | null,
   taktStartMs: null as number | null,
   schlaegeProTakt: 4,
-  tempoOpen: false,
+  werkzeugeOffen: false,
+  werkzeugFensterOffen: false,
+  liedFensterOffen: false,
   tempoAktiv: false,
-  onToggleTempo: vi.fn(),
   onBack: vi.fn(),
   onToggleMenu: vi.fn(),
-  onToggleAppearance: vi.fn(),
+  onToggleWerkzeuge: vi.fn(),
+  onCloseWerkzeuge: vi.fn(),
+  onAppearance: vi.fn(),
+  onTempo: vi.fn(),
   onResetZoom: vi.fn(),
   onToggleTeamNotes: vi.fn(),
   onToggleDraw: vi.fn(),
@@ -109,14 +112,87 @@ describe('ChartHeader – der Puls schlägt im GEZÄHLTEN Tempo', () => {
   });
 });
 
-describe('ChartHeader – der Tempo-Knopf', () => {
-  it('ist auch ohne gepflegtes Tempo da – dort trägt man ja eines nach', () => {
-    zeige({ headInfo: [{ art: 'key', text: 'A' }] });
-    expect(screen.getByRole('button', { name: /^Tempo:/ })).toBeTruthy();
+/**
+ * **Ein Knopf für alle Werkzeuge** (02.10.2026, Alwin). Geprüft werden die Bedingungen, die früher
+ * an den einzelnen Knöpfen hingen und jetzt an den Menü-Einträgen – und die beiden Modi, aus denen
+ * der Knopf selbst wieder herausführen muss, weil es dafür keinen anderen sichtbaren Weg gibt.
+ */
+describe('ChartHeader – der Werkzeuge-Knopf', () => {
+  const eintraege = () =>
+    within(screen.getByRole('menu', { name: 'Werkzeuge' }))
+      .getAllByRole('menuitem')
+      .map((b) => b.textContent);
+
+  it('öffnet das Menü und meldet seinen Zustand', () => {
+    const onToggleWerkzeuge = vi.fn<() => void>();
+    zeige({ onToggleWerkzeuge });
+    const knopf = screen.getByRole('button', { name: 'Werkzeuge' });
+    expect(knopf.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(knopf);
+    expect(onToggleWerkzeuge).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('menu')).toBeNull();
   });
 
-  it('verschwindet beim Ansehen fremder Notizen', () => {
-    zeige({ viewing: true });
-    expect(screen.queryByRole('button', { name: /^Tempo:/ })).toBeNull();
+  it('zeigt im Menü Aussehen, Tempo und Anmerken – Tempo auch ohne gepflegtes Tempo', () => {
+    zeige({ werkzeugeOffen: true, headInfo: [{ art: 'key', text: 'A' }] });
+    expect(eintraege()).toEqual(['AussehenAa', 'Tempo', 'Anmerken']);
+  });
+
+  it('nimmt Zoom und Notizen von anderen nur auf, wenn es sie gibt', () => {
+    zeige({ werkzeugeOffen: true, zoomed: true, canUseGlobalNotes: true });
+    expect(eintraege()).toEqual([
+      'AussehenAa',
+      'Tempo',
+      'Zoom zurücksetzen',
+      'Notizen von …',
+      'Anmerken',
+    ]);
+  });
+
+  it('lässt bei einem Dokument Aussehen und Notizen weg (sie wirken nur auf Akkorde)', () => {
+    zeige({ werkzeugeOffen: true, showsDocument: true, canUseGlobalNotes: true });
+    expect(eintraege()).toEqual(['Tempo', 'Anmerken']);
+  });
+
+  it('ein Eintrag ruft NUR seine Aktion – kein Schließen hinterher (es setzte das Fenster zurück)', () => {
+    const onTempo = vi.fn<() => void>();
+    const onCloseWerkzeuge = vi.fn<() => void>();
+    zeige({ werkzeugeOffen: true, onTempo, onCloseWerkzeuge });
+    fireEvent.click(screen.getByRole('menuitem', { name: /Tempo/ }));
+    expect(onTempo).toHaveBeenCalledTimes(1);
+    expect(onCloseWerkzeuge).not.toHaveBeenCalled();
+  });
+
+  it('wird beim Zeichnen zum Haken, der das Zeichnen beendet', () => {
+    const onToggleDraw = vi.fn<() => void>();
+    zeige({ drawMode: true, werkzeugeOffen: true, onToggleDraw });
+    expect(screen.queryByRole('button', { name: 'Werkzeuge' })).toBeNull();
+    expect(screen.queryByRole('menu')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Anmerken beenden' }));
+    expect(onToggleDraw).toHaveBeenCalledTimes(1);
+  });
+
+  it('führt beim Ansehen fremder Notizen zurück zu den eigenen', () => {
+    const onToggleTeamNotes = vi.fn<() => void>();
+    zeige({ viewing: true, onToggleTeamNotes });
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück zu den eigenen Notizen' }));
+    expect(onToggleTeamNotes).toHaveBeenCalledTimes(1);
+  });
+
+  it('ist hellblau, solange eines seiner Fenster offen ist – voll blau bleibt dem Puls vorbehalten', () => {
+    zeige({ werkzeugFensterOffen: true });
+    const knopf = screen.getByRole('button', { name: 'Werkzeuge' });
+    expect(knopf.className).toMatch(/offen/);
+    expect(knopf.className).not.toMatch(/aktiv/);
+  });
+
+  it('färbt auch die Titel-Kapsel, solange das Lied-Menü oder eines seiner Fenster offen ist', () => {
+    const { container } = zeige({ liedFensterOffen: true });
+    expect(container.querySelector('[data-tour="chart-lied"]')?.className).toMatch(/menuBtnOffen/);
+  });
+
+  it('leuchtet, solange Puls oder Klick laufen', () => {
+    zeige({ tempoAktiv: true });
+    expect(screen.getByRole('button', { name: 'Werkzeuge' }).className).toMatch(/aktiv/);
   });
 });

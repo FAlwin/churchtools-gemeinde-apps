@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { NavBar } from './NavBar';
+import { KnopfReihe } from './KnopfReihe';
 import { Screen, Scroll } from './Screen';
 import { GrosseUeberschrift } from './GrosseUeberschrift';
 
@@ -8,11 +8,11 @@ interface SeitenGeruestProps {
   titel: string;
   /** Zweite Zeile darunter, z. B. Wochentag und Uhrzeit eines Ablaufs. */
   unterzeile?: string;
-  /** Zurück-Aktion links in der Leiste. Ohne sie (und ohne `aktionen`) gibt es gar keine Leiste. */
+  /** Zurück links in der Knopfreihe. Ohne sie (und ohne `aktionen`) gibt es keine Knopfreihe. */
   zurueck?: () => void;
-  /** Beschriftung neben dem Zurück-Pfeil („Termine"). */
+  /** Wohin „zurück" führt („Termine") – für Screenreader; sichtbar ist nur der runde Pfeil. */
   zurueckLabel?: string;
-  /** Knöpfe rechts in der Leiste (Teilen, Bearbeiten …). */
+  /** Runde Knöpfe rechts (`RundKnopf`: Teilen, Bearbeiten …). */
   aktionen?: ReactNode;
   /**
    * „Runterziehen zum Aktualisieren".
@@ -43,9 +43,9 @@ interface SeitenGeruestProps {
  * mehreren Stellen" – deshalb gibt es sie jetzt nur noch **einmal**, hier.
  *
  * Aufbau (bewusst für iOS 26/27, siehe `client/index.html`): Der Titel steht **groß im Inhalt** und
- * scrollt mit weg, oben gibt es keine farbige Fläche. Eine Leiste erscheint nur, wenn es etwas
- * anzutippen gibt – Symbole verträgt das Unschärfe-Band des Systems, Text nicht. Dann hält die
- * Leiste den Abstand nach oben, sonst die Überschrift selbst.
+ * scrollt mit weg, oben gibt es keine farbige Fläche. Gibt es etwas anzutippen (Zurück, Teilen …),
+ * schweben runde Knöpfe direkt unter dem Unschärfe-Band (`KnopfReihe`, 02.10.2026) und bleiben beim
+ * Scrollen stehen; die Überschrift rückt um ihre Höhe nach unten.
  */
 export function SeitenGeruest({
   titel,
@@ -57,16 +57,19 @@ export function SeitenGeruest({
   children,
   ueberlagerung,
 }: SeitenGeruestProps) {
-  const mitLeiste = Boolean(zurueck || aktionen);
+  const mitKnoepfen = Boolean(zurueck || aktionen);
   return (
     <Screen>
-      {mitLeiste && <NavBar back={zurueck} backLabel={zurueckLabel} right={aktionen} />}
-      <Scroll onRefresh={onNeuLaden} unterLeiste={mitLeiste}>
-        <GrosseUeberschrift unterzeile={unterzeile} ohneAbstand={mitLeiste}>
+      <Scroll onRefresh={onNeuLaden}>
+        <GrosseUeberschrift unterzeile={unterzeile} unterKnoepfen={mitKnoepfen}>
           {titel}
         </GrosseUeberschrift>
         {children}
       </Scroll>
+      {/* Nach dem Scroll-Bereich, damit die Knöpfe über dem durchlaufenden Inhalt liegen. */}
+      {mitKnoepfen && (
+        <KnopfReihe zurueck={zurueck} zurueckLabel={zurueckLabel} aktionen={aktionen} />
+      )}
       {ueberlagerung}
     </Screen>
   );

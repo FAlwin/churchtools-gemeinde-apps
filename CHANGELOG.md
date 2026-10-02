@@ -9,12 +9,33 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Geändert
 
+- **Die Setlist hat oben keine milchige Leiste mehr.** Seit iOS 26/27 legt das iPhone über den
+  oberen Bildschirmrand ein Unschärfe-Band, das sich nicht abschalten lässt; die weiße Leiste mit
+  „‹ Termine", Teilen und Bearbeiten lag darin und wirkte milchig und verwaschen. Jetzt schweben
+  dort **runde Knöpfe** direkt unter dem Band – wie in den iPhone-Einstellungen –, scharf, und sie
+  bleiben beim Scrollen stehen.
+- **Das Liedblatt hat oben einen Knopf für alle Werkzeuge.** Auch hier lag der Kopf im milchigen
+  iOS-Band, und vier Werkzeug-Knöpfe nahmen dem Liedtitel den Platz. Jetzt: runder Zurück-Pfeil, der
+  Titel als Kapsel (deutlich länger lesbar) und **ein** Werkzeuge-Knopf mit Aussehen, Tempo, Anmerken
+  und – wenn freigeschaltet – „Notizen von …". Läuft der Puls, ist er blau; beim Zeichnen wird er zum
+  Haken, mit dem man fertig ist. Ist ein Menü offen, sind sein Knopf bzw. die Titel-Kapsel hellblau
+  hinterlegt; Titel und Infos stehen mittig. Die Einführung zum Liedblatt erscheint dafür einmal neu.
+- **Umschalter sind als Knöpfe erkennbar.** Bei „Kommende | Vergangene" und den anderen Umschaltern
+  sah der nicht gewählte Knopf aus wie bloßer Text: Die Schiene dahinter hatte genau die Farbe des
+  Seitenhintergrunds. Sie ist jetzt grau wie beim iPhone. Die Abwesenheiten hatten einen eigenen,
+  nachgebauten Umschalter – sie nutzen jetzt denselben wie der Rest der App.
 - **Der Server läuft auf Express 5** (#415). Reine Wartung, damit Express 4 nicht irgendwann unter
   Zeitdruck ersetzt werden muss – für Nutzer ändert sich nichts. Drei Stellen mussten angepasst
   werden, alle vorher an Express 5 nachgestellt: die Rückfall-Route, die jede Adresse der Web-App auf
   die Startseite leitet (neue Schreibweise `/{*splat}`), der Start (bei belegtem Port meldete der
   Server sonst „läuft", obwohl er nicht lief – jetzt bricht er mit einer Meldung ab) und ein Test.
   Nebenbei liest Express 5 Adress-Parameter einfacher: Aus `?a[b]=1` wird kein Objekt mehr.
+
+### Behoben
+
+- **Im Vollbild war die Seitenanzeige unten abgeschnitten.** „Seite 1 / 2" saß fest am unteren Rand
+  der Blattfläche – im Vollbild also unter Home-Strich und runder Bildschirmecke des iPhones. Sie rückt
+  dort jetzt um den Sicherheitsabstand nach oben. (Bestand schon vor dieser Version.)
 
 ## [2.25.4] – 2026-09-24
 

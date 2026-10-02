@@ -22,7 +22,9 @@ test('Tempo-Menü: der Rahmen bleibt in jedem Zustand gleich', async ({ page }) 
   await page.goto('/?demo=chart');
   await expect(page.locator('canvas').first()).toBeVisible({ timeout: 30_000 });
 
-  await page.getByRole('button', { name: /^Tempo:/ }).click();
+  // Seit dem 02.10.2026 hinter dem Werkzeuge-Knopf (ein Knopf für alles).
+  await page.getByRole('button', { name: 'Werkzeuge' }).click();
+  await page.getByRole('menuitem', { name: /Tempo/ }).click();
   const menu = page.locator('[class*="tempoMenu"]');
   await expect(menu).toBeVisible();
 
@@ -78,7 +80,9 @@ test('Tempo-Menü: die Kopfzeile zeigt das EINGESTELLTE Tempo', async ({ page })
   const kopfInfo = page.locator('[class*="menuInfo"]').first();
   const vorher = (await kopfInfo.innerText()).trim();
 
-  await page.getByRole('button', { name: /^Tempo:/ }).click();
+  // Seit dem 02.10.2026 hinter dem Werkzeuge-Knopf (ein Knopf für alles).
+  await page.getByRole('button', { name: 'Werkzeuge' }).click();
+  await page.getByRole('menuitem', { name: /Tempo/ }).click();
   await page.locator('[class*="tempoMenu"]').getByRole('textbox').fill('137');
   await page.waitForTimeout(200);
 

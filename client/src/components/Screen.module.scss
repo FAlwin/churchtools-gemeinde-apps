@@ -64,11 +64,6 @@
   pointer-events: none;
 }
 
-// Detailansichten: Die Leiste darüber hält den Abstand zum Band schon.
-.pullDicht {
-  top: 4px;
-}
-
 // Der Hinweistext im Indikator – sichtbar erst, wenn genug Platz gezogen ist (Deckkraft im TSX).
 .pullText {
   font-size: 11px;

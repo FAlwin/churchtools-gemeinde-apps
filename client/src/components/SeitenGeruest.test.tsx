@@ -48,6 +48,31 @@ describe('SeitenGeruest', () => {
     expect(screen.getByText('Sonntag, 5. Oktober · 10:00')).toBeTruthy();
   });
 
+  /**
+   * **Runde Knöpfe statt Leiste** (02.10.2026). Sie müssen NEBEN dem Scroll-Bereich liegen: Dort
+   * bleiben sie beim Scrollen stehen. Darin scrollten sie mit weg, und „Zurück" wäre nach unten
+   * gescrollt nicht mehr erreichbar. Der Zurück-Knopf zeigt nur einen Pfeil – sein Name muss das Ziel
+   * nennen, sonst hört ein Screenreader nur „Taste".
+   */
+  it('setzt Zurück und Aktionen als schwebende Knöpfe neben den Scroll-Bereich', () => {
+    const { container } = render(
+      <SeitenGeruest
+        titel="Ablauf"
+        zurueck={() => {}}
+        zurueckLabel="Termine"
+        aktionen={<button>Teilen</button>}
+      >
+        Inhalt
+      </SeitenGeruest>,
+    );
+    const zurueck = screen.getByRole('button', { name: 'Zurück zu Termine' });
+    expect(zurueck.textContent).toBe('');
+    expect(scrollBereich(container).contains(zurueck)).toBe(false);
+    expect(scrollBereich(container).contains(screen.getByRole('button', { name: 'Teilen' }))).toBe(
+      false,
+    );
+  });
+
   it('hängt die Überlagerung neben den Scroll-Bereich, nicht hinein', () => {
     const { container } = render(
       <SeitenGeruest titel="Abwesenheiten" ueberlagerung={<button>Zeitraum eintragen</button>}>

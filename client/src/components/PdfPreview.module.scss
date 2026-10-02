@@ -3,7 +3,7 @@
   min-height: 0;
   overflow: auto;
   padding: 12px;
-  background: #e6e8ec; // gleicher heller Hintergrund wie die Chart-Ansicht
+  background: var(--blatt-umgebung); // gleicher Hintergrund wie die Chart-Ansicht
   display: flex;
   flex-direction: column; // alle Seiten untereinander
   align-items: center;

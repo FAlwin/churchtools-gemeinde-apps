@@ -40,7 +40,10 @@ export const TOUR_TERMINE = 'termine-v3';
 // (chart-v2 hatte den Schritt „Team-Anmerkungen" (#124) ergänzt.)
 // chart-v6 (20.09.2026, #398): Der Schritt „Lied-Optionen" sagt jetzt, dass der Editor in der
 // eingestellten Tonart arbeitet – vorher musste man das erraten (und Alwin hat zurückgerechnet).
-export const TOUR_CHART = 'chart-v6';
+// chart-v7 (02.10.2026): Aussehen, Tempo, Anmerken und „Notizen von …" sind keine eigenen Knöpfe
+// mehr, sondern stecken hinter EINEM runden Werkzeuge-Knopf (Alwin: „Ein Knopf für alles"). Die vier
+// Schritte zeigten auf Knöpfe, die es nicht mehr gibt – jetzt ein Schritt, der alle vier nennt.
+export const TOUR_CHART = 'chart-v7';
 
 /**
  * Einmaliger Hinweis, wenn die Leisten zum ersten Mal ausgeblendet werden (#319).
@@ -152,25 +155,9 @@ export const CHART_STEPS: CoachStep[] = [
     body: 'Tippe auf den Titel, um die Tonart zu ändern, eine Version zu wählen oder zu transponieren. Bearbeitest du eine Version, arbeitet der Editor in der Tonart, die hier eingestellt ist – gespeichert wird, was du siehst. Unter „Dateien …" verwaltest du die Notenblätter des Arrangements, unter „Stammdaten …" Name, Kategorie, Autor und Copyright des Liedes.',
   },
   {
-    selector: '[data-tour="chart-aussehen"]',
-    title: 'Darstellung',
-    body: 'Hier passt du Schriftgröße und Spaltenzahl an.',
-  },
-  {
-    selector: '[data-tour="chart-tempo"]',
-    title: 'Tempo',
-    body: 'Hinter dem Metronom steckt alles zum Tempo. Oben stellst du es ein – mit − und +, durch Eintippen oder indem du im Takt mittippst. Unter „Schläge je Takt" stellst du ein, wie viele Schläge du je Takt zählst – ein 6/8-Stück zählt man meist in zwei, ein schnelles 4/4 auch. Darunter ein sichtbarer Puls und ein hörbarer Klick; beide gelten nur für dich. Nur der Knopf ganz unten speichert das Tempo in ChurchTools – dann sehen es alle.',
-  },
-  {
-    selector: '[data-tour="chart-anmerken"]',
-    title: 'Anmerkungen',
-    body: 'Zeichne oder schreibe Notizen direkt auf die Seite – sie werden pro Konto gespeichert.',
-  },
-  // Nur für Team-Berechtigte sichtbar (sonst existiert der Knopf nicht → Schritt wird übersprungen).
-  {
-    selector: '[data-tour="chart-team"]',
-    title: 'Notizen von anderen',
-    body: 'Sieh dir die geteilten Anmerkungen deiner Team-Mitglieder an – in deren Ansicht – und übernimm sie bei Bedarf in deine eigenen. In der Leiste unten wechselst du dann Arrangement, Version oder die Person. Deine Anmerkungen teilst du unter „Mehr → Team-Notizen".',
+    selector: '[data-tour="chart-werkzeuge"]',
+    title: 'Werkzeuge',
+    body: 'Hinter diesem Knopf steckt alles Weitere: „Aussehen" für Schriftgröße und Spalten, „Tempo" mit Puls, Klick und Mittippen (gespeichert in ChurchTools wird es nur über den Knopf ganz unten im Tempo-Fenster), „Anmerken" zum Zeichnen und Schreiben auf der Seite und – wenn freigeschaltet – „Notizen von …" für die geteilten Anmerkungen deines Teams. Läuft der Puls, leuchtet der Knopf blau; beim Zeichnen wird er zum Haken, mit dem du fertig bist.',
   },
 ];
 

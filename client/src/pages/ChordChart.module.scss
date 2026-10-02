@@ -1,44 +1,20 @@
 .chartScreen {
-  background: var(--bg);
+  background: var(--chart-grund);
 }
 
-// ── Header (ChurchTools-Stil: hell / blur) ──
+// ── Kopf: runde Knöpfe und Titel-Kapsel unter dem Unschärfe-Band (02.10.2026) ──
+// Durchsichtig, ohne Leiste: Bis zum 02.10.2026 war das eine weiße Leiste im iOS-Band – milchig, auch
+// die Symbole. Jetzt beginnt der Kopf dort, wo auf den Tabs die Überschrift beginnt
+// (`--inhalt-pad-top`), und ist so hoch wie die Knopfreihe der Setlist (`--knopfreihe-hoehe`). Was
+// unter ihm aufgeht, hängt an `--chart-kopf-unten` (beide in `styles/_variables.scss`).
 .hdr {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 10px;
-  // Min. 20px oben (siehe NavBar): fängt Safari-Tab (env=0) + kurzzeitiges Safe-Area-Zurücksetzen ab.
-  // Wert und Begründung stehen in `styles/_variables.scss` – eine Stelle für beide Leisten.
-  padding-top: var(--bar-pad-top);
-  background: var(--nav-bg);
-  border-bottom: 1px solid var(--hair);
+  align-items: flex-start;
+  gap: 8px;
+  padding: var(--inhalt-pad-top) 16px 0;
+  height: var(--chart-kopf-unten);
+  box-sizing: border-box;
   flex-shrink: 0;
-}
-
-.ibtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  color: var(--blue-ink);
-  font-size: 20px;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.12s;
-
-  @media (hover: hover) {
-    &:hover {
-      background: var(--surface3);
-    }
-  }
-  &:active {
-    background: var(--surface3);
-  }
 }
 
 .center {
@@ -51,22 +27,39 @@
 
 // Kombinierter Kopf-Button: öffnet das Lied-Menü; enthält Titel + Info-Zeile.
 .menuBtn {
-  display: inline-flex;
+  // Titel-Kapsel: füllt den Platz zwischen Zurück und Werkzeugen – seit dort nur noch EIN Knopf
+  // steht, hat der Titel deutlich mehr Raum (02.10.2026).
+  flex: 1;
+  display: flex;
   flex-direction: column;
+  // Titel und Info-Zeile mittig (Alwin, 02.10.2026).
   align-items: center;
-  gap: 3px;
-  max-width: 100%;
+  justify-content: center;
+  gap: 1px;
   min-width: 0;
-  background: var(--surface3);
+  // Genau so hoch wie die runden Knöpfe daneben – vorher war sie höher (Alwin, 02.10.2026: „der
+  // Balken … ist breiter als die Buttons").
+  height: var(--rundknopf);
+  box-sizing: border-box;
+  background: var(--surface2);
   border: none;
-  border-radius: 14px;
-  padding: 6px 14px;
+  border-radius: calc(var(--rundknopf) / 2);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.16);
+  padding: 0 14px;
   cursor: pointer;
-  transition: opacity 0.12s;
+  text-align: center;
+  transition:
+    opacity 0.12s,
+    background 0.12s;
 
   &:active {
     opacity: 0.7;
   }
+}
+
+// Lied-Menü offen: Kapsel hellblau wie der Werkzeuge-Knopf mit offenem Fenster (02.10.2026).
+.menuBtnOffen {
+  background: var(--blue-tile);
 }
 
 .menuTitleRow {
@@ -78,7 +71,8 @@
 }
 
 .songTitle {
-  font-size: 17px;
+  font-size: 15px;
+  line-height: 1.2;
   font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
@@ -89,25 +83,12 @@
   letter-spacing: -0.2px;
 }
 
-.menuChevron {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--surface2);
-  color: var(--text2);
-  font-size: 12px;
-  line-height: 1;
-}
-
 .menuInfo {
   display: flex;
   align-items: center;
   gap: 6px;
   min-height: 16px; // hält die Höhe stabil, auch wenn nur wenige Infos da sind
+  line-height: 1.2;
   font-family: var(--ui);
   font-size: 12px;
   color: var(--text2);
@@ -145,13 +126,8 @@
   color: var(--text3);
 }
 
-.right {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-// Werkzeug-Buttons im Header (ChurchTools-Stil)
+// Werkzeug-Buttons der Zeichenleiste (ChurchTools-Stil) – im Kopf gibt es sie seit dem 02.10.2026
+// nicht mehr, dort sitzt ein runder Werkzeuge-Knopf.
 .toolBtn {
   height: 34px;
   min-width: 36px;
@@ -190,8 +166,8 @@
 // ── Aussehen-Dropdown ──
 .appMenu {
   position: absolute;
-  // max(20px, env): unter dem Header bleiben, auch im Browser-Tab (env=0) – wie Kopfleisten-Boden.
-  top: calc(max(20px, var(--sat, env(safe-area-inset-top, 0px))) + 58px);
+  // Direkt unter dem Kopf – eine Variable für alle Fenster, die dort aufgehen.
+  top: calc(var(--chart-kopf-unten) + 6px);
   right: 12px;
   z-index: 99;
   background: var(--surface2);
@@ -416,8 +392,8 @@
 
 .modeMenu {
   position: absolute;
-  // max(20px, env): unter dem Header bleiben, auch im Browser-Tab (env=0) – wie Kopfleisten-Boden.
-  top: calc(max(20px, var(--sat, env(safe-area-inset-top, 0px))) + 60px);
+  // Direkt unter dem Kopf – eine Variable für alle Fenster, die dort aufgehen.
+  top: calc(var(--chart-kopf-unten) + 6px);
   left: 50%;
   transform: translateX(-50%);
   z-index: 99;
@@ -494,6 +470,13 @@
   position: relative;
   display: flex;
   flex-direction: column;
+}
+
+// Vollbild: Die Blattfläche reicht bis an den unteren Bildschirmrand. Was dort unten sitzt (die
+// Seitenanzeige), muss über Home-Strich und runde Ecke rücken – sonst war es abgeschnitten
+// (Screenshot Alwin, 02.10.2026). Als Variable, weil `PageDeck` den Modus nicht kennt.
+.chartAreaVollbild {
+  --blatt-unten-frei: env(safe-area-inset-bottom, 0px);
 }
 
 // ── Chart-Body – horizontal blätternde Seiten ──
@@ -1266,4 +1249,19 @@
 // eigenes Element haette der Fehler die Hinweiszeile nach unten geschoben und den Rahmen gesprengt.
 .menuError {
   color: var(--red, #bb2946);
+}
+
+// ── Werkzeuge-Menü (02.10.2026) – Zeilen wie im Lied-Menü (`mmItem`), Symbol rechts in Blau ──
+.werkzeugMenu {
+  padding: 6px;
+  min-width: 220px;
+}
+
+.werkzeugSymbol {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  color: var(--blue-ink);
+  font-size: 15px;
 }

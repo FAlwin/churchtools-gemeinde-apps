@@ -1,6 +1,6 @@
 .seg {
   display: flex;
-  background: var(--surface3);
+  background: var(--seg-track);
   border-radius: var(--r-ctrl);
   padding: 2px;
   gap: 2px;
@@ -8,6 +8,11 @@
 
 .btn {
   flex: 1;
+  // Flex, damit ein Zähler neben der Beschriftung sitzen kann (Abwesenheiten: „Einträge 3").
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   border: none;
   background: none;
   cursor: pointer;

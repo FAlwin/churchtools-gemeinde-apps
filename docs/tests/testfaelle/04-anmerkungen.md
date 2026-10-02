@@ -3,15 +3,17 @@
 Hier geht es um Stift, Finger und Handballen. Nichts davon lässt sich vom Rechner aus prüfen – bitte
 wirklich am iPad mit dem Stift durchgehen.
 
-Der Anmerkungsmodus wird immer gleich eingeschaltet: **Lied öffnen → oben rechts auf den Stift
-tippen.** Dann erscheint die Werkzeugleiste am rechten Rand.
+Der Anmerkungsmodus wird immer gleich eingeschaltet: **Lied öffnen → oben rechts auf den runden
+Werkzeuge-Knopf (drei Regler) → „Anmerken".** Dann erscheint die Werkzeugleiste am rechten Rand, und
+der Knopf oben rechts wird zum **blauen Haken** – damit verlässt man den Modus wieder (seit
+02.10.2026).
 
 ### TF-ANNO-01 · Malen mit Stift, Marker und Radierer
 
 **Das muss passieren:** Der Strich folgt dem Stift ohne Verzögerung und ohne Lücken. Der Marker ist
 durchscheinend, der Liedtext bleibt darunter lesbar. Der Radierer entfernt nur Gemaltes.
 
-1. Lied öffnen, oben rechts auf den **Stift** tippen.
+1. Lied öffnen, oben rechts **Werkzeuge → Anmerken**.
 2. In der Leiste rechts das **Stift-Symbol** wählen und eine Linie über die Seite ziehen.
 3. Das **Marker-Symbol** wählen und eine Textzeile markieren.
 4. Das **Radierer-Symbol** wählen und die Hälfte der Linie wegwischen.
@@ -123,7 +125,7 @@ du weiterblätterst. Nach Schritt 6 ist die Eingabe zu und du kannst normal male
 
 1. Anmerkungsmodus einschalten, **T** wählen.
 2. Einen vorhandenen Text antippen (Rahmen erscheint).
-3. Oben rechts auf den **Stift** tippen, um den Anmerkungsmodus zu verlassen. Hinschauen.
+3. Oben rechts auf den **blauen Haken** tippen, um den Anmerkungsmodus zu verlassen. Hinschauen.
 4. Anmerkungsmodus wieder einschalten, **T** wählen.
 5. Auf eine freie Stelle tippen und etwas eintippen – **nicht** bestätigen.
 6. In der Leiste auf das **Stift-Symbol** wechseln.

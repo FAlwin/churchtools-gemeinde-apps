@@ -331,12 +331,21 @@ Abwesenheiten-Tab trägt die ID `verfuegbarkeit` und erscheint nur für Mitglied
 (Setlist, Chart) als Vollbild-Push.
 
 **Keine Kopfleiste mit Titel mehr (22.09.2026).** Die vier Tabs haben oben gar keine Leiste; ihr Titel
-steht im Scroll-Inhalt und scrollt mit weg. Die Setlist behält die Leiste für Zurück und Aktionen, aber
-**ohne Titel** – Titel und Datum stehen darunter im Inhalt. Grund: iOS 26/27 legt über die oberen
-~95 pt ein Unschärfe-Band (Liquid Glass), Text darin wird weich; Symbole verträgt es. Die Abstände
-kommen aus `--inhalt-pad-top` / `--bar-pad-top` (`styles/_variables.scss`), die App zeichnet hinter
-der Statusleiste (`black-translucent`, `client/index.html`). Der Chart-Kopf (`ChartHeader`) ist noch
-nicht umgebaut. Routing in `App.tsx` über `tab` + `view` (rechteabhängig).
+steht im Scroll-Inhalt und scrollt mit weg. Grund: iOS 26/27 legt über die oberen ~95 pt ein
+Unschärfe-Band (Liquid Glass), alles darin wird weich – **auch Symbole** (Screenshot Alwin,
+02.10.2026; die frühere Annahme „Symbole verträgt es" war falsch). **Seit dem 02.10.2026 hat auch die
+Setlist keine Leiste mehr:** Zurück, Teilen und Bearbeiten sind runde Knöpfe (`KnopfReihe`), die
+direkt unter dem Band schweben und beim Scrollen stehen bleiben – Vorbild sind die iPhone-
+Einstellungen, Alwins Wahl „ohne kleinen Titel". **Am Gerät widerlegt (02.10.2026):** Eine deckende
+Statusleiste (`status-bar-style=default`) beseitigt das Band NICHT – nicht noch einmal versuchen. Die
+Abstände kommen aus `--inhalt-pad-top` / `--knopfreihe-hoehe` / `--bar-pad-top`
+(`styles/_variables.scss`), die App zeichnet hinter der Statusleiste (`black-translucent`,
+`client/index.html`). **Auch der Liedblatt-Kopf (`ChartHeader`) liegt seit dem 02.10.2026 unter dem
+Band:** runder Zurück-Pfeil, Titel als Kapsel, **ein** Werkzeuge-Knopf (`WerkzeugMenu`: Aussehen,
+Tempo, Zoom, Notizen von …, Anmerken – Alwins Wahl „ein Knopf für alles"). Der Knopf zeigt den Modus:
+blau bei Puls/Klick, Haken beim Zeichnen, Personen beim Ansehen fremder Notizen – sonst gäbe es aus
+beiden Modi keinen sichtbaren Ausweg. Menü-Einträge setzen das Overlay-Feld genau EINMAL (kein
+Schließen hinterher). Fenster unter dem Kopf hängen an `--chart-kopf-unten`. Routing in `App.tsx` über `tab` + `view` (rechteabhängig).
 
 **Abwesenheiten sind terminfein, nicht tagesfein (22.09.2026).** Ein Haken an einem Termin trägt in
 ChurchTools das **Zeitfenster dieses Termins** ein (`startTime`/`endTime`, ISO-Zeitpunkte) – nur so
@@ -359,8 +368,8 @@ darf nicht vor 'startTime' liegen") – ohne neue Versionsnummer; am 22.09. ging
 durch. Unser Rumpf (`absenceBody`) behält die Tage, weil Doppel-Erkennung und Antwort sie brauchen;
 nur die Leitung ist anders.
 
-**Ein Gerüst für alle Bildschirme: `components/SeitenGeruest.tsx`.** Es setzt `Screen` + optionale
-`NavBar` + `Scroll` + `GrosseUeberschrift` zusammen; `Agenda`, `AllSongs`, `Availability`, `Settings`
+**Ein Gerüst für alle Bildschirme: `components/SeitenGeruest.tsx`.** Es setzt `Screen` + `Scroll` +
+`GrosseUeberschrift` + optionale `KnopfReihe` (runde Knöpfe für Zurück/Aktionen) zusammen; `Agenda`, `AllSongs`, `Availability`, `Settings`
 und `Setlist` rendern nur noch Inhalt (`children`) und Schwebendes (`ueberlagerung` – Plus-Knopf,
 Speichern-Leiste, Fenster, Meldungen; steht NEBEN dem Scroll-Bereich, sonst scrollt es mit weg).
 Vorher setzte jede Seite dasselbe Muster selbst zusammen – und genau dort liefen sie auseinander

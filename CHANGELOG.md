@@ -9,6 +9,10 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Geändert
 
+- **Umschalter sind als Knöpfe erkennbar.** Bei „Kommende | Vergangene" und den anderen Umschaltern
+  sah der nicht gewählte Knopf aus wie bloßer Text: Die Schiene dahinter hatte genau die Farbe des
+  Seitenhintergrunds. Sie ist jetzt grau wie beim iPhone. Die Abwesenheiten hatten einen eigenen,
+  nachgebauten Umschalter – sie nutzen jetzt denselben wie der Rest der App.
 - **Der Server läuft auf Express 5** (#415). Reine Wartung, damit Express 4 nicht irgendwann unter
   Zeitdruck ersetzt werden muss – für Nutzer ändert sich nichts. Drei Stellen mussten angepasst
   werden, alle vorher an Express 5 nachgestellt: die Rückfall-Route, die jede Adresse der Web-App auf

@@ -38,6 +38,7 @@ import {
   isTourDone,
   markTourDone,
 } from '../utils/onboarding';
+import { Segment } from '../components/Segment';
 import styles from './Availability.module.scss';
 
 // Nicht exportiert (Fast Refresh mag nur Komponenten als Export) – wer die Zahlen braucht, liest sie hier.
@@ -464,22 +465,15 @@ export function Availability({ online, onToast, heute = heuteIso() }: Availabili
   const eintraegeListe = frueher ? frueherListe : anstehend;
   const eintraegeSeite = (
     <>
-      <div className={styles.seg} role="group" aria-label="Zeitraum">
-        <button
-          className={`${styles.segBtn}${!frueher ? ' ' + styles.segAn : ''}`}
-          aria-pressed={!frueher}
-          onClick={() => setFrueher(false)}
-        >
-          Anstehend ({anstehend.length})
-        </button>
-        <button
-          className={`${styles.segBtn}${frueher ? ' ' + styles.segAn : ''}`}
-          aria-pressed={frueher}
-          onClick={() => setFrueher(true)}
-        >
-          Früher ({frueherListe.length})
-        </button>
-      </div>
+      <Segment
+        ariaLabel="Zeitraum"
+        value={frueher ? 'frueher' : 'anstehend'}
+        onChange={(v) => setFrueher(v === 'frueher')}
+        options={[
+          { value: 'anstehend', label: `Anstehend (${anstehend.length})` },
+          { value: 'frueher', label: `Früher (${frueherListe.length})` },
+        ]}
+      />
       {eintraegeListe.length === 0 ? (
         <div className={styles.leerBox}>
           <b>{frueher ? 'Nichts in der Vergangenheit.' : 'Noch nichts eingetragen.'}</b>
@@ -596,23 +590,25 @@ export function Availability({ online, onToast, heute = heuteIso() }: Availabili
         <CenterMessage icon="⚠️" text="Konnte nicht geladen werden." onRetry={neuLaden} />
       ) : (
         <div className={styles.wrap}>
-          <div className={styles.seg} role="group" aria-label="Ansicht">
-            <button
-              className={`${styles.segBtn}${seite === 'termine' ? ' ' + styles.segAn : ''}`}
-              aria-pressed={seite === 'termine'}
-              onClick={() => setSeite('termine')}
-            >
-              Termine
-            </button>
-            <button
-              className={`${styles.segBtn}${seite === 'eintraege' ? ' ' + styles.segAn : ''}`}
-              aria-pressed={seite === 'eintraege'}
-              onClick={() => setSeite('eintraege')}
-            >
-              Einträge
-              {anstehend.length > 0 && <span className={styles.zaehler}>{anstehend.length}</span>}
-            </button>
-          </div>
+          <Segment
+            ariaLabel="Ansicht"
+            value={seite}
+            onChange={setSeite}
+            options={[
+              { value: 'termine', label: 'Termine' },
+              {
+                value: 'eintraege',
+                label: (
+                  <>
+                    Einträge
+                    {anstehend.length > 0 && (
+                      <span className={styles.zaehler}>{anstehend.length}</span>
+                    )}
+                  </>
+                ),
+              },
+            ]}
+          />
           {seite === 'termine' ? termineSeite : eintraegeSeite}
         </div>
       )}

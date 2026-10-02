@@ -31,6 +31,10 @@
   --cp-dir: #0d7a6f; // ChordPro-Direktiven {…} im Editor (ChurchTools-passendes Teal)
 
   --seg-on: #ffffff; // aktives Segment / Toggle-Hintergrund
+  // Schiene der Umschalter (Kommende/Vergangene …). Eigene Farbe seit dem 02.10.2026: Sie war
+  // `--surface3` und damit exakt die Seitenfarbe `--bg` – der nicht gewählte Knopf sah aus wie
+  // bloßer Text (Alwin: „muss deutlicher werden als nur ein Text").
+  --seg-track: #dde2ea;
   --track-off: #d1d5db; // Toggle-Schiene (aus)
   --scrim: rgba(15, 22, 28, 0.5); // Overlay hinter Sheets/Dialogen
 
@@ -77,6 +81,7 @@ html[data-theme='dark'] {
   --cp-dir: #5fd0c3; // Direktiven-Teal (heller für Dark Mode)
 
   --seg-on: #3a4d5e;
+  --seg-track: #2b3a49; // hebt sich im Dunklen schon als `--surface3` ab – unverändert
   --track-off: #3a4856;
 
   // Leisten heller als die Basis → klar abgesetzt. Deckend und gleich der dunklen `theme-color`

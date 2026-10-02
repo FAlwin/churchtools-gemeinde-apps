@@ -9,6 +9,11 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Geändert
 
+- **Die Setlist hat oben keine milchige Leiste mehr.** Seit iOS 26/27 legt das iPhone über den
+  oberen Bildschirmrand ein Unschärfe-Band, das sich nicht abschalten lässt; die weiße Leiste mit
+  „‹ Termine", Teilen und Bearbeiten lag darin und wirkte milchig und verwaschen. Jetzt schweben
+  dort **runde Knöpfe** direkt unter dem Band – wie in den iPhone-Einstellungen –, scharf, und sie
+  bleiben beim Scrollen stehen.
 - **Umschalter sind als Knöpfe erkennbar.** Bei „Kommende | Vergangene" und den anderen Umschaltern
   sah der nicht gewählte Knopf aus wie bloßer Text: Die Schiene dahinter hatte genau die Farbe des
   Seitenhintergrunds. Sie ist jetzt grau wie beim iPhone. Die Abwesenheiten hatten einen eigenen,

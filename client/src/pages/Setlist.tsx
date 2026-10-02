@@ -17,7 +17,7 @@ import {
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
 import { SeitenGeruest } from '../components/SeitenGeruest';
-import { IconButton } from '../components/NavBar';
+import { RundKnopf } from '../components/KnopfReihe';
 import { CenterMessage } from '../components/CenterMessage';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { AddItemSheet } from '../components/AddItemSheet';
@@ -240,24 +240,24 @@ export function Setlist({
   }
 
   /**
-   * Die Knöpfe rechts in der Leiste. Titel und Datum stehen NICHT dort, sondern groß im Inhalt:
-   * Unter iOS 26/27 liegt die Leiste im Unschärfe-Band des Systems (siehe `client/index.html`) –
-   * Symbole verträgt das Band, Text nicht. Dieselbe Linie wie in den Tabs (22.09.2026).
+   * Die runden Knöpfe rechts (`KnopfReihe`, 02.10.2026). Titel und Datum stehen groß im Inhalt.
+   * Bis dahin saßen die Knöpfe in einer weißen Leiste im Unschärfe-Band von iOS 26/27 – dort waren
+   * auch Symbole weich, nicht nur Text (Screenshot Alwin, 02.10.2026). Jetzt schweben sie darunter.
    */
   const aktionen =
     !isLoading && !isError && items.length > 0 ? (
       <>
         {exportableSongs.length > 0 && !editMode && (
-          <IconButton
+          <RundKnopf
             onClick={() => void handleExportPdf()}
             title="Alle Lieder als PDF teilen"
             dataTour="setlist-share"
           >
             <Icon name="share" size={20} stroke={2.2} />
-          </IconButton>
+          </RundKnopf>
         )}
         {canEdit && (
-          <IconButton
+          <RundKnopf
             onClick={() => {
               setErr(null);
               setEditMode((v) => !v);
@@ -266,7 +266,7 @@ export function Setlist({
             dataTour="setlist-edit"
           >
             <Icon name={editMode ? 'check' : 'pencil'} size={20} stroke={2.2} />
-          </IconButton>
+          </RundKnopf>
         )}
       </>
     ) : undefined;

@@ -17,14 +17,18 @@ beginnt mit seiner großen Überschrift, und die ist im Ruhezustand **scharf** �
 des Bandes.
 
 1. App vom Home-Bildschirm starten. Tab **Termine**: Überschrift „Termine", darunter
-   „Kommende | Vergangene", darunter die Liste. Über der Überschrift ist nichts – der Inhalt läuft
+   „Kommende | Vergangene", darunter die Liste. Beide Knöpfe liegen auf einer **grauen Schiene**,
+   der nicht gewählte ist klar als Knopf erkennbar, nicht nur als Text (02.10.2026). Über der Überschrift ist nichts – der Inhalt läuft
    bis unter die Uhr.
 2. Dasselbe in **Lieder** („Lieder", darunter Suchfeld und Sortierung), **Abwesenheiten**
    („Abwesenheiten") und **Mehr** („Mehr").
 3. In jedem der vier: **hochschieben**. Die Überschrift wandert nach oben, läuft unter das Band und
    wird dabei weich – das ist der native Effekt von iOS, kein Fehler. Nichts bleibt oben kleben.
-4. Einen **Termin öffnen**: Oben stehen nur der blaue Zurück-Pfeil („Termine") und rechts die
-   Knöpfe; Name und Datum des Gottesdienstes stehen groß **darunter** im Inhalt.
+4. Einen **Termin öffnen**: Oben gibt es **keine weiße Leiste** mehr. Direkt unter Uhr und Band
+   schweben **runde Knöpfe** – links der Pfeil zurück, rechts Teilen und Bearbeiten –, alle
+   **scharf**. Name und Datum des Gottesdienstes stehen groß darunter. Den Ablauf hochschieben: Die
+   Knöpfe bleiben stehen, der Inhalt läuft unter ihnen durch. Der Pfeil führt zurück zu den
+   Terminen (02.10.2026, Vorbild die iPhone-Einstellungen).
 5. **Ganz nach oben:** In einer langen Liste (z. B. Mehr) weit nach unten scrollen, dann unten auf
    den **Tab tippen, in dem du schon bist** → die Ansicht springt an den Anfang. (Der Tipp auf die
    Uhrzeit oben tut in einer Web-App nichts – das kann iOS nicht weitergeben.)
@@ -35,9 +39,9 @@ des Bandes.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/SeitenGeruest.tsx`, `client/src/components/GrosseUeberschrift.tsx`, `client/src/components/Screen.tsx`, `client/src/components/Screen.module.scss`, `client/src/components/TabBar.tsx`, `client/index.html`, `client/src/styles/_variables.scss`
-- **Automatisiert:** teilweise – `client/src/components/SeitenGeruest.test.tsx` (Überschrift im Inhalt, Leiste nur mit Zurück/Aktionen, Überlagerung außerhalb des Scroll-Bereichs), `client/src/components/Screen.zumAnfang.test.tsx` (aktiver Tab scrollt nach oben); von Hand bleibt, wie es unter dem echten Unschärfe-Band aussieht
-- **Historie:** Kopfzeilen-Umbau 21./22.09.2026
+- **Betrifft:** `client/src/components/SeitenGeruest.tsx`, `client/src/components/KnopfReihe.tsx`, `client/src/components/Segment.tsx`, `client/src/components/GrosseUeberschrift.tsx`, `client/src/components/Screen.tsx`, `client/src/components/Screen.module.scss`, `client/src/components/TabBar.tsx`, `client/index.html`, `client/src/styles/_variables.scss`
+- **Automatisiert:** teilweise – `client/src/components/SeitenGeruest.test.tsx` (Überschrift im Inhalt, runde Knöpfe nur mit Zurück/Aktionen und außerhalb des Scroll-Bereichs, Überlagerung ebenso), `client/src/components/Screen.zumAnfang.test.tsx` (aktiver Tab scrollt nach oben); von Hand bleibt, wie es unter dem echten Unschärfe-Band aussieht
+- **Historie:** Kopfzeilen-Umbau 21./22.09.2026; runde Knöpfe und sichtbare Umschalter-Schiene 02.10.2026 (am selben Tag am Gerät widerlegt: eine deckende Statusleiste beseitigt das milchige Band nicht)
 
 </details>
 

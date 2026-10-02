@@ -97,6 +97,9 @@ html[data-theme='dark'] {
   // Bildschirme OHNE Leiste (große Überschrift im Inhalt): Abstand der Überschrift nach oben.
   // Im Safari-Tab reicht wenig (kein Band, keine Safe-Area).
   --inhalt-pad-top: 12px;
+  // Höhe der runden Knopfreihe (`KnopfReihe`) samt Luft zur Überschrift darunter – eine Quelle für
+  // die Reihe selbst und den Abstand der Überschrift (02.10.2026).
+  --knopfreihe-hoehe: 48px;
 }
 
 /**

@@ -4,9 +4,9 @@
   padding: var(--inhalt-pad-top) 16px 10px;
 }
 
-// Detailansichten: Die Leiste darüber hält den Abstand schon.
-.blockOhneAbstand {
-  padding: 4px 16px 10px;
+// Detailansichten: Unter den runden Knöpfen (`KnopfReihe`) – derselbe Abstand plus deren Höhe.
+.blockUnterKnoepfen {
+  padding: calc(var(--inhalt-pad-top) + var(--knopfreihe-hoehe)) 16px 10px;
 }
 
 .gross {

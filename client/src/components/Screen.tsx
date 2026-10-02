@@ -22,12 +22,6 @@ export function Screen({ children, className, style }: ScreenProps) {
 interface ScrollProps {
   children: ReactNode;
   /**
-   * Sitzt über diesem Bereich eine Leiste (Detailansichten mit Zurück-Pfeil)? Dann hält die Leiste
-   * den Abstand zum Unschärfe-Band schon, und der Zug-Anzeiger rückt dicht an den Inhalt – sonst
-   * läge er mitten in der Leiste.
-   */
-  unterLeiste?: boolean;
-  /**
    * Optional: aktiviert „Runterziehen zum Aktualisieren". Muss das Versprechen des Abrufs zurückgeben
    * – warum, steht an `onNeuLaden` in `SeitenGeruest.tsx`.
    */
@@ -48,13 +42,9 @@ const PULL_HOEHE = 48;
  * `Scroll` selbst `useZumAnfang` auf einen Ref, der im Pull-Zweig nie an ein Element kam – ein
  * zweiter, toter Listener neben dem in `PullScroll` (Code-Check 23.09.2026).
  */
-export function Scroll({ children, onRefresh, unterLeiste }: ScrollProps) {
+export function Scroll({ children, onRefresh }: ScrollProps) {
   if (!onRefresh) return <EinfachScroll>{children}</EinfachScroll>;
-  return (
-    <PullScroll onRefresh={onRefresh} unterLeiste={unterLeiste}>
-      {children}
-    </PullScroll>
-  );
+  return <PullScroll onRefresh={onRefresh}>{children}</PullScroll>;
 }
 
 function EinfachScroll({ children }: { children: ReactNode }) {
@@ -70,11 +60,9 @@ function EinfachScroll({ children }: { children: ReactNode }) {
 function PullScroll({
   children,
   onRefresh,
-  unterLeiste,
 }: {
   children: ReactNode;
   onRefresh: () => Promise<unknown>;
-  unterLeiste?: boolean;
 }) {
   const { ref, pull, refreshing, isTriggered, handlers } = usePullToRefresh(onRefresh);
   useZumAnfang(ref);
@@ -98,7 +86,7 @@ function PullScroll({
         sich darunter weg.
       */}
       <div
-        className={`${styles.pullIndicator}${unterLeiste ? ' ' + styles.pullDicht : ''}`}
+        className={styles.pullIndicator}
         /*
          * Die Deckkraft wächst mit dem Zug, statt bei einer festen Schwelle umzuspringen. Grund ist
          * die feste Position: Bei ganz kurzem Zug liegt der Anzeiger noch über der Überschrift

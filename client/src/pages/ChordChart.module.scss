@@ -8,7 +8,7 @@
   align-items: center;
   gap: 6px;
   padding: 8px 10px;
-  // Min. 20px oben (siehe NavBar): fängt Safari-Tab (env=0) + kurzzeitiges Safe-Area-Zurücksetzen ab.
+  // Min. 20px oben (siehe `--bar-pad-top` in `styles/_variables.scss`): fängt Safari-Tab (env=0) + kurzzeitiges Safe-Area-Zurücksetzen ab.
   // Wert und Begründung stehen in `styles/_variables.scss` – eine Stelle für beide Leisten.
   padding-top: var(--bar-pad-top);
   background: var(--nav-bg);

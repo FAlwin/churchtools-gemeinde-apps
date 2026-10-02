@@ -1,0 +1,55 @@
+// Runde Knöpfe unter dem Unschärfe-Band (02.10.2026, Vorbild: die iPhone-Einstellungen).
+//
+// Die Reihe schwebt ÜBER dem Inhalt und bleibt beim Scrollen stehen; der Inhalt läuft darunter
+// durch. Sie liegt mit `top: var(--inhalt-pad-top)` genau dort, wo auf den Tabs die Überschrift
+// beginnt – direkt unter dem Band. Darin wäre sie weich (native Apps haben dafür eine Ausnahme,
+// Web-Apps nicht; siehe `client/index.html`).
+.reihe {
+  position: absolute;
+  top: var(--inhalt-pad-top);
+  left: 16px;
+  right: 16px;
+  height: var(--knopfreihe-hoehe);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  z-index: 20;
+  // Die Lücke zwischen den Knöpfen gehört dem Inhalt darunter – Tippen und Ziehen gehen durch.
+  pointer-events: none;
+}
+
+.gruppe {
+  display: flex;
+  gap: 10px;
+}
+
+.knopf {
+  pointer-events: auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface2);
+  color: var(--blue-ink);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.16);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s;
+
+  &:active {
+    transform: scale(0.94);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+  }
+}
+
+// Zurück dunkel wie in den iPhone-Einstellungen, die Aktionen blau.
+.zurueck {
+  color: var(--text);
+}

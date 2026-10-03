@@ -224,13 +224,19 @@ holt sie zurück. Die Ränder blättern weiter wie bisher.
 1. Ein Lied öffnen, in die **Mitte** tippen → Leisten weg, Hinweis erscheint.
 2. Nochmal in die Mitte tippen → Leisten zurück.
 3. Am **linken** und **rechten** Rand tippen → es wird geblättert, die Leisten bleiben wie sie sind.
-4. Ins **Querformat** drehen, in die rechte Bildhälfte (aber nicht an den Rand) tippen → Leisten
-   weg **und** die Kopfzeile bezieht sich auf das rechte Lied.
-5. Mit zwei Fingern hineinzoomen, dann in die Mitte tippen → die Vergrößerung **bleibt genau so**,
-   nur die Leisten verschwinden. Nochmal tippen → Leisten zurück, Vergrößerung immer noch dieselbe.
+4. Ins **Querformat** drehen (zwei verschiedene Lieder nebeneinander), in die rechte Bildhälfte
+   (aber nicht an den Rand) tippen → **nur** die Leisten verschwinden; das aktive Lied wechselt
+   NICHT (#421). Ausgewählt wird über die Titel-Kapsel über der Hälfte (siehe TF-KOPF-01).
+5. Mit zwei Fingern hineinzoomen, dann in die Mitte tippen → **was man sieht, bleibt genau so**:
+   dieselbe Stelle des Blatts in der Mitte, die Schrift gleich groß; nur die Leisten verschwinden
+   (#420 – vorher verrutschte der Ausschnitt und das Blatt wurde größer). Nochmal tippen → Leisten
+   zurück, Ausschnitt immer noch derselbe.
    **Eine Minute stehen lassen** – auch der Hintergrund-Abgleich darf nichts daran ändern.
    Danach zu einem anderen Lied und wieder zurück blättern → die Vergrößerung ist ebenfalls noch da.
    (Bis v2.18 setzte das Umschalten den Zoom zurück; das war ein Missverständnis meinerseits.)
+   **Drehen (#420):** Im Hochformat hineinzoomen, ins Querformat drehen → das Blatt steht ganz da
+   (oder im Querformat-Zoom, falls dort einer gespeichert ist – nie angeschnitten). Zurückdrehen →
+   derselbe Ausschnitt wie vorher.
 6. **Am großen Bildschirm, Fenster hoch und schmal** (nicht am Handy!): einmal in die Mitte tippen
    und wieder zurück → die Seite muss am Ende wieder in die Fläche passen. Nur in einem hohen
    Fenster ist die Seite höhenbegrenzt; im Hochformat am Handy begrenzt die Breite und der Fehler
@@ -242,16 +248,19 @@ holt sie zurück. Die Ränder blättern weiter wie bisher.
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/hooks/usePageNavigation.ts`, `client/src/pages/ChordChart.tsx`, `client/src/components/PageDeck.tsx`, `client/src/utils/onboarding.ts`, `client/src/hooks/useZoomPersistence.ts`, `client/src/hooks/useZoomOrchestration.ts`
+- **Betrifft:** `client/src/hooks/usePageNavigation.ts`, `client/src/pages/ChordChart.tsx`, `client/src/components/PageDeck.tsx`, `client/src/utils/onboarding.ts`, `client/src/hooks/useZoomPersistence.ts`, `client/src/hooks/useZoomOrchestration.ts`, `client/src/utils/zoomAusschnitt.ts`
 - **Automatisiert:** weitgehend – `client/src/hooks/usePageNavigation.test.ts` (Zonen,
   Zeichenmodus, der nach einem Touch nachgereichte Klick), dazu `useZoomOrchestration.test.ts`
-  (dass das Umschalten NICHT am Zoom rührt – seit v2.19.0 behält das Vollbild die Vergrößerung).
+  (dass das Umschalten NICHT am Zoom rührt – seit v2.19.0 behält das Vollbild die Vergrößerung),
+  `client/src/utils/zoomAusschnitt.test.ts` und `useZoomPersistence.test.ts` (Ausschnitt statt
+  Pixel, #420).
   **Punkt 5 und 6 deckt
   `e2e/chart-fullscreen.spec.ts` ab** – bewusst als E2E, weil es um echte Geometrie geht
   (gerenderte Seiten, CSS, Zoom-Bibliothek) und die Messung nur in einem hohen Fenster etwas
   aussagt. Von Hand bleibt der Eindruck am Gerät: ob es sich beim echten Pinch richtig anfühlt,
   zeigt nur das Gerät.
-- **Historie:** #319
+- **Historie:** #319; #420 (Ausschnitt statt Pixel – der E2E prüfte bis dahin den Zoom-FAKTOR und
+  war grün bei genau dem Fehler); #421 (Mitte wählt im Querformat keine Hälfte mehr)
 
 </details>
 

@@ -17,6 +17,16 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 - **iPad: Der Bereich oben ist wieder so schmal wie vorher.** Das milchige Band gibt es dort nicht;
   der zusätzliche Abstand gilt nur noch auf dem iPhone.
 
+### Behoben
+
+- **Zoom verrutschte beim Vollbild und beim Drehen** (#420). Wer mit zwei Fingern hineingezoomt
+  hatte und dann ins Vollbild wechselte oder das iPad drehte, sah danach einen anderen Ausschnitt,
+  das Blatt war seitlich angeschnitten und größer. Der Zoom wurde als Pixel-Verschiebung gemerkt;
+  das Blatt wird bei einer neuen Fläche aber neu eingepasst. Jetzt merkt sich die App, **welche
+  Stelle des Blatts** in der Mitte steht: Nach Vollbild oder Drehen steht dieselbe Stelle wieder
+  dort, die Schrift bleibt gleich groß, und am Rand rutscht nichts heraus. Ältere gespeicherte
+  Zooms werden wenigstens am Rand begrenzt.
+
 ## [2.26.0] – 2026-10-02
 
 **Beim Update ist nichts zu tun.** Die Einführung zum Liedblatt erscheint einmal neu, weil die

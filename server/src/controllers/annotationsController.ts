@@ -11,7 +11,7 @@ async function myUserId(req: Request): Promise<number> {
   return req.ctUserId ?? (await getUserId(ctCookie(req)));
 }
 import * as store from '../services/annotations.js';
-import type { AnnotationText, PageAnnotation } from '@shared/types/index';
+import type { AnnotationText, GespeicherterZoom, PageAnnotation } from '@shared/types/index';
 import { ANNO_KEY_RE } from '@shared/keys/index';
 import { ctCookie } from '../utils/ctCookie.js';
 import { songIdsFromQuery } from '../utils/songIdsQuery.js';
@@ -33,11 +33,20 @@ const textSchema = z.object({
   align: z.enum(['left', 'center', 'right']).optional(),
 });
 
+/** Gespeicherter Zoom (#420: mit `fx`/`fy`, der Stelle auf dem Blatt). */
+const zoomSchema = z.object({
+  x: z.number(),
+  y: z.number(),
+  scale: z.number(),
+  fx: z.number().optional(),
+  fy: z.number().optional(),
+});
+
 const annoSchema = z.object({
   // PNG-DataURL der Striche – Obergrenze als Missbrauchs-Bremse (eine Seite).
   strokes: z.string().max(6_000_000).nullable().optional(),
   texts: z.array(textSchema).max(500).optional(),
-  zoom: z.object({ x: z.number(), y: z.number(), scale: z.number() }).nullable().optional(),
+  zoom: zoomSchema.nullable().optional(),
 });
 
 // Compile-Wächter: Zod-Schema und geteilter Typ PageAnnotation müssen deckungsgleich sein.
@@ -55,8 +64,12 @@ void _annoZodSubsetOfType;
 void _annoTypeSubsetOfZod;
 const _annoSchluessel: GleicheSchluessel<PageAnnotation, z.infer<typeof annoSchema>> = true;
 const _textSchluessel: GleicheSchluessel<AnnotationText, z.infer<typeof textSchema>> = true;
+// Auch der Zoom ist verschachtelt – und bekam mit #420 neue, optionale Felder. Ohne diese Zeile
+// hätte Zod `fx`/`fy` beim Speichern weggeschnitten, ohne dass ein Build es bemerkt.
+const _zoomSchluessel: GleicheSchluessel<GespeicherterZoom, z.infer<typeof zoomSchema>> = true;
 void _annoSchluessel;
 void _textSchluessel;
+void _zoomSchluessel;
 
 // Die Schlüsselform kommt aus @shared/keys (#250) – dieselbe Konstante wie im Client. Vorher stand
 // dieselbe Regex hier wortgleich ein zweites Mal; wäre eine der beiden gedriftet, hätte der Server

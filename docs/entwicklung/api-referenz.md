@@ -208,7 +208,7 @@ Client, damit eine Version mit eigener Überschrift auch ihre eigene trägt.
 
 ## Anmerkungen / Einstellungen (pro Konto, serverseitig auf dem Volume)
 
-- `GET  /api/annotations?songs=` / `PUT /api/annotations/:key` / `DELETE …/:key` → Anmerkungen+Zoom pro Konto (Feld-Merge strokes/texts/zoom; key `song<id>_v<ver>_<seite>[_lyr][_d<class>]`; Konto-Obergrenzen #139)
+- `GET  /api/annotations?songs=` / `PUT /api/annotations/:key` / `DELETE …/:key` → Anmerkungen+Zoom pro Konto (Feld-Merge strokes/texts/zoom; `zoom` = `{x, y, scale, fx?, fy?}` – `fx`/`fy` seit #420: die Stelle auf dem Blatt in der Mitte, Anteile 0–1; key `song<id>_v<ver>_<seite>[_lyr][_d<class>]`; Konto-Obergrenzen #139)
 - `GET  /api/settings?songs=` / `PUT /api/settings` → Lied-Einstellungen pro Konto (Schlüssel-Wert, Merge)
 
 ## Team-Notizen (geteilte Anmerkungen, PCO-Modell)

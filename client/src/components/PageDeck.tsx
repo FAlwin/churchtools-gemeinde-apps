@@ -19,6 +19,7 @@ import { usePointerStrokes } from '../hooks/usePointerStrokes';
 import { usePageNavigation } from '../hooks/usePageNavigation';
 import { usePageCanvases } from '../hooks/usePageCanvases';
 import { useZoomOrchestration } from '../hooks/useZoomOrchestration';
+import { ZOOM_GRENZEN, type Blatt, type Flaeche } from '../utils/zoomAusschnitt';
 import { useLatestRef } from '../hooks/useLatestRef';
 import { useRefPair } from '../hooks/useRefPair';
 import { useLandscape } from '../hooks/useLandscape';
@@ -31,8 +32,9 @@ import { SlidePanes } from './SlidePanes';
 import { Spinner } from './Spinner';
 import styles from './PageDeck.module.scss';
 
-const MIN_SCALE = 1;
-const MAX_SCALE = 6;
+// Aus der Umrechnung (#420): Dieselben Grenzen gelten beim Wiederherstellen eines Ausschnitts.
+const MIN_SCALE = ZOOM_GRENZEN.min;
+const MAX_SCALE = ZOOM_GRENZEN.max;
 
 interface PageDeckProps {
   /** Fertig gerenderte Seiten (offscreen-Canvas). Der aufrufende Loader liefert sie. */
@@ -160,6 +162,26 @@ export function PageDeck({
   const perView = landscape ? 2 : 1;
 
   // Pinch-Zoom: Speichern, Wiederherstellen und der komplette Lebenslauf einer Geste.
+  /**
+   * Fläche und Blatt eines Slots, gemessen am echten DOM (#420). Die Zoom-Ebene ist so groß wie die
+   * Fläche (`contentStyle` 100 %), das Blatt (die Inhalts-Canvas) sitzt darin in `.pageBox` – deren
+   * linke obere Ecke ist die der Ebene, also sind die `offset*`-Werte schon Ebenen-Koordinaten.
+   */
+  const geometrie = (j: number): { flaeche: Flaeche; blatt: Blatt } | null => {
+    const flaeche = transformRefs[j].current?.instance?.wrapperComponent;
+    const blatt = contentRefs[j].current;
+    if (!flaeche || !blatt) return null;
+    return {
+      flaeche: { w: flaeche.clientWidth, h: flaeche.clientHeight },
+      blatt: {
+        x: blatt.offsetLeft,
+        y: blatt.offsetTop,
+        w: blatt.offsetWidth,
+        h: blatt.offsetHeight,
+      },
+    };
+  };
+
   const { paneProps, loadZoom, restoreAfterPaint } = useZoomOrchestration({
     zoomKeyBaseFor,
     pageIndex,
@@ -170,6 +192,7 @@ export function PageDeck({
     transformRefs,
     onZoomedChange,
     resetZoomSignal,
+    geometrie,
   });
 
   // ── Schlüssel der beteiligten Seiten ──

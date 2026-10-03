@@ -2,6 +2,14 @@ import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
 import { useZoomPersistence, type ZoomState } from './useZoomPersistence';
 import { useLatestRef } from './useLatestRef';
+import {
+  ZOOM_GRENZEN,
+  faktorFuerBlattBreite,
+  transformAus,
+  type Ausschnitt,
+  type Blatt,
+  type Flaeche,
+} from '../utils/zoomAusschnitt';
 
 interface UseZoomOrchestrationParams {
   /** Basis-Schlüssel für den gespeicherten Zoom einer Seite (ohne Layout-Suffix). */
@@ -20,6 +28,8 @@ interface UseZoomOrchestrationParams {
   onZoomedChange?: (zoomed: boolean) => void;
   /** Erhöht sich, wenn der Reset-Knopf gedrückt wurde. */
   resetZoomSignal: number;
+  /** Fläche und Blatt eines Slots (#420) – `PageDeck` vermisst sie an den echten Elementen. */
+  geometrie: (slot: number) => { flaeche: Flaeche; blatt: Blatt } | null;
   /**
    * Signal „nur einpassen" (#319): Beim Aus-/Einblenden der Leisten ändert sich die Höhe der
    * Anzeigefläche. Anders als `resetZoomSignal` bleibt ein gespeicherter Zoom dabei erhalten – der
@@ -64,6 +74,7 @@ export function useZoomOrchestration({
   transformRefs,
   onZoomedChange,
   resetZoomSignal,
+  geometrie,
 }: UseZoomOrchestrationParams) {
   // Letzter Zoom-Faktor je Slot – um „aktives Herauszoomen" von programmatischem Reset zu unterscheiden.
   const lastScale = useRef<[number, number]>([1, 1]);
@@ -72,6 +83,10 @@ export function useZoomOrchestration({
   // Welche sichtbaren Seiten gerade reingezoomt sind (auch geladener Zoom) → steuert
   // Wisch-Navigation und den Zoom-Reset-Knopf.
   const [zoomedSlots, setZoomedSlots] = useState<[boolean, boolean]>([false, false]);
+  // Der zuletzt gewählte Ausschnitt je Slot (#420) – siehe `useZoomPersistence`.
+  const letzterAusschnitt = useRef<[Ausschnitt | null, Ausschnitt | null]>([null, null]);
+  // Je Slot ein Beobachter der Zoom-Fläche – meldet Vollbild an/aus und Drehen.
+  const groessenBeobachter = useRef<[ResizeObserver | null, ResizeObserver | null]>([null, null]);
 
   const zoom = useZoomPersistence({
     zoomKeyBaseFor,
@@ -81,7 +96,53 @@ export function useZoomOrchestration({
     lastScale,
     gestureSlot,
     zoomedSlots,
+    geometrie,
+    letzterAusschnitt,
   });
+  const geometrieRef = useLatestRef(geometrie);
+
+  /**
+   * **Neue Flächengröße → derselbe Ausschnitt** (#420, Alwin am iPad: „wenn ich reinzoome und dann
+   * in den Vollbildmodus wechsle, ist der Zoom falsch").
+   *
+   * Die Zoom-Ebene ist so groß wie die Fläche, das Blatt darin wird bei Vollbild oder Drehen neu
+   * eingepasst. Die Bibliothek behielt ihre Pixel-Verschiebung und richtete dann zur Mitte hin aus –
+   * der Ausschnitt verrutschte. Hier wird nach der Größenänderung derselbe Ausschnitt gesetzt: die
+   * gleiche Stelle des Blatts in der Mitte, das Blatt so breit wie vorher (die Schrift wächst nicht
+   * mit), am Rand begrenzt. Zweimal `requestAnimationFrame` plus ein 250-ms-Netz liegen sicher NACH
+   * der Neuausrichtung der Bibliothek – dasselbe Muster wie in `usePageCanvases`.
+   */
+  function nachGroessenaenderung(j: number) {
+    const anwenden = () => {
+      if (gestureSlot.current === j) return; // laufende Geste nie unterbrechen (#33)
+      const a = letzterAusschnitt.current[j];
+      const ref = transformRefs[j].current;
+      const geo = geometrieRef.current(j);
+      if (!a || !ref || !geo) return;
+      const s = faktorFuerBlattBreite(a.blattBreite, geo.blatt);
+      const t = transformAus(a, s, geo.flaeche, geo.blatt, ZOOM_GRENZEN);
+      ref.setTransform(t.x, t.y, t.scale, 0);
+    };
+    requestAnimationFrame(() => requestAnimationFrame(anwenden));
+    window.setTimeout(anwenden, 250);
+  }
+
+  /** Die Zoom-Fläche eines Slots beobachten – nur echte Größenänderungen lösen etwas aus. */
+  function beobachte(j: number, wrapper: HTMLElement | null | undefined) {
+    groessenBeobachter.current[j]?.disconnect();
+    groessenBeobachter.current[j] = null;
+    if (!wrapper || typeof ResizeObserver === 'undefined') return;
+    let zuletzt = { w: wrapper.clientWidth, h: wrapper.clientHeight };
+    const ro = new ResizeObserver(() => {
+      const jetzt = { w: wrapper.clientWidth, h: wrapper.clientHeight };
+      if (jetzt.w === zuletzt.w && jetzt.h === zuletzt.h) return;
+      zuletzt = jetzt;
+      nachGroessenaenderung(j);
+    });
+    ro.observe(wrapper);
+    groessenBeobachter.current[j] = ro;
+  }
+
   // Die Funktionen entstehen je Render neu (sie hängen an `zoomKeyBaseFor`, das der Aufrufer inline
   // erzeugt). In einer Ref dürfen die Effekte sie aufrufen, ohne ihre Abhängigkeitsliste zu
   // verfälschen – das war einer der Gründe für die abgeschalteten Hook-Prüfungen.
@@ -98,10 +159,11 @@ export function useZoomOrchestration({
     requestAnimationFrame(() => zoomRef.current.restoreVisibleZoom({ fitUnsaved: true }));
   }, [pageIndex, perView, loading, zoomRef]);
 
-  // Gesten-Ende-Timer beim Unmount aufräumen.
+  // Gesten-Ende-Timer und Größen-Beobachter beim Unmount aufräumen.
   useEffect(
     () => () => {
       if (gestureEndTimer.current) clearTimeout(gestureEndTimer.current);
+      for (const ro of groessenBeobachter.current) ro?.disconnect();
     },
     [],
   );
@@ -148,9 +210,11 @@ export function useZoomOrchestration({
       // Gespeicherten Zoom SOFORT anwenden, sobald die Ebene vermessen ist (kein Warten auf einen
       // späteren Effekt → keine sichtbare Verzögerung nach dem Blättern).
       onInit: (ref) => {
+        beobachte(j, ref.instance?.wrapperComponent);
         if (gestureSlot.current === j) return;
+        letzterAusschnitt.current[j] = null; // neue Ebene (Blättern/Drehen): alter Ausschnitt gilt nicht
         const saved = zoom.loadZoom(pageIndex + j);
-        if (saved) ref.setTransform(saved.x, saved.y, saved.scale, 0);
+        if (saved) zoom.zoomAnwenden(ref, j, saved);
       },
       // Synchron am Gesten-Start setzen (Pinch löst onZoomStart aus, auch beim reinen
       // Zwei-Finger-Verschieben) → schon das erste onTransformed sichert korrekt.

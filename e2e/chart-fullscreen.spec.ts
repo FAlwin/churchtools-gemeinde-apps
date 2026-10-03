@@ -73,6 +73,12 @@ test('Vollbild BEHÄLT den Zoom – es blendet nur die Leisten aus', async ({ pa
    *
    * Ein Test, der eine falsch verstandene Anforderung festhält, ist schlimmer als keiner: Er macht
    * den Fehler dauerhaft. Deshalb umgeschrieben statt gelöscht – die Zusage steht jetzt richtig da.
+   *
+   * **Zweite Korrektur (#420, 03.10.2026):** Bis dahin prüfte der Test den FAKTOR der
+   * Zoom-Bibliothek. Der blieb tatsächlich gleich – aber das Blatt wird im Vollbild neu eingepasst,
+   * also wurde es trotzdem größer und verrutschte (Alwin am iPad: „der Zoom ist falsch"). Der Test
+   * war grün bei genau dem Fehler. Geprüft wird jetzt, was man SIEHT: dieselbe Blattbreite auf dem
+   * Bildschirm und dieselbe Stelle des Blatts in der Mitte.
    */
   await page.addInitScript((tour: string) => {
     localStorage.setItem(`worship:onboard-${tour}`, '1');
@@ -93,6 +99,26 @@ test('Vollbild BEHÄLT den Zoom – es blendet nur die Leisten aus', async ({ pa
       return t ? +new DOMMatrix(getComputedStyle(t).transform).a.toFixed(2) : -1;
     });
 
+  /** Was man sieht: Blattbreite auf dem Bildschirm und welche Stelle des Blatts in der Mitte steht. */
+  const ansicht = () =>
+    page.evaluate(() => {
+      const c = document.querySelector('canvas')!.getBoundingClientRect();
+      const w = document.querySelector('.react-transform-wrapper')!.getBoundingClientRect();
+      return {
+        breite: c.width,
+        fx: (w.left + w.width / 2 - c.left) / c.width,
+        fy: (w.top + w.height / 2 - c.top) / c.height,
+      };
+    });
+  const gleich = (
+    x: { breite: number; fx: number; fy: number },
+    y: { breite: number; fx: number; fy: number },
+  ) => {
+    expect(Math.abs(x.breite - y.breite)).toBeLessThanOrEqual(3);
+    expect(Math.abs(x.fx - y.fx)).toBeLessThanOrEqual(0.01);
+    expect(Math.abs(x.fy - y.fy)).toBeLessThanOrEqual(0.01);
+  };
+
   // Hineinzoomen wie mit zwei Fingern.
   await page.mouse.move(mx, my);
   for (let i = 0; i < 8; i++) {
@@ -103,22 +129,22 @@ test('Vollbild BEHÄLT den Zoom – es blendet nur die Leisten aus', async ({ pa
   }
   await page.waitForTimeout(500);
 
-  const gezoomt = await skala();
-  expect(gezoomt).toBeGreaterThan(1.2); // Vorbedingung: Es ist wirklich vergrößert.
+  expect(await skala()).toBeGreaterThan(1.2); // Vorbedingung: Es ist wirklich vergrößert.
+  const vorher = await ansicht();
 
-  // Ins Vollbild – die Vergrößerung muss BLEIBEN.
+  // Ins Vollbild – was man sieht, muss BLEIBEN: gleiche Blattbreite, gleiche Stelle.
   await page.mouse.click(mx, my);
   await expect(page.locator('[class*="hdr"]')).toHaveCount(0);
   await page.waitForTimeout(700);
-  expect(await skala()).toBe(gezoomt);
+  gleich(await ansicht(), vorher);
 
   // Und zurück – ebenfalls unverändert.
   await page.mouse.click(mx, my);
   await expect(page.locator('[class*="hdr"]')).toBeVisible();
   await page.waitForTimeout(700);
-  expect(await skala()).toBe(gezoomt);
+  gleich(await ansicht(), vorher);
 
   // Auch nach längerem Stehen: Kein Abgleich darf daran rühren (der 30-Sekunden-Fall).
   await page.waitForTimeout(2000);
-  expect(await skala()).toBe(gezoomt);
+  gleich(await ansicht(), vorher);
 });

@@ -799,13 +799,29 @@ export interface AnnotationText {
   align?: 'left' | 'center' | 'right';
 }
 
+/**
+ * Gespeicherter Zoom einer Seite – **die eine Form** für Client, Server und Konto-Sync.
+ *
+ * `x`/`y`/`scale` ist die Pixel-Form der Zoom-Bibliothek. Seit #420 (03.10.2026) kommen `fx`/`fy`
+ * dazu: welche Stelle des BLATTS in der Mitte steht (Anteile 0–1). Nur damit übersteht ein Zoom eine
+ * andere Flächengröße (Vollbild, Drehen); die Pixel allein verrutschten. Beide optional, damit
+ * ältere Einträge und ältere App-Stände weiter passen – die bleiben bei `x`/`y`.
+ */
+export interface GespeicherterZoom {
+  x: number;
+  y: number;
+  scale: number;
+  fx?: number;
+  fy?: number;
+}
+
 /** Anmerkungen einer Seite, pro Konto gespeichert: Striche (PNG-DataURL) + Texte + Zoom. */
 export interface PageAnnotation {
   /** Striche als PNG-DataURL (oder null = keine). */
   strokes?: string | null;
   texts?: AnnotationText[];
   /** Gespeicherter Zoom der Seite. */
-  zoom?: { x: number; y: number; scale: number } | null;
+  zoom?: GespeicherterZoom | null;
 }
 
 /** Geteilte (fremde) Anmerkungsebene beim Ansehen – wie PageAnnotation, aber ohne Zoom. */

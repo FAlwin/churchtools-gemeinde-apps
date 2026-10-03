@@ -1,13 +1,19 @@
+import type { GespeicherterZoom } from '@shared/types/index';
 import type { MutableRefObject } from 'react';
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
 import { pushField } from '../services/annotations';
 import { deviceClass } from '../utils/deviceClass';
+import {
+  ZOOM_GRENZEN,
+  ausschnittAus,
+  transformAus,
+  type Ausschnitt,
+  type Blatt,
+  type Flaeche,
+} from '../utils/zoomAusschnitt';
 
-export interface ZoomState {
-  x: number;
-  y: number;
-  scale: number;
-}
+/** Gespeicherter Zoom – dieselbe Form wie im Konto-Sync (`@shared/types`, mit `fx`/`fy` seit #420). */
+export type ZoomState = GespeicherterZoom;
 
 interface UseZoomPersistenceParams {
   /** Basis-Schlüssel für den gespeicherten Zoom einer Seite (ohne Layout-Suffix). */
@@ -24,6 +30,15 @@ interface UseZoomPersistenceParams {
   gestureSlot: MutableRefObject<number | null>;
   /** Welche sichtbaren Slots gerade reingezoomt sind. */
   zoomedSlots: [boolean, boolean];
+  /** Fläche und Blatt eines Slots – für die Umrechnung in einen Ausschnitt (#420). */
+  geometrie: (slot: number) => { flaeche: Flaeche; blatt: Blatt } | null;
+  /**
+   * Der zuletzt vom NUTZER gewählte (oder wiederhergestellte) Ausschnitt je Slot. Daraus stellt
+   * `useZoomOrchestration` nach einer neuen Flächengröße denselben Ausschnitt her. Bewusst nicht aus
+   * jedem `onTransformed` – die Neuausrichtung der Bibliothek nach einer Größenänderung würde ihn
+   * sonst mit dem verrutschten Stand überschreiben.
+   */
+  letzterAusschnitt: MutableRefObject<[Ausschnitt | null, Ausschnitt | null]>;
 }
 
 /**
@@ -46,6 +61,8 @@ export function useZoomPersistence({
   lastScale,
   gestureSlot,
   zoomedSlots,
+  geometrie,
+  letzterAusschnitt,
 }: UseZoomPersistenceParams) {
   const zoomKeyFor = (page: number): string =>
     `${zoomKeyBaseFor(page)}_d${deviceClass()}${perView}`;
@@ -97,7 +114,18 @@ export function useZoomPersistence({
     if (!t) return;
     const page = pageIndex + slot;
     if (t.scale > 1.01) {
-      const zoom = { x: t.positionX, y: t.positionY, scale: t.scale };
+      // Neben den Pixeln die Stelle auf dem Blatt (#420) – nur sie übersteht eine neue Fläche.
+      const geo = geometrie(slot);
+      const a = geo
+        ? ausschnittAus({ x: t.positionX, y: t.positionY, scale: t.scale }, geo.flaeche, geo.blatt)
+        : null;
+      letzterAusschnitt.current[slot] = a;
+      const zoom: ZoomState = {
+        x: t.positionX,
+        y: t.positionY,
+        scale: t.scale,
+        ...(a ? { fx: a.fx, fy: a.fy } : {}),
+      };
       const zk = zoomKeyFor(page);
       try {
         localStorage.setItem(zk, JSON.stringify(zoom));
@@ -109,6 +137,7 @@ export function useZoomPersistence({
       // Nur löschen, wenn der Nutzer AKTIV wieder auf Fit herausgezoomt hat – nicht beim
       // programmatischen Zurücksetzen/Mounten (das würde einen gespeicherten Zoom fälschlich wipen).
       clearStoredZoom(page);
+      letzterAusschnitt.current[slot] = null;
     }
     lastScale.current[slot] = t.scale;
   }
@@ -119,8 +148,32 @@ export function useZoomPersistence({
       if (!zoomedSlots[j]) continue;
       transformRefs[j].current?.resetTransform(150);
       clearStoredZoom(pageIndex + j);
+      letzterAusschnitt.current[j] = null;
     }
     gestureSlot.current = null;
+  }
+
+  /**
+   * Einen gespeicherten Zoom auf eine Ebene anwenden – **über den Ausschnitt** (#420), nicht über
+   * die gespeicherten Pixel. Ein Eintrag mit `fx`/`fy` zeigt dieselbe Stelle des Blatts; ein älterer
+   * ohne wird aus seinen Pixeln gelesen und dann wenigstens am Rand begrenzt (vorher konnte er das
+   * Blatt seitlich abschneiden). Ohne vermessenes Blatt bleibt es bei den Pixeln wie bisher.
+   */
+  function zoomAnwenden(ref: ReactZoomPanPinchRef, slot: number, saved: ZoomState) {
+    const geo = geometrie(slot);
+    const a =
+      geo && saved.fx !== undefined && saved.fy !== undefined
+        ? { fx: saved.fx, fy: saved.fy }
+        : geo
+          ? ausschnittAus(saved, geo.flaeche, geo.blatt)
+          : null;
+    if (!geo || !a) {
+      ref.setTransform(saved.x, saved.y, saved.scale, 0);
+      return;
+    }
+    const t = transformAus(a, saved.scale, geo.flaeche, geo.blatt, ZOOM_GRENZEN);
+    ref.setTransform(t.x, t.y, t.scale, 0);
+    letzterAusschnitt.current[slot] = ausschnittAus(t, geo.flaeche, geo.blatt);
   }
 
   /**
@@ -138,10 +191,11 @@ export function useZoomPersistence({
       if (!ref) continue;
       const saved = loadZoom(pageIndex + j);
       if (saved) {
-        ref.setTransform(saved.x, saved.y, saved.scale, 0);
+        zoomAnwenden(ref, j, saved);
       } else if (fitUnsaved) {
         const st = ref.instance?.transformState;
         if (st && st.scale > 1.01) ref.resetTransform(0);
+        letzterAusschnitt.current[j] = null;
       }
     }
   }
@@ -153,5 +207,6 @@ export function useZoomPersistence({
     clearStoredZoom,
     resetVisibleZoom,
     restoreVisibleZoom,
+    zoomAnwenden,
   };
 }

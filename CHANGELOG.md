@@ -7,6 +7,16 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Geändert
+
+- **Querformat: Jedes Lied hat seinen eigenen Titel oben** (#421). Stehen zwei Lieder nebeneinander,
+  sitzt über jeder Hälfte eine Titel-Kapsel; die aktive trägt einen blauen Ring. Ein Tipp auf die
+  blasse wählt dieses Lied für Werkzeuge, Anmerken und Lied-Menü. Vorher wählte man es mit einem
+  Tipp aufs Blatt – und landete dabei im Vollbild, sodass man die Auswahl erst nach dem Zurückschalten
+  sah. Der Tipp aufs Blatt schaltet jetzt nur noch das Vollbild.
+- **iPad: Der Bereich oben ist wieder so schmal wie vorher.** Das milchige Band gibt es dort nicht;
+  der zusätzliche Abstand gilt nur noch auf dem iPhone.
+
 ## [2.26.0] – 2026-10-02
 
 **Beim Update ist nichts zu tun.** Die Einführung zum Liedblatt erscheint einmal neu, weil die

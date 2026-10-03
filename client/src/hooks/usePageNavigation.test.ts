@@ -83,17 +83,17 @@ describe('usePageNavigation – die drei Zonen', () => {
     expect(args.onActivePage).not.toHaveBeenCalled();
   });
 
-  it('macht im Querformat BEIDES: Leisten umschalten und Hälfte wählen', () => {
+  /**
+   * #421 (03.10.2026): Vorher wählte derselbe Tipp im Querformat zusätzlich die Hälfte – wer das
+   * andere Lied wollte, landete im Vollbild. Ausgewählt wird jetzt über die Titel-Kapseln.
+   */
+  it('schaltet im Querformat NUR die Leisten um – eine Hälfte wählt der Tipp nicht mehr', () => {
     const { result, args } = starte({ perView: 2 });
-    klick(result, 0.7); // rechte Hälfte, aber innerhalb der Mitte-Zone
+    klick(result, 0.7); // rechte Hälfte, innerhalb der Mitte-Zone
     expect(args.onMiddleTap).toHaveBeenCalledTimes(1);
-    expect(args.onActivePage).toHaveBeenCalledWith(3);
-  });
-
-  it('wählt im Querformat links die linke Hälfte', () => {
-    const { result, args } = starte({ perView: 2 });
-    klick(result, 0.3);
-    expect(args.onActivePage).toHaveBeenCalledWith(2);
+    expect(args.onActivePage).not.toHaveBeenCalled();
+    klick(result, 0.3); // linke Hälfte
+    expect(args.onActivePage).not.toHaveBeenCalled();
   });
 });
 

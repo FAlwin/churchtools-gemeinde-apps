@@ -57,6 +57,40 @@
   }
 }
 
+// ── Querformat, zwei Lieder nebeneinander: je Hälfte eine Kapsel (#421, 03.10.2026) ──
+// Das Paar reicht über die volle Kopfbreite (die negativen Ränder nehmen die runden Knöpfe mit
+// hinein), damit jede Kapsel mittig über IHRER Blatthälfte steht und nicht nur ungefähr. Die
+// Kapseln halten Abstand zu den Knöpfen; Tipps in die Lücken gehen an die Knöpfe durch.
+.kapselPaar {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  margin: 0 calc(-1 * (var(--rundknopf) + 8px));
+  pointer-events: none;
+
+  > .menuBtn {
+    pointer-events: auto;
+    justify-self: center;
+    flex: none;
+    max-width: calc(100% - 2 * (var(--rundknopf) + 14px));
+  }
+}
+
+// Die aktive Kapsel trägt einen blauen Ring – sie bestimmt, wofür Werkzeuge und Menü gelten.
+.kapselAktiv {
+  box-shadow:
+    0 0 0 2px var(--blue),
+    0 1px 4px rgba(15, 23, 42, 0.16);
+}
+
+// Die andere Kapsel ist zurückgenommen: Ein Tipp wählt dieses Lied.
+.kapselInaktiv {
+  opacity: 0.6;
+  box-shadow: none;
+}
+
 // Lied-Menü offen: Kapsel hellblau wie der Werkzeuge-Knopf mit offenem Fenster (02.10.2026).
 .menuBtnOffen {
   background: var(--blue-tile);

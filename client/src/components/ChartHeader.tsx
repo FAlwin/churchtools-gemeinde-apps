@@ -6,6 +6,18 @@ import { WerkzeugMenu, type Werkzeug } from './WerkzeugMenu';
 import styles from '../pages/ChordChart.module.scss';
 
 /**
+ * Die ANDERE Hälfte im Querformat (#421): ein zweites sichtbares Lied neben dem aktiven. Ihr Tipp
+ * macht dieses Lied zum aktiven – für Werkzeuge, Anmerken und Lied-Menü.
+ */
+export interface AndereHaelfte {
+  /** Links (0) oder rechts (1) – die aktive Kapsel steht auf der jeweils anderen Seite. */
+  slot: 0 | 1;
+  titel: string;
+  info: HeadInfoPart[];
+  onWaehlen: () => void;
+}
+
+/**
  * Die Kopfzeile der Lied-Anzeige (#314 – vorher inline in `pages/ChordChart.tsx`).
  *
  * Links zurück, daneben der Lied-Knopf mit Info-Zeile, rechts **ein** runder Knopf für alle
@@ -25,6 +37,12 @@ import styles from '../pages/ChordChart.module.scss';
  */
 interface ChartHeaderProps {
   songTitle: string;
+  /**
+   * Querformat mit zwei verschiedenen Liedern nebeneinander: Dann steht über JEDER Hälfte eine
+   * Titel-Kapsel (#421, Entwurf mit Alwin 03.10.2026) – die aktive hervorgehoben, die andere
+   * zurückgenommen. Ohne diese Angabe gibt es eine Kapsel wie bisher.
+   */
+  andereHaelfte?: AndereHaelfte | null;
   /** Info-Zeile aus `deriveActiveSongView` – reine Daten, die Klassen setzt diese Komponente. */
   headInfo: HeadInfoPart[];
   /** Lied-Menü offen (für `aria-expanded`). */
@@ -80,6 +98,7 @@ interface ChartHeaderProps {
 
 export function ChartHeader({
   songTitle,
+  andereHaelfte = null,
   headInfo,
   menuOpen,
   viewing,
@@ -199,43 +218,93 @@ export function ChartHeader({
     </RundKnopf>
   );
 
+  /** Die Kapsel des AKTIVEN Lieds – öffnet das Lied-Menü, trägt Tempo und Puls. */
+  const aktiveKapsel = (
+    <button
+      className={`${styles.menuBtn}${liedFensterOffen ? ' ' + styles.menuBtnOffen : ''}${
+        andereHaelfte ? ' ' + styles.kapselAktiv : ''
+      }`}
+      data-tour="chart-lied"
+      onClick={() => !viewing && onToggleMenu()}
+      aria-haspopup="menu"
+      aria-expanded={menuOpen}
+    >
+      <span className={styles.menuTitleRow}>
+        {/* Ohne kleinen ▾-Pfeil (Alwin, 02.10.2026) – die Kapsel selbst ist der Knopf. */}
+        <span className={styles.songTitle}>{songTitle}</span>
+      </span>
+      {/* Auch dann zeigen, wenn das Lied selbst nichts mitbringt, aber ein Tempo eingestellt
+                ist – sonst verschwände die frisch angetippte Angabe samt Puls wieder. */}
+      {(headInfo.length > 0 || pulsBpm !== null) && (
+        <span className={styles.menuInfo}>
+          {headInfo.map((part, i) => (
+            <span key={i} className={styles.menuInfoPart}>
+              {i > 0 && <span className={styles.menuInfoDot}>·</span>}
+              {part.art === 'key' && <span className={styles.infoKey}>{part.text}</span>}
+              {part.art === 'capo' && <span className={styles.infoCapo}>{part.text}</span>}
+              {part.art === 'bpm' && tempoAnzeige(pulsBpm ?? part.bpm)}
+              {part.art === 'plain' && part.text}
+            </span>
+          ))}
+          {!hatEigenesTempo && pulsBpm !== null && (
+            <span className={styles.menuInfoPart}>
+              {headInfo.length > 0 && <span className={styles.menuInfoDot}>·</span>}
+              {tempoAnzeige(pulsBpm)}
+            </span>
+          )}
+        </span>
+      )}
+    </button>
+  );
+
+  /**
+   * Die Kapsel des ANDEREN sichtbaren Lieds (#421): zurückgenommen, ohne Puls (der gehört dem
+   * aktiven). Ein Tipp wählt dieses Lied – mehr nicht; sein Menü öffnet erst der nächste Tipp.
+   */
+  const andereKapsel = andereHaelfte && (
+    <button
+      type="button"
+      className={`${styles.menuBtn} ${styles.kapselInaktiv}`}
+      onClick={andereHaelfte.onWaehlen}
+      aria-label={`${andereHaelfte.titel} auswählen`}
+    >
+      <span className={styles.menuTitleRow}>
+        <span className={styles.songTitle}>{andereHaelfte.titel}</span>
+      </span>
+      {andereHaelfte.info.length > 0 && (
+        <span className={styles.menuInfo}>
+          {andereHaelfte.info.map((part, i) => (
+            <span key={i} className={styles.menuInfoPart}>
+              {i > 0 && <span className={styles.menuInfoDot}>·</span>}
+              {part.art === 'key' && <span className={styles.infoKey}>{part.text}</span>}
+              {part.art === 'capo' && <span className={styles.infoCapo}>{part.text}</span>}
+              {part.art === 'bpm' && (
+                <>
+                  <Icon name="metronome" size={15} stroke={1.9} className={styles.infoMetronom} />
+                  {part.bpm}
+                </>
+              )}
+              {part.art === 'plain' && part.text}
+            </span>
+          ))}
+        </span>
+      )}
+    </button>
+  );
+
   return (
     <>
       <div className={styles.hdr}>
         <ZurueckKnopf onClick={onBack} />
-        <button
-          className={`${styles.menuBtn}${liedFensterOffen ? ' ' + styles.menuBtnOffen : ''}`}
-          data-tour="chart-lied"
-          onClick={() => !viewing && onToggleMenu()}
-          aria-haspopup="menu"
-          aria-expanded={menuOpen}
-        >
-          <span className={styles.menuTitleRow}>
-            {/* Ohne kleinen ▾-Pfeil (Alwin, 02.10.2026) – die Kapsel selbst ist der Knopf. */}
-            <span className={styles.songTitle}>{songTitle}</span>
-          </span>
-          {/* Auch dann zeigen, wenn das Lied selbst nichts mitbringt, aber ein Tempo eingestellt
-              ist – sonst verschwände die frisch angetippte Angabe samt Puls wieder. */}
-          {(headInfo.length > 0 || pulsBpm !== null) && (
-            <span className={styles.menuInfo}>
-              {headInfo.map((part, i) => (
-                <span key={i} className={styles.menuInfoPart}>
-                  {i > 0 && <span className={styles.menuInfoDot}>·</span>}
-                  {part.art === 'key' && <span className={styles.infoKey}>{part.text}</span>}
-                  {part.art === 'capo' && <span className={styles.infoCapo}>{part.text}</span>}
-                  {part.art === 'bpm' && tempoAnzeige(pulsBpm ?? part.bpm)}
-                  {part.art === 'plain' && part.text}
-                </span>
-              ))}
-              {!hatEigenesTempo && pulsBpm !== null && (
-                <span className={styles.menuInfoPart}>
-                  {headInfo.length > 0 && <span className={styles.menuInfoDot}>·</span>}
-                  {tempoAnzeige(pulsBpm)}
-                </span>
-              )}
-            </span>
-          )}
-        </button>
+        {andereHaelfte ? (
+          // Querformat, zwei Lieder: je Hälfte eine Kapsel, mittig über ihrem Blatt (#421).
+          <div className={styles.kapselPaar}>
+            {andereHaelfte.slot === 1 ? aktiveKapsel : andereKapsel}
+            {andereHaelfte.slot === 1 ? andereKapsel : aktiveKapsel}
+          </div>
+        ) : (
+          aktiveKapsel
+        )}
         {werkzeugKnopf}
       </div>
       {werkzeugeOffen && !drawMode && !viewing && (

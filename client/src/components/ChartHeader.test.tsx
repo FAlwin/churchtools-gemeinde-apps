@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { ChartHeader } from './ChartHeader';
+import { ChartHeader, type AndereHaelfte } from './ChartHeader';
 import type { HeadInfoPart } from '../utils/activeSongView';
 
 /**
@@ -15,6 +15,7 @@ import type { HeadInfoPart } from '../utils/activeSongView';
  */
 const props = {
   songTitle: 'Höher',
+  andereHaelfte: null as AndereHaelfte | null,
   headInfo: [] as HeadInfoPart[],
   menuOpen: false,
   viewing: false,
@@ -194,5 +195,60 @@ describe('ChartHeader – der Werkzeuge-Knopf', () => {
   it('leuchtet, solange Puls oder Klick laufen', () => {
     zeige({ tempoAktiv: true });
     expect(screen.getByRole('button', { name: 'Werkzeuge' }).className).toMatch(/aktiv/);
+  });
+});
+
+/**
+ * **Querformat mit zwei Liedern** (#421, Entwurf mit Alwin 03.10.2026): je Hälfte eine Kapsel. Die
+ * aktive öffnet das Lied-Menü, die andere wählt nur ihr Lied – vorher tat das ein Tipp aufs Blatt
+ * und schaltete dabei ins Vollbild.
+ */
+describe('ChartHeader – zwei Kapseln im Querformat', () => {
+  const andere = (slot: 0 | 1, onWaehlen = vi.fn<() => void>()) => ({
+    slot,
+    titel: 'Jesus Herr ich denke an dein Opfer',
+    info: [{ art: 'key', text: 'E' }] as HeadInfoPart[],
+    onWaehlen,
+  });
+
+  it('zeigt ohne zweites Lied nur eine Kapsel', () => {
+    zeige();
+    expect(screen.queryByRole('button', { name: /auswählen$/ })).toBeNull();
+  });
+
+  it('die andere Kapsel wählt nur ihr Lied – sie öffnet kein Menü', () => {
+    const onWaehlen = vi.fn<() => void>();
+    const onToggleMenu = vi.fn<() => void>();
+    zeige({ andereHaelfte: andere(1, onWaehlen), onToggleMenu });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Jesus Herr ich denke an dein Opfer auswählen' }),
+    );
+    expect(onWaehlen).toHaveBeenCalledTimes(1);
+    expect(onToggleMenu).not.toHaveBeenCalled();
+  });
+
+  it('die aktive Kapsel trägt den Ring und öffnet weiter das Lied-Menü', () => {
+    const onToggleMenu = vi.fn<() => void>();
+    const { container } = zeige({ andereHaelfte: andere(1), onToggleMenu });
+    const aktiv = container.querySelector('[data-tour="chart-lied"]')!;
+    expect(aktiv.className).toMatch(/kapselAktiv/);
+    fireEvent.click(aktiv);
+    expect(onToggleMenu).toHaveBeenCalledTimes(1);
+  });
+
+  it('steht auf der Seite ihres Blatts: links aktiv → andere rechts, und umgekehrt', () => {
+    const { container, unmount } = zeige({ andereHaelfte: andere(1) });
+    const reihenfolge = () =>
+      Array.from(container.querySelectorAll('[class*="kapselPaar"] > button')).map((b) =>
+        b.getAttribute('data-tour') === 'chart-lied' ? 'aktiv' : 'andere',
+      );
+    expect(reihenfolge()).toEqual(['aktiv', 'andere']);
+    unmount();
+    const zweite = zeige({ andereHaelfte: andere(0) });
+    expect(
+      Array.from(zweite.container.querySelectorAll('[class*="kapselPaar"] > button')).map((b) =>
+        b.getAttribute('data-tour') === 'chart-lied' ? 'aktiv' : 'andere',
+      ),
+    ).toEqual(['andere', 'aktiv']);
   });
 });

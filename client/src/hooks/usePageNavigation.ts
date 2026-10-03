@@ -22,7 +22,7 @@ interface UsePageNavigationParams {
  * Blättern per Wisch und Tipp (#193 – vorher inline in `PageDeck`).
  *
  * Drei Zonen: linkes Fünftel zurück, rechtes Fünftel weiter, Mitte blendet die Leisten aus bzw.
- * wieder ein (#319) und wählt im Querformat zusätzlich die angetippte Hälfte als aktive Seite. Ein Wisch braucht ≥45 px und muss deutlich waagerechter als
+ * wieder ein (#319) – und NUR das. Ein Wisch braucht ≥45 px und muss deutlich waagerechter als
  * senkrecht sein, ein Tipp darf sich kaum bewegen (<12 px) – dazwischen passiert nichts, damit ein
  * abgebrochener Wisch nicht als Tipp durchgeht.
  *
@@ -69,13 +69,12 @@ export function usePageNavigation({
     }
     // Mitte: Kopf- und Fußzeile aus-/einblenden (#319) – in BEIDEN Ausrichtungen, damit die
     // Bedienung sich nicht mit dem Drehen ändert.
+    //
+    // **Im Querformat wählt dieser Tipp KEINE Hälfte mehr** (#421, 03.10.2026). Bis dahin tat er
+    // beides: Vollbild UND die angetippte Hälfte aktiv machen. Wer das andere Lied auswählen wollte,
+    // landete dabei im Vollbild – die Kopfzeile verschwand, die Auswahl sah man erst nach dem
+    // Zurückschalten. Ausgewählt wird jetzt über die Titel-Kapsel über jeder Hälfte (`ChartHeader`).
     onMiddleTap?.();
-    if (perView < 2) return;
-    // Im Querformat macht derselbe Tipp zusätzlich die angetippte Hälfte aktiv. Beides zusammen
-    // ist gewollt: Die Kopfzeile bezieht sich danach auf das Lied, das man gerade angesehen hat.
-    const slot = fx < 0.5 ? 0 : 1;
-    const target = pageIndex + slot;
-    if (target < pageCount) onActivePage(target);
   }
 
   function onTouchStart(e: React.TouchEvent) {

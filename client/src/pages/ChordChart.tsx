@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { SetlistSong } from '@shared/types/index';
 import { Screen } from '../components/Screen';
-import { ChartHeader } from '../components/ChartHeader';
+import { ChartHeader, type AndereHaelfte } from '../components/ChartHeader';
 import { ChartFooter } from '../components/ChartFooter';
 import { ChartOverlays, type ChartOverlay } from '../components/ChartOverlays';
 import { TempoMenu } from '../components/TempoMenu';
@@ -391,6 +391,36 @@ export function ChordChart({
   } = deriveActiveSongView(song, set);
 
   /**
+   * Querformat mit zwei VERSCHIEDENEN Liedern nebeneinander → die zweite Titel-Kapsel (#421). Über
+   * dieselbe reine Ableitung wie beim aktiven Lied (`deriveActiveSongView`), damit Tonart, Fassung
+   * und Tempo der anderen Kapsel nicht nach eigener Regel entstehen. Gehören beide Hälften zum
+   * selben Lied, bleibt es bei einer Kapsel.
+   */
+  const andereHaelfte: AndereHaelfte | null = (() => {
+    if (!landscape) return null;
+    for (const slot of [0, 1] as const) {
+      const o = owners[pageIdx + slot];
+      if (!o || o.songIdx === activeSongIdx) continue;
+      const anderes = songs[o.songIdx];
+      if (!anderes) continue;
+      const sicht = deriveActiveSongView(anderes, effSettings[anderes.id] ?? DEFAULT_SETTINGS);
+      return {
+        slot,
+        // Derselbe Weg zur Überschrift wie bei der aktiven Kapsel (`chartHead` aus dem ANGEZEIGTEN
+        // Text) – sonst stünden über den beiden Hälften unterschiedlich gewonnene Titel (13.08.2026).
+        titel: chartHead({
+          title: anderes.title,
+          author: anderes.author,
+          chordpro: sicht.displayedChordpro,
+        }).title,
+        info: sicht.headInfo,
+        onWaehlen: () => setActivePage(pageIdx + slot),
+      };
+    }
+    return null;
+  })();
+
+  /**
    * Wie eine Anmerkungs-Ebene benannt wird – EINE Quelle für den Streifen oben UND die Auswahl
    * „Notizen von …". Vorher formulierte jede Stelle es selbst, mit anderen Worten und ohne das
    * Arrangement; von Alwin gemeldet als „ich weiß nicht, was was ist".
@@ -596,6 +626,7 @@ export function ChordChart({
       <>
         {!leistenAus && (
           <ChartHeader
+            andereHaelfte={andereHaelfte}
             /**
              * **Derselbe Titel wie auf dem Blatt** – über `chartHead`, nicht über `song.title`.
              *

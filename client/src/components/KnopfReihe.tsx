@@ -17,6 +17,8 @@ interface RundKnopfProps {
    * ein anderer Ton als `aktiv` (voll blau = es läuft etwas) – sonst sagte die Farbe zweierlei.
    */
   offen?: boolean;
+  /** Zurückgenommen: gehört zum nicht aktiven Lied im Querformat (ein Tipp wählt es). */
+  blass?: boolean;
   children: ReactNode;
 }
 
@@ -28,12 +30,15 @@ export function RundKnopf({
   aktiv,
   menuOffen,
   offen,
+  blass,
   children,
 }: RundKnopfProps) {
   return (
     <button
       type="button"
-      className={`${styles.knopf}${aktiv ? ' ' + styles.aktiv : offen ? ' ' + styles.offen : ''}`}
+      className={`${styles.knopf}${aktiv ? ' ' + styles.aktiv : offen ? ' ' + styles.offen : ''}${
+        blass ? ' ' + styles.blass : ''
+      }`}
       onClick={onClick}
       title={title}
       aria-label={title}

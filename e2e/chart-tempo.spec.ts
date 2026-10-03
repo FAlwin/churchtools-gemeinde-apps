@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { oeffneWerkzeug } from './werkzeug';
 import { TOUR_CHART } from '../client/src/utils/onboarding';
 
 /**
@@ -22,9 +23,8 @@ test('Tempo-Menü: der Rahmen bleibt in jedem Zustand gleich', async ({ page }) 
   await page.goto('/?demo=chart');
   await expect(page.locator('canvas').first()).toBeVisible({ timeout: 30_000 });
 
-  // Seit dem 02.10.2026 hinter dem Werkzeuge-Knopf (ein Knopf für alles).
-  await page.getByRole('button', { name: 'Werkzeuge' }).click();
-  await page.getByRole('menuitem', { name: /Tempo/ }).click();
+  // Hochformat: hinter dem Werkzeuge-Knopf; Querformat: einzeln (#421).
+  await oeffneWerkzeug(page, 'Tempo');
   const menu = page.locator('[class*="tempoMenu"]');
   await expect(menu).toBeVisible();
 
@@ -80,9 +80,8 @@ test('Tempo-Menü: die Kopfzeile zeigt das EINGESTELLTE Tempo', async ({ page })
   const kopfInfo = page.locator('[class*="menuInfo"]').first();
   const vorher = (await kopfInfo.innerText()).trim();
 
-  // Seit dem 02.10.2026 hinter dem Werkzeuge-Knopf (ein Knopf für alles).
-  await page.getByRole('button', { name: 'Werkzeuge' }).click();
-  await page.getByRole('menuitem', { name: /Tempo/ }).click();
+  // Hochformat: hinter dem Werkzeuge-Knopf; Querformat: einzeln (#421).
+  await oeffneWerkzeug(page, 'Tempo');
   await page.locator('[class*="tempoMenu"]').getByRole('textbox').fill('137');
   await page.waitForTimeout(200);
 

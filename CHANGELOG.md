@@ -9,9 +9,12 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Geändert
 
-- **Querformat: Jedes Lied hat seinen eigenen Titel oben** (#421). Stehen zwei Lieder nebeneinander,
-  sitzt über jeder Hälfte eine Titel-Kapsel; die aktive trägt einen blauen Ring. Ein Tipp auf die
-  blasse wählt dieses Lied für Werkzeuge, Anmerken und Lied-Menü. Vorher wählte man es mit einem
+- **Querformat: Jedes Lied hat seinen eigenen Titel und seine Werkzeuge oben** (#421). Stehen zwei
+  Lieder nebeneinander, sitzt über jeder Hälfte eine Titel-Kapsel mit Aussehen, Tempo, Notizen von …
+  und Anmerken als einzelnen Knöpfen – auch auf kleinen iPads mittig über dem Lied. Das aktive Lied
+  trägt einen blauen Ring; ein Tipp auf den blassen Titel oder eines seiner Werkzeuge wählt dieses
+  Lied (und öffnet das Werkzeug gleich). Lied-Menü, Aussehen und Tempo öffnen unter ihrem Knopf, also
+  über dem richtigen Lied. Vorher wählte man es mit einem
   Tipp aufs Blatt – und landete dabei im Vollbild, sodass man die Auswahl erst nach dem Zurückschalten
   sah. Der Tipp aufs Blatt schaltet jetzt nur noch das Vollbild.
 - **iPad: Der Bereich oben ist wieder so schmal wie vorher.** Das milchige Band gibt es dort nicht;

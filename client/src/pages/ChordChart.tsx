@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { SetlistSong } from '@shared/types/index';
 import { Screen } from '../components/Screen';
 import { ChartHeader, type AndereHaelfte } from '../components/ChartHeader';
+import type { WerkzeugId } from '../utils/werkzeuge';
 import { ChartFooter } from '../components/ChartFooter';
 import { ChartOverlays, type ChartOverlay } from '../components/ChartOverlays';
 import { TempoMenu } from '../components/TempoMenu';
@@ -390,6 +391,9 @@ export function ChordChart({
     headInfo,
   } = deriveActiveSongView(song, set);
 
+  /** Werkzeug des anderen Lieds, das nach dem Liedwechsel aufgehen soll (siehe Effekt unten). */
+  const naechstesWerkzeug = useRef<WerkzeugId | null>(null);
+
   /**
    * Querformat mit zwei VERSCHIEDENEN Liedern nebeneinander → die zweite Titel-Kapsel (#421). Über
    * dieselbe reine Ableitung wie beim aktiven Lied (`deriveActiveSongView`), damit Tonart, Fassung
@@ -414,11 +418,34 @@ export function ChordChart({
           chordpro: sicht.displayedChordpro,
         }).title,
         info: sicht.headInfo,
+        zeigtDokument: sicht.activeDoc !== null,
         onWaehlen: () => setActivePage(pageIdx + slot),
+        onWerkzeug: (id: WerkzeugId) => {
+          naechstesWerkzeug.current = id;
+          setActivePage(pageIdx + slot);
+        },
       };
     }
     return null;
   })();
+
+  /**
+   * Werkzeug des ANDEREN Lieds (Querformat): erst das Lied wählen, das Werkzeug erst NACH dem Wechsel
+   * öffnen. Sofort ausgeführt, griffe es noch auf das alte Lied – „Notizen von …" listete dessen
+   * Personen, und das Ende des Ansehens beim Liedwechsel (Effekt oben) machte es gleich wieder zu.
+   * Anmerken SCHALTET hier EIN statt umzuschalten: Wer beim anderen Lied auf den Stift tippt, will
+   * dort zeichnen, auch wenn beim bisherigen gerade gezeichnet wurde.
+   */
+  useEffect(() => {
+    const id = naechstesWerkzeug.current;
+    if (!id) return;
+    naechstesWerkzeug.current = null;
+    if (id === 'aussehen') setOverlay('appearance');
+    else if (id === 'tempo') setOverlay('tempo');
+    else if (id === 'team') openSharers();
+    else if (id === 'anmerken') setDrawMode(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [song.id]);
 
   /**
    * Wie eine Anmerkungs-Ebene benannt wird – EINE Quelle für den Streifen oben UND die Auswahl
@@ -627,6 +654,10 @@ export function ChordChart({
         {!leistenAus && (
           <ChartHeader
             andereHaelfte={andereHaelfte}
+            querformat={landscape}
+            offenesWerkzeug={
+              overlay === 'appearance' ? 'aussehen' : overlay === 'tempo' ? 'tempo' : null
+            }
             /**
              * **Derselbe Titel wie auf dem Blatt** – über `chartHead`, nicht über `song.title`.
              *

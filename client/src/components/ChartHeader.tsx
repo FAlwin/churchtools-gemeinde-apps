@@ -1,9 +1,26 @@
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import type { HeadInfoPart } from '../utils/activeSongView';
 import { BpmPulse } from './BpmPulse';
 import { Icon } from './icons';
 import { RundKnopf, ZurueckKnopf } from './KnopfReihe';
 import { WerkzeugMenu, type Werkzeug } from './WerkzeugMenu';
+import { WERKZEUG_NAME, verfuegbareWerkzeuge, type WerkzeugId } from '../utils/werkzeuge';
 import styles from '../pages/ChordChart.module.scss';
+
+function werkzeugSymbol(id: WerkzeugId): ReactNode {
+  switch (id) {
+    case 'aussehen':
+      return <b>Aa</b>;
+    case 'tempo':
+      return <Icon name="metronome" size={19} stroke={1.9} />;
+    case 'zoom':
+      return <Icon name="zoom-reset" size={18} stroke={2} />;
+    case 'team':
+      return <Icon name="people" size={18} stroke={2} />;
+    case 'anmerken':
+      return <Icon name="pencil" size={18} stroke={2.2} />;
+  }
+}
 
 /**
  * Die ANDERE Hälfte im Querformat (#421): ein zweites sichtbares Lied neben dem aktiven. Ihr Tipp
@@ -14,7 +31,11 @@ export interface AndereHaelfte {
   slot: 0 | 1;
   titel: string;
   info: HeadInfoPart[];
+  /** Zeigt dieses Lied ein Dokument statt Akkorden? Dann fehlen Aussehen und Team-Notizen. */
+  zeigtDokument: boolean;
   onWaehlen: () => void;
+  /** Ein Werkzeug dieses Lieds: wählt das Lied UND öffnet das Werkzeug (Querformat, 03.10.2026). */
+  onWerkzeug: (id: WerkzeugId) => void;
 }
 
 /**
@@ -43,6 +64,13 @@ interface ChartHeaderProps {
    * zurückgenommen. Ohne diese Angabe gibt es eine Kapsel wie bisher.
    */
   andereHaelfte?: AndereHaelfte | null;
+  /**
+   * Querformat: Die Werkzeuge stehen EINZELN neben dem Titel (je Lied), nicht hinter dem einen
+   * Werkzeuge-Knopf (Alwin, 03.10.2026). Im Hochformat bleibt der eine Knopf.
+   */
+  querformat?: boolean;
+  /** Welches Werkzeug-Fenster gerade offen ist – färbt im Querformat seinen Knopf hellblau. */
+  offenesWerkzeug?: 'aussehen' | 'tempo' | null;
   /** Info-Zeile aus `deriveActiveSongView` – reine Daten, die Klassen setzt diese Komponente. */
   headInfo: HeadInfoPart[];
   /** Lied-Menü offen (für `aria-expanded`). */
@@ -99,6 +127,8 @@ interface ChartHeaderProps {
 export function ChartHeader({
   songTitle,
   andereHaelfte = null,
+  querformat = false,
+  offenesWerkzeug = null,
   headInfo,
   menuOpen,
   viewing,
@@ -153,48 +183,67 @@ export function ChartHeader({
    */
   const hatEigenesTempo = headInfo.some((p) => p.art === 'bpm');
 
+  /** Was ein Werkzeug des AKTIVEN Lieds tut. */
+  const aktion: Record<WerkzeugId, () => void> = {
+    aussehen: onAppearance,
+    tempo: onTempo,
+    zoom: onResetZoom,
+    team: onToggleTeamNotes,
+    anmerken: onToggleDraw,
+  };
+  const aktiveWerkzeuge = verfuegbareWerkzeuge({
+    zeigtDokument: showsDocument,
+    ansehen: viewing,
+    gezoomt: zoomed,
+    teamNotizen: canUseGlobalNotes,
+  });
+
   /**
-   * Die Werkzeuge im Menü – dieselben Bedingungen wie früher bei den einzelnen Knöpfen. Beim Zeichnen
-   * und beim Ansehen fremder Notizen öffnet der Knopf das Menü gar nicht (siehe unten).
+   * Die Werkzeuge im Menü (Hochformat). Beim Zeichnen und beim Ansehen fremder Notizen öffnet der
+   * Knopf das Menü gar nicht (siehe unten).
    */
-  const werkzeuge: Werkzeug[] = [
-    ...(!showsDocument
-      ? [{ id: 'aussehen', label: 'Aussehen', symbol: <b>Aa</b>, onClick: onAppearance }]
-      : []),
-    // Tempo bewusst auch ohne gepflegtes Tempo (#145): Genau dann will man eins antippen.
-    {
-      id: 'tempo',
-      label: 'Tempo',
-      symbol: <Icon name="metronome" size={19} stroke={1.9} />,
-      onClick: onTempo,
-    },
-    ...(zoomed
-      ? [
-          {
-            id: 'zoom',
-            label: 'Zoom zurücksetzen',
-            symbol: <Icon name="zoom-reset" size={18} stroke={2} />,
-            onClick: onResetZoom,
-          },
-        ]
-      : []),
-    ...(canUseGlobalNotes && !showsDocument
-      ? [
-          {
-            id: 'team',
-            label: 'Notizen von …',
-            symbol: <Icon name="people" size={18} stroke={2} />,
-            onClick: onToggleTeamNotes,
-          },
-        ]
-      : []),
-    {
-      id: 'anmerken',
-      label: 'Anmerken',
-      symbol: <Icon name="pencil" size={18} stroke={2.2} />,
-      onClick: onToggleDraw,
-    },
-  ];
+  const werkzeuge: Werkzeug[] = aktiveWerkzeuge.map((id) => ({
+    id,
+    label: WERKZEUG_NAME[id],
+    symbol: werkzeugSymbol(id),
+    onClick: aktion[id],
+  }));
+
+  /** Querformat: die Werkzeuge des aktiven Lieds als einzelne runde Knöpfe, mit ihrem Zustand. */
+  const aktiveKnoepfe = aktiveWerkzeuge.map((id) => (
+    <RundKnopf
+      key={id}
+      title={id === 'anmerken' && drawMode ? 'Anmerken beenden' : WERKZEUG_NAME[id]}
+      onClick={aktion[id]}
+      aktiv={
+        (id === 'tempo' && tempoAktiv) ||
+        (id === 'team' && viewing) ||
+        (id === 'anmerken' && drawMode)
+      }
+      offen={offenesWerkzeug === id}
+    >
+      {werkzeugSymbol(id)}
+    </RundKnopf>
+  ));
+
+  /** Querformat: die Werkzeuge des ANDEREN Lieds – blass; ein Tipp wählt das Lied und öffnet sie. */
+  const andereKnoepfe =
+    andereHaelfte &&
+    verfuegbareWerkzeuge({
+      zeigtDokument: andereHaelfte.zeigtDokument,
+      ansehen: false,
+      gezoomt: false,
+      teamNotizen: canUseGlobalNotes,
+    }).map((id) => (
+      <RundKnopf
+        key={id}
+        title={`${WERKZEUG_NAME[id]} – ${andereHaelfte.titel}`}
+        onClick={() => andereHaelfte.onWerkzeug(id)}
+        blass
+      >
+        {werkzeugSymbol(id)}
+      </RundKnopf>
+    ));
 
   /** Der eine Knopf rechts – er zeigt, in welchem Modus man ist, und führt wieder heraus. */
   const werkzeugKnopf = drawMode ? (
@@ -218,12 +267,56 @@ export function ChartHeader({
     </RundKnopf>
   );
 
+  /**
+   * **Das Lied-Menü öffnet unter SEINEM Titel** (Alwin, 03.10.2026 – im Querformat stand es mittig
+   * zwischen den Liedern). Die Mitte der aktiven Kapsel wird gemessen, sobald ein Lied-Fenster
+   * aufgeht, und als `--liedmenue-x` gesetzt; `.modeMenu` richtet sich danach (am Rand begrenzt).
+   * Im Hochformat steht die Kapsel mittig – dort ändert sich nichts.
+   */
+  const aktiveKapselRef = useRef<HTMLButtonElement>(null);
+  const aktiveGruppeRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Dasselbe für Aussehen und Tempo im Querformat: Ihre Fenster öffnen unter IHREM Knopf, also über
+   * dem Lied, zu dem sie gehören – sonst klebten sie am rechten Rand, beim linken Lied über dem
+   * falschen Blatt. Im Hochformat (Werkzeuge-Knopf rechts) bleiben sie rechts; dafür werden die
+   * Variablen dort entfernt und `.appMenu` fällt auf `right: 12px` zurück.
+   */
+  useLayoutEffect(() => {
+    const wurzel = document.documentElement.style;
+    const knopf =
+      querformat && offenesWerkzeug
+        ? aktiveGruppeRef.current?.querySelector<HTMLElement>(
+            `[title="${WERKZEUG_NAME[offenesWerkzeug]}"]`,
+          )
+        : null;
+    const r = knopf?.getBoundingClientRect();
+    if (!r) {
+      for (const v of ['--werkzeug-links', '--werkzeug-rechts', '--werkzeug-verschub']) {
+        wurzel.removeProperty(v);
+      }
+      return;
+    }
+    wurzel.setProperty(
+      '--werkzeug-links',
+      `clamp(180px, ${r.left + r.width / 2}px, calc(100% - 180px))`,
+    );
+    wurzel.setProperty('--werkzeug-rechts', 'auto');
+    wurzel.setProperty('--werkzeug-verschub', '-50% 0');
+  }, [querformat, offenesWerkzeug, andereHaelfte?.slot]);
+  useLayoutEffect(() => {
+    if (!liedFensterOffen) return;
+    const r = aktiveKapselRef.current?.getBoundingClientRect();
+    if (r) document.documentElement.style.setProperty('--liedmenue-x', `${r.left + r.width / 2}px`);
+  }, [liedFensterOffen, querformat, andereHaelfte?.slot]);
+
   /** Die Kapsel des AKTIVEN Lieds – öffnet das Lied-Menü, trägt Tempo und Puls. */
   const aktiveKapsel = (
     <button
       className={`${styles.menuBtn}${liedFensterOffen ? ' ' + styles.menuBtnOffen : ''}${
         andereHaelfte ? ' ' + styles.kapselAktiv : ''
       }`}
+      ref={aktiveKapselRef}
       data-tour="chart-lied"
       onClick={() => !viewing && onToggleMenu()}
       aria-haspopup="menu"
@@ -292,20 +385,40 @@ export function ChartHeader({
     </button>
   );
 
+  /** Querformat: Titel + einzelne Werkzeuge eines Lieds als eine Gruppe über seiner Hälfte. */
+  const aktiveGruppe = (
+    <div className={styles.gruppe} ref={aktiveGruppeRef}>
+      {aktiveKapsel}
+      {aktiveKnoepfe}
+    </div>
+  );
+  const andereGruppe = andereHaelfte && (
+    <div className={styles.gruppe}>
+      {andereKapsel}
+      {andereKnoepfe}
+    </div>
+  );
+
   return (
     <>
       <div className={styles.hdr}>
         <ZurueckKnopf onClick={onBack} />
-        {andereHaelfte ? (
-          // Querformat, zwei Lieder: je Hälfte eine Kapsel, mittig über ihrem Blatt (#421).
+        {querformat && andereHaelfte ? (
+          // Querformat, zwei Lieder: je Hälfte Titel UND Werkzeuge, mittig über ihrem Blatt
+          // (#421, Alwin 03.10.2026: „bitte immer über dem Lied, auch bei kleinen iPads").
           <div className={styles.kapselPaar}>
-            {andereHaelfte.slot === 1 ? aktiveKapsel : andereKapsel}
-            {andereHaelfte.slot === 1 ? andereKapsel : aktiveKapsel}
+            {andereHaelfte.slot === 1 ? aktiveGruppe : andereGruppe}
+            {andereHaelfte.slot === 1 ? andereGruppe : aktiveGruppe}
           </div>
+        ) : querformat ? (
+          // Querformat, ein Lied: Titel und Werkzeuge mittig.
+          <div className={styles.gruppeMitte}>{aktiveGruppe}</div>
         ) : (
-          aktiveKapsel
+          <>
+            {aktiveKapsel}
+            {werkzeugKnopf}
+          </>
         )}
-        {werkzeugKnopf}
       </div>
       {werkzeugeOffen && !drawMode && !viewing && (
         <WerkzeugMenu werkzeuge={werkzeuge} onClose={onCloseWerkzeuge} />

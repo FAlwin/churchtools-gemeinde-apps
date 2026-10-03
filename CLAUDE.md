@@ -345,7 +345,12 @@ Band:** runder Zurück-Pfeil, Titel als Kapsel, **ein** Werkzeuge-Knopf (`Werkze
 Tempo, Zoom, Notizen von …, Anmerken – Alwins Wahl „ein Knopf für alles"). Der Knopf zeigt den Modus:
 blau bei Puls/Klick, Haken beim Zeichnen, Personen beim Ansehen fremder Notizen – sonst gäbe es aus
 beiden Modi keinen sichtbaren Ausweg. Menü-Einträge setzen das Overlay-Feld genau EINMAL (kein
-Schließen hinterher). Fenster unter dem Kopf hängen an `--chart-kopf-unten`. Routing in `App.tsx` über `tab` + `view` (rechteabhängig).
+Schließen hinterher). Fenster unter dem Kopf hängen an `--chart-kopf-unten`. **Querformat (#421,
+03.10.2026):** je Lied Titel-Kapsel + EINZELNE Werkzeug-Knöpfe mittig über seiner Hälfte (kein
+gemeinsamer Werkzeuge-Knopf); welche Werkzeuge es gibt, regelt EINE Funktion für Menü und Knöpfe
+(`utils/werkzeuge.ts`); Lied-Menü, Aussehen und Tempo öffnen unter ihrem Knopf (`--liedmenue-x`,
+`--werkzeug-links`); Werkzeug des anderen Lieds = erst wählen, nach dem Wechsel öffnen. iPad-Kopf
+schmal wie vor v2.26.0 (kein Band dort). Routing in `App.tsx` über `tab` + `view` (rechteabhängig).
 
 **Abwesenheiten sind terminfein, nicht tagesfein (22.09.2026).** Ein Haken an einem Termin trägt in
 ChurchTools das **Zeitfenster dieses Termins** ein (`startTime`/`endTime`, ISO-Zeitpunkte) – nur so

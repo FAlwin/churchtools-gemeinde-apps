@@ -44,7 +44,9 @@ export const TOUR_TERMINE = 'termine-v3';
 // mehr, sondern stecken hinter EINEM runden Werkzeuge-Knopf (Alwin: „Ein Knopf für alles"). Die vier
 // Schritte zeigten auf Knöpfe, die es nicht mehr gibt – jetzt ein Schritt, der alle vier nennt.
 // chart-v8 (03.10.2026, #421): Im Querformat steht über jedem der beiden Lieder eine eigene
-// Titel-Kapsel; ein Tipp darauf wählt das Lied. Der Tipp aufs Blatt wählt nichts mehr aus.
+// Titel-Kapsel mit EINZELNEN Werkzeug-Knöpfen (kein gemeinsamer Werkzeuge-Knopf – dessen Schritt
+// entfällt dort von selbst, weil sein Ziel fehlt); ein Tipp darauf wählt das Lied. Der Tipp aufs
+// Blatt wählt nichts mehr aus.
 export const TOUR_CHART = 'chart-v8';
 
 /**
@@ -154,7 +156,7 @@ export const CHART_STEPS: CoachStep[] = [
   {
     selector: '[data-tour="chart-lied"]',
     title: 'Lied-Optionen',
-    body: 'Im Querformat steht über jedem der beiden Lieder ein eigener Titel – ein Tipp auf den blassen wählt dieses Lied aus. Tippe auf den Titel, um die Tonart zu ändern, eine Version zu wählen oder zu transponieren. Bearbeitest du eine Version, arbeitet der Editor in der Tonart, die hier eingestellt ist – gespeichert wird, was du siehst. Unter „Dateien …" verwaltest du die Notenblätter des Arrangements, unter „Stammdaten …" Name, Kategorie, Autor und Copyright des Liedes.',
+    body: 'Im Querformat steht über jedem der beiden Lieder ein eigener Titel mit seinen Werkzeugen – ein Tipp auf den blassen Titel oder eines seiner Werkzeuge wählt dieses Lied aus. Tippe auf den Titel, um die Tonart zu ändern, eine Version zu wählen oder zu transponieren. Bearbeitest du eine Version, arbeitet der Editor in der Tonart, die hier eingestellt ist – gespeichert wird, was du siehst. Unter „Dateien …" verwaltest du die Notenblätter des Arrangements, unter „Stammdaten …" Name, Kategorie, Autor und Copyright des Liedes.',
   },
   {
     selector: '[data-tour="chart-werkzeuge"]',

@@ -19,8 +19,9 @@
 - **Status:** Fertig & produktiv – auf dem Synology-NAS deployt, intern im WLAN **und**
   extern unter `https://musik.ecg-donrath.de` live.
 
-  **Stand 02.10.2026: Produktiv läuft `v2.25.4`** – am 24.09.2026 am Bundle **gemessen**, nicht aus der
-  Doku übernommen. **v2.26.0 ist getaggt, der Prod-Deploy liegt bei Alwin.** So misst man die laufende
+  **Stand 03.10.2026: Produktiv läuft `v2.25.4`** – am 24.09.2026 am Bundle **gemessen**, nicht aus der
+  Doku übernommen. **v2.26.0 und v2.26.1 sind getaggt, der Prod-Deploy liegt bei Alwin** (geplant
+  04.10.2026 abends, nach dem Gottesdienst). So misst man die laufende
   Version: Der Versionsstring steckt im ausgelieferten Bundle
   (`curl -s https://musik.ecg-donrath.de/ | grep -oE 'assets/index-[^"]+\.js'`, dann diese Datei holen
   und nach `v2.` greppen). `/api/health` nennt **keine** Version und taugt dafür nicht. Getestet wird
@@ -614,6 +615,14 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 ```
 
 ## Stand & nächster Schritt
+
+- **v2.26.1 (03.10.2026) = iPad-Korrekturen** (PR #422 Squash `48766c7`; Staging `staging-8b68c34` von
+  Alwin am iPad getestet, Baum von `main` identisch). #420 Zoom als Ausschnitt des Blatts (übersteht
+  Vollbild und Drehen; `fx`/`fy` im gespeicherten Zoom, Server-Schema mit Wächter); #421 Querformat
+  mit Titel-Kapsel und einzelnen Werkzeugen je Lied, Menüs unter ihrem Knopf, Tipp aufs Blatt = nur
+  Vollbild; iPad-Kopf schmal. **Lehre:** Der Vollbild-E2E prüfte den Zoom-FAKTOR und war grün bei genau
+  dem gemeldeten Fehler – ein Test muss messen, was der Nutzer sieht. Prod-Deploy (v2.26.0 + v2.26.1
+  zusammen) am 04.10. abends.
 
 - **v2.26.0 (02.10.2026) = runde Knöpfe statt milchiger Leisten + Express 5** (PR #418 Squash
   `11b2306`, PR #419 Squash `ffb57ff`; Staging `staging-c3d6a77` von Alwin am iPhone getestet, der Baum

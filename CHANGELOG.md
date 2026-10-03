@@ -7,6 +7,12 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+## [2.26.1] – 2026-10-03
+
+**Beim Update ist nichts zu tun.** Die Einführung zum Liedblatt erscheint einmal neu (Querformat mit
+Titel und Werkzeugen je Lied). Am iPad gemeldete Fehler, behoben vor dem ersten Prod-Deploy von
+v2.26.0 – beide Versionen gehen zusammen raus.
+
 ### Geändert
 
 - **Querformat: Jedes Lied hat seinen eigenen Titel und seine Werkzeuge oben** (#421). Stehen zwei

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { SetlistSong } from '@shared/types/index';
 import { Screen } from '../components/Screen';
-import { ChartHeader } from '../components/ChartHeader';
+import { ChartHeader, type AndereHaelfte } from '../components/ChartHeader';
+import type { WerkzeugId } from '../utils/werkzeuge';
 import { ChartFooter } from '../components/ChartFooter';
 import { ChartOverlays, type ChartOverlay } from '../components/ChartOverlays';
 import { TempoMenu } from '../components/TempoMenu';
@@ -390,6 +391,62 @@ export function ChordChart({
     headInfo,
   } = deriveActiveSongView(song, set);
 
+  /** Werkzeug des anderen Lieds, das nach dem Liedwechsel aufgehen soll (siehe Effekt unten). */
+  const naechstesWerkzeug = useRef<WerkzeugId | null>(null);
+
+  /**
+   * Querformat mit zwei VERSCHIEDENEN Liedern nebeneinander → die zweite Titel-Kapsel (#421). Über
+   * dieselbe reine Ableitung wie beim aktiven Lied (`deriveActiveSongView`), damit Tonart, Fassung
+   * und Tempo der anderen Kapsel nicht nach eigener Regel entstehen. Gehören beide Hälften zum
+   * selben Lied, bleibt es bei einer Kapsel.
+   */
+  const andereHaelfte: AndereHaelfte | null = (() => {
+    if (!landscape) return null;
+    for (const slot of [0, 1] as const) {
+      const o = owners[pageIdx + slot];
+      if (!o || o.songIdx === activeSongIdx) continue;
+      const anderes = songs[o.songIdx];
+      if (!anderes) continue;
+      const sicht = deriveActiveSongView(anderes, effSettings[anderes.id] ?? DEFAULT_SETTINGS);
+      return {
+        slot,
+        // Derselbe Weg zur Überschrift wie bei der aktiven Kapsel (`chartHead` aus dem ANGEZEIGTEN
+        // Text) – sonst stünden über den beiden Hälften unterschiedlich gewonnene Titel (13.08.2026).
+        titel: chartHead({
+          title: anderes.title,
+          author: anderes.author,
+          chordpro: sicht.displayedChordpro,
+        }).title,
+        info: sicht.headInfo,
+        zeigtDokument: sicht.activeDoc !== null,
+        onWaehlen: () => setActivePage(pageIdx + slot),
+        onWerkzeug: (id: WerkzeugId) => {
+          naechstesWerkzeug.current = id;
+          setActivePage(pageIdx + slot);
+        },
+      };
+    }
+    return null;
+  })();
+
+  /**
+   * Werkzeug des ANDEREN Lieds (Querformat): erst das Lied wählen, das Werkzeug erst NACH dem Wechsel
+   * öffnen. Sofort ausgeführt, griffe es noch auf das alte Lied – „Notizen von …" listete dessen
+   * Personen, und das Ende des Ansehens beim Liedwechsel (Effekt oben) machte es gleich wieder zu.
+   * Anmerken SCHALTET hier EIN statt umzuschalten: Wer beim anderen Lied auf den Stift tippt, will
+   * dort zeichnen, auch wenn beim bisherigen gerade gezeichnet wurde.
+   */
+  useEffect(() => {
+    const id = naechstesWerkzeug.current;
+    if (!id) return;
+    naechstesWerkzeug.current = null;
+    if (id === 'aussehen') setOverlay('appearance');
+    else if (id === 'tempo') setOverlay('tempo');
+    else if (id === 'team') openSharers();
+    else if (id === 'anmerken') setDrawMode(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [song.id]);
+
   /**
    * Wie eine Anmerkungs-Ebene benannt wird – EINE Quelle für den Streifen oben UND die Auswahl
    * „Notizen von …". Vorher formulierte jede Stelle es selbst, mit anderen Worten und ohne das
@@ -596,6 +653,11 @@ export function ChordChart({
       <>
         {!leistenAus && (
           <ChartHeader
+            andereHaelfte={andereHaelfte}
+            querformat={landscape}
+            offenesWerkzeug={
+              overlay === 'appearance' ? 'aussehen' : overlay === 'tempo' ? 'tempo' : null
+            }
             /**
              * **Derselbe Titel wie auf dem Blatt** – über `chartHead`, nicht über `song.title`.
              *

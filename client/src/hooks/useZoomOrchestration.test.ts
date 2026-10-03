@@ -48,6 +48,7 @@ function starte(initial: Props = { resetZoomSignal: 0 }) {
         loading: false,
         syncTick: 0,
         transformRefs: [ref(), ref()],
+        geometrie: () => null,
         resetZoomSignal: p.resetZoomSignal,
       }),
     { initialProps: initial },

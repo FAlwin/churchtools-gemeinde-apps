@@ -137,6 +137,21 @@ html[data-theme='dark'] {
   }
 }
 
+/**
+ * **iPad: oben so schmal wie vor dem Umbau** (Alwin, 03.10.2026: „Der Bereich oben soll nicht größer
+ * werden … am iPad gibt es dieses Milchige nicht"). Der Abstand unter das Band ist also nur auf dem
+ * iPhone nötig; auf dem iPad genügt die Safe-Area wie bei der früheren Leiste (`--bar-pad-top`) plus
+ * ein paar Pixel. Erkannt an BEIDEN Kanten ≥ 744 px – das kleinste iPad (mini) ist 744 breit, ein
+ * gedrehtes iPhone ist nur ~430 hoch und bleibt draußen.
+ */
+@media (display-mode: standalone) and (min-width: 744px) and (min-height: 744px) {
+  @supports (-webkit-touch-callout: none) {
+    :root {
+      --inhalt-pad-top: calc(var(--bar-pad-top) + 4px);
+    }
+  }
+}
+
 // SCHRIFTEN
 // UI ist der System-Font (bewusst wie ChurchTools). $font-sans = Spiegelung als SCSS-Konstante.
 $font-sans:

@@ -38,6 +38,14 @@ des Bandes.
    Zeichnen. Solange das Werkzeuge-Menü (oder Aussehen/Tempo) offen ist, ist der Knopf **hellblau**;
    ebenso die Titel-Kapsel bei offenem Lied-Menü. Titel und Infos stehen in der Kapsel **mittig**.
    Beim ersten Öffnen erscheint die Einführung neu, mit einem Schritt „Werkzeuge".
+   **iPad quer, zwei Lieder nebeneinander (#421):** Über jeder Hälfte stehen Titel-Kapsel UND die
+   Werkzeuge (Aa, Tempo, Notizen von …, Anmerken) einzeln, mittig über dem Lied – auch auf einem
+   kleinen iPad und quer auf dem iPhone (dort wird der Titel gekürzt). Das aktive Lied trägt einen
+   blauen Ring, das andere ist blass. Tipp auf die blasse Kapsel → dieses Lied ist aktiv, **kein**
+   Vollbild. Tipp auf „Aa" des blassen Lieds → es wird aktiv UND „Aussehen" geht auf. Lied-Menü,
+   Aussehen und Tempo öffnen **unter ihrem Knopf**. Tipp aufs Blatt → nur Vollbild, das aktive Lied
+   bleibt. Der Bereich oben ist am iPad so schmal wie vor
+   v2.26.0.
 6. **Ganz nach oben:** In einer langen Liste (z. B. Mehr) weit nach unten scrollen, dann unten auf
    den **Tab tippen, in dem du schon bist** → die Ansicht springt an den Anfang. (Der Tipp auf die
    Uhrzeit oben tut in einer Web-App nichts – das kann iOS nicht weitergeben.)
@@ -49,7 +57,7 @@ des Bandes.
 
 - **Priorität:** hoch
 - **Betrifft:** `client/src/components/SeitenGeruest.tsx`, `client/src/components/KnopfReihe.tsx`, `client/src/components/ChartHeader.tsx`, `client/src/components/WerkzeugMenu.tsx`, `client/src/utils/onboarding.ts`, `client/src/components/Segment.tsx`, `client/src/components/GrosseUeberschrift.tsx`, `client/src/components/Screen.tsx`, `client/src/components/Screen.module.scss`, `client/src/components/TabBar.tsx`, `client/index.html`, `client/src/styles/_variables.scss`
-- **Automatisiert:** teilweise – `client/src/components/SeitenGeruest.test.tsx` (Überschrift im Inhalt, runde Knöpfe nur mit Zurück/Aktionen und außerhalb des Scroll-Bereichs, Überlagerung ebenso), `client/src/components/ChartHeader.test.tsx` (Werkzeuge-Menü je Bedingung, Haken beim Zeichnen, Personen-Knopf beim Ansehen, kein Schließen nach einem Eintrag), `e2e/chart-tempo.spec.ts` und `e2e/auth-flow.spec.ts` (Tempo und Anmerken über das Menü), `client/src/components/Screen.zumAnfang.test.tsx` (aktiver Tab scrollt nach oben); von Hand bleibt, wie es unter dem echten Unschärfe-Band aussieht
+- **Automatisiert:** teilweise – `client/src/components/SeitenGeruest.test.tsx` (Überschrift im Inhalt, runde Knöpfe nur mit Zurück/Aktionen und außerhalb des Scroll-Bereichs, Überlagerung ebenso), `client/src/components/ChartHeader.test.tsx` (Werkzeuge-Menü je Bedingung, Haken beim Zeichnen, Personen-Knopf beim Ansehen, kein Schließen nach einem Eintrag), `e2e/chart-tempo.spec.ts` und `e2e/auth-flow.spec.ts` (Tempo und Anmerken über das Menü), `e2e/chart-querformat.spec.ts` (Querformat: Wahl per Kapsel ohne Vollbild, Werkzeug des anderen Lieds, Blatt = nur Vollbild), `client/src/components/Screen.zumAnfang.test.tsx` (aktiver Tab scrollt nach oben); von Hand bleibt, wie es unter dem echten Unschärfe-Band aussieht
 - **Historie:** Kopfzeilen-Umbau 21./22.09.2026; runde Knöpfe, Liedblatt mit einem Werkzeuge-Knopf und sichtbare Umschalter-Schiene 02.10.2026 (am selben Tag am Gerät widerlegt: eine deckende Statusleiste beseitigt das milchige Band nicht)
 
 </details>

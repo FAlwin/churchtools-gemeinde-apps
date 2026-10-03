@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { ChartHeader } from './ChartHeader';
+import { ChartHeader, type AndereHaelfte } from './ChartHeader';
+import { verfuegbareWerkzeuge } from '../utils/werkzeuge';
 import type { HeadInfoPart } from '../utils/activeSongView';
 
 /**
@@ -15,6 +16,9 @@ import type { HeadInfoPart } from '../utils/activeSongView';
  */
 const props = {
   songTitle: 'Höher',
+  andereHaelfte: null as AndereHaelfte | null,
+  querformat: false,
+  offenesWerkzeug: null as 'aussehen' | 'tempo' | null,
   headInfo: [] as HeadInfoPart[],
   menuOpen: false,
   viewing: false,
@@ -194,5 +198,135 @@ describe('ChartHeader – der Werkzeuge-Knopf', () => {
   it('leuchtet, solange Puls oder Klick laufen', () => {
     zeige({ tempoAktiv: true });
     expect(screen.getByRole('button', { name: 'Werkzeuge' }).className).toMatch(/aktiv/);
+  });
+});
+
+/**
+ * **Querformat mit zwei Liedern** (#421, Entwurf mit Alwin 03.10.2026): je Hälfte eine Kapsel. Die
+ * aktive öffnet das Lied-Menü, die andere wählt nur ihr Lied – vorher tat das ein Tipp aufs Blatt
+ * und schaltete dabei ins Vollbild.
+ */
+describe('ChartHeader – zwei Kapseln im Querformat', () => {
+  const andere = (
+    slot: 0 | 1,
+    onWaehlen = vi.fn<() => void>(),
+    onWerkzeug = vi.fn<(id: string) => void>(),
+  ): AndereHaelfte => ({
+    slot,
+    titel: 'Jesus Herr ich denke an dein Opfer',
+    info: [{ art: 'key', text: 'E' }] as HeadInfoPart[],
+    zeigtDokument: false,
+    onWaehlen,
+    onWerkzeug,
+  });
+
+  it('zeigt ohne zweites Lied nur eine Kapsel', () => {
+    zeige();
+    expect(screen.queryByRole('button', { name: /auswählen$/ })).toBeNull();
+  });
+
+  it('die andere Kapsel wählt nur ihr Lied – sie öffnet kein Menü', () => {
+    const onWaehlen = vi.fn<() => void>();
+    const onToggleMenu = vi.fn<() => void>();
+    zeige({ querformat: true, andereHaelfte: andere(1, onWaehlen), onToggleMenu });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Jesus Herr ich denke an dein Opfer auswählen' }),
+    );
+    expect(onWaehlen).toHaveBeenCalledTimes(1);
+    expect(onToggleMenu).not.toHaveBeenCalled();
+  });
+
+  it('die aktive Kapsel trägt den Ring und öffnet weiter das Lied-Menü', () => {
+    const onToggleMenu = vi.fn<() => void>();
+    const { container } = zeige({ querformat: true, andereHaelfte: andere(1), onToggleMenu });
+    const aktiv = container.querySelector('[data-tour="chart-lied"]')!;
+    expect(aktiv.className).toMatch(/kapselAktiv/);
+    fireEvent.click(aktiv);
+    expect(onToggleMenu).toHaveBeenCalledTimes(1);
+  });
+
+  it('steht auf der Seite ihres Blatts: links aktiv → andere rechts, und umgekehrt', () => {
+    const reihenfolge = (c: HTMLElement) =>
+      Array.from(c.querySelectorAll('[class*="kapselPaar"] > div')).map((g) =>
+        g.querySelector('[data-tour="chart-lied"]') ? 'aktiv' : 'andere',
+      );
+    const erste = zeige({ querformat: true, andereHaelfte: andere(1) });
+    expect(reihenfolge(erste.container)).toEqual(['aktiv', 'andere']);
+    erste.unmount();
+    const zweite = zeige({ querformat: true, andereHaelfte: andere(0) });
+    expect(reihenfolge(zweite.container)).toEqual(['andere', 'aktiv']);
+  });
+});
+
+/**
+ * **Werkzeuge einzeln je Lied im Querformat** (Alwin, 03.10.2026: „nicht hinter einen gemeinsamen
+ * Button, sondern jeweils einzeln … bitte immer über dem Lied"). Eine Regel (`verfuegbareWerkzeuge`)
+ * für Menü und Knöpfe – geprüft wird sie selbst und dass beide Darstellungen sie nutzen.
+ */
+describe('verfuegbareWerkzeuge – die eine Regel', () => {
+  const basis = { zeigtDokument: false, ansehen: false, gezoomt: false, teamNotizen: false };
+  it('Akkorde: Aussehen, Tempo, Anmerken', () => {
+    expect(verfuegbareWerkzeuge(basis)).toEqual(['aussehen', 'tempo', 'anmerken']);
+  });
+  it('mit Zoom und Team-Recht kommen Zoom und Notizen dazu', () => {
+    expect(verfuegbareWerkzeuge({ ...basis, gezoomt: true, teamNotizen: true })).toEqual([
+      'aussehen',
+      'tempo',
+      'zoom',
+      'team',
+      'anmerken',
+    ]);
+  });
+  it('Dokument: weder Aussehen noch Notizen', () => {
+    expect(verfuegbareWerkzeuge({ ...basis, zeigtDokument: true, teamNotizen: true })).toEqual([
+      'tempo',
+      'anmerken',
+    ]);
+  });
+  it('beim Ansehen fremder Notizen nur der Weg zurück', () => {
+    expect(verfuegbareWerkzeuge({ ...basis, ansehen: true, teamNotizen: true })).toEqual(['team']);
+  });
+});
+
+describe('ChartHeader – Werkzeuge einzeln im Querformat', () => {
+  const andere = (onWerkzeug = vi.fn<(id: string) => void>()): AndereHaelfte => ({
+    slot: 1,
+    titel: 'Staunen',
+    info: [],
+    zeigtDokument: false,
+    onWaehlen: vi.fn<() => void>(),
+    onWerkzeug,
+  });
+
+  it('kein gemeinsamer Werkzeuge-Knopf, sondern die Werkzeuge einzeln', () => {
+    const onAppearance = vi.fn<() => void>();
+    zeige({ querformat: true, onAppearance });
+    expect(screen.queryByRole('button', { name: 'Werkzeuge' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Aussehen' }));
+    expect(onAppearance).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: 'Tempo' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Anmerken' })).toBeTruthy();
+  });
+
+  it('die Knöpfe zeigen ihren Zustand: Puls voll blau, offenes Fenster hellblau, Zeichnen voll blau', () => {
+    zeige({ querformat: true, tempoAktiv: true, offenesWerkzeug: 'aussehen', drawMode: true });
+    expect(screen.getByRole('button', { name: 'Tempo' }).className).toMatch(/aktiv/);
+    expect(screen.getByRole('button', { name: 'Aussehen' }).className).toMatch(/offen/);
+    expect(screen.getByRole('button', { name: 'Anmerken beenden' }).className).toMatch(/aktiv/);
+  });
+
+  it('die Werkzeuge des anderen Lieds wählen dieses Lied – nicht das Werkzeug des aktiven', () => {
+    const onWerkzeug = vi.fn<(id: string) => void>();
+    const onAppearance = vi.fn<() => void>();
+    zeige({ querformat: true, andereHaelfte: andere(onWerkzeug), onAppearance });
+    fireEvent.click(screen.getByRole('button', { name: 'Aussehen – Staunen' }));
+    expect(onWerkzeug).toHaveBeenCalledWith('aussehen');
+    expect(onAppearance).not.toHaveBeenCalled();
+  });
+
+  it('im Hochformat bleibt der eine Werkzeuge-Knopf', () => {
+    zeige({ querformat: false });
+    expect(screen.getByRole('button', { name: 'Werkzeuge' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Aussehen' })).toBeNull();
   });
 });

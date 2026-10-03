@@ -57,6 +57,78 @@
   }
 }
 
+// ── Querformat: je Lied Titel + einzelne Werkzeuge, mittig über seinem Blatt (#421, 03.10.2026) ──
+// Das Paar reicht über die volle Kopfbreite (der negative linke Rand nimmt den Zurück-Knopf mit
+// hinein; rechts steht im Querformat kein Knopf), damit jede Gruppe mittig über IHRER Blatthälfte
+// steht. Die Gruppen halten Abstand zum Zurück-Knopf; Tipps in die Lücken gehen an ihn durch.
+.kapselPaar {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  margin-left: calc(-1 * (var(--rundknopf) + 8px));
+  pointer-events: none;
+
+  > .gruppe {
+    justify-self: center;
+    max-width: calc(100% - 2 * (var(--rundknopf) + 14px));
+  }
+}
+
+// Ein Lied im Querformat: Gruppe in der Mitte des Kopfs.
+.gruppeMitte {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+}
+
+// Titel + Werkzeuge eines Lieds. Wird es eng, gibt zuerst der Titel nach (Auslassungspunkte) – die
+// Knöpfe behalten ihre Größe.
+.gruppe {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  pointer-events: auto;
+
+  > .menuBtn {
+    flex: 0 1 auto;
+  }
+}
+
+// Kleinere Bildschirme (kleines iPad quer, Handy quer): Knöpfe und Kapsel etwas kleiner, damit
+// Titel und vier Werkzeuge in jede Hälfte passen (Alwin: „auch bei kleinen iPads/Bildschirmen").
+@media (max-width: 1100px) {
+  .kapselPaar,
+  .gruppeMitte {
+    --rundknopf: 40px;
+  }
+}
+@media (max-width: 900px) {
+  .kapselPaar,
+  .gruppeMitte {
+    --rundknopf: 36px;
+  }
+  .gruppe {
+    gap: 4px;
+  }
+}
+
+// Die aktive Kapsel trägt einen blauen Ring – sie bestimmt, wofür Werkzeuge und Menü gelten.
+.kapselAktiv {
+  box-shadow:
+    0 0 0 2px var(--blue),
+    0 1px 4px rgba(15, 23, 42, 0.16);
+}
+
+// Die andere Kapsel ist zurückgenommen: Ein Tipp wählt dieses Lied.
+.kapselInaktiv {
+  opacity: 0.6;
+  box-shadow: none;
+}
+
 // Lied-Menü offen: Kapsel hellblau wie der Werkzeuge-Knopf mit offenem Fenster (02.10.2026).
 .menuBtnOffen {
   background: var(--blue-tile);
@@ -168,7 +240,11 @@
   position: absolute;
   // Direkt unter dem Kopf – eine Variable für alle Fenster, die dort aufgehen.
   top: calc(var(--chart-kopf-unten) + 6px);
-  right: 12px;
+  // Hochformat: rechts unter dem Werkzeuge-Knopf. Querformat: unter dem Knopf des Werkzeugs, über
+  // seinem Lied – `ChartHeader` setzt dann die drei Variablen; ohne sie gilt rechts.
+  left: var(--werkzeug-links);
+  right: var(--werkzeug-rechts, 12px);
+  translate: var(--werkzeug-verschub, 0);
   z-index: 99;
   background: var(--surface2);
   border-radius: 14px;
@@ -394,7 +470,9 @@
   position: absolute;
   // Direkt unter dem Kopf – eine Variable für alle Fenster, die dort aufgehen.
   top: calc(var(--chart-kopf-unten) + 6px);
-  left: 50%;
+  // Unter der Titel-Kapsel des aktiven Lieds (`ChartHeader` misst sie) – im Querformat also über
+  // SEINER Hälfte, nicht mittig zwischen den Liedern. Am Rand begrenzt (halbe Menübreite + Luft).
+  left: clamp(120px, var(--liedmenue-x, 50%), calc(100% - 120px));
   transform: translateX(-50%);
   z-index: 99;
   background: var(--surface2);

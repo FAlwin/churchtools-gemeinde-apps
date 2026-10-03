@@ -1,5 +1,6 @@
 import { ANNO_KEY_RE } from '../shared/keys/index';
 import { test, expect } from '@playwright/test';
+import { oeffneWerkzeug } from './werkzeug';
 import {
   TOUR_CHART,
   TOUR_SETLIST,
@@ -73,9 +74,8 @@ test.describe('Auth-Flow mit ChurchTools-Stub', () => {
       { timeout: 20_000 },
     );
 
-    // Seit dem 02.10.2026 hinter dem Werkzeuge-Knopf (ein Knopf für alles).
-    await page.getByRole('button', { name: 'Werkzeuge' }).click();
-    await page.getByRole('menuitem', { name: /Anmerken/ }).click();
+    // Hochformat: hinter dem Werkzeuge-Knopf; Querformat: einzeln (#421).
+    await oeffneWerkzeug(page, 'Anmerken');
     const flaeche = seiten.first();
     const box = await flaeche.boundingBox();
     expect(box).not.toBeNull();

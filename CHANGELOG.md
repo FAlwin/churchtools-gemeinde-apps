@@ -7,6 +7,29 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Geändert
+
+- **Querformat: Jedes Lied hat seinen eigenen Titel und seine Werkzeuge oben** (#421). Stehen zwei
+  Lieder nebeneinander, sitzt über jeder Hälfte eine Titel-Kapsel mit Aussehen, Tempo, Notizen von …
+  und Anmerken als einzelnen Knöpfen – auch auf kleinen iPads mittig über dem Lied. Das aktive Lied
+  trägt einen blauen Ring; ein Tipp auf den blassen Titel oder eines seiner Werkzeuge wählt dieses
+  Lied (und öffnet das Werkzeug gleich). Lied-Menü, Aussehen und Tempo öffnen unter ihrem Knopf, also
+  über dem richtigen Lied. Vorher wählte man es mit einem
+  Tipp aufs Blatt – und landete dabei im Vollbild, sodass man die Auswahl erst nach dem Zurückschalten
+  sah. Der Tipp aufs Blatt schaltet jetzt nur noch das Vollbild.
+- **iPad: Der Bereich oben ist wieder so schmal wie vorher.** Das milchige Band gibt es dort nicht;
+  der zusätzliche Abstand gilt nur noch auf dem iPhone.
+
+### Behoben
+
+- **Zoom verrutschte beim Vollbild und beim Drehen** (#420). Wer mit zwei Fingern hineingezoomt
+  hatte und dann ins Vollbild wechselte oder das iPad drehte, sah danach einen anderen Ausschnitt,
+  das Blatt war seitlich angeschnitten und größer. Der Zoom wurde als Pixel-Verschiebung gemerkt;
+  das Blatt wird bei einer neuen Fläche aber neu eingepasst. Jetzt merkt sich die App, **welche
+  Stelle des Blatts** in der Mitte steht: Nach Vollbild oder Drehen steht dieselbe Stelle wieder
+  dort, die Schrift bleibt gleich groß, und am Rand rutscht nichts heraus. Ältere gespeicherte
+  Zooms werden wenigstens am Rand begrenzt.
+
 ## [2.26.0] – 2026-10-02
 
 **Beim Update ist nichts zu tun.** Die Einführung zum Liedblatt erscheint einmal neu, weil die

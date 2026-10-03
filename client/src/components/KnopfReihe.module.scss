@@ -63,6 +63,11 @@
   background: var(--blue-tile);
 }
 
+// Gehört zum nicht aktiven Lied im Querformat – wie dessen Titel-Kapsel zurückgenommen.
+.blass {
+  opacity: 0.6;
+}
+
 // Hier läuft gerade etwas (Puls, Zeichnen, fremde Notizen) – sichtbar auch bei geschlossenem Menü.
 .aktiv {
   background: var(--blue);

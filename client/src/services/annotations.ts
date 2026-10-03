@@ -22,7 +22,7 @@ import {
   ANNO_KEY_RE,
   normalizeAnnoKey as normalizeKey,
 } from '@shared/keys/index';
-import type { AnnotationText, PageAnnotation } from '@shared/types/index';
+import type { AnnotationText, GespeicherterZoom, PageAnnotation } from '@shared/types/index';
 
 // Namensräume und Grammatik aus @shared/keys – EINZIGE Quelle für Client und Server (#250).
 const DRAW = ANNO_DRAW_NS;
@@ -117,7 +117,7 @@ function annotationFromStorage(key: string): PageAnnotation | null {
   if (strokes) out.strokes = strokes;
   const texts = safeJson<AnnotationText[]>(localStorage.getItem(DRAW + key + '_text'));
   if (texts && texts.length) out.texts = texts;
-  const zoom = safeJson<{ x: number; y: number; scale: number }>(localStorage.getItem(ZOOM + key));
+  const zoom = safeJson<GespeicherterZoom>(localStorage.getItem(ZOOM + key));
   if (zoom) out.zoom = zoom;
   return Object.keys(out).length > 0 ? out : null;
 }

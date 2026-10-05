@@ -172,6 +172,11 @@
 }
 
 // Uhrzeit-ausblenden als Schalter-Zeile.
+// „Neuer Eintrag": Umschalter Lied · Text · Überschrift unter dem Titel, mit Luft zum ersten Feld.
+.art {
+  margin: 2px 0 14px;
+}
+
 // Text des Schalters: Beschriftung + Hinweis darunter (#423 – der Vorlauf gilt für einen Block).
 .toggleText {
   display: flex;

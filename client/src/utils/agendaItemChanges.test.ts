@@ -4,6 +4,7 @@ import {
   pendingAgendaFields,
   durationTarget,
   isDurationValid,
+  neuerAgendaPunkt,
   type AgendaItemDraft,
 } from './agendaItemChanges';
 
@@ -121,5 +122,71 @@ describe('isDurationValid', () => {
     expect(isDurationValid('-1')).toBe(false);
     expect(isDurationValid('2.5')).toBe(false);
     expect(isDurationValid('abc')).toBe(false);
+  });
+});
+
+/** „Neuer Eintrag" (05.10.2026): was angelegt wird – und wann noch nichts. */
+describe('neuerAgendaPunkt', () => {
+  const leer = {
+    title: '',
+    duration: '',
+    responsible: '',
+    note: '',
+    link: { kind: 'keep' } as const,
+  };
+  const lied = { kind: 'link', arrangementId: 30, name: 'Treu' } as const;
+
+  it('Lied ohne eigenen Titel heißt wie das Lied', () => {
+    expect(neuerAgendaPunkt('lied', { ...leer, link: lied })).toEqual({
+      type: 'song',
+      title: 'Treu',
+      arrangementId: 30,
+    });
+  });
+
+  it('Lied mit eigenem Titel behält ihn', () => {
+    expect(neuerAgendaPunkt('lied', { ...leer, title: ' Einsingen ', link: lied })?.title).toBe(
+      'Einsingen',
+    );
+  });
+
+  it('Lied ohne gewähltes Lied: noch nichts anzulegen', () => {
+    expect(neuerAgendaPunkt('lied', { ...leer, title: 'Lied' })).toBeNull();
+  });
+
+  it('Text braucht einen Titel; leere Felder werden weggelassen, nicht als "" geschickt', () => {
+    expect(neuerAgendaPunkt('text', leer)).toBeNull();
+    expect(neuerAgendaPunkt('text', { ...leer, title: 'Begrüßung', responsible: '  ' })).toEqual({
+      type: 'text',
+      title: 'Begrüßung',
+    });
+  });
+
+  it('Dauer, Zuständige und Notiz gehen mit', () => {
+    expect(
+      neuerAgendaPunkt('text', {
+        ...leer,
+        title: 'Predigt',
+        duration: '30',
+        responsible: ' [Predigt] ',
+        note: 'kurz',
+      }),
+    ).toEqual({
+      type: 'text',
+      title: 'Predigt',
+      durationMin: 30,
+      responsible: '[Predigt]',
+      note: 'kurz',
+    });
+  });
+
+  it('eine ungültige Dauer macht den Punkt ungültig, statt still verloren zu gehen', () => {
+    expect(neuerAgendaPunkt('text', { ...leer, title: 'Predigt', duration: '2,5' })).toBeNull();
+  });
+
+  it('Überschrift: nur der Titel, auch wenn in den anderen Feldern noch etwas steht', () => {
+    expect(
+      neuerAgendaPunkt('ueberschrift', { ...leer, title: 'Lobpreis', duration: '5', note: 'x' }),
+    ).toEqual({ type: 'header', title: 'Lobpreis' });
   });
 });

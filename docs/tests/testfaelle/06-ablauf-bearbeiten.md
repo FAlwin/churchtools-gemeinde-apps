@@ -100,23 +100,31 @@ tippen auf den Titel darf **kein** Ziehen auslösen.
 
 ### TF-EDIT-05 · Punkt hinzufügen und löschen
 
-**Das muss passieren:** Die Rückfrage nennt den Punkt **genauso wie die Liste** – also
+**Das muss passieren:** Das **runde blaue Plus** schwebt unten rechts über dem Ablauf (nur im
+Bearbeiten-Modus) und öffnet **dasselbe Fenster wie das Bearbeiten**, nur mit „Neuer Eintrag" und dem
+Umschalter **Lied · Text · Überschrift**. Bei „Lied" geht sofort die Liedsuche auf; nach der Wahl steht
+der Liedname als Titel drin, Dauer und Zuständige lassen sich gleich setzen – ein zweites Fenster danach
+gibt es nicht mehr. Die Rückfrage beim Löschen nennt den Punkt **genauso wie die Liste** – also
 „Lied – Du großer Gott", nicht nur den Liednamen. Der gelöschte Punkt zerfällt sichtbar an seiner
-Stelle. Beides steht danach so in ChurchTools.
+Stelle. Alles steht danach so in ChurchTools.
 
-1. Test-Termin öffnen, **Bearbeiten**.
-2. Ganz unten auf **Hinzufügen** tippen.
-3. Einen Titel eintragen und bestätigen.
-4. Einen **Lied**-Punkt antippen und **Eintrag löschen** wählen.
-5. Die Rückfrage lesen, dann bestätigen.
-6. Zusehen, wie die Zeile verschwindet.
+1. Test-Termin öffnen, **Bearbeiten**. Das Plus erscheint unten rechts; es verdeckt den Stift des
+   letzten Punkts nicht.
+2. **Plus** tippen → die Liedsuche ist offen. Ein Lied wählen.
+3. Im Fenster „Neuer Eintrag" steht der Liedname als Titel. **Dauer** auf 4 setzen, **Hinzufügen**.
+4. Erneut **Plus**, in der Suche **Abbrechen**, oben **Text** wählen: Es gibt kein Liedfeld. Titel
+   eintragen, **Hinzufügen**.
+5. Erneut **Plus**, **Abbrechen**, **Überschrift**: nur das Titelfeld. Titel eintragen, **Hinzufügen**.
+6. Einen **Lied**-Punkt antippen und **Eintrag löschen** wählen.
+7. Die Rückfrage lesen, dann bestätigen.
+8. Zusehen, wie die Zeile verschwindet.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/AddItemSheet.tsx`, `client/src/pages/Setlist.tsx`, `client/src/components/ConfirmDialog.tsx`
-- **Automatisiert:** nein
-- **Historie:** –
+- **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `client/src/utils/agendaItemChanges.ts`, `client/src/components/SchwebePlus.tsx`, `client/src/pages/Setlist.tsx`, `client/src/components/ConfirmDialog.tsx`
+- **Automatisiert:** teilweise – `e2e/ablauf-hinzufuegen.spec.ts` (Plus nur im Bearbeiten-Modus, Text anlegen, steht in der Liste, Löschen), `client/src/components/ItemActionSheet.test.tsx` (Neuer Eintrag: Suche sofort offen, Titel = Liedname, Überschrift nur Titel, Fehler bleibt im Fenster), `client/src/utils/agendaItemChanges.test.ts` (`neuerAgendaPunkt`); von Hand bleibt das Schreiben nach ChurchTools
+- **Historie:** schwebendes Plus und einheitlicher Dialog 05.10.2026 (vorher eigenes „Hinzufügen"-Blatt mit drei Formularen)
 
 </details>
 

@@ -170,7 +170,7 @@ gleich das **Notenblatt** – die App zeigt danach Akkorde, ohne dass man etwas 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/NewSongSheet.tsx`, `client/src/components/ChordEditor.tsx`, `client/src/components/SongPicker.tsx`, `client/src/hooks/useLiedSuche.ts`, `client/src/components/SongSelectTrefferListe.tsx`, `client/src/hooks/useNeuesLied.ts`, `server/src/services/setlistBuilder.ts`, `client/src/utils/liedFormular.ts`, `client/src/pages/AllSongs.tsx`, `client/src/components/AddItemSheet.tsx`, `server/src/services/songVerwaltung.ts`, `server/src/services/ctSongCategories.ts`
+- **Betrifft:** `client/src/components/NewSongSheet.tsx`, `client/src/components/ChordEditor.tsx`, `client/src/components/SongPicker.tsx`, `client/src/hooks/useLiedSuche.ts`, `client/src/components/SongSelectTrefferListe.tsx`, `client/src/hooks/useNeuesLied.ts`, `server/src/services/setlistBuilder.ts`, `client/src/utils/liedFormular.ts`, `client/src/pages/AllSongs.tsx`, `server/src/services/songVerwaltung.ts`, `server/src/services/ctSongCategories.ts`, `client/src/components/ItemActionSheet.tsx`
 - **Automatisiert:** teilweise – `client/src/utils/liedFormular.test.ts`, `client/src/hooks/useNeuesLied.test.tsx` (Gerüst vs. geholtes Blatt, Speichern zieht das Ergebnis nach), `client/src/components/NewSongSheet.test.tsx` (Knopf, Editor ohne Versionsname, nichts öffnet sich von selbst), `server/src/services/arrangementFileVerwaltung.test.ts` (`originalNotenblattSchreiben`: erst hochladen, dann ersetzen; Versionen bleiben), `client/src/components/SongSelectTrefferListe.test.tsx`, `server/src/services/songVerwaltung.test.ts`; von Hand bleibt das Zusammenspiel mit ChurchTools und CCLI
 - **Historie:** #322, #378 (Wegwahl weg, Suche im Einfüge-Dialog)
 
@@ -212,7 +212,7 @@ und **„Bei SongSelect nach … suchen"**. Findet die Bibliothek **nichts**, su
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/hooks/useLiedSuche.ts`, `client/src/components/LiedSucheKopf.tsx`, `client/src/components/SucheAngebot.tsx`, `client/src/components/SongPicker.tsx`, `client/src/pages/AllSongs.tsx`, `client/src/components/AddItemSheet.tsx`, `client/src/components/ItemActionSheet.tsx`
+- **Betrifft:** `client/src/hooks/useLiedSuche.ts`, `client/src/components/LiedSucheKopf.tsx`, `client/src/components/SucheAngebot.tsx`, `client/src/components/SongPicker.tsx`, `client/src/pages/AllSongs.tsx`, `client/src/components/ItemActionSheet.tsx`
 - **Automatisiert:** teilweise – `client/src/hooks/useLiedSuche.test.ts` (SongSelect fragt von selbst NUR bei leerer Bibliothek, nie unter drei Zeichen, nie ohne Lizenz/Anlege-Weg; Angebot schickt sofort; Treffer gelten nur, solange der Begriff steht; Liedtexte nie von selbst), `client/src/components/SongPicker.test.tsx` (Angebot statt Anfrage bei Treffern, automatische Suche bei leerer Bibliothek, kein SongSelect ohne Anlege-Weg, kein Umschalter), `client/src/components/LiedSucheKopf.test.tsx`, `client/src/components/SucheAngebot.test.tsx`, `client/src/utils/songFilter.test.ts` (die Einzahl); von Hand bleibt das Zusammenspiel gegen echtes SongSelect und dass im Liederheft wirklich kein SongSelect erscheint (beim Verknüpfen gibt es ihn seit #391 – TF-EDIT-07)
 - **Historie:** #378 (erster Anlauf Umschalter 14.08.2026, umgebaut nach Rückmeldung Alwin 03.09.2026)
 
@@ -451,7 +451,7 @@ anlegt (#395).
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/LiedSchonVorhanden.tsx`, `client/src/components/NewSongSheet.tsx`, `client/src/utils/liedFormular.ts`, `shared/lieder/index.ts`, `client/src/components/AddItemSheet.tsx`, `client/src/components/ItemActionSheet.tsx`, `client/src/pages/AllSongs.tsx`
+- **Betrifft:** `client/src/components/LiedSchonVorhanden.tsx`, `client/src/components/NewSongSheet.tsx`, `client/src/utils/liedFormular.ts`, `shared/lieder/index.ts`, `client/src/components/ItemActionSheet.tsx`, `client/src/pages/AllSongs.tsx`
 - **Automatisiert:** teilweise – `client/src/components/NewSongSheet.test.tsx` (Rückfrage statt Anlegen, verwenden, trotzdem ohne Nummer, zurück, keine Warnung während des Anlegens), `client/src/utils/liedFormular.test.ts` (`vorhandenesLied`: führende Null, Leerzeichen, eigenes Lied; `notenblattPlan` fällt auf den Treffer zurück), `client/src/components/ItemActionSheet.test.tsx` (vorgemerkt statt geschrieben); von Hand bleibt, dass ChurchTools wirklich kein zweites Lied anlegt und das Notenblatt am zweiten Lied hängt
 - **Historie:** #395 (20.09.2026), gemeldet von Alwin beim Durchklicken von #391
 

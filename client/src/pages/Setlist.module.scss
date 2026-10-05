@@ -1,5 +1,7 @@
+// Bearbeiten-Liste. Unten Platz für das schwebende Plus (54 px + 16 px Rand, `SchwebePlus`): Sonst
+// läge es über dem Stift des letzten Punkts.
 .list {
-  padding: 12px 16px;
+  padding: 12px 16px 76px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -269,19 +271,6 @@
   &:active {
     cursor: grabbing;
   }
-}
-
-.addBtn {
-  margin: 14px 16px 0;
-  width: calc(100% - 32px);
-  padding: 12px;
-  border: 1.5px dashed var(--border);
-  border-radius: 8px;
-  background: none;
-  color: var(--blue-ink);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
 }
 
 // „Geändert"-Aufleuchten (#161): neuer/geänderter/verschobener Ablaufpunkt pulst beim Öffnen 3×

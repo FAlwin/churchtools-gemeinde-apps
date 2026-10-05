@@ -73,7 +73,8 @@ export const TOUR_SETLIST = 'setlist-v1';
 // setlist-edit-v4 (18.09.2026, #391): „Lied verknüpfen" kann jetzt auch ein Lied ANLEGEN („Neues Lied"
 // und SongSelect wie beim Hinzufügen) – der Schritt „Punkt bearbeiten" sagt das.
 // setlist-edit-v5 (05.10.2026, #423): Der Dialog hat „Vor Gottesdienstbeginn" statt „Uhrzeit
-// ausblenden" – der Schritt nennt den Soundcheck als Beispiel. v2.26.1 (produktiv) trägt v4.
+// ausblenden" – der Schritt nennt den Soundcheck als Beispiel. v2.26.1 (produktiv) trägt v4. Im selben
+// Release: „Hinzufügen" ist das schwebende Plus und öffnet den Bearbeiten-Dialog als „Neuer Eintrag".
 export const TOUR_SETLIST_EDIT = 'setlist-edit-v5';
 /** Gruppe 5 – Verfügbarkeit (#177), beim ersten Öffnen des Bereichs. */
 // v3 (05.09.2026, abends): Statuskopf, Streifen zieht mit, Eintragen über EIN Fenster,
@@ -211,7 +212,7 @@ export const SETLIST_EDIT_STEPS: CoachStep[] = [
   {
     selector: '[data-tour="edit-add"]',
     title: 'Hinzufügen',
-    body: 'Füge unten einen neuen Punkt oder ein Lied zum Ablauf hinzu. Tippe Titel, Autor oder CCLI-Nummer – eure Lieder stehen oben, SongSelect darunter. Das Auge zeigt den Liedtext, das Plus fügt ein; bei SongSelect legst du das Lied damit gleich an. Ist ein Lied bei euch nicht da, sucht SongSelect von selbst mit.',
+    body: 'Mit dem Plus legst du einen neuen Eintrag an – im selben Fenster wie beim Bearbeiten: oben wählst du Lied, Text oder Überschrift. Bei „Lied“ geht gleich die Suche auf: Tippe Titel, Autor oder CCLI-Nummer – eure Lieder stehen oben, SongSelect darunter. Das Auge zeigt den Liedtext, das Plus wählt aus. Dauer und Zuständige setzt du gleich mit.',
   },
 ];
 

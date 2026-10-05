@@ -181,7 +181,7 @@ export function SongPicker({
   return (
     <div className={styles.wrap}>
       {/* Oben rechts als ruhige Textaktion – dieselbe Optik wie im Listenkopf des Liederhefts. Stand
-          vorher im `AddItemSheet`; hier, weil nur hier der Suchbegriff für die Vorbelegung bekannt ist. */}
+          vorher im früheren `AddItemSheet`; hier, weil nur hier der Suchbegriff für die Vorbelegung bekannt ist. */}
       {neuesLied && (
         <div className={styles.kopfzeile}>
           <button className={styles.neuesLied} onClick={() => neuesLied.onClick(query)}>

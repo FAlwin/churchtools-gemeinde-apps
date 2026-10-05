@@ -1,7 +1,14 @@
 import { useMemo, useState } from 'react';
 import type { AgendaItem, AgendaServiceOption, SongSelectTreffer } from '@shared/types/index';
 import type { AgendaItemUpdate } from '../services/churchtoolsApi';
-import { pendingAgendaFields, isDurationValid, type LinkState } from '../utils/agendaItemChanges';
+import {
+  pendingAgendaFields,
+  isDurationValid,
+  neuerAgendaPunkt,
+  type LinkState,
+  type NeuerAgendaPunkt,
+  type PunktArt,
+} from '../utils/agendaItemChanges';
 import { SongPicker } from './SongPicker';
 import { NewSongSheet } from './NewSongSheet';
 import { useCapabilities } from '../hooks/useServices';
@@ -9,22 +16,56 @@ import { ResponsibleField } from './ResponsibleField';
 import { Icon } from './icons';
 import { useOverlayKeyboardInset } from '../hooks/useOverlayKeyboardInset';
 import { Schalter } from './Schalter';
+import { Segment } from './Segment';
 import styles from './ItemActionSheet.module.scss';
 
-interface ItemActionSheetProps {
-  item: AgendaItem;
+interface Gemeinsam {
   onClose: () => void;
+  /** Verfügbare ChurchTools-Dienste (Chips im Verantwortlich-Editor). */
+  services: AgendaServiceOption[];
+}
+
+/** Einen vorhandenen Punkt bearbeiten (der Normalfall – `modus` darf fehlen). */
+interface Bearbeiten extends Gemeinsam {
+  modus?: 'bearbeiten';
+  item: AgendaItem;
   /** Schreibt die geänderten Felder gesammelt (EIN Request). Wirft bei Fehler. */
   onUpdate: (fields: AgendaItemUpdate) => Promise<void>;
   /** Läuft der Punkt vor dem Beginn der Veranstaltung (Vorlauf, #423)? */
   vorBeginn: boolean;
   /** Schreibt den Vorlauf nach ChurchTools (gilt für den ganzen Block, siehe Schalter). Wirft bei Fehler. */
   onSetVorBeginn: (vorBeginn: boolean) => Promise<void>;
-  /** Verfügbare ChurchTools-Dienste (Chips im Verantwortlich-Editor). */
-  services: AgendaServiceOption[];
   /** Löschen anstoßen (Bestätigung erfolgt im Eltern-Screen). */
   onRequestDelete: () => void;
 }
+
+/**
+ * Einen neuen Punkt anlegen – **derselbe Dialog** (Alwin, 05.10.2026: „das Hinzufügen ist noch nicht
+ * konsistent mit allen anderen Einstellungen nachher"). Vorher gab es dafür ein eigenes Blatt mit
+ * Typ-Auswahl und drei Formularen; nach einem Lied ging zusätzlich dieser Dialog auf.
+ */
+interface Neu extends Gemeinsam {
+  modus: 'neu';
+  /** Legt den Punkt an (am Ende des Ablaufs). Wirft bei Fehler. */
+  onAdd: (punkt: NeuerAgendaPunkt) => Promise<void>;
+}
+
+type ItemActionSheetProps = Bearbeiten | Neu;
+
+/** Der Ausgangsstand für „Neuer Eintrag": ein leerer Punkt, gegen den nichts verglichen wird. */
+const LEERER_PUNKT: AgendaItem = {
+  id: 0,
+  title: '',
+  type: null,
+  isHeader: false,
+  responsible: [],
+  responsibleText: '',
+  song: null,
+  time: null,
+  vorBeginn: false,
+  durationMin: null,
+  note: '',
+};
 
 /**
  * „Eintrag bearbeiten"-Dialog: ein zentriertes Modal mit allen Einstellungen auf einen Blick
@@ -34,17 +75,16 @@ interface ItemActionSheetProps {
  * alle Änderungen gesammelt nach ChurchTools; „Abbrechen" verwirft sie. (Löschen ist bewusst
  * separat und hat eine eigene Rückfrage.)
  */
-export function ItemActionSheet({
-  item,
-  onClose,
-  onUpdate,
-  vorBeginn: vorBeginnStart,
-  onSetVorBeginn,
-  services,
-  onRequestDelete,
-}: ItemActionSheetProps) {
+export function ItemActionSheet(props: ItemActionSheetProps) {
+  const { onClose, services } = props;
+  const neu = props.modus === 'neu';
+  const item = props.modus === 'neu' ? LEERER_PUNKT : props.item;
+  const vorBeginnStart = props.modus === 'neu' ? false : props.vorBeginn;
   const isSong = !!item.song;
-  const [songMode, setSongMode] = useState(false);
+  // Neu: Was angelegt wird. Ein Lied ist der häufigste Fall – deshalb vorgewählt und die Suche gleich
+  // offen; so geht es genauso schnell wie vorher über „Hinzufügen → Lied".
+  const [art, setArt] = useState<PunktArt>('lied');
+  const [songMode, setSongMode] = useState(neu);
   const [title, setTitle] = useState(item.title);
   const [responsible, setResponsible] = useState(item.responsibleText);
   const [note, setNote] = useState(item.note);
@@ -57,7 +97,7 @@ export function ItemActionSheet({
   // ('keep' = unverändert, 'unlink' = Lied entfernen, 'link' = neues Arrangement verknüpfen).
   const [linkState, setLinkState] = useState<LinkState>({ kind: 'keep' });
   // Der Anlege-Weg aus „Lied verknüpfen" (#391): „Neues Lied" (der Suchbegriff wird zum Titel) oder
-  // ein SongSelect-Treffer. Nur mit dem Recht, Lieder zu bearbeiten – dieselbe Regel wie im `AddItemSheet`.
+  // ein SongSelect-Treffer. Nur mit dem Recht, Lieder zu bearbeiten – beim Bearbeiten wie beim Anlegen.
   const canEditSongs = useCapabilities(true).data?.canEditSongs ?? false;
   const [neuesLied, setNeuesLied] = useState<{ treffer?: SongSelectTreffer; name?: string } | null>(
     null,
@@ -89,12 +129,37 @@ export function ItemActionSheet({
     [item, title, duration, responsible, note, linkState],
   );
 
-  const dirty = Object.keys(pending).length > 0 || vorBeginn !== vorBeginnStart;
+  const neuerPunkt = useMemo(
+    () =>
+      neu ? neuerAgendaPunkt(art, { title, duration, responsible, note, link: linkState }) : null,
+    [neu, art, title, duration, responsible, note, linkState],
+  );
+
+  const dirty = neu
+    ? !!(title.trim() || duration.trim() || responsible.trim() || note.trim()) ||
+      linkState.kind === 'link'
+    : Object.keys(pending).length > 0 || vorBeginn !== vorBeginnStart;
+
+  /** Ein Lied wurde gewählt (Suche, „Neues Lied" oder „gibt es schon") – vorgemerkt, nicht geschrieben. */
+  function liedGewaehlt(arrangementId: number, name: string) {
+    setLinkState({ kind: 'link', arrangementId, name });
+    // Neu ohne eigenen Titel: Der Punkt heißt wie das Lied (wie früher im „Lied hinzufügen").
+    if (neu && !title.trim()) setTitle(name);
+    setErr(null);
+    setNeuesLied(null);
+    setSongMode(false);
+  }
 
   async function saveAll() {
     setBusy(true);
     setErr(null);
     try {
+      if (props.modus === 'neu') {
+        if (neuerPunkt) await props.onAdd(neuerPunkt);
+        onClose();
+        return;
+      }
+      const { onUpdate, onSetVorBeginn } = props;
       // Alle Feld-Änderungen in EINEM Request (kein Teilzustand bei Fehlern); nur der Vorlauf ist
       // in ChurchTools etwas anderes – eine Grenze am Ablauf, kein Feld des Punkts.
       if (Object.keys(pending).length > 0) await onUpdate(pending);
@@ -123,20 +188,10 @@ export function ItemActionSheet({
         startTreffer={neuesLied.treffer}
         startName={neuesLied.name}
         onClose={() => setNeuesLied(null)}
-        onVerknuepfen={(arrangementId, name) => {
-          setLinkState({ kind: 'link', arrangementId, name });
-          setErr(null);
-          setNeuesLied(null);
-          setSongMode(false);
-        }}
+        onVerknuepfen={liedGewaehlt}
         /* Gibt es das Lied schon (gleiche CCLI-Nummer), wird es vorgemerkt wie eine Auswahl aus der
            Suche – geschrieben wird auch hier erst mit „Speichern" (#395). */
-        onVorhandenes={(song) => {
-          setLinkState({ kind: 'link', arrangementId: song.arrangementId, name: song.name });
-          setErr(null);
-          setNeuesLied(null);
-          setSongMode(false);
-        }}
+        onVorhandenes={(song) => liedGewaehlt(song.arrangementId, song.name)}
       />
     );
   }
@@ -146,16 +201,12 @@ export function ItemActionSheet({
     return (
       <div ref={overlayRef} className={styles.overlay} onClick={onOverlayClick}>
         <div className={styles.card} onClick={(e) => e.stopPropagation()}>
-          <div className={styles.title}>Lied verknüpfen</div>
+          <div className={styles.title}>{neu ? 'Lied auswählen' : 'Lied verknüpfen'}</div>
           {err && <div className={styles.err}>{err}</div>}
           <SongPicker
             autoFocus
-            aktionLabel="Mit diesem Eintrag verknüpfen"
-            onPick={(arrangementId, songName) => {
-              setLinkState({ kind: 'link', arrangementId, name: songName });
-              setErr(null);
-              setSongMode(false);
-            }}
+            aktionLabel={neu ? 'Dieses Lied nehmen' : 'Mit diesem Eintrag verknüpfen'}
+            onPick={liedGewaehlt}
             neuesLied={
               canEditSongs
                 ? { label: 'Neues Lied', onClick: (name) => setNeuesLied({ name }) }
@@ -179,8 +230,21 @@ export function ItemActionSheet({
   return (
     <div ref={overlayRef} className={styles.overlay} onClick={onOverlayClick}>
       <div className={styles.card} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.title}>Eintrag bearbeiten</div>
+        <div className={styles.title}>{neu ? 'Neuer Eintrag' : 'Eintrag bearbeiten'}</div>
         {err && <div className={styles.err}>{err}</div>}
+        {neu && (
+          <Segment
+            ariaLabel="Art des Eintrags"
+            className={styles.art}
+            value={art}
+            onChange={setArt}
+            options={[
+              { value: 'lied', label: 'Lied' },
+              { value: 'text', label: 'Text' },
+              { value: 'ueberschrift', label: 'Überschrift' },
+            ]}
+          />
+        )}
 
         <div className={styles.fields}>
           <div className={styles.field}>
@@ -191,42 +255,65 @@ export function ItemActionSheet({
               className={styles.input}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={willBeSong ? 'z. B. Lied' : 'Titel'}
+              placeholder={
+                neu && art === 'ueberschrift'
+                  ? 'Titel der Überschrift'
+                  : willBeSong || (neu && art === 'lied')
+                    ? 'z. B. Lied'
+                    : 'Titel'
+              }
             />
           </div>
 
           {/* Überschriften haben nur einen Titel – keine weiteren Felder. */}
-          {!item.isHeader && (
+          {!(neu ? art === 'ueberschrift' : item.isHeader) && (
             <>
-              <div className={styles.field}>
-                <span className={styles.label}>Lied</span>
-                {effSong ? (
-                  <>
-                    {/* Liedname sichtbar halten – er kommt aus ChurchTools und ist hier nicht änderbar. */}
-                    <div className={styles.readonly}>{effSong.title}</div>
-                    <button className={styles.linkRow} disabled={busy} onClick={clearLink}>
-                      <Icon name="link" size={17} className={styles.linkIcon} />
-                      Verknüpfung aufheben
-                    </button>
-                  </>
-                ) : (
+              {/* Neu entscheidet der Umschalter, ob es ein Lied ist – bei „Text" gibt es kein Liedfeld. */}
+              {neu && art === 'lied' && (
+                <div className={styles.field}>
+                  <span className={styles.label}>Lied</span>
+                  {effSong && <div className={styles.readonly}>{effSong.title}</div>}
                   <button
                     className={styles.linkRow}
                     disabled={busy}
                     onClick={() => setSongMode(true)}
                   >
                     <Icon name="music" size={17} className={styles.linkIcon} />
-                    Lied verknüpfen
+                    {effSong ? 'Anderes Lied wählen' : 'Lied auswählen'}
                   </button>
-                )}
-                {linkState.kind !== 'keep' && (
-                  <span className={styles.pendingHint}>
-                    {linkState.kind === 'unlink'
-                      ? 'Wird beim Speichern entfernt.'
-                      : 'Wird beim Speichern verknüpft.'}
-                  </span>
-                )}
-              </div>
+                </div>
+              )}
+              {!neu && (
+                <div className={styles.field}>
+                  <span className={styles.label}>Lied</span>
+                  {effSong ? (
+                    <>
+                      {/* Liedname sichtbar halten – er kommt aus ChurchTools und ist hier nicht änderbar. */}
+                      <div className={styles.readonly}>{effSong.title}</div>
+                      <button className={styles.linkRow} disabled={busy} onClick={clearLink}>
+                        <Icon name="link" size={17} className={styles.linkIcon} />
+                        Verknüpfung aufheben
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      className={styles.linkRow}
+                      disabled={busy}
+                      onClick={() => setSongMode(true)}
+                    >
+                      <Icon name="music" size={17} className={styles.linkIcon} />
+                      Lied verknüpfen
+                    </button>
+                  )}
+                  {linkState.kind !== 'keep' && (
+                    <span className={styles.pendingHint}>
+                      {linkState.kind === 'unlink'
+                        ? 'Wird beim Speichern entfernt.'
+                        : 'Wird beim Speichern verknüpft.'}
+                    </span>
+                  )}
+                </div>
+              )}
 
               <div className={styles.field}>
                 <span className={styles.label}>Dauer (Minuten)</span>
@@ -264,48 +351,59 @@ export function ItemActionSheet({
           )}
 
           {/* Für ALLE Punkte, auch Überschriften (#423): Ein Block „Vorbereitung" kann ebenso vor dem
-              Beginn liegen. ChurchTools kennt nur eine Grenze, deshalb nennt der Hinweis den Block. */}
-          <button
-            type="button"
-            className={styles.toggleRow}
-            onClick={() => setVorBeginn((v) => !v)}
-            aria-pressed={vorBeginn}
-          >
-            <span className={styles.toggleText}>
-              <span className={styles.label}>Vor Gottesdienstbeginn</span>
-              <span className={styles.toggleHint}>
-                {vorBeginn
-                  ? 'Dieser und alle Punkte darüber laufen vor dem Beginn.'
-                  : 'Gehört zum Gottesdienst – wie alle Punkte darunter.'}
+              Beginn liegen. ChurchTools kennt nur eine Grenze, deshalb nennt der Hinweis den Block.
+              Nicht beim Anlegen: Neue Punkte kommen ans Ende – dort hieße „an", ALLES sei Vorlauf. */}
+          {!neu && (
+            <button
+              type="button"
+              className={styles.toggleRow}
+              onClick={() => setVorBeginn((v) => !v)}
+              aria-pressed={vorBeginn}
+            >
+              <span className={styles.toggleText}>
+                <span className={styles.label}>Vor Gottesdienstbeginn</span>
+                <span className={styles.toggleHint}>
+                  {vorBeginn
+                    ? 'Dieser und alle Punkte darüber laufen vor dem Beginn.'
+                    : 'Gehört zum Gottesdienst – wie alle Punkte darunter.'}
+                </span>
               </span>
-            </span>
-            <Schalter an={vorBeginn} />
-          </button>
+              <Schalter an={vorBeginn} />
+            </button>
+          )}
         </div>
 
         <div className={styles.actions}>
           <button className={styles.cancelBtn} onClick={onClose} disabled={busy}>
             Abbrechen
           </button>
-          <button
-            className={styles.saveBtn}
-            onClick={saveAll}
-            disabled={busy || !durationValid || !dirty}
-          >
-            {busy ? 'Speichere…' : 'Speichern'}
-          </button>
+          {neu ? (
+            <button className={styles.saveBtn} onClick={saveAll} disabled={busy || !neuerPunkt}>
+              {busy ? 'Füge hinzu…' : 'Hinzufügen'}
+            </button>
+          ) : (
+            <button
+              className={styles.saveBtn}
+              onClick={saveAll}
+              disabled={busy || !durationValid || !dirty}
+            >
+              {busy ? 'Speichere…' : 'Speichern'}
+            </button>
+          )}
         </div>
 
-        <button
-          className={styles.deleteBtn}
-          onClick={() => {
-            onClose();
-            onRequestDelete();
-          }}
-        >
-          <Icon name="trash" size={16} />
-          Eintrag löschen
-        </button>
+        {props.modus !== 'neu' && (
+          <button
+            className={styles.deleteBtn}
+            onClick={() => {
+              onClose();
+              props.onRequestDelete();
+            }}
+          >
+            <Icon name="trash" size={16} />
+            Eintrag löschen
+          </button>
+        )}
       </div>
     </div>
   );

@@ -60,8 +60,11 @@
     hinzufügen" – und seit 18.09.2026 auch „Lied verknüpfen", #391); im Liederheft fehlt es. Dazu `liedAnzahl()` für „1 Lied"/„N Lieder". **Seit 04.09.2026 öffnet „Neues Lied" im Liederheft dieselbe Suche**
     (`SongPicker` mit `oeffnen`: Bibliothekstreffer öffnen das Blatt, kein Plus, keine Vorschau; SongSelect
     wie im Ablauf; `neuesLied={{ label: 'Selbst eintippen' }}` gibt den Suchbegriff als `startName` ins
-    leere Formular). Der „Neues Lied"-Kopf rendert im `SongPicker`, nicht mehr im `AddItemSheet` – nur
-    dort ist der Suchbegriff bekannt.
+    leere Formular). Der „Neues Lied"-Kopf rendert im `SongPicker` – nur
+    dort ist der Suchbegriff bekannt. **Neue Ablaufpunkte (05.10.2026)** legt derselbe Dialog an wie das
+    Bearbeiten (`ItemActionSheet modus="neu"`, Umschalter Lied · Text · Überschrift, Nutzlast
+    `neuerAgendaPunkt`); geöffnet über das schwebende Plus (`SchwebePlus`, auch in den Abwesenheiten).
+    Das frühere `AddItemSheet` ist gelöscht.
 
   - die **Liedtext-Vorschau als Zwischenschritt beim Einfügen** (#379, nach Alwins Rückmeldung vom 14.08.2026 umgebaut): Ein Antippen
     zeigt **erst den Text**, darin steht der Knopf zum Einfügen (Muster ProPresenter). **Seit 04.09.2026 der

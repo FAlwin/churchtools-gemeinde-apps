@@ -67,3 +67,49 @@ export function durationTarget(raw: string, current: number | null): number | un
   }
   return current != null && current !== 0 ? 0 : undefined;
 }
+
+/** Was der Dialog „Neuer Eintrag" anlegt (Alwin, 05.10.2026: derselbe Dialog wie Bearbeiten). */
+export type PunktArt = 'lied' | 'text' | 'ueberschrift';
+
+/** Ein neuer Ablaufpunkt, wie ihn `POST …/agenda/items` des eigenen Servers annimmt. */
+export interface NeuerAgendaPunkt {
+  type: 'header' | 'text' | 'song';
+  title?: string;
+  arrangementId?: number;
+  responsible?: string;
+  note?: string;
+  /** Dauer in Minuten (UI-Einheit); der Server rechnet in ChurchTools-Sekunden um. */
+  durationMin?: number;
+}
+
+/**
+ * Der neue Punkt aus dem Dialog – oder `null`, solange er nicht angelegt werden kann.
+ *
+ * - **Lied:** braucht ein gewähltes Lied. Ohne eigenen Titel heißt der Punkt wie das Lied – so war
+ *   es auch im alten „Lied hinzufügen".
+ * - **Text:** braucht einen Titel.
+ * - **Überschrift:** nur der Titel; Dauer, Zuständige und Notiz kennt eine Überschrift nicht.
+ *
+ * Leere Felder werden **weggelassen**, nicht als `""` geschickt: ChurchTools soll seine Vorgaben
+ * behalten. Eine ungültige Dauer macht den Punkt ungültig, statt still verloren zu gehen.
+ */
+export function neuerAgendaPunkt(art: PunktArt, draft: AgendaItemDraft): NeuerAgendaPunkt | null {
+  const title = draft.title.trim();
+  if (!isDurationValid(draft.duration)) return null;
+  if (art === 'ueberschrift') return title ? { type: 'header', title } : null;
+
+  const punkt: NeuerAgendaPunkt = { type: art === 'lied' ? 'song' : 'text' };
+  if (art === 'lied') {
+    if (draft.link.kind !== 'link') return null;
+    punkt.arrangementId = draft.link.arrangementId;
+    punkt.title = title || draft.link.name;
+  } else {
+    if (!title) return null;
+    punkt.title = title;
+  }
+  const dauer = draft.duration.trim();
+  if (dauer !== '') punkt.durationMin = Number(dauer);
+  if (draft.responsible.trim()) punkt.responsible = draft.responsible.trim();
+  if (draft.note.trim()) punkt.note = draft.note.trim();
+  return punkt;
+}

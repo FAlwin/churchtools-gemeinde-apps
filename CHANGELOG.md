@@ -25,6 +25,14 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   kleines Stage-Manager-Fenster am iPad), wandern sie hinter den einen Werkzeuge-Knopf. Gemessen wird
   laufend an der echten Breite. Die Einführung zum Liedblatt erscheint einmal neu.
 
+- **Ablauf: Hinzufügen über ein schwebendes Plus, im selben Fenster wie das Bearbeiten.** Das runde
+  Plus schwebt im Bearbeiten-Modus unten rechts über dem Ablauf (vorher „Eintrag hinzufügen" am
+  Listenende) – auch bei einem leeren Ablauf, der sich bisher gar nicht füllen ließ. Es öffnet
+  „Neuer Eintrag" mit denselben Feldern wie „Eintrag bearbeiten" und dem Umschalter Lied · Text ·
+  Überschrift; bei „Lied" geht sofort die Suche auf, der Liedname wird zum Titel, Dauer und Zuständige
+  setzt man gleich mit. Das frühere Hinzufügen-Blatt mit drei eigenen Formularen und der zweite Dialog
+  nach einem neuen Lied entfallen. Das Plus der Abwesenheiten ist derselbe Baustein.
+
 ### Entfernt
 
 - **Der Schalter „Uhrzeit ausblenden"** (#423). Er war falsch beschriftet: Das Auge in ChurchTools

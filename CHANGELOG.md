@@ -7,6 +7,22 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu
+
+- **Vorlauf vor dem Gottesdienstbeginn** (#423). Im Bearbeiten-Dialog eines Punkts gibt es den
+  Schalter **„Vor Gottesdienstbeginn"**: Ein Soundcheck läuft damit vor dem Beginn, ChurchTools rechnet
+  seine Uhrzeit rückwärts, und der Gottesdienst bleibt um 10:00 – auch im Kalender. Bisher half nur, im
+  Browser die Uhrzeit umzustellen. Weil ChurchTools nur eine Grenze kennt, gilt der Schalter für einen
+  Block: an – dieser und alle Punkte darüber, aus – dieser und alle darunter. Im Ablauf und in der
+  Bearbeiten-Liste steht zwischen Vorlauf und Gottesdienst die Linie „Beginn · 10:00 Uhr". Die Einführung
+  zum Bearbeiten erscheint einmal neu.
+
+### Entfernt
+
+- **Der Schalter „Uhrzeit ausblenden"** (#423). Er war falsch beschriftet: Das Auge in ChurchTools
+  versteckt nicht die Uhrzeit, sondern nimmt den Punkt aus der Zeitrechnung – alle Punkte danach
+  rücken auf. In ChurchTools gesetzte Augen zeigt die App weiter (der Punkt steht ohne Uhrzeit da).
+
 ## [2.26.1] – 2026-10-03
 
 **Beim Update ist nichts zu tun.** Die Einführung zum Liedblatt erscheint einmal neu (Querformat mit

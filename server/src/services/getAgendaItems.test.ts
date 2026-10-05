@@ -55,6 +55,19 @@ describe('getAgendaItems – Uhrzeit & Ablauf-Mapping', () => {
     expect(items[0].durationMin).toBeNull();
   });
 
+  it('übernimmt den Vorlauf vor dem Beginn aus isBeforeEvent (#423)', async () => {
+    mockedGetAgenda.mockResolvedValue({
+      items: [
+        { id: 4, title: 'Soundcheck', type: 'normal', isBeforeEvent: true },
+        { id: 5, title: 'Begrüßung', type: 'normal', isBeforeEvent: false },
+        { id: 6, title: 'Predigt', type: 'normal' }, // Feld fehlt → kein Vorlauf
+      ],
+    });
+
+    const items = await getAgendaItems('cookie', EVENT);
+    expect(items.map((i) => i.vorBeginn)).toEqual([true, false, false]);
+  });
+
   it('fällt auf start zurück, wenn startTimes fehlt, und erkennt Überschriften', async () => {
     mockedGetAgenda.mockResolvedValue({
       items: [{ id: 3, title: 'Teil 1', type: 'header', start: '2026-06-30T10:00:00Z' }],

@@ -135,15 +135,15 @@ export function updateAgendaItem(
   });
 }
 
-/** Blendet die Uhrzeit eines Punkts in ChurchTools aus/ein (durchgestrichenes Auge). */
-export function setAgendaItemHidden(
+/** Legt fest, ob ein Punkt vor dem Beginn der Veranstaltung läuft (Vorlauf, #423). */
+export function setAgendaItemVorBeginn(
   eventId: number,
   itemId: number,
-  hidden: boolean,
+  vorBeginn: boolean,
 ): Promise<{ ok: boolean }> {
-  return apiFetch(`/api/services/${eventId}/agenda/items/${itemId}/hidden`, {
+  return apiFetch(`/api/services/${eventId}/agenda/items/${itemId}/vor-beginn`, {
     method: 'PUT',
-    body: JSON.stringify({ hidden }),
+    body: JSON.stringify({ vorBeginn }),
   });
 }
 

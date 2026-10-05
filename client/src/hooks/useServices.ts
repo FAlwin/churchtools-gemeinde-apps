@@ -187,12 +187,12 @@ export function useUpdateAgendaItem(eventId: number | null) {
   });
 }
 
-/** Blendet die Uhrzeit eines Punkts in ChurchTools aus/ein (Auge) und lädt den Ablauf neu. */
-export function useSetAgendaItemHidden(eventId: number | null) {
+/** Legt den Vorlauf vor dem Beginn fest (#423) und lädt den Ablauf neu – die Uhrzeiten verschieben sich. */
+export function useSetAgendaItemVorBeginn(eventId: number | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (v: { itemId: number; hidden: boolean }) =>
-      api.setAgendaItemHidden(eventId as number, v.itemId, v.hidden),
+    mutationFn: (v: { itemId: number; vorBeginn: boolean }) =>
+      api.setAgendaItemVorBeginn(eventId as number, v.itemId, v.vorBeginn),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['agenda', eventId] }),
   });
 }

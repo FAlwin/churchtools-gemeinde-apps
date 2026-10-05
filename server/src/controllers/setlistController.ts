@@ -45,7 +45,7 @@ import {
   createAgendaItem,
   deleteAgendaItem,
   reorderAgenda,
-  setAgendaItemHidden,
+  setAgendaItemVorBeginn,
   updateAgendaItem,
   updateArrangementTempo,
 } from '../services/ctWrite.js';
@@ -254,16 +254,19 @@ export async function putAgendaItem(req: Request, res: Response): Promise<void> 
   res.json({ ok: true });
 }
 
-const hiddenSchema = z.object({ hidden: z.boolean() });
+const vorBeginnSchema = z.object({ vorBeginn: z.boolean() });
 
-/** PUT /api/services/:eventId/agenda/items/:itemId/hidden – Uhrzeit aus-/einblenden (CT-Auge). */
-export async function putAgendaItemHidden(req: Request, res: Response): Promise<void> {
+/**
+ * PUT /api/services/:eventId/agenda/items/:itemId/vor-beginn – Vorlauf festlegen (#423): dieser
+ * Punkt läuft vor dem Beginn der Veranstaltung (`true`) oder gehört zum Gottesdienst (`false`).
+ */
+export async function putAgendaItemVorBeginn(req: Request, res: Response): Promise<void> {
   const eventId = idSchema.parse(req.params.eventId);
   const itemId = idSchema.parse(req.params.itemId);
-  const { hidden } = hiddenSchema.parse(req.body);
-  await setAgendaItemHidden(ctCookie(req), eventId, itemId, hidden);
-  // BEWUSST ohne `invalidateSongUsageCache` (#300): Das Aus-/Einblenden der Uhrzeit ändert nichts an
-  // den gespielten Liedern. Siehe die Begründung bei `putAgendaOrder`.
+  const { vorBeginn } = vorBeginnSchema.parse(req.body);
+  await setAgendaItemVorBeginn(ctCookie(req), eventId, itemId, vorBeginn);
+  // BEWUSST ohne `invalidateSongUsageCache` (#300): Die Grenze verschiebt nur Uhrzeiten, nicht die
+  // gespielten Lieder. Siehe die Begründung bei `putAgendaOrder`.
   res.json({ ok: true });
 }
 

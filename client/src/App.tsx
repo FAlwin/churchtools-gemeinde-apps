@@ -17,7 +17,7 @@ import {
   useReorderAgenda,
   useDeleteAgendaItem,
   useUpdateAgendaItem,
-  useSetAgendaItemHidden,
+  useSetAgendaItemVorBeginn,
   useAgendaServices,
   useCreateAgendaItem,
   useSongLibrary,
@@ -192,7 +192,7 @@ export default function App() {
   const reorderAgenda = useReorderAgenda(service?.id ?? null);
   const deleteAgendaItem = useDeleteAgendaItem(service?.id ?? null);
   const updateAgendaItem = useUpdateAgendaItem(service?.id ?? null);
-  const setAgendaItemHidden = useSetAgendaItemHidden(service?.id ?? null);
+  const setAgendaItemVorBeginn = useSetAgendaItemVorBeginn(service?.id ?? null);
   const agendaServices = useAgendaServices(
     auth.isAuthenticated && canEditAgendas && view?.type === 'setlist',
   );
@@ -430,8 +430,8 @@ export default function App() {
           remove: (itemId) => deleteAgendaItem.mutateAsync(itemId).then(() => undefined),
           update: (itemId, fields) =>
             updateAgendaItem.mutateAsync({ itemId, fields }).then(() => undefined),
-          setHidden: (itemId, hidden) =>
-            setAgendaItemHidden.mutateAsync({ itemId, hidden }).then(() => undefined),
+          setVorBeginn: (itemId, vorBeginn) =>
+            setAgendaItemVorBeginn.mutateAsync({ itemId, vorBeginn }).then(() => undefined),
           add: (data) => createAgendaItem.mutateAsync(data).then(() => undefined),
         }}
         services={agendaServices.data ?? []}

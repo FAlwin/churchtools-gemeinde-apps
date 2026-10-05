@@ -57,7 +57,7 @@
 - `POST /api/services/:eventId/agenda/items` → Ablaufpunkt anlegen
 - `PUT  /api/services/:eventId/agenda/items/:itemId` → Punkt ändern (Felder gebündelt: `title`, `responsible`, `arrangementId`, `unlink`, `note`, `durationMin` → CT-Sekunden)
 - `DELETE /api/services/:eventId/agenda/items/:itemId` → Punkt löschen
-- `PUT  /api/services/:eventId/agenda/items/:itemId/hidden` {hidden} → Uhrzeit aus-/einblenden (CT-„Auge")
+- `PUT  /api/services/:eventId/agenda/items/:itemId/vor-beginn` {vorBeginn} → Vorlauf vor dem Gottesdienstbeginn (#423): schreibt nur die Grenze `eventStartPosition` des Ablaufs, an: dieser und alle Punkte darüber, aus: dieser und alle darunter
 - `GET  /api/agenda-services` → ChurchTools-Dienste (für die Verantwortlich-Chips)
 
 ## Lieder

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import type { AgendaItem, SongLibraryEntry, SongSelectTreffer } from '@shared/types/index';
 
 /**
@@ -95,6 +95,7 @@ const ITEM: AgendaItem = {
   responsibleText: '',
   song: null,
   time: '10:05',
+  vorBeginn: false,
   durationMin: 5,
   note: '',
 };
@@ -106,8 +107,8 @@ function zeige(overrides: Partial<Parameters<typeof ItemActionSheet>[0]> = {}) {
       item={ITEM}
       onClose={vi.fn()}
       onUpdate={onUpdate}
-      timeHidden={false}
-      onSetHidden={vi.fn().mockResolvedValue(undefined)}
+      vorBeginn={false}
+      onSetVorBeginn={vi.fn().mockResolvedValue(undefined)}
       services={[]}
       onRequestDelete={vi.fn()}
       {...overrides}
@@ -218,5 +219,49 @@ describe('ItemActionSheet – ein vorhandenes Lied statt eines zweiten (#395)', 
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     await vi.waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
     expect(onUpdate.mock.calls[0][0]).toMatchObject({ arrangementId: 880 });
+  });
+});
+
+/**
+ * #423: Der Schalter „Uhrzeit ausblenden" war falsch beschriftet (das CT-Auge nimmt den Punkt aus der
+ * Zeitrechnung) und ist weg. An seiner Stelle legt „Vor Gottesdienstbeginn" den Vorlauf fest.
+ */
+describe('ItemActionSheet – Vor Gottesdienstbeginn (#423)', () => {
+  const schalter = () => screen.getByRole('button', { name: /Vor Gottesdienstbeginn/ });
+
+  it('der alte Schalter „Uhrzeit ausblenden" ist weg', () => {
+    zeige();
+    expect(screen.queryByText('Uhrzeit ausblenden')).toBeNull();
+  });
+
+  it('einschalten + Speichern schreibt den Vorlauf – und sonst nichts', async () => {
+    const onSetVorBeginn = vi.fn().mockResolvedValue(undefined);
+    const { onUpdate } = zeige({ onSetVorBeginn });
+    fireEvent.click(schalter());
+    expect(schalter().getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(onSetVorBeginn).toHaveBeenCalledWith(true));
+    expect(onUpdate).not.toHaveBeenCalled(); // kein Feld geändert → kein Feld-PUT
+  });
+
+  it('ausschalten bei einem Vorlauf-Punkt schreibt false', async () => {
+    const onSetVorBeginn = vi.fn().mockResolvedValue(undefined);
+    zeige({ vorBeginn: true, onSetVorBeginn });
+    expect(schalter().getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(schalter());
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(onSetVorBeginn).toHaveBeenCalledWith(false));
+  });
+
+  it('nur umgeschaltet und zurück: nichts vorgemerkt, Speichern bleibt aus', () => {
+    zeige();
+    fireEvent.click(schalter());
+    fireEvent.click(schalter());
+    expect(screen.getByRole('button', { name: 'Speichern' }).hasAttribute('disabled')).toBe(true);
+  });
+
+  it('auch Überschriften haben den Schalter', () => {
+    zeige({ item: { ...ITEM, isHeader: true, title: 'Vorbereitung' } });
+    expect(schalter()).toBeTruthy();
   });
 });

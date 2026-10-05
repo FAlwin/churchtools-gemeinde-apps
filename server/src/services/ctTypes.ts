@@ -48,6 +48,19 @@ export interface CtAgendaSong {
   bpm: number | null;
 }
 
+/** Ein Ablauf, wie `GET /api/events/{id}/agenda` ihn liefert – nur die Felder, die die App nutzt. */
+export interface CtAgenda {
+  items: CtAgendaItem[];
+  /**
+   * Die Grenze „Beginn der Veranstaltung" (#423): Punkte mit `position` darunter sind Vorlauf und
+   * werden rückwärts ab Veranstaltungsbeginn gerechnet. Eine Platznummer, kein Punkt – beim
+   * Umsortieren bleibt sie stehen.
+   */
+  eventStartPosition?: number;
+  /** Pflichtfeld beim Schreiben des Ablaufs (`PUT …/agenda`). */
+  calendarId?: number;
+}
+
 export interface CtAgendaItem {
   id: number;
   title: string;
@@ -63,6 +76,11 @@ export interface CtAgendaItem {
    * Auge) – das Feld `start` bleibt davon unberührt und ist daher NICHT verlässlich.
    */
   startTimes?: Record<string, string | null>;
+  /**
+   * Läuft der Punkt VOR dem Beginn der Veranstaltung (Vorlauf, #423)? **Nur lesen:** ChurchTools
+   * leitet das Feld aus `eventStartPosition` am Ablauf ab; pro Punkt geschrieben wird es ignoriert
+   * (gemessen an der Test-Instanz, 05.10.2026).
+   */
   isBeforeEvent?: boolean;
   /** Beim Lesen ein Objekt; beim Schreiben wird nur `text` als String gesendet. */
   responsible?: { text?: string; persons?: { service?: string; person?: { title?: string } }[] };

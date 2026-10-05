@@ -7,21 +7,25 @@
  *
  * Der aufwendigste Teil ist das Auflösen entfernter Punkte – Begründung direkt am Code unten.
  */
-import { useRef, useState } from 'react';
+import { Fragment, useRef, useState } from 'react';
 import type { AgendaItem } from '@shared/types/index';
 import { itemLabel } from '../utils/agendaItemTitle';
 import { vanishedRows, type ShownRow } from '../utils/vanishedRows';
-import { ItemTitle, ResponsibleLine } from './AgendaRowParts';
+import { beginnStelle } from '../utils/vorlauf';
+import { BeginnLinie, ItemTitle, ResponsibleLine } from './AgendaRowParts';
 import { DisintegratingRow } from './DisintegratingRow';
 import styles from '../pages/Setlist.module.scss';
 
 export function AgendaFullView({
   items,
   eventId,
+  beginn,
   onSelect,
 }: {
   items: AgendaItem[];
   eventId: number;
+  /** Uhrzeit des Veranstaltungsbeginns („10:00") für die Linie nach dem Vorlauf (#423). */
+  beginn?: string;
   onSelect: (songIndex: number) => void;
 }) {
   let songIndex = -1;
@@ -73,58 +77,69 @@ export function AgendaFullView({
       if (lr.afterId === item.id) rendered.push({ id: lr.id, title: lr.title, removed: true });
     }
   }
+  // Die Linie „Beginn" vor dem ersten Punkt nach dem Vorlauf (#423) – nur, wenn es Vorlauf gibt.
+  const stelle = beginnStelle(rendered);
   return (
     <div className={styles.flowList}>
-      {rendered.map((item) => {
-        // Entfernter Punkt (#161 Etappe B): kurz sichtbar, dann „poof"-Zerfall.
-        if (item.removed) {
-          return <DisintegratingRow key={item.id} title={item.title} />;
-        }
-        const showTime = !!item.time;
-        // Geänderter/neuer/verschobener Punkt (#161) leuchtet beim Öffnen kurz auf.
-        const chg = item.changed ? ` ${styles.changed}` : '';
-        if (item.isHeader) {
-          return (
-            <div key={item.id} className={`${styles.sectionBand}${chg}`}>
-              {showTime && <span className={styles.bandTime}>{item.time}</span>}
-              {item.title}
-            </div>
-          );
-        }
-        const timeCol = <div className={styles.flowTime}>{showTime ? item.time : ''}</div>;
-        const body = (
-          <div className={styles.flowBody}>
-            <div className={styles.flowHead}>
-              <ItemTitle item={item} />
-              {item.song && <span className={styles.flowSongTag}>🎵</span>}
-              {item.durationMin && <span className={styles.flowDur}>{item.durationMin} Min</span>}
-            </div>
-            {item.note && <div className={styles.flowNote}>{item.note}</div>}
-            <ResponsibleLine entries={item.responsible} />
-          </div>
-        );
-        if (item.song) {
-          songIndex += 1;
-          const idx = songIndex;
-          return (
-            <button
-              key={item.id}
-              className={`${styles.flowRowBtn} ${styles.songRow}${chg}`}
-              data-tour={idx === 0 ? 'setlist-song' : undefined}
-              onClick={() => onSelect(idx)}
-            >
-              {timeCol}
-              {body}
-            </button>
-          );
-        }
-        return (
-          <div key={item.id} className={`${styles.flowRow}${chg}`}>
-            {timeCol}
-            {body}
-          </div>
-        );
-      })}
+      {rendered.map((item, i) => (
+        <Fragment key={item.id}>
+          {i === stelle && <BeginnLinie zeit={beginn} />}
+          {zeile(item)}
+        </Fragment>
+      ))}
+      {stelle === rendered.length && <BeginnLinie zeit={beginn} />}
     </div>
   );
+
+  function zeile(item: (typeof rendered)[number]) {
+    // Entfernter Punkt (#161 Etappe B): kurz sichtbar, dann „poof"-Zerfall.
+    if (item.removed) {
+      return <DisintegratingRow key={item.id} title={item.title} />;
+    }
+    const showTime = !!item.time;
+    // Geänderter/neuer/verschobener Punkt (#161) leuchtet beim Öffnen kurz auf.
+    const chg = item.changed ? ` ${styles.changed}` : '';
+    const vl = item.vorBeginn ? ` ${styles.vorlauf}` : '';
+    if (item.isHeader) {
+      return (
+        <div key={item.id} className={`${styles.sectionBand}${chg}`}>
+          {showTime && <span className={styles.bandTime}>{item.time}</span>}
+          {item.title}
+        </div>
+      );
+    }
+    const timeCol = <div className={styles.flowTime}>{showTime ? item.time : ''}</div>;
+    const body = (
+      <div className={styles.flowBody}>
+        <div className={styles.flowHead}>
+          <ItemTitle item={item} />
+          {item.song && <span className={styles.flowSongTag}>🎵</span>}
+          {item.durationMin && <span className={styles.flowDur}>{item.durationMin} Min</span>}
+        </div>
+        {item.note && <div className={styles.flowNote}>{item.note}</div>}
+        <ResponsibleLine entries={item.responsible} />
+      </div>
+    );
+    if (item.song) {
+      songIndex += 1;
+      const idx = songIndex;
+      return (
+        <button
+          key={item.id}
+          className={`${styles.flowRowBtn} ${styles.songRow}${vl}${chg}`}
+          data-tour={idx === 0 ? 'setlist-song' : undefined}
+          onClick={() => onSelect(idx)}
+        >
+          {timeCol}
+          {body}
+        </button>
+      );
+    }
+    return (
+      <div key={item.id} className={`${styles.flowRow}${vl}${chg}`}>
+        {timeCol}
+        {body}
+      </div>
+    );
+  }
 }

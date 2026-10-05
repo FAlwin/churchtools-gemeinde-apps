@@ -172,14 +172,22 @@ const events = [
   },
 ];
 
+/**
+ * Der Ablauf. `eventStartPosition` ist die Grenze „Beginn der Veranstaltung" (#423): Punkte mit
+ * kleinerer `position` sind Vorlauf. Wie in ChurchTools leitet der Stub `isBeforeEvent` daraus ab
+ * (`mitVorlauf`), statt es je Punkt zu speichern.
+ */
 const agenda = {
+  calendarId: 2,
+  eventStartPosition: 0,
   items: [
-    { id: 1, title: 'Begrüßung', type: 'normal', duration: 300, startTimes: {} },
+    { id: 1, title: 'Begrüßung', type: 'normal', duration: 300, position: 0, startTimes: {} },
     {
       id: 2,
       title: 'Lied',
       type: 'song',
       duration: 300,
+      position: 1,
       startTimes: {},
       song: {
         songId: SONG.id,
@@ -192,6 +200,14 @@ const agenda = {
     },
   ],
 };
+
+/** Der Ablauf, wie ChurchTools ihn liefert: `isBeforeEvent` aus der Grenze abgeleitet (#423). */
+function mitVorlauf() {
+  return {
+    ...agenda,
+    items: agenda.items.map((i) => ({ ...i, isBeforeEvent: i.position < agenda.eventStartPosition })),
+  };
+}
 
 /**
  * Datum RELATIV zu heute. Die App fragt Termine im Fenster -7d…+42d ab – ein festes Datum fiele je
@@ -378,7 +394,21 @@ const server = createServer((req, res) => {
   if (path === '/api/csrftoken') return json(res, { data: 'stub-csrf-token' });
   if (path === '/api/permissions/global') return json(res, { data: permissions });
   if (path === '/api/events') return json(res, { data: events });
-  if (path === `/api/events/${EVENT_ID}/agenda`) return json(res, { data: agenda });
+  if (path === `/api/events/${EVENT_ID}/agenda`) {
+    // Nur die Grenze schreiben (#423) – so wie die App es tut: `{calendarId, eventStartPosition}`
+    // ohne `items`. Alles andere beantwortet der Stub wie bisher mit dem Ablauf.
+    if (req.method === 'PUT') {
+      let body = '';
+      req.on('data', (chunk) => (body += chunk));
+      req.on('end', () => {
+        const neu = JSON.parse(body || '{}');
+        if (typeof neu.eventStartPosition === 'number') agenda.eventStartPosition = neu.eventStartPosition;
+        json(res, { data: mitVorlauf() });
+      });
+      return;
+    }
+    return json(res, { data: mitVorlauf() });
+  }
   /**
    * Die Liederliste. **Nicht mehr leer** (#378): Sie ist die Quelle „Bibliothek" und liefert dem
    * Liedtext-Index die ChordPro-Datei – ohne ein Lied darin liesse sich der Umschalter nicht anfassen.

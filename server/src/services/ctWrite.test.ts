@@ -6,7 +6,7 @@ import {
   createAgendaItem,
   updateAgendaItem,
   deleteAgendaItem,
-  setAgendaItemHidden,
+  setAgendaItemVorBeginn,
   deleteFile,
   updateArrangementTempo,
   createAbsence,
@@ -74,7 +74,7 @@ const SCHREIBER: Array<[string, () => Promise<void>]> = [
   ['createAgendaItem', () => createAgendaItem(COOKIE, 9, { type: 'header', title: 'Neu' })],
   ['updateAgendaItem', () => updateAgendaItem(COOKIE, 9, 1, { title: 'Anders' })],
   ['deleteAgendaItem', () => deleteAgendaItem(COOKIE, 9, 1)],
-  ['setAgendaItemHidden', () => setAgendaItemHidden(COOKIE, 9, 1, true)],
+  ['setAgendaItemVorBeginn', () => setAgendaItemVorBeginn(COOKIE, 9, 1, true)],
   ['deleteFile', () => deleteFile(COOKIE, 42)],
   [
     'createAbsence',
@@ -318,5 +318,69 @@ describe('createAbsence – was an ChurchTools geht', () => {
     };
     fuerChurchTools(body);
     expect(body.startDate).toBe('2026-10-08');
+  });
+});
+
+/**
+ * #423: Der Vorlauf wird als **Grenze** geschrieben – nur `calendarId` und `eventStartPosition`,
+ * ohne `items`. Gemessen an der Test-Instanz (05.10.2026): So bleiben alle Punkte unberührt. Ginge
+ * die Liste mit, würde jeder Punkt neu geschrieben, nur um eine Zahl zu ändern.
+ */
+describe('setAgendaItemVorBeginn – nur die Grenze, auf frischem Stand', () => {
+  /** Ablauf mit drei Punkten, Grenze 1 (Punkt 10 ist Vorlauf). Merkt sich, was geschrieben wurde. */
+  function mockAblauf(eventStartPosition = 1) {
+    const geschrieben: { url: string; rumpf: Record<string, unknown> }[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => {
+      const u = String(url);
+      const method = init?.method ?? 'GET';
+      if (u.includes('/api/csrftoken')) return Promise.resolve(jsonRes('token'));
+      if (method === 'GET' && u.includes('/agenda')) {
+        return Promise.resolve(
+          jsonRes({
+            calendarId: 2,
+            eventStartPosition,
+            items: [
+              { id: 10, title: 'Soundcheck', position: 0 },
+              { id: 11, title: 'Begrüßung', position: 1 },
+              { id: 12, title: 'Predigt', position: 2 },
+            ],
+          }),
+        );
+      }
+      geschrieben.push({
+        url: u,
+        rumpf: JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>,
+      });
+      return Promise.resolve(jsonRes(null, 200));
+    });
+    return geschrieben;
+  }
+
+  it('schreibt nur calendarId + eventStartPosition, ohne items', async () => {
+    const g = mockAblauf();
+    await setAgendaItemVorBeginn(COOKIE, 9, 11, true);
+    expect(g).toHaveLength(1);
+    expect(g[0].url).toContain('/api/events/9/agenda');
+    expect(g[0].rumpf).toEqual({ calendarId: 2, eventStartPosition: 2 });
+  });
+
+  it('rechnet mit der Position aus dem frischen Ablauf', async () => {
+    const g = mockAblauf(3); // alle drei Vorlauf
+    await setAgendaItemVorBeginn(COOKIE, 9, 11, false);
+    expect(g[0].rumpf).toEqual({ calendarId: 2, eventStartPosition: 1 });
+  });
+
+  it('steht der Punkt schon so, wird nichts geschrieben', async () => {
+    const g = mockAblauf();
+    await setAgendaItemVorBeginn(COOKIE, 9, 10, true);
+    expect(g).toHaveLength(0);
+  });
+
+  it('fehlt der Punkt im frischen Ablauf: 409 statt einer geratenen Grenze', async () => {
+    const g = mockAblauf();
+    await expect(setAgendaItemVorBeginn(COOKIE, 9, 99, true)).rejects.toMatchObject({
+      status: 409,
+    });
+    expect(g).toHaveLength(0);
   });
 });

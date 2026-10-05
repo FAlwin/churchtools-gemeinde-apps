@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import type { AgendaItem, AgendaServiceOption, Service } from '@shared/types/index';
 import type { AgendaItemUpdate } from '../services/churchtoolsApi';
 import {
@@ -23,9 +23,11 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { AddItemSheet } from '../components/AddItemSheet';
 import { AgendaFullView } from '../components/AgendaFullView';
 import { SortableRow } from '../components/AgendaSortableRow';
+import { BeginnLinie } from '../components/AgendaRowParts';
 import { ItemActionSheet } from '../components/ItemActionSheet';
 import { Icon } from '../components/icons';
 import { itemLabel } from '../utils/agendaItemTitle';
+import { beginnStelle, vorlaufNachUmsortieren } from '../utils/vorlauf';
 import { Coachmarks } from '../components/Coachmarks';
 import {
   SETLIST_STEPS,
@@ -63,8 +65,8 @@ interface AgendaActions {
   remove: (itemId: number) => Promise<void>;
   /** Schreibt geänderte Felder eines Punkts gesammelt (ein Request). */
   update: (itemId: number, fields: AgendaItemUpdate) => Promise<void>;
-  /** Blendet die Uhrzeit eines Punkts in ChurchTools aus (true) oder ein (false). */
-  setHidden: (itemId: number, hidden: boolean) => Promise<void>;
+  /** Legt fest, ob der Punkt (samt allen darüber bzw. darunter) vor dem Beginn läuft (#423). */
+  setVorBeginn: (itemId: number, vorBeginn: boolean) => Promise<void>;
   /** Legt einen neuen Punkt an. */
   add: (data: NewAgendaItem) => Promise<void>;
 }
@@ -166,7 +168,8 @@ export function Setlist({
     const oldIndex = localItems.findIndex((i) => i.id === active.id);
     const newIndex = localItems.findIndex((i) => i.id === over.id);
     if (oldIndex < 0 || newIndex < 0) return;
-    const next = arrayMove(localItems, oldIndex, newIndex);
+    // Die Beginn-Grenze bleibt an ihrem Platz, wie ChurchTools sie nach dem Speichern rechnet (#423).
+    const next = vorlaufNachUmsortieren(localItems, arrayMove(localItems, oldIndex, newIndex));
     setLocalItems(next); // optimistisch
     setErr(null);
     actions.reorder(next.map((i) => i.id)).catch((e: unknown) => {
@@ -302,8 +305,8 @@ export function Setlist({
           services={services}
           onClose={() => setActionItem(null)}
           onUpdate={(fields) => handleUpdate(actionItem.id, fields)}
-          timeHidden={actionItem.time === null}
-          onSetHidden={(hidden) => actions.setHidden(actionItem.id, hidden)}
+          vorBeginn={actionItem.vorBeginn}
+          onSetVorBeginn={(vorBeginn) => actions.setVorBeginn(actionItem.id, vorBeginn)}
           onRequestDelete={() => setPendingDelete(actionItem)}
         />
       )}
@@ -328,6 +331,9 @@ export function Setlist({
       )}
     </>
   );
+
+  // Linie „Beginn" in der Bearbeiten-Liste – dieselbe Regel wie in der Ansicht (#423).
+  const beginnBeiBearbeiten = beginnStelle(localItems);
 
   return (
     <SeitenGeruest
@@ -370,9 +376,13 @@ export function Setlist({
               strategy={verticalListSortingStrategy}
             >
               <div className={styles.list}>
-                {localItems.map((item) => (
-                  <SortableRow key={item.id} item={item} onOpenActions={setActionItem} />
+                {localItems.map((item, i) => (
+                  <Fragment key={item.id}>
+                    {i === beginnBeiBearbeiten && <BeginnLinie zeit={service.time} />}
+                    <SortableRow item={item} onOpenActions={setActionItem} />
+                  </Fragment>
                 ))}
+                {beginnBeiBearbeiten === localItems.length && <BeginnLinie zeit={service.time} />}
               </div>
             </SortableContext>
           </DndContext>
@@ -381,7 +391,12 @@ export function Setlist({
           </button>
         </>
       ) : (
-        <AgendaFullView items={items} eventId={service.id} onSelect={onSelect} />
+        <AgendaFullView
+          items={items}
+          eventId={service.id}
+          beginn={service.time}
+          onSelect={onSelect}
+        />
       )}
     </SeitenGeruest>
   );

@@ -15,7 +15,7 @@ import {
   putAgendaOrder,
   deleteAgendaItemCtrl,
   putAgendaItem,
-  putAgendaItemHidden,
+  putAgendaItemVorBeginn,
   postAgendaItem,
   getSongArrangementsCtrl,
   getSongLibraryCtrl,
@@ -77,7 +77,10 @@ router.get('/songs/:songId/chart', asyncHandler(getSongChartCtrl));
 router.patch('/services/:eventId/agenda/order', asyncHandler(putAgendaOrder));
 router.post('/services/:eventId/agenda/items', asyncHandler(postAgendaItem));
 router.put('/services/:eventId/agenda/items/:itemId', asyncHandler(putAgendaItem));
-router.put('/services/:eventId/agenda/items/:itemId/hidden', asyncHandler(putAgendaItemHidden));
+router.put(
+  '/services/:eventId/agenda/items/:itemId/vor-beginn',
+  asyncHandler(putAgendaItemVorBeginn),
+);
 router.delete('/services/:eventId/agenda/items/:itemId', asyncHandler(deleteAgendaItemCtrl));
 router.put('/songs/:songId/arrangements/:arrangementId/tempo', asyncHandler(putArrangementTempo));
 

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import type { AgendaItem } from '@shared/types/index';
 import { AgendaFullView } from './AgendaFullView';
 
@@ -180,5 +180,62 @@ describe('AgendaFullView – entfernte Punkte auflösen', () => {
     // Wieder da (z. B. in ChurchTools rückgängig gemacht) → kein Platzhalter mehr.
     rerender(<AgendaFullView items={[...zwei]} eventId={1} onSelect={vi.fn()} />);
     expect(screen.queryByLabelText('Entfernt: Zwei')).toBeNull();
+  });
+});
+
+/**
+ * #423: Zwischen Vorlauf (Soundcheck, Gebet) und Veranstaltung steht die Linie „Beginn · 10:00 Uhr" –
+ * nur, wenn es Vorlauf gibt.
+ */
+describe('AgendaFullView – Linie „Beginn" nach dem Vorlauf (#423)', () => {
+  it('steht zwischen dem letzten Vorlauf-Punkt und dem ersten Punkt des Gottesdienstes', () => {
+    render(
+      <AgendaFullView
+        items={[
+          item({ id: 1, title: 'Soundcheck', time: '09:00', vorBeginn: true }),
+          item({ id: 2, title: 'Begrüßung', time: '10:00', vorBeginn: false }),
+        ]}
+        eventId={1}
+        beginn="10:00"
+        onSelect={vi.fn()}
+      />,
+    );
+    const linie = screen.getByRole('separator', { name: 'Beginn 10:00' });
+    expect(linie.textContent).toBe('Beginn · 10:00');
+    const vorher = screen.getByText('Soundcheck');
+    const nachher = screen.getByText('Begrüßung');
+    // DOM-Reihenfolge: Soundcheck → Linie → Begrüßung.
+    expect(vorher.compareDocumentPosition(linie) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(linie.compareDocumentPosition(nachher) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('ohne Vorlauf keine Linie', () => {
+    render(
+      <AgendaFullView
+        items={[item({ id: 1, title: 'Begrüßung', vorBeginn: false })]}
+        eventId={1}
+        beginn="10:00"
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole('separator')).toBeNull();
+  });
+
+  it('die Lied-Nummer zählt trotz Linie nur Lieder', () => {
+    const onSelect = vi.fn();
+    render(
+      <AgendaFullView
+        items={[
+          { ...songItem(1, 'Einsingen'), vorBeginn: true },
+          item({ id: 2, title: 'Begrüßung' }),
+          songItem(3, 'Way Maker'),
+        ]}
+        eventId={1}
+        beginn="10:00"
+        onSelect={onSelect}
+      />,
+    );
+    fireEvent.click(screen.getByText('Way Maker'));
+    expect(onSelect).toHaveBeenCalledWith(1);
   });
 });

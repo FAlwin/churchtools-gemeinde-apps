@@ -530,6 +530,11 @@ export interface AgendaItem {
   song: SetlistSong | null;
   /** Von ChurchTools berechnete Startuhrzeit in deutscher Ortszeit (z.B. „11:05"); null wenn keine. */
   time: string | null;
+  /**
+   * true, wenn der Punkt VOR dem Beginn der Veranstaltung läuft (Vorlauf, #423 – z. B. Soundcheck).
+   * Solche Punkte stehen immer oben am Stück; ChurchTools rechnet ihre Zeiten rückwärts ab Beginn.
+   */
+  vorBeginn: boolean;
   /** Dauer des Punkts in Minuten (aus CT-Sekunden gerundet); null/0 wenn nicht gepflegt. */
   durationMin: number | null;
   /** Notiz/Beschreibung des Punkts (frei, kann leer sein). */

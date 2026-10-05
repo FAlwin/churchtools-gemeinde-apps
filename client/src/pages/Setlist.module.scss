@@ -82,6 +82,34 @@
     inset 3px 0 0 var(--blue),
     var(--shadow);
 }
+// Linie „Beginn · 10:00 Uhr" zwischen Vorlauf und Veranstaltung (#423). Eine Trennlinie, keine Karte:
+// Sie gehört zu keinem Punkt und darf deshalb nicht wie einer aussehen.
+.beginnLinie {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 2px;
+  color: var(--blue-ink);
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    border-top: 1.5px solid currentColor;
+    opacity: 0.45;
+  }
+}
+.beginnText {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+// Vorlauf-Punkte: Uhrzeit gedämpft – sie laufen vor dem Beginn, nicht im Gottesdienst.
+.vorlauf .flowTime {
+  color: var(--text2);
+}
+
 .flowTime {
   flex-shrink: 0;
   width: 42px;

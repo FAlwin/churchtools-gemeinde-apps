@@ -67,3 +67,16 @@ export function ResponsibleLine({ entries }: { entries: AgendaItem['responsible'
     </div>
   );
 }
+
+/**
+ * Die Linie zwischen Vorlauf und Veranstaltung (#423): „Beginn · 10:00 Uhr". Steht in der Ansicht UND in
+ * der Bearbeiten-Liste an derselben Stelle (`utils/vorlauf.ts`), damit sich beim Umschalten nichts
+ * verschiebt. Ohne Uhrzeit (sie fehlt nie, aber sicher ist sicher) steht nur „Beginn".
+ */
+export function BeginnLinie({ zeit }: { zeit?: string }) {
+  return (
+    <div className={styles.beginnLinie} role="separator" aria-label={`Beginn ${zeit ?? ''}`.trim()}>
+      <span className={styles.beginnText}>{zeit ? `Beginn · ${zeit}` : 'Beginn'}</span>
+    </div>
+  );
+}

@@ -55,11 +55,10 @@ Schritt 6 genau den Liednamen einträgst, steht er nur **einmal** da, nicht dopp
 
 </details>
 
-### TF-EDIT-03 · Dauer, Zuständig, Bemerkung, Uhrzeit ausblenden
+### TF-EDIT-03 · Dauer, Zuständig, Bemerkung
 
 **Das muss passieren:** Alles steht danach auch in ChurchTools. Nach Schritt 6 ist die Dauer aus der
 Zeile verschwunden (in ChurchTools steht dann 0 Minuten – „keine Dauer" kennt ChurchTools nicht).
-Nach Schritt 8 bleibt die Zeit-Spalte links leer.
 
 1. Test-Termin öffnen, **Bearbeiten**, einen Punkt antippen.
 2. **Dauer (Minuten)** auf 7 setzen.
@@ -67,15 +66,13 @@ Nach Schritt 8 bleibt die Zeit-Spalte links leer.
 4. Bei **Bemerkung** „Test" eintragen.
 5. **Speichern** und die Zeile ansehen.
 6. Punkt erneut öffnen, das Feld **Dauer** ganz leeren, **Speichern**.
-7. Punkt erneut öffnen, **Uhrzeit ausblenden** einschalten.
-8. **Speichern** und die Zeile ansehen.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
 - **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `client/src/utils/agendaItemChanges.ts`, `client/src/components/ResponsibleField.tsx`
 - **Automatisiert:** teilweise – `client/src/utils/agendaItemChanges.test.ts`
-- **Historie:** –
+- **Historie:** – (der frühere Schritt „Uhrzeit ausblenden" ist mit #423 entfallen, siehe TF-EDIT-08)
 
 </details>
 
@@ -181,5 +178,38 @@ dem Punkt, den du bearbeitet hast – in ChurchTools ein Lied-Punkt mit Arrangem
 - **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `client/src/components/NewSongSheet.tsx`, `client/src/components/SongPicker.tsx`
 - **Automatisiert:** teilweise – `client/src/components/ItemActionSheet.test.tsx` (Weg nur mit Recht, ohne `eventId`, Vormerken statt Schreiben, Abbruch merkt nichts vor), `client/src/components/NewSongSheet.test.tsx` (Erfolgsansicht mit `onVerknuepfen`: Satz, „Zurück zum Eintrag" und „Fertig" tragen die Verknüpfung, kein „Noch ein Lied anlegen"); von Hand bleibt der Schreibvorgang gegen ChurchTools
 - **Historie:** #391 (18.09.2026)
+
+</details>
+
+### TF-EDIT-08 · Soundcheck vor dem Gottesdienstbeginn
+
+**Das brauchst du:** Einen **Test-Termin**, der um 10:00 beginnt, mit einem Punkt „Soundcheck"
+(45 Minuten) ganz oben und mindestens zwei Punkten darunter.
+
+**Das muss passieren:** Der Soundcheck läuft **vor** dem Beginn. Er steht bei 09:15, der Punkt danach
+bei 10:00, und dazwischen steht die Linie **„Beginn · 10:00 Uhr"**. Der Termin selbst bleibt um 10:00, in
+der App wie im ChurchTools-Kalender.
+
+1. Test-Termin öffnen → **Bearbeiten** → **Soundcheck** antippen.
+2. **Vor Gottesdienstbeginn** einschalten. Der Hinweis darunter lautet „Dieser und alle Punkte darüber
+   laufen vor dem Beginn." **Speichern**.
+3. Die Linie „Beginn · 10:00 Uhr" steht unter dem Soundcheck. Mit **Fertig** zurück in die Ansicht: Dort
+   steht sie an derselben Stelle, der Soundcheck zeigt 09:15 in grauer Schrift.
+4. In ChurchTools im Browser den Ablauf öffnen: Der Soundcheck steht vor dem Veranstaltungsbeginn, der
+   Termin beginnt weiter um 10:00.
+5. Zurück in der App: **Bearbeiten**, den **Punkt direkt unter der Linie** über die Linie nach oben
+   ziehen. Die Linie bleibt an ihrem Platz, der gezogene Punkt steht jetzt darüber und läuft vor dem
+   Beginn, der Soundcheck rutscht darunter. (So rechnet ChurchTools: Die Grenze ist ein Platz, kein
+   Punkt.) Reihenfolge wieder zurückziehen.
+6. **Soundcheck** öffnen, **Vor Gottesdienstbeginn** ausschalten, **Speichern**: Die Linie verschwindet,
+   der Soundcheck steht wieder bei 10:00.
+7. Im Bearbeiten-Dialog gibt es **keinen** Schalter „Uhrzeit ausblenden" mehr.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `client/src/components/AgendaFullView.tsx`, `client/src/pages/Setlist.tsx`, `client/src/utils/vorlauf.ts`, `server/src/services/ctWrite.ts`, `server/src/services/agendaPayload.ts`
+- **Automatisiert:** teilweise – `e2e/ablauf-vorlauf.spec.ts` (Schalter → Grenze im Stub → Linie in Bearbeiten-Liste und Ansicht, wieder aus), `client/src/utils/vorlauf.test.ts`, `server/src/services/agendaPayload.test.ts`, `server/src/services/ctWrite.test.ts`; von Hand bleiben die echten Uhrzeiten aus ChurchTools und das Ziehen über die Linie (Schritt 5)
+- **Historie:** #423 (05.10.2026)
 
 </details>

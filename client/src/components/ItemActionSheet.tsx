@@ -16,10 +16,10 @@ interface ItemActionSheetProps {
   onClose: () => void;
   /** Schreibt die geänderten Felder gesammelt (EIN Request). Wirft bei Fehler. */
   onUpdate: (fields: AgendaItemUpdate) => Promise<void>;
-  /** Ist die Uhrzeit dieses Punkts in ChurchTools ausgeblendet? */
-  timeHidden: boolean;
-  /** Blendet die Uhrzeit dieses Punkts in ChurchTools aus (true) oder ein (false). Wirft bei Fehler. */
-  onSetHidden: (hidden: boolean) => Promise<void>;
+  /** Läuft der Punkt vor dem Beginn der Veranstaltung (Vorlauf, #423)? */
+  vorBeginn: boolean;
+  /** Schreibt den Vorlauf nach ChurchTools (gilt für den ganzen Block, siehe Schalter). Wirft bei Fehler. */
+  onSetVorBeginn: (vorBeginn: boolean) => Promise<void>;
   /** Verfügbare ChurchTools-Dienste (Chips im Verantwortlich-Editor). */
   services: AgendaServiceOption[];
   /** Löschen anstoßen (Bestätigung erfolgt im Eltern-Screen). */
@@ -28,9 +28,9 @@ interface ItemActionSheetProps {
 
 /**
  * „Eintrag bearbeiten"-Dialog: ein zentriertes Modal mit allen Einstellungen auf einen Blick
- * (Titel, Lied, Dauer, Zuständig, Uhrzeit ausblenden, Löschen) – angelehnt an den
+ * (Titel, Lied, Dauer, Zuständig, Vor Gottesdienstbeginn, Löschen) – angelehnt an den
  * „Position bearbeiten"-Dialog in ChurchTools. NICHTS wird sofort geschrieben: auch Lied
- * verknüpfen/aufheben und der Uhrzeit-Schalter werden nur vorgemerkt. Erst „Speichern" schreibt
+ * verknüpfen/aufheben und der Vorlauf-Schalter werden nur vorgemerkt. Erst „Speichern" schreibt
  * alle Änderungen gesammelt nach ChurchTools; „Abbrechen" verwirft sie. (Löschen ist bewusst
  * separat und hat eine eigene Rückfrage.)
  */
@@ -38,8 +38,8 @@ export function ItemActionSheet({
   item,
   onClose,
   onUpdate,
-  timeHidden,
-  onSetHidden,
+  vorBeginn: vorBeginnStart,
+  onSetVorBeginn,
   services,
   onRequestDelete,
 }: ItemActionSheetProps) {
@@ -51,8 +51,8 @@ export function ItemActionSheet({
   const [duration, setDuration] = useState(
     item.durationMin != null ? String(item.durationMin) : '',
   );
-  // Uhrzeit-ausgeblendet: lokal – wird wie alles andere erst beim Speichern übernommen.
-  const [hidden, setHidden] = useState(timeHidden);
+  // Vorlauf: lokal – wird wie alles andere erst beim Speichern übernommen.
+  const [vorBeginn, setVorBeginn] = useState(vorBeginnStart);
   // Verknüpfung wird vorgemerkt und erst beim Speichern nach ChurchTools geschrieben
   // ('keep' = unverändert, 'unlink' = Lied entfernen, 'link' = neues Arrangement verknüpfen).
   const [linkState, setLinkState] = useState<LinkState>({ kind: 'keep' });
@@ -76,10 +76,6 @@ export function ItemActionSheet({
         : null;
   const willBeSong = !!effSong;
 
-  function toggleHidden() {
-    setHidden((h) => !h);
-  }
-
   /** Merkt das Entfernen der Verknüpfung vor – bzw. verwirft eine nur vorgemerkte Verknüpfung. */
   function clearLink() {
     setLinkState(isSong ? { kind: 'unlink' } : { kind: 'keep' });
@@ -93,16 +89,16 @@ export function ItemActionSheet({
     [item, title, duration, responsible, note, linkState],
   );
 
-  const dirty = Object.keys(pending).length > 0 || hidden !== timeHidden;
+  const dirty = Object.keys(pending).length > 0 || vorBeginn !== vorBeginnStart;
 
   async function saveAll() {
     setBusy(true);
     setErr(null);
     try {
-      // Alle Feld-Änderungen in EINEM Request (kein Teilzustand bei Fehlern); nur der
-      // Uhrzeit-Schalter ist in ChurchTools ein eigener Endpunkt.
+      // Alle Feld-Änderungen in EINEM Request (kein Teilzustand bei Fehlern); nur der Vorlauf ist
+      // in ChurchTools etwas anderes – eine Grenze am Ablauf, kein Feld des Punkts.
       if (Object.keys(pending).length > 0) await onUpdate(pending);
-      if (hidden !== timeHidden) await onSetHidden(hidden);
+      if (vorBeginn !== vorBeginnStart) await onSetVorBeginn(vorBeginn);
       onClose();
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Speichern fehlgeschlagen.');
@@ -264,18 +260,27 @@ export function ItemActionSheet({
                   onChange={(e) => setNote(e.target.value)}
                 />
               </div>
-
-              <button
-                type="button"
-                className={styles.toggleRow}
-                onClick={toggleHidden}
-                aria-pressed={hidden}
-              >
-                <span className={styles.label}>Uhrzeit ausblenden</span>
-                <Schalter an={hidden} />
-              </button>
             </>
           )}
+
+          {/* Für ALLE Punkte, auch Überschriften (#423): Ein Block „Vorbereitung" kann ebenso vor dem
+              Beginn liegen. ChurchTools kennt nur eine Grenze, deshalb nennt der Hinweis den Block. */}
+          <button
+            type="button"
+            className={styles.toggleRow}
+            onClick={() => setVorBeginn((v) => !v)}
+            aria-pressed={vorBeginn}
+          >
+            <span className={styles.toggleText}>
+              <span className={styles.label}>Vor Gottesdienstbeginn</span>
+              <span className={styles.toggleHint}>
+                {vorBeginn
+                  ? 'Dieser und alle Punkte darüber laufen vor dem Beginn.'
+                  : 'Gehört zum Gottesdienst – wie alle Punkte darunter.'}
+              </span>
+            </span>
+            <Schalter an={vorBeginn} />
+          </button>
         </div>
 
         <div className={styles.actions}>

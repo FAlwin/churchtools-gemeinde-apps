@@ -28,9 +28,9 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 - **Ablauf: Hinzufügen über ein schwebendes Plus, im selben Fenster wie das Bearbeiten.** Das runde
   Plus schwebt im Bearbeiten-Modus unten rechts über dem Ablauf (vorher „Eintrag hinzufügen" am
   Listenende) – auch bei einem leeren Ablauf, der sich bisher gar nicht füllen ließ. Es öffnet
-  „Neuer Eintrag" mit denselben Feldern wie „Eintrag bearbeiten" und dem Umschalter Lied · Text ·
-  Überschrift; bei „Lied" geht sofort die Suche auf, der Liedname wird zum Titel, Dauer und Zuständige
-  setzt man gleich mit. Das frühere Hinzufügen-Blatt mit drei eigenen Formularen und der zweite Dialog
+  „Neuer Eintrag" mit denselben Feldern wie „Eintrag bearbeiten" und dem Umschalter Programmpunkt ·
+  Überschrift. Ein Lied ist ein Programmpunkt mit „Lied verknüpfen" – der Liedname wird zum Titel,
+  Dauer und Zuständige setzt man gleich mit. Das frühere Hinzufügen-Blatt mit drei eigenen Formularen und der zweite Dialog
   nach einem neuen Lied entfallen. Das Plus der Abwesenheiten ist derselbe Baustein.
 - **„Neues Lied" trägt nichts mehr selbst in den Ablauf ein.** Der Server legt nur noch Lied und
   Arrangement an (`POST /api/songs` ohne `eventId`, Antwort ohne `imAblauf`); in den Ablauf kommt es

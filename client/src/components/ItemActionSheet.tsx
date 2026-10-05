@@ -81,10 +81,10 @@ export function ItemActionSheet(props: ItemActionSheetProps) {
   const item = props.modus === 'neu' ? LEERER_PUNKT : props.item;
   const vorBeginnStart = props.modus === 'neu' ? false : props.vorBeginn;
   const isSong = !!item.song;
-  // Neu: Was angelegt wird. Ein Lied ist der häufigste Fall – deshalb vorgewählt und die Suche gleich
-  // offen; so geht es genauso schnell wie vorher über „Hinzufügen → Lied".
-  const [art, setArt] = useState<PunktArt>('lied');
-  const [songMode, setSongMode] = useState(neu);
+  // Neu: Programmpunkt oder Überschrift (Alwin, 05.10.2026: erst das Fenster, nicht die Liedsuche).
+  // Ein Lied ist ein Programmpunkt mit verknüpftem Lied – wie beim Bearbeiten über „Lied verknüpfen".
+  const [art, setArt] = useState<PunktArt>('programmpunkt');
+  const [songMode, setSongMode] = useState(false);
   const [title, setTitle] = useState(item.title);
   const [responsible, setResponsible] = useState(item.responsibleText);
   const [note, setNote] = useState(item.note);
@@ -201,11 +201,11 @@ export function ItemActionSheet(props: ItemActionSheetProps) {
     return (
       <div ref={overlayRef} className={styles.overlay} onClick={onOverlayClick}>
         <div className={styles.card} onClick={(e) => e.stopPropagation()}>
-          <div className={styles.title}>{neu ? 'Lied auswählen' : 'Lied verknüpfen'}</div>
+          <div className={styles.title}>Lied verknüpfen</div>
           {err && <div className={styles.err}>{err}</div>}
           <SongPicker
             autoFocus
-            aktionLabel={neu ? 'Dieses Lied nehmen' : 'Mit diesem Eintrag verknüpfen'}
+            aktionLabel="Mit diesem Eintrag verknüpfen"
             onPick={liedGewaehlt}
             neuesLied={
               canEditSongs
@@ -239,8 +239,7 @@ export function ItemActionSheet(props: ItemActionSheetProps) {
             value={art}
             onChange={setArt}
             options={[
-              { value: 'lied', label: 'Lied' },
-              { value: 'text', label: 'Text' },
+              { value: 'programmpunkt', label: 'Programmpunkt' },
               { value: 'ueberschrift', label: 'Überschrift' },
             ]}
           />
@@ -258,7 +257,7 @@ export function ItemActionSheet(props: ItemActionSheetProps) {
               placeholder={
                 neu && art === 'ueberschrift'
                   ? 'Titel der Überschrift'
-                  : willBeSong || (neu && art === 'lied')
+                  : willBeSong
                     ? 'z. B. Lied'
                     : 'Titel'
               }
@@ -268,52 +267,38 @@ export function ItemActionSheet(props: ItemActionSheetProps) {
           {/* Überschriften haben nur einen Titel – keine weiteren Felder. */}
           {!(neu ? art === 'ueberschrift' : item.isHeader) && (
             <>
-              {/* Neu entscheidet der Umschalter, ob es ein Lied ist – bei „Text" gibt es kein Liedfeld. */}
-              {neu && art === 'lied' && (
-                <div className={styles.field}>
-                  <span className={styles.label}>Lied</span>
-                  {effSong && <div className={styles.readonly}>{effSong.title}</div>}
+              {/* Dasselbe Liedfeld beim Anlegen wie beim Bearbeiten. */}
+              <div className={styles.field}>
+                <span className={styles.label}>Lied</span>
+                {effSong ? (
+                  <>
+                    {/* Liedname sichtbar halten – er kommt aus ChurchTools und ist hier nicht änderbar. */}
+                    <div className={styles.readonly}>{effSong.title}</div>
+                    <button className={styles.linkRow} disabled={busy} onClick={clearLink}>
+                      <Icon name="link" size={17} className={styles.linkIcon} />
+                      Verknüpfung aufheben
+                    </button>
+                  </>
+                ) : (
                   <button
                     className={styles.linkRow}
                     disabled={busy}
                     onClick={() => setSongMode(true)}
                   >
                     <Icon name="music" size={17} className={styles.linkIcon} />
-                    {effSong ? 'Anderes Lied wählen' : 'Lied auswählen'}
+                    Lied verknüpfen
                   </button>
-                </div>
-              )}
-              {!neu && (
-                <div className={styles.field}>
-                  <span className={styles.label}>Lied</span>
-                  {effSong ? (
-                    <>
-                      {/* Liedname sichtbar halten – er kommt aus ChurchTools und ist hier nicht änderbar. */}
-                      <div className={styles.readonly}>{effSong.title}</div>
-                      <button className={styles.linkRow} disabled={busy} onClick={clearLink}>
-                        <Icon name="link" size={17} className={styles.linkIcon} />
-                        Verknüpfung aufheben
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      className={styles.linkRow}
-                      disabled={busy}
-                      onClick={() => setSongMode(true)}
-                    >
-                      <Icon name="music" size={17} className={styles.linkIcon} />
-                      Lied verknüpfen
-                    </button>
-                  )}
-                  {linkState.kind !== 'keep' && (
-                    <span className={styles.pendingHint}>
-                      {linkState.kind === 'unlink'
-                        ? 'Wird beim Speichern entfernt.'
-                        : 'Wird beim Speichern verknüpft.'}
-                    </span>
-                  )}
-                </div>
-              )}
+                )}
+                {/* Beim Anlegen ist ohnehin alles erst mit „Hinzufügen" geschrieben – der Hinweis gilt
+                      dem Bearbeiten, wo der Rest des Punkts schon in ChurchTools steht. */}
+                {!neu && linkState.kind !== 'keep' && (
+                  <span className={styles.pendingHint}>
+                    {linkState.kind === 'unlink'
+                      ? 'Wird beim Speichern entfernt.'
+                      : 'Wird beim Speichern verknüpft.'}
+                  </span>
+                )}
+              </div>
 
               <div className={styles.field}>
                 <span className={styles.label}>Dauer (Minuten)</span>

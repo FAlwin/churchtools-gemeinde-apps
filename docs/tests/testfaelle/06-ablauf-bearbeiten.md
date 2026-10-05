@@ -102,19 +102,20 @@ tippen auf den Titel darf **kein** Ziehen auslösen.
 
 **Das muss passieren:** Das **runde blaue Plus** schwebt unten rechts über dem Ablauf (nur im
 Bearbeiten-Modus) und öffnet **dasselbe Fenster wie das Bearbeiten**, nur mit „Neuer Eintrag" und dem
-Umschalter **Lied · Text · Überschrift**. Bei „Lied" geht sofort die Liedsuche auf; nach der Wahl steht
-der Liedname als Titel drin, Dauer und Zuständige lassen sich gleich setzen – ein zweites Fenster danach
-gibt es nicht mehr. Die Rückfrage beim Löschen nennt den Punkt **genauso wie die Liste** – also
+Umschalter **Programmpunkt · Überschrift** (vorgewählt: Programmpunkt). Ein Lied ist ein Programmpunkt
+mit **Lied verknüpfen** – nach der Wahl steht der Liedname als Titel drin, Dauer und Zuständige lassen
+sich gleich setzen; ein zweites Fenster danach gibt es nicht mehr. Die Rückfrage beim Löschen nennt den Punkt **genauso wie die Liste** – also
 „Lied – Du großer Gott", nicht nur den Liednamen. Der gelöschte Punkt zerfällt sichtbar an seiner
 Stelle. Alles steht danach so in ChurchTools.
 
 1. Test-Termin öffnen, **Bearbeiten**. Das Plus erscheint unten rechts; es verdeckt den Stift des
    letzten Punkts nicht.
-2. **Plus** tippen → die Liedsuche ist offen. Ein Lied wählen.
-3. Im Fenster „Neuer Eintrag" steht der Liedname als Titel. **Dauer** auf 4 setzen, **Hinzufügen**.
-4. Erneut **Plus**, in der Suche **Abbrechen**, oben **Text** wählen: Es gibt kein Liedfeld. Titel
-   eintragen, **Hinzufügen**.
-5. Erneut **Plus**, **Abbrechen**, **Überschrift**: nur das Titelfeld. Titel eintragen, **Hinzufügen**.
+2. **Plus** tippen → das Fenster **„Neuer Eintrag"** ist offen, **Programmpunkt** ist gewählt. Titel
+   eintragen, **Dauer** auf 7 setzen, **Hinzufügen**.
+3. Erneut **Plus** → **Lied verknüpfen** → ein Lied wählen: Der Liedname steht als Titel drin.
+   **Dauer** auf 4 setzen, **Hinzufügen**.
+4. Erneut **Plus**, oben **Überschrift**: nur das Titelfeld. Titel eintragen, **Hinzufügen**.
+5. Alle drei stehen am Ende des Ablaufs.
 6. Einen **Lied**-Punkt antippen und **Eintrag löschen** wählen.
 7. Die Rückfrage lesen, dann bestätigen.
 8. Zusehen, wie die Zeile verschwindet.

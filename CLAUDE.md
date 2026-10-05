@@ -62,7 +62,7 @@
     wie im Ablauf; `neuesLied={{ label: 'Selbst eintippen' }}` gibt den Suchbegriff als `startName` ins
     leere Formular). Der „Neues Lied"-Kopf rendert im `SongPicker` – nur
     dort ist der Suchbegriff bekannt. **Neue Ablaufpunkte (05.10.2026)** legt derselbe Dialog an wie das
-    Bearbeiten (`ItemActionSheet modus="neu"`, Umschalter Lied · Text · Überschrift, Nutzlast
+    Bearbeiten (`ItemActionSheet modus="neu"`, Umschalter Programmpunkt · Überschrift, Lied = Programmpunkt mit „Lied verknüpfen", Nutzlast
     `neuerAgendaPunkt`); geöffnet über das schwebende Plus (`SchwebePlus`, auch in den Abwesenheiten).
     Das frühere `AddItemSheet` ist gelöscht.
 

@@ -130,7 +130,7 @@ ChurchTools-Instanz. Räum sie hinterher in ChurchTools wieder weg; die App kann
 und einem **Standard-Arrangement** in der gewählten Tonart. Beim CCLI-Weg hängt am Arrangement auch
 gleich das **Notenblatt** – die App zeigt danach Akkorde, ohne dass man etwas hochladen muss.
 
-1. Test-Termin öffnen → **Bearbeiten** → schwebendes **Plus** (die Liedsuche geht gleich auf). SongSelect gibt es **hier und beim
+1. Test-Termin öffnen → **Bearbeiten** → schwebendes **Plus** → **Lied verknüpfen**. SongSelect gibt es **hier und beim
    Verknüpfen** (und nur mit SongSelect-Lizenz) – nicht im Liederheft.
 2. Einen Titel eintippen, den es bei euch **nicht** gibt (mindestens drei Zeichen): Die Bibliothek zeigt
    „Keine Treffer", und kurz nachdem du aufhörst zu tippen, erscheint **von selbst** die Gruppe
@@ -185,7 +185,7 @@ möglich zusätzlich eines **ohne**.
 filtert beim Tippen; **unter** den Treffern stehen die Angebote **„Auch in den Liedtexten nach … suchen"**
 und **„Bei SongSelect nach … suchen"**. Findet die Bibliothek **nichts**, sucht SongSelect **von selbst**.
 
-1. Test-Termin öffnen → **Bearbeiten** → schwebendes **Plus** (die Liedsuche geht gleich auf). Über der Liste steht **nur ein
+1. Test-Termin öffnen → **Bearbeiten** → schwebendes **Plus** → **Lied verknüpfen**. Über der Liste steht **nur ein
    Suchfeld** – kein Bibliothek/Liedtexte/SongSelect.
 2. Ein Wort tippen, das ein eigenes Lied trifft (z. B. den Anfang eines Titels): Die Bibliothek zeigt
    Treffer. **Darunter** stehen die beiden Angebote. Es darf **keine** SongSelect-Anfrage gelaufen sein –
@@ -382,15 +382,15 @@ Lied **ohne** Notenblatt als Gegenprobe. Für Schritt 6 ff. ein Konto mit SongSe
 **erst den Liedtext**, und darin steht der Knopf zum Einfügen; das **Plus** fügt sofort ein. Beim
 Durchsehen der Liste passiert von allein nichts.
 
-1. Test-Termin öffnen → **Bearbeiten** → schwebendes **Plus** (die Liedsuche geht gleich auf).
+1. Test-Termin öffnen → **Bearbeiten** → schwebendes **Plus** → **Lied verknüpfen**.
 2. Ein Lied **antippen** (oder auf das **Auge** rechts in der Zeile): Es muss die **Vorschau** kommen –
    Titel, Autor, Tonart und der **ganze Liedtext mit Abschnitten** (Vers 1, Chorus …, wie auf dem
    Blatt), bei langen Liedern **scrollbar** – **und das Lied darf NICHT sofort im Ablauf landen.**
    Der **Pfeil** neben dem Titel führt zur Liste zurück, der Suchbegriff steht noch da. Beim
    **Verknüpfen** heißt der Knopf unten **„Abbrechen"** und verlässt die Suche ganz.
-3. In der Vorschau **„Dieses Lied nehmen"** → im Fenster „Neuer Eintrag" **Hinzufügen**: Jetzt steht
+3. In der Vorschau **„Mit diesem Eintrag verknüpfen"** → im Fenster „Neuer Eintrag" **Hinzufügen**: Jetzt steht
    es im Ablauf, genau einmal.
-4. Erneut das schwebende **Plus**, diesmal das **Plus** rechts in der Zeile: Das Lied muss **sofort** ins
+4. Erneut **Plus** → **Lied verknüpfen**, diesmal das **Plus** rechts in der Zeile: Das Lied muss **sofort** ins
    Fenster „Neuer Eintrag" übernommen werden, **ohne** Vorschau – dann **Hinzufügen**. Das ist der kurze
    Weg für den Gottesdienst.
 5. Ein Lied **ohne Notenblatt** antippen: Es muss dastehen, dass kein Liedtext vorliegt – und
@@ -429,7 +429,7 @@ am Lied).
 zeigen. Und während ein Lied angelegt wird, warnt sie **nicht** vor dem Lied, das sie gerade selbst
 anlegt (#395).
 
-1. Termin öffnen → **Bearbeiten** → schwebendes **Plus** (die Liedsuche geht gleich auf). Die CCLI-Nummer eines vorhandenen
+1. Termin öffnen → **Bearbeiten** → schwebendes **Plus** → **Lied verknüpfen**. Die CCLI-Nummer eines vorhandenen
    Liedes eintippen: Es steht in der Bibliothek ganz oben. **Nicht** antippen, sondern über
    **„Neues Lied"** ins Formular gehen und die Nummer im Feld **CCLI-Nummer** eintragen. Kategorie
    wählen, **Lied anlegen**.

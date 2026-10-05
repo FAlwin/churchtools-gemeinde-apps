@@ -212,7 +212,7 @@ export const SETLIST_EDIT_STEPS: CoachStep[] = [
   {
     selector: '[data-tour="edit-add"]',
     title: 'Hinzufügen',
-    body: 'Mit dem Plus legst du einen neuen Eintrag an – im selben Fenster wie beim Bearbeiten: oben wählst du Lied, Text oder Überschrift. Bei „Lied“ geht gleich die Suche auf: Tippe Titel, Autor oder CCLI-Nummer – eure Lieder stehen oben, SongSelect darunter. Das Auge zeigt den Liedtext, das Plus wählt aus. Dauer und Zuständige setzt du gleich mit.',
+    body: 'Mit dem Plus legst du einen neuen Eintrag an – im selben Fenster wie beim Bearbeiten: oben wählst du Programmpunkt oder Überschrift. Für ein Lied tippst du „Lied verknüpfen“: Titel, Autor oder CCLI-Nummer – eure Lieder stehen oben, SongSelect darunter. Das Auge zeigt den Liedtext, das Plus wählt aus. Dauer und Zuständige setzt du gleich mit.',
   },
 ];
 

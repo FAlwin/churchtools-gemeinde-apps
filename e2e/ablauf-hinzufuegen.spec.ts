@@ -8,13 +8,15 @@ import {
 
 /**
  * Hinzufügen über das schwebende Plus (Alwin, 05.10.2026): „Neuer Eintrag" ist derselbe Dialog wie
- * „Eintrag bearbeiten" – mit dem Umschalter Lied · Text · Überschrift.
+ * „Eintrag bearbeiten" – mit dem Umschalter Programmpunkt · Überschrift.
  *
  * Als E2E, weil die Teile (Dialog, Nutzlast) einzeln getestet sind, der Weg auf der Seite aber nicht:
- * Plus nur im Bearbeiten-Modus, Dialog öffnet mit der Liedsuche, der angelegte Punkt steht danach in
+ * Plus nur im Bearbeiten-Modus, Dialog öffnet mit „Programmpunkt", der angelegte Punkt steht danach in
  * der Liste. Der Stub ist für alle Tests derselbe Prozess – der Punkt wird am Ende wieder gelöscht.
  */
-test('Plus → Neuer Eintrag (Text) → steht im Ablauf, Löschen räumt auf', async ({ page }) => {
+test('Plus → Neuer Eintrag (Programmpunkt) → steht im Ablauf, Löschen räumt auf', async ({
+  page,
+}) => {
   await page.addInitScript(
     (touren: string[]) => {
       for (const t of touren) localStorage.setItem(`worship:onboard-${t}`, '1');
@@ -35,11 +37,13 @@ test('Plus → Neuer Eintrag (Text) → steht im Ablauf, Löschen räumt auf', a
   await page.getByRole('button', { name: 'Ablauf bearbeiten' }).click();
   await plus.click();
 
-  // Der Dialog öffnet mit „Lied" und gleich der Liedsuche.
-  await expect(page.getByText('Lied auswählen')).toBeVisible();
-  await page.getByRole('button', { name: 'Abbrechen' }).click();
+  // Erst das Fenster mit „Programmpunkt" – nicht die Liedsuche (Alwin, 05.10.2026).
   await expect(page.getByText('Neuer Eintrag')).toBeVisible();
-  await page.getByRole('button', { name: 'Text', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Programmpunkt' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(page.getByRole('button', { name: 'Lied verknüpfen' })).toBeVisible();
   await page.getByPlaceholder('Titel', { exact: true }).fill('Abkündigungen (E2E)');
   await page.getByPlaceholder('z. B. 5').fill('7');
   await page.getByRole('button', { name: 'Hinzufügen' }).click();

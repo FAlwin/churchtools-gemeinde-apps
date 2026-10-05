@@ -1,3 +1,5 @@
+@use '../styles/mixins' as m;
+
 .overlay {
   // Vollbild (fixed) → hinter der halbtransparenten iOS-Tastatur schimmert nichts durch.
   // --kb (Tastatur-Höhe, per JS aus dem visualViewport) verkürzt den Inhalt nach unten:
@@ -90,20 +92,13 @@
   flex-wrap: wrap; // auf schmalen Fenstern sauber umbrechen
 }
 .nameInput {
+  @include m.eingabefeld;
   flex: 1;
   min-width: 140px;
   height: 38px;
   padding: 0 12px;
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface2);
-  color: var(--text);
   font-family: var(--ui);
   font-size: 15px;
-  outline: none;
-  &:focus {
-    border-color: var(--blue);
-  }
 }
 
 // ── Eingabe-Toolbar ──

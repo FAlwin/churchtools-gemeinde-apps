@@ -1,3 +1,5 @@
+@use '../styles/mixins' as m;
+
 .wrap {
   display: flex;
   flex-direction: column;
@@ -36,19 +38,12 @@
 
 .labelInput,
 .urlInput {
+  @include m.eingabefeld;
   width: 100%;
-  border: 1.5px solid var(--border);
-  border-radius: 7px;
-  background: var(--surface2);
-  color: var(--text);
   padding: 8px 10px;
   font-size: 14px;
-  outline: none;
   font-family: var(--ui);
 
-  &:focus {
-    border-color: var(--blue);
-  }
   &::placeholder {
     color: var(--text3);
   }

@@ -123,20 +123,12 @@
 
 // Org-Name-Edit (im Sheet)
 .orgInput {
+  @include m.eingabefeld;
   height: 48px;
   width: 100%;
-  border-radius: 8px;
-  border: 1.5px solid var(--border);
-  background: var(--surface2);
-  color: var(--text);
   padding: 0 14px;
   font-size: 16px;
-  outline: none;
   font-family: var(--ui);
-
-  &:focus {
-    border-color: var(--blue);
-  }
 }
 .orgErr {
   font-size: 13px;

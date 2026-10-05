@@ -37,6 +37,11 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   über „Neuer Eintrag". Eine noch nicht aktualisierte App, die `eventId` mitschickt, bekommt **410**
   mit der Bitte, neu zu laden – statt dass das Lied still nicht im Ablauf landet.
 
+- **Eingabefelder sind überall als Felder zu erkennen.** Suchfeld, Von/Bis und „Alle" im Liederheft
+  waren auf dem grauen Hintergrund unsichtbar – ihre Farbe war exakt die Seitenfarbe. Alle
+  Eingabefelder der App teilen jetzt EIN Aussehen (weiß, feiner Rand, beim Antippen blau); vorher gab
+  es neun Kopien mit leicht verschiedenen Rändern und Rundungen.
+
 ### Entfernt
 
 - **Der Schalter „Uhrzeit ausblenden"** (#423). Er war falsch beschriftet: Das Auge in ChurchTools

@@ -1,3 +1,4 @@
+@use '../styles/mixins' as m;
 // Die Stammdaten-Felder eines Liedes (#322) – von „Neues Lied" UND „Stammdaten ändern" genutzt.
 // Sie folgten bewusst dem früheren „Eintrag hinzufügen"-Dialog (seit 05.10.2026 legt `ItemActionSheet`
 // auch neue Punkte an): Ein zweites Aussehen für
@@ -14,38 +15,20 @@
   color: var(--text2);
 }
 .input {
+  @include m.eingabefeld;
   flex: 1;
   min-width: 0;
   padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface2);
-  color: var(--text);
-  font-family: inherit;
   // 16px, damit iOS beim Fokussieren nicht hineinzoomt.
   font-size: 16px;
-
-  &:focus {
-    outline: none;
-    border-color: var(--blue);
-  }
 }
 .textarea {
+  @include m.eingabefeld;
   width: 100%;
   min-width: 0;
   padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface2);
-  color: var(--text);
-  font-family: inherit;
   font-size: 16px;
   resize: vertical;
-
-  &:focus {
-    outline: none;
-    border-color: var(--blue);
-  }
 }
 // Kategorie-Auswahl: Chips statt Auswahlliste. Es sind wenige, sie sind alle erlaubt (der Server
 // schneidet zu), und keiner ist vorbelegt – ein leeres <select> mit Platzhalter sähe dagegen wie ein

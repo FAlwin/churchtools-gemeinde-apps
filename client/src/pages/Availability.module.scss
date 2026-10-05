@@ -272,12 +272,9 @@
   input,
   select,
   textarea {
+    @include m.eingabefeld;
     font-family: var(--ui);
     font-size: 16px;
-    color: var(--text);
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--r-ctrl);
     padding: 10px 12px;
     &:disabled {
       color: var(--text2);

@@ -82,3 +82,33 @@
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
 }
+
+/**
+ * **Das eine Aussehen für Eingabefelder** (05.10.2026): weiß, feiner Rand, beim Fokus blau.
+ *
+ * Anlass: Suchfeld und Von/Bis im Liederheft waren auf der Seite unsichtbar (Alwin: „sollten sichtbar
+ * als Felder gekennzeichnet werden"). Sie trugen `--surface3` – und das ist im Hellen exakt die
+ * Seitenfarbe `--bg`; auf weißen Dialogen fiel es nie auf. Dieselbe Falle hatte am 02.10.2026 schon
+ * der Umschalter (`--seg-track`). Vier Felder hatten das Weiß-mit-Rand bereits – als vier Kopien.
+ * Abstände und Schriftgröße bleiben bei der jeweiligen Stelle; hier steht nur, woran man ein Feld
+ * erkennt. Für einen Rahmen um ein Feld (Lupe + Eingabe) `$innen: true`: Dann färbt der Fokus des
+ * inneren Felds den Rahmen.
+ */
+@mixin eingabefeld($innen: false) {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: inherit;
+
+  @if $innen {
+    &:focus-within {
+      border-color: var(--blue);
+    }
+  } @else {
+    &:focus {
+      outline: none;
+      border-color: var(--blue);
+    }
+  }
+}

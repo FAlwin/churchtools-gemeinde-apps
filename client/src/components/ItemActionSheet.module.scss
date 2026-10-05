@@ -1,3 +1,4 @@
+@use '../styles/mixins' as m;
 // Zentriertes „Punkt bearbeiten"-Modal (wie der ChurchTools-Dialog), kein Drawer.
 .overlay {
   // `fixed` (nicht `absolute`): sonst scrollt der Dialog mit dem Dokument mit, wenn iOS beim
@@ -64,20 +65,11 @@
 }
 
 .input {
+  @include m.eingabefeld;
   width: 100%;
   min-width: 0;
   padding: 11px 13px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface2);
-  color: var(--text);
-  font-family: inherit;
   font-size: 16px;
-
-  &:focus {
-    outline: none;
-    border-color: var(--blue);
-  }
 }
 
 .readonly {
@@ -90,21 +82,12 @@
 }
 
 .textarea {
+  @include m.eingabefeld;
   width: 100%;
   min-width: 0;
   padding: 11px 13px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface2);
-  color: var(--text);
-  font-family: inherit;
   font-size: 16px;
   resize: vertical;
-
-  &:focus {
-    outline: none;
-    border-color: var(--blue);
-  }
 }
 
 // „Lied verknüpfen / aufheben" + „Zurück" als dezente Zeile.

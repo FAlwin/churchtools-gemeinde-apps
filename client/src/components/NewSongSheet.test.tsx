@@ -254,13 +254,6 @@ describe('NewSongSheet – gleicher Name', () => {
   });
 });
 
-describe('NewSongSheet – Ablauf-Einstieg', () => {
-  it('sagt vorher, dass das Lied in den Ablauf kommt', () => {
-    zeige({ eventId: 42, eventName: 'Gottesdienst' });
-    expect(screen.getByText(/in den Ablauf von Gottesdienst eingetragen/)).toBeTruthy();
-  });
-});
-
 describe('NewSongSheet – „Selbst eintippen" belegt den Titel vor (04.09.2026)', () => {
   it('der Suchbegriff steht als Liedname im Formular', () => {
     zeige({ startName: 'Wo ich auch stehe' });
@@ -336,7 +329,7 @@ describe('NewSongSheet – Verknüpfen statt Eintragen (#391)', () => {
   it('sagt, dass das Lied beim Speichern verknüpft wird', () => {
     hookErgebnis.mockReturnValue(ERGEBNIS);
     zeige({ onVerknuepfen: vi.fn() });
-    expect(screen.getByText(/und wird beim Speichern mit dem Eintrag verknüpft/)).toBeTruthy();
+    expect(screen.getByText(/und wird mit dem Eintrag gespeichert/)).toBeTruthy();
   });
 
   it('„Zurück zum Eintrag" gibt Arrangement und Name zurück – onClose bleibt unberührt', () => {

@@ -170,7 +170,7 @@ dem Punkt, den du bearbeitet hast – in ChurchTools ein Lied-Punkt mit Arrangem
    SongSelect-Lizenz erscheint darunter auch die SongSelect-Gruppe.
 3. **„Neues Lied"** antippen: Das Formular ist mit dem Suchbegriff als Titel vorbelegt. Kategorie wählen,
    **Lied anlegen**.
-4. Die Erfolgsansicht sagt „… ist angelegt **und wird beim Speichern mit dem Eintrag verknüpft**". Es
+4. Die Erfolgsansicht sagt „… ist angelegt **und wird mit dem Eintrag gespeichert**". Es
    gibt **„Zurück zum Eintrag"** und „Notenblatt schreiben", aber **kein** „Noch ein Lied anlegen".
 5. **Zurück zum Eintrag** (oder „Fertig"): Du bist wieder in **Eintrag bearbeiten**, im Feld „Lied" steht
    der neue Name mit dem Hinweis **„Wird beim Speichern verknüpft."**

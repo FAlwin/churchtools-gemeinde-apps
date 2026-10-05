@@ -293,14 +293,12 @@ export interface ArrangementAuftrag {
   sourceReference?: string | null;
 }
 
-/** Der Auftrag aus dem Formular „Neues Lied" (#322): Stammdaten + erstes Arrangement (+ Ablauf). */
+/** Der Auftrag aus dem Formular „Neues Lied" (#322): Stammdaten + erstes Arrangement. */
 export interface LiedAnlegenAuftrag extends LiedStammdaten {
   /** Tonart des ersten Arrangements (aus SongSelect vorbelegt, änderbar). */
   key?: string | null;
   /** Name des ersten Arrangements; leer = „Standard". */
   arrangementName?: string;
-  /** Wenn gesetzt: das fertige Lied zusätzlich in den Ablauf dieses Termins eintragen. */
-  eventId?: number;
 }
 
 /**
@@ -324,19 +322,15 @@ export interface LiedStammdatenAnsicht {
 }
 
 /**
- * Was beim Anlegen herauskam – **auch der Teilerfolg wird benannt**, nicht verschwiegen (#322).
+ * Was beim Anlegen herauskam (#322): die IDs des neuen Liedes und seines ersten Arrangements.
  *
- * Ein Lied entsteht in zwei bis drei Schreibvorgängen ohne Transaktion (siehe
- * `server/services/songErstellen.ts`). Deshalb sagt die Antwort nicht nur „hat geklappt", sondern
- * auch, was davon: Ein fehlender Ablauf-Eintrag ist kein Grund, das angelegte Lied zu verschweigen.
+ * Bis zum 05.10.2026 konnte der Server das Lied zusätzlich in einen Ablauf eintragen (`imAblauf`).
+ * Seit „Neuer Eintrag" im Bearbeiten-Dialog wählt der Ablauf das neue Lied wie jedes andere aus und
+ * legt den Punkt selbst an – ein Weg statt zwei.
  */
 export interface LiedAngelegt {
   songId: number;
   arrangementId: number;
-  /** Nur gesetzt, wenn ein Termin mitgegeben wurde: Hat der Ablauf-Eintrag geklappt? */
-  imAblauf?: boolean;
-  /** Warum der Ablauf-Eintrag nicht geklappt hat – für die Meldung an den Nutzer. */
-  ablaufFehler?: string;
 }
 
 /**

@@ -45,8 +45,6 @@ interface MockOpts {
   songStatus?: number;
   /** Status für POST …/arrangements (Standard 201). */
   arrStatus?: number;
-  /** Status für POST …/agenda/items (Standard 201). */
-  agendaStatus?: number;
   /** Soll der abschließende GET das Arrangement zeigen? (Standard ja) */
   arrangementSichtbar?: boolean;
   /** Antwortet der Anlege-POST mit 201, aber OHNE `data.id`? */
@@ -103,12 +101,6 @@ function mockCt(opts: MockOpts = {}): { aufrufe: string[]; ruempfe: Map<string, 
       const st = opts.arrStatus ?? 201;
       return Promise.resolve(
         st >= 400 ? new Response('', { status: st }) : json({ data: { id: neueArrId } }, st),
-      );
-    }
-    if (m === 'POST' && /\/agenda\/items$/.test(u)) {
-      const st = opts.agendaStatus ?? 201;
-      return Promise.resolve(
-        st >= 400 ? new Response('', { status: st }) : json({ data: { id: 7 } }, st),
       );
     }
     // Das bestehende Lied #7 – Grundlage für lesen–ändern–schreiben (#322, Schritt 11).
@@ -197,13 +189,10 @@ describe('der glatte Durchlauf', () => {
     expect(aufrufe.filter((a) => a === 'PUT /api/songs/42')).toHaveLength(0);
   });
 
-  it('trägt das Lied in den Ablauf ein, wenn ein Termin mitkommt', async () => {
-    mockCt();
-    expect(await liedAnlegen(COOKIE, { ...AUFTRAG, eventId: 5 })).toEqual({
-      songId: 42,
-      arrangementId: 99,
-      imAblauf: true,
-    });
+  it('schreibt nur Lied und Arrangement – keinen Ablaufpunkt (seit 05.10.2026 macht das der Ablauf)', async () => {
+    const { aufrufe } = mockCt();
+    expect(await liedAnlegen(COOKIE, AUFTRAG)).toEqual({ songId: 42, arrangementId: 99 });
+    expect(aufrufe.some((a) => a.includes('/agenda'))).toBe(false);
   });
 });
 
@@ -261,18 +250,6 @@ describe('halbe Durchläufe werden benannt, nicht verschluckt', () => {
   it('meldet es, wenn ChurchTools das Arrangement hinterher nicht zeigt', async () => {
     mockCt({ arrangementSichtbar: false });
     await expect(liedAnlegen(COOKIE, AUFTRAG)).rejects.toThrow(/zeigt das Arrangement nicht/);
-  });
-
-  /**
-   * Ein gescheiterter Ablauf-Eintrag ist **kein** Gesamtfehler – das Lied existiert mitsamt
-   * Arrangement. Ein Wurf hier hieße: „nichts passiert", und das wäre gelogen.
-   */
-  it('ein misslungener Ablauf-Eintrag macht das Anlegen nicht zunichte', async () => {
-    mockCt({ agendaStatus: 502 });
-    const ergebnis = await liedAnlegen(COOKIE, { ...AUFTRAG, eventId: 5 });
-    expect(ergebnis.songId).toBe(42);
-    expect(ergebnis.imAblauf).toBe(false);
-    expect(ergebnis.ablaufFehler).toMatch(/Ablaufpunkt anlegen fehlgeschlagen/);
   });
 
   it('wirft, wenn ChurchTools keine ID nennt – ein 201 allein ist kein Beleg', async () => {

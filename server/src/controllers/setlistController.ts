@@ -323,8 +323,6 @@ const neuesLiedSchema = z.object({
   copyright: z.string().trim().max(LIED_GRENZEN.copyright).optional(),
   key: z.string().trim().max(LIED_GRENZEN.key).optional(),
   arrangementName: z.string().trim().max(LIED_GRENZEN.arrangementName).optional(),
-  /** Optional: das fertige Lied gleich in den Ablauf dieses Termins eintragen. */
-  eventId: z.number().int().positive().optional(),
 });
 
 /**
@@ -335,12 +333,22 @@ const neuesLiedSchema = z.object({
  * mitgegeben war, mit der ehrlichen Auskunft, ob der Ablauf-Eintrag geklappt hat.
  */
 export async function postSong(req: Request, res: Response): Promise<void> {
+  /**
+   * **Eine alte App laut abweisen, nicht still bedienen** (Alwin, 05.10.2026: „Alles jetzt").
+   *
+   * Bis zum 05.10.2026 trug der Server das neue Lied auf Wunsch gleich in einen Ablauf ein (`eventId`).
+   * Eine noch nicht aktualisierte App schickt das weiter mit. Ohne diese Prüfung würde zod das Feld
+   * still wegwerfen: Das Lied entstünde, landete aber nicht im Ablauf – und die alte App meldete nichts.
+   * Deshalb wird VOR dem Anlegen abgelehnt; so entsteht auch kein halbes Ergebnis.
+   */
+  if (typeof req.body === 'object' && req.body !== null && 'eventId' in req.body) {
+    throw new HttpError(
+      410,
+      'Diese Version der App ist veraltet – bitte die App neu laden. Das Lied wurde nicht angelegt.',
+    );
+  }
   const daten = neuesLiedSchema.parse(req.body);
-  const ergebnis = await liedAnlegen(ctCookie(req), daten);
-  // Ein neu angelegtes Lied verändert die Bibliothek – und wenn es in einen Ablauf ging, auch die
-  // Statistik dieses Termins (#300: nur bei beigetragenem Termin).
-  if (daten.eventId !== undefined && ergebnis.imAblauf) invalidateSongUsageCache(daten.eventId);
-  res.status(201).json(ergebnis);
+  res.status(201).json(await liedAnlegen(ctCookie(req), daten));
 }
 
 /**

@@ -325,11 +325,10 @@ export function loescheArrangement(
 }
 
 /**
- * Ein neues Lied anlegen (#322) – Lied + erstes Arrangement, auf Wunsch samt Ablauf-Eintrag.
+ * Ein neues Lied anlegen (#322) – Lied + erstes Arrangement.
  *
  * **Rechte, Kategorie und die CCLI-Doppelprüfung macht der Server**, nicht das Formular: Eine Prüfung,
- * die nur in der Oberfläche steht, umgeht jeder, der den Endpunkt direkt aufruft. Die Antwort nennt
- * auch den Teilerfolg (`imAblauf: false`) – die Oberfläche gibt ihn als Text weiter.
+ * die nur in der Oberfläche steht, umgeht jeder, der den Endpunkt direkt aufruft.
  */
 export function legeLiedAn(auftrag: LiedAnlegenAuftrag): Promise<LiedAngelegt> {
   return apiFetch<LiedAngelegt>('/api/songs', {

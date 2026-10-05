@@ -44,14 +44,11 @@ const TREFFER: SongSelectTreffer = {
 
 const FORMULAR = { ...LEERES_FORMULAR, name: 'Treu', categoryId: 0, ccli: '5841527', key: 'E' };
 
-function starte(opts: { eventId?: number; canUseCcli?: boolean } = {}) {
+function starte(opts: { canUseCcli?: boolean } = {}) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return renderHook(
-    () => useNeuesLied({ eventId: opts.eventId, canUseCcli: opts.canUseCcli ?? true }),
-    {
-      wrapper: ({ children }) => <QueryClientProvider client={qc}>{children}</QueryClientProvider>,
-    },
-  );
+  return renderHook(() => useNeuesLied({ canUseCcli: opts.canUseCcli ?? true }), {
+    wrapper: ({ children }) => <QueryClientProvider client={qc}>{children}</QueryClientProvider>,
+  });
 }
 
 beforeEach(() => {
@@ -76,18 +73,6 @@ describe('useNeuesLied – der gute Fall', () => {
     expect(result.current.ergebnis?.hinweise).toEqual([]);
     expect(result.current.fehler).toBeNull();
   });
-
-  it('trägt den Termin in den Auftrag ein, statt danach ein zweites Mal zu schreiben', async () => {
-    // Der Ablauf-Eintrag gehört zum Auftrag: So kennt der Server die Reihenfolge und kann den
-    // Teilerfolg melden. Ein eigener Aufruf hier hätte den Punkt doppelt eingetragen.
-    legeLiedAn.mockResolvedValue({ songId: 77, arrangementId: 500, imAblauf: true });
-    const { result } = starte({ eventId: 42 });
-    await result.current.anlegen(FORMULAR, 0, TREFFER);
-
-    await waitFor(() => expect(result.current.ergebnis).not.toBeNull());
-    expect(legeLiedAn).toHaveBeenCalledWith(expect.objectContaining({ eventId: 42 }));
-    expect(result.current.ergebnis?.hinweise).toEqual([]);
-  });
 });
 
 describe('useNeuesLied – Teilerfolge', () => {
@@ -102,22 +87,6 @@ describe('useNeuesLied – Teilerfolge', () => {
     expect(result.current.ergebnis?.notenblatt).toBe(false);
     expect(result.current.ergebnis?.hinweise.join(' ')).toContain('CCLI antwortet nicht.');
     expect(result.current.fehler).toBeNull();
-  });
-
-  it('nennt einen misslungenen Ablauf-Eintrag samt Grund', async () => {
-    legeLiedAn.mockResolvedValue({
-      songId: 77,
-      arrangementId: 500,
-      imAblauf: false,
-      ablaufFehler: 'Keine Berechtigung, den Ablauf zu ändern.',
-    });
-    const { result } = starte({ eventId: 42 });
-    await result.current.anlegen(FORMULAR, 0, TREFFER);
-
-    await waitFor(() => expect(result.current.ergebnis).not.toBeNull());
-    const hinweise = result.current.ergebnis?.hinweise.join(' ') ?? '';
-    expect(hinweise).toContain('noch nicht im Ablauf');
-    expect(hinweise).toContain('Keine Berechtigung');
   });
 
   it('sagt ohne Akkorde bei CCLI Bescheid, statt es zu versuchen', async () => {

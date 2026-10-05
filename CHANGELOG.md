@@ -32,6 +32,10 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Überschrift; bei „Lied" geht sofort die Suche auf, der Liedname wird zum Titel, Dauer und Zuständige
   setzt man gleich mit. Das frühere Hinzufügen-Blatt mit drei eigenen Formularen und der zweite Dialog
   nach einem neuen Lied entfallen. Das Plus der Abwesenheiten ist derselbe Baustein.
+- **„Neues Lied" trägt nichts mehr selbst in den Ablauf ein.** Der Server legt nur noch Lied und
+  Arrangement an (`POST /api/songs` ohne `eventId`, Antwort ohne `imAblauf`); in den Ablauf kommt es
+  über „Neuer Eintrag". Eine noch nicht aktualisierte App, die `eventId` mitschickt, bekommt **410**
+  mit der Bitte, neu zu laden – statt dass das Lied still nicht im Ablauf landet.
 
 ### Entfernt
 

@@ -525,10 +525,11 @@ export function useArrangementLoeschen(songId: number) {
 }
 
 /**
- * Legt ein Lied an (#322) – Lied + erstes Arrangement, auf Wunsch mit Ablauf-Eintrag.
+ * Legt ein Lied an (#322) – Lied + erstes Arrangement.
  *
- * **Die Liedliste wird danach ungültig, die Statistik nur bei einem Ablauf-Eintrag.** Ohne Termin hat
- * sich an der Nutzung nichts geändert; sie neu zu holen wären ChurchTools-Anfragen für nichts (#300).
+ * **Nur die Liedliste wird danach ungültig, nicht die Statistik:** An der Nutzung hat sich nichts
+ * geändert; sie neu zu holen wären ChurchTools-Anfragen für nichts (#300). In einen Ablauf kommt das
+ * Lied erst über „Neuer Eintrag" – und der lädt den Ablauf selbst neu.
  *
  * Was **nicht** hier steht: ein Wiederholversuch. Ein zweiter Durchlauf legte ein zweites Lied an
  * (siehe `songErstellen.ts`) – React Query wiederholt Mutationen von sich aus nicht, und das bleibt so.
@@ -537,13 +538,8 @@ export function useLiedAnlegen() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (auftrag: LiedAnlegenAuftrag) => api.legeLiedAn(auftrag),
-    onSuccess: (ergebnis, auftrag) => {
+    onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['song-library'] });
-      if (auftrag.eventId !== undefined && ergebnis.imAblauf) {
-        void qc.invalidateQueries({ queryKey: ['agenda', auftrag.eventId] });
-        void qc.invalidateQueries({ queryKey: ['services'] });
-        void qc.invalidateQueries({ queryKey: ['song-usage'] });
-      }
     },
   });
 }

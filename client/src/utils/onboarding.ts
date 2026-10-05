@@ -47,7 +47,10 @@ export const TOUR_TERMINE = 'termine-v3';
 // Titel-Kapsel mit EINZELNEN Werkzeug-Knöpfen (kein gemeinsamer Werkzeuge-Knopf – dessen Schritt
 // entfällt dort von selbst, weil sein Ziel fehlt); ein Tipp darauf wählt das Lied. Der Tipp aufs
 // Blatt wählt nichts mehr aus.
-export const TOUR_CHART = 'chart-v8';
+// chart-v9 (05.10.2026): Auch im Hochformat stehen die Werkzeuge einzeln oben, solange der Titel
+// genug Platz behält – erst im schmalen Fenster (iPhone, kleines Stage-Manager-Fenster) wandern sie
+// hinter den einen Knopf. Neuer Schritt am Ziel `chart-werkzeuge-einzeln`; v2.26.1 (produktiv) trägt v8.
+export const TOUR_CHART = 'chart-v9';
 
 /**
  * Einmaliger Hinweis, wenn die Leisten zum ersten Mal ausgeblendet werden (#319).
@@ -164,6 +167,13 @@ export const CHART_STEPS: CoachStep[] = [
     selector: '[data-tour="chart-werkzeuge"]',
     title: 'Werkzeuge',
     body: 'Hinter diesem Knopf steckt alles Weitere: „Aussehen" für Schriftgröße und Spalten, „Tempo" mit Puls, Klick und Mittippen (gespeichert in ChurchTools wird es nur über den Knopf ganz unten im Tempo-Fenster), „Anmerken" zum Zeichnen und Schreiben auf der Seite und – wenn freigeschaltet – „Notizen von …" für die geteilten Anmerkungen deines Teams. Läuft der Puls, leuchtet der Knopf blau; beim Zeichnen wird er zum Haken, mit dem du fertig bist.',
+  },
+  {
+    // Dasselbe für die EINZELN stehenden Werkzeuge (breites Fenster, Querformat). Es gibt immer nur
+    // eines der beiden Ziele – die Einführung überspringt das fehlende.
+    selector: '[data-tour="chart-werkzeuge-einzeln"]',
+    title: 'Werkzeuge',
+    body: 'Hier oben stehen die Werkzeuge: „Aa" für Schriftgröße und Spalten, das Metronom für Tempo mit Puls, Klick und Mittippen (gespeichert in ChurchTools wird es nur über den Knopf ganz unten im Tempo-Fenster), der Stift zum Anmerken und – wenn freigeschaltet – „Notizen von …" für die geteilten Anmerkungen deines Teams. Wird das Fenster schmal, wandern sie hinter einen gemeinsamen Knopf.',
   },
 ];
 

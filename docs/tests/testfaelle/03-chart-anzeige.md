@@ -186,7 +186,8 @@ genau im Takt des Lieds. Er ist **lautlos**. Die Kopfzeile darf dabei nicht wack
 
 1. Ein Lied mit Tempo öffnen. Vor der Zahl steht ein **Metronom-Symbol**, keine Note.
 2. Oben rechts **Werkzeuge → Tempo** → das Tempo-Menü geht auf. Unter **Sichtbarer Puls** auf
-   **An** – der Punkt beginnt zu pulsen, der Werkzeuge-Knopf färbt sich blau.
+   **An** – der Punkt beginnt zu pulsen, der Werkzeuge-Knopf (bzw. am iPad der Tempo-Knopf) färbt
+   sich blau.
 3. Das Metronom auf dasselbe Tempo stellen und **eine halbe Minute mitlaufen lassen**. Punkt und
    Metronom müssen zusammenbleiben – nicht auseinanderdriften.
 4. **Die Eins ist markiert:** Jeder vierte Blitz (im Dreivierteltakt jeder dritte) zieht sich

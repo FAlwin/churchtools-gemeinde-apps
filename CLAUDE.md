@@ -351,7 +351,10 @@ Schließen hinterher). Fenster unter dem Kopf hängen an `--chart-kopf-unten`. *
 gemeinsamer Werkzeuge-Knopf); welche Werkzeuge es gibt, regelt EINE Funktion für Menü und Knöpfe
 (`utils/werkzeuge.ts`); Lied-Menü, Aussehen und Tempo öffnen unter ihrem Knopf (`--liedmenue-x`,
 `--werkzeug-links`); Werkzeug des anderen Lieds = erst wählen, nach dem Wechsel öffnen. iPad-Kopf
-schmal wie vor v2.26.0 (kein Band dort). Routing in `App.tsx` über `tab` + `view` (rechteabhängig).
+schmal wie vor v2.26.0 (kein Band dort). **Hochformat nach Breite (05.10.2026):** Behält die Titel-Kapsel
+neben Zurück und den einzelnen Werkzeug-Knöpfen mindestens `KAPSEL_MIN` (220 px), stehen die Werkzeuge
+auch im Hochformat einzeln (iPad hochkant, breites Fenster); sonst der eine Knopf (iPhone, kleines
+Stage-Manager-Fenster). Gemessen laufend per `ResizeObserver` am Kopf, Regel `werkzeugeEinzeln`. Routing in `App.tsx` über `tab` + `view` (rechteabhängig).
 
 **Abwesenheiten sind terminfein, nicht tagesfein (22.09.2026).** Ein Haken an einem Termin trägt in
 ChurchTools das **Zeitfenster dieses Termins** ein (`startTime`/`endTime`, ISO-Zeitpunkte) – nur so

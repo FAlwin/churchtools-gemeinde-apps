@@ -3,10 +3,11 @@
 Hier geht es um Stift, Finger und Handballen. Nichts davon lässt sich vom Rechner aus prüfen – bitte
 wirklich am iPad mit dem Stift durchgehen.
 
-Der Anmerkungsmodus wird immer gleich eingeschaltet: **Lied öffnen → oben rechts auf den runden
-Werkzeuge-Knopf (drei Regler) → „Anmerken".** Dann erscheint die Werkzeugleiste am rechten Rand, und
-der Knopf oben rechts wird zum **blauen Haken** – damit verlässt man den Modus wieder (seit
-02.10.2026).
+Der Anmerkungsmodus wird immer gleich eingeschaltet: **Lied öffnen → oben rechts auf den Stift.** Am
+iPad (hochkant wie quer) steht er einzeln oben; im schmalen Fenster und am iPhone steckt er hinter dem
+runden **Werkzeuge**-Knopf (drei Regler) → „Anmerken". Dann erscheint die Werkzeugleiste am rechten
+Rand, und der Knopf wird zum **blauen Haken** bzw. der Stift blau – damit verlässt man den Modus wieder
+(seit 02.10.2026, einzeln im Hochformat seit 05.10.2026).
 
 ### TF-ANNO-01 · Malen mit Stift, Marker und Radierer
 

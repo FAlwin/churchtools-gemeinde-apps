@@ -98,6 +98,15 @@
   }
 }
 
+// Die einzelnen Werkzeug-Knöpfe eines Lieds – ein Behälter, damit die Einführung sie als Ganzes zeigt.
+// Abstand wie das Umfeld: im Kopf (Hochformat) 8px, in der Gruppe (Querformat) 6px bzw. 4px.
+.knoepfe {
+  display: flex;
+  align-items: center;
+  gap: inherit;
+  flex-shrink: 0;
+}
+
 // Kleinere Bildschirme (kleines iPad quer, Handy quer): Knöpfe und Kapsel etwas kleiner, damit
 // Titel und vier Werkzeuge in jede Hälfte passen (Alwin: „auch bei kleinen iPads/Bildschirmen").
 @media (max-width: 1100px) {

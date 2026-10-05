@@ -17,6 +17,14 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Bearbeiten-Liste steht zwischen Vorlauf und Gottesdienst die Linie „Beginn · 10:00 Uhr". Die Einführung
   zum Bearbeiten erscheint einmal neu.
 
+### Geändert
+
+- **Liedblatt: Auch im Hochformat stehen die Werkzeuge einzeln oben**, solange der Titel genug Platz
+  behält – am iPad hochkant und im breiten Fenster also Aa, Tempo, Anmerken (und ggf. Notizen von …)
+  direkt neben dem Titel, ohne Umweg über das Menü. Erst wenn das Fenster zu schmal wird (iPhone,
+  kleines Stage-Manager-Fenster am iPad), wandern sie hinter den einen Werkzeuge-Knopf. Gemessen wird
+  laufend an der echten Breite. Die Einführung zum Liedblatt erscheint einmal neu.
+
 ### Entfernt
 
 - **Der Schalter „Uhrzeit ausblenden"** (#423). Er war falsch beschriftet: Das Auge in ChurchTools

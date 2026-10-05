@@ -7,6 +7,12 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+## [2.27.0] – 2026-10-05
+
+**Beim Update ist nichts zu tun** – keine neue Einstellung. Die Einführungen zum Ablauf-Bearbeiten und
+zum Liedblatt erscheinen einmal neu. Wer nach dem Update noch eine alte App offen hat, bekommt bei
+„Neues Lied" im Ablauf die Bitte, neu zu laden (angelegt wird dabei nichts) – ein Neuladen genügt.
+
 ### Neu
 
 - **Vorlauf vor dem Gottesdienstbeginn** (#423). Im Bearbeiten-Dialog eines Punkts gibt es den

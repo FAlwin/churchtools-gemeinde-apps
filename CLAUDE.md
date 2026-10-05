@@ -19,9 +19,8 @@
 - **Status:** Fertig & produktiv – auf dem Synology-NAS deployt, intern im WLAN **und**
   extern unter `https://musik.ecg-donrath.de` live.
 
-  **Stand 03.10.2026: Produktiv läuft `v2.25.4`** – am 24.09.2026 am Bundle **gemessen**, nicht aus der
-  Doku übernommen. **v2.26.0 und v2.26.1 sind getaggt, der Prod-Deploy liegt bei Alwin** (geplant
-  04.10.2026 abends, nach dem Gottesdienst). So misst man die laufende
+  **Stand 05.10.2026: Produktiv läuft `v2.26.1`** – am 05.10.2026 am Bundle **gemessen**, nicht aus der
+  Doku übernommen. **v2.27.0 ist getaggt, der Prod-Deploy liegt bei Alwin.** So misst man die laufende
   Version: Der Versionsstring steckt im ausgelieferten Bundle
   (`curl -s https://musik.ecg-donrath.de/ | grep -oE 'assets/index-[^"]+\.js'`, dann diese Datei holen
   und nach `v2.` greppen). `/api/health` nennt **keine** Version und taugt dafür nicht. Getestet wird
@@ -621,6 +620,17 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 ```
 
 ## Stand & nächster Schritt
+
+- **v2.27.0 (05.10.2026) = Ablauf und Felder** (PR #425 Squash `1447d65`; Staging `staging-a5e6782` von
+  Alwin getestet, Baum von `main` identisch). #423 Vorlauf vor dem Gottesdienstbeginn (Grenze
+  `eventStartPosition`, nur sie wird geschrieben; Linie „Beginn"), Schalter „Uhrzeit ausblenden" entfernt
+  (das CT-Auge nimmt den Punkt aus der Zeitrechnung); Liedblatt-Werkzeuge im Hochformat einzeln nach
+  Fensterbreite (`werkzeugeEinzeln`, Tour `chart-v9`); schwebendes Plus + „Neuer Eintrag" im
+  Bearbeiten-Dialog (Programmpunkt · Überschrift, Tour `setlist-edit-v5`), `AddItemSheet` und der
+  Ablauf-Weg von „Neues Lied" (`eventId`) entfernt – alte App bekommt 410; ein Feld-Aussehen
+  (`m.eingabefeld`) statt neun Kopien, Suchfeld/Von–Bis waren unsichtbar (`--surface3` = `--bg`).
+  Offen: #424 Beginnzeit ändern (Spike, Serientermine), `isLocked`-Erkennung (Idee). **Lehre:** Eine
+  Fehlermeldung „Keine Berechtigung" hieß diesmal „ChurchTools war weg" – erst messen, dann bauen.
 
 - **v2.26.1 (03.10.2026) = iPad-Korrekturen** (PR #422 Squash `48766c7`; Staging `staging-8b68c34` von
   Alwin am iPad getestet, Baum von `main` identisch). #420 Zoom als Ausschnitt des Blatts (übersteht

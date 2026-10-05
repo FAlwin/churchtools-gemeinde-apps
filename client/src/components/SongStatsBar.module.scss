@@ -1,3 +1,5 @@
+@use '../styles/mixins' as m;
+
 .segWrap {
   margin-top: 10px;
 }
@@ -28,18 +30,16 @@
   padding-left: 2px;
 }
 
+// Weiß mit Rand wie alle Eingabefelder (05.10.2026) – mit `--surface3` waren Von/Bis auf der Seite
+// unsichtbar (exakt die Seitenfarbe).
 .dateInput {
+  @include m.eingabefeld;
   flex: 1;
   min-width: 0;
-  background: var(--surface3);
-  border: none;
-  border-radius: 8px;
   padding: 8px 10px;
   font-size: 13px;
   font-family: var(--ui);
-  color: var(--text);
   font-variant-numeric: tabular-nums;
-  outline: none;
 
   &::-webkit-calendar-picker-indicator {
     opacity: 0.55;
@@ -51,19 +51,20 @@
   flex-shrink: 0;
   padding-bottom: 8px;
 }
+// „Alle" sitzt in derselben Reihe wie die Felder und sieht deshalb aus wie sie (weiß, Rand) – nicht
+// gewählt war es sonst ebenso unsichtbar. Gewählt: hellblau.
 .allBtn {
+  @include m.eingabefeld;
   flex-shrink: 0;
-  border: none;
-  border-radius: 8px;
   padding: 8px 12px;
   font-size: 13px;
   font-weight: 600;
   font-family: var(--ui);
-  background: var(--surface3);
   color: var(--text2);
   cursor: pointer;
 }
 .allActive {
   background: var(--blue-soft);
+  border-color: var(--blue-soft);
   color: var(--blue-ink);
 }

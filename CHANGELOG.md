@@ -7,6 +7,47 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu
+
+- **Vorlauf vor dem Gottesdienstbeginn** (#423). Im Bearbeiten-Dialog eines Punkts gibt es den
+  Schalter **„Vor Gottesdienstbeginn"**: Ein Soundcheck läuft damit vor dem Beginn, ChurchTools rechnet
+  seine Uhrzeit rückwärts, und der Gottesdienst bleibt um 10:00 – auch im Kalender. Bisher half nur, im
+  Browser die Uhrzeit umzustellen. Weil ChurchTools nur eine Grenze kennt, gilt der Schalter für einen
+  Block: an – dieser und alle Punkte darüber, aus – dieser und alle darunter. Im Ablauf und in der
+  Bearbeiten-Liste steht zwischen Vorlauf und Gottesdienst die Linie „Beginn · 10:00 Uhr". Die Einführung
+  zum Bearbeiten erscheint einmal neu.
+
+### Geändert
+
+- **Liedblatt: Auch im Hochformat stehen die Werkzeuge einzeln oben**, solange der Titel genug Platz
+  behält – am iPad hochkant und im breiten Fenster also Aa, Tempo, Anmerken (und ggf. Notizen von …)
+  direkt neben dem Titel, ohne Umweg über das Menü. Erst wenn das Fenster zu schmal wird (iPhone,
+  kleines Stage-Manager-Fenster am iPad), wandern sie hinter den einen Werkzeuge-Knopf. Gemessen wird
+  laufend an der echten Breite. Die Einführung zum Liedblatt erscheint einmal neu.
+
+- **Ablauf: Hinzufügen über ein schwebendes Plus, im selben Fenster wie das Bearbeiten.** Das runde
+  Plus schwebt im Bearbeiten-Modus unten rechts über dem Ablauf (vorher „Eintrag hinzufügen" am
+  Listenende) – auch bei einem leeren Ablauf, der sich bisher gar nicht füllen ließ. Es öffnet
+  „Neuer Eintrag" mit denselben Feldern wie „Eintrag bearbeiten" und dem Umschalter Programmpunkt ·
+  Überschrift. Ein Lied ist ein Programmpunkt mit „Lied verknüpfen" – der Liedname wird zum Titel,
+  Dauer und Zuständige setzt man gleich mit. Das frühere Hinzufügen-Blatt mit drei eigenen Formularen und der zweite Dialog
+  nach einem neuen Lied entfallen. Das Plus der Abwesenheiten ist derselbe Baustein.
+- **„Neues Lied" trägt nichts mehr selbst in den Ablauf ein.** Der Server legt nur noch Lied und
+  Arrangement an (`POST /api/songs` ohne `eventId`, Antwort ohne `imAblauf`); in den Ablauf kommt es
+  über „Neuer Eintrag". Eine noch nicht aktualisierte App, die `eventId` mitschickt, bekommt **410**
+  mit der Bitte, neu zu laden – statt dass das Lied still nicht im Ablauf landet.
+
+- **Eingabefelder sind überall als Felder zu erkennen.** Suchfeld, Von/Bis und „Alle" im Liederheft
+  waren auf dem grauen Hintergrund unsichtbar – ihre Farbe war exakt die Seitenfarbe. Alle
+  Eingabefelder der App teilen jetzt EIN Aussehen (weiß, feiner Rand, beim Antippen blau); vorher gab
+  es neun Kopien mit leicht verschiedenen Rändern und Rundungen.
+
+### Entfernt
+
+- **Der Schalter „Uhrzeit ausblenden"** (#423). Er war falsch beschriftet: Das Auge in ChurchTools
+  versteckt nicht die Uhrzeit, sondern nimmt den Punkt aus der Zeitrechnung – alle Punkte danach
+  rücken auf. In ChurchTools gesetzte Augen zeigt die App weiter (der Punkt steht ohne Uhrzeit da).
+
 ## [2.26.1] – 2026-10-03
 
 **Beim Update ist nichts zu tun.** Die Einführung zum Liedblatt erscheint einmal neu (Querformat mit

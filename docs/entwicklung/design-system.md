@@ -21,7 +21,7 @@ am Ende dieses Dokuments.
 | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--bg`                                              | Seitenhintergrund                                                                                                                                           |
 | `--surface2`                                        | Karten / Listen / Header                                                                                                                                    |
-| `--surface3`                                        | Sekundärflächen (Suche, Kacheln, Pills, Segmente)                                                                                                           |
+| `--surface3`                                        | Sekundärflächen auf **weißen** Flächen (Kacheln, Pills, Tipp-Zustände). Im Hellen exakt `--bg` – direkt auf der Seite unsichtbar, deshalb nie für Felder    |
 | `--border` / `--hair`                               | Rahmen / 1px-Trenner                                                                                                                                        |
 | `--text` / `--text2` / `--text3`                    | Primär / Sekundär / Tertiär                                                                                                                                 |
 | `--blue` / `--blue-ink` / `--blue-soft`             | **Primär**: Buttons, Links, aktive Tabs, Akzente                                                                                                            |
@@ -53,18 +53,22 @@ nutzt bewusst Monospace (`'JetBrains Mono', monospace`) für die Roh-Bearbeitung
 ## Wiederverwendbare Bausteine
 
 - **SCSS-Mixins** (`client/src/styles/_mixins.scss`): `card-list` (Rand + `--r-card`), `group-header`, `list-row`,
-  `key-pill`, `neues-lied-aktion` (die ruhige Textaktion „Neues Lied" – im Liederheft **und** im
-  „Lied hinzufügen"-Blatt, deshalb geteilt). In Modulen:
+  `key-pill`, `neues-lied-aktion` (die ruhige Textaktion „Neues Lied" – im Liederheft **und** in der
+  Liedsuche des Ablaufs, deshalb geteilt), **`eingabefeld`** (05.10.2026: das EINE Aussehen aller
+  Eingabefelder – weiß, feiner Rand, Fokus blau; `$innen: true` für einen Rahmen um Lupe + Eingabe.
+  Vorher neun Kopien mit 1 bzw. 1,5 px Rand, und Suchfeld/Von–Bis trugen `--surface3`, waren auf der
+  Seite also unsichtbar). In Modulen:
   `@use '../styles/mixins' as m;` → `@include m.card-list;`.
 - **Komponenten:** `Segment` (Auswahl 2–3 Optionen), `NoteTile` (Noten-Kachel),
   `Icon` (`components/icons.tsx`, Line-Icons – keine Emojis in der UI), **`SeitenGeruest`** (das
   Gerüst JEDES Bildschirms: Überschrift, runde Knöpfe, Scrollen, Neuladen – seit 22.09.2026 der
   Normalweg, `Screen`/`Scroll`/`GrosseUeberschrift`/`KnopfReihe` sind seine Bausteine; `RundKnopf`
   für Aktionen in Detailansichten), `TabBar`,
-  `Sheet`, `ConfirmDialog`, `SongFields` (die Stammdaten-Felder eines Liedes – von „Neues Lied" und
+  `Sheet`, `ConfirmDialog`, **`SchwebePlus`** (das runde Plus unten rechts – Abwesenheiten und Ablauf),
+  `SongFields` (die Stammdaten-Felder eines Liedes – von „Neues Lied" und
   „Stammdaten ändern" gemeinsam genutzt, damit es die fünf Felder nur einmal gibt).
 - **Lied suchen – ein Feld, eine Zeile, ein Angebot** (#378): `LiedSucheKopf` (nur das Suchfeld, Lupe
-  innen, `--surface3`), **`LiedZeile`** (die Liedzeile mit Auge = Vorschau und Plus = einfügen; ohne
+  innen, `m.eingabefeld`), **`LiedZeile`** (die Liedzeile mit Auge = Vorschau und Plus = einfügen; ohne
   `aktion` eine Pfeil-Zeile – dieselbe Optik für Bibliothek, SongSelect und Liedtexte, vorher drei
   verschiedene) und `SucheAngebot` (die dezente gestrichelte Zeile „Bei SongSelect nach …" / „Auch in den
   Liedtexten nach …" am Listenende – ein Weg, keine Aktion). `LiedTreffer.module.scss` trägt nur noch

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { agendaItemWritePayload } from './agendaPayload.js';
+import { agendaItemWritePayload, beginnPositionFuer } from './agendaPayload.js';
 import type { CtAgendaItem } from './ctTypes.js';
 
 /**
@@ -118,5 +118,38 @@ describe('agendaItemWritePayload – position und Standardwerte', () => {
 
   it('Dauer 0 wird übernommen (Dauer entfernen), nicht als „fehlend" behandelt', () => {
     expect(agendaItemWritePayload(songItem(), { durationSec: 0 }).duration).toBe(0);
+  });
+});
+
+/**
+ * #423: Der Vorlauf ist in ChurchTools eine Grenze (`eventStartPosition`), kein Feld je Punkt. Der
+ * Schalter im Dialog gilt deshalb für einen Block – diese Tests halten fest, für welchen.
+ * Gemessen 05.10.2026: Punkte mit `position` < Grenze sind Vorlauf.
+ */
+describe('beginnPositionFuer – wohin die Beginn-Grenze wandert', () => {
+  it('an: die Grenze rückt direkt UNTER den Punkt – er und alle darüber sind Vorlauf', () => {
+    expect(beginnPositionFuer({ position: 2 }, 0, true)).toBe(3);
+  });
+
+  it('an bei schon vorhandenem Vorlauf: die Grenze rückt weiter nach unten', () => {
+    // Grenze 1 (nur Punkt 0 Vorlauf), Punkt 3 einschalten → 1, 2 und 3 werden mit Vorlauf.
+    expect(beginnPositionFuer({ position: 3 }, 1, true)).toBe(4);
+  });
+
+  it('aus: die Grenze rückt direkt ÜBER den Punkt – er und alle darunter gehören zum Gottesdienst', () => {
+    expect(beginnPositionFuer({ position: 1 }, 3, false)).toBe(1);
+  });
+
+  it('aus am obersten Punkt: kein Vorlauf mehr', () => {
+    expect(beginnPositionFuer({ position: 0 }, 2, false)).toBe(0);
+  });
+
+  it('steht schon so: nichts zu schreiben (null)', () => {
+    expect(beginnPositionFuer({ position: 1 }, 2, true)).toBeNull(); // schon Vorlauf
+    expect(beginnPositionFuer({ position: 2 }, 2, false)).toBeNull(); // erster nach der Grenze
+  });
+
+  it('ohne position zählt der Punkt als oberster (Position 0)', () => {
+    expect(beginnPositionFuer({}, 0, true)).toBe(1);
   });
 });

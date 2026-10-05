@@ -1,3 +1,4 @@
+@use '../styles/mixins' as m;
 // Zentriertes „Punkt bearbeiten"-Modal (wie der ChurchTools-Dialog), kein Drawer.
 .overlay {
   // `fixed` (nicht `absolute`): sonst scrollt der Dialog mit dem Dokument mit, wenn iOS beim
@@ -64,20 +65,11 @@
 }
 
 .input {
+  @include m.eingabefeld;
   width: 100%;
   min-width: 0;
   padding: 11px 13px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface2);
-  color: var(--text);
-  font-family: inherit;
   font-size: 16px;
-
-  &:focus {
-    outline: none;
-    border-color: var(--blue);
-  }
 }
 
 .readonly {
@@ -90,21 +82,12 @@
 }
 
 .textarea {
+  @include m.eingabefeld;
   width: 100%;
   min-width: 0;
   padding: 11px 13px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface2);
-  color: var(--text);
-  font-family: inherit;
   font-size: 16px;
   resize: vertical;
-
-  &:focus {
-    outline: none;
-    border-color: var(--blue);
-  }
 }
 
 // „Lied verknüpfen / aufheben" + „Zurück" als dezente Zeile.
@@ -172,6 +155,22 @@
 }
 
 // Uhrzeit-ausblenden als Schalter-Zeile.
+// „Neuer Eintrag": Umschalter Programmpunkt · Überschrift unter dem Titel, mit Luft zum ersten Feld.
+.art {
+  margin: 2px 0 14px;
+}
+
+// Text des Schalters: Beschriftung + Hinweis darunter (#423 – der Vorlauf gilt für einen Block).
+.toggleText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+.toggleHint {
+  font-size: 12.5px;
+  color: var(--text2);
+}
 .toggleRow {
   display: flex;
   align-items: center;

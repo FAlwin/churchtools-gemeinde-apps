@@ -49,6 +49,8 @@ export function agendaItemWritePayload(
     type: isSong ? 'song' : overrides.unlink ? 'text' : it.type,
     note: overrides.note ?? it.note ?? '',
     duration: overrides.durationSec ?? it.duration ?? 0,
+    // Wirkungslos, aber harmlos: ChurchTools leitet `isBeforeEvent` aus der Grenze ab und ignoriert
+    // den Wert hier (gemessen 05.10.2026). Den Vorlauf setzt `beginnPositionFuer` (#423).
     isBeforeEvent: it.isBeforeEvent ?? false,
     // responsible ist ein Textfeld; ChurchTools löst Dienst-Tokens wie „[Musik]" selbst
     // zu den im Dienstplan zugewiesenen Personen auf.
@@ -56,4 +58,27 @@ export function agendaItemWritePayload(
     ...(overrides.position !== undefined ? { position: overrides.position } : {}),
     ...(arrangementId ? { arrangementId } : {}),
   };
+}
+
+/**
+ * Wohin die Grenze „Beginn der Veranstaltung" wandert, wenn ein Punkt umgeschaltet wird (#423).
+ *
+ * ChurchTools kennt keinen Vorlauf PRO PUNKT, sondern nur die Grenze `eventStartPosition`: Alles mit
+ * kleinerer `position` ist Vorlauf. Deshalb gilt der Schalter immer für einen ganzen Block:
+ *  - **an:** dieser Punkt und alle darüber werden Vorlauf → Grenze direkt UNTER den Punkt,
+ *  - **aus:** dieser Punkt und alle darunter gehören zum Gottesdienst → Grenze direkt ÜBER den Punkt.
+ *
+ * Gerechnet wird mit `position`, nicht mit dem Listenplatz – an `position` misst ChurchTools die
+ * Grenze. Liefert `null`, wenn der Punkt schon so steht wie gewünscht: Dann gibt es nichts zu
+ * schreiben (etwa wenn ein zweites Gerät dasselbe kurz vorher umgeschaltet hat).
+ */
+export function beginnPositionFuer(
+  item: Pick<CtAgendaItem, 'position'>,
+  eventStartPosition: number,
+  vorBeginn: boolean,
+): number | null {
+  const position = item.position ?? 0;
+  const istVorBeginn = position < eventStartPosition;
+  if (istVorBeginn === vorBeginn) return null;
+  return vorBeginn ? position + 1 : position;
 }

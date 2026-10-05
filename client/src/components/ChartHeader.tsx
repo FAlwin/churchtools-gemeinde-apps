@@ -1,10 +1,15 @@
-import { useLayoutEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import type { HeadInfoPart } from '../utils/activeSongView';
 import { BpmPulse } from './BpmPulse';
 import { Icon } from './icons';
 import { RundKnopf, ZurueckKnopf } from './KnopfReihe';
 import { WerkzeugMenu, type Werkzeug } from './WerkzeugMenu';
-import { WERKZEUG_NAME, verfuegbareWerkzeuge, type WerkzeugId } from '../utils/werkzeuge';
+import {
+  WERKZEUG_NAME,
+  verfuegbareWerkzeuge,
+  werkzeugeEinzeln,
+  type WerkzeugId,
+} from '../utils/werkzeuge';
 import styles from '../pages/ChordChart.module.scss';
 
 function werkzeugSymbol(id: WerkzeugId): ReactNode {
@@ -66,10 +71,11 @@ interface ChartHeaderProps {
   andereHaelfte?: AndereHaelfte | null;
   /**
    * Querformat: Die Werkzeuge stehen EINZELN neben dem Titel (je Lied), nicht hinter dem einen
-   * Werkzeuge-Knopf (Alwin, 03.10.2026). Im Hochformat bleibt der eine Knopf.
+   * Werkzeuge-Knopf (Alwin, 03.10.2026). Im Hochformat entscheidet die Breite des Kopfs
+   * (`werkzeugeEinzeln`, Alwin 05.10.2026): einzeln, solange der Titel genug Platz behält.
    */
   querformat?: boolean;
-  /** Welches Werkzeug-Fenster gerade offen ist – färbt im Querformat seinen Knopf hellblau. */
+  /** Welches Werkzeug-Fenster gerade offen ist – färbt seinen einzelnen Knopf hellblau. */
   offenesWerkzeug?: 'aussehen' | 'tempo' | null;
   /** Info-Zeile aus `deriveActiveSongView` – reine Daten, die Klassen setzt diese Komponente. */
   headInfo: HeadInfoPart[];
@@ -199,6 +205,50 @@ export function ChartHeader({
   });
 
   /**
+   * **Hochformat: einzeln oder hinter einem Knopf?** Gemessen an der echten Breite des Kopfs, laufend
+   * (Alwin, 05.10.2026: im kleinen Stage-Manager-Fenster am iPad wie am iPhone). Knopfgröße und Abstand
+   * kommen aus dem CSS, damit die Rechnung nicht eine zweite Zahl neben `--rundknopf` pflegt.
+   * Vor der ersten Messung (und ohne Layout, etwa in jsdom) bleibt es beim einen Knopf.
+   */
+  const kopfRef = useRef<HTMLDivElement>(null);
+  const [kopf, setKopf] = useState<{ breite: number; knopf: number; abstand: number } | null>(null);
+  useLayoutEffect(() => {
+    const el = kopfRef.current;
+    if (!el) return;
+    const messen = () => {
+      const cs = getComputedStyle(el);
+      const breite =
+        el.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+      const knopf = parseFloat(cs.getPropertyValue('--rundknopf')) || 44;
+      const abstand = parseFloat(cs.columnGap) || 8;
+      setKopf((alt) =>
+        alt && alt.breite === breite && alt.knopf === knopf && alt.abstand === abstand
+          ? alt
+          : { breite, knopf, abstand },
+      );
+    };
+    messen();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(messen);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const einzeln =
+    querformat ||
+    (kopf !== null &&
+      werkzeugeEinzeln({
+        kopfBreite: kopf.breite,
+        knopf: kopf.knopf,
+        abstand: kopf.abstand,
+        anzahl: aktiveWerkzeuge.length,
+      }));
+  // Wird das Fenster breiter, während das Werkzeuge-Menü offen ist, verschwindet sein Knopf – dann
+  // darf das Menü nicht ohne Knopf stehen bleiben.
+  useEffect(() => {
+    if (einzeln && werkzeugeOffen) onCloseWerkzeuge();
+  }, [einzeln, werkzeugeOffen, onCloseWerkzeuge]);
+
+  /**
    * Die Werkzeuge im Menü (Hochformat). Beim Zeichnen und beim Ansehen fremder Notizen öffnet der
    * Knopf das Menü gar nicht (siehe unten).
    */
@@ -209,7 +259,7 @@ export function ChartHeader({
     onClick: aktion[id],
   }));
 
-  /** Querformat: die Werkzeuge des aktiven Lieds als einzelne runde Knöpfe, mit ihrem Zustand. */
+  /** Die Werkzeuge des aktiven Lieds als einzelne runde Knöpfe, mit ihrem Zustand. */
   const aktiveKnoepfe = aktiveWerkzeuge.map((id) => (
     <RundKnopf
       key={id}
@@ -274,21 +324,19 @@ export function ChartHeader({
    * Im Hochformat steht die Kapsel mittig – dort ändert sich nichts.
    */
   const aktiveKapselRef = useRef<HTMLButtonElement>(null);
-  const aktiveGruppeRef = useRef<HTMLDivElement>(null);
 
   /**
-   * Dasselbe für Aussehen und Tempo im Querformat: Ihre Fenster öffnen unter IHREM Knopf, also über
-   * dem Lied, zu dem sie gehören – sonst klebten sie am rechten Rand, beim linken Lied über dem
-   * falschen Blatt. Im Hochformat (Werkzeuge-Knopf rechts) bleiben sie rechts; dafür werden die
-   * Variablen dort entfernt und `.appMenu` fällt auf `right: 12px` zurück.
+   * Dasselbe für Aussehen und Tempo, wenn sie einzeln stehen: Ihre Fenster öffnen unter IHREM Knopf,
+   * also über dem Lied, zu dem sie gehören – sonst klebten sie am rechten Rand, beim linken Lied über
+   * dem falschen Blatt. Hinter dem Werkzeuge-Knopf (rechts) bleiben sie rechts; dafür werden die
+   * Variablen entfernt und `.appMenu` fällt auf `right: 12px` zurück. Gesucht wird im ganzen Kopf:
+   * Die Knöpfe des anderen Lieds tragen den Liedtitel im Namen und passen deshalb nicht.
    */
   useLayoutEffect(() => {
     const wurzel = document.documentElement.style;
     const knopf =
-      querformat && offenesWerkzeug
-        ? aktiveGruppeRef.current?.querySelector<HTMLElement>(
-            `[title="${WERKZEUG_NAME[offenesWerkzeug]}"]`,
-          )
+      einzeln && offenesWerkzeug
+        ? kopfRef.current?.querySelector<HTMLElement>(`[title="${WERKZEUG_NAME[offenesWerkzeug]}"]`)
         : null;
     const r = knopf?.getBoundingClientRect();
     if (!r) {
@@ -303,7 +351,7 @@ export function ChartHeader({
     );
     wurzel.setProperty('--werkzeug-rechts', 'auto');
     wurzel.setProperty('--werkzeug-verschub', '-50% 0');
-  }, [querformat, offenesWerkzeug, andereHaelfte?.slot]);
+  }, [einzeln, offenesWerkzeug, andereHaelfte?.slot]);
   useLayoutEffect(() => {
     if (!liedFensterOffen) return;
     const r = aktiveKapselRef.current?.getBoundingClientRect();
@@ -385,11 +433,21 @@ export function ChartHeader({
     </button>
   );
 
+  /**
+   * Die einzelnen Werkzeuge des aktiven Lieds – in EINEM Behälter, damit die Einführung sie als Ganzes
+   * zeigen kann (der eine Werkzeuge-Knopf hat dafür sein eigenes Ziel).
+   */
+  const aktiveKnopfReihe = (
+    <div className={styles.knoepfe} data-tour="chart-werkzeuge-einzeln">
+      {aktiveKnoepfe}
+    </div>
+  );
+
   /** Querformat: Titel + einzelne Werkzeuge eines Lieds als eine Gruppe über seiner Hälfte. */
   const aktiveGruppe = (
-    <div className={styles.gruppe} ref={aktiveGruppeRef}>
+    <div className={styles.gruppe}>
       {aktiveKapsel}
-      {aktiveKnoepfe}
+      {aktiveKnopfReihe}
     </div>
   );
   const andereGruppe = andereHaelfte && (
@@ -401,7 +459,7 @@ export function ChartHeader({
 
   return (
     <>
-      <div className={styles.hdr}>
+      <div className={styles.hdr} ref={kopfRef}>
         <ZurueckKnopf onClick={onBack} />
         {querformat && andereHaelfte ? (
           // Querformat, zwei Lieder: je Hälfte Titel UND Werkzeuge, mittig über ihrem Blatt
@@ -413,6 +471,12 @@ export function ChartHeader({
         ) : querformat ? (
           // Querformat, ein Lied: Titel und Werkzeuge mittig.
           <div className={styles.gruppeMitte}>{aktiveGruppe}</div>
+        ) : einzeln ? (
+          // Hochformat mit Platz (iPad hochkant, breites Fenster): Werkzeuge einzeln rechts.
+          <>
+            {aktiveKapsel}
+            {aktiveKnopfReihe}
+          </>
         ) : (
           <>
             {aktiveKapsel}
@@ -420,7 +484,7 @@ export function ChartHeader({
           </>
         )}
       </div>
-      {werkzeugeOffen && !drawMode && !viewing && (
+      {werkzeugeOffen && !einzeln && !drawMode && !viewing && (
         <WerkzeugMenu werkzeuge={werkzeuge} onClose={onCloseWerkzeuge} />
       )}
     </>

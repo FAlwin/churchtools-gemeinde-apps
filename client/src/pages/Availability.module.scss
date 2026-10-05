@@ -250,28 +250,6 @@
   }
 }
 
-// Runder Plus-Knopf wie in der ChurchTools-App – unten rechts über der Tab-Bar (Screen ist der Bezug).
-.plus {
-  position: absolute;
-  right: 16px;
-  bottom: calc(env(safe-area-inset-bottom) + 16px);
-  width: 54px;
-  height: 54px;
-  border: none;
-  border-radius: 50%;
-  background: var(--blue);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--blue) 38%, transparent);
-  cursor: pointer;
-  z-index: 3;
-  &:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
-}
-
 .hinweis {
   font-family: var(--ui);
   font-size: 12.5px;
@@ -294,12 +272,9 @@
   input,
   select,
   textarea {
+    @include m.eingabefeld;
     font-family: var(--ui);
     font-size: 16px;
-    color: var(--text);
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--r-ctrl);
     padding: 10px 12px;
     &:disabled {
       color: var(--text2);

@@ -60,8 +60,11 @@
     hinzufügen" – und seit 18.09.2026 auch „Lied verknüpfen", #391); im Liederheft fehlt es. Dazu `liedAnzahl()` für „1 Lied"/„N Lieder". **Seit 04.09.2026 öffnet „Neues Lied" im Liederheft dieselbe Suche**
     (`SongPicker` mit `oeffnen`: Bibliothekstreffer öffnen das Blatt, kein Plus, keine Vorschau; SongSelect
     wie im Ablauf; `neuesLied={{ label: 'Selbst eintippen' }}` gibt den Suchbegriff als `startName` ins
-    leere Formular). Der „Neues Lied"-Kopf rendert im `SongPicker`, nicht mehr im `AddItemSheet` – nur
-    dort ist der Suchbegriff bekannt.
+    leere Formular). Der „Neues Lied"-Kopf rendert im `SongPicker` – nur
+    dort ist der Suchbegriff bekannt. **Neue Ablaufpunkte (05.10.2026)** legt derselbe Dialog an wie das
+    Bearbeiten (`ItemActionSheet modus="neu"`, Umschalter Programmpunkt · Überschrift, Lied = Programmpunkt mit „Lied verknüpfen", Nutzlast
+    `neuerAgendaPunkt`); geöffnet über das schwebende Plus (`SchwebePlus`, auch in den Abwesenheiten).
+    Das frühere `AddItemSheet` ist gelöscht.
 
   - die **Liedtext-Vorschau als Zwischenschritt beim Einfügen** (#379, nach Alwins Rückmeldung vom 14.08.2026 umgebaut): Ein Antippen
     zeigt **erst den Text**, darin steht der Knopf zum Einfügen (Muster ProPresenter). **Seit 04.09.2026 der
@@ -351,7 +354,10 @@ Schließen hinterher). Fenster unter dem Kopf hängen an `--chart-kopf-unten`. *
 gemeinsamer Werkzeuge-Knopf); welche Werkzeuge es gibt, regelt EINE Funktion für Menü und Knöpfe
 (`utils/werkzeuge.ts`); Lied-Menü, Aussehen und Tempo öffnen unter ihrem Knopf (`--liedmenue-x`,
 `--werkzeug-links`); Werkzeug des anderen Lieds = erst wählen, nach dem Wechsel öffnen. iPad-Kopf
-schmal wie vor v2.26.0 (kein Band dort). Routing in `App.tsx` über `tab` + `view` (rechteabhängig).
+schmal wie vor v2.26.0 (kein Band dort). **Hochformat nach Breite (05.10.2026):** Behält die Titel-Kapsel
+neben Zurück und den einzelnen Werkzeug-Knöpfen mindestens `KAPSEL_MIN` (220 px), stehen die Werkzeuge
+auch im Hochformat einzeln (iPad hochkant, breites Fenster); sonst der eine Knopf (iPhone, kleines
+Stage-Manager-Fenster). Gemessen laufend per `ResizeObserver` am Kopf, Regel `werkzeugeEinzeln`. Routing in `App.tsx` über `tab` + `view` (rechteabhängig).
 
 **Abwesenheiten sind terminfein, nicht tagesfein (22.09.2026).** Ein Haken an einem Termin trägt in
 ChurchTools das **Zeitfenster dieses Termins** ein (`startTime`/`endTime`, ISO-Zeitpunkte) – nur so
@@ -1126,10 +1132,24 @@ Vollständige Endpunkt-Referenz: `docs/entwicklung/api-referenz.md`.
   Dienstplan zugewiesenen Personen (`persons[]`, `person:null` solange unbesetzt → CT zeigt rote `?`).
   Dienst-Liste: `GET /api/services` (id, name). Personen-Objekte lassen sich hier NICHT schreiben.
 - Payload immer aus **frischen Live-Daten** bauen (Backup-Daten → 422). CSRF-Token nötig.
-- **Uhrzeit ausblenden (das „Auge", verifiziert 26.06.2026):** `POST /…/agenda/items/{id}/hide`
+- **Das „Auge" (verifiziert 26.06.2026, Wirkung nachgemessen 05.10.2026):** `POST /…/agenda/items/{id}/hide`
   bzw. `/unhide` (leerer Body, HTTP 204). Der Zustand steht NICHT in `start` (bleibt immer gefüllt!),
   sondern in **`startTimes[eventId]`**: `null` = ausgeblendet, sonst die Zeit. Beim Lesen die Uhrzeit
   IMMER aus `startTimes[eventId]` ableiten, nicht aus `start`. Diagnose-Skript: `server/scripts/probe-agenda-hidden.ts`.
+  **Es blendet nicht nur die Uhrzeit aus:** Der Punkt zählt dann nicht mehr zur Zeitrechnung, die
+  Punkte danach rücken um seine Dauer auf. Die App beschriftete das monatelang als „Uhrzeit
+  ausblenden" – seit #423 gibt es den Schalter in der App nicht mehr (nur noch in ChurchTools).
+- **Vorlauf vor dem Beginn (#423, gemessen an der Test-Instanz 05.10.2026):** Der Ablauf hat die
+  Grenze **`eventStartPosition`** („Beginn der Veranstaltung"). Punkte mit `position` darunter sind
+  Vorlauf (`isBeforeEvent: true`) und werden **rückwärts** ab Veranstaltungsbeginn gerechnet.
+  `isBeforeEvent` je Punkt zu schreiben wird **ignoriert**. Geschrieben wird nur die Grenze:
+  `PUT /api/events/{id}/agenda {calendarId, eventStartPosition}` **ohne `items`** – Punkte, IDs und
+  Liedverknüpfungen bleiben unberührt (`setAgendaItemVorBeginn`). Die Grenze ist eine **Platznummer**:
+  Umsortieren lässt sie stehen, ein darüber geschobener Punkt wechselt die Seite.
+- **Beginnzeit der Veranstaltung (#424, offen):** `PUT /api/events/{id}` nimmt nur `adminIds`,
+  `isCanceled`, `note` – ein `startDate` darin beantwortet ChurchTools mit **200 und ändert nichts**.
+  Die Zeit hängt am Kalendertermin (`PUT /api/calendars/{c}/appointments/{a}` schreibt den GANZEN
+  Termin; bei Serien braucht ein einzelner Sonntag ein Aufteilen der Serie). Bis zum Spike nicht bauen.
 - **Rechte „Liederbuch für alle Mitglieder":** CT-Rolle braucht „Veranstaltungen sehen (view)"
   - „Einzelne Song-Kategorien sehen (view songcategory)" – sonst nichts. Kein Service-Konto nötig.
 

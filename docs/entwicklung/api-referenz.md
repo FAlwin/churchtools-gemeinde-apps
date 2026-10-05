@@ -57,7 +57,7 @@
 - `POST /api/services/:eventId/agenda/items` → Ablaufpunkt anlegen
 - `PUT  /api/services/:eventId/agenda/items/:itemId` → Punkt ändern (Felder gebündelt: `title`, `responsible`, `arrangementId`, `unlink`, `note`, `durationMin` → CT-Sekunden)
 - `DELETE /api/services/:eventId/agenda/items/:itemId` → Punkt löschen
-- `PUT  /api/services/:eventId/agenda/items/:itemId/hidden` {hidden} → Uhrzeit aus-/einblenden (CT-„Auge")
+- `PUT  /api/services/:eventId/agenda/items/:itemId/vor-beginn` {vorBeginn} → Vorlauf vor dem Gottesdienstbeginn (#423): schreibt nur die Grenze `eventStartPosition` des Ablaufs, an: dieser und alle Punkte darüber, aus: dieser und alle darunter
 - `GET  /api/agenda-services` → ChurchTools-Dienste (für die Verantwortlich-Chips)
 
 ## Lieder
@@ -75,10 +75,12 @@
   den vorhandenen Liedern gebildet – dann fehlen Kategorien, die **kein** Lied benutzt, und eine
   erlaubte ID ohne Namen erscheint als „Kategorie N" (nicht weggelassen: sonst verschweigt die App
   ein Recht). Gemessen mit `server/scripts/probe-songmgmt.ts`.
-- `POST /api/songs` `{name, categoryId, author?, ccli?, copyright?, key?, arrangementName?, eventId?}`
-  → **201** `{songId, arrangementId, imAblauf?, ablaufFehler?}` – ein neues Lied anlegen (#322).
+- `POST /api/songs` `{name, categoryId, author?, ccli?, copyright?, key?, arrangementName?}`
+  → **201** `{songId, arrangementId}` – ein neues Lied anlegen (#322).
   Legt **immer auch ein Arrangement** an (`isDefault: true`; ohne das Flag hätte das Lied kein
-  Standard-Arrangement – gemessen). Mit `eventId` wandert es zusätzlich in den Ablauf dieses Termins.
+  Standard-Arrangement – gemessen). In einen Ablauf kommt es nicht mehr hier, sondern über „Neuer
+  Eintrag" (`POST …/agenda/items`). Ein mitgeschicktes `eventId` (alte App bis 05.10.2026) wird mit
+  **410** und der Bitte, die App neu zu laden, abgelehnt – bevor etwas angelegt wird.
 - `GET  /api/song-text-search?q=…` → `SongTextTreffer[]` – **Suche in den Liedtexten** (#322). Baut beim
   ersten Aufruf einen Index über alle Lieder (ein Datei-Download je Lied), danach eine Stunde aus dem
   Speicher; gebündelt (fünf gleichzeitige Suchen = ein Aufbau) und bei einer Drosselung mit Sperrfrist.
@@ -116,8 +118,7 @@
 
   **Teilfehlschläge sind benannt, nicht verschwiegen:** Scheitert das Arrangement, liegt in
   ChurchTools ein Lied ohne eines – die Meldung sagt das und warnt vor einem zweiten Versuch (er
-  legte ein Doppel an). Scheitert nur der Ablauf-Eintrag, ist das **kein** Fehler: Antwort 201 mit
-  `imAblauf: false` und Grund. Nichts wird automatisch wiederholt oder zurückgenommen.
+  legte ein Doppel an). Nichts wird automatisch wiederholt oder zurückgenommen.
   `note` geht bewusst nicht mit – ChurchTools ignoriert das Feld beim Anlegen (gemessen).
 
 - `GET  /api/song-usage` → Nutzungsstatistik je Song als **`{ dates: string[] }`** (vergangene Spieltermine, bis zu 4 Jahre zurück, absteigend; 1h-Cache). Häufigkeit + „zuletzt gespielt" für den gewählten Zeitraum rechnet der **Client** daraus – ohne erneuten Server-Roundtrip. Bei Drosselung **503** (+ `Retry-After`), wenn kein früherer Stand im Speicher liegt; der Client zeigt dann „–" statt einer Null und lässt die Liederliste vollständig (#300).

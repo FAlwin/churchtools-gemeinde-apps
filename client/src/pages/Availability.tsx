@@ -3,6 +3,7 @@ import type { Absence, AbsenceEvent, NeueAbsence } from '@shared/types/index';
 import { SeitenGeruest } from '../components/SeitenGeruest';
 import { CenterMessage } from '../components/CenterMessage';
 import { Icon } from '../components/icons';
+import { SchwebePlus } from '../components/SchwebePlus';
 import { Coachmarks } from '../components/Coachmarks';
 import { MonatsLeiste } from '../components/MonatsLeiste';
 import { AbsenceSheet, type Entwurf } from '../components/AbsenceSheet';
@@ -526,15 +527,12 @@ export function Availability({ online, onToast, heute = heuteIso() }: Availabili
       ) : (
         !laedt &&
         !fehler && (
-          <button
-            className={styles.plus}
-            data-tour="verf-plus"
-            aria-label="Zeitraum eintragen"
+          <SchwebePlus
+            label="Zeitraum eintragen"
+            dataTour="verf-plus"
             disabled={!online}
             onClick={zeitraumOeffnen}
-          >
-            <Icon name="plus" size={26} stroke={2.2} />
-          </button>
+          />
         )
       )}
 

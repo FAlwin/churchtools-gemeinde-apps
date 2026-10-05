@@ -1,3 +1,5 @@
+@use '../styles/mixins' as m;
+
 .chartScreen {
   background: var(--chart-grund);
 }
@@ -96,6 +98,15 @@
   > .menuBtn {
     flex: 0 1 auto;
   }
+}
+
+// Die einzelnen Werkzeug-Knöpfe eines Lieds – ein Behälter, damit die Einführung sie als Ganzes zeigt.
+// Abstand wie das Umfeld: im Kopf (Hochformat) 8px, in der Gruppe (Querformat) 6px bzw. 4px.
+.knoepfe {
+  display: flex;
+  align-items: center;
+  gap: inherit;
+  flex-shrink: 0;
 }
 
 // Kleinere Bildschirme (kleines iPad quer, Handy quer): Knöpfe und Kapsel etwas kleiner, damit
@@ -1252,24 +1263,16 @@
 }
 
 .tempoInput {
+  @include m.eingabefeld;
   flex: 1;
   min-width: 0;
   height: 44px;
-  border-radius: 10px;
-  border: 1.5px solid var(--border);
-  background: var(--surface2);
-  color: var(--text);
   font-family: var(--ui);
   font-weight: 700;
   font-size: 18px;
   text-align: center;
   // Ziffern gleicher Breite: Sonst wandert die Zahl beim Zählen von 99 auf 100 sichtbar hin und her.
   font-variant-numeric: tabular-nums;
-
-  &:focus {
-    outline: none;
-    border-color: var(--blue);
-  }
 }
 
 // Quadratischer Knopf für ein Symbol. Bewusst nicht `flex: 1` wie `.segBtn` – ein Symbol soll

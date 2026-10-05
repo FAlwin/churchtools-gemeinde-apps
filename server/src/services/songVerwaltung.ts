@@ -5,12 +5,14 @@
  * und die Blockade gegen eine doppelte CCLI-Nummer. Getrennte Dateien hätten diese Regeln zweimal
  * gehabt – und die zweite Fassung wäre bei der nächsten Korrektur vergessen worden.
  *
- * **Ein Lied anlegen sind zwei bis drei Schreibvorgänge, die einzeln scheitern können.** Ein Lied
- * entsteht nicht in einem Zug:
+ * **Ein Lied anlegen sind zwei Schreibvorgänge, die einzeln scheitern können.** Ein Lied entsteht
+ * nicht in einem Zug:
  *
  *  1. `POST /api/songs` – das Lied,
- *  2. `POST …/arrangements` – **ohne Arrangement ist ein Lied unbrauchbar**,
- *  3. optional der Eintrag im Ablauf eines Termins.
+ *  2. `POST …/arrangements` – **ohne Arrangement ist ein Lied unbrauchbar**.
+ *
+ * (Bis zum 05.10.2026 gab es als dritten Schritt optional den Eintrag in einen Ablauf. Den legt jetzt
+ * der Ablauf selbst an – „Neuer Eintrag" wählt das neue Lied wie jedes andere aus.)
  *
  * ChurchTools kennt dafür keine Transaktion. Scheitert Schritt 2, liegt in ChurchTools ein Lied ohne
  * Arrangement – und **genau das muss die App sagen**, statt einen Fehler zu melden, der aussieht, als
@@ -26,13 +28,7 @@ import { ccliSchluessel } from '@shared/lieder/index';
 import { HttpError } from '../middleware/errorHandler.js';
 import { getAllSongs, getSong } from './ctRead.js';
 import { getEditableSongCategories } from './ctSongCategories.js';
-import {
-  createAgendaItem,
-  createArrangement,
-  createSong,
-  deleteSong,
-  updateSong,
-} from './ctWrite.js';
+import { createArrangement, createSong, deleteSong, updateSong } from './ctWrite.js';
 import type { SongOverrides } from './songPayload.js';
 import type { CtSong } from './ctTypes.js';
 
@@ -165,30 +161,7 @@ export async function liedAnlegen(
     );
   }
 
-  if (auftrag.eventId === undefined) return { songId, arrangementId };
-
-  /**
-   * **Der Ablauf-Eintrag ist der dritte Schreibvorgang – und ein Fehlschlag ist kein Gesamtfehler.**
-   *
-   * Das Lied existiert an dieser Stelle mitsamt Arrangement; es wäre falsch, das als gescheitert zu
-   * melden, nur weil der Eintrag im Termin nicht geklappt hat. Der Nutzer erfährt beides: dass das
-   * Lied da ist und dass es noch nicht im Ablauf steht.
-   */
-  try {
-    await createAgendaItem(cookie, auftrag.eventId, {
-      type: 'song',
-      title: auftrag.name,
-      arrangementId,
-    });
-    return { songId, arrangementId, imAblauf: true };
-  } catch (err) {
-    return {
-      songId,
-      arrangementId,
-      imAblauf: false,
-      ablaufFehler: err instanceof Error ? err.message : String(err),
-    };
-  }
+  return { songId, arrangementId };
 }
 
 /**

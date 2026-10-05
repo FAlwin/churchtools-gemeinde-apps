@@ -157,7 +157,6 @@ describe('auftragAus', () => {
         arrangementName: ' Akustik ',
       },
       1,
-      42,
     );
     expect(auftrag).toEqual({
       name: 'Treu',
@@ -167,7 +166,6 @@ describe('auftragAus', () => {
       copyright: '2019',
       key: 'E',
       arrangementName: 'Akustik',
-      eventId: 42,
     });
   });
 

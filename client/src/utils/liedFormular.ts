@@ -153,18 +153,13 @@ export function vorhandenesLied(
  * diese Funktion sie als Zahl und nicht als „vielleicht null" (ein `?? 0` wäre stillschweigend die
  * Kategorie „Aktive Songs" gewesen).
  */
-export function auftragAus(
-  f: NeuesLiedFormular,
-  categoryId: number,
-  eventId?: number,
-): LiedAnlegenAuftrag {
+export function auftragAus(f: NeuesLiedFormular, categoryId: number): LiedAnlegenAuftrag {
   const auftrag: LiedAnlegenAuftrag = { name: f.name.trim(), categoryId };
   if (f.author.trim()) auftrag.author = f.author.trim();
   if (f.ccli.trim()) auftrag.ccli = f.ccli.trim();
   if (f.copyright.trim()) auftrag.copyright = f.copyright.trim();
   if (f.key.trim()) auftrag.key = f.key.trim();
   if (f.arrangementName.trim()) auftrag.arrangementName = f.arrangementName.trim();
-  if (eventId !== undefined) auftrag.eventId = eventId;
   return auftrag;
 }
 

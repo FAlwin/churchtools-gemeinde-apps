@@ -130,7 +130,7 @@ ChurchTools-Instanz. Räum sie hinterher in ChurchTools wieder weg; die App kann
 und einem **Standard-Arrangement** in der gewählten Tonart. Beim CCLI-Weg hängt am Arrangement auch
 gleich das **Notenblatt** – die App zeigt danach Akkorde, ohne dass man etwas hochladen muss.
 
-1. Test-Termin öffnen → **Bearbeiten** → **Hinzufügen** → **Lied**. SongSelect gibt es **hier und beim
+1. Test-Termin öffnen → **Bearbeiten** → schwebendes **Plus** → **Lied verknüpfen**. SongSelect gibt es **hier und beim
    Verknüpfen** (und nur mit SongSelect-Lizenz) – nicht im Liederheft.
 2. Einen Titel eintippen, den es bei euch **nicht** gibt (mindestens drei Zeichen): Die Bibliothek zeigt
    „Keine Treffer", und kurz nachdem du aufhörst zu tippen, erscheint **von selbst** die Gruppe
@@ -163,14 +163,14 @@ gleich das **Notenblatt** – die App zeigt danach Akkorde, ohne dass man etwas 
    erlaubt bleiben.
 9. Dasselbe mit einer **CCLI-Nummer, die es schon gibt**: Hier muss der Server **ablehnen** und sagen,
    welches Lied sie schon hat.
-10. Zum Schluss den Ablauf-Weg zu Ende: Nach dem Anlegen aus Schritt 1–5 muss das Lied **im Ablauf**
-    stehen – genau einmal. (Das Formular hat vorher gesagt, dass es zusätzlich in den Ablauf eingetragen
-    wird.)
+10. Zum Schluss den Ablauf-Weg zu Ende: Nach dem Anlegen aus Schritt 1–5 **„Zurück zum Eintrag"** → im
+    Fenster **„Neuer Eintrag"** steht das neue Lied, **Hinzufügen** → es steht **im Ablauf**, genau
+    einmal (seit 05.10.2026 trägt „Neues Lied" nichts mehr selbst ein).
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/NewSongSheet.tsx`, `client/src/components/ChordEditor.tsx`, `client/src/components/SongPicker.tsx`, `client/src/hooks/useLiedSuche.ts`, `client/src/components/SongSelectTrefferListe.tsx`, `client/src/hooks/useNeuesLied.ts`, `server/src/services/setlistBuilder.ts`, `client/src/utils/liedFormular.ts`, `client/src/pages/AllSongs.tsx`, `client/src/components/AddItemSheet.tsx`, `server/src/services/songVerwaltung.ts`, `server/src/services/ctSongCategories.ts`
+- **Betrifft:** `client/src/components/NewSongSheet.tsx`, `client/src/components/ChordEditor.tsx`, `client/src/components/SongPicker.tsx`, `client/src/hooks/useLiedSuche.ts`, `client/src/components/SongSelectTrefferListe.tsx`, `client/src/hooks/useNeuesLied.ts`, `server/src/services/setlistBuilder.ts`, `client/src/utils/liedFormular.ts`, `client/src/pages/AllSongs.tsx`, `server/src/services/songVerwaltung.ts`, `server/src/services/ctSongCategories.ts`, `client/src/components/ItemActionSheet.tsx`
 - **Automatisiert:** teilweise – `client/src/utils/liedFormular.test.ts`, `client/src/hooks/useNeuesLied.test.tsx` (Gerüst vs. geholtes Blatt, Speichern zieht das Ergebnis nach), `client/src/components/NewSongSheet.test.tsx` (Knopf, Editor ohne Versionsname, nichts öffnet sich von selbst), `server/src/services/arrangementFileVerwaltung.test.ts` (`originalNotenblattSchreiben`: erst hochladen, dann ersetzen; Versionen bleiben), `client/src/components/SongSelectTrefferListe.test.tsx`, `server/src/services/songVerwaltung.test.ts`; von Hand bleibt das Zusammenspiel mit ChurchTools und CCLI
 - **Historie:** #322, #378 (Wegwahl weg, Suche im Einfüge-Dialog)
 
@@ -185,7 +185,7 @@ möglich zusätzlich eines **ohne**.
 filtert beim Tippen; **unter** den Treffern stehen die Angebote **„Auch in den Liedtexten nach … suchen"**
 und **„Bei SongSelect nach … suchen"**. Findet die Bibliothek **nichts**, sucht SongSelect **von selbst**.
 
-1. Test-Termin öffnen → **Bearbeiten** → **Hinzufügen** → **Lied**. Über der Liste steht **nur ein
+1. Test-Termin öffnen → **Bearbeiten** → schwebendes **Plus** → **Lied verknüpfen**. Über der Liste steht **nur ein
    Suchfeld** – kein Bibliothek/Liedtexte/SongSelect.
 2. Ein Wort tippen, das ein eigenes Lied trifft (z. B. den Anfang eines Titels): Die Bibliothek zeigt
    Treffer. **Darunter** stehen die beiden Angebote. Es darf **keine** SongSelect-Anfrage gelaufen sein –
@@ -212,7 +212,7 @@ und **„Bei SongSelect nach … suchen"**. Findet die Bibliothek **nichts**, su
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/hooks/useLiedSuche.ts`, `client/src/components/LiedSucheKopf.tsx`, `client/src/components/SucheAngebot.tsx`, `client/src/components/SongPicker.tsx`, `client/src/pages/AllSongs.tsx`, `client/src/components/AddItemSheet.tsx`, `client/src/components/ItemActionSheet.tsx`
+- **Betrifft:** `client/src/hooks/useLiedSuche.ts`, `client/src/components/LiedSucheKopf.tsx`, `client/src/components/SucheAngebot.tsx`, `client/src/components/SongPicker.tsx`, `client/src/pages/AllSongs.tsx`, `client/src/components/ItemActionSheet.tsx`
 - **Automatisiert:** teilweise – `client/src/hooks/useLiedSuche.test.ts` (SongSelect fragt von selbst NUR bei leerer Bibliothek, nie unter drei Zeichen, nie ohne Lizenz/Anlege-Weg; Angebot schickt sofort; Treffer gelten nur, solange der Begriff steht; Liedtexte nie von selbst), `client/src/components/SongPicker.test.tsx` (Angebot statt Anfrage bei Treffern, automatische Suche bei leerer Bibliothek, kein SongSelect ohne Anlege-Weg, kein Umschalter), `client/src/components/LiedSucheKopf.test.tsx`, `client/src/components/SucheAngebot.test.tsx`, `client/src/utils/songFilter.test.ts` (die Einzahl); von Hand bleibt das Zusammenspiel gegen echtes SongSelect und dass im Liederheft wirklich kein SongSelect erscheint (beim Verknüpfen gibt es ihn seit #391 – TF-EDIT-07)
 - **Historie:** #378 (erster Anlauf Umschalter 14.08.2026, umgebaut nach Rückmeldung Alwin 03.09.2026)
 
@@ -382,15 +382,17 @@ Lied **ohne** Notenblatt als Gegenprobe. Für Schritt 6 ff. ein Konto mit SongSe
 **erst den Liedtext**, und darin steht der Knopf zum Einfügen; das **Plus** fügt sofort ein. Beim
 Durchsehen der Liste passiert von allein nichts.
 
-1. Test-Termin öffnen → **Bearbeiten** → **Hinzufügen** → **Lied**.
+1. Test-Termin öffnen → **Bearbeiten** → schwebendes **Plus** → **Lied verknüpfen**.
 2. Ein Lied **antippen** (oder auf das **Auge** rechts in der Zeile): Es muss die **Vorschau** kommen –
    Titel, Autor, Tonart und der **ganze Liedtext mit Abschnitten** (Vers 1, Chorus …, wie auf dem
    Blatt), bei langen Liedern **scrollbar** – **und das Lied darf NICHT sofort im Ablauf landen.**
    Der **Pfeil** neben dem Titel führt zur Liste zurück, der Suchbegriff steht noch da. Beim
    **Verknüpfen** heißt der Knopf unten **„Abbrechen"** und verlässt die Suche ganz.
-3. In der Vorschau **„Zum Ablauf hinzufügen"**: Jetzt steht es im Ablauf, genau einmal.
-4. Erneut **Hinzufügen → Lied**, diesmal das **Plus** rechts in der Zeile: Das Lied muss **sofort**
-   eingefügt werden, **ohne** Vorschau. Das ist der kurze Weg für den Gottesdienst.
+3. In der Vorschau **„Mit diesem Eintrag verknüpfen"** → im Fenster „Neuer Eintrag" **Hinzufügen**: Jetzt steht
+   es im Ablauf, genau einmal.
+4. Erneut **Plus** → **Lied verknüpfen**, diesmal das **Plus** rechts in der Zeile: Das Lied muss **sofort** ins
+   Fenster „Neuer Eintrag" übernommen werden, **ohne** Vorschau – dann **Hinzufügen**. Das ist der kurze
+   Weg für den Gottesdienst.
 5. Ein Lied **ohne Notenblatt** antippen: Es muss dastehen, dass kein Liedtext vorliegt – und
    **Einfügen muss trotzdem gehen**. Keine leere Fläche, keine Fehlermeldung.
 6. Einen Titel tippen, den es bei euch **nicht** gibt – die Gruppe **„SongSelect · N Treffer"**
@@ -427,13 +429,14 @@ am Lied).
 zeigen. Und während ein Lied angelegt wird, warnt sie **nicht** vor dem Lied, das sie gerade selbst
 anlegt (#395).
 
-1. Termin öffnen → **Bearbeiten** → **Hinzufügen** → **Lied**. Die CCLI-Nummer eines vorhandenen
+1. Termin öffnen → **Bearbeiten** → schwebendes **Plus** → **Lied verknüpfen**. Die CCLI-Nummer eines vorhandenen
    Liedes eintippen: Es steht in der Bibliothek ganz oben. **Nicht** antippen, sondern über
    **„Neues Lied"** ins Formular gehen und die Nummer im Feld **CCLI-Nummer** eintragen. Kategorie
    wählen, **Lied anlegen**.
 2. Es öffnet sich **„Dieses Lied gibt es schon"** mit Name, Autor, Nummer und Tonart des vorhandenen
    Liedes. **In ChurchTools ist nichts angelegt worden.**
-3. **„<Name>" verwenden** antippen: Das vorhandene Lied steht im Ablauf – kein zweites Lied. Gegenprobe
+3. **„<Name>" verwenden** antippen: Das vorhandene Lied steht im Fenster „Neuer Eintrag"; **Hinzufügen** →
+   es steht im Ablauf – kein zweites Lied. Gegenprobe
    in ChurchTools: Es gibt den Titel weiterhin nur einmal.
 4. Dasselbe im Fenster **Lied verknüpfen** (Punkt antippen → Lied verknüpfen → Neues Lied): Dort wird
    das vorhandene Lied **vorgemerkt** („Wird beim Speichern verknüpft."), geschrieben erst mit
@@ -451,7 +454,7 @@ anlegt (#395).
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/LiedSchonVorhanden.tsx`, `client/src/components/NewSongSheet.tsx`, `client/src/utils/liedFormular.ts`, `shared/lieder/index.ts`, `client/src/components/AddItemSheet.tsx`, `client/src/components/ItemActionSheet.tsx`, `client/src/pages/AllSongs.tsx`
+- **Betrifft:** `client/src/components/LiedSchonVorhanden.tsx`, `client/src/components/NewSongSheet.tsx`, `client/src/utils/liedFormular.ts`, `shared/lieder/index.ts`, `client/src/components/ItemActionSheet.tsx`, `client/src/pages/AllSongs.tsx`
 - **Automatisiert:** teilweise – `client/src/components/NewSongSheet.test.tsx` (Rückfrage statt Anlegen, verwenden, trotzdem ohne Nummer, zurück, keine Warnung während des Anlegens), `client/src/utils/liedFormular.test.ts` (`vorhandenesLied`: führende Null, Leerzeichen, eigenes Lied; `notenblattPlan` fällt auf den Treffer zurück), `client/src/components/ItemActionSheet.test.tsx` (vorgemerkt statt geschrieben); von Hand bleibt, dass ChurchTools wirklich kein zweites Lied anlegt und das Notenblatt am zweiten Lied hängt
 - **Historie:** #395 (20.09.2026), gemeldet von Alwin beim Durchklicken von #391
 

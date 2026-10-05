@@ -36,3 +36,32 @@ export function verfuegbareWerkzeuge(b: {
   if (!b.ansehen) ids.push('anmerken');
   return ids;
 }
+
+/**
+ * So schmal darf die Titel-Kapsel werden, bevor die Werkzeuge hinter EINEN Knopf wandern (Alwin,
+ * 05.10.2026: feste Größe, aber nach der echten Fensterbreite – im kleinen Stage-Manager-Fenster am
+ * iPad wie am iPhone). Rund zwanzig Zeichen Titel plus Tonart-Zeile.
+ */
+export const KAPSEL_MIN = 220;
+
+/**
+ * **Stehen die Werkzeuge im Hochformat einzeln oben – oder hinter dem Werkzeuge-Knopf?**
+ *
+ * Gerechnet wird mit dem, was die Titel-Kapsel übrig behält: Kopfbreite minus Zurück-Knopf minus die
+ * einzelnen Werkzeug-Knöpfe, jeweils mit Abstand. Reicht der Rest für `KAPSEL_MIN`, stehen sie einzeln.
+ * Mit der echten Anzahl: Kommt beim Zoomen „Zoom zurücksetzen" dazu und wird es dadurch zu eng, wandert
+ * alles hinter den Knopf – zurück auf die Breite des Kopfs wirkt das nicht, es kann also nicht pendeln.
+ */
+export function werkzeugeEinzeln(m: {
+  /** Innenbreite des Kopfs (ohne Rand-Abstand). */
+  kopfBreite: number;
+  /** Durchmesser eines runden Knopfs. */
+  knopf: number;
+  /** Abstand zwischen den Elementen des Kopfs. */
+  abstand: number;
+  /** Wie viele Werkzeuge gerade einzeln stünden. */
+  anzahl: number;
+}): boolean {
+  const kapsel = m.kopfBreite - m.knopf - m.abstand - m.anzahl * (m.knopf + m.abstand);
+  return kapsel >= KAPSEL_MIN;
+}

@@ -119,3 +119,9 @@ Ausschnitt. Sie darf nicht wieder klein sein.
   Test-Termin. Sonst bricht man mittendrin ab.
 - **Warnen, wo es wehtut**: Alles, was nach ChurchTools schreibt, beginnt mit einem Hinweis auf den
   Test-Termin.
+
+**Lesart „Werkzeuge → Aussehen" im Liedblatt (seit 05.10.2026):** Am iPhone und in einem schmalen
+Fenster stecken Aussehen, Tempo, Notizen von … und Anmerken hinter dem runden **Werkzeuge**-Knopf. Am
+iPad (hochkant wie quer) und in einem breiten Fenster stehen sie **einzeln** oben – dort direkt den
+Knopf tippen (**Aa**, Metronom, Personen, Stift). Die Schritte nennen den Weg übers Menü; beide sind
+gemeint.

@@ -44,13 +44,11 @@ export interface NeuesLiedErgebnis {
 }
 
 interface Args {
-  /** Wenn gesetzt: das Lied zusätzlich in den Ablauf dieses Termins eintragen. */
-  eventId?: number;
   /** Darf die Gemeinde CCLI SongSelect nutzen? Ohne das Recht wird kein Notenblatt geholt. */
   canUseCcli: boolean;
 }
 
-export function useNeuesLied({ eventId, canUseCcli }: Args) {
+export function useNeuesLied({ canUseCcli }: Args) {
   const anlegenMutation = useLiedAnlegen();
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -110,18 +108,9 @@ export function useNeuesLied({ eventId, canUseCcli }: Args) {
     setUngewiss(false);
 
     try {
-      const angelegt = await anlegenMutation.mutateAsync(auftragAus(formular, categoryId, eventId));
+      const angelegt = await anlegenMutation.mutateAsync(auftragAus(formular, categoryId));
 
       const hinweise: string[] = [];
-      // Der Ablauf-Eintrag ist der dritte Schreibvorgang: Sein Fehlschlag ist kein Gesamtfehler, aber
-      // er darf auch nicht verschwiegen werden – sonst sucht jemand das Lied im Ablauf umsonst.
-      if (eventId !== undefined && angelegt.imAblauf === false) {
-        hinweise.push(
-          `Das Lied steht noch nicht im Ablauf – das hat nicht geklappt${
-            angelegt.ablaufFehler ? `: ${angelegt.ablaufFehler}` : '.'
-          }`,
-        );
-      }
 
       let notenblatt = false;
       const plan = notenblattPlan(formular, treffer, canUseCcli);

@@ -47,7 +47,10 @@ export const TOUR_TERMINE = 'termine-v3';
 // Titel-Kapsel mit EINZELNEN Werkzeug-Knöpfen (kein gemeinsamer Werkzeuge-Knopf – dessen Schritt
 // entfällt dort von selbst, weil sein Ziel fehlt); ein Tipp darauf wählt das Lied. Der Tipp aufs
 // Blatt wählt nichts mehr aus.
-export const TOUR_CHART = 'chart-v8';
+// chart-v9 (05.10.2026): Auch im Hochformat stehen die Werkzeuge einzeln oben, solange der Titel
+// genug Platz behält – erst im schmalen Fenster (iPhone, kleines Stage-Manager-Fenster) wandern sie
+// hinter den einen Knopf. Neuer Schritt am Ziel `chart-werkzeuge-einzeln`; v2.26.1 (produktiv) trägt v8.
+export const TOUR_CHART = 'chart-v9';
 
 /**
  * Einmaliger Hinweis, wenn die Leisten zum ersten Mal ausgeblendet werden (#319).
@@ -69,7 +72,10 @@ export const TOUR_SETLIST = 'setlist-v1';
 // genau die, die bei chart-v4 schon einmal falsch war – siehe oben.)
 // setlist-edit-v4 (18.09.2026, #391): „Lied verknüpfen" kann jetzt auch ein Lied ANLEGEN („Neues Lied"
 // und SongSelect wie beim Hinzufügen) – der Schritt „Punkt bearbeiten" sagt das.
-export const TOUR_SETLIST_EDIT = 'setlist-edit-v4';
+// setlist-edit-v5 (05.10.2026, #423): Der Dialog hat „Vor Gottesdienstbeginn" statt „Uhrzeit
+// ausblenden" – der Schritt nennt den Soundcheck als Beispiel. v2.26.1 (produktiv) trägt v4. Im selben
+// Release: „Hinzufügen" ist das schwebende Plus und öffnet den Bearbeiten-Dialog als „Neuer Eintrag".
+export const TOUR_SETLIST_EDIT = 'setlist-edit-v5';
 /** Gruppe 5 – Verfügbarkeit (#177), beim ersten Öffnen des Bereichs. */
 // v3 (05.09.2026, abends): Statuskopf, Streifen zieht mit, Eintragen über EIN Fenster,
 // eigene Einträge per Tipp auf die Zeile änderbar – jeder Schritt zeigt jetzt etwas anderes.
@@ -163,6 +169,13 @@ export const CHART_STEPS: CoachStep[] = [
     title: 'Werkzeuge',
     body: 'Hinter diesem Knopf steckt alles Weitere: „Aussehen" für Schriftgröße und Spalten, „Tempo" mit Puls, Klick und Mittippen (gespeichert in ChurchTools wird es nur über den Knopf ganz unten im Tempo-Fenster), „Anmerken" zum Zeichnen und Schreiben auf der Seite und – wenn freigeschaltet – „Notizen von …" für die geteilten Anmerkungen deines Teams. Läuft der Puls, leuchtet der Knopf blau; beim Zeichnen wird er zum Haken, mit dem du fertig bist.',
   },
+  {
+    // Dasselbe für die EINZELN stehenden Werkzeuge (breites Fenster, Querformat). Es gibt immer nur
+    // eines der beiden Ziele – die Einführung überspringt das fehlende.
+    selector: '[data-tour="chart-werkzeuge-einzeln"]',
+    title: 'Werkzeuge',
+    body: 'Hier oben stehen die Werkzeuge: „Aa" für Schriftgröße und Spalten, das Metronom für Tempo mit Puls, Klick und Mittippen (gespeichert in ChurchTools wird es nur über den Knopf ganz unten im Tempo-Fenster), der Stift zum Anmerken und – wenn freigeschaltet – „Notizen von …" für die geteilten Anmerkungen deines Teams. Wird das Fenster schmal, wandern sie hinter einen gemeinsamen Knopf.',
+  },
 ];
 
 /** Gruppe 3 – Ablauf-Ansicht (beim ersten Öffnen eines Gottesdienstes). */
@@ -194,12 +207,12 @@ export const SETLIST_EDIT_STEPS: CoachStep[] = [
   {
     selector: '[data-tour="edit-item"]',
     title: 'Punkt bearbeiten',
-    body: 'Tippe einen Eintrag an, um Titel, Dauer, Zuständige zu ändern oder ein Lied zu verknüpfen – auch eines, das ihr dort gerade erst anlegt.',
+    body: 'Tippe einen Eintrag an, um Titel, Dauer, Zuständige zu ändern oder ein Lied zu verknüpfen – auch eines, das ihr dort gerade erst anlegt. Läuft etwas vor dem Gottesdienst, etwa der Soundcheck, schalte „Vor Gottesdienstbeginn“ ein.',
   },
   {
     selector: '[data-tour="edit-add"]',
     title: 'Hinzufügen',
-    body: 'Füge unten einen neuen Punkt oder ein Lied zum Ablauf hinzu. Tippe Titel, Autor oder CCLI-Nummer – eure Lieder stehen oben, SongSelect darunter. Das Auge zeigt den Liedtext, das Plus fügt ein; bei SongSelect legst du das Lied damit gleich an. Ist ein Lied bei euch nicht da, sucht SongSelect von selbst mit.',
+    body: 'Mit dem Plus legst du einen neuen Eintrag an – im selben Fenster wie beim Bearbeiten: oben wählst du Programmpunkt oder Überschrift. Für ein Lied tippst du „Lied verknüpfen“: Titel, Autor oder CCLI-Nummer – eure Lieder stehen oben, SongSelect darunter. Das Auge zeigt den Liedtext, das Plus wählt aus. Dauer und Zuständige setzt du gleich mit.',
   },
 ];
 

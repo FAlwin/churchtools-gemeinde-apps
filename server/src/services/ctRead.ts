@@ -10,7 +10,7 @@ import { HttpError } from '../middleware/errorHandler.js';
 import { ctGet } from './ctHttp.js';
 import type {
   CtAbsence,
-  CtAgendaItem,
+  CtAgenda,
   CtArrangement,
   CtEvent,
   CtService,
@@ -77,8 +77,8 @@ export async function getAppointmentSubtitle(
   return subtitle;
 }
 
-export function getAgenda(cookie: string, eventId: number): Promise<{ items: CtAgendaItem[] }> {
-  return ctGet<{ items: CtAgendaItem[] }>(cookie, `/api/events/${eventId}/agenda`);
+export function getAgenda(cookie: string, eventId: number): Promise<CtAgenda> {
+  return ctGet<CtAgenda>(cookie, `/api/events/${eventId}/agenda`);
 }
 
 export function getSong(cookie: string, songId: number): Promise<CtSong> {

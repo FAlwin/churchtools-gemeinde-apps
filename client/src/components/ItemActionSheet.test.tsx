@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import type { AgendaItem, SongLibraryEntry, SongSelectTreffer } from '@shared/types/index';
 
 /**
  * „Eintrag bearbeiten" – geprüft wird der **Anlege-Weg aus „Lied verknüpfen"** (#391, 18.09.2026):
  *
  *  - „Neues Lied" und SongSelect gibt es dort nur **mit dem Recht, Lieder zu bearbeiten** – dieselbe
- *    Regel wie im `AddItemSheet`; ein Treffer, aus dem nichts werden kann, wäre eine Sackgasse.
+ *    Regel beim Bearbeiten wie beim Anlegen; ein Treffer, aus dem nichts werden kann, wäre eine Sackgasse.
  *  - Das Blatt öffnet **ohne `eventId`**: Das Lied gehört in den vorhandenen Punkt, nicht als neuer in
  *    den Ablauf.
  *  - Nach dem Anlegen ist das Lied nur **vorgemerkt** („Wird beim Speichern verknüpft.") – geschrieben
@@ -95,19 +95,23 @@ const ITEM: AgendaItem = {
   responsibleText: '',
   song: null,
   time: '10:05',
+  vorBeginn: false,
   durationMin: 5,
   note: '',
 };
 
-function zeige(overrides: Partial<Parameters<typeof ItemActionSheet>[0]> = {}) {
+/** Die Angaben im Bearbeiten-Modus (der Dialog kennt seit 05.10.2026 auch „neu"). */
+type BearbeitenProps = Extract<Parameters<typeof ItemActionSheet>[0], { item: AgendaItem }>;
+
+function zeige(overrides: Partial<BearbeitenProps> = {}) {
   const onUpdate = vi.fn().mockResolvedValue(undefined);
   render(
     <ItemActionSheet
       item={ITEM}
       onClose={vi.fn()}
       onUpdate={onUpdate}
-      timeHidden={false}
-      onSetHidden={vi.fn().mockResolvedValue(undefined)}
+      vorBeginn={false}
+      onSetVorBeginn={vi.fn().mockResolvedValue(undefined)}
       services={[]}
       onRequestDelete={vi.fn()}
       {...overrides}
@@ -218,5 +222,138 @@ describe('ItemActionSheet – ein vorhandenes Lied statt eines zweiten (#395)', 
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     await vi.waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
     expect(onUpdate.mock.calls[0][0]).toMatchObject({ arrangementId: 880 });
+  });
+});
+
+/**
+ * #423: Der Schalter „Uhrzeit ausblenden" war falsch beschriftet (das CT-Auge nimmt den Punkt aus der
+ * Zeitrechnung) und ist weg. An seiner Stelle legt „Vor Gottesdienstbeginn" den Vorlauf fest.
+ */
+describe('ItemActionSheet – Vor Gottesdienstbeginn (#423)', () => {
+  const schalter = () => screen.getByRole('button', { name: /Vor Gottesdienstbeginn/ });
+
+  it('der alte Schalter „Uhrzeit ausblenden" ist weg', () => {
+    zeige();
+    expect(screen.queryByText('Uhrzeit ausblenden')).toBeNull();
+  });
+
+  it('einschalten + Speichern schreibt den Vorlauf – und sonst nichts', async () => {
+    const onSetVorBeginn = vi.fn().mockResolvedValue(undefined);
+    const { onUpdate } = zeige({ onSetVorBeginn });
+    fireEvent.click(schalter());
+    expect(schalter().getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(onSetVorBeginn).toHaveBeenCalledWith(true));
+    expect(onUpdate).not.toHaveBeenCalled(); // kein Feld geändert → kein Feld-PUT
+  });
+
+  it('ausschalten bei einem Vorlauf-Punkt schreibt false', async () => {
+    const onSetVorBeginn = vi.fn().mockResolvedValue(undefined);
+    zeige({ vorBeginn: true, onSetVorBeginn });
+    expect(schalter().getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(schalter());
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(onSetVorBeginn).toHaveBeenCalledWith(false));
+  });
+
+  it('nur umgeschaltet und zurück: nichts vorgemerkt, Speichern bleibt aus', () => {
+    zeige();
+    fireEvent.click(schalter());
+    fireEvent.click(schalter());
+    expect(screen.getByRole('button', { name: 'Speichern' }).hasAttribute('disabled')).toBe(true);
+  });
+
+  it('auch Überschriften haben den Schalter', () => {
+    zeige({ item: { ...ITEM, isHeader: true, title: 'Vorbereitung' } });
+    expect(schalter()).toBeTruthy();
+  });
+});
+
+/**
+ * „Neuer Eintrag" ist derselbe Dialog wie Bearbeiten (Alwin, 05.10.2026: das Hinzufügen war „nicht
+ * konsistent mit allen anderen Einstellungen nachher"). Umschalter Programmpunkt · Überschrift; ein
+ * Lied ist ein Programmpunkt mit verknüpftem Lied – wie beim Bearbeiten über „Lied verknüpfen".
+ */
+describe('ItemActionSheet – Neuer Eintrag', () => {
+  function zeigeNeu() {
+    const onAdd = vi.fn().mockResolvedValue(undefined);
+    const onClose = vi.fn();
+    render(<ItemActionSheet modus="neu" services={[]} onAdd={onAdd} onClose={onClose} />);
+    return { onAdd, onClose };
+  }
+  const hinzufuegen = () => screen.getByRole('button', { name: 'Hinzufügen' });
+
+  it('öffnet das Fenster mit „Programmpunkt" – nicht die Liedsuche', () => {
+    zeigeNeu();
+    expect(screen.getByText('Neuer Eintrag')).toBeTruthy();
+    expect(screen.queryByTestId('songpicker')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Programmpunkt' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(screen.queryByRole('button', { name: 'Text' })).toBeNull();
+  });
+
+  it('Programmpunkt mit Titel und Dauer: EIN Punkt mit allem', async () => {
+    const { onAdd, onClose } = zeigeNeu();
+    fireEvent.change(screen.getByPlaceholderText('Titel'), { target: { value: 'Begrüßung' } });
+    fireEvent.change(screen.getByPlaceholderText('z. B. 5'), { target: { value: '4' } });
+    fireEvent.click(hinzufuegen());
+    await waitFor(() =>
+      expect(onAdd).toHaveBeenCalledWith({ type: 'text', title: 'Begrüßung', durationMin: 4 }),
+    );
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('Lied verknüpfen macht ihn zum Lied-Punkt – Titel = Liedname, sichtbar im Feld', async () => {
+    const { onAdd } = zeigeNeu();
+    verknuepfenOeffnen();
+    fireEvent.click(screen.getByRole('button', { name: 'Treffer wählen' }));
+    expect(screen.getByPlaceholderText('z. B. Lied')).toHaveProperty('value', 'Treu');
+    // Beim Anlegen kein „Wird beim Speichern verknüpft." – geschrieben wird ohnehin erst mit Hinzufügen.
+    expect(screen.queryByText('Wird beim Speichern verknüpft.')).toBeNull();
+    fireEvent.click(hinzufuegen());
+    await waitFor(() =>
+      expect(onAdd).toHaveBeenCalledWith({ type: 'song', title: 'Treu', arrangementId: 30 }),
+    );
+  });
+
+  it('ein neu angelegtes Lied wird nur vorgemerkt – angelegt wird der Punkt erst mit „Hinzufügen"', async () => {
+    const { onAdd } = zeigeNeu();
+    verknuepfenOeffnen();
+    fireEvent.click(screen.getByRole('button', { name: 'Neues Lied' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Blatt: verknüpfen' }));
+    expect(onAdd).not.toHaveBeenCalled();
+    fireEvent.click(hinzufuegen());
+    await waitFor(() =>
+      expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ arrangementId: 770 })),
+    );
+  });
+
+  it('ohne Titel und ohne Lied lässt sich nichts anlegen', () => {
+    zeigeNeu();
+    expect(hinzufuegen().hasAttribute('disabled')).toBe(true);
+  });
+
+  it('Überschrift: nur der Titel – kein Lied, keine Dauer, kein Vorlauf, kein Löschen', async () => {
+    const { onAdd } = zeigeNeu();
+    fireEvent.click(screen.getByRole('button', { name: 'Überschrift' }));
+    expect(screen.queryByRole('button', { name: 'Lied verknüpfen' })).toBeNull();
+    expect(screen.queryByPlaceholderText('z. B. 5')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Vor Gottesdienstbeginn/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Eintrag löschen/ })).toBeNull();
+    fireEvent.change(screen.getByPlaceholderText('Titel der Überschrift'), {
+      target: { value: 'Lobpreis' },
+    });
+    fireEvent.click(hinzufuegen());
+    await waitFor(() => expect(onAdd).toHaveBeenCalledWith({ type: 'header', title: 'Lobpreis' }));
+  });
+
+  it('ein Fehler bleibt im Fenster stehen, statt es zu schließen', async () => {
+    const { onAdd, onClose } = zeigeNeu();
+    onAdd.mockRejectedValueOnce(new Error('ChurchTools antwortet nicht.'));
+    fireEvent.change(screen.getByPlaceholderText('Titel'), { target: { value: 'Begrüßung' } });
+    fireEvent.click(hinzufuegen());
+    expect(await screen.findByText('ChurchTools antwortet nicht.')).toBeTruthy();
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

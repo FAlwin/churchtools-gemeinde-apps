@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { ChartHeader, type AndereHaelfte } from './ChartHeader';
-import { verfuegbareWerkzeuge } from '../utils/werkzeuge';
+import { KAPSEL_MIN, verfuegbareWerkzeuge, werkzeugeEinzeln } from '../utils/werkzeuge';
 import type { HeadInfoPart } from '../utils/activeSongView';
 
 /**
@@ -324,9 +324,104 @@ describe('ChartHeader – Werkzeuge einzeln im Querformat', () => {
     expect(onAppearance).not.toHaveBeenCalled();
   });
 
-  it('im Hochformat bleibt der eine Werkzeuge-Knopf', () => {
+  it('im Hochformat ohne Messung (jsdom hat kein Layout) bleibt der eine Werkzeuge-Knopf', () => {
     zeige({ querformat: false });
     expect(screen.getByRole('button', { name: 'Werkzeuge' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Aussehen' })).toBeNull();
+  });
+});
+
+/**
+ * Hochformat (Alwin, 05.10.2026): Die Werkzeuge stehen einzeln oben, solange die Titel-Kapsel
+ * `KAPSEL_MIN` behält – gemessen an der echten Breite, laufend (Stage Manager am iPad).
+ */
+describe('werkzeugeEinzeln – die Breitenregel', () => {
+  const knopf = 44;
+  const abstand = 8;
+  /** Genau die Breite, bei der die Kapsel noch `KAPSEL_MIN` behält – aus der Regel selbst gebaut. */
+  const grenze = (anzahl: number) => KAPSEL_MIN + knopf + abstand + anzahl * (knopf + abstand);
+
+  it('genau an der Grenze: einzeln', () => {
+    expect(werkzeugeEinzeln({ kopfBreite: grenze(3), knopf, abstand, anzahl: 3 })).toBe(true);
+  });
+
+  it('ein Pixel darunter: hinter dem Knopf', () => {
+    expect(werkzeugeEinzeln({ kopfBreite: grenze(3) - 1, knopf, abstand, anzahl: 3 })).toBe(false);
+  });
+
+  it('ein Werkzeug mehr braucht einen Knopf mehr Platz', () => {
+    expect(werkzeugeEinzeln({ kopfBreite: grenze(3), knopf, abstand, anzahl: 4 })).toBe(false);
+  });
+
+  it('iPhone hochkant (358 px Kopf): hinter dem Knopf; iPad hochkant (712 px): einzeln', () => {
+    expect(werkzeugeEinzeln({ kopfBreite: 358, knopf, abstand, anzahl: 3 })).toBe(false);
+    expect(werkzeugeEinzeln({ kopfBreite: 712, knopf, abstand, anzahl: 4 })).toBe(true);
+  });
+});
+
+describe('ChartHeader – Hochformat richtet sich nach der Breite', () => {
+  /** jsdom hat kein Layout: Breite und Beobachter von Hand. */
+  let breite = 0;
+  let melden: (() => void) | null = null;
+  beforeEach(() => {
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(() => breite);
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(private cb: () => void) {}
+        // Erst wer wirklich beobachtet, bekommt Meldungen – sonst bliebe der Test ohne `observe` grün.
+        observe() {
+          melden = this.cb;
+        }
+        disconnect() {
+          melden = null;
+        }
+      },
+    );
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    melden = null;
+  });
+
+  it('breit: Werkzeuge einzeln, kein gemeinsamer Knopf', () => {
+    breite = 900;
+    zeige();
+    expect(screen.queryByRole('button', { name: 'Werkzeuge' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Aussehen' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Tempo' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Anmerken' })).toBeTruthy();
+  });
+
+  it('schmal: der eine Werkzeuge-Knopf', () => {
+    breite = 360;
+    zeige();
+    expect(screen.getByRole('button', { name: 'Werkzeuge' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Aussehen' })).toBeNull();
+  });
+
+  it('wird das Fenster schmal, wandern die Werkzeuge hinter den Knopf – und umgekehrt', () => {
+    breite = 900;
+    zeige();
+    expect(screen.getByRole('button', { name: 'Aussehen' })).toBeTruthy();
+    breite = 360;
+    act(() => melden?.());
+    expect(screen.getByRole('button', { name: 'Werkzeuge' })).toBeTruthy();
+    breite = 900;
+    act(() => melden?.());
+    expect(screen.queryByRole('button', { name: 'Werkzeuge' })).toBeNull();
+  });
+
+  it('wird das Fenster breit, während das Menü offen ist, schließt es (sein Knopf ist weg)', () => {
+    breite = 360;
+    const onCloseWerkzeuge = vi.fn<() => void>();
+    zeige({ werkzeugeOffen: true, onCloseWerkzeuge });
+    expect(screen.getByRole('menu', { name: 'Werkzeuge' })).toBeTruthy();
+    expect(onCloseWerkzeuge).not.toHaveBeenCalled();
+    breite = 900;
+    act(() => melden?.());
+    expect(onCloseWerkzeuge).toHaveBeenCalled();
+    expect(screen.queryByRole('menu', { name: 'Werkzeuge' })).toBeNull();
   });
 });

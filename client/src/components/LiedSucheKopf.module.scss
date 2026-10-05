@@ -1,13 +1,15 @@
-// Das eine Suchfeld (#378): Lupe innen, `--surface3`. Diese Optik hatte die Bibliothek schon vor dem
-// Quellen-Umschalter; sie gilt jetzt überall, weil das Feld überall dasselbe ist.
+@use '../styles/mixins' as m;
+
+// Das eine Suchfeld (#378): Lupe innen. Gilt überall, weil das Feld überall dasselbe ist – seit dem
+// 05.10.2026 im Aussehen aller Eingabefelder (`m.eingabefeld`): Vorher `--surface3`, und das ist im
+// Hellen exakt die Seitenfarbe – im Liederheft war das Feld unsichtbar.
 
 .feld {
+  @include m.eingabefeld($innen: true);
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
-  background: var(--surface3);
-  border-radius: var(--r-ctrl);
   padding: 9px 12px;
 
   input {

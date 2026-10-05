@@ -55,11 +55,10 @@ Schritt 6 genau den Liednamen einträgst, steht er nur **einmal** da, nicht dopp
 
 </details>
 
-### TF-EDIT-03 · Dauer, Zuständig, Bemerkung, Uhrzeit ausblenden
+### TF-EDIT-03 · Dauer, Zuständig, Bemerkung
 
 **Das muss passieren:** Alles steht danach auch in ChurchTools. Nach Schritt 6 ist die Dauer aus der
 Zeile verschwunden (in ChurchTools steht dann 0 Minuten – „keine Dauer" kennt ChurchTools nicht).
-Nach Schritt 8 bleibt die Zeit-Spalte links leer.
 
 1. Test-Termin öffnen, **Bearbeiten**, einen Punkt antippen.
 2. **Dauer (Minuten)** auf 7 setzen.
@@ -67,15 +66,13 @@ Nach Schritt 8 bleibt die Zeit-Spalte links leer.
 4. Bei **Bemerkung** „Test" eintragen.
 5. **Speichern** und die Zeile ansehen.
 6. Punkt erneut öffnen, das Feld **Dauer** ganz leeren, **Speichern**.
-7. Punkt erneut öffnen, **Uhrzeit ausblenden** einschalten.
-8. **Speichern** und die Zeile ansehen.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
 - **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `client/src/utils/agendaItemChanges.ts`, `client/src/components/ResponsibleField.tsx`
 - **Automatisiert:** teilweise – `client/src/utils/agendaItemChanges.test.ts`
-- **Historie:** –
+- **Historie:** – (der frühere Schritt „Uhrzeit ausblenden" ist mit #423 entfallen, siehe TF-EDIT-08)
 
 </details>
 
@@ -103,23 +100,32 @@ tippen auf den Titel darf **kein** Ziehen auslösen.
 
 ### TF-EDIT-05 · Punkt hinzufügen und löschen
 
-**Das muss passieren:** Die Rückfrage nennt den Punkt **genauso wie die Liste** – also
+**Das muss passieren:** Das **runde blaue Plus** schwebt unten rechts über dem Ablauf (nur im
+Bearbeiten-Modus) und öffnet **dasselbe Fenster wie das Bearbeiten**, nur mit „Neuer Eintrag" und dem
+Umschalter **Programmpunkt · Überschrift** (vorgewählt: Programmpunkt). Ein Lied ist ein Programmpunkt
+mit **Lied verknüpfen** – nach der Wahl steht der Liedname als Titel drin, Dauer und Zuständige lassen
+sich gleich setzen; ein zweites Fenster danach gibt es nicht mehr. Die Rückfrage beim Löschen nennt den Punkt **genauso wie die Liste** – also
 „Lied – Du großer Gott", nicht nur den Liednamen. Der gelöschte Punkt zerfällt sichtbar an seiner
-Stelle. Beides steht danach so in ChurchTools.
+Stelle. Alles steht danach so in ChurchTools.
 
-1. Test-Termin öffnen, **Bearbeiten**.
-2. Ganz unten auf **Hinzufügen** tippen.
-3. Einen Titel eintragen und bestätigen.
-4. Einen **Lied**-Punkt antippen und **Eintrag löschen** wählen.
-5. Die Rückfrage lesen, dann bestätigen.
-6. Zusehen, wie die Zeile verschwindet.
+1. Test-Termin öffnen, **Bearbeiten**. Das Plus erscheint unten rechts; es verdeckt den Stift des
+   letzten Punkts nicht.
+2. **Plus** tippen → das Fenster **„Neuer Eintrag"** ist offen, **Programmpunkt** ist gewählt. Titel
+   eintragen, **Dauer** auf 7 setzen, **Hinzufügen**.
+3. Erneut **Plus** → **Lied verknüpfen** → ein Lied wählen: Der Liedname steht als Titel drin.
+   **Dauer** auf 4 setzen, **Hinzufügen**.
+4. Erneut **Plus**, oben **Überschrift**: nur das Titelfeld. Titel eintragen, **Hinzufügen**.
+5. Alle drei stehen am Ende des Ablaufs.
+6. Einen **Lied**-Punkt antippen und **Eintrag löschen** wählen.
+7. Die Rückfrage lesen, dann bestätigen.
+8. Zusehen, wie die Zeile verschwindet.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/AddItemSheet.tsx`, `client/src/pages/Setlist.tsx`, `client/src/components/ConfirmDialog.tsx`
-- **Automatisiert:** nein
-- **Historie:** –
+- **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `client/src/utils/agendaItemChanges.ts`, `client/src/components/SchwebePlus.tsx`, `client/src/pages/Setlist.tsx`, `client/src/components/ConfirmDialog.tsx`
+- **Automatisiert:** teilweise – `e2e/ablauf-hinzufuegen.spec.ts` (Plus nur im Bearbeiten-Modus, Text anlegen, steht in der Liste, Löschen), `client/src/components/ItemActionSheet.test.tsx` (Neuer Eintrag: Suche sofort offen, Titel = Liedname, Überschrift nur Titel, Fehler bleibt im Fenster), `client/src/utils/agendaItemChanges.test.ts` (`neuerAgendaPunkt`); von Hand bleibt das Schreiben nach ChurchTools
+- **Historie:** schwebendes Plus und einheitlicher Dialog 05.10.2026 (vorher eigenes „Hinzufügen"-Blatt mit drei Formularen)
 
 </details>
 
@@ -165,7 +171,7 @@ dem Punkt, den du bearbeitet hast – in ChurchTools ein Lied-Punkt mit Arrangem
    SongSelect-Lizenz erscheint darunter auch die SongSelect-Gruppe.
 3. **„Neues Lied"** antippen: Das Formular ist mit dem Suchbegriff als Titel vorbelegt. Kategorie wählen,
    **Lied anlegen**.
-4. Die Erfolgsansicht sagt „… ist angelegt **und wird beim Speichern mit dem Eintrag verknüpft**". Es
+4. Die Erfolgsansicht sagt „… ist angelegt **und wird mit dem Eintrag gespeichert**". Es
    gibt **„Zurück zum Eintrag"** und „Notenblatt schreiben", aber **kein** „Noch ein Lied anlegen".
 5. **Zurück zum Eintrag** (oder „Fertig"): Du bist wieder in **Eintrag bearbeiten**, im Feld „Lied" steht
    der neue Name mit dem Hinweis **„Wird beim Speichern verknüpft."**
@@ -181,5 +187,38 @@ dem Punkt, den du bearbeitet hast – in ChurchTools ein Lied-Punkt mit Arrangem
 - **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `client/src/components/NewSongSheet.tsx`, `client/src/components/SongPicker.tsx`
 - **Automatisiert:** teilweise – `client/src/components/ItemActionSheet.test.tsx` (Weg nur mit Recht, ohne `eventId`, Vormerken statt Schreiben, Abbruch merkt nichts vor), `client/src/components/NewSongSheet.test.tsx` (Erfolgsansicht mit `onVerknuepfen`: Satz, „Zurück zum Eintrag" und „Fertig" tragen die Verknüpfung, kein „Noch ein Lied anlegen"); von Hand bleibt der Schreibvorgang gegen ChurchTools
 - **Historie:** #391 (18.09.2026)
+
+</details>
+
+### TF-EDIT-08 · Soundcheck vor dem Gottesdienstbeginn
+
+**Das brauchst du:** Einen **Test-Termin**, der um 10:00 beginnt, mit einem Punkt „Soundcheck"
+(45 Minuten) ganz oben und mindestens zwei Punkten darunter.
+
+**Das muss passieren:** Der Soundcheck läuft **vor** dem Beginn. Er steht bei 09:15, der Punkt danach
+bei 10:00, und dazwischen steht die Linie **„Beginn · 10:00 Uhr"**. Der Termin selbst bleibt um 10:00, in
+der App wie im ChurchTools-Kalender.
+
+1. Test-Termin öffnen → **Bearbeiten** → **Soundcheck** antippen.
+2. **Vor Gottesdienstbeginn** einschalten. Der Hinweis darunter lautet „Dieser und alle Punkte darüber
+   laufen vor dem Beginn." **Speichern**.
+3. Die Linie „Beginn · 10:00 Uhr" steht unter dem Soundcheck. Mit **Fertig** zurück in die Ansicht: Dort
+   steht sie an derselben Stelle, der Soundcheck zeigt 09:15 in grauer Schrift.
+4. In ChurchTools im Browser den Ablauf öffnen: Der Soundcheck steht vor dem Veranstaltungsbeginn, der
+   Termin beginnt weiter um 10:00.
+5. Zurück in der App: **Bearbeiten**, den **Punkt direkt unter der Linie** über die Linie nach oben
+   ziehen. Die Linie bleibt an ihrem Platz, der gezogene Punkt steht jetzt darüber und läuft vor dem
+   Beginn, der Soundcheck rutscht darunter. (So rechnet ChurchTools: Die Grenze ist ein Platz, kein
+   Punkt.) Reihenfolge wieder zurückziehen.
+6. **Soundcheck** öffnen, **Vor Gottesdienstbeginn** ausschalten, **Speichern**: Die Linie verschwindet,
+   der Soundcheck steht wieder bei 10:00.
+7. Im Bearbeiten-Dialog gibt es **keinen** Schalter „Uhrzeit ausblenden" mehr.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `client/src/components/AgendaFullView.tsx`, `client/src/pages/Setlist.tsx`, `client/src/utils/vorlauf.ts`, `server/src/services/ctWrite.ts`, `server/src/services/agendaPayload.ts`
+- **Automatisiert:** teilweise – `e2e/ablauf-vorlauf.spec.ts` (Schalter → Grenze im Stub → Linie in Bearbeiten-Liste und Ansicht, wieder aus), `client/src/utils/vorlauf.test.ts`, `server/src/services/agendaPayload.test.ts`, `server/src/services/ctWrite.test.ts`; von Hand bleiben die echten Uhrzeiten aus ChurchTools und das Ziehen über die Linie (Schritt 5)
+- **Historie:** #423 (05.10.2026)
 
 </details>

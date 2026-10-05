@@ -4,6 +4,7 @@ import {
   pendingAgendaFields,
   durationTarget,
   isDurationValid,
+  neuerAgendaPunkt,
   type AgendaItemDraft,
 } from './agendaItemChanges';
 
@@ -121,5 +122,74 @@ describe('isDurationValid', () => {
     expect(isDurationValid('-1')).toBe(false);
     expect(isDurationValid('2.5')).toBe(false);
     expect(isDurationValid('abc')).toBe(false);
+  });
+});
+
+/** „Neuer Eintrag" (05.10.2026): was angelegt wird – und wann noch nichts. */
+describe('neuerAgendaPunkt', () => {
+  const leer = {
+    title: '',
+    duration: '',
+    responsible: '',
+    note: '',
+    link: { kind: 'keep' } as const,
+  };
+  const lied = { kind: 'link', arrangementId: 30, name: 'Treu' } as const;
+
+  it('Programmpunkt mit Lied wird ein Lied-Punkt – ohne eigenen Titel heißt er wie das Lied', () => {
+    expect(neuerAgendaPunkt('programmpunkt', { ...leer, link: lied })).toEqual({
+      type: 'song',
+      title: 'Treu',
+      arrangementId: 30,
+    });
+  });
+
+  it('Programmpunkt mit Lied und eigenem Titel behält den Titel', () => {
+    expect(
+      neuerAgendaPunkt('programmpunkt', { ...leer, title: ' Einsingen ', link: lied })?.title,
+    ).toBe('Einsingen');
+  });
+
+  it('Programmpunkt ohne Lied braucht einen Titel; leere Felder werden weggelassen', () => {
+    expect(neuerAgendaPunkt('programmpunkt', leer)).toBeNull();
+    expect(
+      neuerAgendaPunkt('programmpunkt', { ...leer, title: 'Begrüßung', responsible: '  ' }),
+    ).toEqual({ type: 'text', title: 'Begrüßung' });
+  });
+
+  it('Dauer, Zuständige und Notiz gehen mit', () => {
+    expect(
+      neuerAgendaPunkt('programmpunkt', {
+        ...leer,
+        title: 'Predigt',
+        duration: '30',
+        responsible: ' [Predigt] ',
+        note: 'kurz',
+      }),
+    ).toEqual({
+      type: 'text',
+      title: 'Predigt',
+      durationMin: 30,
+      responsible: '[Predigt]',
+      note: 'kurz',
+    });
+  });
+
+  it('eine ungültige Dauer macht den Punkt ungültig, statt still verloren zu gehen', () => {
+    expect(
+      neuerAgendaPunkt('programmpunkt', { ...leer, title: 'Predigt', duration: '2,5' }),
+    ).toBeNull();
+  });
+
+  it('Überschrift: nur der Titel – auch ein vorgemerktes Lied und andere Felder bleiben weg', () => {
+    expect(
+      neuerAgendaPunkt('ueberschrift', {
+        ...leer,
+        title: 'Lobpreis',
+        duration: '5',
+        note: 'x',
+        link: lied,
+      }),
+    ).toEqual({ type: 'header', title: 'Lobpreis' });
   });
 });

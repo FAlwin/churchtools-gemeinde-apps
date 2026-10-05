@@ -9,7 +9,7 @@
  */
 import type { LiedStammdaten } from '@shared/types/index';
 import { HttpError } from '../middleware/errorHandler.js';
-import { agendaItemWritePayload } from './agendaPayload.js';
+import { agendaItemWritePayload, beginnPositionFuer } from './agendaPayload.js';
 import { arrangementWritePayload, type ArrangementOverrides } from './arrangementPayload.js';
 import { csrfWriteDenied, getCsrfToken } from './ctCsrf.js';
 import {
@@ -313,21 +313,34 @@ export async function deleteAgendaItem(
 }
 
 /**
- * Blendet die Uhrzeit eines Ablaufpunkts aus (`hidden=true`) oder wieder ein (`false`) – das
- * durchgestrichene Auge in ChurchTools. Verifiziert: schaltet `startTimes[eventId]` zwischen
- * der Zeit und `null` um (HTTP 204). Pro Event gespeichert, leerer Body.
+ * Legt fest, ob ein Ablaufpunkt VOR dem Beginn der Veranstaltung läuft (Vorlauf, #423).
+ *
+ * Geschrieben wird **nur die Grenze** (`eventStartPosition`), ohne `items`: Gemessen an der
+ * Test-Instanz (05.10.2026) bleiben die Punkte dabei unberührt – IDs, Liedverknüpfungen, Dauern.
+ * Die Liste mitzuschicken hieße, jeden Punkt neu zu schreiben, nur um eine Zahl zu ändern.
+ *
+ * Gerechnet wird auf dem **frisch gelesenen** Ablauf, nie auf dem Stand des Geräts: Hat jemand
+ * zwischendurch umsortiert, gehört die Grenze an die neue Stelle des Punkts.
  */
-export async function setAgendaItemHidden(
+export async function setAgendaItemVorBeginn(
   cookie: string,
   eventId: number,
   itemId: number,
-  hidden: boolean,
+  vorBeginn: boolean,
 ): Promise<void> {
-  const action = hidden ? 'hide' : 'unhide';
-  await schreibe(cookie, `/api/events/${eventId}/agenda/items/${itemId}/${action}`, {
-    method: 'POST',
+  const agenda = await getAgenda(cookie, eventId); // frische Live-Daten
+  const item = agenda.items.find((i) => i.id === itemId);
+  if (!item) {
+    throw new HttpError(409, 'Der Ablauf hat sich geändert. Bitte neu laden und erneut versuchen.');
+  }
+  const neu = beginnPositionFuer(item, agenda.eventStartPosition ?? 0, vorBeginn);
+  if (neu === null) return; // steht schon so – nichts zu schreiben
+
+  await schreibe(cookie, `/api/events/${eventId}/agenda`, {
+    method: 'PUT',
+    json: { calendarId: agenda.calendarId, eventStartPosition: neu },
     verweigert: ABLAUF_VERWEIGERT,
-    fehler: 'Uhrzeit aus-/einblenden fehlgeschlagen',
+    fehler: 'Gottesdienstbeginn speichern fehlgeschlagen',
   });
 }
 

@@ -51,10 +51,6 @@ import {
 import styles from './NewSongSheet.module.scss';
 
 interface NewSongSheetProps {
-  /** Wenn gesetzt: das Lied wird zusätzlich in den Ablauf dieses Termins eingetragen. */
-  eventId?: number;
-  /** Name des Termins – nur für den Satz in der Erfolgsansicht. */
-  eventName?: string;
   /**
    * Ein Treffer aus der Quelle „SongSelect" (#378) – füllt das Formular beim Öffnen.
    *
@@ -71,8 +67,8 @@ interface NewSongSheetProps {
   /**
    * Öffnet das fertige Lied (Chart-Ansicht) – **optional.**
    *
-   * Im Liederheft gibt es diesen Weg; aus dem Ablauf heraus nicht, denn dort steht das Lied nach dem
-   * Anlegen ohnehin im Ablauf und ist einen Fingertipp entfernt. Ein „Lied öffnen", das aus dem Ablauf
+   * Im Liederheft gibt es diesen Weg; aus dem Ablauf heraus nicht, denn dort wird das Lied mit dem
+   * Eintrag verknüpft (`onVerknuepfen`) und ist danach einen Fingertipp entfernt. Ein „Lied öffnen", das aus dem Ablauf
    * ins Liederheft springt, hätte den Nutzer woanders abgesetzt, als er hergekommen ist.
    */
   onOpenSong?: (songId: number, arrangementId: number) => void;
@@ -80,7 +76,8 @@ interface NewSongSheetProps {
    * **Verknüpfen statt Eintragen** – der Weg aus „Lied verknüpfen" (#391, 18.09.2026).
    *
    * Dort wird einem **vorhandenen** Ablaufpunkt ein Lied zugeordnet; das neue Lied darf also nicht als
-   * neuer Punkt in den Ablauf (kein `eventId`), sondern geht als Verknüpfung an den Aufrufer zurück.
+   * eigener Punkt in den Ablauf, sondern geht als Verknüpfung an den Aufrufer zurück – seit 05.10.2026
+   * auch beim Anlegen eines neuen Punkts (`ItemActionSheet modus="neu"`).
    * Ist dieser Weg gesetzt, führt aus der Erfolgsansicht **jeder** Ausgang über ihn – der Knopf wie
    * das „Fertig" –, damit ein angelegtes Lied nie unverknüpft liegen bleibt. „Noch ein Lied anlegen"
    * entfällt: Ein Punkt trägt genau ein Lied.
@@ -99,8 +96,6 @@ interface NewSongSheetProps {
 }
 
 export function NewSongSheet({
-  eventId,
-  eventName,
   startTreffer,
   startName,
   onOpenSong,
@@ -151,7 +146,7 @@ export function NewSongSheet({
     if (voll) setFormular((f) => formularAusTreffer(voll, f));
   }, [details.data]);
 
-  const neuesLied = useNeuesLied({ eventId, canUseCcli });
+  const neuesLied = useNeuesLied({ canUseCcli });
   const ergebnis = neuesLied.ergebnis;
 
   /**
@@ -212,10 +207,9 @@ export function NewSongSheet({
               : ergebnis.notenblatt
                 ? ' – mit Notenblatt'
                 : ''}
-            {eventId !== undefined && ergebnis.hinweise.length === 0 && eventName
-              ? ` und steht im Ablauf von ${eventName}`
-              : ''}
-            {verknuepfen ? ' und wird beim Speichern mit dem Eintrag verknüpft' : ''}.
+            {/* Neutral, weil derselbe Weg beim Bearbeiten („Speichern") und beim Anlegen („Hinzufügen")
+                endet – 05.10.2026. */}
+            {verknuepfen ? ' und wird mit dem Eintrag gespeichert' : ''}.
           </div>
         </div>
 
@@ -350,13 +344,6 @@ export function NewSongSheet({
               />
             </div>
           </SongFields>
-
-          {eventId !== undefined && (
-            <div className={styles.hint}>
-              Das Lied wird zusätzlich in den Ablauf{eventName ? ` von ${eventName}` : ''}{' '}
-              eingetragen.
-            </div>
-          )}
 
           <button
             className={styles.primaryWide}

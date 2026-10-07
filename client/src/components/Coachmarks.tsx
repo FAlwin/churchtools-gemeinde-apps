@@ -119,7 +119,9 @@ export function Coachmarks({ steps, onClose }: CoachmarksProps) {
   const bubbleStyle = { top };
 
   return createPortal(
-    <div className={styles.root} role="dialog" aria-modal="true">
+    // `data-musikapp`: Das Overlay hängt an `body`, außerhalb von `#root` – in der ChurchTools-Extension
+    // gelten unsere Grundregeln und Farben nur im App-Bereich (`buildHilfen/cssBereich.ts`).
+    <div className={styles.root} role="dialog" aria-modal="true" data-musikapp="">
       {/* Spotlight: transparentes Rechteck ums Ziel, riesiger box-shadow dunkelt den Rest ab. */}
       <div
         className={styles.hole}

@@ -2,6 +2,7 @@ import { fileURLToPath, URL } from 'node:url';
 import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { cssBereich } from './src/buildHilfen/cssBereich';
 
 /**
  * ChurchTools übernimmt von unserer `index.html` nur den **Inhalt** in die eigene Seite – der Kopf
@@ -124,6 +125,9 @@ export default defineConfig(({ mode }) => {
       preprocessorOptions: {
         scss: { api: 'modern-compiler' },
       },
+      // Extension: globale Stilregeln nur im App-Bereich – sonst verbiegen sie ChurchTools
+      // (07.10.2026, `src/buildHilfen/cssBereich.ts`). Die PWA bleibt unberührt.
+      ...(istExtension ? { postcss: { plugins: [cssBereich()] } } : {}),
     },
     server: {
       port: 5173,

@@ -1,6 +1,6 @@
 /**
- * Ein nachgebautes ChurchTools für die Tests der Extension-Ablage (#334) – nur die Endpunkte, die
- * `ctRuntime`/`personenAblage` nutzen, mit dem Verhalten, das am 07.10.2026 auf der Test-Instanz
+ * Ein nachgebautes ChurchTools für die Tests der Extension (#334, #335) – nur die Endpunkte, die
+ * `ctRuntime`/`personenAblage`/`ctLesen`/`ctSchreiben` nutzen, mit dem Verhalten, das am 07.10.2026 auf der Test-Instanz
  * gemessen wurde: aufsteigende Datei-IDs, gleiche Namen erlaubt, fremde Person → 403 mit
  * ChurchTools-Rumpf, Herunterladen über die `fileUrl`.
  *
@@ -39,6 +39,13 @@ export class FakeCt {
   hochladenVerboten = false;
   /** Weitere GET-Antworten je Pfad (ohne Basis), z. B. `/api/events/1/agenda` → `{ data: … }`. */
   antworten: Record<string, () => Response> = {};
+  /**
+   * Antworten auf Schreibvorgänge (#335, 3b) je „METHODE pfad" ohne Basis, z. B.
+   * `PUT /api/events/1/agenda`. Ohne Eintrag: 200 `{ data: {} }`.
+   */
+  schreibAntworten: Record<string, () => Response> = {};
+  /** Was geschrieben wurde – mit Rumpf und CSRF-Kopfzeile, zum Nachsehen statt Glauben. */
+  geschrieben: { was: string; json: unknown; csrf: string | null }[] = [];
 
   /** Eine JSON-Antwort für einen Pfad hinterlegen. */
   liefere(pfad: string, body: unknown, status = 200, headers: Record<string, string> = {}): void {
@@ -144,6 +151,13 @@ export class FakeCt {
       const vorher = this.dateien.length;
       this.dateien = this.dateien.filter((d) => d.id !== id);
       return this.dateien.length < vorher ? this.json(204, null) : this.json(404, {});
+    }
+    if (method !== 'GET') {
+      const was = `${method} ${pfad}`;
+      const rumpf = typeof init?.body === 'string' ? (JSON.parse(init.body) as unknown) : null;
+      const csrf = new Headers(init?.headers).get('CSRF-Token');
+      this.geschrieben.push({ was, json: rumpf, csrf });
+      return this.schreibAntworten[was]?.() ?? this.json(200, { data: {} });
     }
     return this.json(404, { message: `Unbekannt: ${method} ${pfad}` });
   }

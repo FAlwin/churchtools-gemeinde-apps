@@ -96,14 +96,19 @@ async function angemeldetePerson(): Promise<number | null> {
  * - 403 von ChurchTools → fehlendes Recht; 403 ohne ChurchTools-Rumpf → vorübergehend
  * - alles andere → `ApiError` mit dem Status
  */
-export async function fehlerAus(res: Response, body: unknown): Promise<ApiError> {
+export async function fehlerAus(
+  res: Response,
+  body: unknown,
+  /** Was bei fehlendem Recht gesagt wird – Standard: das Speichern an der eigenen Person. */
+  keinRecht: string = KEIN_RECHT_MELDUNG,
+): Promise<ApiError> {
   if (res.status === 401) {
     const person = await angemeldetePerson();
     if (person === null) return new ApiError(503, 'ChurchTools antwortet gerade nicht eindeutig.');
     if (person === 0) return new ApiError(401, 'Bei ChurchTools nicht mehr angemeldet.');
-    return new KeinSpeicherRecht(KEIN_RECHT_MELDUNG);
+    return new KeinSpeicherRecht(keinRecht);
   }
-  if (res.status === 403 && istCtVerbot(body)) return new KeinSpeicherRecht(KEIN_RECHT_MELDUNG);
+  if (res.status === 403 && istCtVerbot(body)) return new KeinSpeicherRecht(keinRecht);
   return new ApiError(res.status, meldungAus(body, res.status));
 }
 
@@ -207,7 +212,12 @@ export function _vergissCsrf(): void {
  */
 export async function ctAnfrage<T = unknown>(
   pfad: string,
-  init: { method?: string; body?: FormData | string } = {},
+  init: {
+    method?: string;
+    body?: FormData | string;
+    /** Meldung bei fehlendem Recht (siehe `fehlerAus`) – Ablauf und Tempo sagen es anders (#335). */
+    verweigert?: string;
+  } = {},
 ): Promise<T> {
   pruefeBremse();
   const method = init.method ?? 'GET';
@@ -233,7 +243,7 @@ export async function ctAnfrage<T = unknown>(
       body = text;
     }
   }
-  if (!res.ok) throw await fehlerAus(res, body);
+  if (!res.ok) throw await fehlerAus(res, body, init.verweigert);
   return body as T;
 }
 

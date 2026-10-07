@@ -96,7 +96,7 @@ describe('Anmeldung', () => {
 });
 
 describe('Rechte', () => {
-  it('Bearbeiten ist bis Phase 3b ausgeschaltet – auch wenn ChurchTools es erlaubt (#336)', async () => {
+  it('Ablauf und Tempo gelten, wie ChurchTools sie meldet; Liedverwaltung und SongSelect noch aus (#335)', async () => {
     ct.liefere('/api/permissions/global', {
       data: {
         churchservice: {
@@ -111,7 +111,10 @@ describe('Rechte', () => {
     const r = await meineRechte();
     expect(r.canViewSongs).toBe(true);
     expect(r.canViewAgendas).toBe(true);
-    expect(r.canEditAgendas).toBe(false);
+    expect(r.canEditAgendas).toBe(true);
+    // Das Tempo hängt am Lied-Recht, ist aber eigens benannt – sonst verschwände der Knopf mit der
+    // noch fehlenden Liedverwaltung, oder das Menü behauptete „fehlende Berechtigung" (07.10.2026).
+    expect(r.canEditTempo).toBe(true);
     expect(r.canEditSongs).toBe(false);
     expect(r.canUseCcli).toBe(false);
   });

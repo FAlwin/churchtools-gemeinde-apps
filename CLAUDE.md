@@ -454,15 +454,19 @@ client`, Kürzel `VITE_KEY`) baut die App als ChurchTools-Erweiterung unter `/cc
 - **Logik des Servers, die die Extension braucht, wird nach `shared/ct/` VERSCHOBEN, nicht kopiert**
   (`setlistKern.ts` mit `CtLeser`, Rechte, Bremse, Diff, Zeitzone …); die alten Server-Pfade leiten
   weiter. Der Browser-Leser steht in `client/src/services/ctLesen.ts`, Sitzung/Bremse/Fehler in
-  `ctRuntime.ts` (nach 429 gerätweit keine Anfrage bis `Retry-After`/120 s).
+  `ctRuntime.ts` (nach 429 gerätweit keine Anfrage bis `Retry-After`/120 s). **Schreiben (3b):** Regeln
+  in `shared/ct/schreibKern.ts` (Anschluss `CtSchreiber`), Server über `ctWrite.schreibe`, Browser über
+  `ctSchreiben.ts`; Fehler wie im Server („… fehlgeschlagen (Status)" als 502, fehlendes Recht mit der
+  Meldung des Auftrags).
 - **ChurchTools-Einbettung (gemessen 07.10.2026):** nur der Inhalt der `index.html` wird übernommen
   (Kopf fällt weg → Plugin `kopfInDenInhalt`), `<base href>` auf die Instanz (Pfade absolut, Logos über
   `BASE_URL`), CSP verbietet Inline-Skripte und `blob:`-Worker (pdf.js-Worker als Datei,
   `pdfWorkerDatei.ts`), App liegt unter 56 px ChurchTools-Leiste (`.ct-extension #root { transform }`).
 - Was es in der Extension noch nicht gibt, meldet `ohneServer` (501) – und die Oberfläche zeigt es gar
   nicht erst: **Komponenten fragen `services/funktionen.ts`** (Offline, Abmelden, Statistik …), Bearbeiten
-  hängt an den Rechten (`ctLesen.meineRechte` meldet es bis 3b als `false`). Ein Hinweis in „Mehr"
-  (`ServerVarianteHinweis`). Manueller Test: TF-EXT-01 bis 03. **Anzeige-Einstellungen (Spalten `cols`,
+  hängt an den Rechten (`ctLesen.meineRechte` meldet, was noch fehlt, als `false` – seit 3b-1
+  Liedverwaltung und SongSelect; das Tempo hat dafür das eigene Recht `canEditTempo`). Ein Hinweis in „Mehr"
+  (`ServerVarianteHinweis`). Manueller Test: TF-EXT-01 bis 04. **Anzeige-Einstellungen (Spalten `cols`,
   Textgröße `fs`) werden geräteübergreifend synchronisiert** (kein Geräte-Suffix); **NUR der Zoom
   bleibt pro Geräteklasse getrennt**. **Schlüssel** je Eintrag: `song<id>_v<versionKey>_<seite>` (Zoom zusätzlich
   `_d<geräteklasse><spalten>`, z. B. `_dlarge2`; **`KEY_RE` in `annotations.ts` UND die Server-Zod-Regel

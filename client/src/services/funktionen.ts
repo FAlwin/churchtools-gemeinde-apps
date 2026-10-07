@@ -23,13 +23,6 @@ export const funktionen = {
   statistik: !istExtension,
   /** Suche im Liedtext – ebenso (Plan 3c). */
   liedtextSuche: !istExtension,
-  /**
-   * Etwas in ChurchTools ÄNDERN (Tempo, Ablauf, Lieder) – kommt in der Extension erst mit Phase 3b.
-   * Die Knöpfe dafür blenden die Rechte aus (`ctLesen.meineRechte`); diese Angabe braucht es dort, wo
-   * die Oberfläche sonst einen GRUND nennt – sie darf nicht „fehlende Berechtigung" behaupten, wenn
-   * die Person das Recht hat (Alwin, 07.10.2026, Tempo-Menü).
-   */
-  schreibenInChurchTools: !istExtension,
   /** Der Hinweis auf die Musik App mit eigenem Server (Plan §6, „der Teaser"). */
   hinweisAufServerVariante: istExtension,
 } as const;

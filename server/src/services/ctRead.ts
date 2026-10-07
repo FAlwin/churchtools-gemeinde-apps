@@ -18,6 +18,7 @@ import type {
   CtSongListEntry,
 } from './ctTypes.js';
 import { createTtlMemo } from './ttlMemo.js';
+import { arrangementAus } from '@shared/ct/schreibKern';
 import { dienstReihenfolge, untertitelAus } from '@shared/ct/setlistKern';
 
 export function getEvents(cookie: string, from: string, to: string): Promise<CtEvent[]> {
@@ -106,8 +107,8 @@ export async function getArrangement(
   arrangementId: number,
 ): Promise<{ song: CtSong; arrangement: CtArrangement }> {
   const song = await getSong(cookie, songId);
-  const arrangement = song.arrangements.find((a) => a.id === arrangementId);
-  if (!arrangement) throw new HttpError(404, 'Arrangement nicht gefunden.');
+  // Die Suche selbst liegt seit #335 in `@shared/ct/schreibKern` – auch der Browser braucht sie.
+  const arrangement = arrangementAus(song, arrangementId, (s, m) => new HttpError(s, m));
   return { song, arrangement };
 }
 

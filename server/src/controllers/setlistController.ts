@@ -196,17 +196,8 @@ const createItemSchema = z
 /** POST /api/services/:eventId/agenda/items – neuen Ablaufpunkt anlegen. */
 export async function postAgendaItem(req: Request, res: Response): Promise<void> {
   const eventId = idSchema.parse(req.params.eventId);
-  const { type, title, arrangementId, responsible, note, durationMin } = createItemSchema.parse(
-    req.body,
-  );
-  await createAgendaItem(ctCookie(req), eventId, {
-    type,
-    title: title ?? (type === 'header' ? 'Überschrift' : type === 'song' ? 'Lied' : 'Neuer Punkt'),
-    arrangementId,
-    responsible,
-    note,
-    durationMin,
-  });
+  // Standard-Titel je Art: in `@shared/ct/schreibKern` (#335) – die Extension legt genauso an.
+  await createAgendaItem(ctCookie(req), eventId, createItemSchema.parse(req.body));
   // Nur wenn DIESER Termin zur Statistik beigetragen hat (#300). Ein Zukunftstermin ist nie darin –
   // das Vorbereiten des nächsten Gottesdienstes löst damit keinen ~250-Anfragen-Lauf mehr aus.
   invalidateSongUsageCache(eventId);
@@ -225,20 +216,8 @@ export async function getSongArrangementsCtrl(req: Request, res: Response): Prom
 export async function putAgendaItem(req: Request, res: Response): Promise<void> {
   const eventId = idSchema.parse(req.params.eventId);
   const itemId = idSchema.parse(req.params.itemId);
-  const { title, arrangementId, unlink, responsible, durationMin, note } = updateItemSchema.parse(
-    req.body,
-  );
-  await updateAgendaItem(ctCookie(req), eventId, itemId, {
-    // Beim Aufheben der Lied-Verknüpfung den Titel leeren (der Liedtitel soll nicht als Text
-    // zurückbleiben) – es sei denn, im selben Request kommt ein neuer Titel mit (Kombi-Speichern
-    // aus dem Bearbeiten-Dialog: aufheben + umbenennen in EINEM Schreibvorgang).
-    title: unlink ? (title ?? '') : title,
-    arrangementId,
-    unlink,
-    responsible,
-    durationMin,
-    note,
-  });
+  // „Aufheben leert den Titel": in `@shared/ct/schreibKern` (#335) – die Extension schreibt genauso.
+  await updateAgendaItem(ctCookie(req), eventId, itemId, updateItemSchema.parse(req.body));
   invalidateSongUsageCache(eventId); // nur bei beigetragenem Termin (#300)
   res.json({ ok: true });
 }

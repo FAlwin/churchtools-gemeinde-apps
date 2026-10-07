@@ -9,8 +9,19 @@
  */
 import type { LiedStammdaten } from '@shared/types/index';
 import { HttpError } from '../middleware/errorHandler.js';
-import { agendaItemWritePayload, beginnPositionFuer } from './agendaPayload.js';
 import { arrangementWritePayload, type ArrangementOverrides } from './arrangementPayload.js';
+import {
+  ablaufUmsortieren,
+  arrangementAendern,
+  punktAendern,
+  punktAnlegen,
+  punktLoeschen,
+  tempoSetzen,
+  vorBeginnSetzen,
+  type CtSchreiber,
+  type NeuerPunkt,
+  type PunktAenderung,
+} from '@shared/ct/schreibKern';
 import { csrfWriteDenied, getCsrfToken } from './ctCsrf.js';
 import {
   BASE,
@@ -19,12 +30,9 @@ import {
   ctSignal,
   parseRetryAfter,
 } from './ctHttp.js';
-import { getAgenda, getArrangement, getSong } from './ctRead.js';
+import { getAgenda, getSong } from './ctRead.js';
 import { songWritePayload, type SongOverrides } from './songPayload.js';
-import type { CtAgendaItem, CtArrangement, CtSong } from './ctTypes.js';
-
-/** Fehlermeldung, wenn ChurchTools das Ändern des Ablaufs verweigert – siebenmal derselbe Satz. */
-const ABLAUF_VERWEIGERT = 'Keine Berechtigung, den Ablauf in ChurchTools zu ändern.';
+import type { CtArrangement, CtSong } from './ctTypes.js';
 
 /**
  * Der Schreibvorgang selbst – **einmal, für alle sieben** (#280).
@@ -199,149 +207,50 @@ export async function uploadChordpro(
 }
 
 /**
- * Schreibt die Reihenfolge des Ablaufs zurück: lädt die aktuellen Punkte frisch,
- * sortiert sie nach `orderedItemIds` und speichert die ganze Liste per
- * `PUT /api/events/{id}/agenda` (Position = Listenindex).
+ * Der Schreiber des Servers für die geteilten Regeln in `@shared/ct/schreibKern` (#335, Phase 3b):
+ * frisch gelesen über `ctRead`, geschrieben über `schreibe` (CSRF, Ablehnung, Drosselung).
  */
-export async function reorderAgenda(
-  cookie: string,
-  eventId: number,
-  orderedItemIds: number[],
-): Promise<void> {
-  const { items } = await getAgenda(cookie, eventId); // frische Live-Daten
-  const byId = new Map(items.map((i) => [i.id, i]));
-
-  // Schutz: nur erlauben, wenn die übergebene Reihenfolge exakt dieselben Punkte enthält.
-  const same = orderedItemIds.length === items.length && orderedItemIds.every((id) => byId.has(id));
-  if (!same) {
-    throw new HttpError(409, 'Der Ablauf hat sich geändert. Bitte neu laden und erneut versuchen.');
-  }
-
-  const payload = orderedItemIds.map((id, index) => ({
-    id,
-    ...agendaItemWritePayload(byId.get(id) as CtAgendaItem, { position: index }),
-  }));
-
-  await schreibe(cookie, `/api/events/${eventId}/agenda`, {
-    method: 'PUT',
-    json: { items: payload },
-    verweigert: ABLAUF_VERWEIGERT,
-    fehler: 'Ablauf-Reihenfolge speichern fehlgeschlagen',
-  });
+function schreiberFuer(cookie: string): CtSchreiber {
+  return {
+    agenda: (eventId) => getAgenda(cookie, eventId),
+    song: (songId) => getSong(cookie, songId),
+    schreibe: async (pfad, auftrag) => {
+      await schreibe(cookie, `/api${pfad}`, auftrag);
+    },
+    fehler: (status, meldung) => new HttpError(status, meldung),
+  };
 }
 
-/** Legt einen neuen Ablaufpunkt an (am Ende). Für Lieder ist `arrangementId` Pflicht. */
-export async function createAgendaItem(
-  cookie: string,
-  eventId: number,
-  data: {
-    type: 'header' | 'text' | 'song';
-    title: string;
-    arrangementId?: number;
-    responsible?: string;
-    note?: string;
-    /** Dauer in Minuten (UI-Einheit) – wird in CT-Sekunden umgerechnet. */
-    durationMin?: number;
-  },
-): Promise<void> {
-  const body: Record<string, unknown> = { type: data.type, title: data.title };
-  // Lied-Verknüpfung MUSS als top-level arrangementId gesendet werden (siehe reorderAgenda).
-  if (data.type === 'song' && data.arrangementId) body.arrangementId = data.arrangementId;
-  if (data.responsible) body.responsible = data.responsible;
-  if (data.note) body.note = data.note;
-  // CT erwartet die Dauer in Sekunden (Feld `duration`), die UI arbeitet in Minuten.
-  if (data.durationMin !== undefined) body.duration = data.durationMin * 60;
-  await schreibe(cookie, `/api/events/${eventId}/agenda/items`, {
-    method: 'POST',
-    json: body,
-    verweigert: ABLAUF_VERWEIGERT,
-    fehler: 'Ablaufpunkt anlegen fehlgeschlagen',
-  });
+// Ablauf: die Regeln stehen seit #335 (Phase 3b) in `@shared/ct/schreibKern` – hier nur die Anbindung.
+
+export function reorderAgenda(cookie: string, eventId: number, order: number[]): Promise<void> {
+  return ablaufUmsortieren(schreiberFuer(cookie), eventId, order);
 }
 
-/**
- * Ändert Felder eines Ablaufpunkts (z.B. Titel). Liest den Punkt frisch, überschreibt nur
- * die übergebenen Felder und sendet alle übrigen unverändert mit. Lied-Verknüpfung bleibt
- * über top-level `arrangementId` erhalten.
- */
-export async function updateAgendaItem(
+export function createAgendaItem(cookie: string, eventId: number, data: NeuerPunkt): Promise<void> {
+  return punktAnlegen(schreiberFuer(cookie), eventId, data);
+}
+
+export function updateAgendaItem(
   cookie: string,
   eventId: number,
   itemId: number,
-  fields: {
-    title?: string;
-    note?: string;
-    arrangementId?: number;
-    unlink?: boolean;
-    responsible?: string;
-    /** Neue Dauer in Minuten (UI-Einheit) – wird in CT-Sekunden umgerechnet. */
-    durationMin?: number;
-  },
+  fields: PunktAenderung,
 ): Promise<void> {
-  const { items } = await getAgenda(cookie, eventId);
-  const it = items.find((i) => i.id === itemId);
-  if (!it) throw new HttpError(404, 'Ablaufpunkt nicht gefunden.');
-
-  const body = agendaItemWritePayload(it, {
-    title: fields.title,
-    note: fields.note,
-    arrangementId: fields.arrangementId,
-    unlink: fields.unlink,
-    responsible: fields.responsible,
-    durationSec: fields.durationMin !== undefined ? fields.durationMin * 60 : undefined,
-  });
-  await schreibe(cookie, `/api/events/${eventId}/agenda/items/${itemId}`, {
-    method: 'PUT',
-    json: body,
-    verweigert: ABLAUF_VERWEIGERT,
-    fehler: 'Ablaufpunkt ändern fehlgeschlagen',
-  });
+  return punktAendern(schreiberFuer(cookie), eventId, itemId, fields);
 }
 
-/** Löscht einen Ablaufpunkt aus der Agenda eines Events. */
-export async function deleteAgendaItem(
-  cookie: string,
-  eventId: number,
-  itemId: number,
-): Promise<void> {
-  await schreibe(cookie, `/api/events/${eventId}/agenda/items/${itemId}`, {
-    method: 'DELETE',
-    verweigert: ABLAUF_VERWEIGERT,
-    fehler: 'Ablaufpunkt löschen fehlgeschlagen',
-    okBei404: true, // schon weg ist auch weg
-  });
+export function deleteAgendaItem(cookie: string, eventId: number, itemId: number): Promise<void> {
+  return punktLoeschen(schreiberFuer(cookie), eventId, itemId);
 }
 
-/**
- * Legt fest, ob ein Ablaufpunkt VOR dem Beginn der Veranstaltung läuft (Vorlauf, #423).
- *
- * Geschrieben wird **nur die Grenze** (`eventStartPosition`), ohne `items`: Gemessen an der
- * Test-Instanz (05.10.2026) bleiben die Punkte dabei unberührt – IDs, Liedverknüpfungen, Dauern.
- * Die Liste mitzuschicken hieße, jeden Punkt neu zu schreiben, nur um eine Zahl zu ändern.
- *
- * Gerechnet wird auf dem **frisch gelesenen** Ablauf, nie auf dem Stand des Geräts: Hat jemand
- * zwischendurch umsortiert, gehört die Grenze an die neue Stelle des Punkts.
- */
-export async function setAgendaItemVorBeginn(
+export function setAgendaItemVorBeginn(
   cookie: string,
   eventId: number,
   itemId: number,
   vorBeginn: boolean,
 ): Promise<void> {
-  const agenda = await getAgenda(cookie, eventId); // frische Live-Daten
-  const item = agenda.items.find((i) => i.id === itemId);
-  if (!item) {
-    throw new HttpError(409, 'Der Ablauf hat sich geändert. Bitte neu laden und erneut versuchen.');
-  }
-  const neu = beginnPositionFuer(item, agenda.eventStartPosition ?? 0, vorBeginn);
-  if (neu === null) return; // steht schon so – nichts zu schreiben
-
-  await schreibe(cookie, `/api/events/${eventId}/agenda`, {
-    method: 'PUT',
-    json: { calendarId: agenda.calendarId, eventStartPosition: neu },
-    verweigert: ABLAUF_VERWEIGERT,
-    fehler: 'Gottesdienstbeginn speichern fehlgeschlagen',
-  });
+  return vorBeginnSetzen(schreiberFuer(cookie), eventId, itemId, vorBeginn);
 }
 
 /**
@@ -490,35 +399,17 @@ export async function createArrangement(
 }
 
 /**
- * Ändert ein Arrangement (#396) – **lesen–ändern–schreiben, wie beim Tempo.**
- *
- * `PUT` ersetzt in ChurchTools den ganzen Datensatz; was nicht mitkommt, ist danach `null`. Deshalb
- * wird das Arrangement frisch gelesen und der Payload daraus gebaut. Der gelesene Stand geht
- * zusätzlich zurück an den Aufrufer – er braucht ihn ohnehin, und ein zweites Lesen wäre eine
- * ChurchTools-Anfrage für nichts (#300).
+ * Ändert ein Arrangement (#396) – lesen–ändern–schreiben. Die Regel (`PUT` ersetzt alles, deshalb
+ * aus dem frisch gelesenen Ist-Zustand bauen) steht seit #335 in `@shared/ct/schreibKern`.
  */
-export async function updateArrangement(
+export function updateArrangement(
   cookie: string,
   songId: number,
   arrangementId: number,
   overrides: ArrangementOverrides,
-  /**
-   * Eigene Meldungen für einen engeren Zweck – der Tempo-Weg sagt „das Tempo", nicht „Arrangements".
-   * Der **Ablauf** bleibt derselbe: Wer hier einen zweiten Lese-Schreib-Zyklus danebenstellte,
-   * hätte die gefährlichste Regel des Projekts in zweiter Fassung (`PUT` ersetzt alles).
-   */
   meldungen?: { verweigert: string; fehler: string },
 ): Promise<void> {
-  // Frische Live-Daten – NIE aus einem Cache: geschrieben wird auf diesem Stand.
-  const { arrangement: arr } = await getArrangement(cookie, songId, arrangementId);
-
-  await schreibe(cookie, `/api/songs/${songId}/arrangements/${arrangementId}`, {
-    method: 'PUT',
-    json: arrangementWritePayload(arr, overrides),
-    verweigert:
-      meldungen?.verweigert ?? 'Keine Berechtigung, Arrangements in ChurchTools zu ändern.',
-    fehler: meldungen?.fehler ?? 'Arrangement speichern fehlgeschlagen',
-  });
+  return arrangementAendern(schreiberFuer(cookie), songId, arrangementId, overrides, meldungen);
 }
 
 /**
@@ -588,22 +479,13 @@ export async function deleteFile(cookie: string, fileId: number): Promise<void> 
  * Der Endpunkt bleibt trotzdem eigen: Er wird vom Blatt angetippt, von jemandem, der nur das Tempo
  * meint – und seine Meldungen sagen genau das.
  */
-export async function updateArrangementTempo(
+export function updateArrangementTempo(
   cookie: string,
   songId: number,
   arrangementId: number,
   tempo: number,
 ): Promise<void> {
-  await updateArrangement(
-    cookie,
-    songId,
-    arrangementId,
-    { tempo },
-    {
-      verweigert: 'Keine Berechtigung, das Tempo in ChurchTools zu ändern.',
-      fehler: 'Tempo speichern fehlgeschlagen',
-    },
-  );
+  return tempoSetzen(schreiberFuer(cookie), songId, arrangementId, tempo);
 }
 
 /**

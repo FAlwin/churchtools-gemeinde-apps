@@ -1,3 +1,4 @@
+import type { NeuerPunkt } from '@shared/ct/schreibKern';
 import type { AgendaItem } from '@shared/types/index';
 import type { AgendaItemUpdate } from '../services/churchtoolsApi';
 
@@ -74,16 +75,11 @@ export function durationTarget(raw: string, current: number | null): number | un
  */
 export type PunktArt = 'programmpunkt' | 'ueberschrift';
 
-/** Ein neuer Ablaufpunkt, wie ihn `POST …/agenda/items` des eigenen Servers annimmt. */
-export interface NeuerAgendaPunkt {
-  type: 'header' | 'text' | 'song';
-  title?: string;
-  arrangementId?: number;
-  responsible?: string;
-  note?: string;
-  /** Dauer in Minuten (UI-Einheit); der Server rechnet in ChurchTools-Sekunden um. */
-  durationMin?: number;
-}
+/**
+ * Ein neuer Ablaufpunkt, wie ihn das Anlegen annimmt – Server und ChurchTools-Extension. Die Feldliste
+ * steht einmal, in `@shared/ct/schreibKern` (#335); hier stand bis dahin eine zweite.
+ */
+export type NeuerAgendaPunkt = NeuerPunkt;
 
 /**
  * Der neue Punkt aus dem Dialog – oder `null`, solange er nicht angelegt werden kann.

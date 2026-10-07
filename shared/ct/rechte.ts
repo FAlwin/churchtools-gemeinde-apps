@@ -76,13 +76,16 @@ export function rechteAus(
   const [adminModule, adminPerm] = adminPermission.split(':');
   const isAdmin = has(data[adminModule]?.[adminPerm]);
   // Ein Admin darf ohnehin alles – auch ohne explizit zugewiesene Kategorie-/Kalender-Rechte.
+  // Nicht `has(cs['edit songcategory'])`, sondern über `parseSongEditRight` – sonst wäre dies eine
+  // ZWEITE Stelle, die dasselbe Recht auswertet, und die beiden könnten auseinanderlaufen (#322).
+  const canEditSongs = isAdmin || parseSongEditRight(data).erlaubt;
   return {
     canViewSongs: isAdmin || has(cs['view songcategory']),
     canViewAgendas: isAdmin || has(cs['view agenda']),
     canEditAgendas: isAdmin || has(cs['edit agenda']),
-    // Nicht `has(cs['edit songcategory'])`, sondern über `parseSongEditRight` – sonst wäre dies eine
-    // ZWEITE Stelle, die dasselbe Recht auswertet, und die beiden könnten auseinanderlaufen (#322).
-    canEditSongs: isAdmin || parseSongEditRight(data).erlaubt,
+    canEditSongs,
+    // Dasselbe Recht, eigens benannt (siehe `UserCapabilities.canEditTempo`) – NICHT neu ausgewertet.
+    canEditTempo: canEditSongs,
     // `use ccli` ist ein eigenes Recht und NICHT vom Admin-Recht abgedeckt: Ohne SongSelect-Abo der
     // Gemeinde hilft auch Administrator sein nichts (#322).
     canUseCcli: has(cs['use ccli']),

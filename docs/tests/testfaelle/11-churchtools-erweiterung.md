@@ -66,22 +66,50 @@ Lieds. In ChurchTools hängt an deiner Person unter **Anhänge** je bemalter Sei
 installieren", keinen Bereich „Offline", keine Verwaltung und kein „Abmelden" – dafür unten den Hinweis
 „Erweiterung für ChurchTools" mit **Mehr erfahren**. Bei **Lieder** gibt es keine Reiter
 „Häufigkeit/Zuletzt", kein „Neues Lied", keinen Stift und kein Plus am Lied, und ein langer
-Suchbegriff bietet keine Suche im Liedtext an. Im Ablauf fehlt „Ablauf bearbeiten", bei den Terminen
-das Wolken-Symbol „Für offline speichern". Im Tempo-Menü eines Liedblatts steht „In der Erweiterung
-gilt das Tempo nur hier – in ChurchTools speichern kommt noch", **ohne** Speichern-Knopf – und nicht
-„fehlt dir die Berechtigung" (gemeldet von Alwin am 07.10.2026).
+Suchbegriff bietet keine Suche im Liedtext an. Bei den Terminen fehlt das Wolken-Symbol „Für offline
+speichern". (Ablauf bearbeiten und Tempo speichern gibt es seit 3b-1 – siehe TF-EXT-04.)
 
 1. Unten auf **Mehr**, ganz nach unten scrollen, auf **Mehr erfahren** tippen – es öffnet sich die
    Projektseite beim Abschnitt „Für andere Gemeinden".
 2. Unten auf **Lieder**, in die Suche einen Satz aus einem Lied tippen.
-3. Unten auf **Termine**, einen Gottesdienst öffnen, ein Lied antippen, oben das **Metronom**-Symbol.
+3. Unten auf **Termine**: kein Wolken-Symbol an den Gottesdiensten.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/services/funktionen.ts`, `client/src/components/ServerVarianteHinweis.tsx`, `client/src/pages/Settings.tsx`, `client/src/services/ctLesen.ts`, `client/src/components/TempoMenu.tsx`
-- **Automatisiert:** teilweise – `Settings.extension.test.tsx` (Mehr), `TempoMenu.extension.test.tsx`
-  und `ctLesen.test.ts` (Bearbeiten aus); Lieder, Suche und Termine nur hier
-- **Historie:** #336
+- **Betrifft:** `client/src/services/funktionen.ts`, `client/src/components/ServerVarianteHinweis.tsx`, `client/src/pages/Settings.tsx`, `client/src/services/ctLesen.ts`
+- **Automatisiert:** teilweise – `Settings.extension.test.tsx` (Mehr) und `ctLesen.test.ts`
+  (Liedverwaltung aus); Lieder, Suche und Termine nur hier
+- **Historie:** #336; #335 (3b-1: Tempo-Menü und „Ablauf bearbeiten" nach TF-EXT-04 gewandert)
+
+</details>
+
+### TF-EXT-04 · Ablauf bearbeiten und Tempo speichern in der Erweiterung
+
+**Das brauchst du:** TF-EXT-01 mit einem Konto, das in ChurchTools den Ablauf bearbeiten und Lieder
+bearbeiten darf, und einen **Test-Gottesdienst** mit Ablauf und mindestens einem Lied.
+
+**Das muss passieren:** Jede Änderung steht danach **auch in ChurchTools** (Ablauf dort neu laden) –
+mit derselben Reihenfolge, denselben Liedern und unveränderter Verantwortlichkeit. Ein Lied-Punkt
+bleibt ein Lied (er wird nicht zu einem Textpunkt). Das gespeicherte Tempo steht in ChurchTools am
+Arrangement, **Tonart und Dauer des Arrangements sind unverändert**.
+
+1. Gottesdienst öffnen, **Ablauf bearbeiten**: zwei Punkte per Ziehen vertauschen, fertig.
+2. **Neuer Eintrag**: einen Programmpunkt mit Lied anlegen.
+3. Einen Punkt antippen, die Notiz ändern, speichern.
+4. Einen Punkt antippen, **Vor Gottesdienstbeginn** einschalten, speichern – er und alle darüber
+   rutschen in den Vorlauf.
+5. Den neuen Punkt wieder löschen.
+6. Ein Lied öffnen, oben das **Metronom**, ein anderes Tempo einstellen, **… in ChurchTools speichern**.
+7. In ChurchTools den Ablauf und das Lied ansehen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `client/src/services/ctSchreiben.ts`, `shared/ct/schreibKern.ts`, `shared/ct/agendaPayload.ts`, `shared/ct/arrangementPayload.ts`, `client/src/services/ctRuntime.ts`, `client/src/components/TempoMenu.tsx`
+- **Automatisiert:** teilweise – `ctSchreiben.test.ts` gegen ein nachgebautes ChurchTools (Rümpfe
+  gegen die Erzeuger, Fehlerzweige einzeln); ob ChurchTools die Rümpfe aus dem Browser genauso annimmt
+  wie vom Server, nur hier
+- **Historie:** #335 (3b-1)
 
 </details>

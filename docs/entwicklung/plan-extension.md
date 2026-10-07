@@ -1,7 +1,8 @@
 # Umsetzungsplan – ChurchTools-Extension (zweite Auslieferung derselben Codebasis)
 
 > Status: **Phase 1 (#333), 2 (#334) und 3a (#335, Lesen) erledigt, 07.10.2026.** Ablage = Personen-Dateien
-> (§2b). Phase 4 (#336, Anteasern) und 5 (#337, Paket) erledigt. Offen: 3b Schreiben.
+> (§2b). Phase 4 (#336, Anteasern) und 5 (#337, Paket) erledigt. 3b (Schreiben) läuft in Scheiben:
+> **3b-1 Ablauf + Tempo** gebaut; offen Lieder, Abwesenheiten, Team-Notizen + Einstellungen, SongSelect.
 > Ziel: dieselbe App zusätzlich als **ChurchTools-Extension** unter `/ccm/<key>/` ausliefern –
 > ohne eigenen Server, ohne zweite Anmeldung, installierbar von jeder Gemeinde.
 > Die bestehende Server-/PWA-Variante (NAS, `musik.ecg-donrath.de`) **bleibt** und ist der Weg für
@@ -265,12 +266,28 @@ Zwischenspeicher, `HttpError`; Browser: Sitzung der Seite, Bremse, `ApiError`).
 | Inline-Skripte der `index.html` blockiert (CSP)                                             | Nur der Boot-Hinweis; die App selbst braucht keine                                 |
 | Die Erweiterung erscheint **nicht** in der ChurchTools-App (iPhone, Alwin)                  | geht nicht – siehe §7, Punkt 6                                                     |
 
-#### 3b – Schreiben (offen)
+#### 3b – Schreiben (in Scheiben, Alwin 07.10.2026)
 
-- [ ] Ablauf bearbeiten, Lieder/Arrangements/Versionen, SongSelect, Abwesenheiten – nach demselben
-      Muster: Logik nach `shared/`, Browser-Schreiber mit derselben Bremse
-- [ ] „Notizen von …" (fremde Anmerkungen) aus den Personen-Dateien der anderen
-- [ ] Wer zählt als Musiker (Team-Notizen, Abwesenheiten)? Die Server-Variante hat dafür `site.json`
+Rund 3.800 Zeilen Server-Logik. Geschnitten in fünf Scheiben, jede ein eigener PR und für sich
+nutzbar – nach jeder kann man aufhören. Muster wie beim Lesen: Regeln nach `shared/ct/schreibKern.ts`
+(Anschluss `CtSchreiber`), der Server schreibt über `ctWrite.schreibe`, der Browser über
+`client/src/services/ctSchreiben.ts` (`ctAnfrage`: Sitzung, CSRF, Bremse, Zeitgrenze).
+
+- [x] **3b-1 Ablauf + Tempo:** Reihenfolge, Punkte anlegen/ändern/löschen, Vorlauf, Tempo speichern.
+      Nur offizielle `/api`. Die Regeln (frisch lesen, Rumpf aus dem Ist-Zustand, Reihenfolge-Schutz,
+      Standard-Titel, „Aufheben leert den Titel") lagen zum Teil im Controller und stehen jetzt im Kern.
+      Das Tempo hat ein **eigenes Recht `canEditTempo`** (dasselbe ChurchTools-Recht wie
+      `canEditSongs`, eigens benannt): So geht es in der Extension, während die Liedverwaltung noch
+      verborgen ist – und das Tempo-Menü behauptet keine fehlende Berechtigung
+- [ ] **3b-2 Lieder:** Lieder, Arrangements, Versionen, Notenblätter, Dateien, Kategorien, Quellen.
+      Dabei `arrangementVerwaltung.findeArrangement` mit `schreibKern.arrangementAus` zusammenlegen
+      (dieselbe Suche, andere Meldung – bei 3b-1 gefunden). Kategorien/Quellen gehen über die alte
+      Schnittstelle (`ctAjax`) – aus dem Browser **erst messen**
+- [ ] **3b-3 Abwesenheiten** (Gründe ebenfalls über `ctAjax`; Termin-Arten-Filter hängt an 3b-4)
+- [ ] **3b-4 Team-Notizen + Gemeinde-Einstellungen:** Wer zählt als Musiker? Die Server-Variante hat
+      dafür `site.json` – Vorschlag: die eigenen Daten des Moduls (Custom-Data, §2a). Danach „Notizen
+      von …" aus den Personen-Dateien der anderen
+- [ ] **3b-5 SongSelect** (`ctAjax`, braucht `use ccli`)
 
 #### 3c – Massenläufe (entschieden: weglassen)
 
@@ -286,14 +303,14 @@ Alwin abgenommen, in der Test-Instanz durchgeklickt.
 - [x] **`client/src/services/funktionen.ts`** – was es in dieser Auslieferung gibt (Offline,
       Installieren, Abmelden, Verwaltung, Statistik, Liedtext-Suche, Hinweis). Komponenten fragen
       **diese Flags**, nie den Modus
-- [x] **Bearbeiten** über die Rechte: `ctLesen.meineRechte` meldet bis 3b `canEditAgendas`,
-      `canEditSongs`, `canUseCcli` = `false` – die Knöpfe verschwinden von selbst
+- [x] **Bearbeiten** über die Rechte: `ctLesen.meineRechte` meldet, was noch fehlt, als `false` –
+      die Knöpfe verschwinden von selbst (seit 3b-1 nur noch `canEditSongs`, `canUseCcli`)
 - [x] **Der eine Hinweis** (`ServerVarianteHinweis`) unten in „Mehr"; „Mehr erfahren" springt in den
       README-Abschnitt „Für andere Gemeinden"
 - [x] Inline-Start-Skript der `index.html` im Extension-Paket entfernt (CSP blockiert es ohnehin)
 - [x] **Nachtrag (Alwin, 07.10.2026):** Das Tempo-Menü machte aus dem ausgeschalteten Bearbeiten
-      „Dir fehlt die Berechtigung" – falsch. Wo die Oberfläche einen GRUND nennt, fragt sie jetzt
-      `funktionen.schreibenInChurchTools`; in der Extension: „… speichern kommt noch", ohne Knopf
+      „Dir fehlt die Berechtigung" – falsch. Übergangsweise fragte es `funktionen.schreibenInChurchTools`
+      („… speichern kommt noch"); seit 3b-1 speichert die Extension das Tempo selbst, die Angabe ist weg
 
 ### Phase 5 – Paket, Anleitung, Release (#337)
 

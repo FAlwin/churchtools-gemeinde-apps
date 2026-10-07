@@ -11,7 +11,8 @@ Die Musik App gibt es in zwei Formen:
 | Anmerkungen, Zoom, Tonart merken | ✓ (als Dateien an der eigenen Person, siehe unten) | ✓                                                   |
 | Offline im Saal                  | –                                                  | ✓                                                   |
 | Lied-Statistik, Suche im Text    | –                                                  | ✓                                                   |
-| Ablauf und Lieder bearbeiten     | noch nicht (geplant)                               | ✓                                                   |
+| Ablauf bearbeiten, Tempo         | ✓ (ab v2.29.0)                                     | ✓                                                   |
+| Lieder verwalten                 | noch nicht (geplant)                               | ✓                                                   |
 | In der ChurchTools-App am Handy  | – (ChurchTools zeigt Erweiterungen nur im Web)     | eigene App auf dem Homescreen                       |
 
 ## Installieren
@@ -33,7 +34,10 @@ Die Musik App gibt es in zwei Formen:
   **„„Musik App" sehen (view)"**. Gebt es den Gruppen oder dem Status, die die App nutzen sollen
   (z. B. eurem Musikteam).
 - **Lieder und Abläufe:** Die App zeigt nur, was die Person in ChurchTools ohnehin sehen darf –
-  Abläufe (`view agenda`) und Lieder (`view songcategory`) im Bereich **Events**.
+  Abläufe (`view agenda`) und Lieder (`view songcategory`) im Bereich **Events**. Ebenso beim Ändern:
+  den Ablauf bearbeitet nur, wer `edit agenda` hat, das Tempo nur, wer Lieder bearbeiten darf
+  (`edit songcategory`). Die App schreibt mit der Sitzung der Person – mehr als in ChurchTools selbst
+  darf sie also nie.
 - **Anmerkungen speichern:** Die App legt sie als Dateien an der **eigenen Person** ab. Dafür braucht
   die Person das Recht, ihre eigenen Personendaten zu bearbeiten (in unserer Test-Gemeinde kam es über
   den Status „Mitglied"). Fehlt es, sagt die App das; die Anmerkungen bleiben dann nur auf dem Gerät.

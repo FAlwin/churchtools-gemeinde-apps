@@ -36,6 +36,15 @@ describe('imBereich', () => {
   });
 });
 
+describe('Gewicht der umgeschriebenen Regeln', () => {
+  it('der Bereich hat Gewicht 0 (`:where`) – der Reset darf keine Klasse der App schlagen', () => {
+    // Mit `:is(#root, …)` erbte `* { padding: 0 }` das Gewicht einer ID und überschrieb jedes Polster
+    // der App (Durchklick in der Test-Instanz, 07.10.2026).
+    expect(BEREICH.startsWith(':where(')).toBe(true);
+    expect(imBereich('*').startsWith(':where(')).toBe(true);
+  });
+});
+
 describe('cssBereich – der PostCSS-Lauf', () => {
   it('nichts Globales bleibt übrig, das ChurchTools treffen könnte', async () => {
     const aus = await lauf(

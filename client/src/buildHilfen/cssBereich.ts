@@ -16,8 +16,15 @@
  * und bleiben, wie sie sind.
  */
 
-/** Der Bereich der App im ChurchTools-Dokument. */
-export const BEREICH = ':is(#root, [data-musikapp])';
+/**
+ * Der Bereich der App im ChurchTools-Dokument.
+ *
+ * **`:where`, nicht `:is`** (Durchklick 07.10.2026): `:is(#root, …) *` erbt das Gewicht einer ID und
+ * schlug damit jede Klasse der App – der Reset „Abstand 0" überschrieb alle Polster, die Seiten klebten
+ * am Rand. `:where` hat das Gewicht 0, genau wie das ursprüngliche `*`. Gegen ChurchTools gewinnen die
+ * Regeln trotzdem: ChurchTools' Regeln liegen in `@layer`, unsere nicht.
+ */
+export const BEREICH = ':where(#root, [data-musikapp])';
 
 /**
  * Ein Selektor, auf den App-Bereich umgeschrieben.

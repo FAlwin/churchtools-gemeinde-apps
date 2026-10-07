@@ -15,6 +15,7 @@
  */
 import { ApiError } from './api';
 import { markReachable } from './reachability';
+import { ajaxMeldungen, ajaxNutzlast, type AjaxMeldungen } from '@shared/ct/altSchnittstelle';
 import { parseRetryAfter, STANDARD_SPERRE_MS } from '@shared/ct/bremse';
 import { ctBasis, istExtension } from './modus';
 
@@ -230,7 +231,8 @@ export async function ctAnfrage<T = unknown>(
   const res = await mitZeitgrenze(
     `${ctBasis()}/api${pfad}`,
     { method, credentials: 'include', headers, body: init.body },
-    ZEIT_API_MS,
+    // Datei-Uploads dürfen länger dauern als ein API-Aufruf – wie im Server (`CT_FILE_TIMEOUT_MS`).
+    init.body instanceof FormData ? ZEIT_DATEI_MS : ZEIT_API_MS,
   );
   markReachable(![502, 503, 504].includes(res.status));
   if (res.status === 429) throw bremsen(res);
@@ -243,8 +245,69 @@ export async function ctAnfrage<T = unknown>(
       body = text;
     }
   }
-  if (!res.ok) throw await fehlerAus(res, body, init.verweigert);
+  if (!res.ok) {
+    if (method !== 'GET') csrfVerwerfenBeiAblehnung(res.status);
+    throw await fehlerAus(res, body, init.verweigert);
+  }
   return body as T;
+}
+
+/**
+ * **Ein abgelehntes Token wird verworfen** – die Lehre aus #298, die im Server seit August gilt
+ * (`csrfWriteDenied`) und hier beim Bau der Extension fehlte (gefunden 07.10.2026, Phase 3b-2): Läuft die
+ * Sitzung in ChurchTools neu an, ist das gemerkte Token ungültig. Ohne Verwerfen scheiterte danach JEDER
+ * Schreibversuch, bis jemand die Seite neu lädt.
+ */
+function csrfVerwerfenBeiAblehnung(status: number): void {
+  if (status === 401 || status === 403) csrfToken = null;
+}
+
+/**
+ * Eine Anfrage an die **alte** ChurchTools-Schnittstelle (`index.php?q=churchservice/ajax`, 3b-2) –
+ * für Lied-Kategorien und Liederbücher (`getMasterData`). Wie im Server mit CSRF-Token und
+ * `X-Requested-With` (ohne Token → 401, gemessen 07.10.2026). Ausgewertet wird über
+ * `@shared/ct/altSchnittstelle`, dieselbe Regel wie im Server.
+ */
+export async function ctAltAnfrage(
+  func: string,
+  felder: Record<string, string> = {},
+  meldungen: AjaxMeldungen = {},
+): Promise<unknown> {
+  pruefeBremse();
+  const m = ajaxMeldungen(meldungen);
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+    // Ohne diesen Kopf antwortet die alte Schnittstelle mit einer HTML-Seite statt JSON.
+    'X-Requested-With': 'XMLHttpRequest',
+    Accept: 'application/json',
+  };
+  const csrf = await holeCsrf();
+  if (csrf) headers['CSRF-Token'] = csrf;
+  const res = await mitZeitgrenze(
+    `${ctBasis()}/index.php?q=churchservice/ajax`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      headers,
+      body: new URLSearchParams({ func, ...felder }),
+    },
+    ZEIT_DATEI_MS,
+  );
+  markReachable(![502, 503, 504].includes(res.status));
+  if (res.status === 429) throw bremsen(res);
+  const text = await res.text();
+  if (res.status === 401 || res.status === 403) {
+    csrfVerwerfenBeiAblehnung(res.status);
+    let body: unknown = null;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      /* kein JSON */
+    }
+    throw await fehlerAus(res, body, m.verweigert);
+  }
+  if (!res.ok) throw new ApiError(502, `${m.abgelehnt} (${res.status}).`);
+  return ajaxNutzlast(text, m, (status, meldung) => new ApiError(status, meldung));
 }
 
 /**

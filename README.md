@@ -74,7 +74,7 @@ Optik und Funktionen sind für alle identisch (eine gemeinsame Codebasis).
 
 **Ohne eigenen Server?** Die App gibt es auch als **ChurchTools-Erweiterung** – ein ZIP, das ihr in
 ChurchTools hochladet; angemeldet ist man dann über ChurchTools selbst. Sie kann weniger (kein Offline,
-keine Statistik, noch keine Liedverwaltung) und läuft nur im Browser, nicht in der ChurchTools-App:
+keine Statistik, noch kein SongSelect) und läuft nur im Browser, nicht in der ChurchTools-App:
 **[Anleitung zur Erweiterung](docs/betrieb/ERWEITERUNG.md)**.
 
 ## Schnellstart

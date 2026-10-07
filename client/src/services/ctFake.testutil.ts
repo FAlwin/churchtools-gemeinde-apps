@@ -44,8 +44,18 @@ export class FakeCt {
    * `PUT /api/events/1/agenda`. Ohne Eintrag: 200 `{ data: {} }`.
    */
   schreibAntworten: Record<string, () => Response> = {};
-  /** Was geschrieben wurde – mit Rumpf und CSRF-Kopfzeile, zum Nachsehen statt Glauben. */
-  geschrieben: { was: string; json: unknown; csrf: string | null }[] = [];
+  /**
+   * Was geschrieben wurde – mit Rumpf und CSRF-Kopfzeile, zum Nachsehen statt Glauben. `felder` bei
+   * der alten Schnittstelle (Formular-Felder), `datei` bei einem Upload (`files[]`).
+   */
+  geschrieben: {
+    was: string;
+    json: unknown;
+    csrf: string | null;
+    felder?: Record<string, string>;
+    datei?: File;
+    xrw?: string | null;
+  }[] = [];
 
   /** Eine JSON-Antwort für einen Pfad hinterlegen. */
   liefere(pfad: string, body: unknown, status = 200, headers: Record<string, string> = {}): void {
@@ -155,8 +165,21 @@ export class FakeCt {
     if (method !== 'GET') {
       const was = `${method} ${pfad}`;
       const rumpf = typeof init?.body === 'string' ? (JSON.parse(init.body) as unknown) : null;
-      const csrf = new Headers(init?.headers).get('CSRF-Token');
-      this.geschrieben.push({ was, json: rumpf, csrf });
+      const kopf = new Headers(init?.headers);
+      const csrf = kopf.get('CSRF-Token');
+      const felder =
+        init?.body instanceof URLSearchParams ? Object.fromEntries(init.body) : undefined;
+      const teil = init?.body instanceof FormData ? init.body.get('files[]') : null;
+      // Nur, was es gibt – sonst müsste jeder Test, der einen JSON-Schreibvorgang vergleicht, leere
+      // Felder mitschreiben.
+      this.geschrieben.push({
+        was,
+        json: rumpf,
+        csrf,
+        ...(felder ? { felder } : {}),
+        ...(teil instanceof File ? { datei: teil } : {}),
+        ...(kopf.has('X-Requested-With') ? { xrw: kopf.get('X-Requested-With') } : {}),
+      });
       return this.schreibAntworten[was]?.() ?? this.json(200, { data: {} });
     }
     return this.json(404, { message: `Unbekannt: ${method} ${pfad}` });

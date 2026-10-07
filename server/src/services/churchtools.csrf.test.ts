@@ -2,7 +2,12 @@ import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { __getCsrfTokenForTests as getCsrfToken } from './ctCsrf.js';
 import { __resetSessionMemosForTests } from './ctSessionMemos.js';
 import { CtOverloadedError } from './ctHttp.js';
-import { deleteFile } from './ctWrite.js';
+import { schreiberFuer } from './ctWrite.js';
+import { dateiLoeschen } from '@shared/ct/notenblaetter';
+
+// Das Löschen einer Datei liegt seit #335 (3b-2) im Kern (`@shared/ct/notenblaetter`); geprüft wird es
+// über den Schreiber des Servers – also über genau den Weg, den der Server nimmt.
+const deleteFile = (cookie: string, fileId: number) => dateiLoeschen(schreiberFuer(cookie), fileId);
 
 /**
  * #294: Das CSRF-Token wird beim Speichern automatisch EINMAL nachgefasst.

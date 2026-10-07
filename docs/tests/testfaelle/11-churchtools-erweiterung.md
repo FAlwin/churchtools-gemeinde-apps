@@ -114,3 +114,33 @@ Arrangement, **Tonart und Dauer des Arrangements sind unverändert**.
 - **Historie:** #335 (3b-1)
 
 </details>
+
+### TF-EXT-05 · Lieder, Arrangements, Notenblätter und Dateien in der Erweiterung
+
+**Das brauchst du:** TF-EXT-01 mit einem Konto, das Lieder bearbeiten darf (in mindestens einer
+Kategorie), eine kleine PDF-Datei. Alles, was du anlegst, am Ende wieder löschen.
+
+**Das muss passieren:** Jede Änderung steht danach **auch in ChurchTools** (Lied dort öffnen). Die
+Auswahl der Kategorie zeigt nur die, in denen du Lieder bearbeiten darfst. Kein Knopf führt ins Leere;
+SongSelect ist nirgends zu sehen.
+
+1. **Lieder** → **Neues Lied**: Name, Kategorie, Tonart → anlegen. Das Lied öffnet sich.
+2. Ein zweites Lied mit **derselben CCLI-Nummer** wie ein vorhandenes anlegen → die App lehnt ab.
+3. Am Lied über den Stift die **Stammdaten** ändern (Autor) → gespeichert.
+4. **Arrangements**: ein zweites anlegen, zum **Standard** machen, das alte löschen. Eine Liednummer
+   ohne Liederbuch → die App sagt, dass erst das Liederbuch nötig ist.
+5. **Notenblatt bearbeiten** (Original) → speichern. Dann **Neue Version…** anlegen, umbenennen,
+   löschen. In ChurchTools liegt danach je Version genau eine Datei.
+6. **Dateien**: die PDF hochladen, herunterladen, löschen.
+7. Das Lied löschen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `client/src/services/ctSchreiben.ts`, `client/src/services/ctLesen.ts`, `client/src/services/ctRuntime.ts`, `shared/ct/liedVerwaltung.ts`, `shared/ct/notenblaetter.ts`, `shared/ct/stammdaten.ts`, `shared/ct/altSchnittstelle.ts`
+- **Automatisiert:** teilweise – die Regeln über die Server-Tests (laufen durch den Kern),
+  `ctSchreiben.lieder.test.ts` für den Weg des Browsers (alte Schnittstelle, Upload, CSRF); ob
+  ChurchTools Upload und alte Schnittstelle aus der Einbettung genauso annimmt, nur hier
+- **Historie:** #335 (3b-2)
+
+</details>

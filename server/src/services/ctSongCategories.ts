@@ -17,10 +17,15 @@
  * keine Prüfung.
  */
 import { ctAjax } from './ctAjax.js';
-import { parseCapabilities, parseSongEditRight } from './ctCapabilities.js';
-import { ctGet } from './ctHttp.js';
+import { HttpError } from '../middleware/errorHandler.js';
+import { config } from '../config.js';
+import {
+  alleKategorien,
+  bearbeitbareKategorien,
+  type LiedStammdatenRoh,
+} from '@shared/ct/stammdaten';
+import { ctGet, isCtOverloaded } from './ctHttp.js';
 import { getAllSongs } from './ctRead.js';
-import { ctId } from '../utils/ctId.js';
 import type { SongCategory } from '@shared/types/index';
 
 /** Meldungen für die alte Schnittstelle – Kategorien, nicht SongSelect (siehe `AjaxMeldungen`). */
@@ -33,59 +38,6 @@ const KAT_MELDUNGEN = {
 };
 
 /** So liefert die alte Schnittstelle eine Kategorie: alles als Zeichenkette, Name als `bezeichnung`. */
-interface RohKategorie {
-  id?: string | number;
-  bezeichnung?: string;
-  sortkey?: string | number;
-}
-
-/**
- * Alle Kategorien der Instanz mit Namen – über `getMasterData`.
- *
- * Wirft, wenn die alte Schnittstelle nicht mitspielt. Der Aufrufer entscheidet, ob er das dem Nutzer
- * meldet oder auf die Lieder ausweicht (siehe `getSongCategories`).
- */
-async function ladeKategorienMitNamen(cookie: string): Promise<SongCategory[]> {
-  const daten = (await ctAjax(cookie, 'getMasterData', {}, KAT_MELDUNGEN)) as {
-    songcategory?: RohKategorie[];
-  };
-  const roh = daten.songcategory ?? [];
-  return roh
-    .map((k) => ({
-      // Über `ctId`: Die ID kommt als `"0"` und MUSS eine Zahl werden – sie wird später mit den IDs
-      // aus dem Rechte-Array und mit `song.category.id` verglichen. `Number(k.id)` allein wäre hier
-      // falsch, weil ein fehlendes Feld (`null`) dabei zur echten Kategorie 0 würde.
-      id: ctId(k.id),
-      name: (k.bezeichnung ?? '').trim(),
-      sortkey: Number(k.sortkey ?? 0),
-    }))
-    .filter((k): k is { id: number; name: string; sortkey: number } => k.id !== null && !!k.name)
-    .sort((a, b) => a.sortkey - b.sortkey || a.name.localeCompare(b.name, 'de'))
-    .map(({ id, name }) => ({ id, name }));
-}
-
-/**
- * Rückfall: die Kategorien aus den vorhandenen Liedern zusammentragen.
- *
- * **Zeigt nur, was benutzt wird** – und genau darin liegt seine Schwäche: Bei der ECG stecken alle 49
- * Lieder in Kategorie 0, die zweite erlaubte („Inaktive Songs") käme hier gar nicht vor. Deshalb ist
- * das der Rückfall und nicht der Hauptweg. Er trägt, wenn ChurchTools die alte Schnittstelle ändert.
- */
-async function ladeKategorienAusLiedern(cookie: string): Promise<SongCategory[]> {
-  const songs = await getAllSongs(cookie);
-  const gefunden = new Map<number, string>();
-  for (const s of songs) {
-    // Auch hier über `ctId` – die DRITTE Stelle mit derselben Grammatik. In `/api/songs` ist die ID
-    // gemessen eine Zahl, aber eine eigene Prüfung daneben wäre wieder eine Regel in zwei Fassungen.
-    const id = ctId(s.category?.id);
-    if (id === null) continue;
-    const name = (s.category?.name ?? '').trim();
-    if (!gefunden.has(id) && name) gefunden.set(id, name);
-  }
-  return [...gefunden]
-    .map(([id, name]) => ({ id, name }))
-    .sort((a, b) => a.name.localeCompare(b.name, 'de'));
-}
 
 /**
  * Alle Kategorien der Instanz – Namen aus `getMasterData`, sonst aus den Liedern.
@@ -95,19 +47,15 @@ async function ladeKategorienAusLiedern(cookie: string): Promise<SongCategory[]>
  * die Namen anders beschaffen lassen. Wer eine ID kennt, aber keinen Namen, bekommt später
  * „Kategorie N" angezeigt – eine Zahl ist unschön, ein leerer Eintrag wäre schlimmer.
  */
-export async function getSongCategories(cookie: string): Promise<SongCategory[]> {
-  try {
-    const mitNamen = await ladeKategorienMitNamen(cookie);
-    if (mitNamen.length > 0) return mitNamen;
-    console.warn(
-      '[songcategories] getMasterData lieferte keine Kategorien – weiche auf Lieder aus',
-    );
-  } catch (err) {
-    console.warn(
-      `[songcategories] getMasterData fehlgeschlagen (${err instanceof Error ? err.message : String(err)}) – weiche auf Lieder aus`,
-    );
-  }
-  return ladeKategorienAusLiedern(cookie);
+export function getSongCategories(cookie: string): Promise<SongCategory[]> {
+  // Der Rückfall steht seit #335 (3b-2) in `@shared/ct/stammdaten` – die Extension fällt genauso zurück.
+  return alleKategorien({
+    stammdaten: async () =>
+      (await ctAjax(cookie, 'getMasterData', {}, KAT_MELDUNGEN)) as LiedStammdatenRoh,
+    lieder: () => getAllSongs(cookie),
+    istUeberlastet: isCtOverloaded,
+    warnen: (meldung) => console.warn(`[songcategories] ${meldung}`),
+  });
 }
 
 /**
@@ -147,13 +95,10 @@ export async function getEditableSongCategories(cookie: string): Promise<SongCat
    * einer leeren Antwort wirft, ist gewollt: Dann ist die Lage unklar, und „bitte erneut versuchen"
    * ist richtiger als eine geratene Liste (#149).
    */
-  const { isAdmin } = parseCapabilities(rechte);
-  const recht = parseSongEditRight(rechte);
-  const alle = await getSongCategories(cookie);
-
-  // Ohne Einschränkung (Admin oder Recht ohne Aufzählung): alles, was die Instanz kennt.
-  if (isAdmin || recht.ids === null) return alle;
-
-  const bekannt = new Map(alle.map((k) => [k.id, k.name]));
-  return recht.ids.map((id) => ({ id, name: bekannt.get(id) ?? `Kategorie ${id}` }));
+  return bearbeitbareKategorien(
+    rechte,
+    config.adminPermission,
+    await getSongCategories(cookie),
+    (status, meldung) => new HttpError(status, meldung),
+  );
 }

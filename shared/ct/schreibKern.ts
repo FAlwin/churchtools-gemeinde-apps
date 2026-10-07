@@ -38,8 +38,11 @@ export interface CtSchreiber {
   agenda(eventId: number): Promise<CtAgenda>;
   /** Ein Lied samt Arrangements – **frisch**, nie aus einem Cache. */
   song(songId: number): Promise<CtSong>;
-  /** Schreibt; wirft bei Ablehnung (`verweigert`), Drosselung oder Fehlschlag (`fehler`). */
-  schreibe(pfad: string, auftrag: SchreibAuftrag): Promise<void>;
+  /**
+   * Schreibt; wirft bei Ablehnung (`verweigert`), Drosselung oder Fehlschlag (`fehler`). Liefert den
+   * JSON-Rumpf der Antwort (`null` bei leerer Antwort) – beim Anlegen steht darin die neue ID.
+   */
+  schreibe(pfad: string, auftrag: SchreibAuftrag): Promise<unknown>;
   /** Einen Fehler mit Status erzeugen – in der Fehlerklasse des Aufrufers. */
   fehler(status: number, meldung: string): Error;
 }
@@ -58,9 +61,11 @@ export function arrangementAus(
   song: CtSong,
   arrangementId: number,
   fehler: (status: number, meldung: string) => Error,
+  /** Die Liedverwaltung sagt es dem Nutzer deutlicher (3b-2: dieselbe Suche, eigene Meldung). */
+  meldung = 'Arrangement nicht gefunden.',
 ): CtArrangement {
   const arrangement = song.arrangements.find((a) => a.id === arrangementId);
-  if (!arrangement) throw fehler(404, 'Arrangement nicht gefunden.');
+  if (!arrangement) throw fehler(404, meldung);
   return arrangement;
 }
 

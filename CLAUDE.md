@@ -469,9 +469,10 @@ client`, Kürzel `VITE_KEY`) baut die App als ChurchTools-Erweiterung unter `/cc
   `body` hängt (Coachmarks), braucht `data-musikapp`. Nur EIN `css`-Schlüssel in `vite.config.ts`.
 - Was es in der Extension noch nicht gibt, meldet `ohneServer` (501) – und die Oberfläche zeigt es gar
   nicht erst: **Komponenten fragen `services/funktionen.ts`** (Offline, Abmelden, Statistik …), Bearbeiten
-  hängt an den Rechten (`ctLesen.meineRechte` meldet, was noch fehlt, als `false` – seit 3b-1
-  Liedverwaltung und SongSelect; das Tempo hat dafür das eigene Recht `canEditTempo`). Ein Hinweis in „Mehr"
-  (`ServerVarianteHinweis`). Manueller Test: TF-EXT-01 bis 04. **Anzeige-Einstellungen (Spalten `cols`,
+  hängt an den Rechten (`ctLesen.meineRechte` meldet, was noch fehlt, als `false` – seit 3b-2 nur
+  noch SongSelect, `canUseCcli`). Lieder/Notenblätter: Regeln in `shared/ct/liedVerwaltung.ts`,
+  `notenblaetter.ts`, `stammdaten.ts`, `altSchnittstelle.ts`; Server-Anschluss `ctVerwalter.ts`. Ein Hinweis in „Mehr"
+  (`ServerVarianteHinweis`). Manueller Test: TF-EXT-01 bis 05. **Anzeige-Einstellungen (Spalten `cols`,
   Textgröße `fs`) werden geräteübergreifend synchronisiert** (kein Geräte-Suffix); **NUR der Zoom
   bleibt pro Geräteklasse getrennt**. **Schlüssel** je Eintrag: `song<id>_v<versionKey>_<seite>` (Zoom zusätzlich
   `_d<geräteklasse><spalten>`, z. B. `_dlarge2`; **`KEY_RE` in `annotations.ts` UND die Server-Zod-Regel

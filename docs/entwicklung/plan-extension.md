@@ -199,14 +199,14 @@ Siehe §6. Kein toter Knopf, keine Fehlermeldung – ein Satz, der sagt, warum u
 
 ## 6. Was in der Extension wegfällt
 
-| Funktion                         | Warum                                                                                                                                                     | Umgang                                      |
-| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| **Für offline speichern** (#32)  | Füllt den **Service-Worker-Cache** mit den PDFs/Bildern. Unter `/ccm/…` liefert CT die Seite aus – ein eigener Service Worker ist dort bestenfalls fragil | Knopf entfällt, Hinweis auf Server-Variante |
-| **Team-Anmerkungen teilen**      | Braucht eine Tabelle, die für **alle** gilt – hängt an Phase 1 (globaler Wert?)                                                                           | Nach Phase 1 entscheiden                    |
-| **Fremde Anmerkungen ansehen**   | Ebenso                                                                                                                                                    | Nach Phase 1 entscheiden                    |
-| **Update-Hinweis**               | Ohne Service Worker gibt es keinen Update-Balken; die Version liefert ChurchTools                                                                         | Entfällt ganz                               |
-| **Branding** (Gemeindename/Logo) | Kein `site.json` ohne Server                                                                                                                              | Möglichst aus der CT-API (Phase 1)          |
-| **Login-Bildschirm, Rate-Limit** | Die Anmeldung macht ChurchTools                                                                                                                           | Entfällt – ein Gewinn                       |
+| Funktion                         | Warum                                                                                                                                                     | Umgang                                                |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| **Für offline speichern** (#32)  | Füllt den **Service-Worker-Cache** mit den PDFs/Bildern. Unter `/ccm/…` liefert CT die Seite aus – ein eigener Service Worker ist dort bestenfalls fragil | Knopf entfällt, Hinweis auf Server-Variante           |
+| **Team-Anmerkungen teilen**      | Braucht eine Tabelle, die für **alle** gilt – hängt an Phase 1 (globaler Wert?)                                                                           | **Bleibt** – gemeinsame Kategorie (§2a)               |
+| **Fremde Anmerkungen ansehen**   | Ebenso                                                                                                                                                    | **Bleibt** – gemeinsame Kategorie (§2a)               |
+| **Update-Hinweis**               | Ohne Service Worker gibt es keinen Update-Balken; die Version liefert ChurchTools                                                                         | Entfällt ganz                                         |
+| **Branding** (Gemeindename/Logo) | Kein `site.json` ohne Server                                                                                                                              | Name aus `GET /api/info`; Logo nicht in der API (§2a) |
+| **Login-Bildschirm, Rate-Limit** | Die Anmeldung macht ChurchTools                                                                                                                           | Entfällt – ein Gewinn                                 |
 
 **Der Teaser** (eine Formulierung, an einer Stelle, nicht sechs verschiedene): kurz, ohne
 Werbeton, mit Verweis darauf, dass es die App auch mit eigenem Server gibt und wo man fragen kann.

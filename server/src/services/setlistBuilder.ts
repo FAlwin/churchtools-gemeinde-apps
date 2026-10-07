@@ -13,8 +13,6 @@ import type {
 } from '@shared/types/index';
 import { downloadFileText, fileIdFromUrl } from './ctFiles.js';
 import { CtOverloadedError, isCtOverloaded } from './ctHttp.js';
-// Die eine Tempo-Umrechnung (Zahl oder Zeichenkette) liegt beim Typ, dessen Eigenheit sie ausbügelt.
-import { alsTempoZahl } from './ctTypes.js';
 import { createGebuendelterLauf } from './gebuendelterLauf.js';
 import { mapLimit } from './mapLimit.js';
 import {
@@ -25,35 +23,47 @@ import {
   getEvents,
   getSong,
 } from './ctRead.js';
-import type { CtAgendaSong } from './ctTypes.js';
 import { deleteFile, uploadChordpro, uploadFile } from './ctWrite.js';
 import { fetchChordProText, getSongSelectSong } from './ctSongSelect.js';
-import type { CtArrangementFile, CtSong } from './ctTypes.js';
+import type { CtArrangementFile } from './ctTypes.js';
 import {
   versionSlug,
   versionNameOf,
   versionFileName,
-  isVersionFile,
   isOriginalChordpro,
-  documentsOf,
   arrangementFileEntries,
   safeFileName,
 } from './arrangementFiles.js';
 import { metaValue } from './chordproMeta.js';
-import { setlistFingerprint, agendaSignatureList, diffAgendaItems } from './agendaDiff.js';
-import { isHeaderType, formatBerlinTime, responsibleEntries } from './agendaFormat.js';
+import { setlistFingerprint, agendaSignatureList, fingerprintAusText } from './agendaDiff.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import { isoTag, tagAusIso } from '../utils/isoTag.js';
-import { mapEventToService } from '../utils/mapEvent.js';
+import { config } from '../config.js';
+import {
+  ablaufPunkte,
+  liedBibliothek,
+  liedBlatt,
+  skipMissingAgenda,
+  termineMitAblauf,
+  type CtLeser,
+} from '@shared/ct/setlistKern';
 
 /**
- * Beim Sammeln über viele Termine ist ein fehlender Ablaufplan (404) normal und wird still
- * übersprungen. Ein anderer Fehler (CT-500, Netz-Aussetzer) darf NICHT unbemerkt Termine aus der
- * Liste/Statistik fallen lassen – daher einmal pro Vorkommen warnen.
+ * Der Server-`CtLeser` für den geteilten Aufbau (`@shared/ct/setlistKern`, #335): dieselben Regeln wie
+ * in der Extension, nur mit dem Cookie der Sitzung und den Zwischenspeichern des Servers.
  */
-function skipMissingAgenda(context: string, e: unknown): void {
-  if (e instanceof HttpError && e.status === 404) return; // kein Ablaufplan – erwartet
-  console.warn(`${context}: Ablauf-Abruf fehlgeschlagen (Termin übersprungen):`, e);
+function leserFuer(cookie: string, account = ''): CtLeser {
+  return {
+    events: (from, to) => getEvents(cookie, from, to),
+    agenda: (eventId) => getAgenda(cookie, eventId),
+    song: (songId) => getSong(cookie, songId),
+    alleLieder: () => getAllSongs(cookie),
+    untertitel: (calendarId, appointmentId) =>
+      getAppointmentSubtitle(cookie, calendarId, appointmentId, account),
+    dateiText: (fileUrl) => downloadFileText(cookie, fileUrl),
+    fehler: (status, meldung) => new HttpError(status, meldung),
+    zeitzone: config.zeitzone,
+  };
 }
 
 /** Fingerabdruck der aktuellen Setlist eines Termins (leichter Abruf, ohne ChordPro zu laden). */
@@ -75,7 +85,7 @@ export async function getSetlistState(
 /**
  * Gottesdienste im Zeitfenster, die einen Ablaufplan haben (mit Song-Anzahl). Liefert je Termin
  * zusätzlich den Setlist-Fingerabdruck (#143), damit der Controller das „geändert"-Badge je Konto
- * bestimmen kann.
+ * bestimmen kann. Der Aufbau liegt in `@shared/ct/setlistKern` (#335).
  */
 export async function getServicesWithSetlists(
   cookie: string,
@@ -84,130 +94,8 @@ export async function getServicesWithSetlists(
   /** Konto-Kennung (`accountKey`) – nur für das Untertitel-Memo, das je Konto trennt (#199/#306). */
   account: string,
 ): Promise<{ service: Service; hash: string }[]> {
-  const events = await getEvents(cookie, from, to);
-  // mapLimit liefert in Fertigstellungs-Reihenfolge → Start-Zeitpunkt (ISO inkl. Uhrzeit)
-  // mitführen und am Ende danach sortieren (sonst stehen gleich-tägige Events falsch).
-  const rows: { service: Service; hash: string; start: string }[] = [];
-  // Max. 8 Events gleichzeitig (je 2 CT-Abrufe) – schont die ChurchTools-API.
-  await mapLimit(events, 8, async (ev) => {
-    try {
-      const calId = ev.calendar?.domainIdentifier;
-      // Agenda + Termin-Untertitel parallel laden.
-      const [agenda, subtitle] = await Promise.all([
-        getAgenda(cookie, ev.id),
-        calId && ev.appointmentId
-          ? getAppointmentSubtitle(cookie, calId, ev.appointmentId, account)
-          : Promise.resolve(null),
-      ]);
-      const items = agenda.items ?? [];
-      const songCount = items.filter((i) => i.song).length;
-      // Sichtbar, sobald ein Ablaufplan existiert – auch ohne Lieder.
-      rows.push({
-        service: mapEventToService(ev, songCount, subtitle),
-        hash: setlistFingerprint(items),
-        start: ev.startDate,
-      });
-    } catch (e) {
-      skipMissingAgenda('getServicesWithSetlist', e);
-    }
-  });
-  return rows
-    .sort((a, b) => a.start.localeCompare(b.start))
-    .map((r) => ({ service: r.service, hash: r.hash }));
-}
-
-/**
- * Baut einen einzelnen SetlistSong aus dem Agenda-Song-Eintrag (lädt Datei + Details).
- * `preloadedSong` vermeidet einen erneuten getSong-Abruf, wenn der Song schon vorliegt.
- */
-async function buildSong(
-  cookie: string,
-  agendaSong: CtAgendaSong,
-  preloadedSong?: CtSong,
-): Promise<SetlistSong> {
-  const song = preloadedSong ?? (await getSong(cookie, agendaSong.songId));
-  const arr =
-    song.arrangements.find((a) => a.id === agendaSong.arrangementId) ?? song.arrangements[0];
-
-  const originalFile = arr?.files.find(isOriginalChordpro);
-  const versionFiles = (arr?.files ?? []).filter(isVersionFile);
-
-  /**
-   * Lädt eine Akkord-Datei und sagt, OB der Fehlschlag vorübergehend war (#274).
-   *
-   * Vorher gab jeder Fehler schlicht `''` zurück – eine Zeitüberschreitung wurde damit zu einem
-   * **leeren Lied**: leeres Blatt ohne ein Wort, und in der Sammel-PDF fiel das Lied ganz heraus
-   * (`Setlist.tsx` filtert leere Texte). Ein Absturz des ganzen Ablaufs wäre die falsche Antwort –
-   * dann sähe man auch die anderen Lieder nicht. Deshalb wird der Fehlschlag am Lied vermerkt.
-   *
-   * `404` zählt NICHT als Fehlschlag: Dann ist die Datei in ChurchTools wirklich weg und leer ist
-   * die Wahrheit (`fileDownloadError` unterscheidet das seit #274).
-   */
-  const download = async (f?: CtArrangementFile): Promise<{ text: string; failed: boolean }> => {
-    if (!f) return { text: '', failed: false };
-    try {
-      return { text: await downloadFileText(cookie, f.fileUrl), failed: false };
-    } catch (e) {
-      if (e instanceof HttpError && e.status === 404) return { text: '', failed: false };
-      console.warn(
-        `[setlist] Akkord-Datei von Lied ${agendaSong.songId} nicht ladbar:`,
-        e instanceof Error ? e.message : e,
-      );
-      return { text: '', failed: true };
-    }
-  };
-  // Original + alle benannten Versionen parallel laden
-  const [original, ...versionResults] = await Promise.all([
-    download(originalFile),
-    ...versionFiles.map((f) => download(f)),
-  ]);
-  const chordpro = original.text;
-  const chordproFailed = original.failed || versionResults.some((r) => r.failed);
-  const versions: SongVersion[] = versionFiles.map((f, i) => {
-    const name = versionNameOf(f) ?? 'Version';
-    const text = versionResults[i]?.text ?? '';
-    // Die Tonart der VERSION – dieselbe Regel wie für das Original weiter unten: Die Datei hat das
-    // letzte Wort (#236). Ohne eigene Zeile bleibt `null`, und die App nimmt die des Originals (#398).
-    return { key: versionSlug(name), name, text, writtenKey: metaValue(text, 'key') };
-  });
-
-  // Kopfangaben aus dem Original ableiten (sonst erste Version, falls kein Original existiert)
-  const source = chordpro || versions[0]?.text || '';
-  const originalKey =
-    metaValue(source, 'key') ?? arr?.keyOfArrangement ?? arr?.key ?? agendaSong.key ?? 'C';
-  const targetKey = agendaSong.key ?? arr?.key ?? originalKey;
-  const timeSig = metaValue(source, 'time') ?? arr?.beat ?? null;
-
-  return {
-    id: agendaSong.songId,
-    /**
-     * Die ID des WIRKLICH benutzten Arrangements, nicht die aus dem Ablaufpunkt.
-     *
-     * Beides fällt normalerweise zusammen. Zeigt der Ablaufpunkt aber auf ein Arrangement, das es in
-     * ChurchTools nicht mehr gibt, fällt `arr` oben auf das erste zurück – der Inhalt käme dann von
-     * einem anderen Arrangement, als die ID behauptet. Bis #320 war das kosmetisch; seit die
-     * Anmerkungs-Schlüssel die ID tragen, lägen die Notizen unter einer Nummer, die zum gezeigten
-     * Blatt nicht passt.
-     */
-    arrangementId: arr?.id ?? agendaSong.arrangementId,
-    arrangementName: arr?.name ?? agendaSong.arrangement ?? '',
-    arrangementCount: song.arrangements.length,
-    // `{title}`/`{artist}` aus der Datei gehen vor – genau wie Tonart und Taktart darüber (#236).
-    // Wirkt damit in Kopfzeile, Ablaufplan, Blatt und PDF. Die Bibliothek „Alle Lieder" bleibt
-    // beim ChurchTools-Namen: `getSongLibrary` hat keinen ChordPro-Text (siehe Kommentar dort).
-    title: metaValue(source, 'title') ?? (agendaSong.title || song.name),
-    author: metaValue(source, 'artist') ?? song.author ?? '',
-    originalKey,
-    targetKey,
-    bpm: alsTempoZahl(agendaSong.bpm ?? arr?.bpm),
-    timeSig,
-    ccli: song.ccli ?? null,
-    chordpro,
-    // Nur setzen, wenn wirklich etwas schiefging – so bleibt die Antwort für den Normalfall gleich.
-    ...(chordproFailed ? { chordproFailed: true } : {}),
-    versions,
-    documents: arr ? documentsOf(arr.files) : [],
-  };
+  const rows = await termineMitAblauf(leserFuer(cookie, account), from, to);
+  return rows.map((r) => ({ service: r.service, hash: fingerprintAusText(r.fingerprintText) }));
 }
 
 /** Findet die ChurchTools-fileUrl einer Datei (per Datei-ID) zum Durchreichen. */
@@ -488,122 +376,31 @@ function bailOut(e: unknown, geplant: number, started: number): Record<number, S
   throw new CtOverloadedError(retryAfterMs);
 }
 
-/**
- * Liefert alle Lieder (Standard-Arrangement), alphabetisch. Statistik wird separat geladen.
- *
- * Bewusst der **ChurchTools-Name**, nicht `{title}` aus der Datei (#236): Hier liegt kein
- * ChordPro-Text vor, und ihn zu beschaffen hieße, beim Öffnen der Liste jede Lieddatei einzeln
- * herunterzuladen. In Ablaufplan, Kopfzeile und auf dem Blatt gilt dagegen `{title}`.
- */
-export async function getSongLibrary(cookie: string): Promise<SongLibraryEntry[]> {
-  const songs = await getAllSongs(cookie);
-  return songs
-    .map((s) => {
-      const arr = s.arrangements.find((a) => a.isDefault) ?? s.arrangements[0];
-      if (!arr) return null;
-      return {
-        songId: s.id,
-        name: s.name,
-        author: s.author ?? null,
-        // Leer in ChurchTools kommt als `null` oder `""` – beides heißt „keine Nummer" (#378).
-        ccli: s.ccli ? String(s.ccli) : null,
-        key: arr.keyOfArrangement ?? arr.key ?? null,
-        arrangementId: arr.id,
-      };
-    })
-    .filter((e): e is SongLibraryEntry => e !== null)
-    .sort((a, b) => a.name.localeCompare(b.name, 'de'));
+/** Die Lieder für „Alle Lieder" – Regeln in `@shared/ct/setlistKern` (#335). */
+export function getSongLibrary(cookie: string): Promise<SongLibraryEntry[]> {
+  return liedBibliothek(leserFuer(cookie));
 }
 
 /** Baut die Chart-Daten eines einzelnen Lieds (für die „Alle Lieder"-Ansicht). */
-export async function getSongChart(
+export function getSongChart(
   cookie: string,
   songId: number,
   arrangementId?: number,
 ): Promise<SetlistSong> {
-  const song = await getSong(cookie, songId);
-  const arr =
-    (arrangementId && song.arrangements.find((a) => a.id === arrangementId)) ||
-    song.arrangements.find((a) => a.isDefault) ||
-    song.arrangements[0];
-  if (!arr) throw new HttpError(404, 'Kein Arrangement für dieses Lied gefunden.');
-  // `song` direkt durchreichen → kein zweiter getSong-Abruf in buildSong.
-  return buildSong(
-    cookie,
-    {
-      songId,
-      arrangementId: arr.id,
-      title: song.name,
-      arrangement: arr.name,
-      key: arr.keyOfArrangement ?? arr.key ?? null,
-      bpm: alsTempoZahl(arr.bpm),
-    },
-    song,
-  );
+  return liedBlatt(leserFuer(cookie), songId, arrangementId);
 }
 
 /**
  * Alle Punkte eines Ablaufplans in Reihenfolge – Lieder aufgelöst, übrige nur als Eintrag.
  * `prevSigs` (zuletzt gesehener Stand, #161): ist es gesetzt, bekommt jeder geänderte/neue/
- * verschobene Punkt `changed: true` – die Grundlage fürs Aufleuchten im Client.
+ * verschobene Punkt `changed: true`. Der Aufbau liegt in `@shared/ct/setlistKern` (#335).
  */
-export async function getAgendaItems(
+export function getAgendaItems(
   cookie: string,
   eventId: number,
   prevSigs?: { id: number; sig: string; title?: string }[],
 ): Promise<AgendaItem[]> {
-  const agenda = await getAgenda(cookie, eventId);
-  const items = agenda.items ?? [];
-  const diff = prevSigs ? diffAgendaItems(prevSigs, agendaSignatureList(items)) : null;
-  const changedIds = diff ? new Set(diff.changedIds) : null;
-  const built = await Promise.all(
-    items.map(async (item): Promise<AgendaItem> => {
-      const song = item.song ? await buildSong(cookie, item.song) : null;
-      const durationSec = item.duration ?? 0;
-      // Uhrzeit MASSGEBLICH aus startTimes[eventId]: ist der Eintrag null, hat der Nutzer die
-      // Uhrzeit in ChurchTools ausgeblendet (Auge) → keine Zeit anzeigen. Das Feld `start` bleibt
-      // auch dann gefüllt und ist daher unbrauchbar. Fallback auf `start`, falls startTimes fehlt.
-      const stEntry = item.startTimes ? item.startTimes[String(eventId)] : undefined;
-      const timeSource = stEntry === undefined ? item.start : stEntry;
-      return {
-        id: item.id,
-        title: item.title,
-        type: item.type ?? null,
-        isHeader: isHeaderType(item.type),
-        responsible: responsibleEntries(item),
-        responsibleText: item.responsible?.text ?? '',
-        song,
-        time: formatBerlinTime(timeSource),
-        vorBeginn: item.isBeforeEvent ?? false,
-        durationMin: durationSec > 0 ? Math.round(durationSec / 60) : null,
-        note: item.note ?? '',
-        changed: changedIds ? changedIds.has(item.id) : undefined,
-      };
-    }),
-  );
-  // Entfernte Punkte (Etappe B) als Platzhalter an ihrer alten Position einblenden – der Client
-  // lässt sie auflösen. Ohne Diff (nie gesehen) gibt es keine.
-  if (!diff || diff.removed.length === 0) return built;
-  const result = [...built];
-  for (const r of diff.removed) {
-    const placeholder: AgendaItem = {
-      id: r.id,
-      title: r.title,
-      type: null,
-      isHeader: false,
-      responsible: [],
-      responsibleText: '',
-      song: null,
-      time: null,
-      vorBeginn: false,
-      durationMin: null,
-      note: '',
-      removed: true,
-    };
-    const at = r.afterId == null ? 0 : result.findIndex((it) => it.id === r.afterId) + 1;
-    result.splice(at, 0, placeholder);
-  }
-  return result;
+  return ablaufPunkte(leserFuer(cookie), eventId, prevSigs);
 }
 
 /**

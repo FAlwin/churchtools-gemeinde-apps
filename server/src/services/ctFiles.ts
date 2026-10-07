@@ -51,11 +51,8 @@ export async function downloadFileText(cookie: string, fileUrl: string): Promise
   }
 }
 
-/** Extrahiert die Datei-ID aus einer ChurchTools-fileUrl (…&id=213&…). */
-export function fileIdFromUrl(fileUrl: string): number | null {
-  const m = fileUrl.match(/[?&]id=(\d+)/);
-  return m ? Number(m[1]) : null;
-}
+// Die Datei-ID einer fileUrl – Regel in `@shared/ct/arrangementFiles` (#335).
+export { fileIdFromUrl } from '@shared/ct/arrangementFiles';
 
 /** Lädt eine Datei als Bytes + Content-Type (zum Durchreichen an den Client). */
 export async function fetchFileBytes(

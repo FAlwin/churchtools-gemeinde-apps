@@ -1,0 +1,254 @@
+/**
+ * Die Rohdaten-Typen von ChurchTools – **nur Typen, kein Verhalten** (#280).
+ *
+ * Bewusst ohne jeden Import: Dieses Modul ist die Wurzel des Abhängigkeits-Baums. Solange hier nichts
+ * hineinzeigt, kann auch kein Import-Zirkel entstehen – genau der Fallstrick, der `agendaPayload.ts`
+ * (#212) schon einmal zu einem eigenen Modul gemacht hat.
+ *
+ * Es sind die Formen, die ChurchTools LIEFERT. Was die App daraus macht, steht in `@shared/types`.
+ */
+
+export interface ChurchToolsUser {
+  id: number;
+  firstName: string;
+  lastName: string;
+}
+
+// ── Rohdaten-Typen (Ausschnitt der ChurchTools-Antworten) ──
+export interface CtEvent {
+  id: number;
+  name: string;
+  startDate: string;
+  endDate: string;
+  /** ID des zugehörigen Kalender-Termins (für den Untertitel) */
+  appointmentId?: number;
+  calendar?: { title?: string; domainIdentifier?: string };
+}
+
+/**
+ * Abwesenheit aus `GET /api/persons/{id}/absences` (#177; Felder am 16.07.2026 verifiziert).
+ * `startTime`/`endTime` null = ganztägig. `comment` trägt bei unseren Einträgen den Marker.
+ */
+export interface CtAbsence {
+  id: number;
+  startDate: string;
+  endDate: string;
+  startTime?: string | null;
+  endTime?: string | null;
+  comment?: string | null;
+  absenceReason?: { id?: number | string; name?: string | null } | null;
+}
+
+export interface CtAgendaSong {
+  songId: number;
+  arrangementId: number;
+  title: string;
+  arrangement: string;
+  key: string | null;
+  bpm: number | null;
+}
+
+/** Ein Ablauf, wie `GET /api/events/{id}/agenda` ihn liefert – nur die Felder, die die App nutzt. */
+export interface CtAgenda {
+  items: CtAgendaItem[];
+  /**
+   * Die Grenze „Beginn der Veranstaltung" (#423): Punkte mit `position` darunter sind Vorlauf und
+   * werden rückwärts ab Veranstaltungsbeginn gerechnet. Eine Platznummer, kein Punkt – beim
+   * Umsortieren bleibt sie stehen.
+   */
+  eventStartPosition?: number;
+  /** Pflichtfeld beim Schreiben des Ablaufs (`PUT …/agenda`). */
+  calendarId?: number;
+}
+
+export interface CtAgendaItem {
+  id: number;
+  title: string;
+  type?: string;
+  note?: string;
+  /** Dauer des Punkts in Sekunden (CT-Rohwert). */
+  duration?: number;
+  /** Von ChurchTools berechnete absolute Startzeit (ISO-8601, UTC) – null wenn keine. */
+  start?: string | null;
+  /**
+   * Startzeit je Event-ID. MASSGEBLICH für „Uhrzeit ausgeblendet": ist `startTimes[eventId]`
+   * `null`, hat der Nutzer die Uhrzeit dieses Punkts in ChurchTools ausgeblendet (durchgestrichenes
+   * Auge) – das Feld `start` bleibt davon unberührt und ist daher NICHT verlässlich.
+   */
+  startTimes?: Record<string, string | null>;
+  /**
+   * Läuft der Punkt VOR dem Beginn der Veranstaltung (Vorlauf, #423)? **Nur lesen:** ChurchTools
+   * leitet das Feld aus `eventStartPosition` am Ablauf ab; pro Punkt geschrieben wird es ignoriert
+   * (gemessen an der Test-Instanz, 05.10.2026).
+   */
+  isBeforeEvent?: boolean;
+  /** Beim Lesen ein Objekt; beim Schreiben wird nur `text` als String gesendet. */
+  responsible?: { text?: string; persons?: { service?: string; person?: { title?: string } }[] };
+  position?: number;
+  song?: CtAgendaSong;
+}
+
+export interface CtArrangementFile {
+  name: string;
+  fileUrl: string;
+  /**
+   * Größe in Bytes – **optional und notfalls als Zeichenkette** (#321).
+   *
+   * ChurchTools liefert Zahlen je nach Endpunkt als Zahl ODER als Text; bei `bpm` ist genau das
+   * schon aufgefallen (siehe `CtArrangement`). Wer hier `number` annimmt, rechnet irgendwann mit
+   * `"12345"`. Auswertung deshalb nur über `arrangementFileEntries`.
+   */
+  size?: number | string | null;
+}
+
+/**
+ * **Die eine Tempo-Umrechnung** für ChurchTools-Arrangements.
+ *
+ * ChurchTools liefert das Tempo je nach Endpunkt als Zahl ODER als Zeichenkette (`"120"`), manchmal
+ * als leere Zeichenkette. `Number('')` ist aber `0`, und `0` heißt für den Tempo-Puls „tempolos" –
+ * er wäre schlicht nicht erschienen (#145).
+ *
+ * Bis zum 21.09.2026 stand diese Rechnung an **drei** Stellen (`setlistBuilder`, die Arrangement-
+ * Ansicht und der Schreib-Payload). Nachgemessen im Code-Check: Aus `"abc"` machte der
+ * **Schreib-Payload** ein `NaN` – über JSON ein `null`, also ein für das ganze Team gelöschtes
+ * Tempo. Die Ansicht hatte dieselbe fehlerhafte Kopie, fing sie aber sechs Zeilen weiter mit einem
+ * zweiten `Number.isFinite` wieder auf; `setlistBuilder` rechnete von Anfang an richtig. Genau so
+ * sieht diese Fehlerklasse aus: dieselbe Regel dreimal, an einer Stelle falsch, an einer zweiten
+ * zufällig abgefangen. Sie steht deshalb jetzt hier, bei dem Typ, dessen Eigenheit sie ausbügelt.
+ */
+export function alsTempoZahl(wert: number | string | null | undefined): number | null {
+  if (typeof wert === 'number') return Number.isFinite(wert) ? wert : null;
+  if (typeof wert === 'string') {
+    const n = Number(wert.trim());
+    return wert.trim() !== '' && Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+/** Das Tempo eines Arrangements: `tempo` (beschreibbar) schlägt `bpm` (abgeleitet). */
+export function arrangementTempo(arr: Pick<CtArrangement, 'tempo' | 'bpm'>): number | null {
+  return alsTempoZahl(arr.tempo ?? arr.bpm);
+}
+
+export interface CtArrangement {
+  id: number;
+  name: string;
+  key: string | null;
+  keyOfArrangement: string | null;
+  /**
+   * Tempo als ABGELEITETER Wert – ChurchTools liefert es je nach Endpunkt als Zahl ODER als
+   * Zeichenkette (`"120"`), und es ist **nicht beschreibbar**. Geschrieben wird `tempo`.
+   */
+  bpm: number | string | null;
+  beat: string | null;
+  isDefault?: boolean;
+  files: CtArrangementFile[];
+
+  // ── Felder, die beim SCHREIBEN erhalten bleiben müssen ──────────────────────────────
+  // `PUT` auf ein Arrangement ersetzt den ganzen Datensatz: Alles, was nicht mitgeschickt wird,
+  // ist danach `null`. An der Test-Instanz gemessen (08.08.2026) löschte ein `PUT { name, bpm }`
+  // Tonart, zweite Tonart und Dauer in einem Zug. Sie stehen deshalb hier – nicht weil die App sie
+  // anzeigt, sondern weil sie sie zurückschreiben MUSS. Siehe `arrangementPayload.ts`.
+  /** Das beschreibbare Tempo (Zahl). */
+  tempo?: number | null;
+  duration?: number | null;
+  description?: string | null;
+  /**
+   * ChurchTools' **alter Name für `description`** – dasselbe Feld, nicht ein zweites (gemessen
+   * 20.09.2026: Wer beides schickt, bekommt nur `description` zurück). Steht hier nur noch, um einen
+   * Bestand zu lesen, den ChurchTools unter diesem Namen herausgibt; geschrieben wird es nicht mehr
+   * (siehe `arrangementPayload.ts`).
+   */
+  note?: string | null;
+
+  // ── Quelle und Liednummer (#396) ────────────────────────────────────────────────────
+  /**
+   * Die Quelle (Liederbuch) beim **Lesen** – ein Objekt. Beim **Schreiben** heißt das Feld
+   * `sourceId` und ist eine Zahl; die Umrechnung macht `arrangementWritePayload`.
+   */
+  source?: { id: number; name?: string; shorty?: string } | null;
+  /** Die Quellen-ID, wie manche Antworten sie zusätzlich flach mitliefern. */
+  sourceId?: number | null;
+  /** Die Liednummer in der Quelle – Text, nicht Zahl (Liederbücher haben „A12"). */
+  sourceReference?: string | null;
+  /** `@deprecated` von ChurchTools: liefert das **Kürzel** der Quelle, nicht den Namen. */
+  sourceName?: string | null;
+}
+
+/**
+ * Ein Lied, wie ChurchTools es liefert.
+ *
+ * **Die Felder unterhalb von `arrangements` stehen hier, weil das Ändern der Stammdaten sie braucht**
+ * (#322, Schritt 11): `PUT /api/songs/{id}` ersetzt den ganzen Datensatz, deshalb muss der
+ * Ist-Zustand vollständig gelesen werden, bevor etwas darüber gelegt wird. Gemessen an der
+ * ChurchTools-Test-Instanz (13.08.2026) liefert `GET /api/songs/{id}`: `id`, `name`, `category`,
+ * `author`, `copyright`, `ccli`, `shouldPractice`, `arrangements`, `meta`, `note`.
+ *
+ * `category` ist beim **Lesen** ein Objekt, beim **Schreiben** heißt das Feld `categoryId` – die
+ * Umrechnung macht `songWritePayload`, damit sie nicht an mehreren Stellen entsteht.
+ *
+ * `note` fehlt hier mit Absicht: ChurchTools markiert es am Lied als `@deprecated` und **speichert es
+ * weder beim Anlegen noch beim Ändern** (beides gemessen). Ein Feld, das nichts behält, gehört in
+ * keinen Payload und in kein Formular.
+ */
+export interface CtSong {
+  id: number;
+  name: string;
+  author: string | null;
+  ccli: string | null;
+  copyright?: string | null;
+  category?: CtSongCategory | null;
+  /** ChurchTools-Kennzeichen „sollte geübt werden" – wird beim Schreiben mitgeführt, nicht angezeigt. */
+  shouldPractice?: boolean;
+  arrangements: CtArrangement[];
+}
+
+export interface CtService {
+  id: number;
+  name: string;
+  sortKey?: number;
+}
+
+/**
+ * Die Kategorie, wie ChurchTools sie an einem Lied mitliefert (#322).
+ *
+ * Gemessen am 11.08.2026 (`probe-songmgmt.ts`): Sie steckt **vollständig** in jedem Lied der Liste –
+ * `{id, name, nameTranslated, sortKey, campusId}`. Wir lesen nur die zwei Felder, die wir brauchen;
+ * ein eigener Endpunkt für Kategorien existiert nicht (fünf Pfade geprüft, alle 404).
+ */
+export interface CtSongCategory {
+  id: number;
+  name: string;
+}
+
+export interface CtSongListEntry {
+  id: number;
+  name: string;
+  author: string | null;
+  /**
+   * **Zeichenkette, nicht Zahl** – gemessen `"5841527"`.
+   *
+   * Wichtig für die Doppel-Erkennung beim Anlegen (#322): Verglichen wird getrimmter Text. Als Zahl
+   * gelesen verlöre eine Nummer mit führender Null ihre Identität, und `Number('')` wäre `0` – also
+   * genau ein falscher Treffer bei jedem Lied ohne Nummer.
+   */
+  ccli?: string | null;
+  /** Fehlt bei einem Lied ohne Kategorie – die Zuordnung ist in ChurchTools nicht erzwungen. */
+  category?: CtSongCategory | null;
+  arrangements: {
+    id: number;
+    name: string;
+    key: string | null;
+    keyOfArrangement: string | null;
+    isDefault?: boolean;
+    bpm?: number | null;
+    /**
+     * Die Dateien des Arrangements – **kommen in der Liste mit** (gemessen 13.08.2026).
+     *
+     * Gebraucht vom Suchindex über die Liedtexte (#322): Er findet so das Original-ChordPro jedes
+     * Liedes, ohne je Lied zusätzlich das Arrangement abzurufen. Das wären ~50 Anfragen mehr – genau
+     * die Sorte Last, die in #300 die Drosselung ausgelöst hat.
+     */
+    files?: { name: string; fileUrl: string }[];
+  }[];
+}

@@ -273,8 +273,8 @@ Werbeton, mit Verweis darauf, dass es die App auch mit eigenem Server gibt und w
    entschieden werden – die NAS-App läuft weiter –, kommt aber am Ende auf den Tisch.
 4. **Zwei Datenwelten.** Anmerkungen der Extension liegen in ChurchTools, die der PWA auf dem NAS.
    Es wird **nichts migriert**. Wer wechselt, fängt bei den Anmerkungen neu an. Bewusst so.
-5. **Doppelte Arbeit mit bwl21.** Er baut parallel. Der Plan gehört ihm geschickt, bevor Phase 3
-   beginnt.
+5. **Doppelte Arbeit mit bwl21.** Er baut parallel. **Entschieden (Alwin, 07.10.2026):** Wir schicken
+   den Plan nicht vorab, sondern bauen unsere Fassung fertig und zeigen sie ihm danach.
 
 ## 8. Verifikation
 

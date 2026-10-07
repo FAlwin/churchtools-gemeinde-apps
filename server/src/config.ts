@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { STANDARD_ADMIN_RECHT } from '@shared/ct/rechte';
 
 /**
  * Zentrale, validierte Konfiguration aus Umgebungsvariablen.
@@ -128,7 +129,7 @@ export const config = {
    * Branding-Einstellungen). Form `modul:recht`. Default deckt Voll-Admins ab;
    * je nach Instanz ggf. anpassen.
    */
-  adminPermission: process.env.ADMIN_PERMISSION ?? 'churchcore:administer persons',
+  adminPermission: process.env.ADMIN_PERMISSION ?? STANDARD_ADMIN_RECHT,
   get isProduction() {
     return this.nodeEnv === 'production';
   },

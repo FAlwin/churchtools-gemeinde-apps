@@ -32,6 +32,7 @@ import {
   versionFileName,
   isOriginalChordpro,
   arrangementFileEntries,
+  dateiUrlFinden,
   safeFileName,
 } from './arrangementFiles.js';
 import { metaValue } from './chordproMeta.js';
@@ -62,6 +63,7 @@ function leserFuer(cookie: string, account = ''): CtLeser {
       getAppointmentSubtitle(cookie, calendarId, appointmentId, account),
     dateiText: (fileUrl) => downloadFileText(cookie, fileUrl),
     fehler: (status, meldung) => new HttpError(status, meldung),
+    istUeberlastet: isCtOverloaded,
     zeitzone: config.zeitzone,
   };
 }
@@ -98,18 +100,15 @@ export async function getServicesWithSetlists(
   return rows.map((r) => ({ service: r.service, hash: fingerprintAusText(r.fingerprintText) }));
 }
 
-/** Findet die ChurchTools-fileUrl einer Datei (per Datei-ID) zum Durchreichen. */
+/** Findet die ChurchTools-fileUrl einer Datei (per Datei-ID) zum Durchreichen – oder 404. */
 export async function resolveFileUrl(
   cookie: string,
   songId: number,
   fileId: number,
 ): Promise<string> {
-  const song = await getSong(cookie, songId);
-  for (const arr of song.arrangements) {
-    const f = arr.files.find((x) => fileIdFromUrl(x.fileUrl) === fileId);
-    if (f) return f.fileUrl;
-  }
-  throw new HttpError(404, 'Datei nicht gefunden.');
+  const url = dateiUrlFinden(await getSong(cookie, songId), fileId);
+  if (!url) throw new HttpError(404, 'Datei nicht gefunden.');
+  return url;
 }
 
 /** Lädt das Arrangement + listet die vorhandenen Versionen (mit Datei + Slug). */

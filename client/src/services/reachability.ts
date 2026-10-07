@@ -6,6 +6,7 @@
  * Server ist erreichbar. `apiFetch` meldet beides hierher; die Oberfläche liest es über useOnlineStatus.
  */
 import { BASE } from './apiBase';
+import { ctBasis, istExtension } from './modus';
 
 let reachable = true;
 const listeners = new Set<(v: boolean) => void>();
@@ -42,7 +43,10 @@ export function probeReachable(): Promise<boolean> {
   if (probing) return probing;
   probing = (async () => {
     try {
-      const res = await fetch(`${BASE}/api/health`, { cache: 'no-store' });
+      // Extension (#335): Es gibt keinen eigenen Server – gefragt wird ChurchTools selbst, über den
+      // billigsten Endpunkt ohne Anmeldung (`/api/info`, gemessen 07.10.2026).
+      const adresse = istExtension ? `${ctBasis()}/api/info` : `${BASE}/api/health`;
+      const res = await fetch(adresse, { cache: 'no-store' });
       // Jede Antwort heißt „Server erreichbar" – außer den Vorschalt-Fehlern des Reverse-Proxys,
       // die genau wie in `apiFetch` als „unser Backend fehlt" gelten.
       const ok = ![502, 503, 504].includes(res.status);

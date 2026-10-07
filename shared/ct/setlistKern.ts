@@ -14,9 +14,11 @@ import type {
   AgendaItem,
   Service,
   SetlistSong,
+  SongArrangementOption,
   SongLibraryEntry,
   SongVersion,
 } from '../types/index';
+import { isoTag } from './zeit';
 import { agendaSignatureList, diffAgendaItems, fingerprintRohtext } from './agendaDiff';
 import { formatBerlinTime, isHeaderType, responsibleEntries } from './agendaFormat';
 import {
@@ -35,6 +37,7 @@ import {
   type CtAgendaSong,
   type CtArrangementFile,
   type CtEvent,
+  type CtService,
   type CtSong,
   type CtSongListEntry,
 } from './typen';
@@ -56,8 +59,51 @@ export interface CtLeser {
   dateiText(fileUrl: string): Promise<string>;
   /** Einen Fehler mit Status erzeugen – in der Fehlerklasse des Aufrufers. */
   fehler(status: number, meldung: string): Error;
+  /** Heißt der Fehler „ChurchTools kann gerade nicht mehr" (429, Zeitüberschreitung, #300)? */
+  istUeberlastet(e: unknown): boolean;
   /** Zeitzone der Gemeinde (#414). */
   zeitzone: string;
+}
+
+/** Standard-Zeitfenster der Terminliste: 1 Woche zurück bis 6 Wochen voraus. */
+export function standardFenster(jetzt: Date = new Date()): { from: string; to: string } {
+  return {
+    from: isoTag(new Date(jetzt.getTime() - 7 * 86400000)),
+    to: isoTag(new Date(jetzt.getTime() + 42 * 86400000)),
+  };
+}
+
+/**
+ * „Geändert"-Punkt je Konto (#143): mit dem zuletzt gesehenen Fingerabdruck vergleichen. Ohne
+ * gemerkten Stand (nie geöffnet) gilt ein Termin NICHT als geändert – kein Fehlalarm bei Erstnutzung.
+ */
+export function setlistGeaendert(gesehen: { hash: string } | undefined, hash: string): boolean {
+  return gesehen != null && gesehen.hash !== hash;
+}
+
+/** Die Arrangements eines Lieds als Auswahl (für „Zu Ablauf hinzufügen"). */
+export function arrangementOptionen(song: CtSong): SongArrangementOption[] {
+  return (song.arrangements ?? []).map((a) => ({
+    arrangementId: a.id,
+    arrangementName: a.name,
+    key: a.keyOfArrangement ?? a.key ?? null,
+  }));
+}
+
+/** Der Untertitel aus der Antwort von `GET /calendars/{id}/appointments/{id}` – leer zählt als keiner. */
+export function untertitelAus(data: {
+  appointment?: { subtitle?: string };
+  subtitle?: string;
+}): string | null {
+  const roh = data.appointment?.subtitle ?? data.subtitle ?? null;
+  return roh && roh.trim() ? roh.trim() : null;
+}
+
+/** ChurchTools-Dienste (Musik, Predigt …) für die Verantwortlich-Chips – sortiert wie in ChurchTools. */
+export function dienstReihenfolge(dienste: CtService[]): CtService[] {
+  return [...dienste].sort(
+    (a, b) => (a.sortKey ?? 0) - (b.sortKey ?? 0) || a.name.localeCompare(b.name, 'de'),
+  );
 }
 
 /** Trägt der Fehler den Status 404 (gibt es nicht)? */
@@ -78,6 +124,12 @@ export function skipMissingAgenda(context: string, e: unknown): void {
 /**
  * Gottesdienste im Zeitfenster, die einen Ablaufplan haben (mit Song-Anzahl). Liefert je Termin
  * zusätzlich den Text für den Setlist-Fingerabdruck (#143) – gehasht wird beim Aufrufer.
+ *
+ * **Bremst ChurchTools (429, Zeitüberschreitung), wirft der ganze Lauf** (#300, #335): Vorher wurde
+ * auch das als „Termin übersprungen" verbucht – die Liste kam dann lückenhaft zurück und galt als
+ * Wahrheit; Termine verschwanden, bis ChurchTools sich erholt hatte. Jetzt startet nach der ersten
+ * Drosselung keine weitere Anfrage, und der Aufrufer behält seinen letzten vollständigen Stand.
+ * „Vorübergehend ist nicht ungültig."
  */
 export async function termineMitAblauf(
   leser: CtLeser,
@@ -88,8 +140,10 @@ export async function termineMitAblauf(
   // mapLimit liefert in Fertigstellungs-Reihenfolge → Start-Zeitpunkt (ISO inkl. Uhrzeit)
   // mitführen und am Ende danach sortieren (sonst stehen gleich-tägige Events falsch).
   const rows: { service: Service; fingerprintText: string; start: string }[] = [];
+  let ueberlastung: unknown = null;
   // Max. 8 Events gleichzeitig (je 2 CT-Abrufe) – schont die ChurchTools-API.
   await mapLimit(events, 8, async (ev) => {
+    if (ueberlastung) return; // nach der ersten Drosselung keine weitere Anfrage
     try {
       const calId = ev.calendar?.domainIdentifier;
       // Agenda + Termin-Untertitel parallel laden.
@@ -108,9 +162,15 @@ export async function termineMitAblauf(
         start: ev.startDate,
       });
     } catch (e) {
-      skipMissingAgenda('getServicesWithSetlist', e);
+      if (leser.istUeberlastet(e)) ueberlastung ??= e;
+      else skipMissingAgenda('getServicesWithSetlist', e);
     }
   });
+  if (ueberlastung) {
+    throw ueberlastung instanceof Error
+      ? ueberlastung
+      : leser.fehler(503, 'ChurchTools bremst gerade (zu viele Anfragen).');
+  }
   return rows
     .sort((a, b) => a.start.localeCompare(b.start))
     .map((r) => ({ service: r.service, fingerprintText: r.fingerprintText }));

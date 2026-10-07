@@ -12,6 +12,22 @@
 import type { ArrangementFileEntry, ArrangementFileKind, SongDocument } from '../types/index';
 import type { CtArrangementFile } from './typen';
 
+/**
+ * Die fileUrl einer Datei (per Datei-ID) in irgendeinem Arrangement des Lieds – oder `null`.
+ * Gehört die Datei nicht zu diesem Lied, gibt es keine Adresse: Das ist die Sicherung dagegen, über
+ * eine bekannte Datei-ID beliebige fremde Dateien zu laden.
+ */
+export function dateiUrlFinden(
+  song: { arrangements: { files: CtArrangementFile[] }[] },
+  fileId: number,
+): string | null {
+  for (const arr of song.arrangements) {
+    const f = arr.files.find((x) => fileIdFromUrl(x.fileUrl) === fileId);
+    if (f) return f.fileUrl;
+  }
+  return null;
+}
+
 /** Extrahiert die Datei-ID aus einer ChurchTools-fileUrl (…&id=213&…). */
 export function fileIdFromUrl(fileUrl: string): number | null {
   const m = fileUrl.match(/[?&]id=(\d+)/);

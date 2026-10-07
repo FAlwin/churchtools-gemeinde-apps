@@ -17,3 +17,32 @@ export const MAX_FILE_BYTES = 50 * 1024 * 1024;
 
 /** Die Grenze in Worten – für Meldungen an den Nutzer, damit „52428800" nirgends auftaucht. */
 export const MAX_FILE_TEXT = '50 MB';
+
+/**
+ * Nur diese MIME-Typen werden 1:1 (inline) ausgeliefert. Alles andere reicht der Proxy als
+ * `application/octet-stream` mit `Content-Disposition: attachment` durch. Hintergrund (#138):
+ * Die Bytes kommen aus ChurchTools, wo jeder mit Upload-Recht (Musiker) eine Datei an ein
+ * Arrangement hängen kann. Würde der Content-Type ungefiltert übernommen, könnte eine HTML-/JS-
+ * Datei auf UNSERER Origin ausgeführt werden (in der Extension: auf der ChurchTools-Origin, #335) (Stored-XSS, umgeht die CSP über `'self'`). Die
+ * App braucht nur PDF + Rasterbilder + Klartext. **SVG bewusst NICHT gelistet** – es kann
+ * Skripte enthalten und würde als Bild auf der eigenen Origin rendern.
+ */
+const INLINE_SAFE_MIME = new Set([
+  'application/pdf',
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/gif',
+  'image/webp',
+  'text/plain',
+]);
+
+/** Rein & testbar: entscheidet über Content-Type + ob als Download (attachment) ausgeliefert wird. */
+export function sanitizeFileContentType(raw: string): {
+  contentType: string;
+  attachment: boolean;
+} {
+  const mime = raw.split(';')[0]?.trim().toLowerCase() ?? '';
+  if (INLINE_SAFE_MIME.has(mime)) return { contentType: raw, attachment: false };
+  return { contentType: 'application/octet-stream', attachment: true };
+}

@@ -49,7 +49,7 @@ export function Login({ onLogin, site, theme, offline = false }: LoginProps) {
       <div className={styles.wrap}>
         <img
           className={styles.logo}
-          src={theme === 'dark' ? '/logo-rund-dunkel.png' : '/logo-rund-hell.png'}
+          src={`${import.meta.env.BASE_URL}${theme === 'dark' ? 'logo-rund-dunkel.png' : 'logo-rund-hell.png'}`}
           alt={site.orgName}
         />
         <div className={styles.name}>{site.appName}</div>

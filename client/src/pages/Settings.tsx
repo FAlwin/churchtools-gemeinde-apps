@@ -75,7 +75,8 @@ export function Settings({
     error: sharingError,
     toggle: toggleSharing,
   } = useSharing(canUseGlobalNotes);
-  const logo = theme === 'dark' ? '/logo-rund-dunkel.png' : '/logo-rund-hell.png';
+  // An der Bau-Adresse statt an der Wurzel: In der Extension liegt die App unter /ccm/<Kürzel>/ (#335).
+  const logo = `${import.meta.env.BASE_URL}${theme === 'dark' ? 'logo-rund-dunkel.png' : 'logo-rund-hell.png'}`;
 
   return (
     <SeitenGeruest

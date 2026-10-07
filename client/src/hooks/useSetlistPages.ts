@@ -4,7 +4,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import '../pdfSetup';
 import type { SetlistSong } from '@shared/types/index';
 import type { SetlistPageOwner } from '../utils/chordPdf';
-import { fetchFileBytes } from '../services/fileDownload';
+import { ladeDokument } from '../services/fileDownload';
 import type { SongSettings } from '../utils/chartSettings';
 import { composeStream, docPagesToKeep, type StreamOwner } from '../utils/streamCompose';
 import { useLatestRef } from './useLatestRef';
@@ -26,12 +26,9 @@ interface Args {
 
 const RENDER_SCALE = 2;
 
-async function renderPdfToCanvases(
-  source: { data: ArrayBuffer } | { url: string },
-): Promise<HTMLCanvasElement[]> {
+async function renderPdfToCanvases(data: ArrayBuffer): Promise<HTMLCanvasElement[]> {
   // Dokumente IMMER komplett laden statt pdf.js selbst streamen zu lassen – Begründung in
   // `services/fileDownload.ts` (#32).
-  const data = 'data' in source ? source.data : await fetchFileBytes(source.url);
   const pdf = await pdfjsLib.getDocument({ data }).promise;
   const out: HTMLCanvasElement[] = [];
   for (let i = 1; i <= pdf.numPages; i++) {
@@ -46,14 +43,20 @@ async function renderPdfToCanvases(
   return out;
 }
 
-async function renderImageToCanvas(url: string): Promise<HTMLCanvasElement> {
+async function renderImageToCanvas(bytes: ArrayBuffer): Promise<HTMLCanvasElement> {
+  // Aus den geladenen Bytes statt über eine Adresse (#335): So kommt das Bild in beiden
+  // Auslieferungen über denselben Weg (`ladeDokument`), und die Seite muss nicht wissen, woher.
+  const url = URL.createObjectURL(new Blob([bytes]));
   const img = new Image();
-  img.crossOrigin = 'use-credentials';
-  await new Promise<void>((res, rej) => {
-    img.onload = () => res();
-    img.onerror = () => rej(new Error('Bild konnte nicht geladen werden'));
-    img.src = url;
-  });
+  try {
+    await new Promise<void>((res, rej) => {
+      img.onload = () => res();
+      img.onerror = () => rej(new Error('Bild konnte nicht geladen werden'));
+      img.src = url;
+    });
+  } finally {
+    URL.revokeObjectURL(url);
+  }
   const c = document.createElement('canvas');
   c.width = img.naturalWidth;
   c.height = img.naturalHeight;
@@ -103,7 +106,7 @@ export function useSetlistPages({ chordPdfData, chordOwners, songs, settings, on
 
     (async () => {
       // 1) Akkord-Seiten der kombinierten PDF rendern und je Lied gruppieren (Reihenfolge = localPage).
-      const chordCanvases = await renderPdfToCanvases({ data: chordPdfData.slice(0) });
+      const chordCanvases = await renderPdfToCanvases(chordPdfData.slice(0));
       if (cancelled) return;
       const chordBySong = new Map<number, { canvas: HTMLCanvasElement; versionKey: string }[]>();
       liveRef.current.chordOwners.forEach((o, i) => {
@@ -127,12 +130,12 @@ export function useSetlistPages({ chordPdfData, chordOwners, songs, settings, on
         if (vs === 'chords') continue;
         const docMatch = song.documents.find((d) => d.fileId === vs);
         if (!docMatch || docCache.current.has(docMatch.fileId)) continue;
-        const url = `/api/songs/${song.id}/files/${docMatch.fileId}`;
         try {
+          const bytes = await ladeDokument(song.id, docMatch.fileId);
           const canvases =
             docMatch.type === 'image'
-              ? [await renderImageToCanvas(url)]
-              : await renderPdfToCanvases({ url });
+              ? [await renderImageToCanvas(bytes)]
+              : await renderPdfToCanvases(bytes);
           if (cancelled) return;
           docCache.current.set(docMatch.fileId, canvases);
         } catch {

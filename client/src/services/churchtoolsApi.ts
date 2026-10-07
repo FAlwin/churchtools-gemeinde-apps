@@ -27,8 +27,15 @@ import type {
   UserCapabilities,
 } from '@shared/types/index';
 import { apiFetch, apiFetchBlob } from './api';
+import { istExtension, ohneServer } from './ctRuntime';
+import * as ext from './ctLesen';
+
+// Die Weiche zur ChurchTools-Extension (#335): Lesende Aufrufe gehen dort über `ctLesen.ts` direkt an
+// ChurchTools; was es dort (noch) nicht gibt, sagt `ohneServer`. Schreiben folgt mit Phase 3b, die
+// Massenläufe (Statistik, Liedtext-Suche) bleiben der Server-Variante vorbehalten (Plan §6).
 
 export function login(email: string, password: string): Promise<AuthStatus> {
+  if (istExtension) return ohneServer('Eine eigene Anmeldung');
   return apiFetch<AuthStatus>('/api/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
@@ -36,16 +43,20 @@ export function login(email: string, password: string): Promise<AuthStatus> {
 }
 
 export function logout(): Promise<AuthStatus> {
+  if (istExtension) return ohneServer('Ein eigenes Abmelden (bitte in ChurchTools abmelden)');
   return apiFetch<AuthStatus>('/api/auth/logout', { method: 'POST' });
 }
 
 export function getMe(): Promise<AuthStatus> {
+  if (istExtension) return ext.meinStatus();
   return apiFetch<AuthStatus>('/api/auth/me');
 }
 
 /** Rechte des angemeldeten Nutzers (steuert die sichtbare UI). */
 export async function getCapabilities(): Promise<UserCapabilities> {
-  const caps = await apiFetch<UserCapabilities>('/api/capabilities');
+  const caps = istExtension
+    ? await ext.meineRechte()
+    : await apiFetch<UserCapabilities>('/api/capabilities');
   // ChurchTools liefert sporadisch alle Rechte-Zuordnungen leer (Struktur da, Werte []), obwohl
   // der Nutzer Zugriff hat. Das als transienten Fehler werfen → useCapabilities versucht
   // automatisch neu; hält es an, zeigt App.tsx den Fehlerschirm mit „Erneut versuchen".
@@ -56,6 +67,7 @@ export async function getCapabilities(): Promise<UserCapabilities> {
 }
 
 export function getServices(range?: { from?: string; to?: string }): Promise<Service[]> {
+  if (istExtension) return ext.termine(range);
   const params = new URLSearchParams();
   if (range?.from) params.set('from', range.from);
   if (range?.to) params.set('to', range.to);
@@ -65,21 +77,25 @@ export function getServices(range?: { from?: string; to?: string }): Promise<Ser
 
 /** Alle Ablaufpunkte eines Gottesdienstes (Lieder inkl. ChordPro). */
 export function getAgenda(eventId: number): Promise<AgendaItem[]> {
+  if (istExtension) return ext.ablauf(eventId);
   return apiFetch<AgendaItem[]>(`/api/services/${eventId}/setlist`);
 }
 
 /** Merkt den aktuellen Setlist-Stand als „gesehen" → entfernt das „geändert"-Badge (#143). */
 export function markSetlistSeen(eventId: number): Promise<{ ok: boolean }> {
+  if (istExtension) return ext.alsGesehenMerken(eventId);
   return apiFetch<{ ok: boolean }>(`/api/services/${eventId}/seen`, { method: 'POST' });
 }
 
 /** Aktueller Ablauf-Fingerabdruck (Live-Abgleich: billig, ohne ChordPro-Downloads). */
 export function getSetlistVersion(eventId: number): Promise<{ hash: string }> {
+  if (istExtension) return ext.ablaufStand(eventId);
   return apiFetch<{ hash: string }>(`/api/services/${eventId}/setlist/version`);
 }
 
 /** Speichert die neue Reihenfolge der Ablaufpunkte (Liste der Item-IDs in Wunschreihenfolge). */
 export function reorderAgenda(eventId: number, order: number[]): Promise<{ ok: boolean }> {
+  if (istExtension) return ohneServer('Das Bearbeiten des Ablaufs');
   return apiFetch(`/api/services/${eventId}/agenda/order`, {
     method: 'PATCH',
     body: JSON.stringify({ order }),
@@ -98,6 +114,7 @@ export function createAgendaItem(
     durationMin?: number;
   },
 ): Promise<{ ok: boolean }> {
+  if (istExtension) return ohneServer('Das Bearbeiten des Ablaufs');
   return apiFetch(`/api/services/${eventId}/agenda/items`, {
     method: 'POST',
     body: JSON.stringify(data),
@@ -106,6 +123,7 @@ export function createAgendaItem(
 
 /** Lädt die ChurchTools-Dienste (für die Verantwortlich-Chips). */
 export function getAgendaServices(): Promise<AgendaServiceOption[]> {
+  if (istExtension) return ext.dienste();
   return apiFetch<AgendaServiceOption[]>('/api/agenda-services');
 }
 
@@ -129,6 +147,7 @@ export function updateAgendaItem(
   itemId: number,
   fields: AgendaItemUpdate,
 ): Promise<{ ok: boolean }> {
+  if (istExtension) return ohneServer('Das Bearbeiten des Ablaufs');
   return apiFetch(`/api/services/${eventId}/agenda/items/${itemId}`, {
     method: 'PUT',
     body: JSON.stringify(fields),
@@ -141,6 +160,7 @@ export function setAgendaItemVorBeginn(
   itemId: number,
   vorBeginn: boolean,
 ): Promise<{ ok: boolean }> {
+  if (istExtension) return ohneServer('Das Bearbeiten des Ablaufs');
   return apiFetch(`/api/services/${eventId}/agenda/items/${itemId}/vor-beginn`, {
     method: 'PUT',
     body: JSON.stringify({ vorBeginn }),
@@ -149,6 +169,7 @@ export function setAgendaItemVorBeginn(
 
 /** Alle Lieder (für die „Alle Lieder"-Ansicht) – ohne Statistik (lädt schnell). */
 export function getSongLibrary(): Promise<SongLibraryEntry[]> {
+  if (istExtension) return ext.lieder();
   return apiFetch<SongLibraryEntry[]>('/api/song-library');
 }
 
@@ -159,6 +180,7 @@ export function getSongLibrary(): Promise<SongLibraryEntry[]> {
  * gefiltert. Zwei Filter über dieselbe Regel wären zwei Stellen, die auseinanderlaufen können.
  */
 export function getSongCategories(): Promise<SongCategory[]> {
+  if (istExtension) return ohneServer('Die Liedverwaltung');
   return apiFetch<SongCategory[]>('/api/song-categories');
 }
 
@@ -170,6 +192,7 @@ export function getSongCategories(): Promise<SongCategory[]> {
  * Liedtext suchen, deshalb macht es unser Server selbst (siehe `songTextIndex.ts`).
  */
 export function sucheImLiedtext(q: string): Promise<SongTextTreffer[]> {
+  if (istExtension) return ohneServer('Die Suche im Liedtext');
   return apiFetch<SongTextTreffer[]>(`/api/song-text-search?q=${encodeURIComponent(q)}`);
 }
 
@@ -181,6 +204,7 @@ export function sucheImLiedtext(q: string): Promise<SongTextTreffer[]> {
  * Index-Aufbau, der ~50 Downloads kostet.
  */
 export function holeLiedtextVorschau(songId: number): Promise<LiedtextVorschau> {
+  if (istExtension) return ohneServer('Die Liedtext-Vorschau');
   return apiFetch<LiedtextVorschau>(`/api/songs/${songId}/liedtext-vorschau`);
 }
 
@@ -192,6 +216,7 @@ export function holeLiedtextVorschau(songId: number): Promise<LiedtextVorschau> 
  * darüber speichert je Nummer zwischen.
  */
 export function holeSongSelectLiedtext(songNumber: number): Promise<SongSelectLiedtext> {
+  if (istExtension) return ohneServer('SongSelect');
   return apiFetch<SongSelectLiedtext>(`/api/songselect/songs/${songNumber}/liedtext`);
 }
 
@@ -203,6 +228,7 @@ export function holeSongSelectLiedtext(songNumber: number): Promise<SongSelectLi
  * vorzutäuschen.
  */
 export function sucheSongSelect(title: string): Promise<SongSelectSuchergebnis> {
+  if (istExtension) return ohneServer('SongSelect');
   return apiFetch<SongSelectSuchergebnis>(
     `/api/songselect/search?title=${encodeURIComponent(title)}`,
   );
@@ -210,6 +236,7 @@ export function sucheSongSelect(title: string): Promise<SongSelectSuchergebnis> 
 
 /** Ein CCLI-Lied per Nummer abfragen (#322) – liefert zusätzlich das Copyright fürs Formular. */
 export function getSongSelectSong(songNumber: number): Promise<SongSelectSong> {
+  if (istExtension) return ohneServer('SongSelect');
   return apiFetch<SongSelectSong>(`/api/songselect/songs/${songNumber}`);
 }
 
@@ -220,6 +247,7 @@ export function getSongSelectSong(songNumber: number): Promise<SongSelectSong> {
  * Sie dort mitzuschleppen hieße, sie in jeder Liedliste zu laden, obwohl kein Bildschirm sie anzeigt.
  */
 export function getSongStammdaten(songId: number): Promise<LiedStammdatenAnsicht> {
+  if (istExtension) return ohneServer('Die Liedverwaltung');
   return apiFetch<LiedStammdatenAnsicht>(`/api/songs/${songId}/stammdaten`);
 }
 
@@ -233,6 +261,7 @@ export function aendereLied(
   songId: number,
   aenderung: Partial<LiedStammdaten>,
 ): Promise<LiedStammdatenAnsicht> {
+  if (istExtension) return ohneServer('Die Liedverwaltung');
   return apiFetch<LiedStammdatenAnsicht>(`/api/songs/${songId}`, {
     method: 'PUT',
     body: JSON.stringify(aenderung),
@@ -246,6 +275,7 @@ export function aendereLied(
  * nicht mehr gibt, die Meldung ihn aber braucht.
  */
 export function loescheLied(songId: number): Promise<{ name: string }> {
+  if (istExtension) return ohneServer('Die Liedverwaltung');
   return apiFetch<{ name: string }>(`/api/songs/${songId}`, { method: 'DELETE' });
 }
 
@@ -256,6 +286,7 @@ export function loescheLied(songId: number): Promise<{ name: string }> {
  * heißt „diese Gemeinde führt keine Liederbücher" – dann zeigt das Formular die Quelle gar nicht.
  */
 export function getSongSources(): Promise<SongSource[]> {
+  if (istExtension) return ohneServer('Die Liedverwaltung');
   return apiFetch<SongSource[]>('/api/song-sources');
 }
 
@@ -267,6 +298,7 @@ export function getSongSources(): Promise<SongSource[]> {
  * wie CCLI-Nummer und Copyright in der Bibliothek.
  */
 export function getArrangements(songId: number): Promise<ArrangementAnsicht[]> {
+  if (istExtension) return ohneServer('Die Liedverwaltung');
   return apiFetch<ArrangementAnsicht[]>(`/api/songs/${songId}/arrangements/verwaltung`);
 }
 
@@ -275,6 +307,7 @@ export function legeArrangementAn(
   songId: number,
   auftrag: ArrangementAuftrag & { name: string },
 ): Promise<ArrangementAnsicht> {
+  if (istExtension) return ohneServer('Die Liedverwaltung');
   return apiFetch<ArrangementAnsicht>(`/api/songs/${songId}/arrangements`, {
     method: 'POST',
     body: JSON.stringify(auftrag),
@@ -292,6 +325,7 @@ export function aendereArrangement(
   arrangementId: number,
   auftrag: ArrangementAuftrag,
 ): Promise<ArrangementAnsicht> {
+  if (istExtension) return ohneServer('Die Liedverwaltung');
   return apiFetch<ArrangementAnsicht>(`/api/songs/${songId}/arrangements/${arrangementId}`, {
     method: 'PUT',
     body: JSON.stringify(auftrag),
@@ -308,6 +342,7 @@ export function arrangementZumStandard(
   songId: number,
   arrangementId: number,
 ): Promise<ArrangementAnsicht[]> {
+  if (istExtension) return ohneServer('Die Liedverwaltung');
   return apiFetch<ArrangementAnsicht[]>(
     `/api/songs/${songId}/arrangements/${arrangementId}/default`,
     { method: 'PATCH' },
@@ -319,6 +354,7 @@ export function loescheArrangement(
   songId: number,
   arrangementId: number,
 ): Promise<{ name: string }> {
+  if (istExtension) return ohneServer('Die Liedverwaltung');
   return apiFetch<{ name: string }>(`/api/songs/${songId}/arrangements/${arrangementId}`, {
     method: 'DELETE',
   });
@@ -331,6 +367,7 @@ export function loescheArrangement(
  * die nur in der Oberfläche steht, umgeht jeder, der den Endpunkt direkt aufruft.
  */
 export function legeLiedAn(auftrag: LiedAnlegenAuftrag): Promise<LiedAngelegt> {
+  if (istExtension) return ohneServer('Die Liedverwaltung');
   return apiFetch<LiedAngelegt>('/api/songs', {
     method: 'POST',
     body: JSON.stringify(auftrag),
@@ -343,16 +380,19 @@ export function legeLiedAn(auftrag: LiedAnlegenAuftrag): Promise<LiedAngelegt> {
  */
 export type SongUsageMap = Record<string, { dates: string[] }>;
 export function getSongUsage(): Promise<SongUsageMap> {
+  if (istExtension) return ohneServer('Die Lied-Statistik');
   return apiFetch<SongUsageMap>('/api/song-usage');
 }
 
 /** Arrangements eines bekannten Lieds (für „Zu Ablauf hinzufügen"). */
 export function getSongArrangements(songId: number): Promise<SongArrangementOption[]> {
+  if (istExtension) return ext.arrangements(songId);
   return apiFetch<SongArrangementOption[]>(`/api/songs/${songId}/arrangements`);
 }
 
 /** Chart-Daten eines einzelnen Lieds. */
 export function getSongChart(songId: number, arrangementId?: number): Promise<SetlistSong> {
+  if (istExtension) return ext.blatt(songId, arrangementId);
   const qs = arrangementId ? `?arrangementId=${arrangementId}` : '';
   return apiFetch<SetlistSong>(`/api/songs/${songId}/chart${qs}`);
 }
@@ -367,6 +407,7 @@ export function getArrangementFiles(
   songId: number,
   arrangementId: number,
 ): Promise<ArrangementFileEntry[]> {
+  if (istExtension) return ohneServer('Die Liedverwaltung');
   return apiFetch<ArrangementFileEntry[]>(
     `/api/songs/${songId}/arrangements/${arrangementId}/files`,
   );
@@ -379,6 +420,7 @@ export function getArrangementFiles(
  * eigene Instanz (#199).
  */
 export function getSongFileBlob(songId: number, fileId: number): Promise<Blob> {
+  if (istExtension) return ext.datei(songId, fileId);
   return apiFetchBlob(`/api/songs/${songId}/files/${fileId}`);
 }
 
@@ -397,6 +439,7 @@ export function uploadArrangementFile(
   arrangementId: number,
   datei: File,
 ): Promise<ArrangementFileEntry[]> {
+  if (istExtension) return ohneServer('Die Liedverwaltung');
   return apiFetch<ArrangementFileEntry[]>(
     `/api/songs/${songId}/arrangements/${arrangementId}/files?name=${encodeURIComponent(datei.name)}`,
     {
@@ -419,6 +462,7 @@ export function holeChordProAusSongSelect(
   arrangementId: number,
   songNumber: number,
 ): Promise<ArrangementFileEntry[]> {
+  if (istExtension) return ohneServer('SongSelect');
   return apiFetch<ArrangementFileEntry[]>(
     `/api/songs/${songId}/arrangements/${arrangementId}/songselect/chordpro`,
     { method: 'POST', body: JSON.stringify({ songNumber }) },
@@ -435,6 +479,7 @@ export function speichereNotenblatt(
   arrangementId: number,
   text: string,
 ): Promise<ArrangementFileEntry[]> {
+  if (istExtension) return ohneServer('Das Bearbeiten von Notenblättern');
   return apiFetch<ArrangementFileEntry[]>(
     `/api/songs/${songId}/arrangements/${arrangementId}/chordpro`,
     { method: 'PUT', body: JSON.stringify({ text }) },
@@ -443,11 +488,13 @@ export function speichereNotenblatt(
 
 /** Löscht eine Datei des Lieds (#321). Der Server prüft, dass sie wirklich zu ihm gehört. */
 export function deleteSongFile(songId: number, fileId: number): Promise<void> {
+  if (istExtension) return ohneServer('Die Liedverwaltung');
   return apiFetch<void>(`/api/songs/${songId}/files/${fileId}`, { method: 'DELETE' });
 }
 
 /** Löscht einen Ablaufpunkt. */
 export function deleteAgendaItem(eventId: number, itemId: number): Promise<{ ok: boolean }> {
+  if (istExtension) return ohneServer('Das Bearbeiten des Ablaufs');
   return apiFetch(`/api/services/${eventId}/agenda/items/${itemId}`, { method: 'DELETE' });
 }
 
@@ -459,6 +506,7 @@ export function createVersion(
   name: string,
   text: string,
 ): Promise<SongVersion> {
+  if (istExtension) return ohneServer('Das Bearbeiten von Notenblättern');
   return apiFetch(`/api/songs/${songId}/versions`, {
     method: 'POST',
     body: JSON.stringify({ arrangementId, name, text }),
@@ -472,6 +520,7 @@ export function updateVersion(
   versionKey: string,
   changes: { text?: string; name?: string },
 ): Promise<SongVersion> {
+  if (istExtension) return ohneServer('Das Bearbeiten von Notenblättern');
   return apiFetch(`/api/songs/${songId}/versions/${encodeURIComponent(versionKey)}`, {
     method: 'PUT',
     body: JSON.stringify({ arrangementId, ...changes }),
@@ -484,6 +533,7 @@ export function deleteVersion(
   arrangementId: number,
   versionKey: string,
 ): Promise<{ ok: boolean }> {
+  if (istExtension) return ohneServer('Das Bearbeiten von Notenblättern');
   return apiFetch(`/api/songs/${songId}/versions/${encodeURIComponent(versionKey)}`, {
     method: 'DELETE',
     body: JSON.stringify({ arrangementId }),
@@ -501,6 +551,7 @@ export function setArrangementTempo(
   arrangementId: number,
   tempo: number,
 ): Promise<{ tempo: number }> {
+  if (istExtension) return ohneServer('Die Liedverwaltung');
   return apiFetch(`/api/songs/${songId}/arrangements/${arrangementId}/tempo`, {
     method: 'PUT',
     body: JSON.stringify({ tempo }),

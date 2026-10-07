@@ -146,18 +146,9 @@ export class CtOverloadedError extends HttpError {
   }
 }
 
-/**
- * `Retry-After` lesen – beide erlaubten Formen (#300): Sekunden als Zahl **oder** ein HTTP-Datum.
- * `undefined`, wenn der Kopf fehlt oder unbrauchbar ist; nie ein negativer Wert.
- */
-export function parseRetryAfter(header: string | null, now = Date.now()): number | undefined {
-  if (!header) return undefined;
-  const sekunden = Number(header.trim());
-  if (Number.isFinite(sekunden)) return Math.max(0, sekunden * 1000);
-  const datum = Date.parse(header);
-  if (Number.isNaN(datum)) return undefined;
-  return Math.max(0, datum - now);
-}
+// `Retry-After` lesen – Regel in `@shared/ct/bremse` (#335), hier weitergereicht.
+import { parseRetryAfter } from '@shared/ct/bremse';
+export { parseRetryAfter };
 
 /**
  * „ChurchTools kann gerade nicht mehr" – Drosselung ODER Zeitüberschreitung (#300).

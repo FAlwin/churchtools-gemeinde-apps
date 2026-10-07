@@ -3,6 +3,14 @@
  * ChurchTools-Extension (#335). Lag bis dahin in `server/src/utils/isoTag.ts`.
  */
 
+/**
+ * **Ein Zeitpunkt als `YYYY-MM-DD` (UTC)** – für Zeitfenster an ChurchTools (`from`/`to`), die eine
+ * Stunde Verschiebung vertragen. Begründung in `server/src/utils/isoTag.ts`.
+ */
+export function isoTag(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
 /** Hat der Zeitpunkt eine Zeitzonen-Angabe (`Z` oder `+02:00`)? Nur dann lässt er sich umrechnen. */
 const MIT_ZONE = /(?:Z|[+-]\d{2}:?\d{2})$/i;
 

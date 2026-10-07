@@ -12,9 +12,7 @@ import { config } from '../config.js';
  * Bis zum 21.09.2026 stand diese eine Zeile im Server an drei Stellen (`absences`,
  * `setlistController`, `setlistBuilder`) – zusammengeführt im Code-Check.
  */
-export function isoTag(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
+export { isoTag } from '@shared/ct/zeit';
 
 import { tagAusIso as tagAusIsoIn } from '@shared/ct/zeit';
 

@@ -621,6 +621,14 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **07.10.2026 – nach v2.27.0:** PR #426 (Token-Test deckt alle 18 Schreiber ab + Vollständigkeits-
+  Wächter) gemergt, kein Release. **#177 Excel-Sync zurückgestellt** (Alwin): Die Musiker nutzen die App
+  noch nicht, und die Planung soll ganz aus Excel heraus – ein Abgleich lohnt dann nicht; Zweig
+  `feature/177-excel-sync` bleibt liegen. **#333 Extension-Spike, API-Teil gemessen** – Ergebnisse in
+  `docs/entwicklung/plan-extension.md` §2a. Kern: Nicht-Admins dürfen in Custom-Module-Daten schreiben,
+  aber **ohne Schutz je Eintrag** (bewusst hingenommen), `domainId`/`domainType` werden verworfen,
+  fehlendes Recht antwortet mit **401 „Session abgelaufen"**. Browser-Teil (ZIP, `/ccm/`) offen.
+
 - **v2.27.0 (05.10.2026) = Ablauf und Felder** (PR #425 Squash `1447d65`; Staging `staging-a5e6782` von
   Alwin getestet, Baum von `main` identisch). #423 Vorlauf vor dem Gottesdienstbeginn (Grenze
   `eventStartPosition`, nur sie wird geschrieben; Linie „Beginn"), Schalter „Uhrzeit ausblenden" entfernt

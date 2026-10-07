@@ -1,6 +1,6 @@
 # Umsetzungsplan – ChurchTools-Extension (zweite Auslieferung derselben Codebasis)
 
-> Status: **Entwurf, 10.08.2026. Noch nichts umgesetzt.**
+> Status: **Entwurf, 10.08.2026. Spike #333: API-Teil am 07.10.2026 gemessen (§2a), Browser-Teil offen.**
 > Ziel: dieselbe App zusätzlich als **ChurchTools-Extension** unter `/ccm/<key>/` ausliefern –
 > ohne eigenen Server, ohne zweite Anmeldung, installierbar von jeder Gemeinde.
 > Die bestehende Server-/PWA-Variante (NAS, `musik.ecg-donrath.de`) **bleibt** und ist der Weg für
@@ -27,16 +27,56 @@ angeteasert** – nicht mühsam nachgebaut. Der Teaser verweist auf die Server-V
 
 ## 2. Getroffene Entscheidungen
 
-| Thema           | Entscheidung                                                                                     |
-| --------------- | ------------------------------------------------------------------------------------------------ |
-| Repo            | **Ein Repo, zwei Auslieferungen.** Kein zweites Repo, kein Fork-Abgleich (Begründung §4)         |
-| Build           | `npm run build` = PWA + Server (wie heute) · `npm run build:extension` = ZIP für ChurchTools     |
-| Schalter        | **Genau ein** Modus-Schalter, abgefragt **nur in der Service-Schicht** – nie in einer Komponente |
-| Datenspeicher   | Anmerkungen/Einstellungen/„gesehen" in den **Custom-Module-Daten** von ChurchTools               |
-| Anmeldung       | Sitzung des CT-Kontexts; `login`/`logout` entfallen in der Extension                             |
-| Offline         | **Fällt weg** und wird angeteasert (§6)                                                          |
-| Server-Variante | **Bleibt** im Repo – Ziel des Teasers und Rückfallebene der ECG                                  |
-| Vorlage         | Der Fork von bwl21 (§3) als **Vorlage**, nicht als Grundlage – er steht auf v2.13.5              |
+| Thema            | Entscheidung                                                                                                                                |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Repo             | **Ein Repo, zwei Auslieferungen.** Kein zweites Repo, kein Fork-Abgleich (Begründung §4)                                                    |
+| Build            | `npm run build` = PWA + Server (wie heute) · `npm run build:extension` = ZIP für ChurchTools                                                |
+| Schalter         | **Genau ein** Modus-Schalter, abgefragt **nur in der Service-Schicht** – nie in einer Komponente                                            |
+| Datenspeicher    | Anmerkungen/Einstellungen/„gesehen" in den **Custom-Module-Daten** von ChurchTools                                                          |
+| Anmeldung        | Sitzung des CT-Kontexts; `login`/`logout` entfallen in der Extension                                                                        |
+| Offline          | **Fällt weg** und wird angeteasert (§6)                                                                                                     |
+| Server-Variante  | **Bleibt** im Repo – Ziel des Teasers und Rückfallebene der ECG                                                                             |
+| Vorlage          | Der Fork von bwl21 (§3) als **Vorlage**, nicht als Grundlage – er steht auf v2.13.5                                                         |
+| Schreibschutz    | **Kein Schutz je Eintrag – bewusst hingenommen** (Alwin, 07.10.2026). Die App ändert nur eigene Einträge; die Anleitung sagt es offen (§2a) |
+| Team-Anmerkungen | **Möglich** – eine gemeinsame Kategorie, die alle Musiker beschreiben dürfen (§2a)                                                          |
+| Branding         | Gemeindename aus `GET /api/info` (`siteName`, ohne Anmeldung). Logo: nicht über die API gefunden                                            |
+
+## 2a. Ergebnisse Spike #333 – API-Teil (gemessen 07.10.2026)
+
+Test-Instanz, ChurchTools 3.137.1. Testmodul `ecg-musik-test` per API angelegt
+(`POST /api/custommodules` – verlangt `inMenu`), zwei Kategorien („Benutzerdaten", „Team"), dazu die
+Person „Spike Musiker" **ohne Adminrechte**. Gemessen mit deren eigenem Login-Token, nicht mit dem
+Admin-Konto.
+
+| Frage                                           | Ergebnis                                                                                                                                                                         |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Darf ein Nicht-Admin Werte schreiben und lesen? | **Ja**, mit den Rechten „Daten in Kategorie sehen / erstellen / bearbeiten / löschen" – vergeben **je Kategorie**                                                                |
+| Ist ein Eintrag vor anderen geschützt?          | **Nein.** Spike überschrieb den Wert des Admins (200). Wer eine Kategorie bearbeiten darf, darf **jeden** Eintrag darin ändern und löschen                                       |
+| Gibt es eine Zuordnung zur Person?              | **Nein.** `domainId`/`domainType` werden angenommen und **stillschweigend verworfen** – gespeichert sind nur `id`, `dataCategoryId`, `value`. Die Person muss **im Wert** stehen |
+| Gibt es einen gemeinsam beschreibbaren Wert?    | **Ja** – jede Kategorie ist gemeinsam; eine Kategorie „Team" genügt                                                                                                              |
+| Braucht ein Musiker „Kategorien sehen"?         | **Ja.** Ohne das Recht liefert die Kategorienliste **200 mit leerer Liste** – kein Fehler. Die IDs unterscheiden sich je Installation, also muss die App sie finden können       |
+| Muss ein Musiker Kategorien anlegen dürfen?     | **Nein** – und er soll es nicht. Die Kategorien legt die Gemeinde (oder der erste Start durch einen Admin) an                                                                    |
+| Antwort bei fehlendem Recht                     | **401** mit „Die Session ist abgelaufen" – obwohl die Sitzung gültig ist. ⚠️ Darf in der Extension **nicht** als „abgemeldet" gelten                                             |
+| Termine, Ablauf, Dienste lesbar?                | **Ja** (mit den üblichen Events-Rechten)                                                                                                                                         |
+| ChordPro-Datei hoch- und herunterladen?         | **Ja.** Herunterladen über die `fileUrl` nur **mit Sitzungs-Cookie** – der Login-Token-Header endet in einer Weiterleitungsschleife. Im Browser unter `/ccm/` ist das Cookie da  |
+| Gemeindename über die API?                      | **Ja**, `GET /api/info` → `siteName`, sogar ohne Anmeldung                                                                                                                       |
+| Fremde Login-Token als Admin abrufbar?          | **Nein** (403) – ein Testkonto braucht einen von Hand erzeugten Token                                                                                                            |
+
+**Folgen für die Phasen:**
+
+- **Fehler in der Vorlage von bwl21:** Ihr `readUserValues` filtert auf `domainId === personId` – das
+  Feld kommt nie zurück, die Extension fände ihre eigenen gespeicherten Werte **nie wieder**. Phase 2
+  (#334) muss die Person in den Wert schreiben.
+- **Eigene Einträge nur über die eigene Person ändern:** `ctStore` liest vor dem Ändern, ob der Eintrag
+  dieselbe Person trägt. Das ist kein Schutz gegen Absicht (ChurchTools lässt es zu), aber gegen Versehen.
+- **Kategorien nie automatisch anlegen, wenn der Nutzer kein Recht dazu hat** – die leere Liste ist
+  kein Zeichen für „gibt es nicht", sondern oft für „darf ich nicht sehen". Ein Anlegeversuch endet
+  im 401 „Session abgelaufen".
+- **Installationsanleitung (#337)** nennt den kleinsten Rechte-Satz für Musiker: Modul sehen,
+  Kategorien sehen, Daten sehen/erstellen/bearbeiten/löschen – und offen den fehlenden Schutz je Eintrag.
+
+**Noch offen (Browser-Teil):** ZIP hochladen, Menüpunkt öffnen, `/whoami` im Kontext ohne eigene
+Anmeldung (`id > 0`), und ob ein per API angelegtes Modul ein ZIP aufnimmt.
 
 ## 3. Ausgangslage: der Fork von bwl21
 
@@ -163,8 +203,8 @@ Werbeton, mit Verweis darauf, dass es die App auch mit eigenem Server gibt und w
 
 ## 7. Risiken & offene Fragen
 
-1. **Schreibrechte für normale Nutzer** – ungeklärt, entscheidet über den halben Funktionsumfang.
-   → Phase 1, mit einem Konto ohne Adminrechte.
+1. **Schreibrechte für normale Nutzer** – **geklärt 07.10.2026 (§2a):** gehen, aber ohne Schutz je
+   Eintrag. Bewusst hingenommen.
 2. **Last auf der CT-Instanz.** Ohne Server-Bündelung geht jede Anfrage direkt von jedem Gerät an CT.
    #300 hat gezeigt, dass das eine Instanz lahmlegen kann. Die Notbremse ist **Pflicht**, kein Extra.
 3. **Für die ECG bedeutet Extension: im Saal ohne Netz keine Liedblätter.** Muss jetzt nicht

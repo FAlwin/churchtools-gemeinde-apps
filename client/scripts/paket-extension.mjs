@@ -34,10 +34,10 @@ for (const datei of fs.readdirSync(assets).filter((d) => d.endsWith('.css'))) {
     if (selektor.startsWith('@')) continue;
     for (const teil of selektor.split(',')) {
       const t = teil.trim();
-      if (t.startsWith('html[data-theme') && t.includes(':is(#root')) continue;
+      if (t.startsWith('html[data-theme') && t.includes(':where(#root')) continue;
       if (
         /^(:root|html|body|\*|:[a-z-]+|[a-z][a-z0-9]*)(\b|$)/.test(t) &&
-        !t.startsWith(':is(#root')
+        !t.startsWith(':where(#root')
       ) {
         funde.push(`${datei}: ${t}`);
       }

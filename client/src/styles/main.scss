@@ -55,6 +55,18 @@ html {
 .ct-extension #root {
   transform: translateZ(0);
   overflow: hidden;
+  /**
+   * Die Höhe (07.10.2026): Bisher kam sie über `html, body { height: 100% }` → `#root { height: 100% }`.
+   * Seit unsere Regeln ChurchTools nicht mehr anfassen (`buildHilfen/cssBereich.ts`), hat ChurchTools'
+   * Behälter keine feste Höhe, an der 100 % hängen könnten – die App schrumpfte auf 44 px. Jetzt füllt
+   * sie ihren Behälter direkt (gemessen: 1268 px unter der 56-px-Leiste).
+   */
+  position: absolute;
+  inset: 0;
+  height: auto;
+}
+.ct-extension :has(> #root) {
+  position: relative;
 }
 
 button {

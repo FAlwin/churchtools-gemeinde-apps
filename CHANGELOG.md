@@ -26,6 +26,14 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   dem Abmelden. In der ChurchTools-Erweiterung gilt vorerst nur der automatische Teil (Einstellungen
   kommen dort mit 3b-4).
 
+### Behoben
+
+- **Erweiterung: ChurchTools-Menüs sahen anders aus (gemeldet von Alwin):** Die allgemeinen Stilregeln
+  der App (Abstände, Schrift, Seitenfarbe, `--shadow`) galten in der Erweiterung für die ganze
+  ChurchTools-Seite – gemessen: Schrift Lato → unsere, Menü-Polster 8 → 0 px. Der Erweiterungs-Build
+  grenzt sie jetzt auf den App-Bereich ein, und das Packen bricht ab, falls je wieder eine Regel die
+  ganze Seite trifft. Die Server-Variante ist unverändert.
+
 ### Geändert
 
 - **Eigenes Recht `canEditTempo`:** dasselbe ChurchTools-Recht wie „Lieder bearbeiten", aber eigens

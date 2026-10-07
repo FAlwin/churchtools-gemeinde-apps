@@ -258,13 +258,14 @@ Zwischenspeicher, `HttpError`; Browser: Sitzung der Seite, Bremse, `ApiError`).
 
 **Befunde beim Durchklick** (Test-Instanz, 07.10.2026):
 
-| Befund                                                                                      | Lösung                                                                             |
-| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| ChurchTools verbietet Worker aus `blob:` (CSP `child-src * data`) – das Liedblatt hing      | Extension-Build tauscht `./pdfWorker` gegen `pdfWorkerDatei.ts` (Worker als Datei) |
-| Die App liegt **unter** der ChurchTools-Leiste (56 px); `position: fixed` rutschte darunter | `.ct-extension #root { transform }` – der App-Bereich ist Bezugsrahmen             |
-| Logos mit Wurzel-Pfad (`/logo…`) zeigten ins Leere                                          | `import.meta.env.BASE_URL`                                                         |
-| Inline-Skripte der `index.html` blockiert (CSP)                                             | Nur der Boot-Hinweis; die App selbst braucht keine                                 |
-| Die Erweiterung erscheint **nicht** in der ChurchTools-App (iPhone, Alwin)                  | geht nicht – siehe §7, Punkt 6                                                     |
+| Befund                                                                                      | Lösung                                                                                  |
+| ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| ChurchTools verbietet Worker aus `blob:` (CSP `child-src * data`) – das Liedblatt hing      | Extension-Build tauscht `./pdfWorker` gegen `pdfWorkerDatei.ts` (Worker als Datei)      |
+| Die App liegt **unter** der ChurchTools-Leiste (56 px); `position: fixed` rutschte darunter | `.ct-extension #root { transform }` – der App-Bereich ist Bezugsrahmen                  |
+| Logos mit Wurzel-Pfad (`/logo…`) zeigten ins Leere                                          | `import.meta.env.BASE_URL`                                                              |
+| Inline-Skripte der `index.html` blockiert (CSP)                                             | Nur der Boot-Hinweis; die App selbst braucht keine                                      |
+| Unsere globalen Regeln (`*`, `html`/`body`, `:root`) verbogen die ChurchTools-Menüs (Alwin) | Extension-Build schreibt sie auf `#root` um (`buildHilfen/cssBereich.ts`), Packen prüft |
+| Die Erweiterung erscheint **nicht** in der ChurchTools-App (iPhone, Alwin)                  | geht nicht – siehe §7, Punkt 6                                                          |
 
 #### 3b – Schreiben (in Scheiben, Alwin 07.10.2026)
 

@@ -462,6 +462,11 @@ client`, Kürzel `VITE_KEY`) baut die App als ChurchTools-Erweiterung unter `/cc
   (Kopf fällt weg → Plugin `kopfInDenInhalt`), `<base href>` auf die Instanz (Pfade absolut, Logos über
   `BASE_URL`), CSP verbietet Inline-Skripte und `blob:`-Worker (pdf.js-Worker als Datei,
   `pdfWorkerDatei.ts`), App liegt unter 56 px ChurchTools-Leiste (`.ct-extension #root { transform }`).
+  **Unsere globalen Stilregeln dürfen ChurchTools nicht treffen** (ChurchTools legt seine Regeln in
+  Tailwind-`@layer`, unsere ohne Ebene gewinnen immer): Der Extension-Build schreibt `:root`/`html`/
+  `body`/`*`/Elemente auf `:is(#root, [data-musikapp])` um (`client/src/buildHilfen/cssBereich.ts`),
+  `scripts/paket-extension.mjs` bricht ab, wenn im gebauten CSS noch eine globale Regel steht. Was an
+  `body` hängt (Coachmarks), braucht `data-musikapp`. Nur EIN `css`-Schlüssel in `vite.config.ts`.
 - Was es in der Extension noch nicht gibt, meldet `ohneServer` (501) – und die Oberfläche zeigt es gar
   nicht erst: **Komponenten fragen `services/funktionen.ts`** (Offline, Abmelden, Statistik …), Bearbeiten
   hängt an den Rechten (`ctLesen.meineRechte` meldet, was noch fehlt, als `false` – seit 3b-1

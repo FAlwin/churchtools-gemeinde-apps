@@ -136,6 +136,18 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          # Fester Text ÜBER den automatischen Änderungsnotizen: Wer von der Release-Seite kommt, sieht
+          # sonst nur die ZIP und nicht, was ins ChurchTools-Formular gehört (Alwin, 07.10.2026).
+          body: |
+            ### ChurchTools-Erweiterung (ohne eigenen Server)
+
+            `musik-app-${{ github.ref_name }}.zip` unten unter **Assets** herunterladen und in ChurchTools unter
+            **Administration → Erweiterungen → Erweiterung hinzufügen** hochladen. **Kürzel: `musik-app`**
+            (genau so – sonst lädt sie nicht), Name frei. Zum Aktualisieren beim Eintrag auf den Stift und die
+            neue ZIP hochladen, sonst nichts löschen.
+            Anleitung: https://github.com/FAlwin/churchtools-musik-app/blob/main/docs/betrieb/ERWEITERUNG.md
+
+            **Mit eigenem Server (Docker):** Update wie gewohnt, siehe [UPDATE.md](https://github.com/FAlwin/churchtools-musik-app/blob/main/UPDATE.md).
           files: client/releases/musik-app-${{ github.ref_name }}.zip
           fail_on_unmatched_files: true
           # Tags mit Suffix (z. B. v2.2.0-rc1) als Vorabversion markieren, damit

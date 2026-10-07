@@ -74,6 +74,11 @@ interface ChordChartProps {
   onReload?: () => void;
   /** Darf der Nutzer den ChordPro-Text bearbeiten? (blendet Editor-Funktionen aus) */
   canEditSong?: boolean;
+  /**
+   * Darf das Tempo in ChurchTools speichern? Eigenes Recht (`canEditTempo`): In der ChurchTools-
+   * Extension geht das schon, während die Liedverwaltung noch fehlt (#335).
+   */
+  canEditTempo?: boolean;
   /** Darf Team-Notizen nutzen (eigene teilen + geteilte anderer ansehen)? */
   canUseGlobalNotes?: boolean;
   /** Hat die Gemeinde CCLI SongSelect? (#322) Ohne das erscheint der Einstieg gar nicht. */
@@ -91,6 +96,7 @@ export function ChordChart({
   onBack,
   onReload,
   canEditSong = false,
+  canEditTempo = false,
   canUseGlobalNotes = false,
   canUseCcli = false,
 }: ChordChartProps) {
@@ -758,7 +764,7 @@ export function ChordChart({
             onPuls={setBpmPulse}
             klick={klickModus}
             onKlick={setKlickModus}
-            darfSpeichern={canEditSong}
+            darfSpeichern={canEditTempo}
             onSpeichern={async (tempo) => {
               await setArrangementTempo(song.id, song.arrangementId, tempo);
               // Der Ablauf wird neu geladen, damit das neue Tempo überall steht. Danach ist das

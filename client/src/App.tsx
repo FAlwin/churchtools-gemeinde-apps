@@ -454,6 +454,7 @@ export default function App() {
             onBack={() => setView({ type: 'setlist' })}
             onReload={() => agendaQuery.refetch()}
             canEditSong={canEditSongs}
+            canEditTempo={caps.canEditTempo}
             canUseGlobalNotes={caps.canUseGlobalNotes}
             canUseCcli={caps.canUseCcli}
           />
@@ -476,6 +477,7 @@ export default function App() {
           onBack={() => setView(null)}
           onReload={() => songChart.refetch()}
           canEditSong={canEditSongs}
+          canEditTempo={caps.canEditTempo}
           canUseGlobalNotes={caps.canUseGlobalNotes}
           canUseCcli={caps.canUseCcli}
         />

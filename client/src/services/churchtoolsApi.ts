@@ -29,10 +29,13 @@ import type {
 import { apiFetch, apiFetchBlob } from './api';
 import { istExtension, ohneServer } from './ctRuntime';
 import * as ext from './ctLesen';
+import * as extSchreiben from './ctSchreiben';
+import type { NeuerPunkt, PunktAenderung } from '@shared/ct/schreibKern';
 
-// Die Weiche zur ChurchTools-Extension (#335): Lesende Aufrufe gehen dort über `ctLesen.ts` direkt an
-// ChurchTools; was es dort (noch) nicht gibt, sagt `ohneServer`. Schreiben folgt mit Phase 3b, die
-// Massenläufe (Statistik, Liedtext-Suche) bleiben der Server-Variante vorbehalten (Plan §6).
+// Die Weiche zur ChurchTools-Extension (#335): Lesende Aufrufe gehen dort über `ctLesen.ts`, schreibende
+// über `ctSchreiben.ts` direkt an ChurchTools; was es dort (noch) nicht gibt, sagt `ohneServer`. Phase 3b
+// kommt in Scheiben (Ablauf + Tempo zuerst), die Massenläufe (Statistik, Liedtext-Suche) bleiben der
+// Server-Variante vorbehalten (Plan §6).
 
 export function login(email: string, password: string): Promise<AuthStatus> {
   if (istExtension) return ohneServer('Eine eigene Anmeldung');
@@ -95,7 +98,7 @@ export function getSetlistVersion(eventId: number): Promise<{ hash: string }> {
 
 /** Speichert die neue Reihenfolge der Ablaufpunkte (Liste der Item-IDs in Wunschreihenfolge). */
 export function reorderAgenda(eventId: number, order: number[]): Promise<{ ok: boolean }> {
-  if (istExtension) return ohneServer('Das Bearbeiten des Ablaufs');
+  if (istExtension) return extSchreiben.reihenfolge(eventId, order);
   return apiFetch(`/api/services/${eventId}/agenda/order`, {
     method: 'PATCH',
     body: JSON.stringify({ order }),
@@ -103,18 +106,8 @@ export function reorderAgenda(eventId: number, order: number[]): Promise<{ ok: b
 }
 
 /** Legt einen neuen Ablaufpunkt an (Text/Überschrift/Lied). */
-export function createAgendaItem(
-  eventId: number,
-  data: {
-    type: 'header' | 'text' | 'song';
-    title?: string;
-    arrangementId?: number;
-    responsible?: string;
-    note?: string;
-    durationMin?: number;
-  },
-): Promise<{ ok: boolean }> {
-  if (istExtension) return ohneServer('Das Bearbeiten des Ablaufs');
+export function createAgendaItem(eventId: number, data: NeuerPunkt): Promise<{ ok: boolean }> {
+  if (istExtension) return extSchreiben.punktNeu(eventId, data);
   return apiFetch(`/api/services/${eventId}/agenda/items`, {
     method: 'POST',
     body: JSON.stringify(data),
@@ -128,18 +121,10 @@ export function getAgendaServices(): Promise<AgendaServiceOption[]> {
 }
 
 /**
- * Änderbare Felder eines Ablaufpunkts – gesammelt in EINEM Request (der Server akzeptiert alle
- * zusammen). `arrangementId` verknüpft ein Lied, `unlink` hebt die Verknüpfung auf (beides
- * schließt sich aus); `unlink` + `title` zusammen = aufheben und direkt umbenennen.
+ * Änderbare Felder eines Ablaufpunkts – gesammelt in EINEM Request. Die Feldliste steht einmal, in
+ * `@shared/ct/schreibKern` (#335): Server, Extension und Oberfläche teilen sie.
  */
-export interface AgendaItemUpdate {
-  title?: string;
-  arrangementId?: number;
-  unlink?: boolean;
-  responsible?: string;
-  durationMin?: number;
-  note?: string;
-}
+export type AgendaItemUpdate = PunktAenderung;
 
 /** Schreibt die geänderten Felder eines Ablaufpunkts gesammelt (ein PUT statt Request pro Feld). */
 export function updateAgendaItem(
@@ -147,7 +132,7 @@ export function updateAgendaItem(
   itemId: number,
   fields: AgendaItemUpdate,
 ): Promise<{ ok: boolean }> {
-  if (istExtension) return ohneServer('Das Bearbeiten des Ablaufs');
+  if (istExtension) return extSchreiben.punkt(eventId, itemId, fields);
   return apiFetch(`/api/services/${eventId}/agenda/items/${itemId}`, {
     method: 'PUT',
     body: JSON.stringify(fields),
@@ -160,7 +145,7 @@ export function setAgendaItemVorBeginn(
   itemId: number,
   vorBeginn: boolean,
 ): Promise<{ ok: boolean }> {
-  if (istExtension) return ohneServer('Das Bearbeiten des Ablaufs');
+  if (istExtension) return extSchreiben.vorBeginn(eventId, itemId, vorBeginn);
   return apiFetch(`/api/services/${eventId}/agenda/items/${itemId}/vor-beginn`, {
     method: 'PUT',
     body: JSON.stringify({ vorBeginn }),
@@ -204,7 +189,7 @@ export function sucheImLiedtext(q: string): Promise<SongTextTreffer[]> {
  * Index-Aufbau, der ~50 Downloads kostet.
  */
 export function holeLiedtextVorschau(songId: number): Promise<LiedtextVorschau> {
-  if (istExtension) return ohneServer('Die Liedtext-Vorschau');
+  if (istExtension) return ext.liedtextVorschau(songId);
   return apiFetch<LiedtextVorschau>(`/api/songs/${songId}/liedtext-vorschau`);
 }
 
@@ -494,7 +479,7 @@ export function deleteSongFile(songId: number, fileId: number): Promise<void> {
 
 /** Löscht einen Ablaufpunkt. */
 export function deleteAgendaItem(eventId: number, itemId: number): Promise<{ ok: boolean }> {
-  if (istExtension) return ohneServer('Das Bearbeiten des Ablaufs');
+  if (istExtension) return extSchreiben.punktWeg(eventId, itemId);
   return apiFetch(`/api/services/${eventId}/agenda/items/${itemId}`, { method: 'DELETE' });
 }
 
@@ -551,7 +536,7 @@ export function setArrangementTempo(
   arrangementId: number,
   tempo: number,
 ): Promise<{ tempo: number }> {
-  if (istExtension) return ohneServer('Die Liedverwaltung');
+  if (istExtension) return extSchreiben.tempo(songId, arrangementId, tempo);
   return apiFetch(`/api/songs/${songId}/arrangements/${arrangementId}/tempo`, {
     method: 'PUT',
     body: JSON.stringify({ tempo }),

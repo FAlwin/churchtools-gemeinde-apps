@@ -30,6 +30,7 @@ const CAPS: UserCapabilities = {
   canViewAgendas: true,
   canEditAgendas: true,
   canEditSongs: false,
+  canEditTempo: false,
   isAdmin: false,
   canUseGlobalNotes: true,
   canUseCcli: false,

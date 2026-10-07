@@ -7,6 +7,21 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu
+
+- **Erweiterung: Ablauf bearbeiten und Tempo speichern (#335, 3b-1):** Wer in ChurchTools die Rechte
+  hat, kann in der ChurchTools-Erweiterung jetzt den Ablauf umsortieren, Punkte anlegen, ändern und
+  löschen, den Vorlauf setzen und das Tempo eines Lieds speichern – wie in der Server-Variante. Die
+  Regeln dafür (frisch lesen, nichts nebenbei überschreiben, Lied-Punkte bleiben Lieder) liegen jetzt
+  in `shared/ct/schreibKern.ts` und gelten für beide Auslieferungen; der Server nutzt sie unverändert.
+  Dazu die Liedtext-Vorschau beim Hinzufügen eines Lieds (das Auge in der Lied-Auswahl) – sie wäre in
+  der Erweiterung sonst ins Leere gelaufen.
+
+### Geändert
+
+- **Eigenes Recht `canEditTempo`:** dasselbe ChurchTools-Recht wie „Lieder bearbeiten", aber eigens
+  benannt – das Tempo-Menü fragt jetzt dieses. Für die Server-Variante ändert sich nichts.
+
 ## [2.28.0] – 2026-10-07
 
 **Beim Update ist nichts zu tun** – keine neue Einstellung, keine neue Einführung. Für eure App ändert

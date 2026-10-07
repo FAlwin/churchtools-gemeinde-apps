@@ -29,8 +29,7 @@ import { downloadFileText } from './ctFiles.js';
 import { getAllSongs } from './ctRead.js';
 import { createGebuendelterLauf } from './gebuendelterLauf.js';
 import { mapLimit } from './mapLimit.js';
-import { isOriginalChordpro } from './arrangementFiles.js';
-import type { CtSongListEntry } from './ctTypes.js';
+import { chordproZuLesetext, liedtextVorschauAus, originalChordpro } from '@shared/ct/liedtext';
 
 /** Wie lange ein aufgebauter Index gilt. Liedtexte ändern sich selten; eine Stunde ist reichlich. */
 const INDEX_TTL_MS = 3_600_000;
@@ -65,23 +64,9 @@ export function __resetSongTextIndexForTests(): void {
   indexLauf.reset();
 }
 
-/**
- * ChordPro auf reinen Text reduzieren – **das ist die Regel, auf die es bei der Suche ankommt.**
- *
- * `[Am]` mitten in einem Wort ist der Grund: „ge[Am]liebt" muss bei der Suche nach „geliebt" gefunden
- * werden. Würde man Akkorde nur durch Leerzeichen ersetzen, entstünde „ge liebt" – und der Treffer
- * bliebe aus. Deshalb fallen sie **ersatzlos** weg.
- *
- * Direktiven (`{title: …}`, `{comment: …}`) fliegen ganz heraus: Der Titel wird ohnehin schon in der
- * Liste durchsucht, und Kommentare wie „2× spielen" sind kein Liedtext.
- */
-export function chordproZuLesetext(chordpro: string): string {
-  return chordpro
-    .replace(/\{[^}]*\}/g, ' ') // Direktiven samt Inhalt
-    .replace(/\[[^\]]*\]/g, '') // Akkorde ERSATZLOS – sonst zerfallen Wörter
-    .replace(/\s+/g, ' ')
-    .trim();
-}
+// `chordproZuLesetext` und `originalChordpro` liegen seit #335 (3b-1) in `@shared/ct/liedtext` – die
+// Extension zeigt die Liedtext-Vorschau mit derselben Regel. Hier bleibt die Suche (Massenlauf, 3c).
+export { chordproZuLesetext };
 
 /**
  * Die **Vergleichsform** – sie muss für den Index UND für den Suchbegriff dieselbe sein.
@@ -104,23 +89,6 @@ export function zuSuchform(text: string): string {
  */
 export function chordproZuText(chordpro: string): string {
   return zuSuchform(chordproZuLesetext(chordpro));
-}
-
-/**
- * Die Datei, aus der Suchtext und Vorschau kommen: das **Original**-ChordPro des Liedes.
- *
- * **Nutzt `isOriginalChordpro` und baut die Regel nicht nach** (#379). Vorher stand hier ein eigenes
- * `!/\(App\)\.chordpro$/i` – das erkannte nur den heutigen Marker. Bestandsdateien mit den älteren
- * Kürzeln (`— <Name> (ECG).chordpro`, `— Bearbeitet.chordpro`) gingen damit als Original durch.
- *
- * **Die Folge, genau benannt:** Gesucht wird mit `.find()`, es gewinnt also die **erste** passende Datei.
- * Steht eine solche Bestandsfassung in der ChurchTools-Antwort **vor** dem Original, wurde der
- * **bearbeitete** Text indexiert statt des echten – die Suche fand dann die falsche Fassung, und die
- * Vorschau zeigte sie. (Nicht: „das Lied stand doppelt drin" – `find` liefert nur eine Datei. Diese
- * erste Diagnose war falsch und wäre unbemerkt geblieben, hätte die Gegenprobe sie nicht widerlegt.)
- */
-function originalChordpro(song: CtSongListEntry): { name: string; fileUrl: string } | undefined {
-  return song.arrangements?.flatMap((a) => a.files ?? []).find(isOriginalChordpro);
 }
 
 /**
@@ -260,14 +228,8 @@ export async function liedtextVorschau(cookie: string, songId: number): Promise<
   }
 
   const songs = await getAllSongs(cookie);
-  const song = songs.find((s) => s.id === songId);
-  if (!song) return null;
-  const datei = originalChordpro(song);
-  if (!datei) return null;
-
-  const chordpro = await downloadFileText(cookie, datei.fileUrl);
-  const lesetext = chordproZuLesetext(chordpro);
-  // Nur mit Text: Eine Datei aus lauter Direktiven ist kein Liedtext – die Oberfläche sagt dann
-  // „kein Liedtext“ statt eine leere Vorschau zu zeigen.
-  return lesetext ? chordpro : null;
+  return liedtextVorschauAus(
+    songs.find((s) => s.id === songId),
+    (url) => downloadFileText(cookie, url),
+  );
 }

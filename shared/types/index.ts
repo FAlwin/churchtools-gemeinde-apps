@@ -574,6 +574,13 @@ export interface UserCapabilities {
   canViewAgendas: boolean;
   canEditAgendas: boolean;
   canEditSongs: boolean;
+  /**
+   * Darf das Tempo eines Arrangements in ChurchTools speichern (#335, Phase 3b) – dasselbe
+   * ChurchTools-Recht wie `canEditSongs`, aber **eigens benannt**, weil der Tempo-Weg bewusst schmal
+   * ist (er kann nur das Tempo, siehe `putArrangementTempo`). So kann die ChurchTools-Extension das
+   * Tempo freigeben, während die Liedverwaltung dort noch fehlt.
+   */
+  canEditTempo: boolean;
   /** ChurchTools-Administrator? Steuert Zugriff auf die Branding-Einstellungen. */
   isAdmin: boolean;
   /**

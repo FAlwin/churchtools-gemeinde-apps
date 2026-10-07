@@ -13,6 +13,7 @@ import type {
   AgendaItem,
   AgendaServiceOption,
   AuthStatus,
+  LiedtextVorschau,
   Service,
   SetlistSong,
   SongArrangementOption,
@@ -23,6 +24,7 @@ import type {
 import { DEFAULT_SITE_CONFIG } from '@shared/types/index';
 import { agendaSignatureList, fingerprintRohtext } from '@shared/ct/agendaDiff';
 import { dateiUrlFinden } from '@shared/ct/arrangementFiles';
+import { liedtextVorschauAus } from '@shared/ct/liedtext';
 import { rechteAus, STANDARD_ADMIN_RECHT } from '@shared/ct/rechte';
 import {
   ablaufPunkte,
@@ -156,9 +158,23 @@ export async function meineRechte(): Promise<UserCapabilities> {
     STANDARD_ADMIN_RECHT,
     (status, meldung) => new ApiError(status, meldung),
   );
-  // Schreiben kommt erst mit Phase 3b (#335). Bis dahin meldet die Extension „darf nicht" – dann
-  // verschwinden die Bearbeiten-Knöpfe von selbst, statt beim Antippen mit 501 zu scheitern (#336).
-  return { ...rechte, canEditAgendas: false, canEditSongs: false, canUseCcli: false };
+  // Phase 3b kommt in Scheiben (#335): Ablauf und Tempo schreibt die Extension schon
+  // (`ctSchreiben.ts`) – ihre Rechte gelten, wie ChurchTools sie meldet. Liedverwaltung und SongSelect
+  // fehlen noch; bis dahin meldet die Extension dort „darf nicht", dann verschwinden die Knöpfe von
+  // selbst, statt beim Antippen mit 501 zu scheitern (#336).
+  return { ...rechte, canEditSongs: false, canUseCcli: false };
+}
+
+/**
+ * `GET /api/songs/:id/liedtext-vorschau` – beim Hinzufügen eines Lieds zum Ablauf (#335, 3b-1).
+ *
+ * Der Server sucht das Lied in der ganzen Liederliste (die er ohnehin für die Suche hält); hier wird
+ * nur dieses eine Lied gelesen – eine Anfrage plus die Datei. Welche Datei und „nur mit Text" regelt
+ * `@shared/ct/liedtext`.
+ */
+export async function liedtextVorschau(songId: number): Promise<LiedtextVorschau> {
+  const song = await leser.song(songId);
+  return { chordpro: await liedtextVorschauAus(song, (url) => leser.dateiText(url)) };
 }
 
 /** `GET /api/services` – Termine mit Ablauf, samt „geändert"-Punkt (#143). */

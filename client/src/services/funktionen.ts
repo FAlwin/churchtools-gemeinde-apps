@@ -17,8 +17,20 @@ export const funktionen = {
   installieren: !istExtension,
   /** Eigenes Abmelden – in der Extension meldet man sich in ChurchTools ab. */
   abmelden: !istExtension,
-  /** Verwaltung (Name, Links, Termin-Arten, Anmerkungen) – liegt im `site.json` des Servers. */
-  verwaltung: !istExtension,
+  /**
+   * Den Gemeindenamen in der Verwaltung ändern. In der Extension kommt er aus ChurchTools (`/api/info`);
+   * die übrige Verwaltung gibt es dort seit 3b-4 auch (Daten der Erweiterung, `ctEinstellungen.ts`).
+   */
+  gemeindeName: !istExtension,
+  /**
+   * Die Einstellungen liegen im Datenbereich der Erweiterung (3b-4) – und erreichen Musiker nur, wenn
+   * ihre Gruppe die Kategorie sehen darf. Das sagt die Verwaltung dazu.
+   */
+  einstellungenInChurchTools: istExtension,
+  /** Team-Notizen (Gruppen, Rollen, „Notizen von …") – in der Extension ab 3b-4b. */
+  teamNotizen: !istExtension,
+  /** Abwesenheiten samt Termin-Arten – in der Extension ab 3b-3. */
+  abwesenheiten: !istExtension,
   /** Lied-Statistik (Häufigkeit, zuletzt) – Massenlauf, den nur der Server bündeln kann (Plan 3c). */
   statistik: !istExtension,
   /** Suche im Liedtext – ebenso (Plan 3c). */

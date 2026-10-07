@@ -2,16 +2,17 @@
 import type { SiteConfig } from '@shared/types/index';
 import { apiFetch } from './api';
 import { istExtension, ohneServer } from './ctRuntime';
+import { einstellungenSpeichern } from './ctEinstellungen';
 import { gemeindeKonfiguration } from './ctLesen';
 
 export function getSiteConfig(): Promise<SiteConfig> {
-  // Extension: kein `site.json` – der Gemeindename kommt aus ChurchTools (`/api/info`, Plan §2a).
+  // Extension: kein `site.json` – Name aus ChurchTools, der Rest aus den Daten der Erweiterung (3b-4).
   if (istExtension) return gemeindeKonfiguration();
   return apiFetch<SiteConfig>('/api/site-config');
 }
 
 export function updateSiteConfig(cfg: SiteConfig): Promise<SiteConfig> {
-  if (istExtension) return ohneServer('Das Einstellen der App');
+  if (istExtension) return einstellungenSpeichern(cfg);
   return apiFetch<SiteConfig>('/api/site-config', {
     method: 'PUT',
     body: JSON.stringify(cfg),

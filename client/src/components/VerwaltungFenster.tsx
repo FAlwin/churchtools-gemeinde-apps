@@ -1,5 +1,6 @@
 import type { NoteRolePerm, SiteConfig, StandardAnsicht } from '@shared/types/index';
 import { Sheet } from './Sheet';
+import { speicherFehler } from '../utils/speicherFehler';
 import { Spinner } from './Spinner';
 import { Icon } from './icons';
 import { LinksManager } from './LinksManager';
@@ -45,7 +46,9 @@ export function VerwaltungFenster({ site, isAdmin, v }: VerwaltungFensterProps) 
             placeholder="z. B. Meine Gemeinde"
             autoFocus
           />
-          {v.update.isError && <div className={styles.orgErr}>Speichern fehlgeschlagen.</div>}
+          {v.update.isError && (
+            <div className={styles.orgErr}>{speicherFehler(v.update.error)}</div>
+          )}
           <button className={styles.orgSave} onClick={v.saveOrg} disabled={v.update.isPending}>
             {v.update.isPending ? <Spinner /> : 'Speichern'}
           </button>
@@ -101,7 +104,9 @@ export function VerwaltungFenster({ site, isAdmin, v }: VerwaltungFensterProps) 
               );
             })}
           </div>
-          {v.update.isError && <div className={styles.orgErr}>Speichern fehlgeschlagen.</div>}
+          {v.update.isError && (
+            <div className={styles.orgErr}>{speicherFehler(v.update.error)}</div>
+          )}
           {v.ansichtDirty && (
             <button
               className={styles.orgSave}
@@ -185,7 +190,9 @@ export function VerwaltungFenster({ site, isAdmin, v }: VerwaltungFensterProps) 
                   );
                 })}
               </div>
-              {v.update.isError && <div className={styles.orgErr}>Speichern fehlgeschlagen.</div>}
+              {v.update.isError && (
+                <div className={styles.orgErr}>{speicherFehler(v.update.error)}</div>
+              )}
               {v.groupsDirty && (
                 <button
                   className={styles.orgSave}
@@ -226,7 +233,9 @@ export function VerwaltungFenster({ site, isAdmin, v }: VerwaltungFensterProps) 
               onChange={(roles) => v.setGroupRoles(gid, roles)}
             />
           ))}
-          {v.update.isError && <div className={styles.orgErr}>Speichern fehlgeschlagen.</div>}
+          {v.update.isError && (
+            <div className={styles.orgErr}>{speicherFehler(v.update.error)}</div>
+          )}
           {v.rolesDirty && (
             <button className={styles.orgSave} onClick={v.saveRoles} disabled={v.update.isPending}>
               {v.update.isPending ? <Spinner /> : 'Speichern'}

@@ -13,6 +13,7 @@ Die Musik App gibt es in zwei Formen:
 | Lied-Statistik, Suche im Text    | –                                                  | ✓                                                   |
 | Ablauf bearbeiten, Tempo         | ✓ (ab v2.29.0)                                     | ✓                                                   |
 | Lieder verwalten, Notenblätter   | ✓ (ab v2.29.0, ohne SongSelect)                    | ✓                                                   |
+| Links, Standard-Ansicht (Admin)  | ✓ (ab v2.29.0, gespeichert in ChurchTools)         | ✓                                                   |
 | In der ChurchTools-App am Handy  | – (ChurchTools zeigt Erweiterungen nur im Web)     | eigene App auf dem Homescreen                       |
 
 ## Installieren
@@ -38,6 +39,13 @@ Die Musik App gibt es in zwei Formen:
   den Ablauf bearbeitet nur, wer `edit agenda` hat, Lieder, Arrangements, Notenblätter und das Tempo
   nur, wer Lieder in der jeweiligen Kategorie bearbeiten darf (`edit songcategory`). Die App schreibt mit der Sitzung der Person – mehr als in ChurchTools selbst
   darf sie also nie.
+- **Gemeinde-Einstellungen** (unter **Mehr → Verwaltung**, nur für Admins: Links und „Liedblatt:
+  Standard-Ansicht"): Die App legt sie beim ersten Speichern in ChurchTools ab, in den Daten der
+  Erweiterung unter der Kategorie **„Einstellungen der Musik App"**. Damit sie bei allen ankommen,
+  braucht die Gruppe bzw. der Status eurer Musiker unter **Berechtigungen** für die Erweiterung die
+  Rechte **„view custom category"** und **„view custom data"** für diese Kategorie. Fehlen sie, gibt es
+  keine Fehlermeldung – es gilt dann einfach die Vorgabe („Akkorde", keine Links). Die Kategorie nicht
+  löschen; sie gehört der App.
 - **Anmerkungen speichern:** Die App legt sie als Dateien an der **eigenen Person** ab. Dafür braucht
   die Person das Recht, ihre eigenen Personendaten zu bearbeiten (in unserer Test-Gemeinde kam es über
   den Status „Mitglied"). Fehlt es, sagt die App das; die Anmerkungen bleiben dann nur auf dem Gerät.
@@ -63,7 +71,8 @@ Neue ZIP herunterladen → **Administration → Erweiterungen** → beim Eintrag
 **Stift** → neue **ZIP-Datei** hineinziehen → **Speichern**. Name und Kürzel nicht ändern.
 
 **Sonst ist nichts zu tun – vor allem nichts löschen.** Die Anhänge `musikapp_…` an den Personen sind
-die gespeicherten Anmerkungen und Einstellungen der Musiker; die neue Version liest sie einfach weiter.
+die gespeicherten Anmerkungen und Einstellungen der Musiker, die Kategorie „Einstellungen der Musik App"
+die der Gemeinde; die neue Version liest beides einfach weiter.
 
 ## Entfernen
 

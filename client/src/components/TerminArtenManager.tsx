@@ -4,6 +4,7 @@ import { Spinner } from './Spinner';
 import { Icon } from './icons';
 import { useUpdateSiteConfig } from '../hooks/useSiteConfig';
 import { neueId } from '../utils/ids';
+import { speicherFehler } from '../utils/speicherFehler';
 // Dieselben Stile wie der Links-Editor – bewusst geteilt, nicht kopiert: zwei Listen-Editoren im
 // selben Verwaltungsbereich sollen gleich aussehen, und eine Korrektur soll beide treffen.
 import styles from './LinksManager.module.scss';
@@ -47,7 +48,7 @@ export function TerminArtenManager({ site, onClose }: { site: SiteConfig; onClos
     }
     update.mutate(
       { ...site, terminArten: cleaned },
-      { onSuccess: onClose, onError: () => setErr('Speichern fehlgeschlagen.') },
+      { onSuccess: onClose, onError: (e) => setErr(speicherFehler(e)) },
     );
   }
 

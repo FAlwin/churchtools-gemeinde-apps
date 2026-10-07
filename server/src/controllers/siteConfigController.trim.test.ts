@@ -20,7 +20,6 @@ const FULL = {
 vi.mock('../services/siteConfig.js', () => ({
   getSiteConfig: () => Promise.resolve(FULL),
   saveSiteConfig: vi.fn(),
-  siteConfigSchema: { safeParse: vi.fn() },
 }));
 vi.mock('../services/ctCapabilities.js', () => ({ getGroups: vi.fn(), getGroupRoles: vi.fn() }));
 
@@ -78,17 +77,32 @@ describe('GET /api/site-config – Beschneidung ohne Anmeldung (#152)', () => {
 });
 
 describe('PUT /api/site-config – reicht jedes Feld weiter', () => {
-  it('die Standard-Ansicht kommt beim Speichern an (07.10.2026)', async () => {
-    const data = { ...FULL, terminArten: [] };
-    vi.mocked(siteConfig.siteConfigSchema.safeParse).mockReturnValue({
-      success: true,
-      data,
-    } as unknown as ReturnType<typeof siteConfig.siteConfigSchema.safeParse>);
-    vi.mocked(siteConfig.saveSiteConfig).mockResolvedValue(data as never);
+  /**
+   * Gegen die echte Prüfung (`einstellungenPruefen`), nicht gegen eine Attrappe des Schemas: Bis 3b-4
+   * zählte der Controller die Felder einzeln auf, und ein vergessenes Feld wäre still verloren gegangen.
+   */
+  it('jedes einstellbare Feld kommt beim Speichern an', async () => {
+    const body = {
+      orgName: 'ECG Donrath',
+      links: [{ id: 'w', label: 'Website', url: 'https://example.org', showOnLogin: false }],
+      musicianGroupIds: [9],
+      noteRoles: [{ groupId: 9, roles: [15] }],
+      terminArten: [{ id: 'gd', name: 'Gottesdienst', suchwort: 'Gottes' }],
+      standardAnsicht: 'dokument',
+    };
+    vi.mocked(siteConfig.saveSiteConfig).mockResolvedValue(body as never);
     const res = { json: vi.fn() } as unknown as Response;
-    await putSiteConfigCtrl({ body: data } as Request, res);
-    expect(siteConfig.saveSiteConfig).toHaveBeenCalledWith(
-      expect.objectContaining({ standardAnsicht: 'dokument' }),
-    );
+    await putSiteConfigCtrl({ body } as Request, res);
+    expect(siteConfig.saveSiteConfig).toHaveBeenCalledWith(expect.objectContaining(body));
+  });
+
+  it('lehnt einen Link ohne http(s) mit 400 ab', async () => {
+    const body = {
+      orgName: 'ECG',
+      links: [{ id: 'x', label: 'X', url: 'javascript:alert(1)', showOnLogin: false }],
+    };
+    await expect(
+      putSiteConfigCtrl({ body } as Request, { json: vi.fn() } as unknown as Response),
+    ).rejects.toMatchObject({ status: 400 });
   });
 });

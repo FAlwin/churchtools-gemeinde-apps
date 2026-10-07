@@ -15,7 +15,6 @@ vi.mock('../services/funktionen', async (original) => ({
     installieren: false,
     abmelden: false,
     gemeindeName: false,
-    teamNotizen: false,
     abwesenheiten: false,
     statistik: false,
     liedtextSuche: false,
@@ -85,15 +84,15 @@ describe('„Mehr" in der ChurchTools-Erweiterung', () => {
 
   /**
    * Seit 3b-4 gibt es die Verwaltung auch hier (Daten der Erweiterung) – aber nur, was wirkt: Der Name
-   * kommt aus ChurchTools, Team-Notizen und Abwesenheiten folgen erst (3b-4b, 3b-3).
+   * kommt aus ChurchTools, die Abwesenheiten folgen erst (3b-3). Team-Notizen seit 3b-4b.
    */
-  it('Verwaltung für Admins: Links und Standard-Ansicht, ohne Name, Anmerkungen, Termin-Arten', () => {
+  it('Verwaltung für Admins: Links, Standard-Ansicht, Anmerkungen – ohne Name und Termin-Arten', () => {
     zeige();
     expect(screen.getByText('Verwaltung')).toBeTruthy();
     expect(screen.getByText('Links verwalten')).toBeTruthy();
     expect(screen.getByText('Liedblatt: Standard-Ansicht')).toBeTruthy();
+    expect(screen.getByText('Anmerkungen')).toBeTruthy();
     expect(screen.queryByText('Organisation / Name')).toBeNull();
-    expect(screen.queryByText('Anmerkungen')).toBeNull();
     expect(screen.queryByText('Abwesenheiten: Termin-Arten')).toBeNull();
     // Ohne Leserecht an der Kategorie bekommen Musiker die Einstellungen nicht – das steht dabei.
     expect(screen.getByText(/view custom data/)).toBeTruthy();

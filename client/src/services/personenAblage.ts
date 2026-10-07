@@ -98,12 +98,11 @@ async function meineId(): Promise<number> {
   return id;
 }
 
-/** Die Dateiliste der eigenen Person neu lesen. */
-export async function aktualisiereListe(): Promise<void> {
-  const id = await meineId();
-  const body = await ctAnfrage<{ data?: unknown }>(`/files/person/${id}`);
+/** Die Dateien der App an einer Person – älteste zuerst (ChurchTools vergibt aufsteigende IDs). */
+async function listeVon(personId: number): Promise<Datei[]> {
+  const body = await ctAnfrage<{ data?: unknown }>(`/files/person/${personId}`);
   const roh = Array.isArray(body?.data) ? (body.data as Record<string, unknown>[]) : [];
-  liste = roh
+  return roh
     .filter(
       (f) =>
         typeof f.id === 'number' && typeof f.name === 'string' && typeof f.fileUrl === 'string',
@@ -113,14 +112,19 @@ export async function aktualisiereListe(): Promise<void> {
     .sort((a, b) => a.id - b.id);
 }
 
+/** Die Dateiliste der eigenen Person neu lesen. */
+export async function aktualisiereListe(): Promise<void> {
+  liste = await listeVon(await meineId());
+}
+
 async function dateien(): Promise<Datei[]> {
   if (liste === null) await aktualisiereListe();
   return liste ?? [];
 }
 
 /** Alle Fassungen einer Datei, älteste zuerst (ChurchTools vergibt aufsteigende IDs). */
-function fassungen(name: string): Datei[] {
-  return (liste ?? []).filter((f) => f.name === name);
+function fassungen(name: string, l: Datei[] = liste ?? []): Datei[] {
+  return l.filter((f) => f.name === name);
 }
 
 /**
@@ -190,18 +194,23 @@ async function dataUrlAusBlob(blob: Blob): Promise<string> {
   return `data:image/png;base64,${btoa(bin)}`;
 }
 
-/** Die neueste Fassung jeder Zeichnung dieser Lieder (Schlüssel → PNG-DataURL). */
-async function ladeBilder(songIds: Set<number>): Promise<Record<string, string>> {
+/** Die neueste Fassung jeder Zeichnung dieser Lieder (Schlüssel → Datei), aus einer Dateiliste. */
+function neuesteBilder(l: Datei[], songIds: Set<number>): Map<string, Datei> {
   const neueste = new Map<string, Datei>();
-  for (const f of await dateien()) {
+  for (const f of l) {
     const key = f.name.match(BILD_RE)?.[1];
     if (!key) continue;
     const song = songIdOfAnnoKey(key);
     if (song === null || !songIds.has(song)) continue;
     neueste.set(key, f); // aufsteigend sortiert → die letzte ist die neueste
   }
+  return neueste;
+}
+
+/** Die neueste Fassung jeder Zeichnung dieser Lieder (Schlüssel → PNG-DataURL). */
+async function ladeBilder(l: Datei[], songIds: Set<number>): Promise<Record<string, string>> {
   const out: Record<string, string> = {};
-  for (const [key, f] of neueste) {
+  for (const [key, f] of neuesteBilder(l, songIds)) {
     let inhalt = bildInhalt.get(f.id);
     if (inhalt === undefined) {
       inhalt = await dataUrlAusBlob(await ctDatei(f.fileUrl));
@@ -245,9 +254,9 @@ export function mische(a: DatenDatei, b: DatenDatei): DatenDatei {
  * vorhanden" ist leer). Eine unlesbare Fassung, die nicht als Daten-Datei zu erkennen ist, bleibt außen
  * vor: Das ist keine von uns.
  */
-async function ladeDaten(): Promise<DatenDatei> {
+async function ladeDaten(l: Datei[] = liste ?? []): Promise<DatenDatei> {
   let stand = leer();
-  for (const f of fassungen(DATEN_NAME)) {
+  for (const f of fassungen(DATEN_NAME, l)) {
     let inhalt = datenInhalt.get(f.id);
     if (inhalt === undefined) {
       const text = await (await ctDatei(f.fileUrl)).text();
@@ -300,9 +309,17 @@ export function holeAnmerkungen(songIds: number[]): Promise<Record<string, PageA
 
 async function anmerkungenLesen(songIds: number[]): Promise<Record<string, PageAnnotation>> {
   await aktualisiereListe();
+  return anmerkungenAus(liste ?? [], songIds);
+}
+
+/** Anmerkungen dieser Lieder aus einer Dateiliste – der eigenen oder der einer teilenden Person. */
+async function anmerkungenAus(
+  l: Datei[],
+  songIds: number[],
+): Promise<Record<string, PageAnnotation>> {
   const ids = new Set(songIds);
-  const bilder = await ladeBilder(ids);
-  const daten = await ladeDaten();
+  const bilder = await ladeBilder(l, ids);
+  const daten = await ladeDaten(l);
   const out: Record<string, PageAnnotation> = {};
   const seite = (key: string) => (out[key] ??= {});
   for (const [key, strokes] of Object.entries(bilder)) seite(key).strokes = strokes;
@@ -341,8 +358,12 @@ export function holeEinstellungen(songIds: number[]): Promise<Record<string, str
 
 async function einstellungenLesen(songIds: number[]): Promise<Record<string, string>> {
   await aktualisiereListe();
+  return liedEinstellungenAus(await ladeDaten(), songIds);
+}
+
+/** Die Lied-Einstellungen dieser Lieder aus einer Daten-Datei. */
+function liedEinstellungenAus(daten: DatenDatei, songIds: number[]): Record<string, string> {
   const ids = new Set(songIds);
-  const daten = await ladeDaten();
   const out: Record<string, string> = {};
   for (const [name, f] of Object.entries(daten.felder)) {
     if (!name.startsWith('einst:') || typeof f.w !== 'string') continue;
@@ -404,4 +425,98 @@ export function merkeGesehen(
     }
     await schreibeFelder(felder, jetzt);
   });
+}
+
+// ── Teilen (Team-Notizen, #335 3b-4b) ────────────────────────────────────────
+/**
+ * Ob eine Person ihre Anmerkungen teilt, steht in IHRER Daten-Datei – und die kann nur sie selbst
+ * ändern (fremde Personen-Dateien schreiben verweigert ChurchTools mit 403, Plan §2b). Die Liste „Wer
+ * teilt" in den Daten der Erweiterung (`ctTeilen.ts`) ist nur das Verzeichnis, wo man nachsehen muss;
+ * ein Eintrag dort, den die Person nicht selbst bestätigt, bewirkt nichts.
+ */
+const TEILEN_FELD = 'teilen';
+
+interface TeilenStand {
+  an: boolean;
+  /** Anzeigename für „Notizen von …" – aus der eigenen Datei, nicht aus dem Verzeichnis. */
+  name: string;
+}
+
+function teilenAus(daten: DatenDatei): TeilenStand | null {
+  const w = daten.felder[TEILEN_FELD]?.w as Partial<TeilenStand> | null | undefined;
+  if (!w || typeof w.an !== 'boolean') return null;
+  return { an: w.an, name: typeof w.name === 'string' ? w.name : '' };
+}
+
+/** Teilt die eigene Person ihre Anmerkungen? Ohne Eintrag: nein. */
+export function holeTeilen(): Promise<boolean> {
+  return nacheinander(async () => {
+    await aktualisiereListe();
+    return teilenAus(await ladeDaten())?.an === true;
+  });
+}
+
+/** Das eigene Teilen ein- oder ausschalten – mit dem Namen, unter dem andere die Notizen sehen. */
+export function schreibeTeilen(an: boolean, name: string): Promise<void> {
+  return nacheinander(() => schreibeFelder({ [TEILEN_FELD]: { an, name } }));
+}
+
+/** Was eine andere Person teilt: ihre Dateiliste und ihre Daten-Datei, einmal gelesen. */
+export interface GeteilteAblage {
+  personId: number;
+  name: string;
+  liste: Datei[];
+  daten: DatenDatei;
+}
+
+/**
+ * Die Ablage einer anderen Person – **nur, wenn sie laut ihrer eigenen Datei teilt**, sonst `null`.
+ * Lesen dürfen das Mitglieder, die die Person sehen dürfen (gemessen, Plan §2b).
+ */
+export async function geteilteAblage(personId: number): Promise<GeteilteAblage | null> {
+  const liste = await listeVon(personId);
+  const daten = await ladeDaten(liste);
+  const teilen = teilenAus(daten);
+  if (!teilen?.an) return null;
+  return { personId, name: teilen.name, liste, daten };
+}
+
+/** Zu welchen dieser Lieder hat die Person Anmerkungen (Striche oder Texte)? Zoom zählt nicht. */
+export function geteilteLieder(a: GeteilteAblage, songIds: number[]): number[] {
+  const ids = new Set(songIds);
+  const gefunden = new Set<number>();
+  for (const key of neuesteBilder(a.liste, ids).keys()) {
+    const song = songIdOfAnnoKey(key);
+    if (song !== null) gefunden.add(song);
+  }
+  for (const [name, f] of Object.entries(a.daten.felder)) {
+    const m = name.match(ANNO_FELD_RE);
+    if (!m || m[2] !== 'texts' || !Array.isArray(f.w) || f.w.length === 0) continue;
+    const song = songIdOfAnnoKey(m[1]);
+    if (song !== null && ids.has(song)) gefunden.add(song);
+  }
+  return [...gefunden];
+}
+
+/** Die geteilten Anmerkungen dieser Lieder – **ohne Zoom** (der ist persönlich, wie im Server). */
+export async function geteilteAnmerkungen(
+  a: GeteilteAblage,
+  songIds: number[],
+): Promise<Record<string, { strokes: string | null; texts: AnnotationText[] }>> {
+  const out: Record<string, { strokes: string | null; texts: AnnotationText[] }> = {};
+  for (const [key, seite] of Object.entries(await anmerkungenAus(a.liste, songIds))) {
+    const strokes = seite.strokes ?? null;
+    const texts = seite.texts ?? [];
+    if (!strokes && texts.length === 0) continue;
+    out[key] = { strokes, texts };
+  }
+  return out;
+}
+
+/** Die Lied-Einstellungen der Person – damit ihre Anmerkungen in IHRER Ansicht stehen. */
+export function geteilteEinstellungen(
+  a: GeteilteAblage,
+  songIds: number[],
+): Record<string, string> {
+  return liedEinstellungenAus(a.daten, songIds);
 }

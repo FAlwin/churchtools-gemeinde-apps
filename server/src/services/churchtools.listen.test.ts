@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { getActiveMemberships } from './ctCapabilities.js';
+import { getActiveMemberships, getGroupRoles } from './ctCapabilities.js';
 import { getAllSongs } from './ctRead.js';
 
 /**
@@ -22,6 +22,24 @@ function jsonRes(data: unknown): Response {
 }
 
 afterEach(() => vi.restoreAllMocks());
+
+describe('getGroupRoles – versteckte Rollen fehlen in der Rollen-Zuweisung', () => {
+  /**
+   * Die Regel steht seit 3b-4b in `@shared/ct/gruppen` und gilt auch in der Erweiterung. Bis dahin
+   * bewachte sie kein Test (Gegenprobe 07.10.2026).
+   */
+  it('lässt isHidden-Rollen und Einträge ohne ID/Namen weg', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      jsonRes([
+        { groupTypeRoleId: 15, name: 'Leitung' },
+        { groupTypeRoleId: 16, name: 'Intern', isHidden: true },
+        { name: 'ohne ID' },
+        { groupTypeRoleId: 17, name: '' },
+      ]),
+    );
+    expect(await getGroupRoles('cookie', 9)).toEqual([{ id: 15, name: 'Leitung' }]);
+  });
+});
 
 describe('getActiveMemberships – nur laufende Mitgliedschaften', () => {
   it('liefert Gruppe und Rolle einer aktiven Mitgliedschaft', async () => {

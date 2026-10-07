@@ -64,8 +64,8 @@ Lieds. In ChurchTools hängt an deiner Person unter **Anhänge** je bemalter Sei
 
 **Das muss passieren:** Kein Knopf führt ins Leere. Unter **Mehr** gibt es kein „Als App
 installieren", keinen Bereich „Offline" und kein „Abmelden" – dafür unten den Hinweis „Erweiterung für
-ChurchTools" mit **Mehr erfahren**. In der **Verwaltung** fehlen „Organisation / Name", „Anmerkungen"
-und „Abwesenheiten: Termin-Arten" (der Rest: TF-EXT-06). Bei **Lieder** gibt es keine Reiter
+ChurchTools" mit **Mehr erfahren**. In der **Verwaltung** fehlen „Organisation / Name" und
+„Abwesenheiten: Termin-Arten" (der Rest: TF-EXT-06, TF-EXT-07). Bei **Lieder** gibt es keine Reiter
 „Häufigkeit/Zuletzt", und ein langer Suchbegriff bietet keine Suche im Liedtext an. Bei den Terminen
 fehlt das Wolken-Symbol „Für offline speichern". (Ablauf und Tempo gibt es seit 3b-1 – TF-EXT-04; Lieder
 verwalten seit 3b-2 – TF-EXT-05.)
@@ -173,5 +173,38 @@ dieses Recht bekommt der Musiker „Akkorde", aber keine Fehlermeldung.
   fehlendes Recht, vorübergehender Fehler, Prüfung beim Lesen), `Settings.extension.test.tsx` (welche
   Zeilen); ob die Rechte in ChurchTools so greifen, nur hier
 - **Historie:** #335 (3b-4a)
+
+</details>
+
+### TF-EXT-07 · Team-Notizen in der Erweiterung
+
+**Das brauchst du:** TF-EXT-06, ein Admin-Konto und ein zweites Konto (Musiker), beide **aktive
+Mitglieder** einer Gruppe mit einer Rolle; der Musiker mit Rechten für Lieder (Bereich Events) und auf
+„Team-Notizen der Musik App" mit „view custom category", „view custom data", „create custom data" und
+„delete custom data". Ein Lied mit ChordPro.
+
+**Das muss passieren:** Wer teilt, dessen Anmerkungen sieht der andere im Lied unter „Notizen von …" –
+an derselben Stelle, in der Ansicht der teilenden Person. Wer nicht (mehr) teilt, taucht dort nicht auf.
+
+1. Als Admin unter **Mehr → Verwaltung → Anmerkungen** die Gruppe wählen und die Rolle freigeben →
+   **Speichern**. Unter **Mehr** erscheint „Team-Notizen" mit „Meine Anmerkungen teilen".
+2. Als Musiker die Erweiterung öffnen, **Meine Anmerkungen teilen** einschalten, das Lied öffnen und
+   etwas zeichnen.
+3. Als Admin dasselbe Lied öffnen → Knopf **Notizen von …** → den Musiker antippen: Seine Striche stehen
+   auf dem Blatt.
+4. Als Musiker das Teilen ausschalten. Als Admin das Lied neu öffnen → der Musiker steht nicht mehr unter
+   „Notizen von …".
+5. Eine Person ohne Mitgliedschaft (oder mit nicht freigegebener Rolle) sieht unter **Mehr** keine
+   „Team-Notizen".
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `client/src/services/ctTeilen.ts`, `client/src/services/personenAblage.ts`, `client/src/services/ctModulDaten.ts`, `client/src/services/ctLesen.ts`, `client/src/services/teamNotes.ts`, `shared/ct/gruppen.ts`
+- **Automatisiert:** teilweise – `ctTeilen.test.ts` (Verzeichnis, Reihenfolge, Gegenprüfung an der
+  eigenen Datei, Name, ohne Zoom, Recht aus Gruppe/Rolle), `siteConfigApi.extension.test.ts` (Admin
+  legt das Verzeichnis an); ob die Rechte in ChurchTools so greifen und die Striche richtig liegen, nur
+  hier
+- **Historie:** #335 (3b-4b)
 
 </details>

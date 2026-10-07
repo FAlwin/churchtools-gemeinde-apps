@@ -27,8 +27,6 @@ export const funktionen = {
    * ihre Gruppe die Kategorie sehen darf. Das sagt die Verwaltung dazu.
    */
   einstellungenInChurchTools: istExtension,
-  /** Team-Notizen (Gruppen, Rollen, „Notizen von …") – in der Extension ab 3b-4b. */
-  teamNotizen: !istExtension,
   /** Abwesenheiten samt Termin-Arten – in der Extension ab 3b-3. */
   abwesenheiten: !istExtension,
   /** Lied-Statistik (Häufigkeit, zuletzt) – Massenlauf, den nur der Server bündeln kann (Plan 3c). */

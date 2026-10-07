@@ -30,6 +30,13 @@ import { DEFAULT_SITE_CONFIG } from '@shared/types/index';
 import { agendaSignatureList, fingerprintRohtext } from '@shared/ct/agendaDiff';
 import { arrangementFileEntries, dateiUrlFinden } from '@shared/ct/arrangementFiles';
 import { einstellungenAus } from '@shared/ct/einstellungen';
+import {
+  aktiveMitgliedschaften,
+  computeTeamNotesAllowed,
+  gruppenAus,
+  rollenAus,
+  type RohMitgliedschaft,
+} from '@shared/ct/gruppen';
 import { arrangementAnsicht, stammdatenAnsicht } from '@shared/ct/liedVerwaltung';
 import { arrangementAus } from '@shared/ct/schreibKern';
 import {
@@ -178,8 +185,8 @@ async function gemeindeName(): Promise<string> {
 /**
  * `GET /api/capabilities` – die Rechte aus ChurchTools, mit derselben Regel wie im Server.
  *
- * Team-Notizen und Abwesenheiten bleiben aus: Wer dazugehört, steht in der Server-Variante in deren
- * Einstellungen (Gruppen, Rollen) – die Extension hat dafür noch keinen Ort (Phase 3b).
+ * Team-Notizen seit 3b-4b: wie im Server aus den Gruppen und Rollen der Gemeinde-Einstellungen und den
+ * eigenen Mitgliedschaften (`@shared/ct/gruppen`). Abwesenheiten bleiben bis 3b-3 aus.
  */
 export async function meineRechte(): Promise<UserCapabilities> {
   const roh = await daten<Record<string, Record<string, unknown>>>('/permissions/global');
@@ -192,7 +199,39 @@ export async function meineRechte(): Promise<UserCapabilities> {
   // Notenblätter schreibt die Extension selbst (`ctSchreiben.ts`) – ihre Rechte gelten, wie
   // ChurchTools sie meldet. SongSelect fehlt noch (3b-5); bis dahin meldet die Extension dort „darf
   // nicht", dann verschwinden die Knöpfe von selbst, statt beim Antippen mit 501 zu scheitern (#336).
-  return { ...rechte, canUseCcli: false };
+  return { ...rechte, canUseCcli: false, canUseGlobalNotes: await darfTeamNotizen() };
+}
+
+/**
+ * Darf ich Team-Notizen nutzen? Kein Admin-Bypass, wie im Server. Ein Fehler hier (Einstellungen oder
+ * Mitgliedschaften nicht lesbar) heißt „gerade nicht" – die Knöpfe fehlen dann, bis die Rechte neu
+ * geladen werden. Verworfen wird dabei nichts; die Rechte als Ganzes scheitern daran nicht.
+ */
+async function darfTeamNotizen(): Promise<boolean> {
+  try {
+    const cfg = await gemeindeKonfiguration();
+    if (cfg.musicianGroupIds.length === 0) return false;
+    const status = await meinStatus();
+    if (!status.user) return false;
+    const mitglied = aktiveMitgliedschaften(
+      await daten<RohMitgliedschaft[]>(`/persons/${status.user.id}/groups`),
+    );
+    return computeTeamNotesAllowed(mitglied, cfg.musicianGroupIds, cfg.noteRoles ?? []);
+  } catch (e) {
+    console.warn('[rechte] Team-Notizen nicht ermittelbar – vorerst aus:', e);
+    return false;
+  }
+}
+
+/** `GET /api/groups` – sichtbare Gruppen für die Gruppen-Zuweisung (nur Admin). */
+export async function gruppen(): Promise<{ id: number; name: string }[]> {
+  // limit hoch genug für ein Dropdown; page=1 (CT beginnt bei 1, nicht 0) – wie im Server.
+  return gruppenAus(await daten('/groups?limit=200&page=1'));
+}
+
+/** `GET /api/groups/:id/roles` – Rollen einer Gruppe für die Rollen-Zuweisung (nur Admin). */
+export async function rollen(groupId: number): Promise<{ id: number; name: string }[]> {
+  return rollenAus(await daten(`/groups/${groupId}/roles`));
 }
 
 /**

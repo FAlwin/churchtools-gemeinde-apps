@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import type { NoteRolePerm, SiteConfig, StandardAnsicht } from '@shared/types/index';
 import { sameIdSet, sameRolePerms } from '../utils/adminDrafts';
-import { funktionen } from '../services/funktionen';
 import { useGroups, useUpdateSiteConfig } from './useSiteConfig';
 
 /** Welches Verwaltungs-Fenster gerade offen ist – je eins, gestapelt über „Anmerkungen". */
@@ -46,9 +45,8 @@ export function useVerwaltung(site: SiteConfig, isAdmin: boolean) {
   const [rolesDraft, setRolesDraft] = useState<NoteRolePerm[]>([]);
   const [orgDraft, setOrgDraft] = useState(site.orgName);
   const update = useUpdateSiteConfig();
-  // Gruppen nur laden, wenn ein Admin im Mehr-Tab ist (für Anzeige + Auswahl der Gruppen-Zuweisung)
-  // – und es Team-Notizen gibt; in der Extension liefe die Abfrage sonst ins Leere (bis 3b-4b).
-  const groupsQuery = useGroups(isAdmin && funktionen.teamNotizen);
+  // Gruppen nur laden, wenn ein Admin im Mehr-Tab ist (für Anzeige + Auswahl der Gruppen-Zuweisung).
+  const groupsQuery = useGroups(isAdmin);
 
   function openOrg() {
     setOrgDraft(site.orgName);

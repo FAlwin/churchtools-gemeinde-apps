@@ -23,6 +23,13 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Server-Variante (Recht an der Kategorie, keine doppelte CCLI-Nummer, Liednummer nur mit Liederbuch).
   Die Regeln liegen in `shared/ct/` und gelten für beide. SongSelect fehlt in der Erweiterung noch.
 
+- **Erweiterung: Team-Notizen (#335, 3b-4b):** In der ChurchTools-Erweiterung gibt es jetzt auch
+  „Notizen von …" und „Meine Anmerkungen teilen" – wer mitmacht, legt ein Admin unter **Mehr →
+  Verwaltung → Anmerkungen** über Gruppen und Rollen fest, wie in der Server-Variante. Wer teilt, steht
+  in einem Verzeichnis in den Daten der Erweiterung; gilt aber nur, wenn die Person es in ihrer eigenen
+  Datei bestätigt. Die nötigen Rechte stehen in `docs/betrieb/ERWEITERUNG.md`. Die Regeln für Gruppen,
+  Rollen und Mitgliedschaften liegen jetzt in `shared/ct/gruppen.ts` und gelten für beide.
+
 - **Lieder ohne ChordPro öffnen ihr PDF – und „PDF zuerst" für die ganze Gemeinde:** Angefragt von
   einer Gemeinde ohne SongSelect Premium, die nur PDFs in ChurchTools hat: Bisher öffnete jedes Lied in
   der leeren Akkord-Ansicht, und jeder musste bei jedem Lied umstellen. Jetzt zeigt ein Lied ohne
@@ -51,6 +58,10 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Behoben
 
+- **Erweiterung: ChurchTools-Stile in der App** (gemeldet von Alwin): Die Einführung verdeckte das
+  Liedblatt (Folge der CSS-Eingrenzung: das Overlay bekam die Seitenfläche), das „Aa" im Liedblatt-Kopf
+  war dunkel auf dunkel (ChurchTools färbt fett gesetzten Text), und Symbole rutschten aus der Zeile
+  (das „+" bei „Weiteres Arrangement", der Stift im Liedmenü – ChurchTools macht Symbole zu Blöcken).
 - **Versionen bei Liedern mit Bindestrich im Titel hießen falsch** (beim Durchklick von 3b-2 gefunden,
   betraf auch die Server-Variante): Aus „Testlied 3b-2 — Akustik" wurde die Version „2 — Akustik" –
   und damit ein falscher Schlüssel für Tonart und Anmerkungen; Umbenennen machte den Namen jedes Mal

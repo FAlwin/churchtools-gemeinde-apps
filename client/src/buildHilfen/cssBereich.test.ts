@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import postcss from 'postcss';
-import { BEREICH, cssBereich, imBereich } from './cssBereich';
+import { APP, AUSSERHALB, BEREICH, cssBereich, imBereich } from './cssBereich';
 
 /**
  * Die globalen Stilregeln der Extension bleiben im App-Bereich (Alwin, 07.10.2026: die
@@ -12,10 +12,10 @@ async function lauf(css: string): Promise<string> {
 }
 
 describe('imBereich', () => {
-  it(':root, html, body werden der Bereich selbst', () => {
+  it(':root wird der Bereich selbst, html und body nur die App', () => {
     expect(imBereich(':root')).toBe(BEREICH);
-    expect(imBereich('html')).toBe(BEREICH);
-    expect(imBereich('body')).toBe(BEREICH);
+    expect(imBereich('html')).toBe(APP);
+    expect(imBereich('body')).toBe(APP);
   });
 
   it('das Dunkel-Schema bleibt am html, die Variablen kommen in den Bereich', () => {
@@ -27,6 +27,11 @@ describe('imBereich', () => {
     expect(imBereich('*::before')).toBe(`${BEREICH} *::before`);
     expect(imBereich('button')).toBe(`${BEREICH} button`);
     expect(imBereich(':focus-visible')).toBe(`${BEREICH} :focus-visible`);
+  });
+
+  it('was schon im Bereich steht, bleibt – kein zweites Umschreiben', () => {
+    expect(imBereich(AUSSERHALB)).toBe(AUSSERHALB);
+    expect(imBereich(`${BEREICH} b`)).toBe(`${BEREICH} b`);
   });
 
   it('Klassen und IDs bleiben – CSS-Module, #root und die Einbettungs-Klasse', () => {
@@ -60,6 +65,32 @@ describe('cssBereich – der PostCSS-Lauf', () => {
     const aus = await lauf('html,body{height:100%;color:red} html{height:calc(1px + 2px)}');
     expect(aus).not.toContain('height');
     expect(aus).toContain('color:red');
+  });
+
+  /**
+   * Durchklick 08.10.2026: Das Einführungs-Overlay (`data-musikapp`, außerhalb von `#root`) bekam den
+   * deckenden Seitenhintergrund und verdeckte das Liedblatt. Außerhalb gilt nur die Schrift.
+   */
+  it('außerhalb von #root nur die Schrift der Seite – keine Fläche', async () => {
+    const aus = await lauf(
+      'html,body{background:#fff;color:red;font-family:a;overflow:hidden;overscroll-behavior:none;-webkit-font-smoothing:antialiased}',
+    );
+    // Ganze Regeln vergleichen, nicht Teilstrings: `toContain` fand die Regel für außerhalb auch
+    // mitten in `<Bereich> :where([data-musikapp]){…}` – genau dem Fehler, den dieser Test bewachen
+    // soll (im gebauten CSS gefunden, 08.10.2026).
+    const regeln = aus
+      .split('}')
+      .map((r) => r.trim())
+      .filter(Boolean);
+    expect(regeln).toEqual([
+      `${APP}{background:#fff;color:red;font-family:a;overflow:hidden;overscroll-behavior:none;-webkit-font-smoothing:antialiased`,
+      `${AUSSERHALB}{color:red;font-family:a;-webkit-font-smoothing:antialiased`,
+    ]);
+  });
+
+  it('ohne Schrift-Angaben entsteht für außerhalb keine leere Regel', async () => {
+    const aus = await lauf('body{background:#fff}');
+    expect(aus).not.toContain(AUSSERHALB);
   });
 
   it('auch in @media (Bewegung reduzieren, iOS-App)', async () => {

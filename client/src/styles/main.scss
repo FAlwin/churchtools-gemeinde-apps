@@ -9,6 +9,33 @@
   padding: 0;
 }
 
+// Fett gesetzter Text erbt die Farbe seiner Umgebung – ausdrücklich. In der ChurchTools-Erweiterung
+// färbt ChurchTools sonst jedes `b`/`strong` dunkelblau (`.cts b { color: … }`, gemessen 08.10.2026:
+// das „Aa" im Liedblatt-Kopf war auf dunklem Grund kaum zu sehen). Eine geerbte Farbe verliert gegen
+// jede direkte Regel; diese hier gewinnt, weil ChurchTools' Regeln in `@layer` liegen (cssBereich.ts).
+b,
+strong {
+  color: inherit;
+}
+
+// Bilder und Symbole stehen im Textfluss, wie der Browser es vorgibt. ChurchTools' Grundregeln
+// (Tailwind) machen sie zu Blöcken (`svg { display: block }`) – in der Erweiterung rutschte das „+"
+// über „Weiteres Arrangement" und der Stift unter „Akkorde & Text" (Alwin, 08.10.2026). `revert` holt
+// den Browser-Wert zurück; eigene Klassen der App, die `display` setzen, wiegen schwerer und bleiben.
+// Bewusst NICHT `all: revert` (live probiert): Das setzt auch die Größe und Striche zurück, die als
+// Attribute am SVG stehen – das „+" verschwand ganz.
+img,
+svg,
+video,
+canvas,
+audio,
+iframe,
+embed,
+object {
+  display: revert;
+  vertical-align: revert;
+}
+
 html,
 body {
   height: 100%;

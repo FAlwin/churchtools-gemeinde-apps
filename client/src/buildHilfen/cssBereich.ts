@@ -26,17 +26,35 @@
  */
 export const BEREICH = ':where(#root, [data-musikapp])';
 
+/** Nur die App selbst – ohne die Elemente außerhalb (`data-musikapp`). */
+export const APP = ':where(#root)';
+/** Elemente der App außerhalb von `#root` (das Einführungs-Overlay hängt an `body`). */
+export const AUSSERHALB = ':where([data-musikapp])';
+
+/**
+ * Was aus `html`/`body` auch **außerhalb** von `#root` gelten darf: nur die Schrift, die ein Element
+ * sonst von der Seite erben würde. **Nicht** die Fläche (`background`, `overflow` …) – sie beschreibt
+ * die Seite. Durchklick 08.10.2026: Das Einführungs-Overlay bekam über `[data-musikapp]` den deckenden
+ * Seitenhintergrund und verdeckte das Liedblatt; Schritt 1 „Blättern & Zoomen" zeigte ein leeres Blatt.
+ */
+const SCHRIFT = /^(color|font(-.+)?|line-height|letter-spacing|-webkit-font-smoothing)$/;
+
 /**
  * Ein Selektor, auf den App-Bereich umgeschrieben.
  *
- * - `:root`, `html`, `body` → der Bereich selbst (Variablen, Schrift, Farbe gelten dort),
+ * - `:root` → der Bereich selbst (die Variablen gelten auch außerhalb von `#root`),
+ * - `html`, `body` → nur `#root` (die Fläche der Seite); die Schrift für außerhalb ergänzt das Plugin,
  * - `html[data-theme='dark']` → `html[data-theme='dark'] <Bereich>` (das Dunkel-Schema),
  * - enthält der Selektor eine Klasse oder ID → unverändert (CSS-Module, `#root`, `.ct-extension`),
  * - sonst (`*`, `button`, `:focus-visible` …) → `<Bereich> <Selektor>`.
  */
 export function imBereich(selektor: string): string {
   const s = selektor.trim();
-  if (s === ':root' || s === 'html' || s === 'body') return BEREICH;
+  // Schon im Bereich (z. B. die Regel für außerhalb, die das Plugin selbst ergänzt): nicht ein zweites
+  // Mal umschreiben – sonst stünde `<Bereich> :where([data-musikapp])` da und träfe das Overlay nicht.
+  if (s.startsWith(':where(#root') || s.startsWith(AUSSERHALB)) return s;
+  if (s === ':root') return BEREICH;
+  if (s === 'html' || s === 'body') return APP;
   const schema = /^html(\[[^\]]+\])$/.exec(s);
   if (schema) return `html${schema[1]} ${BEREICH}`;
   if (/[.#]/.test(s)) return s;
@@ -56,7 +74,10 @@ interface Knoten {
 }
 interface Regel extends Knoten {
   selectors: string[];
+  nodes: unknown[];
   walkDecls(cb: (d: { prop: string; remove(): void }) => void): void;
+  cloneAfter(ueber: { selectors: string[] }): Regel;
+  remove(): void;
 }
 interface Wurzel {
   walkRules(cb: (r: Regel) => void): void;
@@ -86,6 +107,12 @@ export function cssBereich() {
           regel.walkDecls((d) => {
             if (d.prop === 'height') d.remove();
           });
+          // Die Schrift der Seite auch für die Elemente außerhalb von `#root` – nur sie (`SCHRIFT`).
+          const aussen = regel.cloneAfter({ selectors: [AUSSERHALB] });
+          aussen.walkDecls((d) => {
+            if (!SCHRIFT.test(d.prop)) d.remove();
+          });
+          if (aussen.nodes.length === 0) aussen.remove();
         }
       });
     },

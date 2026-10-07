@@ -1,7 +1,7 @@
 # Umsetzungsplan – ChurchTools-Extension (zweite Auslieferung derselben Codebasis)
 
 > Status: **Phase 1 (#333), 2 (#334) und 3a (#335, Lesen) erledigt, 07.10.2026.** Ablage = Personen-Dateien
-> (§2b). Offen: 3b Schreiben, Phase 4 Anteasern, Phase 5 Paket.
+> (§2b). Phase 4 (#336, Anteasern) erledigt. Offen: Phase 5 Paket, 3b Schreiben.
 > Ziel: dieselbe App zusätzlich als **ChurchTools-Extension** unter `/ccm/<key>/` ausliefern –
 > ohne eigenen Server, ohne zweite Anmeldung, installierbar von jeder Gemeinde.
 > Die bestehende Server-/PWA-Variante (NAS, `musik.ecg-donrath.de`) **bleibt** und ist der Weg für
@@ -274,9 +274,19 @@ Lied-Statistik (~250 Anfragen) und Liedtext-Suche (jede Lieddatei) bündelt der 
 alle**. Im Browser liefe das **auf jedem Gerät einzeln** – fünf iPads wären fünfmal 250 Anfragen, genau
 der Auslöser von #300. **In der Extension weglassen und auf die Server-Variante verweisen** (Phase 4).
 
-### Phase 4 – Was wegfällt, sauber angeteasert (#336)
+### Phase 4 – Was wegfällt, sauber angeteasert (#336) – erledigt 07.10.2026
 
-Siehe §6. Kein toter Knopf, keine Fehlermeldung – ein Satz, der sagt, warum und wohin.
+Siehe §6. Kein toter Knopf, keine Fehlermeldung – ein Satz, der sagt, warum und wohin. Entwurf von
+Alwin abgenommen, in der Test-Instanz durchgeklickt.
+
+- [x] **`client/src/services/funktionen.ts`** – was es in dieser Auslieferung gibt (Offline,
+      Installieren, Abmelden, Verwaltung, Statistik, Liedtext-Suche, Hinweis). Komponenten fragen
+      **diese Flags**, nie den Modus
+- [x] **Bearbeiten** über die Rechte: `ctLesen.meineRechte` meldet bis 3b `canEditAgendas`,
+      `canEditSongs`, `canUseCcli` = `false` – die Knöpfe verschwinden von selbst
+- [x] **Der eine Hinweis** (`ServerVarianteHinweis`) unten in „Mehr"; „Mehr erfahren" springt in den
+      README-Abschnitt „Für andere Gemeinden"
+- [x] Inline-Start-Skript der `index.html` im Extension-Paket entfernt (CSP blockiert es ohnehin)
 
 ### Phase 5 – Paket, Anleitung, Release (#337)
 

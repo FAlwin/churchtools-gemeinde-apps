@@ -43,6 +43,7 @@ import {
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { ApiError } from './services/api';
 import { withChunkReload } from './utils/chunkReload';
+import { funktionen } from './services/funktionen';
 
 /**
  * Lade-Anzeige, während ein per Code-Splitting nachgeladener Seiten-Chunk eintrifft (#142).
@@ -146,7 +147,7 @@ export default function App() {
   const [pollServices, setPollServices] = useState(true);
   const servicesQuery = useServices(auth.isAuthenticated && canViewAgendas, pollServices);
   // Hält den nächsten Gottesdienst automatisch offline bereit (falls in den Einstellungen aktiv).
-  useOfflineAutoSync(servicesQuery.data);
+  useOfflineAutoSync(funktionen.offline ? servicesQuery.data : undefined);
   // Offline-Zustand: Liedersammlung braucht das Netz (Charts werden je Lied geladen) → Tab wird
   // ohne Netz ausgegraut, ein Tipp erklärt das kurz (#32).
   const online = useOnlineStatus();
@@ -201,7 +202,10 @@ export default function App() {
     auth.isAuthenticated && (tab === 'lieder' || view?.type === 'chart'),
   );
   // Statistik nur für Ablauf-Berechtigte (sie wird aus Abläufen berechnet).
-  const songUsage = useSongUsage(auth.isAuthenticated && tab === 'lieder' && canViewAgendas);
+  // In der ChurchTools-Erweiterung gibt es sie nicht (Massenlauf, Plan 3c).
+  const songUsage = useSongUsage(
+    auth.isAuthenticated && tab === 'lieder' && canViewAgendas && funktionen.statistik,
+  );
   const songChart = useSongChart(
     view?.type === 'chart' && view.source === 'lieder' ? libSel : null,
   );
@@ -315,8 +319,8 @@ export default function App() {
           icon="⚠️"
           text="ChurchTools antwortet gerade nicht. Die Anmeldung bleibt bestehen – bitte gleich noch einmal versuchen."
           onRetry={auth.retryStatus}
-          actionLabel="Abmelden"
-          onAction={() => auth.logout()}
+          actionLabel={funktionen.abmelden ? 'Abmelden' : undefined}
+          onAction={funktionen.abmelden ? () => auth.logout() : undefined}
         />
       </Screen>
     );
@@ -345,8 +349,8 @@ export default function App() {
           <CenterMessage
             loading
             text="Sitzung abgelaufen – bitte neu anmelden…"
-            actionLabel="Abmelden"
-            onAction={() => auth.logout()}
+            actionLabel={funktionen.abmelden ? 'Abmelden' : undefined}
+            onAction={funktionen.abmelden ? () => auth.logout() : undefined}
           />
         ) : !online ? (
           // Offline und keine gespeicherten Berechtigungen (z. B. nach einem App-Update) → kein
@@ -354,8 +358,8 @@ export default function App() {
           <CenterMessage
             icon="📴"
             text="Offline – Berechtigungen nicht verfügbar. Bitte die App einmal online öffnen."
-            actionLabel="Abmelden"
-            onAction={() => auth.logout()}
+            actionLabel={funktionen.abmelden ? 'Abmelden' : undefined}
+            onAction={funktionen.abmelden ? () => auth.logout() : undefined}
           />
         ) : capsQuery.isError ? (
           // Echter ChurchTools-Aussetzer (leere Rechte-Zuordnungen, 502): getCapabilities wirft,
@@ -364,8 +368,8 @@ export default function App() {
             icon="⚠️"
             text="Berechtigungen konnten nicht geladen werden. Bitte erneut versuchen."
             onRetry={() => capsQuery.refetch()}
-            actionLabel="Abmelden"
-            onAction={() => auth.logout()}
+            actionLabel={funktionen.abmelden ? 'Abmelden' : undefined}
+            onAction={funktionen.abmelden ? () => auth.logout() : undefined}
           />
         ) : (
           <CenterMessage loading text="Einen Moment…" />
@@ -532,7 +536,7 @@ export default function App() {
             usage={songUsage.data}
             usageLoading={songUsage.isLoading}
             usageError={songUsage.isError}
-            showStats={canViewAgendas}
+            showStats={canViewAgendas && funktionen.statistik}
             isLoading={songLibrary.isLoading}
             isError={songLibrary.isError}
             onRetry={() => songLibrary.refetch()}

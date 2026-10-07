@@ -14,6 +14,8 @@ import { useVerwaltung } from '../hooks/useVerwaltung';
 import { useSharing } from '../hooks/useSharing';
 import { isOfflineAutoEnabled, setOfflineAutoEnabled } from '../services/offlineAuto';
 import styles from './Settings.module.scss';
+import { funktionen } from '../services/funktionen';
+import { ServerVarianteHinweis } from '../components/ServerVarianteHinweis';
 
 interface SettingsProps {
   site: SiteConfig;
@@ -81,7 +83,9 @@ export function Settings({
   return (
     <SeitenGeruest
       titel="Mehr"
-      ueberlagerung={<VerwaltungFenster site={site} isAdmin={isAdmin} v={verwaltung} />}
+      ueberlagerung={
+        funktionen.verwaltung && <VerwaltungFenster site={site} isAdmin={isAdmin} v={verwaltung} />
+      }
     >
       {/* Profil */}
       <div className={styles.profileCard}>
@@ -92,7 +96,7 @@ export function Settings({
         </div>
       </div>
 
-      <InstallierenHinweis />
+      {funktionen.installieren && <InstallierenHinweis />}
 
       {/* Darstellung */}
       <div className={styles.group}>
@@ -119,16 +123,18 @@ export function Settings({
       </div>
 
       {/* Offline-Reserve */}
-      <div className={styles.group}>
-        <div className={styles.groupHdr}>Offline</div>
-        <div className={styles.cardList}>
-          <SchalterZeile
-            label="Kommende Gottesdienste offline halten"
-            an={autoOffline}
-            onUmschalten={toggleAutoOffline}
-          />
+      {funktionen.offline && (
+        <div className={styles.group}>
+          <div className={styles.groupHdr}>Offline</div>
+          <div className={styles.cardList}>
+            <SchalterZeile
+              label="Kommende Gottesdienste offline halten"
+              an={autoOffline}
+              onUmschalten={toggleAutoOffline}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Weitere Angebote: frei konfigurierbare externe Links (für alle sichtbar) */}
       {site.links.length > 0 && (
@@ -170,7 +176,7 @@ export function Settings({
         </div>
       )}
 
-      {isAdmin && <VerwaltungZeilen site={site} v={verwaltung} />}
+      {isAdmin && funktionen.verwaltung && <VerwaltungZeilen site={site} v={verwaltung} />}
 
       {/* Hilfe */}
       <div className={styles.group}>
@@ -183,15 +189,19 @@ export function Settings({
         </div>
       </div>
 
-      {/* Konto */}
-      <div className={styles.group}>
-        <div className={styles.cardList}>
-          <button className={`${styles.setRow} ${styles.tappable}`} onClick={onLogout}>
-            <span className={`${styles.setLabel} ${styles.danger}`}>Abmelden</span>
-            <Icon name="logout" size={18} className={styles.dangerIcon} />
-          </button>
+      {/* Konto – in der ChurchTools-Erweiterung meldet man sich in ChurchTools ab (#336). */}
+      {funktionen.abmelden && (
+        <div className={styles.group}>
+          <div className={styles.cardList}>
+            <button className={`${styles.setRow} ${styles.tappable}`} onClick={onLogout}>
+              <span className={`${styles.setLabel} ${styles.danger}`}>Abmelden</span>
+              <Icon name="logout" size={18} className={styles.dangerIcon} />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
+
+      {funktionen.hinweisAufServerVariante && <ServerVarianteHinweis />}
 
       {/* Freiwillige Unterstützung – dezent, ganz unten */}
       <SupportBox />

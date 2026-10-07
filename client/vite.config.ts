@@ -28,7 +28,10 @@ function kopfInDenInhalt(): Plugin {
               },
             )}</head>`,
         );
-        return ohne.replace('</body>', `${tags.join('\n')}\n</body>`);
+        // Inline-Skripte (der Start-Hinweis) verbietet die CSP von ChurchTools ohnehin – raus damit,
+        // statt bei jedem Öffnen eine Fehlermeldung in der Konsole zu erzeugen.
+        const ohneInline = ohne.replace(/<script>[\s\S]*?<\/script>/g, '');
+        return ohneInline.replace('</body>', `${tags.join('\n')}\n</body>`);
       },
     },
   };

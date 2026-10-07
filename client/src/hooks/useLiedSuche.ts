@@ -27,6 +27,7 @@ import { LIEDTEXT_SUCHE_MIN_ZEICHEN } from '@shared/types/index';
 import { useEntprellt } from './useEntprellt';
 import { SONGSELECT_MIN_ZEICHEN } from './useServices';
 import { automatischSuchen } from '../utils/liedFormular';
+import { funktionen } from '../services/funktionen';
 
 /** Die beiden Quellen, die als Gruppe unter der Bibliothek erscheinen – ihre Überschrift. */
 export type LiedQuelle = 'liedtext' | 'songselect';
@@ -127,6 +128,10 @@ export function useLiedSuche({ eingabe, canUseCcli, kannAnlegen, bibliothekLeer 
     /** `''` = es läuft nichts; sonst der Begriff, zu dem gerade Liedtext-Treffer gehören. */
     liedtextBegriff,
     liedtexteSuchen,
-    angebotLiedtexte: begriff.length >= LIEDTEXT_SUCHE_MIN_ZEICHEN && liedtextBegriff === '',
+    // In der ChurchTools-Erweiterung gibt es die Liedtext-Suche nicht (Massenlauf, Plan 3c).
+    angebotLiedtexte:
+      funktionen.liedtextSuche &&
+      begriff.length >= LIEDTEXT_SUCHE_MIN_ZEICHEN &&
+      liedtextBegriff === '',
   };
 }

@@ -151,7 +151,14 @@ export async function gemeindeKonfiguration(): Promise<SiteConfig> {
  */
 export async function meineRechte(): Promise<UserCapabilities> {
   const roh = await daten<Record<string, Record<string, unknown>>>('/permissions/global');
-  return rechteAus(roh, STANDARD_ADMIN_RECHT, (status, meldung) => new ApiError(status, meldung));
+  const rechte = rechteAus(
+    roh,
+    STANDARD_ADMIN_RECHT,
+    (status, meldung) => new ApiError(status, meldung),
+  );
+  // Schreiben kommt erst mit Phase 3b (#335). Bis dahin meldet die Extension „darf nicht" – dann
+  // verschwinden die Bearbeiten-Knöpfe von selbst, statt beim Antippen mit 501 zu scheitern (#336).
+  return { ...rechte, canEditAgendas: false, canEditSongs: false, canUseCcli: false };
 }
 
 /** `GET /api/services` – Termine mit Ablauf, samt „geändert"-Punkt (#143). */

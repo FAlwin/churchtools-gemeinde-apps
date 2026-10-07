@@ -221,3 +221,27 @@
 .roleGroup {
   margin-top: 14px;
 }
+
+// Der eine Hinweis in der ChurchTools-Erweiterung (#336): was es nur mit eigenem Server gibt.
+.serverHinweis {
+  padding: 13px 14px;
+  border-radius: 12px;
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+
+  p {
+    margin: 4px 0 8px;
+    color: var(--text2);
+  }
+
+  a {
+    color: var(--blue-ink);
+    font-weight: 600;
+  }
+}
+
+.serverHinweisTitel {
+  font-weight: 600;
+}

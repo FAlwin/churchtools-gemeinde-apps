@@ -17,6 +17,7 @@ import { queryClient } from '../queryClient';
 import * as api from '../services/churchtoolsApi';
 import styles from './Agenda.module.scss';
 import { standKurz } from '../utils/zeitstempel';
+import { funktionen } from '../services/funktionen';
 
 interface AgendaProps {
   services: Service[];
@@ -161,7 +162,7 @@ export function Agenda({
               <span>{s.time}</span>
             </div>
           </div>
-          {held && (
+          {funktionen.offline && held && (
             <span
               className={styles.offBadge}
               data-tour="offline"
@@ -174,7 +175,7 @@ export function Agenda({
           <Icon name="chev-right" size={18} stroke={2.2} className={styles.chev} />
         </button>
         {/* Kommender, noch nicht gespeicherter GD → per Knopf offline verfügbar machen (#32). */}
-        {isFuture && !held && online && (
+        {funktionen.offline && isFuture && !held && online && (
           <button
             className={styles.songBook}
             data-tour="offline"

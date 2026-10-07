@@ -7,6 +7,7 @@ import {
   fingerabdruck,
   gemeindeKonfiguration,
   meinStatus,
+  meineRechte,
   termine,
 } from './ctLesen';
 import { _bremseLoesen, _vergissCsrf, ChurchToolsBremst, ctAnfrage } from './ctRuntime';
@@ -91,6 +92,28 @@ describe('Anmeldung', () => {
       authenticated: true,
       user: { id: 19, firstName: 'Spike', lastName: 'Musiker' },
     });
+  });
+});
+
+describe('Rechte', () => {
+  it('Bearbeiten ist bis Phase 3b ausgeschaltet – auch wenn ChurchTools es erlaubt (#336)', async () => {
+    ct.liefere('/api/permissions/global', {
+      data: {
+        churchservice: {
+          'view songcategory': [1],
+          'view agenda': [1],
+          'edit agenda': [1],
+          'edit songcategory': [1],
+          'use ccli': true,
+        },
+      },
+    });
+    const r = await meineRechte();
+    expect(r.canViewSongs).toBe(true);
+    expect(r.canViewAgendas).toBe(true);
+    expect(r.canEditAgendas).toBe(false);
+    expect(r.canEditSongs).toBe(false);
+    expect(r.canUseCcli).toBe(false);
   });
 });
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useUpdateCheck } from '../hooks/useUpdateCheck';
 import { getOfflineStatus } from '../queryClient';
 import { standKurz } from '../utils/zeitstempel';
+import { funktionen } from '../services/funktionen';
 import styles from '../pages/Settings.module.scss';
 
 /**
@@ -31,7 +32,7 @@ export function VersionsFuss() {
           Neue Version {updateCheck.latest} verfügbar – Was ist neu
         </a>
       )}
-      {offline && (offline.records > 0 || offline.files > 0) && (
+      {funktionen.offline && offline && (offline.records > 0 || offline.files > 0) && (
         <div className={styles.offlineStat}>
           Offline bereit ✓
           {offline.savedAt != null && ` · zuletzt gespeichert ${standKurz(offline.savedAt)}`}

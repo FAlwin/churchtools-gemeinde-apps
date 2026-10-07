@@ -459,7 +459,10 @@ client`, Kürzel `VITE_KEY`) baut die App als ChurchTools-Erweiterung unter `/cc
   (Kopf fällt weg → Plugin `kopfInDenInhalt`), `<base href>` auf die Instanz (Pfade absolut, Logos über
   `BASE_URL`), CSP verbietet Inline-Skripte und `blob:`-Worker (pdf.js-Worker als Datei,
   `pdfWorkerDatei.ts`), App liegt unter 56 px ChurchTools-Leiste (`.ct-extension #root { transform }`).
-- Was es in der Extension noch nicht gibt, meldet `ohneServer` (501). Manueller Test: TF-EXT-01/02. **Anzeige-Einstellungen (Spalten `cols`,
+- Was es in der Extension noch nicht gibt, meldet `ohneServer` (501) – und die Oberfläche zeigt es gar
+  nicht erst: **Komponenten fragen `services/funktionen.ts`** (Offline, Abmelden, Statistik …), Bearbeiten
+  hängt an den Rechten (`ctLesen.meineRechte` meldet es bis 3b als `false`). Ein Hinweis in „Mehr"
+  (`ServerVarianteHinweis`). Manueller Test: TF-EXT-01 bis 03. **Anzeige-Einstellungen (Spalten `cols`,
   Textgröße `fs`) werden geräteübergreifend synchronisiert** (kein Geräte-Suffix); **NUR der Zoom
   bleibt pro Geräteklasse getrennt**. **Schlüssel** je Eintrag: `song<id>_v<versionKey>_<seite>` (Zoom zusätzlich
   `_d<geräteklasse><spalten>`, z. B. `_dlarge2`; **`KEY_RE` in `annotations.ts` UND die Server-Zod-Regel

@@ -56,3 +56,29 @@ Lieds. In ChurchTools hängt an deiner Person unter **Dateien** je bemalter Seit
 - **Historie:** #334, #335
 
 </details>
+
+### TF-EXT-03 · Was es in der Erweiterung nicht gibt, ist nicht zu sehen
+
+**Das brauchst du:** TF-EXT-01, mit einem Admin-Konto (dann sähe man am meisten).
+
+**Das muss passieren:** Kein Knopf führt ins Leere. Unter **Mehr** gibt es kein „Als App
+installieren", keinen Bereich „Offline", keine Verwaltung und kein „Abmelden" – dafür unten den Hinweis
+„Erweiterung für ChurchTools" mit **Mehr erfahren**. Bei **Lieder** gibt es keine Reiter
+„Häufigkeit/Zuletzt", kein „Neues Lied", keinen Stift und kein Plus am Lied, und ein langer
+Suchbegriff bietet keine Suche im Liedtext an. Im Ablauf fehlt „Ablauf bearbeiten", bei den Terminen
+das Wolken-Symbol „Für offline speichern".
+
+1. Unten auf **Mehr**, ganz nach unten scrollen, auf **Mehr erfahren** tippen – es öffnet sich die
+   Projektseite beim Abschnitt „Für andere Gemeinden".
+2. Unten auf **Lieder**, in die Suche einen Satz aus einem Lied tippen.
+3. Unten auf **Termine**, einen Gottesdienst öffnen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `client/src/services/funktionen.ts`, `client/src/components/ServerVarianteHinweis.tsx`, `client/src/pages/Settings.tsx`, `client/src/services/ctLesen.ts`
+- **Automatisiert:** teilweise – `Settings.extension.test.tsx` (Mehr) und `ctLesen.test.ts`
+  (Bearbeiten aus); Lieder, Suche und Termine nur hier
+- **Historie:** #336
+
+</details>

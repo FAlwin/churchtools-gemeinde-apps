@@ -22,6 +22,10 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   `npm run build:extension -w client` baut das Paket. In der Test-Instanz durchgeklickt; dabei
   behoben: pdf.js-Worker (CSP), Vollbild-Fenster unter der ChurchTools-Leiste. Für die
   Server-Variante ändert sich außer der Terminliste oben nichts.
+- **ChurchTools-Erweiterung, Phase 4 (#336):** Was es in der Erweiterung nicht gibt (Offline,
+  Installieren, Abmelden, Verwaltung, Lied-Statistik, Liedtext-Suche, vorerst Bearbeiten), wird dort
+  nicht mehr angezeigt; stattdessen ein Hinweis in „Mehr" auf die App mit eigenem Server. Gesteuert
+  über `services/funktionen.ts` – für die Server-Variante bleibt alles, wie es ist.
 
 - **Vorbereitung ChurchTools-Erweiterung, Phase 2 (#334):** Neuer Speicherweg für den späteren
   Betrieb als Erweiterung: Anmerkungen, Einstellungen und „gesehen" werden dort als Dateien an der

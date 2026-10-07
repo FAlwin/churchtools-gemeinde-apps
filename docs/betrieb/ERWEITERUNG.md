@@ -40,7 +40,7 @@ Die Musik App gibt es in zwei Formen:
 
 ## Gut zu wissen
 
-- **Wo die Anmerkungen liegen:** als Anhänge an der eigenen Person in ChurchTools (**Personen** → die Person öffnen → ganz unten **„Anhänge >>“**): je
+- **Wo die Anmerkungen liegen:** als Anhänge an der eigenen Person in ChurchTools (Menü **Personen** (nicht „Mein Profil“) → Person in der Liste anklicken → ganz unten **„Anhänge >>“**): je
   bemalter Liedseite ein Bild `musikapp_….png`, dazu eine Datei `musikapp_daten.json` (Tonart, Kapo,
   Zoom, Textnotizen, „gesehen"). **Mitglieder, die die Person sehen dürfen, können diese Anhänge
   öffnen** – die App kann ihre Sichtbarkeit nicht einschränken (über die Schnittstelle gemessen).
@@ -58,7 +58,7 @@ Neue ZIP herunterladen → **Administration → Erweiterungen** → beim Eintrag
 ## Entfernen
 
 In **Administration → Erweiterungen** den Eintrag löschen. Die Anmerkungs-Dateien (`musikapp_…`) an
-den Personen bleiben dabei liegen – wer sie nicht mehr braucht, löscht sie selbst: **Personen** → die Person öffnen → ganz unten **„Anhänge >>“**.
+den Personen bleiben dabei liegen – wer sie nicht mehr braucht, löscht sie selbst: Menü **Personen** (nicht „Mein Profil“) → Person in der Liste anklicken → ganz unten **„Anhänge >>“**.
 
 ## Für Entwickler
 

@@ -45,7 +45,8 @@ Lieds. In ChurchTools hängt an deiner Person unter **Anhänge** je bemalter Sei
 1. Gerät A: Liedblatt öffnen, oben auf den **Stift**, etwas malen, den Stift wieder schließen.
 2. Gerät B: dasselbe Lied öffnen.
 3. Gerät A: noch etwas dazumalen. Gerät B: Lied neu öffnen.
-4. In ChurchTools: **Personen** → dich selbst öffnen → ganz unten **„Anhänge >>“** anklicken.
+4. In ChurchTools oben im Menü **Personen** (nicht „Mein Profil“), dich in der Liste anklicken, in der
+   aufgeklappten Ansicht ganz unten **„Anhänge >>“**.
 
 <details><summary>Technisches</summary>
 

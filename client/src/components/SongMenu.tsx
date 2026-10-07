@@ -118,7 +118,8 @@ export function SongMenu({
             )}
           </button>
         )}
-        {showsChords && sections.length > 0 && (
+        {/* Auch beim Dokument (07.10.2026): Geteilt wird, was das Lied zeigt. */}
+        {(!showsChords || sections.length > 0) && (
           <button className={styles.mmItem} onClick={pick(onSharePdf)}>
             <span>Als PDF teilen</span>
             <span className={styles.mmValue}>⤴</span>

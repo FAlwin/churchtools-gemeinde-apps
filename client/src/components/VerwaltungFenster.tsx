@@ -92,9 +92,9 @@ export function VerwaltungFenster({ site, isAdmin, v }: VerwaltungFensterProps) 
                   aria-checked={an}
                   onClick={() => v.setAnsichtDraft(a.wert)}
                 >
-                  <span className={styles.ansichtText}>
+                  <span className={styles.textMitHinweis}>
                     <span className={styles.setLabel}>{a.name}</span>
-                    <span className={styles.ansichtHint}>{a.hinweis}</span>
+                    <span className={styles.zeilenHinweis}>{a.hinweis}</span>
                   </span>
                   <span className={`${styles.radio}${an ? ' ' + styles.radioOn : ''}`} />
                 </button>

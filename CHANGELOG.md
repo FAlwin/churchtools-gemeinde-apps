@@ -26,6 +26,14 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   dem Abmelden. In der ChurchTools-Erweiterung gilt vorerst nur der automatische Teil (Einstellungen
   kommen dort mit 3b-4).
 
+- **Teilen als PDF: mit oder ohne Anmerkungen, und auch mit den PDFs aus ChurchTools:** Teilen öffnet
+  jetzt ein kleines Fenster mit dem Schalter **Meine Anmerkungen** (Striche und Texte so, wie sie auf
+  dem Blatt stehen – etwa zum Üben digital, beim Auftritt auf Papier). Das Gerät merkt sich die Wahl;
+  am Anfang ist sie aus. Jedes Lied kommt so ins PDF, wie es angezeigt wird – Akkorde oder sein
+  PDF/Bild aus ChurchTools. Bisher fehlte der Teilen-Knopf ganz, wenn kein Lied im Ablauf eine
+  ChordPro-Datei hatte (gemeldet von einer Gemeinde ohne SongSelect Premium). Im Liedblatt gibt es
+  „Als PDF teilen" jetzt auch, wenn das Lied sein PDF zeigt.
+
 ### Behoben
 
 - **Erweiterung: ChurchTools-Menüs sahen anders aus (gemeldet von Alwin):** Die allgemeinen Stilregeln

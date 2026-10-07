@@ -28,6 +28,8 @@ const KEYS = {
    * Abmelden.
    */
   gemeindeAnsicht: 'worship:gemeinde-ansicht',
+  /** Beim Teilen als PDF die eigenen Anmerkungen mitnehmen? (07.10.2026, Vorgabe: nein) */
+  teilenMitAnmerkungen: 'worship:teilen-anmerkungen',
 } as const;
 
 type PrefKey = keyof typeof KEYS;
@@ -120,4 +122,13 @@ export function getGemeindeAnsicht(): StandardAnsicht {
 
 export function setGemeindeAnsicht(ansicht: StandardAnsicht): void {
   write('gemeindeAnsicht', ansicht);
+}
+
+/** Beim Teilen als PDF die eigenen Anmerkungen mitnehmen? Ohne Angabe: nein (Alwin, 07.10.2026). */
+export function getTeilenMitAnmerkungen(): boolean {
+  return read('teilenMitAnmerkungen') === '1';
+}
+
+export function setTeilenMitAnmerkungen(an: boolean): void {
+  write('teilenMitAnmerkungen', an ? '1' : '0');
 }

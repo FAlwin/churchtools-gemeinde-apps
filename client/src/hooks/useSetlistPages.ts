@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import * as pdfjsLib from 'pdfjs-dist';
-// Worker inline im Bundle (../pdfSetup) → Charts rendern auch offline (#32).
-import '../pdfSetup';
 import type { SetlistSong } from '@shared/types/index';
 import type { SetlistPageOwner } from '../utils/chordPdf';
 import { ladeDokument } from '../services/fileDownload';
+import { dokumentSeiten, renderPdfToCanvases } from '../utils/dokumentSeiten';
 import type { SongSettings } from '../utils/chartSettings';
 import { composeStream, docPagesToKeep, type StreamOwner } from '../utils/streamCompose';
 import { useLatestRef } from './useLatestRef';
@@ -22,46 +20,6 @@ interface Args {
    * Wort Akkorde.
    */
   onDocError?: (songTitles: string[]) => void;
-}
-
-const RENDER_SCALE = 2;
-
-async function renderPdfToCanvases(data: ArrayBuffer): Promise<HTMLCanvasElement[]> {
-  // Dokumente IMMER komplett laden statt pdf.js selbst streamen zu lassen – Begründung in
-  // `services/fileDownload.ts` (#32).
-  const pdf = await pdfjsLib.getDocument({ data }).promise;
-  const out: HTMLCanvasElement[] = [];
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const vp = page.getViewport({ scale: RENDER_SCALE });
-    const c = document.createElement('canvas');
-    c.width = Math.ceil(vp.width);
-    c.height = Math.ceil(vp.height);
-    await page.render({ canvasContext: c.getContext('2d')!, viewport: vp }).promise;
-    out.push(c);
-  }
-  return out;
-}
-
-async function renderImageToCanvas(bytes: ArrayBuffer): Promise<HTMLCanvasElement> {
-  // Aus den geladenen Bytes statt über eine Adresse (#335): So kommt das Bild in beiden
-  // Auslieferungen über denselben Weg (`ladeDokument`), und die Seite muss nicht wissen, woher.
-  const url = URL.createObjectURL(new Blob([bytes]));
-  const img = new Image();
-  try {
-    await new Promise<void>((res, rej) => {
-      img.onload = () => res();
-      img.onerror = () => rej(new Error('Bild konnte nicht geladen werden'));
-      img.src = url;
-    });
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-  const c = document.createElement('canvas');
-  c.width = img.naturalWidth;
-  c.height = img.naturalHeight;
-  c.getContext('2d')!.drawImage(img, 0, 0);
-  return c;
 }
 
 /**
@@ -132,10 +90,7 @@ export function useSetlistPages({ chordPdfData, chordOwners, songs, settings, on
         if (!docMatch || docCache.current.has(docMatch.fileId)) continue;
         try {
           const bytes = await ladeDokument(song.id, docMatch.fileId);
-          const canvases =
-            docMatch.type === 'image'
-              ? [await renderImageToCanvas(bytes)]
-              : await renderPdfToCanvases(bytes);
+          const canvases = await dokumentSeiten(bytes, docMatch.type);
           if (cancelled) return;
           docCache.current.set(docMatch.fileId, canvases);
         } catch {

@@ -1,11 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
-import {
-  chartHead,
-  generateChordPdf,
-  generateSetlistPdf,
-  generateSetlistPdfWithOwners,
-} from './chordPdf';
+import { chartHead, generateChordPdf, generateSetlistPdfWithOwners } from './chordPdf';
 import type { SetlistSong } from '@shared/types/index';
 
 /**
@@ -96,13 +91,6 @@ describe('generateChordPdf – Seitenaufteilung', () => {
     const vorher = doc.getNumberOfPages();
     generateChordPdf(longSong(400), {}, doc);
     expect(doc.getNumberOfPages()).toBeGreaterThan(vorher);
-  });
-});
-
-describe('generateSetlistPdf – mehrere Lieder', () => {
-  it('jedes weitere Lied beginnt auf einer neuen Seite', () => {
-    const doc = generateSetlistPdf([SHORT, SHORT, SHORT], () => ({}));
-    expect(doc.getNumberOfPages()).toBe(3);
   });
 });
 

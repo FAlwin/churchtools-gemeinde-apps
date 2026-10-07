@@ -6,6 +6,8 @@ interface SchalterZeileProps {
   label: string;
   an: boolean;
   onUmschalten: () => void;
+  /** Erklärung unter der Beschriftung (optional, z. B. im Teilen-Fenster). */
+  hinweis?: string;
 }
 
 /**
@@ -18,7 +20,7 @@ interface SchalterZeileProps {
  * sind außerdem für Screenreader ein Ärgernis. Ein einziger Knopf braucht beides nicht. Der Schalter selbst ist
  * `Schalter` (#413) – derselbe wie in `LinksManager` und `ItemActionSheet`.
  */
-export function SchalterZeile({ label, an, onUmschalten }: SchalterZeileProps) {
+export function SchalterZeile({ label, an, onUmschalten, hinweis }: SchalterZeileProps) {
   return (
     <button
       type="button"
@@ -26,7 +28,14 @@ export function SchalterZeile({ label, an, onUmschalten }: SchalterZeileProps) {
       aria-pressed={an}
       onClick={onUmschalten}
     >
-      <span className={styles.setLabel}>{label}</span>
+      {hinweis ? (
+        <span className={styles.textMitHinweis}>
+          <span className={styles.setLabel}>{label}</span>
+          <span className={styles.zeilenHinweis}>{hinweis}</span>
+        </span>
+      ) : (
+        <span className={styles.setLabel}>{label}</span>
+      )}
       <Schalter an={an} />
     </button>
   );

@@ -341,19 +341,6 @@ export function generateChordPdf(
   return d;
 }
 
-/** Mehrere Lieder zu EINER PDF zusammenfassen (z. B. ganze Veranstaltung). */
-export function generateSetlistPdf(
-  songs: SetlistSong[],
-  optsFor: (song: SetlistSong) => ChordPdfOptions,
-): jsPDF {
-  const d = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-  songs.forEach((song, i) => {
-    if (i > 0) d.addPage();
-    generateChordPdf(song, optsFor(song), d);
-  });
-  return d;
-}
-
 /** Welches Lied (und welche Seite darin) gehört zu einer Seite der zusammengefassten PDF. */
 export interface SetlistPageOwner {
   songIdx: number;
@@ -364,7 +351,8 @@ export interface SetlistPageOwner {
 }
 
 /**
- * Wie generateSetlistPdf, liefert aber zusätzlich pro PDF-Seite den Besitzer (Lied + Seite darin).
+ * Alle Lieder als EINE PDF, dazu pro PDF-Seite der Besitzer (Lied + Seite darin). (Das Teilen des
+ * Ablaufs geht seit 07.10.2026 über `ablaufPdf.ts`, weil es auch Dokument-Seiten einfügt.)
  * Grundlage für den durchgehenden Seitenstrom über den ganzen Ablauf (2-up im Querformat).
  */
 export function generateSetlistPdfWithOwners(

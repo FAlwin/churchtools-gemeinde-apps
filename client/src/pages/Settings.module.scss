@@ -217,15 +217,15 @@
   border-color: var(--blue);
 }
 
-/* Liedblatt: Standard-Ansicht – Auswahl mit Erklärung je Möglichkeit (07.10.2026). */
-.ansichtText {
+/* Zeile mit Erklärung unter der Beschriftung – Standard-Ansicht, Teilen-Fenster (07.10.2026). */
+.textMitHinweis {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 2px;
   text-align: left;
 }
-.ansichtHint {
+.zeilenHinweis {
   font-size: 13px;
   line-height: 1.4;
   color: var(--text2);

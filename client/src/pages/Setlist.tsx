@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from 'react';
-import type { AgendaItem, AgendaServiceOption, Service } from '@shared/types/index';
+import type { AgendaItem, AgendaServiceOption, Service, SetlistSong } from '@shared/types/index';
 import type { AgendaItemUpdate } from '../services/churchtoolsApi';
 import {
   DndContext,
@@ -38,10 +38,13 @@ import {
   isTourDone,
   markTourDone,
 } from '../utils/onboarding';
-import { generateSetlistPdf } from '../utils/chordPdf';
-import { sharePdf } from '../utils/sharePdf';
+import { ablaufPdfBauen, akkordeNichtGeladen, teilbareLieder } from '../utils/ablaufPdf';
+import { eigeneEbene } from '../utils/anmerkungsEbene';
+import { pullAnnotations } from '../services/annotations';
+import { TeilenFenster, type GebautesPdf } from '../components/TeilenFenster';
+import { dokumentSeiten } from '../utils/dokumentSeiten';
+import { ladeDokument } from '../services/fileDownload';
 import { loadSongPdfOpts, loadAppLogo } from '../utils/songPdfOpts';
-import { selectedVersionKey, versionText } from '../utils/songVersions';
 import { innerScrollOnly, resetViewportAfterDrag } from '../utils/dndAutoScroll';
 import styles from './Setlist.module.scss';
 
@@ -175,23 +178,17 @@ export function Setlist({
   }
 
   // Alle Lieder des Ablaufs als eine PDF teilen – jedes Lied EXAKT wie in der App angezeigt
-  // (gespeicherte Tonart/Kapo/Schrift/Spalten + die jeweils gewählte Version + Logo im Kopf).
-  const exportableSongs = items
-    .map((i) => i.song)
-    .filter((s): s is NonNullable<typeof s> => !!s)
-    .map((s) => {
-      const vk = selectedVersionKey(s);
-      return { song: { ...s, chordpro: versionText(s, vk) }, versionKey: vk };
-    })
-    .filter((e) => e.song.chordpro.length > 0);
+  // (gespeicherte Tonart/Kapo/Schrift/Spalten + gewählte Version + Logo im Kopf) – und seit 07.10.2026
+  // auch mit den Seiten eines angezeigten Dokuments (PDF/Bild), `utils/ablaufPdf.ts`.
+  const lieder = items.map((i) => i.song).filter((s): s is NonNullable<typeof s> => !!s);
+  const teilbar = teilbareLieder(lieder);
   // Lieder, die NUR wegen eines Ladefehlers fehlen würden (#274). Ohne diesen Hinweis fiele das Lied
   // stumm aus der geteilten PDF – und niemandem fällt auf, dass ein Blatt fehlt.
-  const nichtGeladen = items
-    .map((i) => i.song)
-    .filter((s): s is NonNullable<typeof s> => !!s && !!s.chordproFailed)
-    .map((s) => s.title);
+  const nichtGeladen = akkordeNichtGeladen(lieder, teilbar);
+  // Das Teilen-Fenster (Anmerkungen ja/nein, PDF entsteht im Hintergrund) – `TeilenFenster`.
+  const [teilenOffen, setTeilenOffen] = useState(false);
 
-  async function handleExportPdf() {
+  function teilenOeffnen() {
     if (nichtGeladen.length > 0) {
       const liste = nichtGeladen.join(', ');
       const weiter = window.confirm(
@@ -200,16 +197,38 @@ export function Setlist({
       );
       if (!weiter) return;
     }
-    if (exportableSongs.length === 0) return;
+    if (teilbar.length > 0) setTeilenOffen(true);
+  }
+
+  async function ablaufPdf(mitAnmerkungen: boolean): Promise<GebautesPdf> {
     const logo = await loadAppLogo();
-    const doc = generateSetlistPdf(
-      exportableSongs.map((e) => e.song),
-      (s) => {
-        const e = exportableSongs.find((x) => x.song.id === s.id);
-        return loadSongPdfOpts(s, logo, e?.versionKey);
+    const optsFor = (s: SetlistSong) =>
+      loadSongPdfOpts(s, logo, teilbar.find((t) => t.song.id === s.id)?.versionKey);
+    // Die Anmerkungen liegen auf dem Gerät erst, wenn ein Lied einmal offen war – deshalb vorher vom
+    // Konto holen. Scheitert das (offline), gilt, was das Gerät hat.
+    if (mitAnmerkungen) await pullAnnotations(teilbar.map((t) => t.song.id)).catch(() => undefined);
+    const { doc, fehlend, ersetzt } = await ablaufPdfBauen(
+      teilbar.map((t) => ({
+        song: t.song,
+        versionKey: t.versionKey,
+        quelle: t.dokument
+          ? { art: 'dokument', dokument: t.dokument }
+          : { art: 'akkorde', opts: optsFor(t.song) },
+      })),
+      {
+        ladeSeiten: async (song, dokument) =>
+          dokumentSeiten(await ladeDokument(song.id, dokument.fileId), dokument.type),
+        akkordOpts: optsFor,
+        ebene: mitAnmerkungen ? eigeneEbene : undefined,
       },
     );
-    void sharePdf(doc, service.name || 'Ablauf');
+    const hinweis = [
+      fehlend.length > 0 ? `Nicht geladen, fehlt im PDF: ${fehlend.join(', ')}` : '',
+      ersetzt.length > 0 ? `Statt des Dokuments mit Akkorden: ${ersetzt.join(', ')}` : '',
+    ]
+      .filter(Boolean)
+      .join('. ');
+    return { doc, hinweis };
   }
 
   /**
@@ -220,9 +239,9 @@ export function Setlist({
   const aktionen =
     !isLoading && !isError && items.length > 0 ? (
       <>
-        {exportableSongs.length > 0 && !editMode && (
+        {teilbar.length > 0 && !editMode && (
           <RundKnopf
-            onClick={() => void handleExportPdf()}
+            onClick={teilenOeffnen}
             title="Alle Lieder als PDF teilen"
             dataTour="setlist-share"
           >
@@ -247,6 +266,15 @@ export function Setlist({
   /** Dialoge und Fenster schweben über dem Inhalt – sie scrollen nicht mit. */
   const ueberlagerung = (
     <>
+      {teilenOffen && (
+        <TeilenFenster
+          titel="Ablauf teilen"
+          dateiname={service.name || 'Ablauf'}
+          bauen={ablaufPdf}
+          onClose={() => setTeilenOffen(false)}
+        />
+      )}
+
       {pendingDelete && (
         <ConfirmDialog
           title="Eintrag löschen?"

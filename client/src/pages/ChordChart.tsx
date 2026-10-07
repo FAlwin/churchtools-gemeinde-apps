@@ -32,9 +32,13 @@ import { SharersSheet } from '../components/SharersSheet';
 import { Toast } from '../components/Toast';
 import { useToast } from '../hooks/useToast';
 import { deriveActiveSongView } from '../utils/activeSongView';
-import { chartHead, generateChordPdf } from '../utils/chordPdf';
+import { chartHead } from '../utils/chordPdf';
 import { pdfOptionsForSong } from '../utils/chartPdfOptions';
-import { sharePdf } from '../utils/sharePdf';
+import { ablaufPdfBauen } from '../utils/ablaufPdf';
+import { eigeneEbene } from '../utils/anmerkungsEbene';
+import { dokumentSeiten } from '../utils/dokumentSeiten';
+import { ladeDokument } from '../services/fileDownload';
+import { TeilenFenster, type GebautesPdf } from '../components/TeilenFenster';
 import { DEFAULT_SETTINGS } from '../utils/chartSettings';
 import { useTeamNotesImport } from '../hooks/useTeamNotesImport';
 import { useChartNavigation } from '../hooks/useChartNavigation';
@@ -577,19 +581,44 @@ export function ChordChart({
   );
 
   /**
-   * „Als PDF teilen" – das aktive Lied als einzelne PDF.
+   * „Als PDF teilen" – das aktive Lied als einzelne PDF, über das Teilen-Fenster (Anmerkungen ja/nein,
+   * 07.10.2026) und denselben Baustein wie der Ablauf (`ablaufPdfBauen`): Akkorde oder das angezeigte
+   * Dokument, auf Wunsch mit den eigenen Anmerkungen.
    *
-   * Geht über `pdfOptionsForSong`, dieselbe Funktion, die auch den Seitenstrom der Anzeige baut.
-   * Vorher baute diese Stelle die Optionen selbst und übergab `totalOffset` – also OHNE den
-   * Kapo-Abzug. Bei gesetztem Kapo war das geteilte PDF dadurch anders transponiert als der
+   * Die Akkord-Optionen kommen aus `pdfOptionsForSong`, derselben Funktion, die auch den Seitenstrom
+   * der Anzeige baut. Vorher baute diese Stelle die Optionen selbst und übergab `totalOffset` – also
+   * OHNE den Kapo-Abzug. Bei gesetztem Kapo war das geteilte PDF dadurch anders transponiert als der
    * Bildschirm (#239). Es darf hier keine zweite Fassung dieser Rechnung geben.
    */
-  const shareCurrentAsPdf = (): void => {
-    const doc = generateChordPdf(
-      { ...song, chordpro: displayedChordpro },
-      pdfOptionsForSong(song, set, logo),
+  const [teilenOffen, setTeilenOffen] = useState(false);
+  const liedPdf = async (mitAnmerkungen: boolean): Promise<GebautesPdf> => {
+    const lied = { ...song, chordpro: displayedChordpro };
+    const opts = pdfOptionsForSong(song, set, logo);
+    const dokument =
+      set.viewSource === 'chords'
+        ? null
+        : (song.documents.find((d) => d.fileId === set.viewSource) ?? null);
+    const { doc, ersetzt, fehlend } = await ablaufPdfBauen(
+      [
+        {
+          song: lied,
+          versionKey: set.versionKey,
+          quelle: dokument ? { art: 'dokument', dokument } : { art: 'akkorde', opts },
+        },
+      ],
+      {
+        ladeSeiten: async (s, d) => dokumentSeiten(await ladeDokument(s.id, d.fileId), d.type),
+        akkordOpts: () => opts,
+        ebene: mitAnmerkungen ? eigeneEbene : undefined,
+      },
     );
-    void sharePdf(doc, song.title);
+    const hinweis =
+      ersetzt.length > 0
+        ? 'Das Dokument ließ sich nicht laden – im PDF stehen die Akkorde'
+        : fehlend.length > 0
+          ? 'Das Dokument ließ sich nicht laden'
+          : '';
+    return { doc, hinweis };
   };
 
   // ChordPro-Versionen anlegen/bearbeiten/löschen (Zustand + ChurchTools-Aufrufe im Hook gebündelt).
@@ -806,7 +835,7 @@ export function ChordChart({
           canEditSong={canEditSong}
           onSetting={(patch) => updateSetting(song.id, patch)}
           onSelectVersion={(versionKey) => selectVersion(song.id, versionKey)}
-          onSharePdf={shareCurrentAsPdf}
+          onSharePdf={() => setTeilenOffen(true)}
           onOpenFiles={() => setOverlay('files')}
           onEditSong={() => setOverlay('stammdaten')}
           onEditCurrent={openEditCurrent}
@@ -1018,6 +1047,15 @@ export function ChordChart({
         )}
 
         <Toast message={toast} />
+
+        {teilenOffen && (
+          <TeilenFenster
+            titel="Lied teilen"
+            dateiname={song.title}
+            bauen={liedPdf}
+            onClose={() => setTeilenOffen(false)}
+          />
+        )}
 
         {chartTour && (
           <Coachmarks

@@ -7,9 +7,11 @@ interface ConfirmDialogProps {
   cancelLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
+  /** `true`: die Bestätigung zerstört nichts (blau statt rot), z. B. „Teilen". */
+  harmlos?: boolean;
 }
 
-/** Bestätigungs-Dialog für destruktive Aktionen. */
+/** Bestätigungs-Dialog – für destruktive Aktionen (rot) oder, mit `harmlos`, für einen zweiten Schritt. */
 export function ConfirmDialog({
   title,
   message,
@@ -17,6 +19,7 @@ export function ConfirmDialog({
   cancelLabel = 'Abbrechen',
   onConfirm,
   onCancel,
+  harmlos = false,
 }: ConfirmDialogProps) {
   return (
     <div className={styles.overlay} onClick={onCancel}>
@@ -27,7 +30,10 @@ export function ConfirmDialog({
           <button className={`${styles.btn} ${styles.cancel}`} onClick={onCancel}>
             {cancelLabel}
           </button>
-          <button className={`${styles.btn} ${styles.danger}`} onClick={onConfirm}>
+          <button
+            className={`${styles.btn} ${harmlos ? styles.primary : styles.danger}`}
+            onClick={onConfirm}
+          >
             {confirmLabel}
           </button>
         </div>

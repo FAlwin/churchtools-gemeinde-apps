@@ -127,13 +127,14 @@ describe('SongMenu – jede Auswahl schließt das Menü', () => {
 });
 
 describe('SongMenu – was zum angezeigten Inhalt passt', () => {
-  it('bei einem Dokument entfallen Abschnitte, Teilen, Bearbeiten und die Versionsliste', () => {
+  it('bei einem Dokument entfallen Abschnitte, Bearbeiten und die Versionsliste – Teilen bleibt', () => {
     const withDoc = song({
       documents: [{ fileId: 99, name: 'Noten.pdf', type: 'pdf' }] as never,
     });
     setup({ song: withDoc, set: { viewSource: 99 } });
     expect(screen.queryByText('Abschnitte transponieren')).toBeNull();
-    expect(screen.queryByText('Als PDF teilen')).toBeNull();
+    // Seit 07.10.2026: Geteilt wird, was das Lied zeigt – auch sein Dokument (Gemeinde ohne ChordPro).
+    expect(screen.getByText('Als PDF teilen')).toBeTruthy();
     expect(screen.queryByText('Bearbeiten (neue Version)')).toBeNull();
     expect(screen.queryByText('Akustik')).toBeNull();
     // Die Anzeige-Umschalter bleiben – sonst käme man vom Dokument nicht mehr weg.

@@ -259,7 +259,7 @@ Zwischenspeicher, `HttpError`; Browser: Sitzung der Seite, Bremse, `ApiError`).
 | Die App liegt **unter** der ChurchTools-Leiste (56 px); `position: fixed` rutschte darunter | `.ct-extension #root { transform }` – der App-Bereich ist Bezugsrahmen             |
 | Logos mit Wurzel-Pfad (`/logo…`) zeigten ins Leere                                          | `import.meta.env.BASE_URL`                                                         |
 | Inline-Skripte der `index.html` blockiert (CSP)                                             | Nur der Boot-Hinweis; die App selbst braucht keine                                 |
-| Die Erweiterung erscheint **nicht** in der ChurchTools-App (iPhone, Alwin)                  | offen – siehe §7                                                                   |
+| Die Erweiterung erscheint **nicht** in der ChurchTools-App (iPhone, Alwin)                  | geht nicht – siehe §7, Punkt 6                                                     |
 
 #### 3b – Schreiben (offen)
 
@@ -315,6 +315,13 @@ Werbeton, mit Verweis darauf, dass es die App auch mit eigenem Server gibt und w
    Es wird **nichts migriert**. Wer wechselt, fängt bei den Anmerkungen neu an. Bewusst so.
 5. **Doppelte Arbeit mit bwl21.** Er baut parallel. **Entschieden (Alwin, 07.10.2026):** Wir schicken
    den Plan nicht vorab, sondern bauen unsere Fassung fertig und zeigen sie ihm danach.
+6. **Nicht in der ChurchTools-App (geklärt 07.10.2026).** Erweiterungen haben nur Einbaustellen im
+   **Web** (`churchtools/churchtools-extension-points`: Hauptmenü, Admin, Finanz-Reiter, Termin-Dialog);
+   die native App kennt sie nicht (Forum 2021, ChurchTools-Mitarbeiter: „nicht in der App möglich").
+   Getestet: Ein Link im Startseiten-Widget „Links" (seit CT 3.125) öffnet am iPhone nur den Browser.
+   **Folge:** Für die ECG bleibt die PWA der Weg (Homescreen, offline, angemeldet). Die Extension ist
+   für Gemeinden ohne eigenen Server gedacht – dort im Browser bzw. am iPad über ChurchTools. Alwin
+   hat trotzdem entschieden, sie fertig zu bauen (Phase 4/5, 3b danach).
 
 ## 8. Verifikation
 

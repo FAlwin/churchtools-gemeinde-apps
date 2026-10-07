@@ -115,6 +115,10 @@ die App als **PNG-Bild** (`toDataURL('image/png', 0.7)`), nicht als Strichliste.
 | Überschreiben?                             | Gibt es nicht – neue Fassung hochladen, **nachlesen, ob sie da ist**, dann die alte löschen                                                                     |
 | Dateien am Modul (`/files/custom_module`)? | **Scheidet aus:** 500 – und die Datei liegt trotzdem da. Diese Domäne gehört dem Erweiterungs-Paket                                                             |
 
+**Nachtrag (07.10.2026):** In der Oberfläche heißen die Personen-Dateien **„Anhänge“** (Person öffnen →
+ganz unten „Anhänge >>“); die Liste dort bietet eine **Sicherheitsstufe** zur Auswahl. Ob sich darüber
+die Sichtbarkeit einschränken lässt, ist **nicht geprüft** – Kandidat für 3b.
+
 **Entscheidung (Alwin, 07.10.2026): alles als Personen-Dateien.** Ein Speicherweg statt zwei, gezieltes
 Laden statt „alle Musiker bei jedem Öffnen", Schutz je Person, und **keine Zusatzrechte** für die
 Gemeinde. Der Preis: Ersetzen ist ein Doppelschritt, die Dateien sind bei der Person in ChurchTools

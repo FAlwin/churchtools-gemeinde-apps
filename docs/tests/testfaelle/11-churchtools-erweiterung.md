@@ -39,13 +39,13 @@ ChordPro-Datei.
 **Das brauchst du:** TF-EXT-01 auf zwei Geräten (oder zwei Browsern) mit demselben Konto.
 
 **Das muss passieren:** Was du auf Gerät A malst, siehst du auf Gerät B nach dem Öffnen desselben
-Lieds. In ChurchTools hängt an deiner Person unter **Dateien** je bemalter Seite **ein** Bild
+Lieds. In ChurchTools hängt an deiner Person unter **Anhänge** je bemalter Seite **ein** Bild
 `musikapp_….png` und **eine** Datei `musikapp_daten.json` – auch nach mehrmaligem Ändern nicht mehr.
 
 1. Gerät A: Liedblatt öffnen, oben auf den **Stift**, etwas malen, den Stift wieder schließen.
 2. Gerät B: dasselbe Lied öffnen.
 3. Gerät A: noch etwas dazumalen. Gerät B: Lied neu öffnen.
-4. In ChurchTools die eigene Person öffnen → **Dateien** ansehen.
+4. In ChurchTools: **Personen** → dich selbst öffnen → ganz unten **„Anhänge >>“** anklicken.
 
 <details><summary>Technisches</summary>
 

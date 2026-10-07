@@ -98,6 +98,13 @@ export interface SongVersion {
    * deshalb von G aus transponiert und stimmte nur, solange niemand die Tonart anfasste.
    */
   writtenKey: string | null;
+  /**
+   * Der Schlüssel, den diese Version **bis zum 07.10.2026** hatte – nur gesetzt, wenn er anders war.
+   * Bei Liedern mit Bindestrich im Titel las die App den Versionsnamen falsch („2 — Akustik" statt
+   * „Akustik", `versionNameBisher`); Tonart und Anmerkungen liegen dort noch unter dem alten Schlüssel.
+   * Das Liedblatt kopiert sie beim Öffnen auf den neuen (`utils/versionMigration.ts`).
+   */
+  alterKey?: string;
 }
 
 /** Ein Arrangement zur Auswahl bei der Songsuche. */

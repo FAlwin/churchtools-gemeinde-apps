@@ -25,6 +25,7 @@ import {
   documentsOf,
   isOriginalChordpro,
   isVersionFile,
+  versionNameBisher,
   versionNameOf,
   versionSlug,
 } from './arrangementFiles';
@@ -228,7 +229,17 @@ export async function baueLied(
     const text = versionResults[i]?.text ?? '';
     // Die Tonart der VERSION – dieselbe Regel wie für das Original weiter unten: Die Datei hat das
     // letzte Wort (#236). Ohne eigene Zeile bleibt `null`, und die App nimmt die des Originals (#398).
-    return { key: versionSlug(name), name, text, writtenKey: metaValue(text, 'key') };
+    const key = versionSlug(name);
+    const bisher = versionNameBisher(f);
+    const alterKey =
+      bisher !== null && versionSlug(bisher) !== key ? versionSlug(bisher) : undefined;
+    return {
+      key,
+      name,
+      text,
+      writtenKey: metaValue(text, 'key'),
+      ...(alterKey ? { alterKey } : {}),
+    };
   });
 
   // Kopfangaben aus dem Original ableiten (sonst erste Version, falls kein Original existiert)

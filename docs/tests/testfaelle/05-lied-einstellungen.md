@@ -347,3 +347,27 @@ mit PDF fehlt nicht. Auf dem iPhone/iPad öffnet „Teilen" das Teilen-Menü (ke
   wählbar)
 
 </details>
+
+### TF-EINST-13 · Versionen bei Liedern mit Bindestrich im Titel
+
+**Das brauchst du:** Ein Lied mit Bindestrich im Titel (z. B. „Herr-lich") mit einer Version, an der
+schon Tonart und Anmerkungen hängen – angelegt mit einer App **vor** dem Update.
+
+**Das muss passieren:** Nach dem Update heißt die Version richtig („Akustik", nicht „lich — Akustik").
+Beim ersten Öffnen ist die Version weiter gewählt, Tonart und Anmerkungen sind da – auch auf einem
+zweiten Gerät.
+
+1. Lied öffnen, auf den **Titel** tippen → unter **Version** steht der richtige Name, mit Haken.
+2. Tonart und Anmerkungen ansehen – wie vor dem Update.
+3. Version **umbenennen** → der Name wird nicht länger, in ChurchTools liegt genau eine Datei.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/ct/arrangementFiles.ts`, `shared/ct/setlistKern.ts`, `shared/ct/notenblaetter.ts`, `client/src/utils/versionMigration.ts`, `client/src/pages/ChordChart.tsx`
+- **Automatisiert:** weitgehend – `versionMigration.test.ts` (Erkennung, Kopien, gewählte Version),
+  `setlistKern.test.ts` (`alterKey`), `ctWrite.test.ts` (Version über den alten Schlüssel gefunden).
+  Von Hand: dass der Umzug VOR dem Lesen der Einstellungen läuft (erstes Öffnen) und ein zweites Gerät
+- **Historie:** Durchklick 3b-2 (07.10.2026)
+
+</details>

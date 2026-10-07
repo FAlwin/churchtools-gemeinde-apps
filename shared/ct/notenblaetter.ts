@@ -17,6 +17,7 @@ import {
   isOriginalChordpro,
   safeFileName,
   versionFileName,
+  versionNameBisher,
   versionNameOf,
   versionSlug,
 } from './arrangementFiles';
@@ -88,6 +89,15 @@ interface VersionsDatei {
   file: CtArrangementFile;
   name: string;
   key: string;
+  /** Der Schlüssel nach der Erkennung bis 07.10.2026 (`versionNameBisher`) – eine ältere App schickt ihn noch. */
+  alterKey: string | null;
+}
+
+/** Die Version zu einem Schlüssel – dem heutigen oder dem bis 07.10.2026 gültigen. */
+function versionZu(versionen: VersionsDatei[], versionKey: string): VersionsDatei | undefined {
+  return (
+    versionen.find((v) => v.key === versionKey) ?? versionen.find((v) => v.alterKey === versionKey)
+  );
 }
 
 /** Die verwalteten Versionen eines Arrangements (Dateien mit `(App)`-Marker) samt Liedname. */
@@ -101,7 +111,9 @@ async function versionenLaden(
   const versionen = arr.files
     .map((file) => {
       const name = versionNameOf(file);
-      return name ? { file, name, key: versionSlug(name) } : null;
+      if (!name) return null;
+      const bisher = versionNameBisher(file);
+      return { file, name, key: versionSlug(name), alterKey: bisher ? versionSlug(bisher) : null };
     })
     .filter((v): v is VersionsDatei => v !== null);
   return { songName: song.name, versionen };
@@ -148,12 +160,12 @@ export async function versionAendern(
   aenderung: { text?: string; name?: string },
 ): Promise<SongVersion> {
   const { songName, versionen } = await versionenLaden(s, songId, arrangementId);
-  const aktuell = versionen.find((v) => v.key === versionKey);
+  const aktuell = versionZu(versionen, versionKey);
   if (!aktuell) throw s.fehler(404, 'Version nicht gefunden.');
 
   const neuerName = versionsName(s, aenderung.name ?? aktuell.name);
   const neuerKey = versionSlug(neuerName);
-  if (neuerKey !== versionKey && versionen.some((v) => v.key === neuerKey)) {
+  if (neuerKey !== aktuell.key && versionen.some((v) => v.key === neuerKey)) {
     throw s.fehler(409, `Es gibt bereits eine Version „${neuerName}".`);
   }
 
@@ -173,7 +185,7 @@ export async function versionLoeschen(
   versionKey: string,
 ): Promise<void> {
   const { versionen } = await versionenLaden(s, songId, arrangementId);
-  const aktuell = versionen.find((v) => v.key === versionKey);
+  const aktuell = versionZu(versionen, versionKey);
   if (!aktuell) return;
   const id = fileIdFromUrl(aktuell.file.fileUrl);
   if (id) await dateiLoeschen(s, id);

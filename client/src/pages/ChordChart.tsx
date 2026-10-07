@@ -49,6 +49,7 @@ import { useChartSync, useResyncAfterEditor } from '../hooks/useChartSync';
 import { useMetronome, type KlickModus } from '../hooks/useMetronome';
 import { taktRaster } from '../utils/metronome';
 import { arrangementMigrationAnwenden } from '../utils/arrangementMigration';
+import { versionMigrationAnwenden } from '../utils/versionMigration';
 import {
   useArrangementUeberschreibung,
   useArrangementVorladen,
@@ -104,6 +105,12 @@ export function ChordChart({
   canUseGlobalNotes = false,
   canUseCcli = false,
 }: ChordChartProps) {
+  // Versions-Schlüssel berichtigt (07.10.2026, `versionMigration.ts`): Tonart und Anmerkungen vom alten
+  // Schlüssel mitnehmen – VOR `useSongSettings`, das die Einstellungen beim ersten Zeichnen liest. Wie
+  // der Arrangement-Umzug weiter unten synchron, lokal und idempotent.
+  useMemo(() => {
+    for (const s of songsAusAblauf) versionMigrationAnwenden(s);
+  }, [songsAusAblauf]);
   // Anzeige-Einstellungen aller Lieder – Halten und Speichern liegt in useSongSettings (#198).
   const { settings, updateSetting, selectVersion, reloadSettings } =
     useSongSettings(songsAusAblauf);

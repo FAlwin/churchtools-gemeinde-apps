@@ -521,6 +521,41 @@ describe('versionAendern – die alte Datei geht erst, wenn die neue liegt', () 
     expect(schritte).toEqual(['POST /api/files/song_arrangement/70', 'DELETE /api/files/555']);
   });
 
+  it('eine ältere App schickt den alten Schlüssel (Bindestrich im Titel) – die Version wird trotzdem gefunden', async () => {
+    const schritte: string[] = [];
+    const MIT_STRICH = {
+      ...MIT_VERSION,
+      name: 'Treu-Lied',
+      arrangements: [
+        {
+          ...MIT_VERSION.arrangements[0],
+          files: [
+            {
+              name: 'Treu-Lied — Akustik (App).chordpro',
+              fileUrl: 'https://ct.test/?q=public/filedownload&id=556',
+            },
+          ],
+        },
+      ],
+    };
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => {
+      const u = String(url);
+      const method = init?.method ?? 'GET';
+      if (u.includes('/api/csrftoken')) return Promise.resolve(jsonRes('t'));
+      if (method === 'GET') return Promise.resolve(jsonRes(MIT_STRICH));
+      schritte.push(`${method} ${u.replace(/^https?:\/\/[^/]+/, '')}`);
+      return Promise.resolve(
+        method === 'POST' ? jsonRes(null, 200) : new Response(null, { status: 204 }),
+      );
+    });
+    // `lied-akustik` war der Schlüssel bis 07.10.2026 („Lied — Akustik" statt „Akustik").
+    const v = await noten.versionAendern(verwalterFuer(COOKIE), 7, 70, 'lied-akustik', {
+      text: '[D]neu',
+    });
+    expect(v.key).toBe('akustik');
+    expect(schritte).toEqual(['POST /api/files/song_arrangement/70', 'DELETE /api/files/556']);
+  });
+
   it('scheitert das Hochladen, bleibt die alte Datei liegen', async () => {
     const schritte = mock(504);
     await expect(

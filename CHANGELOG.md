@@ -42,6 +42,12 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Behoben
 
+- **Versionen bei Liedern mit Bindestrich im Titel hießen falsch** (beim Durchklick von 3b-2 gefunden,
+  betraf auch die Server-Variante): Aus „Testlied 3b-2 — Akustik" wurde die Version „2 — Akustik" –
+  und damit ein falscher Schlüssel für Tonart und Anmerkungen; Umbenennen machte den Namen jedes Mal
+  länger. Jetzt zählt der letzte „ — " vor dem Kürzel. **Beim Update ist nichts zu tun:** Öffnet man
+  ein betroffenes Lied, nimmt die App Tonart, Anmerkungen und die gewählte Version vom alten auf den
+  neuen Schlüssel mit (kopiert, nichts wird gelöscht).
 - **Eine Version ändern konnte sie verlieren:** Die alte Datei wurde gelöscht, BEVOR die neue
   hochgeladen war – scheiterte das Hochladen (Netz, Zeitüberschreitung), war die Version weg. Jetzt
   erst hochladen, dann löschen (beim Umzug der Regeln nach `shared/ct/` gefunden).

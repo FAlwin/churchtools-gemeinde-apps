@@ -66,19 +66,21 @@ installieren", keinen Bereich „Offline", keine Verwaltung und kein „Abmelden
 „Erweiterung für ChurchTools" mit **Mehr erfahren**. Bei **Lieder** gibt es keine Reiter
 „Häufigkeit/Zuletzt", kein „Neues Lied", keinen Stift und kein Plus am Lied, und ein langer
 Suchbegriff bietet keine Suche im Liedtext an. Im Ablauf fehlt „Ablauf bearbeiten", bei den Terminen
-das Wolken-Symbol „Für offline speichern".
+das Wolken-Symbol „Für offline speichern". Im Tempo-Menü eines Liedblatts steht „In der Erweiterung
+gilt das Tempo nur hier – in ChurchTools speichern kommt noch", **ohne** Speichern-Knopf – und nicht
+„fehlt dir die Berechtigung" (gemeldet von Alwin am 07.10.2026).
 
 1. Unten auf **Mehr**, ganz nach unten scrollen, auf **Mehr erfahren** tippen – es öffnet sich die
    Projektseite beim Abschnitt „Für andere Gemeinden".
 2. Unten auf **Lieder**, in die Suche einen Satz aus einem Lied tippen.
-3. Unten auf **Termine**, einen Gottesdienst öffnen.
+3. Unten auf **Termine**, einen Gottesdienst öffnen, ein Lied antippen, oben das **Metronom**-Symbol.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/services/funktionen.ts`, `client/src/components/ServerVarianteHinweis.tsx`, `client/src/pages/Settings.tsx`, `client/src/services/ctLesen.ts`
-- **Automatisiert:** teilweise – `Settings.extension.test.tsx` (Mehr) und `ctLesen.test.ts`
-  (Bearbeiten aus); Lieder, Suche und Termine nur hier
+- **Betrifft:** `client/src/services/funktionen.ts`, `client/src/components/ServerVarianteHinweis.tsx`, `client/src/pages/Settings.tsx`, `client/src/services/ctLesen.ts`, `client/src/components/TempoMenu.tsx`
+- **Automatisiert:** teilweise – `Settings.extension.test.tsx` (Mehr), `TempoMenu.extension.test.tsx`
+  und `ctLesen.test.ts` (Bearbeiten aus); Lieder, Suche und Termine nur hier
 - **Historie:** #336
 
 </details>

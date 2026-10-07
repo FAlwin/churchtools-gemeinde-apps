@@ -7,6 +7,14 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu
+
+- **Die App als ChurchTools-Erweiterung (#333–#337):** Für Gemeinden ohne eigenen Server hängt an
+  jedem Release jetzt zusätzlich `musik-app-<Version>.zip` – in ChurchTools unter Administration →
+  Erweiterungen hochladen, angemeldet ist man dann über ChurchTools. Sie zeigt Termine, Ablauf,
+  Liedblatt und Lieder und speichert Anmerkungen an der eigenen Person; Offline, Statistik und
+  Bearbeiten gibt es nur mit eigenem Server. Anleitung: `docs/betrieb/ERWEITERUNG.md`.
+
 ### Geändert
 
 - **Terminliste bei überlasteter ChurchTools-Instanz:** Bremst ChurchTools (HTTP 429 oder
@@ -16,6 +24,13 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Intern
 
+- **Vorbereitung ChurchTools-Erweiterung, Phase 2 (#334):** Neuer Speicherweg für den späteren
+  Betrieb als Erweiterung: Anmerkungen, Einstellungen und „gesehen" werden dort als Dateien an der
+  eigenen Person in ChurchTools abgelegt (`personenAblage.ts`, `ctRuntime.ts`). Für die
+  Server-Variante ändert sich nichts – die Weiche in `annotations.ts`/`userSettings.ts` wählt den Weg,
+  alle bisherigen Absicherungen gelten für beide. Gemessen auf der Test-Instanz am 07.10.2026 (Plan
+  §2a/§2b). Die Regel „zu welchem Lied gehört ein Schlüssel" und der „gesehen"-Stand liegen jetzt in
+  `shared/` statt dreifach von Hand im Server.
 - **Vorbereitung ChurchTools-Erweiterung, Phase 3a – Lesen (#335):** Die Erweiterung liest Termine,
   Ablauf, Liedblatt, Lieder und Rechte direkt aus ChurchTools – mit denselben Regeln wie der Server,
   die dafür nach `shared/ct/` gewandert sind (nicht kopiert). Gerätweite Bremse nach einem 429.
@@ -26,14 +41,6 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Installieren, Abmelden, Verwaltung, Lied-Statistik, Liedtext-Suche, vorerst Bearbeiten), wird dort
   nicht mehr angezeigt; stattdessen ein Hinweis in „Mehr" auf die App mit eigenem Server. Gesteuert
   über `services/funktionen.ts` – für die Server-Variante bleibt alles, wie es ist.
-
-- **Vorbereitung ChurchTools-Erweiterung, Phase 2 (#334):** Neuer Speicherweg für den späteren
-  Betrieb als Erweiterung: Anmerkungen, Einstellungen und „gesehen" werden dort als Dateien an der
-  eigenen Person in ChurchTools abgelegt (`personenAblage.ts`, `ctRuntime.ts`). Für die
-  Server-Variante ändert sich nichts – die Weiche in `annotations.ts`/`userSettings.ts` wählt den Weg,
-  alle bisherigen Absicherungen gelten für beide. Gemessen auf der Test-Instanz am 07.10.2026 (Plan
-  §2a/§2b). Die Regel „zu welchem Lied gehört ein Schlüssel" und der „gesehen"-Stand liegen jetzt in
-  `shared/` statt dreifach von Hand im Server.
 
 ## [2.27.0] – 2026-10-05
 

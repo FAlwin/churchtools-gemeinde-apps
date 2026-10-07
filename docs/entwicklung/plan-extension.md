@@ -1,7 +1,7 @@
 # Umsetzungsplan – ChurchTools-Extension (zweite Auslieferung derselben Codebasis)
 
 > Status: **Phase 1 (#333), 2 (#334) und 3a (#335, Lesen) erledigt, 07.10.2026.** Ablage = Personen-Dateien
-> (§2b). Phase 4 (#336, Anteasern) erledigt. Offen: Phase 5 Paket, 3b Schreiben.
+> (§2b). Phase 4 (#336, Anteasern) und 5 (#337, Paket) erledigt. Offen: 3b Schreiben.
 > Ziel: dieselbe App zusätzlich als **ChurchTools-Extension** unter `/ccm/<key>/` ausliefern –
 > ohne eigenen Server, ohne zweite Anmeldung, installierbar von jeder Gemeinde.
 > Die bestehende Server-/PWA-Variante (NAS, `musik.ecg-donrath.de`) **bleibt** und ist der Weg für
@@ -287,14 +287,21 @@ Alwin abgenommen, in der Test-Instanz durchgeklickt.
 - [x] **Der eine Hinweis** (`ServerVarianteHinweis`) unten in „Mehr"; „Mehr erfahren" springt in den
       README-Abschnitt „Für andere Gemeinden"
 - [x] Inline-Start-Skript der `index.html` im Extension-Paket entfernt (CSP blockiert es ohnehin)
+- [x] **Nachtrag (Alwin, 07.10.2026):** Das Tempo-Menü machte aus dem ausgeschalteten Bearbeiten
+      „Dir fehlt die Berechtigung" – falsch. Wo die Oberfläche einen GRUND nennt, fragt sie jetzt
+      `funktionen.schreibenInChurchTools`; in der Extension: „… speichern kommt noch", ohne Knopf
 
 ### Phase 5 – Paket, Anleitung, Release (#337)
 
-- [ ] `npm run build:extension` + ZIP-Bau, Key über `.env` konfigurierbar
-- [ ] Installationsanleitung, mit der eine fremde Gemeinde ohne Rückfrage zurechtkommt
-- [ ] CI baut **beide** Auslieferungen; ein Release erzeugt Docker-Image **und** ZIP
-- [ ] `CLAUDE.md`: die Regel „Weiche nur in der Service-Schicht" festhalten – sonst hält sie keine
-      drei Monate
+- [x] `npm run build:extension -w client` + ZIP-Bau (seit 3a); Kürzel über `VITE_KEY`, **für die
+      Verteilung fest `musik-app`** – der Pfad `/ccm/<Kürzel>/` steckt im Build, die Anleitung nennt
+      genau dieses Kürzel
+- [x] Installationsanleitung `docs/betrieb/ERWEITERUNG.md` (Vergleich mit der Server-Variante,
+      Installieren, Rechte, Datenschutz der Personen-Dateien, Aktualisieren, Entfernen); README verweist
+      darauf im Abschnitt „Für andere Gemeinden" (dorthin springt auch der Hinweis in der App)
+- [x] CI baut **beide** Auslieferungen; der Release-Workflow hängt `musik-app-<Tag>.zip` an das
+      GitHub-Release (`fail_on_unmatched_files`)
+- [x] `CLAUDE.md`: Weiche nur in der Service-Schicht, Komponenten fragen `funktionen.ts` (seit 3a/4)
 
 ## 6. Was in der Extension wegfällt
 

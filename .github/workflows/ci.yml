@@ -35,6 +35,11 @@ jobs:
       - name: Build
         run: npm run build
 
+      # Die zweite Auslieferung (#337): die App als ChurchTools-Erweiterung (ZIP). Mitgebaut, damit ein
+      # PR, der nur die PWA im Blick hat, den Extension-Build nicht unbemerkt bricht.
+      - name: Build ChurchTools-Erweiterung
+        run: npm run build:extension -w client
+
       - name: Test
         run: npm test
 

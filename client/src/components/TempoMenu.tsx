@@ -10,6 +10,7 @@ import {
 import { Icon } from './icons';
 import type { KlickModus } from '../hooks/useMetronome';
 import styles from '../pages/ChordChart.module.scss';
+import { funktionen } from '../services/funktionen';
 
 /**
  * Das Tempo-Menü hinter dem Metronom – alles rund ums Tempo an EINER Stelle.
@@ -178,11 +179,13 @@ export function TempoMenu({
   /** Was unter der Trennlinie steht. Immer EINE Zeile, damit der Rahmen nicht springt. */
   const hinweis = fehler
     ? fehler
-    : !darfSpeichern
-      ? 'Zum Ändern in ChurchTools fehlt dir die Berechtigung – der Wert gilt nur hier.'
-      : abweichend
-        ? 'Speichern setzt das Tempo in ChurchTools – für alle, die dieses Lied öffnen.'
-        : 'Puls und Klick gelten nur für dich – gespeichert wird davon nichts.';
+    : !funktionen.schreibenInChurchTools
+      ? 'In der Erweiterung gilt das Tempo nur hier – in ChurchTools speichern kommt noch.'
+      : !darfSpeichern
+        ? 'Zum Ändern in ChurchTools fehlt dir die Berechtigung – der Wert gilt nur hier.'
+        : abweichend
+          ? 'Speichern setzt das Tempo in ChurchTools – für alle, die dieses Lied öffnen.'
+          : 'Puls und Klick gelten nur für dich – gespeichert wird davon nichts.';
 
   return (
     <>
@@ -314,19 +317,22 @@ export function TempoMenu({
         </div>
 
         <div className={`${styles.menuHint}${fehler ? ' ' + styles.menuError : ''}`}>{hinweis}</div>
-        <button
-          className={styles.menuGo}
-          onClick={() => void speichern()}
-          disabled={!darfSpeichern || !abweichend || speichert}
-        >
-          {speichert ? (
-            'Speichern…'
-          ) : (
-            <>
-              <Icon name="metronome" size={16} stroke={2} /> {gilt ?? '–'} in ChurchTools speichern
-            </>
-          )}
-        </button>
+        {funktionen.schreibenInChurchTools && (
+          <button
+            className={styles.menuGo}
+            onClick={() => void speichern()}
+            disabled={!darfSpeichern || !abweichend || speichert}
+          >
+            {speichert ? (
+              'Speichern…'
+            ) : (
+              <>
+                <Icon name="metronome" size={16} stroke={2} /> {gilt ?? '–'} in ChurchTools
+                speichern
+              </>
+            )}
+          </button>
+        )}
       </div>
     </>
   );

@@ -14,6 +14,7 @@ import { getSettings } from '../services/userSettings.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import { ctCookie } from '../utils/ctCookie.js';
 import { songIdsFromQuery } from '../utils/songIdsQuery.js';
+import { songIdOfAnnoKey } from '@shared/keys/index';
 
 async function requireTeamNotes(req: Request): Promise<void> {
   const caps = await getCapabilitiesCached(ctCookie(req), req.ctUserId ?? null);
@@ -76,8 +77,8 @@ export async function getSharers(req: Request, res: Response): Promise<void> {
     for (const [key, value] of Object.entries(entries)) {
       // Nur echte Anmerkungen zählen (Zoom ist geräte-/kontopersönlich und wird nie geteilt).
       if (!value.strokes && !(value.texts && value.texts.length)) continue;
-      const m = key.match(/^song(\d+)_/);
-      if (m) ids.add(Number(m[1]));
+      const id = songIdOfAnnoKey(key);
+      if (id !== null) ids.add(id);
     }
     if (ids.size > 0) out.push({ id: sharer.id, name: sharer.name, songs: [...ids] });
   }

@@ -11,23 +11,13 @@
  */
 import { config } from '../config.js';
 import { readJsonStore, writeJsonStore } from './jsonStore.js';
+import { GESEHEN_MAX_ALTER_MS, type GesehenerStand } from '@shared/types/index';
 
-interface SeenEntry {
-  /** Fingerabdruck der Setlist beim letzten Ansehen. */
-  hash: string;
-  /** Zeitpunkt des letzten Ansehens (ms) – für die Alters-Bereinigung. */
-  seenAt: number;
-  /** Signatur je Punkt beim letzten Ansehen (#161) – Basis für „was hat sich geändert". Optional
-   *  (ältere Einträge haben es nicht → beim nächsten Ansehen ergänzt). */
-  items?: { id: number; sig: string }[];
-}
+type SeenEntry = GesehenerStand;
 /** eventId → gesehener Stand. */
 type EventMap = Record<string, SeenEntry>;
 /** userId → EventMap. */
 type Store = Record<string, EventMap>;
-
-/** Einträge, die länger nicht mehr angesehen wurden, fliegen raus (Termine sind vergänglich). */
-const MAX_AGE_MS = 180 * 24 * 60 * 60 * 1000; // 180 Tage
 
 let store: Store | null = null;
 let writeChain: Promise<unknown> = Promise.resolve();
@@ -64,7 +54,7 @@ export async function markSeenSetlist(
   userId: number,
   eventId: number,
   hash: string,
-  items?: { id: number; sig: string }[],
+  items?: GesehenerStand['items'],
   now: number = Date.now(),
 ): Promise<void> {
   let s: Store;
@@ -77,7 +67,7 @@ export async function markSeenSetlist(
   const events: EventMap = s[uid] ?? {};
   // Alters-Bereinigung, damit die Datei über Jahre nicht unbegrenzt wächst.
   for (const [id, entry] of Object.entries(events)) {
-    if (now - entry.seenAt > MAX_AGE_MS) delete events[id];
+    if (now - entry.seenAt > GESEHEN_MAX_ALTER_MS) delete events[id];
   }
   events[String(eventId)] = { hash, seenAt: now, items };
   s[uid] = events;

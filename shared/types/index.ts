@@ -814,6 +814,24 @@ export interface GespeicherterZoom {
   fy?: number;
 }
 
+/**
+ * „Zuletzt gesehener Setlist-Stand" eines Kontos für einen Termin (#143, #161). Der Server legt ihn in
+ * `seenSetlists.ts` ab, die Extension in ihren Personen-Dateien (#334) – derselbe Typ, dieselbe
+ * Altersgrenze.
+ */
+export interface GesehenerStand {
+  /** Fingerabdruck der Setlist beim letzten Ansehen. */
+  hash: string;
+  /** Zeitpunkt des letzten Ansehens (ms) – für die Alters-Bereinigung. */
+  seenAt: number;
+  /** Signatur je Punkt beim letzten Ansehen (#161) – Basis für „was hat sich geändert". Optional
+   *  (ältere Einträge haben es nicht → beim nächsten Ansehen ergänzt). */
+  items?: { id: number; sig: string }[];
+}
+
+/** Einträge, die länger nicht mehr angesehen wurden, fliegen raus (Termine sind vergänglich). */
+export const GESEHEN_MAX_ALTER_MS = 180 * 24 * 60 * 60 * 1000; // 180 Tage
+
 /** Anmerkungen einer Seite, pro Konto gespeichert: Striche (PNG-DataURL) + Texte + Zoom. */
 export interface PageAnnotation {
   /** Striche als PNG-DataURL (oder null = keine). */

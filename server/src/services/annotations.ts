@@ -9,6 +9,7 @@ import { HttpError } from '../middleware/errorHandler.js';
 import { readJsonStore, writeJsonStore } from './jsonStore.js';
 // Anmerkungs-Typen kommen aus @shared/types – EINZIGE Quelle für Client + Server. Re-Export,
 // damit Bestandsimporte aus diesem Modul weiter funktionieren.
+import { songIdOfAnnoKey } from '@shared/keys/index';
 import type { AnnotationText, PageAnnotation } from '@shared/types/index';
 
 export type { AnnotationText, PageAnnotation };
@@ -101,8 +102,8 @@ export async function getAnnotations(userId: number, songIds: number[]): Promise
   const set = new Set(songIds);
   const out: Store = {};
   for (const [key, value] of Object.entries(store)) {
-    const m = key.match(/^song(\d+)_/);
-    if (m && set.has(Number(m[1]))) out[key] = value;
+    const id = songIdOfAnnoKey(key);
+    if (id !== null && set.has(id)) out[key] = value;
   }
   return out;
 }

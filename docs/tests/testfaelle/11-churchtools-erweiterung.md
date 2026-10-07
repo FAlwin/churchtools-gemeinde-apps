@@ -1,0 +1,58 @@
+# ChurchTools-Erweiterung
+
+Dieselbe App, als Erweiterung direkt in ChurchTools (Plan: `docs/entwicklung/plan-extension.md`).
+Getestet wird in der **Test-Instanz**, nie in der Live-Instanz der Gemeinde. Das Paket baut
+`npm run build:extension -w client` (mit `VITE_KEY` = Kürzel des Moduls); hochladen unter
+**Administration → Erweiterungen → Stift beim Modul → ZIP-Datei**.
+
+### TF-EXT-01 · Erweiterung öffnen, Ablauf und Liedblatt ansehen
+
+**Das brauchst du:** In der Test-Instanz ein Modul (z. B. „Musik App (Test)", Kürzel
+`musik-app-test`) mit dem aktuellen Paket, einen Gottesdienst mit Ablauf und ein Lied mit
+ChordPro-Datei.
+
+**Das muss passieren:** Du bist ohne eigene Anmeldung drin. Termine, Ablauf und Liedblatt erscheinen
+**unter** der ChurchTools-Leiste – kein Fenster rutscht darunter. Das Liedblatt zeigt Akkorde und Text
+(es bleibt nicht bei „Lieder werden vorbereitet…" hängen).
+
+1. In ChurchTools im Menü auf **Musik App (Test)** tippen.
+2. Bei **Termine** einen Gottesdienst öffnen (alte Termine: **Vergangene** → **Mehr laden**).
+3. Ein Lied im Ablauf antippen – das Liedblatt erscheint.
+4. Unten auf **Lieder**: Die Liste zeigt die Lieder der Gemeinde. Beim Stift an einem Lied öffnet sich
+   ein Fenster – es beginnt unter der ChurchTools-Leiste, die nicht abgedunkelt wird.
+5. Unten auf **Mehr**: Oben steht der Name der Gemeinde aus ChurchTools.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `client/src/services/ctLesen.ts`, `client/src/services/ctRuntime.ts`, `client/src/services/modus.ts`, `client/src/pdfSetup.ts`, `client/src/pdfWorkerDatei.ts`, `client/src/styles/main.scss`, `client/vite.config.ts`, `shared/ct/setlistKern.ts`
+- **Automatisiert:** teilweise – `ctLesen.test.ts` und `ctRuntime.test.ts` gegen ein nachgebautes
+  ChurchTools; was nur in der echten Einbettung auffällt (CSP, `<base href>`, Kopf verworfen, Leiste
+  von 56 px), prüft nur dieser Fall
+- **Historie:** #335 (Durchklick 07.10.2026: blob-Worker von der CSP blockiert, Vollbild-Fenster unter
+  der Leiste – beides behoben)
+
+</details>
+
+### TF-EXT-02 · Anmerkungen wandern über ChurchTools auf ein anderes Gerät
+
+**Das brauchst du:** TF-EXT-01 auf zwei Geräten (oder zwei Browsern) mit demselben Konto.
+
+**Das muss passieren:** Was du auf Gerät A malst, siehst du auf Gerät B nach dem Öffnen desselben
+Lieds. In ChurchTools hängt an deiner Person unter **Dateien** je bemalter Seite **ein** Bild
+`musikapp_….png` und **eine** Datei `musikapp_daten.json` – auch nach mehrmaligem Ändern nicht mehr.
+
+1. Gerät A: Liedblatt öffnen, oben auf den **Stift**, etwas malen, den Stift wieder schließen.
+2. Gerät B: dasselbe Lied öffnen.
+3. Gerät A: noch etwas dazumalen. Gerät B: Lied neu öffnen.
+4. In ChurchTools die eigene Person öffnen → **Dateien** ansehen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `client/src/services/personenAblage.ts`, `client/src/services/annotations.ts`, `client/src/services/userSettings.ts`
+- **Automatisiert:** teilweise – `personenAblage.test.ts` (16 Gegenproben); der Weg über die echte
+  Einbettung nur hier
+- **Historie:** #334, #335
+
+</details>

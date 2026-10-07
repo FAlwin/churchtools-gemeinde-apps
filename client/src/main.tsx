@@ -9,6 +9,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { SwUpdateProvider } from './hooks/useSwUpdate';
 import { initPwaInstall } from './services/pwaInstall';
 import { syncAppHeight } from './utils/appHeight';
+import { istExtension } from './services/modus';
 import './styles/main.scss';
 
 // Früh registrieren: das `beforeinstallprompt`-Event feuert einmalig kurz nach dem Laden.
@@ -17,6 +18,10 @@ initPwaInstall();
 // iOS-PWA: zuverlässige App-Höhe. `window.innerHeight` trackt im Standalone-Modus beide
 // Ausrichtungen korrekt (anders als `100dvh`, das beim Drehen hängen bleibt). Wert landet in
 // der CSS-Variable `--app-h`, die `html { height: var(--app-h) }` (main.scss) nutzt.
+// ChurchTools-Extension (#335): Die App liegt unter der ChurchTools-Leiste – main.scss macht ihren
+// Bereich zum Bezugsrahmen der Vollbild-Fenster (`.ct-extension #root`).
+if (istExtension) document.documentElement.classList.add('ct-extension');
+
 syncAppHeight();
 window.addEventListener('resize', syncAppHeight);
 window.addEventListener('orientationchange', syncAppHeight);

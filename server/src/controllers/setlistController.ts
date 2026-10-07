@@ -24,7 +24,6 @@ import { getUserId } from '../services/ctAuth.js';
 import { getCapabilities } from '../services/ctCapabilities.js';
 import { fetchFileBytes } from '../services/ctFiles.js';
 import { getCtServices, getSong } from '../services/ctRead.js';
-import { isoTag } from '../utils/isoTag.js';
 import { getEditableSongCategories } from '../services/ctSongCategories.js';
 import { getSongSources } from '../services/ctSongSources.js';
 import {
@@ -50,6 +49,7 @@ import {
   updateArrangementTempo,
 } from '../services/ctWrite.js';
 import { getSeenSetlists, markSeenSetlist } from '../services/seenSetlists.js';
+import { arrangementOptionen, setlistGeaendert, standardFenster } from '@shared/ct/setlistKern';
 import { MAX_BPM, MIN_BPM } from '@shared/tempo/index';
 import { ARRANGEMENT_GRENZEN, LIED_GRENZEN } from '@shared/types/index';
 import type {
@@ -63,14 +63,7 @@ import { HttpError } from '../middleware/errorHandler.js';
 import { ctCookie } from '../utils/ctCookie.js';
 import { accountKey } from '../middleware/session.js';
 import type { GleicheSchluessel } from '../utils/schemaSpiegel.js';
-
-/** Standard-Zeitfenster: 1 Woche zurück bis 6 Wochen voraus. */
-function defaultWindow(): { from: string; to: string } {
-  const now = new Date();
-  const from = isoTag(new Date(now.getTime() - 7 * 86400000));
-  const to = isoTag(new Date(now.getTime() + 42 * 86400000));
-  return { from, to };
-}
+import { sanitizeFileContentType } from '@shared/dateien/index';
 
 const dateSchema = z
   .string()
@@ -80,7 +73,7 @@ const dateSchema = z
 /** GET /api/services – Gottesdienste mit Setlist. */
 export async function getServices(req: Request, res: Response): Promise<void> {
   const cookie = ctCookie(req);
-  const def = defaultWindow();
+  const def = standardFenster();
   const from = dateSchema.parse(req.query.from) ?? def.from;
   const to = dateSchema.parse(req.query.to) ?? def.to;
   const withHashes = await getServicesWithSetlists(
@@ -101,7 +94,7 @@ export async function getServices(req: Request, res: Response): Promise<void> {
   }
   const services = withHashes.map(({ service, hash }) => {
     const prev = seen[String(service.id)];
-    return { ...service, setlistChanged: prev != null && prev.hash !== hash };
+    return { ...service, setlistChanged: setlistGeaendert(prev, hash) };
   });
   res.json(services);
 }
@@ -224,11 +217,7 @@ export async function postAgendaItem(req: Request, res: Response): Promise<void>
 export async function getSongArrangementsCtrl(req: Request, res: Response): Promise<void> {
   const songId = idSchema.parse(req.params.songId);
   const song = await getSong(ctCookie(req), songId);
-  const result: SongArrangementOption[] = (song.arrangements ?? []).map((a) => ({
-    arrangementId: a.id,
-    arrangementName: a.name,
-    key: a.keyOfArrangement ?? a.key ?? null,
-  }));
+  const result: SongArrangementOption[] = arrangementOptionen(song);
   res.json(result);
 }
 
@@ -709,34 +698,8 @@ export async function putVersion(req: Request, res: Response): Promise<void> {
   res.json(version);
 }
 
-/**
- * Nur diese MIME-Typen werden 1:1 (inline) ausgeliefert. Alles andere reicht der Proxy als
- * `application/octet-stream` mit `Content-Disposition: attachment` durch. Hintergrund (#138):
- * Die Bytes kommen aus ChurchTools, wo jeder mit Upload-Recht (Musiker) eine Datei an ein
- * Arrangement hängen kann. Würde der Content-Type ungefiltert übernommen, könnte eine HTML-/JS-
- * Datei auf UNSERER Origin ausgeführt werden (Stored-XSS, umgeht die CSP über `'self'`). Die
- * App braucht nur PDF + Rasterbilder + Klartext. **SVG bewusst NICHT gelistet** – es kann
- * Skripte enthalten und würde als Bild auf der eigenen Origin rendern.
- */
-const INLINE_SAFE_MIME = new Set([
-  'application/pdf',
-  'image/png',
-  'image/jpeg',
-  'image/jpg',
-  'image/gif',
-  'image/webp',
-  'text/plain',
-]);
-
-/** Rein & testbar: entscheidet über Content-Type + ob als Download (attachment) ausgeliefert wird. */
-export function sanitizeFileContentType(raw: string): {
-  contentType: string;
-  attachment: boolean;
-} {
-  const mime = raw.split(';')[0]?.trim().toLowerCase() ?? '';
-  if (INLINE_SAFE_MIME.has(mime)) return { contentType: raw, attachment: false };
-  return { contentType: 'application/octet-stream', attachment: true };
-}
+// Content-Type-Härtung (#138) – Regel in `@shared/dateien`, hier weitergereicht (Tests, #335).
+export { sanitizeFileContentType };
 
 /** GET /api/songs/:songId/files/:fileId – Datei (PDF/Bild) aus ChurchTools durchreichen. */
 export async function getFile(req: Request, res: Response): Promise<void> {

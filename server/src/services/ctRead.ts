@@ -18,6 +18,7 @@ import type {
   CtSongListEntry,
 } from './ctTypes.js';
 import { createTtlMemo } from './ttlMemo.js';
+import { dienstReihenfolge, untertitelAus } from '@shared/ct/setlistKern';
 
 export function getEvents(cookie: string, from: string, to: string): Promise<CtEvent[]> {
   return ctGet<CtEvent[]>(cookie, `/api/events?from=${from}&to=${to}`);
@@ -66,8 +67,7 @@ export async function getAppointmentSubtitle(
       cookie,
       `/api/calendars/${calendarId}/appointments/${appointmentId}`,
     );
-    const roh = data.appointment?.subtitle ?? data.subtitle ?? null;
-    subtitle = roh && roh.trim() ? roh.trim() : null;
+    subtitle = untertitelAus(data);
   } catch {
     // Ein Fehler wird NICHT gemerkt (#306): Sonst hielte ein einzelner Aussetzer den Untertitel zehn
     // Minuten lang fälschlich auf „keiner" – „vorübergehend ist nicht ungültig".
@@ -113,10 +113,7 @@ export async function getArrangement(
 
 /** Lädt die ChurchTools-Dienste (z.B. „Musik", „Predigt") für die Verantwortlich-Chips. */
 export async function getCtServices(cookie: string): Promise<CtService[]> {
-  const data = await ctGet<CtService[]>(cookie, `/api/services`);
-  return [...data].sort(
-    (a, b) => (a.sortKey ?? 0) - (b.sortKey ?? 0) || a.name.localeCompare(b.name, 'de'),
-  );
+  return dienstReihenfolge(await ctGet<CtService[]>(cookie, `/api/services`));
 }
 
 /** Lädt alle Songs (paginiert) für die „Alle Lieder"-Ansicht. */

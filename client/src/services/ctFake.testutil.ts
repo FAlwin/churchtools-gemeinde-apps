@@ -37,6 +37,17 @@ export class FakeCt {
   herunterladenScheitert = false;
   /** Hochladen an sich selbst verboten (fehlendes Recht) – Antwort wie ChurchTools: 401 + whoami ok. */
   hochladenVerboten = false;
+  /** Weitere GET-Antworten je Pfad (ohne Basis), z. B. `/api/events/1/agenda` → `{ data: … }`. */
+  antworten: Record<string, () => Response> = {};
+
+  /** Eine JSON-Antwort für einen Pfad hinterlegen. */
+  liefere(pfad: string, body: unknown, status = 200, headers: Record<string, string> = {}): void {
+    this.antworten[pfad] = () =>
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { 'Content-Type': 'application/json', ...headers },
+      });
+  }
 
   /** Eine Datei ablegen, als käme sie von einem anderen Gerät desselben Kontos. */
   ablegen(name: string, inhalt: string | Uint8Array, personId = this.ich): number {
@@ -91,6 +102,8 @@ export class FakeCt {
         headers: { 'Content-Type': 'application/unknown' },
       });
     }
+    const hinterlegt = this.antworten[pfad.split('?')[0]] ?? this.antworten[pfad];
+    if (hinterlegt && method === 'GET') return hinterlegt();
     if (pfad === '/api/whoami') return this.json(200, { data: { id: this.ich } });
     if (pfad === '/api/csrftoken') return this.json(200, { data: 'csrf-123' });
 

@@ -1,7 +1,8 @@
 /**
  * Die Laufzeit der ChurchTools-Extension (#334, Plan `docs/entwicklung/plan-extension.md`).
  *
- * **Die einzige Stelle, die `import.meta.env.MODE` liest.** Läuft die App als Extension unter
+ * Modus und Adresse stehen in `modus.ts` (ohne Abhängigkeiten – sonst entstünde ein Import-Kreis über
+ * `api` → `reachability`); hier werden sie weitergereicht. Läuft die App als Extension unter
  * `/ccm/<Kürzel>/`, gibt es keinen eigenen Server: Die Service-Schicht spricht ChurchTools direkt an,
  * mit der Sitzung der Seite (gemessen 07.10.2026: `/whoami` liefert ohne eigene Anmeldung die Person).
  *
@@ -14,21 +15,19 @@
  */
 import { ApiError } from './api';
 import { markReachable } from './reachability';
+import { parseRetryAfter, STANDARD_SPERRE_MS } from '@shared/ct/bremse';
+import { ctBasis, istExtension } from './modus';
 
-/** Läuft dieser Build als ChurchTools-Extension? (`vite build --mode extension`) */
-export const istExtension: boolean = import.meta.env.MODE === 'extension';
+export { ctBasis, istExtension };
 
-declare global {
-  interface Window {
-    /** Setzt ChurchTools auf seinen Extension-Seiten (gemessen 07.10.2026: `https://<instanz>/`). */
-    settings?: { base_url?: string };
-  }
-}
-
-/** Adresse der ChurchTools-Instanz, ohne abschließenden Schrägstrich. */
-export function ctBasis(): string {
-  const url = window.settings?.base_url ?? window.location.origin;
-  return url.replace(/\/+$/, '');
+/**
+ * Was es in der Extension (noch) nicht gibt – ehrlich gesagt statt still gescheitert (#335).
+ * `was` ist ein Satzanfang („Die Liedverwaltung").
+ */
+export function ohneServer<T>(was: string): Promise<T> {
+  return Promise.reject(
+    new ApiError(501, `${was} gibt es in der ChurchTools-Erweiterung noch nicht.`),
+  );
 }
 
 /**
@@ -108,6 +107,66 @@ export async function fehlerAus(res: Response, body: unknown): Promise<ApiError>
   return new ApiError(res.status, meldungAus(body, res.status));
 }
 
+// ── Die Bremse (#300, #335) ──────────────────────────────────────────────────
+/**
+ * ChurchTools bremst gerade (429) – **gerätweit**, für jede Anfrage.
+ *
+ * Im Server bündelt ein Prozess alle Geräte; hier spricht jedes Gerät ChurchTools selbst an. #300 hat
+ * gezeigt, was dann passiert: Nach dem ersten 429 rannten weitere Anfragen in die Wand, verlängerten
+ * die Drosselung, und Anmeldung, Rechte und Speichern scheiterten gleichzeitig. Deshalb geht nach
+ * einem 429 **gar keine** Anfrage mehr raus, bis die Sperrfrist um ist – `Retry-After`, sonst
+ * `STANDARD_SPERRE_MS`.
+ */
+export class ChurchToolsBremst extends ApiError {
+  constructor(public restMs: number) {
+    super(
+      503,
+      `ChurchTools bremst gerade (zu viele Anfragen). Bitte in ${Math.ceil(restMs / 1000)} s erneut versuchen.`,
+    );
+    this.name = 'ChurchToolsBremst';
+  }
+}
+
+let gesperrtBis = 0;
+
+function pruefeBremse(): void {
+  const rest = gesperrtBis - Date.now();
+  if (rest > 0) throw new ChurchToolsBremst(rest);
+}
+
+function bremsen(res: Response): ChurchToolsBremst {
+  const ms = parseRetryAfter(res.headers.get('retry-after')) ?? STANDARD_SPERRE_MS;
+  gesperrtBis = Date.now() + ms;
+  return new ChurchToolsBremst(ms);
+}
+
+/** Heißt der Fehler „ChurchTools kann gerade nicht mehr" – Drosselung oder Zeitüberschreitung? */
+export function istUeberlastet(e: unknown): boolean {
+  return e instanceof ChurchToolsBremst || (e instanceof ApiError && e.status === 504);
+}
+
+/** Nur für Tests: Bremse lösen. */
+export function _bremseLoesen(): void {
+  gesperrtBis = 0;
+}
+
+/** Zeitgrenzen wie im Server (#248): Ohne Grenze hängt eine Anfrage, wenn ChurchTools hängt. */
+const ZEIT_API_MS = 15_000;
+const ZEIT_DATEI_MS = 60_000;
+
+/** fetch mit Zeitgrenze; eine Zeitüberschreitung wird zu 504, ein Netzfehler meldet „nicht erreichbar". */
+async function mitZeitgrenze(url: string, init: RequestInit, ms: number): Promise<Response> {
+  try {
+    return await fetch(url, { ...init, signal: AbortSignal.timeout(ms) });
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'TimeoutError') {
+      throw new ApiError(504, 'ChurchTools antwortet nicht (Zeitüberschreitung).');
+    }
+    markReachable(false);
+    throw e;
+  }
+}
+
 let csrfToken: Promise<string | null> | null = null;
 
 /**
@@ -150,6 +209,7 @@ export async function ctAnfrage<T = unknown>(
   pfad: string,
   init: { method?: string; body?: FormData | string } = {},
 ): Promise<T> {
+  pruefeBremse();
   const method = init.method ?? 'GET';
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (typeof init.body === 'string') headers['Content-Type'] = 'application/json';
@@ -157,19 +217,13 @@ export async function ctAnfrage<T = unknown>(
     const csrf = await holeCsrf();
     if (csrf) headers['CSRF-Token'] = csrf;
   }
-  let res: Response;
-  try {
-    res = await fetch(`${ctBasis()}/api${pfad}`, {
-      method,
-      credentials: 'include',
-      headers,
-      body: init.body,
-    });
-  } catch (e) {
-    markReachable(false);
-    throw e;
-  }
+  const res = await mitZeitgrenze(
+    `${ctBasis()}/api${pfad}`,
+    { method, credentials: 'include', headers, body: init.body },
+    ZEIT_API_MS,
+  );
   markReachable(![502, 503, 504].includes(res.status));
+  if (res.status === 429) throw bremsen(res);
   const text = await res.text();
   let body: unknown = null;
   if (text) {
@@ -188,14 +242,18 @@ export async function ctAnfrage<T = unknown>(
  * Login-Token-Header endet in einer Weiterleitungsschleife). Fehler wie bei `ctAnfrage`.
  */
 export async function ctDatei(fileUrl: string): Promise<Blob> {
-  let res: Response;
-  try {
-    res = await fetch(fileUrl, { credentials: 'include' });
-  } catch (e) {
-    markReachable(false);
-    throw e;
+  // Nur Dateien der eigenen Instanz – die Adressen kommen aus ChurchTools-DATEN (Arrangements können
+  // freie Links enthalten); die Sitzung soll nicht an einen fremden Host gehen (wie `assertCtFileUrl`).
+  if (!fileUrl.startsWith(`${ctBasis()}/`)) {
+    throw new ApiError(
+      502,
+      'Datei-Download abgelehnt: Adresse gehört nicht zur ChurchTools-Instanz.',
+    );
   }
+  pruefeBremse();
+  const res = await mitZeitgrenze(fileUrl, { credentials: 'include' }, ZEIT_DATEI_MS);
   markReachable(![502, 503, 504].includes(res.status));
+  if (res.status === 429) throw bremsen(res);
   if (!res.ok) {
     let body: unknown = null;
     try {

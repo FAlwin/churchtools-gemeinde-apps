@@ -28,6 +28,9 @@ export default tseslint.config(
     // Nicht prüfen: Build-Ergebnisse, Abhängigkeiten, Testberichte.
     ignores: [
       '**/dist/**',
+      // Extension-Build und gepackte ZIPs (#335)
+      '**/dist-extension/**',
+      '**/releases/**',
       '**/node_modules/**',
       '**/coverage/**',
       'playwright-report/**',
@@ -61,6 +64,7 @@ export default tseslint.config(
             'server/*.ts',
             'e2e/*.mjs',
             'scripts/*.mjs',
+            'client/scripts/*.mjs',
             'server/scripts/*.ts',
           ],
         },
@@ -157,6 +161,7 @@ export default tseslint.config(
       'server/*.ts',
       'e2e/*.mjs',
       'scripts/**/*.mjs',
+      'client/scripts/**/*.mjs',
       'server/scripts/**/*.ts',
     ],
     extends: [tseslint.configs.disableTypeChecked],

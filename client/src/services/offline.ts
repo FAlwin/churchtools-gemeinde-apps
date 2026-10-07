@@ -1,6 +1,7 @@
 import type { AgendaItem } from '@shared/types/index';
 import { saveOfflineNow } from '../queryClient';
 import { heuteIso } from '../utils/heute';
+import { istExtension, ohneServer } from './ctRuntime';
 
 /** Führt `fn` über alle Einträge aus, aber höchstens `limit` gleichzeitig (schont Gerät/Netz). */
 async function mapLimit<T>(
@@ -102,6 +103,8 @@ export async function saveServiceOffline(
   items: AgendaItem[],
   onProgress?: (done: number, total: number) => void,
 ): Promise<OfflineSaveResult> {
+  // Extension: kein eigener Service Worker unter /ccm/… – also keine Offline-Reserve (Plan §6).
+  if (istExtension) return ohneServer('Das Speichern für offline');
   const urls: string[] = [];
   for (const it of items) {
     if (it.song)

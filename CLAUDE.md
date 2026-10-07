@@ -443,17 +443,33 @@ sie über `services/personenAblage.ts` (Personen-Dateien in ChurchTools: je Seit
 `musikapp_<schlüssel>.png`, alles andere in `musikapp_daten.json`, Feld-Merge nach Zeitstempel).
 **Warteschlange, Wiederholen und Nachholen bleiben EINMAL in `annotations.ts`/`userSettings.ts`** –
 nie in die Ablage kopieren. `KeinSpeicherRecht` (fehlendes Recht, auch das irreführende CT-401) schaltet
-den Abgleich ab und meldet es. **Anzeige-Einstellungen (Spalten `cols`,
-Textgröße `fs`) werden geräteübergreifend synchronisiert** (kein Geräte-Suffix); **NUR der Zoom
-bleibt pro Geräteklasse getrennt**. **Schlüssel** je Eintrag: `song<id>_v<versionKey>_<seite>` (Zoom zusätzlich
-`_d<geräteklasse><spalten>`, z. B. `_dlarge2`; **`KEY_RE` in `annotations.ts` UND die Server-Zod-Regel
-müssen diese Layout-Ziffer erlauben** – sonst wird der Querformat-Zoom nicht gesynct; Regressionstest
-`annotations.keys.test.ts`). Die **Anmerkungs-Typen** (`AnnotationText`, `PageAnnotation`,
-`SharedPage`) leben EINZIG in `shared/types/index.ts` (seit #137); Client und Server importieren von
-dort, und ein **Compile-Wächter** in `annotationsController.ts` bricht den Build, wenn das Zod-Schema
-vom Typ abweicht – neue Felder also IMMER an beiden Stellen ergänzen (Zod würde sie sonst beim
-Speichern still wegschneiden, Ursache von #115). Dokument-Anmerkungen nutzen `worship_docdraw_<fileId>_<seite>`.
-Geräteklasse `phone` vs `large` via `utils/deviceClass.ts`. Versions-Helfer: `utils/songVersions.ts`.
+den Abgleich ab und meldet es.
+
+**Zwei Auslieferungen (Extension, #335):** `vite build --mode extension` (`npm run build:extension -w
+client`, Kürzel `VITE_KEY`) baut die App als ChurchTools-Erweiterung unter `/ccm/<Kürzel>/`. Regeln:
+
+- **Den Modus liest nur `client/src/services/modus.ts`** (ohne Importe – sonst Kreis `api` →
+  `reachability` → `ctRuntime` → `api`). Gefragt wird er nur in der Service-Schicht und beim Start
+  (`main.tsx`, Klasse `ct-extension`) – **nie in Komponenten oder Hooks**.
+- **Logik des Servers, die die Extension braucht, wird nach `shared/ct/` VERSCHOBEN, nicht kopiert**
+  (`setlistKern.ts` mit `CtLeser`, Rechte, Bremse, Diff, Zeitzone …); die alten Server-Pfade leiten
+  weiter. Der Browser-Leser steht in `client/src/services/ctLesen.ts`, Sitzung/Bremse/Fehler in
+  `ctRuntime.ts` (nach 429 gerätweit keine Anfrage bis `Retry-After`/120 s).
+- **ChurchTools-Einbettung (gemessen 07.10.2026):** nur der Inhalt der `index.html` wird übernommen
+  (Kopf fällt weg → Plugin `kopfInDenInhalt`), `<base href>` auf die Instanz (Pfade absolut, Logos über
+  `BASE_URL`), CSP verbietet Inline-Skripte und `blob:`-Worker (pdf.js-Worker als Datei,
+  `pdfWorkerDatei.ts`), App liegt unter 56 px ChurchTools-Leiste (`.ct-extension #root { transform }`).
+- Was es in der Extension noch nicht gibt, meldet `ohneServer` (501). Manueller Test: TF-EXT-01/02. **Anzeige-Einstellungen (Spalten `cols`,
+  Textgröße `fs`) werden geräteübergreifend synchronisiert** (kein Geräte-Suffix); **NUR der Zoom
+  bleibt pro Geräteklasse getrennt**. **Schlüssel** je Eintrag: `song<id>_v<versionKey>_<seite>` (Zoom zusätzlich
+  `_d<geräteklasse><spalten>`, z. B. `_dlarge2`; **`KEY_RE` in `annotations.ts` UND die Server-Zod-Regel
+  müssen diese Layout-Ziffer erlauben** – sonst wird der Querformat-Zoom nicht gesynct; Regressionstest
+  `annotations.keys.test.ts`). Die **Anmerkungs-Typen** (`AnnotationText`, `PageAnnotation`,
+  `SharedPage`) leben EINZIG in `shared/types/index.ts` (seit #137); Client und Server importieren von
+  dort, und ein **Compile-Wächter** in `annotationsController.ts` bricht den Build, wenn das Zod-Schema
+  vom Typ abweicht – neue Felder also IMMER an beiden Stellen ergänzen (Zod würde sie sonst beim
+  Speichern still wegschneiden, Ursache von #115). Dokument-Anmerkungen nutzen `worship_docdraw_<fileId>_<seite>`.
+  Geräteklasse `phone` vs `large` via `utils/deviceClass.ts`. Versions-Helfer: `utils/songVersions.ts`.
 
 ## Domänen-Besonderheiten
 
@@ -642,6 +658,9 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
   Filter beim Laden (immer alle Musiker) – taugen nicht. **Entscheidung: alles als Personen-Dateien**
   (`/files/person/<eigene id>`, mit Mitglieds-Rechten möglich, fremde ändern → 403, aber für Mitglieder
   lesbar; `PATCH securityLevelId` antwortet 204 und wirkt nicht).
+  **#334 gemergt** (PR #428). **#335 Phase 3a (Lesen) gebaut** – Phase 3 in 3a Lesen / 3b Schreiben /
+  3c Massenläufe (weglassen) geschnitten; in der Test-Instanz durchgeklickt (Modul `musik-app-test`).
+  Offen: Die Erweiterung erscheint **nicht** in der ChurchTools-App (iPhone).
 
 - **v2.27.0 (05.10.2026) = Ablauf und Felder** (PR #425 Squash `1447d65`; Staging `staging-a5e6782` von
   Alwin getestet, Baum von `main` identisch). #423 Vorlauf vor dem Gottesdienstbeginn (Grenze

@@ -4,6 +4,7 @@
  * Anmerkungen selbst bleiben strikt pro Konto (services/annotations.ts).
  */
 import { apiFetch } from './api';
+import { istExtension, ohneServer } from './ctRuntime';
 // SharedPage (fremde Anmerkungsebene) kommt aus @shared/types – re-exportiert für Bestandsimporte.
 import type { SharedPage } from '@shared/types/index';
 
@@ -21,11 +22,13 @@ export interface Sharer {
 
 /** Teilt mein Konto seine Anmerkungen gerade? */
 export function getSharing(): Promise<{ enabled: boolean }> {
+  if (istExtension) return ohneServer('Das Ansehen fremder Anmerkungen');
   return apiFetch<{ enabled: boolean }>('/api/annotations/sharing');
 }
 
 /** Eigenes Teilen ein-/ausschalten. */
 export function setSharing(enabled: boolean): Promise<{ enabled: boolean }> {
+  if (istExtension) return ohneServer('Das Ansehen fremder Anmerkungen');
   return apiFetch<{ enabled: boolean }>('/api/annotations/sharing', {
     method: 'PUT',
     body: JSON.stringify({ enabled }),
@@ -34,6 +37,7 @@ export function setSharing(enabled: boolean): Promise<{ enabled: boolean }> {
 
 /** Wer teilt Anmerkungen zu diesen Liedern? (eigenes Konto ist ausgenommen) */
 export function getSharers(songIds: number[]): Promise<Sharer[]> {
+  if (istExtension) return ohneServer('Das Ansehen fremder Anmerkungen');
   return apiFetch<Sharer[]>(`/api/annotations/sharers?songs=${songIds.join(',')}`);
 }
 
@@ -42,6 +46,7 @@ export function getAnnotationsOf(
   personId: number,
   songIds: number[],
 ): Promise<Record<string, SharedPage>> {
+  if (istExtension) return ohneServer('Das Ansehen fremder Anmerkungen');
   return apiFetch<Record<string, SharedPage>>(
     `/api/annotations/of/${personId}?songs=${songIds.join(',')}`,
   );
@@ -52,6 +57,7 @@ export function getSettingsOf(
   personId: number,
   songIds: number[],
 ): Promise<Record<string, string>> {
+  if (istExtension) return ohneServer('Das Ansehen fremder Anmerkungen');
   return apiFetch<Record<string, string>>(
     `/api/settings/of/${personId}?songs=${songIds.join(',')}`,
   );

@@ -7,7 +7,21 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Geändert
+
+- **Terminliste bei überlasteter ChurchTools-Instanz:** Bremst ChurchTools (HTTP 429 oder
+  Zeitüberschreitung) mitten im Laden der Terminliste, bricht der Lauf jetzt ab, statt eine
+  lückenhafte Liste auszuliefern. Die App zeigt dann weiter den letzten vollständigen Stand, statt
+  dass Gottesdienste kurz verschwinden (#300, #335).
+
 ### Intern
+
+- **Vorbereitung ChurchTools-Erweiterung, Phase 3a – Lesen (#335):** Die Erweiterung liest Termine,
+  Ablauf, Liedblatt, Lieder und Rechte direkt aus ChurchTools – mit denselben Regeln wie der Server,
+  die dafür nach `shared/ct/` gewandert sind (nicht kopiert). Gerätweite Bremse nach einem 429.
+  `npm run build:extension -w client` baut das Paket. In der Test-Instanz durchgeklickt; dabei
+  behoben: pdf.js-Worker (CSP), Vollbild-Fenster unter der ChurchTools-Leiste. Für die
+  Server-Variante ändert sich außer der Terminliste oben nichts.
 
 - **Vorbereitung ChurchTools-Erweiterung, Phase 2 (#334):** Neuer Speicherweg für den späteren
   Betrieb als Erweiterung: Anmerkungen, Einstellungen und „gesehen" werden dort als Dateien an der

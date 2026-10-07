@@ -627,7 +627,10 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
   `feature/177-excel-sync` bleibt liegen. **#333 Extension-Spike, API-Teil gemessen** – Ergebnisse in
   `docs/entwicklung/plan-extension.md` §2a. Kern: Nicht-Admins dürfen in Custom-Module-Daten schreiben,
   aber **ohne Schutz je Eintrag** (bewusst hingenommen), `domainId`/`domainType` werden verworfen,
-  fehlendes Recht antwortet mit **401 „Session abgelaufen"**. Browser-Teil (ZIP, `/ccm/`) offen.
+  fehlendes Recht antwortet mit **401 „Session abgelaufen"**. Browser-Teil ebenfalls gemessen: kein
+  zweites Login, aber ChurchTools bettet nur den Inhalt der `index.html` ein (mit `<base>` auf die
+  Instanz) – Pfade absolut, CSS als Datei. **Spike damit abgeschlossen**, Testaufbau (Modul
+  `ecg-musik-test`, Person „Spike Musiker" id 16) bleibt für Phase 2 stehen.
 
 - **v2.27.0 (05.10.2026) = Ablauf und Felder** (PR #425 Squash `1447d65`; Staging `staging-a5e6782` von
   Alwin getestet, Baum von `main` identisch). #423 Vorlauf vor dem Gottesdienstbeginn (Grenze

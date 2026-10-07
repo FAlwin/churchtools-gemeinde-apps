@@ -1,6 +1,6 @@
 # Umsetzungsplan – ChurchTools-Extension (zweite Auslieferung derselben Codebasis)
 
-> Status: **Entwurf, 10.08.2026. Spike #333: API-Teil am 07.10.2026 gemessen (§2a), Browser-Teil offen.**
+> Status: **Entwurf, 10.08.2026. Spike #333 am 07.10.2026 abgeschlossen (§2a) – Phase 2 kann beginnen.**
 > Ziel: dieselbe App zusätzlich als **ChurchTools-Extension** unter `/ccm/<key>/` ausliefern –
 > ohne eigenen Server, ohne zweite Anmeldung, installierbar von jeder Gemeinde.
 > Die bestehende Server-/PWA-Variante (NAS, `musik.ecg-donrath.de`) **bleibt** und ist der Weg für
@@ -41,7 +41,7 @@ angeteasert** – nicht mühsam nachgebaut. Der Teaser verweist auf die Server-V
 | Team-Anmerkungen | **Möglich** – eine gemeinsame Kategorie, die alle Musiker beschreiben dürfen (§2a)                                                          |
 | Branding         | Gemeindename aus `GET /api/info` (`siteName`, ohne Anmeldung). Logo: nicht über die API gefunden                                            |
 
-## 2a. Ergebnisse Spike #333 – API-Teil (gemessen 07.10.2026)
+## 2a. Ergebnisse Spike #333 (gemessen 07.10.2026)
 
 Test-Instanz, ChurchTools 3.137.1. Testmodul `ecg-musik-test` per API angelegt
 (`POST /api/custommodules` – verlangt `inMenu`), zwei Kategorien („Benutzerdaten", „Team"), dazu die
@@ -75,8 +75,18 @@ Admin-Konto.
 - **Installationsanleitung (#337)** nennt den kleinsten Rechte-Satz für Musiker: Modul sehen,
   Kategorien sehen, Daten sehen/erstellen/bearbeiten/löschen – und offen den fehlenden Schutz je Eintrag.
 
-**Noch offen (Browser-Teil):** ZIP hochladen, Menüpunkt öffnen, `/whoami` im Kontext ohne eigene
-Anmeldung (`id > 0`), und ob ein per API angelegtes Modul ein ZIP aufnimmt.
+**Browser-Teil** – eine Probeseite (nicht im Repo) als ZIP in das per API angelegte Modul geladen
+(Administration → Erweiterungen → Stift beim Modul → ZIP-Datei), geöffnet als Admin und als Spike:
+
+| Frage                                       | Ergebnis                                                                                                                                                                                                                                                                                                            |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Nimmt ein per API angelegtes Modul ein ZIP? | **Ja.** Das ZIP enthält den Ordner `dist/`; ChurchTools liefert dessen Inhalt unter `/ccm/<Kürzel>/` aus – nur angemeldet, sonst kommt die Login-Seite                                                                                                                                                              |
+| `/whoami` ohne eigene Anmeldung             | **Ja**, `id > 0` – als Admin `id 1`, als Spike `id 16`. Der Menüpunkt erscheint auch bei Spike                                                                                                                                                                                                                      |
+| `window.settings.base_url`                  | **Gesetzt** (`https://<instanz>/`)                                                                                                                                                                                                                                                                                  |
+| Schreiben aus dem Browser                   | **Ja** (201) mit der Sitzung der Seite. Ging auch **ohne** `CSRF-Token`-Header – die App schickt ihn trotzdem mit (der offizielle Client tut es)                                                                                                                                                                    |
+| Kleinster Rechte-Satz für Musiker           | **Belegt:** Modul sehen + **Kategorien sehen** + Daten sehen/erstellen/bearbeiten/löschen (je Kategorie). Ohne „Kategorien sehen" findet die Seite den Bereich nicht (200, leer)                                                                                                                                    |
+| ⚠️ Einbettung                               | ChurchTools übernimmt **nur den Inhalt** der `index.html` in die eigene Seite und setzt `<base href="https://<instanz>/">`. Folgen: (1) **relative Pfade zeigen ins Leere** – alles absolut unter `/ccm/<Kürzel>/` (Vite `base`); (2) `<style>` im Kopf **fällt weg** – CSS als Datei einbinden und am Gerät prüfen |
+| CSP der Seite                               | `script-src 'self'` + Nonce – **kein Inline-Script**; Skripte als Datei. `connect-src *`, `img-src *`                                                                                                                                                                                                               |
 
 ## 3. Ausgangslage: der Fork von bwl21
 

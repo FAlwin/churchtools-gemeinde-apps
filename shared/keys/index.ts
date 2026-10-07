@@ -126,8 +126,28 @@ export const SETTINGS_KEY_RE = new RegExp(
   `^worship_(?:${SETTINGS_BASES.join('|')})_\\d+(?:_[a-z0-9-]+){0,2}$`,
 );
 
+/** Längster gespeicherter Einstellungswert – Server und Extension kappen gleich (#334). */
+export const SETTINGS_MAX_WERT = 4000;
+
 /** Nur der Anfang eines Einstellungs-Schlüssels bis zur Lied-ID – für `songIdOf` auf dem Server. */
 export const SETTINGS_SONGID_RE = new RegExp(`^worship_(?:${SETTINGS_BASES.join('|')})_(\\d+)`);
+
+/**
+ * Lied-ID eines Anmerkungs-Schlüssels (`song12_…` → 12), sonst `null`.
+ *
+ * Stand vorher inline im Server (`/^song(\d+)_/`); die Extension filtert ihre Personen-Dateien nach
+ * derselben Regel (#334) – deshalb hier, nicht ein zweites Mal von Hand.
+ */
+export function songIdOfAnnoKey(key: string): number | null {
+  const m = key.match(/^song(\d+)_/);
+  return m ? Number(m[1]) : null;
+}
+
+/** Lied-ID eines Einstellungs-Schlüssels (`worship_key_12_…` → 12), sonst `null`. */
+export function songIdOfSettingsKey(key: string): number | null {
+  const m = key.match(SETTINGS_SONGID_RE);
+  return m ? Number(m[1]) : null;
+}
 
 /** Alte (versionslose) Schlüssel auf das aktuelle Schema heben: `song12_3` → `song12_voriginal_3`. */
 export function normalizeAnnoKey(key: string): string {

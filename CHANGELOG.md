@@ -7,6 +7,16 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Intern
+
+- **Vorbereitung ChurchTools-Erweiterung, Phase 2 (#334):** Neuer Speicherweg für den späteren
+  Betrieb als Erweiterung: Anmerkungen, Einstellungen und „gesehen" werden dort als Dateien an der
+  eigenen Person in ChurchTools abgelegt (`personenAblage.ts`, `ctRuntime.ts`). Für die
+  Server-Variante ändert sich nichts – die Weiche in `annotations.ts`/`userSettings.ts` wählt den Weg,
+  alle bisherigen Absicherungen gelten für beide. Gemessen auf der Test-Instanz am 07.10.2026 (Plan
+  §2a/§2b). Die Regel „zu welchem Lied gehört ein Schlüssel" und der „gesehen"-Stand liegen jetzt in
+  `shared/` statt dreifach von Hand im Server.
+
 ## [2.27.0] – 2026-10-05
 
 **Beim Update ist nichts zu tun** – keine neue Einstellung. Die Einführungen zum Ablauf-Bearbeiten und

@@ -39,19 +39,8 @@ export function withinSettingsLimits(entryCount: number, totalBytes: number): bo
  * Schlüssel **stillschweigend verwerfen** – die Einstellungen wären dann geräteübergreifend weg.
  * Liegt in @shared/keys und wird von Client UND Server geteilt (#250) – hier nur re-exportiert.
  */
-import { SETTINGS_KEY_RE, SETTINGS_SONGID_RE } from '@shared/keys/index';
+import { SETTINGS_KEY_RE, SETTINGS_MAX_WERT, songIdOfSettingsKey } from '@shared/keys/index';
 export { SETTINGS_KEY_RE };
-/**
- * Lied-ID aus einem Einstellungs-Schlüssel ziehen.
- *
- * Muster aus `@shared/keys` – hier stand die Namensliste ein zweites Mal wortgleich, obwohl der
- * Kommentar über dem Import genau das Gegenteil behauptete. Beim Hinzufügen der Zählweise wurde
- * keine der beiden nachgezogen.
- */
-function songIdOf(key: string): number | null {
-  const m = key.match(SETTINGS_SONGID_RE);
-  return m ? Number(m[1]) : null;
-}
 
 function fileFor(userId: number): string {
   return path.join(config.annotationsPath, `settings-${userId}.json`);
@@ -97,7 +86,7 @@ export async function getSettings(userId: number, songIds: number[]): Promise<St
   const set = new Set(songIds);
   const out: Store = {};
   for (const [key, value] of Object.entries(store)) {
-    const id = songIdOf(key);
+    const id = songIdOfSettingsKey(key);
     if (id !== null && set.has(id)) out[key] = value;
   }
   return out;
@@ -116,7 +105,7 @@ export async function putSettings(
     for (const [key, value] of Object.entries(entries)) {
       if (!SETTINGS_KEY_RE.test(key)) continue;
       if (value === null || value === '') delete candidate[key];
-      else candidate[key] = String(value).slice(0, 4000);
+      else candidate[key] = String(value).slice(0, SETTINGS_MAX_WERT);
     }
     const serialized = JSON.stringify(candidate);
     const count = Object.keys(candidate).length;

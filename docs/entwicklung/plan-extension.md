@@ -1,6 +1,7 @@
 # Umsetzungsplan – ChurchTools-Extension (zweite Auslieferung derselben Codebasis)
 
-> Status: **Entwurf, 10.08.2026. Spike #333 am 07.10.2026 abgeschlossen (§2a) – Phase 2 kann beginnen.**
+> Status: **Entwurf, 10.08.2026. Spike #333 am 07.10.2026 abgeschlossen (§2a); Ablage für Phase 2 am
+> selben Tag neu entschieden – Personen-Dateien statt Custom-Module-Daten (§2b).**
 > Ziel: dieselbe App zusätzlich als **ChurchTools-Extension** unter `/ccm/<key>/` ausliefern –
 > ohne eigenen Server, ohne zweite Anmeldung, installierbar von jeder Gemeinde.
 > Die bestehende Server-/PWA-Variante (NAS, `musik.ecg-donrath.de`) **bleibt** und ist der Weg für
@@ -27,19 +28,19 @@ angeteasert** – nicht mühsam nachgebaut. Der Teaser verweist auf die Server-V
 
 ## 2. Getroffene Entscheidungen
 
-| Thema            | Entscheidung                                                                                                                                |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Repo             | **Ein Repo, zwei Auslieferungen.** Kein zweites Repo, kein Fork-Abgleich (Begründung §4)                                                    |
-| Build            | `npm run build` = PWA + Server (wie heute) · `npm run build:extension` = ZIP für ChurchTools                                                |
-| Schalter         | **Genau ein** Modus-Schalter, abgefragt **nur in der Service-Schicht** – nie in einer Komponente                                            |
-| Datenspeicher    | Anmerkungen/Einstellungen/„gesehen" in den **Custom-Module-Daten** von ChurchTools                                                          |
-| Anmeldung        | Sitzung des CT-Kontexts; `login`/`logout` entfallen in der Extension                                                                        |
-| Offline          | **Fällt weg** und wird angeteasert (§6)                                                                                                     |
-| Server-Variante  | **Bleibt** im Repo – Ziel des Teasers und Rückfallebene der ECG                                                                             |
-| Vorlage          | Der Fork von bwl21 (§3) als **Vorlage**, nicht als Grundlage – er steht auf v2.13.5                                                         |
-| Schreibschutz    | **Kein Schutz je Eintrag – bewusst hingenommen** (Alwin, 07.10.2026). Die App ändert nur eigene Einträge; die Anleitung sagt es offen (§2a) |
-| Team-Anmerkungen | **Möglich** – eine gemeinsame Kategorie, die alle Musiker beschreiben dürfen (§2a)                                                          |
-| Branding         | Gemeindename aus `GET /api/info` (`siteName`, ohne Anmeldung). Logo: nicht über die API gefunden                                            |
+| Thema            | Entscheidung                                                                                                                                                                                                   |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Repo             | **Ein Repo, zwei Auslieferungen.** Kein zweites Repo, kein Fork-Abgleich (Begründung §4)                                                                                                                       |
+| Build            | `npm run build` = PWA + Server (wie heute) · `npm run build:extension` = ZIP für ChurchTools                                                                                                                   |
+| Schalter         | **Genau ein** Modus-Schalter, abgefragt **nur in der Service-Schicht** – nie in einer Komponente                                                                                                               |
+| Datenspeicher    | **Personen-Dateien** (`/files/person/<eigene id>`): Zeichnungen als Bild je Seite, alles andere in **einer** kleinen Datei je Person (§2b, Alwin 07.10.2026). Die Custom-Module-Daten werden **nicht** genutzt |
+| Anmeldung        | Sitzung des CT-Kontexts; `login`/`logout` entfallen in der Extension                                                                                                                                           |
+| Offline          | **Fällt weg** und wird angeteasert (§6)                                                                                                                                                                        |
+| Server-Variante  | **Bleibt** im Repo – Ziel des Teasers und Rückfallebene der ECG                                                                                                                                                |
+| Vorlage          | Der Fork von bwl21 (§3) als **Vorlage**, nicht als Grundlage – er steht auf v2.13.5                                                                                                                            |
+| Schreibschutz    | **Je Person** – fremde Dateien ändern/löschen → 403 (§2b). Der fehlende Schutz je Eintrag der Custom-Module-Daten (§2a) ist damit kein Thema mehr                                                              |
+| Team-Anmerkungen | **Immer sichtbar** für alle, die die Person sehen dürfen – Personen-Dateien lassen sich per API nicht verstecken (§2b). Von Alwin für Zeichnungen hingenommen; die Anleitung sagt es offen                     |
+| Branding         | Gemeindename aus `GET /api/info` (`siteName`, ohne Anmeldung). Logo: nicht über die API gefunden                                                                                                               |
 
 ## 2a. Ergebnisse Spike #333 (gemessen 07.10.2026)
 
@@ -62,7 +63,8 @@ Admin-Konto.
 | Gemeindename über die API?                      | **Ja**, `GET /api/info` → `siteName`, sogar ohne Anmeldung                                                                                                                       |
 | Fremde Login-Token als Admin abrufbar?          | **Nein** (403) – ein Testkonto braucht einen von Hand erzeugten Token                                                                                                            |
 
-**Folgen für die Phasen:**
+**Folgen für die Phasen** (Stand nach §2a – für den Speicher **überholt durch §2b**, die Lehren zu 401 und
+zur leeren Liste gelten weiter für jeden Aufruf):
 
 - **Fehler in der Vorlage von bwl21:** Ihr `readUserValues` filtert auf `domainId === personId` – das
   Feld kommt nie zurück, die Extension fände ihre eigenen gespeicherten Werte **nie wieder**. Phase 2
@@ -87,6 +89,36 @@ Admin-Konto.
 | Kleinster Rechte-Satz für Musiker           | **Belegt:** Modul sehen + **Kategorien sehen** + Daten sehen/erstellen/bearbeiten/löschen (je Kategorie). Ohne „Kategorien sehen" findet die Seite den Bereich nicht (200, leer)                                                                                                                                    |
 | ⚠️ Einbettung                               | ChurchTools übernimmt **nur den Inhalt** der `index.html` in die eigene Seite und setzt `<base href="https://<instanz>/">`. Folgen: (1) **relative Pfade zeigen ins Leere** – alles absolut unter `/ccm/<Kürzel>/` (Vite `base`); (2) `<style>` im Kopf **fällt weg** – CSS als Datei einbinden und am Gerät prüfen |
 | CSP der Seite                               | `script-src 'self'` + Nonce – **kein Inline-Script**; Skripte als Datei. `connect-src *`, `img-src *`                                                                                                                                                                                                               |
+
+## 2b. Messung für #334: Wertgröße und Personen-Dateien (07.10.2026)
+
+Beim Zuschnitt von Phase 2 gemessen (Test-Instanz, danach abgeräumt). Anlass: Die Zeichnungen speichert
+die App als **PNG-Bild** (`toDataURL('image/png', 0.7)`), nicht als Strichliste.
+
+**Custom-Module-Daten – taugen nicht als Hauptspeicher:**
+
+| Frage                        | Ergebnis                                                                                                                                                                 |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Wie groß darf ein Wert sein? | **Höchstens 10.000 Zeichen** (Zeichen, nicht Bytes) – sonst 400 `validation.length`. Ein Seitenbild passt nicht hinein                                                   |
+| Lässt sich gezielt laden?    | **Nein.** `GET …/customdatavalues` ignoriert `limit`, `page`, `ids[]` und Wertfilter; ein Einzel-GET antwortet 405. Man lädt immer die **ganze Kategorie aller Musiker** |
+
+**Personen-Dateien** (`/files/person/<id>`) – gemessen mit einem Konto, das **nur Mitglieds-Rechte** hatte
+(der Status „Mitglied" bringt dort „Eigene Personendaten bearbeiten" mit):
+
+| Frage                                      | Ergebnis                                                                                                                                                        |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| An sich selbst hochladen?                  | **Ja** (200); 300 KB problemlos                                                                                                                                 |
+| Gezielt laden?                             | **Ja** – `GET /files/person/<id>` listet nur die Dateien dieser Person; Herunterladen über die `fileUrl` mit Sitzungs-Cookie                                    |
+| Fremde Dateien ändern, löschen, anhängen?  | **Nein** – 403 „Forbidden to edit person files". **Schutz je Person**                                                                                           |
+| Fremde Dateien lesen?                      | **Ja** – wer die Person sehen darf, sieht und lädt ihre Dateien                                                                                                 |
+| Lässt sich das verstecken?                 | **Nein.** `PATCH /files/<id> {securityLevelId}` antwortet **204, ändert aber nichts** (nachgelesen); ein Feld beim Hochladen wird ignoriert. ⚠️ Lügender Erfolg |
+| Überschreiben?                             | Gibt es nicht – neue Fassung hochladen, **nachlesen, ob sie da ist**, dann die alte löschen                                                                     |
+| Dateien am Modul (`/files/custom_module`)? | **Scheidet aus:** 500 – und die Datei liegt trotzdem da. Diese Domäne gehört dem Erweiterungs-Paket                                                             |
+
+**Entscheidung (Alwin, 07.10.2026): alles als Personen-Dateien.** Ein Speicherweg statt zwei, gezieltes
+Laden statt „alle Musiker bei jedem Öffnen", Schutz je Person, und **keine Zusatzrechte** für die
+Gemeinde. Der Preis: Ersetzen ist ein Doppelschritt, die Dateien sind bei der Person in ChurchTools
+sichtbar, und andere Mitglieder können sie lesen.
 
 ## 3. Ausgangslage: der Fork von bwl21
 
@@ -136,7 +168,7 @@ Neu entstehen dabei:
 
 - `client/src/services/ctRuntime.ts` – Modus-Erkennung + konfigurierter CT-Client (**die einzige
   Stelle, die `import.meta.env.MODE` liest**).
-- `client/src/services/ctStore.ts` – der Datenspeicher in den Custom-Module-Daten.
+- `client/src/services/personenAblage.ts` – der Speicher in den Personen-Dateien (§2b).
 - `client/src/services/ctSetlist.ts` – der Setlist-Aufbau im Browser (heute serverseitig).
 
 ## 5. Die fünf Phasen
@@ -168,13 +200,29 @@ eine Stunde.
 der Extension weg. Dann ist die Extension eine **Ansicht** – immer noch nützlich, aber ein anderes
 Produkt. Deshalb steht diese Prüfung vor allem anderen.
 
-### Phase 2 – `ctStore`: der Datenspeicher (#334)
+### Phase 2 – `personenAblage`: der Speicher (#334)
 
-- [ ] `ctStore.ts` als **einzige** Stelle für Anmerkungen, Einstellungen und die „gesehen"-Basislinie
-- [ ] **Index einmal laden, danach im Speicher halten** – nicht vor jedem Schreiben alles neu lesen
-- [ ] Schlüssel-Grammatik unverändert aus `shared/keys` (keine zweite Grammatik!)
-- [ ] `markSetlistSeen` speichert wirklich – sonst klebt das „geändert"-Kennzeichen (#143)
-- [ ] Tests gegen einen gemockten CT-Client; für jede Härtung eine **eigene** Gegenprobe
+Zugeschnitten nach der Messung in §2b.
+
+- [x] `personenAblage.ts` als **einzige** Stelle, die Personen-Dateien liest und schreibt
+- [x] Zeichnungen: **ein Bild je Seite**, Dateiname aus dem Server-Schlüssel (`shared/keys`, keine zweite
+      Grammatik); Einstellungen, Zoom, Textnotizen und „gesehen": **eine** JSON-Datei je Person
+- [x] **Dateiliste einmal laden, danach im Speicher halten** – vor dem Schreiben wird nicht neu gelistet
+      (nur danach, zum Nachlesen); das regelmäßige Holen liest sie frisch
+- [x] **Ersetzen = hochladen → nachlesen → alte löschen.** Gelöscht wird erst, wenn die neue Fassung in
+      der Liste steht (Lehre 11.08.2026). Liegen mehrere Fassungen da, werden sie Feld für Feld
+      zusammengeführt (Bilder: die neueste)
+- [x] „Gesehen" speichert wirklich (`merkeGesehen`/`holeGesehen`). **Der Aufruf aus `markSetlistSeen`
+      kommt mit Phase 3:** Den Fingerabdruck der Setlist rechnet heute der Server, im Browser erst nach
+      #335. Bis dahin gibt es in der Extension keinen Weg dorthin – also auch keine Attrappe
+- [x] Fehlendes Recht (401 „Session abgelaufen", 403 von ChurchTools) → `KeinSpeicherRecht`: Abgleich
+      aus, Meldung, Merker bleiben – **kein** Abmelden. 401 ohne Person → abgemeldet, 401 mit unklarer
+      Antwort und 403 ohne ChurchTools-Rumpf → vorübergehend (#273/#275)
+- [x] Tests gegen ein nachgebautes ChurchTools (`ctFake.testutil.ts`); **16 Gegenproben**, jede Härtung
+      einzeln zurückgenommen – jede machte mindestens einen Test rot
+- [x] **Live gegen die Test-Instanz** (07.10.2026, als Konto ohne Adminrechte, Sitzungs-Cookie wie im
+      Browser): Einstellungen, Zeichnung (7,5 KB) samt Zoom und „gesehen" hin und zurück; nach mehrfachem
+      Ersetzen lagen genau **ein** Bild und **eine** Daten-Datei an der Person. Danach abgeräumt
 
 ### Phase 3 – Die ChurchTools-Aufrufe im Browser (#335)
 
@@ -183,6 +231,8 @@ Produkt. Deshalb steht diese Prüfung vor allem anderen.
 - [ ] Die **429-Notbremse aus #300** mit übernehmen: erster 429/Timeout stoppt den Lauf, Sperrfrist,
       Single-Flight. Ohne Server-Bündelung feuert jedes Gerät einzeln
 - [ ] Dateien über die `fileUrl` des Arrangements statt über den Datei-Proxy
+- [ ] `markSetlistSeen` in der Extension → `personenAblage.merkeGesehen` (der Fingerabdruck entsteht
+      dann im Browser); die „geändert"-Punkte der Terminliste aus `holeGesehen`
 - [ ] Die Weiche in den sieben Service-Dateien aus §4 – und **nirgends sonst**
 
 ### Phase 4 – Was wegfällt, sauber angeteasert (#336)
@@ -199,22 +249,24 @@ Siehe §6. Kein toter Knopf, keine Fehlermeldung – ein Satz, der sagt, warum u
 
 ## 6. Was in der Extension wegfällt
 
-| Funktion                         | Warum                                                                                                                                                     | Umgang                                                |
-| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| **Für offline speichern** (#32)  | Füllt den **Service-Worker-Cache** mit den PDFs/Bildern. Unter `/ccm/…` liefert CT die Seite aus – ein eigener Service Worker ist dort bestenfalls fragil | Knopf entfällt, Hinweis auf Server-Variante           |
-| **Team-Anmerkungen teilen**      | Braucht eine Tabelle, die für **alle** gilt – hängt an Phase 1 (globaler Wert?)                                                                           | **Bleibt** – gemeinsame Kategorie (§2a)               |
-| **Fremde Anmerkungen ansehen**   | Ebenso                                                                                                                                                    | **Bleibt** – gemeinsame Kategorie (§2a)               |
-| **Update-Hinweis**               | Ohne Service Worker gibt es keinen Update-Balken; die Version liefert ChurchTools                                                                         | Entfällt ganz                                         |
-| **Branding** (Gemeindename/Logo) | Kein `site.json` ohne Server                                                                                                                              | Name aus `GET /api/info`; Logo nicht in der API (§2a) |
-| **Login-Bildschirm, Rate-Limit** | Die Anmeldung macht ChurchTools                                                                                                                           | Entfällt – ein Gewinn                                 |
+| Funktion                         | Warum                                                                                                                                                     | Umgang                                                     |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| **Für offline speichern** (#32)  | Füllt den **Service-Worker-Cache** mit den PDFs/Bildern. Unter `/ccm/…` liefert CT die Seite aus – ein eigener Service Worker ist dort bestenfalls fragil | Knopf entfällt, Hinweis auf Server-Variante                |
+| **Team-Anmerkungen teilen**      | Personen-Dateien sind für Mitglieder **immer** lesbar (§2b) – ein Schalter „teilen" könnte nichts verbergen                                               | Schalter entfällt; Hinweis, dass Zeichnungen sichtbar sind |
+| **Fremde Anmerkungen ansehen**   | Die Dateien der anderen sind lesbar (§2b)                                                                                                                 | **Bleibt** – aus den Personen-Dateien                      |
+| **Update-Hinweis**               | Ohne Service Worker gibt es keinen Update-Balken; die Version liefert ChurchTools                                                                         | Entfällt ganz                                              |
+| **Branding** (Gemeindename/Logo) | Kein `site.json` ohne Server                                                                                                                              | Name aus `GET /api/info`; Logo nicht in der API (§2a)      |
+| **Login-Bildschirm, Rate-Limit** | Die Anmeldung macht ChurchTools                                                                                                                           | Entfällt – ein Gewinn                                      |
 
 **Der Teaser** (eine Formulierung, an einer Stelle, nicht sechs verschiedene): kurz, ohne
 Werbeton, mit Verweis darauf, dass es die App auch mit eigenem Server gibt und wo man fragen kann.
 
 ## 7. Risiken & offene Fragen
 
-1. **Schreibrechte für normale Nutzer** – **geklärt 07.10.2026 (§2a):** gehen, aber ohne Schutz je
-   Eintrag. Bewusst hingenommen.
+1. **Schreibrechte für normale Nutzer** – **geklärt 07.10.2026 (§2a, §2b):** Personen-Dateien gehen mit
+   Mitglieds-Rechten, geschützt je Person. **Annahme:** Das Recht „Eigene Personendaten bearbeiten" kam
+   auf der Test-Instanz über den Status „Mitglied" – bei anderen Gemeinden kann es fehlen. Die App muss
+   das freundlich melden, die Anleitung (#337) es nennen.
 2. **Last auf der CT-Instanz.** Ohne Server-Bündelung geht jede Anfrage direkt von jedem Gerät an CT.
    #300 hat gezeigt, dass das eine Instanz lahmlegen kann. Die Notbremse ist **Pflicht**, kein Extra.
 3. **Für die ECG bedeutet Extension: im Saal ohne Netz keine Liedblätter.** Muss jetzt nicht

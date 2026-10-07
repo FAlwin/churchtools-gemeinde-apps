@@ -13,6 +13,8 @@
  * dieselbe Stelle: `pullAnnotations` darf eine Seite mit ausstehendem Upload NICHT überschreiben.
  */
 import { apiFetch, ApiError } from './api';
+import { istExtension, KeinSpeicherRecht } from './ctRuntime';
+import { holeAnmerkungen, schreibeAnmerkung } from './personenAblage';
 import { getReachable } from './reachability';
 import { createPendingKeys } from './pendingKeys';
 import { onAppHidden } from './appHidden';
@@ -35,8 +37,44 @@ export const KEY_RE = ANNO_KEY_RE;
 // Anmerkungs-Typen (AnnotationText, PageAnnotation) kommen aus @shared/types – einzige Quelle
 // für Client + Server, damit beim Server-Roundtrip kein Feld verloren geht.
 
+/**
+ * Der Transportweg – **die Weiche** zwischen Server-Variante und ChurchTools-Extension (#334).
+ *
+ * Nur das Holen und Schreiben unterscheidet sich; Warteschlange, Wiederholen und Nachholen in dieser
+ * Datei gelten für beide Wege. In der Extension liegen die Anmerkungen in den Personen-Dateien
+ * (`personenAblage.ts`). `keepalive` gibt es dort nicht: Browser begrenzen solche Anfragen auf 64 KB,
+ * eine Zeichnung ist größer – sie wird über den Merker beim nächsten Start nachgeholt (#256).
+ */
+const weg = istExtension
+  ? {
+      holen: holeAnmerkungen,
+      schreiben: (key: string, body: PageAnnotation): Promise<unknown> =>
+        schreibeAnmerkung(key, body),
+    }
+  : {
+      holen: (songIds: number[]) =>
+        apiFetch<Record<string, PageAnnotation>>(`/api/annotations?songs=${songIds.join(',')}`),
+      schreiben: (key: string, body: PageAnnotation, keepalive = false): Promise<unknown> =>
+        apiFetch(`/api/annotations/${encodeURIComponent(key)}`, {
+          method: 'PUT',
+          body: JSON.stringify(body),
+          // keepalive: Request überlebt das Backgrounding der Seite (App-Wechsel/Schließen).
+          ...(keepalive ? { keepalive: true } : {}),
+        }),
+    };
+
 // Sync abschalten, wenn nicht angemeldet (Demo / 401) – dann bleibt alles rein lokal.
 let disabled = false;
+
+/**
+ * Ein Recht fehlt dauerhaft (nur in der Extension, #334): Abgleich aus, und SAGEN warum – sonst
+ * zeichnete jemand weiter und wunderte sich auf dem nächsten Gerät. Die Merker bleiben stehen; wird das
+ * Recht nachgereicht, holt der nächste Start alles nach.
+ */
+function keinRecht(e: KeinSpeicherRecht): void {
+  disabled = true;
+  syncErrorHandler?.(e.message);
+}
 
 /**
  * Sync wieder einschalten – MUSS nach jeder erfolgreichen Anmeldung passieren (#211). Ohne das
@@ -69,9 +107,7 @@ function safeJson<T>(raw: string | null): T | null {
 export async function pullAnnotations(songIds: number[]): Promise<void> {
   if (disabled || songIds.length === 0) return;
   try {
-    const data = await apiFetch<Record<string, PageAnnotation>>(
-      `/api/annotations?songs=${songIds.join(',')}`,
-    );
+    const data = await weg.holen(songIds);
     // Der Merker aus localStorage zählt mit (#256): Nach einem Neustart ist die Speicher-Warteschlange
     // leer, die Seite aber weiterhin nicht hochgeladen – ohne diese Prüfung gewinnt der alte Stand.
     const stillPending = pendingStore.read();
@@ -88,7 +124,8 @@ export async function pullAnnotations(songIds: number[]): Promise<void> {
       else localStorage.removeItem(ZOOM + key);
     }
   } catch (e) {
-    if (e instanceof ApiError && e.status === 401) disabled = true;
+    if (e instanceof KeinSpeicherRecht) keinRecht(e);
+    else if (e instanceof ApiError && e.status === 401) disabled = true;
   }
 }
 
@@ -191,14 +228,14 @@ async function flush(key: string, keepalive = false): Promise<void> {
   if (!body || disabled) return;
   inflight.add(key);
   try {
-    await apiFetch(`/api/annotations/${encodeURIComponent(key)}`, {
-      method: 'PUT',
-      body: JSON.stringify(body),
-      // keepalive: Request überlebt das Backgrounding der Seite (App-Wechsel/Schließen).
-      ...(keepalive ? { keepalive: true } : {}),
-    });
+    await weg.schreiben(key, body, keepalive);
     pendingStore.unmark(key); // durch – der Merker darf weg (#256)
   } catch (e) {
+    if (e instanceof KeinSpeicherRecht) {
+      requeue(key, body); // nichts verwerfen – der Merker trägt es zum nächsten Start
+      keinRecht(e);
+      return;
+    }
     if (e instanceof ApiError && e.status === 401) {
       disabled = true;
       return;
@@ -297,11 +334,12 @@ export async function migrateLocalAnnotations(): Promise<void> {
   // Pro Schlüssel hochladen (kleine Requests, einmaliger Vorgang).
   for (const key of keys) {
     try {
-      await apiFetch(`/api/annotations/${encodeURIComponent(key)}`, {
-        method: 'PUT',
-        body: JSON.stringify(entries[key]),
-      });
+      await weg.schreiben(key, entries[key]);
     } catch (e) {
+      if (e instanceof KeinSpeicherRecht) {
+        keinRecht(e);
+        return; // Merker NICHT setzen – mit dem Recht wird es nachgeholt
+      }
       if (e instanceof ApiError && e.status === 401) {
         disabled = true;
         return; // nicht angemeldet → Merker NICHT setzen, später erneut versuchen

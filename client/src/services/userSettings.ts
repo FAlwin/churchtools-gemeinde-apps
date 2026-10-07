@@ -4,6 +4,8 @@
  * schnelle Arbeitsspeicher; dieser Layer spiegelt vom/zum Server.
  */
 import { apiFetch, ApiError } from './api';
+import { istExtension, KeinSpeicherRecht } from './ctRuntime';
+import { holeEinstellungen, schreibeEinstellungen } from './personenAblage';
 import { getReachable } from './reachability';
 import { SETTINGS_KEY_RE } from '@shared/keys/index';
 import { createPendingKeys } from './pendingKeys';
@@ -23,7 +25,35 @@ const MIGRATED_FLAG = 'worship_settings_migrated_v1';
  */
 const pendingStore = createPendingKeys('worship_settings_pending_v1');
 
+/**
+ * Der Transportweg – die Weiche zwischen Server-Variante und Extension (#334), wie in
+ * `annotations.ts`: Nur Holen und Schreiben unterscheiden sich, alle Härtungen hier gelten für beide.
+ */
+const weg = istExtension
+  ? {
+      holen: holeEinstellungen,
+      schreiben: (eintraege: Record<string, string | null>): Promise<unknown> =>
+        schreibeEinstellungen(eintraege),
+    }
+  : {
+      holen: (songIds: number[]) =>
+        apiFetch<Record<string, string>>(`/api/settings?songs=${songIds.join(',')}`),
+      schreiben: (eintraege: Record<string, string | null>, keepalive = false): Promise<unknown> =>
+        apiFetch('/api/settings', {
+          method: 'PUT',
+          body: JSON.stringify(eintraege),
+          // keepalive: Request überlebt das Backgrounding der Seite (App-Wechsel/Schließen) – #275.
+          ...(keepalive ? { keepalive: true } : {}),
+        }),
+    };
+
 let disabled = false;
+
+/** Ein Recht fehlt dauerhaft (nur Extension, #334): Abgleich aus und sagen warum – wie `annotations.ts`. */
+function keinRecht(e: KeinSpeicherRecht): void {
+  disabled = true;
+  syncErrorHandler?.(e.message);
+}
 
 /** Sync nach erfolgreicher Anmeldung wieder einschalten – siehe `annotations.resetSync` (#211). */
 export function resetSync(): void {
@@ -34,7 +64,7 @@ export function resetSync(): void {
 export async function pullSettings(songIds: number[]): Promise<void> {
   if (disabled || songIds.length === 0) return;
   try {
-    const data = await apiFetch<Record<string, string>>(`/api/settings?songs=${songIds.join(',')}`);
+    const data = await weg.holen(songIds);
     // Drei Gründe, einen Schlüssel NICHT zu überschreiben (#275):
     //  - `pending`: Änderung wartet noch auf ihren Upload
     //  - `inflight`: Upload läuft gerade – der Server kennt den neuen Wert noch nicht
@@ -46,7 +76,8 @@ export async function pullSettings(songIds: number[]): Promise<void> {
       if (SETTINGS_KEY_RE.test(k)) localStorage.setItem(k, v);
     }
   } catch (e) {
-    if (e instanceof ApiError && e.status === 401) disabled = true;
+    if (e instanceof KeinSpeicherRecht) keinRecht(e);
+    else if (e instanceof ApiError && e.status === 401) disabled = true;
   }
 }
 
@@ -76,14 +107,14 @@ async function flush(keepalive = false): Promise<void> {
   pending.clear();
   for (const k of batch.keys()) inflight.add(k);
   try {
-    await apiFetch('/api/settings', {
-      method: 'PUT',
-      body: JSON.stringify(Object.fromEntries(batch)),
-      // keepalive: Request überlebt das Backgrounding der Seite (App-Wechsel/Schließen) – #275.
-      ...(keepalive ? { keepalive: true } : {}),
-    });
+    await weg.schreiben(Object.fromEntries(batch), keepalive);
     for (const k of batch.keys()) pendingStore.unmark(k); // durch – der Merker darf weg (#275)
   } catch (e) {
+    if (e instanceof KeinSpeicherRecht) {
+      for (const [k, v] of batch) if (!pending.has(k)) pending.set(k, v); // nichts verwerfen
+      keinRecht(e);
+      return;
+    }
     if (e instanceof ApiError && e.status === 401) {
       disabled = true;
       return;
@@ -168,10 +199,11 @@ export async function migrateLocalSettings(): Promise<void> {
     return;
   }
   try {
-    await apiFetch('/api/settings', { method: 'PUT', body: JSON.stringify(body) });
+    await weg.schreiben(body);
     localStorage.setItem(MIGRATED_FLAG, '1');
   } catch (e) {
-    if (e instanceof ApiError && e.status === 401) disabled = true;
+    if (e instanceof KeinSpeicherRecht) keinRecht(e);
+    else if (e instanceof ApiError && e.status === 401) disabled = true;
     // sonst: Merker NICHT setzen → nächster Versuch beim nächsten Laden
   }
 }

@@ -45,18 +45,25 @@ export default defineConfig(({ mode }) => {
   return {
     base: istExtension ? `/ccm/${kuerzel}/` : '/',
     resolve: {
-      alias: {
+      alias: [
         // geteilte Typen: @shared/... -> ../shared/...
-        '@shared': fileURLToPath(new URL('../shared', import.meta.url)),
-        // Extension: kein Service Worker (Plan §6) – der Update-Hook bekommt einen Ersatz.
+        { find: '@shared', replacement: fileURLToPath(new URL('../shared', import.meta.url)) },
         ...(istExtension
-          ? {
-              'virtual:pwa-register/react': fileURLToPath(
-                new URL('./src/services/swOhne.ts', import.meta.url),
-              ),
-            }
-          : {}),
-      },
+          ? [
+              // Extension: kein Service Worker (Plan §6) – der Update-Hook bekommt einen Ersatz.
+              {
+                find: 'virtual:pwa-register/react',
+                replacement: fileURLToPath(new URL('./src/services/swOhne.ts', import.meta.url)),
+              },
+              // pdf.js-Worker als eigene Datei statt inline – ChurchTools verbietet Worker aus
+              // `blob:` (pdfSetup.ts, #335).
+              {
+                find: /^\.\/pdfWorker$/,
+                replacement: fileURLToPath(new URL('./src/pdfWorkerDatei.ts', import.meta.url)),
+              },
+            ]
+          : []),
+      ],
     },
     build: istExtension ? { outDir: 'dist-extension', emptyOutDir: true } : undefined,
     plugins: [

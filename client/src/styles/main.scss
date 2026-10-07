@@ -48,6 +48,15 @@ html {
   position: relative;
 }
 
+// ChurchTools-Extension (#335, gemessen 07.10.2026): ChurchTools gibt der App einen Bereich UNTER
+// seiner Leiste (56 px). Vollbild-Fenster (`position: fixed`) richteten sich aber nach dem ganzen
+// Fenster und rutschten unter die Leiste. `transform` macht #root zum Bezugsrahmen auch für
+// fixierte Kinder – damit bleiben sie im Bereich der App.
+.ct-extension #root {
+  transform: translateZ(0);
+  overflow: hidden;
+}
+
 button {
   font-family: inherit;
   outline: none;

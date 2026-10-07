@@ -204,16 +204,25 @@ Produkt. Deshalb steht diese Prüfung vor allem anderen.
 
 Zugeschnitten nach der Messung in §2b.
 
-- [ ] `personenAblage.ts` als **einzige** Stelle, die Personen-Dateien liest und schreibt
-- [ ] Zeichnungen: **ein Bild je Seite**, Dateiname aus dem Server-Schlüssel (`shared/keys`, keine zweite
+- [x] `personenAblage.ts` als **einzige** Stelle, die Personen-Dateien liest und schreibt
+- [x] Zeichnungen: **ein Bild je Seite**, Dateiname aus dem Server-Schlüssel (`shared/keys`, keine zweite
       Grammatik); Einstellungen, Zoom, Textnotizen und „gesehen": **eine** JSON-Datei je Person
-- [ ] **Dateiliste einmal laden, danach im Speicher halten** – nicht vor jedem Schreiben neu listen
-- [ ] **Ersetzen = hochladen → nachlesen → alte löschen.** Gelöscht wird erst, wenn die neue Fassung in
-      der Liste steht (Lehre 11.08.2026). Liegen zwei Fassungen da, gewinnt die neuere
-- [ ] `markSetlistSeen` speichert wirklich – sonst klebt das „geändert"-Kennzeichen (#143)
-- [ ] Fehlendes Recht (401 „Session abgelaufen", 403) meldet „darf hier nicht speichern" – **kein**
-      Abmelden; ein vorübergehender Fehler verwirft nichts (#273/#275)
-- [ ] Tests gegen einen gemockten CT-Client; für jede Härtung eine **eigene** Gegenprobe
+- [x] **Dateiliste einmal laden, danach im Speicher halten** – vor dem Schreiben wird nicht neu gelistet
+      (nur danach, zum Nachlesen); das regelmäßige Holen liest sie frisch
+- [x] **Ersetzen = hochladen → nachlesen → alte löschen.** Gelöscht wird erst, wenn die neue Fassung in
+      der Liste steht (Lehre 11.08.2026). Liegen mehrere Fassungen da, werden sie Feld für Feld
+      zusammengeführt (Bilder: die neueste)
+- [x] „Gesehen" speichert wirklich (`merkeGesehen`/`holeGesehen`). **Der Aufruf aus `markSetlistSeen`
+      kommt mit Phase 3:** Den Fingerabdruck der Setlist rechnet heute der Server, im Browser erst nach
+      #335. Bis dahin gibt es in der Extension keinen Weg dorthin – also auch keine Attrappe
+- [x] Fehlendes Recht (401 „Session abgelaufen", 403 von ChurchTools) → `KeinSpeicherRecht`: Abgleich
+      aus, Meldung, Merker bleiben – **kein** Abmelden. 401 ohne Person → abgemeldet, 401 mit unklarer
+      Antwort und 403 ohne ChurchTools-Rumpf → vorübergehend (#273/#275)
+- [x] Tests gegen ein nachgebautes ChurchTools (`ctFake.testutil.ts`); **16 Gegenproben**, jede Härtung
+      einzeln zurückgenommen – jede machte mindestens einen Test rot
+- [x] **Live gegen die Test-Instanz** (07.10.2026, als Konto ohne Adminrechte, Sitzungs-Cookie wie im
+      Browser): Einstellungen, Zeichnung (7,5 KB) samt Zoom und „gesehen" hin und zurück; nach mehrfachem
+      Ersetzen lagen genau **ein** Bild und **eine** Daten-Datei an der Person. Danach abgeräumt
 
 ### Phase 3 – Die ChurchTools-Aufrufe im Browser (#335)
 
@@ -222,6 +231,8 @@ Zugeschnitten nach der Messung in §2b.
 - [ ] Die **429-Notbremse aus #300** mit übernehmen: erster 429/Timeout stoppt den Lauf, Sperrfrist,
       Single-Flight. Ohne Server-Bündelung feuert jedes Gerät einzeln
 - [ ] Dateien über die `fileUrl` des Arrangements statt über den Datei-Proxy
+- [ ] `markSetlistSeen` in der Extension → `personenAblage.merkeGesehen` (der Fingerabdruck entsteht
+      dann im Browser); die „geändert"-Punkte der Terminliste aus `holeGesehen`
 - [ ] Die Weiche in den sieben Service-Dateien aus §4 – und **nirgends sonst**
 
 ### Phase 4 – Was wegfällt, sauber angeteasert (#336)

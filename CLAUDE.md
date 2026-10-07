@@ -437,7 +437,13 @@ das an.
 `services/annotations.ts` (localStorage = Cache, debounced Push, Pull beim Laden/Rückkehr/30 s; Pull
 überspringt Seiten mit noch nicht hochgeladener **oder gerade laufender** Änderung; ausstehende
 Uploads werden beim App-Verlassen sofort via `keepalive` geschickt). Pro-Lied-Einstellungen über
-`services/userSettings.ts` (`utils/songVersions.ts`). **Anzeige-Einstellungen (Spalten `cols`,
+`services/userSettings.ts` (`utils/songVersions.ts`). **Extension (#334):** Beide Dateien haben oben
+eine Weiche `weg` (`istExtension` aus `services/ctRuntime.ts`) – in der Extension holen und schreiben
+sie über `services/personenAblage.ts` (Personen-Dateien in ChurchTools: je Seite ein PNG
+`musikapp_<schlüssel>.png`, alles andere in `musikapp_daten.json`, Feld-Merge nach Zeitstempel).
+**Warteschlange, Wiederholen und Nachholen bleiben EINMAL in `annotations.ts`/`userSettings.ts`** –
+nie in die Ablage kopieren. `KeinSpeicherRecht` (fehlendes Recht, auch das irreführende CT-401) schaltet
+den Abgleich ab und meldet es. **Anzeige-Einstellungen (Spalten `cols`,
 Textgröße `fs`) werden geräteübergreifend synchronisiert** (kein Geräte-Suffix); **NUR der Zoom
 bleibt pro Geräteklasse getrennt**. **Schlüssel** je Eintrag: `song<id>_v<versionKey>_<seite>` (Zoom zusätzlich
 `_d<geräteklasse><spalten>`, z. B. `_dlarge2`; **`KEY_RE` in `annotations.ts` UND die Server-Zod-Regel
@@ -928,6 +934,9 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
   - `client/src/services/pendingKeys.ts` – Merker für ausstehende Uploads (Anmerkungen UND Einstellungen).
   - `client/src/services/appHidden.ts` – `visibilitychange`/`pagehide` an einer Stelle.
   - `server/src/utils/songIdsQuery.ts` – `?songs=…` auswerten (Express liefert dort auch Arrays/Objekte).
+  - `shared/keys` `songIdOfAnnoKey`/`songIdOfSettingsKey` – zu welchem Lied ein Schlüssel gehört (stand
+    dreimal von Hand im Server; die Extension braucht dieselbe Regel, #334).
+  - `shared/types` `GesehenerStand`/`GESEHEN_MAX_ALTER_MS` – „gesehen"-Stand für Server UND Extension.
   - `fileDownloadError` in `ctHttp.ts` – 404 bleibt 404, alles andere 502.
   - `eslint.config.mjs` – EINE Flat Config statt vier (siehe Konventionen).
     ⚠️ **Zwei Lehren aus diesem Durchgang, die über das Projekt hinausgehen:**

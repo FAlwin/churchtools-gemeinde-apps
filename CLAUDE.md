@@ -632,6 +632,10 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
   Instanz) – Pfade absolut, CSS als Datei. **Spike damit abgeschlossen**, Testaufbau (Modul
   `ecg-musik-test`, Kategorien, Werte, Probe-Datei) am 07.10. wieder abgeräumt; für Phase 2 neu anlegen
   (Modul per `POST /api/custommodules` mit `inMenu`, Rechte von Hand – §2a nennt den Satz).
+  **Danach (07.10.) für #334 nachgemessen, §2b:** Custom-Data-Werte max. **10.000 Zeichen**, kein
+  Filter beim Laden (immer alle Musiker) – taugen nicht. **Entscheidung: alles als Personen-Dateien**
+  (`/files/person/<eigene id>`, mit Mitglieds-Rechten möglich, fremde ändern → 403, aber für Mitglieder
+  lesbar; `PATCH securityLevelId` antwortet 204 und wirkt nicht).
 
 - **v2.27.0 (05.10.2026) = Ablauf und Felder** (PR #425 Squash `1447d65`; Staging `staging-a5e6782` von
   Alwin getestet, Baum von `main` identisch). #423 Vorlauf vor dem Gottesdienstbeginn (Grenze

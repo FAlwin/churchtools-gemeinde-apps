@@ -7,6 +7,12 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+## [2.28.0] – 2026-10-07
+
+**Beim Update ist nichts zu tun** – keine neue Einstellung, keine neue Einführung. Für eure App ändert
+sich sichtbar nichts; neu ist die Möglichkeit, sie zusätzlich als ChurchTools-Erweiterung zu betreiben
+(für Gemeinden ohne eigenen Server, siehe unten).
+
 ### Neu
 
 - **Die App als ChurchTools-Erweiterung (#333–#337):** Für Gemeinden ohne eigenen Server hängt an
@@ -25,6 +31,10 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Intern
 
+- **Test für alle 18 Schreibvorgänge (#426):** Lehnt ChurchTools einen Schreibvorgang ab (401/403),
+  holt der nächste Versuch ein frisches CSRF-Token, statt am abgelehnten hängenzubleiben (#298) –
+  vorher nur für einen Teil der Schreiber geprüft. Ein Wächter meldet jede neue Schreibfunktion, die im
+  Test fehlt.
 - **Vorbereitung ChurchTools-Erweiterung, Phase 2 (#334):** Neuer Speicherweg für den späteren
   Betrieb als Erweiterung: Anmerkungen, Einstellungen und „gesehen" werden dort als Dateien an der
   eigenen Person in ChurchTools abgelegt (`personenAblage.ts`, `ctRuntime.ts`). Für die

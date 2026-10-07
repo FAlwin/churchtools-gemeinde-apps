@@ -646,6 +646,12 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **v2.28.0 (07.10.2026) = ChurchTools-Erweiterung + robustere Terminliste** (PRs #426–#433; kein
+  Staging-Test nötig für die PWA – sichtbar ändert sich dort nichts). Die Erweiterung (Lesen, Anteasern,
+  Paket, Update-Hinweis) ist in der Test-Instanz durchgeklickt; das Release hängt erstmals
+  `musik-app-v2.28.0.zip` an. Für die PWA: Die Terminliste wirft bei Drosselung als Ganzes (setlistKern).
+  Offen: Extension 3b (Schreiben, #335).
+
 - **07.10.2026 – nach v2.27.0:** PR #426 (Token-Test deckt alle 18 Schreiber ab + Vollständigkeits-
   Wächter) gemergt, kein Release. **#177 Excel-Sync zurückgestellt** (Alwin): Die Musiker nutzen die App
   noch nicht, und die Planung soll ganz aus Excel heraus – ein Abgleich lohnt dann nicht; Zweig

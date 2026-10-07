@@ -55,10 +55,14 @@ Die Musik App gibt es in zwei Formen:
 Neue ZIP herunterladen → **Administration → Erweiterungen** → beim Eintrag „Musik App" auf den
 **Stift** → neue **ZIP-Datei** hineinziehen → **Speichern**. Name und Kürzel nicht ändern.
 
+**Sonst ist nichts zu tun – vor allem nichts löschen.** Die Anhänge `musikapp_…` an den Personen sind
+die gespeicherten Anmerkungen und Einstellungen der Musiker; die neue Version liest sie einfach weiter.
+
 ## Entfernen
 
 In **Administration → Erweiterungen** den Eintrag löschen. Die Anmerkungs-Dateien (`musikapp_…`) an
-den Personen bleiben dabei liegen – wer sie nicht mehr braucht, löscht sie selbst: Menü **Personen** (nicht „Mein Profil“) → Person in der Liste anklicken → ganz unten **„Anhänge >>“**.
+den Personen bleiben dabei liegen. Aufräumen ist freiwillig und **nur beim endgültigen Entfernen**
+sinnvoll – dann sind die Anmerkungen damit weg. Wer das will, löscht sie an der Person: Menü **Personen** (nicht „Mein Profil“) → Person in der Liste anklicken → ganz unten **„Anhänge >>“**.
 
 ## Für Entwickler
 

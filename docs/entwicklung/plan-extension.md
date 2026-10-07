@@ -289,7 +289,8 @@ nutzbar – nach jeder kann man aufhören. Muster wie beim Lesen: Regeln nach `s
 - [ ] **3b-3 Abwesenheiten** (Gründe ebenfalls über `ctAjax`; Termin-Arten-Filter hängt an 3b-4)
 - [ ] **3b-4 Team-Notizen + Gemeinde-Einstellungen:** Wer zählt als Musiker? Die Server-Variante hat
       dafür `site.json` – Vorschlag: die eigenen Daten des Moduls (Custom-Data, §2a). Danach „Notizen
-      von …" aus den Personen-Dateien der anderen
+      von …" aus den Personen-Dateien der anderen. Dazu gehört auch `standardAnsicht` (Akkorde/PDF
+      zuerst, 07.10.2026) – in der Extension gilt bis dahin nur der automatische Teil
 - [ ] **3b-5 SongSelect** (`ctAjax`, braucht `use ccli`)
 
 #### 3c – Massenläufe (entschieden: weglassen)

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DEFAULT_SITE_CONFIG, type SiteConfig } from '@shared/types/index';
 import * as api from '../services/siteConfigApi';
 import { applyBranding } from '../utils/applyBranding';
+import { merkeGemeindeAnsicht } from '../utils/standardAnsicht';
 
 /**
  * Lädt das Laufzeit-Branding und wendet es bei jeder Änderung auf das Dokument an.
@@ -22,6 +23,13 @@ export function useSiteConfig() {
   useEffect(() => {
     if (query.data) applyBranding(query.data);
   }, [query.data]);
+
+  // Die Standard-Ansicht der Lieder merken – aber nur aus GELADENEN Daten (`dataUpdatedAt > 0`),
+  // nie aus den Vorgaben, mit denen die Abfrage startet: Sonst setzte jeder Start offline die Wahl
+  // der Gemeinde auf „Akkorde" zurück (siehe `standardAnsicht.ts`).
+  useEffect(() => {
+    if (query.data && query.dataUpdatedAt > 0) merkeGemeindeAnsicht(query.data.standardAnsicht);
+  }, [query.data, query.dataUpdatedAt]);
 
   return query;
 }

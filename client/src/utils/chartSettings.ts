@@ -8,6 +8,7 @@ import {
   fromLocalStorage,
   type SettingSource,
 } from './songVersions';
+import { gemeindeAnsicht, standardQuelle } from './standardAnsicht';
 
 /** Einstellungen pro Lied (Tonart, Kapo, Abschnitts-Transponierung, Schrift, Spalten, Anzeige). */
 export interface SongSettings {
@@ -127,13 +128,17 @@ export function loadSettings(
   song: SetlistSong,
   versionKey: string = selectedVersionKey(song),
 ): SongSettings {
-  // viewSource (Dokument vs. Akkorde) gilt pro Lied, nicht pro Version.
+  // viewSource (Dokument vs. Akkorde) gilt pro Lied, nicht pro Version. Eine eigene Wahl geht vor –
+  // auch ein ausdrückliches „Akkorde": Seit es einen Standard „Dokument" gibt (07.10.2026), hieße
+  // „nicht als Dokument-ID lesbar" sonst „nichts gewählt", und die Wahl wäre stillschweigend weg.
   const savedView = lsSong('view', song.id);
   const savedId = savedView ? Number(savedView) : NaN;
   const viewSource =
-    savedView && !Number.isNaN(savedId) && song.documents.some((d) => d.fileId === savedId)
-      ? savedId
-      : 'chords';
+    savedView === 'chords'
+      ? 'chords'
+      : savedView && !Number.isNaN(savedId) && song.documents.some((d) => d.fileId === savedId)
+        ? savedId
+        : standardQuelle(song, gemeindeAnsicht());
   /**
    * Gewähltes Arrangement – pro Lied, wie `viewSource`, und **nur wenn es das Lied noch hat**.
    *

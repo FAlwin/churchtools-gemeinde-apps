@@ -327,7 +327,7 @@ Light/Dark). Alle Design-Tokens in `styles/_variables.scss` (Single Source); `ap
 **Einziger anpassbarer Wert:** der **Gemeinde-Name** (`orgName`) – ein ChurchTools-**Admin** ändert ihn
 im Mehr-Tab (`pages/Settings.tsx` → Verwaltung: `hooks/useVerwaltung.ts`, `components/VerwaltungFenster.tsx`; `PUT /api/site-config`); persistiert in `site.json` (Volume,
 `SITE_CONFIG_PATH`). Admin-Recht über `ADMIN_PERMISSION` (Default `churchcore:administer persons`).
-`SiteConfig` (`shared/types`) hat sieben Felder: `appName`(fest), `description`(fest), `orgName`, `links`, `musicianGroupIds`, `noteRoles?` und `terminArten?` (#400). Nur die ersten drei sind reine Anzeige-Werte.
+`SiteConfig` (`shared/types`) hat acht Felder: `appName`(fest), `description`(fest), `orgName`, `links`, `musicianGroupIds`, `noteRoles?`, `terminArten?` (#400) und `standardAnsicht?` (07.10.2026, Akkorde/PDF zuerst; Regel in `client/src/utils/standardAnsicht.ts`, auf dem Gerät gemerkt in `devicePrefs`). Nur die ersten drei und `standardAnsicht` sind reine Anzeige-Werte. **Ein neues Feld muss an sechs Stellen mit:** Schema, `Editable`, `normalize`, Einlesen in `getSiteConfig`, `putSiteConfigCtrl` – und, falls öffentlich, die beschnittene Antwort in `getSiteConfigCtrl`.
 
 **Navigation:** untere Tab-Bar `Termine`/`Lieder`/`Abwesenheiten`/`Mehr` (`components/TabBar.tsx`; der
 Abwesenheiten-Tab trägt die ID `verfuegbarkeit` und erscheint nur für Mitglieder der `musicianGroupIds`), Detailseiten

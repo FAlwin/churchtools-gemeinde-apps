@@ -217,6 +217,30 @@
   border-color: var(--blue);
 }
 
+/* Liedblatt: Standard-Ansicht – Auswahl mit Erklärung je Möglichkeit (07.10.2026). */
+.ansichtText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+.ansichtHint {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text2);
+}
+.radio {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--border);
+  border-radius: 50%;
+}
+.radioOn {
+  border: 7px solid var(--blue);
+}
+
 /* Rollen-Zuweisung (globale Anmerkungen): je Gruppe eine Rollen-Matrix. */
 .roleGroup {
   margin-top: 14px;

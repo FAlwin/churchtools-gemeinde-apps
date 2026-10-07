@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { NoteRolePerm, SiteConfig } from '@shared/types/index';
+import type { NoteRolePerm, SiteConfig, StandardAnsicht } from '@shared/types/index';
 import { sameIdSet, sameRolePerms } from '../utils/adminDrafts';
 import { useGroups, useUpdateSiteConfig } from './useSiteConfig';
 
@@ -8,6 +8,7 @@ export interface VerwaltungsFenster {
   org: boolean;
   links: boolean;
   terminArten: boolean;
+  ansicht: boolean;
   notes: boolean;
   groups: boolean;
   roles: boolean;
@@ -21,7 +22,7 @@ export interface VerwaltungsFenster {
  * scrollten sie mit). Deshalb liegt der Zustand hier, und `VerwaltungZeilen` / `VerwaltungFenster`
  * zeigen ihn nur an.
  *
- * Bewusst **sechs getrennte Schalter** statt eines Felds „welches Fenster": „Anmerkungen" bleibt offen,
+ * Bewusst **getrennte Schalter** statt eines Felds „welches Fenster": „Anmerkungen" bleibt offen,
  * während darüber Gruppen oder Rollen bearbeitet werden. Und eine Zusammenlegung hat hier schon
  * einmal einen Menüpunkt stumm gemacht (05.08.2026, Reihenfolge der Setter) – beim Aufteilen blieben
  * alle Setter und ihre Reihenfolge unverändert.
@@ -31,6 +32,9 @@ export function useVerwaltung(site: SiteConfig, isAdmin: boolean) {
   const [showLinks, setShowLinks] = useState(false);
   // Verwaltung → „Abwesenheiten: Termin-Arten" – die Knöpfe des Filters (#400).
   const [showTerminArten, setShowTerminArten] = useState(false);
+  // Verwaltung → „Liedblatt: Standard-Ansicht" (07.10.2026).
+  const [showAnsicht, setShowAnsicht] = useState(false);
+  const [ansichtDraft, setAnsichtDraft] = useState<StandardAnsicht>('akkorde');
   // Verwaltung → „Anmerkungen": Übersicht (showNotes) mit zwei Unter-Sheets
   // (Gruppen-Zuweisung + Rollen-Zuweisung).
   const [showNotes, setShowNotes] = useState(false);
@@ -52,6 +56,17 @@ export function useVerwaltung(site: SiteConfig, isAdmin: boolean) {
     update.mutate(
       { ...site, orgName: orgDraft.trim() || site.orgName },
       { onSuccess: () => setShowOrg(false) },
+    );
+  }
+
+  function openAnsicht() {
+    setAnsichtDraft(site.standardAnsicht ?? 'akkorde');
+    setShowAnsicht(true);
+  }
+  function saveAnsicht() {
+    update.mutate(
+      { ...site, standardAnsicht: ansichtDraft },
+      { onSuccess: () => setShowAnsicht(false) },
     );
   }
 
@@ -92,11 +107,13 @@ export function useVerwaltung(site: SiteConfig, isAdmin: boolean) {
   // Vergleiche in `utils/adminDrafts` (#251) – reihenfolgeunabhängig und dort getestet.
   const groupsDirty = showGroups && !sameIdSet(groupDraft, site.musicianGroupIds);
   const rolesDirty = showRoles && !sameRolePerms(rolesDraft, site.noteRoles ?? []);
+  const ansichtDirty = showAnsicht && ansichtDraft !== (site.standardAnsicht ?? 'akkorde');
 
   const offen: VerwaltungsFenster = {
     org: showOrg,
     links: showLinks,
     terminArten: showTerminArten,
+    ansicht: showAnsicht,
     notes: showNotes,
     groups: showGroups,
     roles: showRoles,
@@ -112,6 +129,12 @@ export function useVerwaltung(site: SiteConfig, isAdmin: boolean) {
     rolesDraft,
     groupsDirty,
     rolesDirty,
+    ansichtDraft,
+    setAnsichtDraft,
+    ansichtDirty,
+    openAnsicht,
+    saveAnsicht,
+    closeAnsicht: () => setShowAnsicht(false),
     openOrg,
     saveOrg,
     closeOrg: () => setShowOrg(false),

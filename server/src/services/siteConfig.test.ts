@@ -102,3 +102,23 @@ describe('saveSiteConfig – Termin-Arten', () => {
     expect(saved.terminArten?.map((a) => a.name)).toEqual(['Gottesdienst']);
   });
 });
+
+describe('Liedblatt: Standard-Ansicht (07.10.2026)', () => {
+  it('ohne Angabe gilt „Akkorde" – auch für Bestandsdateien', () => {
+    const r = mod.siteConfigSchema.safeParse({ orgName: 'ECG' });
+    expect(r.success && r.data.standardAnsicht).toBe('akkorde');
+  });
+
+  it('nimmt nur die zwei Werte an', () => {
+    expect(mod.siteConfigSchema.safeParse({ orgName: 'ECG', standardAnsicht: 'pdf' }).success).toBe(
+      false,
+    );
+  });
+
+  it('übersteht Speichern UND erneutes Einlesen der Datei', async () => {
+    const saved = await mod.saveSiteConfig({ orgName: 'ECG', standardAnsicht: 'dokument' });
+    expect(saved.standardAnsicht).toBe('dokument');
+    mod.__resetForTests();
+    expect((await mod.getSiteConfig()).standardAnsicht).toBe('dokument');
+  });
+});

@@ -14,6 +14,7 @@ const FULL = {
   links: [{ label: 'Website', url: 'https://example.org' }],
   musicianGroupIds: [9],
   noteRoles: [{ groupId: 9, roles: [15, 16] }],
+  standardAnsicht: 'dokument',
 };
 
 vi.mock('../services/siteConfig.js', () => ({
@@ -30,7 +31,8 @@ vi.mock('../middleware/session.js', () => ({
   isSessionExpired: (...a: unknown[]) => isSessionExpired(...a),
 }));
 
-const { getSiteConfigCtrl } = await import('./siteConfigController.js');
+const { getSiteConfigCtrl, putSiteConfigCtrl } = await import('./siteConfigController.js');
+const siteConfig = await import('../services/siteConfig.js');
 
 function runCtrl(): Promise<Record<string, unknown>> {
   return new Promise((resolve) => {
@@ -53,6 +55,9 @@ describe('GET /api/site-config – Beschneidung ohne Anmeldung (#152)', () => {
     // Anzeige-Felder bleiben da (der Login-Screen braucht sie).
     expect(body.orgName).toBe('ECG Donrath');
     expect(body.links).toEqual(FULL.links);
+    // Die Standard-Ansicht ist kein internes Feld: Fehlte sie hier, merkte sich das Gerät auf dem
+    // Anmelde-Bildschirm „Akkorde" und verlöre die Wahl der Gemeinde (07.10.2026).
+    expect(body.standardAnsicht).toBe('dokument');
   });
 
   it('beschneidet auch bei ABGELAUFENER Session', async () => {
@@ -69,5 +74,21 @@ describe('GET /api/site-config – Beschneidung ohne Anmeldung (#152)', () => {
     const body = await runCtrl();
     expect(body.musicianGroupIds).toEqual([9]);
     expect(body.noteRoles).toEqual(FULL.noteRoles);
+  });
+});
+
+describe('PUT /api/site-config – reicht jedes Feld weiter', () => {
+  it('die Standard-Ansicht kommt beim Speichern an (07.10.2026)', async () => {
+    const data = { ...FULL, terminArten: [] };
+    vi.mocked(siteConfig.siteConfigSchema.safeParse).mockReturnValue({
+      success: true,
+      data,
+    } as unknown as ReturnType<typeof siteConfig.siteConfigSchema.safeParse>);
+    vi.mocked(siteConfig.saveSiteConfig).mockResolvedValue(data as never);
+    const res = { json: vi.fn() } as unknown as Response;
+    await putSiteConfigCtrl({ body: data } as Request, res);
+    expect(siteConfig.saveSiteConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ standardAnsicht: 'dokument' }),
+    );
   });
 });

@@ -68,6 +68,7 @@ Anpassbar sind nur:
 | -------------------------------------------- | ------------------------------- |
 | ChurchTools-URL, Session-Secret, Admin-Recht | `.env` auf eurem Server         |
 | Gemeindename + eigene Links                  | in der App (Admin → „Mehr"-Tab) |
+| Liedblatt zuerst als Akkorde oder PDF        | in der App (Admin → „Mehr"-Tab) |
 
 Optik und Funktionen sind für alle identisch (eine gemeinsame Codebasis).
 

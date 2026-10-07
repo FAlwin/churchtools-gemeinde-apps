@@ -72,14 +72,21 @@ export const siteConfigSchema = z
       .max(SITE_CONFIG_GRENZEN.maxEintraege)
       .optional()
       .default([]),
+    // Liedblatt: Standard-Ansicht (07.10.2026); fehlt sie (Bestand), gilt „Akkorde".
+    standardAnsicht: z.enum(['akkorde', 'dokument']).optional().default('akkorde'),
   })
   .passthrough();
 
 let cache: SiteConfig | null = null;
 
+/** Nur für Tests: Zwischenspeicher leeren, damit das Einlesen der Datei geprüft werden kann. */
+export function __resetForTests(): void {
+  cache = null;
+}
+
 type Editable = Pick<
   SiteConfig,
-  'orgName' | 'links' | 'musicianGroupIds' | 'noteRoles' | 'terminArten'
+  'orgName' | 'links' | 'musicianGroupIds' | 'noteRoles' | 'terminArten' | 'standardAnsicht'
 >;
 
 /** Setzt eine eingelesene/eingehende Konfiguration auf die festen Felder + anpassbare Werte zusammen. */
@@ -89,6 +96,7 @@ function normalize({
   musicianGroupIds = [],
   noteRoles = [],
   terminArten = [],
+  standardAnsicht = 'akkorde',
 }: Partial<Editable> & { orgName: string }): SiteConfig {
   // Duplikate entfernen (falls mehrfach übergeben).
   const groupIds = [...new Set(musicianGroupIds)];
@@ -106,6 +114,7 @@ function normalize({
     noteRoles: roles,
     // Eine ID nur einmal – die gemerkte Auswahl auf dem Gerät hängt daran (#400).
     terminArten: terminArten.filter((t, i, alle) => alle.findIndex((x) => x.id === t.id) === i),
+    standardAnsicht,
   };
 }
 
@@ -140,6 +149,7 @@ export async function getSiteConfig(): Promise<SiteConfig> {
         musicianGroupIds: ids,
         noteRoles: parsed.data.noteRoles,
         terminArten: parsed.data.terminArten,
+        standardAnsicht: parsed.data.standardAnsicht,
       });
     } else {
       // Inhaltlich unpassend (z. B. handgeschriebene Datei) → Defaults, wie bisher.

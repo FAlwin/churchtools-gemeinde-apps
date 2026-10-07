@@ -23,6 +23,12 @@ export function VerwaltungZeilen({ site, v }: { site: SiteConfig; v: Verwaltung 
               : `${site.links.length} ${site.links.length === 1 ? 'Link' : 'Links'}`}
           </span>
         </button>
+        <button className={`${styles.setRow} ${styles.tappable}`} onClick={v.openAnsicht}>
+          <span className={styles.setLabel}>Liedblatt: Standard-Ansicht</span>
+          <span className={styles.setValue}>
+            {site.standardAnsicht === 'dokument' ? 'PDF zuerst' : 'Akkorde'}
+          </span>
+        </button>
         <button className={`${styles.setRow} ${styles.tappable}`} onClick={v.openTerminArten}>
           <span className={styles.setLabel}>Abwesenheiten: Termin-Arten</span>
           <span className={styles.setValue}>

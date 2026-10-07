@@ -753,7 +753,18 @@ export interface SiteConfig {
    * Kalender, und eine eigene Kategorie kennt ChurchTools an Terminen nicht (gemessen 20.09.2026).
    */
   terminArten?: TerminArt[];
+  /**
+   * Was ein Lied beim ersten Öffnen zeigt (Anfrage einer Gemeinde ohne ChordPro-Dateien, 07.10.2026)
+   * – vom Admin unter Verwaltung → „Liedblatt: Standard-Ansicht" gewählt. `'akkorde'` (Standard):
+   * die Akkord-Ansicht; Lieder **ohne** ChordPro zeigen trotzdem ihr Dokument. `'dokument'`: hat ein
+   * Lied ein PDF oder Bild, wird es gezeigt. Wer bei einem Lied selbst umstellt, behält seine Wahl.
+   * Die Regel steht in `client/src/utils/standardAnsicht.ts`.
+   */
+  standardAnsicht?: StandardAnsicht;
 }
+
+/** Siehe `SiteConfig.standardAnsicht`. */
+export type StandardAnsicht = 'akkorde' | 'dokument';
 
 /** Eine Termin-Art für den Filter (siehe `SiteConfig.terminArten`). */
 export interface TerminArt {
@@ -859,4 +870,5 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   links: [],
   musicianGroupIds: [],
   terminArten: [],
+  standardAnsicht: 'akkorde',
 };

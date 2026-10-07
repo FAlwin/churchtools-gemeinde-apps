@@ -30,37 +30,45 @@ Die Musik App gibt es in zwei Formen:
    - **ZIP-Datei:** die heruntergeladene Datei.
 4. **Speichern.**
 
-## Rechte
+## Rechte einrichten
 
-- **Den Menüpunkt sehen:** Unter **Berechtigungen** gibt es für die Erweiterung das Recht
-  **„„Musik App" sehen (view)"**. Gebt es den Gruppen oder dem Status, die die App nutzen sollen
-  (z. B. eurem Musikteam).
-- **Lieder und Abläufe:** Die App zeigt nur, was die Person in ChurchTools ohnehin sehen darf –
-  Abläufe (`view agenda`) und Lieder (`view songcategory`) im Bereich **Events**. Ebenso beim Ändern:
-  den Ablauf bearbeitet nur, wer `edit agenda` hat, Lieder, Arrangements, Notenblätter und das Tempo
-  nur, wer Lieder in der jeweiligen Kategorie bearbeiten darf (`edit songcategory`). Die App schreibt mit der Sitzung der Person – mehr als in ChurchTools selbst
-  darf sie also nie.
-- **Gemeinde-Einstellungen** (unter **Mehr → Verwaltung**, nur für Admins: Links und „Liedblatt:
-  Standard-Ansicht"): Die App legt sie beim ersten Speichern in ChurchTools ab, in den Daten der
-  Erweiterung unter der Kategorie **„Einstellungen der Musik App"**. Damit sie bei allen ankommen,
-  braucht die Gruppe bzw. der Status eurer Musiker unter **Berechtigungen** für die Erweiterung die
-  Rechte **„view custom category"** und **„view custom data"** für diese Kategorie. Fehlen sie, gibt es
-  keine Fehlermeldung – es gilt dann einfach die Vorgabe („Akkorde", keine Links). Die Kategorie nicht
-  löschen; sie gehört der App.
-- **Team-Notizen** (Musiker sehen die Anmerkungen der anderen unter „Notizen von …"): Ein Admin wählt
-  unter **Mehr → Verwaltung → Anmerkungen** die Gruppen und je Gruppe die Rollen, die mitmachen. Beim
-  Speichern legt die App die Kategorie **„Team-Notizen der Musik App"** an – das Verzeichnis, wer seine
-  Anmerkungen teilt. Die Musiker brauchen dafür **zusätzlich** auf dieser Kategorie „view custom
-  category", „view custom data", **„create custom data"** und **„delete custom data"**: Wer unter
-  **Mehr** „Meine Anmerkungen teilen" einschaltet, trägt sich dort ein (und beim Ausschalten wieder
-  aus). Ob jemand wirklich teilt, steht in seiner eigenen Datei `musikapp_daten.json` – die kann nur er
-  selbst ändern; ein Eintrag, den jemand von Hand macht, bewirkt also nichts.
-- **Ohne Rechte für Lieder und Abläufe** (Bereich **Events**: „view songcategory", „view agenda")
-  meldet die App derzeit „Berechtigungen konnten nicht geladen werden" statt eines klaren Hinweises.
-  Wer die Musik App nutzen soll, braucht diese Rechte.
-- **Anmerkungen speichern:** Die App legt sie als Dateien an der **eigenen Person** ab. Dafür braucht
-  die Person das Recht, ihre eigenen Personendaten zu bearbeiten (in unserer Test-Gemeinde kam es über
-  den Status „Mitglied"). Fehlt es, sagt die App das; die Anmerkungen bleiben dann nur auf dem Gerät.
+Die App kann nichts, was die Person in ChurchTools nicht auch selbst dürfte – sie arbeitet mit deren
+Sitzung. Welche Rechte wofür nötig sind, steht hier **an einer Stelle**. Vergeben werden sie unter
+**Berechtigungen** (am einfachsten über den Status oder die Gruppe eures Musikteams). ChurchTools zeigt
+hinter jedem Recht seinen Schlüssel in Klammern – danach könnt ihr suchen.
+
+| Wofür                                                             | Wer braucht es                                             | Recht in ChurchTools                                                                                                                                                                                      |
+| ----------------------------------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Den Menüpunkt „Musik App" sehen                                   | alle, die die App nutzen                                   | Erweiterung: **„Musik App" sehen** (`view`)                                                                                                                                                               |
+| Lieder sehen                                                      | alle, die die App nutzen                                   | Events: Lieder sehen (`view songcategory`) – für die Kategorien, die sie sehen sollen                                                                                                                     |
+| Termine und Abläufe sehen                                         | alle, die die App nutzen                                   | Events: Abläufe sehen (`view agenda`)                                                                                                                                                                     |
+| Anmerkungen, Tonart, Zoom speichern                               | alle, die die App nutzen                                   | Personen: **Eigene Personendaten bearbeiten** (bei uns über den Status „Mitglied")                                                                                                                        |
+| Gemeinde-Einstellungen bekommen (Links, „PDF zuerst")             | alle, die die App nutzen                                   | Erweiterung: **Kategorien sehen** (`view custom category`) und **Daten in Kategorie sehen** (`view custom data`) für „Einstellungen der Musik App"                                                        |
+| Team-Notizen nutzen („Notizen von …", „Meine Anmerkungen teilen") | Musiker der in der Verwaltung gewählten Gruppen und Rollen | Erweiterung, für „Team-Notizen der Musik App": `view custom category`, `view custom data`, **Daten in Kategorie erstellen** (`create custom data`), **Daten in Kategorie löschen** (`delete custom data`) |
+| Ablauf bearbeiten                                                 | wer Abläufe pflegt                                         | Events: Abläufe bearbeiten (`edit agenda`)                                                                                                                                                                |
+| Lieder, Arrangements, Notenblätter, Tempo ändern                  | wer Lieder pflegt                                          | Events: Lieder bearbeiten (`edit songcategory`) – je Kategorie                                                                                                                                            |
+| Verwaltung in der App (unter **Mehr**)                            | Admins                                                     | `administer persons` (Personen administrieren) – Admins haben es meist schon                                                                                                                              |
+| Gemeinde-Einstellungen und Team-Gruppen speichern                 | Admins                                                     | Erweiterung: **Kategorien erstellen** (`create custom category`), dazu für „Einstellungen der Musik App" `create custom data` und **Daten in Kategorie bearbeiten** (`edit custom data`)                  |
+
+Die beiden Kategorien „Einstellungen der Musik App" und „Team-Notizen der Musik App" legt die App selbst
+an, wenn ein Admin zum ersten Mal speichert (Team-Notizen: sobald eine Gruppe gewählt ist). **Erst danach
+lassen sie sich bei den Rechten auswählen** – also: als Admin einmal speichern, dann die Rechte vergeben.
+Die Kategorien nicht löschen; sie gehören der App. SongSelect gibt es in der Erweiterung noch nicht.
+
+**Was passiert, wenn ein Recht fehlt:**
+
+- **Lieder und Abläufe:** Ohne beide meldet die App derzeit „Berechtigungen konnten nicht geladen
+  werden" statt eines klaren Hinweises (#444).
+- **Gemeinde-Einstellungen:** keine Fehlermeldung – es gilt einfach die Vorgabe („Akkorde", keine Links).
+- **Team-Notizen:** Ohne Mitgliedschaft in einer gewählten Gruppe (mit freigegebener Rolle) erscheinen
+  sie gar nicht. Fehlen nur die Rechte an „Team-Notizen der Musik App", lässt sich „Meine Anmerkungen
+  teilen" nicht einschalten (die App meldet, dass es nicht geklappt hat).
+- **Anmerkungen speichern:** Die App sagt es; die Anmerkungen bleiben dann nur auf dem Gerät.
+
+**Wie Team-Notizen funktionieren:** Wer unter **Mehr** „Meine Anmerkungen teilen" einschaltet, trägt
+sich in „Team-Notizen der Musik App" ein (und beim Ausschalten wieder aus). Ob jemand wirklich teilt,
+steht aber in seiner eigenen Datei `musikapp_daten.json` – die kann nur er selbst ändern; ein Eintrag,
+den jemand von Hand macht, bewirkt also nichts.
 
 ## Gut zu wissen
 

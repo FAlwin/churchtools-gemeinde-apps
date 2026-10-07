@@ -621,6 +621,18 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **07.10.2026 – nach v2.27.0:** PR #426 (Token-Test deckt alle 18 Schreiber ab + Vollständigkeits-
+  Wächter) gemergt, kein Release. **#177 Excel-Sync zurückgestellt** (Alwin): Die Musiker nutzen die App
+  noch nicht, und die Planung soll ganz aus Excel heraus – ein Abgleich lohnt dann nicht; Zweig
+  `feature/177-excel-sync` bleibt liegen. **#333 Extension-Spike, API-Teil gemessen** – Ergebnisse in
+  `docs/entwicklung/plan-extension.md` §2a. Kern: Nicht-Admins dürfen in Custom-Module-Daten schreiben,
+  aber **ohne Schutz je Eintrag** (bewusst hingenommen), `domainId`/`domainType` werden verworfen,
+  fehlendes Recht antwortet mit **401 „Session abgelaufen"**. Browser-Teil ebenfalls gemessen: kein
+  zweites Login, aber ChurchTools bettet nur den Inhalt der `index.html` ein (mit `<base>` auf die
+  Instanz) – Pfade absolut, CSS als Datei. **Spike damit abgeschlossen**, Testaufbau (Modul
+  `ecg-musik-test`, Kategorien, Werte, Probe-Datei) am 07.10. wieder abgeräumt; für Phase 2 neu anlegen
+  (Modul per `POST /api/custommodules` mit `inMenu`, Rechte von Hand – §2a nennt den Satz).
+
 - **v2.27.0 (05.10.2026) = Ablauf und Felder** (PR #425 Squash `1447d65`; Staging `staging-a5e6782` von
   Alwin getestet, Baum von `main` identisch). #423 Vorlauf vor dem Gottesdienstbeginn (Grenze
   `eventStartPosition`, nur sie wird geschrieben; Linie „Beginn"), Schalter „Uhrzeit ausblenden" entfernt

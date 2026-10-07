@@ -13,7 +13,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   jedem Release jetzt zusätzlich `musik-app-<Version>.zip` – in ChurchTools unter Administration →
   Erweiterungen hochladen, angemeldet ist man dann über ChurchTools. Sie zeigt Termine, Ablauf,
   Liedblatt und Lieder und speichert Anmerkungen an der eigenen Person; Offline, Statistik und
-  Bearbeiten gibt es nur mit eigenem Server. Anleitung: `docs/betrieb/ERWEITERUNG.md`.
+  Bearbeiten gibt es nur mit eigenem Server. Neue Versionen meldet die Erweiterung unter „Mehr“
+  (sie fragt dafür selbst bei GitHub nach). Anleitung: `docs/betrieb/ERWEITERUNG.md`.
 
 ### Geändert
 

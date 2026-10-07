@@ -52,6 +52,9 @@ Die Musik App gibt es in zwei Formen:
 
 ## Aktualisieren
 
+Gibt es eine neue Version, steht in der Erweiterung unter **Mehr** ganz unten „Neue Version …
+verfügbar“ – der Link führt zur Release-Seite mit der ZIP. Aktualisiert wird von Hand:
+
 Neue ZIP herunterladen → **Administration → Erweiterungen** → beim Eintrag „Musik App" auf den
 **Stift** → neue **ZIP-Datei** hineinziehen → **Speichern**. Name und Kürzel nicht ändern.
 

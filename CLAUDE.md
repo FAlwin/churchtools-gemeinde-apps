@@ -19,8 +19,8 @@
 - **Status:** Fertig & produktiv – auf dem Synology-NAS deployt, intern im WLAN **und**
   extern unter `https://musik.ecg-donrath.de` live.
 
-  **Stand 05.10.2026: Produktiv läuft `v2.26.1`** – am 05.10.2026 am Bundle **gemessen**, nicht aus der
-  Doku übernommen. **v2.27.0 ist getaggt, der Prod-Deploy liegt bei Alwin.** So misst man die laufende
+  **Stand 06.10.2026: Produktiv läuft `v2.27.0`** – am 06.10.2026 am Bundle **gemessen**, nicht aus der
+  Doku übernommen. So misst man die laufende
   Version: Der Versionsstring steckt im ausgelieferten Bundle
   (`curl -s https://musik.ecg-donrath.de/ | grep -oE 'assets/index-[^"]+\.js'`, dann diese Datei holen
   und nach `v2.` greppen). `/api/health` nennt **keine** Version und taugt dafür nicht. Getestet wird

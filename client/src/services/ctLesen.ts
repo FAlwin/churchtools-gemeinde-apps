@@ -12,18 +12,31 @@
 import type {
   AgendaItem,
   AgendaServiceOption,
+  ArrangementAnsicht,
+  ArrangementFileEntry,
   AuthStatus,
+  LiedStammdatenAnsicht,
   LiedtextVorschau,
   Service,
   SetlistSong,
   SongArrangementOption,
   SiteConfig,
+  SongCategory,
   SongLibraryEntry,
+  SongSource,
   UserCapabilities,
 } from '@shared/types/index';
 import { DEFAULT_SITE_CONFIG } from '@shared/types/index';
 import { agendaSignatureList, fingerprintRohtext } from '@shared/ct/agendaDiff';
-import { dateiUrlFinden } from '@shared/ct/arrangementFiles';
+import { arrangementFileEntries, dateiUrlFinden } from '@shared/ct/arrangementFiles';
+import { arrangementAnsicht, stammdatenAnsicht } from '@shared/ct/liedVerwaltung';
+import { arrangementAus } from '@shared/ct/schreibKern';
+import {
+  alleKategorien,
+  bearbeitbareKategorien as bearbeitbareKategorienAus,
+  quellenAusStammdaten,
+  type LiedStammdatenRoh,
+} from '@shared/ct/stammdaten';
 import { liedtextVorschauAus } from '@shared/ct/liedtext';
 import { rechteAus, STANDARD_ADMIN_RECHT } from '@shared/ct/rechte';
 import {
@@ -43,7 +56,7 @@ import { createTtlMemo } from '@shared/ct/ttlMemo';
 import { sanitizeFileContentType } from '@shared/dateien/index';
 import type { GesehenerStand } from '@shared/types/index';
 import { ApiError } from './api';
-import { ctAnfrage, ctDatei, istUeberlastet } from './ctRuntime';
+import { ctAltAnfrage, ctAnfrage, ctDatei, istUeberlastet } from './ctRuntime';
 import { holeGesehen, merkeGesehen } from './personenAblage';
 
 /** Zeitzone der Gemeinde. Die Server-Variante liest sie aus `ZEITZONE`; hier gilt der Standard. */
@@ -158,11 +171,11 @@ export async function meineRechte(): Promise<UserCapabilities> {
     STANDARD_ADMIN_RECHT,
     (status, meldung) => new ApiError(status, meldung),
   );
-  // Phase 3b kommt in Scheiben (#335): Ablauf und Tempo schreibt die Extension schon
-  // (`ctSchreiben.ts`) – ihre Rechte gelten, wie ChurchTools sie meldet. Liedverwaltung und SongSelect
-  // fehlen noch; bis dahin meldet die Extension dort „darf nicht", dann verschwinden die Knöpfe von
-  // selbst, statt beim Antippen mit 501 zu scheitern (#336).
-  return { ...rechte, canEditSongs: false, canUseCcli: false };
+  // Phase 3b kommt in Scheiben (#335): Ablauf, Tempo und seit 3b-2 auch Lieder, Arrangements und
+  // Notenblätter schreibt die Extension selbst (`ctSchreiben.ts`) – ihre Rechte gelten, wie
+  // ChurchTools sie meldet. SongSelect fehlt noch (3b-5); bis dahin meldet die Extension dort „darf
+  // nicht", dann verschwinden die Knöpfe von selbst, statt beim Antippen mit 501 zu scheitern (#336).
+  return { ...rechte, canUseCcli: false };
 }
 
 /**
@@ -175,6 +188,81 @@ export async function meineRechte(): Promise<UserCapabilities> {
 export async function liedtextVorschau(songId: number): Promise<LiedtextVorschau> {
   const song = await leser.song(songId);
   return { chordpro: await liedtextVorschauAus(song, (url) => leser.dateiText(url)) };
+}
+
+// ── Lied-Stammdaten (3b-2) ───────────────────────────────────────────────────
+
+/**
+ * `getMasterData` der alten Schnittstelle – einmal je Sitzung der Seite geholt. Die Liste ändert sich
+ * selten (Kategorien, Liederbücher), und die Liedverwaltung fragt sie bei jedem Anlegen/Ändern
+ * (Recht, Quelle). Ein Fehlschlag wird NICHT gemerkt – vorübergehend ist nicht ungültig.
+ */
+let stammdaten: Promise<LiedStammdatenRoh> | null = null;
+function liedStammdaten(): Promise<LiedStammdatenRoh> {
+  stammdaten ??= ctAltAnfrage(
+    'getMasterData',
+    {},
+    {
+      verweigert: 'Keine Berechtigung, die Lied-Kategorien in ChurchTools zu lesen.',
+      unlesbar: 'ChurchTools lieferte keine lesbare Antwort für die Lied-Kategorien.',
+      fehlgeschlagen: 'Die Lied-Kategorien konnten nicht geladen werden.',
+    },
+  ).then(
+    (d) => d as LiedStammdatenRoh,
+    (e: unknown) => {
+      stammdaten = null;
+      throw e;
+    },
+  );
+  return stammdaten;
+}
+
+/** Nur für Tests: gemerkte Stammdaten vergessen. */
+export function _vergissStammdaten(): void {
+  stammdaten = null;
+}
+
+/** `GET /api/song-categories` – die Kategorien, in denen die Person Lieder anlegen/ändern darf. */
+export async function bearbeitbareKategorien(): Promise<SongCategory[]> {
+  const rechte = await daten<Record<string, Record<string, unknown>>>('/permissions/global');
+  return bearbeitbareKategorienAus(
+    rechte,
+    STANDARD_ADMIN_RECHT,
+    await alleKategorien({
+      stammdaten: liedStammdaten,
+      lieder: () => leser.alleLieder(),
+      istUeberlastet,
+    }),
+    (status, meldung) => new ApiError(status, meldung),
+  );
+}
+
+/** `GET /api/song-sources` – die Liedquellen (Liederbücher). */
+export async function quellen(): Promise<SongSource[]> {
+  return quellenAusStammdaten(await liedStammdaten());
+}
+
+/** `GET /api/songs/:id/stammdaten` */
+export async function liedStammdatenAnsicht(songId: number): Promise<LiedStammdatenAnsicht> {
+  return stammdatenAnsicht(await leser.song(songId));
+}
+
+/** `GET /api/songs/:id/arrangements/verwaltung` */
+export async function arrangementVerwaltung(songId: number): Promise<ArrangementAnsicht[]> {
+  return (await leser.song(songId)).arrangements.map(arrangementAnsicht);
+}
+
+/** `GET /api/songs/:id/arrangements/:arrId/files` */
+export async function arrangementDateien(
+  songId: number,
+  arrangementId: number,
+): Promise<ArrangementFileEntry[]> {
+  const arr = arrangementAus(
+    await leser.song(songId),
+    arrangementId,
+    (st, m) => new ApiError(st, m),
+  );
+  return arrangementFileEntries(arr.files);
 }
 
 /** `GET /api/services` – Termine mit Ablauf, samt „geändert"-Punkt (#143). */

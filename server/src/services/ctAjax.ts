@@ -20,6 +20,7 @@
  *
  * Vollständig gemessen und begründet in `docs/entwicklung/churchtools-songselect.md`.
  */
+import { ajaxMeldungen, ajaxNutzlast, type AjaxMeldungen } from '@shared/ct/altSchnittstelle';
 import { HttpError } from '../middleware/errorHandler.js';
 import { csrfWriteDenied, getCsrfToken } from './ctCsrf.js';
 import {
@@ -39,51 +40,15 @@ import {
  * Kategorien sind verschiedene Dinge. Genau diese Abwägung ist bei `uploadChordpro` schon einmal so
  * entschieden worden: Der Baustein wird geteilt, der Wortlaut bleibt beim Aufrufer.
  */
-export interface AjaxMeldungen {
-  /** 401/403 – ChurchTools verweigert. */
-  verweigert?: string;
-  /** Anderer HTTP-Fehlschlag; bekommt den Statuscode angehängt. */
-  abgelehnt?: string;
-  /** Antwort war kein lesbares JSON (typisch: abgelaufene Sitzung → HTML-Anmeldeseite). */
-  unlesbar?: string;
-  /** `status` war nicht `success` und ChurchTools nannte keinen Grund. */
-  fehlgeschlagen?: string;
-  /**
-   * Die **innere** Nutzlast war kein lesbares JSON – ein anderer Fall als `unlesbar`.
-   *
-   * Bei SongSelect ist das der Unterschied zwischen „ChurchTools hat nicht sauber geantwortet" und
-   * „CCLI hat nicht sauber geantwortet". Wer den Fehler liest, will wissen, welches der beiden
-   * Systeme klemmt.
-   */
-  innenUnlesbar?: string;
-}
+export type { AjaxMeldungen };
 
-/**
- * Ein Aufruf der alten Schnittstelle. Liefert die **ausgepackte** Antwort.
- *
- * **Die längere Zeitgrenze ist kein Luxus:** Die SongSelect-Aufrufe gehen über ChurchTools **weiter zu
- * CCLI** (gemessen ~800 ms); ein normales API-Zeitlimit würde Suchen abbrechen, die gerade noch
- * funktionieren. Sie gilt hier für alle Aufrufe – die anderen sind schneller, und eine zweite
- * Zeitgrenze daneben wäre eine Zahl, die irgendwann von der ersten abweicht.
- *
- * **Die Antwort ist doppelt verpackt:** außen `{status, data}` von ChurchTools, und `data` ist je nach
- * Aufruf eine **Zeichenkette** mit JSON darin oder direkt ein Objekt. Das ist keine Schönheit,
- * sondern der gemessene Ist-Zustand – und der Grund, warum das Auspacken hier einmal steht und nicht
- * bei jedem Aufrufer.
- */
 export async function ctAjax(
   cookie: string,
   func: string,
   felder: Record<string, string> = {},
   meldungen: AjaxMeldungen = {},
 ): Promise<unknown> {
-  const {
-    verweigert = 'Keine Berechtigung für diese ChurchTools-Funktion.',
-    abgelehnt = 'ChurchTools hat die Anfrage abgelehnt',
-    unlesbar = 'ChurchTools lieferte keine lesbare Antwort.',
-    fehlgeschlagen = 'Die ChurchTools-Anfrage ist fehlgeschlagen.',
-    innenUnlesbar = 'Die Antwort von ChurchTools war nicht lesbar.',
-  } = meldungen;
+  const m = ajaxMeldungen(meldungen);
   const csrf = await getCsrfToken(cookie);
   const body = new URLSearchParams({ func, ...felder });
 
@@ -101,7 +66,7 @@ export async function ctAjax(
     body,
   });
 
-  if (res.status === 401 || res.status === 403) csrfWriteDenied(cookie, verweigert);
+  if (res.status === 401 || res.status === 403) csrfWriteDenied(cookie, m.verweigert);
   // 429 ist eine Drosselung, kein Serverfehler (#383) – dieselbe Regel wie in `ctGet` (#300),
   // `fileDownloadError`, `ctWrite` und `login` (#381). Nur so erkennt ein Massenlauf die Bremse per
   // `isCtOverloaded`, und der Nutzer liest „bitte einen Moment warten" statt „abgelehnt".
@@ -109,35 +74,10 @@ export async function ctAjax(
     throw new CtOverloadedError(parseRetryAfter(res.headers.get('retry-after')));
   }
   if (!res.ok) {
-    throw new HttpError(502, `${abgelehnt} (${res.status}).`);
+    throw new HttpError(502, `${m.abgelehnt} (${res.status}).`);
   }
 
-  const roh = await res.text();
-  let aussen: { status?: string; data?: unknown; message?: string };
-  try {
-    aussen = JSON.parse(roh) as typeof aussen;
-  } catch {
-    // Kommt vor, wenn die Sitzung abgelaufen ist: Dann liefert das alte Modul eine Anmeldeseite.
-    throw new HttpError(502, unlesbar);
-  }
-  if (aussen.status !== 'success') {
-    throw new HttpError(502, aussen.message ?? fehlgeschlagen);
-  }
-  /**
-   * **Drei gemessene Formen von `data`** – alle kommen wirklich vor:
-   *  - SongSelect-Suche und -Abfrage: `data` ist eine **Zeichenkette** mit der CCLI-Antwort darin.
-   *  - SongSelect-Herunterladen: `data` ist ein Objekt `{ success, content }`, und erst `content` ist
-   *    die Zeichenkette.
-   *  - `getMasterData`: `data` ist direkt ein **Objekt** (Kategorien, Dienste, …).
-   */
-  const roh2: unknown =
-    typeof aussen.data === 'object' && aussen.data !== null && 'content' in aussen.data
-      ? aussen.data.content
-      : aussen.data;
-  if (typeof roh2 !== 'string') return roh2;
-  try {
-    return JSON.parse(roh2);
-  } catch {
-    throw new HttpError(502, innenUnlesbar);
-  }
+  // Die Antwort auswerten steht seit #335 (3b-2) in `@shared/ct/altSchnittstelle` – der Browser der
+  // Extension liest dieselbe Schnittstelle.
+  return ajaxNutzlast(await res.text(), m, (status, meldung) => new HttpError(status, meldung));
 }

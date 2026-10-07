@@ -11,7 +11,7 @@ import type {
   SongLibraryEntry,
   SongVersion,
 } from '@shared/types/index';
-import { downloadFileText, fileIdFromUrl } from './ctFiles.js';
+import { downloadFileText } from './ctFiles.js';
 import { CtOverloadedError, isCtOverloaded } from './ctHttp.js';
 import { createGebuendelterLauf } from './gebuendelterLauf.js';
 import { mapLimit } from './mapLimit.js';
@@ -23,19 +23,10 @@ import {
   getEvents,
   getSong,
 } from './ctRead.js';
-import { deleteFile, uploadChordpro, uploadFile } from './ctWrite.js';
+import * as noten from '@shared/ct/notenblaetter';
+import { verwalterFuer } from './ctVerwalter.js';
 import { fetchChordProText, getSongSelectSong } from './ctSongSelect.js';
-import type { CtArrangementFile } from './ctTypes.js';
-import {
-  versionSlug,
-  versionNameOf,
-  versionFileName,
-  isOriginalChordpro,
-  arrangementFileEntries,
-  dateiUrlFinden,
-  safeFileName,
-} from './arrangementFiles.js';
-import { metaValue } from './chordproMeta.js';
+import { dateiUrlFinden } from './arrangementFiles.js';
 import { setlistFingerprint, agendaSignatureList, fingerprintAusText } from './agendaDiff.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import { isoTag, tagAusIso } from '../utils/isoTag.js';
@@ -111,83 +102,35 @@ export async function resolveFileUrl(
   return url;
 }
 
-/** Lädt das Arrangement + listet die vorhandenen Versionen (mit Datei + Slug). */
-async function loadArrangementVersions(
-  cookie: string,
-  songId: number,
-  arrangementId: number,
-): Promise<{ songName: string; files: { file: CtArrangementFile; name: string; key: string }[] }> {
-  const { song, arrangement: arr } = await getArrangement(cookie, songId, arrangementId);
-  const files = arr.files
-    .map((file) => {
-      const name = versionNameOf(file);
-      return name ? { file, name, key: versionSlug(name) } : null;
-    })
-    .filter((v): v is { file: CtArrangementFile; name: string; key: string } => v !== null);
-  return { songName: song.name, files };
-}
+// Versionen, Dateien und das Original-Notenblatt: Regeln seit #335 (3b-2) in `@shared/ct/notenblaetter`.
 
-/** Legt eine neue benannte Version an (eigene .chordpro-Datei im Arrangement). */
-export async function createVersion(
+export function createVersion(
   cookie: string,
   songId: number,
   arrangementId: number,
   name: string,
   text: string,
 ): Promise<SongVersion> {
-  const trimmed = name.trim();
-  if (!trimmed) throw new HttpError(400, 'Bitte einen Versionsnamen angeben.');
-  if (/^original$/i.test(trimmed)) throw new HttpError(400, '„Original" ist reserviert.');
-  const key = versionSlug(trimmed);
-  const { songName, files } = await loadArrangementVersions(cookie, songId, arrangementId);
-  if (files.some((v) => v.key === key)) {
-    throw new HttpError(409, `Es gibt bereits eine Version „${trimmed}".`);
-  }
-  await uploadChordpro(cookie, arrangementId, versionFileName(songName, trimmed), text);
-  return { key, name: trimmed, text, writtenKey: metaValue(text, 'key') };
+  return noten.versionAnlegen(verwalterFuer(cookie), songId, arrangementId, name, text);
 }
 
-/** Aktualisiert Text und/oder Namen einer vorhandenen Version. */
-export async function updateVersion(
+export function updateVersion(
   cookie: string,
   songId: number,
   arrangementId: number,
   versionKey: string,
   changes: { text?: string; name?: string },
 ): Promise<SongVersion> {
-  const { songName, files } = await loadArrangementVersions(cookie, songId, arrangementId);
-  const current = files.find((v) => v.key === versionKey);
-  if (!current) throw new HttpError(404, 'Version nicht gefunden.');
-
-  const newName = (changes.name ?? current.name).trim();
-  if (!newName) throw new HttpError(400, 'Bitte einen Versionsnamen angeben.');
-  if (/^original$/i.test(newName)) throw new HttpError(400, '„Original" ist reserviert.');
-  const newKey = versionSlug(newName);
-  if (newKey !== versionKey && files.some((v) => v.key === newKey)) {
-    throw new HttpError(409, `Es gibt bereits eine Version „${newName}".`);
-  }
-
-  // Text bestimmen: neuer Text oder der bisherige Inhalt (bei reiner Umbenennung).
-  const text = changes.text ?? (await downloadFileText(cookie, current.file.fileUrl));
-  // Alte Datei entfernen, neue (ggf. umbenannt) hochladen.
-  const id = fileIdFromUrl(current.file.fileUrl);
-  if (id) await deleteFile(cookie, id);
-  await uploadChordpro(cookie, arrangementId, versionFileName(songName, newName), text);
-  return { key: newKey, name: newName, text, writtenKey: metaValue(text, 'key') };
+  return noten.versionAendern(verwalterFuer(cookie), songId, arrangementId, versionKey, changes);
 }
 
-/** Löscht eine benannte Version (das Original bleibt erhalten). */
-export async function deleteVersion(
+export function deleteVersion(
   cookie: string,
   songId: number,
   arrangementId: number,
   versionKey: string,
 ): Promise<void> {
-  const { files } = await loadArrangementVersions(cookie, songId, arrangementId);
-  const current = files.find((v) => v.key === versionKey);
-  if (!current) return;
-  const id = fileIdFromUrl(current.file.fileUrl);
-  if (id) await deleteFile(cookie, id);
+  return noten.versionLoeschen(verwalterFuer(cookie), songId, arrangementId, versionKey);
 }
 
 interface SongUsage {
@@ -402,65 +345,29 @@ export function getAgendaItems(
   return ablaufPunkte(leserFuer(cookie), eventId, prevSigs);
 }
 
-/**
- * Alle Dateien eines Arrangements auflisten (#321).
- *
- * Flach und ungefiltert – anders als `documents`, das nur die anzeigbaren Dokumente meint. Damit
- * werden auch Dateien sichtbar, die die App bisher nirgends zeigte (`.docx`, `.mp3`).
- */
-export async function listArrangementFiles(
+export function listArrangementFiles(
   cookie: string,
   songId: number,
   arrangementId: number,
 ): Promise<ArrangementFileEntry[]> {
-  const { arrangement } = await getArrangement(cookie, songId, arrangementId);
-  return arrangementFileEntries(arrangement.files);
+  return noten.dateienListen(verwalterFuer(cookie), songId, arrangementId);
 }
 
-/**
- * Eine beliebige Datei an ein Arrangement hängen (#321).
- *
- * **Der Dateiname wird gereinigt, nicht geglaubt.** Er kommt aus dem Browser des Nutzers; ohne
- * `safeFileName` könnte ein Pfadtrenner darin stehen.
- *
- * **Das Arrangement wird zuerst geprüft.** `getArrangement` wirft 404, wenn es nicht zu diesem Lied
- * gehört – sonst wäre dieser Endpunkt ein Weg, Dateien an ein beliebiges fremdes Arrangement zu
- * hängen, nur weil man dessen Nummer kennt.
- *
- * **Ein vorhandener gleicher Name wird NICHT ersetzt** (ChurchTools tut das nicht, und wir tun es
- * auch nicht von uns aus): Die Datei läge danach zweimal da. Die Oberfläche warnt vorher, weil sie
- * die Liste kennt – ein ungefragtes Löschen fremder Dateien wäre der schlimmere Fehler.
- */
-export async function addArrangementFile(
+export function addArrangementFile(
   cookie: string,
   songId: number,
   arrangementId: number,
   datei: { filename: string; mime: string; inhalt: Uint8Array },
 ): Promise<ArrangementFileEntry[]> {
-  const filename = safeFileName(datei.filename);
-  if (!filename) throw new HttpError(400, 'Bitte einen Dateinamen angeben.');
-  await getArrangement(cookie, songId, arrangementId);
-  await uploadFile(cookie, arrangementId, { ...datei, filename });
-  // Die frische Liste zurückgeben: Der Aufrufer braucht die neue Datei-ID, und ein zweiter Abruf
-  // durch den Client wäre eine Anfrage mehr gegen ChurchTools (#300).
-  return listArrangementFiles(cookie, songId, arrangementId);
+  return noten.dateiHinzufuegen(verwalterFuer(cookie), songId, arrangementId, datei);
 }
 
-/**
- * Eine Datei des Lieds löschen (#321).
- *
- * **`resolveFileUrl` ist hier die Sicherung, nicht Beiwerk:** Es wirft 404, wenn die Datei nicht zu
- * diesem Lied gehört. Ohne diese Prüfung wäre der Endpunkt ein „lösche beliebige Datei in
- * ChurchTools" – die Nummer allein würde reichen, und ChurchTools prüft nur, ob man Lieder bearbeiten
- * darf, nicht WELCHE Datei gemeint war. Dieselbe Sorge wie bei `assertCtFileUrl` (#199).
- */
-export async function removeArrangementFile(
+export function removeArrangementFile(
   cookie: string,
   songId: number,
   fileId: number,
 ): Promise<void> {
-  await resolveFileUrl(cookie, songId, fileId);
-  await deleteFile(cookie, fileId);
+  return noten.dateiEntfernen(verwalterFuer(cookie), songId, fileId);
 }
 
 /**
@@ -518,44 +425,11 @@ export async function holeChordProAusSongSelect(
   return originalNotenblattSchreiben(cookie, songId, arrangementId, text);
 }
 
-/**
- * **Das Original-Notenblatt eines Arrangements schreiben** – aus eigenem Text (Editor nach dem Anlegen,
- * Wunsch Alwin 04.09.2026) oder aus SongSelect (`holeChordProAusSongSelect`).
- *
- * Herausgezogen, weil die Regel „pro Arrangement genau EIN Original, ersetzt statt danebengelegt, erst
- * hochladen und dann das alte löschen" bis dahin nur im SongSelect-Import stand. Ein zweiter Schreibweg
- * mit einer eigenen Fassung dieser Regel wäre genau die Dopplung, bei der die nächste Korrektur eine
- * Stelle trifft und die andere nicht.
- *
- * **Erst hochladen, dann aufräumen:** `uploadFile` ist unsere geprüfte Stelle und wirft bei einem
- * Fehlschlag – erst danach wird gelöscht. Andersherum stünde das Lied ohne Blatt da, sobald der Upload
- * scheitert. Im schlimmsten Fall bleibt ein Doppel liegen; das ist ärgerlich, aber behebbar – ein Lied
- * ohne Blatt im Gottesdienst ist es nicht.
- *
- * **Die verwalteten Versionen `(App)` bleiben unangetastet** – ersetzt wird nur das Original.
- */
-export async function originalNotenblattSchreiben(
+export function originalNotenblattSchreiben(
   cookie: string,
   songId: number,
   arrangementId: number,
   text: string,
 ): Promise<ArrangementFileEntry[]> {
-  const { song, arrangement } = await getArrangement(cookie, songId, arrangementId);
-
-  // Vor dem Schreiben merken, was ersetzt werden soll – danach ist die neue Datei nicht mehr von der
-  // alten zu unterscheiden (beide heißen `<Titel>.chordpro`).
-  const vorher = arrangement.files.filter(isOriginalChordpro).map((f) => fileIdFromUrl(f.fileUrl));
-
-  await uploadFile(cookie, arrangementId, {
-    filename: `${safeFileName(song.name)}.chordpro`,
-    mime: 'text/plain',
-    inhalt: text,
-  });
-
-  for (const id of vorher) {
-    // Ein Fehlschlag beim Aufräumen darf den Erfolg nicht umwerfen: Das neue Blatt liegt schon da.
-    if (id !== null) await deleteFile(cookie, id).catch(() => undefined);
-  }
-
-  return listArrangementFiles(cookie, songId, arrangementId);
+  return noten.notenblattSchreiben(verwalterFuer(cookie), songId, arrangementId, text);
 }

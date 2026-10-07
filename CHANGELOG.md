@@ -17,6 +17,12 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Dazu die Liedtext-Vorschau beim Hinzufügen eines Lieds (das Auge in der Lied-Auswahl) – sie wäre in
   der Erweiterung sonst ins Leere gelaufen.
 
+- **Erweiterung: Lieder verwalten und Notenblätter bearbeiten (#335, 3b-2):** In der
+  ChurchTools-Erweiterung lassen sich jetzt Lieder anlegen, ändern und löschen, Arrangements verwalten,
+  Notenblätter und Versionen bearbeiten und Dateien hochladen – mit denselben Regeln wie in der
+  Server-Variante (Recht an der Kategorie, keine doppelte CCLI-Nummer, Liednummer nur mit Liederbuch).
+  Die Regeln liegen in `shared/ct/` und gelten für beide. SongSelect fehlt in der Erweiterung noch.
+
 - **Lieder ohne ChordPro öffnen ihr PDF – und „PDF zuerst" für die ganze Gemeinde:** Angefragt von
   einer Gemeinde ohne SongSelect Premium, die nur PDFs in ChurchTools hat: Bisher öffnete jedes Lied in
   der leeren Akkord-Ansicht, und jeder musste bei jedem Lied umstellen. Jetzt zeigt ein Lied ohne
@@ -36,6 +42,19 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Behoben
 
+- **Versionen bei Liedern mit Bindestrich im Titel hießen falsch** (beim Durchklick von 3b-2 gefunden,
+  betraf auch die Server-Variante): Aus „Testlied 3b-2 — Akustik" wurde die Version „2 — Akustik" –
+  und damit ein falscher Schlüssel für Tonart und Anmerkungen; Umbenennen machte den Namen jedes Mal
+  länger. Jetzt zählt der letzte „ — " vor dem Kürzel. **Beim Update ist nichts zu tun:** Öffnet man
+  ein betroffenes Lied, nimmt die App Tonart, Anmerkungen und die gewählte Version vom alten auf den
+  neuen Schlüssel mit (kopiert, nichts wird gelöscht).
+- **Eine Version ändern konnte sie verlieren:** Die alte Datei wurde gelöscht, BEVOR die neue
+  hochgeladen war – scheiterte das Hochladen (Netz, Zeitüberschreitung), war die Version weg. Jetzt
+  erst hochladen, dann löschen (beim Umzug der Regeln nach `shared/ct/` gefunden).
+- **Erweiterung: ein abgelehntes CSRF-Token wurde nie verworfen** (die Lehre aus #298 fehlte im
+  Browser) – nach einer neuen ChurchTools-Sitzung scheiterte dann jeder Schreibversuch bis zum Neuladen.
+- **Lied-Kategorien bei Drosselung:** Bremste ChurchTools (429), wich der Server auf die ganze
+  Liederliste aus – genau die Last, die ChurchTools gerade abwehrte (#300). Jetzt meldet er die Bremse.
 - **Erweiterung: ChurchTools-Menüs sahen anders aus (gemeldet von Alwin):** Die allgemeinen Stilregeln
   der App (Abstände, Schrift, Seitenfarbe, `--shadow`) galten in der Erweiterung für die ganze
   ChurchTools-Seite – gemessen: Schrift Lato → unsere, Menü-Polster 8 → 0 px. Der Erweiterungs-Build

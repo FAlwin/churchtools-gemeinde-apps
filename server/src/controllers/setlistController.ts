@@ -34,6 +34,7 @@ import {
   arrangementsLesen,
 } from '../services/arrangementVerwaltung.js';
 import { liedAendern, liedAnlegen, liedLoeschen } from '../services/songVerwaltung.js';
+import { stammdatenAnsicht } from '@shared/ct/liedVerwaltung';
 import { liedtextVorschau, sucheImLiedtext } from '../services/songTextIndex.js';
 import {
   getSongSelectLyrics,
@@ -55,10 +56,8 @@ import { ARRANGEMENT_GRENZEN, LIED_GRENZEN } from '@shared/types/index';
 import type {
   AgendaServiceOption,
   ArrangementAuftrag,
-  LiedStammdatenAnsicht,
   SongArrangementOption,
 } from '@shared/types/index';
-import type { CtSong } from '../services/ctTypes.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import { ctCookie } from '../utils/ctCookie.js';
 import { accountKey } from '../middleware/session.js';
@@ -349,23 +348,8 @@ const liedAendernSchema = z
     message: 'Es wurde keine Änderung mitgeschickt.',
   });
 
-/**
- * Die Antwortform für Stammdaten – **einmal, für Lesen und Schreiben** (#322, Schritt 11).
- *
- * `GET …/stammdaten` und `PUT /api/songs/:songId` antworten gleich; die Oberfläche liest beides mit
- * demselben Typ. Als zwei Abbildungen nebeneinander hätte eine davon irgendwann ein Feld weniger.
- */
-function stammdatenAnsicht(song: CtSong): LiedStammdatenAnsicht {
-  return {
-    songId: song.id,
-    name: song.name,
-    author: song.author,
-    ccli: song.ccli,
-    copyright: song.copyright ?? null,
-    categoryId: song.category?.id ?? null,
-  };
-}
-
+// Die Antwortform für Stammdaten – einmal, für Lesen und Schreiben – steht seit #335 (3b-2) in
+// `@shared/ct/liedVerwaltung`; die Extension antwortet ihrer Oberfläche genauso.
 /**
  * GET /api/songs/:songId/stammdaten – was im Änderungsformular stehen soll (#322, Schritt 11).
  *

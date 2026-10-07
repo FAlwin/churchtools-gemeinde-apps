@@ -59,6 +59,21 @@ export function versionSlug(name: string): string {
  *  - „— Bearbeitet.chordpro" / „— ECG.chordpro" (ganz alte namenlose Varianten → Name „Bearbeitet").
  */
 export function versionNameOf(f: CtArrangementFile): string | null {
+  // Der Trenner, den `versionFileName` schreibt, ist „ — " – und zwar der LETZTE vor dem Kürzel.
+  // Bis zum 07.10.2026 galt der ERSTE Strich, auch ein Bindestrich im Liedtitel: Aus
+  // „Testlied 3b-2 — Akustik (App).chordpro" wurde die Version „2 — Akustik" (Durchklick 3b-2).
+  const getrennt = /^.*\s—\s(.+?)\s*\((?:App|ECG)\)\.chordpro$/i.exec(f.name);
+  if (getrennt) return getrennt[1].trim();
+  return versionNameBisher(f);
+}
+
+/**
+ * Die Erkennung, wie sie **bis zum 07.10.2026** galt: der ERSTE Strich vor dem Kürzel. Bleibt als
+ * Rückfall für Bestandsdateien ohne „ — " (z. B. „Lied-Name (ECG).chordpro") – und für den Umzug der
+ * Schlüssel: Bei Liedern mit Bindestrich im Titel ergab sie einen anderen Namen und damit einen anderen
+ * Schlüssel (`SongVersion.alterKey`), unter dem Tonart und Anmerkungen noch liegen.
+ */
+export function versionNameBisher(f: CtArrangementFile): string | null {
   const tagged = f.name.match(/[—-]\s*(.+?)\s*\((?:App|ECG)\)\.chordpro$/i);
   if (tagged) return tagged[1].trim();
   if (/[—-]\s*(?:bearbeitet|ecg)\.chordpro$/i.test(f.name)) return 'Bearbeitet';

@@ -179,10 +179,12 @@ describe('Schreibvorgänge – 429 wird als Drosselung erkannt (#300, dritte Ste
         new Response('nope', { status: 429, headers: { 'retry-after': '20' } }),
       );
     });
-    const { createSong } = await import('./ctWrite.js');
-    const fehler = await createSong('cookie', { name: 'Testlied', categoryId: 0 }).catch(
-      (e: unknown) => e,
-    );
+    const { schreiberFuer } = await import('./ctWrite.js');
+    const { liedErzeugen } = await import('@shared/ct/liedVerwaltung');
+    const fehler = await liedErzeugen(schreiberFuer('cookie'), {
+      name: 'Testlied',
+      categoryId: 0,
+    }).catch((e: unknown) => e);
 
     expect(fehler).toBeInstanceOf(CtOverloadedError);
     expect(isCtOverloaded(fehler)).toBe(true);
@@ -202,10 +204,12 @@ describe('Schreibvorgänge – 429 wird als Drosselung erkannt (#300, dritte Ste
       }
       return Promise.resolve(new Response('nope', { status: 500 }));
     });
-    const { createSong } = await import('./ctWrite.js');
-    const fehler = await createSong('cookie', { name: 'Testlied', categoryId: 0 }).catch(
-      (e: unknown) => e,
-    );
+    const { schreiberFuer } = await import('./ctWrite.js');
+    const { liedErzeugen } = await import('@shared/ct/liedVerwaltung');
+    const fehler = await liedErzeugen(schreiberFuer('cookie'), {
+      name: 'Testlied',
+      categoryId: 0,
+    }).catch((e: unknown) => e);
     expect(isCtOverloaded(fehler)).toBe(false);
     expect(fehler).toMatchObject({ status: 502 });
   });

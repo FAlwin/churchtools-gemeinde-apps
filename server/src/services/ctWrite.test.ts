@@ -1,26 +1,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
-  uploadChordpro,
   uploadFile,
   reorderAgenda,
   createAgendaItem,
   updateAgendaItem,
   deleteAgendaItem,
   setAgendaItemVorBeginn,
-  deleteFile,
   updateArrangementTempo,
   createAbsence,
   deleteAbsence,
   fuerChurchTools,
-  createSong,
-  updateSong,
-  deleteSong,
-  createArrangement,
-  updateArrangement,
-  setDefaultArrangement,
-  deleteArrangement,
 } from './ctWrite.js';
 import * as ctWriteModul from './ctWrite.js';
+import * as lieder from '@shared/ct/liedVerwaltung';
+import * as noten from '@shared/ct/notenblaetter';
+import { arrangementAendern } from '@shared/ct/schreibKern';
+import { verwalterFuer } from './ctVerwalter.js';
 import { __resetSessionMemosForTests } from './ctSessionMemos.js';
 
 /**
@@ -107,7 +102,6 @@ function mockMitAblehnung() {
 
 /** Die Schreiboperationen, jede mit gültigen Argumenten. */
 const SCHREIBER: Array<[string, () => Promise<void>]> = [
-  ['uploadChordpro', () => uploadChordpro(COOKIE, 5, 'lied.cho', 'inhalt')],
   [
     'uploadFile',
     () => uploadFile(COOKIE, 5, { filename: 'blatt.pdf', mime: 'application/pdf', inhalt: 'x' }),
@@ -117,7 +111,6 @@ const SCHREIBER: Array<[string, () => Promise<void>]> = [
   ['updateAgendaItem', () => updateAgendaItem(COOKIE, 9, 1, { title: 'Anders' })],
   ['deleteAgendaItem', () => deleteAgendaItem(COOKIE, 9, 1)],
   ['setAgendaItemVorBeginn', () => setAgendaItemVorBeginn(COOKIE, 9, 1, true)],
-  ['deleteFile', () => deleteFile(COOKIE, 42)],
   [
     'createAbsence',
     async () => {
@@ -130,37 +123,42 @@ const SCHREIBER: Array<[string, () => Promise<void>]> = [
     },
   ],
   ['deleteAbsence', () => deleteAbsence(COOKIE, 5, 9)],
-  [
-    'createSong',
-    async () => {
-      await createSong(COOKIE, { name: 'Neu', categoryId: 1 });
-    },
-  ],
-  [
-    'updateSong',
-    async () => {
-      await updateSong(COOKIE, 7, { author: 'Anders' });
-    },
-  ],
-  ['deleteSong', () => deleteSong(COOKIE, 7)],
-  [
-    'createArrangement',
-    async () => {
-      await createArrangement(COOKIE, 7, { name: 'Akustik' });
-    },
-  ],
-  ['updateArrangement', () => updateArrangement(COOKIE, 7, 70, { tempo: 96 })],
-  ['setDefaultArrangement', () => setDefaultArrangement(COOKIE, 7, 70)],
-  ['deleteArrangement', () => deleteArrangement(COOKIE, 7, 70)],
-  // Läuft über `updateArrangement` – steht trotzdem drin, damit ein späterer Umbau auffällt.
+  // Läuft über `arrangementAendern` im Kern – steht trotzdem drin, damit ein späterer Umbau auffällt.
   ['updateArrangementTempo', () => updateArrangementTempo(COOKIE, 7, 70, 96)],
+];
+
+/**
+ * **Die Schreiber, die seit #335 (Phase 3b-2) im Kern stehen** (`@shared/ct/liedVerwaltung`,
+ * `notenblaetter`) – geprüft über den Anschluss des Servers (`verwalterFuer`), also über genau den Weg,
+ * den der Server nimmt. Vorher standen sie als eigene Funktionen in `ctWrite` und oben in `SCHREIBER`.
+ */
+const KERN_SCHREIBER: Array<[string, () => Promise<unknown>]> = [
+  [
+    'liedErzeugen',
+    () => lieder.liedErzeugen(verwalterFuer(COOKIE), { name: 'Neu', categoryId: 1 }),
+  ],
+  ['liedSchreiben', () => lieder.liedSchreiben(verwalterFuer(COOKIE), 7, { author: 'Anders' })],
+  ['liedEntfernen', () => lieder.liedEntfernen(verwalterFuer(COOKIE), 7)],
+  [
+    'arrangementErzeugen',
+    () => lieder.arrangementErzeugen(verwalterFuer(COOKIE), 7, { name: 'Akustik' }),
+  ],
+  ['arrangementAendern', () => arrangementAendern(verwalterFuer(COOKIE), 7, 70, { tempo: 96 })],
+  [
+    'arrangementStandardSetzen',
+    () => lieder.arrangementStandardSetzen(verwalterFuer(COOKIE), 7, 70),
+  ],
+  ['arrangementEntfernen', () => lieder.arrangementEntfernen(verwalterFuer(COOKIE), 7, 70)],
+  ['dateiLoeschen', () => noten.dateiLoeschen(verwalterFuer(COOKIE), 42)],
+  ['notenblattSchreiben', () => noten.notenblattSchreiben(verwalterFuer(COOKIE), 7, 70, '[C]Text')],
 ];
 
 /**
  * Exporte von `ctWrite`, die **keine** Schreiboperation sind – jede andere Funktion gehört in
  * `SCHREIBER`. `fuerChurchTools` formt nur einen Rumpf um und schreibt selbst nichts.
  */
-const KEINE_SCHREIBER = ['fuerChurchTools'];
+// `schreiberFuer` baut nur den Anschluss für den Kern (seit #335) – geschrieben wird über `schreibe`.
+const KEINE_SCHREIBER = ['fuerChurchTools', 'schreiberFuer'];
 
 /**
  * **Die Liste selbst wird geprüft** (07.10.2026). Zweimal fehlten hier Schreiber, die längst über
@@ -182,8 +180,11 @@ describe('SCHREIBER ist vollständig', () => {
 beforeEach(() => __resetSessionMemosForTests());
 afterEach(() => vi.restoreAllMocks());
 
+/** Alle Schreiber – die eigenen von `ctWrite` und die des Kerns über den Server-Anschluss. */
+const ALLE_SCHREIBER: Array<[string, () => Promise<unknown>]> = [...SCHREIBER, ...KERN_SCHREIBER];
+
 describe('Jede Schreiboperation verwirft das Token bei einer Ablehnung (#280/#298)', () => {
-  it.each(SCHREIBER)('%s', async (_name, aufrufen) => {
+  it.each(ALLE_SCHREIBER)('%s', async (_name, aufrufen) => {
     const z = mockMitAblehnung();
 
     await expect(aufrufen()).rejects.toThrow(); // 403 → Fehler, nicht stiller Erfolg
@@ -196,7 +197,7 @@ describe('Jede Schreiboperation verwirft das Token bei einer Ablehnung (#280/#29
 });
 
 describe('Ohne Ablehnung bleibt das Token liegen – sonst spart der Speicher nichts', () => {
-  it.each(SCHREIBER)('%s', async (_name, aufrufen) => {
+  it.each(ALLE_SCHREIBER)('%s', async (_name, aufrufen) => {
     const zaehler = { token: 0 };
     vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => {
       const u = String(url);
@@ -218,13 +219,12 @@ describe('Ohne Ablehnung bleibt das Token liegen – sonst spart der Speicher ni
 });
 
 /**
- * #321, Schritt 1: `uploadChordpro` war auf ChordPro zugeschnitten (`text/plain` festverdrahtet).
- * Für die Dateiverwaltung braucht es beliebige Arten – als **gemeinsame** Funktion, nicht als zweite
- * Fassung daneben.
+ * #321, Schritt 1: Das Hochladen von ChordPro war auf `text/plain` festverdrahtet. Für die
+ * Dateiverwaltung braucht es beliebige Arten – als **gemeinsame** Funktion, nicht als zweite Fassung.
  *
- * Geprüft wird deshalb nicht nur, dass `uploadFile` funktioniert, sondern dass `uploadChordpro`
- * WIRKLICH darüber läuft und dabei sein Verhalten behält. Sonst stünden hinterher doch zwei
- * Fassungen da, nur eine davon getestet.
+ * Geprüft wird deshalb nicht nur, dass `uploadFile` funktioniert, sondern dass das Speichern einer
+ * Version WIRKLICH darüber läuft und dabei sein Verhalten behält. Seit #335 (3b-2) steht das im Kern
+ * (`@shared/ct/notenblaetter`) und erreicht `uploadFile` über den Server-Anschluss (`hochladen`).
  */
 describe('uploadFile – die einzige Stelle, die einen Datei-Upload zusammenbaut (#321)', () => {
   /** Fängt den Schreibvorgang ab und gibt die gesendete Datei zurück. */
@@ -233,6 +233,8 @@ describe('uploadFile – die einzige Stelle, die einen Datei-Upload zusammenbaut
     vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => {
       const u = String(url);
       if (u.includes('/api/csrftoken')) return Promise.resolve(jsonRes('token-1'));
+      const gelesen = lesen(u, init?.method ?? 'GET');
+      if (gelesen) return Promise.resolve(gelesen);
       gesendet.url = u;
       const body = init?.body;
       const teil = body instanceof FormData ? body.get('files[]') : null;
@@ -257,10 +259,11 @@ describe('uploadFile – die einzige Stelle, die einen Datei-Upload zusammenbaut
     expect(g.datei?.size).toBe(3);
   });
 
-  it('uploadChordpro läuft darüber und bleibt bei text/plain', async () => {
+  it('eine Version speichern läuft darüber und bleibt bei text/plain', async () => {
     const g = mockUpload();
-    await uploadChordpro(COOKIE, 7, 'Treu — Akustik (App).chordpro', '{title: Treu}');
+    await noten.versionAnlegen(verwalterFuer(COOKIE), 7, 70, 'Akustik', '{title: Treu}');
 
+    expect(g.url).toContain('/api/files/song_arrangement/70');
     expect(g.datei?.name).toBe('Treu — Akustik (App).chordpro');
     expect(g.datei?.type).toBe('text/plain');
   });
@@ -279,12 +282,14 @@ describe('uploadFile – die einzige Stelle, die einen Datei-Upload zusammenbaut
   it('die ChordPro-Meldung bleibt wortgleich, nicht die allgemeine', async () => {
     // „Speichern" ist beim Bearbeiten einer Version die richtige Handlung; „Hochladen" wäre für den
     // Nutzer etwas anderes. Die Verallgemeinerung darf den Wortlaut nicht mitverändern.
-    vi.spyOn(globalThis, 'fetch').mockImplementation((url) =>
-      Promise.resolve(String(url).includes('/api/csrftoken') ? jsonRes('t') : jsonRes(null, 504)),
-    );
-    await expect(uploadChordpro(COOKIE, 7, 'a.chordpro', 'x')).rejects.toThrow(
-      /Speichern in ChurchTools fehlgeschlagen \(504\)/,
-    );
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => {
+      const u = String(url);
+      if (u.includes('/api/csrftoken')) return Promise.resolve(jsonRes('t'));
+      return Promise.resolve(lesen(u, init?.method ?? 'GET') ?? jsonRes(null, 504));
+    });
+    await expect(
+      noten.versionAnlegen(verwalterFuer(COOKIE), 7, 70, 'Akustik', 'x'),
+    ).rejects.toThrow(/Speichern in ChurchTools fehlgeschlagen \(504\)/);
   });
 });
 
@@ -470,5 +475,92 @@ describe('setAgendaItemVorBeginn – nur die Grenze, auf frischem Stand', () => 
       status: 409,
     });
     expect(g).toHaveLength(0);
+  });
+});
+
+/**
+ * **Eine Version ändern: erst die neue Datei, dann die alte weg** (#335, 3b-2, 07.10.2026).
+ *
+ * Bis dahin wurde die alte Datei ZUERST gelöscht. Scheiterte danach das Hochladen, war die Version
+ * verloren – die Lehre vom 11.08.2026. Kein bestehender Test hätte das bemerkt: Alle 754 waren mit
+ * der alten Reihenfolge grün.
+ */
+describe('versionAendern – die alte Datei geht erst, wenn die neue liegt', () => {
+  const MIT_VERSION = {
+    ...LIED,
+    arrangements: [
+      {
+        ...LIED.arrangements[0],
+        files: [
+          {
+            name: 'Treu — Akustik (App).chordpro',
+            fileUrl: 'https://ct.test/?q=public/filedownload&id=555',
+          },
+        ],
+      },
+    ],
+  };
+
+  function mock(uploadStatus: number) {
+    const schritte: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => {
+      const u = String(url);
+      const method = init?.method ?? 'GET';
+      if (u.includes('/api/csrftoken')) return Promise.resolve(jsonRes('t'));
+      if (method === 'GET') return Promise.resolve(jsonRes(MIT_VERSION));
+      schritte.push(`${method} ${u.replace(/^https?:\/\/[^/]+/, '')}`);
+      if (method === 'POST') return Promise.resolve(jsonRes(null, uploadStatus));
+      return Promise.resolve(new Response(null, { status: 204 }));
+    });
+    return schritte;
+  }
+
+  it('Hochladen VOR Löschen – gelöscht wird die alte Datei über ihre ID', async () => {
+    const schritte = mock(200);
+    await noten.versionAendern(verwalterFuer(COOKIE), 7, 70, 'akustik', { text: '[D]neu' });
+    expect(schritte).toEqual(['POST /api/files/song_arrangement/70', 'DELETE /api/files/555']);
+  });
+
+  it('eine ältere App schickt den alten Schlüssel (Bindestrich im Titel) – die Version wird trotzdem gefunden', async () => {
+    const schritte: string[] = [];
+    const MIT_STRICH = {
+      ...MIT_VERSION,
+      name: 'Treu-Lied',
+      arrangements: [
+        {
+          ...MIT_VERSION.arrangements[0],
+          files: [
+            {
+              name: 'Treu-Lied — Akustik (App).chordpro',
+              fileUrl: 'https://ct.test/?q=public/filedownload&id=556',
+            },
+          ],
+        },
+      ],
+    };
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => {
+      const u = String(url);
+      const method = init?.method ?? 'GET';
+      if (u.includes('/api/csrftoken')) return Promise.resolve(jsonRes('t'));
+      if (method === 'GET') return Promise.resolve(jsonRes(MIT_STRICH));
+      schritte.push(`${method} ${u.replace(/^https?:\/\/[^/]+/, '')}`);
+      return Promise.resolve(
+        method === 'POST' ? jsonRes(null, 200) : new Response(null, { status: 204 }),
+      );
+    });
+    // `lied-akustik` war der Schlüssel bis 07.10.2026 („Lied — Akustik" statt „Akustik").
+    const v = await noten.versionAendern(verwalterFuer(COOKIE), 7, 70, 'lied-akustik', {
+      text: '[D]neu',
+    });
+    expect(v.key).toBe('akustik');
+    expect(schritte).toEqual(['POST /api/files/song_arrangement/70', 'DELETE /api/files/556']);
+  });
+
+  it('scheitert das Hochladen, bleibt die alte Datei liegen', async () => {
+    const schritte = mock(504);
+    await expect(
+      noten.versionAendern(verwalterFuer(COOKIE), 7, 70, 'akustik', { text: '[D]neu' }),
+    ).rejects.toThrow();
+    expect(schritte).toEqual(['POST /api/files/song_arrangement/70']);
   });
 });

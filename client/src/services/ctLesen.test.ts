@@ -97,7 +97,7 @@ describe('Anmeldung', () => {
 });
 
 describe('Rechte', () => {
-  it('Ablauf und Tempo gelten, wie ChurchTools sie meldet; Liedverwaltung und SongSelect noch aus (#335)', async () => {
+  it('Ablauf, Tempo und Lieder gelten, wie ChurchTools sie meldet; nur SongSelect noch aus (#335)', async () => {
     ct.liefere('/api/permissions/global', {
       data: {
         churchservice: {
@@ -116,7 +116,9 @@ describe('Rechte', () => {
     // Das Tempo hängt am Lied-Recht, ist aber eigens benannt – sonst verschwände der Knopf mit der
     // noch fehlenden Liedverwaltung, oder das Menü behauptete „fehlende Berechtigung" (07.10.2026).
     expect(r.canEditTempo).toBe(true);
-    expect(r.canEditSongs).toBe(false);
+    // Seit 3b-2 schreibt die Extension auch Lieder, Arrangements und Notenblätter.
+    expect(r.canEditSongs).toBe(true);
+    // SongSelect kommt mit 3b-5 – bis dahin aus, auch wenn die Gemeinde das Recht hat.
     expect(r.canUseCcli).toBe(false);
   });
 });

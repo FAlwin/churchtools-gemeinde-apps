@@ -2,7 +2,8 @@
 
 > Status: **Phase 1 (#333), 2 (#334) und 3a (#335, Lesen) erledigt, 07.10.2026.** Ablage = Personen-Dateien
 > (§2b). Phase 4 (#336, Anteasern) und 5 (#337, Paket) erledigt. 3b (Schreiben) läuft in Scheiben:
-> **3b-1 Ablauf + Tempo** gebaut; offen Lieder, Abwesenheiten, Team-Notizen + Einstellungen, SongSelect.
+> **3b-1 Ablauf + Tempo** und **3b-2 Lieder/Notenblätter** gebaut; offen Abwesenheiten, Team-Notizen +
+> Einstellungen, SongSelect.
 > Ziel: dieselbe App zusätzlich als **ChurchTools-Extension** unter `/ccm/<key>/` ausliefern –
 > ohne eigenen Server, ohne zweite Anmeldung, installierbar von jeder Gemeinde.
 > Die bestehende Server-/PWA-Variante (NAS, `musik.ecg-donrath.de`) **bleibt** und ist der Weg für
@@ -283,10 +284,16 @@ nutzbar – nach jeder kann man aufhören. Muster wie beim Lesen: Regeln nach `s
       gefunden:** Die Liedtext-Vorschau (Auge in der Lied-Auswahl) wurde mit dem Bearbeiten erst
       erreichbar und lief ins Leere – jetzt auch in der Extension (`@shared/ct/liedtext`, ein Lied +
       eine Datei, kein Massenlauf)
-- [ ] **3b-2 Lieder:** Lieder, Arrangements, Versionen, Notenblätter, Dateien, Kategorien, Quellen.
-      Dabei `arrangementVerwaltung.findeArrangement` mit `schreibKern.arrangementAus` zusammenlegen
-      (dieselbe Suche, andere Meldung – bei 3b-1 gefunden). Kategorien/Quellen gehen über die alte
-      Schnittstelle (`ctAjax`) – aus dem Browser **erst messen**
+- [x] **3b-2 Lieder:** Lieder, Arrangements, Versionen, Notenblätter, Dateien, Kategorien, Quellen.
+      Regeln in `shared/ct/liedVerwaltung.ts` (Anschluss `CtVerwalter`), `notenblaetter.ts`
+      (`CtNotenSchreiber`, Hochladen beim Aufrufer – `shared` kennt kein `FormData`), `stammdaten.ts`
+      (Kategorien/Quellen, Rückfall), `altSchnittstelle.ts` (Antwort der alten Schnittstelle). Server
+      über `ctVerwalter.ts`. **Gemessen:** `getMasterData` geht aus dem Browser mit CSRF-Token (ohne →
+      401). `findeArrangement` ist in `arrangementAus` aufgegangen (eigene Meldung als Parameter).
+      **Unterwegs behoben:** Eine Version ändern löschte die alte Datei VOR dem Hochladen der neuen –
+      jetzt umgekehrt; der Browser verwarf ein abgelehntes CSRF-Token nie (#298 fehlte dort); bei 429
+      fiel der Server bei den Kategorien auf die Liederliste zurück (#300). SongSelect bleibt bis 3b-5
+      maskiert (`canUseCcli`)
 - [ ] **3b-3 Abwesenheiten** (Gründe ebenfalls über `ctAjax`; Termin-Arten-Filter hängt an 3b-4)
 - [ ] **3b-4 Team-Notizen + Gemeinde-Einstellungen:** Wer zählt als Musiker? Die Server-Variante hat
       dafür `site.json` – Vorschlag: die eigenen Daten des Moduls (Custom-Data, §2a). Danach „Notizen

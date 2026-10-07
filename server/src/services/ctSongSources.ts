@@ -18,7 +18,7 @@
  */
 import { ctAjax } from './ctAjax.js';
 import { quellenMemo } from './ctSessionMemos.js';
-import { ctId } from '../utils/ctId.js';
+import { quellenAusStammdaten, type LiedStammdatenRoh } from '@shared/ct/stammdaten';
 import type { SongSource } from '@shared/types/index';
 
 /** Meldungen für die alte Schnittstelle – Quellen, nicht Kategorien (siehe `AjaxMeldungen`). */
@@ -38,12 +38,6 @@ const QUELL_MELDUNGEN = {
  * gegangen und nicht blind `?? []` gesetzt: Ein Array-`map` auf ein Objekt wirft nicht, es liefert
  * **leer** – die Quellen wären stillschweigend verschwunden.
  */
-interface RohQuelle {
-  id?: string | number;
-  name?: string;
-  shorty?: string;
-  sortkey?: string | number;
-}
 
 /**
  * Alle Liedquellen der Instanz.
@@ -63,26 +57,10 @@ export async function getSongSources(cookie: string): Promise<SongSource[]> {
   const gemerkt = quellenMemo.get(cookie);
   if (gemerkt !== undefined) return gemerkt;
 
-  const daten = (await ctAjax(cookie, 'getMasterData', {}, QUELL_MELDUNGEN)) as {
-    songsource?: Record<string, RohQuelle> | RohQuelle[];
-  };
-  const roh = daten.songsource;
-  // Beide Formen zulassen: heute ein Objekt, bei `songcategory` ein Array – und morgen vielleicht
-  // umgekehrt. `Object.values` deckt beides ab, ohne dass jemand die Form raten muss.
-  const liste: RohQuelle[] = roh ? Object.values(roh) : [];
-
-  const quellen = liste
-    .map((q) => ({
-      id: ctId(q.id),
-      name: (q.name ?? '').trim(),
-      shorty: (q.shorty ?? '').trim(),
-      sortkey: Number(q.sortkey ?? 0),
-    }))
-    .filter((q): q is { id: number; name: string; shorty: string; sortkey: number } => {
-      return q.id !== null && !!q.name;
-    })
-    .sort((a, b) => a.sortkey - b.sortkey || a.name.localeCompare(b.name, 'de'))
-    .map(({ id, name, shorty }) => ({ id, name, shorty }));
+  // Ausgewertet wird in `@shared/ct/stammdaten` – die Extension liest dieselbe Antwort (#335, 3b-2).
+  const quellen = quellenAusStammdaten(
+    (await ctAjax(cookie, 'getMasterData', {}, QUELL_MELDUNGEN)) as LiedStammdatenRoh,
+  );
 
   if (quellen.length > 0) quellenMemo.set(cookie, quellen);
   return quellen;

@@ -7,11 +7,11 @@
  * geliefert (die App zeigt dann einfach keinen Update-Hinweis).
  */
 import type { UpdateInfo } from '@shared/types/index';
+import { KEIN_UPDATE, RELEASE_API_URL, updateInfoAus } from '@shared/update/index';
 
-const REPO = 'FAlwin/churchtools-musik-app';
 const CACHE_MS = 6 * 60 * 60 * 1000; // Erfolg: 6 Stunden cachen
 const ERROR_CACHE_MS = 15 * 60 * 1000; // Fehler/leer: nur kurz cachen, damit ein neues Release bald sichtbar wird
-const EMPTY: UpdateInfo = { latest: null, tag: null, url: null };
+const EMPTY: UpdateInfo = KEIN_UPDATE;
 
 let cache: { until: number; data: UpdateInfo } | null = null;
 
@@ -19,7 +19,7 @@ export async function getLatestRelease(): Promise<UpdateInfo> {
   if (cache && Date.now() < cache.until) return cache.data;
 
   try {
-    const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
+    const res = await fetch(RELEASE_API_URL, {
       headers: {
         Accept: 'application/vnd.github+json',
         'User-Agent': 'churchtools-musik-app',
@@ -34,10 +34,7 @@ export async function getLatestRelease(): Promise<UpdateInfo> {
       return EMPTY;
     }
 
-    const json = (await res.json()) as { tag_name?: string; html_url?: string };
-    const tag = json.tag_name ?? null;
-    const latest = tag ? tag.replace(/^v/, '') : null;
-    const data: UpdateInfo = { latest, tag, url: json.html_url ?? null };
+    const data = updateInfoAus((await res.json()) as { tag_name?: string; html_url?: string });
     cache = { until: Date.now() + CACHE_MS, data };
     return data;
   } catch {

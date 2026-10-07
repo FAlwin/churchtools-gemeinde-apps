@@ -35,9 +35,12 @@ for (const datei of fs.readdirSync(assets).filter((d) => d.endsWith('.css'))) {
     for (const teil of selektor.split(',')) {
       const t = teil.trim();
       if (t.startsWith('html[data-theme') && t.includes(':where(#root')) continue;
+      // Erlaubt: der App-Bereich (`:where(#root…`) und unsere Elemente außerhalb davon
+      // (`:where([data-musikapp])`, die Schrift des Einführungs-Overlays) – beide treffen ChurchTools nicht.
       if (
         /^(:root|html|body|\*|:[a-z-]+|[a-z][a-z0-9]*)(\b|$)/.test(t) &&
-        !t.startsWith(':where(#root')
+        !t.startsWith(':where(#root') &&
+        !t.startsWith(':where([data-musikapp])')
       ) {
         funde.push(`${datei}: ${t}`);
       }

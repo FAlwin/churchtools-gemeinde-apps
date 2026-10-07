@@ -165,6 +165,12 @@ export class FakeCt {
       if (method === 'GET') {
         return this.json(200, { data: this.werte.filter((w) => w.dataCategoryId === katId) });
       }
+      if (method === 'DELETE') {
+        // Gemessen: 204, ein zweites Mal 404.
+        const vorher = this.werte.length;
+        this.werte = this.werte.filter((x) => x.id !== Number(werte[2]));
+        return this.werte.length < vorher ? this.json(204, null) : this.json(404, {});
+      }
       const b = rumpf();
       if (typeof b.value !== 'string') return this.json(400, { message: 'value fehlt' });
       const value = b.value;

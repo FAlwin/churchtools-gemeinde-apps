@@ -1,6 +1,7 @@
 import type { SiteConfig } from '@shared/types/index';
 import type { Verwaltung } from '../hooks/useVerwaltung';
 import { KATEGORIE_NAME } from '../services/ctEinstellungen';
+import { TEILEN_KATEGORIE } from '../services/ctTeilen';
 import { funktionen } from '../services/funktionen';
 import styles from '../pages/Settings.module.scss';
 
@@ -44,21 +45,26 @@ export function VerwaltungZeilen({ site, v }: { site: SiteConfig; v: Verwaltung 
             </span>
           </button>
         )}
-        {funktionen.teamNotizen && (
-          <button className={`${styles.setRow} ${styles.tappable}`} onClick={v.openNotes}>
-            <span className={styles.setLabel}>Anmerkungen</span>
-            <span className={styles.setValue}>
-              {site.musicianGroupIds.length === 0
-                ? 'aus'
-                : `${site.musicianGroupIds.length} ${site.musicianGroupIds.length === 1 ? 'Gruppe' : 'Gruppen'}`}
-            </span>
-          </button>
-        )}
+        <button className={`${styles.setRow} ${styles.tappable}`} onClick={v.openNotes}>
+          <span className={styles.setLabel}>Anmerkungen</span>
+          <span className={styles.setValue}>
+            {site.musicianGroupIds.length === 0
+              ? 'aus'
+              : `${site.musicianGroupIds.length} ${site.musicianGroupIds.length === 1 ? 'Gruppe' : 'Gruppen'}`}
+          </span>
+        </button>
       </div>
       {funktionen.einstellungenInChurchTools && (
         <p className={styles.installHint}>
           Damit alle diese Einstellungen bekommen, brauchen sie in ChurchTools für die Musik App die
           Rechte „view custom category" und „view custom data" für „{KATEGORIE_NAME}".
+          {site.musicianGroupIds.length > 0 && (
+            <>
+              {' '}
+              Für Team-Notizen zusätzlich für „{TEILEN_KATEGORIE.name}" dieselben zwei sowie „create
+              custom data" und „delete custom data".
+            </>
+          )}
         </p>
       )}
     </div>

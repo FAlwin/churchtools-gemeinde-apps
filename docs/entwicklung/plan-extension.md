@@ -102,6 +102,7 @@ Test-Instanz, am Modul der Test-Erweiterung (`musik-app-test`, id 10), als Admin
 | Kategorie anlegen             | `POST /api/custommodules/<id>/customdatacategories` verlangt `customModuleId`, `name`, `shorty` (≤ 50 Zeichen) → 201 mit ID |
 | Wert anlegen                  | `POST …/customdatacategories/<katId>/customdatavalues` `{dataCategoryId, value}` → **201** `{data: {id}}`                   |
 | Wert ändern                   | `PUT …/customdatavalues/<id>` `{id, dataCategoryId, value}` → **200**                                                       |
+| Wert löschen (08.10.2026)     | `DELETE …/customdatavalues/<id>` → **204**, ein zweites Mal **404**                                                         |
 | Lesen                         | `GET …/customdatavalues` → alle Werte der Kategorie (`id`, `dataCategoryId`, `value`)                                       |
 
 Angelegt und stehen gelassen: Kategorie „Einstellungen der Musik App" (`musikapp-einstellungen`, id 12) mit
@@ -278,14 +279,16 @@ Zwischenspeicher, `HttpError`; Browser: Sitzung der Seite, Bremse, `ApiError`).
 
 **Befunde beim Durchklick** (Test-Instanz, 07.10.2026):
 
-| Befund                                                                                      | Lösung                                                                                  |
-| ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| ChurchTools verbietet Worker aus `blob:` (CSP `child-src * data`) – das Liedblatt hing      | Extension-Build tauscht `./pdfWorker` gegen `pdfWorkerDatei.ts` (Worker als Datei)      |
-| Die App liegt **unter** der ChurchTools-Leiste (56 px); `position: fixed` rutschte darunter | `.ct-extension #root { transform }` – der App-Bereich ist Bezugsrahmen                  |
-| Logos mit Wurzel-Pfad (`/logo…`) zeigten ins Leere                                          | `import.meta.env.BASE_URL`                                                              |
-| Inline-Skripte der `index.html` blockiert (CSP)                                             | Nur der Boot-Hinweis; die App selbst braucht keine                                      |
-| Unsere globalen Regeln (`*`, `html`/`body`, `:root`) verbogen die ChurchTools-Menüs (Alwin) | Extension-Build schreibt sie auf `#root` um (`buildHilfen/cssBereich.ts`), Packen prüft |
-| Die Erweiterung erscheint **nicht** in der ChurchTools-App (iPhone, Alwin)                  | geht nicht – siehe §7, Punkt 6                                                          |
+| Befund                                                                                      | Lösung                                                                                   |
+| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| ChurchTools verbietet Worker aus `blob:` (CSP `child-src * data`) – das Liedblatt hing      | Extension-Build tauscht `./pdfWorker` gegen `pdfWorkerDatei.ts` (Worker als Datei)       |
+| Die App liegt **unter** der ChurchTools-Leiste (56 px); `position: fixed` rutschte darunter | `.ct-extension #root { transform }` – der App-Bereich ist Bezugsrahmen                   |
+| Logos mit Wurzel-Pfad (`/logo…`) zeigten ins Leere                                          | `import.meta.env.BASE_URL`                                                               |
+| Inline-Skripte der `index.html` blockiert (CSP)                                             | Nur der Boot-Hinweis; die App selbst braucht keine                                       |
+| Unsere globalen Regeln (`*`, `html`/`body`, `:root`) verbogen die ChurchTools-Menüs (Alwin) | Extension-Build schreibt sie auf `#root` um (`buildHilfen/cssBereich.ts`), Packen prüft  |
+| Die Erweiterung erscheint **nicht** in der ChurchTools-App (iPhone, Alwin)                  | geht nicht – siehe §7, Punkt 6                                                           |
+| Einführung verdeckte das Liedblatt (08.10., Folge von #440: Seitenfläche auf dem Overlay)   | `html`/`body` nur noch auf `#root`; außerhalb (`data-musikapp`) nur die Schrift          |
+| ChurchTools' Grundregeln in der App: `.cts b` färbte das „Aa", `svg{display:block}` (Alwin) | `b, strong { color: inherit }`, Bilder/Symbole `display: revert` (`all: revert` zu grob) |
 
 #### 3b – Schreiben (in Scheiben, Alwin 07.10.2026)
 
@@ -324,8 +327,15 @@ nutzbar – nach jeder kann man aufhören. Muster wie beim Lesen: Regeln nach `s
       in der Extension Links und Standard-Ansicht; Name, Anmerkungen und Termin-Arten bleiben über
       `funktionen` aus, bis sie wirken. **Musiker brauchen** `view custom category` + `view custom data`
       für die Kategorie – sonst leere Liste, es gilt „Akkorde" (Hinweis in der Verwaltung)
-- [ ] **3b-4b Team-Notizen:** Gruppen/Rollen in der Verwaltung (`/api/groups`, `/api/groups/{id}/roles`),
-      `canUseGlobalNotes` aus den Mitgliedschaften, „Notizen von …" aus den Personen-Dateien der anderen
+- [x] **3b-4b Team-Notizen:** Gruppen/Rollen in der Verwaltung (`/api/groups`, `/api/groups/{id}/roles`),
+      `canUseGlobalNotes` aus den Mitgliedschaften (Regeln in `shared/ct/gruppen.ts`, der Server nutzt
+      sie mit), „Notizen von …" aus den Personen-Dateien der anderen. **Wer teilt** (Alwin: „Liste in den
+      Erweiterungs-Daten"): Verzeichnis `musikapp-teilen` (je Person ein Wert, `ctTeilen.ts`), die
+      Wahrheit aber im Feld `teilen` der eigenen `musikapp_daten.json` – nur die Person kann es ändern.
+      Einschalten: erst Verzeichnis, dann eigene Datei; Ausschalten umgekehrt. Das Verzeichnis legt der
+      Admin beim Speichern der Gruppen an (Musiker dürfen keine Kategorien anlegen). Der Zugriff auf den
+      Datenbereich steht in `ctModulDaten.ts` (Einstellungen und Verzeichnis nutzen ihn).
+      `canUseAvailability` bleibt bis 3b-3 aus
 - [ ] **3b-5 SongSelect** (`ctAjax`, braucht `use ccli`)
 
 #### 3c – Massenläufe (entschieden: weglassen)

@@ -1,10 +1,12 @@
 /**
  * Team-Notizen nach dem PCO-Modell: eigene Anmerkungen wahlweise TEILEN; geteilte Ebenen
  * anderer ANSEHEN (schreibgeschützt, in deren Ansicht) und optional übernehmen (Import).
- * Anmerkungen selbst bleiben strikt pro Konto (services/annotations.ts).
+ * Anmerkungen selbst bleiben strikt pro Konto (services/annotations.ts). In der Erweiterung über die
+ * Personen-Dateien und das Verzeichnis „Wer teilt" (`ctTeilen.ts`, #335 3b-4b).
  */
 import { apiFetch } from './api';
-import { istExtension, ohneServer } from './ctRuntime';
+import { istExtension } from './ctRuntime';
+import { anmerkungenVon, einstellungenVon, teilende, teilenSetzen, teiltIch } from './ctTeilen';
 // SharedPage (fremde Anmerkungsebene) kommt aus @shared/types – re-exportiert für Bestandsimporte.
 import type { SharedPage } from '@shared/types/index';
 
@@ -22,13 +24,13 @@ export interface Sharer {
 
 /** Teilt mein Konto seine Anmerkungen gerade? */
 export function getSharing(): Promise<{ enabled: boolean }> {
-  if (istExtension) return ohneServer('Das Ansehen fremder Anmerkungen');
+  if (istExtension) return teiltIch();
   return apiFetch<{ enabled: boolean }>('/api/annotations/sharing');
 }
 
 /** Eigenes Teilen ein-/ausschalten. */
 export function setSharing(enabled: boolean): Promise<{ enabled: boolean }> {
-  if (istExtension) return ohneServer('Das Ansehen fremder Anmerkungen');
+  if (istExtension) return teilenSetzen(enabled);
   return apiFetch<{ enabled: boolean }>('/api/annotations/sharing', {
     method: 'PUT',
     body: JSON.stringify({ enabled }),
@@ -37,7 +39,7 @@ export function setSharing(enabled: boolean): Promise<{ enabled: boolean }> {
 
 /** Wer teilt Anmerkungen zu diesen Liedern? (eigenes Konto ist ausgenommen) */
 export function getSharers(songIds: number[]): Promise<Sharer[]> {
-  if (istExtension) return ohneServer('Das Ansehen fremder Anmerkungen');
+  if (istExtension) return teilende(songIds);
   return apiFetch<Sharer[]>(`/api/annotations/sharers?songs=${songIds.join(',')}`);
 }
 
@@ -46,7 +48,7 @@ export function getAnnotationsOf(
   personId: number,
   songIds: number[],
 ): Promise<Record<string, SharedPage>> {
-  if (istExtension) return ohneServer('Das Ansehen fremder Anmerkungen');
+  if (istExtension) return anmerkungenVon(personId, songIds);
   return apiFetch<Record<string, SharedPage>>(
     `/api/annotations/of/${personId}?songs=${songIds.join(',')}`,
   );
@@ -57,7 +59,7 @@ export function getSettingsOf(
   personId: number,
   songIds: number[],
 ): Promise<Record<string, string>> {
-  if (istExtension) return ohneServer('Das Ansehen fremder Anmerkungen');
+  if (istExtension) return einstellungenVon(personId, songIds);
   return apiFetch<Record<string, string>>(
     `/api/settings/of/${personId}?songs=${songIds.join(',')}`,
   );

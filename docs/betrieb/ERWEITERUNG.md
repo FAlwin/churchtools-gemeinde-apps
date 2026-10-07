@@ -14,6 +14,7 @@ Die Musik App gibt es in zwei Formen:
 | Ablauf bearbeiten, Tempo         | ✓ (ab v2.29.0)                                     | ✓                                                   |
 | Lieder verwalten, Notenblätter   | ✓ (ab v2.29.0, ohne SongSelect)                    | ✓                                                   |
 | Links, Standard-Ansicht (Admin)  | ✓ (ab v2.29.0, gespeichert in ChurchTools)         | ✓                                                   |
+| Team-Notizen („Notizen von …")   | ✓ (ab v2.29.0, Rechte siehe unten)                 | ✓                                                   |
 | In der ChurchTools-App am Handy  | – (ChurchTools zeigt Erweiterungen nur im Web)     | eigene App auf dem Homescreen                       |
 
 ## Installieren
@@ -46,6 +47,17 @@ Die Musik App gibt es in zwei Formen:
   Rechte **„view custom category"** und **„view custom data"** für diese Kategorie. Fehlen sie, gibt es
   keine Fehlermeldung – es gilt dann einfach die Vorgabe („Akkorde", keine Links). Die Kategorie nicht
   löschen; sie gehört der App.
+- **Team-Notizen** (Musiker sehen die Anmerkungen der anderen unter „Notizen von …"): Ein Admin wählt
+  unter **Mehr → Verwaltung → Anmerkungen** die Gruppen und je Gruppe die Rollen, die mitmachen. Beim
+  Speichern legt die App die Kategorie **„Team-Notizen der Musik App"** an – das Verzeichnis, wer seine
+  Anmerkungen teilt. Die Musiker brauchen dafür **zusätzlich** auf dieser Kategorie „view custom
+  category", „view custom data", **„create custom data"** und **„delete custom data"**: Wer unter
+  **Mehr** „Meine Anmerkungen teilen" einschaltet, trägt sich dort ein (und beim Ausschalten wieder
+  aus). Ob jemand wirklich teilt, steht in seiner eigenen Datei `musikapp_daten.json` – die kann nur er
+  selbst ändern; ein Eintrag, den jemand von Hand macht, bewirkt also nichts.
+- **Ohne Rechte für Lieder und Abläufe** (Bereich **Events**: „view songcategory", „view agenda")
+  meldet die App derzeit „Berechtigungen konnten nicht geladen werden" statt eines klaren Hinweises.
+  Wer die Musik App nutzen soll, braucht diese Rechte.
 - **Anmerkungen speichern:** Die App legt sie als Dateien an der **eigenen Person** ab. Dafür braucht
   die Person das Recht, ihre eigenen Personendaten zu bearbeiten (in unserer Test-Gemeinde kam es über
   den Status „Mitglied"). Fehlt es, sagt die App das; die Anmerkungen bleiben dann nur auf dem Gerät.

@@ -12,8 +12,8 @@
  *  - **Was fremde Daten freigibt, wird NIE überbrückt** (#249/#282): `isAdmin` und
  *    `canUseGlobalNotes` gelten nur bei einer frischen Antwort.
  *
- * Die reinen Ableitungen (`parseCapabilities`, `computeTeamNotesAllowed`) sind absichtlich frei von
- * HTTP – sie lassen sich ohne Netz durchtesten.
+ * Die reinen Ableitungen (`parseCapabilities`, `computeTeamNotesAllowed` in `@shared/ct/gruppen`) sind
+ * absichtlich frei von HTTP – sie lassen sich ohne Netz durchtesten.
  */
 import { config } from '../config.js';
 import { HttpError } from '../middleware/errorHandler.js';
@@ -23,9 +23,20 @@ import { ctGet } from './ctHttp.js';
 import { capsMemo } from './ctSessionMemos.js';
 import { getSiteConfig } from './siteConfig.js';
 import { rechteAus } from '@shared/ct/rechte';
-import type { NoteRolePerm, UserCapabilities } from '@shared/types/index';
+import {
+  aktiveMitgliedschaften,
+  computeAvailabilityAllowed,
+  computeTeamNotesAllowed,
+  gruppenAus,
+  rollenAus,
+  type Mitgliedschaft,
+  type RohMitgliedschaft,
+} from '@shared/ct/gruppen';
+import type { UserCapabilities } from '@shared/types/index';
 
 export { parseSongEditRight, type SongEditRight } from '@shared/ct/rechte';
+// Die Team-Regeln stehen seit 3b-4b in `@shared/ct/gruppen` – die Erweiterung rechnet dieselben (#335).
+export { computeAvailabilityAllowed, computeTeamNotesAllowed } from '@shared/ct/gruppen';
 
 /**
  * Ermittelt aus den ChurchTools-Rechten (Modul churchservice), was der Nutzer darf.
@@ -127,36 +138,6 @@ export async function getCapabilities(
   return full;
 }
 
-/**
- * Reine Berechtigungs-Logik (testbar, ohne Netz): Darf der Nutzer Team-Notizen nutzen
- * (eigene teilen + geteilte ansehen)? Je gewählter Gruppe zählt die freigegebene Rolle;
- * leere/fehlende Rollen-Freigabe einer Gruppe = NIEMAND (kein „alle").
- */
-export function computeTeamNotesAllowed(
-  memberships: Array<{ groupId: number; roleId: number }>,
-  musicianGroupIds: number[],
-  noteRoles: NoteRolePerm[],
-): boolean {
-  const selected = new Set(musicianGroupIds);
-  const rolesByGroup = new Map<number, number[]>();
-  for (const r of noteRoles) rolesByGroup.set(r.groupId, r.roles);
-  return memberships.some(
-    (m) => selected.has(m.groupId) && (rolesByGroup.get(m.groupId) ?? []).includes(m.roleId),
-  );
-}
-
-/**
- * Verfügbarkeit (#177): aktives Mitglied irgendeiner gewählten Gruppe – ohne Rollen-Filter.
- * Reine Funktion, wie `computeTeamNotesAllowed`; leer gewählt = niemand.
- */
-export function computeAvailabilityAllowed(
-  memberships: Array<{ groupId: number; roleId: number }>,
-  musicianGroupIds: number[],
-): boolean {
-  const selected = new Set(musicianGroupIds);
-  return memberships.some((m) => selected.has(m.groupId));
-}
-
 /** Capabilities mit 5-Minuten-Memo je Session – für häufige Rechte-Checks (Team-Notizen). */
 export async function getCapabilitiesCached(
   cookie: string,
@@ -169,63 +150,28 @@ export async function getCapabilitiesCached(
   return caps;
 }
 
-/**
- * Aktive Mitgliedschaften des Nutzers als {Gruppe, Rolle} (via `/api/persons/{id}/groups`).
- * Die Gruppen-ID steht in `group.domainIdentifier` (String), die Rolle in `groupTypeRoleId`.
- * Nur aktive, nicht beendete Mitgliedschaften zählen.
- */
+/** Aktive Mitgliedschaften des Nutzers (via `/api/persons/{id}/groups`, Regel in `@shared/ct/gruppen`). */
 export async function getActiveMemberships(
   cookie: string,
   userId: number,
-): Promise<Array<{ groupId: number; roleId: number }>> {
-  interface Membership {
-    group?: { domainIdentifier?: string | number };
-    groupTypeRoleId?: number;
-    groupMemberStatus?: string;
-    memberEndDate?: string | null;
-  }
-  const rows = await ctGet<Membership[]>(cookie, `/api/persons/${userId}/groups`);
-  const out: Array<{ groupId: number; roleId: number }> = [];
-  for (const r of rows ?? []) {
-    if (r.groupMemberStatus !== 'active' || r.memberEndDate) continue;
-    const groupId = Number(r.group?.domainIdentifier);
-    const roleId = Number(r.groupTypeRoleId);
-    if (Number.isInteger(groupId) && Number.isInteger(roleId)) out.push({ groupId, roleId });
-  }
-  return out;
+): Promise<Mitgliedschaft[]> {
+  return aktiveMitgliedschaften(
+    await ctGet<RohMitgliedschaft[]>(cookie, `/api/persons/${userId}/groups`),
+  );
 }
 
 /** Sichtbare ChurchTools-Gruppen (id + name), alphabetisch – für das Admin-Dropdown „Gruppen-Zuweisung". */
 export async function getGroups(cookie: string): Promise<{ id: number; name: string }[]> {
-  interface Group {
-    id: number;
-    name: string;
-  }
   // limit hoch genug für ein Dropdown; page=1 (CT beginnt bei 1, nicht 0).
-  const rows = await ctGet<Group[]>(cookie, '/api/groups?limit=200&page=1');
-  return (rows ?? [])
-    .filter((g) => Number.isInteger(g.id) && Boolean(g.name))
-    .map((g) => ({ id: g.id, name: g.name }))
-    .sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  return gruppenAus(await ctGet(cookie, '/api/groups?limit=200&page=1'));
 }
 
-/**
- * Rollen einer Gruppe (id = `groupTypeRoleId`, name) für die Rollen-Zuweisung. Versteckte Rollen
- * (`isHidden`) werden ausgelassen. Quelle: `GET /api/groups/{id}/roles`.
- */
+/** Rollen einer Gruppe (id = `groupTypeRoleId`, name) für die Rollen-Zuweisung. */
 export async function getGroupRoles(
   cookie: string,
   groupId: number,
 ): Promise<{ id: number; name: string }[]> {
-  interface Role {
-    groupTypeRoleId?: number;
-    name?: string;
-    isHidden?: boolean;
-  }
-  const rows = await ctGet<Role[]>(cookie, `/api/groups/${groupId}/roles`);
-  return (rows ?? [])
-    .filter((r) => !r.isHidden && Number.isInteger(r.groupTypeRoleId) && Boolean(r.name))
-    .map((r) => ({ id: r.groupTypeRoleId as number, name: r.name as string }));
+  return rollenAus(await ctGet(cookie, `/api/groups/${groupId}/roles`));
 }
 
 /**

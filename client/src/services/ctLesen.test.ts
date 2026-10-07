@@ -6,6 +6,7 @@ import {
   datei,
   fingerabdruck,
   gemeindeKonfiguration,
+  liedtextVorschau,
   meinStatus,
   meineRechte,
   termine,
@@ -188,5 +189,32 @@ describe('Bremse (#300)', () => {
       },
     });
     await expect(datei(7, 5)).rejects.toMatchObject({ status: 502 });
+  });
+});
+
+describe('Liedtext-Vorschau beim Hinzufügen (#335, 3b-1)', () => {
+  function liedMit(dateien: { name: string; inhalt: string }[]): void {
+    const files = dateien.map((d) => ({
+      name: d.name,
+      fileUrl: `${BASIS}/?q=public/filedownload&id=${ct.ablegen(d.name, d.inhalt)}`,
+    }));
+    ct.liefere('/api/songs/7', {
+      data: { id: 7, name: 'Lied', arrangements: [{ id: 70, name: 'A', files }] },
+    });
+  }
+
+  it('zeigt das Original – nicht eine Version, die in der Antwort davor steht', async () => {
+    liedMit([
+      { name: 'Lied — Akustik (App).chordpro', inhalt: '[G]Fassung' },
+      { name: 'Lied.chordpro', inhalt: '{title: Lied}\n[G]Ich bin ge[Am]liebt' },
+    ]);
+    expect((await liedtextVorschau(7)).chordpro).toContain('ge[Am]liebt');
+    // Nur dieses Lied und seine Datei – keine Liederliste (kein Massenlauf in der Extension).
+    expect(ct.zaehle('GET /api/songs?')).toBe(0);
+  });
+
+  it('eine Datei aus lauter Direktiven ist kein Liedtext → null', async () => {
+    liedMit([{ name: 'Lied.chordpro', inhalt: '{title: Lied}\n{key: G}' }]);
+    expect((await liedtextVorschau(7)).chordpro).toBeNull();
   });
 });

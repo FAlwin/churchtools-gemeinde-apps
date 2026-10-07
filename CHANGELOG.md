@@ -14,6 +14,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   löschen, den Vorlauf setzen und das Tempo eines Lieds speichern – wie in der Server-Variante. Die
   Regeln dafür (frisch lesen, nichts nebenbei überschreiben, Lied-Punkte bleiben Lieder) liegen jetzt
   in `shared/ct/schreibKern.ts` und gelten für beide Auslieferungen; der Server nutzt sie unverändert.
+  Dazu die Liedtext-Vorschau beim Hinzufügen eines Lieds (das Auge in der Lied-Auswahl) – sie wäre in
+  der Erweiterung sonst ins Leere gelaufen.
 
 ### Geändert
 

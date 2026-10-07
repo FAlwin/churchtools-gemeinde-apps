@@ -278,7 +278,10 @@ nutzbar – nach jeder kann man aufhören. Muster wie beim Lesen: Regeln nach `s
       Standard-Titel, „Aufheben leert den Titel") lagen zum Teil im Controller und stehen jetzt im Kern.
       Das Tempo hat ein **eigenes Recht `canEditTempo`** (dasselbe ChurchTools-Recht wie
       `canEditSongs`, eigens benannt): So geht es in der Extension, während die Liedverwaltung noch
-      verborgen ist – und das Tempo-Menü behauptet keine fehlende Berechtigung
+      verborgen ist – und das Tempo-Menü behauptet keine fehlende Berechtigung. **Beim Durchklick
+      gefunden:** Die Liedtext-Vorschau (Auge in der Lied-Auswahl) wurde mit dem Bearbeiten erst
+      erreichbar und lief ins Leere – jetzt auch in der Extension (`@shared/ct/liedtext`, ein Lied +
+      eine Datei, kein Massenlauf)
 - [ ] **3b-2 Lieder:** Lieder, Arrangements, Versionen, Notenblätter, Dateien, Kategorien, Quellen.
       Dabei `arrangementVerwaltung.findeArrangement` mit `schreibKern.arrangementAus` zusammenlegen
       (dieselbe Suche, andere Meldung – bei 3b-1 gefunden). Kategorien/Quellen gehen über die alte

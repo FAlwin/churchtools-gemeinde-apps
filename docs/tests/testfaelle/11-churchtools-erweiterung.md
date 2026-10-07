@@ -95,7 +95,8 @@ bleibt ein Lied (er wird nicht zu einem Textpunkt). Das gespeicherte Tempo steht
 Arrangement, **Tonart und Dauer des Arrangements sind unverändert**.
 
 1. Gottesdienst öffnen, **Ablauf bearbeiten**: zwei Punkte per Ziehen vertauschen, fertig.
-2. **Neuer Eintrag**: einen Programmpunkt mit Lied anlegen.
+2. **Neuer Eintrag** → **Lied verknüpfen**: beim Lied das **Auge** antippen – der Liedtext erscheint
+   (kein „gibt es noch nicht"). Dann das Lied übernehmen und den Eintrag anlegen.
 3. Einen Punkt antippen, die Notiz ändern, speichern.
 4. Einen Punkt antippen, **Vor Gottesdienstbeginn** einschalten, speichern – er und alle darüber
    rutschen in den Vorlauf.
@@ -106,7 +107,7 @@ Arrangement, **Tonart und Dauer des Arrangements sind unverändert**.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/services/ctSchreiben.ts`, `shared/ct/schreibKern.ts`, `shared/ct/agendaPayload.ts`, `shared/ct/arrangementPayload.ts`, `client/src/services/ctRuntime.ts`, `client/src/components/TempoMenu.tsx`
+- **Betrifft:** `client/src/services/ctSchreiben.ts`, `shared/ct/schreibKern.ts`, `shared/ct/liedtext.ts`, `shared/ct/agendaPayload.ts`, `shared/ct/arrangementPayload.ts`, `client/src/services/ctRuntime.ts`, `client/src/components/TempoMenu.tsx`
 - **Automatisiert:** teilweise – `ctSchreiben.test.ts` gegen ein nachgebautes ChurchTools (Rümpfe
   gegen die Erzeuger, Fehlerzweige einzeln); ob ChurchTools die Rümpfe aus dem Browser genauso annimmt
   wie vom Server, nur hier

@@ -189,7 +189,7 @@ export function sucheImLiedtext(q: string): Promise<SongTextTreffer[]> {
  * Index-Aufbau, der ~50 Downloads kostet.
  */
 export function holeLiedtextVorschau(songId: number): Promise<LiedtextVorschau> {
-  if (istExtension) return ohneServer('Die Liedtext-Vorschau');
+  if (istExtension) return ext.liedtextVorschau(songId);
   return apiFetch<LiedtextVorschau>(`/api/songs/${songId}/liedtext-vorschau`);
 }
 

@@ -7,6 +7,13 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+## [2.29.0] – 2026-10-08
+
+**Beim Update ist nichts zu tun.** Neu ist eine Einstellung für Admins (**Mehr → Verwaltung →
+„Liedblatt: Standard-Ansicht"**, Vorgabe wie bisher „Akkorde"). Die Einführung zeigt den Schritt „Als
+PDF teilen" einmal neu. **ChurchTools-Erweiterung:** neue ZIP einspielen; für Gemeinde-Einstellungen und
+Team-Notizen brauchen die Musiker zusätzliche Rechte – siehe `docs/betrieb/ERWEITERUNG.md`.
+
 ### Neu
 
 - **Erweiterung: Ablauf bearbeiten und Tempo speichern (#335, 3b-1):** Wer in ChurchTools die Rechte
@@ -85,6 +92,15 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 - **Eigenes Recht `canEditTempo`:** dasselbe ChurchTools-Recht wie „Lieder bearbeiten", aber eigens
   benannt – das Tempo-Menü fragt jetzt dieses. Für die Server-Variante ändert sich nichts.
+- **Einführung „Als PDF teilen"** nennt die Wahl mit oder ohne Anmerkungen und die PDFs aus ChurchTools
+  (Tour-Version `setlist-v2`, erscheint einmal neu).
+- **Fehlermeldungen beim Speichern in der Verwaltung** nennen den Grund (z. B. ein fehlendes Recht)
+  statt nur „Speichern fehlgeschlagen.".
+
+### Intern
+
+- **Release-Seite:** Über den automatischen Notizen steht ein fester Hinweis zur Erweiterung (ZIP unter
+  Assets, was ins ChurchTools-Formular gehört) (#434).
 
 ## [2.28.0] – 2026-10-07
 

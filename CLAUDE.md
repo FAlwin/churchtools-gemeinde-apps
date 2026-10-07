@@ -656,6 +656,14 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **v2.29.0 (08.10.2026) = Erweiterung schreibt + „PDF zuerst" + Teilen mit Anmerkungen** (PRs #436–#443):
+  Extension 3b-1 (Ablauf, Tempo), 3b-2 (Lieder), 3b-4a (Gemeinde-Einstellungen in den Daten der
+  Erweiterung), 3b-4b (Team-Notizen); für beide Varianten: Lieder ohne ChordPro öffnen ihr PDF,
+  Gemeinde-Einstellung „PDF zuerst", Teilen-Fenster mit Anmerkungen und Dokument-Seiten, Versionsname bei
+  Bindestrich (+ Schlüssel-Umzug). Alles in der Test-Instanz durchgeklickt; **der Staging-Test am iPad
+  (TF-EINST-12 Teilen-Menü, TF-CHART-16 PDF zuerst) wurde vor dem Tag NICHT gemacht** – Alwin wollte
+  das Release zum Abschluss des Tages. Offen: 3b-3 Abwesenheiten, 3b-5 SongSelect, #444.
+
 - **v2.28.0 (07.10.2026) = ChurchTools-Erweiterung + robustere Terminliste** (PRs #426–#433; kein
   Staging-Test nötig für die PWA – sichtbar ändert sich dort nichts). Die Erweiterung (Lesen, Anteasern,
   Paket, Update-Hinweis) ist in der Test-Instanz durchgeklickt; das Release hängt erstmals

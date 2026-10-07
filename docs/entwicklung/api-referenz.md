@@ -35,12 +35,14 @@
 
 - `GET  /api/health` → `{status, env}` (öffentlich, für Reverse-Proxy/Monitoring)
 - `GET  /api/update-check` → neueste veröffentlichte Version (liest GitHub-Release; für den In-App-Hinweis)
-- `GET  /api/site-config` → öffentlich `{ appName, description, orgName, links }` plus leere `musicianGroupIds`/`noteRoles`; **angemeldet die vollständige Konfiguration** (die internen Gruppen-/Rollen-IDs gelangen so nicht unauthentifiziert nach außen)
+- `GET  /api/site-config` → öffentlich `{ appName, description, orgName, links, standardAnsicht }` plus leere `musicianGroupIds`/`noteRoles`; **angemeldet die vollständige Konfiguration** (die internen Gruppen-/Rollen-IDs gelangen so nicht unauthentifiziert nach außen)
 - `PUT  /api/site-config` → Gemeinde-Name/Anmerkungs-Zuweisungen speichern (nur Admin, Zod-validiert) Seit #400 auch `terminArten` –
   `{id, name, suchwort}[]` für den Filter im Tab „Abwesenheiten" (Admin: Mehr → Verwaltung →
   „Abwesenheiten: Termin-Arten"); Name/Suchwort getrimmt, Längen aus `SITE_CONFIG_GRENZEN`
   (`@shared/types`, seit v2.25.1 eine Quelle für Formular und Schema – vorher vierfach von Hand),
-  IDs eindeutig
+  IDs eindeutig. Seit 07.10.2026 auch `standardAnsicht` (`'akkorde'` | `'dokument'`, Standard
+  `'akkorde'`) – was ein Lied beim ersten Öffnen zeigt; steht auch in der öffentlichen Antwort (das
+  Gerät merkt sie sich, sonst fiele sie beim Abmelden zurück)
 
 - `POST /api/auth/login` {email, password} → `{authenticated, user}` + setzt signiertes Session-Cookie; holt dabei den persönlichen ChurchTools-Anmelde-Schlüssel (bestes Bemühen) und legt ihn verschlüsselt mit ins Cookie
 - `POST /api/auth/logout` → Session + ChurchTools-Session beenden (den Anmelde-Schlüssel widerruft er bewusst NICHT)

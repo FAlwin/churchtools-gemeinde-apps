@@ -1,4 +1,4 @@
-import type { NoteRolePerm, SiteConfig } from '@shared/types/index';
+import type { NoteRolePerm, SiteConfig, StandardAnsicht } from '@shared/types/index';
 import { Sheet } from './Sheet';
 import { Spinner } from './Spinner';
 import { Icon } from './icons';
@@ -7,6 +7,20 @@ import { TerminArtenManager } from './TerminArtenManager';
 import { useGroupRoles } from '../hooks/useSiteConfig';
 import type { Verwaltung } from '../hooks/useVerwaltung';
 import styles from '../pages/Settings.module.scss';
+
+/** Die zwei Standard-Ansichten – Texte wie im abgenommenen Entwurf (Alwin, 07.10.2026). */
+const ANSICHTEN: { wert: StandardAnsicht; name: string; hinweis: string }[] = [
+  {
+    wert: 'akkorde',
+    name: 'Akkorde',
+    hinweis: 'Aus der ChordPro-Datei, transponierbar. Lieder ohne ChordPro zeigen ihr PDF.',
+  },
+  {
+    wert: 'dokument',
+    name: 'PDF zuerst',
+    hinweis: 'Hat ein Lied ein PDF oder Bild, wird es gezeigt. Sonst die Akkorde.',
+  },
+];
 
 interface VerwaltungFensterProps {
   site: SiteConfig;
@@ -54,6 +68,49 @@ export function VerwaltungFenster({ site, isAdmin, v }: VerwaltungFensterProps) 
             keinen Filter.
           </p>
           <TerminArtenManager site={site} onClose={v.closeTerminArten} />
+        </Sheet>
+      )}
+
+      {v.offen.ansicht && (
+        <Sheet
+          title="Liedblatt: Standard-Ansicht"
+          onClose={v.closeAnsicht}
+          cancelLabel={v.ansichtDirty ? 'Abbrechen' : 'Schließen'}
+        >
+          <p className={styles.sheetHint}>
+            Was ein Lied beim ersten Öffnen zeigt. Wer bei einem Lied selbst umstellt, behält seine
+            Wahl.
+          </p>
+          <div className={styles.cardList} role="radiogroup" aria-label="Standard-Ansicht">
+            {ANSICHTEN.map((a) => {
+              const an = v.ansichtDraft === a.wert;
+              return (
+                <button
+                  key={a.wert}
+                  className={`${styles.setRow} ${styles.tappable}`}
+                  role="radio"
+                  aria-checked={an}
+                  onClick={() => v.setAnsichtDraft(a.wert)}
+                >
+                  <span className={styles.ansichtText}>
+                    <span className={styles.setLabel}>{a.name}</span>
+                    <span className={styles.ansichtHint}>{a.hinweis}</span>
+                  </span>
+                  <span className={`${styles.radio}${an ? ' ' + styles.radioOn : ''}`} />
+                </button>
+              );
+            })}
+          </div>
+          {v.update.isError && <div className={styles.orgErr}>Speichern fehlgeschlagen.</div>}
+          {v.ansichtDirty && (
+            <button
+              className={styles.orgSave}
+              onClick={v.saveAnsicht}
+              disabled={v.update.isPending}
+            >
+              {v.update.isPending ? <Spinner /> : 'Speichern'}
+            </button>
+          )}
         </Sheet>
       )}
 

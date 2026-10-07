@@ -11,6 +11,8 @@
  * Einstellung eben nur für diese Sitzung. Eine Vorliebe darf nie die Bedienung blockieren.
  */
 
+import type { StandardAnsicht } from '@shared/types/index';
+
 const KEYS = {
   /** Ist die Anmerkungs-Werkzeugleiste zum Rand-Knopf eingeklappt? */
   drawbarCollapsed: 'worship:drawbar-collapsed',
@@ -20,6 +22,12 @@ const KEYS = {
   abwesenheitenFilter: 'worship:abwesenheiten-filter',
   /** Ein Abmelden konnte den Server nicht erreichen und muss beim nächsten Start nachgeholt werden (#403). */
   abmeldenAusstehend: 'worship:abmelden-ausstehend',
+  /**
+   * Die Standard-Ansicht der Lieder, wie das Gerät sie zuletzt aus der Gemeinde-Einstellung geladen
+   * hat (07.10.2026, `standardAnsicht.ts`). Keine Konto-Angabe – deshalb hier, und sie übersteht das
+   * Abmelden.
+   */
+  gemeindeAnsicht: 'worship:gemeinde-ansicht',
 } as const;
 
 type PrefKey = keyof typeof KEYS;
@@ -103,4 +111,13 @@ export function setAbmeldenAusstehend(ausstehend: boolean): void {
   } catch {
     /* Speicher gesperrt – dann war auch nichts gemerkt */
   }
+}
+
+/** Die zuletzt geladene Standard-Ansicht der Gemeinde; ohne Angabe „Akkorde". */
+export function getGemeindeAnsicht(): StandardAnsicht {
+  return read('gemeindeAnsicht') === 'dokument' ? 'dokument' : 'akkorde';
+}
+
+export function setGemeindeAnsicht(ansicht: StandardAnsicht): void {
+  write('gemeindeAnsicht', ansicht);
 }

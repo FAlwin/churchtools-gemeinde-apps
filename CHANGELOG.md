@@ -17,6 +17,15 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Dazu die Liedtext-Vorschau beim Hinzufügen eines Lieds (das Auge in der Lied-Auswahl) – sie wäre in
   der Erweiterung sonst ins Leere gelaufen.
 
+- **Lieder ohne ChordPro öffnen ihr PDF – und „PDF zuerst" für die ganze Gemeinde:** Angefragt von
+  einer Gemeinde ohne SongSelect Premium, die nur PDFs in ChurchTools hat: Bisher öffnete jedes Lied in
+  der leeren Akkord-Ansicht, und jeder musste bei jedem Lied umstellen. Jetzt zeigt ein Lied ohne
+  ChordPro von selbst sein PDF (sonst ein Bild). Dazu unter **Mehr → Verwaltung → „Liedblatt:
+  Standard-Ansicht"** die Wahl **Akkorde** (Standard) oder **PDF zuerst**. Wer an einem Lied selbst
+  umstellt, behält seine Wahl. Das Gerät merkt sich die Einstellung – sie gilt auch offline und nach
+  dem Abmelden. In der ChurchTools-Erweiterung gilt vorerst nur der automatische Teil (Einstellungen
+  kommen dort mit 3b-4).
+
 ### Geändert
 
 - **Eigenes Recht `canEditTempo`:** dasselbe ChurchTools-Recht wie „Lieder bearbeiten", aber eigens

@@ -452,3 +452,35 @@ Schlüssel liegen unverändert daneben, es wurde kopiert und nicht umbenannt.
 - **Historie:** #320
 
 </details>
+
+### TF-CHART-16 · Lieder ohne ChordPro öffnen ihr PDF; Gemeinde-Einstellung „PDF zuerst"
+
+**Das brauchst du:** Ein Lied, das in ChurchTools **nur ein PDF** hat (keine `.chordpro`-Datei), und
+ein Lied mit ChordPro **und** PDF. Für Schritt 4 ein Admin-Konto.
+
+**Das muss passieren:** Ein Lied ohne ChordPro öffnet direkt sein PDF – niemand muss umstellen. Was
+jemand an einem Lied selbst wählt, bleibt, auch gegen die Einstellung der Gemeinde. Angestoßen von
+einer Gemeinde ohne SongSelect Premium (07.10.2026).
+
+1. Das Lied **nur mit PDF** öffnen → das PDF erscheint, nicht eine leere Akkord-Seite.
+2. Das Lied **mit ChordPro und PDF** öffnen → die Akkorde erscheinen (Standard).
+3. Bei diesem Lied über den **Titel** auf das PDF umstellen, Lied verlassen, wieder öffnen → das PDF
+   bleibt. Zurück auf **Akkorde** stellen.
+4. Als Admin: **Mehr → Verwaltung → Liedblatt: Standard-Ansicht** → **PDF zuerst** → Speichern. Die
+   Zeile zeigt „PDF zuerst".
+5. Ein anderes Lied mit ChordPro **und** PDF öffnen → jetzt erscheint das PDF. Das Lied aus Schritt 3
+   zeigt weiter die **Akkorde** (eigene Wahl geht vor).
+6. Abmelden, ohne Netz neu öffnen (oder Flugmodus) → die Einstellung gilt weiter.
+7. Einstellung wieder auf **Akkorde** stellen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `client/src/utils/standardAnsicht.ts`, `client/src/utils/chartSettings.ts`, `client/src/hooks/useSiteConfig.ts`, `client/src/utils/devicePrefs.ts`, `client/src/components/VerwaltungFenster.tsx`, `client/src/components/VerwaltungZeilen.tsx`, `server/src/services/siteConfig.ts`
+- **Automatisiert:** weitgehend – `standardAnsicht.test.ts` (Regel, eigene Wahl, Abmelden),
+  `useSiteConfig.ansicht.test.tsx` (offline nicht zurückfallen), `siteConfig.test.ts` und
+  `siteConfigController.trim.test.ts` (Speichern, Einlesen, öffentlich). Von Hand bleibt, dass ein
+  echtes PDF aus ChurchTools erscheint, und Schritt 6
+- **Historie:** Anfrage einer Gemeinde, 07.10.2026
+
+</details>

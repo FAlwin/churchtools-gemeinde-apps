@@ -30,6 +30,9 @@ export async function getSiteConfigCtrl(req: Request, res: Response): Promise<vo
     description: cfg.description,
     orgName: cfg.orgName,
     links: cfg.links,
+    // Kein internes Feld – und ohne es fiele das Gerät beim Abmelden still auf „Akkorde" zurück
+    // (es merkt sich die Ansicht aus der zuletzt geladenen Einstellung, `standardAnsicht.ts`).
+    standardAnsicht: cfg.standardAnsicht,
     musicianGroupIds: [],
     noteRoles: [],
   });
@@ -47,6 +50,7 @@ export async function putSiteConfigCtrl(req: Request, res: Response): Promise<vo
       musicianGroupIds: parsed.data.musicianGroupIds,
       noteRoles: parsed.data.noteRoles,
       terminArten: parsed.data.terminArten,
+      standardAnsicht: parsed.data.standardAnsicht,
     }),
   );
 }

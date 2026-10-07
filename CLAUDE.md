@@ -630,7 +630,8 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
   fehlendes Recht antwortet mit **401 „Session abgelaufen"**. Browser-Teil ebenfalls gemessen: kein
   zweites Login, aber ChurchTools bettet nur den Inhalt der `index.html` ein (mit `<base>` auf die
   Instanz) – Pfade absolut, CSS als Datei. **Spike damit abgeschlossen**, Testaufbau (Modul
-  `ecg-musik-test`, Person „Spike Musiker" id 16) bleibt für Phase 2 stehen.
+  `ecg-musik-test`, Kategorien, Werte, Probe-Datei) am 07.10. wieder abgeräumt; für Phase 2 neu anlegen
+  (Modul per `POST /api/custommodules` mit `inMenu`, Rechte von Hand – §2a nennt den Satz).
 
 - **v2.27.0 (05.10.2026) = Ablauf und Felder** (PR #425 Squash `1447d65`; Staging `staging-a5e6782` von
   Alwin getestet, Baum von `main` identisch). #423 Vorlauf vor dem Gottesdienstbeginn (Grenze

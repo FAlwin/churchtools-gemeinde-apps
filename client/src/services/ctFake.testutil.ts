@@ -57,6 +57,20 @@ export class FakeCt {
     xrw?: string | null;
   }[] = [];
 
+  /**
+   * Der Datenbereich der Erweiterung (3b-4), wie gemessen (Plan §2c): Module nur als Liste, Kategorien
+   * und Werte mit aufsteigenden IDs, ein Wert als Text.
+   */
+  module: { id: number; shorty: string }[] = [{ id: 10, shorty: 'musik-app' }];
+  kategorien: { id: number; customModuleId: number; name: string; shorty: string }[] = [];
+  werte: { id: number; dataCategoryId: number; value: string }[] = [];
+  /** Ohne „Kategorien sehen": ChurchTools liefert eine LEERE Liste, keinen Fehler. */
+  kategorienUnsichtbar = false;
+  /** Schreiben eines Werts meldet Erfolg, ändert aber nichts (lügender Erfolg). */
+  wertSchreibenVerschwindet = false;
+  /** Schreiben im Datenbereich verboten – wie ChurchTools: 401 + whoami ok. */
+  datenSchreibenVerboten = false;
+
   /** Eine JSON-Antwort für einen Pfad hinterlegen. */
   liefere(pfad: string, body: unknown, status = 200, headers: Record<string, string> = {}): void {
     this.antworten[pfad] = () =>
@@ -104,6 +118,71 @@ export class FakeCt {
     });
   }
 
+  /** Module, Kategorien und Werte der Erweiterung – `null`, wenn der Pfad nicht dazugehört. */
+  private datenbereich(method: string, pfad: string, init?: RequestInit): Response | null {
+    const rumpf = () =>
+      (typeof init?.body === 'string' ? JSON.parse(init.body) : {}) as {
+        customModuleId?: unknown;
+        name?: unknown;
+        shorty?: unknown;
+        value?: unknown;
+      };
+    const schreiben = method !== 'GET';
+    if (schreiben && this.datenSchreibenVerboten && pfad.startsWith('/api/custommodules/')) {
+      return this.json(401, { message: 'Die Session ist abgelaufen.' });
+    }
+    if (pfad === '/api/custommodules' && method === 'GET')
+      return this.json(200, { data: this.module });
+    const kat = pfad.match(/^\/api\/custommodules\/(\d+)\/customdatacategories$/);
+    if (kat) {
+      const modul = Number(kat[1]);
+      if (method === 'GET') {
+        const sichtbar = this.kategorienUnsichtbar ? [] : this.kategorien;
+        return this.json(200, { data: sichtbar.filter((k) => k.customModuleId === modul) });
+      }
+      const b = rumpf();
+      if (
+        b.customModuleId !== modul ||
+        typeof b.name !== 'string' ||
+        typeof b.shorty !== 'string'
+      ) {
+        return this.json(400, { message: 'customModuleId, name, shorty fehlen' });
+      }
+      const neu = {
+        id: this.naechsteId++,
+        customModuleId: modul,
+        name: b.name,
+        shorty: b.shorty,
+      };
+      this.kategorien.push(neu);
+      return this.json(201, { data: neu });
+    }
+    const werte = pfad.match(
+      /^\/api\/custommodules\/\d+\/customdatacategories\/(\d+)\/customdatavalues(?:\/(\d+))?$/,
+    );
+    if (werte) {
+      const katId = Number(werte[1]);
+      if (method === 'GET') {
+        return this.json(200, { data: this.werte.filter((w) => w.dataCategoryId === katId) });
+      }
+      const b = rumpf();
+      if (typeof b.value !== 'string') return this.json(400, { message: 'value fehlt' });
+      const value = b.value;
+      if (method === 'POST') {
+        const neu = { id: this.naechsteId++, dataCategoryId: katId, value };
+        if (!this.wertSchreibenVerschwindet) this.werte.push(neu);
+        return this.json(201, { data: { id: neu.id } });
+      }
+      if (method === 'PUT') {
+        const w = this.werte.find((x) => x.id === Number(werte[2]));
+        if (!w) return this.json(404, { message: 'Not found' });
+        if (!this.wertSchreibenVerschwindet) w.value = value;
+        return this.json(200, { data: w });
+      }
+    }
+    return null;
+  }
+
   private async antwort(url: string, init?: RequestInit): Promise<Response> {
     const method = init?.method ?? 'GET';
     const pfad = url.replace(BASIS, '');
@@ -123,6 +202,9 @@ export class FakeCt {
     if (hinterlegt && method === 'GET') return hinterlegt();
     if (pfad === '/api/whoami') return this.json(200, { data: { id: this.ich } });
     if (pfad === '/api/csrftoken') return this.json(200, { data: 'csrf-123' });
+
+    const daten = this.datenbereich(method, pfad, init);
+    if (daten) return daten;
 
     const person = pfad.match(/^\/api\/files\/person\/(\d+)$/);
     if (person && method === 'GET') {

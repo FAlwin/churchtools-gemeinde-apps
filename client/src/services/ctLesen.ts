@@ -29,6 +29,7 @@ import type {
 import { DEFAULT_SITE_CONFIG } from '@shared/types/index';
 import { agendaSignatureList, fingerprintRohtext } from '@shared/ct/agendaDiff';
 import { arrangementFileEntries, dateiUrlFinden } from '@shared/ct/arrangementFiles';
+import { einstellungenAus } from '@shared/ct/einstellungen';
 import { arrangementAnsicht, stammdatenAnsicht } from '@shared/ct/liedVerwaltung';
 import { arrangementAus } from '@shared/ct/schreibKern';
 import {
@@ -57,6 +58,7 @@ import { sanitizeFileContentType } from '@shared/dateien/index';
 import type { GesehenerStand } from '@shared/types/index';
 import { ApiError } from './api';
 import { ctAltAnfrage, ctAnfrage, ctDatei, istUeberlastet } from './ctRuntime';
+import { gespeicherteEinstellungen } from './ctEinstellungen';
 import { holeGesehen, merkeGesehen } from './personenAblage';
 
 /** Zeitzone der Gemeinde. Die Server-Variante liest sie aus `ZEITZONE`; hier gilt der Standard. */
@@ -145,16 +147,31 @@ export async function meinStatus(): Promise<AuthStatus> {
 
 /**
  * `GET /api/site-config` – in der Extension gibt es kein `site.json`. Der Gemeindename kommt aus
- * ChurchTools (`/api/info` → `siteName`, gemessen 07.10.2026, sogar ohne Anmeldung); alles andere
- * bleibt beim Standard. Ein Fehler hier darf die App nicht aufhalten – dann eben der Standardname.
+ * ChurchTools (`/api/info` → `siteName`, gemessen 07.10.2026, sogar ohne Anmeldung), der Rest seit
+ * 3b-4 aus dem Datenbereich der Erweiterung (`ctEinstellungen.ts`), geprüft mit derselben Regel wie im
+ * Server.
+ *
+ * Der Name ist Beiwerk: Scheitert `/info`, gilt der Standardname. Die gespeicherten Einstellungen
+ * nicht – ein vorübergehender Fehler dort **wirft** (siehe `gespeicherteEinstellungen`), damit das
+ * Gerät die Wahl der Gemeinde nicht durch die Vorgaben ersetzt.
  */
 export async function gemeindeKonfiguration(): Promise<SiteConfig> {
+  const [orgName, gespeichert] = await Promise.all([gemeindeName(), gespeicherteEinstellungen()]);
+  // Geprüft mit dem Standardnamen, eingesetzt wird der echte: Das Schema begrenzt den Namen auf 80
+  // Zeichen – ein längerer Name in ChurchTools ließe sonst die ganzen Einstellungen durchfallen.
+  const geprueft =
+    einstellungenAus({ ...gespeichert, orgName: DEFAULT_SITE_CONFIG.orgName }) ??
+    DEFAULT_SITE_CONFIG;
+  return { ...geprueft, orgName };
+}
+
+async function gemeindeName(): Promise<string> {
   try {
     const info = await ctAnfrage<{ siteName?: unknown } | null>('/info');
     const name = typeof info?.siteName === 'string' ? info.siteName.trim() : '';
-    return { ...DEFAULT_SITE_CONFIG, orgName: name || DEFAULT_SITE_CONFIG.orgName };
+    return name || DEFAULT_SITE_CONFIG.orgName;
   } catch {
-    return DEFAULT_SITE_CONFIG;
+    return DEFAULT_SITE_CONFIG.orgName;
   }
 }
 

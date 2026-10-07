@@ -63,11 +63,12 @@ Lieds. In ChurchTools hängt an deiner Person unter **Anhänge** je bemalter Sei
 **Das brauchst du:** TF-EXT-01, mit einem Admin-Konto (dann sähe man am meisten).
 
 **Das muss passieren:** Kein Knopf führt ins Leere. Unter **Mehr** gibt es kein „Als App
-installieren", keinen Bereich „Offline", keine Verwaltung und kein „Abmelden" – dafür unten den Hinweis
-„Erweiterung für ChurchTools" mit **Mehr erfahren**. Bei **Lieder** gibt es keine Reiter
-„Häufigkeit/Zuletzt", kein „Neues Lied", keinen Stift und kein Plus am Lied, und ein langer
-Suchbegriff bietet keine Suche im Liedtext an. Bei den Terminen fehlt das Wolken-Symbol „Für offline
-speichern". (Ablauf bearbeiten und Tempo speichern gibt es seit 3b-1 – siehe TF-EXT-04.)
+installieren", keinen Bereich „Offline" und kein „Abmelden" – dafür unten den Hinweis „Erweiterung für
+ChurchTools" mit **Mehr erfahren**. In der **Verwaltung** fehlen „Organisation / Name", „Anmerkungen"
+und „Abwesenheiten: Termin-Arten" (der Rest: TF-EXT-06). Bei **Lieder** gibt es keine Reiter
+„Häufigkeit/Zuletzt", und ein langer Suchbegriff bietet keine Suche im Liedtext an. Bei den Terminen
+fehlt das Wolken-Symbol „Für offline speichern". (Ablauf und Tempo gibt es seit 3b-1 – TF-EXT-04; Lieder
+verwalten seit 3b-2 – TF-EXT-05.)
 
 1. Unten auf **Mehr**, ganz nach unten scrollen, auf **Mehr erfahren** tippen – es öffnet sich die
    Projektseite beim Abschnitt „Für andere Gemeinden".
@@ -80,7 +81,8 @@ speichern". (Ablauf bearbeiten und Tempo speichern gibt es seit 3b-1 – siehe T
 - **Betrifft:** `client/src/services/funktionen.ts`, `client/src/components/ServerVarianteHinweis.tsx`, `client/src/pages/Settings.tsx`, `client/src/services/ctLesen.ts`
 - **Automatisiert:** teilweise – `Settings.extension.test.tsx` (Mehr) und `ctLesen.test.ts`
   (Liedverwaltung aus); Lieder, Suche und Termine nur hier
-- **Historie:** #336; #335 (3b-1: Tempo-Menü und „Ablauf bearbeiten" nach TF-EXT-04 gewandert)
+- **Historie:** #336; #335 (3b-1: Tempo-Menü und „Ablauf bearbeiten" nach TF-EXT-04 gewandert; 3b-2:
+  Liedverwaltung nach TF-EXT-05; 3b-4a: Verwaltung nach TF-EXT-06)
 
 </details>
 
@@ -142,5 +144,34 @@ SongSelect ist nirgends zu sehen.
   `ctSchreiben.lieder.test.ts` für den Weg des Browsers (alte Schnittstelle, Upload, CSRF); ob
   ChurchTools Upload und alte Schnittstelle aus der Einbettung genauso annimmt, nur hier
 - **Historie:** #335 (3b-2)
+
+</details>
+
+### TF-EXT-06 · Gemeinde-Einstellungen in der Erweiterung
+
+**Das brauchst du:** TF-EXT-01 mit einem Admin-Konto, dazu ein zweites Konto **ohne** Admin-Rechte
+(ein Musiker) und ein Lied mit PDF und ChordPro in ChurchTools.
+
+**Das muss passieren:** Was der Admin unter **Mehr → Verwaltung** einstellt, steht danach in ChurchTools
+und gilt auf jedem Gerät – auch für den Musiker, sobald seine Gruppe die Kategorie sehen darf. Ohne
+dieses Recht bekommt der Musiker „Akkorde", aber keine Fehlermeldung.
+
+1. Als Admin unter **Mehr → Verwaltung → Liedblatt: Standard-Ansicht** auf **PDF zuerst** stellen →
+   **Speichern**. Unter **Links verwalten** einen Link anlegen → **Speichern**.
+2. Seite neu laden: Der Link steht unter **Weitere Angebote**, die Standard-Ansicht zeigt „PDF zuerst".
+3. Als Musiker die Erweiterung öffnen, das Lied öffnen → es zeigt die **Akkorde** (Recht fehlt noch).
+4. Unter **Berechtigungen** der Gruppe des Musikers für die Musik App „view custom category" und „view
+   custom data" für „Einstellungen der Musik App" geben. Als Musiker neu laden, ein anderes Lied mit PDF
+   öffnen → es zeigt das **PDF**.
+5. Den Link als Admin wieder löschen und die Standard-Ansicht zurückstellen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `client/src/services/ctEinstellungen.ts`, `client/src/services/ctLesen.ts`, `client/src/services/siteConfigApi.ts`, `client/src/components/VerwaltungZeilen.tsx`, `shared/ct/einstellungen.ts`
+- **Automatisiert:** teilweise – `ctEinstellungen.test.ts` (Anlegen, Ändern, Nachlesen, fremde Werte,
+  fehlendes Recht, vorübergehender Fehler, Prüfung beim Lesen), `Settings.extension.test.tsx` (welche
+  Zeilen); ob die Rechte in ChurchTools so greifen, nur hier
+- **Historie:** #335 (3b-4a)
 
 </details>

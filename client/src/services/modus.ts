@@ -21,3 +21,14 @@ export function ctBasis(): string {
   const url = window.settings?.base_url ?? window.location.origin;
   return url.replace(/\/+$/, '');
 }
+
+/**
+ * Das Kürzel der Erweiterung (`/ccm/<Kürzel>/`) – daran findet die App ihr Modul in ChurchTools
+ * (`GET /api/custommodules`, Feld `shorty`). Abgelesen an der Bau-Adresse (`vite.config.ts`, `base`),
+ * damit es nicht an zwei Stellen steht. `null` außerhalb der Erweiterung.
+ */
+export function erweiterungsKuerzel(): string | null {
+  if (!istExtension) return null;
+  const m = /^\/ccm\/([^/]+)\/$/.exec(import.meta.env.BASE_URL);
+  return m ? decodeURIComponent(m[1]) : null;
+}

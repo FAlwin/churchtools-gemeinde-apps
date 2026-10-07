@@ -14,10 +14,13 @@ vi.mock('../services/funktionen', async (original) => ({
     offline: false,
     installieren: false,
     abmelden: false,
-    verwaltung: false,
+    gemeindeName: false,
+    teamNotizen: false,
+    abwesenheiten: false,
     statistik: false,
     liedtextSuche: false,
     hinweisAufServerVariante: true,
+    einstellungenInChurchTools: true,
   },
 }));
 vi.mock('../hooks/useSiteConfig', () => ({
@@ -73,12 +76,27 @@ function zeige(): void {
 }
 
 describe('„Mehr" in der ChurchTools-Erweiterung', () => {
-  it('kein Abmelden, kein Offline, kein Installieren, keine Verwaltung – auch nicht für Admins', () => {
+  it('kein Abmelden, kein Offline, kein Installieren', () => {
     zeige();
     expect(screen.queryByText('Abmelden')).toBeNull();
     expect(screen.queryByText('Kommende Gottesdienste offline halten')).toBeNull();
     expect(screen.queryByText(/Als App installieren/)).toBeNull();
+  });
+
+  /**
+   * Seit 3b-4 gibt es die Verwaltung auch hier (Daten der Erweiterung) – aber nur, was wirkt: Der Name
+   * kommt aus ChurchTools, Team-Notizen und Abwesenheiten folgen erst (3b-4b, 3b-3).
+   */
+  it('Verwaltung für Admins: Links und Standard-Ansicht, ohne Name, Anmerkungen, Termin-Arten', () => {
+    zeige();
+    expect(screen.getByText('Verwaltung')).toBeTruthy();
+    expect(screen.getByText('Links verwalten')).toBeTruthy();
+    expect(screen.getByText('Liedblatt: Standard-Ansicht')).toBeTruthy();
     expect(screen.queryByText('Organisation / Name')).toBeNull();
+    expect(screen.queryByText('Anmerkungen')).toBeNull();
+    expect(screen.queryByText('Abwesenheiten: Termin-Arten')).toBeNull();
+    // Ohne Leserecht an der Kategorie bekommen Musiker die Einstellungen nicht – das steht dabei.
+    expect(screen.getByText(/view custom data/)).toBeTruthy();
   });
 
   it('der eine Hinweis mit „Mehr erfahren" zur Projektseite', () => {

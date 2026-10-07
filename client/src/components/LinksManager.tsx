@@ -24,6 +24,7 @@ import { Icon } from './icons';
 import { useUpdateSiteConfig } from '../hooks/useSiteConfig';
 import { neueId } from '../utils/ids';
 import styles from './LinksManager.module.scss';
+import { speicherFehler } from '../utils/speicherFehler';
 
 function newLink(): SiteLink {
   return { id: neueId('l'), label: '', url: '', showOnLogin: false };
@@ -125,7 +126,7 @@ export function LinksManager({ site, onClose }: { site: SiteConfig; onClose: () 
     }
     update.mutate(
       { ...site, links: cleaned },
-      { onSuccess: onClose, onError: () => setErr('Speichern fehlgeschlagen.') },
+      { onSuccess: onClose, onError: (e) => setErr(speicherFehler(e)) },
     );
   }
 

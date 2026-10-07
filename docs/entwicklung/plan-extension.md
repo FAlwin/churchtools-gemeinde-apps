@@ -92,6 +92,25 @@ zur leeren Liste gelten weiter für jeden Aufruf):
 | ⚠️ Einbettung                               | ChurchTools übernimmt **nur den Inhalt** der `index.html` in die eigene Seite und setzt `<base href="https://<instanz>/">`. Folgen: (1) **relative Pfade zeigen ins Leere** – alles absolut unter `/ccm/<Kürzel>/` (Vite `base`); (2) `<style>` im Kopf **fällt weg** – CSS als Datei einbinden und am Gerät prüfen |
 | CSP der Seite                               | `script-src 'self'` + Nonce – **kein Inline-Script**; Skripte als Datei. `connect-src *`, `img-src *`                                                                                                                                                                                                               |
 
+## 2c. Messung für 3b-4: Gemeinde-Einstellungen im Datenbereich der Erweiterung (07.10.2026)
+
+Test-Instanz, am Modul der Test-Erweiterung (`musik-app-test`, id 10), als Admin aus dem Browser:
+
+| Frage                         | Ergebnis                                                                                                                    |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Wie findet die App ihr Modul? | `GET /api/custommodules` → Eintrag mit `shorty` = Kürzel. `GET /api/custommodules/<kürzel>` → **400** (nur über die ID)     |
+| Kategorie anlegen             | `POST /api/custommodules/<id>/customdatacategories` verlangt `customModuleId`, `name`, `shorty` (≤ 50 Zeichen) → 201 mit ID |
+| Wert anlegen                  | `POST …/customdatacategories/<katId>/customdatavalues` `{dataCategoryId, value}` → **201** `{data: {id}}`                   |
+| Wert ändern                   | `PUT …/customdatavalues/<id>` `{id, dataCategoryId, value}` → **200**                                                       |
+| Lesen                         | `GET …/customdatavalues` → alle Werte der Kategorie (`id`, `dataCategoryId`, `value`)                                       |
+
+Angelegt und stehen gelassen: Kategorie „Einstellungen der Musik App" (`musikapp-einstellungen`, id 12) mit
+einem Wert (id 78). Die Rechte am Datenbereich gelten **je Kategorie** (aus `/api/permissions/global`
+abgelesen): `view custom category` und `view custom data` (Lesen), `create`/`edit`/`delete custom data`
+(Schreiben), dazu `create custom category`. Beim Durchklick von 3b-4a: Speichern ändert Wert 78 (`PUT`,
+kein zweiter Wert), der Text steht danach Zeichen für Zeichen so in ChurchTools. Die Lehren aus §2a gelten: ohne „Kategorien sehen" eine **leere** Liste (kein
+Fehler), fehlendes Recht = 401 „Session abgelaufen".
+
 ## 2b. Messung für #334: Wertgröße und Personen-Dateien (07.10.2026)
 
 Beim Zuschnitt von Phase 2 gemessen (Test-Instanz, danach abgeräumt). Anlass: Die Zeichnungen speichert
@@ -294,11 +313,19 @@ nutzbar – nach jeder kann man aufhören. Muster wie beim Lesen: Regeln nach `s
       jetzt umgekehrt; der Browser verwarf ein abgelehntes CSRF-Token nie (#298 fehlte dort); bei 429
       fiel der Server bei den Kategorien auf die Liederliste zurück (#300). SongSelect bleibt bis 3b-5
       maskiert (`canUseCcli`)
-- [ ] **3b-3 Abwesenheiten** (Gründe ebenfalls über `ctAjax`; Termin-Arten-Filter hängt an 3b-4)
-- [ ] **3b-4 Team-Notizen + Gemeinde-Einstellungen:** Wer zählt als Musiker? Die Server-Variante hat
-      dafür `site.json` – Vorschlag: die eigenen Daten des Moduls (Custom-Data, §2a). Danach „Notizen
-      von …" aus den Personen-Dateien der anderen. Dazu gehört auch `standardAnsicht` (Akkorde/PDF
-      zuerst, 07.10.2026) – in der Extension gilt bis dahin nur der automatische Teil
+- [ ] **3b-3 Abwesenheiten** (Gründe ebenfalls über `ctAjax`; die Termin-Arten speichert seit 3b-4a
+      `ctEinstellungen.ts`, die Zeile in der Verwaltung kommt mit 3b-3)
+- [x] **3b-4a Gemeinde-Einstellungen:** im Datenbereich des eigenen Moduls (Alwin: „In den Daten der
+      Erweiterung"), Kategorie `musikapp-einstellungen`, ein Wert mit JSON (§2c). Prüfen und
+      Zusammensetzen liegen jetzt in `shared/ct/einstellungen.ts` – der Server nutzt dieselbe Regel, sein
+      Controller zählt die Felder nicht mehr einzeln auf. Geprüft wird **auch beim Lesen** (den Wert kann
+      jeder mit Schreibrecht an der Kategorie an der App vorbei ändern). Nach dem Schreiben wird
+      nachgelesen. Der Name kommt weiter aus `/api/info` und wird nicht gespeichert. Die Verwaltung zeigt
+      in der Extension Links und Standard-Ansicht; Name, Anmerkungen und Termin-Arten bleiben über
+      `funktionen` aus, bis sie wirken. **Musiker brauchen** `view custom category` + `view custom data`
+      für die Kategorie – sonst leere Liste, es gilt „Akkorde" (Hinweis in der Verwaltung)
+- [ ] **3b-4b Team-Notizen:** Gruppen/Rollen in der Verwaltung (`/api/groups`, `/api/groups/{id}/roles`),
+      `canUseGlobalNotes` aus den Mitgliedschaften, „Notizen von …" aus den Personen-Dateien der anderen
 - [ ] **3b-5 SongSelect** (`ctAjax`, braucht `use ccli`)
 
 #### 3c – Massenläufe (entschieden: weglassen)
@@ -314,9 +341,10 @@ Alwin abgenommen, in der Test-Instanz durchgeklickt.
 
 - [x] **`client/src/services/funktionen.ts`** – was es in dieser Auslieferung gibt (Offline,
       Installieren, Abmelden, Verwaltung, Statistik, Liedtext-Suche, Hinweis). Komponenten fragen
-      **diese Flags**, nie den Modus
+      **diese Flags**, nie den Modus. Seit 3b-4a gibt es die Verwaltung auch in der Extension; statt
+      `verwaltung` schalten `gemeindeName`, `teamNotizen` und `abwesenheiten` einzelne Zeilen
 - [x] **Bearbeiten** über die Rechte: `ctLesen.meineRechte` meldet, was noch fehlt, als `false` –
-      die Knöpfe verschwinden von selbst (seit 3b-1 nur noch `canEditSongs`, `canUseCcli`)
+      die Knöpfe verschwinden von selbst (seit 3b-2 nur noch `canUseCcli`)
 - [x] **Der eine Hinweis** (`ServerVarianteHinweis`) unten in „Mehr"; „Mehr erfahren" springt in den
       README-Abschnitt „Für andere Gemeinden"
 - [x] Inline-Start-Skript der `index.html` im Extension-Paket entfernt (CSP blockiert es ohnehin)

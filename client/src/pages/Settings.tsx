@@ -83,9 +83,7 @@ export function Settings({
   return (
     <SeitenGeruest
       titel="Mehr"
-      ueberlagerung={
-        funktionen.verwaltung && <VerwaltungFenster site={site} isAdmin={isAdmin} v={verwaltung} />
-      }
+      ueberlagerung={<VerwaltungFenster site={site} isAdmin={isAdmin} v={verwaltung} />}
     >
       {/* Profil */}
       <div className={styles.profileCard}>
@@ -176,7 +174,7 @@ export function Settings({
         </div>
       )}
 
-      {isAdmin && funktionen.verwaltung && <VerwaltungZeilen site={site} v={verwaltung} />}
+      {isAdmin && <VerwaltungZeilen site={site} v={verwaltung} />}
 
       {/* Hilfe */}
       <div className={styles.group}>

@@ -5,7 +5,8 @@
  */
 import type { Request, Response } from 'express';
 import { HttpError } from '../middleware/errorHandler.js';
-import { getSiteConfig, saveSiteConfig, siteConfigSchema } from '../services/siteConfig.js';
+import { einstellungenPruefen } from '@shared/ct/einstellungen';
+import { getSiteConfig, saveSiteConfig } from '../services/siteConfig.js';
 import { getGroupRoles, getGroups } from '../services/ctCapabilities.js';
 import { readSession, isSessionExpired } from '../middleware/session.js';
 import { ctCookie } from '../utils/ctCookie.js';
@@ -38,21 +39,17 @@ export async function getSiteConfigCtrl(req: Request, res: Response): Promise<vo
   });
 }
 
+/**
+ * PUT /api/site-config (nur Admin). Prüfen und Zusammensetzen über `einstellungenPruefen` – dieselbe
+ * Regel wie in der Erweiterung. Bis 3b-4 zählte diese Stelle die Felder einzeln auf – jedes neue Feld
+ * musste hier eigens nachgetragen werden.
+ */
 export async function putSiteConfigCtrl(req: Request, res: Response): Promise<void> {
-  const parsed = siteConfigSchema.safeParse(req.body);
-  if (!parsed.success) {
-    throw new HttpError(400, parsed.error.issues[0]?.message ?? 'Ungültige Eingabe.');
-  }
-  res.json(
-    await saveSiteConfig({
-      orgName: parsed.data.orgName,
-      links: parsed.data.links,
-      musicianGroupIds: parsed.data.musicianGroupIds,
-      noteRoles: parsed.data.noteRoles,
-      terminArten: parsed.data.terminArten,
-      standardAnsicht: parsed.data.standardAnsicht,
-    }),
+  const geprueft = einstellungenPruefen(
+    req.body,
+    (status, meldung) => new HttpError(status, meldung),
   );
+  res.json(await saveSiteConfig(geprueft));
 }
 
 /** GET /api/groups (nur Admin) – ChurchTools-Gruppen für das Dropdown „Gruppen-Zuweisung". */

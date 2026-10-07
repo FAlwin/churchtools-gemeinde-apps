@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { SITE_CONFIG_GRENZEN } from '@shared/types/index';
+import { siteConfigSchema } from '@shared/ct/einstellungen';
 import { tempDatei } from '../testHilfen/tempAblage.js';
 
 /**
@@ -27,10 +28,8 @@ describe('siteConfigSchema – Grenzen kommen aus @shared/types', () => {
       orgName: 'ECG',
       terminArten: [{ id: 'x', name: 'n'.repeat(laenge), suchwort: 'gd' }],
     });
-    expect(mod.siteConfigSchema.safeParse(art(SITE_CONFIG_GRENZEN.terminArtName)).success).toBe(
-      true,
-    );
-    expect(mod.siteConfigSchema.safeParse(art(SITE_CONFIG_GRENZEN.terminArtName + 1)).success).toBe(
+    expect(siteConfigSchema.safeParse(art(SITE_CONFIG_GRENZEN.terminArtName)).success).toBe(true);
+    expect(siteConfigSchema.safeParse(art(SITE_CONFIG_GRENZEN.terminArtName + 1)).success).toBe(
       false,
     );
   });
@@ -40,18 +39,18 @@ describe('siteConfigSchema – Grenzen kommen aus @shared/types', () => {
       orgName: 'ECG',
       terminArten: [{ id: 'x', name: 'Gottesdienst', suchwort: 'w'.repeat(laenge) }],
     });
+    expect(siteConfigSchema.safeParse(mitWort(SITE_CONFIG_GRENZEN.terminArtSuchwort)).success).toBe(
+      true,
+    );
     expect(
-      mod.siteConfigSchema.safeParse(mitWort(SITE_CONFIG_GRENZEN.terminArtSuchwort)).success,
-    ).toBe(true);
-    expect(
-      mod.siteConfigSchema.safeParse(mitWort(SITE_CONFIG_GRENZEN.terminArtSuchwort + 1)).success,
+      siteConfigSchema.safeParse(mitWort(SITE_CONFIG_GRENZEN.terminArtSuchwort + 1)).success,
     ).toBe(false);
   });
 });
 
 describe('siteConfigSchema – Termin-Arten', () => {
   it('nimmt Arten an und trimmt', () => {
-    const r = mod.siteConfigSchema.safeParse({
+    const r = siteConfigSchema.safeParse({
       orgName: 'ECG',
       terminArten: [{ id: 'gd', name: ' Gottesdienst ', suchwort: ' Gottes ' }],
     });
@@ -61,19 +60,19 @@ describe('siteConfigSchema – Termin-Arten', () => {
   });
 
   it('ohne Angabe ist die Liste leer – kein Filter', () => {
-    const r = mod.siteConfigSchema.safeParse({ orgName: 'ECG' });
+    const r = siteConfigSchema.safeParse({ orgName: 'ECG' });
     expect(r.success && r.data.terminArten).toEqual([]);
   });
 
   it('lehnt eine Art ohne Namen oder ohne Suchwort ab', () => {
     expect(
-      mod.siteConfigSchema.safeParse({
+      siteConfigSchema.safeParse({
         orgName: 'ECG',
         terminArten: [{ id: 'x', name: '', suchwort: 'a' }],
       }).success,
     ).toBe(false);
     expect(
-      mod.siteConfigSchema.safeParse({
+      siteConfigSchema.safeParse({
         orgName: 'ECG',
         terminArten: [{ id: 'x', name: 'A', suchwort: ' ' }],
       }).success,
@@ -105,12 +104,12 @@ describe('saveSiteConfig – Termin-Arten', () => {
 
 describe('Liedblatt: Standard-Ansicht (07.10.2026)', () => {
   it('ohne Angabe gilt „Akkorde" – auch für Bestandsdateien', () => {
-    const r = mod.siteConfigSchema.safeParse({ orgName: 'ECG' });
+    const r = siteConfigSchema.safeParse({ orgName: 'ECG' });
     expect(r.success && r.data.standardAnsicht).toBe('akkorde');
   });
 
   it('nimmt nur die zwei Werte an', () => {
-    expect(mod.siteConfigSchema.safeParse({ orgName: 'ECG', standardAnsicht: 'pdf' }).success).toBe(
+    expect(siteConfigSchema.safeParse({ orgName: 'ECG', standardAnsicht: 'pdf' }).success).toBe(
       false,
     );
   });

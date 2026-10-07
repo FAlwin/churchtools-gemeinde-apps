@@ -29,8 +29,17 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   ChordPro von selbst sein PDF (sonst ein Bild). Dazu unter **Mehr → Verwaltung → „Liedblatt:
   Standard-Ansicht"** die Wahl **Akkorde** (Standard) oder **PDF zuerst**. Wer an einem Lied selbst
   umstellt, behält seine Wahl. Das Gerät merkt sich die Einstellung – sie gilt auch offline und nach
-  dem Abmelden. In der ChurchTools-Erweiterung gilt vorerst nur der automatische Teil (Einstellungen
-  kommen dort mit 3b-4).
+  dem Abmelden. Auch in der ChurchTools-Erweiterung (siehe „Gemeinde-Einstellungen").
+
+- **Erweiterung: Gemeinde-Einstellungen (#335, 3b-4a):** Admins finden in der ChurchTools-Erweiterung
+  jetzt unter **Mehr → Verwaltung** die Links und die Standard-Ansicht. Gespeichert wird in ChurchTools,
+  in den Daten der Erweiterung (Kategorie „Einstellungen der Musik App"). Damit Musiker die Einstellungen
+  bekommen, braucht ihre Gruppe dort die Rechte „view custom category" und „view custom data" – das
+  steht in der Verwaltung dabei und in `docs/betrieb/ERWEITERUNG.md`. Prüfen und Zusammensetzen der
+  Einstellungen liegen jetzt in `shared/ct/einstellungen.ts` und gelten für beide Auslieferungen; die
+  Erweiterung prüft auch beim Lesen und liest nach dem Speichern nach. Scheitert das Speichern, nennen
+  die Fenster der Verwaltung jetzt den Grund (etwa das fehlende Recht) statt nur „Speichern
+  fehlgeschlagen.".
 
 - **Teilen als PDF: mit oder ohne Anmerkungen, und auch mit den PDFs aus ChurchTools:** Teilen öffnet
   jetzt ein kleines Fenster mit dem Schalter **Meine Anmerkungen** (Striche und Texte so, wie sie auf

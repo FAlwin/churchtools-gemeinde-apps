@@ -1,7 +1,7 @@
 # Umsetzungsplan – ChurchTools-Extension (zweite Auslieferung derselben Codebasis)
 
-> Status: **Entwurf, 10.08.2026. Spike #333 am 07.10.2026 abgeschlossen (§2a); Ablage für Phase 2 am
-> selben Tag neu entschieden – Personen-Dateien statt Custom-Module-Daten (§2b).**
+> Status: **Phase 1 (#333), 2 (#334) und 3a (#335, Lesen) erledigt, 07.10.2026.** Ablage = Personen-Dateien
+> (§2b). Offen: 3b Schreiben, Phase 4 Anteasern, Phase 5 Paket.
 > Ziel: dieselbe App zusätzlich als **ChurchTools-Extension** unter `/ccm/<key>/` ausliefern –
 > ohne eigenen Server, ohne zweite Anmeldung, installierbar von jeder Gemeinde.
 > Die bestehende Server-/PWA-Variante (NAS, `musik.ecg-donrath.de`) **bleibt** und ist der Weg für
@@ -226,14 +226,53 @@ Zugeschnitten nach der Messung in §2b.
 
 ### Phase 3 – Die ChurchTools-Aufrufe im Browser (#335)
 
-- [ ] `server/src/services/setlistBuilder.ts` (613 Zeilen) als **reine Funktionen** in den Client;
-      die vorhandenen Tests wandern mit
-- [ ] Die **429-Notbremse aus #300** mit übernehmen: erster 429/Timeout stoppt den Lauf, Sperrfrist,
-      Single-Flight. Ohne Server-Bündelung feuert jedes Gerät einzeln
-- [ ] Dateien über die `fileUrl` des Arrangements statt über den Datei-Proxy
-- [ ] `markSetlistSeen` in der Extension → `personenAblage.merkeGesehen` (der Fingerabdruck entsteht
-      dann im Browser); die „geändert"-Punkte der Terminliste aus `holeGesehen`
-- [ ] Die Weiche in den sieben Service-Dateien aus §4 – und **nirgends sonst**
+**Neu zugeschnitten am 07.10.2026** (Alwin): Die Bestandsaufnahme fand rund **45** Aufrufe an den
+eigenen Server, davon etwa 20 schreibende – deutlich mehr als gedacht. Deshalb drei Teile.
+
+**Bauregel:** Die Logik des Servers wird nach `shared/ct/` **verschoben**, nicht kopiert. Server und
+Extension nutzen dieselben Funktionen; unterschiedlich ist nur der `CtLeser` (Server: Cookie,
+Zwischenspeicher, `HttpError`; Browser: Sitzung der Seite, Bremse, `ApiError`).
+
+#### 3a – Lesen (erledigt 07.10.2026, in der Test-Instanz durchgeklickt)
+
+- [x] Ablauf-Aufbau, Fingerabdruck-Text, Diff, Rechte, Retry-After, Zeitfenster, Zwischenspeicher,
+      Datei-Adresse und Content-Type-Härtung (#138) in `shared/ct/` bzw. `shared/dateien` – die alten
+      Server-Pfade leiten weiter, die Server-Tests laufen unverändert (Gegenprobe: Regel im Kern
+      verändert → Server-Tests rot)
+- [x] Fingerabdruck: Server `node:crypto`, Browser `crypto.subtle` – dasselbe sha256 (Test vergleicht)
+- [x] **Bremse gerätweit** (`ctRuntime`): nach einem 429 keine Anfrage mehr bis `Retry-After` bzw.
+      120 s; Zeitgrenzen 15 s/60 s. Die Terminliste **wirft** bei Drosselung als Ganzes statt lückenhaft
+      zurückzukommen – gilt seitdem auch für die Server-Variante
+- [x] Lesen in `client/src/services/ctLesen.ts`; Weiche in `churchtoolsApi`, `fileDownload`,
+      `siteConfigApi`, `updateApi`, `availability`, `teamNotes`, `offline`, `reachability`. Was es noch
+      nicht gibt, meldet `ohneServer` (501) ehrlich
+- [x] „Gesehen" verdrahtet: `markSetlistSeen` → `merkeGesehen`, „geändert"-Punkte aus `holeGesehen`
+- [x] Dokumente über `ladeDokument()` in beiden Auslieferungen (Bilder aus Bytes statt über eine Adresse)
+- [x] `npm run build:extension -w client`: `base: /ccm/<VITE_KEY>/`, kein Service Worker,
+      Skripte/Styles aus dem Kopf in den Inhalt, ZIP mit `dist/` nach `client/releases/`
+
+**Befunde beim Durchklick** (Test-Instanz, 07.10.2026):
+
+| Befund                                                                                      | Lösung                                                                             |
+| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| ChurchTools verbietet Worker aus `blob:` (CSP `child-src * data`) – das Liedblatt hing      | Extension-Build tauscht `./pdfWorker` gegen `pdfWorkerDatei.ts` (Worker als Datei) |
+| Die App liegt **unter** der ChurchTools-Leiste (56 px); `position: fixed` rutschte darunter | `.ct-extension #root { transform }` – der App-Bereich ist Bezugsrahmen             |
+| Logos mit Wurzel-Pfad (`/logo…`) zeigten ins Leere                                          | `import.meta.env.BASE_URL`                                                         |
+| Inline-Skripte der `index.html` blockiert (CSP)                                             | Nur der Boot-Hinweis; die App selbst braucht keine                                 |
+| Die Erweiterung erscheint **nicht** in der ChurchTools-App (iPhone, Alwin)                  | offen – siehe §7                                                                   |
+
+#### 3b – Schreiben (offen)
+
+- [ ] Ablauf bearbeiten, Lieder/Arrangements/Versionen, SongSelect, Abwesenheiten – nach demselben
+      Muster: Logik nach `shared/`, Browser-Schreiber mit derselben Bremse
+- [ ] „Notizen von …" (fremde Anmerkungen) aus den Personen-Dateien der anderen
+- [ ] Wer zählt als Musiker (Team-Notizen, Abwesenheiten)? Die Server-Variante hat dafür `site.json`
+
+#### 3c – Massenläufe (entschieden: weglassen)
+
+Lied-Statistik (~250 Anfragen) und Liedtext-Suche (jede Lieddatei) bündelt der Server **einmal für
+alle**. Im Browser liefe das **auf jedem Gerät einzeln** – fünf iPads wären fünfmal 250 Anfragen, genau
+der Auslöser von #300. **In der Extension weglassen und auf die Server-Variante verweisen** (Phase 4).
 
 ### Phase 4 – Was wegfällt, sauber angeteasert (#336)
 
@@ -249,14 +288,15 @@ Siehe §6. Kein toter Knopf, keine Fehlermeldung – ein Satz, der sagt, warum u
 
 ## 6. Was in der Extension wegfällt
 
-| Funktion                         | Warum                                                                                                                                                     | Umgang                                                     |
-| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| **Für offline speichern** (#32)  | Füllt den **Service-Worker-Cache** mit den PDFs/Bildern. Unter `/ccm/…` liefert CT die Seite aus – ein eigener Service Worker ist dort bestenfalls fragil | Knopf entfällt, Hinweis auf Server-Variante                |
-| **Team-Anmerkungen teilen**      | Personen-Dateien sind für Mitglieder **immer** lesbar (§2b) – ein Schalter „teilen" könnte nichts verbergen                                               | Schalter entfällt; Hinweis, dass Zeichnungen sichtbar sind |
-| **Fremde Anmerkungen ansehen**   | Die Dateien der anderen sind lesbar (§2b)                                                                                                                 | **Bleibt** – aus den Personen-Dateien                      |
-| **Update-Hinweis**               | Ohne Service Worker gibt es keinen Update-Balken; die Version liefert ChurchTools                                                                         | Entfällt ganz                                              |
-| **Branding** (Gemeindename/Logo) | Kein `site.json` ohne Server                                                                                                                              | Name aus `GET /api/info`; Logo nicht in der API (§2a)      |
-| **Login-Bildschirm, Rate-Limit** | Die Anmeldung macht ChurchTools                                                                                                                           | Entfällt – ein Gewinn                                      |
+| Funktion                           | Warum                                                                                                                                                     | Umgang                                                     |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| **Für offline speichern** (#32)    | Füllt den **Service-Worker-Cache** mit den PDFs/Bildern. Unter `/ccm/…` liefert CT die Seite aus – ein eigener Service Worker ist dort bestenfalls fragil | Knopf entfällt, Hinweis auf Server-Variante                |
+| **Team-Anmerkungen teilen**        | Personen-Dateien sind für Mitglieder **immer** lesbar (§2b) – ein Schalter „teilen" könnte nichts verbergen                                               | Schalter entfällt; Hinweis, dass Zeichnungen sichtbar sind |
+| **Fremde Anmerkungen ansehen**     | Die Dateien der anderen sind lesbar (§2b)                                                                                                                 | **Bleibt** – aus den Personen-Dateien                      |
+| **Update-Hinweis**                 | Ohne Service Worker gibt es keinen Update-Balken; die Version liefert ChurchTools                                                                         | Entfällt ganz                                              |
+| **Branding** (Gemeindename/Logo)   | Kein `site.json` ohne Server                                                                                                                              | Name aus `GET /api/info`; Logo nicht in der API (§2a)      |
+| **Login-Bildschirm, Rate-Limit**   | Die Anmeldung macht ChurchTools                                                                                                                           | Entfällt – ein Gewinn                                      |
+| **Lied-Statistik, Liedtext-Suche** | Massenläufe – im Browser je Gerät statt einmal für alle (#300)                                                                                            | Weglassen, Hinweis auf Server-Variante (3c)                |
 
 **Der Teaser** (eine Formulierung, an einer Stelle, nicht sechs verschiedene): kurz, ohne
 Werbeton, mit Verweis darauf, dass es die App auch mit eigenem Server gibt und wo man fragen kann.

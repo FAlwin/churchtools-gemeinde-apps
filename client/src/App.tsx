@@ -44,6 +44,7 @@ import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { ApiError } from './services/api';
 import { withChunkReload } from './utils/chunkReload';
 import { funktionen } from './services/funktionen';
+import { KeineLiedRechte } from './services/churchtoolsApi';
 
 /**
  * Lade-Anzeige, während ein per Code-Splitting nachgeladener Seiten-Chunk eintrifft (#142).
@@ -362,11 +363,16 @@ export default function App() {
             onAction={funktionen.abmelden ? () => auth.logout() : undefined}
           />
         ) : capsQuery.isError ? (
-          // Echter ChurchTools-Aussetzer (leere Rechte-Zuordnungen, 502): getCapabilities wirft,
-          // nach den automatischen Neuversuchen landet man hier mit „Erneut versuchen".
+          // Nach den automatischen Neuversuchen: Entweder fehlen der Person in ChurchTools die Rechte
+          // für Lieder und Abläufe (echte Antwort, #444) – oder ChurchTools hatte einen Aussetzer
+          // (leere Rechte-Antwort, 502, #99). „Erneut versuchen" gibt es in beiden Fällen.
           <CenterMessage
-            icon="⚠️"
-            text="Berechtigungen konnten nicht geladen werden. Bitte erneut versuchen."
+            icon={capsQuery.error instanceof KeineLiedRechte ? '🔒' : '⚠️'}
+            text={
+              capsQuery.error instanceof KeineLiedRechte
+                ? 'Dir fehlen in ChurchTools die Rechte für Lieder und Abläufe. Bitte frag die Verantwortlichen deiner Gemeinde.'
+                : 'Berechtigungen konnten nicht geladen werden. Bitte erneut versuchen.'
+            }
             onRetry={() => capsQuery.refetch()}
             actionLabel={funktionen.abmelden ? 'Abmelden' : undefined}
             onAction={funktionen.abmelden ? () => auth.logout() : undefined}

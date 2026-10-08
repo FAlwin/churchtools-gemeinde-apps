@@ -79,9 +79,11 @@ export function rechteAus(
   // Nicht `has(cs['edit songcategory'])`, sondern über `parseSongEditRight` – sonst wäre dies eine
   // ZWEITE Stelle, die dasselbe Recht auswertet, und die beiden könnten auseinanderlaufen (#322).
   const canEditSongs = isAdmin || parseSongEditRight(data).erlaubt;
+  const canViewSongs = isAdmin || has(cs['view songcategory']);
+  const canViewAgendas = isAdmin || has(cs['view agenda']);
   return {
-    canViewSongs: isAdmin || has(cs['view songcategory']),
-    canViewAgendas: isAdmin || has(cs['view agenda']),
+    canViewSongs,
+    canViewAgendas,
     canEditAgendas: isAdmin || has(cs['edit agenda']),
     canEditSongs,
     // Dasselbe Recht, eigens benannt (siehe `UserCapabilities.canEditTempo`) – NICHT neu ausgewertet.
@@ -93,5 +95,21 @@ export function rechteAus(
     // Default; die tatsächliche Gruppen-/Rollen-Prüfung ergänzt getCapabilities (braucht Cookie + Config).
     canUseGlobalNotes: false,
     canUseAvailability: false,
+    keineLiedRechte: !canViewSongs && !canViewAgendas && irgendeinRecht(data),
   };
+}
+
+/**
+ * Ist in der Rechte-Antwort **irgendein** Recht gesetzt (`true` oder eine nicht leere Liste)? Dann ist
+ * sie echt – auch wenn Lieder und Abläufe fehlen (#444). ChurchTools liefert für jeden Nutzer alle
+ * Module mit allen Schlüsseln, leer als `false`/`[]` (gemessen 08.10.2026 an einer Testperson); eine
+ * Antwort, in der gar nichts gesetzt ist, ist der Aussetzer aus #99.
+ */
+export function irgendeinRecht(data: Record<string, Record<string, unknown>>): boolean {
+  return Object.values(data).some(
+    (modul) =>
+      !!modul &&
+      typeof modul === 'object' &&
+      Object.values(modul).some((v) => (Array.isArray(v) ? v.length > 0 : v === true)),
+  );
 }

@@ -7,6 +7,15 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Behoben
+
+- **Ohne Rechte für Lieder und Abläufe stand „Berechtigungen konnten nicht geladen werden"** (#444) –
+  „Erneut versuchen" half nie, weil ein Recht fehlte, kein Netz. Jetzt sagt die App „Dir fehlen in
+  ChurchTools die Rechte für Lieder und Abläufe". Unterschieden wird an der Antwort: ChurchTools schickt
+  immer alle Module, auch leer (gemessen); ist irgendwo ein anderes Recht gesetzt, ist sie echt. Beim
+  Aussetzer aus #99 war nichts gesetzt – dann bleibt es beim alten Text, und die automatischen Versuche
+  bleiben in beiden Fällen.
+
 ## [2.30.0] – 2026-10-08
 
 **Beim Update ist nichts zu tun.** ChurchTools-Erweiterung: neue ZIP einspielen.

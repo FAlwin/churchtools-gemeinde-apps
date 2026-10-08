@@ -55,6 +55,17 @@ export function getMe(): Promise<AuthStatus> {
   return apiFetch<AuthStatus>('/api/auth/me');
 }
 
+/**
+ * ChurchTools hat geantwortet, aber die Person darf weder Lieder noch Abläufe sehen (#444) – ein
+ * fehlendes Recht in ChurchTools, kein Aussetzer.
+ */
+export class KeineLiedRechte extends Error {
+  constructor() {
+    super('Dir fehlen in ChurchTools die Rechte für Lieder und Abläufe.');
+    this.name = 'KeineLiedRechte';
+  }
+}
+
 /** Rechte des angemeldeten Nutzers (steuert die sichtbare UI). */
 export async function getCapabilities(): Promise<UserCapabilities> {
   const caps = istExtension
@@ -64,6 +75,10 @@ export async function getCapabilities(): Promise<UserCapabilities> {
   // der Nutzer Zugriff hat. Das als transienten Fehler werfen → useCapabilities versucht
   // automatisch neu; hält es an, zeigt App.tsx den Fehlerschirm mit „Erneut versuchen".
   if (!caps.canViewSongs && !caps.canViewAgendas) {
+    // Auch bei einer echten Antwort ohne Lied-Rechte wird geworfen – die automatischen Versuche
+    // bleiben (ein Aussetzer löst sich so von selbst, #99). Erst danach entscheidet App.tsx am Typ,
+    // welcher Text erscheint (#444).
+    if (caps.keineLiedRechte) throw new KeineLiedRechte();
     throw new Error('Berechtigungen wurden unvollständig geladen – bitte erneut versuchen.');
   }
   return caps;

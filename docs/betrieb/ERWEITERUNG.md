@@ -57,8 +57,8 @@ Die Kategorien nicht löschen; sie gehören der App. SongSelect gibt es in der E
 
 **Was passiert, wenn ein Recht fehlt:**
 
-- **Lieder und Abläufe:** Ohne beide meldet die App derzeit „Berechtigungen konnten nicht geladen
-  werden" statt eines klaren Hinweises (#444).
+- **Lieder und Abläufe:** Ohne beide sagt die App nach ein paar Sekunden „Dir fehlen in ChurchTools die
+  Rechte für Lieder und Abläufe" (#444).
 - **Gemeinde-Einstellungen:** keine Fehlermeldung – es gilt einfach die Vorgabe („Akkorde", keine Links).
 - **Team-Notizen:** Ohne Mitgliedschaft in einer gewählten Gruppe (mit freigegebener Rolle) erscheinen
   sie gar nicht. Fehlen nur die Rechte an „Team-Notizen der Musik App", lässt sich „Meine Anmerkungen

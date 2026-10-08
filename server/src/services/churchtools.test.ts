@@ -57,6 +57,52 @@ describe('parseCapabilities', () => {
     expect(caps.canViewAgendas).toBe(false);
   });
 
+  /**
+   * #444: ChurchTools schickt IMMER alle Module, auch leer (gemessen 08.10.2026, Testperson „Spike",
+   * hier gekürzt und mit geleerten Event-Rechten). Ob die Antwort echt ist, zeigt ein anderes gesetztes
+   * Recht – beim Aussetzer aus #99 war nichts gesetzt.
+   */
+  const ECHT_OHNE_EVENTS = {
+    churchcore: { 'administer settings': false, 'view links': [] },
+    churchdb: { view: false, 'security level person': [1], 'security level view own data': [2] },
+    churchcal: { view: false, 'view category': [1, 2, 3] },
+    churchservice: {
+      view: false,
+      'view agenda': [],
+      'view songcategory': [],
+      'edit songcategory': [],
+      'use ccli': false,
+    },
+    'musik-app-test': { view: true, 'view custom data': [12, 15] },
+  };
+
+  it('#444: echte Antwort ohne Lieder und Abläufe → keineLiedRechte', () => {
+    const caps = parseCapabilities(ECHT_OHNE_EVENTS);
+    expect(caps.canViewSongs).toBe(false);
+    expect(caps.canViewAgendas).toBe(false);
+    expect(caps.keineLiedRechte).toBe(true);
+  });
+
+  it('#444: alle Module da, aber nichts gesetzt (Aussetzer) → NICHT keineLiedRechte', () => {
+    const leer = Object.fromEntries(
+      Object.entries(ECHT_OHNE_EVENTS).map(([modul, rechte]) => [
+        modul,
+        Object.fromEntries(
+          Object.entries(rechte).map(([k, v]) => [k, Array.isArray(v) ? [] : false]),
+        ),
+      ]),
+    );
+    expect(parseCapabilities(leer).keineLiedRechte).toBe(false);
+  });
+
+  it('#444: mit Lied-Rechten ist keineLiedRechte nie gesetzt', () => {
+    const mit = {
+      ...ECHT_OHNE_EVENTS,
+      churchservice: { ...ECHT_OHNE_EVENTS.churchservice, 'view songcategory': [0] },
+    };
+    expect(parseCapabilities(mit).keineLiedRechte).toBe(false);
+  });
+
   it('erkennt vorhandene Lieder-/Ablauf-Rechte (Arrays mit IDs)', () => {
     const caps = parseCapabilities({
       churchservice: { 'view songcategory': [1, 2], 'view agenda': [5] },

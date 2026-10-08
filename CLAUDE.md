@@ -119,7 +119,7 @@
     das (gemessen, `probe-songsuche.ts`), also durchsucht unser Server die ChordPro-Dateien selbst –
     mit Index, eine Stunde gecacht, gebündelt und gedrosselt (`songTextIndex.ts`). **Neue geteilte
     Bausteine dabei:** `gebuendelterLauf.ts` (Bündelung + Sperrfrist, jetzt auch von der Song-Statistik
-    genutzt) und `mapLimit.ts` (war privat in `setlistBuilder`).
+    genutzt – seit 08.10.2026 nur noch für den einen `getSongStatistic`-Abruf) und `mapLimit.ts` (war privat in `setlistBuilder`).
 
     ⚠️ **Dabei ein Fund über #322 hinaus – und er saß an DREI Stellen:** Die Regel „429 ist eine
     Drosselung, kein Serverfehler" (#300) galt nur in `ctGet`. `fileDownloadError` machte aus jedem
@@ -470,7 +470,7 @@ client`, Kürzel `VITE_KEY`) baut die App als ChurchTools-Erweiterung unter `/cc
   `scripts/paket-extension.mjs` bricht ab, wenn im gebauten CSS noch eine globale Regel steht. Was an
   `body` hängt (Coachmarks), braucht `data-musikapp`. Nur EIN `css`-Schlüssel in `vite.config.ts`.
 - Was es in der Extension noch nicht gibt, meldet `ohneServer` (501) – und die Oberfläche zeigt es gar
-  nicht erst: **Komponenten fragen `services/funktionen.ts`** (Offline, Abmelden, Statistik …), Bearbeiten
+  nicht erst: **Komponenten fragen `services/funktionen.ts`** (Offline, Abmelden, Liedtext-Suche …), Bearbeiten
   hängt an den Rechten (`ctLesen.meineRechte` meldet, was noch fehlt, als `false` – seit 3b-2 nur
   noch SongSelect, `canUseCcli`). Lieder/Notenblätter: Regeln in `shared/ct/liedVerwaltung.ts`,
   `notenblaetter.ts`, `stammdaten.ts`, `altSchnittstelle.ts`; Server-Anschluss `ctVerwalter.ts`. Ein Hinweis in „Mehr"
@@ -657,6 +657,14 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 ```
 
 ## Stand & nächster Schritt
+
+- **Unreleased (08.10.2026) = Lied-Statistik aus ChurchTools** (Zweig `feat/liedstatistik-ct`): Der
+  eigene Lauf über alle Abläufe (~250 Anfragen, Wurzel von #300) ist weg; Server und Erweiterung holen
+  `getSongStatistic` (alte Schnittstelle, EIN Aufruf) über `shared/ct/liedStatistik.ts`. Live gegen
+  den alten Server verglichen: 62/64 gleich, die zwei Abweichungen am 28.06.2026 (zwei Gottesdienste an
+  einem Tag). Keine Vier-Jahres-Grenze mehr, Cache 10 min. Braucht das Recht `view song statistics` je
+  Person – Alwin gibt es allen Mitgliedern, die Lieder sehen. Damit gibt es „Häufigkeit/Zuletzt" auch in
+  der Erweiterung; weggelassen bleibt nur die Suche im Liedtext.
 
 - **v2.31.0 (08.10.2026) = SongSelect in der Erweiterung (3b-5) + #444** (PRs #448, #449): Regeln in
   `shared/ct/songselect.ts`; innerer CCLI-Status wird geprüft; „keine Rechte für Lieder und Abläufe"

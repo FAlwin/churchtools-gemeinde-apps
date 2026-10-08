@@ -20,7 +20,12 @@
  *
  * Vollständig gemessen und begründet in `docs/entwicklung/churchtools-songselect.md`.
  */
-import { ajaxMeldungen, ajaxNutzlast, type AjaxMeldungen } from '@shared/ct/altSchnittstelle';
+import {
+  ajaxMeldungen,
+  ajaxNutzlast,
+  type AjaxMeldungen,
+  type AltPort,
+} from '@shared/ct/altSchnittstelle';
 import { HttpError } from '../middleware/errorHandler.js';
 import { csrfWriteDenied, getCsrfToken } from './ctCsrf.js';
 import {
@@ -80,4 +85,15 @@ export async function ctAjax(
   // Die Antwort auswerten steht seit #335 (3b-2) in `@shared/ct/altSchnittstelle` – der Browser der
   // Extension liest dieselbe Schnittstelle.
   return ajaxNutzlast(await res.text(), m, (status, meldung) => new HttpError(status, meldung));
+}
+
+/**
+ * Der Anschluss an die alte Schnittstelle für die Regeln in `@shared/ct` (SongSelect, Lied-Statistik):
+ * `ctAjax` mit dem Cookie des Nutzers und die Fehlerklasse des Servers.
+ */
+export function altPortFuer(cookie: string): AltPort {
+  return {
+    anfrage: (func, felder, meldungen) => ctAjax(cookie, func, felder, meldungen),
+    fehler: (status, meldung) => new HttpError(status, meldung),
+  };
 }

@@ -62,10 +62,10 @@ Der Browser speichert das Anmelde-Cookie nicht. Das passiert vor allem, wenn die
 ChurchTools begrenzt, wie viele Anfragen es in kurzer Zeit annimmt. Die App zeigt diese Meldung, statt
 einen Fehler vorzutäuschen – **es ist kein Defekt**: Nach ein bis zwei Minuten geht es weiter.
 
-Auslöser sind die Vorgänge, die viele Daten auf einmal holen: die Lied-Statistik (Häufigkeit / zuletzt
-gespielt) und der erste Aufbau der **Suche im Liedtext**. Beide laufen höchstens **einmal** gleichzeitig,
-auch wenn mehrere Geräte sie gleichzeitig auslösen, und legen nach einer Drosselung selbst eine Pause
-ein. Wer die Meldung häufiger sieht, sollte prüfen, ob mehrere Instanzen der App auf dieselbe
+Auslöser ist vor allem der erste Aufbau der **Suche im Liedtext**, der viele Daten auf einmal holt.
+Er läuft höchstens **einmal** gleichzeitig, auch wenn mehrere Geräte ihn auslösen, und legt nach einer
+Drosselung selbst eine Pause ein. (Die Lied-Statistik war bis v2.31 der größte Auslöser; seit v2.32 holt
+sie ChurchTools' eigene Statistik mit einem einzigen Aufruf.) Wer die Meldung häufiger sieht, sollte prüfen, ob mehrere Instanzen der App auf dieselbe
 ChurchTools-Instanz zugreifen – dann baut jede ihre eigenen Zwischenspeicher.
 
 ### Die Suche im Liedtext dauert beim ersten Mal

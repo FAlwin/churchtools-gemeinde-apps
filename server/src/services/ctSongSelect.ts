@@ -18,14 +18,12 @@
  * Suche und Abfrage ändern nichts und dürfen beliebig wiederholt werden; `fetchChordProText` holt nur
  * Text und legt selbst keine Datei an.
  */
-import { HttpError } from '../middleware/errorHandler.js';
-import { ctAjax } from './ctAjax.js';
+import { altPortFuer } from './ctAjax.js';
 import {
   songSelectChordPro,
   songSelectLied,
   songSelectLiedtext,
   songSelectSuchen,
-  type SongSelectPort,
 } from '@shared/ct/songselect';
 import type {
   SongSelectLiedtext,
@@ -33,29 +31,21 @@ import type {
   SongSelectSuchergebnis,
 } from '@shared/types/index';
 
-/**
- * Seit Phase 3b-5 (#335) stehen Aufrufe, Auswertung und Meldungen in `@shared/ct/songselect` – die
- * Erweiterung spricht SongSelect mit denselben Regeln aus dem Browser an. Hier bleibt nur der Anschluss:
- * die alte Schnittstelle mit dem Cookie des Nutzers (`ctAjax`) und die Fehlerklasse des Servers.
- */
-export function songSelectFuer(cookie: string): SongSelectPort {
-  return {
-    anfrage: (func, felder, meldungen) => ctAjax(cookie, func, felder, meldungen),
-    fehler: (status, meldung) => new HttpError(status, meldung),
-  };
-}
+// Seit Phase 3b-5 (#335) stehen Aufrufe, Auswertung und Meldungen in `@shared/ct/songselect` – die
+// Erweiterung spricht SongSelect mit denselben Regeln aus dem Browser an. Hier bleibt nur der Anschluss
+// (`altPortFuer`: alte Schnittstelle mit dem Cookie des Nutzers, Fehlerklasse des Servers).
 
 /** Nach Titel suchen (#322) – siehe `songSelectSuchen`. */
 export function searchSongSelect(
   cookie: string,
   songTitle: string,
 ): Promise<SongSelectSuchergebnis> {
-  return songSelectSuchen(songSelectFuer(cookie), songTitle);
+  return songSelectSuchen(altPortFuer(cookie), songTitle);
 }
 
 /** Ein Lied per CCLI-Nummer (#322) – siehe `songSelectLied`. */
 export function getSongSelectSong(cookie: string, songNumber: number): Promise<SongSelectSong> {
-  return songSelectLied(songSelectFuer(cookie), songNumber);
+  return songSelectLied(altPortFuer(cookie), songNumber);
 }
 
 /** Den Liedtext (#379) – siehe `songSelectLiedtext`. */
@@ -63,7 +53,7 @@ export function getSongSelectLyrics(
   cookie: string,
   songNumber: number,
 ): Promise<SongSelectLiedtext> {
-  return songSelectLiedtext(songSelectFuer(cookie), songNumber);
+  return songSelectLiedtext(altPortFuer(cookie), songNumber);
 }
 
 /** Den ChordPro-Text holen, ohne Datei (#322, Schritt 9) – siehe `songSelectChordPro`. */
@@ -71,5 +61,5 @@ export function fetchChordProText(
   cookie: string,
   auftrag: { arrangementId: number; songNumber: number; title: string; tonality: string },
 ): Promise<string> {
-  return songSelectChordPro(songSelectFuer(cookie), auftrag);
+  return songSelectChordPro(altPortFuer(cookie), auftrag);
 }

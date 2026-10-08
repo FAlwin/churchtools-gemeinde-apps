@@ -21,7 +21,6 @@ import {
   useSongUsage,
 } from '../hooks/useServices';
 import styles from './SongPicker.module.scss';
-import { funktionen } from '../services/funktionen';
 
 interface SongPickerProps {
   /** Einfügen: wird mit dem gewählten (Standard-)Arrangement + Songname aufgerufen. */
@@ -94,7 +93,7 @@ export function SongPicker({
   autoFocus,
 }: SongPickerProps) {
   const caps = useCapabilities(true);
-  const showStats = (caps.data?.canViewAgendas ?? false) && funktionen.statistik;
+  const showStats = caps.data?.canViewAgendas ?? false;
   const lib = useSongLibrary(true);
   const usage = useSongUsage(showStats);
   const f = useSongFilter(lib.data ?? [], usage.data, showStats, 'name', !usage.isError);

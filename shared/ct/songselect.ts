@@ -15,15 +15,12 @@ import type {
   SongSelectSuchergebnis,
   SongSelectTreffer,
 } from '../types/index';
-import type { AjaxMeldungen } from './altSchnittstelle';
+import type { AjaxMeldungen, AltPort } from './altSchnittstelle';
 import { notenblattSchreiben, type CtNotenSchreiber } from './notenblaetter';
 import { arrangementAus } from './schreibKern';
 
-/** Der Anschluss an ChurchTools: ein Aufruf der alten Schnittstelle und die Fehlerklasse des Aufrufers. */
-export interface SongSelectPort {
-  anfrage(func: string, felder: Record<string, string>, meldungen: AjaxMeldungen): Promise<unknown>;
-  fehler(status: number, meldung: string): Error;
-}
+/** Der Anschluss an ChurchTools – derselbe wie für jeden Aufruf der alten Schnittstelle. */
+export type SongSelectPort = AltPort;
 
 /**
  * Die SongSelect-Wortlaute. Getrennt von denen der Lied-Kategorien, weil ein Fehler beim Liedersuchen

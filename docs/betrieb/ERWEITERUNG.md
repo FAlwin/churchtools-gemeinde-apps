@@ -2,20 +2,21 @@
 
 Die Musik App gibt es in zwei Formen:
 
-|                                  | **Erweiterung** (diese Anleitung)                  | **Eigener Server** ([INSTALL.md](../../INSTALL.md)) |
-| -------------------------------- | -------------------------------------------------- | --------------------------------------------------- |
-| Was ihr braucht                  | Admin-Zugang zu eurem ChurchTools – sonst nichts   | Einen Server mit Docker (z. B. eine NAS)            |
-| Anmelden                         | Wer in ChurchTools angemeldet ist, ist drin        | Eigene Anmeldung mit den ChurchTools-Zugangsdaten   |
-| Wo sie liegt                     | Menüpunkt in ChurchTools (im Browser)              | Eigene Adresse, auf dem Homescreen installierbar    |
-| Termine, Ablauf, Liedblatt       | ✓                                                  | ✓                                                   |
-| Anmerkungen, Zoom, Tonart merken | ✓ (als Dateien an der eigenen Person, siehe unten) | ✓                                                   |
-| Offline im Saal                  | –                                                  | ✓                                                   |
-| Lied-Statistik, Suche im Text    | –                                                  | ✓                                                   |
-| Ablauf bearbeiten, Tempo         | ✓ (ab v2.29.0)                                     | ✓                                                   |
-| Lieder verwalten, Notenblätter   | ✓ (ab v2.29.0; SongSelect ab v2.31.0)              | ✓                                                   |
-| Links, Standard-Ansicht (Admin)  | ✓ (ab v2.29.0, gespeichert in ChurchTools)         | ✓                                                   |
-| Team-Notizen („Notizen von …")   | ✓ (ab v2.29.0, Rechte siehe unten)                 | ✓                                                   |
-| In der ChurchTools-App am Handy  | – (ChurchTools zeigt Erweiterungen nur im Web)     | eigene App auf dem Homescreen                       |
+|                                      | **Erweiterung** (diese Anleitung)                  | **Eigener Server** ([INSTALL.md](../../INSTALL.md)) |
+| ------------------------------------ | -------------------------------------------------- | --------------------------------------------------- |
+| Was ihr braucht                      | Admin-Zugang zu eurem ChurchTools – sonst nichts   | Einen Server mit Docker (z. B. eine NAS)            |
+| Anmelden                             | Wer in ChurchTools angemeldet ist, ist drin        | Eigene Anmeldung mit den ChurchTools-Zugangsdaten   |
+| Wo sie liegt                         | Menüpunkt in ChurchTools (im Browser)              | Eigene Adresse, auf dem Homescreen installierbar    |
+| Termine, Ablauf, Liedblatt           | ✓                                                  | ✓                                                   |
+| Anmerkungen, Zoom, Tonart merken     | ✓ (als Dateien an der eigenen Person, siehe unten) | ✓                                                   |
+| Offline im Saal                      | –                                                  | ✓                                                   |
+| Lied-Statistik (Häufigkeit, zuletzt) | ✓ (ab v2.32.0, aus der Statistik von ChurchTools)  | ✓                                                   |
+| Suche im Liedtext                    | –                                                  | ✓                                                   |
+| Ablauf bearbeiten, Tempo             | ✓ (ab v2.29.0)                                     | ✓                                                   |
+| Lieder verwalten, Notenblätter       | ✓ (ab v2.29.0; SongSelect ab v2.31.0)              | ✓                                                   |
+| Links, Standard-Ansicht (Admin)      | ✓ (ab v2.29.0, gespeichert in ChurchTools)         | ✓                                                   |
+| Team-Notizen („Notizen von …")       | ✓ (ab v2.29.0, Rechte siehe unten)                 | ✓                                                   |
+| In der ChurchTools-App am Handy      | – (ChurchTools zeigt Erweiterungen nur im Web)     | eigene App auf dem Homescreen                       |
 
 ## Installieren
 
@@ -45,6 +46,7 @@ hinter jedem Recht seinen Schlüssel in Klammern – danach könnt ihr suchen.
 | Anmerkungen, Tonart, Zoom speichern                               | alle, die die App nutzen                                               | Personen: **Eigene Personendaten bearbeiten** (bei uns über den Status „Mitglied")                                                                                                                        |
 | Gemeinde-Einstellungen bekommen (Links, „PDF zuerst")             | alle, die die App nutzen                                               | Erweiterung: **Kategorien sehen** (`view custom category`) und **Daten in Kategorie sehen** (`view custom data`) für „Einstellungen der Musik App"                                                        |
 | Team-Notizen nutzen („Notizen von …", „Meine Anmerkungen teilen") | Musiker der in der Verwaltung gewählten Gruppen und Rollen             | Erweiterung, für „Team-Notizen der Musik App": `view custom category`, `view custom data`, **Daten in Kategorie erstellen** (`create custom data`), **Daten in Kategorie löschen** (`delete custom data`) |
+| Lied-Statistik („Häufigkeit", „Zuletzt" bei den Liedern)          | alle, die die App nutzen                                               | Events: Lied-Statistik sehen (`view song statistics`) – fehlt es, steht dort „–"                                                                                                                          |
 | Ablauf bearbeiten                                                 | wer Abläufe pflegt                                                     | Events: Abläufe bearbeiten (`edit agenda`)                                                                                                                                                                |
 | Lieder, Arrangements, Notenblätter, Tempo ändern                  | wer Lieder pflegt                                                      | Events: Lieder bearbeiten (`edit songcategory`) – je Kategorie                                                                                                                                            |
 | CCLI SongSelect (suchen, Lied anlegen, Notenblatt holen)          | wer Lieder pflegt – nur mit SongSelect-Abo der Gemeinde in ChurchTools | Events: SongSelect nutzen (`use ccli`) – was aufs Kontingent zählt: [songselect-kontingent.md](songselect-kontingent.md)                                                                                  |

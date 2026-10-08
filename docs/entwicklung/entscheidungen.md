@@ -151,7 +151,7 @@ durchsetzen muss, startet den Container neu.
 | `ctSessionMemos.ts` (Konto-ID)     | Konto-ID zum Session-Cookie                    | 12 h        |
 | `ctSessionMemos.ts` (Rechte)       | Rechte eines Kontos                            | 5 min       |
 | `ctSessionMemos.ts` (CSRF-Token)   | Schreib-Token einer Sitzung                    | 1 min       |
-| `setlistBuilder.ts` (`usageCache`) | org-weite Lied-Statistik                       | 1 h         |
+| `setlistBuilder.ts` (`usageCache`) | org-weite Lied-Statistik (`getSongStatistic`)  | 10 min      |
 | `songTextIndex.ts` (`index`)       | org-weiter Suchindex über die Liedtexte (#322) | 1 h         |
 
 (Die Zahl stand hier bis zum 13.08.2026 auf „vier", obwohl die Tabelle fünf Zeilen hatte – beim

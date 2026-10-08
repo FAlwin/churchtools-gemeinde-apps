@@ -204,9 +204,7 @@ export default function App() {
   );
   // Statistik nur für Ablauf-Berechtigte (sie wird aus Abläufen berechnet).
   // In der ChurchTools-Erweiterung gibt es sie nicht (Massenlauf, Plan 3c).
-  const songUsage = useSongUsage(
-    auth.isAuthenticated && tab === 'lieder' && canViewAgendas && funktionen.statistik,
-  );
+  const songUsage = useSongUsage(auth.isAuthenticated && tab === 'lieder' && canViewAgendas);
   const songChart = useSongChart(
     view?.type === 'chart' && view.source === 'lieder' ? libSel : null,
   );
@@ -544,7 +542,7 @@ export default function App() {
             usage={songUsage.data}
             usageLoading={songUsage.isLoading}
             usageError={songUsage.isError}
-            showStats={canViewAgendas && funktionen.statistik}
+            showStats={canViewAgendas}
             isLoading={songLibrary.isLoading}
             isError={songLibrary.isError}
             onRetry={() => songLibrary.refetch()}

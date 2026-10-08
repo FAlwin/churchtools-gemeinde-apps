@@ -11,8 +11,8 @@ export function ServerVarianteHinweis() {
       <div className={styles.serverHinweis}>
         <div className={styles.serverHinweisTitel}>Erweiterung für ChurchTools</div>
         <p>
-          Offline-Liedblätter, die Lied-Statistik, die Suche im Liedtext und die App auf dem
-          Homescreen gibt es in der Musik App mit eigenem Server.
+          Offline-Liedblätter, die Suche im Liedtext und die App auf dem Homescreen gibt es in der
+          Musik App mit eigenem Server.
         </p>
         <a href={PROJEKT_ADRESSE} target="_blank" rel="noopener noreferrer">
           Mehr erfahren

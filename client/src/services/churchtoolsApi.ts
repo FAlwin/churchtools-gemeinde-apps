@@ -381,7 +381,7 @@ export function legeLiedAn(auftrag: LiedAnlegenAuftrag): Promise<LiedAngelegt> {
  */
 export type SongUsageMap = Record<string, { dates: string[] }>;
 export function getSongUsage(): Promise<SongUsageMap> {
-  if (istExtension) return ohneServer('Die Lied-Statistik');
+  if (istExtension) return ext.liedNutzung();
   return apiFetch<SongUsageMap>('/api/song-usage');
 }
 

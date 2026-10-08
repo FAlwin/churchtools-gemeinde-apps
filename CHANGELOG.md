@@ -7,6 +7,13 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu
+
+- **Erweiterung: CCLI SongSelect (#335, 3b-5):** In der ChurchTools-Erweiterung lassen sich jetzt auch
+  SongSelect-Lieder suchen, ansehen, anlegen und Notenblätter aus SongSelect holen – mit dem
+  SongSelect-Abo der Gemeinde in ChurchTools und dem Recht „SongSelect nutzen". Die Regeln dafür liegen
+  jetzt in `shared/ct/songselect.ts` und gelten für beide Varianten.
+
 ### Behoben
 
 - **Ohne Rechte für Lieder und Abläufe stand „Berechtigungen konnten nicht geladen werden"** (#444) –
@@ -15,6 +22,12 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   immer alle Module, auch leer (gemessen); ist irgendwo ein anderes Recht gesetzt, ist sie echt. Beim
   Aussetzer aus #99 war nichts gesetzt – dann bleibt es beim alten Text, und die automatischen Versuche
   bleiben in beiden Fällen.
+
+### Intern
+
+- **„Ohne Tonart nicht raten" ist jetzt getestet:** Beim Holen eines Notenblatts aus SongSelect bricht
+  die App ab, wenn weder das Arrangement noch CCLI eine Tonart nennt. Die Regel galt schon, hatte aber
+  keinen Test (beim Umzug nach `shared` gefunden).
 
 ## [2.30.0] – 2026-10-08
 

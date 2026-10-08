@@ -36,6 +36,8 @@ import * as lieder from '@shared/ct/liedVerwaltung';
 import type { CtVerwalter } from '@shared/ct/liedVerwaltung';
 import * as noten from '@shared/ct/notenblaetter';
 import type { CtNotenSchreiber } from '@shared/ct/notenblaetter';
+import { notenblattAusSongSelect } from '@shared/ct/songselect';
+import { songSelect } from './ctSongSelect';
 import { ApiError } from './api';
 import { ChurchToolsBremst, ctAnfrage, KeinSpeicherRecht } from './ctRuntime';
 import { bearbeitbareKategorien, leser, quellen } from './ctLesen';
@@ -230,6 +232,18 @@ export function notenblatt(
   text: string,
 ): Promise<ArrangementFileEntry[]> {
   return noten.notenblattSchreiben(schreiber, songId, arrangementId, text);
+}
+
+/**
+ * `POST /api/songs/:id/arrangements/:arr/songselect/chordpro` (3b-5) – das Original-Notenblatt aus
+ * CCLI SongSelect holen und ersetzen; erst holen, dann das alte löschen (`notenblattAusSongSelect`).
+ */
+export function notenblattAusCcli(
+  songId: number,
+  arrangementId: number,
+  songNumber: number,
+): Promise<ArrangementFileEntry[]> {
+  return notenblattAusSongSelect(schreiber, songSelect, songId, arrangementId, songNumber);
 }
 
 /** `POST /api/songs/:id/versions` */

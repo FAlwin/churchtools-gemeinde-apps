@@ -12,6 +12,7 @@ Die Musik App gibt es in zwei Formen:
 | Offline im Saal                      | –                                                  | ✓                                                   |
 | Lied-Statistik (Häufigkeit, zuletzt) | ✓ (ab v2.32.0, aus der Statistik von ChurchTools)  | ✓                                                   |
 | Suche im Liedtext                    | –                                                  | ✓                                                   |
+| Abwesenheiten eintragen              | – (kommt in den Dienstplaner)                      | ✓                                                   |
 | Ablauf bearbeiten, Tempo             | ✓ (ab v2.29.0)                                     | ✓                                                   |
 | Lieder verwalten, Notenblätter       | ✓ (ab v2.29.0; SongSelect ab v2.31.0)              | ✓                                                   |
 | Links, Standard-Ansicht (Admin)      | ✓ (ab v2.29.0, gespeichert in ChurchTools)         | ✓                                                   |

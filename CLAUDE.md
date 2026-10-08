@@ -97,7 +97,9 @@
     einen **`disclaimer`**, der **angezeigt werden MUSS** – Lizenzbedingung, keine Zierde
     (`GET /api/songselect/songs/:songNumber/liedtext`).
 
-    ⚠️ **Ob CCLI einen Textabruf als Nutzung verbucht, bleibt offen – und ist per API NICHT messbar.**
+    **Aufs Download-Kontingent zählt ein Textabruf laut CCLI NICHT** (Liedtexte sind unbegrenzt,
+    CCLI-Support, Stand April 2023 – siehe `docs/betrieb/songselect-kontingent.md`). ⚠️ **Ob er in der Nutzungs-Historie
+    erscheint, bleibt offen – und ist per API NICHT messbar.**
     Die Antwort enthält kein Feld, das darauf hindeutet (gesucht nach `report`, `usage`, `count` …), aber
     das beweist nichts. Auch die Warnung „wird bei CCLI vermerkt" in `churchtools-songselect.md` ist eine
     **Annahme ohne Beleg**. Belastbar wären nur die Nutzungs-Historie im SongSelect-Konto oder eine

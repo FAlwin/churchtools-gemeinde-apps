@@ -95,6 +95,25 @@ describe('Suchen und Abfragen über die alte Schnittstelle', () => {
     expect(JSON.stringify(r)).not.toContain('999');
   });
 
+  it('meldet CCLI innen einen Fehler, ist das ein Fehler – keine leere Trefferliste', async () => {
+    // Die Hülle von ChurchTools sagt „success", innen steht der Status von CCLI.
+    ct.schreibAntworten[AJAX] = ccli({ statusCode: 503, message: 'Service Unavailable' });
+    await expect(suchen('Treu')).rejects.toMatchObject({
+      status: 502,
+      message: expect.stringContaining('CCLI 503') as unknown,
+    });
+  });
+
+  it('innen 200 (gemessen) ist kein Fehler', async () => {
+    ct.schreibAntworten[AJAX] = ccli({
+      statusCode: 200,
+      message: 'Success',
+      pagination: { totalItems: 1 },
+      data: { results: [TREFFER] },
+    });
+    expect((await suchen('Treu')).treffer).toHaveLength(1);
+  });
+
   it('ein leerer Titel geht gar nicht erst raus', async () => {
     await expect(suchen('   ')).rejects.toMatchObject({ status: 400 });
     expect(ct.geschrieben).toEqual([]);

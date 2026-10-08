@@ -783,8 +783,9 @@ export async function getSongSelectByNumber(req: Request, res: Response): Promis
  * Grundlage der Vorschau: Bei 147 Treffern zu einem Titel entscheidet nur der Text, welches Lied gemeint
  * ist. Der `disclaimer` von CCLI geht mit durch – er **muss** angezeigt werden.
  *
- * **Nur beim bewussten Öffnen eines Treffers aufrufen, nie beim Durchsehen einer Liste:** Ob CCLI den
- * Abruf als Nutzung verbucht, ist offen (siehe `getSongSelectLyrics`). Der Client speichert je Nummer
+ * **Nur beim bewussten Öffnen eines Treffers aufrufen, nie beim Durchsehen einer Liste:** Aufs
+ * Kontingent zählt er laut CCLI nicht; ob er in der Nutzungs-Historie erscheint, ist offen (siehe
+ * `songSelectLiedtext`). Der Client speichert je Nummer
  * zwischen, damit Auf- und Zuklappen nicht mehrfach fragt.
  */
 export async function getSongSelectLyricsCtrl(req: Request, res: Response): Promise<void> {

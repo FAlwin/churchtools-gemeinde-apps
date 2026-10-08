@@ -236,7 +236,8 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
 - **Die Vorschau vor dem Einfügen (#379):**
   - `components/SongPicker`: **Beim Durchsehen der Liste wird KEIN Liedtext abgefragt** – geprüft am
     `enabled`-Argument beider Hooks, denn eine Vorschau je Zeile hieße eine Anfrage je Zeile. Bei CCLI ist
-    das mehr als Sparsamkeit: Ob ein Textabruf dort als Nutzung verbucht wird, ist offen. Dazu die zwei
+    das mehr als Sparsamkeit: Aufs Kontingent zählt ein Textabruf laut CCLI nicht, ob er in der
+    Nutzungs-Historie erscheint, ist offen. Dazu die zwei
     Wege, die beide gewollt sind: **Antippen → Vorschau** und **„+" → sofort einfügen** (der zweite darf
     keine Textabfrage auslösen). Der Hook `useLiedSuche` ist hier **nicht gemockt** – ein Mock müsste
     seine Quellen-Logik nachbauen; stattdessen läuft er echt, mit Fake-Timern für die Entprellung.

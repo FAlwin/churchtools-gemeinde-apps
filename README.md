@@ -46,6 +46,7 @@ Datenquelle – die App hat keine eigene Datenbank.
   im Stammdaten-Blatt ändern, weitere Arrangements anlegen, zum Standard machen, löschen mit Rückfrage
 - **Notenblatt aus CCLI SongSelect holen** – wenn die Gemeinde die SongSelect-Integration in
   ChurchTools aktiviert hat und das Lied eine CCLI-Nummer trägt; in der Tonart des Arrangements
+  (was dabei aufs SongSelect-Kontingent zählt: [docs/betrieb/songselect-kontingent.md](docs/betrieb/songselect-kontingent.md))
 - **Abwesenheiten** – Musikerinnen und Musiker tragen je Termin per Häkchen oder als Zeitraum ein,
   wann sie fehlen; gespeichert wird direkt in ChurchTools. Termine lassen sich nach Art filtern
   (z. B. nur Gottesdienste); die Arten pflegt der Admin. Sichtbar für Mitglieder der gewählten

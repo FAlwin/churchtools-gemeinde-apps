@@ -16,6 +16,11 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Behoben
 
+- **SongSelect zeigte „Keine Treffer", wenn CCLI innen einen Fehler meldete** (beim Durchklick der
+  Erweiterung: „Treu" ergab einmal nichts, gleich danach 100 Treffer). ChurchTools packt die Antwort von
+  CCLI in eine eigene Hülle, die auch bei einem CCLI-Fehler „success" sagt. Jetzt prüft die App den
+  inneren Status und meldet „SongSelect hat nicht geantwortet … Bitte gleich noch einmal versuchen." Galt
+  auch für die Server-Variante.
 - **Ohne Rechte für Lieder und Abläufe stand „Berechtigungen konnten nicht geladen werden"** (#444) –
   „Erneut versuchen" half nie, weil ein Recht fehlte, kein Netz. Jetzt sagt die App „Dir fehlen in
   ChurchTools die Rechte für Lieder und Abläufe". Unterschieden wird an der Antwort: ChurchTools schickt
@@ -24,6 +29,10 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   bleiben in beiden Fällen.
 
 ### Intern
+
+- **Neu: `docs/betrieb/songselect-kontingent.md`** – was bei SongSelect aufs Kontingent zählt (CCLI: 200
+  Lieder je Abo-Jahr, Texte unbegrenzt) und was die App dabei abfragt. Die Aussage „offen, ob CCLI einen
+  Textabruf verbucht" ist an allen Stellen präzisiert: aufs Kontingent zählt er laut CCLI nicht.
 
 - **„Ohne Tonart nicht raten" ist jetzt getestet:** Beim Holen eines Notenblatts aus SongSelect bricht
   die App ab, wenn weder das Arrangement noch CCLI eine Tonart nennt. Die Regel galt schon, hatte aber

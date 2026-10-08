@@ -371,6 +371,10 @@ gemessen), aber es ist **offen, ob CCLI einen Textabruf als Nutzung vermerkt** �
 Solange das nicht gemessen ist, wird nicht abgerufen: Ein Abruf bei jedem Durchsehen könnte der Gemeinde
 Nutzungen verbuchen, die niemand wollte.
 
+_Nachtrag 08.10.2026:_ Die Vorschau gibt es inzwischen (#379), nur für bewusst geöffnete Treffer. Laut
+CCLI-Support zählen Liedtexte **nicht** aufs Download-Kontingent; ob sie in der Nutzungs-Historie erscheinen,
+ist weiter offen. Siehe `docs/betrieb/songselect-kontingent.md`.
+
 ## Doppelte Lieder: der Server blockiert, die App fragt (#395, 20.09.2026)
 
 Ein zweites Lied mit derselben **CCLI-Nummer** lehnt der Server ab (`songVerwaltung.ts`, 409) – das

@@ -92,8 +92,9 @@
   Nummer (#381), Grundlage der Vorschau vor dem Anlegen. Gemessen am 14.08.2026: Der Aufruf heißt
   `getCCLILyrics` und nimmt `songNumber`; CCLI liefert den Text **strukturiert** (`lyricParts` mit
   „Vers 1", „Chorus 1") und dazu einen **`disclaimer`**, der **angezeigt werden muss**.
-  ⚠️ **Nur beim bewussten Öffnen eines Treffers aufrufen, nie beim Durchsehen:** Ob CCLI den Abruf als
-  Nutzung verbucht, ist offen (die Antwort enthält keinen Hinweis darauf – das beweist nichts). Der Client
+  ⚠️ **Nur beim bewussten Öffnen eines Treffers aufrufen, nie beim Durchsehen:** Aufs Download-Kontingent
+  zählt er laut CCLI nicht (Liedtexte sind unbegrenzt); ob er in der Nutzungs-Historie erscheint, ist offen
+  (siehe `docs/betrieb/songselect-kontingent.md`). Der Client
   speichert je Nummer zwischen (`staleTime: Infinity`).
 - `GET  /api/songs/:songId/liedtext-vorschau` → `LiedtextVorschau` (`{chordpro: string | null}`) – das
   **rohe ChordPro des Original-Notenblatts** für die Vorschau (#379). Seit 04.09.2026 der ganze Text

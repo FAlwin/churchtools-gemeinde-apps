@@ -212,8 +212,8 @@ export function holeLiedtextVorschau(songId: number): Promise<LiedtextVorschau> 
 /**
  * Den Liedtext eines **SongSelect**-Liedes holen (#379) – die Vorschau vor dem Anlegen.
  *
- * **Nur beim bewussten Öffnen eines Treffers**, nie beim Durchsehen: Ob CCLI den Abruf als Nutzung
- * verbucht, ist offen (gemessen wurde nur, dass die Antwort keinen Hinweis darauf enthält). Der Hook
+ * **Nur beim bewussten Öffnen eines Treffers**, nie beim Durchsehen: Aufs Kontingent zählt ein
+ * Textabruf laut CCLI nicht; ob er in der Nutzungs-Historie erscheint, ist offen (`docs/betrieb/songselect-kontingent.md`). Der Hook
  * darüber speichert je Nummer zwischen.
  */
 export function holeSongSelectLiedtext(songNumber: number): Promise<SongSelectLiedtext> {

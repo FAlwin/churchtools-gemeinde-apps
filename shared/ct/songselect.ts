@@ -38,8 +38,30 @@ export const SS_MELDUNGEN: AjaxMeldungen = {
   innenUnlesbar: 'Die Antwort von CCLI war nicht lesbar.',
 };
 
-function ss(p: SongSelectPort, func: string, felder: Record<string, string>): Promise<unknown> {
-  return p.anfrage(func, felder, SS_MELDUNGEN);
+/**
+ * Ein SongSelect-Aufruf – **mit Blick auf den inneren Status von CCLI.**
+ *
+ * ChurchTools packt die Antwort von CCLI in seine eigene Hülle; innen steht `statusCode` (gemessen
+ * 08.10.2026: `200`, `message: "Success"`). Meldet CCLI dort einen Fehler, sagt die Hülle trotzdem
+ * „success" – ohne diesen Blick läse die App eine leere Trefferliste und zeigte „Keine Treffer", wo in
+ * Wahrheit CCLI nicht geantwortet hat (Durchklick 08.10.2026: „Treu" ergab einmal nichts, gleich danach
+ * 100 Treffer). Ein Erfolgssignal ist kein Beleg.
+ */
+async function ss(
+  p: SongSelectPort,
+  func: string,
+  felder: Record<string, string>,
+): Promise<unknown> {
+  const antwort = await p.anfrage(func, felder, SS_MELDUNGEN);
+  const innen = antwort as { statusCode?: unknown; message?: unknown } | null;
+  if (typeof innen?.statusCode === 'number' && innen.statusCode >= 400) {
+    const grund = typeof innen.message === 'string' && innen.message ? ` – ${innen.message}` : '';
+    throw p.fehler(
+      502,
+      `SongSelect hat nicht geantwortet (CCLI ${innen.statusCode}${grund}). Bitte gleich noch einmal versuchen.`,
+    );
+  }
+  return antwort;
 }
 
 /** Was CCLI je Format meldet: Gibt es das, und deckt die Lizenz der Gemeinde es ab? */
@@ -132,8 +154,9 @@ interface CtLyricsRoh {
 
 /**
  * Den **Liedtext** holen (#379) – für die Vorschau vor dem Anlegen. Der Text kommt strukturiert in
- * `lyricParts`. ⚠️ **`disclaimer` MUSS mit angezeigt werden** – eine Lizenzbedingung. ⚠️ Offen, ob CCLI
- * den Abruf als Nutzung verbucht; deshalb ruft die Oberfläche ihn nur für bewusst geöffnete Treffer.
+ * `lyricParts`. ⚠️ **`disclaimer` MUSS mit angezeigt werden** – eine Lizenzbedingung. Aufs Kontingent
+ * zählt ein Textabruf laut CCLI nicht (Liedtexte sind unbegrenzt); ob er in der Nutzungs-Historie
+ * erscheint, ist offen – deshalb ruft die Oberfläche ihn nur für bewusst geöffnete Treffer ab.
  */
 export async function songSelectLiedtext(
   p: SongSelectPort,

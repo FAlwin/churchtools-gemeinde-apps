@@ -44,6 +44,7 @@ import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { ApiError } from './services/api';
 import { withChunkReload } from './utils/chunkReload';
 import { funktionen } from './services/funktionen';
+import { useVollbildHinweis } from './hooks/useVollbildHinweis';
 import { KeineLiedRechte } from './services/churchtoolsApi';
 
 /**
@@ -285,6 +286,12 @@ export default function App() {
     });
     return () => setSessionExpiredHandler(null);
   }, []);
+
+  // Einmaliger Hinweis auf den Vollbild-Knopf (nur Erweiterung, v2.32.0).
+  useVollbildHinweis(
+    funktionen.vollbildKnopf && auth.isAuthenticated && !!caps && !tourActive,
+    showToast,
+  );
 
   // Einführung beim ersten Mal automatisch starten – erst wenn die Termine da sind (dann existieren
   // die hervorzuhebenden Elemente) und keine Vollansicht offen ist.

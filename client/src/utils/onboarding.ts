@@ -60,6 +60,13 @@ export const TOUR_CHART = 'chart-v9';
  * dieselbe Merker-Mechanik wie die Touren, statt eine zweite daneben zu bauen.
  */
 export const HINT_VOLLBILD = 'hinweis-vollbild';
+
+/**
+ * Einmaliger Hinweis auf den Vollbild-Knopf der Erweiterung (v2.32.0, Release-Routine Schritt 2 –
+ * Alwins Wahl „einmaliger Hinweis" statt eines neuen Tour-Schritts: Der hätte die Termine-Einführung
+ * allen erneut gezeigt, auch in der Server-App, wo es den Knopf nicht gibt).
+ */
+export const HINT_VOLLBILD_KNOPF = 'hinweis-vollbild-knopf';
 // setlist-v2 (08.10.2026, v2.29.0): Teilen fragt jetzt nach den Anmerkungen und nimmt auch die PDFs aus
 // ChurchTools mit – der Schritt „Als PDF teilen" sagt es, und Bestandsnutzer sollen ihn einmal sehen.
 // v2.30.0 (08.10.2026): Text um Vorschau und Herunterladen ergänzt – bewusst OHNE neue Version: v2 ging

@@ -65,7 +65,9 @@ export function SeitenGeruest({
   return (
     <Screen>
       <Scroll onRefresh={onNeuLaden}>
-        <GrosseUeberschrift unterzeile={unterzeile} unterKnoepfen={mitKnoepfen}>
+        {/* Nur EIGENE Knöpfe schieben die Überschrift nach unten. Der Vollbild-Knopf allein schwebt
+            rechts neben ihr – sonst stünde jede Seite eine Knopfreihe tiefer (Alwin, 09.10.2026). */}
+        <GrosseUeberschrift unterzeile={unterzeile} unterKnoepfen={Boolean(zurueck || aktionen)}>
           {titel}
         </GrosseUeberschrift>
         {children}

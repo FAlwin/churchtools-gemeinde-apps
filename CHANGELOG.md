@@ -32,6 +32,13 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Server-Variante:** Wer die Statistik sehen soll, braucht in ChurchTools das Recht „Song-Statistik
   sehen" (`view song statistics`).
 
+### Behoben
+
+- **Lied aus der Liederliste sprang sofort zurück** (Alwin, Test-Instanz): Die App merkt sich den
+  zuletzt geöffneten Gottesdienst für einen Neustart. Stand der nicht mehr in der Terminliste, setzte
+  die Suche danach jede Ansicht zurück – auch ein gerade geöffnetes Lied aus der Liederliste. Jetzt
+  greift sie nur noch für Ablauf und Liederheft eines Gottesdienstes.
+
 ## [2.31.0] – 2026-10-08
 
 **Beim Update ist nichts zu tun.** ChurchTools-Erweiterung: neue ZIP einspielen; für SongSelect braucht

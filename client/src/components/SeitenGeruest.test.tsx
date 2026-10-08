@@ -120,6 +120,21 @@ describe('SeitenGeruest – Vollbild-Knopf', () => {
     schalter.vollbildKnopf = false;
   });
 
+  // Alwin, 09.10.2026: „jetzt stehen die Überschriften extrem tief" – der Knopf allein rückt nichts.
+  it('der Vollbild-Knopf allein schiebt die Überschrift NICHT unter eine Knopfreihe', () => {
+    schalter.vollbildKnopf = true;
+    render(<SeitenGeruest titel="Termine">Inhalt</SeitenGeruest>);
+    const klasseOhne = screen.getByRole('heading', { name: 'Termine' }).parentElement?.className;
+    render(
+      <SeitenGeruest titel="Ablauf" zurueck={vi.fn()}>
+        Inhalt
+      </SeitenGeruest>,
+    );
+    const klasseMit = screen.getByRole('heading', { name: 'Ablauf' }).parentElement?.className;
+    expect(klasseOhne).not.toBe(klasseMit);
+    schalter.vollbildKnopf = false;
+  });
+
   it('Erweiterung: ganz rechts, nach den Knöpfen der Seite', () => {
     schalter.vollbildKnopf = true;
     render(

@@ -7,6 +7,11 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+## [2.31.0] – 2026-10-08
+
+**Beim Update ist nichts zu tun.** ChurchTools-Erweiterung: neue ZIP einspielen; für SongSelect braucht
+es dort das Recht „SongSelect nutzen" (siehe `docs/betrieb/ERWEITERUNG.md`). Keine neue Einführung.
+
 ### Neu
 
 - **Erweiterung: CCLI SongSelect (#335, 3b-5):** In der ChurchTools-Erweiterung lassen sich jetzt auch

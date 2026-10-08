@@ -2,8 +2,8 @@
 
 > Status: **Phase 1 (#333), 2 (#334) und 3a (#335, Lesen) erledigt, 07.10.2026.** Ablage = Personen-Dateien
 > (§2b). Phase 4 (#336, Anteasern) und 5 (#337, Paket) erledigt. 3b (Schreiben) läuft in Scheiben:
-> **3b-1 Ablauf + Tempo** und **3b-2 Lieder/Notenblätter** gebaut; offen Abwesenheiten, Team-Notizen +
-> Einstellungen, SongSelect.
+> **3b-1 Ablauf + Tempo**, **3b-2 Lieder/Notenblätter**, **3b-4 Einstellungen + Team-Notizen** und
+> **3b-5 SongSelect** gebaut; offen Abwesenheiten (3b-3).
 > Ziel: dieselbe App zusätzlich als **ChurchTools-Extension** unter `/ccm/<key>/` ausliefern –
 > ohne eigenen Server, ohne zweite Anmeldung, installierbar von jeder Gemeinde.
 > Die bestehende Server-/PWA-Variante (NAS, `musik.ecg-donrath.de`) **bleibt** und ist der Weg für
@@ -336,7 +336,12 @@ nutzbar – nach jeder kann man aufhören. Muster wie beim Lesen: Regeln nach `s
       Admin beim Speichern der Gruppen an (Musiker dürfen keine Kategorien anlegen). Der Zugriff auf den
       Datenbereich steht in `ctModulDaten.ts` (Einstellungen und Verzeichnis nutzen ihn).
       `canUseAvailability` bleibt bis 3b-3 aus
-- [ ] **3b-5 SongSelect** (`ctAjax`, braucht `use ccli`)
+- [x] **3b-5 SongSelect:** Regeln aus `ctSongSelect.ts`/`setlistBuilder.ts` nach `shared/ct/songselect.ts`
+      (Anschluss `SongSelectPort`: Aufruf der alten Schnittstelle + Fehlerklasse); Server über
+      `songSelectFuer(cookie)`, Browser über `ctAltAnfrage` (`client/src/services/ctSongSelect.ts`).
+      `canUseCcli` nicht mehr maskiert. Dabei `ctRead.getArrangement` entfallen (einziger Nutzer). Die
+      Regel „ohne Tonart nicht raten" war vorher ungetestet – jetzt bewacht. **Aus dem Browser noch nicht
+      gemessen:** ob ChurchTools die `getCCLI*`-Aufrufe ohne `browsertabId` annimmt
 
 #### 3c – Massenläufe (entschieden: weglassen)
 

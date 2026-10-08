@@ -30,6 +30,7 @@ import { apiFetch, apiFetchBlob } from './api';
 import { istExtension, ohneServer } from './ctRuntime';
 import * as ext from './ctLesen';
 import * as extSchreiben from './ctSchreiben';
+import * as extSongSelect from './ctSongSelect';
 import type { NeuerPunkt, PunktAenderung } from '@shared/ct/schreibKern';
 
 // Die Weiche zur ChurchTools-Extension (#335): Lesende Aufrufe gehen dort über `ctLesen.ts`, schreibende
@@ -211,12 +212,12 @@ export function holeLiedtextVorschau(songId: number): Promise<LiedtextVorschau> 
 /**
  * Den Liedtext eines **SongSelect**-Liedes holen (#379) – die Vorschau vor dem Anlegen.
  *
- * **Nur beim bewussten Öffnen eines Treffers**, nie beim Durchsehen: Ob CCLI den Abruf als Nutzung
- * verbucht, ist offen (gemessen wurde nur, dass die Antwort keinen Hinweis darauf enthält). Der Hook
+ * **Nur beim bewussten Öffnen eines Treffers**, nie beim Durchsehen: Aufs Kontingent zählt ein
+ * Textabruf laut CCLI nicht; ob er in der Nutzungs-Historie erscheint, ist offen (`docs/betrieb/songselect-kontingent.md`). Der Hook
  * darüber speichert je Nummer zwischen.
  */
 export function holeSongSelectLiedtext(songNumber: number): Promise<SongSelectLiedtext> {
-  if (istExtension) return ohneServer('SongSelect');
+  if (istExtension) return extSongSelect.liedtext(songNumber);
   return apiFetch<SongSelectLiedtext>(`/api/songselect/songs/${songNumber}/liedtext`);
 }
 
@@ -228,7 +229,7 @@ export function holeSongSelectLiedtext(songNumber: number): Promise<SongSelectLi
  * vorzutäuschen.
  */
 export function sucheSongSelect(title: string): Promise<SongSelectSuchergebnis> {
-  if (istExtension) return ohneServer('SongSelect');
+  if (istExtension) return extSongSelect.suchen(title);
   return apiFetch<SongSelectSuchergebnis>(
     `/api/songselect/search?title=${encodeURIComponent(title)}`,
   );
@@ -236,7 +237,7 @@ export function sucheSongSelect(title: string): Promise<SongSelectSuchergebnis> 
 
 /** Ein CCLI-Lied per Nummer abfragen (#322) – liefert zusätzlich das Copyright fürs Formular. */
 export function getSongSelectSong(songNumber: number): Promise<SongSelectSong> {
-  if (istExtension) return ohneServer('SongSelect');
+  if (istExtension) return extSongSelect.lied(songNumber);
   return apiFetch<SongSelectSong>(`/api/songselect/songs/${songNumber}`);
 }
 
@@ -462,7 +463,7 @@ export function holeChordProAusSongSelect(
   arrangementId: number,
   songNumber: number,
 ): Promise<ArrangementFileEntry[]> {
-  if (istExtension) return ohneServer('SongSelect');
+  if (istExtension) return extSchreiben.notenblattAusCcli(songId, arrangementId, songNumber);
   return apiFetch<ArrangementFileEntry[]>(
     `/api/songs/${songId}/arrangements/${arrangementId}/songselect/chordpro`,
     { method: 'POST', body: JSON.stringify({ songNumber }) },

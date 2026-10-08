@@ -303,9 +303,9 @@ export function useLiedtextVorschau(songId: number, enabled: boolean) {
 /**
  * Der Liedtext eines **SongSelect**-Liedes für die Vorschau (#379).
  *
- * **`staleTime: Infinity` und `gcTime` lang – das ist hier keine Feinheit, sondern die Vorkehrung.** Ob
- * CCLI einen Textabruf als Nutzung verbucht, ist offen; deshalb darf Auf- und Zuklappen desselben Liedes
- * **nicht** erneut fragen. Ein Abruf je Nummer und Sitzung.
+ * **`staleTime: Infinity` und `gcTime` lang – das ist hier keine Feinheit, sondern die Vorkehrung.** Aufs
+ * Kontingent zählt ein Textabruf laut CCLI nicht, ob er in der Nutzungs-Historie erscheint, ist offen;
+ * deshalb darf Auf- und Zuklappen desselben Liedes **nicht** erneut fragen. Ein Abruf je Nummer und Sitzung.
  *
  * `enabled` steuert der Aufrufer: erst wenn ein Treffer wirklich geöffnet wird.
  */

@@ -54,8 +54,8 @@ const ABLAUF_GEAENDERT = 'Der Ablauf hat sich geändert. Bitte neu laden und ern
 
 /**
  * Ein bestimmtes Arrangement eines Lieds – oder 404 (#321). Die Suche stand zweimal da (Tempo und
- * Versionen) und ist seit `ctRead.getArrangement` eine Funktion; hier liegt sie, damit auch der
- * Browser sie hat.
+ * Versionen); hier liegt sie, damit Server und Browser sie teilen. Das Lied dazu liest der Aufrufer
+ * frisch (`CtSchreiber.song`) – geschrieben wird auf diesem Stand.
  */
 export function arrangementAus(
   song: CtSong,

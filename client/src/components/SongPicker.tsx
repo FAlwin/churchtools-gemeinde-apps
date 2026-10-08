@@ -112,8 +112,9 @@ export function SongPicker({
 
   /**
    * Die zwei Textquellen. **Beide sind abgeschaltet, solange die Liste zu sehen ist** – das ist die
-   * eigentliche Vorkehrung: Beim Durchsehen entsteht keine einzige Anfrage, und bei SongSelect (wo offen
-   * ist, ob CCLI einen Textabruf verbucht) auch kein Abruf.
+   * eigentliche Vorkehrung: Beim Durchsehen entsteht keine einzige Anfrage, und bei SongSelect auch kein
+   * Abruf (aufs Kontingent zählt ein Text laut CCLI nicht; ob er in der Nutzungs-Historie erscheint, ist
+   * offen – `docs/betrieb/songselect-kontingent.md`).
    */
   const eigenerText = useLiedtextVorschau(
     vorschau?.art === 'bibliothek' ? vorschau.song.songId : 0,

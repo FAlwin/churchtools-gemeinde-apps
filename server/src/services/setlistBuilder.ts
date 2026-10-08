@@ -15,17 +15,11 @@ import { downloadFileText } from './ctFiles.js';
 import { CtOverloadedError, isCtOverloaded } from './ctHttp.js';
 import { createGebuendelterLauf } from './gebuendelterLauf.js';
 import { mapLimit } from './mapLimit.js';
-import {
-  getAgenda,
-  getAllSongs,
-  getAppointmentSubtitle,
-  getArrangement,
-  getEvents,
-  getSong,
-} from './ctRead.js';
+import { getAgenda, getAllSongs, getAppointmentSubtitle, getEvents, getSong } from './ctRead.js';
 import * as noten from '@shared/ct/notenblaetter';
 import { verwalterFuer } from './ctVerwalter.js';
-import { fetchChordProText, getSongSelectSong } from './ctSongSelect.js';
+import { songSelectFuer } from './ctSongSelect.js';
+import { notenblattAusSongSelect } from '@shared/ct/songselect';
 import { dateiUrlFinden } from './arrangementFiles.js';
 import { setlistFingerprint, agendaSignatureList, fingerprintAusText } from './agendaDiff.js';
 import { HttpError } from '../middleware/errorHandler.js';
@@ -387,42 +381,20 @@ export function removeArrangementFile(
  * **Die verwalteten Versionen bleiben unangetastet.** Sie gehören der App und dem Nutzer, nicht
  * CCLI; ersetzt wird nur das Original.
  */
-export async function holeChordProAusSongSelect(
+export function holeChordProAusSongSelect(
   cookie: string,
   songId: number,
   arrangementId: number,
   songNumber: number,
 ): Promise<ArrangementFileEntry[]> {
-  const { song, arrangement } = await getArrangement(cookie, songId, arrangementId);
-
-  /**
-   * Die Tonart des ARRANGEMENTS, sonst die von CCLI vorgeschlagene.
-   *
-   * Ohne beides wird abgebrochen, statt eine zu raten: Ein Notenblatt in einer zufälligen Tonart
-   * ist schlimmer als keines – man merkt es erst beim Spielen.
-   */
-  const tonart = arrangement.keyOfArrangement ?? arrangement.key ?? null;
-  const ausCcli = tonart ? null : await getSongSelectSong(cookie, songNumber);
-  const tonality = tonart ?? ausCcli?.defaultKey ?? null;
-  if (!tonality) {
-    throw new HttpError(
-      400,
-      'Für dieses Arrangement ist keine Tonart hinterlegt, und CCLI schlägt keine vor. Bitte zuerst eine Tonart setzen.',
-    );
-  }
-
-  /**
-   * **Erst den Text holen, dann schreiben.** Der Aufruf bei CCLI liefert nur den Text – er legt nichts
-   * an (gemessen). Das Schreiben samt Ersetzen des alten Originals macht `originalNotenblattSchreiben`
-   * – dieselbe Stelle, die auch der Editor nach dem Anlegen nutzt (04.09.2026).
-   */
-  const text = await fetchChordProText(cookie, {
+  // Tonart-Regel und Reihenfolge stehen seit 3b-5 in `@shared/ct/songselect` (#335).
+  return notenblattAusSongSelect(
+    verwalterFuer(cookie),
+    songSelectFuer(cookie),
+    songId,
     arrangementId,
     songNumber,
-    title: song.name,
-    tonality,
-  });
-  return originalNotenblattSchreiben(cookie, songId, arrangementId, text);
+  );
 }
 
 export function originalNotenblattSchreiben(

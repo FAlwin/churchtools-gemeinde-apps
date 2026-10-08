@@ -6,19 +6,16 @@
  * Minuten Vorhaltezeit halbieren sie. Ein Fehler wird bewusst NICHT gemerkt, sonst hielte ein
  * einzelner Aussetzer zehn Minuten.
  */
-import { HttpError } from '../middleware/errorHandler.js';
 import { ctGet } from './ctHttp.js';
 import type {
   CtAbsence,
   CtAgenda,
-  CtArrangement,
   CtEvent,
   CtService,
   CtSong,
   CtSongListEntry,
 } from './ctTypes.js';
 import { createTtlMemo } from './ttlMemo.js';
-import { arrangementAus } from '@shared/ct/schreibKern';
 import { dienstReihenfolge, untertitelAus } from '@shared/ct/setlistKern';
 
 export function getEvents(cookie: string, from: string, to: string): Promise<CtEvent[]> {
@@ -84,32 +81,6 @@ export function getAgenda(cookie: string, eventId: number): Promise<CtAgenda> {
 
 export function getSong(cookie: string, songId: number): Promise<CtSong> {
   return ctGet<CtSong>(cookie, `/api/songs/${songId}`);
-}
-
-/**
- * Ein bestimmtes Arrangement eines Lieds – frisch geladen, oder 404 (#321).
- *
- * **Warum als eigene Funktion:** Dieselben vier Zeilen standen an zwei Stellen, samt **wortgleicher**
- * Fehlermeldung – in `updateArrangementTempo` (`ctWrite`) und in `loadArrangementVersions`
- * (`setlistBuilder`). Mit der Dateiverwaltung wäre eine dritte dazugekommen. Sie liegt hier in
- * `ctRead`, weil beide Module von hier lesen dürfen, ohne einen Ring zu bilden.
- *
- * Das Lied kommt mit zurück: Wer das Arrangement sucht, braucht oft auch den Liednamen (die
- * Versionsdateien tragen ihn), und ein zweiter Abruf für dieselben Daten wäre eine Anfrage zu viel
- * gegen ChurchTools (#300).
- *
- * **Nie aus einem Cache.** Geschrieben wird auf dem, was hier zurückkommt – ein veralteter Stand
- * würde Felder mit alten Werten überschreiben.
- */
-export async function getArrangement(
-  cookie: string,
-  songId: number,
-  arrangementId: number,
-): Promise<{ song: CtSong; arrangement: CtArrangement }> {
-  const song = await getSong(cookie, songId);
-  // Die Suche selbst liegt seit #335 in `@shared/ct/schreibKern` – auch der Browser braucht sie.
-  const arrangement = arrangementAus(song, arrangementId, (s, m) => new HttpError(s, m));
-  return { song, arrangement };
 }
 
 /** Lädt die ChurchTools-Dienste (z.B. „Musik", „Predigt") für die Verantwortlich-Chips. */

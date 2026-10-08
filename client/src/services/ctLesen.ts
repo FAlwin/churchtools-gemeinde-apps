@@ -195,11 +195,10 @@ export async function meineRechte(): Promise<UserCapabilities> {
     STANDARD_ADMIN_RECHT,
     (status, meldung) => new ApiError(status, meldung),
   );
-  // Phase 3b kommt in Scheiben (#335): Ablauf, Tempo und seit 3b-2 auch Lieder, Arrangements und
-  // Notenblätter schreibt die Extension selbst (`ctSchreiben.ts`) – ihre Rechte gelten, wie
-  // ChurchTools sie meldet. SongSelect fehlt noch (3b-5); bis dahin meldet die Extension dort „darf
-  // nicht", dann verschwinden die Knöpfe von selbst, statt beim Antippen mit 501 zu scheitern (#336).
-  return { ...rechte, canUseCcli: false, canUseGlobalNotes: await darfTeamNotizen() };
+  // Seit 3b-5 schreibt und liest die Extension alles selbst, auch SongSelect (`ctSongSelect.ts`) –
+  // die Rechte gelten, wie ChurchTools sie meldet. Abwesenheiten bleiben aus (`canUseAvailability`,
+  // in `rechteAus` false), bis sie gebaut sind.
+  return { ...rechte, canUseGlobalNotes: await darfTeamNotizen() };
 }
 
 /**

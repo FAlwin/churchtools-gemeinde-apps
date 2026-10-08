@@ -123,8 +123,8 @@ Arrangement, **Tonart und Dauer des Arrangements sind unverändert**.
 Kategorie), eine kleine PDF-Datei. Alles, was du anlegst, am Ende wieder löschen.
 
 **Das muss passieren:** Jede Änderung steht danach **auch in ChurchTools** (Lied dort öffnen). Die
-Auswahl der Kategorie zeigt nur die, in denen du Lieder bearbeiten darfst. Kein Knopf führt ins Leere;
-SongSelect ist nirgends zu sehen.
+Auswahl der Kategorie zeigt nur die, in denen du Lieder bearbeiten darfst. Kein Knopf führt ins Leere.
+(SongSelect: TF-EXT-08.)
 
 1. **Lieder** → **Neues Lied**: Name, Kategorie, Tonart → anlegen. Das Lied öffnet sich.
 2. Ein zweites Lied mit **derselben CCLI-Nummer** wie ein vorhandenes anlegen → die App lehnt ab.
@@ -208,6 +208,34 @@ an derselben Stelle, in der Ansicht der teilenden Person. Wer nicht (mehr) teilt
 - **Historie:** #335 (3b-4b)
 
 </details>
+
+### TF-EXT-08 · CCLI SongSelect in der Erweiterung
+
+**Das brauchst du:** Eine ChurchTools-Instanz **mit SongSelect-Abo** (in ChurchTools unter Lieder
+eingerichtet) und ein Konto mit „SongSelect nutzen" (`use ccli`) und dem Recht, Lieder zu bearbeiten.
+Alles, was du anlegst, am Ende wieder löschen.
+
+**Das muss passieren:** Suchen, Vorschau, Anlegen und Notenblatt-Holen funktionieren wie in der
+Server-Variante – aus dem Browser, ohne eigenen Server. Ohne `use ccli` ist SongSelect nirgends zu sehen.
+
+1. **Lieder** → in die Suche einen Titel tippen, der in der Bibliothek nicht vorkommt → darunter
+   erscheinen SongSelect-Treffer.
+2. Bei einem Treffer das **Auge** → der Liedtext erscheint mit dem Hinweis von CCLI darunter.
+3. Den Treffer **anlegen** → Titel, Autoren und Copyright sind ausgefüllt; nach dem Anlegen hat das Lied
+   ein Notenblatt in der Tonart des Arrangements (in ChurchTools nachsehen: genau eine `.chordpro`).
+4. Bei einem Lied **mit** CCLI-Nummer, aber **ohne** Notenblatt: Lied öffnen → Titel → **Dateien …** →
+   **Aus SongSelect holen** → Rückfrage bestätigen → das Notenblatt erscheint (in ChurchTools genau eine
+   `.chordpro`). Hat das Lied schon eines, wird der Knopf nicht angeboten.
+5. Mit einem Konto **ohne** `use ccli`: keine SongSelect-Treffer, kein Menüpunkt.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `client/src/services/ctSongSelect.ts`, `client/src/services/ctSchreiben.ts`, `client/src/services/ctRuntime.ts`, `shared/ct/songselect.ts`
+- **Automatisiert:** teilweise – `ctSongSelect.test.ts` (Weg des Browsers: Funktion, CSRF,
+  `X-Requested-With`, Lizenz, Reihenfolge, Tonart), Server-Tests über dieselben Regeln; ob ChurchTools die
+  `getCCLI*`-Aufrufe aus dem Browser annimmt, nur hier
+- **Historie:** #335 (3b-5)
 
 ### TF-EXT-09 · Ohne Rechte für Lieder und Abläufe: klarer Hinweis
 

@@ -8,8 +8,8 @@ import type { SongLibraryEntry, SongSelectSuchergebnis } from '@shared/types/ind
  *
  * **Die teuerste Zusicherung zuerst: Beim Durchsehen der Liste wird KEIN Liedtext abgefragt.** Erst wenn
  * ein Lied wirklich geöffnet wird, läuft eine Anfrage. Bei SongSelect ist das mehr als eine Frage der
- * Sparsamkeit: Ob CCLI einen Textabruf als Nutzung verbucht, ist offen (gemessen wurde nur, dass die
- * Antwort keinen Hinweis darauf enthält). Geprüft wird das am **`enabled`-Argument** der Hooks – an der
+ * Sparsamkeit: Aufs Kontingent zählt ein Textabruf laut CCLI zwar nicht (Texte sind unbegrenzt), ob er
+ * in der Nutzungs-Historie erscheint, ist aber offen. Geprüft wird das am **`enabled`-Argument** der Hooks – an der
  * Darstellung wäre nur der Mock geprüft.
  *
  * Dazu die zwei Wege, die Alwin ausdrücklich beide wollte: **Antippen → Vorschau** (Muster ProPresenter)
@@ -109,8 +109,8 @@ describe('SongPicker – in der Liste wird kein Liedtext geholt', () => {
 
   it('die CCLI-Abfrage ebenfalls – dort ist es besonders wichtig', () => {
     /**
-     * Ob CCLI einen Textabruf verbucht, ist offen. Eine Anfrage beim Durchsehen von 147 Treffern wäre
-     * genau das, was niemand will.
+     * Ob ein Textabruf bei CCLI in der Nutzungs-Historie erscheint, ist offen (aufs Kontingent zählt er
+     * laut CCLI nicht). Eine Anfrage beim Durchsehen von 147 Treffern wäre genau das, was niemand will.
      */
     zeige({ onSongSelectTreffer });
     expect(ccliText).toHaveBeenCalledWith(null, false);

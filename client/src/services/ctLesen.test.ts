@@ -97,7 +97,7 @@ describe('Anmeldung', () => {
 });
 
 describe('Rechte', () => {
-  it('Ablauf, Tempo und Lieder gelten, wie ChurchTools sie meldet; nur SongSelect noch aus (#335)', async () => {
+  it('Ablauf, Tempo, Lieder und SongSelect gelten, wie ChurchTools sie meldet (#335)', async () => {
     ct.liefere('/api/permissions/global', {
       data: {
         churchservice: {
@@ -118,8 +118,8 @@ describe('Rechte', () => {
     expect(r.canEditTempo).toBe(true);
     // Seit 3b-2 schreibt die Extension auch Lieder, Arrangements und Notenblätter.
     expect(r.canEditSongs).toBe(true);
-    // SongSelect kommt mit 3b-5 – bis dahin aus, auch wenn die Gemeinde das Recht hat.
-    expect(r.canUseCcli).toBe(false);
+    // Seit 3b-5 auch SongSelect – wie ChurchTools es meldet.
+    expect(r.canUseCcli).toBe(true);
   });
 });
 

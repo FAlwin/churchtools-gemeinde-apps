@@ -610,6 +610,13 @@ export interface UserCapabilities {
    * pflegen. Leere Gruppenauswahl = Bereich aus.
    */
   canUseAvailability: boolean;
+  /**
+   * Weder Lieder noch Abläufe – und die Antwort ist trotzdem ECHT (#444): Irgendein anderes Recht ist
+   * gesetzt. ChurchTools schickt immer alle Module, auch leer (gemessen 08.10.2026); beim Aussetzer aus
+   * #99 war die ganze Antwort leer. Nur dann zeigt die App „Dir fehlen die Rechte …" statt „konnten
+   * nicht geladen werden". Fehlt das Feld (ältere Server), gilt `false`.
+   */
+  keineLiedRechte?: boolean;
 }
 
 // ── Verfügbarkeit / Abwesenheiten (#177) ──────────────────────────────────

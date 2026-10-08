@@ -208,3 +208,27 @@ an derselben Stelle, in der Ansicht der teilenden Person. Wer nicht (mehr) teilt
 - **Historie:** #335 (3b-4b)
 
 </details>
+
+### TF-EXT-09 · Ohne Rechte für Lieder und Abläufe: klarer Hinweis
+
+**Das brauchst du:** Ein Konto, das den Menüpunkt der Musik App sehen darf, aber im Bereich **Events**
+weder „Lieder sehen" (`view songcategory`) noch „Abläufe sehen" (`view agenda`) hat.
+
+**Das muss passieren:** Nach ein paar Sekunden (die App versucht es erst automatisch erneut) steht da:
+„Dir fehlen in ChurchTools die Rechte für Lieder und Abläufe. Bitte frag die Verantwortlichen deiner
+Gemeinde." – mit Schloss und „Erneut versuchen". NICHT „Berechtigungen konnten nicht geladen werden".
+
+1. Mit diesem Konto die Erweiterung öffnen und warten.
+2. In ChurchTools „Lieder sehen" für eine Kategorie geben, in der App **Erneut versuchen** → die App
+   öffnet sich mit dem Tab „Lieder".
+3. Gilt genauso in der Server-Variante (Anmeldung mit einem solchen Konto).
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/ct/rechte.ts`, `client/src/services/churchtoolsApi.ts`, `client/src/App.tsx`
+- **Automatisiert:** teilweise – `churchtools.test.ts` (echte Antwort vs. leere, an der gemessenen Form),
+  `churchtoolsApi.rechte.test.ts` (Fehlertyp); der Text im Fehlerschirm nur hier
+- **Historie:** #444
+
+</details>

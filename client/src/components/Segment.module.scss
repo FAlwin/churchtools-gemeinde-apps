@@ -1,9 +1,9 @@
+@use '../styles/mixins' as *;
+
+// Einzelne Knöpfe statt Teile auf einer Spur (Alwin, 09.10.2026) – Aussehen in `auswahlKnopf`.
 .seg {
   display: flex;
-  background: var(--seg-track);
-  border-radius: var(--r-ctrl);
-  padding: 2px;
-  gap: 2px;
+  gap: 6px;
 }
 
 .btn {
@@ -13,22 +13,14 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  border: none;
-  background: none;
-  cursor: pointer;
+  @include auswahlKnopf;
   font-size: 13px;
-  font-weight: 600;
-  color: var(--text2);
   padding: 8px 11px;
-  border-radius: calc(var(--r-ctrl) - 2px);
-  transition: all 0.14s;
-  font-family: var(--ui);
+  border-radius: var(--r-ctrl);
 }
 
 .on {
-  background: var(--seg-on);
-  color: var(--text);
-  box-shadow: 0 1px 3px rgba(22, 33, 42, 0.12);
+  @include auswahlKnopfAn;
 }
 
 // Ausgegraut (z. B. „Vergangene" ohne Netz): sichtbar zurückgestellt, bleibt aber tippbar,

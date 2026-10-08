@@ -112,3 +112,30 @@
     }
   }
 }
+
+/**
+ * **Ein Knopf in einer Reihe von Auswahl-Knöpfen** (A–Z/Häufigkeit/Zuletzt, Kommende/Vergangene,
+ * Zählweise …) – EINE Bauart für die ganze App (Alwin, 09.10.2026: „auch wenn sie nicht ausgewählt
+ * sind, soll sichtbar sein, dass es verschiedene Buttons sind"; Farben wie bisher). Bis dahin gab es
+ * zwei: den grauen Umschalter mit unsichtbaren Teilen (`Segment`) und blaue Knöpfe in den
+ * Liedblatt-Menüs. Größe und Schrift bleiben bei der jeweiligen Stelle.
+ */
+@mixin auswahlKnopf {
+  border: 1px solid var(--border);
+  background: var(--seg-track);
+  color: var(--text2);
+  font-family: var(--ui);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.14s,
+    color 0.14s,
+    box-shadow 0.14s;
+}
+
+/** Der gewählte Knopf der Reihe – hell und leicht abgehoben, wie bisher im Umschalter. */
+@mixin auswahlKnopfAn {
+  background: var(--seg-on);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(22, 33, 42, 0.12);
+}

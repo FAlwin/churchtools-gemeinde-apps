@@ -24,6 +24,10 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Geändert
 
+- **Umschalter sind jetzt sichtbar getrennte Knöpfe** (Alwin): A–Z/Häufigkeit/Zuletzt, Kommende/
+  Vergangene, Abwesenheiten, Mehr und die Liedblatt-Menüs (Spalten, Zählweise, Puls). Auch die nicht
+  gewählten Teile haben einen eigenen Rand; der gewählte ist hell und abgehoben wie bisher. Die
+  Liedblatt-Menüs hatten eine eigene, blaue Bauart – jetzt gibt es eine für die ganze App.
 - **Die Lied-Statistik kommt aus ChurchTools selbst – ein Aufruf statt rund 250** (Alwin): Bisher las die
   App für jeden Termin der letzten vier Jahre den Ablauf – der Lauf, der ChurchTools schon einmal
   ausgebremst hat (#300). ChurchTools führt dieselbe Statistik selbst; die App holt sie jetzt mit einem

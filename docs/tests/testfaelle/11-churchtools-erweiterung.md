@@ -263,7 +263,7 @@ Gemeinde." – mit Schloss und „Erneut versuchen". NICHT „Berechtigungen kon
 
 ### TF-EXT-10 · Lied-Statistik (Häufigkeit, zuletzt) aus ChurchTools
 
-**Das brauchst du:** Ein Konto mit „Lied-Statistik sehen" (`view song statistics`, Bereich Events) und
+**Das brauchst du:** Ein Konto mit „Song-Statistik sehen" (`view song statistics`, Bereich Events) und
 ein zweites ohne dieses Recht. Ein paar Lieder, die in vergangenen Gottesdiensten im Ablauf standen.
 
 **Das muss passieren:** Bei **Lieder** gibt es die Reiter „Häufigkeit" und „Zuletzt" mit Zeitraum, und

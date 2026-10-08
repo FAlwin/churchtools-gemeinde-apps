@@ -132,7 +132,7 @@ export function deleteVersion(
  *
  * Org-weit gleich und kurz gemerkt: Der Inhalt (nur Spieltage je Lied) ist für alle gleich und
  * unkritisch; aufgebaut wird mit dem Cookie des ersten Anfragenden im Zeitfenster. Wer das Recht
- * „Lied-Statistik sehen" nicht hat, löst selbst keinen Abruf aus, der gelingt – bekommt aber den Stand
+ * „Song-Statistik sehen" nicht hat, löst selbst keinen Abruf aus, der gelingt – bekommt aber den Stand
  * eines anderen, solange er gemerkt ist. Das war beim alten Lauf genauso.
  */
 let usageCache: { at: number; data: Record<number, LiedNutzung> } | null = null;

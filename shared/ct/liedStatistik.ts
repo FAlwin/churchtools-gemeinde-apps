@@ -27,7 +27,7 @@ export interface LiedNutzung {
 
 export const STATISTIK_MELDUNGEN: AjaxMeldungen = {
   verweigert:
-    'Keine Berechtigung für die Lied-Statistik in ChurchTools (Recht „Lied-Statistik sehen").',
+    'Keine Berechtigung für die Lied-Statistik in ChurchTools (Recht „Song-Statistik sehen").',
   abgelehnt: 'ChurchTools hat die Lied-Statistik abgelehnt',
   unlesbar: 'ChurchTools lieferte keine lesbare Lied-Statistik.',
   fehlgeschlagen: 'Die Lied-Statistik konnte nicht geladen werden.',

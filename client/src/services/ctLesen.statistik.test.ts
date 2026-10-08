@@ -52,12 +52,12 @@ describe('liedNutzung (Erweiterung)', () => {
     expect(ct.geschrieben.filter((g) => g.was === AJAX)).toHaveLength(1);
   });
 
-  it('ohne Recht „Lied-Statistik sehen": eine klare Meldung, und nichts wird gemerkt', async () => {
+  it('ohne Recht „Song-Statistik sehen": eine klare Meldung, und nichts wird gemerkt', async () => {
     ct.schreibAntworten[AJAX] = () =>
       new Response(JSON.stringify({ message: 'Die Session ist abgelaufen' }), { status: 401 });
     const fehler = await liedNutzung().catch((e: unknown) => e);
     expect(fehler).toBeInstanceOf(KeinSpeicherRecht);
-    expect((fehler as Error).message).toContain('Lied-Statistik sehen');
+    expect((fehler as Error).message).toContain('Song-Statistik sehen');
     ct.schreibAntworten[AJAX] = json({
       status: 'success',
       data: { '70': [{ date: '2026-06-01 10:00:00' }] },

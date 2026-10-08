@@ -11,7 +11,7 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 - **Lied-Statistik jetzt auch in der ChurchTools-Erweiterung:** „Häufigkeit" und „Zuletzt" bei den
   Liedern und in der Lied-Auswahl. Möglich, weil die App die Statistik jetzt aus ChurchTools selbst holt
-  (siehe unten). Dafür braucht jede Person das Recht „Lied-Statistik sehen"; ohne steht dort „–".
+  (siehe unten). Dafür braucht jede Person das Recht „Song-Statistik sehen"; ohne steht dort „–".
 
 ### Geändert
 

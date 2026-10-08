@@ -91,6 +91,9 @@ export function rechteAus(
     // `use ccli` ist ein eigenes Recht und NICHT vom Admin-Recht abgedeckt: Ohne SongSelect-Abo der
     // Gemeinde hilft auch Administrator sein nichts (#322).
     canUseCcli: has(cs['use ccli']),
+    // Ebenso kein Admin-Bypass: ChurchTools prüft beim Abruf (`getSongStatistic`) genau dieses Recht –
+    // ein Reiter, dessen Abruf dann scheitert, hilft niemandem.
+    canViewSongStatistics: has(cs['view song statistics']),
     isAdmin,
     // Default; die tatsächliche Gruppen-/Rollen-Prüfung ergänzt getCapabilities (braucht Cookie + Config).
     canUseGlobalNotes: false,

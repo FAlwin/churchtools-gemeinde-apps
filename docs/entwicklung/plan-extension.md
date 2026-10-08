@@ -349,6 +349,13 @@ Lied-Statistik (~250 Anfragen) und Liedtext-Suche (jede Lieddatei) bündelt der 
 alle**. Im Browser liefe das **auf jedem Gerät einzeln** – fünf iPads wären fünfmal 250 Anfragen, genau
 der Auslöser von #300. **In der Extension weglassen und auf die Server-Variante verweisen** (Phase 4).
 
+_Nachtrag 08.10.2026 – Lied-Statistik doch:_ ChurchTools führt die Statistik selbst und liefert sie mit
+**einem** Aufruf (`func=getSongStatistic`, gefunden in `cs_loadandmap.js`). Gegen die echten Daten der
+ECG verglichen: 62 von 64 Liedern identisch (die zwei Abweichungen an einem Tag mit zwei Gottesdiensten).
+Alwin: „Beides bitte mit der ChurchTools-Statistik bauen. Unsere weg." → `@shared/ct/liedStatistik`,
+Server (`getSongUsageMap`) und Extension (`ctLesen.liedNutzung`). Recht je Person: `view song
+statistics`. Die Liedtext-Suche bleibt weggelassen.
+
 ### Phase 4 – Was wegfällt, sauber angeteasert (#336) – erledigt 07.10.2026
 
 Siehe §6. Kein toter Knopf, keine Fehlermeldung – ein Satz, der sagt, warum und wohin. Entwurf von
@@ -381,15 +388,16 @@ Alwin abgenommen, in der Test-Instanz durchgeklickt.
 
 ## 6. Was in der Extension wegfällt
 
-| Funktion                           | Warum                                                                                                                                                     | Umgang                                                     |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| **Für offline speichern** (#32)    | Füllt den **Service-Worker-Cache** mit den PDFs/Bildern. Unter `/ccm/…` liefert CT die Seite aus – ein eigener Service Worker ist dort bestenfalls fragil | Knopf entfällt, Hinweis auf Server-Variante                |
-| **Team-Anmerkungen teilen**        | Personen-Dateien sind für Mitglieder **immer** lesbar (§2b) – ein Schalter „teilen" könnte nichts verbergen                                               | Schalter entfällt; Hinweis, dass Zeichnungen sichtbar sind |
-| **Fremde Anmerkungen ansehen**     | Die Dateien der anderen sind lesbar (§2b)                                                                                                                 | **Bleibt** – aus den Personen-Dateien                      |
-| **Update-Hinweis**                 | Ohne Service Worker kein Update-Balken; ein Hinweis in „Mehr“ braucht nur die neueste Version                                                             | Bleibt: Der Browser fragt GitHub selbst (#337, Alwin)      |
-| **Branding** (Gemeindename/Logo)   | Kein `site.json` ohne Server                                                                                                                              | Name aus `GET /api/info`; Logo nicht in der API (§2a)      |
-| **Login-Bildschirm, Rate-Limit**   | Die Anmeldung macht ChurchTools                                                                                                                           | Entfällt – ein Gewinn                                      |
-| **Lied-Statistik, Liedtext-Suche** | Massenläufe – im Browser je Gerät statt einmal für alle (#300)                                                                                            | Weglassen, Hinweis auf Server-Variante (3c)                |
+| Funktion                         | Warum                                                                                                                                                     | Umgang                                                     |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| **Für offline speichern** (#32)  | Füllt den **Service-Worker-Cache** mit den PDFs/Bildern. Unter `/ccm/…` liefert CT die Seite aus – ein eigener Service Worker ist dort bestenfalls fragil | Knopf entfällt, Hinweis auf Server-Variante                |
+| **Team-Anmerkungen teilen**      | Personen-Dateien sind für Mitglieder **immer** lesbar (§2b) – ein Schalter „teilen" könnte nichts verbergen                                               | Schalter entfällt; Hinweis, dass Zeichnungen sichtbar sind |
+| **Fremde Anmerkungen ansehen**   | Die Dateien der anderen sind lesbar (§2b)                                                                                                                 | **Bleibt** – aus den Personen-Dateien                      |
+| **Update-Hinweis**               | Ohne Service Worker kein Update-Balken; ein Hinweis in „Mehr“ braucht nur die neueste Version                                                             | Bleibt: Der Browser fragt GitHub selbst (#337, Alwin)      |
+| **Branding** (Gemeindename/Logo) | Kein `site.json` ohne Server                                                                                                                              | Name aus `GET /api/info`; Logo nicht in der API (§2a)      |
+| **Login-Bildschirm, Rate-Limit** | Die Anmeldung macht ChurchTools                                                                                                                           | Entfällt – ein Gewinn                                      |
+| **Liedtext-Suche**               | Massenlauf – im Browser je Gerät statt einmal für alle (#300)                                                                                             | Weglassen, Hinweis auf Server-Variante (3c)                |
+| **Lied-Statistik**               | war ein Massenlauf (#300)                                                                                                                                 | Seit 08.10.2026 aus `getSongStatistic` (1 Aufruf)          |
 
 **Der Teaser** (eine Formulierung, an einer Stelle, nicht sechs verschiedene): kurz, ohne
 Werbeton, mit Verweis darauf, dass es die App auch mit eigenem Server gibt und wo man fragen kann.

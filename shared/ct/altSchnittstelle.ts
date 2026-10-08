@@ -24,6 +24,15 @@ export interface AjaxMeldungen {
   innenUnlesbar?: string;
 }
 
+/**
+ * Der Anschluss an die alte Schnittstelle: ein Aufruf (`func` + Felder) und die Fehlerklasse des
+ * Aufrufers. Server: `ctAjax` mit dem Cookie, Browser: `ctAltAnfrage` mit der Sitzung der Seite.
+ */
+export interface AltPort {
+  anfrage(func: string, felder: Record<string, string>, meldungen: AjaxMeldungen): Promise<unknown>;
+  fehler(status: number, meldung: string): Error;
+}
+
 /** Die Meldungen mit ihren Vorgaben. */
 export function ajaxMeldungen(m: AjaxMeldungen = {}): Required<AjaxMeldungen> {
   return {

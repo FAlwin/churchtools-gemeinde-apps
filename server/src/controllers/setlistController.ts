@@ -197,9 +197,9 @@ export async function postAgendaItem(req: Request, res: Response): Promise<void>
   const eventId = idSchema.parse(req.params.eventId);
   // Standard-Titel je Art: in `@shared/ct/schreibKern` (#335) – die Extension legt genauso an.
   await createAgendaItem(ctCookie(req), eventId, createItemSchema.parse(req.body));
-  // Nur wenn DIESER Termin zur Statistik beigetragen hat (#300). Ein Zukunftstermin ist nie darin –
-  // das Vorbereiten des nächsten Gottesdienstes löst damit keinen ~250-Anfragen-Lauf mehr aus.
-  invalidateSongUsageCache(eventId);
+  // Der nächste Blick in die Statistik holt sie neu – seit 08.10.2026 ein einziger Abruf bei ChurchTools
+  // (`getSongStatistic`), kein Lauf über alle Abläufe mehr (#300).
+  invalidateSongUsageCache();
   res.json({ ok: true });
 }
 
@@ -217,7 +217,7 @@ export async function putAgendaItem(req: Request, res: Response): Promise<void> 
   const itemId = idSchema.parse(req.params.itemId);
   // „Aufheben leert den Titel": in `@shared/ct/schreibKern` (#335) – die Extension schreibt genauso.
   await updateAgendaItem(ctCookie(req), eventId, itemId, updateItemSchema.parse(req.body));
-  invalidateSongUsageCache(eventId); // nur bei beigetragenem Termin (#300)
+  invalidateSongUsageCache();
   res.json({ ok: true });
 }
 
@@ -242,7 +242,7 @@ export async function deleteAgendaItemCtrl(req: Request, res: Response): Promise
   const eventId = idSchema.parse(req.params.eventId);
   const itemId = idSchema.parse(req.params.itemId);
   await deleteAgendaItem(ctCookie(req), eventId, itemId);
-  invalidateSongUsageCache(eventId); // nur bei beigetragenem Termin (#300)
+  invalidateSongUsageCache();
   res.json({ ok: true });
 }
 
@@ -567,9 +567,24 @@ export async function getAgendaServicesCtrl(req: Request, res: Response): Promis
   res.json(result);
 }
 
-/** GET /api/song-usage – Nutzungsdaten je Song (Häufigkeit + zuletzt), separat/gecacht. */
+/**
+ * GET /api/song-usage – Nutzungsdaten je Song (Häufigkeit + zuletzt), separat/gecacht.
+ *
+ * **Erst das eigene Recht, dann der Zwischenspeicher:** Die Statistik wird für alle gemerkt; ohne diese
+ * Prüfung bekäme auch wer ohne „Song-Statistik sehen" den Stand, den ein Musiker gerade geladen hat
+ * (Alwin, 08.10.2026: nur Musiker sollen sie sehen). Die Rechte sind je Person gemerkt – kostet also
+ * keinen Abruf bei ChurchTools.
+ */
 export async function getSongUsageCtrl(req: Request, res: Response): Promise<void> {
-  const usage = await getSongUsageMap(ctCookie(req));
+  const cookie = ctCookie(req);
+  const caps = await getCapabilities(cookie, req.ctUserId ?? null);
+  if (!caps.canViewSongStatistics) {
+    throw new HttpError(
+      403,
+      'Keine Berechtigung für die Lied-Statistik (Recht „Song-Statistik sehen").',
+    );
+  }
+  const usage = await getSongUsageMap(cookie);
   res.json(usage);
 }
 

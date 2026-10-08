@@ -65,8 +65,8 @@ Lieds. In ChurchTools hängt an deiner Person unter **Anhänge** je bemalter Sei
 **Das muss passieren:** Kein Knopf führt ins Leere. Unter **Mehr** gibt es kein „Als App
 installieren", keinen Bereich „Offline" und kein „Abmelden" – dafür unten den Hinweis „Erweiterung für
 ChurchTools" mit **Mehr erfahren**. In der **Verwaltung** fehlen „Organisation / Name" und
-„Abwesenheiten: Termin-Arten" (der Rest: TF-EXT-06, TF-EXT-07). Bei **Lieder** gibt es keine Reiter
-„Häufigkeit/Zuletzt", und ein langer Suchbegriff bietet keine Suche im Liedtext an. Bei den Terminen
+„Abwesenheiten: Termin-Arten" (der Rest: TF-EXT-06, TF-EXT-07). Bei **Lieder** bietet ein langer Suchbegriff
+keine Suche im Liedtext an (die Reiter „Häufigkeit/Zuletzt" gibt es seit v2.32: TF-EXT-10). Bei den Terminen
 fehlt das Wolken-Symbol „Für offline speichern". (Ablauf und Tempo gibt es seit 3b-1 – TF-EXT-04; Lieder
 verwalten seit 3b-2 – TF-EXT-05.)
 
@@ -258,5 +258,33 @@ Gemeinde." – mit Schloss und „Erneut versuchen". NICHT „Berechtigungen kon
 - **Automatisiert:** teilweise – `churchtools.test.ts` (echte Antwort vs. leere, an der gemessenen Form),
   `churchtoolsApi.rechte.test.ts` (Fehlertyp); der Text im Fehlerschirm nur hier
 - **Historie:** #444
+
+</details>
+
+### TF-EXT-10 · Lied-Statistik (Häufigkeit, zuletzt) aus ChurchTools
+
+**Das brauchst du:** Ein Konto mit „Song-Statistik sehen" (`view song statistics`, Bereich Events) und
+ein zweites ohne dieses Recht. Ein paar Lieder, die in vergangenen Gottesdiensten im Ablauf standen.
+
+**Das muss passieren:** Bei **Lieder** gibt es die Reiter „Häufigkeit" und „Zuletzt" mit Zeitraum, und
+die Zahlen passen zu ChurchTools (Lieder → ein Lied → Statistik). Ohne das Recht gibt es die Reiter nicht
+(nur „A–Z"), die Liederliste bleibt vollständig. Gilt genauso in der Server-Variante – dort auch dann,
+wenn kurz vorher ein Musiker die Statistik geladen hat.
+
+1. Mit dem ersten Konto: **Lieder** → Reiter **Häufigkeit** → ein Lied, das am letzten Sonntag dran war,
+   steht mit passender Zahl da; unter **Zuletzt** mit dem richtigen Datum.
+2. Den Zeitraum oben enger stellen → die Zahlen werden kleiner.
+3. Beim Hinzufügen eines Lieds zum Ablauf: die Lied-Auswahl sortiert sich ebenso nach Häufigkeit.
+4. Mit dem zweiten Konto (in der Server-Variante direkt nach Schritt 1): **Lieder** zeigt nur die
+   Liste ohne „Häufigkeit/Zuletzt", kein Fehler, alle Lieder sind da. Ebenso in der Lied-Auswahl.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/ct/liedStatistik.ts`, `shared/ct/rechte.ts`, `client/src/services/ctLesen.ts`, `server/src/services/setlistBuilder.ts`, `server/src/controllers/setlistController.ts`
+- **Automatisiert:** teilweise – `liedStatistik.test.ts` (Auswertung, Zeitzone, Zukunft), `songUsage.test.ts`
+  (Server: merken, bündeln, Drosselung, fehlendes Recht), `ctLesen.statistik.test.ts` (Weg des Browsers);
+  ob die Zahlen zu ChurchTools passen, nur hier
+- **Historie:** Alwin 08.10.2026 (Vergleich mit echten Daten: 62 von 64 identisch)
 
 </details>

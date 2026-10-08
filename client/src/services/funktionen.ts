@@ -29,9 +29,10 @@ export const funktionen = {
   einstellungenInChurchTools: istExtension,
   /** Abwesenheiten samt Termin-Arten – in der Extension ab 3b-3. */
   abwesenheiten: !istExtension,
-  /** Lied-Statistik (Häufigkeit, zuletzt) – Massenlauf, den nur der Server bündeln kann (Plan 3c). */
-  statistik: !istExtension,
-  /** Suche im Liedtext – ebenso (Plan 3c). */
+  /**
+   * Suche im Liedtext – ein Lauf über jede Lieddatei; im Browser liefe er auf jedem Gerät einzeln (Plan
+   * 3c, #300). Die Lied-Statistik gibt es seit 08.10.2026 auch hier (`getSongStatistic`, ein Aufruf).
+   */
   liedtextSuche: !istExtension,
   /** Der Hinweis auf die Musik App mit eigenem Server (Plan §6, „der Teaser"). */
   hinweisAufServerVariante: istExtension,

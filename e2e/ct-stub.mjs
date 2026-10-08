@@ -205,7 +205,10 @@ const agenda = {
 function mitVorlauf() {
   return {
     ...agenda,
-    items: agenda.items.map((i) => ({ ...i, isBeforeEvent: i.position < agenda.eventStartPosition })),
+    items: agenda.items.map((i) => ({
+      ...i,
+      isBeforeEvent: i.position < agenda.eventStartPosition,
+    })),
   };
 }
 
@@ -230,6 +233,8 @@ const permissions = {
     // Ohne dieses Recht meldet der Server `canUseCcli: false` und der Reiter „SongSelect" (#378)
     // erschiene nie – dann liesse sich der Umschalter nicht durchklicken.
     'use ccli': [1],
+    // Ohne dieses Recht gäbe es die Reiter „Häufigkeit/Zuletzt" nicht (seit 08.10.2026).
+    'view song statistics': true,
   },
   churchcore: {},
 };
@@ -263,6 +268,12 @@ const CCLI_TREFFER = [
 ];
 
 function ajaxAntwort(func) {
+  // Die Lied-Statistik (08.10.2026): je Arrangement-ID die Termine, Ortszeit ohne Zone – wie gemessen.
+  if (func === 'getSongStatistic') {
+    // Vor einer Woche – damit es im voreingestellten Zeitraum der Liederliste liegt, egal wann der Test läuft.
+    const tag = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
+    return { status: 'success', data: { 9001: [{ date: `${tag} 10:00:00`, category_id: '2' }] } };
+  }
   if (func === 'getMasterData') {
     // Kategorien: alles als Zeichenkette, Name als `bezeichnung` – so liefert es das alte Modul.
     return {
@@ -335,7 +346,11 @@ function ajaxAntwort(func) {
           disclaimer:
             'For use solely with the SongSelect Terms of Use. All rights reserved. www.ccli.com',
           lyricParts: [
-            { partLabel: 'Vers 1', partType: 'Verse', lyrics: 'Erste Zeile vom Stub-Vers,\nzweite Zeile.' },
+            {
+              partLabel: 'Vers 1',
+              partType: 'Verse',
+              lyrics: 'Erste Zeile vom Stub-Vers,\nzweite Zeile.',
+            },
             { partLabel: 'Chorus 1', partType: 'Chorus', lyrics: 'Stub-Refrain,\nHalleluja!' },
             // Ein Abschnitt ohne Text – er darf NICHT als leere Überschrift erscheinen.
             { partLabel: 'Bridge', partType: 'Bridge', lyrics: '   ' },
@@ -431,7 +446,8 @@ const server = createServer((req, res) => {
       req.on('data', (chunk) => (body += chunk));
       req.on('end', () => {
         const neu = JSON.parse(body || '{}');
-        if (typeof neu.eventStartPosition === 'number') agenda.eventStartPosition = neu.eventStartPosition;
+        if (typeof neu.eventStartPosition === 'number')
+          agenda.eventStartPosition = neu.eventStartPosition;
         json(res, { data: mitVorlauf() });
       });
       return;
@@ -455,7 +471,14 @@ const server = createServer((req, res) => {
   // Durchklick der Verfügbarkeit (#177) schon.
   if (path.startsWith('/api/persons/') && path.endsWith('/groups')) {
     return json(res, {
-      data: [{ group: { domainIdentifier: '9' }, groupTypeRoleId: 1, groupMemberStatus: 'active', memberEndDate: null }],
+      data: [
+        {
+          group: { domainIdentifier: '9' },
+          groupTypeRoleId: 1,
+          groupMemberStatus: 'active',
+          memberEndDate: null,
+        },
+      ],
     });
   }
   // Abwesenheiten (#177) – ein kleiner Speicher im Prozess, damit Anlegen/Löschen sichtbar wird.
@@ -529,7 +552,7 @@ const server = createServer((req, res) => {
         const rumpf = JSON.parse(body || '{}');
         // Die Quelle kommt beim LESEN als Objekt zurück, beim Schreiben als `sourceId` – wie bei CT.
         const quelle = rumpf.sourceId
-          ? QUELLEN.find((q) => q.id === Number(rumpf.sourceId)) ?? null
+          ? (QUELLEN.find((q) => q.id === Number(rumpf.sourceId)) ?? null)
           : null;
         const felder = {
           name: rumpf.name ?? null,

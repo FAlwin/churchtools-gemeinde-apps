@@ -46,6 +46,7 @@ import {
   type LiedStammdatenRoh,
 } from '@shared/ct/stammdaten';
 import { liedtextVorschauAus } from '@shared/ct/liedtext';
+import { liedStatistik, type LiedNutzung } from '@shared/ct/liedStatistik';
 import { rechteAus, STANDARD_ADMIN_RECHT } from '@shared/ct/rechte';
 import {
   ablaufPunkte,
@@ -243,6 +244,41 @@ export async function rollen(groupId: number): Promise<{ id: number; name: strin
 export async function liedtextVorschau(songId: number): Promise<LiedtextVorschau> {
   const song = await leser.song(songId);
   return { chordpro: await liedtextVorschauAus(song, (url) => leser.dateiText(url)) };
+}
+
+// ── Lied-Statistik ───────────────────────────────────────────────────────────
+
+/**
+ * `GET /api/song-usage` – die Lied-Statistik aus ChurchTools selbst (`@shared/ct/liedStatistik`, Alwin
+ * 08.10.2026): EIN Aufruf (`getSongStatistic`) plus die Liederliste. Bis dahin gab es die Statistik in
+ * der Extension nicht, weil der alte Weg je Gerät ~250 Anfragen gekostet hätte (#300).
+ *
+ * Zehn Minuten gemerkt, wie im Server. Ein Fehlschlag wird NICHT gemerkt – vorübergehend ist nicht
+ * ungültig. Ohne das Recht „Song-Statistik sehen" fragt die Ansicht gar nicht erst
+ * (`canViewSongStatistics`); täte sie es doch, würfe ChurchTools.
+ */
+let nutzung: { at: number; daten: Promise<Record<number, LiedNutzung>> } | null = null;
+const NUTZUNG_TTL_MS = 10 * 60_000;
+
+export function liedNutzung(): Promise<Record<number, LiedNutzung>> {
+  if (nutzung && Date.now() - nutzung.at < NUTZUNG_TTL_MS) return nutzung.daten;
+  const daten = (async () =>
+    liedStatistik(
+      { anfrage: ctAltAnfrage, fehler: (status, meldung) => new ApiError(status, meldung) },
+      await leser.alleLieder(),
+      ZEITZONE,
+    ))();
+  const eintrag = { at: Date.now(), daten };
+  nutzung = eintrag;
+  daten.catch(() => {
+    if (nutzung === eintrag) nutzung = null;
+  });
+  return daten;
+}
+
+/** Nur für Tests: die gemerkte Statistik vergessen. */
+export function _vergissNutzung(): void {
+  nutzung = null;
 }
 
 // ── Lied-Stammdaten (3b-2) ───────────────────────────────────────────────────

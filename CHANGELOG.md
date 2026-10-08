@@ -7,6 +7,24 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu
+
+- **Lied-Statistik jetzt auch in der ChurchTools-Erweiterung:** „Häufigkeit" und „Zuletzt" bei den
+  Liedern und in der Lied-Auswahl. Möglich, weil die App die Statistik jetzt aus ChurchTools selbst holt
+  (siehe unten). Zu sehen ist sie nur mit dem Recht „Song-Statistik sehen" – die ECG gibt es nur den
+  Musikern. Wer es nicht hat, bekommt die Reiter gar nicht angezeigt, und der Server gibt die Statistik
+  auch nicht aus seinem Zwischenspeicher heraus.
+
+### Geändert
+
+- **Die Lied-Statistik kommt aus ChurchTools selbst – ein Aufruf statt rund 250** (Alwin): Bisher las die
+  App für jeden Termin der letzten vier Jahre den Ablauf – der Lauf, der ChurchTools schon einmal
+  ausgebremst hat (#300). ChurchTools führt dieselbe Statistik selbst; die App holt sie jetzt mit einem
+  einzigen Aufruf. Gegen die echten Daten der ECG verglichen: 62 von 64 Liedern identisch, die zwei
+  Abweichungen an einem Tag mit zwei Gottesdiensten. Die Grenze von vier Jahren entfällt. **Für die
+  Server-Variante:** Wer die Statistik sehen soll, braucht in ChurchTools das Recht „Song-Statistik
+  sehen" (`view song statistics`).
+
 ## [2.31.0] – 2026-10-08
 
 **Beim Update ist nichts zu tun.** ChurchTools-Erweiterung: neue ZIP einspielen; für SongSelect braucht

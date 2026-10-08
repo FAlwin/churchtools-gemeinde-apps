@@ -14,22 +14,20 @@ import type {
 import { downloadFileText } from './ctFiles.js';
 import { CtOverloadedError, isCtOverloaded } from './ctHttp.js';
 import { createGebuendelterLauf } from './gebuendelterLauf.js';
-import { mapLimit } from './mapLimit.js';
 import { getAgenda, getAllSongs, getAppointmentSubtitle, getEvents, getSong } from './ctRead.js';
 import * as noten from '@shared/ct/notenblaetter';
 import { verwalterFuer } from './ctVerwalter.js';
-import { songSelectFuer } from './ctSongSelect.js';
+import { altPortFuer } from './ctAjax.js';
 import { notenblattAusSongSelect } from '@shared/ct/songselect';
+import { liedStatistik, type LiedNutzung } from '@shared/ct/liedStatistik';
 import { dateiUrlFinden } from './arrangementFiles.js';
 import { setlistFingerprint, agendaSignatureList, fingerprintAusText } from './agendaDiff.js';
 import { HttpError } from '../middleware/errorHandler.js';
-import { isoTag, tagAusIso } from '../utils/isoTag.js';
 import { config } from '../config.js';
 import {
   ablaufPunkte,
   liedBibliothek,
   liedBlatt,
-  skipMissingAgenda,
   termineMitAblauf,
   type CtLeser,
 } from '@shared/ct/setlistKern';
@@ -127,63 +125,35 @@ export function deleteVersion(
   return noten.versionLoeschen(verwalterFuer(cookie), songId, arrangementId, versionKey);
 }
 
-interface SongUsage {
-  /** Vergangene Spieltermine (YYYY-MM-DD), absteigend sortiert (neuester zuerst). */
-  dates: string[];
-}
+/**
+ * **Die Lied-Statistik kommt aus ChurchTools selbst** (`@shared/ct/liedStatistik`, Alwin 08.10.2026) –
+ * ein Aufruf (`getSongStatistic`) plus die Liederliste, statt wie bis dahin für jeden Termin der
+ * letzten vier Jahre den Ablauf zu lesen (~250 Anfragen je Lauf, der Auslöser von #300).
+ *
+ * Org-weit gleich und kurz gemerkt: Der Inhalt (nur Spieltage je Lied) ist für alle gleich und
+ * unkritisch; aufgebaut wird mit dem Cookie des ersten Anfragenden im Zeitfenster. Der Speicher prüft
+ * KEIN Recht – das tut der Aufrufer (`getSongUsageCtrl`), bevor er hierher kommt; sonst bekäme auch
+ * wer ohne „Song-Statistik sehen" den Stand, den ein Musiker gerade geladen hat.
+ */
+let usageCache: { at: number; data: Record<number, LiedNutzung> } | null = null;
 
-// Org-weite Song-Nutzung (gleich für alle) – im Speicher gecacht (TTL 1 h).
-// Bewusst mit dem Cookie des ERSTEN Anfragenden im TTL-Fenster aufgebaut: Die Statistik ist
-// organisationsweit identisch, und der Inhalt (nur Lied-Spieldaten, keine Titel/Notizen) ist
-// unkritisch. CT-Sichtbarkeitsunterschiede zwischen Konten werden hier bewusst eingeebnet.
-//
-// `eventIds` = die Termine, aus denen dieser Stand gebaut wurde (#300). Damit kann das Invalidieren
-// präzise werden, statt bei jeder Ablauf-Änderung alles wegzuwerfen (siehe `invalidateSongUsageCache`).
-//
-// Bewusst KEIN `complete`-Feld: Ein Lauf, bei dem einzelne Termine mit 403/500 ausfielen, wird ganz
-// normal gecacht und ausgeliefert – wie vor #300. Ein Feld zu führen, das nirgends gelesen wird, wäre
-// toter Code, der eine Regel behauptet, die es nicht gibt. Das Sichtbarmachen einer unvollständigen
-// Statistik in der Oberfläche ist ein eigener Schritt (am Issue vermerkt).
-let usageCache: {
-  at: number;
-  data: Record<number, SongUsage>;
-  eventIds: Set<number>;
-} | null = null;
-
+/** So lange gilt ein Stand. Der Abruf ist billig – kurz genug, dass ein Gottesdienst bald auftaucht. */
+const USAGE_TTL_MS = 10 * 60_000;
 /** Sperrfrist nach einer Drosselung – lang genug, dass sich das CT-Limit erholt. */
 const USAGE_COOLDOWN_MS = 120_000;
 /**
- * Bündelung und Sperrfrist des Statistik-Laufs (#300) – **im Baustein, nicht mehr handgeschrieben.**
- *
- * Vorher standen `usageInflight` und `usageRetryAfter` hier als eigene Variablen. Mit dem Suchindex
- * über die Liedtexte kam ein zweiter Lauf derselben Art dazu; eine Kopie der Mechanik wäre genau die
- * Fehlerklasse, die dieses Projekt am häufigsten getroffen hat. Der Zwischenspeicher selbst bleibt
- * hier – was gecacht wird und wann es verfällt, ist bei beiden verschieden.
+ * Bündelung und Sperrfrist (#300) bleiben, auch für den einen Aufruf: Fünf iPads, die gleichzeitig
+ * „Alle Lieder" öffnen, lösen EINEN Abruf aus; nach einer Drosselung wird eine Weile nicht gefragt.
  */
-const usageLauf = createGebuendelterLauf<Record<number, SongUsage>>(USAGE_COOLDOWN_MS);
+const usageLauf = createGebuendelterLauf<Record<number, LiedNutzung>>(USAGE_COOLDOWN_MS);
 
 /**
- * Leert den Statistik-Cache – **nur wenn dieser Termin überhaupt mitgezählt wurde** (#300).
- *
- * Vorher warf jede Ablauf-Änderung den ganzen Stand weg. Folge: Wer den nächsten Sonntag vorbereitet
- * (Lied hinzufügen, Titel ändern), entwertete die Statistik – und der nächste Blick in „Alle Lieder"
- * oder „Lied hinzufügen" löste einen **kalten Lauf mit ~250 ChurchTools-Anfragen** aus. Genau diese
- * Schleife hat das CT-Limit gerissen und danach Anmeldung, Rechte und Speichern mit lahmgelegt.
- *
- * Die Prüfung ist beweisbar richtig: Hat ein Termin nichts zum Stand beigetragen, kann sein Ändern
- * keine Zahl verändern. **Zukunftstermine sind nie im Set** (`date > to` unten filtert sie), das
- * Vorbereiten des nächsten Gottesdienstes invalidiert also nie mehr.
+ * Der nächste Aufruf holt die Statistik neu (nach einer Ablauf-Änderung). Der gemerkte Stand bleibt
+ * bis dahin stehen – scheitert der neue Abruf an einer Drosselung, ist er die bessere Antwort als gar
+ * keine Zahlen.
  */
-export function invalidateSongUsageCache(eventId?: number): void {
-  if (!usageCache) return;
-  if (eventId === undefined || usageCache.eventIds.has(eventId)) {
-    // Bewusst NICHT wegwerfen, sondern nur als „muss neu gebaut werden" markieren (`at = 0`):
-    // Der Stand ist danach nur leicht veraltet, aber im Wesentlichen richtig. Scheitert der neue Lauf
-    // an einer Drosselung, ist er die deutlich bessere Antwort als „keine Statistik" – ohne Zahlen
-    // zeigt die Liederliste sonst „–" und die Sortierung nach Häufigkeit wird unbrauchbar.
-    // `at = 0` heißt: TTL ist sicher abgelaufen → der nächste Aufruf baut neu.
-    usageCache = { ...usageCache, at: 0 };
-  }
+export function invalidateSongUsageCache(): void {
+  if (usageCache) usageCache = { ...usageCache, at: 0 };
 }
 
 /** Nur für Tests: Cache, laufender Abruf und Sperrfrist zurücksetzen. */
@@ -192,124 +162,36 @@ export function __resetSongUsageForTests(): void {
   usageLauf.reset();
 }
 
-/** Wie viele Jahre zurück Spieltermine gesammelt werden – deckt den „Alle"-Zeitfilter ab. */
-const USAGE_LOOKBACK_YEARS = 4;
-
 /**
- * Sammelt je Lied die vergangenen Spieltermine aus den Abläufen der letzten
- * `USAGE_LOOKBACK_YEARS` Jahre – bis heute (geplante Zukunftstermine zählen NICHT als „gespielt").
- * Org-weit gleich, 1 h gecacht. Häufigkeit und „zuletzt gespielt" für einen frei gewählten Zeitraum
- * rechnet der Client selbst aus dieser Terminliste – ohne erneuten Server-Roundtrip.
+ * Je Lied die vergangenen Spieltage. Häufigkeit und „zuletzt gespielt" für einen frei gewählten Zeitraum
+ * rechnet der Client selbst aus dieser Liste.
  */
-export async function getSongUsageMap(cookie: string): Promise<Record<number, SongUsage>> {
-  if (usageCache && Date.now() - usageCache.at < 3_600_000) return usageCache.data;
-  // Nach einer Drosselung eine Weile gar nicht erst versuchen – sonst rennt jeder Aufruf erneut in
-  // die Wand und verlängert die Drosselung, die er gerade abwarten sollte.
+export async function getSongUsageMap(cookie: string): Promise<Record<number, LiedNutzung>> {
+  if (usageCache && Date.now() - usageCache.at < USAGE_TTL_MS) return usageCache.data;
+  // Nach einer Drosselung eine Weile gar nicht erst fragen – sonst verlängert jeder Aufruf sie.
   if (usageLauf.istGesperrt()) {
-    if (usageCache) return usageCache.data; // letzter bekannter Stand ist besser als nichts
+    if (usageCache) return usageCache.data;
     throw new CtOverloadedError(usageLauf.restMs());
   }
-  // Läuft schon einer? `fuehreAus` hängt sich an (#300). Ohne das starten fünf iPads, die gleichzeitig
-  // „Alle Lieder" öffnen, FÜNF volle Läufe – rund 1.235 ChurchTools-Anfragen statt 250.
-  return usageLauf.fuehreAus(() => runSongUsage(cookie));
-}
-
-/** Der eigentliche Lauf – getrennt, damit `getSongUsageMap` nur noch Cache/Bündelung/Sperrfrist regelt. */
-async function runSongUsage(cookie: string): Promise<Record<number, SongUsage>> {
-  const started = Date.now();
-  const today = new Date();
-  const to = isoTag(today);
-  const fromD = new Date(today);
-  fromD.setFullYear(fromD.getFullYear() - USAGE_LOOKBACK_YEARS);
-  const from = isoTag(fromD);
-
-  /** Bei Drosselung/Zeitüberschreitung sofort aufhören (#300) – siehe `bailOut` unten. */
-  let overloaded = false;
-  let events;
-  try {
-    events = await getEvents(cookie, from, to);
-  } catch (e) {
-    // Auch der EINE Termin-Abruf am Anfang kann gedrosselt werden – dann ist der Lauf hier zu Ende
-    // und die Sperrfrist muss genauso greifen wie unten.
-    if (isCtOverloaded(e)) return bailOut(e, 0, started);
-    throw e;
-  }
-
-  const usage: Record<number, SongUsage> = {};
-  const eventIds = new Set<number>();
-  /** Termine mit einem echten Fehler (403/500) – die machen die Statistik unvollständig. */
-  let skipped = 0;
-  /** Termine ganz ohne Ablaufplan (404) – normal, kein Mangel. Nur zur Einordnung im Log. */
-  let ohneAblauf = 0;
-  await mapLimit(events, 8, async (ev) => {
-    // Notbremse: Sobald ChurchTools gebremst hat, keine weiteren Anfragen mehr starten. Es laufen
-    // höchstens noch die 8 begonnenen aus – statt weiterer ~240 in ein erschöpftes Limit.
-    if (overloaded) return;
+  return usageLauf.fuehreAus(async () => {
     try {
-      const date = tagAusIso(ev.startDate);
-      if (date > to) return; // Sicherheitsnetz: keine Zukunftstermine mitzählen
-      const agenda = await getAgenda(cookie, ev.id);
-      eventIds.add(ev.id); // hat beigetragen → nur DIESE Termine dürfen den Stand invalidieren
-      for (const it of agenda.items ?? []) {
-        const id = it.song?.songId;
-        if (!id) continue;
-        (usage[id] ??= { dates: [] }).dates.push(date);
-      }
+      const data = await liedStatistik(
+        altPortFuer(cookie),
+        await getAllSongs(cookie),
+        config.zeitzone,
+      );
+      usageCache = { at: Date.now(), data };
+      usageLauf.entsperren();
+      return data;
     } catch (e) {
-      if (isCtOverloaded(e)) {
-        overloaded = true;
-        return;
-      }
-      // Ein 404 heißt „dieser Termin hat gar keinen Ablaufplan" und ist der NORMALFALL: Im
-      // 4-Jahres-Fenster liegen Gebetstreffen, Sitzungen und alles andere ohne Lieder. Er darf die
-      // Statistik NICHT als unvollständig ausweisen (#300). Der erste Betriebslauf zeigte 175 von 223
-      // Terminen ohne Ablauf – als „übersprungen" gezählt stand dauerhaft `vollständig=false` da, und
-      // eine Warnung, die immer leuchtet, wird ignoriert.
-      if (e instanceof HttpError && e.status === 404) ohneAblauf++;
-      // Andere Fehler (403/500) überspringen nur diesen Termin und brechen den Lauf NICHT ab – sonst
-      // würde ein dauerhaft unlesbarer Termin die Statistik für immer blockieren.
-      else skipped++;
-      skipMissingAgenda('getSongUsageMap', e);
+      if (!isCtOverloaded(e)) throw e;
+      const ms = (e instanceof HttpError ? e.retryAfterMs : undefined) ?? USAGE_COOLDOWN_MS;
+      usageLauf.sperren(ms);
+      // Der letzte bekannte Stand ist besser als nichts; ohne ihn ein ehrlicher Fehler.
+      if (usageCache) return usageCache.data;
+      throw new CtOverloadedError(ms);
     }
   });
-
-  if (overloaded) return bailOut(null, events.length, started);
-
-  // Termine je Lied absteigend sortieren (neuester zuerst) → Client nimmt [0] als „zuletzt".
-  for (const u of Object.values(usage)) u.dates.sort((a, b) => b.localeCompare(a));
-  usageCache = { at: Date.now(), data: usage, eventIds };
-  usageLauf.entsperren();
-  console.warn(
-    `[songUsage] Lauf beendet: ${eventIds.size} mit Ablauf, ${ohneAblauf} ohne (normal), ` +
-      `${skipped} fehlerhaft, vollständig=${skipped === 0}, ` +
-      `${((Date.now() - started) / 1000).toFixed(1)} s`,
-  );
-  return usage;
-}
-
-/**
- * Abbruch wegen Drosselung (#300): Das Teilergebnis wird **verworfen**, nicht gecacht.
- *
- * Sonst würde eine im Sturm entstandene, viel zu kleine Statistik eine volle Stunde als Wahrheit
- * ausgeliefert – und über die Client-Persistenz sogar sieben Tage lang. Liegt noch ein **früherer**
- * Stand im Speicher, wird der weiter ausgeliefert (sein Alter bleibt unverändert, der Cache verlängert
- * sich also nicht selbst). Liegt keiner, ist ein ehrlicher Fehler besser als falsche Zahlen.
- *
- * Genau formuliert: der letzte BEKANNTE Stand, nicht zwingend ein vollständiger. Fielen darin einzelne
- * Termine mit 403/500 aus, ist er leicht zu niedrig – so wie er auch im Normalbetrieb ausgeliefert
- * würde. Diese Ehrlichkeit ist wichtig, weil eine frühere Fassung dieses Kommentars „vollständiger
- * Stand" behauptete, was der Code nie geprüft hat.
- */
-function bailOut(e: unknown, geplant: number, started: number): Record<number, SongUsage> {
-  const retryAfterMs = (e instanceof HttpError ? e.retryAfterMs : undefined) ?? USAGE_COOLDOWN_MS;
-  usageLauf.sperren(retryAfterMs);
-  console.warn(
-    `[songUsage] Lauf ABGEBROCHEN (ChurchTools drosselt) nach ` +
-      `${((Date.now() - started) / 1000).toFixed(1)} s von ${geplant} Terminen; ` +
-      `Sperrfrist ${Math.round(retryAfterMs / 1000)} s`,
-  );
-  if (usageCache) return usageCache.data;
-  throw new CtOverloadedError(retryAfterMs);
 }
 
 /** Die Lieder für „Alle Lieder" – Regeln in `@shared/ct/setlistKern` (#335). */
@@ -390,7 +272,7 @@ export function holeChordProAusSongSelect(
   // Tonart-Regel und Reihenfolge stehen seit 3b-5 in `@shared/ct/songselect` (#335).
   return notenblattAusSongSelect(
     verwalterFuer(cookie),
-    songSelectFuer(cookie),
+    altPortFuer(cookie),
     songId,
     arrangementId,
     songNumber,

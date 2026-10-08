@@ -16,7 +16,6 @@ vi.mock('../services/funktionen', async (original) => ({
     abmelden: false,
     gemeindeName: false,
     abwesenheiten: false,
-    statistik: false,
     liedtextSuche: false,
     hinweisAufServerVariante: true,
     einstellungenInChurchTools: true,

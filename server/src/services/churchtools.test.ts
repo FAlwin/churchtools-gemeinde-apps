@@ -129,6 +129,21 @@ describe('parseCapabilities', () => {
     expect(caps.canViewSongs).toBe(true);
     expect(caps.canViewAgendas).toBe(true);
   });
+
+  // Nur Musiker sollen die Statistik sehen (Alwin, 08.10.2026) – also das eigene Recht, ohne Ableitung.
+  it('Song-Statistik: nur mit `view song statistics`, nicht aus Ablauf- oder Admin-Rechten', () => {
+    const mit = parseCapabilities({ churchservice: { 'view song statistics': true } });
+    expect(mit.canViewSongStatistics).toBe(true);
+    const ohne = parseCapabilities({
+      churchcore: { 'administer persons': [1] },
+      churchservice: {
+        'view agenda': [5],
+        'view songcategory': [1],
+        'view song statistics': false,
+      },
+    });
+    expect(ohne.canViewSongStatistics).toBe(false);
+  });
 });
 
 describe('computeTeamNotesAllowed', () => {

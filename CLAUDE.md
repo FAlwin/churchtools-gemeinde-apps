@@ -658,7 +658,14 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
-- **Unreleased (08.10.2026) = Lied-Statistik aus ChurchTools** (Zweig `feat/liedstatistik-ct`): Der
+- **v2.32.0 (09.10.2026) = Lied-Statistik aus ChurchTools + Vollbild-Knopf + getrennte Umschalter**
+  (PRs #452, #453). Vollbild (nur Erweiterung): ein Knopf auf jeder Seite ganz rechts oben legt `#root`
+  per `data-vollbild` über die ChurchTools-Leiste (`useAppVollbild`, z-index 2500 < Coachmarks 3000) –
+  das Browser-Vollbild (Fullscreen-API) war am iPad unruhig (Safari-X, Hinweis, Flackern) und fehlt in
+  ChurchTools als Homescreen-App ganz. Umschalter: eine Vorlage `auswahlKnopf` für `Segment` und die
+  Liedblatt-Menüs. Fix: `useAppNav` stellt den gemerkten Gottesdienst nur noch für Ablauf/Liederheft
+  wieder her (warf vorher Lieder aus der Liederliste zurück). Einmaliger Hinweis `HINT_VOLLBILD_KNOPF`.
+  Alles von Alwin in der Test-Instanz abgenommen. Die Statistik im Einzelnen: Der
   eigene Lauf über alle Abläufe (~250 Anfragen, Wurzel von #300) ist weg; Server und Erweiterung holen
   `getSongStatistic` (alte Schnittstelle, EIN Aufruf) über `shared/ct/liedStatistik.ts`. Live gegen
   den alten Server verglichen: 62/64 gleich, die zwei Abweichungen am 28.06.2026 (zwei Gottesdienste an

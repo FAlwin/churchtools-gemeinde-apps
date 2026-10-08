@@ -289,30 +289,35 @@ wenn kurz vorher ein Musiker die Statistik geladen hat.
 
 </details>
 
-### TF-EXT-11 · Echtes Vollbild am Liedblatt (iPad, Android, Rechner)
+### TF-EXT-11 · Vollbild-Knopf: die App liegt über der ChurchTools-Leiste
 
-**Das brauchst du:** Die Erweiterung in ChurchTools im Browser – am iPad (Safari) und, wenn zur Hand,
-am iPhone. Ein Lied mit Notenblatt.
+**Das brauchst du:** Die Erweiterung in ChurchTools – am iPad in Safari, am besten zusätzlich mit
+ChurchTools als Homescreen-App (Safari → Teilen → „Zum Home-Bildschirm"). Wenn zur Hand: ein iPhone
+und ein Rechner mit Chrome oder Edge. Ein Lied mit Notenblatt, ein Ablauf.
 
-**Das muss passieren:** Ein Tipp in die Mitte des Blatts blendet nicht nur die Leisten der App aus,
-sondern auch die Leiste von ChurchTools und die des Browsers – das Blatt füllt den ganzen Bildschirm.
-Ein zweiter Tipp holt alles zurück. Am iPhone bleibt es wie bisher (nur die Leisten der App weg).
+**Das muss passieren:** Der Knopf mit den vier Ecken (oben rechts in **Lieder** und im Ablauf, im
+Liedblatt bei den Werkzeugen) legt die App über die Leiste von ChurchTools – in jedem Browser, ohne X
+und ohne Hinweis von Safari, ohne Flackern. Mit ChurchTools als Homescreen-App ist dann der ganze
+Bildschirm die App. Der Zustand bleibt beim Wechsel zwischen Liste, Ablauf und Liedblatt.
 
-1. **Lieder** → ein Lied öffnen → in die Mitte des Blatts tippen → das Blatt füllt den ganzen
-   Bildschirm, oben steht nichts mehr von ChurchTools oder Safari. Der Zoom bleibt, wie er war.
-2. Nochmal in die Mitte tippen → Leisten der App, ChurchTools und Safari sind wieder da.
-3. Wieder ins Vollbild, dann das Vollbild **über das System** verlassen (am iPad: von oben wischen bzw.
-   das ✕ von Safari; am Rechner: Esc) → die Leisten der App sind sofort wieder da, nicht ein leeres
-   Blatt ohne Bedienung.
-4. Im Vollbild blättern, zoomen, zeichnen → alles geht wie ohne Vollbild.
-5. Am iPhone: in die Mitte tippen → nur die Leisten der App verschwinden, keine Fehlermeldung.
+1. **Lieder** → Knopf oben rechts → die ChurchTools-Leiste ist weg, der Knopf zeigt jetzt die nach
+   innen zeigenden Ecken („Vollbild beenden").
+2. Ein Lied öffnen → weiter ohne ChurchTools-Leiste; bei den Werkzeugen steht „Vollbild beenden".
+3. In die Mitte des Blatts tippen → wie immer verschwinden zusätzlich unsere Leisten; nochmal tippen
+   holt sie zurück. Kein Flackern.
+4. Zurück zur Liste → weiter ohne ChurchTools-Leiste. Knopf antippen → die Leiste ist wieder da.
+5. Dasselbe aus einem Ablauf heraus (Knopf neben Teilen/Bearbeiten).
+6. Am iPhone (oder schmalem Fenster): Im Liedblatt steckt „Vollbild" im Werkzeug-Menü; es wirkt genauso.
+7. In der Server-App (Homescreen-App der Musik App) gibt es den Knopf nicht.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/hooks/useEchtesVollbild.ts`, `client/src/pages/ChordChart.tsx`, `client/src/services/funktionen.ts`
-- **Automatisiert:** teilweise – `useEchtesVollbild.test.ts` (an/aus, iPhone, Verlassen von außen,
-  Ablehnung, webkit-Vorsilbe); ob das Gerät die ChurchTools-Leiste wirklich verdeckt, nur hier
-- **Historie:** Alwin 08.10.2026 („das wäre richtig cool")
+- **Betrifft:** `client/src/hooks/useAppVollbild.ts`, `client/src/components/VollbildKnopf.tsx`, `client/src/components/ChartHeader.tsx`, `client/src/utils/werkzeuge.ts`, `client/src/styles/main.scss`
+- **Automatisiert:** teilweise – `useAppVollbild.test.tsx` (Attribut, ein Zustand, bleibt beim Wechsel),
+  `VollbildKnopf.test.tsx`, `ChartHeader.test.tsx` (Werkzeug, Name, nicht beim anderen Lied); ob die
+  ChurchTools-Leiste wirklich verdeckt wird, nur hier
+- **Historie:** Alwin 08.10.2026 – erster Versuch mit dem Browser-Vollbild verworfen (Safari-X,
+  Hinweis, Flackern; in der Homescreen-App gar nicht verfügbar)
 
 </details>

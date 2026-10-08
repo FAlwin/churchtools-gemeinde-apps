@@ -12,8 +12,10 @@ import {
 } from '../utils/werkzeuge';
 import styles from '../pages/ChordChart.module.scss';
 
-function werkzeugSymbol(id: WerkzeugId): ReactNode {
+function werkzeugSymbol(id: WerkzeugId, vollbildAn = false): ReactNode {
   switch (id) {
+    case 'vollbild':
+      return <Icon name={vollbildAn ? 'vollbild-aus' : 'vollbild'} size={18} stroke={2.2} />;
     case 'aussehen':
       return <b>Aa</b>;
     case 'tempo':
@@ -128,6 +130,12 @@ interface ChartHeaderProps {
   onResetZoom: () => void;
   onToggleTeamNotes: () => void;
   onToggleDraw: () => void;
+  /**
+   * Vollbild der ganzen App (nur Erweiterung, `useAppVollbild`). Ohne `onVollbild` gibt es das
+   * Werkzeug nicht – in der Homescreen-App fehlt die ChurchTools-Leiste, die es verdecken könnte.
+   */
+  vollbildAn?: boolean;
+  onVollbild?: () => void;
 }
 
 export function ChartHeader({
@@ -160,6 +168,8 @@ export function ChartHeader({
   onResetZoom,
   onToggleTeamNotes,
   onToggleDraw,
+  vollbildAn = false,
+  onVollbild,
 }: ChartHeaderProps) {
   /**
    * Tempo-Angabe samt Puls. Als Funktion, weil sie an ZWEI Stellen gebraucht wird: im Teil, den das
@@ -196,12 +206,16 @@ export function ChartHeader({
     zoom: onResetZoom,
     team: onToggleTeamNotes,
     anmerken: onToggleDraw,
+    vollbild: onVollbild ?? (() => undefined),
   };
+  const werkzeugName = (id: WerkzeugId) =>
+    id === 'vollbild' && vollbildAn ? 'Vollbild beenden' : WERKZEUG_NAME[id];
   const aktiveWerkzeuge = verfuegbareWerkzeuge({
     zeigtDokument: showsDocument,
     ansehen: viewing,
     gezoomt: zoomed,
     teamNotizen: canUseGlobalNotes,
+    vollbild: onVollbild !== undefined,
   });
 
   /**
@@ -254,8 +268,8 @@ export function ChartHeader({
    */
   const werkzeuge: Werkzeug[] = aktiveWerkzeuge.map((id) => ({
     id,
-    label: WERKZEUG_NAME[id],
-    symbol: werkzeugSymbol(id),
+    label: werkzeugName(id),
+    symbol: werkzeugSymbol(id, vollbildAn),
     onClick: aktion[id],
   }));
 
@@ -263,16 +277,17 @@ export function ChartHeader({
   const aktiveKnoepfe = aktiveWerkzeuge.map((id) => (
     <RundKnopf
       key={id}
-      title={id === 'anmerken' && drawMode ? 'Anmerken beenden' : WERKZEUG_NAME[id]}
+      title={id === 'anmerken' && drawMode ? 'Anmerken beenden' : werkzeugName(id)}
       onClick={aktion[id]}
       aktiv={
         (id === 'tempo' && tempoAktiv) ||
         (id === 'team' && viewing) ||
-        (id === 'anmerken' && drawMode)
+        (id === 'anmerken' && drawMode) ||
+        (id === 'vollbild' && vollbildAn)
       }
       offen={offenesWerkzeug === id}
     >
-      {werkzeugSymbol(id)}
+      {werkzeugSymbol(id, vollbildAn)}
     </RundKnopf>
   ));
 

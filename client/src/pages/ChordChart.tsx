@@ -13,7 +13,7 @@ import { ChordEditor } from '../components/ChordEditor';
 import { PageDeck } from '../components/PageDeck';
 import { useSongSettings } from '../hooks/useSongSettings';
 import { useLandscape } from '../hooks/useLandscape';
-import { useEchtesVollbild } from '../hooks/useEchtesVollbild';
+import { useAppVollbild } from '../hooks/useAppVollbild';
 import { funktionen } from '../services/funktionen';
 import { Coachmarks } from '../components/Coachmarks';
 import {
@@ -258,9 +258,8 @@ export function ChordChart({
    * jede Bedienung und wüsste nicht, warum.
    */
   const [leistenAus, setLeistenAus] = useState(false);
-  // In der Erweiterung zusätzlich das Vollbild des Browsers; wer es von außen verlässt (Esc,
-  // Wischgeste), bekommt die Leisten zurück.
-  const echtesVollbild = useEchtesVollbild(funktionen.echtesVollbild, () => setLeistenAus(false));
+  // Vollbild der ganzen App (nur Erweiterung) – ein Werkzeug im Kopf, getrennt vom Tipp in die Mitte.
+  const [vollbildAn, vollbildUmschalten] = useAppVollbild();
   const [resetZoomSignal, setResetZoomSignal] = useState(0); // erhöhen → PageDeck setzt sichtbaren Zoom zurück
   // Erhöhen → die verfügbare Fläche hat sich geändert (Leisten umgeschaltet, #319). PageDeck baut
   // daraufhin die Zoom-Ebene neu auf, damit sie die neue Höhe vermisst, und passt eine vergrößerte
@@ -682,8 +681,6 @@ export function ChordChart({
   const leistenUmschalten = () => {
     const wirdAusgeblendet = !leistenAus;
     setLeistenAus(wirdAusgeblendet);
-    // Direkt im Tipp: Browser gewähren das Vollbild nur als Folge einer Berührung.
-    echtesVollbild(wirdAusgeblendet);
     // Der Hinweis steht BEWUSST außerhalb der `setLeistenAus`-Aktualisierung. Solche Funktionen
     // müssen frei von Nebenwirkungen sein – React ruft sie unter Umständen mehrfach auf und darf
     // Ergebnisse verwerfen. Als Merker und Toast noch darin standen, **erschien der Hinweis nie**
@@ -772,6 +769,15 @@ export function ChordChart({
               setOverlay(null);
               setDrawMode((d) => !d);
             }}
+            vollbildAn={vollbildAn}
+            onVollbild={
+              funktionen.vollbildKnopf
+                ? () => {
+                    setOverlay(null);
+                    vollbildUmschalten();
+                  }
+                : undefined
+            }
           />
         )}
 

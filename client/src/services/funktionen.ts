@@ -35,11 +35,10 @@ export const funktionen = {
    */
   liedtextSuche: !istExtension,
   /**
-   * „Vollbild" am Liedblatt nutzt zusätzlich das Vollbild des Browsers – nur in der Erweiterung, wo
-   * sonst die Leiste von ChurchTools stehen bliebe. Die Homescreen-App braucht es nicht
-   * (`useEchtesVollbild`).
+   * Der Vollbild-Knopf (Liederliste, Ablauf, Werkzeug im Liedblatt): legt die App über die Leiste von
+   * ChurchTools (`useAppVollbild`). Nur in der Erweiterung – nur dort gibt es diese Leiste.
    */
-  echtesVollbild: istExtension,
+  vollbildKnopf: istExtension,
   /** Der Hinweis auf die Musik App mit eigenem Server (Plan §6, „der Teaser"). */
   hinweisAufServerVariante: istExtension,
 } as const;

@@ -286,6 +286,47 @@ describe('verfuegbareWerkzeuge – die eine Regel', () => {
   it('beim Ansehen fremder Notizen nur der Weg zurück', () => {
     expect(verfuegbareWerkzeuge({ ...basis, ansehen: true, teamNotizen: true })).toEqual(['team']);
   });
+  // Vollbild gilt für die App, nicht für das Lied – es steht immer, wenn es das gibt (Erweiterung).
+  it('Vollbild (Erweiterung): als letztes Werkzeug, auch beim Dokument und beim Ansehen', () => {
+    expect(verfuegbareWerkzeuge({ ...basis, vollbild: true }).at(-1)).toBe('vollbild');
+    expect(verfuegbareWerkzeuge({ ...basis, zeigtDokument: true, vollbild: true })).toContain(
+      'vollbild',
+    );
+    expect(verfuegbareWerkzeuge({ ...basis, ansehen: true, vollbild: true })).toContain('vollbild');
+    expect(verfuegbareWerkzeuge(basis)).not.toContain('vollbild');
+  });
+});
+
+describe('ChartHeader – Vollbild-Werkzeug', () => {
+  it('ohne onVollbild (Homescreen-App) gibt es kein Vollbild-Werkzeug', () => {
+    zeige({ querformat: true });
+    expect(screen.queryByTitle('Vollbild')).toBeNull();
+  });
+
+  it('mit onVollbild: Knopf „Vollbild", Tipp schaltet; eingeschaltet heißt er „Vollbild beenden"', () => {
+    const onVollbild = vi.fn();
+    const { rerender } = render(
+      <ChartHeader {...props} querformat onVollbild={onVollbild} vollbildAn={false} />,
+    );
+    fireEvent.click(screen.getByTitle('Vollbild'));
+    expect(onVollbild).toHaveBeenCalledTimes(1);
+    rerender(<ChartHeader {...props} querformat onVollbild={onVollbild} vollbildAn />);
+    expect(screen.getByTitle('Vollbild beenden')).toBeTruthy();
+  });
+
+  it('im Querformat NICHT bei den Werkzeugen des anderen Lieds – es gilt für die App', () => {
+    const andere: AndereHaelfte = {
+      slot: 1,
+      titel: 'Treu',
+      info: [],
+      zeigtDokument: false,
+      onWaehlen: vi.fn(),
+      onWerkzeug: vi.fn(),
+    };
+    zeige({ querformat: true, andereHaelfte: andere, ...{ onVollbild: vi.fn() } });
+    expect(screen.queryByTitle('Vollbild – Treu')).toBeNull();
+    expect(screen.getAllByTitle('Vollbild')).toHaveLength(1);
+  });
 });
 
 describe('ChartHeader – Werkzeuge einzeln im Querformat', () => {

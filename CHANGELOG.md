@@ -9,10 +9,11 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Neu
 
-- **Echtes Vollbild in der ChurchTools-Erweiterung:** Ein Tipp in die Mitte des Liedblatts blendet
-  jetzt auch die Leiste von ChurchTools und die des Browsers aus – am iPad, unter Android und am
-  Rechner. Am iPhone erlaubt Safari das nicht; dort bleibt es beim Ausblenden der App-Leisten. Wer das
-  Vollbild über das System verlässt, bekommt die Leisten sofort zurück.
+- **Vollbild-Knopf in der ChurchTools-Erweiterung:** Oben rechts in **Lieder** und im Ablauf, im
+  Liedblatt bei den Werkzeugen. Er legt die App über die Leiste von ChurchTools – in jedem Browser,
+  auch am iPhone. Mit ChurchTools als Homescreen-App füllt die App damit den ganzen Bildschirm. Der
+  Zustand bleibt beim Wechsel zwischen Liste, Ablauf und Liedblatt. (Ein erster Versuch mit dem
+  Vollbild des Browsers war am iPad unruhiger – Safari-X, Hinweis, Flackern – und wurde verworfen.)
 
 - **Lied-Statistik jetzt auch in der ChurchTools-Erweiterung:** „Häufigkeit" und „Zuletzt" bei den
   Liedern und in der Lied-Auswahl. Möglich, weil die App die Statistik jetzt aus ChurchTools selbst holt

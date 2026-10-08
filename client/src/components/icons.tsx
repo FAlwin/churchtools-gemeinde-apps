@@ -42,6 +42,8 @@ export type IconName =
   | 'eye'
   | 'eye-off'
   | 'zoom-reset'
+  | 'vollbild'
+  | 'vollbild-aus'
   | 'download'
   | 'undo'
   | 'redo'
@@ -155,6 +157,18 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
           <path d="M10.8 7.6H12.4V9.2" />
           <path d="M7.6 10.8V12.4H9.2" />
           <path d="M12.4 10.8V12.4H10.8" />
+        </svg>
+      );
+    case 'vollbild':
+      return (
+        <svg {...p}>
+          <path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" />
+        </svg>
+      );
+    case 'vollbild-aus':
+      return (
+        <svg {...p}>
+          <path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5" />
         </svg>
       );
     case 'sun':

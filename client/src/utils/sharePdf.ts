@@ -1,5 +1,5 @@
 import type { jsPDF } from 'jspdf';
-import { shareOrDownload } from './shareFile';
+import { downloadFile, shareOrDownload } from './shareFile';
 
 /**
  * Teilt eine erzeugte PDF über das System-Teilen-Menü (Web Share API mit Datei – iPad/iPhone/
@@ -9,6 +9,14 @@ import { shareOrDownload } from './shareFile';
  * erzeugte PDFs. Hier bleibt nur, was PDF-spezifisch ist: die Endung.
  */
 export async function sharePdf(doc: jsPDF, filename: string): Promise<void> {
-  const safe = filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
-  await shareOrDownload(doc.output('blob'), safe);
+  await shareOrDownload(doc.output('blob'), mitEndung(filename));
+}
+
+/** Lädt eine erzeugte PDF direkt herunter – ohne Teilen-Menü (08.10.2026). */
+export function downloadPdf(doc: jsPDF, filename: string): void {
+  downloadFile(doc.output('blob'), mitEndung(filename));
+}
+
+function mitEndung(filename: string): string {
+  return filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
 }

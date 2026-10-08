@@ -1,0 +1,108 @@
+// Vorschau im Teilen-Fenster (08.10.2026): Blätter auf der dunklen Grundfläche, wie Papier auf dem
+// Tisch – dieselbe Fläche wie hinter dem Liedblatt (`--bg`).
+
+.leiste {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px;
+  background: var(--bg);
+  border-radius: var(--r-tile);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  min-height: 124px;
+  align-items: center;
+}
+
+.laedt {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  color: var(--text3);
+}
+
+.blatt {
+  flex: 0 0 auto;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: #fff;
+  cursor: pointer;
+  line-height: 0;
+
+  img {
+    display: block;
+    height: 104px;
+    width: auto;
+    border-radius: 3px;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+  }
+}
+
+.gross {
+  margin-top: 12px;
+  padding: 10px;
+  background: var(--bg);
+  border-radius: var(--r-tile);
+}
+
+.grossKopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.zaehler {
+  font-size: 13px;
+  color: var(--text2);
+  font-variant-numeric: tabular-nums;
+}
+
+.blaettern {
+  display: flex;
+  gap: 4px;
+}
+
+.knopf {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 36px;
+  padding: 0 8px;
+  border: none;
+  border-radius: var(--r-ctrl);
+  background: var(--surface3);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+
+  &:disabled {
+    color: var(--text3);
+    cursor: default;
+  }
+}
+
+.grossBlatt {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  color: var(--text3);
+
+  img {
+    display: block;
+    max-width: 100%;
+    max-height: 60vh;
+    width: auto;
+    height: auto;
+    background: #fff;
+    border-radius: 3px;
+  }
+}

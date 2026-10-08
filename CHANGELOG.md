@@ -7,6 +7,24 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+## [2.30.0] – 2026-10-08
+
+**Beim Update ist nichts zu tun.** ChurchTools-Erweiterung: neue ZIP einspielen.
+
+### Neu
+
+- **Teilen als PDF: Vorschau und Herunterladen** (Alwin): Ist das PDF fertig, zeigt das Fenster seine
+  Seiten als kleine Blätter – antippen zeigt eine Seite groß, mit Blättern. Neben „Teilen" gibt es
+  **„Herunterladen"**: Die Datei landet direkt auf dem Gerät, ohne Teilen-Menü; das Fenster bleibt
+  offen, man kann danach noch teilen. Klappt die Vorschau einmal nicht, gehen Teilen und Herunterladen
+  trotzdem.
+
+### Intern
+
+- **Staging baut auch `feat/…`-Branches:** Die Branches hießen längst so und kamen nie auf die
+  Test-Instanz. Dazu fehlte auf dem NAS der Watchtower der Test-Instanz (am 07.10. beim Neu-Anlegen
+  verloren) – wieder gestartet, Staging zieht wieder selbst.
+
 ## [2.29.0] – 2026-10-08
 
 **Beim Update ist nichts zu tun.** Neu ist eine Einstellung für Admins (**Mehr → Verwaltung →

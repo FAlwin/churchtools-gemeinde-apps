@@ -5,8 +5,11 @@ import { SchalterZeile } from './SchalterZeile';
 import { Spinner } from './Spinner';
 import { useLatestRef } from '../hooks/useLatestRef';
 import { getTeilenMitAnmerkungen, setTeilenMitAnmerkungen } from '../utils/devicePrefs';
-import { sharePdf } from '../utils/sharePdf';
+import { downloadPdf, sharePdf } from '../utils/sharePdf';
+import { Icon } from './icons';
+import { PdfSeitenVorschau } from './PdfSeitenVorschau';
 import styles from '../pages/Settings.module.scss';
+import eigene from './TeilenFenster.module.scss';
 
 /** Was das Bauen liefert: das PDF und ein Hinweis auf Lieder, die nicht wie gezeigt dabei sind. */
 export interface GebautesPdf {
@@ -36,10 +39,16 @@ type Stand =
  *  - Mit Dokumenten (PDFs aus ChurchTools) dauert das Bauen Sekunden. Danach öffnet iOS das
  *    Teilen-Menü nicht mehr – es braucht ein frisches Antippen. Das PDF entsteht deshalb, sobald das
  *    Fenster offen ist, und „Teilen" gibt es erst, wenn es fertig ist.
+ *
+ * Seit 08.10.2026 (Alwin: „eine Ansicht vor dem Teilen und überhaupt herunterladen"): Ist das PDF
+ * fertig, zeigt das Fenster seine Seiten (`PdfSeitenVorschau`), und neben „Teilen" gibt es
+ * „Herunterladen" – direkt, ohne Teilen-Menü. Das Fenster bleibt danach offen; man kann es auch noch
+ * teilen.
  */
 export function TeilenFenster({ titel, dateiname, bauen, onClose }: TeilenFensterProps) {
   const [mitAnmerkungen, setMitAnmerkungen] = useState(getTeilenMitAnmerkungen);
   const [stand, setStand] = useState<Stand>({ art: 'baut' });
+  const [geladen, setGeladen] = useState(false);
   // Gebaut wird nur bei neuer Wahl – `bauen` ist beim Aufrufer je Darstellung eine neue Funktion.
   const bauenRef = useLatestRef(bauen);
 
@@ -47,6 +56,7 @@ export function TeilenFenster({ titel, dateiname, bauen, onClose }: TeilenFenste
     // Wer während des Bauens umschaltet, bekommt das PDF zur NEUEN Wahl – das alte wird verworfen.
     let aktuell = true;
     setStand({ art: 'baut' });
+    setGeladen(false);
     bauenRef.current(mitAnmerkungen).then(
       (pdf) => {
         if (aktuell) setStand({ art: 'fertig', pdf });
@@ -89,21 +99,44 @@ export function TeilenFenster({ titel, dateiname, bauen, onClose }: TeilenFenste
             : [
                 `Fertig · ${stand.pdf.doc.getNumberOfPages()} ${stand.pdf.doc.getNumberOfPages() === 1 ? 'Seite' : 'Seiten'}`,
                 stand.pdf.hinweis,
+                geladen ? 'Heruntergeladen' : '',
               ]
                 .filter(Boolean)
                 .join('. ')}
       </p>
-      <button
-        className={styles.orgSave}
-        disabled={stand.art !== 'fertig'}
-        onClick={() => {
-          if (stand.art !== 'fertig') return;
-          void sharePdf(stand.pdf.doc, dateiname);
-          onClose();
-        }}
-      >
-        {stand.art === 'baut' ? <Spinner /> : 'Teilen'}
-      </button>
+      {stand.art === 'fertig' && <PdfSeitenVorschau doc={stand.pdf.doc} />}
+      <div className={eigene.knoepfe}>
+        <button
+          type="button"
+          className={eigene.zweit}
+          disabled={stand.art !== 'fertig'}
+          onClick={() => {
+            if (stand.art !== 'fertig') return;
+            downloadPdf(stand.pdf.doc, dateiname);
+            setGeladen(true);
+          }}
+        >
+          <Icon name="download" size={18} /> Herunterladen
+        </button>
+        <button
+          type="button"
+          className={eigene.erst}
+          disabled={stand.art !== 'fertig'}
+          onClick={() => {
+            if (stand.art !== 'fertig') return;
+            void sharePdf(stand.pdf.doc, dateiname);
+            onClose();
+          }}
+        >
+          {stand.art === 'baut' ? (
+            <Spinner />
+          ) : (
+            <>
+              <Icon name="share" size={18} /> Teilen
+            </>
+          )}
+        </button>
+      </div>
     </Sheet>
   );
 }

@@ -64,9 +64,17 @@ export function useAppNav({
   // Terminliste geladen ist. Nur wenn eine Ansicht wiederhergestellt wurde (view != null).
   // Lässt er sich nicht finden (z. B. nicht mehr in der Liste), zurück zur Startansicht –
   // damit hängt nichts im Lade-Screen.
+  //
+  // **Nur für eine Ansicht, die einen Gottesdienst braucht** (09.10.2026, Alwin: „Lieder lassen sich
+  // nicht aus der Liedliste öffnen – kurz auf, dann zurück"). Vorher griff die Suche bei JEDER Ansicht:
+  // Stand der gemerkte Gottesdienst nicht in der Liste (vergangen; in der Test-Instanz gab es gar keine
+  // kommenden), warf das Öffnen eines Lieds aus der Liederliste sofort zurück – und ebenso ein nach dem
+  // Kaltstart wiederhergestelltes Lied aus der Liederliste.
   useEffect(() => {
     if (!restored?.serviceId || service || !isAuthenticated || !view) return;
-    if (servicesLoading) return;
+    const brauchtDienst =
+      view.type === 'setlist' || (view.type === 'chart' && view.source === 'setlist');
+    if (!brauchtDienst || servicesLoading) return;
     const found = services?.find((s) => s.id === restored.serviceId);
     if (found) setService(found);
     else setView(null);

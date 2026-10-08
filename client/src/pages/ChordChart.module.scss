@@ -19,6 +19,13 @@
   flex-shrink: 0;
 }
 
+// Vollbild-Knopf (Erweiterung): abgesetzt ganz rechts, nicht Teil der Werkzeuge (`ChartHeader`).
+.vollbildPlatz {
+  display: flex;
+  flex-shrink: 0;
+  margin-left: 6px;
+}
+
 .center {
   flex: 1;
   min-width: 0;
@@ -371,18 +378,11 @@
   min-width: 0;
   height: 44px;
   border-radius: 10px;
-  border: 1.5px solid var(--border);
-  background: var(--surface2);
-  color: var(--text);
-  font-weight: 600;
+  @include m.auswahlKnopf;
   font-size: 13px;
-  cursor: pointer;
-  font-family: var(--ui);
 
   &.on {
-    background: var(--blue);
-    color: #fff;
-    border-color: var(--blue);
+    @include m.auswahlKnopfAn;
   }
   &:disabled {
     opacity: 0.4;

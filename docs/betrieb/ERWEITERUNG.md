@@ -9,6 +9,7 @@ Die Musik App gibt es in zwei Formen:
 | Wo sie liegt                         | Menüpunkt in ChurchTools (im Browser)              | Eigene Adresse, auf dem Homescreen installierbar    |
 | Termine, Ablauf, Liedblatt           | ✓                                                  | ✓                                                   |
 | Anmerkungen, Zoom, Tonart merken     | ✓ (als Dateien an der eigenen Person, siehe unten) | ✓                                                   |
+| Vollbild                             | ✓ (Knopf legt die App über die ChurchTools-Leiste) | ✓ (Homescreen-App)                                  |
 | Offline im Saal                      | –                                                  | ✓                                                   |
 | Lied-Statistik (Häufigkeit, zuletzt) | ✓ (ab v2.32.0, aus der Statistik von ChurchTools)  | ✓                                                   |
 | Suche im Liedtext                    | –                                                  | ✓                                                   |
@@ -89,6 +90,9 @@ den jemand von Hand macht, bewirkt also nichts.
 
 ## Gut zu wissen
 
+- **Ganzer Bildschirm am iPad:** ChurchTools in Safari über **Teilen → „Zum Home-Bildschirm"** als
+  App ablegen und darin den **Vollbild-Knopf** der Musik App nutzen (vier Ecken, oben rechts). Dann
+  stehen weder Safari- noch ChurchTools-Leiste – wie bei der Musik App mit eigenem Server.
 - **Wo die Anmerkungen liegen:** als Anhänge an der eigenen Person in ChurchTools (Menü **Personen** (nicht „Mein Profil“) → Person in der Liste anklicken → ganz unten **„Anhänge >>“**): je
   bemalter Liedseite ein Bild `musikapp_….png`, dazu eine Datei `musikapp_daten.json` (Tonart, Kapo,
   Zoom, Textnotizen, „gesehen"). **Mitglieder, die die Person sehen dürfen, können diese Anhänge

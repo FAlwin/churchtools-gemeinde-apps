@@ -9,6 +9,13 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Neu
 
+- **Vollbild-Knopf in der ChurchTools-Erweiterung:** Auf jeder Seite an derselben Stelle, ganz rechts
+  oben – auch im Liedblatt, dort abgesetzt von den Werkzeugen und am iPhone nicht im Menü versteckt
+  (man braucht ihn zum Ein- und Ausschalten). Er legt die App über die Leiste von ChurchTools – in jedem Browser,
+  auch am iPhone. Mit ChurchTools als Homescreen-App füllt die App damit den ganzen Bildschirm. Der
+  Zustand bleibt beim Wechsel zwischen Liste, Ablauf und Liedblatt. (Ein erster Versuch mit dem
+  Vollbild des Browsers war am iPad unruhiger – Safari-X, Hinweis, Flackern – und wurde verworfen.)
+
 - **Lied-Statistik jetzt auch in der ChurchTools-Erweiterung:** „Häufigkeit" und „Zuletzt" bei den
   Liedern und in der Lied-Auswahl. Möglich, weil die App die Statistik jetzt aus ChurchTools selbst holt
   (siehe unten). Zu sehen ist sie nur mit dem Recht „Song-Statistik sehen" – die ECG gibt es nur den
@@ -17,6 +24,10 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Geändert
 
+- **Umschalter sind jetzt sichtbar getrennte Knöpfe** (Alwin): A–Z/Häufigkeit/Zuletzt, Kommende/
+  Vergangene, Abwesenheiten, Mehr und die Liedblatt-Menüs (Spalten, Zählweise, Puls). Auch die nicht
+  gewählten Teile haben einen eigenen Rand; der gewählte ist hell und abgehoben wie bisher. Die
+  Liedblatt-Menüs hatten eine eigene, blaue Bauart – jetzt gibt es eine für die ganze App.
 - **Die Lied-Statistik kommt aus ChurchTools selbst – ein Aufruf statt rund 250** (Alwin): Bisher las die
   App für jeden Termin der letzten vier Jahre den Ablauf – der Lauf, der ChurchTools schon einmal
   ausgebremst hat (#300). ChurchTools führt dieselbe Statistik selbst; die App holt sie jetzt mit einem
@@ -24,6 +35,13 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Abweichungen an einem Tag mit zwei Gottesdiensten. Die Grenze von vier Jahren entfällt. **Für die
   Server-Variante:** Wer die Statistik sehen soll, braucht in ChurchTools das Recht „Song-Statistik
   sehen" (`view song statistics`).
+
+### Behoben
+
+- **Lied aus der Liederliste sprang sofort zurück** (Alwin, Test-Instanz): Die App merkt sich den
+  zuletzt geöffneten Gottesdienst für einen Neustart. Stand der nicht mehr in der Terminliste, setzte
+  die Suche danach jede Ansicht zurück – auch ein gerade geöffnetes Lied aus der Liederliste. Jetzt
+  greift sie nur noch für Ablauf und Liederheft eines Gottesdienstes.
 
 ## [2.31.0] – 2026-10-08
 

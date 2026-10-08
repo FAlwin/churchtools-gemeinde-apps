@@ -128,6 +128,14 @@ interface ChartHeaderProps {
   onResetZoom: () => void;
   onToggleTeamNotes: () => void;
   onToggleDraw: () => void;
+  /**
+   * Vollbild der ganzen App (nur Erweiterung, `useAppVollbild`). Ohne `onVollbild` kein Knopf – in
+   * der Homescreen-App fehlt die ChurchTools-Leiste, die er verdecken könnte. **Kein Werkzeug:** Er
+   * steht abgesetzt ganz rechts, auf jeder Seite an derselben Stelle, und wandert am iPhone NICHT ins
+   * Werkzeug-Menü – man braucht ihn zum Ein- UND Ausschalten (Entwurf mit Alwin, 08.10.2026).
+   */
+  vollbildAn?: boolean;
+  onVollbild?: () => void;
 }
 
 export function ChartHeader({
@@ -160,6 +168,8 @@ export function ChartHeader({
   onResetZoom,
   onToggleTeamNotes,
   onToggleDraw,
+  vollbildAn = false,
+  onVollbild,
 }: ChartHeaderProps) {
   /**
    * Tempo-Angabe samt Puls. Als Funktion, weil sie an ZWEI Stellen gebraucht wird: im Teil, den das
@@ -240,7 +250,8 @@ export function ChartHeader({
         kopfBreite: kopf.breite,
         knopf: kopf.knopf,
         abstand: kopf.abstand,
-        anzahl: aktiveWerkzeuge.length,
+        // Der Vollbild-Knopf belegt rechts einen Platz wie ein Werkzeug.
+        anzahl: aktiveWerkzeuge.length + (onVollbild ? 1 : 0),
       }));
   // Wird das Fenster breiter, während das Werkzeuge-Menü offen ist, verschwindet sein Knopf – dann
   // darf das Menü nicht ohne Knopf stehen bleiben.
@@ -482,6 +493,17 @@ export function ChartHeader({
             {aktiveKapsel}
             {werkzeugKnopf}
           </>
+        )}
+        {onVollbild && (
+          <span className={styles.vollbildPlatz}>
+            <RundKnopf
+              onClick={onVollbild}
+              title={vollbildAn ? 'Vollbild beenden' : 'Vollbild'}
+              aktiv={vollbildAn}
+            >
+              <Icon name={vollbildAn ? 'vollbild-aus' : 'vollbild'} size={18} stroke={2.2} />
+            </RundKnopf>
+          </span>
         )}
       </div>
       {werkzeugeOffen && !einzeln && !drawMode && !viewing && (

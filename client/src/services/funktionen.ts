@@ -34,6 +34,11 @@ export const funktionen = {
    * 3c, #300). Die Lied-Statistik gibt es seit 08.10.2026 auch hier (`getSongStatistic`, ein Aufruf).
    */
   liedtextSuche: !istExtension,
+  /**
+   * Der Vollbild-Knopf (Liederliste, Ablauf, Werkzeug im Liedblatt): legt die App über die Leiste von
+   * ChurchTools (`useAppVollbild`). Nur in der Erweiterung – nur dort gibt es diese Leiste.
+   */
+  vollbildKnopf: istExtension,
   /** Der Hinweis auf die Musik App mit eigenem Server (Plan §6, „der Teaser"). */
   hinweisAufServerVariante: istExtension,
 } as const;

@@ -95,6 +95,14 @@ html {
 .ct-extension :has(> #root) {
   position: relative;
 }
+// Vollbild der ganzen App (Erweiterung, `useAppVollbild`): Die App legt sich über die Leiste von
+// ChurchTools – fest am Fenster statt im Bereich unter der Leiste. Die Ebene liegt über ChurchTools,
+// aber UNTER der Einführung (`Coachmarks`, 3000), die an `body` hängt.
+.ct-extension #root[data-vollbild] {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+}
 
 button {
   font-family: inherit;

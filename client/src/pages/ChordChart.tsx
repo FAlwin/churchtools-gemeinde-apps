@@ -13,6 +13,8 @@ import { ChordEditor } from '../components/ChordEditor';
 import { PageDeck } from '../components/PageDeck';
 import { useSongSettings } from '../hooks/useSongSettings';
 import { useLandscape } from '../hooks/useLandscape';
+import { useAppVollbild } from '../hooks/useAppVollbild';
+import { funktionen } from '../services/funktionen';
 import { Coachmarks } from '../components/Coachmarks';
 import {
   CHART_STEPS,
@@ -256,6 +258,8 @@ export function ChordChart({
    * jede Bedienung und wüsste nicht, warum.
    */
   const [leistenAus, setLeistenAus] = useState(false);
+  // Vollbild der ganzen App (nur Erweiterung) – ein Werkzeug im Kopf, getrennt vom Tipp in die Mitte.
+  const [vollbildAn, vollbildUmschalten] = useAppVollbild();
   const [resetZoomSignal, setResetZoomSignal] = useState(0); // erhöhen → PageDeck setzt sichtbaren Zoom zurück
   // Erhöhen → die verfügbare Fläche hat sich geändert (Leisten umgeschaltet, #319). PageDeck baut
   // daraufhin die Zoom-Ebene neu auf, damit sie die neue Höhe vermisst, und passt eine vergrößerte
@@ -765,6 +769,15 @@ export function ChordChart({
               setOverlay(null);
               setDrawMode((d) => !d);
             }}
+            vollbildAn={vollbildAn}
+            onVollbild={
+              funktionen.vollbildKnopf
+                ? () => {
+                    setOverlay(null);
+                    vollbildUmschalten();
+                  }
+                : undefined
+            }
           />
         )}
 

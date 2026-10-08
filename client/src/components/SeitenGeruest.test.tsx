@@ -2,6 +2,17 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { SeitenGeruest } from './SeitenGeruest';
+import { RundKnopf } from './KnopfReihe';
+
+const schalter = vi.hoisted(() => ({ vollbildKnopf: false }));
+vi.mock('../services/funktionen', async (original) => ({
+  funktionen: {
+    ...(await original<typeof import('../services/funktionen')>()).funktionen,
+    get vollbildKnopf() {
+      return schalter.vollbildKnopf;
+    },
+  },
+}));
 
 /**
  * **Das gemeinsame Gerüst aller Bildschirme** (22.09.2026, Wunsch Alwin: „bitte alles gleich mit
@@ -94,5 +105,53 @@ describe('SeitenGeruest', () => {
     const zug = container.querySelector('[class*="pullIndicator"]');
     expect(zug).not.toBeNull();
     expect(scrollBereich(container).contains(zug)).toBe(false);
+  });
+});
+
+/**
+ * Der Vollbild-Knopf der Erweiterung steht auf JEDER Seite an derselben Stelle – ganz rechts oben,
+ * nach den Knöpfen der Seite (Alwin, 08.10.2026: „bei Terminen gibt es ihn nicht, bei Mehr nicht").
+ */
+describe('SeitenGeruest – Vollbild-Knopf', () => {
+  it('Erweiterung: auch auf einer Seite ohne eigene Knöpfe (Termine, Mehr)', () => {
+    schalter.vollbildKnopf = true;
+    render(<SeitenGeruest titel="Mehr">Inhalt</SeitenGeruest>);
+    expect(screen.getByTitle('Vollbild')).toBeTruthy();
+    schalter.vollbildKnopf = false;
+  });
+
+  // Alwin, 09.10.2026: „jetzt stehen die Überschriften extrem tief" – der Knopf allein rückt nichts.
+  it('der Vollbild-Knopf allein schiebt die Überschrift NICHT unter eine Knopfreihe', () => {
+    schalter.vollbildKnopf = true;
+    render(<SeitenGeruest titel="Termine">Inhalt</SeitenGeruest>);
+    const klasseOhne = screen.getByRole('heading', { name: 'Termine' }).parentElement?.className;
+    render(
+      <SeitenGeruest titel="Ablauf" zurueck={vi.fn()}>
+        Inhalt
+      </SeitenGeruest>,
+    );
+    const klasseMit = screen.getByRole('heading', { name: 'Ablauf' }).parentElement?.className;
+    expect(klasseOhne).not.toBe(klasseMit);
+    schalter.vollbildKnopf = false;
+  });
+
+  it('Erweiterung: ganz rechts, nach den Knöpfen der Seite', () => {
+    schalter.vollbildKnopf = true;
+    render(
+      <SeitenGeruest
+        titel="Ablauf"
+        zurueck={vi.fn()}
+        aktionen={
+          <RundKnopf onClick={vi.fn()} title="Teilen">
+            T
+          </RundKnopf>
+        }
+      >
+        Inhalt
+      </SeitenGeruest>,
+    );
+    const knoepfe = screen.getAllByRole('button').map((b) => b.getAttribute('title'));
+    expect(knoepfe.at(-1)).toBe('Vollbild');
+    schalter.vollbildKnopf = false;
   });
 });

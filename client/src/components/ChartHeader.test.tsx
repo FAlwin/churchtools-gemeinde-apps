@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import type { ComponentProps } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { ChartHeader, type AndereHaelfte } from './ChartHeader';
@@ -46,7 +47,7 @@ const props = {
   onToggleDraw: vi.fn(),
 };
 
-function zeige(over: Partial<typeof props> = {}) {
+function zeige(over: Partial<ComponentProps<typeof ChartHeader>> = {}) {
   return render(<ChartHeader {...props} {...over} />);
 }
 
@@ -288,6 +289,43 @@ describe('verfuegbareWerkzeuge – die eine Regel', () => {
   });
 });
 
+describe('ChartHeader – Vollbild-Knopf (Erweiterung)', () => {
+  it('ohne onVollbild (Homescreen-App) gibt es keinen Vollbild-Knopf', () => {
+    zeige({ querformat: true });
+    expect(screen.queryByTitle('Vollbild')).toBeNull();
+  });
+
+  it('Knopf „Vollbild", Tipp schaltet; eingeschaltet heißt er „Vollbild beenden"', () => {
+    const onVollbild = vi.fn();
+    const { rerender } = render(<ChartHeader {...props} onVollbild={onVollbild} />);
+    fireEvent.click(screen.getByTitle('Vollbild'));
+    expect(onVollbild).toHaveBeenCalledTimes(1);
+    rerender(<ChartHeader {...props} onVollbild={onVollbild} vollbildAn />);
+    expect(screen.getByTitle('Vollbild beenden')).toBeTruthy();
+  });
+
+  // Man braucht ihn zum Ein- UND Ausschalten – deshalb nie im Menü versteckt (Alwin, 08.10.2026).
+  it('schmal (Werkzeuge im Menü): der Knopf bleibt sichtbar und steht NICHT im Menü', () => {
+    zeige({ onVollbild: vi.fn(), werkzeugeOffen: true });
+    expect(screen.getAllByTitle('Vollbild')).toHaveLength(1);
+    const menu = screen.getByRole('menu');
+    expect(within(menu).queryByText('Vollbild')).toBeNull();
+  });
+
+  it('Querformat mit zwei Liedern: EIN Knopf für die App, nicht je Lied', () => {
+    const andere: AndereHaelfte = {
+      slot: 1,
+      titel: 'Treu',
+      info: [],
+      zeigtDokument: false,
+      onWaehlen: vi.fn(),
+      onWerkzeug: vi.fn(),
+    };
+    zeige({ querformat: true, andereHaelfte: andere, onVollbild: vi.fn() });
+    expect(screen.getAllByTitle('Vollbild')).toHaveLength(1);
+  });
+});
+
 describe('ChartHeader – Werkzeuge einzeln im Querformat', () => {
   const andere = (onWerkzeug = vi.fn<(id: string) => void>()): AndereHaelfte => ({
     slot: 1,
@@ -397,6 +435,17 @@ describe('ChartHeader – Hochformat richtet sich nach der Breite', () => {
   it('schmal: der eine Werkzeuge-Knopf', () => {
     breite = 360;
     zeige();
+    expect(screen.getByRole('button', { name: 'Werkzeuge' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Aussehen' })).toBeNull();
+  });
+
+  // Der Vollbild-Knopf belegt rechts einen Platz – sonst würde die Titel-Kapsel unter KAPSEL_MIN gedrückt.
+  it('der Vollbild-Knopf zählt mit: genau passend für 3 Werkzeuge → mit ihm ins Menü', () => {
+    breite = KAPSEL_MIN + 44 + 8 + 3 * (44 + 8);
+    const { unmount } = zeige();
+    expect(screen.getByRole('button', { name: 'Aussehen' })).toBeTruthy();
+    unmount();
+    zeige({ onVollbild: vi.fn() });
     expect(screen.getByRole('button', { name: 'Werkzeuge' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Aussehen' })).toBeNull();
   });

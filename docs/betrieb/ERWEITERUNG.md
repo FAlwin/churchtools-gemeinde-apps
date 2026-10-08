@@ -53,6 +53,13 @@ hinter jedem Recht seinen Schlüssel in Klammern – danach könnt ihr suchen.
 | Verwaltung in der App (unter **Mehr**)                            | Admins                                                                 | `administer persons` (Personen administrieren) – Admins haben es meist schon                                                                                                                                   |
 | Gemeinde-Einstellungen und Team-Gruppen speichern                 | Admins                                                                 | Erweiterung: **Kategorien erstellen** (`create custom category`), dazu für „Einstellungen der Musik App" `create custom data` und **Daten in Kategorie bearbeiten** (`edit custom data`)                       |
 
+**Beispiel ECG – Liederbuch für alle Mitglieder** (Status „Mitglied", ohne Abläufe): Veranstaltungen:
+„Veranstaltungen" sehen (`view`) und Einzelne Song-Kategorien sehen (`view songcategory`) für die
+Kategorien, die alle sehen sollen; Erweiterung: „Musik App" sehen (`view`), dazu Kategorien sehen und
+Daten in Kategorie sehen **nur** für „Einstellungen der Musik App". Ohne `view agenda` öffnet die App
+direkt bei „Lieder", einen Reiter „Termine" gibt es dann nicht. Die Musiker bekommen über die Rollen
+ihrer Gruppe zusätzlich Abläufe, „Song-Statistik sehen", die Team-Notizen und das Bearbeiten.
+
 **Mehr braucht ein Musiker nicht – und sollte er nicht haben:** kein „-- Alle --" (gilt sonst auch für
 jede künftige Kategorie), kein Kategorien bearbeiten/löschen und bei „Einstellungen der Musik App" weder
 Daten erstellen noch bearbeiten noch löschen. Sonst könnte jeder Musiker die Gemeinde-Einstellungen

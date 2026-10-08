@@ -3,6 +3,16 @@
 Kurz zusammengefasst für Gemeinden, die die Musik App mit CCLI SongSelect nutzen (ChurchTools-Stammtisch,
 08.10.2026). Stand der Quellen: CCLI-Support USA, zuletzt aktualisiert April 2023.
 
+## Was die 200 bedeuten – und was nicht
+
+- Ihr könnt im Abo-Jahr von **200 verschiedenen Liedern Notenblätter herunterladen oder drucken**
+  (Akkorde, Lead Sheet, Vocal Sheet) – **jedes davon beliebig oft**, auch in anderen Tonarten.
+- **Nicht** gemeint ist, wie viele Lieder ihr nutzen, in Abläufe einfügen oder singen dürft. Ob ein Lied
+  öffentlich gesungen werden darf, regelt die **CCLI-Lizenz** der Gemeinde (Gottesdienst-Lizenz mit
+  Liedmeldung) – ein eigener Vertrag, unabhängig vom SongSelect-Abo.
+- Notenblätter, die schon in ChurchTools liegen, kosten beim Öffnen, Teilen oder Transponieren nichts mehr.
+  Gezählt wird nur der Abruf bei SongSelect.
+
 ## Die Regeln von CCLI
 
 - Die Abos **Advanced** und **Premium** enthalten **200 verschiedene urheberrechtlich geschützte Lieder

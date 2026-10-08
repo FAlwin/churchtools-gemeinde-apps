@@ -53,6 +53,12 @@ hinter jedem Recht seinen Schlüssel in Klammern – danach könnt ihr suchen.
 | Verwaltung in der App (unter **Mehr**)                            | Admins                                                                 | `administer persons` (Personen administrieren) – Admins haben es meist schon                                                                                                                                   |
 | Gemeinde-Einstellungen und Team-Gruppen speichern                 | Admins                                                                 | Erweiterung: **Kategorien erstellen** (`create custom category`), dazu für „Einstellungen der Musik App" `create custom data` und **Daten in Kategorie bearbeiten** (`edit custom data`)                       |
 
+**Mehr braucht ein Musiker nicht – und sollte er nicht haben:** kein „-- Alle --" (gilt sonst auch für
+jede künftige Kategorie), kein Kategorien bearbeiten/löschen und bei „Einstellungen der Musik App" weder
+Daten erstellen noch bearbeiten noch löschen. Sonst könnte jeder Musiker die Gemeinde-Einstellungen
+überschreiben oder eine Kategorie der App löschen. ChurchTools schützt die Daten einer Kategorie nicht
+je Eintrag – wer dort schreiben darf, darf alles darin.
+
 Die beiden Kategorien „Einstellungen der Musik App" und „Team-Notizen der Musik App" legt die App selbst
 an, wenn ein Admin zum ersten Mal speichert (Team-Notizen: sobald eine Gruppe gewählt ist). **Erst danach
 lassen sie sich bei den Rechten auswählen** – also: als Admin einmal speichern, dann die Rechte vergeben.

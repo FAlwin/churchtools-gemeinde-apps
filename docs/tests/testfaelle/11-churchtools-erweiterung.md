@@ -288,3 +288,31 @@ wenn kurz vorher ein Musiker die Statistik geladen hat.
 - **Historie:** Alwin 08.10.2026 (Vergleich mit echten Daten: 62 von 64 identisch)
 
 </details>
+
+### TF-EXT-11 · Echtes Vollbild am Liedblatt (iPad, Android, Rechner)
+
+**Das brauchst du:** Die Erweiterung in ChurchTools im Browser – am iPad (Safari) und, wenn zur Hand,
+am iPhone. Ein Lied mit Notenblatt.
+
+**Das muss passieren:** Ein Tipp in die Mitte des Blatts blendet nicht nur die Leisten der App aus,
+sondern auch die Leiste von ChurchTools und die des Browsers – das Blatt füllt den ganzen Bildschirm.
+Ein zweiter Tipp holt alles zurück. Am iPhone bleibt es wie bisher (nur die Leisten der App weg).
+
+1. **Lieder** → ein Lied öffnen → in die Mitte des Blatts tippen → das Blatt füllt den ganzen
+   Bildschirm, oben steht nichts mehr von ChurchTools oder Safari. Der Zoom bleibt, wie er war.
+2. Nochmal in die Mitte tippen → Leisten der App, ChurchTools und Safari sind wieder da.
+3. Wieder ins Vollbild, dann das Vollbild **über das System** verlassen (am iPad: von oben wischen bzw.
+   das ✕ von Safari; am Rechner: Esc) → die Leisten der App sind sofort wieder da, nicht ein leeres
+   Blatt ohne Bedienung.
+4. Im Vollbild blättern, zoomen, zeichnen → alles geht wie ohne Vollbild.
+5. Am iPhone: in die Mitte tippen → nur die Leisten der App verschwinden, keine Fehlermeldung.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `client/src/hooks/useEchtesVollbild.ts`, `client/src/pages/ChordChart.tsx`, `client/src/services/funktionen.ts`
+- **Automatisiert:** teilweise – `useEchtesVollbild.test.ts` (an/aus, iPhone, Verlassen von außen,
+  Ablehnung, webkit-Vorsilbe); ob das Gerät die ChurchTools-Leiste wirklich verdeckt, nur hier
+- **Historie:** Alwin 08.10.2026 („das wäre richtig cool")
+
+</details>

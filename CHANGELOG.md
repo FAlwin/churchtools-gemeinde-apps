@@ -9,6 +9,11 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Neu
 
+- **Echtes Vollbild in der ChurchTools-Erweiterung:** Ein Tipp in die Mitte des Liedblatts blendet
+  jetzt auch die Leiste von ChurchTools und die des Browsers aus – am iPad, unter Android und am
+  Rechner. Am iPhone erlaubt Safari das nicht; dort bleibt es beim Ausblenden der App-Leisten. Wer das
+  Vollbild über das System verlässt, bekommt die Leisten sofort zurück.
+
 - **Lied-Statistik jetzt auch in der ChurchTools-Erweiterung:** „Häufigkeit" und „Zuletzt" bei den
   Liedern und in der Lied-Auswahl. Möglich, weil die App die Statistik jetzt aus ChurchTools selbst holt
   (siehe unten). Zu sehen ist sie nur mit dem Recht „Song-Statistik sehen" – die ECG gibt es nur den

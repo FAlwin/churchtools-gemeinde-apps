@@ -9,6 +9,7 @@ Die Musik App gibt es in zwei Formen:
 | Wo sie liegt                         | Menüpunkt in ChurchTools (im Browser)              | Eigene Adresse, auf dem Homescreen installierbar    |
 | Termine, Ablauf, Liedblatt           | ✓                                                  | ✓                                                   |
 | Anmerkungen, Zoom, Tonart merken     | ✓ (als Dateien an der eigenen Person, siehe unten) | ✓                                                   |
+| Vollbild am Liedblatt                | ✓ (iPad, Android, Rechner – nicht am iPhone)       | ✓ (Homescreen-App)                                  |
 | Offline im Saal                      | –                                                  | ✓                                                   |
 | Lied-Statistik (Häufigkeit, zuletzt) | ✓ (ab v2.32.0, aus der Statistik von ChurchTools)  | ✓                                                   |
 | Suche im Liedtext                    | –                                                  | ✓                                                   |

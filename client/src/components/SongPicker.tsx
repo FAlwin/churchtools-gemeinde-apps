@@ -93,7 +93,7 @@ export function SongPicker({
   autoFocus,
 }: SongPickerProps) {
   const caps = useCapabilities(true);
-  const showStats = caps.data?.canViewAgendas ?? false;
+  const showStats = caps.data?.canViewSongStatistics ?? false;
   const lib = useSongLibrary(true);
   const usage = useSongUsage(showStats);
   const f = useSongFilter(lib.data ?? [], usage.data, showStats, 'name', !usage.isError);

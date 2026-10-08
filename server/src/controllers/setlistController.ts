@@ -567,9 +567,24 @@ export async function getAgendaServicesCtrl(req: Request, res: Response): Promis
   res.json(result);
 }
 
-/** GET /api/song-usage – Nutzungsdaten je Song (Häufigkeit + zuletzt), separat/gecacht. */
+/**
+ * GET /api/song-usage – Nutzungsdaten je Song (Häufigkeit + zuletzt), separat/gecacht.
+ *
+ * **Erst das eigene Recht, dann der Zwischenspeicher:** Die Statistik wird für alle gemerkt; ohne diese
+ * Prüfung bekäme auch wer ohne „Song-Statistik sehen" den Stand, den ein Musiker gerade geladen hat
+ * (Alwin, 08.10.2026: nur Musiker sollen sie sehen). Die Rechte sind je Person gemerkt – kostet also
+ * keinen Abruf bei ChurchTools.
+ */
 export async function getSongUsageCtrl(req: Request, res: Response): Promise<void> {
-  const usage = await getSongUsageMap(ctCookie(req));
+  const cookie = ctCookie(req);
+  const caps = await getCapabilities(cookie, req.ctUserId ?? null);
+  if (!caps.canViewSongStatistics) {
+    throw new HttpError(
+      403,
+      'Keine Berechtigung für die Lied-Statistik (Recht „Song-Statistik sehen").',
+    );
+  }
+  const usage = await getSongUsageMap(cookie);
   res.json(usage);
 }
 

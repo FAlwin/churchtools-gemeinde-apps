@@ -131,9 +131,9 @@ export function deleteVersion(
  * letzten vier Jahre den Ablauf zu lesen (~250 Anfragen je Lauf, der Auslöser von #300).
  *
  * Org-weit gleich und kurz gemerkt: Der Inhalt (nur Spieltage je Lied) ist für alle gleich und
- * unkritisch; aufgebaut wird mit dem Cookie des ersten Anfragenden im Zeitfenster. Wer das Recht
- * „Song-Statistik sehen" nicht hat, löst selbst keinen Abruf aus, der gelingt – bekommt aber den Stand
- * eines anderen, solange er gemerkt ist. Das war beim alten Lauf genauso.
+ * unkritisch; aufgebaut wird mit dem Cookie des ersten Anfragenden im Zeitfenster. Der Speicher prüft
+ * KEIN Recht – das tut der Aufrufer (`getSongUsageCtrl`), bevor er hierher kommt; sonst bekäme auch
+ * wer ohne „Song-Statistik sehen" den Stand, den ein Musiker gerade geladen hat.
  */
 let usageCache: { at: number; data: Record<number, LiedNutzung> } | null = null;
 

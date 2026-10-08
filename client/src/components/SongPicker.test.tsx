@@ -26,7 +26,7 @@ vi.mock('../hooks/useServices', () => ({
   SONGSELECT_MIN_ZEICHEN: 3,
   useCapabilities: () => caps(),
   useSongLibrary: () => lib(),
-  useSongUsage: () => usage(),
+  useSongUsage: (an: boolean) => usage(an),
   useLiedtextVorschau: (songId: number, enabled: boolean) => eigenerText(songId, enabled),
   useSongSelectLiedtext: (nr: number | null, enabled: boolean) => ccliText(nr, enabled),
   useSongSelectSuche: () => songSelectSuche(),
@@ -71,7 +71,9 @@ const onSongSelectTreffer = vi.fn();
 beforeEach(() => {
   vi.useFakeTimers();
   vi.clearAllMocks();
-  caps.mockReturnValue({ data: { canViewAgendas: false, canUseCcli: true } });
+  caps.mockReturnValue({
+    data: { canViewAgendas: false, canViewSongStatistics: false, canUseCcli: true },
+  });
   lib.mockReturnValue({ data: BESTAND, isLoading: false, isError: false });
   usage.mockReturnValue({ data: undefined, isLoading: false, isError: false });
   eigenerText.mockReturnValue({ data: undefined, isLoading: false, isError: false });
@@ -284,5 +286,24 @@ describe('SongPicker – „Neues Lied" / „Selbst eintippen" oben rechts (04.0
   it('fehlt der Weg, fehlt der Knopf', () => {
     zeige();
     expect(screen.queryByRole('button', { name: /Selbst eintippen|Neues Lied/ })).toBeNull();
+  });
+});
+
+/**
+ * Nur Musiker sollen die Statistik sehen (Alwin, 08.10.2026): Sie hängt am Recht „Song-Statistik
+ * sehen" – NICHT mehr an den Abläufen. Wer Abläufe sieht, aber das Recht nicht hat, fragt gar nicht erst.
+ */
+describe('SongPicker – Statistik nur mit dem eigenen Recht', () => {
+  it('Abläufe ja, Statistik-Recht nein → keine Statistik angefragt', () => {
+    caps.mockReturnValue({ data: { canViewAgendas: true, canViewSongStatistics: false } });
+    zeige();
+    expect(usage).toHaveBeenCalled();
+    expect(usage.mock.calls.every(([an]) => an === false)).toBe(true);
+  });
+
+  it('mit dem Recht → Statistik angefragt', () => {
+    caps.mockReturnValue({ data: { canViewAgendas: false, canViewSongStatistics: true } });
+    zeige();
+    expect(usage).toHaveBeenCalledWith(true);
   });
 });

@@ -267,19 +267,21 @@ Gemeinde." – mit Schloss und „Erneut versuchen". NICHT „Berechtigungen kon
 ein zweites ohne dieses Recht. Ein paar Lieder, die in vergangenen Gottesdiensten im Ablauf standen.
 
 **Das muss passieren:** Bei **Lieder** gibt es die Reiter „Häufigkeit" und „Zuletzt" mit Zeitraum, und
-die Zahlen passen zu ChurchTools (Lieder → ein Lied → Statistik). Ohne das Recht steht bei den Liedern
-„–", die Liederliste bleibt vollständig. Gilt genauso in der Server-Variante.
+die Zahlen passen zu ChurchTools (Lieder → ein Lied → Statistik). Ohne das Recht gibt es die Reiter nicht
+(nur „A–Z"), die Liederliste bleibt vollständig. Gilt genauso in der Server-Variante – dort auch dann,
+wenn kurz vorher ein Musiker die Statistik geladen hat.
 
 1. Mit dem ersten Konto: **Lieder** → Reiter **Häufigkeit** → ein Lied, das am letzten Sonntag dran war,
    steht mit passender Zahl da; unter **Zuletzt** mit dem richtigen Datum.
 2. Den Zeitraum oben enger stellen → die Zahlen werden kleiner.
 3. Beim Hinzufügen eines Lieds zum Ablauf: die Lied-Auswahl sortiert sich ebenso nach Häufigkeit.
-4. Mit dem zweiten Konto: dieselbe Ansicht zeigt „–", kein Fehler, alle Lieder sind da.
+4. Mit dem zweiten Konto (in der Server-Variante direkt nach Schritt 1): **Lieder** zeigt nur die
+   Liste ohne „Häufigkeit/Zuletzt", kein Fehler, alle Lieder sind da. Ebenso in der Lied-Auswahl.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `shared/ct/liedStatistik.ts`, `client/src/services/ctLesen.ts`, `server/src/services/setlistBuilder.ts`
+- **Betrifft:** `shared/ct/liedStatistik.ts`, `shared/ct/rechte.ts`, `client/src/services/ctLesen.ts`, `server/src/services/setlistBuilder.ts`, `server/src/controllers/setlistController.ts`
 - **Automatisiert:** teilweise – `liedStatistik.test.ts` (Auswertung, Zeitzone, Zukunft), `songUsage.test.ts`
   (Server: merken, bündeln, Drosselung, fehlendes Recht), `ctLesen.statistik.test.ts` (Weg des Browsers);
   ob die Zahlen zu ChurchTools passen, nur hier

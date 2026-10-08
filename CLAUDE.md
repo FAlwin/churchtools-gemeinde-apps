@@ -663,7 +663,9 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
   `getSongStatistic` (alte Schnittstelle, EIN Aufruf) über `shared/ct/liedStatistik.ts`. Live gegen
   den alten Server verglichen: 62/64 gleich, die zwei Abweichungen am 28.06.2026 (zwei Gottesdienste an
   einem Tag). Keine Vier-Jahres-Grenze mehr, Cache 10 min. Braucht das Recht `view song statistics` je
-  Person – Alwin gibt es allen Mitgliedern, die Lieder sehen. Damit gibt es „Häufigkeit/Zuletzt" auch in
+  Person („Song-Statistik sehen") – **nur die Musiker sollen es haben** (Alwin). Deshalb prüft der
+  Server es VOR seinem org-weiten Zwischenspeicher (`getSongUsageCtrl`, 403), und beide Varianten
+  zeigen die Reiter nur mit `canViewSongStatistics`. Damit gibt es „Häufigkeit/Zuletzt" auch in
   der Erweiterung; weggelassen bleibt nur die Suche im Liedtext.
 
 - **v2.31.0 (08.10.2026) = SongSelect in der Erweiterung (3b-5) + #444** (PRs #448, #449): Regeln in

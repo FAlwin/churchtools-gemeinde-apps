@@ -604,6 +604,13 @@ export interface UserCapabilities {
    */
   canUseCcli: boolean;
   /**
+   * Darf die Lied-Statistik sehen („Häufigkeit", „Zuletzt") – aus dem ChurchTools-Recht `view song
+   * statistics` („Song-Statistik sehen"). Die Gemeinde gibt es bewusst nur den Musikern (Alwin,
+   * 08.10.2026). Ohne das Recht gibt es die Reiter nicht, und der Server gibt die Statistik nicht
+   * heraus – auch nicht aus seinem Zwischenspeicher, den ein Musiker gefüllt hat.
+   */
+  canViewSongStatistics: boolean;
+  /**
    * Darf den Bereich „Verfügbarkeit" nutzen (#177) – aktives Mitglied einer der unter „Anmerkungen →
    * Gruppen-Zuweisung" gewählten Gruppen (`musicianGroupIds`), **ohne** Rollen-Filter: Die Rollen aus
    * `noteRoles` regeln nur, wer fremde Notizen sieht. Eigene Abwesenheiten darf jedes Teammitglied

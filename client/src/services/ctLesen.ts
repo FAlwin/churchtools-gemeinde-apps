@@ -254,7 +254,8 @@ export async function liedtextVorschau(songId: number): Promise<LiedtextVorschau
  * der Extension nicht, weil der alte Weg je Gerät ~250 Anfragen gekostet hätte (#300).
  *
  * Zehn Minuten gemerkt, wie im Server. Ein Fehlschlag wird NICHT gemerkt – vorübergehend ist nicht
- * ungültig. Ohne das Recht „Song-Statistik sehen" wirft ChurchTools; die Ansicht zeigt dann „–".
+ * ungültig. Ohne das Recht „Song-Statistik sehen" fragt die Ansicht gar nicht erst
+ * (`canViewSongStatistics`); täte sie es doch, würfe ChurchTools.
  */
 let nutzung: { at: number; daten: Promise<Record<number, LiedNutzung>> } | null = null;
 const NUTZUNG_TTL_MS = 10 * 60_000;

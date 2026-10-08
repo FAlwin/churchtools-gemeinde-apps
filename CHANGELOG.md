@@ -9,8 +9,9 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Neu
 
-- **Vollbild-Knopf in der ChurchTools-Erweiterung:** Oben rechts in **Lieder** und im Ablauf, im
-  Liedblatt bei den Werkzeugen. Er legt die App über die Leiste von ChurchTools – in jedem Browser,
+- **Vollbild-Knopf in der ChurchTools-Erweiterung:** Auf jeder Seite an derselben Stelle, ganz rechts
+  oben – auch im Liedblatt, dort abgesetzt von den Werkzeugen und am iPhone nicht im Menü versteckt
+  (man braucht ihn zum Ein- und Ausschalten). Er legt die App über die Leiste von ChurchTools – in jedem Browser,
   auch am iPhone. Mit ChurchTools als Homescreen-App füllt die App damit den ganzen Bildschirm. Der
   Zustand bleibt beim Wechsel zwischen Liste, Ablauf und Liedblatt. (Ein erster Versuch mit dem
   Vollbild des Browsers war am iPad unruhiger – Safari-X, Hinweis, Flackern – und wurde verworfen.)

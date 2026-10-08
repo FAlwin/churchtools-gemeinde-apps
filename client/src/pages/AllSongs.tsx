@@ -18,8 +18,6 @@ import { useLiedSuche } from '../hooks/useLiedSuche';
 import { useSongFilter } from '../hooks/useSongFilter';
 import { liedAnzahl, statLabel } from '../utils/songFilter';
 import type { SongUsageMap } from '../services/churchtoolsApi';
-import { VollbildKnopf } from '../components/VollbildKnopf';
-import { funktionen } from '../services/funktionen';
 import styles from './AllSongs.module.scss';
 
 interface AllSongsProps {
@@ -175,12 +173,7 @@ export function AllSongs({
   );
 
   return (
-    <SeitenGeruest
-      titel="Lieder"
-      onNeuLaden={onRetry}
-      ueberlagerung={ueberlagerung}
-      aktionen={funktionen.vollbildKnopf ? <VollbildKnopf /> : undefined}
-    >
+    <SeitenGeruest titel="Lieder" onNeuLaden={onRetry} ueberlagerung={ueberlagerung}>
       <div className={styles.searchWrap}>
         {/* Dasselbe Suchfeld wie im Einfüge-Dialog – ohne SongSelect-Weg, deshalb tut Enter hier nichts. */}
         <LiedSucheKopf eingabe={f.q} onEingabe={f.setQ} />

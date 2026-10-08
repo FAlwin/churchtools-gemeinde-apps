@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { KnopfReihe } from './KnopfReihe';
 import { Screen, Scroll } from './Screen';
 import { GrosseUeberschrift } from './GrosseUeberschrift';
+import { VollbildKnopf } from './VollbildKnopf';
+import { funktionen } from '../services/funktionen';
 
 interface SeitenGeruestProps {
   /** Die große Überschrift am Anfang des Inhalts. */
@@ -57,7 +59,9 @@ export function SeitenGeruest({
   children,
   ueberlagerung,
 }: SeitenGeruestProps) {
-  const mitKnoepfen = Boolean(zurueck || aktionen);
+  // Der Vollbild-Knopf (nur Erweiterung) steht auf JEDER Seite ganz rechts – an einer Stelle, damit
+  // man ihn zum Ein- und Ausschalten immer am selben Ort findet (Entwurf mit Alwin, 08.10.2026).
+  const mitKnoepfen = Boolean(zurueck || aktionen || funktionen.vollbildKnopf);
   return (
     <Screen>
       <Scroll onRefresh={onNeuLaden}>
@@ -68,7 +72,16 @@ export function SeitenGeruest({
       </Scroll>
       {/* Nach dem Scroll-Bereich, damit die Knöpfe über dem durchlaufenden Inhalt liegen. */}
       {mitKnoepfen && (
-        <KnopfReihe zurueck={zurueck} zurueckLabel={zurueckLabel} aktionen={aktionen} />
+        <KnopfReihe
+          zurueck={zurueck}
+          zurueckLabel={zurueckLabel}
+          aktionen={
+            <>
+              {aktionen}
+              <VollbildKnopf />
+            </>
+          }
+        />
       )}
       {ueberlagerung}
     </Screen>

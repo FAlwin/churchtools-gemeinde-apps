@@ -26,7 +26,6 @@ import { SortableRow } from '../components/AgendaSortableRow';
 import { BeginnLinie } from '../components/AgendaRowParts';
 import { ItemActionSheet } from '../components/ItemActionSheet';
 import { Icon } from '../components/icons';
-import { VollbildKnopf } from '../components/VollbildKnopf';
 import { itemLabel } from '../utils/agendaItemTitle';
 import type { NeuerAgendaPunkt } from '../utils/agendaItemChanges';
 import { beginnStelle, vorlaufNachUmsortieren } from '../utils/vorlauf';
@@ -237,7 +236,7 @@ export function Setlist({
    * Bis dahin saßen die Knöpfe in einer weißen Leiste im Unschärfe-Band von iOS 26/27 – dort waren
    * auch Symbole weich, nicht nur Text (Screenshot Alwin, 02.10.2026). Jetzt schweben sie darunter.
    */
-  const ablaufAktionen =
+  const aktionen =
     !isLoading && !isError && items.length > 0 ? (
       <>
         {teilbar.length > 0 && !editMode && (
@@ -262,14 +261,7 @@ export function Setlist({
           </RundKnopf>
         )}
       </>
-    ) : null;
-  // Vollbild steht auch beim Laden oder leeren Ablauf – es gilt für die App, nicht für den Ablauf.
-  const aktionen = (
-    <>
-      {ablaufAktionen}
-      <VollbildKnopf />
-    </>
-  );
+    ) : undefined;
 
   /** Dialoge und Fenster schweben über dem Inhalt – sie scrollen nicht mit. */
   const ueberlagerung = (

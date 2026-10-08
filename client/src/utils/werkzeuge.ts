@@ -5,7 +5,7 @@
  */
 
 /** Die Werkzeuge des Liedblatts. */
-export type WerkzeugId = 'aussehen' | 'tempo' | 'zoom' | 'team' | 'anmerken' | 'vollbild';
+export type WerkzeugId = 'aussehen' | 'tempo' | 'zoom' | 'team' | 'anmerken';
 
 export const WERKZEUG_NAME: Record<WerkzeugId, string> = {
   aussehen: 'Aussehen',
@@ -13,7 +13,6 @@ export const WERKZEUG_NAME: Record<WerkzeugId, string> = {
   zoom: 'Zoom zurücksetzen',
   team: 'Notizen von …',
   anmerken: 'Anmerken',
-  vollbild: 'Vollbild',
 };
 
 /**
@@ -27,11 +26,6 @@ export function verfuegbareWerkzeuge(b: {
   ansehen: boolean;
   gezoomt: boolean;
   teamNotizen: boolean;
-  /**
-   * Vollbild der ganzen App – nur in der Erweiterung (`funktionen.vollbildKnopf`). Steht IMMER, auch
-   * beim Dokument und beim Ansehen fremder Notizen: Es gilt für die App, nicht für das Lied.
-   */
-  vollbild?: boolean;
 }): WerkzeugId[] {
   const ids: WerkzeugId[] = [];
   if (!b.zeigtDokument && !b.ansehen) ids.push('aussehen');
@@ -40,7 +34,6 @@ export function verfuegbareWerkzeuge(b: {
   if (b.gezoomt) ids.push('zoom');
   if (b.teamNotizen && !b.zeigtDokument) ids.push('team');
   if (!b.ansehen) ids.push('anmerken');
-  if (b.vollbild) ids.push('vollbild');
   return ids;
 }
 

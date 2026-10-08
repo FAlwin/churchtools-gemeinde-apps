@@ -12,10 +12,8 @@ import {
 } from '../utils/werkzeuge';
 import styles from '../pages/ChordChart.module.scss';
 
-function werkzeugSymbol(id: WerkzeugId, vollbildAn = false): ReactNode {
+function werkzeugSymbol(id: WerkzeugId): ReactNode {
   switch (id) {
-    case 'vollbild':
-      return <Icon name={vollbildAn ? 'vollbild-aus' : 'vollbild'} size={18} stroke={2.2} />;
     case 'aussehen':
       return <b>Aa</b>;
     case 'tempo':
@@ -131,8 +129,10 @@ interface ChartHeaderProps {
   onToggleTeamNotes: () => void;
   onToggleDraw: () => void;
   /**
-   * Vollbild der ganzen App (nur Erweiterung, `useAppVollbild`). Ohne `onVollbild` gibt es das
-   * Werkzeug nicht – in der Homescreen-App fehlt die ChurchTools-Leiste, die es verdecken könnte.
+   * Vollbild der ganzen App (nur Erweiterung, `useAppVollbild`). Ohne `onVollbild` kein Knopf – in
+   * der Homescreen-App fehlt die ChurchTools-Leiste, die er verdecken könnte. **Kein Werkzeug:** Er
+   * steht abgesetzt ganz rechts, auf jeder Seite an derselben Stelle, und wandert am iPhone NICHT ins
+   * Werkzeug-Menü – man braucht ihn zum Ein- UND Ausschalten (Entwurf mit Alwin, 08.10.2026).
    */
   vollbildAn?: boolean;
   onVollbild?: () => void;
@@ -206,16 +206,12 @@ export function ChartHeader({
     zoom: onResetZoom,
     team: onToggleTeamNotes,
     anmerken: onToggleDraw,
-    vollbild: onVollbild ?? (() => undefined),
   };
-  const werkzeugName = (id: WerkzeugId) =>
-    id === 'vollbild' && vollbildAn ? 'Vollbild beenden' : WERKZEUG_NAME[id];
   const aktiveWerkzeuge = verfuegbareWerkzeuge({
     zeigtDokument: showsDocument,
     ansehen: viewing,
     gezoomt: zoomed,
     teamNotizen: canUseGlobalNotes,
-    vollbild: onVollbild !== undefined,
   });
 
   /**
@@ -254,7 +250,8 @@ export function ChartHeader({
         kopfBreite: kopf.breite,
         knopf: kopf.knopf,
         abstand: kopf.abstand,
-        anzahl: aktiveWerkzeuge.length,
+        // Der Vollbild-Knopf belegt rechts einen Platz wie ein Werkzeug.
+        anzahl: aktiveWerkzeuge.length + (onVollbild ? 1 : 0),
       }));
   // Wird das Fenster breiter, während das Werkzeuge-Menü offen ist, verschwindet sein Knopf – dann
   // darf das Menü nicht ohne Knopf stehen bleiben.
@@ -268,8 +265,8 @@ export function ChartHeader({
    */
   const werkzeuge: Werkzeug[] = aktiveWerkzeuge.map((id) => ({
     id,
-    label: werkzeugName(id),
-    symbol: werkzeugSymbol(id, vollbildAn),
+    label: WERKZEUG_NAME[id],
+    symbol: werkzeugSymbol(id),
     onClick: aktion[id],
   }));
 
@@ -277,17 +274,16 @@ export function ChartHeader({
   const aktiveKnoepfe = aktiveWerkzeuge.map((id) => (
     <RundKnopf
       key={id}
-      title={id === 'anmerken' && drawMode ? 'Anmerken beenden' : werkzeugName(id)}
+      title={id === 'anmerken' && drawMode ? 'Anmerken beenden' : WERKZEUG_NAME[id]}
       onClick={aktion[id]}
       aktiv={
         (id === 'tempo' && tempoAktiv) ||
         (id === 'team' && viewing) ||
-        (id === 'anmerken' && drawMode) ||
-        (id === 'vollbild' && vollbildAn)
+        (id === 'anmerken' && drawMode)
       }
       offen={offenesWerkzeug === id}
     >
-      {werkzeugSymbol(id, vollbildAn)}
+      {werkzeugSymbol(id)}
     </RundKnopf>
   ));
 
@@ -497,6 +493,17 @@ export function ChartHeader({
             {aktiveKapsel}
             {werkzeugKnopf}
           </>
+        )}
+        {onVollbild && (
+          <span className={styles.vollbildPlatz}>
+            <RundKnopf
+              onClick={onVollbild}
+              title={vollbildAn ? 'Vollbild beenden' : 'Vollbild'}
+              aktiv={vollbildAn}
+            >
+              <Icon name={vollbildAn ? 'vollbild-aus' : 'vollbild'} size={18} stroke={2.2} />
+            </RundKnopf>
+          </span>
         )}
       </div>
       {werkzeugeOffen && !einzeln && !drawMode && !viewing && (

@@ -19,6 +19,13 @@
   flex-shrink: 0;
 }
 
+// Vollbild-Knopf (Erweiterung): abgesetzt ganz rechts, nicht Teil der Werkzeuge (`ChartHeader`).
+.vollbildPlatz {
+  display: flex;
+  flex-shrink: 0;
+  margin-left: 6px;
+}
+
 .center {
   flex: 1;
   min-width: 0;

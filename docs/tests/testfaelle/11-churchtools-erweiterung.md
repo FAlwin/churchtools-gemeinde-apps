@@ -295,27 +295,32 @@ wenn kurz vorher ein Musiker die Statistik geladen hat.
 ChurchTools als Homescreen-App (Safari → Teilen → „Zum Home-Bildschirm"). Wenn zur Hand: ein iPhone
 und ein Rechner mit Chrome oder Edge. Ein Lied mit Notenblatt, ein Ablauf.
 
-**Das muss passieren:** Der Knopf mit den vier Ecken (oben rechts in **Lieder** und im Ablauf, im
-Liedblatt bei den Werkzeugen) legt die App über die Leiste von ChurchTools – in jedem Browser, ohne X
+**Das muss passieren:** Der Knopf mit den vier Ecken steht auf **jeder** Seite an derselben Stelle,
+ganz rechts oben (Termine, Lieder, Abwesenheiten, Mehr, Ablauf, Liedblatt). Er legt die App über die
+Leiste von ChurchTools – in jedem Browser, ohne X
 und ohne Hinweis von Safari, ohne Flackern. Mit ChurchTools als Homescreen-App ist dann der ganze
 Bildschirm die App. Der Zustand bleibt beim Wechsel zwischen Liste, Ablauf und Liedblatt.
 
 1. **Lieder** → Knopf oben rechts → die ChurchTools-Leiste ist weg, der Knopf zeigt jetzt die nach
    innen zeigenden Ecken („Vollbild beenden").
-2. Ein Lied öffnen → weiter ohne ChurchTools-Leiste; bei den Werkzeugen steht „Vollbild beenden".
+2. Ein Lied öffnen → weiter ohne ChurchTools-Leiste; ganz rechts, abgesetzt von den Werkzeugen, steht
+   „Vollbild beenden".
 3. In die Mitte des Blatts tippen → wie immer verschwinden zusätzlich unsere Leisten; nochmal tippen
    holt sie zurück. Kein Flackern.
 4. Zurück zur Liste → weiter ohne ChurchTools-Leiste. Knopf antippen → die Leiste ist wieder da.
-5. Dasselbe aus einem Ablauf heraus (Knopf neben Teilen/Bearbeiten).
-6. Am iPhone (oder schmalem Fenster): Im Liedblatt steckt „Vollbild" im Werkzeug-Menü; es wirkt genauso.
+5. **Termine**, **Mehr**, ein Ablauf: Der Knopf steht jeweils ganz rechts oben (im Ablauf rechts neben
+   Teilen/Bearbeiten).
+6. Am iPhone (oder schmalem Fenster): Im Liedblatt stecken die Werkzeuge im Menü, der Vollbild-Knopf
+   steht trotzdem sichtbar ganz rechts – nicht im Menü.
 7. In der Server-App (Homescreen-App der Musik App) gibt es den Knopf nicht.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/hooks/useAppVollbild.ts`, `client/src/components/VollbildKnopf.tsx`, `client/src/components/ChartHeader.tsx`, `client/src/utils/werkzeuge.ts`, `client/src/styles/main.scss`
+- **Betrifft:** `client/src/hooks/useAppVollbild.ts`, `client/src/components/VollbildKnopf.tsx`, `client/src/components/SeitenGeruest.tsx`, `client/src/components/ChartHeader.tsx`, `client/src/styles/main.scss`
 - **Automatisiert:** teilweise – `useAppVollbild.test.tsx` (Attribut, ein Zustand, bleibt beim Wechsel),
-  `VollbildKnopf.test.tsx`, `ChartHeader.test.tsx` (Werkzeug, Name, nicht beim anderen Lied); ob die
+  `VollbildKnopf.test.tsx`, `SeitenGeruest.test.tsx` (jede Seite, ganz rechts), `ChartHeader.test.tsx`
+  (nie im Menü, zählt bei der Breite mit, einer im Querformat); ob die
   ChurchTools-Leiste wirklich verdeckt wird, nur hier
 - **Historie:** Alwin 08.10.2026 – erster Versuch mit dem Browser-Vollbild verworfen (Safari-X,
   Hinweis, Flackern; in der Homescreen-App gar nicht verfügbar)

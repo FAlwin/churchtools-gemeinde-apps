@@ -62,6 +62,8 @@ export const TOUR_CHART = 'chart-v9';
 export const HINT_VOLLBILD = 'hinweis-vollbild';
 // setlist-v2 (08.10.2026, v2.29.0): Teilen fragt jetzt nach den Anmerkungen und nimmt auch die PDFs aus
 // ChurchTools mit – der Schritt „Als PDF teilen" sagt es, und Bestandsnutzer sollen ihn einmal sehen.
+// v2.30.0 (08.10.2026): Text um Vorschau und Herunterladen ergänzt – bewusst OHNE neue Version: v2 ging
+// erst am Vorabend raus, die Tour noch einmal zu zeigen wäre lästiger als der fehlende Halbsatz.
 export const TOUR_SETLIST = 'setlist-v2';
 // setlist-edit-v2: „Hinzufügen" kann jetzt auch ein Lied ANLEGEN (#322) – bisher konnte man nur
 // vorhandene wählen. Version erhöht, damit Bestandsnutzer den geänderten Schritt sehen.
@@ -190,7 +192,7 @@ export const SETLIST_STEPS: CoachStep[] = [
   {
     selector: '[data-tour="setlist-share"]',
     title: 'Als PDF teilen',
-    body: 'Alle Lieder dieses Gottesdienstes auf einmal als PDF teilen – z. B. per Mail oder zum Drucken. Vorher wählst du, ob deine Anmerkungen mit hinein sollen; Lieder mit PDF aus ChurchTools kommen so hinein, wie du sie siehst.',
+    body: 'Alle Lieder dieses Gottesdienstes auf einmal als PDF teilen – z. B. per Mail oder zum Drucken. Vorher siehst du die Seiten, wählst, ob deine Anmerkungen mit hinein sollen, und kannst das PDF auch einfach herunterladen.',
   },
   {
     selector: '[data-tour="setlist-edit"]',

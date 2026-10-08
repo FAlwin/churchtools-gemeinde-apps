@@ -317,7 +317,7 @@ stimmt das Blatt weiter – ohne dass du irgendwo rechnen musst.
 
 </details>
 
-### TF-EINST-12 · Teilen mit oder ohne Anmerkungen, auch mit PDFs aus ChurchTools
+### TF-EINST-12 · Teilen mit oder ohne Anmerkungen, auch mit PDFs aus ChurchTools – mit Vorschau und Herunterladen
 
 **Das brauchst du:** Einen Ablauf mit einem Lied mit Akkorden und einem Lied, das sein **PDF** zeigt
 (nur PDF in ChurchTools, oder im Liedmenü aufs PDF umgestellt). Auf beiden etwas angemerkt (Stift und
@@ -326,6 +326,7 @@ Text). Ein iPad/iPhone und, wenn möglich, einen Drucker.
 **Das muss passieren:** Ohne Anmerkungen ist das PDF sauber; mit Anmerkungen stehen Striche und Texte
 **an derselben Stelle** wie auf dem Bildschirm – auf der Akkord-Seite UND auf der PDF-Seite. Das Lied
 mit PDF fehlt nicht. Auf dem iPhone/iPad öffnet „Teilen" das Teilen-Menü (kein stiller Download).
+Vor dem Teilen zeigt das Fenster die Seiten; „Herunterladen" speichert ohne Teilen-Menü.
 
 1. Ablauf öffnen, oben auf das **Teilen**-Symbol → Fenster „Ablauf teilen", nach kurzer Zeit
    „Fertig · N Seiten". **Teilen** → Teilen-Menü → in Dateien sichern, ansehen: keine Anmerkungen.
@@ -334,17 +335,23 @@ mit PDF fehlt nicht. Auf dem iPhone/iPad öffnet „Teilen" das Teilen-Menü (ke
 3. Fenster schließen, wieder öffnen → der Schalter steht noch auf „an" (das Gerät merkt es sich).
 4. Ein Lied öffnen, das sein PDF zeigt, Titel antippen → **Als PDF teilen** gibt es jetzt auch hier.
 5. Eine Gemeinde/ein Ablauf **nur mit PDFs** (keine Akkorde): Das Teilen-Symbol im Ablauf ist da.
+6. **Vorschau:** Im Fenster stehen die Seiten als kleine Blätter. Eine antippen → sie erscheint groß,
+   **‹ ›** blättert, **Alle Seiten** führt zurück. **Meine Anmerkungen** umschalten → die Vorschau zeigt
+   das neue PDF (mit bzw. ohne Striche).
+7. **Herunterladen** → die Datei landet ohne Teilen-Menü auf dem Gerät (iPad im Browser: Dateien →
+   Downloads; in der App vom Homescreen kann iOS eine Ansicht mit Teilen-Knopf zeigen). Das Fenster
+   bleibt offen und zeigt „Heruntergeladen".
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/TeilenFenster.tsx`, `client/src/utils/ablaufPdf.ts`, `client/src/utils/anmerkungsEbene.ts`, `client/src/utils/dokumentSeiten.ts`, `client/src/pages/Setlist.tsx`, `client/src/pages/ChordChart.tsx`, `client/src/components/SongMenu.tsx`
+- **Betrifft:** `client/src/components/TeilenFenster.tsx`, `client/src/components/PdfSeitenVorschau.tsx`, `client/src/utils/sharePdf.ts`, `client/src/utils/shareFile.ts`, `client/src/utils/ablaufPdf.ts`, `client/src/utils/anmerkungsEbene.ts`, `client/src/utils/dokumentSeiten.ts`, `client/src/pages/Setlist.tsx`, `client/src/pages/ChordChart.tsx`, `client/src/components/SongMenu.tsx`
 - **Automatisiert:** teilweise – `ablaufPdf.test.ts` (Reihenfolge, Dokument-Seiten, Ersatz/Fehlen,
-  Seitenbesitzer und Ebene je Seite), `TeilenFenster.test.tsx` (Vorgabe, Merken, veraltetes PDF);
+  Seitenbesitzer und Ebene je Seite), `TeilenFenster.test.tsx` (Vorgabe, Merken, veraltetes PDF, Vorschau, Großansicht, Herunterladen);
   gegen den ChurchTools-Stub durchgeklickt und das heruntergeladene PDF angesehen. Von Hand bleibt das
   Teilen-Menü auf iOS (frisches Antippen) und ein Ausdruck
 - **Historie:** Anfrage BG Korntal (Teilen-Knopf fehlte ohne ChordPro), Alwin 07.10.2026 (Anmerkungen
-  wählbar)
+  wählbar), Alwin 08.10.2026 (Vorschau und Herunterladen)
 
 </details>
 

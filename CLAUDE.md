@@ -656,6 +656,10 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **v2.30.0 (08.10.2026) = Teilen mit Vorschau und Herunterladen** (`PdfSeitenVorschau`, `downloadPdf`);
+  Staging baut jetzt auch `feat/**`, der fehlende Watchtower der Test-Instanz läuft wieder. Von Alwin
+  abgenommen (Staging `staging-6db4f70` + Erweiterungs-Paket).
+
 - **v2.29.0 (08.10.2026) = Erweiterung schreibt + „PDF zuerst" + Teilen mit Anmerkungen** (PRs #436–#443):
   Extension 3b-1 (Ablauf, Tempo), 3b-2 (Lieder), 3b-4a (Gemeinde-Einstellungen in den Daten der
   Erweiterung), 3b-4b (Team-Notizen); für beide Varianten: Lieder ohne ChordPro öffnen ihr PDF,

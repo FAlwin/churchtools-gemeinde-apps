@@ -32,7 +32,15 @@ export async function shareOrDownload(blob: Blob, filename: string): Promise<voi
       if (err instanceof DOMException && err.name === 'AbortError') return;
     }
   }
+  downloadFile(blob, filename);
+}
 
+/**
+ * Lädt `blob` unter `filename` herunter – ohne Teilen-Menü (Alwin, 08.10.2026: „überhaupt
+ * herunterladen und nicht erst an andere teilen"). Auch der Rückfall von `shareOrDownload`.
+ * Am iPad landet die Datei je nach Safari-Einstellung in „Dateien" → Downloads.
+ */
+export function downloadFile(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

@@ -565,7 +565,7 @@ Neue Nutzer bekommen beim ersten Mal eine geführte Einführung mit Hinweisblase
   Portweiterleitung 443/80 im Router (DSM-Admin-Ports bleiben zu). **Kein Cloudflare.**
 - **Anleitung (hostende Gemeinden):** `INSTALL.md` (image-basiert, empfohlen) + `UPDATE.md`.
   Build-aus-Quellcode-Variante: `docs/betrieb/DEPLOYMENT.md`.
-- **Images:** `.github/workflows/staging.yml` baut bei jedem Push (main, `feature/**`, `fix/**` – #386) ein `:staging`-Image
+- **Images:** `.github/workflows/staging.yml` baut bei jedem Push (main, `feature/**`, `feat/**`, `fix/**` – #386) ein `:staging`-Image
   (amd64) nach GHCR; `release.yml` baut bei Tag `vX.Y.Z` Multi-Arch mit den Tags `vX.Y.Z`, `X.Y`,
   \*\*`X` (Major, z. B. `2`)\*\* und `latest`.
 - **Test-Instanz (Auto-Deploy):** `deploy/docker-compose.staging.yml` (Container `musik-app-test`, Port

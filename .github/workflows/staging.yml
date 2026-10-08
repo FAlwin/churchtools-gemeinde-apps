@@ -1,8 +1,9 @@
 name: Staging-Image
 
-# Bei jedem Push (main, feature/** oder fix/**) ein Test-Image bauen und als :staging nach GHCR pushen.
-# fix/** seit #386: Gerade Fehlerbehebungen müssen VOR dem Merge auf der Test-Instanz durchklickbar
-# sein. chore/** und docs/** bleiben bewusst draußen – ein Doku-Branch braucht kein Image.
+# Bei jedem Push (main, feature/**, feat/** oder fix/**) ein Test-Image bauen und als :staging nach GHCR
+# pushen. fix/** seit #386: Gerade Fehlerbehebungen müssen VOR dem Merge auf der Test-Instanz durchklickbar
+# sein. feat/** seit 08.10.2026: Die Branches hießen längst so – sie kamen nie auf Staging, nur ihr Merge.
+# Mit dem Test-Paket der Erweiterung soll dieselbe Fassung auch auf Staging liegen (Alwin). chore/** und docs/** bleiben bewusst draußen – ein Doku-Branch braucht kein Image.
 # Der NAS (x86_64) zieht es automatisch (Watchtower) → kein manueller Rebuild der Test-Instanz mehr.
 # Nur amd64 (Test-NAS ist x86_64) → schnell, ein einziger nativer Build.
 on:
@@ -10,6 +11,7 @@ on:
     branches:
       - main
       - 'feature/**'
+      - 'feat/**'
       - 'fix/**'
 
 env:

@@ -7,13 +7,24 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+## [2.32.0] – 2026-10-09
+
+**Beim Update bitte beachten (Server-Variante):** Die Lied-Statistik („Häufigkeit", „Zuletzt") braucht
+jetzt das ChurchTools-Recht **„Song-Statistik sehen"** (`view song statistics`, Bereich Veranstaltungen).
+Bisher reichte „Abläufe sehen" – wer das neue Recht nicht hat, sieht die Statistik nach dem Update
+nicht mehr. Am besten dort vergeben, wo die Musiker ihre Lied-Rechte bekommen (z. B. ihre Gruppe).
+**Erweiterung:** neue ZIP einspielen; für die Statistik dasselbe Recht (alle Rechte:
+`docs/betrieb/ERWEITERUNG.md`). Sonst ist nichts zu tun. Einführung: ein einmaliger Hinweis auf den
+neuen Vollbild-Knopf (nur Erweiterung).
+
 ### Neu
 
 - **Vollbild-Knopf in der ChurchTools-Erweiterung:** Auf jeder Seite an derselben Stelle, ganz rechts
   oben – auch im Liedblatt, dort abgesetzt von den Werkzeugen und am iPhone nicht im Menü versteckt
   (man braucht ihn zum Ein- und Ausschalten). Er legt die App über die Leiste von ChurchTools – in jedem Browser,
   auch am iPhone. Mit ChurchTools als Homescreen-App füllt die App damit den ganzen Bildschirm. Der
-  Zustand bleibt beim Wechsel zwischen Liste, Ablauf und Liedblatt. (Ein erster Versuch mit dem
+  Zustand bleibt beim Wechsel zwischen Liste, Ablauf und Liedblatt. Nach dem Update weist ein
+  einmaliger Hinweis darauf hin. (Ein erster Versuch mit dem
   Vollbild des Browsers war am iPad unruhiger – Safari-X, Hinweis, Flackern – und wurde verworfen.)
 
 - **Lied-Statistik jetzt auch in der ChurchTools-Erweiterung:** „Häufigkeit" und „Zuletzt" bei den

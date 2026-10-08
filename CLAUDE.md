@@ -1254,6 +1254,8 @@ Vollständige Endpunkt-Referenz: `docs/entwicklung/api-referenz.md`.
   Termin; bei Serien braucht ein einzelner Sonntag ein Aufteilen der Serie). Bis zum Spike nicht bauen.
 - **Rechte „Liederbuch für alle Mitglieder":** CT-Rolle braucht „Veranstaltungen sehen (view)"
   - „Einzelne Song-Kategorien sehen (view songcategory)" – sonst nichts. Kein Service-Konto nötig.
+  In der Erweiterung dazu „Musik App" sehen + Sehen der Kategorie „Einstellungen der Musik App". Die
+  ECG gibt Mitgliedern bewusst KEINE Abläufe (Alwin, 08.10.2026) – Satz in `docs/betrieb/ERWEITERUNG.md`.
 
 ## Berechtigungsmodell (Capabilities)
 

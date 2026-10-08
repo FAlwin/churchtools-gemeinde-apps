@@ -223,8 +223,9 @@ Server-Variante – aus dem Browser, ohne eigenen Server. Ohne `use ccli` ist So
 2. Bei einem Treffer das **Auge** → der Liedtext erscheint mit dem Hinweis von CCLI darunter.
 3. Den Treffer **anlegen** → Titel, Autoren und Copyright sind ausgefüllt; nach dem Anlegen hat das Lied
    ein Notenblatt in der Tonart des Arrangements (in ChurchTools nachsehen: genau eine `.chordpro`).
-4. Bei einem vorhandenen Lied mit CCLI-Nummer im Liedmenü **Notenblatt aus SongSelect holen** → das alte
-   Original ist ersetzt, nicht verdoppelt.
+4. Bei einem Lied **mit** CCLI-Nummer, aber **ohne** Notenblatt: Lied öffnen → Titel → **Dateien …** →
+   **Aus SongSelect holen** → Rückfrage bestätigen → das Notenblatt erscheint (in ChurchTools genau eine
+   `.chordpro`). Hat das Lied schon eines, wird der Knopf nicht angeboten.
 5. Mit einem Konto **ohne** `use ccli`: keine SongSelect-Treffer, kein Menüpunkt.
 
 <details><summary>Technisches</summary>

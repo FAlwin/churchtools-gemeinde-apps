@@ -658,6 +658,11 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **v2.31.0 (08.10.2026) = SongSelect in der Erweiterung (3b-5) + #444** (PRs #448, #449): Regeln in
+  `shared/ct/songselect.ts`; innerer CCLI-Status wird geprüft; „keine Rechte für Lieder und Abläufe"
+  bekommt einen eigenen Hinweis. In der Test-Instanz mit „Treu" (4328979) durchgeklickt – sie hängt am
+  echten SongSelect-Konto der ECG. Offen von der Erweiterung nur 3b-3 (Abwesenheiten).
+
 - **v2.30.0 (08.10.2026) = Teilen mit Vorschau und Herunterladen** (`PdfSeitenVorschau`, `downloadPdf`);
   Staging baut jetzt auch `feat/**`, der fehlende Watchtower der Test-Instanz läuft wieder. Von Alwin
   abgenommen (Staging `staging-6db4f70` + Erweiterungs-Paket).

@@ -117,6 +117,11 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
 
 ### Interaktionskern (Hooks/Komponenten, #141)
 
+- Liedblatt, aus `ChordChart.tsx` herausgelöst (#465): `hooks/useChartOverlay` (welches Fenster offen ist,
+  rein über `fensterAnsicht`), `hooks/useWerkzeugSteuerung` (jeder Knopf setzt das Fenster-Feld genau
+  EINMAL; Werkzeug des anderen Lieds öffnet erst nach dem Liedwechsel), `hooks/useLokaleUmzuege`
+  (Versions-/Arrangement-Umzug läuft, Einstellungen werden danach neu gelesen). Verhalten vorher/nachher
+  im Browser verglichen (Demo-Liedblatt, gleiche Klickfolge, gleiches Ergebnis).
 - `hooks/usePageDraw` (jsdom): Laden aus localStorage, Text hinzufügen + **Push-Dedup**
   (unveränderter Re-Render pusht nicht erneut), **Undo/Redo** (Text), **Key-Wechsel** lädt die
   jeweilige Seite. Bewusst ohne echtes Canvas (Strich-Persistenz bleibt manuell/Staging).

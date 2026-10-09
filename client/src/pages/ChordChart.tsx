@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SetlistSong } from '@shared/types/index';
 import { Screen } from '../components/Screen';
 import { ChartHeader, type AndereHaelfte } from '../components/ChartHeader';
 import type { WerkzeugId } from '../utils/werkzeuge';
 import { ChartFooter } from '../components/ChartFooter';
-import { ChartOverlays, type ChartOverlay } from '../components/ChartOverlays';
+import { ChartOverlays } from '../components/ChartOverlays';
+import { useChartOverlay } from '../hooks/useChartOverlay';
+import { useTempoSteuerung } from '../hooks/useTempoSteuerung';
+import { useLokaleUmzuege } from '../hooks/useLokaleUmzuege';
+import { useWerkzeugSteuerung } from '../hooks/useWerkzeugSteuerung';
 import { TempoMenu } from '../components/TempoMenu';
 import { ImportPreviewBar, ViewingBanner } from '../components/ChartTeamNotesBars';
 import { Icon } from '../components/icons';
@@ -14,7 +18,6 @@ import { PageDeck } from '../components/PageDeck';
 import { useSongSettings } from '../hooks/useSongSettings';
 import { useLandscape } from '../hooks/useLandscape';
 import { useAppVollbild } from '../hooks/useAppVollbild';
-import { funktionen } from '../services/funktionen';
 import { Coachmarks } from '../components/Coachmarks';
 import {
   CHART_STEPS,
@@ -48,10 +51,6 @@ import { useChartEditor } from '../hooks/useChartEditor';
 import { useAppLogo } from '../hooks/useAppLogo';
 import { useChartStream } from '../hooks/useChartStream';
 import { useChartSync, useResyncAfterEditor } from '../hooks/useChartSync';
-import { useMetronome, type KlickModus } from '../hooks/useMetronome';
-import { taktRaster } from '../utils/metronome';
-import { arrangementMigrationAnwenden } from '../utils/arrangementMigration';
-import { versionMigrationAnwenden } from '../utils/versionMigration';
 import {
   useArrangementUeberschreibung,
   useArrangementVorladen,
@@ -107,12 +106,6 @@ export function ChordChart({
   canUseGlobalNotes = false,
   canUseCcli = false,
 }: ChordChartProps) {
-  // Versions-Schlüssel berichtigt (07.10.2026, `versionMigration.ts`): Tonart und Anmerkungen vom alten
-  // Schlüssel mitnehmen – VOR `useSongSettings`, das die Einstellungen beim ersten Zeichnen liest. Wie
-  // der Arrangement-Umzug weiter unten synchron, lokal und idempotent.
-  useMemo(() => {
-    for (const s of songsAusAblauf) versionMigrationAnwenden(s);
-  }, [songsAusAblauf]);
   // Anzeige-Einstellungen aller Lieder – Halten und Speichern liegt in useSongSettings (#198).
   const { settings, updateSetting, selectVersion, reloadSettings } =
     useSongSettings(songsAusAblauf);
@@ -129,21 +122,8 @@ export function ChordChart({
     settings,
   );
 
-  /**
-   * Bestandsnotizen dem geltenden Arrangement zuschlagen (#320).
-   *
-   * **In einem `useMemo` und nicht in einem `useEffect`** – bewusst: Effekte laufen NACH dem ersten
-   * Zeichnen. Die Seiten stünden dann einen Wimpernschlag lang ohne die Notizen da, weil die App
-   * seit dem Arrangement-Segment unter dem neuen Schlüssel sucht und der Bestand noch unter dem
-   * alten liegt. Der Vorgang ist rein lokal, synchron und idempotent (ein zweiter Lauf findet
-   * nichts mehr) – damit ist er an dieser Stelle unbedenklich.
-   *
-   * Läuft über ALLE Lieder des Ablaufs, nicht nur das offene: Der Strom zeigt im Querformat auch
-   * Seiten des Nachbarlieds.
-   */
-  useMemo(() => {
-    for (const s of songs) arrangementMigrationAnwenden(s.id, s.arrangementId);
-  }, [songs]);
+  // Versions- und Arrangement-Umzug der lokalen Schlüssel – vor dem Zeichnen (`useLokaleUmzuege`).
+  useLokaleUmzuege(songsAusAblauf, songs, reloadSettings);
   // Signatur über den INHALT aller Versionen → der Strom wird neu erzeugt, sobald sich ein Lied-Text
   // ändert (z. B. nach dem Bearbeiten/Anlegen einer Version), nicht nur bei geänderter Lied-Liste.
   const songsSig = songs
@@ -174,24 +154,17 @@ export function ChordChart({
     onAfterInitialPull: () => teamNotizenNachlauf.current?.(),
   });
 
-  /**
-   * EIN Zustand für alle Auswahl-Overlays statt fünf Booleans (#283).
-   *
-   * Sie schließen sich gegenseitig aus – mit fünf unabhängigen Flaggen war ein Zustand darstellbar,
-   * den es nicht geben darf (zwei Overlays gleichzeitig offen). Mit einem Feld ist er nicht mehr
-   * ausdrückbar, und beim Öffnen des einen ist das andere automatisch zu.
-   *
-   * **Die Namen kommen aus `ChartOverlay` und werden hier nicht abgeschrieben** (#321). Vorher stand
-   * die Liste der fünf Namen zweimal: dort für die Komponente, hier für den Zustand. Bei „Dateien"
-   * wäre es die dritte Fassung geworden – und die Namen, die `ChartOverlays` gar nicht rendert
-   * (`tempo`, `files`), stehen jetzt sichtbar getrennt statt in einer Liste vermischt.
-   */
-  const [overlay, setOverlay] = useState<
-    ChartOverlay | 'tempo' | 'files' | 'stammdaten' | 'werkzeuge'
-  >(null);
-  /** Ein Overlay umschalten (nochmal derselbe Knopf schließt es). */
-  const toggleOverlay = (o: 'appearance' | 'menu' | 'tempo' | 'werkzeuge') =>
-    setOverlay((cur) => (cur === o ? null : o));
+  // Alle Fenster als EIN Zustand (#283) samt der abgeleiteten Werte – in `useChartOverlay`.
+  const {
+    overlay,
+    setOverlay,
+    toggleOverlay,
+    chartOverlay,
+    offenesWerkzeug,
+    werkzeugeOffen,
+    werkzeugFensterOffen,
+    liedFensterOffen,
+  } = useChartOverlay();
 
   const { toast, showToast } = useToast();
   // ── Team-Notizen (#124, PCO-Modell): „Notizen von …" ansehen + übernehmen ──
@@ -236,20 +209,6 @@ export function ChordChart({
   const [drawColor, setDrawColor] = useState('#0062ac'); // Standard-Anmerkungsfarbe: Blau
   const [drawTool, setDrawTool] = useState<DrawTool>('pen');
   const [streamZoomed, setStreamZoomed] = useState(false); // eine sichtbare Seite (Strom oder Dokument) ist reingezoomt
-  // Tempo-Puls (#145): bewusst NICHT gemerkt – er ist ein Werkzeug zum Einzählen, keine Ansicht.
-  // Beim Öffnen des Liederhefts ist er immer aus, damit im Gottesdienst nichts unerwartet blinkt.
-  const [bpmPulse, setBpmPulse] = useState(false);
-  // Hörbarer Klick – wie der Puls bewusst NICHT gemerkt. Ein Gerät, das beim Öffnen von selbst
-  // losklickt, wäre im Gottesdienst eine Panne.
-  const [klickModus, setKlickModus] = useState<KlickModus>('aus');
-  /**
-   * Im Tempo-Menü eingestelltes Tempo. `null` heißt „wie im Lied".
-   *
-   * Der Wert liegt HIER und nicht im Menü, weil Puls und Klick ihm folgen müssen: Wer ein Tempo
-   * antippt, soll es erst hören und dann speichern. Läge er im Menü, klänge der Klick weiter im
-   * alten Tempo, während das Menü ein neues anzeigt.
-   */
-  const [tempoWert, setTempoWert] = useState<number | null>(null);
   /**
    * Vollbild: Kopf- und Fußzeile ausgeblendet (#319). Ein Tipp in die Mitte schaltet um.
    *
@@ -260,7 +219,6 @@ export function ChordChart({
   const [leistenAus, setLeistenAus] = useState(false);
   // Vollbild der ganzen App (nur Erweiterung) – ein Werkzeug im Kopf, getrennt vom Tipp in die Mitte.
   const [vollbildAn, vollbildUmschalten] = useAppVollbild();
-  const [resetZoomSignal, setResetZoomSignal] = useState(0); // erhöhen → PageDeck setzt sichtbaren Zoom zurück
   // Erhöhen → die verfügbare Fläche hat sich geändert (Leisten umgeschaltet, #319). PageDeck baut
   // daraufhin die Zoom-Ebene neu auf, damit sie die neue Höhe vermisst, und passt eine vergrößerte
   // Seite ein – ohne den gespeicherten Zoom zu vergessen.
@@ -412,8 +370,17 @@ export function ChordChart({
     headInfo,
   } = deriveActiveSongView(song, set);
 
-  /** Werkzeug des anderen Lieds, das nach dem Liedwechsel aufgehen soll (siehe Effekt unten). */
-  const naechstesWerkzeug = useRef<WerkzeugId | null>(null);
+  // Was die Werkzeug-Knöpfe tun, samt „Werkzeug nach dem Liedwechsel öffnen" – in
+  // `useWerkzeugSteuerung`. Bewusst HIER aufgerufen: Sein Effekt muss nach „Ansehen gilt pro Lied" laufen.
+  const werkzeug = useWerkzeugSteuerung({
+    songId: song.id,
+    setOverlay,
+    setDrawMode,
+    viewing: viewing !== null,
+    openSharers,
+    stopViewing,
+    vollbildUmschalten,
+  });
 
   /**
    * Querformat mit zwei VERSCHIEDENEN Liedern nebeneinander → die zweite Titel-Kapsel (#421). Über
@@ -442,31 +409,13 @@ export function ChordChart({
         zeigtDokument: sicht.activeDoc !== null,
         onWaehlen: () => setActivePage(pageIdx + slot),
         onWerkzeug: (id: WerkzeugId) => {
-          naechstesWerkzeug.current = id;
+          werkzeug.nachLiedwechsel(id);
           setActivePage(pageIdx + slot);
         },
       };
     }
     return null;
   })();
-
-  /**
-   * Werkzeug des ANDEREN Lieds (Querformat): erst das Lied wählen, das Werkzeug erst NACH dem Wechsel
-   * öffnen. Sofort ausgeführt, griffe es noch auf das alte Lied – „Notizen von …" listete dessen
-   * Personen, und das Ende des Ansehens beim Liedwechsel (Effekt oben) machte es gleich wieder zu.
-   * Anmerken SCHALTET hier EIN statt umzuschalten: Wer beim anderen Lied auf den Stift tippt, will
-   * dort zeichnen, auch wenn beim bisherigen gerade gezeichnet wurde.
-   */
-  useEffect(() => {
-    const id = naechstesWerkzeug.current;
-    if (!id) return;
-    naechstesWerkzeug.current = null;
-    if (id === 'aussehen') setOverlay('appearance');
-    else if (id === 'tempo') setOverlay('tempo');
-    else if (id === 'team') openSharers();
-    else if (id === 'anmerken') setDrawMode(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [song.id]);
 
   /**
    * Wie eine Anmerkungs-Ebene benannt wird – EINE Quelle für den Streifen oben UND die Auswahl
@@ -499,66 +448,20 @@ export function ChordChart({
     },
   };
 
-  /**
-   * Wirksames Tempo: das eingestellte, sonst das aus ChurchTools. Steht EINMAL hier und wird von
-   * Kopfzeile, Puls, Klick und Menü gemeinsam benutzt – jede Stelle, die stattdessen selbst
-   * `tempoWert ?? song.bpm` rechnete, wäre eine Kopie dieser Regel.
-   */
-  const wirksamesTempo = tempoWert ?? song.bpm;
-
-  /**
-   * Zählweise und was daraus folgt (#145).
-   *
-   * Die gespeicherte Tempo-Zahl meint IMMER die Grundschläge – gezählt wird aber unter Umständen
-   * gröber (6/8 in Dreiergruppen, schnelles 4/4 in Halben). Beide Rechnungen stehen EINMAL hier;
-   * Puls und Klick bekommen fertig das gezählte Tempo und die gezählte Taktlänge, statt jeder für
-   * sich aus Taktart und Zählweise dasselbe abzuleiten.
-   */
-  const { klickTempo, schlaegeProTakt } = taktRaster(wirksamesTempo, song.timeSig, set.zaehlweise);
-
-  // Beim Liedwechsel zurück auf „wie im Lied". Ein eingestelltes Tempo gehört zu DIESEM Lied; es
-  // beim Blättern mitzunehmen hieße, das nächste Lied stillschweigend im falschen Takt zu klicken.
-  const liedZuvor = useRef(song.id);
-  useEffect(() => {
-    if (liedZuvor.current === song.id) return;
-    liedZuvor.current = song.id;
-    setTempoWert(null);
-  }, [song.id]);
-
-  /**
-   * Nullpunkt des gemeinsamen Takt-Rasters, in `performance.now()`-Millisekunden.
-   *
-   * Puls und Klick hatten je eine eigene Uhr – wer sie nacheinander einschaltete, bekam zwei
-   * Nullpunkte und damit zwei Takte. Jetzt gibt es EINEN, gesetzt beim Einschalten des ersten von
-   * beiden und gelöscht, wenn keiner mehr läuft. Der Zweite steigt in das laufende Raster ein,
-   * statt bei sich selbst anzufangen.
-   *
-   * Beim TEMPOWECHSEL wird das Raster neu gesetzt: Aus einem festen Nullpunkt und einer neuen
-   * Schlagdauer folgte sonst ein Sprung mitten im Takt. Ein Metronom fängt bei neuem Tempo neu an.
-   */
-  const [taktStart, setTaktStart] = useState<number | null>(null);
-  const taktLaeuft = bpmPulse || klickModus !== 'aus';
-  const taktTempo = useRef(wirksamesTempo);
-  useEffect(() => {
-    if (!taktLaeuft) {
-      setTaktStart(null);
-      return;
-    }
-    setTaktStart((bisher) =>
-      bisher === null || taktTempo.current !== wirksamesTempo ? performance.now() : bisher,
-    );
-    taktTempo.current = wirksamesTempo;
-  }, [taktLaeuft, wirksamesTempo]);
-
-  // Hörbarer Klick auf der Audio-Uhr. Endet er von selbst (Einzählen fertig), zieht der Modus nach –
-  // sonst stünde das Menü weiter auf „Einzählen", obwohl längst nichts mehr klingt.
-  useMetronome({
-    bpm: klickTempo,
+  // Tempo, Puls und Klick samt gemeinsamem Takt-Raster (#145) – in `useTempoSteuerung`.
+  const {
+    bpmPulse,
+    setBpmPulse,
+    klickModus,
+    setKlickModus,
+    tempoWert,
+    setTempoWert,
+    wirksamesTempo,
+    klickTempo,
     schlaegeProTakt,
-    modus: klickModus,
-    taktStartMs: taktStart,
-    onEnde: () => setKlickModus('aus'),
-  });
+    taktStart,
+    tempoAktiv,
+  } = useTempoSteuerung(song, set);
 
   // Anmerkungs-/Zoom-Schlüssel je Strom-Seite. Die Regeln – welche Darstellungsart gilt, wann es
   // KEINEN Schlüssel gibt – stehen rein und getestet in `utils/chartPageKeys` (#314); hier nur die
@@ -701,9 +604,7 @@ export function ChordChart({
           <ChartHeader
             andereHaelfte={andereHaelfte}
             querformat={landscape}
-            offenesWerkzeug={
-              overlay === 'appearance' ? 'aussehen' : overlay === 'tempo' ? 'tempo' : null
-            }
+            offenesWerkzeug={offenesWerkzeug}
             /**
              * **Derselbe Titel wie auf dem Blatt** – über `chartHead`, nicht über `song.title`.
              *
@@ -731,19 +632,10 @@ export function ChordChart({
             klickBpm={klickTempo}
             taktStartMs={taktStart}
             schlaegeProTakt={schlaegeProTakt}
-            werkzeugeOffen={overlay === 'werkzeuge'}
-            werkzeugFensterOffen={
-              overlay === 'werkzeuge' || overlay === 'appearance' || overlay === 'tempo'
-            }
-            liedFensterOffen={
-              overlay === 'menu' ||
-              overlay === 'key' ||
-              overlay === 'capo' ||
-              overlay === 'sec' ||
-              overlay === 'files' ||
-              overlay === 'stammdaten'
-            }
-            tempoAktiv={bpmPulse || klickModus !== 'aus'}
+            werkzeugeOffen={werkzeugeOffen}
+            werkzeugFensterOffen={werkzeugFensterOffen}
+            liedFensterOffen={liedFensterOffen}
+            tempoAktiv={tempoAktiv}
             onBack={onBack}
             onToggleMenu={() => toggleOverlay('menu')}
             onToggleWerkzeuge={() => toggleOverlay('werkzeuge')}
@@ -754,30 +646,13 @@ export function ChordChart({
              * geöffnete Fenster sofort wieder zumachen (ein Feld für alle Overlays, Lehre vom
              * 05.08.2026: Zusammengelegter Zustand macht die Reihenfolge der Setter bedeutsam).
              */
-            onAppearance={() => setOverlay('appearance')}
-            onTempo={() => setOverlay('tempo')}
-            onResetZoom={() => {
-              setOverlay(null);
-              setResetZoomSignal((n) => n + 1);
-            }}
-            onToggleTeamNotes={() => {
-              setOverlay(null);
-              if (viewing) stopViewing();
-              else openSharers();
-            }}
-            onToggleDraw={() => {
-              setOverlay(null);
-              setDrawMode((d) => !d);
-            }}
+            onAppearance={werkzeug.onAppearance}
+            onTempo={werkzeug.onTempo}
+            onResetZoom={werkzeug.onResetZoom}
+            onToggleTeamNotes={werkzeug.onToggleTeamNotes}
+            onToggleDraw={werkzeug.onToggleDraw}
             vollbildAn={vollbildAn}
-            onVollbild={
-              funktionen.vollbildKnopf
-                ? () => {
-                    setOverlay(null);
-                    vollbildUmschalten();
-                  }
-                : undefined
-            }
+            onVollbild={werkzeug.onVollbild}
           />
         )}
 
@@ -832,15 +707,8 @@ export function ChordChart({
           ablaufArrangementId={ablaufArrangement}
           // Tempo-Menü, Dateiverwaltung und Werkzeuge-Menü sind bewusst KEINE `ChartOverlay`: Sie
           // teilen sich zwar die Regel „höchstens eines offen", haben aber eine ganz andere
-          // Bedienung. Deshalb hier herausgefiltert, statt den Typ dort aufzuweichen.
-          overlay={
-            overlay === 'tempo' ||
-            overlay === 'files' ||
-            overlay === 'stammdaten' ||
-            overlay === 'werkzeuge'
-              ? null
-              : overlay
-          }
+          // Bedienung. `useChartOverlay` filtert sie heraus, statt den Typ dort aufzuweichen.
+          overlay={chartOverlay}
           /* Eigener Pfeil statt `setOverlay`: Der Zustand kennt mehr Werte als `ChartOverlay`. */
           onOverlay={(o) => setOverlay(o)}
           song={song}
@@ -892,7 +760,7 @@ export function ChordChart({
               syncTick={syncTick}
               onMiddleTap={leistenUmschalten}
               onZoomedChange={setStreamZoomed}
-              resetZoomSignal={resetZoomSignal}
+              resetZoomSignal={werkzeug.resetZoomSignal}
             />
           ) : (
             <div className={styles.empty}>

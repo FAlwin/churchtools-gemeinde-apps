@@ -35,6 +35,7 @@ import {
   type GespeicherterZoom,
   type PageAnnotation,
 } from '@shared/types/index';
+import { whoamiId } from '@shared/ct/whoami';
 
 const PRAEFIX = 'musikapp_';
 const DATEN_NAME = `${PRAEFIX}daten.json`;
@@ -89,11 +90,10 @@ function nacheinander<T>(fn: () => Promise<T>): Promise<T> {
 
 async function meineId(): Promise<number> {
   if (ich !== null) return ich;
-  const body = await ctAnfrage<{ data?: { id?: unknown } }>('/whoami');
-  const id = body?.data?.id;
+  const body = await ctAnfrage<{ data?: unknown }>('/whoami');
+  const id = whoamiId(body?.data);
   // id -1 = keine gültige Sitzung (#381) – dann gibt es keine eigene Ablage.
-  if (typeof id !== 'number' || id <= 0)
-    throw new ApiError(401, 'Bei ChurchTools nicht angemeldet.');
+  if (!id) throw new ApiError(401, 'Bei ChurchTools nicht angemeldet.');
   ich = id;
   return id;
 }

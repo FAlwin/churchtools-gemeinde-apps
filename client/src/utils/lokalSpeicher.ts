@@ -42,3 +42,16 @@ export function __resetLokalSpeicherForTests(): void {
   gemeldet = false;
   melder = null;
 }
+
+/**
+ * Einen gespeicherten JSON-Wert lesen – `null` bei fehlendem oder kaputtem Inhalt (#463: stand als
+ * `safeParse`/`safeJson` zweimal wortgleich da). Ungeprüft: Wer eine bestimmte Form braucht, prüft sie.
+ */
+export function jsonOderNull<T>(roh: string | null): T | null {
+  if (!roh) return null;
+  try {
+    return JSON.parse(roh) as T;
+  } catch {
+    return null;
+  }
+}

@@ -25,7 +25,7 @@ import {
   normalizeAnnoKey as normalizeKey,
 } from '@shared/keys/index';
 import type { AnnotationText, GespeicherterZoom, PageAnnotation } from '@shared/types/index';
-import { lokalSchreiben } from '../utils/lokalSpeicher';
+import { jsonOderNull, lokalSchreiben } from '../utils/lokalSpeicher';
 
 // Namensräume und Grammatik aus @shared/keys – EINZIGE Quelle für Client und Server (#250).
 const DRAW = ANNO_DRAW_NS;
@@ -94,15 +94,6 @@ function serverKeyOf(lsKey: string): string {
     .replace(/_text$/, '');
 }
 
-function safeJson<T>(raw: string | null): T | null {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
-}
-
 // ── Pull: Server → localStorage ──────────────────────────────
 /** Holt alle Anmerkungen des Kontos zu diesen Liedern und spiegelt sie in localStorage. */
 export async function pullAnnotations(songIds: number[]): Promise<void> {
@@ -153,9 +144,9 @@ function annotationFromStorage(key: string): PageAnnotation | null {
   const out: PageAnnotation = {};
   const strokes = localStorage.getItem(DRAW + key);
   if (strokes) out.strokes = strokes;
-  const texts = safeJson<AnnotationText[]>(localStorage.getItem(DRAW + key + '_text'));
+  const texts = jsonOderNull<AnnotationText[]>(localStorage.getItem(DRAW + key + '_text'));
   if (texts && texts.length) out.texts = texts;
-  const zoom = safeJson<GespeicherterZoom>(localStorage.getItem(ZOOM + key));
+  const zoom = jsonOderNull<GespeicherterZoom>(localStorage.getItem(ZOOM + key));
   if (zoom) out.zoom = zoom;
   return Object.keys(out).length > 0 ? out : null;
 }

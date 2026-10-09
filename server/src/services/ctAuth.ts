@@ -8,7 +8,7 @@
 import { HttpError } from '../middleware/errorHandler.js';
 import { BASE, CtOverloadedError, ctGet, ctSignal, parseRetryAfter } from './ctHttp.js';
 import { forgetSession, userIdMemo } from './ctSessionMemos.js';
-import { ctId } from '../utils/ctId.js';
+import { whoamiId } from '@shared/ct/whoami';
 import type { ChurchToolsUser } from './ctTypes.js';
 
 /**
@@ -226,10 +226,10 @@ export async function sitzungAusSchluessel(
  * **behauptet** den Typ nur (castet), und die ChurchTools-Schnittstellen liefern IDs teils als
  * Zeichenkette. Eine eigene Zahlenprüfung hier wäre eine zweite Fassung derselben Regel.
  *
- * **Warum hier und nur hier:** `whoami` ist die einzige Stelle im Projekt, die `/api/whoami` ruft.
+ * **Warum hier und nur hier:** `whoami` ist im Server die einzige Stelle, die `/api/whoami` ruft.
  * Alle Aufrufer (`getUserId`, `getMe`, Team-Notizen, `getCapabilities`, Anmerkungen, Einstellungen,
- * Setlist) gehen darüber – die Prüfung ein zweites Mal daneben zu stellen wäre genau die
- * Regel-Dopplung, die dieses Projekt am häufigsten getroffen hat.
+ * Setlist) gehen darüber. Die Regel selbst (`id > 0`) liegt seit #463 in `@shared/ct/whoami` – die
+ * Erweiterung fragt `/api/whoami` an drei Stellen selbst und braucht dieselbe.
  *
  * Nebeneffekt, der ebenfalls hier verschwindet: Die `-1` floss über `getUserId` ungeprüft in
  * Dateinamen (`annotations.ts` → `-1.json`, `userSettings.ts` → `settings--1.json`). Zwei
@@ -238,8 +238,9 @@ export async function sitzungAusSchluessel(
  */
 export async function whoami(cookie: string): Promise<ChurchToolsUser> {
   const me = await ctGet<ChurchToolsUser>(cookie, '/api/whoami');
-  const id = ctId(me?.id);
-  if (id === null || id <= 0) {
+  const id = whoamiId(me);
+  // `null` (unlesbar) gilt hier wie bisher als abgelaufen: Ein 200 ohne lesbare ID ist keine Sitzung.
+  if (!id) {
     throw new HttpError(401, 'Session abgelaufen. Bitte neu anmelden.');
   }
   return { id, firstName: me.firstName, lastName: me.lastName };

@@ -37,6 +37,7 @@ import {
   type GeteilteAblage,
 } from './personenAblage';
 import type { AnnotationText } from '@shared/types/index';
+import { merkeVersprechen } from '@shared/ct/versprechenMerker';
 
 export const TEILEN_KATEGORIE: KategorieAngabe = {
   kuerzel: 'musikapp-teilen',
@@ -131,7 +132,7 @@ export async function teilenSetzen(enabled: boolean): Promise<{ enabled: boolean
       }
     }
   }
-  ablagen.clear();
+  ablagen.vergiss();
   return { enabled };
 }
 
@@ -142,21 +143,15 @@ export async function teilenSetzen(enabled: boolean): Promise<{ enabled: boolean
  * nacheinander Liste, Anmerkungen und Einstellungen derselben Person; ohne das Merken wären das drei
  * Mal Dateiliste und Daten-Datei. Ein Fehlschlag wird nicht gemerkt.
  */
-const MERKEN_MS = 60_000;
-const ablagen = new Map<number, { zeit: number; ablage: Promise<GeteilteAblage | null> }>();
+const ablagen = merkeVersprechen<GeteilteAblage | null>({ ttlMs: 60_000 });
 
 function ablageVon(personId: number): Promise<GeteilteAblage | null> {
-  const da = ablagen.get(personId);
-  if (da && Date.now() - da.zeit < MERKEN_MS) return da.ablage;
-  const ablage = geteilteAblage(personId);
-  ablagen.set(personId, { zeit: Date.now(), ablage });
-  ablage.catch(() => ablagen.delete(personId));
-  return ablage;
+  return ablagen.hole(personId, () => geteilteAblage(personId));
 }
 
 /** Nur für Tests. */
 export function _vergissAblagen(): void {
-  ablagen.clear();
+  ablagen.vergiss();
 }
 
 /**

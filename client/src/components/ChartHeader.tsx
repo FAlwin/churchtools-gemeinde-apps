@@ -4,6 +4,7 @@ import { BpmPulse } from './BpmPulse';
 import { Icon } from './icons';
 import { RundKnopf, ZurueckKnopf } from './KnopfReihe';
 import { WerkzeugMenu, type Werkzeug } from './WerkzeugMenu';
+import { VollbildRundKnopf } from './VollbildKnopf';
 import {
   WERKZEUG_NAME,
   verfuegbareWerkzeuge,
@@ -496,13 +497,7 @@ export function ChartHeader({
         )}
         {onVollbild && (
           <span className={styles.vollbildPlatz}>
-            <RundKnopf
-              onClick={onVollbild}
-              title={vollbildAn ? 'Vollbild beenden' : 'Vollbild'}
-              aktiv={vollbildAn}
-            >
-              <Icon name={vollbildAn ? 'vollbild-aus' : 'vollbild'} size={18} stroke={2.2} />
-            </RundKnopf>
+            <VollbildRundKnopf an={vollbildAn} onClick={onVollbild} />
           </span>
         )}
       </div>

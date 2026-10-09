@@ -3,19 +3,9 @@ import { saveOfflineNow } from '../queryClient';
 import { heuteIso } from '../utils/heute';
 import { istExtension, ohneServer } from './ctRuntime';
 import { lokalSchreiben } from '../utils/lokalSpeicher';
-
-/** Führt `fn` über alle Einträge aus, aber höchstens `limit` gleichzeitig (schont Gerät/Netz). */
-async function mapLimit<T>(
-  items: T[],
-  limit: number,
-  fn: (item: T) => Promise<void>,
-): Promise<void> {
-  let i = 0;
-  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (i < items.length) await fn(items[i++]);
-  });
-  await Promise.all(workers);
-}
+// Die eine Fassung für Server, Erweiterung und Offline-Vorrat – vorher stand hier eine eigene (#463).
+import { mapLimit } from '@shared/ct/mapLimit';
+import { liedDateiPfad } from './apiBase';
 
 // ── Offline-Verzeichnis: welcher Gottesdienst liegt (vollständig) offline vor? ────────────────
 // Dauerhaft in localStorage – Grundlage für das Offline-Symbol am Termin, das Ausgrauen ohne Netz
@@ -105,8 +95,7 @@ export async function saveServiceOffline(
   const urls: string[] = [];
   for (const it of items) {
     if (it.song)
-      for (const doc of it.song.documents)
-        urls.push(`/api/songs/${it.song.id}/files/${doc.fileId}`);
+      for (const doc of it.song.documents) urls.push(liedDateiPfad(it.song.id, doc.fileId));
   }
   let done = 0;
   let failed = 0;

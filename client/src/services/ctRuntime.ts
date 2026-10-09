@@ -18,6 +18,8 @@ import { markReachable } from './reachability';
 import { ajaxMeldungen, ajaxNutzlast, type AjaxMeldungen } from '@shared/ct/altSchnittstelle';
 import { parseRetryAfter, STANDARD_SPERRE_MS } from '@shared/ct/bremse';
 import { ctBasis, istExtension } from './modus';
+import { merkeVersprechen } from '@shared/ct/versprechenMerker';
+import { whoamiId } from '@shared/ct/whoami';
 
 export { ctBasis, istExtension };
 
@@ -80,10 +82,9 @@ async function angemeldetePerson(): Promise<number | null> {
       headers: { Accept: 'application/json' },
     });
     if (!res.ok) return null;
-    const body = (await res.json()) as { data?: { id?: unknown } };
-    const id = body.data?.id;
-    // Ohne gültige Sitzung antwortet ChurchTools mit 200 und id -1 (#381) – das ist „niemand".
-    return typeof id === 'number' ? Math.max(id, 0) : null;
+    const body = (await res.json()) as { data?: unknown };
+    // Ohne gültige Sitzung antwortet ChurchTools mit 200 und id -1 (#381) – das ist „niemand" (0).
+    return whoamiId(body.data);
   } catch {
     return null;
   }
@@ -173,15 +174,16 @@ async function mitZeitgrenze(url: string, init: RequestInit, ms: number): Promis
   }
 }
 
-let csrfToken: Promise<string | null> | null = null;
-
 /**
  * Das CSRF-Token der Sitzung – einmal geholt, danach gemerkt. Gemessen 07.10.2026 ging Schreiben auch
  * ohne; der offizielle ChurchTools-Client schickt es trotzdem mit, und das ist die sichere Seite.
- * Scheitert das Holen, wird ohne geschrieben (und beim nächsten Mal neu versucht).
+ * Scheitert das Holen, wird ohne geschrieben – und `null` NICHT gemerkt, der nächste Schreibvorgang
+ * fragt neu (`behalten`).
  */
+const csrfToken = merkeVersprechen<string | null>({ behalten: (t) => t !== null });
+
 function holeCsrf(): Promise<string | null> {
-  csrfToken ??= (async () => {
+  return csrfToken.hole('csrf', async () => {
     try {
       const res = await fetch(`${ctBasis()}/api/csrftoken`, {
         credentials: 'include',
@@ -193,16 +195,12 @@ function holeCsrf(): Promise<string | null> {
     } catch {
       return null;
     }
-  })().then((t) => {
-    if (t === null) csrfToken = null;
-    return t;
   });
-  return csrfToken;
 }
 
 /** Nur für Tests: gemerktes CSRF-Token vergessen. */
 export function _vergissCsrf(): void {
-  csrfToken = null;
+  csrfToken.vergiss();
 }
 
 /**
@@ -253,13 +251,22 @@ export async function ctAnfrage<T = unknown>(
 }
 
 /**
+ * Wie `ctAnfrage`, aber ausgepackt: ChurchTools packt fast alles in `{ data: … }` – wie `ctGet` im
+ * Server: `data`, sonst den Rumpf. Stand vorher wortgleich in `ctLesen` und `ctModulDaten` (#463).
+ */
+export async function ctDaten<T>(pfad: string): Promise<T> {
+  const body = await ctAnfrage<{ data?: T } | null>(pfad);
+  return (body?.data ?? body) as T;
+}
+
+/**
  * **Ein abgelehntes Token wird verworfen** – die Lehre aus #298, die im Server seit August gilt
  * (`csrfWriteDenied`) und hier beim Bau der Extension fehlte (gefunden 07.10.2026, Phase 3b-2): Läuft die
  * Sitzung in ChurchTools neu an, ist das gemerkte Token ungültig. Ohne Verwerfen scheiterte danach JEDER
  * Schreibversuch, bis jemand die Seite neu lädt.
  */
 function csrfVerwerfenBeiAblehnung(status: number): void {
-  if (status === 401 || status === 403) csrfToken = null;
+  if (status === 401 || status === 403) csrfToken.vergiss();
 }
 
 /**

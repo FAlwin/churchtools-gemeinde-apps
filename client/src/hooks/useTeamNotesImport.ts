@@ -15,21 +15,12 @@ import { type SongSettings, settingsForLevel, DEFAULT_SETTINGS } from '../utils/
 import { mergeStrokes } from '../utils/strokes';
 import { levelsUnderNamespace, levelKeyOf, OWN_DRAW_PREFIX } from '../utils/annotationKeys';
 import { beschreibeEbene } from '../utils/annotationLevelLabel';
-import { lokalSchreiben } from '../utils/lokalSpeicher';
+import { jsonOderNull, lokalSchreiben } from '../utils/lokalSpeicher';
 
 /** Textobjekt einer Anmerkungs-Seite (Form wird beim Import 1:1 übernommen). */
 interface PageTextObjLike {
   id: number;
   [k: string]: unknown;
-}
-
-function safeParse<T>(raw: string | null): T | null {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
 }
 
 interface UseTeamNotesImportParams {
@@ -185,7 +176,7 @@ export function useTeamNotesImport({
         const base = songPageKey(songId, level.versionKey, level.lyr, page, level.arrangementId);
         const theirStrokes = localStorage.getItem(VIEW_NS + base);
         const theirTexts =
-          safeParse<PageTextObjLike[]>(localStorage.getItem(`${VIEW_NS + base}_text`)) ?? [];
+          jsonOderNull<PageTextObjLike[]>(localStorage.getItem(`${VIEW_NS + base}_text`)) ?? [];
         const ownKey = OWN_DRAW_PREFIX + base;
         if (mode === 'replace') {
           // `lokalSchreiben` wirft nie – ein voller Gerätespeicher verhindert das Hochladen nicht (#457).
@@ -200,7 +191,7 @@ export function useTeamNotesImport({
             pushField(ownKey, 'strokes', merged);
           }
           const ownTexts =
-            safeParse<PageTextObjLike[]>(localStorage.getItem(`${ownKey}_text`)) ?? [];
+            jsonOderNull<PageTextObjLike[]>(localStorage.getItem(`${ownKey}_text`)) ?? [];
           const withNewIds = theirTexts.map((t, i) => ({ ...t, id: Date.now() + i }));
           const mergedTexts = [...ownTexts, ...withNewIds];
           if (mergedTexts.length) {

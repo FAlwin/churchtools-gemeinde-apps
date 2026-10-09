@@ -9,7 +9,7 @@
 import type { UpdateInfo } from '../types/index';
 
 /** Das öffentliche Repo, dessen Releases die Versionen sind. */
-export const RELEASE_REPO = 'FAlwin/churchtools-musik-app';
+export const RELEASE_REPO = 'FAlwin/churchtools-gemeinde-apps';
 
 /** Die GitHub-Adresse für „neuestes veröffentlichtes Release" (ohne Vorabversionen). */
 export const RELEASE_API_URL = `https://api.github.com/repos/${RELEASE_REPO}/releases/latest`;

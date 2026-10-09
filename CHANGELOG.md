@@ -55,6 +55,13 @@ Code-Check vom 09.10.2026 abgearbeitet (#455–#466).
 - **Veraltete Kommentare** zur Lied-Statistik (~250 Anfragen) und Lücken in `eslint.config.mjs`
   berichtigt (#464).
 
+### Geändert
+
+- **Repo umbenannt in `FAlwin/churchtools-gemeinde-apps`** (09.10.2026, Vorbereitung Dienstplaner). Für Nutzer
+  ändert sich nichts: GitHub leitet alte Links, die Update-Abfrage und git weiter (vorher gemessen); das
+  Docker-Image heißt weiter `ghcr.io/falwin/churchtools-musik-app`. Links in Doku, Release-Text und
+  „Für andere Gemeinden“ zeigen jetzt direkt auf den neuen Namen.
+
 ## [2.32.0] – 2026-10-09
 
 **Beim Update bitte beachten (Server-Variante):** Die Lied-Statistik („Häufigkeit", „Zuletzt") braucht

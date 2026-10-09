@@ -22,7 +22,7 @@ Die Musik App gibt es in zwei Formen:
 
 ## Installieren
 
-1. Bei den [Releases](https://github.com/FAlwin/churchtools-musik-app/releases) die neueste Datei
+1. Bei den [Releases](https://github.com/FAlwin/churchtools-gemeinde-apps/releases) die neueste Datei
    **`musik-app-v….zip`** herunterladen (nicht entpacken).
 2. In ChurchTools: **Administration → Erweiterungen → Erweiterung hinzufügen**.
 3. Ausfüllen:

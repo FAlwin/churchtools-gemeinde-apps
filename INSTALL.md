@@ -25,7 +25,7 @@ Installieren, öffnen und warten, bis das Wal-Symbol „ruhig" ist.
 
 ### 2. Den Ordner `deploy/` herunterladen
 
-Aus dem GitHub-Repo den Ordner [`deploy/`](https://github.com/FAlwin/churchtools-musik-app/tree/main/deploy)
+Aus dem GitHub-Repo den Ordner [`deploy/`](https://github.com/FAlwin/churchtools-gemeinde-apps/tree/main/deploy)
 mit allen Dateien in einen leeren Ordner auf dem Computer legen (z. B. `musik-app/`).
 
 > Am einfachsten oben auf der Repo-Seite **„Code" → „Download ZIP"**, entpacken, den Ordner `deploy/` behalten.
@@ -64,7 +64,7 @@ Installieren und starten.
 
 ### 2. Dateien herunterladen
 
-Aus dem GitHub-Repo den Ordner [`deploy/`](https://github.com/FAlwin/churchtools-musik-app/tree/main/deploy) öffnen und diese zwei Dateien herunterladen:
+Aus dem GitHub-Repo den Ordner [`deploy/`](https://github.com/FAlwin/churchtools-gemeinde-apps/tree/main/deploy) öffnen und diese zwei Dateien herunterladen:
 
 - `docker-compose.yml`
 - `.env.example`

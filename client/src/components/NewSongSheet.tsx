@@ -25,7 +25,7 @@
 import { useEffect, useState } from 'react';
 import type { SongLibraryEntry, SongSelectTreffer } from '@shared/types/index';
 import { LIED_GRENZEN } from '@shared/types/index';
-import { Sheet } from './Sheet';
+import { Sheet } from '@ui/fenster/Sheet';
 import { LiedSchonVorhanden } from './LiedSchonVorhanden';
 import { Icon } from '@ui/icons/icons';
 import { CenterMessage } from './CenterMessage';

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useOverlayKeyboardInset } from '../hooks/useOverlayKeyboardInset';
+import { useOverlayKeyboardInset } from './useOverlayKeyboardInset';
 import styles from './Sheet.module.scss';
 
 interface SheetProps {

@@ -1,5 +1,5 @@
 import type { NoteRolePerm, SiteConfig, StandardAnsicht } from '@shared/types/index';
-import { Sheet } from './Sheet';
+import { Sheet } from '@ui/fenster/Sheet';
 import { speicherFehler } from '../utils/speicherFehler';
 import { Spinner } from './Spinner';
 import { Icon } from '@ui/icons/icons';

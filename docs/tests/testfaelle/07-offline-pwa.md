@@ -84,7 +84,7 @@ vorn laden und nicht zur Termin-Liste zurückspringen.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/main.tsx`, `client/src/utils/navStorage.ts`, `client/src/components/RestoreGate.tsx`, `client/src/utils/appHeight.ts`
+- **Betrifft:** `client/src/main.tsx`, `client/src/utils/navStorage.ts`, `client/src/components/RestoreGate.tsx`, `ui/fenster/appHeight.ts`
 - **Automatisiert:** nein – App-Wechsel nur am Gerät
 - **Historie:** #24
 

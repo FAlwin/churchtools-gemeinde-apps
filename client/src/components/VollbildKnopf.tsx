@@ -1,4 +1,4 @@
-import { RundKnopf } from './KnopfReihe';
+import { RundKnopf } from '@ui/bedienung/KnopfReihe';
 import { Icon } from '@ui/icons/icons';
 import { useAppVollbild } from '../hooks/useAppVollbild';
 import { funktionen } from '../services/funktionen';

@@ -22,7 +22,9 @@ const caps = vi.fn();
 vi.mock('../hooks/useServices', () => ({
   useCapabilities: () => caps(),
 }));
-vi.mock('../hooks/useOverlayKeyboardInset', () => ({ useOverlayKeyboardInset: () => undefined }));
+vi.mock('@ui/fenster/useOverlayKeyboardInset', () => ({
+  useOverlayKeyboardInset: () => undefined,
+}));
 
 const TREFFER: SongSelectTreffer = {
   songNumber: 5841527,

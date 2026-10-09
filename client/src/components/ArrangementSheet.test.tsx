@@ -16,7 +16,9 @@ import type { ArrangementAnsicht, SongSource } from '@shared/types/index';
  *  2. Eine Liednummer ohne Quelle sperrt und wird **erklärt**, statt in eine Fehlermeldung zu laufen.
  *  3. „Zum Standard machen" und „Löschen" erscheinen nur, wo sie etwas bewirken.
  */
-vi.mock('../hooks/useOverlayKeyboardInset', () => ({ useOverlayKeyboardInset: () => undefined }));
+vi.mock('@ui/fenster/useOverlayKeyboardInset', () => ({
+  useOverlayKeyboardInset: () => undefined,
+}));
 
 const { ArrangementSheet } = await import('./ArrangementSheet');
 

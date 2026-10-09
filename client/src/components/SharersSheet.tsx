@@ -8,7 +8,7 @@
  */
 import type { Sharer } from '../services/teamNotes';
 import { beschreibeEbene } from '../utils/annotationLevelLabel';
-import { Sheet } from './Sheet';
+import { Sheet } from '@ui/fenster/Sheet';
 import { Icon } from '@ui/icons/icons';
 import styles from '../pages/ChordChart.module.scss';
 

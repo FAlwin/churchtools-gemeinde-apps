@@ -49,6 +49,14 @@ Code-Check vom 09.10.2026 abgearbeitet (#455–#466).
   Musik-App und Dienstplaner dieselbe Quelle nutzen. Neuer Alias `@ui` (Vite, Vitest, tsconfig),
   `ui/` wird mit gelintet und im Build typgeprüft. Gebaute PWA und Erweiterung sind inhaltlich
   gleich wie vorher (CSS und JS verglichen).
+- **Grundbausteine der Oberfläche liegen jetzt in `ui/`** (#469, E1 Teil 2): Fenster (`Sheet`,
+  Tastatur-Aussparung, App-Höhe) in `ui/fenster/`, `Segment`, `Schalter`, `KnopfReihe` in
+  `ui/bedienung/`, `shareFile`/`sharePdf` in `ui/teilen/`. Die Tests in `ui/` laufen im Client-Testlauf
+  mit (vorher und nachher 150 Dateien, 1589 Tests); die Mock-Pfade der Tests sind mitgewandert.
+  `ui/package.json` (`"type": "module"`) sorgt dafür, dass React hier genauso eingebunden wird wie im
+  Client. Gebaute PWA und Erweiterung entsprechen dem Stand vor E1 (nur Hash-Kürzel und die
+  Reihenfolge einer Vorlade-Liste weichen ab). Ablauf, Abwesenheiten und Seitengerüst ziehen erst in
+  der Etappe um, in der der Dienstplaner sie nutzt.
 - **Regel-Dopplungen zusammengeführt** (#463): ein Baustein für „Versprechen merken, bei Fehlschlag
   vergessen" (statt fünf Kopien, eine davon ohne Schutz gegen das Löschen eines neueren Eintrags), die
   whoami-Regel für Server und Erweiterung (zwei Stellen nahmen eine ID als Text nicht an), eine Adresse

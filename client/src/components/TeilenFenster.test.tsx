@@ -4,7 +4,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { jsPDF } from 'jspdf';
 import type { GebautesPdf } from './TeilenFenster';
 
-vi.mock('../utils/sharePdf', () => ({
+vi.mock('@ui/teilen/sharePdf', () => ({
   sharePdf: vi.fn(() => Promise.resolve()),
   downloadPdf: vi.fn(),
 }));
@@ -21,7 +21,7 @@ vi.mock('../utils/dokumentSeiten', () => {
     renderPdfSeite: vi.fn(async (_d: ArrayBuffer, nr: number) => blatt(nr)),
   };
 });
-const { downloadPdf, sharePdf } = await import('../utils/sharePdf');
+const { downloadPdf, sharePdf } = await import('@ui/teilen/sharePdf');
 const { TeilenFenster } = await import('./TeilenFenster');
 const { PdfSeitenVorschau } = await import('./PdfSeitenVorschau');
 const { getTeilenMitAnmerkungen } = await import('../utils/devicePrefs');

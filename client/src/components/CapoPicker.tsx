@@ -1,4 +1,4 @@
-import { Sheet } from './Sheet';
+import { Sheet } from '@ui/fenster/Sheet';
 import styles from './keyButtons.module.scss';
 
 interface CapoPickerProps {

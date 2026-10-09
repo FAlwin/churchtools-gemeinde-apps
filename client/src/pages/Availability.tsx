@@ -39,7 +39,7 @@ import {
   isTourDone,
   markTourDone,
 } from '../utils/onboarding';
-import { Segment } from '../components/Segment';
+import { Segment } from '@ui/bedienung/Segment';
 import styles from './Availability.module.scss';
 
 // Nicht exportiert (Fast Refresh mag nur Komponenten als Export) – wer die Zahlen braucht, liest sie hier.

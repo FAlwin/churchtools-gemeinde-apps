@@ -16,7 +16,7 @@
 import { useRef } from 'react';
 import type { ArrangementFileEntry } from '@shared/types/index';
 import { DATEI_SYMBOL, dateiZeilen } from '../utils/dateiVerwaltung';
-import { Sheet } from './Sheet';
+import { Sheet } from '@ui/fenster/Sheet';
 import { Icon } from '@ui/icons/icons';
 import styles from '../pages/ChordChart.module.scss';
 

@@ -2,10 +2,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import type { SiteConfig } from '@shared/types/index';
-import { Schalter } from './Schalter';
+import { Schalter } from '@ui/bedienung/Schalter';
 import { SchalterZeile } from './SchalterZeile';
 import { LinksManager } from './LinksManager';
-import styles from './Schalter.module.scss';
+import styles from '@ui/bedienung/Schalter.module.scss';
 
 /**
  * Der eine Schalter (#413). Geprüft werden das Bedienmuster (der Knopf trägt `aria-pressed`, der

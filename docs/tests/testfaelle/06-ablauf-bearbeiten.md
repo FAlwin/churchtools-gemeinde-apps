@@ -148,8 +148,8 @@ verschobenen Symbole.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/hooks/useOverlayKeyboardInset.ts`, `client/src/components/ItemActionSheet.tsx`, `client/src/components/Sheet.tsx`
-- **Automatisiert:** teilweise – `client/src/hooks/useOverlayKeyboardInset.test.tsx`
+- **Betrifft:** `ui/fenster/useOverlayKeyboardInset.ts`, `client/src/components/ItemActionSheet.tsx`, `ui/fenster/Sheet.tsx`
+- **Automatisiert:** teilweise – `ui/fenster/useOverlayKeyboardInset.test.tsx`
 - **Historie:** #207
 
 </details>

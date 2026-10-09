@@ -1,4 +1,4 @@
-import { Sheet } from './Sheet';
+import { Sheet } from '@ui/fenster/Sheet';
 import { ALL_KEYS_MAJOR, ALL_KEYS_MINOR } from '../utils/transpose';
 import styles from './keyButtons.module.scss';
 

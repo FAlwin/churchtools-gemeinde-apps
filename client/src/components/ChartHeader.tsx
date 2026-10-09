@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import type { HeadInfoPart } from '../utils/activeSongView';
 import { BpmPulse } from './BpmPulse';
 import { Icon } from '@ui/icons/icons';
-import { RundKnopf, ZurueckKnopf } from './KnopfReihe';
+import { RundKnopf, ZurueckKnopf } from '@ui/bedienung/KnopfReihe';
 import { WerkzeugMenu, type Werkzeug } from './WerkzeugMenu';
 import { VollbildRundKnopf } from './VollbildKnopf';
 import {

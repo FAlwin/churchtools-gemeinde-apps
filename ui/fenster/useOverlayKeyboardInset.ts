@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { syncAppHeight } from '../utils/appHeight';
+import { syncAppHeight } from './appHeight';
 
 /**
  * Hält einen Vollbild-Overlay über der iOS-Tastatur frei (#207).

@@ -1,5 +1,5 @@
 import type { SongLibraryEntry } from '@shared/types/index';
-import { Sheet } from './Sheet';
+import { Sheet } from '@ui/fenster/Sheet';
 import styles from './NewSongSheet.module.scss';
 
 interface LiedSchonVorhandenProps {

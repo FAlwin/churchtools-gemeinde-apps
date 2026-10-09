@@ -11,7 +11,7 @@ import { EditSongSheet } from '../components/EditSongSheet';
 import { SongStatsBar } from '../components/SongStatsBar';
 import { LiedtextTrefferListe } from '../components/LiedtextTrefferListe';
 import { LiedSucheKopf } from '../components/LiedSucheKopf';
-import { Sheet } from '../components/Sheet';
+import { Sheet } from '@ui/fenster/Sheet';
 import { SongPicker } from '../components/SongPicker';
 import { SucheAngebot } from '../components/SucheAngebot';
 import { useLiedSuche } from '../hooks/useLiedSuche';

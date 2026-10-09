@@ -22,7 +22,7 @@
  */
 import { useEffect, useState } from 'react';
 import type { ArrangementAnsicht, ArrangementAuftrag } from '@shared/types/index';
-import { Sheet } from './Sheet';
+import { Sheet } from '@ui/fenster/Sheet';
 import { Icon } from '@ui/icons/icons';
 import { CenterMessage } from './CenterMessage';
 import { ConfirmDialog } from './ConfirmDialog';

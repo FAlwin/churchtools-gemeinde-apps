@@ -1,4 +1,4 @@
-import { Segment } from './Segment';
+import { Segment } from '@ui/bedienung/Segment';
 import type { SongSort } from '../utils/songFilter';
 import styles from './SongStatsBar.module.scss';
 

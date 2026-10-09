@@ -8,7 +8,7 @@ Die Musik App gibt es in zwei Formen:
 | Anmelden                             | Wer in ChurchTools angemeldet ist, ist drin        | Eigene Anmeldung mit den ChurchTools-Zugangsdaten   |
 | Wo sie liegt                         | Menüpunkt in ChurchTools (im Browser)              | Eigene Adresse, auf dem Homescreen installierbar    |
 | Termine, Ablauf, Liedblatt           | ✓                                                  | ✓                                                   |
-| Anmerkungen, Zoom, Tonart merken     | ✓ (als Dateien an der eigenen Person, siehe unten) | ✓                                                   |
+| Anmerkungen, Zoom, Tonart merken     | ✓ (als Dateien an der eigenen Person, siehe unten) | ✓ – dieselben wie in der Erweiterung                |
 | Vollbild                             | ✓ (Knopf legt die App über die ChurchTools-Leiste) | ✓ (Homescreen-App)                                  |
 | Offline im Saal                      | –                                                  | ✓                                                   |
 | Lied-Statistik (Häufigkeit, zuletzt) | ✓ (ab v2.32.0, aus der Statistik von ChurchTools)  | ✓                                                   |
@@ -97,7 +97,9 @@ den jemand von Hand macht, bewirkt also nichts.
   bemalter Liedseite ein Bild `musikapp_….png`, dazu eine Datei `musikapp_daten.json` (Tonart, Kapo,
   Zoom, Textnotizen, „gesehen"). **Mitglieder, die die Person sehen dürfen, können diese Anhänge
   öffnen** – die App kann ihre Sichtbarkeit nicht einschränken (über die Schnittstelle gemessen).
-  Ändern oder löschen kann sie nur die Person selbst.
+  Ändern oder löschen kann sie nur die Person selbst. **Die Musik App mit eigenem Server nutzt seit
+  dem 09.10.2026 dieselben Dateien** – wer beide benutzt, sieht dieselben Anmerkungen. Was vorher nur
+  in der Server-App lag, zieht beim ersten Öffnen dort von selbst um.
 - **Kein Offline:** Im Saal ohne Netz gibt es in der Erweiterung keine Liedblätter. Wer das braucht,
   nimmt die Variante mit eigenem Server.
 - **Last:** Jedes Gerät fragt ChurchTools selbst. Bremst ChurchTools (zu viele Anfragen), hält die App

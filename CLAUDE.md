@@ -148,19 +148,19 @@
 
 ## Tech-Stack
 
-| Bereich         | Technologie                                                                                                                                   |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Frontend        | React + Vite + TypeScript (PWA)                                                                                                               |
-| Styling         | SCSS Modules                                                                                                                                  |
-| Datenfetching   | TanStack Query                                                                                                                                |
-| Formulare       | React Hook Form + Zod                                                                                                                         |
-| Backend         | Node.js + Express + TypeScript                                                                                                                |
-| Datenbank       | keine – ChurchTools ist Datenquelle; Anmerkungen/Einstellungen pro Konto als JSON auf dem Volume (`ANNOTATIONS_PATH`), localStorage als Cache |
-| Validierung     | Zod (serverseitig)                                                                                                                            |
-| Deployment      | Docker auf Synology NAS (Container Manager)                                                                                                   |
-| Externer Zugang | Synology Reverse Proxy + DDNS + Let's Encrypt (KEIN Cloudflare)                                                                               |
-| Tests           | Vitest (Client-Logik/Hooks/Komponenten + Server, CT gemockt); Playwright-Render-Smoke (E2E)                                                   |
-| CI              | GitHub Actions: lint + build + test je PR                                                                                                     |
+| Bereich         | Technologie                                                                                                                                                                          |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Frontend        | React + Vite + TypeScript (PWA)                                                                                                                                                      |
+| Styling         | SCSS Modules                                                                                                                                                                         |
+| Datenfetching   | TanStack Query                                                                                                                                                                       |
+| Formulare       | React Hook Form + Zod                                                                                                                                                                |
+| Backend         | Node.js + Express + TypeScript                                                                                                                                                       |
+| Datenbank       | keine – ChurchTools ist Datenquelle; Anmerkungen/Einstellungen seit 09.10.2026 als Anhänge an der eigenen Person in ChurchTools (`shared/ct/personenAblage`), localStorage als Cache |
+| Validierung     | Zod (serverseitig)                                                                                                                                                                   |
+| Deployment      | Docker auf Synology NAS (Container Manager)                                                                                                                                          |
+| Externer Zugang | Synology Reverse Proxy + DDNS + Let's Encrypt (KEIN Cloudflare)                                                                                                                      |
+| Tests           | Vitest (Client-Logik/Hooks/Komponenten + Server, CT gemockt); Playwright-Render-Smoke (E2E)                                                                                          |
+| CI              | GitHub Actions: lint + build + test je PR                                                                                                                                            |
 
 ## Ordnerstruktur
 
@@ -607,8 +607,9 @@ Neue Nutzer bekommen beim ersten Mal eine geführte Einführung mit Hinweisblase
   ungefragt mitten in der Nutzung neu.
 - **Gemeinden:** `deploy/docker-compose.yml` ist auf `:2` gepinnt; Update per `update.command`/`update.bat`.
 - **Env (Volume `/app/data`, alle im Dockerfile gesetzt):** `SITE_CONFIG_PATH=/app/data/site.json`,
-  `ANNOTATIONS_PATH=/app/data/annotations` (kontobezogene Anmerkungen/Einstellungen, dazu `sharing.json`
-  und `abmeldungen.json` – beendete Anmeldungen, #460),
+  `ANNOTATIONS_PATH=/app/data/annotations` (bis zum Umzug nach ChurchTools der Altbestand je Konto;
+  dauerhaft `sharing.json` – Verzeichnis der Team-Notizen –, `abmeldungen.json` – beendete Anmeldungen,
+  #460 – und `ablage-umzug.json` – Umzugsstand je Konto),
   `CAPABILITIES_CACHE_PATH=/app/data/capabilities-cache.json` (Rechte-Cache, überbrückt CT-Aussetzer),
   `SEEN_SETLISTS_PATH=/app/data/seen-setlists.json` (Basislinien für den „geändert"-Hinweis #143/#161)
   – beim Re-Deploy **Volume behalten**.
@@ -1228,7 +1229,8 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
   HTTPS via Synology-Reverse-Proxy, Prod-Port an `127.0.0.1:3001` gebunden). `trust proxy` ist in Prod
   gesetzt. Bei reinen HTTP-Instanzen (z. B. andere Gemeinden im LAN) `COOKIE_SECURE` weglassen/`false`,
   sonst speichert der Browser das Session-Cookie nicht → „nicht angemeldet" nach Login.
-- **Daten-Volume behalten:** `worship-data:/app/data` hält `site.json` (Gemeindename) + Anmerkungen.
+- **Daten-Volume behalten:** `worship-data:/app/data` hält `site.json` (Gemeindename), den Umzugsstand und
+  bis zum Umzug die alten Anmerkungen (seit 09.10.2026 liegen sie in ChurchTools).
   Beim Neu-Erstellen des Projekts das Volume behalten – sonst fallen die Werte auf Defaults zurück.
 - **Bekannte Datenlücke:** Nicht alle Arrangements haben eine `.chordpro`-Datei (manche nur
   `.sng`/`.txt`) → Frontend zeigt dann „keine Akkord-Datei hinterlegt".

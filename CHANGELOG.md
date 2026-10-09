@@ -7,6 +7,29 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+**Beim Update bitte beachten (Server-App):** Anmerkungen, Lied-Einstellungen, „gesehen" und das Teilen
+liegen jetzt in **ChurchTools** – als Anhänge an der eigenen Person, dieselben wie in der Erweiterung.
+Dafür braucht jedes Konto das ChurchTools-Recht **„Eigene Personendaten bearbeiten"** (bei der ECG über den
+Status „Mitglied"); fehlt es, sagt die App beim Speichern, dass ChurchTools es nicht erlaubt. Was bisher
+auf dem Daten-Volume lag, zieht beim ersten Öffnen jedes Kontos von selbst um; das Volume **nicht
+löschen** – die alten Dateien eines Kontos räumt die App 3 Monate nach seinem geprüften Umzug selbst weg.
+Ohne Erweiterung in ChurchTools: `ERWEITERUNG_KUERZEL` muss nicht gesetzt werden.
+
+### Neu
+
+- **Ablage in ChurchTools – App und Erweiterung sehen dieselben Notizen** (Alwin, 09.10.2026: „so viel wie
+  möglich bei ChurchTools"). Bisher sah die Erweiterung die Anmerkungen aus der Server-App nicht und
+  umgekehrt. Jetzt schreibt der Server mit der Anmeldung der Person in ihre Personen-Dateien.
+  - **Umzug beim ersten Öffnen:** im Hintergrund, Bild für Bild mit Pause (#300), bei einer
+    ChurchTools-Bremse später fortgesetzt. Was in ChurchTools schon liegt (aus der Erweiterung), gewinnt
+    – je Seite und je Einstellung; das Volume füllt nur Lücken. Bis der Umzug fertig ist, zeigt die App
+    die fehlenden Seiten weiter vom Volume. Fertig ist er erst, wenn ChurchTools frisch gelesen nichts
+    mehr vermisst.
+  - **Team-Notizen:** dieselbe Liste „Wer teilt" wie die Erweiterung; ohne Erweiterung die bisherige
+    Liste. Wer in der Server-App geteilt hat und seitdem nicht angemeldet war, bleibt sichtbar.
+  - **Staging zieht nicht um** – bei der ECG hängt es am echten ChurchTools, seine Volume-Notizen sind
+    Testreste (`ABLAGE_UMZUG` übersteuert).
+
 Code-Check vom 09.10.2026 abgearbeitet (#455–#466).
 
 ### Behoben

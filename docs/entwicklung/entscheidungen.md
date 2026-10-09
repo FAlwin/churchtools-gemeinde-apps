@@ -95,7 +95,7 @@ sofort und kann rückgängig machen.
 Das ist bewusst nicht umgesetzt: Es vervielfacht die Ebenen und würde bestehende Anmerkungen ohne
 Migration unsichtbar machen.
 
-## `trust proxy: 'loopback'` statt `1` _(26.07.2026, #214)_
+## `trust proxy: 'loopback'` statt `1` _(26.07.2026, #214 – **seit #459 überholt, siehe unten**)_
 
 **Entscheidung:** In Produktion gilt `app.set('trust proxy', 'loopback')`.
 **Begründung:** Von dieser Einstellung hängt die gesamte IP-Härtung ab – vor allem das Login-Limit
@@ -110,6 +110,24 @@ Damit hängt die Annahme nicht mehr an der (von hier nicht einsehbaren) Proxy-Ke
 **Nicht abgedeckt:** Würde die App je **ohne** Reverse-Proxy direkt ins Netz gehängt (der Kommentar in
 `deploy/docker-compose.prod.yml` lädt zum Umstellen auf `3001:3001` ein), wäre `X-Forwarded-For` frei
 wählbar und das IP-Limit umgehbar. Prod bindet deshalb bewusst nur `127.0.0.1`.
+
+## `trust proxy`: eigene Regel statt `'loopback'` – der Docker-Hop _(09.10.2026, #459)_
+
+**Entscheidung:** In Produktion gilt `app.set('trust proxy', vertrauterProxy)`
+(`server/src/utils/vertrauterProxy.ts`): Die **Verbindung selbst** (Hop 0) darf lokal oder privat sein,
+jeder weitere Hop in `X-Forwarded-For` nur lokal.
+**Begründung:** Der Abschnitt darüber nahm an, die Verbindung komme von `127.0.0.1`. Prod läuft aber in
+Docker (`127.0.0.1:3001:3001`, Bridge-Netz): Der Reverse-Proxy des NAS spricht 127.0.0.1 an, im
+Container erscheint die Verbindung vom **Docker-Gateway** (172.x.0.1). Dem vertraute `'loopback'` nicht
+– `req.ip` war das Gateway, für **jede** Anfrage dasselbe, und das Login-Limit ein gemeinsames
+Kontingent (Code-Check 09.10.2026). Ein Cloudflare-Tunnel im selben Docker-Netz sieht genauso aus.
+Weiter hinten nur Loopback, damit ein Gerät im eigenen WLAN (privat, aber nie Hop 0) seine Adresse nicht
+per selbst gesetzter Kopfzeile wählen kann.
+**Verifiziert:** `trustProxy.test.ts` rechnet `req.ip` mit Express selbst für eine Verbindung vom
+Gateway – samt Gegenprobe, dass `'loopback'` dort das Gateway liefert. Am NAS: `RateLimit-Remaining`
+der Login-Antwort aus zwei Netzen vergleichen (je Netz ein eigener Zähler).
+**Nicht abgedeckt (wie oben):** Ohne Reverse-Proxy direkt am Netz wäre der Docker-Hop ein beliebiger
+Client – dann wäre `X-Forwarded-For` frei wählbar. Prod bindet deshalb weiter nur `127.0.0.1`.
 
 ## Server läuft per `tsx` aus dem Quelltext, ohne Build-Artefakt _(27.07.2026, #199)_
 

@@ -12,7 +12,7 @@ import type { NextFunction, Request, Response } from 'express';
  * Warnung, die ständig kommt, wird überlesen. Kein Abbruch, HTTP-Betrieb im LAN bleibt erlaubt.
  *
  * Gelesen wird der Kopf `X-Forwarded-Proto` **direkt**, nicht über `req.secure`: Das hängt an
- * `trust proxy` (bei uns `loopback`), und bei einer fremden Proxy-Anordnung würde die Warnung genau
+ * `trust proxy` (bei uns `vertrauterProxy`), und bei einer fremden Proxy-Anordnung würde die Warnung genau
  * dort ausbleiben, wo sie gebraucht wird. Ein gefälschter Kopf bewirkt nur diese eine Logzeile –
  * er entscheidet über nichts.
  */

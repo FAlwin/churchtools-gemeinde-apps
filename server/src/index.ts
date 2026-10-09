@@ -7,6 +7,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import { config } from './config.js';
+import { vertrauterProxy } from './utils/vertrauterProxy.js';
 import { ipRateKey } from './utils/ipKey.js';
 import { sessionRateKey, dropUnusableSessionCookie } from './middleware/session.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
@@ -32,7 +33,10 @@ const clientDist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '.
 // Steht noch ein Hop dazwischen, wäre `req.ip` immer `127.0.0.1` → alle Anfragen der Welt teilten
 // EINEN Rate-Limit-Schlüssel (eine von außen auslösbare Login-Sperre für die ganze Gemeinde).
 // Wichtig fürs Login-Limit (`routes/auth.ts`), das mangels Session nur die IP hat.
-if (config.isProduction) app.set('trust proxy', 'loopback');
+//
+// Seit #459 eine eigene Regel statt `'loopback'`: Hinter Docker kommt die Verbindung vom Docker-
+// Gateway (privat, nicht Loopback) – siehe `utils/vertrauterProxy.ts`.
+if (config.isProduction) app.set('trust proxy', vertrauterProxy);
 
 // ── Sicherheit & Basis-Middleware ───────────────────────────
 // Content-Security-Policy: In Produktion restriktiv (zusätzliche Schutzschicht gegen XSS),

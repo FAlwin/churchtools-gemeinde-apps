@@ -3,7 +3,7 @@ import { ChordProInput, type ChordProHandle } from './ChordProInput';
 import { PdfPreview } from './PdfPreview';
 import { Icon } from '@ui/icons/icons';
 import { Spinner } from './Spinner';
-import { useOverlayKeyboardInset } from '../hooks/useOverlayKeyboardInset';
+import { useOverlayKeyboardInset } from '@ui/fenster/useOverlayKeyboardInset';
 import styles from './ChordEditor.module.scss';
 import { shiftKey } from '../utils/transpose';
 

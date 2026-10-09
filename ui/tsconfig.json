@@ -8,6 +8,8 @@
     "jsx": "react-jsx",
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    // Typen für `*.module.scss`-Importe (wie in client/); innerhalb von ui/ wird relativ importiert.
+    "types": ["vite/client"],
     "noEmit": true
   },
   // Sammel-Muster statt Ordnerliste – dieselbe Lehre wie in shared/tsconfig.json.

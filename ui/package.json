@@ -1,0 +1,7 @@
+{
+  "name": "@worship/ui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Gemeinsame Oberflächen-Bausteine von Musik-App und Dienstplaner (#469). Kein eigener Workspace: eingebunden über den Alias @ui. \"type\": \"module\" wie client/ und shared/ – sonst bindet der Build CommonJS-Pakete (React) hier anders ein als im Client.",
+  "type": "module"
+}

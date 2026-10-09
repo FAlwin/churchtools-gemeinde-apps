@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { SiteConfig } from '@shared/types/index';
 import type { Theme, ThemePref } from '../types/index';
 import { SeitenGeruest } from '../components/SeitenGeruest';
-import { Segment } from '../components/Segment';
+import { Segment } from '@ui/bedienung/Segment';
 import { Icon } from '@ui/icons/icons';
 import { SupportBox } from '../components/SupportBox';
 import { SchalterZeile } from '../components/SchalterZeile';

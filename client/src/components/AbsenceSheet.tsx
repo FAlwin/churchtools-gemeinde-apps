@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Absence, AbsenceReason, NeueAbsence } from '@shared/types/index';
-import { Sheet } from './Sheet';
+import { Sheet } from '@ui/fenster/Sheet';
 import { anzahlTage } from '../utils/wochen';
 import { SCHNELLWAHL, schnellwahlZeitraum, type SchnellwahlId } from '../utils/schnellwahl';
 import styles from '../pages/Availability.module.scss';

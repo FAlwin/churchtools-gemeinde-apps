@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { KnopfReihe } from './KnopfReihe';
+import { KnopfReihe } from '@ui/bedienung/KnopfReihe';
 import { Screen, Scroll } from './Screen';
 import { GrosseUeberschrift } from './GrosseUeberschrift';
 import { VollbildKnopf } from './VollbildKnopf';

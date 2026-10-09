@@ -1,5 +1,5 @@
 import type { Absence } from '@shared/types/index';
-import { Sheet } from './Sheet';
+import { Sheet } from '@ui/fenster/Sheet';
 import { tagKurz, zeitraumKurz } from '../utils/absenceDatum';
 import styles from '../pages/Availability.module.scss';
 

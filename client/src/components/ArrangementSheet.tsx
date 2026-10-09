@@ -19,7 +19,7 @@
  */
 import { useState } from 'react';
 import { ARRANGEMENT_GRENZEN, type ArrangementAnsicht, type SongSource } from '@shared/types/index';
-import { Sheet } from './Sheet';
+import { Sheet } from '@ui/fenster/Sheet';
 import { Icon } from '@ui/icons/icons';
 import feld from './SongFields.module.scss';
 import styles from './NewSongSheet.module.scss';

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Service, SongArrangementOption, SongLibraryEntry } from '@shared/types/index';
-import { Sheet } from './Sheet';
+import { Sheet } from '@ui/fenster/Sheet';
 import { CenterMessage } from './CenterMessage';
 import { Icon } from '@ui/icons/icons';
 import { useSongArrangements, useAddSongToService } from '../hooks/useServices';

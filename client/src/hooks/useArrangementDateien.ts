@@ -16,7 +16,7 @@ import {
   holeChordProAusSongSelect,
   uploadArrangementFile,
 } from '../services/churchtoolsApi';
-import { shareOrDownload } from '../utils/shareFile';
+import { shareOrDownload } from '@ui/teilen/shareFile';
 import { pruefeUpload } from '../utils/dateiVerwaltung';
 
 interface Args {

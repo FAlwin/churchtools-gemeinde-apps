@@ -18,7 +18,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { innerScrollOnly } from '../utils/dndAutoScroll';
-import { Schalter } from './Schalter';
+import { Schalter } from '@ui/bedienung/Schalter';
 import { Spinner } from './Spinner';
 import { Icon } from '@ui/icons/icons';
 import { useUpdateSiteConfig } from '../hooks/useSiteConfig';

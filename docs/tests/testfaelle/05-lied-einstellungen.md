@@ -169,7 +169,7 @@ eine andere Tonart als auf dem Blatt – bei Kapo 2 zwei Halbtöne zu hoch.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/pages/ChordChart.tsx`, `client/src/utils/chartPdfOptions.ts`, `client/src/utils/songPdfOpts.ts`, `client/src/utils/sharePdf.ts`, `client/src/utils/chordPdf.ts`, `client/src/hooks/useAppLogo.ts`
+- **Betrifft:** `client/src/pages/ChordChart.tsx`, `client/src/utils/chartPdfOptions.ts`, `client/src/utils/songPdfOpts.ts`, `ui/teilen/sharePdf.ts`, `client/src/utils/chordPdf.ts`, `client/src/hooks/useAppLogo.ts`
 - **Automatisiert:** teilweise – `client/src/utils/chartPdfOptions.test.ts` (die Rechnung inkl. Kapo und der Weg über den Speicher); von Hand bleibt der Teilen-Dialog des Geräts und das Ansehen der fertigen Datei
 - **Historie:** #239
 
@@ -345,7 +345,7 @@ Vor dem Teilen zeigt das Fenster die Seiten; „Herunterladen" speichert ohne Te
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/TeilenFenster.tsx`, `client/src/components/PdfSeitenVorschau.tsx`, `client/src/utils/sharePdf.ts`, `client/src/utils/shareFile.ts`, `client/src/utils/ablaufPdf.ts`, `client/src/utils/anmerkungsEbene.ts`, `client/src/utils/dokumentSeiten.ts`, `client/src/pages/Setlist.tsx`, `client/src/pages/ChordChart.tsx`, `client/src/components/SongMenu.tsx`
+- **Betrifft:** `client/src/components/TeilenFenster.tsx`, `client/src/components/PdfSeitenVorschau.tsx`, `ui/teilen/sharePdf.ts`, `ui/teilen/shareFile.ts`, `client/src/utils/ablaufPdf.ts`, `client/src/utils/anmerkungsEbene.ts`, `client/src/utils/dokumentSeiten.ts`, `client/src/pages/Setlist.tsx`, `client/src/pages/ChordChart.tsx`, `client/src/components/SongMenu.tsx`
 - **Automatisiert:** teilweise – `ablaufPdf.test.ts` (Reihenfolge, Dokument-Seiten, Ersatz/Fehlen,
   Seitenbesitzer und Ebene je Seite), `TeilenFenster.test.tsx` (Vorgabe, Merken, veraltetes PDF, Vorschau, Großansicht, Herunterladen);
   gegen den ChurchTools-Stub durchgeklickt und das heruntergeladene PDF angesehen. Von Hand bleibt das

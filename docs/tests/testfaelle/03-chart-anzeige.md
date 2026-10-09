@@ -111,8 +111,8 @@ darüber, keine verschobenen Symbole, nichts rutscht aus dem Bild.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/main.tsx`, `client/src/utils/appHeight.ts`, `client/src/hooks/useOverlayKeyboardInset.ts`, `client/src/components/Screen.tsx`
-- **Automatisiert:** teilweise – `client/src/hooks/useOverlayKeyboardInset.test.tsx`
+- **Betrifft:** `client/src/main.tsx`, `ui/fenster/appHeight.ts`, `ui/fenster/useOverlayKeyboardInset.ts`, `client/src/components/Screen.tsx`
+- **Automatisiert:** teilweise – `ui/fenster/useOverlayKeyboardInset.test.tsx`
 - **Historie:** #56, #187, #207
 
 </details>

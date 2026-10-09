@@ -190,7 +190,10 @@ churchtools-gemeinde-apps/
 ├── shared/types/            # geteilte Typen (Service, SetlistSong, Setlist, …)
 └── ui/                      # gemeinsame Oberflächen-Bausteine beider Apps (Alias @ui, Dienstplaner E1)
     ├── design/              # _variables.scss (Tokens), _mixins.scss
-    └── icons/               # icons.tsx (Line-Icons)
+    ├── icons/               # icons.tsx (Line-Icons)
+    ├── fenster/             # Sheet (Modal), useOverlayKeyboardInset, appHeight
+    ├── bedienung/           # Segment, Schalter, KnopfReihe
+    └── teilen/              # shareFile, sharePdf
 ```
 
 ## Konventionen
@@ -238,7 +241,7 @@ churchtools-gemeinde-apps/
   Orientierungsänderung darf ihn senken. `env()` bleibt Fallback → keine Regression ohne JS-Messung.
 - **Dialoge müssen die iOS-Tastatur aussparen** (#207): Jedes Vollbild-Overlay mit Eingabefeldern ist
   `position: fixed` (NIE `absolute` – sonst scrollt es mit dem Dokument mit) und nutzt den Hook
-  `hooks/useOverlayKeyboardInset` + `padding-bottom: calc(… + var(--kb, 0px))`. Der Hook misst die
+  `ui/fenster/useOverlayKeyboardInset` + `padding-bottom: calc(… + var(--kb, 0px))`. Der Hook misst die
   Tastaturhöhe am `visualViewport` und holt den von iOS hinterlassenen Dokument-Scroll zurück; ohne
   ihn liegen Trefferlisten/Knöpfe unter der Tastatur und die Kopfleiste bleibt verrutscht. Gilt für
   `Sheet` (alle Dialoge), `ItemActionSheet` und den `ChordEditor`.

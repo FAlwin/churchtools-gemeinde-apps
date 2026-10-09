@@ -1,5 +1,5 @@
 import type { ChordProSection } from '@shared/types/index';
-import { Sheet } from './Sheet';
+import { Sheet } from '@ui/fenster/Sheet';
 import styles from './SectionTransposeSheet.module.scss';
 
 interface SectionTransposeSheetProps {

@@ -28,7 +28,7 @@ vi.mock('../services/churchtoolsApi', () => ({
   getSongFileBlob: (...a: unknown[]) => getSongFileBlob(...a),
 }));
 const shareOrDownload = vi.fn();
-vi.mock('../utils/shareFile', () => ({
+vi.mock('@ui/teilen/shareFile', () => ({
   shareOrDownload: (...a: unknown[]) => shareOrDownload(...a),
 }));
 

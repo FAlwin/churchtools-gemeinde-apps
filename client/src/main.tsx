@@ -8,7 +8,7 @@ import { RestoreGate } from './components/RestoreGate';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { SwUpdateProvider } from './hooks/useSwUpdate';
 import { initPwaInstall } from './services/pwaInstall';
-import { syncAppHeight } from './utils/appHeight';
+import { syncAppHeight } from '@ui/fenster/appHeight';
 import { istExtension } from './services/modus';
 import './styles/main.scss';
 

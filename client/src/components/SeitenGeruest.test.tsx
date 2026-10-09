@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { SeitenGeruest } from './SeitenGeruest';
-import { RundKnopf } from './KnopfReihe';
+import { RundKnopf } from '@ui/bedienung/KnopfReihe';
 
 const schalter = vi.hoisted(() => ({ vollbildKnopf: false }));
 vi.mock('../services/funktionen', async (original) => ({

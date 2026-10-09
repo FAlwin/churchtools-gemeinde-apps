@@ -289,7 +289,7 @@
    * 430 px hoch – auf einem Handy im QUERFORMAT (etwa 390 px) reicht das nicht, und der
    * Speichern-Knopf säße unerreichbar unterhalb des Bildschirms. `--app-h` statt `100vh`, weil iOS
    * bei eingeblendeter Adresszeile Letzteres zu groß meldet (dafür gibt es die Variable, siehe
-   * `utils/appHeight.ts`).
+   * `ui/fenster/appHeight.ts`).
    *
    * Das widerspricht der festen Größe NICHT: Sie soll sich beim BEDIENEN nicht ändern. Diese Grenze
    * hängt allein an der Bildschirmhöhe und steht während der ganzen Bedienung still.

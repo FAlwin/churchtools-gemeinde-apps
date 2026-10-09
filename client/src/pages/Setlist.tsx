@@ -17,7 +17,7 @@ import {
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
 import { SeitenGeruest } from '../components/SeitenGeruest';
-import { RundKnopf } from '../components/KnopfReihe';
+import { RundKnopf } from '@ui/bedienung/KnopfReihe';
 import { CenterMessage } from '../components/CenterMessage';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SchwebePlus } from '../components/SchwebePlus';

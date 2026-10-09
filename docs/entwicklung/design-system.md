@@ -34,7 +34,7 @@ am Ende dieses Dokuments.
 | `--scrim`                                           | Overlay hinter Sheets/Dialogen                                                                                                                              |
 | `--nav-bg` / `--shadow`                             | Leisten (deckend, = `theme-color`) / Karten-Schatten                                                                                                        |
 | `--ui`                                              | System-Schriftfamilie (kein Web-Font)                                                                                                                       |
-| `--kb`                                              | **Höhe der iOS-Tastatur** – wird von `hooks/useOverlayKeyboardInset` am `visualViewport` gemessen (nur auf Dialog-Overlays gesetzt, siehe Regel unten)      |
+| `--kb`                                              | **Höhe der iOS-Tastatur** – wird von `ui/fenster/useOverlayKeyboardInset` am `visualViewport` gemessen (nur auf Dialog-Overlays gesetzt, siehe Regel unten) |
 | `--sat`                                             | **stabile iOS-Safe-Area oben** – Ausnahme: wird in `client/src/main.tsx` per verstecktem Probe-Element **in JS gemessen**, steht NICHT in `_variables.scss` |
 
 **Es gibt bewusst KEIN `--orange`, `--teal`, `--chord`.** Akzent = Blau, Destruktiv = Rot.
@@ -115,6 +115,6 @@ Fokussieren die Seite hochschiebt – und spart die Tastatur aus:
 padding-bottom: calc(16px + var(--kb, 0px));
 ```
 
-`--kb` liefert der Hook `hooks/useOverlayKeyboardInset` (Messung am `visualViewport`); er holt zusätzlich den
+`--kb` liefert der Hook `ui/fenster/useOverlayKeyboardInset` (Messung am `visualViewport`); er holt zusätzlich den
 von iOS hinterlassenen Dokument-Scroll zurück. Ohne beides liegen Trefferlisten und Knöpfe unter der
 Tastatur, und die Kopfleiste bleibt nach dem Schließen verrutscht (#207).

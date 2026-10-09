@@ -298,8 +298,8 @@ sitzt die Ansicht wieder normal.
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/ChordEditor.tsx`, `client/src/hooks/useOverlayKeyboardInset.ts`
-- **Automatisiert:** teilweise – `client/src/hooks/useOverlayKeyboardInset.test.tsx`
+- **Betrifft:** `client/src/components/ChordEditor.tsx`, `ui/fenster/useOverlayKeyboardInset.ts`
+- **Automatisiert:** teilweise – `ui/fenster/useOverlayKeyboardInset.test.tsx`
 - **Historie:** #207
 
 </details>

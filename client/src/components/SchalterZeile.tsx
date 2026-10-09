@@ -1,5 +1,5 @@
 import styles from '../pages/Settings.module.scss';
-import { Schalter } from './Schalter';
+import { Schalter } from '@ui/bedienung/Schalter';
 
 interface SchalterZeileProps {
   /** Beschriftung links – zugleich der Name des Schalters für Screenreader. */

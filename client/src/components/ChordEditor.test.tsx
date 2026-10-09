@@ -12,7 +12,9 @@ import { render, screen, fireEvent } from '@testing-library/react';
  */
 vi.mock('./ChordProInput', () => ({ ChordProInput: () => <div data-testid="eingabe" /> }));
 vi.mock('./PdfPreview', () => ({ PdfPreview: () => null }));
-vi.mock('../hooks/useOverlayKeyboardInset', () => ({ useOverlayKeyboardInset: () => undefined }));
+vi.mock('@ui/fenster/useOverlayKeyboardInset', () => ({
+  useOverlayKeyboardInset: () => undefined,
+}));
 
 const { ChordEditor } = await import('./ChordEditor');
 

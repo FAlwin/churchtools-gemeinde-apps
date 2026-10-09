@@ -260,3 +260,51 @@ Gerät bleibt sie erhalten.
 - **Historie:** #245
 
 </details>
+
+### TF-ANNO-12 · App und Erweiterung zeigen dieselben Anmerkungen
+
+**Das brauchst du:** Ein Konto, das die Musik App mit eigenem Server (Staging oder Prod) UND die
+ChurchTools-Erweiterung benutzen kann. ⚠️ Staging hängt bei der ECG am echten ChurchTools – was du dort
+zeichnest, liegt in deinen echten Personen-Dateien.
+
+**Das muss passieren:** Was du in der einen Form zeichnest, siehst du in der anderen.
+
+1. In der Server-App ein Lied öffnen, eine Seite anmerken (Strich und eine Textnotiz).
+2. Eine Minute warten (Abgleich), dann in ChurchTools die Erweiterung öffnen und dasselbe Lied mit
+   derselben Version aufrufen: Strich und Text sind da.
+3. In der Erweiterung auf einer anderen Seite etwas zeichnen.
+4. Zurück in der Server-App das Lied neu öffnen: auch das ist da.
+5. In ChurchTools unter **Personen → du selbst → Anhänge** liegen die Bilder `musikapp_….png` und eine
+   `musikapp_daten.json`.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/ct/personenAblage.ts`, `server/src/services/ctPersonenAblage.ts`, `server/src/services/kontoAblage.ts`, `client/src/services/personenAblage.ts`
+- **Automatisiert:** teilweise – `e2e/auth-flow.spec.ts` (Anmerkung geht über den Server in die Personen-Dateien des Stubs), `server/src/services/ablageUmzug.test.ts`; von Hand bleibt das echte ChurchTools mit beiden Formen
+- **Historie:** Ablage in ChurchTools, 09.10.2026
+
+</details>
+
+### TF-ANNO-13 · Beim ersten Öffnen ziehen die alten Notizen um
+
+**Das brauchst du:** Prod nach dem Update (Staging zieht nicht um) und ein Konto mit Anmerkungen aus der
+Zeit davor. Zugriff auf das Container-Log hilft.
+
+**Das muss passieren:** Nach dem Update sind alle bisherigen Anmerkungen sofort zu sehen. Ein paar
+Minuten später liegen sie auch in ChurchTools – und damit in der Erweiterung.
+
+1. Nach dem Update die App öffnen und ein Lied mit alten Anmerkungen aufrufen: Sie sind da.
+2. Ein paar Minuten warten. Im Container-Log erscheint `[ablage] Umzug Konto … fertig und geprüft`.
+3. Dasselbe Lied in der Erweiterung öffnen: die Anmerkungen sind da.
+4. Gegenprobe „ChurchTools gewinnt": Eine Seite, die du schon vor dem Update in der Erweiterung bemalt
+   hattest, zeigt den Stand aus der Erweiterung, nicht den älteren aus der Server-App.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `server/src/services/ablageUmzug.ts`, `server/src/services/altbestand.ts`, `shared/ct/personenAblage.ts`
+- **Automatisiert:** teilweise – `server/src/services/ablageUmzug.test.ts`, `server/src/services/personenAblageUmzug.test.ts`; von Hand bleibt der echte Altbestand auf dem NAS
+- **Historie:** Ablage in ChurchTools, 09.10.2026
+
+</details>

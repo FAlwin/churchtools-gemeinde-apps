@@ -158,7 +158,10 @@ export async function termineMitAblauf(
       const songCount = items.filter((i) => i.song).length;
       // Sichtbar, sobald ein Ablaufplan existiert – auch ohne Lieder.
       rows.push({
-        service: mapEventToService(ev, songCount, subtitle, leser.zeitzone),
+        service: {
+          ...mapEventToService(ev, songCount, subtitle, leser.zeitzone),
+          ablaufAbgeschlossen: agenda.isLocked === true,
+        },
         fingerprintText: fingerprintRohtext(items),
         start: ev.startDate,
       });

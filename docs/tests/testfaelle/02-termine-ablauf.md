@@ -164,3 +164,30 @@ bis zu einer Minute. Kurzes Nachladen ist normal und gewollt.
 - **Historie:** #306 (v2.16.2 pausierte den Takt, ohne beim Zurückkommen nachzuladen – in v2.16.3 behoben)
 
 </details>
+
+### TF-ABLAUF-09 · Ablauf abschließen und wieder öffnen
+
+**Das brauchst du:** Ein Konto mit dem Recht, Abläufe zu bearbeiten, und einen Termin, dessen Ablauf du
+kurz sperren darfst.
+
+**Das muss passieren:** Abschließen und Öffnen gehen in der App. Ist der Ablauf abgeschlossen, sagt die
+App das – nicht mehr „Keine Berechtigung".
+
+1. Den Ablauf öffnen und oben auf den **Stift** tippen (Bearbeiten).
+2. Das **Schloss** oben antippen → Rückfrage „Ablauf abschließen?" → **Abschließen**.
+3. Es erscheint der Hinweis „Dieser Ablauf ist in ChurchTools abgeschlossen …" mit **Ablauf öffnen**;
+   Ziehen, Bearbeiten und das Plus sind weg. In ChurchTools ist der Ablauf ebenfalls abgeschlossen.
+4. **Ablauf öffnen** antippen → die Bearbeiten-Ansicht ist wieder da.
+5. Gegenprobe von außen: In ChurchTools den Ablauf abschließen, in der App (noch im Bearbeiten) einen
+   Punkt löschen → statt „Keine Berechtigung" erscheint der Hinweis, und kurz danach der Knopf
+   **Ablauf öffnen**.
+6. Außerhalb des Bearbeitens zeigt die Ansicht bewusst keinen Hinweis.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/ct/schreibKern.ts`, `shared/ct/setlistKern.ts`, `client/src/pages/Setlist.tsx`, `server/src/controllers/setlistController.ts`
+- **Automatisiert:** teilweise – `server/src/services/ablaufAbschluss.test.ts`, `client/src/pages/Setlist.abschluss.test.tsx`, `client/src/services/ctSchreiben.test.ts`; von Hand bleibt echtes ChurchTools
+- **Historie:** Alwin 09.10.2026
+
+</details>

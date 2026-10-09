@@ -26,6 +26,21 @@ docker image prune -f     # optional: altes Image aufräumen
 > **Das Daten-Volume `musik-data` NICHT löschen.** Dort liegen eure Einstellungen
 > (Gemeindename, Links). Nur `docker compose pull` + `up -d` anwenden – dann bleiben sie erhalten.
 
+## Einmalig beim Update auf die Ablage in ChurchTools
+
+Ab dieser Fassung liegen Anmerkungen, Lied-Einstellungen und das Teilen jedes Kontos **in ChurchTools**
+(als Anhänge an der eigenen Person) – dieselben wie in der ChurchTools-Erweiterung. Was bisher auf dem
+Daten-Volume lag, zieht beim ersten Öffnen jedes Kontos von selbst um. Zu tun:
+
+- **Recht prüfen:** Jedes Konto braucht in ChurchTools **„Eigene Personendaten bearbeiten"** (z. B. über
+  den Status „Mitglied"). Ohne das meldet die App beim Speichern, dass ChurchTools es nicht erlaubt.
+- **Volume behalten.** Die alten Dateien eines Kontos löscht die App erst 3 Monate nach seinem geprüften
+  Umzug selbst. Im Container-Log steht je Konto `[ablage] Umzug Konto … fertig und geprüft`.
+- **Mit Erweiterung:** Heißt sie bei euch nicht `musik-app`, `ERWEITERUNG_KUERZEL` in der `.env` setzen –
+  dann teilen App und Erweiterung dieselbe Liste der Team-Notizen.
+- **Test-Installation am echten ChurchTools?** Dort `ABLAGE_UMZUG=aus` setzen, sonst landen Test-Notizen
+  vom Volume in den echten Personen-Dateien. (Images mit Version `staging-…` ziehen von selbst nicht um.)
+
 ## Synology Container Manager (ohne `docker compose` in der Oberfläche)
 
 Der Container Manager zieht bei vorhandenem Tag **kein** neues Image und hat keinen Knopf dafür.

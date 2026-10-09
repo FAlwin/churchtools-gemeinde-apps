@@ -31,6 +31,11 @@ export interface Service {
    * Termine sind `false` (kein Fehlalarm bei Erstnutzung).
    */
   setlistChanged: boolean;
+  /**
+   * Der Ablauf ist in ChurchTools **abgeschlossen** (`isLocked`, Alwin 09.10.2026) – dann lässt ChurchTools
+   * kein Ändern zu, bis ihn jemand wieder öffnet. Optional: Ältere Server und die Demo kennen es nicht.
+   */
+  ablaufAbgeschlossen?: boolean;
 }
 
 /** Ein Song innerhalb einer Setlist (aufgelöstes Arrangement). */

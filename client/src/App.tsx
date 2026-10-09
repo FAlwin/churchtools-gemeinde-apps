@@ -434,9 +434,12 @@ export default function App() {
 
   // ── Gepushte Vollbild-Ansichten (ohne Tab-Bar) ──
   if (view?.type === 'setlist' && service) {
+    // Der Termin FRISCH aus der Terminliste, nicht die Kopie vom Antippen: Sonst käme ein neuer Zustand
+    // (etwa „abgeschlossen", 09.10.2026) auf dieser Seite nie an. Die Kopie bleibt der Rückfall.
+    const frischerTermin = servicesQuery.data?.find((s) => s.id === service.id) ?? service;
     return (
       <Setlist
-        service={service}
+        service={frischerTermin}
         items={items}
         isLoading={agendaQuery.isLoading}
         isError={agendaQuery.isError}

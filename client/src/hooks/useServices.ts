@@ -197,6 +197,22 @@ export function useSetAgendaItemVorBeginn(eventId: number | null) {
   });
 }
 
+/**
+ * Den Ablauf abschließen oder öffnen (09.10.2026). Danach Terminliste und Ablauf neu: Der Zustand
+ * steht am Termin (`ablaufAbgeschlossen`), und wer bearbeitet, soll sofort sehen, ob er wieder darf.
+ */
+export function useAblaufAbschliessen(eventId: number | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (abgeschlossen: boolean) =>
+      api.setAblaufAbgeschlossen(eventId as number, abgeschlossen),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ['services'] });
+      void qc.invalidateQueries({ queryKey: ['agenda', eventId] });
+    },
+  });
+}
+
 /** Lädt die ChurchTools-Dienste (für die Verantwortlich-Chips). */
 export function useAgendaServices(enabled: boolean) {
   return useQuery({

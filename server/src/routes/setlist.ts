@@ -11,6 +11,7 @@ import {
   deleteAgendaItemCtrl,
   putAgendaItem,
   putAgendaItemVorBeginn,
+  putAblaufAbgeschlossen,
   postAgendaItem,
   getCapabilitiesCtrl,
   getAgendaServicesCtrl,
@@ -90,6 +91,7 @@ router.put(
   asyncHandler(putAgendaItemVorBeginn),
 );
 router.delete('/services/:eventId/agenda/items/:itemId', asyncHandler(deleteAgendaItemCtrl));
+router.put('/services/:eventId/agenda/abgeschlossen', asyncHandler(putAblaufAbgeschlossen));
 router.put('/songs/:songId/arrangements/:arrangementId/tempo', asyncHandler(putArrangementTempo));
 
 /**

@@ -62,6 +62,7 @@
 - `POST /api/services/:eventId/agenda/items` → Ablaufpunkt anlegen
 - `PUT  /api/services/:eventId/agenda/items/:itemId` → Punkt ändern (Felder gebündelt: `title`, `responsible`, `arrangementId`, `unlink`, `note`, `durationMin` → CT-Sekunden)
 - `DELETE /api/services/:eventId/agenda/items/:itemId` → Punkt löschen
+- `PUT  /api/services/:eventId/agenda/abgeschlossen` {abgeschlossen} → Ablauf in ChurchTools abschließen/öffnen (09.10.2026): `POST /events/{id}/agenda/lock` bzw. `…/unlock` (gemessen; ein `PUT …/agenda` mit `isLocked` wird angenommen, aber nicht übernommen). Der Zustand steht am Termin (`Service.ablaufAbgeschlossen`). Verweigert ChurchTools ein Ändern, sieht der Schreib-Kern am Ablauf nach: abgeschlossen → **423** „Dieser Ablauf ist in ChurchTools abgeschlossen …" statt „Keine Berechtigung".
 - `PUT  /api/services/:eventId/agenda/items/:itemId/vor-beginn` {vorBeginn} → Vorlauf vor dem Gottesdienstbeginn (#423): schreibt nur die Grenze `eventStartPosition` des Ablaufs, an: dieser und alle Punkte darüber, aus: dieser und alle darunter
 - `GET  /api/agenda-services` → ChurchTools-Dienste (für die Verantwortlich-Chips)
 
@@ -217,12 +218,22 @@ Original (bzw. der ersten Version, falls kein Original existiert); welche Übers
 gerenderten Blatt steht, entscheidet zusätzlich der **angezeigte** Text – siehe `chartHead()` im
 Client, damit eine Version mit eigener Überschrift auch ihre eigene trägt.
 
-## Anmerkungen / Einstellungen (pro Konto, serverseitig auf dem Volume)
+## Anmerkungen / Einstellungen (pro Konto, in den Personen-Dateien in ChurchTools)
+
+Seit der Ablage in ChurchTools (09.10.2026) liest und schreibt der Server diese Endpunkte über
+`services/kontoAblage.ts` in die Personen-Dateien der Person (`@shared/ct/personenAblage`) – dieselben,
+die die Erweiterung nutzt. Bis der Umzug eines Kontos fertig ist, ergänzt er Lesezugriffe um den
+Altbestand vom Daten-Volume (ChurchTools gewinnt). Die früheren Konto-Obergrenzen (#139, 413) gelten
+für das Volume und entfallen damit; je Anfrage begrenzt weiter das Zod-Schema.
 
 - `GET  /api/annotations?songs=` / `PUT /api/annotations/:key` / `DELETE …/:key` → Anmerkungen+Zoom pro Konto (Feld-Merge strokes/texts/zoom; `zoom` = `{x, y, scale, fx?, fy?}` – `fx`/`fy` seit #420: die Stelle auf dem Blatt in der Mitte, Anteile 0–1; key `song<id>_v<ver>_<seite>[_lyr][_d<class>]`; Konto-Obergrenzen #139)
 - `GET  /api/settings?songs=` / `PUT /api/settings` → Lied-Einstellungen pro Konto (Schlüssel-Wert, Merge)
 
 ## Team-Notizen (geteilte Anmerkungen, PCO-Modell)
+
+Ob jemand teilt, steht in seiner eigenen Daten-Datei in ChurchTools. Gefunden wird man über das
+Verzeichnis der Erweiterung (Modul `ERWEITERUNG_KUERZEL`, Kategorie `musikapp-teilen`) und die Liste
+`sharing.json` auf dem Volume – gelesen als eines, geschrieben in beide (`services/ctTeilenServer.ts`).
 
 - `GET/PUT /api/annotations/sharing` → eigenen Teilen-Schalter lesen/setzen
 - `GET  /api/annotations/sharers?songs=` → wer teilt für die gefragten Lieder geteilte Anmerkungen

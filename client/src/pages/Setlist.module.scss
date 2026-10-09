@@ -186,6 +186,39 @@
   vertical-align: -2px;
   margin: 0 1px;
 }
+// Abgeschlossener Ablauf im Bearbeiten-Modus (09.10.2026): Hinweis mit „Ablauf öffnen".
+.abgeschlossen {
+  display: flex;
+  gap: 8px;
+  margin: 12px 16px 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.abgeschlossenIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--blue);
+}
+.oeffnenKnopf {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--blue);
+  background: var(--surface2);
+  color: var(--blue);
+  font-size: 13px;
+  font-weight: 600;
+  &:disabled {
+    opacity: 0.6;
+  }
+}
 .editError {
   font-size: 13px;
   color: var(--red);

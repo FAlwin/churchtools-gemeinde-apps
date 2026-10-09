@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type { AgendaItem, AgendaServiceOption, Service, SetlistSong } from '@shared/types/index';
 import type { AgendaItemUpdate } from '../services/churchtoolsApi';
 import {
@@ -27,6 +28,9 @@ import { BeginnLinie } from '../components/AgendaRowParts';
 import { ItemActionSheet } from '../components/ItemActionSheet';
 import { Icon } from '@ui/icons/icons';
 import { itemLabel } from '../utils/agendaItemTitle';
+import { ApiError } from '../services/api';
+import { useAblaufAbschliessen } from '../hooks/useServices';
+import { ABLAUF_ABGESCHLOSSEN } from '@shared/ct/schreibKern';
 import type { NeuerAgendaPunkt } from '../utils/agendaItemChanges';
 import { beginnStelle, vorlaufNachUmsortieren } from '../utils/vorlauf';
 import { Coachmarks } from '../components/Coachmarks';
@@ -112,6 +116,39 @@ export function Setlist({
   const [neuOffen, setNeuOffen] = useState(false);
   const [actionItem, setActionItem] = useState<AgendaItem | null>(null);
 
+  /**
+   * **Abgeschlossen** (Alwin, 09.10.2026): In ChurchTools kann man einen Ablauf abschließen; dann lässt
+   * ChurchTools kein Ändern zu. Vorher meldete die App beim Löschen nur „Keine Berechtigung". Jetzt sagt
+   * sie es beim Bearbeiten, sperrt die Bedienung und bietet „Ablauf öffnen" an – in der Ansicht bewusst
+   * kein Hinweis (Alwin).
+   */
+  const abgeschlossen = service.ablaufAbgeschlossen === true;
+  const abschluss = useAblaufAbschliessen(service.id);
+  const [abschliessenFrage, setAbschliessenFrage] = useState(false);
+  const qc = useQueryClient();
+
+  /**
+   * Eine Fehlermeldung zeigen – und hat in der Zwischenzeit jemand den Ablauf abgeschlossen (423 vom
+   * Schreib-Kern), den Termin neu holen: Dann erscheint gleich der Hinweis mit „Ablauf öffnen".
+   */
+  function fehlerZeigen(e: unknown, sonst: string): void {
+    setErr(e instanceof Error ? e.message : sonst);
+    if (e instanceof ApiError && e.status === 423) {
+      void qc.invalidateQueries({ queryKey: ['services'] });
+    }
+  }
+
+  function abschlussSetzen(zu: boolean): void {
+    setErr(null);
+    abschluss.mutate(zu, {
+      onError: (e) =>
+        fehlerZeigen(
+          e,
+          zu ? 'Ablauf konnte nicht abgeschlossen werden.' : 'Ablauf konnte nicht geöffnet werden.',
+        ),
+    });
+  }
+
   // Server-Stand (auch nach dem Speichern) übernehmen – ohne „entfernt"-Platzhalter.
   useEffect(() => {
     setLocalItems(items.filter((i) => !i.removed));
@@ -147,7 +184,7 @@ export function Setlist({
     setErr(null);
     actions.reorder(next.map((i) => i.id)).catch((e: unknown) => {
       setLocalItems(items); // zurückrollen
-      setErr(e instanceof Error ? e.message : 'Reihenfolge konnte nicht gespeichert werden.');
+      fehlerZeigen(e, 'Reihenfolge konnte nicht gespeichert werden.');
     });
   }
 
@@ -161,6 +198,9 @@ export function Setlist({
     // Fehler wird vom Aktionsmenü angezeigt – hier nur lokal zurückrollen und weiterwerfen.
     return actions.update(itemId, fields).catch((e: unknown) => {
       setLocalItems(items.filter((i) => !i.removed));
+      if (e instanceof ApiError && e.status === 423) {
+        void qc.invalidateQueries({ queryKey: ['services'] });
+      }
       throw e;
     });
   }
@@ -173,7 +213,7 @@ export function Setlist({
     setLocalItems((prev) => prev.filter((i) => i.id !== target.id)); // optimistisch
     actions.remove(target.id).catch((e: unknown) => {
       setLocalItems(items); // zurückrollen
-      setErr(e instanceof Error ? e.message : 'Punkt konnte nicht gelöscht werden.');
+      fehlerZeigen(e, 'Punkt konnte nicht gelöscht werden.');
     });
   }
 
@@ -248,6 +288,15 @@ export function Setlist({
             <Icon name="share" size={20} stroke={2.2} />
           </RundKnopf>
         )}
+        {canEdit && editMode && !abgeschlossen && (
+          <RundKnopf
+            onClick={() => setAbschliessenFrage(true)}
+            title="Ablauf abschließen"
+            dataTour="edit-lock"
+          >
+            <Icon name="lock" size={19} stroke={2.2} />
+          </RundKnopf>
+        )}
         {canEdit && (
           <RundKnopf
             onClick={() => {
@@ -275,6 +324,19 @@ export function Setlist({
         />
       )}
 
+      {abschliessenFrage && (
+        <ConfirmDialog
+          title="Ablauf abschließen?"
+          message="Danach kann niemand den Ablauf mehr ändern – weder hier noch in ChurchTools –, bis ihn jemand wieder öffnet. Teilen sich mehrere Termine diesen Ablauf, gilt es für alle."
+          confirmLabel="Abschließen"
+          onConfirm={() => {
+            setAbschliessenFrage(false);
+            abschlussSetzen(true);
+          }}
+          onCancel={() => setAbschliessenFrage(false)}
+        />
+      )}
+
       {pendingDelete && (
         <ConfirmDialog
           title="Eintrag löschen?"
@@ -287,7 +349,7 @@ export function Setlist({
 
       {/* Das Plus schwebt im Bearbeiten-Modus über dem Ablauf (Alwin, 05.10.2026) – vorher stand
           „Eintrag hinzufügen" am Listenende. Auch bei einem leeren Ablauf, der sonst nicht zu füllen war. */}
-      {editMode && !isLoading && !isError && !neuOffen && (
+      {editMode && !abgeschlossen && !isLoading && !isError && !neuOffen && (
         <SchwebePlus
           label="Eintrag hinzufügen"
           dataTour="edit-add"
@@ -361,6 +423,30 @@ export function Setlist({
         <CenterMessage icon="⚠️" text="Ablauf konnte nicht geladen werden." onRetry={onRetry} />
       ) : items.length === 0 ? (
         <CenterMessage icon="📋" text="Dieser Ablauf enthält noch keine Punkte." />
+      ) : editMode && abgeschlossen ? (
+        <>
+          <div className={styles.abgeschlossen} role="status">
+            <Icon name="lock" size={16} stroke={2.2} className={styles.abgeschlossenIcon} />
+            <div>
+              {ABLAUF_ABGESCHLOSSEN}
+              <button
+                className={styles.oeffnenKnopf}
+                onClick={() => abschlussSetzen(false)}
+                disabled={abschluss.isPending}
+              >
+                <Icon name="lock-open" size={15} stroke={2.2} />
+                {abschluss.isPending ? 'Öffne…' : 'Ablauf öffnen'}
+              </button>
+            </div>
+          </div>
+          {err && <div className={styles.editError}>{err}</div>}
+          <AgendaFullView
+            items={items}
+            eventId={service.id}
+            beginn={service.time}
+            onSelect={onSelect}
+          />
+        </>
       ) : editMode ? (
         <>
           <div className={styles.editHint}>

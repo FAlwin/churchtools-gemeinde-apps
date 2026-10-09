@@ -1,4 +1,4 @@
-@use '../styles/mixins' as m;
+@use '@ui/design/mixins' as m;
 
 // Das eine Suchfeld (#378): Lupe innen. Gilt überall, weil das Feld überall dasselbe ist – seit dem
 // 05.10.2026 im Aussehen aller Eingabefelder (`m.eingabefeld`): Vorher `--surface3`, und das ist im

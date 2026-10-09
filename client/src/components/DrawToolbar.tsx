@@ -7,7 +7,7 @@ import {
 } from '../utils/devicePrefs';
 import type { DrawTool } from '../types/index';
 import type { TextStyle, TextAlign } from '../hooks/usePageDraw';
-import { Icon } from './icons';
+import { Icon } from '@ui/icons/icons';
 import styles from './DrawToolbar.module.scss';
 
 interface DrawToolbarProps {

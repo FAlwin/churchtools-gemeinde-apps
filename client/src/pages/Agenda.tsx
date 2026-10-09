@@ -3,7 +3,7 @@ import type { Service } from '@shared/types/index';
 import { SeitenGeruest } from '../components/SeitenGeruest';
 import { CenterMessage } from '../components/CenterMessage';
 import { Segment } from '../components/Segment';
-import { Icon } from '../components/icons';
+import { Icon } from '@ui/icons/icons';
 import { Spinner } from '../components/Spinner';
 import { Toast } from '../components/Toast';
 import { useToast } from '../hooks/useToast';

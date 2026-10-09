@@ -2,7 +2,7 @@ import type { NoteRolePerm, SiteConfig, StandardAnsicht } from '@shared/types/in
 import { Sheet } from './Sheet';
 import { speicherFehler } from '../utils/speicherFehler';
 import { Spinner } from './Spinner';
-import { Icon } from './icons';
+import { Icon } from '@ui/icons/icons';
 import { LinksManager } from './LinksManager';
 import { TerminArtenManager } from './TerminArtenManager';
 import { useGroupRoles } from '../hooks/useSiteConfig';

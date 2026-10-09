@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import type { HeadInfoPart } from '../utils/activeSongView';
 import { BpmPulse } from './BpmPulse';
-import { Icon } from './icons';
+import { Icon } from '@ui/icons/icons';
 import { RundKnopf, ZurueckKnopf } from './KnopfReihe';
 import { WerkzeugMenu, type Werkzeug } from './WerkzeugMenu';
 import { VollbildRundKnopf } from './VollbildKnopf';

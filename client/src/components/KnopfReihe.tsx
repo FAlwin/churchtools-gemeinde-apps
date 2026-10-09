@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Icon } from './icons';
+import { Icon } from '@ui/icons/icons';
 import styles from './KnopfReihe.module.scss';
 
 interface RundKnopfProps {

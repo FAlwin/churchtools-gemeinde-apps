@@ -11,7 +11,7 @@
  * Gemeinsam für Liederheft und Einfüge-Dialog – drei Kopien desselben Knopfs wären der Anfang, an dem
  * eine spätere Änderung nur einen Teil trifft.
  */
-import { Icon } from './icons';
+import { Icon } from '@ui/icons/icons';
 import styles from './SucheAngebot.module.scss';
 
 interface SucheAngebotProps {

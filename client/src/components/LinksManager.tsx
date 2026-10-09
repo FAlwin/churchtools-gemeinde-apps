@@ -20,7 +20,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { innerScrollOnly } from '../utils/dndAutoScroll';
 import { Schalter } from './Schalter';
 import { Spinner } from './Spinner';
-import { Icon } from './icons';
+import { Icon } from '@ui/icons/icons';
 import { useUpdateSiteConfig } from '../hooks/useSiteConfig';
 import { neueId } from '../utils/ids';
 import styles from './LinksManager.module.scss';

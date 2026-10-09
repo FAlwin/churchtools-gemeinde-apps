@@ -1,4 +1,4 @@
-@use '../styles/mixins' as m;
+@use '@ui/design/mixins' as m;
 // Zentriertes „Punkt bearbeiten"-Modal (wie der ChurchTools-Dialog), kein Drawer.
 .overlay {
   // `fixed` (nicht `absolute`): sonst scrollt der Dialog mit dem Dokument mit, wenn iOS beim

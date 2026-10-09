@@ -44,6 +44,11 @@ Code-Check vom 09.10.2026 abgearbeitet (#455–#466).
 
 ### Intern
 
+- **Design und Icons liegen jetzt in `ui/`** (#469, Dienstplaner E1 Teil 1): Tokens und Mixins
+  (`ui/design/`) und die Line-Icons (`ui/icons/icons.tsx`) sind aus `client/src` umgezogen, damit
+  Musik-App und Dienstplaner dieselbe Quelle nutzen. Neuer Alias `@ui` (Vite, Vitest, tsconfig),
+  `ui/` wird mit gelintet und im Build typgeprüft. Gebaute PWA und Erweiterung sind inhaltlich
+  gleich wie vorher (CSS und JS verglichen).
 - **Regel-Dopplungen zusammengeführt** (#463): ein Baustein für „Versprechen merken, bei Fehlschlag
   vergessen" (statt fünf Kopien, eine davon ohne Schutz gegen das Löschen eines neueren Eintrags), die
   whoami-Regel für Server und Erweiterung (zwei Stellen nahmen eine ID als Text nicht an), eine Adresse

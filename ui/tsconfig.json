@@ -1,0 +1,15 @@
+{
+  "extends": "../tsconfig.base.json",
+  // Gemeinsame Oberflächen-Bausteine beider Apps (Musik-App in client/, später der Dienstplaner).
+  // Gebaut und geprüft werden sie dort, wo sie eingebunden sind (Vite-Alias `@ui`); dieses tsconfig
+  // braucht der Lint, damit er die Dateien einem Projekt zuordnen kann. Einstellungen wie client/.
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true
+  },
+  // Sammel-Muster statt Ordnerliste – dieselbe Lehre wie in shared/tsconfig.json.
+  "include": ["**/*.ts", "**/*.tsx"]
+}

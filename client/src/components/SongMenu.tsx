@@ -10,7 +10,7 @@
  */
 import type { SetlistSong, ChordProSection, SongArrangementOption } from '@shared/types/index';
 import type { SongSettings } from '../utils/chartSettings';
-import { Icon } from '../components/icons';
+import { Icon } from '@ui/icons/icons';
 import { hasStoredNotesForLevel as hasOwnNotes } from '../utils/annotationKeys';
 import styles from '../pages/ChordChart.module.scss';
 

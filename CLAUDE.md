@@ -177,7 +177,7 @@ churchtools-gemeinde-apps/
 │       ├── services/        # API-Kommunikation (alle fetch-Aufrufe + TanStack Query)
 │       ├── utils/           # reine Hilfsfunktionen: chordpro.ts, transpose.ts
 │       ├── types/           # client-spezifische Typen
-│       ├── styles/          # _variables.scss, _mixins.scss, main.scss
+│       ├── styles/          # main.scss (Tokens + Mixins liegen in ui/design/)
 │       └── assets/          # Bilder, Icons, Fonts
 ├── server/                  # Express-Proxy zu ChurchTools
 │   └── src/
@@ -187,7 +187,10 @@ churchtools-gemeinde-apps/
 │       ├── middleware/      # errorHandler, Auth, Rate-Limit
 │       ├── types/           # server-spezifische Typen
 │       └── utils/           # Hilfsfunktionen (u. a. isoTag.ts = die eine Datums-Formatierung)
-└── shared/types/            # geteilte Typen (Service, SetlistSong, Setlist, …)
+├── shared/types/            # geteilte Typen (Service, SetlistSong, Setlist, …)
+└── ui/                      # gemeinsame Oberflächen-Bausteine beider Apps (Alias @ui, Dienstplaner E1)
+    ├── design/              # _variables.scss (Tokens), _mixins.scss
+    └── icons/               # icons.tsx (Line-Icons)
 ```
 
 ## Konventionen
@@ -226,7 +229,7 @@ churchtools-gemeinde-apps/
 - Hooks: camelCase mit use-Prefix (`useSetlist.ts`)
 - Services: camelCase (`churchtoolsApi.ts`)
 - Styles: `Component.module.scss` – eine Datei pro Komponente
-- Globale Variablen nur aus `src/styles/_variables.scss`. **Einzige Ausnahme: `--sat`** – die
+- Globale Variablen nur aus `ui/design/_variables.scss`. **Einzige Ausnahme: `--sat`** – die
   iOS-Safe-Area oben wird in `main.tsx` gemessen (siehe unten), kommt also aus JS, nicht aus SCSS.
 - **Abstand nach oben immer `max(20px, var(--sat, env(safe-area-inset-top, 0px)))`, NIE `env()` direkt**
   (#187): iOS setzt `env(safe-area-inset-top)` beim Schließen eines Modals kurz auf 0 → mit `env()`
@@ -326,7 +329,7 @@ Das frühere White-Label (Farb-/Logo-Anpassung pro Gemeinde) wurde **zurückgeba
 (helle gruppierte Listen auf Grau, **blaue** Primärfarbe `#2563EB` – seit #393 der Look der ChurchTools-**App**,
 nicht mehr des Web-Clients: hellblaue Datumskacheln, 12-px-Karten mit feinem Rand, Gruppen-Überschriften in
 normaler Schreibung; System-Font, untere Tab-Bar,
-Light/Dark). Alle Design-Tokens in `styles/_variables.scss` (Single Source); `applyBranding.ts` setzt
+Light/Dark). Alle Design-Tokens in `ui/design/_variables.scss` (Single Source); `applyBranding.ts` setzt
 **keine** Laufzeit-Farben mehr. Logo-Assets in `client/public/` (`logo-rund-hell/-dunkel.png`,
 `icon-192/512.png`, `favicon.svg`); PWA-Manifest ist **statisch** (`public/manifest.webmanifest`).
 
@@ -348,7 +351,7 @@ direkt unter dem Band schweben und beim Scrollen stehen bleiben – Vorbild sind
 Einstellungen, Alwins Wahl „ohne kleinen Titel". **Am Gerät widerlegt (02.10.2026):** Eine deckende
 Statusleiste (`status-bar-style=default`) beseitigt das Band NICHT – nicht noch einmal versuchen. Die
 Abstände kommen aus `--inhalt-pad-top` / `--knopfreihe-hoehe` / `--bar-pad-top`
-(`styles/_variables.scss`), die App zeichnet hinter der Statusleiste (`black-translucent`,
+(`ui/design/_variables.scss`), die App zeichnet hinter der Statusleiste (`black-translucent`,
 `client/index.html`). **Auch der Liedblatt-Kopf (`ChartHeader`) liegt seit dem 02.10.2026 unter dem
 Band:** runder Zurück-Pfeil, Titel als Kapsel, **ein** Werkzeuge-Knopf (`WerkzeugMenu`: Aussehen,
 Tempo, Zoom, Notizen von …, Anmerken – Alwins Wahl „ein Knopf für alles"). Der Knopf zeigt den Modus:
@@ -397,7 +400,7 @@ nutzen das Gerüst – wer `Screen` direkt verwendet, braucht einen Grund (Login
 
 **Design-Regeln (verbindlich):** `docs/entwicklung/design-system.md` – Farben nur über Tokens (es gibt **kein**
 `--orange`/`--teal`/`--chord`; Akzent = Blau, Destruktiv = Rot), System-Font, gemeinsame Bausteine
-(SCSS-Mixins `styles/_mixins.scss`, `<Segment>`, `Icon`/Line-Icons statt Emojis).
+(SCSS-Mixins `ui/design/_mixins.scss`, `<Segment>`, `Icon`/Line-Icons statt Emojis).
 
 ## Akkord-Ansicht: durchgehender Seiten-Strom + Anmerkungen
 

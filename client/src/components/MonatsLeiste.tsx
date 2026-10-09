@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Icon } from './icons';
+import { Icon } from '@ui/icons/icons';
 import { monatKurz, monatNurKurz, monatVon, monateAb } from '../utils/monate';
 import styles from './MonatsLeiste.module.scss';
 

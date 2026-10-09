@@ -9,7 +9,7 @@
 import type { Sharer } from '../services/teamNotes';
 import { beschreibeEbene } from '../utils/annotationLevelLabel';
 import { Sheet } from './Sheet';
-import { Icon } from './icons';
+import { Icon } from '@ui/icons/icons';
 import styles from '../pages/ChordChart.module.scss';
 
 /** Das Minimum einer Anmerkungs-Ebene, das der Wähler braucht (Rest siehe `annotationKeys`). */

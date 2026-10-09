@@ -52,6 +52,9 @@ export default defineConfig(({ mode }) => {
       alias: [
         // geteilte Typen: @shared/... -> ../shared/...
         { find: '@shared', replacement: fileURLToPath(new URL('../shared', import.meta.url)) },
+        // gemeinsame Oberflächen-Bausteine beider Apps (Design, Icons …): @ui/... -> ../ui/...
+        // Dieselben Aliase stehen in vitest.config.ts und tsconfig.json – alle drei gleich halten.
+        { find: '@ui', replacement: fileURLToPath(new URL('../ui', import.meta.url)) },
         ...(istExtension
           ? [
               // Extension: kein Service Worker (Plan §6) – der Update-Hook bekommt einen Ersatz.

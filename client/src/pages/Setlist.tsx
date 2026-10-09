@@ -25,7 +25,7 @@ import { AgendaFullView } from '../components/AgendaFullView';
 import { SortableRow } from '../components/AgendaSortableRow';
 import { BeginnLinie } from '../components/AgendaRowParts';
 import { ItemActionSheet } from '../components/ItemActionSheet';
-import { Icon } from '../components/icons';
+import { Icon } from '@ui/icons/icons';
 import { itemLabel } from '../utils/agendaItemTitle';
 import type { NeuerAgendaPunkt } from '../utils/agendaItemChanges';
 import { beginnStelle, vorlaufNachUmsortieren } from '../utils/vorlauf';

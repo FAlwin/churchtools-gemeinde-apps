@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { SITE_CONFIG_GRENZEN, type SiteConfig, type TerminArt } from '@shared/types/index';
 import { Spinner } from './Spinner';
-import { Icon } from './icons';
+import { Icon } from '@ui/icons/icons';
 import { useUpdateSiteConfig } from '../hooks/useSiteConfig';
 import { neueId } from '../utils/ids';
 import { speicherFehler } from '../utils/speicherFehler';

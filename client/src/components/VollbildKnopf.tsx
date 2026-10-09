@@ -1,5 +1,5 @@
 import { RundKnopf } from './KnopfReihe';
-import { Icon } from './icons';
+import { Icon } from '@ui/icons/icons';
 import { useAppVollbild } from '../hooks/useAppVollbild';
 import { funktionen } from '../services/funktionen';
 

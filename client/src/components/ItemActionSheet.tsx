@@ -13,7 +13,7 @@ import { SongPicker } from './SongPicker';
 import { NewSongSheet } from './NewSongSheet';
 import { useCapabilities } from '../hooks/useServices';
 import { ResponsibleField } from './ResponsibleField';
-import { Icon } from './icons';
+import { Icon } from '@ui/icons/icons';
 import { useOverlayKeyboardInset } from '../hooks/useOverlayKeyboardInset';
 import { Schalter } from './Schalter';
 import { Segment } from './Segment';

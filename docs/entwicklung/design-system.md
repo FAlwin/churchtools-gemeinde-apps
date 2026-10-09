@@ -12,7 +12,7 @@ Die Werte wurden von Screenshots der App abgelesen (Entscheidung Alwin anhand de
 
 ## Farben – nur über Tokens
 
-Einzige Quelle: `client/src/styles/_variables.scss` (Light = `:root`, Dark = `html[data-theme='dark']`).
+Einzige Quelle: `ui/design/_variables.scss` (Light = `:root`, Dark = `html[data-theme='dark']`).
 **Einzige Ausnahme: `--sat`** (Safe-Area oben) wird in JS gemessen – siehe Tabelle unten und die Regel
 am Ende dieses Dokuments.
 **Keine rohen Hex-/rgba-Werte in Komponenten** (Ausnahmen: reine Schatten, Overlays, `#fff` auf farbigen Flächen).
@@ -52,15 +52,15 @@ nutzt bewusst Monospace (`'JetBrains Mono', monospace`) für die Roh-Bearbeitung
 
 ## Wiederverwendbare Bausteine
 
-- **SCSS-Mixins** (`client/src/styles/_mixins.scss`): `card-list` (Rand + `--r-card`), `group-header`, `list-row`,
+- **SCSS-Mixins** (`ui/design/_mixins.scss`): `card-list` (Rand + `--r-card`), `group-header`, `list-row`,
   `key-pill`, `neues-lied-aktion` (die ruhige Textaktion „Neues Lied" – im Liederheft **und** in der
   Liedsuche des Ablaufs, deshalb geteilt), **`eingabefeld`** (05.10.2026: das EINE Aussehen aller
   Eingabefelder – weiß, feiner Rand, Fokus blau; `$innen: true` für einen Rahmen um Lupe + Eingabe.
   Vorher neun Kopien mit 1 bzw. 1,5 px Rand, und Suchfeld/Von–Bis trugen `--surface3`, waren auf der
   Seite also unsichtbar). In Modulen:
-  `@use '../styles/mixins' as m;` → `@include m.card-list;`.
+  `@use '@ui/design/mixins' as m;` → `@include m.card-list;`.
 - **Komponenten:** `Segment` (Auswahl 2–3 Optionen), `NoteTile` (Noten-Kachel),
-  `Icon` (`components/icons.tsx`, Line-Icons – keine Emojis in der UI), **`SeitenGeruest`** (das
+  `Icon` (`ui/icons/icons.tsx`, Line-Icons – keine Emojis in der UI), **`SeitenGeruest`** (das
   Gerüst JEDES Bildschirms: Überschrift, runde Knöpfe, Scrollen, Neuladen – seit 22.09.2026 der
   Normalweg, `Screen`/`Scroll`/`GrosseUeberschrift`/`KnopfReihe` sind seine Bausteine; `RundKnopf`
   für Aktionen in Detailansichten), `TabBar`,
@@ -102,7 +102,7 @@ ihn senken (im Querformat gibt es oben oft keine Safe Area). Der `20px`-Boden f�
 Safari-Tab-Fall ab (`env()` ist dort immer `0`), `env()` bleibt Fallback, solange `--sat` noch nicht
 gemessen wurde → keine Regression auf Geräten ohne Safe Area.
 
-Betroffene Module: `styles/_variables.scss` (`--bar-pad-top`), `components/AblaufChangedBanner.module.scss`,
+Betroffene Module: `ui/design/_variables.scss` (`--bar-pad-top`), `components/AblaufChangedBanner.module.scss`,
 `components/ChordEditor.module.scss`, `pages/ChordChart.module.scss` (Header + beide Dropdowns).
 
 ## Dialoge über der Tastatur (Safe Area unten) – verbindlich

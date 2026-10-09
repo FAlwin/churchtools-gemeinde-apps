@@ -1,4 +1,4 @@
-@use '../styles/mixins' as m;
+@use '@ui/design/mixins' as m;
 // Die Stammdaten-Felder eines Liedes (#322) – von „Neues Lied" UND „Stammdaten ändern" genutzt.
 // Sie folgten bewusst dem früheren „Eintrag hinzufügen"-Dialog (seit 05.10.2026 legt `ItemActionSheet`
 // auch neue Punkte an): Ein zweites Aussehen für

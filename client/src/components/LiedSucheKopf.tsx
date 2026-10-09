@@ -13,7 +13,7 @@
  * Was hier **nicht** liegt: die Trefferlisten. Die Bibliothek zeigt in jeder Ansicht etwas anderes (im
  * Liederheft mit „+"- und Stift-Knopf, in der Auswahl ohne), deshalb rendert sie der Aufrufer.
  */
-import { Icon } from './icons';
+import { Icon } from '@ui/icons/icons';
 import styles from './LiedSucheKopf.module.scss';
 
 interface LiedSucheKopfProps {

@@ -8,7 +8,7 @@ import { LiedtextTrefferListe } from './LiedtextTrefferListe';
 import { SongSelectTrefferListe } from './SongSelectTrefferListe';
 import { LiedVorschau } from './LiedVorschau';
 import { LiedZeile } from './LiedZeile';
-import { Icon } from './icons';
+import { Icon } from '@ui/icons/icons';
 import { chordproZuTeile } from '../utils/liedtextTeile';
 import { useSongFilter } from '../hooks/useSongFilter';
 import { useLiedSuche } from '../hooks/useLiedSuche';

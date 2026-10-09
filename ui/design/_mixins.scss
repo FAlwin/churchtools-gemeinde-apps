@@ -1,5 +1,5 @@
 // Wiederverwendbare Layout-Bausteine (ChurchTools-Listen).
-// In Komponenten: `@use '../styles/mixins' as m;` und z. B. `@include m.card-list;`.
+// In Komponenten: `@use '@ui/design/mixins' as m;` und z. B. `@include m.card-list;`.
 
 // Weiße Listen-Karte: 12 px Rundung, feiner Rand, kaum Schatten (ChurchTools-App, #393).
 @mixin card-list {

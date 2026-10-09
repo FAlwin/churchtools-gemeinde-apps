@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { Service, SongArrangementOption, SongLibraryEntry } from '@shared/types/index';
 import { Sheet } from './Sheet';
 import { CenterMessage } from './CenterMessage';
-import { Icon } from './icons';
+import { Icon } from '@ui/icons/icons';
 import { useSongArrangements, useAddSongToService } from '../hooks/useServices';
 import { heuteIso } from '../utils/heute';
 import styles from './AddToAgendaSheet.module.scss';

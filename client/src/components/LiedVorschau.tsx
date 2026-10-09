@@ -15,7 +15,7 @@
  * Text mit; er ist eine Lizenzbedingung, keine Zierde.
  */
 import type { LiedtextTeil } from '@shared/types/index';
-import { Icon } from './icons';
+import { Icon } from '@ui/icons/icons';
 import styles from './LiedVorschau.module.scss';
 
 interface LiedVorschauProps {

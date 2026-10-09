@@ -25,6 +25,7 @@ import {
   normalizeAnnoKey as normalizeKey,
 } from '@shared/keys/index';
 import type { AnnotationText, GespeicherterZoom, PageAnnotation } from '@shared/types/index';
+import { lokalSchreiben } from '../utils/lokalSpeicher';
 
 // Namensräume und Grammatik aus @shared/keys – EINZIGE Quelle für Client und Server (#250).
 const DRAW = ANNO_DRAW_NS;
@@ -115,12 +116,12 @@ export async function pullAnnotations(songIds: number[]): Promise<void> {
       // Seiten mit noch nicht hochgeladener ODER gerade hochladender lokaler Änderung NICHT
       // überschreiben (sonst gehen frische Anmerkungen/Zooms an den alten Server-Stand verloren).
       if (pendingFields.has(key) || inflight.has(key) || stillPending.has(key)) continue;
-      if (a.strokes) localStorage.setItem(DRAW + key, a.strokes);
+      // `lokalSchreiben` wirft nie (#457): Ein voller Gerätespeicher bräche sonst den ganzen Abgleich ab.
+      if (a.strokes) lokalSchreiben(DRAW + key, a.strokes);
       else localStorage.removeItem(DRAW + key);
-      if (a.texts && a.texts.length)
-        localStorage.setItem(DRAW + key + '_text', JSON.stringify(a.texts));
+      if (a.texts && a.texts.length) lokalSchreiben(DRAW + key + '_text', JSON.stringify(a.texts));
       else localStorage.removeItem(DRAW + key + '_text');
-      if (a.zoom) localStorage.setItem(ZOOM + key, JSON.stringify(a.zoom));
+      if (a.zoom) lokalSchreiben(ZOOM + key, JSON.stringify(a.zoom));
       else localStorage.removeItem(ZOOM + key);
     }
   } catch (e) {
@@ -193,14 +194,6 @@ const inflight = new Set<string>();
 let syncErrorHandler: ((msg: string) => void) | null = null;
 export function setAnnotationsSyncErrorHandler(fn: ((msg: string) => void) | null): void {
   syncErrorHandler = fn;
-}
-
-/**
- * Ein Problem mit den Anmerkungen melden – nutzt denselben Kanal wie die Sync-Fehler (#251).
- * Gedacht für Fälle, die außerhalb dieses Moduls auffallen, z. B. ein voller Gerätespeicher.
- */
-export function reportAnnotationProblem(msg: string): void {
-  syncErrorHandler?.(msg);
 }
 
 /**
@@ -353,5 +346,5 @@ export async function migrateLocalAnnotations(): Promise<void> {
       retryLater = true; // Netz-/Serverfehler → nächster Start versucht es erneut
     }
   }
-  if (!retryLater) localStorage.setItem(MIGRATED_FLAG, '1');
+  if (!retryLater) lokalSchreiben(MIGRATED_FLAG, '1');
 }

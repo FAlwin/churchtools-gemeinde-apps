@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { lokalSchreiben } from '../utils/lokalSpeicher';
 
 /**
  * Wie useState, persistiert den Wert aber in localStorage.
@@ -21,11 +22,7 @@ export function useLocalStorage<T>(
     (value: T | ((prev: T) => T)) => {
       setStored((prev) => {
         const next = value instanceof Function ? value(prev) : value;
-        try {
-          localStorage.setItem(key, JSON.stringify(next));
-        } catch {
-          // Speicher voll / nicht verfügbar – Wert bleibt zumindest im State
-        }
+        lokalSchreiben(key, JSON.stringify(next)); // voll → Wert bleibt zumindest im State
         return next;
       });
     },

@@ -15,6 +15,7 @@
  * daraus ein Rumpf wird, weiß nur der jeweilige Dienst (bei den Anmerkungen ein Objekt aus mehreren
  * Einträgen, bei den Einstellungen der Wert selbst bzw. `null` fürs Entfernen).
  */
+import { lokalSchreiben } from '../utils/lokalSpeicher';
 export interface PendingKeys {
   /** Alle Schlüssel, deren Upload noch aussteht. */
   read(): Set<string>;
@@ -40,13 +41,9 @@ export function createPendingKeys(storageKey: string): PendingKeys {
   }
 
   function write(keys: Set<string>): void {
-    try {
-      if (keys.size === 0) localStorage.removeItem(storageKey);
-      else localStorage.setItem(storageKey, JSON.stringify([...keys]));
-    } catch {
-      // Voller Gerätespeicher: dann bleibt es beim Verhalten von vorher (Merker nur im Speicher).
-      // Kein Grund, deshalb den Upload selbst zu verhindern.
-    }
+    // Voller Gerätespeicher: dann bleibt es beim Verhalten von vorher (Merker nur im Speicher).
+    // Kein Grund, deshalb den Upload selbst zu verhindern – `lokalSchreiben` wirft nie.
+    lokalSchreiben(storageKey, keys.size === 0 ? null : JSON.stringify([...keys]));
   }
 
   return {

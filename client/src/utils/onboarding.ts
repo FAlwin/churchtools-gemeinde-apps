@@ -1,4 +1,5 @@
 import type { CoachStep } from '../components/Coachmarks';
+import { lokalSchreiben } from './lokalSpeicher';
 
 /**
  * Merker + Schrittdefinitionen der geführten Einführung (#Onboarding). Der „gesehen"-Zustand liegt
@@ -115,11 +116,7 @@ export function isTourDone(key: string): boolean {
 }
 
 export function markTourDone(key: string): void {
-  try {
-    localStorage.setItem(PREFIX + key, '1');
-  } catch {
-    /* Speicher voll/gesperrt – dann eben erneut zeigen */
-  }
+  lokalSchreiben(PREFIX + key, '1'); // voll → dann eben erneut zeigen
 }
 
 /** Alle Touren zurücksetzen → erscheinen wieder („Einführung nochmal ansehen"). */

@@ -10,6 +10,7 @@ import { getReachable } from './reachability';
 import { SETTINGS_KEY_RE } from '@shared/keys/index';
 import { createPendingKeys } from './pendingKeys';
 import { onAppHidden } from './appHidden';
+import { lokalSchreiben } from '../utils/lokalSpeicher';
 
 // Grammatik aus @shared/keys (#250) – Client und Server teilen sie jetzt wirklich.
 const MIGRATED_FLAG = 'worship_settings_migrated_v1';
@@ -73,7 +74,7 @@ export async function pullSettings(songIds: number[]): Promise<void> {
     const stillPending = pendingStore.read();
     for (const [k, v] of Object.entries(data)) {
       if (pending.has(k) || inflight.has(k) || stillPending.has(k)) continue;
-      if (SETTINGS_KEY_RE.test(k)) localStorage.setItem(k, v);
+      if (SETTINGS_KEY_RE.test(k)) lokalSchreiben(k, v); // wirft nie (#457)
     }
   } catch (e) {
     if (e instanceof KeinSpeicherRecht) keinRecht(e);
@@ -195,12 +196,12 @@ export async function migrateLocalSettings(): Promise<void> {
     }
   }
   if (Object.keys(body).length === 0) {
-    localStorage.setItem(MIGRATED_FLAG, '1');
+    lokalSchreiben(MIGRATED_FLAG, '1');
     return;
   }
   try {
     await weg.schreiben(body);
-    localStorage.setItem(MIGRATED_FLAG, '1');
+    lokalSchreiben(MIGRATED_FLAG, '1');
   } catch (e) {
     if (e instanceof KeinSpeicherRecht) keinRecht(e);
     else if (e instanceof ApiError && e.status === 401) disabled = true;

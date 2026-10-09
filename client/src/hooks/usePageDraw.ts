@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { pushField, reportAnnotationProblem } from '../services/annotations';
+import { pushField } from '../services/annotations';
+import { lokalSchreiben } from '../utils/lokalSpeicher';
 
 /** Signatur der Sync-Push-Funktion (privat: pushField, global: pushSharedField). */
 type PushFn = (lsKey: string, field: 'strokes' | 'texts', value: unknown) => void;
@@ -54,9 +55,6 @@ type LayerRef = React.MutableRefObject<HTMLDivElement | null>;
  * pro Seite in localStorage. Die Striche selbst zeichnet der Viewer auf die Canvas; dieser Hook
  * verwaltet Verlauf, Text und Persistenz.
  */
-// Einmal pro Sitzung genügt der Hinweis auf einen vollen Gerätespeicher (#251).
-let storageWarned = false;
-
 export function usePageDraw(
   storageKey: string | null,
   strokesRef: CanvasRef,
@@ -145,8 +143,8 @@ export function usePageDraw(
   // Texte speichern (localStorage-Cache immer; Server-Push nur bei echter Änderung)
   useEffect(() => {
     if (!textKey || !drawKey) return;
-    if (texts.length) localStorage.setItem(textKey, JSON.stringify(texts));
-    else localStorage.removeItem(textKey);
+    // Ein voller Gerätespeicher darf das Hochladen nicht verhindern (#457) – `lokalSchreiben` wirft nie.
+    lokalSchreiben(textKey, texts.length ? JSON.stringify(texts) : null);
     const norm = JSON.stringify(texts);
     if (norm !== loadedJson.current) {
       pushRef.current(drawKey, 'texts', texts);
@@ -164,19 +162,9 @@ export function usePageDraw(
     const c = strokesRef.current;
     if (!c || !c.width) return;
     const data = c.toDataURL('image/png', 0.7);
-    try {
-      localStorage.setItem(drawKey, data);
-    } catch {
-      // Gerätespeicher voll (#251). Die Anmerkung ist NICHT verloren – sie geht unten trotzdem zum
-      // Konto und kommt beim nächsten Abgleich zurück. Aber der Offline-Vorrat funktioniert nicht
-      // mehr, und das muss der Nutzer wissen. EINMAL pro Sitzung melden, nicht bei jedem Strich.
-      if (!storageWarned) {
-        storageWarned = true;
-        reportAnnotationProblem(
-          'Der Speicher dieses Geräts ist voll. Anmerkungen werden weiter auf dein Konto gesichert, stehen aber offline nicht bereit.',
-        );
-      }
-    }
+    // Gerätespeicher voll (#251): Die Anmerkung ist NICHT verloren – sie geht unten trotzdem zum
+    // Konto. `lokalSchreiben` meldet den vollen Speicher einmal je Sitzung.
+    lokalSchreiben(drawKey, data);
     pushRef.current(drawKey, 'strokes', data);
   }
   function applySnapshot(s: Snapshot) {

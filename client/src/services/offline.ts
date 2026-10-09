@@ -2,6 +2,7 @@ import type { AgendaItem } from '@shared/types/index';
 import { saveOfflineNow } from '../queryClient';
 import { heuteIso } from '../utils/heute';
 import { istExtension, ohneServer } from './ctRuntime';
+import { lokalSchreiben } from '../utils/lokalSpeicher';
 
 /** Führt `fn` über alle Einträge aus, aber höchstens `limit` gleichzeitig (schont Gerät/Netz). */
 async function mapLimit<T>(
@@ -41,11 +42,7 @@ export function getOfflineRegistry(): Record<number, OfflineRegEntry> {
 }
 
 function writeRegistry(reg: Record<number, OfflineRegEntry>): void {
-  try {
-    localStorage.setItem(REG_KEY, JSON.stringify(reg));
-  } catch {
-    /* Speicher nicht verfügbar */
-  }
+  lokalSchreiben(REG_KEY, JSON.stringify(reg));
   window.dispatchEvent(new Event(OFFLINE_REG_EVENT));
 }
 

@@ -18,6 +18,7 @@
  *
  * Rein und ohne Speicherzugriff – die Anwendung steht in `arrangementMigrationAnwenden`.
  */
+import { lokalSchreiben } from './lokalSpeicher';
 
 /** Ein Kopiervorgang: derselbe Inhalt unter einem zusätzlichen Schlüssel. */
 export interface Kopie {
@@ -89,7 +90,7 @@ export function arrangementMigrationAnwenden(songId: number, arrangementId: numb
     // Erst prüfen, dann schreiben: Ein zwischenzeitlich entfernter Schlüssel darf keinen leeren
     // Eintrag hinterlassen – der sähe wie „hier wurde bewusst nichts gezeichnet" aus und würde
     // späteres Nachziehen blockieren.
-    if (wert !== null) localStorage.setItem(nach, wert);
+    if (wert !== null) lokalSchreiben(nach, wert);
   }
   return kopien.length;
 }

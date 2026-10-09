@@ -15,6 +15,7 @@ import { type SongSettings, settingsForLevel, DEFAULT_SETTINGS } from '../utils/
 import { mergeStrokes } from '../utils/strokes';
 import { levelsUnderNamespace, levelKeyOf, OWN_DRAW_PREFIX } from '../utils/annotationKeys';
 import { beschreibeEbene } from '../utils/annotationLevelLabel';
+import { lokalSchreiben } from '../utils/lokalSpeicher';
 
 /** Textobjekt einer Anmerkungs-Seite (Form wird beim Import 1:1 übernommen). */
 interface PageTextObjLike {
@@ -187,16 +188,15 @@ export function useTeamNotesImport({
           safeParse<PageTextObjLike[]>(localStorage.getItem(`${VIEW_NS + base}_text`)) ?? [];
         const ownKey = OWN_DRAW_PREFIX + base;
         if (mode === 'replace') {
-          if (theirStrokes) localStorage.setItem(ownKey, theirStrokes);
-          else localStorage.removeItem(ownKey);
+          // `lokalSchreiben` wirft nie – ein voller Gerätespeicher verhindert das Hochladen nicht (#457).
+          lokalSchreiben(ownKey, theirStrokes ?? null);
           pushField(ownKey, 'strokes', theirStrokes ?? null);
-          if (theirTexts.length) localStorage.setItem(`${ownKey}_text`, JSON.stringify(theirTexts));
-          else localStorage.removeItem(`${ownKey}_text`);
+          lokalSchreiben(`${ownKey}_text`, theirTexts.length ? JSON.stringify(theirTexts) : null);
           pushField(ownKey, 'texts', theirTexts);
         } else {
           const merged = await mergeStrokes(localStorage.getItem(ownKey), theirStrokes);
           if (merged) {
-            localStorage.setItem(ownKey, merged);
+            lokalSchreiben(ownKey, merged);
             pushField(ownKey, 'strokes', merged);
           }
           const ownTexts =
@@ -204,7 +204,7 @@ export function useTeamNotesImport({
           const withNewIds = theirTexts.map((t, i) => ({ ...t, id: Date.now() + i }));
           const mergedTexts = [...ownTexts, ...withNewIds];
           if (mergedTexts.length) {
-            localStorage.setItem(`${ownKey}_text`, JSON.stringify(mergedTexts));
+            lokalSchreiben(`${ownKey}_text`, JSON.stringify(mergedTexts));
             pushField(ownKey, 'texts', mergedTexts);
           }
         }

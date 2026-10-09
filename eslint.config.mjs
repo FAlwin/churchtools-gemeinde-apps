@@ -50,11 +50,11 @@ export default tseslint.config(
     languageOptions: {
       parserOptions: {
         projectService: {
-          // Dateien, die zu keinem tsconfig gehören (Konfigurationen im Wurzelverzeichnis und die
-          // E2E-Tests), bekommen ein Standard-Projekt – sonst bricht die Typinformation ab und die
-          // Datei wäre gar nicht prüfbar.
-          //  hat sein eigenes tsconfig – hier stehen nur die Tooling-Dateien, für die es
-          // keins gibt. Deren typbewusste Prüfung ist unten ausdrücklich abgeschaltet, weil die
+          // Dateien, die zu keinem tsconfig gehören (Konfigurationen im Wurzelverzeichnis, Skripte und
+          // der ChurchTools-Stub der E2E-Tests), bekommen ein Standard-Projekt – sonst bricht die
+          // Typinformation ab und die Datei wäre gar nicht prüfbar.
+          // Die E2E-Tests selbst (e2e/*.ts) haben ihr eigenes tsconfig – hier stehen nur die
+          // Tooling-Dateien, für die es keins gibt. Deren typbewusste Prüfung ist unten ausdrücklich abgeschaltet, weil die
           // Typen im Standardprojekt nur halb auflösen und die Meldungen dann Artefakte sind.
           allowDefaultProject: [
             '*.ts',
@@ -149,8 +149,8 @@ export default tseslint.config(
   /**
    * Tooling-Dateien (Build-/Testkonfiguration, der ChurchTools-Stub in reinem JS): OHNE typbewusste
    * Regeln. Sie gehören zu keinem tsconfig; im Standardprojekt lösen die Typen nur halb auf, und die
-   * -Meldungen daraus sind Artefakte der fehlenden Typinformation, keine echten Funde.
-   * Syntax, ungenutzte Variablen und  werden weiter geprüft.
+   * no-unsafe-Meldungen daraus sind Artefakte der fehlenden Typinformation, keine echten Funde.
+   * Syntax, ungenutzte Variablen und undefinierte Namen werden weiter geprüft.
    */
   {
     files: [

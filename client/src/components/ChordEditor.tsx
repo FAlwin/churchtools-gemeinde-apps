@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChordProInput, type ChordProHandle } from './ChordProInput';
 import { PdfPreview } from './PdfPreview';
-import { Icon } from './icons';
+import { Icon } from '@ui/icons/icons';
 import { Spinner } from './Spinner';
 import { useOverlayKeyboardInset } from '../hooks/useOverlayKeyboardInset';
 import styles from './ChordEditor.module.scss';

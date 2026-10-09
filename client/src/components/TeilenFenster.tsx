@@ -6,7 +6,7 @@ import { Spinner } from './Spinner';
 import { useLatestRef } from '../hooks/useLatestRef';
 import { getTeilenMitAnmerkungen, setTeilenMitAnmerkungen } from '../utils/devicePrefs';
 import { downloadPdf, sharePdf } from '../utils/sharePdf';
-import { Icon } from './icons';
+import { Icon } from '@ui/icons/icons';
 import { PdfSeitenVorschau } from './PdfSeitenVorschau';
 import styles from '../pages/Settings.module.scss';
 import eigene from './TeilenFenster.module.scss';

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { jsPDF } from 'jspdf';
-import { Icon } from './icons';
+import { Icon } from '@ui/icons/icons';
 import { Spinner } from './Spinner';
 import { renderPdfSeite, renderPdfToCanvases } from '../utils/dokumentSeiten';
 import styles from './PdfSeitenVorschau.module.scss';

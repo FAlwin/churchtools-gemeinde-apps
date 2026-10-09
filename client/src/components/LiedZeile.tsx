@@ -16,7 +16,7 @@
  * die Liedtext-Treffer, wo ein Tipp direkt ins Lied führt und es nichts einzufügen gibt.
  */
 import type { ReactNode } from 'react';
-import { Icon } from './icons';
+import { Icon } from '@ui/icons/icons';
 import styles from './LiedZeile.module.scss';
 
 interface LiedZeileProps {

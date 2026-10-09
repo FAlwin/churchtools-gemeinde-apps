@@ -1,4 +1,4 @@
-import { Icon } from './icons';
+import { Icon } from '@ui/icons/icons';
 import styles from './NoteTile.module.scss';
 
 interface NoteTileProps {

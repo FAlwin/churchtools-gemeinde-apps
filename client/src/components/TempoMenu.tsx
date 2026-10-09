@@ -7,7 +7,7 @@ import {
   moeglicheZaehlweisen,
   wirksameZaehlweise,
 } from '../utils/metronome';
-import { Icon } from './icons';
+import { Icon } from '@ui/icons/icons';
 import type { KlickModus } from '../hooks/useMetronome';
 import styles from '../pages/ChordChart.module.scss';
 

@@ -1,4 +1,4 @@
-@use '../styles/mixins' as m;
+@use '@ui/design/mixins' as m;
 
 // Abwesenheiten (#177) – Aufbau nach Entwurfsrunde 8 (19.09.2026). Die Klassen ab „Formular im
 // Fenster" nutzen auch `components/AbsenceSheet.tsx` und `components/ZeitraumFrage.tsx`.

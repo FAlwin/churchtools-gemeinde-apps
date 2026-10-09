@@ -1,4 +1,4 @@
-import { Icon, type IconName } from './icons';
+import { Icon, type IconName } from '@ui/icons/icons';
 import { scrolleZumAnfang } from '../hooks/useZumAnfang';
 import styles from './TabBar.module.scss';
 

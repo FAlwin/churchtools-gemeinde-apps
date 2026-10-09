@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { type Service, type SongLibraryEntry } from '@shared/types/index';
 import { SeitenGeruest } from '../components/SeitenGeruest';
 import { CenterMessage } from '../components/CenterMessage';
-import { Icon } from '../components/icons';
+import { Icon } from '@ui/icons/icons';
 import { NoteTile } from '../components/NoteTile';
 import { AddToAgendaSheet } from '../components/AddToAgendaSheet';
 import { NewSongSheet } from '../components/NewSongSheet';

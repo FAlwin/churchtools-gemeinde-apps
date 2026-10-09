@@ -11,7 +11,7 @@ import { useLokaleUmzuege } from '../hooks/useLokaleUmzuege';
 import { useWerkzeugSteuerung } from '../hooks/useWerkzeugSteuerung';
 import { TempoMenu } from '../components/TempoMenu';
 import { ImportPreviewBar, ViewingBanner } from '../components/ChartTeamNotesBars';
-import { Icon } from '../components/icons';
+import { Icon } from '@ui/icons/icons';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ChordEditor } from '../components/ChordEditor';
 import { PageDeck } from '../components/PageDeck';

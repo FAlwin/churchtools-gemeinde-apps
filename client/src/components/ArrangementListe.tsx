@@ -13,7 +13,7 @@
  * nicht als zweite Prüfung, sondern damit niemand auf etwas tippt, das sicher abgelehnt wird.
  */
 import type { ArrangementAnsicht } from '@shared/types/index';
-import { Icon } from './icons';
+import { Icon } from '@ui/icons/icons';
 import { unterzeile } from '../utils/arrangementFormular';
 import styles from './ArrangementListe.module.scss';
 import neu from './NewSongSheet.module.scss';

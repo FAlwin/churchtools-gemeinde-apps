@@ -1,4 +1,4 @@
-@use '../styles/mixins' as m;
+@use '@ui/design/mixins' as m;
 
 .chartScreen {
   background: var(--chart-grund);
@@ -8,7 +8,7 @@
 // Durchsichtig, ohne Leiste: Bis zum 02.10.2026 war das eine weiße Leiste im iOS-Band – milchig, auch
 // die Symbole. Jetzt beginnt der Kopf dort, wo auf den Tabs die Überschrift beginnt
 // (`--inhalt-pad-top`), und ist so hoch wie die Knopfreihe der Setlist (`--knopfreihe-hoehe`). Was
-// unter ihm aufgeht, hängt an `--chart-kopf-unten` (beide in `styles/_variables.scss`).
+// unter ihm aufgeht, hängt an `--chart-kopf-unten` (beide in `ui/design/_variables.scss`).
 .hdr {
   display: flex;
   align-items: flex-start;

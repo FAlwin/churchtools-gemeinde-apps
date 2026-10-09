@@ -1,4 +1,4 @@
-@use '../styles/mixins' as m;
+@use '@ui/design/mixins' as m;
 
 // Die gemeinsame Liedzeile (#378): Zeile = Vorschau/Öffnen, rechts daneben das Plus.
 // Vorher lagen diese Stile doppelt – in `SongPicker.module.scss` (Bibliothek) und

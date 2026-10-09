@@ -90,9 +90,9 @@ export default tseslint.config(
     },
   },
 
-  // ── Client: Browser + React ─────────────────────────────────────────────────
+  // ── Client und gemeinsame Oberflächen-Bausteine (ui/): Browser + React ──────
   {
-    files: ['client/src/**/*.{ts,tsx}'],
+    files: ['client/src/**/*.{ts,tsx}', 'ui/**/*.{ts,tsx}'],
     languageOptions: {
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },

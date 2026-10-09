@@ -203,7 +203,7 @@ genau im Takt des Lieds. Er ist **lautlos**. Die Kopfzeile darf dabei nicht wack
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/BpmPulse.tsx`, `client/src/utils/bpmPulse.ts`, `client/src/components/ChartHeader.tsx`, `client/src/components/TempoMenu.tsx`, `client/src/components/icons.tsx`, `client/src/utils/activeSongView.ts`
+- **Betrifft:** `client/src/components/BpmPulse.tsx`, `client/src/utils/bpmPulse.ts`, `client/src/components/ChartHeader.tsx`, `client/src/components/TempoMenu.tsx`, `ui/icons/icons.tsx`, `client/src/utils/activeSongView.ts`
 - **Automatisiert:** teilweise – `client/src/utils/bpmPulse.test.ts` und
   `client/src/components/BpmPulse.test.tsx` (Taktrate mit selbst gesteuerten Frames, auch über 144
   Schläge hinweg), dazu `client/src/components/TempoMenu.test.tsx`. Von Hand bleibt der Abgleich

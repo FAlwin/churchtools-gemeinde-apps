@@ -7,7 +7,7 @@
 import type { AgendaItem } from '@shared/types/index';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Icon } from './icons';
+import { Icon } from '@ui/icons/icons';
 import { ItemTitle, ResponsibleLine } from './AgendaRowParts';
 import styles from '../pages/Setlist.module.scss';
 

@@ -1,6 +1,6 @@
 .block {
   // Der Abstand oben hält die Überschrift im Ruhezustand unter dem Unschärfe-Band von iOS; er ist
-  // Teil des Inhalts und scrollt mit weg. Wert je Umgebung in `styles/_variables.scss`.
+  // Teil des Inhalts und scrollt mit weg. Wert je Umgebung in `ui/design/_variables.scss`.
   padding: var(--inhalt-pad-top) 16px 10px;
 }
 

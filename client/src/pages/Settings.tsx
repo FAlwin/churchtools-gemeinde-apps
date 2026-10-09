@@ -3,7 +3,7 @@ import type { SiteConfig } from '@shared/types/index';
 import type { Theme, ThemePref } from '../types/index';
 import { SeitenGeruest } from '../components/SeitenGeruest';
 import { Segment } from '../components/Segment';
-import { Icon } from '../components/icons';
+import { Icon } from '@ui/icons/icons';
 import { SupportBox } from '../components/SupportBox';
 import { SchalterZeile } from '../components/SchalterZeile';
 import { InstallierenHinweis } from '../components/InstallierenHinweis';

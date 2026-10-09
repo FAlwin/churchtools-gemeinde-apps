@@ -1,4 +1,4 @@
-import { Icon } from './icons';
+import { Icon } from '@ui/icons/icons';
 import { usePwaInstall } from '../hooks/usePwaInstall';
 import { promptInstall } from '../services/pwaInstall';
 import styles from '../pages/Settings.module.scss';

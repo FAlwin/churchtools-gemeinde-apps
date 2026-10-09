@@ -10,6 +10,7 @@
 import type { HochzuladendeDatei } from '@shared/ct/notenblaetter';
 import { HttpError } from '../middleware/errorHandler.js';
 import {
+  ablaufAbschliessen,
   ablaufUmsortieren,
   punktAendern,
   punktAnlegen,
@@ -257,6 +258,15 @@ export function setAgendaItemVorBeginn(
   vorBeginn: boolean,
 ): Promise<void> {
   return vorBeginnSetzen(schreiberFuer(cookie), eventId, itemId, vorBeginn);
+}
+
+/** Den Ablauf abschließen oder wieder öffnen (09.10.2026) – Regel in `@shared/ct/schreibKern`. */
+export function setAblaufAbgeschlossen(
+  cookie: string,
+  eventId: number,
+  abgeschlossen: boolean,
+): Promise<void> {
+  return ablaufAbschliessen(schreiberFuer(cookie), eventId, abgeschlossen);
 }
 
 /**

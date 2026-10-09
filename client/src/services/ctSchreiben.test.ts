@@ -3,7 +3,15 @@ import { agendaItemWritePayload } from '@shared/ct/agendaPayload';
 import { arrangementWritePayload } from '@shared/ct/arrangementPayload';
 import type { CtAgenda, CtSong } from '@shared/ct/typen';
 import { ApiError } from './api';
-import { punkt, punktNeu, punktWeg, reihenfolge, tempo, vorBeginn } from './ctSchreiben';
+import {
+  abgeschlossen,
+  punkt,
+  punktNeu,
+  punktWeg,
+  reihenfolge,
+  tempo,
+  vorBeginn,
+} from './ctSchreiben';
 import { _bremseLoesen, _vergissCsrf, ChurchToolsBremst, KeinSpeicherRecht } from './ctRuntime';
 import { FakeCt } from './ctFake.testutil';
 
@@ -131,6 +139,43 @@ describe('Punkte', () => {
     ct.schreibAntworten['DELETE /api/events/500/agenda/items/3'] = () =>
       new Response(JSON.stringify({ message: 'Not found' }), { status: 404 });
     await expect(punktWeg(500, 3)).resolves.toEqual({ ok: true });
+  });
+});
+
+describe('Abgeschlossener Ablauf (09.10.2026)', () => {
+  // Gemessen an der Test-Instanz: Im abgeschlossenen Ablauf antwortet ChurchTools mit 403
+  // „error.forbidden.update" – genau wie bei einem fehlenden Recht.
+  const VERBOT = () =>
+    new Response(
+      JSON.stringify({
+        message: 'Forbidden to update agenda[1].',
+        messageKey: 'error.forbidden.update',
+      }),
+      { status: 403 },
+    );
+
+  it('Löschen im abgeschlossenen Ablauf → „abgeschlossen" (423), nicht „Keine Berechtigung"', async () => {
+    ct.liefere('/api/events/500/agenda', { data: { ...AGENDA, isLocked: true } });
+    ct.schreibAntworten['DELETE /api/events/500/agenda/items/3'] = VERBOT;
+    await expect(punktWeg(500, 3)).rejects.toMatchObject({
+      status: 423,
+      message: 'Dieser Ablauf ist in ChurchTools abgeschlossen. Zum Ändern erst wieder öffnen.',
+    });
+  });
+
+  it('offener Ablauf, Verbot → bleibt „Keine Berechtigung"', async () => {
+    ct.schreibAntworten['DELETE /api/events/500/agenda/items/3'] = VERBOT;
+    const e: unknown = await punktWeg(500, 3).catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(KeinSpeicherRecht);
+  });
+
+  it('abschließen und öffnen über lock/unlock', async () => {
+    await abgeschlossen(500, true);
+    await abgeschlossen(500, false);
+    expect(ct.geschrieben.map((g) => g.was)).toEqual([
+      'POST /api/events/500/agenda/lock',
+      'POST /api/events/500/agenda/unlock',
+    ]);
   });
 });
 

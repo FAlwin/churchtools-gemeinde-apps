@@ -17,6 +17,7 @@ import {
   punktLoeschen,
   tempoSetzen,
   vorBeginnSetzen,
+  ablaufAbschliessen,
   type CtSchreiber,
   type NeuerPunkt,
   type PunktAenderung,
@@ -136,6 +137,12 @@ export async function vorBeginn(
   wert: boolean,
 ): Promise<{ ok: boolean }> {
   await vorBeginnSetzen(schreiber, eventId, itemId, wert);
+  return OK;
+}
+
+/** `PUT /api/services/:id/agenda/abgeschlossen` */
+export async function abgeschlossen(eventId: number, wert: boolean): Promise<{ ok: boolean }> {
+  await ablaufAbschliessen(schreiber, eventId, wert);
   return OK;
 }
 

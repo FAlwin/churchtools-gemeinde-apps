@@ -12,6 +12,7 @@ import {
   fuerChurchTools,
   uploadPersonFile,
   deleteFile,
+  setAblaufAbgeschlossen,
 } from './ctWrite.js';
 import * as ctWriteModul from './ctWrite.js';
 import * as lieder from '@shared/ct/liedVerwaltung';
@@ -131,6 +132,7 @@ const SCHREIBER: Array<[string, () => Promise<void>]> = [
     () => uploadPersonFile(COOKIE, 5, 'musikapp_x.png', new Uint8Array([1]), 'image/png'),
   ],
   ['deleteFile', () => deleteFile(COOKIE, 9)],
+  ['setAblaufAbgeschlossen', () => setAblaufAbgeschlossen(COOKIE, 9, true)],
   // Läuft über `arrangementAendern` im Kern – steht trotzdem drin, damit ein späterer Umbau auffällt.
   ['updateArrangementTempo', () => updateArrangementTempo(COOKIE, 7, 70, 96)],
 ];

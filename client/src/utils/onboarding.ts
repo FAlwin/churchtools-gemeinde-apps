@@ -87,7 +87,8 @@ export const TOUR_SETLIST = 'setlist-v2';
 // setlist-edit-v5 (05.10.2026, #423): Der Dialog hat „Vor Gottesdienstbeginn" statt „Uhrzeit
 // ausblenden" – der Schritt nennt den Soundcheck als Beispiel. v2.26.1 (produktiv) trägt v4. Im selben
 // Release: „Hinzufügen" ist das schwebende Plus und öffnet den Bearbeiten-Dialog als „Neuer Eintrag".
-export const TOUR_SETLIST_EDIT = 'setlist-edit-v5';
+// v6 (09.10.2026): neuer Schritt „Abschließen“ – der Schloss-Knopf schließt den Ablauf in ChurchTools ab.
+export const TOUR_SETLIST_EDIT = 'setlist-edit-v6';
 /** Gruppe 5 – Verfügbarkeit (#177), beim ersten Öffnen des Bereichs. */
 // v3 (05.09.2026, abends): Statuskopf, Streifen zieht mit, Eintragen über EIN Fenster,
 // eigene Einträge per Tipp auf die Zeile änderbar – jeder Schritt zeigt jetzt etwas anderes.
@@ -221,6 +222,11 @@ export const SETLIST_EDIT_STEPS: CoachStep[] = [
     selector: '[data-tour="edit-add"]',
     title: 'Hinzufügen',
     body: 'Mit dem Plus legst du einen neuen Eintrag an – im selben Fenster wie beim Bearbeiten: oben wählst du Programmpunkt oder Überschrift. Für ein Lied tippst du „Lied verknüpfen“: Titel, Autor oder CCLI-Nummer – eure Lieder stehen oben, SongSelect darunter. Das Auge zeigt den Liedtext, das Plus wählt aus. Dauer und Zuständige setzt du gleich mit.',
+  },
+  {
+    selector: '[data-tour="edit-lock"]',
+    title: 'Abschließen',
+    body: 'Steht der Ablauf, schließt das Schloss ihn in ChurchTools ab – dann kann ihn niemand mehr versehentlich ändern. Zum Ändern öffnest du ihn hier wieder.',
   },
 ];
 

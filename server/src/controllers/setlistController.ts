@@ -24,6 +24,7 @@ import {
   reorderAgenda,
   setAgendaItemVorBeginn,
   updateAgendaItem,
+  setAblaufAbgeschlossen,
 } from '../services/ctWrite.js';
 import { gesehenHolen, gesehenMerken } from '../services/kontoAblage.js';
 import { setlistGeaendert, standardFenster } from '@shared/ct/setlistKern';
@@ -192,6 +193,19 @@ export async function putAgendaItemVorBeginn(req: Request, res: Response): Promi
   await setAgendaItemVorBeginn(ctCookie(req), eventId, itemId, vorBeginn);
   // BEWUSST ohne `invalidateSongUsageCache` (#300): Die Grenze verschiebt nur Uhrzeiten, nicht die
   // gespielten Lieder. Siehe die Begründung bei `putAgendaOrder`.
+  res.json({ ok: true });
+}
+
+const abgeschlossenSchema = z.object({ abgeschlossen: z.boolean() });
+
+/**
+ * PUT /api/services/:eventId/agenda/abgeschlossen – den Ablauf in ChurchTools abschließen (`true`) oder
+ * wieder öffnen (`false`), wie der Knopf in ChurchTools (Alwin, 09.10.2026). Ändert keine Punkte.
+ */
+export async function putAblaufAbgeschlossen(req: Request, res: Response): Promise<void> {
+  const eventId = idSchema.parse(req.params.eventId);
+  const { abgeschlossen } = abgeschlossenSchema.parse(req.body);
+  await setAblaufAbgeschlossen(ctCookie(req), eventId, abgeschlossen);
   res.json({ ok: true });
 }
 

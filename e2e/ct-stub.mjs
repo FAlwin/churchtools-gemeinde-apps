@@ -193,7 +193,30 @@ const events = [
     calendar: { domainIdentifier: '3', title: 'Jugend' },
     appointmentId: null,
   },
+  /**
+   * **Ein eigener Termin für „Ablauf abschließen"** (09.10.2026). Die E2E-Tests laufen parallel gegen
+   * DIESEN Stub; schlösse der Abschluss-Test den Ablauf von „Gottesdienst (Stub)" ab, scheiterte
+   * gleichzeitig das Anlegen im Hinzufügen-Test (so passiert). Deshalb ein eigener Ablauf.
+   */
+  {
+    id: EVENT_ID + 3,
+    startDate: isoInDays(6),
+    endDate: isoInDays(6, 12),
+    name: 'Abschlussprobe (Stub)',
+    calendar: { domainIdentifier: '1', title: 'Gottesdienst' },
+    appointmentId: null,
+  },
 ];
+
+/** Der Ablauf des Abschluss-Termins – nur abschließen/öffnen, sonst nichts. */
+const agendaAbschluss = {
+  calendarId: 2,
+  eventStartPosition: 0,
+  isLocked: false,
+  items: [
+    { id: 801, title: 'Ansage (Stub)', type: 'normal', duration: 300, position: 0, startTimes: {} },
+  ],
+};
 
 /**
  * Der Ablauf. `eventStartPosition` ist die Grenze „Beginn der Veranstaltung" (#423): Punkte mit
@@ -499,6 +522,17 @@ const server = createServer((req, res) => {
       json(res, { data: punkt }, 201);
     });
     return;
+  }
+  // Abschließen/Öffnen (09.10.2026) – wie gemessen: lock/unlock setzen `isLocked`, und im
+  // abgeschlossenen Ablauf verweigert ChurchTools jedes Ändern mit 403 „error.forbidden.update".
+  const sperre = path.match(new RegExp(`^/api/events/${EVENT_ID + 3}/agenda/(lock|unlock)$`));
+  if (sperre && req.method === 'POST') {
+    agendaAbschluss.isLocked = sperre[1] === 'lock';
+    res.writeHead(204);
+    return res.end();
+  }
+  if (path === `/api/events/${EVENT_ID + 3}/agenda`) {
+    return json(res, { data: agendaAbschluss });
   }
   if (punktMatch && req.method === 'DELETE' && punktMatch[1]) {
     agenda.items = agenda.items.filter((i) => i.id !== Number(punktMatch[1]));

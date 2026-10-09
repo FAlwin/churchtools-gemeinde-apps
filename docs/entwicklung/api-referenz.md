@@ -62,6 +62,7 @@
 - `POST /api/services/:eventId/agenda/items` → Ablaufpunkt anlegen
 - `PUT  /api/services/:eventId/agenda/items/:itemId` → Punkt ändern (Felder gebündelt: `title`, `responsible`, `arrangementId`, `unlink`, `note`, `durationMin` → CT-Sekunden)
 - `DELETE /api/services/:eventId/agenda/items/:itemId` → Punkt löschen
+- `PUT  /api/services/:eventId/agenda/abgeschlossen` {abgeschlossen} → Ablauf in ChurchTools abschließen/öffnen (09.10.2026): `POST /events/{id}/agenda/lock` bzw. `…/unlock` (gemessen; ein `PUT …/agenda` mit `isLocked` wird angenommen, aber nicht übernommen). Der Zustand steht am Termin (`Service.ablaufAbgeschlossen`). Verweigert ChurchTools ein Ändern, sieht der Schreib-Kern am Ablauf nach: abgeschlossen → **423** „Dieser Ablauf ist in ChurchTools abgeschlossen …" statt „Keine Berechtigung".
 - `PUT  /api/services/:eventId/agenda/items/:itemId/vor-beginn` {vorBeginn} → Vorlauf vor dem Gottesdienstbeginn (#423): schreibt nur die Grenze `eventStartPosition` des Ablaufs, an: dieser und alle Punkte darüber, aus: dieser und alle darunter
 - `GET  /api/agenda-services` → ChurchTools-Dienste (für die Verantwortlich-Chips)
 

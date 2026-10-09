@@ -59,6 +59,8 @@ export interface CtAgenda {
   eventStartPosition?: number;
   /** Pflichtfeld beim Schreiben des Ablaufs (`PUT …/agenda`). */
   calendarId?: number;
+  /** In ChurchTools abgeschlossen (`…/agenda/lock`) – dann verweigert ChurchTools jedes Ändern. */
+  isLocked?: boolean;
 }
 
 export interface CtAgendaItem {

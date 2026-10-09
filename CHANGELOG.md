@@ -29,6 +29,11 @@ Ohne Erweiterung in ChurchTools: `ERWEITERUNG_KUERZEL` muss nicht gesetzt werden
     Liste. Wer in der Server-App geteilt hat und seitdem nicht angemeldet war, bleibt sichtbar.
   - **Staging zieht nicht um** – bei der ECG hängt es am echten ChurchTools, seine Volume-Notizen sind
     Testreste (`ABLAGE_UMZUG` übersteuert).
+- **Ablauf abschließen und öffnen** (Alwin, 09.10.2026): Im Bearbeiten-Modus schließt ein Schloss-Knopf
+  den Ablauf in ChurchTools ab (nach Rückfrage); ist er abgeschlossen, sagt die App das und bietet
+  „Ablauf öffnen" an – statt der irreführenden Meldung „Keine Berechtigung", die bisher beim Löschen
+  oder Ändern kam. Server-App und Erweiterung; nur mit dem Recht „Ablauf bearbeiten". Die Einführung
+  im Bearbeiten-Modus hat dafür einen Schritt mehr.
 
 Code-Check vom 09.10.2026 abgearbeitet (#455–#466).
 

@@ -53,6 +53,60 @@ export const ABLAUF_VERWEIGERT = 'Keine Berechtigung, den Ablauf in ChurchTools 
 const ABLAUF_GEAENDERT = 'Der Ablauf hat sich geändert. Bitte neu laden und erneut versuchen.';
 
 /**
+ * Meldung, wenn der Ablauf in ChurchTools **abgeschlossen** ist (Alwin, 09.10.2026). ChurchTools antwortet
+ * dann auf jedes Ändern mit 403 „nicht aktualisieren" – genau wie bei einem fehlenden Recht. Die App sagte
+ * deshalb „Keine Berechtigung", und niemand kam darauf, dass nur der Abschluss im Weg stand.
+ */
+export const ABLAUF_ABGESCHLOSSEN =
+  'Dieser Ablauf ist in ChurchTools abgeschlossen. Zum Ändern erst wieder öffnen.';
+
+/**
+ * Jeder Schreibvorgang am Ablauf geht hier durch: Verweigert ChurchTools, wird **am Ablauf nachgesehen**
+ * (gemessen 09.10.2026: abgeschlossen → `isLocked: true`, Ändern/Löschen → 403). Ist er abgeschlossen,
+ * kommt die richtige Meldung (423); sonst bleibt es bei „Keine Berechtigung". Lässt sich der Ablauf gerade
+ * nicht lesen, bleibt der ursprüngliche Fehler – geraten wird nicht.
+ */
+async function ablaufSchreibe(
+  s: CtSchreiber,
+  eventId: number,
+  pfad: string,
+  auftrag: SchreibAuftrag,
+): Promise<unknown> {
+  try {
+    return await s.schreibe(pfad, auftrag);
+  } catch (e) {
+    if (!(e instanceof Error && e.message === ABLAUF_VERWEIGERT)) throw e;
+    let abgeschlossen = false;
+    try {
+      abgeschlossen = (await s.agenda(eventId)).isLocked === true;
+    } catch {
+      throw e;
+    }
+    if (abgeschlossen) throw s.fehler(423, ABLAUF_ABGESCHLOSSEN);
+    throw e;
+  }
+}
+
+/**
+ * Den Ablauf **abschließen** oder wieder **öffnen** (Alwin, 09.10.2026) – wie der Knopf in ChurchTools.
+ * Gemessen an der Test-Instanz: `POST …/agenda/lock` bzw. `…/unlock` (204), danach `isLocked`/`isFinal`.
+ * Ein `PUT …/agenda` mit `isLocked`/`isFinal` nimmt ChurchTools an (200), übernimmt es aber nicht. Wer
+ * „Ablauf bearbeiten" nicht hat, bekommt 403. Teilen sich mehrere Termine einen Ablauf, gilt es für alle.
+ */
+export async function ablaufAbschliessen(
+  s: CtSchreiber,
+  eventId: number,
+  abgeschlossen: boolean,
+): Promise<void> {
+  await s.schreibe(`/events/${eventId}/agenda/${abgeschlossen ? 'lock' : 'unlock'}`, {
+    method: 'POST',
+    json: {},
+    verweigert: 'Keine Berechtigung, den Ablauf in ChurchTools abzuschließen oder zu öffnen.',
+    fehler: abgeschlossen ? 'Ablauf abschließen fehlgeschlagen' : 'Ablauf öffnen fehlgeschlagen',
+  });
+}
+
+/**
  * Ein bestimmtes Arrangement eines Lieds – oder 404 (#321). Die Suche stand zweimal da (Tempo und
  * Versionen); hier liegt sie, damit Server und Browser sie teilen. Das Lied dazu liest der Aufrufer
  * frisch (`CtSchreiber.song`) – geschrieben wird auf diesem Stand.
@@ -93,7 +147,7 @@ export async function ablaufUmsortieren(
     ...agendaItemWritePayload(byId.get(id) as CtAgendaItem, { position: index }),
   }));
 
-  await s.schreibe(`/events/${eventId}/agenda`, {
+  await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda`, {
     method: 'PUT',
     json: { items: payload },
     verweigert: ABLAUF_VERWEIGERT,
@@ -135,7 +189,7 @@ export async function punktAnlegen(
   if (data.note) body.note = data.note;
   // CT erwartet die Dauer in Sekunden (Feld `duration`), die UI arbeitet in Minuten.
   if (data.durationMin !== undefined) body.duration = data.durationMin * 60;
-  await s.schreibe(`/events/${eventId}/agenda/items`, {
+  await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda/items`, {
     method: 'POST',
     json: body,
     verweigert: ABLAUF_VERWEIGERT,
@@ -184,7 +238,7 @@ export async function punktAendern(
     responsible: fields.responsible,
     durationSec: fields.durationMin !== undefined ? fields.durationMin * 60 : undefined,
   });
-  await s.schreibe(`/events/${eventId}/agenda/items/${itemId}`, {
+  await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda/items/${itemId}`, {
     method: 'PUT',
     json: body,
     verweigert: ABLAUF_VERWEIGERT,
@@ -198,7 +252,7 @@ export async function punktLoeschen(
   eventId: number,
   itemId: number,
 ): Promise<void> {
-  await s.schreibe(`/events/${eventId}/agenda/items/${itemId}`, {
+  await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda/items/${itemId}`, {
     method: 'DELETE',
     verweigert: ABLAUF_VERWEIGERT,
     fehler: 'Ablaufpunkt löschen fehlgeschlagen',
@@ -228,7 +282,7 @@ export async function vorBeginnSetzen(
   const neu = beginnPositionFuer(item, agenda.eventStartPosition ?? 0, vorBeginn);
   if (neu === null) return; // steht schon so – nichts zu schreiben
 
-  await s.schreibe(`/events/${eventId}/agenda`, {
+  await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda`, {
     method: 'PUT',
     json: { calendarId: agenda.calendarId, eventStartPosition: neu },
     verweigert: ABLAUF_VERWEIGERT,

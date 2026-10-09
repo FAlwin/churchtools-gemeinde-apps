@@ -597,7 +597,8 @@ Neue Nutzer bekommen beim ersten Mal eine geführte Einführung mit Hinweisblase
   ungefragt mitten in der Nutzung neu.
 - **Gemeinden:** `deploy/docker-compose.yml` ist auf `:2` gepinnt; Update per `update.command`/`update.bat`.
 - **Env (Volume `/app/data`, alle im Dockerfile gesetzt):** `SITE_CONFIG_PATH=/app/data/site.json`,
-  `ANNOTATIONS_PATH=/app/data/annotations` (kontobezogene Anmerkungen/Einstellungen),
+  `ANNOTATIONS_PATH=/app/data/annotations` (kontobezogene Anmerkungen/Einstellungen, dazu `sharing.json`
+  und `abmeldungen.json` – beendete Anmeldungen, #460),
   `CAPABILITIES_CACHE_PATH=/app/data/capabilities-cache.json` (Rechte-Cache, überbrückt CT-Aussetzer),
   `SEEN_SETLISTS_PATH=/app/data/seen-setlists.json` (Basislinien für den „geändert"-Hinweis #143/#161)
   – beim Re-Deploy **Volume behalten**.

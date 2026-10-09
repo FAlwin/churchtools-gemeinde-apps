@@ -8,6 +8,7 @@ import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import { config } from './config.js';
 import { vertrauterProxy } from './utils/vertrauterProxy.js';
+import { abmeldungenLaden } from './services/abmeldungen.js';
 import { ipRateKey } from './utils/ipKey.js';
 import { sessionRateKey, dropUnusableSessionCookie } from './middleware/session.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
@@ -154,6 +155,10 @@ if (config.isProduction) {
 // ── Fehlerbehandlung (immer zuletzt) ────────────────────────
 app.use(notFoundHandler);
 app.use(errorHandler);
+
+// Abgemeldete Sitzungen vor der ersten Anfrage kennen (#460). Ein Lesefehler bricht den Start ab:
+// Mit leerer Liste wären abgemeldete Cookie-Kopien wieder gültig – das soll laut scheitern.
+await abmeldungenLaden();
 
 /**
  * **Express 5 ruft diesen Rückruf auch bei einem Fehler auf** (#415, nachgestellt am 24.09.2026):

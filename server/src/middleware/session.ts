@@ -4,6 +4,7 @@ import { HttpError } from './errorHandler.js';
 import { config } from '../config.js';
 import { getCapabilities } from '../services/ctCapabilities.js';
 import { ctCookie } from '../utils/ctCookie.js';
+import { alsAbgemeldetMerken, istAbgemeldet } from '../services/abmeldungen.js';
 
 const COOKIE_NAME = 'ct_session';
 // Sitzungsdauer des App-Cookies. Rollierend: bei jeder Nutzung (requireSession) neu gesetzt,
@@ -209,7 +210,24 @@ export function isSessionExpired(issuedAt: number, now = Date.now()): boolean {
   return now - issuedAt > SESSION_ABSOLUTE_MAX_MS;
 }
 
-/** Liest das signierte Session-Cookie aus dem Request (oder null, wenn keins/ungültig). */
+/**
+ * Kennung EINER Anmeldung (#460): Konto + Login-Zeitpunkt. Beides bleibt beim Rollieren und beim
+ * stillen Erneuern gleich – auch jede Kopie des Cookies trägt sie. Ein anderes Gerät derselben Person
+ * hat einen anderen Login-Zeitpunkt.
+ */
+export function sitzungsKennung(s: Pick<Sitzung, 'userId' | 'ctCookie' | 'issuedAt'>): string {
+  return `${accountKey(s.userId, s.ctCookie)}@${s.issuedAt}`;
+}
+
+/**
+ * Diese Anmeldung serverseitig beenden (#460) – auch für Kopien des Cookies, die noch irgendwo liegen.
+ * Gemerkt bis zum Ende ihrer Lebensdauer; danach lehnt `isSessionExpired` sie ohnehin ab.
+ */
+export function sitzungBeenden(s: Sitzung): Promise<void> {
+  return alsAbgemeldetMerken(sitzungsKennung(s), s.issuedAt + SESSION_ABSOLUTE_MAX_MS);
+}
+
+/** Liest das signierte Session-Cookie aus dem Request (oder null, wenn keins/ungültig/abgemeldet). */
 export function readSession(req: Request): Sitzung | null {
   // Bewusst `unknown`: `signedCookies` ist untypisiert (`any`) – der Guard darunter macht daraus
   // einen String, statt das `any` weiterzureichen (#279).
@@ -219,6 +237,8 @@ export function readSession(req: Request): Sitzung | null {
   // `parseSessionValue` zerlegt nur (rein und ohne Schlüssel); entschlüsselt wird hier (#194).
   const ctCookie = decryptCtCookie(parsed.ctCookie);
   if (ctCookie === null) return null; // sah verschlüsselt aus, passt aber nicht → wie keine Session
+  // Abgemeldet (#460): wie keine Sitzung – `dropUnusableSessionCookie` räumt das Cookie dann auch weg.
+  if (istAbgemeldet(sitzungsKennung({ ...parsed, ctCookie }))) return null;
   // Ein Schlüssel, der sich nicht entschlüsseln lässt, kostet nur das stille Erneuern – die Sitzung
   // selbst bleibt gültig. Unverschlüsselt wird er nie akzeptiert: Er muss mit `e1:` beginnen.
   const loginToken =

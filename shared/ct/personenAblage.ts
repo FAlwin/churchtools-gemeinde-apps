@@ -233,6 +233,72 @@ export function geteilteEinstellungen(
   return liedEinstellungenAus(a.daten, songIds);
 }
 
+// ── Umzug aus der alten Server-Ablage (09.10.2026) ───────────────────────────
+/** Was die Server-App bis zum Umzug auf ihrem Daten-Volume hatte – je Person. */
+export interface Altbestand {
+  anmerkungen: Record<string, PageAnnotation>;
+  einstellungen: Record<string, string>;
+  gesehen: Record<number, GesehenerStand>;
+  teilen: { an: boolean; name: string } | null;
+}
+
+/** Was beim Umzug fehlt bzw. übernommen wurde. */
+export interface UmzugBericht {
+  /** Seiten, deren Bild hochgeladen wurde (bzw. bei `pruefe` noch fehlt). */
+  bilder: number;
+  /** Felder der Daten-Datei (Texte, Zoom, Einstellungen, gesehen, teilen). */
+  felder: number;
+}
+
+/**
+ * Welche Seiten stehen schon in ChurchTools? Eine Seite zählt, sobald es IRGENDETWAS zu ihr gibt –
+ * ein Bild oder ein Feld, auch ein gelöschtes (Grabstein): **ChurchTools gewinnt** (Alwin, 09.10.2026).
+ * Wer eine Seite in der Erweiterung schon bearbeitet oder geleert hat, bekommt sie nicht vom NAS zurück.
+ */
+function seitenInChurchTools(l: Datei[], daten: DatenDatei): Set<string> {
+  const da = new Set<string>();
+  for (const f of l) {
+    const key = f.name.match(BILD_RE)?.[1];
+    if (key) da.add(key);
+  }
+  for (const name of Object.keys(daten.felder)) {
+    const m = name.match(ANNO_FELD_RE);
+    if (m) da.add(m[1]);
+  }
+  return da;
+}
+
+/** Was vom Altbestand in ChurchTools noch fehlt – Seiten mit Bild und die fehlenden Felder. */
+function fehlendes(
+  alt: Altbestand,
+  l: Datei[],
+  daten: DatenDatei,
+  jetzt = Date.now(),
+): { bilder: [string, string][]; felder: Record<string, unknown> } {
+  const da = seitenInChurchTools(l, daten);
+  const bilder: [string, string][] = [];
+  const felder: Record<string, unknown> = {};
+  for (const [key, seite] of Object.entries(alt.anmerkungen)) {
+    if (da.has(key)) continue;
+    if (seite.strokes) bilder.push([key, seite.strokes]);
+    if (seite.texts?.length) felder[textFeld(key)] = seite.texts;
+    if (seite.zoom) felder[zoomFeld(key)] = seite.zoom;
+  }
+  for (const [key, wert] of Object.entries(alt.einstellungen)) {
+    if (!SETTINGS_KEY_RE.test(key) || !wert) continue;
+    if (!(einstFeld(key) in daten.felder))
+      felder[einstFeld(key)] = wert.slice(0, SETTINGS_MAX_WERT);
+  }
+  for (const [eventId, stand] of Object.entries(alt.gesehen)) {
+    // Zu alte Stände zählen ohnehin nicht mehr (`holeGesehen` lässt sie weg) – die ziehen nicht um.
+    if (jetzt - stand.seenAt > GESEHEN_MAX_ALTER_MS) continue;
+    const name = gesehenFeld(Number(eventId));
+    if (!(name in daten.felder)) felder[name] = stand;
+  }
+  if (alt.teilen && !(TEILEN_FELD in daten.felder)) felder[TEILEN_FELD] = alt.teilen;
+  return { bilder, felder };
+}
+
 // ── Die Ablage mit Zustand ───────────────────────────────────────────────────
 /**
  * Eine Ablage mit ihrem Zustand: Dateiliste der eigenen Person, Inhalte geladener Dateien und die
@@ -241,7 +307,12 @@ export function geteilteEinstellungen(
  * Den Anschluss bekommt jeder Aufruf mit, nicht die Fabrik: Im Server hängt er an der Sitzung der
  * Anfrage, und die kann sich zwischen zwei Aufrufen erneuert haben.
  */
-export function erstellePersonenAblage() {
+export function erstellePersonenAblage(
+  opts: {
+    /** Höchstens so viele Bilder im Speicher (die zuletzt gebrauchten). Ohne Angabe: alle. */
+    maxBilder?: number;
+  } = {},
+) {
   /** Die Dateiliste der eigenen Person – einmal geladen, nach jedem Hochladen neu gelesen. */
   let liste: Datei[] | null = null;
   /** Inhalt geladener Dateien je Datei-ID: Eine Datei ändert sich nie, eine neue Fassung hat eine neue ID. */
@@ -319,9 +390,13 @@ export function erstellePersonenAblage() {
     const out: Record<string, string> = {};
     for (const [key, f] of neuesteBilder(l, songIds)) {
       let inhalt = bildInhalt.get(f.id);
-      if (inhalt === undefined) {
-        inhalt = dataUrlAusBytes(await p.datei(f.fileUrl));
-        bildInhalt.set(f.id, inhalt);
+      if (inhalt === undefined) inhalt = dataUrlAusBytes(await p.datei(f.fileUrl));
+      // Nach hinten (zuletzt gebraucht); bei Überlauf fällt das am längsten ungenutzte heraus.
+      bildInhalt.delete(f.id);
+      bildInhalt.set(f.id, inhalt);
+      if (opts.maxBilder !== undefined && bildInhalt.size > opts.maxBilder) {
+        const aeltestes = bildInhalt.keys().next().value;
+        if (aeltestes !== undefined) bildInhalt.delete(aeltestes);
       }
       out[key] = inhalt;
     }
@@ -419,6 +494,40 @@ export function erstellePersonenAblage() {
   }
 
   return {
+    /**
+     * **Den Altbestand der Server-App übernehmen** – nur, was in ChurchTools noch fehlt (ChurchTools
+     * gewinnt je Seite, je Einstellung). Bilder einzeln mit `pause` dazwischen – ein Massenlauf hat
+     * ChurchTools schon einmal ausgebremst (#300); die Felder in EINEM Schreibvorgang. Wirft bei jedem
+     * Fehler; ein zweiter Lauf macht da weiter, wo der erste aufgehört hat (was hochgeladen ist, fehlt
+     * dann nicht mehr).
+     */
+    uebernimmAltbestand(
+      p: AblagePort,
+      alt: Altbestand,
+      pause: () => Promise<void> = () => Promise.resolve(),
+    ): Promise<UmzugBericht> {
+      return nacheinander(async () => {
+        await aktualisiereListe(p);
+        const { bilder, felder } = fehlendes(alt, liste ?? [], await ladeDaten(p, liste ?? []));
+        for (const [key, strokes] of bilder) {
+          const { bytes, typ } = bytesAusDataUrl(strokes);
+          await ersetze(p, bildName(key), bytes, typ);
+          await pause();
+        }
+        if (Object.keys(felder).length > 0) await schreibeFelder(p, felder);
+        return { bilder: bilder.length, felder: Object.keys(felder).length };
+      });
+    },
+
+    /** Was vom Altbestand in ChurchTools noch fehlt – frisch gelesen. `0/0` = Umzug vollständig. */
+    pruefeAltbestand(p: AblagePort, alt: Altbestand): Promise<UmzugBericht> {
+      return nacheinander(async () => {
+        await aktualisiereListe(p);
+        const { bilder, felder } = fehlendes(alt, liste ?? [], await ladeDaten(p, liste ?? []));
+        return { bilder: bilder.length, felder: Object.keys(felder).length };
+      });
+    },
+
     /** Nur für Tests: alles vergessen. */
     zuruecksetzen(): void {
       liste = null;

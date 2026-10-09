@@ -10,6 +10,8 @@ import {
   createAbsence,
   deleteAbsence,
   fuerChurchTools,
+  uploadPersonFile,
+  deleteFile,
 } from './ctWrite.js';
 import * as ctWriteModul from './ctWrite.js';
 import * as lieder from '@shared/ct/liedVerwaltung';
@@ -123,6 +125,12 @@ const SCHREIBER: Array<[string, () => Promise<void>]> = [
     },
   ],
   ['deleteAbsence', () => deleteAbsence(COOKIE, 5, 9)],
+  // Personen-Ablage der Server-App (Ablage in ChurchTools, 09.10.2026).
+  [
+    'uploadPersonFile',
+    () => uploadPersonFile(COOKIE, 5, 'musikapp_x.png', new Uint8Array([1]), 'image/png'),
+  ],
+  ['deleteFile', () => deleteFile(COOKIE, 9)],
   // Läuft über `arrangementAendern` im Kern – steht trotzdem drin, damit ein späterer Umbau auffällt.
   ['updateArrangementTempo', () => updateArrangementTempo(COOKIE, 7, 70, 96)],
 ];

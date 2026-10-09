@@ -29,7 +29,8 @@ export {
 
 let ich: number | null = null;
 
-const port: AblagePort = {
+/** Der Browser-Anschluss – auch für das Teilen (`ctTeilen.ts`). */
+export const ablagePort: AblagePort = {
   async meineId() {
     if (ich !== null) return ich;
     const body = await ctAnfrage<{ data?: unknown }>('/whoami');
@@ -55,7 +56,10 @@ const port: AblagePort = {
   istNichtGefunden: (e) => e instanceof ApiError && e.status === 404,
 };
 
-const ablage = erstellePersonenAblage();
+/** Die eine Ablage dieses Geräts. */
+export const eigeneAblage = erstellePersonenAblage();
+const ablage = eigeneAblage;
+const port = ablagePort;
 
 /** Nur für Tests: alles vergessen. */
 export function _zuruecksetzen(): void {

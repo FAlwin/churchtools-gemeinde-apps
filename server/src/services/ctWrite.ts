@@ -170,6 +170,38 @@ export async function uploadFile(
   });
 }
 
+/**
+ * Eine Datei an die eigene Person hängen – die Personen-Ablage der Server-App (Ablage in ChurchTools,
+ * 09.10.2026). Gemessen vom Server aus: ohne CSRF-Token 401, mit 200 – deshalb über `schreibe`.
+ */
+export async function uploadPersonFile(
+  cookie: string,
+  personId: number,
+  name: string,
+  inhalt: Uint8Array,
+  typ: string,
+): Promise<void> {
+  const form = new FormData();
+  // Kopie: `Blob` verlangt einen Puffer vom Typ ArrayBuffer (TypeScript 5.7).
+  form.append('files[]', new Blob([new Uint8Array(inhalt)], { type: typ }), name);
+  await schreibe(cookie, `/api/files/person/${personId}`, {
+    method: 'POST',
+    form,
+    verweigert: 'ChurchTools erlaubt dir nicht, Dateien an deiner Person zu speichern.',
+    fehler: 'Speichern in ChurchTools fehlgeschlagen',
+  });
+}
+
+/** Eine Datei löschen (`DELETE /api/files/<id>`). Schon weg (404) ist erledigt, kein Fehler. */
+export async function deleteFile(cookie: string, fileId: number): Promise<void> {
+  await schreibe(cookie, `/api/files/${fileId}`, {
+    method: 'DELETE',
+    verweigert: 'ChurchTools erlaubt dir nicht, diese Datei zu löschen.',
+    fehler: 'Löschen in ChurchTools fehlgeschlagen',
+    okBei404: true,
+  });
+}
+
 /** Der JSON-Rumpf einer Antwort – `null`, wenn sie leer oder kein JSON ist (204 beim Löschen). */
 async function rumpfAus(res: Response): Promise<unknown> {
   const text = await res.text();

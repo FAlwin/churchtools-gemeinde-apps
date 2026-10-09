@@ -15,7 +15,7 @@ ChurchTools ist Datenquelle).
 
 ## Versionierung
 
-- Ein **öffentliches** Git-Repo (`FAlwin/churchtools-musik-app`), MIT-Lizenz.
+- Ein **öffentliches** Git-Repo (`FAlwin/churchtools-gemeinde-apps`), MIT-Lizenz.
 - Arbeit immer in Feature-Branch + PR, nie direkt auf `main`.
 - `.env` wird **nie** committet – nur `.env.example` mit Platzhaltern.
 - Releases als Git-Tag `vX.Y.Z` (SemVer) → CI baut die GHCR-Images.

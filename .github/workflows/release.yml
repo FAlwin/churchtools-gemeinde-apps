@@ -145,10 +145,10 @@ jobs:
             **Administration → Erweiterungen → Erweiterung hinzufügen** hochladen. **Kürzel: `musik-app`**
             (genau so – sonst lädt sie nicht), Name frei. Zum Aktualisieren beim Eintrag auf den Stift und die
             neue ZIP hochladen, sonst nichts löschen.
-            Anleitung: https://github.com/FAlwin/churchtools-musik-app/blob/main/docs/betrieb/ERWEITERUNG.md
-            **Welche ChurchTools-Rechte eure Musiker und Admins brauchen:** [Rechte einrichten](https://github.com/FAlwin/churchtools-musik-app/blob/main/docs/betrieb/ERWEITERUNG.md#rechte-einrichten)
+            Anleitung: https://github.com/FAlwin/churchtools-gemeinde-apps/blob/main/docs/betrieb/ERWEITERUNG.md
+            **Welche ChurchTools-Rechte eure Musiker und Admins brauchen:** [Rechte einrichten](https://github.com/FAlwin/churchtools-gemeinde-apps/blob/main/docs/betrieb/ERWEITERUNG.md#rechte-einrichten)
 
-            **Mit eigenem Server (Docker):** Update wie gewohnt, siehe [UPDATE.md](https://github.com/FAlwin/churchtools-musik-app/blob/main/UPDATE.md).
+            **Mit eigenem Server (Docker):** Update wie gewohnt, siehe [UPDATE.md](https://github.com/FAlwin/churchtools-gemeinde-apps/blob/main/UPDATE.md).
           files: client/releases/musik-app-${{ github.ref_name }}.zip
           fail_on_unmatched_files: true
           # Tags mit Suffix (z. B. v2.2.0-rc1) als Vorabversion markieren, damit

@@ -140,7 +140,11 @@
   (`sudo docker pull ghcr.io/falwin/churchtools-musik-app:2`), dann Projekt stoppen → löschen
   (**ohne** Volumes) → erstellen, mit **identischem** Projektnamen (er bestimmt den Volume-Namen).
 
-- **Repository:** öffentliches GitHub-Repo `FAlwin/churchtools-musik-app` (origin/main), MIT-Lizenz.
+- **Repository:** öffentliches GitHub-Repo `FAlwin/churchtools-gemeinde-apps` (origin/main), MIT-Lizenz.
+  **Am 09.10.2026 umbenannt** von `churchtools-musik-app` (hier entsteht auch der Dienstplaner). GitHub leitet
+  den alten Namen weiter (API, Release-Seiten, git) – darum **den alten Namen nie wieder vergeben**, sonst
+  verlieren installierte Musik-Apps ihren Update-Hinweis. **Gleich geblieben:** Image
+  `ghcr.io/falwin/churchtools-musik-app`, Container- und Projektname auf dem NAS, Kürzel `musik-app`.
 
 ## Tech-Stack
 
@@ -163,7 +167,7 @@
 Monorepo mit npm-Workspaces:
 
 ```
-churchtools-musik-app/
+churchtools-gemeinde-apps/
 ├── client/                  # React + Vite PWA
 │   ├── public/              # statische Assets (logo.png, PWA-Icons)
 │   └── src/
@@ -549,7 +553,7 @@ Neue Nutzer bekommen beim ersten Mal eine geführte Einführung mit Hinweisblase
 - [x] Zod-Validierung auf allen API-Routen
 - [x] helmet eingerichtet
 - [x] express-rate-limit eingerichtet (zusätzlich striktes Limit am Login)
-- [x] Öffentliches Repo unter MIT-Lizenz (`FAlwin/churchtools-musik-app`); keine Secrets im Code/in der Historie (`.env` nie eingecheckt)
+- [x] Öffentliches Repo unter MIT-Lizenz (`FAlwin/churchtools-gemeinde-apps`); keine Secrets im Code/in der Historie (`.env` nie eingecheckt)
 - [x] Authentifizierung: persönlicher ChurchTools-Login, Session in signiertem httpOnly-Cookie
 - [x] HTTPS extern via Synology Reverse Proxy + Let's Encrypt (`musik.ecg-donrath.de`)
 - [x] npm audit: zuletzt geprüft am 26.07.2026 – Funde betreffen **ausschließlich Build-/Lint-/
@@ -649,7 +653,7 @@ Release-Notes & Versionshistorie: siehe `CHANGELOG.md` (Single Source – hier n
 ## So startest du die App lokal
 
 ```
-cd ~/ecg-donrath/churchtools-musik-app
+cd ~/ecg-donrath/churchtools-gemeinde-apps
 npm install        # einmalig
 npm run dev:client # Frontend -> http://localhost:5173 (braucht das laufende Backend + echten
                    # ChurchTools-Login; es gibt KEINE Mock-Daten. Für UI-Prüfungen ohne Login:

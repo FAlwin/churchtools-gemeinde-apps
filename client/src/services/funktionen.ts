@@ -49,4 +49,4 @@ export const funktionen = {
  * kommt (Alwin, 07.10.2026). Wird die Überschrift im README umbenannt, hier mitziehen.
  */
 export const PROJEKT_ADRESSE =
-  'https://github.com/FAlwin/churchtools-musik-app#f%C3%BCr-andere-gemeinden';
+  'https://github.com/FAlwin/churchtools-gemeinde-apps#f%C3%BCr-andere-gemeinden';

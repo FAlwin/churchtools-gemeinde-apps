@@ -151,7 +151,17 @@ describe('annotations – Upload schlägt fehl (#245)', () => {
   });
 
   it('401 schaltet den Sync ab und wiederholt nicht', async () => {
-    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(401)));
+    // Wirklich abgemeldet heißt: Die Rückfrage bei `/api/auth/me` sagt es AUSDRÜCKLICH. Antwortet
+    // sie selbst nur mit einem Fehler, ist das „unklar" und wird wiederholt (#455).
+    const fetchMock = vi
+      .fn()
+      .mockImplementation((url: string | URL) =>
+        Promise.resolve(
+          String(url).includes('/api/auth/me')
+            ? jsonResponse(200, { authenticated: false })
+            : jsonResponse(401),
+        ),
+      );
     vi.stubGlobal('fetch', fetchMock);
 
     pushField(`${DRAW}${KEY}`, 'strokes', 'data:image/png;base64,AAA');
@@ -159,6 +169,18 @@ describe('annotations – Upload schlägt fehl (#245)', () => {
     await vi.advanceTimersByTimeAsync(30_000);
 
     expect(putCount(fetchMock)).toBe(1);
+  });
+
+  it('401 mit UNKLARER Rückfrage schaltet den Sync NICHT ab – es wird wiederholt (#455)', async () => {
+    // Netz-Aussetzer beim stillen Erneuern: vorübergehend ist nicht ungültig.
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(401)));
+    vi.stubGlobal('fetch', fetchMock);
+
+    pushField(`${DRAW}${KEY}`, 'strokes', 'data:image/png;base64,AAA');
+    await runFlush();
+    await vi.advanceTimersByTimeAsync(30_000);
+
+    expect(putCount(fetchMock)).toBeGreaterThan(1);
   });
 
   it('ein neuer Strich gewinnt gegen den zurückgelegten Stand', async () => {

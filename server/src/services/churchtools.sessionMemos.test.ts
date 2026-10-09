@@ -6,6 +6,7 @@ import {
   forgetSession,
   gruendeMemo,
   quellenMemo,
+  sichtbareLiederMemo,
 } from './ctSessionMemos.js';
 import { __getCsrfTokenForTests as getCsrfToken } from './ctCsrf.js';
 
@@ -216,14 +217,16 @@ describe('Abmelden WÄHREND ein Token geholt wird (#280)', () => {
  * nicht die Liste.
  */
 describe('forgetSession räumt WIRKLICH alle Sitzungs-Speicher', () => {
-  it('vergisst auch Abwesenheitsgründe und Liedquellen', () => {
+  it('vergisst auch Abwesenheitsgründe, Liedquellen und die sichtbaren Lieder (#458)', () => {
     const cookie = 'ChurchTools_sid=zzz';
     gruendeMemo.set(cookie, [{ id: 1, name: 'Krank', standard: false }]);
     quellenMemo.set(cookie, [{ id: 2, name: 'Unser Liederbuch', shorty: 'ULB' }]);
+    sichtbareLiederMemo.set(cookie, []);
 
     forgetSession(cookie);
 
     expect(gruendeMemo.get(cookie)).toBeUndefined();
     expect(quellenMemo.get(cookie)).toBeUndefined();
+    expect(sichtbareLiederMemo.get(cookie)).toBeUndefined();
   });
 });

@@ -62,21 +62,17 @@ import {
 } from '@shared/ct/setlistKern';
 import type { CtAgenda, CtEvent, CtService, CtSong, CtSongListEntry } from '@shared/ct/typen';
 import { createTtlMemo } from '@shared/ct/ttlMemo';
+import { merkeVersprechen } from '@shared/ct/versprechenMerker';
+import { whoamiId } from '@shared/ct/whoami';
 import { sanitizeFileContentType } from '@shared/dateien/index';
 import type { GesehenerStand } from '@shared/types/index';
 import { ApiError } from './api';
-import { ctAltAnfrage, ctAnfrage, ctDatei, istUeberlastet } from './ctRuntime';
+import { ctAltAnfrage, ctAnfrage, ctDaten, ctDatei, istUeberlastet } from './ctRuntime';
 import { gespeicherteEinstellungen } from './ctEinstellungen';
 import { holeGesehen, merkeGesehen } from './personenAblage';
 
 /** Zeitzone der Gemeinde. Die Server-Variante liest sie aus `ZEITZONE`; hier gilt der Standard. */
 const ZEITZONE = 'Europe/Berlin';
-
-/** ChurchTools packt fast alles in `{ data: … }` – wie `ctGet` im Server: `data`, sonst den Rumpf. */
-async function daten<T>(pfad: string): Promise<T> {
-  const body = await ctAnfrage<{ data?: T } | null>(pfad);
-  return (body?.data ?? body) as T;
-}
 
 /**
  * Untertitel-Memo (#306): Der Untertitel war die HÄLFTE der Dauerlast der Terminliste – je Termin ein
@@ -87,14 +83,14 @@ const untertitelMemo = createTtlMemo<string | null>(10 * 60_000);
 
 /** Der `CtLeser` des Browsers für den geteilten Aufbau. */
 export const leser: CtLeser = {
-  events: (from, to) => daten<CtEvent[]>(`/events?from=${from}&to=${to}`),
-  agenda: (eventId) => daten<CtAgenda>(`/events/${eventId}/agenda`),
-  song: (songId) => daten<CtSong>(`/songs/${songId}`),
+  events: (from, to) => ctDaten<CtEvent[]>(`/events?from=${from}&to=${to}`),
+  agenda: (eventId) => ctDaten<CtAgenda>(`/events/${eventId}/agenda`),
+  song: (songId) => ctDaten<CtSong>(`/songs/${songId}`),
   async alleLieder() {
     // Wie `ctRead.getAllSongs`: seitenweise, höchstens 50 Seiten.
     const alle: CtSongListEntry[] = [];
     for (let seite = 1; seite <= 50; seite++) {
-      const teil = await daten<CtSongListEntry[]>(`/songs?limit=100&page=${seite}`);
+      const teil = await ctDaten<CtSongListEntry[]>(`/songs?limit=100&page=${seite}`);
       alle.push(...teil);
       if (teil.length < 100) break;
     }
@@ -106,7 +102,7 @@ export const leser: CtLeser = {
     if (treffer !== undefined) return treffer;
     try {
       const wert = untertitelAus(
-        await daten<{ appointment?: { subtitle?: string }; subtitle?: string }>(
+        await ctDaten<{ appointment?: { subtitle?: string }; subtitle?: string }>(
           `/calendars/${calendarId}/appointments/${appointmentId}`,
         ),
       );
@@ -145,11 +141,12 @@ async function gesehenOderLeer(): Promise<Record<number, GesehenerStand>> {
 
 /** `GET /api/auth/me` – in der Extension: wer ist in ChurchTools angemeldet (`id > 0`, #381)? */
 export async function meinStatus(): Promise<AuthStatus> {
-  const ich = await daten<{ id?: number; firstName?: string; lastName?: string }>('/whoami');
-  if (!ich || typeof ich.id !== 'number' || ich.id <= 0) return { authenticated: false };
+  const ich = await ctDaten<{ firstName?: string; lastName?: string } | null>('/whoami');
+  const id = whoamiId(ich);
+  if (!id) return { authenticated: false };
   return {
     authenticated: true,
-    user: { id: ich.id, firstName: ich.firstName ?? '', lastName: ich.lastName ?? '' },
+    user: { id, firstName: ich?.firstName ?? '', lastName: ich?.lastName ?? '' },
   };
 }
 
@@ -190,7 +187,7 @@ async function gemeindeName(): Promise<string> {
  * eigenen Mitgliedschaften (`@shared/ct/gruppen`). Abwesenheiten bleiben bis 3b-3 aus.
  */
 export async function meineRechte(): Promise<UserCapabilities> {
-  const roh = await daten<Record<string, Record<string, unknown>>>('/permissions/global');
+  const roh = await ctDaten<Record<string, Record<string, unknown>>>('/permissions/global');
   const rechte = rechteAus(
     roh,
     STANDARD_ADMIN_RECHT,
@@ -214,7 +211,7 @@ async function darfTeamNotizen(): Promise<boolean> {
     const status = await meinStatus();
     if (!status.user) return false;
     const mitglied = aktiveMitgliedschaften(
-      await daten<RohMitgliedschaft[]>(`/persons/${status.user.id}/groups`),
+      await ctDaten<RohMitgliedschaft[]>(`/persons/${status.user.id}/groups`),
     );
     return computeTeamNotesAllowed(mitglied, cfg.musicianGroupIds, cfg.noteRoles ?? []);
   } catch (e) {
@@ -226,12 +223,12 @@ async function darfTeamNotizen(): Promise<boolean> {
 /** `GET /api/groups` – sichtbare Gruppen für die Gruppen-Zuweisung (nur Admin). */
 export async function gruppen(): Promise<{ id: number; name: string }[]> {
   // limit hoch genug für ein Dropdown; page=1 (CT beginnt bei 1, nicht 0) – wie im Server.
-  return gruppenAus(await daten('/groups?limit=200&page=1'));
+  return gruppenAus(await ctDaten('/groups?limit=200&page=1'));
 }
 
 /** `GET /api/groups/:id/roles` – Rollen einer Gruppe für die Rollen-Zuweisung (nur Admin). */
 export async function rollen(groupId: number): Promise<{ id: number; name: string }[]> {
-  return rollenAus(await daten(`/groups/${groupId}/roles`));
+  return rollenAus(await ctDaten(`/groups/${groupId}/roles`));
 }
 
 /**
@@ -257,28 +254,21 @@ export async function liedtextVorschau(songId: number): Promise<LiedtextVorschau
  * ungültig. Ohne das Recht „Song-Statistik sehen" fragt die Ansicht gar nicht erst
  * (`canViewSongStatistics`); täte sie es doch, würfe ChurchTools.
  */
-let nutzung: { at: number; daten: Promise<Record<number, LiedNutzung>> } | null = null;
-const NUTZUNG_TTL_MS = 10 * 60_000;
+const nutzung = merkeVersprechen<Record<number, LiedNutzung>>({ ttlMs: 10 * 60_000 });
 
 export function liedNutzung(): Promise<Record<number, LiedNutzung>> {
-  if (nutzung && Date.now() - nutzung.at < NUTZUNG_TTL_MS) return nutzung.daten;
-  const daten = (async () =>
+  return nutzung.hole('statistik', async () =>
     liedStatistik(
       { anfrage: ctAltAnfrage, fehler: (status, meldung) => new ApiError(status, meldung) },
       await leser.alleLieder(),
       ZEITZONE,
-    ))();
-  const eintrag = { at: Date.now(), daten };
-  nutzung = eintrag;
-  daten.catch(() => {
-    if (nutzung === eintrag) nutzung = null;
-  });
-  return daten;
+    ),
+  );
 }
 
 /** Nur für Tests: die gemerkte Statistik vergessen. */
 export function _vergissNutzung(): void {
-  nutzung = null;
+  nutzung.vergiss();
 }
 
 // ── Lied-Stammdaten (3b-2) ───────────────────────────────────────────────────
@@ -288,34 +278,31 @@ export function _vergissNutzung(): void {
  * selten (Kategorien, Liederbücher), und die Liedverwaltung fragt sie bei jedem Anlegen/Ändern
  * (Recht, Quelle). Ein Fehlschlag wird NICHT gemerkt – vorübergehend ist nicht ungültig.
  */
-let stammdaten: Promise<LiedStammdatenRoh> | null = null;
+const stammdaten = merkeVersprechen<LiedStammdatenRoh>();
 function liedStammdaten(): Promise<LiedStammdatenRoh> {
-  stammdaten ??= ctAltAnfrage(
-    'getMasterData',
-    {},
-    {
-      verweigert: 'Keine Berechtigung, die Lied-Kategorien in ChurchTools zu lesen.',
-      unlesbar: 'ChurchTools lieferte keine lesbare Antwort für die Lied-Kategorien.',
-      fehlgeschlagen: 'Die Lied-Kategorien konnten nicht geladen werden.',
-    },
-  ).then(
-    (d) => d as LiedStammdatenRoh,
-    (e: unknown) => {
-      stammdaten = null;
-      throw e;
-    },
+  return stammdaten.hole(
+    'stammdaten',
+    async () =>
+      (await ctAltAnfrage(
+        'getMasterData',
+        {},
+        {
+          verweigert: 'Keine Berechtigung, die Lied-Kategorien in ChurchTools zu lesen.',
+          unlesbar: 'ChurchTools lieferte keine lesbare Antwort für die Lied-Kategorien.',
+          fehlgeschlagen: 'Die Lied-Kategorien konnten nicht geladen werden.',
+        },
+      )) as LiedStammdatenRoh,
   );
-  return stammdaten;
 }
 
 /** Nur für Tests: gemerkte Stammdaten vergessen. */
 export function _vergissStammdaten(): void {
-  stammdaten = null;
+  stammdaten.vergiss();
 }
 
 /** `GET /api/song-categories` – die Kategorien, in denen die Person Lieder anlegen/ändern darf. */
 export async function bearbeitbareKategorien(): Promise<SongCategory[]> {
-  const rechte = await daten<Record<string, Record<string, unknown>>>('/permissions/global');
+  const rechte = await ctDaten<Record<string, Record<string, unknown>>>('/permissions/global');
   return bearbeitbareKategorienAus(
     rechte,
     STANDARD_ADMIN_RECHT,
@@ -408,7 +395,7 @@ export async function arrangements(songId: number): Promise<SongArrangementOptio
 }
 
 export async function dienste(): Promise<AgendaServiceOption[]> {
-  const roh = await daten<CtService[]>('/services');
+  const roh = await ctDaten<CtService[]>('/services');
   return dienstReihenfolge(roh).map((s) => ({ id: s.id, name: s.name }));
 }
 

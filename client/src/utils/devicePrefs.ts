@@ -12,6 +12,7 @@
  */
 
 import type { StandardAnsicht } from '@shared/types/index';
+import { lokalSchreiben } from './lokalSpeicher';
 
 const KEYS = {
   /** Ist die Anmerkungs-Werkzeugleiste zum Rand-Knopf eingeklappt? */
@@ -43,11 +44,7 @@ function read(key: PrefKey): string | null {
 }
 
 function write(key: PrefKey, value: string): void {
-  try {
-    localStorage.setItem(KEYS[key], value);
-  } catch {
-    /* Speicher voll/gesperrt → Vorliebe gilt nur für diese Sitzung */
-  }
+  lokalSchreiben(KEYS[key], value); // voll → Vorliebe gilt nur für diese Sitzung
 }
 
 export function getDrawbarCollapsed(): boolean {

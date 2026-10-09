@@ -25,6 +25,7 @@ import {
   normalizeAnnoKey as normalizeKey,
 } from '@shared/keys/index';
 import type { AnnotationText, GespeicherterZoom, PageAnnotation } from '@shared/types/index';
+import { jsonOderNull, lokalSchreiben } from '../utils/lokalSpeicher';
 
 // Namensräume und Grammatik aus @shared/keys – EINZIGE Quelle für Client und Server (#250).
 const DRAW = ANNO_DRAW_NS;
@@ -93,15 +94,6 @@ function serverKeyOf(lsKey: string): string {
     .replace(/_text$/, '');
 }
 
-function safeJson<T>(raw: string | null): T | null {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
-}
-
 // ── Pull: Server → localStorage ──────────────────────────────
 /** Holt alle Anmerkungen des Kontos zu diesen Liedern und spiegelt sie in localStorage. */
 export async function pullAnnotations(songIds: number[]): Promise<void> {
@@ -115,12 +107,12 @@ export async function pullAnnotations(songIds: number[]): Promise<void> {
       // Seiten mit noch nicht hochgeladener ODER gerade hochladender lokaler Änderung NICHT
       // überschreiben (sonst gehen frische Anmerkungen/Zooms an den alten Server-Stand verloren).
       if (pendingFields.has(key) || inflight.has(key) || stillPending.has(key)) continue;
-      if (a.strokes) localStorage.setItem(DRAW + key, a.strokes);
+      // `lokalSchreiben` wirft nie (#457): Ein voller Gerätespeicher bräche sonst den ganzen Abgleich ab.
+      if (a.strokes) lokalSchreiben(DRAW + key, a.strokes);
       else localStorage.removeItem(DRAW + key);
-      if (a.texts && a.texts.length)
-        localStorage.setItem(DRAW + key + '_text', JSON.stringify(a.texts));
+      if (a.texts && a.texts.length) lokalSchreiben(DRAW + key + '_text', JSON.stringify(a.texts));
       else localStorage.removeItem(DRAW + key + '_text');
-      if (a.zoom) localStorage.setItem(ZOOM + key, JSON.stringify(a.zoom));
+      if (a.zoom) lokalSchreiben(ZOOM + key, JSON.stringify(a.zoom));
       else localStorage.removeItem(ZOOM + key);
     }
   } catch (e) {
@@ -152,9 +144,9 @@ function annotationFromStorage(key: string): PageAnnotation | null {
   const out: PageAnnotation = {};
   const strokes = localStorage.getItem(DRAW + key);
   if (strokes) out.strokes = strokes;
-  const texts = safeJson<AnnotationText[]>(localStorage.getItem(DRAW + key + '_text'));
+  const texts = jsonOderNull<AnnotationText[]>(localStorage.getItem(DRAW + key + '_text'));
   if (texts && texts.length) out.texts = texts;
-  const zoom = safeJson<GespeicherterZoom>(localStorage.getItem(ZOOM + key));
+  const zoom = jsonOderNull<GespeicherterZoom>(localStorage.getItem(ZOOM + key));
   if (zoom) out.zoom = zoom;
   return Object.keys(out).length > 0 ? out : null;
 }
@@ -193,14 +185,6 @@ const inflight = new Set<string>();
 let syncErrorHandler: ((msg: string) => void) | null = null;
 export function setAnnotationsSyncErrorHandler(fn: ((msg: string) => void) | null): void {
   syncErrorHandler = fn;
-}
-
-/**
- * Ein Problem mit den Anmerkungen melden – nutzt denselben Kanal wie die Sync-Fehler (#251).
- * Gedacht für Fälle, die außerhalb dieses Moduls auffallen, z. B. ein voller Gerätespeicher.
- */
-export function reportAnnotationProblem(msg: string): void {
-  syncErrorHandler?.(msg);
 }
 
 /**
@@ -353,5 +337,5 @@ export async function migrateLocalAnnotations(): Promise<void> {
       retryLater = true; // Netz-/Serverfehler → nächster Start versucht es erneut
     }
   }
-  if (!retryLater) localStorage.setItem(MIGRATED_FLAG, '1');
+  if (!retryLater) lokalSchreiben(MIGRATED_FLAG, '1');
 }

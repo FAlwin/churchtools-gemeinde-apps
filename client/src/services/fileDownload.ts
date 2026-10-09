@@ -7,6 +7,7 @@
  */
 import { istExtension } from './ctRuntime';
 import { datei } from './ctLesen';
+import { liedDateiPfad } from './apiBase';
 
 /**
  * Lädt eine Datei **vollständig** und gibt ihre Bytes zurück.
@@ -30,5 +31,5 @@ export async function fetchFileBytes(url: string): Promise<ArrayBuffer> {
  */
 export async function ladeDokument(songId: number, fileId: number): Promise<ArrayBuffer> {
   if (istExtension) return (await datei(songId, fileId)).arrayBuffer();
-  return fetchFileBytes(`/api/songs/${songId}/files/${fileId}`);
+  return fetchFileBytes(liedDateiPfad(songId, fileId));
 }

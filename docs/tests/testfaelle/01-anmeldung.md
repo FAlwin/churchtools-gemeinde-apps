@@ -157,7 +157,51 @@ persönlichen Anmelde-Schlüssel still eine neue.
 
 - **Priorität:** hoch
 - **Betrifft:** `server/src/controllers/authController.ts`, `server/src/services/ctAuth.ts`, `server/src/middleware/session.ts`, `client/src/services/api.ts`
-- **Automatisiert:** teilweise – `server/src/controllers/authController.erneuern.test.ts` (erneuert, ungültiger Schlüssel meldet ab, Aussetzer behält die Anmeldung, ohne Schlüssel altes Verhalten, Login nimmt den Schlüssel mit), `server/src/middleware/session.rolling.test.ts` (Rollieren behält den Schlüssel), `server/src/services/ctAuth.test.ts`, `client/src/services/api.session401.test.ts` (Rückfrage vor dem Abmelden, eine für alle, „unklar" meldet nicht ab); von Hand bleibt, ob ein normales Konto seinen Schlüssel abrufen darf
+- **Automatisiert:** teilweise – `server/src/controllers/authController.erneuern.test.ts` (erneuert, ungültiger Schlüssel meldet ab, Aussetzer behält die Anmeldung, ohne Schlüssel altes Verhalten, Login nimmt den Schlüssel mit), `server/src/middleware/session.rolling.test.ts` (Rollieren behält den Schlüssel), `server/src/services/ctAuth.test.ts`, `client/src/services/api.session401.test.ts` (Rückfrage vor dem Abmelden, eine für alle, „unklar" meldet nicht ab, sondern endet mit 503 – #455), `client/src/services/annotations.flush.test.ts` (Sync bleibt bei „unklar" an); von Hand bleibt, ob ein normales Konto seinen Schlüssel abrufen darf
 - **Historie:** Alwin 23.09.2026
+
+</details>
+
+### TF-AUTH-07 · Jedes Netz hat sein eigenes Login-Kontingent
+
+**Das brauchst du:** Einen Mac mit Terminal, ein Handy mit Hotspot. Nur auf **Prod** oder Staging (beide
+laufen hinter Docker) – lokal ohne Docker sagt der Test nichts.
+
+**Das muss passieren:** Die Bremse gegen Passwort-Raten zählt **je Anschluss**. Probiert jemand von
+außen 50-mal ein falsches Passwort, ist nur sein Anschluss gesperrt – nicht die ganze Gemeinde.
+
+1. Im WLAN zweimal ausführen und jeweils die Zeile `RateLimit-Remaining` ablesen (die Zahl sinkt um 1):
+   `curl -s -D - -o /dev/null -X POST https://musik.ecg-donrath.de/api/auth/login -H 'content-type: application/json' -d '{}'`
+2. Den Mac mit dem **Handy-Hotspot** verbinden (WLAN aus) und denselben Befehl einmal ausführen.
+3. Die Zahl im Hotspot muss **unabhängig** sein – meist wieder hoch (z. B. 49), nicht die WLAN-Zahl
+   minus eins. Der Befehl fragt ChurchTools nicht und meldet nur „ungültige Eingabe".
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `server/src/index.ts`, `server/src/utils/vertrauterProxy.ts`, `server/src/routes/auth.ts`
+- **Automatisiert:** teilweise – `server/src/trustProxy.test.ts` (Docker-Gateway als Verbindung, eigene Kopfzeile zählt nicht); von Hand bleibt die echte Proxy-Kette am NAS
+- **Historie:** #459
+
+</details>
+
+### TF-AUTH-08 · Abmelden auf einem Gerät lässt das andere angemeldet
+
+**Das brauchst du:** Zwei Geräte mit demselben Konto (z. B. Handy und iPad).
+
+**Das muss passieren:** Abmelden beendet **nur diese Anmeldung** – auch für eine Kopie davon, die
+irgendwo liegt. Das andere Gerät bleibt angemeldet.
+
+1. Auf beiden Geräten anmelden.
+2. Auf dem Handy **Mehr → Abmelden**.
+3. Auf dem iPad die App neu laden: Die Termine erscheinen, **kein** Login.
+4. Auf dem Handy wieder anmelden: geht wie gewohnt.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `server/src/controllers/authController.ts`, `server/src/middleware/session.ts`, `server/src/services/abmeldungen.ts`
+- **Automatisiert:** ja (Server) – `server/src/controllers/authController.abmelden.test.ts` (kopierte Sitzung tot, anderes Gerät bleibt, übersteht Neustart); von Hand bleibt das Zusammenspiel zweier echter Geräte
+- **Historie:** #460
 
 </details>

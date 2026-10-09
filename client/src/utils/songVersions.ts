@@ -1,5 +1,6 @@
 import type { SetlistSong } from '@shared/types/index';
 import { pushSetting } from '../services/userSettings';
+import { lokalSchreiben } from './lokalSpeicher';
 
 // Alle Anzeige-Einstellungen (auch Spalten & Textgröße) werden geräteübergreifend über das Konto
 // synchronisiert – ein Schlüssel ohne Geräte-Suffix. NUR der Zoom bleibt pro Geräteklasse getrennt;
@@ -32,8 +33,7 @@ export function lsSong(base: string, songId: number): string | null {
  */
 export function setLsSong(base: string, songId: number, value: string | null): void {
   const k = songKey(base, songId);
-  if (value === null) localStorage.removeItem(k);
-  else localStorage.setItem(k, value);
+  lokalSchreiben(k, value); // wirft nie – sonst entfiele das Hochladen (#457)
   pushSetting(k, value);
 }
 
@@ -139,7 +139,6 @@ export function setLsVersion(
   value: string | null,
 ): void {
   const k = fullKey(base, songId, versionKey);
-  if (value === null) localStorage.removeItem(k);
-  else localStorage.setItem(k, value);
+  lokalSchreiben(k, value); // wirft nie – sonst entfiele das Hochladen (#457)
   pushSetting(k, value);
 }

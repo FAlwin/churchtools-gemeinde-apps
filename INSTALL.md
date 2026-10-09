@@ -92,6 +92,11 @@ Das Ergebnis kopieren und eintragen.
 > `.env.example` und alles unter 32 Zeichen werden abgelehnt, mit einer Meldung im Log. Der Befehl
 > oben liefert 64 Zeichen. Grund: Aus diesem Wert entstehen die Signatur des Login-Cookies **und**
 > der Schlüssel, mit dem die ChurchTools-Anmeldung darin verschlüsselt liegt.
+>
+> **Wie ein Master-Passwort behandeln:** nicht in unverschlüsselte Backups, nicht weitergeben. Die App
+> legt beim ersten Anmelden in ChurchTools einen persönlichen Anmeldeschlüssel an (damit man angemeldet
+> bleibt) – wer Geheimnis **und** ein Login-Cookie hat, käme damit an ChurchTools heran. Details und was
+> beim Wechseln des Geheimnisses passiert: [DEPLOYMENT.md](docs/betrieb/DEPLOYMENT.md).
 
 ### 4. App starten
 

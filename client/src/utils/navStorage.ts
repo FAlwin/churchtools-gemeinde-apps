@@ -1,4 +1,5 @@
 import type { TabId } from '../components/TabBar';
+import { lokalSchreiben } from './lokalSpeicher';
 
 /** Eine gepushte Vollbild-Ansicht über der Tab-Ebene (Ablauf oder Lied-Anzeige). */
 export type View = null | { type: 'setlist' } | { type: 'chart'; source: 'setlist' | 'lieder' };
@@ -34,11 +35,7 @@ export function loadNav(): PersistedNav | null {
 }
 
 export function saveNav(nav: PersistedNav): void {
-  try {
-    localStorage.setItem(NAV_KEY, JSON.stringify(nav));
-  } catch {
-    // Speicher nicht verfügbar – Wiederherstellung entfällt dann eben
-  }
+  lokalSchreiben(NAV_KEY, JSON.stringify(nav)); // voll → Wiederherstellung entfällt dann eben
 }
 
 export function clearNav(): void {

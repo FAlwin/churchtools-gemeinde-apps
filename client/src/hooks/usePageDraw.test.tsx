@@ -53,6 +53,23 @@ describe('usePageDraw', () => {
     expect(textPushesAfterRerender).toBe(textPushesAfterAdd);
   });
 
+  it('voller Gerätespeicher: die Textnotiz geht trotzdem ans Konto (#457)', () => {
+    // Vorher stand das ungeschützte `localStorage.setItem` VOR dem Hochladen – es warf, und das
+    // Hochladen entfiel. Die Lehre aus #251 galt nur für die Striche.
+    const key = 'worship_docdraw_song9_v1_0';
+    const push = vi.fn();
+    const { strokesRef, layerRef } = refs();
+    const { result } = renderHook(() => usePageDraw(key, strokesRef, layerRef, 0, push));
+    const voll = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('voll', 'QuotaExceededError');
+    });
+    act(() => result.current.placeText(0.4, 0.4, 10, 10));
+    act(() => result.current.confirmText('Trotzdem', '#000', 2, DEFAULT_TEXT_STYLE));
+    voll.mockRestore();
+    const texte = push.mock.calls.filter((c) => c[0] === key && c[1] === 'texts');
+    expect(texte.at(-1)?.[2]).toEqual([expect.objectContaining({ text: 'Trotzdem' })]);
+  });
+
   it('Undo/Redo eines Textes stellt den Stand wieder her', () => {
     const key = 'worship_docdraw_song3_v1_0';
     const push = vi.fn();

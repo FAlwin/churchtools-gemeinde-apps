@@ -7,6 +7,54 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+Code-Check vom 09.10.2026 abgearbeitet (#455–#466).
+
+### Behoben
+
+- **Ein Netz-Aussetzer meldet nicht mehr ab** (#455): Lief die ChurchTools-Sitzung ab und war genau
+  beim stillen Erneuern das Netz kurz weg, meldete die App ab und leerte das Gerät samt Offline-Liedern.
+  Jetzt bleibt man angemeldet, und der nächste Versuch fragt neu. Auch der Abgleich von Anmerkungen und
+  Einstellungen schaltete sich in diesem Fall still ab.
+- **Voller Gerätespeicher verhindert kein Speichern aufs Konto mehr** (#457): Textnotizen, übernommene
+  Team-Notizen und Lied-Einstellungen (Tonart, Version) gingen bei vollem Speicher nicht ans Konto; bei Textnotizen konnte es
+  laut Code sogar zum Fehlerbildschirm führen (nicht nachgestellt). Jetzt kommt einmal der Hinweis „Speicher voll", und alles
+  wird trotzdem gesichert.
+- **Liedtext-Suche nur für Lieder, die man sehen darf** (#458): Treffer und Vorschau kamen aus einem
+  Suchverzeichnis für alle, ohne die Lied-Rechte der fragenden Person zu prüfen. Jetzt nur aus der
+  eigenen Liederliste in ChurchTools. Dabei behoben: Baute ein Mitglied (Liederbuch) das Verzeichnis,
+  fehlten den Musikern eine Stunde lang Lieder – fehlende werden jetzt nachgeladen.
+- **Liedtext-Suche während einer ChurchTools-Bremse** (#456): Mit älterem Verzeichnis lud jede Suche
+  alle Notenblätter neu und verlängerte die Bremse. Jetzt wird das ältere Verzeichnis benutzt.
+- **Login-Bremse je Anschluss statt für alle gemeinsam** (#459): Hinter Docker sah der Server sehr
+  wahrscheinlich für jede Anfrage dieselbe Adresse (das Docker-Gateway) – 50 Fehlversuche von außen
+  hätten dann die Anmeldung für die ganze Gemeinde gesperrt. Aus Aufbau und Code geschlossen, am NAS
+  noch zu bestätigen: TF-AUTH-07.
+- **Lied-Statistik prüft die Rechte gemerkt** (#466) statt bei jedem Aufruf mit zwei Anfragen an
+  ChurchTools.
+
+### Sicherheit
+
+- **Abmelden beendet die Anmeldung auch serverseitig** (#460): Eine vor dem Abmelden kopierte
+  App-Sitzung konnte sich mit dem Anmeldeschlüssel bis zu 90 Tage lang selbst wiederbeleben. Andere
+  Geräte derselben Person bleiben angemeldet. Neue Datei im Daten-Volume: `abmeldungen.json`.
+- **Abhängigkeit `proxy-addr` 2.0.8** (#461, GHSA-jqcg-44mw-7w3h), `npm audit` ohne Funde.
+- **Betriebs-Doku: `SESSION_SECRET` ist ein Master-Passwort** (#462) – was die App in ChurchTools
+  anlegt (persönlicher Anmeldeschlüssel) und was beim Wechseln des Geheimnisses passiert
+  (`docs/betrieb/DEPLOYMENT.md`).
+
+### Intern
+
+- **Regel-Dopplungen zusammengeführt** (#463): ein Baustein für „Versprechen merken, bei Fehlschlag
+  vergessen" (statt fünf Kopien, eine davon ohne Schutz gegen das Löschen eines neueren Eintrags), die
+  whoami-Regel für Server und Erweiterung (zwei Stellen nahmen eine ID als Text nicht an), eine Adresse
+  für Lied-Dateien (Offline-Vorrat und Betrachter müssen dieselbe nehmen), `mapLimit`,
+  Vollbild-Knopf, JSON-Lesen.
+- **Große Dateien aufgeteilt** (#465): Der Server-Controller (843 Zeilen) nach Fachbereich in fünf
+  Dateien; das Liedblatt gibt Fenster-Zustand, Werkzeug-Knöpfe, Tempo und die Schlüssel-Umzüge an
+  eigene Hooks ab (1.092 → 960 Zeilen; Umzüge jetzt per `useLayoutEffect` statt im `useMemo`).
+- **Veraltete Kommentare** zur Lied-Statistik (~250 Anfragen) und Lücken in `eslint.config.mjs`
+  berichtigt (#464).
+
 ## [2.32.0] – 2026-10-09
 
 **Beim Update bitte beachten (Server-Variante):** Die Lied-Statistik („Häufigkeit", „Zuletzt") braucht

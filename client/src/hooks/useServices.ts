@@ -395,7 +395,7 @@ export function useSongStammdaten(songId: number | null) {
  *
  * Danach ist **alles ungültig, wo ein Liedname steht**: Bibliothek, Chart und – falls das Lied im
  * Ablauf vorkommt – die Abläufe. Bewusst NICHT die Statistik (`song-usage`): Ein umbenanntes Lied wurde
- * nicht öfter oder seltener gespielt, und der Lauf kostet ~250 ChurchTools-Anfragen (#300).
+ * nicht öfter oder seltener gespielt – ihre Zahlen ändern sich dadurch nicht.
  */
 export function useLiedAendern(songId: number) {
   const qc = useQueryClient();
@@ -465,7 +465,9 @@ export function useArrangements(songId: number | null) {
  * vergessen heißt hier: Die App zeigt einen Stand, den es in ChurchTools nicht mehr gibt.
  *
  * **Die Statistik bewusst nicht** (`song-usage`): Ein geändertes Arrangement wurde nicht öfter
- * gespielt, und der Lauf kostet ~250 ChurchTools-Anfragen (#300).
+ * gespielt. Einzige Ausnahme: Ein gelöschtes Arrangement nimmt seine Einsätze mit (ChurchTools zählt je
+ * Arrangement). Das zeigt die Statistik, sobald der Stand des Servers verfällt (zehn Minuten) – ein
+ * Neuladen hier holte vorher nur denselben gemerkten Stand.
  */
 function arrangementListenErneuern(qc: ReturnType<typeof useQueryClient>, songId: number): void {
   void qc.invalidateQueries({ queryKey: ['arrangements', songId] });

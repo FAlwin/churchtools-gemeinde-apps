@@ -48,7 +48,8 @@ function isAuthPath(path: string): boolean {
  * - **Eine Erneuerung für alle:** Laufen beim Öffnen fünf Anfragen gleichzeitig in 401, warten alle
  *   auf DENSELBEN Aufruf – sonst holte jede eine eigene ChurchTools-Sitzung.
  * - **„unklar" ist nicht „abgemeldet":** Antwortet `/api/auth/me` gar nicht (Netz, 5xx), wird NICHT
- *   abgemeldet – vorübergehend ist nicht ungültig. Die Anfrage scheitert, der nächste Versuch fragt neu.
+ *   abgemeldet – vorübergehend ist nicht ungültig. Die Anfrage scheitert mit **503**, nicht mit 401
+ *   (#455), der nächste Versuch fragt neu.
  */
 type Erneuerung = 'erneuert' | 'abgemeldet' | 'unklar';
 let laufendeErneuerung: Promise<Erneuerung> | null = null;
@@ -126,6 +127,15 @@ export async function apiFetch<T>(
       const erneuerung = wiederholt ? 'abgemeldet' : await sitzungErneuern();
       if (erneuerung === 'erneuert') return apiFetch<T>(path, options, true);
       if (erneuerung === 'abgemeldet') sessionExpiredHandler?.();
+      // „unklar" darf NICHT als 401 weiterlaufen (#455): Jeder Aufrufer liest 401 als „abgemeldet" –
+      // die Rechte-Abfrage in `App.tsx` meldete dann ab und leerte das Gerät samt Offline-Vorrat,
+      // die Sync-Dienste schalteten sich still ab. Wie `ctRuntime.fehlerAus`: vorübergehend = 503.
+      if (erneuerung === 'unklar') {
+        throw new ApiError(
+          503,
+          'Die Anmeldung ließ sich gerade nicht prüfen. Bitte gleich noch einmal versuchen.',
+        );
+      }
     }
     throw new ApiError(res.status, message);
   }

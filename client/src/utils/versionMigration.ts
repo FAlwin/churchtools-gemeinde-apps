@@ -14,6 +14,7 @@
 import type { SetlistSong } from '@shared/types/index';
 import type { Kopie } from './arrangementMigration';
 import { lsSong, setLsSong } from './songVersions';
+import { lokalSchreiben } from './lokalSpeicher';
 
 function ohneSonderzeichen(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -67,10 +68,7 @@ export function versionMigrationAnwenden(song: SetlistSong): number {
   for (const v of umzug) {
     for (const { von, nach } of versionKopien(vorhanden, song.id, v.alterKey, v.key)) {
       const wert = localStorage.getItem(von);
-      if (wert !== null) {
-        localStorage.setItem(nach, wert);
-        anzahl++;
-      }
+      if (wert !== null && lokalSchreiben(nach, wert)) anzahl++;
     }
     // Die gewählte Version – über `setLsSong`, damit auch das Konto (und damit andere Geräte) sie hat.
     if (lsSong('ver', song.id) === v.alterKey) setLsSong('ver', song.id, v.key);

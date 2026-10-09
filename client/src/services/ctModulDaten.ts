@@ -12,8 +12,9 @@
  *    Schreiben → 401 (`KeinSpeicherRecht`, siehe `ctRuntime.fehlerAus`).
  */
 import { ApiError } from './api';
-import { ctAnfrage, KeinSpeicherRecht } from './ctRuntime';
+import { ctAnfrage, ctDaten, KeinSpeicherRecht } from './ctRuntime';
 import { erweiterungsKuerzel } from './modus';
+import { merkeVersprechen } from '@shared/ct/versprechenMerker';
 
 /** Gemessen (Plan §2b): Mehr nimmt ChurchTools in einem Wert nicht an. */
 export const MAX_ZEICHEN = 10_000;
@@ -31,37 +32,30 @@ export interface KategorieAngabe {
   beschreibung: string;
 }
 
-async function daten<T>(pfad: string): Promise<T> {
-  const body = await ctAnfrage<{ data?: T } | null>(pfad);
-  return (body?.data ?? body) as T;
-}
-
 /**
  * Die ID des eigenen Moduls – je Sitzung der Seite einmal gesucht. Ein Fehlschlag wird NICHT gemerkt
  * (vorübergehend ist nicht ungültig).
  */
-let modulSuche: Promise<number> | null = null;
+const modulSuche = merkeVersprechen<number>();
 
 export function modulId(): Promise<number> {
-  modulSuche ??= (async () => {
+  return modulSuche.hole('modul', async () => {
     const kuerzel = erweiterungsKuerzel();
-    const module = await daten<{ id: number; shorty: string }[]>('/custommodules');
+    const module = await ctDaten<{ id: number; shorty: string }[]>('/custommodules');
     const modul = (module ?? []).find((m) => m.shorty === kuerzel);
     if (!modul) throw new ApiError(404, 'Die Musik App ist in ChurchTools nicht zu finden.');
     return modul.id;
-  })();
-  modulSuche.catch(() => (modulSuche = null));
-  return modulSuche;
+  });
 }
 
 /** Nur für Tests: das gemerkte Modul vergessen. */
 export function _vergissModul(): void {
-  modulSuche = null;
+  modulSuche.vergiss();
 }
 
 /** Die Kategorie mit diesem Kürzel – `null`, wenn es sie nicht gibt oder man sie nicht sehen darf. */
 export async function kategorieSuchen(modul: number, kuerzel: string): Promise<number | null> {
-  const liste = await daten<{ id: number; shorty: string }[]>(
+  const liste = await ctDaten<{ id: number; shorty: string }[]>(
     `/custommodules/${modul}/customdatacategories`,
   );
   return (liste ?? []).find((k) => k.shorty === kuerzel)?.id ?? null;
@@ -100,7 +94,7 @@ function wertePfad(modul: number, kategorie: number): string {
 }
 
 export async function werteLesen(modul: number, kategorie: number): Promise<Wert[]> {
-  return (await daten<Wert[]>(wertePfad(modul, kategorie))) ?? [];
+  return (await ctDaten<Wert[]>(wertePfad(modul, kategorie))) ?? [];
 }
 
 export async function wertAnlegen(

@@ -1,8 +1,8 @@
 /**
  * Alle Zwischenspeicher, die an EINEM Session-Cookie hängen – an einer Stelle (#280).
  *
- * Es sind sechs: Konto-ID (12 h), Rechte (5 min), CSRF-Token (1 min), die laufenden Token-Abrufe
- * sowie Abwesenheitsgründe und Liedquellen (je 1 min).
+ * Es sind sieben: Konto-ID (12 h), Rechte (5 min), CSRF-Token (1 min), die laufenden Token-Abrufe,
+ * Abwesenheitsgründe und Liedquellen (je 1 min) sowie die sichtbaren Lieder (5 min, #458).
  * Sie lagen früher über
  * `churchtools.ts` verstreut, jede mit ihrer eigenen handgeschriebenen Ablaufprüfung – und `logout`
  * räumte nur eine davon. Ein abgemeldetes Cookie lieferte dadurch bis zu fünf Minuten lang gecachte
@@ -16,6 +16,7 @@
  */
 import { createTtlMemo } from './ttlMemo.js';
 import type { AbsenceReason, SongSource, UserCapabilities } from '@shared/types/index';
+import type { CtSongListEntry } from '@shared/ct/typen';
 
 // Cookie → ChurchTools-Person-ID, gecacht mit 12-h-Auffrischung – spart whoami-Abrufe je Anmerkung
 // und prüft periodisch, ob das Cookie noch gilt (unabhängig von der App-Cookie-Lebensdauer).
@@ -60,6 +61,12 @@ export const gruendeMemo = createTtlMemo<AbsenceReason[]>(60_000);
 export const quellenMemo = createTtlMemo<SongSource[]>(60_000);
 
 /**
+ * Die Liederliste, die ChurchTools dieser Sitzung zeigt (#458) – für die Liedtext-Suche: Treffer nur
+ * aus Liedern, die die Person sehen darf. Fünf Minuten wie die Rechte.
+ */
+export const sichtbareLiederMemo = createTtlMemo<CtSongListEntry[]>(5 * 60_000);
+
+/**
  * Alles vergessen, was an EINEM Session-Cookie hängt – die eine Stelle, die alle Sitzungs-Speicher
  * kennt. Wer einen neuen hinzufügt, trägt ihn hier ein; sonst überlebt er das Abmelden.
  *
@@ -78,6 +85,7 @@ export function forgetSession(cookie: string): void {
   // genau der Fehler, gegen den dieses Modul gebaut wurde („logout räumte einen von drei").
   gruendeMemo.delete(cookie);
   quellenMemo.delete(cookie);
+  sichtbareLiederMemo.delete(cookie);
 }
 
 /** Nur für Tests: ALLE sitzungsgebundenen Speicher leeren – die Liste muss vollständig bleiben. */
@@ -88,4 +96,5 @@ export function __resetSessionMemosForTests(): void {
   csrfInflight.clear();
   gruendeMemo.clear();
   quellenMemo.clear();
+  sichtbareLiederMemo.clear();
 }

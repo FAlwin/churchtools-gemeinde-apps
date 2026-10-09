@@ -20,13 +20,24 @@
  *  3. **gecacht** – eine Stunde; danach wird beim nächsten Suchen neu gebaut.
  *
  * **Der Index hält nur, was zum Suchen nötig ist:** kleingeschriebenen Text ohne Akkorde und ohne
- * ChordPro-Direktiven. Er ist bewusst org-weit und kontenunabhängig – wie die Statistik: Liedtexte sind
- * für alle dieselben, und der Bestand ist ohnehin für jeden mit Lieder-Recht sichtbar.
+ * ChordPro-Direktiven. Er ist **einer für die ganze Gemeinde** – Liedtexte sind für alle dieselben.
+ *
+ * **Aber nicht jeder darf jedes Lied sehen (#458).** In ChurchTools hängt das Lied-Recht an Kategorien
+ * (z. B. „Inaktive Songs" nur für Musiker). Deshalb gilt zweierlei:
+ *
+ *  - **Treffer und Vorschau nur aus der EIGENEN Liederliste** – die liefert ChurchTools mit dem Cookie
+ *    der fragenden Person, gemerkt je Sitzung (`sichtbareLiederMemo`). Wir bauen die Rechte-Regel nicht
+ *    nach; ChurchTools entscheidet. Vorher bekam jede angemeldete Person Texte aller Lieder.
+ *  - **Der Index wächst um das, was jemand sieht und er noch nicht kennt.** Gebaut wird mit dem Cookie
+ *    der ersten Person – sah die nur einen Teil (ein Mitglied mit Liederbuch), fehlten den Musikern
+ *    eine Stunde lang Lieder. Jetzt werden fehlende Lieder nachgeladen, nicht der ganze Index neu.
  */
 import { LIEDTEXT_SUCHE_MIN_ZEICHEN, type SongTextTreffer } from '@shared/types/index';
 import { CtOverloadedError, isCtOverloaded } from './ctHttp.js';
 import { downloadFileText } from './ctFiles.js';
 import { getAllSongs } from './ctRead.js';
+import { sichtbareLiederMemo } from './ctSessionMemos.js';
+import type { CtSongListEntry } from '@shared/ct/typen';
 import { createGebuendelterLauf } from './gebuendelterLauf.js';
 import { mapLimit } from './mapLimit.js';
 import { chordproZuLesetext, liedtextVorschauAus, originalChordpro } from '@shared/ct/liedtext';
@@ -35,7 +46,7 @@ import { chordproZuLesetext, liedtextVorschauAus, originalChordpro } from '@shar
 const INDEX_TTL_MS = 3_600_000;
 /** Sperrfrist nach einer Drosselung – wie bei der Statistik. */
 const INDEX_COOLDOWN_MS = 120_000;
-/** Gleichzeitige Datei-Downloads. Bewusst niedriger als die 8 der Statistik: Dateien sind schwerer. */
+/** Gleichzeitige Datei-Downloads – Dateien sind schwer, deshalb wenige. */
 const PARALLEL = 6;
 
 interface IndexEintrag {
@@ -55,8 +66,16 @@ interface IndexEintrag {
   chordpro: string;
 }
 
-let index: { at: number; eintraege: IndexEintrag[] } | null = null;
-const indexLauf = createGebuendelterLauf<IndexEintrag[]>(INDEX_COOLDOWN_MS);
+interface IndexStand {
+  /** Wann der Index zuletzt VOLLSTÄNDIG gebaut wurde – ein Nachladen verlängert die Stunde nicht. */
+  at: number;
+  eintraege: IndexEintrag[];
+  /** Welche Lieder schon angesehen wurden – mit oder ohne Text. Was hier fehlt, wird nachgeladen. */
+  abgedeckt: ReadonlySet<number>;
+}
+
+let index: IndexStand | null = null;
+const indexLauf = createGebuendelterLauf<IndexStand>(INDEX_COOLDOWN_MS);
 
 /** Nur für Tests: Index, laufenden Aufbau und Sperrfrist zurücksetzen. */
 export function __resetSongTextIndexForTests(): void {
@@ -106,11 +125,35 @@ export function ausschnitt(text: string, treffer: string, laenge = 90): string {
   return (von > 0 ? '… ' : '') + text.slice(von, bis).trim() + (bis < text.length ? ' …' : '');
 }
 
-/** Baut den Index: für jedes Lied das Original-ChordPro laden und auf Suchtext reduzieren. */
-async function baueIndex(cookie: string): Promise<IndexEintrag[]> {
-  const started = Date.now();
-  const songs = await getAllSongs(cookie);
+type Lied = CtSongListEntry;
+
+/**
+ * Die Liederliste, die ChurchTools DIESER Person zeigt – gemerkt je Sitzung (#458).
+ *
+ * Kostet eine Anfrage je 100 Lieder, höchstens alle fünf Minuten je Person. Billiger lässt sich die
+ * Frage „darf sie dieses Lied sehen?" nicht ehrlich beantworten – die Kategorie-Rechte nachzubauen
+ * wäre eine zweite Fassung einer Regel, die ChurchTools schon hat.
+ */
+async function sichtbareLieder(cookie: string): Promise<Lied[]> {
+  const gemerkt = sichtbareLiederMemo.get(cookie);
+  if (gemerkt) return gemerkt;
+  const lieder = await getAllSongs(cookie);
+  sichtbareLiederMemo.set(cookie, lieder);
+  return lieder;
+}
+
+/** Für diese Lieder das Original-ChordPro laden und auf Suchtext reduzieren. */
+async function ladeTexte(
+  cookie: string,
+  songs: Lied[],
+): Promise<{
+  eintraege: IndexEintrag[];
+  abgedeckt: number[];
+  ohneText: number;
+  gedrosselt: boolean;
+}> {
   const eintraege: IndexEintrag[] = [];
+  const abgedeckt: number[] = [];
   let gedrosselt = false;
   let ohneText = 0;
 
@@ -120,6 +163,7 @@ async function baueIndex(cookie: string): Promise<IndexEintrag[]> {
     const datei = originalChordpro(song);
     if (!datei) {
       ohneText++;
+      abgedeckt.push(song.id);
       return;
     }
     try {
@@ -137,6 +181,7 @@ async function baueIndex(cookie: string): Promise<IndexEintrag[]> {
           chordpro,
         });
       } else ohneText++;
+      abgedeckt.push(song.id);
     } catch (e) {
       if (isCtOverloaded(e)) {
         gedrosselt = true;
@@ -145,29 +190,93 @@ async function baueIndex(cookie: string): Promise<IndexEintrag[]> {
       // Ein einzelnes nicht ladbares Notenblatt darf den Index nicht verhindern – das Lied fehlt dann
       // nur in der Textsuche und bleibt über den Titel weiter findbar.
       ohneText++;
+      abgedeckt.push(song.id);
     }
   });
+  return { eintraege, abgedeckt, ohneText, gedrosselt };
+}
 
-  if (gedrosselt) {
-    indexLauf.sperren();
-    console.warn(
-      `[songTextIndex] Aufbau ABGEBROCHEN (ChurchTools drosselt) nach ` +
-        `${((Date.now() - started) / 1000).toFixed(1)} s; Sperrfrist ` +
-        `${Math.round(INDEX_COOLDOWN_MS / 1000)} s`,
-    );
+/** Nach einer Drosselung: Sperrfrist beginnen und im Log festhalten. */
+function nachDrosselung(was: string, started: number): void {
+  indexLauf.sperren();
+  console.warn(
+    `[songTextIndex] ${was} ABGEBROCHEN (ChurchTools drosselt) nach ` +
+      `${((Date.now() - started) / 1000).toFixed(1)} s; Sperrfrist ` +
+      `${Math.round(INDEX_COOLDOWN_MS / 1000)} s`,
+  );
+}
+
+/** Baut den Index neu – aus den Liedern, die die auslösende Person sieht. */
+async function baueIndex(cookie: string, songs: Lied[]): Promise<IndexStand> {
+  const started = Date.now();
+  const r = await ladeTexte(cookie, songs);
+
+  if (r.gedrosselt) {
+    nachDrosselung('Aufbau', started);
     // Ein halber Index wäre schlimmer als keiner: Er würde eine Stunde lang Lieder verschweigen und
     // dabei aussehen wie ein vollständiges Ergebnis.
-    if (index) return index.eintraege;
+    if (index) return index;
     throw new CtOverloadedError(INDEX_COOLDOWN_MS);
   }
 
-  index = { at: Date.now(), eintraege };
+  index = { at: Date.now(), eintraege: r.eintraege, abgedeckt: new Set(r.abgedeckt) };
   indexLauf.entsperren();
   console.warn(
-    `[songTextIndex] Aufbau beendet: ${eintraege.length} Lieder mit Text, ${ohneText} ohne, ` +
+    `[songTextIndex] Aufbau beendet: ${r.eintraege.length} Lieder mit Text, ${r.ohneText} ohne, ` +
       `${((Date.now() - started) / 1000).toFixed(1)} s`,
   );
-  return eintraege;
+  return index;
+}
+
+/**
+ * Nur die Lieder nachladen, die der Index noch nicht kennt (#458) – statt alles neu zu bauen.
+ *
+ * Hier darf auch ein Teil hinein: Jedes nachgeladene Lied steht in `abgedeckt`, der Rest wird beim
+ * nächsten Suchen erneut versucht. Anders als beim Aufbau verschweigt das nichts, was vorher da war.
+ */
+async function ergaenzeIndex(
+  cookie: string,
+  stand: IndexStand,
+  fehlend: Lied[],
+): Promise<IndexStand> {
+  const started = Date.now();
+  const r = await ladeTexte(cookie, fehlend);
+  index = {
+    at: stand.at,
+    eintraege: [...stand.eintraege, ...r.eintraege],
+    abgedeckt: new Set([...stand.abgedeckt, ...r.abgedeckt]),
+  };
+  if (r.gedrosselt) nachDrosselung('Nachladen', started);
+  return index;
+}
+
+/**
+ * Den Index besorgen, der für diese Person taugt: frisch, und mit allen Liedern, die sie sieht.
+ *
+ * **Während einer Drosselung wird weder gebaut noch nachgeladen** (#456). Liegt ein älterer Index vor,
+ * ist der die bessere Antwort als ein Fehler – Liedtexte ändern sich selten. Vorher fiel dieser Fall
+ * durch zum Neubau, denn `fuehreAus` prüft die Sperre nicht: Jede Suche in der Sperrfrist startete
+ * einen Lauf und verlängerte die Drosselung – das Muster aus #300. Liegt keiner vor, muss die
+ * Oberfläche erfahren, dass sie kurz warten soll: „nichts gefunden" und „konnte nicht suchen" sind
+ * zwei verschiedene Aussagen (#270).
+ */
+async function indexFuer(cookie: string, sichtbar: Lied[]): Promise<IndexStand> {
+  // Zweimal: Hängt sich ein Aufruf an das Nachladen eines anderen, sind seine Lieder danach evtl.
+  // noch nicht dabei – dann einmal selbst nachladen. Mehr nicht, sonst droht eine Schleife.
+  for (let versuch = 0; versuch < 2; versuch++) {
+    const vorhanden = index;
+    const frisch = vorhanden !== null && Date.now() - vorhanden.at < INDEX_TTL_MS;
+    if (indexLauf.istGesperrt()) {
+      if (vorhanden === null) throw new CtOverloadedError(indexLauf.restMs());
+      return vorhanden;
+    }
+    if (!frisch) return indexLauf.fuehreAus(() => baueIndex(cookie, sichtbar));
+    const fehlend = sichtbar.filter((l) => !vorhanden.abgedeckt.has(l.id));
+    if (fehlend.length === 0) return vorhanden;
+    await indexLauf.fuehreAus(() => ergaenzeIndex(cookie, vorhanden, fehlend));
+  }
+  // `index` ist hier gesetzt: Jeder Weg oben, der nicht zurückkehrt, hat ihn gebaut oder ergänzt.
+  return index as IndexStand;
 }
 
 /**
@@ -181,24 +290,12 @@ export async function sucheImLiedtext(cookie: string, begriff: string): Promise<
   const gesucht = zuSuchform(begriff.trim());
   if (gesucht.length < LIEDTEXT_SUCHE_MIN_ZEICHEN) return [];
 
-  const vorhanden = index;
-  const frisch = vorhanden !== null && Date.now() - vorhanden.at < INDEX_TTL_MS;
-  if (!frisch && indexLauf.istGesperrt()) {
-    /**
-     * Während einer Drosselung wird **nicht** neu gebaut. Liegt ein älterer Index vor, ist der die
-     * bessere Antwort als ein Fehler – Liedtexte ändern sich selten. Liegt keiner vor, muss die
-     * Oberfläche erfahren, dass sie kurz warten soll, statt eine leere Trefferliste zu sehen: „nichts
-     * gefunden" und „konnte nicht suchen" sind zwei verschiedene Aussagen (#270).
-     */
-    if (vorhanden === null) throw new CtOverloadedError(indexLauf.restMs());
-  }
-  const eintraege =
-    frisch && vorhanden !== null
-      ? vorhanden.eintraege
-      : await indexLauf.fuehreAus(() => baueIndex(cookie));
+  const sichtbar = await sichtbareLieder(cookie);
+  const darf = new Set(sichtbar.map((l) => l.id));
+  const { eintraege } = await indexFuer(cookie, sichtbar);
 
   return eintraege
-    .filter((e) => e.text.includes(gesucht))
+    .filter((e) => darf.has(e.songId) && e.text.includes(gesucht))
     .map((e) => ({ songId: e.songId, name: e.name, ausschnitt: ausschnitt(e.text, gesucht) }))
     .sort((a, b) => a.name.localeCompare(b.name, 'de-DE'));
 }
@@ -219,6 +316,11 @@ export async function sucheImLiedtext(cookie: string, begriff: string): Promise<
  * `null` heißt „dieses Lied hat keinen Text" – die Oberfläche zeigt dann **keine** leere Vorschau.
  */
 export async function liedtextVorschau(cookie: string, songId: number): Promise<string | null> {
+  // Erst die eigene Liederliste (#458): Ein Lied, das ChurchTools dieser Person nicht zeigt, hat für
+  // sie keine Vorschau – auch wenn es im Index steht, den jemand anderes aufgebaut hat.
+  const song = (await sichtbareLieder(cookie)).find((s) => s.id === songId);
+  if (!song) return null;
+
   const vorhanden = index;
   if (vorhanden !== null && Date.now() - vorhanden.at < INDEX_TTL_MS) {
     const treffer = vorhanden.eintraege.find((e) => e.songId === songId);
@@ -227,9 +329,5 @@ export async function liedtextVorschau(cookie: string, songId: number): Promise<
     if (treffer) return treffer.chordpro;
   }
 
-  const songs = await getAllSongs(cookie);
-  return liedtextVorschauAus(
-    songs.find((s) => s.id === songId),
-    (url) => downloadFileText(cookie, url),
-  );
+  return liedtextVorschauAus(song, (url) => downloadFileText(cookie, url));
 }

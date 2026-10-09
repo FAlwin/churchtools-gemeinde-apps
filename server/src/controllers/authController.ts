@@ -7,7 +7,13 @@ import {
   sitzungAusSchluessel,
   whoami,
 } from '../services/ctAuth.js';
-import { setSession, clearSession, readSession, isSessionExpired } from '../middleware/session.js';
+import {
+  setSession,
+  clearSession,
+  readSession,
+  isSessionExpired,
+  sitzungBeenden,
+} from '../middleware/session.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import type { AuthStatus } from '@shared/types/index';
 
@@ -40,11 +46,16 @@ export async function postLogin(req: Request, res: Response): Promise<void> {
  *
  * ⚠️ Den **Anmelde-Schlüssel** widerruft der Logout bewusst NICHT (kein `DELETE …/logintoken`): Es
  * gibt ihn je Person nur einmal, und andere Dienste der Person nutzen ihn womöglich mit. Er lag nur
- * in unserem Cookie – mit dem Cookie ist er für uns weg.
+ * in unserem Cookie – aber eine vorher kopierte App-Sitzung trüge ihn weiter. Deshalb merkt sich der
+ * Server die Anmeldung als beendet (#460): Danach kann sie sich mit dem Schlüssel nicht mehr selbst
+ * wiederbeleben.
  */
 export async function postLogout(req: Request, res: Response): Promise<void> {
   const session = readSession(req);
-  if (session) await logout(session.ctCookie);
+  if (session) {
+    await sitzungBeenden(session);
+    await logout(session.ctCookie);
+  }
   clearSession(res);
   res.json({ authenticated: false } satisfies AuthStatus);
 }

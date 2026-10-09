@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, lazy, Suspense, type ComponentProps } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { setSessionExpiredHandler } from './services/api';
+import { setSpeicherVollMelder } from './utils/lokalSpeicher';
 import { setSettingsSyncErrorHandler } from './services/userSettings';
 import { setAnnotationsSyncErrorHandler } from './services/annotations';
 import { Login } from './pages/Login';
@@ -262,6 +263,12 @@ export default function App() {
   useEffect(() => {
     setAnnotationsSyncErrorHandler((msg) => showToast(msg));
     return () => setAnnotationsSyncErrorHandler(null);
+  }, [showToast]);
+
+  // Und für einen vollen Gerätespeicher (#251, #457) – einmal je Sitzung, aus `lokalSchreiben`.
+  useEffect(() => {
+    setSpeicherVollMelder((msg) => showToast(msg));
+    return () => setSpeicherVollMelder(null);
   }, [showToast]);
 
   // Globaler „Session abgelaufen"-Fänger (#186): Ein 401 aus JEDER Query/Mutation (nicht nur der

@@ -2,8 +2,10 @@
  * Ein teurer, organisationsweit gleicher Lauf – **höchstens einer gleichzeitig, mit Sperrfrist nach
  * einer Drosselung** (#300).
  *
- * Zwei Läufe dieser Art gibt es: die Song-Statistik (~250 ChurchTools-Anfragen) und der Suchindex über
- * die Liedtexte (~50 Datei-Downloads). Beide brauchen dieselben drei Vorkehrungen:
+ * Zwei Läufe nutzen ihn: der Suchindex über die Liedtexte (ein Datei-Download je Lied) und die
+ * Lied-Statistik. Die war bis v2.32.0 der teure Lauf (~250 Anfragen, die Wurzel von #300); seitdem ist
+ * sie EIN Aufruf (`getSongStatistic`) – gebündelt und gesperrt wird sie trotzdem, denn auch ein Aufruf
+ * je iPad in einer Drosselung verlängert sie. Beide brauchen dieselben drei Vorkehrungen:
  *
  *  1. **Bündeln.** Öffnen fünf iPads gleichzeitig die Liederliste, darf **ein** Lauf starten, nicht
  *     fünf. Genau dieser Fall hat in #300 das ChurchTools-Limit gerissen – danach scheiterten
@@ -18,8 +20,8 @@
  * beiden Fassungen gelandet. Das ist die Fehlerklasse, die dieses Projekt am häufigsten getroffen hat.
  *
  * **Was hier NICHT liegt:** der Zwischenspeicher selbst. Was gecacht wird und wann es veraltet, ist bei
- * beiden verschieden (die Statistik merkt sich zusätzlich, aus welchen Terminen ein Stand gebaut wurde,
- * um gezielt zu verwerfen). Dieser Baustein regelt nur „wer darf jetzt laufen".
+ * beiden verschieden (Statistik zehn Minuten und nach einer Ablauf-Änderung verworfen, Suchindex eine
+ * Stunde und um fehlende Lieder ergänzt). Dieser Baustein regelt nur „wer darf jetzt laufen".
  *
  * ⚠️ Prozesslokal – siehe „Ein Prozess, ein Zustand" in `docs/entwicklung/entscheidungen.md`.
  */

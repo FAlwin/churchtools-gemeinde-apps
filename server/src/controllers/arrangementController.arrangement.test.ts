@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ArrangementAuftrag } from '@shared/types/index';
-import { arrangementAendernSchema } from './setlistController.js';
+import { arrangementAendernSchema } from './arrangementController.js';
 
 /**
  * **Die Zod-Form und der geteilte Typ müssen dieselben acht Felder kennen.**

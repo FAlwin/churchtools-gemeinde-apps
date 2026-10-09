@@ -1,4 +1,5 @@
 import { useEffect, type MutableRefObject } from 'react';
+import { lokalSchreiben } from '../utils/lokalSpeicher';
 
 // Gelernte Höhe der iOS-Bildschirmtastatur (px). Damit heben wir den Chart-Bereich schon BEIM
 // Fokussieren an – ist der Cursor beim Öffnen der Tastatur bereits sichtbar, verschiebt iOS die
@@ -7,11 +8,7 @@ let lastKbHeight = Number(localStorage.getItem('musikapp:kbHeight')) || 0;
 function learnKbHeight(kb: number): void {
   if (kb === lastKbHeight) return;
   lastKbHeight = kb;
-  try {
-    localStorage.setItem('musikapp:kbHeight', String(kb));
-  } catch {
-    /* voll/gesperrt → nur In-Memory */
-  }
+  lokalSchreiben('musikapp:kbHeight', String(kb)); // voll → nur In-Memory
 }
 
 // iOS scrollt beim Öffnen der Tastatur nicht nur das Fenster, sondern notfalls auch GECLIPPTE

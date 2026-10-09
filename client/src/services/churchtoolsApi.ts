@@ -27,6 +27,7 @@ import type {
   UserCapabilities,
 } from '@shared/types/index';
 import { apiFetch, apiFetchBlob } from './api';
+import { liedDateiPfad } from './apiBase';
 import { istExtension, ohneServer } from './ctRuntime';
 import * as ext from './ctLesen';
 import * as extSchreiben from './ctSchreiben';
@@ -422,7 +423,7 @@ export function getArrangementFiles(
  */
 export function getSongFileBlob(songId: number, fileId: number): Promise<Blob> {
   if (istExtension) return ext.datei(songId, fileId);
-  return apiFetchBlob(`/api/songs/${songId}/files/${fileId}`);
+  return apiFetchBlob(liedDateiPfad(songId, fileId));
 }
 
 /**
@@ -490,7 +491,7 @@ export function speichereNotenblatt(
 /** Löscht eine Datei des Lieds (#321). Der Server prüft, dass sie wirklich zu ihm gehört. */
 export function deleteSongFile(songId: number, fileId: number): Promise<void> {
   if (istExtension) return extSchreiben.dateiWeg(songId, fileId);
-  return apiFetch<void>(`/api/songs/${songId}/files/${fileId}`, { method: 'DELETE' });
+  return apiFetch<void>(liedDateiPfad(songId, fileId), { method: 'DELETE' });
 }
 
 /** Löscht einen Ablaufpunkt. */

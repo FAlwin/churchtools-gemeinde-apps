@@ -11,6 +11,7 @@ import {
   type Blatt,
   type Flaeche,
 } from '../utils/zoomAusschnitt';
+import { lokalSchreiben } from '../utils/lokalSpeicher';
 
 /** Gespeicherter Zoom – dieselbe Form wie im Konto-Sync (`@shared/types`, mit `fx`/`fy` seit #420). */
 export type ZoomState = GespeicherterZoom;
@@ -127,11 +128,7 @@ export function useZoomPersistence({
         ...(a ? { fx: a.fx, fy: a.fy } : {}),
       };
       const zk = zoomKeyFor(page);
-      try {
-        localStorage.setItem(zk, JSON.stringify(zoom));
-      } catch {
-        /* Speicher voll */
-      }
+      lokalSchreiben(zk, JSON.stringify(zoom));
       pushField(zk, 'zoom', zoom);
     } else if (lastScale.current[slot] > 1.01) {
       // Nur löschen, wenn der Nutzer AKTIV wieder auf Fit herausgezoomt hat – nicht beim

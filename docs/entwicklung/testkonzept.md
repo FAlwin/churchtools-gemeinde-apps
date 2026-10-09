@@ -49,7 +49,9 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
   dazu „leeren heißt weglassen" und die Pflichtfelder
 - `services/songTextIndex` – Suche im Liedtext (#322): Akkorde fallen **ersatzlos** weg (sonst wird
   „ge[Am]liebt" nicht bei „geliebt" gefunden), fünf gleichzeitige Suchen ergeben **einen** Index-Aufbau,
-  eine Drosselung wird gemeldet statt eine halbe Trefferliste ausgeliefert.
+  eine Drosselung wird gemeldet statt eine halbe Trefferliste ausgeliefert, und in der Sperrfrist wird
+  mit altem Index **nicht** neu gebaut (#456). Treffer und Vorschau nur aus der eigenen Liederliste,
+  fehlende Lieder werden nachgeladen statt alles neu (#458).
   Dazu die **Vorschau** (#379): Sie **baut den Index nicht** – steht er frisch, kostet sie keinen
   Download, sonst genau **einen** (gezählt im Test). Und sie nimmt das **Original**-ChordPro, auch wenn
   App-Fassungen davor stehen: Das Testmaterial listet sie deshalb absichtlich **vor** dem Original –
@@ -61,7 +63,7 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
 - `services/seenSetlists` – „gesehen"-Basislinien-Store (atomar, Cleanup)
 - `services/capabilitiesCache` + `churchtools(.capabilities)` – Rechte-Cache, CT-Aussetzer überbrücken
 - `services/annotations` – Anmerkungen pro Konto inkl. Obergrenzen (#139)
-- `controllers/setlistController.filetype` – Datei-Proxy Content-Type-Whitelist (#138)
+- `controllers/dateiController.filetype` – Datei-Proxy Content-Type-Whitelist (#138)
 - `middleware/session` – signiertes Session-Cookie, Ablauf/Format
 - `services/userSettings` – Konto-Obergrenzen der Lied-Einstellungen (#195): Grenzlogik, Eintrags-
   und Byte-Grenze, Wert-Kappung, Schlüssel-Filter. Auch der Fall „Store liegt schon ÜBER der Grenze,
@@ -115,6 +117,11 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
 
 ### Interaktionskern (Hooks/Komponenten, #141)
 
+- Liedblatt, aus `ChordChart.tsx` herausgelöst (#465): `hooks/useChartOverlay` (welches Fenster offen ist,
+  rein über `fensterAnsicht`), `hooks/useWerkzeugSteuerung` (jeder Knopf setzt das Fenster-Feld genau
+  EINMAL; Werkzeug des anderen Lieds öffnet erst nach dem Liedwechsel), `hooks/useLokaleUmzuege`
+  (Versions-/Arrangement-Umzug läuft, Einstellungen werden danach neu gelesen). Verhalten vorher/nachher
+  im Browser verglichen (Demo-Liedblatt, gleiche Klickfolge, gleiches Ergebnis).
 - `hooks/usePageDraw` (jsdom): Laden aus localStorage, Text hinzufügen + **Push-Dedup**
   (unveränderter Re-Render pusht nicht erneut), **Undo/Redo** (Text), **Key-Wechsel** lädt die
   jeweilige Seite. Bewusst ohne echtes Canvas (Strich-Persistenz bleibt manuell/Staging).
@@ -181,7 +188,7 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
     Seiten am Erzeuger, nicht an der Zahl. `services/ctTypes.test` deckt die eine Tempo-Umrechnung ab
     (Leerstring darf nicht `0` werden, Unfug nicht `NaN`), und `services/arrangementPayload.test`
     prüft am Schreib-Payload, dass aus unsinnigem `bpm` **gar kein** Tempo geschickt wird.
-    `controllers/setlistController.arrangement.test` hält die Zod-Form gegen `ArrangementAuftrag`
+    `controllers/arrangementController.arrangement.test` hält die Zod-Form gegen `ArrangementAuftrag`
     über die **Schlüsselmenge** eines `Required<…>`-Auftrags. **Lehre:** Ein Compile-Wächter wie bei
     den Anmerkungen (#115) taugt hier nicht – bei ausschließlich optionalen Feldern ist die Zuweisung
     in beide Richtungen gültig, der Wächter kann nicht fehlschlagen (ausprobiert, ein entferntes

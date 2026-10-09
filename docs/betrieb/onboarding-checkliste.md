@@ -17,6 +17,8 @@ betreiben aber **nichts** für sie (kein zentraler Server, kein geteilter Zugang
 
 - [ ] `deploy/`-Paket bereitgestellt, `.env` ausgefüllt
 - [ ] `SESSION_SECRET` frisch erzeugt (`openssl rand -hex 32`) – **nicht** wiederverwenden/teilen
+- [ ] Mitarbeitende informiert: Die App legt beim ersten Anmelden einen ChurchTools-Anmeldeschlüssel an
+      (siehe `DEPLOYMENT.md`, Abschnitt zu `SESSION_SECRET`); `.env` nur verschlüsselt sichern
 - [ ] Container läuft, `:3001` intern erreichbar
 - [ ] Reverse Proxy + HTTPS-Zertifikat eingerichtet, externe URL erreichbar
 - [ ] Erst-Login mit Admin-Recht funktioniert

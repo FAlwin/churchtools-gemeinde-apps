@@ -35,6 +35,14 @@ Ohne Erweiterung in ChurchTools: `ERWEITERUNG_KUERZEL` muss nicht gesetzt werden
   oder Ändern kam. Server-App und Erweiterung; nur mit dem Recht „Ablauf bearbeiten". Die Einführung
   im Bearbeiten-Modus hat dafür einen Schritt mehr.
 
+### Behoben (Ablage)
+
+- **Woanders Gelöschtes verschwindet jetzt auch hier:** Wurde eine Seite auf einem anderen Gerät oder in
+  der Erweiterung ganz geleert – oder eine Einstellung zurückgesetzt –, behielt ein Gerät, das sie schon
+  geladen hatte, seine alte Kopie. Gab es schon mit der NAS-Ablage, fiel aber erst auf, seit App und
+  Erweiterung dieselbe Ablage teilen. Entfernt wird nur, was auf dem Konto fehlt und nicht noch auf das
+  Hochladen wartet.
+
 Code-Check vom 09.10.2026 abgearbeitet (#455–#466).
 
 ### Behoben

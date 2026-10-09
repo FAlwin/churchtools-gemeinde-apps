@@ -20,6 +20,8 @@ COPY . .
 # Vite stellt VITE_*-Variablen zur Build-Zeit als import.meta.env bereit → Anzeige im Mehr-Tab.
 ARG APP_VERSION=dev
 RUN VITE_APP_VERSION="$APP_VERSION" npm run build --workspace=client
+# Auch der Server kennt seine Version – Staging (`staging-…`) zieht die alte Ablage nicht nach ChurchTools um.
+ENV APP_VERSION=$APP_VERSION
 
 ENV NODE_ENV=production
 ENV PORT=3001

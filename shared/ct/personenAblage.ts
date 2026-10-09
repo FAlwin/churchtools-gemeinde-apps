@@ -618,6 +618,14 @@ export function erstellePersonenAblage(
       });
     },
 
+    /** Wie `holeTeilen`, aber `null`, wenn die eigene Datei dazu noch nichts sagt (für den Umzug). */
+    holeTeilenStand(p: AblagePort): Promise<boolean | null> {
+      return nacheinander(async () => {
+        await aktualisiereListe(p);
+        return teilenAus(await ladeDaten(p, liste ?? []))?.an ?? null;
+      });
+    },
+
     /** Das eigene Teilen ein- oder ausschalten – mit dem Namen, unter dem andere die Notizen sehen. */
     schreibeTeilen(p: AblagePort, an: boolean, name: string): Promise<void> {
       return nacheinander(() => schreibeFelder(p, { [TEILEN_FELD]: { an, name } }));
@@ -633,6 +641,15 @@ export function erstellePersonenAblage(
       const teilen = teilenAus(daten);
       if (!teilen?.an) return null;
       return { personId, name: teilen.name, liste: l, daten };
+    },
+
+    /**
+     * Sagt die Datei einer anderen Person etwas zum Teilen? `null` = noch nichts (etwa, weil sie aus
+     * der Server-App noch nicht umgezogen ist) – das ist etwas anderes als ausgeschaltet.
+     */
+    async teilenStandVon(p: AblagePort, personId: number): Promise<boolean | null> {
+      const l = await listeVon(p, personId);
+      return teilenAus(await ladeDaten(p, l))?.an ?? null;
     },
 
     /** Die geteilten Anmerkungen dieser Lieder – **ohne Zoom** (der ist persönlich). */

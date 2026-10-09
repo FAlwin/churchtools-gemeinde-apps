@@ -4,6 +4,7 @@
  * Volume (wie annotations). Gespeichert als einfache Schlüssel→Wert-Tabelle (localStorage-Keys).
  */
 import path from 'node:path';
+import { rm } from 'node:fs/promises';
 import { config } from '../config.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import { readJsonStore, writeJsonStore } from './jsonStore.js';
@@ -77,6 +78,14 @@ async function withLock<T>(userId: number, fn: () => Promise<T>): Promise<T> {
     run.catch(() => {}),
   );
   return run;
+}
+
+/** Die Lied-Einstellungen eines Kontos auf dem Daten-Volume löschen (90 Tage nach dem Umzug). */
+export async function kontoLoeschen(userId: number): Promise<void> {
+  await withLock(userId, async () => {
+    await rm(fileFor(userId), { force: true });
+    cache.delete(userId);
+  });
 }
 
 /** Alle Einstellungen eines Kontos zu den genannten Liedern (leere songIds = alle). */

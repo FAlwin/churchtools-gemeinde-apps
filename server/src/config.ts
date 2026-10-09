@@ -125,6 +125,22 @@ export const config = {
    */
   seenSetlistsPath: process.env.SEEN_SETLISTS_PATH ?? './data/seen-setlists.json',
   /**
+   * **Umzug der alten Ablage nach ChurchTools** (09.10.2026): Ziehen die Anmerkungen, Einstellungen,
+   * „gesehen" und Teilen eines Kontos vom Daten-Volume in seine Personen-Dateien um? Standard: ja – außer
+   * auf Staging (Version `staging-…`): Staging hängt bei der ECG am echten ChurchTools, und seine
+   * NAS-Notizen sind Testreste, die nicht in die echten Personen-Dateien gehören (Alwin, 09.10.2026).
+   * `ABLAGE_UMZUG=an`/`aus` übersteuert das.
+   */
+  ablageUmzug: process.env.ABLAGE_UMZUG
+    ? process.env.ABLAGE_UMZUG.toLowerCase() !== 'aus'
+    : !(process.env.APP_VERSION ?? '').startsWith('staging-'),
+  /**
+   * Kürzel der ChurchTools-Erweiterung dieser Gemeinde (`/ccm/<kürzel>/`). Über ihre Daten teilen App
+   * und Erweiterung das Verzeichnis „Wer teilt" der Team-Notizen. Gibt es das Modul nicht, nimmt der
+   * Server seine eigene Liste auf dem Daten-Volume.
+   */
+  erweiterungKuerzel: process.env.ERWEITERUNG_KUERZEL ?? 'musik-app',
+  /**
    * ChurchTools-Recht, das als „Administrator" gilt (steuert Zugriff auf die
    * Branding-Einstellungen). Form `modul:recht`. Default deckt Voll-Admins ab;
    * je nach Instanz ggf. anpassen.

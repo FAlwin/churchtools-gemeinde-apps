@@ -10,7 +10,7 @@ import { getUserId } from '../services/ctAuth.js';
 async function myUserId(req: Request): Promise<number> {
   return req.ctUserId ?? (await getUserId(ctCookie(req)));
 }
-import * as store from '../services/annotations.js';
+import { anmerkungenHolen, anmerkungSchreiben } from '../services/kontoAblage.js';
 import type { AnnotationText, GespeicherterZoom, PageAnnotation } from '@shared/types/index';
 import { ANNO_KEY_RE } from '@shared/keys/index';
 import { ctCookie } from '../utils/ctCookie.js';
@@ -80,7 +80,7 @@ const keySchema = z.string().max(120).regex(ANNO_KEY_RE, 'Ungültiger Anmerkungs
 export async function getAnnotations(req: Request, res: Response): Promise<void> {
   const userId = await myUserId(req);
   const songs = songIdsFromQuery(req.query.songs);
-  res.json(await store.getAnnotations(userId, songs));
+  res.json(await anmerkungenHolen(ctCookie(req), userId, songs));
 }
 
 /** PUT /api/annotations/:key – Anmerkungen einer Seite aktualisieren (Feld-Merge). */
@@ -88,7 +88,7 @@ export async function putAnnotation(req: Request, res: Response): Promise<void> 
   const userId = await myUserId(req);
   const key = keySchema.parse(req.params.key);
   const partial = annoSchema.parse(req.body);
-  await store.putAnnotation(userId, key, partial);
+  await anmerkungSchreiben(ctCookie(req), userId, key, partial);
   res.json({ ok: true });
 }
 
@@ -96,6 +96,6 @@ export async function putAnnotation(req: Request, res: Response): Promise<void> 
 export async function deleteAnnotation(req: Request, res: Response): Promise<void> {
   const userId = await myUserId(req);
   const key = keySchema.parse(req.params.key);
-  await store.deleteAnnotation(userId, key);
+  await anmerkungSchreiben(ctCookie(req), userId, key, { strokes: null, texts: [], zoom: null });
   res.json({ ok: true });
 }

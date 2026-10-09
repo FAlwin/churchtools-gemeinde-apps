@@ -21,7 +21,7 @@ import {
 } from '../services/setlistBuilder.js';
 import { getMemoizedVersion, rememberVersion } from '../services/versionMemo.js';
 import { getUserId } from '../services/ctAuth.js';
-import { getCapabilities } from '../services/ctCapabilities.js';
+import { getCapabilities, getCapabilitiesCached } from '../services/ctCapabilities.js';
 import { fetchFileBytes } from '../services/ctFiles.js';
 import { getCtServices, getSong } from '../services/ctRead.js';
 import { getEditableSongCategories } from '../services/ctSongCategories.js';
@@ -148,8 +148,8 @@ export async function putAgendaOrder(req: Request, res: Response): Promise<void>
   await reorderAgenda(ctCookie(req), eventId, order);
   // BEWUSST ohne `invalidateSongUsageCache` (#300): Die Reihenfolge ändert nicht, WELCHE Lieder an
   // welchem Datum gespielt wurden – die Statistik kann sich dadurch nicht ändern. Bitte nicht als
-  // vergessene Lücke „nachrüsten": Jedes unnötige Invalidieren kostet einen Lauf mit ~250
-  // ChurchTools-Anfragen und war die Ursache der 429-Drosselung.
+  // vergessene Lücke „nachrüsten". (Bis v2.32.0 kostete jedes Verwerfen einen Lauf mit ~250
+  // Anfragen; heute ist es ein Aufruf, aber ein unnötiger bleibt unnötig.)
   res.json({ ok: true });
 }
 
@@ -383,8 +383,7 @@ export async function putSong(req: Request, res: Response): Promise<void> {
  * Name zurückgegeben – nach dem Löschen gibt es ihn nicht mehr, die Meldung braucht ihn aber.
  *
  * **Kein `invalidateSongUsageCache`:** Die Statistik zählt, welche Lieder an welchem Datum gespielt
- * wurden; ein gelöschtes Lied verschwindet ohnehin aus der Bibliothek. Ein Lauf mit ~250
- * ChurchTools-Anfragen für nichts war die Ursache der Drosselung in #300.
+ * wurden; ein gelöschtes Lied verschwindet ohnehin aus der Bibliothek.
  */
 export async function deleteSongCtrl(req: Request, res: Response): Promise<void> {
   const songId = idSchema.parse(req.params.songId);
@@ -572,12 +571,13 @@ export async function getAgendaServicesCtrl(req: Request, res: Response): Promis
  *
  * **Erst das eigene Recht, dann der Zwischenspeicher:** Die Statistik wird für alle gemerkt; ohne diese
  * Prüfung bekäme auch wer ohne „Song-Statistik sehen" den Stand, den ein Musiker gerade geladen hat
- * (Alwin, 08.10.2026: nur Musiker sollen sie sehen). Die Rechte sind je Person gemerkt – kostet also
- * keinen Abruf bei ChurchTools.
+ * (Alwin, 08.10.2026: nur Musiker sollen sie sehen). Die Rechte sind je Sitzung fünf Minuten gemerkt
+ * (`getCapabilitiesCached`) – meist kostet die Prüfung also keinen Abruf bei ChurchTools.
  */
 export async function getSongUsageCtrl(req: Request, res: Response): Promise<void> {
   const cookie = ctCookie(req);
-  const caps = await getCapabilities(cookie, req.ctUserId ?? null);
+  // Gemerkt (#466) – ungemerkt kostete jeder Statistik-Aufruf zwei Anfragen bei ChurchTools.
+  const caps = await getCapabilitiesCached(cookie, req.ctUserId ?? null);
   if (!caps.canViewSongStatistics) {
     throw new HttpError(
       403,

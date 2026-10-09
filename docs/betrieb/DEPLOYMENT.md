@@ -47,6 +47,34 @@ SESSION_SECRET=<langer-zufallsstring>
 - `SESSION_SECRET`: langer Zufallsstring, z. B. `openssl rand -hex 32`.
 - Ohne `CHURCHTOOLS_BASE_URL` startet die App bewusst nicht.
 
+### `SESSION_SECRET` ist ein Master-Passwort – und was die App in ChurchTools anlegt (#462)
+
+**Der Anmeldeschlüssel.** Beim ersten Anmelden holt die App den persönlichen ChurchTools-Anmeldeschlüssel
+der Person (Login-Token, `GET /persons/{id}/logintoken`) – und **legt einen an, wenn sie noch keinen
+hat**. Damit bleibt man angemeldet, obwohl ChurchTools seine eigene Sitzung nach rund einem Tag beendet.
+Der Schlüssel gilt **unbefristet**, bis ihn jemand in ChurchTools löscht oder neu erzeugt; es gibt ihn je
+Person nur einmal, andere Dienste können ihn mitbenutzen. Die App speichert ihn **nirgends auf dem
+Server** und schreibt ihn in kein Log – er liegt nur **verschlüsselt im Cookie** des Geräts.
+
+**Warum das Geheimnis deshalb so wichtig ist.** Aus `SESSION_SECRET` entstehen Signatur und
+Verschlüsselung dieses Cookies. Wer **beides** hat – das Geheimnis und ein Cookie (Backup, verlorenes
+Gerät) –, kann den Schlüssel auslesen und damit **direkt bei ChurchTools** arbeiten, ohne die 90-Tage-
+Grenze der App. Deshalb:
+
+- `SESSION_SECRET` wie ein **Master-Passwort** behandeln: nicht in **unverschlüsselte** Backups (die
+  `.env` liegt im Projektordner – Hyper Backup o. Ä. dann verschlüsselt sichern), nicht per Mail oder
+  Chat weitergeben, nie einchecken.
+- **Rotieren** (neues Geheimnis in die `.env`, Container neu starten) meldet **alle** in der App ab –
+  jeder meldet sich einmal neu an. Die in ChurchTools angelegten Anmeldeschlüssel bleiben dabei
+  **gültig**: Bei Verdacht auf Missbrauch zusätzlich den Schlüssel der betroffenen Person in ChurchTools
+  neu erzeugen. Achtung, das trifft auch andere Dienste, die ihn nutzen.
+- **Abmelden** in der App beendet die Anmeldung serverseitig, auch für eine vorher kopierte Sitzung
+  (#460) – den Schlüssel in ChurchTools widerruft es bewusst nicht.
+
+**Für andere Gemeinden:** Sagt euren Mitarbeitenden, dass die App beim ersten Anmelden einen
+ChurchTools-Anmeldeschlüssel anlegt bzw. nutzt. Darf ein Konto seinen Schlüssel nicht abrufen, läuft
+alles weiter – man muss sich dann nur nach Ende der ChurchTools-Sitzung neu anmelden.
+
 ## 3. Externer Zugang über Reverse Proxy
 
 So wird `https://musik.deine-gemeinde.de` erreichbar. Reihenfolge wichtig:

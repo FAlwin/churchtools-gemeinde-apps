@@ -10,7 +10,7 @@ vi.mock('../services/setlistBuilder.js', async (importOriginal) => ({
   getSongUsageMap: vi.fn(),
 }));
 
-const { getSongUsageCtrl } = await import('./setlistController.js');
+const { getSongUsageCtrl } = await import('./liederController.js');
 const { getCapabilities, getCapabilitiesCached } = await import('../services/ctCapabilities.js');
 const { getSongUsageMap } = await import('../services/setlistBuilder.js');
 

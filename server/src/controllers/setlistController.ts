@@ -1,3 +1,10 @@
+/**
+ * **Termine und Ablauf** – Gottesdienste, Ablaufpunkte, „geändert"-Hinweis, Rechte und Dienste.
+ *
+ * Bis #465 stand hier alles (843 Zeilen, ~50 Handler). Aufgeteilt nach Fachbereich: Lieder in
+ * `liederController.ts`, Arrangements und App-Fassungen in `arrangementController.ts`, Dateien in
+ * `dateiController.ts`, SongSelect in `songSelectController.ts`. Reines Verschieben, keine Logik geändert.
+ */
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 import {
@@ -5,64 +12,25 @@ import {
   getAgendaItems,
   getSetlistFingerprint,
   getSetlistState,
-  createVersion,
-  updateVersion,
-  deleteVersion,
-  resolveFileUrl,
-  getSongLibrary,
-  getSongChart,
-  getSongUsageMap,
   invalidateSongUsageCache,
-  listArrangementFiles,
-  addArrangementFile,
-  removeArrangementFile,
-  holeChordProAusSongSelect,
-  originalNotenblattSchreiben,
 } from '../services/setlistBuilder.js';
 import { getMemoizedVersion, rememberVersion } from '../services/versionMemo.js';
 import { getUserId } from '../services/ctAuth.js';
-import { getCapabilities, getCapabilitiesCached } from '../services/ctCapabilities.js';
-import { fetchFileBytes } from '../services/ctFiles.js';
-import { getCtServices, getSong } from '../services/ctRead.js';
-import { getEditableSongCategories } from '../services/ctSongCategories.js';
-import { getSongSources } from '../services/ctSongSources.js';
-import {
-  arrangementAendern,
-  arrangementAnlegen,
-  arrangementLoeschen,
-  arrangementZumStandard,
-  arrangementsLesen,
-} from '../services/arrangementVerwaltung.js';
-import { liedAendern, liedAnlegen, liedLoeschen } from '../services/songVerwaltung.js';
-import { stammdatenAnsicht } from '@shared/ct/liedVerwaltung';
-import { liedtextVorschau, sucheImLiedtext } from '../services/songTextIndex.js';
-import {
-  getSongSelectLyrics,
-  getSongSelectSong,
-  searchSongSelect,
-} from '../services/ctSongSelect.js';
+import { getCapabilities } from '../services/ctCapabilities.js';
+import { getCtServices } from '../services/ctRead.js';
 import {
   createAgendaItem,
   deleteAgendaItem,
   reorderAgenda,
   setAgendaItemVorBeginn,
   updateAgendaItem,
-  updateArrangementTempo,
 } from '../services/ctWrite.js';
 import { getSeenSetlists, markSeenSetlist } from '../services/seenSetlists.js';
-import { arrangementOptionen, setlistGeaendert, standardFenster } from '@shared/ct/setlistKern';
-import { MAX_BPM, MIN_BPM } from '@shared/tempo/index';
-import { ARRANGEMENT_GRENZEN, LIED_GRENZEN } from '@shared/types/index';
-import type {
-  AgendaServiceOption,
-  ArrangementAuftrag,
-  SongArrangementOption,
-} from '@shared/types/index';
-import { HttpError } from '../middleware/errorHandler.js';
+import { setlistGeaendert, standardFenster } from '@shared/ct/setlistKern';
+import type { AgendaServiceOption } from '@shared/types/index';
 import { ctCookie } from '../utils/ctCookie.js';
 import { accountKey } from '../middleware/session.js';
-import type { GleicheSchluessel } from '../utils/schemaSpiegel.js';
-import { sanitizeFileContentType } from '@shared/dateien/index';
+import { idSchema } from './idSchemas.js';
 
 const dateSchema = z
   .string()
@@ -135,8 +103,6 @@ export async function markSetlistSeen(req: Request, res: Response): Promise<void
   res.json({ ok: true });
 }
 
-const idSchema = z.coerce.number().int().positive();
-
 const orderSchema = z.object({
   order: z.array(z.coerce.number().int().positive()).min(1),
 });
@@ -203,14 +169,6 @@ export async function postAgendaItem(req: Request, res: Response): Promise<void>
   res.json({ ok: true });
 }
 
-/** GET /api/songs/:songId/arrangements – Arrangements eines bekannten Lieds (für „Zu Ablauf hinzufügen"). */
-export async function getSongArrangementsCtrl(req: Request, res: Response): Promise<void> {
-  const songId = idSchema.parse(req.params.songId);
-  const song = await getSong(ctCookie(req), songId);
-  const result: SongArrangementOption[] = arrangementOptionen(song);
-  res.json(result);
-}
-
 /** PUT /api/services/:eventId/agenda/items/:itemId – Punkt umbenennen oder mit Lied verknüpfen. */
 export async function putAgendaItem(req: Request, res: Response): Promise<void> {
   const eventId = idSchema.parse(req.params.eventId);
@@ -246,313 +204,6 @@ export async function deleteAgendaItemCtrl(req: Request, res: Response): Promise
   res.json({ ok: true });
 }
 
-/** GET /api/song-library – alle Lieder (Standard-Arrangement) für die „Alle Lieder"-Ansicht. */
-export async function getSongLibraryCtrl(req: Request, res: Response): Promise<void> {
-  const songs = await getSongLibrary(ctCookie(req));
-  res.json(songs);
-}
-
-/**
- * GET /api/song-categories – die Kategorien, in denen der Nutzer Lieder anlegen/ändern darf (#322).
- *
- * **Schon zugeschnitten.** Der Dienst schneidet die Liste am ChurchTools-Recht zu; die Oberfläche
- * bekommt gar nichts zu sehen, was ChurchTools ablehnen würde. Dieselbe Funktion prüft beim Anlegen,
- * ob die gewählte Kategorie erlaubt war – eine Prüfung, die nur in der Oberfläche steht, ist keine.
- */
-export async function getSongCategoriesCtrl(req: Request, res: Response): Promise<void> {
-  const categories = await getEditableSongCategories(ctCookie(req));
-  res.json(categories);
-}
-
-/**
- * Ein neues Lied, wie es aus dem Formular kommt (#322, Schritt 10).
- *
- * **Die Grenzen stammen von ChurchTools selbst** (gemessen mit leerem Rumpf, 07.08.2026): Name 2–200
- * Zeichen, `categoryId` eine Ganzzahl. Geprüft wird hier trotzdem, damit ein Tippfehler eine
- * verständliche deutsche Meldung ergibt und nicht erst nach einer Runde durch ChurchTools auffällt.
- *
- * **Die Zahlen kommen aus `LIED_GRENZEN` (`@shared/types`), nicht aus der Hand.** Das Formular richtet
- * seine `maxLength` nach derselben Liste; hier ein zweites Mal hingeschriebene Werte wären zwei
- * Stellen, die auseinanderlaufen, sobald ChurchTools eine Grenze verschiebt.
- *
- * **`categoryId` ist `nonnegative`, nicht `positive`:** Kategorie **0** ist echt („Aktive Songs").
- * Mit `positive()` wäre ausgerechnet die Kategorie unmöglich, in der bei der ECG alle Lieder liegen.
- */
-const neuesLiedSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(LIED_GRENZEN.name.min, `Der Liedname braucht mindestens ${LIED_GRENZEN.name.min} Zeichen.`)
-    .max(LIED_GRENZEN.name.max),
-  categoryId: z.number().int().nonnegative(),
-  author: z.string().trim().max(LIED_GRENZEN.author).optional(),
-  ccli: z.string().trim().max(LIED_GRENZEN.ccli).optional(),
-  copyright: z.string().trim().max(LIED_GRENZEN.copyright).optional(),
-  key: z.string().trim().max(LIED_GRENZEN.key).optional(),
-  arrangementName: z.string().trim().max(LIED_GRENZEN.arrangementName).optional(),
-});
-
-/**
- * POST /api/songs – ein neues Lied anlegen (#322, Schritt 10).
- *
- * Rechte, Doppel-Erkennung und die Reihenfolge der Schreibvorgänge stecken im Dienst; der Controller
- * prüft nur die Form der Eingabe. Antwort ist `201` mit den neuen IDs – und, wenn ein Termin
- * mitgegeben war, mit der ehrlichen Auskunft, ob der Ablauf-Eintrag geklappt hat.
- */
-export async function postSong(req: Request, res: Response): Promise<void> {
-  /**
-   * **Eine alte App laut abweisen, nicht still bedienen** (Alwin, 05.10.2026: „Alles jetzt").
-   *
-   * Bis zum 05.10.2026 trug der Server das neue Lied auf Wunsch gleich in einen Ablauf ein (`eventId`).
-   * Eine noch nicht aktualisierte App schickt das weiter mit. Ohne diese Prüfung würde zod das Feld
-   * still wegwerfen: Das Lied entstünde, landete aber nicht im Ablauf – und die alte App meldete nichts.
-   * Deshalb wird VOR dem Anlegen abgelehnt; so entsteht auch kein halbes Ergebnis.
-   */
-  if (typeof req.body === 'object' && req.body !== null && 'eventId' in req.body) {
-    throw new HttpError(
-      410,
-      'Diese Version der App ist veraltet – bitte die App neu laden. Das Lied wurde nicht angelegt.',
-    );
-  }
-  const daten = neuesLiedSchema.parse(req.body);
-  res.status(201).json(await liedAnlegen(ctCookie(req), daten));
-}
-
-/**
- * Was sich an den Stammdaten ändern lässt (#322, Schritt 11).
- *
- * **Jedes Feld ist optional – aber nicht beliebig leer.** Ein fehlendes Feld heißt „nicht geändert",
- * ein leerer Text heißt „löschen" (Autor, CCLI-Nummer, Copyright dürfen weg). Beim **Namen** gilt das
- * nicht: Er ist in ChurchTools Pflicht, deshalb dieselbe Mindestlänge wie beim Anlegen.
- *
- * Die Grenzen kommen aus `LIED_GRENZEN` – dieselbe Liste, die auch das Anlegen und das Formular
- * benutzen.
- */
-const liedAendernSchema = z
-  .object({
-    name: z
-      .string()
-      .trim()
-      .min(
-        LIED_GRENZEN.name.min,
-        `Der Liedname braucht mindestens ${LIED_GRENZEN.name.min} Zeichen.`,
-      )
-      .max(LIED_GRENZEN.name.max)
-      .optional(),
-    categoryId: z.number().int().nonnegative().optional(),
-    author: z.string().trim().max(LIED_GRENZEN.author).optional(),
-    ccli: z.string().trim().max(LIED_GRENZEN.ccli).optional(),
-    copyright: z.string().trim().max(LIED_GRENZEN.copyright).optional(),
-  })
-  .refine((d) => Object.values(d).some((v) => v !== undefined), {
-    message: 'Es wurde keine Änderung mitgeschickt.',
-  });
-
-// Die Antwortform für Stammdaten – einmal, für Lesen und Schreiben – steht seit #335 (3b-2) in
-// `@shared/ct/liedVerwaltung`; die Extension antwortet ihrer Oberfläche genauso.
-/**
- * GET /api/songs/:songId/stammdaten – was im Änderungsformular stehen soll (#322, Schritt 11).
- *
- * **Warum ein eigener Weg und nicht die Bibliothek:** `SongLibraryEntry` kennt CCLI-Nummer, Copyright
- * und Kategorie nicht. Sie dort zu ergänzen hieße, sie in **jede** Liedliste mitzuschleppen – Felder,
- * die kein Bildschirm anzeigt. Hier werden sie für genau ein Lied geholt, wenn das Formular aufgeht.
- */
-export async function getSongStammdaten(req: Request, res: Response): Promise<void> {
-  const songId = idSchema.parse(req.params.songId);
-  res.json(stammdatenAnsicht(await getSong(ctCookie(req), songId)));
-}
-
-/**
- * PUT /api/songs/:songId – Stammdaten eines Liedes ändern (#322, Schritt 11).
- *
- * Rechte an alter und neuer Kategorie, die CCLI-Blockade und das **lesen–ändern–schreiben** stecken im
- * Dienst; der Controller prüft nur die Form. Zurück kommt das Lied, wie ChurchTools es **danach**
- * liest – nicht das, was das Formular geschickt hat.
- */
-export async function putSong(req: Request, res: Response): Promise<void> {
-  const songId = idSchema.parse(req.params.songId);
-  const aenderung = liedAendernSchema.parse(req.body);
-  res.json(stammdatenAnsicht(await liedAendern(ctCookie(req), songId, aenderung)));
-}
-
-/**
- * DELETE /api/songs/:songId – ein Lied samt allem, was daran hängt, löschen (#322, Schritt 11).
- *
- * **Die Rückfrage steht in der Oberfläche**, nicht hier: Sie muss die Folgen nennen (Arrangements,
- * Notenblätter, Dateien), und dafür braucht sie den Zusammenhang. Hier wird das Recht geprüft und der
- * Name zurückgegeben – nach dem Löschen gibt es ihn nicht mehr, die Meldung braucht ihn aber.
- *
- * **Kein `invalidateSongUsageCache`:** Die Statistik zählt, welche Lieder an welchem Datum gespielt
- * wurden; ein gelöschtes Lied verschwindet ohnehin aus der Bibliothek.
- */
-export async function deleteSongCtrl(req: Request, res: Response): Promise<void> {
-  const songId = idSchema.parse(req.params.songId);
-  const { name } = await liedLoeschen(ctCookie(req), songId);
-  res.json({ name });
-}
-
-/**
- * Was ein Arrangement tragen darf (#396) – **die Grenzen kommen aus `ARRANGEMENT_GRENZEN`**, nicht
- * aus der Hand. Das Formular richtet seine `maxLength` nach derselben Liste.
- *
- * **`nullable()` ist hier kein Beiwerk:** `undefined` heißt „nicht geändert", `null` heißt „leeren".
- * Ohne den Unterschied ließe sich kein Feld je wieder freiräumen (siehe `arrangementPayload.ts`).
- */
-const arrangementFelderSchema = {
-  key: z.string().trim().max(ARRANGEMENT_GRENZEN.key).nullable().optional(),
-  tempo: z
-    .number()
-    .int()
-    .min(ARRANGEMENT_GRENZEN.tempo.min)
-    .max(ARRANGEMENT_GRENZEN.tempo.max)
-    .nullable()
-    .optional(),
-  beat: z.string().trim().max(ARRANGEMENT_GRENZEN.beat).nullable().optional(),
-  /** Länge in SEKUNDEN – die Umrechnung aus Minuten:Sekunden macht die Oberfläche. */
-  duration: z
-    .number()
-    .int()
-    .min(ARRANGEMENT_GRENZEN.duration.min)
-    .max(ARRANGEMENT_GRENZEN.duration.max)
-    .nullable()
-    .optional(),
-  description: z.string().trim().max(ARRANGEMENT_GRENZEN.description).nullable().optional(),
-  sourceId: z.number().int().positive().nullable().optional(),
-  sourceReference: z.string().trim().max(ARRANGEMENT_GRENZEN.sourceReference).nullable().optional(),
-};
-
-const arrangementNameSchema = z
-  .string()
-  .trim()
-  .min(ARRANGEMENT_GRENZEN.name.min, 'Das Arrangement braucht einen Namen.')
-  .max(ARRANGEMENT_GRENZEN.name.max);
-
-const neuesArrangementSchema = z.object({
-  name: arrangementNameSchema,
-  ...arrangementFelderSchema,
-});
-
-/**
- * Die Form des Änderungs-Auftrags – **exportiert, weil ein Test sie gegen den geteilten Typ
- * `ArrangementAuftrag` hält** (`setlistController.arrangement.test.ts`).
- *
- * Hier ist **jedes** Feld optional – eine Zuweisung in beide Richtungen bleibt auch dann gültig, wenn
- * dem Schema ein Feld fehlt. Am 21.09.2026 ausprobiert: Ein Wächter in der Bauart der Anmerkungen
- * ließ das entfernte `beat` anstandslos durch. Der Test prüft deshalb die **Schlüsselmenge** eines
- * vollständig ausgefüllten Auftrags, und `GleicheSchluessel` unten bricht schon den Build.
- *
- * ⚠️ Hier stand bis zum 23.09.2026, bei den Anmerkungen seien „die Felder Pflicht, ein fehlendes fällt
- * dem Compiler auf". **Das war falsch** – auch dort ist alles optional, und der Wächter ließ `bold`
- * (den Anlass #115!) durch. Die falsche Annahme ist der Grund, warum die Lehre von hier nicht dorthin
- * übertragen wurde. Seitdem nutzen alle drei Stellen denselben Baustein (`utils/schemaSpiegel.ts`).
- */
-export const arrangementAendernSchema = z
-  .object({ name: arrangementNameSchema.optional(), ...arrangementFelderSchema })
-  .refine((d) => Object.values(d).some((v) => v !== undefined), {
-    message: 'Es wurde keine Änderung mitgeschickt.',
-  });
-const _arrangementSchluessel: GleicheSchluessel<
-  ArrangementAuftrag,
-  z.infer<typeof arrangementAendernSchema>
-> = true;
-void _arrangementSchluessel;
-
-/** GET /api/song-sources – die Liedquellen (Liederbücher) der Gemeinde (#396). */
-export async function getSongSourcesCtrl(req: Request, res: Response): Promise<void> {
-  res.json(await getSongSources(ctCookie(req)));
-}
-
-/** GET /api/songs/:songId/arrangements/verwaltung – alle Arrangements mit allen Feldern (#396). */
-export async function getArrangementsVerwaltung(req: Request, res: Response): Promise<void> {
-  const songId = idSchema.parse(req.params.songId);
-  res.json(await arrangementsLesen(ctCookie(req), songId));
-}
-
-/**
- * POST /api/songs/:songId/arrangements – ein weiteres Arrangement anlegen (#396).
- *
- * Rechte, die Quellen-Prüfung und „nie als Standard" stecken im Dienst; der Controller prüft nur die
- * Form der Eingabe.
- */
-export async function postArrangement(req: Request, res: Response): Promise<void> {
-  const songId = idSchema.parse(req.params.songId);
-  const auftrag = neuesArrangementSchema.parse(req.body);
-  res.status(201).json(await arrangementAnlegen(ctCookie(req), songId, auftrag));
-}
-
-/**
- * PUT /api/songs/:songId/arrangements/:arrangementId – ein Arrangement ändern (#396).
- *
- * **Das ist der allgemeine Weg, den `putArrangementTempo` bewusst nicht war.** Der schmale
- * Tempo-Endpunkt bleibt trotzdem: Er wird vom Blatt aus angetippt, von jemandem, der nur das Tempo
- * meint – und er geht durch dieselbe geprüfte Payload-Funktion wie dieser hier.
- */
-export async function putArrangement(req: Request, res: Response): Promise<void> {
-  const songId = idSchema.parse(req.params.songId);
-  const arrangementId = idSchema.parse(req.params.arrangementId);
-  const auftrag = arrangementAendernSchema.parse(req.body);
-  res.json(await arrangementAendern(ctCookie(req), songId, arrangementId, auftrag));
-}
-
-/**
- * PATCH /api/songs/:songId/arrangements/:arrangementId/default – zum Standard machen (#396).
- *
- * Derselbe Pfad wie bei ChurchTools – nicht aus Nachahmung, sondern weil der Dienst ihn eins zu eins
- * weiterreicht. Zurück kommt die **ganze Liste**: Ein Standardwechsel ändert immer zwei Einträge,
- * und die Oberfläche soll nicht raten müssen, welcher das Flag verloren hat.
- */
-export async function patchArrangementDefault(req: Request, res: Response): Promise<void> {
-  const songId = idSchema.parse(req.params.songId);
-  const arrangementId = idSchema.parse(req.params.arrangementId);
-  res.json(await arrangementZumStandard(ctCookie(req), songId, arrangementId));
-}
-
-/**
- * DELETE /api/songs/:songId/arrangements/:arrangementId – ein Arrangement löschen (#396).
- *
- * **Die Rückfrage steht in der Oberfläche** und nennt die Folgen (Notenblätter, Dateien, Versionen).
- * Hier werden Recht und die beiden Geländer geprüft – letztes Arrangement und Standard – und der
- * Name zurückgegeben, den es danach nicht mehr gibt.
- */
-export async function deleteArrangementCtrl(req: Request, res: Response): Promise<void> {
-  const songId = idSchema.parse(req.params.songId);
-  const arrangementId = idSchema.parse(req.params.arrangementId);
-  const { name } = await arrangementLoeschen(ctCookie(req), songId, arrangementId);
-  res.json({ name });
-}
-
-/**
- * GET /api/song-text-search?q=… – **Suche in den Liedtexten** (#322).
- *
- * Der Index wird beim ersten Aufruf gebaut (ein Datei-Download je Lied) und dann eine Stunde gehalten;
- * gebündelt und gedrosselt, siehe `songTextIndex.ts`. Unter drei Zeichen wird nicht gesucht – kürzere
- * Begriffe treffen fast jedes Lied und der Aufwand wäre für nichts.
- */
-export async function getSongTextSearch(req: Request, res: Response): Promise<void> {
-  const q = z
-    .string()
-    .trim()
-    .max(100)
-    .parse(req.query.q ?? '');
-  res.json(await sucheImLiedtext(ctCookie(req), q));
-}
-
-/**
- * GET /api/songs/:songId/liedtext-vorschau – **der Textanfang EINES Liedes** (#379).
- *
- * Für den Fall, dass mehrere Lieder gleich heißen: Ohne einen Blick in den Text ist nicht zu entscheiden,
- * welches gemeint ist. **Baut den Suchindex NICHT** – er wird nur benutzt, wenn er ohnehin frisch
- * dasteht; sonst wird genau dieses eine Notenblatt geladen (siehe `liedtextVorschau`).
- *
- * `vorschau: null` heißt „hat keinen Text" – ein eigener Fall, kein Fehler: Die Oberfläche zeigt dann
- * gar keine Vorschau statt einer leeren.
- */
-export async function getLiedtextVorschau(req: Request, res: Response): Promise<void> {
-  const songId = idSchema.parse(req.params.songId);
-  // Das rohe ChordPro – die Abschnitte baut der Client mit dem Parser des Blattes (04.09.2026).
-  res.json({ chordpro: await liedtextVorschau(ctCookie(req), songId) });
-}
-
 /** GET /api/capabilities – was der angemeldete Nutzer laut ChurchTools darf. */
 export async function getCapabilitiesCtrl(req: Request, res: Response): Promise<void> {
   const caps = await getCapabilities(ctCookie(req), req.ctUserId ?? null);
@@ -564,38 +215,6 @@ export async function getAgendaServicesCtrl(req: Request, res: Response): Promis
   const services = await getCtServices(ctCookie(req));
   const result: AgendaServiceOption[] = services.map((s) => ({ id: s.id, name: s.name }));
   res.json(result);
-}
-
-/**
- * GET /api/song-usage – Nutzungsdaten je Song (Häufigkeit + zuletzt), separat/gecacht.
- *
- * **Erst das eigene Recht, dann der Zwischenspeicher:** Die Statistik wird für alle gemerkt; ohne diese
- * Prüfung bekäme auch wer ohne „Song-Statistik sehen" den Stand, den ein Musiker gerade geladen hat
- * (Alwin, 08.10.2026: nur Musiker sollen sie sehen). Die Rechte sind je Sitzung fünf Minuten gemerkt
- * (`getCapabilitiesCached`) – meist kostet die Prüfung also keinen Abruf bei ChurchTools.
- */
-export async function getSongUsageCtrl(req: Request, res: Response): Promise<void> {
-  const cookie = ctCookie(req);
-  // Gemerkt (#466) – ungemerkt kostete jeder Statistik-Aufruf zwei Anfragen bei ChurchTools.
-  const caps = await getCapabilitiesCached(cookie, req.ctUserId ?? null);
-  if (!caps.canViewSongStatistics) {
-    throw new HttpError(
-      403,
-      'Keine Berechtigung für die Lied-Statistik (Recht „Song-Statistik sehen").',
-    );
-  }
-  const usage = await getSongUsageMap(cookie);
-  res.json(usage);
-}
-
-const arrSchema = z.coerce.number().int().positive().optional();
-
-/** GET /api/songs/:songId/chart – Chart-Daten eines einzelnen Lieds. */
-export async function getSongChartCtrl(req: Request, res: Response): Promise<void> {
-  const songId = idSchema.parse(req.params.songId);
-  const arrangementId = arrSchema.parse(req.query.arrangementId);
-  const song = await getSongChart(ctCookie(req), songId, arrangementId);
-  res.json(song);
 }
 
 /** GET /api/services/:eventId/setlist – alle Ablaufpunkte (Lieder inkl. ChordPro). */
@@ -613,231 +232,4 @@ export async function getSetlist(req: Request, res: Response): Promise<void> {
   }
   const items = await getAgendaItems(cookie, eventId, prevSigs);
   res.json(items);
-}
-
-const createVersionSchema = z.object({
-  arrangementId: z.coerce.number().int().positive(),
-  name: z.string().trim().min(1, 'Name fehlt').max(60),
-  text: z.string().min(1, 'Text fehlt'),
-});
-
-/** POST /api/songs/:songId/versions – neue benannte Version anlegen. */
-export async function postVersion(req: Request, res: Response): Promise<void> {
-  const songId = idSchema.parse(req.params.songId);
-  const { arrangementId, name, text } = createVersionSchema.parse(req.body);
-  const version = await createVersion(ctCookie(req), songId, arrangementId, name, text);
-  res.json(version);
-}
-
-/**
- * Grenzen aus `@shared/tempo` – dieselben, die im Client über den Speichern-Knopf entscheiden.
- * Abgeschrieben waren sie hier schon einmal (`.min(20).max(300)`); dann prüfen zwei Stellen
- * denselben Bereich und die Frage ist nur, wann sie auseinanderlaufen.
- */
-export const tempoSchema = z.object({
-  tempo: z.coerce.number().int().min(MIN_BPM).max(MAX_BPM),
-});
-
-/**
- * PUT /api/songs/:songId/arrangements/:arrangementId/tempo – Tempo eines Arrangements setzen.
- *
- * Der Endpunkt ist BEWUSST schmal – er kann nur das Tempo. Ein allgemeines „Arrangement ändern"
- * wäre gefährlicher, als es klingt: `PUT` ersetzt in ChurchTools den ganzen Datensatz, ein
- * unvollständiger Rumpf löscht Tonart und Dauer (siehe `arrangementPayload.ts`). Was der Server
- * nicht anbietet, kann auch niemand versehentlich aufrufen.
- *
- * Der Wert kommt vom Antippen und landet in ChurchTools – dort gilt er für ALLE.
- */
-export async function putArrangementTempo(req: Request, res: Response): Promise<void> {
-  const songId = idSchema.parse(req.params.songId);
-  const arrangementId = idSchema.parse(req.params.arrangementId);
-  const { tempo } = tempoSchema.parse(req.body);
-  // Rechte erzwingt ChurchTools selbst – das Cookie des Nutzers geht durch, wie beim Bearbeiten
-  // der ChordPro-Versionen. Ein 401/403 kommt als 403 zurück.
-  await updateArrangementTempo(ctCookie(req), songId, arrangementId, tempo);
-  res.json({ tempo });
-}
-
-const updateVersionSchema = z.object({
-  arrangementId: z.coerce.number().int().positive(),
-  text: z.string().min(1).optional(),
-  name: z.string().trim().min(1).max(60).optional(),
-});
-
-/** PUT /api/songs/:songId/versions/:versionKey – Version aktualisieren (Text und/oder Name). */
-export async function putVersion(req: Request, res: Response): Promise<void> {
-  const songId = idSchema.parse(req.params.songId);
-  const versionKey = z.string().min(1).parse(req.params.versionKey);
-  const { arrangementId, text, name } = updateVersionSchema.parse(req.body);
-  const version = await updateVersion(ctCookie(req), songId, arrangementId, versionKey, {
-    text,
-    name,
-  });
-  res.json(version);
-}
-
-// Content-Type-Härtung (#138) – Regel in `@shared/dateien`, hier weitergereicht (Tests, #335).
-export { sanitizeFileContentType };
-
-/** GET /api/songs/:songId/files/:fileId – Datei (PDF/Bild) aus ChurchTools durchreichen. */
-export async function getFile(req: Request, res: Response): Promise<void> {
-  const songId = idSchema.parse(req.params.songId);
-  const fileId = idSchema.parse(req.params.fileId);
-  const cookie = ctCookie(req);
-  const fileUrl = await resolveFileUrl(cookie, songId, fileId);
-  const { buffer, contentType: raw } = await fetchFileBytes(cookie, fileUrl);
-  const { contentType, attachment } = sanitizeFileContentType(raw);
-  res.setHeader('Content-Type', contentType);
-  // nosniff ist global (Helmet) gesetzt; hier zusätzlich, damit ein durchgereichter octet-stream
-  // NIE per Content-Sniffing doch als HTML interpretiert wird.
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  if (attachment) res.setHeader('Content-Disposition', 'attachment');
-  res.setHeader('Cache-Control', 'private, max-age=300');
-  res.send(buffer);
-}
-
-const deleteSchema = z.object({ arrangementId: z.coerce.number().int().positive() });
-
-/** DELETE /api/songs/:songId/versions/:versionKey – benannte Version löschen (Original bleibt). */
-export async function deleteVersionCtrl(req: Request, res: Response): Promise<void> {
-  const songId = idSchema.parse(req.params.songId);
-  const versionKey = z.string().min(1).parse(req.params.versionKey);
-  const { arrangementId } = deleteSchema.parse(req.body);
-  await deleteVersion(ctCookie(req), songId, arrangementId, versionKey);
-  res.json({ ok: true });
-}
-
-/**
- * Die Dateiverwaltung eines Arrangements (#321).
- *
- * **Rechte:** wie bei den ChordPro-Versionen und beim Tempo – das Cookie des Nutzers geht durch,
- * **ChurchTools entscheidet**. Ein 401/403 kommt als verständliche Meldung zurück (`csrfWriteDenied`,
- * #298). Eine zusätzliche eigene Prüfung stünde daneben und wäre die zweite Stelle für dieselbe
- * Regel – genau das, was in diesem Projekt regelmäßig auseinanderläuft. Die Oberfläche zeigt den
- * Einstieg nur bei `canEditSong`; erzwungen wird er nicht dort, sondern in ChurchTools.
- */
-
-/** GET /api/songs/:songId/arrangements/:arrangementId/files */
-export async function getArrangementFiles(req: Request, res: Response): Promise<void> {
-  const songId = idSchema.parse(req.params.songId);
-  const arrangementId = idSchema.parse(req.params.arrangementId);
-  res.json(await listArrangementFiles(ctCookie(req), songId, arrangementId));
-}
-
-/**
- * POST /api/songs/:songId/arrangements/:arrangementId/files?name=<Dateiname>
- *
- * **Roher Rumpf, kein Multipart.** Der Browser schickt die Datei unverändert als Body, Art über
- * `Content-Type`, Name über `?name=`. Das spart eine Abhängigkeit fürs Zerlegen von Multipart – und
- * eine Abhängigkeit, die Dateien aus dem Netz zerlegt, ist eine Angriffsfläche, die wir für einen
- * einzigen Endpunkt nicht brauchen. Zusammengesetzt wird das Multipart erst zu ChurchTools hin, in
- * `uploadFile`.
- */
-export async function postArrangementFile(req: Request, res: Response): Promise<void> {
-  const songId = idSchema.parse(req.params.songId);
-  const arrangementId = idSchema.parse(req.params.arrangementId);
-  const filename = z.string().min(1).max(255).parse(req.query.name);
-  const mime = z
-    .string()
-    .min(1)
-    .max(255)
-    .catch('application/octet-stream')
-    .parse(req.get('content-type'));
-
-  // `express.raw` legt den Rumpf als Buffer ab. Ein leerer Rumpf ist ein Fehler und kein leeres
-  // Dokument: Er entstünde bei einem abgebrochenen Upload, und eine 0-Byte-Datei in ChurchTools
-  // sähe aus wie eine echte.
-  const inhalt = req.body as unknown;
-  if (!Buffer.isBuffer(inhalt) || inhalt.length === 0) {
-    throw new HttpError(400, 'Die Datei ist leer oder wurde nicht vollständig übertragen.');
-  }
-
-  res.json(
-    await addArrangementFile(ctCookie(req), songId, arrangementId, {
-      filename,
-      mime,
-      inhalt,
-    }),
-  );
-}
-
-/** DELETE /api/songs/:songId/files/:fileId */
-export async function deleteArrangementFileCtrl(req: Request, res: Response): Promise<void> {
-  const songId = idSchema.parse(req.params.songId);
-  const fileId = idSchema.parse(req.params.fileId);
-  await removeArrangementFile(ctCookie(req), songId, fileId);
-  res.status(204).end();
-}
-
-/**
- * CCLI SongSelect (#322) – **nur die lesenden Wege**: suchen und abfragen.
- *
- * Beide ändern nichts und sind beliebig wiederholbar; das Herunterladen kommt später an eigener
- * Stelle mit eigener Rückfrage.
- *
- * **Rechte:** wie überall geht das Cookie des Nutzers durch und ChurchTools entscheidet. Zusätzlich
- * meldet `capabilities.canUseCcli`, ob die Gemeinde SongSelect überhaupt hat – damit die Oberfläche
- * den Einstieg gar nicht erst zeigt, statt einen Knopf anzubieten, der immer scheitert.
- */
-
-/** GET /api/songselect/search?title=… */
-export async function getSongSelectSearch(req: Request, res: Response): Promise<void> {
-  const title = z.string().min(1).max(200).parse(req.query.title);
-  res.json(await searchSongSelect(ctCookie(req), title));
-}
-
-/** GET /api/songselect/songs/:songNumber */
-export async function getSongSelectByNumber(req: Request, res: Response): Promise<void> {
-  const songNumber = idSchema.parse(req.params.songNumber);
-  res.json(await getSongSelectSong(ctCookie(req), songNumber));
-}
-
-/**
- * GET /api/songselect/songs/:songNumber/liedtext – **der Liedtext eines SongSelect-Liedes** (#379).
- *
- * Grundlage der Vorschau: Bei 147 Treffern zu einem Titel entscheidet nur der Text, welches Lied gemeint
- * ist. Der `disclaimer` von CCLI geht mit durch – er **muss** angezeigt werden.
- *
- * **Nur beim bewussten Öffnen eines Treffers aufrufen, nie beim Durchsehen einer Liste:** Aufs
- * Kontingent zählt er laut CCLI nicht; ob er in der Nutzungs-Historie erscheint, ist offen (siehe
- * `songSelectLiedtext`). Der Client speichert je Nummer
- * zwischen, damit Auf- und Zuklappen nicht mehrfach fragt.
- */
-export async function getSongSelectLyricsCtrl(req: Request, res: Response): Promise<void> {
-  const songNumber = idSchema.parse(req.params.songNumber);
-  res.json(await getSongSelectLyrics(ctCookie(req), songNumber));
-}
-
-/**
- * POST /api/songs/:songId/arrangements/:arrangementId/songselect/chordpro
- *
- * Holt das Notenblatt aus CCLI SongSelect ins Arrangement (#322). **Der einzige schreibende
- * SongSelect-Weg** – er ersetzt ein vorhandenes Original-ChordPro (Begründung am Dienst).
- */
-export async function postSongSelectChordPro(req: Request, res: Response): Promise<void> {
-  const songId = idSchema.parse(req.params.songId);
-  const arrangementId = idSchema.parse(req.params.arrangementId);
-  const { songNumber } = z.object({ songNumber: z.number().int().positive() }).parse(req.body);
-  res.json(await holeChordProAusSongSelect(ctCookie(req), songId, arrangementId, songNumber));
-}
-
-/**
- * PUT /api/songs/:songId/arrangements/:arrangementId/chordpro
- *
- * Schreibt das **Original**-Notenblatt aus eigenem Text – der Editor nach dem Anlegen (Wunsch Alwin,
- * 04.09.2026). Ersetzt ein vorhandenes Original über dieselbe Stelle wie der SongSelect-Import
- * (`originalNotenblattSchreiben`); die verwalteten Versionen `(App)` bleiben unangetastet.
- *
- * Obergrenze wie beim Datei-Upload gedacht: Ein Notenblatt hat ein paar Kilobyte, 200 kB sind weit
- * darüber – eine Grenze gegen Versehen, nicht gegen Nutzer.
- */
-export async function putNotenblatt(req: Request, res: Response): Promise<void> {
-  const songId = idSchema.parse(req.params.songId);
-  const arrangementId = idSchema.parse(req.params.arrangementId);
-  const { text } = z
-    .object({
-      text: z.string().trim().min(1, 'Der Text ist leer.').max(200_000, 'Der Text ist zu lang.'),
-    })
-    .parse(req.body);
-  res.json(await originalNotenblattSchreiben(ctCookie(req), songId, arrangementId, text));
 }

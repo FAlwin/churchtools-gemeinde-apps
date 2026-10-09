@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizeFileContentType } from './setlistController.js';
+import { sanitizeFileContentType } from './dateiController.js';
 
 describe('sanitizeFileContentType (#138 – Datei-Proxy Content-Type härten)', () => {
   it('PDF und Rasterbilder werden inline mit unverändertem Content-Type ausgeliefert', () => {

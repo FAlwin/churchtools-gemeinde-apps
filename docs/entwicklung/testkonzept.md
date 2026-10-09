@@ -63,7 +63,7 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
 - `services/seenSetlists` – „gesehen"-Basislinien-Store (atomar, Cleanup)
 - `services/capabilitiesCache` + `churchtools(.capabilities)` – Rechte-Cache, CT-Aussetzer überbrücken
 - `services/annotations` – Anmerkungen pro Konto inkl. Obergrenzen (#139)
-- `controllers/setlistController.filetype` – Datei-Proxy Content-Type-Whitelist (#138)
+- `controllers/dateiController.filetype` – Datei-Proxy Content-Type-Whitelist (#138)
 - `middleware/session` – signiertes Session-Cookie, Ablauf/Format
 - `services/userSettings` – Konto-Obergrenzen der Lied-Einstellungen (#195): Grenzlogik, Eintrags-
   und Byte-Grenze, Wert-Kappung, Schlüssel-Filter. Auch der Fall „Store liegt schon ÜBER der Grenze,
@@ -183,7 +183,7 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
     Seiten am Erzeuger, nicht an der Zahl. `services/ctTypes.test` deckt die eine Tempo-Umrechnung ab
     (Leerstring darf nicht `0` werden, Unfug nicht `NaN`), und `services/arrangementPayload.test`
     prüft am Schreib-Payload, dass aus unsinnigem `bpm` **gar kein** Tempo geschickt wird.
-    `controllers/setlistController.arrangement.test` hält die Zod-Form gegen `ArrangementAuftrag`
+    `controllers/arrangementController.arrangement.test` hält die Zod-Form gegen `ArrangementAuftrag`
     über die **Schlüsselmenge** eines `Required<…>`-Auftrags. **Lehre:** Ein Compile-Wächter wie bei
     den Anmerkungen (#115) taugt hier nicht – bei ausschließlich optionalen Feldern ist die Zuweisung
     in beide Richtungen gültig, der Wächter kann nicht fehlschlagen (ausprobiert, ein entferntes

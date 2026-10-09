@@ -3,7 +3,7 @@ import type { Request, Response } from 'express';
 
 vi.mock('../services/songVerwaltung.js', () => ({ liedAnlegen: vi.fn() }));
 
-const { postSong } = await import('./setlistController.js');
+const { postSong } = await import('./liederController.js');
 const { liedAnlegen } = await import('../services/songVerwaltung.js');
 
 /**

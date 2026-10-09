@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { MAX_BPM, MIN_BPM } from '@shared/tempo/index';
-import { tempoSchema } from './setlistController.js';
+import { tempoSchema } from './arrangementController.js';
 
 /**
  * Der Wert geht nach ChurchTools und gilt dort für ALLE – deshalb wird er serverseitig geprüft und

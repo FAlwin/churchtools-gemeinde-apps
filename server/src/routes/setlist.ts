@@ -7,25 +7,37 @@ import {
   getSetlist,
   getSetlistVersion,
   markSetlistSeen,
-  postVersion,
-  putArrangementTempo,
-  putVersion,
-  deleteVersionCtrl,
-  getFile,
   putAgendaOrder,
   deleteAgendaItemCtrl,
   putAgendaItem,
   putAgendaItemVorBeginn,
   postAgendaItem,
-  getSongArrangementsCtrl,
-  getSongLibraryCtrl,
+  getCapabilitiesCtrl,
+  getAgendaServicesCtrl,
+} from '../controllers/setlistController.js';
+import {
+  postVersion,
+  putArrangementTempo,
+  putVersion,
+  deleteVersionCtrl,
   getArrangementsVerwaltung,
-  getSongCategoriesCtrl,
-  getSongSourcesCtrl,
   patchArrangementDefault,
   postArrangement,
   putArrangement,
   deleteArrangementCtrl,
+  putNotenblatt,
+} from '../controllers/arrangementController.js';
+import {
+  getFile,
+  getArrangementFiles,
+  postArrangementFile,
+  deleteArrangementFileCtrl,
+} from '../controllers/dateiController.js';
+import {
+  getSongArrangementsCtrl,
+  getSongLibraryCtrl,
+  getSongCategoriesCtrl,
+  getSongSourcesCtrl,
   getSongTextSearch,
   postSong,
   putSong,
@@ -33,18 +45,14 @@ import {
   deleteSongCtrl,
   getSongChartCtrl,
   getSongUsageCtrl,
-  getCapabilitiesCtrl,
-  getAgendaServicesCtrl,
-  getArrangementFiles,
-  postArrangementFile,
-  deleteArrangementFileCtrl,
+  getLiedtextVorschau,
+} from '../controllers/liederController.js';
+import {
   getSongSelectSearch,
   getSongSelectByNumber,
   postSongSelectChordPro,
-  putNotenblatt,
-  getLiedtextVorschau,
   getSongSelectLyricsCtrl,
-} from '../controllers/setlistController.js';
+} from '../controllers/songSelectController.js';
 
 const router = Router();
 

@@ -143,7 +143,22 @@ describe('apiFetch – still erneuern vor dem Abmelden', () => {
     const f = antwortet(401, { status: 503, body: {} });
     vi.stubGlobal('fetch', f);
 
-    await expect(apiFetch('/api/services')).rejects.toMatchObject({ status: 401 });
+    // 503 statt 401 (#455): Wer 401 sieht, hält die Sitzung für tot – `App.tsx` meldete ab und leerte
+    // das Gerät, die Sync-Dienste schalteten sich ab. Ein Netz-Aussetzer ist aber vorübergehend.
+    await expect(apiFetch('/api/services')).rejects.toMatchObject({ status: 503 });
+    expect(onExpired).not.toHaveBeenCalled();
+  });
+
+  it('auch ohne Netz bei der Rückfrage: 503, kein Abmelden (#455)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string | URL) =>
+        String(url).includes('/api/auth/me')
+          ? Promise.reject(new TypeError('Failed to fetch'))
+          : Promise.resolve(jsonResponse(401, { error: 'x' })),
+      ),
+    );
+    await expect(apiFetch('/api/services')).rejects.toMatchObject({ status: 503 });
     expect(onExpired).not.toHaveBeenCalled();
   });
 

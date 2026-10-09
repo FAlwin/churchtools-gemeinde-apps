@@ -49,7 +49,9 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
   dazu „leeren heißt weglassen" und die Pflichtfelder
 - `services/songTextIndex` – Suche im Liedtext (#322): Akkorde fallen **ersatzlos** weg (sonst wird
   „ge[Am]liebt" nicht bei „geliebt" gefunden), fünf gleichzeitige Suchen ergeben **einen** Index-Aufbau,
-  eine Drosselung wird gemeldet statt eine halbe Trefferliste ausgeliefert.
+  eine Drosselung wird gemeldet statt eine halbe Trefferliste ausgeliefert, und in der Sperrfrist wird
+  mit altem Index **nicht** neu gebaut (#456). Treffer und Vorschau nur aus der eigenen Liederliste,
+  fehlende Lieder werden nachgeladen statt alles neu (#458).
   Dazu die **Vorschau** (#379): Sie **baut den Index nicht** – steht er frisch, kostet sie keinen
   Download, sonst genau **einen** (gezählt im Test). Und sie nimmt das **Original**-ChordPro, auch wenn
   App-Fassungen davor stehen: Das Testmaterial listet sie deshalb absichtlich **vor** dem Original –

@@ -88,6 +88,10 @@
   Speicher; gebündelt (fünf gleichzeitige Suchen = ein Aufbau) und bei einer Drosselung mit Sperrfrist.
   Unter `LIEDTEXT_SUCHE_MIN_ZEICHEN` (3) wird nicht gesucht – die Grenze steht in `@shared/types`, weil
   Client und Server sie beide prüfen. Gemessen: Weder `/api/songs?query=` noch CCLI können das.
+  **Treffer nur aus Liedern, die die fragende Person in ChurchTools sieht** (#458): Der Index ist einer
+  für alle, gefiltert wird mit ihrer eigenen Liederliste (je Sitzung 5 min gemerkt). Sieht sie Lieder,
+  die der Index noch nicht kennt, werden **nur diese** nachgeladen. In einer Sperrfrist nach einer
+  Drosselung wird weder gebaut noch nachgeladen – ein älterer Index wird weiter benutzt (#456).
 - `GET  /api/songselect/songs/:songNumber/liedtext` → `SongSelectLiedtext` – **CCLIs Liedtext** zu einer
   Nummer (#381), Grundlage der Vorschau vor dem Anlegen. Gemessen am 14.08.2026: Der Aufruf heißt
   `getCCLILyrics` und nimmt `songNumber`; CCLI liefert den Text **strukturiert** (`lyricParts` mit
@@ -102,7 +106,7 @@
   Parser des Blattes – kein zweiter Abschnitts-Parser auf dem Server. **Baut den Suchindex NICHT:** Steht
   er frisch, kommt die Antwort daraus (der Index hält das ChordPro; keine Anfrage an ChurchTools); sonst
   wird **genau dieses eine** Notenblatt geladen. `chordpro: null` heißt „hat keinen Text" – ein gültiger
-  Fall, kein Fehler.
+  Fall, kein Fehler – und ebenso „dieses Lied siehst du in ChurchTools nicht" (#458).
 - `GET  /api/songs/:songId/stammdaten` → `LiedStammdatenAnsicht` – Name, Kategorie, Autor, CCLI,
   Copyright eines Liedes (fürs Änderungsformular; die Bibliothek kennt diese Felder nicht).
 - `PUT  /api/songs/:songId` `{name?, categoryId?, author?, ccli?, copyright?}` → `LiedStammdatenAnsicht`

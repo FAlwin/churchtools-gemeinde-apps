@@ -143,19 +143,21 @@ durchsetzen muss, startet den Container neu.
 
 ## Ein Prozess, ein Zustand – die App skaliert nicht horizontal _(27.07.2026, #198)_
 
-**Sechs** Caches leben **im Arbeitsspeicher des Server-Prozesses**, alle in `services/`:
+**Neun** Caches leben **im Arbeitsspeicher des Server-Prozesses**, alle in `services/`:
 
-| Wo                                 | Was                                            | Lebensdauer |
-| ---------------------------------- | ---------------------------------------------- | ----------- |
-| `versionMemo.ts`                   | Ablauf-Fingerabdruck je Termin **und Konto**   | 5 s         |
-| `ctSessionMemos.ts` (Konto-ID)     | Konto-ID zum Session-Cookie                    | 12 h        |
-| `ctSessionMemos.ts` (Rechte)       | Rechte eines Kontos                            | 5 min       |
-| `ctSessionMemos.ts` (CSRF-Token)   | Schreib-Token einer Sitzung                    | 1 min       |
-| `setlistBuilder.ts` (`usageCache`) | org-weite Lied-Statistik (`getSongStatistic`)  | 10 min      |
-| `songTextIndex.ts` (`index`)       | org-weiter Suchindex über die Liedtexte (#322) | 1 h         |
+| Wo                                     | Was                                                                                | Lebensdauer |
+| -------------------------------------- | ---------------------------------------------------------------------------------- | ----------- |
+| `versionMemo.ts`                       | Ablauf-Fingerabdruck je Termin **und Konto**                                       | 5 s         |
+| `ctSessionMemos.ts` (Konto-ID)         | Konto-ID zum Session-Cookie                                                        | 12 h        |
+| `ctSessionMemos.ts` (Rechte)           | Rechte eines Kontos                                                                | 5 min       |
+| `ctSessionMemos.ts` (CSRF-Token)       | Schreib-Token einer Sitzung                                                        | 1 min       |
+| `ctSessionMemos.ts` (Gründe, Quellen)  | Abwesenheitsgründe, Liedquellen einer Sitzung                                      | je 1 min    |
+| `ctSessionMemos.ts` (sichtbare Lieder) | Liederliste einer Sitzung – Filter der Liedtext-Suche (#458)                       | 5 min       |
+| `setlistBuilder.ts` (`usageCache`)     | org-weite Lied-Statistik (`getSongStatistic`)                                      | 10 min      |
+| `songTextIndex.ts` (`index`)           | org-weiter Suchindex über die Liedtexte (#322); Treffer je Person gefiltert (#458) | 1 h         |
 
 (Die Zahl stand hier bis zum 13.08.2026 auf „vier", obwohl die Tabelle fünf Zeilen hatte – beim
-Ergänzen des Suchindex nachgezählt.)
+Ergänzen des Suchindex nachgezählt. Am 09.10.2026 wieder: „sechs", aber Gründe und Quellen fehlten.)
 
 **Bewusst so.** Die App läuft als **eine** Container-Instanz auf dem NAS; ein geteilter Speicher
 (Redis o. ä.) wäre ein zusätzlicher Dienst, der ausfallen kann – für Caches, deren Verlust nichts

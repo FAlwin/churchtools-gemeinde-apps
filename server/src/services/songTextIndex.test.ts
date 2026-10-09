@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { __resetSessionMemosForTests } from './ctSessionMemos.js';
 import {
   __resetSongTextIndexForTests,
   ausschnitt,
@@ -108,11 +109,18 @@ let downloads = 0;
  * der Testaufbau war falsch. Genau deshalb steht die Download-Zählung unten im Test: Sie zeigt
  * sofort, dass gar nichts geladen wurde.
  */
-function mockCt(opts: { drosselAb?: number } = {}): void {
+function mockCt(opts: { drosselAb?: number; sichtbar?: Record<string, number[]> } = {}): void {
   downloads = 0;
-  vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
+  vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => {
     const u = String(url);
-    if (u.includes('/api/songs')) return Promise.resolve(json({ data: LIEDER }));
+    if (u.includes('/api/songs')) {
+      // Wie ChurchTools: Jede Person bekommt nur die Lieder ihrer Kategorien (#458).
+      const cookie = (init?.headers as Record<string, string> | undefined)?.Cookie ?? '';
+      const ids = opts.sichtbar?.[cookie];
+      return Promise.resolve(
+        json({ data: ids ? LIEDER.filter((l) => ids.includes(l.id)) : LIEDER }),
+      );
+    }
     if (u.startsWith('https://test.church.tools/f/')) {
       downloads++;
       if (opts.drosselAb !== undefined && downloads > opts.drosselAb) {
@@ -124,8 +132,14 @@ function mockCt(opts: { drosselAb?: number } = {}): void {
   });
 }
 
-beforeEach(() => __resetSongTextIndexForTests());
-afterEach(() => vi.restoreAllMocks());
+beforeEach(() => {
+  __resetSongTextIndexForTests();
+  __resetSessionMemosForTests();
+});
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
 
 describe('chordproZuText – die Regel, an der eine naive Suche scheitert', () => {
   it('entfernt Akkorde ERSATZLOS, damit Wörter nicht zerfallen', () => {
@@ -241,6 +255,59 @@ describe('sucheImLiedtext', () => {
      */
     mockCt({ drosselAb: 0 });
     await expect(sucheImLiedtext(COOKIE, 'geliebt')).rejects.toThrow(/bremst uns/);
+  });
+});
+
+describe('sucheImLiedtext – Drosselung mit altem Index (#456)', () => {
+  it('liefert in der Sperrfrist den alten Index und startet KEINEN neuen Aufbau', async () => {
+    /**
+     * Vorher fiel „Index älter als eine Stunde + Sperrfrist" durch zum Neubau – `fuehreAus` prüft die
+     * Sperre nicht. Jede Suche in der Sperrfrist lud wieder alle Notenblätter und verlängerte die
+     * Drosselung: das Muster aus #300.
+     */
+    vi.useFakeTimers({ toFake: ['Date'] });
+    mockCt();
+    expect(await sucheImLiedtext(COOKIE, 'geliebt')).toHaveLength(1); // Index steht (2 Downloads)
+
+    vi.setSystemTime(Date.now() + 3_600_001); // Index ist alt
+    vi.mocked(globalThis.fetch).mockRestore();
+    mockCt({ drosselAb: 0 }); // Neubau wird gedrosselt → Sperrfrist
+    expect(await sucheImLiedtext(COOKIE, 'geliebt')).toHaveLength(1); // alter Index statt Fehler
+    const nachDrosselung = downloads;
+
+    // In der Sperrfrist: weiter der alte Index, KEIN neuer Download.
+    expect(await sucheImLiedtext(COOKIE, 'treue')).toHaveLength(1);
+    expect(await sucheImLiedtext(COOKIE, 'frei')).toHaveLength(1);
+    expect(downloads).toBe(nachDrosselung);
+  });
+});
+
+describe('sucheImLiedtext – nur Lieder, die die Person sehen darf (#458)', () => {
+  const MUSIKER = 'ChurchTools_sid=musiker';
+  const MITGLIED = 'ChurchTools_sid=mitglied';
+
+  it('Treffer nur aus der eigenen Liederliste – auch wenn ein anderer den Index gebaut hat', async () => {
+    mockCt({ sichtbar: { [MUSIKER]: [1, 2, 3], [MITGLIED]: [2] } });
+    expect(await sucheImLiedtext(MUSIKER, 'geliebt')).toHaveLength(1); // Musiker baut den Index
+    expect(await sucheImLiedtext(MITGLIED, 'geliebt')).toEqual([]); // Lied 1 ist nicht seins
+    expect(await sucheImLiedtext(MITGLIED, 'treue')).toHaveLength(1);
+  });
+
+  it('keine Vorschau eines Liedes, das die Person nicht sieht – auch nicht aus dem Index', async () => {
+    mockCt({ sichtbar: { [MUSIKER]: [1, 2, 3], [MITGLIED]: [2] } });
+    await sucheImLiedtext(MUSIKER, 'geliebt');
+    expect(await liedtextVorschau(MITGLIED, 1)).toBeNull();
+    expect(await liedtextVorschau(MUSIKER, 1)).toMatch(/liebt/);
+  });
+
+  it('baut ein Mitglied den Index, fehlen dem Musiker danach keine Lieder – nachgeladen, nicht neu', async () => {
+    mockCt({ sichtbar: { [MUSIKER]: [1, 2, 3], [MITGLIED]: [2] } });
+    expect(await sucheImLiedtext(MITGLIED, 'treue')).toHaveLength(1); // Index nur mit Lied 2
+    expect(downloads).toBe(1);
+    expect(await sucheImLiedtext(MUSIKER, 'geliebt')).toHaveLength(1); // Lied 1 nachgeladen
+    expect(downloads).toBe(2); // nur das fehlende, nicht alle erneut
+    await sucheImLiedtext(MUSIKER, 'treue');
+    expect(downloads).toBe(2); // danach ist alles da
   });
 });
 

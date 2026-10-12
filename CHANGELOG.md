@@ -7,6 +7,17 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Intern
+
+- **Anmeldungen, erster Baustein: die Preisberechnung** (#474, Bauplan Anmeldungen A1 Teil 1). Neue App
+  im Repo (Jotform-Ersatz für alle Gemeinden); hier zunächst nur die Regel ohne Oberfläche:
+  `shared/anmeldung/preis.ts` rechnet Grundpreis (fest oder nach Auswahl mit Kontingent) → Alter →
+  Rabatte/Zuschläge (immer, Frühbucher, ab dem n-ten Kind) → Extras, **in Cent**, und prüft die Regeln
+  (`pruefeRegeln`). Formular, Erweiterung und Druckliste nutzen später genau diese eine Rechnung.
+  21 Tests mit von Hand nachgerechneten Beträgen aus dem Entwurf; jede der sieben Rechenregeln einzeln
+  gegengeprüft (eine Lücke dabei gefunden und mit einem Test geschlossen). Die Tests laufen im
+  Client-Testlauf mit, wie die von `ui/`. Für die Musik-App ändert sich nichts.
+
 ## [2.33.0] – 2026-10-12
 
 **Beim Update bitte beachten (Server-App):** Anmerkungen, Lied-Einstellungen, „gesehen" und das Teilen

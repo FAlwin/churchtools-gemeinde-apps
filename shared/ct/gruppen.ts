@@ -15,10 +15,15 @@ export interface Mitgliedschaft {
 
 /** Was `GET /api/persons/{id}/groups` je Eintrag liefert (der Rest interessiert nicht). */
 export interface RohMitgliedschaft {
-  group?: { domainIdentifier?: string | number };
+  group?: { domainIdentifier?: string | number; title?: string };
   groupTypeRoleId?: number;
   groupMemberStatus?: string;
   memberEndDate?: string | null;
+}
+
+/** Zählt die Mitgliedschaft? Nur aktive, nicht beendete – angefragte oder wartende nicht. */
+function istAktiv(r: RohMitgliedschaft): boolean {
+  return r.groupMemberStatus === 'active' && !r.memberEndDate;
 }
 
 /**
@@ -30,7 +35,7 @@ export function aktiveMitgliedschaften(
 ): Mitgliedschaft[] {
   const out: Mitgliedschaft[] = [];
   for (const r of rows ?? []) {
-    if (r.groupMemberStatus !== 'active' || r.memberEndDate) continue;
+    if (!istAktiv(r)) continue;
     const groupId = Number(r.group?.domainIdentifier);
     const roleId = Number(r.groupTypeRoleId);
     if (Number.isInteger(groupId) && Number.isInteger(roleId)) out.push({ groupId, roleId });
@@ -96,4 +101,37 @@ export function computeAvailabilityAllowed(
 ): boolean {
   const selected = new Set(musicianGroupIds);
   return memberships.some((m) => selected.has(m.groupId));
+}
+
+/** Eine eigene Gruppe mit Namen – und ob man sie leitet (Anmeldungen, #474: „Deine Gruppen"). */
+export interface MeineGruppe {
+  id: number;
+  name: string;
+  leitung: boolean;
+}
+
+/**
+ * Die eigenen Gruppen mit Namen, alphabetisch, und ob die Rolle eine **Leitungsrolle** ist.
+ *
+ * Gemessen an der Test-Instanz (3.137.1, 12.10.2026): `GET /api/persons/{id}/groups` liefert je
+ * Mitgliedschaft `group.title` und `groupTypeRoleId`; ob die Rolle leitet, steht nicht dort, sondern in
+ * `GET /api/group/roles` (`isLeader`, z. B. „Leiter" und „Co-Leiter" ja, „Mitarbeiter" nein). Eine Rolle,
+ * die dort fehlt, gilt nicht als Leitung – lieber eine Leitung zu wenig anzeigen als eine zu viel.
+ */
+export function meineGruppen(
+  rows: RohMitgliedschaft[] | null | undefined,
+  rollen: { id?: unknown; isLeader?: unknown }[] | null | undefined,
+): MeineGruppe[] {
+  const leitend = new Set(
+    (rollen ?? []).filter((r) => r.isLeader === true).map((r) => Number(r.id)),
+  );
+  const out: MeineGruppe[] = [];
+  for (const r of rows ?? []) {
+    if (!istAktiv(r)) continue;
+    const id = Number(r.group?.domainIdentifier);
+    const name = typeof r.group?.title === 'string' ? r.group.title.trim() : '';
+    if (!Number.isInteger(id) || name === '') continue;
+    out.push({ id, name, leitung: leitend.has(Number(r.groupTypeRoleId)) });
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name, 'de'));
 }

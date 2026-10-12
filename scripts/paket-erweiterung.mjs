@@ -30,6 +30,24 @@ if (!kuerzelFund) {
   process.exit(1);
 }
 const kuerzel = kuerzelFund[1];
+
+/**
+ * **Nichts Ladbares im Kopf** (#474): ChurchTools übernimmt nur den Inhalt der `index.html` – ein Skript
+ * oder Stylesheet im `<head>` käme nie an, die Erweiterung bliebe leer. Das Plugin `kopfInDenInhalt`
+ * (über `ui/erweiterung/viteErweiterung.ts`) verschiebt sie; fehlt es in einer App, bricht es hier ab.
+ */
+const kopf =
+  /<head>([\s\S]*?)<\/head>/.exec(fs.readFileSync(path.join(quelle, 'index.html'), 'utf8'))?.[1] ??
+  '';
+if (/<script type="module"|<link rel="(?:stylesheet|modulepreload)"/.test(kopf)) {
+  console.error(
+    'Im <head> des gebauten index.html steht noch ein Skript oder Stylesheet – ChurchTools lädt es nicht.',
+  );
+  console.error(
+    'Fehlt `erweiterungsBau` (ui/erweiterung/viteErweiterung.ts) in der Vite-Konfiguration der App?',
+  );
+  process.exit(1);
+}
 /**
  * **Nachsehen statt glauben (07.10.2026):** Im gebauten CSS darf keine Regel mehr auf die ganze Seite
  * zielen (`:root`, `html`, `body`, `*`, nackte Elemente) – sonst verbiegt sie ChurchTools' Menüs.

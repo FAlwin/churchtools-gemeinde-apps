@@ -1,0 +1,62 @@
+name: Release Anmeldungen
+
+# Die Anmeldungen (#474) haben ihren eigenen Release-Weg – getrennt von der Musik-App:
+# Tag `anmeldung-vX.Y.Z` → Erweiterung bauen und packen → GitHub Release mit der ZIP.
+#
+# **`make_latest: false` ist Pflicht.** Die installierten Musik-Apps fragen `/releases/latest` nach ihrem
+# Update-Hinweis (`/api/update-check`). Wäre ein Anmelde-Release „latest", sähen alle Gemeinden einen
+# falschen Update-Hinweis bzw. keinen mehr (gefunden beim Dienstplaner, E1). Der Tag-Filter `v*` der
+# Musik-App greift hier nicht: `anmeldung-v…` beginnt nicht mit `v`.
+#
+# Ablauf: erst in main mergen (CI grün) → `git tag anmeldung-vX.Y.Z && git push origin anmeldung-vX.Y.Z`.
+on:
+  push:
+    tags:
+      - 'anmeldung-v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Version ohne Präfix (`anmeldung-v0.1.0` → `v0.1.0`) – so steht sie in der App und im Dateinamen.
+      - name: Version ermitteln
+        run: echo "VERSION=${GITHUB_REF_NAME#anmeldung-}" >> "$GITHUB_ENV"
+
+      # Das Kürzel ist fest `anmeldungen` (der Pfad /ccm/<Kürzel>/ steckt im Build) – die Anleitung
+      # (docs/betrieb/ANMELDUNGEN.md) nennt genau dieses Kürzel.
+      - name: Erweiterung bauen und packen
+        run: |
+          npm run build -w anmeldungen
+          npm run paket -w anmeldungen
+        env:
+          VITE_KEY: anmeldungen
+          VITE_APP_VERSION: ${{ env.VERSION }}
+
+      - name: GitHub Release veröffentlichen
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Anmeldungen ${{ env.VERSION }}
+          make_latest: false
+          # Tags mit Suffix (z. B. anmeldung-v0.2.0-rc1) als Vorabversion.
+          prerelease: ${{ contains(env.VERSION, '-') }}
+          body: |
+            ### Anmeldungen – ChurchTools-Erweiterung
+
+            `anmeldungen-${{ env.VERSION }}.zip` unten unter **Assets** herunterladen und in ChurchTools unter
+            **Administration → Erweiterungen → Erweiterung hinzufügen** hochladen. **Kürzel: `anmeldungen`**
+            (genau so – sonst lädt sie nicht), Name frei. Zum Aktualisieren beim Eintrag auf den Stift und die
+            neue ZIP hochladen.
+            Anleitung: https://github.com/FAlwin/churchtools-gemeinde-apps/blob/main/docs/betrieb/ANMELDUNGEN.md
+          files: anmeldungen/releases/anmeldungen-${{ env.VERSION }}.zip
+          fail_on_unmatched_files: true

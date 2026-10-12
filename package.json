@@ -2,18 +2,20 @@
   "name": "churchtools-gemeinde-apps",
   "version": "0.1.0",
   "private": true,
-  "description": "Worship-Charts-PWA für ChurchTools – Chord Charts aus der Setlist, automatisch transponiert",
+  "description": "ChurchTools-Apps für Gemeinden: Musik-App (Worship-Charts-PWA), Anmeldungen (Erweiterung + öffentliches Formular), später der Dienstplaner",
   "license": "MIT",
   "workspaces": [
     "client",
     "server",
-    "shared"
+    "shared",
+    "anmeldungen",
+    "formular"
   ],
   "scripts": {
     "dev": "npm run dev --workspace=server & npm run dev --workspace=client",
     "dev:client": "npm run dev --workspace=client",
     "dev:server": "npm run dev --workspace=server",
-    "build": "npm run build --workspace=shared && tsc -p ui && npm run build --workspace=server && npm run build --workspace=client",
+    "build": "npm run build --workspace=shared && tsc -p ui && npm run build --workspace=server && npm run build --workspace=client && npm run build --workspace=anmeldungen && npm run build --workspace=formular",
     "lint": "eslint . --max-warnings 0",
     "test": "npm run test --workspaces --if-present",
     "test:cov": "npm run test:cov --workspace=client",

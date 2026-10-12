@@ -50,6 +50,14 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Mails als „180.8“ erscheinen – und die öffentlichen Einstellungen als geprüftes JSON in der
   Gruppen-Beschreibung (höchstens 5.000 Zeichen, sonst Fehlermeldung statt Abschneiden). 23 Tests, acht
   Regeln einzeln gegengeprüft.
+- **ChurchTools-Verbindung und Erweiterungs-Bau für alle Apps im Repo** (#474): Damit die Anmeldungen sie
+  nicht nachbauen, liegen die Verbindung einer Erweiterung zu ChurchTools (Fehler-Übersetzung, Bremse,
+  CSRF, Zeitgrenzen) jetzt in `ui/ct/verbindung.ts` und der Erweiterungs-Bau (`cssBereich`,
+  `kopfInDenInhalt`) in `ui/erweiterung/`; das Packen (`scripts/paket-erweiterung.mjs`) liest das Kürzel
+  aus dem gebauten `index.html`. Die Musik-App stellt die Verbindung in `ctRuntime.ts` ein (Meldung bei
+  fehlendem Recht, „nicht erreichbar"), für sie ändert sich nichts. Das Attribut für Elemente außerhalb
+  von `#root` heißt jetzt `data-gemeinde-app` und steht nur noch an einer Stelle (`BEREICH_ATTRIBUT`).
+  Neue Tests für die Einstellung, fünf Gegenproben.
 
 ## [2.33.0] – 2026-10-12
 

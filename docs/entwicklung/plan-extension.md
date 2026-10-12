@@ -193,7 +193,8 @@ alle betroffenen Aufrufe liegen dort schon heute gebündelt –
 Neu entstehen dabei:
 
 - `client/src/services/ctRuntime.ts` – Modus-Erkennung + konfigurierter CT-Client (**die einzige
-  Stelle, die `import.meta.env.MODE` liest**).
+  Stelle, die `import.meta.env.MODE` liest**). Seit #474 liegt der CT-Client selbst in
+  `ui/ct/verbindung.ts` (für alle Erweiterungen), `ctRuntime.ts` stellt ihn ein; `MODE` liest `modus.ts`.
 - `client/src/services/personenAblage.ts` – der Speicher in den Personen-Dateien (§2b).
 - `client/src/services/ctSetlist.ts` – der Setlist-Aufbau im Browser (heute serverseitig).
 
@@ -279,16 +280,16 @@ Zwischenspeicher, `HttpError`; Browser: Sitzung der Seite, Bremse, `ApiError`).
 
 **Befunde beim Durchklick** (Test-Instanz, 07.10.2026):
 
-| Befund                                                                                      | Lösung                                                                                   |
-| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| ChurchTools verbietet Worker aus `blob:` (CSP `child-src * data`) – das Liedblatt hing      | Extension-Build tauscht `./pdfWorker` gegen `pdfWorkerDatei.ts` (Worker als Datei)       |
-| Die App liegt **unter** der ChurchTools-Leiste (56 px); `position: fixed` rutschte darunter | `.ct-extension #root { transform }` – der App-Bereich ist Bezugsrahmen                   |
-| Logos mit Wurzel-Pfad (`/logo…`) zeigten ins Leere                                          | `import.meta.env.BASE_URL`                                                               |
-| Inline-Skripte der `index.html` blockiert (CSP)                                             | Nur der Boot-Hinweis; die App selbst braucht keine                                       |
-| Unsere globalen Regeln (`*`, `html`/`body`, `:root`) verbogen die ChurchTools-Menüs (Alwin) | Extension-Build schreibt sie auf `#root` um (`buildHilfen/cssBereich.ts`), Packen prüft  |
-| Die Erweiterung erscheint **nicht** in der ChurchTools-App (iPhone, Alwin)                  | geht nicht – siehe §7, Punkt 6                                                           |
-| Einführung verdeckte das Liedblatt (08.10., Folge von #440: Seitenfläche auf dem Overlay)   | `html`/`body` nur noch auf `#root`; außerhalb (`data-musikapp`) nur die Schrift          |
-| ChurchTools' Grundregeln in der App: `.cts b` färbte das „Aa", `svg{display:block}` (Alwin) | `b, strong { color: inherit }`, Bilder/Symbole `display: revert` (`all: revert` zu grob) |
+| Befund                                                                                      | Lösung                                                                                     |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| ChurchTools verbietet Worker aus `blob:` (CSP `child-src * data`) – das Liedblatt hing      | Extension-Build tauscht `./pdfWorker` gegen `pdfWorkerDatei.ts` (Worker als Datei)         |
+| Die App liegt **unter** der ChurchTools-Leiste (56 px); `position: fixed` rutschte darunter | `.ct-extension #root { transform }` – der App-Bereich ist Bezugsrahmen                     |
+| Logos mit Wurzel-Pfad (`/logo…`) zeigten ins Leere                                          | `import.meta.env.BASE_URL`                                                                 |
+| Inline-Skripte der `index.html` blockiert (CSP)                                             | Nur der Boot-Hinweis; die App selbst braucht keine                                         |
+| Unsere globalen Regeln (`*`, `html`/`body`, `:root`) verbogen die ChurchTools-Menüs (Alwin) | Extension-Build schreibt sie auf `#root` um (`ui/erweiterung/cssBereich.ts`), Packen prüft |
+| Die Erweiterung erscheint **nicht** in der ChurchTools-App (iPhone, Alwin)                  | geht nicht – siehe §7, Punkt 6                                                             |
+| Einführung verdeckte das Liedblatt (08.10., Folge von #440: Seitenfläche auf dem Overlay)   | `html`/`body` nur noch auf `#root`; außerhalb (`data-gemeinde-app`) nur die Schrift        |
+| ChurchTools' Grundregeln in der App: `.cts b` färbte das „Aa", `svg{display:block}` (Alwin) | `b, strong { color: inherit }`, Bilder/Symbole `display: revert` (`all: revert` zu grob)   |
 
 #### 3b – Schreiben (in Scheiben, Alwin 07.10.2026)
 

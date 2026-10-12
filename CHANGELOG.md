@@ -7,6 +7,17 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Intern
+
+- **ChurchTools-Verbindung und Erweiterungs-Bau für alle Apps im Repo** (#474): Damit die Anmeldungen sie
+  nicht nachbauen, liegen die Verbindung einer Erweiterung zu ChurchTools (Fehler-Übersetzung, Bremse,
+  CSRF, Zeitgrenzen) jetzt in `ui/ct/verbindung.ts` und der Erweiterungs-Bau (`cssBereich`,
+  `kopfInDenInhalt`) in `ui/erweiterung/`; das Packen (`scripts/paket-erweiterung.mjs`) liest das Kürzel
+  aus dem gebauten `index.html`. Die Musik-App stellt die Verbindung in `ctRuntime.ts` ein (Meldung bei
+  fehlendem Recht, „nicht erreichbar"), für sie ändert sich nichts. Das Attribut für Elemente außerhalb
+  von `#root` heißt jetzt `data-gemeinde-app` und steht nur noch an einer Stelle (`BEREICH_ATTRIBUT`).
+  Neue Tests für die Einstellung, fünf Gegenproben.
+
 ## [2.33.0] – 2026-10-12
 
 **Beim Update bitte beachten (Server-App):** Anmerkungen, Lied-Einstellungen, „gesehen" und das Teilen

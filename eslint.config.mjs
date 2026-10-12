@@ -64,7 +64,6 @@ export default tseslint.config(
             'server/*.ts',
             'e2e/*.mjs',
             'scripts/*.mjs',
-            'client/scripts/*.mjs',
             'server/scripts/*.ts',
           ],
         },

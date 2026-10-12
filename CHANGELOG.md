@@ -7,6 +7,28 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Anmeldungen)
+
+- **Startseite der Anmeldungen: Veranstaltungen der eigenen Gruppen** (#480, Bauplan A2 – nur lesen).
+  Eine Veranstaltung ist eine **Untergruppe der Gruppe, die sie anbietet** (entschieden 12.10.2026); die
+  Rechte regelt damit ChurchTools („Berechtigung für die Untergruppen“, Anleitung in
+  `docs/betrieb/ANMELDUNGEN.md`). Wie im Entwurf:
+  - **Braucht deine Aufmerksamkeit:** Entwurf wartet auf Freigabe, Plätze frei bei Warteliste
+    („Wer rückt nach?“), offene Zahlungen (nur für die Leitung), Einstellungen nicht lesbar.
+  - **Veranstaltungen:** _Anstehend · Entwürfe · Vorbei_ mit Zähler, Gruppen-Filter, Monatsüberschriften;
+    je Zeile Datum, Gruppe, Preis, Stand der Anmeldung, Anmeldeschluss, Belegung, Link zur Gruppe.
+  - **Deine Gruppen:** Leitung/Mitglied, Anzahl; „Untergruppen für dich nicht freigegeben“ statt einer
+    falschen leeren Liste, wenn ChurchTools sie verbirgt.
+  - Datum und Ort stehen als Kopie in den öffentlichen Einstellungen (`termin`) – der Termin wird bewusst
+    nicht verknüpft (A0).
+  - Geprüft gegen die Test-Instanz mit dem echten Code: 7 Abfragen für die ganze Übersicht.
+
+### Intern
+
+- `ctAlleSeiten` (`ui/ct/verbindung.ts`): ChurchTools-Listen über alle Seiten – `members` und `groups`
+  liefern sonst nur 10 Einträge (gemessen). Mehr als erlaubt → Fehler statt still abgeschnitten. Die
+  Liederliste der Musik-App nutzt es jetzt auch (bisher eigene Schleife, ohne Test – jetzt mit).
+
 ### Intern
 
 - **Anmeldungen, erster Baustein: die Preisberechnung** (#474, Bauplan Anmeldungen A1 Teil 1). Neue App

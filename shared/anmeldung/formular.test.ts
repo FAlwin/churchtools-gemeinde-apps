@@ -194,6 +194,12 @@ describe('pruefeFormular', () => {
 describe('Einstellungen in der Gruppen-Beschreibung', () => {
   function einstellungen(): OeffentlicheEinstellungen {
     return {
+      termin: {
+        beginn: '2026-12-28T15:00',
+        ende: '2027-01-02T11:00',
+        ort: 'Haus Lutzenberg',
+        terminId: 812,
+      },
       preis: {
         grundpreis: {
           art: 'auswahl',
@@ -240,6 +246,17 @@ describe('Einstellungen in der Gruppen-Beschreibung', () => {
   it('eine normale Beschreibung ist keine Einstellung', () => {
     expect(einstellungenLesen('Wir essen gemeinsam nach dem Gottesdienst.')).toBeNull();
     expect(einstellungenLesen(null)).toBeNull();
+  });
+
+  it('ohne Datum (Entwurf) geht, ein Datum in anderer Schreibweise nicht', () => {
+    const ohne = { ...einstellungen(), termin: null };
+    expect(einstellungenLesen(einstellungenAlsText(ohne))).toEqual(ohne);
+    const falsch = {
+      ...einstellungen(),
+      termin: { ...einstellungen().termin!, beginn: '28.12.2026' },
+    };
+    expect(() => einstellungenAlsText(falsch)).toThrow();
+    expect(einstellungenLesen(EINSTELLUNGEN_KENNUNG + JSON.stringify(falsch))).toBeNull();
   });
 
   it('kaputtes oder manipuliertes JSON wird abgelehnt, ohne zu werfen', () => {

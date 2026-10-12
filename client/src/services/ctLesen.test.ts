@@ -6,6 +6,7 @@ import {
   datei,
   fingerabdruck,
   gemeindeKonfiguration,
+  leser,
   liedtextVorschau,
   meinStatus,
   meineRechte,
@@ -218,5 +219,26 @@ describe('Liedtext-Vorschau beim Hinzufügen (#335, 3b-1)', () => {
   it('eine Datei aus lauter Direktiven ist kein Liedtext → null', async () => {
     liedMit([{ name: 'Lied.chordpro', inhalt: '{title: Lied}\n{key: G}' }]);
     expect((await liedtextVorschau(7)).chordpro).toBeNull();
+  });
+});
+
+/**
+ * Die Liederliste kommt seitenweise (#480: Blättern jetzt über `ctAlleSeiten`). Ohne diesen Test fiel
+ * nicht auf, wenn nur die erste Seite gelesen wurde – die Gegenprobe blieb grün.
+ */
+describe('leser.alleLieder – über alle Seiten', () => {
+  it('liest Seite für Seite bis zur letzten', async () => {
+    const seiten = [
+      { data: [{ id: 1, name: 'A' }], meta: { pagination: { lastPage: 2 } } },
+      { data: [{ id: 2, name: 'B' }], meta: { pagination: { lastPage: 2 } } },
+    ];
+    let n = 0;
+    ct.antworten['/api/songs'] = () =>
+      new Response(JSON.stringify(seiten[n++]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    expect((await leser.alleLieder()).map((l) => l.id)).toEqual([1, 2]);
+    expect(ct.zaehle('GET /api/songs')).toBe(2);
   });
 });

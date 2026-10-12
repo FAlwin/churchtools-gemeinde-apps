@@ -1,8 +1,8 @@
 # Anmeldungen – ChurchTools-Erweiterung
 
-> **Stand: Grundgerüst (A1).** Die Erweiterung zeigt bisher nur, wer angemeldet ist und in welchen
-> Gruppen. Veranstaltungen, Formular und Teilnehmerlisten folgen Schritt für Schritt (Bauplan A2–A10).
-> Diese Anleitung wächst mit.
+> **Stand: Startseite (A2).** Die Erweiterung zeigt die Veranstaltungen der eigenen Gruppen mit Stand
+> und Belegung und was Aufmerksamkeit braucht – **nur lesen**. Anlegen und Bearbeiten (A3), Formular und
+> Teilnehmerlisten folgen Schritt für Schritt (Bauplan A3–A10). Diese Anleitung wächst mit.
 
 Die Anmeldungen ersetzen Jotform & Co.: Veranstalter legen Anmeldungen zu Veranstaltungen selbst an und
 verwalten sie in ChurchTools. Teilnehmende melden sich über ein öffentliches Formular an und können
@@ -35,13 +35,33 @@ Sie besteht aus zwei Teilen:
 ## Rechte
 
 Die Erweiterung kann nichts, was die Person in ChurchTools nicht auch selbst dürfte – sie arbeitet mit
-deren Sitzung. Für das Grundgerüst braucht es **keine besonderen Rechte**: die eigene Person, die eigenen
-Gruppen und die Gruppenrollen kann jede angemeldete Person lesen (gemessen an der Test-Instanz mit einem
-Konto ohne Admin-Rechte, 12.10.2026).
+deren Sitzung.
 
-Später gilt (Bauplan §2): **Jede Veranstaltung gehört zu einer Gruppe.** Mitglieder der Gruppe legen
-Anmeldungen an, die Leitung gibt sie frei, die ganze Gruppe bearbeitet die Anmeldungen. Welche Rechte
-dafür genau nötig sind, steht hier, sobald es gemessen ist.
+**Jede Veranstaltung ist eine Untergruppe der Gruppe, die sie anbietet** (z. B. „Gemeindeessen“ unter
+dem Team, das es organisiert). Damit regelt ChurchTools selbst, wer was darf:
+
+| Wer                                            | Darf                                                                                                                          | Woher                                                                                                                         |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Leitung der Gruppe (Leiter, Co-Leiter)         | alles: Anmeldungen, Felder, Einstellungen, freigeben                                                                          | bei Gruppentypen mit „Berechtigung für die Untergruppen“ für die Leitung schon so (bei der ECG: Gruppentyp „Dienst“, 1 Ebene) |
+| alle anderen in der Gruppe (z. B. Mitarbeiter) | Anmeldungen sehen und bearbeiten: „bezahlt“, Warteliste, nachrücken, absagen, von Hand anmelden – **nicht** die Einstellungen | **muss eingestellt werden**, siehe unten                                                                                      |
+
+**Einstellen (einmal je Gruppe, die Veranstaltungen anbietet):** Rechteverwaltung → Reiter **„Gruppe“** →
+Gruppe wählen → ganz unten **„Berechtigung für die Untergruppen“** → _Wie viele Ebenen…_: **Eine Ebene
+von Untergruppen** → bei **„Personen und Gruppen“** für die Rolle **Mitarbeiter**:
+
+- Gruppeninfos sehen, Gruppenmitglieder sehen, Gruppenmitgliedsfelder sehen, Gruppenmitgliedsfelder
+  bearbeiten – jeweils **Stufe 3 (Hoch)** (wie die Leitung, damit das Team auch z. B. Allergien sieht)
+- Gruppenmitgliedschaften bearbeiten, Gruppenmitglieder hinzufügen, Gruppenmitglieder entfernen ✅
+- alles andere **leer** (vor allem nicht: Gruppeninfos/Grundeinstellungen bearbeiten, Gruppenmitgliedsfelder
+  verwalten, Routinen verwalten)
+
+So an der Test-Instanz eingestellt und gemessen (12.10.2026): Mitarbeiter sehen und bearbeiten die
+Anmeldungen, Name, Status und Felder der Veranstaltung ändern dürfen sie nicht. Fehlt die Einstellung,
+zeigt die Startseite bei der Gruppe „Untergruppen für dich nicht freigegeben“ statt die Veranstaltungen
+stillschweigend wegzulassen.
+
+**Den Menüpunkt sehen:** Erweiterung **„Anmeldungen“ sehen** – für alle, die mitarbeiten (z. B. über den
+Status oder global über die Gruppen).
 
 ## Für Entwickler
 

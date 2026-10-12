@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ctAnfrage, fehlerAus, verbindungEinrichten, _vergissCsrf } from './verbindung';
+import {
+  ctAlleSeiten,
+  ctAnfrage,
+  fehlerAus,
+  verbindungEinrichten,
+  _vergissCsrf,
+} from './verbindung';
 
 /**
  * Die Verbindung ohne die Musik-App (#474) – so, wie eine neue Erweiterung sie vorfindet. Die
@@ -64,5 +70,54 @@ describe('verbindungEinrichten', () => {
   it('ohne Einstellung wird nichts gemeldet und nichts geht kaputt', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(json(200, { data: 1 }));
     await expect(ctAnfrage('/whoami')).resolves.toEqual({ data: 1 });
+  });
+});
+
+describe('ctAlleSeiten (#480)', () => {
+  /** Eine Liste mit `n` Einträgen, so seitenweise ausgeliefert wie ChurchTools (`meta.pagination`). */
+  function liste(n: number, mitMeta = true) {
+    return vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = new URL(String(input));
+      const limit = Number(url.searchParams.get('limit'));
+      const seite = Number(url.searchParams.get('page'));
+      const data = Array.from({ length: n }, (_, i) => i).slice((seite - 1) * limit, seite * limit);
+      const lastPage = Math.ceil(n / limit);
+      return Promise.resolve(
+        json(200, mitMeta ? { data, meta: { pagination: { lastPage } } } : { data }),
+      );
+    });
+  }
+
+  it('blättert bis zur letzten Seite – 25 Einträge bei 10 je Seite sind 3 Abfragen', async () => {
+    const spy = liste(25);
+    expect(await ctAlleSeiten<number>('/groups/1/members', 10)).toHaveLength(25);
+    expect(spy).toHaveBeenCalledTimes(3);
+    expect(String(spy.mock.calls[2][0])).toBe(
+      'https://ct.test/api/groups/1/members?limit=10&page=3',
+    );
+  });
+
+  it('genau volle letzte Seite: nach lastPage aufhören, keine leere Extra-Abfrage', async () => {
+    const spy = liste(20);
+    expect(await ctAlleSeiten<number>('/groups/1/members', 10)).toHaveLength(20);
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('leere Liste (lastPage 0) → eine Abfrage, leeres Ergebnis', async () => {
+    const spy = liste(0);
+    expect(await ctAlleSeiten('/groups/1/members', 10)).toEqual([]);
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('ohne Angabe zur letzten Seite: bis eine Seite kürzer ist; Pfad mit ? bekommt &', async () => {
+    const spy = liste(20, false);
+    expect(await ctAlleSeiten<number>('/groups?ids[]=4', 10)).toHaveLength(20);
+    expect(spy).toHaveBeenCalledTimes(3);
+    expect(String(spy.mock.calls[0][0])).toBe('https://ct.test/api/groups?ids[]=4&limit=10&page=1');
+  });
+
+  it('mehr als maxSeiten → Fehler statt einer halben Liste', async () => {
+    liste(50);
+    await expect(ctAlleSeiten('/songs', 10, 3)).rejects.toThrow('mehr als 30 Einträge');
   });
 });

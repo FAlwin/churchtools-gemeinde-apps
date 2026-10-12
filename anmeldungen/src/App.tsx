@@ -1,21 +1,30 @@
 import { useCallback, useEffect, useState } from 'react';
+import { tagAusIso } from '@shared/ct/zeit';
 import { ladeStart } from './start';
+import { ladeUebersicht } from './veranstaltungen';
+import { datumText } from './anzeige';
+import { Startseite } from './Startseite';
 import { fehlerZustand, type Zustand } from './zustand';
 import styles from './App.module.scss';
 
 /**
- * Das Grundgerüst der Anmeldungen (#474, A1): Es zeigt, wer angemeldet ist und in welchen Gruppen –
- * mehr noch nicht. Die Veranstaltungsliste kommt in A2.
+ * Die Anmeldungen in ChurchTools: Wer angemeldet ist, seine Gruppen (#474, A1) und deren
+ * Veranstaltungen (#480, A2). Erst die Person und ihre Gruppen, dann die Veranstaltungen darunter –
+ * scheitert eines davon vorübergehend, gibt es „Erneut versuchen“ statt einer halben Seite.
  */
 export function App() {
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
+  const zeitzone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const heute = tagAusIso(new Date().toISOString(), zeitzone);
 
   const laden = useCallback(() => {
     setZustand({ art: 'laedt' });
-    ladeStart().then(
-      (start) => setZustand({ art: 'fertig', start }),
-      (e: unknown) => setZustand(fehlerZustand(e)),
-    );
+    ladeStart()
+      .then(async (start) => ({ start, uebersicht: await ladeUebersicht(start.gruppen) }))
+      .then(
+        ({ start, uebersicht }) => setZustand({ art: 'fertig', start, uebersicht }),
+        (e: unknown) => setZustand(fehlerZustand(e)),
+      );
   }, []);
 
   useEffect(laden, [laden]);
@@ -23,9 +32,15 @@ export function App() {
   return (
     <main className={styles.seite}>
       <header className={styles.kopf}>
-        <h1 className={styles.titel}>Anmeldungen</h1>
-        {zustand.art === 'fertig' && zustand.start.gemeinde && (
-          <p className={styles.gemeinde}>{zustand.start.gemeinde}</p>
+        <p className={styles.app}>
+          Anmeldungen
+          {zustand.art === 'fertig' && zustand.start.gemeinde && ` · ${zustand.start.gemeinde}`}
+        </p>
+        {zustand.art === 'fertig' && (
+          <div className={styles.gruss}>
+            <h1>{zustand.start.vorname ? `Hallo ${zustand.start.vorname}` : 'Hallo'}</h1>
+            <span>{datumText(heute)}</span>
+          </div>
         )}
       </header>
 
@@ -43,36 +58,12 @@ export function App() {
       )}
 
       {zustand.art === 'fertig' && (
-        <>
-          <p className={styles.gruss}>
-            {zustand.start.vorname ? `Hallo, ${zustand.start.vorname}!` : 'Hallo!'}
-          </p>
-          <section className={styles.abschnitt} aria-labelledby="deine-gruppen">
-            <h2 id="deine-gruppen" className={styles.ueberschrift}>
-              Deine Gruppen
-            </h2>
-            {zustand.start.gruppen.length === 0 ? (
-              <p className={styles.hinweis}>
-                Du bist in keiner Gruppe. Veranstaltungen gehören immer zu einer Gruppe – frag die
-                Verantwortlichen deiner Gemeinde, wenn du Anmeldungen anlegen möchtest.
-              </p>
-            ) : (
-              <ul className={styles.liste}>
-                {zustand.start.gruppen.map((g) => (
-                  <li key={g.id} className={styles.gruppe}>
-                    <span>{g.name}</span>
-                    <span className={g.leitung ? styles.chipLeitung : styles.chip}>
-                      {g.leitung ? 'Leitung' : 'Mitglied'}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-          <p className={styles.hinweis}>
-            Hier entstehen die Anmeldungen deiner Gruppen. Noch ist das nur das Grundgerüst.
-          </p>
-        </>
+        <Startseite
+          start={zustand.start}
+          uebersicht={zustand.uebersicht}
+          heute={heute}
+          zeitzone={zeitzone}
+        />
       )}
 
       <footer className={styles.fuss}>Version {import.meta.env.VITE_APP_VERSION ?? 'dev'}</footer>

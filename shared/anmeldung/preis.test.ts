@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { berechnePreis, euroText, pruefeRegeln, type Buchung, type PreisRegeln } from './preis';
+import {
+  berechnePreis,
+  euroText,
+  preisKurz,
+  pruefeRegeln,
+  type Buchung,
+  type PreisRegeln,
+} from './preis';
 
 /**
  * Preis-Baukasten (#474). Die erwarteten Beträge sind **von Hand nachgerechnet** (siehe Kommentar an
@@ -347,5 +354,34 @@ describe('pruefeRegeln', () => {
     r.extras[0].bezeichnung = '';
     const f = pruefeRegeln(r);
     expect(f).toHaveLength(4);
+  });
+});
+
+describe('preisKurz (Listen-Zeile, A2)', () => {
+  const regeln = (g: Partial<PreisRegeln['grundpreis']>): PreisRegeln => ({
+    grundpreis: { art: 'fest', betragCent: 0, gilt: 'person', auswahlName: '', optionen: [], ...g },
+    alter: [],
+    anpassungen: [],
+    extras: [],
+  });
+  const opt = (preisCent: number) => ({ name: 'x', preisCent, kontingent: 0, belegt: 0 });
+
+  it('fest: kostenlos, je Person, je Anmeldung', () => {
+    expect(preisKurz(regeln({}))).toBe('kostenlos');
+    expect(preisKurz(regeln({ betragCent: 1200 }))).toBe('12,00 € p. P.');
+    expect(preisKurz(regeln({ betragCent: 3000, gilt: 'anmeldung' }))).toBe(
+      '30,00 € pro Anmeldung',
+    );
+  });
+
+  it('Auswahl: der günstigste Eintrag mit „ab“, gleiche Preise ohne', () => {
+    expect(preisKurz(regeln({ art: 'auswahl', optionen: [opt(9000), opt(6552)] }))).toBe(
+      'ab 65,52 € p. P.',
+    );
+    expect(preisKurz(regeln({ art: 'auswahl', optionen: [opt(500), opt(500)] }))).toBe(
+      '5,00 € p. P.',
+    );
+    expect(preisKurz(regeln({ art: 'auswahl', optionen: [opt(0), opt(0)] }))).toBe('kostenlos');
+    expect(preisKurz(regeln({ art: 'auswahl', optionen: [] }))).toBe('Preis folgt');
   });
 });

@@ -1,11 +1,12 @@
 import { ApiError } from '@ui/ct/fehler';
 import { istUeberlastet } from '@ui/ct/verbindung';
 import type { Start } from './start';
+import type { Uebersicht } from './veranstaltungen';
 
-/** Was die Startseite gerade zeigt (#474). */
+/** Was die Startseite gerade zeigt (#474, Übersicht seit A2 #480). */
 export type Zustand =
   | { art: 'laedt' }
-  | { art: 'fertig'; start: Start }
+  | { art: 'fertig'; start: Start; uebersicht: Uebersicht }
   | { art: 'fehler'; text: string; nochmal: boolean };
 
 /**

@@ -6,11 +6,21 @@ import { ChurchToolsBremst } from '@ui/ct/verbindung';
 import { App } from './App';
 import { fehlerZustand } from './zustand';
 import { ladeStart } from './start';
+import { ladeUebersicht, type Uebersicht } from './veranstaltungen';
 
 vi.mock('./start', () => ({ ladeStart: vi.fn() }));
+vi.mock('./veranstaltungen', () => ({ ladeUebersicht: vi.fn() }));
 const laden = vi.mocked(ladeStart);
+const ladenUebersicht = vi.mocked(ladeUebersicht);
 
-describe('Startseite der Anmeldungen (#474)', () => {
+const LEER: Uebersicht = {
+  einteilung: { anstehend: [], entwuerfe: [], vorbei: [] },
+  hinweise: [],
+  offen: new Map(),
+  verborgen: new Map(),
+};
+
+describe('App der Anmeldungen (#474, #480)', () => {
   it('zeigt Gruß, Gemeinde und die Gruppen mit Leitung/Mitglied', async () => {
     laden.mockResolvedValue({
       vorname: 'Alwin',
@@ -20,29 +30,34 @@ describe('Startseite der Anmeldungen (#474)', () => {
         { id: 7, name: 'Technik', leitung: false },
       ],
     });
+    ladenUebersicht.mockResolvedValue(LEER);
     render(<App />);
-    expect(await screen.findByText('Hallo, Alwin!')).toBeTruthy();
-    expect(screen.getByText('Evangeliumschristen- Gemeinde e.V.')).toBeTruthy();
+    expect(await screen.findByText('Hallo Alwin')).toBeTruthy();
+    expect(screen.getByText(/Evangeliumschristen- Gemeinde e\.V\./)).toBeTruthy();
     const zeilen = screen.getAllByRole('listitem').map((z) => z.textContent);
-    expect(zeilen).toEqual(['LobpreisteamLeitung', 'TechnikMitglied']);
+    expect(zeilen).toEqual(['Lobpreisteamnichts geplantLeitung', 'Techniknichts geplantMitglied']);
+    // Die Übersicht wird mit genau den Gruppen der Person geladen.
+    expect(ladenUebersicht).toHaveBeenCalledWith([
+      { id: 9, name: 'Lobpreisteam', leitung: true },
+      { id: 7, name: 'Technik', leitung: false },
+    ]);
   });
 
   it('keine Gruppen → erklärt, warum', async () => {
     laden.mockResolvedValue({ vorname: 'Alwin', gemeinde: null, gruppen: [] });
+    ladenUebersicht.mockResolvedValue(LEER);
     render(<App />);
     expect(await screen.findByText(/Du bist in keiner Gruppe/)).toBeTruthy();
   });
 
-  it('ChurchTools antwortet nicht → „Erneut versuchen" lädt neu', async () => {
-    laden.mockRejectedValueOnce(new ApiError(502, 'x')).mockResolvedValueOnce({
-      vorname: 'Alwin',
-      gemeinde: null,
-      gruppen: [],
-    });
+  it('Übersicht scheitert vorübergehend → „Erneut versuchen" lädt beides neu', async () => {
+    laden.mockResolvedValue({ vorname: 'Alwin', gemeinde: null, gruppen: [] });
+    ladenUebersicht.mockRejectedValueOnce(new ApiError(502, 'x')).mockResolvedValueOnce(LEER);
     render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: 'Erneut versuchen' }));
-    expect(await screen.findByText('Hallo, Alwin!')).toBeTruthy();
+    expect(await screen.findByText('Hallo Alwin')).toBeTruthy();
     expect(laden).toHaveBeenCalledTimes(2);
+    expect(ladenUebersicht).toHaveBeenCalledTimes(2);
   });
 });
 

@@ -7,6 +7,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+## [2.34.1] – 2026-10-12
+
 ### Geändert
 
 - **Schildchen „neu"/„geändert" verschwinden mit dem Hinweis** (Alwin, 12.10.2026: „nur ein kurzer Hinweis
@@ -22,6 +24,26 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Markierungen jetzt auch im Speicher weg. Gemerkt wird erst, wenn die Ablauf-Ansicht wirklich steht
   (sie wird nachgeladen; die Daten kamen sonst vorher an und galten als gesehen, bevor sie zu sehen
   waren).
+
+### Neu (Anmeldungen)
+
+- **Startseite der Anmeldungen: Veranstaltungen der eigenen Gruppen** (#480, Bauplan A2 – nur lesen).
+  Eine Veranstaltung ist eine **Untergruppe der Gruppe, die sie anbietet** (entschieden 12.10.2026); die
+  Rechte regelt damit ChurchTools („Berechtigung für die Untergruppen“, Anleitung in
+  `docs/betrieb/ANMELDUNGEN.md`). Wie im Entwurf:
+  - **Braucht deine Aufmerksamkeit:** Entwurf wartet auf Freigabe, Plätze frei bei Warteliste
+    („Wer rückt nach?“), offene Zahlungen (nur für die Leitung), Einstellungen nicht lesbar.
+  - **Veranstaltungen:** _Anstehend · Entwürfe · Vorbei_ mit Zähler, Gruppen-Filter, Monatsüberschriften;
+    je Zeile Datum, Gruppe, Preis, Stand der Anmeldung, Anmeldeschluss, Belegung, Link zur Gruppe.
+  - **Deine Gruppen:** Leitung/Mitglied, Anzahl; „Untergruppen für dich nicht freigegeben“ statt einer
+    falschen leeren Liste, wenn ChurchTools sie verbirgt.
+  - Datum und Ort stehen als Kopie in den öffentlichen Einstellungen (`termin`) – der Termin wird bewusst
+    nicht verknüpft (A0).
+  - Geprüft gegen die Test-Instanz mit dem echten Code: 7 Abfragen für die ganze Übersicht.
+
+- `ctAlleSeiten` (`ui/ct/verbindung.ts`): ChurchTools-Listen über alle Seiten – `members` und `groups`
+  liefern sonst nur 10 Einträge (gemessen). Mehr als erlaubt → Fehler statt still abgeschnitten. Die
+  Liederliste der Musik-App nutzt es jetzt auch (bisher eigene Schleife, ohne Test – jetzt mit).
 
 ## [2.34.0] – 2026-10-12
 
@@ -66,22 +88,6 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   „Beginn" beim Löschen nicht mit (gemessen 12.10.2026); der erste Punkt des Gottesdienstes rutschte samt
   Uhrzeiten davor. Die App rückt die Grenze jetzt selbst nach.
 
-### Neu (Anmeldungen)
-
-- **Startseite der Anmeldungen: Veranstaltungen der eigenen Gruppen** (#480, Bauplan A2 – nur lesen).
-  Eine Veranstaltung ist eine **Untergruppe der Gruppe, die sie anbietet** (entschieden 12.10.2026); die
-  Rechte regelt damit ChurchTools („Berechtigung für die Untergruppen“, Anleitung in
-  `docs/betrieb/ANMELDUNGEN.md`). Wie im Entwurf:
-  - **Braucht deine Aufmerksamkeit:** Entwurf wartet auf Freigabe, Plätze frei bei Warteliste
-    („Wer rückt nach?“), offene Zahlungen (nur für die Leitung), Einstellungen nicht lesbar.
-  - **Veranstaltungen:** _Anstehend · Entwürfe · Vorbei_ mit Zähler, Gruppen-Filter, Monatsüberschriften;
-    je Zeile Datum, Gruppe, Preis, Stand der Anmeldung, Anmeldeschluss, Belegung, Link zur Gruppe.
-  - **Deine Gruppen:** Leitung/Mitglied, Anzahl; „Untergruppen für dich nicht freigegeben“ statt einer
-    falschen leeren Liste, wenn ChurchTools sie verbirgt.
-  - Datum und Ort stehen als Kopie in den öffentlichen Einstellungen (`termin`) – der Termin wird bewusst
-    nicht verknüpft (A0).
-  - Geprüft gegen die Test-Instanz mit dem echten Code: 7 Abfragen für die ganze Übersicht.
-
 ### Intern
 
 - **Anmeldungen, erster Baustein: die Preisberechnung** (#474, Bauplan Anmeldungen A1 Teil 1). Neue App
@@ -123,9 +129,6 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
     unverändert) und der Erweiterungs-Bau (`ui/erweiterung/viteErweiterung.ts`, nutzt jetzt auch die
     Musik-App). Das Packen prüft zusätzlich, dass kein Skript im `<head>` zurückbleibt.
   - Tests: 17 neue; zehn Gegenproben an den Regeln und zwei am Bau, jede schlägt an.
-- `ctAlleSeiten` (`ui/ct/verbindung.ts`): ChurchTools-Listen über alle Seiten – `members` und `groups`
-  liefern sonst nur 10 Einträge (gemessen). Mehr als erlaubt → Fehler statt still abgeschnitten. Die
-  Liederliste der Musik-App nutzt es jetzt auch (bisher eigene Schleife, ohne Test – jetzt mit).
 
 ## [2.33.0] – 2026-10-12
 

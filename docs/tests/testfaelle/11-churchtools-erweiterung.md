@@ -52,7 +52,7 @@ Lieds. In ChurchTools hängt an deiner Person unter **Anhänge** je bemalter Sei
 
 - **Priorität:** hoch
 - **Betrifft:** `client/src/services/personenAblage.ts`, `client/src/services/annotations.ts`, `client/src/services/userSettings.ts`
-- **Automatisiert:** teilweise – `personenAblage.test.ts` (16 Gegenproben); der Weg über die echte
+- **Automatisiert:** teilweise – `personenAblage.test.ts`; der Weg über die echte
   Einbettung nur hier
 - **Historie:** #334, #335
 
@@ -130,7 +130,7 @@ Auswahl der Kategorie zeigt nur die, in denen du Lieder bearbeiten darfst. Kein 
 2. Ein zweites Lied mit **derselben CCLI-Nummer** wie ein vorhandenes anlegen → die App lehnt ab.
 3. Am Lied über den Stift die **Stammdaten** ändern (Autor) → gespeichert.
 4. **Arrangements**: ein zweites anlegen, zum **Standard** machen, das alte löschen. Eine Liednummer
-   ohne Liederbuch → die App sagt, dass erst das Liederbuch nötig ist.
+   ohne **Quelle** → die App sagt, dass ChurchTools eine Liednummer nur zusammen mit einer Quelle speichert.
 5. **Notenblatt bearbeiten** (Original) → speichern. Dann **Neue Version…** anlegen, umbenennen,
    löschen. In ChurchTools liegt danach je Version genau eine Datei.
 6. **Dateien**: die PDF hochladen, herunterladen, löschen.
@@ -218,13 +218,14 @@ Alles, was du anlegst, am Ende wieder löschen.
 **Das muss passieren:** Suchen, Vorschau, Anlegen und Notenblatt-Holen funktionieren wie in der
 Server-Variante – aus dem Browser, ohne eigenen Server. Ohne `use ccli` ist SongSelect nirgends zu sehen.
 
-1. **Lieder** → in die Suche einen Titel tippen, der in der Bibliothek nicht vorkommt → darunter
-   erscheinen SongSelect-Treffer.
+1. **Lieder** → oben **Neues Lied** → einen Titel eintippen, der in der Bibliothek nicht vorkommt →
+   darunter erscheinen SongSelect-Treffer. (In der Suche der Liederliste selbst gibt es bewusst kein
+   SongSelect – #378.)
 2. Bei einem Treffer das **Auge** → der Liedtext erscheint mit dem Hinweis von CCLI darunter.
 3. Den Treffer **anlegen** → Titel, Autoren und Copyright sind ausgefüllt; nach dem Anlegen hat das Lied
    ein Notenblatt in der Tonart des Arrangements (in ChurchTools nachsehen: genau eine `.chordpro`).
 4. Bei einem Lied **mit** CCLI-Nummer, aber **ohne** Notenblatt: Lied öffnen → Titel → **Dateien …** →
-   **Aus SongSelect holen** → Rückfrage bestätigen → das Notenblatt erscheint (in ChurchTools genau eine
+   **Notenblatt aus SongSelect holen …** → Rückfrage bestätigen → das Notenblatt erscheint (in ChurchTools genau eine
    `.chordpro`). Hat das Lied schon eines, wird der Knopf nicht angeboten.
 5. Mit einem Konto **ohne** `use ccli`: keine SongSelect-Treffer, kein Menüpunkt.
 
@@ -236,6 +237,8 @@ Server-Variante – aus dem Browser, ohne eigenen Server. Ohne `use ccli` ist So
   `X-Requested-With`, Lizenz, Reihenfolge, Tonart), Server-Tests über dieselben Regeln; ob ChurchTools die
   `getCCLI*`-Aufrufe aus dem Browser annimmt, nur hier
 - **Historie:** #335 (3b-5)
+
+</details>
 
 ### TF-EXT-09 · Ohne Rechte für Lieder und Abläufe: klarer Hinweis
 
@@ -296,7 +299,8 @@ ChurchTools als Homescreen-App (Safari → Teilen → „Zum Home-Bildschirm"). 
 und ein Rechner mit Chrome oder Edge. Ein Lied mit Notenblatt, ein Ablauf.
 
 **Das muss passieren:** Der Knopf mit den vier Ecken steht auf **jeder** Seite an derselben Stelle,
-ganz rechts oben (Termine, Lieder, Abwesenheiten, Mehr, Ablauf, Liedblatt). Er legt die App über die
+ganz rechts oben (Termine, Lieder, Mehr, Ablauf, Liedblatt – den Tab „Abwesenheiten" gibt es in der
+Erweiterung nicht). Er legt die App über die
 Leiste von ChurchTools – in jedem Browser, ohne X
 und ohne Hinweis von Safari, ohne Flackern. Mit ChurchTools als Homescreen-App ist dann der ganze
 Bildschirm die App. Der Zustand bleibt beim Wechsel zwischen Liste, Ablauf und Liedblatt.

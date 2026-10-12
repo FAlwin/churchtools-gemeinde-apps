@@ -117,11 +117,13 @@ Neu-Anmelden alles nur auf dem Gerät liegen – ohne jeden Hinweis, dass nichts
 
 ### TF-AUTH-05 · Zu viele Fehlversuche werden verständlich gemeldet
 
-**Das muss passieren:** Irgendwann sagt die Meldung, dass es **zu viele Versuche** waren – nicht
-schon wieder nur „Passwort falsch". Nach ein paar Minuten geht die Anmeldung wieder.
+**Das muss passieren:** Irgendwann kommt **nicht mehr** „Passwort falsch", sondern eine von zwei
+Meldungen: „Zu viele Anmeldeversuche …" (die eigene Sperre der App, nach 50 Versuchen in 15 Minuten)
+oder – wenn ChurchTools selbst früher bremst – „Der Server antwortet gerade nicht … am Passwort liegt es
+nicht". Nach ein paar Minuten geht die Anmeldung wieder.
 
 1. Abmelden.
-2. Fünf- bis zehnmal hintereinander mit falschem Passwort anmelden.
+2. Mehrmals hintereinander mit falschem Passwort anmelden, bis sich die Meldung ändert.
 3. Die Meldung lesen.
 4. Ein paar Minuten warten und dich richtig anmelden.
 

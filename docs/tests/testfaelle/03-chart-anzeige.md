@@ -102,7 +102,7 @@ Browser).
 **Das muss passieren:** Die obere Leiste sitzt nach jedem Schritt an derselben Stelle. Keine Lücke
 darüber, keine verschobenen Symbole, nichts rutscht aus dem Bild.
 
-1. Einen Termin öffnen, oben rechts auf **Bearbeiten** tippen.
+1. Einen Termin öffnen, oben rechts auf den runden **Stift** („Ablauf bearbeiten") tippen.
 2. Einen Eintrag antippen, **Lied verknüpfen**, etwas eintippen, einen Treffer wählen.
 3. **Speichern** tippen und auf die obere Leiste schauen.
 4. Zu einer anderen App wechseln und zurückkommen.
@@ -301,7 +301,7 @@ Tempo also, bevor man es speichert. **Das Menü darf dabei nie seine Größe ode
     Datensatz – deshalb dieser Punkt.)
 11. Mit einem Konto **ohne** Bearbeitungsrecht: Der Speichern-Knopf ist ausgegraut und der Hinweis
     nennt die fehlende Berechtigung. Einstellen, Puls und Klick gehen trotzdem.
-12. Lied **ohne** Tempo öffnen: Feld leer, Ton gesperrt. Auf **+** tippen → es beginnt bei 120.
+12. Lied **ohne** Tempo öffnen: Feld leer, Ton gesperrt. Auf **+** tippen → es beginnt bei 121 (Startwert 120, plus eins).
     Speichern → ab jetzt hat das Lied ein Tempo, Puls und Klick sind frei.
 13. Ein Tempo einstellen und **zum nächsten Lied blättern** → dort gilt wieder das Tempo dieses
     Lieds, nicht das eingestellte.
@@ -375,7 +375,7 @@ einem.
 zwischen Tonart und Tempo. Bei genau einem steht dort **nichts** zusätzlich.
 
 1. Lied mit **mehreren** Arrangements öffnen → der Name des geltenden erscheint (z. B.
-   `G · Akustik · ♩ 72`).
+   `G · Akustik` und das Tempo mit dem Metronom-Symbol davor).
 2. Lied mit **einem** Arrangement öffnen → keine zusätzliche Angabe.
 3. Hat das Lied auch eine eigene **Version**, steht das Arrangement **davor** – die Versionen sind
    ChordPro-Dateien innerhalb eines Arrangements, die Reihenfolge spiegelt die Schachtelung.
@@ -465,7 +465,7 @@ einer Gemeinde ohne SongSelect Premium (07.10.2026).
 1. Das Lied **nur mit PDF** öffnen → das PDF erscheint, nicht eine leere Akkord-Seite.
 2. Das Lied **mit ChordPro und PDF** öffnen → die Akkorde erscheinen (Standard).
 3. Bei diesem Lied über den **Titel** auf das PDF umstellen, Lied verlassen, wieder öffnen → das PDF
-   bleibt. Zurück auf **Akkorde** stellen.
+   bleibt. Zurück auf **Akkorde & Text** stellen.
 4. Als Admin: **Mehr → Verwaltung → Liedblatt: Standard-Ansicht** → **PDF zuerst** → Speichern. Die
    Zeile zeigt „PDF zuerst".
 5. Ein anderes Lied mit ChordPro **und** PDF öffnen → jetzt erscheint das PDF. Das Lied aus Schritt 3

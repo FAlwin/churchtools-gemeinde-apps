@@ -2,7 +2,7 @@
 
 > Referenz der Endpunkte, die das Express-Backend dem Client anbietet (ausgelagert aus `CLAUDE.md`).
 > ChurchTools-spezifische Schreib-/Lese-Eigenheiten stehen weiterhin in `CLAUDE.md`.
-> Stand: 21.09.2026 (v2.25.0).
+> Stand: 12.10.2026 (v2.34.1).
 > Alle `/api/...`-Routen erfordern eine gültige Session – **außer** `health`,
 > `site-config` (GET), `update-check` und dem kompletten `auth/`-Router (`login`, `logout`, `me`;
 > `me` antwortet ohne Session bewusst mit `{authenticated:false}`).
@@ -224,10 +224,10 @@ Client, damit eine Version mit eigener Überschrift auch ihre eigene trägt.
 Seit der Ablage in ChurchTools (09.10.2026) liest und schreibt der Server diese Endpunkte über
 `services/kontoAblage.ts` in die Personen-Dateien der Person (`@shared/ct/personenAblage`) – dieselben,
 die die Erweiterung nutzt. Bis der Umzug eines Kontos fertig ist, ergänzt er Lesezugriffe um den
-Altbestand vom Daten-Volume (ChurchTools gewinnt). Die früheren Konto-Obergrenzen (#139, 413) gelten
-für das Volume und entfallen damit; je Anfrage begrenzt weiter das Zod-Schema.
+Altbestand vom Daten-Volume (ChurchTools gewinnt). Die früheren Konto-Obergrenzen (#139, 413) sind
+mit den Volume-Schreibfunktionen entfallen (12.10.2026); je Anfrage begrenzt weiter das Zod-Schema.
 
-- `GET  /api/annotations?songs=` / `PUT /api/annotations/:key` / `DELETE …/:key` → Anmerkungen+Zoom pro Konto (Feld-Merge strokes/texts/zoom; `zoom` = `{x, y, scale, fx?, fy?}` – `fx`/`fy` seit #420: die Stelle auf dem Blatt in der Mitte, Anteile 0–1; key `song<id>_v<ver>_<seite>[_lyr][_d<class>]`; Konto-Obergrenzen #139)
+- `GET  /api/annotations?songs=` / `PUT /api/annotations/:key` / `DELETE …/:key` → Anmerkungen+Zoom pro Konto (Feld-Merge strokes/texts/zoom; `zoom` = `{x, y, scale, fx?, fy?}` – `fx`/`fy` seit #420: die Stelle auf dem Blatt in der Mitte, Anteile 0–1; key `song<id>_v<ver>_<seite>[_lyr][_d<class>]`)
 - `GET  /api/settings?songs=` / `PUT /api/settings` → Lied-Einstellungen pro Konto (Schlüssel-Wert, Merge)
 
 ## Team-Notizen (geteilte Anmerkungen, PCO-Modell)

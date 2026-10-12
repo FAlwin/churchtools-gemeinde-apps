@@ -1,13 +1,15 @@
 /**
- * Kontobezogene Speicherung der Anmerkungen (Striche + Textfelder + Zoom) je Lied-Version-Seite.
- * Ohne DB: eine JSON-Datei pro ChurchTools-Konto auf dem Volume (wie site.json), atomar geschrieben.
+ * **Altbestand** der Anmerkungen auf dem Daten-Volume (Striche + Textfelder + Zoom je
+ * Lied-Version-Seite): eine JSON-Datei pro ChurchTools-Konto. Seit v2.33.0 liegen Anmerkungen in
+ * ChurchTools (`kontoAblage.ts`); hier wird nur noch für den Umzug gelesen (`altbestand.ts`,
+ * `ablageUmzug.ts`) und 90 Tage nach geprüftem Umzug gelöscht. Die Schreibfunktionen
+ * (`putAnnotation`, `deleteAnnotation`) samt Konto-Obergrenzen #139 sind am 12.10.2026 entfallen.
  * Schlüssel je Eintrag: `song<id>_v<versionKey>_<seite>`.
  */
 import path from 'node:path';
 import { rm } from 'node:fs/promises';
 import { config } from '../config.js';
-import { HttpError } from '../middleware/errorHandler.js';
-import { readJsonStore, writeJsonStore } from './jsonStore.js';
+import { readJsonStore } from './jsonStore.js';
 // Anmerkungs-Typen kommen aus @shared/types – EINZIGE Quelle für Client + Server. Re-Export,
 // damit Bestandsimporte aus diesem Modul weiter funktionieren.
 import { songIdOfAnnoKey } from '@shared/keys/index';
@@ -17,28 +19,14 @@ export type { AnnotationText, PageAnnotation };
 
 type Store = Record<string, PageAnnotation>;
 
-// ── Obergrenzen je Konto (#139) ───────────────────────────────────────────────────────────────
-// Ohne Grenze könnte ein angemeldeter Nutzer beliebig viele/große Einträge anlegen und das Volume
-// (und – über den Cache – den RAM) fluten. Beides ist großzügig über realem Bedarf (ein Nutzer
-// annotiert praktisch ein paar hundert Seiten), deckelt aber den Missbrauch hart.
-/** Höchstzahl Anmerkungs-Einträge (Lied-Version-Seiten) je Konto. */
-export const MAX_ENTRIES_PER_ACCOUNT = 5000;
-/** Höchstgröße der gesamten Konto-Datei in Bytes (serialisiert). */
-export const MAX_BYTES_PER_ACCOUNT = 50 * 1024 * 1024; // 50 MB
-/** Höchstzahl gleichzeitig im RAM gehaltener Konten (LRU); begrenzt den Cache-Speicher. */
 const MAX_CACHED_ACCOUNTS = 300;
-
-/** Rein & testbar: Liegt ein Konto-Store mit dieser Eintragszahl + Bytegröße im erlaubten Rahmen? */
-export function withinAccountLimits(entryCount: number, totalBytes: number): boolean {
-  return entryCount <= MAX_ENTRIES_PER_ACCOUNT && totalBytes <= MAX_BYTES_PER_ACCOUNT;
-}
 
 function fileFor(userId: number): string {
   return path.join(config.annotationsPath, `${userId}.json`);
 }
 
 const cache = new Map<number, Store>();
-// Schreibzugriffe je Konto serialisieren (kein Clobbern bei parallelen Speicherungen).
+// Zugriffe je Konto serialisieren (Löschen nicht mitten in ein Lesen).
 const locks = new Map<number, Promise<unknown>>();
 
 /**
@@ -68,19 +56,6 @@ async function read(userId: number): Promise<Store> {
   return data;
 }
 
-/**
- * Schreibt den Store und übernimmt ihn **erst danach** in den Cache (#273).
- *
- * Der übergebene Store muss eine KOPIE sein: Vorher haben die Aufrufer das gecachte Objekt an der
- * Stelle verändert und dann geschrieben – schlug das Schreiben fehl (z. B. ENOSPC), zeigte der Cache
- * einen Stand, der nie auf der Platte lag.
- */
-async function write(userId: number, store: Store, serialized?: string): Promise<void> {
-  await writeJsonStore(fileFor(userId), serialized ?? JSON.stringify(store));
-  cacheSet(userId, store);
-}
-
-/** Führt `fn` aus, sodass Schreibzugriffe desselben Kontos nacheinander laufen. */
 async function withLock<T>(userId: number, fn: () => Promise<T>): Promise<T> {
   const prev = locks.get(userId) ?? Promise.resolve();
   const run = prev.then(fn, fn);
@@ -89,11 +64,6 @@ async function withLock<T>(userId: number, fn: () => Promise<T>): Promise<T> {
     run.catch(() => {}),
   );
   return run;
-}
-
-/** Ist ein Eintrag leer (kann verworfen werden)? */
-function isEmpty(a: PageAnnotation): boolean {
-  return !a.strokes && (!a.texts || a.texts.length === 0) && !a.zoom;
 }
 
 /**
@@ -118,56 +88,4 @@ export async function getAnnotations(userId: number, songIds: number[]): Promise
     if (id !== null && set.has(id)) out[key] = value;
   }
   return out;
-}
-
-/** Aktualisiert einen Eintrag (Feld-Merge: nur übergebene Felder überschreiben). */
-export async function putAnnotation(
-  userId: number,
-  key: string,
-  partial: PageAnnotation,
-): Promise<void> {
-  await withLock(userId, async () => {
-    const store = await read(userId);
-    const cur = store[key] ?? {};
-    const next: PageAnnotation = { ...cur };
-    if ('strokes' in partial) next.strokes = partial.strokes ?? null;
-    if ('texts' in partial) next.texts = partial.texts ?? [];
-    if ('zoom' in partial) next.zoom = partial.zoom ?? null;
-    // Leerer Eintrag → löschen (verkleinert immer, keine Grenzprüfung nötig). Auf einer KOPIE, damit
-    // ein fehlgeschlagenes Schreiben den Cache nicht verändert zurücklässt (#273).
-    if (isEmpty(next)) {
-      if (key in store) {
-        const shrunk: Store = { ...store };
-        delete shrunk[key];
-        await write(userId, shrunk);
-      }
-      return;
-    }
-    // Konto-Obergrenze (#139) am fertigen Kandidaten prüfen. Das reine Löschen (isEmpty, oben) ist
-    // davon ausgenommen → ein über die Grenze geratenes Konto lässt sich immer wieder freiräumen.
-    // Die Grenzen liegen weit über realem Bedarf; im Alltag greift das nie. Serialisierung wird an
-    // `write` weitergereicht, damit sie nicht doppelt anfällt.
-    const candidate: Store = { ...store, [key]: next };
-    const serialized = JSON.stringify(candidate);
-    if (!withinAccountLimits(Object.keys(candidate).length, Buffer.byteLength(serialized))) {
-      throw new HttpError(
-        413,
-        'Speicher-Obergrenze für Anmerkungen erreicht. Bitte nicht mehr benötigte Anmerkungen löschen.',
-      );
-    }
-    // `candidate` ist die Kopie von oben – sie wird geschrieben, nicht das gecachte Objekt (#273).
-    await write(userId, candidate, serialized);
-  });
-}
-
-/** Löscht einen Eintrag. */
-export async function deleteAnnotation(userId: number, key: string): Promise<void> {
-  await withLock(userId, async () => {
-    const store = await read(userId);
-    if (store[key]) {
-      const shrunk: Store = { ...store };
-      delete shrunk[key];
-      await write(userId, shrunk);
-    }
-  });
 }

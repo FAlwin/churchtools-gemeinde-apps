@@ -1,17 +1,12 @@
 /**
- * „Zuletzt gesehener Setlist-Stand" je Konto und Termin (#143).
- *
- * Der Server bildet für jede Setlist einen Fingerabdruck (Lieder + Reihenfolge + Tonart, siehe
- * `setlistBuilder.setlistFingerprint`). Öffnet ein Konto einen Termin, wird der aktuelle
- * Fingerabdruck hier gemerkt. Weicht er später ab, weiß die Terminliste: „hat sich seit deinem
- * letzten Reinschauen geändert" → Badge. Ist noch kein Stand gemerkt (nie geöffnet), gilt der
- * Termin NICHT als geändert (kein Fehlalarm bei Erstnutzung).
- *
- * Ohne DB: eine gemeinsame JSON-Datei auf dem Volume, atomar geschrieben (wie capabilities-cache).
+ * **Altbestand** der „zuletzt gesehenen Setlist-Stände" je Konto und Termin (#143) auf dem Volume –
+ * eine gemeinsame JSON-Datei. Seit v2.33.0 merkt die App „gesehen" in ChurchTools (`kontoAblage.ts`);
+ * hier wird nur noch für den Umzug gelesen (`altbestand.ts`) und ein Konto nach dem Umzug vergessen.
+ * `markSeenSetlist` ist am 12.10.2026 entfallen.
  */
 import { config } from '../config.js';
 import { readJsonStore, writeJsonStore } from './jsonStore.js';
-import { GESEHEN_MAX_ALTER_MS, type GesehenerStand } from '@shared/types/index';
+import type { GesehenerStand } from '@shared/types/index';
 
 type SeenEntry = GesehenerStand;
 /** eventId → gesehener Stand. */
@@ -21,8 +16,6 @@ type Store = Record<string, EventMap>;
 
 let store: Store | null = null;
 let writeChain: Promise<unknown> = Promise.resolve();
-/** Nur EINMAL warnen, wenn Schreiben dauerhaft scheitert (z. B. Pfad nicht beschreibbar). */
-let warnedWriteError = false;
 
 /**
  * Liest die Ablage über `jsonStore` (#404) – dieselbe Regel wie beim Rechte-Cache: Nur „Datei gibt es
@@ -45,51 +38,6 @@ export async function getSeenSetlists(userId: number): Promise<EventMap> {
   }
 }
 
-/**
- * Merkt den aktuellen Fingerabdruck als „gesehen" für Konto + Termin und räumt dabei zu alte
- * Einträge des Kontos aus. Best effort – Schreibfehler werden geschluckt (das Badge ist ein
- * Komfort-Hinweis, kein kritischer Zustand).
- */
-export async function markSeenSetlist(
-  userId: number,
-  eventId: number,
-  hash: string,
-  items?: GesehenerStand['items'],
-  now: number = Date.now(),
-): Promise<void> {
-  let s: Store;
-  try {
-    s = await load();
-  } catch {
-    return; // NICHT schreiben – ein Stand aus einem gescheiterten Lesen löschte alle anderen Konten (#404)
-  }
-  const uid = String(userId);
-  const events: EventMap = s[uid] ?? {};
-  // Alters-Bereinigung, damit die Datei über Jahre nicht unbegrenzt wächst.
-  for (const [id, entry] of Object.entries(events)) {
-    if (now - entry.seenAt > GESEHEN_MAX_ALTER_MS) delete events[id];
-  }
-  events[String(eventId)] = { hash, seenAt: now, items };
-  s[uid] = events;
-  const write = (): Promise<void> => writeJsonStore(config.seenSetlistsPath, JSON.stringify(s));
-  writeChain = writeChain.then(write, write);
-  return writeChain.then(
-    () => {},
-    (e: unknown) => {
-      // Best effort bleibt: Fehler bricht nichts ab. Aber ein dauerhaft scheiterndes Schreiben
-      // (fehlendes/unbeschreibbares Volume) soll sichtbar sein – sonst leben die Stände nur im
-      // RAM und sind nach jedem Neustart weg.
-      if (!warnedWriteError) {
-        warnedWriteError = true;
-        console.warn(
-          `Seen-Setlists: Schreiben nach ${config.seenSetlistsPath} fehlgeschlagen – Stände gehen bei Neustart verloren:`,
-          e instanceof Error ? e.message : e,
-        );
-      }
-    },
-  );
-}
-
 /** Die gemerkten Stände eines Kontos vergessen (90 Tage nach dem Umzug nach ChurchTools). */
 export async function kontoVergessen(userId: number): Promise<void> {
   const s = await load();
@@ -104,5 +52,4 @@ export async function kontoVergessen(userId: number): Promise<void> {
 export function __resetForTests(): void {
   store = null;
   writeChain = Promise.resolve();
-  warnedWriteError = false;
 }

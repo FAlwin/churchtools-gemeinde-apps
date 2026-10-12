@@ -55,7 +55,8 @@ dabei nicht mit.
 1. Unten auf **Lieder** tippen – über der Liste steht nur das Suchfeld (das ist der Anfang).
 2. Oben einen Teil eines Liedtitels eintippen (drei, vier Buchstaben). Prüfen: Lieder, die das Wort im
    **Titel** haben, stehen **vor** denen, die es nur im Autor tragen (bei „A–Z").
-3. Den Zeitraum-Filter umstellen, z. B. auf **letzte 12 Monate**.
+3. Auf **Häufigkeit** stellen und den Zeitraum über **Von**/**Bis** eingrenzen (z. B. die letzten 12
+   Monate), danach **Alle**. (Die Felder gibt es nur mit dem Recht für die Lied-Statistik.)
 4. Ein Lied antippen, das kürzlich im Gottesdienst war.
 
 <details><summary>Technisches</summary>
@@ -272,7 +273,8 @@ ist sie weg und die App zeigt wieder das Original.
 3. Im Editor eine Textzeile ändern und **Speichern**.
 4. Das Blatt ansehen.
 5. In ChurchTools beim Lied nachsehen, welche Datei dort liegt.
-6. In der App: Liedtitel → Version → „Akustik" umbenennen, dann löschen.
+6. In der App: Liedtitel → **„Akustik" bearbeiten** → Namen ändern und speichern; danach Liedtitel →
+   Version → löschen.
 
 <details><summary>Technisches</summary>
 
@@ -311,10 +313,11 @@ sitzt die Ansicht wieder normal.
 **Das muss passieren:** Die neue Überschrift steht **auf dem Blatt** – und zwar dieselbe, die du in
 der Vorschau rechts gesehen hast. Sie steht auch oben in der Kopfzeile und im Ablaufplan.
 
-**Eine Stelle ändert sich absichtlich NICHT:** Unter **Alle Lieder** steht weiter der Name, den das
+**Eine Stelle ändert sich absichtlich NICHT:** Unter **Lieder** steht weiter der Name, den das
 Lied in ChurchTools trägt. Das ist so gewollt und kein Fehler – die Liste kennt den Liedtext nicht.
 
-1. Das Lied öffnen und oben rechts **Werkzeuge → Anmerken** tippen.
+1. Das Lied öffnen, oben auf den **Liedtitel** tippen und **Bearbeiten (neue Version)** (bzw.
+   „„…" bearbeiten") wählen – der Editor öffnet sich.
 2. In der Zeile `{title: …}` die Überschrift ändern, z. B. auf
    `{title: Mottosong AC26 - Auf dich will ich bauen}`.
 3. Die **Vorschau rechts** ansehen und dir die Überschrift merken.
@@ -322,7 +325,7 @@ Lied in ChurchTools trägt. Das ist so gewollt und kein Fehler – die Liste ken
 5. Die Überschrift auf dem Blatt mit der aus Schritt 3 vergleichen – sie muss gleich sein.
 6. Oben in die **Kopfzeile** schauen.
 7. Zum Ablaufplan des Gottesdienstes wechseln, in dem das Lied vorkommt.
-8. Unten auf **Alle Lieder** tippen und das Lied suchen (hier steht der ChurchTools-Name).
+8. Unten auf **Lieder** tippen und das Lied suchen (hier steht der ChurchTools-Name).
 9. Zurück in den Editor: die Zeile `{title: …}` ganz löschen und speichern. Jetzt muss überall
    wieder der ChurchTools-Name stehen.
 
@@ -357,11 +360,11 @@ Konto sind sie gar nicht sichtbar – nicht ausgegraut, sondern weg.
 
 ### TF-ADMIN-02 · Hinweis auf eine neue Version
 
-**Das muss passieren:** Der Hinweis erscheint und lädt auf Tipp neu. Danach steht unter **Mehr** die
+**Das muss passieren:** Der Hinweis erscheint unten über der Tab-Leiste; **Jetzt laden** lädt neu. Danach steht unter **Mehr** die
 neue Versionsnummer.
 
 1. Nach einem Release die App öffnen (oder offen lassen).
-2. Auf den Hinweis oben tippen.
+2. Im Hinweis unten auf **Jetzt laden** tippen.
 3. Unten auf **Mehr** und ganz unten die Versionsnummer ansehen.
 
 <details><summary>Technisches</summary>

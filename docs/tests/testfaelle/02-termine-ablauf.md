@@ -98,7 +98,7 @@ trüge die ganze Liste Schildchen.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `server/src/services/agendaDiff.ts`, `server/src/services/seenSetlists.ts`, `client/src/components/AblaufChangedBanner.tsx`, `client/src/pages/Agenda.tsx`
+- **Betrifft:** `shared/ct/agendaDiff.ts`, `server/src/services/kontoAblage.ts`, `shared/ct/personenAblage.ts`, `client/src/pages/Agenda.tsx`, `client/src/components/AgendaFullView.tsx`, `client/src/hooks/useSetlistLiveSync.ts`
 - **Automatisiert:** teilweise – `server/src/services/setlistBuilder.test.ts` (Vergleichslogik)
 - **Historie:** #143, #161
 

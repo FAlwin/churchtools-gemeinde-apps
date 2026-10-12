@@ -19,7 +19,7 @@ durchscheinend, der Liedtext bleibt darunter lesbar. Der Radierer entfernt nur G
 3. Das **Marker-Symbol** wählen und eine Textzeile markieren.
 4. Das **Radierer-Symbol** wählen und die Hälfte der Linie wegwischen.
 5. Auf den **farbigen Kreis** oben in der Leiste tippen, eine andere Farbe wählen, erneut malen.
-6. Auf das Stift-Symbol **lange** tippen (oder erneut antippen) und die Strichstärke ändern, dann
+6. Auf das schon gewählte Stift-Symbol **noch einmal** tippen und die Strichstärke ändern, dann
    noch einmal malen.
 
 <details><summary>Technisches</summary>
@@ -106,7 +106,7 @@ selbst fett.
 2. Den vorhandenen Text antippen – ein gestrichelter Rahmen erscheint.
 3. Den Text an eine andere Stelle ziehen.
 4. Am **blauen Punkt** unten rechts ziehen, bis der Text größer ist.
-5. In der Leiste nacheinander **F**, **K** und **U** antippen und wieder aus.
+5. In der Leiste nacheinander **B** (fett), **I** (kursiv) und **U** (unterstrichen) antippen und wieder aus.
 6. Eine Minute nichts tun und dann hinschauen.
 7. Die App schließen und neu öffnen, dasselbe Lied aufrufen.
 

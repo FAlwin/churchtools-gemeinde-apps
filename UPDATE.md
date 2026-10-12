@@ -36,10 +36,14 @@ Daten-Volume lag, zieht beim ersten Öffnen jedes Kontos von selbst um. Zu tun:
   den Status „Mitglied"). Ohne das meldet die App beim Speichern, dass ChurchTools es nicht erlaubt.
 - **Volume behalten.** Die alten Dateien eines Kontos löscht die App erst 3 Monate nach seinem geprüften
   Umzug selbst. Im Container-Log steht je Konto `[ablage] Umzug Konto … fertig und geprüft`.
-- **Mit Erweiterung:** Heißt sie bei euch nicht `musik-app`, `ERWEITERUNG_KUERZEL` in der `.env` setzen –
+- **Mit Erweiterung:** Die veröffentlichte ZIP heißt immer `musik-app`, dann ist nichts zu tun. Nur bei
+  einer selbst gebauten Erweiterung mit anderem Kürzel `ERWEITERUNG_KUERZEL` in der `.env` setzen –
   dann teilen App und Erweiterung dieselbe Liste der Team-Notizen.
 - **Test-Installation am echten ChurchTools?** Dort `ABLAGE_UMZUG=aus` setzen, sonst landen Test-Notizen
   vom Volume in den echten Personen-Dateien. (Images mit Version `staging-…` ziehen von selbst nicht um.)
+- **Beides wirkt nur, wenn die Compose-Datei die Variablen durchreicht.** Die Vorlagen in `deploy/` tun
+  das seit 12.10.2026; wer eine ältere Kopie nutzt, ergänzt unter `environment:`
+  `ERWEITERUNG_KUERZEL: ${ERWEITERUNG_KUERZEL:-musik-app}` und `ABLAGE_UMZUG: ${ABLAGE_UMZUG:-}`.
 
 ## Synology Container Manager (ohne `docker compose` in der Oberfläche)
 

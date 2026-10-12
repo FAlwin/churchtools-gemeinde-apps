@@ -50,12 +50,14 @@ Es wird Docker Compose v2 benötigt.
 
 ### „Nicht angemeldet" direkt nach dem Login
 
-Der Browser speichert das Anmelde-Cookie nicht. Das passiert vor allem, wenn die App **nur über HTTP**
-(ohne `https://`) aufgerufen wird und nicht über `localhost` läuft.
+Der Browser speichert das Anmelde-Cookie nicht. Das passiert, wenn `COOKIE_SECURE=true` gesetzt ist, die
+App aber über **HTTP** (ohne `https://`) aufgerufen wird – ein „secure"-Cookie nimmt der Browser dann nicht
+an. Mit dem Standard `COOKIE_SECURE=false` klappt die Anmeldung auch per `http://<NAS-IP>:3001`.
 
-- Lokal: immer **http://localhost:3001** verwenden (nicht die IP).
-- Im Netz/extern: über **HTTPS** erreichbar machen (Reverse Proxy oder Cloudflare Tunnel,
-  siehe [INSTALL.md](../../INSTALL.md) → „Externer Zugriff").
+- Über **HTTPS** aufrufen (Reverse Proxy oder Cloudflare Tunnel, siehe [INSTALL.md](../../INSTALL.md) →
+  „Externer Zugriff") – oder, solange es nur im LAN läuft, `COOKIE_SECURE` auf `false` lassen.
+- Die Prod-Vorlage `deploy/docker-compose.prod.yml` setzt `true` und lauscht nur an `127.0.0.1` – sie ist
+  nur hinter einem Reverse Proxy nutzbar.
 
 ### „ChurchTools bremst uns gerade aus (zu viele Anfragen)"
 
@@ -85,8 +87,8 @@ Erkennungsmerkmal: **ChurchTools selbst funktioniert im Browser einwandfrei**, u
 Container-Protokoll steht zum Anmeldeversuch **nichts** (der Fehlerzweig war stumm; seit #381 loggt
 er `[churchtools] login → …`).
 
-Ins Protokoll sehen – **erst den Namen des laufenden Containers ermitteln**, er kann von dem in der
-Compose-Datei abweichen (bei der ECG heisst er `worship-charts`, nicht `musik-app`):
+Ins Protokoll sehen – **erst den Namen des laufenden Containers ermitteln** (Basis-Vorlage
+`churchtools-musik-app`, Prod-Vorlage und ECG `worship-charts`):
 
 ```
 sudo docker ps --format "{{.Names}}\t{{.Image}}\t{{.Status}}"
@@ -146,16 +148,18 @@ die App neu starten (`update.command`/`update.bat` oder `docker compose up -d`).
 nach einer Weile selbst. Früher lud die App dann nichts mehr und „Erneut versuchen" half nicht; nur
 Abmelden und neu Anmelden brachte alles zurück. Jetzt erkennt die App das an jeder Stelle und führt
 direkt zur Anmeldung.
-→ Einfach neu anmelden. Anmerkungen und Einstellungen sind sicher (sie liegen pro Konto auf dem
-Server) und sind nach dem Anmelden wieder da.
+→ Einfach neu anmelden. Anmerkungen und Einstellungen sind sicher (sie liegen seit v2.33.0 in
+ChurchTools als Anhänge an der eigenen Person) und sind nach dem Anmelden wieder da.
 
 ---
 
 ## Updates & Daten
 
-### Nach einem Update sind Einstellungen/Anmerkungen weg
+### Nach einem Update sind Gemeindename/Links weg
 
-Das Daten-Volume wurde beim Update gelöscht oder umbenannt.
+Das Daten-Volume wurde beim Update gelöscht oder umbenannt. (Anmerkungen und Lied-Einstellungen liegen
+seit v2.33.0 in ChurchTools und sind davon nicht betroffen – fehlen sie, fehlt meist das Recht „Eigene
+Personendaten bearbeiten", siehe [UPDATE.md](../../UPDATE.md).)
 → Beim Aktualisieren das Volume **behalten** (nicht „mit Volumes löschen" wählen).
 Die mitgelieferten Update-Skripte (`update.command`/`update.bat`) machen das automatisch richtig.
 Details: [UPDATE.md](../../UPDATE.md).

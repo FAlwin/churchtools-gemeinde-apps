@@ -7,6 +7,31 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Behoben
+
+- **Einstellungen aus der `.env` kamen nicht im Container an** (beim Doku-Abgleich gefunden, 12.10.2026):
+  Die Compose-Vorlagen reichten `ERWEITERUNG_KUERZEL` und `ABLAGE_UMZUG` gar nicht durch, die
+  Basis-Vorlage `deploy/docker-compose.yml` auch `COOKIE_SECURE` nicht – obwohl `.env.example` und die
+  Doku genau das empfahlen. Wer dort `COOKIE_SECURE=true` gesetzt hatte, bekam trotzdem ein Cookie
+  ohne „Secure" (das Log warnte). Alle drei Vorlagen reichen die Variablen jetzt mit denselben
+  Standardwerten durch, die der Server annimmt. **Wer eine ältere Kopie der Compose-Datei nutzt**, ergänzt
+  die Zeilen unter `environment:` (UPDATE.md).
+
+### Intern
+
+- **Alte Schreibfunktionen der Volume-Ablage entfernt:** `putAnnotation`, `deleteAnnotation`,
+  `putSettings` und `markSeenSetlist` (samt Konto-Obergrenzen #139/#195) wurden seit dem Umzug nach
+  ChurchTools (v2.33.0) nicht mehr aufgerufen, nur noch von Tests. Die Dienste lesen jetzt nur noch den
+  Altbestand für den Umzug und löschen ihn danach; Tests legen Altdaten über `testHilfen/altbestand.ts` an.
+
+### Doku
+
+- Betriebs-Doku an den Stand angeglichen: DEPLOYMENT.md beschreibt die Prod-Vorlage (fertiges Image, nur
+  hinter einem Reverse Proxy) statt eines Baus aus dem Quellcode; „Nicht angemeldet" liegt an
+  `COOKIE_SECURE=true` bei HTTP, nicht an HTTP an sich; Anmerkungen liegen in ChurchTools, nicht auf dem
+  Volume; Testkonzept, README (Ablauf bearbeiten, Funktionen der Erweiterung), CLAUDE.md und
+  Konfigurationsmanagement nachgezogen.
+
 ### Neu (Anmeldungen)
 
 - **Veranstaltungen anlegen und einrichten** (#486, Bauplan A3 – der erste Schritt, der in ChurchTools

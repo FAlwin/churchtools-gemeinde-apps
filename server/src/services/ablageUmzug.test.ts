@@ -3,6 +3,7 @@ import path from 'node:path';
 import { existsSync } from 'node:fs';
 import { leeren, tempVerzeichnis } from '../testHilfen/tempAblage.js';
 import { AblageFake, BILD } from '../testHilfen/ablageFake.js';
+import { nasAnmerkungAnlegen, nasEinstellungenAnlegen } from '../testHilfen/altbestand.js';
 
 /**
  * **Umzug der Server-Ablage nach ChurchTools** (09.10.2026) – der Server-Teil: Lesen während des
@@ -59,7 +60,7 @@ async function fertigUmgezogen(): Promise<void> {
 
 describe('Lesen während des Umzugs', () => {
   it('ChurchTools plus die Seiten vom Volume – und danach liegt alles in ChurchTools', async () => {
-    await annotations.putAnnotation(ICH, NAS_SEITE, { strokes: BILD });
+    await nasAnmerkungAnlegen(ICH, NAS_SEITE, { strokes: BILD });
     await konto.anmerkungSchreiben(COOKIE, ICH, CT_SEITE, { strokes: BILD });
 
     const gelesen = await konto.anmerkungenHolen(COOKIE, ICH, [1]);
@@ -71,7 +72,7 @@ describe('Lesen während des Umzugs', () => {
   });
 
   it('Einstellungen: ChurchTools gewinnt, das Volume füllt Lücken', async () => {
-    await userSettings.putSettings(ICH, {
+    await nasEinstellungenAnlegen(ICH, {
       worship_key_1_original: 'D',
       worship_capo_1_original: '2',
     });
@@ -86,7 +87,7 @@ describe('Lesen während des Umzugs', () => {
 
 describe('fertig heißt geprüft', () => {
   it('fehlt nach dem Hochladen noch etwas, gilt der Umzug NICHT als fertig', async () => {
-    await annotations.putAnnotation(ICH, NAS_SEITE, { strokes: BILD });
+    await nasAnmerkungAnlegen(ICH, NAS_SEITE, { strokes: BILD });
     const { ablageVon } = await import('./ctPersonenAblage.js');
     // Ein Umzug, der „erledigt" meldet, aber nichts hochgeladen hat – ein Erfolgssignal ist kein Beleg.
     vi.spyOn(ablageVon(ICH), 'uebernimmAltbestand').mockResolvedValue({ bilder: 1, felder: 0 });
@@ -101,7 +102,7 @@ describe('fertig heißt geprüft', () => {
 describe('Schreiben auf eine Seite, die erst auf dem Volume liegt', () => {
   it('ein Zoom nimmt Striche und Texte der Seite mit – nichts bleibt auf dem Volume zurück', async () => {
     const text = { id: 1, fx: 0, fy: 0, text: 'NAS', color: '#000', sizeCqh: 2 };
-    await annotations.putAnnotation(ICH, NAS_SEITE, { strokes: BILD, texts: [text] });
+    await nasAnmerkungAnlegen(ICH, NAS_SEITE, { strokes: BILD, texts: [text] });
     await konto.anmerkungSchreiben(COOKIE, ICH, NAS_SEITE, { zoom: { x: 1, y: 1, scale: 2 } });
 
     const { ablageVon } = await import('./ctPersonenAblage.js');
@@ -114,7 +115,7 @@ describe('Schreiben auf eine Seite, die erst auf dem Volume liegt', () => {
   });
 
   it('ganz gelöscht bleibt gelöscht – weder das Lesen noch der Umzug holt die Seite zurück', async () => {
-    await annotations.putAnnotation(ICH, NAS_SEITE, { strokes: BILD });
+    await nasAnmerkungAnlegen(ICH, NAS_SEITE, { strokes: BILD });
     await konto.anmerkungSchreiben(COOKIE, ICH, NAS_SEITE, {
       strokes: null,
       texts: [],
@@ -129,7 +130,7 @@ describe('Schreiben auf eine Seite, die erst auf dem Volume liegt', () => {
 
 describe('Abbau der alten Ablage nach 90 Tagen', () => {
   it('löscht erst 90 Tage nach dem geprüften Umzug – vorher nicht', async () => {
-    await annotations.putAnnotation(ICH, NAS_SEITE, { strokes: BILD });
+    await nasAnmerkungAnlegen(ICH, NAS_SEITE, { strokes: BILD });
     await konto.anmerkungenHolen(COOKIE, ICH, [1]);
     await fertigUmgezogen();
     const datei = path.join(dir, `${ICH}.json`);
@@ -142,7 +143,7 @@ describe('Abbau der alten Ablage nach 90 Tagen', () => {
   });
 
   it('ohne fertigen Umzug wird nie gelöscht', async () => {
-    await annotations.putAnnotation(ICH, NAS_SEITE, { strokes: BILD });
+    await nasAnmerkungAnlegen(ICH, NAS_SEITE, { strokes: BILD });
     await umzug.aufraeumen(Date.now() + 10 * umzug.NAS_AUFBEWAHRUNG_MS);
     expect(existsSync(path.join(dir, `${ICH}.json`))).toBe(true);
   });
@@ -151,7 +152,7 @@ describe('Abbau der alten Ablage nach 90 Tagen', () => {
 describe('Staging zieht nicht um', () => {
   it('ohne Umzug: kein Lesen vom Volume, kein Hochladen', async () => {
     (config as { ablageUmzug: boolean }).ablageUmzug = false;
-    await annotations.putAnnotation(ICH, NAS_SEITE, { strokes: BILD });
+    await nasAnmerkungAnlegen(ICH, NAS_SEITE, { strokes: BILD });
     expect(await konto.anmerkungenHolen(COOKIE, ICH, [1])).toEqual({});
     expect(umzug.__laufenderUmzug(ICH)).toBeUndefined();
     expect(fake.aktuell.hochgeladen).toEqual([]);

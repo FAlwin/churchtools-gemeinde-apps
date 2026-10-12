@@ -11,6 +11,9 @@ Datenquelle – die App hat keine eigene Datenbank.
 ## Was die App kann
 
 - **Ablaufpläne & Setlists** aus ChurchTools anzeigen (kompletter Ablauf, nicht nur Lieder)
+- **Ablauf bearbeiten** (mit dem ChurchTools-Recht dafür): Punkte und Lieder anlegen, ändern, löschen und
+  per Ziehen sortieren, Vorlauf vor dem Beginn festlegen, Ablauf abschließen und wieder öffnen;
+  Löschen und Verschieben lassen sich kurz danach **rückgängig** machen
 - **Chord Charts als PDF** (SongSelect-Look) mit automatischer Transponierung, Kapo, Spalten- und
   Schrift-Optionen; im Querformat zwei Seiten nebeneinander, als PDF teil-/druckbar
 - **Alle Lieder** durchsuchbar inkl. Nutzungs-Statistik (Häufigkeit / zuletzt gespielt, mit
@@ -29,8 +32,8 @@ Datenquelle – die App hat keine eigene Datenbank.
   Lied der Bibliothek schon dieselbe CCLI-Nummer, fragt die App, ob das vorhandene verwendet werden soll
 - **Stammdaten pflegen** – Name, Kategorie, Autor, CCLI-Nummer und Copyright eines vorhandenen Liedes
   ändern; Löschen mit Rückfrage, die die Folgen nennt
-- **Live-Aktualisierung**: Änderungen am Ablauf erscheinen zeitnah bei allen; geänderte Punkte
-  werden beim Öffnen hervorgehoben, entfernte lösen sich sichtbar auf
+- **Live-Aktualisierung**: Änderungen am Ablauf erscheinen zeitnah bei allen; ein kurzer Hinweis unten
+  nennt, was neu, geändert oder entfernt ist, und markiert die betroffenen Punkte für ein paar Sekunden
 - **Mehrere benannte Lied-Versionen** (z. B. „Akustik", „Jugend") – team-weit in ChurchTools,
   Original bleibt erhalten. Der **Editor arbeitet in der Tonart, die gerade auf dem Blatt steht**;
   jede Version kennt ihre eigene Tonart
@@ -75,7 +78,7 @@ Optik und Funktionen sind für alle identisch (eine gemeinsame Codebasis).
 
 **Ohne eigenen Server?** Die App gibt es auch als **ChurchTools-Erweiterung** – ein ZIP, das ihr in
 ChurchTools hochladet; angemeldet ist man dann über ChurchTools selbst. Sie kann weniger (kein Offline,
-keine Statistik) und läuft nur im Browser, nicht in der ChurchTools-App:
+keine Suche im Liedtext, keine Abwesenheiten) und läuft nur im Browser, nicht in der ChurchTools-App:
 **[Anleitung zur Erweiterung](docs/betrieb/ERWEITERUNG.md)**.
 
 ## Schnellstart

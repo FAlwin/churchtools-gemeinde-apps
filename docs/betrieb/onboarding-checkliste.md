@@ -26,7 +26,8 @@ betreiben aber **nichts** für sie (kein zentraler Server, kein geteilter Zugang
 
 ## Typische Stolpersteine (aus Erfahrung)
 
-- **Cookie/HTTPS:** Login-Cookie wird im reinen HTTP-LAN ggf. abgelehnt → über HTTPS testen.
+- **Cookie/HTTPS:** Mit `COOKIE_SECURE=true` lehnt der Browser das Login-Cookie bei Aufruf über HTTP ab
+  → über HTTPS testen (die Prod-Vorlage setzt `true`).
   In Produktion vertraut die App dem Reverse Proxy (`trust proxy`) – die `X-Forwarded-*`-Header
   müssen ankommen.
 - **ChurchTools-Rechte:** „Nichts sichtbar" liegt fast immer an fehlenden CT-Lese-Rechten

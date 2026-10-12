@@ -25,6 +25,14 @@ services:
       CHURCHTOOLS_ABSENCE_REASON_ID: ${CHURCHTOOLS_ABSENCE_REASON_ID:-1}
       # Zeitzone der Gemeinde (#414): an welchem Tag ein Termin stattfindet. Standard Europe/Berlin.
       ZEITZONE: ${ZEITZONE:-Europe/Berlin}
+      # Erst auf "true", wenn die App NUR noch über HTTPS erreichbar ist (siehe Kommentar bei `ports`).
+      # Bis 12.10.2026 fehlte die Zeile: Ein Eintrag in der `.env` kam dann gar nicht im Container an.
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      # Kürzel der ChurchTools-Erweiterung (`/ccm/<kürzel>/`), mit der die App die Team-Notizen-Liste teilt.
+      ERWEITERUNG_KUERZEL: ${ERWEITERUNG_KUERZEL:-musik-app}
+      # Umzug des Volume-Altbestands nach ChurchTools: leer = automatisch (Images `staging-…` ziehen
+      # nicht um), `aus` für eine Test-Installation am echten ChurchTools.
+      ABLAGE_UMZUG: ${ABLAGE_UMZUG:-}
     ports:
       # links = Host-Port (bei Bedarf ändern), rechts = im Container fest auf 3001.
       #
@@ -37,7 +45,7 @@ services:
       # Sitzungs-Cookie – darin steckt die ChurchTools-Anmeldung – trägt kein `Secure`-Flag:
       #
       #   ports:      - '127.0.0.1:3001:3001'
-      #   environment: COOKIE_SECURE: "true"
+      #   in der `.env`: COOKIE_SECURE=true
       #
       # Schritt für Schritt samt Prüfungen, ob es wirklich greift:
       # docs/betrieb/DEPLOYMENT.md, Abschnitt 3 (Live) bzw. 6 (Test-Instanz).

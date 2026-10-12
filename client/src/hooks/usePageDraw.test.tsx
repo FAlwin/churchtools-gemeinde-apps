@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { StrictMode, useLayoutEffect } from 'react';
+import { renderHook, act, render } from '@testing-library/react';
 import { usePageDraw, DEFAULT_TEXT_STYLE } from './usePageDraw';
 
 /**
@@ -106,5 +107,50 @@ describe('usePageDraw', () => {
     rerender({ k: 'worship_docdraw_song4_v1_0' });
     expect(result.current.texts).toHaveLength(1);
     expect(result.current.texts[0].text).toBe('Seite A');
+  });
+
+  /**
+   * #113 unter StrictMode (12.10.2026): Beim Seitenwechsel muss die neue Seite SCHON IM ERSTEN
+   * gezeichneten Frame ihre eigenen Texte tragen – sonst blitzen die der vorigen Seite auf.
+   *
+   * Der Abgleich lief über einen Ref, der beim ersten der beiden Render-Durchläufe (StrictMode,
+   * unterbrochenes Rendern) schon umgestellt war; der zweite sah „nichts Neues" und das synchrone
+   * Laden ging verloren. Gemessen wird, was React wirklich übernimmt (`useLayoutEffect` läuft nach
+   * dem Übernehmen und vor dem Zeichnen) – nicht das Ergebnis eines verworfenen Durchlaufs.
+   */
+  it('unter StrictMode zeigt die neue Seite im ersten Frame ihre eigenen Texte (#113)', () => {
+    const A = 'worship_docdraw_song5_v1_0';
+    const B = 'worship_docdraw_song5_v1_1';
+    localStorage.setItem(
+      `${A}_text`,
+      JSON.stringify([{ id: 1, fx: 0.5, fy: 0.5, text: 'Seite A', color: '#000', sizeCqh: 2 }]),
+    );
+    localStorage.setItem(
+      `${B}_text`,
+      JSON.stringify([{ id: 2, fx: 0.5, fy: 0.5, text: 'Seite B', color: '#000', sizeCqh: 2 }]),
+    );
+    const frames: string[] = [];
+    function Seite({ k }: { k: string }) {
+      const { strokesRef, layerRef } = refs();
+      const { texts } = usePageDraw(k, strokesRef, layerRef, 0, vi.fn());
+      useLayoutEffect(() => {
+        frames.push(`${k === A ? 'A' : 'B'}:${texts.map((t) => t.text).join(',')}`);
+      });
+      return null;
+    }
+    const { rerender } = render(
+      <StrictMode>
+        <Seite k={A} />
+      </StrictMode>,
+    );
+    frames.length = 0;
+    rerender(
+      <StrictMode>
+        <Seite k={B} />
+      </StrictMode>,
+    );
+    expect(frames.length).toBeGreaterThan(0);
+    expect(frames.filter((f) => f.startsWith('B:'))).not.toContain('B:Seite A');
+    expect(frames[0]).toBe('B:Seite B');
   });
 });

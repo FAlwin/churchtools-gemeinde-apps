@@ -9,6 +9,7 @@ import {
   markSetlistSeen,
   putAgendaOrder,
   deleteAgendaItemCtrl,
+  postAgendaItemWiederherstellen,
   putAgendaItem,
   putAgendaItemVorBeginn,
   putAblaufAbgeschlossen,
@@ -85,6 +86,10 @@ router.get('/songs/:songId/arrangements', asyncHandler(getSongArrangementsCtrl))
 router.get('/songs/:songId/chart', asyncHandler(getSongChartCtrl));
 router.patch('/services/:eventId/agenda/order', asyncHandler(putAgendaOrder));
 router.post('/services/:eventId/agenda/items', asyncHandler(postAgendaItem));
+router.post(
+  '/services/:eventId/agenda/items/wiederherstellen',
+  asyncHandler(postAgendaItemWiederherstellen),
+);
 router.put('/services/:eventId/agenda/items/:itemId', asyncHandler(putAgendaItem));
 router.put(
   '/services/:eventId/agenda/items/:itemId/vor-beginn',

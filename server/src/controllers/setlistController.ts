@@ -22,6 +22,7 @@ import {
   createAgendaItem,
   deleteAgendaItem,
   reorderAgenda,
+  restoreAgendaItem,
   setAgendaItemVorBeginn,
   updateAgendaItem,
   setAblaufAbgeschlossen,
@@ -209,11 +210,44 @@ export async function putAblaufAbgeschlossen(req: Request, res: Response): Promi
   res.json({ ok: true });
 }
 
-/** DELETE /api/services/:eventId/agenda/items/:itemId – einen Ablaufpunkt löschen. */
+/**
+ * DELETE /api/services/:eventId/agenda/items/:itemId – einen Ablaufpunkt löschen. Die Antwort trägt
+ * unter `wiederherstellen` alles, was „Rückgängig" braucht (`null`, wenn der Punkt schon weg war).
+ */
 export async function deleteAgendaItemCtrl(req: Request, res: Response): Promise<void> {
   const eventId = idSchema.parse(req.params.eventId);
   const itemId = idSchema.parse(req.params.itemId);
-  await deleteAgendaItem(ctCookie(req), eventId, itemId);
+  const wiederherstellen = await deleteAgendaItem(ctCookie(req), eventId, itemId);
+  invalidateSongUsageCache();
+  res.json({ ok: true, wiederherstellen });
+}
+
+/** Der Merkzettel aus dem Löschen – so, wie er zurückkommt (Grenzen wie ChurchTools, OpenAPI). */
+const geloeschterPunktSchema = z.object({
+  felder: z.object({
+    type: z.enum(['header', 'text', 'song']),
+    title: z.string().max(100),
+    note: z.string().max(4000),
+    duration: z.number().int().min(0),
+    responsible: z.string().max(1000),
+    serviceGroupNotes: z
+      .array(
+        z.object({
+          serviceGroupId: z.number().int().positive(),
+          note: z.string().min(1).max(4000),
+        }),
+      )
+      .max(100),
+    arrangementId: z.number().int().positive().optional(),
+  }),
+  nachId: z.number().int().positive().nullable(),
+  vorBeginn: z.boolean(),
+});
+
+/** POST /api/services/:eventId/agenda/items/wiederherstellen – „Rückgängig" nach dem Löschen. */
+export async function postAgendaItemWiederherstellen(req: Request, res: Response): Promise<void> {
+  const eventId = idSchema.parse(req.params.eventId);
+  await restoreAgendaItem(ctCookie(req), eventId, geloeschterPunktSchema.parse(req.body));
   invalidateSongUsageCache();
   res.json({ ok: true });
 }

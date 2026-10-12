@@ -105,8 +105,8 @@ Bearbeiten-Modus) und öffnet **dasselbe Fenster wie das Bearbeiten**, nur mit �
 Umschalter **Programmpunkt · Überschrift** (vorgewählt: Programmpunkt). Ein Lied ist ein Programmpunkt
 mit **Lied verknüpfen** – nach der Wahl steht der Liedname als Titel drin, Dauer und Zuständige lassen
 sich gleich setzen; ein zweites Fenster danach gibt es nicht mehr. Die Rückfrage beim Löschen nennt den Punkt **genauso wie die Liste** – also
-„Lied – Du großer Gott", nicht nur den Liednamen. Der gelöschte Punkt zerfällt sichtbar an seiner
-Stelle. Alles steht danach so in ChurchTools.
+„Lied – Du großer Gott", nicht nur den Liednamen. Nach dem Löschen steht unten kurz
+„„Titel" gelöscht · Rückgängig" (Näheres in TF-ABLAUF-10). Alles steht danach so in ChurchTools.
 
 1. Test-Termin öffnen, **Bearbeiten**. Das Plus erscheint unten rechts; es verdeckt den Stift des
    letzten Punkts nicht.

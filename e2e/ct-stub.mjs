@@ -206,6 +206,18 @@ const events = [
     calendar: { domainIdentifier: '1', title: 'Gottesdienst' },
     appointmentId: null,
   },
+  /**
+   * **Ein eigener Termin für „Rückgängig"** (12.10.2026): Löschen, Verschieben und Zurückholen ändern
+   * den Ablauf – im geteilten „Gottesdienst (Stub)" störte das die parallel laufenden Tests.
+   */
+  {
+    id: EVENT_ID + 4,
+    startDate: isoInDays(7),
+    endDate: isoInDays(7, 12),
+    name: 'Rückgängig-Probe (Stub)',
+    calendar: { domainIdentifier: '1', title: 'Gottesdienst' },
+    appointmentId: null,
+  },
 ];
 
 /** Der Ablauf des Abschluss-Termins – nur abschließen/öffnen, sonst nichts. */
@@ -216,6 +228,27 @@ const agendaAbschluss = {
   items: [
     { id: 801, title: 'Ansage (Stub)', type: 'normal', duration: 300, position: 0, startTimes: {} },
   ],
+};
+
+/**
+ * Der Ablauf des Rückgängig-Termins – anlegen, löschen und umsortieren wie in ChurchTools (gemessen
+ * 12.10.2026): Neue Punkte kommen ans Ende und die Antwort trägt die ID; `PUT …/agenda` mit `items`
+ * sortiert nach der Liste.
+ */
+const agendaRueckgaengig = {
+  calendarId: 2,
+  eventStartPosition: 0,
+  items: ['Eins', 'Zwei', 'Drei'].map((title, n) => ({
+    id: 901 + n,
+    title: `${title} (Stub)`,
+    type: 'normal',
+    duration: 300,
+    position: n,
+    startTimes: {},
+    note: '',
+    responsible: { text: '' },
+    serviceGroupNotes: [],
+  })),
 };
 
 /**
@@ -533,6 +566,50 @@ const server = createServer((req, res) => {
   }
   if (path === `/api/events/${EVENT_ID + 3}/agenda`) {
     return json(res, { data: agendaAbschluss });
+  }
+  // Der Rückgängig-Termin (12.10.2026): Ablauf lesen/umsortieren, Punkte anlegen/löschen.
+  const rPunkt = path.match(new RegExp(`^/api/events/${EVENT_ID + 4}/agenda/items(?:/(\\d+))?$`));
+  if (path === `/api/events/${EVENT_ID + 4}/agenda` || rPunkt) {
+    const a = agendaRueckgaengig;
+    const neuNummerieren = () => a.items.forEach((i, n) => (i.position = n));
+    if (req.method === 'GET') return json(res, { data: a });
+    if (req.method === 'DELETE' && rPunkt?.[1]) {
+      a.items = a.items.filter((i) => i.id !== Number(rPunkt[1]));
+      neuNummerieren();
+      res.writeHead(204);
+      return res.end();
+    }
+    let body = '';
+    req.on('data', (chunk) => (body += chunk));
+    req.on('end', () => {
+      const neu = JSON.parse(body || '{}');
+      if (req.method === 'POST' && rPunkt && !rPunkt[1]) {
+        const punkt = {
+          id: Math.max(0, ...a.items.map((i) => i.id)) + 1,
+          title: neu.title ?? '',
+          type: neu.type ?? 'text',
+          duration: neu.duration ?? 0,
+          position: a.items.length,
+          startTimes: {},
+          note: neu.note ?? '',
+          responsible: { text: neu.responsible ?? '' },
+          serviceGroupNotes: neu.serviceGroupNotes ?? [],
+        };
+        a.items.push(punkt);
+        return json(res, { data: punkt }, 201);
+      }
+      if (req.method === 'PUT' && !rPunkt) {
+        if (Array.isArray(neu.items)) {
+          a.items = neu.items.map((x) => a.items.find((i) => i.id === x.id)).filter(Boolean);
+          neuNummerieren();
+        }
+        if (typeof neu.eventStartPosition === 'number')
+          a.eventStartPosition = neu.eventStartPosition;
+        return json(res, { data: a });
+      }
+      json(res, { message: 'Stub kennt das nicht' }, 400);
+    });
+    return;
   }
   if (punktMatch && req.method === 'DELETE' && punktMatch[1]) {
     agenda.items = agenda.items.filter((i) => i.id !== Number(punktMatch[1]));

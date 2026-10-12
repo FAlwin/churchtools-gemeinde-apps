@@ -115,6 +115,18 @@ describe('getAgendaItems – Änderungs-Diff (#161/#178)', () => {
     expect(items[2].changed).toBeFalsy();
   });
 
+  it('mehrere entfernte Punkte hintereinander behalten ihre Reihenfolge', async () => {
+    // Basislinie A, B, C, D – B und C sind weg. Beide stehen hinter A; C darf nicht vor B rutschen.
+    mockedGetAgenda.mockResolvedValue({ items: [raw(1, 'A'), raw(4, 'D')] });
+    const items = await getAgendaItems('cookie', EVENT, [
+      sigOf(1, 'A'),
+      sigOf(2, 'B'),
+      sigOf(3, 'C'),
+      sigOf(4, 'D'),
+    ]);
+    expect(items.map((i) => i.id)).toEqual([1, 2, 3, 4]);
+  });
+
   it('markiert einen inhaltlich geänderten Punkt als changed', async () => {
     mockedGetAgenda.mockResolvedValue({
       items: [raw(1, 'A neu'), raw(2, 'B')],
@@ -124,5 +136,16 @@ describe('getAgendaItems – Änderungs-Diff (#161/#178)', () => {
     expect(items[0].changed).toBe(true);
     expect(items[1].changed).toBeFalsy();
     expect(items.some((i) => i.removed)).toBe(false);
+    // Geändert ist nicht neu (Schildchen „geändert", 12.10.2026).
+    expect(items[0].neu).toBe(false);
+  });
+
+  it('ein Punkt, den es im gesehenen Stand nicht gab, ist neu (Schildchen „neu")', async () => {
+    mockedGetAgenda.mockResolvedValue({ items: [raw(1, 'A'), raw(7, 'Neu dazu')] });
+    const items = await getAgendaItems('cookie', EVENT, [sigOf(1, 'A')]);
+    expect(items.map((i) => [i.id, i.neu, i.changed])).toEqual([
+      [1, false, false],
+      [7, true, true],
+    ]);
   });
 });

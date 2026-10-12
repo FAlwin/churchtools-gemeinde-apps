@@ -48,6 +48,8 @@ export type IconName =
   | 'download'
   | 'undo'
   | 'redo'
+  | 'refresh'
+  | 'x'
   | 'grip'
   | 'align-left'
   | 'align-center'
@@ -411,6 +413,23 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
         <svg {...p}>
           <path d="M17.5 17.5a4.3 4.3 0 0 0 .4-8.6 6 6 0 0 0-11.8 1.2 3.8 3.8 0 0 0 .4 7.4" />
           <path d="M12 12v6M9.5 15.5 12 18l2.5-2.5" />
+        </svg>
+      );
+    case 'refresh':
+      // Zwei Pfeile im Kreis – „Ablauf aktualisiert" (12.10.2026).
+      return (
+        <svg {...p}>
+          <path d="M20 11a8 8 0 0 0-14.6-4.5" />
+          <path d="M4 4v4h4" />
+          <path d="M4 13a8 8 0 0 0 14.6 4.5" />
+          <path d="M20 20v-4h-4" />
+        </svg>
+      );
+    case 'x':
+      // Schließen – etwa für die Hinweisleiste über dem Ablauf (12.10.2026).
+      return (
+        <svg {...p}>
+          <path d="M6 6l12 12M18 6L6 18" />
         </svg>
       );
     case 'undo':

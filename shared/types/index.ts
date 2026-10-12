@@ -547,14 +547,16 @@ export interface AgendaItem {
   note: string;
   /**
    * true, wenn dieser Punkt neu/geändert/verschoben ist gegenüber dem Stand, den das Konto zuletzt
-   * gesehen hat (#161) – der Client lässt ihn dann kurz aufleuchten. `undefined`, wenn kein
-   * Vergleichsstand existiert (nie geöffnet) oder der Abruf ohne Diff lief.
+   * gesehen hat (#161) – der Client zeigt dann ein Schildchen und zählt ihn in der Hinweisleiste.
+   * `undefined`, wenn kein Vergleichsstand existiert (nie geöffnet) oder der Abruf ohne Diff lief.
    */
   changed?: boolean;
+  /** true, wenn es den Punkt im zuletzt gesehenen Stand noch gar nicht gab (Schildchen „neu"). */
+  neu?: boolean;
   /**
    * true bei einem PLATZHALTER für einen seit dem letzten Ansehen ENTFERNTEN Punkt (#161 Etappe B):
-   * steht an der alten Position, der Client blendet ihn kurz ein und lässt ihn auflösen. Solche
-   * Einträge sind nicht mehr Teil des echten Ablaufs (kein Lied, nicht anklickbar).
+   * Der Client nennt ihn in der Hinweisleiste über dem Ablauf. Solche Einträge sind nicht mehr Teil
+   * des echten Ablaufs (kein Lied, nicht anklickbar) und werden nicht als Zeile gezeigt.
    */
   removed?: boolean;
 }

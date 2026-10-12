@@ -88,6 +88,12 @@ export interface CtAgendaItem {
   responsible?: { text?: string; persons?: { service?: string; person?: { title?: string } }[] };
   position?: number;
   song?: CtAgendaSong;
+  /**
+   * Notizen je Dienstgruppe. **Muss beim Ändern eines Punkts mitgeschickt werden:** Ein
+   * `PUT …/agenda/items/{id}` ohne das Feld leert sie (gemessen an der Test-Instanz, 12.10.2026);
+   * das Umsortieren per `PUT …/agenda` lässt sie dagegen stehen.
+   */
+  serviceGroupNotes?: { serviceGroupId: number; note: string }[];
 }
 
 export interface CtArrangementFile {

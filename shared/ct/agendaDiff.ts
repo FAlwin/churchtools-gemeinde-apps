@@ -74,7 +74,8 @@ function lisPositions(arr: number[]): Set<number> {
  * Vergleicht den zuletzt gesehenen Ablauf-Stand (`prev`) mit dem aktuellen (`current`) und liefert,
  * welche Punkte sich verändert haben (#161). Rein & testbar.
  * - `changedIds`: neu, inhaltlich geändert ODER verschoben (relative Reihenfolge über LIS).
- * - `removedIds`: im vorigen Stand vorhanden, jetzt weg (für die „auflösen"-Animation, Etappe B).
+ * - `newIds`: davon die, die es im vorigen Stand gar nicht gab (Schildchen „neu" statt „geändert").
+ * - `removed`: im vorigen Stand vorhanden, jetzt weg (für die Hinweisleiste über dem Ablauf).
  * Ist `prev` leer (nie gesehen), gilt NICHTS als geändert (kein Fehlalarm bei Erstnutzung).
  */
 export function diffAgendaItems(
@@ -82,15 +83,18 @@ export function diffAgendaItems(
   current: { id: number; sig: string }[],
 ): {
   changedIds: number[];
+  newIds: number[];
   /** Entfernte Punkte samt Titel und „stand hinter welchem noch vorhandenen Punkt" (afterId,
-   *  null = ganz vorne) – der Client blendet sie dort kurz ein und lässt sie auflösen (Etappe B). */
+   *  null = ganz vorne) – der Client nennt sie in der Hinweisleiste über dem Ablauf. */
   removed: { id: number; title: string; afterId: number | null }[];
 } {
-  if (prev.length === 0) return { changedIds: [], removed: [] };
+  if (prev.length === 0) return { changedIds: [], newIds: [], removed: [] };
   const prevById = new Map(prev.map((p, index) => [p.id, { sig: p.sig, index }]));
   const changed = new Set<number>();
+  const neu: number[] = [];
   for (const it of current) {
     const p = prevById.get(it.id);
+    if (!p) neu.push(it.id);
     if (!p || p.sig !== it.sig) changed.add(it.id); // neu oder inhaltlich geändert
   }
   // Verschoben: gemeinsame Punkte (unabhängig von Inhaltsänderung) auf Reihenfolge prüfen.
@@ -114,5 +118,5 @@ export function diffAgendaItems(
     }
     removed.push({ id: p.id, title: p.title ?? 'Entfernter Punkt', afterId });
   });
-  return { changedIds: [...changed], removed };
+  return { changedIds: [...changed], newIds: neu, removed };
 }

@@ -24,7 +24,7 @@ describe('beginnStelle', () => {
   });
 
   it('„entfernt"-Platzhalter ziehen die Linie nicht vor sich', () => {
-    // Ein zerfallender Punkt zwischen Vorlauf und Gottesdienst: Die Linie gehört vor den echten Punkt.
+    // Ein Platzhalter zwischen Vorlauf und Gottesdienst: Die Linie gehört vor den echten Punkt.
     const zeilen = [punkt(1, true), { removed: true }, punkt(3, false)];
     expect(beginnStelle(zeilen)).toBe(2);
   });

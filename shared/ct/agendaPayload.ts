@@ -55,9 +55,18 @@ export function agendaItemWritePayload(
     // responsible ist ein Textfeld; ChurchTools löst Dienst-Tokens wie „[Musik]" selbst
     // zu den im Dienstplan zugewiesenen Personen auf.
     responsible: overrides.responsible ?? it.responsible?.text ?? '',
+    // Ohne dieses Feld leert ChurchTools beim Ändern die Notizen je Dienstgruppe (12.10.2026).
+    serviceGroupNotes: dienstgruppenNotizen(it),
     ...(overrides.position !== undefined ? { position: overrides.position } : {}),
     ...(arrangementId ? { arrangementId } : {}),
   };
+}
+
+/** Die Notizen je Dienstgruppe in der Form, in der ChurchTools sie schreibend annimmt. */
+export function dienstgruppenNotizen(it: CtAgendaItem): { serviceGroupId: number; note: string }[] {
+  return (it.serviceGroupNotes ?? [])
+    .filter((n) => typeof n.serviceGroupId === 'number' && !!n.note)
+    .map((n) => ({ serviceGroupId: n.serviceGroupId, note: n.note }));
 }
 
 /**

@@ -1,40 +1,7 @@
 @use '@ui/design/variables' as *;
 
-// ── Reset ───────────────────────────────────────────────────
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-// Fett gesetzter Text erbt die Farbe seiner Umgebung – ausdrücklich. In der ChurchTools-Erweiterung
-// färbt ChurchTools sonst jedes `b`/`strong` dunkelblau (`.cts b { color: … }`, gemessen 08.10.2026:
-// das „Aa" im Liedblatt-Kopf war auf dunklem Grund kaum zu sehen). Eine geerbte Farbe verliert gegen
-// jede direkte Regel; diese hier gewinnt, weil ChurchTools' Regeln in `@layer` liegen (cssBereich.ts).
-b,
-strong {
-  color: inherit;
-}
-
-// Bilder und Symbole stehen im Textfluss, wie der Browser es vorgibt. ChurchTools' Grundregeln
-// (Tailwind) machen sie zu Blöcken (`svg { display: block }`) – in der Erweiterung rutschte das „+"
-// über „Weiteres Arrangement" und der Stift unter „Akkorde & Text" (Alwin, 08.10.2026). `revert` holt
-// den Browser-Wert zurück; eigene Klassen der App, die `display` setzen, wiegen schwerer und bleiben.
-// Bewusst NICHT `all: revert` (live probiert): Das setzt auch die Größe und Striche zurück, die als
-// Attribute am SVG stehen – das „+" verschwand ganz.
-img,
-svg,
-video,
-canvas,
-audio,
-iframe,
-embed,
-object {
-  display: revert;
-  vertical-align: revert;
-}
+// Reset, Erweiterungs-Lehren, Fokus und Bewegung: für alle Apps gleich (#474).
+@use '@ui/design/grundregeln';
 
 html,
 body {
@@ -73,59 +40,6 @@ html {
   // und bleiben ~34px zu kurz → leerer Balken / dunkler Streifen unten. Mit `relative` füllen
   // sie die volle App-Höhe (#root = innerHeight + Safe-Area).
   position: relative;
-}
-
-// ChurchTools-Extension (#335, gemessen 07.10.2026): ChurchTools gibt der App einen Bereich UNTER
-// seiner Leiste (56 px). Vollbild-Fenster (`position: fixed`) richteten sich aber nach dem ganzen
-// Fenster und rutschten unter die Leiste. `transform` macht #root zum Bezugsrahmen auch für
-// fixierte Kinder – damit bleiben sie im Bereich der App.
-.ct-extension #root {
-  transform: translateZ(0);
-  overflow: hidden;
-  /**
-   * Die Höhe (07.10.2026): Bisher kam sie über `html, body { height: 100% }` → `#root { height: 100% }`.
-   * Seit unsere Regeln ChurchTools nicht mehr anfassen (`ui/erweiterung/cssBereich.ts`), hat ChurchTools'
-   * Behälter keine feste Höhe, an der 100 % hängen könnten – die App schrumpfte auf 44 px. Jetzt füllt
-   * sie ihren Behälter direkt (gemessen: 1268 px unter der 56-px-Leiste).
-   */
-  position: absolute;
-  inset: 0;
-  height: auto;
-}
-.ct-extension :has(> #root) {
-  position: relative;
-}
-// Vollbild der ganzen App (Erweiterung, `useAppVollbild`): Die App legt sich über die Leiste von
-// ChurchTools – fest am Fenster statt im Bereich unter der Leiste. Die Ebene liegt über ChurchTools,
-// aber UNTER der Einführung (`Coachmarks`, 3000), die an `body` hängt.
-.ct-extension #root[data-vollbild] {
-  position: fixed;
-  inset: 0;
-  z-index: 2500;
-}
-
-button {
-  font-family: inherit;
-  outline: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-// Barrierefreiheit: sichtbarer Fokusring NUR bei Tastatur-Navigation (nicht bei Maus/Touch).
-:focus-visible {
-  outline: 2px solid var(--blue);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
-// Bewegungsreduzierung respektieren: Animationen/Übergänge praktisch ausschalten.
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-  }
 }
 
 // Animationen, die global mehrfach genutzt werden

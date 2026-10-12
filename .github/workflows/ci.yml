@@ -40,6 +40,11 @@ jobs:
       - name: Build ChurchTools-Erweiterung
         run: npm run build:extension -w client
 
+      # Die Anmeldungen (#474) sind nur Erweiterung: gebaut hat sie schon `npm run build`, hier wird gepackt –
+      # dabei prüft das Packen, dass keine Stilregel ChurchTools trifft.
+      - name: Anmeldungen-Erweiterung packen
+        run: npm run paket -w anmeldungen
+
       - name: Test
         run: npm test
 

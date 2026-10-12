@@ -9,6 +9,7 @@
  *
  * Aufgerufen wird es nur aus der Weiche in `churchtoolsApi.ts` und `fileDownload.ts`.
  */
+import { gemeindeNameAus } from '@shared/ct/info';
 import type {
   AgendaItem,
   AgendaServiceOption,
@@ -172,9 +173,7 @@ export async function gemeindeKonfiguration(): Promise<SiteConfig> {
 
 async function gemeindeName(): Promise<string> {
   try {
-    const info = await ctAnfrage<{ siteName?: unknown } | null>('/info');
-    const name = typeof info?.siteName === 'string' ? info.siteName.trim() : '';
-    return name || DEFAULT_SITE_CONFIG.orgName;
+    return gemeindeNameAus(await ctAnfrage<unknown>('/info')) ?? DEFAULT_SITE_CONFIG.orgName;
   } catch {
     return DEFAULT_SITE_CONFIG.orgName;
   }

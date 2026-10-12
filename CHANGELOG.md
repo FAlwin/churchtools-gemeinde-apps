@@ -7,6 +7,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+## [2.34.0] – 2026-10-12
+
 ### Geändert
 
 - **Ablauf-Änderungen ohne Animation** (Alwin, 12.10.2026): Statt aufleuchtender Punkte und zerfallender

@@ -19,7 +19,7 @@
 - **Status:** Fertig & produktiv – auf dem Synology-NAS deployt, intern im WLAN **und**
   extern unter `https://musik.ecg-donrath.de` live.
 
-  **Stand 12.10.2026: Produktiv läuft `v2.32.0`** – am 12.10.2026 am Bundle **gemessen**, nicht aus der
+  **Stand 12.10.2026: Produktiv läuft `v2.33.0`** – am 12.10.2026 am Bundle **gemessen**, nicht aus der
   Doku übernommen. So misst man die laufende
   Version: Der Versionsstring steckt im ausgelieferten Bundle
   (`curl -s https://musik.ecg-donrath.de/ | grep -oE 'assets/index-[^"]+\.js'`, dann diese Datei holen
@@ -681,6 +681,15 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **v2.34.0 (12.10.2026) = Ablauf-Änderungen ohne Animation + Rückgängig** (PRs #477, #482). Das
+  Zerfallen gelöschter Punkte fotografierte per `html2canvas` die ganze Seite ab und ließ die Erweiterung
+  hängen; jetzt ein dunkler Hinweis unten (`AblaufHinweis`, 6 s) und Schildchen „neu"/„geändert"
+  (`AenderungsMerker`). „Gesehen" gilt nach dem Anzeigen (`useMarkSeenAfterShown`), nicht mehr beim
+  Verlassen – in der Erweiterung verlässt man die ganze Seite. Rückgängig für Löschen/Verschieben
+  (`punktLoeschen` liefert einen Merkzettel, `punktWiederherstellen`). Gemessen und behoben: `PUT` auf
+  einen Punkt ohne `serviceGroupNotes` leert sie; CT zieht `eventStartPosition` beim Löschen nicht mit.
+  `Toast` hängt per Portal an `body`. Ref-Vergleich im Render ist unter StrictMode unsicher → Zustand
+  (`AgendaFullView`, `usePageDraw`).
 - **v2.33.0 (12.10.2026) = Ablage in ChurchTools + Ablauf abschließen + Code-Check #455–#466**
   (PRs #467, #470, #471, #472). Anmerkungen, Lied-Einstellungen, „gesehen" und Teilen der Server-App
   liegen jetzt als Personen-Anhänge in ChurchTools (`shared/ct/personenAblage.ts`, dieselbe Ablage wie

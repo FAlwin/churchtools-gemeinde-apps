@@ -18,6 +18,31 @@
   pointer-events: none;
 }
 
+// Mit Knopf (Rückgängig): antippbar, Text links, Knopf rechts.
+.mitAktion {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+  pointer-events: auto;
+}
+.aktion {
+  flex: none;
+  border: none;
+  background: none;
+  padding: 4px 2px;
+  color: #8db4ff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid #8db4ff;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
 @keyframes toast-in {
   from {
     opacity: 0;

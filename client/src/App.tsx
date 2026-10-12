@@ -17,6 +17,7 @@ import {
   useAgenda,
   useReorderAgenda,
   useDeleteAgendaItem,
+  useRestoreAgendaItem,
   useUpdateAgendaItem,
   useSetAgendaItemVorBeginn,
   useAgendaServices,
@@ -195,6 +196,7 @@ export default function App() {
   const agendaQuery = useAgenda(service?.id ?? null);
   const reorderAgenda = useReorderAgenda(service?.id ?? null);
   const deleteAgendaItem = useDeleteAgendaItem(service?.id ?? null);
+  const restoreAgendaItem = useRestoreAgendaItem(service?.id ?? null);
   const updateAgendaItem = useUpdateAgendaItem(service?.id ?? null);
   const setAgendaItemVorBeginn = useSetAgendaItemVorBeginn(service?.id ?? null);
   const agendaServices = useAgendaServices(
@@ -452,7 +454,9 @@ export default function App() {
         isReordering={reorderAgenda.isPending}
         actions={{
           reorder: (order) => reorderAgenda.mutateAsync(order).then(() => undefined),
-          remove: (itemId) => deleteAgendaItem.mutateAsync(itemId).then(() => undefined),
+          remove: (itemId) =>
+            deleteAgendaItem.mutateAsync(itemId).then((r) => r.wiederherstellen ?? null),
+          restore: (g) => restoreAgendaItem.mutateAsync(g).then(() => undefined),
           update: (itemId, fields) =>
             updateAgendaItem.mutateAsync({ itemId, fields }).then(() => undefined),
           setVorBeginn: (itemId, vorBeginn) =>

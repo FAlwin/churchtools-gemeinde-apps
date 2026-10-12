@@ -7,6 +7,30 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Geändert
+
+- **Ablauf-Änderungen ohne Animation** (Alwin, 12.10.2026): Statt aufleuchtender Punkte und zerfallender
+  Zeilen steht oben im Ablauf eine ruhige Leiste „Ablauf aktualisiert · 1 neu · 2 geändert", darunter jeder
+  entfernte Punkt durchgestrichen; neue und geänderte Punkte tragen ein Schildchen „neu"/„geändert". Das
+  Zerfallen fotografierte die ganze Seite ab (`html2canvas`) – in der ChurchTools-Erweiterung ist das die
+  komplette ChurchTools-Seite, die dabei hängen blieb. `html2canvas` ist als Abhängigkeit entfallen.
+
+### Neu
+
+- **Rückgängig nach Löschen und Verschieben** (Alwin, 12.10.2026): Im Bearbeiten-Modus steht danach unten
+  „„Titel" gelöscht · Rückgängig" bzw. „… verschoben · Rückgängig", etwa 8 Sekunden lang. Ein gelöschter
+  Punkt kommt an seine Stelle zurück – mit Dauer, Notiz, Zuständigen, Dienstgruppen-Notizen und Vorlauf
+  (gemessen an der Test-Instanz); er hat danach eine neue ID. Eine in ChurchTools ausgeblendete Uhrzeit
+  kommt nicht zurück, die Schnittstelle kennt das Feld nicht.
+
+### Behoben
+
+- **Bearbeiten löschte die Notizen je Dienstgruppe:** ChurchTools leert sie bei einem Ändern ohne dieses
+  Feld (gemessen 12.10.2026) – die App schickte es nicht mit. Gab es seit dem Bearbeiten-Dialog.
+- **Löschen eines Vorlauf-Punkts schob den Gottesdienst in den Vorlauf:** ChurchTools zieht die Grenze
+  „Beginn" beim Löschen nicht mit (gemessen 12.10.2026); der erste Punkt des Gottesdienstes rutschte samt
+  Uhrzeiten davor. Die App rückt die Grenze jetzt selbst nach.
+
 ## [2.33.0] – 2026-10-12
 
 **Beim Update bitte beachten (Server-App):** Anmerkungen, Lied-Einstellungen, „gesehen" und das Teilen

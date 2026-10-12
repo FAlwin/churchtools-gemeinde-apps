@@ -30,7 +30,7 @@ export function useSetlistLiveSync(args: {
 
   // Ablauf neu laden (Live-Update): Der Server markiert die geänderten Punkte anhand des zuletzt
   // GESEHENEN Stands – dieser wird bewusst NICHT hier aktualisiert, sondern erst beim Verlassen
-  // des Termins (useMarkSeenOnLeave). So leuchten auch live eingetroffene Änderungen auf.
+  // des Termins (useMarkSeenOnLeave). So tragen auch live eingetroffene Änderungen ihr Schildchen.
   const reloadAblauf = useCallback(
     (id: number) => {
       void qc.invalidateQueries({ queryKey: ['agenda', id] });
@@ -66,7 +66,7 @@ export function useSetlistLiveSync(args: {
 
 /**
  * „Gesehen" gilt beim VERLASSEN eines Termins (#143/#161): Erst dann wird der aktuelle Stand als
- * Basislinie gemerkt – so bleiben die aufleuchtenden Markierungen sichtbar, solange man drin ist,
+ * Basislinie gemerkt – so bleiben Leiste und Schildchen („neu"/„geändert") sichtbar, solange man drin ist,
  * und der „geändert"-Punkt in der Terminliste verschwindet nach dem Reinschauen. Ein Wechsel
  * zwischen Ablauf und Liederheft desselben Termins zählt NICHT als Verlassen – der Aufrufer gibt
  * dafür durchgehend dieselbe `openTerminId`.

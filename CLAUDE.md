@@ -1121,7 +1121,7 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
   (#176), UI-Monolithen aufgeteilt + Interaktionskern getestet (#140/#141, v2.13.4/.5).
   Live-Aktualisierung (Terminliste + offener Ablauf gleichen sich selbst ab), Ablauf-Änderungs-
   Markierung (#143/#161: geänderte Punkte leuchten auf, entfernte lösen sich im „poof"-Partikel-Effekt
-  auf), Lied-Statistik mit Zeitfilter (#158) + volle sortierbare Lied-Auswahl beim Hinzufügen/
+  auf – seit 12.10.2026 ersetzt durch Leiste „Ablauf aktualisiert" + Schildchen), Lied-Statistik mit Zeitfilter (#158) + volle sortierbare Lied-Auswahl beim Hinzufügen/
   Verknüpfen (#157), Bearbeiten-Dialog „alles erst mit Speichern", Code-Check-Härtungen (u.a.
   sha256-Fingerprint, seen-setlists aufs Volume, Datei-Proxy). Davor: Team-Notizen (#124, v2.9.0,
   PCO-Modell), Rechte-Cache (v2.8.1), Code-Splitting (#142). Onboarding-Pflege ist verbindlich →

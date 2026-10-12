@@ -11,8 +11,8 @@ import { AgendaFullView } from './AgendaFullView';
  * Zwei Dinge sind hier heikel und deshalb festgehalten:
  *  - Die **Lied-Nummer** beim Antippen. Sie zählt nur LIEDER, nicht alle Ablaufpunkte. Stimmt sie
  *    nicht, landet man beim falschen Chart – mitten im Gottesdienst.
- *  - Die **Position aufgelöster Punkte**: Ein gelöschter Punkt muss dort zerfallen, wo er stand,
- *    nicht irgendwo. Sonst springt das Layout und man traut der Liste nicht mehr.
+ *  - **Entfernte Punkte** dürfen nicht kommentarlos verschwinden – auch die nicht, die der Server
+ *    nicht kennt (#178). Seit 12.10.2026 nennt sie die Hinweisleiste oben, statt sie zerfallen zu lassen.
  */
 function item(over: Partial<AgendaItem> = {}): AgendaItem {
   return {
@@ -106,16 +106,52 @@ describe('AgendaFullView – Lied antippen', () => {
   });
 });
 
-describe('AgendaFullView – entfernte Punkte auflösen', () => {
-  it('zeigt einen vom Server gemeldeten entfernten Punkt an', () => {
-    render(
+/** Die Hinweisleiste über dem Ablauf (12.10.2026) – `null`, wenn keine da ist. */
+function leiste(): string | null {
+  return screen.queryByRole('status')?.textContent ?? null;
+}
+
+describe('AgendaFullView – Hinweisleiste statt Aufleuchten und Zerfallen (12.10.2026)', () => {
+  it('nennt einen vom Server gemeldeten entfernten Punkt – als Zeile steht er NICHT mehr da', () => {
+    const { container } = render(
       <AgendaFullView
-        items={[{ id: 9, title: 'Weg damit', removed: true } as unknown as AgendaItem]}
+        items={[
+          item({ id: 1, title: 'Bleibt' }),
+          { id: 9, title: 'Weg damit', removed: true } as unknown as AgendaItem,
+        ]}
         eventId={1}
         onSelect={vi.fn()}
       />,
     );
-    expect(screen.getByLabelText('Entfernt: Weg damit')).toBeTruthy();
+    expect(leiste()).toContain('Ablauf aktualisiert');
+    expect(leiste()).toContain('Entfernt: Weg damit');
+    // Außerhalb der Leiste taucht der Titel nicht auf.
+    const ohneLeiste = (container.textContent ?? '').replace(leiste() ?? '', '');
+    expect(ohneLeiste).not.toContain('Weg damit');
+  });
+
+  it('zählt neu und geändert getrennt und zeigt das passende Schildchen', () => {
+    render(
+      <AgendaFullView
+        items={[
+          item({ id: 1, title: 'Begrüßung' }),
+          item({ id: 2, title: 'Gebet', changed: true, neu: true }),
+          item({ id: 3, title: 'Predigt', changed: true, neu: false }),
+        ]}
+        eventId={1}
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(leiste()).toContain('Ablauf aktualisiert · 1 neu · 1 geändert');
+    const zeile = (t: string) => screen.getByText(t).closest('div')!.parentElement!.textContent;
+    expect(zeile('Gebet')).toContain('neu');
+    expect(zeile('Predigt')).toContain('geändert');
+    expect(zeile('Begrüßung')).not.toMatch(/neu|geändert/);
+  });
+
+  it('ohne Änderungen gibt es keine Leiste', () => {
+    render(<AgendaFullView items={[item({ id: 1 })]} eventId={1} onSelect={vi.fn()} />);
+    expect(leiste()).toBeNull();
   });
 
   it('merkt selbst, wenn ein zuvor gezeigter Punkt verschwindet (#178)', () => {
@@ -124,34 +160,41 @@ describe('AgendaFullView – entfernte Punkte auflösen', () => {
     // selbst bemerken, sonst verschwindet die Zeile kommentarlos.
     const vorher = [item({ id: 1, title: 'Bleibt' }), item({ id: 2, title: 'Verschwindet' })];
     const { rerender } = render(<AgendaFullView items={vorher} eventId={1} onSelect={vi.fn()} />);
+    expect(leiste()).toBeNull();
     rerender(
       <AgendaFullView items={[item({ id: 1, title: 'Bleibt' })]} eventId={1} onSelect={vi.fn()} />,
     );
-    expect(screen.getByLabelText('Entfernt: Verschwindet')).toBeTruthy();
+    expect(leiste()).toContain('Entfernt: Verschwindet');
   });
 
-  it('der Platzhalter steht an der Stelle des gelöschten Punkts, nicht am Ende', () => {
-    const drei = [
-      item({ id: 1, title: 'Eins' }),
-      item({ id: 2, title: 'Zwei' }),
-      item({ id: 3, title: 'Drei' }),
-    ];
-    const { rerender, container } = render(
-      <AgendaFullView items={drei} eventId={1} onSelect={vi.fn()} />,
-    );
-    rerender(
-      <AgendaFullView
-        items={[item({ id: 1, title: 'Eins' }), item({ id: 3, title: 'Drei' })]}
-        eventId={1}
-        onSelect={vi.fn()}
-      />,
-    );
-    const text = container.textContent ?? '';
-    expect(text.indexOf('Eins')).toBeLessThan(text.indexOf('Zwei'));
-    expect(text.indexOf('Zwei')).toBeLessThan(text.indexOf('Drei'));
+  it('ein lokal bemerkter entfernter Punkt bleibt in der Leiste stehen (zerfällt nicht mehr)', () => {
+    vi.useFakeTimers();
+    try {
+      const vorher = [item({ id: 1, title: 'Bleibt' }), item({ id: 2, title: 'Weg' })];
+      const { rerender } = render(<AgendaFullView items={vorher} eventId={1} onSelect={vi.fn()} />);
+      rerender(
+        <AgendaFullView
+          items={[item({ id: 1, title: 'Bleibt' })]}
+          eventId={1}
+          onSelect={vi.fn()}
+        />,
+      );
+      vi.advanceTimersByTime(5 * 60_000);
+      // Ein neuer Stand vom Server (neues Array) darf ihn nicht vergessen lassen.
+      rerender(
+        <AgendaFullView
+          items={[item({ id: 1, title: 'Bleibt' })]}
+          eventId={1}
+          onSelect={vi.fn()}
+        />,
+      );
+      expect(leiste()).toContain('Entfernt: Weg');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
-  it('ein Terminwechsel löst NICHTS auf (die Punkte gehören zu einem anderen Termin)', () => {
+  it('ein Terminwechsel meldet NICHTS (die Punkte gehören zu einem anderen Termin)', () => {
     const { rerender } = render(
       <AgendaFullView
         items={[item({ id: 1, title: 'Termin A' })]}
@@ -166,20 +209,39 @@ describe('AgendaFullView – entfernte Punkte auflösen', () => {
         onSelect={vi.fn()}
       />,
     );
-    expect(screen.queryByLabelText('Entfernt: Termin A')).toBeNull();
+    expect(leiste()).toBeNull();
   });
 
-  it('ein rückgängig gemachter Punkt taucht wieder als echte Zeile auf', () => {
+  it('ein rückgängig gemachter Punkt verschwindet wieder aus der Leiste', () => {
     const zwei = [item({ id: 1, title: 'Eins' }), item({ id: 2, title: 'Zwei' })];
     const { rerender } = render(<AgendaFullView items={zwei} eventId={1} onSelect={vi.fn()} />);
     rerender(
       <AgendaFullView items={[item({ id: 1, title: 'Eins' })]} eventId={1} onSelect={vi.fn()} />,
     );
-    expect(screen.getByLabelText('Entfernt: Zwei')).toBeTruthy();
+    expect(leiste()).toContain('Entfernt: Zwei');
 
-    // Wieder da (z. B. in ChurchTools rückgängig gemacht) → kein Platzhalter mehr.
+    // Wieder da (z. B. „Rückgängig" oder in ChurchTools zurückgeholt) → nicht mehr als entfernt gemeldet.
     rerender(<AgendaFullView items={[...zwei]} eventId={1} onSelect={vi.fn()} />);
-    expect(screen.queryByLabelText('Entfernt: Zwei')).toBeNull();
+    expect(leiste()).toBeNull();
+  });
+
+  it('weggeklickt bleibt sie weg – bis eine neue Änderung kommt', () => {
+    const a = [item({ id: 1, title: 'Eins', changed: true, neu: true }), item({ id: 2 })];
+    const { rerender } = render(<AgendaFullView items={a} eventId={1} onSelect={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Hinweis schließen' }));
+    expect(leiste()).toBeNull();
+    // Gleicher Stand neu geladen → bleibt zu.
+    rerender(<AgendaFullView items={[...a]} eventId={1} onSelect={vi.fn()} />);
+    expect(leiste()).toBeNull();
+    // Etwas Neues → wieder da.
+    rerender(
+      <AgendaFullView
+        items={[...a, item({ id: 3, title: 'Drei', changed: true, neu: true })]}
+        eventId={1}
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(leiste()).toContain('2 neu');
   });
 });
 

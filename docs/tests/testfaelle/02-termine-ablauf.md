@@ -85,8 +85,9 @@ anderen Stelle und wurde früher übersehen.
 **Das brauchst du:** Zugang zu ChurchTools im Browser, während die App offen ist.
 
 **Das muss passieren:** In Schritt 4 hat der Termin einen **blauen Punkt** – wie eine ungelesene
-Nachricht. In Schritt 5 leuchtet der geänderte Punkt kurz auf. Beim allerersten Öffnen eines
-Termins darf **nichts** leuchten, sonst blinkt die ganze Liste.
+Nachricht. In Schritt 5 steht oben „Ablauf aktualisiert · 1 geändert" und der Punkt trägt das
+Schildchen **geändert**. Beim allerersten Öffnen eines Termins darf **nichts** markiert sein, sonst
+trüge die ganze Liste Schildchen.
 
 1. Einen Termin öffnen und wieder zurück zur Liste (damit gilt er als gesehen).
 2. Im Browser in ChurchTools ein Lied dieses Ablaufs austauschen.
@@ -103,24 +104,27 @@ Termins darf **nichts** leuchten, sonst blinkt die ganze Liste.
 
 </details>
 
-### TF-ABLAUF-06 · Gelöschter Punkt löst sich an seiner Stelle auf
+### TF-ABLAUF-06 · Leiste „Ablauf aktualisiert" nennt Neues und Entferntes
 
-**Das brauchst du:** Zugang zu ChurchTools, App mit geöffnetem Ablauf daneben.
+**Das brauchst du:** Zugang zu ChurchTools, App mit geöffnetem Ablauf daneben – am besten **auch in der
+ChurchTools-Erweiterung**, dort blieb die frühere Animation hängen.
 
-**Das muss passieren:** Die Zeile bleibt kurz durchgestrichen lesbar und **zerfällt** dann sichtbar –
-genau **an ihrer Stelle**, nicht unten am Listenende. Danach schließt sich die Lücke. Sie darf nicht
-einfach kommentarlos verschwinden; sonst denkt man, man habe sich verklickt.
+**Das muss passieren:** Oben im Ablauf erscheint eine ruhige Leiste „Ablauf aktualisiert · 1 neu",
+darunter „Entfernt: ~~Titel~~" für den gelöschten Punkt. Der neue Punkt trägt das Schildchen **neu**.
+Nichts blinkt, nichts zerfällt, die Seite bleibt bedienbar. Das X schließt die Leiste; kommt danach
+eine weitere Änderung, ist sie wieder da.
 
 1. Einen Termin in der App öffnen und offen lassen.
-2. In ChurchTools einen Punkt **aus der Mitte** des Ablaufs löschen.
-3. In der App warten (bis zu einer Minute) und auf die Stelle schauen.
+2. In ChurchTools einen Punkt **aus der Mitte** löschen und einen neuen Punkt anlegen.
+3. In der App warten (bis zu einer Minute) und auf den Ablauf schauen.
+4. Die Leiste mit dem X schließen, dann in ChurchTools noch einen Punkt ändern.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/DisintegratingRow.tsx`, `client/src/components/AgendaFullView.tsx`, `client/src/utils/vanishedRows.ts`, `client/src/utils/disintegrate.ts`, `client/src/utils/annotationKeys.ts`
-- **Automatisiert:** teilweise – `client/src/components/AgendaFullView.test.tsx` (Position), Animation nicht
-- **Historie:** #161, #178
+- **Betrifft:** `client/src/components/AgendaFullView.tsx`, `client/src/components/AblaufHinweis.tsx`, `client/src/utils/ablaufAenderungen.ts`, `client/src/utils/vanishedRows.ts`, `shared/ct/agendaDiff.ts`
+- **Automatisiert:** teilweise – `client/src/components/AgendaFullView.test.tsx` (Leiste, Schildchen, Wegklicken); das Zusammenspiel mit ChurchTools nicht
+- **Historie:** #161, #178; seit 12.10.2026 Leiste statt Aufleuchten und Zerfallen
 
 </details>
 
@@ -189,5 +193,31 @@ App das – nicht mehr „Keine Berechtigung".
 - **Betrifft:** `shared/ct/schreibKern.ts`, `shared/ct/setlistKern.ts`, `client/src/pages/Setlist.tsx`, `server/src/controllers/setlistController.ts`
 - **Automatisiert:** teilweise – `server/src/services/ablaufAbschluss.test.ts`, `client/src/pages/Setlist.abschluss.test.tsx`, `client/src/services/ctSchreiben.test.ts`; von Hand bleibt echtes ChurchTools
 - **Historie:** Alwin 09.10.2026
+
+</details>
+
+### TF-ABLAUF-10 · Löschen und Verschieben lassen sich rückgängig machen
+
+**Das brauchst du:** Recht „Ablauf bearbeiten", einen Ablauf, in dem ein Punkt **Zuständige**, eine
+**Notiz** und eine **Dienstgruppen-Notiz** hat (in ChurchTools eintragen).
+
+**Das muss passieren:** Nach dem Löschen steht unten „„Titel" gelöscht · Rückgängig". Ein Tipp holt den
+Punkt **an dieselbe Stelle** zurück – mit Dauer, Notiz, Zuständigen und Dienstgruppen-Notiz. Nach dem
+Verschieben gilt dasselbe für die alte Reihenfolge. Nach etwa 8 Sekunden oder mit „Fertig" verschwindet
+das Angebot. Wird ein Punkt **vor dem Gottesdienstbeginn** gelöscht, rutscht der erste Punkt des
+Gottesdienstes **nicht** in den Vorlauf (die Linie „Beginn" bleibt, wo sie hingehört).
+
+1. Ablauf öffnen, „Ablauf bearbeiten" tippen.
+2. Den vorbereiteten Punkt antippen → „Eintrag löschen" → „Löschen".
+3. Unten auf **Rückgängig** tippen; in ChurchTools nachsehen, ob alles wieder da ist.
+4. Einen Punkt am Griff verschieben, dann **Rückgängig**.
+5. Einen Punkt aus dem Vorlauf löschen und auf die Linie „Beginn" achten; danach Rückgängig.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/ct/schreibKern.ts`, `shared/ct/agendaPayload.ts`, `client/src/pages/Setlist.tsx`, `client/src/hooks/useRueckgaengig.ts`, `client/src/components/Toast.tsx`, `server/src/controllers/setlistController.ts`
+- **Automatisiert:** teilweise – `server/src/services/ablaufRueckgaengig.test.ts`, `client/src/pages/Setlist.rueckgaengig.test.tsx`, `client/src/hooks/useRueckgaengig.test.ts`, `e2e/ablauf-rueckgaengig.spec.ts`; gegen echtes ChurchTools nur von Hand
+- **Historie:** 12.10.2026 (Alwin). Nicht zurück kommt eine in ChurchTools ausgeblendete Uhrzeit – die Schnittstelle kennt das Feld nicht.
 
 </details>

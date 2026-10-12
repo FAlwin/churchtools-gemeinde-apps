@@ -5,15 +5,18 @@
  * Die Uhrzeit (`item.time`) ist bereits serverseitig richtig: In ChurchTools ausgeblendete Punkte
  * (Auge) liefern gar keine Zeit.
  *
- * Der aufwendigste Teil ist das Auflösen entfernter Punkte – Begründung direkt am Code unten.
+ * Änderungen seit dem letzten Ansehen zeigt seit 12.10.2026 eine ruhige Leiste oben (`AblaufHinweis`)
+ * und ein Schildchen „neu"/„geändert" am Punkt. Vorher leuchteten Punkte auf und entfernte zerfielen
+ * in Partikel – das Abfotografieren dafür ließ die ChurchTools-Erweiterung hängen (Alwin).
  */
 import { Fragment, useRef, useState } from 'react';
 import type { AgendaItem } from '@shared/types/index';
 import { itemLabel } from '../utils/agendaItemTitle';
 import { vanishedRows, type ShownRow } from '../utils/vanishedRows';
 import { beginnStelle } from '../utils/vorlauf';
+import { ablaufAenderungen } from '../utils/ablaufAenderungen';
 import { BeginnLinie, ItemTitle, ResponsibleLine } from './AgendaRowParts';
-import { DisintegratingRow } from './DisintegratingRow';
+import { AblaufHinweis } from './AblaufHinweis';
 import styles from '../pages/Setlist.module.scss';
 
 export function AgendaFullView({
@@ -29,82 +32,66 @@ export function AgendaFullView({
   onSelect: (songIndex: number) => void;
 }) {
   let songIndex = -1;
-  // Lokal erzeugte „aufgelöst"-Platzhalter (#178): Punkte, die seit dem Betreten hinzukamen und
-  // wieder gelöscht wurden, stehen nicht in der „gesehen"-Basislinie → der Server liefert für sie
-  // KEINEN removed-Platzhalter. Die Ansicht merkt sich deshalb selbst, was sie zuletzt gezeigt
-  // hat, und lässt auch solche Punkte sichtbar zerfallen statt sie kommentarlos zu entfernen.
+  // Lokal erkannte Löschungen (#178): Punkte, die seit dem Betreten hinzukamen und wieder gelöscht
+  // wurden, stehen nicht in der „gesehen"-Basislinie → der Server liefert für sie KEINEN
+  // removed-Platzhalter. Die Ansicht merkt sich deshalb selbst, was sie zuletzt gezeigt hat, damit
+  // auch solche Punkte in der Leiste als „Entfernt" stehen statt kommentarlos zu verschwinden.
   const prevShown = useRef<{ eventId: number; items: AgendaItem[]; rows: ShownRow[] } | null>(null);
-  const [localRemoved, setLocalRemoved] = useState<
-    { id: number; title: string; afterId: number | null; at: number }[]
-  >([]);
-  // SYNCHRON während des Renderns abgleichen (NICHT useEffect): sonst rendert erst ein Frame OHNE
-  // die gelöschte Zeile (Layout springt), dann fügt der Effekt den Platzhalter wieder ein
-  // („blinkt"). Bedingtes setState im Render ist das dokumentierte „State an geänderte Props
-  // anpassen"-Muster – gleiche #113-Lektion wie in usePageDraw.
+  const [localRemoved, setLocalRemoved] = useState<{ id: number; title: string }[]>([]);
+  // SYNCHRON während des Renderns abgleichen (NICHT useEffect): sonst zeigt ein Frame die Leiste ohne
+  // den gerade verschwundenen Punkt. Bedingtes setState im Render ist das dokumentierte „State an
+  // geänderte Props anpassen"-Muster – gleiche #113-Lektion wie in usePageDraw.
   const prev = prevShown.current;
   if (!prev || prev.eventId !== eventId || prev.items !== items) {
     const shown: ShownRow[] = items
       .filter((i) => !i.removed)
-      // Gleiche Bezeichnung wie in der Liste (#215) – sonst stand beim Auflösen plötzlich nur
-      // noch der Liedname statt „Lied – Du großer Gott".
+      // Gleiche Bezeichnung wie in der Liste (#215).
       .map((i) => ({ id: i.id, title: itemLabel(i) }));
     prevShown.current = { eventId, items, rows: shown };
     if (!prev || prev.eventId !== eventId) {
-      // Terminwechsel/Erstaufbau: nichts auflösen, nur Merkstand setzen.
+      // Terminwechsel/Erstaufbau: nichts melden, nur Merkstand setzen.
       if (localRemoved.length) setLocalRemoved([]);
     } else {
       const presentIds = new Set(items.map((i) => i.id));
       const vanished = vanishedRows(prev.rows, presentIds);
-      const now = Date.now();
       setLocalRemoved((cur) => {
-        // Wieder aufgetauchte IDs (rückgängig gemacht) und alte, längst zerfallene Einträge räumen.
-        const kept = cur.filter((c) => !presentIds.has(c.id) && now - c.at < 60_000);
+        // Wieder aufgetauchte IDs (rückgängig gemacht) räumen; bleibt sonst, bis der Termin wechselt.
+        const kept = cur.filter((c) => !presentIds.has(c.id));
         const fresh = vanished
           .filter((v) => !kept.some((c) => c.id === v.id))
-          .map((v) => ({ ...v, at: now }));
+          .map((v) => ({ id: v.id, title: v.title }));
         return fresh.length || kept.length !== cur.length ? [...kept, ...fresh] : cur;
       });
     }
   }
-  // Lokale Platzhalter an ihrer alten Position einfügen (gleiches Muster wie serverseitig).
-  const rendered: (AgendaItem | { id: number; title: string; removed: true })[] = [];
-  for (const lr of localRemoved) {
-    if (lr.afterId == null) rendered.push({ id: lr.id, title: lr.title, removed: true });
-  }
-  for (const item of items) {
-    rendered.push(item);
-    for (const lr of localRemoved) {
-      if (lr.afterId === item.id) rendered.push({ id: lr.id, title: lr.title, removed: true });
-    }
-  }
+  const zeilen = items.filter((i) => !i.removed);
   // Die Linie „Beginn" vor dem ersten Punkt nach dem Vorlauf (#423) – nur, wenn es Vorlauf gibt.
-  const stelle = beginnStelle(rendered);
+  const stelle = beginnStelle(zeilen);
   return (
     <div className={styles.flowList}>
-      {rendered.map((item, i) => (
+      <AblaufHinweis aenderungen={ablaufAenderungen(items, localRemoved)} />
+      {zeilen.map((item, i) => (
         <Fragment key={item.id}>
           {i === stelle && <BeginnLinie zeit={beginn} />}
           {zeile(item)}
         </Fragment>
       ))}
-      {stelle === rendered.length && <BeginnLinie zeit={beginn} />}
+      {stelle === zeilen.length && <BeginnLinie zeit={beginn} />}
     </div>
   );
 
-  function zeile(item: (typeof rendered)[number]) {
-    // Entfernter Punkt (#161 Etappe B): kurz sichtbar, dann „poof"-Zerfall.
-    if (item.removed) {
-      return <DisintegratingRow key={item.id} title={item.title} />;
-    }
+  function zeile(item: AgendaItem) {
     const showTime = !!item.time;
-    // Geänderter/neuer/verschobener Punkt (#161) leuchtet beim Öffnen kurz auf.
-    const chg = item.changed ? ` ${styles.changed}` : '';
+    // Neu/geändert/verschoben seit dem letzten Ansehen (#161): ein festes Schildchen, keine Bewegung.
+    const schild = item.neu ? 'neu' : item.changed ? 'geändert' : null;
+    const tag = schild && <span className={styles.aenderungsTag}>{schild}</span>;
     const vl = item.vorBeginn ? ` ${styles.vorlauf}` : '';
     if (item.isHeader) {
       return (
-        <div key={item.id} className={`${styles.sectionBand}${chg}`}>
+        <div key={item.id} className={styles.sectionBand}>
           {showTime && <span className={styles.bandTime}>{item.time}</span>}
           {item.title}
+          {tag}
         </div>
       );
     }
@@ -114,6 +101,7 @@ export function AgendaFullView({
         <div className={styles.flowHead}>
           <ItemTitle item={item} />
           {item.song && <span className={styles.flowSongTag}>🎵</span>}
+          {tag}
           {item.durationMin && <span className={styles.flowDur}>{item.durationMin} Min</span>}
         </div>
         {item.note && <div className={styles.flowNote}>{item.note}</div>}
@@ -126,7 +114,7 @@ export function AgendaFullView({
       return (
         <button
           key={item.id}
-          className={`${styles.flowRowBtn} ${styles.songRow}${vl}${chg}`}
+          className={`${styles.flowRowBtn} ${styles.songRow}${vl}`}
           data-tour={idx === 0 ? 'setlist-song' : undefined}
           onClick={() => onSelect(idx)}
         >
@@ -136,7 +124,7 @@ export function AgendaFullView({
       );
     }
     return (
-      <div key={item.id} className={`${styles.flowRow}${vl}${chg}`}>
+      <div key={item.id} className={`${styles.flowRow}${vl}`}>
         {timeCol}
         {body}
       </div>

@@ -9,6 +9,7 @@ import {
 } from '@shared/types/index';
 import { sucheArt } from '../utils/liedFormular';
 import { heuteIso } from '../utils/heute';
+import type { GeloeschterPunkt } from '@shared/ct/schreibKern';
 import * as api from '../services/churchtoolsApi';
 import { ApiError } from '../services/api';
 
@@ -156,9 +157,23 @@ export function useReorderAgenda(eventId: number | null) {
 
 /** Löscht einen Ablaufpunkt und lädt Ablauf + Übersicht (Song-Anzahl) neu. */
 export function useDeleteAgendaItem(eventId: number | null) {
+  return useAgendaItemMutation(eventId, (itemId: number) =>
+    api.deleteAgendaItem(eventId as number, itemId),
+  );
+}
+
+/** „Rückgängig" nach dem Löschen – lädt danach dasselbe neu wie das Löschen selbst. */
+export function useRestoreAgendaItem(eventId: number | null) {
+  return useAgendaItemMutation(eventId, (g: GeloeschterPunkt) =>
+    api.restoreAgendaItem(eventId as number, g),
+  );
+}
+
+/** Löschen und Wiederherstellen ändern die Lieder des Termins: Ablauf, Übersicht und Statistik neu. */
+function useAgendaItemMutation<V, R>(eventId: number | null, mutationFn: (v: V) => Promise<R>) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (itemId: number) => api.deleteAgendaItem(eventId as number, itemId),
+    mutationFn,
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['agenda', eventId] });
       void qc.invalidateQueries({ queryKey: ['services'] });

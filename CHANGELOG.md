@@ -7,6 +7,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+## [2.33.0] – 2026-10-12
+
 **Beim Update bitte beachten (Server-App):** Anmerkungen, Lied-Einstellungen, „gesehen" und das Teilen
 liegen jetzt in **ChurchTools** – als Anhänge an der eigenen Person, dieselben wie in der Erweiterung.
 Dafür braucht jedes Konto das ChurchTools-Recht **„Eigene Personendaten bearbeiten"** (bei der ECG über den

@@ -681,6 +681,12 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **v2.34.1 (12.10.2026) = Schildchen verschwinden mit dem Hinweis** (PR #484, dazu die Anmelde-Startseite
+  #481 aus dem anderen Teil des Repos). Alwin: „nur ein kurzer Hinweis und fertig" – `useKurzerHinweis`
+  steuert Hinweis und Schildchen gemeinsam (6 s), die `AenderungsMeldung` beschreibt nur den jeweiligen
+  Schub. Nach dem Gesehen-Merken nimmt `useMarkSetlistSeen` die Markierungen auch aus dem gespeicherten
+  Ablauf (`ohneMarkierungen`), gemerkt wird erst nach `AgendaFullView.onSichtbar` (die Ablaufseite wird
+  nachgeladen). v2.34.0 wurde nie eingespielt.
 - **v2.34.0 (12.10.2026) = Ablauf-Änderungen ohne Animation + Rückgängig** (PRs #477, #482). Das
   Zerfallen gelöschter Punkte fotografierte per `html2canvas` die ganze Seite ab und ließ die Erweiterung
   hängen; jetzt ein dunkler Hinweis unten (`AblaufHinweis`, 6 s) und Schildchen „neu"/„geändert"

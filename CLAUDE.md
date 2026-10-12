@@ -19,7 +19,7 @@
 - **Status:** Fertig & produktiv – auf dem Synology-NAS deployt, intern im WLAN **und**
   extern unter `https://musik.ecg-donrath.de` live.
 
-  **Stand 07.10.2026: Produktiv läuft `v2.28.0`** – am 07.10.2026 am Bundle **gemessen**, nicht aus der
+  **Stand 12.10.2026: Produktiv läuft `v2.32.0`** – am 12.10.2026 am Bundle **gemessen**, nicht aus der
   Doku übernommen. So misst man die laufende
   Version: Der Versionsstring steckt im ausgelieferten Bundle
   (`curl -s https://musik.ecg-donrath.de/ | grep -oE 'assets/index-[^"]+\.js'`, dann diese Datei holen
@@ -670,6 +670,14 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **v2.33.0 (12.10.2026) = Ablage in ChurchTools + Ablauf abschließen + Code-Check #455–#466**
+  (PRs #467, #470, #471, #472). Anmerkungen, Lied-Einstellungen, „gesehen" und Teilen der Server-App
+  liegen jetzt als Personen-Anhänge in ChurchTools (`shared/ct/personenAblage.ts`, dieselbe Ablage wie
+  die Erweiterung); Altbestand zieht je Konto beim ersten Zugriff um (`ablageUmzug.ts`, ChurchTools
+  gewinnt, NAS-Daten 90 Tage nach geprüftem Umzug gelöscht, Staging zieht nicht um). Abgeschlossene
+  Abläufe melden das statt „Keine Berechtigung" und lassen sich in der App öffnen/abschließen
+  (`POST …/agenda/lock|unlock`). Design/Icons/Grundbausteine liegen in `ui/` (#469). Offen: #459
+  (NAS-Messung), danach ungenutzte NAS-Schreibfunktionen entfernen.
 - **v2.32.0 (09.10.2026) = Lied-Statistik aus ChurchTools + Vollbild-Knopf + getrennte Umschalter**
   (PRs #452, #453). Vollbild (nur Erweiterung): ein Knopf auf jeder Seite ganz rechts oben legt `#root`
   per `data-vollbild` über die ChurchTools-Leiste (`useAppVollbild`, z-index 2500 < Coachmarks 3000) –

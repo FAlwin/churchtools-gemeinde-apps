@@ -22,6 +22,14 @@
   font-weight: 600;
 }
 
+.kopfzeile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .gruss {
   display: flex;
   align-items: baseline;

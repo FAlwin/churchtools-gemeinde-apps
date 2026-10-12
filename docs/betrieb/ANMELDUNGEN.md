@@ -1,8 +1,9 @@
 # Anmeldungen – ChurchTools-Erweiterung
 
-> **Stand: Startseite (A2).** Die Erweiterung zeigt die Veranstaltungen der eigenen Gruppen mit Stand
-> und Belegung und was Aufmerksamkeit braucht – **nur lesen**. Anlegen und Bearbeiten (A3), Formular und
-> Teilnehmerlisten folgen Schritt für Schritt (Bauplan A3–A10). Diese Anleitung wächst mit.
+> **Stand: Anlegen und Einrichten (A3).** Die Erweiterung zeigt die Veranstaltungen der eigenen Gruppen;
+> Leitung und Organisatoren legen neue an (Vorlage oder „wie eine frühere“), wählen oder legen den Termin im
+> Kalender an, stellen Zeitraum, Plätze und Warteliste ein und geben frei. Preise (A4), Formular und
+> Gestaltung (A5), das öffentliche Formular (A6) und die Anmeldungsliste (A7) folgen. Diese Anleitung wächst mit.
 
 Die Anmeldungen ersetzen Jotform & Co.: Veranstalter legen Anmeldungen zu Veranstaltungen selbst an und
 verwalten sie in ChurchTools. Teilnehmende melden sich über ein öffentliches Formular an und können
@@ -32,36 +33,74 @@ Sie besteht aus zwei Teilen:
 
 **Aktualisieren:** beim Eintrag auf den Stift und die neue ZIP hochladen, sonst nichts ändern.
 
-## Rechte
+## In ChurchTools einrichten
 
 Die Erweiterung kann nichts, was die Person in ChurchTools nicht auch selbst dürfte – sie arbeitet mit
-deren Sitzung.
+deren Sitzung. **Jede Veranstaltung ist eine Untergruppe der Gruppe, die sie anbietet** (z. B.
+„Gemeindeessen“ unter dem Team, das es organisiert), von der eigenen Gruppenart **„Anmeldung“**. Damit
+regelt ChurchTools selbst, wer was darf:
 
-**Jede Veranstaltung ist eine Untergruppe der Gruppe, die sie anbietet** (z. B. „Gemeindeessen“ unter
-dem Team, das es organisiert). Damit regelt ChurchTools selbst, wer was darf:
+| Wer im Team                    | Anmeldung anlegen        | Einrichten und freigeben | Termin im Kalender anlegen        | Anmeldungen bearbeiten                                           |
+| ------------------------------ | ------------------------ | ------------------------ | --------------------------------- | ---------------------------------------------------------------- |
+| Leiter, Co-Leiter, Organisator | ✅ (nur Art „Anmeldung“) | ✅                       | ✅ in den freigegebenen Kalendern | ✅                                                               |
+| Mitarbeiter                    | –                        | –                        | –                                 | ✅ „bezahlt“, Warteliste, nachrücken, absagen, von Hand anmelden |
 
-| Wer                                            | Darf                                                                                                                          | Woher                                                                                                                         |
-| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Leitung der Gruppe (Leiter, Co-Leiter)         | alles: Anmeldungen, Felder, Einstellungen, freigeben                                                                          | bei Gruppentypen mit „Berechtigung für die Untergruppen“ für die Leitung schon so (bei der ECG: Gruppentyp „Dienst“, 1 Ebene) |
-| alle anderen in der Gruppe (z. B. Mitarbeiter) | Anmeldungen sehen und bearbeiten: „bezahlt“, Warteliste, nachrücken, absagen, von Hand anmelden – **nicht** die Einstellungen | **muss eingestellt werden**, siehe unten                                                                                      |
+So an der Test-Instanz eingestellt und gemessen (12.10.2026). Admins dürfen ohnehin alles.
 
-**Einstellen (einmal je Gruppe, die Veranstaltungen anbietet):** Rechteverwaltung → Reiter **„Gruppe“** →
-Gruppe wählen → ganz unten **„Berechtigung für die Untergruppen“** → _Wie viele Ebenen…_: **Eine Ebene
-von Untergruppen** → bei **„Personen und Gruppen“** für die Rolle **Mitarbeiter**:
+### 1. Gruppenart „Anmeldung“ anlegen (einmal je Gemeinde)
 
-- Gruppeninfos sehen, Gruppenmitglieder sehen, Gruppenmitgliedsfelder sehen, Gruppenmitgliedsfelder
-  bearbeiten – jeweils **Stufe 3 (Hoch)** (wie die Leitung, damit das Team auch z. B. Allergien sieht)
-- Gruppenmitgliedschaften bearbeiten, Gruppenmitglieder hinzufügen, Gruppenmitglieder entfernen ✅
-- alles andere **leer** (vor allem nicht: Gruppeninfos/Grundeinstellungen bearbeiten, Gruppenmitgliedsfelder
-  verwalten, Routinen verwalten)
+**Gruppen → Einstellungen → Gruppentypen → Gruppentyp hinzufügen:** Einzahl **Anmeldung**, Mehrzahl
+**Anmeldungen**, Kürzel **AN**, Farbe frei, Beschreibung z. B. „Liste der Anmeldungen zu einer
+Veranstaltung. Liegt unter dem Team, das sie anbietet.“ – _Leitung muss vorhanden sein_, _In „Neue Person
+erstellen“ aufnehmen_ und _Beiträge aktivieren_ **aus**. Rollen: **Teilnehmer** (Standardrolle) und
+**Leiter** (legt ChurchTools selbst an). Die Erweiterung findet die Art über den Namen „Anmeldung“.
 
-So an der Test-Instanz eingestellt und gemessen (12.10.2026): Mitarbeiter sehen und bearbeiten die
-Anmeldungen, Name, Status und Felder der Veranstaltung ändern dürfen sie nicht. Fehlt die Einstellung,
-zeigt die Startseite bei der Gruppe „Untergruppen für dich nicht freigegeben“ statt die Veranstaltungen
-stillschweigend wegzulassen.
+Veranstaltungen **ohne** Anmeldung brauchen diese Art nicht – sie bleiben Termine (oder Gruppen anderer Art).
 
-**Den Menüpunkt sehen:** Erweiterung **„Anmeldungen“ sehen** – für alle, die mitarbeiten (z. B. über den
-Status oder global über die Gruppen).
+### 2. Anlegen erlauben (je Gruppe, die Veranstaltungen anbietet)
+
+Rechteverwaltung → Reiter **„Gruppe“** → Gruppe wählen → **Gruppeninterne Berechtigungen** →
+„Personen und Gruppen“ → Zeile **„Untergruppen erstellen und kopieren“**: bei **Leiter, Co-Leiter und
+Organisator** nur **„Anmeldung“** auswählen (nicht „Alle“). Mitarbeiter bleiben bei „Keine“.
+
+### 3. Rechte in den Veranstaltungen (je Gruppe)
+
+Dieselbe Seite, ganz unten **„Berechtigung für die Untergruppen“** → _Wie viele Ebenen…_: **Eine Ebene
+von Untergruppen** → bei „Personen und Gruppen“:
+
+- **Mitarbeiter:** Gruppeninfos sehen, Gruppenmitglieder sehen, Gruppenmitgliedsfelder sehen,
+  Gruppenmitgliedsfelder bearbeiten – jeweils **Stufe 3 (Hoch)** (damit das Team auch z. B. Allergien sieht);
+  Gruppenmitgliedschaften bearbeiten, Gruppenmitglieder hinzufügen, Gruppenmitglieder entfernen ✅; alles
+  andere **leer**.
+- **Organisator** (wie die Leitung): dieselben vier mit Stufe 3, dazu ✅ Gruppeninfos bearbeiten,
+  Grundeinstellungen bearbeiten, Gruppenmitgliedsfelder verwalten, Gruppenmitgliedschaften bearbeiten,
+  hinzufügen, entfernen, Routinen verwalten.
+- Die **Leitung** hat das bei der ECG schon über den Gruppentyp „Dienst“ (orange markiert).
+
+„Grundeinstellungen bearbeiten“ ist in ChurchTools **ein** Schalter für Plätze, Anmeldezeitraum **und**
+Status – wer eine Veranstaltung einrichten darf, darf sie also auch freigeben.
+
+Fehlt Schritt 3, zeigt die Startseite bei der Gruppe „Untergruppen für dich nicht freigegeben“ statt die
+Veranstaltungen stillschweigend wegzulassen.
+
+### 4. Kalender (je Gruppe)
+
+Der Termin kommt immer aus dem Kalender; fehlt er, legt die Erweiterung ihn an – mit dem Link zur
+Anmeldung. Dafür: Dieselbe Seite, Kasten **„Globale Berechtigungen durch Gruppenzugehörigkeit“** → in den
+Spalten **Leiter, Co-Leiter, Organisator** je auf **„Bearbeiten“** → **Kalender** → **„In einzelnen Kalendern
+Termine erstellen, bearbeiten etc. (edit category)“** → die Kalender anhaken, in die dieses Team
+Termine stellen darf (nicht „-- Alle --“). Danach steht unter der Spalte „Kalender: edit category (…)“.
+
+Die Erweiterung bietet beim Anlegen genau diese Kalender an. Fehlt das Recht, meldet ChurchTools übrigens
+401 statt 403 – die Erweiterung sagt dann, dass ChurchTools es nicht erlaubt, und an wen man sich wendet.
+
+In **vorhandene** Termine trägt die Erweiterung nichts ein (ChurchTools ersetzt einen Termin beim Ändern
+ganz – Räume, Dienste oder Bild gingen verloren); dort steht „Link zur Anmeldung kopieren“.
+
+### 5. Den Menüpunkt sehen
+
+Erweiterung **„Anmeldungen“ sehen** (`view`, Bereich „anmeldungen“ in den Berechtigungen) – für alle, die
+mitarbeiten (z. B. über den Status oder global über die Gruppen).
 
 ## Für Entwickler
 

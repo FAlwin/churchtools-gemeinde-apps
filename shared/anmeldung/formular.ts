@@ -293,7 +293,14 @@ export const SYSTEMFELDER = [
 
 /** Höchstlänge der Gruppen-Beschreibung (gemessen A0: 5.000 geht, 20.000 → 400). */
 export const BESCHREIBUNG_MAX = 5000;
-/** Erkennungszeichen am Anfang der Beschreibung, damit eine normale Beschreibung nie als Einstellung gilt. */
+/**
+ * Erkennungszeichen am Anfang der Beschreibung, damit eine normale Beschreibung nie als Einstellung gilt.
+ *
+ * **Neue Angaben im Format brauchen einen Standardwert (`.default(…)`)** – sonst werden alle Einstellungen,
+ * die vorher geschrieben wurden, unlesbar und die Veranstaltungen fallen aus der Liste (an der Test-Instanz
+ * am 12.10.2026 mit `loeschfristMonate` passiert). Erst eine Änderung, die alte Werte anders DEUTET,
+ * braucht `anmeldung:v2:` und eine Umwandlung.
+ */
 export const EINSTELLUNGEN_KENNUNG = 'anmeldung:v1:';
 
 export interface Gestaltung {
@@ -333,6 +340,8 @@ export interface OeffentlicheEinstellungen {
   wer: 'familie' | 'einzeln' | 'kinder';
   /** Freie Plätze im Formular zeigen. */
   plaetze: { zeigen: 'immer' | 'knapp' | 'nie'; knappUnter: number };
+  /** Monate nach dem Ende, nach denen die Anmeldungen gelöscht werden (A3; die Routine dazu baut A9). */
+  loeschfristMonate: number;
 }
 
 const geltung = z.enum(['person', 'anmeldung']);
@@ -416,7 +425,9 @@ const einstellungenSchema = z.object({
       ort: z.string().max(200),
       terminId: z.number().int().positive().nullable(),
     })
-    .nullable(),
+    .nullable()
+    // Seit A2 (#480); fehlt es in älteren Einstellungen, gibt es eben noch kein Datum.
+    .default(null),
   preis: preisSchema,
   formular: z.object({
     anmeldung: z.array(feldSchema).max(30),
@@ -437,6 +448,8 @@ const einstellungenSchema = z.object({
     zeigen: z.enum(['immer', 'knapp', 'nie']),
     knappUnter: z.number().int().min(1),
   }),
+  // Seit A3 (#486). Mit Standardwert: Einstellungen, die vor dem Feld geschrieben wurden, bleiben lesbar.
+  loeschfristMonate: z.number().int().min(1).max(36).default(3),
 });
 
 /**

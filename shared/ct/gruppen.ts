@@ -15,7 +15,11 @@ export interface Mitgliedschaft {
 
 /** Was `GET /api/persons/{id}/groups` je Eintrag liefert (der Rest interessiert nicht). */
 export interface RohMitgliedschaft {
-  group?: { domainIdentifier?: string | number; title?: string };
+  group?: {
+    domainIdentifier?: string | number;
+    title?: string;
+    domainAttributes?: { note?: string | null };
+  };
   groupTypeRoleId?: number;
   groupMemberStatus?: string;
   memberEndDate?: string | null;

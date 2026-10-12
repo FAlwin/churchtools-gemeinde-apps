@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
 import { ChurchToolsBremst } from '@ui/ct/verbindung';
@@ -7,11 +7,17 @@ import { App } from './App';
 import { fehlerZustand } from './zustand';
 import { ladeStart } from './start';
 import { ladeUebersicht, type Uebersicht } from './veranstaltungen';
+import { anlegenMoeglich } from './einrichten';
 
 vi.mock('./start', () => ({ ladeStart: vi.fn() }));
 vi.mock('./veranstaltungen', () => ({ ladeUebersicht: vi.fn() }));
+vi.mock('./einrichten', async (original) => ({
+  ...(await original<typeof import('./einrichten')>()),
+  anlegenMoeglich: vi.fn(),
+}));
 const laden = vi.mocked(ladeStart);
 const ladenUebersicht = vi.mocked(ladeUebersicht);
+const anlegen = vi.mocked(anlegenMoeglich);
 
 const LEER: Uebersicht = {
   einteilung: { anstehend: [], entwuerfe: [], vorbei: [] },
@@ -21,6 +27,8 @@ const LEER: Uebersicht = {
 };
 
 describe('App der Anmeldungen (#474, #480)', () => {
+  beforeEach(() => anlegen.mockResolvedValue({ artId: 5, teamIds: [] }));
+
   it('zeigt Gruß, Gemeinde und die Gruppen mit Leitung/Mitglied', async () => {
     laden.mockResolvedValue({
       vorname: 'Alwin',
@@ -81,5 +89,34 @@ describe('fehlerZustand – die Zweige einzeln', () => {
     expect(fehlerZustand(new ApiError(403, 'Keine ausreichende Berechtigung.'))).toMatchObject({
       text: 'Keine ausreichende Berechtigung.',
     });
+  });
+});
+
+describe('Anlegen auf der Startseite (A3, #486)', () => {
+  const START = {
+    vorname: 'Alwin',
+    gemeinde: null,
+    gruppen: [
+      { id: 9, name: 'Lobpreisteam', leitung: true },
+      { id: 7, name: 'Technik', leitung: false },
+    ],
+  };
+  it('„Neue Veranstaltung“ nur, wenn man in einem Team anlegen darf – und nur mit diesen Teams', async () => {
+    laden.mockResolvedValue(START);
+    ladenUebersicht.mockResolvedValue(LEER);
+    anlegen.mockResolvedValue({ artId: 5, teamIds: [7] });
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: /Neue Veranstaltung/ }));
+    const auswahl = await screen.findByRole('combobox', { name: 'Gehört zur Gruppe' });
+    expect([...auswahl.querySelectorAll('option')].map((o) => o.textContent)).toEqual(['Technik']);
+    expect(anlegen).toHaveBeenCalledWith([9, 7]);
+  });
+  it('ohne Anlege-Recht kein Knopf; fehlt die Gruppenart, sagt die Seite es', async () => {
+    laden.mockResolvedValue(START);
+    ladenUebersicht.mockResolvedValue(LEER);
+    anlegen.mockResolvedValue({ artId: null, teamIds: [] });
+    render(<App />);
+    expect(await screen.findByText(/fehlt die Gruppenart „Anmeldung“/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Neue Veranstaltung/ })).toBeNull();
   });
 });

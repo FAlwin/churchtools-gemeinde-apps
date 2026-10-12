@@ -21,6 +21,8 @@ interface Props {
   uebersicht: Uebersicht;
   heute: string;
   zeitzone: string;
+  /** Eine Veranstaltung zum Einrichten öffnen (A3). */
+  onOeffnen: (id: number) => void;
 }
 
 function gruppenUrl(id: number): string {
@@ -62,7 +64,15 @@ function ZurGruppe({
   );
 }
 
-function HinweisZeile({ h, gruppenName }: { h: Hinweis; gruppenName: (id: number) => string }) {
+function HinweisZeile({
+  h,
+  gruppenName,
+  onOeffnen,
+}: {
+  h: Hinweis;
+  gruppenName: (id: number) => string;
+  onOeffnen: (id: number) => void;
+}) {
   if (h.art === 'kaputt') {
     return (
       <div className={styles.zeile}>
@@ -103,7 +113,14 @@ function HinweisZeile({ h, gruppenName }: { h: Hinweis; gruppenName: (id: number
         <b>{text.titel}</b>
         <small>{text.zeile}</small>
       </div>
-      <ZurGruppe id={v.id} name={v.name} />
+      {h.art === 'freigabe' ? (
+        <button type="button" className={styles.oeffnen} onClick={() => onOeffnen(v.id)}>
+          Ansehen
+        </button>
+      ) : (
+        // Nachrücken und Zahlungen gehen bis zur Anmeldungsliste (A7) in ChurchTools.
+        <ZurGruppe id={v.id} name={v.name} />
+      )}
     </div>
   );
 }
@@ -136,11 +153,13 @@ function VeranstaltungZeile({
   gruppenName,
   heute,
   zeitzone,
+  onOeffnen,
 }: {
   v: Veranstaltung;
   gruppenName: (id: number) => string;
   heute: string;
   zeitzone: string;
+  onOeffnen: (id: number) => void;
 }) {
   const teile = [v.tag ? datumText(v.tag) : 'Datum folgt', gruppenName(v.gruppeId), v.preis];
   const schluss = schlussText(v, heute, zeitzone);
@@ -149,7 +168,9 @@ function VeranstaltungZeile({
     <div className={styles.zeile}>
       <Kachel tag={v.tag} grau={v.phase === 'vorbei'} />
       <div className={styles.mitte}>
-        <b>{v.name}</b>
+        <button type="button" className={styles.titelKnopf} onClick={() => onOeffnen(v.id)}>
+          {v.name}
+        </button>
         <small>{teile.join(' · ')}</small>
         <span className={styles.chips}>
           {v.phase === 'entwurf' && <span className={styles.chip}>Entwurf</span>}
@@ -166,12 +187,12 @@ function VeranstaltungZeile({
         </span>
       </div>
       <Belegung v={v} />
-      <ZurGruppe id={v.id} name={v.name} text="Öffnen" />
+      <ZurGruppe id={v.id} name={v.name} />
     </div>
   );
 }
 
-export function Startseite({ start, uebersicht, heute, zeitzone }: Props) {
+export function Startseite({ start, uebersicht, heute, zeitzone, onOeffnen }: Props) {
   const [reiter, setReiter] = useState<Reiter>('anstehend');
   const [auswahl, setAuswahl] = useState<Set<number>>(
     () => new Set(start.gruppen.map((g) => g.id)),
@@ -221,6 +242,7 @@ export function Startseite({ start, uebersicht, heute, zeitzone }: Props) {
                   key={`${h.art}-${h.art === 'kaputt' ? h.id : h.v.id}`}
                   h={h}
                   gruppenName={gruppenName}
+                  onOeffnen={onOeffnen}
                 />
               ))}
             </div>
@@ -289,6 +311,7 @@ export function Startseite({ start, uebersicht, heute, zeitzone }: Props) {
                       gruppenName={gruppenName}
                       heute={heute}
                       zeitzone={zeitzone}
+                      onOeffnen={onOeffnen}
                     />
                   ))}
                 </div>

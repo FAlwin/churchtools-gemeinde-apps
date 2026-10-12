@@ -10,6 +10,7 @@ import { ApiError } from '@ui/ct/fehler';
 import { whoamiId } from '@shared/ct/whoami';
 import { meineGruppen, type MeineGruppe, type RohMitgliedschaft } from '@shared/ct/gruppen';
 import { gemeindeNameAus } from '@shared/ct/info';
+import { istVeranstaltung } from '@shared/anmeldung/uebersicht';
 
 export interface Start {
   vorname: string;
@@ -34,5 +35,10 @@ export async function ladeStart(): Promise<Start> {
     ctAnfrage<unknown>('/info').then(gemeindeNameAus, () => null),
   ]);
   const vorname = typeof ich?.firstName === 'string' ? ich.firstName.trim() : '';
-  return { vorname, gemeinde, gruppen: meineGruppen(mitgliedschaften, rollen) };
+  // Veranstaltungen, in denen man selbst Mitglied ist (Leitung, angemeldet mit Konto), sind keine Teams
+  // (gemessen A3: /persons/{id}/groups liefert sie mit, samt Beschreibung).
+  const teams = (mitgliedschaften ?? []).filter(
+    (m) => !istVeranstaltung({ beschreibung: m.group?.domainAttributes?.note ?? '' }),
+  );
+  return { vorname, gemeinde, gruppen: meineGruppen(teams, rollen) };
 }

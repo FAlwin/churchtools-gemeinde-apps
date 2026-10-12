@@ -224,6 +224,7 @@ describe('Einstellungen in der Gruppen-Beschreibung', () => {
       ctFelder: { tel: 12, betrag: 33 },
       wer: 'familie',
       plaetze: { zeigen: 'knapp', knappUnter: 10 },
+      loeschfristMonate: 6,
     };
   }
 
@@ -257,6 +258,13 @@ describe('Einstellungen in der Gruppen-Beschreibung', () => {
     };
     expect(() => einstellungenAlsText(falsch)).toThrow();
     expect(einstellungenLesen(EINSTELLUNGEN_KENNUNG + JSON.stringify(falsch))).toBeNull();
+  });
+
+  it('ältere Einstellungen ohne später hinzugekommene Angaben bleiben lesbar (mit Standardwert)', () => {
+    const { termin: _t, loeschfristMonate: _l, ...alt } = einstellungen();
+    const gelesen = einstellungenLesen(EINSTELLUNGEN_KENNUNG + JSON.stringify(alt));
+    expect(gelesen?.termin).toBeNull();
+    expect(gelesen?.loeschfristMonate).toBe(3);
   });
 
   it('kaputtes oder manipuliertes JSON wird abgelehnt, ohne zu werfen', () => {

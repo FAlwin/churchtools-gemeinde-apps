@@ -48,15 +48,17 @@ wechselt zum nächsten Lied.
 **Das brauchst du:** Ein iPad. Ein mehrseitiges Lied und ein Lied, bei dem in ChurchTools ein PDF
 hochgeladen ist.
 
-**Das muss passieren:** Im Querformat liegen immer **zwei** Seiten nebeneinander – auch beim PDF. Es
-darf nie eine Seite allein rechts stehen. Im Hochformat wieder eine. Nach dem Drehen darf keine
-Seite vergrößert hängen bleiben.
+**Das muss passieren:** Im Querformat liegen immer **zwei** Seiten nebeneinander – auch beim PDF.
+Geblättert wird um eine Seite. Am Ende steht die letzte Seite **rechts** neben ihrer Vorgängerin –
+nie allein links mit leerer rechter Hälfte. Hat das Ganze nur eine einzige Seite, steht sie mittig.
+Im Hochformat wieder eine Seite. Nach dem Drehen darf keine Seite vergrößert hängen bleiben.
 
 1. Ein mehrseitiges Lied öffnen.
 2. Das iPad ins **Querformat** drehen.
 3. Einmal weiterblättern.
-4. Zum Lied mit dem PDF wechseln.
-5. Zurück ins **Hochformat** drehen.
+4. Bis **ganz ans Ende** blättern: Das letzte Bild ist ein volles Paar, die letzte Seite steht rechts.
+5. Zum Lied mit dem PDF wechseln.
+6. Zurück ins **Hochformat** drehen.
 
 <details><summary>Technisches</summary>
 

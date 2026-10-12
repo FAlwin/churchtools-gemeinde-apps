@@ -7,6 +7,24 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Behoben
+
+- **Einstellungen aus der `.env` kamen nicht im Container an** (beim Doku-Abgleich gefunden, 12.10.2026):
+  Die Compose-Vorlagen reichten `ERWEITERUNG_KUERZEL` und `ABLAGE_UMZUG` gar nicht durch, die
+  Basis-Vorlage `deploy/docker-compose.yml` auch `COOKIE_SECURE` nicht – obwohl `.env.example` und die
+  Doku genau das empfahlen. Wer dort `COOKIE_SECURE=true` gesetzt hatte, bekam trotzdem ein Cookie
+  ohne „Secure" (das Log warnte). Alle drei Vorlagen reichen die Variablen jetzt mit denselben
+  Standardwerten durch, die der Server annimmt. **Wer eine ältere Kopie der Compose-Datei nutzt**, ergänzt
+  die Zeilen unter `environment:` (UPDATE.md).
+
+### Doku
+
+- Betriebs-Doku an den Stand angeglichen: DEPLOYMENT.md beschreibt die Prod-Vorlage (fertiges Image, nur
+  hinter einem Reverse Proxy) statt eines Baus aus dem Quellcode; „Nicht angemeldet" liegt an
+  `COOKIE_SECURE=true` bei HTTP, nicht an HTTP an sich; Anmerkungen liegen in ChurchTools, nicht auf dem
+  Volume; Testkonzept, README (Ablauf bearbeiten, Funktionen der Erweiterung), CLAUDE.md und
+  Konfigurationsmanagement nachgezogen.
+
 ## [2.34.1] – 2026-10-12
 
 ### Geändert

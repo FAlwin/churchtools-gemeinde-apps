@@ -2,12 +2,10 @@
 
 Schwerpunkt auf **reiner Logik und serverseitigem Verhalten, das man von Hand kaum
 vollständig durchprüfen kann**. Die App hat keine eigene DB; UI-Feinheiten werden
-zusätzlich manuell (bzw. auf Staging) geprüft. Stand 03.09.2026 (nach #378, #379 und #381): **137 Testdateien** –
-**92 Client (1003 Tests)** + **43 Server (519 Tests)** mit Vitest + **11 Playwright-E2E in 6 Dateien**
-(Render-Smoke, voller Auth-Flow, Vollbild-Geometrie, Tempo-Menü-Geometrie,
-Arrangement-Migration,
-Arrangement-Wechsel). Die Zahlen sind mit
-`npm run test` und `npx playwright test --list` ausgezählt, nicht fortgeschrieben.
+zusätzlich manuell (bzw. auf Staging) geprüft. Stand 12.10.2026 (v2.34.1): **237 Vitest-Dateien** –
+**167 im Client-Lauf (1745 Tests, inkl. `ui/` und `shared/anmeldung`)** + **70 Server (832 Tests)** +
+**18 Playwright-E2E in 12 Dateien**. Die Zahlen sind mit `npm run test` und `npm run test:e2e`
+ausgezählt, nicht fortgeschrieben.
 
 ## Umfang
 
@@ -22,6 +20,12 @@ Arrangement-Wechsel). Die Zahlen sind mit
 | E2E Tempo-Menü-Geometrie (#145)              | aktiv (CI-Job `e2e`) | Playwright                   | `e2e/chart-tempo.spec.ts`                     |
 | E2E Arrangement-Migration (#320)             | aktiv (CI-Job `e2e`) | Playwright                   | `e2e/chart-arrangement-notizen.spec.ts`       |
 | E2E Arrangement-Wechsel (#320)               | aktiv (CI-Job `e2e`) | Playwright + CT-Stub         | `e2e/chart-arrangement-wechsel.spec.ts`       |
+| E2E Querformat (zwei Seiten nebeneinander)   | aktiv (CI-Job `e2e`) | Playwright                   | `e2e/chart-querformat.spec.ts`                |
+| E2E Ablauf: Punkt hinzufügen/löschen         | aktiv (CI-Job `e2e`) | Playwright + CT-Stub         | `e2e/ablauf-hinzufuegen.spec.ts`              |
+| E2E Ablauf: Vorlauf vor dem Beginn (#423)    | aktiv (CI-Job `e2e`) | Playwright + CT-Stub         | `e2e/ablauf-vorlauf.spec.ts`                  |
+| E2E Ablauf abschließen/öffnen                | aktiv (CI-Job `e2e`) | Playwright + CT-Stub         | `e2e/ablauf-abschliessen.spec.ts`             |
+| E2E Rückgängig nach Löschen/Verschieben      | aktiv (CI-Job `e2e`) | Playwright + CT-Stub         | `e2e/ablauf-rueckgaengig.spec.ts`             |
+| E2E Lied-Statistik aus ChurchTools           | aktiv (CI-Job `e2e`) | Playwright + CT-Stub         | `e2e/lied-statistik.spec.ts`                  |
 
 **Befehle:** `npm test` (alle Vitest), `npm run test:cov` (mit Coverage),
 `npm run test:watch` (Watch-Modus, im Client), `npm run test:e2e` (Playwright).
@@ -70,7 +74,7 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
   Aufrufe = ein Lauf, Freigabe auch nach einem Fehler, Sperrfrist mit `Retry-After`
 - `services/churchtools.ratelimit` – 429 ist eine **Drosselung, kein Serverfehler** (#300), inzwischen an
   allen **drei** Stellen: `ctGet`, Datei-Download und Schreibpfad (`schreibe`)
-- `services/seenSetlists` – „gesehen"-Basislinien-Store (atomar, Cleanup)
+- `services/seenSetlists` – Altbestand der „gesehen"-Basislinien (nur noch für den Umzug nach ChurchTools)
 - `services/capabilitiesCache` + `churchtools(.capabilities)` – Rechte-Cache, CT-Aussetzer überbrücken
 - `services/annotations` – Anmerkungen pro Konto inkl. Obergrenzen (#139)
 - `controllers/dateiController.filetype` – Datei-Proxy Content-Type-Whitelist (#138)

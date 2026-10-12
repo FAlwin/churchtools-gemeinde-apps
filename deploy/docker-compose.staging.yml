@@ -45,6 +45,11 @@ services:
       # nicht und die Anmeldung schlägt fehl. Nur für einen bewussten Test ohne Proxy:
       # COOKIE_SECURE=false in der Test-.env.
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      # Kürzel der ChurchTools-Erweiterung (`/ccm/<kürzel>/`), mit der die App die Team-Notizen-Liste teilt.
+      ERWEITERUNG_KUERZEL: ${ERWEITERUNG_KUERZEL:-musik-app}
+      # Umzug des Volume-Altbestands nach ChurchTools: leer = automatisch (Images `staging-…` ziehen
+      # nicht um), `aus` für eine Test-Installation am echten ChurchTools.
+      ABLAGE_UMZUG: ${ABLAGE_UMZUG:-}
     ports:
       # NUR lokal binden (#196) – wie Prod. Vorher lauschte der Port auf ALLEN Interfaces: Das
       # Session-Cookie (mit der ChurchTools-Anmeldung darin) lief damit unverschlüsselt über HTTP

@@ -19,7 +19,7 @@
 - **Status:** Fertig & produktiv – auf dem Synology-NAS deployt, intern im WLAN **und**
   extern unter `https://musik.ecg-donrath.de` live.
 
-  **Stand 12.10.2026: Produktiv läuft `v2.33.0`** – am 12.10.2026 am Bundle **gemessen**, nicht aus der
+  **Stand 12.10.2026: Produktiv läuft `v2.34.1`** – am 12.10.2026 am Bundle **gemessen**, nicht aus der
   Doku übernommen. So misst man die laufende
   Version: Der Versionsstring steckt im ausgelieferten Bundle
   (`curl -s https://musik.ecg-donrath.de/ | grep -oE 'assets/index-[^"]+\.js'`, dann diese Datei holen
@@ -159,7 +159,7 @@
 | Validierung     | Zod (serverseitig)                                                                                                                                                                   |
 | Deployment      | Docker auf Synology NAS (Container Manager)                                                                                                                                          |
 | Externer Zugang | Synology Reverse Proxy + DDNS + Let's Encrypt (KEIN Cloudflare)                                                                                                                      |
-| Tests           | Vitest (Client-Logik/Hooks/Komponenten + Server, CT gemockt); Playwright-Render-Smoke (E2E)                                                                                          |
+| Tests           | Vitest (Client-Logik/Hooks/Komponenten + Server, CT gemockt); Playwright gegen einen ChurchTools-Stub (E2E)                                                                          |
 | CI              | GitHub Actions: lint + build + test je PR                                                                                                                                            |
 
 ## Ordnerstruktur
@@ -551,10 +551,11 @@ Neue Nutzer bekommen beim ersten Mal eine geführte Einführung mit Hinweisblase
   Interaktionskern (`hooks/usePageDraw` Undo/Redo/Push-Dedup/Key-Wechsel), Basis-Komponenten
   (`Coachmarks`) und alle Server-Services/-Controller/-Middleware (ChurchTools gemockt).
   Coverage schließt `utils/`, `components/`, `hooks/`, `services/` ein.
-- **E2E (Playwright):** ein **Render-Smoke** gegen `?demo=chart` (mountet die Chart-Ansicht ohne
-  Login/Backend → prüft, dass die PDF-Seiten rendern, ohne unbehandelte JS-Fehler). Läuft im
-  CI-Job selbst (Dev-Server hochgefahren), nicht gegen die LAN-Staging-Instanz. Der **volle
-  Auth-Flow** (Login→Agenda→Anmerkung→Sync) braucht einen ChurchTools-Stub → offen als #174.
+- **E2E (Playwright):** zwölf Spec-Dateien in `e2e/` – Render-Smoke gegen `?demo=chart`, der volle
+  Auth-Flow und die Abläufe (Hinzufügen, Vorlauf, Abschließen, Rückgängig, Statistik, Liedblatt) gegen
+  den ChurchTools-Stub `e2e/ct-stub.mjs` (#174). Playwright startet Stub, echten Server und Client selbst;
+  die Tests laufen **parallel gegen EINEN Stub** – wer den Ablauf ändert, braucht einen eigenen
+  Stub-Termin. Läuft im CI-Job `e2e`, nicht gegen die Staging-Instanz.
 - **CI:** `.github/workflows/ci.yml` – Job `build-and-test` (`lint` + `build` + `test`) **und**
   Job `e2e` (Playwright-Smoke, Chromium) bei jedem PR und Push auf `main`. Kein DB-Service nötig.
 - **Regel:** Jeder Bug → Issue (Vorlage „Fehlerbericht"); betrifft er reine Logik,
@@ -618,7 +619,8 @@ Neue Nutzer bekommen beim ersten Mal eine geführte Einführung mit Hinweisblase
   dauerhaft `sharing.json` – Verzeichnis der Team-Notizen –, `abmeldungen.json` – beendete Anmeldungen,
   #460 – und `ablage-umzug.json` – Umzugsstand je Konto),
   `CAPABILITIES_CACHE_PATH=/app/data/capabilities-cache.json` (Rechte-Cache, überbrückt CT-Aussetzer),
-  `SEEN_SETLISTS_PATH=/app/data/seen-setlists.json` (Basislinien für den „geändert"-Hinweis #143/#161)
+  `SEEN_SETLISTS_PATH=/app/data/seen-setlists.json` (nur noch Altbestand für den Umzug – „gesehen" liegt
+  seit v2.33.0 in ChurchTools)
   – beim Re-Deploy **Volume behalten**.
 
 ## Release-Routine (JEDES Mal vor einem Tag durchgehen)
@@ -656,8 +658,8 @@ Details unter „Deployment-Stand", #387). Dann das Projekt
 **Projekt › Erstellen**. Nur so wird eine geänderte Compose (z. B. neue Env wie `COOKIE_SECURE`)
 wirklich übernommen; ein reiner **Neustart** übernimmt Env-Änderungen NICHT. Das benannte Volume
 überlebt das Löschen und wird beim Erstellen dank fixem `name:` wieder eingehängt. Der interne Volume-Name ist `<projektname>_<volume-key>`; ein abweichender
-Projektname hängt den Container an ein **neues, leeres** Volume (Gemeindename/Links/Anmerkungen
-wirken „weg", liegen aber unversehrt im alten Volume). Absicherung: Die Compose-Dateien setzen
+Projektname hängt den Container an ein **neues, leeres** Volume (Gemeindename/Links und der noch
+nicht umgezogene Anmerkungs-Altbestand wirken „weg", liegen aber unversehrt im alten Volume). Absicherung: Die Compose-Dateien setzen
 `name:` fest (Prod `worship-charts`, Test `worship-charts-test`) → der Volume-Präfix ist damit
 unabhängig vom Container Manager fixiert (`name` **nie** ändern). Vor größeren Eingriffen ein
 Volume-Backup ziehen: `sudo tar czf ~/backup.tar.gz -C /volume1/@docker/volumes/<vol>/_data .`.
@@ -1147,7 +1149,7 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
   (#176), UI-Monolithen aufgeteilt + Interaktionskern getestet (#140/#141, v2.13.4/.5).
   Live-Aktualisierung (Terminliste + offener Ablauf gleichen sich selbst ab), Ablauf-Änderungs-
   Markierung (#143/#161: geänderte Punkte leuchten auf, entfernte lösen sich im „poof"-Partikel-Effekt
-  auf – seit 12.10.2026 ersetzt durch Leiste „Ablauf aktualisiert" + Schildchen), Lied-Statistik mit Zeitfilter (#158) + volle sortierbare Lied-Auswahl beim Hinzufügen/
+  auf – seit 12.10.2026 ersetzt durch kurzen Hinweis unten + Schildchen, die mit ihm verschwinden), Lied-Statistik mit Zeitfilter (#158) + volle sortierbare Lied-Auswahl beim Hinzufügen/
   Verknüpfen (#157), Bearbeiten-Dialog „alles erst mit Speichern", Code-Check-Härtungen (u.a.
   sha256-Fingerprint, seen-setlists aufs Volume, Datei-Proxy). Davor: Team-Notizen (#124, v2.9.0,
   PCO-Modell), Rechte-Cache (v2.8.1), Code-Splitting (#142). Onboarding-Pflege ist verbindlich →
@@ -1372,7 +1374,7 @@ Vollständige Endpunkt-Referenz: `docs/entwicklung/api-referenz.md`.
 - Versionen werden als separate `"<Titel> — <Name> (App).chordpro"` gespeichert (Original bleibt
   unangetastet); abwärtskompatibel zu Bestandsdateien `"(ECG)"` sowie alt `"— Bearbeitet.chordpro"`/
   `"— ECG.chordpro"` (Name „Bearbeitet"). Marker `(App)` ist bewusst gemeinde-neutral (früher `(ECG)`).
-  Erkennung/Slug in `server/src/services/setlistBuilder.ts` (`versionNameOf`, `versionSlug`).
+  Erkennung/Slug in `shared/ct/arrangementFiles.ts` (`versionNameOf`, `versionSlug`).
 - Rechte regelt ChurchTools (403 → Hinweis im Editor). Verifiziert an Test-Lied „Treu" (songId 21).
 - Datei-Download braucht die volle fileUrl (nur `id` reicht nicht); Browser lädt nur über den Proxy.
 
@@ -1433,6 +1435,6 @@ Erkundet mit `server/scripts/probe-*.ts` (persönlicher Login-Token, nur lesend)
 - [x] Verteilung an andere Gemeinden (Selbst-Hosting) – abgeschlossen (öffentlich, MIT, `INSTALL.md`)
 - [x] Offline-Reserve (Issue #32) – umgesetzt & produktiv seit v2.6.0; Plan bleibt als Referenz:
       `docs/entwicklung/plan-offline-reserve.md`
-- [ ] Musik-Verfügbarkeit/Abwesenheiten als App-Modul – **optional**, aus dem Kern-Projekt
-      herausgenommen (22.06.2026, siehe `docs/entwicklung/PROJEKTPLAN.md`); lebt als Issue #177 mit Plan
-      in `docs/entwicklung/plan-verfuegbarkeit-phase1.md`
+- [x] Musik-Verfügbarkeit/Abwesenheiten als App-Modul – umgesetzt seit v2.25.0 (Tab „Abwesenheiten",
+      `client/src/pages/Availability.tsx`, `server/src/routes/absences.ts`); offen bleibt aus #177 nur der
+      optionale Excel↔ChurchTools-Sync (Plan `docs/entwicklung/plan-verfuegbarkeit-phase1.md`)

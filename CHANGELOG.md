@@ -33,6 +33,24 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   „Beginn" beim Löschen nicht mit (gemessen 12.10.2026); der erste Punkt des Gottesdienstes rutschte samt
   Uhrzeiten davor. Die App rückt die Grenze jetzt selbst nach.
 
+### Intern
+
+- **Anmeldungen, erster Baustein: die Preisberechnung** (#474, Bauplan Anmeldungen A1 Teil 1). Neue App
+  im Repo (Jotform-Ersatz für alle Gemeinden); hier zunächst nur die Regel ohne Oberfläche:
+  `shared/anmeldung/preis.ts` rechnet Grundpreis (fest oder nach Auswahl mit Kontingent) → Alter →
+  Rabatte/Zuschläge (immer, Frühbucher, ab dem n-ten Kind) → Extras, **in Cent**, und prüft die Regeln
+  (`pruefeRegeln`). Formular, Erweiterung und Druckliste nutzen später genau diese eine Rechnung.
+  21 Tests mit von Hand nachgerechneten Beträgen aus dem Entwurf; jede der sieben Rechenregeln einzeln
+  gegengeprüft (eine Lücke dabei gefunden und mit einem Test geschlossen). Die Tests laufen im
+  Client-Testlauf mit, wie die von `ui/`. Für die Musik-App ändert sich nichts.
+- **Anmeldungen, zweiter Baustein: das Formular-Modell** (#474, A1 Teil 2): `shared/anmeldung/formular.ts`
+  mit Feldern und Baukasten-Typen, Pflichtprüfung, Alter am ersten Tag, Zuordnung zu ChurchTools
+  (Gruppen- oder Personenfeld) nach den Messungen an der Test-Instanz – „Mehrere Antworten“ als Text,
+  weil ChurchTools bei der Anmeldung ohne Login nur einen Wert annimmt; Betrag als Text, weil Zahlen in
+  Mails als „180.8“ erscheinen – und die öffentlichen Einstellungen als geprüftes JSON in der
+  Gruppen-Beschreibung (höchstens 5.000 Zeichen, sonst Fehlermeldung statt Abschneiden). 23 Tests, acht
+  Regeln einzeln gegengeprüft.
+
 ## [2.33.0] – 2026-10-12
 
 **Beim Update bitte beachten (Server-App):** Anmerkungen, Lied-Einstellungen, „gesehen" und das Teilen

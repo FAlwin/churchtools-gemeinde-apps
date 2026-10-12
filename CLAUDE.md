@@ -684,7 +684,7 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 - **v2.34.0 (12.10.2026) = Ablauf-Änderungen ohne Animation + Rückgängig** (PRs #477, #482). Das
   Zerfallen gelöschter Punkte fotografierte per `html2canvas` die ganze Seite ab und ließ die Erweiterung
   hängen; jetzt ein dunkler Hinweis unten (`AblaufHinweis`, 6 s) und Schildchen „neu"/„geändert"
-  (`AenderungsMerker`). „Gesehen" gilt nach dem Anzeigen (`useMarkSeenAfterShown`), nicht mehr beim
+  (ab v2.34.1 nur so lange wie der Hinweis, `useKurzerHinweis`). „Gesehen" gilt nach dem Anzeigen (`useMarkSeenAfterShown`), nicht mehr beim
   Verlassen – in der Erweiterung verlässt man die ganze Seite. Rückgängig für Löschen/Verschieben
   (`punktLoeschen` liefert einen Merkzettel, `punktWiederherstellen`). Gemessen und behoben: `PUT` auf
   einen Punkt ohne `serviceGroupNotes` leert sie; CT zieht `eventStartPosition` beim Löschen nicht mit.

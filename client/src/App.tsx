@@ -232,9 +232,12 @@ export default function App() {
     inSetlistChart,
     online,
   });
+  // Gemerkt wird erst, wenn die Ablauf-Ansicht WIRKLICH steht – nicht schon, wenn die Daten da sind
+  // (die Seite wird nachgeladen und kam sonst zu spät, 12.10.2026).
+  const [ablaufSichtbar, setAblaufSichtbar] = useState(false);
   useMarkSeenAfterShown({
     eventId: service?.id ?? null,
-    angezeigt: inSetlistView,
+    angezeigt: inSetlistView && ablaufSichtbar,
     items: agendaQuery.data,
     stand: agendaQuery.dataUpdatedAt,
     laedt: agendaQuery.isFetching,
@@ -471,6 +474,7 @@ export default function App() {
         }}
         services={agendaServices.data ?? []}
         canEdit={canEditAgendas}
+        onAblaufSichtbar={setAblaufSichtbar}
       />
     );
   }

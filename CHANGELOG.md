@@ -7,6 +7,22 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Geändert
+
+- **Schildchen „neu"/„geändert" verschwinden mit dem Hinweis** (Alwin, 12.10.2026: „nur ein kurzer Hinweis
+  und fertig"): Sie stehen nur noch die etwa 6 Sekunden, die auch der Hinweis unten steht, statt bis man
+  den Termin verlässt. Hinweis und Schildchen zeigen dabei nur, was diese eine Aktualisierung gebracht
+  hat – kommt eine weitere Änderung, trägt nur der neu betroffene Punkt ein Schildchen.
+
+### Behoben
+
+- **Derselbe Hinweis kam nach einem Neuladen noch einmal** (12.10.2026): Die App zeigte ihren
+  gespeicherten Ablauf samt der alten Markierungen, solange er als frisch galt (30 s) – in der
+  Erweiterung schon nach einem kurzen Wechsel der ChurchTools-Seite. Nach dem Gesehen-Merken sind die
+  Markierungen jetzt auch im Speicher weg. Gemerkt wird erst, wenn die Ablauf-Ansicht wirklich steht
+  (sie wird nachgeladen; die Daten kamen sonst vorher an und galten als gesehen, bevor sie zu sehen
+  waren).
+
 ## [2.34.0] – 2026-10-12
 
 ### Geändert

@@ -18,6 +18,29 @@ const PORT = Number(process.env.PORT ?? 4599);
 const SESSION = 'ChurchTools_stubsid=abc123';
 const PERSON = { id: 4711, firstName: 'Test', lastName: 'Musiker' };
 
+/**
+ * Personen-Dateien (Ablage in ChurchTools, 09.10.2026) – wie gemessen: Hochladen legt IMMER eine neue
+ * Datei an (kein Überschreiben), IDs steigen, Herunterladen über denselben Query-Pfad wie die Lied-Dateien.
+ */
+const personenDateien = new Map(); // personId → [{ id, name, inhalt: Buffer }]
+let personDateiId = 90000;
+
+/** Die erste Datei aus einem multipart/form-data-Rumpf (Feld `files[]`): Name und Inhalt. */
+function ersteDatei(rumpf, contentType) {
+  const grenze = /boundary=(?:"([^"]+)"|([^;]+))/.exec(contentType ?? '');
+  if (!grenze) return null;
+  const trenner = Buffer.from(`--${grenze[1] ?? grenze[2]}`);
+  const start = rumpf.indexOf(trenner);
+  const ende = rumpf.indexOf(trenner, start + trenner.length);
+  if (start < 0 || ende < 0) return null;
+  const teil = rumpf.subarray(start + trenner.length + 2, ende - 2); // ohne CRLF davor/danach
+  const kopfEnde = teil.indexOf('\r\n\r\n');
+  const kopf = teil.subarray(0, kopfEnde).toString('utf8');
+  const name = /filename="([^"]*)"/.exec(kopf)?.[1];
+  if (!name) return null;
+  return { name, inhalt: Buffer.from(teil.subarray(kopfEnde + 4)) };
+}
+
 /** Abwesenheiten (#177): eine manuelle (ohne Marker) liegt vor, damit das Schloss zu sehen ist. */
 let absenceId = 9000;
 
@@ -170,7 +193,30 @@ const events = [
     calendar: { domainIdentifier: '3', title: 'Jugend' },
     appointmentId: null,
   },
+  /**
+   * **Ein eigener Termin für „Ablauf abschließen"** (09.10.2026). Die E2E-Tests laufen parallel gegen
+   * DIESEN Stub; schlösse der Abschluss-Test den Ablauf von „Gottesdienst (Stub)" ab, scheiterte
+   * gleichzeitig das Anlegen im Hinzufügen-Test (so passiert). Deshalb ein eigener Ablauf.
+   */
+  {
+    id: EVENT_ID + 3,
+    startDate: isoInDays(6),
+    endDate: isoInDays(6, 12),
+    name: 'Abschlussprobe (Stub)',
+    calendar: { domainIdentifier: '1', title: 'Gottesdienst' },
+    appointmentId: null,
+  },
 ];
+
+/** Der Ablauf des Abschluss-Termins – nur abschließen/öffnen, sonst nichts. */
+const agendaAbschluss = {
+  calendarId: 2,
+  eventStartPosition: 0,
+  isLocked: false,
+  items: [
+    { id: 801, title: 'Ansage (Stub)', type: 'normal', duration: 300, position: 0, startTimes: {} },
+  ],
+};
 
 /**
  * Der Ablauf. `eventStartPosition` ist die Grenze „Beginn der Veranstaltung" (#423): Punkte mit
@@ -376,6 +422,50 @@ const server = createServer((req, res) => {
   const url = new URL(req.url ?? '/', `http://localhost:${PORT}`);
   const path = url.pathname;
 
+  // Personen-Dateien (Ablage in ChurchTools): Liste, Hochladen, Herunterladen, Löschen.
+  const personDateien = /^\/api\/files\/person\/(\d+)$/.exec(path);
+  if (personDateien && req.method === 'GET') {
+    const liste = personenDateien.get(Number(personDateien[1])) ?? [];
+    return json(res, {
+      data: liste.map((f) => ({
+        id: f.id,
+        name: f.name,
+        fileUrl: `http://localhost:${PORT}/?q=public/filedownload&id=${f.id}`,
+      })),
+    });
+  }
+  if (personDateien && req.method === 'POST') {
+    const teile = [];
+    req.on('data', (c) => teile.push(c));
+    req.on('end', () => {
+      const datei = ersteDatei(Buffer.concat(teile), req.headers['content-type']);
+      if (!datei) return json(res, { message: 'stub: keine Datei' }, 400);
+      const id = personDateiId++;
+      const liste = personenDateien.get(Number(personDateien[1])) ?? [];
+      liste.push({ id, ...datei });
+      personenDateien.set(Number(personDateien[1]), liste);
+      json(res, { data: [{ id, name: datei.name }] });
+    });
+    return;
+  }
+  const loeschId = /^\/api\/files\/(\d+)$/.exec(path);
+  if (loeschId && req.method === 'DELETE') {
+    for (const [pid, liste] of personenDateien) {
+      personenDateien.set(
+        pid,
+        liste.filter((f) => f.id !== Number(loeschId[1])),
+      );
+    }
+    return json(res, { data: {} });
+  }
+  const personDatei = [...personenDateien.values()]
+    .flat()
+    .find((f) => String(f.id) === url.searchParams.get('id'));
+  if (url.searchParams.get('q') === 'public/filedownload' && personDatei) {
+    res.writeHead(200, { 'Content-Type': 'application/unknown' });
+    return res.end(personDatei.inhalt);
+  }
+
   // Datei-Download (ChordPro) – ChurchTools liefert das über einen Query-Pfad aus.
   if (url.searchParams.get('q') === 'public/filedownload') {
     res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -432,6 +522,17 @@ const server = createServer((req, res) => {
       json(res, { data: punkt }, 201);
     });
     return;
+  }
+  // Abschließen/Öffnen (09.10.2026) – wie gemessen: lock/unlock setzen `isLocked`, und im
+  // abgeschlossenen Ablauf verweigert ChurchTools jedes Ändern mit 403 „error.forbidden.update".
+  const sperre = path.match(new RegExp(`^/api/events/${EVENT_ID + 3}/agenda/(lock|unlock)$`));
+  if (sperre && req.method === 'POST') {
+    agendaAbschluss.isLocked = sperre[1] === 'lock';
+    res.writeHead(204);
+    return res.end();
+  }
+  if (path === `/api/events/${EVENT_ID + 3}/agenda`) {
+    return json(res, { data: agendaAbschluss });
   }
   if (punktMatch && req.method === 'DELETE' && punktMatch[1]) {
     agenda.items = agenda.items.filter((i) => i.id !== Number(punktMatch[1]));

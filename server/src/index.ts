@@ -9,6 +9,7 @@ import rateLimit from 'express-rate-limit';
 import { config } from './config.js';
 import { vertrauterProxy } from './utils/vertrauterProxy.js';
 import { abmeldungenLaden } from './services/abmeldungen.js';
+import { aufraeumen } from './services/ablageUmzug.js';
 import { ipRateKey } from './utils/ipKey.js';
 import { sessionRateKey, dropUnusableSessionCookie } from './middleware/session.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
@@ -159,6 +160,14 @@ app.use(errorHandler);
 // Abgemeldete Sitzungen vor der ersten Anfrage kennen (#460). Ein Lesefehler bricht den Start ab:
 // Mit leerer Liste wären abgemeldete Cookie-Kopien wieder gültig – das soll laut scheitern.
 await abmeldungenLaden();
+
+// Alte Ablage auf dem Daten-Volume: 90 Tage nach einem geprüften Umzug nach ChurchTools löschen –
+// beim Start und dann täglich. Läuft im Hintergrund; ein Fehler hält den Server nicht auf.
+const ablageAufraeumen = (): void => {
+  aufraeumen().catch((e: unknown) => console.warn('[ablage] Aufräumen gescheitert:', e));
+};
+ablageAufraeumen();
+setInterval(ablageAufraeumen, 24 * 60 * 60 * 1000).unref();
 
 /**
  * **Express 5 ruft diesen Rückruf auch bei einem Fehler auf** (#415, nachgestellt am 24.09.2026):

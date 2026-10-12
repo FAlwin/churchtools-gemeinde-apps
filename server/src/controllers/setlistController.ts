@@ -24,8 +24,9 @@ import {
   reorderAgenda,
   setAgendaItemVorBeginn,
   updateAgendaItem,
+  setAblaufAbgeschlossen,
 } from '../services/ctWrite.js';
-import { getSeenSetlists, markSeenSetlist } from '../services/seenSetlists.js';
+import { gesehenHolen, gesehenMerken } from '../services/kontoAblage.js';
 import { setlistGeaendert, standardFenster } from '@shared/ct/setlistKern';
 import type { AgendaServiceOption } from '@shared/types/index';
 import { ctCookie } from '../utils/ctCookie.js';
@@ -52,10 +53,10 @@ export async function getServices(req: Request, res: Response): Promise<void> {
   // „Geändert"-Badge je Konto (#143): mit dem zuletzt gesehenen Fingerabdruck vergleichen. Ohne
   // gemerkten Stand (nie geöffnet) gilt NICHT als geändert. userId best effort aus dem Cookie
   // (seit #149) – fehlt sie, wird ohne Badge ausgeliefert (Komfort-Feature, kein harter Fehler).
-  let seen: Awaited<ReturnType<typeof getSeenSetlists>> = {};
+  let seen: Awaited<ReturnType<typeof gesehenHolen>> = {};
   try {
     const userId = req.ctUserId ?? (await getUserId(cookie));
-    seen = await getSeenSetlists(userId);
+    seen = await gesehenHolen(cookie, userId);
   } catch {
     /* Konto-ID/Datei nicht verfügbar → ohne Badge ausliefern */
   }
@@ -99,7 +100,7 @@ export async function markSetlistSeen(req: Request, res: Response): Promise<void
   const eventId = idSchema.parse(req.params.eventId);
   const userId = req.ctUserId ?? (await getUserId(cookie));
   const { hash, items } = await getSetlistState(cookie, eventId);
-  await markSeenSetlist(userId, eventId, hash, items);
+  await gesehenMerken(cookie, userId, eventId, hash, items);
   res.json({ ok: true });
 }
 
@@ -195,6 +196,19 @@ export async function putAgendaItemVorBeginn(req: Request, res: Response): Promi
   res.json({ ok: true });
 }
 
+const abgeschlossenSchema = z.object({ abgeschlossen: z.boolean() });
+
+/**
+ * PUT /api/services/:eventId/agenda/abgeschlossen – den Ablauf in ChurchTools abschließen (`true`) oder
+ * wieder öffnen (`false`), wie der Knopf in ChurchTools (Alwin, 09.10.2026). Ändert keine Punkte.
+ */
+export async function putAblaufAbgeschlossen(req: Request, res: Response): Promise<void> {
+  const eventId = idSchema.parse(req.params.eventId);
+  const { abgeschlossen } = abgeschlossenSchema.parse(req.body);
+  await setAblaufAbgeschlossen(ctCookie(req), eventId, abgeschlossen);
+  res.json({ ok: true });
+}
+
 /** DELETE /api/services/:eventId/agenda/items/:itemId – einen Ablaufpunkt löschen. */
 export async function deleteAgendaItemCtrl(req: Request, res: Response): Promise<void> {
   const eventId = idSchema.parse(req.params.eventId);
@@ -226,7 +240,7 @@ export async function getSetlist(req: Request, res: Response): Promise<void> {
   let prevSigs: { id: number; sig: string }[] | undefined;
   try {
     const userId = req.ctUserId ?? (await getUserId(cookie));
-    prevSigs = (await getSeenSetlists(userId))[String(eventId)]?.items;
+    prevSigs = (await gesehenHolen(cookie, userId))[String(eventId)]?.items;
   } catch {
     /* Konto-ID/Datei nicht verfügbar → ohne Diff */
   }

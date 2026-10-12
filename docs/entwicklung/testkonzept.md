@@ -33,7 +33,9 @@ ChurchTools-Login) → prüft, dass die PDF-Seiten rendern und keine unbehandelt
 der Client. Geprüft wird der Weg, der im Gottesdienst zählt: Anmelden → Terminliste (also Login,
 Session-Cookie **und** Rechte-Abfrage) → Ablauf mit Lied-Punkt (#200) → Chart (Seitenstrom aus dem
 ChordPro der Stub-Datei) → Strich zeichnen → **`PUT /api/annotations/…` mit Status 200**, wobei der
-Schlüssel der Grammatik aus #250 folgen muss. Dazu: die geführte Einführung erscheint beim ersten
+Schlüssel der Grammatik aus #250 folgen muss. Seit der Ablage in ChurchTools (09.10.2026) heißt 200: Der
+Server hat das Bild als Personen-Datei in den Stub hochgeladen UND danach in der Dateiliste gefunden
+(der Stub kennt dafür Liste, multipart-Upload, Download und Löschen). Dazu: die geführte Einführung erscheint beim ersten
 Öffnen, und ohne Anmeldung steht die Anmeldemaske statt einer „Erneut versuchen"-Sackgasse (#186).
 Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #211, #245, #256.
 
@@ -47,6 +49,14 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
 - `services/songPayload` – der Lied-`PUT` aus dem Ist-Zustand (#322): **ein Teil-`PUT` löscht in
   ChurchTools die nicht gesendeten Felder** (gemessen), deshalb steht hier der Test auf **Erhalt**;
   dazu „leeren heißt weglassen" und die Pflichtfelder
+- **Ablage in ChurchTools** (09.10.2026): `services/personenAblageUmzug.test` (Umzugsregel im Kern:
+  ChurchTools gewinnt je Seite und Einstellung – auch ein dort Gelöschtes –, Felder in EINEM
+  Schreibvorgang, zu alte „gesehen" ziehen nicht um, ein zweiter Lauf macht weiter),
+  `services/ablageUmzug.test` (Lesen während des Umzugs, ein Zoom nimmt die Volume-Seite mit, gelöscht
+  bleibt gelöscht, fertig erst nach Prüfung, Abbau nach 90 Tagen, Staging zieht nicht um),
+  `services/ctTeilenServer.test` (noch nicht Umgezogene bleiben sichtbar, in ChurchTools ausgeschaltet
+  gilt, ohne Erweiterung die Volume-Liste). Gegen eine Personen-Ablage im Speicher
+  (`testHilfen/ablageFake.ts`), die wie gemessen nie überschreibt.
 - `services/songTextIndex` – Suche im Liedtext (#322): Akkorde fallen **ersatzlos** weg (sonst wird
   „ge[Am]liebt" nicht bei „geliebt" gefunden), fünf gleichzeitige Suchen ergeben **einen** Index-Aufbau,
   eine Drosselung wird gemeldet statt eine halbe Trefferliste ausgeliefert, und in der Sperrfrist wird

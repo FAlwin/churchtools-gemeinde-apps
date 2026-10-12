@@ -14,6 +14,7 @@
  */
 import { apiFetch, ApiError } from './api';
 import { istExtension, KeinSpeicherRecht } from './ctRuntime';
+import { verwaisteEntfernen } from './verwaisteEintraege';
 import { holeAnmerkungen, schreibeAnmerkung } from './personenAblage';
 import { getReachable } from './reachability';
 import { createPendingKeys } from './pendingKeys';
@@ -23,6 +24,7 @@ import {
   ANNO_ZOOM_NS,
   ANNO_KEY_RE,
   normalizeAnnoKey as normalizeKey,
+  songIdOfAnnoKey,
 } from '@shared/keys/index';
 import type { AnnotationText, GespeicherterZoom, PageAnnotation } from '@shared/types/index';
 import { jsonOderNull, lokalSchreiben } from '../utils/lokalSpeicher';
@@ -115,6 +117,16 @@ export async function pullAnnotations(songIds: number[]): Promise<void> {
       if (a.zoom) lokalSchreiben(ZOOM + key, JSON.stringify(a.zoom));
       else localStorage.removeItem(ZOOM + key);
     }
+    // Ganz geleerte Seiten (anderes Gerät, Erweiterung) auch hier entfernen – Regel und Schutz dort.
+    verwaisteEntfernen({
+      kontoSchluessel: (ls) =>
+        ls.startsWith(DRAW) || ls.startsWith(ZOOM) ? serverKeyOf(ls) : null,
+      liedVon: songIdOfAnnoKey,
+      songIds,
+      aufDemKonto: (key) => key in data,
+      geschuetzt: (key) => pendingFields.has(key) || inflight.has(key) || stillPending.has(key),
+      freigegeben: localStorage.getItem(MIGRATED_FLAG) !== null,
+    });
   } catch (e) {
     if (e instanceof KeinSpeicherRecht) keinRecht(e);
     else if (e instanceof ApiError && e.status === 401) disabled = true;

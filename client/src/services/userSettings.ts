@@ -7,7 +7,8 @@ import { apiFetch, ApiError } from './api';
 import { istExtension, KeinSpeicherRecht } from './ctRuntime';
 import { holeEinstellungen, schreibeEinstellungen } from './personenAblage';
 import { getReachable } from './reachability';
-import { SETTINGS_KEY_RE } from '@shared/keys/index';
+import { SETTINGS_KEY_RE, songIdOfSettingsKey } from '@shared/keys/index';
+import { verwaisteEntfernen } from './verwaisteEintraege';
 import { createPendingKeys } from './pendingKeys';
 import { onAppHidden } from './appHidden';
 import { lokalSchreiben } from '../utils/lokalSpeicher';
@@ -76,6 +77,15 @@ export async function pullSettings(songIds: number[]): Promise<void> {
       if (pending.has(k) || inflight.has(k) || stillPending.has(k)) continue;
       if (SETTINGS_KEY_RE.test(k)) lokalSchreiben(k, v); // wirft nie (#457)
     }
+    // Anderswo zurückgesetzte Einstellungen auch hier entfernen – Regel und Schutz dort.
+    verwaisteEntfernen({
+      kontoSchluessel: (ls) => (SETTINGS_KEY_RE.test(ls) ? ls : null),
+      liedVon: songIdOfSettingsKey,
+      songIds,
+      aufDemKonto: (k) => k in data,
+      geschuetzt: (k) => pending.has(k) || inflight.has(k) || stillPending.has(k),
+      freigegeben: localStorage.getItem(MIGRATED_FLAG) !== null,
+    });
   } catch (e) {
     if (e instanceof KeinSpeicherRecht) keinRecht(e);
     else if (e instanceof ApiError && e.status === 401) disabled = true;

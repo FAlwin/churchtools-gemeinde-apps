@@ -90,6 +90,16 @@ export async function markSeenSetlist(
   );
 }
 
+/** Die gemerkten Stände eines Kontos vergessen (90 Tage nach dem Umzug nach ChurchTools). */
+export async function kontoVergessen(userId: number): Promise<void> {
+  const s = await load();
+  if (!(String(userId) in s)) return;
+  delete s[String(userId)];
+  const write = (): Promise<void> => writeJsonStore(config.seenSetlistsPath, JSON.stringify(s));
+  writeChain = writeChain.then(write, write);
+  await writeChain;
+}
+
 /** Nur für Tests: In-Memory-Zustand zurücksetzen, damit die Datei erneut gelesen wird. */
 export function __resetForTests(): void {
   store = null;

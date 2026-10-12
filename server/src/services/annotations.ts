@@ -4,6 +4,7 @@
  * Schlüssel je Eintrag: `song<id>_v<versionKey>_<seite>`.
  */
 import path from 'node:path';
+import { rm } from 'node:fs/promises';
 import { config } from '../config.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import { readJsonStore, writeJsonStore } from './jsonStore.js';
@@ -93,6 +94,17 @@ async function withLock<T>(userId: number, fn: () => Promise<T>): Promise<T> {
 /** Ist ein Eintrag leer (kann verworfen werden)? */
 function isEmpty(a: PageAnnotation): boolean {
   return !a.strokes && (!a.texts || a.texts.length === 0) && !a.zoom;
+}
+
+/**
+ * Die Ablage eines Kontos auf dem Daten-Volume löschen – erst 90 Tage nach einem vollständig geprüften
+ * Umzug nach ChurchTools (`ablageUmzug.ts`, Alwin 09.10.2026). „Gibt es nicht" ist erledigt.
+ */
+export async function kontoLoeschen(userId: number): Promise<void> {
+  await withLock(userId, async () => {
+    await rm(fileFor(userId), { force: true });
+    cache.delete(userId);
+  });
 }
 
 /** Alle Einträge eines Kontos zu den genannten Liedern (leere songIds = alle). */

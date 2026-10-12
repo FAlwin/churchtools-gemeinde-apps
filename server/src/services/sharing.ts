@@ -65,6 +65,14 @@ export async function isSharing(userId: number): Promise<boolean> {
   return store[String(userId)]?.enabled === true;
 }
 
+/** Der Eintrag eines Kontos (für den Umzug nach ChurchTools) – `null`, wenn es keinen gibt. */
+export async function sharingEintrag(
+  userId: number,
+): Promise<{ an: boolean; name: string } | null> {
+  const e = (await read())[String(userId)];
+  return e ? { an: e.enabled, name: e.name } : null;
+}
+
 /** Alle Konten, die aktuell teilen (id + Anzeigename). */
 export async function listSharers(): Promise<Array<{ id: number; name: string }>> {
   const store = await read();

@@ -6,16 +6,25 @@
  */
 import type { Request, Response } from 'express';
 import { z } from 'zod';
-import { getUserId, whoami } from '../services/ctAuth.js';
+import { getUserId } from '../services/ctAuth.js';
 import { getCapabilitiesCached } from '../services/ctCapabilities.js';
-import { setSharing, isSharing, listSharers } from '../services/sharing.js';
-import * as annotations from '../services/annotations.js';
-import { getSettings } from '../services/userSettings.js';
+import { teiltIch } from '../services/kontoAblage.js';
+import {
+  anmerkungenVon,
+  einstellungenVon,
+  teilende,
+  teilenSetzen,
+} from '../services/ctTeilenServer.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import { ctCookie } from '../utils/ctCookie.js';
 import { songIdsFromQuery } from '../utils/songIdsQuery.js';
-import { songIdOfAnnoKey } from '@shared/keys/index';
 
+/**
+ * Seit der Ablage in ChurchTools (09.10.2026) liegt alles in den Personen-Dateien: ob jemand teilt
+ * (seine eigene Daten-Datei), seine Anmerkungen und Einstellungen. Gefunden wird man über das
+ * Verzeichnis der Erweiterung und die Liste auf dem Daten-Volume (`ctTeilenServer.ts`). Die Rechte
+ * prüft weiter der Server, bevor er überhaupt nachsieht.
+ */
 async function requireTeamNotes(req: Request): Promise<void> {
   const caps = await getCapabilitiesCached(ctCookie(req), req.ctUserId ?? null);
   if (!caps.canUseGlobalNotes) {
@@ -33,88 +42,43 @@ function personIdOf(req: Request): number {
   return id;
 }
 
-/**
- * Eigene Konto-ID – bevorzugt aus dem Session-Cookie (#149/#152), sonst per whoami. Ohne diese
- * Bevorzugung fielen die Team-Notiz-Endpunkte bei einem ChurchTools-Aussetzer unnötig aus, obwohl
- * die ID längst im signierten Cookie steht (kein Netz nötig).
- */
 async function myUserId(req: Request): Promise<number> {
   return req.ctUserId ?? (await getUserId(ctCookie(req)));
 }
 
-/** GET /api/annotations/sharing – teilt DIESES Konto gerade? (für den Schalter im Mehr-Tab) */
+/** GET /api/annotations/sharing – teilt mein Konto? */
 export async function getSharing(req: Request, res: Response): Promise<void> {
   const userId = await myUserId(req);
-  res.json({ enabled: await isSharing(userId) });
+  res.json({ enabled: await teiltIch(ctCookie(req), userId) });
 }
 
 const sharingSchema = z.object({ enabled: z.boolean() });
 
-/** PUT /api/annotations/sharing – eigenes Teilen ein-/ausschalten (nur Team-Berechtigte). */
+/** PUT /api/annotations/sharing – eigenes Teilen umschalten. */
 export async function putSharing(req: Request, res: Response): Promise<void> {
   await requireTeamNotes(req);
   const { enabled } = sharingSchema.parse(req.body);
-  // Hier ist whoami nötig (nicht nur die Cookie-ID): der Anzeigename landet in sharing.json,
-  // damit andere „Notizen von <Name>" sehen. Betrifft nur diese eine Schreibaktion.
-  const me = await whoami(ctCookie(req));
-  await setSharing(me.id, `${me.firstName} ${me.lastName}`.trim(), enabled);
-  res.json({ enabled });
+  res.json(await teilenSetzen(ctCookie(req), await myUserId(req), enabled));
 }
 
-/**
- * GET /api/annotations/sharers?songs=1,2 – wer teilt Anmerkungen zu diesen Liedern?
- * Liefert je teilendem Konto (außer dem eigenen) die Lied-IDs, zu denen es Anmerkungen hat.
- */
+/** GET /api/annotations/sharers?songs=… – wer teilt Anmerkungen zu diesen Liedern (außer mir)? */
 export async function getSharers(req: Request, res: Response): Promise<void> {
   await requireTeamNotes(req);
-  const myId = await myUserId(req);
-  const songs = songIdsOf(req);
-  const out: Array<{ id: number; name: string; songs: number[] }> = [];
-  for (const sharer of await listSharers()) {
-    if (sharer.id === myId) continue;
-    const entries = await annotations.getAnnotations(sharer.id, songs);
-    const ids = new Set<number>();
-    for (const [key, value] of Object.entries(entries)) {
-      // Nur echte Anmerkungen zählen (Zoom ist geräte-/kontopersönlich und wird nie geteilt).
-      if (!value.strokes && !(value.texts && value.texts.length)) continue;
-      const id = songIdOfAnnoKey(key);
-      if (id !== null) ids.add(id);
-    }
-    if (ids.size > 0) out.push({ id: sharer.id, name: sharer.name, songs: [...ids] });
-  }
-  res.json(out);
-}
-
-/** Gemeinsame Absicherung der Fremd-Lese-Endpunkte: Berechtigung + die Person muss teilen. */
-async function requireSharedFrom(req: Request): Promise<number> {
-  await requireTeamNotes(req);
-  const personId = personIdOf(req);
-  if (!(await isSharing(personId))) {
-    throw new HttpError(403, 'Diese Person teilt ihre Anmerkungen nicht.');
-  }
-  return personId;
+  res.json(await teilende(ctCookie(req), await myUserId(req), songIdsOf(req)));
 }
 
 /** GET /api/annotations/of/:personId?songs=… – geteilte Anmerkungen einer Person (ohne Zoom). */
 export async function getAnnotationsOf(req: Request, res: Response): Promise<void> {
-  const personId = await requireSharedFrom(req);
-  const entries = await annotations.getAnnotations(personId, songIdsOf(req));
-  // Zoom ist persönlich: Feld entfernen, reine Zoom-Einträge (Layout-Suffix-Schlüssel) auslassen.
-  const out: Record<string, { strokes?: string | null; texts?: unknown[] }> = {};
-  for (const [key, value] of Object.entries(entries)) {
-    const strokes = value.strokes ?? null;
-    const texts = value.texts ?? [];
-    if (!strokes && texts.length === 0) continue;
-    out[key] = { strokes, texts };
-  }
-  res.json(out);
+  await requireTeamNotes(req);
+  res.json(
+    await anmerkungenVon(ctCookie(req), await myUserId(req), personIdOf(req), songIdsOf(req)),
+  );
 }
 
-/**
- * GET /api/settings/of/:personId?songs=… – Lied-Einstellungen einer teilenden Person.
- * Nötig, um ihre Anmerkungen in IHRER Ansicht (Spalten/Schrift/Version) darzustellen.
- */
+/** GET /api/settings/of/:personId?songs=… – ihre Lied-Einstellungen (für ihre Ansicht). */
 export async function getSettingsOf(req: Request, res: Response): Promise<void> {
-  const personId = await requireSharedFrom(req);
-  res.json(await getSettings(personId, songIdsOf(req)));
+  await requireTeamNotes(req);
+  res.json(
+    await einstellungenVon(ctCookie(req), await myUserId(req), personIdOf(req), songIdsOf(req)),
+  );
 }

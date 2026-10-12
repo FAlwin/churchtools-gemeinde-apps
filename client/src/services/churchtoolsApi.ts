@@ -169,6 +169,18 @@ export function setAgendaItemVorBeginn(
   });
 }
 
+/** Den Ablauf in ChurchTools abschließen (`true`) oder wieder öffnen (`false`) – 09.10.2026. */
+export function setAblaufAbgeschlossen(
+  eventId: number,
+  abgeschlossen: boolean,
+): Promise<{ ok: boolean }> {
+  if (istExtension) return extSchreiben.abgeschlossen(eventId, abgeschlossen);
+  return apiFetch(`/api/services/${eventId}/agenda/abgeschlossen`, {
+    method: 'PUT',
+    body: JSON.stringify({ abgeschlossen }),
+  });
+}
+
 /** Alle Lieder (für die „Alle Lieder"-Ansicht) – ohne Statistik (lädt schnell). */
 export function getSongLibrary(): Promise<SongLibraryEntry[]> {
   if (istExtension) return ext.lieder();

@@ -11,12 +11,34 @@ Entscheidungen unten anhängen (Datum + Kontext + Entscheidung + Begründung).
 Datenquelle; das Backend ist ein reiner Proxy.
 **Begründung:** Doppelte Datenhaltung (Lieder, Setlisten, Tonarten) wäre fehleranfällig
 und müsste synchron gehalten werden. ChurchTools ist ohnehin das führende System der
-Gemeinde. **App-eigene Daten** (Anmerkungen, Lied-Einstellungen, Rechte-/„gesehen"-Caches,
-Teilen-Status) liegen **pro Konto als JSON-Dateien auf einem Docker-Volume** (Env-Pfade
-`ANNOTATIONS_PATH`, `SEEN_SETLISTS_PATH`, `CAPABILITIES_CACHE_PATH`, `SITE_CONFIG_PATH`);
-`localStorage` ist nur Client-Cache.
+Gemeinde. **App-eigene Daten** der Person (Anmerkungen, Lied-Einstellungen, „gesehen", Teilen) liegen
+seit dem 09.10.2026 **in ChurchTools** als Anhänge an der eigenen Person (siehe „Ablage in ChurchTools"
+unten); vorher pro Konto als JSON-Dateien auf dem Docker-Volume. Auf dem Volume bleiben Gemeinde- und
+Betriebsdaten (`SITE_CONFIG_PATH`, `CAPABILITIES_CACHE_PATH`, `abmeldungen.json`, `sharing.json`) und bis
+zum Umzug der Altbestand (`ANNOTATIONS_PATH`, `SEEN_SETLISTS_PATH`). `localStorage` ist nur Client-Cache.
 **Folge:** Kein ORM, keine Migrationen, keine Test-DB – aber Persistenz übers Volume statt
 klassischer Datenbank. Die Blueprint-Punkte rund um Datenbanken entfallen für dieses Projekt.
+
+## Ablage in ChurchTools – auch für die Server-App _(09.10.2026)_
+
+**Entscheidung:** Die Server-App speichert Anmerkungen, Lied-Einstellungen, „gesehen" und Teilen in den
+Personen-Dateien der Person in ChurchTools – dieselben wie die Erweiterung. Die Regeln liegen einmal in
+`shared/ct/personenAblage.ts`, `modulDaten.ts`, `teilen.ts`; Erweiterung und Server geben je einen
+Anschluss mit (Browser-Sitzung bzw. Sitzung der Person im Server). Für **alle** Installationen (Alwin).
+**Begründung:** Alwin: „so viel wie möglich bei ChurchTools". Vorher sah die Erweiterung die Notizen der
+Server-App nicht – zwei Wahrheiten für dieselbe Person.
+**Umzug** (`ablageUmzug.ts`, `altbestand.ts`): beim ersten Zugriff eines Kontos, im Hintergrund, Bilder
+einzeln mit Pause, Felder in einem Zug. **ChurchTools gewinnt** je Seite und Einstellung (auch ein dort
+Gelöschtes, Alwin). Bis zum Ende ergänzt das Lesen die Lücken aus dem Volume; schreibt jemand auf eine
+nur dort liegende Seite, nimmt der Schreibzugriff ihren Inhalt mit (sonst ließe ein Zoom Striche/Texte
+zurück). Fertig erst nach frischer Prüfung; das Volume des Kontos wird **90 Tage** danach gelöscht
+(Alwin), `sharing.json` bleibt als Verzeichnis. **Staging zieht nicht um** (am echten ChurchTools, Testreste
+auf dem Volume).
+**Gemessen (Test-Instanz, vom Server aus):** Hochladen an die eigene Person braucht das CSRF-Token (ohne:
+401), Herunterladen und Löschen gehen mit der Sitzung.
+**Folge:** Jedes Konto braucht „Eigene Personendaten bearbeiten". Team-Notizen anderer, die noch nicht
+umgezogen sind, kommen bis zu ihrer nächsten Anmeldung vom Volume – nur sie selbst dürfen in ihre
+Personen-Dateien schreiben.
 
 ## Auth über ChurchTools-Session
 

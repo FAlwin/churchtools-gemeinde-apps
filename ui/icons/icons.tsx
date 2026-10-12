@@ -18,6 +18,7 @@ export type IconName =
   | 'sun'
   | 'moon'
   | 'lock'
+  | 'lock-open'
   | 'type'
   | 'logout'
   | 'check'
@@ -189,6 +190,14 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
         <svg {...p}>
           <rect x="4.5" y="10.5" width="15" height="10" rx="2.5" />
           <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" />
+        </svg>
+      );
+    case 'lock-open':
+      // Wie `lock`, der Bügel nach oben links gelöst – „Ablauf öffnen" (09.10.2026).
+      return (
+        <svg {...p}>
+          <rect x="4.5" y="10.5" width="15" height="10" rx="2.5" />
+          <path d="M8 10.5V7a4 4 0 0 1 7.6-1.8" />
         </svg>
       );
     case 'type':

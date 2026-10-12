@@ -1,9 +1,10 @@
 /**
  * Lokal erkannte „aufgelöst"-Platzhalter (#178).
  *
- * Der Server markiert Löschungen nur gegen die „gesehen"-Basislinie (Stand beim letzten VERLASSEN
- * des Termins). Ein Punkt, der seit dem Betreten HINZUKAM und wieder gelöscht wird, steht dort nie
- * drin – für ihn kommt also KEIN removed-Platzhalter vom Server, er verschwände kommentarlos.
+ * Der Server markiert Löschungen nur gegen die „gesehen"-Basislinie (seit 12.10.2026 der zuletzt
+ * angezeigte und gemerkte Stand; vorher der beim Verlassen). Ein Punkt, der erst DANACH hinzukam und
+ * wieder gelöscht wird – oder dessen Merken scheiterte –, steht dort nie drin: Für ihn kommt KEIN
+ * removed-Platzhalter vom Server, er verschwände kommentarlos.
  * Die Ansicht weiß aber selbst, was sie zuletzt angezeigt hat: dieser Helfer vergleicht den zuletzt
  * angezeigten Stand mit den aktuell vorhandenen IDs und liefert für verschwundene Punkte die
  * Platzhalter-Daten (inkl. Einfüge-Position wie beim Server: hinter dem letzten noch vorhandenen

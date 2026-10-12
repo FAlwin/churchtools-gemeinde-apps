@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { AgendaItem, AgendaServiceOption, Service, SetlistSong } from '@shared/types/index';
 import type { AgendaItemUpdate } from '../services/churchtoolsApi';
+import type { GeloeschterPunkt } from '@shared/ct/schreibKern';
 import {
   DndContext,
   closestCenter,
@@ -21,6 +22,8 @@ import { SeitenGeruest } from '../components/SeitenGeruest';
 import { RundKnopf } from '@ui/bedienung/KnopfReihe';
 import { CenterMessage } from '../components/CenterMessage';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { Toast } from '../components/Toast';
+import { useRueckgaengig } from '../hooks/useRueckgaengig';
 import { SchwebePlus } from '../components/SchwebePlus';
 import { AgendaFullView } from '../components/AgendaFullView';
 import { SortableRow } from '../components/AgendaSortableRow';
@@ -59,8 +62,10 @@ import styles from './Setlist.module.scss';
 interface AgendaActions {
   /** Speichert die neue Reihenfolge (Item-IDs). */
   reorder: (order: number[]) => Promise<void>;
-  /** Löscht einen Ablaufpunkt. */
-  remove: (itemId: number) => Promise<void>;
+  /** Löscht einen Ablaufpunkt; liefert den Merkzettel für „Rückgängig" (`null`: war schon weg). */
+  remove: (itemId: number) => Promise<GeloeschterPunkt | null>;
+  /** Legt einen eben gelöschten Punkt an seiner alten Stelle wieder an. */
+  restore: (punkt: GeloeschterPunkt) => Promise<void>;
   /** Schreibt geänderte Felder eines Punkts gesammelt (ein Request). */
   update: (itemId: number, fields: AgendaItemUpdate) => Promise<void>;
   /** Legt fest, ob der Punkt (samt allen darüber bzw. darunter) vor dem Beginn läuft (#423). */
@@ -115,6 +120,8 @@ export function Setlist({
   // werden gleich beim Anlegen gesetzt; der frühere zweite Dialog nach einem Lied entfällt.
   const [neuOffen, setNeuOffen] = useState(false);
   const [actionItem, setActionItem] = useState<AgendaItem | null>(null);
+  // „Rückgängig" für Löschen und Verschieben (Alwin, 12.10.2026) – Bearbeiten und Anlegen bewusst nicht.
+  const rueckgaengig = useRueckgaengig();
 
   /**
    * **Abgeschlossen** (Alwin, 09.10.2026): In ChurchTools kann man einen Ablauf abschließen; dann lässt
@@ -166,6 +173,12 @@ export function Setlist({
     if (editMode && !isTourDone(TOUR_SETLIST_EDIT)) setEditTour(true);
   }, [editMode]);
 
+  // „Fertig" beendet auch das Angebot „Rückgängig" – es gehört zum Bearbeiten.
+  const { verwerfen: rueckgaengigVerwerfen } = rueckgaengig;
+  useEffect(() => {
+    if (!editMode) rueckgaengigVerwerfen();
+  }, [editMode, rueckgaengigVerwerfen]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -179,13 +192,23 @@ export function Setlist({
     const newIndex = localItems.findIndex((i) => i.id === over.id);
     if (oldIndex < 0 || newIndex < 0) return;
     // Die Beginn-Grenze bleibt an ihrem Platz, wie ChurchTools sie nach dem Speichern rechnet (#423).
+    const vorher = localItems;
     const next = vorlaufNachUmsortieren(localItems, arrayMove(localItems, oldIndex, newIndex));
     setLocalItems(next); // optimistisch
     setErr(null);
-    actions.reorder(next.map((i) => i.id)).catch((e: unknown) => {
-      setLocalItems(items); // zurückrollen
-      fehlerZeigen(e, 'Reihenfolge konnte nicht gespeichert werden.');
-    });
+    rueckgaengig.verwerfen();
+    actions
+      .reorder(next.map((i) => i.id))
+      .then(() =>
+        rueckgaengig.anbieten(`„${itemLabel(vorher[oldIndex])}" verschoben`, () => {
+          setLocalItems(vorher); // optimistisch zurück
+          return actions.reorder(vorher.map((i) => i.id));
+        }),
+      )
+      .catch((e: unknown) => {
+        setLocalItems(items); // zurückrollen
+        fehlerZeigen(e, 'Reihenfolge konnte nicht gespeichert werden.');
+      });
   }
 
   /** Schreibt Feld-Änderungen (ein Request); Titel optimistisch lokal spiegeln. */
@@ -211,9 +234,24 @@ export function Setlist({
     setPendingDelete(null);
     setErr(null);
     setLocalItems((prev) => prev.filter((i) => i.id !== target.id)); // optimistisch
-    actions.remove(target.id).catch((e: unknown) => {
-      setLocalItems(items); // zurückrollen
-      fehlerZeigen(e, 'Punkt konnte nicht gelöscht werden.');
+    rueckgaengig.verwerfen();
+    actions
+      .remove(target.id)
+      .then((g) => {
+        if (g) rueckgaengig.anbieten(`„${itemLabel(target)}" gelöscht`, () => actions.restore(g));
+      })
+      .catch((e: unknown) => {
+        setLocalItems(items); // zurückrollen
+        fehlerZeigen(e, 'Punkt konnte nicht gelöscht werden.');
+      });
+  }
+
+  /** „Rückgängig" antippen – scheitert es (z. B. Ablauf inzwischen geändert), steht die Meldung oben. */
+  function rueckgaengigMachen(): void {
+    setErr(null);
+    rueckgaengig.ausloesen().catch((e: unknown) => {
+      setLocalItems(items.filter((i) => !i.removed));
+      fehlerZeigen(e, 'Rückgängig machen hat nicht geklappt.');
     });
   }
 
@@ -380,6 +418,13 @@ export function Setlist({
           vorBeginn={actionItem.vorBeginn}
           onSetVorBeginn={(vorBeginn) => actions.setVorBeginn(actionItem.id, vorBeginn)}
           onRequestDelete={() => setPendingDelete(actionItem)}
+        />
+      )}
+
+      {editMode && (
+        <Toast
+          message={rueckgaengig.angebot}
+          aktion={{ label: 'Rückgängig', onClick: rueckgaengigMachen }}
         />
       )}
 

@@ -7,6 +7,40 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Geändert
+
+- **Ablauf-Änderungen ohne Animation** (Alwin, 12.10.2026): Statt aufleuchtender Punkte und zerfallender
+  Zeilen erscheint unten ein dunkler Hinweis „Ablauf aktualisiert · 1 neu · 2 geändert", darunter jeder
+  entfernte Punkt durchgestrichen; er verschwindet nach etwa 6 Sekunden von selbst. Neue und geänderte
+  Punkte tragen ein Schildchen „neu"/„geändert", solange man im Termin ist. Das Zerfallen fotografierte
+  die ganze Seite ab (`html2canvas`) – in der ChurchTools-Erweiterung ist das die komplette
+  ChurchTools-Seite, die dabei hängen blieb. Die direkte Abhängigkeit `html2canvas` ist entfallen (jsPDF
+  bringt es weiter als eigenen Teil mit, der nur für `doc.html()` geladen würde – die App ruft das nicht
+  auf).
+- **„Gesehen" gilt nach dem Anzeigen, nicht erst beim Verlassen** (12.10.2026): In der Erweiterung
+  verlässt man meist die ganze ChurchTools-Seite – dann wurde nichts gemerkt, und dieselben Änderungen
+  kamen beim nächsten Öffnen wieder. Gemerkt wird jetzt, sobald der frisch geholte Ablauf mit
+  Änderungen angezeigt wurde (und nur dann – in der Erweiterung ist jedes Merken ein Schreiben).
+- **Hinweise unten hängen jetzt an der Seite, nicht am Inhalt** (12.10.2026): Mitten im Inhalt gezeichnet,
+  saß ein Hinweis oben statt unten – der Bereich „Zum Aktualisieren nach unten ziehen" verschiebt per
+  `transform`. `Toast` hängt deshalb wie die Einführung per Portal an `body`.
+
+### Neu
+
+- **Rückgängig nach Löschen und Verschieben** (Alwin, 12.10.2026): Im Bearbeiten-Modus steht danach unten
+  „„Titel" gelöscht · Rückgängig" bzw. „… verschoben · Rückgängig", etwa 8 Sekunden lang. Ein gelöschter
+  Punkt kommt an seine Stelle zurück – mit Dauer, Notiz, Zuständigen, Dienstgruppen-Notizen und Vorlauf
+  (gemessen an der Test-Instanz); er hat danach eine neue ID. Eine in ChurchTools ausgeblendete Uhrzeit
+  kommt nicht zurück, die Schnittstelle kennt das Feld nicht.
+
+### Behoben
+
+- **Bearbeiten löschte die Notizen je Dienstgruppe:** ChurchTools leert sie bei einem Ändern ohne dieses
+  Feld (gemessen 12.10.2026) – die App schickte es nicht mit. Gab es seit dem Bearbeiten-Dialog.
+- **Löschen eines Vorlauf-Punkts schob den Gottesdienst in den Vorlauf:** ChurchTools zieht die Grenze
+  „Beginn" beim Löschen nicht mit (gemessen 12.10.2026); der erste Punkt des Gottesdienstes rutschte samt
+  Uhrzeiten davor. Die App rückt die Grenze jetzt selbst nach.
+
 ### Intern
 
 - **Anmeldungen, erster Baustein: die Preisberechnung** (#474, Bauplan Anmeldungen A1 Teil 1). Neue App

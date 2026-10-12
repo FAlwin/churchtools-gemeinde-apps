@@ -15,7 +15,7 @@
  *  - **Gelesen wird frisch, nie aus einem Cache** – geschrieben wird auf diesem Stand.
  *  - **Kein Schreibvorgang wird automatisch wiederholt.** Nicht alle sind idempotent.
  */
-import { agendaItemWritePayload, beginnPositionFuer } from './agendaPayload';
+import { agendaItemWritePayload, beginnPositionFuer, dienstgruppenNotizen } from './agendaPayload';
 import { arrangementWritePayload, type ArrangementOverrides } from './arrangementPayload';
 import type { CtAgenda, CtAgendaItem, CtArrangement, CtSong } from './typen';
 
@@ -246,18 +246,143 @@ export async function punktAendern(
   });
 }
 
-/** Löscht einen Ablaufpunkt aus der Agenda eines Events. */
+/**
+ * Was „Rückgängig" nach dem Löschen braucht (Alwin, 12.10.2026): der Punkt, wie ChurchTools ihn beim
+ * Anlegen nimmt, und wo er stand.
+ *
+ * Gemessen an der Test-Instanz (12.10.2026): Ein neu angelegter Punkt bekommt Titel, Dauer, Notiz,
+ * Zuständige (ChurchTools ordnet die Personen über die Dienst-Platzhalter neu zu) und die Notizen je
+ * Dienstgruppe vollständig zurück; die Stelle stellt danach das Umsortieren her. **Nicht** zurück
+ * kommt eine in ChurchTools ausgeblendete Uhrzeit – die Schnittstelle kennt das Feld nicht. Der Punkt
+ * hat danach eine neue ID.
+ */
+export interface GeloeschterPunkt {
+  felder: {
+    type: 'header' | 'text' | 'song';
+    title: string;
+    note: string;
+    /** In Sekunden, wie ChurchTools sie speichert – nicht in gerundeten Minuten der Oberfläche. */
+    duration: number;
+    responsible: string;
+    serviceGroupNotes: { serviceGroupId: number; note: string }[];
+    arrangementId?: number;
+  };
+  /** Der Punkt, hinter dem er stand – `null` = ganz vorne. */
+  nachId: number | null;
+  vorBeginn: boolean;
+}
+
+/**
+ * Löscht einen Ablaufpunkt und gibt zurück, was zum Wiederherstellen nötig ist. Dafür wird der Ablauf
+ * vorher frisch gelesen – der Stand des Geräts kann veraltet sein. `null`, wenn der Punkt schon weg war.
+ */
 export async function punktLoeschen(
   s: CtSchreiber,
   eventId: number,
   itemId: number,
-): Promise<void> {
+): Promise<GeloeschterPunkt | null> {
+  // Lässt sich der Ablauf gerade nicht lesen, wird trotzdem gelöscht – nur ohne „Rückgängig". Gewollt
+  // ist das Löschen; der Merkzettel ist eine Zugabe und darf es nicht verhindern.
+  const agenda = await s.agenda(eventId).then(
+    (a) => a,
+    () => null,
+  );
+  const items = agenda?.items ?? [];
+  const stelle = items.findIndex((i) => i.id === itemId);
+  const it = stelle >= 0 ? items[stelle] : undefined;
   await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda/items/${itemId}`, {
     method: 'DELETE',
     verweigert: ABLAUF_VERWEIGERT,
     fehler: 'Ablaufpunkt löschen fehlgeschlagen',
     okBei404: true, // schon weg ist auch weg
   });
+  if (!it) return null;
+  // Die Beginn-Grenze zieht ChurchTools NICHT mit (gemessen 12.10.2026): Fehlt ein Vorlauf-Punkt, rutschte
+  // sonst der erste Punkt des Gottesdienstes in den Vorlauf – samt verschobener Uhrzeiten.
+  const grenze = agenda?.eventStartPosition ?? 0;
+  if ((it.position ?? stelle) < grenze) {
+    await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda`, {
+      method: 'PUT',
+      json: { calendarId: agenda?.calendarId, eventStartPosition: grenze - 1 },
+      verweigert: ABLAUF_VERWEIGERT,
+      fehler: 'Gottesdienstbeginn nach dem Löschen nachziehen fehlgeschlagen',
+    });
+  }
+  // Derselbe Payload wie beim Ändern – sonst fehlte hier ein Feld, das dort schon gelernt ist.
+  const p = agendaItemWritePayload(it);
+  return {
+    felder: {
+      // Anlegen kennt nur diese drei Arten (OpenAPI der Test-Instanz); alles andere ist ein Textpunkt.
+      type: p.type === 'header' || p.type === 'song' ? p.type : 'text',
+      title: text(p.title),
+      note: text(p.note),
+      duration: typeof p.duration === 'number' ? p.duration : 0,
+      responsible: text(p.responsible),
+      serviceGroupNotes: dienstgruppenNotizen(it),
+      ...(typeof p.arrangementId === 'number' ? { arrangementId: p.arrangementId } : {}),
+    },
+    nachId: stelle > 0 ? items[stelle - 1].id : null,
+    vorBeginn: it.isBeforeEvent ?? false,
+  };
+}
+
+/** Ein Textfeld aus dem Payload – `sonst`, wenn es keins ist. */
+function text(v: unknown, sonst = ''): string {
+  return typeof v === 'string' ? v : sonst;
+}
+
+/**
+ * Legt einen gelöschten Punkt wieder an – an seiner alten Stelle und im alten Vorlauf-Zustand.
+ *
+ * Drei Schritte, jeder mit den vorhandenen Regeln: anlegen, per `ablaufUmsortieren` an die Stelle
+ * schieben, per `vorBeginnSetzen` den Vorlauf richten. Ob der neue Punkt **wirklich** da ist, wird am
+ * frisch gelesenen Ablauf geprüft, nicht an der Antwort des Anlegens (Lehre vom 11.08.2026). Ist der
+ * Vorgänger inzwischen auch weg, landet der Punkt am Ende.
+ */
+export async function punktWiederherstellen(
+  s: CtSchreiber,
+  eventId: number,
+  g: GeloeschterPunkt,
+): Promise<void> {
+  const f = g.felder;
+  const body: Record<string, unknown> =
+    f.type === 'header'
+      ? { type: 'header', title: f.title }
+      : {
+          type: f.arrangementId ? 'song' : f.type,
+          title: f.title,
+          note: f.note,
+          duration: f.duration,
+          responsible: f.responsible,
+          serviceGroupNotes: f.serviceGroupNotes,
+          ...(f.arrangementId ? { arrangementId: f.arrangementId } : {}),
+        };
+  const antwort = await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda/items`, {
+    method: 'POST',
+    json: body,
+    verweigert: ABLAUF_VERWEIGERT,
+    fehler: 'Ablaufpunkt wiederherstellen fehlgeschlagen',
+  });
+  const neuId = neueId(antwort);
+  const { items } = await s.agenda(eventId);
+  if (neuId === null || !items.some((i) => i.id === neuId)) {
+    throw s.fehler(502, 'Der Punkt wurde nicht wieder angelegt. Bitte den Ablauf neu laden.');
+  }
+
+  const rest = items.map((i) => i.id).filter((id) => id !== neuId);
+  const nach = g.nachId === null ? -1 : rest.indexOf(g.nachId);
+  const ziel = g.nachId === null ? 0 : nach >= 0 ? nach + 1 : rest.length;
+  const reihenfolge = [...rest.slice(0, ziel), neuId, ...rest.slice(ziel)];
+  if (reihenfolge.some((id, k) => items[k]?.id !== id)) {
+    await ablaufUmsortieren(s, eventId, reihenfolge);
+  }
+  await vorBeginnSetzen(s, eventId, neuId, g.vorBeginn);
+}
+
+/** Die ID aus der Antwort auf `POST …/agenda/items` (`{ data: { id } }`). */
+function neueId(antwort: unknown): number | null {
+  const data = (antwort as { data?: { id?: unknown } } | null)?.data;
+  return typeof data?.id === 'number' ? data.id : null;
 }
 
 /**

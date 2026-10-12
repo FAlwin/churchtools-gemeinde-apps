@@ -32,7 +32,7 @@ import { istExtension, ohneServer } from './ctRuntime';
 import * as ext from './ctLesen';
 import * as extSchreiben from './ctSchreiben';
 import * as extSongSelect from './ctSongSelect';
-import type { NeuerPunkt, PunktAenderung } from '@shared/ct/schreibKern';
+import type { GeloeschterPunkt, NeuerPunkt, PunktAenderung } from '@shared/ct/schreibKern';
 
 // Die Weiche zur ChurchTools-Extension (#335): Lesende Aufrufe gehen dort über `ctLesen.ts`, schreibende
 // über `ctSchreiben.ts` direkt an ChurchTools; was es dort (noch) nicht gibt, sagt `ohneServer`. Phase 3b
@@ -506,10 +506,22 @@ export function deleteSongFile(songId: number, fileId: number): Promise<void> {
   return apiFetch<void>(liedDateiPfad(songId, fileId), { method: 'DELETE' });
 }
 
-/** Löscht einen Ablaufpunkt. */
-export function deleteAgendaItem(eventId: number, itemId: number): Promise<{ ok: boolean }> {
+/** Löscht einen Ablaufpunkt; `wiederherstellen` ist der Merkzettel für „Rückgängig". */
+export function deleteAgendaItem(
+  eventId: number,
+  itemId: number,
+): Promise<{ ok: boolean; wiederherstellen?: GeloeschterPunkt | null }> {
   if (istExtension) return extSchreiben.punktWeg(eventId, itemId);
   return apiFetch(`/api/services/${eventId}/agenda/items/${itemId}`, { method: 'DELETE' });
+}
+
+/** „Rückgängig" nach dem Löschen: den Punkt an seiner alten Stelle wieder anlegen. */
+export function restoreAgendaItem(eventId: number, g: GeloeschterPunkt): Promise<{ ok: boolean }> {
+  if (istExtension) return extSchreiben.punktZurueck(eventId, g);
+  return apiFetch(`/api/services/${eventId}/agenda/items/wiederherstellen`, {
+    method: 'POST',
+    body: JSON.stringify(g),
+  });
 }
 
 /** Legt eine neue benannte Version eines Songs in ChurchTools an. */

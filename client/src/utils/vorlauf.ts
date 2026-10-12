@@ -16,7 +16,8 @@ type Zeile = { removed?: boolean; vorBeginn?: boolean };
  * Linie nur Lärm). Sind ALLE Punkte Vorlauf, steht sie am Ende (`zeilen.length`).
  *
  * „Entfernt"-Platzhalter zählen nicht: Sie tragen nie `vorBeginn` und würden die Linie sonst vor
- * einen Punkt ziehen, der gerade zerfällt.
+ * einen Punkt ziehen, den es nicht mehr gibt. (Die Ansicht zeigt sie seit 12.10.2026 gar nicht mehr als
+ * Zeile, sondern nennt sie in der Hinweisleiste – die Regel bleibt für jeden Aufrufer richtig.)
  */
 export function beginnStelle(zeilen: readonly Zeile[]): number {
   let vorlauf = false;

@@ -13,7 +13,9 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Zeilen steht oben im Ablauf eine ruhige Leiste „Ablauf aktualisiert · 1 neu · 2 geändert", darunter jeder
   entfernte Punkt durchgestrichen; neue und geänderte Punkte tragen ein Schildchen „neu"/„geändert". Das
   Zerfallen fotografierte die ganze Seite ab (`html2canvas`) – in der ChurchTools-Erweiterung ist das die
-  komplette ChurchTools-Seite, die dabei hängen blieb. `html2canvas` ist als Abhängigkeit entfallen.
+  komplette ChurchTools-Seite, die dabei hängen blieb. Die direkte Abhängigkeit `html2canvas` ist
+  entfallen (jsPDF bringt es weiter als eigenen Teil mit, der nur für `doc.html()` geladen würde – die App
+  ruft das nicht auf).
 
 ### Neu
 

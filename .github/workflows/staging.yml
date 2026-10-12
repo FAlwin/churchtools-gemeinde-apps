@@ -13,6 +13,11 @@ on:
       - 'feature/**'
       - 'feat/**'
       - 'fix/**'
+      # Die Anmelde-App (#474) ändert an der Musik-App nichts – ihre Zweige überschrieben aber das EINE
+      # :staging und damit den Teststand der Musik-App (12.10.2026, zweimal in einer Stunde). Ausnahmen
+      # müssen hinter den Mustern stehen, die sie einschränken.
+      - '!feat/anmeldung-**'
+      - '!fix/anmeldung-**'
 
 env:
   IMAGE: ghcr.io/falwin/churchtools-musik-app

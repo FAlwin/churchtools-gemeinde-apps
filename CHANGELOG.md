@@ -17,6 +17,13 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Standardwerten durch, die der Server annimmt. **Wer eine ältere Kopie der Compose-Datei nutzt**, ergänzt
   die Zeilen unter `environment:` (UPDATE.md).
 
+### Intern
+
+- **Alte Schreibfunktionen der Volume-Ablage entfernt:** `putAnnotation`, `deleteAnnotation`,
+  `putSettings` und `markSeenSetlist` (samt Konto-Obergrenzen #139/#195) wurden seit dem Umzug nach
+  ChurchTools (v2.33.0) nicht mehr aufgerufen, nur noch von Tests. Die Dienste lesen jetzt nur noch den
+  Altbestand für den Umzug und löschen ihn danach; Tests legen Altdaten über `testHilfen/altbestand.ts` an.
+
 ### Doku
 
 - Betriebs-Doku an den Stand angeglichen: DEPLOYMENT.md beschreibt die Prod-Vorlage (fertiges Image, nur

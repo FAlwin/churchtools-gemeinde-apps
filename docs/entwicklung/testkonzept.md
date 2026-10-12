@@ -76,12 +76,13 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
   allen **drei** Stellen: `ctGet`, Datei-Download und Schreibpfad (`schreibe`)
 - `services/seenSetlists` – Altbestand der „gesehen"-Basislinien (nur noch für den Umzug nach ChurchTools)
 - `services/capabilitiesCache` + `churchtools(.capabilities)` – Rechte-Cache, CT-Aussetzer überbrücken
-- `services/annotations` – Anmerkungen pro Konto inkl. Obergrenzen (#139)
+- `services/annotations` – Altbestand der Anmerkungen auf dem Volume: lesen, Konto löschen, Lesefehler
+  wirft statt „leer" (#273). Die Schreibfunktionen samt Obergrenzen (#139) sind am 12.10.2026 entfallen.
 - `controllers/dateiController.filetype` – Datei-Proxy Content-Type-Whitelist (#138)
 - `middleware/session` – signiertes Session-Cookie, Ablauf/Format
-- `services/userSettings` – Konto-Obergrenzen der Lied-Einstellungen (#195): Grenzlogik, Eintrags-
-  und Byte-Grenze, Wert-Kappung, Schlüssel-Filter. Auch der Fall „Store liegt schon ÜBER der Grenze,
-  Löschen muss trotzdem gehen" ist abgedeckt (#213, `server/src/services/userSettings.test.ts`)
+- `services/userSettings` – Altbestand der Lied-Einstellungen: Schlüssel-Filter (#215, #145 – jede
+  erlaubte Einstellung findet ihr Lied), Lesefehler wirft (#273). `putSettings` samt Obergrenzen
+  (#195, #213) ist am 12.10.2026 entfallen. Altdaten legen Tests über `server/src/testHilfen/altbestand.ts` an.
 - `utils/ipKey` – Rate-Limit-Schlüssel (#146): gleiches /64 ⇒ gleicher Schlüssel, verschiedene /64
   getrennt, IPv4-mapped wie IPv4, Zone-Index, Normalisierung, unparsebar, leer
 - `services/buildSong.head` – Kopfangaben aus der ChordPro-Datei (#236): `{title}`/`{artist}`

@@ -224,8 +224,8 @@ Client, damit eine Version mit eigener Überschrift auch ihre eigene trägt.
 Seit der Ablage in ChurchTools (09.10.2026) liest und schreibt der Server diese Endpunkte über
 `services/kontoAblage.ts` in die Personen-Dateien der Person (`@shared/ct/personenAblage`) – dieselben,
 die die Erweiterung nutzt. Bis der Umzug eines Kontos fertig ist, ergänzt er Lesezugriffe um den
-Altbestand vom Daten-Volume (ChurchTools gewinnt). Die früheren Konto-Obergrenzen (#139, 413) gelten
-für das Volume und entfallen damit; je Anfrage begrenzt weiter das Zod-Schema.
+Altbestand vom Daten-Volume (ChurchTools gewinnt). Die früheren Konto-Obergrenzen (#139, 413) sind
+mit den Volume-Schreibfunktionen entfallen (12.10.2026); je Anfrage begrenzt weiter das Zod-Schema.
 
 - `GET  /api/annotations?songs=` / `PUT /api/annotations/:key` / `DELETE …/:key` → Anmerkungen+Zoom pro Konto (Feld-Merge strokes/texts/zoom; `zoom` = `{x, y, scale, fx?, fy?}` – `fx`/`fy` seit #420: die Stelle auf dem Blatt in der Mitte, Anteile 0–1; key `song<id>_v<ver>_<seite>[_lyr][_d<class>]`)
 - `GET  /api/settings?songs=` / `PUT /api/settings` → Lied-Einstellungen pro Konto (Schlüssel-Wert, Merge)

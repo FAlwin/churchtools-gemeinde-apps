@@ -1,31 +1,16 @@
 /**
- * Kontobezogene Lied-/Versions-Einstellungen (Tonart, Kapo, Spalten, Schrift, Nur-Text,
- * Abschnitte, gewählte Version, Anzeige-Quelle). Ohne DB: eine JSON-Datei pro Konto auf dem
- * Volume (wie annotations). Gespeichert als einfache Schlüssel→Wert-Tabelle (localStorage-Keys).
+ * **Altbestand** der Lied-/Versions-Einstellungen auf dem Daten-Volume (Tonart, Kapo, Spalten, Schrift,
+ * Nur-Text, Abschnitte, gewählte Version, Anzeige-Quelle): eine JSON-Datei pro Konto, Schlüssel→Wert.
+ * Seit v2.33.0 liegen die Einstellungen in ChurchTools; hier wird nur noch für den Umzug gelesen und
+ * 90 Tage nach geprüftem Umzug gelöscht. `putSettings` samt Konto-Obergrenzen #195 ist am 12.10.2026
+ * entfallen.
  */
 import path from 'node:path';
 import { rm } from 'node:fs/promises';
 import { config } from '../config.js';
-import { HttpError } from '../middleware/errorHandler.js';
-import { readJsonStore, writeJsonStore } from './jsonStore.js';
+import { readJsonStore } from './jsonStore.js';
 
 type Store = Record<string, string>;
-
-// ── Obergrenzen je Konto (#195) ────────────────────────────────────────────────────────────────
-// Die Anmerkungen haben solche Grenzen seit #139, die Einstellungen hatten keine: Schlüssel wurden
-// nur per Regex geprüft, die ANZAHL war unbegrenzt → ein angemeldetes Gemeindeglied konnte per
-// `PUT /api/settings` beliebig viele Schlüssel schreiben und damit das Volume (NAS) fluten.
-// Die Werte liegen weit über realem Bedarf: pro Lied entstehen ~8 Einstellungen (Tonart, Kapo,
-// Spalten, Schrift, Nur-Text, Abschnitte, Version, Anzeige-Quelle), je Version etwas mehr.
-/** Höchstzahl Einstellungs-Einträge je Konto (~8 pro Lied ⇒ Platz für weit über 2000 Lieder). */
-export const MAX_SETTINGS_PER_ACCOUNT = 20_000;
-/** Höchstgröße der gesamten Einstellungs-Datei eines Kontos in Bytes (serialisiert). */
-export const MAX_SETTINGS_BYTES_PER_ACCOUNT = 5 * 1024 * 1024; // 5 MB
-
-/** Rein & testbar: Liegt ein Einstellungs-Store mit dieser Eintragszahl + Bytegröße im Rahmen? */
-export function withinSettingsLimits(entryCount: number, totalBytes: number): boolean {
-  return entryCount <= MAX_SETTINGS_PER_ACCOUNT && totalBytes <= MAX_SETTINGS_BYTES_PER_ACCOUNT;
-}
 
 /**
  * Erlaubte Einstellungs-Schlüssel – begrenzt, was synchronisiert wird.
@@ -40,7 +25,7 @@ export function withinSettingsLimits(entryCount: number, totalBytes: number): bo
  * Schlüssel **stillschweigend verwerfen** – die Einstellungen wären dann geräteübergreifend weg.
  * Liegt in @shared/keys und wird von Client UND Server geteilt (#250) – hier nur re-exportiert.
  */
-import { SETTINGS_KEY_RE, SETTINGS_MAX_WERT, songIdOfSettingsKey } from '@shared/keys/index';
+import { SETTINGS_KEY_RE, songIdOfSettingsKey } from '@shared/keys/index';
 export { SETTINGS_KEY_RE };
 
 function fileFor(userId: number): string {
@@ -58,16 +43,6 @@ async function read(userId: number): Promise<Store> {
   const data = (await readJsonStore<Store>(fileFor(userId), 'Lied-Einstellungen')) ?? {};
   cache.set(userId, data);
   return data;
-}
-
-/**
- * `serialized` vermeidet doppeltes JSON.stringify, wenn der Aufrufer schon serialisiert hat.
- * Der Cache wird **erst nach** erfolgreichem Schreiben gesetzt (#273) – vorher zeigte er bei einem
- * Schreibfehler einen Stand, der nie auf der Platte lag. `putSettings` arbeitet ohnehin auf einer Kopie.
- */
-async function write(userId: number, store: Store, serialized?: string): Promise<void> {
-  await writeJsonStore(fileFor(userId), serialized ?? JSON.stringify(store));
-  cache.set(userId, store);
 }
 
 async function withLock<T>(userId: number, fn: () => Promise<T>): Promise<T> {
@@ -99,40 +74,4 @@ export async function getSettings(userId: number, songIds: number[]): Promise<St
     if (id !== null && set.has(id)) out[key] = value;
   }
   return out;
-}
-
-/** Mehrere Einstellungen setzen/entfernen (null/"" entfernt). Nur erlaubte Schlüssel. */
-export async function putSettings(
-  userId: number,
-  entries: Record<string, string | null>,
-): Promise<void> {
-  await withLock(userId, async () => {
-    const store = await read(userId);
-    // Auf einer KOPIE arbeiten und erst nach der Grenzprüfung übernehmen – sonst wäre der Store
-    // (und der Cache) schon verändert, wenn wir abbrechen.
-    const candidate: Store = { ...store };
-    for (const [key, value] of Object.entries(entries)) {
-      if (!SETTINGS_KEY_RE.test(key)) continue;
-      if (value === null || value === '') delete candidate[key];
-      else candidate[key] = String(value).slice(0, SETTINGS_MAX_WERT);
-    }
-    const serialized = JSON.stringify(candidate);
-    const count = Object.keys(candidate).length;
-    const bytes = Buffer.byteLength(serialized);
-    if (!withinSettingsLimits(count, bytes)) {
-      // Über der Grenze wird NUR abgelehnt, was den Store wachsen lässt (#213). Sonst säße ein
-      // Konto, dessen Datei schon vor Einführung der Grenzen zu groß war, in der Sackgasse: Auch
-      // das Aufräumen bekäme 413, und nur ein Handeingriff auf dem Volume käme da raus.
-      // (`annotations.ts` löst dasselbe über einen eigenen Löschzweig vor der Prüfung.)
-      const prevCount = Object.keys(store).length;
-      const prevBytes = Buffer.byteLength(JSON.stringify(store));
-      if (count > prevCount || bytes > prevBytes) {
-        throw new HttpError(
-          413,
-          'Speicher-Obergrenze für Lied-Einstellungen erreicht. Bitte nicht mehr benötigte Einstellungen zurücksetzen.',
-        );
-      }
-    }
-    await write(userId, candidate, serialized);
-  });
 }

@@ -15,10 +15,12 @@ import {
   punktAendern,
   punktAnlegen,
   punktLoeschen,
+  punktWiederherstellen,
   tempoSetzen,
   vorBeginnSetzen,
   ablaufAbschliessen,
   type CtSchreiber,
+  type GeloeschterPunkt,
   type NeuerPunkt,
   type PunktAenderung,
   type SchreibAuftrag,
@@ -124,9 +126,17 @@ export async function punkt(
   return OK;
 }
 
-/** `DELETE /api/services/:id/agenda/items/:itemId` */
-export async function punktWeg(eventId: number, itemId: number): Promise<{ ok: boolean }> {
-  await punktLoeschen(schreiber, eventId, itemId);
+/** `DELETE /api/services/:id/agenda/items/:itemId` – samt Merkzettel für „Rückgängig". */
+export async function punktWeg(
+  eventId: number,
+  itemId: number,
+): Promise<{ ok: boolean; wiederherstellen: GeloeschterPunkt | null }> {
+  return { ...OK, wiederherstellen: await punktLoeschen(schreiber, eventId, itemId) };
+}
+
+/** `POST /api/services/:id/agenda/items/wiederherstellen` */
+export async function punktZurueck(eventId: number, g: GeloeschterPunkt): Promise<{ ok: boolean }> {
+  await punktWiederherstellen(schreiber, eventId, g);
   return OK;
 }
 

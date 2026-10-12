@@ -23,16 +23,18 @@ describe('diffAgendaItems (#161 – was hat sich im Ablauf geändert)', () => {
   const base = [s(1, 'a'), s(2, 'b'), s(3, 'c'), s(4, 'd')];
 
   it('kein voriger Stand → nichts geändert (kein Fehlalarm bei Erstnutzung)', () => {
-    expect(diffAgendaItems([], base)).toEqual({ changedIds: [], removed: [] });
+    expect(diffAgendaItems([], base)).toEqual({ changedIds: [], newIds: [], removed: [] });
   });
 
   it('identisch → nichts geändert', () => {
-    expect(diffAgendaItems(base, base)).toEqual({ changedIds: [], removed: [] });
+    expect(diffAgendaItems(base, base)).toEqual({ changedIds: [], newIds: [], removed: [] });
   });
 
   it('neuer Punkt → als geändert markiert', () => {
     const now = [...base, s(5, 'e')];
     expect(diffAgendaItems(base, now).changedIds).toEqual([5]);
+    // … und nur er gilt als NEU (Schildchen „neu" statt „geändert", 12.10.2026).
+    expect(diffAgendaItems(base, now).newIds).toEqual([5]);
   });
 
   it('inhaltlich geänderter Punkt (gleiche id, andere Signatur)', () => {
@@ -58,6 +60,8 @@ describe('diffAgendaItems (#161 – was hat sich im Ablauf geändert)', () => {
     const now = [s(1, 'a'), s(2, 'B!'), s(4, 'd'), s(5, 'e')];
     const r = diffAgendaItems(base, now);
     expect(new Set(r.changedIds)).toEqual(new Set([2, 5]));
+    // Geändert ist nicht neu: nur 5 trägt „neu".
+    expect(r.newIds).toEqual([5]);
     expect(r.removed.map((x) => x.id)).toEqual([3]);
   });
 });

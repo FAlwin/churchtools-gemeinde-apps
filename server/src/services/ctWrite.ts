@@ -15,9 +15,11 @@ import {
   punktAendern,
   punktAnlegen,
   punktLoeschen,
+  punktWiederherstellen,
   tempoSetzen,
   vorBeginnSetzen,
   type CtSchreiber,
+  type GeloeschterPunkt,
   type NeuerPunkt,
   type PunktAenderung,
 } from '@shared/ct/schreibKern';
@@ -247,8 +249,22 @@ export function updateAgendaItem(
   return punktAendern(schreiberFuer(cookie), eventId, itemId, fields);
 }
 
-export function deleteAgendaItem(cookie: string, eventId: number, itemId: number): Promise<void> {
+/** Löscht und liefert, was „Rückgängig" zum Wiederherstellen braucht (`null`: war schon weg). */
+export function deleteAgendaItem(
+  cookie: string,
+  eventId: number,
+  itemId: number,
+): Promise<GeloeschterPunkt | null> {
   return punktLoeschen(schreiberFuer(cookie), eventId, itemId);
+}
+
+/** Legt einen eben gelöschten Punkt an seiner alten Stelle wieder an („Rückgängig", 12.10.2026). */
+export function restoreAgendaItem(
+  cookie: string,
+  eventId: number,
+  punkt: GeloeschterPunkt,
+): Promise<void> {
+  return punktWiederherstellen(schreiberFuer(cookie), eventId, punkt);
 }
 
 export function setAgendaItemVorBeginn(

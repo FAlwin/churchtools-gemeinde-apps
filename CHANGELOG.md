@@ -7,6 +7,47 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Geändert
+
+- **Ablauf-Änderungen ohne Animation** (Alwin, 12.10.2026): Statt aufleuchtender Punkte und zerfallender
+  Zeilen erscheint unten ein dunkler Hinweis „Ablauf aktualisiert · 1 neu · 2 geändert", darunter jeder
+  entfernte Punkt durchgestrichen; er verschwindet nach etwa 6 Sekunden von selbst. Neue und geänderte
+  Punkte tragen ein Schildchen „neu"/„geändert", solange man im Termin ist. Das Zerfallen fotografierte
+  die ganze Seite ab (`html2canvas`) – in der ChurchTools-Erweiterung ist das die komplette
+  ChurchTools-Seite, die dabei hängen blieb. Die direkte Abhängigkeit `html2canvas` ist entfallen (jsPDF
+  bringt es weiter als eigenen Teil mit, der nur für `doc.html()` geladen würde – die App ruft das nicht
+  auf).
+- **„Gesehen" gilt nach dem Anzeigen, nicht erst beim Verlassen** (12.10.2026): In der Erweiterung
+  verlässt man meist die ganze ChurchTools-Seite – dann wurde nichts gemerkt, und dieselben Änderungen
+  kamen beim nächsten Öffnen wieder. Gemerkt wird jetzt, sobald der frisch geholte Ablauf mit
+  Änderungen angezeigt wurde (und nur dann – in der Erweiterung ist jedes Merken ein Schreiben).
+- **Hinweise unten hängen jetzt an der Seite, nicht am Inhalt** (12.10.2026): Mitten im Inhalt gezeichnet,
+  saß ein Hinweis oben statt unten – der Bereich „Zum Aktualisieren nach unten ziehen" verschiebt per
+  `transform`. `Toast` hängt deshalb wie die Einführung per Portal an `body`.
+
+### Neu
+
+- **Rückgängig nach Löschen und Verschieben** (Alwin, 12.10.2026): Im Bearbeiten-Modus steht danach unten
+  „„Titel" gelöscht · Rückgängig" bzw. „… verschoben · Rückgängig", etwa 8 Sekunden lang. Ein gelöschter
+  Punkt kommt an seine Stelle zurück – mit Dauer, Notiz, Zuständigen, Dienstgruppen-Notizen und Vorlauf
+  (gemessen an der Test-Instanz); er hat danach eine neue ID. Eine in ChurchTools ausgeblendete Uhrzeit
+  kommt nicht zurück, die Schnittstelle kennt das Feld nicht.
+
+### Behoben
+
+- **Seitenwechsel im Liedblatt: Text-Anmerkungen kamen einen Frame zu spät** (12.10.2026, Fehlerklasse
+  #113): `usePageDraw` merkte sich den vorigen Seitenschlüssel in einem Ref und lud die Texte der neuen
+  Seite noch während des Renderns. Rendert React zweimal (StrictMode im Entwicklungs-Build,
+  unterbrochenes Rendern), war der Ref nach dem ersten Durchlauf schon umgestellt – das Laden ging
+  verloren, die Seite stand einen Frame ohne Texte da. Jetzt liegt der Schlüssel im Zustand; ein Test
+  unter StrictMode misst den ersten übernommenen Frame. Projektweit nach demselben Muster gesucht:
+  sonst nur `AgendaFullView` (dort mit dem Ablauf-Umbau behoben).
+- **Bearbeiten löschte die Notizen je Dienstgruppe:** ChurchTools leert sie bei einem Ändern ohne dieses
+  Feld (gemessen 12.10.2026) – die App schickte es nicht mit. Gab es seit dem Bearbeiten-Dialog.
+- **Löschen eines Vorlauf-Punkts schob den Gottesdienst in den Vorlauf:** ChurchTools zieht die Grenze
+  „Beginn" beim Löschen nicht mit (gemessen 12.10.2026); der erste Punkt des Gottesdienstes rutschte samt
+  Uhrzeiten davor. Die App rückt die Grenze jetzt selbst nach.
+
 ### Neu (Anmeldungen)
 
 - **Startseite der Anmeldungen: Veranstaltungen der eigenen Gruppen** (#480, Bauplan A2 – nur lesen).
@@ -22,12 +63,6 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   - Datum und Ort stehen als Kopie in den öffentlichen Einstellungen (`termin`) – der Termin wird bewusst
     nicht verknüpft (A0).
   - Geprüft gegen die Test-Instanz mit dem echten Code: 7 Abfragen für die ganze Übersicht.
-
-### Intern
-
-- `ctAlleSeiten` (`ui/ct/verbindung.ts`): ChurchTools-Listen über alle Seiten – `members` und `groups`
-  liefern sonst nur 10 Einträge (gemessen). Mehr als erlaubt → Fehler statt still abgeschnitten. Die
-  Liederliste der Musik-App nutzt es jetzt auch (bisher eigene Schleife, ohne Test – jetzt mit).
 
 ### Intern
 
@@ -70,6 +105,9 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
     unverändert) und der Erweiterungs-Bau (`ui/erweiterung/viteErweiterung.ts`, nutzt jetzt auch die
     Musik-App). Das Packen prüft zusätzlich, dass kein Skript im `<head>` zurückbleibt.
   - Tests: 17 neue; zehn Gegenproben an den Regeln und zwei am Bau, jede schlägt an.
+- `ctAlleSeiten` (`ui/ct/verbindung.ts`): ChurchTools-Listen über alle Seiten – `members` und `groups`
+  liefern sonst nur 10 Einträge (gemessen). Mehr als erlaubt → Fehler statt still abgeschnitten. Die
+  Liederliste der Musik-App nutzt es jetzt auch (bisher eigene Schleife, ohne Test – jetzt mit).
 
 ## [2.33.0] – 2026-10-12
 

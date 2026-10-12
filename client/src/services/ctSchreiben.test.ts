@@ -138,7 +138,7 @@ describe('Punkte', () => {
   it('Löschen: „schon weg" ist kein Fehler', async () => {
     ct.schreibAntworten['DELETE /api/events/500/agenda/items/3'] = () =>
       new Response(JSON.stringify({ message: 'Not found' }), { status: 404 });
-    await expect(punktWeg(500, 3)).resolves.toEqual({ ok: true });
+    await expect(punktWeg(500, 3)).resolves.toMatchObject({ ok: true });
   });
 });
 

@@ -341,7 +341,8 @@ export async function liedBlatt(
 /**
  * Alle Punkte eines Ablaufplans in Reihenfolge – Lieder aufgelöst, übrige nur als Eintrag.
  * `prevSigs` (zuletzt gesehener Stand, #161): ist es gesetzt, bekommt jeder geänderte/neue/
- * verschobene Punkt `changed: true` – die Grundlage fürs Aufleuchten im Client.
+ * verschobene Punkt `changed: true` (neue zusätzlich `neu: true`) – die Grundlage für Schildchen und
+ * Hinweisleiste im Client.
  */
 export async function ablaufPunkte(
   leser: CtLeser,
@@ -352,6 +353,7 @@ export async function ablaufPunkte(
   const items = agenda.items ?? [];
   const diff = prevSigs ? diffAgendaItems(prevSigs, agendaSignatureList(items)) : null;
   const changedIds = diff ? new Set(diff.changedIds) : null;
+  const newIds = diff ? new Set(diff.newIds) : null;
   const built = await Promise.all(
     items.map(async (item): Promise<AgendaItem> => {
       const song = item.song ? await baueLied(leser, item.song) : null;
@@ -374,11 +376,12 @@ export async function ablaufPunkte(
         durationMin: durationSec > 0 ? Math.round(durationSec / 60) : null,
         note: item.note ?? '',
         changed: changedIds ? changedIds.has(item.id) : undefined,
+        neu: newIds ? newIds.has(item.id) : undefined,
       };
     }),
   );
-  // Entfernte Punkte (Etappe B) als Platzhalter an ihrer alten Position einblenden – der Client
-  // lässt sie auflösen. Ohne Diff (nie gesehen) gibt es keine.
+  // Entfernte Punkte (Etappe B) als Platzhalter an ihrer alten Position – der Client nennt sie in der
+  // Hinweisleiste. Ohne Diff (nie gesehen) gibt es keine.
   if (!diff || diff.removed.length === 0) return built;
   const result = [...built];
   for (const r of diff.removed) {
@@ -396,7 +399,10 @@ export async function ablaufPunkte(
       note: '',
       removed: true,
     };
-    const at = r.afterId == null ? 0 : result.findIndex((it) => it.id === r.afterId) + 1;
+    let at = r.afterId == null ? 0 : result.findIndex((it) => it.id === r.afterId) + 1;
+    // Hinter schon eingesetzte Platzhalter derselben Stelle – sonst kehrte sich die Reihenfolge
+    // aufeinanderfolgender entfernter Punkte um („Drei" vor „Zwei", 12.10.2026 im Browser gesehen).
+    while (at < result.length && result[at].removed) at++;
     result.splice(at, 0, placeholder);
   }
   return result;

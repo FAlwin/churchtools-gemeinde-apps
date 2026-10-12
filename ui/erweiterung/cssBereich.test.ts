@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import postcss from 'postcss';
-import { APP, AUSSERHALB, BEREICH, cssBereich, imBereich } from './cssBereich';
+import { APP, AUSSERHALB, BEREICH, BEREICH_ATTRIBUT, cssBereich, imBereich } from './cssBereich';
 
 /**
  * Die globalen Stilregeln der Extension bleiben im App-Bereich (Alwin, 07.10.2026: die
@@ -68,7 +68,7 @@ describe('cssBereich – der PostCSS-Lauf', () => {
   });
 
   /**
-   * Durchklick 08.10.2026: Das Einführungs-Overlay (`data-musikapp`, außerhalb von `#root`) bekam den
+   * Durchklick 08.10.2026: Das Einführungs-Overlay (`data-gemeinde-app`, außerhalb von `#root`) bekam den
    * deckenden Seitenhintergrund und verdeckte das Liedblatt. Außerhalb gilt nur die Schrift.
    */
   it('außerhalb von #root nur die Schrift der Seite – keine Fläche', async () => {
@@ -76,7 +76,7 @@ describe('cssBereich – der PostCSS-Lauf', () => {
       'html,body{background:#fff;color:red;font-family:a;overflow:hidden;overscroll-behavior:none;-webkit-font-smoothing:antialiased}',
     );
     // Ganze Regeln vergleichen, nicht Teilstrings: `toContain` fand die Regel für außerhalb auch
-    // mitten in `<Bereich> :where([data-musikapp]){…}` – genau dem Fehler, den dieser Test bewachen
+    // mitten in `<Bereich> :where([data-gemeinde-app]){…}` – genau dem Fehler, den dieser Test bewachen
     // soll (im gebauten CSS gefunden, 08.10.2026).
     const regeln = aus
       .split('}')
@@ -101,5 +101,12 @@ describe('cssBereich – der PostCSS-Lauf', () => {
   it('Keyframes bleiben unangetastet', async () => {
     const aus = await lauf('@keyframes spin{to{transform:rotate(1turn)}}');
     expect(aus).toBe('@keyframes spin{to{transform:rotate(1turn)}}');
+  });
+});
+
+describe('BEREICH_ATTRIBUT', () => {
+  it('ist genau das Attribut, auf das die Regeln für außerhalb zielen', () => {
+    expect(AUSSERHALB).toBe(`:where([${BEREICH_ATTRIBUT}])`);
+    expect(BEREICH).toContain(`[${BEREICH_ATTRIBUT}]`);
   });
 });

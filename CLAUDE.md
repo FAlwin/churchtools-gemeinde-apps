@@ -188,12 +188,14 @@ churchtools-gemeinde-apps/
 │       ├── types/           # server-spezifische Typen
 │       └── utils/           # Hilfsfunktionen (u. a. isoTag.ts = die eine Datums-Formatierung)
 ├── shared/types/            # geteilte Typen (Service, SetlistSong, Setlist, …)
-└── ui/                      # gemeinsame Oberflächen-Bausteine beider Apps (Alias @ui, Dienstplaner E1)
+└── ui/                      # gemeinsame Browser-Bausteine aller Apps (Alias @ui, Dienstplaner E1, Anmeldungen #474)
     ├── design/              # _variables.scss (Tokens), _mixins.scss
     ├── icons/               # icons.tsx (Line-Icons)
     ├── fenster/             # Sheet (Modal), useOverlayKeyboardInset, appHeight
     ├── bedienung/           # Segment, Schalter, KnopfReihe
-    └── teilen/              # shareFile, sharePdf
+    ├── teilen/              # shareFile, sharePdf
+    ├── ct/                  # Verbindung einer Erweiterung zu ChurchTools: verbindung.ts, fehler.ts (ApiError), basis.ts
+    └── erweiterung/         # Erweiterungs-Bau: cssBereich (PostCSS), kopfInDenInhalt (Vite-Plugin)
 ```
 
 ## Konventionen
@@ -466,7 +468,8 @@ client`, Kürzel `VITE_KEY`) baut die App als ChurchTools-Erweiterung unter `/cc
 - **Logik des Servers, die die Extension braucht, wird nach `shared/ct/` VERSCHOBEN, nicht kopiert**
   (`setlistKern.ts` mit `CtLeser`, Rechte, Bremse, Diff, Zeitzone …); die alten Server-Pfade leiten
   weiter. Der Browser-Leser steht in `client/src/services/ctLesen.ts`, Sitzung/Bremse/Fehler in
-  `ctRuntime.ts` (nach 429 gerätweit keine Anfrage bis `Retry-After`/120 s). **Schreiben (3b):** Regeln
+  `ui/ct/verbindung.ts` (für alle Erweiterungen, #474; die Musik-App stellt sie in `ctRuntime.ts` ein und
+  reicht sie weiter – nach 429 gerätweit keine Anfrage bis `Retry-After`/120 s). **Schreiben (3b):** Regeln
   in `shared/ct/schreibKern.ts` (Anschluss `CtSchreiber`), Server über `ctWrite.schreibe`, Browser über
   `ctSchreiben.ts`; Fehler wie im Server („… fehlgeschlagen (Status)" als 502, fehlendes Recht mit der
   Meldung des Auftrags).
@@ -476,9 +479,10 @@ client`, Kürzel `VITE_KEY`) baut die App als ChurchTools-Erweiterung unter `/cc
   `pdfWorkerDatei.ts`), App liegt unter 56 px ChurchTools-Leiste (`.ct-extension #root { transform }`).
   **Unsere globalen Stilregeln dürfen ChurchTools nicht treffen** (ChurchTools legt seine Regeln in
   Tailwind-`@layer`, unsere ohne Ebene gewinnen immer): Der Extension-Build schreibt `:root`/`html`/
-  `body`/`*`/Elemente auf `:where(#root, [data-musikapp])` um (Gewicht 0 – `:is` schlug alle Klassen der App) (`client/src/buildHilfen/cssBereich.ts`),
-  `scripts/paket-extension.mjs` bricht ab, wenn im gebauten CSS noch eine globale Regel steht. Was an
-  `body` hängt (Coachmarks), braucht `data-musikapp`. Nur EIN `css`-Schlüssel in `vite.config.ts`.
+  `body`/`*`/Elemente auf `:where(#root, [data-gemeinde-app])` um (Gewicht 0 – `:is` schlug alle Klassen der App) (`ui/erweiterung/cssBereich.ts`),
+  `scripts/paket-erweiterung.mjs` bricht ab, wenn im gebauten CSS noch eine globale Regel steht (Kürzel
+  liest es aus dem gebauten `index.html`). Was an `body` hängt (Coachmarks), setzt `BEREICH_ATTRIBUT`
+  aus `cssBereich.ts` (hieß bis #474 `data-musikapp`). Nur EIN `css`-Schlüssel in `vite.config.ts`.
 - Was es in der Extension noch nicht gibt, meldet `ohneServer` (501) – und die Oberfläche zeigt es gar
   nicht erst: **Komponenten fragen `services/funktionen.ts`** (Offline, Abmelden, Liedtext-Suche …), Bearbeiten
   hängt an den Rechten (`ctLesen.meineRechte` meldet, was noch fehlt, als `false` – seit 3b-2 nur

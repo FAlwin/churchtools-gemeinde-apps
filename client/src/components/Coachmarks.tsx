@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import styles from './Coachmarks.module.scss';
+import { BEREICH_ATTRIBUT } from '@ui/erweiterung/cssBereich';
 
 /** Ein Schritt der Einführung: hebt das per `selector` gefundene Element hervor und erklärt es. */
 export interface CoachStep {
@@ -119,9 +120,9 @@ export function Coachmarks({ steps, onClose }: CoachmarksProps) {
   const bubbleStyle = { top };
 
   return createPortal(
-    // `data-musikapp`: Das Overlay hängt an `body`, außerhalb von `#root` – in der ChurchTools-Extension
-    // gelten unsere Grundregeln und Farben nur im App-Bereich (`buildHilfen/cssBereich.ts`).
-    <div className={styles.root} role="dialog" aria-modal="true" data-musikapp="">
+    // `BEREICH_ATTRIBUT`: Das Overlay hängt an `body`, außerhalb von `#root` – in der ChurchTools-Extension
+    // gelten unsere Grundregeln und Farben nur im App-Bereich (`ui/erweiterung/cssBereich.ts`).
+    <div className={styles.root} role="dialog" aria-modal="true" {...{ [BEREICH_ATTRIBUT]: '' }}>
       {/* Spotlight: transparentes Rechteck ums Ziel, riesiger box-shadow dunkelt den Rest ab. */}
       <div
         className={styles.hole}

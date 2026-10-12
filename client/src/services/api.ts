@@ -4,16 +4,10 @@
  */
 import { markReachable } from './reachability';
 import { BASE } from './apiBase';
+import { ApiError } from '@ui/ct/fehler';
 
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-  ) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
+// Die Klasse liegt bei der ChurchTools-Verbindung, die alle Erweiterungen teilen (#474).
+export { ApiError };
 
 /**
  * Globaler „Sitzung abgelaufen"-Melder (#186, hierher gezogen mit #210/#211).

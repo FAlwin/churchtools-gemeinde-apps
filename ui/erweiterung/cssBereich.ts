@@ -11,10 +11,21 @@
  * allgemein sie sind.
  *
  * Deshalb schreibt der **Extension-Build** (nur er – die PWA bleibt Byte für Byte gleich) jede
- * globale Regel auf den App-Bereich um: `#root` und Elemente mit `data-musikapp` (das
+ * globale Regel auf den App-Bereich um: `#root` und Elemente mit `data-gemeinde-app` (das
  * Einführungs-Overlay hängt an `body`, außerhalb von `#root`). Modul-Klassen sind ohnehin eindeutig
  * und bleiben, wie sie sind.
+ *
+ * **Für jede Erweiterung dieses Repos** (#474, aus `client/src/buildHilfen/` hierher gezogen): Jede läuft
+ * auf ihrer eigenen ChurchTools-Seite (`/ccm/<Kürzel>/`), deshalb dürfen sich alle denselben Bereich
+ * teilen. Die Kennung hieß bis dahin `data-musikapp`.
  */
+
+/**
+ * Das Attribut für Elemente der App außerhalb von `#root` (Portale an `body`) – **hier und nur hier**
+ * festgelegt: Bereich und Regeln bauen darauf auf, die Komponenten setzen es über diese Konstante
+ * (`{...{ [BEREICH_ATTRIBUT]: '' }}`) – so können Overlay und Stilregel nicht auseinanderlaufen.
+ */
+export const BEREICH_ATTRIBUT = 'data-gemeinde-app';
 
 /**
  * Der Bereich der App im ChurchTools-Dokument.
@@ -24,17 +35,17 @@
  * am Rand. `:where` hat das Gewicht 0, genau wie das ursprüngliche `*`. Gegen ChurchTools gewinnen die
  * Regeln trotzdem: ChurchTools' Regeln liegen in `@layer`, unsere nicht.
  */
-export const BEREICH = ':where(#root, [data-musikapp])';
+export const BEREICH = `:where(#root, [${BEREICH_ATTRIBUT}])`;
 
-/** Nur die App selbst – ohne die Elemente außerhalb (`data-musikapp`). */
+/** Nur die App selbst – ohne die Elemente außerhalb (`BEREICH_ATTRIBUT`). */
 export const APP = ':where(#root)';
 /** Elemente der App außerhalb von `#root` (das Einführungs-Overlay hängt an `body`). */
-export const AUSSERHALB = ':where([data-musikapp])';
+export const AUSSERHALB = `:where([${BEREICH_ATTRIBUT}])`;
 
 /**
  * Was aus `html`/`body` auch **außerhalb** von `#root` gelten darf: nur die Schrift, die ein Element
  * sonst von der Seite erben würde. **Nicht** die Fläche (`background`, `overflow` …) – sie beschreibt
- * die Seite. Durchklick 08.10.2026: Das Einführungs-Overlay bekam über `[data-musikapp]` den deckenden
+ * die Seite. Durchklick 08.10.2026: Das Einführungs-Overlay bekam über `[data-gemeinde-app]` den deckenden
  * Seitenhintergrund und verdeckte das Liedblatt; Schritt 1 „Blättern & Zoomen" zeigte ein leeres Blatt.
  */
 const SCHRIFT = /^(color|font(-.+)?|line-height|letter-spacing|-webkit-font-smoothing)$/;
@@ -51,7 +62,7 @@ const SCHRIFT = /^(color|font(-.+)?|line-height|letter-spacing|-webkit-font-smoo
 export function imBereich(selektor: string): string {
   const s = selektor.trim();
   // Schon im Bereich (z. B. die Regel für außerhalb, die das Plugin selbst ergänzt): nicht ein zweites
-  // Mal umschreiben – sonst stünde `<Bereich> :where([data-musikapp])` da und träfe das Overlay nicht.
+  // Mal umschreiben – sonst stünde `<Bereich> :where([data-gemeinde-app])` da und träfe das Overlay nicht.
   if (s.startsWith(':where(#root') || s.startsWith(AUSSERHALB)) return s;
   if (s === ':root') return BEREICH;
   if (s === 'html' || s === 'body') return APP;
@@ -97,7 +108,7 @@ function inKeyframes(r: Knoten): boolean {
  */
 export function cssBereich() {
   return {
-    postcssPlugin: 'musikapp-css-bereich',
+    postcssPlugin: 'gemeinde-app-css-bereich',
     Once(wurzel: Wurzel) {
       wurzel.walkRules((regel) => {
         if (inKeyframes(regel)) return;

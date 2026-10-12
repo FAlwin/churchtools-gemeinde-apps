@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ctAnfrage, ctBasis, fehlerAus, KeinSpeicherRecht, _vergissCsrf } from './ctRuntime';
 import { ApiError } from './api';
+import { getReachable, markReachable } from './reachability';
 import { urlVon } from './ctFake.testutil';
 
 /**
@@ -85,5 +86,27 @@ describe('ctAnfrage', () => {
       json(400, { message: 'There are validation errors', translatedMessage: 'Eingabe falsch.' }),
     );
     await expect(ctAnfrage('/irgendwas')).rejects.toThrow('Eingabe falsch.');
+  });
+});
+
+/**
+ * Die Verbindung liegt seit #474 in `ui/ct/verbindung.ts`; die Musik-App stellt sie in `ctRuntime.ts`
+ * ein. Ohne diese Tests blieb die Gegenprobe grün, als die Einstellung fehlte.
+ */
+describe('Einstellung der Musik-App (#474)', () => {
+  it('fehlendes Recht nennt das Recht, das die Musik-App braucht', async () => {
+    const body = { message: 'Forbidden to edit person files', messageKey: 'error.forbidden.edit' };
+    const e = await fehlerAus(json(403, body), body);
+    expect(e.message).toContain('Eigene Personendaten bearbeiten');
+  });
+
+  it('keine Antwort von ChurchTools → „nicht erreichbar", eine Antwort → wieder erreichbar', async () => {
+    markReachable(true);
+    const spy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
+    await expect(ctAnfrage('/whoami')).rejects.toThrow('Failed to fetch');
+    expect(getReachable()).toBe(false);
+    spy.mockResolvedValue(json(200, { data: 1 }));
+    await ctAnfrage('/whoami');
+    expect(getReachable()).toBe(true);
   });
 });

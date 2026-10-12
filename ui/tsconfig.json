@@ -1,6 +1,6 @@
 {
   "extends": "../tsconfig.base.json",
-  // Gemeinsame Oberflächen-Bausteine beider Apps (Musik-App in client/, später der Dienstplaner).
+  // Gemeinsame Browser-Bausteine aller Apps (Musik-App in client/, Anmeldungen, später der Dienstplaner).
   // Gebaut und geprüft werden sie dort, wo sie eingebunden sind (Vite-Alias `@ui`); dieses tsconfig
   // braucht der Lint, damit er die Dateien einem Projekt zuordnen kann. Einstellungen wie client/.
   "compilerOptions": {
@@ -10,7 +10,11 @@
     "moduleResolution": "Bundler",
     // Typen für `*.module.scss`-Importe (wie in client/); innerhalb von ui/ wird relativ importiert.
     "types": ["vite/client"],
-    "noEmit": true
+    "noEmit": true,
+    // Die ChurchTools-Verbindung (`ct/`) nutzt die Regeln aus shared/ct – derselbe Alias wie in den Apps.
+    "paths": {
+      "@shared/*": ["../shared/*"]
+    }
   },
   // Sammel-Muster statt Ordnerliste – dieselbe Lehre wie in shared/tsconfig.json.
   "include": ["**/*.ts", "**/*.tsx"]

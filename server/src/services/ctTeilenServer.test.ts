@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import path from 'node:path';
 import { leeren, tempVerzeichnis } from '../testHilfen/tempAblage.js';
 import { AblageFake, BILD } from '../testHilfen/ablageFake.js';
+import { nasAnmerkungAnlegen } from '../testHilfen/altbestand.js';
 
 /**
  * Team-Notizen der Server-App über ChurchTools (09.10.2026). Hier der Übergang: Wer in der Server-App
@@ -58,7 +59,7 @@ beforeEach(async () => {
   await annotations.kontoLoeschen(KOLLEGE);
   // Der Kollege hat in der Server-App geteilt und gezeichnet – und ist seitdem nicht da gewesen.
   await sharing.setSharing(KOLLEGE, 'Kollege', true);
-  await annotations.putAnnotation(KOLLEGE, SEITE, { strokes: BILD });
+  await nasAnmerkungAnlegen(KOLLEGE, SEITE, { strokes: BILD });
 });
 
 describe('Teilende, die noch nicht umgezogen sind', () => {

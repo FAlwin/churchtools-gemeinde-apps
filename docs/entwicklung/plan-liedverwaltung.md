@@ -288,7 +288,7 @@ Vorgang nicht auslöst, belegt nichts.**
 
 Daraus die Umsetzung:
 
-- **`songWritePayload`** (`server/services/songPayload.ts`) baut den Rumpf **aus dem gelesenen Lied**
+- **`songWritePayload`** (`shared/ct/songPayload.ts`) baut den Rumpf **aus dem gelesenen Lied**
   plus Änderung – wie `arrangementWritePayload` beim Tempo. `ZU_ERHALTEN` nennt die Felder, die
   mitmüssen; `shouldPractice` steht dort, obwohl die App es nirgends zeigt.
 - **Leeren nutzt den Messbefund, statt eine zweite Annahme zu treffen:** `''` lässt das Feld aus dem

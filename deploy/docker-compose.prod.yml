@@ -47,6 +47,11 @@ services:
       CHURCHTOOLS_ABSENCE_REASON_ID: ${CHURCHTOOLS_ABSENCE_REASON_ID:-1}
       # Zeitzone der Gemeinde (#414): an welchem Tag ein Termin stattfindet. Standard Europe/Berlin.
       ZEITZONE: ${ZEITZONE:-Europe/Berlin}
+      # Kürzel der ChurchTools-Erweiterung (`/ccm/<kürzel>/`), mit der die App die Team-Notizen-Liste teilt.
+      ERWEITERUNG_KUERZEL: ${ERWEITERUNG_KUERZEL:-musik-app}
+      # Umzug des Volume-Altbestands nach ChurchTools: leer = automatisch (Images `staging-…` ziehen
+      # nicht um), `aus` für eine Test-Installation am echten ChurchTools.
+      ABLAGE_UMZUG: ${ABLAGE_UMZUG:-}
     ports:
       # Nur auf localhost binden: der Zugriff läuft ausschließlich über den Reverse Proxy (HTTPS).
       # Direkter LAN-Zugriff (HTTP, Cookie ohne Secure-Wirkung) bleibt damit zu. Falls eine

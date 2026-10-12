@@ -21,40 +21,36 @@ beforeEach(async () => {
 
 const USER = 42;
 
-describe('seenSetlists (#143 – zuletzt gesehener Setlist-Stand je Konto)', () => {
+/** Den Altbestand so anlegen, wie ihn die Server-App vor dem Umzug geschrieben hat. */
+async function altbestand(inhalt: unknown): Promise<void> {
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  await fs.writeFile(file, JSON.stringify(inhalt), 'utf-8');
+}
+
+/**
+ * Der **Altbestand** der gesehenen Stände (#143) – nur noch gelesen (Umzug nach ChurchTools) und je
+ * Konto vergessen. `markSeenSetlist` und seine Tests sind am 12.10.2026 entfallen.
+ */
+describe('seenSetlists – Altbestand', () => {
   it('nichts gemerkt → leeres Objekt', async () => {
     expect(await mod.getSeenSetlists(USER)).toEqual({});
   });
 
-  it('markSeen merkt den Fingerabdruck je Termin und ist wieder lesbar', async () => {
-    await mod.markSeenSetlist(USER, 1001, 'hashA', undefined, 1_000_000);
-    await mod.markSeenSetlist(USER, 1002, 'hashB', undefined, 1_000_000);
-    const seen = await mod.getSeenSetlists(USER);
-    expect(seen['1001']?.hash).toBe('hashA');
-    expect(seen['1002']?.hash).toBe('hashB');
-  });
-
-  it('erneutes markSeen überschreibt den Stand desselben Termins', async () => {
-    await mod.markSeenSetlist(USER, 1001, 'alt', undefined, 1_000_000);
-    await mod.markSeenSetlist(USER, 1001, 'neu', undefined, 2_000_000);
-    const seen = await mod.getSeenSetlists(USER);
-    expect(seen['1001']?.hash).toBe('neu');
-  });
-
-  it('Konten sind getrennt', async () => {
-    await mod.markSeenSetlist(USER, 1001, 'hashA', undefined, 1_000_000);
+  it('liest die Stände je Konto, andere Konten getrennt', async () => {
+    await altbestand({ [USER]: { '1001': { hash: 'hashA', seenAt: 1 } }, '99': {} });
+    expect((await mod.getSeenSetlists(USER))['1001']?.hash).toBe('hashA');
     expect(await mod.getSeenSetlists(99)).toEqual({});
   });
 
-  it('räumt Einträge älter als 180 Tage beim nächsten Schreiben aus', async () => {
-    const t0 = 1_000_000_000_000;
-    await mod.markSeenSetlist(USER, 1001, 'alt', undefined, t0);
-    // 181 Tage später ein anderer Termin → der alte Eintrag fällt raus.
-    const later = t0 + 181 * 24 * 60 * 60 * 1000;
-    await mod.markSeenSetlist(USER, 1002, 'neu', undefined, later);
-    const seen = await mod.getSeenSetlists(USER);
-    expect(seen['1001']).toBeUndefined();
-    expect(seen['1002']?.hash).toBe('neu');
+  it('kontoVergessen nimmt nur dieses Konto heraus', async () => {
+    await altbestand({
+      [USER]: { '1001': { hash: 'a', seenAt: 1 } },
+      '99': { '2002': { hash: 'b', seenAt: 1 } },
+    });
+    await mod.kontoVergessen(USER);
+    mod.__resetForTests(); // von der Platte neu lesen
+    expect(await mod.getSeenSetlists(USER)).toEqual({});
+    expect((await mod.getSeenSetlists(99))['2002']?.hash).toBe('b');
   });
 });
 
@@ -65,13 +61,13 @@ describe('seenSetlists (#143 – zuletzt gesehener Setlist-Stand je Konto)', () 
  * hängt nicht davon ab, unter welchem Benutzer die Tests laufen (als root griffe `chmod 000` nicht).
  */
 describe('Gesehene Abläufe – beschädigte Datei (#404)', () => {
-  it('überschreibt sie nicht und liefert beim Lesen „nichts gemerkt" statt eines Fehlers', async () => {
+  it('liefert beim Lesen „nichts gemerkt" und Vergessen überschreibt die Datei nicht', async () => {
     await fs.mkdir(path.dirname(file), { recursive: true });
     await fs.writeFile(file, '{"kaputt": ', 'utf-8');
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    await mod.markSeenSetlist(USER, 1001, 'hashA');
     expect(await mod.getSeenSetlists(USER)).toEqual({});
+    await expect(mod.kontoVergessen(USER)).rejects.toThrow();
 
     expect(await fs.readFile(file, 'utf-8')).toBe('{"kaputt": ');
     expect(errors).toHaveBeenCalled(); // laut – ein Blick aufs Volume ist nötig

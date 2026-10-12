@@ -163,7 +163,9 @@ und HTTPS. Zwei Wege:
 
 > **Wichtig bei HTTPS: `COOKIE_SECURE=true` setzen.** Steht die Variable auf `false` (der
 > Standard, damit die App im LAN per HTTP läuft), geht das Anmelde-Cookie auch über HTTPS ohne
-> „secure"-Kennzeichen. Also in der `.env` bzw. Compose-Datei `COOKIE_SECURE=true` eintragen und
+> „secure"-Kennzeichen. Also in der `.env` `COOKIE_SECURE=true` eintragen (die Compose-Vorlagen reichen
+> den Wert seit 12.10.2026 durch – ältere Kopien unter `environment:` um
+> `COOKIE_SECURE: ${COOKIE_SECURE:-false}` ergänzen) und
 > den Container **neu erstellen** – ein reiner Neustart übernimmt geänderte Variablen nicht. Wer es
 > vergisst, findet seit v2.25.3 einmalig eine Warnung im Container-Log. Der Haken: Danach ist die
 > App **nur noch über HTTPS** nutzbar, der direkte Zugriff per `http://nas-ip:3001` meldet nicht
@@ -242,7 +244,7 @@ Die App ist nun unter `https://musik.eure-domain.de` erreichbar.
 | macOS blockiert `setup.command` | „Nicht verifizierter Entwickler" – Rechtsklick → „Öffnen" → „Öffnen"                  |
 | Windows blockiert `setup.bat`   | SmartScreen – „Weitere Informationen" → „Trotzdem ausführen"                          |
 | „Docker wurde nicht gefunden"   | Docker Desktop ist nicht installiert oder nicht gestartet                             |
-| „Nicht angemeldet" trotz Login  | Cookie-Problem – nur über HTTPS (Reverse Proxy/Cloudflare) lösen                      |
+| „Nicht angemeldet" trotz Login  | `COOKIE_SECURE=true`, aber Aufruf über `http://` – über HTTPS aufrufen oder `false`   |
 | Keine Lieder/Abläufe sichtbar   | Fehlende ChurchTools-Rechte für diese Person                                          |
 | Admin-Funktionen fehlen         | `ADMIN_PERMISSION` in `.env` passt nicht – Wert anpassen                              |
 | Termine am falschen Tag         | Gemeinde außerhalb Deutschlands – `ZEITZONE` in `.env` setzen (z. B. `Europe/Zurich`) |
@@ -268,11 +270,11 @@ Im Ordner `deploy/` liegen drei Varianten. Für die allermeisten Gemeinden reich
 | Datei                        | Wofür                                                                                                                                                                                                                                                                                       | Auto-Update     |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
 | `docker-compose.yml`         | **Empfohlener Standard.** Einfacher Produktivbetrieb einer Gemeinde. Updates spielt ihr bewusst ein (`docker compose pull` + `up -d`, oder per `update`-Skript).                                                                                                                            | nein            |
-| `docker-compose.prod.yml`    | Wie die Basis, aber das Image ist auf den Major-Tag `:2` gepinnt (keine ungewollten Sprünge auf eine größere Umstellung). Sinnvoll, wenn ihr maximale Kontrolle über den Zeitpunkt von Updates wollt.                                                                                       | nein            |
+| `docker-compose.prod.yml`    | **Nur mit Reverse Proxy und HTTPS.** Port `3001` lauscht nur an `127.0.0.1`, `COOKIE_SECURE` steht standardmäßig auf `true`, Container heißt `worship-charts`. Ohne Proxy ist die App damit weder erreichbar noch anmeldbar – Einrichtung in [DEPLOYMENT.md](docs/betrieb/DEPLOYMENT.md).   | nein            |
 | `docker-compose.staging.yml` | **Nur zum Testen.** Eine zweite, parallele Instanz neben der Live-App (eigenes Volume). Zieht über Watchtower automatisch neue Test-Versionen. **Braucht einen eigenen Reverse Proxy mit HTTPS** – Port `3002` ist nur an `127.0.0.1` gebunden und `COOKIE_SECURE` steht auf `true` (#196). | ja (Watchtower) |
 
 Hinweise:
 
-- Die Dateien nutzen unterschiedliche **Volume-Namen** (`musik-data` in der Basis, `worship-data` in Prod, `worship-data-test` in Staging). Wechselt ihr die Datei, zeigt Docker auf ein anderes Volume – bleibt bei **einer** Datei, damit eure Daten (Gemeindename, Links, Anmerkungen) erhalten bleiben.
+- Die Dateien nutzen unterschiedliche **Volume-Namen** (`musik-data` in der Basis, `worship-data` in Prod, `worship-data-test` in Staging). Wechselt ihr die Datei, zeigt Docker auf ein anderes Volume – bleibt bei **einer** Datei, damit eure Daten (Gemeindename, Links, Musikergruppen) erhalten bleiben. Anmerkungen und Einstellungen liegen seit v2.33.0 in ChurchTools; auf dem Volume steht nur noch ihr Altbestand, bis er umgezogen ist.
 - Prod und Staging könnt ihr **gleichzeitig** betreiben (verschiedene Ports/Volumes) – so testet ihr eine neue Version unter einer eigenen Test-Adresse, während die Gemeinde weiter auf der Live-Adresse arbeitet. Die Test-Instanz lauscht dabei nur lokal (`127.0.0.1`) und braucht deshalb einen eigenen Reverse-Proxy-Eintrag – Schritt für Schritt in [DEPLOYMENT.md, Abschnitt 6](docs/betrieb/DEPLOYMENT.md#6-test-instanz-danebenstellen-optional).
 - Für Staging empfiehlt sich eine **eigene, von Prod getrennte** `.env` (getrennte `CHURCHTOOLS_BASE_URL`/`SESSION_SECRET`).

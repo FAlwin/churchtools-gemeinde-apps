@@ -15,7 +15,7 @@ Termin ist nur **vorgemerkt** (blauer Ring) – erst **Speichern** legt in Churc
 eine Abwesenheit mit dessen **Uhrzeit** und dem Kommentar `[Musikteam]` an, alle Häkchen auf einmal
 (seit 22.09.2026; vorher ganztägig je Tag). Ein zweiter Tipp nimmt einen Haken zurück.
 
-1. Anmelden, unten auf **Abwesenheiten**. Beim ersten Öffnen erscheint die Einführung (drei Blasen) –
+1. Anmelden, unten auf **Abwesenheiten**. Beim ersten Öffnen erscheint die Einführung (vier Blasen, drei ohne Termin-Arten) –
    schließen. Oben der Schalter **Termine | Einträge**, darunter die Monatsleiste mit **Heute**
    (ausgegraut), dem laufenden Monat und sechs Monaten voraus, rechts der runde Pfeil.
 2. Beim nächsten Gottesdienst das Kästchen **Abwesend** antippen: Haken rot, blauer Ring, die

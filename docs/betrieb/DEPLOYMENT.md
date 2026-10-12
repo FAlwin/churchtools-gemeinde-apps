@@ -1,8 +1,11 @@
-# Deployment – aus dem Quellcode (Synology NAS + Reverse Proxy)
+# Deployment – Synology NAS + Reverse Proxy (Prod-Vorlage)
 
-> Diese Anleitung beschreibt das Bauen **aus dem Quellcode** auf einem Synology-NAS
-> (mit Container Manager) als **Beispiel-Setup**. Wer lieber das fertige Image nutzt,
-> nimmt **[INSTALL.md](../../INSTALL.md)** – das ist der empfohlene, einfachere Weg.
+> Diese Anleitung beschreibt den Betrieb mit `deploy/docker-compose.prod.yml` auf einem Synology-NAS
+> (mit Container Manager) als **Beispiel-Setup**: fertiges Image `ghcr.io/falwin/churchtools-musik-app:2`,
+> Zugriff **nur über einen Reverse Proxy mit HTTPS** (Port an `127.0.0.1`, `COOKIE_SECURE` an). Wer es
+> einfacher will oder keinen Proxy hat, nimmt **[INSTALL.md](../../INSTALL.md)** mit der Basis-Vorlage.
+> (Bis zum 12.10.2026 hieß diese Seite „aus dem Quellcode" – gebaut wird aber nichts mehr, die Vorlage
+> zieht das Image. Selbst bauen geht nur mit `docker-compose.dev.yml` und braucht zusätzlich `ui/`.)
 >
 > Alle konkreten Werte unten (`deine-gemeinde.de`, `<NAS-IP>`, DNS-/Router-Anbieter)
 > sind **Platzhalter** – durch eure eigenen ersetzen.
@@ -29,11 +32,10 @@ Ein Container (`app`) liefert sowohl die Web-App als auch die API aus.
 
 1. In DSM die **File Station** öffnen.
 2. Im freigegebenen Ordner `docker` einen Unterordner anlegen (z. B. `churchtools-musik-app`).
-3. Den **Projektordner** dorthin kopieren (ohne `node_modules`/`.git`). Mindestens nötig:
-   `Dockerfile`, eine Compose-Datei aus `deploy/` (für Produktion: `deploy/docker-compose.prod.yml`,
-   im Container Manager als `docker-compose.yml` ablegen), `package.json`, `package-lock.json`,
-   `client/`, `server/`, `shared/`. **Im Projektstamm liegt KEINE `docker-compose.yml`** – dort gibt es
-   nur `docker-compose.dev.yml` (Entwicklung); die produktiven Vorlagen liegen in `deploy/`.
+3. Dorthin genügt **eine Datei**: `deploy/docker-compose.prod.yml`, im Container Manager als
+   `docker-compose.yml` ablegen (dazu gleich die `.env`). Quellcode, `Dockerfile` und `node_modules`
+   braucht es nicht – das Image kommt fertig von GHCR. **Im Projektstamm liegt KEINE
+   `docker-compose.yml`** – dort gibt es nur `docker-compose.dev.yml` (Entwicklung).
 
 ## 2. .env-Datei für die Produktion anlegen
 
@@ -64,7 +66,8 @@ Grenze der App. Deshalb:
 - `SESSION_SECRET` wie ein **Master-Passwort** behandeln: nicht in **unverschlüsselte** Backups (die
   `.env` liegt im Projektordner – Hyper Backup o. Ä. dann verschlüsselt sichern), nicht per Mail oder
   Chat weitergeben, nie einchecken.
-- **Rotieren** (neues Geheimnis in die `.env`, Container neu starten) meldet **alle** in der App ab –
+- **Rotieren** (neues Geheimnis in die `.env`, Container **neu erstellen** – `docker compose up -d`;
+  ein reiner Neustart übernimmt geänderte Variablen nicht) meldet **alle** in der App ab –
   jeder meldet sich einmal neu an. Die in ChurchTools angelegten Anmeldeschlüssel bleiben dabei
   **gültig**: Bei Verdacht auf Missbrauch zusätzlich den Schlüssel der betroffenen Person in ChurchTools
   neu erzeugen. Achtung, das trifft auch andere Dienste, die ihn nutzen.
@@ -112,12 +115,14 @@ So wird `https://musik.deine-gemeinde.de` erreichbar. Reihenfolge wichtig:
 2. Projektname + Pfad = der hochgeladene Ordner; die dort als `docker-compose.yml` abgelegte
    Compose-Datei (Kopie aus `deploy/`) wird erkannt. **Projektname exakt `worship-charts`** – der
    Volume-Name ist `<projektname>_<volume-key>`, ein abweichender Name hängt ein neues, LEERES Volume ein.
-3. **Erstellen/Starten**. Beim ersten Mal baut er das Image (dauert ein paar Minuten).
+3. **Erstellen/Starten**. Beim ersten Mal lädt er das Image herunter (ein, zwei Minuten).
 4. Logs prüfen: Der `app`-Container sollte „Server läuft …" zeigen.
 
 ## 5. Aufrufen & als App installieren
 
-- **Lokal im WLAN:** `http://<NAS-IP>:3001` im Browser öffnen → Login erscheint.
+- **Nur über den Reverse Proxy:** Die Prod-Vorlage lauscht an `127.0.0.1:3001` und setzt
+  `COOKIE_SECURE=true` – `http://<NAS-IP>:3001` ist von anderen Geräten nicht erreichbar und meldet
+  nicht an. Auch im WLAN die HTTPS-Adresse nehmen.
 - Auf iPad/iPhone: Teilen-Symbol → **„Zum Home-Bildschirm"** → läuft als PWA im Vollbild.
 - Von außen: `https://musik.deine-gemeinde.de`.
 
@@ -209,7 +214,7 @@ sicheren Weg gehen:
    `denied: denied` heißt dabei fast immer: altes gespeichertes GHCR-Login → `sudo docker logout ghcr.io`.
 1. Container Manager → **Projekt** → **Aktion → Stoppen**
 2. **Aktion → Löschen** (löscht nur Projekt/Container, **nicht** die Dateien; ein Daten-Volume bleibt erhalten).
-3. **Projekt → Erstellen** (baut alles frisch, ohne Cache)
+3. **Projekt → Erstellen** (legt den Container mit dem gerade geholten Image neu an)
 4. **Nachsehen, ob die neue Fassung wirklich läuft** – und zwar am **ausgelieferten Stand**, nicht am
    Gefühl:
 
@@ -232,9 +237,11 @@ Container. Ebenso verräterisch: `curl -sI …/` zeigt unter `Last-Modified` die
 
 ## Hinweise / Troubleshooting
 
-- **„Nach Login: nicht angemeldet"** → Session-Cookie kam nicht an. Schnelltest:
-  `http://<NAS-IP>:3001/api/auth/me` → `{"authenticated":true,…}` = ok. Das `secure`-Flag des Cookies
-  steuert die Env **`COOKIE_SECURE`** (Default `false`): bei reinem HTTP-Betrieb im LAN aus lassen (sonst
+- **„Nach Login: nicht angemeldet"** → Session-Cookie kam nicht an. Schnelltest im Browser über die
+  HTTPS-Adresse: `https://musik.deine-gemeinde.de/api/auth/me` → `{"authenticated":true,…}` = ok (der
+  Port lauscht nur lokal; per SSH auf dem NAS ginge `curl http://127.0.0.1:3001/api/health`). Das
+  `secure`-Flag des Cookies steuert die Env **`COOKIE_SECURE`** (im Code Standard `false`, in der
+  Prod-Vorlage `true`): bei reinem HTTP-Betrieb im LAN aus lassen (sonst
   speichert der Browser das Cookie nicht), bei HTTPS-only auf `true` setzen. **ECG-Prod läuft seit
   13.07.2026 mit `COOKIE_SECURE: true`** (Zugang nur über den Synology-Reverse-Proxy).
 - `.env` enthält das `SESSION_SECRET` – nicht teilen, nicht einchecken.

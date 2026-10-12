@@ -13,7 +13,8 @@ entsprechend verschoben.
 
 1. Ein Lied öffnen.
 2. Oben auf den **Liedtitel** tippen.
-3. Bei **Transponieren** zweimal nach oben (+2) und das Menü schließen.
+3. Auf **Transponieren** tippen, im Fenster „Tonart wählen" eine Tonart zwei Halbtöne höher wählen
+   (z. B. von G nach A) und das Menü schließen.
 4. Wieder auf den Titel tippen.
 5. Bei **Kapo** die 2 wählen und schließen.
 

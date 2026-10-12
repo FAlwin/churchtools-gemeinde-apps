@@ -196,7 +196,8 @@ Neu entstehen dabei:
   Stelle, die `import.meta.env.MODE` liest**). Seit #474 liegt der CT-Client selbst in
   `ui/ct/verbindung.ts` (für alle Erweiterungen), `ctRuntime.ts` stellt ihn ein; `MODE` liest `modus.ts`.
 - `client/src/services/personenAblage.ts` – der Speicher in den Personen-Dateien (§2b).
-- `client/src/services/ctSetlist.ts` – der Setlist-Aufbau im Browser (heute serverseitig).
+- `client/src/services/ctLesen.ts` – der Setlist-Aufbau im Browser, mit `shared/ct/setlistKern.ts`
+  (im Plan noch als `ctSetlist.ts` vorgesehen).
 
 ## 5. Die fünf Phasen
 

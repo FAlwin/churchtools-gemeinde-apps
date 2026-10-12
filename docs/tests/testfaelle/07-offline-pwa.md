@@ -9,9 +9,10 @@ mit schlechtem WLAN treten diese Fehler nicht auf.
 verfügbar.
 
 1. Mit Internet unten auf **Termine** tippen.
-2. Den nächsten Gottesdienst öffnen.
-3. Jedes Lied einmal antippen und durchblättern.
-4. Zurück zur Termin-Liste und auf das Symbol beim Termin schauen.
+2. Beim nächsten Gottesdienst auf das Wolken-Symbol **„Für offline speichern"** tippen und warten, bis es
+   sich ändert. (Ist unter **Mehr** „Kommende Gottesdienste offline halten" an, speichert die App den
+   nächsten Gottesdienst ohnehin von selbst – Öffnen und Blättern allein speichert nichts.)
+3. Auf das Symbol beim Termin schauen.
 
 <details><summary>Technisches</summary>
 

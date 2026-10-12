@@ -44,6 +44,6 @@ shared/types/*.js
 .e2e-data/
 .entwuerfe/
 
-# ChurchTools-Extension (#335): Build und gepackte ZIPs
-client/dist-extension/
-client/releases/
+# ChurchTools-Erweiterungen (#335, #474): Build und gepackte ZIPs – jede App hat ihre eigenen
+*/dist-extension/
+*/releases/

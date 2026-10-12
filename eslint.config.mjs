@@ -62,6 +62,8 @@ export default tseslint.config(
             '*.js',
             'client/*.ts',
             'server/*.ts',
+            'anmeldungen/*.ts',
+            'formular/*.ts',
             'e2e/*.mjs',
             'scripts/*.mjs',
             'server/scripts/*.ts',
@@ -89,9 +91,14 @@ export default tseslint.config(
     },
   },
 
-  // ── Client und gemeinsame Oberflächen-Bausteine (ui/): Browser + React ──────
+  // ── Client, Anmeldungen, Formular und gemeinsame Bausteine (ui/): Browser + React ──
   {
-    files: ['client/src/**/*.{ts,tsx}', 'ui/**/*.{ts,tsx}'],
+    files: [
+      'client/src/**/*.{ts,tsx}',
+      'anmeldungen/src/**/*.{ts,tsx}',
+      'formular/src/**/*.{ts,tsx}',
+      'ui/**/*.{ts,tsx}',
+    ],
     languageOptions: {
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },
@@ -158,9 +165,10 @@ export default tseslint.config(
       '*.js',
       'client/*.ts',
       'server/*.ts',
+      'anmeldungen/*.ts',
+      'formular/*.ts',
       'e2e/*.mjs',
       'scripts/**/*.mjs',
-      'client/scripts/**/*.mjs',
       'server/scripts/**/*.ts',
     ],
     extends: [tseslint.configs.disableTypeChecked],

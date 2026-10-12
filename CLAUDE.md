@@ -188,14 +188,17 @@ churchtools-gemeinde-apps/
 │       ├── types/           # server-spezifische Typen
 │       └── utils/           # Hilfsfunktionen (u. a. isoTag.ts = die eine Datums-Formatierung)
 ├── shared/types/            # geteilte Typen (Service, SetlistSong, Setlist, …)
+├── shared/anmeldung/        # Regeln der Anmeldungen: preis.ts, formular.ts (#474)
+├── anmeldungen/             # Anmeldungen: ChurchTools-Erweiterung für Veranstalter (#474, nur Erweiterung)
+├── formular/                # Anmeldungen: öffentliches Formular, statisch (GitHub Pages), noch Platzhalter
 └── ui/                      # gemeinsame Browser-Bausteine aller Apps (Alias @ui, Dienstplaner E1, Anmeldungen #474)
-    ├── design/              # _variables.scss (Tokens), _mixins.scss
+    ├── design/              # _variables.scss (Tokens), _mixins.scss, _grundregeln.scss (Reset + Erweiterungs-Lehren)
     ├── icons/               # icons.tsx (Line-Icons)
     ├── fenster/             # Sheet (Modal), useOverlayKeyboardInset, appHeight
     ├── bedienung/           # Segment, Schalter, KnopfReihe
     ├── teilen/              # shareFile, sharePdf
     ├── ct/                  # Verbindung einer Erweiterung zu ChurchTools: verbindung.ts, fehler.ts (ApiError), basis.ts
-    └── erweiterung/         # Erweiterungs-Bau: cssBereich (PostCSS), kopfInDenInhalt (Vite-Plugin)
+    └── erweiterung/         # Erweiterungs-Bau: viteErweiterung (fasst zusammen), cssBereich, kopfInDenInhalt
 ```
 
 ## Konventionen
@@ -637,6 +640,10 @@ den Skill `/festhalten`, der genau das automatisiert.
    und auf die neue Version (`## [X.Y.Z] – Datum`) hochziehen. Versionierung nach SemVer.
 6. **Taggen:** `git tag vX.Y.Z && git push origin vX.Y.Z` → CI baut `:latest` + `:X.Y` + `:X`
    (Major-Tag, damit Gemeinden sicher auf `:2` bleiben können). Prod-Deploy bewusst, nicht nebenbei.
+   **Die Anmeldungen haben einen eigenen Weg:** Tag `anmeldung-vX.Y.Z` (ab v0.1.0) →
+   `anmeldungen-release.yml` → Release mit `anmeldungen-vX.Y.Z.zip`, **immer `make_latest: false`**
+   (sonst zeigt `/releases/latest` den Musik-Apps ein Anmelde-Release als Update). Anleitung:
+   `docs/betrieb/ANMELDUNGEN.md`.
 7. **Memory aktualisieren:** Projekt-Memory + `MEMORY.md`-Index auf den neuen Stand bringen.
 
 **⚠️ Prod-Deploy & Daten-Volume (Lehre aus dem Vorfall 2026-07-08):** Beim Aktualisieren im

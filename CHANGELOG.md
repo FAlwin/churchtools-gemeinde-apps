@@ -32,6 +32,22 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   fehlendem Recht, „nicht erreichbar"), für sie ändert sich nichts. Das Attribut für Elemente außerhalb
   von `#root` heißt jetzt `data-gemeinde-app` und steht nur noch an einer Stelle (`BEREICH_ATTRIBUT`).
   Neue Tests für die Einstellung, fünf Gegenproben.
+- **Anmeldungen: Grundgerüst** (#474, A1 Teil 3). Zwei neue Bereiche im Repo, für die Musik-App ändert
+  sich nichts:
+  - `anmeldungen/` – die ChurchTools-Erweiterung (Kürzel `anmeldungen`). Sie zeigt bisher, wer angemeldet
+    ist, die Gemeinde und die eigenen Gruppen mit „Leitung"/„Mitglied" (gemessen an der Test-Instanz:
+    Name aus `group.title`, Leitung aus `GET /api/group/roles` → `isLeader`; ohne Admin-Rechte lesbar).
+    Sind Person oder Gruppen nicht lesbar, sagt sie es und bietet „Erneut versuchen" – statt „keine
+    Gruppen" zu behaupten. Ansehen ohne ChurchTools: `npm run dev -w anmeldungen`, `…/?demo`.
+  - `formular/` – Platzhalter des öffentlichen Formulars (statische Seite für GitHub Pages).
+  - Eigener Release-Weg: Tag `anmeldung-v*` → ZIP am Release, **nie „latest"**; Formular-Veröffentlichung
+    vorerst nur von Hand. Anleitung: `docs/betrieb/ANMELDUNGEN.md`.
+  - Geteilt statt kopiert: die Gruppen-Regel (`meineGruppen` in `shared/ct/gruppen.ts`), der Gemeindename
+    (`shared/ct/info.ts`, nutzt jetzt auch die Musik-App), die Grundregeln der Stile
+    (`ui/design/_grundregeln.scss`, aus der `main.scss` der Musik-App – gebautes CSS Regel für Regel
+    unverändert) und der Erweiterungs-Bau (`ui/erweiterung/viteErweiterung.ts`, nutzt jetzt auch die
+    Musik-App). Das Packen prüft zusätzlich, dass kein Skript im `<head>` zurückbleibt.
+  - Tests: 17 neue; zehn Gegenproben an den Regeln und zwei am Bau, jede schlägt an.
 
 ## [2.33.0] – 2026-10-12
 

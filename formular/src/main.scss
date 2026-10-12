@@ -1,0 +1,13 @@
+@use '@ui/design/variables' as *;
+// Dieselben Grundregeln wie die Apps (#474); die Erweiterungs-Teile darin greifen hier nicht, weil die
+// Seite keine `ct-extension` ist.
+@use '@ui/design/grundregeln';
+
+html,
+body {
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ui);
+  -webkit-font-smoothing: antialiased;
+}

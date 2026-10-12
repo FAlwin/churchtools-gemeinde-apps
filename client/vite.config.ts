@@ -1,9 +1,8 @@
 import { fileURLToPath, URL } from 'node:url';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig, mergeConfig, type UserConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
-import { cssBereich } from '../ui/erweiterung/cssBereich';
-import { kopfInDenInhalt } from '../ui/erweiterung/kopfInDenInhalt';
+import { erweiterungsBau } from '../ui/erweiterung/viteErweiterung';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -12,9 +11,8 @@ export default defineConfig(({ mode }) => {
    * `vite build --mode extension` = ChurchTools-Extension unter `/ccm/<VITE_KEY>/`.
    */
   const istExtension = mode === 'extension';
-  const kuerzel = loadEnv(mode, process.cwd(), '').VITE_KEY || 'musik-app';
-  return {
-    base: istExtension ? `/ccm/${kuerzel}/` : '/',
+  const app: UserConfig = {
+    base: '/',
     resolve: {
       alias: [
         // geteilte Typen: @shared/... -> ../shared/...
@@ -39,11 +37,10 @@ export default defineConfig(({ mode }) => {
           : []),
       ],
     },
-    build: istExtension ? { outDir: 'dist-extension', emptyOutDir: true } : undefined,
     plugins: [
       react(),
       ...(istExtension
-        ? [kopfInDenInhalt()]
+        ? []
         : [
             VitePWA({
               // 'prompt' statt 'autoUpdate': ein neuer Service Worker lädt die laufende App NICHT
@@ -95,9 +92,6 @@ export default defineConfig(({ mode }) => {
       preprocessorOptions: {
         scss: { api: 'modern-compiler' },
       },
-      // Extension: globale Stilregeln nur im App-Bereich – sonst verbiegen sie ChurchTools
-      // (07.10.2026, `ui/erweiterung/cssBereich.ts`). Die PWA bleibt unberührt.
-      ...(istExtension ? { postcss: { plugins: [cssBereich()] } } : {}),
     },
     server: {
       port: 5173,
@@ -112,4 +106,8 @@ export default defineConfig(({ mode }) => {
       },
     },
   };
+  // Extension: Pfad `/ccm/<Kürzel>/`, eigener Ausgabeordner, Kopf in den Inhalt, Stilregeln nur im
+  // App-Bereich – für alle Erweiterungen gleich (`ui/erweiterung/viteErweiterung.ts`, #474). Die PWA
+  // bleibt unberührt.
+  return istExtension ? mergeConfig(app, erweiterungsBau(mode, 'musik-app')) : app;
 });

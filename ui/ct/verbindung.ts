@@ -274,6 +274,31 @@ export async function ctDaten<T>(pfad: string): Promise<T> {
 }
 
 /**
+ * **Alle Seiten einer ChurchTools-Liste** (#480). Viele Listen liefern nur eine Seite – `members` und
+ * `groups` standardmäßig **10** Einträge (gemessen 12.10.2026); wer nur die erste liest, zählt ab dem
+ * elften falsch. Geblättert wird nach `meta.pagination.lastPage` (leer: `0`), fehlt die Angabe, bis eine
+ * Seite kürzer als `limit` ist.
+ *
+ * `limit` höchstens 200 (500 → 400, gemessen an `members`). **Mehr als `maxSeiten` Seiten → Fehler**
+ * statt still abgeschnitten: Eine halbe Liste sähe aus wie eine ganze.
+ */
+export async function ctAlleSeiten<T>(pfad: string, limit = 100, maxSeiten = 50): Promise<T[]> {
+  const alle: T[] = [];
+  const trenner = pfad.includes('?') ? '&' : '?';
+  for (let seite = 1; seite <= maxSeiten; seite++) {
+    const body = await ctAnfrage<{
+      data?: T[];
+      meta?: { pagination?: { lastPage?: number } };
+    } | null>(`${pfad}${trenner}limit=${limit}&page=${seite}`);
+    const teil = Array.isArray(body?.data) ? body.data : [];
+    alle.push(...teil);
+    const letzte = body?.meta?.pagination?.lastPage;
+    if (typeof letzte === 'number' ? seite >= letzte : teil.length < limit) return alle;
+  }
+  throw new ApiError(502, `Die Liste ${pfad} hat mehr als ${maxSeiten * limit} Einträge.`);
+}
+
+/**
  * **Ein abgelehntes Token wird verworfen** – die Lehre aus #298, die im Server seit August gilt
  * (`csrfWriteDenied`) und hier beim Bau der Extension fehlte (gefunden 07.10.2026, Phase 3b-2): Läuft die
  * Sitzung in ChurchTools neu an, ist das gemerkte Token ungültig. Ohne Verwerfen scheiterte danach JEDER

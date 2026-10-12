@@ -24,6 +24,7 @@ export {
   ctAnfrage,
   ctDaten,
   ctAltAnfrage,
+  ctAlleSeiten,
   ctDatei,
 } from '@ui/ct/verbindung';
 export { istExtension };

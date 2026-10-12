@@ -2,9 +2,9 @@
 @use '@ui/design/mixins' as m;
 
 .seite {
-  max-width: 720px;
+  max-width: 1120px;
   margin: 0 auto;
-  padding: 24px 16px 32px;
+  padding: 20px 16px 32px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -13,16 +13,33 @@
 .kopf {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
-.titel {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text);
+.app {
+  color: var(--text2);
+  font-size: 14px;
+  font-weight: 600;
 }
 
-.gemeinde,
+.gruss {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+
+  h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  span {
+    color: var(--text2);
+    font-size: 14px;
+  }
+}
+
 .hinweis,
 .fuss {
   color: var(--text2);
@@ -33,57 +50,6 @@
 .fuss {
   font-size: 13px;
   color: var(--text3);
-}
-
-.gruss {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.abschnitt {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.ueberschrift {
-  @include m.group-header;
-  padding-bottom: 0;
-}
-
-.liste {
-  @include m.card-list;
-  list-style: none;
-}
-
-// Wie `m.list-row`, aber (noch) nicht antippbar – deshalb ohne Zeiger und Drück-Farbe.
-.gruppe {
-  @include m.list-row;
-  justify-content: space-between;
-  cursor: default;
-  font-size: 16px;
-  color: var(--text);
-
-  &:active {
-    background: none;
-  }
-}
-
-.chip {
-  flex: none;
-  padding: 2px 10px;
-  border-radius: 999px;
-  font-size: 13px;
-  background: var(--surface3);
-  color: var(--text2);
-}
-
-.chipLeitung {
-  composes: chip;
-  background: var(--blue-soft);
-  color: var(--blue-ink);
-  font-weight: 600;
 }
 
 .fehler {

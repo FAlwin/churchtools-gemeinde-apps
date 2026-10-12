@@ -298,3 +298,21 @@ export function pruefeRegeln(regeln: PreisRegeln): string[] {
   }
   return [...new Set(fehler)];
 }
+
+/**
+ * **Der Preis in einem Wort, für Listen** (A2, #480): „kostenlos“, „12,00 € p. P.“, „30,00 € pro Anmeldung“,
+ * „ab 65,52 €“ (Auswahl: der günstigste Eintrag). Das ist bewusst nur der **Grundpreis** – Alter, Rabatte und
+ * Extras rechnet `berechnePreis` für eine echte Anmeldung aus; in einer Zeile würden sie nur verwirren.
+ */
+export function preisKurz(regeln: PreisRegeln): string {
+  const g = regeln.grundpreis;
+  const je = g.gilt === 'person' ? ' p. P.' : ' pro Anmeldung';
+  if (g.art === 'auswahl') {
+    if (g.optionen.length === 0) return 'Preis folgt';
+    const min = Math.min(...g.optionen.map((o) => o.preisCent));
+    const max = Math.max(...g.optionen.map((o) => o.preisCent));
+    if (max === 0) return 'kostenlos';
+    return min === max ? euroText(min) + je : `ab ${euroText(min)}${je}`;
+  }
+  return g.betragCent === 0 ? 'kostenlos' : euroText(g.betragCent) + je;
+}

@@ -68,7 +68,14 @@ import { whoamiId } from '@shared/ct/whoami';
 import { sanitizeFileContentType } from '@shared/dateien/index';
 import type { GesehenerStand } from '@shared/types/index';
 import { ApiError } from './api';
-import { ctAltAnfrage, ctAnfrage, ctDaten, ctDatei, istUeberlastet } from './ctRuntime';
+import {
+  ctAlleSeiten,
+  ctAltAnfrage,
+  ctAnfrage,
+  ctDaten,
+  ctDatei,
+  istUeberlastet,
+} from './ctRuntime';
 import { gespeicherteEinstellungen } from './ctEinstellungen';
 import { holeGesehen, merkeGesehen } from './personenAblage';
 
@@ -87,16 +94,9 @@ export const leser: CtLeser = {
   events: (from, to) => ctDaten<CtEvent[]>(`/events?from=${from}&to=${to}`),
   agenda: (eventId) => ctDaten<CtAgenda>(`/events/${eventId}/agenda`),
   song: (songId) => ctDaten<CtSong>(`/songs/${songId}`),
-  async alleLieder() {
-    // Wie `ctRead.getAllSongs`: seitenweise, höchstens 50 Seiten.
-    const alle: CtSongListEntry[] = [];
-    for (let seite = 1; seite <= 50; seite++) {
-      const teil = await ctDaten<CtSongListEntry[]>(`/songs?limit=100&page=${seite}`);
-      alle.push(...teil);
-      if (teil.length < 100) break;
-    }
-    return alle;
-  },
+  // Wie `ctRead.getAllSongs`: seitenweise, höchstens 50 Seiten – das Blättern steht seit #480 einmal in
+  // `ctAlleSeiten` (mehr als 5.000 Lieder → Fehler statt still abgeschnitten).
+  alleLieder: () => ctAlleSeiten<CtSongListEntry>('/songs'),
   async untertitel(calendarId, appointmentId) {
     const key = `${calendarId}|${appointmentId}`;
     const treffer = untertitelMemo.get(key);

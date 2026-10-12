@@ -305,7 +305,25 @@ export interface Gestaltung {
   gemeindename: boolean;
 }
 
+/**
+ * **Wann und wo** (A2, #480). Der ChurchTools-Termin wird bewusst NICHT mit der Gruppe verknüpft (A0 #4:
+ * Termin löschen löscht sonst die Gruppe samt Anmeldungen), und der Kalender ist ohne Login nicht lesbar.
+ * Das öffentliche Formular braucht Datum und Ort aber – deshalb stehen sie hier, als Kopie; `terminId`
+ * merkt sich den Termin, damit die Erweiterung Abweichungen erkennen kann.
+ *
+ * Zeiten in **Ortszeit der Gemeinde**, ohne Zone (`2026-11-15T12:00`) – so, wie sie auf der Einladung
+ * stehen. Verglichen wird nur mit dem heutigen Tag, nie auf die Minute.
+ */
+export interface TerminAngabe {
+  beginn: string;
+  ende: string | null;
+  ort: string;
+  terminId: number | null;
+}
+
 export interface OeffentlicheEinstellungen {
+  /** `null`, solange ein Entwurf noch kein Datum hat. */
+  termin: TerminAngabe | null;
   preis: PreisRegeln;
   formular: Formular;
   gestaltung: Gestaltung;
@@ -389,7 +407,16 @@ const feldSchema = z.object({
   zustand: z.enum(['aus', 'freiwillig', 'pflicht']),
   antworten: z.array(z.string().max(80)).max(20),
 });
+const zeitpunkt = z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
 const einstellungenSchema = z.object({
+  termin: z
+    .object({
+      beginn: zeitpunkt,
+      ende: zeitpunkt.nullable(),
+      ort: z.string().max(200),
+      terminId: z.number().int().positive().nullable(),
+    })
+    .nullable(),
   preis: preisSchema,
   formular: z.object({
     anmeldung: z.array(feldSchema).max(30),

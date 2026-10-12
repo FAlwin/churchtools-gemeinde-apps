@@ -20,8 +20,7 @@ const { useMarkSeenAfterShown } = await import('./useSetlistLiveSync');
  */
 const punkt = (over: Partial<AgendaItem>) => ({ id: 1, title: 'A', ...over }) as AgendaItem;
 
-function zeige(start: Parameters<typeof useMarkSeenAfterShown>[0]) {
-  const qc = new QueryClient();
+function zeige(start: Parameters<typeof useMarkSeenAfterShown>[0], qc = new QueryClient()) {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={qc}>{children}</QueryClientProvider>
   );
@@ -51,6 +50,23 @@ describe('useMarkSeenAfterShown', () => {
   it('merkt einen angezeigten Stand mit Änderungen als gesehen', async () => {
     zeige(BASIS);
     await vi.waitFor(() => expect(api.markSetlistSeen).toHaveBeenCalledWith(7));
+  });
+
+  it('nach dem Merken trägt auch der gespeicherte Ablauf keine Markierungen mehr', async () => {
+    // Sonst brachte ein Neuladen binnen 30 s (Erweiterung: kurz eine andere ChurchTools-Seite) denselben
+    // Hinweis aus dem Speicher noch einmal – im Browser gefunden, 12.10.2026.
+    const qc = new QueryClient();
+    const items = [
+      punkt({ changed: true, neu: true }),
+      punkt({ id: 9, title: 'Weg', removed: true }),
+    ];
+    qc.setQueryData(['agenda', 7], items);
+    zeige({ ...BASIS, items }, qc);
+    await vi.waitFor(() =>
+      expect(qc.getQueryData(['agenda', 7])).toEqual([
+        expect.objectContaining({ id: 1, changed: false, neu: false }),
+      ]),
+    );
   });
 
   it('nicht, solange noch geladen wird – das Angezeigte ist dann der alte Stand aus dem Speicher', async () => {

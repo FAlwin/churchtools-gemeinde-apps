@@ -91,6 +91,8 @@ interface SetlistProps {
   services: AgendaServiceOption[];
   /** Darf der Nutzer den Ablauf bearbeiten? (blendet die Bearbeiten-UI aus) */
   canEdit?: boolean;
+  /** Steht die Ablauf-Ansicht gerade? (für das Gesehen-Merken, siehe `AgendaFullView.onSichtbar`) */
+  onAblaufSichtbar?: (sichtbar: boolean) => void;
 }
 
 export function Setlist({
@@ -105,6 +107,7 @@ export function Setlist({
   isReordering,
   services,
   canEdit = false,
+  onAblaufSichtbar,
 }: SetlistProps) {
   const [editMode, setEditMode] = useState(false);
   // Geführte Einführung (#Onboarding, Gruppen 3+4): Ablauf-Ansicht beim ersten Öffnen, Bearbeiten-
@@ -490,6 +493,7 @@ export function Setlist({
             eventId={service.id}
             beginn={service.time}
             onSelect={onSelect}
+            onSichtbar={onAblaufSichtbar}
           />
         </>
       ) : editMode ? (
@@ -534,6 +538,7 @@ export function Setlist({
           eventId={service.id}
           beginn={service.time}
           onSelect={onSelect}
+          onSichtbar={onAblaufSichtbar}
         />
       )}
     </SeitenGeruest>

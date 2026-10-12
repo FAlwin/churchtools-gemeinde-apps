@@ -10,70 +10,74 @@ export interface AblaufAenderungen {
 }
 
 /**
- * Was während EINES Besuchs eines Termins als neu, geändert oder entfernt aufgefallen ist.
+ * Was EINE Aktualisierung gebracht hat – für den kurzen Hinweis unten und die Schildchen, die genauso
+ * lange stehen und mit ihm verschwinden (Alwin, 12.10.2026: „nur ein kurzer Hinweis und fertig").
  *
- * Warum gemerkt und nicht einfach vom Server übernommen: Seit 12.10.2026 gilt ein Stand als „gesehen",
- * sobald er angezeigt wurde (`useMarkSeenAfterShown`) – nicht erst beim Verlassen. Der nächste Abruf
- * markiert deshalb nur noch, was SEITDEM dazukam. Ohne Merker verlören die Punkte von vorhin ihr
- * Schildchen, während man noch draufschaut.
+ * Es ist bewusst nur dieser eine Schub, nichts Angesammeltes: Seit dem Anzeigen gilt ein Stand als
+ * „gesehen" (`useMarkSeenAfterShown`), der nächste Abruf markiert also nur, was seitdem dazukam.
  */
-export interface AenderungsMerker {
-  eventId: number;
+export interface AenderungsMeldung {
   neu: ReadonlySet<number>;
   geaendert: ReadonlySet<number>;
-  /** ID → Titel, in der Reihenfolge, in der sie aufgefallen sind. */
-  entfernt: ReadonlyMap<number, string>;
-}
-
-export function leererMerker(eventId: number): AenderungsMerker {
-  return { eventId, neu: new Set(), geaendert: new Set(), entfernt: new Map() };
+  /** Die entfernten Punkte, in Ablauf-Reihenfolge. */
+  entfernt: { id: number; title: string }[];
 }
 
 /**
- * Nimmt einen neuen Stand auf. `lokalEntfernt` sind Punkte, die seit dem letzten Stand verschwunden
- * sind, ohne dass der Server sie kennt (#178 – erst nach dem Gesehen-Stand dazugekommen).
- * Gibt `vorher` unverändert zurück, wenn sich nichts ändert (stabile Identität für React).
+ * Die Meldung aus einem Abruf. `lokalEntfernt` sind Punkte, die seit dem zuletzt gezeigten Stand
+ * verschwunden sind, ohne dass der Server sie kennt (#178 – erst nach dem Gesehen-Stand dazugekommen).
  */
-export function merkeAenderungen(
-  vorher: AenderungsMerker,
+export function meldungAus(
   items: AgendaItem[],
   lokalEntfernt: { id: number; title: string }[] = [],
-): AenderungsMerker {
-  const neu = new Set(vorher.neu);
-  const geaendert = new Set(vorher.geaendert);
-  const entfernt = new Map(vorher.entfernt);
-  const da = new Set<number>();
+): AenderungsMeldung {
+  const neu = new Set<number>();
+  const geaendert = new Set<number>();
+  const entfernt: { id: number; title: string }[] = [];
   for (const i of items) {
-    if (i.removed) {
-      if (!entfernt.has(i.id)) entfernt.set(i.id, i.title);
-      continue;
-    }
-    da.add(i.id);
-    if (i.neu) {
-      neu.add(i.id);
-      geaendert.delete(i.id);
-    } else if (i.changed && !neu.has(i.id)) geaendert.add(i.id);
+    if (i.removed) entfernt.push({ id: i.id, title: i.title });
+    else if (i.neu) neu.add(i.id);
+    else if (i.changed) geaendert.add(i.id);
   }
-  for (const l of lokalEntfernt) if (!entfernt.has(l.id)) entfernt.set(l.id, l.title);
-  // Wieder aufgetaucht (zurückgeholt) → nicht mehr entfernt. Weg → kein Schildchen mehr.
-  for (const id of [...entfernt.keys()]) if (da.has(id)) entfernt.delete(id);
-  for (const id of [...neu]) if (!da.has(id)) neu.delete(id);
-  for (const id of [...geaendert]) if (!da.has(id)) geaendert.delete(id);
-
-  const gleich =
-    gleicheMenge(neu, vorher.neu) &&
-    gleicheMenge(geaendert, vorher.geaendert) &&
-    [...entfernt.keys()].join() === [...vorher.entfernt.keys()].join();
-  return gleich ? vorher : { eventId: vorher.eventId, neu, geaendert, entfernt };
+  for (const l of lokalEntfernt) {
+    if (!entfernt.some((e) => e.id === l.id)) entfernt.push({ id: l.id, title: l.title });
+  }
+  return { neu, geaendert, entfernt };
 }
 
-function gleicheMenge(a: ReadonlySet<number>, b: ReadonlySet<number>): boolean {
-  return a.size === b.size && [...a].every((x) => b.has(x));
+/**
+ * Ein Abruf, der NICHTS Neues bringt, bricht die laufende Meldung nicht ab – er räumt sie nur auf:
+ * Punkte, die wieder da sind (Rückgängig), gelten nicht mehr als entfernt; Punkte, die fehlen,
+ * tragen kein Schildchen mehr.
+ *
+ * Warum überhaupt: Nach dem Gesehen-Merken nimmt die App die Markierungen auch aus ihrem gespeicherten
+ * Ablauf (`useMarkSetlistSeen`) – sonst zeigte ein Neuladen binnen 30 s den Hinweis noch einmal. Diese
+ * Aktualisierung kommt Sekundenbruchteile nach dem Anzeigen an und dürfte den Hinweis nicht sofort
+ * wieder schließen.
+ */
+export function meldungBereinigen(m: AenderungsMeldung, items: AgendaItem[]): AenderungsMeldung {
+  const da = new Set(items.filter((i) => !i.removed).map((i) => i.id));
+  return {
+    neu: new Set([...m.neu].filter((id) => da.has(id))),
+    geaendert: new Set([...m.geaendert].filter((id) => da.has(id))),
+    entfernt: m.entfernt.filter((e) => !da.has(e.id)),
+  };
+}
+
+/**
+ * Der gespeicherte Ablauf, nachdem sein Stand als gesehen gemerkt wurde: ohne Markierungen und ohne
+ * „entfernt"-Platzhalter. Sonst zeigte ein Neuladen innerhalb der Frische-Zeit (30 s) den Hinweis aus
+ * dem Speicher noch einmal – in der Erweiterung schon bei einem kurzen Wechsel der ChurchTools-Seite.
+ */
+export function ohneMarkierungen(items: AgendaItem[]): AgendaItem[] {
+  return items
+    .filter((i) => !i.removed)
+    .map((i) => (i.changed || i.neu ? { ...i, changed: false, neu: false } : i));
 }
 
 /** Die Zahlen und Titel für den Hinweis. */
-export function zusammenfassen(m: AenderungsMerker): AblaufAenderungen {
-  return { neu: m.neu.size, geaendert: m.geaendert.size, entfernt: [...m.entfernt.values()] };
+export function zusammenfassen(m: AenderungsMeldung): AblaufAenderungen {
+  return { neu: m.neu.size, geaendert: m.geaendert.size, entfernt: m.entfernt.map((e) => e.title) };
 }
 
 /** Gibt es überhaupt etwas zu melden? */

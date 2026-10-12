@@ -56,5 +56,7 @@ test('Plus → Neuer Eintrag (Programmpunkt) → steht im Ablauf, Löschen räum
   await neu.click();
   await page.getByRole('button', { name: /Eintrag löschen/ }).click();
   await page.getByRole('button', { name: 'Löschen', exact: true }).click();
-  await expect(page.getByText('Abkündigungen (E2E)')).toHaveCount(0);
+  // Nur die Liste (#root): Der Hinweis „„Abkündigungen (E2E)" gelöscht · Rückgängig" hängt an `body`
+  // und nennt den Titel auch – ob er schon steht, hing vom Tempo ab (in der CI rot, 12.10.2026).
+  await expect(page.locator('#root').getByText('Abkündigungen (E2E)')).toHaveCount(0);
 });

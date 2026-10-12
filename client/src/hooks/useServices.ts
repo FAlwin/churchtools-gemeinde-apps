@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   LIEDTEXT_SUCHE_MIN_ZEICHEN,
+  type AgendaItem,
   type ArrangementAuftrag,
   type LiedAnlegenAuftrag,
   type LiedStammdaten,
@@ -9,6 +10,7 @@ import {
 } from '@shared/types/index';
 import { sucheArt } from '../utils/liedFormular';
 import { heuteIso } from '../utils/heute';
+import { ohneMarkierungen } from '../utils/ablaufAenderungen';
 import type { GeloeschterPunkt } from '@shared/ct/schreibKern';
 import * as api from '../services/churchtoolsApi';
 import { ApiError } from '../services/api';
@@ -89,6 +91,9 @@ export function useMarkSetlistSeen() {
     mutationFn: (v: { eventId: number; refresh: boolean }) => api.markSetlistSeen(v.eventId),
     onSuccess: (_data, v) => {
       if (v.refresh) void qc.invalidateQueries({ queryKey: ['services'] });
+      // Gesehen ist gesehen – auch im gespeicherten Ablauf (12.10.2026). Sonst brachte ein Neuladen
+      // binnen 30 s (Erweiterung: kurz eine andere ChurchTools-Seite) denselben Hinweis noch einmal.
+      qc.setQueryData<AgendaItem[]>(['agenda', v.eventId], (alt) => alt && ohneMarkierungen(alt));
     },
   });
 }

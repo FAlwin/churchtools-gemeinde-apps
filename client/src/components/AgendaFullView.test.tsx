@@ -4,7 +4,7 @@ import { render, screen, cleanup, fireEvent, act } from '@testing-library/react'
 import { StrictMode } from 'react';
 import type { AgendaItem } from '@shared/types/index';
 import { AgendaFullView } from './AgendaFullView';
-import { HINWEIS_MS } from './AblaufHinweis';
+import { HINWEIS_MS } from '../hooks/useKurzerHinweis';
 
 /**
  * #198: Diese Ansicht lag in `Setlist.tsx` und war damit ungetestet – obwohl sie das ist, worauf
@@ -78,6 +78,25 @@ describe('AgendaFullView – Zeilen', () => {
       <AgendaFullView items={[item({ time: null })]} eventId={1} onSelect={vi.fn()} />,
     );
     expect(container.textContent).not.toMatch(/\d{2}:\d{2}/);
+  });
+});
+
+describe('AgendaFullView – meldet, dass sie steht', () => {
+  it('meldet „sichtbar" erst nach dem Einhängen und „weg" beim Aushängen (fürs Gesehen-Merken)', () => {
+    // Die Ablaufseite wird nachgeladen; die Daten kamen vorher an und galten schon als gesehen, bevor
+    // die Ansicht sie zeigen konnte (12.10.2026). Gemerkt werden darf erst nach diesem Signal.
+    const onSichtbar = vi.fn();
+    const { unmount } = render(
+      <AgendaFullView
+        items={[item({ id: 1 })]}
+        eventId={1}
+        onSelect={vi.fn()}
+        onSichtbar={onSichtbar}
+      />,
+    );
+    expect(onSichtbar).toHaveBeenLastCalledWith(true);
+    unmount();
+    expect(onSichtbar).toHaveBeenLastCalledWith(false);
   });
 });
 
@@ -162,7 +181,7 @@ describe('AgendaFullView – Hinweis und Schildchen statt Aufleuchten und Zerfal
     expect(hinweis()).toBeNull();
   });
 
-  it('der Hinweis verschwindet von selbst – die Schildchen bleiben', () => {
+  it('Hinweis und Schildchen verschwinden zusammen – „nur ein kurzer Hinweis und fertig"', () => {
     render(
       <AgendaFullView
         items={[item({ id: 2, title: 'Gebet', changed: true, neu: true })]}
@@ -172,12 +191,13 @@ describe('AgendaFullView – Hinweis und Schildchen statt Aufleuchten und Zerfal
     );
     act(() => void vi.advanceTimersByTime(HINWEIS_MS - 1));
     expect(hinweis()).not.toBeNull();
+    expect(zeile('Gebet')).toContain('neu');
     act(() => void vi.advanceTimersByTime(1));
     expect(hinweis()).toBeNull();
-    expect(zeile('Gebet')).toContain('neu');
+    expect(zeile('Gebet')).not.toContain('neu');
   });
 
-  it('die Schildchen bleiben, wenn der nächste Abruf nichts mehr markiert (schon als gesehen gemerkt)', () => {
+  it('ein Abruf ohne Neuigkeiten (Markierungen nach dem Merken entfernt) schließt den Hinweis NICHT vorzeitig', () => {
     const { rerender } = render(
       <AgendaFullView
         items={[
@@ -188,14 +208,40 @@ describe('AgendaFullView – Hinweis und Schildchen statt Aufleuchten und Zerfal
         onSelect={vi.fn()}
       />,
     );
+    act(() => void vi.advanceTimersByTime(1000));
+    // Derselbe Ablauf ohne Markierungen – so sieht der gespeicherte Stand nach dem Gesehen-Merken aus.
     rerender(
       <AgendaFullView
-        items={[item({ id: 1, title: 'A' }), item({ id: 2, title: 'Gebet', changed: false })]}
+        items={[item({ id: 1, title: 'A' }), item({ id: 2, title: 'Gebet' })]}
         eventId={1}
         onSelect={vi.fn()}
       />,
     );
+    expect(hinweis()).toContain('1 neu');
     expect(zeile('Gebet')).toContain('neu');
+    act(() => void vi.advanceTimersByTime(HINWEIS_MS - 1000));
+    expect(hinweis()).toBeNull();
+  });
+
+  it('bei der nächsten Änderung trägt nur der neue Punkt ein Schildchen, nicht der von vorhin', () => {
+    const { rerender } = render(
+      <AgendaFullView
+        items={[item({ id: 1, title: 'A', changed: true, neu: true })]}
+        eventId={1}
+        onSelect={vi.fn()}
+      />,
+    );
+    // Der nächste Abruf: A ist inzwischen als gesehen gemerkt, B kam dazu.
+    rerender(
+      <AgendaFullView
+        items={[item({ id: 1, title: 'A' }), item({ id: 2, title: 'B', changed: true, neu: true })]}
+        eventId={1}
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(zeile('B')).toContain('neu');
+    expect(zeile('A')).not.toContain('neu');
+    expect(hinweis()).toContain('1 neu');
   });
 
   it('kommt etwas dazu, erscheint der Hinweis wieder – derselbe Stand nicht noch einmal', () => {

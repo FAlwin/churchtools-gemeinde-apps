@@ -28,19 +28,23 @@ async function oeffneBearbeiten(page: Page): Promise<void> {
   await page.getByLabel(/Passwort/i).fill('egal-der-stub-prueft-nicht');
   await page.getByRole('button', { name: /Anmelden/i }).click();
   await page.getByText('Rückgängig-Probe (Stub)').click();
-  await expect(page.getByText('Zwei (Stub)')).toBeVisible();
+  await expect(page.locator('#root').getByText('Zwei (Stub)')).toBeVisible();
   await page.getByRole('button', { name: 'Ablauf bearbeiten' }).click();
 }
 
 /** Die Titel der Bearbeiten-Liste in ihrer Reihenfolge. */
 async function reihenfolge(page: Page): Promise<string[]> {
-  const titel = await page.getByText(/^(Eins|Zwei|Drei) \(Stub\)$/).allTextContents();
+  // Nur die Liste (#root) – der Hinweis unten hängt an `body` und nennt entfernte Punkte auch.
+  const titel = await page
+    .locator('#root')
+    .getByText(/^(Eins|Zwei|Drei) \(Stub\)$/)
+    .allTextContents();
   return titel.map((t) => t.replace(' (Stub)', ''));
 }
 
 test('Löschen → Rückgängig: der Punkt steht wieder an seiner Stelle', async ({ page }) => {
   await oeffneBearbeiten(page);
-  await page.getByText('Zwei (Stub)').click();
+  await page.locator('#root').getByText('Zwei (Stub)').click();
   await page.getByRole('button', { name: /Eintrag löschen/ }).click();
   await page.getByRole('button', { name: 'Löschen', exact: true }).click();
 
@@ -55,7 +59,10 @@ test('Löschen → Rückgängig: der Punkt steht wieder an seiner Stelle', async
   // Wirklich im (Stub-)ChurchTools, nicht nur auf dem Bildschirm: den Ablauf beim Server abfragen.
   // (Nicht per Neuladen – die App zeigt dann kurz ihren gespeicherten Stand, das prüfte nichts.)
   const res = await page.request.get('/api/services/1504/setlist');
-  const titel = ((await res.json()) as { title: string }[]).map((i) => i.title);
+  // Nur echte Punkte – „entfernt"-Platzhalter hängen vom Gesehen-Stand des Testkontos ab.
+  const titel = ((await res.json()) as { title: string; removed?: boolean }[])
+    .filter((i) => !i.removed)
+    .map((i) => i.title);
   expect(titel).toEqual(['Eins (Stub)', 'Zwei (Stub)', 'Drei (Stub)']);
 });
 

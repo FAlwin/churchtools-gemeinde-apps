@@ -70,8 +70,8 @@ export function useSetlistLiveSync(args: {
  * Vorher galt es erst beim VERLASSEN eines Termins innerhalb der App (#143/#161). In der
  * ChurchTools-Erweiterung verlässt man aber meist die ganze Seite – dann lief nichts, und beim nächsten
  * Öffnen kamen dieselben Änderungen noch einmal („bleibt länger stehen"). Jetzt wird gemerkt, nachdem
- * der FRISCH geholte Ablauf in der Ablauf-Ansicht stand. Die Schildchen dieses Besuchs hält die Ansicht
- * selbst fest (`AenderungsMerker`); der Hinweis unten verschwindet ohnehin von selbst.
+ * der FRISCH geholte Ablauf in der Ablauf-Ansicht stand. Hinweis und Schildchen stehen ohnehin nur ein
+ * paar Sekunden (`useKurzerHinweis`) – der nächste Abruf meldet nur, was seitdem dazukam.
  *
  * Geschrieben wird nur, wenn es etwas zu quittieren gibt (markierte Punkte) oder noch gar kein
  * Gesehen-Stand existiert (`changed` überall `undefined`) – in der Erweiterung ist jedes Merken ein

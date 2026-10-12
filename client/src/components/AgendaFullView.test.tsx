@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
+import { StrictMode } from 'react';
 import type { AgendaItem } from '@shared/types/index';
 import { AgendaFullView } from './AgendaFullView';
+import { HINWEIS_MS } from './AblaufHinweis';
 
 /**
  * #198: Diese Ansicht lag in `Setlist.tsx` und war damit ungetestet – obwohl sie das ist, worauf
@@ -12,7 +14,7 @@ import { AgendaFullView } from './AgendaFullView';
  *  - Die **Lied-Nummer** beim Antippen. Sie zählt nur LIEDER, nicht alle Ablaufpunkte. Stimmt sie
  *    nicht, landet man beim falschen Chart – mitten im Gottesdienst.
  *  - **Entfernte Punkte** dürfen nicht kommentarlos verschwinden – auch die nicht, die der Server
- *    nicht kennt (#178). Seit 12.10.2026 nennt sie die Hinweisleiste oben, statt sie zerfallen zu lassen.
+ *    nicht kennt (#178). Seit 12.10.2026 nennt sie ein Hinweis unten, statt sie zerfallen zu lassen.
  */
 function item(over: Partial<AgendaItem> = {}): AgendaItem {
   return {
@@ -106,13 +108,21 @@ describe('AgendaFullView – Lied antippen', () => {
   });
 });
 
-/** Die Hinweisleiste über dem Ablauf (12.10.2026) – `null`, wenn keine da ist. */
-function leiste(): string | null {
+/** Der Hinweis unten (12.10.2026, Variante C) – `null`, wenn keiner da ist. */
+function hinweis(): string | null {
   return screen.queryByRole('status')?.textContent ?? null;
 }
 
-describe('AgendaFullView – Hinweisleiste statt Aufleuchten und Zerfallen (12.10.2026)', () => {
-  it('nennt einen vom Server gemeldeten entfernten Punkt – als Zeile steht er NICHT mehr da', () => {
+/** Die Zeile eines Punkts samt Schildchen. */
+function zeile(titel: string): string {
+  return screen.getByText(titel).closest('div')!.parentElement!.textContent ?? '';
+}
+
+describe('AgendaFullView – Hinweis und Schildchen statt Aufleuchten und Zerfallen (12.10.2026)', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('nennt einen vom Server gemeldeten entfernten Punkt – als Zeile steht er NICHT da', () => {
     const { container } = render(
       <AgendaFullView
         items={[
@@ -123,11 +133,10 @@ describe('AgendaFullView – Hinweisleiste statt Aufleuchten und Zerfallen (12.1
         onSelect={vi.fn()}
       />,
     );
-    expect(leiste()).toContain('Ablauf aktualisiert');
-    expect(leiste()).toContain('Entfernt: Weg damit');
-    // Außerhalb der Leiste taucht der Titel nicht auf.
-    const ohneLeiste = (container.textContent ?? '').replace(leiste() ?? '', '');
-    expect(ohneLeiste).not.toContain('Weg damit');
+    expect(hinweis()).toContain('Ablauf aktualisiert');
+    expect(hinweis()).toContain('Entfernt: Weg damit');
+    const ohneHinweis = (container.textContent ?? '').replace(hinweis() ?? '', '');
+    expect(ohneHinweis).not.toContain('Weg damit');
   });
 
   it('zählt neu und geändert getrennt und zeigt das passende Schildchen', () => {
@@ -142,56 +151,101 @@ describe('AgendaFullView – Hinweisleiste statt Aufleuchten und Zerfallen (12.1
         onSelect={vi.fn()}
       />,
     );
-    expect(leiste()).toContain('Ablauf aktualisiert · 1 neu · 1 geändert');
-    const zeile = (t: string) => screen.getByText(t).closest('div')!.parentElement!.textContent;
+    expect(hinweis()).toContain('Ablauf aktualisiert · 1 neu · 1 geändert');
     expect(zeile('Gebet')).toContain('neu');
     expect(zeile('Predigt')).toContain('geändert');
     expect(zeile('Begrüßung')).not.toMatch(/neu|geändert/);
   });
 
-  it('ohne Änderungen gibt es keine Leiste', () => {
+  it('ohne Änderungen gibt es keinen Hinweis', () => {
     render(<AgendaFullView items={[item({ id: 1 })]} eventId={1} onSelect={vi.fn()} />);
-    expect(leiste()).toBeNull();
+    expect(hinweis()).toBeNull();
+  });
+
+  it('der Hinweis verschwindet von selbst – die Schildchen bleiben', () => {
+    render(
+      <AgendaFullView
+        items={[item({ id: 2, title: 'Gebet', changed: true, neu: true })]}
+        eventId={1}
+        onSelect={vi.fn()}
+      />,
+    );
+    act(() => void vi.advanceTimersByTime(HINWEIS_MS - 1));
+    expect(hinweis()).not.toBeNull();
+    act(() => void vi.advanceTimersByTime(1));
+    expect(hinweis()).toBeNull();
+    expect(zeile('Gebet')).toContain('neu');
+  });
+
+  it('die Schildchen bleiben, wenn der nächste Abruf nichts mehr markiert (schon als gesehen gemerkt)', () => {
+    const { rerender } = render(
+      <AgendaFullView
+        items={[
+          item({ id: 1, title: 'A' }),
+          item({ id: 2, title: 'Gebet', changed: true, neu: true }),
+        ]}
+        eventId={1}
+        onSelect={vi.fn()}
+      />,
+    );
+    rerender(
+      <AgendaFullView
+        items={[item({ id: 1, title: 'A' }), item({ id: 2, title: 'Gebet', changed: false })]}
+        eventId={1}
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(zeile('Gebet')).toContain('neu');
+  });
+
+  it('kommt etwas dazu, erscheint der Hinweis wieder – derselbe Stand nicht noch einmal', () => {
+    const a = [item({ id: 1, title: 'A', changed: true, neu: true })];
+    const { rerender } = render(<AgendaFullView items={a} eventId={1} onSelect={vi.fn()} />);
+    act(() => void vi.advanceTimersByTime(HINWEIS_MS));
+    rerender(<AgendaFullView items={[...a]} eventId={1} onSelect={vi.fn()} />);
+    expect(hinweis()).toBeNull();
+    rerender(
+      <AgendaFullView
+        items={[...a, item({ id: 3, title: 'Drei', changed: true, neu: true })]}
+        eventId={1}
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(hinweis()).toContain('2 neu');
   });
 
   it('merkt selbst, wenn ein zuvor gezeigter Punkt verschwindet (#178)', () => {
-    // Punkte, die erst nach dem Betreten hinzukamen und wieder gelöscht wurden, stehen NICHT in der
-    // „gesehen"-Basislinie des Servers – er meldet für sie keinen Platzhalter. Die Ansicht muss das
-    // selbst bemerken, sonst verschwindet die Zeile kommentarlos.
+    // Punkte, die nach dem Gesehen-Stand hinzukamen und wieder gelöscht wurden, kennt der Server
+    // nicht – er meldet für sie keinen Platzhalter. Die Ansicht muss das selbst bemerken.
     const vorher = [item({ id: 1, title: 'Bleibt' }), item({ id: 2, title: 'Verschwindet' })];
     const { rerender } = render(<AgendaFullView items={vorher} eventId={1} onSelect={vi.fn()} />);
-    expect(leiste()).toBeNull();
+    expect(hinweis()).toBeNull();
     rerender(
       <AgendaFullView items={[item({ id: 1, title: 'Bleibt' })]} eventId={1} onSelect={vi.fn()} />,
     );
-    expect(leiste()).toContain('Entfernt: Verschwindet');
+    expect(hinweis()).toContain('Entfernt: Verschwindet');
   });
 
-  it('ein lokal bemerkter entfernter Punkt bleibt in der Leiste stehen (zerfällt nicht mehr)', () => {
-    vi.useFakeTimers();
-    try {
-      const vorher = [item({ id: 1, title: 'Bleibt' }), item({ id: 2, title: 'Weg' })];
-      const { rerender } = render(<AgendaFullView items={vorher} eventId={1} onSelect={vi.fn()} />);
-      rerender(
+  it('auch unter StrictMode (doppeltes Rendern im Dev-Build) kommen Schildchen und Hinweis an', () => {
+    // Im Browser gefunden (12.10.2026): Der Abgleich lief über einen Ref, der beim ersten der beiden
+    // Durchläufe schon umgestellt war – der zweite sah „nichts Neues" und verwarf das Ergebnis.
+    const a = [item({ id: 1, title: 'A' })];
+    const { rerender } = render(
+      <StrictMode>
+        <AgendaFullView items={a} eventId={1} onSelect={vi.fn()} />
+      </StrictMode>,
+    );
+    rerender(
+      <StrictMode>
         <AgendaFullView
-          items={[item({ id: 1, title: 'Bleibt' })]}
+          items={[...a, item({ id: 4, title: 'Kollekte', changed: true, neu: true })]}
           eventId={1}
           onSelect={vi.fn()}
-        />,
-      );
-      vi.advanceTimersByTime(5 * 60_000);
-      // Ein neuer Stand vom Server (neues Array) darf ihn nicht vergessen lassen.
-      rerender(
-        <AgendaFullView
-          items={[item({ id: 1, title: 'Bleibt' })]}
-          eventId={1}
-          onSelect={vi.fn()}
-        />,
-      );
-      expect(leiste()).toContain('Entfernt: Weg');
-    } finally {
-      vi.useRealTimers();
-    }
+        />
+      </StrictMode>,
+    );
+    expect(zeile('Kollekte')).toContain('neu');
+    expect(hinweis()).toContain('1 neu');
   });
 
   it('ein Terminwechsel meldet NICHTS (die Punkte gehören zu einem anderen Termin)', () => {
@@ -209,39 +263,32 @@ describe('AgendaFullView – Hinweisleiste statt Aufleuchten und Zerfallen (12.1
         onSelect={vi.fn()}
       />,
     );
-    expect(leiste()).toBeNull();
+    expect(hinweis()).toBeNull();
   });
 
-  it('ein rückgängig gemachter Punkt verschwindet wieder aus der Leiste', () => {
+  it('ein Terminwechsel nimmt die Schildchen des alten Termins nicht mit', () => {
+    const { rerender } = render(
+      <AgendaFullView
+        items={[item({ id: 1, title: 'A', changed: true, neu: true })]}
+        eventId={1}
+        onSelect={vi.fn()}
+      />,
+    );
+    rerender(
+      <AgendaFullView items={[item({ id: 1, title: 'A' })]} eventId={2} onSelect={vi.fn()} />,
+    );
+    expect(zeile('A')).not.toContain('neu');
+  });
+
+  it('ein zurückgeholter Punkt gilt nicht mehr als entfernt', () => {
     const zwei = [item({ id: 1, title: 'Eins' }), item({ id: 2, title: 'Zwei' })];
     const { rerender } = render(<AgendaFullView items={zwei} eventId={1} onSelect={vi.fn()} />);
     rerender(
       <AgendaFullView items={[item({ id: 1, title: 'Eins' })]} eventId={1} onSelect={vi.fn()} />,
     );
-    expect(leiste()).toContain('Entfernt: Zwei');
-
-    // Wieder da (z. B. „Rückgängig" oder in ChurchTools zurückgeholt) → nicht mehr als entfernt gemeldet.
+    expect(hinweis()).toContain('Entfernt: Zwei');
     rerender(<AgendaFullView items={[...zwei]} eventId={1} onSelect={vi.fn()} />);
-    expect(leiste()).toBeNull();
-  });
-
-  it('weggeklickt bleibt sie weg – bis eine neue Änderung kommt', () => {
-    const a = [item({ id: 1, title: 'Eins', changed: true, neu: true }), item({ id: 2 })];
-    const { rerender } = render(<AgendaFullView items={a} eventId={1} onSelect={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Hinweis schließen' }));
-    expect(leiste()).toBeNull();
-    // Gleicher Stand neu geladen → bleibt zu.
-    rerender(<AgendaFullView items={[...a]} eventId={1} onSelect={vi.fn()} />);
-    expect(leiste()).toBeNull();
-    // Etwas Neues → wieder da.
-    rerender(
-      <AgendaFullView
-        items={[...a, item({ id: 3, title: 'Drei', changed: true, neu: true })]}
-        eventId={1}
-        onSelect={vi.fn()}
-      />,
-    );
-    expect(leiste()).toContain('2 neu');
+    expect(hinweis()).toBeNull();
   });
 });
 

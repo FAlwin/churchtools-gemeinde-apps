@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import type { AgendaItem } from '@shared/types/index';
 import { useMarkSetlistSeen, useSetlistVersion } from './useServices';
 
 /**
@@ -29,8 +30,7 @@ export function useSetlistLiveSync(args: {
   const lastLiveHash = useRef<{ eventId: number; hash: string } | null>(null);
 
   // Ablauf neu laden (Live-Update): Der Server markiert die geänderten Punkte anhand des zuletzt
-  // GESEHENEN Stands – dieser wird bewusst NICHT hier aktualisiert, sondern erst beim Verlassen
-  // des Termins (useMarkSeenOnLeave). So tragen auch live eingetroffene Änderungen ihr Schildchen.
+  // GESEHENEN Stands; gemerkt wird er, nachdem der neue Stand angezeigt wurde (useMarkSeenAfterShown).
   const reloadAblauf = useCallback(
     (id: number) => {
       void qc.invalidateQueries({ queryKey: ['agenda', id] });
@@ -65,21 +65,40 @@ export function useSetlistLiveSync(args: {
 }
 
 /**
- * „Gesehen" gilt beim VERLASSEN eines Termins (#143/#161): Erst dann wird der aktuelle Stand als
- * Basislinie gemerkt – so bleiben Leiste und Schildchen („neu"/„geändert") sichtbar, solange man drin ist,
- * und der „geändert"-Punkt in der Terminliste verschwindet nach dem Reinschauen. Ein Wechsel
- * zwischen Ablauf und Liederheft desselben Termins zählt NICHT als Verlassen – der Aufrufer gibt
- * dafür durchgehend dieselbe `openTerminId`.
+ * „Gesehen" gilt, **sobald ein Stand mit Änderungen angezeigt wurde** (Alwin, 12.10.2026).
+ *
+ * Vorher galt es erst beim VERLASSEN eines Termins innerhalb der App (#143/#161). In der
+ * ChurchTools-Erweiterung verlässt man aber meist die ganze Seite – dann lief nichts, und beim nächsten
+ * Öffnen kamen dieselben Änderungen noch einmal („bleibt länger stehen"). Jetzt wird gemerkt, nachdem
+ * der FRISCH geholte Ablauf in der Ablauf-Ansicht stand. Die Schildchen dieses Besuchs hält die Ansicht
+ * selbst fest (`AenderungsMerker`); der Hinweis unten verschwindet ohnehin von selbst.
+ *
+ * Geschrieben wird nur, wenn es etwas zu quittieren gibt (markierte Punkte) oder noch gar kein
+ * Gesehen-Stand existiert (`changed` überall `undefined`) – in der Erweiterung ist jedes Merken ein
+ * Schreiben in die Personen-Dateien, das soll nicht bei jedem Fokus passieren.
  */
-export function useMarkSeenOnLeave(openTerminId: number | null): void {
-  const markSeen = useMarkSetlistSeen();
-  const prevRef = useRef<number | null>(null);
-  const { mutate } = markSeen;
+export function useMarkSeenAfterShown(args: {
+  eventId: number | null;
+  /** Steht der Ablauf gerade in der Ablauf-Ansicht (nicht im Liederheft)? */
+  angezeigt: boolean;
+  items: AgendaItem[] | undefined;
+  /** Zeitpunkt des Abrufs (`dataUpdatedAt`) – jeder neue Abruf wird höchstens einmal quittiert. */
+  stand: number;
+  /** Läuft gerade ein Abruf? Dann ist das Angezeigte (aus dem Speicher) nicht der aktuelle Stand. */
+  laedt: boolean;
+}): void {
+  const { eventId, angezeigt, items, stand, laedt } = args;
+  const { mutate } = useMarkSetlistSeen();
+  const erledigt = useRef<string | null>(null);
   useEffect(() => {
-    const prev = prevRef.current;
-    prevRef.current = openTerminId;
-    if (prev != null && prev !== openTerminId) {
-      mutate({ eventId: prev, refresh: true });
-    }
-  }, [openTerminId, mutate]);
+    if (!angezeigt || eventId == null || !items || items.length === 0 || laedt || stand === 0)
+      return;
+    const schluessel = `${eventId}:${stand}`;
+    if (erledigt.current === schluessel) return;
+    const markiert = items.some((i) => i.changed || i.removed);
+    const ohneBasis = items.every((i) => i.changed === undefined && !i.removed);
+    if (!markiert && !ohneBasis) return;
+    erledigt.current = schluessel;
+    mutate({ eventId, refresh: markiert });
+  }, [angezeigt, eventId, items, stand, laedt, mutate]);
 }

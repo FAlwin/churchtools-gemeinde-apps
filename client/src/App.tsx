@@ -27,7 +27,7 @@ import {
   useSongChart,
   useCapabilities,
 } from './hooks/useServices';
-import { useSetlistLiveSync, useMarkSeenOnLeave } from './hooks/useSetlistLiveSync';
+import { useSetlistLiveSync, useMarkSeenAfterShown } from './hooks/useSetlistLiveSync';
 import { Screen } from './components/Screen';
 import { CenterMessage } from './components/CenterMessage';
 import { TabBar, type TabId } from './components/TabBar';
@@ -215,7 +215,7 @@ export default function App() {
   const items = agendaQuery.data ?? [];
   const songs = items.flatMap((i) => (i.song ? [i.song] : []));
 
-  // Live-Abgleich des geöffneten Ablaufs + „gesehen"-Basislinie beim Verlassen –
+  // Live-Abgleich des geöffneten Ablaufs + „gesehen"-Basislinie nach dem Anzeigen –
   // Details in hooks/useSetlistLiveSync.ts.
   // Takt nachziehen, sobald sich die Ansicht ändert (#306). Ein Render Verzug ist bei 60 Sekunden
   // ohne Belang. Das Frischholen beim Zurückkehren macht `useServices` selbst – es gehört neben den
@@ -232,7 +232,13 @@ export default function App() {
     inSetlistChart,
     online,
   });
-  useMarkSeenOnLeave(inSetlistView || inSetlistChart ? (service?.id ?? null) : null);
+  useMarkSeenAfterShown({
+    eventId: service?.id ?? null,
+    angezeigt: inSetlistView,
+    items: agendaQuery.data,
+    stand: agendaQuery.dataUpdatedAt,
+    laedt: agendaQuery.isFetching,
+  });
 
   // Wer keine Abläufe sehen darf, startet im Lieder-Tab
   useEffect(() => {
@@ -541,8 +547,8 @@ export default function App() {
             onSelect={(s) => {
               setService(s);
               setView({ type: 'setlist' });
-              // „Gesehen" wird beim Verlassen gemerkt (Effekt oben, #161) – nicht hier, sonst
-              // wären die geänderten Punkte beim Öffnen schon wieder als gesehen markiert.
+              // „Gesehen" wird gemerkt, NACHDEM der frische Stand angezeigt wurde (Effekt oben,
+              // 12.10.2026) – nicht hier, sonst kämen die Markierungen gar nicht erst an.
               // Ablauf frisch holen: Der Cache wird sofort angezeigt, aber nur ein frischer
               // Abruf bringt die aktuellen „geändert"-Markierungen mit (sonst blinkt beim
               // schnellen Wieder-Öffnen nichts, weil der 30-s-Cache noch als frisch gilt).

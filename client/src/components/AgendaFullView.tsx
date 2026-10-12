@@ -5,16 +5,22 @@
  * Die Uhrzeit (`item.time`) ist bereits serverseitig richtig: In ChurchTools ausgeblendete Punkte
  * (Auge) liefern gar keine Zeit.
  *
- * Änderungen seit dem letzten Ansehen zeigt seit 12.10.2026 eine ruhige Leiste oben (`AblaufHinweis`)
- * und ein Schildchen „neu"/„geändert" am Punkt. Vorher leuchteten Punkte auf und entfernte zerfielen
- * in Partikel – das Abfotografieren dafür ließ die ChurchTools-Erweiterung hängen (Alwin).
+ * Änderungen seit dem letzten Ansehen zeigt seit 12.10.2026 ein Hinweis unten, der von selbst verschwindet
+ * (`AblaufHinweis`), und ein Schildchen „neu"/„geändert" am Punkt, das während des Besuchs bleibt
+ * (`AenderungsMerker`). Vorher leuchteten Punkte auf und entfernte zerfielen in Partikel – das
+ * Abfotografieren dafür ließ die ChurchTools-Erweiterung hängen (Alwin).
  */
-import { Fragment, useRef, useState } from 'react';
+import { Fragment, useState } from 'react';
 import type { AgendaItem } from '@shared/types/index';
 import { itemLabel } from '../utils/agendaItemTitle';
 import { vanishedRows, type ShownRow } from '../utils/vanishedRows';
 import { beginnStelle } from '../utils/vorlauf';
-import { ablaufAenderungen } from '../utils/ablaufAenderungen';
+import {
+  leererMerker,
+  merkeAenderungen,
+  zusammenfassen,
+  type AenderungsMerker,
+} from '../utils/ablaufAenderungen';
 import { BeginnLinie, ItemTitle, ResponsibleLine } from './AgendaRowParts';
 import { AblaufHinweis } from './AblaufHinweis';
 import styles from '../pages/Setlist.module.scss';
@@ -32,44 +38,28 @@ export function AgendaFullView({
   onSelect: (songIndex: number) => void;
 }) {
   let songIndex = -1;
-  // Lokal erkannte Löschungen (#178): Punkte, die seit dem Betreten hinzukamen und wieder gelöscht
-  // wurden, stehen nicht in der „gesehen"-Basislinie → der Server liefert für sie KEINEN
-  // removed-Platzhalter. Die Ansicht merkt sich deshalb selbst, was sie zuletzt gezeigt hat, damit
-  // auch solche Punkte in der Leiste als „Entfernt" stehen statt kommentarlos zu verschwinden.
-  const prevShown = useRef<{ eventId: number; items: AgendaItem[]; rows: ShownRow[] } | null>(null);
-  const [localRemoved, setLocalRemoved] = useState<{ id: number; title: string }[]>([]);
-  // SYNCHRON während des Renderns abgleichen (NICHT useEffect): sonst zeigt ein Frame die Leiste ohne
-  // den gerade verschwundenen Punkt. Bedingtes setState im Render ist das dokumentierte „State an
-  // geänderte Props anpassen"-Muster – gleiche #113-Lektion wie in usePageDraw.
-  const prev = prevShown.current;
-  if (!prev || prev.eventId !== eventId || prev.items !== items) {
-    const shown: ShownRow[] = items
-      .filter((i) => !i.removed)
-      // Gleiche Bezeichnung wie in der Liste (#215).
-      .map((i) => ({ id: i.id, title: itemLabel(i) }));
-    prevShown.current = { eventId, items, rows: shown };
-    if (!prev || prev.eventId !== eventId) {
-      // Terminwechsel/Erstaufbau: nichts melden, nur Merkstand setzen.
-      if (localRemoved.length) setLocalRemoved([]);
-    } else {
-      const presentIds = new Set(items.map((i) => i.id));
-      const vanished = vanishedRows(prev.rows, presentIds);
-      setLocalRemoved((cur) => {
-        // Wieder aufgetauchte IDs (rückgängig gemacht) räumen; bleibt sonst, bis der Termin wechselt.
-        const kept = cur.filter((c) => !presentIds.has(c.id));
-        const fresh = vanished
-          .filter((v) => !kept.some((c) => c.id === v.id))
-          .map((v) => ({ id: v.id, title: v.title }));
-        return fresh.length || kept.length !== cur.length ? [...kept, ...fresh] : cur;
-      });
-    }
+  // Lokal erkannte Löschungen (#178): Punkte, die seit dem Gesehen-Stand hinzukamen und wieder
+  // gelöscht wurden, kennt der Server nicht → er liefert für sie KEINEN removed-Platzhalter. Die Ansicht
+  // merkt sich deshalb selbst, was sie zuletzt gezeigt hat, damit auch solche Punkte als „Entfernt"
+  // gemeldet werden statt kommentarlos zu verschwinden.
+  const [stand, setStand] = useState(() => abgleichen(null, eventId, items));
+  // SYNCHRON während des Renderns abgleichen (NICHT useEffect): sonst zeigt ein Frame die Punkte ohne
+  // Schildchen. Bedingtes setState im Render ist das dokumentierte „State an geänderte Props
+  // anpassen"-Muster – gleiche #113-Lektion wie in usePageDraw. Der Vergleichsstand liegt dabei im
+  // ZUSTAND, nicht in einem Ref: Ein Ref ist nach dem ersten von zwei Durchläufen (StrictMode,
+  // unterbrochenes Rendern) schon umgestellt, und der zweite verwarf das Ergebnis – die Schildchen
+  // kamen nie an (im Browser gefunden, 12.10.2026).
+  let aktuell = stand;
+  if (stand.eventId !== eventId || stand.items !== items) {
+    aktuell = abgleichen(stand, eventId, items);
+    setStand(aktuell);
   }
   const zeilen = items.filter((i) => !i.removed);
   // Die Linie „Beginn" vor dem ersten Punkt nach dem Vorlauf (#423) – nur, wenn es Vorlauf gibt.
   const stelle = beginnStelle(zeilen);
   return (
     <div className={styles.flowList}>
-      <AblaufHinweis aenderungen={ablaufAenderungen(items, localRemoved)} />
+      <AblaufHinweis aenderungen={zusammenfassen(aktuell.merker)} />
       {zeilen.map((item, i) => (
         <Fragment key={item.id}>
           {i === stelle && <BeginnLinie zeit={beginn} />}
@@ -83,7 +73,11 @@ export function AgendaFullView({
   function zeile(item: AgendaItem) {
     const showTime = !!item.time;
     // Neu/geändert/verschoben seit dem letzten Ansehen (#161): ein festes Schildchen, keine Bewegung.
-    const schild = item.neu ? 'neu' : item.changed ? 'geändert' : null;
+    const schild = aktuell.merker.neu.has(item.id)
+      ? 'neu'
+      : aktuell.merker.geaendert.has(item.id)
+        ? 'geändert'
+        : null;
     const tag = schild && <span className={styles.aenderungsTag}>{schild}</span>;
     const vl = item.vorBeginn ? ` ${styles.vorlauf}` : '';
     if (item.isHeader) {
@@ -130,4 +124,24 @@ export function AgendaFullView({
       </div>
     );
   }
+}
+
+/** Was die Ansicht zuletzt gezeigt hat – und was ihr dabei als neu, geändert oder entfernt auffiel. */
+interface Abgleich {
+  eventId: number;
+  items: AgendaItem[];
+  rows: ShownRow[];
+  merker: AenderungsMerker;
+}
+
+/** Nimmt einen neuen Stand auf; bei Terminwechsel/Erstaufbau frisch und ohne „lokal entfernt". */
+function abgleichen(vorher: Abgleich | null, eventId: number, items: AgendaItem[]): Abgleich {
+  const rows: ShownRow[] = items
+    .filter((i) => !i.removed)
+    // Gleiche Bezeichnung wie in der Liste (#215).
+    .map((i) => ({ id: i.id, title: itemLabel(i) }));
+  const gleicherTermin = vorher !== null && vorher.eventId === eventId;
+  const basis = gleicherTermin ? vorher.merker : leererMerker(eventId);
+  const weg = gleicherTermin ? vanishedRows(vorher.rows, new Set(items.map((i) => i.id))) : [];
+  return { eventId, items, rows, merker: merkeAenderungen(basis, items, weg) };
 }

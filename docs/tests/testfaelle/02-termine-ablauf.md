@@ -85,8 +85,8 @@ anderen Stelle und wurde früher übersehen.
 **Das brauchst du:** Zugang zu ChurchTools im Browser, während die App offen ist.
 
 **Das muss passieren:** In Schritt 4 hat der Termin einen **blauen Punkt** – wie eine ungelesene
-Nachricht. In Schritt 5 steht oben „Ablauf aktualisiert · 1 geändert" und der Punkt trägt das
-Schildchen **geändert**. Beim allerersten Öffnen eines Termins darf **nichts** markiert sein, sonst
+Nachricht. In Schritt 5 erscheint unten kurz „Ablauf aktualisiert · 1 geändert" und der Punkt trägt
+das Schildchen **geändert**. Beim allerersten Öffnen eines Termins darf **nichts** markiert sein, sonst
 trüge die ganze Liste Schildchen.
 
 1. Einen Termin öffnen und wieder zurück zur Liste (damit gilt er als gesehen).
@@ -104,27 +104,30 @@ trüge die ganze Liste Schildchen.
 
 </details>
 
-### TF-ABLAUF-06 · Leiste „Ablauf aktualisiert" nennt Neues und Entferntes
+### TF-ABLAUF-06 · Hinweis „Ablauf aktualisiert" nennt Neues und Entferntes
 
 **Das brauchst du:** Zugang zu ChurchTools, App mit geöffnetem Ablauf daneben – am besten **auch in der
 ChurchTools-Erweiterung**, dort blieb die frühere Animation hängen.
 
-**Das muss passieren:** Oben im Ablauf erscheint eine ruhige Leiste „Ablauf aktualisiert · 1 neu",
-darunter „Entfernt: ~~Titel~~" für den gelöschten Punkt. Der neue Punkt trägt das Schildchen **neu**.
-Nichts blinkt, nichts zerfällt, die Seite bleibt bedienbar. Das X schließt die Leiste; kommt danach
-eine weitere Änderung, ist sie wieder da.
+**Das muss passieren:** Unten erscheint ein dunkler Hinweis „Ablauf aktualisiert · 1 neu", darunter
+„Entfernt: ~~Titel~~" für den gelöschten Punkt. Nach etwa 6 Sekunden verschwindet er von selbst. Der
+neue Punkt trägt das Schildchen **neu**, solange du im Termin bist. Nichts blinkt, nichts zerfällt,
+die Seite bleibt bedienbar. Öffnest du den Termin später noch einmal, kommt **derselbe** Hinweis nicht
+wieder – auch nicht in der Erweiterung, wenn du dazwischen die ChurchTools-Seite gewechselt hast.
 
 1. Einen Termin in der App öffnen und offen lassen.
 2. In ChurchTools einen Punkt **aus der Mitte** löschen und einen neuen Punkt anlegen.
-3. In der App warten (bis zu einer Minute) und auf den Ablauf schauen.
-4. Die Leiste mit dem X schließen, dann in ChurchTools noch einen Punkt ändern.
+3. In der App warten (bis zu einer Minute) und auf den Ablauf schauen; 6 Sekunden weiter warten.
+4. In ChurchTools noch einen Punkt ändern → der Hinweis kommt wieder („1 geändert" dazu).
+5. Zu einer anderen ChurchTools-Seite wechseln (Erweiterung) bzw. zurück zu den Terminen, dann den
+   Termin wieder öffnen → kein Hinweis, keine Schildchen.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/AgendaFullView.tsx`, `client/src/components/AblaufHinweis.tsx`, `client/src/utils/ablaufAenderungen.ts`, `client/src/utils/vanishedRows.ts`, `shared/ct/agendaDiff.ts`
-- **Automatisiert:** teilweise – `client/src/components/AgendaFullView.test.tsx` (Leiste, Schildchen, Wegklicken); das Zusammenspiel mit ChurchTools nicht
-- **Historie:** #161, #178; seit 12.10.2026 Leiste statt Aufleuchten und Zerfallen
+- **Betrifft:** `client/src/components/AgendaFullView.tsx`, `client/src/components/AblaufHinweis.tsx`, `client/src/utils/ablaufAenderungen.ts`, `client/src/utils/vanishedRows.ts`, `client/src/hooks/useSetlistLiveSync.ts`, `shared/ct/agendaDiff.ts`
+- **Automatisiert:** teilweise – `client/src/components/AgendaFullView.test.tsx` (Hinweis, Schildchen, Verschwinden), `client/src/hooks/useMarkSeenAfterShown.test.tsx` (Gesehen-Merken); das Zusammenspiel mit ChurchTools nicht
+- **Historie:** #161, #178; 12.10.2026 erst eine Leiste über der Liste (sah aus wie ein Ablaufpunkt), dann Hinweis unten (Variante C). „Gesehen" seitdem nach dem Anzeigen statt beim Verlassen.
 
 </details>
 

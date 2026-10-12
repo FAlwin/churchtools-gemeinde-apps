@@ -1,3 +1,6 @@
+import type { ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import { BEREICH_ATTRIBUT } from '@ui/erweiterung/cssBereich';
 import styles from './Toast.module.scss';
 
 // useToast lebt in `hooks/useToast.ts` (getrennt, damit diese Datei nur Komponenten exportiert).
@@ -8,16 +11,29 @@ export interface ToastAktion {
   onClick: () => void;
 }
 
-export function Toast({ message, aktion }: { message: string | null; aktion?: ToastAktion }) {
+/**
+ * Der kleine dunkle Hinweis unten.
+ *
+ * **Hängt per Portal an `body`** (12.10.2026): Mitten im Inhalt gezeichnet, saß er oben statt unten –
+ * der Bereich für „Zum Aktualisieren nach unten ziehen" verschiebt per `transform`, und daran richtet
+ * sich ein `position: fixed` dann aus statt am Fenster. `BEREICH_ATTRIBUT` sorgt wie bei den Coachmarks
+ * dafür, dass in der ChurchTools-Erweiterung unsere Stilregeln auch außerhalb von `#root` gelten.
+ */
+export function Toast({ message, aktion }: { message: ReactNode; aktion?: ToastAktion }) {
   if (!message) return null;
-  return (
-    <div className={`${styles.toast}${aktion ? ` ${styles.mitAktion}` : ''}`} role="status">
+  return createPortal(
+    <div
+      className={`${styles.toast}${aktion ? ` ${styles.mitAktion}` : ''}`}
+      role="status"
+      {...{ [BEREICH_ATTRIBUT]: '' }}
+    >
       <span>{message}</span>
       {aktion && (
         <button type="button" className={styles.aktion} onClick={aktion.onClick}>
           {aktion.label}
         </button>
       )}
-    </div>
+    </div>,
+    document.body,
   );
 }

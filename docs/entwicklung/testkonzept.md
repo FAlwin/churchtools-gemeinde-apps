@@ -263,7 +263,7 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
     leere Anzeige sind drei verschiedene Aussagen. Und: **der CCLI-Hinweis wird angezeigt**, wenn die
     Quelle ihn mitschickt – das ist eine Lizenzbedingung, keine Zierde.
 - `utils/strokes` (`mergeStrokes`, reine null-Zweige), `utils/vanishedRows` (lokal bemerkte
-  Löschungen #178 – seit 12.10.2026 für die Hinweisleiste, `AgendaFullView.test.tsx`) und `utils/annotationKeys` (Schlüssel-Grammatik: Ebenen-Präfix,
+  Löschungen #178 – seit 12.10.2026 für den Hinweis „Ablauf aktualisiert", `AgendaFullView.test.tsx`) und `utils/annotationKeys` (Schlüssel-Grammatik: Ebenen-Präfix,
   nicht-leere Notizen je Ebene, Ebenen-Gruppierung unter Namensraum) rein getestet.
 - **Seiten-Engine, seit der Aufteilung von `PageDeck` (#193):**
   - `hooks/usePageCanvases` (jsdom, `getContext` gestubbt): Maße + Seitenverhältnis der Quellseite,

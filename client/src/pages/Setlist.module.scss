@@ -306,40 +306,22 @@
   }
 }
 
-// Hinweisleiste über dem Ablauf (12.10.2026, ersetzt Aufleuchten und Zerfallen aus #161): ruhig, ohne
-// Bewegung. Sanfte Akzentfläche wie die Vers-Beschriftungen (`--blue-soft`), Schrift in Akzentfarbe.
-.aenderungsLeiste {
+// Inhalt des Änderungs-Hinweises unten (12.10.2026, Variante C): Kopfzeile, darunter je entfernter
+// Punkt eine Zeile. Der dunkle Hintergrund kommt vom `Toast`.
+.aenderungsHinweis {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 9px 12px;
-  border-radius: 9px;
-  background: var(--blue-soft);
-  color: var(--blue-ink);
-  font-size: 13.5px;
+  gap: 2px;
+  text-align: left;
 
   strong {
     font-weight: 700;
   }
 }
-.aenderungsKopf {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.aenderungsZu {
-  margin-left: auto;
-  display: flex;
-  border: none;
-  background: none;
-  padding: 2px;
-  color: inherit;
-  cursor: pointer;
-}
 .aenderungsEntfernt {
-  padding-left: 23px; // unter dem Text, nicht unter dem Symbol
+  font-weight: 500;
   s {
-    color: var(--text2);
+    opacity: 0.75;
   }
 }
 // Schildchen „neu"/„geändert" am Punkt – fest, ohne Animation.

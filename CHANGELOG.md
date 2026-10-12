@@ -10,12 +10,20 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 ### Geändert
 
 - **Ablauf-Änderungen ohne Animation** (Alwin, 12.10.2026): Statt aufleuchtender Punkte und zerfallender
-  Zeilen steht oben im Ablauf eine ruhige Leiste „Ablauf aktualisiert · 1 neu · 2 geändert", darunter jeder
-  entfernte Punkt durchgestrichen; neue und geänderte Punkte tragen ein Schildchen „neu"/„geändert". Das
-  Zerfallen fotografierte die ganze Seite ab (`html2canvas`) – in der ChurchTools-Erweiterung ist das die
-  komplette ChurchTools-Seite, die dabei hängen blieb. Die direkte Abhängigkeit `html2canvas` ist
-  entfallen (jsPDF bringt es weiter als eigenen Teil mit, der nur für `doc.html()` geladen würde – die App
-  ruft das nicht auf).
+  Zeilen erscheint unten ein dunkler Hinweis „Ablauf aktualisiert · 1 neu · 2 geändert", darunter jeder
+  entfernte Punkt durchgestrichen; er verschwindet nach etwa 6 Sekunden von selbst. Neue und geänderte
+  Punkte tragen ein Schildchen „neu"/„geändert", solange man im Termin ist. Das Zerfallen fotografierte
+  die ganze Seite ab (`html2canvas`) – in der ChurchTools-Erweiterung ist das die komplette
+  ChurchTools-Seite, die dabei hängen blieb. Die direkte Abhängigkeit `html2canvas` ist entfallen (jsPDF
+  bringt es weiter als eigenen Teil mit, der nur für `doc.html()` geladen würde – die App ruft das nicht
+  auf).
+- **„Gesehen" gilt nach dem Anzeigen, nicht erst beim Verlassen** (12.10.2026): In der Erweiterung
+  verlässt man meist die ganze ChurchTools-Seite – dann wurde nichts gemerkt, und dieselben Änderungen
+  kamen beim nächsten Öffnen wieder. Gemerkt wird jetzt, sobald der frisch geholte Ablauf mit
+  Änderungen angezeigt wurde (und nur dann – in der Erweiterung ist jedes Merken ein Schreiben).
+- **Hinweise unten hängen jetzt an der Seite, nicht am Inhalt** (12.10.2026): Mitten im Inhalt gezeichnet,
+  saß ein Hinweis oben statt unten – der Bereich „Zum Aktualisieren nach unten ziehen" verschiebt per
+  `transform`. `Toast` hängt deshalb wie die Einführung per Portal an `body`.
 
 ### Neu
 

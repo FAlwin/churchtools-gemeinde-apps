@@ -7,6 +7,16 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Behoben
+
+- **Seitenwechsel im Liedblatt: Text-Anmerkungen kamen einen Frame zu spät** (12.10.2026, Fehlerklasse
+  #113): `usePageDraw` merkte sich den vorigen Seitenschlüssel in einem Ref und lud die Texte der neuen
+  Seite noch während des Renderns. Rendert React zweimal (StrictMode im Entwicklungs-Build,
+  unterbrochenes Rendern), war der Ref nach dem ersten Durchlauf schon umgestellt – das Laden ging
+  verloren, die Seite stand einen Frame ohne Texte da. Jetzt liegt der Schlüssel im Zustand; ein Test
+  unter StrictMode misst den ersten übernommenen Frame. Projektweit nach demselben Muster gesucht:
+  sonst nur `AgendaFullView` (dort mit dem Ablauf-Umbau behoben).
+
 ### Intern
 
 - **Anmeldungen, erster Baustein: die Preisberechnung** (#474, Bauplan Anmeldungen A1 Teil 1). Neue App

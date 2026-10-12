@@ -102,9 +102,15 @@ export function usePageDraw(
   // (beim Vorwärtswischen als kurzes Aufblitzen sichtbar, #113). Der Effekt unten übernimmt danach
   // nur noch Verlauf-Reset und den Server-Pull (reloadTick). Bedingtes setState im Render ist das
   // dokumentierte „State an geänderte Props anpassen"-Muster.
-  const prevTextKey = useRef(textKey);
-  if (textKey !== prevTextKey.current) {
-    prevTextKey.current = textKey;
+  //
+  // Der Vergleichsschlüssel liegt im ZUSTAND, nicht in einem Ref (12.10.2026): Ein Ref war nach dem
+  // ersten von zwei Render-Durchläufen (StrictMode, unterbrochenes Rendern) schon umgestellt, der
+  // zweite sah „nichts Neues" – das synchrone Laden ging verloren, die neue Seite stand einen Frame
+  // lang ohne Texte da. Mit Zustand sehen beide Durchläufe denselben alten Schlüssel und tun
+  // dasselbe; `loadedJson` bekommt dabei zweimal denselben Wert.
+  const [prevTextKey, setPrevTextKey] = useState(textKey);
+  if (textKey !== prevTextKey) {
+    setPrevTextKey(textKey);
     let loaded: PageTextObj[] = [];
     try {
       const s = textKey ? localStorage.getItem(textKey) : null;

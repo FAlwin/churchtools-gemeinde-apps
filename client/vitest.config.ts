@@ -36,8 +36,13 @@ export default defineConfig({
     // Anmelde-Schlüssel-Tests am 23.09.2026 aufgefallen: „nicht aufgerufen" scheiterte an den
     // Aufrufen des vorigen Tests). Dieselbe Fehlerklasse, dieselbe Antwort: einmal hier.
     clearMocks: true,
-    // ui/ (gemeinsame Bausteine, #469) hat keinen eigenen Testlauf – seine Tests laufen hier mit.
-    include: ['src/**/*.test.{ts,tsx}', '../ui/**/*.test.{ts,tsx}'],
+    // ui/ (gemeinsame Bausteine, #469) und shared/anmeldung/ (Regeln der Anmeldungen, #474) haben
+    // keinen eigenen Testlauf – ihre Tests laufen hier mit.
+    include: [
+      'src/**/*.test.{ts,tsx}',
+      '../ui/**/*.test.{ts,tsx}',
+      '../shared/anmeldung/**/*.test.ts',
+    ],
     // Baut gerenderte Komponenten/Hooks nach jedem Test ab – ohne das bleiben sie samt ihrer
     // window-Listener am Leben und mischen sich in spätere Tests ein (#314).
     setupFiles: ['./src/test-setup.ts'],

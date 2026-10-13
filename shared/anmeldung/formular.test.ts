@@ -14,6 +14,7 @@ import {
   type Feld,
   type OeffentlicheEinstellungen,
 } from './formular';
+import { STANDARD_BEZAHLUNG } from './bezahlung';
 
 /** Formular-Modell (#474). Die ChurchTools-Regeln dahinter sind in A0 an der Test-Instanz gemessen. */
 
@@ -225,6 +226,13 @@ describe('Einstellungen in der Gruppen-Beschreibung', () => {
       wer: 'familie',
       plaetze: { zeigen: 'knapp', knappUnter: 10 },
       loeschfristMonate: 6,
+      bezahlung: {
+        kontoinhaber: 'Gemeinde e.V.',
+        iban: 'DE89370400440532013000',
+        bic: '',
+        fristTage: 14,
+        zweck: 'Silvester [Nachname]',
+      },
     };
   }
 
@@ -261,10 +269,16 @@ describe('Einstellungen in der Gruppen-Beschreibung', () => {
   });
 
   it('ältere Einstellungen ohne später hinzugekommene Angaben bleiben lesbar (mit Standardwert)', () => {
-    const { termin: _t, loeschfristMonate: _l, ...alt } = einstellungen();
+    const { termin: _t, loeschfristMonate: _l, bezahlung: _b, ...alt } = einstellungen();
     const gelesen = einstellungenLesen(EINSTELLUNGEN_KENNUNG + JSON.stringify(alt));
     expect(gelesen?.termin).toBeNull();
     expect(gelesen?.loeschfristMonate).toBe(3);
+    // Seit A4: ohne Bankverbindung, 14 Tage, Zweck nur mit Nachnamen.
+    expect(gelesen?.bezahlung).toEqual(STANDARD_BEZAHLUNG);
+    // Jede gelesene Veranstaltung bekommt ihr eigenes Objekt – sonst änderte eine die nächste mit.
+    const zweite = einstellungenLesen(EINSTELLUNGEN_KENNUNG + JSON.stringify(alt));
+    expect(zweite?.bezahlung).not.toBe(gelesen?.bezahlung);
+    expect(gelesen?.bezahlung).not.toBe(STANDARD_BEZAHLUNG);
   });
 
   it('kaputtes oder manipuliertes JSON wird abgelehnt, ohne zu werfen', () => {

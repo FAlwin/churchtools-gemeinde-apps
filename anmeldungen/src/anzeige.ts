@@ -4,6 +4,15 @@
  */
 import type { OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import type { Anmeldestand, Veranstaltung } from '@shared/anmeldung/uebersicht';
+import {
+  altersText,
+  bedingungText,
+  euroText,
+  type Altersregel,
+  type Anpassung,
+  type Geltung,
+  type Grundpreis,
+} from '@shared/anmeldung/preis';
 
 const WOCHENTAG = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 const MONAT = [
@@ -81,3 +90,62 @@ export const WER_TEXT: Record<OeffentlicheEinstellungen['wer'], [string, string]
   einzeln: ['Einzelpersonen', 'Jede Person meldet sich selbst an'],
   kinder: ['Nur Kinder', 'Eltern geben ihre Kontaktdaten an, angemeldet werden die Kinder'],
 };
+
+/**
+ * **Ein Euro-Betrag aus einem Eingabefeld, in Cent** (A4): „12“, „12,5“, „12,50“, „12.50“, „1.234,50“,
+ * auch mit „€“. `null`, wenn es kein Betrag ist; leer gilt als 0. Mehr als zwei Nachkommastellen lehnt es
+ * ab, statt still zu runden.
+ */
+export function centAus(text: string): number | null {
+  const t = text.replace(/[\s€]/g, '');
+  if (t === '') return 0;
+  // Tausenderpunkte nur vor einem Komma („1.234,50“); sonst ist ein Punkt das Dezimalzeichen.
+  const ohneTausender = /^\d{1,3}(\.\d{3})+(,\d{1,2})?$/.test(t) ? t.replace(/\./g, '') : t;
+  const m = /^(\d{1,6})(?:[.,](\d{1,2}))?$/.exec(ohneTausender);
+  if (!m) return null;
+  return Number(m[1]) * 100 + Number((m[2] ?? '').padEnd(2, '0'));
+}
+
+/** Cent als Eingabetext: „12“, „12,50“ – das Gegenstück zu `centAus`. */
+export function euroEingabe(cent: number): string {
+  const euro = Math.floor(cent / 100);
+  const rest = cent % 100;
+  return rest === 0 ? String(euro) : `${euro},${String(rest).padStart(2, '0')}`;
+}
+
+// ── Preise (A4) ─────────────────────────────────────────────────────────────────────────────────
+
+/** „pro Person“ / „pro Anmeldung“ (A4). */
+export const JE: Record<Geltung, string> = { person: 'pro Person', anmeldung: 'pro Anmeldung' };
+
+/** „12,00 € pro Person“, „kostenlos“, „nach Auswahl „Zimmertyp“ · 2 Optionen, 65,52 €–89,00 € pro Person“. */
+export function grundpreisText(g: Grundpreis): string {
+  if (g.art === 'fest')
+    return g.betragCent === 0 ? 'kostenlos' : `${euroText(g.betragCent)} ${JE[g.gilt]}`;
+  if (g.optionen.length === 0) return `nach Auswahl „${g.auswahlName}“ · noch keine Optionen`;
+  const preise = g.optionen.map((o) => o.preisCent);
+  const min = Math.min(...preise);
+  const max = Math.max(...preise);
+  const spanne = min === max ? euroText(min) : `${euroText(min)}–${euroText(max)}`;
+  const optionen = g.optionen.length === 1 ? '1 Option' : `${g.optionen.length} Optionen`;
+  const kontingent = g.optionen.some((o) => o.kontingent > 0) ? ' · mit Kontingent' : '';
+  return `nach Auswahl „${g.auswahlName}“ · ${optionen}, ${spanne} pro Person${kontingent}`;
+}
+
+/** „unter 3 Jahren frei · 3–11 Jahre 50 %“ */
+export function alterText(regeln: Altersregel[]): string {
+  return regeln
+    .map((r) => {
+      const wert =
+        r.art === 'frei' ? 'frei' : r.art === 'prozent' ? `${r.wert} %` : euroText(r.wert);
+      return `${altersText(r)} ${wert}`;
+    })
+    .join(' · ');
+}
+
+/** „−5,00 € pro Person, bei Anmeldung bis 31.10.2026“ */
+export function anpassungText(a: Anpassung): string {
+  const hoehe = a.einheit === 'euro' ? euroText(a.wert) : `${a.wert} %`;
+  const wann = a.bedingung === 'immer' ? '' : `, ${bedingungText(a)}`;
+  return `${a.art === 'rabatt' ? '−' : '+'}${hoehe} ${JE[a.gilt]}${wann}`;
+}

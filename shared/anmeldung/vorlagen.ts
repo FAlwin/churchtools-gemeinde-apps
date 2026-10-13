@@ -4,6 +4,7 @@
  * ändern. Hier steht auch der eine Satz Startwerte, auf dem Tests und Demo aufbauen – damit ein neues
  * Feld der Einstellungen an EINER Stelle einen Wert bekommt.
  */
+import { STANDARD_BEZAHLUNG } from './bezahlung';
 import { standardFormular, type Gestaltung, type OeffentlicheEinstellungen } from './formular';
 
 export type Vorlage = 'einfach' | 'kinder' | 'freizeit';
@@ -33,7 +34,7 @@ const GESTALTUNG: Record<Vorlage, Gestaltung['vorlage']> = {
   freizeit: 'foto',
 };
 
-/** Die Startwerte einer neuen Veranstaltung: noch ohne Termin, kostenlos, Löschfrist 3 Monate. */
+/** Die Startwerte einer neuen Veranstaltung: noch ohne Termin, kostenlos, ohne Konto, Löschfrist 3 Monate. */
 export function neueEinstellungen(vorlage: Vorlage): OeffentlicheEinstellungen {
   return {
     termin: null,
@@ -61,5 +62,6 @@ export function neueEinstellungen(vorlage: Vorlage): OeffentlicheEinstellungen {
     wer: vorlage === 'kinder' ? 'kinder' : 'familie',
     plaetze: { zeigen: 'knapp', knappUnter: 5 },
     loeschfristMonate: 3,
+    bezahlung: { ...STANDARD_BEZAHLUNG },
   };
 }

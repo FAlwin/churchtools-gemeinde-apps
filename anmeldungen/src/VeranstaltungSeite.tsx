@@ -2,17 +2,34 @@ import { useCallback, useEffect, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { Sheet } from '@ui/fenster/Sheet';
 import { ctBasis } from '@ui/ct/basis';
-import type { OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
+import { tagAusIso } from '@shared/ct/zeit';
+import { geburtsdatumAn, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import { ortszeitAus } from '@shared/anmeldung/termin';
+import { kannEtwasKosten } from '@shared/anmeldung/preis';
+import { ibanText, verwendungszweck } from '@shared/anmeldung/bezahlung';
+import type { MeineGruppe } from '@shared/ct/gruppen';
 import {
   anmeldungVon,
+  anmeldungenZahl,
+  istGruppenAdmin,
+  teamVon,
+  wiederherstellen,
   darfVeranstaltungEinrichten,
   einstellungenVon,
   freigeben,
   kopfVon,
   type AnmeldeEinstellungen,
 } from './einrichten';
-import { AnmeldungFenster, LoeschfristFenster, TerminFenster, WerFenster } from './Bearbeiten';
+import {
+  AnmeldungFenster,
+  BezahlungFenster,
+  LoeschfristFenster,
+  TerminFenster,
+  WerFenster,
+} from './Bearbeiten';
+import { PreisFensterZeigen, PreiseKarte, ProbeRechnen, type PreisFenster } from './Preise';
+import { VerwaltenFenster } from './Verwalten';
+import type { Aenderung } from './Rueckgaengig';
 import { WER_TEXT, datumText } from './anzeige';
 import { fehlerMeldung, type Fehlermeldung } from './zustand';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
@@ -22,9 +39,10 @@ import f from './Formular.module.scss';
 
 /**
  * **Eine Veranstaltung einrichten** (A3, #486) – der Reiter „Veranstaltung“ aus dem Entwurf: Termin,
- * Anmeldung, wer sich anmeldet, Löschfrist; dazu Freigeben. Bearbeiten darf, wem ChurchTools es erlaubt
- * (Leitung und Organisatoren des Teams) – alle anderen sehen die Karten ohne „Bearbeiten“.
- * Preise (A4), Formular und Gestaltung (A5) und die Anmeldungsliste (A7) folgen.
+ * Anmeldung, wer sich anmeldet, Preise und Bezahlung (A4), Löschfrist; dazu Freigeben und „Probe rechnen“.
+ * Bearbeiten darf, wem ChurchTools es erlaubt (Leitung und Organisatoren des Teams) – alle anderen sehen
+ * die Karten ohne „Bearbeiten“ und dürfen probeweise rechnen.
+ * Formular und Gestaltung (A5) und die Anmeldungsliste (A7) folgen.
  */
 
 interface Daten {
@@ -33,9 +51,24 @@ interface Daten {
   einstellungen: OeffentlicheEinstellungen;
   anmeldung: AnmeldeEinstellungen;
   darf: boolean;
+  /** Angemeldet und Warteliste (A4: Hinweis beim Ändern der Preise); `null` = nicht bekannt. */
+  anmeldungen: number | null;
+  /** Das Team, zu dem die Veranstaltung gehört (Verwalten). */
+  team: { id: number; name: string } | null;
+  /** Gruppen-Admin: darf verschieben (Verwalten). */
+  admin: boolean;
 }
 
-type Fenster = 'termin' | 'anmeldung' | 'wer' | 'loeschfrist' | 'freigeben' | null;
+type Fenster =
+  | 'termin'
+  | 'anmeldung'
+  | 'wer'
+  | 'bezahlung'
+  | 'loeschfrist'
+  | 'freigeben'
+  | 'verwalten'
+  | { preis: PreisFenster }
+  | null;
 
 function Karte({
   titel,
@@ -73,11 +106,20 @@ function Zeile({ titel, children }: { titel: string; children: React.ReactNode }
 export function VeranstaltungSeite({
   id,
   zeitzone,
+  teams = [],
   onZurueck,
+  onGeaendert = () => {},
 }: {
   id: number;
   zeitzone: string;
+  /** Die eigenen Gruppen – Ziele für „In ein anderes Team“. */
+  teams?: MeineGruppe[];
   onZurueck: () => void;
+  /**
+   * Nach jeder Änderung: was geändert wurde und wie es zurückgeht (Leiste „Rückgängig“ der App).
+   * `zurUebersicht`: Die Veranstaltung ist archiviert und hier nicht mehr zu sehen.
+   */
+  onGeaendert?: (a: Aenderung, zurUebersicht: boolean) => void;
 }) {
   const [daten, setDaten] = useState<Daten | null>(null);
   const [fehler, setFehler] = useState<Fehlermeldung | null>(null);
@@ -92,17 +134,33 @@ export function VeranstaltungSeite({
       einstellungenVon(id),
       anmeldungVon(id),
       darfVeranstaltungEinrichten(id),
+      anmeldungenZahl(id),
+      teamVon(id),
+      istGruppenAdmin(),
     ]).then(
-      ([kopf, einstellungen, anmeldung, darf]) =>
-        setDaten({ ...kopf, einstellungen, anmeldung, darf }),
+      ([kopf, einstellungen, anmeldung, darf, anmeldungen, team, admin]) =>
+        setDaten({ ...kopf, einstellungen, anmeldung, darf, anmeldungen, team, admin }),
       (e: unknown) => setFehler(fehlerMeldung(e)),
     );
   }, [id]);
 
   useEffect(laden, [laden]);
 
-  const gespeichert = () => {
+  /**
+   * Nach dem Speichern eines Fensters: neu laden und „Rückgängig“ anbieten. Der Stand VOR der Änderung ist
+   * der, den die Seite gerade zeigt – `wiederherstellen` schreibt ihn zurück (eine Stelle für alle Fenster).
+   */
+  const gespeichert = (was: string) => () => {
     setFenster(null);
+    if (daten) {
+      const vorher = {
+        name: daten.name,
+        statusId: daten.statusId,
+        einstellungen: daten.einstellungen,
+        anmeldung: daten.anmeldung,
+      };
+      onGeaendert({ text: was, rueckgaengig: () => wiederherstellen(id, vorher) }, false);
+    }
     laden();
   };
 
@@ -138,6 +196,11 @@ export function VeranstaltungSeite({
     return `${datumText(lokal.slice(0, 10))}`;
   };
   const t = e.termin;
+  const geburt = geburtsdatumAn(e.formular);
+  const kostet = kannEtwasKosten(e.preis);
+  const b = e.bezahlung;
+  const brauchtAlter =
+    e.preis.alter.length > 0 || e.preis.anpassungen.some((x) => x.bedingung === 'abKind');
 
   return (
     <div className={v.seite}>
@@ -153,6 +216,11 @@ export function VeranstaltungSeite({
           {entwurf && darf && (
             <button type="button" className={v.freigeben} onClick={() => setFenster('freigeben')}>
               Freigeben
+            </button>
+          )}
+          {darf && (
+            <button type="button" className={v.bearbeiten} onClick={() => setFenster('verwalten')}>
+              Verwalten
             </button>
           )}
           <a className={s.link} href={`${ctBasis()}/groups/${id}`}>
@@ -204,18 +272,59 @@ export function VeranstaltungSeite({
                   : `wenn weniger als ${e.plaetze.knappUnter} frei sind`}
             </Zeile>
           </Karte>
-        </div>
-        <div className={s.spalte}>
           <Karte titel="Wer meldet sich an?" onBearbeiten={bearbeiten('wer')}>
             <Zeile titel="Anmeldung">{WER_TEXT[e.wer][0]}</Zeile>
+            <Zeile titel="Geburtsdatum">
+              {geburt ? 'wird abgefragt (Pflicht)' : 'wird nicht abgefragt'}
+            </Zeile>
+          </Karte>
+          <PreiseKarte
+            preis={e.preis}
+            geburtsdatum={geburt}
+            darf={darf}
+            onOeffnen={(w) => setFenster({ preis: w })}
+            onGeburtsdatum={() => setFenster('wer')}
+          />
+          <Karte titel="Bezahlung" onBearbeiten={bearbeiten('bezahlung')}>
+            <Zeile titel="Bankverbindung">
+              {b.iban ? (
+                <>
+                  {b.kontoinhaber}
+                  <br />
+                  {ibanText(b.iban)}
+                  {b.bic && ` · ${b.bic}`}
+                </>
+              ) : kostet ? (
+                <span className={v.fehlt}>fehlt noch</span>
+              ) : (
+                'keine (kostenlos)'
+              )}
+            </Zeile>
+            <Zeile titel="Zahlungsfrist">
+              {b.fristTage === 0 ? 'keine' : `${b.fristTage} Tage nach der Anmeldung`}
+            </Zeile>
+            <Zeile titel="Verwendungszweck">
+              {b.zweck || '–'}
+              {b.zweck.includes('[') && (
+                <small className={v.klein}>z. B. „{verwendungszweck(b.zweck, 'Müller')}“</small>
+              )}
+            </Zeile>
           </Karte>
           <Karte titel="Datenschutz" onBearbeiten={bearbeiten('loeschfrist')}>
             <Zeile titel="Daten löschen">{e.loeschfristMonate} Monate nach dem Ende</Zeile>
           </Karte>
           <p className={v.hinweis}>
-            Preise, Formular und Gestaltung kommen in den nächsten Schritten dazu, die Liste der
-            Anmeldungen danach. Bis dahin: „In ChurchTools“.
+            Formular und Gestaltung kommen im nächsten Schritt dazu, die Liste der Anmeldungen
+            danach. Bis dahin: „In ChurchTools“.
           </p>
+        </div>
+        <div className={`${s.spalte} ${v.klebt}`}>
+          <ProbeRechnen
+            preis={e.preis}
+            wer={e.wer}
+            geburtsdatum={geburt}
+            heute={tagAusIso(new Date().toISOString(), zeitzone)}
+          />
         </div>
       </div>
 
@@ -226,7 +335,7 @@ export function VeranstaltungSeite({
           termin={e.termin}
           zeitzone={zeitzone}
           onClose={() => setFenster(null)}
-          onGespeichert={gespeichert}
+          onGespeichert={gespeichert('Termin gespeichert.')}
         />
       )}
       {fenster === 'anmeldung' && (
@@ -236,15 +345,56 @@ export function VeranstaltungSeite({
           plaetze={e.plaetze}
           zeitzone={zeitzone}
           onClose={() => setFenster(null)}
-          onGespeichert={gespeichert}
+          onGespeichert={gespeichert('Anmeldung gespeichert.')}
         />
       )}
       {fenster === 'wer' && (
         <WerFenster
           id={id}
           wer={e.wer}
+          geburtsdatum={geburt}
+          brauchtAlter={brauchtAlter}
           onClose={() => setFenster(null)}
-          onGespeichert={gespeichert}
+          onGespeichert={gespeichert('„Wer meldet sich an?“ gespeichert.')}
+        />
+      )}
+      {fenster === 'bezahlung' && (
+        <BezahlungFenster
+          id={id}
+          bezahlung={b}
+          kostet={kostet}
+          onClose={() => setFenster(null)}
+          onGespeichert={gespeichert('Bezahlung gespeichert.')}
+        />
+      )}
+      {fenster !== null && typeof fenster === 'object' && (
+        <PreisFensterZeigen
+          key={JSON.stringify(fenster.preis)}
+          id={id}
+          fenster={fenster.preis}
+          preis={e.preis}
+          geburtsdatum={geburt}
+          anmeldungen={daten.anmeldungen}
+          onClose={() => setFenster(null)}
+          onGespeichert={gespeichert('Preise gespeichert.')}
+          onWechsel={(w) => setFenster({ preis: w })}
+        />
+      )}
+      {fenster === 'verwalten' && (
+        <VerwaltenFenster
+          id={id}
+          name={daten.name}
+          statusId={daten.statusId}
+          team={daten.team}
+          teams={teams}
+          admin={daten.admin}
+          anmeldungen={daten.anmeldungen}
+          onClose={() => setFenster(null)}
+          onGeaendert={(aenderung, weg) => {
+            setFenster(null);
+            onGeaendert(aenderung, weg);
+            if (!weg) laden();
+          }}
         />
       )}
       {fenster === 'loeschfrist' && (
@@ -252,7 +402,7 @@ export function VeranstaltungSeite({
           id={id}
           monate={e.loeschfristMonate}
           onClose={() => setFenster(null)}
-          onGespeichert={gespeichert}
+          onGespeichert={gespeichert('Löschfrist gespeichert.')}
         />
       )}
       {fenster === 'freigeben' && (
@@ -262,6 +412,7 @@ export function VeranstaltungSeite({
             {a.ab ? ` (${zeit(a.ab)})` : ''}.{!t && ' Es ist noch kein Termin gewählt.'}
             {!a.ab &&
               ' Es ist noch kein Anmeldebeginn gesetzt – ohne ihn nimmt ChurchTools nichts an.'}
+            {kostet && !b.iban && ' Es gibt Preise, aber noch keine Bankverbindung.'}
           </p>
           {freigabeFehler && (
             <p className={f.fehler} role="alert">
@@ -278,7 +429,9 @@ export function VeranstaltungSeite({
               try {
                 await freigeben(id);
                 setArbeitet(false);
-                gespeichert();
+                gespeichert(
+                  'Freigegeben – Gäste können sich anmelden, sobald der Zeitraum läuft.',
+                )();
               } catch (err) {
                 setFreigabeFehler(fehlerMeldung(err).text);
                 setArbeitet(false);

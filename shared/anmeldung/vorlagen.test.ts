@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { einstellungenAlsText, einstellungenLesen, geburtsdatumAn } from './formular';
 import { neueEinstellungen, VORLAGEN } from './vorlagen';
+import { STANDARD_BEZAHLUNG } from './bezahlung';
 
 describe('Vorlagen (A3, #486)', () => {
   it('jede Vorlage ergibt gültige Einstellungen, die die Beschreibung hin und zurück überstehen', () => {
@@ -21,5 +22,12 @@ describe('Vorlagen (A3, #486)', () => {
     expect(e.termin).toBeNull();
     expect(e.preis.grundpreis.betragCent).toBe(0);
     expect(e.loeschfristMonate).toBe(3);
+    expect(e.bezahlung).toEqual(STANDARD_BEZAHLUNG);
+  });
+  it('jede neue Veranstaltung hat ihre eigene Bezahlung (kein geteiltes Objekt)', () => {
+    const a = neueEinstellungen('einfach');
+    a.bezahlung.iban = 'DE89370400440532013000';
+    expect(neueEinstellungen('einfach').bezahlung.iban).toBe('');
+    expect(STANDARD_BEZAHLUNG.iban).toBe('');
   });
 });

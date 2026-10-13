@@ -127,3 +127,66 @@
   border-radius: 10px;
   font-size: 15px;
 }
+
+// ── Preis-Fenster (A4) ────────────────────────────────────────────────────────────────────────────
+
+.optionKasten {
+  list-style: none;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  .feld {
+    margin-bottom: 6px;
+  }
+}
+
+.klein {
+  @include m.auswahlKnopf;
+  flex: none !important;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.textKnopf {
+  align-self: flex-start;
+  border: none;
+  background: none;
+  padding: 2px 0;
+  color: var(--red);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.entfernen {
+  width: 100%;
+  height: 42px;
+  margin-top: 10px;
+  border: 1px solid color-mix(in srgb, var(--red) 40%, transparent);
+  border-radius: 12px;
+  background: none;
+  color: var(--red);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+}
+
+.gut {
+  color: var(--green);
+  font-size: 13px;
+}

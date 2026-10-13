@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { darfAnlegen, darfEinrichten } from './rechte';
+import { darfAnlegen, darfEinrichten, darfVerschiebenUndLoeschen } from './rechte';
 
 /** Antworten wie gemessen (12.10.2026, Spike in „Technik“ und Admin). */
 describe('Rechte (A3, #486)', () => {
@@ -17,5 +17,14 @@ describe('Rechte (A3, #486)', () => {
     expect(darfEinrichten({ '+edit group infos': true }, {})).toBe(false);
     expect(darfEinrichten({ '+see persons': 3, '+edit group member fields': 3 }, {})).toBe(false);
     expect(darfEinrichten({}, { 'administer groups': true })).toBe(true);
+  });
+  it('verschieben und endgültig löschen: nur Gruppen-Admins – der Organisator mit allen Gruppenrechten nicht (gemessen 13.10.)', () => {
+    const organisator = {
+      'edit group': [129],
+      'security level person': [1],
+    };
+    expect(darfVerschiebenUndLoeschen(organisator)).toBe(false);
+    expect(darfVerschiebenUndLoeschen(null)).toBe(false);
+    expect(darfVerschiebenUndLoeschen({ 'administer groups': true })).toBe(true);
   });
 });

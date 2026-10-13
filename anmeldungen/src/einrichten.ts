@@ -7,6 +7,7 @@
  * ist kein Beleg. Weicht das Nachgelesene ab, wirft es `NichtUebernommen` – die Oberfläche sagt dann, was
  * fehlt, statt „gespeichert“ zu melden.
  */
+import { ZodError } from 'zod';
 import { ctAlleSeiten, ctAnfrage, ctBasis, ctDaten } from '@ui/ct/verbindung';
 import { ApiError } from '@ui/ct/fehler';
 import {
@@ -15,10 +16,20 @@ import {
   einstellungenLesen,
   type OeffentlicheEinstellungen,
 } from '@shared/anmeldung/formular';
+import { pruefeRegeln, type PreisRegeln } from '@shared/anmeldung/preis';
+import {
+  NACHNAME,
+  ZWECK_MAX,
+  ibanNormal,
+  pruefeBezahlung,
+  zweckMitNeuemNamen,
+  type Bezahlung,
+} from '@shared/anmeldung/bezahlung';
+import { belegungAus } from '@shared/anmeldung/uebersicht';
 import { felderNeuZuordnen, systemfeldAnlage } from '@shared/anmeldung/felder';
 import { neueEinstellungen, type Vorlage } from '@shared/anmeldung/vorlagen';
 import { anmeldeLink, utcAus, type CtTermin } from '@shared/anmeldung/termin';
-import { darfAnlegen, darfEinrichten } from '@shared/anmeldung/rechte';
+import { darfAnlegen, darfEinrichten, darfVerschiebenUndLoeschen } from '@shared/anmeldung/rechte';
 
 /** ChurchTools hat geantwortet, aber nicht übernommen, was geschickt wurde. */
 export class NichtUebernommen extends ApiError {
@@ -101,8 +112,23 @@ export async function darfVeranstaltungEinrichten(id: number): Promise<boolean> 
 
 // ── Anlegen ─────────────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Die Einstellungen als Text – oder eine Meldung, die sagt, was nicht passt. Ohne das stünde bei zu langen
+ * Einstellungen (über 5.000 Zeichen) „ChurchTools antwortet gerade nicht“ da: Ein einfacher `Error` gilt in
+ * `fehlerMeldung` als „keine Antwort“ (A4, beim Bauen der Preise gefunden).
+ */
+function alsText(e: OeffentlicheEinstellungen): string {
+  try {
+    return einstellungenAlsText(e);
+  } catch (err) {
+    if (err instanceof ZodError)
+      throw new ApiError(422, 'Eine Angabe ist zu lang oder ungültig und wurde nicht gespeichert.');
+    throw new ApiError(413, err instanceof Error ? err.message : 'Die Einstellungen sind zu lang.');
+  }
+}
+
 async function einstellungenSchreiben(id: number, e: OeffentlicheEinstellungen): Promise<void> {
-  const text = einstellungenAlsText(e);
+  const text = alsText(e);
   await ctAnfrage(`/groups/${id}`, { method: 'PATCH', body: json({ note: text }) });
   if ((await gruppe(id)).information?.note !== text)
     throw new NichtUebernommen('die Einstellungen');
@@ -154,7 +180,10 @@ export async function legeVeranstaltungAn(a: {
   });
   const id = neu?.data?.id;
   if (typeof id !== 'number') throw new NichtUebernommen('die neue Veranstaltung');
-  const e = neueEinstellungen(a.vorlage);
+  const vorlage = neueEinstellungen(a.vorlage);
+  // Verwendungszweck gleich mit dem Namen der Veranstaltung („Gemeindeessen [Nachname]“, A4).
+  const zweck = `${a.name.slice(0, ZWECK_MAX - NACHNAME.length - 1)} ${NACHNAME}`;
+  const e = { ...vorlage, bezahlung: { ...vorlage.bezahlung, zweck } };
   await einstellungenSchreiben(id, e);
   // Unbekannte melden sich ohne Bestätigungsmail an, bekannte Adressen bestätigen einmal (A0, Modus existing).
   await ctAnfrage(`/groups/${id}`, {
@@ -183,7 +212,10 @@ async function gruppenfelder(id: number): Promise<{ id: number; name: string }[]
  * Feldnummern neu zuordnen und das Datum leeren – die Kopie findet sonst als „gestern“ statt.
  */
 export async function kopiereVeranstaltung(quelleId: number, name: string): Promise<number> {
-  const quelle = await einstellungenVon(quelleId);
+  const [quelle, quellName] = await Promise.all([
+    einstellungenVon(quelleId),
+    gruppe(quelleId).then((g) => g.name),
+  ]);
   const kopie = await ctAnfrage<{ data?: { id?: number } }>(`/groups/${quelleId}/duplicate`, {
     method: 'POST',
     body: json({ newName: name }),
@@ -195,6 +227,10 @@ export async function kopiereVeranstaltung(quelleId: number, name: string): Prom
     ...quelle,
     termin: null,
     ctFelder: felderNeuZuordnen(quelle.ctFelder, alt, neu),
+    bezahlung: {
+      ...quelle.bezahlung,
+      zweck: zweckMitNeuemNamen(quelle.bezahlung.zweck, quellName, name),
+    },
   });
   return id;
 }
@@ -209,6 +245,62 @@ export async function aendereEinstellungen(
   const neu = aendern(await einstellungenVon(id));
   await einstellungenSchreiben(id, neu);
   return neu;
+}
+
+/**
+ * **Preise ändern** (A4). `aendern` bekommt die frisch gelesenen Preise – so überschreibt ein Fenster nie,
+ * was ein anderer Baustein inzwischen gespeichert hat. Ungültige Regeln werden nicht gespeichert
+ * (`pruefeRegeln`, dieselbe Prüfung wie im Fenster). Wie oft eine Option schon gebucht ist (`belegt`), kommt
+ * aus den Anmeldungen und bleibt beim Bearbeiten stehen – zugeordnet über den Namen der Option.
+ */
+export async function aenderePreise(
+  id: number,
+  aendern: (p: PreisRegeln) => PreisRegeln,
+): Promise<OeffentlicheEinstellungen> {
+  return aendereEinstellungen(id, (e) => {
+    const neu = aendern(e.preis);
+    const fehler = pruefeRegeln(neu);
+    if (fehler.length) throw new ApiError(422, fehler.join(' '));
+    const belegt = new Map(e.preis.grundpreis.optionen.map((o) => [o.name, o.belegt]));
+    const optionen = neu.grundpreis.optionen.map((o) => ({
+      ...o,
+      belegt: belegt.get(o.name) ?? 0,
+    }));
+    return { ...e, preis: { ...neu, grundpreis: { ...neu.grundpreis, optionen } } };
+  });
+}
+
+/** **Bezahlung speichern** (A4) – IBAN und BIC ohne Leerzeichen, geprüft wie im Fenster. */
+export async function speichereBezahlung(id: number, b: Bezahlung): Promise<void> {
+  const sauber: Bezahlung = {
+    kontoinhaber: b.kontoinhaber.trim(),
+    iban: ibanNormal(b.iban),
+    bic: ibanNormal(b.bic),
+    fristTage: b.fristTage,
+    zweck: b.zweck.trim(),
+  };
+  const fehler = pruefeBezahlung(sauber);
+  if (fehler.length) throw new ApiError(422, fehler.join(' '));
+  await aendereEinstellungen(id, (e) => ({ ...e, bezahlung: sauber }));
+}
+
+/**
+ * **Wie viele haben sich schon angemeldet?** (A4: Hinweis beim Ändern der Preise) – angemeldet und auf der
+ * Warteliste, gezählt wie auf der Startseite (`belegungAus`). `null`, wenn man die Mitglieder nicht sehen darf
+ * (403, dauerhaft); alles andere kann vorübergehend sein und wird geworfen.
+ */
+export async function anmeldungenZahl(id: number): Promise<number | null> {
+  try {
+    const mitglieder = await ctAlleSeiten<Parameters<typeof belegungAus>[0][number]>(
+      `/groups/${id}/members`,
+      200,
+    );
+    const b = belegungAus(mitglieder, undefined);
+    return b.aktiv + b.wartend;
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 403) return null;
+    throw e;
+  }
 }
 
 export interface AnmeldeEinstellungen {
@@ -256,9 +348,148 @@ export async function anmeldungVon(id: number): Promise<AnmeldeEinstellungen> {
 
 /** Entwurf → aktiv. Ab jetzt sehen Gäste die Anmeldung (sobald der Zeitraum begonnen hat). */
 export async function freigeben(id: number): Promise<void> {
-  await ctAnfrage(`/groups/${id}`, { method: 'PATCH', body: json({ groupStatusId: 1 }) });
-  if ((await gruppe(id)).information?.groupStatusId !== 1)
-    throw new NichtUebernommen('die Freigabe');
+  await setzeStatus(id, STATUS.freigegeben);
+}
+
+// ── Verwalten: umbenennen, Status, verschieben, Archiv, löschen (A4-Nachtrag) ───────────────────
+
+/** Status einer ChurchTools-Gruppe: 1 aktiv (= freigegeben), 2 Entwurf, 3 archiviert. */
+export const STATUS = { freigegeben: 1, entwurf: 2, archiviert: 3 } as const;
+
+const STATUS_WAS: Record<number, string> = {
+  1: 'die Freigabe',
+  2: 'den Entwurf-Status',
+  3: 'das Archivieren',
+};
+
+/**
+ * **Status setzen** – freigeben, Freigabe zurücknehmen, archivieren, wiederherstellen. Darf, wer einrichten
+ * darf (gemessen 13.10.2026: Organisator 200 für 1 ↔ 2 ↔ 3). Nachgelesen.
+ */
+export async function setzeStatus(id: number, statusId: number): Promise<void> {
+  await ctAnfrage(`/groups/${id}`, { method: 'PATCH', body: json({ groupStatusId: statusId }) });
+  if ((await gruppe(id)).information?.groupStatusId !== statusId)
+    throw new NichtUebernommen(STATUS_WAS[statusId] ?? 'den Status');
+}
+
+/**
+ * **Umbenennen** (flach im PATCH, gemessen: Organisator 200). Nachgelesen. Steht der alte Name im
+ * Verwendungszweck, zieht er mit (`zweckMitNeuemNamen`) – auch beim Zurückbenennen über „Rückgängig“.
+ */
+export async function umbenennen(id: number, name: string): Promise<void> {
+  const neu = name.trim();
+  if (!neu) throw new ApiError(422, 'Der Name darf nicht leer sein.');
+  const vorher = await gruppe(id);
+  await ctAnfrage(`/groups/${id}`, { method: 'PATCH', body: json({ name: neu }) });
+  if ((await gruppe(id)).name !== neu) throw new NichtUebernommen('den neuen Namen');
+  const e = einstellungenLesen(vorher.information?.note);
+  if (!e) return;
+  const zweck = zweckMitNeuemNamen(e.bezahlung.zweck, vorher.name, neu);
+  if (zweck !== e.bezahlung.zweck)
+    await einstellungenSchreiben(id, { ...e, bezahlung: { ...e.bezahlung, zweck } });
+}
+
+/** Die Obergruppe (das Team) einer Veranstaltung – auch einer archivierten (gemessen). */
+export async function teamVon(id: number): Promise<{ id: number; name: string } | null> {
+  const eltern = await ctDaten<{ title?: string; domainIdentifier?: string }[]>(
+    `/groups/${id}/parents`,
+  );
+  const e = eltern[0];
+  return e ? { id: Number(e.domainIdentifier), name: (e.title ?? '').trim() } : null;
+}
+
+/**
+ * **In ein anderes Team verschieben** – erst die neue Obergruppe dazu, dann die alte weg (so hängt die
+ * Veranstaltung nie ohne Team). Nur Gruppen-Admins (`darfVerschiebenUndLoeschen`). Nachgelesen.
+ */
+export async function verschieben(id: number, vonTeam: number, nachTeam: number): Promise<void> {
+  if (vonTeam === nachTeam) return;
+  await ctAnfrage(`/groups/${id}/parents/${nachTeam}`, { method: 'PUT' });
+  await ctAnfrage(`/groups/${id}/parents/${vonTeam}`, { method: 'DELETE' });
+  if ((await teamVon(id))?.id !== nachTeam) throw new NichtUebernommen('das neue Team');
+}
+
+/** Darf die angemeldete Person verschieben und endgültig löschen? (nur Gruppen-Admins) */
+export async function istGruppenAdmin(): Promise<boolean> {
+  return darfVerschiebenUndLoeschen((await globaleRechte()).churchdb);
+}
+
+export interface Archiviert {
+  id: number;
+  name: string;
+  team: string | null;
+  /** Erster Tag (Ortszeit), falls ein Termin gewählt war. */
+  tag: string | null;
+}
+
+/**
+ * **Das Archiv** – archivierte Veranstaltungen, die man sehen darf. Archivierte Gruppen stehen weder in
+ * `children` noch in `hierarchies` (gemessen), wohl aber in `/groups` mit Status-Filter.
+ */
+export async function archivListe(artId: number): Promise<Archiviert[]> {
+  const roh = await ctAlleSeiten<GruppeRoh>(
+    `/groups?group_status_ids[]=${STATUS.archiviert}&group_type_ids[]=${artId}`,
+    200,
+  );
+  const liste: Archiviert[] = [];
+  for (const g of roh) {
+    const e = einstellungenLesen(g.information?.note);
+    if (!e) continue;
+    const team = await teamVon(g.id).catch(() => null);
+    liste.push({
+      id: g.id,
+      name: g.name,
+      team: team?.name ?? null,
+      tag: e.termin?.beginn.slice(0, 10) ?? null,
+    });
+  }
+  return liste.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+}
+
+/**
+ * **Endgültig löschen** – nur aus dem Archiv und nur für Gruppen-Admins. Löscht die Gruppe samt allen
+ * Anmeldungen; ChurchTools kann das nicht zurückholen. Nachgeprüft: Danach muss die Gruppe 404 liefern.
+ */
+export async function loeschenEndgueltig(id: number): Promise<void> {
+  if ((await gruppe(id)).information?.groupStatusId !== STATUS.archiviert)
+    throw new ApiError(409, 'Endgültig löschen geht nur aus dem Archiv.');
+  await ctAnfrage(`/groups/${id}`, { method: 'DELETE' });
+  const noch = await gruppe(id).then(
+    () => true,
+    (e: unknown) => !(e instanceof ApiError && e.status === 404),
+  );
+  if (noch) throw new NichtUebernommen('das Löschen');
+}
+
+// ── Rückgängig ──────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * **Der Stand einer Veranstaltung, wie sie die Seite zeigt** – für „Rückgängig“ (Alwin, 13.10.2026: „immer
+ * mit Warnungen und Rückgängig-Knöpfen“). Eine Stelle für alle Fenster: Wer speichert, merkt sich vorher
+ * diesen Stand; „Rückgängig“ schreibt ihn mit `wiederherstellen` zurück.
+ */
+export interface Stand {
+  name: string;
+  statusId: number;
+  einstellungen: OeffentlicheEinstellungen;
+  anmeldung: AnmeldeEinstellungen;
+}
+
+/**
+ * **Einen früheren Stand zurückschreiben** – Name, Status, Einstellungen, Zeitraum/Plätze/Warteliste; jeder
+ * Teil über die Funktion, die ihn auch sonst schreibt (und nachliest). Nur was sich unterscheidet, wird
+ * geschrieben. Ein im Kalender neu angelegter Termin bleibt bestehen – zurück geht nur die Auswahl.
+ */
+export async function wiederherstellen(id: number, alt: Stand): Promise<void> {
+  const jetzt = await gruppe(id);
+  if (jetzt.name !== alt.name) await umbenennen(id, alt.name);
+  const e = einstellungenLesen(jetzt.information?.note);
+  if (!e || alsText(e) !== alsText(alt.einstellungen))
+    await einstellungenSchreiben(id, alt.einstellungen);
+  const a = await anmeldungVon(id);
+  if (JSON.stringify(a) !== JSON.stringify(alt.anmeldung))
+    await speichereAnmeldung(id, alt.anmeldung);
+  if (jetzt.information?.groupStatusId !== alt.statusId) await setzeStatus(id, alt.statusId);
 }
 
 // ── Kalender ────────────────────────────────────────────────────────────────────────────────────

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   berechnePreis,
   euroText,
+  kannEtwasKosten,
   preisKurz,
   pruefeRegeln,
   type Buchung,
@@ -324,6 +325,19 @@ describe('pruefeRegeln', () => {
     expect(pruefeRegeln(silvester())).toEqual([]);
   });
 
+  it('ein Rabatt in Prozent ist höchstens 100 % (A4), ein Zuschlag darf mehr', () => {
+    const r = silvester();
+    const basis = r.anpassungen[0];
+    r.anpassungen = [{ ...basis, bezeichnung: 'Zu viel', einheit: 'prozent', wert: 101 }];
+    expect(pruefeRegeln(r)).toEqual(['„Zu viel“: Ein Rabatt kann höchstens 100 % sein.']);
+    r.anpassungen = [{ ...basis, bezeichnung: 'Zu viel', einheit: 'prozent', wert: 100 }];
+    expect(pruefeRegeln(r)).toEqual([]);
+    r.anpassungen = [
+      { ...basis, art: 'zuschlag', bezeichnung: 'Doppelt', einheit: 'prozent', wert: 150 },
+    ];
+    expect(pruefeRegeln(r)).toEqual([]);
+  });
+
   it('überschneidende Altersgruppen werden gemeldet', () => {
     const r = silvester();
     r.alter = [
@@ -383,5 +397,75 @@ describe('preisKurz (Listen-Zeile, A2)', () => {
     );
     expect(preisKurz(regeln({ art: 'auswahl', optionen: [opt(0), opt(0)] }))).toBe('kostenlos');
     expect(preisKurz(regeln({ art: 'auswahl', optionen: [] }))).toBe('Preis folgt');
+  });
+  it('„kostenlos“ nur, wenn wirklich nichts kostet (A4)', () => {
+    const mitExtra: PreisRegeln = {
+      ...regeln({}),
+      extras: [{ bezeichnung: 'T-Shirt', preisCent: 1200, gilt: 'person' }],
+    };
+    expect(preisKurz(mitExtra)).toBe('Preis je nach Angaben');
+    const auswahlNullMitExtra: PreisRegeln = {
+      ...regeln({ art: 'auswahl', auswahlName: 'Zimmer', optionen: [opt(0)] }),
+      extras: mitExtra.extras,
+    };
+    expect(preisKurz(auswahlNullMitExtra)).toBe('Preis je nach Angaben');
+    // Eine Auswahl gilt immer pro Person – auch wenn `gilt` aus einem früheren festen Preis noch „anmeldung“ sagt.
+    expect(
+      preisKurz(regeln({ art: 'auswahl', gilt: 'anmeldung', optionen: [opt(500), opt(900)] })),
+    ).toBe('ab 5,00 € p. P.');
+  });
+});
+
+describe('kannEtwasKosten (A4: braucht es eine Bankverbindung?)', () => {
+  const leer: PreisRegeln = {
+    grundpreis: { art: 'fest', betragCent: 0, gilt: 'person', auswahlName: '', optionen: [] },
+    alter: [],
+    anpassungen: [],
+    extras: [],
+  };
+  const rabatt = {
+    bezeichnung: 'X',
+    bedingung: 'immer' as const,
+    bis: '',
+    abKind: 2,
+    einheit: 'euro' as const,
+    wert: 500,
+    gilt: 'person' as const,
+  };
+  it('kostenlos und nur Rabatte → nein', () => {
+    expect(kannEtwasKosten(leer)).toBe(false);
+    expect(kannEtwasKosten({ ...leer, anpassungen: [{ ...rabatt, art: 'rabatt' }] })).toBe(false);
+    expect(
+      kannEtwasKosten({ ...leer, alter: [{ von: 0, bis: 2, art: 'prozent', wert: 50 }] }),
+    ).toBe(false);
+  });
+  it('jeder Baustein mit Betrag einzeln → ja', () => {
+    expect(kannEtwasKosten({ ...leer, grundpreis: { ...leer.grundpreis, betragCent: 1 } })).toBe(
+      true,
+    );
+    expect(
+      kannEtwasKosten({
+        ...leer,
+        grundpreis: {
+          ...leer.grundpreis,
+          art: 'auswahl',
+          auswahlName: 'Zimmer',
+          optionen: [
+            { name: 'A', preisCent: 0, kontingent: 0, belegt: 0 },
+            { name: 'B', preisCent: 100, kontingent: 0, belegt: 0 },
+          ],
+        },
+      }),
+    ).toBe(true);
+    expect(
+      kannEtwasKosten({ ...leer, alter: [{ von: 18, bis: null, art: 'fest', wert: 1000 }] }),
+    ).toBe(true);
+    expect(kannEtwasKosten({ ...leer, anpassungen: [{ ...rabatt, art: 'zuschlag' }] })).toBe(true);
+    expect(
+      kannEtwasKosten({
+        ...leer,
+        extras: [{ bezeichnung: 'Kanu', preisCent: 500, gilt: 'anmeldung' }],
+      }),
+    ).toBe(true);
   });
 });

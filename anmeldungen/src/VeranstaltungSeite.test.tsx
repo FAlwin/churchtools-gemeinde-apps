@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
-import type { OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
+import { geburtsdatumAn, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import { ApiError } from '@ui/ct/fehler';
 import * as E from './einrichten';
 import { VeranstaltungSeite } from './VeranstaltungSeite';
@@ -25,6 +25,12 @@ vi.mock('./einrichten', async (original) => {
     legeVeranstaltungAn: vi.fn(),
     kopiereVeranstaltung: vi.fn(),
     veranstaltungenVon: vi.fn(),
+    anmeldungenZahl: vi.fn(),
+    teamVon: vi.fn(),
+    istGruppenAdmin: vi.fn(),
+    wiederherstellen: vi.fn(),
+    aenderePreise: vi.fn(),
+    speichereBezahlung: vi.fn(),
   };
 });
 const m = vi.mocked(E);
@@ -46,6 +52,9 @@ function stelle(
     { id: 1, name: 'Sonstige Veranstaltung', schreiben: true },
   ]);
   m.termineIn.mockResolvedValue([]);
+  m.anmeldungenZahl.mockResolvedValue(0);
+  m.teamVon.mockResolvedValue({ id: 9, name: 'Lobpreisteam' });
+  m.istGruppenAdmin.mockResolvedValue(false);
 }
 
 function zeigen() {
@@ -217,6 +226,125 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
         bis: '2026-11-12T22:59:00Z',
       }),
     );
+  });
+});
+
+describe('Bezahlung, Freigeben, Geburtsdatum (A4)', () => {
+  const zwoelfEuro = {
+    ...neueEinstellungen('einfach').preis,
+    grundpreis: { ...neueEinstellungen('einfach').preis.grundpreis, betragCent: 1200 },
+  };
+
+  it('Preise ohne Bankverbindung: Karte sagt „fehlt noch“, Freigeben weist darauf hin', async () => {
+    stelle(true, 2, { preis: zwoelfEuro });
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Bezahlung' });
+    expect(within(karte).getByText('fehlt noch')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Freigeben' }));
+    expect(screen.getByText(/Es gibt Preise, aber noch keine Bankverbindung/)).toBeTruthy();
+  });
+
+  it('kostenlos: kein Konto nötig, kein Hinweis', async () => {
+    stelle(true);
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Bezahlung' });
+    expect(within(karte).getByText('keine (kostenlos)')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Freigeben' }));
+    expect(screen.queryByText(/noch keine Bankverbindung/)).toBeNull();
+  });
+
+  it('Bezahlung: falsche IBAN → Meldung, Speichern gesperrt; richtige → gespeichert wie eingegeben', async () => {
+    stelle(true, 2, { preis: zwoelfEuro });
+    m.speichereBezahlung.mockResolvedValue();
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Bezahlung' });
+    fireEvent.click(within(karte).getByRole('button', { name: 'Bearbeiten' }));
+    fireEvent.change(screen.getByLabelText('Kontoinhaber'), { target: { value: 'Gemeinde e.V.' } });
+    fireEvent.change(screen.getByLabelText('IBAN'), {
+      target: { value: 'DE89 3704 0044 0532 0130 01' },
+    });
+    expect(screen.getByText(/Die IBAN stimmt nicht/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Speichern' })).toHaveProperty('disabled', true);
+    fireEvent.change(screen.getByLabelText('IBAN'), {
+      target: { value: 'DE89 3704 0044 0532 0130 00' },
+    });
+    expect(screen.getByText(/IBAN stimmt \(Prüfziffer passt\)/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() =>
+      expect(m.speichereBezahlung).toHaveBeenCalledWith(91, {
+        kontoinhaber: 'Gemeinde e.V.',
+        iban: 'DE89370400440532013000',
+        bic: '',
+        fristTage: 14,
+        zweck: '[Nachname]',
+      }),
+    );
+  });
+
+  it('Wer meldet sich an?: Geburtsdatum einschalten schreibt es ins Formular (setzeGeburtsdatum)', async () => {
+    stelle(true);
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Wer meldet sich an?' });
+    expect(within(karte).getByText('wird nicht abgefragt')).toBeTruthy();
+    fireEvent.click(within(karte).getByRole('button', { name: 'Bearbeiten' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pflicht' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(m.aendereEinstellungen).toHaveBeenCalled());
+    const aendern = m.aendereEinstellungen.mock.calls[0][1];
+    expect(geburtsdatumAn(aendern(neueEinstellungen('einfach')).formular)).toBe(true);
+  });
+
+  it('Preise nach Alter ohne Geburtsdatum: „Geburtsdatum abfragen“ öffnet „Wer meldet sich an?“ mit Warnung', async () => {
+    stelle(true, 2, {
+      preis: { ...zwoelfEuro, alter: [{ von: 0, bis: 2, art: 'frei', wert: 0 }] },
+    });
+    zeigen();
+    fireEvent.click(await screen.findByRole('button', { name: 'Geburtsdatum abfragen' }));
+    expect(screen.getByText(/Ohne Geburtsdatum kann das Formular sie nicht rechnen/)).toBeTruthy();
+  });
+
+  it('Anmeldungen werden gezählt und im Preis-Fenster genannt', async () => {
+    stelle(true, 2, { preis: zwoelfEuro });
+    m.anmeldungenZahl.mockResolvedValue(12);
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Preise' });
+    fireEvent.click(within(karte).getByRole('button', { name: /Grundpreis/ }));
+    expect(screen.getByText(/Es gibt schon 12 Anmeldungen/)).toBeTruthy();
+  });
+});
+
+describe('Rückgängig nach dem Speichern (A4-Nachtrag)', () => {
+  it('jedes Fenster meldet die Änderung mit dem Stand VOR dem Speichern als Weg zurück', async () => {
+    stelle(true);
+    m.aendereEinstellungen.mockResolvedValue(neueEinstellungen('einfach'));
+    const geaendert = vi.fn();
+    render(
+      <VeranstaltungSeite id={91} zeitzone={ZONE} onZurueck={() => {}} onGeaendert={geaendert} />,
+    );
+    const karte = await screen.findByRole('region', { name: 'Datenschutz' });
+    fireEvent.click(within(karte).getByRole('button', { name: 'Bearbeiten' }));
+    fireEvent.change(screen.getByLabelText('Monate nach dem Ende (1–36)'), {
+      target: { value: '6' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(geaendert).toHaveBeenCalled());
+    const [a, weg] = geaendert.mock.calls[0];
+    expect(a.text).toBe('Löschfrist gespeichert.');
+    expect(weg).toBe(false);
+    await a.rueckgaengig();
+    expect(m.wiederherstellen).toHaveBeenCalledWith(91, {
+      name: 'Gemeindeessen',
+      statusId: 2,
+      einstellungen: neueEinstellungen('einfach'),
+      anmeldung: { maxPlaetze: null, warteliste: false, ab: null, bis: null },
+    });
+  });
+
+  it('„Verwalten“ nur mit Recht', async () => {
+    stelle(false);
+    zeigen();
+    await screen.findByText(/Einrichten und freigeben kann die Leitung/);
+    expect(screen.queryByRole('button', { name: 'Verwalten' })).toBeNull();
   });
 });
 

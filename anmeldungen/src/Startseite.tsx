@@ -23,6 +23,8 @@ interface Props {
   zeitzone: string;
   /** Eine Veranstaltung zum Einrichten öffnen (A3). */
   onOeffnen: (id: number) => void;
+  /** Zum Archiv der gelöschten Veranstaltungen (A4-Nachtrag); fehlt, wenn es die Gruppenart nicht gibt. */
+  onArchiv?: () => void;
 }
 
 function gruppenUrl(id: number): string {
@@ -192,7 +194,7 @@ function VeranstaltungZeile({
   );
 }
 
-export function Startseite({ start, uebersicht, heute, zeitzone, onOeffnen }: Props) {
+export function Startseite({ start, uebersicht, heute, zeitzone, onOeffnen, onArchiv }: Props) {
   const [reiter, setReiter] = useState<Reiter>('anstehend');
   const [auswahl, setAuswahl] = useState<Set<number>>(
     () => new Set(start.gruppen.map((g) => g.id)),
@@ -322,6 +324,14 @@ export function Startseite({ start, uebersicht, heute, zeitzone, onOeffnen }: Pr
         <p className={styles.fussnote}>
           Welche Veranstaltungen du siehst, entscheidet ChurchTools: die deiner Gruppen. Bearbeiten
           und freigeben darf die Leitung der Gruppe.
+          {onArchiv && (
+            <>
+              {' '}
+              <button type="button" className={styles.titelKnopf} onClick={onArchiv}>
+                Gelöschte Veranstaltungen (Archiv)
+              </button>
+            </>
+          )}
         </p>
       </div>
 

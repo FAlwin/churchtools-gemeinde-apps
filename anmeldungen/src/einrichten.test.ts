@@ -1,8 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
-import { einstellungenLesen } from '@shared/anmeldung/formular';
+import { ApiError } from '@ui/ct/fehler';
+import { einstellungenLesen, standardFormular } from '@shared/anmeldung/formular';
 import {
   NichtUebernommen,
+  aendereEinstellungen,
+  aenderePreise,
+  anmeldungenZahl,
   anlegenMoeglich,
   freigeben,
   kalenderListe,
@@ -10,6 +14,15 @@ import {
   legeTerminAn,
   legeVeranstaltungAn,
   speichereAnmeldung,
+  speichereBezahlung,
+  STATUS,
+  archivListe,
+  loeschenEndgueltig,
+  setzeStatus,
+  teamVon,
+  umbenennen,
+  verschieben,
+  wiederherstellen,
 } from './einrichten';
 
 /**
@@ -26,6 +39,7 @@ interface G {
   note: string;
   settings: Record<string, unknown>;
   felder: { id: number; name: string }[];
+  eltern: number[];
 }
 
 let gruppen: Map<number, G>;
@@ -33,9 +47,11 @@ let naechste: number;
 let schlucken: Set<string>;
 let termine: Map<number, Record<string, unknown>>;
 let aufrufe: string[];
+/** Mitglieder je Gruppe; `403`/`502` = so antwortet ChurchTools auf `/members`. */
+let mitglieder: Map<number, { groupMemberStatus: string }[] | 403 | 502>;
 
 function json(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
+  return new Response(status === 204 ? null : JSON.stringify(body), {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
@@ -78,6 +94,7 @@ function ct() {
         note: '',
         settings: {},
         felder: [],
+        eltern: [Number(body.parentGroupId)],
       });
       return json(201, { data: { id } });
     }
@@ -95,6 +112,38 @@ function ct() {
       });
       return json(201, { data: { id } });
     }
+    if (m === 'GET' && pfad === '/groups' && url.searchParams.has('group_status_ids[]')) {
+      const st = Number(url.searchParams.get('group_status_ids[]'));
+      const typ = Number(url.searchParams.get('group_type_ids[]'));
+      const data = [...gruppen.values()]
+        .filter((g) => g.status === st && g.typ === typ)
+        .map((g) => ({
+          id: g.id,
+          name: g.name,
+          information: { note: g.note, groupStatusId: g.status },
+        }));
+      return json(200, { data, meta: { pagination: { lastPage: 1 } } });
+    }
+    r = /^\/groups\/(\d+)\/parents(?:\/(\d+))?$/.exec(pfad);
+    if (r) {
+      const g = gruppen.get(Number(r[1]))!;
+      const p = Number(r[2]);
+      if (m === 'PUT') g.eltern = [...g.eltern, p];
+      if (m === 'DELETE') g.eltern = g.eltern.filter((x) => x !== p);
+      if (m !== 'GET') return json(m === 'PUT' ? 201 : 204, {});
+      return json(200, {
+        data: g.eltern.map((x) => ({
+          title: x === 7 ? 'Technik' : `Team ${x}`,
+          domainIdentifier: String(x),
+        })),
+      });
+    }
+    r = /^\/groups\/(\d+)\/members$/.exec(pfad);
+    if (r) {
+      const m = mitglieder.get(Number(r[1])) ?? [];
+      if (typeof m === 'number') return json(m, { message: 'nein' });
+      return json(200, { data: m, meta: { pagination: { lastPage: 1 } } });
+    }
     r = /^\/groups\/(\d+)\/memberfields\/group$/.exec(pfad);
     if (r && m === 'POST') {
       const g = gruppen.get(Number(r[1]))!;
@@ -111,9 +160,14 @@ function ct() {
     if (r) {
       const g = gruppen.get(Number(r[1]));
       if (!g) return json(404, {});
+      if (m === 'DELETE') {
+        if (!schlucken.has('DELETE')) gruppen.delete(g.id);
+        return json(204, {});
+      }
       if (m === 'PATCH' && !schlucken.has('PATCH')) {
         for (const [k, v] of Object.entries(body)) {
           if (k === 'note') g.note = String(v);
+          else if (k === 'name') g.name = String(v);
           else if (k === 'groupStatusId') g.status = Number(v);
           else if (k !== 'information') g.settings[k] = v; // verschachtelt: still ignoriert (gemessen)
         }
@@ -153,6 +207,7 @@ beforeEach(() => {
   schlucken = new Set();
   termine = new Map();
   aufrufe = [];
+  mitglieder = new Map();
   vi.stubGlobal('window', {
     settings: { base_url: 'https://ct.test/' },
     location: { origin: 'https://ct.test' },
@@ -295,5 +350,272 @@ describe('Rechte und Kalender', () => {
         zeitzone: 'Europe/Berlin',
       }),
     ).rejects.toBeInstanceOf(NichtUebernommen);
+  });
+});
+
+describe('Preise und Bezahlung (A4)', () => {
+  const zimmer = (belegt4: number) => ({
+    art: 'auswahl' as const,
+    betragCent: 0,
+    gilt: 'person' as const,
+    auswahlName: 'Zimmer',
+    optionen: [
+      { name: '4-Bett', preisCent: 6552, kontingent: 8, belegt: belegt4 },
+      { name: '2-Bett', preisCent: 8900, kontingent: 4, belegt: 2 },
+    ],
+  });
+
+  it('neue Veranstaltung: Verwendungszweck mit ihrem Namen, noch ohne Konto', async () => {
+    const id = await legeVeranstaltungAn({
+      name: 'Gemeindeessen',
+      teamId: 7,
+      artId: 5,
+      vorlage: 'einfach',
+    });
+    const b = einstellungenLesen(gruppen.get(id)!.note)!.bezahlung;
+    expect(b.zweck).toBe('Gemeindeessen [Nachname]');
+    expect(b.iban).toBe('');
+  });
+
+  it('Preise ändern: auf die FRISCH gelesenen Preise, „belegt“ bleibt (über den Namen), nachgelesen', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'freizeit' });
+    await aendereEinstellungen(id, (e) => ({ ...e, preis: { ...e.preis, grundpreis: zimmer(5) } }));
+    // Inzwischen hat jemand anderes ein Extra gespeichert – das Fenster weiß davon nichts.
+    await aendereEinstellungen(id, (e) => ({
+      ...e,
+      preis: {
+        ...e.preis,
+        extras: [{ bezeichnung: 'Bettwäsche', preisCent: 800, gilt: 'person' }],
+      },
+    }));
+    // Das Fenster ändert den Preis und dreht die Reihenfolge der Optionen um; „belegt“ kennt es nicht (0).
+    await aenderePreise(id, (p) => ({
+      ...p,
+      grundpreis: {
+        ...p.grundpreis,
+        optionen: [
+          { name: '2-Bett', preisCent: 9000, kontingent: 4, belegt: 0 },
+          { name: '4-Bett', preisCent: 6552, kontingent: 8, belegt: 0 },
+          { name: 'Neu', preisCent: 5000, kontingent: 0, belegt: 0 },
+        ],
+      },
+    }));
+    const p = einstellungenLesen(gruppen.get(id)!.note)!.preis;
+    expect(p.grundpreis.optionen.map((o) => [o.name, o.preisCent, o.belegt])).toEqual([
+      ['2-Bett', 9000, 2],
+      ['4-Bett', 6552, 5],
+      ['Neu', 5000, 0],
+    ]);
+    expect(p.extras).toHaveLength(1);
+  });
+
+  it('ungültige Preise → Meldung von pruefeRegeln, und es wird NICHTS geschrieben', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    const vorher = gruppen.get(id)!.note;
+    const patchVorher = aufrufe.filter((a) => a.startsWith('PATCH')).length;
+    const fehler = await aenderePreise(id, (p) => ({
+      ...p,
+      alter: [
+        { von: 0, bis: 5, art: 'frei', wert: 0 },
+        { von: 3, bis: 11, art: 'prozent', wert: 50 },
+      ],
+    })).catch((e: unknown) => e);
+    expect(fehler).toBeInstanceOf(ApiError);
+    expect((fehler as ApiError).status).toBe(422);
+    expect((fehler as ApiError).message).toContain('überschneiden');
+    expect(gruppen.get(id)!.note).toBe(vorher);
+    expect(aufrufe.filter((a) => a.startsWith('PATCH')).length).toBe(patchVorher);
+  });
+
+  it('Bezahlung: IBAN ohne Leerzeichen gespeichert; falsche IBAN wird nicht geschrieben', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    const b = {
+      kontoinhaber: ' Gemeinde e.V. ',
+      iban: 'de89 3704 0044 0532 0130 00',
+      bic: 'cobadeff',
+      fristTage: 10,
+      zweck: ' X [Nachname] ',
+    };
+    await speichereBezahlung(id, b);
+    expect(einstellungenLesen(gruppen.get(id)!.note)!.bezahlung).toEqual({
+      kontoinhaber: 'Gemeinde e.V.',
+      iban: 'DE89370400440532013000',
+      bic: 'COBADEFF',
+      fristTage: 10,
+      zweck: 'X [Nachname]',
+    });
+    const vorher = gruppen.get(id)!.note;
+    await expect(
+      speichereBezahlung(id, { ...b, iban: 'DE89370400440532013001' }),
+    ).rejects.toMatchObject({ status: 422 });
+    expect(gruppen.get(id)!.note).toBe(vorher);
+  });
+
+  it('zu lange Einstellungen → sagt das (413), nicht „ChurchTools antwortet gerade nicht“', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    const lang = standardFormular();
+    lang.person.push(
+      ...Array.from({ length: 20 }, (_, i) => ({
+        id: `l${i}`,
+        art: 'eigen' as const,
+        typ: 'textarea' as const,
+        frage: `Frage ${i}`,
+        hilfe: 'x'.repeat(390),
+        zustand: 'freiwillig' as const,
+        antworten: [],
+      })),
+    );
+    const e = await aendereEinstellungen(id, (x) => ({ ...x, formular: lang })).catch(
+      (err: unknown) => err,
+    );
+    expect(e).toBeInstanceOf(ApiError);
+    expect((e as ApiError).status).toBe(413);
+    expect((e as ApiError).message).toContain('erlaubt sind 5000');
+    // Und eine ungültige Angabe (zu langer Name eines Extras) → 422 mit eigener Meldung.
+    const z = await aendereEinstellungen(id, (x) => ({
+      ...x,
+      preis: {
+        ...x.preis,
+        extras: [{ bezeichnung: 'x'.repeat(81), preisCent: 0, gilt: 'person' }],
+      },
+    })).catch((err: unknown) => err);
+    expect((z as ApiError).status).toBe(422);
+  });
+
+  it('Zahl der Anmeldungen: angemeldet + Warteliste; 403 → unbekannt; 502 → Fehler (vorübergehend)', async () => {
+    mitglieder.set(91, [
+      { groupMemberStatus: 'active' },
+      { groupMemberStatus: 'active' },
+      { groupMemberStatus: 'waiting' },
+      { groupMemberStatus: 'to_delete' },
+    ]);
+    expect(await anmeldungenZahl(91)).toBe(3);
+    expect(await anmeldungenZahl(92)).toBe(0);
+    mitglieder.set(93, 403);
+    expect(await anmeldungenZahl(93)).toBeNull();
+    mitglieder.set(94, 502);
+    await expect(anmeldungenZahl(94)).rejects.toBeInstanceOf(ApiError);
+  });
+});
+
+describe('Verwalten (A4-Nachtrag)', () => {
+  const neu = () => legeVeranstaltungAn({ name: 'Essen', teamId: 7, artId: 5, vorlage: 'einfach' });
+
+  it('umbenennen: getrimmt und nachgelesen; leer → abgelehnt; nicht übernommen → Fehler', async () => {
+    const id = await neu();
+    await umbenennen(id, '  Gemeindeessen  ');
+    expect(gruppen.get(id)!.name).toBe('Gemeindeessen');
+    await expect(umbenennen(id, '  ')).rejects.toMatchObject({ status: 422 });
+    schlucken.add('PATCH');
+    await expect(umbenennen(id, 'Anders')).rejects.toBeInstanceOf(NichtUebernommen);
+  });
+
+  it('Status: freigeben, zurück zum Entwurf, archivieren – jeweils nachgelesen', async () => {
+    const id = await neu();
+    for (const st of [STATUS.freigegeben, STATUS.entwurf, STATUS.archiviert]) {
+      await setzeStatus(id, st);
+      expect(gruppen.get(id)!.status).toBe(st);
+    }
+    schlucken.add('PATCH');
+    await expect(setzeStatus(id, STATUS.entwurf)).rejects.toThrow('den Entwurf-Status');
+  });
+
+  it('verschieben: erst das neue Team dazu, dann das alte weg – nie ohne Team', async () => {
+    const id = await neu();
+    await verschieben(id, 7, 9);
+    const schritte = aufrufe.filter((a) => a.includes('/parents/'));
+    expect(schritte).toEqual([`PUT /groups/${id}/parents/9`, `DELETE /groups/${id}/parents/7`]);
+    expect(gruppen.get(id)!.eltern).toEqual([9]);
+    expect(await teamVon(id)).toEqual({ id: 9, name: 'Team 9' });
+  });
+
+  it('Archiv: nur archivierte Veranstaltungen (Art „Anmeldung“, mit Einstellungen), nach Namen', async () => {
+    const a = await legeVeranstaltungAn({
+      name: 'Zelten',
+      teamId: 7,
+      artId: 5,
+      vorlage: 'einfach',
+    });
+    const b = await legeVeranstaltungAn({
+      name: 'Ausflug',
+      teamId: 7,
+      artId: 5,
+      vorlage: 'einfach',
+    });
+    await neu(); // bleibt Entwurf
+    await setzeStatus(a, STATUS.archiviert);
+    await setzeStatus(b, STATUS.archiviert);
+    gruppen.get(b)!.note = 'irgendeine Beschreibung'; // keine Einstellungen → keine Veranstaltung
+    const c = await legeVeranstaltungAn({ name: 'Basar', teamId: 7, artId: 5, vorlage: 'einfach' });
+    await setzeStatus(c, STATUS.archiviert);
+    expect((await archivListe(5)).map((x) => [x.name, x.team])).toEqual([
+      ['Basar', 'Technik'],
+      ['Zelten', 'Technik'],
+    ]);
+  });
+
+  it('endgültig löschen: nur aus dem Archiv; danach muss die Gruppe weg sein', async () => {
+    const id = await neu();
+    await expect(loeschenEndgueltig(id)).rejects.toMatchObject({ status: 409 });
+    expect(gruppen.has(id)).toBe(true);
+    await setzeStatus(id, STATUS.archiviert);
+    schlucken.add('DELETE');
+    await expect(loeschenEndgueltig(id)).rejects.toBeInstanceOf(NichtUebernommen);
+    schlucken.delete('DELETE');
+    await loeschenEndgueltig(id);
+    expect(gruppen.has(id)).toBe(false);
+  });
+
+  it('wiederherstellen: schreibt Name, Einstellungen, Plätze und Status zurück – nur was sich unterscheidet', async () => {
+    const id = await neu();
+    const vorher = {
+      name: gruppen.get(id)!.name,
+      statusId: gruppen.get(id)!.status,
+      einstellungen: einstellungenLesen(gruppen.get(id)!.note)!,
+      anmeldung: { maxPlaetze: null, warteliste: false, ab: null, bis: null },
+    };
+    await umbenennen(id, 'Anders');
+    await aenderePreise(id, (p) => ({
+      ...p,
+      extras: [{ bezeichnung: 'Kaffee', preisCent: 200, gilt: 'person' }],
+    }));
+    await speichereAnmeldung(id, { maxPlaetze: 30, warteliste: true, ab: null, bis: null });
+    await setzeStatus(id, STATUS.archiviert);
+    aufrufe = [];
+    await wiederherstellen(id, vorher);
+    const g = gruppen.get(id)!;
+    expect(g.name).toBe('Essen');
+    expect(g.status).toBe(STATUS.entwurf);
+    expect(einstellungenLesen(g.note)!.preis.extras).toEqual([]);
+    expect(g.settings).toMatchObject({ maxMembers: null, allowWaitinglist: false });
+    // Und ein zweites Mal: alles gleich → kein Schreibaufruf mehr.
+    aufrufe = [];
+    await wiederherstellen(id, vorher);
+    expect(aufrufe.filter((a) => !a.startsWith('GET'))).toEqual([]);
+  });
+
+  it('Verwendungszweck folgt dem Namen: beim Kopieren und beim Umbenennen (und zurück)', async () => {
+    const quelle = await legeVeranstaltungAn({
+      name: 'Freizeit 2026',
+      teamId: 7,
+      artId: 5,
+      vorlage: 'freizeit',
+    });
+    const kopie = await kopiereVeranstaltung(quelle, 'Freizeit 2027');
+    expect(einstellungenLesen(gruppen.get(kopie)!.note)!.bezahlung.zweck).toBe(
+      'Freizeit 2027 [Nachname]',
+    );
+    await umbenennen(kopie, 'Sommerfreizeit 2027');
+    expect(einstellungenLesen(gruppen.get(kopie)!.note)!.bezahlung.zweck).toBe(
+      'Sommerfreizeit 2027 [Nachname]',
+    );
+    await umbenennen(kopie, 'Freizeit 2027');
+    expect(einstellungenLesen(gruppen.get(kopie)!.note)!.bezahlung.zweck).toBe(
+      'Freizeit 2027 [Nachname]',
+    );
+    // Die Quelle bleibt, wie sie war.
+    expect(einstellungenLesen(gruppen.get(quelle)!.note)!.bezahlung.zweck).toBe(
+      'Freizeit 2026 [Nachname]',
+    );
   });
 });

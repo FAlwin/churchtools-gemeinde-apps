@@ -1,9 +1,10 @@
 # Anmeldungen – ChurchTools-Erweiterung
 
-> **Stand: Anlegen und Einrichten (A3).** Die Erweiterung zeigt die Veranstaltungen der eigenen Gruppen;
+> **Stand: Preise und Bezahlung (A4).** Die Erweiterung zeigt die Veranstaltungen der eigenen Gruppen;
 > Leitung und Organisatoren legen neue an (Vorlage oder „wie eine frühere“), wählen oder legen den Termin im
-> Kalender an, stellen Zeitraum, Plätze und Warteliste ein und geben frei. Preise (A4), Formular und
-> Gestaltung (A5), das öffentliche Formular (A6) und die Anmeldungsliste (A7) folgen. Diese Anleitung wächst mit.
+> Kalender an, stellen Zeitraum, Plätze, Warteliste, Preise und Bankverbindung ein und geben frei. Formular
+> und Gestaltung (A5), das öffentliche Formular (A6) und die Anmeldungsliste (A7) folgen. Diese Anleitung
+> wächst mit.
 
 Die Anmeldungen ersetzen Jotform & Co.: Veranstalter legen Anmeldungen zu Veranstaltungen selbst an und
 verwalten sie in ChurchTools. Teilnehmende melden sich über ein öffentliches Formular an und können
@@ -15,7 +16,7 @@ Sie besteht aus zwei Teilen:
 | ------------ | ------------------------------------------- | --------------------------------------------------------------- |
 | Wo           | Menüpunkt in ChurchTools                    | eine Adresse für alle Gemeinden (GitHub Pages des Projekts)     |
 | Anmelden     | Wer in ChurchTools angemeldet ist, ist drin | ohne Konto; ändern und absagen über den Link in der Bestätigung |
-| Installieren | ZIP hochladen (unten)                       | nichts – ab A4: eine Adresse als erlaubte Herkunft eintragen    |
+| Installieren | ZIP hochladen (unten)                       | nichts – ab A6: eine Adresse als erlaubte Herkunft eintragen    |
 
 ## Installieren
 
@@ -101,6 +102,30 @@ ganz – Räume, Dienste oder Bild gingen verloren); dort steht „Link zur Anme
 
 Erweiterung **„Anmeldungen“ sehen** (`view`, Bereich „anmeldungen“ in den Berechtigungen) – für alle, die
 mitarbeiten (z. B. über den Status oder global über die Gruppen).
+
+## Preise und Bezahlung
+
+- **Preise** stellt die Leitung auf der Seite der Veranstaltung ein. Gerechnet wird immer in derselben
+  Reihenfolge: Grundpreis → Alter → Rabatte und Zuschläge → Extras. Mit **„Probe rechnen“** prüft man an
+  einer Beispielfamilie, ob herauskommt, was man erwartet; das Formular rechnet genauso.
+- **Preise nach Alter** brauchen das Geburtsdatum (unter „Wer meldet sich an?“). Gezählt wird das Alter am
+  ersten Tag der Veranstaltung.
+- **Preise ändern** geht auch, wenn es schon Anmeldungen gibt. Wer angemeldet ist, behält seinen Betrag.
+- **Bankverbindung:** je Veranstaltung („wie eine frühere“ übernimmt sie). Sie steht im öffentlichen
+  Formular und in der Bestätigung, ist also **ohne Anmeldung lesbar**. Bitte nur das Konto der Gemeinde
+  eintragen. Im Verwendungszweck wird `[Nachname]` durch den Nachnamen ersetzt.
+
+## Umbenennen, verschieben, löschen
+
+- **„Verwalten“** oben auf der Seite einer Veranstaltung: umbenennen, Freigabe zurücknehmen, in ein
+  anderes Team verschieben, löschen. Nach jeder Änderung – auch nach dem Speichern eines Fensters – steht
+  oben **„Rückgängig“**. Steht der Name im Verwendungszweck, zieht er beim Umbenennen und bei „wie eine
+  frühere“ mit; der Titel des Kalendertermins bleibt, wie er ist.
+- **Löschen schiebt ins Archiv.** Die Veranstaltung verschwindet aus der Liste, Gäste können sich nicht
+  mehr anmelden, die Anmeldungen bleiben. Unter **„Gelöschte Veranstaltungen (Archiv)“** auf der
+  Startseite lässt sie sich wiederherstellen (als Entwurf).
+- **Endgültig löschen** (mit allen Anmeldungen, nicht umkehrbar) geht nur aus dem Archiv und nur für
+  **Gruppen-Admins** – ebenso das Verschieben in ein anderes Team. Das legt ChurchTools so fest.
 
 ## Für Entwickler
 

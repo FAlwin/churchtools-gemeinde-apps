@@ -1,6 +1,14 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import {
+  act,
+  createEvent,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import type { OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import * as FF from './formularFelder';
@@ -63,6 +71,29 @@ function zeigen(e = einstellungen(), darf = true) {
 
 const dt = () => ({ setData: vi.fn(), setDragImage: vi.fn(), effectAllowed: '' });
 
+/** jsdom gibt `clientY` an Zieh-Ereignisse nicht weiter (kein DragEvent) – hier von Hand. */
+function mitY(typ: 'dragOver' | 'drop' | 'dragEnter', el: Element, y: number) {
+  const ev = createEvent[typ](el);
+  Object.defineProperty(ev, 'clientY', { value: y });
+  fireEvent(el, ev);
+}
+
+/**
+ * jsdom kennt keine Maße: Jedes Feld bekommt einen Platz (100 px hoch, untereinander), die Bühne beginnt bei 0.
+ * Gibt zurück, wo die obere bzw. untere Hälfte eines Felds liegt.
+ */
+function lage(container: HTMLElement) {
+  const felder = [...container.querySelectorAll<HTMLElement>('[data-feld]')];
+  felder.forEach((el, i) => {
+    el.getBoundingClientRect = () =>
+      ({ top: 100 + i * 100, bottom: 180 + i * 100, height: 80 }) as DOMRect;
+  });
+  return (id: string, wo: 'oben' | 'unten') => {
+    const i = felder.findIndex((el) => el.dataset.feld === id);
+    return 100 + i * 100 + (wo === 'oben' ? 10 : 70);
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   ff.feldSpeichern.mockResolvedValue({} as never);
@@ -124,47 +155,64 @@ describe('Baukasten (A5): Bausteine ins Formular', () => {
     expect(feld).toMatchObject({ id: 'addr', art: 'standard', zustand: 'freiwillig' });
   });
 
-  it('ziehen und auf einem Feld ablegen → an dieser Stelle', async () => {
-    const { huelle } = zeigen();
+  it('ziehen: über der oberen Hälfte eines Felds → davor, über der unteren → danach', async () => {
+    const { huelle, container } = zeigen();
+    const y = lage(container);
     fireEvent.dragStart(screen.getByRole('button', { name: 'Datum' }), { dataTransfer: dt() });
-    // jsdom kennt keine Maße: Die Höhe ist 0, abgelegt wird also „nach“ dem Feld.
-    fireEvent.dragEnter(huelle('allergy'), { clientY: 5 });
-    fireEvent.drop(huelle('allergy'), { clientY: 5 });
+    mitY('dragOver', huelle('allergy'), y('allergy', 'unten'));
+    mitY('drop', huelle('allergy'), y('allergy', 'unten'));
     await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
     const [, bereich, feld, , vorId] = ff.feldSpeichern.mock.calls[0];
     expect([bereich, vorId]).toEqual(['person', 'foto']);
     expect(feld).toMatchObject({ typ: 'date' });
   });
 
-  it('über einem Feld öffnet sich eine Lücke; dort loslassen legt dort ab', async () => {
-    const { huelle } = zeigen();
+  it('die Lücke öffnet sich an der Stelle; dort loslassen legt dort ab', async () => {
+    const { huelle, container } = zeigen();
+    const y = lage(container);
     fireEvent.dragStart(screen.getByRole('button', { name: 'Zahl' }), { dataTransfer: dt() });
-    fireEvent.dragEnter(huelle('allergy'), { clientY: 5 });
+    mitY('dragOver', huelle('foto'), y('foto', 'oben'));
     const luecke = screen.getByText('Hier loslassen');
-    // „Nach Allergien“ = „vor Foto“: Die Lücke steht direkt vor dem Foto-Feld.
     expect(luecke.nextElementSibling?.getAttribute('data-feld')).toBe('foto');
-    fireEvent.drop(luecke);
+    mitY('drop', luecke, y('foto', 'oben'));
     await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
     expect(ff.feldSpeichern.mock.calls[0][4]).toBe('foto');
     expect(screen.queryByText('Hier loslassen')).toBeNull();
   });
 
-  it('losgelassen auf einem Feld, während die Lücke offen ist → dort, wo die Lücke steht', async () => {
-    const { huelle } = zeigen();
+  it('die Lücke springt nicht: gerechnet wird mit den Plätzen vom Start, nicht mit verschobenen Feldern', () => {
+    const { huelle, container } = zeigen();
+    const y = lage(container);
     fireEvent.dragStart(screen.getByRole('button', { name: 'Zahl' }), { dataTransfer: dt() });
-    fireEvent.dragEnter(huelle('allergy'), { clientY: 5 });
-    // Die Lücke steht vor „Foto“; losgelassen wird über dem Foto-Feld selbst (ohne neues dragover).
-    fireEvent.drop(huelle('foto'), { clientY: 5 });
-    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
-    expect(ff.feldSpeichern.mock.calls[0][4]).toBe('foto');
+    mitY('dragOver', huelle('allergy'), y('allergy', 'oben'));
+    // Jetzt stehen die Felder im Browser woanders (die Lücke schiebt sie) – die Stelle bleibt dieselbe.
+    for (const el of container.querySelectorAll<HTMLElement>('[data-feld]'))
+      el.getBoundingClientRect = () => ({ top: 5000, bottom: 5080, height: 80 }) as DOMRect;
+    mitY('dragOver', huelle('allergy'), y('allergy', 'oben'));
+    expect(screen.getByText('Hier loslassen').nextElementSibling?.getAttribute('data-feld')).toBe(
+      'allergy',
+    );
   });
 
-  it('ein vorhandenes Feld klappt beim Ziehen weg, an seiner Stelle steht die Lücke', async () => {
+  it('zwischen zwei Bereichen entscheidet die Nähe; ganz unten im Kontakt = unter den Bemerkungen', async () => {
+    const { huelle, container } = zeigen();
+    const y = lage(container);
+    fireEvent.dragStart(screen.getByRole('button', { name: 'Zahl' }), { dataTransfer: dt() });
+    // Knapp unter dem letzten Feld des Kontakts (Bemerkungen) → ganz unten im Kontakt.
+    mitY('dragOver', huelle('note'), y('note', 'unten') + 15);
+    mitY('drop', huelle('note'), y('note', 'unten') + 15);
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
+    // „ganz unten“ = vor Preis/Datenschutz, also unter die Bemerkungen.
+    expect(ff.feldSpeichern.mock.calls[0].slice(1, 2)).toEqual(['anmeldung']);
+    expect(ff.feldSpeichern.mock.calls[0][4]).toBe('price');
+  });
+
+  it('ein vorhandenes Feld (ganz greifbar) klappt beim Ziehen weg, an seiner Stelle steht die Lücke', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    const { huelle } = zeigen();
-    fireEvent.dragStart(huelle('allergy').querySelector('[draggable="true"]')!, {
-      dataTransfer: dt(),
-    });
+    const { huelle, container } = zeigen();
+    lage(container);
+    expect(huelle('allergy').getAttribute('draggable')).toBe('true');
+    fireEvent.dragStart(huelle('allergy'), { dataTransfer: dt() });
     await act(async () => {
       vi.advanceTimersByTime(1);
     });
@@ -175,31 +223,39 @@ describe('Baukasten (A5): Bausteine ins Formular', () => {
   });
 
   it('abgelegt wird, wo losgelassen wird – auch ohne vorheriges „dragover“', async () => {
-    const { huelle } = zeigen();
+    const { huelle, container } = zeigen();
+    const y = lage(container);
     fireEvent.dragStart(screen.getByRole('button', { name: 'Zahl' }), { dataTransfer: dt() });
-    fireEvent.drop(huelle('birth'), { clientY: 5 });
+    mitY('drop', huelle('birth'), y('birth', 'unten'));
     await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
     expect(ff.feldSpeichern.mock.calls[0][4]).toBe('allergy');
   });
 
-  it('vorhandenes Feld am Griff in den anderen Bereich ziehen → nur verschoben; nichts springt', async () => {
+  it('vorhandenes Feld in den anderen Bereich ziehen → nur verschoben; beim Start springt nichts', async () => {
     const { huelle, container } = zeigen();
+    const y = lage(container);
     const vorher = container.innerHTML.length;
-    fireEvent.dragStart(huelle('f1').querySelector('[draggable="true"]')!, {
-      dataTransfer: dt(),
-    });
-    // Beim Ziehen kommt nichts dazu, was das Formular unter dem Mauszeiger verschiebt (Durchklicken 13.10.:
-    // Ablageflächen am Bereichsende schoben alles nach unten, abgelegt wurde ein Feld zu tief).
-    expect(screen.queryByText('Hier ablegen')).toBeNull();
+    fireEvent.dragStart(huelle('f1'), { dataTransfer: dt() });
+    expect(screen.queryByText('Hier loslassen')).toBeNull();
     expect(Math.abs(container.innerHTML.length - vorher)).toBeLessThan(80);
-    expect(huelle('f1').className).toMatch(/wirdGezogen/);
-    // Untere Hälfte von „Telefon“ = ans Ende des Kontakts.
-    fireEvent.drop(huelle('tel'), { clientY: 5 });
+    // Obere Hälfte der Bemerkungen = vor die Bemerkungen.
+    mitY('dragOver', huelle('note'), y('note', 'oben'));
+    mitY('drop', huelle('note'), y('note', 'oben'));
     await waitFor(() =>
       expect(ff.feldEinordnen).toHaveBeenCalledWith(91, 'f1', 'anmeldung', 'note'),
     );
     expect(ff.feldSpeichern).not.toHaveBeenCalled();
-    expect(container.querySelectorAll('[data-feld="f1"]')).toHaveLength(1);
+  });
+
+  it('am Rand der Bühne wird beim Ziehen mitgescrollt', () => {
+    const { huelle, container } = zeigen();
+    lage(container);
+    const scroll = vi.fn();
+    (document.scrollingElement ?? document.documentElement).scrollBy = scroll;
+    fireEvent.dragStart(screen.getByRole('button', { name: 'Zahl' }), { dataTransfer: dt() });
+    mitY('dragOver', huelle('name'), window.innerHeight - 10);
+    expect(scroll).toHaveBeenCalledWith(0, expect.any(Number));
+    expect(scroll.mock.calls[0][1]).toBeGreaterThan(0);
   });
 
   it('Pfeile verschieben ohne Ziehen (Handy, Tastatur)', async () => {
@@ -314,7 +370,7 @@ describe('Baukasten (A5): direkt im Feld bearbeiten', () => {
     fireEvent.click(huelle('mail'));
     expect(screen.queryByLabelText('Frage')).toBeNull();
     expect(huelle('priv').querySelector('button')).toBeNull();
-    expect(huelle('priv').querySelector('[draggable="true"]')).toBeNull();
+    expect(huelle('priv').getAttribute('draggable')).toBe('false');
   });
 });
 

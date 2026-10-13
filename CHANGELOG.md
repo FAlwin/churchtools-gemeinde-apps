@@ -22,8 +22,11 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   - **Titelbild scharf:** ChurchTools liefert als `imageUrl` ein Vorschaubild mit 150×150 Pixeln – das Bild war
     verzogen und unscharf (Alwin). Jetzt in voller Breite über den Bilddienst (`?w=1600&h=0`, ohne Login
     abrufbar, Seitenverhältnis bleibt; gemessen).
-  - **Ziehen:** Ein vorhandenes Feld klappt beim Ziehen weg, an seiner Stelle steht gleich die Lücke; abgelegt
-    wird dort, wo die Lücke zu sehen ist – auch wenn über einem Feld losgelassen wird.
+  - **Ziehen** (Alwin: „Lücke springt“, „hakelig“): Die Stelle wird an den Plätzen vom Start des Ziehens
+    gerechnet, nicht an den Feldern, die die Lücke gerade verschoben hat – so springt sie nicht mehr hin und her
+    (wie SortableJS). Das ganze Feld lässt sich greifen, nicht nur der Griff; am Rand scrollt die Seite mit; ein
+    vorhandenes Feld klappt beim Ziehen weg, an seiner Stelle steht gleich die Lücke; „ganz unten“ im Kontakt
+    heißt beim Ziehen wirklich unter die Bemerkungen.
   - **Leiste:** Gruppen zum Einklappen mit Zahlen („5 von 8 im Formular“), Haken an Bausteinen, die schon
     drin sind, Kacheln heben sich beim Zeigen.
   - **Fragetyp ändern** unten im Feld – solange niemand geantwortet hat. ChurchTools ändert den Typ einer

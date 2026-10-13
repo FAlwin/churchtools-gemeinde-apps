@@ -982,3 +982,11 @@
     opacity: 0.6;
   }
 }
+// Das ganze Feld lässt sich greifen (Alwin: „hakelig“).
+.ziehbar {
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
+}

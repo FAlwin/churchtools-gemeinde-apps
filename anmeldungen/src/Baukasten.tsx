@@ -55,12 +55,33 @@ export const PAUSE_DESIGN_MS = 700;
 
 type Gezogen = { art: 'neu'; b: NeuerBaustein } | { art: 'feld'; id: string };
 /**
- * Wo abgelegt wird: vor `vorId` im Bereich (`null` = am Ende). Immer so ausgedrückt – „nach Feld A“ und „vor Feld
- * B“ sind dieselbe Stelle, sonst spränge die Lücke zwischen zwei Darstellungen hin und her.
+ * Wo abgelegt wird: vor `vorId` im Bereich (`null` = ganz unten im Bereich, auch unter den Bemerkungen). Immer
+ * so ausgedrückt – „nach Feld A“ und „vor Feld B“ sind dieselbe Stelle, sonst spränge die Lücke.
  */
 interface Ziel {
   bereich: Bereich;
   vorId: string | null;
+}
+
+/** Wo ein Feld beim Start des Ziehens stand – relativ zur Bühne (scrollt mit). */
+interface Platz {
+  id: string;
+  bereich: Bereich;
+  oben: number;
+  unten: number;
+}
+
+/** Abstand zum Rand, ab dem beim Ziehen mitgescrollt wird, und wie weit je Schritt. */
+const RAND_SCROLL = 70;
+const SCHRITT_SCROLL = 14;
+
+/** Das nächste Element darüber, das scrollt (in ChurchTools ist das nicht das Fenster, sondern der Rahmen). */
+function scrollEltern(el: HTMLElement | null): HTMLElement {
+  for (let x = el?.parentElement; x; x = x.parentElement) {
+    const o = getComputedStyle(x).overflowY;
+    if ((o === 'auto' || o === 'scroll') && x.scrollHeight > x.clientHeight) return x;
+  }
+  return (document.scrollingElement as HTMLElement | null) ?? document.documentElement;
 }
 interface AntwortInfo {
   feldId: string;
@@ -382,10 +403,49 @@ export function Baukasten({
       verschieben(f.id, bereich, liste[i + 2]?.id ?? null);
   }
 
-  // ── Ziehen und Ablegen: Über einem Feld öffnet sich davor oder dahinter eine Lücke (wie bei Campflow) ──
-  function zielAn(f: Feld, bereich: Bereich, oben: boolean): Ziel {
-    if (amEnde(f)) return { bereich, vorId: null };
-    if (oben) return { bereich, vorId: f.id };
+  // ── Ziehen und Ablegen: Wo der Mauszeiger ist, öffnet sich eine Lücke (wie bei Campflow) ──
+  //
+  // Die Stelle wird an den Plätzen ausgerechnet, die die Felder beim START des Ziehens hatten – nicht an den
+  // Feldern, wie sie gerade stehen. Sonst verschiebt die Lücke die Felder, die neue Rechnung sieht eine andere
+  // Stelle, die Lücke springt dorthin … (Alwin, 13.10.2026: „Lücke springt“). So macht es auch SortableJS.
+  const plaetze = useRef<Platz[]>([]);
+  const buehneRef = useRef<HTMLDivElement>(null);
+
+  function plaetzeMerken() {
+    const b = buehneRef.current;
+    if (!b) return;
+    const oben = b.getBoundingClientRect().top;
+    plaetze.current = [...b.querySelectorAll<HTMLElement>('[data-feld][data-bereich]')]
+      .filter((el) => el.dataset.ende === undefined)
+      .map((el) => {
+        const r = el.getBoundingClientRect();
+        return {
+          id: el.dataset.feld!,
+          bereich: el.dataset.bereich as Bereich,
+          oben: r.top - oben,
+          unten: r.bottom - oben,
+        };
+      });
+  }
+
+  /** Die Stelle für eine Höhe `y` (relativ zur Bühne): vor dem ersten Feld, dessen Mitte darunter liegt. */
+  function zielAus(y: number): Ziel | null {
+    const liste = plaetze.current;
+    for (let i = 0; i < liste.length; i++) {
+      const p = liste[i];
+      if (y >= (p.oben + p.unten) / 2) continue;
+      // Zwischen zwei Bereichen entscheidet, welchem der Mauszeiger näher ist.
+      const davor = liste[i - 1];
+      if (davor && davor.bereich !== p.bereich && y < (davor.unten + p.oben) / 2)
+        return { bereich: davor.bereich, vorId: null };
+      return { bereich: p.bereich, vorId: p.id };
+    }
+    const letzte = liste.at(-1);
+    return letzte ? { bereich: letzte.bereich, vorId: null } : null;
+  }
+
+  /** Die Stelle, an der ein Feld gerade steht (für die Lücke, sobald es beim Ziehen wegklappt). */
+  function zielAnStelle(f: Feld, bereich: Bereich): Ziel {
     const liste = ablageListe(bereich);
     const i = liste.findIndex((x) => x.id === f.id);
     return { bereich, vorId: liste[i + 1]?.id ?? null };
@@ -397,36 +457,44 @@ export function Baukasten({
     setZiehtFeld(null);
     setZiel(null);
     if (!g || !z) return;
-    if (g.art === 'neu') einfuegen(g.b, z);
-    else verschieben(g.id, z.bereich, z.vorId);
+    // „Ganz unten“ heißt beim Ziehen wirklich ganz unten – auch unter den Bemerkungen, aber vor Preis und
+    // Datenschutz (`einordnen` setzt nichts dahinter). Ohne Angabe käme es VOR die Bemerkungen (Antippen).
+    const vorId = z.vorId ?? formularRef.current[z.bereich].find(amEnde)?.id ?? null;
+    const wohin = { bereich: z.bereich, vorId };
+    if (g.art === 'neu') einfuegen(g.b, wohin);
+    else verschieben(g.id, z.bereich, vorId);
+  }
+
+  function ueberBuehne(ev: React.DragEvent<HTMLDivElement>) {
+    if (!gezogen.current) return;
+    ev.preventDefault();
+    // Am Rand mitscrollen – in ChurchTools scrollt der Rahmen, nicht das Fenster.
+    const sc = scrollEltern(ev.currentTarget);
+    const r =
+      sc === document.scrollingElement
+        ? { top: 0, bottom: window.innerHeight }
+        : sc.getBoundingClientRect();
+    // `?.`: Nicht jede Umgebung kennt `scrollBy` an Elementen (jsdom) – dann eben ohne Mitscrollen.
+    if (ev.clientY < r.top + RAND_SCROLL) sc.scrollBy?.(0, -SCHRITT_SCROLL);
+    else if (ev.clientY > r.bottom - RAND_SCROLL) sc.scrollBy?.(0, SCHRITT_SCROLL);
+    const z = zielAus(ev.clientY - ev.currentTarget.getBoundingClientRect().top);
+    if (z) zielSetzen(z);
   }
 
   function zielSetzen(z: Ziel) {
     setZiel((alt) => (alt && alt.bereich === z.bereich && alt.vorId === z.vorId ? alt : z));
   }
 
-  /** Die Lücke selbst: Wer hier loslässt, legt dort ab, wo sie steht. */
-  const luecke = (z: Ziel) => (
-    <div
-      key="luecke"
-      className={k.luecke}
-      onDragEnter={(ev) => ev.preventDefault()}
-      onDragOver={(ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-      }}
-      onDrop={(ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        ablegen(z);
-      }}
-    >
+  /** Die Lücke selbst – nur zu sehen; abgelegt wird über die Bühne (`ueberBuehne`, `onDrop`). */
+  const luecke = () => (
+    <div key="luecke" className={k.luecke}>
       Hier loslassen
     </div>
   );
 
   const ziehenBeginnen = (g: Gezogen) => {
     gezogen.current = g;
+    plaetzeMerken();
     setZiehtFeld(g.art === 'feld' ? g.id : null);
   };
   const ziehenEnde = () => {
@@ -457,16 +525,6 @@ export function Baukasten({
 
   // ── Die Hülle um jedes Feld ──
   function huelle(f: Feld, bereich: Bereich, inhalt: ReactNode): ReactNode {
-    const zielHier = (ev: React.DragEvent<HTMLDivElement>): Ziel => {
-      const r = ev.currentTarget.getBoundingClientRect();
-      return zielAn(f, bereich, ev.clientY < r.top + r.height / 2);
-    };
-    const zielUeber = (ev: React.DragEvent<HTMLDivElement>) => {
-      if (!gezogen.current) return;
-      ev.preventDefault();
-      ev.stopPropagation();
-      zielSetzen(zielHier(ev));
-    };
     const beweglich = verschiebbar(f);
     const istAktiv = aktiv === f.id && entwurf?.feld.id === f.id;
     // Name, E-Mail, Datenschutz: verschiebbar (außer Datenschutz), aber nicht zu bearbeiten oder zu entfernen.
@@ -544,47 +602,37 @@ export function Baukasten({
         )}
       </>
     );
+    // Das ganze Feld lässt sich greifen, nicht nur der kleine Griff (Alwin: „hakelig“) – außer beim Bearbeiten,
+    // sonst ließe sich im Text nichts markieren.
+    const ziehbar = beweglich && !istAktiv;
     return [
-      lueckeDavor && luecke(ziel),
+      lueckeDavor && luecke(),
       <div
         key="feld"
-        className={`${k.huelle} ${istAktiv ? k.aktiv : ''} ${fest ? k.fest : ''} ${ziehtFeld === f.id ? k.wirdGezogen : ''}`}
+        className={`${k.huelle} ${istAktiv ? k.aktiv : ''} ${fest ? k.fest : ''} ${ziehbar ? k.ziehbar : ''} ${ziehtFeld === f.id ? k.wirdGezogen : ''}`}
         data-feld={f.id}
+        data-bereich={bereich}
+        data-ende={amEnde(f) ? '' : undefined}
+        draggable={ziehbar}
         onClick={(ev) => {
           ev.stopPropagation();
           if (!fest) waehlen(f.id);
         }}
-        // Schon beim Hineinziehen „hier darf abgelegt werden“ melden – sonst legt der Browser nicht ab, wenn
-        // zwischen Hineinziehen und Loslassen kein `dragover` kam (gefunden beim Durchklicken 13.10.2026).
-        onDragEnter={zielUeber}
-        onDragOver={zielUeber}
-        onDrop={(ev) => {
-          ev.preventDefault();
+        onDragStart={(ev) => {
+          if (!ziehbar) return;
           ev.stopPropagation();
-          // Dort, wo die Lücke zu sehen ist – sie hat das Feld verschoben, die Hälfte unter dem Mauszeiger sagt
-          // nichts mehr (Alwin: „Drag & Drop noch nicht perfekt“). Ohne Lücke (kein `dragover` vorher) aus dem
-          // Ereignis selbst.
-          ablegen(ziel ?? zielHier(ev));
+          ev.dataTransfer.effectAllowed = 'move';
+          ev.dataTransfer.setData('text/plain', f.id);
+          ev.dataTransfer.setDragImage(ev.currentTarget, 24, 24);
+          ziehenBeginnen({ art: 'feld', id: f.id });
+          // Wie bei Campflow: Das Feld klappt weg, an seiner Stelle steht gleich die Lücke – nichts springt,
+          // und es gibt keinen doppelten Platz. Erst im nächsten Takt, sonst fehlt dem Browser das Bild.
+          setTimeout(() => setZiel(zielAnStelle(f, bereich)));
         }}
+        onDragEnd={ziehenEnde}
       >
         {beweglich && (
-          <span
-            className={k.griff}
-            draggable
-            title="Ziehen zum Verschieben"
-            onDragStart={(ev) => {
-              ev.dataTransfer.effectAllowed = 'move';
-              ev.dataTransfer.setData('text/plain', f.id);
-              const h = ev.currentTarget.parentElement;
-              if (h) ev.dataTransfer.setDragImage(h, 24, 24);
-              ziehenBeginnen({ art: 'feld', id: f.id });
-              // Wie bei Campflow: Das Feld klappt weg, an seiner Stelle steht gleich die Lücke – nichts
-              // springt, und es gibt keinen doppelten Platz. Erst im nächsten Takt, sonst fehlt dem Browser das
-              // Bild zum Ziehen.
-              setTimeout(() => setZiel(zielAn(f, bereich, false)));
-            }}
-            onDragEnd={ziehenEnde}
-          >
+          <span className={k.griff} aria-hidden="true">
             <Icon name="grip" size={16} />
           </span>
         )}
@@ -606,7 +654,7 @@ export function Baukasten({
           </div>
         )}
       </div>,
-      lueckeDanach && luecke(ziel),
+      lueckeDanach && luecke(),
     ];
   }
 
@@ -765,8 +813,19 @@ export function Baukasten({
 
       <div className={`${k.flaeche} ${zeigeVorschau ? k.ohneLeiste : ''}`}>
         <div
+          ref={buehneRef}
           className={`${k.buehne} ${geraet === 'handy' ? k.handy : ''}`}
           onClick={() => !zeigeVorschau && waehlen(null)}
+          // Schon beim Hineinziehen „hier darf abgelegt werden“ melden – sonst legt der Browser nicht ab, wenn
+          // zwischen Hineinziehen und Loslassen kein `dragover` kam (gefunden beim Durchklicken 13.10.2026).
+          onDragEnter={ueberBuehne}
+          onDragOver={ueberBuehne}
+          onDrop={(ev) => {
+            if (!gezogen.current) return;
+            ev.preventDefault();
+            // Dort, wo die Lücke zu sehen ist; ohne Lücke (kein `dragover` vorher) aus dem Ereignis selbst.
+            ablegen(ziel ?? zielAus(ev.clientY - ev.currentTarget.getBoundingClientRect().top));
+          }}
         >
           {zeigeVorschau ? (
             <AnmeldeFormular

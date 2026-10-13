@@ -67,10 +67,15 @@ describe('App der Anmeldungen (#474, #480)', () => {
     const zeilen = screen.getAllByRole('listitem').map((z) => z.textContent);
     expect(zeilen).toEqual(['Lobpreisteamnichts geplantLeitung', 'Techniknichts geplantMitglied']);
     // Die Übersicht wird mit genau den Gruppen der Person geladen.
-    expect(ladenUebersicht).toHaveBeenCalledWith([
-      { id: 9, name: 'Lobpreisteam', leitung: true },
-      { id: 7, name: 'Technik', leitung: false },
-    ]);
+    // Dazu die Gruppenart (A5: erkennt Veranstaltungen, deren Einstellungen überschrieben wurden).
+    expect(ladenUebersicht).toHaveBeenCalledWith(
+      [
+        { id: 9, name: 'Lobpreisteam', leitung: true },
+        { id: 7, name: 'Technik', leitung: false },
+      ],
+      expect.any(Date),
+      5,
+    );
   });
 
   it('keine Gruppen → erklärt, warum', async () => {

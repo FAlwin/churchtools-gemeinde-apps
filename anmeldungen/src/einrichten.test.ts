@@ -1,12 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
 import { ApiError } from '@ui/ct/fehler';
-import { einstellungenLesen, standardFormular } from '@shared/anmeldung/formular';
+import {
+  EINSTELLUNGEN_KENNUNG,
+  HINWEIS_SATZ,
+  einstellungenLesen,
+  sicherungLesen,
+  standardFormular,
+} from '@shared/anmeldung/formular';
 import {
   NichtUebernommen,
   aendereEinstellungen,
   aenderePreise,
   anmeldungenZahl,
+  einstellungenVon,
   anlegenMoeglich,
   freigeben,
   kalenderListe,
@@ -38,7 +45,7 @@ interface G {
   status: number;
   note: string;
   settings: Record<string, unknown>;
-  felder: { id: number; name: string }[];
+  felder: { id: number; name: string; note?: string | null; [k: string]: unknown }[];
   eltern: number[];
 }
 
@@ -108,7 +115,7 @@ function ct() {
         name: String(body.newName),
         status: 2,
         settings: { ...q.settings },
-        felder: q.felder.map((f) => ({ id: f.id + 1000, name: f.name })),
+        felder: q.felder.map((f) => ({ ...f, id: f.id + 1000 })),
       });
       return json(201, { data: { id } });
     }
@@ -144,11 +151,23 @@ function ct() {
       if (typeof m === 'number') return json(m, { message: 'nein' });
       return json(200, { data: m, meta: { pagination: { lastPage: 1 } } });
     }
+    r = /^\/groups\/(\d+)\/memberfields\/group\/(\d+)$/.exec(pfad);
+    if (r) {
+      const g = gruppen.get(Number(r[1]))!;
+      const f = g.felder.find((x) => x.id === Number(r![2]));
+      if (!f) return json(404, {});
+      if (m === 'DELETE') {
+        g.felder = g.felder.filter((x) => x !== f);
+        return json(204, {});
+      }
+      if (!schlucken.has('FELD')) Object.assign(f, body);
+      return json(200, { data: f });
+    }
     r = /^\/groups\/(\d+)\/memberfields\/group$/.exec(pfad);
     if (r && m === 'POST') {
       const g = gruppen.get(Number(r[1]))!;
       const id = naechste++;
-      g.felder.push({ id, name: String(body.name) });
+      g.felder.push({ ...body, id, name: String(body.name), note: null });
       return json(201, { data: { id } });
     }
     r = /^\/groups\/(\d+)\/memberfields$/.exec(pfad);
@@ -219,6 +238,17 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/** Text, der sich kaum packen lässt (Zufall mit festem Startwert) – für „zu lang“ trotz Packen. */
+function unpackbar(n: number, start: number): string {
+  let x = start + 1;
+  let t = '';
+  while (t.length < n) {
+    x = (x * 1103515245 + 12345) % 2147483648;
+    t += String.fromCharCode(33 + (x % 90));
+  }
+  return t;
+}
+
 describe('legeVeranstaltungAn', () => {
   it('Entwurf vom Typ „Anmeldung“ unter dem Team, mit Systemfeldern und deren Nummern', async () => {
     const id = await legeVeranstaltungAn({
@@ -267,10 +297,10 @@ describe('kopiereVeranstaltung', () => {
     });
     const g = gruppen.get(quelle)!;
     const e = einstellungenLesen(g.note)!;
-    g.note = g.note.replace(
-      '"termin":null',
-      '"termin":{"beginn":"2026-11-15T12:00","ende":null,"ort":"Saal","terminId":5}',
-    );
+    await aendereEinstellungen(quelle, (x) => ({
+      ...x,
+      termin: { beginn: '2026-11-15T12:00', ende: null, ort: 'Saal', terminId: 5 },
+    }));
     expect(einstellungenLesen(g.note)?.termin).not.toBeNull();
     const kopie = await kopiereVeranstaltung(quelle, 'Essen 2027');
     const k = einstellungenLesen(gruppen.get(kopie)!.note)!;
@@ -460,7 +490,8 @@ describe('Preise und Bezahlung (A4)', () => {
         art: 'eigen' as const,
         typ: 'textarea' as const,
         frage: `Frage ${i}`,
-        hilfe: 'x'.repeat(390),
+        // Ungleichmäßiger Text – gleichförmiger würde sich so gut packen, dass er hineinpasst (A5).
+        hilfe: unpackbar(390, i),
         zustand: 'freiwillig' as const,
         antworten: [],
       })),
@@ -616,6 +647,52 @@ describe('Verwalten (A4-Nachtrag)', () => {
     // Die Quelle bleibt, wie sie war.
     expect(einstellungenLesen(gruppen.get(quelle)!.note)!.bezahlung.zweck).toBe(
       'Freizeit 2026 [Nachname]',
+    );
+  });
+});
+
+describe('Speicherformat: unsichtbar, gesichert, repariert (A5)', () => {
+  const neu = () =>
+    legeVeranstaltungAn({ name: 'Essen', teamId: 7, artId: 5, vorlage: 'freizeit' });
+  const notizen = (id: number) => gruppen.get(id)!.felder.map((f) => f.note);
+
+  it('in „Infos“ steht nur der Hinweissatz; die Sicherung steht in den Systemfeldern', async () => {
+    const id = await neu();
+    const g = gruppen.get(id)!;
+    expect(g.note.split('\n')[0]).toBe(HINWEIS_SATZ);
+    expect(sicherungLesen(notizen(id))).toEqual(einstellungenLesen(g.note));
+  });
+
+  it('jemand bearbeitet die Beschreibung in ChurchTools → beim Öffnen aus der Sicherung repariert, sein Text bleibt', async () => {
+    const id = await neu();
+    const vorher = einstellungenLesen(gruppen.get(id)!.note);
+    gruppen.get(id)!.note = 'Treffpunkt ist der Parkplatz.'; // so speichert der ChurchTools-Editor
+    expect(await einstellungenVon(id)).toEqual(vorher);
+    const g = gruppen.get(id)!;
+    expect(g.note.startsWith('Treffpunkt ist der Parkplatz.\n\n[anmeldung]: #v2:')).toBe(true);
+    expect(einstellungenLesen(g.note)).toEqual(vorher);
+  });
+
+  it('ohne Sicherung lässt sich nichts reparieren → „lassen sich nicht lesen“', async () => {
+    const id = await neu();
+    gruppen.get(id)!.note = 'überschrieben';
+    for (const f of gruppen.get(id)!.felder) f.note = null;
+    await expect(einstellungenVon(id)).rejects.toMatchObject({ status: 422 });
+  });
+
+  it('altes, sichtbares Format → beim Öffnen gleich ins neue umgestellt', async () => {
+    const id = await neu();
+    const e = einstellungenLesen(gruppen.get(id)!.note)!;
+    gruppen.get(id)!.note = EINSTELLUNGEN_KENNUNG + JSON.stringify(e);
+    expect(await einstellungenVon(id)).toEqual(e);
+    expect(gruppen.get(id)!.note.split('\n')[0]).toBe(HINWEIS_SATZ);
+  });
+
+  it('nimmt ChurchTools die Sicherung nicht an → Fehler statt „gespeichert“', async () => {
+    const id = await neu();
+    schlucken.add('FELD');
+    await expect(aendereEinstellungen(id, (e) => ({ ...e, loeschfristMonate: 7 }))).rejects.toThrow(
+      'die Sicherung der Einstellungen',
     );
   });
 });

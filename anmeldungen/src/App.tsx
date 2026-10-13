@@ -56,10 +56,10 @@ export function App() {
     ladeStart()
       .then(async (start) => {
         const teamIds = start.gruppen.map((g) => g.id);
-        const [uebersicht, anlegen] = await Promise.all([
-          ladeUebersicht(start.gruppen),
-          anlegenMoeglich(teamIds),
-        ]);
+        // Erst die Gruppenart: Die Übersicht erkennt daran Veranstaltungen, deren Einstellungen in
+        // ChurchTools überschrieben wurden, und repariert sie (A5).
+        const anlegen = await anlegenMoeglich(teamIds);
+        const uebersicht = await ladeUebersicht(start.gruppen, new Date(), anlegen.artId);
         return { start, uebersicht, anlegen };
       })
       .then(

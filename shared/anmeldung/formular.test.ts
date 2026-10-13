@@ -1,7 +1,18 @@
 import { describe, expect, it } from 'vitest';
+import { deflateSync, strToU8 } from 'fflate';
 import {
   BESCHREIBUNG_MAX,
   EINSTELLUNGEN_KENNUNG,
+  HINWEIS_SATZ,
+  SICHERUNG_MAX,
+  VERWEIS,
+  einstellungenPacken,
+  istAltesFormat,
+  platzBelegt,
+  sicherungLesen,
+  sicherungTeile,
+  sichtbarerText,
+  traegtEinstellungen,
   alterAm,
   ctAblage,
   einstellungenAlsText,
@@ -236,17 +247,69 @@ describe('Einstellungen in der Gruppen-Beschreibung', () => {
     };
   }
 
-  it('hin und zurück ergibt dasselbe', () => {
+  it('hin und zurück ergibt dasselbe – sichtbar nur der Hinweissatz, der Code als unsichtbare Markdown-Zeile', () => {
     const text = einstellungenAlsText(einstellungen());
-    expect(text.startsWith(EINSTELLUNGEN_KENNUNG)).toBe(true);
+    const [sichtbar, , zeile, ...rest] = text.split('\n');
+    expect(sichtbar).toBe(HINWEIS_SATZ);
+    // Eine Markdown-Link-Definition – ChurchTools zeigt sie nicht an (gemessen 13.10.2026).
+    expect(zeile).toMatch(/^\[anmeldung\]: #v2:[A-Za-z0-9_-]+$/);
+    expect(rest).toEqual([]);
     expect(einstellungenLesen(text)).toEqual(einstellungen());
+  });
+
+  it('eigener Text in ChurchTools bleibt stehen; die Zeile wird darunter gesetzt', () => {
+    const alt = einstellungenAlsText(einstellungen());
+    const zeile = alt.split('\n').at(-1)!;
+    const vomTeam = `Treffpunkt ist der Parkplatz.\n\n${zeile}`;
+    expect(sichtbarerText(vomTeam)).toBe('Treffpunkt ist der Parkplatz.');
+    const neu = einstellungenAlsText(einstellungen(), sichtbarerText(vomTeam));
+    expect(neu.startsWith('Treffpunkt ist der Parkplatz.\n\n' + VERWEIS)).toBe(true);
+    // Die Zeile darf irgendwo stehen – auch mitten im Text.
+    expect(einstellungenLesen(`oben\n${zeile}\nunten`)).toEqual(einstellungen());
+    expect(sichtbarerText(null)).toBe(HINWEIS_SATZ);
+    expect(sichtbarerText(zeile)).toBe(HINWEIS_SATZ);
+  });
+
+  it('das alte, sichtbare Format (bis A4) wird weiter gelesen – und als alt erkannt', () => {
+    const v1 = EINSTELLUNGEN_KENNUNG + JSON.stringify(einstellungen());
+    expect(einstellungenLesen(v1)).toEqual(einstellungen());
+    expect(istAltesFormat(v1)).toBe(true);
+    expect(istAltesFormat(einstellungenAlsText(einstellungen()))).toBe(false);
+    // Beim Umstellen verschwindet der alte Block aus dem sichtbaren Text.
+    expect(sichtbarerText(v1)).toBe(HINWEIS_SATZ);
+  });
+
+  it('traegtEinstellungen: altes und neues Format, auch kaputt – ein normaler Text nicht', () => {
+    expect(traegtEinstellungen(einstellungenAlsText(einstellungen()))).toBe(true);
+    expect(traegtEinstellungen(EINSTELLUNGEN_KENNUNG + '{kaputt')).toBe(true);
+    expect(traegtEinstellungen(`${HINWEIS_SATZ}\n\n${VERWEIS}AAAA`)).toBe(true);
+    expect(traegtEinstellungen('Wir essen gemeinsam.')).toBe(false);
+    expect(traegtEinstellungen(null)).toBe(false);
+  });
+
+  it('gepackt passt eine große Freizeit, die ungepackt zu lang war (A5-Messung: 5.532 Zeichen)', () => {
+    const e = einstellungen();
+    for (let i = 0; i < 10; i++)
+      e.formular.person.push(
+        eigen('select', `Eine typische Frage Nummer ${i} an alle Teilnehmenden?`, {
+          id: `g${i}`,
+          hilfe: 'Ein kurzer Hilfetext dazu',
+          antworten: ['Antwort eins', 'Antwort zwei', 'Antwort drei', 'Antwort vier'],
+        }),
+      );
+    e.gestaltung.text = 'Wir freuen uns auf euch! Bringt gute Laune und warme Sachen mit. '.repeat(
+      12,
+    );
+    expect(JSON.stringify(e).length).toBeGreaterThan(BESCHREIBUNG_MAX);
+    expect(einstellungenAlsText(e).length).toBeLessThan(BESCHREIBUNG_MAX / 2);
+    expect(platzBelegt(e)).toBeLessThan(0.5);
   });
 
   it('zu lang → Fehler mit Zahl statt still abgeschnitten', () => {
     const e = einstellungen();
     e.formular.person.push(
       ...Array.from({ length: 20 }, (_, i) =>
-        eigen('textarea', `Frage ${i}`, { id: `l${i}`, hilfe: 'x'.repeat(390) }),
+        eigen('textarea', `Frage ${i}`, { id: `l${i}`, hilfe: unpackbar(390, i) }),
       ),
     );
     expect(() => einstellungenAlsText(e)).toThrow(`erlaubt sind ${BESCHREIBUNG_MAX}`);
@@ -281,10 +344,56 @@ describe('Einstellungen in der Gruppen-Beschreibung', () => {
     expect(gelesen?.bezahlung).not.toBe(STANDARD_BEZAHLUNG);
   });
 
-  it('kaputtes oder manipuliertes JSON wird abgelehnt, ohne zu werfen', () => {
+  it('kaputtes oder manipuliertes JSON wird abgelehnt, ohne zu werfen – in beiden Formaten', () => {
     expect(einstellungenLesen(EINSTELLUNGEN_KENNUNG + '{kaputt')).toBeNull();
+    expect(einstellungenLesen(`${VERWEIS}kaputt`)).toBeNull();
     const e = einstellungen() as unknown as { gestaltung: { farbe: string } };
     e.gestaltung.farbe = 'red;background:url(javascript:alert(1))';
     expect(einstellungenLesen(EINSTELLUNGEN_KENNUNG + JSON.stringify(e))).toBeNull();
+    // Dasselbe gepackt (an der Prüfung vorbei gepackt): beim Lesen abgelehnt.
+    const roh = btoa(String.fromCharCode(...deflateSync(strToU8(JSON.stringify(e)))))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+    expect(einstellungenLesen(`${VERWEIS}${roh}`)).toBeNull();
+    expect(() => einstellungenPacken(e as unknown as OeffentlicheEinstellungen)).toThrow();
+  });
+
+  describe('Sicherung in den Feldbeschreibungen (A5)', () => {
+    it('zurückgelesen in beliebiger Reihenfolge; fremde Notizen stören nicht', () => {
+      const text = einstellungenAlsText(einstellungen());
+      const teile = sicherungTeile(text)!;
+      expect(teile.length).toBeGreaterThanOrEqual(1);
+      expect(sicherungLesen([null, 'Hinweis vom Team', ...teile, ''])).toEqual(einstellungen());
+    });
+
+    it('große Einstellungen: mehrere Teile, jeder höchstens 1.024 Zeichen; fehlt einer → nichts', () => {
+      const e = einstellungen();
+      e.gestaltung.text = unpackbar(700, 7);
+      for (let i = 0; i < 4; i++)
+        e.formular.person.push(
+          eigen('text', unpackbar(150, i), { id: `s${i}`, hilfe: unpackbar(300, i + 9) }),
+        );
+      const teile = sicherungTeile(einstellungenAlsText(e))!;
+      expect(teile.length).toBeGreaterThan(1);
+      for (const t of teile) expect(t.length).toBeLessThanOrEqual(SICHERUNG_MAX);
+      expect(sicherungLesen([...teile].reverse())).toEqual(e);
+      expect(sicherungLesen(teile.slice(1))).toBeNull();
+    });
+
+    it('ohne Code in der Beschreibung gibt es nichts zu sichern', () => {
+      expect(sicherungTeile('Nur ein Text.')).toBeNull();
+    });
   });
 });
+
+/** Text, der sich kaum packen lässt (Zufall mit festem Startwert) – für „zu lang“ trotz Packen. */
+function unpackbar(n: number, start: number): string {
+  let x = start + 1;
+  let t = '';
+  while (t.length < n) {
+    x = (x * 1103515245 + 12345) % 2147483648;
+    t += String.fromCharCode(33 + (x % 90));
+  }
+  return t;
+}

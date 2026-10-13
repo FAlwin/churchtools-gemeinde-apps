@@ -31,6 +31,13 @@ import {
   verschieben,
   wiederherstellen,
 } from './einrichten';
+import {
+  feldEntfernen,
+  feldSpeichern,
+  felderAnlegen,
+  reihenfolgeSpeichern,
+} from './formularFelder';
+import type { Feld } from '@shared/anmeldung/formular';
 
 /**
  * Anlegen und Einrichten (A3, #486) gegen eine nachgestellte ChurchTools-Instanz, die sich merkt, was
@@ -55,7 +62,19 @@ let schlucken: Set<string>;
 let termine: Map<number, Record<string, unknown>>;
 let aufrufe: string[];
 /** Mitglieder je Gruppe; `403`/`502` = so antwortet ChurchTools auf `/members`. */
-let mitglieder: Map<number, { groupMemberStatus: string }[] | 403 | 502>;
+let mitglieder: Map<
+  number,
+  { groupMemberStatus: string; fields?: { id: number; value: unknown }[] }[] | 403 | 502
+>;
+/** Wie ChurchTools: Antwortmöglichkeiten ohne ID bekommen eine neue (gemessen A5). */
+let naechsteOption = 1;
+const mitIds = (o: unknown) =>
+  Array.isArray(o)
+    ? (o as { id?: string; name: string }[]).map((x) => ({
+        id: x.id ?? String(naechsteOption++),
+        name: x.name,
+      }))
+    : o;
 
 function json(status: number, body: unknown): Response {
   return new Response(status === 204 ? null : JSON.stringify(body), {
@@ -160,14 +179,21 @@ function ct() {
         g.felder = g.felder.filter((x) => x !== f);
         return json(204, {});
       }
-      if (!schlucken.has('FELD')) Object.assign(f, body);
+      if (!schlucken.has('FELD'))
+        Object.assign(f, body, 'options' in body ? { options: mitIds(body.options) } : {});
       return json(200, { data: f });
     }
     r = /^\/groups\/(\d+)\/memberfields\/group$/.exec(pfad);
     if (r && m === 'POST') {
       const g = gruppen.get(Number(r[1]))!;
       const id = naechste++;
-      g.felder.push({ ...body, id, name: String(body.name), note: null });
+      g.felder.push({
+        ...body,
+        id,
+        name: String(body.name),
+        note: null,
+        options: mitIds(body.options),
+      });
       return json(201, { data: { id } });
     }
     r = /^\/groups\/(\d+)\/memberfields$/.exec(pfad);
@@ -227,6 +253,7 @@ beforeEach(() => {
   termine = new Map();
   aufrufe = [];
   mitglieder = new Map();
+  naechsteOption = 1;
   vi.stubGlobal('window', {
     settings: { base_url: 'https://ct.test/' },
     location: { origin: 'https://ct.test' },
@@ -694,5 +721,159 @@ describe('Speicherformat: unsichtbar, gesichert, repariert (A5)', () => {
     await expect(aendereEinstellungen(id, (e) => ({ ...e, loeschfristMonate: 7 }))).rejects.toThrow(
       'die Sicherung der Einstellungen',
     );
+  });
+});
+
+describe('Formularfelder in ChurchTools (A5)', () => {
+  const neu = () => legeVeranstaltungAn({ name: 'Essen', teamId: 7, artId: 5, vorlage: 'einfach' });
+  const feld = (extra: Partial<Feld> = {}): Feld => ({
+    id: 'f1',
+    art: 'eigen',
+    typ: 'select',
+    frage: 'T-Shirt-Größe',
+    hilfe: '',
+    zustand: 'freiwillig',
+    antworten: ['S', 'M', 'L'],
+    ...extra,
+  });
+  const ctFeld = (id: number, feldId: string) => {
+    const e = einstellungenLesen(gruppen.get(id)!.note)!;
+    return gruppen.get(id)!.felder.find((f) => f.id === e.ctFelder[feldId])!;
+  };
+
+  it('Vorlage anlegen: Telefon, Bemerkungen, Allergien werden Spalten – Stufe 3, Pflicht wie im Formular', async () => {
+    const id = await legeVeranstaltungAn({
+      name: 'Kindertag',
+      teamId: 7,
+      artId: 5,
+      vorlage: 'kinder',
+    });
+    await felderAnlegen(id);
+    const tel = ctFeld(id, 'tel');
+    expect(tel).toMatchObject({
+      name: 'Telefon',
+      securityLevel: 3,
+      requiredInRegistrationForm: true,
+    });
+    expect(ctFeld(id, 'allergy')).toMatchObject({ useInRegistrationForm: true, securityLevel: 3 });
+    // Name, E-Mail, Geburtsdatum stehen an der Person – keine Spalte.
+    const e = einstellungenLesen(gruppen.get(id)!.note)!;
+    expect(e.ctFelder.name ?? e.ctFelder.mail ?? e.ctFelder.birth).toBeUndefined();
+    // Zweimal aufrufen legt nichts doppelt an.
+    const anzahl = gruppen.get(id)!.felder.length;
+    await felderAnlegen(id);
+    expect(gruppen.get(id)!.felder).toHaveLength(anzahl);
+  });
+
+  it('neue Frage: Spalte mit Antworten angelegt, ins Formular vor die Bemerkungen', async () => {
+    const id = await neu();
+    const e = await feldSpeichern(id, 'anmeldung', feld());
+    expect(ctFeld(id, 'f1')).toMatchObject({ name: 'T-Shirt-Größe', fieldTypeCode: 'select' });
+    expect((ctFeld(id, 'f1').options as { name: string }[]).map((o) => o.name)).toEqual([
+      'S',
+      'M',
+      'L',
+    ]);
+    const ids = e.formular.anmeldung.map((f) => f.id);
+    expect(ids.indexOf('f1')).toBe(ids.indexOf('note') - 1);
+  });
+
+  it('Antwort umbenennen behält die ID (Wahl bleibt); eine gewählte entfernte Antwort wird nur verborgen', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'anmeldung', feld());
+    const opt = () => ctFeld(id, 'f1').options as { id: string; name: string }[];
+    const [s, m, l] = opt();
+    const ctId = ctFeld(id, 'f1').id;
+    mitglieder.set(id, [{ groupMemberStatus: 'active', fields: [{ id: ctId, value: l.id }] }]);
+    // M → Medium (gleiche ID), L entfernt (aber gewählt), XL neu
+    const e = await feldSpeichern(id, 'anmeldung', feld({ antworten: ['S', 'Medium', 'XL'] }), [
+      { text: 'S', altId: s.id },
+      { text: 'Medium', altId: m.id },
+      { text: 'XL' },
+    ]);
+    expect(opt().map((o) => [o.id, o.name])).toEqual([
+      [s.id, 'S'],
+      [m.id, 'Medium'],
+      [expect.any(String), 'XL'],
+      [l.id, 'L'],
+    ]);
+    expect(e.formular.anmeldung.find((f) => f.id === 'f1')?.verborgen).toEqual(['L']);
+  });
+
+  it('Feld entfernen: ohne Antworten gelöscht, mit Antworten nur ausgeblendet', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'anmeldung', feld());
+    await feldSpeichern(
+      id,
+      'person',
+      feld({ id: 'f2', typ: 'text', frage: 'Lieblingslied', antworten: [] }),
+    );
+    const ct2 = ctFeld(id, 'f2').id;
+    mitglieder.set(id, [
+      { groupMemberStatus: 'active', fields: [{ id: ct2, value: 'Amazing Grace' }] },
+    ]);
+    expect(await feldEntfernen(id, 'anmeldung', 'f1')).toEqual({ art: 'geloescht' });
+    expect(gruppen.get(id)!.felder.some((f) => f.name === 'T-Shirt-Größe')).toBe(false);
+    expect(await feldEntfernen(id, 'person', 'f2')).toEqual({ art: 'ausgeblendet', antworten: 1 });
+    const g = gruppen.get(id)!;
+    expect(g.felder.find((f) => f.id === ct2)).toMatchObject({ useInRegistrationForm: false });
+    expect(einstellungenLesen(g.note)!.formular.person.find((f) => f.id === 'f2')?.zustand).toBe(
+      'aus',
+    );
+  });
+
+  it('gleicher Name wie ein Systemfeld oder eine andere Frage → eindeutig mit (2)', async () => {
+    const id = await neu();
+    await feldSpeichern(
+      id,
+      'person',
+      feld({ id: 'f3', typ: 'text', frage: 'Betrag', antworten: [] }),
+    );
+    expect(ctFeld(id, 'f3').name).toBe('Betrag (2)');
+  });
+
+  it('ungültiges Formular (Auswahl mit nur einer Antwort) → nichts in ChurchTools angelegt', async () => {
+    const id = await neu();
+    const vorher = gruppen.get(id)!.felder.length;
+    await expect(
+      feldSpeichern(id, 'anmeldung', feld({ antworten: ['nur eine'] })),
+    ).rejects.toMatchObject({
+      status: 422,
+    });
+    expect(gruppen.get(id)!.felder).toHaveLength(vorher);
+  });
+
+  it('Reihenfolge: nur die Einstellungen', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'anmeldung', feld());
+    await reihenfolgeSpeichern(id, 'anmeldung', [
+      'name',
+      'mail',
+      'f1',
+      'tel',
+      'note',
+      'price',
+      'priv',
+    ]);
+    expect(einstellungenLesen(gruppen.get(id)!.note)!.formular.anmeldung.map((f) => f.id)).toEqual([
+      'name',
+      'mail',
+      'f1',
+      'tel',
+      'note',
+      'price',
+      'priv',
+    ]);
+  });
+
+  it('nimmt ChurchTools das Feld nicht an → Fehler, Formular unverändert', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'anmeldung', feld());
+    const vorher = gruppen.get(id)!.note;
+    schlucken.add('FELD');
+    await expect(feldSpeichern(id, 'anmeldung', feld({ frage: 'Größe' }))).rejects.toBeInstanceOf(
+      NichtUebernommen,
+    );
+    expect(gruppen.get(id)!.note).toBe(vorher);
   });
 });

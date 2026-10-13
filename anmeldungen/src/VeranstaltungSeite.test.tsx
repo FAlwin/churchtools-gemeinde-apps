@@ -34,6 +34,8 @@ vi.mock('./einrichten', async (original) => {
   };
 });
 const m = vi.mocked(E);
+// „Neue Veranstaltung“ legt danach die Spalten an (A5) – hier nicht Gegenstand.
+vi.mock('./formularFelder', () => ({ felderAnlegen: vi.fn().mockResolvedValue(undefined) }));
 
 const ZONE = 'Europe/Berlin';
 

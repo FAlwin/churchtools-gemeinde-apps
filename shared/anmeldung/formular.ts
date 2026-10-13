@@ -51,6 +51,12 @@ export interface Feld {
   zustand: Feldzustand;
   /** Antworten bei `radio`, `select`, `multi`. */
   antworten: string[];
+  /**
+   * Antworten, die aus dem Formular entfernt wurden, die aber schon jemand gewählt hat (A5, Alwin:
+   * „ausblenden“). Sie bleiben in ChurchTools stehen – sonst wäre die Wahl der Person still weg (gemessen) –,
+   * das Formular bietet sie nicht mehr an.
+   */
+  verborgen?: string[];
 }
 
 export interface Formular {
@@ -420,6 +426,7 @@ const feldSchema = z.object({
   hilfe: z.string().max(400),
   zustand: z.enum(['aus', 'freiwillig', 'pflicht']),
   antworten: z.array(z.string().max(80)).max(20),
+  verborgen: z.array(z.string().max(80)).max(20).optional(),
 });
 const zeitpunkt = z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
 const einstellungenSchema = z.object({

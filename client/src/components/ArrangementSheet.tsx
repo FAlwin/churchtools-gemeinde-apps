@@ -84,7 +84,7 @@ export function ArrangementSheet({
     >
       {fehler && <div className={styles.err}>{fehler}</div>}
 
-      <div className={feld.form}>
+      <div>
         <div className={feld.field}>
           <span className={feld.label}>Name</span>
           <input

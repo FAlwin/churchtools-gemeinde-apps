@@ -156,10 +156,7 @@ export function Agenda({
               : showToast('Für diese Veranstaltung gibt es noch keinen Ablauf.')
           }
         >
-          <div className={`${styles.dateBadge} ${styles.dateBadgeOhne}`}>
-            <span className={styles.day}>{s.day}</span>
-            <span className={styles.month}>{s.month}</span>
-          </div>
+          <DatumKachel tag={s.day} monat={s.month} gedimmt />
           <div className={styles.info}>
             <div className={`${styles.svcName} ${styles.svcNameOhne}`}>{s.name}</div>
             {/* „Kein Ablauf" VORN: Am Handy ist die Zeile schmal, und genau das muss sichtbar bleiben. */}

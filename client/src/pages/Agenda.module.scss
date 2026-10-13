@@ -156,15 +156,7 @@
 }
 
 // ── Termin ohne Ablauf (13.10.2026) ─────────────────────────────────────────────────────────
-// Graue statt blauer Kachel und gedämpfter Name: Hier gibt es noch nichts zu öffnen.
-.dateBadgeOhne {
-  background: var(--surface3);
-
-  .day,
-  .month {
-    color: var(--text2);
-  }
-}
+// Gedämpfter Name (die graue Kachel kommt aus `DatumKachel gedimmt`): Hier gibt es noch nichts zu öffnen.
 .svcNameOhne {
   color: var(--text2);
 }

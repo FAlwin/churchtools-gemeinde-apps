@@ -24,3 +24,13 @@
   margin-top: 2px;
   opacity: 0.85;
 }
+
+// Grau statt blau (13.10.2026): Termin ohne Ablauf in der Musik-App – noch nichts zu öffnen.
+.gedimmt {
+  background: var(--surface3);
+
+  .tag,
+  .monat {
+    color: var(--text2);
+  }
+}

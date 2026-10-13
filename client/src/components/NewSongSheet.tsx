@@ -310,7 +310,7 @@ export function NewSongSheet({
           sich kein Lied anlegen – das kann ein Administrator ändern.
         </div>
       ) : (
-        <div className={feld.form}>
+        <div>
           <SongFields
             formular={formular}
             onFeld={setzeFeld}

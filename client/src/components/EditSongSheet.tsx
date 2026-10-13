@@ -39,7 +39,6 @@ import { ArrangementSheet } from './ArrangementSheet';
 import { ChordEditor } from './ChordEditor';
 import { useNotenblatt } from '../hooks/useNotenblatt';
 // Die Feld-Stile direkt aus dem Modul: Ein Re-Export über die Komponente bricht Fast Refresh.
-import feld from './SongFields.module.scss';
 import {
   useArrangementAendern,
   useArrangementAnlegen,
@@ -291,7 +290,7 @@ export function EditSongSheet({
             – bitte die Kategorie zuerst in ChurchTools setzen.
           </div>
         ) : (
-          <div className={feld.form}>
+          <div>
             <SongFields
               formular={formular}
               onFeld={(f, wert) => setFormular((alt) => ({ ...alt, [f]: wert }))}

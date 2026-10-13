@@ -116,12 +116,24 @@ mitarbeiten (z. B. über den Status oder global über die Gruppen).
 
 ## Formular und Gestaltung
 
-- **Reiter „Formular“:** Felder hinzufügen (Bausteine links), bearbeiten, verschieben, ausschalten.
-  Jedes Feld außer Name, E-Mail und Geburtsdatum wird in ChurchTools eine **Spalte der Mitgliederliste**
-  (Sicherheitsstufe 3 – das Team sieht die Antworten). Hat schon jemand geantwortet, wird ein Feld oder
-  eine Antwort beim Entfernen nur **ausgeblendet**; die Antworten bleiben.
-- **Reiter „Gestaltung“:** Vorlage, Titelbild, Farbe, Feldstil, Knöpfe, Begrüßungstext – rechts die
-  Vorschau, so wie Gäste das Formular sehen. Das Titelbild ist das Gruppenbild in ChurchTools.
+- **Reiter „Formular“** – der Baukasten. In der Mitte steht das Formular so, wie Gäste es sehen; rechts die
+  Leiste mit **Bausteine** und **Design**.
+  - **Hinzufügen:** einen Baustein an die richtige Stelle ins Formular ziehen oder antippen (er landet unter
+    dem gewählten Feld). Empfohlene Bausteine (Geburtsdatum, Telefon, Anschrift …) gibt es je einmal; ist
+    einer schon im Formular, ist seine Kachel grau.
+  - **Bearbeiten:** ein Feld anklicken – Frage, Hilfetext, Antworten und „Pflicht“ stehen direkt im Feld.
+    Verschieben am Griff links oder mit den Pfeilen, kopieren und entfernen oben rechts am Feld.
+  - **Kopf:** Name und Begrüßungstext direkt anklicken; „Titelbild ändern“ steht im Bild. Das Titelbild ist
+    das Gruppenbild in ChurchTools und öffentlich sichtbar.
+  - **Design:** Vorlage, Farbe, Feldstil, Knöpfe, Gemeindename – man sieht es sofort im Formular. Oben
+    „Computer/Handy“ und „Vorschau“ (zum Ausprobieren, ohne Bearbeiten).
+  - **Gespeichert wird von selbst**; oben steht, ob gerade gespeichert wird, und bei einem Fehler „Nochmal“.
+    Nach jeder Änderung bietet die Leiste oben „Rückgängig“ an (nicht beim Titelbild).
+  - Jedes Feld außer Name, E-Mail und Geburtsdatum wird in ChurchTools eine **Spalte der Mitgliederliste**
+    (Sicherheitsstufe 3 – das Team sieht die Antworten). Hat schon jemand geantwortet, wird ein Feld oder
+    eine Antwort beim Entfernen nur **ausgeblendet**; die Antworten bleiben, und unter „Ausgeblendet“ lässt
+    sich das Feld zurückholen. Überschrift, Hinweistext und Trennlinie sind nur Text, ohne Spalte.
+  - Ziehen geht mit der Maus; auf dem Handy Bausteine antippen und mit den Pfeilen verschieben.
 - **Wo die Einstellungen stehen:** in der Beschreibung der Gruppe, unsichtbar unter dem Satz „Diese
   Anmeldung wird mit der Erweiterung **Anmeldungen** verwaltet.“ Wer den Text in ChurchTools ändert,
   schadet nicht: Die Erweiterung stellt die Einstellungen aus ihrer Sicherung wieder her (in den

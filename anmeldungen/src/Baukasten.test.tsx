@@ -1,0 +1,357 @@
+// @vitest-environment jsdom
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
+import type { OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
+import * as FF from './formularFelder';
+import * as EI from './einrichten';
+import { ApiError } from '@ui/ct/fehler';
+import { Baukasten, PAUSE_DESIGN_MS, PAUSE_FELD_MS } from './Baukasten';
+import { fehlerMeldung } from './zustand';
+
+vi.mock('./formularFelder', () => ({
+  feldSpeichern: vi.fn(),
+  feldEntfernen: vi.fn(),
+  feldEinordnen: vi.fn(),
+  ctFelderLesen: vi.fn(),
+  antwortenZaehlen: vi.fn(),
+}));
+vi.mock('./einrichten', async (original) => ({
+  ...(await original<typeof import('./einrichten')>()),
+  aendereEinstellungen: vi.fn(),
+  bildHochladen: vi.fn(),
+  bildEntfernen: vi.fn(),
+  umbenennen: vi.fn(),
+}));
+const ff = vi.mocked(FF);
+const ei = vi.mocked(EI);
+
+/** Kinder-Event mit einer eigenen Auswahl „Gruppe“ (Spalte 501, Antworten mit IDs 11/12). */
+function einstellungen(): OeffentlicheEinstellungen {
+  const e = neueEinstellungen('kinder');
+  e.formular.person.push({
+    id: 'f1',
+    art: 'eigen',
+    typ: 'radio',
+    frage: 'Gruppe',
+    hilfe: '',
+    zustand: 'freiwillig',
+    antworten: ['Minis', 'Kids'],
+  });
+  e.ctFelder = { ...e.ctFelder, f1: 501 };
+  return e;
+}
+
+function zeigen(e = einstellungen(), darf = true) {
+  const gespeichert = vi.fn();
+  const r = render(
+    <Baukasten
+      id={91}
+      name="Kindertag"
+      gemeinde="ECG Donrath"
+      einstellungen={e}
+      bildUrl={null}
+      darf={darf}
+      heute="2026-10-13"
+      onGespeichert={gespeichert}
+    />,
+  );
+  const huelle = (feldId: string) => r.container.querySelector(`[data-feld="${feldId}"]`)!;
+  return { gespeichert, huelle, ...r };
+}
+
+const dt = () => ({ setData: vi.fn(), setDragImage: vi.fn(), effectAllowed: '' });
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  ff.feldSpeichern.mockResolvedValue({} as never);
+  ff.feldEntfernen.mockResolvedValue({ art: 'geloescht' });
+  ff.feldEinordnen.mockResolvedValue(undefined);
+  ff.ctFelderLesen.mockResolvedValue(
+    new Map([
+      [
+        501,
+        {
+          id: 501,
+          name: 'Gruppe',
+          options: [
+            { id: 11, name: 'Minis' },
+            { id: 12, name: 'Kids' },
+          ],
+        },
+      ],
+    ]),
+  );
+  ff.antwortenZaehlen.mockResolvedValue(new Map());
+  ei.aendereEinstellungen.mockResolvedValue({} as never);
+});
+afterEach(() => vi.useRealTimers());
+
+describe('Baukasten (A5): Bausteine ins Formular', () => {
+  it('antippen ohne gewähltes Feld → ans Ende von „Jedes Kind“, neue Kennung, gleich bearbeitbar', async () => {
+    const { gespeichert } = zeigen();
+    fireEvent.click(screen.getByRole('button', { name: 'Kurzer Text' }));
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
+    const [id, bereich, feld, antworten, vorId] = ff.feldSpeichern.mock.calls[0];
+    expect([id, bereich, antworten, vorId]).toEqual([91, 'person', undefined, null]);
+    expect(feld).toMatchObject({ id: 'f2', art: 'eigen', typ: 'text', frage: 'Neue Frage' });
+    expect(screen.getByLabelText('Frage')).toHaveProperty('value', 'Neue Frage');
+    await waitFor(() =>
+      expect(gespeichert).toHaveBeenCalledWith('„Kurzer Text“ hinzugefügt.', true),
+    );
+  });
+
+  it('antippen mit gewähltem Feld → gleich darunter', async () => {
+    const { huelle } = zeigen();
+    fireEvent.click(huelle('allergy'));
+    fireEvent.click(screen.getByRole('button', { name: 'Ja / Nein' }));
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
+    const [, bereich, , , vorId] = ff.feldSpeichern.mock.calls[0];
+    expect([bereich, vorId]).toEqual(['person', 'foto']);
+  });
+
+  it('empfohlene Bausteine: was schon im Formular ist, ist ausgegraut; Anschrift kommt in den Kontakt', async () => {
+    zeigen();
+    expect(screen.getByRole('button', { name: 'Telefon' }).getAttribute('aria-disabled')).toBe(
+      'true',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Telefon' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Anschrift' }));
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalledTimes(1));
+    const [, bereich, feld] = ff.feldSpeichern.mock.calls[0];
+    expect(bereich).toBe('anmeldung');
+    expect(feld).toMatchObject({ id: 'addr', art: 'standard', zustand: 'freiwillig' });
+  });
+
+  it('ziehen und auf einem Feld ablegen → an dieser Stelle', async () => {
+    const { huelle } = zeigen();
+    fireEvent.dragStart(screen.getByRole('button', { name: 'Datum' }), { dataTransfer: dt() });
+    // jsdom kennt keine Maße: Die Höhe ist 0, abgelegt wird also „nach“ dem Feld.
+    fireEvent.dragEnter(huelle('allergy'), { clientY: 5 });
+    fireEvent.drop(huelle('allergy'), { clientY: 5 });
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
+    const [, bereich, feld, , vorId] = ff.feldSpeichern.mock.calls[0];
+    expect([bereich, vorId]).toEqual(['person', 'foto']);
+    expect(feld).toMatchObject({ typ: 'date' });
+  });
+
+  it('abgelegt wird, wo losgelassen wird – auch ohne vorheriges „dragover“', async () => {
+    const { huelle } = zeigen();
+    fireEvent.dragStart(screen.getByRole('button', { name: 'Zahl' }), { dataTransfer: dt() });
+    fireEvent.drop(huelle('birth'), { clientY: 5 });
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
+    expect(ff.feldSpeichern.mock.calls[0][4]).toBe('allergy');
+  });
+
+  it('vorhandenes Feld am Griff in den anderen Bereich ziehen → nur verschoben', async () => {
+    const { huelle, container } = zeigen();
+    fireEvent.dragStart(huelle('f1').querySelector('[draggable="true"]')!, {
+      dataTransfer: dt(),
+    });
+    const zonen = screen.getAllByText('Hier ablegen');
+    expect(zonen).toHaveLength(2);
+    // Die erste Ablage gehört zum Kontakt (Bereich „anmeldung“).
+    fireEvent.drop(zonen[0]);
+    await waitFor(() => expect(ff.feldEinordnen).toHaveBeenCalledWith(91, 'f1', 'anmeldung', null));
+    expect(ff.feldSpeichern).not.toHaveBeenCalled();
+    expect(container.querySelectorAll('[data-feld="f1"]')).toHaveLength(1);
+  });
+
+  it('Pfeile verschieben ohne Ziehen (Handy, Tastatur)', async () => {
+    zeigen();
+    fireEvent.click(screen.getByRole('button', { name: 'Gruppe nach oben' }));
+    await waitFor(() => expect(ff.feldEinordnen).toHaveBeenCalledWith(91, 'f1', 'person', 'foto'));
+    expect(screen.getByRole('button', { name: 'Gruppe nach unten' })).toHaveProperty(
+      'disabled',
+      false,
+    );
+  });
+});
+
+describe('Baukasten (A5): direkt im Feld bearbeiten', () => {
+  it('nach einer Pause beim Tippen gespeichert – vorher nicht; die IDs der Antworten gehen mit', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { huelle } = zeigen();
+    fireEvent.click(huelle('f1'));
+    await waitFor(() => expect(ff.ctFelderLesen).toHaveBeenCalled());
+    fireEvent.change(screen.getByLabelText('Frage'), { target: { value: 'Welche Gruppe?' } });
+    fireEvent.change(screen.getByLabelText('Antwort 1'), { target: { value: 'Kleine' } });
+    await act(async () => {
+      vi.advanceTimersByTime(PAUSE_FELD_MS - 1);
+    });
+    expect(ff.feldSpeichern).not.toHaveBeenCalled();
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+    });
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
+    const [, bereich, feld, antworten] = ff.feldSpeichern.mock.calls[0];
+    expect(bereich).toBe('person');
+    expect(feld).toMatchObject({ frage: 'Welche Gruppe?', antworten: ['Kleine', 'Kids'] });
+    expect(antworten).toEqual([
+      { text: 'Kleine', altId: '11' },
+      { text: 'Kids', altId: '12' },
+    ]);
+  });
+
+  it('umbenannt, bevor die IDs da sind → die ID kommt trotzdem an die richtige Antwort', async () => {
+    let laden!: (m: Awaited<ReturnType<typeof FF.ctFelderLesen>>) => void;
+    ff.ctFelderLesen.mockReturnValue(new Promise((r) => (laden = r)));
+    const { huelle } = zeigen();
+    fireEvent.click(huelle('f1'));
+    fireEvent.change(screen.getByLabelText('Antwort 2'), { target: { value: 'Große' } });
+    await act(async () =>
+      laden(
+        new Map([
+          [
+            501,
+            {
+              id: 501,
+              name: 'Gruppe',
+              options: [
+                { id: 11, name: 'Minis' },
+                { id: 12, name: 'Kids' },
+              ],
+            },
+          ],
+        ]),
+      ),
+    );
+    fireEvent.click(huelle('allergy'));
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
+    expect(ff.feldSpeichern.mock.calls[0][3]).toEqual([
+      { text: 'Minis', altId: '11' },
+      { text: 'Große', altId: '12' },
+    ]);
+  });
+
+  it('ein anderes Feld wählen speichert sofort', async () => {
+    const { huelle } = zeigen();
+    fireEvent.click(huelle('tel'));
+    fireEvent.change(screen.getByLabelText('Hilfetext'), { target: { value: 'für Notfälle' } });
+    fireEvent.click(huelle('f1'));
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
+    expect(ff.feldSpeichern.mock.calls[0][2]).toMatchObject({ id: 'tel', hilfe: 'für Notfälle' });
+  });
+
+  it('ohne Frage wird nicht gespeichert – mit Hinweis', async () => {
+    const { huelle } = zeigen();
+    fireEvent.click(huelle('f1'));
+    fireEvent.change(screen.getByLabelText('Frage'), { target: { value: '  ' } });
+    fireEvent.click(huelle('allergy'));
+    expect(await screen.findByText('Nicht gespeichert: Bitte eine Frage eintragen.')).toBeTruthy();
+    expect(ff.feldSpeichern).not.toHaveBeenCalled();
+  });
+
+  it('entfernen: die Meldung sagt, was passiert ist (Antworten bleiben)', async () => {
+    ff.feldEntfernen.mockResolvedValue({ art: 'ausgeblendet', antworten: 3 });
+    const { gespeichert } = zeigen();
+    fireEvent.click(screen.getByRole('button', { name: 'Gruppe entfernen' }));
+    await waitFor(() => expect(ff.feldEntfernen).toHaveBeenCalledWith(91, 'f1'));
+    await waitFor(() =>
+      expect(gespeichert).toHaveBeenCalledWith(
+        '„Gruppe“ ausgeblendet – die 3 Antworten bleiben in ChurchTools.',
+        true,
+      ),
+    );
+  });
+
+  it('feste Felder (Name, E-Mail, Datenschutz) haben kein Werkzeug', () => {
+    const { huelle } = zeigen();
+    for (const id of ['name', 'mail', 'priv', 'pname'])
+      expect(huelle(id).querySelector('button')).toBeNull();
+  });
+});
+
+describe('Baukasten (A5): Speichern eins nach dem anderen', () => {
+  it('das zweite Speichern beginnt erst, wenn das erste fertig ist', async () => {
+    let fertig!: () => void;
+    ff.feldSpeichern.mockReturnValueOnce(new Promise((r) => (fertig = () => r({} as never))));
+    zeigen();
+    fireEvent.click(screen.getByRole('button', { name: 'Kurzer Text' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gruppe nach oben' }));
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
+    expect(ff.feldEinordnen).not.toHaveBeenCalled();
+    expect(screen.getByText('Wird gespeichert …')).toBeTruthy();
+    await act(async () => fertig());
+    await waitFor(() => expect(ff.feldEinordnen).toHaveBeenCalled());
+  });
+
+  it('ein Fehler wird gezeigt; „Nochmal“ wiederholt genau diese Aufgabe', async () => {
+    const fehler = new ApiError(504, 'Zeitüberschreitung');
+    ff.feldEinordnen.mockRejectedValueOnce(fehler);
+    zeigen();
+    fireEvent.click(screen.getByRole('button', { name: 'Gruppe nach oben' }));
+    const meldung = await screen.findByRole('alert');
+    expect(meldung.textContent).toContain(fehlerMeldung(fehler).text);
+    fireEvent.click(screen.getByRole('button', { name: 'Nochmal' }));
+    await waitFor(() => expect(ff.feldEinordnen).toHaveBeenCalledTimes(2));
+    expect(ff.feldEinordnen.mock.calls[1]).toEqual(ff.feldEinordnen.mock.calls[0]);
+  });
+});
+
+describe('Baukasten (A5): Design', () => {
+  it('mehrere Änderungen kurz hintereinander → EIN Speichern mit allen', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    zeigen();
+    const leiste = screen.getByRole('complementary', { name: 'Bausteine und Design' });
+    fireEvent.click(within(leiste).getByRole('button', { name: 'Design' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Klassisch/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gold' }));
+    await act(async () => {
+      vi.advanceTimersByTime(PAUSE_DESIGN_MS - 1);
+    });
+    expect(ei.aendereEinstellungen).not.toHaveBeenCalled();
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+    });
+    await waitFor(() => expect(ei.aendereEinstellungen).toHaveBeenCalledTimes(1));
+    const aendern = ei.aendereEinstellungen.mock.calls[0][1];
+    const neu = aendern(neueEinstellungen('kinder'));
+    expect(neu.gestaltung).toMatchObject({ vorlage: 'klassisch', farbe: '#c9a54a' });
+  });
+
+  it('Begrüßungstext direkt im Formular; beim Verlassen sofort gespeichert', async () => {
+    zeigen();
+    const text = screen.getByLabelText('Begrüßungstext');
+    fireEvent.change(text, { target: { value: 'Herzlich willkommen!' } });
+    fireEvent.blur(text);
+    await waitFor(() => expect(ei.aendereEinstellungen).toHaveBeenCalledTimes(1));
+    expect(
+      ei.aendereEinstellungen.mock.calls[0][1](neueEinstellungen('kinder')).gestaltung.text,
+    ).toBe('Herzlich willkommen!');
+  });
+
+  it('Name direkt im Kopf ändern → umbenannt', async () => {
+    ei.umbenennen.mockResolvedValue(undefined);
+    zeigen();
+    const name = screen.getByLabelText('Name der Veranstaltung');
+    fireEvent.change(name, { target: { value: 'Kinderfest' } });
+    fireEvent.blur(name);
+    await waitFor(() => expect(ei.umbenennen).toHaveBeenCalledWith(91, 'Kinderfest'));
+  });
+
+  it('Titelbild ist nicht umkehrbar (kein „Rückgängig“)', async () => {
+    ei.bildHochladen.mockResolvedValue('https://ct.test/bild.png');
+    const { gespeichert } = zeigen();
+    const datei = new File(['x'], 'b.png', { type: 'image/png' });
+    fireEvent.change(screen.getByLabelText('Titelbild hochladen'), { target: { files: [datei] } });
+    await waitFor(() => expect(gespeichert).toHaveBeenCalledWith('Titelbild hochgeladen.', false));
+  });
+});
+
+describe('Baukasten (A5): Ansichten', () => {
+  it('ohne Recht: nur das Formular, keine Bausteine, keine Hüllen', () => {
+    const { container } = zeigen(einstellungen(), false);
+    expect(screen.queryByRole('button', { name: 'Kurzer Text' })).toBeNull();
+    expect(container.querySelector('[data-feld]')).toBeNull();
+    expect(screen.getByText('Nur die Leitung kann das Formular ändern.')).toBeTruthy();
+  });
+
+  it('Vorschau: ohne Leiste, Formular zum Ausprobieren', () => {
+    const { container } = zeigen();
+    fireEvent.click(screen.getByRole('button', { name: 'Vorschau' }));
+    expect(screen.queryByRole('complementary', { name: 'Bausteine und Design' })).toBeNull();
+    expect(container.querySelector('[data-feld]')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Verbindlich anmelden' })).toBeTruthy();
+  });
+});

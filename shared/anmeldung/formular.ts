@@ -34,8 +34,18 @@ export type Feldtyp =
   | 'date'
   | 'number'
   | 'info'
+  | 'ueberschrift'
+  | 'trenner'
   | 'privacy'
   | 'price';
+
+/**
+ * **Nur Text, keine Frage** – Hinweistext, Zwischenüberschrift, Trennlinie (A5). Keine Antwort, keine Spalte in
+ * ChurchTools, kein „Pflicht“. Die EINE Stelle für diese Regel (Prüfung, Ablage, Darstellung, Baukasten).
+ */
+export function nurText(typ: Feldtyp): boolean {
+  return typ === 'info' || typ === 'ueberschrift' || typ === 'trenner';
+}
 
 /** `fest` = immer dabei, `standard` = vorgegeben, an/aus; `eigen` = aus dem Baukasten; `preis` = aus den Preisen. */
 export type Feldart = 'fest' | 'standard' | 'eigen' | 'preis';
@@ -66,18 +76,23 @@ export interface Formular {
   person: Feld[];
 }
 
-/** Bausteine des Baukastens (ohne die festen und vorgegebenen Felder). */
-export const BAUSTEINE: { typ: Feldtyp; name: string }[] = [
-  { typ: 'text', name: 'Kurzer Text' },
-  { typ: 'textarea', name: 'Langer Text' },
-  { typ: 'janein', name: 'Ja / Nein' },
-  { typ: 'check', name: 'Ankreuzen' },
-  { typ: 'radio', name: 'Eine Antwort' },
-  { typ: 'select', name: 'Auswahlliste' },
-  { typ: 'multi', name: 'Mehrere Antworten' },
-  { typ: 'date', name: 'Datum' },
-  { typ: 'number', name: 'Zahl' },
-  { typ: 'info', name: 'Hinweistext' },
+/**
+ * Bausteine des Baukastens (ohne die festen und vorgegebenen Felder): eigene Fragen und Gestaltung. Die
+ * empfohlenen Bausteine (Telefon, Geburtsdatum …) stehen in `baukasten.ts` (`EMPFOHLEN`).
+ */
+export const BAUSTEINE: { typ: Feldtyp; name: string; gruppe: 'frage' | 'gestaltung' }[] = [
+  { typ: 'text', name: 'Kurzer Text', gruppe: 'frage' },
+  { typ: 'textarea', name: 'Langer Text', gruppe: 'frage' },
+  { typ: 'janein', name: 'Ja / Nein', gruppe: 'frage' },
+  { typ: 'check', name: 'Ankreuzen', gruppe: 'frage' },
+  { typ: 'radio', name: 'Eine Antwort', gruppe: 'frage' },
+  { typ: 'select', name: 'Auswahlliste', gruppe: 'frage' },
+  { typ: 'multi', name: 'Mehrere Antworten', gruppe: 'frage' },
+  { typ: 'date', name: 'Datum', gruppe: 'frage' },
+  { typ: 'number', name: 'Zahl', gruppe: 'frage' },
+  { typ: 'ueberschrift', name: 'Überschrift', gruppe: 'gestaltung' },
+  { typ: 'info', name: 'Hinweistext', gruppe: 'gestaltung' },
+  { typ: 'trenner', name: 'Trennlinie', gruppe: 'gestaltung' },
 ];
 
 export interface Vorgaben {
@@ -173,7 +188,7 @@ const MAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 export function pruefeAntworten(f: Formular, a: Antworten): string[] {
   const fehlt: string[] = [];
   const pruefe = (x: Feld, wert: Antwort, pfad: string) => {
-    if (x.typ === 'info' || x.typ === 'price' || x.zustand === 'aus') return;
+    if (nurText(x.typ) || x.typ === 'price' || x.zustand === 'aus') return;
     if (x.typ === 'email' && typeof wert === 'string' && wert.trim() && !MAIL.test(wert.trim())) {
       fehlt.push(pfad);
       return;
@@ -203,18 +218,29 @@ export function pruefeAntworten(f: Formular, a: Antworten): string[] {
   return fehlt;
 }
 
+/**
+ * **Was an einem Feld nicht stimmt** – die EINE Regel für den Baukasten (Anzeige direkt am Feld, bevor
+ * gespeichert wird) und `pruefeFormular` (beim Speichern). `null` = in Ordnung.
+ */
+export function feldFehler(x: Feld): string | null {
+  if (x.art === 'eigen' && x.typ !== 'trenner' && !x.frage.trim())
+    return nurText(x.typ) ? 'Bitte einen Text eintragen.' : 'Bitte eine Frage eintragen.';
+  if (
+    (x.typ === 'radio' || x.typ === 'select' || x.typ === 'multi') &&
+    x.antworten.filter((s) => s.trim()).length < 2
+  )
+    return 'Bitte mindestens zwei Antworten eintragen.';
+  return null;
+}
+
 /** Was an einem Formular nicht stimmt – beim Speichern im Baukasten. */
 export function pruefeFormular(f: Formular): string[] {
   const fehler: string[] = [];
   const ids = alleFelder(f).map((x) => x.id);
   if (new Set(ids).size !== ids.length) fehler.push('Zwei Felder haben dieselbe Kennung.');
   for (const x of alleFelder(f)) {
-    if (x.art === 'eigen' && !x.frage.trim()) fehler.push('Ein Feld hat keine Frage.');
-    if (
-      (x.typ === 'radio' || x.typ === 'select' || x.typ === 'multi') &&
-      x.antworten.filter((s) => s.trim()).length < 2
-    )
-      fehler.push(`„${x.frage}“ braucht mindestens zwei Antworten.`);
+    const fehlt = feldFehler(x);
+    if (fehlt) fehler.push(x.frage.trim() ? `„${x.frage}“: ${fehlt}` : fehlt);
   }
   for (const id of ['name', 'mail', 'priv'])
     if (!f.anmeldung.some((x) => x.id === id && x.zustand === 'pflicht'))
@@ -252,6 +278,8 @@ export function ctAblage(x: Feld): CtAblage {
     case 'email':
       return { ort: 'person', feld: 'email' };
     case 'info':
+    case 'ueberschrift':
+    case 'trenner':
     case 'price':
     case 'privacy':
       return { ort: 'keins' };
@@ -421,6 +449,9 @@ const feldSchema = z.object({
     'date',
     'number',
     'info',
+    // Seit A5 (Baukasten). Neue Werte im enum lassen ältere Einstellungen lesbar.
+    'ueberschrift',
+    'trenner',
     'privacy',
     'price',
   ]),

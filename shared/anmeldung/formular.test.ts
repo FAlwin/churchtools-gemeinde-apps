@@ -17,7 +17,9 @@ import {
   ctAblage,
   einstellungenAlsText,
   einstellungenLesen,
+  feldFehler,
   geburtsdatumAn,
+  nurText,
   pruefeAntworten,
   pruefeFormular,
   setzeGeburtsdatum,
@@ -192,9 +194,31 @@ describe('pruefeFormular', () => {
       eigen('text', '', { id: 'q8' }),
     );
     expect(pruefeFormular(f)).toEqual([
-      '„Größe“ braucht mindestens zwei Antworten.',
-      'Ein Feld hat keine Frage.',
+      '„Größe“: Bitte mindestens zwei Antworten eintragen.',
+      'Bitte eine Frage eintragen.',
     ]);
+  });
+  it('Text-Bausteine (A5): Trennlinie ohne Text ist in Ordnung, Überschrift und Hinweis brauchen einen', () => {
+    const f = standardFormular();
+    f.person.push(
+      eigen('trenner', '', { id: 'q7' }),
+      eigen('ueberschrift', ' ', { id: 'q6' }),
+      eigen('info', 'Bitte Sonnencreme mitbringen', { id: 'q5' }),
+    );
+    expect(pruefeFormular(f)).toEqual(['Bitte einen Text eintragen.']);
+    // Einzeln, weil `pruefeFormular` gleiche Meldungen zusammenfasst – sonst fiele eine leere Trennlinie hier nicht auf.
+    expect(feldFehler(eigen('trenner', '', { id: 'q7' }))).toBeNull();
+    expect(feldFehler(eigen('info', '', { id: 'q5' }))).toBe('Bitte einen Text eintragen.');
+  });
+  it('Text-Bausteine haben keine Spalte und keine Pflicht – auch auf „Pflicht“ gesetzt nicht', () => {
+    for (const typ of ['info', 'ueberschrift', 'trenner'] as const) {
+      expect(nurText(typ)).toBe(true);
+      expect(ctAblage(eigen(typ, 'x'))).toEqual({ ort: 'keins' });
+    }
+    expect(nurText('text')).toBe(false);
+    const f = standardFormular();
+    f.person.push(eigen('ueberschrift', 'Zum Kind', { id: 'q4', zustand: 'pflicht' }));
+    expect(pruefeAntworten(f, { anmeldung: {}, personen: [{}] })).not.toContain('personen.0.q4');
   });
   it('ohne E-Mail ist das Formular ungültig', () => {
     const f = standardFormular();

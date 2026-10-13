@@ -29,8 +29,7 @@ import {
 } from './Bearbeiten';
 import { PreisFensterZeigen, PreiseKarte, ProbeRechnen, type PreisFenster } from './Preise';
 import { VerwaltenFenster } from './Verwalten';
-import { FormularReiter } from './FormularReiter';
-import { GestaltungReiter } from './GestaltungReiter';
+import { Baukasten } from './Baukasten';
 import { Segment } from '@ui/bedienung/Segment';
 import type { Aenderung } from './Rueckgaengig';
 import { WER_TEXT, datumText } from './anzeige';
@@ -45,11 +44,14 @@ import f from './Formular.module.scss';
  * Anmeldung, wer sich anmeldet, Preise und Bezahlung (A4), Löschfrist; dazu Freigeben und „Probe rechnen“.
  * Bearbeiten darf, wem ChurchTools es erlaubt (Leitung und Organisatoren des Teams) – alle anderen sehen
  * die Karten ohne „Bearbeiten“ und dürfen probeweise rechnen.
- * Formular und Gestaltung (A5) und die Anmeldungsliste (A7) folgen.
+ * Daneben der Reiter „Formular“ (A5): der Baukasten mit Bausteinen und Design. Die Anmeldungsliste (A7) folgt.
  */
 
-/** Die Reiter einer Veranstaltung (A5). Die Anmeldungsliste (A7) kommt dazu. */
-export type Reiter = 'veranstaltung' | 'formular' | 'gestaltung';
+/**
+ * Die Reiter einer Veranstaltung (A5). „Gestaltung“ war bis zum Umbau am 13.10.2026 ein eigener Reiter – jetzt
+ * steckt sie im Baukasten (Leiste „Design“). Die Anmeldungsliste (A7) kommt dazu.
+ */
+export type Reiter = 'veranstaltung' | 'formular';
 
 interface Daten {
   name: string;
@@ -258,20 +260,11 @@ export function VeranstaltungSeite({
         options={[
           { value: 'veranstaltung', label: 'Veranstaltung' },
           { value: 'formular', label: 'Formular' },
-          { value: 'gestaltung', label: 'Gestaltung' },
         ]}
       />
 
       {reiter === 'formular' && (
-        <FormularReiter
-          id={id}
-          einstellungen={e}
-          darf={darf}
-          onGespeichert={(text) => gespeichert(text)()}
-        />
-      )}
-      {reiter === 'gestaltung' && (
-        <GestaltungReiter
+        <Baukasten
           id={id}
           name={daten.name}
           gemeinde={gemeinde}

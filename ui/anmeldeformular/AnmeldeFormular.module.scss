@@ -911,3 +911,16 @@
   background: transparent;
   padding: 0;
 }
+
+// Baukasten-Bausteine „Überschrift“ und „Trennlinie“ (A5).
+.pv .zwischen h3 {
+  font-family: var(--p-head);
+  font-size: 1.13em;
+  margin: 6px 0 0;
+}
+.pv .trenner {
+  border: 0;
+  border-top: 1px solid var(--p-line);
+  margin: 4px 0;
+  width: 100%;
+}

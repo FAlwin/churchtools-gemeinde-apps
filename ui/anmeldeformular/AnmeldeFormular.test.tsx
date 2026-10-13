@@ -159,3 +159,73 @@ describe('Anmeldeformular (A5)', () => {
     expect(textAufFarbe('#c9a54a')).toBe('#1a1410');
   });
 });
+
+describe('Haken für den Baukasten (A5)', () => {
+  const mitText = () => {
+    const e = freizeit();
+    e.formular.person.push(
+      {
+        id: 'f2',
+        art: 'eigen',
+        typ: 'ueberschrift',
+        frage: 'Zum Essen',
+        hilfe: '',
+        zustand: 'freiwillig',
+        antworten: [],
+      },
+      {
+        id: 'f3',
+        art: 'eigen',
+        typ: 'trenner',
+        frage: '',
+        hilfe: '',
+        zustand: 'pflicht',
+        antworten: [],
+      },
+    );
+    return e;
+  };
+
+  it('Überschrift und Trennlinie: ohne Eingabe, ohne „Pflicht“-Stern', () => {
+    const { container } = zeigen(mitText());
+    expect(screen.getAllByRole('heading', { name: 'Zum Essen' }).length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('hr').length).toBeGreaterThan(0);
+    // Kein Stern an der Überschrift; dass eine Trennlinie auf „Pflicht“ nichts aufhält, prüft formular.test.ts.
+    expect(screen.getAllByRole('heading', { name: 'Zum Essen' })[0].textContent).toBe('Zum Essen');
+  });
+
+  it('jedes sichtbare Feld in der Hülle, eine Person, Ablage je Bereich, eigener Kopf; schickt nichts ab', () => {
+    const gesehen: string[] = [];
+    render(
+      <AnmeldeFormular
+        ansicht={{ name: 'Freizeit', gemeinde: 'ECG', einstellungen: mitText() }}
+        heute={HEUTE}
+        vorschau
+        start={musterAntworten(mitText(), HEUTE)}
+        baukasten={{
+          feld: (f, bereich, inhalt) => {
+            gesehen.push(`${bereich}:${f.id}`);
+            return <div data-testid={`h-${f.id}`}>{inhalt}</div>;
+          },
+          ende: (bereich) => <div>Ablage {bereich}</div>,
+          titel: <span>Eigener Titel</span>,
+          einleitung: <span>Eigene Begrüßung</span>,
+          bild: <button type="button">Bild</button>,
+        }}
+      />,
+    );
+    // Musterdaten haben zwei Personen – der Baukasten zeigt eine.
+    expect(gesehen.filter((x) => x === 'person:pname')).toHaveLength(1);
+    expect(gesehen).toContain('anmeldung:mail');
+    expect(gesehen).toContain('anmeldung:priv');
+    expect(gesehen).not.toContain('person:foto'); // aus
+    expect(screen.getByText('Ablage anmeldung')).toBeTruthy();
+    expect(screen.getByText('Ablage person')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Eigener Titel' })).toBeTruthy();
+    expect(screen.getByText('Eigene Begrüßung')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Entfernen' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Verbindlich anmelden' }));
+    expect(screen.queryByText('Danke für die Anmeldung!')).toBeNull();
+    expect(screen.queryByText(/abgeschickt wird hier nichts/)).toBeNull();
+  });
+});

@@ -188,8 +188,9 @@ churchtools-gemeinde-apps/
 │       ├── types/           # server-spezifische Typen
 │       └── utils/           # Hilfsfunktionen (u. a. isoTag.ts = die eine Datums-Formatierung)
 ├── shared/types/            # geteilte Typen (Service, SetlistSong, Setlist, …)
-├── shared/anmeldung/        # Regeln der Anmeldungen: preis, formular (#474), uebersicht (#480), vorlagen, termin, felder, rechte (#486), bezahlung (#507), gestaltung (A5)
-├── anmeldungen/             # Anmeldungen: ChurchTools-Erweiterung für Veranstalter (#474, nur Erweiterung)
+├── shared/anmeldung/        # Regeln der Anmeldungen: preis, formular (#474), uebersicht (#480), vorlagen, termin, felder, rechte (#486), bezahlung (#507), gestaltung + baukasten (A5)
+├── anmeldungen/             # Anmeldungen: ChurchTools-Erweiterung für Veranstalter (#474, nur Erweiterung);
+│                            #   Formular-Baukasten = Baukasten.tsx (+ BaukastenLeiste, FeldBearbeiten, useSchlange)
 ├── formular/                # Anmeldungen: öffentliches Formular, statisch (GitHub Pages), noch Platzhalter
 ├── dienstplaner/            # Dienstplaner: ChurchTools-Erweiterung für alle Dienstgruppen (Bauplan E2, vorerst nur Erweiterung)
 └── ui/                      # gemeinsame Browser-Bausteine aller Apps (Alias @ui, Dienstplaner E1, Anmeldungen #474)
@@ -198,7 +199,7 @@ churchtools-gemeinde-apps/
     ├── fenster/             # Sheet (Modal), useOverlayKeyboardInset, appHeight
     ├── bedienung/           # Segment, Schalter, KnopfReihe, ReiterLeiste (untere Reiter), useMedienAbfrage
     ├── teilen/              # shareFile, sharePdf
-    ├── anmeldeformular/     # Anmeldeformular, wie Gäste es sehen (A5): Vorschau in der Erweiterung, öffentlich ab A6
+    ├── anmeldeformular/     # Anmeldeformular, wie Gäste es sehen (A5): Baukasten + Vorschau in der Erweiterung, öffentlich ab A6
     ├── ct/                  # Verbindung einer Erweiterung zu ChurchTools: verbindung.ts, fehler.ts (ApiError), basis.ts,
     │                        #   fehlerMeldung.ts (was bei Fehlern gesagt wird), ich.ts (wer angemeldet ist, Gemeinde, Gruppen)
     └── erweiterung/         # Erweiterungs-Bau: viteErweiterung (fasst zusammen), cssBereich, kopfInDenInhalt;

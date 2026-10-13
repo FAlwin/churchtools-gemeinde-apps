@@ -34,13 +34,9 @@ import {
   verschieben,
   wiederherstellen,
 } from './einrichten';
-import {
-  feldEntfernen,
-  feldSpeichern,
-  felderAnlegen,
-  reihenfolgeSpeichern,
-} from './formularFelder';
+import { feldEntfernen, feldSpeichern, felderAnlegen, feldEinordnen } from './formularFelder';
 import type { Feld } from '@shared/anmeldung/formular';
+import { EMPFOHLEN } from '@shared/anmeldung/baukasten';
 
 /**
  * Anlegen und Einrichten (A3, #486) gegen eine nachgestellte ChurchTools-Instanz, die sich merkt, was
@@ -832,9 +828,9 @@ describe('Formularfelder in ChurchTools (A5)', () => {
     mitglieder.set(id, [
       { groupMemberStatus: 'active', fields: [{ id: ct2, value: 'Amazing Grace' }] },
     ]);
-    expect(await feldEntfernen(id, 'anmeldung', 'f1')).toEqual({ art: 'geloescht' });
+    expect(await feldEntfernen(id, 'f1')).toEqual({ art: 'geloescht' });
     expect(gruppen.get(id)!.felder.some((f) => f.name === 'T-Shirt-Größe')).toBe(false);
-    expect(await feldEntfernen(id, 'person', 'f2')).toEqual({ art: 'ausgeblendet', antworten: 1 });
+    expect(await feldEntfernen(id, 'f2')).toEqual({ art: 'ausgeblendet', antworten: 1 });
     const g = gruppen.get(id)!;
     expect(g.felder.find((f) => f.id === ct2)).toMatchObject({ useInRegistrationForm: false });
     expect(einstellungenLesen(g.note)!.formular.person.find((f) => f.id === 'f2')?.zustand).toBe(
@@ -863,27 +859,58 @@ describe('Formularfelder in ChurchTools (A5)', () => {
     expect(gruppen.get(id)!.felder).toHaveLength(vorher);
   });
 
-  it('Reihenfolge: nur die Einstellungen', async () => {
+  const ids = (id: number) => {
+    const f = einstellungenLesen(gruppen.get(id)!.note)!.formular;
+    return { anmeldung: f.anmeldung.map((x) => x.id), person: f.person.map((x) => x.id) };
+  };
+
+  it('Verschieben (Baukasten): nur die Einstellungen, auch in den anderen Bereich', async () => {
     const id = await neu();
     await feldSpeichern(id, 'anmeldung', feld());
-    await reihenfolgeSpeichern(id, 'anmeldung', [
-      'name',
-      'mail',
-      'f1',
-      'tel',
-      'note',
-      'price',
-      'priv',
-    ]);
-    expect(einstellungenLesen(gruppen.get(id)!.note)!.formular.anmeldung.map((f) => f.id)).toEqual([
-      'name',
-      'mail',
-      'f1',
-      'tel',
-      'note',
-      'price',
-      'priv',
-    ]);
+    const ctVorher = gruppen.get(id)!.felder.length;
+    await feldEinordnen(id, 'f1', 'anmeldung', 'tel');
+    expect(ids(id).anmeldung).toEqual(['name', 'mail', 'f1', 'tel', 'note', 'price', 'priv']);
+    await feldEinordnen(id, 'f1', 'person', null);
+    expect(ids(id).anmeldung).not.toContain('f1');
+    expect(ids(id).person.at(-1)).toBe('f1');
+    expect(gruppen.get(id)!.felder).toHaveLength(ctVorher);
+  });
+
+  it('Ablegen an einer Stelle: neues Feld vor `vorId`, Spalte angelegt', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'anmeldung', feld(), undefined, 'tel');
+    expect(ids(id).anmeldung).toEqual(['name', 'mail', 'f1', 'tel', 'note', 'price', 'priv']);
+    expect(ctFeld(id, 'f1').name).toBe('T-Shirt-Größe');
+  });
+
+  it('empfohlenes Feld (Anschrift) einfügen und wieder herausnehmen: Spalte bleibt, nur ausgeschaltet', async () => {
+    const id = await neu();
+    const anschrift = EMPFOHLEN.find((x) => x.id === 'addr')!.feld;
+    await feldSpeichern(id, 'anmeldung', anschrift, undefined, null);
+    expect(ids(id).anmeldung).toEqual(['name', 'mail', 'tel', 'addr', 'note', 'price', 'priv']);
+    expect(ctFeld(id, 'addr')).toMatchObject({ name: 'Anschrift', useInRegistrationForm: true });
+    expect(await feldEntfernen(id, 'addr')).toEqual({ art: 'ausgeblendet', antworten: 0 });
+    expect(ctFeld(id, 'addr')).toMatchObject({ useInRegistrationForm: false });
+    expect(
+      einstellungenLesen(gruppen.get(id)!.note)!.formular.anmeldung.find((f) => f.id === 'addr')
+        ?.zustand,
+    ).toBe('aus');
+  });
+
+  it('ausgeschaltetes Feld an eine Stelle ziehen → eingeschaltet UND dorthin verschoben', async () => {
+    const id = await neu();
+    const foto = einstellungenLesen(gruppen.get(id)!.note)!.formular.person.find(
+      (f) => f.id === 'foto',
+    )!;
+    expect(foto.zustand).toBe('aus');
+    await feldSpeichern(id, 'person', { ...foto, zustand: 'freiwillig' }, undefined, 'allergy');
+    expect(ids(id).person).toEqual(['pname', 'birth', 'foto', 'allergy']);
+    expect(ctFeld(id, 'foto')).toMatchObject({ useInRegistrationForm: true });
+  });
+
+  it('Name, E-Mail, Datenschutz lassen sich nicht entfernen', async () => {
+    const id = await neu();
+    await expect(feldEntfernen(id, 'mail')).rejects.toMatchObject({ status: 422 });
   });
 
   it('nimmt ChurchTools das Feld nicht an → Fehler, Formular unverändert', async () => {

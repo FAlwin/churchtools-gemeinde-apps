@@ -9,15 +9,27 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Neu (Anmeldungen)
 
-- **Formular-Baukasten, Gestaltung und Vorschau** (Bauplan A5).
-  - **Reiter „Formular“:** Bausteine (Text, Ja/Nein, Ankreuzen, Auswahl, Datum, Zahl, Hinweistext …)
-    für „einmal pro Anmeldung“ oder „für jede Person“, jedes Feld so, wie Gäste es sehen; ein Fenster
-    je Feld (Frage, Hilfe, Antworten, Pflicht/freiwillig/aus), verschieben, Platzanzeige. **Jedes Feld
-    wird eine Spalte der Mitgliederliste** auf Sicherheitsstufe 3 (Alwin: „nur das Team“).
-    Antworten umbenennen behält die Wahl der Personen; **entfernen mit vorhandenen Antworten blendet
-    nur aus** (Alwin) – gemessen: Löschen hätte die Antworten still entfernt.
-  - **Reiter „Gestaltung“:** sechs Vorlagen, Titelbild (Gruppenbild), Farbe, Feldstil, Knöpfe,
-    Begrüßungstext; Vorschau Handy/Computer mit Musterdaten. Schriften ohne Google (Datenschutz).
+- **Formular-Baukasten mit Design und Vorschau** (Bauplan A5) – ein Reiter „Formular“, aufgebaut nach Alwins
+  Vorbildern vom 13.10.2026 (Baukasten wie Campflow, Design wie Jotform, Bearbeiten wie Google Forms).
+  - **In der Mitte das echte Formular** – dieselbe Darstellung wie für Gäste. Bausteine aus der Leiste rechts
+    an die richtige Stelle **ziehen** (eine blaue Linie zeigt, wo sie landen) oder **antippen** (unter das
+    gewählte Feld). Felder **direkt im Formular bearbeiten**: Frage, Hilfetext, Antworten, „Pflicht“.
+    Verschieben am Griff oder mit den Pfeilen (Handy, Tastatur), kopieren, entfernen. Name und
+    Begrüßungstext direkt im Kopf, „Titelbild ändern“ im Bild.
+  - **Bausteine:** empfohlene mit fester Bedeutung (Geburtsdatum, Telefon, Anschrift, Notfallkontakt,
+    Allergien, Gesundheit, Foto-Erlaubnis, Bemerkungen – je einmal), eigene Fragen (Text, Ja/Nein,
+    Ankreuzen, Auswahl, Mehrfachauswahl, Datum, Zahl) und Gestaltung (Überschrift, Hinweistext,
+    Trennlinie). Suche, Platzanzeige, ausgeblendete Felder lassen sich zurückholen.
+  - **Design** in derselben Leiste: sechs Vorlagen mit Vorschaubild, Farben, Feldstil, Knöpfe,
+    Titelbild (Gruppenbild), Gemeindename. Jede Änderung sieht man sofort im Formular. Umschalter
+    Computer/Handy und „Vorschau“ zum Ausprobieren mit Musterdaten. Schriften ohne Google (Datenschutz).
+  - **Gespeichert wird von selbst** – nach dem Ziehen, beim Verlassen eines Felds, nach einer kurzen
+    Pause beim Tippen –, eins nach dem anderen, mit „Rückgängig“; scheitert etwas, steht es oben mit
+    „Nochmal“.
+  - **Jedes Feld wird eine Spalte der Mitgliederliste** auf Sicherheitsstufe 3 (Alwin: „nur das Team“).
+    Antworten umbenennen behält die Wahl der Personen – auch wenn man umbenennt, bevor die Antworten aus
+    ChurchTools geladen sind; **entfernen mit vorhandenen Antworten blendet nur aus** (Alwin) – gemessen:
+    Löschen hätte die Antworten still entfernt. Empfohlene Felder werden nur ausgeschaltet.
   - **Einstellungen unsichtbar** (Alwin: der Datenblock in „Infos“ „sieht nicht gut aus“): dort
     steht nur noch ein Satz, die Einstellungen stehen gepackt als unsichtbare Markdown-Zeile darunter
     (gemessen: ChurchTools zeigt sie nicht an). Gepackt ist der Block rund ein Drittel so lang – auch

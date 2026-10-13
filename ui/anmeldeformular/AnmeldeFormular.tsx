@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import {
   alterAm,
   geburtsdatumAn,
+  nurText,
   pruefeAntworten,
   type Antwort,
   type Antworten,
@@ -13,8 +14,9 @@ import { leereAntworten, textAufFarbe } from './daten';
 import s from './AnmeldeFormular.module.scss';
 
 /**
- * **Das Anmeldeformular, wie Gäste es sehen** (A5) – EINE Darstellung für die Vorschau in der Erweiterung
- * (Reiter „Gestaltung“, Baukasten) und das öffentliche Formular (A6). Rechnet mit `berechnePreis` und prüft mit
+ * **Das Anmeldeformular, wie Gäste es sehen** (A5) – EINE Darstellung für den Baukasten in der Erweiterung
+ * (dort mit `baukasten`: Felder auswählen, ziehen, direkt bearbeiten), die Vorschau und das öffentliche
+ * Formular (A6). Rechnet mit `berechnePreis` und prüft mit
  * `pruefeAntworten` – dieselben Regeln wie die Nachprüfung. Aussehen nach Vorlage, Farbe, Feldstil, Knöpfen
  * (`AnmeldeFormular.module.scss`, aus dem Entwurf vom 09.10.2026).
  */
@@ -29,6 +31,20 @@ export interface Ansicht {
   freiePlaetze?: number | null;
   /** Letzter Anmeldetag, `YYYY-MM-DD`. */
   anmeldeschluss?: string | null;
+}
+
+/**
+ * **Haken für den Baukasten** – damit der Baukasten genau dieses Formular zeigt und nur drumherum eingreift:
+ * eine Hülle um jedes Feld (auswählen, ziehen, direkt bearbeiten), eine Ablegestelle am Ende jedes Bereichs,
+ * und Titel, Begrüßung und Titelbild zum Bearbeiten im Kopf. Mit Haken zeigt das Formular nur eine Person und
+ * schickt nichts ab.
+ */
+export interface BaukastenHaken {
+  feld: (f: Feld, bereich: 'anmeldung' | 'person', inhalt: ReactNode) => ReactNode;
+  ende: (bereich: 'anmeldung' | 'person') => ReactNode;
+  titel?: ReactNode;
+  einleitung?: ReactNode;
+  bild?: ReactNode;
 }
 
 const WOCHENTAG = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
@@ -55,7 +71,7 @@ function Pflicht({ f }: { f: Feld }) {
         *
       </span>
     );
-  if (f.zustand === 'freiwillig' && f.typ !== 'info')
+  if (f.zustand === 'freiwillig' && !nurText(f.typ))
     return <span className={s.opt}> (freiwillig)</span>;
   return null;
 }
@@ -88,6 +104,15 @@ export function FeldEingabe({
     hatFehler(unter) ? <span className={s.err}>{text}</span> : null;
   const hilfe = f.hilfe ? <span className={s.help}>{f.hilfe}</span> : null;
   const id = `af-${pfad}`;
+
+  if (f.typ === 'ueberschrift')
+    return (
+      <div className={`${s.pf} ${s.zwischen}`}>
+        <h3>{f.frage}</h3>
+        {f.hilfe && <span className={s.help}>{f.hilfe}</span>}
+      </div>
+    );
+  if (f.typ === 'trenner') return <hr className={s.trenner} />;
 
   if (f.typ === 'info')
     return (
@@ -295,12 +320,15 @@ export function AnmeldeFormular({
   heute,
   vorschau = false,
   start,
+  baukasten,
 }: {
   ansicht: Ansicht;
   heute: string;
   vorschau?: boolean;
   /** Anfangswerte (Vorschau: `musterAntworten`). */
   start?: Antworten;
+  /** Im Baukasten: Felder auswählen, ziehen, bearbeiten (siehe `BaukastenHaken`). */
+  baukasten?: BaukastenHaken;
 }) {
   const e = ansicht.einstellungen;
   const g = e.gestaltung;
@@ -368,7 +396,12 @@ export function AnmeldeFormular({
     ...(ansicht.bildUrl ? { '--user-img': `url("${ansicht.bildUrl}")` } : {}),
   } as React.CSSProperties;
 
+  const huelle = (f: Feld, bereich: 'anmeldung' | 'person', inhalt: ReactNode) =>
+    baukasten ? <Fragment key={f.id}>{baukasten.feld(f, bereich, inhalt)}</Fragment> : inhalt;
+  const personen = baukasten ? antworten.personen.slice(0, 1) : antworten.personen;
+
   function absenden() {
+    if (baukasten) return;
     const offen = pruefeAntworten(e.formular, antworten);
     setFehler(offen);
     if (offen.length === 0) setFertig(true);
@@ -383,10 +416,11 @@ export function AnmeldeFormular({
           <header className={s.hero}>
             <div className={s['hero-in']}>
               {g.gemeindename && ansicht.gemeinde && <p className={s.org}>{ansicht.gemeinde}</p>}
-              <h1>{ansicht.name}</h1>
+              <h1>{baukasten?.titel ?? ansicht.name}</h1>
               <p className={s.sub}>{unter}</p>
               <div className={s.orn} aria-hidden="true" />
             </div>
+            {baukasten?.bild}
           </header>
           <div className={s.info}>
             <div className={s.facts}>
@@ -404,7 +438,7 @@ export function AnmeldeFormular({
                 <b>{preisKurz(e.preis)}</b>
               </span>
             </div>
-            {g.text && <p className={s.intro}>{g.text}</p>}
+            {baukasten?.einleitung ?? (g.text && <p className={s.intro}>{g.text}</p>)}
           </div>
         </aside>
         <div className={s.main}>
@@ -436,16 +470,21 @@ export function AnmeldeFormular({
             >
               <section className={s.sec}>
                 <h2>{kinder ? 'Kontakt der Eltern' : 'Deine Kontaktdaten'}</h2>
-                {kopf.map((f) => (
-                  <FeldEingabe
-                    key={f.id}
-                    feld={f}
-                    pfad={`anmeldung.${f.id}`}
-                    wert={antworten.anmeldung[f.id]}
-                    onWert={(w) => setAnmeldung(f.id, w)}
-                    fehler={fehler}
-                  />
-                ))}
+                {kopf.map((f) =>
+                  huelle(
+                    f,
+                    'anmeldung',
+                    <FeldEingabe
+                      key={f.id}
+                      feld={f}
+                      pfad={`anmeldung.${f.id}`}
+                      wert={antworten.anmeldung[f.id]}
+                      onWert={(w) => setAnmeldung(f.id, w)}
+                      fehler={fehler}
+                    />,
+                  ),
+                )}
+                {baukasten?.ende('anmeldung')}
               </section>
               <section className={s.sec}>
                 <h2>
@@ -455,13 +494,13 @@ export function AnmeldeFormular({
                       ? 'Wer nimmt teil?'
                       : 'Wer nimmt teil?'}
                 </h2>
-                {antworten.personen.map((p, i) => (
+                {personen.map((p, i) => (
                   <div key={i} className={s.person}>
                     <div className={s['person-top']}>
                       <strong>
                         {kinder ? 'Kind' : 'Person'} {i + 1}
                       </strong>
-                      {antworten.personen.length > 1 && (
+                      {!baukasten && antworten.personen.length > 1 && (
                         <button
                           type="button"
                           className={s.xbtn}
@@ -476,23 +515,30 @@ export function AnmeldeFormular({
                         </button>
                       )}
                     </div>
-                    {personFelder.map((f) => (
-                      <FeldEingabe
-                        key={f.id}
-                        feld={f}
-                        pfad={`personen.${i}.${f.id}`}
-                        wert={p[f.id]}
-                        onWert={(w) => setPerson(i, f.id, w)}
-                        fehler={fehler}
-                      />
-                    ))}
+                    {personFelder.map((f) =>
+                      huelle(
+                        f,
+                        'person',
+                        <FeldEingabe
+                          key={f.id}
+                          feld={f}
+                          pfad={`personen.${i}.${f.id}`}
+                          wert={p[f.id]}
+                          onWert={(w) => setPerson(i, f.id, w)}
+                          fehler={fehler}
+                        />,
+                      ),
+                    )}
+                    {baukasten?.ende('person')}
                   </div>
                 ))}
                 {e.wer !== 'einzeln' && (
                   <button
                     type="button"
                     className={s.addbtn}
-                    onClick={() => setAntworten((a) => ({ ...a, personen: [...a.personen, {}] }))}
+                    onClick={() =>
+                      !baukasten && setAntworten((a) => ({ ...a, personen: [...a.personen, {}] }))
+                    }
                   >
                     + {kinder ? 'Weiteres Kind' : 'Weitere Person'}
                   </button>
@@ -550,17 +596,21 @@ export function AnmeldeFormular({
                 </section>
               )}
               <section className={s.sec}>
-                {ende.map((f) => (
-                  <FeldEingabe
-                    key={f.id}
-                    feld={f}
-                    pfad={`anmeldung.${f.id}`}
-                    wert={antworten.anmeldung[f.id]}
-                    onWert={(w) => setAnmeldung(f.id, w)}
-                    fehler={fehler}
-                    loeschtag={loeschtag}
-                  />
-                ))}
+                {ende.map((f) =>
+                  huelle(
+                    f,
+                    'anmeldung',
+                    <FeldEingabe
+                      key={f.id}
+                      feld={f}
+                      pfad={`anmeldung.${f.id}`}
+                      wert={antworten.anmeldung[f.id]}
+                      onWert={(w) => setAnmeldung(f.id, w)}
+                      fehler={fehler}
+                      loeschtag={loeschtag}
+                    />,
+                  ),
+                )}
                 {kostet && (
                   <div className={s.sumbox} aria-label="Preis">
                     {zeilen.map((p, i) => (
@@ -603,7 +653,7 @@ export function AnmeldeFormular({
                 <button type="submit" className={s.go}>
                   Verbindlich anmelden
                 </button>
-                {vorschau && (
+                {vorschau && !baukasten && (
                   <p className={s.hintline}>
                     Vorschau mit Musterdaten – abgeschickt wird hier nichts.
                   </p>

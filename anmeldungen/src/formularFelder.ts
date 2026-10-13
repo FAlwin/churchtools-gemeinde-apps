@@ -28,9 +28,10 @@ import {
   optionenPlanen,
   type CtOption,
 } from '@shared/anmeldung/felder';
+import { bereichVon, einordnen, type Bereich } from '@shared/anmeldung/baukasten';
 import { NichtUebernommen, aendereEinstellungen, einstellungenVon } from './einrichten';
 
-export type Bereich = keyof Formular;
+export type { Bereich };
 
 interface CtFeld {
   id: number;
@@ -89,46 +90,39 @@ export async function antwortenZaehlen(id: number): Promise<Map<number, Beantwor
   return m;
 }
 
-/** Ein neues Feld im Baukasten bekommt eine Kennung, die es im Formular noch nicht gibt. */
-export function neueFeldKennung(formular: Formular): string {
-  const vergeben = new Set([...formular.anmeldung, ...formular.person].map((f) => f.id));
-  for (let i = 1; ; i++) if (!vergeben.has(`f${i}`)) return `f${i}`;
-}
-
-/** Wo ein neues Feld hinkommt: im Bereich „Anmeldung“ vor die Bemerkungen (dahinter Preis und Datenschutz). */
-function einfuegeStelle(liste: Feld[], bereich: Bereich): number {
-  if (bereich === 'person') return liste.length;
-  const vor = liste.findIndex((f) => f.id === 'note' || f.typ === 'price' || f.typ === 'privacy');
-  return vor < 0 ? liste.length : vor;
-}
-
-function ersetzen(formular: Formular, bereich: Bereich, feld: Feld): Formular {
-  const liste = formular[bereich];
-  const i = liste.findIndex((f) => f.id === feld.id);
-  const neu =
-    i >= 0
-      ? liste.map((f) => (f.id === feld.id ? feld : f))
-      : [
-          ...liste.slice(0, einfuegeStelle(liste, bereich)),
-          feld,
-          ...liste.slice(einfuegeStelle(liste, bereich)),
-        ];
-  return { ...formular, [bereich]: neu };
+/**
+ * Das Feld ins Formular übernehmen: ein vorhandenes an Ort und Stelle ersetzen, ein neues einordnen (`einordnen`,
+ * dieselbe Regel wie beim Ziehen im Baukasten). Mit `vorId` (auch `null` = ans Ende) wird zusätzlich dorthin
+ * verschoben – auch in den anderen Bereich.
+ */
+function ersetzen(
+  formular: Formular,
+  bereich: Bereich,
+  feld: Feld,
+  vorId: string | null | undefined,
+): Formular {
+  const da = bereichVon(formular, feld.id);
+  if (!da) return einordnen(formular, feld.id, bereich, vorId ?? null, feld);
+  const ersetzt = { ...formular, [da]: formular[da].map((f) => (f.id === feld.id ? feld : f)) };
+  return vorId === undefined ? ersetzt : einordnen(ersetzt, feld.id, bereich, vorId);
 }
 
 /**
- * **Ein Feld speichern** – neu oder geändert. `antworten`: die Antworten im Fenster, je mit der ChurchTools-ID,
+ * **Ein Feld speichern** – neu oder geändert. `antworten`: die Antworten im Baukasten, je mit der ChurchTools-ID,
  * aus der sie hervorgegangen sind (bei neuen ohne). Ohne Angabe werden `feld.antworten` über den Namen den
- * vorhandenen IDs zugeordnet (Ausblenden, Anlegen). Gibt die gespeicherten Einstellungen zurück.
+ * vorhandenen IDs zugeordnet (Ausblenden, Anlegen). `vorId`: wohin es kommt (vor dieses Feld, `null` = ans Ende
+ * des Bereichs) – ohne Angabe bleibt ein vorhandenes Feld, wo es ist, und ein neues kommt ans Ende.
+ * Gibt die gespeicherten Einstellungen zurück.
  */
 export async function feldSpeichern(
   id: number,
   bereich: Bereich,
   feld: Feld,
   antworten?: { text: string; altId?: string }[],
+  vorId?: string | null,
 ): Promise<OeffentlicheEinstellungen> {
   const e = await einstellungenVon(id);
-  const geplant = ersetzen(e.formular, bereich, feld);
+  const geplant = ersetzen(e.formular, bereich, feld, vorId);
   const fehler = pruefeFormular(geplant);
   if (fehler.length) throw new ApiError(422, fehler.join(' '));
 
@@ -187,29 +181,30 @@ export async function feldSpeichern(
   if (!gespeichert.verborgen) delete gespeichert.verborgen;
   return aendereEinstellungen(id, (frisch) => ({
     ...frisch,
-    formular: ersetzen(frisch.formular, bereich, gespeichert),
+    formular: ersetzen(frisch.formular, bereich, gespeichert, vorId),
     ctFelder: ctId !== undefined ? { ...frisch.ctFelder, [feld.id]: ctId } : frisch.ctFelder,
   }));
 }
 
 /**
- * **Ein eigenes Feld entfernen.** Hat es schon jemand beantwortet, wird es nur **ausgeblendet** (Alwin:
- * „ausblenden“) – die Spalte und die Antworten bleiben, im Formular erscheint es nicht mehr. Sonst wird die
- * Spalte gelöscht. Gibt zurück, was passiert ist.
+ * **Ein Feld aus dem Formular nehmen.** Empfohlene Felder (Telefon, Geburtsdatum …) werden nur ausgeschaltet –
+ * ihre Kachel bietet sie wieder an. Eigene Felder: Hat sie schon jemand beantwortet, werden sie nur
+ * **ausgeblendet** (Alwin: „ausblenden“) – die Spalte und die Antworten bleiben, im Formular erscheint das Feld
+ * nicht mehr. Sonst wird die Spalte gelöscht. Gibt zurück, was passiert ist.
  */
 export async function feldEntfernen(
   id: number,
-  bereich: Bereich,
   feldId: string,
 ): Promise<{ art: 'geloescht' } | { art: 'ausgeblendet'; antworten: number }> {
   const e = await einstellungenVon(id);
-  const feld = e.formular[bereich].find((f) => f.id === feldId);
-  if (!feld) return { art: 'geloescht' };
-  if (feld.art !== 'eigen')
-    throw new ApiError(422, 'Vorgegebene Felder lassen sich nur ausschalten.');
+  const bereich = bereichVon(e.formular, feldId);
+  const feld = bereich ? e.formular[bereich].find((f) => f.id === feldId) : undefined;
+  if (!bereich || !feld) return { art: 'geloescht' };
+  if (feld.art === 'fest' || feld.art === 'preis')
+    throw new ApiError(422, 'Name, E-Mail, Datenschutz und Preise gehören immer dazu.');
   const ctId = e.ctFelder[feldId];
   const antworten = ctId !== undefined ? ((await antwortenZaehlen(id)).get(ctId)?.gesamt ?? 0) : 0;
-  if (antworten > 0) {
+  if (feld.art === 'standard' || antworten > 0) {
     await feldSpeichern(id, bereich, { ...feld, zustand: 'aus' });
     return { art: 'ausgeblendet', antworten };
   }
@@ -223,8 +218,8 @@ export async function feldEntfernen(
     return {
       ...frisch,
       formular: {
-        ...frisch.formular,
-        [bereich]: frisch.formular[bereich].filter((f) => f.id !== feldId),
+        anmeldung: frisch.formular.anmeldung.filter((f) => f.id !== feldId),
+        person: frisch.formular.person.filter((f) => f.id !== feldId),
       },
       ctFelder,
     };
@@ -232,18 +227,20 @@ export async function feldEntfernen(
   return { art: 'geloescht' };
 }
 
-/** **Reihenfolge** eines Bereichs speichern – nur die Einstellungen, ChurchTools kennt keine Formular-Reihenfolge. */
-export async function reihenfolgeSpeichern(
+/**
+ * **Ein Feld verschieben** – vor `vorId` in `bereich` (`null` = ans Ende), auch in den anderen Bereich. Nur die
+ * Einstellungen: ChurchTools kennt keine Formular-Reihenfolge, und die Spalte gehört zur Gruppe, nicht zum Bereich.
+ */
+export async function feldEinordnen(
   id: number,
+  feldId: string,
   bereich: Bereich,
-  ids: string[],
+  vorId: string | null,
 ): Promise<void> {
-  await aendereEinstellungen(id, (frisch) => {
-    const nach = new Map(frisch.formular[bereich].map((f) => [f.id, f]));
-    const sortiert = ids.map((x) => nach.get(x)).filter((f): f is Feld => !!f);
-    const rest = frisch.formular[bereich].filter((f) => !ids.includes(f.id));
-    return { ...frisch, formular: { ...frisch.formular, [bereich]: [...sortiert, ...rest] } };
-  });
+  await aendereEinstellungen(id, (frisch) => ({
+    ...frisch,
+    formular: einordnen(frisch.formular, feldId, bereich, vorId),
+  }));
 }
 
 /**

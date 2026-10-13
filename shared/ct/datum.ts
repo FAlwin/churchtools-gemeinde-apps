@@ -2,8 +2,7 @@
  * **Wie Tage in den Apps heißen** – „Sa, 14.11.2026“, die Datumskachel „14 NOV“, Monatsüberschriften.
  * Tage kommen als `YYYY-MM-DD` in Ortszeit der Gemeinde (`ortszeitAus`/`tagAusIso` in `zeit.ts`).
  *
- * Für alle Apps (Dienstplaner E3-2). Die Anmeldungen haben dieselben Funktionen noch in
- * `anmeldungen/src/anzeige.ts` und ziehen hierher um, sobald ihre laufende Arbeit (A4) gemergt ist.
+ * Für alle Apps (Dienstplaner E3-2); die Anmeldungen reichen sie über `anmeldungen/src/anzeige.ts` weiter.
  */
 
 const WOCHENTAG = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];

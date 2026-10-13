@@ -39,7 +39,7 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 - **Eine Zeitrechnung:** `ortszeitAus`/`utcAus` liegen jetzt in `shared/ct/zeit.ts`, `tagAusIso` rechnet
   darüber (vorher eigene Formatierer in `zeit.ts` und `shared/anmeldung/termin.ts`, dort ohne die Regel
   „ohne Zeitzone nicht umrechnen“). `termin.ts` leitet weiter.
-- Neu geteilt: `shared/ct/datum.ts` (Wochentag, Kachel, Monat – die Anmeldungen ziehen nach),
+- Neu geteilt: `shared/ct/datum.ts` (Wochentag, Kachel, Monat – auch für die Anmeldungen),
   `shared/ct/dienste.ts` (`/services` mit Dienstgruppe und Gruppen), `shared/dienstplan/termine.ts` (die
   Regeln der Liste) und `ui/bedienung/DatumKachel` – die Kachel der Terminliste der Musik-App, die sie jetzt
   ebenfalls nutzt (CSS unverändert).

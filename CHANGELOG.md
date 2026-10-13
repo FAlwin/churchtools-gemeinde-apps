@@ -22,12 +22,22 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 - **Geteilt statt nachgebaut** (Dienstplaner E2): `ui/ct/ich.ts` (wer angemeldet ist, Gemeinde, Gruppen –
   wirft auch, wenn ChurchTools die Gruppen ohne Liste liefert, statt „keine Gruppen“ zu zeigen),
   `ui/ct/fehlerMeldung.ts` (was bei Fehlern gesagt wird) und `ui/erweiterung/ErweiterungsSeite.tsx`
-  (Rahmen: Kopf, Laden, Fehler, Version). Die Anmeldungen ziehen nach #493 darauf um.
+  (Rahmen: Kopf, Laden, Fehler, Version).
 - `shared/ct/rechte.ts`: `idsAusRecht` (Rechte in Listenform, mit der `Number(null)`-Falle) und
   `rechteAntwortPruefen` (leere Antwort = Aussetzer) herausgezogen; `parseSongEditRight` und `rechteAus`
   nutzen sie, der Dienstplaner auch (`shared/ct/dienstRechte.ts`, `shared/ct/dienstgruppen.ts`).
 - Staging baut `feat/dienstplaner-**` und `fix/dienstplaner-**` nicht (sie überschrieben sonst das
   `:staging` der Musik-App).
+
+### Intern (Anmeldungen)
+
+- **Die Anmeldungen nutzen die gemeinsamen Bausteine** (#498): Fehlertexte (`ui/ct/fehlerMeldung.ts`, nur
+  `NichtUebernommen` bleibt eigener Sonderfall), wer angemeldet ist (`ui/ct/ich.ts`) und der Seitenrahmen
+  (`ErweiterungsSeite`, `ErweiterungsRahmen`, `FehlerKasten` – neu mit Platz für einen Knopf neben dem
+  Gruß und einen Hinweis unter dem Kopf). `anmeldungen/src/App.module.scss` ist weg, die Regeln stehen nur
+  noch in `ui/erweiterung/`. Einzige sichtbare Änderung: Liefert ChurchTools die Gruppen ohne Liste, steht
+  „antwortet gerade nicht“ mit „Erneut versuchen“ da statt still „keine Gruppen“. Neu getestet: der
+  Ladefehler der Veranstaltungsseite und das Datum neben dem Gruß.
 
 ### Behoben
 

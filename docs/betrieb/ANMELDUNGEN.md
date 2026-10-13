@@ -105,7 +105,8 @@ mitarbeiten (z. B. über den Status oder global über die Gruppen).
 ## Für Entwickler
 
 - Code: `anmeldungen/` (Erweiterung), `formular/` (öffentliche Seite), Regeln in `shared/anmeldung/`,
-  ChurchTools-Verbindung in `ui/ct/`.
+  ChurchTools-Verbindung, Anmeldung und Fehlertexte in `ui/ct/`, Seitenrahmen in `ui/erweiterung/` –
+  dieselben wie beim Dienstplaner.
 - Ansehen ohne ChurchTools: `npm run dev -w anmeldungen`, dann
   `http://localhost:5176/ccm/anmeldungen/?demo` (`?demo=leer`, `?demo=fehler` für die Sonderfälle).
 - Release: Tag `anmeldung-vX.Y.Z` (Workflow `anmeldungen-release.yml`, **nie „latest"** – sonst sähen

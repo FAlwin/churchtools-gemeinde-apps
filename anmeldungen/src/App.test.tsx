@@ -5,6 +5,9 @@ import { ApiError } from '@ui/ct/fehler';
 import { ChurchToolsBremst } from '@ui/ct/verbindung';
 import { App } from './App';
 import { fehlerZustand } from './zustand';
+import { NichtUebernommen } from './einrichten';
+import { datumText } from './anzeige';
+import { tagAusIso } from '@shared/ct/zeit';
 import { ladeStart } from './start';
 import { ladeUebersicht, type Uebersicht } from './veranstaltungen';
 import { anlegenMoeglich } from './einrichten';
@@ -42,6 +45,9 @@ describe('App der Anmeldungen (#474, #480)', () => {
     render(<App />);
     expect(await screen.findByText('Hallo Alwin')).toBeTruthy();
     expect(screen.getByText(/Evangeliumschristen- Gemeinde e\.V\./)).toBeTruthy();
+    // Neben dem Gruß steht das heutige Datum („Di, 13.10.2026“) – über den gemeinsamen Rahmen.
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    expect(screen.getByText(datumText(tagAusIso(new Date().toISOString(), zone)))).toBeTruthy();
     const zeilen = screen.getAllByRole('listitem').map((z) => z.textContent);
     expect(zeilen).toEqual(['Lobpreisteamnichts geplantLeitung', 'Techniknichts geplantMitglied']);
     // Die Übersicht wird mit genau den Gruppen der Person geladen.
@@ -84,6 +90,12 @@ describe('fehlerZustand – die Zweige einzeln', () => {
         text: expect.stringContaining('antwortet gerade nicht'),
       });
     }
+  });
+  it('nicht übernommen (A3) → genau das, NICHT „antwortet gerade nicht“, obwohl es ein 502 ist', () => {
+    expect(fehlerZustand(new NichtUebernommen('die Freigabe'))).toMatchObject({
+      text: expect.stringContaining('nicht übernommen'),
+      nochmal: true,
+    });
   });
   it('anderer Fehler (z. B. fehlendes Recht) → die Meldung von ChurchTools', () => {
     expect(fehlerZustand(new ApiError(403, 'Keine ausreichende Berechtigung.'))).toMatchObject({

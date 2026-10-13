@@ -1,7 +1,7 @@
 /**
  * **Was eine Erweiterung sagt, wenn ChurchTools nicht liefert** – für jede App dieses Repos, damit die
- * Zweige überall gleich unterschieden werden (Dienstplaner E2; dieselbe Form wie `fehlerMeldung` der
- * Anmeldungen, die nach #493 hierher umzieht).
+ * Zweige überall gleich unterschieden werden (Dienstplaner E2). Genutzt von Dienstplaner und Anmeldungen;
+ * die Anmeldungen prüfen davor nur ihren Sonderfall `NichtUebernommen` (`anmeldungen/src/zustand.ts`).
  *
  * Die Zweige einzeln, denn vorübergehend ist nicht ungültig:
  * - **401** = abgemeldet → neu laden, „Erneut versuchen“ hilft nicht.

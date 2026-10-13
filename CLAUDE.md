@@ -201,7 +201,7 @@ churchtools-gemeinde-apps/
     ├── ct/                  # Verbindung einer Erweiterung zu ChurchTools: verbindung.ts, fehler.ts (ApiError), basis.ts,
     │                        #   fehlerMeldung.ts (was bei Fehlern gesagt wird), ich.ts (wer angemeldet ist, Gemeinde, Gruppen)
     └── erweiterung/         # Erweiterungs-Bau: viteErweiterung (fasst zusammen), cssBereich, kopfInDenInhalt;
-                             #   ErweiterungsSeite (Rahmen: Kopf, Laden, Fehler, Version)
+                             #   ErweiterungsSeite (Kopf, Laden, Fehler, Version), ErweiterungsRahmen (ohne Kopf), FehlerKasten
 ```
 
 ## Konventionen

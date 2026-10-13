@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   EINSTELLUNGEN_KENNUNG,
   einstellungenAlsText,
-  standardFormular,
   type OeffentlicheEinstellungen,
   type TerminAngabe,
 } from './formular';
@@ -19,6 +18,7 @@ import {
   type VeranstaltungDetails,
   type VeranstaltungRoh,
 } from './uebersicht';
+import { neueEinstellungen } from './vorlagen';
 
 /**
  * Übersicht der Veranstaltungen (A2, #480). Die Beschreibungen entstehen mit `einstellungenAlsText` –
@@ -28,27 +28,7 @@ const HEUTE = '2026-10-12';
 const JETZT = new Date('2026-10-12T10:00:00Z');
 
 function einstellungen(termin: TerminAngabe | null): OeffentlicheEinstellungen {
-  return {
-    termin,
-    preis: {
-      grundpreis: { art: 'fest', betragCent: 0, gilt: 'person', auswahlName: '', optionen: [] },
-      alter: [],
-      anpassungen: [],
-      extras: [],
-    },
-    formular: standardFormular(),
-    gestaltung: {
-      vorlage: 'klassisch',
-      farbe: '#2563eb',
-      feldstil: 'kasten',
-      knoepfe: 'rund',
-      text: '',
-      gemeindename: true,
-    },
-    ctFelder: { bezahlt: 67 },
-    wer: 'familie',
-    plaetze: { zeigen: 'knapp', knappUnter: 5 },
-  };
+  return { ...neueEinstellungen('einfach'), termin, ctFelder: { bezahlt: 67 } };
 }
 
 const termin = (beginn: string, ende: string | null = null): TerminAngabe => ({

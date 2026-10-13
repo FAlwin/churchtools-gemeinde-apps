@@ -1,11 +1,7 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import {
-  einstellungenAlsText,
-  standardFormular,
-  type OeffentlicheEinstellungen,
-} from '@shared/anmeldung/formular';
+import { einstellungenAlsText, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import {
   aufmerksamkeit,
   einteilen,
@@ -15,6 +11,7 @@ import {
   type VeranstaltungRoh,
 } from '@shared/anmeldung/uebersicht';
 import type { MeineGruppe } from '@shared/ct/gruppen';
+import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import { Startseite } from './Startseite';
 import type { Start } from './start';
 import type { Uebersicht } from './veranstaltungen';
@@ -28,25 +25,13 @@ const JETZT = new Date('2026-10-12T10:00:00Z');
 
 function beschreibung(beginn: string, betragCent = 0, bezahlt?: number): string {
   const e: OeffentlicheEinstellungen = {
+    ...neueEinstellungen('einfach'),
     termin: { beginn, ende: null, ort: 'Gemeindesaal', terminId: null },
     preis: {
+      ...neueEinstellungen('einfach').preis,
       grundpreis: { art: 'fest', betragCent, gilt: 'person', auswahlName: '', optionen: [] },
-      alter: [],
-      anpassungen: [],
-      extras: [],
-    },
-    formular: standardFormular(),
-    gestaltung: {
-      vorlage: 'klassisch',
-      farbe: '#2563eb',
-      feldstil: 'kasten',
-      knoepfe: 'rund',
-      text: '',
-      gemeindename: true,
     },
     ctFelder: bezahlt ? { bezahlt } : {},
-    wer: 'familie',
-    plaetze: { zeigen: 'knapp', knappUnter: 5 },
   };
   return einstellungenAlsText(e);
 }
@@ -128,7 +113,17 @@ function uebersicht(
 }
 
 function zeigen(u = uebersicht()) {
-  render(<Startseite start={START} uebersicht={u} heute={HEUTE} zeitzone="Europe/Berlin" />);
+  const oeffnen = vi.fn();
+  render(
+    <Startseite
+      start={START}
+      uebersicht={u}
+      heute={HEUTE}
+      zeitzone="Europe/Berlin"
+      onOeffnen={oeffnen}
+    />,
+  );
+  return oeffnen;
 }
 
 const abschnitt = (name: string) => screen.getByRole('region', { name });
@@ -202,6 +197,18 @@ describe('Startseite (A2, #480)', () => {
       'Lobpreisteam3 VeranstaltungenLeitung',
       'Technik1 Veranstaltung · Untergruppen für dich nicht freigegebenMitglied',
     ]);
+  });
+
+  it('ein Klick auf den Namen öffnet die Veranstaltung; „Ansehen“ beim Entwurf ebenso (A3)', () => {
+    const oeffnen = zeigen();
+    fireEvent.click(
+      within(abschnitt('Veranstaltungen')).getByRole('button', { name: 'Grundkurs' }),
+    );
+    expect(oeffnen).toHaveBeenLastCalledWith(52);
+    fireEvent.click(
+      within(abschnitt('Braucht deine Aufmerksamkeit')).getByRole('button', { name: 'Ansehen' }),
+    );
+    expect(oeffnen).toHaveBeenLastCalledWith(43);
   });
 
   it('jede Veranstaltung führt zu ihrer Gruppe in ChurchTools', () => {

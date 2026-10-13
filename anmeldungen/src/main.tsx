@@ -10,10 +10,10 @@ import './main.scss';
  */
 document.documentElement.classList.add('ct-extension');
 
-// Ohne Recht sagt die Verbindung das allgemein; hier passt es genauer.
+// Ohne Recht: anlegen, einrichten, Kalender (A3) – deshalb allgemein, mit dem Weg zum Recht.
 verbindungEinrichten({
   keinRecht:
-    'ChurchTools erlaubt dir das nicht. Anmeldungen bearbeiten darf, wer in der Gruppe der Veranstaltung ist.',
+    'ChurchTools erlaubt dir das nicht. Frag die Leitung deiner Gruppe oder die Verantwortlichen deiner Gemeinde nach dem passenden Recht.',
 });
 
 async function starten(): Promise<void> {

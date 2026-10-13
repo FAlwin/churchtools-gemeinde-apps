@@ -31,6 +31,16 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Behoben
 
+- **Antwortet ChurchTools nicht, sagt die App das jetzt auch** (#489): Lief eine Anfrage an ChurchTools in
+  die Zeitgrenze, meldete die Web-App beim Laden, Speichern und Anmelden „Interner Serverfehler" (und
+  schrieb einen Stacktrace ins Log). Jetzt kommt überall „ChurchTools antwortet gerade nicht. Bitte
+  später erneut versuchen." – wie in der Erweiterung. Ursache: Der Server sprach ChurchTools an neun
+  Stellen mit eigenem `fetch` an, und nur der Datei-Download übersetzte die Zeitüberschreitung. Jetzt
+  läuft alles über **eine** Funktion (`ctFetch`), die Zeitgrenze, Drosselung (429) und
+  Zeitüberschreitung regelt.
+- **Liedtext-Index hört bei einer Zeitüberschreitung auf** (gefunden bei #489): Lief ein Datei-Download
+  beim Bau des Index in die Zeitgrenze, erkannte der Lauf das nicht als „ChurchTools kann gerade nicht"
+  und schickte weiter Anfragen. Jetzt bricht er ab wie bei einer Drosselung.
 - **Einstellungen aus der `.env` kamen nicht im Container an** (beim Doku-Abgleich gefunden, 12.10.2026):
   Die Compose-Vorlagen reichten `ERWEITERUNG_KUERZEL` und `ABLAGE_UMZUG` gar nicht durch, die
   Basis-Vorlage `deploy/docker-compose.yml` auch `COOKIE_SECURE` nicht – obwohl `.env.example` und die
@@ -53,6 +63,34 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   `COOKIE_SECURE=true` bei HTTP, nicht an HTTP an sich; Anmerkungen liegen in ChurchTools, nicht auf dem
   Volume; Testkonzept, README (Ablauf bearbeiten, Funktionen der Erweiterung), CLAUDE.md und
   Konfigurationsmanagement nachgezogen.
+
+### Neu (Anmeldungen)
+
+- **Veranstaltungen anlegen und einrichten** (#486, Bauplan A3 – der erste Schritt, der in ChurchTools
+  schreibt). Eigene Gruppenart „Anmeldung“; Veranstaltungen ohne Anmeldung bleiben, wie sie sind.
+  - **„Neue Veranstaltung“** für Leitung, Co-Leitung und Organisatoren eines Teams (nach den Rechten, die
+    ChurchTools meldet): Vorlage (einfaches Event, Kinder-Event, Freizeit) oder **„wie eine frühere“** –
+    die Kopie bekommt die neuen Feldnummern, ihr Datum wird geleert. Angelegt wird ein Entwurf unter dem
+    Team, mit den Feldern Betrag, Aufschlüsselung, Auswahl, Extras, Bezahlt, Bezahlt am.
+  - **Seite einer Veranstaltung** mit Termin, Anmeldung (Zeitraum, Plätze, Warteliste, freie Plätze
+    zeigen), „Wer meldet sich an?“, Löschfrist – und **Freigeben**. Wer nicht einrichten darf, sieht alles
+    ohne „Bearbeiten“.
+  - **Termin immer aus dem Kalender:** vorhandenen wählen oder neu anlegen (nur in Kalendern, in die man
+    schreiben darf). Neue Termine bekommen den Link zur Anmeldung; vorhandene bleiben unangetastet (ChurchTools
+    ersetzt beim Ändern den ganzen Termin), dort gibt es „Link zur Anmeldung kopieren“. Datum und Ort werden
+    kopiert, nicht verknüpft.
+  - **Jeder Schreibschritt wird nachgelesen;** übernimmt ChurchTools etwas nicht, sagt die Seite genau
+    das, statt „gespeichert“ zu melden.
+  - Einrichtung in ChurchTools (Gruppenart, Anlegen, Rechte in den Veranstaltungen, Kalender) Schritt für
+    Schritt in `docs/betrieb/ANMELDUNGEN.md`.
+
+### Behoben (Anmeldungen)
+
+- **Ältere Einstellungen bleiben lesbar:** Neue Angaben im Einstellungsformat (`loeschfristMonate`,
+  `termin`) haben Standardwerte – sonst wären Veranstaltungen, die vorher angelegt wurden, als „unlesbar“
+  aus der Liste gefallen (an der Test-Instanz beim Bauen aufgefallen).
+- **Veranstaltungen, in denen man selbst Mitglied ist, stehen nicht mehr unter „Deine Gruppen“**
+  (ChurchTools liefert sie dort mit, gemessen).
 
 ## [2.34.1] – 2026-10-12
 

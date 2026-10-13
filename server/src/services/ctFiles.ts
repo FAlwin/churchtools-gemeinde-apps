@@ -14,8 +14,7 @@ import {
   BASE,
   CT_FILE_TIMEOUT_MS,
   MAX_FILE_BYTES,
-  asGatewayError,
-  ctSignal,
+  ctFetch,
   fileDownloadError,
   readLimited,
 } from './ctHttp.js';
@@ -34,21 +33,18 @@ function assertCtFileUrl(fileUrl: string): void {
 /** Lädt eine Arrangement-Datei (z.B. .chordpro) als Text – mit Session-Cookie. */
 export async function downloadFileText(cookie: string, fileUrl: string): Promise<string> {
   assertCtFileUrl(fileUrl);
-  try {
-    // `redirect: 'manual'` (#199): assertCtFileUrl prüft den Host der ANGEFRAGTEN URL – ohne diese
-    // Zeile würde fetch einer Weiterleitung folgen und das CT-Cookie mitnehmen. Ein Open Redirect in
-    // der eigenen CT-Instanz könnte es so abfließen lassen.
-    const res = await fetch(fileUrl, {
-      headers: { Cookie: cookie },
-      redirect: 'manual',
-      signal: ctSignal(CT_FILE_TIMEOUT_MS),
-    });
-    if (!res.ok) fileDownloadError(res.status, res.headers.get('retry-after'));
-    // Auch ChordPro-Text gedeckelt (#248): Es ist eine Datei aus ChurchTools und kann alles sein.
-    return (await readLimited(res, MAX_FILE_BYTES)).toString('utf8');
-  } catch (e) {
-    asGatewayError(e, 'Datei-Download (Text)');
-  }
+  // `redirect: 'manual'` (#199): assertCtFileUrl prüft den Host der ANGEFRAGTEN URL – ohne diese
+  // Zeile würde fetch einer Weiterleitung folgen und das CT-Cookie mitnehmen. Ein Open Redirect in
+  // der eigenen CT-Instanz könnte es so abfließen lassen.
+  const res = await ctFetch(fileUrl, {
+    was: 'Datei-Download (Text)',
+    headers: { Cookie: cookie },
+    redirect: 'manual',
+    zeitgrenzeMs: CT_FILE_TIMEOUT_MS,
+  });
+  if (!res.ok) fileDownloadError(res.status);
+  // Auch ChordPro-Text gedeckelt (#248): Es ist eine Datei aus ChurchTools und kann alles sein.
+  return (await readLimited(res, MAX_FILE_BYTES)).toString('utf8');
 }
 
 // Die Datei-ID einer fileUrl – Regel in `@shared/ct/arrangementFiles` (#335).
@@ -60,20 +56,17 @@ export async function fetchFileBytes(
   fileUrl: string,
 ): Promise<{ buffer: Buffer; contentType: string }> {
   assertCtFileUrl(fileUrl);
-  try {
-    // Wie in downloadFileText: keinen Weiterleitungen folgen, damit das CT-Cookie die geprüfte
-    // Instanz nicht verlässt (#199). Verifiziert: ChurchTools liefert Dateien direkt mit 200 aus.
-    const res = await fetch(fileUrl, {
-      headers: { Cookie: cookie },
-      redirect: 'manual',
-      signal: ctSignal(CT_FILE_TIMEOUT_MS),
-    });
-    if (!res.ok) fileDownloadError(res.status, res.headers.get('retry-after'));
-    // Gedeckelt lesen statt `arrayBuffer()` (#248) – sonst landet eine beliebig große Datei
-    // vollständig im Speicher des Containers.
-    const buffer = await readLimited(res, MAX_FILE_BYTES);
-    return { buffer, contentType: res.headers.get('content-type') ?? 'application/octet-stream' };
-  } catch (e) {
-    asGatewayError(e, 'Datei-Download (Bytes)');
-  }
+  // Wie in downloadFileText: keinen Weiterleitungen folgen, damit das CT-Cookie die geprüfte
+  // Instanz nicht verlässt (#199). Verifiziert: ChurchTools liefert Dateien direkt mit 200 aus.
+  const res = await ctFetch(fileUrl, {
+    was: 'Datei-Download (Bytes)',
+    headers: { Cookie: cookie },
+    redirect: 'manual',
+    zeitgrenzeMs: CT_FILE_TIMEOUT_MS,
+  });
+  if (!res.ok) fileDownloadError(res.status);
+  // Gedeckelt lesen statt `arrayBuffer()` (#248) – sonst landet eine beliebig große Datei
+  // vollständig im Speicher des Containers.
+  const buffer = await readLimited(res, MAX_FILE_BYTES);
+  return { buffer, contentType: res.headers.get('content-type') ?? 'application/octet-stream' };
 }

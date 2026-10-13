@@ -9,10 +9,15 @@
 >
 > **503 bei Drosselung (#300):** Antwortet ChurchTools mit **429** („zu viele Anfragen"), wird das zu
 > einem **503** mit `Retry-After`-Kopf – bewusst nicht als 429, weil der Client einen 429 als „zu viele
-> Anmeldeversuche" deuten würde. Betrifft **alle** ChurchTools-gestützten Endpunkte, weil es in `ctGet`
-> sitzt. `/api/song-usage` liefert 503 zusätzlich **während seiner Sperrfrist**, also auch ohne einen
-> ChurchTools-Aufruf. Ausnahme: `getCsrfToken` bildet ein CT-429 weiter auf **502** ab (mit dem
-> CT-Status im Text).
+> Anmeldeversuche" deuten würde. Betrifft **alle** ChurchTools-gestützten Endpunkte (Lesen, Schreiben,
+> Anmelden, CSRF-Token, Dateien, alte Schnittstelle), weil es in `ctFetch` sitzt (#489).
+> `/api/song-usage` liefert 503 zusätzlich **während seiner Sperrfrist**, also auch ohne einen
+> ChurchTools-Aufruf.
+>
+> **504 bei Zeitüberschreitung (#489):** Antwortet ChurchTools nicht innerhalb der Zeitgrenze (15 s; Dateien,
+> Uploads und alte Schnittstelle 60 s), kommt **504** „ChurchTools antwortet gerade nicht" – auf allen Wegen,
+> auch wenn erst das Lesen der Antwort zu lange dauert. Vorher wurde das außer beim Datei-Download ein
+> **500** „Interner Serverfehler".
 >
 > **401/403-Vertrag (wichtig für den Client):** `ctGet` reicht nur echte **401** als 401 weiter
 > („Session abgelaufen"), ein **403** von ChurchTools bleibt **403** – denn jeder 401 löst im Client

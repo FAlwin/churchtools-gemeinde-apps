@@ -12,7 +12,11 @@
  *    Anmeldeversuche". Begründung an `CtOverloadedError`.
  */
 import { config } from '../config.js';
-import { HttpError } from '../middleware/errorHandler.js';
+import {
+  CT_ANTWORTET_NICHT,
+  HttpError,
+  istZeitueberschreitung,
+} from '../middleware/errorHandler.js';
 
 export const BASE = config.churchtoolsBaseUrl.replace(/\/$/, '');
 
@@ -91,39 +95,25 @@ export async function readLimited(res: Response, maxBytes: number): Promise<Buff
  * Steht als Helfer da, weil die Zeile vorher an ZWEI Stellen wortgleich stand (`downloadFileText`
  * und `fetchFileBytes`) – eine davon zu ändern wäre die nächste halb umgesetzte Regel gewesen.
  */
-export function fileDownloadError(status: number, retryAfter?: string | null): never {
-  /**
-   * **429 ist eine Drosselung, kein Serverfehler** – gefunden am 13.08.2026 beim Bau des Suchindex.
-   *
-   * `ctGet` erkennt 429 seit #300 und wirft `CtOverloadedError`, damit Massenläufe beim ERSTEN
-   * Vorkommen abbrechen können. Der DATEI-Pfad tat das nicht: Er machte aus jedem Status außer 404
-   * einen 502. Folge: Ein Lauf, der viele Dateien lädt (Suchindex ~50, Setlist-Aufbau ähnlich), konnte
-   * die Drosselung nicht erkennen und schickte weiter Anfragen in ein erschöpftes Limit – genau das
-   * Muster, das in #300 die ganze App lahmgelegt hat.
-   *
-   * Die Regel steht jetzt an beiden Stellen gleich. `retryAfter` wird durchgereicht, weil ChurchTools
-   * dort manchmal selbst sagt, wie lange es gebremst sein will.
-   */
-  if (status === 429) throw new CtOverloadedError(parseRetryAfter(retryAfter ?? null));
+export function fileDownloadError(status: number): never {
+  // Ein 429 kommt hier nicht mehr an: `ctFetch` macht daraus schon die Drosselung (#489).
   throw new HttpError(status === 404 ? 404 : 502, `Datei-Download fehlgeschlagen (${status}).`);
 }
 
 /**
- * Zeitüberschreitungen als 504 melden, nicht als 500 (#248): Der Fehler liegt beim Upstream, und der
- * Client soll „später nochmal" unterscheiden können von „echter Fehler".
+ * Zeitüberschreitung bei ChurchTools – **504, mit eigenem Fehlertyp** (#248, #489).
+ *
+ * 504 statt 500: Der Fehler liegt beim Upstream, und der Client soll „gleich nochmal" von „echter
+ * Fehler" unterscheiden können. Der eigene Typ ist für die Massenläufe da: `isCtOverloaded` erkennt
+ * ihn, so wie die Drosselung. Vorher war es ein schlichter `HttpError(504)` aus dem Datei-Download –
+ * den erkannte `isCtOverloaded` NICHT, und der Liedtext-Index lief nach einer Zeitüberschreitung
+ * weiter in ChurchTools hinein (gefunden bei #489).
  */
-export function asGatewayError(e: unknown, was: string): never {
-  if (e instanceof HttpError) throw e;
-  if (isTimeout(e)) {
-    console.warn(`[churchtools] Zeitüberschreitung bei ${was}`);
-    throw new HttpError(504, 'ChurchTools antwortet gerade nicht. Bitte später erneut versuchen.');
+export class CtTimeoutError extends HttpError {
+  constructor() {
+    super(504, CT_ANTWORTET_NICHT);
+    this.name = 'CtTimeoutError';
   }
-  throw e;
-}
-
-/** Abbruch wegen Zeitüberschreitung – eine Stelle, damit `asGatewayError` und `isCtOverloaded` dasselbe meinen. */
-function isTimeout(e: unknown): boolean {
-  return e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError');
 }
 
 /**
@@ -154,17 +144,65 @@ export { parseRetryAfter };
  * „ChurchTools kann gerade nicht mehr" – Drosselung ODER Zeitüberschreitung (#300).
  *
  * Beides heißt für einen Massenlauf dasselbe: **sofort aufhören**, statt weitere hundert Anfragen in
- * eine Wand zu schicken. Die Zeitüberschreitung gehört dazu, weil `ctGet` nicht über `asGatewayError`
- * läuft – dort fliegt ein Timeout als rohe `TimeoutError` heraus.
+ * eine Wand zu schicken. Die Zeitüberschreitung kommt in zwei Formen: als `CtTimeoutError`, wenn sie
+ * beim Abschicken passiert (`ctFetch`), und roh, wenn erst das Lesen der Antwort zu lange dauert –
+ * dasselbe Abbruch-Signal gilt auch für den Rumpf.
  */
 export function isCtOverloaded(e: unknown): boolean {
-  return e instanceof CtOverloadedError || isTimeout(e);
+  return e instanceof CtOverloadedError || e instanceof CtTimeoutError || istZeitueberschreitung(e);
+}
+
+/**
+ * **Die eine Stelle, an der der Server ChurchTools anspricht** (#489).
+ *
+ * Vorher riefen neun Stellen `fetch` selbst auf, und jede baute die Regeln nach; die Kommentare
+ * zählten die Kopien mit („die DRITTE Stelle", „die VIERTE"). Die Kopien waren nicht gleich: Eine
+ * Zeitüberschreitung wurde nur beim Datei-Download zu 504, überall sonst lief sie bis zum
+ * `errorHandler` durch und kam als 500 „Interner Serverfehler" heraus.
+ *
+ * Hier gilt für JEDEN Aufruf:
+ *  - **Zeitgrenze** (`ctSignal`, auf Wunsch die längere für Dateien);
+ *  - **Zeitüberschreitung → `CtTimeoutError` (504)** – vorübergehend ist nicht ungültig;
+ *  - **429 → `CtOverloadedError` (503)** samt `Retry-After` (#300) und Log-Zeile.
+ *
+ * Was ein Status sonst bedeutet (401 = Sitzung weg oder falsches Passwort, 404 = schon gelöscht),
+ * ist je Aufrufer verschieden und bleibt dort. `was` steht nur im Log – Pfade gehen nicht nach außen
+ * (#199).
+ */
+export async function ctFetch(
+  url: string,
+  init: Omit<RequestInit, 'signal'> & { was: string; zeitgrenzeMs?: number },
+): Promise<Response> {
+  const { was, zeitgrenzeMs, ...rest } = init;
+  let res: Response;
+  try {
+    res = await fetch(url, { ...rest, signal: ctSignal(zeitgrenzeMs) });
+  } catch (e) {
+    if (istZeitueberschreitung(e)) {
+      console.warn(`[churchtools] Zeitüberschreitung bei ${was}`);
+      throw new CtTimeoutError();
+    }
+    throw e;
+  }
+  // 429 = ChurchTools drosselt uns (#300). Eigene Fehlerklasse, damit Massenläufe (Lied-Statistik)
+  // beim ERSTEN Vorkommen abbrechen können, statt weitere hundert Anfragen in ein erschöpftes Limit
+  // zu schicken – genau das hat im Betrieb die ganze App lahmgelegt (Anmeldung, Rechte, Speichern
+  // bekamen danach ebenfalls 429). Für den Nutzer heißt es „gleich nochmal", nicht „abgelehnt".
+  if (res.status === 429) {
+    const retryAfterMs = parseRetryAfter(res.headers.get('retry-after'));
+    console.warn(
+      `[churchtools] 429 (gedrosselt) bei ${was}` +
+        (retryAfterMs === undefined ? '' : `, Retry-After ${Math.round(retryAfterMs / 1000)} s`),
+    );
+    throw new CtOverloadedError(retryAfterMs);
+  }
+  return res;
 }
 
 /** Führt eine authentifizierte JSON-Anfrage gegen die ChurchTools-API aus. */
 export async function ctGet<T = unknown>(cookie: string, path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    signal: ctSignal(),
+  const res = await ctFetch(`${BASE}${path}`, {
+    was: path,
     headers: { Cookie: cookie, Accept: 'application/json' },
   });
   if (res.status === 401) {
@@ -177,18 +215,6 @@ export async function ctGet<T = unknown>(cookie: string, path: string): Promise<
     // Pfad NICHT nach außen geben (#199) – er verrät interne API-Struktur inkl. Personen-IDs.
     console.warn(`[churchtools] 403 bei ${path}`);
     throw new HttpError(403, 'Kein Zugriff auf diese ChurchTools-Daten.');
-  }
-  // 429 = ChurchTools drosselt uns (#300). Eigene Fehlerklasse, damit Massenläufe (Lied-Statistik)
-  // beim ERSTEN Vorkommen abbrechen können, statt weitere hundert Anfragen in ein erschöpftes Limit
-  // zu schicken – genau das hat im Betrieb die ganze App lahmgelegt (Anmeldung, Rechte, Speichern
-  // bekamen danach ebenfalls 429). Vorher war das ein 502 unter vielen und nicht unterscheidbar.
-  if (res.status === 429) {
-    const retryAfterMs = parseRetryAfter(res.headers.get('retry-after'));
-    console.warn(
-      `[churchtools] 429 (gedrosselt) bei ${path}` +
-        (retryAfterMs === undefined ? '' : `, Retry-After ${Math.round(retryAfterMs / 1000)} s`),
-    );
-    throw new CtOverloadedError(retryAfterMs);
   }
   if (!res.ok) {
     // 404 durchreichen (z. B. „Termin hat keinen Ablaufplan") – Aufrufer wie die Statistik

@@ -2,6 +2,7 @@
  * **Wie Daten und Stände auf der Startseite heißen** (A2, #480) – an einer Stelle, damit Liste, Hinweise
  * und Kacheln dasselbe sagen. Tage kommen als `YYYY-MM-DD` (Ortszeit der Gemeinde, siehe `TerminAngabe`).
  */
+import type { OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import type { Anmeldestand, Veranstaltung } from '@shared/anmeldung/uebersicht';
 
 const WOCHENTAG = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
@@ -73,3 +74,10 @@ export function schlussText(v: Veranstaltung, heute: string, zeitzone: string): 
 export function anzahlText(n: number, eins: string, viele: string): string {
   return `${n} ${n === 1 ? eins : viele}`;
 }
+
+/** „Wer meldet sich an?“ – Name und Erklärung (A3). */
+export const WER_TEXT: Record<OeffentlicheEinstellungen['wer'], [string, string]> = {
+  familie: ['Familien', 'Erwachsene und Kinder in einer Anmeldung'],
+  einzeln: ['Einzelpersonen', 'Jede Person meldet sich selbst an'],
+  kinder: ['Nur Kinder', 'Eltern geben ihre Kontaktdaten an, angemeldet werden die Kinder'],
+};

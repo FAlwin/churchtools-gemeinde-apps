@@ -704,6 +704,13 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **v2.34.2 (13.10.2026) = Code-Check-Funde #489–#492** (PRs #494, #497, #500, #506; dazu #487 Compose
+  reicht `.env`-Werte durch, TF-CHART-03 #488 und aus dem anderen Teil des Repos Dienstplaner E2/E3-1 und
+  Anmeldungen A3). Server spricht ChurchTools nur über `ctFetch` (Zeitüberschreitung 504 statt 500,
+  Liedtext-Index bricht danach ab); Erweiterung wertet „Anmeldung unlesbar" als vorübergehend
+  (`angemeldeteId`); ein Anmerkungstyp, `_text`-Suffix an einer Stelle; Abfrage-Schlüssel in
+  `hooks/abfrageSchluessel.ts`. Die untere Leiste der Musik-App ist seit #502 `ui/bedienung/ReiterLeiste`
+  (anderer Teil des Repos, CSS laut dortigem Vergleich gleich). Offen: #459 (NAS-Messung TF-AUTH-07).
 - **v2.34.1 (12.10.2026) = Schildchen verschwinden mit dem Hinweis** (PR #484, dazu die Anmelde-Startseite
   #481 aus dem anderen Teil des Repos). Alwin: „nur ein kurzer Hinweis und fertig" – `useKurzerHinweis`
   steuert Hinweis und Schildchen gemeinsam (6 s), die `AenderungsMeldung` beschreibt nur den jeweiligen

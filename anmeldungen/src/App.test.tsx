@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
 import { ChurchToolsBremst } from '@ui/ct/verbindung';
 import { App } from './App';
@@ -13,6 +13,22 @@ import { ladeUebersicht, type Uebersicht } from './veranstaltungen';
 import { anlegenMoeglich } from './einrichten';
 
 vi.mock('./start', () => ({ ladeStart: vi.fn() }));
+// Die Veranstaltungsseite als Attrappe: Ein Knopf meldet „archiviert“ – wie „Verwalten → Löschen“.
+const zurueckholen = vi.fn().mockResolvedValue(undefined);
+vi.mock('./VeranstaltungSeite', () => ({
+  VeranstaltungSeite: ({
+    onGeaendert,
+  }: {
+    onGeaendert: (a: { text: string; rueckgaengig: () => Promise<void> }, weg: boolean) => void;
+  }) => (
+    <button
+      type="button"
+      onClick={() => onGeaendert({ text: '„X“ ist im Archiv.', rueckgaengig: zurueckholen }, true)}
+    >
+      archivieren
+    </button>
+  ),
+}));
 vi.mock('./veranstaltungen', () => ({ ladeUebersicht: vi.fn() }));
 vi.mock('./einrichten', async (original) => ({
   ...(await original<typeof import('./einrichten')>()),
@@ -130,5 +146,25 @@ describe('Anlegen auf der Startseite (A3, #486)', () => {
     render(<App />);
     expect(await screen.findByText(/fehlt die Gruppenart „Anmeldung“/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Neue Veranstaltung/ })).toBeNull();
+  });
+});
+
+describe('Leiste „Rückgängig“ über den Seitenwechsel (A4-Nachtrag)', () => {
+  beforeEach(() => anlegen.mockResolvedValue({ artId: 5, teamIds: [] }));
+
+  it('archiviert → Übersicht mit „Rückgängig“; danach lädt sie neu und bietet es NICHT noch einmal an', async () => {
+    window.location.hash = '#/v/91';
+    laden.mockResolvedValue({ vorname: 'Alwin', gemeinde: null, gruppen: [] });
+    ladenUebersicht.mockResolvedValue(LEER);
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'archivieren' }));
+    expect(await screen.findByText('„X“ ist im Archiv.')).toBeTruthy();
+    expect(window.location.hash).toBe('');
+    const vorher = laden.mock.calls.length;
+    fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+    await waitFor(() => expect(laden.mock.calls.length).toBeGreaterThan(vorher));
+    expect(await screen.findByText('Rückgängig gemacht.')).toBeTruthy();
+    expect(zurueckholen).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: 'Rückgängig' })).toBeNull();
   });
 });

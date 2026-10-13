@@ -22,6 +22,7 @@ import {
   ZWECK_MAX,
   ibanNormal,
   pruefeBezahlung,
+  zweckMitNeuemNamen,
   type Bezahlung,
 } from '@shared/anmeldung/bezahlung';
 import { belegungAus } from '@shared/anmeldung/uebersicht';
@@ -211,7 +212,10 @@ async function gruppenfelder(id: number): Promise<{ id: number; name: string }[]
  * Feldnummern neu zuordnen und das Datum leeren – die Kopie findet sonst als „gestern“ statt.
  */
 export async function kopiereVeranstaltung(quelleId: number, name: string): Promise<number> {
-  const quelle = await einstellungenVon(quelleId);
+  const [quelle, quellName] = await Promise.all([
+    einstellungenVon(quelleId),
+    gruppe(quelleId).then((g) => g.name),
+  ]);
   const kopie = await ctAnfrage<{ data?: { id?: number } }>(`/groups/${quelleId}/duplicate`, {
     method: 'POST',
     body: json({ newName: name }),
@@ -223,6 +227,10 @@ export async function kopiereVeranstaltung(quelleId: number, name: string): Prom
     ...quelle,
     termin: null,
     ctFelder: felderNeuZuordnen(quelle.ctFelder, alt, neu),
+    bezahlung: {
+      ...quelle.bezahlung,
+      zweck: zweckMitNeuemNamen(quelle.bezahlung.zweck, quellName, name),
+    },
   });
   return id;
 }
@@ -364,12 +372,21 @@ export async function setzeStatus(id: number, statusId: number): Promise<void> {
     throw new NichtUebernommen(STATUS_WAS[statusId] ?? 'den Status');
 }
 
-/** **Umbenennen** (flach im PATCH, gemessen: Organisator 200). Nachgelesen. */
+/**
+ * **Umbenennen** (flach im PATCH, gemessen: Organisator 200). Nachgelesen. Steht der alte Name im
+ * Verwendungszweck, zieht er mit (`zweckMitNeuemNamen`) – auch beim Zurückbenennen über „Rückgängig“.
+ */
 export async function umbenennen(id: number, name: string): Promise<void> {
   const neu = name.trim();
   if (!neu) throw new ApiError(422, 'Der Name darf nicht leer sein.');
+  const vorher = await gruppe(id);
   await ctAnfrage(`/groups/${id}`, { method: 'PATCH', body: json({ name: neu }) });
   if ((await gruppe(id)).name !== neu) throw new NichtUebernommen('den neuen Namen');
+  const e = einstellungenLesen(vorher.information?.note);
+  if (!e) return;
+  const zweck = zweckMitNeuemNamen(e.bezahlung.zweck, vorher.name, neu);
+  if (zweck !== e.bezahlung.zweck)
+    await einstellungenSchreiben(id, { ...e, bezahlung: { ...e.bezahlung, zweck } });
 }
 
 /** Die Obergruppe (das Team) einer Veranstaltung – auch einer archivierten (gemessen). */

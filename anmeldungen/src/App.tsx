@@ -92,6 +92,9 @@ export function App() {
       aenderung={aenderung}
       onSchliessen={() => setAenderung(null)}
       onRueckgaengig={() => {
+        // Die App merkt sich, dass zurückgenommen ist: Die Übersicht lädt gleich neu und baut die Leiste
+        // dabei neu auf – sonst böte sie danach wieder „Rückgängig“ an (Durchklicken 13.10.2026).
+        setAenderung({ text: 'Rückgängig gemacht.', rueckgaengig: null });
         if (ansicht.art === 'start') laden();
         else setStand((x) => x + 1);
       }}

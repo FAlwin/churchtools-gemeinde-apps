@@ -165,6 +165,34 @@ describe('Archiv (A4-Nachtrag)', () => {
   });
 });
 
+describe('Archiv: zweimal hintereinander endgültig löschen (Durchklicken 13.10.2026)', () => {
+  it('der zweite Knopf hängt nicht auf „Wird gelöscht …“', async () => {
+    m.archivListe
+      .mockResolvedValueOnce([
+        { id: 40, name: 'A', team: null, tag: null },
+        { id: 41, name: 'B', team: null, tag: null },
+      ])
+      .mockResolvedValue([{ id: 41, name: 'B', team: null, tag: null }]);
+    m.istGruppenAdmin.mockResolvedValue(true);
+    m.loeschenEndgueltig.mockResolvedValue();
+    render(<ArchivSeite artId={5} onZurueck={() => {}} onGeaendert={() => {}} />);
+    const loeschen = async (name: string) => {
+      fireEvent.click((await screen.findAllByRole('button', { name: 'Endgültig löschen' }))[0]);
+      fireEvent.change(screen.getByLabelText('Zum Bestätigen den Namen eintippen'), {
+        target: { value: name },
+      });
+      fireEvent.click(screen.getAllByRole('button', { name: 'Endgültig löschen' }).at(-1)!);
+      await waitFor(() =>
+        expect(m.loeschenEndgueltig).toHaveBeenLastCalledWith(name === 'A' ? 40 : 41),
+      );
+    };
+    await loeschen('A');
+    await waitFor(() => expect(screen.queryByText('Endgültig löschen?')).toBeNull());
+    await loeschen('B');
+    expect(m.loeschenEndgueltig).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('Leiste „Rückgängig“', () => {
   it('Rückgängig ausführen → „Rückgängig gemacht.“, Seite lädt neu', async () => {
     const zurueck = vi.fn().mockResolvedValue(undefined);

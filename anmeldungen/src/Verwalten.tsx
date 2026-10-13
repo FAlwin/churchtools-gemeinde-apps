@@ -70,8 +70,8 @@ export function VerwaltenFenster({
           />
         </label>
         <p className={f.hinweis}>
-          Der Termin im Kalender und der Verwendungszweck behalten ihren Text – bei Bedarf dort
-          anpassen.
+          Steht der Name im Verwendungszweck, zieht er mit. Der Termin im Kalender behält seinen
+          Titel – bei Bedarf dort anpassen.
         </p>
         <Fehler text={fehler} />
         <button

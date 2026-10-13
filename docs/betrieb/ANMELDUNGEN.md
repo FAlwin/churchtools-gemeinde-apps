@@ -119,7 +119,8 @@ mitarbeiten (z. B. über den Status oder global über die Gruppen).
 
 - **„Verwalten“** oben auf der Seite einer Veranstaltung: umbenennen, Freigabe zurücknehmen, in ein
   anderes Team verschieben, löschen. Nach jeder Änderung – auch nach dem Speichern eines Fensters – steht
-  oben **„Rückgängig“**.
+  oben **„Rückgängig“**. Steht der Name im Verwendungszweck, zieht er beim Umbenennen und bei „wie eine
+  frühere“ mit; der Titel des Kalendertermins bleibt, wie er ist.
 - **Löschen schiebt ins Archiv.** Die Veranstaltung verschwindet aus der Liste, Gäste können sich nicht
   mehr anmelden, die Anmeldungen bleiben. Unter **„Gelöschte Veranstaltungen (Archiv)“** auf der
   Startseite lässt sie sich wiederherstellen (als Entwurf).

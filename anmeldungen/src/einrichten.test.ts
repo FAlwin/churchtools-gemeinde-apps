@@ -593,4 +593,29 @@ describe('Verwalten (A4-Nachtrag)', () => {
     await wiederherstellen(id, vorher);
     expect(aufrufe.filter((a) => !a.startsWith('GET'))).toEqual([]);
   });
+
+  it('Verwendungszweck folgt dem Namen: beim Kopieren und beim Umbenennen (und zurück)', async () => {
+    const quelle = await legeVeranstaltungAn({
+      name: 'Freizeit 2026',
+      teamId: 7,
+      artId: 5,
+      vorlage: 'freizeit',
+    });
+    const kopie = await kopiereVeranstaltung(quelle, 'Freizeit 2027');
+    expect(einstellungenLesen(gruppen.get(kopie)!.note)!.bezahlung.zweck).toBe(
+      'Freizeit 2027 [Nachname]',
+    );
+    await umbenennen(kopie, 'Sommerfreizeit 2027');
+    expect(einstellungenLesen(gruppen.get(kopie)!.note)!.bezahlung.zweck).toBe(
+      'Sommerfreizeit 2027 [Nachname]',
+    );
+    await umbenennen(kopie, 'Freizeit 2027');
+    expect(einstellungenLesen(gruppen.get(kopie)!.note)!.bezahlung.zweck).toBe(
+      'Freizeit 2027 [Nachname]',
+    );
+    // Die Quelle bleibt, wie sie war.
+    expect(einstellungenLesen(gruppen.get(quelle)!.note)!.bezahlung.zweck).toBe(
+      'Freizeit 2026 [Nachname]',
+    );
+  });
 });

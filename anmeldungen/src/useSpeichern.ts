@@ -13,6 +13,9 @@ export function useSpeichern(onGespeichert: () => void) {
     setFehler(null);
     try {
       await tun();
+      // Auch nach Erfolg zurücksetzen: Meist schließt das Fenster ohnehin, die Archiv-Seite aber bleibt
+      // stehen – dort hing der zweite „Endgültig löschen“ sonst auf „Wird gelöscht …“ (Durchklicken 13.10.).
+      setArbeitet(false);
       (danach ?? onGespeichert)();
     } catch (e) {
       setFehler(fehlerMeldung(e).text);

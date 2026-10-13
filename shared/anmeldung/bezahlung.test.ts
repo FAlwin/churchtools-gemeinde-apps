@@ -6,6 +6,7 @@ import {
   ibanText,
   pruefeBezahlung,
   verwendungszweck,
+  zweckMitNeuemNamen,
   type Bezahlung,
 } from './bezahlung';
 
@@ -49,6 +50,24 @@ describe('Verwendungszweck', () => {
     expect(verwendungszweck('Silvester [Nachname]', ' Müller ')).toBe('Silvester Müller');
     expect(verwendungszweck('[Nachname] / [Nachname]', 'Ott')).toBe('Ott / Ott');
     expect(verwendungszweck('Spende Gemeindeessen', 'Ott')).toBe('Spende Gemeindeessen');
+  });
+});
+
+describe('Verwendungszweck folgt dem Namen (Durchklicken 13.10.2026)', () => {
+  it('alter Name im Zweck → durch den neuen ersetzt', () => {
+    expect(zweckMitNeuemNamen('Freizeit 2026 [Nachname]', 'Freizeit 2026', 'Freizeit 2027')).toBe(
+      'Freizeit 2027 [Nachname]',
+    );
+  });
+  it('eigener Zweck ohne den Namen, leerer alter Name, gleicher Name → bleibt', () => {
+    expect(zweckMitNeuemNamen('Spende [Nachname]', 'Freizeit 2026', 'Freizeit 2027')).toBe(
+      'Spende [Nachname]',
+    );
+    expect(zweckMitNeuemNamen('X [Nachname]', '', 'Y')).toBe('X [Nachname]');
+    expect(zweckMitNeuemNamen('X [Nachname]', 'X', 'X')).toBe('X [Nachname]');
+  });
+  it('nie länger als für eine Überweisung erlaubt', () => {
+    expect(zweckMitNeuemNamen('A [Nachname]', 'A', 'B'.repeat(200))).toHaveLength(140);
   });
 });
 

@@ -128,6 +128,11 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   - **Leiste „Rückgängig“** nach jeder Änderung, auch nach dem Speichern eines Fensters (Termin,
     Anmeldung, Preise, Bezahlung …): Sie schreibt den Stand von vorher zurück (`wiederherstellen`,
     eine Stelle für alle Fenster). Ein im Kalender neu angelegter Termin bleibt dabei bestehen.
+  - **Der Verwendungszweck folgt dem Namen:** Steht der alte Name darin, ersetzen Umbenennen und
+    „wie eine frühere“ ihn durch den neuen („Freizeit 2027 [Nachname]“ statt „Freizeit 2026 …“). Beim
+    Durchklicken in der Test-Instanz gefunden, ebenso: „Rückgängig“ wurde nach dem Neuladen der
+    Übersicht erneut angeboten, und das zweite „Endgültig löschen“ hintereinander blieb auf
+    „Wird gelöscht …“ stehen – beides behoben, je mit Test.
   - **Rechte, gemessen:** Umbenennen, Status und Archiv darf, wer einrichten darf. Verschieben und
     endgültig Löschen erlaubt ChurchTools nur Gruppen-Admins; für alle anderen sind die Knöpfe gesperrt,
     mit Grund.

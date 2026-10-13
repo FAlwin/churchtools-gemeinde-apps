@@ -73,6 +73,17 @@ export function verwendungszweck(zweck: string, nachname: string): string {
   return zweck.split(NACHNAME).join(nachname.trim()).trim();
 }
 
+/**
+ * **Der Verwendungszweck folgt dem Namen** (Durchklicken 13.10.2026: Die Kopie „Freizeit 2027“ hätte mit
+ * „Freizeit 2026 Müller“ überweisen lassen). Steht der alte Name im Zweck, wird er durch den neuen ersetzt;
+ * einen selbst geschriebenen Zweck ohne den Namen lässt es stehen. Beim Kopieren und Umbenennen.
+ */
+export function zweckMitNeuemNamen(zweck: string, altName: string, neuName: string): string {
+  const alt = altName.trim();
+  if (!alt || alt === neuName.trim() || !zweck.includes(alt)) return zweck;
+  return zweck.split(alt).join(neuName.trim()).slice(0, ZWECK_MAX);
+}
+
 /** **Was an der Bezahlung nicht stimmt** – leer, wenn alles passt. Eine fehlende IBAN ist erlaubt (kostenlos). */
 export function pruefeBezahlung(b: Bezahlung): string[] {
   const fehler: string[] = [];

@@ -5,12 +5,14 @@
  * `anmeldungen/src/veranstaltungen.ts`.
  *
  * Eine Veranstaltung ist eine **Untergruppe der Team-Gruppe** (entschieden 12.10.2026, Messung
- * `docs/messung-a2-2026-10-12.md` im Planungsordner). Erkannt wird sie an der Kennung ihrer Beschreibung
- * (`EINSTELLUNGEN_KENNUNG`) – andere Untergruppen (z. B. „Lobpreisteam“ unter „Gottesdienst“) sind keine.
+ * `docs/messung-a2-2026-10-12.md` im Planungsordner). Erkannt wird sie an den Einstellungen in ihrer
+ * Beschreibung (`traegtEinstellungen`, altes und neues Format) oder – wenn die fehlen, weil jemand die
+ * Beschreibung in ChurchTools überschrieben hat – an der Gruppenart „Anmeldung“ (A5). Andere Untergruppen
+ * (z. B. „Lobpreisteam“ unter „Gottesdienst“) sind keine.
  */
 import {
-  EINSTELLUNGEN_KENNUNG,
   einstellungenLesen,
+  traegtEinstellungen,
   type OeffentlicheEinstellungen,
   type TerminAngabe,
 } from './formular';
@@ -26,6 +28,8 @@ export interface VeranstaltungRoh {
   statusId: number;
   /** Die Beschreibung (`information.note`) – darin unsere Einstellungen. */
   beschreibung: string;
+  /** Gruppenart (`domainAttributes.groupTypeId`) – erkennt eine Veranstaltung ohne Einstellungen (A5). */
+  typId?: number;
 }
 
 /** Was ChurchTools sonst zur Gruppe weiß (`GET /groups?ids[]=…`). */
@@ -73,9 +77,16 @@ export interface KaputteVeranstaltung {
   gruppeId: number;
 }
 
-/** Ist die Untergruppe überhaupt eine Veranstaltung der Anmeldungen? */
-export function istVeranstaltung(roh: Pick<VeranstaltungRoh, 'beschreibung'>): boolean {
-  return roh.beschreibung.startsWith(EINSTELLUNGEN_KENNUNG);
+/**
+ * Ist die Untergruppe überhaupt eine Veranstaltung der Anmeldungen? An den Einstellungen in der Beschreibung –
+ * oder, mit `artId`, an der Gruppenart „Anmeldung“ (dann auch, wenn die Einstellungen fehlen).
+ */
+export function istVeranstaltung(
+  roh: Pick<VeranstaltungRoh, 'beschreibung' | 'typId'>,
+  artId?: number | null,
+): boolean {
+  if (traegtEinstellungen(roh.beschreibung)) return true;
+  return artId !== undefined && artId !== null && roh.typId === artId;
 }
 
 /**
@@ -127,15 +138,20 @@ export function belegungAus(
   return { aktiv, wartend, unbezahlt: bezahltFeldId === undefined ? null : unbezahlt };
 }
 
-/** Eine Veranstaltung aus allem, was ChurchTools liefert. `null` = keine (oder unlesbare) Veranstaltung. */
+/**
+ * Eine Veranstaltung aus allem, was ChurchTools liefert. `null` = keine (oder unlesbare) Veranstaltung.
+ * `gelesen`: schon gelesene Einstellungen – z. B. aus der Sicherung repariert (A5), dann steht in
+ * `roh.beschreibung` noch der überschriebene Text.
+ */
 export function veranstaltungAus(
   roh: VeranstaltungRoh,
   details: VeranstaltungDetails,
   belegung: Belegung | null,
   heute: string,
   jetzt: Date,
+  gelesen: OeffentlicheEinstellungen | null = einstellungenLesen(roh.beschreibung),
 ): Veranstaltung | null {
-  const einstellungen = einstellungenLesen(roh.beschreibung);
+  const einstellungen = gelesen;
   if (!einstellungen) return null;
   const phase = phaseVon(roh.statusId, einstellungen.termin, heute);
   return {

@@ -14,6 +14,8 @@ export type Zustand =
       uebersicht: Uebersicht;
       /** Wo die Person anlegen darf (A3); `artId: null` = Gruppenart „Anmeldung“ fehlt. */
       anlegen: { artId: number | null; teamIds: number[] };
+      /** Gruppen-Admin: darf jede Veranstaltung freigeben (A5: Hinweis auf der Startseite). */
+      admin: boolean;
     }
   | { art: 'fehler'; text: string; nochmal: boolean };
 

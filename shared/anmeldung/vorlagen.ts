@@ -5,6 +5,7 @@
  * Feld der Einstellungen an EINER Stelle einen Wert bekommt.
  */
 import { STANDARD_BEZAHLUNG } from './bezahlung';
+import { VORLAGEN_GESTALTUNG } from './gestaltung';
 import { standardFormular, type Gestaltung, type OeffentlicheEinstellungen } from './formular';
 
 export type Vorlage = 'einfach' | 'kinder' | 'freizeit';
@@ -34,6 +35,19 @@ const GESTALTUNG: Record<Vorlage, Gestaltung['vorlage']> = {
   freizeit: 'foto',
 };
 
+/** Die Gestaltung einer neuen Veranstaltung: die Vorgaben der passenden Formular-Vorlage. */
+function startGestaltung(vorlage: Vorlage): Gestaltung {
+  const v = VORLAGEN_GESTALTUNG.find((x) => x.id === GESTALTUNG[vorlage])!;
+  return {
+    vorlage: v.id,
+    farbe: v.farbe,
+    feldstil: v.feldstil,
+    knoepfe: v.knoepfe,
+    text: '',
+    gemeindename: true,
+  };
+}
+
 /** Die Startwerte einer neuen Veranstaltung: noch ohne Termin, kostenlos, ohne Konto, Löschfrist 3 Monate. */
 export function neueEinstellungen(vorlage: Vorlage): OeffentlicheEinstellungen {
   return {
@@ -50,14 +64,7 @@ export function neueEinstellungen(vorlage: Vorlage): OeffentlicheEinstellungen {
         : vorlage === 'freizeit'
           ? standardFormular({ geburtsdatum: true })
           : standardFormular(),
-    gestaltung: {
-      vorlage: GESTALTUNG[vorlage],
-      farbe: '#2563eb',
-      feldstil: 'kasten',
-      knoepfe: 'rund',
-      text: '',
-      gemeindename: true,
-    },
+    gestaltung: startGestaltung(vorlage),
     ctFelder: {},
     wer: vorlage === 'kinder' ? 'kinder' : 'familie',
     plaetze: { zeigen: 'knapp', knappUnter: 5 },

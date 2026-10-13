@@ -14,6 +14,11 @@ import {
   SYSTEMFELDER,
   einstellungenAlsText,
   einstellungenLesen,
+  einstellungenPacken,
+  istAltesFormat,
+  sichtbarerText,
+  sicherungLesen,
+  sicherungTeile,
   type OeffentlicheEinstellungen,
 } from '@shared/anmeldung/formular';
 import { pruefeRegeln, type PreisRegeln } from '@shared/anmeldung/preis';
@@ -44,7 +49,12 @@ const json = (body: unknown) => JSON.stringify(body);
 interface GruppeRoh {
   id: number;
   name: string;
-  information?: { note?: string | null; groupStatusId?: number; groupTypeId?: number };
+  information?: {
+    note?: string | null;
+    groupStatusId?: number;
+    groupTypeId?: number;
+    imageUrl?: string | null;
+  };
   settings?: {
     maxMembers?: number | null;
     allowWaitinglist?: boolean;
@@ -117,9 +127,9 @@ export async function darfVeranstaltungEinrichten(id: number): Promise<boolean> 
  * Einstellungen (über 5.000 Zeichen) „ChurchTools antwortet gerade nicht“ da: Ein einfacher `Error` gilt in
  * `fehlerMeldung` als „keine Antwort“ (A4, beim Bauen der Preise gefunden).
  */
-function alsText(e: OeffentlicheEinstellungen): string {
+function alsText(e: OeffentlicheEinstellungen, sichtbar?: string): string {
   try {
-    return einstellungenAlsText(e);
+    return einstellungenAlsText(e, sichtbar);
   } catch (err) {
     if (err instanceof ZodError)
       throw new ApiError(422, 'Eine Angabe ist zu lang oder ungültig und wurde nicht gespeichert.');
@@ -127,25 +137,136 @@ function alsText(e: OeffentlicheEinstellungen): string {
   }
 }
 
+/**
+ * **Einstellungen schreiben** (A5): unsichtbar und gepackt unter dem sichtbaren Text der Beschreibung – hat
+ * jemand dort in ChurchTools eigenen Text geschrieben, bleibt er stehen. Danach die Sicherung. Beides
+ * nachgelesen.
+ */
 async function einstellungenSchreiben(id: number, e: OeffentlicheEinstellungen): Promise<void> {
-  const text = alsText(e);
+  const vorher = (await gruppe(id)).information?.note;
+  const text = alsText(e, sichtbarerText(vorher));
   await ctAnfrage(`/groups/${id}`, { method: 'PATCH', body: json({ note: text }) });
   if ((await gruppe(id)).information?.note !== text)
     throw new NichtUebernommen('die Einstellungen');
+  await sicherungSchreiben(id, text, e.ctFelder);
 }
 
-/** Name und Status (1 aktiv, 2 Entwurf) einer Veranstaltung. */
-export async function kopfVon(id: number): Promise<{ name: string; statusId: number }> {
-  const g = await gruppe(id);
-  return { name: g.name, statusId: Number(g.information?.groupStatusId) };
+/** Die Beschreibungen (`note`) der Gruppenfelder einer Veranstaltung, je Feldnummer. */
+async function feldNotizen(id: number): Promise<Map<number, string>> {
+  const felder = await ctDaten<{ type?: string; field?: { id?: number; note?: string | null } }[]>(
+    `/groups/${id}/memberfields`,
+  );
+  const m = new Map<number, string>();
+  for (const f of felder)
+    if (f.type === 'group' && typeof f.field?.id === 'number')
+      m.set(f.field.id, f.field.note ?? '');
+  return m;
 }
 
-/** Liest die Einstellungen einer Veranstaltung frisch aus ChurchTools. */
-export async function einstellungenVon(id: number): Promise<OeffentlicheEinstellungen> {
-  const e = einstellungenLesen((await gruppe(id)).information?.note);
-  if (!e)
-    throw new ApiError(422, 'Die Einstellungen dieser Veranstaltung lassen sich nicht lesen.');
+/**
+ * **Die Sicherung schreiben** (A5, Alwin: „versteckt + Sicherung“) – derselbe Code in den Beschreibungen der
+ * Systemfelder, in Teilen zu je höchstens 1.024 Zeichen (`sicherungTeile`). Nur, was sich geändert hat, wird
+ * geschrieben; danach nachgelesen. Veranstaltungen aus der Zeit vor A3 haben nicht alle Systemfelder – reicht
+ * der Platz nicht, bleiben sie ohne Sicherung.
+ */
+async function sicherungSchreiben(
+  id: number,
+  beschreibung: string,
+  ctFelder: Record<string, number>,
+): Promise<void> {
+  const teile = sicherungTeile(beschreibung);
+  const ids = SYSTEMFELDER.map((f) => ctFelder[f.id]).filter(
+    (x): x is number => typeof x === 'number',
+  );
+  if (!teile || ids.length < teile.length) return;
+  const jetzt = await feldNotizen(id);
+  for (const [i, feldId] of ids.entries()) {
+    const soll = teile[i] ?? '';
+    if ((jetzt.get(feldId) ?? '') === soll) continue;
+    await ctAnfrage(`/groups/${id}/memberfields/group/${feldId}`, {
+      method: 'PATCH',
+      body: json({ note: soll }),
+    });
+  }
+  // Nachlesen gegen das, was geschrieben werden sollte – eine noch lesbare, aber VERALTETE Sicherung zählt
+  // nicht (beim Schreiben des Tests gefunden).
+  const nachher = await feldNotizen(id);
+  if (ids.some((f, i) => (nachher.get(f) ?? '') !== (teile[i] ?? '')))
+    throw new NichtUebernommen('die Sicherung der Einstellungen');
+}
+
+/**
+ * **Reparieren** (A5): Fehlen die Einstellungen in der Beschreibung (jemand hat sie in ChurchTools bearbeitet;
+ * der Editor wirft die unsichtbare Zeile weg – gemessen), stellt die Erweiterung sie aus der Sicherung wieder
+ * her und behält den neuen Text. `null`, wenn es keine Sicherung gibt. Darf man nicht schreiben (403), gibt es
+ * die Einstellungen trotzdem zum Ansehen.
+ */
+export async function reparieren(id: number): Promise<OeffentlicheEinstellungen | null> {
+  const e = sicherungLesen([...(await feldNotizen(id)).values()]);
+  if (!e) return null;
+  try {
+    await einstellungenSchreiben(id, e);
+  } catch (err) {
+    if (!(err instanceof ApiError && err.status === 403)) throw err;
+  }
   return e;
+}
+
+/** Name, Status (1 aktiv, 2 Entwurf) und Titelbild einer Veranstaltung. */
+export async function kopfVon(
+  id: number,
+): Promise<{ name: string; statusId: number; bildUrl: string | null }> {
+  const g = await gruppe(id);
+  return {
+    name: g.name,
+    statusId: Number(g.information?.groupStatusId),
+    bildUrl: g.information?.imageUrl || null,
+  };
+}
+
+/** Größtes Titelbild, das die Erweiterung hochlädt – größere Fotos vorher verkleinern. */
+export const BILD_MAX_BYTES = 8 * 1024 * 1024;
+
+/**
+ * **Titelbild hochladen** (A5) – das Gruppenbild in ChurchTools, ohne Login abrufbar (A0). Gemessen 13.10.2026:
+ * `POST /files/groupimage/{id}` mit dem Feld `files[]`. Nachgelesen; gibt die neue Bild-Adresse zurück.
+ */
+export async function bildHochladen(id: number, datei: File): Promise<string> {
+  if (!datei.type.startsWith('image/'))
+    throw new ApiError(422, 'Bitte ein Bild wählen (JPG oder PNG).');
+  if (datei.size > BILD_MAX_BYTES)
+    throw new ApiError(413, 'Das Bild ist größer als 8 MB. Bitte vorher verkleinern.');
+  const form = new FormData();
+  form.append('files[]', datei, datei.name);
+  await ctAnfrage(`/files/groupimage/${id}`, { method: 'POST', body: form });
+  const url = (await gruppe(id)).information?.imageUrl;
+  if (!url) throw new NichtUebernommen('das Titelbild');
+  return url;
+}
+
+/** **Titelbild entfernen** – dann gilt das Bild der Vorlage (gemessen: `DELETE /files/groupimage/{id}` → 204). */
+export async function bildEntfernen(id: number): Promise<void> {
+  await ctAnfrage(`/files/groupimage/${id}`, { method: 'DELETE' });
+  if ((await gruppe(id)).information?.imageUrl)
+    throw new NichtUebernommen('das Entfernen des Titelbilds');
+}
+
+/**
+ * Liest die Einstellungen einer Veranstaltung frisch aus ChurchTools. Steht die Beschreibung noch im alten,
+ * sichtbaren Format, schreibt sie sie gleich neu (A5: der Datenblock verschwindet aus „Infos“); geht das nicht
+ * (kein Recht, ChurchTools antwortet nicht), bleibt sie, wie sie ist – gelesen ist sie trotzdem. Fehlen die
+ * Einstellungen, wird aus der Sicherung repariert.
+ */
+export async function einstellungenVon(id: number): Promise<OeffentlicheEinstellungen> {
+  const note = (await gruppe(id)).information?.note;
+  const e = einstellungenLesen(note);
+  if (e) {
+    if (istAltesFormat(note)) await einstellungenSchreiben(id, e).catch(() => undefined);
+    return e;
+  }
+  const repariert = await reparieren(id);
+  if (repariert) return repariert;
+  throw new ApiError(422, 'Die Einstellungen dieser Veranstaltung lassen sich nicht lesen.');
 }
 
 async function systemfelderAnlegen(id: number): Promise<Record<string, number>> {
@@ -484,7 +605,7 @@ export async function wiederherstellen(id: number, alt: Stand): Promise<void> {
   const jetzt = await gruppe(id);
   if (jetzt.name !== alt.name) await umbenennen(id, alt.name);
   const e = einstellungenLesen(jetzt.information?.note);
-  if (!e || alsText(e) !== alsText(alt.einstellungen))
+  if (!e || einstellungenPacken(e) !== einstellungenPacken(alt.einstellungen))
     await einstellungenSchreiben(id, alt.einstellungen);
   const a = await anmeldungVon(id);
   if (JSON.stringify(a) !== JSON.stringify(alt.anmeldung))

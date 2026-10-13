@@ -10,11 +10,13 @@
  *    (`useInRegistrationForm`) – ein ausgeblendetes Feld lehnt ChurchTools ab.
  *  - **Mehrfachauswahl** nimmt ChurchTools bei der anonymen Anmeldung nur mit EINEM Wert an → wir
  *    speichern „Mehrere Antworten“ als Text.
- *  - Die öffentlichen Einstellungen (Preise, Aufbau, Gestaltung) liegen als JSON in der
- *    **Beschreibung der Anmeldegruppe** – die ist ohne Login lesbar, fasst aber höchstens
- *    **5.000 Zeichen**. Der Erweiterungs-Speicher ist ohne Login nicht lesbar.
+ *  - Die öffentlichen Einstellungen (Preise, Aufbau, Gestaltung) liegen in der **Beschreibung der
+ *    Anmeldegruppe** – die ist ohne Login lesbar, fasst aber höchstens **5.000 Zeichen**. Der
+ *    Erweiterungs-Speicher ist ohne Login nicht lesbar. Seit A5 **gepackt und unsichtbar** (siehe
+ *    `einstellungenAlsText`).
  */
 import { z } from 'zod';
+import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate';
 import type { PreisRegeln } from './preis';
 import { STANDARD_BEZAHLUNG, ZWECK_MAX, type Bezahlung } from './bezahlung';
 
@@ -32,8 +34,18 @@ export type Feldtyp =
   | 'date'
   | 'number'
   | 'info'
+  | 'ueberschrift'
+  | 'trenner'
   | 'privacy'
   | 'price';
+
+/**
+ * **Nur Text, keine Frage** – Hinweistext, Zwischenüberschrift, Trennlinie (A5). Keine Antwort, keine Spalte in
+ * ChurchTools, kein „Pflicht“. Die EINE Stelle für diese Regel (Prüfung, Ablage, Darstellung, Baukasten).
+ */
+export function nurText(typ: Feldtyp): boolean {
+  return typ === 'info' || typ === 'ueberschrift' || typ === 'trenner';
+}
 
 /** `fest` = immer dabei, `standard` = vorgegeben, an/aus; `eigen` = aus dem Baukasten; `preis` = aus den Preisen. */
 export type Feldart = 'fest' | 'standard' | 'eigen' | 'preis';
@@ -49,6 +61,12 @@ export interface Feld {
   zustand: Feldzustand;
   /** Antworten bei `radio`, `select`, `multi`. */
   antworten: string[];
+  /**
+   * Antworten, die aus dem Formular entfernt wurden, die aber schon jemand gewählt hat (A5, Alwin:
+   * „ausblenden“). Sie bleiben in ChurchTools stehen – sonst wäre die Wahl der Person still weg (gemessen) –,
+   * das Formular bietet sie nicht mehr an.
+   */
+  verborgen?: string[];
 }
 
 export interface Formular {
@@ -58,18 +76,23 @@ export interface Formular {
   person: Feld[];
 }
 
-/** Bausteine des Baukastens (ohne die festen und vorgegebenen Felder). */
-export const BAUSTEINE: { typ: Feldtyp; name: string }[] = [
-  { typ: 'text', name: 'Kurzer Text' },
-  { typ: 'textarea', name: 'Langer Text' },
-  { typ: 'janein', name: 'Ja / Nein' },
-  { typ: 'check', name: 'Ankreuzen' },
-  { typ: 'radio', name: 'Eine Antwort' },
-  { typ: 'select', name: 'Auswahlliste' },
-  { typ: 'multi', name: 'Mehrere Antworten' },
-  { typ: 'date', name: 'Datum' },
-  { typ: 'number', name: 'Zahl' },
-  { typ: 'info', name: 'Hinweistext' },
+/**
+ * Bausteine des Baukastens (ohne die festen und vorgegebenen Felder): eigene Fragen und Gestaltung. Die
+ * empfohlenen Bausteine (Telefon, Geburtsdatum …) stehen in `baukasten.ts` (`EMPFOHLEN`).
+ */
+export const BAUSTEINE: { typ: Feldtyp; name: string; gruppe: 'frage' | 'gestaltung' }[] = [
+  { typ: 'text', name: 'Kurzer Text', gruppe: 'frage' },
+  { typ: 'textarea', name: 'Langer Text', gruppe: 'frage' },
+  { typ: 'janein', name: 'Ja / Nein', gruppe: 'frage' },
+  { typ: 'check', name: 'Ankreuzen', gruppe: 'frage' },
+  { typ: 'radio', name: 'Eine Antwort', gruppe: 'frage' },
+  { typ: 'select', name: 'Auswahlliste', gruppe: 'frage' },
+  { typ: 'multi', name: 'Mehrere Antworten', gruppe: 'frage' },
+  { typ: 'date', name: 'Datum', gruppe: 'frage' },
+  { typ: 'number', name: 'Zahl', gruppe: 'frage' },
+  { typ: 'ueberschrift', name: 'Überschrift', gruppe: 'gestaltung' },
+  { typ: 'info', name: 'Hinweistext', gruppe: 'gestaltung' },
+  { typ: 'trenner', name: 'Trennlinie', gruppe: 'gestaltung' },
 ];
 
 export interface Vorgaben {
@@ -165,7 +188,7 @@ const MAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 export function pruefeAntworten(f: Formular, a: Antworten): string[] {
   const fehlt: string[] = [];
   const pruefe = (x: Feld, wert: Antwort, pfad: string) => {
-    if (x.typ === 'info' || x.typ === 'price' || x.zustand === 'aus') return;
+    if (nurText(x.typ) || x.typ === 'price' || x.zustand === 'aus') return;
     if (x.typ === 'email' && typeof wert === 'string' && wert.trim() && !MAIL.test(wert.trim())) {
       fehlt.push(pfad);
       return;
@@ -195,18 +218,29 @@ export function pruefeAntworten(f: Formular, a: Antworten): string[] {
   return fehlt;
 }
 
+/**
+ * **Was an einem Feld nicht stimmt** – die EINE Regel für den Baukasten (Anzeige direkt am Feld, bevor
+ * gespeichert wird) und `pruefeFormular` (beim Speichern). `null` = in Ordnung.
+ */
+export function feldFehler(x: Feld): string | null {
+  if (x.art === 'eigen' && x.typ !== 'trenner' && !x.frage.trim())
+    return nurText(x.typ) ? 'Bitte einen Text eintragen.' : 'Bitte eine Frage eintragen.';
+  if (
+    (x.typ === 'radio' || x.typ === 'select' || x.typ === 'multi') &&
+    x.antworten.filter((s) => s.trim()).length < 2
+  )
+    return 'Bitte mindestens zwei Antworten eintragen.';
+  return null;
+}
+
 /** Was an einem Formular nicht stimmt – beim Speichern im Baukasten. */
 export function pruefeFormular(f: Formular): string[] {
   const fehler: string[] = [];
   const ids = alleFelder(f).map((x) => x.id);
   if (new Set(ids).size !== ids.length) fehler.push('Zwei Felder haben dieselbe Kennung.');
   for (const x of alleFelder(f)) {
-    if (x.art === 'eigen' && !x.frage.trim()) fehler.push('Ein Feld hat keine Frage.');
-    if (
-      (x.typ === 'radio' || x.typ === 'select' || x.typ === 'multi') &&
-      x.antworten.filter((s) => s.trim()).length < 2
-    )
-      fehler.push(`„${x.frage}“ braucht mindestens zwei Antworten.`);
+    const fehlt = feldFehler(x);
+    if (fehlt) fehler.push(x.frage.trim() ? `„${x.frage}“: ${fehlt}` : fehlt);
   }
   for (const id of ['name', 'mail', 'priv'])
     if (!f.anmeldung.some((x) => x.id === id && x.zustand === 'pflicht'))
@@ -244,6 +278,8 @@ export function ctAblage(x: Feld): CtAblage {
     case 'email':
       return { ort: 'person', feld: 'email' };
     case 'info':
+    case 'ueberschrift':
+    case 'trenner':
     case 'price':
     case 'privacy':
       return { ort: 'keins' };
@@ -295,12 +331,12 @@ export const SYSTEMFELDER = [
 /** Höchstlänge der Gruppen-Beschreibung (gemessen A0: 5.000 geht, 20.000 → 400). */
 export const BESCHREIBUNG_MAX = 5000;
 /**
- * Erkennungszeichen am Anfang der Beschreibung, damit eine normale Beschreibung nie als Einstellung gilt.
+ * Erkennungszeichen des **alten** Formats (bis A4): JSON sichtbar am Anfang der Beschreibung. Wird weiter
+ * gelesen; geschrieben wird seit A5 das unsichtbare, gepackte Format (`VERWEIS`).
  *
  * **Neue Angaben im Format brauchen einen Standardwert (`.default(…)`)** – sonst werden alle Einstellungen,
  * die vorher geschrieben wurden, unlesbar und die Veranstaltungen fallen aus der Liste (an der Test-Instanz
- * am 12.10.2026 mit `loeschfristMonate` passiert). Erst eine Änderung, die alte Werte anders DEUTET,
- * braucht `anmeldung:v2:` und eine Umwandlung.
+ * am 12.10.2026 mit `loeschfristMonate` passiert). Das gilt für beide Formate: Sie teilen das Schema.
  */
 export const EINSTELLUNGEN_KENNUNG = 'anmeldung:v1:';
 
@@ -327,6 +363,8 @@ export interface TerminAngabe {
   ende: string | null;
   ort: string;
   terminId: number | null;
+  /** Der Kalender des Termins (A5) – damit das Termin-Fenster dort beginnt. Fehlt bei älteren Einstellungen. */
+  kalenderId?: number | null;
 }
 
 export interface OeffentlicheEinstellungen {
@@ -411,6 +449,9 @@ const feldSchema = z.object({
     'date',
     'number',
     'info',
+    // Seit A5 (Baukasten). Neue Werte im enum lassen ältere Einstellungen lesbar.
+    'ueberschrift',
+    'trenner',
     'privacy',
     'price',
   ]),
@@ -418,6 +459,7 @@ const feldSchema = z.object({
   hilfe: z.string().max(400),
   zustand: z.enum(['aus', 'freiwillig', 'pflicht']),
   antworten: z.array(z.string().max(80)).max(20),
+  verborgen: z.array(z.string().max(80)).max(20).optional(),
 });
 const zeitpunkt = z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
 const einstellungenSchema = z.object({
@@ -427,6 +469,7 @@ const einstellungenSchema = z.object({
       ende: zeitpunkt.nullable(),
       ort: z.string().max(200),
       terminId: z.number().int().positive().nullable(),
+      kalenderId: z.number().int().positive().nullable().optional(),
     })
     .nullable()
     // Seit A2 (#480); fehlt es in älteren Einstellungen, gibt es eben noch kein Datum.
@@ -466,13 +509,76 @@ const einstellungenSchema = z.object({
     .default(() => ({ ...STANDARD_BEZAHLUNG })),
 });
 
+// ── Speicherformat v2 (A5): unsichtbar, gepackt, mit Sicherung ──────────────────────────────────
+
 /**
- * **Einstellungen als Text für die Gruppen-Beschreibung.** Wirft, wenn der Text die Höchstlänge
- * sprengt – dann darf nichts gespeichert werden, sonst lehnt ChurchTools ab (400) oder es geht ein
- * Teil verloren. Die Erweiterung zeigt die Meldung und nennt, was zu kürzen ist.
+ * Der Satz, der in ChurchTools in „Infos“ der Gruppe steht (Alwin, 13.10.2026: der sichtbare Datenblock
+ * „sieht nicht gut aus“). Darunter stehen die Einstellungen als **Markdown-Link-Definition** – ChurchTools
+ * zeigt die Beschreibung als Markdown und eine Link-Definition gar nicht an (gemessen, Übersicht, Infos-Seite
+ * und Editor). Die Schnittstelle liefert sie unverändert, auch `/publicgroups` ohne Login.
  */
-export function einstellungenAlsText(e: OeffentlicheEinstellungen): string {
-  const text = EINSTELLUNGEN_KENNUNG + JSON.stringify(einstellungenSchema.parse(e));
+export const HINWEIS_SATZ =
+  'Diese Anmeldung wird mit der Erweiterung **Anmeldungen** verwaltet. Einstellungen bitte dort ändern.';
+
+/** Beginn der unsichtbaren Zeile; dahinter der gepackte Code (deflate, Base64url). */
+export const VERWEIS = '[anmeldung]: #v2:';
+const VERWEIS_ZEILE = /^\[anmeldung\]: #v2:([A-Za-z0-9_-]+)[ \t]*$/m;
+
+function base64url(bytes: Uint8Array): string {
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000)
+    bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function ausBase64url(code: string): Uint8Array {
+  const bin = atob(code.replace(/-/g, '+').replace(/_/g, '/'));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+/**
+ * **Die Einstellungen als gepackter Code** – geprüft (zod), als JSON, gepackt (deflate), Base64url. Packen
+ * schrumpft den Block auf rund ein Drittel; damit passen auch große Freizeiten in die 5.000 Zeichen (A5-Messung:
+ * eine volle Freizeit mit 10 Fragen braucht ungepackt 5.532).
+ */
+export function einstellungenPacken(e: OeffentlicheEinstellungen): string {
+  return base64url(
+    deflateSync(strToU8(JSON.stringify(einstellungenSchema.parse(e))), { level: 9 }),
+  );
+}
+
+/** Gegenstück zu `einstellungenPacken`; `null` bei kaputtem oder ungültigem Code – nie eine Ausnahme. */
+export function einstellungenEntpacken(code: string): OeffentlicheEinstellungen | null {
+  try {
+    const r = einstellungenSchema.safeParse(JSON.parse(strFromU8(inflateSync(ausBase64url(code)))));
+    return r.success ? r.data : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * **Was in ChurchTools sichtbar bleibt** – die Beschreibung ohne unsere Zeile. Hat jemand dort eigenen Text
+ * geschrieben, bleibt er stehen; ist sie leer (oder noch im alten Format), steht der Hinweissatz da.
+ */
+export function sichtbarerText(beschreibung: string | null | undefined): string {
+  if (!beschreibung || beschreibung.startsWith(EINSTELLUNGEN_KENNUNG)) return HINWEIS_SATZ;
+  const ohne = beschreibung.replace(VERWEIS_ZEILE, '').trim();
+  return ohne || HINWEIS_SATZ;
+}
+
+/**
+ * **Einstellungen als Text für die Gruppen-Beschreibung** – der sichtbare Text (Standard: `HINWEIS_SATZ`),
+ * darunter unsichtbar der gepackte Code. Wirft, wenn es die Höchstlänge sprengt – dann darf nichts
+ * gespeichert werden, sonst lehnt ChurchTools ab (400) oder es geht ein Teil verloren.
+ */
+export function einstellungenAlsText(
+  e: OeffentlicheEinstellungen,
+  sichtbar: string = HINWEIS_SATZ,
+): string {
+  const text = `${sichtbar.trim()}\n\n${VERWEIS}${einstellungenPacken(e)}`;
   if (text.length > BESCHREIBUNG_MAX)
     throw new Error(
       `Die Einstellungen sind ${text.length} Zeichen lang, erlaubt sind ${BESCHREIBUNG_MAX}. Bitte Begrüßungstext oder Hinweise kürzen.`,
@@ -480,15 +586,41 @@ export function einstellungenAlsText(e: OeffentlicheEinstellungen): string {
   return text;
 }
 
+/** Wie voll die Beschreibung ist (0–1) – für die Platzanzeige im Baukasten. */
+export function platzBelegt(e: OeffentlicheEinstellungen, sichtbar: string = HINWEIS_SATZ): number {
+  const laenge = `${sichtbar.trim()}\n\n${VERWEIS}${einstellungenPacken(e)}`.length;
+  return laenge / BESCHREIBUNG_MAX;
+}
+
 /**
- * **Einstellungen aus der Gruppen-Beschreibung lesen.** `null`, wenn die Beschreibung keine
- * Einstellungen enthält oder sie nicht gültig sind – nie eine Ausnahme: Die öffentliche Seite zeigt
- * dann „Diese Anmeldung ist gerade nicht verfügbar“ statt eines halben Formulars.
+ * **Trägt die Beschreibung Einstellungen der Anmeldungen?** – altes oder neues Format, ob lesbar oder nicht.
+ * Die EINE Stelle, an der eine Veranstaltung an ihrer Beschreibung erkannt wird (Übersicht, „Deine Gruppen“).
+ */
+export function traegtEinstellungen(beschreibung: string | null | undefined): boolean {
+  return (
+    !!beschreibung &&
+    (beschreibung.startsWith(EINSTELLUNGEN_KENNUNG) || VERWEIS_ZEILE.test(beschreibung))
+  );
+}
+
+/** Steht die Beschreibung noch im alten, sichtbaren Format (v1)? Dann schreibt die Erweiterung sie neu. */
+export function istAltesFormat(beschreibung: string | null | undefined): boolean {
+  return !!beschreibung && beschreibung.startsWith(EINSTELLUNGEN_KENNUNG);
+}
+
+/**
+ * **Einstellungen aus der Gruppen-Beschreibung lesen** – das neue Format (unsichtbare Zeile, irgendwo im Text)
+ * und das alte (`anmeldung:v1:` + JSON am Anfang). `null`, wenn keine oder keine gültigen Einstellungen
+ * darin stehen – nie eine Ausnahme: Die öffentliche Seite zeigt dann „Diese Anmeldung ist gerade nicht
+ * verfügbar“ statt eines halben Formulars.
  */
 export function einstellungenLesen(
   beschreibung: string | null | undefined,
 ): OeffentlicheEinstellungen | null {
-  if (!beschreibung || !beschreibung.startsWith(EINSTELLUNGEN_KENNUNG)) return null;
+  if (!beschreibung) return null;
+  const v2 = VERWEIS_ZEILE.exec(beschreibung);
+  if (v2) return einstellungenEntpacken(v2[1]);
+  if (!beschreibung.startsWith(EINSTELLUNGEN_KENNUNG)) return null;
   try {
     const roh: unknown = JSON.parse(beschreibung.slice(EINSTELLUNGEN_KENNUNG.length));
     const r = einstellungenSchema.safeParse(roh);
@@ -496,4 +628,52 @@ export function einstellungenLesen(
   } catch {
     return null;
   }
+}
+
+// ── Sicherung in den Beschreibungen der Systemfelder ────────────────────────────────────────────
+
+/**
+ * **Die Sicherung** (Alwin, 13.10.2026: „versteckt + Sicherung“). Wer die Beschreibung in ChurchTools
+ * bearbeitet und speichert, verliert die unsichtbare Zeile – der Editor speichert nur, was er zeigt
+ * (gemessen). Deshalb steht derselbe Code zusätzlich in den Beschreibungen der Systemfelder (Betrag,
+ * Bezahlt …): je höchstens 1.024 Zeichen (gemessen), Organisatoren dürfen dort schreiben, öffentlich ist es
+ * nicht. Jeder Teil trägt Nummer und Anzahl, damit ein unvollständiger Satz erkannt wird.
+ */
+export const SICHERUNG_MAX = 1024;
+const SICHERUNG_KOPF = 'anmeldung-sicherung:';
+const SICHERUNG_TEIL = /^anmeldung-sicherung:(\d+)\/(\d+):([A-Za-z0-9_-]*)$/;
+
+/** Den Code einer Beschreibung in Teile für die Systemfelder zerlegen; `null`, wenn kein Code darin steht. */
+export function sicherungTeile(beschreibung: string): string[] | null {
+  const v2 = VERWEIS_ZEILE.exec(beschreibung);
+  if (!v2) return null;
+  const code = v2[1];
+  // Platz je Teil: 1.024 minus Kopf mit zwei bis zu zweistelligen Zahlen.
+  const groesse = SICHERUNG_MAX - SICHERUNG_KOPF.length - 6;
+  const anzahl = Math.max(1, Math.ceil(code.length / groesse));
+  return Array.from(
+    { length: anzahl },
+    (_, i) => `${SICHERUNG_KOPF}${i + 1}/${anzahl}:${code.slice(i * groesse, (i + 1) * groesse)}`,
+  );
+}
+
+/**
+ * Die Sicherung wieder zusammensetzen; `null`, wenn Teile fehlen oder der Code nicht lesbar ist. (Fehlt ein Teil,
+ * scheitert auch schon das Entpacken – die Zählung ist die zweite Sicherung dahinter; die Gegenprobe zeigte, dass
+ * sie allein keinen Test fallen lässt.)
+ */
+export function sicherungLesen(
+  notizen: (string | null | undefined)[],
+): OeffentlicheEinstellungen | null {
+  const teile = new Map<number, string>();
+  let anzahl = 0;
+  for (const n of notizen) {
+    const m = n ? SICHERUNG_TEIL.exec(n.trim()) : null;
+    if (!m) continue;
+    anzahl = Number(m[2]);
+    teile.set(Number(m[1]), m[3]);
+  }
+  if (anzahl === 0 || teile.size !== anzahl) return null;
+  const code = Array.from({ length: anzahl }, (_, i) => teile.get(i + 1) ?? '').join('');
+  return einstellungenEntpacken(code);
 }

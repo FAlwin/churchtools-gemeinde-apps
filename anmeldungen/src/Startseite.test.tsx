@@ -219,3 +219,40 @@ describe('Startseite (A2, #480)', () => {
     expect(link.getAttribute('href')).toMatch(/\/groups\/40$/);
   });
 });
+
+describe('Freigabe-Hinweis für Admins (A5, aus der A3-Abnahme)', () => {
+  // Ein Entwurf in einem Team, in dem man keine Leitung ist.
+  const technikEntwurf = (): Uebersicht => {
+    const liste = [
+      v(
+        { id: 61, name: 'Gemeindecamp', gruppeId: 7, statusId: 2, beginn: '2027-06-01T10:00' },
+        null,
+      ),
+    ];
+    return {
+      einteilung: einteilen(liste),
+      hinweise: aufmerksamkeit(liste, [], new Set([9])),
+      offen: new Map(),
+      verborgen: new Map(),
+    };
+  };
+
+  it('ohne Admin-Recht: „Freigeben kann die Leitung der Gruppe.“', () => {
+    zeigen(technikEntwurf());
+    expect(screen.getByText('Technik · Freigeben kann die Leitung der Gruppe.')).toBeTruthy();
+  });
+
+  it('als Admin: „Freigeben kannst du als Admin.“', () => {
+    render(
+      <Startseite
+        start={START}
+        uebersicht={technikEntwurf()}
+        heute={HEUTE}
+        zeitzone="Europe/Berlin"
+        onOeffnen={() => {}}
+        admin
+      />,
+    );
+    expect(screen.getByText('Technik · Freigeben kannst du als Admin.')).toBeTruthy();
+  });
+});

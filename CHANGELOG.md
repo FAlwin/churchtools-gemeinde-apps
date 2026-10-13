@@ -18,6 +18,65 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Dienste stehen weiter unter Start und Termine. Die Prüfung mit drei Rollen (Admin, Leitung von
   Technik, Mitglied) war sonst ohne Befund.
 
+### Neu (Dienstplaner, E3-5)
+
+- **Die Matrix wird bedienbar** (#523, Entwurf v17): Terminleiste ‹ ＋ Zeitraum ＋ › – „passend zur
+  Fensterbreite“ oder fest, mit „an Fensterbreite anpassen“ zurück –, Spaltenbreite S/M/L, Filter nach
+  Veranstaltung (aus den Terminnamen, wie in der Termine-Liste) und nach Gruppe, beides im Gerät gemerkt.
+  Termine einer anderen als der häufigsten Veranstaltung sind leicht abgesetzt (bei der ECG die
+  Gebetsabende), die Kopfzeile ist einheitlich hoch. **„Wer wie oft?“**: Einsätze je Person im sichtbaren
+  Zeitraum und in den sichtbaren Gruppen, mit Schnitt. „Abgesagt“ und die Monatsauslastung kommen mit E4
+  (aus `possiblepersons`, 2,6 s und 508 KB je Termin – nur bei Bedarf).
+- Intern: `FilterChips` (eine Gestaltung für Termine-Liste und Matrix), `geraet.ts` (Merken im Gerät an
+  einer Stelle, auch für die Termine-Liste), `useBreite` misst per Callback-Ref – mit `useRef` maß es nie,
+  weil der Bereich erst nach dem Laden erscheint (im Browser gefunden).
+
+### Neu (Dienstplaner, E3-4)
+
+- **Planen-Matrix** (#521, Entwurf v17, nur lesen): Termine als Spalten (Füllstand, „N frei“, abgesagt
+  blass), Dienstgruppen als aufklappbare Zeilen mit freien Plätzen je Termin – was man plant, ist offen und
+  „du planst“ –, darunter je Dienst die Plätze: zugesagt, angefragt, frei, Gast, „Nicht sichtbar“ (Namen
+  verbergen). Am Handy eine Datumsleiste und ein Termin. Dieselbe Abfrage wie Start und Termine.
+- **Wer planen darf** (gemessen in E0): globales Recht auf die Dienstgruppe **oder** Leitung einer
+  ChurchTools-Gruppe des Dienstes **oder** Admin des Termins (`darfDienstPlanen`, eine Regel für Reiter,
+  Startseite, Termine und Matrix). Vorher zählte nur das globale Recht – Gruppenleiter sahen „Planen“ nicht.
+  Bei der ECG ist jeder Dienst einer Gruppe zugeordnet (live gemessen, nur lesend).
+
+### Neu (Anmeldungen)
+
+- **Formular-Baukasten mit Design und Vorschau** (Bauplan A5) – ein Reiter „Formular“, aufgebaut nach Alwins
+  Vorbildern vom 13.10.2026 (Baukasten wie Campflow, Design wie Jotform, Bearbeiten wie Google Forms).
+  - **In der Mitte das echte Formular** – dieselbe Darstellung wie für Gäste. Bausteine aus der Leiste rechts
+    an die richtige Stelle **ziehen** (eine blaue Linie zeigt, wo sie landen) oder **antippen** (unter das
+    gewählte Feld). Felder **direkt im Formular bearbeiten**: Frage, Hilfetext, Antworten, „Pflicht“.
+    Verschieben am Griff oder mit den Pfeilen (Handy, Tastatur), kopieren, entfernen. Name und
+    Begrüßungstext direkt im Kopf, „Titelbild ändern“ im Bild.
+  - **Bausteine:** empfohlene mit fester Bedeutung (Geburtsdatum, Telefon, Anschrift, Notfallkontakt,
+    Allergien, Gesundheit, Foto-Erlaubnis, Bemerkungen – je einmal), eigene Fragen (Text, Ja/Nein,
+    Ankreuzen, Auswahl, Mehrfachauswahl, Datum, Zahl) und Gestaltung (Überschrift, Hinweistext,
+    Trennlinie). Suche, Platzanzeige, ausgeblendete Felder lassen sich zurückholen.
+  - **Design** in derselben Leiste: sechs Vorlagen mit Vorschaubild, Farben, Feldstil, Knöpfe,
+    Titelbild (Gruppenbild), Gemeindename. Jede Änderung sieht man sofort im Formular. Umschalter
+    Computer/Handy und „Vorschau“ zum Ausprobieren mit Musterdaten. Schriften ohne Google (Datenschutz).
+  - **Gespeichert wird von selbst** – nach dem Ziehen, beim Verlassen eines Felds, nach einer kurzen
+    Pause beim Tippen –, eins nach dem anderen, mit „Rückgängig“; scheitert etwas, steht es oben mit
+    „Nochmal“.
+  - Die Leiste **„Rückgängig“ schwebt jetzt unten** über der Seite (in der ganzen Erweiterung), statt oben
+    Platz zu nehmen – beim Speichern von selbst schob sie sonst jedes Mal das Formular nach unten.
+  - **Jedes Feld wird eine Spalte der Mitgliederliste** auf Sicherheitsstufe 3 (Alwin: „nur das Team“).
+    Antworten umbenennen behält die Wahl der Personen – auch wenn man umbenennt, bevor die Antworten aus
+    ChurchTools geladen sind; **entfernen mit vorhandenen Antworten blendet nur aus** (Alwin) – gemessen:
+    Löschen hätte die Antworten still entfernt. Empfohlene Felder werden nur ausgeschaltet.
+  - **Einstellungen unsichtbar** (Alwin: der Datenblock in „Infos“ „sieht nicht gut aus“): dort
+    steht nur noch ein Satz, die Einstellungen stehen gepackt als unsichtbare Markdown-Zeile darunter
+    (gemessen: ChurchTools zeigt sie nicht an). Gepackt ist der Block rund ein Drittel so lang – auch
+    große Freizeiten passen (ungepackt 5.532 von 5.000 Zeichen). **Sicherung** in den Beschreibungen
+    der Systemfelder; überschreibt jemand die Beschreibung in ChurchTools (der Editor wirft die
+    unsichtbare Zeile weg – gemessen), stellt die Erweiterung sie selbst wieder her und behält den
+    neuen Text. Ältere Veranstaltungen werden beim Öffnen umgestellt.
+  - Termin-Fenster beginnt beim Kalender des gewählten Termins; Admins lesen auf der Startseite
+    „Freigeben kannst du als Admin“ (beides aus der A3-Abnahme).
+
 ## [2.35.0] – 2026-10-13
 
 ### Neu
@@ -61,30 +120,6 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Beim Zusammenführen zog die Datumskachel nach `ui/bedienung/DatumKachel` um, die neue Zeile „Kein
   Ablauf" nutzte noch die alten Klassen (vor dem Release gefunden; die Kachel hat jetzt `gedimmt`). Dabei
   zwei alte Reste entfernt: `feld.form` (gab es nie) und `styles.verse` (seit dem Redesign weg).
-
-### Neu (Dienstplaner, E3-5)
-
-- **Die Matrix wird bedienbar** (#523, Entwurf v17): Terminleiste ‹ ＋ Zeitraum ＋ › – „passend zur
-  Fensterbreite“ oder fest, mit „an Fensterbreite anpassen“ zurück –, Spaltenbreite S/M/L, Filter nach
-  Veranstaltung (aus den Terminnamen, wie in der Termine-Liste) und nach Gruppe, beides im Gerät gemerkt.
-  Termine einer anderen als der häufigsten Veranstaltung sind leicht abgesetzt (bei der ECG die
-  Gebetsabende), die Kopfzeile ist einheitlich hoch. **„Wer wie oft?“**: Einsätze je Person im sichtbaren
-  Zeitraum und in den sichtbaren Gruppen, mit Schnitt. „Abgesagt“ und die Monatsauslastung kommen mit E4
-  (aus `possiblepersons`, 2,6 s und 508 KB je Termin – nur bei Bedarf).
-- Intern: `FilterChips` (eine Gestaltung für Termine-Liste und Matrix), `geraet.ts` (Merken im Gerät an
-  einer Stelle, auch für die Termine-Liste), `useBreite` misst per Callback-Ref – mit `useRef` maß es nie,
-  weil der Bereich erst nach dem Laden erscheint (im Browser gefunden).
-
-### Neu (Dienstplaner, E3-4)
-
-- **Planen-Matrix** (#521, Entwurf v17, nur lesen): Termine als Spalten (Füllstand, „N frei“, abgesagt
-  blass), Dienstgruppen als aufklappbare Zeilen mit freien Plätzen je Termin – was man plant, ist offen und
-  „du planst“ –, darunter je Dienst die Plätze: zugesagt, angefragt, frei, Gast, „Nicht sichtbar“ (Namen
-  verbergen). Am Handy eine Datumsleiste und ein Termin. Dieselbe Abfrage wie Start und Termine.
-- **Wer planen darf** (gemessen in E0): globales Recht auf die Dienstgruppe **oder** Leitung einer
-  ChurchTools-Gruppe des Dienstes **oder** Admin des Termins (`darfDienstPlanen`, eine Regel für Reiter,
-  Startseite, Termine und Matrix). Vorher zählte nur das globale Recht – Gruppenleiter sahen „Planen“ nicht.
-  Bei der ECG ist jeder Dienst einer Gruppe zugeordnet (live gemessen, nur lesend).
 
 ### Neu (Dienstplaner, E3-3)
 

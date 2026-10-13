@@ -1,12 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
 import { ApiError } from '@ui/ct/fehler';
-import { einstellungenLesen, standardFormular } from '@shared/anmeldung/formular';
+import {
+  EINSTELLUNGEN_KENNUNG,
+  HINWEIS_SATZ,
+  einstellungenLesen,
+  sicherungLesen,
+  standardFormular,
+} from '@shared/anmeldung/formular';
 import {
   NichtUebernommen,
   aendereEinstellungen,
   aenderePreise,
   anmeldungenZahl,
+  bildEntfernen,
+  bildHochladen,
+  einstellungenVon,
+  kopfVon,
   anlegenMoeglich,
   freigeben,
   kalenderListe,
@@ -24,6 +34,9 @@ import {
   verschieben,
   wiederherstellen,
 } from './einrichten';
+import { feldEntfernen, feldSpeichern, felderAnlegen, feldEinordnen } from './formularFelder';
+import type { Feld } from '@shared/anmeldung/formular';
+import { EMPFOHLEN } from '@shared/anmeldung/baukasten';
 
 /**
  * Anlegen und Einrichten (A3, #486) gegen eine nachgestellte ChurchTools-Instanz, die sich merkt, was
@@ -38,7 +51,8 @@ interface G {
   status: number;
   note: string;
   settings: Record<string, unknown>;
-  felder: { id: number; name: string }[];
+  felder: { id: number; name: string; note?: string | null; [k: string]: unknown }[];
+  bild?: string;
   eltern: number[];
 }
 
@@ -48,7 +62,19 @@ let schlucken: Set<string>;
 let termine: Map<number, Record<string, unknown>>;
 let aufrufe: string[];
 /** Mitglieder je Gruppe; `403`/`502` = so antwortet ChurchTools auf `/members`. */
-let mitglieder: Map<number, { groupMemberStatus: string }[] | 403 | 502>;
+let mitglieder: Map<
+  number,
+  { groupMemberStatus: string; fields?: { id: number; value: unknown }[] }[] | 403 | 502
+>;
+/** Wie ChurchTools: Antwortmöglichkeiten ohne ID bekommen eine neue (gemessen A5). */
+let naechsteOption = 1;
+const mitIds = (o: unknown) =>
+  Array.isArray(o)
+    ? (o as { id?: string; name: string }[]).map((x) => ({
+        id: x.id ?? String(naechsteOption++),
+        name: x.name,
+      }))
+    : o;
 
 function json(status: number, body: unknown): Response {
   return new Response(status === 204 ? null : JSON.stringify(body), {
@@ -62,7 +88,8 @@ function ct() {
     const url = new URL(String(input));
     const pfad = url.pathname.replace(/^\/api/, '');
     const m = (init?.method ?? 'GET').toUpperCase();
-    const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : {};
+    const body =
+      typeof init?.body === 'string' ? (JSON.parse(init.body) as Record<string, unknown>) : {};
     aufrufe.push(`${m} ${pfad}${'note' in body ? ' [note]' : ''}`);
     if (pfad === '/csrftoken') return json(200, { data: 't' });
     if (m === 'GET' && pfad === '/group/grouptypes')
@@ -108,7 +135,7 @@ function ct() {
         name: String(body.newName),
         status: 2,
         settings: { ...q.settings },
-        felder: q.felder.map((f) => ({ id: f.id + 1000, name: f.name })),
+        felder: q.felder.map((f) => ({ ...f, id: f.id + 1000 })),
       });
       return json(201, { data: { id } });
     }
@@ -144,11 +171,37 @@ function ct() {
       if (typeof m === 'number') return json(m, { message: 'nein' });
       return json(200, { data: m, meta: { pagination: { lastPage: 1 } } });
     }
+    r = /^\/files\/groupimage\/(\d+)$/.exec(pfad);
+    if (r) {
+      const g = gruppen.get(Number(r[1]))!;
+      if (m === 'DELETE') g.bild = undefined;
+      else if (!schlucken.has('BILD')) g.bild = 'https://ct.test/images/1/abc';
+      return json(m === 'DELETE' ? 204 : 200, { data: [{ imageUrl: g.bild }] });
+    }
+    r = /^\/groups\/(\d+)\/memberfields\/group\/(\d+)$/.exec(pfad);
+    if (r) {
+      const g = gruppen.get(Number(r[1]))!;
+      const f = g.felder.find((x) => x.id === Number(r![2]));
+      if (!f) return json(404, {});
+      if (m === 'DELETE') {
+        g.felder = g.felder.filter((x) => x !== f);
+        return json(204, {});
+      }
+      if (!schlucken.has('FELD'))
+        Object.assign(f, body, 'options' in body ? { options: mitIds(body.options) } : {});
+      return json(200, { data: f });
+    }
     r = /^\/groups\/(\d+)\/memberfields\/group$/.exec(pfad);
     if (r && m === 'POST') {
       const g = gruppen.get(Number(r[1]))!;
       const id = naechste++;
-      g.felder.push({ id, name: String(body.name) });
+      g.felder.push({
+        ...body,
+        id,
+        name: String(body.name),
+        note: null,
+        options: mitIds(body.options),
+      });
       return json(201, { data: { id } });
     }
     r = /^\/groups\/(\d+)\/memberfields$/.exec(pfad);
@@ -176,7 +229,12 @@ function ct() {
         data: {
           id: g.id,
           name: g.name,
-          information: { note: g.note, groupStatusId: g.status, groupTypeId: g.typ },
+          information: {
+            note: g.note,
+            groupStatusId: g.status,
+            groupTypeId: g.typ,
+            imageUrl: g.bild ?? '',
+          },
           settings: g.settings,
         },
       });
@@ -208,6 +266,7 @@ beforeEach(() => {
   termine = new Map();
   aufrufe = [];
   mitglieder = new Map();
+  naechsteOption = 1;
   vi.stubGlobal('window', {
     settings: { base_url: 'https://ct.test/' },
     location: { origin: 'https://ct.test' },
@@ -218,6 +277,17 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
 });
+
+/** Text, der sich kaum packen lässt (Zufall mit festem Startwert) – für „zu lang“ trotz Packen. */
+function unpackbar(n: number, start: number): string {
+  let x = start + 1;
+  let t = '';
+  while (t.length < n) {
+    x = (x * 1103515245 + 12345) % 2147483648;
+    t += String.fromCharCode(33 + (x % 90));
+  }
+  return t;
+}
 
 describe('legeVeranstaltungAn', () => {
   it('Entwurf vom Typ „Anmeldung“ unter dem Team, mit Systemfeldern und deren Nummern', async () => {
@@ -267,10 +337,10 @@ describe('kopiereVeranstaltung', () => {
     });
     const g = gruppen.get(quelle)!;
     const e = einstellungenLesen(g.note)!;
-    g.note = g.note.replace(
-      '"termin":null',
-      '"termin":{"beginn":"2026-11-15T12:00","ende":null,"ort":"Saal","terminId":5}',
-    );
+    await aendereEinstellungen(quelle, (x) => ({
+      ...x,
+      termin: { beginn: '2026-11-15T12:00', ende: null, ort: 'Saal', terminId: 5 },
+    }));
     expect(einstellungenLesen(g.note)?.termin).not.toBeNull();
     const kopie = await kopiereVeranstaltung(quelle, 'Essen 2027');
     const k = einstellungenLesen(gruppen.get(kopie)!.note)!;
@@ -460,7 +530,8 @@ describe('Preise und Bezahlung (A4)', () => {
         art: 'eigen' as const,
         typ: 'textarea' as const,
         frage: `Frage ${i}`,
-        hilfe: 'x'.repeat(390),
+        // Ungleichmäßiger Text – gleichförmiger würde sich so gut packen, dass er hineinpasst (A5).
+        hilfe: unpackbar(390, i),
         zustand: 'freiwillig' as const,
         antworten: [],
       })),
@@ -617,5 +688,261 @@ describe('Verwalten (A4-Nachtrag)', () => {
     expect(einstellungenLesen(gruppen.get(quelle)!.note)!.bezahlung.zweck).toBe(
       'Freizeit 2026 [Nachname]',
     );
+  });
+});
+
+describe('Speicherformat: unsichtbar, gesichert, repariert (A5)', () => {
+  const neu = () =>
+    legeVeranstaltungAn({ name: 'Essen', teamId: 7, artId: 5, vorlage: 'freizeit' });
+  const notizen = (id: number) => gruppen.get(id)!.felder.map((f) => f.note);
+
+  it('in „Infos“ steht nur der Hinweissatz; die Sicherung steht in den Systemfeldern', async () => {
+    const id = await neu();
+    const g = gruppen.get(id)!;
+    expect(g.note.split('\n')[0]).toBe(HINWEIS_SATZ);
+    expect(sicherungLesen(notizen(id))).toEqual(einstellungenLesen(g.note));
+  });
+
+  it('jemand bearbeitet die Beschreibung in ChurchTools → beim Öffnen aus der Sicherung repariert, sein Text bleibt', async () => {
+    const id = await neu();
+    const vorher = einstellungenLesen(gruppen.get(id)!.note);
+    gruppen.get(id)!.note = 'Treffpunkt ist der Parkplatz.'; // so speichert der ChurchTools-Editor
+    expect(await einstellungenVon(id)).toEqual(vorher);
+    const g = gruppen.get(id)!;
+    expect(g.note.startsWith('Treffpunkt ist der Parkplatz.\n\n[anmeldung]: #v2:')).toBe(true);
+    expect(einstellungenLesen(g.note)).toEqual(vorher);
+  });
+
+  it('ohne Sicherung lässt sich nichts reparieren → „lassen sich nicht lesen“', async () => {
+    const id = await neu();
+    gruppen.get(id)!.note = 'überschrieben';
+    for (const f of gruppen.get(id)!.felder) f.note = null;
+    await expect(einstellungenVon(id)).rejects.toMatchObject({ status: 422 });
+  });
+
+  it('altes, sichtbares Format → beim Öffnen gleich ins neue umgestellt', async () => {
+    const id = await neu();
+    const e = einstellungenLesen(gruppen.get(id)!.note)!;
+    gruppen.get(id)!.note = EINSTELLUNGEN_KENNUNG + JSON.stringify(e);
+    expect(await einstellungenVon(id)).toEqual(e);
+    expect(gruppen.get(id)!.note.split('\n')[0]).toBe(HINWEIS_SATZ);
+  });
+
+  it('nimmt ChurchTools die Sicherung nicht an → Fehler statt „gespeichert“', async () => {
+    const id = await neu();
+    schlucken.add('FELD');
+    await expect(aendereEinstellungen(id, (e) => ({ ...e, loeschfristMonate: 7 }))).rejects.toThrow(
+      'die Sicherung der Einstellungen',
+    );
+  });
+});
+
+describe('Formularfelder in ChurchTools (A5)', () => {
+  const neu = () => legeVeranstaltungAn({ name: 'Essen', teamId: 7, artId: 5, vorlage: 'einfach' });
+  const feld = (extra: Partial<Feld> = {}): Feld => ({
+    id: 'f1',
+    art: 'eigen',
+    typ: 'select',
+    frage: 'T-Shirt-Größe',
+    hilfe: '',
+    zustand: 'freiwillig',
+    antworten: ['S', 'M', 'L'],
+    ...extra,
+  });
+  const ctFeld = (id: number, feldId: string) => {
+    const e = einstellungenLesen(gruppen.get(id)!.note)!;
+    return gruppen.get(id)!.felder.find((f) => f.id === e.ctFelder[feldId])!;
+  };
+
+  it('Vorlage anlegen: Telefon, Bemerkungen, Allergien werden Spalten – Stufe 3, Pflicht wie im Formular', async () => {
+    const id = await legeVeranstaltungAn({
+      name: 'Kindertag',
+      teamId: 7,
+      artId: 5,
+      vorlage: 'kinder',
+    });
+    await felderAnlegen(id);
+    const tel = ctFeld(id, 'tel');
+    expect(tel).toMatchObject({
+      name: 'Telefon',
+      securityLevel: 3,
+      requiredInRegistrationForm: true,
+    });
+    expect(ctFeld(id, 'allergy')).toMatchObject({ useInRegistrationForm: true, securityLevel: 3 });
+    // Name, E-Mail, Geburtsdatum stehen an der Person – keine Spalte.
+    const e = einstellungenLesen(gruppen.get(id)!.note)!;
+    expect(e.ctFelder.name ?? e.ctFelder.mail ?? e.ctFelder.birth).toBeUndefined();
+    // Zweimal aufrufen legt nichts doppelt an.
+    const anzahl = gruppen.get(id)!.felder.length;
+    aufrufe = [];
+    await felderAnlegen(id);
+    expect(gruppen.get(id)!.felder).toHaveLength(anzahl);
+    // … und rührt vorhandene Spalten nicht an (kein Schreibaufruf an den Feldern).
+    expect(aufrufe.filter((a) => !a.startsWith('GET') && a.includes('/memberfields'))).toEqual([]);
+  });
+
+  it('neue Frage: Spalte mit Antworten angelegt, ins Formular vor die Bemerkungen', async () => {
+    const id = await neu();
+    const e = await feldSpeichern(id, 'anmeldung', feld());
+    expect(ctFeld(id, 'f1')).toMatchObject({ name: 'T-Shirt-Größe', fieldTypeCode: 'select' });
+    expect((ctFeld(id, 'f1').options as { name: string }[]).map((o) => o.name)).toEqual([
+      'S',
+      'M',
+      'L',
+    ]);
+    const ids = e.formular.anmeldung.map((f) => f.id);
+    expect(ids.indexOf('f1')).toBe(ids.indexOf('note') - 1);
+  });
+
+  it('Antwort umbenennen behält die ID (Wahl bleibt); eine gewählte entfernte Antwort wird nur verborgen', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'anmeldung', feld());
+    const opt = () => ctFeld(id, 'f1').options as { id: string; name: string }[];
+    const [s, m, l] = opt();
+    const ctId = ctFeld(id, 'f1').id;
+    mitglieder.set(id, [{ groupMemberStatus: 'active', fields: [{ id: ctId, value: l.id }] }]);
+    // M → Medium (gleiche ID), L entfernt (aber gewählt), XL neu
+    const e = await feldSpeichern(id, 'anmeldung', feld({ antworten: ['S', 'Medium', 'XL'] }), [
+      { text: 'S', altId: s.id },
+      { text: 'Medium', altId: m.id },
+      { text: 'XL' },
+    ]);
+    expect(opt().map((o) => [o.id, o.name])).toEqual([
+      [s.id, 'S'],
+      [m.id, 'Medium'],
+      [expect.any(String), 'XL'],
+      [l.id, 'L'],
+    ]);
+    expect(e.formular.anmeldung.find((f) => f.id === 'f1')?.verborgen).toEqual(['L']);
+  });
+
+  it('Feld entfernen: ohne Antworten gelöscht, mit Antworten nur ausgeblendet', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'anmeldung', feld());
+    await feldSpeichern(
+      id,
+      'person',
+      feld({ id: 'f2', typ: 'text', frage: 'Lieblingslied', antworten: [] }),
+    );
+    const ct2 = ctFeld(id, 'f2').id;
+    mitglieder.set(id, [
+      { groupMemberStatus: 'active', fields: [{ id: ct2, value: 'Amazing Grace' }] },
+    ]);
+    expect(await feldEntfernen(id, 'f1')).toEqual({ art: 'geloescht' });
+    expect(gruppen.get(id)!.felder.some((f) => f.name === 'T-Shirt-Größe')).toBe(false);
+    expect(await feldEntfernen(id, 'f2')).toEqual({ art: 'ausgeblendet', antworten: 1 });
+    const g = gruppen.get(id)!;
+    expect(g.felder.find((f) => f.id === ct2)).toMatchObject({ useInRegistrationForm: false });
+    expect(einstellungenLesen(g.note)!.formular.person.find((f) => f.id === 'f2')?.zustand).toBe(
+      'aus',
+    );
+  });
+
+  it('gleicher Name wie ein Systemfeld oder eine andere Frage → eindeutig mit (2)', async () => {
+    const id = await neu();
+    await feldSpeichern(
+      id,
+      'person',
+      feld({ id: 'f3', typ: 'text', frage: 'Betrag', antworten: [] }),
+    );
+    expect(ctFeld(id, 'f3').name).toBe('Betrag (2)');
+  });
+
+  it('ungültiges Formular (Auswahl mit nur einer Antwort) → nichts in ChurchTools angelegt', async () => {
+    const id = await neu();
+    const vorher = gruppen.get(id)!.felder.length;
+    await expect(
+      feldSpeichern(id, 'anmeldung', feld({ antworten: ['nur eine'] })),
+    ).rejects.toMatchObject({
+      status: 422,
+    });
+    expect(gruppen.get(id)!.felder).toHaveLength(vorher);
+  });
+
+  const ids = (id: number) => {
+    const f = einstellungenLesen(gruppen.get(id)!.note)!.formular;
+    return { anmeldung: f.anmeldung.map((x) => x.id), person: f.person.map((x) => x.id) };
+  };
+
+  it('Verschieben (Baukasten): nur die Einstellungen, auch in den anderen Bereich', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'anmeldung', feld());
+    const ctVorher = gruppen.get(id)!.felder.length;
+    await feldEinordnen(id, 'f1', 'anmeldung', 'tel');
+    expect(ids(id).anmeldung).toEqual(['name', 'mail', 'f1', 'tel', 'note', 'price', 'priv']);
+    await feldEinordnen(id, 'f1', 'person', null);
+    expect(ids(id).anmeldung).not.toContain('f1');
+    expect(ids(id).person.at(-1)).toBe('f1');
+    expect(gruppen.get(id)!.felder).toHaveLength(ctVorher);
+  });
+
+  it('Ablegen an einer Stelle: neues Feld vor `vorId`, Spalte angelegt', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'anmeldung', feld(), undefined, 'tel');
+    expect(ids(id).anmeldung).toEqual(['name', 'mail', 'f1', 'tel', 'note', 'price', 'priv']);
+    expect(ctFeld(id, 'f1').name).toBe('T-Shirt-Größe');
+  });
+
+  it('empfohlenes Feld (Anschrift) einfügen und wieder herausnehmen: Spalte bleibt, nur ausgeschaltet', async () => {
+    const id = await neu();
+    const anschrift = EMPFOHLEN.find((x) => x.id === 'addr')!.feld;
+    await feldSpeichern(id, 'anmeldung', anschrift, undefined, null);
+    expect(ids(id).anmeldung).toEqual(['name', 'mail', 'tel', 'addr', 'note', 'price', 'priv']);
+    expect(ctFeld(id, 'addr')).toMatchObject({ name: 'Anschrift', useInRegistrationForm: true });
+    expect(await feldEntfernen(id, 'addr')).toEqual({ art: 'ausgeblendet', antworten: 0 });
+    expect(ctFeld(id, 'addr')).toMatchObject({ useInRegistrationForm: false });
+    expect(
+      einstellungenLesen(gruppen.get(id)!.note)!.formular.anmeldung.find((f) => f.id === 'addr')
+        ?.zustand,
+    ).toBe('aus');
+  });
+
+  it('ausgeschaltetes Feld an eine Stelle ziehen → eingeschaltet UND dorthin verschoben', async () => {
+    const id = await neu();
+    const foto = einstellungenLesen(gruppen.get(id)!.note)!.formular.person.find(
+      (f) => f.id === 'foto',
+    )!;
+    expect(foto.zustand).toBe('aus');
+    await feldSpeichern(id, 'person', { ...foto, zustand: 'freiwillig' }, undefined, 'allergy');
+    expect(ids(id).person).toEqual(['pname', 'birth', 'foto', 'allergy']);
+    expect(ctFeld(id, 'foto')).toMatchObject({ useInRegistrationForm: true });
+  });
+
+  it('Name, E-Mail, Datenschutz lassen sich nicht entfernen', async () => {
+    const id = await neu();
+    await expect(feldEntfernen(id, 'mail')).rejects.toMatchObject({ status: 422 });
+  });
+
+  it('nimmt ChurchTools das Feld nicht an → Fehler, Formular unverändert', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'anmeldung', feld());
+    const vorher = gruppen.get(id)!.note;
+    schlucken.add('FELD');
+    await expect(feldSpeichern(id, 'anmeldung', feld({ frage: 'Größe' }))).rejects.toBeInstanceOf(
+      NichtUebernommen,
+    );
+    expect(gruppen.get(id)!.note).toBe(vorher);
+  });
+});
+
+describe('Titelbild (A5)', () => {
+  const bild = () => new File(['x'], 'bild.png', { type: 'image/png' });
+  it('hochladen (Feld files[]), nachgelesen; entfernen', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    expect(await bildHochladen(id, bild())).toBe('https://ct.test/images/1/abc');
+    expect((await kopfVon(id)).bildUrl).toBe('https://ct.test/images/1/abc');
+    await bildEntfernen(id);
+    expect((await kopfVon(id)).bildUrl).toBeNull();
+  });
+  it('kein Bild oder zu groß → abgelehnt, bevor etwas hochgeladen wird; nicht übernommen → Fehler', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    await expect(
+      bildHochladen(id, new File(['x'], 'a.pdf', { type: 'application/pdf' })),
+    ).rejects.toMatchObject({ status: 422 });
+    const gross = new File([new Uint8Array(9 * 1024 * 1024)], 'gross.jpg', { type: 'image/jpeg' });
+    await expect(bildHochladen(id, gross)).rejects.toMatchObject({ status: 413 });
+    expect(aufrufe.some((a) => a.includes('groupimage'))).toBe(false);
+    schlucken.add('BILD');
+    await expect(bildHochladen(id, bild())).rejects.toBeInstanceOf(NichtUebernommen);
   });
 });

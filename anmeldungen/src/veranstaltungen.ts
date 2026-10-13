@@ -34,6 +34,7 @@ import {
   type VeranstaltungRoh,
 } from '@shared/anmeldung/uebersicht';
 
+import { reparieren } from './einrichten';
 /** Gleichzeitige Anfragen – schont ChurchTools (#300), die Bremse in der Verbindung greift zusätzlich. */
 const PARALLEL = 3;
 
@@ -49,7 +50,7 @@ export interface Uebersicht {
 interface KindRoh {
   title?: string;
   domainIdentifier?: string | number;
-  domainAttributes?: { note?: string | null; groupStatusId?: number };
+  domainAttributes?: { note?: string | null; groupStatusId?: number; groupTypeId?: number };
 }
 
 interface GruppeRoh {
@@ -78,6 +79,19 @@ function heuteAus(jetzt: Date): string {
 }
 
 /**
+ * Einstellungen aus der Sicherung (A5) – fehlt die Sicherung oder darf man die Felder nicht lesen (403), bleibt
+ * die Veranstaltung ein Hinweis „lässt sich nicht lesen“; alles andere kann vorübergehend sein → werfen.
+ */
+async function ausSicherung(id: number): Promise<OeffentlicheEinstellungen | null> {
+  try {
+    return await reparieren(id);
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 403) return null;
+    throw e;
+  }
+}
+
+/**
  * Lädt die Übersicht. **Wirft** bei vorübergehenden Fehlern – eine halbe Übersicht sähe aus wie eine
  * ganze („keine Veranstaltungen“, „nichts zu zahlen“). Einzige Ausnahme: Darf man die Anmeldungen
  * einer Veranstaltung nicht sehen (403), steht sie ohne Belegung da.
@@ -85,6 +99,8 @@ function heuteAus(jetzt: Date): string {
 export async function ladeUebersicht(
   gruppen: MeineGruppe[],
   jetzt = new Date(),
+  /** Gruppenart „Anmeldung“ – erkennt Veranstaltungen, deren Einstellungen in ChurchTools überschrieben wurden (A5). */
+  artId: number | null = null,
 ): Promise<Uebersicht> {
   const heute = heuteAus(jetzt);
   const kinderJeGruppe = new Map<number, VeranstaltungRoh[]>();
@@ -101,6 +117,7 @@ export async function ladeUebersicht(
           gruppeId: g.id,
           statusId: Number(k.domainAttributes?.groupStatusId),
           beschreibung: k.domainAttributes?.note ?? '',
+          typId: k.domainAttributes?.groupTypeId,
         })),
       );
     }),
@@ -110,7 +127,7 @@ export async function ladeUebersicht(
   const kandidaten = new Map<number, VeranstaltungRoh>();
   for (const g of gruppen) {
     for (const k of kinderJeGruppe.get(g.id) ?? []) {
-      if (Number.isInteger(k.id) && istVeranstaltung(k) && !kandidaten.has(k.id)) {
+      if (Number.isInteger(k.id) && istVeranstaltung(k, artId) && !kandidaten.has(k.id)) {
         kandidaten.set(k.id, k);
       }
     }
@@ -120,7 +137,7 @@ export async function ladeUebersicht(
   const lesbar: { r: VeranstaltungRoh; e: OeffentlicheEinstellungen }[] = [];
   const kaputt: KaputteVeranstaltung[] = [];
   for (const r of kandidaten.values()) {
-    const e = einstellungenLesen(r.beschreibung);
+    const e = einstellungenLesen(r.beschreibung) ?? (await ausSicherung(r.id));
     if (e) lesbar.push({ r, e });
     else kaputt.push({ id: r.id, name: r.name, gruppeId: r.gruppeId });
   }
@@ -152,13 +169,14 @@ export async function ladeUebersicht(
   });
 
   const liste: Veranstaltung[] = [];
-  for (const { r } of lesbar) {
+  for (const { r, e } of lesbar) {
     const v = veranstaltungAus(
       r,
       detailsAus(details.get(r.id)),
       belegung.get(r.id) ?? null,
       heute,
       jetzt,
+      e,
     );
     if (v) liste.push(v);
   }

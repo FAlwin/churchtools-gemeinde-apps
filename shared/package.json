@@ -12,6 +12,7 @@
     "build": "tsc --noEmit"
   },
   "dependencies": {
+    "fflate": "^0.8.3",
     "zod": "^3.23.8"
   }
 }

@@ -1,0 +1,808 @@
+// Der Formular-Baukasten (A5): das echte Formular in der Mitte, rechts Bausteine und Design. Entwurf vom
+// 13.10.2026 (`anmeldungen/entwurf/formular-baukasten.html`). Nur Klassen am Anfang jeder Regel – der
+// Erweiterungs-Build lehnt Regeln ab, die mit einem Element beginnen.
+@use '@ui/design/mixins' as m;
+
+.baukasten {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+// ── Kopfleiste: Speicherstand, Computer/Handy, Vorschau ──
+.kopfleiste {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+.rechts {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.status {
+  font-size: 13px;
+  color: var(--text2);
+}
+.statusFehler {
+  font-size: 13px;
+  color: var(--red);
+
+  button {
+    border: 0;
+    background: none;
+    color: var(--blue);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+  }
+}
+.schalterZeile {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.miniSchalter {
+  width: 34px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--seg-track);
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    transition: left 0.15s;
+  }
+}
+.an {
+  background: var(--blue);
+
+  &::after {
+    left: 16px;
+  }
+}
+
+// ── Fläche: Formular | Leiste ──
+.flaeche {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+  align-items: start;
+
+  @media (max-width: 899px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.ohneLeiste {
+  grid-template-columns: minmax(0, 1fr);
+}
+.buehne {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  min-width: 0;
+}
+.handy {
+  max-width: 400px;
+  width: 100%;
+  margin-inline: auto;
+  border: 8px solid #1f2937;
+  border-radius: 32px;
+}
+.leiste {
+  position: sticky;
+  top: 8px;
+  max-height: calc(100vh - 120px);
+  overflow: auto;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+
+  @media (max-width: 899px) {
+    display: none;
+  }
+}
+.mobil {
+  display: none;
+
+  @media (max-width: 899px) {
+    display: flex;
+    gap: 8px;
+    position: sticky;
+    bottom: 8px;
+    justify-content: center;
+
+    button {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 18px;
+      background: var(--blue);
+      color: #fff;
+      font: inherit;
+      font-weight: 600;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+      cursor: pointer;
+    }
+  }
+}
+
+// ── Die Hülle um jedes Feld im Formular (Campflow: gestrichelt beim Zeigen, Griff links, Werkzeug rechts) ──
+.huelle {
+  position: relative;
+  border: 1.5px dashed transparent;
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin: -8px -10px;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--p-line-strong, #9fb0b4);
+  }
+}
+.aktiv {
+  cursor: default;
+  border: 1.5px solid var(--p-accent, #2563eb);
+  // Durchscheinend statt Kartenfarbe: Auf farbigen Karten (Vorlage „Bunt“) sah ein weißer Grund aus, als fiele das
+  // Feld aus der Karte heraus (Durchklicken 13.10.2026).
+  background: color-mix(in srgb, var(--p-accent, #2563eb) 6%, transparent);
+
+  &:hover {
+    border-color: var(--p-accent, #2563eb);
+  }
+}
+.fest {
+  cursor: default;
+
+  &:hover .festSchild {
+    opacity: 1;
+  }
+}
+.festSchild {
+  position: absolute;
+  right: 8px;
+  top: 6px;
+  font-size: 11px;
+  color: var(--p-muted, #5b6b70);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.linieOben::before,
+.linieUnten::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: 3px;
+  border-radius: 2px;
+  background: #2563eb;
+}
+.linieOben::before {
+  top: -4px;
+}
+.linieUnten::after {
+  bottom: -4px;
+}
+.griff {
+  position: absolute;
+  left: -24px;
+  top: 8px;
+  width: 22px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  color: var(--p-muted, #5b6b70);
+  cursor: grab;
+  opacity: 0;
+}
+.huelle:hover .griff,
+.aktiv .griff {
+  opacity: 1;
+}
+.werkzeug {
+  position: absolute;
+  right: 6px;
+  top: 4px;
+  display: none;
+  gap: 2px;
+  z-index: 1;
+  background: var(--p-card, #fff);
+  border-radius: 8px;
+
+  button {
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--p-muted, #5b6b70);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--p-fill, #eef3f3);
+      color: var(--p-text, #17242a);
+    }
+
+    &:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+  }
+}
+.huelle:hover .werkzeug,
+.aktiv .werkzeug {
+  display: flex;
+}
+.inhalt {
+  pointer-events: none;
+}
+.wirdGezogen {
+  opacity: 0.35;
+}
+
+// ── Kopf zum Bearbeiten: Name, Begrüßung, Titelbild ──
+.titel {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 4px;
+  margin-left: -4px;
+  outline: none;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  &:focus {
+    box-shadow: 0 0 0 2px currentColor;
+  }
+}
+.einleitung {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1.5px dashed transparent;
+  border-radius: 8px;
+  padding: 4px 6px;
+  margin-left: -6px;
+  resize: none;
+  field-sizing: content;
+  min-height: 2.6em;
+
+  // Auf bunten Hintergründen (Konfetti, Foto) lesbar: leicht hinterlegt, solange leer oder in Arbeit.
+  &:placeholder-shown,
+  &:hover,
+  &:focus {
+    background: color-mix(in srgb, var(--p-card, #fff) 88%, transparent);
+  }
+
+  &:hover {
+    border-color: var(--p-line-strong, #9fb0b4);
+  }
+
+  &:focus {
+    outline: none;
+    border-style: solid;
+    border-color: var(--p-accent, #2563eb);
+  }
+
+  &::placeholder {
+    color: var(--p-accent-text, #2563eb);
+    font-weight: 600;
+  }
+}
+.bildKnopf {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 8px;
+  padding: 7px 12px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #111827;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+// ── Bearbeiten direkt im Feld (Google Forms) ──
+.bearbeiten {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--p-text, #17242a);
+}
+.frage {
+  font: inherit;
+  font-weight: 700;
+  font-size: 1.05em;
+  color: inherit;
+  border: 0;
+  border-bottom: 2px solid var(--p-accent, #2563eb);
+  border-radius: 6px 6px 0 0;
+  background: var(--p-fill, #eef3f3);
+  padding: 8px 10px;
+  outline: none;
+
+  &:disabled {
+    background: transparent;
+    border-bottom-color: transparent;
+    padding-left: 0;
+  }
+}
+.hilfe {
+  font: inherit;
+  font-size: 0.87em;
+  color: inherit;
+  border: 0;
+  border-bottom: 1px solid var(--p-line, #dde5e6);
+  background: transparent;
+  padding: 6px 10px;
+  outline: none;
+
+  &:focus {
+    border-bottom: 2px solid var(--p-accent, #2563eb);
+  }
+}
+.antworten {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.antwort {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  input {
+    flex: 1;
+    min-width: 0;
+    font: inherit;
+    color: inherit;
+    border: 0;
+    border-bottom: 1px solid transparent;
+    background: transparent;
+    padding: 5px 2px;
+    outline: none;
+
+    &:hover {
+      border-bottom-color: var(--p-line, #dde5e6);
+    }
+
+    &:focus {
+      border-bottom: 2px solid var(--p-accent, #2563eb);
+    }
+  }
+
+  button {
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--p-muted, #5b6b70);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+  }
+}
+.punkt,
+.kaestchen {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border: 1.5px solid var(--p-line-strong, #9fb0b4);
+}
+.punkt {
+  border-radius: 50%;
+}
+.kaestchen {
+  border-radius: 4px;
+}
+.nummer {
+  width: 18px;
+  text-align: right;
+  color: var(--p-muted, #5b6b70);
+  font-size: 0.87em;
+}
+.antwortNeu {
+  align-self: flex-start;
+  border: 0;
+  background: none;
+  color: var(--p-accent-text, #2563eb);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0 0 26px;
+}
+.fuss {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--p-line, #dde5e6);
+  font-size: 0.82em;
+  color: var(--p-muted, #5b6b70);
+}
+.werkzeugUnten {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 2px;
+  padding-right: 10px;
+  border-right: 1px solid var(--p-line, #dde5e6);
+
+  button {
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--p-muted, #5b6b70);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--p-fill, #eef3f3);
+      color: var(--p-text, #17242a);
+    }
+
+    &:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+  }
+}
+.muster {
+  border: 1px dashed var(--p-line-strong, #9fb0b4);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.87em;
+  color: var(--p-muted, #5b6b70);
+}
+.musterLang {
+  min-height: 64px;
+}
+.musterKurz {
+  max-width: 200px;
+}
+.musterReihe {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  text-align: center;
+}
+.musterLinie {
+  border: 0;
+  border-top: 1px solid var(--p-line-strong, #9fb0b4);
+  margin: 8px 0;
+}
+.pflicht {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--p-text, #17242a);
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.7;
+  }
+}
+.notiz {
+  margin: 0;
+  font-size: 0.82em;
+  color: var(--p-muted, #5b6b70);
+}
+.fehler {
+  margin: 0;
+  font-size: 0.87em;
+  color: var(--p-err, #b42318);
+}
+
+// ── Leiste: Bausteine und Design ──
+.tafel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+}
+.suche {
+  @include m.eingabefeld;
+  height: 38px;
+  padding: 0 12px;
+  font-size: 14px;
+  width: 100%;
+}
+.gruppe {
+  margin: 10px 0 2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  small {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+    color: var(--text3);
+  }
+}
+.kacheln {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.kachel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 13px;
+  text-align: center;
+  cursor: grab;
+  user-select: none;
+
+  svg {
+    color: var(--text2);
+  }
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--blue);
+    outline: none;
+  }
+
+  &[aria-disabled='true'] {
+    opacity: 0.45;
+    cursor: default;
+    border-color: var(--border);
+  }
+}
+.ausgeblendet {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+  }
+
+  span {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text2);
+  }
+
+  button {
+    border: 0;
+    background: none;
+    color: var(--blue);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+}
+.klein {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text2);
+}
+.platz {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text2);
+
+  > div:first-child {
+    display: flex;
+    justify-content: space-between;
+  }
+}
+.balken {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--seg-track);
+  overflow: hidden;
+
+  i {
+    display: block;
+    height: 100%;
+    background: var(--blue);
+  }
+}
+.knapp i {
+  background: var(--red);
+}
+.vorlagen {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.vorlage {
+  @include m.auswahlKnopf;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 6px;
+  border-radius: 10px;
+  text-align: left;
+  font-size: 13px;
+
+  small {
+    font-weight: 400;
+    font-size: 11px;
+    color: var(--text2);
+  }
+
+  &[aria-pressed='true'] {
+    @include m.auswahlKnopfAn;
+    border-color: var(--blue);
+    box-shadow: 0 0 0 2px var(--blue);
+  }
+}
+// Kleine Vorschaubilder je Vorlage – nur Andeutungen; das Formular links zeigt die Wahl sofort.
+.mini {
+  width: 100%;
+  height: 52px;
+  border-radius: 7px;
+  margin-bottom: 4px;
+  background: #f3f6f6;
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+.mini-klassisch {
+  background:
+    linear-gradient(var(--m), var(--m)) top / 100% 40% no-repeat,
+    #f3f6f6;
+}
+.mini-foto {
+  background: linear-gradient(#365a8c, #f0c08a 60%, #2d4a56);
+}
+.mini-karte {
+  background: radial-gradient(ellipse at 50% 0%, #22346e, #0b1228 70%);
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 8px 25%;
+    background: #fbf7ec;
+    border: 1px solid var(--m);
+  }
+}
+.mini-bunt {
+  background:
+    radial-gradient(circle, #ffcf3f 0 3px, transparent 3.5px) 0 0 / 14px 14px,
+    radial-gradient(circle, #ff7aa8 0 3px, transparent 3.5px) 7px 5px / 16px 16px,
+    #fff8e6;
+}
+.mini-geteilt {
+  background: linear-gradient(90deg, var(--m) 40%, #fff 40%);
+}
+.mini-gross {
+  background:
+    linear-gradient(var(--m), var(--m)) top / 100% 45% no-repeat,
+    #fff;
+}
+.farben {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.farbe {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--surface2);
+  box-shadow: 0 0 0 1px var(--border);
+  cursor: pointer;
+
+  &[aria-pressed='true'] {
+    box-shadow: 0 0 0 3px var(--blue);
+  }
+}
+.eigeneFarbe {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text2);
+
+  input {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+}
+.reihe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.knopfLeise {
+  @include m.auswahlKnopf;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+.textKnopf {
+  border: 0;
+  background: none;
+  color: var(--blue);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+.werkzeugUnten:last-child {
+  border-right: 0;
+  padding-right: 0;
+}

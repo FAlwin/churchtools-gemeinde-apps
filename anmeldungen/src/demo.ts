@@ -50,7 +50,9 @@ interface G {
   status: number;
   note: string;
   settings: Record<string, unknown>;
-  felder: { id: number; name: string }[];
+  felder: { id: number; name: string; [k: string]: unknown }[];
+  /** Titelbild (A5). */
+  bild?: string;
 }
 
 let naechste = 500;
@@ -223,7 +225,12 @@ export function demoStarten(fall: string): void {
   const gruppeRoh = (id: number, x: G) => ({
     id,
     name: x.name,
-    information: { note: x.note, groupStatusId: x.status, groupTypeId: 5 },
+    information: {
+      note: x.note,
+      groupStatusId: x.status,
+      groupTypeId: 5,
+      imageUrl: x.bild ?? null,
+    },
     settings: x.settings,
   });
   // Archivierte Gruppen stehen weder in `children` noch in `hierarchies` (gemessen 13.10.2026).
@@ -300,7 +307,7 @@ export function demoStarten(fall: string): void {
         data: kinderVon(Number(r[1])).map(([id, x]) => ({
           title: x.name,
           domainIdentifier: String(id),
-          domainAttributes: { note: x.note, groupStatusId: x.status },
+          domainAttributes: { note: x.note, groupStatusId: x.status, groupTypeId: 5 },
         })),
       });
     }
@@ -359,16 +366,53 @@ export function demoStarten(fall: string): void {
         name: String(body.newName),
         status: 2,
         settings: { ...q.settings },
-        felder: q.felder.map((f) => ({ id: f.id + 1000, name: f.name })),
+        felder: q.felder.map((f) => ({ ...f, id: f.id + 1000 })),
       });
       return antwort({ data: { id } }, 201);
+    }
+    // Antwortmöglichkeiten bekommen IDs wie in ChurchTools (A5).
+    const mitIds = (o: unknown) =>
+      Array.isArray(o)
+        ? (o as { id?: string; name: string }[]).map((x) => ({
+            id: x.id ?? String(naechste++),
+            name: x.name,
+          }))
+        : o;
+    r = /^\/groups\/(\d+)\/memberfields\/group\/(\d+)$/.exec(pfad);
+    if (r) {
+      const x = gruppen.get(Number(r[1]))!;
+      const feld = x.felder.find((f) => f.id === Number(r![2]));
+      if (!feld) return antwort({}, 404);
+      if (m === 'DELETE') {
+        x.felder = x.felder.filter((f) => f !== feld);
+        return antwort({}, 204);
+      }
+      Object.assign(feld, body, 'options' in body ? { options: mitIds(body.options) } : {});
+      return antwort({ data: feld });
+    }
+    r = /^\/files\/groupimage\/(\d+)$/.exec(pfad);
+    if (r) {
+      const x = gruppen.get(Number(r[1]))!;
+      if (m === 'DELETE') {
+        x.bild = undefined;
+        return antwort({}, 204);
+      }
+      const datei = (init?.body as FormData | undefined)?.get('files[]');
+      x.bild = datei instanceof Blob ? URL.createObjectURL(datei) : undefined;
+      return antwort({ data: [{ imageUrl: x.bild }] });
     }
     r = /^\/groups\/(\d+)\/memberfields(\/group)?$/.exec(pfad);
     if (r) {
       const x = gruppen.get(Number(r[1]))!;
       if (m === 'POST') {
         const id = naechste++;
-        x.felder.push({ id, name: String(body.name) });
+        x.felder.push({
+          ...body,
+          id,
+          name: String(body.name),
+          note: null,
+          options: mitIds(body.options),
+        });
         return antwort({ data: { id } }, 201);
       }
       return antwort({ data: x.felder.map((f) => ({ type: 'group', field: f })) });

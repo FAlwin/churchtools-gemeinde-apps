@@ -7,6 +7,41 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Anmeldungen)
+
+- **Formular-Baukasten mit Design und Vorschau** (Bauplan A5) – ein Reiter „Formular“, aufgebaut nach Alwins
+  Vorbildern vom 13.10.2026 (Baukasten wie Campflow, Design wie Jotform, Bearbeiten wie Google Forms).
+  - **In der Mitte das echte Formular** – dieselbe Darstellung wie für Gäste. Bausteine aus der Leiste rechts
+    an die richtige Stelle **ziehen** (eine blaue Linie zeigt, wo sie landen) oder **antippen** (unter das
+    gewählte Feld). Felder **direkt im Formular bearbeiten**: Frage, Hilfetext, Antworten, „Pflicht“.
+    Verschieben am Griff oder mit den Pfeilen (Handy, Tastatur), kopieren, entfernen. Name und
+    Begrüßungstext direkt im Kopf, „Titelbild ändern“ im Bild.
+  - **Bausteine:** empfohlene mit fester Bedeutung (Geburtsdatum, Telefon, Anschrift, Notfallkontakt,
+    Allergien, Gesundheit, Foto-Erlaubnis, Bemerkungen – je einmal), eigene Fragen (Text, Ja/Nein,
+    Ankreuzen, Auswahl, Mehrfachauswahl, Datum, Zahl) und Gestaltung (Überschrift, Hinweistext,
+    Trennlinie). Suche, Platzanzeige, ausgeblendete Felder lassen sich zurückholen.
+  - **Design** in derselben Leiste: sechs Vorlagen mit Vorschaubild, Farben, Feldstil, Knöpfe,
+    Titelbild (Gruppenbild), Gemeindename. Jede Änderung sieht man sofort im Formular. Umschalter
+    Computer/Handy und „Vorschau“ zum Ausprobieren mit Musterdaten. Schriften ohne Google (Datenschutz).
+  - **Gespeichert wird von selbst** – nach dem Ziehen, beim Verlassen eines Felds, nach einer kurzen
+    Pause beim Tippen –, eins nach dem anderen, mit „Rückgängig“; scheitert etwas, steht es oben mit
+    „Nochmal“.
+  - Die Leiste **„Rückgängig“ schwebt jetzt unten** über der Seite (in der ganzen Erweiterung), statt oben
+    Platz zu nehmen – beim Speichern von selbst schob sie sonst jedes Mal das Formular nach unten.
+  - **Jedes Feld wird eine Spalte der Mitgliederliste** auf Sicherheitsstufe 3 (Alwin: „nur das Team“).
+    Antworten umbenennen behält die Wahl der Personen – auch wenn man umbenennt, bevor die Antworten aus
+    ChurchTools geladen sind; **entfernen mit vorhandenen Antworten blendet nur aus** (Alwin) – gemessen:
+    Löschen hätte die Antworten still entfernt. Empfohlene Felder werden nur ausgeschaltet.
+  - **Einstellungen unsichtbar** (Alwin: der Datenblock in „Infos“ „sieht nicht gut aus“): dort
+    steht nur noch ein Satz, die Einstellungen stehen gepackt als unsichtbare Markdown-Zeile darunter
+    (gemessen: ChurchTools zeigt sie nicht an). Gepackt ist der Block rund ein Drittel so lang – auch
+    große Freizeiten passen (ungepackt 5.532 von 5.000 Zeichen). **Sicherung** in den Beschreibungen
+    der Systemfelder; überschreibt jemand die Beschreibung in ChurchTools (der Editor wirft die
+    unsichtbare Zeile weg – gemessen), stellt die Erweiterung sie selbst wieder her und behält den
+    neuen Text. Ältere Veranstaltungen werden beim Öffnen umgestellt.
+  - Termin-Fenster beginnt beim Kalender des gewählten Termins; Admins lesen auf der Startseite
+    „Freigeben kannst du als Admin“ (beides aus der A3-Abnahme).
+
 ## [2.35.0] – 2026-10-13
 
 ### Neu

@@ -3,6 +3,7 @@ import { Sheet } from '@ui/fenster/Sheet';
 import type { MeineGruppe } from '@shared/ct/gruppen';
 import { VORLAGEN, type Vorlage } from '@shared/anmeldung/vorlagen';
 import { kopiereVeranstaltung, legeVeranstaltungAn, veranstaltungenVon } from './einrichten';
+import { felderAnlegen } from './formularFelder';
 import { fehlerMeldung } from './zustand';
 import f from './Formular.module.scss';
 
@@ -59,6 +60,8 @@ export function NeueVeranstaltung({
         start === 'kopie'
           ? await kopiereVeranstaltung(quelleId!, name.trim())
           : await legeVeranstaltungAn({ name: name.trim(), teamId, artId, vorlage: start });
+      // Die Spalten für Telefon, Bemerkungen, Allergien … (A5). Die Kopie bringt sie schon mit.
+      if (start !== 'kopie') await felderAnlegen(id);
       onFertig(id);
     } catch (e) {
       setFehler(fehlerMeldung(e).text);

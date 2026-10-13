@@ -277,15 +277,30 @@
 
 // ── Verwalten, Archiv, „Rückgängig“ (A4-Nachtrag) ─────────────────────────────────────────────────
 
+// Schwebt unten über der Seite, statt oben Platz zu nehmen: Im Baukasten wird von selbst gespeichert, und jede
+// Meldung schob sonst das ganze Formular nach unten (Durchklicken 13.10.2026).
 .leiste {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 50;
+  width: min(560px, calc(100% - 32px));
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 10px 12px 10px 14px;
   border-radius: 12px;
-  background: var(--blue-soft);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.16);
   color: var(--text);
   font-size: 15px;
+
+  // Über den schwebenden Knöpfen des Baukastens am Handy.
+  @media (max-width: 899px) {
+    bottom: calc(72px + env(safe-area-inset-bottom));
+  }
 
   > span {
     flex: 1;
@@ -353,4 +368,10 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+}
+
+// Reiter Veranstaltung · Formular · Gestaltung (A5)
+.reiter {
+  align-self: flex-start;
+  min-width: min(100%, 420px);
 }

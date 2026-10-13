@@ -23,6 +23,14 @@ export interface RohPlatz {
 export interface RohTermin extends CtEvent {
   isCanceled?: boolean;
   eventServices?: RohPlatz[] | null;
+  /** Admins des Termins – sie dürfen dort einteilen (E0 §2). Gemessen: Listen von Personen-IDs. */
+  adminIds?: unknown;
+  eventAdminIds?: unknown;
+}
+
+/** Ist die Person Admin dieses Termins (`adminIds` oder `eventAdminIds`)? */
+export function istTerminAdmin(t: RohTermin, ichId: number): boolean {
+  return [t.adminIds, t.eventAdminIds].some((l) => Array.isArray(l) && l.includes(ichId));
 }
 
 /** Ein eigener Dienst an einem Termin. */
@@ -78,14 +86,15 @@ export function termineAus(
   o: {
     ichId: number;
     dienste: Map<number, Dienst>;
-    /** Plant man diese Dienstgruppe? (`darfDienstgruppePlanen`) */
-    planbar: (dienstgruppeId: number) => boolean;
+    /** Darf man diesen Dienst an diesem Termin planen? (`darfDienstPlanen`, mit Termin-Admin) */
+    planbar: (dienst: Dienst, terminAdmin: boolean) => boolean;
     zeitzone: string;
   },
 ): TerminZeile[] {
   return roh
     .map((t) => {
       const lokal = ortszeitAus(t.startDate, o.zeitzone);
+      const admin = istTerminAdmin(t, o.ichId);
       const meine: MeinDienst[] = [];
       const team: TeamPlatz[] = [];
       const freiNachGruppe: Record<number, number> = {};
@@ -103,7 +112,7 @@ export function termineAus(
             zugesagt: p.isAccepted === true,
           });
         }
-        if (dienst?.dienstgruppeId != null && o.planbar(dienst.dienstgruppeId)) {
+        if (dienst?.dienstgruppeId != null && o.planbar(dienst, admin)) {
           geplant++;
           if (istFrei(p)) {
             frei++;

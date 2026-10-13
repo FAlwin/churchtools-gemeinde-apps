@@ -32,7 +32,8 @@ const zeilen = (roh: RohTermin[], planbar: number[] = []) =>
   termineAus(roh, {
     ichId: ICH,
     dienste: DIENSTE,
-    planbar: (g) => planbar.includes(g),
+    planbar: (d, admin) =>
+      admin || (d.dienstgruppeId !== null && planbar.includes(d.dienstgruppeId)),
     zeitzone: 'Europe/Berlin',
   });
 
@@ -179,5 +180,17 @@ describe('Team, Ende und freie Plätze je Gruppe (Startseite, E3-3)', () => {
   it('Ende in Ortszeit, wenn es nach dem Beginn liegt; sonst null', () => {
     const roh = { ...termin(1, 'X', '2026-10-18T08:00:00Z'), endDate: '2026-10-18T09:30:00Z' };
     expect(zeilen([roh])[0]).toMatchObject({ endeUhrzeit: '11:30', ende: '2026-10-18T09:30:00Z' });
+  });
+});
+
+describe('Termin-Admin (E3-4)', () => {
+  it('Admin eines Termins plant dort jeden Dienst – adminIds oder eventAdminIds', () => {
+    const roh = (extra: object) => ({
+      ...termin(1, 'X', '2026-10-18T08:00:00Z', [{ serviceId: 9, personId: null, name: null }]),
+      ...extra,
+    });
+    expect(zeilen([roh({ adminIds: [ICH] })])[0].frei).toBe(1);
+    expect(zeilen([roh({ eventAdminIds: [ICH] })])[0].frei).toBe(1);
+    expect(zeilen([roh({ adminIds: [99], eventAdminIds: [] })])[0].frei).toBe(0);
   });
 });

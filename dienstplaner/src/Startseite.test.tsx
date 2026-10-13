@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { zeile } from '@shared/dienstplan/zeile.testutil';
+import { LEERER_PLAN, zeile } from '@shared/dienstplan/zeile.testutil';
 import type { TerminZeile } from '@shared/dienstplan/termine';
 import { Startseite } from './Startseite';
 import type { Start } from './start';
+import { startFuer } from './start.testutil';
 import { ladeAbwesenheiten, ladeLieder, ladeMusikApp } from './ladeBeiwerk';
 
 vi.mock('./ladeBeiwerk', () => ({
@@ -19,17 +20,7 @@ const musikApp = vi.mocked(ladeMusikApp);
 // „jetzt“ der Startseite ist die echte Uhr – die Tage im Test liegen deshalb relativ zu heute.
 const tag = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 const HEUTE = tag(0);
-const START: Start = {
-  ichId: 1,
-  vorname: 'Alwin',
-  gemeinde: null,
-  gruppen: [],
-  dienstgruppen: [
-    { id: 3, name: 'Technik' },
-    { id: 4, name: 'Musik' },
-  ],
-  rechte: { planbareDienstgruppen: [3, 4], ablaufKalender: [], abwesenheitenAller: false },
-};
+const START: Start = startFuer({ gemeinde: null });
 
 const TEAM = ['Anna', 'Ben', 'Clara', 'David', 'Ella', 'Finn', 'Greta'].map((name) => ({
   dienst: 'Gesang',
@@ -55,7 +46,7 @@ function zeige(
   render(
     <Startseite
       start={START}
-      termine={{ art: 'fertig', zeilen, wochen: 8 }}
+      termine={{ art: 'fertig', zeilen, plan: LEERER_PLAN, wochen: 8 }}
       heute={HEUTE}
       onNochmal={() => {}}
       onMeineTermine={onMeineTermine}
@@ -89,7 +80,7 @@ describe('Startseite (E3-3)', () => {
     const { unmount } = render(
       <Startseite
         start={START}
-        termine={{ art: 'fertig', zeilen: ZEILEN, wochen: 8 }}
+        termine={{ art: 'fertig', zeilen: ZEILEN, plan: LEERER_PLAN, wochen: 8 }}
         heute={HEUTE}
         onNochmal={() => {}}
         onMeineTermine={() => {}}
@@ -138,7 +129,7 @@ describe('Startseite (E3-3)', () => {
     const { unmount } = render(
       <Startseite
         start={START}
-        termine={{ art: 'fertig', zeilen: ZEILEN, wochen: 8 }}
+        termine={{ art: 'fertig', zeilen: ZEILEN, plan: LEERER_PLAN, wochen: 8 }}
         heute={HEUTE}
         onNochmal={() => {}}
         onMeineTermine={() => {}}

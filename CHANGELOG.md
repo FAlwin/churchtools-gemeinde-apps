@@ -25,6 +25,17 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Adresse (`#/termine`), Neuladen und Zurück funktionieren. Termine, Planen und Abwesenheiten zeigen noch
   einen Platzhalter.
 
+### Neu (Dienstplaner, E3-4)
+
+- **Planen-Matrix** (#521, Entwurf v17, nur lesen): Termine als Spalten (Füllstand, „N frei“, abgesagt
+  blass), Dienstgruppen als aufklappbare Zeilen mit freien Plätzen je Termin – was man plant, ist offen und
+  „du planst“ –, darunter je Dienst die Plätze: zugesagt, angefragt, frei, Gast, „Nicht sichtbar“ (Namen
+  verbergen). Am Handy eine Datumsleiste und ein Termin. Dieselbe Abfrage wie Start und Termine.
+- **Wer planen darf** (gemessen in E0): globales Recht auf die Dienstgruppe **oder** Leitung einer
+  ChurchTools-Gruppe des Dienstes **oder** Admin des Termins (`darfDienstPlanen`, eine Regel für Reiter,
+  Startseite, Termine und Matrix). Vorher zählte nur das globale Recht – Gruppenleiter sahen „Planen“ nicht.
+  Bei der ECG ist jeder Dienst einer Gruppe zugeordnet (live gemessen, nur lesend).
+
 ### Neu (Dienstplaner, E3-3)
 
 - **Startseite** (#518, Entwurf v17): „Als Nächstes“ mit deinem Dienst, dem Team (fünf Namen, dann „und N

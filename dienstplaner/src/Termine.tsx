@@ -13,6 +13,7 @@ import {
   type Auswahl,
   type TerminZeile,
 } from '@shared/dienstplan/termine';
+import type { Plan } from '@shared/dienstplan/plan';
 import { leseAuswahl, merkeAuswahl } from './auswahl';
 import { Plakette } from './Plakette';
 import styles from './Termine.module.scss';
@@ -20,7 +21,7 @@ import styles from './Termine.module.scss';
 export type TermineZustand =
   | { art: 'laedt' }
   | { art: 'fehler'; fehler: Fehlermeldung }
-  | { art: 'fertig'; zeilen: TerminZeile[]; wochen: number };
+  | { art: 'fertig'; zeilen: TerminZeile[]; plan: Plan; wochen: number };
 
 interface Props {
   zustand: TermineZustand;

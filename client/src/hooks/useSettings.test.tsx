@@ -34,6 +34,17 @@ beforeEach(() => {
 
 const farbe = () => document.querySelector('meta[name="theme-color"]')?.getAttribute('content');
 
+describe('useSettings – Design „System“', () => {
+  it('folgt dem System: dunkel gestellt → data-theme dark, hell → light', () => {
+    setzeSystem(true);
+    renderHook(() => useSettings());
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    setzeSystem(false);
+    renderHook(() => useSettings());
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+  });
+});
+
 describe('useSettings – die Farbe der Systemleiste', () => {
   it('folgt dem hellen App-Theme, AUCH wenn das Gerät dunkel steht', () => {
     setzeSystem(true);

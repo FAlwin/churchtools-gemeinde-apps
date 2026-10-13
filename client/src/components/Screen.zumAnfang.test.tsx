@@ -93,4 +93,11 @@ describe('TabBar – der aktive Tab scrollt nach oben', () => {
 
     expect(onChange).toHaveBeenCalledWith('lieder');
   });
+
+  it('trägt das Ziel der geführten Einführung (`[data-tour="tabbar"]`, onboarding.ts)', () => {
+    const { container } = render(
+      <TabBar active="termine" tabs={['termine', 'lieder']} onChange={() => {}} />,
+    );
+    expect(container.querySelector('[data-tour="tabbar"]')).not.toBeNull();
+  });
 });

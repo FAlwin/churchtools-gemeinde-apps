@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import type { Theme, ThemePref } from '../types/index';
+import { useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 
 const darkQuery = '(prefers-color-scheme: dark)';
 
@@ -15,15 +16,7 @@ export function useSettings() {
   const [wakePref, setWakePref] = useLocalStorage<boolean>('worship_wake', false);
 
   // System-Präferenz beobachten (nur relevant, wenn themePref === 'system')
-  const [systemDark, setSystemDark] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia?.(darkQuery).matches,
-  );
-  useEffect(() => {
-    const mq = window.matchMedia(darkQuery);
-    const handler = (e: MediaQueryListEvent) => setSystemDark(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
+  const systemDark = useMedienAbfrage(darkQuery);
 
   // Tatsächlich angewandtes Theme
   const theme: Theme = themePref === 'system' ? (systemDark ? 'dark' : 'light') : themePref;

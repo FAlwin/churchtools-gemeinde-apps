@@ -6,6 +6,8 @@ import type { CSSProperties } from 'react';
 
 export type IconName =
   | 'calendar'
+  | 'home'
+  | 'grid'
   | 'calendar-fill'
   | 'music'
   | 'music-fill'
@@ -87,6 +89,22 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
         <svg {...p}>
           <rect x="3" y="4.5" width="18" height="16" rx="2.5" />
           <path d="M3 9h18M8 2.5v4M16 2.5v4" />
+        </svg>
+      );
+    // Reiter „Start“ und „Planen“ des Dienstplaners (Entwurf v17, E3).
+    case 'home':
+      return (
+        <svg {...p}>
+          <path d="M3.5 11 12 4l8.5 7" />
+          <path d="M5.5 9.5V20h13V9.5" />
+          <path d="M10 20v-5h4v5" />
+        </svg>
+      );
+    case 'grid':
+      return (
+        <svg {...p}>
+          <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+          <path d="M3.5 10h17M9.5 4.5v15" />
         </svg>
       );
     case 'calendar-fill':

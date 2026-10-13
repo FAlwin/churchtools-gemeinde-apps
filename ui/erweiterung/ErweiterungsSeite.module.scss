@@ -17,6 +17,19 @@
   overscroll-behavior: contain;
 }
 
+/** Mit etwas `unten` (Reiterleiste am Handy): Rollbereich darüber, die Leiste fest darunter. */
+.huelle {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+
+  > .rolle {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+  }
+}
+
 .seite {
   max-width: 1120px;
   margin: 0 auto;
@@ -30,6 +43,14 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+// Reiter direkt neben dem App-Namen, wie im Entwurf des Dienstplaners (v17).
+.appzeile {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
 }
 
 .app {

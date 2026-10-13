@@ -83,8 +83,8 @@ describe('isCtOverloaded – Drosselung UND Zeitüberschreitung (#300)', () => {
   });
 
   it('erkennt auch eine Zeitüberschreitung', () => {
-    // Wichtig: `ctGet` läuft NICHT über `asGatewayError` – dort fliegt ein Timeout als rohe
-    // TimeoutError heraus. Für einen Massenlauf heißt beides dasselbe: sofort aufhören.
+    // Roh kommt sie, wenn erst das Lesen der Antwort zu lange dauert (beim Abschicken macht `ctFetch`
+    // daraus `CtTimeoutError`, #489). Für einen Massenlauf heißt alles dasselbe: sofort aufhören.
     const timeout = new Error('aborted');
     timeout.name = 'TimeoutError';
     const abort = new Error('aborted');

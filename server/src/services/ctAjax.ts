@@ -28,13 +28,7 @@ import {
 } from '@shared/ct/altSchnittstelle';
 import { HttpError } from '../middleware/errorHandler.js';
 import { csrfWriteDenied, getCsrfToken } from './ctCsrf.js';
-import {
-  BASE,
-  CT_FILE_TIMEOUT_MS,
-  CtOverloadedError,
-  ctSignal,
-  parseRetryAfter,
-} from './ctHttp.js';
+import { BASE, CT_FILE_TIMEOUT_MS, ctFetch } from './ctHttp.js';
 
 /**
  * Die Meldungen eines Aufrufs – **durchgereicht, nicht generisch** (Muster von `uploadFile`).
@@ -57,8 +51,10 @@ export async function ctAjax(
   const csrf = await getCsrfToken(cookie);
   const body = new URLSearchParams({ func, ...felder });
 
-  const res = await fetch(`${BASE}/index.php?q=churchservice/ajax`, {
-    signal: ctSignal(CT_FILE_TIMEOUT_MS),
+  // Zeitgrenze, Zeitüberschreitung (504) und Drosselung (429 → 503) regelt `ctFetch` (#489).
+  const res = await ctFetch(`${BASE}/index.php?q=churchservice/ajax`, {
+    was: `ajax ${func}`,
+    zeitgrenzeMs: CT_FILE_TIMEOUT_MS,
     method: 'POST',
     headers: {
       Cookie: cookie,
@@ -72,12 +68,6 @@ export async function ctAjax(
   });
 
   if (res.status === 401 || res.status === 403) csrfWriteDenied(cookie, m.verweigert);
-  // 429 ist eine Drosselung, kein Serverfehler (#383) – dieselbe Regel wie in `ctGet` (#300),
-  // `fileDownloadError`, `ctWrite` und `login` (#381). Nur so erkennt ein Massenlauf die Bremse per
-  // `isCtOverloaded`, und der Nutzer liest „bitte einen Moment warten" statt „abgelehnt".
-  if (res.status === 429) {
-    throw new CtOverloadedError(parseRetryAfter(res.headers.get('retry-after')));
-  }
   if (!res.ok) {
     throw new HttpError(502, `${m.abgelehnt} (${res.status}).`);
   }

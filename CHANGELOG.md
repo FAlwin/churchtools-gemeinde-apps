@@ -9,6 +9,16 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Behoben
 
+- **Antwortet ChurchTools nicht, sagt die App das jetzt auch** (#489): Lief eine Anfrage an ChurchTools in
+  die Zeitgrenze, meldete die Web-App beim Laden, Speichern und Anmelden „Interner Serverfehler" (und
+  schrieb einen Stacktrace ins Log). Jetzt kommt überall „ChurchTools antwortet gerade nicht. Bitte
+  später erneut versuchen." – wie in der Erweiterung. Ursache: Der Server sprach ChurchTools an neun
+  Stellen mit eigenem `fetch` an, und nur der Datei-Download übersetzte die Zeitüberschreitung. Jetzt
+  läuft alles über **eine** Funktion (`ctFetch`), die Zeitgrenze, Drosselung (429) und
+  Zeitüberschreitung regelt.
+- **Liedtext-Index hört bei einer Zeitüberschreitung auf** (gefunden bei #489): Lief ein Datei-Download
+  beim Bau des Index in die Zeitgrenze, erkannte der Lauf das nicht als „ChurchTools kann gerade nicht"
+  und schickte weiter Anfragen. Jetzt bricht er ab wie bei einer Drosselung.
 - **Einstellungen aus der `.env` kamen nicht im Container an** (beim Doku-Abgleich gefunden, 12.10.2026):
   Die Compose-Vorlagen reichten `ERWEITERUNG_KUERZEL` und `ABLAGE_UMZUG` gar nicht durch, die
   Basis-Vorlage `deploy/docker-compose.yml` auch `COOKIE_SECURE` nicht – obwohl `.env.example` und die

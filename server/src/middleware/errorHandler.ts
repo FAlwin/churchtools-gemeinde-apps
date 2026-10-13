@@ -19,6 +19,20 @@ export class HttpError extends Error {
   }
 }
 
+/**
+ * Abbruch wegen Zeitüberschreitung (`AbortSignal.timeout`) – die eine Stelle für diese Erkennung.
+ *
+ * Steht hier und nicht in `ctHttp.ts`, weil auch der `errorHandler` sie braucht und `ctHttp.ts` von
+ * hier importiert (umgekehrt wäre es ein Kreis).
+ */
+export function istZeitueberschreitung(e: unknown): boolean {
+  return e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError');
+}
+
+/** Die Meldung dazu – `CtTimeoutError` und der `errorHandler` sagen dasselbe. */
+export const CT_ANTWORTET_NICHT =
+  'ChurchTools antwortet gerade nicht. Bitte später erneut versuchen.';
+
 /** 404 für unbekannte Routen. */
 export const notFoundHandler: RequestHandler = (_req, res) => {
   res.status(404).json({ error: 'Nicht gefunden' });
@@ -37,6 +51,14 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
       res.setHeader('Retry-After', String(Math.max(1, Math.ceil(err.retryAfterMs / 1000))));
     }
     res.status(err.status).json({ error: err.message });
+    return;
+  }
+  // Zeitüberschreitung beim LESEN einer ChurchTools-Antwort (#489): Das Abbruch-Signal gilt auch für
+  // den Rumpf, und dort greift `ctFetch` nicht mehr. Vorübergehend, also 504 wie beim Abschicken –
+  // ohne Stacktrace, denn es ist kein Programmfehler.
+  if (istZeitueberschreitung(err)) {
+    console.warn('[churchtools] Zeitüberschreitung beim Lesen der Antwort');
+    res.status(504).json({ error: CT_ANTWORTET_NICHT });
     return;
   }
   console.error('Unerwarteter Fehler:', err);

@@ -175,6 +175,9 @@ außen 50-mal ein falsches Passwort, ist nur sein Anschluss gesperrt – nicht d
 1. Im WLAN zweimal ausführen und jeweils die Zeile `RateLimit-Remaining` ablesen (die Zahl sinkt um 1):
    `curl -s -D - -o /dev/null -X POST https://musik.ecg-donrath.de/api/auth/login -H 'content-type: application/json' -d '{}'`
 2. Den Mac mit dem **Handy-Hotspot** verbinden (WLAN aus) und denselben Befehl einmal ausführen.
+   **Vorher prüfen, dass der Mac wirklich über das Handy hinausgeht:** `curl -s https://api.ipify.org`
+   muss eine andere Adresse zeigen als im WLAN. Läuft ein VPN, geht der Verkehr trotz Hotspot über die
+   Heimadresse – dann beide Befehle mit `--interface en0` ausführen (am 13.10.2026 so passiert).
 3. Die Zahl im Hotspot muss **unabhängig** sein – meist wieder hoch (z. B. 49), nicht die WLAN-Zahl
    minus eins. Der Befehl fragt ChurchTools nicht und meldet nur „ungültige Eingabe".
 
@@ -183,7 +186,7 @@ außen 50-mal ein falsches Passwort, ist nur sein Anschluss gesperrt – nicht d
 - **Priorität:** hoch
 - **Betrifft:** `server/src/index.ts`, `server/src/utils/vertrauterProxy.ts`, `server/src/routes/auth.ts`
 - **Automatisiert:** teilweise – `server/src/trustProxy.test.ts` (Docker-Gateway als Verbindung, eigene Kopfzeile zählt nicht); von Hand bleibt die echte Proxy-Kette am NAS
-- **Historie:** #459
+- **Historie:** #459 – an Prod bestanden am 13.10.2026 (v2.34.2): Hotspot 49, WLAN unabhängig davon 46
 
 </details>
 

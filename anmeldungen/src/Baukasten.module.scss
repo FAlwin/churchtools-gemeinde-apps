@@ -203,10 +203,10 @@
   font-weight: 600;
   animation: luecke-auf 0.16s ease-out;
 }
+// Nur einblenden, nicht aufziehen: Die Felder gleiten selbst an ihren Platz (FLIP im Baukasten); eine
+// wachsende Höhe obendrauf ließ es ruckeln.
 @keyframes luecke-auf {
   from {
-    height: 0;
-    margin: 0;
     opacity: 0;
   }
 }

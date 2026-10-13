@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { Segment } from '@ui/bedienung/Segment';
 import { Sheet } from '@ui/fenster/Sheet';
@@ -71,9 +71,11 @@ interface Platz {
   unten: number;
 }
 
-/** Abstand zum Rand, ab dem beim Ziehen mitgescrollt wird, und wie weit je Schritt. */
-const RAND_SCROLL = 70;
-const SCHRITT_SCROLL = 14;
+/** Abstand zum Rand, ab dem beim Ziehen mitgescrollt wird, und das Tempo ganz am Rand (Pixel je Bild). */
+const RAND_SCROLL = 80;
+const TEMPO_SCROLL = 18;
+/** Wie lange die Felder zu ihrem neuen Platz gleiten, wenn die Lücke wandert. */
+const GLEITEN_MS = 160;
 
 /** Das nächste Element darüber, das scrollt (in ChurchTools ist das nicht das Fenster, sondern der Rahmen). */
 function scrollEltern(el: HTMLElement | null): HTMLElement {
@@ -415,6 +417,12 @@ export function Baukasten({
     const b = buehneRef.current;
     if (!b) return;
     const oben = b.getBoundingClientRect().top;
+    lagen.current = new Map(
+      [...b.querySelectorAll<HTMLElement>('[data-feld]')].map((el) => [
+        el.dataset.feld!,
+        el.getBoundingClientRect().top - oben,
+      ]),
+    );
     plaetze.current = [...b.querySelectorAll<HTMLElement>('[data-feld][data-bereich]')]
       .filter((el) => el.dataset.ende === undefined)
       .map((el) => {
@@ -458,6 +466,47 @@ export function Baukasten({
     else verschieben(g.id, z.bereich, vorId);
   }
 
+  // ── Gleiten statt Springen (Alwin: „manchmal ruckelt es noch kräftig“) ──
+  // Wandert die Lücke, gleiten die Felder von ihrem alten zu ihrem neuen Platz (FLIP über die Web Animations
+  // API), statt schlagartig zu springen. Die Rechnung oben benutzt weiter die Plätze vom Start.
+  const lagen = useRef(new Map<string, number>());
+  useLayoutEffect(() => {
+    const b = buehneRef.current;
+    if (!b || !gezogen.current) return;
+    const oben = b.getBoundingClientRect().top;
+    const neu = new Map<string, number>();
+    for (const el of b.querySelectorAll<HTMLElement>('[data-feld]')) {
+      const id = el.dataset.feld!;
+      const jetzt = el.getBoundingClientRect().top - oben;
+      neu.set(id, jetzt);
+      const vorher = lagen.current.get(id);
+      if (vorher !== undefined && Math.abs(vorher - jetzt) > 1)
+        el.animate?.([{ transform: `translateY(${vorher - jetzt}px)` }, { transform: 'none' }], {
+          duration: GLEITEN_MS,
+          easing: 'ease-out',
+        });
+    }
+    lagen.current = neu;
+  }, [ziel]);
+
+  // Gleichmäßig mitscrollen, solange der Mauszeiger am Rand ist – je näher am Rand, desto schneller. Vorher
+  // gab es je Mausereignis einen festen Schritt, das ruckelte.
+  const scrollen = useRef<{ el: HTMLElement; tempo: number; laeuft: boolean }>({
+    el: document.documentElement,
+    tempo: 0,
+    laeuft: false,
+  });
+  function scrollSchritt() {
+    const s = scrollen.current;
+    if (!gezogen.current || s.tempo === 0) {
+      s.laeuft = false;
+      return;
+    }
+    // `?.`: Nicht jede Umgebung kennt `scrollBy` an Elementen (jsdom) – dann eben ohne Mitscrollen.
+    s.el.scrollBy?.(0, s.tempo);
+    requestAnimationFrame(scrollSchritt);
+  }
+
   function ueberBuehne(ev: React.DragEvent<HTMLDivElement>) {
     if (!gezogen.current) return;
     ev.preventDefault();
@@ -467,9 +516,22 @@ export function Baukasten({
       sc === document.scrollingElement
         ? { top: 0, bottom: window.innerHeight }
         : sc.getBoundingClientRect();
-    // `?.`: Nicht jede Umgebung kennt `scrollBy` an Elementen (jsdom) – dann eben ohne Mitscrollen.
-    if (ev.clientY < r.top + RAND_SCROLL) sc.scrollBy?.(0, -SCHRITT_SCROLL);
-    else if (ev.clientY > r.bottom - RAND_SCROLL) sc.scrollBy?.(0, SCHRITT_SCROLL);
+    const vonOben = ev.clientY - r.top;
+    const vonUnten = r.bottom - ev.clientY;
+    const tempo =
+      vonOben < RAND_SCROLL
+        ? -Math.ceil(((RAND_SCROLL - vonOben) / RAND_SCROLL) * TEMPO_SCROLL)
+        : vonUnten < RAND_SCROLL
+          ? Math.ceil(((RAND_SCROLL - vonUnten) / RAND_SCROLL) * TEMPO_SCROLL)
+          : 0;
+    const s = scrollen.current;
+    s.el = sc;
+    s.tempo = tempo;
+    if (tempo !== 0 && !s.laeuft) {
+      s.laeuft = true;
+      s.el.scrollBy?.(0, tempo);
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(scrollSchritt);
+    }
     const z = zielAus(ev.clientY - ev.currentTarget.getBoundingClientRect().top);
     if (z) zielSetzen(z);
   }
@@ -491,6 +553,7 @@ export function Baukasten({
     setZiehtFeld(g.art === 'feld' ? g.id : null);
   };
   const ziehenEnde = () => {
+    scrollen.current.tempo = 0;
     gezogen.current = null;
     setZiehtFeld(null);
     setZiel(null);

@@ -7,6 +7,28 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Dienstplaner)
+
+- **Grundgerüst des Dienstplaners** (#495, Bauplan E2): neue ChurchTools-Erweiterung `dienstplaner/` (Kürzel
+  `dienstplaner`). Sie zeigt, wer angemeldet ist, die Gemeinde, die eigenen Gruppen mit Leitung/Mitglied
+  und welche Dienstgruppen man laut ChurchTools-Recht „Dienste einer Dienstgruppe bearbeiten“ plant.
+  Scheitert das Laden vorübergehend, gibt es „Erneut versuchen“; abgemeldet ist ein eigener Zweig. Demo
+  ohne ChurchTools nur im Dev-Build (`?demo`, `?demo=mitglied`, `?demo=fehler`). Eigener Release-Weg:
+  Tag `dienstplan-v*` über die neue gemeinsame Vorlage `erweiterung-release.yml` (`make_latest: false`
+  fest darin). Für die Musik-App und die Anmeldungen ändert sich nichts.
+
+### Intern (Dienstplaner)
+
+- **Geteilt statt nachgebaut** (Dienstplaner E2): `ui/ct/ich.ts` (wer angemeldet ist, Gemeinde, Gruppen –
+  wirft auch, wenn ChurchTools die Gruppen ohne Liste liefert, statt „keine Gruppen“ zu zeigen),
+  `ui/ct/fehlerMeldung.ts` (was bei Fehlern gesagt wird) und `ui/erweiterung/ErweiterungsSeite.tsx`
+  (Rahmen: Kopf, Laden, Fehler, Version). Die Anmeldungen ziehen nach #493 darauf um.
+- `shared/ct/rechte.ts`: `idsAusRecht` (Rechte in Listenform, mit der `Number(null)`-Falle) und
+  `rechteAntwortPruefen` (leere Antwort = Aussetzer) herausgezogen; `parseSongEditRight` und `rechteAus`
+  nutzen sie, der Dienstplaner auch (`shared/ct/dienstRechte.ts`, `shared/ct/dienstgruppen.ts`).
+- Staging baut `feat/dienstplaner-**` und `fix/dienstplaner-**` nicht (sie überschrieben sonst das
+  `:staging` der Musik-App).
+
 ### Behoben
 
 - **Antwortet ChurchTools nicht, sagt die App das jetzt auch** (#489): Lief eine Anfrage an ChurchTools in

@@ -191,14 +191,17 @@ churchtools-gemeinde-apps/
 ├── shared/anmeldung/        # Regeln der Anmeldungen: preis, formular (#474), uebersicht (#480), vorlagen, termin, felder, rechte (#486)
 ├── anmeldungen/             # Anmeldungen: ChurchTools-Erweiterung für Veranstalter (#474, nur Erweiterung)
 ├── formular/                # Anmeldungen: öffentliches Formular, statisch (GitHub Pages), noch Platzhalter
+├── dienstplaner/            # Dienstplaner: ChurchTools-Erweiterung für alle Dienstgruppen (Bauplan E2, vorerst nur Erweiterung)
 └── ui/                      # gemeinsame Browser-Bausteine aller Apps (Alias @ui, Dienstplaner E1, Anmeldungen #474)
     ├── design/              # _variables.scss (Tokens), _mixins.scss, _grundregeln.scss (Reset + Erweiterungs-Lehren)
     ├── icons/               # icons.tsx (Line-Icons)
     ├── fenster/             # Sheet (Modal), useOverlayKeyboardInset, appHeight
     ├── bedienung/           # Segment, Schalter, KnopfReihe
     ├── teilen/              # shareFile, sharePdf
-    ├── ct/                  # Verbindung einer Erweiterung zu ChurchTools: verbindung.ts, fehler.ts (ApiError), basis.ts
-    └── erweiterung/         # Erweiterungs-Bau: viteErweiterung (fasst zusammen), cssBereich, kopfInDenInhalt
+    ├── ct/                  # Verbindung einer Erweiterung zu ChurchTools: verbindung.ts, fehler.ts (ApiError), basis.ts,
+    │                        #   fehlerMeldung.ts (was bei Fehlern gesagt wird), ich.ts (wer angemeldet ist, Gemeinde, Gruppen)
+    └── erweiterung/         # Erweiterungs-Bau: viteErweiterung (fasst zusammen), cssBereich, kopfInDenInhalt;
+                             #   ErweiterungsSeite (Rahmen: Kopf, Laden, Fehler, Version)
 ```
 
 ## Konventionen
@@ -650,6 +653,9 @@ den Skill `/festhalten`, der genau das automatisiert.
    `anmeldungen-release.yml` → Release mit `anmeldungen-vX.Y.Z.zip`, **immer `make_latest: false`**
    (sonst zeigt `/releases/latest` den Musik-Apps ein Anmelde-Release als Update). Anleitung:
    `docs/betrieb/ANMELDUNGEN.md`.
+   **Der Dienstplaner ebenso:** Tag `dienstplan-vX.Y.Z` → `dienstplaner-release.yml` → gemeinsame Vorlage
+   `erweiterung-release.yml` (dort steht `make_latest: false` fest) → `dienstplaner-vX.Y.Z.zip`. Anleitung:
+   `docs/betrieb/DIENSTPLANER.md`. Seine Zweige heißen `feat/dienstplaner-…` – die baut Staging nicht.
 7. **Memory aktualisieren:** Projekt-Memory + `MEMORY.md`-Index auf den neuen Stand bringen.
 
 **⚠️ Prod-Deploy & Daten-Volume (Lehre aus dem Vorfall 2026-07-08):** Beim Aktualisieren im

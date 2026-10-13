@@ -37,17 +37,36 @@ export interface SongEditRight {
 export function parseSongEditRight(
   data: Record<string, Record<string, unknown>> | null | undefined,
 ): SongEditRight {
-  const wert = data?.churchservice?.['edit songcategory'];
-  if (Array.isArray(wert)) {
-    // Über `ctId`, NICHT über `map(Number)`: `Number(null)` ist 0, und 0 ist bei den Kategorien eine
-    // echte ID („Aktive Songs"). Ein `null` in der Liste hätte sonst ein Recht erfunden.
-    const ids = wert.map(ctId).filter((n): n is number => n !== null);
-    return { erlaubt: ids.length > 0, ids };
+  const ids = idsAusRecht(data?.churchservice?.['edit songcategory']);
+  return { erlaubt: ids === null || ids.length > 0, ids };
+}
+
+/**
+ * **Die IDs, für die ein ChurchTools-Recht gilt** (Kategorien, Dienstgruppen, Kalender …) – für jedes
+ * Recht in Listenform dieselbe Lesart (aus `parseSongEditRight` herausgezogen für den Dienstplaner):
+ *
+ * - Liste → die IDs darin, über `ctId`, NICHT über `map(Number)`: `Number(null)` ist 0, und 0 ist bei
+ *   den Kategorien eine echte ID („Aktive Songs"). Ein `null` in der Liste hätte sonst ein Recht erfunden.
+ * - `undefined`/`false` → `[]` (kein Recht).
+ * - etwas anderes Wahres → `null` = Recht ohne Aufzählung; der Aufrufer darf dann nicht selbst eingrenzen.
+ */
+export function idsAusRecht(wert: unknown): number[] | null {
+  if (Array.isArray(wert)) return wert.map(ctId).filter((n): n is number => n !== null);
+  return wert ? null : [];
+}
+
+/**
+ * Ist die Rechte-Antwort echt? Eine **leere** Antwort ist ein Aussetzer von ChurchTools, nicht „keine
+ * Rechte" (siehe `rechteAus`) – dann wird geworfen, damit der Aufrufer neu versucht. Für jede App, die
+ * `/permissions/global` liest, dieselbe Prüfung.
+ */
+export function rechteAntwortPruefen(
+  data: Record<string, Record<string, unknown>> | null | undefined,
+  fehler: (status: number, meldung: string) => Error,
+): asserts data is Record<string, Record<string, unknown>> {
+  if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
+    throw fehler(502, 'Leere Rechte-Antwort von ChurchTools – bitte erneut versuchen.');
   }
-  // Kein Array: `undefined`/`false` heißt kein Recht, alles andere Wahre ein Recht ohne Aufzählung.
-  // Diese Unterscheidung stand vorher in `has()` und muss hier gleich ausfallen – sonst ändert sich
-  // `canEditSongs` als Nebenwirkung dieser Umstellung.
-  return wert ? { erlaubt: true, ids: null } : { erlaubt: false, ids: [] };
 }
 
 /**
@@ -67,9 +86,7 @@ export function rechteAus(
   adminPermission: string,
   fehler: (status: number, meldung: string) => Error,
 ): UserCapabilities {
-  if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
-    throw fehler(502, 'Leere Rechte-Antwort von ChurchTools – bitte erneut versuchen.');
-  }
+  rechteAntwortPruefen(data, fehler);
   const cs = data.churchservice ?? {};
   const has = (v: unknown): boolean => (Array.isArray(v) ? v.length > 0 : Boolean(v));
   // Admin-Recht aus der Konfiguration (Form `modul:recht`).

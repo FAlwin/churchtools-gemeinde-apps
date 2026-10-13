@@ -1,0 +1,80 @@
+name: Release einer Erweiterung (Vorlage)
+
+# Gemeinsamer Release-Weg für die ChurchTools-Erweiterungen dieses Repos, die keine Musik-App sind
+# (Dienstplaner E2). Aufgerufen von einem kleinen Workflow je App, der nur auf seinen Tag hört
+# (z. B. `dienstplan-v*` → dienstplaner-release.yml).
+#
+# **`make_latest: false` ist Pflicht und steht deshalb HIER, nicht beim Aufrufer.** Die installierten
+# Musik-Apps fragen `/releases/latest` nach ihrem Update-Hinweis. Wäre ein Release einer anderen App
+# „latest", sähen alle Gemeinden keinen Musik-App-Hinweis mehr (gefunden beim Dienstplaner, E1).
+#
+# Die Anmeldungen haben (noch) ihren eigenen Workflow `anmeldungen-release.yml` mit denselben Schritten;
+# er zieht hierher um, sobald diese Vorlage einmal echt gelaufen ist.
+on:
+  workflow_call:
+    inputs:
+      praefix:
+        description: 'Tag-Präfix vor der Version, z. B. "dienstplan-" (Tag dienstplan-v0.1.0 → v0.1.0)'
+        required: true
+        type: string
+      workspace:
+        description: 'npm-Workspace der App, z. B. "dienstplaner"'
+        required: true
+        type: string
+      kuerzel:
+        description: 'Kürzel der Erweiterung in ChurchTools (steckt im Pfad /ccm/<Kürzel>/)'
+        required: true
+        type: string
+      titel:
+        description: 'Name im Release-Titel, z. B. "Dienstplaner"'
+        required: true
+        type: string
+      anleitung:
+        description: 'Pfad der Installationsanleitung im Repo, z. B. "docs/betrieb/DIENSTPLANER.md"'
+        required: true
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Version ohne Präfix (`dienstplan-v0.1.0` → `v0.1.0`) – so steht sie in der App und im Dateinamen.
+      - name: Version ermitteln
+        run: echo "VERSION=${GITHUB_REF_NAME#${{ inputs.praefix }}}" >> "$GITHUB_ENV"
+
+      - name: Erweiterung bauen und packen
+        run: |
+          npm run build -w ${{ inputs.workspace }}
+          npm run paket -w ${{ inputs.workspace }}
+        env:
+          VITE_KEY: ${{ inputs.kuerzel }}
+          VITE_APP_VERSION: ${{ env.VERSION }}
+
+      - name: GitHub Release veröffentlichen
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ inputs.titel }} ${{ env.VERSION }}
+          make_latest: false
+          # Tags mit Suffix (z. B. dienstplan-v0.2.0-rc1) als Vorabversion.
+          prerelease: ${{ contains(env.VERSION, '-') }}
+          body: |
+            ### ${{ inputs.titel }} – ChurchTools-Erweiterung
+
+            `${{ inputs.kuerzel }}-${{ env.VERSION }}.zip` unten unter **Assets** herunterladen und in ChurchTools unter
+            **Administration → Erweiterungen → Erweiterung hinzufügen** hochladen. **Kürzel: `${{ inputs.kuerzel }}`**
+            (genau so – sonst lädt sie nicht), Name frei. Zum Aktualisieren beim Eintrag auf den Stift und die
+            neue ZIP hochladen.
+            Anleitung: https://github.com/FAlwin/churchtools-gemeinde-apps/blob/main/${{ inputs.anleitung }}
+          files: ${{ inputs.workspace }}/releases/${{ inputs.kuerzel }}-${{ env.VERSION }}.zip
+          fail_on_unmatched_files: true

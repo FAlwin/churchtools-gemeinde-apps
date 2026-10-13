@@ -1,0 +1,18 @@
+@use '@ui/design/variables' as *;
+// Reset, Erweiterungs-Lehren (Bereich unter der ChurchTools-Leiste, fette Schrift, Symbole), Fokus und
+// Bewegung – dieselben Grundregeln wie die Musik-App und die Anmeldungen.
+@use '@ui/design/grundregeln';
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+// In ChurchTools füllt die App ihren Bereich unter der Leiste (grundregeln: `.ct-extension #root`) und
+// scrollt darin selbst.
+#root {
+  overflow-y: auto;
+}

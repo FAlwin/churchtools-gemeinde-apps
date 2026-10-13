@@ -45,6 +45,10 @@ jobs:
       - name: Anmeldungen-Erweiterung packen
         run: npm run paket -w anmeldungen
 
+      # Der Dienstplaner ist (vorerst) ebenfalls nur Erweiterung – gleiche Prüfung beim Packen.
+      - name: Dienstplaner-Erweiterung packen
+        run: npm run paket -w dienstplaner
+
       - name: Test
         run: npm test
 

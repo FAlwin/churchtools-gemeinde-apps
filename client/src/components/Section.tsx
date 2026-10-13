@@ -32,11 +32,10 @@ export function Section({
     if (!anyLyric) return null;
   }
 
-  const typeClass = styles[section.type] ?? styles.verse;
   const shiftLabel = shift ? (shift > 0 ? `+${shift}` : `${shift}`) : null;
 
   return (
-    <div className={`${styles.sectionBlock} ${typeClass}`}>
+    <div className={styles.sectionBlock}>
       {(section.label || shiftLabel) && (
         <div
           className={styles.secLabel}

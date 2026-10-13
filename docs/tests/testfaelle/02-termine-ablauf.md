@@ -183,20 +183,24 @@ App das – nicht mehr „Keine Berechtigung".
 
 1. Den Ablauf öffnen und oben auf den **Stift** tippen (Bearbeiten).
 2. Das **Schloss** oben antippen → Rückfrage „Ablauf abschließen?" → **Abschließen**.
-3. Es erscheint der Hinweis „Dieser Ablauf ist in ChurchTools abgeschlossen …" mit **Ablauf öffnen**;
-   Ziehen, Bearbeiten und das Plus sind weg. In ChurchTools ist der Ablauf ebenfalls abgeschlossen.
-4. **Ablauf öffnen** antippen → die Bearbeiten-Ansicht ist wieder da.
-5. Gegenprobe von außen: In ChurchTools den Ablauf abschließen, in der App (noch im Bearbeiten) einen
-   Punkt löschen → statt „Keine Berechtigung" erscheint der Hinweis, und kurz danach der Knopf
-   **Ablauf öffnen**.
-6. Außerhalb des Bearbeitens zeigt die Ansicht bewusst keinen Hinweis.
+3. Oben rechts steht statt des Schlosses jetzt das **offene Schloss** („Ablauf öffnen", blau gefüllt); es
+   gibt keinen Kasten über dem Ablauf. In ChurchTools ist der Ablauf ebenfalls abgeschlossen.
+4. Einen Punkt antippen, einen Punkt ziehen und das **Plus** antippen → jedes Mal erscheint unten
+   „Dieser Ablauf ist in ChurchTools abgeschlossen. Zum Ändern oben rechts das Schloss antippen." –
+   es öffnet sich kein Fenster, der gezogene Punkt springt zurück.
+5. Das **offene Schloss** antippen (ohne Rückfrage) → oben steht wieder das Schloss zum Abschließen,
+   Bearbeiten geht wie vorher.
+6. Gegenprobe von außen: In ChurchTools den Ablauf abschließen, in der App (noch im Bearbeiten) einen
+   Punkt löschen → statt „Keine Berechtigung" erscheint die Meldung „abgeschlossen", und kurz danach
+   oben das offene Schloss.
+7. Außerhalb des Bearbeitens zeigt die Ansicht bewusst keinen Hinweis.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
 - **Betrifft:** `shared/ct/schreibKern.ts`, `shared/ct/setlistKern.ts`, `client/src/pages/Setlist.tsx`, `server/src/controllers/setlistController.ts`
 - **Automatisiert:** teilweise – `server/src/services/ablaufAbschluss.test.ts`, `client/src/pages/Setlist.abschluss.test.tsx`, `client/src/services/ctSchreiben.test.ts`; von Hand bleibt echtes ChurchTools
-- **Historie:** Alwin 09.10.2026
+- **Historie:** Alwin 09.10.2026; seit 13.10.2026 ohne Kasten, Öffnen als Knopf oben rechts (Alwin)
 
 </details>
 

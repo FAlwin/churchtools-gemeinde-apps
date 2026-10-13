@@ -19,8 +19,17 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   bearbeiten" sieht man die Termine, aber ohne „Ablauf anlegen". Die App liest vor dem Anlegen nach, ob es
   schon einen Ablauf gibt, und danach, ob er wirklich da ist.
 
+### Geändert
+
+- **Abgeschlossener Ablauf: Öffnen als Knopf oben rechts** (Alwin, 13.10.2026): Statt des großen Kastens
+  über dem Ablauf steht beim Bearbeiten oben rechts das offene Schloss („Ablauf öffnen", ohne Rückfrage).
+  Will man trotzdem etwas ändern – Punkt antippen, ziehen oder das Plus –, sagt ein Hinweis unten, dass
+  der Ablauf abgeschlossen ist und erst wieder geöffnet werden muss.
+
 ### Behoben
 
+- **Ein leerer Ablauf ließ sich nicht bearbeiten:** Ohne einen einzigen Punkt fehlte oben der Stift – ein
+  Ablauf ohne Punkte (etwa „Leer" angelegt) war eine Sackgasse. Der Stift steht jetzt immer da.
 - **Verwaltung erst mit geladenen Einstellungen** (beim Bau von „Ablauf anlegen" gefunden, 13.10.2026):
   Öffnete man direkt nach dem Start ein Fenster der Verwaltung, bevor die Einstellungen vom Server da
   waren, zeigte es die Vorgaben („nichts gewählt") – und ein Speichern hätte die echte Einstellung

@@ -69,6 +69,8 @@
 }
 
 .kopf {
+  // Einheitlich hoch (Entwurf: --hh 112px) – ein langer Name darf die Zeile nicht strecken.
+  height: 112px;
   width: var(--cw);
   min-width: var(--cw);
   max-width: var(--cw);
@@ -401,4 +403,136 @@
   padding: 6px 14px;
   border-radius: 10px;
   font-size: 14px;
+}
+
+// ── E3-5: Werkzeugleiste, Filter, Terminleiste ──────────────────────────────
+.planen {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.werkzeug {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+
+.leiste {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: auto;
+}
+
+.leistenKnopf {
+  @include m.auswahlKnopf;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  min-width: 32px;
+  padding: 0 7px;
+  border-radius: 8px;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+.zeitraum {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 150px;
+  padding: 0 4px;
+  line-height: 1.15;
+
+  b {
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  small {
+    font-size: 11.5px;
+    color: var(--text2);
+  }
+}
+
+.anpassen {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--blue-ink);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+// Termine einer anderen Veranstaltung als der häufigsten (Entwurf: Gebetsabende abgesetzt).
+.neben {
+  background: color-mix(in srgb, var(--section) 70%, var(--surface2)) !important;
+}
+
+// ── „Wer wie oft?“ ──────────────────────────────────────────────────────────
+.personen {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+
+  th,
+  td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--hair);
+    text-align: left;
+    vertical-align: top;
+    color: var(--text);
+  }
+
+  thead th {
+    background: var(--nav-bg);
+    color: var(--text2);
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  tbody th {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+}
+
+.etikett {
+  display: inline-block;
+  margin: 0 4px 4px 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--surface3);
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.anzahl {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+
+  i {
+    display: block;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--blue);
+  }
 }

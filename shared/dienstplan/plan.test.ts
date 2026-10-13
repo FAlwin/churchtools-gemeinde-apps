@@ -62,7 +62,14 @@ describe('platzAus', () => {
 
   it('„Namen verbergen“: besetzt, aber ohne Namen – der mitgeschickte echte Name fällt weg', () => {
     const p = platzAus({ personId: -2, name: 'Echter Name', isAccepted: true }, ICH);
-    expect(p).toEqual({ art: 'zugesagt', name: null, gast: false, verborgen: true, ich: false });
+    expect(p).toEqual({
+      art: 'zugesagt',
+      name: null,
+      gast: false,
+      verborgen: true,
+      ich: false,
+      personId: null,
+    });
   });
 });
 

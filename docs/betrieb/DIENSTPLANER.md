@@ -1,7 +1,8 @@
 # Dienstplaner – ChurchTools-Erweiterung
 
-> **Stand: Planen-Matrix (E3-4).** Die Erweiterung startet in ChurchTools – **nur lesen**. **Planen**: Termine
-> als Spalten, Dienstgruppen und Dienste als Zeilen, in jeder Zelle die Plätze; am Handy ein Termin auf einmal. **Start**: „Als
+> **Stand: E3 fertig gebaut (E3-5).** Die Erweiterung startet in ChurchTools – **nur lesen**. **Planen**:
+> Termine als Spalten, Dienstgruppen und Dienste als Zeilen, in jeder Zelle die Plätze; Terminleiste,
+> Spaltenbreite, Filter nach Veranstaltung und Gruppe, „Wer wie oft?“; am Handy ein Termin auf einmal. **Start**: „Als
 > Nächstes“ (dein Dienst, Team, Lieder, Musik-App), deine offenen Anfragen, deine nächsten Dienste,
 > Abwesenheiten und für Planer die freien Plätze der nächsten 6 Wochen. Die Reiter
 > Start · Termine · Planen · Abwesenheiten stehen (am Computer oben, am Handy unten; „Planen“ nur für

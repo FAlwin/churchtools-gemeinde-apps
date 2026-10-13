@@ -30,6 +30,8 @@ export interface PlanPlatz {
   verborgen: boolean;
   /** Der eigene Platz. */
   ich: boolean;
+  /** Die Person – `null` bei freien, verborgenen und Gast-Plätzen („Wer wie oft?“ zählt danach). */
+  personId: number | null;
 }
 
 export interface PlanSpalte {
@@ -68,10 +70,12 @@ export interface Plan {
 
 /** Ein Platz, wie er in der Matrix steht. */
 export function platzAus(p: RohPlatz, ichId: number): PlanPlatz {
-  if (istFrei(p)) return { art: 'frei', name: null, gast: false, verborgen: false, ich: false };
+  if (istFrei(p)) {
+    return { art: 'frei', name: null, gast: false, verborgen: false, ich: false, personId: null };
+  }
   const art: PlatzArt = p.isAccepted === true ? 'zugesagt' : 'angefragt';
   if (p.personId === VERBORGENE_PERSON) {
-    return { art, name: null, gast: false, verborgen: true, ich: false };
+    return { art, name: null, gast: false, verborgen: true, ich: false, personId: null };
   }
   return {
     art,
@@ -79,6 +83,7 @@ export function platzAus(p: RohPlatz, ichId: number): PlanPlatz {
     gast: p.personId == null,
     verborgen: false,
     ich: p.personId === ichId,
+    personId: typeof p.personId === 'number' ? p.personId : null,
   };
 }
 

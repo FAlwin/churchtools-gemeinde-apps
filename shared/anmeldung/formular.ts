@@ -346,7 +346,6 @@ export interface Gestaltung {
   feldstil: 'kasten' | 'linie' | 'gefuellt';
   knoepfe: 'eckig' | 'rund';
   text: string;
-  gemeindename: boolean;
   // Feinheiten (Alwin, 13.10.2026: „Jotform für Design und Vorlagen“). `null` = wie die Vorlage.
   /** Schrift – nur Systemschriften, nichts wird von Google geladen (Datenschutz). `standard` = die der Vorlage. */
   schrift: 'standard' | 'rund' | 'serif' | 'klassisch' | 'lesbar';
@@ -357,10 +356,8 @@ export interface Gestaltung {
   /** Farbe der Schrift. */
   schriftfarbe: string | null;
   breite: 'schmal' | 'normal' | 'breit';
-  /** Rundes Zeichen im Kopf (Campflow); das Gemeindelogo gibt ChurchTools ohne Login nicht heraus (gemessen). */
-  logo: boolean;
-  /** Text im runden Zeichen, z. B. „ECG“ – leer = aus dem Gemeindenamen. */
-  kuerzel: string;
+  // Gemeindename und rundes Zeichen im Kopf gab es kurz – Alwin, 13.10.2026: „kann weg“. Ältere Einstellungen
+  // mit `gemeindename`, `logo`, `kuerzel` bleiben lesbar: zod lässt unbekannte Angaben beim Lesen weg.
 }
 
 /** Die Werte der Feinheiten für Einstellungen, die noch keine haben, und für neue Veranstaltungen. */
@@ -370,8 +367,6 @@ export const GESTALTUNG_FEIN = {
   kartenfarbe: null,
   schriftfarbe: null,
   breite: 'normal',
-  logo: true,
-  kuerzel: '',
 } as const satisfies Partial<Gestaltung>;
 
 /**
@@ -515,7 +510,6 @@ const einstellungenSchema = z.object({
     feldstil: z.enum(['kasten', 'linie', 'gefuellt']),
     knoepfe: z.enum(['eckig', 'rund']),
     text: z.string().max(1200),
-    gemeindename: z.boolean(),
     // Seit den Feinheiten (A5) – mit Standardwert, damit ältere Einstellungen lesbar bleiben.
     schrift: z
       .enum(['standard', 'rund', 'serif', 'klassisch', 'lesbar'])
@@ -525,8 +519,6 @@ const einstellungenSchema = z.object({
     kartenfarbe: hexOderNull.default(GESTALTUNG_FEIN.kartenfarbe),
     schriftfarbe: hexOderNull.default(GESTALTUNG_FEIN.schriftfarbe),
     breite: z.enum(['schmal', 'normal', 'breit']).default(GESTALTUNG_FEIN.breite),
-    logo: z.boolean().default(GESTALTUNG_FEIN.logo),
-    kuerzel: z.string().max(4).default(GESTALTUNG_FEIN.kuerzel),
   }),
   ctFelder: z.record(z.string(), z.number().int().positive()),
   wer: z.enum(['familie', 'einzeln', 'kinder']),

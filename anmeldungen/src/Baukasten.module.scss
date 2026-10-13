@@ -266,7 +266,7 @@
   pointer-events: none;
 }
 .wirdGezogen {
-  opacity: 0.35;
+  display: none;
 }
 
 // ── Kopf zum Bearbeiten: Name, Begrüßung, Titelbild ──
@@ -324,11 +324,15 @@
     font-weight: 600;
   }
 }
-.bildKnopf {
+.bildKnoepfe {
   position: absolute;
   right: 12px;
   top: 12px;
   z-index: 2;
+  display: flex;
+  gap: 6px;
+}
+.bildKnopf {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -898,21 +902,6 @@
 }
 .schrift-lesbar b {
   font-family: Verdana, Tahoma, 'Segoe UI', sans-serif;
-}
-.kuerzel {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-
-  input {
-    @include m.eingabefeld;
-    width: 80px;
-    height: 34px;
-    padding: 0 10px;
-    font-size: 15px;
-    text-transform: uppercase;
-  }
 }
 
 // ── Feinheiten: Leiste wie Campflow – Gruppen zum Einklappen, Kacheln heben sich, Haken bei „schon drin“ ──

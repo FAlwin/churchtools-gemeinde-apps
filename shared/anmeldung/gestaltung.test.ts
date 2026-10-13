@@ -48,7 +48,6 @@ describe('Feinheiten der Gestaltung (A5)', () => {
         feldstil: e.gestaltung.feldstil,
         knoepfe: e.gestaltung.knoepfe,
         text: '',
-        gemeindename: true,
       },
     };
     const gelesen = einstellungenEntpacken(einstellungenPacken(alt as never));

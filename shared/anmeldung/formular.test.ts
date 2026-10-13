@@ -256,7 +256,6 @@ describe('Einstellungen in der Gruppen-Beschreibung', () => {
         feldstil: 'linie',
         knoepfe: 'eckig',
         text: 'Gemeinsam ins neue Jahr.',
-        gemeindename: true,
         ...GESTALTUNG_FEIN,
       },
       ctFelder: { tel: 12, betrag: 33 },

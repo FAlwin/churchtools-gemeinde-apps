@@ -109,3 +109,13 @@ export function vorlageWechseln(
     schriftfarbe: null,
   };
 }
+
+/**
+ * **Das Titelbild in voller Größe.** Die `imageUrl`, die ChurchTools für ein Gruppenbild liefert, ist ein
+ * Vorschaubild mit 150×150 Pixeln (gemessen 13.10.2026) – auf dem Kopf des Formulars verzogen und unscharf
+ * (Alwin). Der Bilddienst liefert jede Breite ohne Login: `?w=1600&h=0` hält das Seitenverhältnis. Das
+ * Original (`fileUrl`) ist ohne Login nicht abrufbar (401).
+ */
+export function titelbildGross(url: string, breite = 1600): string {
+  return `${url}${url.includes('?') ? '&' : '?'}w=${breite}&h=0`;
+}

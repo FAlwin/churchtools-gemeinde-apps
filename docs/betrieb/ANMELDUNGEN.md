@@ -123,8 +123,8 @@ mitarbeiten (z. B. über den Status oder global über die Gruppen).
     einer schon im Formular, ist seine Kachel grau.
   - **Bearbeiten:** ein Feld anklicken – Frage, Hilfetext, Antworten und „Pflicht“ stehen direkt im Feld.
     Verschieben am Griff links oder mit den Pfeilen, kopieren und entfernen oben rechts am Feld.
-  - **Kopf:** Name und Begrüßungstext direkt anklicken; „Titelbild ändern“ steht im Bild. Das Titelbild ist
-    das Gruppenbild in ChurchTools und öffentlich sichtbar.
+  - **Kopf:** Name und Begrüßungstext direkt anklicken; „Titelbild ändern“ (und entfernen) steht im Bild. Das
+    Titelbild ist das Gruppenbild in ChurchTools und öffentlich sichtbar.
   - **Design:** Vorlage, Farbe, Feldstil, Knöpfe, Gemeindename – man sieht es sofort im Formular. Oben
     „Computer/Handy“ und „Vorschau“ (zum Ausprobieren, ohne Bearbeiten).
   - **Gespeichert wird von selbst**; oben steht, ob gerade gespeichert wird, und bei einem Fehler „Nochmal“.
@@ -138,8 +138,8 @@ mitarbeiten (z. B. über den Status oder global über die Gruppen).
     stehen immer direkt vor „Verbindlich anmelden“.
   - **Fragetyp ändern** (unten im gewählten Feld) geht nur, solange niemand geantwortet hat: ChurchTools kann
     den Typ einer Spalte nicht ändern, die Erweiterung legt dafür eine neue an.
-  - **Design** hat außerdem Schrift, eigene Farben (Seite, Formular, Schrift), Breite und das runde Zeichen
-    mit dem Kürzel der Gemeinde. Schriften kommen nur vom Gerät selbst – nichts wird von Google geladen.
+  - **Design** hat außerdem Schrift, eigene Farben (Seite, Formular, Schrift) und die Breite. Schriften kommen
+    nur vom Gerät selbst – nichts wird von Google geladen. Das Titelbild ändert man direkt im Bild.
 - **Wo die Einstellungen stehen:** in der Beschreibung der Gruppe, unsichtbar unter dem Satz „Diese
   Anmeldung wird mit der Erweiterung **Anmeldungen** verwaltet.“ Wer den Text in ChurchTools ändert,
   schadet nicht: Die Erweiterung stellt die Einstellungen aus ihrer Sicherung wieder her (in den

@@ -17,8 +17,13 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   - **Mehr Design (wie Jotform):** Schrift (Rund, Mit Serifen, Klassisch, Gut lesbar – nur Systemschriften,
     nichts von Google), eigene Farben für Seite, Formular und Schrift (zurück auf „wie Vorlage“), Breite des
     Formulars. Ein Vorlagenwechsel nimmt die eigenen Farben zurück.
-  - **Kopf:** rundes Zeichen mit Kürzel der Gemeinde (eintragbar; das Gemeindelogo gibt ChurchTools ohne
-    Login nicht heraus – gemessen), Preis, Plätze und Anmeldeschluss mit Symbol.
+  - **Kopf:** Preis, Plätze und Anmeldeschluss mit Symbol. Gemeindename und Zeichen im Kopf sind weg (Alwin).
+    „Titelbild ändern“ steht nur noch im Bild (dort auch „entfernen“), nicht mehr zusätzlich unter „Design“.
+  - **Titelbild scharf:** ChurchTools liefert als `imageUrl` ein Vorschaubild mit 150×150 Pixeln – das Bild war
+    verzogen und unscharf (Alwin). Jetzt in voller Breite über den Bilddienst (`?w=1600&h=0`, ohne Login
+    abrufbar, Seitenverhältnis bleibt; gemessen).
+  - **Ziehen:** Ein vorhandenes Feld klappt beim Ziehen weg, an seiner Stelle steht gleich die Lücke; abgelegt
+    wird dort, wo die Lücke zu sehen ist – auch wenn über einem Feld losgelassen wird.
   - **Leiste:** Gruppen zum Einklappen mit Zahlen („5 von 8 im Formular“), Haken an Bausteinen, die schon
     drin sind, Kacheln heben sich beim Zeigen.
   - **Fragetyp ändern** unten im Feld – solange niemand geantwortet hat. ChurchTools ändert den Typ einer

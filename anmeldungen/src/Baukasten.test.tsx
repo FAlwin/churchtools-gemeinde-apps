@@ -149,6 +149,31 @@ describe('Baukasten (A5): Bausteine ins Formular', () => {
     expect(screen.queryByText('Hier loslassen')).toBeNull();
   });
 
+  it('losgelassen auf einem Feld, während die Lücke offen ist → dort, wo die Lücke steht', async () => {
+    const { huelle } = zeigen();
+    fireEvent.dragStart(screen.getByRole('button', { name: 'Zahl' }), { dataTransfer: dt() });
+    fireEvent.dragEnter(huelle('allergy'), { clientY: 5 });
+    // Die Lücke steht vor „Foto“; losgelassen wird über dem Foto-Feld selbst (ohne neues dragover).
+    fireEvent.drop(huelle('foto'), { clientY: 5 });
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
+    expect(ff.feldSpeichern.mock.calls[0][4]).toBe('foto');
+  });
+
+  it('ein vorhandenes Feld klappt beim Ziehen weg, an seiner Stelle steht die Lücke', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { huelle } = zeigen();
+    fireEvent.dragStart(huelle('allergy').querySelector('[draggable="true"]')!, {
+      dataTransfer: dt(),
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(huelle('allergy').className).toMatch(/wirdGezogen/);
+    expect(screen.getByText('Hier loslassen').nextElementSibling?.getAttribute('data-feld')).toBe(
+      'foto',
+    );
+  });
+
   it('abgelegt wird, wo losgelassen wird – auch ohne vorheriges „dragover“', async () => {
     const { huelle } = zeigen();
     fireEvent.dragStart(screen.getByRole('button', { name: 'Zahl' }), { dataTransfer: dt() });
@@ -430,7 +455,7 @@ describe('Baukasten (Feinheiten): Leiste, Fragetyp, Design', () => {
     await waitFor(() => expect(screen.getByLabelText('Fragetyp')).toHaveProperty('disabled', true));
   });
 
-  it('eigene Farbe zurück auf „wie Vorlage“; Kürzel; Schrift', async () => {
+  it('eigene Farbe zurück auf „wie Vorlage“; Schrift', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const e = einstellungen();
     e.gestaltung = { ...e.gestaltung, kartenfarbe: '#123456' };
@@ -438,13 +463,12 @@ describe('Baukasten (Feinheiten): Leiste, Fragetyp, Design', () => {
     const leiste = screen.getByRole('complementary', { name: 'Bausteine und Design' });
     fireEvent.click(within(leiste).getByRole('button', { name: 'Design' }));
     fireEvent.click(screen.getByRole('button', { name: 'wie Vorlage' }));
-    fireEvent.change(screen.getByLabelText('Kürzel im Zeichen'), { target: { value: 'kt' } });
     fireEvent.click(screen.getByRole('button', { name: /Gut lesbar/ }));
     await act(async () => {
       vi.advanceTimersByTime(PAUSE_DESIGN_MS);
     });
     await waitFor(() => expect(ei.aendereEinstellungen).toHaveBeenCalledTimes(1));
     const g = ei.aendereEinstellungen.mock.calls[0][1](neueEinstellungen('kinder')).gestaltung;
-    expect(g).toMatchObject({ kartenfarbe: null, kuerzel: 'kt', schrift: 'lesbar' });
+    expect(g).toMatchObject({ kartenfarbe: null, schrift: 'lesbar' });
   });
 });

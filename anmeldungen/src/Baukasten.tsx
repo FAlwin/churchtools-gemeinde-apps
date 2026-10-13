@@ -561,8 +561,10 @@ export function Baukasten({
         onDrop={(ev) => {
           ev.preventDefault();
           ev.stopPropagation();
-          // Aus dem Ereignis selbst, nicht aus `ziel`: Der Zustand kann einen Schritt hinterher sein.
-          ablegen(zielHier(ev));
+          // Dort, wo die Lücke zu sehen ist – sie hat das Feld verschoben, die Hälfte unter dem Mauszeiger sagt
+          // nichts mehr (Alwin: „Drag & Drop noch nicht perfekt“). Ohne Lücke (kein `dragover` vorher) aus dem
+          // Ereignis selbst.
+          ablegen(ziel ?? zielHier(ev));
         }}
       >
         {beweglich && (
@@ -576,6 +578,10 @@ export function Baukasten({
               const h = ev.currentTarget.parentElement;
               if (h) ev.dataTransfer.setDragImage(h, 24, 24);
               ziehenBeginnen({ art: 'feld', id: f.id });
+              // Wie bei Campflow: Das Feld klappt weg, an seiner Stelle steht gleich die Lücke – nichts
+              // springt, und es gibt keinen doppelten Platz. Erst im nächsten Takt, sonst fehlt dem Browser das
+              // Bild zum Ziehen.
+              setTimeout(() => setZiel(zielAn(f, bereich, false)));
             }}
             onDragEnd={ziehenEnde}
           >
@@ -645,16 +651,34 @@ export function Baukasten({
         onBlur={designSichern}
       />
     ),
+    // Das Titelbild gibt es nur hier, direkt im Bild (Alwin: „Titelbild ändern gibt es zweimal“).
     bild: (
-      <button
-        type="button"
-        className={k.bildKnopf}
-        disabled={bildArbeitet}
-        onClick={() => bildDatei.current?.click()}
-      >
-        <BausteinSymbol name="bild" size={16} />
-        {bildArbeitet ? 'Wird hochgeladen …' : 'Titelbild ändern'}
-      </button>
+      <div className={k.bildKnoepfe}>
+        <button
+          type="button"
+          className={k.bildKnopf}
+          disabled={bildArbeitet}
+          onClick={() => bildDatei.current?.click()}
+        >
+          <BausteinSymbol name="bild" size={16} />
+          {bildArbeitet
+            ? 'Wird hochgeladen …'
+            : bildUrl
+              ? 'Titelbild ändern'
+              : 'Titelbild hochladen'}
+        </button>
+        {bildUrl && !bildArbeitet && (
+          <button
+            type="button"
+            className={k.bildKnopf}
+            aria-label="Titelbild entfernen"
+            title="Titelbild entfernen – dann gilt das Bild der Vorlage"
+            onClick={bildWeg}
+          >
+            <Icon name="trash" size={16} />
+          </button>
+        )}
+      </div>
     ),
   };
 
@@ -679,17 +703,7 @@ export function Baukasten({
       platz={platzBelegt({ ...e, formular, gestaltung })}
     />
   );
-  const tafelDesign = (
-    <DesignTafel
-      gestaltung={gestaltung}
-      gemeinde={gemeinde}
-      onGestaltung={gestalten}
-      bildUrl={bildUrl}
-      bildArbeitet={bildArbeitet}
-      onBild={bildWaehlen}
-      onBildWeg={bildWeg}
-    />
-  );
+  const tafelDesign = <DesignTafel gestaltung={gestaltung} onGestaltung={gestalten} />;
 
   const wartet = stand.art === 'arbeitet' || !!designWartet.current || geaendert.current;
   const status =

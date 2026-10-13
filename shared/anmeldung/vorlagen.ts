@@ -49,7 +49,6 @@ function startGestaltung(vorlage: Vorlage): Gestaltung {
     feldstil: v.feldstil,
     knoepfe: v.knoepfe,
     text: '',
-    gemeindename: true,
     ...GESTALTUNG_FEIN,
   };
 }

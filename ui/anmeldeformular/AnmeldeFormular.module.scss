@@ -48,13 +48,6 @@
   position: relative;
   z-index: 1;
 }
-.pv .org {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
 .pv .hero h1 {
   font-family: var(--p-head);
   margin: 0;
@@ -309,9 +302,6 @@
 .t-klassisch .hero h1 {
   font-size: 30px;
 }
-.t-klassisch .org {
-  opacity: 0.85;
-}
 .t-klassisch .info,
 .t-klassisch .main {
   width: 100%;
@@ -367,9 +357,6 @@
 }
 .t-foto .hero h1 {
   font-size: 32px;
-}
-.t-foto .org {
-  color: var(--p-accent-text);
 }
 .t-foto .info {
   padding-block: 14px 18px;
@@ -430,10 +417,6 @@
 }
 .t-karte .hero {
   text-align: center;
-}
-.t-karte .org {
-  color: var(--p-accent-text);
-  letter-spacing: 0.3em;
 }
 .t-karte .hero h1 {
   font-size: 34px;
@@ -531,15 +514,6 @@
     radial-gradient(ellipse 54px 20px at 16% 78%, #fff 96%, transparent),
     radial-gradient(ellipse 36px 14px at 26% 70%, #fff 96%, transparent),
     linear-gradient(#8fd3ff, #d9f1ff);
-}
-.t-bunt .org {
-  display: inline-block;
-  background: #ffcf3f;
-  color: #3b2a00;
-  padding: 3px 10px;
-  border-radius: 999px;
-  transform: rotate(-3deg);
-  letter-spacing: 0.06em;
 }
 .t-bunt .hero h1 {
   font-size: 36px;
@@ -641,9 +615,6 @@
 .t-geteilt .hero h1 {
   font-size: 34px;
   font-weight: 400;
-}
-.t-geteilt .org {
-  opacity: 0.85;
 }
 .t-geteilt .intro {
   color: rgba(255, 255, 255, 0.92);
@@ -796,9 +767,6 @@
     linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.65)),
     var(--user-img) center / cover;
 }
-.has-img.t-bunt .org {
-  color: #3b2a00;
-}
 
 /* Felder, die es im ersten Formular-Entwurf noch nicht gab */
 .pv .req {
@@ -919,7 +887,7 @@
   width: 100%;
 }
 
-// ── Feinheiten (A5): Breite, eigene Farben, Schrift, Zeichen im Kopf ──
+// ── Feinheiten (A5): Breite, eigene Farben, Schrift, Symbole ──
 // Steht am Ende der Datei: Bei gleicher Gewichtung gewinnt die spätere Regel gegen die Vorgaben der Vorlage.
 .br-schmal {
   --p-breite: 0.85;
@@ -951,23 +919,6 @@
 .sch-lesbar {
   --p-head: Verdana, Tahoma, 'Segoe UI', sans-serif;
   --p-body: Verdana, Tahoma, 'Segoe UI', sans-serif;
-}
-// Rundes Zeichen im Kopf (Campflow): Kürzel der Gemeinde.
-.pv .zeichen {
-  display: grid;
-  place-items: center;
-  width: 64px;
-  height: 64px;
-  margin-bottom: 14px;
-  border-radius: 50%;
-  background: var(--p-card);
-  color: var(--p-accent-text);
-  border: 3px solid color-mix(in srgb, var(--p-card) 70%, transparent);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
-  font-family: var(--p-head);
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
 }
 .pv .fact svg {
   width: 14px;

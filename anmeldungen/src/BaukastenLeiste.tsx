@@ -1,7 +1,6 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { Segment } from '@ui/bedienung/Segment';
-import { Schalter } from '@ui/bedienung/Schalter';
 import {
   BAUSTEINE,
   type Feld,
@@ -16,7 +15,6 @@ import {
   type Bereich,
 } from '@shared/anmeldung/baukasten';
 import { FARBEN, VORLAGEN_GESTALTUNG, vorlageWechseln } from '@shared/anmeldung/gestaltung';
-import { kuerzelVon } from '@ui/anmeldeformular/daten';
 import { BausteinSymbol, type BausteinIcon } from './bausteinIcons';
 import k from './Baukasten.module.scss';
 
@@ -281,23 +279,11 @@ const STANDARD_FARBE = { seitenfarbe: '#f3f6f6', kartenfarbe: '#ffffff', schrift
 
 export function DesignTafel({
   gestaltung: g,
-  gemeinde,
   onGestaltung,
-  bildUrl,
-  bildArbeitet,
-  onBild,
-  onBildWeg,
 }: {
   gestaltung: Gestaltung;
-  gemeinde: string | null;
   onGestaltung: (g: Gestaltung) => void;
-  bildUrl: string | null;
-  bildArbeitet: boolean;
-  onBild: (datei: File) => void;
-  onBildWeg: () => void;
 }) {
-  const datei = useRef<HTMLInputElement>(null);
-  const vorlage = VORLAGEN_GESTALTUNG.find((x) => x.id === g.vorlage)!;
   return (
     <div className={k.tafel}>
       <h3 className={k.gruppe}>Vorlagen</h3>
@@ -434,75 +420,6 @@ export function DesignTafel({
           { value: 'rund', label: 'Rund' },
         ]}
       />
-
-      <h3 className={k.gruppe}>Titelbild</h3>
-      <div className={k.reihe}>
-        <button
-          type="button"
-          className={k.knopfLeise}
-          disabled={bildArbeitet}
-          onClick={() => datei.current?.click()}
-        >
-          {bildArbeitet ? 'Wird hochgeladen …' : bildUrl ? 'Anderes Bild' : 'Eigenes Bild'}
-        </button>
-        {bildUrl && (
-          <button type="button" className={k.textKnopf} disabled={bildArbeitet} onClick={onBildWeg}>
-            Bild der Vorlage nehmen
-          </button>
-        )}
-        <input
-          ref={datei}
-          type="file"
-          accept="image/*"
-          hidden
-          aria-label="Titelbild wählen"
-          onChange={(e) => {
-            const d = e.target.files?.[0];
-            e.target.value = '';
-            if (d) onBild(d);
-          }}
-        />
-      </div>
-      <p className={k.klein}>
-        Bei „{vorlage.name}“ landet es als {vorlage.bildOrt}. Es ist das Gruppenbild in ChurchTools
-        und öffentlich sichtbar.
-      </p>
-
-      <h3 className={k.gruppe}>Kopf</h3>
-      <button
-        type="button"
-        className={k.schalterZeile}
-        aria-pressed={g.gemeindename}
-        onClick={() => onGestaltung({ ...g, gemeindename: !g.gemeindename })}
-      >
-        Gemeindename zeigen
-        <Schalter an={g.gemeindename} />
-      </button>
-      <button
-        type="button"
-        className={k.schalterZeile}
-        aria-pressed={g.logo}
-        onClick={() => onGestaltung({ ...g, logo: !g.logo })}
-      >
-        Rundes Zeichen im Kopf
-        <Schalter an={g.logo} />
-      </button>
-      {g.logo && (
-        <label className={k.kuerzel}>
-          <span>Kürzel im Zeichen</span>
-          <input
-            value={g.kuerzel}
-            maxLength={4}
-            placeholder={kuerzelVon('', gemeinde)}
-            aria-label="Kürzel im Zeichen"
-            onChange={(e) => onGestaltung({ ...g, kuerzel: e.target.value })}
-          />
-        </label>
-      )}
-      <p className={k.klein}>
-        Ein eigenes Logo-Bild kommt später: ChurchTools gibt das Gemeindelogo ohne Anmeldung nicht
-        heraus.
-      </p>
     </div>
   );
 }

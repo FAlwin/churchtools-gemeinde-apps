@@ -11,7 +11,8 @@ import {
 } from '@shared/anmeldung/formular';
 import { amEnde } from '@shared/anmeldung/baukasten';
 import { berechnePreis, euroText, kannEtwasKosten, preisKurz } from '@shared/anmeldung/preis';
-import { kuerzelVon, leereAntworten, textAufFarbe } from './daten';
+import { leereAntworten, textAufFarbe } from './daten';
+import { titelbildGross } from '@shared/anmeldung/gestaltung';
 import s from './AnmeldeFormular.module.scss';
 
 /**
@@ -393,7 +394,7 @@ export function AnmeldeFormular({
     ...(g.seitenfarbe ? { '--p-page': g.seitenfarbe } : {}),
     ...(g.kartenfarbe ? { '--p-card': g.kartenfarbe } : {}),
     ...(g.schriftfarbe ? { '--p-text': g.schriftfarbe, '--p-muted': g.schriftfarbe } : {}),
-    ...(ansicht.bildUrl ? { '--user-img': `url("${ansicht.bildUrl}")` } : {}),
+    ...(ansicht.bildUrl ? { '--user-img': `url("${titelbildGross(ansicht.bildUrl)}")` } : {}),
   } as React.CSSProperties;
 
   const huelle = (f: Feld, bereich: 'anmeldung' | 'person', inhalt: ReactNode) =>
@@ -415,12 +416,6 @@ export function AnmeldeFormular({
         <aside className={s.side}>
           <header className={s.hero}>
             <div className={s['hero-in']}>
-              {g.logo && (
-                <div className={s.zeichen} aria-hidden="true">
-                  {kuerzelVon(g.kuerzel, ansicht.gemeinde)}
-                </div>
-              )}
-              {g.gemeindename && ansicht.gemeinde && <p className={s.org}>{ansicht.gemeinde}</p>}
               <h1>{baukasten?.titel ?? ansicht.name}</h1>
               <p className={s.sub}>{unter}</p>
               <div className={s.orn} aria-hidden="true" />

@@ -49,24 +49,3 @@ export function musterAntworten(e: OeffentlicheEinstellungen, heute: string): An
     })),
   };
 }
-
-/**
- * **Das Kürzel im runden Zeichen** (Feinheiten A5): das eingetragene, sonst die Anfangsbuchstaben der Gemeinde
- * („Evangeliumschristen-Gemeinde Donrath“ → „EGD“, „ECG Donrath“ → „ECG“). Höchstens vier Zeichen; ohne Gemeinde ein Punkt.
- */
-export function kuerzelVon(kuerzel: string, gemeinde: string | null): string {
-  const eigen = kuerzel.trim();
-  if (eigen) return eigen.slice(0, 4).toUpperCase();
-  const woerter = (gemeinde ?? '')
-    .split(/[\s\-–]+/)
-    .filter((w) => /^\p{Lu}/u.test(w) && !/^e\.?\s?V\.?$/i.test(w));
-  // Steht schon eine Abkürzung im Namen („ECG Donrath“), ist sie das Kürzel.
-  const abkuerzung = woerter.find((w) => /^\p{Lu}{2,4}$/u.test(w));
-  if (abkuerzung) return abkuerzung;
-  return (
-    woerter
-      .map((w) => w[0])
-      .join('')
-      .slice(0, 3) || '•'
-  );
-}

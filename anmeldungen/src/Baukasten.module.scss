@@ -258,18 +258,8 @@
 .inhalt {
   pointer-events: none;
 }
-.ablage {
-  border: 2px dashed var(--p-line-strong, #9fb0b4);
-  border-radius: 10px;
-  padding: 12px;
-  text-align: center;
-  font-size: 13px;
-  color: var(--p-muted, #5b6b70);
-}
-.ablageAn {
-  border-color: #2563eb;
-  background: rgba(37, 99, 235, 0.07);
-  color: #2563eb;
+.wirdGezogen {
+  opacity: 0.35;
 }
 
 // ── Kopf zum Bearbeiten: Name, Begrüßung, Titelbild ──
@@ -301,9 +291,16 @@
   border-radius: 8px;
   padding: 4px 6px;
   margin-left: -6px;
-  resize: vertical;
+  resize: none;
   field-sizing: content;
   min-height: 2.6em;
+
+  // Auf bunten Hintergründen (Konfetti, Foto) lesbar: leicht hinterlegt, solange leer oder in Arbeit.
+  &:placeholder-shown,
+  &:hover,
+  &:focus {
+    background: color-mix(in srgb, var(--p-card, #fff) 88%, transparent);
+  }
 
   &:hover {
     border-color: var(--p-line-strong, #9fb0b4);
@@ -345,13 +342,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding-right: 120px;
   color: var(--p-text, #17242a);
-
-  @container pv (max-width: 520px) {
-    padding-right: 0;
-    padding-top: 28px;
-  }
 }
 .frage {
   font: inherit;
@@ -472,8 +463,60 @@
   font-size: 0.82em;
   color: var(--p-muted, #5b6b70);
 }
-.pflicht {
+.werkzeugUnten {
   margin-left: auto;
+  display: inline-flex;
+  gap: 2px;
+  padding-right: 10px;
+  border-right: 1px solid var(--p-line, #dde5e6);
+
+  button {
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--p-muted, #5b6b70);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--p-fill, #eef3f3);
+      color: var(--p-text, #17242a);
+    }
+
+    &:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+  }
+}
+.muster {
+  border: 1px dashed var(--p-line-strong, #9fb0b4);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.87em;
+  color: var(--p-muted, #5b6b70);
+}
+.musterLang {
+  min-height: 64px;
+}
+.musterKurz {
+  max-width: 200px;
+}
+.musterReihe {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  text-align: center;
+}
+.musterLinie {
+  border: 0;
+  border-top: 1px solid var(--p-line-strong, #9fb0b4);
+  margin: 8px 0;
+}
+.pflicht {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -756,4 +799,8 @@
   font-weight: 600;
   cursor: pointer;
   padding: 0;
+}
+.werkzeugUnten:last-child {
+  border-right: 0;
+  padding-right: 0;
 }

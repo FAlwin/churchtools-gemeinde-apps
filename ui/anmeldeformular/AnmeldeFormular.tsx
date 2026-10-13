@@ -35,13 +35,13 @@ export interface Ansicht {
 
 /**
  * **Haken für den Baukasten** – damit der Baukasten genau dieses Formular zeigt und nur drumherum eingreift:
- * eine Hülle um jedes Feld (auswählen, ziehen, direkt bearbeiten), eine Ablegestelle am Ende jedes Bereichs,
- * und Titel, Begrüßung und Titelbild zum Bearbeiten im Kopf. Mit Haken zeigt das Formular nur eine Person und
- * schickt nichts ab.
+ * eine Hülle um jedes Feld (auswählen, ziehen, direkt bearbeiten) und Titel, Begrüßung und Titelbild zum
+ * Bearbeiten im Kopf. Mit Haken zeigt das Formular nur eine Person und schickt nichts ab. (Eigene
+ * Ablegestellen am Ende der Bereiche gab es kurz – sie erschienen erst beim Ziehen und schoben das Formular
+ * unter dem Mauszeiger weg; abgelegt wird deshalb nur auf den Feldern selbst, obere oder untere Hälfte.)
  */
 export interface BaukastenHaken {
   feld: (f: Feld, bereich: 'anmeldung' | 'person', inhalt: ReactNode) => ReactNode;
-  ende: (bereich: 'anmeldung' | 'person') => ReactNode;
   titel?: ReactNode;
   einleitung?: ReactNode;
   bild?: ReactNode;
@@ -484,7 +484,6 @@ export function AnmeldeFormular({
                     />,
                   ),
                 )}
-                {baukasten?.ende('anmeldung')}
               </section>
               <section className={s.sec}>
                 <h2>
@@ -529,7 +528,6 @@ export function AnmeldeFormular({
                         />,
                       ),
                     )}
-                    {baukasten?.ende('person')}
                   </div>
                 ))}
                 {e.wer !== 'einzeln' && (

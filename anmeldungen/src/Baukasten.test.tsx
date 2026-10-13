@@ -143,16 +143,22 @@ describe('Baukasten (A5): Bausteine ins Formular', () => {
     expect(ff.feldSpeichern.mock.calls[0][4]).toBe('allergy');
   });
 
-  it('vorhandenes Feld am Griff in den anderen Bereich ziehen → nur verschoben', async () => {
+  it('vorhandenes Feld am Griff in den anderen Bereich ziehen → nur verschoben; nichts springt', async () => {
     const { huelle, container } = zeigen();
+    const vorher = container.innerHTML.length;
     fireEvent.dragStart(huelle('f1').querySelector('[draggable="true"]')!, {
       dataTransfer: dt(),
     });
-    const zonen = screen.getAllByText('Hier ablegen');
-    expect(zonen).toHaveLength(2);
-    // Die erste Ablage gehört zum Kontakt (Bereich „anmeldung“).
-    fireEvent.drop(zonen[0]);
-    await waitFor(() => expect(ff.feldEinordnen).toHaveBeenCalledWith(91, 'f1', 'anmeldung', null));
+    // Beim Ziehen kommt nichts dazu, was das Formular unter dem Mauszeiger verschiebt (Durchklicken 13.10.:
+    // Ablageflächen am Bereichsende schoben alles nach unten, abgelegt wurde ein Feld zu tief).
+    expect(screen.queryByText('Hier ablegen')).toBeNull();
+    expect(Math.abs(container.innerHTML.length - vorher)).toBeLessThan(80);
+    expect(huelle('f1').className).toMatch(/wirdGezogen/);
+    // Untere Hälfte von „Telefon“ = ans Ende des Kontakts.
+    fireEvent.drop(huelle('tel'), { clientY: 5 });
+    await waitFor(() =>
+      expect(ff.feldEinordnen).toHaveBeenCalledWith(91, 'f1', 'anmeldung', 'note'),
+    );
     expect(ff.feldSpeichern).not.toHaveBeenCalled();
     expect(container.querySelectorAll('[data-feld="f1"]')).toHaveLength(1);
   });
@@ -253,6 +259,13 @@ describe('Baukasten (A5): direkt im Feld bearbeiten', () => {
         true,
       ),
     );
+  });
+
+  it('gewähltes Feld: Werkzeug unten im Feld statt über dem Text', () => {
+    const { huelle } = zeigen();
+    fireEvent.click(huelle('f1'));
+    const knopf = screen.getByRole('button', { name: 'Gruppe entfernen' });
+    expect(knopf.closest('[class*="werkzeugUnten"]')).toBeTruthy();
   });
 
   it('feste Felder (Name, E-Mail, Datenschutz) haben kein Werkzeug', () => {

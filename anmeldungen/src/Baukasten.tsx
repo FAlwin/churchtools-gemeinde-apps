@@ -51,10 +51,10 @@ export const PAUSE_FELD_MS = 1500;
 export const PAUSE_DESIGN_MS = 700;
 
 type Gezogen = { art: 'neu'; b: NeuerBaustein } | { art: 'feld'; id: string };
+/** Wo abgelegt wird: vor oder nach einem Feld (obere bzw. untere Hälfte). */
 interface Ziel {
   bereich: Bereich;
-  /** Das Feld, an dem abgelegt wird (`null` = Ende des Bereichs). */
-  feldId: string | null;
+  feldId: string;
   wo: 'vor' | 'nach';
 }
 interface AntwortInfo {
@@ -107,7 +107,8 @@ export function Baukasten({
   const [reiter, setReiter] = useState<'bausteine' | 'design'>('bausteine');
   const [blatt, setBlatt] = useState<'bausteine' | 'design' | null>(null);
   const [bildArbeitet, setBildArbeitet] = useState(false);
-  const [zieht, setZieht] = useState(false);
+  /** Das Feld, das gerade gezogen wird – es wird blass, damit man sieht, was man bewegt. */
+  const [ziehtFeld, setZiehtFeld] = useState<string | null>(null);
   const [ziel, setZiel] = useState<Ziel | null>(null);
 
   const formular = lokalF ?? e.formular;
@@ -123,6 +124,16 @@ export function Baukasten({
   const designWartet = useRef<Gestaltung | null>(null);
   const gezogen = useRef<Gezogen | null>(null);
   const bildDatei = useRef<HTMLInputElement>(null);
+  /** Ein neu eingefügtes Feld nach dem Zeichnen ins Bild holen (beim Antippen liegt es oft außer Sicht). */
+  const insBild = useRef<string | null>(null);
+  useEffect(() => {
+    const feldId = insBild.current;
+    if (!feldId) return;
+    insBild.current = null;
+    document
+      .querySelector(`[data-feld="${feldId}"]`)
+      ?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+  });
 
   // Neuer gespeicherter Stand: den Zwischenstand verwerfen – aber nur, wenn nichts mehr läuft oder wartet.
   useEffect(() => {
@@ -272,6 +283,7 @@ export function Baukasten({
     setAktiv(feld.id);
     setInfo(null);
     neuerEntwurf(feld);
+    insBild.current = feld.id;
     void tun(`„${b.name}“ hinzugefügt.`, () => feldSpeichern(id, bereich, feld, undefined, vorId));
   }
 
@@ -342,7 +354,6 @@ export function Baukasten({
 
   // ── Ziehen und Ablegen ──
   function zielVorId(z: Ziel): string | null {
-    if (z.feldId === null) return null;
     if (z.wo === 'vor') return z.feldId;
     const liste = sichtbareListe(z.bereich);
     const i = liste.findIndex((x) => x.id === z.feldId);
@@ -352,7 +363,7 @@ export function Baukasten({
   function ablegen(z: Ziel | null) {
     const g = gezogen.current;
     gezogen.current = null;
-    setZieht(false);
+    setZiehtFeld(null);
     setZiel(null);
     if (!g || !z) return;
     const vorId = zielVorId(z);
@@ -368,11 +379,11 @@ export function Baukasten({
 
   const ziehenBeginnen = (g: Gezogen) => {
     gezogen.current = g;
-    setZieht(true);
+    setZiehtFeld(g.art === 'feld' ? g.id : null);
   };
   const ziehenEnde = () => {
     gezogen.current = null;
-    setZieht(false);
+    setZiehtFeld(null);
     setZiel(null);
   };
 
@@ -426,9 +437,63 @@ export function Baukasten({
             )
             .map((o) => o.text)
         : [];
+    const werkzeug = (
+      <>
+        {beweglich && (
+          <>
+            <button
+              type="button"
+              aria-label={`${f.frage || 'Trennlinie'} nach oben`}
+              disabled={i <= 0}
+              onClick={(ev) => {
+                ev.stopPropagation();
+                hochRunter(f, bereich, -1);
+              }}
+            >
+              <Icon name="chev-down" size={16} style={{ transform: 'rotate(180deg)' }} />
+            </button>
+            <button
+              type="button"
+              aria-label={`${f.frage || 'Trennlinie'} nach unten`}
+              disabled={i < 0 || i >= liste.length - 1}
+              onClick={(ev) => {
+                ev.stopPropagation();
+                hochRunter(f, bereich, 1);
+              }}
+            >
+              <Icon name="chev-down" size={16} />
+            </button>
+          </>
+        )}
+        {f.art === 'eigen' && (
+          <button
+            type="button"
+            aria-label={`${f.frage || 'Trennlinie'} kopieren`}
+            title="Kopieren"
+            onClick={(ev) => {
+              ev.stopPropagation();
+              kopieren(f);
+            }}
+          >
+            <BausteinSymbol name="kopie" size={16} />
+          </button>
+        )}
+        <button
+          type="button"
+          aria-label={`${f.frage || 'Trennlinie'} entfernen`}
+          title={f.art === 'eigen' ? 'Entfernen' : 'Ausschalten'}
+          onClick={(ev) => {
+            ev.stopPropagation();
+            entfernen(f);
+          }}
+        >
+          <Icon name="trash" size={16} />
+        </button>
+      </>
+    );
     return (
       <div
-        className={`${k.huelle} ${istAktiv ? k.aktiv : ''} ${fest ? k.fest : ''} ${linie}`}
+        className={`${k.huelle} ${istAktiv ? k.aktiv : ''} ${fest ? k.fest : ''} ${linie} ${ziehtFeld === f.id ? k.wirdGezogen : ''}`}
         data-feld={f.id}
         onClick={(ev) => {
           ev.stopPropagation();
@@ -463,60 +528,7 @@ export function Baukasten({
           </span>
         )}
         {fest && <span className={k.festSchild}>gehört immer dazu</span>}
-        {!fest && (
-          <div className={k.werkzeug}>
-            {beweglich && (
-              <>
-                <button
-                  type="button"
-                  aria-label={`${f.frage || 'Trennlinie'} nach oben`}
-                  disabled={i <= 0}
-                  onClick={(ev) => {
-                    ev.stopPropagation();
-                    hochRunter(f, bereich, -1);
-                  }}
-                >
-                  <Icon name="chev-down" size={16} style={{ transform: 'rotate(180deg)' }} />
-                </button>
-                <button
-                  type="button"
-                  aria-label={`${f.frage || 'Trennlinie'} nach unten`}
-                  disabled={i < 0 || i >= liste.length - 1}
-                  onClick={(ev) => {
-                    ev.stopPropagation();
-                    hochRunter(f, bereich, 1);
-                  }}
-                >
-                  <Icon name="chev-down" size={16} />
-                </button>
-              </>
-            )}
-            {f.art === 'eigen' && (
-              <button
-                type="button"
-                aria-label={`${f.frage || 'Trennlinie'} kopieren`}
-                title="Kopieren"
-                onClick={(ev) => {
-                  ev.stopPropagation();
-                  kopieren(f);
-                }}
-              >
-                <BausteinSymbol name="kopie" size={16} />
-              </button>
-            )}
-            <button
-              type="button"
-              aria-label={`${f.frage || 'Trennlinie'} entfernen`}
-              title={f.art === 'eigen' ? 'Entfernen' : 'Ausschalten'}
-              onClick={(ev) => {
-                ev.stopPropagation();
-                entfernen(f);
-              }}
-            >
-              <Icon name="trash" size={16} />
-            </button>
-          </div>
-        )}
+        {!fest && !istAktiv && <div className={k.werkzeug}>{werkzeug}</div>}
         {istAktiv && entwurf ? (
           <FeldBearbeiten
             entwurf={entwurf}
@@ -524,36 +536,13 @@ export function Baukasten({
             beantwortet={entfernt ? entfernt.beantwortet : null}
             entferntGewaehlt={entferntGewaehlt}
             altersPreise={e.preis.alter.length > 0}
+            werkzeug={werkzeug}
           />
         ) : (
           <div ref={inert} className={k.inhalt}>
             {inhalt}
           </div>
         )}
-      </div>
-    );
-  }
-
-  function ende(bereich: Bereich): ReactNode {
-    if (!zieht) return null;
-    const an = ziel?.bereich === bereich && ziel.feldId === null;
-    const zielAmEnde = (ev: React.DragEvent) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      zielSetzen({ bereich, feldId: null, wo: 'nach' });
-    };
-    return (
-      <div
-        className={`${k.ablage} ${an ? k.ablageAn : ''}`}
-        onDragEnter={zielAmEnde}
-        onDragOver={zielAmEnde}
-        onDrop={(ev) => {
-          ev.preventDefault();
-          ev.stopPropagation();
-          ablegen({ bereich, feldId: null, wo: 'nach' });
-        }}
-      >
-        Hier ablegen
       </div>
     );
   }
@@ -576,7 +565,6 @@ export function Baukasten({
 
   const haken: BaukastenHaken = {
     feld: huelle,
-    ende,
     titel: (
       <input
         className={k.titel}

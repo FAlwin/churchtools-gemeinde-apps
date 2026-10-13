@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { Schalter } from '@ui/bedienung/Schalter';
 import { nurText, type Feld } from '@shared/anmeldung/formular';
@@ -15,12 +16,39 @@ import k from './Baukasten.module.scss';
  * nach einer Pause) – diese Komponente meldet nur Änderungen.
  */
 
+/** Wie die Eingabe aussieht – damit man beim Bearbeiten sieht, was Gäste ausfüllen (Google Forms: „Kurzantwort“). */
+function Muster({ f }: { f: Feld }) {
+  switch (f.typ) {
+    case 'text':
+    case 'tel':
+      return <div className={k.muster}>Kurze Antwort</div>;
+    case 'textarea':
+      return <div className={`${k.muster} ${k.musterLang}`}>Längere Antwort</div>;
+    case 'date':
+      return <div className={`${k.muster} ${k.musterKurz}`}>TT.MM.JJJJ</div>;
+    case 'number':
+      return <div className={`${k.muster} ${k.musterKurz}`}>Zahl</div>;
+    case 'janein':
+      return (
+        <div className={k.musterReihe}>
+          <span className={k.muster}>Ja</span>
+          <span className={k.muster}>Nein</span>
+        </div>
+      );
+    case 'trenner':
+      return <hr className={k.musterLinie} />;
+    default:
+      return null;
+  }
+}
+
 export function FeldBearbeiten({
   entwurf: d,
   onAendern,
   beantwortet,
   entferntGewaehlt,
   altersPreise,
+  werkzeug,
 }: {
   entwurf: FeldEntwurf;
   onAendern: (d: FeldEntwurf) => void;
@@ -30,6 +58,8 @@ export function FeldBearbeiten({
   entferntGewaehlt: string[];
   /** Es gibt Preise nach Alter – das Geburtsdatum ist dann unverzichtbar. */
   altersPreise: boolean;
+  /** Verschieben, kopieren, entfernen – unten im Feld wie bei Google Forms, nicht über dem Text. */
+  werkzeug?: ReactNode;
 }) {
   const f = d.feld;
   const setFeld = (neu: Partial<Feld>) => onAendern({ ...d, feld: { ...f, ...neu } });
@@ -71,6 +101,7 @@ export function FeldBearbeiten({
           onChange={(e) => setFeld({ hilfe: e.target.value })}
         />
       )}
+      <Muster f={f} />
       {mitAntworten(f) && (
         <div className={k.antworten}>
           {d.antworten.map((a, i) => (
@@ -126,6 +157,7 @@ export function FeldBearbeiten({
               ? 'Wird eine Spalte in ChurchTools'
               : 'Empfohlener Baustein'}
         </span>
+        {werkzeug && <span className={k.werkzeugUnten}>{werkzeug}</span>}
         {!text && (
           <button
             type="button"

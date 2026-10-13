@@ -26,6 +26,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   - **Gespeichert wird von selbst** – nach dem Ziehen, beim Verlassen eines Felds, nach einer kurzen
     Pause beim Tippen –, eins nach dem anderen, mit „Rückgängig“; scheitert etwas, steht es oben mit
     „Nochmal“.
+  - Die Leiste **„Rückgängig“ schwebt jetzt unten** über der Seite (in der ganzen Erweiterung), statt oben
+    Platz zu nehmen – beim Speichern von selbst schob sie sonst jedes Mal das Formular nach unten.
   - **Jedes Feld wird eine Spalte der Mitgliederliste** auf Sicherheitsstufe 3 (Alwin: „nur das Team“).
     Antworten umbenennen behält die Wahl der Personen – auch wenn man umbenennt, bevor die Antworten aus
     ChurchTools geladen sind; **entfernen mit vorhandenen Antworten blendet nur aus** (Alwin) – gemessen:

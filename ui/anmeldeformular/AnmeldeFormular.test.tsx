@@ -194,7 +194,7 @@ describe('Haken für den Baukasten (A5)', () => {
     expect(screen.getAllByRole('heading', { name: 'Zum Essen' })[0].textContent).toBe('Zum Essen');
   });
 
-  it('jedes sichtbare Feld in der Hülle, eine Person, Ablage je Bereich, eigener Kopf; schickt nichts ab', () => {
+  it('jedes sichtbare Feld in der Hülle, eine Person, eigener Kopf; schickt nichts ab', () => {
     const gesehen: string[] = [];
     render(
       <AnmeldeFormular
@@ -207,7 +207,6 @@ describe('Haken für den Baukasten (A5)', () => {
             gesehen.push(`${bereich}:${f.id}`);
             return <div data-testid={`h-${f.id}`}>{inhalt}</div>;
           },
-          ende: (bereich) => <div>Ablage {bereich}</div>,
           titel: <span>Eigener Titel</span>,
           einleitung: <span>Eigene Begrüßung</span>,
           bild: <button type="button">Bild</button>,
@@ -219,8 +218,6 @@ describe('Haken für den Baukasten (A5)', () => {
     expect(gesehen).toContain('anmeldung:mail');
     expect(gesehen).toContain('anmeldung:priv');
     expect(gesehen).not.toContain('person:foto'); // aus
-    expect(screen.getByText('Ablage anmeldung')).toBeTruthy();
-    expect(screen.getByText('Ablage person')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Eigener Titel' })).toBeTruthy();
     expect(screen.getByText('Eigene Begrüßung')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Entfernen' })).toBeNull();

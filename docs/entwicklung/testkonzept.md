@@ -275,7 +275,8 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
     Quelle ihn mitschickt – das ist eine Lizenzbedingung, keine Zierde.
 - `utils/strokes` (`mergeStrokes`, reine null-Zweige), `utils/vanishedRows` (lokal bemerkte
   Löschungen #178 – seit 12.10.2026 für den Hinweis „Ablauf aktualisiert", `AgendaFullView.test.tsx`) und `utils/annotationKeys` (Schlüssel-Grammatik: Ebenen-Präfix,
-  nicht-leere Notizen je Ebene, Ebenen-Gruppierung unter Namensraum) rein getestet.
+  nicht-leere Notizen je Ebene, Ebenen-Gruppierung unter Namensraum, das `_text`-Suffix mit dem
+  gespeicherten Format als Literal – #490) rein getestet.
 - **Seiten-Engine, seit der Aufteilung von `PageDeck` (#193):**
   - `hooks/usePageCanvases` (jsdom, `getContext` gestubbt): Maße + Seitenverhältnis der Quellseite,
     Striche der sichtbaren Seiten laden, fremde Ebene aufs Overlay, Querformat bedient beide Seiten,

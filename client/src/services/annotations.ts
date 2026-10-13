@@ -28,6 +28,7 @@ import {
 } from '@shared/keys/index';
 import type { AnnotationText, GespeicherterZoom, PageAnnotation } from '@shared/types/index';
 import { jsonOderNull, lokalSchreiben } from '../utils/lokalSpeicher';
+import { ohneTextSuffix, textSchluessel } from '../utils/annotationKeys';
 
 // Namensräume und Grammatik aus @shared/keys – EINZIGE Quelle für Client und Server (#250).
 const DRAW = ANNO_DRAW_NS;
@@ -90,10 +91,7 @@ export function resetSync(): void {
 
 /** localStorage-Key → Server-Eintrags-Schlüssel (song<id>_v<version>_<seite>). */
 function serverKeyOf(lsKey: string): string {
-  return lsKey
-    .replace(DRAW, '')
-    .replace(ZOOM, '')
-    .replace(/_text$/, '');
+  return ohneTextSuffix(lsKey.replace(DRAW, '').replace(ZOOM, ''));
 }
 
 // ── Pull: Server → localStorage ──────────────────────────────
@@ -112,8 +110,9 @@ export async function pullAnnotations(songIds: number[]): Promise<void> {
       // `lokalSchreiben` wirft nie (#457): Ein voller Gerätespeicher bräche sonst den ganzen Abgleich ab.
       if (a.strokes) lokalSchreiben(DRAW + key, a.strokes);
       else localStorage.removeItem(DRAW + key);
-      if (a.texts && a.texts.length) lokalSchreiben(DRAW + key + '_text', JSON.stringify(a.texts));
-      else localStorage.removeItem(DRAW + key + '_text');
+      if (a.texts && a.texts.length)
+        lokalSchreiben(textSchluessel(DRAW + key), JSON.stringify(a.texts));
+      else localStorage.removeItem(textSchluessel(DRAW + key));
       if (a.zoom) lokalSchreiben(ZOOM + key, JSON.stringify(a.zoom));
       else localStorage.removeItem(ZOOM + key);
     }
@@ -156,7 +155,7 @@ function annotationFromStorage(key: string): PageAnnotation | null {
   const out: PageAnnotation = {};
   const strokes = localStorage.getItem(DRAW + key);
   if (strokes) out.strokes = strokes;
-  const texts = jsonOderNull<AnnotationText[]>(localStorage.getItem(DRAW + key + '_text'));
+  const texts = jsonOderNull<AnnotationText[]>(localStorage.getItem(textSchluessel(DRAW + key)));
   if (texts && texts.length) out.texts = texts;
   const zoom = jsonOderNull<GespeicherterZoom>(localStorage.getItem(ZOOM + key));
   if (zoom) out.zoom = zoom;
@@ -304,7 +303,7 @@ export async function migrateLocalAnnotations(): Promise<void> {
     const k = localStorage.key(i);
     if (!k) continue;
     if (k.startsWith(DRAW)) {
-      found.add(k.slice(DRAW.length).replace(/_text$/, ''));
+      found.add(ohneTextSuffix(k.slice(DRAW.length)));
     } else if (k.startsWith(ZOOM)) {
       const base = k.slice(ZOOM.length);
       if (/^p\d+$/.test(base)) continue; // alte seiten-globale Zoom-Keys ignorieren

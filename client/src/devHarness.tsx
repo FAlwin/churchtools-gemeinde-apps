@@ -10,6 +10,7 @@
 import { useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { PageDeck } from './components/PageDeck';
+import { textSchluessel } from './utils/annotationKeys';
 import './styles/main.scss';
 
 // ── Kunstseiten: weiß mit großer Seitennummer + Linien (eindeutig unterscheidbar) ──
@@ -37,7 +38,7 @@ const KEY = (p: number) => `harness_p${p}`;
 // Text-Anmerkungen vorbelegen: Seite 1 unten, Seite 2 oben – wie im echten Fall (#113).
 function seed(): void {
   localStorage.setItem(
-    `${KEY(0)}_text`,
+    textSchluessel(KEY(0)),
     JSON.stringify([
       {
         id: 1,
@@ -52,7 +53,7 @@ function seed(): void {
     ]),
   );
   localStorage.setItem(
-    `${KEY(1)}_text`,
+    textSchluessel(KEY(1)),
     JSON.stringify([
       {
         id: 2,
@@ -66,8 +67,8 @@ function seed(): void {
       },
     ]),
   );
-  localStorage.removeItem(`${KEY(2)}_text`);
-  localStorage.removeItem(`${KEY(3)}_text`);
+  localStorage.removeItem(textSchluessel(KEY(2)));
+  localStorage.removeItem(textSchluessel(KEY(3)));
   // Ein einfacher Strich auf Seite 1+2 (zum Vergleich Striche vs. Text).
   const s = document.createElement('canvas');
   s.width = 840;

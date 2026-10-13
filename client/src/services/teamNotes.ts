@@ -10,6 +10,7 @@ import { anmerkungenVon, einstellungenVon, teilende, teilenSetzen, teiltIch } fr
 // SharedPage (fremde Anmerkungsebene) kommt aus @shared/types – re-exportiert für Bestandsimporte.
 import type { SharedPage } from '@shared/types/index';
 import { lokalSchreiben } from '../utils/lokalSpeicher';
+import { textSchluessel } from '../utils/annotationKeys';
 
 export type { SharedPage };
 
@@ -82,7 +83,7 @@ export async function loadViewMirror(personId: number, songIds: number[]): Promi
     // `lokalSchreiben` wirft nie (#457) – sonst bräche ein voller Speicher das Ansehen ganz ab.
     if (page.strokes) lokalSchreiben(VIEW_NS + key, page.strokes);
     if (page.texts && page.texts.length) {
-      lokalSchreiben(`${VIEW_NS + key}_text`, JSON.stringify(page.texts));
+      lokalSchreiben(textSchluessel(VIEW_NS + key), JSON.stringify(page.texts));
     }
   }
 }

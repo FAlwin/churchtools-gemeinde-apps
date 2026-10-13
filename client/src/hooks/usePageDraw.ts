@@ -1,19 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
+import type { AnnotationText } from '@shared/types/index';
 import { pushField } from '../services/annotations';
 import { lokalSchreiben } from '../utils/lokalSpeicher';
+import { readPageTexts, textSchluessel } from '../utils/annotationKeys';
 
 /** Signatur der Sync-Push-Funktion (privat: pushField, global: pushSharedField). */
 type PushFn = (lsKey: string, field: 'strokes' | 'texts', value: unknown) => void;
 
-export type TextAlign = 'left' | 'center' | 'right';
+export type TextAlign = NonNullable<AnnotationText['align']>;
 
-/** Absatz-Formatierung einer Text-Anmerkung (gilt für den ganzen Block). */
-export interface TextStyle {
-  bold: boolean;
-  italic: boolean;
-  underline: boolean;
-  align: TextAlign;
-}
+/** Absatz-Formatierung einer Text-Anmerkung (gilt für den ganzen Block) – die Formatfelder aus
+ *  `AnnotationText`, hier alle gesetzt. */
+export type TextStyle = Required<Pick<AnnotationText, 'bold' | 'italic' | 'underline' | 'align'>>;
 
 /** Standard für neu platzierten Text: normale Stärke, mittig. */
 export const DEFAULT_TEXT_STYLE: TextStyle = {
@@ -23,23 +21,20 @@ export const DEFAULT_TEXT_STYLE: TextStyle = {
   align: 'center',
 };
 
-/** Eine Text-Anmerkung auf einer PDF-Seite. Position als Bruchteil der Seite (0..1), Größe in
- *  cqh (% der Seitenhöhe) → skaliert/zoomt verlustfrei mit der Seite mit. Format-Felder optional
- *  (ältere gespeicherte Anmerkungen kennen sie nicht → Fallback über DEFAULT_TEXT_STYLE). */
-export interface PageTextObj {
-  id: number;
-  fx: number;
-  fy: number;
-  text: string;
-  color: string;
-  sizeCqh: number;
-  bold?: boolean;
-  italic?: boolean;
-  underline?: boolean;
-  align?: TextAlign;
-  /** Nur bei Team-Anmerkungen: wer den Text angelegt hat (stempelt der Server; nur Anzeige). */
-  author?: { id: number; name: string };
-}
+/**
+ * Eine Text-Anmerkung auf einer PDF-Seite – **derselbe Typ wie im geteilten Modell** (#490).
+ *
+ * Position als Bruchteil der Seite (0..1), Größe in cqh (% der Seitenhöhe) → skaliert/zoomt
+ * verlustfrei mit der Seite mit. Format-Felder optional (ältere Anmerkungen kennen sie nicht →
+ * Fallback über DEFAULT_TEXT_STYLE).
+ *
+ * Bis 13.10.2026 stand hier eine Kopie von `AnnotationText`. Ein neues Formatfeld wäre in der Kopie
+ * gezeichnet und lokal gespeichert, vom Server-Schema aber beim Sync abgeschnitten worden – genau
+ * das Muster von #115. Der Compile-Wächter im `annotationsController` prüft Zod gegen
+ * `AnnotationText`; seit dem Alias gilt er damit auch für den Typ, mit dem die Oberfläche arbeitet.
+ * Das Feld `author` der Kopie entfiel: Niemand setzte oder las es.
+ */
+export type PageTextObj = AnnotationText;
 
 interface Snapshot {
   img: string | null;
@@ -89,7 +84,7 @@ export function usePageDraw(
   } | null>(null);
 
   const drawKey = storageKey;
-  const textKey = storageKey ? `${storageKey}_text` : null;
+  const textKey = storageKey ? textSchluessel(storageKey) : null;
   // Zuletzt geladener Text-Stand (JSON) – verhindert das Zurück-Pushen gerade geladener Daten.
   const loadedJson = useRef('[]');
   // Push-Funktion als Ref: ein Wechsel (privat ↔ global) soll den Speicher-Effekt NICHT erneut
@@ -111,13 +106,7 @@ export function usePageDraw(
   const [prevTextKey, setPrevTextKey] = useState(textKey);
   if (textKey !== prevTextKey) {
     setPrevTextKey(textKey);
-    let loaded: PageTextObj[] = [];
-    try {
-      const s = textKey ? localStorage.getItem(textKey) : null;
-      loaded = s ? (JSON.parse(s) as PageTextObj[]) : [];
-    } catch {
-      loaded = [];
-    }
+    const loaded = readPageTexts<PageTextObj>(storageKey);
     setTexts(loaded);
     loadedJson.current = JSON.stringify(loaded);
     setSelectedId(null);
@@ -125,18 +114,12 @@ export function usePageDraw(
 
   // Texte laden, wenn die Seite (Schlüssel) wechselt ODER nach einem Server-Pull (reloadTick).
   useEffect(() => {
-    if (!textKey) {
+    if (!storageKey) {
       setTexts([]);
       loadedJson.current = '[]';
       return;
     }
-    let loaded: PageTextObj[] = [];
-    try {
-      const s = localStorage.getItem(textKey);
-      loaded = s ? (JSON.parse(s) as PageTextObj[]) : [];
-    } catch {
-      loaded = [];
-    }
+    const loaded = readPageTexts<PageTextObj>(storageKey);
     setTexts(loaded);
     loadedJson.current = JSON.stringify(loaded);
     setSelectedId(null);
@@ -144,7 +127,7 @@ export function usePageDraw(
     redoStack.current = [];
     setCanUndo(false);
     setCanRedo(false);
-  }, [textKey, reloadTick]);
+  }, [storageKey, reloadTick]);
 
   // Texte speichern (localStorage-Cache immer; Server-Push nur bei echter Änderung)
   useEffect(() => {

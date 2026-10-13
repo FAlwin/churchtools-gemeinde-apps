@@ -14,6 +14,23 @@ import { ANNO_DRAW_NS, levelPrefix } from '@shared/keys/index';
 export const OWN_DRAW_PREFIX = ANNO_DRAW_NS;
 
 /**
+ * Das Suffix der Textobjekte einer Seite – **nur hier** (#490). Striche liegen unter dem
+ * Seiten-Schlüssel selbst, Texte unter `<Seiten-Schlüssel>_text`. Vorher hängten über zehn Stellen in
+ * fünf Dateien das Suffix von Hand an oder schnitten es mit eigenen Regexen ab.
+ */
+const TEXT_SUFFIX = '_text';
+
+/** Speicherschlüssel der Textobjekte zu einem Seiten-Schlüssel (mit oder ohne Namensraum davor). */
+export function textSchluessel(pageKey: string): string {
+  return pageKey + TEXT_SUFFIX;
+}
+
+/** Der Seiten-Schlüssel zu einem Schlüssel, der Striche ODER Texte meint. */
+export function ohneTextSuffix(key: string): string {
+  return key.endsWith(TEXT_SUFFIX) ? key.slice(0, -TEXT_SUFFIX.length) : key;
+}
+
+/**
  * Basis-Schlüssel einer Ebenen-Seite (ohne Namensraum-Präfix, ohne `_text`).
  *
  * Das Arrangement-Segment (#320) ist erlaubt, wird aber NICHT ausgewertet: Diese Auflistung
@@ -74,8 +91,7 @@ export function hasStoredNotesForLevel(
     const k = localStorage.key(i);
     if (!k || !k.startsWith(prefix)) continue;
     // Nur reine Seiten-Schlüssel (Striche) bzw. deren `_text` zählen – keine Fremd-/Zoom-Suffixe.
-    const rest = k.slice(prefix.length);
-    if (!/^\d+(_text)?$/.test(rest)) continue;
+    if (!/^\d+$/.test(ohneTextSuffix(k.slice(prefix.length)))) continue;
     const v = localStorage.getItem(k);
     if (v && v !== '[]') return true;
   }
@@ -112,7 +128,7 @@ export function levelsUnderNamespace(nsPrefix: string): AnnotationLevel[] {
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
     if (!k || !k.startsWith(nsPrefix)) continue;
-    const base = k.slice(nsPrefix.length).replace(/_text$/, '');
+    const base = ohneTextSuffix(k.slice(nsPrefix.length));
     const m = LEVEL_PAGE_RE.exec(base);
     if (!m) continue;
     const gk = levelKeyOf({
@@ -137,16 +153,14 @@ export function levelsUnderNamespace(nsPrefix: string): AnnotationLevel[] {
 /**
  * Die Textobjekte EINER Anmerkungs-Seite aus dem lokalen Speicher (#198).
  *
- * Warum hier: Das `_text`-Suffix gehört zur Schlüssel-Grammatik dieses Moduls. Vorher hängten es
- * die Komponenten selbst an – die Grammatik war damit an mehreren Stellen verstreut, obwohl der
- * Rest davon (Präfixe, Ebenen, Seitenzahl) längst hier liegt.
+ * Warum hier: Das `_text`-Suffix gehört zur Schlüssel-Grammatik dieses Moduls (`textSchluessel`).
  *
  * Kaputtes JSON ergibt eine leere Liste: Eine unlesbare Anmerkung darf die Seite nicht mitreißen.
  */
 export function readPageTexts<T>(pageKey: string | null): T[] {
   if (!pageKey) return [];
   try {
-    const raw = localStorage.getItem(`${pageKey}_text`);
+    const raw = localStorage.getItem(textSchluessel(pageKey));
     return raw ? (JSON.parse(raw) as T[]) : [];
   } catch {
     return [];

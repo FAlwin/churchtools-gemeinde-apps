@@ -6,6 +6,9 @@ import {
   levelsUnderNamespace,
   levelKeyOf,
   OWN_DRAW_PREFIX,
+  ohneTextSuffix,
+  readPageTexts,
+  textSchluessel,
 } from './annotationKeys';
 
 const NS = 'worship_teamview_';
@@ -95,5 +98,32 @@ describe('hasStoredNotesForLevel – der Stift-Marker findet arrangement-genaue 
   it('findet Bestandsnotizen ohne Arrangement weiterhin', () => {
     localStorage.setItem(`${OWN_DRAW_PREFIX}song1_vorig_0`, '[[1,2]]');
     expect(hasStoredNotesForLevel(1, 'orig', false, null)).toBe(true);
+  });
+});
+
+describe('textSchluessel / ohneTextSuffix – das `_text`-Suffix an einer Stelle (#490)', () => {
+  // Bewusst ein Literal: Das ist das FORMAT der schon gespeicherten Anmerkungen auf allen Geräten.
+  // Ändert es sich, findet die App die vorhandenen Texte nicht mehr.
+  it('hängt das gespeicherte Format an – mit und ohne Namensraum', () => {
+    expect(textSchluessel('song7_vorig_3')).toBe('song7_vorig_3_text');
+    expect(textSchluessel(OWN_DRAW_PREFIX + 'song7_vorig_3')).toBe(
+      'worship_docdraw_song7_vorig_3_text',
+    );
+  });
+
+  it('ohneTextSuffix ist die Umkehrung – und lässt Strich-Schlüssel unverändert', () => {
+    const seite = OWN_DRAW_PREFIX + 'song7_a12_vorig_lyr_3';
+    expect(ohneTextSuffix(textSchluessel(seite))).toBe(seite);
+    expect(ohneTextSuffix(seite)).toBe(seite);
+  });
+
+  it('schneidet nur am Ende ab', () => {
+    expect(ohneTextSuffix('song7_vmein_text_ding_3')).toBe('song7_vmein_text_ding_3');
+  });
+
+  it('readPageTexts liest unter genau diesem Schlüssel', () => {
+    localStorage.setItem(textSchluessel('song7_vorig_3'), JSON.stringify([{ id: 1, text: 'Hi' }]));
+    expect(readPageTexts<{ id: number }>('song7_vorig_3')).toEqual([{ id: 1, text: 'Hi' }]);
+    expect(readPageTexts('song7_vorig_4')).toEqual([]);
   });
 });

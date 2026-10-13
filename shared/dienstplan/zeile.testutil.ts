@@ -1,4 +1,5 @@
 import type { TerminZeile } from './termine';
+import type { Plan } from './plan';
 
 /**
  * Eine Terminzeile für Tests – alle Felder mit ruhigen Vorgaben, `extra` überschreibt. Eine Stelle für
@@ -27,3 +28,6 @@ export function zeile(
     ...extra,
   };
 }
+
+/** Ein leerer Plan – für Tests, die nur die Liste brauchen. */
+export const LEERER_PLAN: Plan = { spalten: [], gruppen: [] };

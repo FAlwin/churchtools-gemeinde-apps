@@ -1,11 +1,6 @@
-import type { ReiterId } from './reiter';
 import styles from './Startseite.module.scss';
 
-const TEXT: Record<Exclude<ReiterId, 'start' | 'termine'>, { titel: string; text: string }> = {
-  planen: {
-    titel: 'Planen',
-    text: 'Hier entsteht der Plan deiner Dienstgruppen: Termine nebeneinander, Dienste untereinander.',
-  },
+const TEXT: Record<'abwesenheiten', { titel: string; text: string }> = {
   abwesenheiten: {
     titel: 'Abwesenheiten',
     text: 'Hier trägst du bald ein, wann du nicht kannst – dieselben Abwesenheiten wie in ChurchTools.',
@@ -13,7 +8,7 @@ const TEXT: Record<Exclude<ReiterId, 'start' | 'termine'>, { titel: string; text
 };
 
 /** Platzhalter der Reiter, die in den nächsten Schritten von E3 gebaut werden. */
-export function Demnaechst({ reiter }: { reiter: Exclude<ReiterId, 'start' | 'termine'> }) {
+export function Demnaechst({ reiter }: { reiter: 'abwesenheiten' }) {
   const t = TEXT[reiter];
   return (
     <section className={styles.karte} aria-labelledby="demnaechst">

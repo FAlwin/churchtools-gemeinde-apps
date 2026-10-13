@@ -2,14 +2,13 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
-import { darfDienstgruppePlanen } from '@shared/ct/dienstRechte';
 import { kachel, tagKurz } from '@shared/ct/datum';
 import { isoTag } from '@shared/ct/zeit';
 import { decktTermin } from '@shared/absences/index';
 import type { CtAbsence } from '@shared/ct/typen';
 import type { TerminZeile } from '@shared/dienstplan/termine';
 import { bisDahin, startUebersicht, type DienstAmTermin } from '@shared/dienstplan/start';
-import type { Start } from './start';
+import { planbareDienstgruppen, type Start } from './start';
 import type { TermineZustand } from './Termine';
 import { ladeAbwesenheiten, ladeLieder, ladeMusikApp } from './ladeBeiwerk';
 import { Plakette } from './Plakette';
@@ -37,7 +36,7 @@ const TEAM_ZEIGEN = 5;
  * „Ablauf & Dienste“ mit der Termin-Ansicht.
  */
 export function Startseite({ start, termine, heute, onNochmal, onMeineTermine }: Props) {
-  const planbar = start.dienstgruppen.filter((g) => darfDienstgruppePlanen(start.rechte, g.id));
+  const planbar = planbareDienstgruppen(start);
   const zeilen = termine?.art === 'fertig' ? termine.zeilen : [];
   const u = startUebersicht(zeilen, { jetzt: new Date(), heute, planbar });
   const abwesenheiten = useAbwesenheiten(start.ichId, heute);

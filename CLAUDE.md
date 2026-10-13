@@ -188,7 +188,7 @@ churchtools-gemeinde-apps/
 │       ├── types/           # server-spezifische Typen
 │       └── utils/           # Hilfsfunktionen (u. a. isoTag.ts = die eine Datums-Formatierung)
 ├── shared/types/            # geteilte Typen (Service, SetlistSong, Setlist, …)
-├── shared/dienstplan/       # Regeln des Dienstplaners: termine (Liste, Meine|Alle, Arten, freie Plätze; E3-2)
+├── shared/dienstplan/       # Regeln des Dienstplaners: termine (Liste, E3-2), start (Startseite, E3-3), plan (Matrix, E3-4)
 ├── shared/anmeldung/        # Regeln der Anmeldungen: preis, formular (#474), uebersicht (#480), vorlagen, termin, felder, rechte (#486), bezahlung (#507)
 ├── anmeldungen/             # Anmeldungen: ChurchTools-Erweiterung für Veranstalter (#474, nur Erweiterung)
 ├── formular/                # Anmeldungen: öffentliches Formular, statisch (GitHub Pages), noch Platzhalter

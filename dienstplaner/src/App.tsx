@@ -4,10 +4,10 @@ import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { ReiterLeiste } from '@ui/bedienung/ReiterLeiste';
 import { Segment } from '@ui/bedienung/Segment';
 import { useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
-import { darfDienstgruppePlanen } from '@shared/ct/dienstRechte';
-import { ladeStart, type Start } from './start';
+import { ladeStart, planbareDienstgruppen, type Start } from './start';
 import { Startseite } from './Startseite';
 import { Demnaechst } from './Demnaechst';
+import { Planen } from './Planen';
 import { Termine, type TermineZustand } from './Termine';
 import { ladeTermine, WOCHEN_JE_SCHRITT } from './ladeTermine';
 import { adresseFuer, reiterAusAdresse, sichtbareReiter, type ReiterId } from './reiter';
@@ -48,8 +48,8 @@ export function App() {
     return () => window.removeEventListener('hashchange', folgen);
   }, []);
 
-  const darfPlanen =
-    !!start && start.dienstgruppen.some((g) => darfDienstgruppePlanen(start.rechte, g.id));
+  // Global, als Leitung der Gruppe eines Dienstes – dieselbe Regel wie in der Matrix (`planbar`).
+  const darfPlanen = !!start && planbareDienstgruppen(start).length > 0;
   const reiter = sichtbareReiter(darfPlanen);
   const aktiv = reiterAusAdresse(hash, reiter);
 
@@ -57,19 +57,27 @@ export function App() {
     (s: Start, w: number) => {
       setTermine({ art: 'laedt' });
       ladeTermine(s, w, zeitzone).then(
-        (zeilen) => setTermine({ art: 'fertig', zeilen, wochen: w }),
+        (d) => setTermine({ art: 'fertig', zeilen: d.zeilen, plan: d.plan, wochen: w }),
         (e: unknown) => setTermine({ art: 'fehler', fehler: fehlerMeldung(e) }),
       );
     },
     [zeitzone],
   );
 
-  // Start und Termine zeigen dieselbe Liste – geladen wird einmal, wenn einer der beiden offen ist.
+  // Start, Termine und Planen zeigen dieselben Termine – geladen wird einmal, wenn einer davon offen ist.
   useEffect(() => {
-    if ((aktiv === 'start' || aktiv === 'termine') && start && termine === null) {
+    if (aktiv !== 'abwesenheiten' && start && termine === null) {
       termineLaden(start, wochen);
     }
   }, [aktiv, start, termine, wochen, termineLaden]);
+  // „Weitere Termine laden“ – in Termine und Planen derselbe Schritt.
+  const mehrLaden = () => {
+    if (!start) return;
+    const w = wochen + WOCHEN_JE_SCHRITT;
+    setWochen(w);
+    termineLaden(start, w);
+  };
+
   const wechseln = (id: ReiterId) => {
     window.location.hash = adresseFuer(id);
   };
@@ -116,14 +124,18 @@ export function App() {
           zustand={termine}
           planer={darfPlanen}
           onNochmal={() => termineLaden(start, wochen)}
-          onMehr={() => {
-            const w = wochen + WOCHEN_JE_SCHRITT;
-            setWochen(w);
-            termineLaden(start, w);
-          }}
+          onMehr={mehrLaden}
         />
       )}
-      {(aktiv === 'planen' || aktiv === 'abwesenheiten') && <Demnaechst reiter={aktiv} />}
+      {aktiv === 'planen' && termine && start && (
+        <Planen
+          zustand={termine}
+          handy={handy}
+          onNochmal={() => termineLaden(start, wochen)}
+          onMehr={mehrLaden}
+        />
+      )}
+      {aktiv === 'abwesenheiten' && <Demnaechst reiter={aktiv} />}
     </ErweiterungsSeite>
   );
 }

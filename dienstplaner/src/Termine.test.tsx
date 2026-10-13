@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { zeile } from '@shared/dienstplan/zeile.testutil';
+import { LEERER_PLAN, zeile } from '@shared/dienstplan/zeile.testutil';
 import { Termine } from './Termine';
 
 const z = zeile;
@@ -25,7 +25,7 @@ function zeige(planer = true) {
   const onMehr = vi.fn();
   render(
     <Termine
-      zustand={{ art: 'fertig', zeilen: ZEILEN, wochen: 8 }}
+      zustand={{ art: 'fertig', zeilen: ZEILEN, plan: LEERER_PLAN, wochen: 8 }}
       planer={planer}
       onNochmal={() => {}}
       onMehr={onMehr}
@@ -87,7 +87,7 @@ describe('Termine (E3-2)', () => {
   it('die Wahl bleibt nach dem Neuladen erhalten (im Gerät gemerkt)', () => {
     const { unmount } = render(
       <Termine
-        zustand={{ art: 'fertig', zeilen: ZEILEN, wochen: 8 }}
+        zustand={{ art: 'fertig', zeilen: ZEILEN, plan: LEERER_PLAN, wochen: 8 }}
         planer
         onNochmal={() => {}}
         onMehr={() => {}}
@@ -102,7 +102,12 @@ describe('Termine (E3-2)', () => {
   it('keine eigenen Dienste → sagt es und verweist auf „Alle“; Nachladen bleibt möglich', () => {
     render(
       <Termine
-        zustand={{ art: 'fertig', zeilen: [z(2, 'Gebetsabend', '2026-10-21')], wochen: 8 }}
+        zustand={{
+          art: 'fertig',
+          zeilen: [z(2, 'Gebetsabend', '2026-10-21')],
+          plan: LEERER_PLAN,
+          wochen: 8,
+        }}
         planer={false}
         onNochmal={() => {}}
         onMehr={() => {}}

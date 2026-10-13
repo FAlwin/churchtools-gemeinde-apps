@@ -5,8 +5,16 @@ import { ApiError } from '@ui/ct/fehler';
 import { App } from './App';
 import { ladeStart, type Start } from './start';
 import { ladeTermine } from './ladeTermine';
+import { startFuer } from './start.testutil';
+import { LEERER_PLAN } from '@shared/dienstplan/zeile.testutil';
 
-vi.mock('./start', () => ({ ladeStart: vi.fn() }));
+const KEINE_TERMINE = { zeilen: [], plan: LEERER_PLAN };
+
+// Nur das Laden wird ersetzt – die Regeln aus start.ts (wer planen darf) laufen echt.
+vi.mock('./start', async (original) => ({
+  ...(await original<typeof import('./start')>()),
+  ladeStart: vi.fn(),
+}));
 vi.mock('./ladeTermine', () => ({ ladeTermine: vi.fn(), WOCHEN_JE_SCHRITT: 8 }));
 // Das Beiwerk der Startseite (Lieder, Abwesenheiten, Musik-App) – hier ohne Netz.
 vi.mock('./ladeBeiwerk', () => ({
@@ -18,23 +26,13 @@ const laden = vi.mocked(ladeStart);
 const termineLaden = vi.mocked(ladeTermine);
 
 // Ohne eigene Vorgabe im Test: keine Termine (sonst gäbe die Attrappe `undefined` zurück).
-beforeEach(() => termineLaden.mockResolvedValue([]));
-
-const DIENSTGRUPPEN = [
-  { id: 1, name: 'Programm' },
-  { id: 3, name: 'Technik' },
-  { id: 4, name: 'Musik' },
-];
+beforeEach(() => termineLaden.mockResolvedValue(KEINE_TERMINE));
 
 function start(planbar: number[] | null, gruppen: Start['gruppen'] = []): Start {
-  return {
-    ichId: 1,
-    vorname: 'Alwin',
-    gemeinde: 'Evangeliumschristen- Gemeinde e.V.',
+  return startFuer({
     gruppen,
-    dienstgruppen: DIENSTGRUPPEN,
     rechte: { planbareDienstgruppen: planbar, ablaufKalender: [], abwesenheitenAller: false },
-  };
+  });
 }
 
 describe('App des Dienstplaners (E2/E3-3)', () => {
@@ -151,7 +149,7 @@ describe('Termine im Reiter (E3-2)', () => {
   it('Start und Termine teilen eine Liste: einmal geladen, beim Wechseln nicht neu; „Weitere“ +8 Wochen', async () => {
     breite(false);
     laden.mockResolvedValue(start([3]));
-    termineLaden.mockResolvedValue([]);
+    termineLaden.mockResolvedValue(KEINE_TERMINE);
     render(<App />);
     const bereiche = await screen.findByRole('group', { name: 'Bereiche' });
     // Schon die Startseite braucht die Termine („Als Nächstes“, deine Dienste).
@@ -172,7 +170,7 @@ describe('Termine im Reiter (E3-2)', () => {
     breite(false);
     window.location.hash = '#/termine';
     laden.mockResolvedValue(start([3]));
-    termineLaden.mockRejectedValueOnce(new ApiError(502, 'x')).mockResolvedValueOnce([]);
+    termineLaden.mockRejectedValueOnce(new ApiError(502, 'x')).mockResolvedValueOnce(KEINE_TERMINE);
     render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: 'Erneut versuchen' }));
     await screen.findByRole('button', { name: 'Weitere Termine laden' });
@@ -201,5 +199,32 @@ describe('Startseite → Termine (E3-3)', () => {
     expect(within(welche).getByRole('button', { name: 'Meine' }).getAttribute('aria-pressed')).toBe(
       'true',
     );
+  });
+});
+
+describe('Planen für Gruppenleiter (E3-4)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.location.hash = '';
+  });
+
+  it('Leitung der Gruppe eines Dienstes ohne globales Recht → Reiter „Planen“ mit der Matrix', async () => {
+    breite(false);
+    laden.mockResolvedValue(start([], [{ id: 7, name: 'Technik', leitung: true }]));
+    render(<App />);
+    const bereiche = await screen.findByRole('group', { name: 'Bereiche' });
+    fireEvent.click(within(bereiche).getByRole('button', { name: 'Planen' }));
+    expect(window.location.hash).toBe('#/planen');
+    expect(
+      await screen.findByText(/In den nächsten 8 Wochen stehen keine Termine an/),
+    ).toBeTruthy();
+  });
+
+  it('nur Mitglied, ohne Recht → kein Reiter „Planen“', async () => {
+    breite(false);
+    laden.mockResolvedValue(start([], [{ id: 7, name: 'Technik', leitung: false }]));
+    render(<App />);
+    const bereiche = await screen.findByRole('group', { name: 'Bereiche' });
+    expect(within(bereiche).queryByRole('button', { name: 'Planen' })).toBeNull();
   });
 });

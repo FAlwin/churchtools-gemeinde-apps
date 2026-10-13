@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { darfDienstgruppePlanen, dienstRechteAus } from './dienstRechte';
+import { darfDienstgruppePlanen, darfDienstPlanen, dienstRechteAus } from './dienstRechte';
 import { idsAusRecht } from './rechte';
 
 const fehler = (status: number, meldung: string) => Object.assign(new Error(meldung), { status });
@@ -80,5 +80,32 @@ describe('darfDienstgruppePlanen', () => {
 
   it('Recht ohne Aufzählung (null) → jede Dienstgruppe', () => {
     expect(darfDienstgruppePlanen({ ...rechte, planbareDienstgruppen: null }, 99)).toBe(true);
+  });
+});
+
+describe('darfDienstPlanen – die drei Wege (E0 §2)', () => {
+  const MITGLIED_RECHTE = dienstRechteAus(SPIKE, fehler);
+  const PLANER_RECHTE = dienstRechteAus(ALWIN, fehler);
+  const TON = { dienstgruppeId: 3, gruppenIds: [7] };
+  const keine = new Set<number>();
+
+  it('1. globales Recht für die Dienstgruppe', () => {
+    expect(darfDienstPlanen(PLANER_RECHTE, TON, keine)).toBe(true);
+  });
+
+  it('2. Leitung einer ChurchTools-Gruppe des Dienstes – auch ohne globales Recht', () => {
+    expect(darfDienstPlanen(MITGLIED_RECHTE, TON, new Set([7]))).toBe(true);
+    expect(darfDienstPlanen(MITGLIED_RECHTE, TON, new Set([9]))).toBe(false);
+  });
+
+  it('3. Admin des Termins – für jeden Dienst darin', () => {
+    expect(darfDienstPlanen(MITGLIED_RECHTE, TON, keine, true)).toBe(true);
+  });
+
+  it('nichts davon → nein; Dienst ohne Dienstgruppe und ohne Gruppen → nur als Admin', () => {
+    expect(darfDienstPlanen(MITGLIED_RECHTE, TON, keine)).toBe(false);
+    const lose = { dienstgruppeId: null, gruppenIds: [] };
+    expect(darfDienstPlanen(PLANER_RECHTE, lose, keine)).toBe(false);
+    expect(darfDienstPlanen(PLANER_RECHTE, lose, keine, true)).toBe(true);
   });
 });

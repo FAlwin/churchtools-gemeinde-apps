@@ -1,0 +1,36 @@
+// Datumskachel wie „Anstehende Termine" in der ChurchTools-App (#393): hellblau, dunkle Schrift.
+// Aus der Terminliste der Musik-App (pages/Agenda.module.scss) – jetzt für alle Terminlisten (E3-2).
+.kachel {
+  width: 50px;
+  height: 50px;
+  border-radius: var(--r-tile);
+  background: var(--blue-tile);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.tag {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--blue-tile-text);
+  line-height: 1;
+}
+.monat {
+  font-size: 11px;
+  color: var(--blue-tile-text);
+  font-weight: 500;
+  margin-top: 2px;
+  opacity: 0.85;
+}
+
+// Grau statt blau (13.10.2026): Termin ohne Ablauf in der Musik-App – noch nichts zu öffnen.
+.gedimmt {
+  background: var(--surface3);
+
+  .tag,
+  .monat {
+    color: var(--text2);
+  }
+}

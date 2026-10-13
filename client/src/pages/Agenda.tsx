@@ -7,7 +7,9 @@ import { Icon } from '@ui/icons/icons';
 import { Spinner } from '../components/Spinner';
 import { Toast } from '../components/Toast';
 import { useToast } from '../hooks/useToast';
-import { usePastServices } from '../hooks/useServices';
+import { usePastServices, useServicesOhneAblauf } from '../hooks/useServices';
+import { useSiteConfig } from '../hooks/useSiteConfig';
+import { AblaufAnlegenFenster } from '../components/AblaufAnlegenFenster';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineServices } from '../hooks/useOfflineServices';
 import { heuteIso } from '../utils/heute';
@@ -18,6 +20,7 @@ import styles from './Agenda.module.scss';
 import { standKurz } from '../utils/zeitstempel';
 import { funktionen } from '../services/funktionen';
 import { agendaAbfrage } from '../hooks/abfrageSchluessel';
+import { DatumKachel } from '@ui/bedienung/DatumKachel';
 
 interface AgendaProps {
   services: Service[];
@@ -31,6 +34,11 @@ interface AgendaProps {
   onSelect: (service: Service) => void;
   /** Öffnet direkt das „Liederheft" (Lieder-Charts) des Gottesdienstes. */
   onOpenSongs: (service: Service) => void;
+  /**
+   * Darf Abläufe anlegen (Recht „Ablauf bearbeiten" in ChurchTools, 13.10.2026). Ohne das Recht stehen
+   * Termine ohne Ablauf trotzdem in der Liste – nur ohne „Ablauf anlegen".
+   */
+  kannAblaufAnlegen?: boolean;
 }
 
 const MONTHS = [
@@ -74,6 +82,7 @@ export function Agenda({
   onRetry,
   onSelect,
   onOpenSongs,
+  kannAblaufAnlegen = false,
 }: AgendaProps) {
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
   const [monthsBack, setMonthsBack] = useState(1);
@@ -92,7 +101,19 @@ export function Agenda({
 
   const today = heuteIso();
   const pastQuery = usePastServices(monthsBack, tab === 'past' && online);
-  const upcoming = services
+  // Termine ohne Ablauf (13.10.2026) – nur, wenn die Verwaltung Kalender dafür gewählt hat.
+  const regel = useSiteConfig().data.ablaufAnlegen;
+  const ohneQuery = useServicesOhneAblauf(
+    online && tab === 'upcoming' && (regel?.kalenderIds.length ?? 0) > 0,
+  );
+  const [anlegenFuer, setAnlegenFuer] = useState<Service | null>(null);
+  const mitAblaufIds = new Set(services.map((s) => s.id));
+  // Hat einer inzwischen einen Ablauf (in ChurchTools angelegt), steht er nur noch oben – nie doppelt.
+  const ohneAblauf = (ohneQuery.data ?? []).filter(
+    (s) => s.date >= today && !mitAblaufIds.has(s.id),
+  );
+  const ohneIds = new Set(ohneAblauf.map((s) => s.id));
+  const upcoming = [...services, ...ohneAblauf]
     .filter((s) => s.date >= today)
     .sort((a, b) => a.start.localeCompare(b.start));
   const past = [...(pastQuery.data ?? [])]
@@ -123,7 +144,42 @@ export function Agenda({
     }
   }
 
+  /** Eine Veranstaltung ohne Ablauf: graue Kachel, „Kein Ablauf", rechts „Ablauf anlegen". */
+  function ohneAblaufZeile(s: Service) {
+    return (
+      <div key={s.id} className={styles.card}>
+        <button
+          className={styles.cardMain}
+          onClick={() =>
+            kannAblaufAnlegen
+              ? setAnlegenFuer(s)
+              : showToast('Für diese Veranstaltung gibt es noch keinen Ablauf.')
+          }
+        >
+          <DatumKachel tag={s.day} monat={s.month} gedimmt />
+          <div className={styles.info}>
+            <div className={`${styles.svcName} ${styles.svcNameOhne}`}>{s.name}</div>
+            {/* „Kein Ablauf" VORN: Am Handy ist die Zeile schmal, und genau das muss sichtbar bleiben. */}
+            <div className={styles.meta}>
+              <span className={styles.keinAblauf}>Kein Ablauf</span>
+              <span>{s.weekday.slice(0, 2)}</span>
+              <span className={styles.dotSep}>·</span>
+              <span>{s.time}</span>
+            </div>
+          </div>
+          {kannAblaufAnlegen && (
+            <span className={styles.ablaufAnlegen} aria-label="Ablauf anlegen">
+              <Icon name="plus" size={14} stroke={2.4} />
+              Anlegen
+            </span>
+          )}
+        </button>
+      </div>
+    );
+  }
+
   function row(s: Service) {
+    if (ohneIds.has(s.id)) return ohneAblaufZeile(s);
     const held = !!offlineReg[s.id];
     // Ohne Netz ist nur bedienbar, was offline vorliegt – alles andere ausgegraut + Hinweis.
     const blocked = !online && !held;
@@ -134,10 +190,7 @@ export function Agenda({
           className={styles.cardMain}
           onClick={() => (blocked ? showToast(OFFLINE_HINT) : onSelect(s))}
         >
-          <div className={styles.dateBadge}>
-            <span className={styles.day}>{s.day}</span>
-            <span className={styles.month}>{s.month}</span>
-          </div>
+          <DatumKachel tag={s.day} monat={s.month} />
           <div className={styles.info}>
             <div className={styles.svcName}>
               {/* Dezenter Punkt (#143, wie „ungelesen"): Ablauf hat sich seit dem letzten
@@ -216,8 +269,30 @@ export function Agenda({
   return (
     <SeitenGeruest
       titel="Termine"
-      onNeuLaden={tab === 'upcoming' ? onRetry : () => pastQuery.refetch()}
-      ueberlagerung={<Toast message={toast} />}
+      onNeuLaden={
+        tab === 'upcoming'
+          ? () => Promise.all([onRetry?.(), ohneQuery.isEnabled ? ohneQuery.refetch() : null])
+          : () => pastQuery.refetch()
+      }
+      // In der Überlagerung, nicht im Inhalt: Dort scrollte das Fenster mit und wurde abgeschnitten
+      // (im Bildschirmfoto gesehen, 13.10.2026) – wie die Fenster der Verwaltung (`useVerwaltung`).
+      ueberlagerung={
+        <>
+          <Toast message={toast} />
+          {anlegenFuer && (
+            <AblaufAnlegenFenster
+              termin={anlegenFuer}
+              mitAblauf={services}
+              onClose={() => setAnlegenFuer(null)}
+              onAngelegt={(t) => {
+                setAnlegenFuer(null);
+                // Den frischen Termin öffnen: Der Ablauf ist da, die Liste lädt im Hintergrund neu.
+                onSelect({ ...t, songCount: 0 });
+              }}
+            />
+          )}
+        </>
+      }
     >
       <Segment
         className={styles.segWrap}

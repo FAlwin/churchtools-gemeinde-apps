@@ -188,6 +188,7 @@ churchtools-gemeinde-apps/
 │       ├── types/           # server-spezifische Typen
 │       └── utils/           # Hilfsfunktionen (u. a. isoTag.ts = die eine Datums-Formatierung)
 ├── shared/types/            # geteilte Typen (Service, SetlistSong, Setlist, …)
+├── shared/dienstplan/       # Regeln des Dienstplaners: termine (Liste, E3-2), start (Startseite, E3-3), plan (Matrix, E3-4), fenster + werWieOft (E3-5)
 ├── shared/anmeldung/        # Regeln der Anmeldungen: preis, formular (#474), uebersicht (#480), vorlagen, termin, felder, rechte (#486), bezahlung (#507), gestaltung + baukasten (A5)
 ├── anmeldungen/             # Anmeldungen: ChurchTools-Erweiterung für Veranstalter (#474, nur Erweiterung);
 │                            #   Formular-Baukasten = Baukasten.tsx (+ BaukastenLeiste, FeldBearbeiten, useSchlange)
@@ -197,7 +198,7 @@ churchtools-gemeinde-apps/
     ├── design/              # _variables.scss (Tokens), _mixins.scss, _grundregeln.scss (Reset + Erweiterungs-Lehren)
     ├── icons/               # icons.tsx (Line-Icons)
     ├── fenster/             # Sheet (Modal), useOverlayKeyboardInset, appHeight
-    ├── bedienung/           # Segment, Schalter, KnopfReihe, ReiterLeiste (untere Reiter), useMedienAbfrage
+    ├── bedienung/           # Segment, Schalter, KnopfReihe, ReiterLeiste (untere Reiter), useMedienAbfrage, DatumKachel
     ├── teilen/              # shareFile, sharePdf
     ├── anmeldeformular/     # Anmeldeformular, wie Gäste es sehen (A5): Baukasten + Vorschau in der Erweiterung, öffentlich ab A6
     ├── ct/                  # Verbindung einer Erweiterung zu ChurchTools: verbindung.ts, fehler.ts (ApiError), basis.ts,
@@ -706,6 +707,16 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **v2.35.0 (13.10.2026) = Ablauf in der App anlegen** (PR #515, dazu aus dem anderen Teil des Repos
+  Dienstplaner E3-2/E3-3, Anmeldungen A4 und die schmalere Reiterleiste in den Erweiterungen #504).
+  Terminliste zeigt Veranstaltungen OHNE Ablauf aus den in der Verwaltung gewählten Kalendern (+ Suchwort,
+  weil Gottesdienst und Gebetsabend bei der ECG im selben Kalender liegen) mit „Anlegen" – aus einer
+  Vorlage (vorausgewählt), wie eine frühere oder leer. Regeln in `shared/ct/ablaufAnlegen.ts`; eigene
+  Abfrage `/api/services/ohne-ablauf`, die bestehende Terminliste bleibt „nur mit Ablauf". ChurchTools:
+  `PUT /events/{id}/agenda` (`template_id` / `event_id`), gemessen an der Test-Instanz. Abgeschlossener
+  Ablauf: kein Kasten mehr, „Ablauf öffnen" als Knopf oben rechts, Änderungsversuche → Hinweis. Verwaltung
+  erst nach geladener SiteConfig. Neuer Wächter `client/src/cssKlassen.test.ts`. **Testen solcher
+  Schreib-Funktionen nur in der Test-Instanz** – Staging hängt am echten ChurchTools.
 - **v2.34.2 (13.10.2026) = Code-Check-Funde #489–#492** (PRs #494, #497, #500, #506; dazu #487 Compose
   reicht `.env`-Werte durch, TF-CHART-03 #488 und aus dem anderen Teil des Repos Dienstplaner E2/E3-1 und
   Anmeldungen A3). Server spricht ChurchTools nur über `ctFetch` (Zeitüberschreitung 504 statt 500,

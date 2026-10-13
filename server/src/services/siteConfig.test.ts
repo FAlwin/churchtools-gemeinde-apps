@@ -121,3 +121,36 @@ describe('Liedblatt: Standard-Ansicht (07.10.2026)', () => {
     expect((await mod.getSiteConfig()).standardAnsicht).toBe('dokument');
   });
 });
+
+describe('Termine ohne Ablauf (13.10.2026)', () => {
+  it('ohne Angabe ist die Funktion aus – auch für Bestandsdateien', () => {
+    const r = siteConfigSchema.safeParse({ orgName: 'ECG' });
+    expect(r.success && r.data.ablaufAnlegen).toEqual({ kalenderIds: [], suchwort: '' });
+  });
+
+  it('lehnt ein zu langes Suchwort und ungültige Kalender-IDs ab', () => {
+    const lang = 'w'.repeat(SITE_CONFIG_GRENZEN.terminArtSuchwort + 1);
+    expect(
+      siteConfigSchema.safeParse({
+        orgName: 'ECG',
+        ablaufAnlegen: { kalenderIds: [2], suchwort: lang },
+      }).success,
+    ).toBe(false);
+    expect(
+      siteConfigSchema.safeParse({
+        orgName: 'ECG',
+        ablaufAnlegen: { kalenderIds: [0], suchwort: '' },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('übersteht Speichern UND erneutes Einlesen; Kalender nur einmal, Suchwort getrimmt', async () => {
+    const saved = await mod.saveSiteConfig({
+      orgName: 'ECG',
+      ablaufAnlegen: { kalenderIds: [2, 2, 5], suchwort: ' Gottesdienst ' },
+    });
+    expect(saved.ablaufAnlegen).toEqual({ kalenderIds: [2, 5], suchwort: 'Gottesdienst' });
+    mod.__resetForTests();
+    expect((await mod.getSiteConfig()).ablaufAnlegen).toEqual(saved.ablaufAnlegen);
+  });
+});

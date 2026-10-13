@@ -23,6 +23,7 @@ import { RundKnopf } from '@ui/bedienung/KnopfReihe';
 import { CenterMessage } from '../components/CenterMessage';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Toast } from '../components/Toast';
+import { useToast } from '../hooks/useToast';
 import { useRueckgaengig } from '../hooks/useRueckgaengig';
 import { SchwebePlus } from '../components/SchwebePlus';
 import { AgendaFullView } from '../components/AgendaFullView';
@@ -33,7 +34,6 @@ import { Icon } from '@ui/icons/icons';
 import { itemLabel } from '../utils/agendaItemTitle';
 import { ApiError } from '../services/api';
 import { useAblaufAbschliessen } from '../hooks/useServices';
-import { ABLAUF_ABGESCHLOSSEN } from '@shared/ct/schreibKern';
 import type { NeuerAgendaPunkt } from '../utils/agendaItemChanges';
 import { beginnStelle, vorlaufNachUmsortieren } from '../utils/vorlauf';
 import { Coachmarks } from '../components/Coachmarks';
@@ -55,6 +55,10 @@ import { loadSongPdfOpts, loadAppLogo } from '../utils/songPdfOpts';
 import { innerScrollOnly, resetViewportAfterDrag } from '../utils/dndAutoScroll';
 import styles from './Setlist.module.scss';
 import { schluessel } from '../hooks/abfrageSchluessel';
+
+/** Der Hinweis, wenn man einen abgeschlossenen Ablauf ändern will (Alwin, 13.10.2026). */
+const GESPERRT =
+  'Dieser Ablauf ist in ChurchTools abgeschlossen. Zum Ändern oben rechts das Schloss antippen.';
 
 /**
  * Gebündelte Bearbeiten-Aktionen des Ablaufs – EIN Objekt statt einzelner Callback-Props durch
@@ -129,11 +133,13 @@ export function Setlist({
 
   /**
    * **Abgeschlossen** (Alwin, 09.10.2026): In ChurchTools kann man einen Ablauf abschließen; dann lässt
-   * ChurchTools kein Ändern zu. Vorher meldete die App beim Löschen nur „Keine Berechtigung". Jetzt sagt
-   * sie es beim Bearbeiten, sperrt die Bedienung und bietet „Ablauf öffnen" an – in der Ansicht bewusst
-   * kein Hinweis (Alwin).
+   * ChurchTools kein Ändern zu. Vorher meldete die App beim Löschen nur „Keine Berechtigung". In der Ansicht
+   * bewusst kein Hinweis (Alwin). Beim Bearbeiten steht oben rechts statt des Schlosses zum Abschließen
+   * „Ablauf öffnen" – und wer trotzdem etwas ändern will (Punkt antippen, ziehen, Plus), bekommt den
+   * Hinweis `GESPERRT` (Alwin, 13.10.2026: „nur der Knopf"; vorher ein großer Kasten über dem Ablauf).
    */
   const abgeschlossen = service.ablaufAbgeschlossen === true;
+  const { toast: sperrHinweis, showToast: zeigeSperrHinweis } = useToast();
   const abschluss = useAblaufAbschliessen(service.id);
   const [abschliessenFrage, setAbschliessenFrage] = useState(false);
   const qc = useQueryClient();
@@ -192,6 +198,11 @@ export function Setlist({
     resetViewportAfterDrag(); // #56: weggerutschte Kopfleiste zurückholen (auch ohne Umsortierung)
     const { active, over } = e;
     if (!over || active.id === over.id) return;
+    // Abgeschlossen: nicht speichern – der Punkt springt zurück, der Hinweis sagt warum.
+    if (abgeschlossen) {
+      zeigeSperrHinweis(GESPERRT);
+      return;
+    }
     const oldIndex = localItems.findIndex((i) => i.id === active.id);
     const newIndex = localItems.findIndex((i) => i.id === over.id);
     if (oldIndex < 0 || newIndex < 0) return;
@@ -318,8 +329,10 @@ export function Setlist({
    * Bis dahin saßen die Knöpfe in einer weißen Leiste im Unschärfe-Band von iOS 26/27 – dort waren
    * auch Symbole weich, nicht nur Text (Screenshot Alwin, 02.10.2026). Jetzt schweben sie darunter.
    */
+  // Auch bei einem LEEREN Ablauf (13.10.2026): Sonst gab es keinen Stift, und ein in der App leer
+  // angelegter Ablauf ließ sich nicht füllen. Das Teilen braucht Lieder und fragt selbst (`teilbar`).
   const aktionen =
-    !isLoading && !isError && items.length > 0 ? (
+    !isLoading && !isError ? (
       <>
         {teilbar.length > 0 && !editMode && (
           <RundKnopf
@@ -337,6 +350,17 @@ export function Setlist({
             dataTour="edit-lock"
           >
             <Icon name="lock" size={19} stroke={2.2} />
+          </RundKnopf>
+        )}
+        {/* Öffnen ohne Rückfrage – es zerstört nichts. */}
+        {canEdit && editMode && abgeschlossen && (
+          <RundKnopf
+            onClick={() => !abschluss.isPending && abschlussSetzen(false)}
+            title="Ablauf öffnen"
+            dataTour="edit-lock"
+            aktiv
+          >
+            <Icon name="lock-open" size={19} stroke={2.2} />
           </RundKnopf>
         )}
         {canEdit && (
@@ -391,11 +415,11 @@ export function Setlist({
 
       {/* Das Plus schwebt im Bearbeiten-Modus über dem Ablauf (Alwin, 05.10.2026) – vorher stand
           „Eintrag hinzufügen" am Listenende. Auch bei einem leeren Ablauf, der sonst nicht zu füllen war. */}
-      {editMode && !abgeschlossen && !isLoading && !isError && !neuOffen && (
+      {editMode && !isLoading && !isError && !neuOffen && (
         <SchwebePlus
           label="Eintrag hinzufügen"
           dataTour="edit-add"
-          onClick={() => setNeuOffen(true)}
+          onClick={() => (abgeschlossen ? zeigeSperrHinweis(GESPERRT) : setNeuOffen(true))}
         />
       )}
 
@@ -431,6 +455,7 @@ export function Setlist({
           aktion={{ label: 'Rückgängig', onClick: rueckgaengigMachen }}
         />
       )}
+      {editMode && <Toast message={sperrHinweis} />}
 
       {setlistTour && (
         <Coachmarks
@@ -472,43 +497,21 @@ export function Setlist({
         <CenterMessage icon="⚠️" text="Ablauf konnte nicht geladen werden." onRetry={onRetry} />
       ) : items.length === 0 ? (
         <CenterMessage icon="📋" text="Dieser Ablauf enthält noch keine Punkte." />
-      ) : editMode && abgeschlossen ? (
-        <>
-          <div className={styles.abgeschlossen} role="status">
-            <Icon name="lock" size={16} stroke={2.2} className={styles.abgeschlossenIcon} />
-            <div>
-              {ABLAUF_ABGESCHLOSSEN}
-              <button
-                className={styles.oeffnenKnopf}
-                onClick={() => abschlussSetzen(false)}
-                disabled={abschluss.isPending}
-              >
-                <Icon name="lock-open" size={15} stroke={2.2} />
-                {abschluss.isPending ? 'Öffne…' : 'Ablauf öffnen'}
-              </button>
-            </div>
-          </div>
-          {err && <div className={styles.editError}>{err}</div>}
-          <AgendaFullView
-            items={items}
-            eventId={service.id}
-            beginn={service.time}
-            onSelect={onSelect}
-            onSichtbar={onAblaufSichtbar}
-          />
-        </>
       ) : editMode ? (
         <>
-          <div className={styles.editHint}>
-            {isReordering ? (
-              'Speichere…'
-            ) : (
-              <>
-                Ziehen <Icon name="grip" size={14} className={styles.hintIcon} /> zum Sortieren ·
-                Eintrag antippen zum Bearbeiten.
-              </>
-            )}
-          </div>
+          {/* Abgeschlossen: keine Anleitung zum Sortieren – der Knopf oben rechts sagt genug (Alwin). */}
+          {!abgeschlossen && (
+            <div className={styles.editHint}>
+              {isReordering ? (
+                'Speichere…'
+              ) : (
+                <>
+                  Ziehen <Icon name="grip" size={14} className={styles.hintIcon} /> zum Sortieren ·
+                  Eintrag antippen zum Bearbeiten.
+                </>
+              )}
+            </div>
+          )}
           {err && <div className={styles.editError}>{err}</div>}
           <DndContext
             sensors={sensors}
@@ -525,7 +528,12 @@ export function Setlist({
                 {localItems.map((item, i) => (
                   <Fragment key={item.id}>
                     {i === beginnBeiBearbeiten && <BeginnLinie zeit={service.time} />}
-                    <SortableRow item={item} onOpenActions={setActionItem} />
+                    <SortableRow
+                      item={item}
+                      onOpenActions={(it) =>
+                        abgeschlossen ? zeigeSperrHinweis(GESPERRT) : setActionItem(it)
+                      }
+                    />
                   </Fragment>
                 ))}
                 {beginnBeiBearbeiten === localItems.length && <BeginnLinie zeit={service.time} />}

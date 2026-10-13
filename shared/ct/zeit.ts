@@ -17,18 +17,65 @@ const MIT_ZONE = /(?:Z|[+-]\d{2}:?\d{2})$/i;
 /** Ein Formatierer je Zeitzone – `Intl.DateTimeFormat` anzulegen ist teuer, Termine gibt es viele. */
 const formatierer = new Map<string, Intl.DateTimeFormat>();
 
-function tagFormat(zeitzone: string): Intl.DateTimeFormat {
+function wanduhrFormat(zeitzone: string): Intl.DateTimeFormat {
   let f = formatierer.get(zeitzone);
   if (!f) {
     f = new Intl.DateTimeFormat('en-US', {
       timeZone: zeitzone,
+      hourCycle: 'h23',
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
     });
     formatierer.set(zeitzone, f);
   }
   return f;
+}
+
+/** Die Wanduhr in `zeitzone` zu einem Zeitpunkt: [Jahr, Monat, Tag, Stunde, Minute]. */
+function wanduhr(ms: number, zeitzone: string): number[] {
+  const teile = wanduhrFormat(zeitzone).formatToParts(new Date(ms));
+  const wert = (t: Intl.DateTimeFormatPartTypes) => Number(teile.find((p) => p.type === t)?.value);
+  return [wert('year'), wert('month'), wert('day'), wert('hour'), wert('minute')];
+}
+
+const zwei = (n: number) => String(n).padStart(2, '0');
+
+/**
+ * **Ein ChurchTools-Zeitpunkt als Ortszeit der Gemeinde** `YYYY-MM-DDTHH:mm` – die eine Umrechnung
+ * UTC → Wanduhr für alle Apps (Dienstplaner E3-2; vorher getrennt in `tagAusIso` und, für die
+ * Anmeldungen, in `shared/anmeldung/termin.ts`, dort ohne die Regel unten).
+ *
+ * Ohne Zeitzonen-Angabe (`2026-10-04` oder `2026-10-04T08:00:00`) steht die gemeinte Zeit schon im
+ * Text – umgerechnet würde sie nach der Zeitzone des Geräts bzw. Servers (im Container UTC).
+ */
+export function ortszeitAus(zeitpunkt: string, zeitzone: string): string {
+  const ms = MIT_ZONE.test(zeitpunkt) ? Date.parse(zeitpunkt) : Number.NaN;
+  if (Number.isNaN(ms)) {
+    const text = zeitpunkt.slice(0, 16);
+    return text.length === 10 ? `${text}T00:00` : text;
+  }
+  const [j, m, t, h, mi] = wanduhr(ms, zeitzone);
+  return `${j}-${zwei(m)}-${zwei(t)}T${zwei(h)}:${zwei(mi)}`;
+}
+
+/**
+ * Ortszeit `YYYY-MM-DDTHH:mm` → UTC für ChurchTools (`…Z`). Der Abstand zur UTC wird am Zeitpunkt selbst
+ * bestimmt (zweimal, damit ein Tag mit Zeitumstellung stimmt). Aus `shared/anmeldung/termin.ts` (A3).
+ */
+export function utcAus(lokal: string, zeitzone: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(lokal);
+  if (!m) throw new Error(`Zeit „${lokal}“ hat nicht die Form JJJJ-MM-TTTHH:MM.`);
+  const soll = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+  const abstand = (ms: number) => {
+    const [j, mo, t, h, mi] = wanduhr(ms, zeitzone);
+    return Date.UTC(j, mo - 1, t, h, mi) - ms;
+  };
+  let utc = soll - abstand(soll);
+  utc = soll - abstand(utc);
+  return new Date(utc).toISOString().replace('.000Z', 'Z');
 }
 
 /**
@@ -50,11 +97,5 @@ function tagFormat(zeitzone: string): Intl.DateTimeFormat {
  * Eintrag auch nach der Umstellung überein.
  */
 export function tagAusIso(zeitpunkt: string, zeitzone: string): string {
-  if (!MIT_ZONE.test(zeitpunkt)) return zeitpunkt.slice(0, 10);
-  const ms = Date.parse(zeitpunkt);
-  if (Number.isNaN(ms)) return zeitpunkt.slice(0, 10);
-  const teile = tagFormat(zeitzone).formatToParts(ms);
-  const teil = (typ: Intl.DateTimeFormatPartTypes): string =>
-    teile.find((t) => t.type === typ)?.value ?? '';
-  return `${teil('year')}-${teil('month')}-${teil('day')}`;
+  return ortszeitAus(zeitpunkt, zeitzone).slice(0, 10);
 }

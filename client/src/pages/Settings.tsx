@@ -19,6 +19,14 @@ import { ServerVarianteHinweis } from '../components/ServerVarianteHinweis';
 
 interface SettingsProps {
   site: SiteConfig;
+  /**
+   * Sind die Einstellungen wirklich vom Server geladen – nicht nur die Vorgaben, mit denen die Abfrage
+   * startet (13.10.2026)? Erst dann erscheint die Verwaltung: Ihre Fenster übernehmen beim Öffnen die
+   * aktuellen Werte als Entwurf. Aus den Vorgaben übernommen, stand dort „nichts gewählt", und ein
+   * Speichern hätte die echte Einstellung überschrieben (im Browser-Test aufgefallen). Dieselbe Lehre
+   * steht in `useSiteConfig` für die Standard-Ansicht (`dataUpdatedAt > 0`).
+   */
+  siteGeladen: boolean;
   theme: Theme;
   themePref: ThemePref;
   setThemePref: (t: ThemePref) => void;
@@ -52,6 +60,7 @@ const THEME_OPTIONS: { value: ThemePref; label: string; icon: 'sun' | 'moon' | '
  */
 export function Settings({
   site,
+  siteGeladen,
   theme,
   themePref,
   setThemePref,
@@ -174,7 +183,14 @@ export function Settings({
         </div>
       )}
 
-      {isAdmin && <VerwaltungZeilen site={site} v={verwaltung} />}
+      {isAdmin &&
+        (siteGeladen ? (
+          <VerwaltungZeilen site={site} v={verwaltung} />
+        ) : (
+          <p className={styles.installHint}>
+            Die Verwaltung erscheint, sobald die Einstellungen geladen sind.
+          </p>
+        ))}
 
       {/* Hilfe */}
       <div className={styles.group}>

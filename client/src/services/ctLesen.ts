@@ -9,6 +9,14 @@
  *
  * Aufgerufen wird es nur aus der Weiche in `churchtoolsApi.ts` und `fileDownload.ts`.
  */
+import {
+  fensterOhneAblauf,
+  kalenderAus,
+  termineOhneAblauf,
+  vorlagenAus,
+} from '@shared/ct/ablaufAnlegen';
+import type { AblaufVorlage, Kalender } from '@shared/types/index';
+import type { CtAblaufVorlage, CtKalender } from '@shared/ct/typen';
 import { gemeindeNameAus } from '@shared/ct/info';
 import type {
   AgendaItem,
@@ -415,4 +423,22 @@ export async function datei(songId: number, fileId: number): Promise<Blob> {
   const roh = await ctDatei(url);
   const { contentType } = sanitizeFileContentType(roh.type);
   return new Blob([await roh.arrayBuffer()], { type: contentType });
+}
+
+// ── Ablauf anlegen (13.10.2026) – Regeln in `@shared/ct/ablaufAnlegen` ─────────────────────────
+
+/** `GET /api/services/ohne-ablauf` – Veranstaltungen ohne Ablauf, die laut Einstellung einen bekommen sollen. */
+export async function termineOhneAblaufListe(): Promise<Service[]> {
+  const { from, to } = fensterOhneAblauf();
+  return termineOhneAblauf(leser, from, to, (await gemeindeKonfiguration()).ablaufAnlegen);
+}
+
+/** `GET /api/ablauf-vorlagen` – die Ablauf-Vorlagen aus ChurchTools. */
+export async function ablaufVorlagen(): Promise<AblaufVorlage[]> {
+  return vorlagenAus(await ctDaten<CtAblaufVorlage[]>('/agendatemplates'));
+}
+
+/** `GET /api/kalender` – die Kalender, für die Verwaltung „Termine ohne Ablauf". */
+export async function kalender(): Promise<Kalender[]> {
+  return kalenderAus(await ctDaten<CtKalender[]>('/calendars'));
 }

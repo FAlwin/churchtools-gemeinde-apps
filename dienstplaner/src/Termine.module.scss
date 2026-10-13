@@ -1,0 +1,113 @@
+// Termine-Liste des Dienstplaners (E3-2, Entwurf v17) – Tokens und Bausteine aus ui/design, Karten wie
+// auf der Startseite. Farben nach dem ChurchTools-Look: Grün = zugesagt, Rot = offen (freie Plätze).
+@use '@ui/design/mixins' as m;
+
+.karte {
+  @include m.card-list;
+}
+
+.kopf {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--hair);
+
+  h2 {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+  }
+}
+
+.monat {
+  padding: 8px 14px;
+  background: var(--section);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+}
+
+.liste {
+  list-style: none;
+}
+
+.zeile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  color: var(--text);
+
+  & + & {
+    box-shadow: inset 0 1px 0 var(--hair);
+  }
+}
+
+.mitte {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  b {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  small {
+    color: var(--text2);
+    font-size: 13px;
+  }
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.frei {
+  flex: none;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--red);
+}
+
+.besetzt {
+  flex: none;
+  display: inline-flex;
+  color: var(--green);
+}
+
+.leer,
+.hinweis {
+  padding: 14px;
+  color: var(--text2);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.mehr {
+  display: flex;
+  justify-content: center;
+  padding: 10px 14px 14px;
+  border-top: 1px solid var(--hair);
+}
+
+.knopf {
+  @include m.auswahlKnopf;
+  padding: 6px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.fussnote {
+  margin: 8px 2px 0;
+  color: var(--text2);
+  font-size: 12.5px;
+  line-height: 1.45;
+}

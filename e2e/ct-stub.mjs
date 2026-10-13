@@ -19,6 +19,17 @@ const SESSION = 'ChurchTools_stubsid=abc123';
 const PERSON = { id: 4711, firstName: 'Test', lastName: 'Musiker' };
 
 /**
+ * **Ein eigener Admin** (13.10.2026, „Termine ohne Ablauf"): Die Verwaltung ist nur für Admins da, der
+ * Stub-Nutzer oben darf alles AUSSER administrieren – das soll für die übrigen Tests so bleiben. Wer sich
+ * mit `admin@example.org` anmeldet, bekommt eine eigene Sitzung und eine eigene Person: Der Server merkt
+ * sich Rechte je Konto, mit derselben Person mischten sich Admin- und Musiker-Rechte.
+ */
+const ADMIN_EMAIL = 'admin@example.org';
+const SESSION_ADMIN = 'ChurchTools_stubsid=admin456';
+const ADMIN_PERSON = { id: 4712, firstName: 'Admin', lastName: 'Stub' };
+const istAdmin = (req) => (req.headers.cookie ?? '').includes('admin456');
+
+/**
  * Personen-Dateien (Ablage in ChurchTools, 09.10.2026) – wie gemessen: Hochladen legt IMMER eine neue
  * Datei an (kein Überschreiben), IDs steigen, Herunterladen über denselben Query-Pfad wie die Lied-Dateien.
  */
@@ -218,7 +229,43 @@ const events = [
     calendar: { domainIdentifier: '1', title: 'Gottesdienst' },
     appointmentId: null,
   },
+  /**
+   * **„Ablauf anlegen"** (13.10.2026): eine Veranstaltung OHNE Ablauf in einem eigenen Kalender – nur
+   * der Anlegen-Test schaltet diesen Kalender in der Verwaltung ein, die übrigen Tests sehen ihn nie. Ein
+   * zweiter Termin im selben Kalender mit anderem Namen prüft das Suchwort.
+   */
+  {
+    id: EVENT_ID + 5,
+    startDate: isoInDays(8),
+    endDate: isoInDays(8, 12),
+    name: 'Gottesdienst zur Anlegeprobe',
+    calendar: { domainIdentifier: '6', title: 'Anlegeprobe' },
+    appointmentId: null,
+  },
+  {
+    id: EVENT_ID + 6,
+    startDate: isoInDays(9),
+    endDate: isoInDays(9, 12),
+    name: 'Gebetsabend zur Anlegeprobe',
+    calendar: { domainIdentifier: '6', title: 'Anlegeprobe' },
+    appointmentId: null,
+  },
 ];
+
+/** Die Ablauf-Vorlage für „Ablauf anlegen" – Punkte wie in ChurchTools (`type` text/header). */
+const VORLAGE = {
+  id: 77,
+  name: 'Probe-Vorlage (Stub)',
+  calendarId: 6,
+  series: '',
+  items: [
+    { id: 1, type: 'header', title: 'Ankommen (Vorlage)', duration: 0 },
+    { id: 2, type: 'text', title: 'Begrüßung (Vorlage)', duration: 300 },
+  ],
+};
+
+/** Der angelegte Ablauf von „Anlegeprobe" – `null`, solange es keinen gibt (dann 404 wie gemessen). */
+let agendaAngelegt = null;
 
 /** Der Ablauf des Abschluss-Termins – nur abschließen/öffnen, sonst nichts. */
 const agendaAbschluss = {
@@ -523,14 +570,61 @@ const server = createServer((req, res) => {
   }
 
   if (path === '/api/login' && req.method === 'POST') {
-    // Der Stub prüft nichts – falsche Zugangsdaten sind ein eigener Testfall am echten CT.
-    json(res, { data: PERSON }, 200, { 'Set-Cookie': `${SESSION}; Path=/; HttpOnly` });
+    // Der Stub prüft nichts – falsche Zugangsdaten sind ein eigener Testfall am echten CT. Nur der
+    // Admin (`ADMIN_EMAIL`) bekommt eine eigene Sitzung.
+    let body = '';
+    req.on('data', (chunk) => (body += chunk));
+    req.on('end', () => {
+      const admin = (JSON.parse(body || '{}').username ?? '') === ADMIN_EMAIL;
+      json(res, { data: admin ? ADMIN_PERSON : PERSON }, 200, {
+        'Set-Cookie': `${admin ? SESSION_ADMIN : SESSION}; Path=/; HttpOnly`,
+      });
+    });
     return;
   }
   if (path === '/api/logout') return json(res, { data: {} });
-  if (path === '/api/whoami') return json(res, { data: PERSON });
+  if (path === '/api/whoami') return json(res, { data: istAdmin(req) ? ADMIN_PERSON : PERSON });
+  if (path === '/api/calendars') {
+    return json(res, {
+      data: [
+        { id: 1, name: 'Gottesdienst' },
+        { id: 6, name: 'Anlegeprobe' },
+      ],
+    });
+  }
+  if (path === '/api/agendatemplates') return json(res, { data: [VORLAGE] });
+  // „Ablauf anlegen": 404 bis zum Anlegen; `PUT …/agenda?template_id=` legt aus der Vorlage an.
+  if (
+    path === `/api/events/${EVENT_ID + 5}/agenda` ||
+    path === `/api/events/${EVENT_ID + 6}/agenda`
+  ) {
+    const id = Number(path.split('/')[3]);
+    if (req.method === 'PUT' && id === EVENT_ID + 5) {
+      const vorlage = url.searchParams.get('template_id');
+      agendaAngelegt = {
+        calendarId: 6,
+        eventStartPosition: 0,
+        isLocked: false,
+        items:
+          vorlage === String(VORLAGE.id)
+            ? VORLAGE.items.map((i, n) => ({ ...i, id: 950 + n, position: n, startTimes: {} }))
+            : [],
+      };
+      return json(res, { data: agendaAngelegt });
+    }
+    if (id === EVENT_ID + 5 && agendaAngelegt) return json(res, { data: agendaAngelegt });
+    return json(res, { message: 'Agenda not found' }, 404);
+  }
   if (path === '/api/csrftoken') return json(res, { data: 'stub-csrf-token' });
-  if (path === '/api/permissions/global') return json(res, { data: permissions });
+  if (path === '/api/permissions/global') {
+    // Der Admin darf zusätzlich administrieren (`STANDARD_ADMIN_RECHT` in `shared/ct/rechte.ts`).
+    if (istAdmin(req)) {
+      return json(res, {
+        data: { ...permissions, churchcore: { 'administer persons': true } },
+      });
+    }
+    return json(res, { data: permissions });
+  }
   if (path === '/api/events') return json(res, { data: events });
   // Punkte anlegen und löschen (05.10.2026, „Neuer Eintrag" über das schwebende Plus). Neue Punkte
   // kommen ans Ende – wie in ChurchTools.

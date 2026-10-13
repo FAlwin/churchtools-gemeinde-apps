@@ -70,31 +70,7 @@
   pointer-events: none;
 }
 
-// Datumskachel wie „Anstehende Termine" in der ChurchTools-App (#393): hellblau, dunkle Schrift.
-.dateBadge {
-  width: 50px;
-  height: 50px;
-  border-radius: var(--r-tile);
-  background: var(--blue-tile);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.day {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--blue-tile-text);
-  line-height: 1;
-}
-.month {
-  font-size: 11px;
-  color: var(--blue-tile-text);
-  font-weight: 500;
-  margin-top: 2px;
-  opacity: 0.85;
-}
+// Die Datumskachel ist `DatumKachel` (ui/bedienung) – gemeinsam mit dem Dienstplaner.
 
 .info {
   flex: 1;
@@ -177,4 +153,30 @@
   flex-shrink: 0;
   color: var(--green);
   margin-right: 2px;
+}
+
+// ── Termin ohne Ablauf (13.10.2026) ─────────────────────────────────────────────────────────
+// Gedämpfter Name (die graue Kachel kommt aus `DatumKachel gedimmt`): Hier gibt es noch nichts zu öffnen.
+.svcNameOhne {
+  color: var(--text2);
+}
+.keinAblauf {
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px dashed var(--text3);
+  color: var(--text2);
+  font-size: 11.5px;
+}
+.ablaufAnlegen {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
 }

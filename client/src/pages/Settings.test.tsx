@@ -56,13 +56,14 @@ const SITE: SiteConfig = {
   noteRoles: [],
 };
 
-function zeige(p: { isAdmin?: boolean; canUseGlobalNotes?: boolean } = {}) {
+function zeige(p: { isAdmin?: boolean; canUseGlobalNotes?: boolean; siteGeladen?: boolean } = {}) {
   const onToggleWake = vi.fn();
   const onLogout = vi.fn();
   const onReplayIntro = vi.fn();
   render(
     <Settings
       site={SITE}
+      siteGeladen={p.siteGeladen ?? true}
       theme="light"
       themePref="system"
       setThemePref={vi.fn()}
@@ -93,6 +94,14 @@ describe('Mehr – Aufbau', () => {
     zeige();
     expect(screen.queryByText('Verwaltung')).toBeNull();
     expect(screen.queryByText('Team-Notizen')).toBeNull();
+  });
+
+  it('die Verwaltung erst mit GELADENEN Einstellungen – sonst übernähmen ihre Fenster die Vorgaben', () => {
+    zeige({ isAdmin: true, siteGeladen: false });
+    expect(screen.queryByText('Verwaltung')).toBeNull();
+    expect(
+      screen.getByText(/Die Verwaltung erscheint, sobald die Einstellungen geladen sind/),
+    ).toBeTruthy();
   });
 
   it('zeigt beides mit den Rechten dazu', () => {

@@ -1,0 +1,538 @@
+// Planen-Matrix des Dienstplaners (E3-4, Entwurf v17) – Tokens aus ui/design. Farben nach dem
+// ChurchTools-Look: Grün = zugesagt/besetzt, Rot = frei (offen), Grau = nicht vorgesehen.
+@use '@ui/design/mixins' as m;
+
+.karte {
+  @include m.card-list;
+}
+
+// ── Computer: die Tabelle ────────────────────────────────────────────────────
+// Eigener Rollbereich in beide Richtungen, damit Kopfzeile (oben) und Dienst-Spalte (links) stehen bleiben.
+.rahmen {
+  @include m.card-list;
+  overflow: auto;
+  max-height: calc(100vh - 220px);
+  min-height: 320px;
+}
+
+.plan {
+  --svcw: 178px;
+  --cw: 172px;
+  border-collapse: separate;
+  border-spacing: 0;
+
+  th,
+  td {
+    border-right: 1px solid var(--hair);
+    border-bottom: 1px solid var(--hair);
+    background: var(--surface2);
+    vertical-align: top;
+    padding: 0;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: var(--nav-bg);
+    border-bottom: 2px solid var(--border);
+  }
+}
+
+.svc {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: var(--svcw);
+  min-width: var(--svcw);
+  max-width: var(--svcw);
+  padding: 10px 12px;
+  text-align: left;
+  border-right: 1px solid var(--border) !important;
+
+  b {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+  }
+}
+
+// Die Kopfzelle „Dienst“: über allem, unten bündig. Mit `.plan` davor, damit sie die Tabellenregeln schlägt –
+// ein Element-Selektor vorne (`thead …`) gälte im Erweiterungs-Bau als globale Regel (Packprüfung).
+.plan .svcKopf {
+  z-index: 5;
+  vertical-align: bottom;
+  font-weight: 400;
+  color: var(--text2);
+  font-size: 13px;
+}
+
+.kopf {
+  // Einheitlich hoch (Entwurf: --hh 112px) – ein langer Name darf die Zeile nicht strecken.
+  height: 112px;
+  width: var(--cw);
+  min-width: var(--cw);
+  max-width: var(--cw);
+  padding: 10px 11px !important;
+  text-align: left;
+  font-weight: 400;
+}
+
+.kopfDatum {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+
+  small {
+    color: var(--text2);
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+}
+
+.kopfName {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fuellung {
+  height: 4px;
+  margin-top: 6px;
+  border-radius: 2px;
+  background: var(--surface3);
+  overflow: hidden;
+
+  i {
+    display: block;
+    height: 100%;
+    background: var(--green);
+  }
+}
+
+.stand {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.offen {
+  color: var(--red);
+  font-weight: 600;
+}
+
+.gruppe th,
+.gruppe td {
+  background: var(--section);
+}
+
+.gruppenKnopf {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+
+  &[aria-expanded='false'] .chev {
+    transform: rotate(-90deg);
+  }
+}
+
+.chev {
+  display: inline-flex;
+  color: var(--text2);
+  transition: transform 0.15s;
+}
+
+.duPlanst {
+  margin-left: auto;
+  flex: none;
+  white-space: nowrap;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.gruppenStand {
+  flex: none;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--red);
+}
+
+.besetzt {
+  color: var(--green);
+  font-weight: 600;
+}
+
+.nichts {
+  color: var(--text3);
+  font-weight: 400;
+}
+
+.zelle {
+  padding: 6px !important;
+}
+
+.na {
+  display: block;
+  padding: 10px;
+  text-align: center;
+  color: var(--text3);
+}
+
+.abgesagtSpalte {
+  opacity: 0.55;
+}
+
+// ── Plätze ──────────────────────────────────────────────────────────────────
+.plaetze {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.platz {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  font-size: 14px;
+  line-height: 1.2;
+  color: var(--text);
+}
+
+.ic {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.zugesagt .ic {
+  background: var(--green);
+  color: #fff;
+}
+
+.angefragt .ic {
+  border: 1.5px solid var(--text3);
+  color: var(--text2);
+}
+
+.frei {
+  justify-content: center;
+  font-weight: 700;
+  color: var(--red);
+  background: color-mix(in srgb, var(--red) 10%, var(--surface2));
+  border: 1.5px solid color-mix(in srgb, var(--red) 55%, transparent);
+}
+
+.ich {
+  font-weight: 700;
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leise {
+  color: var(--text2);
+  font-style: italic;
+}
+
+.gast {
+  flex: none;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--surface3);
+  color: var(--text2);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+// ── Handy: Datumsleiste und ein Termin ──────────────────────────────────────
+.datumsleiste {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 2px 6px;
+  scroll-snap-type: x proximity;
+}
+
+.datumChip {
+  flex: none;
+  scroll-snap-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 96px;
+  max-width: 124px;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-tile);
+  background: var(--surface2);
+  font: inherit;
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+
+  b {
+    font-size: 14px;
+  }
+
+  small {
+    font-size: 11.5px;
+    color: var(--text2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  &[aria-pressed='true'] {
+    border-color: var(--blue);
+    box-shadow: inset 0 0 0 1px var(--blue);
+  }
+}
+
+.chipStand {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--red);
+}
+
+.chipBesetzt {
+  composes: chipStand;
+  color: var(--green);
+}
+
+.handyKopf {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+
+  b {
+    display: block;
+    font-size: 16px;
+  }
+
+  small {
+    color: var(--text2);
+    font-size: 13px;
+  }
+}
+
+.handyGruppe {
+  border-top: 1px solid var(--hair);
+}
+
+.handyGruppenKopf {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px 0 0;
+  background: var(--section);
+}
+
+.handyDienst {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--hair);
+
+  > span {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text2);
+  }
+}
+
+.hinweis {
+  margin: 8px 2px 0;
+  color: var(--text2);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.mehr {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.knopf {
+  @include m.auswahlKnopf;
+  padding: 6px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+// ── E3-5: Werkzeugleiste, Filter, Terminleiste ──────────────────────────────
+.planen {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.werkzeug {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+
+.leiste {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: auto;
+}
+
+.leistenKnopf {
+  @include m.auswahlKnopf;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  min-width: 32px;
+  padding: 0 7px;
+  border-radius: 8px;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+.zeitraum {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 150px;
+  padding: 0 4px;
+  line-height: 1.15;
+
+  b {
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  small {
+    font-size: 11.5px;
+    color: var(--text2);
+  }
+}
+
+.anpassen {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--blue-ink);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+// Termine einer anderen Veranstaltung als der häufigsten (Entwurf: Gebetsabende abgesetzt).
+.neben {
+  background: color-mix(in srgb, var(--section) 70%, var(--surface2)) !important;
+}
+
+// ── „Wer wie oft?“ ──────────────────────────────────────────────────────────
+.personen {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+
+  th,
+  td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--hair);
+    text-align: left;
+    vertical-align: top;
+    color: var(--text);
+  }
+
+  thead th {
+    background: var(--nav-bg);
+    color: var(--text2);
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  tbody th {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+}
+
+.etikett {
+  display: inline-block;
+  margin: 0 4px 4px 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--surface3);
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.anzahl {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+
+  i {
+    display: block;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--blue);
+  }
+}

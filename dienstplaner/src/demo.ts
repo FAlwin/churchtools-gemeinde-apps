@@ -19,6 +19,76 @@ const MITGLIED = {
   'manage absent': false,
 };
 
+/** Ein Zeitpunkt `tage` nach heute um `uhr` (UTC), damit die Demo nie veraltet. */
+function zeit(tage: number, uhr: string): string {
+  const d = new Date(Date.now() + tage * 86_400_000);
+  return `${d.toISOString().slice(0, 10)}T${uhr}:00Z`;
+}
+
+/** Plätze wie gemessen (Live, 13.10.2026): frei = ohne Namen; `isAccepted` = zugesagt. */
+const platz = (
+  serviceId: number,
+  personId: number | null,
+  name: string | null,
+  isAccepted = false,
+) => ({
+  serviceId,
+  personId,
+  name,
+  isAccepted,
+});
+
+const TERMINE = [
+  {
+    id: 101,
+    name: 'Gottesdienst',
+    startDate: zeit(4, '08:00'),
+    endDate: zeit(4, '10:00'),
+    eventServices: [
+      platz(6, 1, 'Alwin', true),
+      platz(7, null, null),
+      platz(9, 1, 'Alwin'),
+      platz(9, 19, 'Spike', true),
+    ],
+  },
+  {
+    id: 102,
+    name: 'Gebetsabend',
+    startDate: zeit(7, '17:00'),
+    endDate: zeit(7, '18:30'),
+    eventServices: [platz(6, 19, 'Spike', true)],
+  },
+  {
+    id: 103,
+    name: 'Gottesdienst',
+    startDate: zeit(11, '08:00'),
+    endDate: zeit(11, '10:00'),
+    eventServices: [platz(6, null, null), platz(7, null, null), platz(9, 19, 'Spike')],
+  },
+  {
+    id: 104,
+    name: 'Gemeindeversammlung',
+    startDate: zeit(16, '17:00'),
+    endDate: zeit(16, '19:00'),
+    isCanceled: true,
+    eventServices: [],
+  },
+  {
+    id: 105,
+    name: 'Gebetsabend',
+    startDate: zeit(21, '17:00'),
+    endDate: zeit(21, '18:30'),
+    eventServices: [platz(7, 1, 'Alwin', true)],
+  },
+  {
+    id: 106,
+    name: 'Gottesdienst',
+    startDate: zeit(39, '09:00'),
+    endDate: zeit(39, '11:00'),
+    eventServices: [platz(6, 19, 'Spike', true), platz(7, 1, 'Alwin', true), platz(9, null, null)],
+  },
+];
+
 function daten(fall: string): Record<string, unknown> {
   return {
     '/api/whoami': { data: { id: 1, firstName: fall === 'mitglied' ? 'Spike' : 'Alwin' } },
@@ -48,6 +118,37 @@ function daten(fall: string): Record<string, unknown> {
         churchcore: { 'administer persons': fall !== 'mitglied' },
         churchservice: fall === 'mitglied' ? MITGLIED : PLANER,
       },
+    },
+    '/api/events': { data: TERMINE },
+    // Ablauf nur am ersten Termin – die anderen zeigen „Noch kein Ablauf“ (ChurchTools: 404).
+    '/api/events/101/agenda': {
+      data: {
+        items: [
+          { id: 1, type: 'header', title: 'Ankommen' },
+          { id: 2, type: 'song', title: 'Halleluja', song: { title: 'Halleluja' } },
+          { id: 3, type: 'song', title: 'Treu', song: { title: 'Treu' } },
+          { id: 4, type: 'normal', title: 'Predigt' },
+        ],
+      },
+    },
+    // Abwesend am Tag der offenen Anfrage (Gesang, erster Gottesdienst) – die Startseite warnt.
+    '/api/persons/1/absences': {
+      data: [
+        { id: 1, startDate: zeit(4, '00:00').slice(0, 10), endDate: zeit(4, '00:00').slice(0, 10) },
+        {
+          id: 2,
+          startDate: zeit(30, '00:00').slice(0, 10),
+          endDate: zeit(33, '00:00').slice(0, 10),
+        },
+      ],
+    },
+    '/api/custommodules': { data: [{ id: 10, shorty: 'musik-app', name: 'Musik App' }] },
+    '/api/services': {
+      data: [
+        { id: 6, name: 'Ton', serviceGroupId: 3, groupIds: [7] },
+        { id: 7, name: 'Licht', serviceGroupId: 3, groupIds: [7] },
+        { id: 9, name: 'Gesang', serviceGroupId: 4, groupIds: [9] },
+      ],
     },
     '/api/servicegroups': {
       data: [

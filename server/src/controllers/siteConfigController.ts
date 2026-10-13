@@ -10,6 +10,7 @@ import { getSiteConfig, saveSiteConfig } from '../services/siteConfig.js';
 import { getGroupRoles, getGroups } from '../services/ctCapabilities.js';
 import { readSession, isSessionExpired } from '../middleware/session.js';
 import { ctCookie } from '../utils/ctCookie.js';
+import { getKalender } from '../services/ctRead.js';
 
 /**
  * GET /api/site-config – öffentlich (der Login-Screen braucht Name/Logo/Links, bevor man
@@ -50,6 +51,11 @@ export async function putSiteConfigCtrl(req: Request, res: Response): Promise<vo
     (status, meldung) => new HttpError(status, meldung),
   );
   res.json(await saveSiteConfig(geprueft));
+}
+
+/** GET /api/kalender (nur Admin) – ChurchTools-Kalender für „Termine ohne Ablauf" (13.10.2026). */
+export async function getKalenderCtrl(req: Request, res: Response): Promise<void> {
+  res.json(await getKalender(ctCookie(req)));
 }
 
 /** GET /api/groups (nur Admin) – ChurchTools-Gruppen für das Dropdown „Gruppen-Zuweisung". */

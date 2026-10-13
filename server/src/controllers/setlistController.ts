@@ -7,7 +7,9 @@
  */
 import type { Request, Response } from 'express';
 import { z } from 'zod';
+import { HttpError } from '../middleware/errorHandler.js';
 import {
+  getServicesOhneAblauf,
   getServicesWithSetlists,
   getAgendaItems,
   getSetlistFingerprint,
@@ -17,7 +19,8 @@ import {
 import { getMemoizedVersion, rememberVersion } from '../services/versionMemo.js';
 import { getUserId } from '../services/ctAuth.js';
 import { getCapabilities } from '../services/ctCapabilities.js';
-import { getCtServices } from '../services/ctRead.js';
+import { getAblaufVorlagen, getCtServices } from '../services/ctRead.js';
+import { getSiteConfig } from '../services/siteConfig.js';
 import {
   createAgendaItem,
   deleteAgendaItem,
@@ -26,6 +29,7 @@ import {
   setAgendaItemVorBeginn,
   updateAgendaItem,
   setAblaufAbgeschlossen,
+  createAblauf,
 } from '../services/ctWrite.js';
 import { gesehenHolen, gesehenMerken } from '../services/kontoAblage.js';
 import { setlistGeaendert, standardFenster } from '@shared/ct/setlistKern';
@@ -66,6 +70,47 @@ export async function getServices(req: Request, res: Response): Promise<void> {
     return { ...service, setlistChanged: setlistGeaendert(prev, hash) };
   });
   res.json(services);
+}
+
+/**
+ * GET /api/services/ohne-ablauf – Veranstaltungen ohne Ablauf, die laut Verwaltung einen bekommen
+ * sollen (13.10.2026). Eigene Abfrage neben `/api/services`, damit alles, was dort einen Ablauf
+ * voraussetzt (Offline-Vorrat, Liederheft, Navigation), unverändert bleibt.
+ */
+export async function getServicesOhneAblaufCtrl(req: Request, res: Response): Promise<void> {
+  const cookie = ctCookie(req);
+  const regel = (await getSiteConfig()).ablaufAnlegen;
+  res.json(await getServicesOhneAblauf(cookie, accountKey(req.ctUserId, cookie), regel));
+}
+
+/** GET /api/ablauf-vorlagen – die Ablauf-Vorlagen aus ChurchTools (13.10.2026). */
+export async function getAblaufVorlagenCtrl(req: Request, res: Response): Promise<void> {
+  res.json(await getAblaufVorlagen(ctCookie(req)));
+}
+
+const ablaufAnlegenSchema = z.object({
+  kalenderId: idSchema,
+  quelle: z.discriminatedUnion('art', [
+    z.object({ art: z.literal('vorlage'), vorlageId: idSchema }),
+    z.object({ art: z.literal('kopie'), eventId: idSchema }),
+    z.object({ art: z.literal('leer') }),
+  ]),
+});
+
+/**
+ * POST /api/services/:eventId/agenda – einen Ablauf anlegen (13.10.2026). 409, wenn es schon einen
+ * gibt; Regel und Nachlesen in `@shared/ct/ablaufAnlegen`.
+ */
+export async function postAblaufCtrl(req: Request, res: Response): Promise<void> {
+  const eventId = idSchema.parse(req.params.eventId);
+  const { kalenderId, quelle } = ablaufAnlegenSchema.parse(req.body);
+  if (quelle.art === 'kopie' && quelle.eventId === eventId) {
+    throw new HttpError(400, 'Ein Ablauf kann nicht aus sich selbst kopiert werden.');
+  }
+  await createAblauf(ctCookie(req), eventId, kalenderId, quelle);
+  // Kopie oder Vorlage können Lieder enthalten – die Statistik holt sie beim nächsten Blick neu.
+  invalidateSongUsageCache();
+  res.json({ ok: true });
 }
 
 /**

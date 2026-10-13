@@ -29,6 +29,10 @@ export function VerwaltungZeilen({ site, v }: { site: SiteConfig; v: Verwaltung 
               : `${site.links.length} ${site.links.length === 1 ? 'Link' : 'Links'}`}
           </span>
         </button>
+        <button className={`${styles.setRow} ${styles.tappable}`} onClick={v.openAblaufAnlegen}>
+          <span className={styles.setLabel}>Termine ohne Ablauf</span>
+          <span className={styles.setValue}>{ablaufAnlegenWert(site)}</span>
+        </button>
         <button className={`${styles.setRow} ${styles.tappable}`} onClick={v.openAnsicht}>
           <span className={styles.setLabel}>Liedblatt: Standard-Ansicht</span>
           <span className={styles.setValue}>
@@ -69,4 +73,13 @@ export function VerwaltungZeilen({ site, v }: { site: SiteConfig; v: Verwaltung 
       )}
     </div>
   );
+}
+
+/** Kurzfassung für die Zeile „Termine ohne Ablauf": aus, oder Anzahl Kalender samt Suchwort. */
+function ablaufAnlegenWert(site: SiteConfig): string {
+  const regel = site.ablaufAnlegen;
+  const n = regel?.kalenderIds.length ?? 0;
+  if (n === 0) return 'aus';
+  const kalender = `${n} Kalender`;
+  return regel?.suchwort ? `${kalender} · „${regel.suchwort}“` : kalender;
 }

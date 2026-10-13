@@ -1,10 +1,14 @@
 # Dienstplaner – ChurchTools-Erweiterung
 
-> **Stand: Reiter (E3-1).** Die Erweiterung startet in ChurchTools und zeigt, wer angemeldet ist, die
-> eigenen Gruppen und welche Dienstgruppen man laut ChurchTools-Rechten plant – **nur lesen**. Die Reiter
+> **Stand: E3 fertig gebaut (E3-5).** Die Erweiterung startet in ChurchTools – **nur lesen**. **Planen**:
+> Termine als Spalten, Dienstgruppen und Dienste als Zeilen, in jeder Zelle die Plätze; Terminleiste,
+> Spaltenbreite, Filter nach Veranstaltung und Gruppe, „Wer wie oft?“; am Handy ein Termin auf einmal. **Start**: „Als
+> Nächstes“ (dein Dienst, Team, Lieder, Musik-App), deine offenen Anfragen, deine nächsten Dienste,
+> Abwesenheiten und für Planer die freien Plätze der nächsten 6 Wochen. Die Reiter
 > Start · Termine · Planen · Abwesenheiten stehen (am Computer oben, am Handy unten; „Planen“ nur für
-> Planer); Termine, Planen und Abwesenheiten füllen sich Schritt für Schritt (Bauplan E3–E9). Diese
-> Anleitung wächst mit.
+> Planer). **Termine**: Liste nach Monaten, „Meine | Alle“, Filter nach Veranstaltung (aus den
+> Terminnamen), die eigenen Dienste (zugesagt/angefragt), für Planer die freien Plätze ihrer
+> Dienstgruppen. Planen und Abwesenheiten folgen (Bauplan E3–E9). Diese Anleitung wächst mit.
 
 Der Dienstplaner plant die Dienste **aller** Dienstgruppen (Musik, Technik, Predigt, Moderation …) nach
 dem Vorbild von Planning Center Services. **Alles liegt in ChurchTools** – es gibt keinen eigenen Server.
@@ -36,13 +40,14 @@ deren Sitzung. **Ein eigenes Rechte-System gibt es nicht.**
 | --------------------------------- | -------------------------------- | -------------------------------------------------------------------- |
 | alle mit Zugang zur Erweiterung   | eigene Dienste und Gruppen sehen | Erweiterung „Dienstplaner“ sehen                                     |
 | Planer einer Dienstgruppe         | diese Dienstgruppe planen        | Recht „Dienste einer Dienstgruppe bearbeiten“ für diese Dienstgruppe |
-| Leitung der Gruppe eines Dienstes | diesen Dienst planen (ab E3)     | Rolle mit Leitung in der ChurchTools-Gruppe des Dienstes             |
-| Admin eines Termins               | an diesem Termin planen (ab E3)  | als Admin am Termin eingetragen                                      |
+| Leitung der Gruppe eines Dienstes | diesen Dienst planen             | Rolle mit Leitung in der ChurchTools-Gruppe des Dienstes             |
+| Admin eines Termins               | an diesem Termin planen          | als Admin am Termin eingetragen                                      |
 | Ablauf-Pflege                     | Abläufe bearbeiten (ab E6)       | Recht „Ablauf bearbeiten“ für den Kalender                           |
 
-Gemessen an der Test-Instanz (08. und 13.10.2026). In E2 zeigt die Startseite nur den ersten Teil
-(globales Recht „Dienste einer Dienstgruppe bearbeiten“); Leitung und Termin-Admin hängen am einzelnen
-Termin und kommen mit der Terminansicht dazu.
+Gemessen an der Test-Instanz (08. und 13.10.2026). Alle drei Wege gelten seit E3-4 (eine Regel:
+`darfDienstPlanen`). Der Reiter „Planen“ erscheint für globale Planer und Gruppenleitungen; wer nur Admin
+einzelner Termine ist, sieht das an diesen Terminen. „Planen“ heißt bis E4 nur ansehen – eingeteilt wird
+noch in ChurchTools.
 
 **Den Menüpunkt sehen:** Erweiterung **„Dienstplaner“ sehen** – für alle, die Dienste haben.
 

@@ -1,69 +1,66 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
 import { App } from './App';
 import { ladeStart, type Start } from './start';
+import { ladeTermine } from './ladeTermine';
+import { startFuer } from './start.testutil';
+import { LEERER_PLAN } from '@shared/dienstplan/zeile.testutil';
 
-vi.mock('./start', () => ({ ladeStart: vi.fn() }));
+const KEINE_TERMINE = { zeilen: [], plan: LEERER_PLAN };
+
+// Nur das Laden wird ersetzt – die Regeln aus start.ts (wer planen darf) laufen echt.
+vi.mock('./start', async (original) => ({
+  ...(await original<typeof import('./start')>()),
+  ladeStart: vi.fn(),
+}));
+vi.mock('./ladeTermine', () => ({ ladeTermine: vi.fn(), WOCHEN_JE_SCHRITT: 8 }));
+// Das Beiwerk der Startseite (Lieder, Abwesenheiten, Musik-App) – hier ohne Netz.
+vi.mock('./ladeBeiwerk', () => ({
+  ladeLieder: vi.fn(() => Promise.resolve(null)),
+  ladeAbwesenheiten: vi.fn(() => Promise.resolve([])),
+  ladeMusikApp: vi.fn(() => Promise.resolve(null)),
+}));
 const laden = vi.mocked(ladeStart);
+const termineLaden = vi.mocked(ladeTermine);
 
-const DIENSTGRUPPEN = [
-  { id: 1, name: 'Programm' },
-  { id: 3, name: 'Technik' },
-  { id: 4, name: 'Musik' },
-];
+// Ohne eigene Vorgabe im Test: keine Termine (sonst gäbe die Attrappe `undefined` zurück).
+beforeEach(() => termineLaden.mockResolvedValue(KEINE_TERMINE));
 
 function start(planbar: number[] | null, gruppen: Start['gruppen'] = []): Start {
-  return {
-    vorname: 'Alwin',
-    gemeinde: 'Evangeliumschristen- Gemeinde e.V.',
+  return startFuer({
     gruppen,
-    dienstgruppen: DIENSTGRUPPEN,
     rechte: { planbareDienstgruppen: planbar, ablaufKalender: [], abwesenheitenAller: false },
-  };
+  });
 }
 
-const karte = (name: string) => within(screen.getByRole('region', { name }));
+describe('App des Dienstplaners (E2/E3-3)', () => {
+  const planenKnoepfe = () =>
+    within(screen.getByRole('region', { name: 'Planen' }))
+      .getAllByRole('button')
+      .map((b) => b.querySelector('b')?.textContent);
 
-describe('App des Dienstplaners (E2)', () => {
-  it('Gruß, Gemeinde, geplante Dienstgruppen in der Reihenfolge der Gemeinde, Gruppen mit Rolle', async () => {
-    laden.mockResolvedValue(
-      start(
-        [4, 3],
-        [
-          { id: 9, name: 'Lobpreisteam', leitung: false },
-          { id: 7, name: 'Technik', leitung: true },
-        ],
-      ),
-    );
+  it('Gruß, Gemeinde und – für Planer – die Dienstgruppen in der Reihenfolge der Gemeinde', async () => {
+    laden.mockResolvedValue(start([4, 3]));
     render(<App />);
     expect(await screen.findByText('Hallo Alwin')).toBeTruthy();
     expect(screen.getByText(/Dienstplaner · Evangeliumschristen- Gemeinde e\.V\./)).toBeTruthy();
-    expect(
-      karte('Planen')
-        .getAllByRole('listitem')
-        .map((z) => z.textContent),
-    ).toEqual(['Technik', 'Musik']);
-    expect(
-      karte('Deine Gruppen')
-        .getAllByRole('listitem')
-        .map((z) => z.textContent),
-    ).toEqual(['LobpreisteamMitglied', 'TechnikLeitung']);
+    expect(planenKnoepfe()).toEqual(['Technik', 'Musik']);
   });
 
   it('Recht ohne Aufzählung (null) → alle Dienstgruppen', async () => {
     laden.mockResolvedValue(start(null));
     render(<App />);
     await screen.findByText('Hallo Alwin');
-    expect(karte('Planen').getAllByRole('listitem')).toHaveLength(3);
+    expect(planenKnoepfe()).toHaveLength(3);
   });
 
-  it('ohne Planer-Recht und ohne Gruppen → sagt beides, statt leere Karten zu zeigen', async () => {
+  it('ohne Planer-Recht keine Karte „Planen“', async () => {
     laden.mockResolvedValue(start([]));
     render(<App />);
-    expect(await screen.findByText(/planst du keine Dienstgruppe/)).toBeTruthy();
-    expect(screen.getByText('Du bist in keiner Gruppe.')).toBeTruthy();
+    await screen.findByText('Hallo Alwin');
+    expect(screen.queryByRole('region', { name: 'Planen' })).toBeNull();
   });
 
   it('vorübergehender Fehler → „Erneut versuchen“ lädt neu', async () => {
@@ -140,5 +137,94 @@ describe('Reiter des Dienstplaners (E3-1)', () => {
     render(<App />);
     await screen.findByRole('button', { name: 'Erneut versuchen' });
     expect(screen.queryByRole('group', { name: 'Bereiche' })).toBeNull();
+  });
+});
+
+describe('Termine im Reiter (E3-2)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.location.hash = '';
+  });
+
+  it('Start und Termine teilen eine Liste: einmal geladen, beim Wechseln nicht neu; „Weitere“ +8 Wochen', async () => {
+    breite(false);
+    laden.mockResolvedValue(start([3]));
+    termineLaden.mockResolvedValue(KEINE_TERMINE);
+    render(<App />);
+    const bereiche = await screen.findByRole('group', { name: 'Bereiche' });
+    // Schon die Startseite braucht die Termine („Als Nächstes“, deine Dienste).
+    await waitFor(() => expect(termineLaden).toHaveBeenCalledTimes(1));
+    fireEvent.click(within(bereiche).getByRole('button', { name: 'Termine' }));
+    await screen.findByRole('button', { name: 'Weitere Termine laden' });
+    fireEvent.click(within(bereiche).getByRole('button', { name: 'Start' }));
+    fireEvent.click(within(bereiche).getByRole('button', { name: 'Termine' }));
+    await screen.findByRole('button', { name: 'Weitere Termine laden' });
+    expect(termineLaden).toHaveBeenCalledTimes(1);
+    expect(termineLaden.mock.calls[0][1]).toBe(8);
+    fireEvent.click(screen.getByRole('button', { name: 'Weitere Termine laden' }));
+    expect(termineLaden).toHaveBeenCalledTimes(2);
+    expect(termineLaden.mock.calls[1][1]).toBe(16);
+  });
+
+  it('Ladefehler der Termine → Fehlerkasten, „Erneut versuchen“ lädt neu', async () => {
+    breite(false);
+    window.location.hash = '#/termine';
+    laden.mockResolvedValue(start([3]));
+    termineLaden.mockRejectedValueOnce(new ApiError(502, 'x')).mockResolvedValueOnce(KEINE_TERMINE);
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Erneut versuchen' }));
+    await screen.findByRole('button', { name: 'Weitere Termine laden' });
+    expect(termineLaden).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('Startseite → Termine (E3-3)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.location.hash = '';
+  });
+
+  it('„Alle“ bei „Deine nächsten Dienste“ öffnet die Termine in der Ansicht „Meine“ – auch wenn „Alle“ gemerkt war', async () => {
+    breite(false);
+    localStorage.setItem(
+      'dienstplaner.termine.auswahl',
+      JSON.stringify({ nurMeine: false, ausgeblendet: [] }),
+    );
+    laden.mockResolvedValue(start([3]));
+    render(<App />);
+    const dienste = await screen.findByRole('region', { name: 'Deine nächsten Dienste' });
+    fireEvent.click(within(dienste).getByRole('button', { name: /Alle/ }));
+    expect(window.location.hash).toBe('#/termine');
+    const welche = await screen.findByRole('group', { name: 'Welche Termine' });
+    expect(within(welche).getByRole('button', { name: 'Meine' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+  });
+});
+
+describe('Planen für Gruppenleiter (E3-4)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.location.hash = '';
+  });
+
+  it('Leitung der Gruppe eines Dienstes ohne globales Recht → Reiter „Planen“ mit der Matrix', async () => {
+    breite(false);
+    laden.mockResolvedValue(start([], [{ id: 7, name: 'Technik', leitung: true }]));
+    render(<App />);
+    const bereiche = await screen.findByRole('group', { name: 'Bereiche' });
+    fireEvent.click(within(bereiche).getByRole('button', { name: 'Planen' }));
+    expect(window.location.hash).toBe('#/planen');
+    expect(
+      await screen.findByText(/In den nächsten 8 Wochen stehen keine Termine an/),
+    ).toBeTruthy();
+  });
+
+  it('nur Mitglied, ohne Recht → kein Reiter „Planen“', async () => {
+    breite(false);
+    laden.mockResolvedValue(start([], [{ id: 7, name: 'Technik', leitung: false }]));
+    render(<App />);
+    const bereiche = await screen.findByRole('group', { name: 'Bereiche' });
+    expect(within(bereiche).queryByRole('button', { name: 'Planen' })).toBeNull();
   });
 });

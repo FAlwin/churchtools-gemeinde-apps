@@ -5,6 +5,7 @@ import { Spinner } from './Spinner';
 import { Icon } from '@ui/icons/icons';
 import { LinksManager } from './LinksManager';
 import { TerminArtenManager } from './TerminArtenManager';
+import { AblaufAnlegenManager } from './AblaufAnlegenManager';
 import { useGroupRoles } from '../hooks/useSiteConfig';
 import type { Verwaltung } from '../hooks/useVerwaltung';
 import styles from '../pages/Settings.module.scss';
@@ -71,6 +72,12 @@ export function VerwaltungFenster({ site, isAdmin, v }: VerwaltungFensterProps) 
             keinen Filter.
           </p>
           <TerminArtenManager site={site} onClose={v.closeTerminArten} />
+        </Sheet>
+      )}
+
+      {v.offen.ablaufAnlegen && (
+        <Sheet title="Termine ohne Ablauf" onClose={v.closeAblaufAnlegen}>
+          <AblaufAnlegenManager site={site} onClose={v.closeAblaufAnlegen} />
         </Sheet>
       )}
 

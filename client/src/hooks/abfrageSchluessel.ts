@@ -24,6 +24,10 @@ export const schluessel = {
 
   /** Alle Terminlisten – die aktuelle UND die vergangenen Monate. */
   termine: () => ['services'] as const,
+  /** Termine ohne Ablauf (13.10.2026) – unter `termine()`, damit ein Erneuern der Liste sie mitnimmt. */
+  termineOhneAblauf: () => [...schluessel.termine(), 'ohne-ablauf'] as const,
+  ablaufVorlagen: () => ['ablauf-vorlagen'] as const,
+  kalender: () => ['kalender'] as const,
   termineVergangen: (monateZurueck: number) =>
     [...schluessel.termine(), 'past', monateZurueck] as const,
 

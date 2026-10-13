@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@ui/ct/fehler';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
-import { ladeStart } from './start';
+import { ladeStart, planbar, planbareDienstgruppen } from './start';
+import { startFuer } from './start.testutil';
 
 /**
  * Der Start des Dienstplaners gegen eine nachgestellte ChurchTools-Instanz – Antworten in der Form, die
@@ -51,6 +52,8 @@ const GUT: Antworten = {
         { id: 1, name: 'Programm', nameTranslated: 'Programm', sortKey: 10 },
       ],
     }),
+  '/services': () =>
+    json(200, { data: [{ id: 6, name: 'Ton', serviceGroupId: 3, sortKey: 0, groupIds: [7] }] }),
 };
 
 beforeEach(() => {
@@ -70,6 +73,7 @@ describe('ladeStart (Dienstplaner)', () => {
   it('Person, Gruppen, Dienstgruppen in Gemeinde-Reihenfolge und die Planer-Rechte', async () => {
     ct(GUT);
     expect(await ladeStart()).toEqual({
+      ichId: 1,
       vorname: 'Alwin',
       gemeinde: 'ECG',
       gruppen: [{ id: 7, name: 'Technik', leitung: true }],
@@ -77,8 +81,17 @@ describe('ladeStart (Dienstplaner)', () => {
         { id: 1, name: 'Programm' },
         { id: 3, name: 'Technik' },
       ],
+      dienste: new Map([
+        [6, { id: 6, name: 'Ton', dienstgruppeId: 3, gruppenIds: [7], sortKey: 0 }],
+      ]),
       rechte: { planbareDienstgruppen: [3], ablaufKalender: [], abwesenheitenAller: false },
     });
+  });
+
+  it('Dienste ohne Liste → Fehler 502 (ohne Dienste keine Namen und keine freien Plätze)', async () => {
+    ct({ ...GUT, '/services': () => json(200, { data: null }) });
+    const e = await ladeStart().catch((x: unknown) => x);
+    expect((e as ApiError).status).toBe(502);
   });
 
   it('niemand angemeldet → 401, Rechte und Dienstgruppen werden gar nicht erst gefragt', async () => {
@@ -103,5 +116,26 @@ describe('ladeStart (Dienstplaner)', () => {
   it('Dienstgruppen nicht lesbar (500) → Fehler', async () => {
     ct({ ...GUT, '/servicegroups': () => json(500, {}) });
     await expect(ladeStart()).rejects.toBeInstanceOf(ApiError);
+  });
+});
+
+describe('Wer plant was (E3-4): global, als Leitung, Termin-Admin in der Matrix', () => {
+  it('Leitung einer Gruppe des Dienstes macht zum Planer – auch ohne globales Recht', () => {
+    const ohneRecht = startFuer({
+      rechte: { planbareDienstgruppen: [], ablaufKalender: [], abwesenheitenAller: false },
+      gruppen: [{ id: 7, name: 'Technik', leitung: true }],
+    });
+    expect(planbareDienstgruppen(ohneRecht).map((g) => g.name)).toEqual(['Technik']);
+    expect(planbar(ohneRecht, ohneRecht.dienste.get(6)!)).toBe(true);
+    expect(planbar(ohneRecht, ohneRecht.dienste.get(9)!)).toBe(false);
+  });
+
+  it('nur Mitglied (keine Leitung) und ohne Recht → nichts planbar', () => {
+    const mitglied = startFuer({
+      rechte: { planbareDienstgruppen: [], ablaufKalender: [], abwesenheitenAller: false },
+      gruppen: [{ id: 7, name: 'Technik', leitung: false }],
+    });
+    expect(planbareDienstgruppen(mitglied)).toEqual([]);
+    expect(planbar(mitglied, mitglied.dienste.get(6)!, true)).toBe(true);
   });
 });

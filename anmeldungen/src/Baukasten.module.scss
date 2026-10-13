@@ -165,7 +165,9 @@
 .aktiv {
   cursor: default;
   border: 1.5px solid var(--p-accent, #2563eb);
-  background: color-mix(in srgb, var(--p-accent, #2563eb) 4%, var(--p-card, #fff));
+  // Durchscheinend statt Kartenfarbe: Auf farbigen Karten (Vorlage „Bunt“) sah ein weißer Grund aus, als fiele das
+  // Feld aus der Karte heraus (Durchklicken 13.10.2026).
+  background: color-mix(in srgb, var(--p-accent, #2563eb) 6%, transparent);
 
   &:hover {
     border-color: var(--p-accent, #2563eb);

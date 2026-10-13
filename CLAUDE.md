@@ -316,9 +316,12 @@ churchtools-gemeinde-apps/
   Nur `/api/csrftoken` liefert noch 401. Der gesamte Ausgesperrt-Schutz hing an diesem 401 – ohne ihn
   hielt die App den Phantom-Nutzer für angemeldet und zeigte „kein Zugriff" (Sackgasse, heraus nur
   über das Löschen der Website-Daten). **`whoami()` in `ctAuth` prüft deshalb per `ctId`, ob die
-  Antwort überhaupt eine Person beschreibt (`id > 0`), und wirft sonst 401.** Das ist die **einzige**
-  Stelle im Projekt, die `/api/whoami` ruft – alle Aufrufer (`getUserId`, `getMe`, Team-Notizen,
-  `getCapabilities`, Anmerkungen, Einstellungen, Setlist) gehen darüber. Merkmal ist die **ID**, nicht
+  Antwort überhaupt eine Person beschreibt (`id > 0`), und wirft sonst 401.** Das ist im **Server** die
+  einzige Stelle, die `/api/whoami` ruft – alle Aufrufer (`getUserId`, `getMe`, Team-Notizen,
+  `getCapabilities`, Anmerkungen, Einstellungen, Setlist) gehen darüber. Die Regel selbst liegt in
+  `@shared/ct/whoami` (`whoamiId`: ID / `0` = niemand / `null` = unlesbar). **Im Browser** (Erweiterungen)
+  nimmt jede Stelle `angemeldeteId` aus `ui/ct/ich.ts`: niemand → 401, **unlesbar → 503** (#491) –
+  vorher galt „unlesbar" in der Musik-App als abgemeldet und schaltete den Anmerkungs-Abgleich ab. Merkmal ist die **ID**, nicht
   `lastName === 'Anonymous'`: Der Name ist Anzeigetext und in einer anderen Spracheinstellung anders.
   Nebenwirkung, die damit ebenfalls weg ist: Die `-1` floss über `getUserId` in Dateinamen
   (`annotations.ts` → `-1.json`, `userSettings.ts` → `settings--1.json`) – zwei Menschen mit toter

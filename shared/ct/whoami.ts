@@ -14,6 +14,9 @@
  * - **`0`** → ausdrücklich niemand (der Phantom-Nutzer);
  * - **`null`** → unlesbar. Das ist NICHT „niemand" – vorübergehend ist nicht ungültig; wer abmelden
  *   würde, muss diesen Fall selbst entscheiden.
+ *
+ * Im Browser übersetzt `angemeldeteId` (`ui/ct/ich.ts`) die drei Ausgänge in ID / 401 / 503 – dort
+ * wurde `null` zweimal als „abgemeldet" gewertet (#491).
  */
 import { ctId } from './ctId';
 

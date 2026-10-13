@@ -3,7 +3,17 @@ import { Sheet } from '@ui/fenster/Sheet';
 import { Segment } from '@ui/bedienung/Segment';
 import { ctBasis } from '@ui/ct/basis';
 import { tagAusIso } from '@shared/ct/zeit';
-import type { OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
+import { setzeGeburtsdatum, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
+import {
+  NACHNAME,
+  ZWECK_MAX,
+  ibanGueltig,
+  ibanNormal,
+  ibanText,
+  pruefeBezahlung,
+  verwendungszweck,
+  type Bezahlung,
+} from '@shared/anmeldung/bezahlung';
 import {
   anmeldeLink,
   ortszeitAus,
@@ -16,12 +26,14 @@ import {
   kalenderListe,
   legeTerminAn,
   speichereAnmeldung,
+  speichereBezahlung,
   termineIn,
   type AnmeldeEinstellungen,
   type Kalender,
 } from './einrichten';
 import { WER_TEXT, datumText } from './anzeige';
 import { fehlerMeldung } from './zustand';
+import { useSpeichern } from './useSpeichern';
 import f from './Formular.module.scss';
 
 /**
@@ -29,25 +41,7 @@ import f from './Formular.module.scss';
  * – dort wird nachgelesen –, meldet Fehler im Fenster und schließt erst, wenn ChurchTools übernommen hat.
  */
 
-/** Gemeinsamer Ablauf: speichern, bei Erfolg schließen, sonst die Meldung zeigen. */
-function useSpeichern(onGespeichert: () => void) {
-  const [arbeitet, setArbeitet] = useState(false);
-  const [fehler, setFehler] = useState<string | null>(null);
-  async function speichern(tun: () => Promise<unknown>) {
-    setArbeitet(true);
-    setFehler(null);
-    try {
-      await tun();
-      onGespeichert();
-    } catch (e) {
-      setFehler(fehlerMeldung(e).text);
-      setArbeitet(false);
-    }
-  }
-  return { arbeitet, fehler, speichern };
-}
-
-function Fehler({ text }: { text: string | null }) {
+export function Fehler({ text }: { text: string | null }) {
   return text ? (
     <p className={f.fehler} role="alert">
       {text}
@@ -493,18 +487,29 @@ export function AnmeldungFenster({
 
 // ── Wer meldet sich an, Löschfrist ──────────────────────────────────────────────────────────────
 
+/**
+ * **Wer meldet sich an?** – und ob das Geburtsdatum abgefragt wird (A4: Preise nach Alter und der
+ * Geschwister-Rabatt brauchen es; im Entwurf steht der Schalter hier). Geschaltet wird über
+ * `setzeGeburtsdatum`, die eine Stelle, die auch der Formular-Baukasten (A5) nutzt.
+ */
 export function WerFenster({
   id,
   wer,
+  geburtsdatum,
+  brauchtAlter,
   onClose,
   onGespeichert,
 }: {
   id: number;
   wer: OeffentlicheEinstellungen['wer'];
+  geburtsdatum: boolean;
+  /** Gibt es Preise nach Alter oder einen Geschwister-Rabatt? */
+  brauchtAlter: boolean;
   onClose: () => void;
   onGespeichert: () => void;
 }) {
   const [wahl, setWahl] = useState(wer);
+  const [geburt, setGeburt] = useState(geburtsdatum);
   const { arbeitet, fehler, speichern } = useSpeichern(onGespeichert);
   return (
     <Sheet title="Wer meldet sich an?" onClose={onClose}>
@@ -522,12 +527,168 @@ export function WerFenster({
           </button>
         ))}
       </div>
+      <div className={f.feld}>
+        <span>Geburtsdatum</span>
+        <Segment
+          ariaLabel="Geburtsdatum"
+          value={geburt ? 'ja' : 'nein'}
+          onChange={(x) => setGeburt(x === 'ja')}
+          options={[
+            { value: 'ja', label: 'Pflicht' },
+            { value: 'nein', label: 'Nicht abfragen' },
+          ]}
+        />
+      </div>
+      {brauchtAlter && !geburt && (
+        <p className={f.fehler}>
+          Es gibt Preise nach Alter oder einen Geschwister-Rabatt. Ohne Geburtsdatum kann das
+          Formular sie nicht rechnen – jede Person zahlt dann den Grundpreis.
+        </p>
+      )}
       <Fehler text={fehler} />
       <button
         type="button"
         className={f.knopf}
         disabled={arbeitet}
-        onClick={() => speichern(() => aendereEinstellungen(id, (e) => ({ ...e, wer: wahl })))}
+        onClick={() =>
+          speichern(() =>
+            aendereEinstellungen(id, (e) => ({
+              ...e,
+              wer: wahl,
+              formular: setzeGeburtsdatum(e.formular, geburt),
+            })),
+          )
+        }
+      >
+        {arbeitet ? 'Wird gespeichert …' : 'Speichern'}
+      </button>
+    </Sheet>
+  );
+}
+
+// ── Bezahlung ───────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * **Bezahlung** (A4): Konto, Zahlungsfrist, Verwendungszweck. Die IBAN wird beim Tippen geprüft
+ * (`ibanGueltig`); gespeichert wird nur, was `pruefeBezahlung` durchlässt.
+ */
+export function BezahlungFenster({
+  id,
+  bezahlung,
+  kostet,
+  onClose,
+  onGespeichert,
+}: {
+  id: number;
+  bezahlung: Bezahlung;
+  /** Kann die Anmeldung etwas kosten (`kannEtwasKosten`)? */
+  kostet: boolean;
+  onClose: () => void;
+  onGespeichert: () => void;
+}) {
+  const [inhaber, setInhaber] = useState(bezahlung.kontoinhaber);
+  const [iban, setIban] = useState(ibanText(bezahlung.iban));
+  const [bic, setBic] = useState(bezahlung.bic);
+  const [frist, setFrist] = useState(String(bezahlung.fristTage));
+  const [zweck, setZweck] = useState(bezahlung.zweck);
+  const { arbeitet, fehler, speichern } = useSpeichern(onGespeichert);
+
+  const neu: Bezahlung = {
+    kontoinhaber: inhaber.trim(),
+    iban: ibanNormal(iban),
+    bic: ibanNormal(bic),
+    fristTage: frist === '' ? -1 : Number(frist),
+    zweck: zweck.trim(),
+  };
+  const probleme = pruefeBezahlung(neu);
+
+  return (
+    <Sheet title="Bezahlung" onClose={onClose}>
+      <p className={f.hinweis}>
+        Die Bankverbindung steht im Anmeldeformular und in der Bestätigung – sie ist öffentlich
+        lesbar. Bitte nur das Konto der Gemeinde eintragen.
+      </p>
+      {kostet && !neu.iban && (
+        <p className={f.fehler}>Es gibt Preise, aber noch keine Bankverbindung.</p>
+      )}
+      <label className={f.feld}>
+        <span>Kontoinhaber</span>
+        <input
+          className={f.eingabe}
+          value={inhaber}
+          maxLength={70}
+          autoComplete="off"
+          placeholder="z. B. Evangeliumschristen-Gemeinde e.V."
+          onChange={(e) => setInhaber(e.target.value)}
+        />
+      </label>
+      <label className={f.feld}>
+        <span>IBAN</span>
+        <input
+          className={f.eingabe}
+          value={iban}
+          maxLength={42}
+          autoComplete="off"
+          spellCheck={false}
+          placeholder="DE00 0000 0000 0000 0000 00"
+          aria-label="IBAN"
+          onChange={(e) => setIban(e.target.value)}
+        />
+        {neu.iban &&
+          (ibanGueltig(neu.iban) ? (
+            <small className={f.gut}>IBAN stimmt (Prüfziffer passt).</small>
+          ) : (
+            <small className={f.fehler}>
+              Die IBAN stimmt nicht. Bitte Ziffer für Ziffer prüfen.
+            </small>
+          ))}
+      </label>
+      <label className={f.feld}>
+        <span>BIC (freiwillig)</span>
+        <input
+          className={f.eingabe}
+          value={bic}
+          maxLength={11}
+          autoComplete="off"
+          spellCheck={false}
+          onChange={(e) => setBic(e.target.value)}
+        />
+      </label>
+      <label className={f.feld}>
+        <span>Zahlungsfrist in Tagen nach der Anmeldung (0 = keine)</span>
+        <input
+          className={f.eingabe}
+          inputMode="numeric"
+          value={frist}
+          onChange={(e) => setFrist(e.target.value.replace(/\D/g, ''))}
+        />
+      </label>
+      <label className={f.feld}>
+        <span>Verwendungszweck</span>
+        <input
+          className={f.eingabe}
+          value={zweck}
+          maxLength={ZWECK_MAX}
+          aria-label="Verwendungszweck"
+          onChange={(e) => setZweck(e.target.value)}
+        />
+        <small className={f.hinweis}>
+          {NACHNAME} wird durch den Nachnamen ersetzt, z. B. „{verwendungszweck(zweck, 'Müller')}“.
+        </small>
+      </label>
+      {probleme
+        .filter((p) => !p.startsWith('Die IBAN'))
+        .map((p) => (
+          <p key={p} className={f.fehler}>
+            {p}
+          </p>
+        ))}
+      <Fehler text={fehler} />
+      <button
+        type="button"
+        className={f.knopf}
+        disabled={probleme.length > 0 || arbeitet}
+        onClick={() => speichern(() => speichereBezahlung(id, neu))}
       >
         {arbeitet ? 'Wird gespeichert …' : 'Speichern'}
       </button>

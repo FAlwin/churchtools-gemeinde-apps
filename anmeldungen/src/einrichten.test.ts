@@ -1,8 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
-import { einstellungenLesen } from '@shared/anmeldung/formular';
+import { ApiError } from '@ui/ct/fehler';
+import { einstellungenLesen, standardFormular } from '@shared/anmeldung/formular';
 import {
   NichtUebernommen,
+  aendereEinstellungen,
+  aenderePreise,
+  anmeldungenZahl,
   anlegenMoeglich,
   freigeben,
   kalenderListe,
@@ -10,6 +14,7 @@ import {
   legeTerminAn,
   legeVeranstaltungAn,
   speichereAnmeldung,
+  speichereBezahlung,
 } from './einrichten';
 
 /**
@@ -33,6 +38,8 @@ let naechste: number;
 let schlucken: Set<string>;
 let termine: Map<number, Record<string, unknown>>;
 let aufrufe: string[];
+/** Mitglieder je Gruppe; `403`/`502` = so antwortet ChurchTools auf `/members`. */
+let mitglieder: Map<number, { groupMemberStatus: string }[] | 403 | 502>;
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -95,6 +102,12 @@ function ct() {
       });
       return json(201, { data: { id } });
     }
+    r = /^\/groups\/(\d+)\/members$/.exec(pfad);
+    if (r) {
+      const m = mitglieder.get(Number(r[1])) ?? [];
+      if (typeof m === 'number') return json(m, { message: 'nein' });
+      return json(200, { data: m, meta: { pagination: { lastPage: 1 } } });
+    }
     r = /^\/groups\/(\d+)\/memberfields\/group$/.exec(pfad);
     if (r && m === 'POST') {
       const g = gruppen.get(Number(r[1]))!;
@@ -153,6 +166,7 @@ beforeEach(() => {
   schlucken = new Set();
   termine = new Map();
   aufrufe = [];
+  mitglieder = new Map();
   vi.stubGlobal('window', {
     settings: { base_url: 'https://ct.test/' },
     location: { origin: 'https://ct.test' },
@@ -295,5 +309,150 @@ describe('Rechte und Kalender', () => {
         zeitzone: 'Europe/Berlin',
       }),
     ).rejects.toBeInstanceOf(NichtUebernommen);
+  });
+});
+
+describe('Preise und Bezahlung (A4)', () => {
+  const zimmer = (belegt4: number) => ({
+    art: 'auswahl' as const,
+    betragCent: 0,
+    gilt: 'person' as const,
+    auswahlName: 'Zimmer',
+    optionen: [
+      { name: '4-Bett', preisCent: 6552, kontingent: 8, belegt: belegt4 },
+      { name: '2-Bett', preisCent: 8900, kontingent: 4, belegt: 2 },
+    ],
+  });
+
+  it('neue Veranstaltung: Verwendungszweck mit ihrem Namen, noch ohne Konto', async () => {
+    const id = await legeVeranstaltungAn({
+      name: 'Gemeindeessen',
+      teamId: 7,
+      artId: 5,
+      vorlage: 'einfach',
+    });
+    const b = einstellungenLesen(gruppen.get(id)!.note)!.bezahlung;
+    expect(b.zweck).toBe('Gemeindeessen [Nachname]');
+    expect(b.iban).toBe('');
+  });
+
+  it('Preise ändern: auf die FRISCH gelesenen Preise, „belegt“ bleibt (über den Namen), nachgelesen', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'freizeit' });
+    await aendereEinstellungen(id, (e) => ({ ...e, preis: { ...e.preis, grundpreis: zimmer(5) } }));
+    // Inzwischen hat jemand anderes ein Extra gespeichert – das Fenster weiß davon nichts.
+    await aendereEinstellungen(id, (e) => ({
+      ...e,
+      preis: {
+        ...e.preis,
+        extras: [{ bezeichnung: 'Bettwäsche', preisCent: 800, gilt: 'person' }],
+      },
+    }));
+    // Das Fenster ändert den Preis und dreht die Reihenfolge der Optionen um; „belegt“ kennt es nicht (0).
+    await aenderePreise(id, (p) => ({
+      ...p,
+      grundpreis: {
+        ...p.grundpreis,
+        optionen: [
+          { name: '2-Bett', preisCent: 9000, kontingent: 4, belegt: 0 },
+          { name: '4-Bett', preisCent: 6552, kontingent: 8, belegt: 0 },
+          { name: 'Neu', preisCent: 5000, kontingent: 0, belegt: 0 },
+        ],
+      },
+    }));
+    const p = einstellungenLesen(gruppen.get(id)!.note)!.preis;
+    expect(p.grundpreis.optionen.map((o) => [o.name, o.preisCent, o.belegt])).toEqual([
+      ['2-Bett', 9000, 2],
+      ['4-Bett', 6552, 5],
+      ['Neu', 5000, 0],
+    ]);
+    expect(p.extras).toHaveLength(1);
+  });
+
+  it('ungültige Preise → Meldung von pruefeRegeln, und es wird NICHTS geschrieben', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    const vorher = gruppen.get(id)!.note;
+    const patchVorher = aufrufe.filter((a) => a.startsWith('PATCH')).length;
+    const fehler = await aenderePreise(id, (p) => ({
+      ...p,
+      alter: [
+        { von: 0, bis: 5, art: 'frei', wert: 0 },
+        { von: 3, bis: 11, art: 'prozent', wert: 50 },
+      ],
+    })).catch((e: unknown) => e);
+    expect(fehler).toBeInstanceOf(ApiError);
+    expect((fehler as ApiError).status).toBe(422);
+    expect((fehler as ApiError).message).toContain('überschneiden');
+    expect(gruppen.get(id)!.note).toBe(vorher);
+    expect(aufrufe.filter((a) => a.startsWith('PATCH')).length).toBe(patchVorher);
+  });
+
+  it('Bezahlung: IBAN ohne Leerzeichen gespeichert; falsche IBAN wird nicht geschrieben', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    const b = {
+      kontoinhaber: ' Gemeinde e.V. ',
+      iban: 'de89 3704 0044 0532 0130 00',
+      bic: 'cobadeff',
+      fristTage: 10,
+      zweck: ' X [Nachname] ',
+    };
+    await speichereBezahlung(id, b);
+    expect(einstellungenLesen(gruppen.get(id)!.note)!.bezahlung).toEqual({
+      kontoinhaber: 'Gemeinde e.V.',
+      iban: 'DE89370400440532013000',
+      bic: 'COBADEFF',
+      fristTage: 10,
+      zweck: 'X [Nachname]',
+    });
+    const vorher = gruppen.get(id)!.note;
+    await expect(
+      speichereBezahlung(id, { ...b, iban: 'DE89370400440532013001' }),
+    ).rejects.toMatchObject({ status: 422 });
+    expect(gruppen.get(id)!.note).toBe(vorher);
+  });
+
+  it('zu lange Einstellungen → sagt das (413), nicht „ChurchTools antwortet gerade nicht“', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    const lang = standardFormular();
+    lang.person.push(
+      ...Array.from({ length: 20 }, (_, i) => ({
+        id: `l${i}`,
+        art: 'eigen' as const,
+        typ: 'textarea' as const,
+        frage: `Frage ${i}`,
+        hilfe: 'x'.repeat(390),
+        zustand: 'freiwillig' as const,
+        antworten: [],
+      })),
+    );
+    const e = await aendereEinstellungen(id, (x) => ({ ...x, formular: lang })).catch(
+      (err: unknown) => err,
+    );
+    expect(e).toBeInstanceOf(ApiError);
+    expect((e as ApiError).status).toBe(413);
+    expect((e as ApiError).message).toContain('erlaubt sind 5000');
+    // Und eine ungültige Angabe (zu langer Name eines Extras) → 422 mit eigener Meldung.
+    const z = await aendereEinstellungen(id, (x) => ({
+      ...x,
+      preis: {
+        ...x.preis,
+        extras: [{ bezeichnung: 'x'.repeat(81), preisCent: 0, gilt: 'person' }],
+      },
+    })).catch((err: unknown) => err);
+    expect((z as ApiError).status).toBe(422);
+  });
+
+  it('Zahl der Anmeldungen: angemeldet + Warteliste; 403 → unbekannt; 502 → Fehler (vorübergehend)', async () => {
+    mitglieder.set(91, [
+      { groupMemberStatus: 'active' },
+      { groupMemberStatus: 'active' },
+      { groupMemberStatus: 'waiting' },
+      { groupMemberStatus: 'to_delete' },
+    ]);
+    expect(await anmeldungenZahl(91)).toBe(3);
+    expect(await anmeldungenZahl(92)).toBe(0);
+    mitglieder.set(93, 403);
+    expect(await anmeldungenZahl(93)).toBeNull();
+    mitglieder.set(94, 502);
+    await expect(anmeldungenZahl(94)).rejects.toBeInstanceOf(ApiError);
   });
 });

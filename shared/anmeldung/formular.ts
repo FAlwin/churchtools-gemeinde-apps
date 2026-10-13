@@ -16,6 +16,7 @@
  */
 import { z } from 'zod';
 import type { PreisRegeln } from './preis';
+import { STANDARD_BEZAHLUNG, ZWECK_MAX, type Bezahlung } from './bezahlung';
 
 export type Feldtyp =
   | 'name'
@@ -342,6 +343,8 @@ export interface OeffentlicheEinstellungen {
   plaetze: { zeigen: 'immer' | 'knapp' | 'nie'; knappUnter: number };
   /** Monate nach dem Ende, nach denen die Anmeldungen gelöscht werden (A3; die Routine dazu baut A9). */
   loeschfristMonate: number;
+  /** Konto, Zahlungsfrist, Verwendungszweck (A4) – öffentlich lesbar, siehe `bezahlung.ts`. */
+  bezahlung: Bezahlung;
 }
 
 const geltung = z.enum(['person', 'anmeldung']);
@@ -450,6 +453,17 @@ const einstellungenSchema = z.object({
   }),
   // Seit A3 (#486). Mit Standardwert: Einstellungen, die vor dem Feld geschrieben wurden, bleiben lesbar.
   loeschfristMonate: z.number().int().min(1).max(36).default(3),
+  // Seit A4. Mit Standardwert, damit ältere Einstellungen lesbar bleiben. (Zod gibt beim Lesen ohnehin ein
+  // neues Objekt zurück – getestet in formular.test.ts –, die Funktion macht das nur ausdrücklich.)
+  bezahlung: z
+    .object({
+      kontoinhaber: z.string().max(70),
+      iban: z.string().max(34),
+      bic: z.string().max(11),
+      fristTage: z.number().int().min(0).max(365),
+      zweck: z.string().max(ZWECK_MAX),
+    })
+    .default(() => ({ ...STANDARD_BEZAHLUNG })),
 });
 
 /**

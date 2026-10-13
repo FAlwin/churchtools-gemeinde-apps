@@ -100,6 +100,23 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Neu (Anmeldungen)
 
+- **Preise, „Probe rechnen“ und Bezahlung** (#507, Bauplan A4).
+  - **Karte „Preise“** auf der Seite einer Veranstaltung: Grundpreis (fest oder nach Auswahl, z. B. Zimmer
+    mit Kontingent), nach Alter, Rabatte und Zuschläge (immer, Frühbucher, ab dem n-ten Kind), Extras zum
+    Ankreuzen. Ein Fenster je Baustein; Beträge mit Komma („12,50“). Was nicht stimmt (`pruefeRegeln`),
+    steht im Fenster und wird nicht gespeichert.
+  - **„Probe rechnen“:** eine Beispiel-Anmeldung durch dieselbe Rechnung wie im Formular
+    (`berechnePreis`), für alle, die die Veranstaltung sehen. Gespeichert wird nichts.
+  - **Preise ändern, wenn es schon Anmeldungen gibt**, ist erlaubt (Alwin, 13.10.2026). Das Fenster
+    nennt die Zahl der Anmeldungen und sagt, dass ihr Betrag bleibt.
+  - **Geburtsdatum** unter „Wer meldet sich an?“ ein- und ausschalten. Gibt es Preise nach Alter oder
+    einen Geschwister-Rabatt ohne Geburtsdatum, warnen Karte und Fenster.
+  - **Karte „Bezahlung“:** Kontoinhaber, IBAN (Prüfziffer wird geprüft), BIC freiwillig,
+    Zahlungsfrist, Verwendungszweck mit `[Nachname]`. Neue Veranstaltungen bekommen ihren Namen in den
+    Verwendungszweck. Die Angaben sind öffentlich lesbar (das Formular braucht sie), deshalb nur das
+    Gemeindekonto eintragen. Freigeben weist darauf hin, wenn es Preise, aber kein Konto gibt.
+  - Einstellungsformat: `bezahlung` mit Standardwert, ältere Veranstaltungen bleiben lesbar.
+
 - **Veranstaltungen anlegen und einrichten** (#486, Bauplan A3 – der erste Schritt, der in ChurchTools
   schreibt). Eigene Gruppenart „Anmeldung“; Veranstaltungen ohne Anmeldung bleiben, wie sie sind.
   - **„Neue Veranstaltung“** für Leitung, Co-Leitung und Organisatoren eines Teams (nach den Rechten, die
@@ -120,6 +137,12 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Behoben (Anmeldungen)
 
+- **Zu lange Einstellungen meldeten „ChurchTools antwortet gerade nicht“** (beim Bau von A4 gefunden).
+  Sprengen die Einstellungen die 5.000 Zeichen der Gruppen-Beschreibung, sagt die Seite jetzt genau das;
+  eine zu lange Einzelangabe hat eine eigene Meldung. Beides wird nicht gespeichert.
+- **„kostenlos“ in der Liste, obwohl Extras oder Altersstufen etwas kosten:** `preisKurz` sagt
+  „kostenlos“ nur noch, wenn wirklich nichts kostet (`kannEtwasKosten`), sonst „Preis je nach Angaben“.
+  Eine Auswahl zeigt immer „p. P.“.
 - **Ältere Einstellungen bleiben lesbar:** Neue Angaben im Einstellungsformat (`loeschfristMonate`,
   `termin`) haben Standardwerte – sonst wären Veranstaltungen, die vorher angelegt wurden, als „unlesbar“
   aus der Liste gefallen (an der Test-Instanz beim Bauen aufgefallen).

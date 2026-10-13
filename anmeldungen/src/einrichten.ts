@@ -7,6 +7,7 @@
  * ist kein Beleg. Weicht das Nachgelesene ab, wirft es `NichtUebernommen` – die Oberfläche sagt dann, was
  * fehlt, statt „gespeichert“ zu melden.
  */
+import { ZodError } from 'zod';
 import { ctAlleSeiten, ctAnfrage, ctBasis, ctDaten } from '@ui/ct/verbindung';
 import { ApiError } from '@ui/ct/fehler';
 import {
@@ -15,6 +16,15 @@ import {
   einstellungenLesen,
   type OeffentlicheEinstellungen,
 } from '@shared/anmeldung/formular';
+import { pruefeRegeln, type PreisRegeln } from '@shared/anmeldung/preis';
+import {
+  NACHNAME,
+  ZWECK_MAX,
+  ibanNormal,
+  pruefeBezahlung,
+  type Bezahlung,
+} from '@shared/anmeldung/bezahlung';
+import { belegungAus } from '@shared/anmeldung/uebersicht';
 import { felderNeuZuordnen, systemfeldAnlage } from '@shared/anmeldung/felder';
 import { neueEinstellungen, type Vorlage } from '@shared/anmeldung/vorlagen';
 import { anmeldeLink, utcAus, type CtTermin } from '@shared/anmeldung/termin';
@@ -101,8 +111,23 @@ export async function darfVeranstaltungEinrichten(id: number): Promise<boolean> 
 
 // ── Anlegen ─────────────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Die Einstellungen als Text – oder eine Meldung, die sagt, was nicht passt. Ohne das stünde bei zu langen
+ * Einstellungen (über 5.000 Zeichen) „ChurchTools antwortet gerade nicht“ da: Ein einfacher `Error` gilt in
+ * `fehlerMeldung` als „keine Antwort“ (A4, beim Bauen der Preise gefunden).
+ */
+function alsText(e: OeffentlicheEinstellungen): string {
+  try {
+    return einstellungenAlsText(e);
+  } catch (err) {
+    if (err instanceof ZodError)
+      throw new ApiError(422, 'Eine Angabe ist zu lang oder ungültig und wurde nicht gespeichert.');
+    throw new ApiError(413, err instanceof Error ? err.message : 'Die Einstellungen sind zu lang.');
+  }
+}
+
 async function einstellungenSchreiben(id: number, e: OeffentlicheEinstellungen): Promise<void> {
-  const text = einstellungenAlsText(e);
+  const text = alsText(e);
   await ctAnfrage(`/groups/${id}`, { method: 'PATCH', body: json({ note: text }) });
   if ((await gruppe(id)).information?.note !== text)
     throw new NichtUebernommen('die Einstellungen');
@@ -154,7 +179,10 @@ export async function legeVeranstaltungAn(a: {
   });
   const id = neu?.data?.id;
   if (typeof id !== 'number') throw new NichtUebernommen('die neue Veranstaltung');
-  const e = neueEinstellungen(a.vorlage);
+  const vorlage = neueEinstellungen(a.vorlage);
+  // Verwendungszweck gleich mit dem Namen der Veranstaltung („Gemeindeessen [Nachname]“, A4).
+  const zweck = `${a.name.slice(0, ZWECK_MAX - NACHNAME.length - 1)} ${NACHNAME}`;
+  const e = { ...vorlage, bezahlung: { ...vorlage.bezahlung, zweck } };
   await einstellungenSchreiben(id, e);
   // Unbekannte melden sich ohne Bestätigungsmail an, bekannte Adressen bestätigen einmal (A0, Modus existing).
   await ctAnfrage(`/groups/${id}`, {
@@ -209,6 +237,62 @@ export async function aendereEinstellungen(
   const neu = aendern(await einstellungenVon(id));
   await einstellungenSchreiben(id, neu);
   return neu;
+}
+
+/**
+ * **Preise ändern** (A4). `aendern` bekommt die frisch gelesenen Preise – so überschreibt ein Fenster nie,
+ * was ein anderer Baustein inzwischen gespeichert hat. Ungültige Regeln werden nicht gespeichert
+ * (`pruefeRegeln`, dieselbe Prüfung wie im Fenster). Wie oft eine Option schon gebucht ist (`belegt`), kommt
+ * aus den Anmeldungen und bleibt beim Bearbeiten stehen – zugeordnet über den Namen der Option.
+ */
+export async function aenderePreise(
+  id: number,
+  aendern: (p: PreisRegeln) => PreisRegeln,
+): Promise<OeffentlicheEinstellungen> {
+  return aendereEinstellungen(id, (e) => {
+    const neu = aendern(e.preis);
+    const fehler = pruefeRegeln(neu);
+    if (fehler.length) throw new ApiError(422, fehler.join(' '));
+    const belegt = new Map(e.preis.grundpreis.optionen.map((o) => [o.name, o.belegt]));
+    const optionen = neu.grundpreis.optionen.map((o) => ({
+      ...o,
+      belegt: belegt.get(o.name) ?? 0,
+    }));
+    return { ...e, preis: { ...neu, grundpreis: { ...neu.grundpreis, optionen } } };
+  });
+}
+
+/** **Bezahlung speichern** (A4) – IBAN und BIC ohne Leerzeichen, geprüft wie im Fenster. */
+export async function speichereBezahlung(id: number, b: Bezahlung): Promise<void> {
+  const sauber: Bezahlung = {
+    kontoinhaber: b.kontoinhaber.trim(),
+    iban: ibanNormal(b.iban),
+    bic: ibanNormal(b.bic),
+    fristTage: b.fristTage,
+    zweck: b.zweck.trim(),
+  };
+  const fehler = pruefeBezahlung(sauber);
+  if (fehler.length) throw new ApiError(422, fehler.join(' '));
+  await aendereEinstellungen(id, (e) => ({ ...e, bezahlung: sauber }));
+}
+
+/**
+ * **Wie viele haben sich schon angemeldet?** (A4: Hinweis beim Ändern der Preise) – angemeldet und auf der
+ * Warteliste, gezählt wie auf der Startseite (`belegungAus`). `null`, wenn man die Mitglieder nicht sehen darf
+ * (403, dauerhaft); alles andere kann vorübergehend sein und wird geworfen.
+ */
+export async function anmeldungenZahl(id: number): Promise<number | null> {
+  try {
+    const mitglieder = await ctAlleSeiten<Parameters<typeof belegungAus>[0][number]>(
+      `/groups/${id}/members`,
+      200,
+    );
+    const b = belegungAus(mitglieder, undefined);
+    return b.aktiv + b.wartend;
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 403) return null;
+    throw e;
+  }
 }
 
 export interface AnmeldeEinstellungen {

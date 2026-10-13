@@ -16,12 +16,14 @@ function beschreibung(
   ort: string,
   grundpreis: OeffentlicheEinstellungen['preis']['grundpreis'],
   bezahlt?: number,
+  mehr: Partial<OeffentlicheEinstellungen> = {},
 ): string {
   return einstellungenAlsText({
     ...neueEinstellungen('einfach'),
     termin: { beginn, ende, ort, terminId: null },
     preis: { grundpreis, alter: [], anpassungen: [], extras: [] },
     ctFelder: bezahlt ? { bezahlt } : {},
+    ...mehr,
   });
 }
 
@@ -102,6 +104,46 @@ function demoGruppen(): Map<number, G> {
             ],
           },
           73,
+          // A4: alle Preis-Bausteine und eine Bankverbindung, damit „Probe rechnen“ etwas zu tun hat.
+          {
+            preis: {
+              grundpreis: {
+                art: 'auswahl',
+                betragCent: 0,
+                gilt: 'person',
+                auswahlName: 'Zimmer',
+                optionen: [
+                  { name: '4-Bett-Zimmer', preisCent: 6552, kontingent: 8, belegt: 0 },
+                  { name: '2-Bett-Zimmer', preisCent: 8900, kontingent: 4, belegt: 0 },
+                ],
+              },
+              alter: [
+                { von: 0, bis: 2, art: 'frei', wert: 0 },
+                { von: 3, bis: 11, art: 'prozent', wert: 50 },
+              ],
+              anpassungen: [
+                {
+                  art: 'rabatt',
+                  bezeichnung: 'Frühbucher',
+                  bedingung: 'fruehbucher',
+                  bis: tag(10).slice(0, 10),
+                  abKind: 2,
+                  einheit: 'euro',
+                  wert: 500,
+                  gilt: 'person',
+                },
+              ],
+              extras: [{ bezeichnung: 'Bettwäsche leihen', preisCent: 800, gilt: 'person' }],
+            },
+            formular: neueEinstellungen('freizeit').formular,
+            bezahlung: {
+              kontoinhaber: 'Gemeinde e.V. (Beispiel)',
+              iban: 'DE89370400440532013000',
+              bic: '',
+              fristTage: 14,
+              zweck: 'Lobpreisfreizeit [Nachname]',
+            },
+          },
         ),
         {
           maxMembers: 20,

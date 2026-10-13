@@ -5,7 +5,10 @@
  * Formular (Betrag bei der Anmeldung), die Erweiterung (Liste, Fenster, „Probe rechnen“, Druckliste,
  * Rundmail) und die Nachprüfung. Ohne eigenen Server rechnet das Formular im Browser; die
  * Erweiterung rechnet jeden gespeicherten Betrag mit genau dieser Funktion nach und meldet
- * Abweichungen. Eine zweite Rechnung daneben wäre die Fehlerklasse vom 31.07.2026
+ * Abweichungen. **Achtung für diese Nachprüfung (A7):** Preise dürfen sich nach den ersten Anmeldungen
+ * ändern, wer angemeldet ist, behält seinen Betrag (Alwin, 13.10.2026, A4). Nachgerechnet werden darf
+ * deshalb nur gegen die Regeln zur Zeit der Anmeldung – sonst meldet jede Preisänderung alle älteren
+ * Anmeldungen als falsch. Eine zweite Rechnung daneben wäre die Fehlerklasse vom 31.07.2026
  * (PDF-Optionen an drei Stellen, einer fehlte der Kapo-Abzug).
  *
  * Reihenfolge, fest: **Grundpreis → Alter → Rabatte und Zuschläge → Extras.**
@@ -287,6 +290,8 @@ export function pruefeRegeln(regeln: PreisRegeln): string[] {
       fehler.push(
         `„${a.bezeichnung}“: Bitte einen positiven Wert eintragen; ob Rabatt oder Zuschlag, steht daneben.`,
       );
+    if (a.art === 'rabatt' && a.einheit === 'prozent' && a.wert > 100)
+      fehler.push(`„${a.bezeichnung}“: Ein Rabatt kann höchstens 100 % sein.`);
     if (a.bedingung === 'abKind' && a.abKind < 2)
       fehler.push(`„${a.bezeichnung}“: „ab dem n-ten Kind“ beginnt beim 2. Kind.`);
     if (a.bedingung === 'fruehbucher' && !/^\d{4}-\d{2}-\d{2}$/.test(a.bis))
@@ -300,19 +305,35 @@ export function pruefeRegeln(regeln: PreisRegeln): string[] {
 }
 
 /**
+ * **Kann eine Anmeldung überhaupt etwas kosten?** (A4) – sobald irgendein Baustein einen Betrag hat:
+ * Grundpreis oder eine Option, ein fester Preis nach Alter, ein Zuschlag oder ein Extra. Rabatte allein
+ * kosten nichts. Daran hängt, ob eine Bankverbindung nötig ist (Freigeben, Karte „Bezahlung“).
+ */
+export function kannEtwasKosten(regeln: PreisRegeln): boolean {
+  const g = regeln.grundpreis;
+  if (g.art === 'fest' ? g.betragCent > 0 : g.optionen.some((o) => o.preisCent > 0)) return true;
+  if (regeln.alter.some((r) => r.art === 'fest' && r.wert > 0)) return true;
+  if (regeln.anpassungen.some((a) => a.art === 'zuschlag' && a.wert > 0)) return true;
+  return regeln.extras.some((x) => x.preisCent > 0);
+}
+
+/**
  * **Der Preis in einem Wort, für Listen** (A2, #480): „kostenlos“, „12,00 € p. P.“, „30,00 € pro Anmeldung“,
  * „ab 65,52 €“ (Auswahl: der günstigste Eintrag). Das ist bewusst nur der **Grundpreis** – Alter, Rabatte und
  * Extras rechnet `berechnePreis` für eine echte Anmeldung aus; in einer Zeile würden sie nur verwirren.
+ * Ist der Grundpreis 0, kostet aber etwas anderes (Extra, Zuschlag, Altersstufe): „Preis je nach Angaben“.
  */
 export function preisKurz(regeln: PreisRegeln): string {
   const g = regeln.grundpreis;
-  const je = g.gilt === 'person' ? ' p. P.' : ' pro Anmeldung';
+  if (g.art === 'auswahl' && g.optionen.length === 0) return 'Preis folgt';
+  // „kostenlos“ nur, wenn wirklich nichts kostet (A4) – nicht schon bei Grundpreis 0 mit bezahlten Extras.
+  if (!kannEtwasKosten(regeln)) return 'kostenlos';
+  const je = g.art === 'fest' && g.gilt === 'anmeldung' ? ' pro Anmeldung' : ' p. P.';
   if (g.art === 'auswahl') {
-    if (g.optionen.length === 0) return 'Preis folgt';
     const min = Math.min(...g.optionen.map((o) => o.preisCent));
     const max = Math.max(...g.optionen.map((o) => o.preisCent));
-    if (max === 0) return 'kostenlos';
+    if (max === 0) return 'Preis je nach Angaben';
     return min === max ? euroText(min) + je : `ab ${euroText(min)}${je}`;
   }
-  return g.betragCent === 0 ? 'kostenlos' : euroText(g.betragCent) + je;
+  return g.betragCent === 0 ? 'Preis je nach Angaben' : euroText(g.betragCent) + je;
 }

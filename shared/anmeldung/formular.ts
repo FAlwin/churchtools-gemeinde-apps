@@ -335,6 +335,8 @@ export interface TerminAngabe {
   ende: string | null;
   ort: string;
   terminId: number | null;
+  /** Der Kalender des Termins (A5) – damit das Termin-Fenster dort beginnt. Fehlt bei älteren Einstellungen. */
+  kalenderId?: number | null;
 }
 
 export interface OeffentlicheEinstellungen {
@@ -436,6 +438,7 @@ const einstellungenSchema = z.object({
       ende: zeitpunkt.nullable(),
       ort: z.string().max(200),
       terminId: z.number().int().positive().nullable(),
+      kalenderId: z.number().int().positive().nullable().optional(),
     })
     .nullable()
     // Seit A2 (#480); fehlt es in älteren Einstellungen, gibt es eben noch kein Datum.

@@ -62,7 +62,11 @@ export interface CtTermin {
 }
 
 /** Ein ChurchTools-Termin als Kopie für unsere Einstellungen. Ganztägig: von 0:00 bis 23:59. */
-export function terminAusCt(t: CtTermin, zeitzone: string): TerminAngabe {
+export function terminAusCt(
+  t: CtTermin,
+  zeitzone: string,
+  kalenderId?: number | null,
+): TerminAngabe {
   const nurTag = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
   const beginn = nurTag(t.startDate) ? `${t.startDate}T00:00` : ortszeitAus(t.startDate, zeitzone);
   const ende = nurTag(t.endDate) ? `${t.endDate}T23:59` : ortszeitAus(t.endDate, zeitzone);
@@ -70,7 +74,13 @@ export function terminAusCt(t: CtTermin, zeitzone: string): TerminAngabe {
     .map((x) => (x ?? '').trim())
     .filter(Boolean)
     .join(', ');
-  return { beginn, ende: ende === beginn ? null : ende, ort, terminId: t.id };
+  return {
+    beginn,
+    ende: ende === beginn ? null : ende,
+    ort,
+    terminId: t.id,
+    ...(kalenderId ? { kalenderId } : {}),
+  };
 }
 
 /** Der Link zur Anmeldung, wie er in einem neu angelegten Termin steht: Formular + Instanz + Gruppe. */

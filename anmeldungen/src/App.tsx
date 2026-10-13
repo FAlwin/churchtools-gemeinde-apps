@@ -3,10 +3,10 @@ import { Icon } from '@ui/icons/icons';
 import { tagAusIso } from '@shared/ct/zeit';
 import { ladeStart } from './start';
 import { ladeUebersicht } from './veranstaltungen';
-import { anlegenMoeglich } from './einrichten';
+import { anlegenMoeglich, istGruppenAdmin } from './einrichten';
 import { datumText } from './anzeige';
 import { Startseite } from './Startseite';
-import { VeranstaltungSeite } from './VeranstaltungSeite';
+import { VeranstaltungSeite, type Reiter } from './VeranstaltungSeite';
 import { NeueVeranstaltung } from './NeueVeranstaltung';
 import { ArchivSeite } from './ArchivSeite';
 import { RueckgaengigLeiste, type Aenderung } from './Rueckgaengig';
@@ -29,11 +29,20 @@ import s from './Startseite.module.scss';
  * Über jeder Seite steht nach einer Änderung die Leiste „Rückgängig“ (A4-Nachtrag) – auch nach einem
  * Seitenwechsel, denn nach dem Archivieren geht es zur Übersicht.
  */
-type Ansicht = { art: 'start' } | { art: 'veranstaltung'; id: number } | { art: 'archiv' };
+type Ansicht =
+  | { art: 'start' }
+  | { art: 'veranstaltung'; id: number; reiter: Reiter }
+  | { art: 'archiv' };
 
 function ansichtAusAdresse(): Ansicht {
-  const m = /^#\/v\/(\d+)$/.exec(window.location.hash);
-  if (m) return { art: 'veranstaltung', id: Number(m[1]) };
+  // `#/v/91` = Reiter „Veranstaltung“, `#/v/91/formular`, `#/v/91/gestaltung` (A5).
+  const m = /^#\/v\/(\d+)(?:\/(formular|gestaltung))?$/.exec(window.location.hash);
+  if (m)
+    return {
+      art: 'veranstaltung',
+      id: Number(m[1]),
+      reiter: (m[2] as Reiter | undefined) ?? 'veranstaltung',
+    };
   if (window.location.hash === '#/archiv') return { art: 'archiv' };
   return { art: 'start' };
 }
@@ -59,8 +68,11 @@ export function App() {
         // Erst die Gruppenart: Die Übersicht erkennt daran Veranstaltungen, deren Einstellungen in
         // ChurchTools überschrieben wurden, und repariert sie (A5).
         const anlegen = await anlegenMoeglich(teamIds);
-        const uebersicht = await ladeUebersicht(start.gruppen, new Date(), anlegen.artId);
-        return { start, uebersicht, anlegen };
+        const [uebersicht, admin] = await Promise.all([
+          ladeUebersicht(start.gruppen, new Date(), anlegen.artId),
+          istGruppenAdmin(),
+        ]);
+        return { start, uebersicht, anlegen, admin };
       })
       .then(
         (d) => setZustand({ art: 'fertig', ...d }),
@@ -108,6 +120,12 @@ export function App() {
         <VeranstaltungSeite
           key={`${ansicht.id}-${stand}`}
           id={ansicht.id}
+          reiter={ansicht.reiter}
+          onReiter={(r) => {
+            window.location.hash =
+              r === 'veranstaltung' ? `#/v/${ansicht.id}` : `#/v/${ansicht.id}/${r}`;
+          }}
+          gemeinde={fertig?.start.gemeinde ?? null}
           zeitzone={zeitzone}
           teams={fertig?.start.gruppen ?? []}
           onZurueck={zurUebersicht}
@@ -177,6 +195,7 @@ export function App() {
           heute={heute}
           zeitzone={zeitzone}
           onOeffnen={oeffnen}
+          admin={fertig.admin}
           onArchiv={
             fertig.anlegen.artId !== null
               ? () => {

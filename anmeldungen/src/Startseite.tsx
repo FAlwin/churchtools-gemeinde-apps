@@ -25,6 +25,8 @@ interface Props {
   onOeffnen: (id: number) => void;
   /** Zum Archiv der gelöschten Veranstaltungen (A4-Nachtrag); fehlt, wenn es die Gruppenart nicht gibt. */
   onArchiv?: () => void;
+  /** Gruppen-Admin: darf jede Veranstaltung freigeben (A5). */
+  admin?: boolean;
 }
 
 function gruppenUrl(id: number): string {
@@ -70,10 +72,12 @@ function HinweisZeile({
   h,
   gruppenName,
   onOeffnen,
+  admin,
 }: {
   h: Hinweis;
   gruppenName: (id: number) => string;
   onOeffnen: (id: number) => void;
+  admin: boolean;
 }) {
   if (h.art === 'kaputt') {
     return (
@@ -95,9 +99,12 @@ function HinweisZeile({
     h.art === 'freigabe'
       ? {
           titel: `${v.name} wartet auf Freigabe`,
+          // Admins dürfen jede freigeben (A3-Abnahme: Alwin las „kann die Leitung“, obwohl er selbst darf).
           zeile: h.darfFreigeben
             ? `${gruppenName(v.gruppeId)} · Freigeben kannst du als Leitung der Gruppe.`
-            : `${gruppenName(v.gruppeId)} · Freigeben kann die Leitung der Gruppe.`,
+            : admin
+              ? `${gruppenName(v.gruppeId)} · Freigeben kannst du als Admin.`
+              : `${gruppenName(v.gruppeId)} · Freigeben kann die Leitung der Gruppe.`,
         }
       : h.art === 'nachruecken'
         ? {
@@ -194,7 +201,15 @@ function VeranstaltungZeile({
   );
 }
 
-export function Startseite({ start, uebersicht, heute, zeitzone, onOeffnen, onArchiv }: Props) {
+export function Startseite({
+  start,
+  uebersicht,
+  heute,
+  zeitzone,
+  onOeffnen,
+  onArchiv,
+  admin = false,
+}: Props) {
   const [reiter, setReiter] = useState<Reiter>('anstehend');
   const [auswahl, setAuswahl] = useState<Set<number>>(
     () => new Set(start.gruppen.map((g) => g.id)),
@@ -245,6 +260,7 @@ export function Startseite({ start, uebersicht, heute, zeitzone, onOeffnen, onAr
                   h={h}
                   gruppenName={gruppenName}
                   onOeffnen={onOeffnen}
+                  admin={admin}
                 />
               ))}
             </div>

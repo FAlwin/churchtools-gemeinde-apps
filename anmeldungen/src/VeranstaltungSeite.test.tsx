@@ -44,7 +44,7 @@ function stelle(
   statusId = 2,
   einstellungen: Partial<OeffentlicheEinstellungen> = {},
 ) {
-  m.kopfVon.mockResolvedValue({ name: 'Gemeindeessen', statusId });
+  m.kopfVon.mockResolvedValue({ name: 'Gemeindeessen', statusId, bildUrl: null });
   m.einstellungenVon.mockResolvedValue({ ...neueEinstellungen('einfach'), ...einstellungen });
   m.anmeldungVon.mockResolvedValue({ maxPlaetze: null, warteliste: false, ab: null, bis: null });
   m.darfVeranstaltungEinrichten.mockResolvedValue(darf);
@@ -154,7 +154,27 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
       ende: '2026-11-15T14:00',
       ort: 'Saal',
       terminId: 61,
+      // A5: der Kalender wird mit gemerkt – das Termin-Fenster beginnt dann dort.
+      kalenderId: 1,
     });
+  });
+
+  it('das Termin-Fenster beginnt beim Kalender des gewählten Termins (A5)', async () => {
+    stelle(true, 2, {
+      termin: { beginn: '2026-11-15T12:00', ende: null, ort: '', terminId: 7, kalenderId: 1 },
+    });
+    m.kalenderListe.mockResolvedValue([
+      { id: 2, name: 'Bandproben', schreiben: false },
+      { id: 1, name: 'Sonstige Veranstaltung', schreiben: true },
+    ]);
+    zeigen();
+    const termin = await screen.findByRole('region', { name: 'Termin' });
+    fireEvent.click(within(termin).getByRole('button', { name: 'Bearbeiten' }));
+    const kalender = await screen.findByRole('combobox', { name: 'Kalender' });
+    expect(kalender).toHaveProperty('value', '1');
+    await waitFor(() =>
+      expect(m.termineIn).toHaveBeenCalledWith(1, expect.any(String), expect.any(String)),
+    );
   });
 
   it('Ende vor Beginn → „anlegen“ gesperrt, mit Hinweis', async () => {

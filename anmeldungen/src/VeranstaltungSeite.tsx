@@ -29,6 +29,9 @@ import {
 } from './Bearbeiten';
 import { PreisFensterZeigen, PreiseKarte, ProbeRechnen, type PreisFenster } from './Preise';
 import { VerwaltenFenster } from './Verwalten';
+import { FormularReiter } from './FormularReiter';
+import { GestaltungReiter } from './GestaltungReiter';
+import { Segment } from '@ui/bedienung/Segment';
 import type { Aenderung } from './Rueckgaengig';
 import { WER_TEXT, datumText } from './anzeige';
 import { fehlerMeldung, type Fehlermeldung } from './zustand';
@@ -45,9 +48,14 @@ import f from './Formular.module.scss';
  * Formular und Gestaltung (A5) und die Anmeldungsliste (A7) folgen.
  */
 
+/** Die Reiter einer Veranstaltung (A5). Die Anmeldungsliste (A7) kommt dazu. */
+export type Reiter = 'veranstaltung' | 'formular' | 'gestaltung';
+
 interface Daten {
   name: string;
   statusId: number;
+  /** Titelbild (Gruppenbild), `null` = Bild der Vorlage. */
+  bildUrl: string | null;
   einstellungen: OeffentlicheEinstellungen;
   anmeldung: AnmeldeEinstellungen;
   darf: boolean;
@@ -105,12 +113,19 @@ function Zeile({ titel, children }: { titel: string; children: React.ReactNode }
 
 export function VeranstaltungSeite({
   id,
+  reiter = 'veranstaltung',
+  onReiter = () => {},
+  gemeinde = null,
   zeitzone,
   teams = [],
   onZurueck,
   onGeaendert = () => {},
 }: {
   id: number;
+  reiter?: Reiter;
+  onReiter?: (r: Reiter) => void;
+  /** Gemeindename für den Kopf des Formulars (Vorschau). */
+  gemeinde?: string | null;
   zeitzone: string;
   /** Die eigenen Gruppen – Ziele für „In ein anderes Team“. */
   teams?: MeineGruppe[];
@@ -235,98 +250,137 @@ export function VeranstaltungSeite({
         </p>
       )}
 
-      <div className={s.raster}>
-        <div className={s.spalte}>
-          <Karte titel="Termin" onBearbeiten={bearbeiten('termin')}>
-            {t ? (
-              <>
-                <Zeile titel="Wann">
-                  {datumText(t.beginn.slice(0, 10))}, {t.beginn.slice(11)} Uhr
-                  {t.ende &&
-                    (t.ende.slice(0, 10) === t.beginn.slice(0, 10)
-                      ? ` bis ${t.ende.slice(11)} Uhr`
-                      : ` bis ${datumText(t.ende.slice(0, 10))}, ${t.ende.slice(11)} Uhr`)}
-                </Zeile>
-                <Zeile titel="Ort">{t.ort || '–'}</Zeile>
-                <Zeile titel="Kalender">{t.terminId ? `Termin Nr. ${t.terminId}` : '–'}</Zeile>
-              </>
-            ) : (
-              <Zeile titel="Wann">noch kein Termin gewählt</Zeile>
-            )}
-          </Karte>
-          <Karte titel="Anmeldung" onBearbeiten={bearbeiten('anmeldung')}>
-            <Zeile titel="Zeitraum">
-              {a.ab ? `ab ${zeit(a.ab)}` : 'noch nicht geöffnet'}
-              {a.bis ? ` bis ${zeit(a.bis)}` : ''}
-            </Zeile>
-            <Zeile titel="Plätze">
-              {a.maxPlaetze ?? 'unbegrenzt'}
-              {a.maxPlaetze !== null &&
-                (a.warteliste ? ' · danach Warteliste' : ' · ohne Warteliste')}
-            </Zeile>
-            <Zeile titel="Freie Plätze zeigen">
-              {e.plaetze.zeigen === 'immer'
-                ? 'immer'
-                : e.plaetze.zeigen === 'nie'
-                  ? 'nie'
-                  : `wenn weniger als ${e.plaetze.knappUnter} frei sind`}
-            </Zeile>
-          </Karte>
-          <Karte titel="Wer meldet sich an?" onBearbeiten={bearbeiten('wer')}>
-            <Zeile titel="Anmeldung">{WER_TEXT[e.wer][0]}</Zeile>
-            <Zeile titel="Geburtsdatum">
-              {geburt ? 'wird abgefragt (Pflicht)' : 'wird nicht abgefragt'}
-            </Zeile>
-          </Karte>
-          <PreiseKarte
-            preis={e.preis}
-            geburtsdatum={geburt}
-            darf={darf}
-            onOeffnen={(w) => setFenster({ preis: w })}
-            onGeburtsdatum={() => setFenster('wer')}
-          />
-          <Karte titel="Bezahlung" onBearbeiten={bearbeiten('bezahlung')}>
-            <Zeile titel="Bankverbindung">
-              {b.iban ? (
+      <Segment<Reiter>
+        className={v.reiter}
+        ariaLabel="Bereich"
+        value={reiter}
+        onChange={onReiter}
+        options={[
+          { value: 'veranstaltung', label: 'Veranstaltung' },
+          { value: 'formular', label: 'Formular' },
+          { value: 'gestaltung', label: 'Gestaltung' },
+        ]}
+      />
+
+      {reiter === 'formular' && (
+        <FormularReiter
+          id={id}
+          einstellungen={e}
+          darf={darf}
+          onGespeichert={(text) => gespeichert(text)()}
+        />
+      )}
+      {reiter === 'gestaltung' && (
+        <GestaltungReiter
+          id={id}
+          name={daten.name}
+          gemeinde={gemeinde}
+          einstellungen={e}
+          bildUrl={daten.bildUrl}
+          darf={darf}
+          heute={tagAusIso(new Date().toISOString(), zeitzone)}
+          onGespeichert={(text, umkehrbar) =>
+            umkehrbar
+              ? gespeichert(text)()
+              : (onGeaendert({ text, rueckgaengig: null }, false), laden())
+          }
+        />
+      )}
+
+      {reiter === 'veranstaltung' && (
+        <div className={s.raster}>
+          <div className={s.spalte}>
+            <Karte titel="Termin" onBearbeiten={bearbeiten('termin')}>
+              {t ? (
                 <>
-                  {b.kontoinhaber}
-                  <br />
-                  {ibanText(b.iban)}
-                  {b.bic && ` · ${b.bic}`}
+                  <Zeile titel="Wann">
+                    {datumText(t.beginn.slice(0, 10))}, {t.beginn.slice(11)} Uhr
+                    {t.ende &&
+                      (t.ende.slice(0, 10) === t.beginn.slice(0, 10)
+                        ? ` bis ${t.ende.slice(11)} Uhr`
+                        : ` bis ${datumText(t.ende.slice(0, 10))}, ${t.ende.slice(11)} Uhr`)}
+                  </Zeile>
+                  <Zeile titel="Ort">{t.ort || '–'}</Zeile>
+                  <Zeile titel="Kalender">{t.terminId ? `Termin Nr. ${t.terminId}` : '–'}</Zeile>
                 </>
-              ) : kostet ? (
-                <span className={v.fehlt}>fehlt noch</span>
               ) : (
-                'keine (kostenlos)'
+                <Zeile titel="Wann">noch kein Termin gewählt</Zeile>
               )}
-            </Zeile>
-            <Zeile titel="Zahlungsfrist">
-              {b.fristTage === 0 ? 'keine' : `${b.fristTage} Tage nach der Anmeldung`}
-            </Zeile>
-            <Zeile titel="Verwendungszweck">
-              {b.zweck || '–'}
-              {b.zweck.includes('[') && (
-                <small className={v.klein}>z. B. „{verwendungszweck(b.zweck, 'Müller')}“</small>
-              )}
-            </Zeile>
-          </Karte>
-          <Karte titel="Datenschutz" onBearbeiten={bearbeiten('loeschfrist')}>
-            <Zeile titel="Daten löschen">{e.loeschfristMonate} Monate nach dem Ende</Zeile>
-          </Karte>
-          <p className={v.hinweis}>
-            Formular und Gestaltung kommen im nächsten Schritt dazu, die Liste der Anmeldungen
-            danach. Bis dahin: „In ChurchTools“.
-          </p>
+            </Karte>
+            <Karte titel="Anmeldung" onBearbeiten={bearbeiten('anmeldung')}>
+              <Zeile titel="Zeitraum">
+                {a.ab ? `ab ${zeit(a.ab)}` : 'noch nicht geöffnet'}
+                {a.bis ? ` bis ${zeit(a.bis)}` : ''}
+              </Zeile>
+              <Zeile titel="Plätze">
+                {a.maxPlaetze ?? 'unbegrenzt'}
+                {a.maxPlaetze !== null &&
+                  (a.warteliste ? ' · danach Warteliste' : ' · ohne Warteliste')}
+              </Zeile>
+              <Zeile titel="Freie Plätze zeigen">
+                {e.plaetze.zeigen === 'immer'
+                  ? 'immer'
+                  : e.plaetze.zeigen === 'nie'
+                    ? 'nie'
+                    : `wenn weniger als ${e.plaetze.knappUnter} frei sind`}
+              </Zeile>
+            </Karte>
+            <Karte titel="Wer meldet sich an?" onBearbeiten={bearbeiten('wer')}>
+              <Zeile titel="Anmeldung">{WER_TEXT[e.wer][0]}</Zeile>
+              <Zeile titel="Geburtsdatum">
+                {geburt ? 'wird abgefragt (Pflicht)' : 'wird nicht abgefragt'}
+              </Zeile>
+            </Karte>
+            <PreiseKarte
+              preis={e.preis}
+              geburtsdatum={geburt}
+              darf={darf}
+              onOeffnen={(w) => setFenster({ preis: w })}
+              onGeburtsdatum={() => setFenster('wer')}
+            />
+            <Karte titel="Bezahlung" onBearbeiten={bearbeiten('bezahlung')}>
+              <Zeile titel="Bankverbindung">
+                {b.iban ? (
+                  <>
+                    {b.kontoinhaber}
+                    <br />
+                    {ibanText(b.iban)}
+                    {b.bic && ` · ${b.bic}`}
+                  </>
+                ) : kostet ? (
+                  <span className={v.fehlt}>fehlt noch</span>
+                ) : (
+                  'keine (kostenlos)'
+                )}
+              </Zeile>
+              <Zeile titel="Zahlungsfrist">
+                {b.fristTage === 0 ? 'keine' : `${b.fristTage} Tage nach der Anmeldung`}
+              </Zeile>
+              <Zeile titel="Verwendungszweck">
+                {b.zweck || '–'}
+                {b.zweck.includes('[') && (
+                  <small className={v.klein}>z. B. „{verwendungszweck(b.zweck, 'Müller')}“</small>
+                )}
+              </Zeile>
+            </Karte>
+            <Karte titel="Datenschutz" onBearbeiten={bearbeiten('loeschfrist')}>
+              <Zeile titel="Daten löschen">{e.loeschfristMonate} Monate nach dem Ende</Zeile>
+            </Karte>
+            <p className={v.hinweis}>
+              Die Liste der Anmeldungen kommt in einem späteren Schritt dazu. Bis dahin: „In
+              ChurchTools“.
+            </p>
+          </div>
+          <div className={`${s.spalte} ${v.klebt}`}>
+            <ProbeRechnen
+              preis={e.preis}
+              wer={e.wer}
+              geburtsdatum={geburt}
+              heute={tagAusIso(new Date().toISOString(), zeitzone)}
+            />
+          </div>
         </div>
-        <div className={`${s.spalte} ${v.klebt}`}>
-          <ProbeRechnen
-            preis={e.preis}
-            wer={e.wer}
-            geburtsdatum={geburt}
-            heute={tagAusIso(new Date().toISOString(), zeitzone)}
-          />
-        </div>
-      </div>
+      )}
 
       {fenster === 'termin' && (
         <TerminFenster

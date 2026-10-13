@@ -13,7 +13,10 @@ import {
   aendereEinstellungen,
   aenderePreise,
   anmeldungenZahl,
+  bildEntfernen,
+  bildHochladen,
   einstellungenVon,
+  kopfVon,
   anlegenMoeglich,
   freigeben,
   kalenderListe,
@@ -53,6 +56,7 @@ interface G {
   note: string;
   settings: Record<string, unknown>;
   felder: { id: number; name: string; note?: string | null; [k: string]: unknown }[];
+  bild?: string;
   eltern: number[];
 }
 
@@ -88,7 +92,8 @@ function ct() {
     const url = new URL(String(input));
     const pfad = url.pathname.replace(/^\/api/, '');
     const m = (init?.method ?? 'GET').toUpperCase();
-    const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : {};
+    const body =
+      typeof init?.body === 'string' ? (JSON.parse(init.body) as Record<string, unknown>) : {};
     aufrufe.push(`${m} ${pfad}${'note' in body ? ' [note]' : ''}`);
     if (pfad === '/csrftoken') return json(200, { data: 't' });
     if (m === 'GET' && pfad === '/group/grouptypes')
@@ -170,6 +175,13 @@ function ct() {
       if (typeof m === 'number') return json(m, { message: 'nein' });
       return json(200, { data: m, meta: { pagination: { lastPage: 1 } } });
     }
+    r = /^\/files\/groupimage\/(\d+)$/.exec(pfad);
+    if (r) {
+      const g = gruppen.get(Number(r[1]))!;
+      if (m === 'DELETE') g.bild = undefined;
+      else if (!schlucken.has('BILD')) g.bild = 'https://ct.test/images/1/abc';
+      return json(m === 'DELETE' ? 204 : 200, { data: [{ imageUrl: g.bild }] });
+    }
     r = /^\/groups\/(\d+)\/memberfields\/group\/(\d+)$/.exec(pfad);
     if (r) {
       const g = gruppen.get(Number(r[1]))!;
@@ -221,7 +233,12 @@ function ct() {
         data: {
           id: g.id,
           name: g.name,
-          information: { note: g.note, groupStatusId: g.status, groupTypeId: g.typ },
+          information: {
+            note: g.note,
+            groupStatusId: g.status,
+            groupTypeId: g.typ,
+            imageUrl: g.bild ?? '',
+          },
           settings: g.settings,
         },
       });
@@ -875,5 +892,27 @@ describe('Formularfelder in ChurchTools (A5)', () => {
       NichtUebernommen,
     );
     expect(gruppen.get(id)!.note).toBe(vorher);
+  });
+});
+
+describe('Titelbild (A5)', () => {
+  const bild = () => new File(['x'], 'bild.png', { type: 'image/png' });
+  it('hochladen (Feld files[]), nachgelesen; entfernen', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    expect(await bildHochladen(id, bild())).toBe('https://ct.test/images/1/abc');
+    expect((await kopfVon(id)).bildUrl).toBe('https://ct.test/images/1/abc');
+    await bildEntfernen(id);
+    expect((await kopfVon(id)).bildUrl).toBeNull();
+  });
+  it('kein Bild oder zu groß → abgelehnt, bevor etwas hochgeladen wird; nicht übernommen → Fehler', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    await expect(
+      bildHochladen(id, new File(['x'], 'a.pdf', { type: 'application/pdf' })),
+    ).rejects.toMatchObject({ status: 422 });
+    const gross = new File([new Uint8Array(9 * 1024 * 1024)], 'gross.jpg', { type: 'image/jpeg' });
+    await expect(bildHochladen(id, gross)).rejects.toMatchObject({ status: 413 });
+    expect(aufrufe.some((a) => a.includes('groupimage'))).toBe(false);
+    schlucken.add('BILD');
+    await expect(bildHochladen(id, bild())).rejects.toBeInstanceOf(NichtUebernommen);
   });
 });

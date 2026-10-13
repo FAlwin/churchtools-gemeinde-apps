@@ -49,7 +49,12 @@ const json = (body: unknown) => JSON.stringify(body);
 interface GruppeRoh {
   id: number;
   name: string;
-  information?: { note?: string | null; groupStatusId?: number; groupTypeId?: number };
+  information?: {
+    note?: string | null;
+    groupStatusId?: number;
+    groupTypeId?: number;
+    imageUrl?: string | null;
+  };
   settings?: {
     maxMembers?: number | null;
     allowWaitinglist?: boolean;
@@ -207,10 +212,43 @@ export async function reparieren(id: number): Promise<OeffentlicheEinstellungen 
   return e;
 }
 
-/** Name und Status (1 aktiv, 2 Entwurf) einer Veranstaltung. */
-export async function kopfVon(id: number): Promise<{ name: string; statusId: number }> {
+/** Name, Status (1 aktiv, 2 Entwurf) und Titelbild einer Veranstaltung. */
+export async function kopfVon(
+  id: number,
+): Promise<{ name: string; statusId: number; bildUrl: string | null }> {
   const g = await gruppe(id);
-  return { name: g.name, statusId: Number(g.information?.groupStatusId) };
+  return {
+    name: g.name,
+    statusId: Number(g.information?.groupStatusId),
+    bildUrl: g.information?.imageUrl || null,
+  };
+}
+
+/** Größtes Titelbild, das die Erweiterung hochlädt – größere Fotos vorher verkleinern. */
+export const BILD_MAX_BYTES = 8 * 1024 * 1024;
+
+/**
+ * **Titelbild hochladen** (A5) – das Gruppenbild in ChurchTools, ohne Login abrufbar (A0). Gemessen 13.10.2026:
+ * `POST /files/groupimage/{id}` mit dem Feld `files[]`. Nachgelesen; gibt die neue Bild-Adresse zurück.
+ */
+export async function bildHochladen(id: number, datei: File): Promise<string> {
+  if (!datei.type.startsWith('image/'))
+    throw new ApiError(422, 'Bitte ein Bild wählen (JPG oder PNG).');
+  if (datei.size > BILD_MAX_BYTES)
+    throw new ApiError(413, 'Das Bild ist größer als 8 MB. Bitte vorher verkleinern.');
+  const form = new FormData();
+  form.append('files[]', datei, datei.name);
+  await ctAnfrage(`/files/groupimage/${id}`, { method: 'POST', body: form });
+  const url = (await gruppe(id)).information?.imageUrl;
+  if (!url) throw new NichtUebernommen('das Titelbild');
+  return url;
+}
+
+/** **Titelbild entfernen** – dann gilt das Bild der Vorlage (gemessen: `DELETE /files/groupimage/{id}` → 204). */
+export async function bildEntfernen(id: number): Promise<void> {
+  await ctAnfrage(`/files/groupimage/${id}`, { method: 'DELETE' });
+  if ((await gruppe(id)).information?.imageUrl)
+    throw new NichtUebernommen('das Entfernen des Titelbilds');
 }
 
 /**

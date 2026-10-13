@@ -125,7 +125,8 @@ export function TerminFenster({
   const heute = tagAusIso(new Date().toISOString(), zeitzone);
   const [art, setArt] = useState<'vorhanden' | 'neu'>('vorhanden');
   const [kalender, setKalender] = useState<Kalender[] | null>(null);
-  const [kalenderId, setKalenderId] = useState<number | null>(null);
+  // Beim Kalender des gewählten Termins beginnen (A3-Abnahme: es begann beim ersten, z. B. „Bandproben“).
+  const [kalenderId, setKalenderId] = useState<number | null>(termin?.kalenderId ?? null);
   const [termine, setTermine] = useState<CtTermin[] | null>(null);
   const [suche, setSuche] = useState('');
   const [neu, setNeu] = useState({
@@ -233,7 +234,7 @@ export function TerminFenster({
           ) : (
             <ul className={f.optionen} aria-label="Termine">
               {gefiltert.slice(0, 30).map((t) => {
-                const k = terminAusCt(t, zeitzone);
+                const k = terminAusCt(t, zeitzone, kalenderId);
                 return (
                   <li key={`${t.id}-${t.startDate}`} className={f.listenEintrag}>
                     <button
@@ -343,7 +344,7 @@ export function TerminFenster({
                 });
                 await aendereEinstellungen(id, (e) => ({
                   ...e,
-                  termin: terminAusCt(termin, zeitzone),
+                  termin: terminAusCt(termin, zeitzone, kalenderId),
                 }));
               })
             }

@@ -33,6 +33,7 @@ vi.mock('./veranstaltungen', () => ({ ladeUebersicht: vi.fn() }));
 vi.mock('./einrichten', async (original) => ({
   ...(await original<typeof import('./einrichten')>()),
   anlegenMoeglich: vi.fn(),
+  istGruppenAdmin: vi.fn().mockResolvedValue(false),
 }));
 const laden = vi.mocked(ladeStart);
 const ladenUebersicht = vi.mocked(ladeUebersicht);

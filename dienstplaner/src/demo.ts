@@ -120,6 +120,29 @@ function daten(fall: string): Record<string, unknown> {
       },
     },
     '/api/events': { data: TERMINE },
+    // Ablauf nur am ersten Termin – die anderen zeigen „Noch kein Ablauf“ (ChurchTools: 404).
+    '/api/events/101/agenda': {
+      data: {
+        items: [
+          { id: 1, type: 'header', title: 'Ankommen' },
+          { id: 2, type: 'song', title: 'Halleluja', song: { title: 'Halleluja' } },
+          { id: 3, type: 'song', title: 'Treu', song: { title: 'Treu' } },
+          { id: 4, type: 'normal', title: 'Predigt' },
+        ],
+      },
+    },
+    // Abwesend am Tag der offenen Anfrage (Gesang, erster Gottesdienst) – die Startseite warnt.
+    '/api/persons/1/absences': {
+      data: [
+        { id: 1, startDate: zeit(4, '00:00').slice(0, 10), endDate: zeit(4, '00:00').slice(0, 10) },
+        {
+          id: 2,
+          startDate: zeit(30, '00:00').slice(0, 10),
+          endDate: zeit(33, '00:00').slice(0, 10),
+        },
+      ],
+    },
+    '/api/custommodules': { data: [{ id: 10, shorty: 'musik-app', name: 'Musik App' }] },
     '/api/services': {
       data: [
         { id: 6, name: 'Ton', serviceGroupId: 3, groupIds: [7] },

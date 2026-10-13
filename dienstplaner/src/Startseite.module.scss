@@ -1,10 +1,10 @@
-// Startseite des Dienstplaners (E2) – Design der Musik-App und der Anmeldungen: Tokens und
-// Listen-Bausteine aus ui/design (ChurchTools-Look, #393), Karten wie auf der Startseite der Anmeldungen.
+// Startseite des Dienstplaners (E3-3, Entwurf v17) – Tokens und Bausteine aus ui/design, Karten wie in
+// der Termine-Liste. Farben nach dem ChurchTools-Look: Rot = offen, Grün = besetzt.
 @use '@ui/design/mixins' as m;
 
 .raster {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
   gap: 16px;
   align-items: start;
 
@@ -13,11 +13,22 @@
   }
 }
 
+.spalte {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
 .karte {
   @include m.card-list;
 }
 
 .kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   padding: 12px 14px;
   border-bottom: 1px solid var(--hair);
 
@@ -28,11 +39,22 @@
   }
 }
 
+.klein {
+  @include m.auswahlKnopf;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+
 .liste {
   list-style: none;
 }
 
-.zeile {
+.zeile,
+.linkZeile {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -44,16 +66,54 @@
   }
 }
 
+.linkZeile {
+  width: 100%;
+  border: none;
+  background: none;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+
+  &:active {
+    background: var(--surface3);
+  }
+}
+
 .mitte {
   flex: 1;
   min-width: 0;
-  font-size: 15px;
-  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  b {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  small {
+    color: var(--text2);
+    font-size: 13px;
+  }
 }
 
 .leise {
   color: var(--text2);
   font-size: 14px;
+}
+
+.warnung {
+  color: var(--red) !important;
+  font-weight: 600;
+}
+
+.frei {
+  color: var(--red);
+  font-weight: 600;
+}
+
+.besetzt {
+  color: var(--green);
 }
 
 .kachel {
@@ -64,8 +124,6 @@
   width: 44px;
   height: 44px;
   border-radius: var(--r-tile);
-  background: var(--blue-tile);
-  color: var(--blue-tile-text);
 }
 
 .kachelGrau {
@@ -73,32 +131,72 @@
   color: var(--text2);
 }
 
-.rolle {
-  flex: none;
-  padding: 2px 10px;
-  border-radius: 999px;
-  font-size: 13px;
-  background: var(--surface3);
-  color: var(--text2);
-}
-
-.rolleLeitung {
-  composes: rolle;
-  background: var(--blue-soft);
-  color: var(--blue-ink);
-  font-weight: 600;
-}
-
 .hinweis {
   padding: 10px 14px 12px;
-  border-top: 1px solid var(--hair);
   color: var(--text2);
   font-size: 13px;
   line-height: 1.45;
 }
 
-.bau {
-  grid-column: 1 / -1;
-  color: var(--text2);
+// „Als Nächstes“ – der große Kasten oben (Entwurf: .hero).
+.held {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+}
+
+.vorzeile {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--blue-ink);
+}
+
+.heldKopf {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  h2 {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--text);
+  }
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.knopf {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: var(--blue);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text);
   font-size: 14px;
+  line-height: 1.45;
 }

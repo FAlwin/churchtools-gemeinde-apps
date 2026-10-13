@@ -25,6 +25,16 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Adresse (`#/termine`), Neuladen und Zurück funktionieren. Termine, Planen und Abwesenheiten zeigen noch
   einen Platzhalter.
 
+### Neu (Dienstplaner, E3-3)
+
+- **Startseite** (#518, Entwurf v17): „Als Nächstes“ mit deinem Dienst, dem Team (fünf Namen, dann „und N
+  weitere“; „Namen verbergen“ wird beachtet), den Liedern aus dem Ablauf, dem Ende und dem Knopf zur
+  Musik-App, wenn sie installiert ist; „Für dich offen“ (deine Anfragen, mit Warnung bei Abwesenheit);
+  „Deine nächsten Dienste“ (→ Termine, Meine); Abwesenheiten (Anzahl); für Planer freie Plätze je
+  Dienstgruppe in den nächsten 6 Wochen. Start und Termine laden dieselbe Liste einmal. Was nicht lesbar
+  ist (Ablauf, Abwesenheiten), fehlt – statt „kein Ablauf“ oder „nichts eingetragen“ zu behaupten.
+  Die Gruppenkarte aus E2 entfällt (nicht im Entwurf).
+
 ### Neu (Dienstplaner, E3-2)
 
 - **Termine** (#511, Entwurf v17): Liste nach Monaten mit „Meine | Alle“ (Vorgabe Meine), Filter nach

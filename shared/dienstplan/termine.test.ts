@@ -62,8 +62,11 @@ describe('termineAus', () => {
     expect(z).toEqual({
       id: 1,
       name: 'Gottesdienst',
+      beginn: '2026-10-18T08:00:00Z',
+      ende: '2026-10-18T08:00:00Z',
       tag: '2026-10-18',
       uhrzeit: '10:00',
+      endeUhrzeit: null,
       abgesagt: false,
       meine: [
         { dienst: 'Ton', zugesagt: true },
@@ -71,6 +74,8 @@ describe('termineAus', () => {
       ],
       geplant: 2,
       frei: 1,
+      freiNachGruppe: { 3: 1 },
+      team: [],
     });
   });
 
@@ -129,5 +134,50 @@ describe('Veranstaltungsarten und Filter', () => {
       ['2026-10', 4],
       ['2026-11', 2],
     ]);
+  });
+});
+
+describe('Team, Ende und freie Plätze je Gruppe (Startseite, E3-3)', () => {
+  it('Team: besetzte Plätze anderer mit Dienst und Zusage; ich selbst und freie Plätze fehlen', () => {
+    const [z] = zeilen([
+      termin(1, 'X', '2026-10-18T08:00:00Z', [
+        { serviceId: 6, personId: ICH, name: 'Alwin', isAccepted: true },
+        { serviceId: 7, personId: 46, name: 'Anna Test', isAccepted: true },
+        { serviceId: 9, personId: null, name: 'Gast', isAccepted: false },
+        { serviceId: 9, personId: null, name: null },
+      ]),
+    ]);
+    expect(z.team).toEqual([
+      { dienst: 'Licht', name: 'Anna Test', zugesagt: true },
+      { dienst: 'Gesang', name: 'Gast', zugesagt: false },
+    ]);
+  });
+
+  it('„Namen verbergen“ (personId -2): der mitgeschickte echte Name erscheint NIE', () => {
+    const [z] = zeilen([
+      termin(1, 'X', '2026-10-18T08:00:00Z', [
+        { serviceId: 7, personId: -2, name: 'Echter Name', isAccepted: true },
+      ]),
+    ]);
+    expect(JSON.stringify(z)).not.toContain('Echter Name');
+  });
+
+  it('freie Plätze je geplanter Gruppe; nicht geplante Gruppen fehlen', () => {
+    const [z] = zeilen(
+      [
+        termin(1, 'X', '2026-10-18T08:00:00Z', [
+          { serviceId: 6, personId: null, name: null },
+          { serviceId: 7, personId: null, name: null },
+          { serviceId: 9, personId: null, name: null },
+        ]),
+      ],
+      [3],
+    );
+    expect(z.freiNachGruppe).toEqual({ 3: 2 });
+  });
+
+  it('Ende in Ortszeit, wenn es nach dem Beginn liegt; sonst null', () => {
+    const roh = { ...termin(1, 'X', '2026-10-18T08:00:00Z'), endDate: '2026-10-18T09:30:00Z' };
+    expect(zeilen([roh])[0]).toMatchObject({ endeUhrzeit: '11:30', ende: '2026-10-18T09:30:00Z' });
   });
 });

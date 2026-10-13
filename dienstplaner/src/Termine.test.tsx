@@ -1,25 +1,10 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import type { TerminZeile } from '@shared/dienstplan/termine';
+import { zeile } from '@shared/dienstplan/zeile.testutil';
 import { Termine } from './Termine';
 
-const z = (
-  id: number,
-  name: string,
-  tag: string,
-  extra: Partial<TerminZeile> = {},
-): TerminZeile => ({
-  id,
-  name,
-  tag,
-  uhrzeit: '10:00',
-  abgesagt: false,
-  meine: [],
-  geplant: 0,
-  frei: 0,
-  ...extra,
-});
+const z = zeile;
 
 const ZEILEN = [
   z(1, 'Gottesdienst', '2026-10-18', {
@@ -58,10 +43,10 @@ describe('Termine (E3-2)', () => {
   it('Vorgabe „Meine“: nur Termine mit eigenem Dienst, mit zugesagt/angefragt', () => {
     zeige();
     expect(titel()).toEqual(['Gottesdienst']);
-    const zeile = screen.getAllByRole('listitem')[0];
-    expect(within(zeile).getByText('Ton')).toBeTruthy();
-    expect(within(zeile).getByText(/Gesang · angefragt/)).toBeTruthy();
-    expect(within(zeile).getByText('So, 18.10. · 10:00 Uhr')).toBeTruthy();
+    const reihe = screen.getAllByRole('listitem')[0];
+    expect(within(reihe).getByText('Ton')).toBeTruthy();
+    expect(within(reihe).getByText(/Gesang · angefragt/)).toBeTruthy();
+    expect(within(reihe).getByText('So, 18.10. · 10:00 Uhr')).toBeTruthy();
   });
 
   it('„Alle“: nach Monaten, Planer sehen „N frei“ und den Haken nur bei eigenen Plätzen', () => {

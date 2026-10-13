@@ -11,6 +11,8 @@ import { Demnaechst } from './Demnaechst';
 import { Termine, type TermineZustand } from './Termine';
 import { ladeTermine, WOCHEN_JE_SCHRITT } from './ladeTermine';
 import { adresseFuer, reiterAusAdresse, sichtbareReiter, type ReiterId } from './reiter';
+import { leseAuswahl, merkeAuswahl } from './auswahl';
+import { tagAusIso } from '@shared/ct/zeit';
 
 /**
  * Der Dienstplaner in ChurchTools (Bauplan E2/E3): Start · Termine · Planen · Abwesenheiten. Am Computer
@@ -62,8 +64,11 @@ export function App() {
     [zeitzone],
   );
 
+  // Start und Termine zeigen dieselbe Liste – geladen wird einmal, wenn einer der beiden offen ist.
   useEffect(() => {
-    if (aktiv === 'termine' && start && termine === null) termineLaden(start, wochen);
+    if ((aktiv === 'start' || aktiv === 'termine') && start && termine === null) {
+      termineLaden(start, wochen);
+    }
   }, [aktiv, start, termine, wochen, termineLaden]);
   const wechseln = (id: ReiterId) => {
     window.location.hash = adresseFuer(id);
@@ -94,7 +99,18 @@ export function App() {
       gruss={aktiv === 'start'}
       onNochmal={laden}
     >
-      {start && aktiv === 'start' && <Startseite start={start} />}
+      {start && aktiv === 'start' && (
+        <Startseite
+          start={start}
+          termine={termine}
+          heute={tagAusIso(new Date().toISOString(), zeitzone)}
+          onNochmal={() => termineLaden(start, wochen)}
+          onMeineTermine={() => {
+            merkeAuswahl({ ...leseAuswahl(), nurMeine: true });
+            wechseln('termine');
+          }}
+        />
+      )}
       {aktiv === 'termine' && termine && start && (
         <Termine
           zustand={termine}

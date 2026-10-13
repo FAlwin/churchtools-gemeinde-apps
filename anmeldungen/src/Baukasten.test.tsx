@@ -10,6 +10,7 @@ import {
   within,
 } from '@testing-library/react';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
+import { vorlageVon } from '@shared/anmeldung/gestaltung';
 import type { OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import * as FF from './formularFelder';
 import * as EI from './einrichten';
@@ -31,6 +32,7 @@ vi.mock('./einrichten', async (original) => ({
   bildHochladen: vi.fn(),
   bildEntfernen: vi.fn(),
   umbenennen: vi.fn(),
+  gemeindeLogo: vi.fn(),
 }));
 const ff = vi.mocked(FF);
 const ei = vi.mocked(EI);
@@ -116,6 +118,7 @@ beforeEach(() => {
   );
   ff.antwortenZaehlen.mockResolvedValue(new Map());
   ei.aendereEinstellungen.mockResolvedValue({} as never);
+  ei.gemeindeLogo.mockResolvedValue(null);
 });
 afterEach(() => vi.useRealTimers());
 
@@ -406,8 +409,8 @@ describe('Baukasten (A5): Design', () => {
     zeigen();
     const leiste = screen.getByRole('complementary', { name: 'Bausteine und Design' });
     fireEvent.click(within(leiste).getByRole('button', { name: 'Design' }));
-    fireEvent.click(screen.getByRole('button', { name: /^Klassisch/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Gold' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Klassisch.*Kopfband/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Beere' }));
     await act(async () => {
       vi.advanceTimersByTime(PAUSE_DESIGN_MS - 1);
     });
@@ -418,7 +421,11 @@ describe('Baukasten (A5): Design', () => {
     await waitFor(() => expect(ei.aendereEinstellungen).toHaveBeenCalledTimes(1));
     const aendern = ei.aendereEinstellungen.mock.calls[0][1];
     const neu = aendern(neueEinstellungen('kinder'));
-    expect(neu.gestaltung).toMatchObject({ vorlage: 'klassisch', farbe: '#c9a54a' });
+    expect(neu.gestaltung).toMatchObject({
+      ...vorlageVon('klassisch').werte,
+      vorlage: 'klassisch',
+      farbe: '#a3245c',
+    });
   });
 
   it('Begrüßungstext direkt im Formular; beim Verlassen sofort gespeichert', async () => {
@@ -510,20 +517,49 @@ describe('Baukasten (Feinheiten): Leiste, Fragetyp, Design', () => {
     await waitFor(() => expect(screen.getByLabelText('Fragetyp')).toHaveProperty('disabled', true));
   });
 
-  it('eigene Farbe zurück auf „wie Vorlage“; Schrift', async () => {
+  it('Design einzeln ändern: Muster, Logo-Platz, Schrift – „seitdem geändert“ zählt mit', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    const e = einstellungen();
-    e.gestaltung = { ...e.gestaltung, kartenfarbe: '#123456' };
-    zeigen(e);
+    zeigen();
     const leiste = screen.getByRole('complementary', { name: 'Bausteine und Design' });
     fireEvent.click(within(leiste).getByRole('button', { name: 'Design' }));
-    fireEvent.click(screen.getByRole('button', { name: 'wie Vorlage' }));
-    fireEvent.click(screen.getByRole('button', { name: /Gut lesbar/ }));
+    // Kinder-Event startet bei „Bunt“ mit Konfetti – umstellbar auf Sterne (Alwin: „andere Hintergründe“).
+    fireEvent.click(screen.getByRole('button', { name: /^Sterne/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Links neben dem Titel' }));
+    fireEvent.click(
+      within(screen.getByRole('group', { name: 'Schrift: Text' })).getByRole('button', {
+        name: 'Lesbar',
+      }),
+    );
+    expect(screen.getByText(/seitdem geändert: Muster, Text/)).toBeTruthy();
     await act(async () => {
       vi.advanceTimersByTime(PAUSE_DESIGN_MS);
     });
     await waitFor(() => expect(ei.aendereEinstellungen).toHaveBeenCalledTimes(1));
     const g = ei.aendereEinstellungen.mock.calls[0][1](neueEinstellungen('kinder')).gestaltung;
-    expect(g).toMatchObject({ kartenfarbe: null, schrift: 'lesbar' });
+    expect(g).toMatchObject({ muster: 'sterne', logoOrt: 'links', textSchrift: 'lesbar' });
+  });
+
+  it('Gemeindelogo aus ChurchTools: wird übernommen, sobald es bekannt ist (nur mit Recht)', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    ei.gemeindeLogo.mockResolvedValue('https://ct.test/images/558/logo');
+    zeigen();
+    await waitFor(() => expect(ei.gemeindeLogo).toHaveBeenCalled());
+    await act(async () => {
+      vi.advanceTimersByTime(PAUSE_DESIGN_MS + 10);
+    });
+    await waitFor(() => expect(ei.aendereEinstellungen).toHaveBeenCalled());
+    const g = ei.aendereEinstellungen.mock.calls[0][1](neueEinstellungen('kinder')).gestaltung;
+    expect(g).toMatchObject({ logo: 'ct', logoUrl: 'https://ct.test/images/558/logo' });
+  });
+
+  it('ohne Recht wird das Logo nicht übernommen (kein Schreiben)', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    ei.gemeindeLogo.mockResolvedValue('https://ct.test/images/558/logo');
+    zeigen(einstellungen(), false);
+    await waitFor(() => expect(ei.gemeindeLogo).toHaveBeenCalled());
+    await act(async () => {
+      vi.advanceTimersByTime(PAUSE_DESIGN_MS + 50);
+    });
+    expect(ei.aendereEinstellungen).not.toHaveBeenCalled();
   });
 });

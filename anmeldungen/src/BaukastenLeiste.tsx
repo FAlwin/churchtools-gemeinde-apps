@@ -1,27 +1,19 @@
 import { useState } from 'react';
 import { Icon } from '@ui/icons/icons';
-import { Segment } from '@ui/bedienung/Segment';
-import {
-  BAUSTEINE,
-  type Feld,
-  type Feldtyp,
-  type Formular,
-  type Gestaltung,
-} from '@shared/anmeldung/formular';
+import { BAUSTEINE, type Feld, type Feldtyp, type Formular } from '@shared/anmeldung/formular';
 import {
   EMPFOHLEN,
   bausteinFeld,
   neueFeldKennung,
   type Bereich,
 } from '@shared/anmeldung/baukasten';
-import { FARBEN, VORLAGEN_GESTALTUNG, vorlageWechseln } from '@shared/anmeldung/gestaltung';
 import { BausteinSymbol, type BausteinIcon } from './bausteinIcons';
 import k from './Baukasten.module.scss';
 
 /**
  * **Die Leiste rechts im Baukasten** (A5): „Bausteine“ wie bei Campflow (Kacheln zum Ziehen oder Antippen, mit
- * Suche) und „Design“ wie bei Jotform (Vorlagen-Galerie, Farben, Feldstil, Knöpfe, Titelbild). Sie ändert nichts
- * selbst – sie meldet dem Baukasten, was gezogen, angetippt oder gewählt wurde.
+ * Suche); „Design“ steht in `DesignTafel.tsx`. Sie ändert nichts selbst – sie meldet dem Baukasten, was gezogen
+ * oder angetippt wurde.
  */
 
 /** Ein Baustein, der ins Formular kommt: das fertige Feld und wohin es beim Antippen gehört. */
@@ -261,165 +253,6 @@ export function BausteineTafel({
           <small>Es wird knapp – lange Hilfetexte oder der Begrüßungstext kürzen hilft.</small>
         )}
       </div>
-    </div>
-  );
-}
-
-/** Die Schriften zur Wahl – nur Systemschriften (Datenschutz). `standard` = die der Vorlage. */
-const SCHRIFTEN: [Gestaltung['schrift'], string, string][] = [
-  ['standard', 'Wie Vorlage', ''],
-  ['rund', 'Rund', 'für Kinder'],
-  ['serif', 'Mit Serifen', 'festlich'],
-  ['klassisch', 'Klassisch', 'Einladung'],
-  ['lesbar', 'Gut lesbar', 'Senioren'],
-];
-
-/** Was der Farbwähler zeigt, solange die Vorlage die Farbe bestimmt. */
-const STANDARD_FARBE = { seitenfarbe: '#f3f6f6', kartenfarbe: '#ffffff', schriftfarbe: '#17242a' };
-
-export function DesignTafel({
-  gestaltung: g,
-  onGestaltung,
-}: {
-  gestaltung: Gestaltung;
-  onGestaltung: (g: Gestaltung) => void;
-}) {
-  return (
-    <div className={k.tafel}>
-      <h3 className={k.gruppe}>Vorlagen</h3>
-      <div className={k.vorlagen}>
-        {VORLAGEN_GESTALTUNG.map((x) => (
-          <button
-            key={x.id}
-            type="button"
-            className={k.vorlage}
-            aria-pressed={x.id === g.vorlage}
-            onClick={() => onGestaltung(vorlageWechseln(g, x.id))}
-          >
-            <span
-              className={`${k.mini} ${k[`mini-${x.id}`]}`}
-              style={{ '--m': x.farbe } as React.CSSProperties}
-            />
-            <b>{x.name}</b>
-            <small>{x.hinweis}</small>
-          </button>
-        ))}
-      </div>
-
-      <h3 className={k.gruppe}>Farbe</h3>
-      <div className={k.farben} role="group" aria-label="Farbe">
-        {FARBEN.map(([hex, name]) => (
-          <button
-            key={hex}
-            type="button"
-            className={k.farbe}
-            aria-label={name}
-            aria-pressed={g.farbe.toLowerCase() === hex}
-            style={{ background: hex }}
-            onClick={() => onGestaltung({ ...g, farbe: hex })}
-          />
-        ))}
-        <label className={k.eigeneFarbe}>
-          <input
-            type="color"
-            value={g.farbe}
-            aria-label="Eigene Farbe"
-            onChange={(e) => onGestaltung({ ...g, farbe: e.target.value })}
-          />
-          eigene
-        </label>
-      </div>
-
-      <h3 className={k.gruppe}>Eigene Farben</h3>
-      <div className={k.farbPaare}>
-        {(
-          [
-            ['seitenfarbe', 'Seite'],
-            ['kartenfarbe', 'Formular'],
-            ['schriftfarbe', 'Schrift'],
-          ] as const
-        ).map(([feld, name]) => (
-          <div key={feld} className={k.farbPaar}>
-            <label>
-              <input
-                type="color"
-                value={g[feld] ?? STANDARD_FARBE[feld]}
-                aria-label={`Farbe: ${name}`}
-                onChange={(e) => onGestaltung({ ...g, [feld]: e.target.value })}
-              />
-              <span>{name}</span>
-            </label>
-            {g[feld] ? (
-              <button
-                type="button"
-                className={k.textKnopf}
-                onClick={() => onGestaltung({ ...g, [feld]: null })}
-              >
-                wie Vorlage
-              </button>
-            ) : (
-              <small>wie Vorlage</small>
-            )}
-          </div>
-        ))}
-      </div>
-
-      <h3 className={k.gruppe}>Schrift</h3>
-      <div className={k.schriften}>
-        {SCHRIFTEN.map(([id, name, hinweis]) => (
-          <button
-            key={id}
-            type="button"
-            className={`${k.schrift} ${k[`schrift-${id}`] ?? ''}`}
-            aria-pressed={g.schrift === id}
-            onClick={() => onGestaltung({ ...g, schrift: id })}
-          >
-            <b>Aa</b>
-            <small>
-              {name}
-              {hinweis && ` · ${hinweis}`}
-            </small>
-          </button>
-        ))}
-      </div>
-      <p className={k.klein}>
-        Nur Schriften, die jedes Gerät schon hat – nichts wird von Google geladen.
-      </p>
-
-      <h3 className={k.gruppe}>Breite des Formulars</h3>
-      <Segment
-        ariaLabel="Breite des Formulars"
-        value={g.breite}
-        onChange={(breite) => onGestaltung({ ...g, breite })}
-        options={[
-          { value: 'schmal', label: 'Schmal' },
-          { value: 'normal', label: 'Normal' },
-          { value: 'breit', label: 'Breit' },
-        ]}
-      />
-
-      <h3 className={k.gruppe}>Eingabefelder</h3>
-      <Segment
-        ariaLabel="Eingabefelder"
-        value={g.feldstil}
-        onChange={(feldstil) => onGestaltung({ ...g, feldstil })}
-        options={[
-          { value: 'kasten', label: 'Kasten' },
-          { value: 'linie', label: 'Linie' },
-          { value: 'gefuellt', label: 'Gefüllt' },
-        ]}
-      />
-
-      <h3 className={k.gruppe}>Knöpfe</h3>
-      <Segment
-        ariaLabel="Knöpfe"
-        value={g.knoepfe}
-        onChange={(knoepfe) => onGestaltung({ ...g, knoepfe })}
-        options={[
-          { value: 'eckig', label: 'Eckig' },
-          { value: 'rund', label: 'Rund' },
-        ]}
-      />
     </div>
   );
 }

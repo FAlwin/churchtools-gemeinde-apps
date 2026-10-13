@@ -29,9 +29,16 @@ import {
   feldSpeichern,
   feldTypAendern,
 } from './formularFelder';
-import { aendereEinstellungen, bildEntfernen, bildHochladen, umbenennen } from './einrichten';
+import {
+  aendereEinstellungen,
+  bildEntfernen,
+  bildHochladen,
+  gemeindeLogo,
+  umbenennen,
+} from './einrichten';
 import { FeldBearbeiten } from './FeldBearbeiten';
-import { BausteineTafel, DesignTafel, type NeuerBaustein } from './BaukastenLeiste';
+import { BausteineTafel, type NeuerBaustein } from './BaukastenLeiste';
+import { DesignTafel } from './DesignTafel';
 import { entwurfFehler, mitAntworten, type FeldEntwurf } from './baukastenEntwurf';
 import { BausteinSymbol } from './bausteinIcons';
 import { useSchlange } from './useSchlange';
@@ -162,6 +169,19 @@ export function Baukasten({
       .querySelector(`[data-feld="${feldId}"]`)
       ?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
   });
+
+  // Das Gemeindelogo aus ChurchTools einmal holen (`undefined` = lädt noch, `null` = keins hinterlegt).
+  const [ctLogo, setCtLogo] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    let aktuell = true;
+    gemeindeLogo().then(
+      (url) => aktuell && setCtLogo(url),
+      () => aktuell && setCtLogo(null),
+    );
+    return () => {
+      aktuell = false;
+    };
+  }, []);
 
   // Neuer gespeicherter Stand: den Zwischenstand verwerfen – aber nur, wenn nichts mehr läuft oder wartet.
   useEffect(() => {
@@ -296,6 +316,17 @@ export function Baukasten({
     if (designUhr.current) clearTimeout(designUhr.current);
     designUhr.current = setTimeout(designSichern, PAUSE_DESIGN_MS);
   }
+
+  // Ist „Gemeindelogo“ gewählt und hat sich die Adresse in ChurchTools geändert (oder fehlt sie noch), gleich
+  // übernehmen – sonst zeigte das öffentliche Formular ein altes oder keins. Nur, wer bearbeiten darf.
+  const logoGeprueft = useRef(false);
+  useEffect(() => {
+    if (!darf || ctLogo === undefined || logoGeprueft.current) return;
+    logoGeprueft.current = true;
+    const g = lokalG ?? e.gestaltung;
+    if (g.logo === 'ct' && ctLogo && g.logoUrl !== ctLogo) gestalten({ ...g, logoUrl: ctLogo });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nur einmal, sobald das Logo bekannt ist
+  }, [ctLogo, darf]);
 
   /** Einen Baustein ins Formular setzen – vor `vorId` in `bereich`, sonst unter das gewählte Feld. */
   function einfuegen(b: NeuerBaustein, wohin?: { bereich: Bereich; vorId: string | null }) {
@@ -807,7 +838,9 @@ export function Baukasten({
       platz={platzBelegt({ ...e, formular, gestaltung })}
     />
   );
-  const tafelDesign = <DesignTafel gestaltung={gestaltung} onGestaltung={gestalten} />;
+  const tafelDesign = (
+    <DesignTafel gestaltung={gestaltung} onGestaltung={gestalten} ctLogo={ctLogo} />
+  );
 
   const wartet = stand.art === 'arbeitet' || !!designWartet.current || geaendert.current;
   const status =

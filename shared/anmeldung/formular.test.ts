@@ -17,7 +17,6 @@ import {
   ctAblage,
   einstellungenAlsText,
   einstellungenLesen,
-  GESTALTUNG_FEIN,
   feldFehler,
   geburtsdatumAn,
   nurText,
@@ -29,6 +28,7 @@ import {
   type OeffentlicheEinstellungen,
 } from './formular';
 import { STANDARD_BEZAHLUNG } from './bezahlung';
+import { mitVorgaben } from './gestaltung';
 
 /** Formular-Modell (#474). Die ChurchTools-Regeln dahinter sind in A0 an der Test-Instanz gemessen. */
 
@@ -250,14 +250,13 @@ describe('Einstellungen in der Gruppen-Beschreibung', () => {
         extras: [{ bezeichnung: 'Bettwäsche leihen', preisCent: 800, gilt: 'person' }],
       },
       formular: standardFormular({ geburtsdatum: true }),
-      gestaltung: {
+      gestaltung: mitVorgaben({
         vorlage: 'karte',
         farbe: '#c9a54a',
         feldstil: 'linie',
         knoepfe: 'eckig',
         text: 'Gemeinsam ins neue Jahr.',
-        ...GESTALTUNG_FEIN,
-      },
+      }),
       ctFelder: { tel: 12, betrag: 33 },
       wer: 'familie',
       plaetze: { zeigen: 'knapp', knappUnter: 10 },

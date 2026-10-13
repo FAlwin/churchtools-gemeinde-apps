@@ -11,7 +11,7 @@ import {
 } from '@shared/anmeldung/formular';
 import { amEnde } from '@shared/anmeldung/baukasten';
 import { berechnePreis, euroText, kannEtwasKosten, preisKurz } from '@shared/anmeldung/preis';
-import { leereAntworten, textAufFarbe } from './daten';
+import { SCHRIFT, leereAntworten, textAufFarbe } from './daten';
 import { titelbildGross } from '@shared/anmeldung/gestaltung';
 import s from './AnmeldeFormular.module.scss';
 
@@ -377,25 +377,47 @@ export function AnmeldeFormular({
     frei !== null &&
     (e.plaetze.zeigen === 'immer' || (e.plaetze.zeigen === 'knapp' && frei < e.plaetze.knappUnter));
 
+  // Jede Einstellung eine Klasse bzw. eine Variable (Entwurf v3) – keine starren Vorlagen mehr.
+  const mitBild = !!ansicht.bildUrl;
+  const bildAlsSeite = mitBild && (g.hintergrund === 'bild' || g.aufbau === 'seite');
   const klassen = [
     s.pv,
-    s[`t-${g.vorlage}`],
+    s[`a-${g.aufbau}`],
+    s[`kh-${g.kopfHoehe}`],
+    g.kopfAusrichtung === 'mitte' ? s['kopf-mitte'] : '',
     s[`fs-${g.feldstil}`],
     s[`bt-${g.knoepfe}`],
+    g.knopfVoll ? s['bt-voll'] : '',
     s[`br-${g.breite}`] ?? '',
-    g.schrift !== 'standard' ? s[`sch-${g.schrift}`] : '',
-    g.seitenfarbe ? s['eigene-seite'] : '',
-    g.kartenfarbe ? s['eigene-karte'] : '',
-    ansicht.bildUrl ? s['has-img'] : '',
+    s[`ek-${g.ecken}`],
+    g.schatten ? s.schatten : '',
+    g.rahmen ? s.rahmen : '',
+    g.bunt ? s.bunt : '',
+    g.gross ? s.gross : '',
+    g.hintergrund === 'muster' ? s[`m-${g.muster}`] : '',
+    bildAlsSeite ? s['bild-seite'] : mitBild ? s['bild-kopf'] : '',
   ].join(' ');
   const stil = {
     '--p-accent': g.farbe,
     '--p-on-accent': textAufFarbe(g.farbe),
-    ...(g.seitenfarbe ? { '--p-page': g.seitenfarbe } : {}),
-    ...(g.kartenfarbe ? { '--p-card': g.kartenfarbe } : {}),
-    ...(g.schriftfarbe ? { '--p-text': g.schriftfarbe, '--p-muted': g.schriftfarbe } : {}),
-    ...(ansicht.bildUrl ? { '--user-img': `url("${titelbildGross(ansicht.bildUrl)}")` } : {}),
+    '--p-page': g.seitenfarbe,
+    // Text direkt auf der Seite (Hinweise, Begrüßung) muss auf der Seitenfarbe lesbar sein.
+    '--p-auf-seite': bildAlsSeite ? '#ffffff' : textAufFarbe(g.seitenfarbe),
+    '--p-card': g.kartenfarbe,
+    '--p-text': g.schriftfarbe,
+    '--p-muster': g.musterfarbe,
+    '--p-head': SCHRIFT[g.kopfSchrift],
+    '--p-body': SCHRIFT[g.textSchrift],
+    ...(mitBild ? { '--user-img': `url("${titelbildGross(ansicht.bildUrl!)}")` } : {}),
   } as React.CSSProperties;
+  const logo =
+    g.logo !== 'keins' && g.logoUrl ? (
+      <img
+        className={`${s.logo} ${g.logoOrt === 'oben' ? s['logo-oben'] : ''}`}
+        src={titelbildGross(g.logoUrl, 240)}
+        alt=""
+      />
+    ) : null;
 
   const huelle = (f: Feld, bereich: 'anmeldung' | 'person', inhalt: ReactNode) =>
     baukasten ? <Fragment key={f.id}>{baukasten.feld(f, bereich, inhalt)}</Fragment> : inhalt;
@@ -415,10 +437,14 @@ export function AnmeldeFormular({
       <div className={s['pv-shell']}>
         <aside className={s.side}>
           <header className={s.hero}>
-            <div className={s['hero-in']}>
-              <h1>{baukasten?.titel ?? ansicht.name}</h1>
-              <p className={s.sub}>{unter}</p>
-              <div className={s.orn} aria-hidden="true" />
+            <div
+              className={`${s['hero-in']} ${g.logoOrt === 'links' && logo ? s['mit-logo-links'] : ''}`}
+            >
+              {logo}
+              <div>
+                <h1>{baukasten?.titel ?? ansicht.name}</h1>
+                <p className={s.sub}>{unter}</p>
+              </div>
             </div>
             {baukasten?.bild}
           </header>

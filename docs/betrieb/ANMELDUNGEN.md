@@ -138,8 +138,13 @@ mitarbeiten (z. B. über den Status oder global über die Gruppen).
     stehen immer direkt vor „Verbindlich anmelden“.
   - **Fragetyp ändern** (unten im gewählten Feld) geht nur, solange niemand geantwortet hat: ChurchTools kann
     den Typ einer Spalte nicht ändern, die Erweiterung legt dafür eine neue an.
-  - **Design** hat außerdem Schrift, eigene Farben (Seite, Formular, Schrift) und die Breite. Schriften kommen
-    nur vom Gerät selbst – nichts wird von Google geladen. Das Titelbild ändert man direkt im Bild.
+  - **Design:** Eine Vorlage (Klassisch, Foto, Einladung, Bunt, Zweigeteilt, Groß und deutlich) ist nur der
+    Startpunkt – sie füllt alle Werte. Danach lässt sich alles einzeln ändern: Aufbau, Kopf, Logo, Hintergrund
+    (Farbe, Muster, Titelbild), Farben, Schriften, Abschnitte, Eingabefelder, Knopf, Breite. Ein anderer
+    Startpunkt setzt alles wieder auf dessen Werte (Logo, Begrüßung und Breite bleiben). Schriften kommen nur
+    vom Gerät selbst – nichts wird von Google geladen. Das Titelbild ändert man direkt im Bild.
+  - **Logo:** das Gemeindelogo aus ChurchTools (Einstellungen → Allgemein); die Erweiterung übernimmt es beim
+    Öffnen des Baukastens. Ist dort keins hinterlegt, gibt es keins.
 - **Wo die Einstellungen stehen:** in der Beschreibung der Gruppe, unsichtbar unter dem Satz „Diese
   Anmeldung wird mit der Erweiterung **Anmeldungen** verwaltet.“ Wer den Text in ChurchTools ändert,
   schadet nicht: Die Erweiterung stellt die Einstellungen aus ihrer Sicherung wieder her (in den

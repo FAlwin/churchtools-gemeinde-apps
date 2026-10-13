@@ -5,7 +5,7 @@ import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import { berechnePreis, euroText } from '@shared/anmeldung/preis';
 import { alterAm, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import { AnmeldeFormular } from './AnmeldeFormular';
-import { musterAntworten, textAufFarbe } from './daten';
+import { SCHRIFT, musterAntworten, textAufFarbe } from './daten';
 import { titelbildGross } from '@shared/anmeldung/gestaltung';
 
 const HEUTE = '2026-10-13';
@@ -139,19 +139,62 @@ describe('Anmeldeformular (A5)', () => {
     expect(screen.getByText('Die Teilnahme ist kostenlos.')).toBeTruthy();
   });
 
-  it('Gestaltung: Vorlage, Feldstil, Knöpfe als Klassen', () => {
+  it('Gestaltung: jede Einstellung eine Klasse (Aufbau, Kopf, Muster, Ecken, Abschnitte, Felder, Knopf)', () => {
     const e = freizeit();
     e.gestaltung = {
       ...e.gestaltung,
-      vorlage: 'bunt',
+      aufbau: 'karte',
+      kopfHoehe: 'gross',
+      kopfAusrichtung: 'mitte',
+      hintergrund: 'muster',
+      muster: 'sterne',
+      ecken: 'sehrrund',
+      schatten: true,
+      rahmen: true,
+      bunt: true,
+      gross: true,
       feldstil: 'linie',
       knoepfe: 'rund',
+      knopfVoll: false,
     };
     const { container } = zeigen(e);
-    const wurzel = container.firstElementChild!;
-    expect(wurzel.className).toMatch(/t-bunt/);
-    expect(wurzel.className).toMatch(/fs-linie/);
-    expect(wurzel.className).toMatch(/bt-rund/);
+    const k = container.firstElementChild!.className;
+    for (const klasse of [
+      'a-karte',
+      'kh-gross',
+      'kopf-mitte',
+      'm-sterne',
+      'ek-sehrrund',
+      'schatten',
+      'rahmen',
+      'bunt',
+      'gross',
+      'fs-linie',
+      'bt-rund',
+    ])
+      expect(k).toMatch(new RegExp(klasse));
+    expect(k).not.toMatch(/bt-voll|t-bunt/);
+  });
+
+  it('Muster nur bei „Muster“; Titelbild als Seite nur bei „Titelbild“ oder „Bild über alles“', () => {
+    const e = freizeit();
+    e.gestaltung = { ...e.gestaltung, aufbau: 'kopfband', hintergrund: 'farbe', muster: 'sterne' };
+    const mitBild = (g: typeof e.gestaltung) =>
+      render(
+        <AnmeldeFormular
+          ansicht={{
+            name: 'X',
+            gemeinde: null,
+            einstellungen: { ...e, gestaltung: g },
+            bildUrl: 'https://ct.test/b',
+          }}
+          heute={HEUTE}
+        />,
+      ).container.firstElementChild!.className;
+    expect(mitBild(e.gestaltung)).toMatch(/bild-kopf/);
+    expect(mitBild(e.gestaltung)).not.toMatch(/m-sterne|bild-seite/);
+    expect(mitBild({ ...e.gestaltung, hintergrund: 'bild' })).toMatch(/bild-seite/);
+    expect(mitBild({ ...e.gestaltung, aufbau: 'seite' })).toMatch(/bild-seite/);
   });
 
   it('Schrift auf der Akzentfarbe: hell auf dunkel, dunkel auf hell', () => {
@@ -228,35 +271,59 @@ describe('Haken für den Baukasten (A5)', () => {
 });
 
 describe('Feinheiten (A5): Schrift, Farben, Breite, Titelbild', () => {
-  it('eigene Farben, Schrift und Breite landen am Formular; „wie Vorlage“ lässt sie weg', () => {
+  it('Farben, Schriften und Breite landen als Variablen bzw. Klasse am Formular', () => {
     const e = freizeit();
     e.gestaltung = {
       ...e.gestaltung,
-      schrift: 'rund',
+      kopfSchrift: 'rund',
+      textSchrift: 'lesbar',
       breite: 'breit',
       seitenfarbe: '#112233',
       kartenfarbe: '#fefefe',
       schriftfarbe: '#222222',
+      musterfarbe: '#abcdef',
     };
-    const { container, unmount } = render(
+    const { container } = render(
       <AnmeldeFormular ansicht={{ name: 'X', gemeinde: 'ECG', einstellungen: e }} heute={HEUTE} />,
     );
     const pv = container.firstElementChild as HTMLElement;
     expect(pv.style.getPropertyValue('--p-page')).toBe('#112233');
     expect(pv.style.getPropertyValue('--p-card')).toBe('#fefefe');
     expect(pv.style.getPropertyValue('--p-text')).toBe('#222222');
-    expect(pv.className).toMatch(/sch-rund/);
+    expect(pv.style.getPropertyValue('--p-muster')).toBe('#abcdef');
+    expect(pv.style.getPropertyValue('--p-head')).toBe(SCHRIFT.rund);
+    expect(pv.style.getPropertyValue('--p-body')).toBe(SCHRIFT.lesbar);
+    // Auf dunkler Seite helle Schrift für Hinweise und Begrüßung
+    expect(pv.style.getPropertyValue('--p-auf-seite')).toBe('#ffffff');
     expect(pv.className).toMatch(/br-breit/);
-    expect(pv.className).toMatch(/eigene-seite/);
-    expect(pv.className).toMatch(/eigene-karte/);
-    unmount();
-    e.gestaltung = { ...e.gestaltung, seitenfarbe: null, schrift: 'standard' };
-    const neu = render(
-      <AnmeldeFormular ansicht={{ name: 'X', gemeinde: 'ECG', einstellungen: e }} heute={HEUTE} />,
+  });
+
+  it('Logo: oben in der Mitte (Standard), links daneben oder keins; ohne Adresse keins', () => {
+    const e = freizeit();
+    const logo = (g: Partial<typeof e.gestaltung>) => {
+      const { container, unmount } = render(
+        <AnmeldeFormular
+          ansicht={{
+            name: 'X',
+            gemeinde: null,
+            einstellungen: { ...e, gestaltung: { ...e.gestaltung, ...g } },
+          }}
+          heute={HEUTE}
+        />,
+      );
+      const img = container.querySelector('img');
+      const r = img ? `${img.getAttribute('src')}|${img.className}` : null;
+      unmount();
+      return r;
+    };
+    expect(logo({ logo: 'ct', logoUrl: 'https://ct.test/images/558/x' })).toMatch(
+      /^https:\/\/ct.test\/images\/558\/x\?w=240&h=0\|.*logo-oben/,
     );
-    const pv2 = neu.container.firstElementChild as HTMLElement;
-    expect(pv2.style.getPropertyValue('--p-page')).toBe('');
-    expect(pv2.className).not.toMatch(/sch-|eigene-seite/);
+    expect(logo({ logo: 'ct', logoUrl: 'https://ct.test/l', logoOrt: 'links' })).not.toMatch(
+      /logo-oben/,
+    );
+    expect(logo({ logo: 'keins', logoUrl: 'https://ct.test/l' })).toBeNull();
+    expect(logo({ logo: 'ct', logoUrl: null })).toBeNull();
   });
 
   it('Titelbild in voller Größe, nicht das 150-Pixel-Vorschaubild (Alwin: „verzogen und unscharf“)', () => {

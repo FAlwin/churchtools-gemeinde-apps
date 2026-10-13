@@ -244,6 +244,19 @@ export async function bildHochladen(id: number, datei: File): Promise<string> {
   return url;
 }
 
+/**
+ * **Das Gemeindelogo aus ChurchTools** (gemessen 13.10.2026): Angemeldet steht es in `/config` als `site_logo`
+ * (z. B. `images/558/…`, relativ zur Instanz); ohne Login fehlt die Angabe. Die Bildadresse selbst ist ohne
+ * Login abrufbar – deshalb wird sie in die Gestaltung übernommen, damit das öffentliche Formular sie zeigt.
+ * `null`, wenn keins hinterlegt ist.
+ */
+export async function gemeindeLogo(): Promise<string | null> {
+  const c = await ctAnfrage<{ site_logo?: string | null } | null>('/config');
+  const pfad = c?.site_logo?.trim();
+  if (!pfad) return null;
+  return /^https:\/\//.test(pfad) ? pfad : `${ctBasis()}/${pfad.replace(/^\/+/, '')}`;
+}
+
 /** **Titelbild entfernen** – dann gilt das Bild der Vorlage (gemessen: `DELETE /files/groupimage/{id}` → 204). */
 export async function bildEntfernen(id: number): Promise<void> {
   await ctAnfrage(`/files/groupimage/${id}`, { method: 'DELETE' });

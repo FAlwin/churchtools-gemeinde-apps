@@ -9,6 +9,18 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Neu (Anmeldungen)
 
+- **Design frei einstellbar** (Entwurf v3, Alwin, 13.10.2026: „Diese Vorlagen sollten nicht so starr sein …
+  gefällt mir sehr gut, gerne so umsetzen“). Die sechs Vorlagen sind nur noch **Startpunkte**; danach ist alles
+  einzeln änderbar: Aufbau (Kopfband, Bild über alles, zweigeteilt, Karte), Kopfhöhe und Ausrichtung, Logo
+  (Gemeindelogo aus ChurchTools – oben in der Mitte oder links daneben – oder keins), Hintergrund (Farbe, Muster
+  Punkte/Konfetti/Sterne/Wellen/Raster in eigener Farbe, Titelbild), Haupt-, Seiten-, Formular- und
+  Schriftfarbe, Schrift für Überschriften und Text, größere Schrift, Ecken, Schatten, Rahmen, bunte Abschnitte,
+  Eingabefelder, Knopf. Die Leiste zeigt, was seit dem Startpunkt geändert ist. Ältere Einstellungen bekommen
+  das Fehlende aus ihrer Vorlage; gespeichert wird nur, was abweicht (sonst brauchte die Sicherung zwei Felder).
+  - Gemessen: Das Gemeindelogo steht angemeldet in `/config` (`site_logo`), ohne Login nicht; die Bildadresse
+    selbst ist öffentlich – die Erweiterung übernimmt sie in die Gestaltung. Ein eigenes Logo folgt.
+  - Ziehen ruckelt nicht mehr: Felder gleiten an ihren Platz, Mitscrollen gleichmäßig.
+
 - **Feinheiten am Baukasten** (Alwin, 13.10.2026: „wenn du es genauso schaffst zu bauen, bin ich echt happy“).
   - **Alles verschiebbar** – auch Name, E-Mail und Bemerkungen (jeweils in ihrem Bereich). Nur Preisbereich und
     Datenschutz bleiben direkt vor dem Absenden. Das Formular zeigt die Anmeldung in der gespeicherten

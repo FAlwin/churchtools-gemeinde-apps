@@ -8,6 +8,8 @@ import { datumText } from './anzeige';
 import { Startseite } from './Startseite';
 import { VeranstaltungSeite } from './VeranstaltungSeite';
 import { NeueVeranstaltung } from './NeueVeranstaltung';
+import { ArchivSeite } from './ArchivSeite';
+import { RueckgaengigLeiste, type Aenderung } from './Rueckgaengig';
 import { fehlerZustand, type Zustand } from './zustand';
 import {
   ErweiterungsRahmen,
@@ -21,18 +23,31 @@ import s from './Startseite.module.scss';
  * (#480, A2) und das Anlegen und Einrichten (#486, A3). Erst Person und Gruppen, dann Veranstaltungen und
  * Anlege-Rechte – scheitert eines vorübergehend, gibt es „Erneut versuchen“ statt einer halben Seite.
  *
- * Welche Seite offen ist, steht in der Adresse (`#/v/91` = Veranstaltung 91), damit Neuladen und der
- * Zurück-Knopf des Browsers funktionieren.
+ * Welche Seite offen ist, steht in der Adresse (`#/v/91` = Veranstaltung 91, `#/archiv` = Archiv), damit
+ * Neuladen und der Zurück-Knopf des Browsers funktionieren.
+ *
+ * Über jeder Seite steht nach einer Änderung die Leiste „Rückgängig“ (A4-Nachtrag) – auch nach einem
+ * Seitenwechsel, denn nach dem Archivieren geht es zur Übersicht.
  */
-function idAusAdresse(): number | null {
+type Ansicht = { art: 'start' } | { art: 'veranstaltung'; id: number } | { art: 'archiv' };
+
+function ansichtAusAdresse(): Ansicht {
   const m = /^#\/v\/(\d+)$/.exec(window.location.hash);
-  return m ? Number(m[1]) : null;
+  if (m) return { art: 'veranstaltung', id: Number(m[1]) };
+  if (window.location.hash === '#/archiv') return { art: 'archiv' };
+  return { art: 'start' };
 }
 
 export function App() {
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
-  const [offen, setOffen] = useState<number | null>(idAusAdresse);
+  const [ansicht, setAnsicht] = useState<Ansicht>(ansichtAusAdresse);
   const [neu, setNeu] = useState(false);
+  const [aenderung, setAenderungRoh] = useState<(Aenderung & { nr: number }) | null>(null);
+  // Jede Änderung bekommt eine neue Leiste – auch wenn der Text gleich lautet („Preise gespeichert.“).
+  const setAenderung = (a: Aenderung | null) =>
+    setAenderungRoh((alt) => (a ? { ...a, nr: (alt?.nr ?? 0) + 1 } : null));
+  /** Zählt hoch, wenn die offene Seite neu laden soll (nach „Rückgängig“). */
+  const [stand, setStand] = useState(0);
   const zeitzone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const heute = tagAusIso(new Date().toISOString(), zeitzone);
 
@@ -56,7 +71,7 @@ export function App() {
   useEffect(laden, [laden]);
 
   useEffect(() => {
-    const folgen = () => setOffen(idAusAdresse());
+    const folgen = () => setAnsicht(ansichtAusAdresse());
     window.addEventListener('hashchange', folgen);
     return () => window.removeEventListener('hashchange', folgen);
   }, []);
@@ -69,15 +84,57 @@ export function App() {
     laden();
   };
 
-  if (offen !== null) {
+  const fertig = zustand.art === 'fertig' ? zustand : null;
+
+  const leiste = aenderung && (
+    <RueckgaengigLeiste
+      key={aenderung.nr}
+      aenderung={aenderung}
+      onSchliessen={() => setAenderung(null)}
+      onRueckgaengig={() => {
+        if (ansicht.art === 'start') laden();
+        else setStand((x) => x + 1);
+      }}
+    />
+  );
+
+  if (ansicht.art === 'veranstaltung') {
     return (
       <ErweiterungsRahmen>
-        <VeranstaltungSeite id={offen} zeitzone={zeitzone} onZurueck={zurUebersicht} />
+        {leiste}
+        <VeranstaltungSeite
+          key={`${ansicht.id}-${stand}`}
+          id={ansicht.id}
+          zeitzone={zeitzone}
+          teams={fertig?.start.gruppen ?? []}
+          onZurueck={zurUebersicht}
+          onGeaendert={(a, weg) => {
+            setAenderung(a);
+            if (weg) zurUebersicht();
+          }}
+        />
       </ErweiterungsRahmen>
     );
   }
 
-  const fertig = zustand.art === 'fertig' ? zustand : null;
+  if (ansicht.art === 'archiv') {
+    return (
+      <ErweiterungsRahmen>
+        {leiste}
+        {fertig?.anlegen.artId ? (
+          <ArchivSeite
+            key={stand}
+            artId={fertig.anlegen.artId}
+            onZurueck={zurUebersicht}
+            onGeaendert={setAenderung}
+          />
+        ) : (
+          <p>Wird geladen …</p>
+        )}
+      </ErweiterungsRahmen>
+    );
+  }
+
   const anlegeTeams = fertig
     ? fertig.start.gruppen.filter((g) => fertig.anlegen.teamIds.includes(g.id))
     : [];
@@ -109,6 +166,7 @@ export function App() {
         'In dieser Gemeinde fehlt die Gruppenart „Anmeldung“ – ohne sie lassen sich keine Veranstaltungen anlegen. Wie man sie einrichtet, steht in der Anleitung der Erweiterung.'
       }
     >
+      {leiste}
       {fertig && (
         <Startseite
           start={fertig.start}
@@ -116,6 +174,13 @@ export function App() {
           heute={heute}
           zeitzone={zeitzone}
           onOeffnen={oeffnen}
+          onArchiv={
+            fertig.anlegen.artId !== null
+              ? () => {
+                  window.location.hash = '#/archiv';
+                }
+              : undefined
+          }
         />
       )}
 

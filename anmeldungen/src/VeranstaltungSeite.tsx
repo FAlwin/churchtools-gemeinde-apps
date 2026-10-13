@@ -7,9 +7,13 @@ import { geburtsdatumAn, type OeffentlicheEinstellungen } from '@shared/anmeldun
 import { ortszeitAus } from '@shared/anmeldung/termin';
 import { kannEtwasKosten } from '@shared/anmeldung/preis';
 import { ibanText, verwendungszweck } from '@shared/anmeldung/bezahlung';
+import type { MeineGruppe } from '@shared/ct/gruppen';
 import {
   anmeldungVon,
   anmeldungenZahl,
+  istGruppenAdmin,
+  teamVon,
+  wiederherstellen,
   darfVeranstaltungEinrichten,
   einstellungenVon,
   freigeben,
@@ -24,6 +28,8 @@ import {
   WerFenster,
 } from './Bearbeiten';
 import { PreisFensterZeigen, PreiseKarte, ProbeRechnen, type PreisFenster } from './Preise';
+import { VerwaltenFenster } from './Verwalten';
+import type { Aenderung } from './Rueckgaengig';
 import { WER_TEXT, datumText } from './anzeige';
 import { fehlerMeldung, type Fehlermeldung } from './zustand';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
@@ -47,6 +53,10 @@ interface Daten {
   darf: boolean;
   /** Angemeldet und Warteliste (A4: Hinweis beim Ändern der Preise); `null` = nicht bekannt. */
   anmeldungen: number | null;
+  /** Das Team, zu dem die Veranstaltung gehört (Verwalten). */
+  team: { id: number; name: string } | null;
+  /** Gruppen-Admin: darf verschieben (Verwalten). */
+  admin: boolean;
 }
 
 type Fenster =
@@ -56,6 +66,7 @@ type Fenster =
   | 'bezahlung'
   | 'loeschfrist'
   | 'freigeben'
+  | 'verwalten'
   | { preis: PreisFenster }
   | null;
 
@@ -95,11 +106,20 @@ function Zeile({ titel, children }: { titel: string; children: React.ReactNode }
 export function VeranstaltungSeite({
   id,
   zeitzone,
+  teams = [],
   onZurueck,
+  onGeaendert = () => {},
 }: {
   id: number;
   zeitzone: string;
+  /** Die eigenen Gruppen – Ziele für „In ein anderes Team“. */
+  teams?: MeineGruppe[];
   onZurueck: () => void;
+  /**
+   * Nach jeder Änderung: was geändert wurde und wie es zurückgeht (Leiste „Rückgängig“ der App).
+   * `zurUebersicht`: Die Veranstaltung ist archiviert und hier nicht mehr zu sehen.
+   */
+  onGeaendert?: (a: Aenderung, zurUebersicht: boolean) => void;
 }) {
   const [daten, setDaten] = useState<Daten | null>(null);
   const [fehler, setFehler] = useState<Fehlermeldung | null>(null);
@@ -115,17 +135,32 @@ export function VeranstaltungSeite({
       anmeldungVon(id),
       darfVeranstaltungEinrichten(id),
       anmeldungenZahl(id),
+      teamVon(id),
+      istGruppenAdmin(),
     ]).then(
-      ([kopf, einstellungen, anmeldung, darf, anmeldungen]) =>
-        setDaten({ ...kopf, einstellungen, anmeldung, darf, anmeldungen }),
+      ([kopf, einstellungen, anmeldung, darf, anmeldungen, team, admin]) =>
+        setDaten({ ...kopf, einstellungen, anmeldung, darf, anmeldungen, team, admin }),
       (e: unknown) => setFehler(fehlerMeldung(e)),
     );
   }, [id]);
 
   useEffect(laden, [laden]);
 
-  const gespeichert = () => {
+  /**
+   * Nach dem Speichern eines Fensters: neu laden und „Rückgängig“ anbieten. Der Stand VOR der Änderung ist
+   * der, den die Seite gerade zeigt – `wiederherstellen` schreibt ihn zurück (eine Stelle für alle Fenster).
+   */
+  const gespeichert = (was: string) => () => {
     setFenster(null);
+    if (daten) {
+      const vorher = {
+        name: daten.name,
+        statusId: daten.statusId,
+        einstellungen: daten.einstellungen,
+        anmeldung: daten.anmeldung,
+      };
+      onGeaendert({ text: was, rueckgaengig: () => wiederherstellen(id, vorher) }, false);
+    }
     laden();
   };
 
@@ -181,6 +216,11 @@ export function VeranstaltungSeite({
           {entwurf && darf && (
             <button type="button" className={v.freigeben} onClick={() => setFenster('freigeben')}>
               Freigeben
+            </button>
+          )}
+          {darf && (
+            <button type="button" className={v.bearbeiten} onClick={() => setFenster('verwalten')}>
+              Verwalten
             </button>
           )}
           <a className={s.link} href={`${ctBasis()}/groups/${id}`}>
@@ -295,7 +335,7 @@ export function VeranstaltungSeite({
           termin={e.termin}
           zeitzone={zeitzone}
           onClose={() => setFenster(null)}
-          onGespeichert={gespeichert}
+          onGespeichert={gespeichert('Termin gespeichert.')}
         />
       )}
       {fenster === 'anmeldung' && (
@@ -305,7 +345,7 @@ export function VeranstaltungSeite({
           plaetze={e.plaetze}
           zeitzone={zeitzone}
           onClose={() => setFenster(null)}
-          onGespeichert={gespeichert}
+          onGespeichert={gespeichert('Anmeldung gespeichert.')}
         />
       )}
       {fenster === 'wer' && (
@@ -315,7 +355,7 @@ export function VeranstaltungSeite({
           geburtsdatum={geburt}
           brauchtAlter={brauchtAlter}
           onClose={() => setFenster(null)}
-          onGespeichert={gespeichert}
+          onGespeichert={gespeichert('„Wer meldet sich an?“ gespeichert.')}
         />
       )}
       {fenster === 'bezahlung' && (
@@ -324,7 +364,7 @@ export function VeranstaltungSeite({
           bezahlung={b}
           kostet={kostet}
           onClose={() => setFenster(null)}
-          onGespeichert={gespeichert}
+          onGespeichert={gespeichert('Bezahlung gespeichert.')}
         />
       )}
       {fenster !== null && typeof fenster === 'object' && (
@@ -336,8 +376,25 @@ export function VeranstaltungSeite({
           geburtsdatum={geburt}
           anmeldungen={daten.anmeldungen}
           onClose={() => setFenster(null)}
-          onGespeichert={gespeichert}
+          onGespeichert={gespeichert('Preise gespeichert.')}
           onWechsel={(w) => setFenster({ preis: w })}
+        />
+      )}
+      {fenster === 'verwalten' && (
+        <VerwaltenFenster
+          id={id}
+          name={daten.name}
+          statusId={daten.statusId}
+          team={daten.team}
+          teams={teams}
+          admin={daten.admin}
+          anmeldungen={daten.anmeldungen}
+          onClose={() => setFenster(null)}
+          onGeaendert={(aenderung, weg) => {
+            setFenster(null);
+            onGeaendert(aenderung, weg);
+            if (!weg) laden();
+          }}
         />
       )}
       {fenster === 'loeschfrist' && (
@@ -345,7 +402,7 @@ export function VeranstaltungSeite({
           id={id}
           monate={e.loeschfristMonate}
           onClose={() => setFenster(null)}
-          onGespeichert={gespeichert}
+          onGespeichert={gespeichert('Löschfrist gespeichert.')}
         />
       )}
       {fenster === 'freigeben' && (
@@ -372,7 +429,9 @@ export function VeranstaltungSeite({
               try {
                 await freigeben(id);
                 setArbeitet(false);
-                gespeichert();
+                gespeichert(
+                  'Freigegeben – Gäste können sich anmelden, sobald der Zeitraum läuft.',
+                )();
               } catch (err) {
                 setFreigabeFehler(fehlerMeldung(err).text);
                 setArbeitet(false);

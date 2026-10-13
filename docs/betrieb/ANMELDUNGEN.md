@@ -115,6 +115,17 @@ mitarbeiten (z. B. über den Status oder global über die Gruppen).
   Formular und in der Bestätigung, ist also **ohne Anmeldung lesbar**. Bitte nur das Konto der Gemeinde
   eintragen. Im Verwendungszweck wird `[Nachname]` durch den Nachnamen ersetzt.
 
+## Umbenennen, verschieben, löschen
+
+- **„Verwalten“** oben auf der Seite einer Veranstaltung: umbenennen, Freigabe zurücknehmen, in ein
+  anderes Team verschieben, löschen. Nach jeder Änderung – auch nach dem Speichern eines Fensters – steht
+  oben **„Rückgängig“**.
+- **Löschen schiebt ins Archiv.** Die Veranstaltung verschwindet aus der Liste, Gäste können sich nicht
+  mehr anmelden, die Anmeldungen bleiben. Unter **„Gelöschte Veranstaltungen (Archiv)“** auf der
+  Startseite lässt sie sich wiederherstellen (als Entwurf).
+- **Endgültig löschen** (mit allen Anmeldungen, nicht umkehrbar) geht nur aus dem Archiv und nur für
+  **Gruppen-Admins** – ebenso das Verschieben in ein anderes Team. Das legt ChurchTools so fest.
+
 ## Für Entwickler
 
 - Code: `anmeldungen/` (Erweiterung), `formular/` (öffentliche Seite), Regeln in `shared/anmeldung/`,

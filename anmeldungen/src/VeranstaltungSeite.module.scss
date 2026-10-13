@@ -274,3 +274,83 @@
   font-size: 17px !important;
   box-shadow: none !important;
 }
+
+// ── Verwalten, Archiv, „Rückgängig“ (A4-Nachtrag) ─────────────────────────────────────────────────
+
+.leiste {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px 10px 14px;
+  border-radius: 12px;
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 15px;
+
+  > span {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.leisteFehler {
+  color: var(--red);
+}
+
+.leisteKnopf {
+  flex: none;
+  height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 10px;
+  background: var(--blue);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+
+.leisteZu {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--text2);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.archivLeer {
+  padding: 16px 14px;
+  color: var(--text2);
+  font-size: 15px;
+}
+
+.archivKnoepfe {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.endgueltig {
+  padding: 5px 12px;
+  border: 1px solid color-mix(in srgb, var(--red) 40%, transparent);
+  border-radius: 999px;
+  background: none;
+  color: var(--red);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}

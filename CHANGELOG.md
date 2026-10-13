@@ -117,6 +117,21 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
     Gemeindekonto eintragen. Freigeben weist darauf hin, wenn es Preise, aber kein Konto gibt.
   - Einstellungsformat: `bezahlung` mit Standardwert, ältere Veranstaltungen bleiben lesbar.
 
+- **Veranstaltungen verwalten, mit „Rückgängig“** (#507, Alwin 13.10.2026: „alles muss möglich sein …
+  immer mit Warnungen und Rückgängig-Knöpfen“).
+  - **„Verwalten“** auf der Seite einer Veranstaltung: umbenennen, Freigabe zurücknehmen, in ein anderes
+    Team verschieben, löschen. Jede Aktion sagt vorher, was passiert (auch wie viele Anmeldungen
+    betroffen sind).
+  - **Löschen schiebt ins Archiv** (Alwin: „erst Archiv“). Unter „Gelöschte Veranstaltungen (Archiv)“
+    auf der Startseite lässt sich alles wiederherstellen; es kommt als Entwurf zurück. **Endgültig
+    löschen** nur aus dem Archiv, nur für Gruppen-Admins und erst, wenn man den Namen eintippt.
+  - **Leiste „Rückgängig“** nach jeder Änderung, auch nach dem Speichern eines Fensters (Termin,
+    Anmeldung, Preise, Bezahlung …): Sie schreibt den Stand von vorher zurück (`wiederherstellen`,
+    eine Stelle für alle Fenster). Ein im Kalender neu angelegter Termin bleibt dabei bestehen.
+  - **Rechte, gemessen:** Umbenennen, Status und Archiv darf, wer einrichten darf. Verschieben und
+    endgültig Löschen erlaubt ChurchTools nur Gruppen-Admins; für alle anderen sind die Knöpfe gesperrt,
+    mit Grund.
+
 - **Veranstaltungen anlegen und einrichten** (#486, Bauplan A3 – der erste Schritt, der in ChurchTools
   schreibt). Eigene Gruppenart „Anmeldung“; Veranstaltungen ohne Anmeldung bleiben, wie sie sind.
   - **„Neue Veranstaltung“** für Leitung, Co-Leitung und Organisatoren eines Teams (nach den Rechten, die

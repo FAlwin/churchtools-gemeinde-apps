@@ -3,7 +3,7 @@
  * nach – in der Form, die an der Test-Instanz gemessen wurde (12.10.2026) –, damit die Seite ohne Instanz
  * zu sehen und zu bedienen ist. Seit A3 merkt sich die Demo auch, was geschrieben wird (Anlegen,
  * Einrichten, Termine), bis die Seite neu geladen wird. `?demo=leer` zeigt „keine Gruppen",
- * `?demo=fehler` den Fehlerfall. Wird nie mitgebaut (siehe `main.tsx`).
+ * `?demo=fehler` den Fehlerfall, `?demo=admin` einen Gruppen-Admin (verschieben, endgültig löschen). Wird nie mitgebaut (siehe `main.tsx`).
  *
  * Die Beschreibungen entstehen mit `einstellungenAlsText` – wie im Betrieb.
  */
@@ -45,6 +45,8 @@ const utc = (lokal: string) => new Date(lokal).toISOString().replace('.000Z', 'Z
 interface G {
   name: string;
   parent: number;
+  /** Beim Verschieben: die neue Obergruppe, bis die alte entfernt ist (`PUT`, dann `DELETE` parents). */
+  neuParent?: number;
   status: number;
   note: string;
   settings: Record<string, unknown>;
@@ -212,7 +214,8 @@ export function demoStarten(fall: string): void {
   const gruppen = demoGruppen();
   const antwort = (daten: unknown, status = 200) =>
     Promise.resolve(
-      new Response(JSON.stringify(daten), {
+      // 204 hat keinen Inhalt – sonst wirft `Response`.
+      new Response(status === 204 ? null : JSON.stringify(daten), {
         status,
         headers: { 'Content-Type': 'application/json' },
       }),
@@ -223,7 +226,9 @@ export function demoStarten(fall: string): void {
     information: { note: x.note, groupStatusId: x.status, groupTypeId: 5 },
     settings: x.settings,
   });
-  const kinderVon = (p: number) => [...gruppen].filter(([, x]) => x.parent === p);
+  // Archivierte Gruppen stehen weder in `children` noch in `hierarchies` (gemessen 13.10.2026).
+  const kinderVon = (p: number) => [...gruppen].filter(([, x]) => x.parent === p && x.status !== 3);
+  const TEAMS: Record<number, string> = { 7: 'Technik', 9: 'Lobpreisteam' };
 
   window.fetch = (input, init) => {
     const url = new URL(
@@ -270,7 +275,9 @@ export function demoStarten(fall: string): void {
       });
     }
     if (pfad === '/permissions/global') {
-      return antwort({ data: { churchdb: {}, churchcal: { 'edit category': [1] } } });
+      // `?demo=admin`: Gruppen-Admin (darf verschieben und endgültig löschen).
+      const churchdb = fall === 'admin' ? { 'administer groups': true } : {};
+      return antwort({ data: { churchdb, churchcal: { 'edit category': [1] } } });
     }
     let r = /^\/permissions\/internal\/groups\/(\d+)$/.exec(pfad);
     if (r) {
@@ -296,6 +303,33 @@ export function demoStarten(fall: string): void {
           domainAttributes: { note: x.note, groupStatusId: x.status },
         })),
       });
+    }
+    if (pfad === '/groups' && m === 'GET' && url.searchParams.has('group_status_ids[]')) {
+      const status = Number(url.searchParams.get('group_status_ids[]'));
+      return antwort({
+        data: [...gruppen]
+          .filter(([, x]) => x.status === status)
+          .map(([id, x]) => gruppeRoh(id, x)),
+        meta: { pagination: { lastPage: 1 } },
+      });
+    }
+    r = /^\/groups\/(\d+)\/parents(?:\/(\d+))?$/.exec(pfad);
+    if (r) {
+      const x = gruppen.get(Number(r[1]));
+      if (!x) return antwort({}, 404);
+      if (fall !== 'admin' && m !== 'GET') return antwort({ message: 'Forbidden' }, 403);
+      const p = Number(r[2]);
+      if (m === 'PUT') x.neuParent = p;
+      if (m === 'DELETE' && x.parent === p && x.neuParent) {
+        x.parent = x.neuParent;
+        x.neuParent = undefined;
+      }
+      return antwort(
+        m === 'GET'
+          ? { data: [{ title: TEAMS[x.parent] ?? 'Team', domainIdentifier: String(x.parent) }] }
+          : {},
+        m === 'PUT' ? 201 : m === 'DELETE' ? 204 : 200,
+      );
     }
     if (pfad === '/groups' && m === 'GET') {
       const ids = url.searchParams.getAll('ids[]').map(Number);
@@ -350,9 +384,15 @@ export function demoStarten(fall: string): void {
       const id = Number(r[1]);
       const x = gruppen.get(id);
       if (!x) return antwort({}, 404);
+      if (m === 'DELETE') {
+        if (fall !== 'admin') return antwort({ message: 'Forbidden' }, 403);
+        gruppen.delete(id);
+        return antwort({}, 204);
+      }
       if (m === 'PATCH') {
         for (const [k, v] of Object.entries(body)) {
           if (k === 'note') x.note = String(v);
+          else if (k === 'name') x.name = String(v);
           else if (k === 'groupStatusId') x.status = Number(v);
           else x.settings[k] = v;
         }

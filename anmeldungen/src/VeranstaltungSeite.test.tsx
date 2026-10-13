@@ -26,6 +26,9 @@ vi.mock('./einrichten', async (original) => {
     kopiereVeranstaltung: vi.fn(),
     veranstaltungenVon: vi.fn(),
     anmeldungenZahl: vi.fn(),
+    teamVon: vi.fn(),
+    istGruppenAdmin: vi.fn(),
+    wiederherstellen: vi.fn(),
     aenderePreise: vi.fn(),
     speichereBezahlung: vi.fn(),
   };
@@ -50,6 +53,8 @@ function stelle(
   ]);
   m.termineIn.mockResolvedValue([]);
   m.anmeldungenZahl.mockResolvedValue(0);
+  m.teamVon.mockResolvedValue({ id: 9, name: 'Lobpreisteam' });
+  m.istGruppenAdmin.mockResolvedValue(false);
 }
 
 function zeigen() {
@@ -305,6 +310,41 @@ describe('Bezahlung, Freigeben, Geburtsdatum (A4)', () => {
     const karte = await screen.findByRole('region', { name: 'Preise' });
     fireEvent.click(within(karte).getByRole('button', { name: /Grundpreis/ }));
     expect(screen.getByText(/Es gibt schon 12 Anmeldungen/)).toBeTruthy();
+  });
+});
+
+describe('Rückgängig nach dem Speichern (A4-Nachtrag)', () => {
+  it('jedes Fenster meldet die Änderung mit dem Stand VOR dem Speichern als Weg zurück', async () => {
+    stelle(true);
+    m.aendereEinstellungen.mockResolvedValue(neueEinstellungen('einfach'));
+    const geaendert = vi.fn();
+    render(
+      <VeranstaltungSeite id={91} zeitzone={ZONE} onZurueck={() => {}} onGeaendert={geaendert} />,
+    );
+    const karte = await screen.findByRole('region', { name: 'Datenschutz' });
+    fireEvent.click(within(karte).getByRole('button', { name: 'Bearbeiten' }));
+    fireEvent.change(screen.getByLabelText('Monate nach dem Ende (1–36)'), {
+      target: { value: '6' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(geaendert).toHaveBeenCalled());
+    const [a, weg] = geaendert.mock.calls[0];
+    expect(a.text).toBe('Löschfrist gespeichert.');
+    expect(weg).toBe(false);
+    await a.rueckgaengig();
+    expect(m.wiederherstellen).toHaveBeenCalledWith(91, {
+      name: 'Gemeindeessen',
+      statusId: 2,
+      einstellungen: neueEinstellungen('einfach'),
+      anmeldung: { maxPlaetze: null, warteliste: false, ab: null, bis: null },
+    });
+  });
+
+  it('„Verwalten“ nur mit Recht', async () => {
+    stelle(false);
+    zeigen();
+    await screen.findByText(/Einrichten und freigeben kann die Leitung/);
+    expect(screen.queryByRole('button', { name: 'Verwalten' })).toBeNull();
   });
 });
 

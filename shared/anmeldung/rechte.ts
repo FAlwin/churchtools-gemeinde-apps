@@ -22,6 +22,16 @@ export function darfAnlegen(teamRechte: Rechte, global: Rechte, typId: number): 
   return Array.isArray(erlaubt) && erlaubt.map(Number).includes(typId);
 }
 
+/**
+ * **Darf man eine Veranstaltung in ein anderes Team verschieben oder endgültig löschen?** (A4-Nachtrag,
+ * gemessen 13.10.2026): Nur Gruppen-Admins – ein Organisator bekommt bei `PUT/DELETE /groups/{id}/parents/…`
+ * und `DELETE /groups/{id}` ein 403, und ChurchTools meldet dafür kein eigenes Recht je Gruppe.
+ * Umbenennen, Freigabe zurücknehmen und Archivieren gehen mit `darfEinrichten`.
+ */
+export function darfVerschiebenUndLoeschen(global: Rechte): boolean {
+  return verwaltetGruppen(global);
+}
+
 /** Darf man die Veranstaltung einrichten (Einstellungen, Plätze, Zeitraum) und freigeben? */
 export function darfEinrichten(rechte: Rechte, global: Rechte): boolean {
   if (verwaltetGruppen(global)) return true;

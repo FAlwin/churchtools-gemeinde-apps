@@ -15,6 +15,14 @@ import {
   legeVeranstaltungAn,
   speichereAnmeldung,
   speichereBezahlung,
+  STATUS,
+  archivListe,
+  loeschenEndgueltig,
+  setzeStatus,
+  teamVon,
+  umbenennen,
+  verschieben,
+  wiederherstellen,
 } from './einrichten';
 
 /**
@@ -31,6 +39,7 @@ interface G {
   note: string;
   settings: Record<string, unknown>;
   felder: { id: number; name: string }[];
+  eltern: number[];
 }
 
 let gruppen: Map<number, G>;
@@ -42,7 +51,7 @@ let aufrufe: string[];
 let mitglieder: Map<number, { groupMemberStatus: string }[] | 403 | 502>;
 
 function json(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
+  return new Response(status === 204 ? null : JSON.stringify(body), {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
@@ -85,6 +94,7 @@ function ct() {
         note: '',
         settings: {},
         felder: [],
+        eltern: [Number(body.parentGroupId)],
       });
       return json(201, { data: { id } });
     }
@@ -101,6 +111,32 @@ function ct() {
         felder: q.felder.map((f) => ({ id: f.id + 1000, name: f.name })),
       });
       return json(201, { data: { id } });
+    }
+    if (m === 'GET' && pfad === '/groups' && url.searchParams.has('group_status_ids[]')) {
+      const st = Number(url.searchParams.get('group_status_ids[]'));
+      const typ = Number(url.searchParams.get('group_type_ids[]'));
+      const data = [...gruppen.values()]
+        .filter((g) => g.status === st && g.typ === typ)
+        .map((g) => ({
+          id: g.id,
+          name: g.name,
+          information: { note: g.note, groupStatusId: g.status },
+        }));
+      return json(200, { data, meta: { pagination: { lastPage: 1 } } });
+    }
+    r = /^\/groups\/(\d+)\/parents(?:\/(\d+))?$/.exec(pfad);
+    if (r) {
+      const g = gruppen.get(Number(r[1]))!;
+      const p = Number(r[2]);
+      if (m === 'PUT') g.eltern = [...g.eltern, p];
+      if (m === 'DELETE') g.eltern = g.eltern.filter((x) => x !== p);
+      if (m !== 'GET') return json(m === 'PUT' ? 201 : 204, {});
+      return json(200, {
+        data: g.eltern.map((x) => ({
+          title: x === 7 ? 'Technik' : `Team ${x}`,
+          domainIdentifier: String(x),
+        })),
+      });
     }
     r = /^\/groups\/(\d+)\/members$/.exec(pfad);
     if (r) {
@@ -124,9 +160,14 @@ function ct() {
     if (r) {
       const g = gruppen.get(Number(r[1]));
       if (!g) return json(404, {});
+      if (m === 'DELETE') {
+        if (!schlucken.has('DELETE')) gruppen.delete(g.id);
+        return json(204, {});
+      }
       if (m === 'PATCH' && !schlucken.has('PATCH')) {
         for (const [k, v] of Object.entries(body)) {
           if (k === 'note') g.note = String(v);
+          else if (k === 'name') g.name = String(v);
           else if (k === 'groupStatusId') g.status = Number(v);
           else if (k !== 'information') g.settings[k] = v; // verschachtelt: still ignoriert (gemessen)
         }
@@ -454,5 +495,102 @@ describe('Preise und Bezahlung (A4)', () => {
     expect(await anmeldungenZahl(93)).toBeNull();
     mitglieder.set(94, 502);
     await expect(anmeldungenZahl(94)).rejects.toBeInstanceOf(ApiError);
+  });
+});
+
+describe('Verwalten (A4-Nachtrag)', () => {
+  const neu = () => legeVeranstaltungAn({ name: 'Essen', teamId: 7, artId: 5, vorlage: 'einfach' });
+
+  it('umbenennen: getrimmt und nachgelesen; leer → abgelehnt; nicht übernommen → Fehler', async () => {
+    const id = await neu();
+    await umbenennen(id, '  Gemeindeessen  ');
+    expect(gruppen.get(id)!.name).toBe('Gemeindeessen');
+    await expect(umbenennen(id, '  ')).rejects.toMatchObject({ status: 422 });
+    schlucken.add('PATCH');
+    await expect(umbenennen(id, 'Anders')).rejects.toBeInstanceOf(NichtUebernommen);
+  });
+
+  it('Status: freigeben, zurück zum Entwurf, archivieren – jeweils nachgelesen', async () => {
+    const id = await neu();
+    for (const st of [STATUS.freigegeben, STATUS.entwurf, STATUS.archiviert]) {
+      await setzeStatus(id, st);
+      expect(gruppen.get(id)!.status).toBe(st);
+    }
+    schlucken.add('PATCH');
+    await expect(setzeStatus(id, STATUS.entwurf)).rejects.toThrow('den Entwurf-Status');
+  });
+
+  it('verschieben: erst das neue Team dazu, dann das alte weg – nie ohne Team', async () => {
+    const id = await neu();
+    await verschieben(id, 7, 9);
+    const schritte = aufrufe.filter((a) => a.includes('/parents/'));
+    expect(schritte).toEqual([`PUT /groups/${id}/parents/9`, `DELETE /groups/${id}/parents/7`]);
+    expect(gruppen.get(id)!.eltern).toEqual([9]);
+    expect(await teamVon(id)).toEqual({ id: 9, name: 'Team 9' });
+  });
+
+  it('Archiv: nur archivierte Veranstaltungen (Art „Anmeldung“, mit Einstellungen), nach Namen', async () => {
+    const a = await legeVeranstaltungAn({
+      name: 'Zelten',
+      teamId: 7,
+      artId: 5,
+      vorlage: 'einfach',
+    });
+    const b = await legeVeranstaltungAn({
+      name: 'Ausflug',
+      teamId: 7,
+      artId: 5,
+      vorlage: 'einfach',
+    });
+    await neu(); // bleibt Entwurf
+    await setzeStatus(a, STATUS.archiviert);
+    await setzeStatus(b, STATUS.archiviert);
+    gruppen.get(b)!.note = 'irgendeine Beschreibung'; // keine Einstellungen → keine Veranstaltung
+    const c = await legeVeranstaltungAn({ name: 'Basar', teamId: 7, artId: 5, vorlage: 'einfach' });
+    await setzeStatus(c, STATUS.archiviert);
+    expect((await archivListe(5)).map((x) => [x.name, x.team])).toEqual([
+      ['Basar', 'Technik'],
+      ['Zelten', 'Technik'],
+    ]);
+  });
+
+  it('endgültig löschen: nur aus dem Archiv; danach muss die Gruppe weg sein', async () => {
+    const id = await neu();
+    await expect(loeschenEndgueltig(id)).rejects.toMatchObject({ status: 409 });
+    expect(gruppen.has(id)).toBe(true);
+    await setzeStatus(id, STATUS.archiviert);
+    schlucken.add('DELETE');
+    await expect(loeschenEndgueltig(id)).rejects.toBeInstanceOf(NichtUebernommen);
+    schlucken.delete('DELETE');
+    await loeschenEndgueltig(id);
+    expect(gruppen.has(id)).toBe(false);
+  });
+
+  it('wiederherstellen: schreibt Name, Einstellungen, Plätze und Status zurück – nur was sich unterscheidet', async () => {
+    const id = await neu();
+    const vorher = {
+      name: gruppen.get(id)!.name,
+      statusId: gruppen.get(id)!.status,
+      einstellungen: einstellungenLesen(gruppen.get(id)!.note)!,
+      anmeldung: { maxPlaetze: null, warteliste: false, ab: null, bis: null },
+    };
+    await umbenennen(id, 'Anders');
+    await aenderePreise(id, (p) => ({
+      ...p,
+      extras: [{ bezeichnung: 'Kaffee', preisCent: 200, gilt: 'person' }],
+    }));
+    await speichereAnmeldung(id, { maxPlaetze: 30, warteliste: true, ab: null, bis: null });
+    await setzeStatus(id, STATUS.archiviert);
+    aufrufe = [];
+    await wiederherstellen(id, vorher);
+    const g = gruppen.get(id)!;
+    expect(g.name).toBe('Essen');
+    expect(g.status).toBe(STATUS.entwurf);
+    expect(einstellungenLesen(g.note)!.preis.extras).toEqual([]);
+    expect(g.settings).toMatchObject({ maxMembers: null, allowWaitinglist: false });
+    // Und ein zweites Mal: alles gleich → kein Schreibaufruf mehr.
+    aufrufe = [];
+    await wiederherstellen(id, vorher);
+    expect(aufrufe.filter((a) => !a.startsWith('GET'))).toEqual([]);
   });
 });

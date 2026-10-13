@@ -7,6 +7,27 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Anmeldungen)
+
+- **Formular-Baukasten, Gestaltung und Vorschau** (Bauplan A5).
+  - **Reiter „Formular“:** Bausteine (Text, Ja/Nein, Ankreuzen, Auswahl, Datum, Zahl, Hinweistext …)
+    für „einmal pro Anmeldung“ oder „für jede Person“, jedes Feld so, wie Gäste es sehen; ein Fenster
+    je Feld (Frage, Hilfe, Antworten, Pflicht/freiwillig/aus), verschieben, Platzanzeige. **Jedes Feld
+    wird eine Spalte der Mitgliederliste** auf Sicherheitsstufe 3 (Alwin: „nur das Team“).
+    Antworten umbenennen behält die Wahl der Personen; **entfernen mit vorhandenen Antworten blendet
+    nur aus** (Alwin) – gemessen: Löschen hätte die Antworten still entfernt.
+  - **Reiter „Gestaltung“:** sechs Vorlagen, Titelbild (Gruppenbild), Farbe, Feldstil, Knöpfe,
+    Begrüßungstext; Vorschau Handy/Computer mit Musterdaten. Schriften ohne Google (Datenschutz).
+  - **Einstellungen unsichtbar** (Alwin: der Datenblock in „Infos“ „sieht nicht gut aus“): dort
+    steht nur noch ein Satz, die Einstellungen stehen gepackt als unsichtbare Markdown-Zeile darunter
+    (gemessen: ChurchTools zeigt sie nicht an). Gepackt ist der Block rund ein Drittel so lang – auch
+    große Freizeiten passen (ungepackt 5.532 von 5.000 Zeichen). **Sicherung** in den Beschreibungen
+    der Systemfelder; überschreibt jemand die Beschreibung in ChurchTools (der Editor wirft die
+    unsichtbare Zeile weg – gemessen), stellt die Erweiterung sie selbst wieder her und behält den
+    neuen Text. Ältere Veranstaltungen werden beim Öffnen umgestellt.
+  - Termin-Fenster beginnt beim Kalender des gewählten Termins; Admins lesen auf der Startseite
+    „Freigeben kannst du als Admin“ (beides aus der A3-Abnahme).
+
 ## [2.34.2] – 2026-10-13
 
 ### Neu (Dienstplaner)

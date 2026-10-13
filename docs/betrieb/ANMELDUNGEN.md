@@ -1,10 +1,9 @@
 # Anmeldungen – ChurchTools-Erweiterung
 
-> **Stand: Preise und Bezahlung (A4).** Die Erweiterung zeigt die Veranstaltungen der eigenen Gruppen;
-> Leitung und Organisatoren legen neue an (Vorlage oder „wie eine frühere“), wählen oder legen den Termin im
-> Kalender an, stellen Zeitraum, Plätze, Warteliste, Preise und Bankverbindung ein und geben frei. Formular
-> und Gestaltung (A5), das öffentliche Formular (A6) und die Anmeldungsliste (A7) folgen. Diese Anleitung
-> wächst mit.
+> **Stand: Formular und Gestaltung (A5).** Die Erweiterung zeigt die Veranstaltungen der eigenen Gruppen;
+> Leitung und Organisatoren legen neue an, wählen den Termin, stellen Zeitraum, Plätze, Preise und
+> Bankverbindung ein, bauen das Formular, gestalten es und geben frei. Das öffentliche Formular (A6) und
+> die Anmeldungsliste (A7) folgen. Diese Anleitung wächst mit.
 
 Die Anmeldungen ersetzen Jotform & Co.: Veranstalter legen Anmeldungen zu Veranstaltungen selbst an und
 verwalten sie in ChurchTools. Teilnehmende melden sich über ein öffentliches Formular an und können
@@ -114,6 +113,19 @@ mitarbeiten (z. B. über den Status oder global über die Gruppen).
 - **Bankverbindung:** je Veranstaltung („wie eine frühere“ übernimmt sie). Sie steht im öffentlichen
   Formular und in der Bestätigung, ist also **ohne Anmeldung lesbar**. Bitte nur das Konto der Gemeinde
   eintragen. Im Verwendungszweck wird `[Nachname]` durch den Nachnamen ersetzt.
+
+## Formular und Gestaltung
+
+- **Reiter „Formular“:** Felder hinzufügen (Bausteine links), bearbeiten, verschieben, ausschalten.
+  Jedes Feld außer Name, E-Mail und Geburtsdatum wird in ChurchTools eine **Spalte der Mitgliederliste**
+  (Sicherheitsstufe 3 – das Team sieht die Antworten). Hat schon jemand geantwortet, wird ein Feld oder
+  eine Antwort beim Entfernen nur **ausgeblendet**; die Antworten bleiben.
+- **Reiter „Gestaltung“:** Vorlage, Titelbild, Farbe, Feldstil, Knöpfe, Begrüßungstext – rechts die
+  Vorschau, so wie Gäste das Formular sehen. Das Titelbild ist das Gruppenbild in ChurchTools.
+- **Wo die Einstellungen stehen:** in der Beschreibung der Gruppe, unsichtbar unter dem Satz „Diese
+  Anmeldung wird mit der Erweiterung **Anmeldungen** verwaltet.“ Wer den Text in ChurchTools ändert,
+  schadet nicht: Die Erweiterung stellt die Einstellungen aus ihrer Sicherung wieder her (in den
+  Beschreibungen der Felder „Betrag“, „Bezahlt“ …) und behält den neuen Text.
 
 ## Umbenennen, verschieben, löschen
 

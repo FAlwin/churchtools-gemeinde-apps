@@ -626,7 +626,11 @@ export function sicherungTeile(beschreibung: string): string[] | null {
   );
 }
 
-/** Die Sicherung wieder zusammensetzen; `null`, wenn Teile fehlen oder der Code nicht lesbar ist. */
+/**
+ * Die Sicherung wieder zusammensetzen; `null`, wenn Teile fehlen oder der Code nicht lesbar ist. (Fehlt ein Teil,
+ * scheitert auch schon das Entpacken – die Zählung ist die zweite Sicherung dahinter; die Gegenprobe zeigte, dass
+ * sie allein keinen Test fallen lässt.)
+ */
 export function sicherungLesen(
   notizen: (string | null | undefined)[],
 ): OeffentlicheEinstellungen | null {

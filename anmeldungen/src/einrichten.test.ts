@@ -778,8 +778,11 @@ describe('Formularfelder in ChurchTools (A5)', () => {
     expect(e.ctFelder.name ?? e.ctFelder.mail ?? e.ctFelder.birth).toBeUndefined();
     // Zweimal aufrufen legt nichts doppelt an.
     const anzahl = gruppen.get(id)!.felder.length;
+    aufrufe = [];
     await felderAnlegen(id);
     expect(gruppen.get(id)!.felder).toHaveLength(anzahl);
+    // … und rührt vorhandene Spalten nicht an (kein Schreibaufruf an den Feldern).
+    expect(aufrufe.filter((a) => !a.startsWith('GET') && a.includes('/memberfields'))).toEqual([]);
   });
 
   it('neue Frage: Spalte mit Antworten angelegt, ins Formular vor die Bemerkungen', async () => {

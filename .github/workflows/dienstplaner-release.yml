@@ -1,0 +1,23 @@
+name: Release Dienstplaner
+
+# Der Dienstplaner hat seinen eigenen Release-Weg – getrennt von der Musik-App (Bauplan E2):
+# Tag `dienstplan-vX.Y.Z` → Erweiterung bauen und packen → GitHub Release mit der ZIP (`make_latest: false`,
+# siehe Vorlage). Der Tag-Filter `v*` der Musik-App greift hier nicht: `dienstplan-v…` beginnt nicht mit `v`.
+#
+# Ablauf: erst in main mergen (CI grün) → `git tag dienstplan-vX.Y.Z && git push origin dienstplan-vX.Y.Z`.
+on:
+  push:
+    tags:
+      - 'dienstplan-v*'
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    uses: ./.github/workflows/erweiterung-release.yml
+    with:
+      praefix: dienstplan-
+      workspace: dienstplaner
+      kuerzel: dienstplaner
+      titel: Dienstplaner
+      anleitung: docs/betrieb/DIENSTPLANER.md

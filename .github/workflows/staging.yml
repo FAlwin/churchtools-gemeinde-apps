@@ -18,6 +18,9 @@ on:
       # müssen hinter den Mustern stehen, die sie einschränken.
       - '!feat/anmeldung-**'
       - '!fix/anmeldung-**'
+      # Ebenso der Dienstplaner (eigene Erweiterung, kein Teil des Musik-App-Images).
+      - '!feat/dienstplaner-**'
+      - '!fix/dienstplaner-**'
 
 env:
   IMAGE: ghcr.io/falwin/churchtools-musik-app

@@ -1,0 +1,75 @@
+// Rahmen jeder Erweiterung dieses Repos (Dienstplaner E2): Kopf, Laden, Fehler, Fuß. Gestaltung wie die
+// Startseite der Anmeldungen (#474) – Tokens und Listen-Bausteine aus ui/design (ChurchTools-Look, #393).
+@use '../design/mixins' as m;
+
+.seite {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 20px 16px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.kopf {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.app {
+  color: var(--text2);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.gruss {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+
+  h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  span {
+    color: var(--text2);
+    font-size: 14px;
+  }
+}
+
+.hinweis,
+.fuss {
+  color: var(--text2);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.fuss {
+  font-size: 13px;
+  color: var(--text3);
+}
+
+.fehler {
+  @include m.card-list;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  color: var(--text);
+}
+
+.knopf {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 10px;
+  background: var(--blue);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}

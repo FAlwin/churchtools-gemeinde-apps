@@ -1,0 +1,18 @@
+{
+  "extends": "../tsconfig.base.json",
+  // Wie client/ und anmeldungen/: Browser, React, Aliase @shared und @ui (dieselben stehen in vite.config.ts und – für die
+  // Tests, die im Client-Testlauf mitlaufen – in client/vitest.config.ts).
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["vite/client"],
+    "noEmit": true,
+    "paths": {
+      "@shared/*": ["../shared/*"],
+      "@ui/*": ["../ui/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}

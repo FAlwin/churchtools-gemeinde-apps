@@ -88,7 +88,8 @@ export const FARBEN: [string, string][] = [
 
 /**
  * Vorlage wechseln: Farbe, Feldstil und Knöpfe der neuen Vorlage übernehmen – jeweils nur, wenn der bisherige
- * Wert noch der Vorgabe der alten Vorlage entsprach (sonst hat das Team ihn bewusst gewählt).
+ * Wert noch der Vorgabe der alten Vorlage entsprach (sonst hat das Team ihn bewusst gewählt). Eigene Farben für
+ * Seite, Karten und Schrift fallen weg: Sie passten zur alten Vorlage, nicht zur neuen.
  */
 export function vorlageWechseln(
   g: OeffentlicheEinstellungen['gestaltung'],
@@ -102,5 +103,9 @@ export function vorlageWechseln(
     farbe: !alt || g.farbe.toLowerCase() === alt.farbe ? ziel.farbe : g.farbe,
     feldstil: !alt || g.feldstil === alt.feldstil ? ziel.feldstil : g.feldstil,
     knoepfe: !alt || g.knoepfe === alt.knoepfe ? ziel.knoepfe : g.knoepfe,
+    // Seite, Karten und Schrift bringt jede Vorlage selbst mit – eigene Farben gehören zur alten Vorlage.
+    seitenfarbe: null,
+    kartenfarbe: null,
+    schriftfarbe: null,
   };
 }

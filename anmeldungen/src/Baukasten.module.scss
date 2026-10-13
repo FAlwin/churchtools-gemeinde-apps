@@ -811,3 +811,185 @@
   border-right: 0;
   padding-right: 0;
 }
+
+// ── Feinheiten: eigene Farben, Schriften, Kürzel ──
+.farbPaare {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.farbPaar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 12px;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  input {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+  }
+
+  small {
+    color: var(--text3);
+  }
+
+  .textKnopf {
+    font-size: 12px;
+  }
+}
+.schriften {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.schrift {
+  @include m.auswahlKnopf;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  text-align: left;
+
+  b {
+    font-size: 22px;
+    line-height: 1.1;
+  }
+
+  small {
+    font-family: var(--ui);
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text2);
+  }
+
+  &[aria-pressed='true'] {
+    @include m.auswahlKnopfAn;
+    border-color: var(--blue);
+    box-shadow: 0 0 0 2px var(--blue);
+  }
+}
+.schrift-rund b {
+  font-family: ui-rounded, 'SF Pro Rounded', 'Arial Rounded MT Bold', 'Trebuchet MS', sans-serif;
+}
+.schrift-serif b {
+  font-family: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+}
+.schrift-klassisch b {
+  font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+}
+.schrift-lesbar b {
+  font-family: Verdana, Tahoma, 'Segoe UI', sans-serif;
+}
+.kuerzel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+
+  input {
+    @include m.eingabefeld;
+    width: 80px;
+    height: 34px;
+    padding: 0 10px;
+    font-size: 15px;
+    text-transform: uppercase;
+  }
+}
+
+// ── Feinheiten: Leiste wie Campflow – Gruppen zum Einklappen, Kacheln heben sich, Haken bei „schon drin“ ──
+.gruppenKopf {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin: 10px 0 2px;
+  padding: 6px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+
+  svg {
+    transition: transform 0.15s;
+  }
+
+  &[aria-expanded='false'] svg {
+    transform: rotate(-90deg);
+  }
+}
+.zahl {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--surface3);
+  color: var(--text2);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.kachel {
+  position: relative;
+  transition:
+    transform 0.12s,
+    box-shadow 0.12s,
+    border-color 0.12s;
+
+  &:not([aria-disabled='true']):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(37, 99, 235, 0.14);
+  }
+
+  &:not([aria-disabled='true']):active {
+    cursor: grabbing;
+    transform: scale(0.97);
+  }
+}
+.haken {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  color: var(--green);
+}
+// `hidden` allein reicht nicht: `display: grid` oben schlägt die Vorgabe des Browsers.
+.kacheln[hidden] {
+  display: none;
+}
+
+.typ {
+  font: inherit;
+  font-size: 0.95em;
+  padding: 4px 8px;
+  border: 1px solid var(--p-line, #dde5e6);
+  border-radius: 7px;
+  background: var(--p-card, #fff);
+  color: var(--p-text, #17242a);
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}

@@ -347,7 +347,32 @@ export interface Gestaltung {
   knoepfe: 'eckig' | 'rund';
   text: string;
   gemeindename: boolean;
+  // Feinheiten (Alwin, 13.10.2026: „Jotform für Design und Vorlagen“). `null` = wie die Vorlage.
+  /** Schrift – nur Systemschriften, nichts wird von Google geladen (Datenschutz). `standard` = die der Vorlage. */
+  schrift: 'standard' | 'rund' | 'serif' | 'klassisch' | 'lesbar';
+  /** Farbe der Seite hinter dem Formular. */
+  seitenfarbe: string | null;
+  /** Farbe der Formular-Karten. */
+  kartenfarbe: string | null;
+  /** Farbe der Schrift. */
+  schriftfarbe: string | null;
+  breite: 'schmal' | 'normal' | 'breit';
+  /** Rundes Zeichen im Kopf (Campflow); das Gemeindelogo gibt ChurchTools ohne Login nicht heraus (gemessen). */
+  logo: boolean;
+  /** Text im runden Zeichen, z. B. „ECG“ – leer = aus dem Gemeindenamen. */
+  kuerzel: string;
 }
+
+/** Die Werte der Feinheiten für Einstellungen, die noch keine haben, und für neue Veranstaltungen. */
+export const GESTALTUNG_FEIN = {
+  schrift: 'standard',
+  seitenfarbe: null,
+  kartenfarbe: null,
+  schriftfarbe: null,
+  breite: 'normal',
+  logo: true,
+  kuerzel: '',
+} as const satisfies Partial<Gestaltung>;
 
 /**
  * **Wann und wo** (A2, #480). Der ChurchTools-Termin wird bewusst NICHT mit der Gruppe verknüpft (A0 #4:
@@ -461,6 +486,10 @@ const feldSchema = z.object({
   antworten: z.array(z.string().max(80)).max(20),
   verborgen: z.array(z.string().max(80)).max(20).optional(),
 });
+const hexOderNull = z
+  .string()
+  .regex(/^#[0-9a-fA-F]{6}$/)
+  .nullable();
 const zeitpunkt = z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
 const einstellungenSchema = z.object({
   termin: z
@@ -487,6 +516,17 @@ const einstellungenSchema = z.object({
     knoepfe: z.enum(['eckig', 'rund']),
     text: z.string().max(1200),
     gemeindename: z.boolean(),
+    // Seit den Feinheiten (A5) – mit Standardwert, damit ältere Einstellungen lesbar bleiben.
+    schrift: z
+      .enum(['standard', 'rund', 'serif', 'klassisch', 'lesbar'])
+      .default(GESTALTUNG_FEIN.schrift),
+    // Farben nur in Hex-Schreibweise – sie landen in einem style-Attribut.
+    seitenfarbe: hexOderNull.default(GESTALTUNG_FEIN.seitenfarbe),
+    kartenfarbe: hexOderNull.default(GESTALTUNG_FEIN.kartenfarbe),
+    schriftfarbe: hexOderNull.default(GESTALTUNG_FEIN.schriftfarbe),
+    breite: z.enum(['schmal', 'normal', 'breit']).default(GESTALTUNG_FEIN.breite),
+    logo: z.boolean().default(GESTALTUNG_FEIN.logo),
+    kuerzel: z.string().max(4).default(GESTALTUNG_FEIN.kuerzel),
   }),
   ctFelder: z.record(z.string(), z.number().int().positive()),
   wer: z.enum(['familie', 'einzeln', 'kinder']),

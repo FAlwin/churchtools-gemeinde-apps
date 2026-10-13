@@ -11,7 +11,7 @@ import {
 } from '@shared/anmeldung/formular';
 import { amEnde } from '@shared/anmeldung/baukasten';
 import { berechnePreis, euroText, kannEtwasKosten, preisKurz } from '@shared/anmeldung/preis';
-import { leereAntworten, textAufFarbe } from './daten';
+import { kuerzelVon, leereAntworten, textAufFarbe } from './daten';
 import s from './AnmeldeFormular.module.scss';
 
 /**
@@ -286,32 +286,26 @@ export function FeldEingabe({
   );
 }
 
-/**
- * **Der Stil-Rahmen** – Vorlage, Farbe, Feldstil, Knöpfe – ohne Kopf und Abschnitte. Für einzelne Felder
- * außerhalb des Formulars (Baukasten, Feld-Fenster), damit sie genauso aussehen wie für Gäste.
- */
-export function FeldRahmen({
-  gestaltung: g,
-  children,
-}: {
-  gestaltung: OeffentlicheEinstellungen['gestaltung'];
-  children: React.ReactNode;
-}) {
+const SYMBOLE = {
+  leute:
+    'M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3 20c0-3 3-5 6-5s6 2 6 5M16 11a3 3 0 1 0 0-6M21 20c0-2.5-1.5-4.2-4-4.8',
+  uhr: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 7v5l3 2',
+  preis: 'M20 12v8H4v-8M2 7h20v5H2zM12 22V7M12 7c-2-4-6-4-6-1s6 1 6 1Zm0 0c2-4 6-4 6-1s-6 1-6 1Z',
+} as const;
+
+function Symbol({ name }: { name: keyof typeof SYMBOLE }) {
   return (
-    <div
-      className={[
-        s.pv,
-        s.rahmen,
-        s[`t-${g.vorlage}`],
-        s[`fs-${g.feldstil}`],
-        s[`bt-${g.knoepfe}`],
-      ].join(' ')}
-      style={
-        { '--p-accent': g.farbe, '--p-on-accent': textAufFarbe(g.farbe) } as React.CSSProperties
-      }
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
     >
-      {children}
-    </div>
+      <path d={SYMBOLE[name]} />
+    </svg>
   );
 }
 
@@ -387,11 +381,18 @@ export function AnmeldeFormular({
     s[`t-${g.vorlage}`],
     s[`fs-${g.feldstil}`],
     s[`bt-${g.knoepfe}`],
+    s[`br-${g.breite}`] ?? '',
+    g.schrift !== 'standard' ? s[`sch-${g.schrift}`] : '',
+    g.seitenfarbe ? s['eigene-seite'] : '',
+    g.kartenfarbe ? s['eigene-karte'] : '',
     ansicht.bildUrl ? s['has-img'] : '',
   ].join(' ');
   const stil = {
     '--p-accent': g.farbe,
     '--p-on-accent': textAufFarbe(g.farbe),
+    ...(g.seitenfarbe ? { '--p-page': g.seitenfarbe } : {}),
+    ...(g.kartenfarbe ? { '--p-card': g.kartenfarbe } : {}),
+    ...(g.schriftfarbe ? { '--p-text': g.schriftfarbe, '--p-muted': g.schriftfarbe } : {}),
     ...(ansicht.bildUrl ? { '--user-img': `url("${ansicht.bildUrl}")` } : {}),
   } as React.CSSProperties;
 
@@ -414,6 +415,11 @@ export function AnmeldeFormular({
         <aside className={s.side}>
           <header className={s.hero}>
             <div className={s['hero-in']}>
+              {g.logo && (
+                <div className={s.zeichen} aria-hidden="true">
+                  {kuerzelVon(g.kuerzel, ansicht.gemeinde)}
+                </div>
+              )}
               {g.gemeindename && ansicht.gemeinde && <p className={s.org}>{ansicht.gemeinde}</p>}
               <h1>{baukasten?.titel ?? ansicht.name}</h1>
               <p className={s.sub}>{unter}</p>
@@ -425,15 +431,18 @@ export function AnmeldeFormular({
             <div className={s.facts}>
               {freiZeigen && (
                 <span className={`${s.fact} ${s.hot}`}>
+                  <Symbol name="leute" />
                   noch <b>{frei === 1 ? '1 Platz' : `${frei} Plätze`}</b> frei
                 </span>
               )}
               {ansicht.anmeldeschluss && (
                 <span className={s.fact}>
+                  <Symbol name="uhr" />
                   Anmeldeschluss <b>{datumText(ansicht.anmeldeschluss)}</b>
                 </span>
               )}
               <span className={s.fact}>
+                <Symbol name="preis" />
                 <b>{preisKurz(e.preis)}</b>
               </span>
             </div>

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { Icon } from '@ui/icons/icons';
 import { Segment } from '@ui/bedienung/Segment';
 import { Schalter } from '@ui/bedienung/Schalter';
 import {
@@ -15,6 +16,7 @@ import {
   type Bereich,
 } from '@shared/anmeldung/baukasten';
 import { FARBEN, VORLAGEN_GESTALTUNG, vorlageWechseln } from '@shared/anmeldung/gestaltung';
+import { kuerzelVon } from '@ui/anmeldeformular/daten';
 import { BausteinSymbol, type BausteinIcon } from './bausteinIcons';
 import k from './Baukasten.module.scss';
 
@@ -95,9 +97,35 @@ function Kachel({
         onZiehen();
       }}
     >
+      {benutzt && (
+        <span className={k.haken} aria-hidden="true">
+          <Icon name="check" size={14} stroke={2.6} />
+        </span>
+      )}
       <BausteinSymbol name={symbol} />
       {name}
     </div>
+  );
+}
+
+/** Kopf einer Kachel-Gruppe – zum Ein- und Ausklappen, mit Zahl. */
+function GruppenKopf({
+  name,
+  zahl,
+  offen,
+  onKlick,
+}: {
+  name: string;
+  zahl: string;
+  offen: boolean;
+  onKlick: () => void;
+}) {
+  return (
+    <button type="button" className={k.gruppenKopf} aria-expanded={offen} onClick={onKlick}>
+      <Icon name="chev-down" size={14} stroke={2.4} />
+      {name}
+      <span className={k.zahl}>{zahl}</span>
+    </button>
   );
 }
 
@@ -121,6 +149,8 @@ export function BausteineTafel({
   platz: number;
 }) {
   const [suche, setSuche] = useState('');
+  const [offen, setOffen] = useState({ empfohlen: true, frage: true, gestaltung: true });
+  const umschalten = (g: keyof typeof offen) => setOffen({ ...offen, [g]: !offen[g] });
   const passt = (name: string) => name.toLowerCase().includes(suche.trim().toLowerCase());
   const da = new Map(alleFelder(formular).map((f) => [f.id, f]));
 
@@ -159,10 +189,13 @@ export function BausteineTafel({
       />
       {empfohlen.length > 0 && (
         <>
-          <h3 className={k.gruppe}>
-            Empfohlen <small>· mit fester Bedeutung, je einmal</small>
-          </h3>
-          <div className={k.kacheln}>
+          <GruppenKopf
+            name="Empfohlen"
+            zahl={`${empfohlen.filter((x) => x.benutzt).length} von ${empfohlen.length} im Formular`}
+            offen={offen.empfohlen}
+            onKlick={() => umschalten('empfohlen')}
+          />
+          <div className={k.kacheln} hidden={!offen.empfohlen}>
             {empfohlen.map(({ b, benutzt, id }) => (
               <Kachel
                 key={id}
@@ -181,8 +214,13 @@ export function BausteineTafel({
         if (!liste.length) return null;
         return (
           <div key={gruppe}>
-            <h3 className={k.gruppe}>{gruppe === 'frage' ? 'Eigene Fragen' : 'Gestaltung'}</h3>
-            <div className={k.kacheln}>
+            <GruppenKopf
+              name={gruppe === 'frage' ? 'Eigene Fragen' : 'Gestaltung'}
+              zahl={String(liste.length)}
+              offen={offen[gruppe]}
+              onKlick={() => umschalten(gruppe)}
+            />
+            <div className={k.kacheln} hidden={!offen[gruppe]}>
               {liste.map(({ typ, b }) => (
                 <Kachel
                   key={typ}
@@ -229,8 +267,21 @@ export function BausteineTafel({
   );
 }
 
+/** Die Schriften zur Wahl – nur Systemschriften (Datenschutz). `standard` = die der Vorlage. */
+const SCHRIFTEN: [Gestaltung['schrift'], string, string][] = [
+  ['standard', 'Wie Vorlage', ''],
+  ['rund', 'Rund', 'für Kinder'],
+  ['serif', 'Mit Serifen', 'festlich'],
+  ['klassisch', 'Klassisch', 'Einladung'],
+  ['lesbar', 'Gut lesbar', 'Senioren'],
+];
+
+/** Was der Farbwähler zeigt, solange die Vorlage die Farbe bestimmt. */
+const STANDARD_FARBE = { seitenfarbe: '#f3f6f6', kartenfarbe: '#ffffff', schriftfarbe: '#17242a' };
+
 export function DesignTafel({
   gestaltung: g,
+  gemeinde,
   onGestaltung,
   bildUrl,
   bildArbeitet,
@@ -238,6 +289,7 @@ export function DesignTafel({
   onBildWeg,
 }: {
   gestaltung: Gestaltung;
+  gemeinde: string | null;
   onGestaltung: (g: Gestaltung) => void;
   bildUrl: string | null;
   bildArbeitet: boolean;
@@ -291,6 +343,74 @@ export function DesignTafel({
           eigene
         </label>
       </div>
+
+      <h3 className={k.gruppe}>Eigene Farben</h3>
+      <div className={k.farbPaare}>
+        {(
+          [
+            ['seitenfarbe', 'Seite'],
+            ['kartenfarbe', 'Formular'],
+            ['schriftfarbe', 'Schrift'],
+          ] as const
+        ).map(([feld, name]) => (
+          <div key={feld} className={k.farbPaar}>
+            <label>
+              <input
+                type="color"
+                value={g[feld] ?? STANDARD_FARBE[feld]}
+                aria-label={`Farbe: ${name}`}
+                onChange={(e) => onGestaltung({ ...g, [feld]: e.target.value })}
+              />
+              <span>{name}</span>
+            </label>
+            {g[feld] ? (
+              <button
+                type="button"
+                className={k.textKnopf}
+                onClick={() => onGestaltung({ ...g, [feld]: null })}
+              >
+                wie Vorlage
+              </button>
+            ) : (
+              <small>wie Vorlage</small>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <h3 className={k.gruppe}>Schrift</h3>
+      <div className={k.schriften}>
+        {SCHRIFTEN.map(([id, name, hinweis]) => (
+          <button
+            key={id}
+            type="button"
+            className={`${k.schrift} ${k[`schrift-${id}`] ?? ''}`}
+            aria-pressed={g.schrift === id}
+            onClick={() => onGestaltung({ ...g, schrift: id })}
+          >
+            <b>Aa</b>
+            <small>
+              {name}
+              {hinweis && ` · ${hinweis}`}
+            </small>
+          </button>
+        ))}
+      </div>
+      <p className={k.klein}>
+        Nur Schriften, die jedes Gerät schon hat – nichts wird von Google geladen.
+      </p>
+
+      <h3 className={k.gruppe}>Breite des Formulars</h3>
+      <Segment
+        ariaLabel="Breite des Formulars"
+        value={g.breite}
+        onChange={(breite) => onGestaltung({ ...g, breite })}
+        options={[
+          { value: 'schmal', label: 'Schmal' },
+          { value: 'normal', label: 'Normal' },
+          { value: 'breit', label: 'Breit' },
+        ]}
+      />
 
       <h3 className={k.gruppe}>Eingabefelder</h3>
       <Segment
@@ -358,6 +478,31 @@ export function DesignTafel({
         Gemeindename zeigen
         <Schalter an={g.gemeindename} />
       </button>
+      <button
+        type="button"
+        className={k.schalterZeile}
+        aria-pressed={g.logo}
+        onClick={() => onGestaltung({ ...g, logo: !g.logo })}
+      >
+        Rundes Zeichen im Kopf
+        <Schalter an={g.logo} />
+      </button>
+      {g.logo && (
+        <label className={k.kuerzel}>
+          <span>Kürzel im Zeichen</span>
+          <input
+            value={g.kuerzel}
+            maxLength={4}
+            placeholder={kuerzelVon('', gemeinde)}
+            aria-label="Kürzel im Zeichen"
+            onChange={(e) => onGestaltung({ ...g, kuerzel: e.target.value })}
+          />
+        </label>
+      )}
+      <p className={k.klein}>
+        Ein eigenes Logo-Bild kommt später: ChurchTools gibt das Gemeindelogo ohne Anmeldung nicht
+        heraus.
+      </p>
     </div>
   );
 }

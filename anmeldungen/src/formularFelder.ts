@@ -228,6 +228,36 @@ export async function feldEntfernen(
 }
 
 /**
+ * **Den Fragetyp eines Felds ändern** (Feinheiten A5). ChurchTools ändert den Typ einer Spalte nicht: `PATCH` mit
+ * neuem `fieldTypeCode` antwortet 200 und lässt den Typ, wie er ist (gemessen 13.10.2026). Also: alte Spalte
+ * löschen, neue anlegen – das geht nur, solange niemand geantwortet hat (sonst wären die Antworten weg).
+ * `feld` ist das Feld mit dem neuen Typ (und allem, was gerade im Baukasten daran geändert ist).
+ */
+export async function feldTypAendern(id: number, feld: Feld): Promise<OeffentlicheEinstellungen> {
+  const e = await einstellungenVon(id);
+  const bereich = bereichVon(e.formular, feld.id);
+  if (!bereich) throw new ApiError(404, `Das Feld „${feld.frage}“ gibt es nicht mehr.`);
+  if (feld.art !== 'eigen')
+    throw new ApiError(422, 'Nur bei eigenen Fragen lässt sich der Fragetyp ändern.');
+  const ctId = e.ctFelder[feld.id];
+  if (ctId !== undefined) {
+    const antworten = (await antwortenZaehlen(id)).get(ctId)?.gesamt ?? 0;
+    if (antworten > 0)
+      throw new ApiError(
+        409,
+        `Bei „${feld.frage}“ haben schon ${antworten === 1 ? 'eine Anmeldung' : `${antworten} Anmeldungen`} geantwortet – der Fragetyp lässt sich nicht mehr ändern. Lege dafür ein neues Feld an.`,
+      );
+    if ((await ctFelderLesen(id)).has(ctId)) {
+      await ctAnfrage(`/groups/${id}/memberfields/group/${ctId}`, { method: 'DELETE' });
+      if ((await ctFelderLesen(id)).has(ctId))
+        throw new NichtUebernommen('das Ändern des Fragetyps');
+    }
+  }
+  // Ohne Spalte legt `feldSpeichern` eine neue an (wie nach „Rückgängig“ eines Entfernens).
+  return feldSpeichern(id, bereich, { ...feld, verborgen: undefined });
+}
+
+/**
  * **Ein Feld verschieben** – vor `vorId` in `bereich` (`null` = ans Ende), auch in den anderen Bereich. Nur die
  * Einstellungen: ChurchTools kennt keine Formular-Reihenfolge, und die Spalte gehört zur Gruppe, nicht zum Bereich.
  */

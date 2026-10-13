@@ -5,7 +5,7 @@ import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import { berechnePreis, euroText } from '@shared/anmeldung/preis';
 import { alterAm, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import { AnmeldeFormular } from './AnmeldeFormular';
-import { musterAntworten, textAufFarbe } from './daten';
+import { kuerzelVon, musterAntworten, textAufFarbe } from './daten';
 
 const HEUTE = '2026-10-13';
 
@@ -224,5 +224,63 @@ describe('Haken für den Baukasten (A5)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Verbindlich anmelden' }));
     expect(screen.queryByText('Danke für die Anmeldung!')).toBeNull();
     expect(screen.queryByText(/abgeschickt wird hier nichts/)).toBeNull();
+  });
+});
+
+describe('Feinheiten (A5): Kopf, Schrift, Farben, Breite', () => {
+  it('Kürzel: eingetragen, sonst Abkürzung aus dem Namen, sonst Anfangsbuchstaben (ohne „e.V.“)', () => {
+    expect(kuerzelVon('ecg', 'Egal')).toBe('ECG');
+    expect(kuerzelVon('', 'ECG Donrath')).toBe('ECG');
+    expect(kuerzelVon('', 'Evangeliumschristen- Gemeinde e.V.')).toBe('EG');
+    expect(kuerzelVon(' ', null)).toBe('•');
+  });
+
+  it('Zeichen im Kopf an/aus; eigene Farben, Schrift und Breite landen am Formular', () => {
+    const e = freizeit();
+    e.gestaltung = {
+      ...e.gestaltung,
+      kuerzel: 'ecg',
+      schrift: 'rund',
+      breite: 'breit',
+      seitenfarbe: '#112233',
+      kartenfarbe: '#fefefe',
+      schriftfarbe: '#222222',
+    };
+    const { container, unmount } = render(
+      <AnmeldeFormular ansicht={{ name: 'X', gemeinde: 'ECG', einstellungen: e }} heute={HEUTE} />,
+    );
+    expect(screen.getByText('ECG', { selector: '[aria-hidden]' })).toBeTruthy();
+    const pv = container.firstElementChild as HTMLElement;
+    expect(pv.style.getPropertyValue('--p-page')).toBe('#112233');
+    expect(pv.style.getPropertyValue('--p-card')).toBe('#fefefe');
+    expect(pv.style.getPropertyValue('--p-text')).toBe('#222222');
+    expect(pv.className).toMatch(/sch-rund/);
+    expect(pv.className).toMatch(/br-breit/);
+    expect(pv.className).toMatch(/eigene-seite/);
+    expect(pv.className).toMatch(/eigene-karte/);
+    unmount();
+    e.gestaltung = { ...e.gestaltung, logo: false, seitenfarbe: null, schrift: 'standard' };
+    const neu = render(
+      <AnmeldeFormular ansicht={{ name: 'X', gemeinde: 'ECG', einstellungen: e }} heute={HEUTE} />,
+    );
+    expect(screen.queryByText('ECG', { selector: '[aria-hidden]' })).toBeNull();
+    const pv2 = neu.container.firstElementChild as HTMLElement;
+    expect(pv2.style.getPropertyValue('--p-page')).toBe('');
+    expect(pv2.className).not.toMatch(/sch-|eigene-seite/);
+  });
+});
+
+describe('Reihenfolge (Feinheiten A5)', () => {
+  it('das Formular zeigt die gespeicherte Reihenfolge – auch Bemerkungen ganz oben; Datenschutz am Ende', () => {
+    const e = freizeit();
+    const note = e.formular.anmeldung.find((f) => f.id === 'note')!;
+    e.formular.anmeldung = [note, ...e.formular.anmeldung.filter((f) => f.id !== 'note')];
+    const { container } = render(
+      <AnmeldeFormular ansicht={{ name: 'X', gemeinde: null, einstellungen: e }} heute={HEUTE} />,
+    );
+    const text = container.textContent ?? '';
+    expect(text.indexOf('Bemerkungen')).toBeGreaterThan(-1);
+    expect(text.indexOf('Bemerkungen')).toBeLessThan(text.indexOf('E-Mail'));
+    expect(text.indexOf('Ich bin einverstanden')).toBeGreaterThan(text.indexOf('Bemerkungen'));
   });
 });

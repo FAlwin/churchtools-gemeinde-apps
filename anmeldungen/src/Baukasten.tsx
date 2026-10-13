@@ -7,6 +7,7 @@ import { musterAntworten } from '@ui/anmeldeformular/daten';
 import {
   platzBelegt,
   type Feld,
+  type Feldtyp,
   type Formular,
   type Gestaltung,
   type OeffentlicheEinstellungen,
@@ -26,6 +27,7 @@ import {
   feldEinordnen,
   feldEntfernen,
   feldSpeichern,
+  feldTypAendern,
 } from './formularFelder';
 import { aendereEinstellungen, bildEntfernen, bildHochladen, umbenennen } from './einrichten';
 import { FeldBearbeiten } from './FeldBearbeiten';
@@ -288,6 +290,29 @@ export function Baukasten({
     neuerEntwurf(feld);
     insBild.current = feld.id;
     void tun(`„${b.name}“ hinzugefügt.`, () => feldSpeichern(id, bereich, feld, undefined, vorId));
+  }
+
+  /** Fragetyp ändern – mit allem, was gerade am Feld geändert ist (`feldTypAendern`: neue Spalte). */
+  function typAendern(typ: Feldtyp) {
+    const d = entwurfRef.current;
+    if (!d || d.feld.typ === typ) return;
+    if (feldUhr.current) clearTimeout(feldUhr.current);
+    geaendert.current = false;
+    const bisher = d.antworten.map((a) => a.text.trim()).filter(Boolean);
+    const feld: Feld = {
+      ...d.feld,
+      typ,
+      frage: d.feld.frage.trim(),
+      antworten: mitAntworten({ ...d.feld, typ })
+        ? bisher.length >= 2
+          ? bisher
+          : ['Antwort 1', 'Antwort 2']
+        : [],
+    };
+    setLokalF(ersetzeFeld(formularRef.current, feld));
+    neuerEntwurf(feld);
+    setInfo(null);
+    void tun(`Fragetyp von „${feld.frage}“ geändert.`, () => feldTypAendern(id, feld));
   }
 
   function verschieben(feldId: string, bereich: Bereich, vorId: string | null) {
@@ -567,6 +592,7 @@ export function Baukasten({
             entferntGewaehlt={entferntGewaehlt}
             altersPreise={e.preis.alter.length > 0}
             werkzeug={werkzeug}
+            onTyp={typAendern}
           />
         ) : (
           <div ref={inert} className={k.inhalt}>
@@ -656,6 +682,7 @@ export function Baukasten({
   const tafelDesign = (
     <DesignTafel
       gestaltung={gestaltung}
+      gemeinde={gemeinde}
       onGestaltung={gestalten}
       bildUrl={bildUrl}
       bildArbeitet={bildArbeitet}

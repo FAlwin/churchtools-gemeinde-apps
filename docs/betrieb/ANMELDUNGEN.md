@@ -133,7 +133,13 @@ mitarbeiten (z. B. über den Status oder global über die Gruppen).
     (Sicherheitsstufe 3 – das Team sieht die Antworten). Hat schon jemand geantwortet, wird ein Feld oder
     eine Antwort beim Entfernen nur **ausgeblendet**; die Antworten bleiben, und unter „Ausgeblendet“ lässt
     sich das Feld zurückholen. Überschrift, Hinweistext und Trennlinie sind nur Text, ohne Spalte.
-  - Ziehen geht mit der Maus; auf dem Handy Bausteine antippen und mit den Pfeilen verschieben.
+  - Ziehen geht mit der Maus (es öffnet sich eine Lücke, wo der Baustein landet); auf dem Handy Bausteine
+    antippen und mit den Pfeilen verschieben. Alles lässt sich verschieben – nur Preisbereich und Datenschutz
+    stehen immer direkt vor „Verbindlich anmelden“.
+  - **Fragetyp ändern** (unten im gewählten Feld) geht nur, solange niemand geantwortet hat: ChurchTools kann
+    den Typ einer Spalte nicht ändern, die Erweiterung legt dafür eine neue an.
+  - **Design** hat außerdem Schrift, eigene Farben (Seite, Formular, Schrift), Breite und das runde Zeichen
+    mit dem Kürzel der Gemeinde. Schriften kommen nur vom Gerät selbst – nichts wird von Google geladen.
 - **Wo die Einstellungen stehen:** in der Beschreibung der Gruppe, unsichtbar unter dem Satz „Diese
   Anmeldung wird mit der Erweiterung **Anmeldungen** verwaltet.“ Wer den Text in ChurchTools ändert,
   schadet nicht: Die Erweiterung stellt die Einstellungen aus ihrer Sicherung wieder her (in den

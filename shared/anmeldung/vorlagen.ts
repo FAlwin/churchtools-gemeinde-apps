@@ -6,7 +6,12 @@
  */
 import { STANDARD_BEZAHLUNG } from './bezahlung';
 import { VORLAGEN_GESTALTUNG } from './gestaltung';
-import { standardFormular, type Gestaltung, type OeffentlicheEinstellungen } from './formular';
+import {
+  GESTALTUNG_FEIN,
+  standardFormular,
+  type Gestaltung,
+  type OeffentlicheEinstellungen,
+} from './formular';
 
 export type Vorlage = 'einfach' | 'kinder' | 'freizeit';
 
@@ -45,6 +50,7 @@ function startGestaltung(vorlage: Vorlage): Gestaltung {
     knoepfe: v.knoepfe,
     text: '',
     gemeindename: true,
+    ...GESTALTUNG_FEIN,
   };
 }
 

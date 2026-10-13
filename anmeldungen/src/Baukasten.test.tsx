@@ -11,6 +11,7 @@ import { fehlerMeldung } from './zustand';
 
 vi.mock('./formularFelder', () => ({
   feldSpeichern: vi.fn(),
+  feldTypAendern: vi.fn(),
   feldEntfernen: vi.fn(),
   feldEinordnen: vi.fn(),
   ctFelderLesen: vi.fn(),
@@ -383,5 +384,67 @@ describe('Baukasten (A5): Ansichten', () => {
     expect(screen.queryByRole('complementary', { name: 'Bausteine und Design' })).toBeNull();
     expect(container.querySelector('[data-feld]')).toBeNull();
     expect(screen.getByRole('button', { name: 'Verbindlich anmelden' })).toBeTruthy();
+  });
+});
+
+describe('Baukasten (Feinheiten): Leiste, Fragetyp, Design', () => {
+  it('Gruppen klappen ein und aus; Zahlen; was schon drin ist, hat einen Haken', () => {
+    const { container } = zeigen();
+    const kopf = screen.getByRole('button', { name: /Eigene Fragen/ });
+    expect(kopf.getAttribute('aria-expanded')).toBe('true');
+    fireEvent.click(kopf);
+    expect(kopf.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByRole('button', { name: 'Kurzer Text' })).toBeNull();
+    expect(screen.getByRole('button', { name: /Empfohlen/ }).textContent).toMatch(
+      /5 von 8 im Formular/,
+    );
+    const telefon = screen.getByRole('button', { name: 'Telefon' });
+    expect(telefon.querySelector('[class*="haken"]')).toBeTruthy();
+    expect(container.querySelector('[class*="haken"]')).toBeTruthy();
+  });
+
+  it('Fragetyp ändern: mit allem, was gerade am Feld steht; Antworten bleiben', async () => {
+    ff.feldTypAendern.mockResolvedValue({} as never);
+    const { huelle } = zeigen();
+    fireEvent.click(huelle('f1'));
+    await waitFor(() => expect(ff.antwortenZaehlen).toHaveBeenCalled());
+    fireEvent.change(screen.getByLabelText('Frage'), { target: { value: 'Gruppe?' } });
+    fireEvent.change(screen.getByLabelText('Fragetyp'), { target: { value: 'select' } });
+    await waitFor(() => expect(ff.feldTypAendern).toHaveBeenCalled());
+    expect(ff.feldTypAendern.mock.calls[0][1]).toMatchObject({
+      id: 'f1',
+      typ: 'select',
+      frage: 'Gruppe?',
+      antworten: ['Minis', 'Kids'],
+    });
+    // Das Tippen davor wird nicht zusätzlich gespeichert – der Typwechsel nimmt es mit.
+    expect(ff.feldSpeichern).not.toHaveBeenCalled();
+  });
+
+  it('Fragetyp gesperrt, wenn schon jemand geantwortet hat', async () => {
+    ff.antwortenZaehlen.mockResolvedValue(
+      new Map([[501, { gesamt: 2, jeOption: new Map([['11', 2]]) }]]),
+    );
+    const { huelle } = zeigen();
+    fireEvent.click(huelle('f1'));
+    await waitFor(() => expect(screen.getByLabelText('Fragetyp')).toHaveProperty('disabled', true));
+  });
+
+  it('eigene Farbe zurück auf „wie Vorlage“; Kürzel; Schrift', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const e = einstellungen();
+    e.gestaltung = { ...e.gestaltung, kartenfarbe: '#123456' };
+    zeigen(e);
+    const leiste = screen.getByRole('complementary', { name: 'Bausteine und Design' });
+    fireEvent.click(within(leiste).getByRole('button', { name: 'Design' }));
+    fireEvent.click(screen.getByRole('button', { name: 'wie Vorlage' }));
+    fireEvent.change(screen.getByLabelText('Kürzel im Zeichen'), { target: { value: 'kt' } });
+    fireEvent.click(screen.getByRole('button', { name: /Gut lesbar/ }));
+    await act(async () => {
+      vi.advanceTimersByTime(PAUSE_DESIGN_MS);
+    });
+    await waitFor(() => expect(ei.aendereEinstellungen).toHaveBeenCalledTimes(1));
+    const g = ei.aendereEinstellungen.mock.calls[0][1](neueEinstellungen('kinder')).gestaltung;
+    expect(g).toMatchObject({ kartenfarbe: null, kuerzel: 'kt', schrift: 'lesbar' });
   });
 });

@@ -34,7 +34,13 @@ import {
   verschieben,
   wiederherstellen,
 } from './einrichten';
-import { feldEntfernen, feldSpeichern, felderAnlegen, feldEinordnen } from './formularFelder';
+import {
+  feldEntfernen,
+  feldSpeichern,
+  felderAnlegen,
+  feldEinordnen,
+  feldTypAendern,
+} from './formularFelder';
 import type { Feld } from '@shared/anmeldung/formular';
 import { EMPFOHLEN } from '@shared/anmeldung/baukasten';
 
@@ -906,6 +912,27 @@ describe('Formularfelder in ChurchTools (A5)', () => {
     await feldSpeichern(id, 'person', { ...foto, zustand: 'freiwillig' }, undefined, 'allergy');
     expect(ids(id).person).toEqual(['pname', 'birth', 'foto', 'allergy']);
     expect(ctFeld(id, 'foto')).toMatchObject({ useInRegistrationForm: true });
+  });
+
+  it('Fragetyp ändern: ohne Antworten neue Spalte mit neuem Typ; mit Antworten abgelehnt, nichts geändert', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'anmeldung', feld());
+    const alt = ctFeld(id, 'f1');
+    expect(alt.fieldTypeCode).toBe('select');
+    await feldTypAendern(id, feld({ typ: 'radio' }));
+    const neuesFeld = ctFeld(id, 'f1');
+    expect(neuesFeld.id).not.toBe(alt.id);
+    expect(neuesFeld.fieldTypeCode).toBe('radioselect');
+    expect(gruppen.get(id)!.felder.some((f) => f.id === alt.id)).toBe(false);
+    mitglieder.set(id, [
+      { groupMemberStatus: 'active', fields: [{ id: neuesFeld.id, value: 'x' }] },
+    ]);
+    const vorher = gruppen.get(id)!.note;
+    await expect(feldTypAendern(id, feld({ typ: 'select' }))).rejects.toMatchObject({
+      status: 409,
+    });
+    expect(ctFeld(id, 'f1').id).toBe(neuesFeld.id);
+    expect(gruppen.get(id)!.note).toBe(vorher);
   });
 
   it('Name, E-Mail, Datenschutz lassen sich nicht entfernen', async () => {

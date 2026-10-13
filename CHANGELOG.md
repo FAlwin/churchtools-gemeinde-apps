@@ -9,6 +9,21 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Neu (Anmeldungen)
 
+- **Feinheiten am Baukasten** (Alwin, 13.10.2026: „wenn du es genauso schaffst zu bauen, bin ich echt happy“).
+  - **Alles verschiebbar** – auch Name, E-Mail und Bemerkungen (jeweils in ihrem Bereich). Nur Preisbereich und
+    Datenschutz bleiben direkt vor dem Absenden. Das Formular zeigt die Anmeldung in der gespeicherten
+    Reihenfolge.
+  - **Beim Ziehen öffnet sich eine Lücke** „Hier loslassen“ (wie bei Campflow) statt der blauen Linie.
+  - **Mehr Design (wie Jotform):** Schrift (Rund, Mit Serifen, Klassisch, Gut lesbar – nur Systemschriften,
+    nichts von Google), eigene Farben für Seite, Formular und Schrift (zurück auf „wie Vorlage“), Breite des
+    Formulars. Ein Vorlagenwechsel nimmt die eigenen Farben zurück.
+  - **Kopf:** rundes Zeichen mit Kürzel der Gemeinde (eintragbar; das Gemeindelogo gibt ChurchTools ohne
+    Login nicht heraus – gemessen), Preis, Plätze und Anmeldeschluss mit Symbol.
+  - **Leiste:** Gruppen zum Einklappen mit Zahlen („5 von 8 im Formular“), Haken an Bausteinen, die schon
+    drin sind, Kacheln heben sich beim Zeigen.
+  - **Fragetyp ändern** unten im Feld – solange niemand geantwortet hat. ChurchTools ändert den Typ einer
+    Spalte nicht (PATCH antwortet 200 und lässt ihn, gemessen); deshalb neue Spalte statt alter.
+
 - **Formular-Baukasten mit Design und Vorschau** (Bauplan A5) – ein Reiter „Formular“, aufgebaut nach Alwins
   Vorbildern vom 13.10.2026 (Baukasten wie Campflow, Design wie Jotform, Bearbeiten wie Google Forms).
   - **In der Mitte das echte Formular** – dieselbe Darstellung wie für Gäste. Bausteine aus der Leiste rechts

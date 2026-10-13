@@ -135,6 +135,19 @@ describe('Baukasten (A5): Bausteine ins Formular', () => {
     expect(feld).toMatchObject({ typ: 'date' });
   });
 
+  it('über einem Feld öffnet sich eine Lücke; dort loslassen legt dort ab', async () => {
+    const { huelle } = zeigen();
+    fireEvent.dragStart(screen.getByRole('button', { name: 'Zahl' }), { dataTransfer: dt() });
+    fireEvent.dragEnter(huelle('allergy'), { clientY: 5 });
+    const luecke = screen.getByText('Hier loslassen');
+    // „Nach Allergien“ = „vor Foto“: Die Lücke steht direkt vor dem Foto-Feld.
+    expect(luecke.nextElementSibling?.getAttribute('data-feld')).toBe('foto');
+    fireEvent.drop(luecke);
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
+    expect(ff.feldSpeichern.mock.calls[0][4]).toBe('foto');
+    expect(screen.queryByText('Hier loslassen')).toBeNull();
+  });
+
   it('abgelegt wird, wo losgelassen wird – auch ohne vorheriges „dragover“', async () => {
     const { huelle } = zeigen();
     fireEvent.dragStart(screen.getByRole('button', { name: 'Zahl' }), { dataTransfer: dt() });
@@ -268,10 +281,14 @@ describe('Baukasten (A5): direkt im Feld bearbeiten', () => {
     expect(knopf.closest('[class*="werkzeugUnten"]')).toBeTruthy();
   });
 
-  it('feste Felder (Name, E-Mail, Datenschutz) haben kein Werkzeug', () => {
+  it('Name und E-Mail: verschieben ja, entfernen und bearbeiten nein; Datenschutz bleibt ganz, wo er ist', () => {
     const { huelle } = zeigen();
-    for (const id of ['name', 'mail', 'priv', 'pname'])
-      expect(huelle(id).querySelector('button')).toBeNull();
+    expect(screen.getByRole('button', { name: 'E-Mail nach oben' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'E-Mail entfernen' })).toBeNull();
+    fireEvent.click(huelle('mail'));
+    expect(screen.queryByLabelText('Frage')).toBeNull();
+    expect(huelle('priv').querySelector('button')).toBeNull();
+    expect(huelle('priv').querySelector('[draggable="true"]')).toBeNull();
   });
 });
 

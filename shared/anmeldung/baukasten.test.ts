@@ -31,32 +31,58 @@ describe('Baukasten: einordnen (A5)', () => {
     expect(ids(f).person).not.toContain('f2');
   });
 
-  it('oben feste Felder bleiben oben, unten feste unten – auch wenn davor/dahinter abgelegt wird', () => {
-    expect(ids(einordnen(grund(), 'f1', 'anmeldung', 'name')).anmeldung).toEqual([
-      'name',
+  it('alles ist verschiebbar – auch Name und E-Mail (Alwin: „Ich möchte alles verschieben können“)', () => {
+    expect(ids(einordnen(grund(), 'mail', 'anmeldung', 'name')).anmeldung).toEqual([
       'mail',
-      'f1',
+      'name',
       'tel',
       'note',
       'price',
       'priv',
     ]);
+    expect(ids(einordnen(grund(), 'f1', 'person', 'pname')).person[0]).toBe('f1');
+    // Name, E-Mail und der Name jeder Person bleiben in ihrem Bereich.
+    expect(ids(einordnen(grund(), 'mail', 'person', null)).anmeldung).toContain('mail');
+    expect(ids(einordnen(grund(), 'pname', 'anmeldung', null)).person).toContain('pname');
+  });
+
+  it('Preis und Datenschutz bleiben am Ende – auch wenn dahinter abgelegt wird', () => {
     expect(ids(einordnen(grund(), 'f1', 'anmeldung', 'priv')).anmeldung).toEqual([
       'name',
       'mail',
       'tel',
+      'note',
+      'f1',
+      'price',
+      'priv',
+    ]);
+  });
+
+  it('„ans Ende“ = vor die Bemerkungen; die Bemerkungen selbst wirklich ans Ende', () => {
+    expect(ids(einordnen(grund(), 'f1', 'anmeldung', null)).anmeldung).toEqual([
+      'name',
+      'mail',
+      'tel',
       'f1',
       'note',
       'price',
       'priv',
     ]);
-    expect(ids(einordnen(grund(), 'f1', 'person', 'pname')).person[0]).toBe('pname');
+    const f = einordnen(grund(), 'note', 'anmeldung', 'name');
+    expect(ids(f).anmeldung[0]).toBe('note');
+    expect(ids(einordnen(f, 'note', 'anmeldung', null)).anmeldung).toEqual([
+      'name',
+      'mail',
+      'tel',
+      'note',
+      'price',
+      'priv',
+    ]);
   });
 
-  it('feste Felder bewegen sich nicht', () => {
+  it('Preis und Datenschutz bewegen sich nicht', () => {
     const f = grund();
-    for (const id of ['name', 'mail', 'pname', 'price', 'priv', 'note'])
-      expect(einordnen(f, id, 'person', null)).toBe(f);
+    for (const id of ['price', 'priv']) expect(einordnen(f, id, 'person', null)).toBe(f);
   });
 
   it('neues Feld wird eingefügt; ein unbekanntes ohne Feld ändert nichts', () => {
@@ -74,7 +100,7 @@ describe('Baukasten: einordnen (A5)', () => {
     expect(einordnen(f, 'gibtsnicht', 'person', null)).toBe(f);
   });
 
-  it('Geburtsdatum gehört zur Person, Bemerkungen ans Ende der Anmeldung – egal wohin gezogen', () => {
+  it('Geburtsdatum gehört zur Person, Bemerkungen zur Anmeldung – egal wohin gezogen', () => {
     const f = standardFormular();
     f.person = f.person.filter((x) => x.id !== 'birth');
     f.anmeldung = f.anmeldung.filter((x) => x.id !== 'note');
@@ -88,7 +114,12 @@ describe('Baukasten: einordnen (A5)', () => {
 
   it('verschiebbar, naechsteId, neue Kennung', () => {
     const f = grund();
-    expect(f.anmeldung.filter(verschiebbar).map((x) => x.id)).toEqual(['tel']);
+    expect(f.anmeldung.filter(verschiebbar).map((x) => x.id)).toEqual([
+      'name',
+      'mail',
+      'tel',
+      'note',
+    ]);
     expect(naechsteId(f, 'f1')).toBe('f2');
     expect(naechsteId(f, 'f2')).toBeNull();
     expect(neueFeldKennung(f)).toBe('f3');

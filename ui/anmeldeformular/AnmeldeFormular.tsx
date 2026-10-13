@@ -9,6 +9,7 @@ import {
   type Feld,
   type OeffentlicheEinstellungen,
 } from '@shared/anmeldung/formular';
+import { amEnde } from '@shared/anmeldung/baukasten';
 import { berechnePreis, euroText, kannEtwasKosten, preisKurz } from '@shared/anmeldung/preis';
 import { leereAntworten, textAufFarbe } from './daten';
 import s from './AnmeldeFormular.module.scss';
@@ -340,12 +341,10 @@ export function AnmeldeFormular({
   const [fertig, setFertig] = useState(false);
 
   const sichtbar = (f: Feld) => f.zustand !== 'aus';
-  const kopf = e.formular.anmeldung.filter(
-    (f) => sichtbar(f) && f.id !== 'note' && f.typ !== 'price' && f.typ !== 'privacy',
-  );
-  const ende = e.formular.anmeldung.filter(
-    (f) => sichtbar(f) && (f.id === 'note' || f.typ === 'privacy'),
-  );
+  // In der gespeicherten Reihenfolge – im Baukasten lässt sich jedes Feld verschieben, auch Name, E-Mail und
+  // Bemerkungen. Nur der Datenschutz steht immer am Ende, direkt vor dem Absenden.
+  const kopf = e.formular.anmeldung.filter((f) => sichtbar(f) && !amEnde(f));
+  const ende = e.formular.anmeldung.filter((f) => sichtbar(f) && f.typ === 'privacy');
   const preisFeld = e.formular.anmeldung.find((f) => f.typ === 'price' && sichtbar(f));
   const personFelder = e.formular.person.filter(sichtbar);
   const loeschtag = loeschTag(e);

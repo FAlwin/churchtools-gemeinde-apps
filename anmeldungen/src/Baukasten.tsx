@@ -12,6 +12,7 @@ import {
   type OeffentlicheEinstellungen,
 } from '@shared/anmeldung/formular';
 import {
+  amEnde,
   bereichVon,
   einordnen,
   naechsteId,
@@ -51,11 +52,13 @@ export const PAUSE_FELD_MS = 1500;
 export const PAUSE_DESIGN_MS = 700;
 
 type Gezogen = { art: 'neu'; b: NeuerBaustein } | { art: 'feld'; id: string };
-/** Wo abgelegt wird: vor oder nach einem Feld (obere bzw. untere Hälfte). */
+/**
+ * Wo abgelegt wird: vor `vorId` im Bereich (`null` = am Ende). Immer so ausgedrückt – „nach Feld A“ und „vor Feld
+ * B“ sind dieselbe Stelle, sonst spränge die Lücke zwischen zwei Darstellungen hin und her.
+ */
 interface Ziel {
   bereich: Bereich;
-  feldId: string;
-  wo: 'vor' | 'nach';
+  vorId: string | null;
 }
 interface AntwortInfo {
   feldId: string;
@@ -341,8 +344,10 @@ export function Baukasten({
     );
   }
 
-  /** Die sichtbaren Felder eines Bereichs – so, wie das Formular sie zeigt (Bemerkungen usw. stehen am Ende). */
+  /** Die sichtbaren Felder eines Bereichs – so, wie das Formular sie zeigt. */
   const sichtbareListe = (bereich: Bereich) => formular[bereich].filter(sichtbar);
+  /** Die Felder, zwischen die abgelegt werden kann (ohne Preis und Datenschutz am Ende). */
+  const ablageListe = (bereich: Bereich) => sichtbareListe(bereich).filter((x) => !amEnde(x));
 
   function hochRunter(f: Feld, bereich: Bereich, um: -1 | 1) {
     const liste = sichtbareListe(bereich).filter(verschiebbar);
@@ -352,12 +357,13 @@ export function Baukasten({
       verschieben(f.id, bereich, liste[i + 2]?.id ?? null);
   }
 
-  // ── Ziehen und Ablegen ──
-  function zielVorId(z: Ziel): string | null {
-    if (z.wo === 'vor') return z.feldId;
-    const liste = sichtbareListe(z.bereich);
-    const i = liste.findIndex((x) => x.id === z.feldId);
-    return liste[i + 1]?.id ?? null;
+  // ── Ziehen und Ablegen: Über einem Feld öffnet sich davor oder dahinter eine Lücke (wie bei Campflow) ──
+  function zielAn(f: Feld, bereich: Bereich, oben: boolean): Ziel {
+    if (amEnde(f)) return { bereich, vorId: null };
+    if (oben) return { bereich, vorId: f.id };
+    const liste = ablageListe(bereich);
+    const i = liste.findIndex((x) => x.id === f.id);
+    return { bereich, vorId: liste[i + 1]?.id ?? null };
   }
 
   function ablegen(z: Ziel | null) {
@@ -366,16 +372,33 @@ export function Baukasten({
     setZiehtFeld(null);
     setZiel(null);
     if (!g || !z) return;
-    const vorId = zielVorId(z);
-    if (g.art === 'neu') einfuegen(g.b, { bereich: z.bereich, vorId });
-    else verschieben(g.id, z.bereich, vorId);
+    if (g.art === 'neu') einfuegen(g.b, z);
+    else verschieben(g.id, z.bereich, z.vorId);
   }
 
   function zielSetzen(z: Ziel) {
-    setZiel((alt) =>
-      alt && alt.bereich === z.bereich && alt.feldId === z.feldId && alt.wo === z.wo ? alt : z,
-    );
+    setZiel((alt) => (alt && alt.bereich === z.bereich && alt.vorId === z.vorId ? alt : z));
   }
+
+  /** Die Lücke selbst: Wer hier loslässt, legt dort ab, wo sie steht. */
+  const luecke = (z: Ziel) => (
+    <div
+      key="luecke"
+      className={k.luecke}
+      onDragEnter={(ev) => ev.preventDefault()}
+      onDragOver={(ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+      }}
+      onDrop={(ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        ablegen(z);
+      }}
+    >
+      Hier loslassen
+    </div>
+  );
 
   const ziehenBeginnen = (g: Gezogen) => {
     gezogen.current = g;
@@ -411,7 +434,7 @@ export function Baukasten({
   function huelle(f: Feld, bereich: Bereich, inhalt: ReactNode): ReactNode {
     const zielHier = (ev: React.DragEvent<HTMLDivElement>): Ziel => {
       const r = ev.currentTarget.getBoundingClientRect();
-      return { bereich, feldId: f.id, wo: ev.clientY < r.top + r.height / 2 ? 'vor' : 'nach' };
+      return zielAn(f, bereich, ev.clientY < r.top + r.height / 2);
     };
     const zielUeber = (ev: React.DragEvent<HTMLDivElement>) => {
       if (!gezogen.current) return;
@@ -421,11 +444,14 @@ export function Baukasten({
     };
     const beweglich = verschiebbar(f);
     const istAktiv = aktiv === f.id && entwurf?.feld.id === f.id;
+    // Name, E-Mail, Datenschutz: verschiebbar (außer Datenschutz), aber nicht zu bearbeiten oder zu entfernen.
     const fest = f.art === 'fest' || f.art === 'preis';
     const liste = sichtbareListe(bereich).filter(verschiebbar);
     const i = liste.findIndex((x) => x.id === f.id);
-    const linie =
-      ziel && ziel.feldId === f.id ? (ziel.wo === 'vor' ? k.linieOben : k.linieUnten) : '';
+    const hierLuecke = !!ziel && ziel.bereich === bereich;
+    const lueckeDavor = hierLuecke && ziel.vorId === f.id;
+    const lueckeDanach =
+      hierLuecke && ziel.vorId === null && ablageListe(bereich).at(-1)?.id === f.id;
     const entfernt = info && info.feldId === f.id ? info : null;
     const entferntGewaehlt =
       entfernt && entwurf
@@ -478,22 +504,26 @@ export function Baukasten({
             <BausteinSymbol name="kopie" size={16} />
           </button>
         )}
-        <button
-          type="button"
-          aria-label={`${f.frage || 'Trennlinie'} entfernen`}
-          title={f.art === 'eigen' ? 'Entfernen' : 'Ausschalten'}
-          onClick={(ev) => {
-            ev.stopPropagation();
-            entfernen(f);
-          }}
-        >
-          <Icon name="trash" size={16} />
-        </button>
+        {!fest && (
+          <button
+            type="button"
+            aria-label={`${f.frage || 'Trennlinie'} entfernen`}
+            title={f.art === 'eigen' ? 'Entfernen' : 'Ausschalten'}
+            onClick={(ev) => {
+              ev.stopPropagation();
+              entfernen(f);
+            }}
+          >
+            <Icon name="trash" size={16} />
+          </button>
+        )}
       </>
     );
-    return (
+    return [
+      lueckeDavor && luecke(ziel),
       <div
-        className={`${k.huelle} ${istAktiv ? k.aktiv : ''} ${fest ? k.fest : ''} ${linie} ${ziehtFeld === f.id ? k.wirdGezogen : ''}`}
+        key="feld"
+        className={`${k.huelle} ${istAktiv ? k.aktiv : ''} ${fest ? k.fest : ''} ${ziehtFeld === f.id ? k.wirdGezogen : ''}`}
         data-feld={f.id}
         onClick={(ev) => {
           ev.stopPropagation();
@@ -527,8 +557,8 @@ export function Baukasten({
             <Icon name="grip" size={16} />
           </span>
         )}
-        {fest && <span className={k.festSchild}>gehört immer dazu</span>}
-        {!fest && !istAktiv && <div className={k.werkzeug}>{werkzeug}</div>}
+        {fest && !beweglich && <span className={k.festSchild}>gehört immer dazu</span>}
+        {(beweglich || !fest) && !istAktiv && <div className={k.werkzeug}>{werkzeug}</div>}
         {istAktiv && entwurf ? (
           <FeldBearbeiten
             entwurf={entwurf}
@@ -543,8 +573,9 @@ export function Baukasten({
             {inhalt}
           </div>
         )}
-      </div>
-    );
+      </div>,
+      lueckeDanach && luecke(ziel),
+    ];
   }
 
   // Das bearbeitete Feld so zeigen, wie es gerade im Baukasten steht (für die Vorschau).

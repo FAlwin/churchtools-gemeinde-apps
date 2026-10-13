@@ -189,21 +189,26 @@
   opacity: 0;
   transition: opacity 0.15s;
 }
-.linieOben::before,
-.linieUnten::after {
-  content: '';
-  position: absolute;
-  left: 4px;
-  right: 4px;
-  height: 3px;
-  border-radius: 2px;
-  background: #2563eb;
+// Die Lücke beim Ziehen (Campflow): öffnet sich sanft dort, wo abgelegt wird; die Felder rücken auseinander.
+.luecke {
+  display: grid;
+  place-items: center;
+  height: 64px;
+  margin: 4px 0;
+  border: 2px dashed var(--p-accent, #2563eb);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--p-accent, #2563eb) 7%, transparent);
+  color: var(--p-accent-text, #2563eb);
+  font-size: 13px;
+  font-weight: 600;
+  animation: luecke-auf 0.16s ease-out;
 }
-.linieOben::before {
-  top: -4px;
-}
-.linieUnten::after {
-  bottom: -4px;
+@keyframes luecke-auf {
+  from {
+    height: 0;
+    margin: 0;
+    opacity: 0;
+  }
 }
 .griff {
   position: absolute;

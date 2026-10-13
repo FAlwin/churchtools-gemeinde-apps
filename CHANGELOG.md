@@ -41,6 +41,10 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Behoben
 
+- **Erweiterung: Ein Aussetzer von ChurchTools meldet nicht mehr ab** (#491): Lieferte ChurchTools bei
+  „Wer bin ich?" etwas Unlesbares (etwa eine Wartungsseite), zeigte die Musik-App in ChurchTools
+  „nicht angemeldet", und Anmerkungen wurden bis zum Neuladen nur noch auf dem Gerät gespeichert. Jetzt
+  gilt das als vorübergehend: Die App bietet „Erneut versuchen" an, der Abgleich läuft weiter.
 - **Antwortet ChurchTools nicht, sagt die App das jetzt auch** (#489): Lief eine Anfrage an ChurchTools in
   die Zeitgrenze, meldete die Web-App beim Laden, Speichern und Anmelden „Interner Serverfehler" (und
   schrieb einen Stacktrace ins Log). Jetzt kommt überall „ChurchTools antwortet gerade nicht. Bitte

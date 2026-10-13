@@ -65,6 +65,7 @@ import type { CtAgenda, CtEvent, CtService, CtSong, CtSongListEntry } from '@sha
 import { createTtlMemo } from '@shared/ct/ttlMemo';
 import { merkeVersprechen } from '@shared/ct/versprechenMerker';
 import { whoamiId } from '@shared/ct/whoami';
+import { angemeldeteId } from '@ui/ct/ich';
 import { sanitizeFileContentType } from '@shared/dateien/index';
 import type { GesehenerStand } from '@shared/types/index';
 import { ApiError } from './api';
@@ -143,8 +144,11 @@ async function gesehenOderLeer(): Promise<Record<number, GesehenerStand>> {
 /** `GET /api/auth/me` – in der Extension: wer ist in ChurchTools angemeldet (`id > 0`, #381)? */
 export async function meinStatus(): Promise<AuthStatus> {
   const ich = await ctDaten<{ firstName?: string; lastName?: string } | null>('/whoami');
-  const id = whoamiId(ich);
-  if (!id) return { authenticated: false };
+  // Ausdrücklich niemand (#381) heißt hier „abgemeldet" – das ist die Antwort, nicht ein Fehler.
+  if (whoamiId(ich) === 0) return { authenticated: false };
+  // Unlesbar wirft 503 (#491): Die App zeigt dann „Anmeldung gerade nicht prüfbar" mit „Erneut
+  // versuchen" (`statusUnknown`), statt den Login anzubieten.
+  const id = angemeldeteId(ich);
   return {
     authenticated: true,
     user: { id, firstName: ich?.firstName ?? '', lastName: ich?.lastName ?? '' },

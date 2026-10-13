@@ -21,6 +21,7 @@ vi.mock('./personenAblage', () => ({
 
 import * as ablage from './personenAblage';
 import { KeinSpeicherRecht } from './ctRuntime';
+import { ApiError } from './api';
 import {
   pullAnnotations,
   pushField,
@@ -61,6 +62,22 @@ afterEach(() => {
 });
 
 describe('Anmerkungen in der Extension', () => {
+  it('ein Aussetzer (503) schaltet den Abgleich NICHT ab – ein 401 schon (#491)', async () => {
+    vi.mocked(ablage.holeAnmerkungen).mockRejectedValueOnce(
+      new ApiError(503, 'ChurchTools antwortet gerade nicht eindeutig.'),
+    );
+    await pullAnnotations([7]);
+    vi.mocked(ablage.holeAnmerkungen).mockResolvedValueOnce({ [SEITE]: { strokes: 'data:y' } });
+    await pullAnnotations([7]);
+    expect(localStorage.getItem(`worship_docdraw_${SEITE}`)).toBe('data:y');
+
+    vi.mocked(ablage.holeAnmerkungen).mockRejectedValueOnce(new ApiError(401, 'abgemeldet'));
+    await pullAnnotations([7]);
+    vi.mocked(ablage.holeAnmerkungen).mockClear();
+    await pullAnnotations([7]);
+    expect(ablage.holeAnmerkungen).not.toHaveBeenCalled();
+  });
+
   it('schreiben über die Personen-Dateien, nicht über fetch an den eigenen Server', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     pushField(`worship_docdraw_${SEITE}`, 'strokes', 'data:image/png;base64,AA==');

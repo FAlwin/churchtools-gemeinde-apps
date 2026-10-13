@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from './fehler';
 import { _bremseLoesen, _vergissCsrf } from './verbindung';
-import { ladeIch } from './ich';
+import { angemeldeteId, ladeIch } from './ich';
 
 /**
  * Wer angemeldet ist – gegen eine nachgestellte ChurchTools-Instanz in der Form, die an der
@@ -93,5 +93,32 @@ describe('ladeIch', () => {
     const ich = await ladeIch();
     expect(ich.gemeinde).toBeNull();
     expect(ich.mitgliedschaften).toHaveLength(1);
+  });
+});
+
+describe('angemeldeteId – drei Ausgänge, zwei Fehler (#491)', () => {
+  it('eine Person → ihre ID (auch als Zeichenkette geliefert)', () => {
+    expect(angemeldeteId({ id: 19 })).toBe(19);
+    expect(angemeldeteId({ id: '19' })).toBe(19);
+  });
+
+  it('der Phantom-Nutzer (#381) → 401: wirklich abgemeldet', () => {
+    expect(() => angemeldeteId({ id: -1, lastName: 'Anonymous' })).toThrow(
+      expect.objectContaining({ status: 401 }),
+    );
+  });
+
+  it('unlesbar → 503: vorübergehend, NICHT abgemeldet', () => {
+    for (const daten of [null, {}, '<html>Wartung</html>', { id: 'abc' }]) {
+      const f = (() => {
+        try {
+          angemeldeteId(daten);
+        } catch (e) {
+          return e;
+        }
+      })();
+      expect(f).toBeInstanceOf(ApiError);
+      expect(f).toMatchObject({ status: 503 });
+    }
   });
 });

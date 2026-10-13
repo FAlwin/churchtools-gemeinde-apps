@@ -36,6 +36,28 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe('Wer bin ich? (#491)', () => {
+  it('unlesbar → 503 statt 401, und danach wird neu gefragt', async () => {
+    const echt = ct.antworten['/api/whoami'];
+    ct.antworten['/api/whoami'] = () =>
+      new Response('<html>Wartung</html>', {
+        status: 200,
+        headers: { 'Content-Type': 'text/html' },
+      });
+    await expect(holeEinstellungen([12])).rejects.toMatchObject({ status: 503 });
+
+    // Der Aussetzer ist vorbei: Die ID wurde NICHT als „niemand" gemerkt.
+    if (echt) ct.antworten['/api/whoami'] = echt;
+    else delete ct.antworten['/api/whoami'];
+    await expect(holeEinstellungen([12])).resolves.toEqual({});
+  });
+
+  it('niemand angemeldet → 401', async () => {
+    ct.liefere('/api/whoami', { data: { id: -1, lastName: 'Anonymous' } });
+    await expect(holeEinstellungen([12])).rejects.toMatchObject({ status: 401 });
+  });
+});
+
 describe('Einstellungen', () => {
   it('schreiben und wieder holen – nur die angefragten Lieder, nur gültige Schlüssel', async () => {
     await schreibeEinstellungen({

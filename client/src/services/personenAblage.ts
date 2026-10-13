@@ -11,7 +11,7 @@
  */
 import { ApiError } from './api';
 import { ctAnfrage, ctDatei, KeinSpeicherRecht } from './ctRuntime';
-import { whoamiId } from '@shared/ct/whoami';
+import { angemeldeteId } from '@ui/ct/ich';
 import {
   erstellePersonenAblage,
   type AblagePort,
@@ -34,9 +34,9 @@ export const ablagePort: AblagePort = {
   async meineId() {
     if (ich !== null) return ich;
     const body = await ctAnfrage<{ data?: unknown }>('/whoami');
-    const id = whoamiId(body?.data);
-    // id -1 = keine gültige Sitzung (#381) – dann gibt es keine eigene Ablage.
-    if (!id) throw new ApiError(401, 'Bei ChurchTools nicht angemeldet.');
+    // Niemand angemeldet (#381) → 401, unlesbar → 503 (#491): Nur ein 401 schaltet den
+    // Anmerkungs-Abgleich ab, ein Aussetzer von ChurchTools nicht.
+    const id = angemeldeteId(body?.data);
     ich = id;
     return id;
   },

@@ -83,6 +83,15 @@ describe('Terminliste', () => {
 });
 
 describe('Anmeldung', () => {
+  it('unlesbar (Wartungsseite mit 200) heißt NICHT abgemeldet, sondern vorübergehend (#491)', async () => {
+    ct.antworten['/api/whoami'] = () =>
+      new Response('<html>Wartung</html>', {
+        status: 200,
+        headers: { 'Content-Type': 'text/html' },
+      });
+    await expect(meinStatus()).rejects.toMatchObject({ status: 503 });
+  });
+
   it('id -1 (#381) heißt: nicht angemeldet', async () => {
     ct.liefere('/api/whoami', { data: { id: -1, lastName: 'Anonymous' } });
     expect(await meinStatus()).toEqual({ authenticated: false });

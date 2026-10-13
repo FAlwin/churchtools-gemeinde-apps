@@ -23,15 +23,32 @@ export interface Ich {
 }
 
 /**
+ * **Die ID der angemeldeten Person – oder ein Fehler, der sagt, WARUM nicht** (#491). Für jede
+ * Erweiterung, die `/whoami` selbst liest; `daten` ist der ausgepackte Rumpf.
+ *
+ * `whoamiId` hat drei Ausgänge, und die Aufrufer brauchten zwei verschiedene Fehler daraus:
+ * - `0` (der Phantom-Nutzer, #381) → **401**: wirklich abgemeldet;
+ * - `null` (unlesbar, etwa eine Wartungsseite mit Status 200) → **503**: vorübergehend.
+ *
+ * Die Musik-App wertete `null` an zwei Stellen als „abgemeldet": Die Erweiterung zeigte „nicht
+ * angemeldet", und der Anmerkungs-Abgleich schaltete sich bis zum Neuladen ab. Vorübergehend ist nicht
+ * ungültig – deshalb steht die Unterscheidung hier einmal statt an jeder Stelle.
+ */
+export function angemeldeteId(daten: unknown): number {
+  const id = whoamiId(daten);
+  if (id === 0) throw new ApiError(401, 'Bei ChurchTools nicht angemeldet.');
+  if (id === null) throw new ApiError(503, 'ChurchTools antwortet gerade nicht eindeutig.');
+  return id;
+}
+
+/**
  * **Wirft**, wenn Person, Gruppen oder Rollen nicht lesbar sind: Eine leere Liste hieße „du bist in
  * keiner Gruppe“, und das wäre bei einem Aussetzer von ChurchTools falsch. Nur der Gemeindename ist
  * Beiwerk und darf fehlen.
  */
 export async function ladeIch(): Promise<Ich> {
   const ich = await ctDaten<{ id?: unknown; firstName?: unknown } | null>('/whoami');
-  const id = whoamiId(ich);
-  if (id === 0) throw new ApiError(401, 'Bei ChurchTools nicht angemeldet.');
-  if (id === null) throw new ApiError(503, 'ChurchTools antwortet gerade nicht eindeutig.');
+  const id = angemeldeteId(ich);
   const [mitgliedschaften, rollen, gemeinde] = await Promise.all([
     ctDaten<RohMitgliedschaft[] | null>(`/persons/${id}/groups`),
     ctDaten<{ id?: unknown; isLeader?: unknown }[] | null>('/group/roles'),

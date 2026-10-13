@@ -11,13 +11,17 @@ export type SeitenZustand =
 /**
  * **Der äußere Rahmen jeder Erweiterungsseite** (Dienstplaner E2, Anmeldungen): Breite, Abstände und die
  * Version im Fuß. Ohne Kopf – für Unterseiten wie eine einzelne Veranstaltung der Anmeldungen.
+ *
+ * Gescrollt wird im Rollbereich (`.rolle`), nicht in `#root` – siehe ErweiterungsSeite.module.scss.
  */
 export function ErweiterungsRahmen({ children }: { children?: ReactNode }) {
   return (
-    <main className={styles.seite}>
-      {children}
-      <footer className={styles.fuss}>Version {import.meta.env.VITE_APP_VERSION ?? 'dev'}</footer>
-    </main>
+    <div className={styles.rolle}>
+      <main className={styles.seite}>
+        {children}
+        <footer className={styles.fuss}>Version {import.meta.env.VITE_APP_VERSION ?? 'dev'}</footer>
+      </main>
+    </div>
   );
 }
 

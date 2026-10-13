@@ -51,6 +51,13 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Intern
 
+- **Text-Anmerkungen haben nur noch einen Typ** (#490): `PageTextObj` war eine Kopie von `AnnotationText`.
+  Ein neues Formatfeld wäre gezeichnet und lokal gespeichert, beim Sync vom Server aber abgeschnitten
+  worden (das Muster von #115). Jetzt ist `PageTextObj` ein Alias, `TextAlign`/`TextStyle` sind daraus
+  abgeleitet; das ungenutzte Feld `author` entfiel. Das `_text`-Suffix der Speicherschlüssel bilden und
+  entfernen jetzt nur noch `textSchluessel`/`ohneTextSuffix` – vorher von Hand an über zehn Stellen.
+  `usePageDraw` liest die Texte über `readPageTexts` statt zweimal mit eigenem Code. Gespeichertes
+  Format unverändert.
 - **Alte Schreibfunktionen der Volume-Ablage entfernt:** `putAnnotation`, `deleteAnnotation`,
   `putSettings` und `markSeenSetlist` (samt Konto-Obergrenzen #139/#195) wurden seit dem Umzug nach
   ChurchTools (v2.33.0) nicht mehr aufgerufen, nur noch von Tests. Die Dienste lesen jetzt nur noch den

@@ -448,8 +448,11 @@ Anno-Canvas + Textfelder + **Rückgängig/Wiederholen**. Text wird **inline dire
 bearbeitet (Tipp = Cursor an der Stelle; außerhalb tippen legt fest; **ein** Tipp auf einen Text
 öffnet ihn direkt zum Bearbeiten; ziehen = verschieben, Ecken-Ziehknopf = Größe; Zeilenumbrüche
 erlaubt). **Text-Format je Block** (fett/kursiv/unterstrichen + links/mitte/rechts) als optionale
-Felder in `PageTextObj` (`DEFAULT_TEXT_STYLE` = normal & mittig; Bestandstexte ohne `bold`-Feld
-gelten als fett → Fallback). Marker als **eine** halbtransparente Linie (Schnappschuss-Technik).
+Felder in `AnnotationText` (`shared/types`; `PageTextObj` ist seit #490 nur noch ein Alias darauf –
+ein neues Formatfeld kommt dort hin, der Compile-Wächter im `annotationsController` meldet dann das
+fehlende Zod-Feld; `DEFAULT_TEXT_STYLE` = normal & mittig; Bestandstexte ohne `bold`-Feld gelten als
+fett → Fallback). Das `_text`-Suffix der Text-Schlüssel nur über `textSchluessel`/`ohneTextSuffix`
+aus `utils/annotationKeys.ts`. Marker als **eine** halbtransparente Linie (Schnappschuss-Technik).
 Werkzeugleiste `components/DrawToolbar.tsx`: Farbknopf mit Aufklapp-Palette (vier Farben
 Rot/Blau/Grün/Orange + freier Picker). **Einheitliche Bedienung:** erster Tipp wählt ein Werkzeug,
 zweiter Tipp klappt dessen Einstellungen links auf Höhe des Werkzeugs auf (`expandedTool`) –

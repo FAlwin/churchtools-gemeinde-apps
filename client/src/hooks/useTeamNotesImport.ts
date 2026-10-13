@@ -13,7 +13,12 @@ import { pushField } from '../services/annotations';
 import { availableVersions, setLsVersion, setLsSong, readVersioned } from '../utils/songVersions';
 import { type SongSettings, settingsForLevel, DEFAULT_SETTINGS } from '../utils/chartSettings';
 import { mergeStrokes } from '../utils/strokes';
-import { levelsUnderNamespace, levelKeyOf, OWN_DRAW_PREFIX } from '../utils/annotationKeys';
+import {
+  levelsUnderNamespace,
+  levelKeyOf,
+  OWN_DRAW_PREFIX,
+  textSchluessel,
+} from '../utils/annotationKeys';
 import { beschreibeEbene } from '../utils/annotationLevelLabel';
 import { jsonOderNull, lokalSchreiben } from '../utils/lokalSpeicher';
 
@@ -176,13 +181,17 @@ export function useTeamNotesImport({
         const base = songPageKey(songId, level.versionKey, level.lyr, page, level.arrangementId);
         const theirStrokes = localStorage.getItem(VIEW_NS + base);
         const theirTexts =
-          jsonOderNull<PageTextObjLike[]>(localStorage.getItem(`${VIEW_NS + base}_text`)) ?? [];
+          jsonOderNull<PageTextObjLike[]>(localStorage.getItem(textSchluessel(VIEW_NS + base))) ??
+          [];
         const ownKey = OWN_DRAW_PREFIX + base;
         if (mode === 'replace') {
           // `lokalSchreiben` wirft nie – ein voller Gerätespeicher verhindert das Hochladen nicht (#457).
           lokalSchreiben(ownKey, theirStrokes ?? null);
           pushField(ownKey, 'strokes', theirStrokes ?? null);
-          lokalSchreiben(`${ownKey}_text`, theirTexts.length ? JSON.stringify(theirTexts) : null);
+          lokalSchreiben(
+            textSchluessel(ownKey),
+            theirTexts.length ? JSON.stringify(theirTexts) : null,
+          );
           pushField(ownKey, 'texts', theirTexts);
         } else {
           const merged = await mergeStrokes(localStorage.getItem(ownKey), theirStrokes);
@@ -191,11 +200,11 @@ export function useTeamNotesImport({
             pushField(ownKey, 'strokes', merged);
           }
           const ownTexts =
-            jsonOderNull<PageTextObjLike[]>(localStorage.getItem(`${ownKey}_text`)) ?? [];
+            jsonOderNull<PageTextObjLike[]>(localStorage.getItem(textSchluessel(ownKey))) ?? [];
           const withNewIds = theirTexts.map((t, i) => ({ ...t, id: Date.now() + i }));
           const mergedTexts = [...ownTexts, ...withNewIds];
           if (mergedTexts.length) {
-            lokalSchreiben(`${ownKey}_text`, JSON.stringify(mergedTexts));
+            lokalSchreiben(textSchluessel(ownKey), JSON.stringify(mergedTexts));
             pushField(ownKey, 'texts', mergedTexts);
           }
         }

@@ -127,7 +127,8 @@ export default function App() {
   const settings = useSettings();
   useWakeLock(settings.wakePref);
   const auth = useAuth();
-  const site = useSiteConfig().data;
+  const siteQuery = useSiteConfig();
+  const site = siteQuery.data;
   const queryClient = useQueryClient();
 
   const capsQuery = useCapabilities(auth.isAuthenticated);
@@ -549,6 +550,7 @@ export default function App() {
             isLoading={servicesQuery.isLoading}
             isError={servicesQuery.isError}
             onRetry={() => servicesQuery.refetch()}
+            kannAblaufAnlegen={canEditAgendas}
             onSelect={(s) => {
               setService(s);
               setView({ type: 'setlist' });
@@ -601,6 +603,7 @@ export default function App() {
         {tab === 'mehr' && (
           <Settings
             site={site}
+            siteGeladen={siteQuery.dataUpdatedAt > 0}
             theme={settings.theme}
             themePref={settings.themePref}
             setThemePref={settings.setThemePref}

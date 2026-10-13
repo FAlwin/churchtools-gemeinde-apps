@@ -6,6 +6,7 @@ import {
   putSiteConfigCtrl,
   getGroupsCtrl,
   getGroupRolesCtrl,
+  getKalenderCtrl,
 } from '../controllers/siteConfigController.js';
 
 const router = Router();
@@ -20,6 +21,9 @@ router.put(
   asyncHandler(requireAdmin),
   asyncHandler(putSiteConfigCtrl),
 );
+
+// ChurchTools-Kalender für „Termine ohne Ablauf" (nur Admin, 13.10.2026).
+router.get('/kalender', requireSession, asyncHandler(requireAdmin), asyncHandler(getKalenderCtrl));
 
 // ChurchTools-Gruppen für das Admin-Dropdown „Gruppen-Zuweisung" (nur Admin).
 router.get('/groups', requireSession, asyncHandler(requireAdmin), asyncHandler(getGroupsCtrl));

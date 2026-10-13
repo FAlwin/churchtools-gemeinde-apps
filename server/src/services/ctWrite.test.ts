@@ -14,6 +14,7 @@ import {
   uploadPersonFile,
   deleteFile,
   setAblaufAbgeschlossen,
+  createAblauf,
 } from './ctWrite.js';
 import * as ctWriteModul from './ctWrite.js';
 import * as lieder from '@shared/ct/liedVerwaltung';
@@ -73,12 +74,25 @@ function jsonRes(data: unknown, status = 200): Response {
 }
 
 /**
+ * Veranstaltung OHNE Ablauf für `createAblauf` (13.10.2026): Es liest vorher nach und schreibt nur, wenn
+ * es keinen gibt – und hinterher, ob er jetzt da ist. Also: 404, bis ein Anlegen gelungen ist; das
+ * nächste Nachlesen findet ihn, danach gilt wieder „keiner" (jeder Aufruf beginnt von vorn).
+ */
+const OHNE_ABLAUF = '/api/events/77/agenda';
+const ablaufStand = { angelegt: false };
+
+/**
  * **Lesen gelingt immer** – scheitern soll erst der Schreibvorgang. Einige Schreiber lesen vorher
  * (Ablauf, Lied, Arrangement); scheiterte schon das Lesen, holte niemand ein Token, und der Test
  * bewiese nichts über `schreibe`. Eine Stelle für beide Attrappen unten.
  */
 function lesen(u: string, method: string): Response | null {
   if (method !== 'GET') return null;
+  if (u.includes(OHNE_ABLAUF)) {
+    if (!ablaufStand.angelegt) return jsonRes(null, 404);
+    ablaufStand.angelegt = false;
+    return jsonRes({ items: [] });
+  }
   if (u.includes('/agenda')) return jsonRes({ items: [PUNKT] });
   if (u.includes('/api/songs/')) return jsonRes(LIED);
   return null;
@@ -155,6 +169,7 @@ const SCHREIBER: Array<[string, () => Promise<void>]> = [
   ],
   ['deleteFile', () => deleteFile(COOKIE, 9)],
   ['setAblaufAbgeschlossen', () => setAblaufAbgeschlossen(COOKIE, 9, true)],
+  ['createAblauf', () => createAblauf(COOKIE, 77, 2, { art: 'vorlage', vorlageId: 28 })],
   // Läuft über `arrangementAendern` im Kern – steht trotzdem drin, damit ein späterer Umbau auffällt.
   ['updateArrangementTempo', () => updateArrangementTempo(COOKIE, 7, 70, 96)],
 ];
@@ -209,7 +224,10 @@ describe('SCHREIBER ist vollständig', () => {
   });
 });
 
-beforeEach(() => __resetSessionMemosForTests());
+beforeEach(() => {
+  __resetSessionMemosForTests();
+  ablaufStand.angelegt = false;
+});
 afterEach(() => vi.restoreAllMocks());
 
 /** Alle Schreiber – die eigenen von `ctWrite` und die des Kerns über den Server-Anschluss. */
@@ -240,6 +258,7 @@ describe('Ohne Ablehnung bleibt das Token liegen – sonst spart der Speicher ni
       }
       const gelesen = lesen(u, method);
       if (gelesen) return Promise.resolve(gelesen);
+      if (u.includes(OHNE_ABLAUF)) ablaufStand.angelegt = true;
       // Mit ID: Die Anlege-Funktionen verlangen sie (`neueId`), die übrigen übergehen sie.
       return Promise.resolve(jsonRes({ id: 1 }, 200));
     });

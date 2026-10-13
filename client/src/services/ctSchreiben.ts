@@ -36,6 +36,8 @@ import type {
   SongVersion,
 } from '@shared/types/index';
 import * as lieder from '@shared/ct/liedVerwaltung';
+import { ablaufAnlegen } from '@shared/ct/ablaufAnlegen';
+import type { AblaufQuelle } from '@shared/types/index';
 import type { CtVerwalter } from '@shared/ct/liedVerwaltung';
 import * as noten from '@shared/ct/notenblaetter';
 import type { CtNotenSchreiber } from '@shared/ct/notenblaetter';
@@ -151,6 +153,15 @@ export async function vorBeginn(
 }
 
 /** `PUT /api/services/:id/agenda/abgeschlossen` */
+export async function ablaufNeu(
+  eventId: number,
+  kalenderId: number,
+  quelle: AblaufQuelle,
+): Promise<{ ok: boolean }> {
+  await ablaufAnlegen(schreiber, eventId, kalenderId, quelle);
+  return OK;
+}
+
 export async function abgeschlossen(eventId: number, wert: boolean): Promise<{ ok: boolean }> {
   await ablaufAbschliessen(schreiber, eventId, wert);
   return OK;

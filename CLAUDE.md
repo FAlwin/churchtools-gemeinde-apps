@@ -704,6 +704,13 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **Ablauf in der App anlegen (13.10.2026, unreleased, Alwin)**: Terminliste zeigt Veranstaltungen OHNE
+  Ablauf aus den in der Verwaltung gewählten Kalendern (+ Suchwort, weil Gottesdienst und Gebetsabend bei
+  der ECG im selben Kalender liegen) mit „Ablauf anlegen" – aus einer Vorlage (vorausgewählt), wie eine
+  frühere oder leer. Regeln in `shared/ct/ablaufAnlegen.ts`; eigene Abfrage `/api/services/ohne-ablauf`,
+  die bestehende Terminliste bleibt „nur mit Ablauf". ChurchTools: `PUT /events/{id}/agenda`
+  (`template_id` / `event_id`), gemessen an der Test-Instanz. **Testen nur in der Test-Instanz** – Staging
+  hängt am echten ChurchTools.
 - **v2.34.2 (13.10.2026) = Code-Check-Funde #489–#492** (PRs #494, #497, #500, #506; dazu #487 Compose
   reicht `.env`-Werte durch, TF-CHART-03 #488 und aus dem anderen Teil des Repos Dienstplaner E2/E3-1 und
   Anmeldungen A3). Server spricht ChurchTools nur über `ctFetch` (Zeitüberschreitung 504 statt 500,

@@ -2,6 +2,8 @@
  * Konkrete Backend-Endpunkte der Worship-App. Alle UI-Datenzugriffe laufen hierüber.
  */
 import type {
+  AblaufQuelle,
+  AblaufVorlage,
   AgendaItem,
   AgendaServiceOption,
   ArrangementAnsicht,
@@ -128,6 +130,34 @@ export function createAgendaItem(eventId: number, data: NeuerPunkt): Promise<{ o
   return apiFetch(`/api/services/${eventId}/agenda/items`, {
     method: 'POST',
     body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Veranstaltungen ohne Ablauf, die laut Verwaltung einen bekommen sollen (13.10.2026) – getrennt von
+ * `getServices`, das weiter nur Termine mit Ablauf liefert.
+ */
+export function getServicesOhneAblauf(): Promise<Service[]> {
+  if (istExtension) return ext.termineOhneAblaufListe();
+  return apiFetch<Service[]>('/api/services/ohne-ablauf');
+}
+
+/** Die Ablauf-Vorlagen aus ChurchTools (13.10.2026). */
+export function getAblaufVorlagen(): Promise<AblaufVorlage[]> {
+  if (istExtension) return ext.ablaufVorlagen();
+  return apiFetch<AblaufVorlage[]>('/api/ablauf-vorlagen');
+}
+
+/** Einen Ablauf anlegen – aus einer Vorlage, als Kopie oder leer (13.10.2026). */
+export function ablaufAnlegen(
+  eventId: number,
+  kalenderId: number,
+  quelle: AblaufQuelle,
+): Promise<{ ok: boolean }> {
+  if (istExtension) return extSchreiben.ablaufNeu(eventId, kalenderId, quelle);
+  return apiFetch(`/api/services/${eventId}/agenda`, {
+    method: 'POST',
+    body: JSON.stringify({ kalenderId, quelle }),
   });
 }
 

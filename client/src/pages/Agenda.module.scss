@@ -178,3 +178,37 @@
   color: var(--green);
   margin-right: 2px;
 }
+
+// ── Termin ohne Ablauf (13.10.2026) ─────────────────────────────────────────────────────────
+// Graue statt blauer Kachel und gedämpfter Name: Hier gibt es noch nichts zu öffnen.
+.dateBadgeOhne {
+  background: var(--surface3);
+
+  .day,
+  .month {
+    color: var(--text2);
+  }
+}
+.svcNameOhne {
+  color: var(--text2);
+}
+.keinAblauf {
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px dashed var(--text3);
+  color: var(--text2);
+  font-size: 11.5px;
+}
+.ablaufAnlegen {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}

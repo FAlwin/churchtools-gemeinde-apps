@@ -25,6 +25,20 @@ export interface CtEvent {
   calendar?: { title?: string; domainIdentifier?: string };
 }
 
+/** Eine Ablauf-Vorlage aus `GET /api/agendatemplates` – nur die Felder, die die App nutzt. */
+export interface CtAblaufVorlage {
+  id: number;
+  name?: string | null;
+  calendarId?: number | null;
+  items?: unknown[];
+}
+
+/** Ein Kalender aus `GET /api/calendars`. */
+export interface CtKalender {
+  id: number;
+  name?: string | null;
+}
+
 /**
  * Abwesenheit aus `GET /api/persons/{id}/absences` (#177; Felder am 16.07.2026 verifiziert).
  * `startTime`/`endTime` null = ganztägig. `comment` trägt bei unseren Einträgen den Marker.

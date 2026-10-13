@@ -1,6 +1,7 @@
 import type { Service } from '../types/index';
 import type { CtEvent } from './typen';
 import { tagAusIso } from './zeit';
+import { ctId } from './ctId';
 
 const TZ = 'Europe/Berlin';
 const MONTHS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
@@ -29,6 +30,7 @@ export function mapEventToService(
   zeitzone: string,
 ): Service {
   const p = parts(ev.startDate);
+  const kalenderId = ctId(ev.calendar?.domainIdentifier);
   return {
     id: ev.id,
     day: p.day,
@@ -43,5 +45,6 @@ export function mapEventToService(
     songCount,
     // Default; der Controller setzt es je Konto anhand des gemerkten Setlist-Stands (#143).
     setlistChanged: false,
+    ...(kalenderId !== null ? { kalenderId } : {}),
   };
 }

@@ -1,0 +1,143 @@
+// „Ablauf anlegen" (13.10.2026) – drei Wege als Karten, im gewählten die Auswahl darunter.
+.fuer {
+  margin: -6px 0 14px;
+  font-size: 13.5px;
+  color: var(--text2);
+}
+
+.optionen {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.option {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface2);
+  overflow: hidden;
+}
+
+// Die gewählte Karte – blauer Rand wie eine Auswahl, nicht wie ein Knopf.
+.an {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 1px var(--blue);
+}
+
+.kopf {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-family: var(--ui);
+  text-align: left;
+  cursor: pointer;
+}
+
+.icon {
+  color: var(--text2);
+  flex-shrink: 0;
+
+  .an & {
+    color: var(--blue-ink);
+  }
+}
+
+.titel {
+  font-size: 15.5px;
+  font-weight: 600;
+}
+
+.hinweis {
+  margin: -4px 14px 12px 46px;
+  font-size: 12.5px;
+  color: var(--text2);
+}
+
+.eintraege {
+  display: flex;
+  flex-direction: column;
+  padding: 0 8px 8px 38px;
+}
+
+.eintrag {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 8px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font-family: var(--ui);
+  text-align: left;
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover {
+      background: var(--surface3);
+    }
+  }
+}
+
+// Runder Auswahlpunkt (wie ein Radioknopf, aber in der App-Farbe).
+.punkt {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid var(--text3);
+}
+
+.punktAn {
+  border-color: var(--blue);
+  background: radial-gradient(var(--blue) 0 4px, transparent 4.5px);
+}
+
+.eintragTitel {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eintragMeta {
+  flex-shrink: 0;
+  font-size: 12.5px;
+  color: var(--text2);
+}
+
+.mehr {
+  align-self: flex-start;
+  margin: 2px 0 0 26px;
+  padding: 4px 0;
+  border: none;
+  background: none;
+  color: var(--blue-ink);
+  font-family: var(--ui);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fehler {
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(178, 34, 71, 0.1);
+  border: 1px solid rgba(178, 34, 71, 0.3);
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.anlegen {
+  margin-top: 14px;
+}

@@ -36,6 +36,37 @@ export interface Service {
    * kein Ändern zu, bis ihn jemand wieder öffnet. Optional: Ältere Server und die Demo kennen es nicht.
    */
   ablaufAbgeschlossen?: boolean;
+  /**
+   * ChurchTools-Kalender des Termins – für „Ablauf anlegen" (13.10.2026): Ein neuer Ablauf braucht ihn,
+   * und „Wie eine frühere" schlägt Termine aus demselben Kalender vor. Optional: Ältere Server kennen es
+   * nicht.
+   */
+  kalenderId?: number;
+}
+
+/**
+ * Woraus ein neuer Ablauf entsteht (13.10.2026) – ChurchTools kann alle drei direkt
+ * (`PUT /events/{id}/agenda`, mit `template_id` bzw. `event_id`).
+ */
+export type AblaufQuelle =
+  | { art: 'vorlage'; vorlageId: number }
+  | { art: 'kopie'; eventId: number }
+  | { art: 'leer' };
+
+/** Eine Ablauf-Vorlage aus ChurchTools (`GET /agendatemplates`). */
+export interface AblaufVorlage {
+  id: number;
+  name: string;
+  /** Kalender, für den die Vorlage gedacht ist – `null`, wenn ChurchTools keinen nennt. */
+  kalenderId: number | null;
+  /** Anzahl Punkte – zur Orientierung in der Auswahl. */
+  punkte: number;
+}
+
+/** Ein ChurchTools-Kalender (für die Verwaltung). */
+export interface Kalender {
+  id: number;
+  name: string;
 }
 
 /** Ein Song innerhalb einer Setlist (aufgelöstes Arrangement). */
@@ -789,6 +820,20 @@ export interface SiteConfig {
    * Die Regel steht in `client/src/utils/standardAnsicht.ts`.
    */
   standardAnsicht?: StandardAnsicht;
+  /**
+   * Welche Termine OHNE Ablauf die Terminliste zeigt – mit „Ablauf anlegen" (Alwin, 13.10.2026). Nur
+   * Termine aus `kalenderIds`, und – wenn gesetzt – nur solche, deren Name `suchwort` enthält
+   * (Groß-/Kleinschreibung egal). Grund für das Suchwort: Bei der ECG liegen Gottesdienst und
+   * Gebetsabend im selben Kalender. Leere Kalenderliste = Funktion aus. Die Regel steht in
+   * `@shared/ct/setlistKern` (`brauchtAblauf`).
+   */
+  ablaufAnlegen?: AblaufAnlegenRegel;
+}
+
+/** Siehe `SiteConfig.ablaufAnlegen`. */
+export interface AblaufAnlegenRegel {
+  kalenderIds: number[];
+  suchwort: string;
 }
 
 /** Siehe `SiteConfig.standardAnsicht`. */
@@ -899,4 +944,5 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   musicianGroupIds: [],
   terminArten: [],
   standardAnsicht: 'akkorde',
+  ablaufAnlegen: { kalenderIds: [], suchwort: '' },
 };

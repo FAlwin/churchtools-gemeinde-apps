@@ -7,6 +7,26 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu
+
+- **Ablauf direkt in der App anlegen** (Wunsch Alwin, 13.10.2026): Bisher musste man für eine Veranstaltung
+  ohne Ablauf erst in ChurchTools einen anlegen. Jetzt stehen kommende Veranstaltungen ohne Ablauf mit
+  „Kein Ablauf" in der Terminliste, und „Ablauf anlegen" erzeugt ihn – **aus einer Vorlage**
+  (vorausgewählt, die des eigenen Kalenders zuerst), **wie eine frühere Veranstaltung** (meist der letzte
+  Sonntag, samt Liedern) oder **leer**. Danach öffnet sich der neue Ablauf. Welche Veranstaltungen
+  erscheinen, legt die Verwaltung unter **Termine ohne Ablauf** fest: Kalender und, wenn nötig, ein Wort im
+  Namen (bei der ECG liegen Gottesdienst und Gebetsabend im selben Kalender). Ohne Recht „Ablauf
+  bearbeiten" sieht man die Termine, aber ohne „Ablauf anlegen". Die App liest vor dem Anlegen nach, ob es
+  schon einen Ablauf gibt, und danach, ob er wirklich da ist.
+
+### Behoben
+
+- **Verwaltung erst mit geladenen Einstellungen** (beim Bau von „Ablauf anlegen" gefunden, 13.10.2026):
+  Öffnete man direkt nach dem Start ein Fenster der Verwaltung, bevor die Einstellungen vom Server da
+  waren, zeigte es die Vorgaben („nichts gewählt") – und ein Speichern hätte die echte Einstellung
+  überschrieben. Das galt für alle Fenster (Name, Links, Termin-Arten, Gruppen, Rollen). Die Verwaltung
+  erscheint jetzt erst, wenn die Einstellungen geladen sind.
+
 ## [2.34.2] – 2026-10-13
 
 ### Neu (Dienstplaner)

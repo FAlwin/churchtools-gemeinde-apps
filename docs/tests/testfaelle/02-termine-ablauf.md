@@ -225,3 +225,34 @@ Gottesdienstes **nicht** in den Vorlauf (die Linie „Beginn" bleibt, wo sie hin
 - **Historie:** 12.10.2026 (Alwin). Nicht zurück kommt eine in ChurchTools ausgeblendete Uhrzeit – die Schnittstelle kennt das Feld nicht.
 
 </details>
+
+### TF-ABLAUF-11 · Ablauf direkt in der App anlegen
+
+**Das brauchst du:** Admin für die Verwaltung, Recht „Ablauf bearbeiten", in ChurchTools mindestens eine
+**Ablauf-Vorlage** und kommende Veranstaltungen **ohne Ablauf** – darunter eine, die nicht passen soll
+(z. B. ein Gebetsabend im selben Kalender). **Nur in der Test-Instanz** (Erweiterung oder lokaler Server):
+Staging hängt am echten ChurchTools und würde dort echte Abläufe anlegen.
+
+**Das muss passieren:** Veranstaltungen ohne Ablauf aus den gewählten Kalendern stehen mit grauer
+Datumskachel und „Kein Ablauf" in der Terminliste, rechts „Ablauf anlegen". Termine, deren Name das
+Suchwort nicht enthält, fehlen. Im Fenster ist die erste Vorlage vorausgewählt (die des eigenen
+Kalenders zuerst). Nach „Anlegen" öffnet sich der neue Ablauf mit den Punkten der Vorlage; in der Liste
+steht der Termin danach als normaler Termin – nur einmal.
+
+1. **Mehr → Termine ohne Ablauf**: den Kalender anhaken, Suchwort „Gottesdienst", Speichern.
+2. **Termine**: Der Gottesdienst ohne Ablauf steht da, der Gebetsabend nicht.
+3. Zeile antippen → Vorlage gewählt lassen → **Anlegen**. Der Ablauf öffnet sich; in ChurchTools nachsehen.
+4. Für einen weiteren Termin **Wie eine frühere** wählen: Der Ablauf des letzten Sonntags kommt samt
+   Liedern und Linie „Beginn" mit.
+5. Für einen dritten **Leer**: ein leerer Ablauf, Punkte über das Plus hinzufügen.
+6. Ohne Recht „Ablauf bearbeiten" (anderes Konto): Die Termine stehen mit „Kein Ablauf" da, aber ohne
+   „Ablauf anlegen".
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/ct/ablaufAnlegen.ts`, `client/src/pages/Agenda.tsx`, `client/src/components/AblaufAnlegenFenster.tsx`, `client/src/components/AblaufAnlegenManager.tsx`, `client/src/utils/ablaufVorschlaege.ts`, `server/src/controllers/setlistController.ts`
+- **Automatisiert:** teilweise – `shared/ct/ablaufAnlegen.test.ts`, `client/src/components/AblaufAnlegenFenster.test.tsx`, `client/src/pages/Agenda.ohneAblauf.test.tsx`, `client/src/utils/ablaufVorschlaege.test.ts`, `e2e/ablauf-anlegen.spec.ts`; gegen echtes ChurchTools nur von Hand
+- **Historie:** 13.10.2026 (Alwin). Gemessen: `PUT /events/{id}/agenda` mit `template_id` / `event_id` / ohne legt an; auf einen vorhandenen Ablauf antwortet es 200 und ändert nichts – die App liest trotzdem vorher nach.
+
+</details>

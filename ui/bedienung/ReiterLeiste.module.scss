@@ -5,9 +5,9 @@
   background: var(--nav-bg);
   border-top: 1px solid var(--hair);
   flex-shrink: 0;
-  // Abstand der Symbole über dem Home-Strich. ~54px auf dem iPhone (Safe-Area 34px + 20px),
-  // 34px auf Geräten ohne Strich. (Wert beim Feinschliff festgelegt.)
-  padding-bottom: max(34px, calc(env(safe-area-inset-bottom) + 20px));
+  // Abstand der Symbole über dem Home-Strich – Token, damit was darüber schwebt mitzieht
+  // (ui/design/_variables.scss; in den Erweiterungen schmaler).
+  padding-bottom: var(--reiter-polster);
   z-index: 20;
 }
 

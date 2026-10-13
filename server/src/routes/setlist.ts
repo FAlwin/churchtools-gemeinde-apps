@@ -16,6 +16,9 @@ import {
   postAgendaItem,
   getCapabilitiesCtrl,
   getAgendaServicesCtrl,
+  getServicesOhneAblaufCtrl,
+  getAblaufVorlagenCtrl,
+  postAblaufCtrl,
 } from '../controllers/setlistController.js';
 import {
   postVersion,
@@ -61,6 +64,10 @@ const router = Router();
 // Alle Setlist-Routen erfordern eine Session
 router.use(requireSession);
 router.get('/services', asyncHandler(getServices));
+// Vor `/services/:eventId/…` – sonst läse Express „ohne-ablauf" als Termin-ID.
+router.get('/services/ohne-ablauf', asyncHandler(getServicesOhneAblaufCtrl));
+router.get('/ablauf-vorlagen', asyncHandler(getAblaufVorlagenCtrl));
+router.post('/services/:eventId/agenda', asyncHandler(postAblaufCtrl));
 router.get('/services/:eventId/setlist', asyncHandler(getSetlist));
 router.get('/services/:eventId/setlist/version', asyncHandler(getSetlistVersion));
 router.post('/services/:eventId/seen', asyncHandler(markSetlistSeen));

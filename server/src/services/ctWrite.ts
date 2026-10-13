@@ -9,6 +9,8 @@
  */
 import type { HochzuladendeDatei } from '@shared/ct/notenblaetter';
 import { HttpError } from '../middleware/errorHandler.js';
+import { ablaufAnlegen } from '@shared/ct/ablaufAnlegen';
+import type { AblaufQuelle } from '@shared/types/index';
 import {
   ablaufAbschliessen,
   ablaufUmsortieren,
@@ -255,6 +257,16 @@ export function setAgendaItemVorBeginn(
   vorBeginn: boolean,
 ): Promise<void> {
   return vorBeginnSetzen(schreiberFuer(cookie), eventId, itemId, vorBeginn);
+}
+
+/** Einen Ablauf anlegen (13.10.2026) – Regel in `@shared/ct/ablaufAnlegen`. */
+export function createAblauf(
+  cookie: string,
+  eventId: number,
+  kalenderId: number,
+  quelle: AblaufQuelle,
+): Promise<void> {
+  return ablaufAnlegen(schreiberFuer(cookie), eventId, kalenderId, quelle);
 }
 
 /** Den Ablauf abschließen oder wieder öffnen (09.10.2026) – Regel in `@shared/ct/schreibKern`. */

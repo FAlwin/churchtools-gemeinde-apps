@@ -3,6 +3,8 @@
  *  - Liste der Gottesdienste, die tatsächlich eine Setlist (Agenda mit Songs) haben
  *  - die Songs einer Setlist inkl. heruntergeladenem ChordPro-Inhalt
  */
+import { fensterOhneAblauf, termineOhneAblauf } from '@shared/ct/ablaufAnlegen';
+import type { AblaufAnlegenRegel } from '@shared/types/index';
 import type {
   AgendaItem,
   ArrangementFileEntry,
@@ -81,6 +83,19 @@ export async function getServicesWithSetlists(
 ): Promise<{ service: Service; hash: string }[]> {
   const rows = await termineMitAblauf(leserFuer(cookie, account), from, to);
   return rows.map((r) => ({ service: r.service, hash: fingerprintAusText(r.fingerprintText) }));
+}
+
+/**
+ * Veranstaltungen ohne Ablauf, die laut Einstellung einen bekommen sollen (13.10.2026) – Regel in
+ * `@shared/ct/ablaufAnlegen`. Eigene Abfrage: Die Terminliste oben bleibt „nur mit Ablauf".
+ */
+export function getServicesOhneAblauf(
+  cookie: string,
+  account: string,
+  regel: AblaufAnlegenRegel | undefined,
+): Promise<Service[]> {
+  const { from, to } = fensterOhneAblauf();
+  return termineOhneAblauf(leserFuer(cookie, account), from, to, regel);
 }
 
 /** Findet die ChurchTools-fileUrl einer Datei (per Datei-ID) zum Durchreichen – oder 404. */

@@ -183,20 +183,24 @@ App das – nicht mehr „Keine Berechtigung".
 
 1. Den Ablauf öffnen und oben auf den **Stift** tippen (Bearbeiten).
 2. Das **Schloss** oben antippen → Rückfrage „Ablauf abschließen?" → **Abschließen**.
-3. Es erscheint der Hinweis „Dieser Ablauf ist in ChurchTools abgeschlossen …" mit **Ablauf öffnen**;
-   Ziehen, Bearbeiten und das Plus sind weg. In ChurchTools ist der Ablauf ebenfalls abgeschlossen.
-4. **Ablauf öffnen** antippen → die Bearbeiten-Ansicht ist wieder da.
-5. Gegenprobe von außen: In ChurchTools den Ablauf abschließen, in der App (noch im Bearbeiten) einen
-   Punkt löschen → statt „Keine Berechtigung" erscheint der Hinweis, und kurz danach der Knopf
-   **Ablauf öffnen**.
-6. Außerhalb des Bearbeitens zeigt die Ansicht bewusst keinen Hinweis.
+3. Oben rechts steht statt des Schlosses jetzt das **offene Schloss** („Ablauf öffnen", blau gefüllt); es
+   gibt keinen Kasten über dem Ablauf. In ChurchTools ist der Ablauf ebenfalls abgeschlossen.
+4. Einen Punkt antippen, einen Punkt ziehen und das **Plus** antippen → jedes Mal erscheint unten
+   „Dieser Ablauf ist in ChurchTools abgeschlossen. Zum Ändern oben rechts das Schloss antippen." –
+   es öffnet sich kein Fenster, der gezogene Punkt springt zurück.
+5. Das **offene Schloss** antippen (ohne Rückfrage) → oben steht wieder das Schloss zum Abschließen,
+   Bearbeiten geht wie vorher.
+6. Gegenprobe von außen: In ChurchTools den Ablauf abschließen, in der App (noch im Bearbeiten) einen
+   Punkt löschen → statt „Keine Berechtigung" erscheint die Meldung „abgeschlossen", und kurz danach
+   oben das offene Schloss.
+7. Außerhalb des Bearbeitens zeigt die Ansicht bewusst keinen Hinweis.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
 - **Betrifft:** `shared/ct/schreibKern.ts`, `shared/ct/setlistKern.ts`, `client/src/pages/Setlist.tsx`, `server/src/controllers/setlistController.ts`
 - **Automatisiert:** teilweise – `server/src/services/ablaufAbschluss.test.ts`, `client/src/pages/Setlist.abschluss.test.tsx`, `client/src/services/ctSchreiben.test.ts`; von Hand bleibt echtes ChurchTools
-- **Historie:** Alwin 09.10.2026
+- **Historie:** Alwin 09.10.2026; seit 13.10.2026 ohne Kasten, Öffnen als Knopf oben rechts (Alwin)
 
 </details>
 
@@ -223,5 +227,36 @@ Gottesdienstes **nicht** in den Vorlauf (die Linie „Beginn" bleibt, wo sie hin
 - **Betrifft:** `shared/ct/schreibKern.ts`, `shared/ct/agendaPayload.ts`, `client/src/pages/Setlist.tsx`, `client/src/hooks/useRueckgaengig.ts`, `client/src/components/Toast.tsx`, `server/src/controllers/setlistController.ts`
 - **Automatisiert:** teilweise – `server/src/services/ablaufRueckgaengig.test.ts`, `client/src/pages/Setlist.rueckgaengig.test.tsx`, `client/src/hooks/useRueckgaengig.test.ts`, `e2e/ablauf-rueckgaengig.spec.ts`; gegen echtes ChurchTools nur von Hand
 - **Historie:** 12.10.2026 (Alwin). Nicht zurück kommt eine in ChurchTools ausgeblendete Uhrzeit – die Schnittstelle kennt das Feld nicht.
+
+</details>
+
+### TF-ABLAUF-11 · Ablauf direkt in der App anlegen
+
+**Das brauchst du:** Admin für die Verwaltung, Recht „Ablauf bearbeiten", in ChurchTools mindestens eine
+**Ablauf-Vorlage** und kommende Veranstaltungen **ohne Ablauf** – darunter eine, die nicht passen soll
+(z. B. ein Gebetsabend im selben Kalender). **Nur in der Test-Instanz** (Erweiterung oder lokaler Server):
+Staging hängt am echten ChurchTools und würde dort echte Abläufe anlegen.
+
+**Das muss passieren:** Veranstaltungen ohne Ablauf aus den gewählten Kalendern stehen mit grauer
+Datumskachel und „Kein Ablauf" in der Terminliste, rechts „Ablauf anlegen". Termine, deren Name das
+Suchwort nicht enthält, fehlen. Im Fenster ist die erste Vorlage vorausgewählt (die des eigenen
+Kalenders zuerst). Nach „Anlegen" öffnet sich der neue Ablauf mit den Punkten der Vorlage; in der Liste
+steht der Termin danach als normaler Termin – nur einmal.
+
+1. **Mehr → Termine ohne Ablauf**: den Kalender anhaken, Suchwort „Gottesdienst", Speichern.
+2. **Termine**: Der Gottesdienst ohne Ablauf steht da, der Gebetsabend nicht.
+3. Zeile antippen → Vorlage gewählt lassen → **Anlegen**. Der Ablauf öffnet sich; in ChurchTools nachsehen.
+4. Für einen weiteren Termin **Wie eine frühere** wählen: Der Ablauf des letzten Sonntags kommt samt
+   Liedern und Linie „Beginn" mit.
+5. Für einen dritten **Leer**: ein leerer Ablauf, Punkte über das Plus hinzufügen.
+6. Ohne Recht „Ablauf bearbeiten" (anderes Konto): Die Termine stehen mit „Kein Ablauf" da, aber ohne
+   „Ablauf anlegen".
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/ct/ablaufAnlegen.ts`, `client/src/pages/Agenda.tsx`, `client/src/components/AblaufAnlegenFenster.tsx`, `client/src/components/AblaufAnlegenManager.tsx`, `client/src/utils/ablaufVorschlaege.ts`, `server/src/controllers/setlistController.ts`
+- **Automatisiert:** teilweise – `shared/ct/ablaufAnlegen.test.ts`, `client/src/components/AblaufAnlegenFenster.test.tsx`, `client/src/pages/Agenda.ohneAblauf.test.tsx`, `client/src/utils/ablaufVorschlaege.test.ts`, `e2e/ablauf-anlegen.spec.ts`; gegen echtes ChurchTools nur von Hand
+- **Historie:** 13.10.2026 (Alwin). Gemessen: `PUT /events/{id}/agenda` mit `template_id` / `event_id` / ohne legt an; auf einen vorhandenen Ablauf antwortet es 200 und ändert nichts – die App liest trotzdem vorher nach.
 
 </details>

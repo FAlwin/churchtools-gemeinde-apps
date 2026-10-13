@@ -77,13 +77,30 @@ export const siteConfigSchema = z
       .default([]),
     // Liedblatt: Standard-Ansicht (07.10.2026); fehlt sie (Bestand), gilt „Akkorde".
     standardAnsicht: z.enum(['akkorde', 'dokument']).optional().default('akkorde'),
+    // Termine ohne Ablauf (13.10.2026); fehlt es (Bestand), ist die Funktion aus.
+    ablaufAnlegen: z
+      .object({
+        kalenderIds: z
+          .array(z.number().int().positive())
+          .max(SITE_CONFIG_GRENZEN.maxEintraege)
+          .default([]),
+        suchwort: z.string().trim().max(SITE_CONFIG_GRENZEN.terminArtSuchwort).default(''),
+      })
+      .optional()
+      .default({ kalenderIds: [], suchwort: '' }),
   })
   .passthrough();
 
 /** Was ein Admin einstellen kann – alles andere an `SiteConfig` ist fest. */
 export type EinstellbareWerte = Pick<
   SiteConfig,
-  'orgName' | 'links' | 'musicianGroupIds' | 'noteRoles' | 'terminArten' | 'standardAnsicht'
+  | 'orgName'
+  | 'links'
+  | 'musicianGroupIds'
+  | 'noteRoles'
+  | 'terminArten'
+  | 'standardAnsicht'
+  | 'ablaufAnlegen'
 >;
 
 /** Setzt eine eingelesene/eingehende Konfiguration auf die festen Felder + anpassbare Werte zusammen. */
@@ -94,6 +111,7 @@ export function einstellungenZusammensetzen({
   noteRoles = [],
   terminArten = [],
   standardAnsicht = 'akkorde',
+  ablaufAnlegen = { kalenderIds: [], suchwort: '' },
 }: Partial<EinstellbareWerte> & { orgName: string }): SiteConfig {
   // Duplikate entfernen (falls mehrfach übergeben).
   const groupIds = [...new Set(musicianGroupIds)];
@@ -112,6 +130,10 @@ export function einstellungenZusammensetzen({
     // Eine ID nur einmal – die gemerkte Auswahl auf dem Gerät hängt daran (#400).
     terminArten: terminArten.filter((t, i, alle) => alle.findIndex((x) => x.id === t.id) === i),
     standardAnsicht,
+    ablaufAnlegen: {
+      kalenderIds: [...new Set(ablaufAnlegen.kalenderIds)],
+      suchwort: ablaufAnlegen.suchwort.trim(),
+    },
   };
 }
 

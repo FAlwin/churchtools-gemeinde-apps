@@ -59,6 +59,7 @@ function zeige(): void {
   render(
     <Settings
       site={{ ...DEFAULT_SITE_CONFIG, orgName: 'ECG Donrath' }}
+      siteGeladen
       theme="light"
       themePref="system"
       setThemePref={vi.fn()}

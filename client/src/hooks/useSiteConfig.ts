@@ -45,6 +45,16 @@ export function useGroups(enabled: boolean) {
   });
 }
 
+/** Lädt die ChurchTools-Kalender (Verwaltung „Termine ohne Ablauf", 13.10.2026; nur wenn `enabled`). */
+export function useKalender(enabled: boolean) {
+  return useQuery({
+    queryKey: schluessel.kalender(),
+    queryFn: api.getKalender,
+    enabled,
+    staleTime: 1000 * 60 * 10,
+  });
+}
+
 /** Lädt die Rollen einer Gruppe (für die Rollen-Zuweisung; nur wenn `enabled`). */
 export function useGroupRoles(groupId: number | null, enabled: boolean) {
   return useQuery({

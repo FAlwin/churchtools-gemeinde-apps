@@ -1,9 +1,9 @@
 /** API-Aufrufe für das Laufzeit-Branding (White-Label). */
-import type { SiteConfig } from '@shared/types/index';
+import type { Kalender, SiteConfig } from '@shared/types/index';
 import { apiFetch } from './api';
 import { istExtension } from './ctRuntime';
 import { einstellungenSpeichern } from './ctEinstellungen';
-import { gemeindeKonfiguration, gruppen, rollen } from './ctLesen';
+import { gemeindeKonfiguration, gruppen, kalender, rollen } from './ctLesen';
 import { teilenEinrichten } from './ctTeilen';
 
 export function getSiteConfig(): Promise<SiteConfig> {
@@ -29,6 +29,12 @@ export async function updateSiteConfig(cfg: SiteConfig): Promise<SiteConfig> {
 interface CtGroup {
   id: number;
   name: string;
+}
+
+/** ChurchTools-Kalender für „Termine ohne Ablauf" (nur Admin, 13.10.2026). */
+export function getKalender(): Promise<Kalender[]> {
+  if (istExtension) return kalender();
+  return apiFetch<Kalender[]>('/api/kalender');
 }
 
 /** ChurchTools-Gruppen für das Admin-Dropdown „Musiker-Gruppe" (nur Admin). */

@@ -52,7 +52,11 @@ const ITEM = {
   durationMin: 5,
 } as unknown as AgendaItem;
 
-function zeige(abgeschlossen: boolean, remove: () => Promise<unknown> = () => Promise.resolve()) {
+function zeige(
+  abgeschlossen: boolean,
+  remove: () => Promise<unknown> = () => Promise.resolve(),
+  items: AgendaItem[] = [ITEM],
+) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const actions = {
     reorder: vi.fn(() => Promise.resolve()),
@@ -65,7 +69,7 @@ function zeige(abgeschlossen: boolean, remove: () => Promise<unknown> = () => Pr
     <QueryClientProvider client={qc}>
       <Setlist
         service={{ ...SERVICE, ablaufAbgeschlossen: abgeschlossen }}
-        items={[ITEM]}
+        items={items}
         isLoading={false}
         isError={false}
         onRetry={() => Promise.resolve()}
@@ -88,19 +92,39 @@ beforeEach(() => {
 });
 
 describe('Ablauf abgeschlossen', () => {
-  it('in der Ansicht kein Hinweis', () => {
+  it('in der Ansicht kein Hinweis und kein Schloss', () => {
     zeige(true);
-    expect(screen.queryByText(ABLAUF_ABGESCHLOSSEN)).toBeNull();
+    expect(screen.queryByText(/abgeschlossen/)).toBeNull();
+    expect(screen.queryByTitle('Ablauf öffnen')).toBeNull();
   });
 
-  it('beim Bearbeiten: Hinweis, kein Plus, „Ablauf öffnen" öffnet ihn', async () => {
+  /**
+   * Alwin, 13.10.2026: „nur der Knopf" – kein Kasten mehr über dem Ablauf. Oben rechts „Ablauf öffnen"
+   * statt „Ablauf abschließen"; wer trotzdem etwas ändern will, bekommt den Hinweis.
+   */
+  it('beim Bearbeiten: kein Kasten, oben „Ablauf öffnen" – öffnet ohne Rückfrage', async () => {
     zeige(true);
     fireEvent.click(screen.getByTitle('Ablauf bearbeiten'));
-    expect(screen.getByText(ABLAUF_ABGESCHLOSSEN)).toBeTruthy();
-    expect(screen.queryByLabelText('Eintrag hinzufügen')).toBeNull();
+    expect(screen.queryByText(/abgeschlossen/)).toBeNull();
     expect(screen.queryByTitle('Ablauf abschließen')).toBeNull();
-    fireEvent.click(screen.getByText('Ablauf öffnen'));
+    fireEvent.click(screen.getByTitle('Ablauf öffnen'));
     await waitFor(() => expect(api.setAblaufAbgeschlossen).toHaveBeenCalledWith(1, false));
+  });
+
+  it('wer trotzdem ändern will – Punkt antippen oder Plus –, bekommt den Hinweis', async () => {
+    zeige(true);
+    fireEvent.click(screen.getByTitle('Ablauf bearbeiten'));
+    fireEvent.click(screen.getAllByLabelText('Bearbeiten')[0]);
+    expect(await screen.findByText(/Dieser Ablauf ist in ChurchTools abgeschlossen/)).toBeTruthy();
+    expect(screen.queryByText('Eintrag löschen')).toBeNull(); // kein Bearbeiten-Fenster
+  });
+
+  it('auch das Plus zeigt den Hinweis statt des Fensters', async () => {
+    zeige(true);
+    fireEvent.click(screen.getByTitle('Ablauf bearbeiten'));
+    fireEvent.click(screen.getByLabelText('Eintrag hinzufügen'));
+    expect(await screen.findByText(/Dieser Ablauf ist in ChurchTools abgeschlossen/)).toBeTruthy();
+    expect(screen.queryByText('Neuer Eintrag')).toBeNull();
   });
 
   it('offen: das Schloss schließt erst nach der Rückfrage ab', async () => {
@@ -121,5 +145,13 @@ describe('Ablauf abgeschlossen', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
     expect(await screen.findByText(ABLAUF_ABGESCHLOSSEN)).toBeTruthy();
     expect(neu).toHaveBeenCalledWith({ queryKey: schluessel.termine() });
+  });
+});
+
+describe('Leerer Ablauf (13.10.2026)', () => {
+  it('hat trotzdem den Stift – sonst ließe sich ein leer angelegter Ablauf nicht füllen', () => {
+    zeige(false, undefined, []);
+    fireEvent.click(screen.getByTitle('Ablauf bearbeiten'));
+    expect(screen.getByLabelText('Eintrag hinzufügen')).toBeTruthy();
   });
 });

@@ -17,6 +17,9 @@ import type {
 } from './ctTypes.js';
 import { createTtlMemo } from './ttlMemo.js';
 import { dienstReihenfolge, untertitelAus } from '@shared/ct/setlistKern';
+import { kalenderAus, vorlagenAus } from '@shared/ct/ablaufAnlegen';
+import type { CtAblaufVorlage, CtKalender } from '@shared/ct/typen';
+import type { AblaufVorlage, Kalender } from '@shared/types/index';
 
 export function getEvents(cookie: string, from: string, to: string): Promise<CtEvent[]> {
   return ctGet<CtEvent[]>(cookie, `/api/events?from=${from}&to=${to}`);
@@ -112,4 +115,14 @@ export function getAbsences(
 ): Promise<CtAbsence[]> {
   const q = new URLSearchParams({ from, to, limit: '500' });
   return ctGet<CtAbsence[]>(cookie, `/api/persons/${personId}/absences?${q.toString()}`);
+}
+
+/** Die Ablauf-Vorlagen der Gemeinde (Ablauf anlegen, 13.10.2026) – Regel in `@shared/ct/ablaufAnlegen`. */
+export async function getAblaufVorlagen(cookie: string): Promise<AblaufVorlage[]> {
+  return vorlagenAus(await ctGet<CtAblaufVorlage[]>(cookie, '/api/agendatemplates'));
+}
+
+/** Die Kalender der Gemeinde – für die Verwaltung „Termine ohne Ablauf" (13.10.2026). */
+export async function getKalender(cookie: string): Promise<Kalender[]> {
+  return kalenderAus(await ctGet<CtKalender[]>(cookie, '/api/calendars'));
 }

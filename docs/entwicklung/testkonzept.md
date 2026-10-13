@@ -110,6 +110,12 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
   `isCtOverloaded` erkennt die Zeitüberschreitung beim Datei-Download (der Liedtext-Index lief dort
   vorher weiter); der `errorHandler` macht aus einer Zeitüberschreitung beim Lesen der Antwort 504
   ohne Stacktrace
+- `shared/ct/ablaufAnlegen` – Ablauf anlegen (13.10.2026): welche Termine ohne Ablauf erscheinen
+  (Kalender + Suchwort, Gebetsabend bleibt draußen), nur passende werden gefragt, Bremse wirft den Lauf,
+  andere Fehler lassen nur den Termin weg; Anlegen mit Vorlage/Kopie/leer, vorher nachlesen (409 ohne zu
+  schreiben), hinterher nachlesen (502). Dazu `AblaufAnlegenFenster` („Vorlage zuerst", Quelle, Fehler im
+  Fenster), `Agenda.ohneAblauf` (nie doppelt, Knopf nur mit Recht, ohne Regel keine Abfrage) und
+  `e2e/ablauf-anlegen.spec.ts` (Verwaltung → Liste → Anlegen über den echten Server, eigener Stub-Admin)
 - `hooks/abfrageSchluessel` – die Abfrage-Schlüssel (#492): Namen wie gespeichert (Literal, bewusst),
   engere Schlüssel liegen unter den weiteren (Erneuern trifft sie), Vorladen und `useSongChart` bzw.
   Offline-Vorrat und `useAgenda` teilen sich den Eintrag, der Offline-Vorrat holt trotzdem frisch

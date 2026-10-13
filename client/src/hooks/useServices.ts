@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   LIEDTEXT_SUCHE_MIN_ZEICHEN,
+  type AblaufQuelle,
   type AgendaItem,
   type ArrangementAuftrag,
   type LiedAnlegenAuftrag,
@@ -138,6 +139,47 @@ export function usePastServices(monthsBack: number, enabled: boolean) {
     enabled,
     staleTime: 1000 * 60 * 5,
     placeholderData: (prev) => prev, // beim „Mehr laden" alte Liste behalten (kein Flackern)
+  });
+}
+
+/**
+ * Veranstaltungen ohne Ablauf, die laut Verwaltung einen bekommen sollen (13.10.2026). Nur, wenn die
+ * Funktion eingestellt ist – sonst wäre jede Abfrage eine leere Antwort.
+ */
+export function useServicesOhneAblauf(enabled: boolean) {
+  return useQuery({
+    queryKey: schluessel.termineOhneAblauf(),
+    queryFn: () => api.getServicesOhneAblauf(),
+    enabled,
+    staleTime: ACTIVE_STALE_MS,
+    refetchOnWindowFocus: true,
+  });
+}
+
+/** Die Ablauf-Vorlagen aus ChurchTools – fürs Fenster „Ablauf anlegen". */
+export function useAblaufVorlagen(enabled: boolean) {
+  return useQuery({
+    queryKey: schluessel.ablaufVorlagen(),
+    queryFn: () => api.getAblaufVorlagen(),
+    enabled,
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+/**
+ * Einen Ablauf anlegen. Danach – auch nach einem Fehler, etwa „gibt es schon" – beide Terminlisten
+ * neu: Der Termin wandert von „ohne Ablauf" in die normale Liste.
+ */
+export function useAblaufAnlegen() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { eventId: number; kalenderId: number; quelle: AblaufQuelle }) =>
+      api.ablaufAnlegen(v.eventId, v.kalenderId, v.quelle),
+    onSettled: (_d, _e, v) => {
+      void qc.invalidateQueries({ queryKey: schluessel.termine() });
+      void qc.invalidateQueries({ queryKey: schluessel.agenda(v.eventId) });
+      void qc.invalidateQueries({ queryKey: schluessel.liedNutzung() });
+    },
   });
 }
 

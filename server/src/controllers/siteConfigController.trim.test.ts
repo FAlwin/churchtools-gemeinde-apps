@@ -15,6 +15,7 @@ const FULL = {
   musicianGroupIds: [9],
   noteRoles: [{ groupId: 9, roles: [15, 16] }],
   standardAnsicht: 'dokument',
+  ablaufAnlegen: { kalenderIds: [2], suchwort: 'Gottesdienst' },
 };
 
 vi.mock('../services/siteConfig.js', () => ({
@@ -57,6 +58,8 @@ describe('GET /api/site-config – Beschneidung ohne Anmeldung (#152)', () => {
     // Die Standard-Ansicht ist kein internes Feld: Fehlte sie hier, merkte sich das Gerät auf dem
     // Anmelde-Bildschirm „Akkorde" und verlöre die Wahl der Gemeinde (07.10.2026).
     expect(body.standardAnsicht).toBe('dokument');
+    // Kalender-IDs sind intern – sie gehen erst nach der Anmeldung heraus (13.10.2026).
+    expect(body.ablaufAnlegen).toBeUndefined();
   });
 
   it('beschneidet auch bei ABGELAUFENER Session', async () => {

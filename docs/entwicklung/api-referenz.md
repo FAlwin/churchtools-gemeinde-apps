@@ -60,6 +60,9 @@
 ## Termine / Ablauf
 
 - `GET  /api/services?from=&to=` → `Service[]` (nur mit Setlist; Default-Fenster -7d…+42d; enthält `setlistChanged`-Markierung je Konto). Der Termin-**Untertitel** kommt aus einem 10-Minuten-Memo je Konto+Kalender+Termin (#306) – er war die Hälfte der Dauerlast. Ein Fehler wird bewusst NICHT gemerkt.
+- `GET  /api/services/ohne-ablauf` → `Service[]` (13.10.2026): Veranstaltungen **ohne** Ablauf ab heute bis +42 Tage, die laut `SiteConfig.ablaufAnlegen` einen bekommen sollen (gewählte Kalender, optional Suchwort im Namen). Leer, solange keine Kalender gewählt sind. Eigene Abfrage neben `/api/services`, damit Offline-Vorrat, Liederheft und Navigation weiter nur Termine mit Ablauf sehen. Gefragt wird nur bei den passenden Veranstaltungen; „kein Ablauf" heißt ausschließlich 404.
+- `GET  /api/ablauf-vorlagen` → `AblaufVorlage[]` (`GET /agendatemplates`, nach Namen sortiert)
+- `POST /api/services/:eventId/agenda` {kalenderId, quelle: {art:'vorlage', vorlageId} | {art:'kopie', eventId} | {art:'leer'}} → Ablauf anlegen (13.10.2026): `PUT /events/{id}/agenda` mit `?template_id=` bzw. `?event_id=`, Kalender im Rumpf. Liest **vorher** nach (gibt es schon einen → **409**, ohne zu schreiben) und **hinterher** (kein Ablauf da → **502**). Kopie aus sich selbst → 400.
 - `GET  /api/services/:eventId/setlist` → kompletter Ablauf (`AgendaItem[]`, Lieder mit `chordpro` + `versions[]` + documents[]; geänderte/entfernte Punkte markiert)
 - `GET  /api/services/:eventId/setlist/version` → billiger Fingerabdruck (sha256) des Ablaufs für den Live-Abgleich (8s-Poll; Server-5s-Memo je Event)
 - `POST /api/services/:eventId/seen` → aktuellen Ablauf-Stand als „gesehen"-Basislinie merken (steuert den „geändert"-Hinweis, #143/#161)
@@ -259,5 +262,6 @@ Verzeichnis der Erweiterung (Modul `ERWEITERUNG_KUERZEL`, Kategorie `musikapp-te
 
 ## Admin (nur mit Admin-Recht)
 
+- `GET  /api/kalender` → ChurchTools-Kalender (Verwaltung „Termine ohne Ablauf", 13.10.2026)
 - `GET  /api/groups` → ChurchTools-Gruppen (Dropdown „Gruppen-Zuweisung" für Team-Notizen)
 - `GET  /api/groups/:id/roles` → Rollen einer Gruppe (Rollen-Zuweisung)

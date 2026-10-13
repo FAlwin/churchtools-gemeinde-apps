@@ -13,9 +13,9 @@ const DIENSTE = diensteAus([
   { id: 20, name: 'Ohne Gruppe', serviceGroupId: null },
 ]);
 const GRUPPEN = [
-  { id: 1, name: 'Programm' },
-  { id: 3, name: 'Technik' },
-  { id: 4, name: 'Musik' },
+  { id: 1, name: 'Programm', fuerAlle: false },
+  { id: 3, name: 'Technik', fuerAlle: false },
+  { id: 4, name: 'Musik', fuerAlle: false },
 ];
 
 const termin = (
@@ -39,6 +39,7 @@ const plan = (roh: RohTermin[], planbarGruppen: number[] = [3]) =>
     dienstgruppen: GRUPPEN,
     zeitzone: 'Europe/Berlin',
     planbar: (d) => d.dienstgruppeId !== null && planbarGruppen.includes(d.dienstgruppeId),
+    ganzSichtbar: () => true,
   });
 
 describe('platzAus', () => {
@@ -159,5 +160,34 @@ describe('planAus', () => {
   it('abgesagte Termine bleiben als Spalte stehen (markiert)', () => {
     const p = plan([termin(1, '2026-10-18T08:00:00Z', [], { isCanceled: true })]);
     expect(p.spalten[0].abgesagt).toBe(true);
+  });
+});
+
+describe('planAus – nur Dienste, die ChurchTools ganz liefert', () => {
+  // Ein Mitglied, das Technik leitet: Musik kommt nur mit dem eigenen Eintrag (gemessen 13.10.2026).
+  const roh = [
+    termin(11, '2026-10-25T09:00:00Z', [
+      { serviceId: 6, personId: 5, name: 'Anna', isAccepted: true },
+      { serviceId: 7, personId: null, name: null },
+      { serviceId: 9, personId: ICH, name: 'Alwin', isAccepted: true },
+    ]),
+  ];
+  const p = planAus(roh, {
+    ichId: ICH,
+    dienste: DIENSTE,
+    dienstgruppen: GRUPPEN,
+    zeitzone: 'Europe/Berlin',
+    planbar: (d) => d.dienstgruppeId === 3,
+    ganzSichtbar: (d) => d.dienstgruppeId === 3,
+  });
+
+  it('ein nur teilweise gelieferter Dienst bekommt keine Zeile – auch die Gruppe fällt weg', () => {
+    expect(p.gruppen.map((g) => [g.gruppe?.name, g.zeilen.map((z) => z.dienst.name)])).toEqual([
+      ['Technik', ['Licht', 'Ton']],
+    ]);
+  });
+
+  it('der Kopf zählt dieselben Plätze wie die Zeilen', () => {
+    expect(p.spalten[0]).toMatchObject({ plaetze: 2, besetzt: 1 });
   });
 });

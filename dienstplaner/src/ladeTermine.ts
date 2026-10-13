@@ -11,7 +11,7 @@ import { ApiError } from '@ui/ct/fehler';
 import { isoTag } from '@shared/ct/zeit';
 import { termineAus, type RohTermin, type TerminZeile } from '@shared/dienstplan/termine';
 import { planAus, type Plan } from '@shared/dienstplan/plan';
-import { planbar, type Start } from './start';
+import { ganzSichtbar, planbar, type Start } from './start';
 
 /** Liste (Start, Termine) und Matrix (Planen) – aus derselben Antwort, eine Abfrage für alle drei Reiter. */
 export interface TermineDaten {
@@ -52,6 +52,7 @@ export async function ladeTermine(
       dienstgruppen: start.dienstgruppen,
       zeitzone,
       planbar: (dienst) => planbar(start, dienst),
+      ganzSichtbar: (dienst) => ganzSichtbar(start, dienst),
     }),
   };
 }

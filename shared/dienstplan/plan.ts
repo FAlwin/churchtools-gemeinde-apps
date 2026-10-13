@@ -5,7 +5,9 @@
  * Aus derselben `/events`-Antwort wie die Termine-Liste (`termine.ts`), mit denselben Regeln: frei = ohne
  * Namen (`istFrei`), „Namen verbergen“ (`personId: -2`) zeigt nie einen Namen, zugesagt = `isAccepted`.
  * Welche Dienste überhaupt kommen, entscheidet ChurchTools (gemessen 08.10.2026: `eventServices` enthält
- * nur Dienste der Gruppen, die man sehen darf) – hier wird nichts zusätzlich versteckt.
+ * nur Dienste der Gruppen, die man sehen darf). **Aber** aus anderen Gruppen kommen die eigenen Einträge
+ * mit (gemessen 13.10.2026) – solche Dienste lässt die Matrix weg (`ganzSichtbar`, Regel in
+ * `siehtDienstGanz`), sonst stünden die übrigen Plätze als „nicht vorgesehen“ da.
  */
 import type { Dienst } from '../ct/dienste';
 import type { Dienstgruppe } from '../ct/dienstgruppen';
@@ -40,7 +42,7 @@ export interface PlanSpalte {
   tag: string;
   uhrzeit: string;
   abgesagt: boolean;
-  /** Alle Plätze des Termins und davon besetzte – für Füllstand und „N frei“. */
+  /** Die Plätze des Termins in den Zeilen der Matrix und davon besetzte – für Füllstand und „N frei“. */
   plaetze: number;
   besetzt: number;
   /** Admin dieses Termins – plant dann jeden Dienst darin. */
@@ -96,14 +98,21 @@ export function planAus(
     zeitzone: string;
     /** Darf man diesen Dienst planen (ohne Termin-Admin)? */
     planbar: (dienst: Dienst) => boolean;
+    /** Liefert ChurchTools alle Plätze dieses Dienstes (`siehtDienstGanz`)? Sonst bleibt er draußen. */
+    ganzSichtbar: (dienst: Dienst) => boolean;
   },
 ): Plan {
   const termine = [...roh].sort(
     (a, b) => Date.parse(a.startDate) - Date.parse(b.startDate) || a.id - b.id,
   );
+  // Nur Dienste, die eine Zeile bekommen: bekannt und vollständig geliefert. Kopf und Zeilen zählen dasselbe.
+  const inMatrix = (p: RohPlatz): boolean => {
+    const dienst = typeof p.serviceId === 'number' ? o.dienste.get(p.serviceId) : undefined;
+    return dienst !== undefined && o.ganzSichtbar(dienst);
+  };
   const spalten: PlanSpalte[] = termine.map((t) => {
     const lokal = ortszeitAus(t.startDate, o.zeitzone);
-    const plaetze = t.eventServices ?? [];
+    const plaetze = (t.eventServices ?? []).filter(inMatrix);
     return {
       id: t.id,
       name: t.name,
@@ -120,7 +129,7 @@ export function planAus(
   const zellen = new Map<number, (PlanPlatz[] | null)[]>();
   termine.forEach((t, i) => {
     for (const p of t.eventServices ?? []) {
-      if (typeof p.serviceId !== 'number') continue;
+      if (typeof p.serviceId !== 'number' || !inMatrix(p)) continue;
       let reihe = zellen.get(p.serviceId);
       if (!reihe) {
         reihe = termine.map(() => null);

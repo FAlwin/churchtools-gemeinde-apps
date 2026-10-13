@@ -13,9 +13,9 @@ export function startFuer(extra: Partial<Start> = {}): Start {
     gemeinde: 'Evangeliumschristen- Gemeinde e.V.',
     gruppen: [],
     dienstgruppen: [
-      { id: 1, name: 'Programm' },
-      { id: 3, name: 'Technik' },
-      { id: 4, name: 'Musik' },
+      { id: 1, name: 'Programm', fuerAlle: false },
+      { id: 3, name: 'Technik', fuerAlle: false },
+      { id: 4, name: 'Musik', fuerAlle: false },
     ],
     dienste: diensteAus([
       { id: 1, name: 'Predigt', serviceGroupId: 1, groupIds: [6] },
@@ -23,7 +23,12 @@ export function startFuer(extra: Partial<Start> = {}): Start {
       { id: 7, name: 'Licht', serviceGroupId: 3, groupIds: [7] },
       { id: 9, name: 'Gesang', serviceGroupId: 4, groupIds: [9] },
     ]),
-    rechte: { planbareDienstgruppen: [3, 4], ablaufKalender: [], abwesenheitenAller: false },
+    rechte: {
+      planbareDienstgruppen: [3, 4],
+      sichtbareDienstgruppen: [],
+      ablaufKalender: [],
+      abwesenheitenAller: false,
+    },
     ...extra,
   };
 }

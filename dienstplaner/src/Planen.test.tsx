@@ -12,8 +12,8 @@ const DIENSTE = diensteAus([
   { id: 7, name: 'Licht', serviceGroupId: 3 },
 ]);
 const GRUPPEN = [
-  { id: 1, name: 'Programm' },
-  { id: 3, name: 'Technik' },
+  { id: 1, name: 'Programm', fuerAlle: false },
+  { id: 3, name: 'Technik', fuerAlle: false },
 ];
 
 const ROH = [
@@ -45,6 +45,7 @@ const PLAN = planAus(ROH, {
   dienstgruppen: GRUPPEN,
   zeitzone: 'Europe/Berlin',
   planbar: (d) => d.dienstgruppeId === 3,
+  ganzSichtbar: () => true,
 });
 
 function zeige(handy = false) {
@@ -188,6 +189,7 @@ const PLAN2 = planAus(
     dienstgruppen: GRUPPEN,
     zeitzone: 'Europe/Berlin',
     planbar: () => true,
+    ganzSichtbar: () => true,
   },
 );
 

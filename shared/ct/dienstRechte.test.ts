@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { darfDienstgruppePlanen, darfDienstPlanen, dienstRechteAus } from './dienstRechte';
+import {
+  darfDienstgruppePlanen,
+  darfDienstPlanen,
+  dienstRechteAus,
+  siehtDienstGanz,
+} from './dienstRechte';
 import { idsAusRecht } from './rechte';
 
 const fehler = (status: number, meldung: string) => Object.assign(new Error(meldung), { status });
@@ -31,6 +36,7 @@ describe('dienstRechteAus', () => {
   it('Planer: Dienstgruppen, Ablauf-Kalender und Abwesenheiten aus der gemessenen Antwort', () => {
     expect(dienstRechteAus(ALWIN, fehler)).toEqual({
       planbareDienstgruppen: [1, 3, 4],
+      sichtbareDienstgruppen: [1, 3, 4],
       ablaufKalender: [1, 2, 3, 4, 5],
       abwesenheitenAller: true,
     });
@@ -39,6 +45,7 @@ describe('dienstRechteAus', () => {
   it('Mitglied ohne Sonderrecht: überall leer – „Ablauf sehen“ ist kein Bearbeiten', () => {
     expect(dienstRechteAus(SPIKE, fehler)).toEqual({
       planbareDienstgruppen: [],
+      sichtbareDienstgruppen: [],
       ablaufKalender: [],
       abwesenheitenAller: false,
     });
@@ -107,5 +114,47 @@ describe('darfDienstPlanen – die drei Wege (E0 §2)', () => {
     const lose = { dienstgruppeId: null, gruppenIds: [] };
     expect(darfDienstPlanen(PLANER_RECHTE, lose, keine)).toBe(false);
     expect(darfDienstPlanen(PLANER_RECHTE, lose, keine, true)).toBe(true);
+  });
+});
+
+describe('siehtDienstGanz – liefert ChurchTools alle Plätze? (gemessen 13.10.2026, drei Rollen)', () => {
+  const MITGLIED = dienstRechteAus(SPIKE, fehler);
+  const GESANG = { dienstgruppeId: 4, gruppenIds: [9] };
+  const keine = new Set<number>();
+
+  it('Mitglied ohne Recht, Gruppe nicht für alle: nur die eigenen Einträge → nein', () => {
+    expect(siehtDienstGanz(MITGLIED, GESANG, false, keine)).toBe(false);
+  });
+
+  it('Dienstgruppe „für alle sichtbar“ → ja', () => {
+    expect(siehtDienstGanz(MITGLIED, GESANG, true, keine)).toBe(true);
+  });
+
+  it('Recht „Dienstgruppe sehen“ – für diese Gruppe, oder ohne Aufzählung für alle', () => {
+    expect(
+      siehtDienstGanz({ ...MITGLIED, sichtbareDienstgruppen: [4] }, GESANG, false, keine),
+    ).toBe(true);
+    expect(
+      siehtDienstGanz({ ...MITGLIED, sichtbareDienstgruppen: [3] }, GESANG, false, keine),
+    ).toBe(false);
+    expect(
+      siehtDienstGanz({ ...MITGLIED, sichtbareDienstgruppen: null }, GESANG, false, keine),
+    ).toBe(true);
+  });
+
+  it('wer planen darf, sieht ganz: Bearbeiten-Recht oder Leitung einer Gruppe des Dienstes', () => {
+    expect(siehtDienstGanz({ ...MITGLIED, planbareDienstgruppen: [4] }, GESANG, false, keine)).toBe(
+      true,
+    );
+    expect(siehtDienstGanz(MITGLIED, GESANG, false, new Set([9]))).toBe(true);
+    expect(siehtDienstGanz(MITGLIED, GESANG, false, new Set([7]))).toBe(false);
+  });
+
+  it('Dienst ohne Dienstgruppe: nur über eine Leitung', () => {
+    const lose = { dienstgruppeId: null, gruppenIds: [9] };
+    expect(siehtDienstGanz({ ...MITGLIED, sichtbareDienstgruppen: null }, lose, false, keine)).toBe(
+      false,
+    );
+    expect(siehtDienstGanz(MITGLIED, lose, false, new Set([9]))).toBe(true);
   });
 });

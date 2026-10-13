@@ -10,7 +10,12 @@ import { ctDaten } from '@ui/ct/verbindung';
 import { ApiError } from '@ui/ct/fehler';
 import { ladeIch } from '@ui/ct/ich';
 import { meineGruppen, type MeineGruppe } from '@shared/ct/gruppen';
-import { darfDienstPlanen, dienstRechteAus, type DienstRechte } from '@shared/ct/dienstRechte';
+import {
+  darfDienstPlanen,
+  dienstRechteAus,
+  siehtDienstGanz,
+  type DienstRechte,
+} from '@shared/ct/dienstRechte';
 import { dienstgruppenAus, type Dienstgruppe } from '@shared/ct/dienstgruppen';
 import { diensteAus, type Dienst } from '@shared/ct/dienste';
 
@@ -59,6 +64,12 @@ export function geleiteteGruppen(start: Start): Set<number> {
 /** Darf man diesen Dienst planen (global, als Leitung oder als Admin des Termins)? */
 export function planbar(start: Start, dienst: Dienst, terminAdmin = false): boolean {
   return darfDienstPlanen(start.rechte, dienst, geleiteteGruppen(start), terminAdmin);
+}
+
+/** Liefert ChurchTools alle Plätze dieses Dienstes – oder nur die eigenen? (Matrix, „Wer wie oft?“) */
+export function ganzSichtbar(start: Start, dienst: Dienst): boolean {
+  const gruppe = start.dienstgruppen.find((g) => g.id === dienst.dienstgruppeId);
+  return siehtDienstGanz(start.rechte, dienst, gruppe?.fuerAlle === true, geleiteteGruppen(start));
 }
 
 /**

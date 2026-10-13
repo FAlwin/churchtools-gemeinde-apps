@@ -7,6 +7,17 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Behoben (Dienstplaner)
+
+- **Matrix zeigte halbe Dienstgruppen** (#525, gefunden bei der Prüfung mit drei Rollen in der
+  Test-Instanz): Wer eine Dienstgruppe nicht ganz sehen darf, bekommt von ChurchTools daraus nur die
+  eigenen Einträge. Die Matrix stellte die übrigen Plätze dann als „nicht vorgesehen“ dar, und bei
+  „Wer wie oft?“ fehlten Leute. Jetzt zeigen Matrix, Gruppen-Filter, Kopfzeile und „Wer wie oft?“ nur
+  Dienste, die ChurchTools vollständig liefert: Dienstgruppe für alle sichtbar, Recht zum Sehen oder
+  Bearbeiten, oder Leitung einer Gruppe des Dienstes (`siehtDienstGanz`, eine Regel). Die eigenen
+  Dienste stehen weiter unter Start und Termine. Die Prüfung mit drei Rollen (Admin, Leitung von
+  Technik, Mitglied) war sonst ohne Befund.
+
 ## [2.35.0] – 2026-10-13
 
 ### Neu

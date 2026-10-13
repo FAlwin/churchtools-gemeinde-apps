@@ -187,9 +187,10 @@ export function Planen({ zustand, handy, onNochmal, onMehr }: Props) {
         </button>
       </div>
       <p className={styles.hinweis}>
-        Welche Dienste du siehst, entscheidet ChurchTools. Planen darfst du, wo du die Dienstgruppe
-        bearbeiten darfst, die Gruppe eines Dienstes leitest oder Admin des Termins bist. Einteilen
-        kommt als Nächstes.
+        Welche Dienste du siehst, entscheidet ChurchTools. Hier stehen nur Dienstgruppen, die du
+        ganz sehen darfst – deine eigenen Dienste findest du immer unter Start und Termine. Planen
+        darfst du, wo du die Dienstgruppe bearbeiten darfst, die Gruppe eines Dienstes leitest oder
+        Admin des Termins bist. Einteilen kommt als Nächstes.
       </p>
     </div>
   );

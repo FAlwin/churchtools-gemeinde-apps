@@ -10,9 +10,9 @@ describe('dienstgruppenAus', () => {
       { id: 3, name: 'Technik', nameTranslated: 'Technik', sortKey: 30 },
     ];
     expect(dienstgruppenAus(roh)).toEqual([
-      { id: 1, name: 'Programm' },
-      { id: 3, name: 'Technik' },
-      { id: 4, name: 'Musik' },
+      { id: 1, name: 'Programm', fuerAlle: false },
+      { id: 3, name: 'Technik', fuerAlle: false },
+      { id: 4, name: 'Musik', fuerAlle: false },
     ]);
   });
 
@@ -30,10 +30,27 @@ describe('dienstgruppenAus', () => {
 
   it('ohne sortKey ans Ende, dann nach Name', () => {
     const roh = [
-      { id: 9, name: 'Zeta' },
-      { id: 8, name: 'Alpha' },
+      { id: 9, name: 'Zeta', fuerAlle: false },
+      { id: 8, name: 'Alpha', fuerAlle: false },
       { id: 1, name: 'Mitte', sortKey: 5 },
     ];
     expect(dienstgruppenAus(roh).map((g) => g.name)).toEqual(['Mitte', 'Alpha', 'Zeta']);
+  });
+});
+
+describe('dienstgruppenAus – „für alle sichtbar“', () => {
+  it('`viewAll: true` → fuerAlle; fehlt es oder ist es kein echtes true → nein', () => {
+    const g = dienstgruppenAus([
+      { id: 1, name: 'Programm', viewAll: true },
+      { id: 3, name: 'Technik', viewAll: false },
+      { id: 4, name: 'Musik' },
+      { id: 5, name: 'Deko', viewAll: 'true' },
+    ]);
+    expect(Object.fromEntries(g.map((x) => [x.name, x.fuerAlle]))).toEqual({
+      Programm: true,
+      Technik: false,
+      Musik: false,
+      Deko: false,
+    });
   });
 });

@@ -31,7 +31,12 @@ beforeEach(() => termineLaden.mockResolvedValue(KEINE_TERMINE));
 function start(planbar: number[] | null, gruppen: Start['gruppen'] = []): Start {
   return startFuer({
     gruppen,
-    rechte: { planbareDienstgruppen: planbar, ablaufKalender: [], abwesenheitenAller: false },
+    rechte: {
+      planbareDienstgruppen: planbar,
+      sichtbareDienstgruppen: [],
+      ablaufKalender: [],
+      abwesenheitenAller: false,
+    },
   });
 }
 

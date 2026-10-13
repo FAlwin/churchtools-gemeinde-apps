@@ -139,6 +139,42 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     );
   });
 
+  it('vorhandener Termin: Link zur Anmeldung als Text zu sehen und mit einem Knopf zu kopieren', async () => {
+    stelle(true);
+    const kopieren = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: kopieren },
+      configurable: true,
+    });
+    zeigen();
+    const termin = await screen.findByRole('region', { name: 'Termin' });
+    fireEvent.click(within(termin).getByRole('button', { name: 'Bearbeiten' }));
+    const link = await screen.findByRole('textbox', { name: 'Link zur Anmeldung' });
+    expect(link).toHaveProperty(
+      'value',
+      'https://falwin.github.io/churchtools-gemeinde-apps/#ct.test/91',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Link kopieren' }));
+    expect(await screen.findByRole('button', { name: 'Link kopiert' })).toBeTruthy();
+    expect(kopieren).toHaveBeenCalledWith(
+      'https://falwin.github.io/churchtools-gemeinde-apps/#ct.test/91',
+    );
+  });
+
+  it('Kopieren verweigert → Link bleibt markiert, mit Hinweis zum Kopieren von Hand', async () => {
+    stelle(true);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: vi.fn().mockRejectedValue(new Error('nein')) },
+      configurable: true,
+    });
+    zeigen();
+    const termin = await screen.findByRole('region', { name: 'Termin' });
+    fireEvent.click(within(termin).getByRole('button', { name: 'Bearbeiten' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Link kopieren' }));
+    expect(await screen.findByText(/kopiere ihn von Hand/)).toBeTruthy();
+    expect(screen.getByRole('textbox', { name: 'Link zur Anmeldung' })).toBeTruthy();
+  });
+
   it('Anmeldung: Beginn 0:00 und Schluss 23:59 in Ortszeit, als UTC gespeichert', async () => {
     stelle(true);
     m.speichereAnmeldung.mockResolvedValue();

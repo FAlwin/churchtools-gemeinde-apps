@@ -59,6 +59,15 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   aus der Liste gefallen (an der Test-Instanz beim Bauen aufgefallen).
 - **Veranstaltungen, in denen man selbst Mitglied ist, stehen nicht mehr unter „Deine Gruppen“**
   (ChurchTools liefert sie dort mit, gemessen).
+- **Die Erweiterung lässt sich wieder scrollen** (Abnahme A3, 13.10.2026: am Handy ging es nicht,
+  der Fehler steckt seit dem Grundgerüst drin). `#root { overflow-y: auto }` verlor gegen die Grundregel
+  `.ct-extension #root { overflow: hidden }`, denn die gewichtet höher (Klasse + ID). Alles unterhalb des
+  Fensterrands war abgeschnitten. Jetzt scrollt ein Bereich innerhalb von `#root` (`App.module.scss`,
+  `.rolle`). `#root` bleibt der feste Rahmen, deshalb wandern die Fenster beim Scrollen nicht mit
+  (im Browser nachgemessen: 600 px gescrollt, „Neue Veranstaltung“ voll sichtbar).
+- **Link zur Anmeldung als Text:** Bei einem vorhandenen Termin steht der Link jetzt in voller Länge da,
+  darunter „Link kopieren“. Lässt der Browser das Kopieren nicht zu, ist der Link markiert und es gibt
+  einen Hinweis.
 
 ## [2.34.1] – 2026-10-12
 

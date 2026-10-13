@@ -1,6 +1,20 @@
 // Design wie in der Musik-App: Tokens und Listen-Bausteine aus ui/design (ChurchTools-App, #393).
 @use '@ui/design/mixins' as m;
 
+/**
+ * **Der Rollbereich** (Abnahme A3, Alwin 13.10.2026: „lässt sich nicht scrollen“). In der Erweiterung ist
+ * `#root` am Bereich unter der ChurchTools-Leiste festgemacht und `overflow: hidden`
+ * (`ui/design/_grundregeln.scss`, `.ct-extension #root`) – ein `#root { overflow-y: auto }` verlor
+ * dagegen (Klasse + ID wiegt mehr als ID), die Seite war abgeschnitten. Gescrollt wird deshalb hier, eine
+ * Ebene tiefer: `#root` bleibt der feste Rahmen (`transform`), an dem die Fenster (`Sheet`,
+ * `position: fixed`) hängen – sie scrollen so nicht mit weg.
+ */
+.rolle {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .seite {
   max-width: 1120px;
   margin: 0 auto;

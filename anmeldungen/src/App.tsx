@@ -67,10 +67,14 @@ export function App() {
 
   if (offen !== null) {
     return (
-      <main className={styles.seite}>
-        <VeranstaltungSeite id={offen} zeitzone={zeitzone} onZurueck={zurUebersicht} />
-        <footer className={styles.fuss}>Version {import.meta.env.VITE_APP_VERSION ?? 'dev'}</footer>
-      </main>
+      <div className={styles.rolle}>
+        <main className={styles.seite}>
+          <VeranstaltungSeite id={offen} zeitzone={zeitzone} onZurueck={zurUebersicht} />
+          <footer className={styles.fuss}>
+            Version {import.meta.env.VITE_APP_VERSION ?? 'dev'}
+          </footer>
+        </main>
+      </div>
     );
   }
 
@@ -80,71 +84,73 @@ export function App() {
     : [];
 
   return (
-    <main className={styles.seite}>
-      <header className={styles.kopf}>
-        <p className={styles.app}>
-          Anmeldungen
-          {fertig?.start.gemeinde && ` · ${fertig.start.gemeinde}`}
-        </p>
-        {fertig && (
-          <div className={styles.kopfzeile}>
-            <div className={styles.gruss}>
-              <h1>{fertig.start.vorname ? `Hallo ${fertig.start.vorname}` : 'Hallo'}</h1>
-              <span>{datumText(heute)}</span>
+    <div className={styles.rolle}>
+      <main className={styles.seite}>
+        <header className={styles.kopf}>
+          <p className={styles.app}>
+            Anmeldungen
+            {fertig?.start.gemeinde && ` · ${fertig.start.gemeinde}`}
+          </p>
+          {fertig && (
+            <div className={styles.kopfzeile}>
+              <div className={styles.gruss}>
+                <h1>{fertig.start.vorname ? `Hallo ${fertig.start.vorname}` : 'Hallo'}</h1>
+                <span>{datumText(heute)}</span>
+              </div>
+              {anlegeTeams.length > 0 && (
+                <button type="button" className={s.neu} onClick={() => setNeu(true)}>
+                  <Icon name="plus" size={18} />
+                  Neue Veranstaltung
+                </button>
+              )}
             </div>
-            {anlegeTeams.length > 0 && (
-              <button type="button" className={s.neu} onClick={() => setNeu(true)}>
-                <Icon name="plus" size={18} />
-                Neue Veranstaltung
+          )}
+        </header>
+
+        {fertig && fertig.anlegen.artId === null && (
+          <p className={styles.hinweis}>
+            In dieser Gemeinde fehlt die Gruppenart „Anmeldung“ – ohne sie lassen sich keine
+            Veranstaltungen anlegen. Wie man sie einrichtet, steht in der Anleitung der Erweiterung.
+          </p>
+        )}
+
+        {zustand.art === 'laedt' && <p className={styles.hinweis}>Wird geladen …</p>}
+
+        {zustand.art === 'fehler' && (
+          <div className={styles.fehler} role="alert">
+            <p>{zustand.text}</p>
+            {zustand.nochmal && (
+              <button type="button" className={styles.knopf} onClick={laden}>
+                Erneut versuchen
               </button>
             )}
           </div>
         )}
-      </header>
 
-      {fertig && fertig.anlegen.artId === null && (
-        <p className={styles.hinweis}>
-          In dieser Gemeinde fehlt die Gruppenart „Anmeldung“ – ohne sie lassen sich keine
-          Veranstaltungen anlegen. Wie man sie einrichtet, steht in der Anleitung der Erweiterung.
-        </p>
-      )}
+        {fertig && (
+          <Startseite
+            start={fertig.start}
+            uebersicht={fertig.uebersicht}
+            heute={heute}
+            zeitzone={zeitzone}
+            onOeffnen={oeffnen}
+          />
+        )}
 
-      {zustand.art === 'laedt' && <p className={styles.hinweis}>Wird geladen …</p>}
+        {neu && fertig && fertig.anlegen.artId !== null && (
+          <NeueVeranstaltung
+            teams={anlegeTeams}
+            artId={fertig.anlegen.artId}
+            onClose={() => setNeu(false)}
+            onFertig={(id) => {
+              setNeu(false);
+              oeffnen(id);
+            }}
+          />
+        )}
 
-      {zustand.art === 'fehler' && (
-        <div className={styles.fehler} role="alert">
-          <p>{zustand.text}</p>
-          {zustand.nochmal && (
-            <button type="button" className={styles.knopf} onClick={laden}>
-              Erneut versuchen
-            </button>
-          )}
-        </div>
-      )}
-
-      {fertig && (
-        <Startseite
-          start={fertig.start}
-          uebersicht={fertig.uebersicht}
-          heute={heute}
-          zeitzone={zeitzone}
-          onOeffnen={oeffnen}
-        />
-      )}
-
-      {neu && fertig && fertig.anlegen.artId !== null && (
-        <NeueVeranstaltung
-          teams={anlegeTeams}
-          artId={fertig.anlegen.artId}
-          onClose={() => setNeu(false)}
-          onFertig={(id) => {
-            setNeu(false);
-            oeffnen(id);
-          }}
-        />
-      )}
-
-      <footer className={styles.fuss}>Version {import.meta.env.VITE_APP_VERSION ?? 'dev'}</footer>
-    </main>
+        <footer className={styles.fuss}>Version {import.meta.env.VITE_APP_VERSION ?? 'dev'}</footer>
+      </main>
+    </div>
   );
 }

@@ -10,26 +10,20 @@
  *    erneut – eine Sackgasse, aus der nur ein Neustart hülfe.
  */
 import { HttpError } from '../middleware/errorHandler.js';
-import { BASE, CtOverloadedError, ctSignal, parseRetryAfter } from './ctHttp.js';
+import { BASE, CtOverloadedError, ctFetch } from './ctHttp.js';
 import { csrfCache, csrfInflight } from './ctSessionMemos.js';
 
 /** Ein einzelner Versuch, ein CSRF-Token zu holen. */
 async function fetchCsrfTokenOnce(cookie: string): Promise<string> {
-  const res = await fetch(`${BASE}/api/csrftoken`, {
-    signal: ctSignal(),
+  // Zeitüberschreitung (504) und Drosselung (429 → 503) regelt `ctFetch` (#489, #383).
+  const res = await ctFetch(`${BASE}/api/csrftoken`, {
+    was: 'csrftoken',
     headers: { Cookie: cookie, Accept: 'application/json' },
   });
   // Tote CT-Session als 401 durchreichen (nicht 502): Sonst wertet der Client das als „offline"
   // und der globale Re-Login greift nicht → „CSRF-Token konnte nicht geholt werden"-Sackgasse (#186).
   if (res.status === 401 || res.status === 403) {
     throw new HttpError(401, 'Session abgelaufen. Bitte neu anmelden.');
-  }
-  // 429 ist eine Drosselung, kein Serverfehler (#383) – dieselbe Regel wie an den fünf anderen
-  // Stellen, die ChurchTools direkt ansprechen. Der Kommentar unten nannte 429 seit #296 als eine der
-  // zu unterscheidenden Möglichkeiten, behandelt wurde sie nicht: Aus der Bremse wurde ein 502.
-  if (res.status === 429) {
-    console.error('[churchtools] csrftoken → HTTP 429 (Drosselung)');
-    throw new CtOverloadedError(parseRetryAfter(res.headers.get('retry-after')));
   }
   if (!res.ok) {
     // Diagnostisch (#296): den ECHTEN ChurchTools-Status mitgeben. Dieser Fehler trat reproduzierbar

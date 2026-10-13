@@ -104,6 +104,12 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
   zählt der Leser mit); genau an der Grenze ist noch in Ordnung. Dazu die Fehlerbilder: eine
   Zeitüberschreitung wird **504**, ein echter Netzfehler bleibt er selbst, und der Host-Wächter aus
   #199 fragt eine Fremd-URL gar nicht erst an
+- `services/ctFetch` – die eine Stelle für ChurchTools-Aufrufe (#489): Zeitüberschreitung wird **504**
+  auf JEDEM Weg (Lesen, Schreiben, alte Schnittstelle, CSRF-Token, Anmelden, Datei), je Weg ein Test;
+  Abmelden bleibt still; ein anderer Netzfehler bleibt er selbst; 429 beim Schreiben wird Drosselung;
+  `isCtOverloaded` erkennt die Zeitüberschreitung beim Datei-Download (der Liedtext-Index lief dort
+  vorher weiter); der `errorHandler` macht aus einer Zeitüberschreitung beim Lesen der Antwort 504
+  ohne Stacktrace
 - `services/updateCheck` – Cache-Fenster: Erfolg lang (6 h), Fehler/Offline nur kurz
   (`ERROR_CACHE_MS` 15 min) und danach erneuter Versuch → schützt das GitHub-Rate-Limit (#152)
 

@@ -283,11 +283,15 @@ churchtools-gemeinde-apps/
 - Geschäftslogik gehört ausschließlich in `services/`
 - Jede Route validiert Input mit Zod vor der Verarbeitung
 - Fehlerbehandlung zentral in `middleware/errorHandler.ts`
-- **429 → 503 mit `Retry-After` (#300):** Ein ChurchTools-429 („zu viele Anfragen") wird in `ctGet` zu
-  `CtOverloadedError` (Status **503**). Bewusst nicht als 429 nach außen: Der Client würde das als „zu
-  viele Anmeldeversuche" deuten, und ein 503 **mit** unserem `{error}`-Rumpf kippt die App dank #296
-  nicht in den Offline-Zustand. Massenläufe brechen beim ersten Vorkommen ab (`isCtOverloaded` deckt
-  auch Zeitüberschreitungen ab, weil `ctGet` nicht über `asGatewayError` läuft).
+- **ChurchTools nur über `ctFetch` ansprechen (#489).** Es setzt die Zeitgrenze und übersetzt
+  **429 → `CtOverloadedError` (503 mit `Retry-After`, #300)** und **Zeitüberschreitung →
+  `CtTimeoutError` (504)**. Vorher riefen neun Stellen `fetch` selbst auf; eine Zeitüberschreitung kam
+  außer beim Datei-Download als 500 „Interner Serverfehler" heraus. Was ein Status sonst bedeutet
+  (401/403/404), bleibt beim Aufrufer. 429 bewusst nicht als 429 nach außen: Der Client würde das als
+  „zu viele Anmeldeversuche" deuten, und ein 503 **mit** unserem `{error}`-Rumpf kippt die App dank #296
+  nicht in den Offline-Zustand. Läuft erst das Lesen der Antwort in die Zeitgrenze, macht der
+  `errorHandler` daraus ebenfalls 504. Massenläufe brechen beim ersten Vorkommen ab: `isCtOverloaded`
+  erkennt Drosselung, `CtTimeoutError` und die rohe Zeitüberschreitung.
 - **401 vs. 403 streng trennen (#152):** `ctGet` gibt nur echte **401** als 401 weiter („Session
   abgelaufen"); ein **403** von ChurchTools bleibt **403**. Grund: Seit #186 löst jeder 401 einen
   Zwangs-Logout samt Geräte-Aufräumen aus – ein transienter Proxy-/Rechte-403 würde den Nutzer sonst

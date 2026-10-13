@@ -103,7 +103,7 @@ export async function apiFetch<T>(
   // 502/503/504 heißt nur dann „offline", wenn die Antwort NICHT von unserem App-Server stammt –
   // ein reiner Vorschalt-Fehler des Reverse-Proxys (Body leer oder HTML). ABER: Unser Server gibt
   // bei einem ChurchTools-Problem SELBST 502/504 zurück (Token-Endpunkt abgelehnt, CT-Timeout →
-  // asGatewayError). Diese Antwort trägt unseren `{error}`-Body → unser Server LÄUFT, wir sind NICHT
+  // `CtTimeoutError`, #489). Diese Antwort trägt unseren `{error}`-Body → unser Server LÄUFT, wir sind NICHT
   // offline. Ohne diese Unterscheidung kippte ein einzelner ChurchTools-Aussetzer die ganze App in
   // den Offline-/„ChurchTools antwortet nicht"-Zustand samt Login-Screen (#296). Jede andere Antwort
   // (400/401/403/404/500) heißt ohnehin: App-Server erreichbar.

@@ -6,7 +6,7 @@
  * `Authorization`-Header nicht annimmt.
  */
 import { HttpError } from '../middleware/errorHandler.js';
-import { BASE, CtOverloadedError, ctGet, ctSignal, parseRetryAfter } from './ctHttp.js';
+import { BASE, ctFetch, ctGet } from './ctHttp.js';
 import { forgetSession, userIdMemo } from './ctSessionMemos.js';
 import { whoamiId } from '@shared/ct/whoami';
 import type { ChurchToolsUser } from './ctTypes.js';
@@ -67,12 +67,10 @@ export async function login(
   username: string,
   password: string,
 ): Promise<{ cookie: string; user: ChurchToolsUser }> {
-  // Eine Zeitüberschreitung bleibt hier bewusst eine rohe `TimeoutError` – wie in `ctGet`. Sie
-  // wird vom `errorHandler` zu 500 und landet als „Unerwarteter Fehler" im Log, ist also sichtbar;
-  // und `isCtOverloaded` erkennt sie genau in dieser Form (#300). Sie hier allein zu einem 504 zu
-  // übersetzen wäre eine fünfte Variante derselben Regel statt einer Regel.
-  const res = await fetch(`${BASE}/api/login`, {
-    signal: ctSignal(),
+  // Zeitüberschreitung (504) und Drosselung (429 → 503) regelt `ctFetch` (#489) – vorher kam eine
+  // Zeitüberschreitung hier als 500 „Interner Serverfehler" heraus.
+  const res = await ctFetch(`${BASE}/api/login`, {
+    was: 'login',
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify({ username, password }),
@@ -98,13 +96,8 @@ async function sitzungAusAntwort(
   res: Response,
   wofuer: 'login' | 'anmeldeschluessel',
 ): Promise<{ cookie: string; user: ChurchToolsUser }> {
-  // **429 ist eine Drosselung, kein Serverfehler** – die VIERTE Stelle dieser Regel (#381).
-  // `ctGet` (#300), der Datei-Download und `ctWrite` (13.08.2026) unterscheiden das; der
-  // Anmeldepfad machte daraus einen 502 und damit „am Passwort liegt es nicht" statt „bitte einen
-  // Moment warten".
-  if (res.status === 429) {
-    throw new CtOverloadedError(parseRetryAfter(res.headers.get('retry-after')));
-  }
+  // Ein 429 kommt hier nicht mehr an: `ctFetch` macht daraus schon die Drosselung (#381, #489) – für
+  // beide Wege, Passwort und Anmelde-Schlüssel.
   if (!res.ok) {
     // **Diagnostisch (#381).** Dieser Zweig war stumm: Der `errorHandler` loggt nur
     // nicht-`HttpError`, ein Request-Log gibt es nicht. Ein fehlgeschlagener Login – die häufigste
@@ -194,8 +187,8 @@ export async function holeAnmeldeSchluessel(
 export async function sitzungAusSchluessel(
   loginToken: string,
 ): Promise<{ cookie: string; user: ChurchToolsUser }> {
-  const res = await fetch(`${BASE}/api/whoami`, {
-    signal: ctSignal(),
+  const res = await ctFetch(`${BASE}/api/whoami`, {
+    was: 'anmeldeschluessel',
     headers: { Authorization: `Login ${loginToken}`, Accept: 'application/json' },
   });
   if (res.status === 401 || res.status === 403) {
@@ -272,8 +265,8 @@ export async function getUserId(cookie: string): Promise<number> {
 export async function logout(cookie: string): Promise<void> {
   forgetSession(cookie);
   try {
-    await fetch(`${BASE}/api/logout`, {
-      signal: ctSignal(),
+    await ctFetch(`${BASE}/api/logout`, {
+      was: 'logout',
       method: 'POST',
       headers: { Cookie: cookie, Accept: 'application/json' },
     });

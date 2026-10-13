@@ -16,6 +16,7 @@ import {
 import type { Plan } from '@shared/dienstplan/plan';
 import { leseAuswahl, merkeAuswahl } from './auswahl';
 import { Plakette } from './Plakette';
+import { FilterChips } from './FilterChips';
 import styles from './Termine.module.scss';
 
 export type TermineZustand =
@@ -47,13 +48,6 @@ export function Termine({ zustand, planer, onNochmal, onMehr }: Props) {
   const alle = zustand.art === 'fertig' ? zustand.zeilen : [];
   const arten = veranstaltungsArten(alle);
   const monate = nachMonat(filtere(alle, auswahl));
-  const umschalten = (art: string) =>
-    aendern({
-      ...auswahl,
-      ausgeblendet: auswahl.ausgeblendet.includes(art)
-        ? auswahl.ausgeblendet.filter((a) => a !== art)
-        : [...auswahl.ausgeblendet, art],
-    });
 
   return (
     <div>
@@ -70,19 +64,15 @@ export function Termine({ zustand, planer, onNochmal, onMehr }: Props) {
             ariaLabel="Welche Termine"
           />
           {arten.length > 1 && (
-            <div className={styles.chips} role="group" aria-label="Veranstaltungen">
-              {arten.map((art) => (
-                <button
-                  key={art || 'weitere'}
-                  type="button"
-                  className={styles.chip}
-                  aria-pressed={!auswahl.ausgeblendet.includes(art)}
-                  onClick={() => umschalten(art)}
-                >
-                  {art === WEITERE ? 'Weitere' : art}
-                </button>
-              ))}
-            </div>
+            <FilterChips
+              name="Veranstaltungen"
+              optionen={arten.map((art) => ({
+                wert: art,
+                text: art === WEITERE ? 'Weitere' : art,
+              }))}
+              aus={auswahl.ausgeblendet}
+              onAus={(ausgeblendet) => aendern({ ...auswahl, ausgeblendet })}
+            />
           )}
         </div>
 

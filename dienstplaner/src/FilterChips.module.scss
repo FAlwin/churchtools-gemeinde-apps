@@ -1,0 +1,19 @@
+// Filter-Chips (an = gedrückt) – eine Gestaltung für Termine-Liste und Matrix (E3-2/E3-5).
+@use '@ui/design/mixins' as m;
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  @include m.auswahlKnopf;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+
+  &[aria-pressed='true'] {
+    @include m.auswahlKnopfAn;
+  }
+}

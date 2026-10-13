@@ -51,6 +51,19 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Ablauf" nutzte noch die alten Klassen (vor dem Release gefunden; die Kachel hat jetzt `gedimmt`). Dabei
   zwei alte Reste entfernt: `feld.form` (gab es nie) und `styles.verse` (seit dem Redesign weg).
 
+### Neu (Dienstplaner, E3-5)
+
+- **Die Matrix wird bedienbar** (#523, Entwurf v17): Terminleiste ‹ ＋ Zeitraum ＋ › – „passend zur
+  Fensterbreite“ oder fest, mit „an Fensterbreite anpassen“ zurück –, Spaltenbreite S/M/L, Filter nach
+  Veranstaltung (aus den Terminnamen, wie in der Termine-Liste) und nach Gruppe, beides im Gerät gemerkt.
+  Termine einer anderen als der häufigsten Veranstaltung sind leicht abgesetzt (bei der ECG die
+  Gebetsabende), die Kopfzeile ist einheitlich hoch. **„Wer wie oft?“**: Einsätze je Person im sichtbaren
+  Zeitraum und in den sichtbaren Gruppen, mit Schnitt. „Abgesagt“ und die Monatsauslastung kommen mit E4
+  (aus `possiblepersons`, 2,6 s und 508 KB je Termin – nur bei Bedarf).
+- Intern: `FilterChips` (eine Gestaltung für Termine-Liste und Matrix), `geraet.ts` (Merken im Gerät an
+  einer Stelle, auch für die Termine-Liste), `useBreite` misst per Callback-Ref – mit `useRef` maß es nie,
+  weil der Bereich erst nach dem Laden erscheint (im Browser gefunden).
+
 ### Neu (Dienstplaner, E3-4)
 
 - **Planen-Matrix** (#521, Entwurf v17, nur lesen): Termine als Spalten (Füllstand, „N frei“, abgesagt

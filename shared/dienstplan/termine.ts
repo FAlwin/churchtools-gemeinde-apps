@@ -151,7 +151,7 @@ export const WEITERE = '';
  * wie „Gottesdienst“), häufigste zuerst. Einzelne Termine fallen unter „Weitere“ (`WEITERE`) – so
  * entstehen keine Filter für jedes einmalige Ereignis, und nichts davon ist fest eingebaut.
  */
-export function veranstaltungsArten(zeilen: TerminZeile[]): string[] {
+export function veranstaltungsArten(zeilen: { name: string }[]): string[] {
   const n = new Map<string, number>();
   for (const z of zeilen) n.set(z.name, (n.get(z.name) ?? 0) + 1);
   const arten = [...n.entries()]
@@ -162,7 +162,7 @@ export function veranstaltungsArten(zeilen: TerminZeile[]): string[] {
 }
 
 /** Zu welcher Art gehört der Termin? */
-export function artVon(z: TerminZeile, arten: string[]): string {
+export function artVon(z: { name: string }, arten: string[]): string {
   return arten.includes(z.name) && z.name !== WEITERE ? z.name : WEITERE;
 }
 

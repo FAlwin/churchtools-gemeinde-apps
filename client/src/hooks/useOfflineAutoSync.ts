@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react';
 import type { Service } from '@shared/types/index';
 import { queryClient } from '../queryClient';
-import * as api from '../services/churchtoolsApi';
 import { getOfflineRegistry, saveServiceOffline } from '../services/offline';
 import { isOfflineAutoEnabled } from '../services/offlineAuto';
 import { heuteIso } from '../utils/heute';
+import { agendaAbfrage } from './abfrageSchluessel';
 
 /**
  * Hält Gottesdienste automatisch offline bereit (#32): den NÄCHSTEN kommenden immer (sofern der
@@ -38,10 +38,7 @@ export function useOfflineAutoSync(services: Service[] | undefined): void {
         if (cancelled) return;
         synced.current.add(svc.id);
         try {
-          const items = await queryClient.fetchQuery({
-            queryKey: ['agenda', svc.id],
-            queryFn: () => api.getAgenda(svc.id),
-          });
+          const items = await queryClient.fetchQuery(agendaAbfrage(svc.id));
           if (cancelled) return;
           const { failed } = await saveServiceOffline({ id: svc.id, date: svc.date }, items);
           // Unvollständig → nicht als erledigt merken, damit der nächste Lauf es nachholt (#277).

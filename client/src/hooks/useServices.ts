@@ -14,6 +14,7 @@ import { ohneMarkierungen } from '../utils/ablaufAenderungen';
 import type { GeloeschterPunkt } from '@shared/ct/schreibKern';
 import * as api from '../services/churchtoolsApi';
 import { ApiError } from '../services/api';
+import { agendaAbfrage, liedblattAbfrage, schluessel } from './abfrageSchluessel';
 
 // Kurze Frische für die aktuellen (aktiven) Daten: So erscheinen ChurchTools-Änderungen
 // (verschobene Punkte, geänderte Setlist) zeitnah – die Query gilt schon nach 30 s als veraltet
@@ -26,7 +27,7 @@ const ACTIVE_STALE_MS = 1000 * 30;
 export function useServices(enabled: boolean, poll = true) {
   const qc = useQueryClient();
   const query = useQuery({
-    queryKey: ['services'],
+    queryKey: schluessel.termine(),
     queryFn: () => api.getServices(),
     enabled,
     staleTime: ACTIVE_STALE_MS,
@@ -70,7 +71,7 @@ export function useServices(enabled: boolean, poll = true) {
   const taktLiefVorher = useRef(poll);
   useEffect(() => {
     if (poll && !taktLiefVorher.current && enabled) {
-      void qc.refetchQueries({ queryKey: ['services'], exact: true });
+      void qc.refetchQueries({ queryKey: schluessel.termine(), exact: true });
     }
     taktLiefVorher.current = poll;
   }, [poll, enabled, qc]);
@@ -90,10 +91,13 @@ export function useMarkSetlistSeen() {
   return useMutation({
     mutationFn: (v: { eventId: number; refresh: boolean }) => api.markSetlistSeen(v.eventId),
     onSuccess: (_data, v) => {
-      if (v.refresh) void qc.invalidateQueries({ queryKey: ['services'] });
+      if (v.refresh) void qc.invalidateQueries({ queryKey: schluessel.termine() });
       // Gesehen ist gesehen – auch im gespeicherten Ablauf (12.10.2026). Sonst brachte ein Neuladen
       // binnen 30 s (Erweiterung: kurz eine andere ChurchTools-Seite) denselben Hinweis noch einmal.
-      qc.setQueryData<AgendaItem[]>(['agenda', v.eventId], (alt) => alt && ohneMarkierungen(alt));
+      qc.setQueryData<AgendaItem[]>(
+        schluessel.agenda(v.eventId),
+        (alt) => alt && ohneMarkierungen(alt),
+      );
     },
   });
 }
@@ -125,7 +129,7 @@ function monthsAgoIso(monthsBack: number): string {
 /** Lädt vergangene Gottesdienste der letzten `monthsBack` Monate (lazy, nur wenn enabled). */
 export function usePastServices(monthsBack: number, enabled: boolean) {
   return useQuery({
-    queryKey: ['services', 'past', monthsBack],
+    queryKey: schluessel.termineVergangen(monthsBack),
     queryFn: () =>
       api.getServices({
         from: monthsAgoIso(monthsBack),
@@ -140,9 +144,7 @@ export function usePastServices(monthsBack: number, enabled: boolean) {
 /** Lädt alle Ablaufpunkte eines Gottesdienstes (Lieder inkl. ChordPro). */
 export function useAgenda(eventId: number | null) {
   return useQuery({
-    queryKey: ['agenda', eventId],
-    queryFn: () => api.getAgenda(eventId as number),
-    enabled: eventId !== null,
+    ...agendaAbfrage(eventId),
     // Kurze Frische (#159): verschobene/geänderte Ablaufpunkte erscheinen zeitnah beim
     // nächsten Fokus/Wiederverbinden statt erst nach 5 min.
     staleTime: ACTIVE_STALE_MS,
@@ -156,7 +158,7 @@ export function useReorderAgenda(eventId: number | null) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (order: number[]) => api.reorderAgenda(eventId as number, order),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['agenda', eventId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: schluessel.agenda(eventId) }),
   });
 }
 
@@ -180,9 +182,9 @@ function useAgendaItemMutation<V, R>(eventId: number | null, mutationFn: (v: V) 
   return useMutation({
     mutationFn,
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['agenda', eventId] });
-      void qc.invalidateQueries({ queryKey: ['services'] });
-      void qc.invalidateQueries({ queryKey: ['song-usage'] });
+      void qc.invalidateQueries({ queryKey: schluessel.agenda(eventId) });
+      void qc.invalidateQueries({ queryKey: schluessel.termine() });
+      void qc.invalidateQueries({ queryKey: schluessel.liedNutzung() });
     },
   });
 }
@@ -198,10 +200,10 @@ export function useUpdateAgendaItem(eventId: number | null) {
     mutationFn: (v: { itemId: number; fields: api.AgendaItemUpdate }) =>
       api.updateAgendaItem(eventId as number, v.itemId, v.fields),
     onSuccess: (_data, v) => {
-      void qc.invalidateQueries({ queryKey: ['agenda', eventId] });
+      void qc.invalidateQueries({ queryKey: schluessel.agenda(eventId) });
       if (v.fields.arrangementId !== undefined || v.fields.unlink) {
-        void qc.invalidateQueries({ queryKey: ['services'] });
-        void qc.invalidateQueries({ queryKey: ['song-usage'] });
+        void qc.invalidateQueries({ queryKey: schluessel.termine() });
+        void qc.invalidateQueries({ queryKey: schluessel.liedNutzung() });
       }
     },
   });
@@ -213,7 +215,7 @@ export function useSetAgendaItemVorBeginn(eventId: number | null) {
   return useMutation({
     mutationFn: (v: { itemId: number; vorBeginn: boolean }) =>
       api.setAgendaItemVorBeginn(eventId as number, v.itemId, v.vorBeginn),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['agenda', eventId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: schluessel.agenda(eventId) }),
   });
 }
 
@@ -227,8 +229,8 @@ export function useAblaufAbschliessen(eventId: number | null) {
     mutationFn: (abgeschlossen: boolean) =>
       api.setAblaufAbgeschlossen(eventId as number, abgeschlossen),
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: ['services'] });
-      void qc.invalidateQueries({ queryKey: ['agenda', eventId] });
+      void qc.invalidateQueries({ queryKey: schluessel.termine() });
+      void qc.invalidateQueries({ queryKey: schluessel.agenda(eventId) });
     },
   });
 }
@@ -268,7 +270,7 @@ export function useCapabilities(enabled: boolean) {
 /** Lädt alle Lieder (für die „Alle Lieder"-Ansicht). */
 export function useSongLibrary(enabled: boolean) {
   return useQuery({
-    queryKey: ['song-library'],
+    queryKey: schluessel.liederliste(),
     queryFn: () => api.getSongLibrary(),
     enabled,
     staleTime: 1000 * 60 * 10,
@@ -419,7 +421,7 @@ export function useSongSelectSong(songNumber: number | null) {
  */
 export function useSongStammdaten(songId: number | null) {
   return useQuery({
-    queryKey: ['song-stammdaten', songId],
+    queryKey: schluessel.liedStammdaten(songId),
     queryFn: () => api.getSongStammdaten(songId as number),
     enabled: songId !== null,
     staleTime: 0,
@@ -439,10 +441,10 @@ export function useLiedAendern(songId: number) {
     mutationFn: (aenderung: Partial<LiedStammdaten>) => api.aendereLied(songId, aenderung),
     onSuccess: (stand) => {
       // Den frischen Stand direkt in den Cache legen, damit das Formular nicht kurz den alten zeigt.
-      qc.setQueryData(['song-stammdaten', songId], stand);
-      void qc.invalidateQueries({ queryKey: ['song-library'] });
-      void qc.invalidateQueries({ queryKey: ['song-chart', songId] });
-      void qc.invalidateQueries({ queryKey: ['agenda'] });
+      qc.setQueryData(schluessel.liedStammdaten(songId), stand);
+      void qc.invalidateQueries({ queryKey: schluessel.liederliste() });
+      void qc.invalidateQueries({ queryKey: schluessel.liedblaetter(songId) });
+      void qc.invalidateQueries({ queryKey: schluessel.agendaAlle() });
     },
   });
 }
@@ -459,9 +461,9 @@ export function useLiedLoeschen() {
   return useMutation({
     mutationFn: (songId: number) => api.loescheLied(songId),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['song-library'] });
-      void qc.invalidateQueries({ queryKey: ['agenda'] });
-      void qc.invalidateQueries({ queryKey: ['services'] });
+      void qc.invalidateQueries({ queryKey: schluessel.liederliste() });
+      void qc.invalidateQueries({ queryKey: schluessel.agendaAlle() });
+      void qc.invalidateQueries({ queryKey: schluessel.termine() });
     },
   });
 }
@@ -485,7 +487,7 @@ export function useSongSources(enabled: boolean) {
 /** Die Arrangements eines Liedes mit allen Feldern (#396) – nur im Stammdaten-Blatt. */
 export function useArrangements(songId: number | null) {
   return useQuery({
-    queryKey: ['arrangements', songId],
+    queryKey: schluessel.arrangements(songId),
     queryFn: () => api.getArrangements(songId as number),
     enabled: songId !== null,
     staleTime: 0,
@@ -506,10 +508,10 @@ export function useArrangements(songId: number | null) {
  * Neuladen hier holte vorher nur denselben gemerkten Stand.
  */
 function arrangementListenErneuern(qc: ReturnType<typeof useQueryClient>, songId: number): void {
-  void qc.invalidateQueries({ queryKey: ['arrangements', songId] });
-  void qc.invalidateQueries({ queryKey: ['song-library'] });
-  void qc.invalidateQueries({ queryKey: ['song-chart', songId] });
-  void qc.invalidateQueries({ queryKey: ['song-arrangements', songId] });
+  void qc.invalidateQueries({ queryKey: schluessel.arrangements(songId) });
+  void qc.invalidateQueries({ queryKey: schluessel.liederliste() });
+  void qc.invalidateQueries({ queryKey: schluessel.liedblaetter(songId) });
+  void qc.invalidateQueries({ queryKey: schluessel.liedArrangements(songId) });
 }
 
 /** Legt ein weiteres Arrangement an (#396). */
@@ -543,7 +545,7 @@ export function useArrangementStandard(songId: number) {
   return useMutation({
     mutationFn: (arrangementId: number) => api.arrangementZumStandard(songId, arrangementId),
     onSuccess: (liste) => {
-      qc.setQueryData(['arrangements', songId], liste);
+      qc.setQueryData(schluessel.arrangements(songId), liste);
       arrangementListenErneuern(qc, songId);
     },
   });
@@ -557,7 +559,7 @@ export function useArrangementLoeschen(songId: number) {
     onSuccess: () => {
       arrangementListenErneuern(qc, songId);
       // Ein gelöschtes Arrangement kann in einem Ablauf gestanden haben.
-      void qc.invalidateQueries({ queryKey: ['agenda'] });
+      void qc.invalidateQueries({ queryKey: schluessel.agendaAlle() });
     },
   });
 }
@@ -577,7 +579,7 @@ export function useLiedAnlegen() {
   return useMutation({
     mutationFn: (auftrag: LiedAnlegenAuftrag) => api.legeLiedAn(auftrag),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['song-library'] });
+      void qc.invalidateQueries({ queryKey: schluessel.liederliste() });
     },
   });
 }
@@ -585,7 +587,7 @@ export function useLiedAnlegen() {
 /** Lädt die Song-Nutzungsdaten (Häufigkeit/zuletzt) im Hintergrund. */
 export function useSongUsage(enabled: boolean) {
   return useQuery({
-    queryKey: ['song-usage'],
+    queryKey: schluessel.liedNutzung(),
     queryFn: () => api.getSongUsage(),
     enabled,
     staleTime: 1000 * 60 * 30,
@@ -594,18 +596,18 @@ export function useSongUsage(enabled: boolean) {
 
 /** Lädt die Chart-Daten eines einzelnen Lieds. */
 export function useSongChart(sel: { songId: number; arrangementId?: number } | null) {
+  // Derselbe Schlüssel wie beim Vorladen und in der Arrangement-Überschreibung (#492) – vorher stand er
+  // hier von Hand. Ohne Auswahl ist die Abfrage aus; der Schlüssel der Lied-ID 0 wird nie geholt.
   return useQuery({
-    queryKey: ['song-chart', sel?.songId, sel?.arrangementId],
-    queryFn: () => api.getSongChart(sel!.songId, sel?.arrangementId),
+    ...liedblattAbfrage(sel?.songId ?? 0, sel?.arrangementId),
     enabled: sel !== null,
-    staleTime: 1000 * 60 * 5,
   });
 }
 
 /** Lädt die Arrangements eines bekannten Lieds (für „Zu Ablauf hinzufügen"). */
 export function useSongArrangements(songId: number | null) {
   return useQuery({
-    queryKey: ['song-arrangements', songId],
+    queryKey: schluessel.liedArrangements(songId),
     queryFn: () => api.getSongArrangements(songId as number),
     enabled: songId !== null,
     staleTime: 1000 * 60 * 5,
@@ -626,9 +628,9 @@ export function useAddSongToService() {
         arrangementId: v.arrangementId,
       }),
     onSuccess: (_data, v) => {
-      void qc.invalidateQueries({ queryKey: ['agenda', v.eventId] });
-      void qc.invalidateQueries({ queryKey: ['services'] });
-      void qc.invalidateQueries({ queryKey: ['song-usage'] });
+      void qc.invalidateQueries({ queryKey: schluessel.agenda(v.eventId) });
+      void qc.invalidateQueries({ queryKey: schluessel.termine() });
+      void qc.invalidateQueries({ queryKey: schluessel.liedNutzung() });
     },
   });
 }
@@ -646,9 +648,9 @@ export function useCreateAgendaItem(eventId: number | null) {
       durationMin?: number;
     }) => api.createAgendaItem(eventId as number, data),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['agenda', eventId] });
-      void qc.invalidateQueries({ queryKey: ['services'] });
-      void qc.invalidateQueries({ queryKey: ['song-usage'] });
+      void qc.invalidateQueries({ queryKey: schluessel.agenda(eventId) });
+      void qc.invalidateQueries({ queryKey: schluessel.termine() });
+      void qc.invalidateQueries({ queryKey: schluessel.liedNutzung() });
     },
   });
 }

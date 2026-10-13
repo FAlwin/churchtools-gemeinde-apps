@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { schluessel } from './abfrageSchluessel';
 import { renderHook } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -60,10 +61,10 @@ describe('useMarkSeenAfterShown', () => {
       punkt({ changed: true, neu: true }),
       punkt({ id: 9, title: 'Weg', removed: true }),
     ];
-    qc.setQueryData(['agenda', 7], items);
+    qc.setQueryData(schluessel.agenda(7), items);
     zeige({ ...BASIS, items }, qc);
     await vi.waitFor(() =>
-      expect(qc.getQueryData(['agenda', 7])).toEqual([
+      expect(qc.getQueryData(schluessel.agenda(7))).toEqual([
         expect.objectContaining({ id: 1, changed: false, neu: false }),
       ]),
     );

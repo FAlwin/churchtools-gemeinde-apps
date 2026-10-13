@@ -78,6 +78,12 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Intern
 
+- **Abfrage-Schlüssel an einer Stelle** (#492): Die Schlüssel des Zwischenspeichers standen rund 70-mal
+  von Hand im Code; ein Tippfehler beim Erneuern wäre still geblieben. `useSongChart` baute seinen
+  Schlüssel selbst, obwohl `chartQueryKey` genau dafür angelegt war. Jetzt stehen alle mehrfach
+  genutzten Schlüssel in `hooks/abfrageSchluessel.ts`, die engeren bauen auf den weiteren auf, und Ablauf
+  und Liedblatt haben je eine `queryOptions`-Fabrik für Anzeige, Vorladen und Offline-Vorrat. Namen
+  unverändert – der gespeicherte Zwischenspeicher bleibt gültig.
 - **Text-Anmerkungen haben nur noch einen Typ** (#490): `PageTextObj` war eine Kopie von `AnnotationText`.
   Ein neues Formatfeld wäre gezeichnet und lokal gespeichert, beim Sync vom Server aber abgeschnitten
   worden (das Muster von #115). Jetzt ist `PageTextObj` ein Alias, `TextAlign`/`TextStyle` sind daraus

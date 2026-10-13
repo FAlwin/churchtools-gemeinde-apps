@@ -18,6 +18,7 @@ import {
 } from '../services/churchtoolsApi';
 import { shareOrDownload } from '@ui/teilen/shareFile';
 import { pruefeUpload } from '../utils/dateiVerwaltung';
+import { schluessel } from './abfrageSchluessel';
 
 interface Args {
   songId: number;
@@ -38,7 +39,7 @@ export function useArrangementDateien({ songId, arrangementId, aktiv, showToast,
   const [uploadWarnung, setUploadWarnung] = useState<{ datei: File; text: string } | null>(null);
 
   const dateien = useQuery({
-    queryKey: ['arrangement-files', songId, arrangementId],
+    queryKey: schluessel.arrangementDateien(songId, arrangementId),
     queryFn: () => getArrangementFiles(songId, arrangementId),
     enabled: aktiv,
     staleTime: 1000 * 30,
@@ -58,7 +59,7 @@ export function useArrangementDateien({ songId, arrangementId, aktiv, showToast,
    * über den Erfolg nicht aufhalten und schon gar nicht verschlucken.
    */
   const auffrischen = (): void => {
-    void qc.invalidateQueries({ queryKey: ['arrangement-files', songId, arrangementId] });
+    void qc.invalidateQueries({ queryKey: schluessel.arrangementDateien(songId, arrangementId) });
     onReload?.();
   };
 

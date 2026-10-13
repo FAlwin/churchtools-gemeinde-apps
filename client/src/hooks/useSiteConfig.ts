@@ -4,6 +4,7 @@ import { DEFAULT_SITE_CONFIG, type SiteConfig } from '@shared/types/index';
 import * as api from '../services/siteConfigApi';
 import { applyBranding } from '../utils/applyBranding';
 import { merkeGemeindeAnsicht } from '../utils/standardAnsicht';
+import { schluessel } from './abfrageSchluessel';
 
 /**
  * Lädt das Laufzeit-Branding und wendet es bei jeder Änderung auf das Dokument an.
@@ -11,7 +12,7 @@ import { merkeGemeindeAnsicht } from '../utils/standardAnsicht';
  */
 export function useSiteConfig() {
   const query = useQuery({
-    queryKey: ['site-config'],
+    queryKey: schluessel.gemeindeKonfiguration(),
     queryFn: api.getSiteConfig,
     initialData: DEFAULT_SITE_CONFIG,
     // Defaults sofort anzeigen (kein Aufblitzen), aber als „veraltet" markieren,
@@ -60,7 +61,7 @@ export function useUpdateSiteConfig() {
   return useMutation({
     mutationFn: (cfg: SiteConfig) => api.updateSiteConfig(cfg),
     onSuccess: (saved) => {
-      qc.setQueryData(['site-config'], saved);
+      qc.setQueryData(schluessel.gemeindeKonfiguration(), saved);
       applyBranding(saved);
     },
   });

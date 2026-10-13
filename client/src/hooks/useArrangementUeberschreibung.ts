@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import type { SetlistSong } from '@shared/types/index';
-import * as api from '../services/churchtoolsApi';
+import { liedblattAbfrage } from './abfrageSchluessel';
 import type { SongSettings } from '../utils/chartSettings';
 
 /**
@@ -20,15 +20,6 @@ import type { SongSettings } from '../utils/chartSettings';
  * Seiten für einen Moment, und im Gottesdienst ist ein leeres Blatt das Letzte, was man braucht.
  * Dasselbe bei einem Fehlschlag – dann bleibt es beim Ablauf, statt das Lied auszulassen.
  */
-
-/**
- * Der Abfrage-Schlüssel eines Arrangements – an EINER Stelle, damit Abruf und Vorladen sich den
- * Zwischenspeicher wirklich teilen. Mit zwei Schreibweisen läge dasselbe Blatt zweimal darin, und
- * das Vorladen wäre wirkungslos, ohne dass es auffiele.
- */
-export function chartQueryKey(songId: number, arrangementId: number) {
-  return ['song-chart', songId, arrangementId] as const;
-}
 
 /**
  * Die Chart-Daten anderer Arrangements im Voraus holen (#320).
@@ -55,11 +46,7 @@ export function useArrangementVorladen(
     // nicht erneut laden. Früher stand hier das Array selbst, mit einer Dauerwarnung von
     // `exhaustive-deps` (#406) – so hängt der Effekt nur noch an dem, was er wirklich liest.
     for (const id of schluessel.split(',').filter(Boolean).map(Number)) {
-      void qc.prefetchQuery({
-        queryKey: chartQueryKey(songId, id),
-        queryFn: () => api.getSongChart(songId, id),
-        staleTime: 1000 * 60 * 5,
-      });
+      void qc.prefetchQuery(liedblattAbfrage(songId, id));
     }
   }, [aktiv, songId, schluessel, qc]);
 }
@@ -79,13 +66,9 @@ export function useArrangementUeberschreibung(
   const ergebnisse = useQueries({
     queries: offen.map((s) => {
       const arrangementId = gewaehlt(s) as number;
-      return {
-        // Derselbe Schlüssel wie beim Vorladen und in `useSongChart` – so teilen sich alle den
-        // Zwischenspeicher, statt dasselbe Arrangement mehrfach zu holen.
-        queryKey: chartQueryKey(s.id, arrangementId),
-        queryFn: () => api.getSongChart(s.id, arrangementId),
-        staleTime: 1000 * 60 * 5,
-      };
+      // Dieselbe Abfrage wie beim Vorladen und in `useSongChart` (#492) – so teilen sich alle den
+      // Zwischenspeicher, statt dasselbe Arrangement mehrfach zu holen.
+      return liedblattAbfrage(s.id, arrangementId);
     }),
   });
 

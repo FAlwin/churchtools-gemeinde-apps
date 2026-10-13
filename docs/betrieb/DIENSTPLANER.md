@@ -8,7 +8,7 @@
 > Start · Termine · Planen · Abwesenheiten stehen (am Computer oben, am Handy unten; „Planen“ nur für
 > Planer). **Termine**: Liste nach Monaten, „Meine | Alle“, Filter nach Veranstaltung (aus den
 > Terminnamen), die eigenen Dienste (zugesagt/angefragt), für Planer die freien Plätze ihrer
-> Dienstgruppen. Planen und Abwesenheiten folgen (Bauplan E3–E9). Diese Anleitung wächst mit.
+> Dienstgruppen. Einteilen und Abwesenheiten folgen (Bauplan E4–E9). Diese Anleitung wächst mit.
 
 Der Dienstplaner plant die Dienste **aller** Dienstgruppen (Musik, Technik, Predigt, Moderation …) nach
 dem Vorbild von Planning Center Services. **Alles liegt in ChurchTools** – es gibt keinen eigenen Server.
@@ -49,7 +49,18 @@ Gemessen an der Test-Instanz (08. und 13.10.2026). Alle drei Wege gelten seit E3
 einzelner Termine ist, sieht das an diesen Terminen. „Planen“ heißt bis E4 nur ansehen – eingeteilt wird
 noch in ChurchTools.
 
-**Den Menüpunkt sehen:** Erweiterung **„Dienstplaner“ sehen** – für alle, die Dienste haben.
+**Den Menüpunkt sehen:** Erweiterung **„Dienstplaner“ sehen** – für alle, die Dienste haben. Ohne dieses
+Recht zeigt ChurchTools selbst „Keine ausreichende Berechtigung“.
+
+**Was in der Matrix steht** (Prüfung mit drei Rollen, 13.10.2026, #525): ChurchTools liefert die Plätze
+einer Dienstgruppe nur dann **vollständig**, wenn die Dienstgruppe „für alle sichtbar“ ist, man sie sehen
+oder bearbeiten darf oder eine Gruppe des Dienstes leitet. Sonst kommen nur die **eigenen** Einträge. Die
+Matrix und „Wer wie oft?“ zeigen deshalb nur vollständig gelieferte Dienste (`siehtDienstGanz`), denn eine
+halbe Zeile sähe aus wie „nicht vorgesehen“. Die eigenen Dienste stehen immer unter Start und Termine.
+
+**Selbst prüfen:** In der Test-Instanz als Admin eine Person öffnen → Symbol „Benutzer simulieren“ (der
+Browser-Bereich der App unterdrückt die Rückfrage; dann `?q=simulate&id=<Person>&location=churchdb`
+aufrufen). Testnutzer Spike (19) hat nur „Dienstplaner sehen“.
 
 ## Für Entwickler
 

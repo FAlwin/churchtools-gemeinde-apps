@@ -10,8 +10,8 @@ const DIENSTE = diensteAus([
   { id: 9, name: 'Gesang', serviceGroupId: 4 },
 ]);
 const GRUPPEN = [
-  { id: 3, name: 'Technik' },
-  { id: 4, name: 'Musik' },
+  { id: 3, name: 'Technik', fuerAlle: false },
+  { id: 4, name: 'Musik', fuerAlle: false },
 ];
 const t = (id: number, startDate: string, eventServices: object[]): RohTermin => ({
   id,
@@ -41,6 +41,7 @@ const PLAN = planAus(
     dienstgruppen: GRUPPEN,
     zeitzone: 'Europe/Berlin',
     planbar: () => true,
+    ganzSichtbar: () => true,
   },
 );
 
@@ -98,6 +99,7 @@ describe('werWieOft – Personen nach ID', () => {
         dienstgruppen: GRUPPEN,
         zeitzone: 'Europe/Berlin',
         planbar: () => true,
+        ganzSichtbar: () => true,
       },
     );
     expect(werWieOft(p, alle).personen.map((x) => [x.name, x.einsaetze.length])).toEqual([

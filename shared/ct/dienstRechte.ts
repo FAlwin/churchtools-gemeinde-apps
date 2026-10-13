@@ -18,6 +18,8 @@ export interface DienstRechte {
    * das Recht ohne Aufzählung → alle; dann nicht selbst eingrenzen.
    */
   planbareDienstgruppen: number[] | null;
+  /** Dienstgruppen, die man ganz sehen darf (`view servicegroup`); `null` = alle. */
+  sichtbareDienstgruppen: number[] | null;
   /** Kalender, in denen man Abläufe bearbeiten darf (`edit agenda`); `null` = alle. */
   ablaufKalender: number[] | null;
   /** Abwesenheiten aller sehen und pflegen (`manage absent`). */
@@ -32,6 +34,7 @@ export function dienstRechteAus(
   const cs = data.churchservice ?? {};
   return {
     planbareDienstgruppen: idsAusRecht(cs['edit servicegroup']),
+    sichtbareDienstgruppen: idsAusRecht(cs['view servicegroup']),
     ablaufKalender: idsAusRecht(cs['edit agenda']),
     abwesenheitenAller: cs['manage absent'] === true,
   };
@@ -62,4 +65,28 @@ export function darfDienstPlanen(
   if (dienst.dienstgruppeId !== null && darfDienstgruppePlanen(rechte, dienst.dienstgruppeId))
     return true;
   return dienst.gruppenIds.some((g) => geleiteteGruppen.has(g));
+}
+
+/**
+ * **Liefert ChurchTools die Plätze dieses Dienstes vollständig?** Gemessen an der Test-Instanz (13.10.2026,
+ * Prüfung mit drei Rollen): ChurchTools gibt alle Plätze eines Dienstes heraus, wenn die Dienstgruppe für
+ * alle sichtbar ist (`viewAll`), wenn man sie sehen oder bearbeiten darf, oder wenn man eine
+ * ChurchTools-Gruppe des Dienstes leitet. Sonst kommen nur die **eigenen** Einträge – eine Matrix daraus
+ * zeigte die übrigen Plätze als „nicht vorgesehen“, und „Wer wie oft?“ ließe Leute aus. Termin-Admin zählt
+ * hier nicht: Die Matrix-Zeile reicht über viele Termine.
+ */
+export function siehtDienstGanz(
+  rechte: DienstRechte,
+  dienst: { dienstgruppeId: number | null; gruppenIds: number[] },
+  gruppeFuerAlle: boolean,
+  geleiteteGruppen: ReadonlySet<number>,
+): boolean {
+  if (gruppeFuerAlle) return true;
+  const gid = dienst.dienstgruppeId;
+  if (
+    gid !== null &&
+    (rechte.sichtbareDienstgruppen === null || rechte.sichtbareDienstgruppen.includes(gid))
+  )
+    return true;
+  return darfDienstPlanen(rechte, dienst, geleiteteGruppen);
 }

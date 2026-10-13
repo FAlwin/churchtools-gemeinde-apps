@@ -7,6 +7,41 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Behoben (Dienstplaner)
+
+- **Matrix zeigte halbe Dienstgruppen** (#525, gefunden bei der Prüfung mit drei Rollen in der
+  Test-Instanz): Wer eine Dienstgruppe nicht ganz sehen darf, bekommt von ChurchTools daraus nur die
+  eigenen Einträge. Die Matrix stellte die übrigen Plätze dann als „nicht vorgesehen“ dar, und bei
+  „Wer wie oft?“ fehlten Leute. Jetzt zeigen Matrix, Gruppen-Filter, Kopfzeile und „Wer wie oft?“ nur
+  Dienste, die ChurchTools vollständig liefert: Dienstgruppe für alle sichtbar, Recht zum Sehen oder
+  Bearbeiten, oder Leitung einer Gruppe des Dienstes (`siehtDienstGanz`, eine Regel). Die eigenen
+  Dienste stehen weiter unter Start und Termine. Die Prüfung mit drei Rollen (Admin, Leitung von
+  Technik, Mitglied) war sonst ohne Befund.
+
+### Neu (Dienstplaner, E3-5)
+
+- **Die Matrix wird bedienbar** (#523, Entwurf v17): Terminleiste ‹ ＋ Zeitraum ＋ › – „passend zur
+  Fensterbreite“ oder fest, mit „an Fensterbreite anpassen“ zurück –, Spaltenbreite S/M/L, Filter nach
+  Veranstaltung (aus den Terminnamen, wie in der Termine-Liste) und nach Gruppe, beides im Gerät gemerkt.
+  Termine einer anderen als der häufigsten Veranstaltung sind leicht abgesetzt (bei der ECG die
+  Gebetsabende), die Kopfzeile ist einheitlich hoch. **„Wer wie oft?“**: Einsätze je Person im sichtbaren
+  Zeitraum und in den sichtbaren Gruppen, mit Schnitt. „Abgesagt“ und die Monatsauslastung kommen mit E4
+  (aus `possiblepersons`, 2,6 s und 508 KB je Termin – nur bei Bedarf).
+- Intern: `FilterChips` (eine Gestaltung für Termine-Liste und Matrix), `geraet.ts` (Merken im Gerät an
+  einer Stelle, auch für die Termine-Liste), `useBreite` misst per Callback-Ref – mit `useRef` maß es nie,
+  weil der Bereich erst nach dem Laden erscheint (im Browser gefunden).
+
+### Neu (Dienstplaner, E3-4)
+
+- **Planen-Matrix** (#521, Entwurf v17, nur lesen): Termine als Spalten (Füllstand, „N frei“, abgesagt
+  blass), Dienstgruppen als aufklappbare Zeilen mit freien Plätzen je Termin – was man plant, ist offen und
+  „du planst“ –, darunter je Dienst die Plätze: zugesagt, angefragt, frei, Gast, „Nicht sichtbar“ (Namen
+  verbergen). Am Handy eine Datumsleiste und ein Termin. Dieselbe Abfrage wie Start und Termine.
+- **Wer planen darf** (gemessen in E0): globales Recht auf die Dienstgruppe **oder** Leitung einer
+  ChurchTools-Gruppe des Dienstes **oder** Admin des Termins (`darfDienstPlanen`, eine Regel für Reiter,
+  Startseite, Termine und Matrix). Vorher zählte nur das globale Recht – Gruppenleiter sahen „Planen“ nicht.
+  Bei der ECG ist jeder Dienst einer Gruppe zugeordnet (live gemessen, nur lesend).
+
 ### Neu (Anmeldungen)
 
 - **Formular-Baukasten mit Design und Vorschau** (Bauplan A5) – ein Reiter „Formular“, aufgebaut nach Alwins
@@ -85,30 +120,6 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Beim Zusammenführen zog die Datumskachel nach `ui/bedienung/DatumKachel` um, die neue Zeile „Kein
   Ablauf" nutzte noch die alten Klassen (vor dem Release gefunden; die Kachel hat jetzt `gedimmt`). Dabei
   zwei alte Reste entfernt: `feld.form` (gab es nie) und `styles.verse` (seit dem Redesign weg).
-
-### Neu (Dienstplaner, E3-5)
-
-- **Die Matrix wird bedienbar** (#523, Entwurf v17): Terminleiste ‹ ＋ Zeitraum ＋ › – „passend zur
-  Fensterbreite“ oder fest, mit „an Fensterbreite anpassen“ zurück –, Spaltenbreite S/M/L, Filter nach
-  Veranstaltung (aus den Terminnamen, wie in der Termine-Liste) und nach Gruppe, beides im Gerät gemerkt.
-  Termine einer anderen als der häufigsten Veranstaltung sind leicht abgesetzt (bei der ECG die
-  Gebetsabende), die Kopfzeile ist einheitlich hoch. **„Wer wie oft?“**: Einsätze je Person im sichtbaren
-  Zeitraum und in den sichtbaren Gruppen, mit Schnitt. „Abgesagt“ und die Monatsauslastung kommen mit E4
-  (aus `possiblepersons`, 2,6 s und 508 KB je Termin – nur bei Bedarf).
-- Intern: `FilterChips` (eine Gestaltung für Termine-Liste und Matrix), `geraet.ts` (Merken im Gerät an
-  einer Stelle, auch für die Termine-Liste), `useBreite` misst per Callback-Ref – mit `useRef` maß es nie,
-  weil der Bereich erst nach dem Laden erscheint (im Browser gefunden).
-
-### Neu (Dienstplaner, E3-4)
-
-- **Planen-Matrix** (#521, Entwurf v17, nur lesen): Termine als Spalten (Füllstand, „N frei“, abgesagt
-  blass), Dienstgruppen als aufklappbare Zeilen mit freien Plätzen je Termin – was man plant, ist offen und
-  „du planst“ –, darunter je Dienst die Plätze: zugesagt, angefragt, frei, Gast, „Nicht sichtbar“ (Namen
-  verbergen). Am Handy eine Datumsleiste und ein Termin. Dieselbe Abfrage wie Start und Termine.
-- **Wer planen darf** (gemessen in E0): globales Recht auf die Dienstgruppe **oder** Leitung einer
-  ChurchTools-Gruppe des Dienstes **oder** Admin des Termins (`darfDienstPlanen`, eine Regel für Reiter,
-  Startseite, Termine und Matrix). Vorher zählte nur das globale Recht – Gruppenleiter sahen „Planen“ nicht.
-  Bei der ECG ist jeder Dienst einer Gruppe zugeordnet (live gemessen, nur lesend).
 
 ### Neu (Dienstplaner, E3-3)
 

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@ui/ct/fehler';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
-import { ladeStart, planbar, planbareDienstgruppen } from './start';
+import { ganzSichtbar, ladeStart, planbar, planbareDienstgruppen } from './start';
 import { startFuer } from './start.testutil';
 
 /**
@@ -49,7 +49,7 @@ const GUT: Antworten = {
     json(200, {
       data: [
         { id: 3, name: 'Technik', nameTranslated: 'Technik', sortKey: 30 },
-        { id: 1, name: 'Programm', nameTranslated: 'Programm', sortKey: 10 },
+        { id: 1, name: 'Programm', nameTranslated: 'Programm', sortKey: 10, viewAll: true },
       ],
     }),
   '/services': () =>
@@ -78,13 +78,18 @@ describe('ladeStart (Dienstplaner)', () => {
       gemeinde: 'ECG',
       gruppen: [{ id: 7, name: 'Technik', leitung: true }],
       dienstgruppen: [
-        { id: 1, name: 'Programm' },
-        { id: 3, name: 'Technik' },
+        { id: 1, name: 'Programm', fuerAlle: true },
+        { id: 3, name: 'Technik', fuerAlle: false },
       ],
       dienste: new Map([
         [6, { id: 6, name: 'Ton', dienstgruppeId: 3, gruppenIds: [7], sortKey: 0 }],
       ]),
-      rechte: { planbareDienstgruppen: [3], ablaufKalender: [], abwesenheitenAller: false },
+      rechte: {
+        planbareDienstgruppen: [3],
+        sichtbareDienstgruppen: [],
+        ablaufKalender: [],
+        abwesenheitenAller: false,
+      },
     });
   });
 
@@ -122,7 +127,12 @@ describe('ladeStart (Dienstplaner)', () => {
 describe('Wer plant was (E3-4): global, als Leitung, Termin-Admin in der Matrix', () => {
   it('Leitung einer Gruppe des Dienstes macht zum Planer – auch ohne globales Recht', () => {
     const ohneRecht = startFuer({
-      rechte: { planbareDienstgruppen: [], ablaufKalender: [], abwesenheitenAller: false },
+      rechte: {
+        planbareDienstgruppen: [],
+        sichtbareDienstgruppen: [],
+        ablaufKalender: [],
+        abwesenheitenAller: false,
+      },
       gruppen: [{ id: 7, name: 'Technik', leitung: true }],
     });
     expect(planbareDienstgruppen(ohneRecht).map((g) => g.name)).toEqual(['Technik']);
@@ -132,10 +142,48 @@ describe('Wer plant was (E3-4): global, als Leitung, Termin-Admin in der Matrix'
 
   it('nur Mitglied (keine Leitung) und ohne Recht → nichts planbar', () => {
     const mitglied = startFuer({
-      rechte: { planbareDienstgruppen: [], ablaufKalender: [], abwesenheitenAller: false },
+      rechte: {
+        planbareDienstgruppen: [],
+        sichtbareDienstgruppen: [],
+        ablaufKalender: [],
+        abwesenheitenAller: false,
+      },
       gruppen: [{ id: 7, name: 'Technik', leitung: false }],
     });
     expect(planbareDienstgruppen(mitglied)).toEqual([]);
     expect(planbar(mitglied, mitglied.dienste.get(6)!, true)).toBe(true);
+  });
+});
+
+describe('ganzSichtbar: was die Matrix zeigen darf (Prüfung mit drei Rollen, 13.10.2026)', () => {
+  const OHNE = {
+    planbareDienstgruppen: [],
+    sichtbareDienstgruppen: [],
+    ablaufKalender: [],
+    abwesenheitenAller: false,
+  };
+
+  it('Mitglied ohne Recht: weder Technik noch Musik ganz', () => {
+    const s = startFuer({ rechte: OHNE });
+    expect(ganzSichtbar(s, s.dienste.get(6)!)).toBe(false);
+    expect(ganzSichtbar(s, s.dienste.get(9)!)).toBe(false);
+  });
+
+  it('Leitung von Technik: Technik ganz, Musik nicht', () => {
+    const s = startFuer({ rechte: OHNE, gruppen: [{ id: 7, name: 'Technik', leitung: true }] });
+    expect(ganzSichtbar(s, s.dienste.get(6)!)).toBe(true);
+    expect(ganzSichtbar(s, s.dienste.get(9)!)).toBe(false);
+  });
+
+  it('Dienstgruppe „für alle sichtbar“ kommt aus den Dienstgruppen des Starts', () => {
+    const s = startFuer({ rechte: OHNE });
+    s.dienstgruppen = s.dienstgruppen.map((g) => (g.id === 4 ? { ...g, fuerAlle: true } : g));
+    expect(ganzSichtbar(s, s.dienste.get(9)!)).toBe(true);
+  });
+
+  it('Recht „Dienstgruppe sehen“', () => {
+    const s = startFuer({ rechte: { ...OHNE, sichtbareDienstgruppen: [3] } });
+    expect(ganzSichtbar(s, s.dienste.get(6)!)).toBe(true);
+    expect(ganzSichtbar(s, s.dienste.get(9)!)).toBe(false);
   });
 });

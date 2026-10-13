@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { bisDahin, startUebersicht, NAECHSTE_DIENSTE } from './start';
 import { zeile } from './zeile.testutil';
 
-const TECHNIK = { id: 3, name: 'Technik' };
-const MUSIK = { id: 4, name: 'Musik' };
+const TECHNIK = { id: 3, name: 'Technik', fuerAlle: false };
+const MUSIK = { id: 4, name: 'Musik', fuerAlle: false };
 const JETZT = new Date('2026-10-14T12:00:00Z');
 const O = { jetzt: JETZT, heute: '2026-10-14', planbar: [TECHNIK, MUSIK] };
 

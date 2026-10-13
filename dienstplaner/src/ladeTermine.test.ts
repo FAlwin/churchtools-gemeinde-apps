@@ -14,7 +14,12 @@ function json(status: number, body: unknown): Response {
 
 const START: Start = startFuer({
   gemeinde: null,
-  rechte: { planbareDienstgruppen: [3], ablaufKalender: [], abwesenheitenAller: false },
+  rechte: {
+    planbareDienstgruppen: [3],
+    sichtbareDienstgruppen: [],
+    ablaufKalender: [],
+    abwesenheitenAller: false,
+  },
 });
 
 const TERMINE = {
@@ -75,6 +80,22 @@ describe('ladeTermine', () => {
         team: [],
       },
     ]);
+  });
+
+  it('Mitglied ohne Recht: eigener Dienst steht in der Liste, aber nicht als halbe Gruppe in der Matrix', async () => {
+    ct(() => json(200, TERMINE));
+    const mitglied = startFuer({
+      rechte: {
+        planbareDienstgruppen: [],
+        sichtbareDienstgruppen: [],
+        ablaufKalender: [],
+        abwesenheitenAller: false,
+      },
+    });
+    const d = await ladeTermine(mitglied, 8, 'Europe/Berlin', new Date('2026-10-13T12:00:00Z'));
+    expect(d.zeilen[0].meine).toEqual([{ dienst: 'Ton', zugesagt: true }]);
+    expect(d.plan.gruppen).toEqual([]);
+    expect(d.plan.spalten[0]).toMatchObject({ plaetze: 0, besetzt: 0 });
   });
 
   it('Termine ohne Liste → Fehler 502, nicht „keine Termine“', async () => {

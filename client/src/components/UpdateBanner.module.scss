@@ -1,9 +1,9 @@
-// Schwebender Hinweis-Balken über der Tab-Leiste (deren Höhe: Icons + Safe-Area, siehe TabBar).
+// Schwebender Hinweis-Balken über der Tab-Leiste (deren Höhe: Icons + `--reiter-polster`, ReiterLeiste).
 .banner {
   position: fixed;
   left: 12px;
   right: 12px;
-  bottom: calc(max(34px, env(safe-area-inset-bottom) + 20px) + 62px);
+  bottom: calc(var(--reiter-polster) + 62px);
   z-index: 30; // über der Tab-Leiste (20), unter Sheets/Dialogen
   display: flex;
   align-items: center;

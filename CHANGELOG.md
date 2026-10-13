@@ -23,6 +23,14 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Adresse (`#/termine`), Neuladen und Zurück funktionieren. Termine, Planen und Abwesenheiten zeigen noch
   einen Platzhalter.
 
+### Geändert
+
+- **Reiterleiste in den ChurchTools-Erweiterungen schmaler** (#504, Musik-App und Dienstplaner): Im
+  Handy-Browser fällt das Polster für den Home-Strich weg (nur noch der echte Abstand des Geräts + 6 px,
+  ~60 statt 88 px). Die installierte Musik-App bleibt, wie sie ist. Die Höhe steht jetzt als Token
+  `--reiter-polster` an einer Stelle; der Update-Hinweis, der über der Leiste schwebt, rechnet damit statt
+  mit einer eigenen Kopie der Formel.
+
 ### Intern (Dienstplaner)
 
 - **Geteilt statt nachgebaut** (#502): Die untere Leiste der Musik-App ist jetzt `ui/bedienung/ReiterLeiste`

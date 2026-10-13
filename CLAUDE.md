@@ -276,6 +276,10 @@ churchtools-gemeinde-apps/
   ChurchTools meldet die App NICHT mehr ab – nur „Abmelden" in der App oder ein neu erzeugter
   Schlüssel.
 - API-Calls ausschließlich über `services/` + TanStack Query
+- **Abfrage-Schlüssel aus `hooks/abfrageSchluessel.ts`** (#492): Ein Schlüssel, der an mehr als einer
+  Stelle steht (Abruf und Erneuern, mehrere Abrufe), kommt dorthin; Ablauf und Liedblatt haben
+  `queryOptions`-Fabriken (`agendaAbfrage`, `liedblattAbfrage`), die Anzeige, Vorladen und
+  Offline-Vorrat teilen. Die Namen sind Teil des gespeicherten Zwischenspeichers – nicht umbenennen.
 - Keine Geschäftslogik in Komponenten (→ in `hooks/`)
 - Keine Inline-Styles, außer für dynamische Laufzeitwerte
   (Schriftgröße, Akkordfarbe, Canvas-Position)

@@ -110,6 +110,9 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
   `isCtOverloaded` erkennt die Zeitüberschreitung beim Datei-Download (der Liedtext-Index lief dort
   vorher weiter); der `errorHandler` macht aus einer Zeitüberschreitung beim Lesen der Antwort 504
   ohne Stacktrace
+- `hooks/abfrageSchluessel` – die Abfrage-Schlüssel (#492): Namen wie gespeichert (Literal, bewusst),
+  engere Schlüssel liegen unter den weiteren (Erneuern trifft sie), Vorladen und `useSongChart` bzw.
+  Offline-Vorrat und `useAgenda` teilen sich den Eintrag, der Offline-Vorrat holt trotzdem frisch
 - `services/updateCheck` – Cache-Fenster: Erfolg lang (6 h), Fehler/Offline nur kurz
   (`ERROR_CACHE_MS` 15 min) und danach erneuter Versuch → schützt das GitHub-Rate-Limit (#152)
 

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { schluessel } from '../hooks/abfrageSchluessel';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ApiError } from '../services/api';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -119,6 +120,6 @@ describe('Ablauf abgeschlossen', () => {
     fireEvent.click(await screen.findByText('Eintrag löschen'));
     fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
     expect(await screen.findByText(ABLAUF_ABGESCHLOSSEN)).toBeTruthy();
-    expect(neu).toHaveBeenCalledWith({ queryKey: ['services'] });
+    expect(neu).toHaveBeenCalledWith({ queryKey: schluessel.termine() });
   });
 });

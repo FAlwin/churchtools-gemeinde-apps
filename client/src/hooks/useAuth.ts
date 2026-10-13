@@ -6,13 +6,14 @@ import { resetSync as resetSettingsSync } from '../services/userSettings';
 import { clearDeviceData } from '../utils/clearDeviceData';
 import { ApiError } from '../services/api';
 import { getAbmeldenAusstehend, setAbmeldenAusstehend } from '../utils/devicePrefs';
+import { schluessel } from './abfrageSchluessel';
 
 /** Anmeldestatus + Login/Logout. Nutzt das /api/auth/me-Cookie des Backends. */
 export function useAuth() {
   const qc = useQueryClient();
 
   const meQuery = useQuery({
-    queryKey: ['me'],
+    queryKey: schluessel.ich(),
     /**
      * Steht ein Abmelden noch aus (#403), wird es ZUERST nachgeholt – und bis der Server es bestätigt
      * hat, gilt das Gerät als abgemeldet. Sonst zeigte `/api/auth/me` mit dem liegengebliebenen
@@ -40,7 +41,7 @@ export function useAuth() {
     onSuccess: (status) => {
       // Eine neue Anmeldung ersetzt das alte Cookie – ein noch ausstehendes Abmelden ist damit erledigt.
       setAbmeldenAusstehend(false);
-      qc.setQueryData(['me'], status);
+      qc.setQueryData(schluessel.ich(), status);
       // Server-Sync wieder einschalten (#211): Nach einem automatischen Abmelden steht in beiden
       // Sync-Diensten `disabled = true`; ohne Reset speichern Anmerkungen und Lied-Einstellungen
       // für den Rest der Seiten-Lebensdauer NUR lokal und gehen geräteübergreifend verloren.
@@ -49,7 +50,7 @@ export function useAuth() {
       // site-config wird schon auf dem Login-Screen geladen, dort aber nur mit den öffentlichen
       // Anzeige-Feldern (ohne Gruppen-/Rollen-IDs). Nach dem Login neu holen, damit die Admin-
       // Einstellungen die vollständige Konfiguration bekommen.
-      void qc.invalidateQueries({ queryKey: ['site-config'] });
+      void qc.invalidateQueries({ queryKey: schluessel.gemeindeKonfiguration() });
     },
   });
 
@@ -78,7 +79,7 @@ export function useAuth() {
       // ALLE Konto-Daten aus Speicher + Gerät räumen (geteilte Gemeinde-Geräte!): erst den
       // In-Memory-Cache leeren, dann IndexedDB/Datei-Cache/localStorage (clearDeviceData).
       qc.removeQueries();
-      qc.setQueryData(['me'], { authenticated: false });
+      qc.setQueryData(schluessel.ich(), { authenticated: false });
       await clearDeviceData();
     },
   });

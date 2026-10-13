@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { AgendaItem } from '@shared/types/index';
 import { useMarkSetlistSeen, useSetlistVersion } from './useServices';
+import { schluessel } from './abfrageSchluessel';
 
 /**
  * Live-Abgleich des geöffneten Ablaufs (#159/#161): Solange Ablauf oder Liederheft (aus dem
@@ -33,7 +34,7 @@ export function useSetlistLiveSync(args: {
   // GESEHENEN Stands; gemerkt wird er, nachdem der neue Stand angezeigt wurde (useMarkSeenAfterShown).
   const reloadAblauf = useCallback(
     (id: number) => {
-      void qc.invalidateQueries({ queryKey: ['agenda', id] });
+      void qc.invalidateQueries({ queryKey: schluessel.agenda(id) });
       setChartOutdated(false);
     },
     [qc],

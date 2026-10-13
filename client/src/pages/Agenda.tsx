@@ -14,10 +14,10 @@ import { heuteIso } from '../utils/heute';
 import { saveServiceOffline } from '../services/offline';
 import { liedAnzahl } from '../utils/songFilter';
 import { queryClient } from '../queryClient';
-import * as api from '../services/churchtoolsApi';
 import styles from './Agenda.module.scss';
 import { standKurz } from '../utils/zeitstempel';
 import { funktionen } from '../services/funktionen';
+import { agendaAbfrage } from '../hooks/abfrageSchluessel';
 
 interface AgendaProps {
   services: Service[];
@@ -104,10 +104,7 @@ export function Agenda({
     if (savingId !== null) return;
     setSavingId(s.id);
     try {
-      const items = await queryClient.fetchQuery({
-        queryKey: ['agenda', s.id],
-        queryFn: () => api.getAgenda(s.id),
-      });
+      const items = await queryClient.fetchQuery(agendaAbfrage(s.id));
       const { total, failed } = await saveServiceOffline({ id: s.id, date: s.date }, items);
       // Teilweise geladen ist NICHT „gespeichert" (#277): Sonst verlässt sich jemand im Saal darauf
       // und die Dokumente fehlen. Die geglückten Dateien bleiben im Vorrat – erneut versuchen lädt

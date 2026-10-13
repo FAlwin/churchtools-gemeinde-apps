@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { schluessel } from './abfrageSchluessel';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -73,7 +74,7 @@ describe('useNotenblatt – Speichern', () => {
     const { result, invalidate } = starte();
     expect(await result.current.speichern('{title: Treu}\n[E]Neu')).toBe(true);
     expect(speichereNotenblatt).toHaveBeenCalledWith(77, 500, '{title: Treu}\n[E]Neu');
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['song-chart', 77] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: schluessel.liedblaetter(77) });
     expect(result.current.fehler).toBeNull();
   });
 

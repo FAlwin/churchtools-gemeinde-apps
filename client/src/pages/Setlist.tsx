@@ -54,6 +54,7 @@ import { ladeDokument } from '../services/fileDownload';
 import { loadSongPdfOpts, loadAppLogo } from '../utils/songPdfOpts';
 import { innerScrollOnly, resetViewportAfterDrag } from '../utils/dndAutoScroll';
 import styles from './Setlist.module.scss';
+import { schluessel } from '../hooks/abfrageSchluessel';
 
 /**
  * Gebündelte Bearbeiten-Aktionen des Ablaufs – EIN Objekt statt einzelner Callback-Props durch
@@ -144,7 +145,7 @@ export function Setlist({
   function fehlerZeigen(e: unknown, sonst: string): void {
     setErr(e instanceof Error ? e.message : sonst);
     if (e instanceof ApiError && e.status === 423) {
-      void qc.invalidateQueries({ queryKey: ['services'] });
+      void qc.invalidateQueries({ queryKey: schluessel.termine() });
     }
   }
 
@@ -225,7 +226,7 @@ export function Setlist({
     return actions.update(itemId, fields).catch((e: unknown) => {
       setLocalItems(items.filter((i) => !i.removed));
       if (e instanceof ApiError && e.status === 423) {
-        void qc.invalidateQueries({ queryKey: ['services'] });
+        void qc.invalidateQueries({ queryKey: schluessel.termine() });
       }
       throw e;
     });

@@ -48,6 +48,7 @@ import { withChunkReload } from './utils/chunkReload';
 import { funktionen } from './services/funktionen';
 import { useVollbildHinweis } from './hooks/useVollbildHinweis';
 import { KeineLiedRechte } from './services/churchtoolsApi';
+import { schluessel } from './hooks/abfrageSchluessel';
 
 /**
  * Lade-Anzeige, während ein per Code-Splitting nachgeladener Seiten-Chunk eintrifft (#142).
@@ -556,13 +557,13 @@ export default function App() {
               // Ablauf frisch holen: Der Cache wird sofort angezeigt, aber nur ein frischer
               // Abruf bringt die aktuellen „geändert"-Markierungen mit (sonst blinkt beim
               // schnellen Wieder-Öffnen nichts, weil der 30-s-Cache noch als frisch gilt).
-              void queryClient.invalidateQueries({ queryKey: ['agenda', s.id] });
+              void queryClient.invalidateQueries({ queryKey: schluessel.agenda(s.id) });
             }}
             onOpenSongs={(s) => {
               setService(s);
               setSongIndex(0);
               setView({ type: 'chart', source: 'setlist' });
-              void queryClient.invalidateQueries({ queryKey: ['agenda', s.id] });
+              void queryClient.invalidateQueries({ queryKey: schluessel.agenda(s.id) });
             }}
           />
         )}

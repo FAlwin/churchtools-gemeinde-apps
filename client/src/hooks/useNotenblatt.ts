@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getSongChart, speichereNotenblatt } from '../services/churchtoolsApi';
 import { chordproVorlage } from '../utils/activeSongView';
+import { schluessel } from './abfrageSchluessel';
 
 export interface NotenblattZiel {
   songId: number;
@@ -54,7 +55,7 @@ export function useNotenblatt(ziel: NotenblattZiel | null) {
     try {
       await speichereNotenblatt(ziel.songId, ziel.arrangementId, inhalt);
       // Das Blatt hat sich geändert – wer das Lied gleich öffnet, soll es sehen, nicht den Cache.
-      void queryClient.invalidateQueries({ queryKey: ['song-chart', ziel.songId] });
+      void queryClient.invalidateQueries({ queryKey: schluessel.liedblaetter(ziel.songId) });
       return true;
     } catch (e) {
       // Der Grund kommt vom Server (Rechte, Netz) – damit klar ist, ob ein zweiter Versuch Sinn hat.

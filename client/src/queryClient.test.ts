@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import 'fake-indexeddb/auto';
 import { describe, it, expect } from 'vitest';
+import { schluessel } from './hooks/abfrageSchluessel';
 import { QueryClient } from '@tanstack/react-query';
 import {
   persistQueryClientSave,
@@ -19,9 +20,12 @@ describe('Offline-Persistenz (IndexedDB)', () => {
     const opts = { persister, maxAge: WEEK, buster: 'test' };
 
     const c1 = new QueryClient({ defaultOptions: { queries: { gcTime: WEEK } } });
-    c1.setQueryData(['me'], { authenticated: true, user: { firstName: 'A', lastName: 'B' } });
-    c1.setQueryData(['services'], [{ id: 1, name: 'Gottesdienst' }]);
-    c1.setQueryData(['agenda', 1], [{ id: 9, title: 'Lied', isHeader: false }]);
+    c1.setQueryData(schluessel.ich(), {
+      authenticated: true,
+      user: { firstName: 'A', lastName: 'B' },
+    });
+    c1.setQueryData(schluessel.termine(), [{ id: 1, name: 'Gottesdienst' }]);
+    c1.setQueryData(schluessel.agenda(1), [{ id: 9, title: 'Lied', isHeader: false }]);
 
     await persistQueryClientSave({ queryClient: c1, ...opts });
     await flush();
@@ -29,11 +33,13 @@ describe('Offline-Persistenz (IndexedDB)', () => {
     const c2 = new QueryClient({ defaultOptions: { queries: { gcTime: WEEK } } });
     await persistQueryClientRestore({ queryClient: c2, ...opts });
 
-    expect(c2.getQueryData(['me'])).toEqual({
+    expect(c2.getQueryData(schluessel.ich())).toEqual({
       authenticated: true,
       user: { firstName: 'A', lastName: 'B' },
     });
-    expect(c2.getQueryData(['services'])).toEqual([{ id: 1, name: 'Gottesdienst' }]);
-    expect(c2.getQueryData(['agenda', 1])).toEqual([{ id: 9, title: 'Lied', isHeader: false }]);
+    expect(c2.getQueryData(schluessel.termine())).toEqual([{ id: 1, name: 'Gottesdienst' }]);
+    expect(c2.getQueryData(schluessel.agenda(1))).toEqual([
+      { id: 9, title: 'Lied', isHeader: false },
+    ]);
   });
 });

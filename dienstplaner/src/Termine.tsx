@@ -14,6 +14,7 @@ import {
   type TerminZeile,
 } from '@shared/dienstplan/termine';
 import { leseAuswahl, merkeAuswahl } from './auswahl';
+import { Plakette } from './Plakette';
 import styles from './Termine.module.scss';
 
 export type TermineZustand =
@@ -139,18 +140,12 @@ function TerminReihe({ z, planer }: { z: TerminZeile; planer: boolean }) {
         </small>
         {(z.meine.length > 0 || z.abgesagt) && (
           <span className={styles.tags}>
-            {z.abgesagt && <span className={styles.abgesagt}>abgesagt</span>}
-            {z.meine.map((d, i) =>
-              d.zugesagt ? (
-                <span key={i} className={styles.zugesagt}>
-                  <Icon name="check" size={13} /> {d.dienst}
-                </span>
-              ) : (
-                <span key={i} className={styles.angefragt}>
-                  ? {d.dienst} · angefragt
-                </span>
-              ),
-            )}
+            {z.abgesagt && <Plakette art="abgesagt">abgesagt</Plakette>}
+            {z.meine.map((d, i) => (
+              <Plakette key={i} art={d.zugesagt ? 'zugesagt' : 'angefragt'}>
+                {d.zugesagt ? d.dienst : `${d.dienst} · angefragt`}
+              </Plakette>
+            ))}
           </span>
         )}
       </div>

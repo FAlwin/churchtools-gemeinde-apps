@@ -69,12 +69,17 @@ describe('ladeTermine', () => {
       {
         id: 7,
         name: 'Gottesdienst',
+        beginn: '2026-10-18T08:00:00Z',
+        ende: '2026-10-18T10:00:00Z',
         tag: '2026-10-18',
         uhrzeit: '10:00',
+        endeUhrzeit: '12:00',
         abgesagt: false,
         meine: [{ dienst: 'Ton', zugesagt: true }],
         geplant: 2,
         frei: 1,
+        freiNachGruppe: { 3: 1 },
+        team: [],
       },
     ]);
   });

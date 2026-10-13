@@ -7,6 +7,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+## [2.34.2] – 2026-10-13
+
 ### Neu (Dienstplaner)
 
 - **Grundgerüst des Dienstplaners** (#495, Bauplan E2): neue ChurchTools-Erweiterung `dienstplaner/` (Kürzel

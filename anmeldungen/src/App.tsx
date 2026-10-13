@@ -9,7 +9,11 @@ import { Startseite } from './Startseite';
 import { VeranstaltungSeite } from './VeranstaltungSeite';
 import { NeueVeranstaltung } from './NeueVeranstaltung';
 import { fehlerZustand, type Zustand } from './zustand';
-import styles from './App.module.scss';
+import {
+  ErweiterungsRahmen,
+  ErweiterungsSeite,
+  type SeitenZustand,
+} from '@ui/erweiterung/ErweiterungsSeite';
 import s from './Startseite.module.scss';
 
 /**
@@ -67,10 +71,9 @@ export function App() {
 
   if (offen !== null) {
     return (
-      <main className={styles.seite}>
+      <ErweiterungsRahmen>
         <VeranstaltungSeite id={offen} zeitzone={zeitzone} onZurueck={zurUebersicht} />
-        <footer className={styles.fuss}>Version {import.meta.env.VITE_APP_VERSION ?? 'dev'}</footer>
-      </main>
+      </ErweiterungsRahmen>
     );
   }
 
@@ -79,49 +82,33 @@ export function App() {
     ? fertig.start.gruppen.filter((g) => fertig.anlegen.teamIds.includes(g.id))
     : [];
 
+  // Der Rahmen (Kopf, Laden, Fehlerkasten, Fuß) ist für alle Erweiterungen derselbe (`ui/erweiterung`).
+  const seite: SeitenZustand =
+    zustand.art === 'fertig'
+      ? { art: 'fertig', vorname: zustand.start.vorname, gemeinde: zustand.start.gemeinde }
+      : zustand.art === 'fehler'
+        ? { art: 'fehler', fehler: { text: zustand.text, nochmal: zustand.nochmal } }
+        : { art: 'laedt' };
+
   return (
-    <main className={styles.seite}>
-      <header className={styles.kopf}>
-        <p className={styles.app}>
-          Anmeldungen
-          {fertig?.start.gemeinde && ` · ${fertig.start.gemeinde}`}
-        </p>
-        {fertig && (
-          <div className={styles.kopfzeile}>
-            <div className={styles.gruss}>
-              <h1>{fertig.start.vorname ? `Hallo ${fertig.start.vorname}` : 'Hallo'}</h1>
-              <span>{datumText(heute)}</span>
-            </div>
-            {anlegeTeams.length > 0 && (
-              <button type="button" className={s.neu} onClick={() => setNeu(true)}>
-                <Icon name="plus" size={18} />
-                Neue Veranstaltung
-              </button>
-            )}
-          </div>
-        )}
-      </header>
-
-      {fertig && fertig.anlegen.artId === null && (
-        <p className={styles.hinweis}>
-          In dieser Gemeinde fehlt die Gruppenart „Anmeldung“ – ohne sie lassen sich keine
-          Veranstaltungen anlegen. Wie man sie einrichtet, steht in der Anleitung der Erweiterung.
-        </p>
-      )}
-
-      {zustand.art === 'laedt' && <p className={styles.hinweis}>Wird geladen …</p>}
-
-      {zustand.art === 'fehler' && (
-        <div className={styles.fehler} role="alert">
-          <p>{zustand.text}</p>
-          {zustand.nochmal && (
-            <button type="button" className={styles.knopf} onClick={laden}>
-              Erneut versuchen
-            </button>
-          )}
-        </div>
-      )}
-
+    <ErweiterungsSeite
+      app="Anmeldungen"
+      zustand={seite}
+      nebenGruss={datumText(heute)}
+      onNochmal={laden}
+      kopfAktion={
+        anlegeTeams.length > 0 && (
+          <button type="button" className={s.neu} onClick={() => setNeu(true)}>
+            <Icon name="plus" size={18} />
+            Neue Veranstaltung
+          </button>
+        )
+      }
+      hinweis={
+        fertig?.anlegen.artId === null &&
+        'In dieser Gemeinde fehlt die Gruppenart „Anmeldung“ – ohne sie lassen sich keine Veranstaltungen anlegen. Wie man sie einrichtet, steht in der Anleitung der Erweiterung.'
+      }
+    >
       {fertig && (
         <Startseite
           start={fertig.start}
@@ -143,8 +130,6 @@ export function App() {
           }}
         />
       )}
-
-      <footer className={styles.fuss}>Version {import.meta.env.VITE_APP_VERSION ?? 'dev'}</footer>
-    </main>
+    </ErweiterungsSeite>
   );
 }

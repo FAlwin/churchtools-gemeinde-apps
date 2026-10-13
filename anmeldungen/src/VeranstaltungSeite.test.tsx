@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import type { OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
+import { ApiError } from '@ui/ct/fehler';
 import * as E from './einrichten';
 import { VeranstaltungSeite } from './VeranstaltungSeite';
 import { NeueVeranstaltung } from './NeueVeranstaltung';
@@ -53,6 +54,27 @@ function zeigen() {
 
 beforeEach(() => {
   vi.stubGlobal('window', Object.assign(window, { settings: { base_url: 'https://ct.test/' } }));
+});
+
+describe('Veranstaltung laden scheitert – gemeinsamer Fehlerkasten (ui/erweiterung)', () => {
+  it('vorübergehend (502) → „antwortet gerade nicht“, „Erneut versuchen“ lädt neu', async () => {
+    stelle(true);
+    m.kopfVon.mockRejectedValueOnce(new ApiError(502, 'x'));
+    zeigen();
+    expect(await screen.findByText(/antwortet gerade nicht/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Erneut versuchen' }));
+    expect(await screen.findByText('Gemeindeessen')).toBeTruthy();
+    expect(m.kopfVon).toHaveBeenCalledTimes(2);
+  });
+
+  it('abgemeldet (401) → Hinweis ohne „Erneut versuchen“, der Weg zurück bleibt', async () => {
+    stelle(true);
+    m.kopfVon.mockRejectedValueOnce(new ApiError(401, 'x'));
+    zeigen();
+    expect(await screen.findByText(/nicht mehr angemeldet/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Erneut versuchen' })).toBeNull();
+    expect(screen.getByRole('button', { name: /Übersicht/ })).toBeTruthy();
+  });
 });
 
 describe('Veranstaltung einrichten (A3, #486)', () => {

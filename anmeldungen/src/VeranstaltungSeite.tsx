@@ -15,6 +15,7 @@ import {
 import { AnmeldungFenster, LoeschfristFenster, TerminFenster, WerFenster } from './Bearbeiten';
 import { WER_TEXT, datumText } from './anzeige';
 import { fehlerMeldung, type Fehlermeldung } from './zustand';
+import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import s from './Startseite.module.scss';
 import v from './VeranstaltungSeite.module.scss';
 import f from './Formular.module.scss';
@@ -116,14 +117,7 @@ export function VeranstaltungSeite({
     return (
       <div className={v.seite}>
         {zurueck}
-        <div className={s.karte} role="alert" style={{ padding: 16 }}>
-          <p>{fehler.text}</p>
-          {fehler.nochmal && (
-            <button type="button" className={f.knopf} style={{ marginTop: 12 }} onClick={laden}>
-              Erneut versuchen
-            </button>
-          )}
-        </div>
+        <FehlerKasten fehler={fehler} onNochmal={laden} />
       </div>
     );
   }

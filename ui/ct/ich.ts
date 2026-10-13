@@ -1,7 +1,6 @@
 /**
  * **Wer ist angemeldet, in welcher Gemeinde, in welchen Gruppen?** – der Anfang jeder Erweiterung dieses
- * Repos (Dienstplaner E2; dieselben Abfragen wie die Startseite der Anmeldungen, die nach #493
- * hierher umzieht).
+ * Repos (Dienstplaner E2). Genutzt vom Dienstplaner und von der Startseite der Anmeldungen.
  *
  * Gelesen wird mit der Sitzung der ChurchTools-Seite (`verbindung.ts`); die Regeln stehen in
  * `shared/ct/` (`whoamiId`, `gemeindeNameAus`). Die Mitgliedschaften kommen **roh** zurück: Jede App

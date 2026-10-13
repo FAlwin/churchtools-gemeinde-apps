@@ -8,6 +8,8 @@ import { darfDienstgruppePlanen } from '@shared/ct/dienstRechte';
 import { ladeStart, type Start } from './start';
 import { Startseite } from './Startseite';
 import { Demnaechst } from './Demnaechst';
+import { Termine, type TermineZustand } from './Termine';
+import { ladeTermine, WOCHEN_JE_SCHRITT } from './ladeTermine';
 import { adresseFuer, reiterAusAdresse, sichtbareReiter, type ReiterId } from './reiter';
 
 /**
@@ -20,6 +22,10 @@ export function App() {
   const [start, setStart] = useState<Start | null>(null);
   const [hash, setHash] = useState(() => window.location.hash);
   const handy = useMedienAbfrage('(max-width: 759px)');
+  // Termine erst laden, wenn jemand den Reiter öffnet; beim Wechseln bleiben sie erhalten.
+  const [termine, setTermine] = useState<TermineZustand | null>(null);
+  const [wochen, setWochen] = useState(WOCHEN_JE_SCHRITT);
+  const zeitzone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   const laden = useCallback(() => {
     setZustand({ art: 'laedt' });
@@ -44,6 +50,21 @@ export function App() {
     !!start && start.dienstgruppen.some((g) => darfDienstgruppePlanen(start.rechte, g.id));
   const reiter = sichtbareReiter(darfPlanen);
   const aktiv = reiterAusAdresse(hash, reiter);
+
+  const termineLaden = useCallback(
+    (s: Start, w: number) => {
+      setTermine({ art: 'laedt' });
+      ladeTermine(s, w, zeitzone).then(
+        (zeilen) => setTermine({ art: 'fertig', zeilen, wochen: w }),
+        (e: unknown) => setTermine({ art: 'fehler', fehler: fehlerMeldung(e) }),
+      );
+    },
+    [zeitzone],
+  );
+
+  useEffect(() => {
+    if (aktiv === 'termine' && start && termine === null) termineLaden(start, wochen);
+  }, [aktiv, start, termine, wochen, termineLaden]);
   const wechseln = (id: ReiterId) => {
     window.location.hash = adresseFuer(id);
   };
@@ -74,7 +95,19 @@ export function App() {
       onNochmal={laden}
     >
       {start && aktiv === 'start' && <Startseite start={start} />}
-      {aktiv !== 'start' && <Demnaechst reiter={aktiv} />}
+      {aktiv === 'termine' && termine && start && (
+        <Termine
+          zustand={termine}
+          planer={darfPlanen}
+          onNochmal={() => termineLaden(start, wochen)}
+          onMehr={() => {
+            const w = wochen + WOCHEN_JE_SCHRITT;
+            setWochen(w);
+            termineLaden(start, w);
+          }}
+        />
+      )}
+      {(aktiv === 'planen' || aktiv === 'abwesenheiten') && <Demnaechst reiter={aktiv} />}
     </ErweiterungsSeite>
   );
 }

@@ -70,6 +70,7 @@ describe('ladeStart (Dienstplaner)', () => {
   it('Person, Gruppen, Dienstgruppen in Gemeinde-Reihenfolge und die Planer-Rechte', async () => {
     ct(GUT);
     expect(await ladeStart()).toEqual({
+      ichId: 1,
       vorname: 'Alwin',
       gemeinde: 'ECG',
       gruppen: [{ id: 7, name: 'Technik', leitung: true }],

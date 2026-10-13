@@ -18,6 +18,7 @@ import styles from './Agenda.module.scss';
 import { standKurz } from '../utils/zeitstempel';
 import { funktionen } from '../services/funktionen';
 import { agendaAbfrage } from '../hooks/abfrageSchluessel';
+import { DatumKachel } from '@ui/bedienung/DatumKachel';
 
 interface AgendaProps {
   services: Service[];
@@ -134,10 +135,7 @@ export function Agenda({
           className={styles.cardMain}
           onClick={() => (blocked ? showToast(OFFLINE_HINT) : onSelect(s))}
         >
-          <div className={styles.dateBadge}>
-            <span className={styles.day}>{s.day}</span>
-            <span className={styles.month}>{s.month}</span>
-          </div>
+          <DatumKachel tag={s.day} monat={s.month} />
           <div className={styles.info}>
             <div className={styles.svcName}>
               {/* Dezenter Punkt (#143, wie „ungelesen"): Ablauf hat sich seit dem letzten

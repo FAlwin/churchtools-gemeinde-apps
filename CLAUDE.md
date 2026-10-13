@@ -188,6 +188,7 @@ churchtools-gemeinde-apps/
 │       ├── types/           # server-spezifische Typen
 │       └── utils/           # Hilfsfunktionen (u. a. isoTag.ts = die eine Datums-Formatierung)
 ├── shared/types/            # geteilte Typen (Service, SetlistSong, Setlist, …)
+├── shared/dienstplan/       # Regeln des Dienstplaners: termine (Liste, Meine|Alle, Arten, freie Plätze; E3-2)
 ├── shared/anmeldung/        # Regeln der Anmeldungen: preis, formular (#474), uebersicht (#480), vorlagen, termin, felder, rechte (#486), bezahlung (#507)
 ├── anmeldungen/             # Anmeldungen: ChurchTools-Erweiterung für Veranstalter (#474, nur Erweiterung)
 ├── formular/                # Anmeldungen: öffentliches Formular, statisch (GitHub Pages), noch Platzhalter
@@ -196,7 +197,7 @@ churchtools-gemeinde-apps/
     ├── design/              # _variables.scss (Tokens), _mixins.scss, _grundregeln.scss (Reset + Erweiterungs-Lehren)
     ├── icons/               # icons.tsx (Line-Icons)
     ├── fenster/             # Sheet (Modal), useOverlayKeyboardInset, appHeight
-    ├── bedienung/           # Segment, Schalter, KnopfReihe, ReiterLeiste (untere Reiter), useMedienAbfrage
+    ├── bedienung/           # Segment, Schalter, KnopfReihe, ReiterLeiste (untere Reiter), useMedienAbfrage, DatumKachel
     ├── teilen/              # shareFile, sharePdf
     ├── ct/                  # Verbindung einer Erweiterung zu ChurchTools: verbindung.ts, fehler.ts (ApiError), basis.ts,
     │                        #   fehlerMeldung.ts (was bei Fehlern gesagt wird), ich.ts (wer angemeldet ist, Gemeinde, Gruppen)

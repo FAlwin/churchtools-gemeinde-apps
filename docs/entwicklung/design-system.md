@@ -63,7 +63,8 @@ nutzt bewusst Monospace (`'JetBrains Mono', monospace`) für die Roh-Bearbeitung
   `Icon` (`ui/icons/icons.tsx`, Line-Icons – keine Emojis in der UI), **`SeitenGeruest`** (das
   Gerüst JEDES Bildschirms: Überschrift, runde Knöpfe, Scrollen, Neuladen – seit 22.09.2026 der
   Normalweg, `Screen`/`Scroll`/`GrosseUeberschrift`/`KnopfReihe` sind seine Bausteine; `RundKnopf`
-  für Aktionen in Detailansichten), `TabBar`,
+  für Aktionen in Detailansichten), `TabBar` (Reiter der Musik-App in der gemeinsamen
+  `ui/bedienung/ReiterLeiste`),
   `Sheet`, `ConfirmDialog`, **`SchwebePlus`** (das runde Plus unten rechts – Abwesenheiten und Ablauf),
   `SongFields` (die Stammdaten-Felder eines Liedes – von „Neues Lied" und
   „Stammdaten ändern" gemeinsam genutzt, damit es die fünf Felder nur einmal gibt).

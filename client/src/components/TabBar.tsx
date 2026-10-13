@@ -1,6 +1,6 @@
-import { Icon, type IconName } from '@ui/icons/icons';
+import type { IconName } from '@ui/icons/icons';
+import { ReiterLeiste } from '@ui/bedienung/ReiterLeiste';
 import { scrolleZumAnfang } from '../hooks/useZumAnfang';
-import styles from './TabBar.module.scss';
 
 export type TabId = 'termine' | 'lieder' | 'verfuegbarkeit' | 'mehr';
 
@@ -23,30 +23,20 @@ interface TabBarProps {
   onChange: (tab: TabId) => void;
 }
 
-/** Untere Navigationsleiste im ChurchTools-Stil. */
+/**
+ * Untere Navigationsleiste der Musik-App: ihre Reiter in der gemeinsamen `ReiterLeiste` (ui/bedienung,
+ * auch im Dienstplaner). Tippt man den schon aktiven Reiter, geht es nach oben – wie in iOS-Apps. Der
+ * Tipp auf die Statusleiste erreicht eine Web-App nicht (siehe `Screen.tsx`), dies ist der Ersatz dafür.
+ */
 export function TabBar({ active, tabs, dimmed = [], onChange }: TabBarProps) {
   return (
-    <div className={styles.tabbar} data-tour="tabbar">
-      {tabs.map((id) => {
-        const meta = TAB_META[id];
-        const on = active === id;
-        const off = dimmed.includes(id);
-        return (
-          <button
-            key={id}
-            className={`${styles.tab}${on ? ' ' + styles.on : ''}${off ? ' ' + styles.off : ''}`}
-            onClick={() => {
-              // Schon aktiv? Dann nach oben scrollen – wie in iOS-Apps. Der Tipp auf die Statusleiste
-              // erreicht eine Web-App nicht (siehe `Screen.tsx`), dies ist der Ersatz dafür.
-              if (on) scrolleZumAnfang();
-              else onChange(id);
-            }}
-          >
-            <Icon name={meta.icon} size={24} stroke={1.9} />
-            <span>{meta.label}</span>
-          </button>
-        );
-      })}
-    </div>
+    <ReiterLeiste
+      reiter={tabs.map((id) => ({ id, ...TAB_META[id] }))}
+      aktiv={active}
+      gedimmt={dimmed}
+      onWechsel={onChange}
+      onErneut={scrolleZumAnfang}
+      tour="tabbar"
+    />
   );
 }

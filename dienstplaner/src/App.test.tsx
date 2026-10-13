@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
 import { App } from './App';
@@ -79,5 +79,66 @@ describe('App des Dienstplaners (E2)', () => {
     render(<App />);
     expect(await screen.findByText(/nicht mehr angemeldet/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Erneut versuchen' })).toBeNull();
+  });
+});
+
+/** `matchMedia` wie im Browser: `handy` = schmaler als 760 px. */
+function breite(handy: boolean) {
+  vi.stubGlobal('matchMedia', (q: string) => ({
+    matches: handy && q.includes('max-width: 759px'),
+    media: q,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }));
+}
+
+describe('Reiter des Dienstplaners (E3-1)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.location.hash = '';
+  });
+
+  it('Computer: Reiter oben als Umschalter, Planen nur mit Recht; Gruß nur auf Start', async () => {
+    breite(false);
+    laden.mockResolvedValue(start([3]));
+    render(<App />);
+    const bereiche = await screen.findByRole('group', { name: 'Bereiche' });
+    expect(
+      within(bereiche)
+        .getAllByRole('button')
+        .map((b) => b.textContent),
+    ).toEqual(['Start', 'Termine', 'Planen', 'Abwesenheiten']);
+    expect(screen.getByText('Hallo Alwin')).toBeTruthy();
+    fireEvent.click(within(bereiche).getByRole('button', { name: 'Termine' }));
+    expect(window.location.hash).toBe('#/termine');
+    expect(await screen.findByRole('region', { name: 'Termine' })).toBeTruthy();
+    expect(screen.queryByText('Hallo Alwin')).toBeNull();
+  });
+
+  it('ohne Planer-Recht kein Reiter „Planen“ – auch nicht über die Adresse', async () => {
+    breite(false);
+    window.location.hash = '#/planen';
+    laden.mockResolvedValue(start([]));
+    render(<App />);
+    const bereiche = await screen.findByRole('group', { name: 'Bereiche' });
+    expect(within(bereiche).queryByRole('button', { name: 'Planen' })).toBeNull();
+    expect(screen.getByText('Hallo Alwin')).toBeTruthy();
+  });
+
+  it('Handy: Reiter unten als Leiste, oben keine', async () => {
+    breite(true);
+    laden.mockResolvedValue(start([3]));
+    render(<App />);
+    const leiste = await screen.findByRole('navigation', { name: 'Bereiche' });
+    expect(within(leiste).getAllByRole('button')).toHaveLength(4);
+    expect(screen.queryByRole('group', { name: 'Bereiche' })).toBeNull();
+  });
+
+  it('beim Laden und im Fehlerfall noch keine Reiter', async () => {
+    breite(false);
+    laden.mockRejectedValue(new ApiError(502, 'x'));
+    render(<App />);
+    await screen.findByRole('button', { name: 'Erneut versuchen' });
+    expect(screen.queryByRole('group', { name: 'Bereiche' })).toBeNull();
   });
 });

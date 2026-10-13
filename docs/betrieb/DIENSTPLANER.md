@@ -1,8 +1,10 @@
 # Dienstplaner – ChurchTools-Erweiterung
 
-> **Stand: Grundgerüst (E2).** Die Erweiterung startet in ChurchTools und zeigt, wer angemeldet ist, die
-> eigenen Gruppen und welche Dienstgruppen man laut ChurchTools-Rechten plant – **nur lesen**. Termine,
-> Planen und Abwesenheiten folgen Schritt für Schritt (Bauplan E3–E9). Diese Anleitung wächst mit.
+> **Stand: Reiter (E3-1).** Die Erweiterung startet in ChurchTools und zeigt, wer angemeldet ist, die
+> eigenen Gruppen und welche Dienstgruppen man laut ChurchTools-Rechten plant – **nur lesen**. Die Reiter
+> Start · Termine · Planen · Abwesenheiten stehen (am Computer oben, am Handy unten; „Planen“ nur für
+> Planer); Termine, Planen und Abwesenheiten füllen sich Schritt für Schritt (Bauplan E3–E9). Diese
+> Anleitung wächst mit.
 
 Der Dienstplaner plant die Dienste **aller** Dienstgruppen (Musik, Technik, Predigt, Moderation …) nach
 dem Vorbild von Planning Center Services. **Alles liegt in ChurchTools** – es gibt keinen eigenen Server.

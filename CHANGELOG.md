@@ -17,7 +17,20 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Tag `dienstplan-v*` über die neue gemeinsame Vorlage `erweiterung-release.yml` (`make_latest: false`
   fest darin). Für die Musik-App und die Anmeldungen ändert sich nichts.
 
+- **Reiter Start · Termine · Planen · Abwesenheiten** (#502, E3-1, wie im Entwurf v17): am Computer oben
+  neben dem Namen, am Handy unten als Leiste wie in der Musik-App. „Planen“ nur mit Planer-Recht (vorerst
+  das globale; Gruppenleitung und Termin-Admin folgen), der Gruß nur auf Start. Der Reiter steht in der
+  Adresse (`#/termine`), Neuladen und Zurück funktionieren. Termine, Planen und Abwesenheiten zeigen noch
+  einen Platzhalter.
+
 ### Intern (Dienstplaner)
+
+- **Geteilt statt nachgebaut** (#502): Die untere Leiste der Musik-App ist jetzt `ui/bedienung/ReiterLeiste`
+  (die `TabBar` füllt sie mit ihren Reitern, Hochscrollen und Einführungs-Ziel; die Leiste ist jetzt ein
+  `<nav>` mit `aria-pressed`). `ui/bedienung/useMedienAbfrage` ersetzt zwei handgeschriebene
+  `matchMedia`-Muster (Notizen-Editor, Design „System“). Gebautes CSS der Musik-App (PWA und Erweiterung)
+  mit `main` verglichen: gleich bis auf Hash-Kürzel. Neu getestet: das Einführungs-Ziel der Leiste und
+  „Design System folgt dem dunklen System“ (beides vorher ohne Test).
 
 - **Geteilt statt nachgebaut** (Dienstplaner E2): `ui/ct/ich.ts` (wer angemeldet ist, Gemeinde, Gruppen –
   wirft auch, wenn ChurchTools die Gruppen ohne Liste liefert, statt „keine Gruppen“ zu zeigen),

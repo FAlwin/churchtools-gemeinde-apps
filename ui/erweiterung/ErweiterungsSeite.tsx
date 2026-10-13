@@ -13,14 +13,29 @@ export type SeitenZustand =
  * Version im Fuß. Ohne Kopf – für Unterseiten wie eine einzelne Veranstaltung der Anmeldungen.
  *
  * Gescrollt wird im Rollbereich (`.rolle`), nicht in `#root` – siehe ErweiterungsSeite.module.scss.
+ * `unten` (z. B. die Reiterleiste am Handy, Dienstplaner E3) steht UNTER dem Rollbereich und scrollt
+ * nicht mit – ohne `position: fixed`, das in der Erweiterung am `#root` hinge.
  */
-export function ErweiterungsRahmen({ children }: { children?: ReactNode }) {
-  return (
+export function ErweiterungsRahmen({
+  children,
+  unten,
+}: {
+  children?: ReactNode;
+  unten?: ReactNode;
+}) {
+  const rolle = (
     <div className={styles.rolle}>
       <main className={styles.seite}>
         {children}
         <footer className={styles.fuss}>Version {import.meta.env.VITE_APP_VERSION ?? 'dev'}</footer>
       </main>
+    </div>
+  );
+  if (!unten) return rolle;
+  return (
+    <div className={styles.huelle}>
+      {rolle}
+      {unten}
     </div>
   );
 }
@@ -58,6 +73,12 @@ interface Props {
   kopfAktion?: ReactNode;
   /** Ein Hinweis unter dem Kopf in ruhiger Schrift (z. B. „Gruppenart fehlt“) – nur bei `fertig`. */
   hinweis?: ReactNode;
+  /** Neben dem App-Namen, z. B. die Reiter am Computer (Dienstplaner E3). */
+  reiter?: ReactNode;
+  /** „Hallo …“ zeigen? Mit Reitern nur auf der Startseite (Entwurf v17). Vorgabe: ja. */
+  gruss?: boolean;
+  /** Unter dem Rollbereich, z. B. die Reiterleiste am Handy (siehe `ErweiterungsRahmen`). */
+  unten?: ReactNode;
   /** „Erneut versuchen“ – erscheint nur, wenn der Fehler vorübergehend ist (`fehlerMeldung`). */
   onNochmal: () => void;
   /** Der Inhalt – nur bei `fertig`. */
@@ -74,17 +95,30 @@ export function ErweiterungsSeite({
   nebenGruss,
   kopfAktion,
   hinweis,
+  reiter,
+  gruss = true,
+  unten,
   onNochmal,
   children,
 }: Props) {
+  const appName = (
+    <p className={styles.app}>
+      {app}
+      {zustand.art === 'fertig' && zustand.gemeinde && ` · ${zustand.gemeinde}`}
+    </p>
+  );
   return (
-    <ErweiterungsRahmen>
+    <ErweiterungsRahmen unten={unten}>
       <header className={styles.kopf}>
-        <p className={styles.app}>
-          {app}
-          {zustand.art === 'fertig' && zustand.gemeinde && ` · ${zustand.gemeinde}`}
-        </p>
-        {zustand.art === 'fertig' && (
+        {reiter ? (
+          <div className={styles.appzeile}>
+            {appName}
+            {reiter}
+          </div>
+        ) : (
+          appName
+        )}
+        {zustand.art === 'fertig' && gruss && (
           <div className={styles.kopfzeile}>
             <div className={styles.gruss}>
               <h1>{zustand.vorname ? `Hallo ${zustand.vorname}` : 'Hallo'}</h1>

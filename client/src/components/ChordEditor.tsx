@@ -6,6 +6,7 @@ import { Spinner } from './Spinner';
 import { useOverlayKeyboardInset } from '@ui/fenster/useOverlayKeyboardInset';
 import styles from './ChordEditor.module.scss';
 import { shiftKey } from '../utils/transpose';
+import { useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 
 interface ChordEditorProps {
   songTitle: string;
@@ -96,9 +97,7 @@ export function ChordEditor({
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [view, setView] = useState<View>('both');
-  const [wide, setWide] = useState(() =>
-    typeof window !== 'undefined' ? window.matchMedia('(min-width: 768px)').matches : true,
-  );
+  const wide = useMedienAbfrage('(min-width: 768px)', true);
   const editorRef = useRef<ChordProHandle>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
 
@@ -110,13 +109,6 @@ export function ChordEditor({
   const effView: View = !wide && view === 'both' ? 'editor' : view;
   const showEditor = effView !== 'preview';
   const showPreview = effView !== 'editor';
-
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 768px)');
-    const onChange = () => setWide(mq.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
 
   // iOS-Tastatur: Der Overlay bleibt VOLLBILD (fixed, inset 0) – so schimmert hinter der
   // halbtransparenten Tastatur nichts von der dahinterliegenden Ansicht durch. Statt den Overlay

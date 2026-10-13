@@ -196,12 +196,12 @@ churchtools-gemeinde-apps/
     ├── design/              # _variables.scss (Tokens), _mixins.scss, _grundregeln.scss (Reset + Erweiterungs-Lehren)
     ├── icons/               # icons.tsx (Line-Icons)
     ├── fenster/             # Sheet (Modal), useOverlayKeyboardInset, appHeight
-    ├── bedienung/           # Segment, Schalter, KnopfReihe
+    ├── bedienung/           # Segment, Schalter, KnopfReihe, ReiterLeiste (untere Reiter), useMedienAbfrage
     ├── teilen/              # shareFile, sharePdf
     ├── ct/                  # Verbindung einer Erweiterung zu ChurchTools: verbindung.ts, fehler.ts (ApiError), basis.ts,
     │                        #   fehlerMeldung.ts (was bei Fehlern gesagt wird), ich.ts (wer angemeldet ist, Gemeinde, Gruppen)
     └── erweiterung/         # Erweiterungs-Bau: viteErweiterung (fasst zusammen), cssBereich, kopfInDenInhalt;
-                             #   ErweiterungsSeite (Kopf, Laden, Fehler, Version), ErweiterungsRahmen (ohne Kopf), FehlerKasten
+                             #   ErweiterungsSeite (Kopf, Laden, Fehler, Version; Reiter, Gruß, unten), ErweiterungsRahmen (ohne Kopf), FehlerKasten
 ```
 
 ## Konventionen
@@ -356,7 +356,8 @@ im Mehr-Tab (`pages/Settings.tsx` → Verwaltung: `hooks/useVerwaltung.ts`, `com
 `SITE_CONFIG_PATH`). Admin-Recht über `ADMIN_PERMISSION` (Default `churchcore:administer persons`).
 `SiteConfig` (`shared/types`) hat acht Felder: `appName`(fest), `description`(fest), `orgName`, `links`, `musicianGroupIds`, `noteRoles?`, `terminArten?` (#400) und `standardAnsicht?` (07.10.2026, Akkorde/PDF zuerst; Regel in `client/src/utils/standardAnsicht.ts`, auf dem Gerät gemerkt in `devicePrefs`). Nur die ersten drei und `standardAnsicht` sind reine Anzeige-Werte. **Ein neues Feld muss an sechs Stellen mit:** Schema, `Editable`, `normalize`, Einlesen in `getSiteConfig`, `putSiteConfigCtrl` – und, falls öffentlich, die beschnittene Antwort in `getSiteConfigCtrl`.
 
-**Navigation:** untere Tab-Bar `Termine`/`Lieder`/`Abwesenheiten`/`Mehr` (`components/TabBar.tsx`; der
+**Navigation:** untere Tab-Bar `Termine`/`Lieder`/`Abwesenheiten`/`Mehr` (`components/TabBar.tsx` – füllt die
+gemeinsame `ui/bedienung/ReiterLeiste`, die auch der Dienstplaner am Handy nutzt; der
 Abwesenheiten-Tab trägt die ID `verfuegbarkeit` und erscheint nur für Mitglieder der `musicianGroupIds`), Detailseiten
 (Setlist, Chart) als Vollbild-Push.
 

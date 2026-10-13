@@ -14,6 +14,8 @@ import { dienstRechteAus, type DienstRechte } from '@shared/ct/dienstRechte';
 import { dienstgruppenAus, type Dienstgruppe } from '@shared/ct/dienstgruppen';
 
 export interface Start {
+  /** Die eigene Person – daran erkennt die Termine-Liste die eigenen Dienste. */
+  ichId: number;
   vorname: string;
   gemeinde: string | null;
   gruppen: MeineGruppe[];
@@ -32,6 +34,7 @@ export async function ladeStart(): Promise<Start> {
     throw new ApiError(502, 'ChurchTools hat die Dienstgruppen nicht geliefert.');
   }
   return {
+    ichId: ich.id,
     vorname: ich.vorname,
     gemeinde: ich.gemeinde,
     gruppen: meineGruppen(ich.mitgliedschaften, ich.rollen),

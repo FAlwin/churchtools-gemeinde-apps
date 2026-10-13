@@ -1,12 +1,18 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
 import { App } from './App';
 import { ladeStart, type Start } from './start';
+import { ladeTermine } from './ladeTermine';
 
 vi.mock('./start', () => ({ ladeStart: vi.fn() }));
+vi.mock('./ladeTermine', () => ({ ladeTermine: vi.fn(), WOCHEN_JE_SCHRITT: 8 }));
 const laden = vi.mocked(ladeStart);
+const termineLaden = vi.mocked(ladeTermine);
+
+// Ohne eigene Vorgabe im Test: keine Termine (sonst gäbe die Attrappe `undefined` zurück).
+beforeEach(() => termineLaden.mockResolvedValue([]));
 
 const DIENSTGRUPPEN = [
   { id: 1, name: 'Programm' },
@@ -16,6 +22,7 @@ const DIENSTGRUPPEN = [
 
 function start(planbar: number[] | null, gruppen: Start['gruppen'] = []): Start {
   return {
+    ichId: 1,
     vorname: 'Alwin',
     gemeinde: 'Evangeliumschristen- Gemeinde e.V.',
     gruppen,
@@ -140,5 +147,42 @@ describe('Reiter des Dienstplaners (E3-1)', () => {
     render(<App />);
     await screen.findByRole('button', { name: 'Erneut versuchen' });
     expect(screen.queryByRole('group', { name: 'Bereiche' })).toBeNull();
+  });
+});
+
+describe('Termine im Reiter (E3-2)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.location.hash = '';
+  });
+
+  it('lädt erst beim Öffnen, beim Hin- und Herwechseln nur einmal; „Weitere“ lädt 8 Wochen mehr', async () => {
+    breite(false);
+    laden.mockResolvedValue(start([3]));
+    termineLaden.mockResolvedValue([]);
+    render(<App />);
+    const bereiche = await screen.findByRole('group', { name: 'Bereiche' });
+    expect(termineLaden).not.toHaveBeenCalled();
+    fireEvent.click(within(bereiche).getByRole('button', { name: 'Termine' }));
+    await screen.findByRole('button', { name: 'Weitere Termine laden' });
+    fireEvent.click(within(bereiche).getByRole('button', { name: 'Start' }));
+    fireEvent.click(within(bereiche).getByRole('button', { name: 'Termine' }));
+    await screen.findByRole('button', { name: 'Weitere Termine laden' });
+    expect(termineLaden).toHaveBeenCalledTimes(1);
+    expect(termineLaden.mock.calls[0][1]).toBe(8);
+    fireEvent.click(screen.getByRole('button', { name: 'Weitere Termine laden' }));
+    expect(termineLaden).toHaveBeenCalledTimes(2);
+    expect(termineLaden.mock.calls[1][1]).toBe(16);
+  });
+
+  it('Ladefehler der Termine → Fehlerkasten, „Erneut versuchen“ lädt neu', async () => {
+    breite(false);
+    window.location.hash = '#/termine';
+    laden.mockResolvedValue(start([3]));
+    termineLaden.mockRejectedValueOnce(new ApiError(502, 'x')).mockResolvedValueOnce([]);
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Erneut versuchen' }));
+    await screen.findByRole('button', { name: 'Weitere Termine laden' });
+    expect(termineLaden).toHaveBeenCalledTimes(2);
   });
 });

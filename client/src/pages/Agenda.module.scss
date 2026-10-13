@@ -70,31 +70,7 @@
   pointer-events: none;
 }
 
-// Datumskachel wie „Anstehende Termine" in der ChurchTools-App (#393): hellblau, dunkle Schrift.
-.dateBadge {
-  width: 50px;
-  height: 50px;
-  border-radius: var(--r-tile);
-  background: var(--blue-tile);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.day {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--blue-tile-text);
-  line-height: 1;
-}
-.month {
-  font-size: 11px;
-  color: var(--blue-tile-text);
-  font-weight: 500;
-  margin-top: 2px;
-  opacity: 0.85;
-}
+// Die Datumskachel ist `DatumKachel` (ui/bedienung) – gemeinsam mit dem Dienstplaner.
 
 .info {
   flex: 1;

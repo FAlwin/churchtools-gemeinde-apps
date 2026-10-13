@@ -25,6 +25,25 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Adresse (`#/termine`), Neuladen und Zurück funktionieren. Termine, Planen und Abwesenheiten zeigen noch
   einen Platzhalter.
 
+### Neu (Dienstplaner, E3-2)
+
+- **Termine** (#511, Entwurf v17): Liste nach Monaten mit „Meine | Alle“ (Vorgabe Meine), Filter nach
+  Veranstaltung – jeder Terminname, der mindestens zweimal vorkommt, wird ein Filter, einzelne fallen unter
+  „Weitere“ (nichts fest eingebaut). Plaketten mit den eigenen Diensten (zugesagt/angefragt), „abgesagt“;
+  Planer sehen „N frei“ ihrer Dienstgruppen oder einen Haken, wenn alles besetzt ist. Geladen wird in
+  Schritten von 8 Wochen („Weitere Termine laden“), beim Wechseln der Reiter nicht neu. Die Wahl bleibt im
+  Gerät gemerkt.
+
+### Intern (E3-2)
+
+- **Eine Zeitrechnung:** `ortszeitAus`/`utcAus` liegen jetzt in `shared/ct/zeit.ts`, `tagAusIso` rechnet
+  darüber (vorher eigene Formatierer in `zeit.ts` und `shared/anmeldung/termin.ts`, dort ohne die Regel
+  „ohne Zeitzone nicht umrechnen“). `termin.ts` leitet weiter.
+- Neu geteilt: `shared/ct/datum.ts` (Wochentag, Kachel, Monat – die Anmeldungen ziehen nach),
+  `shared/ct/dienste.ts` (`/services` mit Dienstgruppe und Gruppen), `shared/dienstplan/termine.ts` (die
+  Regeln der Liste) und `ui/bedienung/DatumKachel` – die Kachel der Terminliste der Musik-App, die sie jetzt
+  ebenfalls nutzt (CSS unverändert).
+
 ### Geändert
 
 - **Reiterleiste in den ChurchTools-Erweiterungen schmaler** (#504, Musik-App und Dienstplaner): Im

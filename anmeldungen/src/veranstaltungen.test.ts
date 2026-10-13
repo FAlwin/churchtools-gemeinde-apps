@@ -3,11 +3,11 @@ import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
 import { ApiError } from '@ui/ct/fehler';
 import {
   einstellungenAlsText,
-  standardFormular,
   EINSTELLUNGEN_KENNUNG,
   type OeffentlicheEinstellungen,
 } from '@shared/anmeldung/formular';
 import type { MeineGruppe } from '@shared/ct/gruppen';
+import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import { ladeUebersicht } from './veranstaltungen';
 
 /**
@@ -26,25 +26,13 @@ function json(status: number, body: unknown): Response {
 
 function beschreibung(beginn: string | null, bezahlt?: number): string {
   const e: OeffentlicheEinstellungen = {
+    ...neueEinstellungen('einfach'),
     termin: beginn ? { beginn, ende: null, ort: 'Saal', terminId: null } : null,
     preis: {
+      ...neueEinstellungen('einfach').preis,
       grundpreis: { art: 'fest', betragCent: 1200, gilt: 'person', auswahlName: '', optionen: [] },
-      alter: [],
-      anpassungen: [],
-      extras: [],
-    },
-    formular: standardFormular(),
-    gestaltung: {
-      vorlage: 'klassisch',
-      farbe: '#2563eb',
-      feldstil: 'kasten',
-      knoepfe: 'rund',
-      text: '',
-      gemeindename: true,
     },
     ctFelder: bezahlt ? { bezahlt } : {},
-    wer: 'familie',
-    plaetze: { zeigen: 'knapp', knappUnter: 5 },
   };
   return einstellungenAlsText(e);
 }

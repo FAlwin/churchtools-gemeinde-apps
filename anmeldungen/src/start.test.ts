@@ -81,6 +81,32 @@ describe('ladeStart', () => {
     });
   });
 
+  it('Veranstaltungen, in denen man selbst Mitglied ist, sind keine „eigenen Gruppen“', async () => {
+    ct({
+      ...GUT,
+      '/persons/1/groups': () =>
+        json(200, {
+          data: [
+            {
+              group: { title: 'Technik', domainIdentifier: '7', domainAttributes: { note: '' } },
+              groupTypeRoleId: 15,
+              groupMemberStatus: 'active',
+            },
+            {
+              group: {
+                title: 'Gemeindeessen',
+                domainIdentifier: '91',
+                domainAttributes: { note: 'anmeldung:v1:{}' },
+              },
+              groupTypeRoleId: 32,
+              groupMemberStatus: 'active',
+            },
+          ],
+        }),
+    });
+    expect((await ladeStart()).gruppen.map((g) => g.name)).toEqual(['Technik']);
+  });
+
   it('niemand angemeldet (id -1) → 401, keine weiteren Anfragen', async () => {
     ct({ ...GUT, '/whoami': () => json(200, { data: { id: -1, lastName: 'Anonymous' } }) });
     const e = await ladeStart().catch((x: unknown) => x);

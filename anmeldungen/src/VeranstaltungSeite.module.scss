@@ -1,0 +1,91 @@
+// Seite einer Veranstaltung (A3) – Karten wie die Startseite (Startseite.module.scss), dazu Kopf und Liste.
+@use '@ui/design/mixins' as m;
+
+.seite {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.zurueck {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px 4px 0;
+  border: none;
+  background: none;
+  color: var(--blue-ink);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.kopf {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  > div:first-child {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  h1 {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+  }
+}
+
+.aktionen {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.freigeben {
+  height: 38px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 10px;
+  background: var(--blue);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bearbeiten {
+  @include m.auswahlKnopf;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+
+.kv {
+  display: grid;
+  grid-template-columns: minmax(110px, max-content) 1fr;
+  gap: 8px 16px;
+  padding: 12px 14px 14px;
+  font-size: 15px;
+
+  dt {
+    color: var(--text2);
+  }
+
+  dd {
+    color: var(--text);
+    min-width: 0;
+  }
+}
+
+.hinweis {
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.45;
+}

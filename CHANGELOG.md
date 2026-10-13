@@ -42,6 +42,34 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Volume; Testkonzept, README (Ablauf bearbeiten, Funktionen der Erweiterung), CLAUDE.md und
   Konfigurationsmanagement nachgezogen.
 
+### Neu (Anmeldungen)
+
+- **Veranstaltungen anlegen und einrichten** (#486, Bauplan A3 – der erste Schritt, der in ChurchTools
+  schreibt). Eigene Gruppenart „Anmeldung“; Veranstaltungen ohne Anmeldung bleiben, wie sie sind.
+  - **„Neue Veranstaltung“** für Leitung, Co-Leitung und Organisatoren eines Teams (nach den Rechten, die
+    ChurchTools meldet): Vorlage (einfaches Event, Kinder-Event, Freizeit) oder **„wie eine frühere“** –
+    die Kopie bekommt die neuen Feldnummern, ihr Datum wird geleert. Angelegt wird ein Entwurf unter dem
+    Team, mit den Feldern Betrag, Aufschlüsselung, Auswahl, Extras, Bezahlt, Bezahlt am.
+  - **Seite einer Veranstaltung** mit Termin, Anmeldung (Zeitraum, Plätze, Warteliste, freie Plätze
+    zeigen), „Wer meldet sich an?“, Löschfrist – und **Freigeben**. Wer nicht einrichten darf, sieht alles
+    ohne „Bearbeiten“.
+  - **Termin immer aus dem Kalender:** vorhandenen wählen oder neu anlegen (nur in Kalendern, in die man
+    schreiben darf). Neue Termine bekommen den Link zur Anmeldung; vorhandene bleiben unangetastet (ChurchTools
+    ersetzt beim Ändern den ganzen Termin), dort gibt es „Link zur Anmeldung kopieren“. Datum und Ort werden
+    kopiert, nicht verknüpft.
+  - **Jeder Schreibschritt wird nachgelesen;** übernimmt ChurchTools etwas nicht, sagt die Seite genau
+    das, statt „gespeichert“ zu melden.
+  - Einrichtung in ChurchTools (Gruppenart, Anlegen, Rechte in den Veranstaltungen, Kalender) Schritt für
+    Schritt in `docs/betrieb/ANMELDUNGEN.md`.
+
+### Behoben (Anmeldungen)
+
+- **Ältere Einstellungen bleiben lesbar:** Neue Angaben im Einstellungsformat (`loeschfristMonate`,
+  `termin`) haben Standardwerte – sonst wären Veranstaltungen, die vorher angelegt wurden, als „unlesbar“
+  aus der Liste gefallen (an der Test-Instanz beim Bauen aufgefallen).
+- **Veranstaltungen, in denen man selbst Mitglied ist, stehen nicht mehr unter „Deine Gruppen“**
+  (ChurchTools liefert sie dort mit, gemessen).
+
 ## [2.34.1] – 2026-10-12
 
 ### Geändert

@@ -207,19 +207,18 @@ describe('Baukasten (A5): Bausteine ins Formular', () => {
     expect(ff.feldSpeichern.mock.calls[0][4]).toBe('price');
   });
 
-  it('ein vorhandenes Feld (ganz greifbar) klappt beim Ziehen weg, an seiner Stelle steht die Lücke', async () => {
+  it('ein vorhandenes Feld ist ganz greifbar; beim Ziehen wird es blass und bleibt stehen', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const { huelle, container } = zeigen();
     lage(container);
     expect(huelle('allergy').getAttribute('draggable')).toBe('true');
     fireEvent.dragStart(huelle('allergy'), { dataTransfer: dt() });
     await act(async () => {
-      vi.advanceTimersByTime(1);
+      vi.advanceTimersByTime(10);
     });
     expect(huelle('allergy').className).toMatch(/wirdGezogen/);
-    expect(screen.getByText('Hier loslassen').nextElementSibling?.getAttribute('data-feld')).toBe(
-      'foto',
-    );
+    // Keine Lücke von selbst: Ausblenden oder Umbauen beim Start bricht das Ziehen in Chrome ab.
+    expect(screen.queryByText('Hier loslassen')).toBeNull();
   });
 
   it('abgelegt wird, wo losgelassen wird – auch ohne vorheriges „dragover“', async () => {

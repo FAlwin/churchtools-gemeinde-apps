@@ -444,13 +444,6 @@ export function Baukasten({
     return letzte ? { bereich: letzte.bereich, vorId: null } : null;
   }
 
-  /** Die Stelle, an der ein Feld gerade steht (für die Lücke, sobald es beim Ziehen wegklappt). */
-  function zielAnStelle(f: Feld, bereich: Bereich): Ziel {
-    const liste = ablageListe(bereich);
-    const i = liste.findIndex((x) => x.id === f.id);
-    return { bereich, vorId: liste[i + 1]?.id ?? null };
-  }
-
   function ablegen(z: Ziel | null) {
     const g = gezogen.current;
     gezogen.current = null;
@@ -624,10 +617,10 @@ export function Baukasten({
           ev.dataTransfer.effectAllowed = 'move';
           ev.dataTransfer.setData('text/plain', f.id);
           ev.dataTransfer.setDragImage(ev.currentTarget, 24, 24);
+          // Das Feld wird nur blass, es klappt NICHT weg: Chrome bricht das Ziehen sofort ab, sobald das gezogene
+          // Element ausgeblendet wird (13.10.2026 – „Ziehen geht jetzt gar nicht mehr“, mit echter Maus
+          // nachgestellt: dragstart, sofort dragend). In jsdom nicht prüfbar.
           ziehenBeginnen({ art: 'feld', id: f.id });
-          // Wie bei Campflow: Das Feld klappt weg, an seiner Stelle steht gleich die Lücke – nichts springt,
-          // und es gibt keinen doppelten Platz. Erst im nächsten Takt, sonst fehlt dem Browser das Bild.
-          setTimeout(() => setZiel(zielAnStelle(f, bereich)));
         }}
         onDragEnd={ziehenEnde}
       >

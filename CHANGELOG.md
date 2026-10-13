@@ -25,8 +25,9 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   - **Ziehen** (Alwin: „Lücke springt“, „hakelig“): Die Stelle wird an den Plätzen vom Start des Ziehens
     gerechnet, nicht an den Feldern, die die Lücke gerade verschoben hat – so springt sie nicht mehr hin und her
     (wie SortableJS). Das ganze Feld lässt sich greifen, nicht nur der Griff; am Rand scrollt die Seite mit; ein
-    vorhandenes Feld klappt beim Ziehen weg, an seiner Stelle steht gleich die Lücke; „ganz unten“ im Kontakt
-    heißt beim Ziehen wirklich unter die Bemerkungen.
+    vorhandenes Feld wird beim Ziehen blass (ausblenden bricht das Ziehen in Chrome ab – kurz so ausgeliefert,
+    „geht jetzt gar nicht mehr“, mit echter Maus nachgestellt); „ganz unten“ im Kontakt heißt beim Ziehen
+    wirklich unter die Bemerkungen.
   - **Leiste:** Gruppen zum Einklappen mit Zahlen („5 von 8 im Formular“), Haken an Bausteinen, die schon
     drin sind, Kacheln heben sich beim Zeigen.
   - **Fragetyp ändern** unten im Feld – solange niemand geantwortet hat. ChurchTools ändert den Typ einer

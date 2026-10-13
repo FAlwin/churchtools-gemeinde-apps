@@ -2,6 +2,21 @@
 // Startseite der Anmeldungen (#474) – Tokens und Listen-Bausteine aus ui/design (ChurchTools-Look, #393).
 @use '../design/mixins' as m;
 
+/**
+ * **Der Rollbereich** (Abnahme Anmeldungen A3, Alwin 13.10.2026: am Handy „lässt sich nicht scrollen“).
+ * In der Erweiterung hängt `#root` fest im Bereich unter der ChurchTools-Leiste und hat
+ * `overflow: hidden` (`ui/design/_grundregeln.scss`, `.ct-extension #root`). Das frühere
+ * `#root { overflow-y: auto }` in den `main.scss` verlor dagegen, weil Klasse + ID schwerer wiegt als
+ * eine ID allein; alles unterhalb des Fensterrands war abgeschnitten. Deshalb scrollt der Inhalt eine
+ * Ebene tiefer, hier. `#root` bleibt der feste Rahmen (`transform`), an dem die Fenster (`Sheet`,
+ * `position: fixed`) hängen; so wandern sie beim Scrollen nicht mit weg.
+ */
+.rolle {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .seite {
   max-width: 1120px;
   margin: 0 auto;

@@ -101,3 +101,29 @@
   font-size: 13px;
   line-height: 1.45;
 }
+
+// Link zur Anmeldung: in voller Länge (umbrochen) und darunter „Link kopieren“ (A3-Abnahme).
+.linkZeile {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.linkText {
+  @include m.eingabefeld;
+  width: 100%;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text2);
+  word-break: break-all;
+  resize: none;
+}
+
+.kopieren {
+  @include m.auswahlKnopf;
+  height: 42px;
+  border-radius: 10px;
+  font-size: 15px;
+}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { Segment } from '@ui/bedienung/Segment';
 import { ctBasis } from '@ui/ct/basis';
@@ -55,25 +55,49 @@ function Fehler({ text }: { text: string | null }) {
   ) : null;
 }
 
-/** Den Link zur Anmeldung in die Zwischenablage – geht das nicht (alter Browser), steht er zum Markieren da. */
+/**
+ * Der Link zur Anmeldung – **als Text zu sehen und mit einem Knopf zu kopieren** (Abnahme A3, Alwin
+ * 13.10.2026: „ein Link als Text“). Lässt der Browser das Kopieren nicht zu, ist der Link markiert und
+ * kann von Hand kopiert werden.
+ */
 function LinkKopieren({ link }: { link: string }) {
-  const [stand, setStand] = useState<'bereit' | 'kopiert' | 'zeigen'>('bereit');
-  if (stand === 'zeigen') {
-    return <input className={f.eingabe} readOnly value={link} onFocus={(e) => e.target.select()} />;
-  }
+  const [stand, setStand] = useState<'bereit' | 'kopiert' | 'vonHand'>('bereit');
+  const feld = useRef<HTMLTextAreaElement>(null);
   return (
-    <button
-      type="button"
-      className={f.option}
-      onClick={() =>
-        navigator.clipboard.writeText(link).then(
-          () => setStand('kopiert'),
-          () => setStand('zeigen'),
-        )
-      }
-    >
-      {stand === 'kopiert' ? 'Link kopiert' : 'Link zur Anmeldung kopieren'}
-    </button>
+    <div className={f.feld}>
+      <span>Link zur Anmeldung</span>
+      <div className={f.linkZeile}>
+        <textarea
+          ref={feld}
+          className={f.linkText}
+          readOnly
+          rows={2}
+          value={link}
+          aria-label="Link zur Anmeldung"
+          onFocus={(e) => e.target.select()}
+        />
+        <button
+          type="button"
+          className={f.kopieren}
+          onClick={() =>
+            navigator.clipboard.writeText(link).then(
+              () => setStand('kopiert'),
+              () => {
+                feld.current?.select();
+                setStand('vonHand');
+              },
+            )
+          }
+        >
+          {stand === 'kopiert' ? 'Link kopiert' : 'Link kopieren'}
+        </button>
+      </div>
+      {stand === 'vonHand' && (
+        <small className={f.hinweis}>
+          Der Browser lässt das Kopieren nicht zu – der Link ist markiert, kopiere ihn von Hand.
+        </small>
+      )}
+    </div>
   );
 }
 

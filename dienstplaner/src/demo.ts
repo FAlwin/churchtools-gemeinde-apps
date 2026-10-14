@@ -231,8 +231,21 @@ function speicherDemo(fall: string) {
     zeit: zeit(0, '07:00'),
     version: 1,
   };
+  // Veraltet (E4-3-3): eingetragen, als Gesang am Termin 103 frei war – inzwischen ist dort Spike angefragt.
+  const veraltet = {
+    ...spike,
+    ort: { eventId: 103, serviceId: 9, index: null },
+    ziel: { art: 'person', personId: 47, name: 'Finn Test' },
+    von: { personId: 1, name: 'Alwin' },
+  };
   const werte = new Map<number, { id: number; dataCategoryId: number; value: string }[]>([
-    [40, [{ id: 400, dataCategoryId: 40, value: JSON.stringify(spike) }]],
+    [
+      40,
+      [
+        { id: 400, dataCategoryId: 40, value: JSON.stringify(spike) },
+        { id: 401, dataCategoryId: 40, value: JSON.stringify(veraltet) },
+      ],
+    ],
   ]);
   let naechste = 500;
   const ids = () => kategorien.map((k) => k.id);

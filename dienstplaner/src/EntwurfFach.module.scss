@@ -1,0 +1,37 @@
+// Entwurfs-Fach (E4-3-3, Entwurf Abschnitt 3) – Tokens aus ui/design; Knöpfe und Hinweise aus WerKann.module.scss.
+
+// „Ben Test – Entwurf, noch nicht gesendet“ – blau wie der Entwurf in der Matrix.
+.status {
+  margin: 4px 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.45;
+
+  small {
+    display: block;
+    margin-top: 2px;
+    color: var(--text2);
+    font-size: 12.5px;
+  }
+}
+
+.modus {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+
+  // „Anfrage senden“ brach im schmalen Fach um (Browser-Check, 14.10.2026).
+  button {
+    white-space: nowrap;
+  }
+}
+
+// „Entfernen“ – nur die Schrift rot, wie im Entwurf.
+.gefahr {
+  color: var(--red);
+}

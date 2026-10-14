@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
-import { _vergissModul, ladeEntwuerfe, richteSchubladeEin } from './ladeEntwuerfe';
+import { _vergissModul, entferneEntwurf, ladeEntwuerfe, richteSchubladeEin } from './ladeEntwuerfe';
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -158,5 +158,28 @@ describe('richteSchubladeEin', () => {
       'POST /api/custommodules/16/customdatacategories': () => json(201, { data: { id: 40 } }),
     });
     await expect(richteSchubladeEin(TECHNIK)).rejects.toMatchObject({ status: 502 });
+  });
+});
+
+describe('entferneEntwurf', () => {
+  it('löscht den Wert in der Schublade der Gruppe; ohne Schublade → „kein Recht“, ohne Anfrage', async () => {
+    let werte = [wert(100, 20)];
+    const spy = ct({
+      ...GRUND,
+      'GET /api/csrftoken': () => json(200, { data: 'tok' }),
+      'GET /api/custommodules/16/customdatacategories/30/customdatavalues': () =>
+        json(200, { data: werte }),
+      'DELETE /api/custommodules/16/customdatacategories/30/customdatavalues/100': () => {
+        werte = [];
+        return new Response(null, { status: 204 });
+      },
+    });
+    const d = await ladeEntwuerfe([TECHNIK, PROGRAMM]);
+    const ort = { eventId: 20, serviceId: 7, index: null };
+    expect(await entferneEntwurf(d, 3, ort, 1)).toEqual({ ok: true, entwurf: null });
+    expect(spy.mock.calls.some((c) => c[1]?.method === 'DELETE')).toBe(true);
+    spy.mockClear();
+    expect(await entferneEntwurf(d, 1, ort, 1)).toEqual({ ok: false, grund: 'kein-recht' });
+    expect(spy).not.toHaveBeenCalled();
   });
 });

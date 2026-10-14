@@ -99,3 +99,14 @@ export function utcAus(lokal: string, zeitzone: string): string {
 export function tagAusIso(zeitpunkt: string, zeitzone: string): string {
   return ortszeitAus(zeitpunkt, zeitzone).slice(0, 10);
 }
+
+/**
+ * **Wann etwas zuletzt gespeichert wurde** – „heute 18:42“ bzw. „12.10. 18:42“, in Ortszeit der Gemeinde
+ * (Dienstplaner E4-3-3: „Eingetragen von Spike, heute 18:42“). Auf `ortszeitAus` gebaut, nicht nachgerechnet.
+ */
+export function wannText(zeitpunkt: string, zeitzone: string, jetzt = new Date()): string {
+  const lokal = ortszeitAus(zeitpunkt, zeitzone);
+  const uhr = lokal.slice(11, 16);
+  if (lokal.slice(0, 10) === tagAusIso(jetzt.toISOString(), zeitzone)) return `heute ${uhr}`;
+  return `${lokal.slice(8, 10)}.${lokal.slice(5, 7)}. ${uhr}`;
+}

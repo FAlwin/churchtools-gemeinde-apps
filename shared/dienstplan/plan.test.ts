@@ -64,6 +64,8 @@ describe('platzAus', () => {
   it('„Namen verbergen“: besetzt, aber ohne Namen – der mitgeschickte echte Name fällt weg', () => {
     const p = platzAus({ personId: -2, name: 'Echter Name', isAccepted: true }, ICH);
     expect(p).toEqual({
+      // Die Belegung (für „Entwurf veraltet“) kennt nur die verborgene ID, nie den Namen.
+      belegung: { art: 'zusage', personId: -2 },
       art: 'zugesagt',
       name: null,
       gast: false,
@@ -71,6 +73,19 @@ describe('platzAus', () => {
       ich: false,
       personId: null,
       index: null,
+    });
+    expect(JSON.stringify(p)).not.toContain('Echter Name');
+  });
+
+  it('jeder Platz trägt seine Belegung – dieselbe Regel wie beim Einteilen (`belegungAus`)', () => {
+    expect(platzAus({ personId: null, name: null }, ICH).belegung).toEqual({ art: 'frei' });
+    expect(platzAus({ personId: 5, name: 'Anna', isAccepted: false }, ICH).belegung).toEqual({
+      art: 'anfrage',
+      personId: 5,
+    });
+    expect(platzAus({ personId: null, name: ' Max ', isAccepted: true }, ICH).belegung).toEqual({
+      art: 'gast',
+      name: 'Max',
     });
   });
 

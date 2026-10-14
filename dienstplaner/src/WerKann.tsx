@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
@@ -6,6 +6,7 @@ import { kandidatenAus, kandidatHinweis, type Kandidat } from '@shared/dienstpla
 import type { Entwurf, EntwurfErgebnis, EntwurfZiel } from '@shared/dienstplan/entwuerfe';
 import { ladeWerKann } from './ladeWerKann';
 import { grundText } from './ladeEntwuerfe';
+import { useInsBild } from './useInsBild';
 import styles from './WerKann.module.scss';
 
 /** Welcher freie Platz – alles, was das Fach zum Laden und für die Überschrift braucht. */
@@ -42,6 +43,8 @@ export type Eintragen =
   | {
       art: 'bereit';
       onWahl: (ziel: EntwurfZiel, erwartet: number | null) => Promise<EntwurfErgebnis>;
+      /** Ersetzt einen Entwurf („Andere Person wählen“, E4-3-3): dessen Version. Sonst `null` (neu). */
+      erwartet?: number | null;
     };
 
 type Zustand =
@@ -80,13 +83,8 @@ export function WerKann({
     null,
   );
 
-  // Ein Hinweis (Konflikt, Fehler) steht unter der langen Liste – am Handy sah man ihn nach dem Tippen oben
-  // gar nicht (in der Test-Instanz gefunden, 14.10.2026). Deshalb rollt das Fach ihn ins Bild.
-  const hinweisRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (meldung || konflikt)
-      hinweisRef.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
-  }, [meldung, konflikt]);
+  // Ein Hinweis (Konflikt, Fehler) steht unter der langen Liste – ins Bild rollen (`useInsBild`).
+  const hinweisRef = useInsBild<HTMLDivElement>(meldung ?? konflikt);
 
   const bereit = eintragen?.art === 'bereit' ? eintragen : null;
   const waehle = async (ziel: EntwurfZiel, erwartet: number | null) => {
@@ -172,7 +170,10 @@ export function WerKann({
                           className={`${klasse} ${styles.waehlbar}`}
                           disabled={laeuft}
                           onClick={() =>
-                            void waehle({ art: 'person', personId: k.personId, name: k.name }, null)
+                            void waehle(
+                              { art: 'person', personId: k.personId, name: k.name },
+                              bereit.erwartet ?? null,
+                            )
                           }
                         >
                           {inhalt}
@@ -190,7 +191,8 @@ export function WerKann({
               className={styles.gastZeile}
               onSubmit={(e) => {
                 e.preventDefault();
-                if (gast.trim().length >= 2) void waehle({ art: 'gast', name: gast.trim() }, null);
+                if (bereit && gast.trim().length >= 2)
+                  void waehle({ art: 'gast', name: gast.trim() }, bereit.erwartet ?? null);
               }}
             >
               <h3 className={styles.titel}>Jemand ohne ChurchTools-Konto</h3>

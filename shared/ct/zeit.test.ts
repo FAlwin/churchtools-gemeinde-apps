@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ortszeitAus, tagAusIso, utcAus } from './zeit';
+import { ortszeitAus, tagAusIso, utcAus, wannText } from './zeit';
 
 const BERLIN = 'Europe/Berlin';
 
@@ -30,5 +30,17 @@ describe('ortszeitAus – die eine Umrechnung UTC → Ortszeit', () => {
     for (const lokal of ['2026-03-29T10:00', '2026-10-25T10:00', '2026-07-01T23:59']) {
       expect(ortszeitAus(utcAus(lokal, BERLIN), BERLIN)).toBe(lokal);
     }
+  });
+});
+
+describe('wannText (E4-3-3)', () => {
+  const jetzt = new Date('2026-10-14T20:00:00Z');
+  it('heute → „heute HH:MM“ in Ortszeit der Gemeinde', () => {
+    expect(wannText('2026-10-14T16:42:00.000Z', 'Europe/Berlin', jetzt)).toBe('heute 18:42');
+  });
+  it('anderer Tag → „TT.MM. HH:MM“; der Tag zählt in Ortszeit, nicht in UTC', () => {
+    expect(wannText('2026-10-12T07:05:00.000Z', 'Europe/Berlin', jetzt)).toBe('12.10. 09:05');
+    // 23:30 UTC am 13. ist in Berlin schon der 14. – also „heute“.
+    expect(wannText('2026-10-13T22:30:00.000Z', 'Europe/Berlin', jetzt)).toBe('heute 00:30');
   });
 });

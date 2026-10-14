@@ -7,6 +7,17 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Dienstplaner, E4-1)
+
+- **Schreibkern zum Einteilen** (#531, noch ohne Oberfläche): `shared/dienstplan/einteilen.ts` bringt einen
+  Platz sicher auf eine neue Belegung (Anfrage, Zusage, Gast oder frei). Dafür wird erst frisch gelesen.
+  Steht inzwischen jemand anderes da, gibt es einen Konflikt statt eines Überschreibens. Dann wird
+  geschrieben, und danach wird nachgelesen: Erfolg ist erst, wer am Platz steht. Gemessen in E4-0:
+  Jedes Schreiben vergibt eine neue Platz-ID, deshalb wird der Platz über Dienst und `index` gemerkt.
+  Leeren per PUT lehnt ChurchTools ab, Zurückziehen geht über `decline`. Kein Schreibvorgang wird
+  automatisch wiederholt. Bei einem vorübergehenden Fehler wird nachgelesen, statt nochmal zu senden.
+  Jeder Fehlerfall hat einen eigenen Ausgang. Echt geprüft am Mess-Termin der Test-Instanz.
+
 ### Behoben (Dienstplaner)
 
 - **Matrix zeigte halbe Dienstgruppen** (#525, gefunden bei der Prüfung mit drei Rollen in der

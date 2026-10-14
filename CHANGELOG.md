@@ -7,6 +7,20 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Dienstplaner, E4-2)
+
+- **Fach „Wer kann?“** (#533, Entwurf v17): Einen freien Platz in der Matrix antippen, am Computer wie am
+  Handy, zeigt die Leute aus der ChurchTools-Gruppe des Dienstes. Oben stehen die, die frei und selten
+  dran sind. Bei jeder Person steht „frei“, „abwesend: Grund“ oder „am Tag schon: Dienst“, dazu
+  „N× im Monat“; ab 7 Personen gibt es ein Suchfeld. Antippbar sind freie Plätze nur dort, wo man den
+  Dienst planen darf oder Admin des Termins ist. Vorerst nur zum Ansehen, Einteilen kommt mit E4-3.
+  **Frühere Absagen werden nicht gezeigt und zählen nicht für die Reihenfolge** (Alwin, 14.10.2026):
+  ChurchTools unterscheidet über die Schnittstelle nicht zwischen „hat abgesagt“ und „vom Planer
+  herausgenommen“, rechnet aber −500 Punkte ab. Den privaten Kommentar einer Abwesenheit zeigt das Fach
+  nicht. Geladen wird erst beim Öffnen (`possiblepersons` je Dienst) und zwei Minuten gemerkt.
+- Intern: `shared/dienstplan/werKann.ts` (Regeln), `PlanPlatz.index` und `PlanZeile.planbar`,
+  `monatName` in `shared/ct/datum.ts`.
+
 ### Neu (Dienstplaner, E4-1)
 
 - **Schreibkern zum Einteilen** (#531, noch ohne Oberfläche): `shared/dienstplan/einteilen.ts` bringt einen

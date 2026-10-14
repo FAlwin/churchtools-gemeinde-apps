@@ -123,6 +123,11 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   bleiben sie zusammen rechts (vorher schwebte „Einstellungen“ mitten in der Zeile).
 - **Formular-Adresse zum Testen:** Neben `https://…` ist auch `http://localhost:<Port>` erlaubt (das Formular auf
   dem eigenen Rechner), bis die eigene Adresse der Gemeinde steht.
+- **Karte „Anmeldelink“** (Entwurf `link-kopieren-v2`, Alwin: „B – bitte mit einheitlichen Buttons“): Ist eine
+  Veranstaltung freigegeben und die Formular-Adresse eingerichtet, steht oben auf ihrer Seite der Link als Text,
+  dazu drei gleiche Knöpfe **Kopieren** (danach kurz „Kopiert“), **Öffnen** (neuer Tab) und **Teilen** (Teilen-Menü
+  des Geräts; fehlt, wo der Browser keins hat). Vorher stand der Link nur im Termin-Fenster. Das Kopieren beider
+  Stellen läuft über einen gemeinsamen Hook (`useLinkKopieren.ts`).
 - **„Erst einrichten“ mit Nummern:** Die Schritte waren in ChurchTools ohne Zahlen (ChurchTools nimmt Listen
   die Nummern).
 - **Demo** (`?demo`) kennt die Gemeinde-Einstellungen (Formular-Adresse, Vorgaben); `?demo=einrichten`

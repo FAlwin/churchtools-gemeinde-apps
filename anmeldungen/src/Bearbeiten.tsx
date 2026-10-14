@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
+import { useLinkKopieren } from './useLinkKopieren';
 import { Segment } from '@ui/bedienung/Segment';
 import { ctBasis } from '@ui/ct/basis';
 import { tagAusIso } from '@shared/ct/zeit';
@@ -55,8 +56,8 @@ export function Fehler({ text }: { text: string | null }) {
  * kann von Hand kopiert werden.
  */
 function LinkKopieren({ link }: { link: string }) {
-  const [stand, setStand] = useState<'bereit' | 'kopiert' | 'vonHand'>('bereit');
   const feld = useRef<HTMLTextAreaElement>(null);
+  const { stand, kopieren } = useLinkKopieren(link, feld);
   return (
     <div className={f.feld}>
       <span>Link zur Anmeldung</span>
@@ -70,19 +71,7 @@ function LinkKopieren({ link }: { link: string }) {
           aria-label="Link zur Anmeldung"
           onFocus={(e) => e.target.select()}
         />
-        <button
-          type="button"
-          className={f.kopieren}
-          onClick={() =>
-            navigator.clipboard.writeText(link).then(
-              () => setStand('kopiert'),
-              () => {
-                feld.current?.select();
-                setStand('vonHand');
-              },
-            )
-          }
-        >
+        <button type="button" className={f.kopieren} onClick={() => void kopieren()}>
           {stand === 'kopiert' ? 'Link kopiert' : 'Link kopieren'}
         </button>
       </div>

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import { geburtsdatumAn, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import { ApiError } from '@ui/ct/fehler';
@@ -320,6 +320,59 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Link kopieren' }));
     expect(await screen.findByText(/kopiere ihn von Hand/)).toBeTruthy();
     expect(screen.getByRole('textbox', { name: 'Link zur Anmeldung' })).toBeTruthy();
+  });
+
+  it('freigegeben: Karte „Anmeldelink“ oben – Kopieren (kurz „Kopiert“), Öffnen, Teilen', async () => {
+    stelle(true, 1);
+    const kopieren = vi.fn().mockResolvedValue(undefined);
+    const teilen = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: kopieren },
+      configurable: true,
+    });
+    Object.defineProperty(navigator, 'share', { value: teilen, configurable: true });
+    // Auch wenn der Test scheitert: Das Teilen-Menü darf nicht in den nächsten Test durchsickern.
+    onTestFinished(() => void delete (navigator as { share?: unknown }).share);
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Anmeldelink' });
+    const LINK = 'https://anmeldung.beispiel.de/#ct.test/91';
+    expect(within(karte).getByRole('textbox', { name: 'Anmeldelink' })).toHaveProperty(
+      'value',
+      LINK,
+    );
+    expect(within(karte).getByRole('link', { name: 'Öffnen' }).getAttribute('href')).toBe(LINK);
+    vi.useFakeTimers();
+    try {
+      fireEvent.click(within(karte).getByRole('button', { name: 'Kopieren' }));
+      await act(async () => {});
+      expect(kopieren).toHaveBeenCalledWith(LINK);
+      expect(within(karte).getByRole('button', { name: 'Kopiert' })).toBeTruthy();
+      await act(async () => {
+        vi.advanceTimersByTime(1600);
+      });
+      expect(within(karte).getByRole('button', { name: 'Kopieren' })).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+    fireEvent.click(within(karte).getByRole('button', { name: 'Teilen' }));
+    expect(teilen).toHaveBeenCalledWith({ title: 'Gemeindeessen', url: LINK });
+  });
+
+  it('Anmeldelink: nicht im Entwurf, nicht ohne Formular-Adresse; ohne Teilen-Menü kein „Teilen“', async () => {
+    stelle(true, 2);
+    zeigen();
+    await screen.findByRole('region', { name: 'Termin' });
+    expect(screen.queryByRole('region', { name: 'Anmeldelink' })).toBeNull();
+    cleanup();
+    stelle(true, 1);
+    zeigen(null);
+    await screen.findByRole('region', { name: 'Termin' });
+    expect(screen.queryByRole('region', { name: 'Anmeldelink' })).toBeNull();
+    cleanup();
+    stelle(true, 1);
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Anmeldelink' });
+    expect(within(karte).queryByRole('button', { name: 'Teilen' })).toBeNull();
   });
 
   it('Anmeldung: Beginn 0:00 und Schluss 23:59 in Ortszeit, als UTC gespeichert', async () => {

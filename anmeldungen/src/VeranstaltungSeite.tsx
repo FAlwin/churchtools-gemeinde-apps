@@ -3,7 +3,7 @@ import { Icon } from '@ui/icons/icons';
 import { ctBasis } from '@ui/ct/basis';
 import { tagAusIso } from '@shared/ct/zeit';
 import { geburtsdatumAn, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
-import { ortszeitAus } from '@shared/anmeldung/termin';
+import { anmeldeLink, ortszeitAus } from '@shared/anmeldung/termin';
 import { kannEtwasKosten, wozuGeburtsdatum } from '@shared/anmeldung/preis';
 import { ibanText, verwendungszweck } from '@shared/anmeldung/bezahlung';
 import type { MeineGruppe } from '@shared/ct/gruppen';
@@ -28,6 +28,7 @@ import {
 import { PreisFensterZeigen, PreiseKarte, ProbeRechnen, type PreisFenster } from './Preise';
 import { VerwaltenFenster } from './Verwalten';
 import { FreigebenFenster } from './FreigebenFenster';
+import { AnmeldeLinkKarte } from './AnmeldeLink';
 import { Baukasten } from './Baukasten';
 import { Segment } from '@ui/bedienung/Segment';
 import type { Aenderung } from './Rueckgaengig';
@@ -248,6 +249,10 @@ export function VeranstaltungSeite({
         <p className={v.hinweis}>
           Einrichten und freigeben kann die Leitung der Gruppe. Du kannst alles ansehen.
         </p>
+      )}
+      {/* Erst freigegeben nimmt das Formular etwas an – vorher gibt es keinen Link (14.10.2026). */}
+      {!entwurf && formularAdresse && (
+        <AnmeldeLinkKarte link={anmeldeLink(formularAdresse, ctBasis(), id)} titel={daten.name} />
       )}
 
       <Segment<Reiter>

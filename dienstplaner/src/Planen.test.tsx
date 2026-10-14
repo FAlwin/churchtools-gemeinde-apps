@@ -273,8 +273,9 @@ describe('Planen – Filter, Breite, abgesetzt (E3-5)', () => {
 
   it('Filter nach Veranstaltung blendet Spalten aus – „Weitere“ = die Einzeltermine', () => {
     zeige2();
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
     const arten = within(screen.getByRole('group', { name: 'Veranstaltungen' }));
-    fireEvent.click(arten.getByRole('button', { name: 'Weitere' }));
+    fireEvent.click(arten.getByRole('checkbox', { name: 'Weitere' }));
     expect(spaltenNamen()).toEqual(['Gottesdienst', 'Gottesdienst', 'Gottesdienst']);
   });
 
@@ -287,8 +288,9 @@ describe('Planen – Filter, Breite, abgesetzt (E3-5)', () => {
         onMehr={() => {}}
       />,
     );
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
     const gruppen = within(screen.getByRole('group', { name: 'Gruppen' }));
-    fireEvent.click(gruppen.getByRole('button', { name: 'Programm' }));
+    fireEvent.click(gruppen.getByRole('checkbox', { name: 'Programm' }));
     expect(tabelle().queryByRole('button', { name: /Programm/ })).toBeNull();
     unmount();
     zeige2();
@@ -298,10 +300,11 @@ describe('Planen – Filter, Breite, abgesetzt (E3-5)', () => {
 
   it('alles ausgeblendet → sagt, wie man wieder einblendet', () => {
     zeige2();
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
     const gruppen = within(screen.getByRole('group', { name: 'Gruppen' }));
-    fireEvent.click(gruppen.getByRole('button', { name: 'Programm' }));
-    fireEvent.click(gruppen.getByRole('button', { name: 'Technik' }));
-    expect(screen.getByText(/Nichts eingeblendet/)).toBeTruthy();
+    fireEvent.click(gruppen.getByRole('checkbox', { name: 'Programm' }));
+    fireEvent.click(gruppen.getByRole('checkbox', { name: 'Technik' }));
+    expect(screen.getByText(/Nichts eingeblendet – über „Filter“/)).toBeTruthy();
   });
 
   it('Spaltenbreite S/M/L wird gemerkt', () => {

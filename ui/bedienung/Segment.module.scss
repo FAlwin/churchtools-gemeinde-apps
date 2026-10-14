@@ -29,3 +29,24 @@
   color: var(--text3);
   opacity: 0.55;
 }
+
+// Verbunden (Dienstplaner, 14.10.2026): eine gemeinsame Schiene, die gewählte Option hell darauf.
+.verbunden {
+  display: inline-flex;
+  gap: 0;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--seg-track);
+
+  .btn {
+    border: 0;
+    background: transparent;
+    border-radius: calc(var(--r-ctrl) - 2px);
+    padding: 7px 12px;
+  }
+
+  .on {
+    @include auswahlKnopfAn;
+  }
+}

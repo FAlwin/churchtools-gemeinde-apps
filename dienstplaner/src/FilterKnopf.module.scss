@@ -1,0 +1,87 @@
+// Filter-Knopf mit Menü (Entwurf A, 14.10.2026) – dieselbe Knopf-Bauart wie die Umschalter (`auswahlKnopf`).
+@use '@ui/design/mixins' as m;
+
+.rahmen {
+  position: relative;
+}
+
+.knopf {
+  @include m.auswahlKnopf;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: var(--r-ctrl);
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+
+// Etwas ist ausgeblendet: Knopf blau getönt, damit man es nicht übersieht.
+.aktiv {
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+  border-color: transparent;
+}
+
+.zahl {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--blue);
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.menue {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 230px;
+  max-width: min(320px, calc(100vw - 32px));
+  padding: 8px 12px 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+.abschnitt {
+  margin: 0;
+  padding: 4px 0 2px;
+  border: 0;
+
+  & + & {
+    margin-top: 8px;
+  }
+
+  legend {
+    padding: 0;
+    margin-bottom: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--text2);
+  }
+}
+
+.zeile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  font-size: 14.5px;
+  color: var(--text);
+  cursor: pointer;
+
+  input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--blue);
+  }
+}

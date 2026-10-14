@@ -57,4 +57,18 @@ describe('Segment', () => {
     );
     expect(screen.getByRole('button', { name: /^Einträge\s*3$/ })).toBeTruthy();
   });
+
+  it('„verbunden“ nur auf Wunsch (Dienstplaner) – ohne Angabe bleibt die Musik-App-Form', () => {
+    const opts = [
+      { value: 'a', label: 'A' },
+      { value: 'b', label: 'B' },
+    ];
+    const { rerender } = render(
+      <Segment value="a" options={opts} onChange={() => {}} ariaLabel="Probe" />,
+    );
+    const gruppe = () => screen.getByRole('group', { name: 'Probe' });
+    expect(gruppe().className).not.toMatch(/verbunden/);
+    rerender(<Segment value="a" options={opts} onChange={() => {}} ariaLabel="Probe" verbunden />);
+    expect(gruppe().className).toMatch(/verbunden/);
+  });
 });

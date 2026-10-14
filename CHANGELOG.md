@@ -7,6 +7,19 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Geändert (Dienstplaner)
+
+- **Weniger Knopf-Formen** (#541, Alwin am Handy: „zu viele verschiedene Buttons“; Entwurf A aus drei):
+  - Statt zweier Reihen Filter-Pillen gibt es einen Knopf **„Filter“** mit Menü: je Abschnitt
+    (Veranstaltungen, Gruppen) eine Überschrift und Häkchen. Angehakt heißt „wird gezeigt“. Die Zahl am
+    Knopf sagt, wie viel ausgeblendet ist.
+  - Die Umschalter (Reiter oben, Matrix | Wer wie oft?, Meine | Alle, S/M/L) sind **verbunden** (eine
+    Schiene).
+  - Die Status-Schildchen in der Termine-Liste sind schlichter Text statt getönter Pillen.
+  - Die Funktion bleibt unverändert, ebenso der Zustand, den das Gerät sich merkt. Die Musik-App behält
+    ihre Umschalter: Die neue Bauart `verbunden` am gemeinsamen `Segment` greift nur, wo sie angegeben ist.
+  - `FilterChips` entfällt (ersetzt durch `FilterKnopf`).
+
 ### Intern
 
 - **Monatsnamen an einer Stelle** (#535): Sie standen viermal von Hand im Code (`shared/ct/datum.ts`,

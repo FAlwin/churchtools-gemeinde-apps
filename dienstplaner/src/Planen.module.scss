@@ -436,10 +436,12 @@
   gap: 8px 14px;
 }
 
-.filter {
+// Rechts in der Leiste: Spaltenbreite (Computer) und der Filter-Knopf.
+.rechts {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 14px;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
 }
 
 // „Wer wie oft?“ brach bei mittlerer Breite zweizeilig um (Prüfung mit drei Rollen, 13.10.2026). Nur hier –
@@ -452,7 +454,6 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-right: auto;
 }
 
 .leistenKnopf {

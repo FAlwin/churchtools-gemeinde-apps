@@ -326,6 +326,37 @@ describe('Feinheiten (A5): Schrift, Farben, Breite, Titelbild', () => {
     expect(logo({ logo: 'ct', logoUrl: null })).toBeNull();
   });
 
+  it('Logo oben in der Mitte → Titel auch mittig (Alwin, 14.10.2026); links daneben → wie eingestellt', () => {
+    const e = freizeit();
+    const klasse = (g: Partial<typeof e.gestaltung>) => {
+      const { container, unmount } = render(
+        <AnmeldeFormular
+          ansicht={{
+            name: 'X',
+            gemeinde: null,
+            einstellungen: {
+              ...e,
+              gestaltung: { ...e.gestaltung, kopfAusrichtung: 'links', ...g },
+            },
+          }}
+          heute={HEUTE}
+        />,
+      );
+      const k = container.firstElementChild!.className;
+      unmount();
+      return k;
+    };
+    expect(klasse({ logo: 'ct', logoUrl: 'https://ct.test/l', logoOrt: 'oben' })).toMatch(
+      /kopf-mitte/,
+    );
+    expect(klasse({ logo: 'ct', logoUrl: 'https://ct.test/l', logoOrt: 'links' })).not.toMatch(
+      /kopf-mitte/,
+    );
+    expect(klasse({ logo: 'keins', logoUrl: 'https://ct.test/l', logoOrt: 'oben' })).not.toMatch(
+      /kopf-mitte/,
+    );
+  });
+
   it('Titelbild in voller Größe, nicht das 150-Pixel-Vorschaubild (Alwin: „verzogen und unscharf“)', () => {
     const { container } = render(
       <AnmeldeFormular

@@ -106,6 +106,13 @@ const ersetzeFeld = (fo: Formular, feld: Feld): Formular => ({
   person: fo.person.map((f) => (f.id === feld.id ? feld : f)),
 });
 
+/** Ein Textfeld so hoch wie sein Inhalt (nicht jeder Browser kann `field-sizing: content`). */
+function hoeheAnpassen(el: HTMLTextAreaElement | null) {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = `${el.scrollHeight}px`;
+}
+
 /** Setzt `inert`: Die Felder im Baukasten zeigen nur, wie es aussieht – Klicks gehen an die Hülle. */
 const inert = (el: HTMLElement | null) => el?.setAttribute('inert', '');
 
@@ -763,15 +770,26 @@ export function Baukasten({
 
   const haken: BaukastenHaken = {
     feld: huelle,
+    // Ein mehrzeiliges Feld, damit lange Namen umbrechen wie im Formular (am Handy wurde „TEST A5 Bauka…“
+    // abgeschnitten); Enter speichert statt einer neuen Zeile.
     titel: (
-      <input
+      <textarea
+        ref={hoeheAnpassen}
         className={k.titel}
         value={nameEntwurf}
         maxLength={100}
+        rows={1}
         aria-label="Name der Veranstaltung"
-        onChange={(ev) => setNameEntwurf(ev.target.value)}
+        onChange={(ev) => {
+          setNameEntwurf(ev.target.value.replace(/\n/g, ' '));
+          hoeheAnpassen(ev.target);
+        }}
         onBlur={nameSichern}
-        onKeyDown={(ev) => ev.key === 'Enter' && ev.currentTarget.blur()}
+        onKeyDown={(ev) => {
+          if (ev.key !== 'Enter') return;
+          ev.preventDefault();
+          ev.currentTarget.blur();
+        }}
       />
     ),
     einleitung: (

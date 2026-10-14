@@ -272,9 +272,14 @@
 
 // ── Kopf zum Bearbeiten: Name, Begrüßung, Titelbild ──
 .titel {
+  display: block;
   width: 100%;
   font: inherit;
   color: inherit;
+  text-align: inherit;
+  line-height: inherit;
+  resize: none;
+  overflow: hidden;
   background: transparent;
   border: 0;
   border-radius: 6px;

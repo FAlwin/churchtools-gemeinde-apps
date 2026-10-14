@@ -379,12 +379,14 @@ export function AnmeldeFormular({
 
   // Jede Einstellung eine Klasse bzw. eine Variable (Entwurf v3) – keine starren Vorlagen mehr.
   const mitBild = !!ansicht.bildUrl;
+  const logoOben = g.logo !== 'keins' && !!g.logoUrl && g.logoOrt === 'oben';
   const bildAlsSeite = mitBild && (g.hintergrund === 'bild' || g.aufbau === 'seite');
   const klassen = [
     s.pv,
     s[`a-${g.aufbau}`],
     s[`kh-${g.kopfHoehe}`],
-    g.kopfAusrichtung === 'mitte' ? s['kopf-mitte'] : '',
+    // Steht das Logo oben in der Mitte, steht auch der Titel mittig (Alwin, 14.10.2026) – sonst wirkt es schief.
+    g.kopfAusrichtung === 'mitte' || logoOben ? s['kopf-mitte'] : '',
     s[`fs-${g.feldstil}`],
     s[`bt-${g.knoepfe}`],
     g.knopfVoll ? s['bt-voll'] : '',

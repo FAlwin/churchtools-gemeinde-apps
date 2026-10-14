@@ -446,6 +446,10 @@ describe('Baukasten (A5): Design', () => {
     fireEvent.change(name, { target: { value: 'Kinderfest' } });
     fireEvent.blur(name);
     await waitFor(() => expect(ei.umbenennen).toHaveBeenCalledWith(91, 'Kinderfest'));
+    // Mehrzeilig, damit lange Namen umbrechen; Enter speichert statt eine neue Zeile zu machen.
+    expect(name.tagName).toBe('TEXTAREA');
+    fireEvent.change(name, { target: { value: 'Kinder\nfest' } });
+    expect(name).toHaveProperty('value', 'Kinder fest');
   });
 
   it('Titelbild ist nicht umkehrbar (kein „Rückgängig“)', async () => {

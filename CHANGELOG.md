@@ -20,6 +20,9 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   - Gemessen: Das Gemeindelogo steht angemeldet in `/config` (`site_logo`), ohne Login nicht; die Bildadresse
     selbst ist öffentlich – die Erweiterung übernimmt sie in die Gestaltung. Ein eigenes Logo folgt.
   - Ziehen ruckelt nicht mehr: Felder gleiten an ihren Platz, Mitscrollen gleichmäßig.
+  - Steht das Logo oben in der Mitte, steht auch der Titel mittig (Alwin, 14.10.2026) – sonst wirkt der Kopf
+    schief.
+  - Der Name im Baukasten bricht um, statt am Handy abgeschnitten zu werden; Enter speichert wie bisher.
 
 - **Feinheiten am Baukasten** (Alwin, 13.10.2026: „wenn du es genauso schaffst zu bauen, bin ich echt happy“).
   - **Alles verschiebbar** – auch Name, E-Mail und Bemerkungen (jeweils in ihrem Bereich). Nur Preisbereich und

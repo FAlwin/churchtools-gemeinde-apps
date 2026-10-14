@@ -265,9 +265,9 @@
 .inhalt {
   pointer-events: none;
 }
-// Nur blass, nicht ausgeblendet: Ein ausgeblendetes Element beendet in Chrome das Ziehen sofort.
+// Beim Ziehen weg – an seiner Stelle steht die Lücke. Erst nach dem Start gesetzt (sonst bricht Chrome ab).
 .wirdGezogen {
-  opacity: 0.35;
+  display: none;
 }
 
 // ── Kopf zum Bearbeiten: Name, Begrüßung, Titelbild ──

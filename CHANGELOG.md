@@ -23,6 +23,9 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   - Steht das Logo oben in der Mitte, steht auch der Titel mittig (Alwin, 14.10.2026) – sonst wirkt der Kopf
     schief.
   - Der Name im Baukasten bricht um, statt am Handy abgeschnitten zu werden; Enter speichert wie bisher.
+  - Beim Ziehen verschwindet das Feld, an seiner Stelle steht nur „Hier loslassen“ (Alwin, 14.10.2026: „muss
+    nicht mehr in grau angezeigt werden“). Ausgeblendet wird erst nach dem Start des Ziehens – während
+    `dragstart` bricht Chrome sonst ab; mit echter Maus geprüft (versteckt nach 9 ms, Ablegen 1 s später).
   - **Eigenes Logo** (Alwin, 14.10.2026): unter „Logo → Eigenes“ die bisherigen Logos zur Auswahl und „Neues
     hochladen“. Gemessen: ChurchTools kennt je Gruppe nur ein Bild, Anhänge sind nur vorübergehend und ohne
     Bildadresse. Deshalb liegt jedes Logo als Bild einer Hilfsgruppe, die gleich archiviert angelegt wird (Art

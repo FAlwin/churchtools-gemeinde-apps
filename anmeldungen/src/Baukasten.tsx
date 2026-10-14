@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { flushSync } from 'react-dom';
 import { Icon } from '@ui/icons/icons';
 import { Segment } from '@ui/bedienung/Segment';
 import { Sheet } from '@ui/fenster/Sheet';
@@ -451,18 +452,21 @@ export function Baukasten({
   const plaetze = useRef<Platz[]>([]);
   const buehneRef = useRef<HTMLDivElement>(null);
 
-  function plaetzeMerken() {
+  /** `mitLagen: false` – nur die Plätze neu, die Lagen fürs Gleiten bleiben (beim Ausblenden des Felds). */
+  function plaetzeMerken(mitLagen = true) {
     const b = buehneRef.current;
     if (!b) return;
     const oben = b.getBoundingClientRect().top;
-    lagen.current = new Map(
-      [...b.querySelectorAll<HTMLElement>('[data-feld]')].map((el) => [
-        el.dataset.feld!,
-        el.getBoundingClientRect().top - oben,
-      ]),
-    );
+    if (mitLagen)
+      lagen.current = new Map(
+        [...b.querySelectorAll<HTMLElement>('[data-feld]')].map((el) => [
+          el.dataset.feld!,
+          el.getBoundingClientRect().top - oben,
+        ]),
+      );
+    const weg = gezogen.current?.art === 'feld' ? gezogen.current.id : null;
     plaetze.current = [...b.querySelectorAll<HTMLElement>('[data-feld][data-bereich]')]
-      .filter((el) => el.dataset.ende === undefined)
+      .filter((el) => el.dataset.ende === undefined && el.dataset.feld !== weg)
       .map((el) => {
         const r = el.getBoundingClientRect();
         return {
@@ -588,7 +592,17 @@ export function Baukasten({
   const ziehenBeginnen = (g: Gezogen) => {
     gezogen.current = g;
     plaetzeMerken();
-    setZiehtFeld(g.art === 'feld' ? g.id : null);
+    if (g.art !== 'feld') return;
+    // Das gezogene Feld verschwindet, an seiner Stelle steht nur die Lücke (Alwin, 14.10.2026: „muss nicht mehr
+    // in grau angezeigt werden“). Erst NACH dem Start: Wird es noch während `dragstart` ausgeblendet, bricht
+    // Chrome das Ziehen sofort ab (13.10.2026, mit echter Maus nachgestellt). Danach die Plätze ohne das Feld.
+    window.setTimeout(() => {
+      if (gezogen.current !== g) return;
+      flushSync(() => setZiehtFeld(g.id));
+      plaetzeMerken(false);
+      const bereich = bereichVon(formularRef.current, g.id);
+      if (bereich) zielSetzen({ bereich, vorId: g.id });
+    }, 0);
   };
   const ziehenEnde = () => {
     scrollen.current.tempo = 0;
@@ -718,9 +732,7 @@ export function Baukasten({
           ev.dataTransfer.effectAllowed = 'move';
           ev.dataTransfer.setData('text/plain', f.id);
           ev.dataTransfer.setDragImage(ev.currentTarget, 24, 24);
-          // Das Feld wird nur blass, es klappt NICHT weg: Chrome bricht das Ziehen sofort ab, sobald das gezogene
-          // Element ausgeblendet wird (13.10.2026 – „Ziehen geht jetzt gar nicht mehr“, mit echter Maus
-          // nachgestellt: dragstart, sofort dragend). In jsdom nicht prüfbar.
+          // Ausgeblendet wird erst nach dem Start (`ziehenBeginnen`) – sonst bricht Chrome das Ziehen ab.
           ziehenBeginnen({ art: 'feld', id: f.id });
         }}
         onDragEnd={ziehenEnde}

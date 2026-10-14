@@ -216,18 +216,25 @@ describe('Baukasten (A5): Bausteine ins Formular', () => {
     expect(ff.feldSpeichern.mock.calls[0][4]).toBe('price');
   });
 
-  it('ein vorhandenes Feld ist ganz greifbar; beim Ziehen wird es blass und bleibt stehen', async () => {
+  it('ein vorhandenes Feld ist ganz greifbar; beim Ziehen steht an seiner Stelle nur die Lücke – erst nach dem Start', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const { huelle, container } = zeigen();
     lage(container);
     expect(huelle('allergy').getAttribute('draggable')).toBe('true');
     fireEvent.dragStart(huelle('allergy'), { dataTransfer: dt() });
+    // Während `dragstart` ändert sich nichts – Ausblenden in dem Moment bricht das Ziehen in Chrome ab.
+    expect(huelle('allergy').className).not.toMatch(/wirdGezogen/);
+    expect(screen.queryByText('Hier loslassen')).toBeNull();
     await act(async () => {
       vi.advanceTimersByTime(10);
     });
     expect(huelle('allergy').className).toMatch(/wirdGezogen/);
-    // Keine Lücke von selbst: Ausblenden oder Umbauen beim Start bricht das Ziehen in Chrome ab.
-    expect(screen.queryByText('Hier loslassen')).toBeNull();
+    expect(screen.getByText('Hier loslassen').nextElementSibling?.getAttribute('data-feld')).toBe(
+      'allergy',
+    );
+    // Dort losgelassen → nichts verschoben.
+    fireEvent.drop(huelle('allergy'));
+    expect(ff.feldEinordnen).not.toHaveBeenCalled();
   });
 
   it('abgelegt wird, wo losgelassen wird – auch ohne vorheriges „dragover“', async () => {

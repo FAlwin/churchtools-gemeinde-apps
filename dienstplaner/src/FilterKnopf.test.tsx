@@ -32,14 +32,17 @@ function Mit({ start = [] as string[], gruppen = ['Programm', 'Technik'] }) {
   );
 }
 
+/** Ist das Häkchen gesetzt? (Hilfsfunktion: so passt der Typ für Compiler und Lint gleichermaßen.) */
+const angehakt = (el: HTMLElement): boolean => (el as HTMLInputElement).checked;
+
 describe('FilterKnopf (Entwurf A, 14.10.2026)', () => {
   it('zu, bis man tippt; dann je Abschnitt eine Überschrift und Häkchen = wird gezeigt', () => {
     render(<Mit start={['Gebetsabend']} />);
     expect(screen.queryByRole('dialog')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Filter, 1 ausgeblendet' }));
     const arten = within(screen.getByRole('group', { name: 'Veranstaltungen' }));
-    expect(arten.getByRole('checkbox', { name: 'Gottesdienst' }).checked).toBe(true);
-    expect(arten.getByRole('checkbox', { name: 'Gebetsabend' }).checked).toBe(false);
+    expect(angehakt(arten.getByRole('checkbox', { name: 'Gottesdienst' }))).toBe(true);
+    expect(angehakt(arten.getByRole('checkbox', { name: 'Gebetsabend' }))).toBe(false);
     expect(screen.getByRole('group', { name: 'Gruppen' })).toBeTruthy();
   });
 

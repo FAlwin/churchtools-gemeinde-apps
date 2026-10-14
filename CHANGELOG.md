@@ -7,6 +7,15 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Intern
+
+- **Monatsnamen an einer Stelle** (#535): Sie standen viermal von Hand im Code (`shared/ct/datum.ts`,
+  `client/src/utils/monate.ts`, `client/src/pages/Agenda.tsx`, `shared/ct/mapEvent.ts`), und
+  `kachel()` bildete die Kurzform noch einmal selbst. Jetzt gibt es `MONATE` und daraus abgeleitet
+  `MONATE_KURZ` (die ersten drei Buchstaben, bei allen zwölf Monaten gleich) in `shared/ct/datum.ts`,
+  alle anderen Stellen nutzen sie. Die Anzeige bleibt gleich: Die neuen Tests über alle zwölf Monate sind
+  auch gegen den alten Code grün.
+
 ### Neu (Dienstplaner, E4-2)
 
 - **Fach „Wer kann?“** (#533, Entwurf v17): Einen freien Platz in der Matrix antippen, am Computer wie am

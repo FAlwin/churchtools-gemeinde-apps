@@ -107,3 +107,13 @@ describe('Terminliste: Termine ohne Ablauf', () => {
     expect(api.getServicesOhneAblauf).not.toHaveBeenCalled();
   });
 });
+
+describe('Terminliste: Monatsüberschriften', () => {
+  it('je Monat eine Überschrift „Monat JJJJ“ (Namen aus der gemeinsamen Quelle, 14.10.2026)', async () => {
+    api.getServicesOhneAblauf.mockResolvedValue([]);
+    zeige(false, [termin(5, '2027-03-07'), termin(6, '2027-03-14'), termin(7, '2027-10-03')]);
+    expect(await screen.findByText('März 2027')).toBeTruthy();
+    expect(screen.getByText('Oktober 2027')).toBeTruthy();
+    expect(screen.getAllByText('März 2027')).toHaveLength(1);
+  });
+});

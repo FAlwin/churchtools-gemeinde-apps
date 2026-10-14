@@ -5,34 +5,7 @@
  * aus ChurchTools, ohne Zeitzone und ohne `Date`-Mitternachts-Fallen (siehe `wochen.ts`). Alles rein
  * und ohne Netz prüfbar.
  */
-const MONATE = [
-  'Januar',
-  'Februar',
-  'März',
-  'April',
-  'Mai',
-  'Juni',
-  'Juli',
-  'August',
-  'September',
-  'Oktober',
-  'November',
-  'Dezember',
-] as const;
-const MONATE_KURZ = [
-  'Jan',
-  'Feb',
-  'Mär',
-  'Apr',
-  'Mai',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Okt',
-  'Nov',
-  'Dez',
-] as const;
+import { MONATE, MONATE_KURZ } from '@shared/ct/datum';
 
 /** `2026-10-04` → `2026-10`. */
 export function monatVon(tag: string): string {

@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { letzterTag, monatKurz, monatLabel, monatPlus, monatVon, monateAb } from './monate';
+import {
+  letzterTag,
+  monatKurz,
+  monatLabel,
+  monatNurKurz,
+  monatPlus,
+  monatVon,
+  monateAb,
+} from './monate';
 
 describe('monate – die Monatsansicht rechnet in Strings, nicht in Zeitzonen', () => {
   it('addiert über den Jahreswechsel und zurück', () => {
@@ -20,5 +28,19 @@ describe('monate – die Monatsansicht rechnet in Strings, nicht in Zeitzonen', 
     expect(letzterTag('2026-02')).toBe('2026-02-28');
     expect(letzterTag('2028-02')).toBe('2028-02-29');
     expect(letzterTag('2026-12')).toBe('2026-12-31');
+  });
+});
+
+describe('Monatsnamen aus der gemeinsamen Quelle (14.10.2026) – Anzeige wie vorher', () => {
+  const LANG =
+    'Januar Februar März April Mai Juni Juli August September Oktober November Dezember'.split(' ');
+  const KURZ = 'Jan Feb Mär Apr Mai Jun Jul Aug Sep Okt Nov Dez'.split(' ');
+  it('monatLabel, monatKurz, monatNurKurz über alle zwölf Monate', () => {
+    for (let m = 0; m < 12; m++) {
+      const monat = `2027-${String(m + 1).padStart(2, '0')}`;
+      expect(monatLabel(monat)).toBe(`${LANG[m]} 2027`);
+      expect(monatKurz(monat)).toBe(`${KURZ[m]} 27`);
+      expect(monatNurKurz(monat)).toBe(KURZ[m]);
+    }
   });
 });

@@ -697,7 +697,7 @@ Release-Notes & Versionshistorie: siehe `CHANGELOG.md` (Single Source – hier n
 ## So startest du die App lokal
 
 ```
-cd ~/ecg-donrath/churchtools-gemeinde-apps
+cd ~/ecg-donrath/gemeinde-apps/code
 npm install        # einmalig
 npm run dev:client # Frontend -> http://localhost:5173 (braucht das laufende Backend + echten
                    # ChurchTools-Login; es gibt KEINE Mock-Daten. Für UI-Prüfungen ohne Login:

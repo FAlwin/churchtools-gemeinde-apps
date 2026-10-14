@@ -14,7 +14,11 @@ import type { Dienst } from '../ct/dienste';
 import { ortszeitAus } from '../ct/zeit';
 
 export interface RohPlatz {
+  /** Die Platz-ID – **ändert sich bei jedem Schreiben** (E0, Fallstrick 1). */
+  id?: unknown;
   serviceId?: unknown;
+  /** Reihenfolge der Plätze eines Dienstes (1, 2, …); `null`, wenn der Dienst nur einen Platz hat. */
+  index?: unknown;
   personId?: unknown;
   name?: unknown;
   isAccepted?: unknown;

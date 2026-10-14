@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { schluessel } from './abfrageSchluessel';
-import { renderHook } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, renderHook } from '@testing-library/react';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import type { AgendaItem } from '@shared/types/index';
 
@@ -99,6 +99,37 @@ describe('useMarkSeenAfterShown', () => {
   it('noch gar kein Gesehen-Stand → einmal merken, damit spätere Änderungen erkannt werden', async () => {
     zeige({ ...BASIS, items: [punkt({})] });
     await vi.waitFor(() => expect(api.markSetlistSeen).toHaveBeenCalledWith(7));
+  });
+
+  it('noch kein Gesehen-Stand, verdrahtet wie in der App: genau EIN Schreiben, keine Schleife (#555)', async () => {
+    // Die Fälle oben reichen die Props von Hand herein – so blieb unbemerkt, dass das eigene
+    // `setQueryData` nach dem Merken einen neuen „Stand" erzeugt. Mit `changed` noch `undefined` hielt
+    // der Effekt das wieder für „noch nie gesehen" und speicherte erneut, ~6-mal pro Sekunde
+    // (gemessen in der Test-Instanz, 14.10.2026). Hier also wie in `App.tsx`: Daten und Stand aus der Abfrage.
+    const qc = new QueryClient();
+    function MitAbfrage() {
+      const q = useQuery({
+        queryKey: schluessel.agenda(7),
+        queryFn: () => Promise.resolve([punkt({}), punkt({ id: 2, title: 'B' })]),
+        staleTime: Infinity,
+      });
+      useMarkSeenAfterShown({
+        eventId: 7,
+        angezeigt: true,
+        items: q.data,
+        stand: q.dataUpdatedAt,
+        laedt: q.isFetching,
+      });
+      return null;
+    }
+    render(
+      <QueryClientProvider client={qc}>
+        <MitAbfrage />
+      </QueryClientProvider>,
+    );
+    await vi.waitFor(() => expect(api.markSetlistSeen).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 150));
+    expect(api.markSetlistSeen).toHaveBeenCalledTimes(1);
   });
 
   it('ein entfernter Punkt allein reicht zum Quittieren', async () => {

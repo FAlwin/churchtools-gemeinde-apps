@@ -62,6 +62,15 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Behoben
 
+- **Endlosschleife beim ersten Öffnen eines Ablaufs** (#555, kritisch): Hatte jemand für einen Ablauf noch
+  keinen „gesehen“-Stand – also bei jedem neuen Gottesdienst beim ersten Öffnen –, speicherte die App den
+  Stand immer wieder, solange die Ablauf-Ansicht offen war: rund **6 ChurchTools-Anfragen pro Sekunde** je
+  Gerät (gemessen in der Test-Instanz: 280 Anfragen in 45 s). Seit v2.34.1 (#484) in Web-App und
+  Erweiterung. Ursache: Nach dem Speichern setzte die App nur die markierten Punkte im Speicher auf
+  „gesehen“; Punkte ganz ohne Angabe blieben so – und das galt wieder als „noch nie gesehen“. Jetzt
+  bekommt jeder Punkt „gesehen“; ein Test verdrahtet den Ablauf wie die App selbst und zählt: genau ein
+  Schreiben.
+
 - **Datumsfelder am iPhone** (#539): Safari gibt Datumsfeldern eine eigene Mindestbreite und mittigen Text –
   im Anmeldeformular ragte das Geburtsdatum dadurch über die Nachbarfelder (Bildschirmfoto von Alwin). In der
   Musik-App betraf es „Abwesenheit eintragen“ (Von/Bis zweispaltig) und den Zeitraum der Statistik. Neuer

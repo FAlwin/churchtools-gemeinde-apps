@@ -7,6 +7,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+## [2.35.1] – 2026-10-14
+
 ### Hinzugefügt (Dienstplaner)
 
 - **Zeitraum wählen** (#549, Alwin: „was heißt weitere Termine laden? Macht man das nicht über das + oben?“):

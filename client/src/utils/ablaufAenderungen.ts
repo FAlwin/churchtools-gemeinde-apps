@@ -68,11 +68,14 @@ export function meldungBereinigen(m: AenderungsMeldung, items: AgendaItem[]): Ae
  * Der gespeicherte Ablauf, nachdem sein Stand als gesehen gemerkt wurde: ohne Markierungen und ohne
  * „entfernt"-Platzhalter. Sonst zeigte ein Neuladen innerhalb der Frische-Zeit (30 s) den Hinweis aus
  * dem Speicher noch einmal – in der Erweiterung schon bei einem kurzen Wechsel der ChurchTools-Seite.
+ *
+ * **JEDER Punkt bekommt `changed: false` – auch einer ohne Angabe** (#555). `undefined` heißt „es gibt
+ * noch keinen Gesehen-Stand", und genau den gibt es jetzt. Blieb es bei `undefined`, hielt
+ * `useMarkSeenAfterShown` den Ablauf nach diesem `setQueryData` (neuer `dataUpdatedAt`) wieder für
+ * „noch nie gesehen" und speicherte erneut – eine Endlosschleife, ~6 ChurchTools-Anfragen pro Sekunde.
  */
 export function ohneMarkierungen(items: AgendaItem[]): AgendaItem[] {
-  return items
-    .filter((i) => !i.removed)
-    .map((i) => (i.changed || i.neu ? { ...i, changed: false, neu: false } : i));
+  return items.filter((i) => !i.removed).map((i) => ({ ...i, changed: false, neu: false }));
 }
 
 /** Die Zahlen und Titel für den Hinweis. */

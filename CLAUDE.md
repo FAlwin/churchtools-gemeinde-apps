@@ -707,6 +707,14 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **v2.35.1 (14.10.2026) = Hotfix Endlosschleife #555** (PR #556; dazu aus dem anderen Teil des Repos
+  Dienstplaner E3-4/E3-5/E4-1/E4-2, Anmeldungen A5/A6-1 und die gemeinsamen Fixes #536 Monatsnamen, #538
+  kein Scrollen im Scrollen in Fenstern, #540 Datumsfelder). Seit v2.34.1 (#484) speicherte die App beim
+  ERSTEN Öffnen eines Ablaufs (noch kein Gesehen-Stand) den Stand in einer Schleife, ~6 ChurchTools-Anfragen
+  pro Sekunde je Gerät, solange die Ablauf-Ansicht offen war: Das `setQueryData` nach dem Merken erzeugte
+  einen neuen `dataUpdatedAt`, `ohneMarkierungen` ließ `changed` aber `undefined`. Gefunden bei der
+  Polling-Messung (Ergebnis in #557). **Lehre:** Tests eines Effekts, der an `dataUpdatedAt` hängt, mit der
+  echten Abfrage verdrahten – handgereichte Props sehen die Rückkopplung nicht.
 - **v2.35.0 (13.10.2026) = Ablauf in der App anlegen** (PR #515, dazu aus dem anderen Teil des Repos
   Dienstplaner E3-2/E3-3, Anmeldungen A4 und die schmalere Reiterleiste in den Erweiterungen #504).
   Terminliste zeigt Veranstaltungen OHNE Ablauf aus den in der Verwaltung gewählten Kalendern (+ Suchwort,

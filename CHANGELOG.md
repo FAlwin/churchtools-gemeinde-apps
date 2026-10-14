@@ -111,6 +111,23 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Neu (Anmeldungen)
 
+- **Echt anmelden** (A6-2, #548). Gemessen 14.10.2026 an der Test-Instanz (`messung-a6-2026-10-14.md`):
+  Familie, Kind allein, Geschwister mit derselben Adresse, dieselbe Person doppelt.
+  - **Öffentliches Formular:** Token → Formular-Aufbau (Feldnummern) → Anmeldung, ohne Login. **Variante A**
+    (Alwin): Mitglied werden nur die Teilnehmenden; was es einmal je Anmeldung gibt (neues Systemfeld „Angemeldet
+    von“, Telefon, Bemerkungen, Betrag, Aufschlüsselung, Auswahl, Extras), steht bei der ersten Person. Antworten
+    im Format von ChurchTools (Auswahl als Options-ID, Ankreuzen `1`, Mehrfachauswahl als Text). Passt etwas nicht
+    zu ChurchTools, wird nichts geschickt. Schon bekannt → „Fast geschafft, bitte per Mail bestätigen“. Fehler
+    einzeln, die Eingaben bleiben. `?probe` = Trockenlauf.
+  - **Freigeben** wählt die Leitung (ohne nimmt ChurchTools nichts an), setzt die Vorgaben für neue Personen –
+    **flach** (`newPersonStatusId/CampusId/DepartmentId`; `newMember: {…}` meldet 200 und speichert nichts) –,
+    ergänzt fehlende Systemfelder und fragt danach wie ein Gast, ob Anmeldungen angenommen werden.
+  - **Einstellungen der Gemeinde** (Gruppen-Admins): Vorgaben für neue Personen einmal je Gemeinde, im
+    Datenbereich der Erweiterung; ohne Einstellung der Vorschlag. Ein Aussetzer beim Lesen wirft, statt still den
+    Vorschlag zu nehmen. Anschluss an den Datenbereich für die Erweiterungen in `ui/` (`ui/ct/modulPort.ts`); der
+    gemeinsame Kern meldete fest „Musik App“, jetzt das Kürzel der Erweiterung.
+  - Die Preis-Buchung aus den Antworten steht an EINER Stelle (`buchungAus`) – angezeigter und gespeicherter
+    Betrag können nicht auseinanderlaufen. Ein Test zählte die Systemfelder als Literal – jetzt gegen die Liste.
 - **Öffentliches Formular anzeigen** (A6-1, #542 – erste von fünf Scheiben von A6). Die Seite `formular/` liest
   die Veranstaltung **ohne Login** aus ChurchTools (`/publicgroups/{id}`, `/info`) und zeigt sie mit demselben
   Formular wie der Baukasten. Link wie gehabt `…/#<instanz>/<gruppe>` (`ortAusLink` ist das Gegenstück zu

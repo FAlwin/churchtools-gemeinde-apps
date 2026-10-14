@@ -47,8 +47,13 @@ export function FreigebenFenster({
 
   useEffect(() => {
     let aktuell = true;
-    Promise.all([leitungsKandidaten(id), meineId(), stammdaten(), gemeindeVorgaben()]).then(
-      ([k, ich, s, v]) => {
+    Promise.all([
+      leitungsKandidaten(id),
+      meineId(),
+      // Die Stammdaten nur einmal laden – die Vorgaben brauchen sie auch.
+      stammdaten().then(async (st) => [st, await gemeindeVorgaben(st)] as const),
+    ]).then(
+      ([k, ich, [s, v]]) => {
         if (!aktuell) return;
         setKandidaten(k);
         // Wer schon Leitung ist, bleibt gewählt; sonst die Person, die gerade freigibt.

@@ -50,7 +50,9 @@ export async function modulSuchen(p: ModulPort): Promise<number> {
   const kuerzel = p.kuerzel();
   const module = await p.daten<{ id: number; shorty: string }[]>('/custommodules');
   const modul = (module ?? []).find((m) => m.shorty === kuerzel);
-  if (!modul) throw p.fehler(404, 'Die Musik App ist in ChurchTools nicht zu finden.');
+  // Für jede Erweiterung (Musik App, Anmeldungen …) – nicht fest „Musik App“ (A6-2).
+  if (!modul)
+    throw p.fehler(404, `Die Erweiterung „${kuerzel ?? '?'}“ ist in ChurchTools nicht zu finden.`);
   return modul.id;
 }
 

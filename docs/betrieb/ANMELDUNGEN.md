@@ -84,6 +84,25 @@ Status – wer eine Veranstaltung einrichten darf, darf sie also auch freigeben.
 (`visibility`). Nur so kann das Formular sie ohne Login lesen. In einer öffentlichen Liste taucht sie dadurch
 nicht auf – gefunden wird sie nur über ihren Link.
 
+**Freigeben richtet das Anmelden ein** (A6-2): ChurchTools nimmt eine Anmeldung erst an, wenn die Gruppe eine
+**Leitung** hat und feststeht, welchen **Status, Standort und Bereich** neue Personen bekommen. Beim Freigeben
+wählt man die Leitung (Leute aus dem Team; wer freigibt, ist vorgewählt) – sie bekommt in dieser Gruppe die Rolle
+„Leiter“, sieht die Anmeldungen auch direkt in ChurchTools und ist dort Ansprechpartner. Danach fragt die
+Erweiterung ChurchTools wie ein Gast, ob Anmeldungen angenommen werden, und sagt sonst, was fehlt.
+
+**Einstellungen der Gemeinde** (Startseite → „Einstellungen“, nur Gruppen-Admins): Status, Standort und Bereich
+für neue Personen – einmal für alle Veranstaltungen. Ohne gespeicherte Einstellung gilt der Vorschlag
+„Interessent“ und – wenn es nur einen gibt – der einzige Standort und Bereich. Gespeichert im Datenbereich der
+Erweiterung (Kategorie „Einstellungen der Anmeldungen“, beim ersten Speichern angelegt). Damit Veranstalter die
+gespeicherte Wahl beim Freigeben bekommen, brauchen sie in ChurchTools das Recht, diese Kategorie zu **sehen**;
+ohne das gilt für sie der Vorschlag.
+
+**Wer bei einer Anmeldung Mitglied wird** (Alwin, 14.10.2026, „Variante A“): genau die Personen unter „Wer
+nimmt teil?“. Name der Kontaktperson („Angemeldet von“), Telefon, Bemerkungen, Betrag, Aufschlüsselung, Auswahl
+und Extras stehen als Felder bei der **ersten** Person; alle bekommen die E-Mail-Adresse der Kontaktperson. Bei
+„Nur Kinder“ belegen Eltern so keinen Platz. Ist jemand schon bekannt (Name und Adresse), schickt ChurchTools
+eine Mail zum Bestätigen – erst danach gilt die Anmeldung.
+
 Fehlt Schritt 3, zeigt die Startseite bei der Gruppe „Untergruppen für dich nicht freigegeben“ statt die
 Veranstaltungen stillschweigend wegzulassen.
 

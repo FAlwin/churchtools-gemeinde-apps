@@ -9,6 +9,7 @@ import { Startseite } from './Startseite';
 import { VeranstaltungSeite, type Reiter } from './VeranstaltungSeite';
 import { NeueVeranstaltung } from './NeueVeranstaltung';
 import { ArchivSeite } from './ArchivSeite';
+import { GemeindeFenster } from './GemeindeFenster';
 import { RueckgaengigLeiste, type Aenderung } from './Rueckgaengig';
 import { fehlerZustand, type Zustand } from './zustand';
 import {
@@ -52,6 +53,7 @@ export function App() {
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
   const [ansicht, setAnsicht] = useState<Ansicht>(ansichtAusAdresse);
   const [neu, setNeu] = useState(false);
+  const [einstellungen, setEinstellungen] = useState(false);
   const [aenderung, setAenderungRoh] = useState<(Aenderung & { nr: number }) | null>(null);
   // Jede Änderung bekommt eine neue Leiste – auch wenn der Text gleich lautet („Preise gespeichert.“).
   const setAenderung = (a: Aenderung | null) =>
@@ -176,12 +178,20 @@ export function App() {
       nebenGruss={datumText(heute)}
       onNochmal={laden}
       kopfAktion={
-        anlegeTeams.length > 0 && (
-          <button type="button" className={s.neu} onClick={() => setNeu(true)}>
-            <Icon name="plus" size={18} />
-            Neue Veranstaltung
-          </button>
-        )
+        <>
+          {fertig?.admin && (
+            <button type="button" className={s.neu} onClick={() => setEinstellungen(true)}>
+              <Icon name="cog" size={18} />
+              Einstellungen
+            </button>
+          )}
+          {anlegeTeams.length > 0 && (
+            <button type="button" className={s.neu} onClick={() => setNeu(true)}>
+              <Icon name="plus" size={18} />
+              Neue Veranstaltung
+            </button>
+          )}
+        </>
       }
       hinweis={
         fertig?.anlegen.artId === null &&
@@ -207,6 +217,15 @@ export function App() {
         />
       )}
 
+      {einstellungen && (
+        <GemeindeFenster
+          onClose={() => setEinstellungen(false)}
+          onGespeichert={(text) => {
+            setEinstellungen(false);
+            setAenderung({ text, rueckgaengig: null });
+          }}
+        />
+      )}
       {neu && fertig && fertig.anlegen.artId !== null && (
         <NeueVeranstaltung
           teams={anlegeTeams}

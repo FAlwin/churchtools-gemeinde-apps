@@ -232,7 +232,7 @@ export function DesignTafel({
           <button
             type="button"
             className={k.vorlage}
-            aria-pressed={g.logo === 'ct'}
+            aria-pressed={g.logo === 'ct' && !eigenOffen}
             disabled={ctLogo === null}
             onClick={() => {
               setEigenOffen(false);

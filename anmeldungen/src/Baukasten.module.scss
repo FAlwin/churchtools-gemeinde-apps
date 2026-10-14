@@ -890,6 +890,13 @@
     text-align: center;
   }
 
+  // „Gemeindelogo“ passte am Handy nicht in die Kachel und wurde abgeschnitten.
+  .vorlage b {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+  }
+
   img {
     width: 40px;
     height: 40px;

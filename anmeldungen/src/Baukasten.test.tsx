@@ -579,6 +579,10 @@ describe('Baukasten (Feinheiten): Leiste, Fragetyp, Design', () => {
     const leiste = screen.getByRole('complementary', { name: 'Bausteine und Design' });
     fireEvent.click(within(leiste).getByRole('button', { name: 'Design' }));
     fireEvent.click(screen.getByRole('button', { name: /Eigenes/ }));
+    // Nur „Eigenes“ ist markiert, solange man eins aussucht – nicht zusätzlich das Gemeindelogo.
+    expect(screen.getByRole('button', { name: /Gemeindelogo/ }).getAttribute('aria-pressed')).toBe(
+      'false',
+    );
     await act(async () => {
       vi.advanceTimersByTime(PAUSE_DESIGN_MS + 10);
     });

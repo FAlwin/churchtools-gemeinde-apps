@@ -72,4 +72,4 @@ aufrufen). Testnutzer Spike (19) hat nur „Dienstplaner sehen“.
   `http://localhost:5178/ccm/dienstplaner/?demo` (`?demo=mitglied`, `?demo=fehler` für die Sonderfälle).
 - Release: Tag `dienstplan-vX.Y.Z` → `dienstplaner-release.yml` → gemeinsame Vorlage
   `erweiterung-release.yml` (**nie „latest"** – sonst sähen die Musik-Apps keinen Update-Hinweis mehr).
-- Bauplan und Entwurf: `~/ecg-donrath/dienstplaner/docs/bauplan.md` (außerhalb des Repos).
+- Bauplan und Entwurf: `~/ecg-donrath/gemeinde-apps/dienstplaner-planung/docs/bauplan.md` (außerhalb des Repos).

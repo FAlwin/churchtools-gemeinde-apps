@@ -16,6 +16,12 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   alle anderen Stellen nutzen sie. Die Anzeige bleibt gleich: Die neuen Tests über alle zwölf Monate sind
   auch gegen den alten Code grün.
 
+### Behoben
+
+- **Scrollen im Scrollen** (#537, Alwin am Handy): In „Wer kann?“ (Dienstplaner), „Zum Ablauf hinzufügen“
+  und „Abschnitte transponieren“ (Musik-App) hatte die Liste eine eigene Scrollfläche im ohnehin scrollenden
+  Fenster. Jetzt scrollt nur das Fenster. Die Regel steht am gemeinsamen Baustein `ui/fenster/Sheet.tsx`.
+
 ### Neu (Dienstplaner, E4-2)
 
 - **Fach „Wer kann?“** (#533, Entwurf v17): Einen freien Platz in der Matrix antippen, am Computer wie am

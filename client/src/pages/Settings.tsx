@@ -13,6 +13,7 @@ import { VersionsFuss } from '../components/VersionsFuss';
 import { useVerwaltung } from '../hooks/useVerwaltung';
 import { useSharing } from '../hooks/useSharing';
 import { isOfflineAutoEnabled, setOfflineAutoEnabled } from '../services/offlineAuto';
+import { getLiedansicht, setLiedansicht, type Liedansicht } from '../utils/devicePrefs';
 import styles from './Settings.module.scss';
 import { funktionen } from '../services/funktionen';
 import { ServerVarianteHinweis } from '../components/ServerVarianteHinweis';
@@ -41,6 +42,11 @@ interface SettingsProps {
   /** Startet die geführte Einführung erneut. */
   onReplayIntro: () => void;
 }
+
+const LIEDANSICHT_OPTIONS: { value: Liedansicht; label: string }[] = [
+  { value: 'blaettern', label: 'Blättern' },
+  { value: 'scrollen', label: 'Scrollen' },
+];
 
 const THEME_OPTIONS: { value: ThemePref; label: string; icon: 'sun' | 'moon' | 'cog' }[] = [
   { value: 'light', label: 'Hell', icon: 'sun' },
@@ -74,6 +80,11 @@ export function Settings({
 }: SettingsProps) {
   const verwaltung = useVerwaltung(site, isAdmin);
   const [autoOffline, setAutoOffline] = useState(isOfflineAutoEnabled());
+  const [liedansicht, setLiedansichtState] = useState(getLiedansicht);
+  function waehleLiedansicht(a: Liedansicht) {
+    setLiedansichtState(a);
+    setLiedansicht(a);
+  }
   function toggleAutoOffline() {
     const v = !autoOffline;
     setAutoOffline(v);
@@ -126,6 +137,20 @@ export function Settings({
         <div className={styles.groupHdr}>Während des Spielens</div>
         <div className={styles.cardList}>
           <SchalterZeile label="Display aktiv halten" an={wakePref} onUmschalten={onToggleWake} />
+          {/* #551: Seiten untereinander statt blättern – je Gerät (am Handy vielleicht anders als am iPad). */}
+          <div className={styles.setRow}>
+            <span className={styles.setLabel}>Liedansicht</span>
+            <Segment
+              className={styles.themeSeg}
+              value={liedansicht}
+              ariaLabel="Liedansicht"
+              options={LIEDANSICHT_OPTIONS}
+              onChange={waehleLiedansicht}
+            />
+          </div>
+          <p className={styles.installHint}>
+            „Scrollen" zeigt die Lieder untereinander. Gilt nur für dieses Gerät.
+          </p>
         </div>
       </div>
 

@@ -9,19 +9,16 @@
  * Schnellwahl „Wochenende" im Fenster.
  */
 
+import { plusTage } from '@shared/ct/datum';
+
+// Seit 14.10.2026 gemeinsam mit dem Dienstplaner in `shared/ct/datum.ts`.
+export { plusTage } from '@shared/ct/datum';
+
 const TAG_MS = 86_400_000;
 
 function utc(iso: string): number {
   const [j, m, t] = iso.split('-').map(Number);
   return Date.UTC(j, m - 1, t);
-}
-
-function iso(ms: number): string {
-  return new Date(ms).toISOString().slice(0, 10);
-}
-
-export function plusTage(tag: string, n: number): string {
-  return iso(utc(tag) + n * TAG_MS);
 }
 
 /** Der Montag der Woche, in der `tag` liegt. */

@@ -31,6 +31,8 @@ const KEYS = {
   gemeindeAnsicht: 'worship:gemeinde-ansicht',
   /** Beim Teilen als PDF die eigenen Anmerkungen mitnehmen? (07.10.2026, Vorgabe: nein) */
   teilenMitAnmerkungen: 'worship:teilen-anmerkungen',
+  /** Liedansicht: blättern oder scrollen (#551) – je Gerät, am Handy will man es vielleicht anders als am iPad. */
+  liedansicht: 'worship:liedansicht',
 } as const;
 
 type PrefKey = keyof typeof KEYS;
@@ -128,4 +130,16 @@ export function getTeilenMitAnmerkungen(): boolean {
 
 export function setTeilenMitAnmerkungen(an: boolean): void {
   write('teilenMitAnmerkungen', an ? '1' : '0');
+}
+
+/** Wie die Lieder eines Ablaufs angezeigt werden (#551): Seite für Seite oder untereinander. */
+export type Liedansicht = 'blaettern' | 'scrollen';
+
+/** Ohne Angabe (oder mit Unsinn): blättern – wie bisher. */
+export function getLiedansicht(): Liedansicht {
+  return read('liedansicht') === 'scrollen' ? 'scrollen' : 'blaettern';
+}
+
+export function setLiedansicht(ansicht: Liedansicht): void {
+  write('liedansicht', ansicht);
 }

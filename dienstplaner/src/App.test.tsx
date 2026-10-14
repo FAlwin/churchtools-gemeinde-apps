@@ -4,7 +4,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { ApiError } from '@ui/ct/fehler';
 import { App } from './App';
 import { ladeStart, type Start } from './start';
-import { ladeTermine } from './ladeTermine';
+import { ladeTermine, ladeZeitraum } from './ladeTermine';
 import { startFuer } from './start.testutil';
 import { LEERER_PLAN } from '@shared/dienstplan/zeile.testutil';
 
@@ -15,7 +15,12 @@ vi.mock('./start', async (original) => ({
   ...(await original<typeof import('./start')>()),
   ladeStart: vi.fn(),
 }));
-vi.mock('./ladeTermine', () => ({ ladeTermine: vi.fn(), WOCHEN_JE_SCHRITT: 8 }));
+vi.mock('./ladeTermine', () => ({
+  ladeTermine: vi.fn(),
+  ladeZeitraum: vi.fn(),
+  WOCHEN_JE_SCHRITT: 8,
+  MAX_WOCHEN: 52,
+}));
 // Das Beiwerk der Startseite (Lieder, Abwesenheiten, Musik-App) – hier ohne Netz.
 vi.mock('./ladeBeiwerk', () => ({
   ladeLieder: vi.fn(() => Promise.resolve(null)),
@@ -180,6 +185,58 @@ describe('Termine im Reiter (E3-2)', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Erneut versuchen' }));
     await screen.findByRole('button', { name: 'Weitere Termine laden' });
     expect(termineLaden).toHaveBeenCalledTimes(2);
+  });
+
+  it('Nachladen ist still: das Bisherige bleibt stehen; ein Fehler dabei bleibt neben der Liste (14.10.2026)', async () => {
+    breite(false);
+    window.location.hash = '#/termine';
+    laden.mockResolvedValue(start([3]));
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Weitere Termine laden' }));
+    // Nicht wieder „lädt …“ über die ganze Seite – die Liste und ihr Knopf bleiben.
+    expect(screen.getByRole('button', { name: 'wird geladen …' })).toBeTruthy();
+    termineLaden.mockRejectedValueOnce(new ApiError(502, 'x'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Weitere Termine laden' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Erneut versuchen' }));
+    expect(screen.getByRole('button', { name: 'wird geladen …' })).toBeTruthy();
+    expect(termineLaden.mock.calls.map((c) => c[1])).toEqual([8, 16, 24, 24]);
+  });
+
+  it('Planen: nach einem gescheiterten Nachladen zählt, was geladen ist – › bleibt bis zur Grenze möglich', async () => {
+    breite(false);
+    window.location.hash = '#/planen';
+    localStorage.clear();
+    laden.mockResolvedValue(start([3]));
+    // Leer bis 48 Wochen, der Schritt auf 56 scheitert.
+    termineLaden.mockImplementation((_s, w) =>
+      w > 48 ? Promise.reject(new ApiError(502, 'x')) : Promise.resolve(KEINE_TERMINE),
+    );
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Späteren Termin dazunehmen' }));
+    await screen.findByRole('button', { name: 'Erneut versuchen' });
+    expect(termineLaden.mock.calls.map((c) => c[1])).toEqual([8, 16, 24, 32, 40, 48, 56]);
+    // Geladen sind 48 Wochen – also noch nicht am Ende, auch wenn der Versuch schon bei 56 war.
+    expect(screen.getByRole('button', { name: 'Späteren Termin dazunehmen' })).toHaveProperty(
+      'disabled',
+      false,
+    );
+  });
+
+  it('Planen: ein gewählter Monat lädt über `ladeZeitraum` genau diesen Monat', async () => {
+    breite(false);
+    window.location.hash = '#/planen';
+    localStorage.clear();
+    laden.mockResolvedValue(start([3]));
+    vi.mocked(ladeZeitraum).mockResolvedValue(KEINE_TERMINE);
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: /^Zeitraum:/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Dieser Monat/ }));
+    await screen.findByText(/^Im .* stehen keine Termine an\.$/);
+    const [, von, bis, zeitzone] = vi.mocked(ladeZeitraum).mock.calls[0];
+    expect([von.slice(0, 7), von.slice(8)]).toEqual([bis.slice(0, 7), '01']);
+    // Dieselbe Zeitzone wie „ab heute“ (die des Browsers – in der CI UTC, nicht fest „Europe/Berlin“).
+    expect(zeitzone).toBe(termineLaden.mock.calls[0][2]);
+    localStorage.clear();
   });
 });
 

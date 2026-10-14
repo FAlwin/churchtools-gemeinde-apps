@@ -52,7 +52,7 @@ async function modulIdOderNull(cookie: string): Promise<number | null> {
   const da = modulMemo.get('modul');
   if (da !== undefined) return da;
   try {
-    const id = await modulSuchen(modulPortFuer(cookie));
+    const id = await modulSuchen(modulPortFuer(cookie), 'Die Musik App');
     modulMemo.set('modul', id);
     return id;
   } catch (e) {

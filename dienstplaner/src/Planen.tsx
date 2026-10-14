@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { Fragment, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { Segment } from '@ui/bedienung/Segment';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
+import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
+import { Toast } from '@ui/fenster/Toast';
+import { useToast } from '@ui/fenster/useToast';
 import { kachel, monatName, tagKurz } from '@shared/ct/datum';
 import type { Plan, PlanGruppe, PlanPlatz, PlanSpalte, PlanZeile } from '@shared/dienstplan/plan';
 import { artVon, veranstaltungsArten, WEITERE } from '@shared/dienstplan/termine';
@@ -17,11 +20,29 @@ import {
   type FensterSchritt,
 } from '@shared/dienstplan/fenster';
 import { werWieOft } from '@shared/dienstplan/werWieOft';
+import {
+  entwurfVeraltet,
+  ortSchluessel,
+  type Entwurf,
+  type EntwurfErgebnis,
+  type EntwurfZiel,
+} from '@shared/dienstplan/entwuerfe';
+import {
+  zeitraumGrenzen,
+  spanneText,
+  zeitraumText,
+  zeitraumVerschieben,
+  type Zeitraum,
+} from '@shared/dienstplan/zeitraum';
 import type { TermineZustand } from './Termine';
+import type { TermineDaten } from './ladeTermine';
+import { ZeitraumKnopf } from './ZeitraumKnopf';
 import { leseAnsicht, merkeAnsicht, type PlanenAnsicht } from './planenAnsicht';
 import { useBreite } from './useBreite';
 import { FilterKnopf } from './FilterKnopf';
-import { WerKann, type FreierPlatz } from './WerKann';
+import { WerKann, type Eintragen, type FreierPlatz } from './WerKann';
+import { EntwurfFach } from './EntwurfFach';
+import { grundText, type EntwuerfeDaten, type EntwurfAnschluss } from './ladeEntwuerfe';
 import styles from './Planen.module.scss';
 
 interface Props {
@@ -29,8 +50,25 @@ interface Props {
   /** Schmaler Bildschirm: ein Termin auf einmal statt der Tabelle (Entwurf v17). */
   handy: boolean;
   onNochmal: () => void;
+  /** Weitere Wochen „ab heute“ nachladen – die Terminleiste ruft das am Ende selbst auf. */
   onMehr: () => void;
+  /** Lassen sich „ab heute“ noch weitere Wochen nachladen? */
+  mehrMoeglich: boolean;
+  /** Einen gewählten Zeitraum laden (Monat, von–bis) – nur für die Matrix, Start und Termine bleiben. */
+  ladeZeitraum: (von: string, bis: string) => Promise<TermineDaten>;
+  /** Heute (`YYYY-MM-DD`, Ortszeit der Gemeinde). */
+  heute: string;
+  /** Eintragen als Entwurf (E4-3) – ohne Anschluss bleibt „Wer kann?“ nur zum Ansehen. */
+  entwuerfe?: EntwurfAnschluss;
 }
+
+/** Ein Entwurf an einem Platz – und ob er veraltet ist (in ChurchTools steht inzwischen etwas anderes). */
+type EntwurfAmPlatz = { entwurf: Entwurf; veraltet: boolean };
+
+type EntwuerfeZustand =
+  | { art: 'laedt' }
+  | { art: 'fehler'; text: string }
+  | { art: 'fertig'; daten: EntwuerfeDaten };
 
 /** Schlüssel einer Gruppe – `null` (ohne Dienstgruppe) bekommt einen eigenen. */
 const schluessel = (g: PlanGruppe) => (g.gruppe ? String(g.gruppe.id) : 'ohne');
@@ -48,6 +86,13 @@ interface Sicht {
   onUmschalten: (k: string) => void;
   /** Freien Platz antippen → „Wer kann?“ (nur wo man den Dienst planen darf). */
   onFrei: (spalte: number, zeile: PlanZeile, nr: number) => void;
+  /** Der Entwurf an einem Platz – mit „veraltet“, wenn in ChurchTools inzwischen etwas anderes steht. */
+  entwurf: (spalte: number, zeile: PlanZeile, p: PlanPlatz) => EntwurfAmPlatz | null;
+  /** Einen Entwurf antippen → Entwurfs-Fach (E4-3-3; nur wo man planen und die Schublade ändern darf). */
+  onEntwurf: (spalte: number, zeile: PlanZeile, nr: number) => void;
+  darfAendern: (zeile: PlanZeile) => boolean;
+  /** Die eigene Person – eigene Entwürfe stehen ohne „von …“. */
+  ichId: number | null;
 }
 
 /** Darf man an diesem Termin diesen Dienst planen – über Recht, Leitung oder als Admin des Termins? */
@@ -67,17 +112,29 @@ function freierPlatz(s: PlanSpalte, z: PlanZeile, plaetze: PlanPlatz[], nr: numb
     nr,
     von: plaetze.length,
     schonDa: plaetze.flatMap((p) => (p.personId !== null ? [p.personId] : [])),
+    index: plaetze[nr - 1]?.index ?? null,
+    gruppeId: z.dienst.dienstgruppeId ?? 0,
   };
 }
 
 /**
  * **Planen** (Bauplan E3-4/E3-5, Entwurf v17): Termine als Spalten, Dienstgruppen und Dienste als Zeilen,
- * in jeder Zelle die Plätze. Darüber die Terminleiste (‹ ＋ Zeitraum ＋ ›, „passend zur Fensterbreite“),
- * Filter nach Veranstaltung und Gruppe, Spaltenbreite und „Wer wie oft?“. **Nur lesen** – Einteilen kommt
- * mit E4. Am Handy: eine Datumsleiste und darunter ein Termin.
+ * in jeder Zelle die Plätze. Darüber die Terminleiste mit dem **Zeitraum-Knopf** (Alwin, 14.10.2026): ab heute
+ * (passend zur Fensterbreite, ‹ ＋ ＋ › blättern und laden am Ende selbst nach), ein Monat oder ein eigener
+ * Zeitraum – dann stehen alle Termine des Bereichs da, und ‹ › springen um den ganzen Bereich. Dazu Filter,
+ * Spaltenbreite und „Wer wie oft?“. **Nur lesen** – Einteilen kommt mit E4. Am Handy: eine Datumsleiste und
+ * darunter ein Termin.
  */
-export function Planen({ zustand, handy, onNochmal, onMehr }: Props) {
-  const plan = zustand.art === 'fertig' ? zustand.plan : null;
+export function Planen({
+  zustand,
+  handy,
+  onNochmal,
+  onMehr,
+  mehrMoeglich,
+  ladeZeitraum,
+  heute,
+  entwuerfe,
+}: Props) {
   const [ansicht, setAnsichtRoh] = useState<PlanenAnsicht>(leseAnsicht);
   const setAnsicht = (a: PlanenAnsicht) => {
     setAnsichtRoh(a);
@@ -86,220 +143,569 @@ export function Planen({ zustand, handy, onNochmal, onMehr }: Props) {
   const [fenster, setFenster] = useState<Fenster>({ start: 0, anzahl: null });
   const [zu, setZu] = useState<Set<string> | null>(null);
   const [frei, setFrei] = useState<FreierPlatz | null>(null);
+  // Ein angetippter Entwurf (E4-3-3) – und ob „Andere Person wählen“ einen Entwurf ersetzt (seine Version).
+  const [fach, setFach] = useState<{
+    platz: FreierPlatz;
+    entwurf: Entwurf;
+    inChurchTools: string | null;
+  } | null>(null);
+  const [ersetzt, setErsetzt] = useState<number | null>(null);
   const [rahmen, platz] = useBreite();
+  const { toast, showToast } = useToast();
 
-  if (zustand.art === 'laedt') return <p className={styles.hinweis}>Termine werden geladen …</p>;
-  if (zustand.art === 'fehler')
-    return <FehlerKasten fehler={zustand.fehler} onNochmal={onNochmal} />;
-  if (!plan || plan.spalten.length === 0) {
-    return (
-      <section className={styles.karte}>
-        <p className={styles.hinweis} style={{ padding: 14 }}>
-          In den nächsten {zustand.wochen} Wochen stehen keine Termine an.
-        </p>
-      </section>
+  // Entwürfe (E4-3): geladen beim Öffnen, neu nach dem Einrichten einer Schublade oder „Erneut versuchen“.
+  const [ew, setEw] = useState<EntwuerfeZustand>({ art: 'laedt' });
+  const [ewVersuch, setEwVersuch] = useState(0);
+  useEffect(() => {
+    if (!entwuerfe) return;
+    let aktuell = true;
+    setEw({ art: 'laedt' });
+    entwuerfe.laden().then(
+      (daten) => aktuell && setEw({ art: 'fertig', daten }),
+      (e: unknown) => aktuell && setEw({ art: 'fehler', text: fehlerMeldung(e).text }),
     );
+    return () => {
+      aktuell = false;
+    };
+  }, [entwuerfe, ewVersuch]);
+  const ewNeu = useCallback(() => setEwVersuch((v) => v + 1), []);
+  /**
+   * Der Entwurf an einem Platz. Gültig ist er nur, wenn am Platz in ChurchTools noch dasselbe steht wie beim
+   * Eintragen (Entwürfe entstehen an freien Plätzen) – sonst ist er **veraltet**: Es gilt ChurchTools, und am
+   * Platz steht nur ein Schild (Alwin, 14.10.2026). Verglichen wird mit derselben Regel wie beim Einteilen
+   * (`p.belegung`, `gleichePerson`).
+   */
+  const entwurfAmPlatz = (s: PlanSpalte, zl: PlanZeile, p: PlanPlatz): EntwurfAmPlatz | null => {
+    if (ew.art !== 'fertig') return null;
+    const e = ew.daten.entwuerfe.get(
+      ortSchluessel({ eventId: s.id, serviceId: zl.dienst.id, index: p.index }),
+    );
+    if (!e) return null;
+    return { entwurf: e, veraltet: entwurfVeraltet(e, p.belegung) };
+  };
+  /** Darf man die Entwürfe dieser Gruppe ändern? (Schublade bereit) */
+  const darfAendern = (zl: PlanZeile) =>
+    ew.art === 'fertig' &&
+    ew.daten.schubladen.get(zl.dienst.dienstgruppeId ?? 0)?.stand === 'bereit';
+  /** Einen Entwurf (oder sein Fehlen) in die geladenen Daten übernehmen – ohne alles neu zu laden. */
+  const ewSetzen = (k: string, e: Entwurf | null) =>
+    setEw((alt) => {
+      if (alt.art !== 'fertig') return alt;
+      const map = new Map(alt.daten.entwuerfe);
+      if (e) map.set(k, e);
+      else map.delete(k);
+      return { art: 'fertig', daten: { ...alt.daten, entwuerfe: map } };
+    });
+
+  // Gewählter Zeitraum: eigene Abfrage, gemerkt mit ihrem Bereich – eine späte Antwort für einen alten
+  // Bereich zählt nicht mehr.
+  const grenzen = zeitraumGrenzen(ansicht.zeitraum);
+  const bereich = grenzen ? `${grenzen.von}|${grenzen.bis}` : null;
+  const [eigen, setEigen] = useState<{ bereich: string; zustand: TermineZustand } | null>(null);
+  const [versuch, setVersuch] = useState(0);
+  useEffect(() => {
+    if (!grenzen || !bereich) return;
+    let aktuell = true;
+    setEigen({ bereich, zustand: { art: 'laedt' } });
+    ladeZeitraum(grenzen.von, grenzen.bis).then(
+      (d) =>
+        aktuell &&
+        setEigen({
+          bereich,
+          zustand: { art: 'fertig', zeilen: d.zeilen, plan: d.plan, wochen: 0 },
+        }),
+      (e: unknown) =>
+        aktuell && setEigen({ bereich, zustand: { art: 'fehler', fehler: fehlerMeldung(e) } }),
+    );
+    return () => {
+      aktuell = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `grenzen` steckt vollständig in `bereich`
+  }, [bereich, ladeZeitraum, versuch]);
+  const quelle: TermineZustand = !bereich
+    ? zustand
+    : eigen?.bereich === bereich
+      ? eigen.zustand
+      : { art: 'laedt' };
+
+  // „Ab heute“ am Ende: erst nachladen, dann den Schritt tun (Alwin: „Weitere Termine laden“ machte dasselbe
+  // wie ＋). Kommt nichts Neues, wird weitergeladen – eine lange Lücke (Sommerpause, oder ein Filter auf eine
+  // selten eingesetzte Gruppe) ist kein Ende. Schluss ist erst an der Ladegrenze (`mehrMoeglich`).
+  const [nachLaden, setNachLaden] = useState<{ was: FensterSchritt; laenge: number } | null>(null);
+  useEffect(() => {
+    if (!nachLaden || zustand.art !== 'fertig') return;
+    if (zustand.nachladeFehler) {
+      setNachLaden(null); // nicht als „Ende“ werten – ein Aussetzer ist kein Ende
+      return;
+    }
+    const d = fensterDaten(zustand.plan, ansicht, platz);
+    if (d.gefiltert.length > nachLaden.laenge) {
+      setFenster((f) => schritt(f, nachLaden.was, d.gefiltert.length, d.passend));
+    } else if (mehrMoeglich) {
+      onMehr(); // `nachLaden` bleibt stehen – der nächste Stand landet wieder hier
+      return;
+    }
+    setNachLaden(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nur, wenn neue Termine angekommen sind
+  }, [zustand]);
+  const kannNachladen = !bereich && mehrMoeglich && !nachLaden;
+
+  const waehleZeitraum = (z: Zeitraum) => {
+    if (z.art === 'abHeute') setFenster((f) => schritt(f, 'passend', 0, 0));
+    setAnsicht({ ...ansicht, zeitraum: z });
+  };
+
+  const plan = quelle.art === 'fertig' ? quelle.plan : null;
+  const d = plan ? fensterDaten(plan, ansicht, platz) : null;
+  const gesamt = d?.gefiltert.length ?? 0;
+  const f = sichtbar(fenster, gesamt, d?.passend ?? 0);
+  const imFenster = d ? (bereich ? d.gefiltert : d.gefiltert.slice(f.von, f.bis)) : [];
+  const nachladen = (was: FensterSchritt) => {
+    setNachLaden({ was, laenge: gesamt });
+    onMehr();
+  };
+  const gehe = (was: FensterSchritt) => {
+    const amEnde = (was === 'weiter' || was === 'spaeterDazu') && !f.danach;
+    if (amEnde && kannNachladen) {
+      nachladen(was);
+      return;
+    }
+    setFenster(schritt(fenster, was, gesamt, d?.passend ?? 0));
+  };
+
+  // Aufschrift des Zeitraum-Knopfs.
+  const anzahl = handy || bereich ? (d?.gefiltert.length ?? 0) : imFenster.length;
+  const terminText = `${anzahl} ${anzahl === 1 ? 'Termin' : 'Termine'}`;
+  const z = ansicht.zeitraum;
+  const zeile1 =
+    z.art !== 'abHeute'
+      ? zeitraumText(z)
+      : handy || !plan || imFenster.length === 0
+        ? 'Ab heute'
+        : spanneText(
+            plan.spalten[imFenster[0]].tag,
+            plan.spalten[imFenster[imFenster.length - 1]].tag,
+          );
+  const zeile2 =
+    quelle.art === 'laedt'
+      ? 'wird geladen …'
+      : nachLaden
+        ? 'weitere Termine werden geladen …'
+        : z.art === 'abHeute' && !handy && fenster.anzahl === null
+          ? `${terminText} · passend zur Fensterbreite`
+          : terminText;
+
+  const knopf = (
+    <ZeitraumKnopf
+      zeitraum={z}
+      zeile1={zeile1}
+      zeile2={zeile2}
+      heute={heute}
+      handy={handy}
+      onWahl={waehleZeitraum}
+    />
+  );
+  const leiste = (
+    <Terminleiste
+      knopf={knopf}
+      bereich={!!bereich}
+      handy={handy}
+      davor={bereich ? true : f.davor}
+      danach={bereich ? true : f.danach || kannNachladen}
+      onSchritt={gehe}
+      onVerschieben={(r) => setAnsicht({ ...ansicht, zeitraum: zeitraumVerschieben(z, r) })}
+    />
+  );
+
+  const arten = plan ? veranstaltungsArten(plan.spalten) : [];
+  const werkzeug = (
+    <div className={styles.werkzeug}>
+      <Segment
+        value={ansicht.unteransicht}
+        options={[
+          { value: 'matrix', label: 'Matrix' },
+          { value: 'personen', label: 'Wer wie oft?' },
+        ]}
+        onChange={(v) => setAnsicht({ ...ansicht, unteransicht: v })}
+        ariaLabel="Ansicht"
+        className={styles.ansicht}
+        verbunden
+      />
+      {!handy && leiste}
+      <div className={styles.rechts}>
+        {!handy && ansicht.unteransicht === 'matrix' && (
+          <Segment<Breite>
+            value={ansicht.breite}
+            options={[
+              { value: 's', label: 'S' },
+              { value: 'm', label: 'M' },
+              { value: 'l', label: 'L' },
+            ]}
+            onChange={(b) => setAnsicht({ ...ansicht, breite: b })}
+            ariaLabel="Spaltenbreite"
+            verbunden
+          />
+        )}
+        <FilterKnopf
+          abschnitte={[
+            {
+              titel: 'Veranstaltungen',
+              optionen: arten.map((art) => ({
+                wert: art,
+                text: art === WEITERE ? 'Weitere' : art,
+              })),
+              aus: ansicht.ausgeblendeteArten,
+              onAus: (ausgeblendeteArten) => setAnsicht({ ...ansicht, ausgeblendeteArten }),
+            },
+            {
+              titel: 'Gruppen',
+              optionen: (plan?.gruppen ?? []).map((g) => ({
+                wert: schluessel(g),
+                text: gruppenName(g),
+              })),
+              aus: ansicht.ausgeblendeteGruppen,
+              onAus: (ausgeblendeteGruppen) => setAnsicht({ ...ansicht, ausgeblendeteGruppen }),
+            },
+          ]}
+        />
+      </div>
+      {handy && leiste}
+    </div>
+  );
+
+  const hinweis = (text: string) => (
+    <section className={styles.karte}>
+      <p className={styles.hinweis} style={{ padding: 14 }}>
+        {text}
+      </p>
+    </section>
+  );
+
+  let inhalt: ReactNode;
+  if (quelle.art === 'laedt') inhalt = <p className={styles.hinweis}>Termine werden geladen …</p>;
+  else if (quelle.art === 'fehler')
+    inhalt = (
+      <FehlerKasten
+        fehler={quelle.fehler}
+        onNochmal={bereich ? () => setVersuch((v) => v + 1) : onNochmal}
+      />
+    );
+  else if (!plan || !d || plan.spalten.length === 0)
+    inhalt = hinweis(
+      z.art === 'abHeute'
+        ? `In den nächsten ${quelle.wochen} Wochen stehen keine Termine an.`
+        : z.art === 'monat'
+          ? `Im ${zeitraumText(z)} stehen keine Termine an.`
+          : `Vom ${zeitraumText(z).replace(' – ', ' bis ')} stehen keine Termine an.`,
+    );
+  else {
+    const gruppen = plan.gruppen.filter(
+      (g) => !ansicht.ausgeblendeteGruppen.includes(schluessel(g)),
+    );
+    // Vorgabe beim ersten Anzeigen: was man nicht plant, ist zugeklappt.
+    const zugeklappt = zu ?? new Set(plan.gruppen.filter((g) => !g.planbar).map(schluessel));
+    const umschalten = (k: string) => {
+      const neu = new Set(zugeklappt);
+      if (neu.has(k)) neu.delete(k);
+      else neu.add(k);
+      setZu(neu);
+    };
+    const haupt = arten[0] !== undefined && arten[0] !== WEITERE ? arten[0] : null;
+    const sicht: Sicht = {
+      plan,
+      spalten: handy ? d.gefiltert : imFenster,
+      gruppen,
+      zugeklappt,
+      neben: (s) => haupt !== null && s.name !== haupt,
+      onUmschalten: umschalten,
+      onFrei: (i, zl, nr) => setFrei(freierPlatz(plan.spalten[i], zl, zl.zellen[i] ?? [], nr)),
+      entwurf: (i, zl, p) => entwurfAmPlatz(plan.spalten[i], zl, p),
+      darfAendern,
+      onEntwurf: (i, zl, nr) => {
+        const plaetze = zl.zellen[i] ?? [];
+        const p = plaetze[nr - 1];
+        const a = p ? entwurfAmPlatz(plan.spalten[i], zl, p) : null;
+        if (!p || !a) return;
+        setFach({
+          platz: freierPlatz(plan.spalten[i], zl, plaetze, nr),
+          entwurf: a.entwurf,
+          inChurchTools: a.veraltet ? stehtInChurchTools(p) : null,
+        });
+      },
+      ichId: entwuerfe?.ich.personId ?? null,
+    };
+    inhalt =
+      d.gefiltert.length === 0 || gruppen.length === 0 ? (
+        hinweis(
+          'Nichts eingeblendet – über „Filter“ eine Veranstaltung oder Gruppe wieder anhaken.',
+        )
+      ) : ansicht.unteransicht === 'personen' ? (
+        <WerWieOft sicht={sicht} />
+      ) : handy ? (
+        <HandyPlan sicht={sicht} amEnde={kannNachladen ? () => nachladen('passend') : undefined} />
+      ) : (
+        <TabellenPlan sicht={sicht} breite={ansicht.breite} platz={platz} />
+      );
   }
 
-  // Filter: Veranstaltungsarten (aus den Terminnamen, wie in der Termine-Liste) und Gruppen.
-  const arten = veranstaltungsArten(plan.spalten);
-  const haupt = arten[0] !== undefined && arten[0] !== WEITERE ? arten[0] : null;
-  const gefiltert = plan.spalten
-    .map((_, i) => i)
-    .filter((i) => !ansicht.ausgeblendeteArten.includes(artVon(plan.spalten[i], arten)));
-  const gruppen = plan.gruppen.filter((g) => !ansicht.ausgeblendeteGruppen.includes(schluessel(g)));
-
-  // Fenster über die gefilterten Termine.
-  const passend = passendeAnzahl(platz, ansicht.breite, gefiltert.length);
-  const f = sichtbar(fenster, gefiltert.length, passend);
-  const imFenster = gefiltert.slice(f.von, f.bis);
-  const gehe = (was: FensterSchritt) =>
-    setFenster(schritt(fenster, was, gefiltert.length, passend));
-
-  // Vorgabe beim ersten Anzeigen: was man nicht plant, ist zugeklappt.
-  const zugeklappt = zu ?? new Set(plan.gruppen.filter((g) => !g.planbar).map(schluessel));
-  const umschalten = (k: string) => {
-    const neu = new Set(zugeklappt);
-    if (neu.has(k)) neu.delete(k);
-    else neu.add(k);
-    setZu(neu);
+  /** Nach einer Änderung im Entwurfs-Fach: Ergebnis übernehmen, bei Erfolg schließen und Bescheid geben. */
+  const nachFach = (r: EntwurfErgebnis, k: string, text: () => string) => {
+    if (r.ok) {
+      ewSetzen(k, r.entwurf);
+      setFach(null);
+      showToast(text());
+    } else if (r.grund === 'konflikt') {
+      // Was jetzt dasteht, zeigt auch die Matrix sofort.
+      ewSetzen(k, r.jetzt ?? null);
+    }
   };
 
-  const sicht: Sicht = {
-    plan,
-    spalten: handy ? gefiltert : imFenster,
-    gruppen,
-    zugeklappt,
-    neben: (s) => haupt !== null && s.name !== haupt,
-    onUmschalten: umschalten,
-    onFrei: (i, z, nr) => setFrei(freierPlatz(plan.spalten[i], z, z.zellen[i] ?? [], nr)),
+  /** Ob und wie man an diesem Platz eintragen kann – aus Anschluss, Schublade und Rechten. */
+  const eintragenFuer = (f: FreierPlatz): Eintragen | undefined => {
+    if (!entwuerfe) return undefined;
+    if (ew.art === 'laedt') return { art: 'laedt' };
+    if (ew.art === 'fehler') return { art: 'gesperrt', text: ew.text, onNochmal: ewNeu };
+    const daten = ew.daten;
+    const s = daten.schubladen.get(f.gruppeId);
+    if (!s) {
+      return { art: 'gesperrt', text: 'Für diesen Dienst kannst du hier keine Entwürfe anlegen.' };
+    }
+    if (s.fehler) return { art: 'gesperrt', text: grundText(s.fehler), onNochmal: ewNeu };
+    if (s.stand === 'einrichtbar') {
+      return {
+        art: 'einrichten',
+        gruppe: s.gruppe.name,
+        onEinrichten: async () => {
+          await entwuerfe.einrichten(s.gruppe);
+          ewNeu();
+        },
+      };
+    }
+    if (s.stand === 'fehlt') {
+      return {
+        art: 'gesperrt',
+        text: `Für „${s.gruppe.name}“ gibt es noch keinen Platz für Entwürfe – oder dir fehlt das Recht, ihn zu sehen. Bitte die Gemeinde-Verwaltung fragen.`,
+      };
+    }
+    if (s.stand === 'nur-lesen') {
+      return {
+        art: 'gesperrt',
+        text: `Du darfst die Entwürfe von „${s.gruppe.name}“ ansehen, aber nicht ändern. Bitte die Gemeinde-Verwaltung nach dem Recht fragen.`,
+      };
+    }
+    const ort = { eventId: f.eventId, serviceId: f.serviceId, index: f.index };
+    return {
+      art: 'bereit',
+      erwartet: ersetzt,
+      onWahl: async (ziel: EntwurfZiel, erwartet: number | null): Promise<EntwurfErgebnis> => {
+        // Ersetzt man einen Entwurf („Andere Person wählen“), bleibt „Beim Senden“ wie es war.
+        const bisher = erwartet !== null ? daten.entwuerfe.get(ortSchluessel(ort)) : undefined;
+        const r = await entwuerfe.speichern(
+          daten,
+          f.gruppeId,
+          {
+            ort,
+            ziel,
+            modus: bisher?.modus ?? 'anfrage',
+            gesehen: { art: 'frei' },
+            von: entwuerfe.ich,
+          },
+          erwartet,
+        );
+        const k = ortSchluessel(ort);
+        if (r.ok) {
+          ewSetzen(k, r.entwurf);
+          setFrei(null);
+          setErsetzt(null);
+          showToast(`${ziel.name} eingetragen – noch nicht gesendet.`);
+        } else if (r.grund === 'konflikt') {
+          // Was jetzt dasteht, zeigt auch die Matrix sofort.
+          ewSetzen(k, r.jetzt ?? null);
+        }
+        return r;
+      },
+    };
   };
 
+  // Die Leiste unten (E4-3-3): gültige Entwürfe im geladenen Zeitraum – veraltete werden nie gesendet.
+  const offen = plan
+    ? plan.gruppen.reduce(
+        (n, g) =>
+          n +
+          g.zeilen.reduce(
+            (m, zl) =>
+              m +
+              zl.zellen.reduce(
+                (k, zelle, i) =>
+                  k +
+                  (zelle ?? []).filter((p) => {
+                    const a = entwurfAmPlatz(plan.spalten[i], zl, p);
+                    return a !== null && !a.veraltet;
+                  }).length,
+                0,
+              ),
+            0,
+          ),
+        0,
+      )
+    : 0;
+
+  const nachladeFehler = !bereich && zustand.art === 'fertig' ? zustand.nachladeFehler : undefined;
   return (
     <div className={styles.planen}>
-      <div className={styles.werkzeug}>
-        <Segment
-          value={ansicht.unteransicht}
-          options={[
-            { value: 'matrix', label: 'Matrix' },
-            { value: 'personen', label: 'Wer wie oft?' },
-          ]}
-          onChange={(v) => setAnsicht({ ...ansicht, unteransicht: v })}
-          ariaLabel="Ansicht"
-          className={styles.ansicht}
-          verbunden
-        />
-        {!handy && (
-          <Terminleiste
-            plan={plan}
-            spalten={imFenster}
-            davor={f.davor}
-            danach={f.danach}
-            festeAnzahl={fenster.anzahl !== null}
-            onSchritt={gehe}
-          />
-        )}
-        <div className={styles.rechts}>
-          {!handy && ansicht.unteransicht === 'matrix' && (
-            <Segment<Breite>
-              value={ansicht.breite}
-              options={[
-                { value: 's', label: 'S' },
-                { value: 'm', label: 'M' },
-                { value: 'l', label: 'L' },
-              ]}
-              onChange={(b) => setAnsicht({ ...ansicht, breite: b })}
-              ariaLabel="Spaltenbreite"
-              verbunden
-            />
-          )}
-          <FilterKnopf
-            abschnitte={[
-              {
-                titel: 'Veranstaltungen',
-                optionen: arten.map((art) => ({
-                  wert: art,
-                  text: art === WEITERE ? 'Weitere' : art,
-                })),
-                aus: ansicht.ausgeblendeteArten,
-                onAus: (ausgeblendeteArten) => setAnsicht({ ...ansicht, ausgeblendeteArten }),
-              },
-              {
-                titel: 'Gruppen',
-                optionen: plan.gruppen.map((g) => ({ wert: schluessel(g), text: gruppenName(g) })),
-                aus: ansicht.ausgeblendeteGruppen,
-                onAus: (ausgeblendeteGruppen) => setAnsicht({ ...ansicht, ausgeblendeteGruppen }),
-              },
-            ]}
-          />
-        </div>
-      </div>
-
-      <div ref={rahmen}>
-        {gefiltert.length === 0 || gruppen.length === 0 ? (
-          <section className={styles.karte}>
-            <p className={styles.hinweis} style={{ padding: 14 }}>
-              Nichts eingeblendet – über „Filter“ eine Veranstaltung oder Gruppe wieder anhaken.
-            </p>
-          </section>
-        ) : ansicht.unteransicht === 'personen' ? (
-          <WerWieOft sicht={sicht} />
-        ) : handy ? (
-          <HandyPlan sicht={sicht} />
-        ) : (
-          <TabellenPlan sicht={sicht} breite={ansicht.breite} platz={platz} />
-        )}
-      </div>
-
-      <div className={styles.mehr}>
-        <button type="button" className={styles.knopf} onClick={onMehr}>
-          Weitere Termine laden
-        </button>
-      </div>
+      {werkzeug}
+      {nachladeFehler && (
+        <FehlerKasten fehler={nachladeFehler} onNochmal={() => nachladen('weiter')} />
+      )}
+      <div ref={rahmen}>{inhalt}</div>
       <p className={styles.hinweis}>
         Welche Dienste du siehst, entscheidet ChurchTools. Hier stehen nur Dienstgruppen, die du
         ganz sehen darfst – deine eigenen Dienste findest du immer unter Start und Termine. Planen
         darfst du, wo du die Dienstgruppe bearbeiten darfst, die Gruppe eines Dienstes leitest oder
-        Admin des Termins bist. Einen freien Platz antippen zeigt, wer kann – Einteilen kommt als
-        Nächstes.
+        Admin des Termins bist. Einen freien Platz antippen zeigt, wer kann – dort trägst du
+        jemanden als Entwurf ein. Gesendet wird noch nichts.
       </p>
-      {frei && <WerKann platz={frei} onClose={() => setFrei(null)} />}
+      {fach && entwuerfe && ew.art === 'fertig' && (
+        <EntwurfFach
+          platz={fach.platz}
+          entwurf={fach.entwurf}
+          inChurchTools={fach.inChurchTools}
+          onClose={() => setFach(null)}
+          onModus={async (modus, erwartet) => {
+            const e = fach.entwurf;
+            const r = await entwuerfe.speichern(
+              ew.daten,
+              fach.platz.gruppeId,
+              { ort: e.ort, ziel: e.ziel, modus, gesehen: e.gesehen, von: entwuerfe.ich },
+              erwartet,
+            );
+            nachFach(r, ortSchluessel(e.ort), () =>
+              modus === 'direkt'
+                ? `${e.ziel.name} wird beim Senden direkt zugeteilt.`
+                : `${e.ziel.name} bekommt beim Senden eine Anfrage.`,
+            );
+            return r;
+          }}
+          onEntfernen={async (erwartet) => {
+            const e = fach.entwurf;
+            const r = await entwuerfe.entfernen(ew.daten, fach.platz.gruppeId, e.ort, erwartet);
+            nachFach(r, ortSchluessel(e.ort), () =>
+              fach.inChurchTools !== null ? 'Entwurf verworfen.' : 'Entwurf entfernt.',
+            );
+            return r;
+          }}
+          onAnderePerson={() => {
+            // „Wer kann?“ für denselben Platz – es ersetzt den Entwurf (mit seiner Version).
+            setErsetzt(fach.entwurf.version);
+            setFrei(fach.platz);
+            setFach(null);
+          }}
+        />
+      )}
+      {frei && (
+        <WerKann
+          platz={frei}
+          onClose={() => {
+            setFrei(null);
+            setErsetzt(null);
+          }}
+          eintragen={eintragenFuer(frei)}
+        />
+      )}
+      {offen > 0 && (
+        <div className={styles.sendeLeiste} role="status" aria-label="Noch nicht gesendet">
+          {/* Am Handy kürzer, wie im Entwurf (Abschnitt 6) – sonst bricht alles um. */}
+          <span>
+            {offen} {offen === 1 ? 'Entwurf' : 'Entwürfe'}
+            {handy ? '' : ' noch nicht gesendet'}
+            <small>{handy ? 'Senden folgt' : 'Senden kommt mit dem nächsten Schritt'}</small>
+          </span>
+          <button type="button" className={styles.leistenKnopf} disabled>
+            {handy ? 'Ansehen' : 'Ansehen und senden'}
+          </button>
+        </div>
+      )}
+      <Toast message={toast} />
     </div>
   );
 }
 
+/** Gefilterte Spalten und wie viele „passend“ ins Fenster gehen – für Anzeige und Nachladen gleich. */
+function fensterDaten(plan: Plan, ansicht: PlanenAnsicht, platz: number) {
+  const arten = veranstaltungsArten(plan.spalten);
+  const gefiltert = plan.spalten
+    .map((_, i) => i)
+    .filter((i) => !ansicht.ausgeblendeteArten.includes(artVon(plan.spalten[i], arten)));
+  return { gefiltert, passend: passendeAnzahl(platz, ansicht.breite, gefiltert.length) };
+}
+
+/**
+ * Die Terminleiste: ‹ ＋ [Zeitraum] ＋ › bei „ab heute“, ‹ [Zeitraum] › bei gewähltem Bereich. Am Handy nur
+ * Knopf und ‹ › für einen gewählten Bereich – geblättert wird dort in der Datumsleiste.
+ */
 function Terminleiste({
-  plan,
-  spalten,
+  knopf,
+  bereich,
+  handy,
   davor,
   danach,
-  festeAnzahl,
   onSchritt,
+  onVerschieben,
 }: {
-  plan: Plan;
-  spalten: number[];
+  knopf: ReactNode;
+  bereich: boolean;
+  handy: boolean;
   davor: boolean;
   danach: boolean;
-  festeAnzahl: boolean;
   onSchritt: (was: FensterSchritt) => void;
+  onVerschieben: (richtung: 1 | -1) => void;
 }) {
-  const erster = plan.spalten[spalten[0]];
-  const letzter = plan.spalten[spalten[spalten.length - 1]];
-  const kurz = (tag: string) => `${tag.slice(8, 10)}.${tag.slice(5, 7)}.`;
+  const pfeil = (richtung: 1 | -1, aktiv: boolean) => (
+    <button
+      type="button"
+      className={styles.leistenKnopf}
+      disabled={!aktiv}
+      aria-label={
+        bereich
+          ? richtung < 0
+            ? 'Zeitraum davor'
+            : 'Zeitraum danach'
+          : richtung < 0
+            ? 'Einen Termin zurück'
+            : 'Einen Termin weiter'
+      }
+      onClick={() =>
+        bereich ? onVerschieben(richtung) : onSchritt(richtung < 0 ? 'zurueck' : 'weiter')
+      }
+    >
+      <Icon name={richtung < 0 ? 'chev-left' : 'chev-right'} size={16} />
+    </button>
+  );
+  const dazu = (was: 'frueherDazu' | 'spaeterDazu', aktiv: boolean) => (
+    <button
+      type="button"
+      className={styles.leistenKnopf}
+      disabled={!aktiv}
+      aria-label={
+        was === 'frueherDazu' ? 'Früheren Termin dazunehmen' : 'Späteren Termin dazunehmen'
+      }
+      onClick={() => onSchritt(was)}
+    >
+      <Icon name="plus" size={16} />
+    </button>
+  );
+  const blaettern = !handy || bereich;
   return (
-    <div className={styles.leiste} role="group" aria-label="Zeitraum">
-      <button
-        type="button"
-        className={styles.leistenKnopf}
-        disabled={!davor}
-        aria-label="Einen Termin zurück"
-        onClick={() => onSchritt('zurueck')}
-      >
-        <Icon name="chev-left" size={16} />
-      </button>
-      <button
-        type="button"
-        className={styles.leistenKnopf}
-        disabled={!davor}
-        aria-label="Früheren Termin dazunehmen"
-        onClick={() => onSchritt('frueherDazu')}
-      >
-        <Icon name="plus" size={16} />
-      </button>
-      <span className={styles.zeitraum}>
-        <b>
-          {erster && letzter
-            ? `${kurz(erster.tag)} – ${kurz(letzter.tag)}${letzter.tag.slice(0, 4)}`
-            : '–'}
-        </b>
-        <small>
-          {spalten.length} {spalten.length === 1 ? 'Termin' : 'Termine'}
-          {!festeAnzahl && ' · passend zur Fensterbreite'}
-        </small>
-        {festeAnzahl && (
-          <button type="button" className={styles.anpassen} onClick={() => onSchritt('passend')}>
-            an Fensterbreite anpassen
-          </button>
-        )}
-      </span>
-      <button
-        type="button"
-        className={styles.leistenKnopf}
-        disabled={!danach}
-        aria-label="Späteren Termin dazunehmen"
-        onClick={() => onSchritt('spaeterDazu')}
-      >
-        <Icon name="plus" size={16} />
-      </button>
-      <button
-        type="button"
-        className={styles.leistenKnopf}
-        disabled={!danach}
-        aria-label="Einen Termin weiter"
-        onClick={() => onSchritt('weiter')}
-      >
-        <Icon name="chev-right" size={16} />
-      </button>
+    <div
+      className={`${styles.leiste}${handy ? ' ' + styles.leisteHandy : ''}`}
+      role="group"
+      aria-label="Zeitraum"
+    >
+      {blaettern && pfeil(-1, davor)}
+      {!bereich && !handy && dazu('frueherDazu', davor)}
+      {knopf}
+      {!bereich && !handy && dazu('spaeterDazu', danach)}
+      {blaettern && pfeil(1, danach)}
     </div>
   );
 }
@@ -357,7 +763,12 @@ function TabellenPlan({ sicht, breite, platz }: { sicht: Sicht; breite: Breite; 
     `${s.abgesagt ? ' ' + styles.abgesagtSpalte : ''}${neben(s) ? ' ' + styles.neben : ''}`;
   return (
     <div className={styles.rahmen}>
-      <table className={styles.plan} style={{ ['--cw' as string]: `${cw}px` }}>
+      {/* Feste Breiten: Sonst dehnt der Inhalt die Spalten, und „passend“ passt nicht mehr – dann rutscht
+          der erste Termin beim Wischen unter die Dienst-Spalte (Alwin, 14.10.2026). */}
+      <table
+        className={styles.plan}
+        style={{ ['--cw' as string]: `${cw}px`, width: DIENST_SPALTE + spalten.length * cw }}
+      >
         <thead>
           <tr>
             <th className={`${styles.svc} ${styles.svcKopf}`} scope="col">
@@ -435,6 +846,13 @@ function TabellenPlan({ sicht, breite, platz }: { sicht: Sicht; breite: Breite; 
                                     ? (nr) => sicht.onFrei(i, z, nr)
                                     : undefined
                                 }
+                                entwurf={(p) => sicht.entwurf(i, z, p)}
+                                onEntwurf={
+                                  darfPlanen(z, plan.spalten[i]) && sicht.darfAendern(z)
+                                    ? (nr) => sicht.onEntwurf(i, z, nr)
+                                    : undefined
+                                }
+                                ichId={sicht.ichId}
                               />
                             )}
                           </td>
@@ -451,12 +869,19 @@ function TabellenPlan({ sicht, breite, platz }: { sicht: Sicht; breite: Breite; 
   );
 }
 
-function HandyPlan({ sicht }: { sicht: Sicht }) {
+function HandyPlan({ sicht, amEnde }: { sicht: Sicht; amEnde?: () => void }) {
   const { plan, spalten, gruppen, zugeklappt, neben, onUmschalten } = sicht;
   const [gewaehlt, setGewaehlt] = useState<number | null>(null);
   const id =
     gewaehlt !== null && spalten.some((i) => plan.spalten[i].id === gewaehlt) ? gewaehlt : null;
   const i = id === null ? spalten[0] : spalten.find((x) => plan.spalten[x].id === id)!;
+  // Letzten Termin der Datumsleiste gewählt → weitere Wochen im Hintergrund nachladen (statt „Weitere
+  // Termine laden“, 14.10.2026).
+  const amLetzten = spalten.length > 1 && i === spalten[spalten.length - 1];
+  useEffect(() => {
+    if (amLetzten && amEnde) amEnde();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nur beim Erreichen des letzten Termins
+  }, [amLetzten]);
   const s = plan.spalten[i];
   const k = kachel(s.tag);
   const st = standText(s);
@@ -511,6 +936,13 @@ function HandyPlan({ sicht }: { sicht: Sicht }) {
                     <Plaetze
                       plaetze={z.zellen[i]!}
                       onFrei={darfPlanen(z, s) ? (nr) => sicht.onFrei(i, z, nr) : undefined}
+                      entwurf={(p) => sicht.entwurf(i, z, p)}
+                      onEntwurf={
+                        darfPlanen(z, s) && sicht.darfAendern(z)
+                          ? (nr) => sicht.onEntwurf(i, z, nr)
+                          : undefined
+                      }
+                      ichId={sicht.ichId}
                     />
                   </div>
                 ))}
@@ -589,29 +1021,115 @@ function WerWieOft({ sicht }: { sicht: Sicht }) {
 function Plaetze({
   plaetze,
   onFrei,
+  entwurf,
+  onEntwurf,
+  ichId = null,
 }: {
   plaetze: PlanPlatz[];
   /** Nur wo man planen darf: freier Platz wird ein Knopf (Platz 1 … n). */
   onFrei?: (nr: number) => void;
+  /** Der Entwurf an einem Platz (E4-3) – gültig steht er statt „frei“ da, veraltet als Schild darunter. */
+  entwurf?: (p: PlanPlatz) => EntwurfAmPlatz | null;
+  /** Entwurf bzw. Schild antippen → Entwurfs-Fach (nur wo man planen und ändern darf). */
+  onEntwurf?: (nr: number) => void;
+  ichId?: number | null;
 }) {
   return (
     <div className={styles.plaetze}>
-      {plaetze.map((p, i) =>
-        p.art === 'frei' && onFrei ? (
-          <button
-            key={i}
-            type="button"
-            className={`${styles.platz} ${styles.frei} ${styles.freiKnopf}`}
-            onClick={() => onFrei(i + 1)}
-            aria-label={`frei – Wer kann? (Platz ${i + 1} von ${plaetze.length})`}
-          >
-            frei
-          </button>
-        ) : (
-          <Platz key={i} p={p} />
-        ),
-      )}
+      {plaetze.map((p, i) => {
+        const a = entwurf?.(p) ?? null;
+        const oeffnen = onEntwurf ? () => onEntwurf(i + 1) : undefined;
+        if (a && !a.veraltet) {
+          return (
+            <EntwurfPlatz
+              key={i}
+              e={a.entwurf}
+              eigener={a.entwurf.von.personId === ichId}
+              onOeffnen={oeffnen}
+            />
+          );
+        }
+        const platz =
+          p.art === 'frei' && onFrei ? (
+            <button
+              type="button"
+              className={`${styles.platz} ${styles.frei} ${styles.freiKnopf}`}
+              onClick={() => onFrei(i + 1)}
+              aria-label={`frei – Wer kann? (Platz ${i + 1} von ${plaetze.length})`}
+            >
+              frei
+            </button>
+          ) : (
+            <Platz p={p} />
+          );
+        if (!a) return <Fragment key={i}>{platz}</Fragment>;
+        // Veraltet: ChurchTools gilt – darunter ein Schild, das zum Entwurf führt (Alwin, 14.10.2026).
+        const text = `Entwurf veraltet: „${a.entwurf.ziel.name}“ von ${a.entwurf.von.name}`;
+        return (
+          <Fragment key={i}>
+            {platz}
+            {oeffnen ? (
+              <button
+                type="button"
+                className={`${styles.veraltet} ${styles.veraltetKnopf}`}
+                onClick={oeffnen}
+                aria-label={text}
+              >
+                <Icon name="pencil" size={10} /> Entwurf veraltet
+              </button>
+            ) : (
+              <span className={styles.veraltet} title={text}>
+                <Icon name="pencil" size={10} /> Entwurf veraltet
+              </span>
+            )}
+          </Fragment>
+        );
+      })}
     </div>
+  );
+}
+
+/** Was jetzt in ChurchTools am Platz steht – für das Fach eines veralteten Entwurfs. */
+function stehtInChurchTools(p: PlanPlatz): string {
+  if (p.art === 'frei') return 'Der Platz ist dort wieder frei.';
+  if (p.verborgen) return 'Dort ist jemand eingetragen (Name nicht sichtbar).';
+  if (p.gast) return `${p.name} steht dort als Gast.`;
+  return p.art === 'zugesagt' ? `${p.name} hat dort zugesagt.` : `${p.name} ist dort angefragt.`;
+}
+
+/** Ein Entwurf – noch nicht gesendet: gestrichelt mit Stift, „von …“ wenn von jemand anderem (E4-3). */
+function EntwurfPlatz({
+  e,
+  eigener,
+  onOeffnen,
+}: {
+  e: Entwurf;
+  eigener: boolean;
+  /** Antippen öffnet das Entwurfs-Fach (E4-3-3) – nur wo man ändern darf. */
+  onOeffnen?: () => void;
+}) {
+  const gast = e.ziel.art === 'gast';
+  const Tag = onOeffnen ? 'button' : 'span';
+  return (
+    <Tag
+      {...(onOeffnen
+        ? {
+            type: 'button' as const,
+            onClick: onOeffnen,
+            'aria-label': `Entwurf von ${e.von.name}: ${e.ziel.name}${gast ? ' (Gast)' : ''}`,
+          }
+        : {})}
+      className={`${styles.platz} ${styles.entwurf}${onOeffnen ? ' ' + styles.entwurfKnopf : ''}`}
+      title={`Entwurf von ${e.von.name} – noch nicht gesendet`}
+    >
+      <span className={styles.ic} aria-label="Entwurf, noch nicht gesendet">
+        <Icon name="pencil" size={11} />
+      </span>
+      <span className={styles.name}>{e.ziel.name}</span>
+      {gast && <span className={styles.gast}>Gast</span>}
+      {!gast && e.modus === 'direkt' && <span className={styles.direkt}>direkt</span>}
+      {!eigener && <span className={styles.von}>{e.von.name}</span>}
+    </Tag>
   );
 }
 

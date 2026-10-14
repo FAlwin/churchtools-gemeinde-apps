@@ -1,0 +1,67 @@
+// Scroll-Modus (#551): Seiten nahtlos untereinander, jede in voller Breite.
+.root {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  // Hinter dem Ende des Ablaufs dieselbe Fläche wie beim Blättern.
+  background: var(--blatt-umgebung);
+  // Nur senkrecht scrollen – Wischen zur Seite und Zoomen gehören hier niemandem.
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.inhalt {
+  position: relative;
+}
+
+// Keine Lücke, kein Schatten, kein Rand: Die Seiten laufen ineinander (Alwin, 14.10.2026).
+.seite {
+  position: relative;
+  width: 100%;
+  background: #fff;
+}
+
+.leinwand {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+// Texte deckungsgleich über der Seite; cqh = % der Seitenhöhe wie in der Live-Ansicht.
+.textEbene {
+  position: absolute;
+  inset: 0;
+  container-type: size;
+  line-height: 1;
+  pointer-events: none;
+}
+
+// Wo der Bildschirm vor dem Pedal-Tritt endete – kurz, damit man die Zeile wiederfindet.
+.merker {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 2px dashed var(--blue);
+  pointer-events: none;
+  animation: merkerAus 1.4s ease-out forwards;
+}
+
+@keyframes merkerAus {
+  0%,
+  40% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .merker {
+    animation-duration: 0.01s;
+    animation-delay: 1.2s;
+  }
+}

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@ui/ct/fehler';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
-import { ladeTermine } from './ladeTermine';
+import { ladeTermine, ladeZeitraum } from './ladeTermine';
 import type { Start } from './start';
 import { startFuer } from './start.testutil';
 
@@ -49,7 +49,10 @@ beforeEach(() => {
     location: { origin: 'https://ct.test' },
   });
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 describe('ladeTermine', () => {
   it('Zeitraum ab heute über `wochen` (hier 16, nicht die Vorgabe 8), mit den Plätzen; eigene Dienste und freie Plätze', async () => {
@@ -101,6 +104,31 @@ describe('ladeTermine', () => {
   it('Termine ohne Liste → Fehler 502, nicht „keine Termine“', async () => {
     ct(() => json(200, { data: null }));
     const e = await ladeTermine(START, 8, 'Europe/Berlin').catch((x: unknown) => x);
+    expect((e as ApiError).status).toBe(502);
+  });
+});
+
+describe('ladeZeitraum (Zeitraum-Knopf, 14.10.2026)', () => {
+  it('beide Tage eingeschlossen – ChurchTools nimmt `to` ausschließlich, also einen Tag mehr', async () => {
+    const spy = ct(() => json(200, TERMINE));
+    const d = await ladeZeitraum(START, '2026-10-01', '2026-10-31', 'Europe/Berlin');
+    expect(spy.mock.calls.map((c) => String(c[0]))).toEqual([
+      'https://ct.test/api/events?from=2026-10-01&to=2026-11-01&include=eventServices',
+    ]);
+    expect(d.plan.spalten.map((s) => s.id)).toEqual([7]);
+  });
+
+  it('über den Jahreswechsel', async () => {
+    const spy = ct(() => json(200, { data: [] }));
+    await ladeZeitraum(START, '2026-12-01', '2026-12-31', 'Europe/Berlin');
+    expect(String(spy.mock.calls[0][0])).toContain('from=2026-12-01&to=2027-01-01&');
+  });
+
+  it('ohne Liste → Fehler 502 wie bei „ab heute“', async () => {
+    ct(() => json(200, { data: null }));
+    const e = await ladeZeitraum(START, '2026-10-01', '2026-10-31', 'Europe/Berlin').catch(
+      (x: unknown) => x,
+    );
     expect((e as ApiError).status).toBe(502);
   });
 });

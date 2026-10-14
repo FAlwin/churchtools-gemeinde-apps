@@ -73,9 +73,10 @@ export function belegungAus(p: RohPlatz): Belegung {
 
 /**
  * Ist die gesehene Belegung noch dieselbe? Eine Anfrage, die inzwischen zugesagt wurde, zählt als
- * dieselbe Person – geändert hat sich dann nur die Antwort, nicht die Einteilung.
+ * dieselbe Person – geändert hat sich dann nur die Antwort, nicht die Einteilung. Auch der Entwurfs-Speicher
+ * (`entwuerfe.ts`) prüft damit, ob ein Entwurf veraltet ist – eine Regel für beide.
  */
-function gleichePerson(a: Belegung, b: Belegung): boolean {
+export function gleichePerson(a: Belegung, b: Belegung): boolean {
   if (a.art === 'frei' || b.art === 'frei') return a.art === b.art;
   if (a.art === 'gast' || b.art === 'gast') {
     return a.art === 'gast' && b.art === 'gast' && a.name.trim() === b.name.trim();

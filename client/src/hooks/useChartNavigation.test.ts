@@ -163,6 +163,29 @@ describe('useChartNavigation – Tastatur', () => {
     feld.remove();
   });
 
+  it('versteht die Pedal-Tasten: ↓/Bild↓/Leertaste weiter, ↑/Bild↑ zurück (#551)', () => {
+    const { result } = starte(owners([5]));
+    for (const key of ['ArrowDown', 'PageDown', ' ']) {
+      act(() => void window.dispatchEvent(new KeyboardEvent('keydown', { key })));
+    }
+    expect(result.current.pageIdx).toBe(3);
+    for (const key of ['ArrowUp', 'PageUp']) {
+      act(() => void window.dispatchEvent(new KeyboardEvent('keydown', { key })));
+    }
+    expect(result.current.pageIdx).toBe(1);
+  });
+
+  it('übernimmt ein eigenes Pedal (Scroll-Modus), statt zu blättern', () => {
+    const pedal = vi.fn();
+    const { result } = renderHook(() =>
+      useChartNavigation({ owners: owners([3]), startIndex: 0, blockedRef: blocked(), pedal }),
+    );
+    act(() => void window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' })));
+    act(() => void window.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageUp' })));
+    expect(pedal.mock.calls).toEqual([[1], [-1]]);
+    expect(result.current.pageIdx).toBe(0);
+  });
+
   it('meldet den Tastatur-Listener beim Verlassen wieder ab', () => {
     const { result, unmount } = starte(owners([3]));
     unmount();

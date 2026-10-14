@@ -141,6 +141,22 @@ describe('Mehr – Schalter-Zeilen schalten genau einmal, über Zeile ODER Schal
   });
 });
 
+describe('Mehr – Liedansicht (#551)', () => {
+  beforeEach(() => localStorage.removeItem('worship:liedansicht'));
+
+  it('zeigt „Blättern" gewählt und merkt sich „Scrollen" auf diesem Gerät', () => {
+    zeige();
+    const gruppe = screen.getByRole('group', { name: 'Liedansicht' });
+    const blaettern = gruppe.querySelector('button[aria-pressed="true"]');
+    expect(blaettern?.textContent).toBe('Blättern');
+    fireEvent.click(screen.getByRole('button', { name: 'Scrollen' }));
+    expect(screen.getByRole('button', { name: 'Scrollen' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(localStorage.getItem('worship:liedansicht')).toBe('scrollen');
+  });
+});
+
 describe('Mehr – Hilfe und Konto', () => {
   it('Einführung und Abmelden rufen ihre Aktion', () => {
     const { onReplayIntro, onLogout } = zeige();

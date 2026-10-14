@@ -7,6 +7,158 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Anmeldungen)
+
+- **Dunkelmodus wie ChurchTools** (Alwin, 14.10.2026). Die Anmeldungen sind hell oder dunkel, je nachdem, was
+  in ChurchTools eingestellt ist (gemessen: Klasse `light`/`dark` an `<body>`, unabhängig vom Gerät), und
+  schalten mit um. Die Farben sind die von ChurchTools (Tailwind 4: zinc-900 Seite, zinc-800 Karten …).
+  Die Formular-Vorschau im Baukasten bleibt in ihrem eigenen Design. Gemeinsamer Baustein für alle Apps:
+  `ui/design/thema.ts` und ein eigener Farbblock in `_variables.scss`; die Musik-App und der Dienstplaner
+  bleiben, wie sie sind, bis sie umsteigen (`docs/entwicklung/dunkelmodus.md`). Der Erweiterungs-Bau
+  schreibt dafür jetzt auch Selektoren mit mehreren Attributen am `html` richtig um.
+- **Zahnrad wie in ChurchTools:** Der Knopf „Einstellungen“ zeigt das Zahnrad von „System-Einstellungen“
+  (Font Awesome „gear“, solid; CC BY 4.0). Stehen „Einstellungen“ und „Neue Veranstaltung“ beide im Kopf,
+  bleiben sie zusammen rechts (vorher schwebte „Einstellungen“ mitten in der Zeile).
+- **Formular-Adresse zum Testen:** Neben `https://…` ist auch `http://localhost:<Port>` erlaubt (das Formular auf
+  dem eigenen Rechner), bis die eigene Adresse der Gemeinde steht.
+- **Karte „Anmeldelink“** (Entwurf `link-kopieren-v2`, Alwin: „B – bitte mit einheitlichen Buttons“): Ist eine
+  Veranstaltung freigegeben und die Formular-Adresse eingerichtet, steht oben auf ihrer Seite der Link als Text,
+  dazu drei gleiche Knöpfe **Kopieren** (danach kurz „Kopiert“), **Öffnen** (neuer Tab) und **Teilen** (Teilen-Menü
+  des Geräts; fehlt, wo der Browser keins hat). Vorher stand der Link nur im Termin-Fenster. Das Kopieren beider
+  Stellen läuft über einen gemeinsamen Hook (`useLinkKopieren.ts`).
+  **Erst geprüft, dann gezeigt** (Alwin, 15.10.2026): Die Karte fragt wie ein Gast bei ChurchTools nach. Nimmt
+  ChurchTools nichts an (z. B. vor A6-2 freigegeben und nicht öffentlich – der Link führte zu „nicht geöffnet“),
+  steht statt des Links, was fehlt, und „Jetzt einrichten“ öffnet das Freigeben-Fenster; danach prüft sie neu.
+  Fehlt nur der laufende Anmeldezeitraum oder lässt sich gerade nicht prüfen, bleibt der Link mit Hinweis.
+- **„Erst einrichten“ mit Nummern:** Die Schritte waren in ChurchTools ohne Zahlen (ChurchTools nimmt Listen
+  die Nummern).
+- **Demo** (`?demo`) kennt die Gemeinde-Einstellungen (Formular-Adresse, Vorgaben); `?demo=einrichten`
+  zeigt den Zustand davor. Seit A6-2 blieb die Demo sonst bei „Erst einrichten“ stehen.
+- **Echt anmelden** (A6-2, #548). Gemessen 14.10.2026 an der Test-Instanz (`messung-a6-2026-10-14.md`):
+  Familie, Kind allein, Geschwister mit derselben Adresse, dieselbe Person doppelt.
+  - **Öffentliches Formular:** Token → Formular-Aufbau (Feldnummern) → Anmeldung, ohne Login. **Variante A**
+    (Alwin): Mitglied werden nur die Teilnehmenden; was es einmal je Anmeldung gibt (neues Systemfeld „Angemeldet
+    von“, Telefon, Bemerkungen, Betrag, Aufschlüsselung, Auswahl, Extras), steht bei der ersten Person. Antworten
+    im Format von ChurchTools (Auswahl als Options-ID, Ankreuzen `1`, Mehrfachauswahl als Text). Passt etwas nicht
+    zu ChurchTools, wird nichts geschickt. Schon bekannt → „Fast geschafft, bitte per Mail bestätigen“. Fehler
+    einzeln, die Eingaben bleiben. `?probe` = Trockenlauf.
+  - **Freigeben** wählt die Leitung (ohne nimmt ChurchTools nichts an), setzt die Vorgaben für neue Personen –
+    **flach** (`newPersonStatusId/CampusId/DepartmentId`; `newMember: {…}` meldet 200 und speichert nichts) –,
+    ergänzt fehlende Systemfelder und fragt danach wie ein Gast, ob Anmeldungen angenommen werden.
+  - **Einstellungen der Gemeinde** (Gruppen-Admins): Vorgaben für neue Personen einmal je Gemeinde, im
+    Datenbereich der Erweiterung; ohne Einstellung der Vorschlag. Ein Aussetzer beim Lesen wirft, statt still den
+    Vorschlag zu nehmen. Anschluss an den Datenbereich über `modulPortFuer` (`ui/ct/modulPort.ts`, derselbe wie
+    beim Dienstplaner; beim Zusammenführen mit E4-3 lagen zwei Fassungen vor – jetzt eine).
+  - **Formular auf dem eigenen Webspace jeder Gemeinde** (Alwin, 14.10.2026: „Voraussetzung für diese Extension,
+    auf keinen Fall soll unsere Domain da sichtbar werden“). Statt einer festen Adresse (`FORMULAR_ADRESSE`,
+    GitHub Pages) trägt ein Gruppen-Admin unter „Einstellungen“ die Adresse der Formular-Seite ein; die
+    Erweiterung prüft, ob sie antwortet und in ChurchTools als erlaubte Herkunft steht. Ohne Adresse zeigt die
+    Startseite nur „Erst einrichten“, Freigeben ist gesperrt, und es gibt keinen Link. Am Release hängt das
+    Formular als `anmeldungen-formular-v….zip`; der Pages-Workflow ist weg. Gemessen: In ChurchTools selbst geht
+    es nicht (Erweiterungsseiten und ihre Dateien nur mit Login, kein Recht für nicht angemeldete Besucher,
+    Wiki-Dateien mit `Content-Security-Policy: sandbox`).
+  - Die Preis-Buchung aus den Antworten steht an EINER Stelle (`buchungAus`) – angezeigter und gespeicherter
+    Betrag können nicht auseinanderlaufen. Ein Test zählte die Systemfelder als Literal – jetzt gegen die Liste.
+
+## [2.36.0] – 2026-10-15
+
+### Neu
+
+- **Scroll-Modus: Lieder untereinander statt blättern** (#551, Idee vom ChurchTools-Dev-Stammtisch):
+  - Unter **Mehr → Während des Spielens → Liedansicht** gibt es **Blättern** (wie bisher) und
+    **Scrollen**. Die Wahl gilt nur für dieses Gerät.
+  - Beim Scrollen stehen alle Seiten des Ablaufs untereinander, nahtlos und jede so breit wie der
+    Bildschirm – quer am iPad eine Seite statt zwei, die Schrift wird dadurch deutlich größer.
+  - Es sind dieselben Seiten wie beim Blättern: Anmerkungen und „Notizen von …“ stehen an derselben Stelle.
+  - Die Kopfzeile und die Punkte unten zeigen das Lied in der Bildmitte; ein Punkt holt sein Lied nach oben.
+  - Ein Tipp aufs Blatt blendet die Leisten aus und wieder ein.
+  - Pedal und Pfeile unten scrollen ⅔ Bildschirm weiter; eine gestrichelte Linie zeigt kurz, wo der
+    Bildschirm vorher endete.
+  - Zum Malen öffnet der Stift die sichtbare Seite einzeln (alle Werkzeuge wie gewohnt); danach geht es
+    an derselben Stelle weiter.
+- **Pedale:** Die Liedansicht versteht jetzt auch ↓/↑, Bild↓/Bild↑ und die Leertaste (Umschalt+Leertaste
+  zurück) – vorher nur ←/→, viele Bluetooth-Pedale taten darum nichts. Gedrückt gehaltene Tasten lösen
+  keinen Dauerlauf mehr aus. Gilt fürs Blättern wie fürs Scrollen.
+
+### Hinzugefügt (Dienstplaner)
+
+- **Entwürfe ändern und entfernen** (#564, Bauplan E4-3-3): Einen Entwurf in der Matrix antippen öffnet sein Fach –
+  wer, „Eingetragen von Spike, heute 18:42“, „Beim Senden: Anfrage senden | Direkt zuteilen“ (nicht bei Gästen),
+  „Andere Person wählen“ (ersetzt ihn, „direkt“ bleibt) und „Entfernen“. Ein Konflikt mit einem anderen Planer
+  steht da, mit „So lassen“ oder bewusst „Trotzdem …“.
+- **Veraltete Entwürfe** (Alwin: Schild am Platz): Steht in ChurchTools inzwischen etwas anderes als beim
+  Eintragen, zeigt die Matrix ChurchTools und darunter ein kleines Schild „Entwurf veraltet“. Antippen sagt, was
+  dort jetzt steht, und bietet „Entwurf verwerfen“. Verglichen wird mit derselben Regel wie beim Einteilen – jeder
+  Platz trägt dazu seine Belegung aus `belegungAus`.
+- **Leiste unten:** „N Entwürfe noch nicht gesendet“ (nur gültige im geladenen Zeitraum, am Handy kurz „N
+  Entwürfe · Senden folgt“). Senden selbst kommt mit E4-4.
+- **Als Entwurf eintragen** (#561, Bauplan E4-3-2, Entwurf `e4-3-entwurf.html`): Im Fach „Wer kann?“ sind die
+  Personen jetzt antippbar – sie stehen danach **als Entwurf** im Plan (blau gestrichelt mit Stift), **noch ohne
+  Anfrage**. Darunter „Jemand ohne ChurchTools-Konto“ für einen Gast. Fremde Entwürfe tragen den Namen des
+  Planers, Gäste das Schild „Gast“. Hat jemand anderes den Platz eben geändert, steht das da – mit „Entwurf von X
+  lassen“ oder „Trotzdem … eintragen“ (Alwin). Fehlt einer Dienstgruppe der Speicher, bietet der Dienstplaner
+  „Einrichten“ an (nur wer in ChurchTools Kategorien anlegen darf), sonst sagt er genau, welches Recht fehlt.
+  Gesendet wird noch nichts – das kommt mit E4-4.
+
+### Intern
+
+- **Gemeinsame Bausteine statt Kopien** (#561): Der Browser-Anschluss an den Speicher der Erweiterung
+  (`ui/ct/modulPort.ts`), das Kürzel aus der Bau-Adresse (`ui/erweiterung/kuerzel.ts`) und der Hinweis-Toast
+  (`ui/fenster/Toast.tsx`, `useToast.ts`) standen nur in der Musik-App; jetzt nutzen beide Apps dieselben. Die
+  Musik-App reicht sie nur weiter, ihr Verhalten bleibt gleich. `kategorieAusListe` hält die Regel „bei gleichem
+  Kürzel die kleinste ID“ für eine schon geladene Liste – ohne sie nachzubauen.
+- Die Demo (`?demo`) spielt den Speicher nach (Kategorien, Werte, Rechte des Anlegers) und hat einen Entwurf von
+  Spike.
+
+### Behoben
+
+- **Gleiche Kategorie, verschiedene Geräte** (#558): ChurchTools nimmt dasselbe Kürzel für zwei Kategorien an
+  (gemessen 14.10.2026). `kategorieSuchen` nahm bisher die erste in der Liste – je nach Antwort hätten zwei
+  Geräte in verschiedene Kategorien geschrieben. Jetzt nehmen alle die mit der kleinsten ID. Gilt auch für die
+  Einstellungen und Team-Notizen der Musik-App.
+
+### Intern
+
+- **Speicher-Kern für Entwürfe** (#558, Bauplan E4-3, erste Scheibe – noch ohne Oberfläche):
+  `shared/dienstplan/entwuerfe.ts`. Noch nicht gesendete Einteilungen liegen im Speicher der Erweiterung,
+  **eine Kategorie je Dienstgruppe** (Alwin), ein Wert je Platz (Termin + Dienst + `index`, nie die flüchtige
+  Platz-ID) mit Version, „von wem“ und dem, was beim Eintragen in ChurchTools stand. Speichern und Entfernen
+  lesen frisch, vergleichen die Version und lesen nach – eine andere Version ist ein Konflikt, nie ein stilles
+  Überschreiben; kein Schreibvorgang wird automatisch wiederholt. Doppelte Werte (zwei gleichzeitige
+  Anlegen) bekommen einen festen Gewinner. Ein Entwurf ist veraltet, sobald in ChurchTools etwas anderes
+  steht – dieselbe Regel wie beim Einteilen (`gleichePerson`). Der Stand der Schublade (fehlt, einrichtbar,
+  nur lesen, bereit) kommt aus den Rechten. Echt an der Test-Instanz geprüft (Wegwerf-Kategorie, danach
+  gelöscht).
+- **`modulSuchen`** meldet ein fehlendes Modul mit dem Namen des Aufrufers statt fest „Die Musik App“ (#558).
+
+## [2.35.1] – 2026-10-14
+
+### Hinzugefügt (Dienstplaner)
+
+- **Zeitraum wählen** (#549, Alwin: „was heißt weitere Termine laden? Macht man das nicht über das + oben?“):
+  - Der Datumsbereich in der Terminleiste der Matrix ist ein Knopf mit Menü: **Ab heute** (wie bisher,
+    passend zur Fensterbreite), **Dieser Monat**, **Nächster Monat** oder ein **eigener Zeitraum** von–bis.
+    Bei einem Monat oder eigenen Zeitraum stehen alle seine Termine in der Matrix; ‹ › springen um einen
+    Monat bzw. um die eigene Länge. Das Gerät merkt sich die Wahl.
+  - „Weitere Termine laden“ unter der Matrix entfällt: Bei „ab heute“ laden ＋ und › am Ende selbst nach,
+    am Handy der letzte Datums-Chip. Kommt nichts dazu (lange Lücke, oder ein Filter auf eine selten
+    eingesetzte Gruppe), wird weitergeladen, bis ein Jahr erreicht ist.
+  - Nachladen ist jetzt still: Das Bisherige bleibt stehen, statt dass die Seite neu lädt. Ein Fehler
+    dabei zeigt einen Fehlerkasten neben der Liste, und „Erneut versuchen“ lädt genau einen Schritt.
+    In „Termine“ zeigt der Knopf solange „wird geladen …“.
+  - Den Text einer Spanne („18.10. – 08.11.2026“) gab es zweimal, einmal ohne Jahreswechsel. Jetzt
+    nutzen beide `spanneText`, und ein einzelner Tag heißt „18.10.2026“ statt „18.10. – 18.10.2026“.
+
+### Behoben (Dienstplaner)
+
+- **Matrix am Computer** (#546, Alwin):
+  - „Passend zur Fensterbreite“ ragte heraus, weil der Kopf (Datumskachel + „Mi · 19:00“) die Spalten
+    dehnte. Beim Wischen rutschte dann der erste Termin unter die Dienst-Spalte. Jetzt hat die Tabelle
+    feste Breiten, und die Uhrzeit bricht in schmalen Spalten um.
+  - Die Dienst-Namen klebten am linken Rand, weil eine allgemeinere Tabellen-Regel den Abstand nahm.
+  - Nach „＋“ wurde die Terminleiste höher, weil „an Fensterbreite anpassen“ eine eigene Zeile bekam.
+    Mit #549 entfällt dieser Knopf: Zurück zu „passend“ geht es über „Ab heute“ im Zeitraum-Menü.
+
 ### Geändert (Dienstplaner)
 
 - **Weniger Knopf-Formen** (#541, Alwin am Handy: „zu viele verschiedene Buttons“; Entwurf A aus drei):
@@ -22,6 +174,11 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Intern
 
+- **Bausteine für den Zeitraum** (#549): `plusTage`, `monatPlus` und `letzterTag` liegen jetzt in
+  `shared/ct/datum.ts`. Die Musik-App holt sie von dort (`client/src/utils/monate.ts` und `wochen.ts`
+  geben sie nur weiter). Die Regeln des Zeitraums stehen in `shared/dienstplan/zeitraum.ts`. Das
+  Aufklapp-Menü (zu bei Tipp daneben oder Escape) ist ein gemeinsamer Hook `useAufklapp` für Filter- und
+  Zeitraum-Knopf. Die Demo (`?demo`) beachtet jetzt `from`/`to` wie ChurchTools.
 - **Monatsnamen an einer Stelle** (#535): Sie standen viermal von Hand im Code (`shared/ct/datum.ts`,
   `client/src/utils/monate.ts`, `client/src/pages/Agenda.tsx`, `shared/ct/mapEvent.ts`), und
   `kachel()` bildete die Kurzform noch einmal selbst. Jetzt gibt es `MONATE` und daraus abgeleitet
@@ -30,6 +187,15 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   auch gegen den alten Code grün.
 
 ### Behoben
+
+- **Endlosschleife beim ersten Öffnen eines Ablaufs** (#555, kritisch): Hatte jemand für einen Ablauf noch
+  keinen „gesehen“-Stand – also bei jedem neuen Gottesdienst beim ersten Öffnen –, speicherte die App den
+  Stand immer wieder, solange die Ablauf-Ansicht offen war: rund **6 ChurchTools-Anfragen pro Sekunde** je
+  Gerät (gemessen in der Test-Instanz: 280 Anfragen in 45 s). Seit v2.34.1 (#484) in Web-App und
+  Erweiterung. Ursache: Nach dem Speichern setzte die App nur die markierten Punkte im Speicher auf
+  „gesehen“; Punkte ganz ohne Angabe blieben so – und das galt wieder als „noch nie gesehen“. Jetzt
+  bekommt jeder Punkt „gesehen“; ein Test verdrahtet den Ablauf wie die App selbst und zählt: genau ein
+  Schreiben.
 
 - **Datumsfelder am iPhone** (#539): Safari gibt Datumsfeldern eine eigene Mindestbreite und mittigen Text –
   im Anmeldeformular ragte das Geburtsdatum dadurch über die Nachbarfelder (Bildschirmfoto von Alwin). In der
@@ -111,56 +277,6 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Neu (Anmeldungen)
 
-- **Dunkelmodus wie ChurchTools** (Alwin, 14.10.2026). Die Anmeldungen sind hell oder dunkel, je nachdem, was
-  in ChurchTools eingestellt ist (gemessen: Klasse `light`/`dark` an `<body>`, unabhängig vom Gerät), und
-  schalten mit um. Die Farben sind die von ChurchTools (Tailwind 4: zinc-900 Seite, zinc-800 Karten …).
-  Die Formular-Vorschau im Baukasten bleibt in ihrem eigenen Design. Gemeinsamer Baustein für alle Apps:
-  `ui/design/thema.ts` und ein eigener Farbblock in `_variables.scss`; die Musik-App und der Dienstplaner
-  bleiben, wie sie sind, bis sie umsteigen (`docs/entwicklung/dunkelmodus.md`). Der Erweiterungs-Bau
-  schreibt dafür jetzt auch Selektoren mit mehreren Attributen am `html` richtig um.
-- **Zahnrad wie in ChurchTools:** Der Knopf „Einstellungen“ zeigt das Zahnrad von „System-Einstellungen“
-  (Font Awesome „gear“, solid; CC BY 4.0). Stehen „Einstellungen“ und „Neue Veranstaltung“ beide im Kopf,
-  bleiben sie zusammen rechts (vorher schwebte „Einstellungen“ mitten in der Zeile).
-- **Formular-Adresse zum Testen:** Neben `https://…` ist auch `http://localhost:<Port>` erlaubt (das Formular auf
-  dem eigenen Rechner), bis die eigene Adresse der Gemeinde steht.
-- **Karte „Anmeldelink“** (Entwurf `link-kopieren-v2`, Alwin: „B – bitte mit einheitlichen Buttons“): Ist eine
-  Veranstaltung freigegeben und die Formular-Adresse eingerichtet, steht oben auf ihrer Seite der Link als Text,
-  dazu drei gleiche Knöpfe **Kopieren** (danach kurz „Kopiert“), **Öffnen** (neuer Tab) und **Teilen** (Teilen-Menü
-  des Geräts; fehlt, wo der Browser keins hat). Vorher stand der Link nur im Termin-Fenster. Das Kopieren beider
-  Stellen läuft über einen gemeinsamen Hook (`useLinkKopieren.ts`).
-  **Erst geprüft, dann gezeigt** (Alwin, 15.10.2026): Die Karte fragt wie ein Gast bei ChurchTools nach. Nimmt
-  ChurchTools nichts an (z. B. vor A6-2 freigegeben und nicht öffentlich – der Link führte zu „nicht geöffnet“),
-  steht statt des Links, was fehlt, und „Jetzt einrichten“ öffnet das Freigeben-Fenster; danach prüft sie neu.
-  Fehlt nur der laufende Anmeldezeitraum oder lässt sich gerade nicht prüfen, bleibt der Link mit Hinweis.
-- **„Erst einrichten“ mit Nummern:** Die Schritte waren in ChurchTools ohne Zahlen (ChurchTools nimmt Listen
-  die Nummern).
-- **Demo** (`?demo`) kennt die Gemeinde-Einstellungen (Formular-Adresse, Vorgaben); `?demo=einrichten`
-  zeigt den Zustand davor. Seit A6-2 blieb die Demo sonst bei „Erst einrichten“ stehen.
-- **Echt anmelden** (A6-2, #548). Gemessen 14.10.2026 an der Test-Instanz (`messung-a6-2026-10-14.md`):
-  Familie, Kind allein, Geschwister mit derselben Adresse, dieselbe Person doppelt.
-  - **Öffentliches Formular:** Token → Formular-Aufbau (Feldnummern) → Anmeldung, ohne Login. **Variante A**
-    (Alwin): Mitglied werden nur die Teilnehmenden; was es einmal je Anmeldung gibt (neues Systemfeld „Angemeldet
-    von“, Telefon, Bemerkungen, Betrag, Aufschlüsselung, Auswahl, Extras), steht bei der ersten Person. Antworten
-    im Format von ChurchTools (Auswahl als Options-ID, Ankreuzen `1`, Mehrfachauswahl als Text). Passt etwas nicht
-    zu ChurchTools, wird nichts geschickt. Schon bekannt → „Fast geschafft, bitte per Mail bestätigen“. Fehler
-    einzeln, die Eingaben bleiben. `?probe` = Trockenlauf.
-  - **Freigeben** wählt die Leitung (ohne nimmt ChurchTools nichts an), setzt die Vorgaben für neue Personen –
-    **flach** (`newPersonStatusId/CampusId/DepartmentId`; `newMember: {…}` meldet 200 und speichert nichts) –,
-    ergänzt fehlende Systemfelder und fragt danach wie ein Gast, ob Anmeldungen angenommen werden.
-  - **Einstellungen der Gemeinde** (Gruppen-Admins): Vorgaben für neue Personen einmal je Gemeinde, im
-    Datenbereich der Erweiterung; ohne Einstellung der Vorschlag. Ein Aussetzer beim Lesen wirft, statt still den
-    Vorschlag zu nehmen. Anschluss an den Datenbereich für die Erweiterungen in `ui/` (`ui/ct/modulPort.ts`); der
-    gemeinsame Kern meldete fest „Musik App“, jetzt das Kürzel der Erweiterung.
-  - **Formular auf dem eigenen Webspace jeder Gemeinde** (Alwin, 14.10.2026: „Voraussetzung für diese Extension,
-    auf keinen Fall soll unsere Domain da sichtbar werden“). Statt einer festen Adresse (`FORMULAR_ADRESSE`,
-    GitHub Pages) trägt ein Gruppen-Admin unter „Einstellungen“ die Adresse der Formular-Seite ein; die
-    Erweiterung prüft, ob sie antwortet und in ChurchTools als erlaubte Herkunft steht. Ohne Adresse zeigt die
-    Startseite nur „Erst einrichten“, Freigeben ist gesperrt, und es gibt keinen Link. Am Release hängt das
-    Formular als `anmeldungen-formular-v….zip`; der Pages-Workflow ist weg. Gemessen: In ChurchTools selbst geht
-    es nicht (Erweiterungsseiten und ihre Dateien nur mit Login, kein Recht für nicht angemeldete Besucher,
-    Wiki-Dateien mit `Content-Security-Policy: sandbox`).
-  - Die Preis-Buchung aus den Antworten steht an EINER Stelle (`buchungAus`) – angezeigter und gespeicherter
-    Betrag können nicht auseinanderlaufen. Ein Test zählte die Systemfelder als Literal – jetzt gegen die Liste.
 - **Öffentliches Formular anzeigen** (A6-1, #542 – erste von fünf Scheiben von A6). Die Seite `formular/` liest
   die Veranstaltung **ohne Login** aus ChurchTools (`/publicgroups/{id}`, `/info`) und zeigt sie mit demselben
   Formular wie der Baukasten. Link wie gehabt `…/#<instanz>/<gruppe>` (`ortAusLink` ist das Gegenstück zu

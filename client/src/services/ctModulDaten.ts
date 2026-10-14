@@ -3,30 +3,16 @@
  * `@shared/ct/modulDaten` (Regeln und Messwerte dort). Darauf bauen die Gemeinde-Einstellungen
  * (`ctEinstellungen.ts`) und das Verzeichnis „Wer teilt" der Team-Notizen (`ctTeilen.ts`).
  */
-import { ApiError } from './api';
-import { ctAnfrage, ctDaten, KeinSpeicherRecht } from './ctRuntime';
 import { erweiterungsKuerzel } from './modus';
 import { merkeVersprechen } from '@shared/ct/versprechenMerker';
 import * as kern from '@shared/ct/modulDaten';
 import type { KategorieAngabe, ModulPort, Wert } from '@shared/ct/modulDaten';
+import { modulPortFuer } from '@ui/ct/modulPort';
 
 export { MAX_ZEICHEN, inhaltAus, type KategorieAngabe, type Wert } from '@shared/ct/modulDaten';
 
-/** Der Anschluss der Erweiterung: Sitzung der Seite über `ctAnfrage`. */
-export const modulPort: ModulPort = {
-  kuerzel: erweiterungsKuerzel,
-  daten: (pfad) => ctDaten(pfad),
-  async schreibe(pfad, auftrag) {
-    await ctAnfrage(pfad, {
-      method: auftrag.method,
-      body: auftrag.json === undefined ? undefined : JSON.stringify(auftrag.json),
-      verweigert: auftrag.verweigert,
-    });
-  },
-  fehler: (status, meldung) => new ApiError(status, meldung),
-  istKeinRecht: (e) => e instanceof KeinSpeicherRecht,
-  istNichtGefunden: (e) => e instanceof ApiError && e.status === 404,
-};
+/** Der Anschluss der Erweiterung: Sitzung der Seite über `ctAnfrage` (gemeinsam in `ui/ct/modulPort.ts`). */
+export const modulPort: ModulPort = modulPortFuer(erweiterungsKuerzel);
 
 /**
  * Die ID des eigenen Moduls – je Sitzung der Seite einmal gesucht. Ein Fehlschlag wird NICHT gemerkt
@@ -35,7 +21,7 @@ export const modulPort: ModulPort = {
 const modulSuche = merkeVersprechen<number>();
 
 export function modulId(): Promise<number> {
-  return modulSuche.hole('modul', () => kern.modulSuchen(modulPort));
+  return modulSuche.hole('modul', () => kern.modulSuchen(modulPort, 'Die Musik App'));
 }
 
 /** Nur für Tests: das gemerkte Modul vergessen. */

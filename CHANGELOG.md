@@ -18,6 +18,12 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Behoben
 
+- **Datumsfelder am iPhone** (#539): Safari gibt Datumsfeldern eine eigene Mindestbreite und mittigen Text –
+  im Anmeldeformular ragte das Geburtsdatum dadurch über die Nachbarfelder (Bildschirmfoto von Alwin). In der
+  Musik-App betraf es „Abwesenheit eintragen“ (Von/Bis zweispaltig) und den Zeitraum der Statistik. Neuer
+  gemeinsamer Baustein `datumsfeld` in `ui/design/_mixins.scss`; die Spalten der Abwesenheit sind jetzt
+  `minmax(0, 1fr)`. Weil die Statistik-Felder leer starten, haben sie eine feste Höhe (sonst fiele ein leeres
+  Feld am iPhone zusammen). In Chrome in Handygröße nachgemessen, Höhen wie vorher; am iPhone zu bestätigen.
 - **Scrollen im Scrollen** (#537, Alwin am Handy): In „Wer kann?“ (Dienstplaner), „Zum Ablauf hinzufügen“
   und „Abschnitte transponieren“ (Musik-App) hatte die Liste eine eigene Scrollfläche im ohnehin scrollenden
   Fenster. Jetzt scrollt nur das Fenster. Die Regel steht am gemeinsamen Baustein `ui/fenster/Sheet.tsx`.

@@ -281,11 +281,19 @@
       background: var(--surface3);
     }
   }
+  // Am iPhone ragte ein Datumsfeld über seine Spalte (#539); leer fiele es ohne feste Höhe zusammen.
+  input {
+    @include m.datumsfeld;
+  }
+  input[type='date'] {
+    height: calc(1lh + 22px);
+  }
 }
 
+// `minmax(0, …)`: Sonst bestimmt die Mindestbreite eines Datumsfelds die Spalte (#539).
 .zwei {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 10px;
 }
 

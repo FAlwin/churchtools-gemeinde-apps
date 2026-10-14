@@ -402,19 +402,6 @@
   line-height: 1.45;
 }
 
-.mehr {
-  display: flex;
-  justify-content: center;
-  margin-top: 10px;
-}
-
-.knopf {
-  @include m.auswahlKnopf;
-  padding: 6px 14px;
-  border-radius: 10px;
-  font-size: 14px;
-}
-
 // Freier Platz, den man planen darf: antippbar (E4-2 „Wer kann?“).
 .freiKnopf {
   font: inherit;
@@ -481,37 +468,6 @@
   }
 }
 
-.zeitraum {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 150px;
-  padding: 0 4px;
-  line-height: 1.15;
-
-  b {
-    font-size: 14.5px;
-    font-weight: 700;
-    color: var(--text);
-    font-variant-numeric: tabular-nums;
-  }
-
-  small {
-    font-size: 11.5px;
-    color: var(--text2);
-  }
-}
-
-.anpassen {
-  border: 0;
-  background: none;
-  padding: 0;
-  color: var(--blue-ink);
-  font-size: 11.5px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
 // Termine einer anderen Veranstaltung als der häufigsten (Entwurf: Gebetsabende abgesetzt).
 .neben {
   background: color-mix(in srgb, var(--section) 70%, var(--surface2)) !important;
@@ -567,5 +523,18 @@
     height: 6px;
     border-radius: 3px;
     background: var(--blue);
+  }
+}
+
+// Am Handy: Zeitraum-Leiste in eigener Reihe, der Knopf füllt die Breite (‹ › nur bei gewähltem Zeitraum).
+.leisteHandy {
+  flex-basis: 100%;
+
+  > :not(button) {
+    flex: 1;
+  }
+
+  button[aria-expanded] {
+    width: 100%;
   }
 }

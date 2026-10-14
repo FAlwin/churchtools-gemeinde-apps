@@ -5,20 +5,14 @@
  * aus ChurchTools, ohne Zeitzone und ohne `Date`-Mitternachts-Fallen (siehe `wochen.ts`). Alles rein
  * und ohne Netz prüfbar.
  */
-import { MONATE, MONATE_KURZ } from '@shared/ct/datum';
+import { MONATE, MONATE_KURZ, monatPlus } from '@shared/ct/datum';
+
+// Seit 14.10.2026 gemeinsam mit dem Dienstplaner in `shared/ct/datum.ts`.
+export { letzterTag, monatPlus } from '@shared/ct/datum';
 
 /** `2026-10-04` → `2026-10`. */
 export function monatVon(tag: string): string {
   return tag.slice(0, 7);
-}
-
-/** `2026-10` + 3 → `2027-01`; negative Werte gehen zurück. */
-export function monatPlus(monat: string, n: number): string {
-  const jahr = Number(monat.slice(0, 4));
-  const idx = Number(monat.slice(5, 7)) - 1 + n;
-  const j = jahr + Math.floor(idx / 12);
-  const m = ((idx % 12) + 12) % 12;
-  return `${j}-${String(m + 1).padStart(2, '0')}`;
 }
 
 /** `2026-10` → „Oktober 2026". */
@@ -40,12 +34,4 @@ export function monatNurKurz(monat: string): string {
 export function monateAb(heute: string, anzahl: number): string[] {
   const start = monatVon(heute);
   return Array.from({ length: anzahl }, (_, i) => monatPlus(start, i));
-}
-
-/** Letzter Tag des Monats als `YYYY-MM-DD` – Schaltjahre inklusive (UTC, wie alles hier). */
-export function letzterTag(monat: string): string {
-  const jahr = Number(monat.slice(0, 4));
-  const m = Number(monat.slice(5, 7));
-  const tage = new Date(Date.UTC(jahr, m, 0)).getUTCDate();
-  return `${monat}-${String(tage).padStart(2, '0')}`;
 }

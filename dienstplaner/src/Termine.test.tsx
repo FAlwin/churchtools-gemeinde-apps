@@ -120,9 +120,45 @@ describe('Termine (E3-2)', () => {
     expect(screen.getByRole('button', { name: 'Weitere Termine laden' })).toBeTruthy();
   });
 
-  it('„Weitere Termine laden“ ruft das Nachladen', () => {
-    const { onMehr } = zeige();
+  it('„Weitere Termine laden“ ruft das Nachladen; bis die Antwort da ist: „wird geladen …“, gesperrt', () => {
+    const onMehr = vi.fn();
+    const el = (zustand: Parameters<typeof Termine>[0]['zustand']) => (
+      <Termine zustand={zustand} planer onNochmal={() => {}} onMehr={onMehr} />
+    );
+    const fertig = { art: 'fertig', zeilen: ZEILEN, plan: LEERER_PLAN, wochen: 8 } as const;
+    const { rerender } = render(el(fertig));
     fireEvent.click(screen.getByRole('button', { name: 'Weitere Termine laden' }));
+    expect(onMehr).toHaveBeenCalledTimes(1);
+    // Das Bisherige bleibt stehen (still nachladen) – kein Doppelklick, der zweimal lädt.
+    const knopf = screen.getByRole('button', { name: 'wird geladen …' });
+    expect(knopf).toHaveProperty('disabled', true);
+    expect(titel()).toEqual(['Gottesdienst']); // Vorgabe „Meine“
+    rerender(el({ ...fertig, wochen: 16 }));
+    expect(screen.getByRole('button', { name: 'Weitere Termine laden' })).toHaveProperty(
+      'disabled',
+      false,
+    );
+  });
+
+  it('Nachladen schlägt fehl → Liste bleibt, Fehlerkasten; „Erneut versuchen“ lädt wieder', () => {
+    const onMehr = vi.fn();
+    render(
+      <Termine
+        zustand={{
+          art: 'fertig',
+          zeilen: ZEILEN,
+          plan: LEERER_PLAN,
+          wochen: 8,
+          nachladeFehler: { text: 'ChurchTools antwortet gerade nicht.', nochmal: true },
+        }}
+        planer
+        onNochmal={() => {}}
+        onMehr={onMehr}
+      />,
+    );
+    expect(titel()).toEqual(['Gottesdienst']); // Vorgabe „Meine“
+    expect(screen.getByText('ChurchTools antwortet gerade nicht.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Erneut versuchen' }));
     expect(onMehr).toHaveBeenCalledTimes(1);
   });
 

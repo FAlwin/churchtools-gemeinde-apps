@@ -9,6 +9,7 @@
 import { ctDaten } from '@ui/ct/verbindung';
 import { ApiError } from '@ui/ct/fehler';
 import { isoTag } from '@shared/ct/zeit';
+import { plusTage } from '@shared/ct/datum';
 import { termineAus, type RohTermin, type TerminZeile } from '@shared/dienstplan/termine';
 import { planAus, type Plan } from '@shared/dienstplan/plan';
 import { ganzSichtbar, planbar, type Start } from './start';
@@ -22,6 +23,9 @@ export interface TermineDaten {
 /** Ein Ladeschritt in Wochen. */
 export const WOCHEN_JE_SCHRITT = 8;
 
+/** So weit lädt „ab heute“ höchstens nach (ein Jahr) – weiter blättert man mit einem gewählten Zeitraum. */
+export const MAX_WOCHEN = 52;
+
 /**
  * Termine von heute bis `wochen` Wochen voraus. **Wirft**, wenn die Termine nicht als Liste kommen – eine
  * leere Liste hieße „keine Termine“, und das wäre bei einem Aussetzer falsch.
@@ -34,7 +38,33 @@ export async function ladeTermine(
 ): Promise<TermineDaten> {
   const von = isoTag(jetzt);
   const bis = isoTag(new Date(jetzt.getTime() + wochen * 7 * 86_400_000));
-  const termine = await ctDaten<unknown>(`/events?from=${von}&to=${bis}&include=eventServices`);
+  return ladeVonBis(start, von, bis, zeitzone);
+}
+
+/**
+ * **Ein gewählter Zeitraum** für die Matrix (Monat oder von–bis, Alwin 14.10.2026), `bis` eingeschlossen –
+ * dieselbe Abfrage und dieselben Regeln wie `ladeTermine`. ChurchTools zählt `to` nicht mit (E0), deshalb
+ * wird ein Tag dazugerechnet.
+ */
+export function ladeZeitraum(
+  start: Start,
+  von: string,
+  bis: string,
+  zeitzone: string,
+): Promise<TermineDaten> {
+  return ladeVonBis(start, von, plusTage(bis, 1), zeitzone);
+}
+
+/** `von` eingeschlossen, `bisAusschliesslich` nicht (wie ChurchTools' `to`). */
+async function ladeVonBis(
+  start: Start,
+  von: string,
+  bisAusschliesslich: string,
+  zeitzone: string,
+): Promise<TermineDaten> {
+  const termine = await ctDaten<unknown>(
+    `/events?from=${von}&to=${bisAusschliesslich}&include=eventServices`,
+  );
   if (!Array.isArray(termine)) {
     throw new ApiError(502, 'ChurchTools hat die Termine nicht vollständig geliefert.');
   }

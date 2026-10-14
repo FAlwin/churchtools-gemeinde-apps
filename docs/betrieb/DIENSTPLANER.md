@@ -2,7 +2,7 @@
 
 > **Stand: E3 fertig (14.10.2026)** – mit drei Rollen geprüft (Test-Instanz) und lesend an der Live-Instanz. Die Erweiterung startet in ChurchTools – **nur lesen**. **Planen**:
 > Termine als Spalten, Dienstgruppen und Dienste als Zeilen, in jeder Zelle die Plätze; freien Platz antippen →
-> „Wer kann?“ (E4-2, nur ansehen); Terminleiste,
+> „Wer kann?“ (E4-2, nur ansehen); Zeitraum wählen (ab heute, ein Monat oder von–bis), Terminleiste,
 > Spaltenbreite, Filter nach Veranstaltung und Gruppe, „Wer wie oft?“; am Handy ein Termin auf einmal. **Start**: „Als
 > Nächstes“ (dein Dienst, Team, Lieder, Musik-App), deine offenen Anfragen, deine nächsten Dienste,
 > Abwesenheiten und für Planer die freien Plätze der nächsten 6 Wochen. Die Reiter

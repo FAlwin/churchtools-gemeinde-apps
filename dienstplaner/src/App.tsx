@@ -9,7 +9,7 @@ import { Startseite } from './Startseite';
 import { Demnaechst } from './Demnaechst';
 import { Planen } from './Planen';
 import { Termine, type TermineZustand } from './Termine';
-import { ladeTermine, WOCHEN_JE_SCHRITT } from './ladeTermine';
+import { ladeTermine, ladeZeitraum, MAX_WOCHEN, WOCHEN_JE_SCHRITT } from './ladeTermine';
 import { adresseFuer, reiterAusAdresse, sichtbareReiter, type ReiterId } from './reiter';
 import { leseAuswahl, merkeAuswahl } from './auswahl';
 import { tagAusIso } from '@shared/ct/zeit';
@@ -54,14 +54,26 @@ export function App() {
   const aktiv = reiterAusAdresse(hash, reiter);
 
   const termineLaden = useCallback(
-    (s: Start, w: number) => {
-      setTermine({ art: 'laedt' });
+    (s: Start, w: number, still = false) => {
+      // Still: beim Nachladen weiterer Wochen bleibt das Bisherige stehen, bis das Neue da ist.
+      if (!still) setTermine({ art: 'laedt' });
       ladeTermine(s, w, zeitzone).then(
         (d) => setTermine({ art: 'fertig', zeilen: d.zeilen, plan: d.plan, wochen: w }),
-        (e: unknown) => setTermine({ art: 'fehler', fehler: fehlerMeldung(e) }),
+        (e: unknown) =>
+          setTermine((alt) =>
+            still && alt?.art === 'fertig'
+              ? { ...alt, nachladeFehler: fehlerMeldung(e) }
+              : { art: 'fehler', fehler: fehlerMeldung(e) },
+          ),
       );
     },
     [zeitzone],
+  );
+  // Ein gewählter Zeitraum der Matrix (Monat, von–bis) – eigene Abfrage, Start und Termine bleiben.
+  const zeitraumLaden = useCallback(
+    (von: string, bis: string) =>
+      start ? ladeZeitraum(start, von, bis, zeitzone) : Promise.reject(new Error('kein Start')),
+    [start, zeitzone],
   );
 
   // Start, Termine und Planen zeigen dieselben Termine – geladen wird einmal, wenn einer davon offen ist.
@@ -70,12 +82,15 @@ export function App() {
       termineLaden(start, wochen);
     }
   }, [aktiv, start, termine, wochen, termineLaden]);
-  // „Weitere Termine laden“ – in Termine und Planen derselbe Schritt.
+  // Was wirklich geladen ist – nach einem gescheiterten Nachladen steht `wochen` schon einen Schritt weiter.
+  const geladen = termine?.art === 'fertig' ? termine.wochen : wochen;
+  // „Weitere Termine laden“ – in Termine und Planen derselbe Schritt. Gezählt wird ab dem Geladenen: Schlägt
+  // es fehl, bleibt `nachladeFehler` am alten Stand, und „Erneut versuchen“ lädt wieder genau einen Schritt.
   const mehrLaden = () => {
     if (!start) return;
-    const w = wochen + WOCHEN_JE_SCHRITT;
+    const w = geladen + WOCHEN_JE_SCHRITT;
     setWochen(w);
-    termineLaden(start, w);
+    termineLaden(start, w, true);
   };
 
   const wechseln = (id: ReiterId) => {
@@ -134,6 +149,9 @@ export function App() {
           handy={handy}
           onNochmal={() => termineLaden(start, wochen)}
           onMehr={mehrLaden}
+          mehrMoeglich={geladen < MAX_WOCHEN}
+          ladeZeitraum={zeitraumLaden}
+          heute={tagAusIso(new Date().toISOString(), zeitzone)}
         />
       )}
       {aktiv === 'abwesenheiten' && <Demnaechst reiter={aktiv} />}

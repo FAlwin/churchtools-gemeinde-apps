@@ -1,5 +1,6 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId } from 'react';
 import { Icon } from '@ui/icons/icons';
+import { useAufklapp } from './useAufklapp';
 import styles from './FilterKnopf.module.scss';
 
 /** Ein Abschnitt im Filter-Menü, z. B. „Veranstaltungen“ oder „Gruppen“. */
@@ -26,29 +27,13 @@ export function FilterKnopf({
   /** Für die Lage in der Leiste (z. B. rechtsbündig). */
   className?: string;
 }) {
-  const [offen, setOffen] = useState(false);
-  const rahmen = useRef<HTMLDivElement>(null);
+  const { offen, setOffen, rahmen } = useAufklapp();
   const id = useId();
   const sichtbar = abschnitte.filter((a) => a.optionen.length > 1);
   const ausgeblendet = sichtbar.reduce(
     (n, a) => n + a.optionen.filter((o) => a.aus.includes(o.wert)).length,
     0,
   );
-
-  // Schließen bei Tipp daneben oder Escape.
-  useEffect(() => {
-    if (!offen) return;
-    const weg = (e: PointerEvent) => {
-      if (rahmen.current && !rahmen.current.contains(e.target as Node)) setOffen(false);
-    };
-    const taste = (e: KeyboardEvent) => e.key === 'Escape' && setOffen(false);
-    document.addEventListener('pointerdown', weg);
-    document.addEventListener('keydown', taste);
-    return () => {
-      document.removeEventListener('pointerdown', weg);
-      document.removeEventListener('keydown', taste);
-    };
-  }, [offen]);
 
   if (sichtbar.length === 0) return null;
   return (

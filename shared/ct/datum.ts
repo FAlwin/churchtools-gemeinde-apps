@@ -67,3 +67,28 @@ export function monatName(tag: string): string {
 export function tageBis(heute: string, tag: string): number {
   return Math.round((datum(tag).getTime() - datum(heute).getTime()) / 86_400_000);
 }
+
+// ── Rechnen mit Tagen und Monaten (aus der Musik-App, 14.10.2026 hierher – auch der Dienstplaner braucht sie) ──
+// Gerechnet wird auf `YYYY-MM-DD` / `YYYY-MM` in UTC, damit nichts an einer Sommerzeit hängt.
+
+/** `2026-10-04` + 3 → `2026-10-07`; negative Werte gehen zurück. */
+export function plusTage(tag: string, n: number): string {
+  return new Date(datum(tag).getTime() + n * 86_400_000).toISOString().slice(0, 10);
+}
+
+/** `2026-10` + 3 → `2027-01`; negative Werte gehen zurück. */
+export function monatPlus(monat: string, n: number): string {
+  const jahr = Number(monat.slice(0, 4));
+  const idx = Number(monat.slice(5, 7)) - 1 + n;
+  const j = jahr + Math.floor(idx / 12);
+  const m = ((idx % 12) + 12) % 12;
+  return `${j}-${String(m + 1).padStart(2, '0')}`;
+}
+
+/** Letzter Tag des Monats als `YYYY-MM-DD` – Schaltjahre inklusive (UTC, wie alles hier). */
+export function letzterTag(monat: string): string {
+  const jahr = Number(monat.slice(0, 4));
+  const m = Number(monat.slice(5, 7));
+  const tage = new Date(Date.UTC(jahr, m, 0)).getUTCDate();
+  return `${monat}-${String(tage).padStart(2, '0')}`;
+}

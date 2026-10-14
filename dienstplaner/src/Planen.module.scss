@@ -425,6 +425,12 @@
   gap: 6px 14px;
 }
 
+// „Wer wie oft?“ brach bei mittlerer Breite zweizeilig um (Prüfung mit drei Rollen, 13.10.2026). Nur hier –
+// der gemeinsame Baustein darf anderswo umbrechen.
+.ansicht button {
+  white-space: nowrap;
+}
+
 .leiste {
   display: flex;
   align-items: center;

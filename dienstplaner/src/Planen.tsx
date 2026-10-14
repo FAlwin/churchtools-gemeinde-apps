@@ -121,6 +121,7 @@ export function Planen({ zustand, handy, onNochmal, onMehr }: Props) {
           ]}
           onChange={(v) => setAnsicht({ ...ansicht, unteransicht: v })}
           ariaLabel="Ansicht"
+          className={styles.ansicht}
         />
         {!handy && (
           <Terminleiste

@@ -857,7 +857,12 @@ export function Baukasten({
     />
   );
   const tafelDesign = (
-    <DesignTafel gestaltung={gestaltung} onGestaltung={gestalten} ctLogo={ctLogo} />
+    <DesignTafel
+      gestaltung={gestaltung}
+      onGestaltung={gestalten}
+      ctLogo={ctLogo}
+      veranstaltungId={id}
+    />
   );
 
   const wartet = stand.art === 'arbeitet' || !!designWartet.current || geaendert.current;

@@ -144,7 +144,13 @@ mitarbeiten (z. B. über den Status oder global über die Gruppen).
     Startpunkt setzt alles wieder auf dessen Werte (Logo, Begrüßung und Breite bleiben). Schriften kommen nur
     vom Gerät selbst – nichts wird von Google geladen. Das Titelbild ändert man direkt im Bild.
   - **Logo:** das Gemeindelogo aus ChurchTools (Einstellungen → Allgemein); die Erweiterung übernimmt es beim
-    Öffnen des Baukastens. Ist dort keins hinterlegt, gibt es keins.
+    Öffnen des Baukastens. Ist dort keins hinterlegt, gibt es keins. **Oder ein eigenes:** „Eigenes“ zeigt die
+    schon hochgeladenen Logos zur Auswahl, dazu „Neues hochladen“. Weil ChurchTools je Gruppe nur ein Bild kennt
+    (das Titelbild), liegt jedes eigene Logo als Bild einer **archivierten Hilfsgruppe** „Logo: …“ unter dem
+    Team (Gruppenart „Anmeldung“, Beschreibung „Logo für die Anmeldungen. Bitte nicht löschen …“). In der
+    Erweiterung tauchen diese Gruppen nicht als Veranstaltung auf. **Wird so eine Gruppe in ChurchTools
+    gelöscht, fehlt das Logo in jedem Formular, das es zeigt.** Entfernen geht in der Leiste nur für
+    Gruppen-Admins, mit Warnung; von selbst wird nichts gelöscht (Kopien nutzen dasselbe Logo).
 - **Wo die Einstellungen stehen:** in der Beschreibung der Gruppe, unsichtbar unter dem Satz „Diese
   Anmeldung wird mit der Erweiterung **Anmeldungen** verwaltet.“ Wer den Text in ChurchTools ändert,
   schadet nicht: Die Erweiterung stellt die Einstellungen aus ihrer Sicherung wieder her (in den

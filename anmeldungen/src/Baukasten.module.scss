@@ -1017,3 +1017,77 @@
     box-shadow: 0 0 0 2px var(--blue);
   }
 }
+
+// ── Eigenes Logo (14.10.2026) ──
+.logoAuswahl {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.logoListe {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.logoKachel {
+  @include m.auswahlKnopf;
+  display: grid;
+  place-items: center;
+  min-height: 56px;
+  padding: 6px;
+  border-radius: 10px;
+  font-size: 12px;
+
+  img {
+    max-width: 100%;
+    max-height: 44px;
+    object-fit: contain;
+  }
+
+  &[aria-pressed='true'] {
+    @include m.auswahlKnopfAn;
+    border-color: var(--blue);
+    box-shadow: 0 0 0 2px var(--blue);
+  }
+}
+.logoNeu {
+  border-style: dashed;
+  color: var(--blue);
+  font-weight: 600;
+}
+.logoEntfernen {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text2);
+
+  select {
+    flex: 1;
+    min-width: 0;
+  }
+}
+.logoWarnung {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--red);
+  border-radius: 10px;
+  font-size: 12px;
+
+  p {
+    flex-basis: 100%;
+    margin: 0;
+  }
+
+  button:first-of-type {
+    color: var(--red);
+    font-weight: 600;
+  }
+}
+.logoFehler {
+  margin: 0;
+  font-size: 12px;
+  color: var(--red);
+}

@@ -33,6 +33,10 @@ vi.mock('./einrichten', async (original) => ({
   bildEntfernen: vi.fn(),
   umbenennen: vi.fn(),
   gemeindeLogo: vi.fn(),
+  logoListe: vi.fn(),
+  logoHochladen: vi.fn(),
+  logoEntfernen: vi.fn(),
+  istGruppenAdmin: vi.fn(),
 }));
 const ff = vi.mocked(FF);
 const ei = vi.mocked(EI);
@@ -119,6 +123,8 @@ beforeEach(() => {
   ff.antwortenZaehlen.mockResolvedValue(new Map());
   ei.aendereEinstellungen.mockResolvedValue({} as never);
   ei.gemeindeLogo.mockResolvedValue(null);
+  ei.logoListe.mockResolvedValue([]);
+  ei.istGruppenAdmin.mockResolvedValue(false);
 });
 afterEach(() => vi.useRealTimers());
 
@@ -554,6 +560,62 @@ describe('Baukasten (Feinheiten): Leiste, Fragetyp, Design', () => {
     await waitFor(() => expect(ei.aendereEinstellungen).toHaveBeenCalled());
     const g = ei.aendereEinstellungen.mock.calls[0][1](neueEinstellungen('kinder')).gestaltung;
     expect(g).toMatchObject({ logo: 'ct', logoUrl: 'https://ct.test/images/558/logo' });
+  });
+
+  it('Eigenes Logo: bisherige zur Auswahl, Neues hochladen wählt es gleich; Formular bleibt, bis eins gewählt ist', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const alt = { id: 300, name: 'Jugend', url: 'https://ct.test/images/9/alt' };
+    const neu = { id: 301, name: 'Kinder', url: 'https://ct.test/images/10/neu' };
+    ei.logoListe.mockResolvedValue([alt]);
+    ei.logoHochladen.mockResolvedValue(neu);
+    zeigen();
+    const leiste = screen.getByRole('complementary', { name: 'Bausteine und Design' });
+    fireEvent.click(within(leiste).getByRole('button', { name: 'Design' }));
+    fireEvent.click(screen.getByRole('button', { name: /Eigenes/ }));
+    await act(async () => {
+      vi.advanceTimersByTime(PAUSE_DESIGN_MS + 10);
+    });
+    expect(ei.aendereEinstellungen).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole('button', { name: 'Jugend' }));
+    await act(async () => {
+      vi.advanceTimersByTime(PAUSE_DESIGN_MS + 10);
+    });
+    await waitFor(() => expect(ei.aendereEinstellungen).toHaveBeenCalledTimes(1));
+    const g = ei.aendereEinstellungen.mock.calls[0][1](neueEinstellungen('kinder')).gestaltung;
+    expect(g).toMatchObject({ logo: 'eigen', logoUrl: alt.url });
+
+    const d = new File(['x'], 'Kinder.png', { type: 'image/png' });
+    fireEvent.change(screen.getByLabelText('Eigenes Logo hochladen'), { target: { files: [d] } });
+    await waitFor(() => expect(ei.logoHochladen).toHaveBeenCalledWith(91, d));
+    expect(
+      (await screen.findByRole('button', { name: 'Kinder' })).getAttribute('aria-pressed'),
+    ).toBe('true');
+    // Entfernen nur für Gruppen-Admins.
+    expect(screen.queryByLabelText('Logo entfernen')).toBeNull();
+  });
+
+  it('Eigenes Logo entfernen (Gruppen-Admin): erst Warnung; das gewählte → „Kein Logo“', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const l = { id: 300, name: 'Jugend', url: 'https://ct.test/images/9/alt' };
+    ei.logoListe.mockResolvedValue([l]);
+    ei.istGruppenAdmin.mockResolvedValue(true);
+    ei.logoEntfernen.mockResolvedValue(undefined);
+    const e = einstellungen();
+    e.gestaltung = { ...e.gestaltung, logo: 'eigen', logoUrl: l.url };
+    zeigen(e);
+    const leiste = screen.getByRole('complementary', { name: 'Bausteine und Design' });
+    fireEvent.click(within(leiste).getByRole('button', { name: 'Design' }));
+    fireEvent.change(await screen.findByLabelText('Logo entfernen'), { target: { value: '300' } });
+    expect(ei.logoEntfernen).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert').textContent).toMatch(/hat danach keins mehr/);
+    fireEvent.click(screen.getByRole('button', { name: 'Entfernen' }));
+    await waitFor(() => expect(ei.logoEntfernen).toHaveBeenCalledWith(300));
+    await act(async () => {
+      vi.advanceTimersByTime(PAUSE_DESIGN_MS + 10);
+    });
+    await waitFor(() => expect(ei.aendereEinstellungen).toHaveBeenCalled());
+    const g = ei.aendereEinstellungen.mock.calls.at(-1)![1](neueEinstellungen('kinder')).gestaltung;
+    expect(g).toMatchObject({ logo: 'keins', logoUrl: null });
   });
 
   it('ohne Recht wird das Logo nicht übernommen (kein Schreiben)', async () => {

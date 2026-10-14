@@ -11,6 +11,7 @@ import {
   belegungAus,
   einteilen,
   istVeranstaltung,
+  LOGO_KENNUNG,
   phaseVon,
   veranstaltungAus,
   verborgeneUntergruppen,
@@ -76,6 +77,11 @@ describe('istVeranstaltung', () => {
     expect(istVeranstaltung({ beschreibung: EINSTELLUNGEN_KENNUNG + '{}' })).toBe(true);
     expect(istVeranstaltung({ beschreibung: 'Wir proben donnerstags.' })).toBe(false);
     expect(istVeranstaltung({ beschreibung: '' })).toBe(false);
+  });
+  it('Logo-Gruppen derselben Art sind keine Veranstaltung (eigenes Logo, 14.10.2026)', () => {
+    const logo = { beschreibung: `${LOGO_KENNUNG} Bitte nicht löschen.`, typId: 5 };
+    expect(istVeranstaltung(logo, 5)).toBe(false);
+    expect(istVeranstaltung({ ...logo, beschreibung: '' }, 5)).toBe(true);
   });
 });
 

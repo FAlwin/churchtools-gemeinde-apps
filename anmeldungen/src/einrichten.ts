@@ -30,7 +30,7 @@ import {
   zweckMitNeuemNamen,
   type Bezahlung,
 } from '@shared/anmeldung/bezahlung';
-import { belegungAus } from '@shared/anmeldung/uebersicht';
+import { LOGO_KENNUNG, belegungAus, istLogoGruppe } from '@shared/anmeldung/uebersicht';
 import { felderNeuZuordnen, systemfeldAnlage } from '@shared/anmeldung/felder';
 import { neueEinstellungen, type Vorlage } from '@shared/anmeldung/vorlagen';
 import { anmeldeLink, utcAus, type CtTermin } from '@shared/anmeldung/termin';
@@ -231,11 +231,15 @@ export const BILD_MAX_BYTES = 8 * 1024 * 1024;
  * **Titelbild hochladen** (A5) – das Gruppenbild in ChurchTools, ohne Login abrufbar (A0). Gemessen 13.10.2026:
  * `POST /files/groupimage/{id}` mit dem Feld `files[]`. Nachgelesen; gibt die neue Bild-Adresse zurück.
  */
-export async function bildHochladen(id: number, datei: File): Promise<string> {
+function bildPruefen(datei: File): void {
   if (!datei.type.startsWith('image/'))
     throw new ApiError(422, 'Bitte ein Bild wählen (JPG oder PNG).');
   if (datei.size > BILD_MAX_BYTES)
     throw new ApiError(413, 'Das Bild ist größer als 8 MB. Bitte vorher verkleinern.');
+}
+
+export async function bildHochladen(id: number, datei: File): Promise<string> {
+  bildPruefen(datei);
   const form = new FormData();
   form.append('files[]', datei, datei.name);
   await ctAnfrage(`/files/groupimage/${id}`, { method: 'POST', body: form });
@@ -255,6 +259,84 @@ export async function gemeindeLogo(): Promise<string | null> {
   const pfad = c?.site_logo?.trim();
   if (!pfad) return null;
   return /^https:\/\//.test(pfad) ? pfad : `${ctBasis()}/${pfad.replace(/^\/+/, '')}`;
+}
+
+export interface EigenesLogo {
+  /** Die Hilfsgruppe, deren Bild das Logo ist. */
+  id: number;
+  name: string;
+  url: string;
+}
+
+const LOGO_TEXT = `${LOGO_KENNUNG} Bitte nicht löschen – sonst fehlt das Logo in den Formularen, die es zeigen.`;
+
+/**
+ * **Eigene Logos, die man sehen darf** – die archivierten Logo-Gruppen derselben Art wie die Veranstaltung
+ * (Archivierte stehen nur in `/groups` mit Status-Filter, gemessen). Ohne Bild bleibt eine weg.
+ */
+export async function logoListe(veranstaltungId: number): Promise<EigenesLogo[]> {
+  const art = (await gruppe(veranstaltungId)).information?.groupTypeId;
+  if (typeof art !== 'number') return [];
+  const roh = await ctAlleSeiten<GruppeRoh>(
+    `/groups?group_status_ids[]=${STATUS.archiviert}&group_type_ids[]=${art}`,
+    200,
+  );
+  return roh
+    .filter((g) => istLogoGruppe(g.information?.note) && g.information?.imageUrl)
+    .map((g) => ({
+      id: g.id,
+      name: g.name.replace(/^Logo:\s*/, ''),
+      url: g.information!.imageUrl!,
+    }))
+    .sort((a, b) => b.id - a.id);
+}
+
+/**
+ * **Eigenes Logo hochladen** (Alwin, 14.10.2026) – als Bild einer Hilfsgruppe (`LOGO_KENNUNG`): gleich
+ * archiviert angelegt (so taucht sie nie als Entwurf auf), Art und Team wie die Veranstaltung – damit gelten
+ * dieselben Rechte wie beim Anlegen. Gemessen 14.10.2026. Klappt ein Schritt nicht, wird die halbe Gruppe
+ * wieder entfernt (wenn das auch nicht geht, bleibt sie unsichtbar im Archiv – ohne Kennung zeigt sie niemand).
+ */
+export async function logoHochladen(veranstaltungId: number, datei: File): Promise<EigenesLogo> {
+  bildPruefen(datei);
+  const [v, team] = await Promise.all([gruppe(veranstaltungId), teamVon(veranstaltungId)]);
+  const name = `Logo: ${datei.name.replace(/\.[a-z0-9]+$/i, '')}`.slice(0, 100);
+  const neu = await ctAnfrage<{ data?: { id?: number } }>('/groups', {
+    method: 'POST',
+    body: json({
+      name,
+      groupTypeId: v.information?.groupTypeId,
+      groupStatusId: STATUS.archiviert,
+      ...(team ? { parentGroupId: team.id } : {}),
+    }),
+  });
+  const id = neu?.data?.id;
+  if (typeof id !== 'number') throw new NichtUebernommen('das Logo');
+  try {
+    await ctAnfrage(`/groups/${id}`, { method: 'PATCH', body: json({ note: LOGO_TEXT }) });
+    const url = await bildHochladen(id, datei);
+    if (!istLogoGruppe((await gruppe(id)).information?.note))
+      throw new NichtUebernommen('das Logo');
+    return { id, name: name.replace(/^Logo:\s*/, ''), url };
+  } catch (fehler) {
+    await ctAnfrage(`/groups/${id}`, { method: 'DELETE' }).catch(() => undefined);
+    throw fehler;
+  }
+}
+
+/**
+ * **Ein eigenes Logo entfernen** – löscht die Hilfsgruppe; Formulare, die das Logo zeigen, haben danach keins
+ * mehr (gemessen: das Bild liefert dann 404). Nur Logo-Gruppen, nachgeprüft.
+ */
+export async function logoEntfernen(id: number): Promise<void> {
+  if (!istLogoGruppe((await gruppe(id)).information?.note))
+    throw new ApiError(409, 'Das ist keine Logo-Gruppe.');
+  await ctAnfrage(`/groups/${id}`, { method: 'DELETE' });
+  const noch = await gruppe(id).then(
+    () => true,
+    (e: unknown) => !(e instanceof ApiError && e.status === 404),
+  );
+  if (noch) throw new NichtUebernommen('das Entfernen des Logos');
 }
 
 /** **Titelbild entfernen** – dann gilt das Bild der Vorlage (gemessen: `DELETE /files/groupimage/{id}` → 204). */

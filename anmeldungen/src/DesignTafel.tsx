@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Segment } from '@ui/bedienung/Segment';
 import { Schalter } from '@ui/bedienung/Schalter';
 import { SCHRIFT } from '@ui/anmeldeformular/daten';
@@ -11,6 +11,7 @@ import {
   vorlageVon,
   vorlageWechseln,
 } from '@shared/anmeldung/gestaltung';
+import { LogoAuswahl } from './LogoAuswahl';
 import k from './Baukasten.module.scss';
 
 /**
@@ -136,15 +137,20 @@ export function DesignTafel({
   gestaltung: g,
   onGestaltung,
   ctLogo,
+  veranstaltungId,
 }: {
   gestaltung: Gestaltung;
   onGestaltung: (g: Gestaltung) => void;
+  veranstaltungId: number;
   /** Das Gemeindelogo aus ChurchTools (`undefined` = wird noch geladen, `null` = keins hinterlegt). */
   ctLogo: string | null | undefined;
 }) {
   const setze = <K extends keyof Gestaltung>(feld: K, wert: Gestaltung[K]) =>
     onGestaltung({ ...g, [feld]: wert });
   const geaendert = geaendertSeitVorlage(g);
+  // „Eigenes“ angetippt, aber noch keins gewählt: Auswahl zeigen, das Formular bleibt, wie es ist.
+  const [eigenOffen, setEigenOffen] = useState(false);
+  const eigenesZeigen = g.logo === 'eigen' || eigenOffen;
   const farbe = (feld: 'farbe' | 'seitenfarbe' | 'kartenfarbe' | 'schriftfarbe', name: string) => (
     <label className={k.farbPaar}>
       <input
@@ -228,7 +234,10 @@ export function DesignTafel({
             className={k.vorlage}
             aria-pressed={g.logo === 'ct'}
             disabled={ctLogo === null}
-            onClick={() => onGestaltung({ ...g, logo: 'ct', logoUrl: ctLogo ?? g.logoUrl })}
+            onClick={() => {
+              setEigenOffen(false);
+              onGestaltung({ ...g, logo: 'ct', logoUrl: ctLogo ?? g.logoUrl });
+            }}
           >
             {ctLogo ? (
               <img src={titelbildGross(ctLogo, 120)} alt="" />
@@ -238,22 +247,44 @@ export function DesignTafel({
             <b>Gemeindelogo</b>
             <small>{ctLogo === null ? 'in ChurchTools keins' : 'aus ChurchTools'}</small>
           </button>
-          <button type="button" className={k.vorlage} disabled>
-            <span className={k.leerLogo}>+</span>
+          <button
+            type="button"
+            className={k.vorlage}
+            aria-pressed={eigenesZeigen}
+            onClick={() => setEigenOffen(true)}
+          >
+            {g.logo === 'eigen' && g.logoUrl ? (
+              <img src={titelbildGross(g.logoUrl, 120)} alt="" />
+            ) : (
+              <span className={k.leerLogo}>+</span>
+            )}
             <b>Eigenes</b>
-            <small>kommt als Nächstes</small>
+            <small>hochladen</small>
           </button>
           <button
             type="button"
             className={k.vorlage}
             aria-pressed={g.logo === 'keins'}
-            onClick={() => setze('logo', 'keins')}
+            onClick={() => {
+              setEigenOffen(false);
+              setze('logo', 'keins');
+            }}
           >
             <span className={k.leerLogo}>–</span>
             <b>Kein Logo</b>
             <small>&nbsp;</small>
           </button>
         </div>
+        {eigenesZeigen && (
+          <LogoAuswahl
+            veranstaltungId={veranstaltungId}
+            gewaehlt={g.logo === 'eigen' ? g.logoUrl : null}
+            onWaehlen={(url) => onGestaltung({ ...g, logo: 'eigen', logoUrl: url })}
+            onEntfernt={(url) => {
+              if (g.logoUrl === url) onGestaltung({ ...g, logo: 'keins', logoUrl: null });
+            }}
+          />
+        )}
         {g.logo !== 'keins' && (
           <Segment
             ariaLabel="Platz des Logos"

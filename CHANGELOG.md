@@ -7,6 +7,16 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Behoben (Dienstplaner)
+
+- **Matrix am Computer** (#546, Alwin):
+  - „Passend zur Fensterbreite“ ragte heraus, weil der Kopf (Datumskachel + „Mi · 19:00“) die Spalten
+    dehnte. Beim Wischen rutschte dann der erste Termin unter die Dienst-Spalte. Jetzt hat die Tabelle
+    feste Breiten, und die Uhrzeit bricht in schmalen Spalten um.
+  - Die Dienst-Namen klebten am linken Rand, weil eine allgemeinere Tabellen-Regel den Abstand nahm.
+  - Nach „＋“ wurde die Terminleiste höher. Jetzt steht „an Fensterbreite anpassen“ in derselben Zeile
+    wie die Anzahl.
+
 ### Geändert (Dienstplaner)
 
 - **Weniger Knopf-Formen** (#541, Alwin am Handy: „zu viele verschiedene Buttons“; Entwurf A aus drei):

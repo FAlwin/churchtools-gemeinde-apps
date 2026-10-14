@@ -68,6 +68,12 @@ export function vorgabenText(v: NeuePersonVorgaben, s: Stammdaten): string {
 }
 
 /**
+ * Fehlt **nur** das, ist die Anmeldung richtig eingerichtet und der Link gilt, sobald der Zeitraum läuft (ist er
+ * vorbei, fehlt zusätzlich `endDateNotPassed`). Daran erkennt die Karte „Anmeldelink“, dass sie den Link zeigen darf.
+ */
+export const ZEITRAUM_ZU = 'Der Anmeldezeitraum hat noch nicht begonnen oder ist vorbei.';
+
+/**
  * Was eine fehlende Bedingung bedeutet – in Worten des Teams. Abgeleitete Angaben (`canSignUp`, `canContactLeader`
  * …) stehen hier nicht: Sie fehlen nur, weil etwas anderes fehlt.
  */
@@ -75,7 +81,7 @@ const BEDINGUNG: Record<string, string> = {
   groupIsActive: 'Die Veranstaltung ist nicht freigegeben.',
   groupIsPublic: 'Die Veranstaltung ist nicht öffentlich.',
   groupIsNotHidden: 'Die Gruppe ist in ChurchTools ausgeblendet.',
-  groupIsOpenForMembers: 'Der Anmeldezeitraum hat noch nicht begonnen oder ist vorbei.',
+  groupIsOpenForMembers: ZEITRAUM_ZU,
   endDateNotPassed: 'Der Anmeldezeitraum ist vorbei.',
   groupHasLeader: 'Die Gruppe hat keine Leitung.',
   atLeastOneLeaderCanCreateNewPerson:

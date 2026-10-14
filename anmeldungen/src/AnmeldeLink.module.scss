@@ -64,3 +64,22 @@
   line-height: 1.45;
   color: var(--text2);
 }
+
+// ChurchTools nimmt (noch) keine Anmeldungen an – statt des Links, was fehlt (15.10.2026).
+.warnung {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 14px 14px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--red);
+
+  ul {
+    margin: 0;
+    padding-left: 20px;
+    list-style: disc; // ChurchTools (Tailwind) nimmt Listen die Punkte
+    color: var(--text);
+  }
+}

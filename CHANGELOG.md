@@ -128,6 +128,10 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   dazu drei gleiche Knöpfe **Kopieren** (danach kurz „Kopiert“), **Öffnen** (neuer Tab) und **Teilen** (Teilen-Menü
   des Geräts; fehlt, wo der Browser keins hat). Vorher stand der Link nur im Termin-Fenster. Das Kopieren beider
   Stellen läuft über einen gemeinsamen Hook (`useLinkKopieren.ts`).
+  **Erst geprüft, dann gezeigt** (Alwin, 15.10.2026): Die Karte fragt wie ein Gast bei ChurchTools nach. Nimmt
+  ChurchTools nichts an (z. B. vor A6-2 freigegeben und nicht öffentlich – der Link führte zu „nicht geöffnet“),
+  steht statt des Links, was fehlt, und „Jetzt einrichten“ öffnet das Freigeben-Fenster; danach prüft sie neu.
+  Fehlt nur der laufende Anmeldezeitraum oder lässt sich gerade nicht prüfen, bleibt der Link mit Hinweis.
 - **„Erst einrichten“ mit Nummern:** Die Schritte waren in ChurchTools ohne Zahlen (ChurchTools nimmt Listen
   die Nummern).
 - **Demo** (`?demo`) kennt die Gemeinde-Einstellungen (Formular-Adresse, Vorgaben); `?demo=einrichten`

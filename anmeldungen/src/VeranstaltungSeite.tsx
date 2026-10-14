@@ -252,7 +252,13 @@ export function VeranstaltungSeite({
       )}
       {/* Erst freigegeben nimmt das Formular etwas an – vorher gibt es keinen Link (14.10.2026). */}
       {!entwurf && formularAdresse && (
-        <AnmeldeLinkKarte link={anmeldeLink(formularAdresse, ctBasis(), id)} titel={daten.name} />
+        <AnmeldeLinkKarte
+          id={id}
+          link={anmeldeLink(formularAdresse, ctBasis(), id)}
+          titel={daten.name}
+          stand={daten}
+          onEinrichten={darf ? () => setFenster('freigeben') : undefined}
+        />
       )}
 
       <Segment<Reiter>

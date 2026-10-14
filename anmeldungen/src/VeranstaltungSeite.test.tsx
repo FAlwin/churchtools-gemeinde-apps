@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import { geburtsdatumAn, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import { ApiError } from '@ui/ct/fehler';
+import { ZEITRAUM_ZU } from '@shared/anmeldung/vorbereiten';
 import * as E from './einrichten';
 import * as G from './gemeinde';
 import { VeranstaltungSeite } from './VeranstaltungSeite';
@@ -336,7 +337,7 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     zeigen();
     const karte = await screen.findByRole('region', { name: 'Anmeldelink' });
     const LINK = 'https://anmeldung.beispiel.de/#ct.test/91';
-    expect(within(karte).getByRole('textbox', { name: 'Anmeldelink' })).toHaveProperty(
+    expect(await within(karte).findByRole('textbox', { name: 'Anmeldelink' })).toHaveProperty(
       'value',
       LINK,
     );
@@ -372,7 +373,67 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     stelle(true, 1);
     zeigen();
     const karte = await screen.findByRole('region', { name: 'Anmeldelink' });
+    await within(karte).findByRole('button', { name: 'Kopieren' });
     expect(within(karte).queryByRole('button', { name: 'Teilen' })).toBeNull();
+  });
+
+  it('Anmeldelink: nimmt ChurchTools nichts an → kein Link, was fehlt, „Jetzt einrichten“ öffnet das Freigeben', async () => {
+    stelle(true, 1);
+    m.anmeldeBedingungen.mockResolvedValue(['Die Gruppe hat keine Leitung.']);
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Anmeldelink' });
+    expect(await within(karte).findByText('Die Gruppe hat keine Leitung.')).toBeTruthy();
+    expect(within(karte).queryByRole('textbox', { name: 'Anmeldelink' })).toBeNull();
+    expect(m.anmeldeBedingungen).toHaveBeenCalledWith(91);
+    fireEvent.click(within(karte).getByRole('button', { name: 'Jetzt einrichten' }));
+    expect(await screen.findByRole('button', { name: 'Jetzt freigeben' })).toBeTruthy();
+  });
+
+  it('Anmeldelink: nach „Jetzt einrichten“ prüft die Karte neu und zeigt den Link', async () => {
+    stelle(true, 1);
+    m.freigeben.mockResolvedValue();
+    // Erst gesperrt (Karte), danach nimmt ChurchTools an (Fenster nach dem Freigeben, Karte nach dem Neuladen).
+    m.anmeldeBedingungen.mockResolvedValueOnce(['Die Gruppe hat keine Leitung.']);
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Anmeldelink' });
+    fireEvent.click(await within(karte).findByRole('button', { name: 'Jetzt einrichten' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Jetzt freigeben' }));
+    await waitFor(() => expect(m.freigeben).toHaveBeenCalledWith(91));
+    expect(
+      await within(await screen.findByRole('region', { name: 'Anmeldelink' })).findByRole(
+        'textbox',
+        { name: 'Anmeldelink' },
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText('Die Gruppe hat keine Leitung.')).toBeNull();
+  });
+
+  it('Anmeldelink: ohne Recht kein „Jetzt einrichten“, sondern wer es kann', async () => {
+    stelle(false, 1);
+    m.anmeldeBedingungen.mockResolvedValue(['Die Gruppe hat keine Leitung.']);
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Anmeldelink' });
+    expect(await within(karte).findByText('Einrichten kann die Leitung der Gruppe.')).toBeTruthy();
+    expect(within(karte).queryByRole('button', { name: 'Jetzt einrichten' })).toBeNull();
+  });
+
+  it('Anmeldelink: fehlt nur der laufende Zeitraum → Link bleibt, mit Hinweis', async () => {
+    stelle(true, 1);
+    m.anmeldeBedingungen.mockResolvedValue([ZEITRAUM_ZU]);
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Anmeldelink' });
+    expect(await within(karte).findByRole('textbox', { name: 'Anmeldelink' })).toBeTruthy();
+    expect(within(karte).getByText(/funktioniert, sobald er beginnt/)).toBeTruthy();
+    expect(within(karte).queryByRole('alert')).toBeNull();
+  });
+
+  it('Anmeldelink: Prüfung scheitert vorübergehend → Link bleibt (nicht verstecken), mit Hinweis', async () => {
+    stelle(true, 1);
+    m.anmeldeBedingungen.mockRejectedValue(new ApiError(503, 'kurz weg'));
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Anmeldelink' });
+    expect(await within(karte).findByRole('textbox', { name: 'Anmeldelink' })).toBeTruthy();
+    expect(within(karte).getByText(/ließ sich gerade nicht prüfen/)).toBeTruthy();
   });
 
   it('Anmeldung: Beginn 0:00 und Schluss 23:59 in Ortszeit, als UTC gespeichert', async () => {

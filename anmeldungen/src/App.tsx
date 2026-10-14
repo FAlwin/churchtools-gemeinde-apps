@@ -185,7 +185,7 @@ export function App() {
         <>
           {fertig?.admin && (
             <button type="button" className={s.neu} onClick={() => setEinstellungen(true)}>
-              <Icon name="cog" size={18} />
+              <Icon name="zahnrad" size={16} />
               Einstellungen
             </button>
           )}

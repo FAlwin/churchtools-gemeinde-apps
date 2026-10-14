@@ -55,7 +55,8 @@ const SCHRIFT = /^(color|font(-.+)?|line-height|letter-spacing|-webkit-font-smoo
  *
  * - `:root` → der Bereich selbst (die Variablen gelten auch außerhalb von `#root`),
  * - `html`, `body` → nur `#root` (die Fläche der Seite); die Schrift für außerhalb ergänzt das Plugin,
- * - `html[data-theme='dark']` → `html[data-theme='dark'] <Bereich>` (das Dunkel-Schema),
+ * - `html[data-theme='dark']` → `html[data-theme='dark'] <Bereich>` (das Dunkel-Schema; auch mit mehreren
+ *   Attributen, `html[data-theme='dark'][data-dunkel='churchtools']`),
  * - enthält der Selektor eine Klasse oder ID → unverändert (CSS-Module, `#root`, `.ct-extension`),
  * - sonst (`*`, `button`, `:focus-visible` …) → `<Bereich> <Selektor>`.
  */
@@ -66,7 +67,7 @@ export function imBereich(selektor: string): string {
   if (s.startsWith(':where(#root') || s.startsWith(AUSSERHALB)) return s;
   if (s === ':root') return BEREICH;
   if (s === 'html' || s === 'body') return APP;
-  const schema = /^html(\[[^\]]+\])$/.exec(s);
+  const schema = /^html((?:\[[^\]]+\])+)$/.exec(s);
   if (schema) return `html${schema[1]} ${BEREICH}`;
   if (/[.#]/.test(s)) return s;
   return `${BEREICH} ${s}`;

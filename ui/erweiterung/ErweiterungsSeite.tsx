@@ -124,7 +124,8 @@ export function ErweiterungsSeite({
               <h1>{zustand.vorname ? `Hallo ${zustand.vorname}` : 'Hallo'}</h1>
               {nebenGruss && <span>{nebenGruss}</span>}
             </div>
-            {kopfAktion}
+            {/* Mehrere Knöpfe bleiben zusammen rechts – sonst verteilt `space-between` sie über die Zeile. */}
+            {kopfAktion && <div className={styles.aktionen}>{kopfAktion}</div>}
           </div>
         )}
       </header>

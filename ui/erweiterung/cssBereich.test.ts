@@ -22,6 +22,11 @@ describe('imBereich', () => {
     expect(imBereich("html[data-theme='dark']")).toBe(`html[data-theme='dark'] ${BEREICH}`);
   });
 
+  it('auch mit mehreren Attributen (dunkel wie ChurchTools) – sonst stünde der Bereich VOR dem html', () => {
+    const sel = "html[data-theme='dark'][data-dunkel='churchtools']";
+    expect(imBereich(sel)).toBe(`${sel} ${BEREICH}`);
+  });
+
   it('Element-, Universal- und Pseudo-Selektoren wandern in den Bereich', () => {
     expect(imBereich('*')).toBe(`${BEREICH} *`);
     expect(imBereich('*::before')).toBe(`${BEREICH} *::before`);

@@ -111,6 +111,20 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Neu (Anmeldungen)
 
+- **Dunkelmodus wie ChurchTools** (Alwin, 14.10.2026). Die Anmeldungen sind hell oder dunkel, je nachdem, was
+  in ChurchTools eingestellt ist (gemessen: Klasse `light`/`dark` an `<body>`, unabhängig vom Gerät), und
+  schalten mit um. Die Farben sind die von ChurchTools (Tailwind 4: zinc-900 Seite, zinc-800 Karten …).
+  Die Formular-Vorschau im Baukasten bleibt in ihrem eigenen Design. Gemeinsamer Baustein für alle Apps:
+  `ui/design/thema.ts` und ein eigener Farbblock in `_variables.scss`; die Musik-App und der Dienstplaner
+  bleiben, wie sie sind, bis sie umsteigen (`docs/entwicklung/dunkelmodus.md`). Der Erweiterungs-Bau
+  schreibt dafür jetzt auch Selektoren mit mehreren Attributen am `html` richtig um.
+- **Zahnrad wie in ChurchTools:** Der Knopf „Einstellungen“ zeigt das Zahnrad von „System-Einstellungen“
+  (Font Awesome „gear“, solid; CC BY 4.0). Stehen „Einstellungen“ und „Neue Veranstaltung“ beide im Kopf,
+  bleiben sie zusammen rechts (vorher schwebte „Einstellungen“ mitten in der Zeile).
+- **Formular-Adresse zum Testen:** Neben `https://…` ist auch `http://localhost:<Port>` erlaubt (das Formular auf
+  dem eigenen Rechner), bis die eigene Adresse der Gemeinde steht.
+- **Demo** (`?demo`) kennt die Gemeinde-Einstellungen (Formular-Adresse, Vorgaben); `?demo=einrichten`
+  zeigt den Zustand davor. Seit A6-2 blieb die Demo sonst bei „Erst einrichten“ stehen.
 - **Echt anmelden** (A6-2, #548). Gemessen 14.10.2026 an der Test-Instanz (`messung-a6-2026-10-14.md`):
   Familie, Kind allein, Geschwister mit derselben Adresse, dieselbe Person doppelt.
   - **Öffentliches Formular:** Token → Formular-Aufbau (Feldnummern) → Anmeldung, ohne Login. **Variante A**

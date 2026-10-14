@@ -120,8 +120,14 @@ describe('formularAdresseAus – die Adresse der Formular-Seite der Gemeinde', (
       'https://anmeldung.beispiel.de/?x=1',
       'https://anmeldung.beispiel.de/#a',
       'localhost',
+      'http://localhost.beispiel.de',
       'javascript:alert(1)',
     ])
       expect(formularAdresseAus(x), x).toBeNull();
+  });
+  it('zum Testen: http://localhost mit Port (nur mit ausdrücklichem http://)', () => {
+    expect(formularAdresseAus('http://localhost:5177')).toBe('http://localhost:5177/');
+    expect(formularAdresseAus('http://127.0.0.1:5177/')).toBe('http://127.0.0.1:5177/');
+    expect(herkunftVon('http://localhost:5177/')).toBe('http://localhost:5177');
   });
 });

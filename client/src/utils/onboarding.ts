@@ -187,6 +187,21 @@ export const CHART_STEPS: CoachStep[] = [
   },
 ];
 
+/**
+ * Der erste Schritt im Scroll-Modus (#551): Seitwärts wischen und Zoomen gibt es dort nicht – die
+ * Einführung darf nichts erklären, was gar nicht geht.
+ */
+export const CHART_SCHRITT_SCROLLEN: CoachStep = {
+  selector: '[data-tour="chart-blaettern"]',
+  title: 'Scrollen',
+  body: 'Die Lieder stehen untereinander – wische nach oben und unten. Ein Pedal oder die Pfeiltasten scrollen ein Stück weiter. Ein Tipp aufs Blatt blendet die Leisten aus – dann hat das Blatt die ganze Fläche. Zum Blättern zurück: unter „Mehr" bei „Liedansicht".',
+};
+
+/** Die Einführung der Chart-Ansicht passend zur Liedansicht dieses Geräts. */
+export function chartSchritte(scrollen: boolean): CoachStep[] {
+  return scrollen ? [CHART_SCHRITT_SCROLLEN, ...CHART_STEPS.slice(1)] : CHART_STEPS;
+}
+
 /** Gruppe 3 – Ablauf-Ansicht (beim ersten Öffnen eines Gottesdienstes). */
 export const SETLIST_STEPS: CoachStep[] = [
   {

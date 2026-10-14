@@ -486,3 +486,39 @@ einer Gemeinde ohne SongSelect Premium (07.10.2026).
 - **Historie:** Anfrage einer Gemeinde, 07.10.2026
 
 </details>
+
+### TF-CHART-17 · Scroll-Modus und Pedal
+
+**Das brauchst du:** Ein iPad und ein iPhone (oder eins von beiden), einen Gottesdienst mit mehreren
+Liedern, davon eins mit Anmerkungen. Wenn vorhanden: ein Bluetooth-Pedal (AirTurn, PageFlip …).
+
+**Das muss passieren:** Mit **Mehr → Liedansicht: Scrollen** stehen die Lieder untereinander, jede Seite
+so breit wie der Bildschirm – quer am iPad **eine** Seite, nicht zwei. Zwischen den Seiten keine graue
+Lücke. Die Anmerkungen stehen an derselben Stelle wie beim Blättern. Ein Pedal-Tritt scrollt etwa ⅔
+Bildschirm weiter, eine blaue gestrichelte Linie zeigt kurz, wo der Bildschirm vorher endete. Gedrückt
+halten löst keinen Dauerlauf aus. Ein Tipp aufs Blatt blendet die Leisten aus und wieder ein. Die
+Einstellung gilt nur auf diesem Gerät.
+
+1. **Mehr → Während des Spielens → Liedansicht: Scrollen** wählen.
+2. Einen Gottesdienst öffnen, ein Lied antippen. Mit dem Finger nach unten wischen: Die Kopfzeile zeigt
+   immer das Lied in der Bildmitte, die Punkte unten folgen.
+3. Das Pedal treten (oder ↓ / Leertaste auf einer Tastatur): ein Schritt, die Linie blitzt kurz auf. Rückwärts
+   mit dem anderen Pedal (↑ / Umschalt+Leertaste).
+4. Einmal aufs Blatt tippen → Leisten weg; nochmal → Leisten da.
+5. Einen Lied-Punkt unten antippen → dieses Lied steht oben.
+6. Anmerken (Stift): Die sichtbare Seite öffnet sich **einzeln** (quer: nicht zwei nebeneinander). Etwas
+   malen, **Anmerken beenden** → man steht wieder an derselben Stelle, die Anmerkung ist zu sehen.
+7. Das iPad drehen: Hoch- und Querformat zeigen jeweils eine Seite in voller Breite.
+8. **Liedansicht: Blättern** wählen → alles wie bisher. Auf einem zweiten Gerät bleibt die eigene Wahl.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `client/src/components/ScrollDeck.tsx`, `client/src/pages/ChordChart.tsx`, `client/src/utils/pedalTasten.ts`, `client/src/hooks/useChartNavigation.ts`, `client/src/components/PageDeck.tsx`, `client/src/utils/devicePrefs.ts`, `client/src/pages/Settings.tsx`
+- **Automatisiert:** weitgehend – `e2e/chart-scrollen.spec.ts` (Seiten nahtlos und voll breit, Pedal ⅔,
+  Kopfzeile folgt der Mitte, Tipp, Lied-Punkt, Fußpfeil, Malen einzeln und zurück an dieselbe Stelle, quer
+  eine Seite), `pedalTasten.test.ts`, `ScrollDeck.test.tsx`, `useChartNavigation.test.ts`. Von Hand bleiben
+  ein echtes Pedal, das Wischen mit dem Finger und das Drehen
+- **Historie:** #551 (ChurchTools-Dev-Stammtisch, 14.10.2026)
+
+</details>

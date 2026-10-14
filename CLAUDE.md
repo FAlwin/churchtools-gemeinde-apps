@@ -449,6 +449,18 @@ speichern + `restoreVisibleZoom`), `useKeyboardInsets` (iOS-Tastatur-Hub), `useS
 (Blätter-Animation) und `usePointerStrokes` (Zeichen-Engine Stift/Marker/Radierer inkl. aller
 Touch-Regeln); `composePane` bleibt bewusst in PageDeck.
 
+**Scroll-Modus (#551, 14.10.2026):** Mehr → Liedansicht: **Blättern / Scrollen**, je Gerät
+(`devicePrefs.getLiedansicht`, `worship:liedansicht`). Scrollen zeigt **dieselben Seiten** untereinander,
+jede in voller Breite, nahtlos (`components/ScrollDeck.tsx`) – nur zum Lesen: Anmerkungen werden mitgezeichnet,
+nicht umgerechnet; welche eigene Ebene gilt, entscheidet für Blättern UND Scrollen `pageKeys.eigenerSchluessel`.
+Leinwände nur in Bildschirmnähe (IntersectionObserver), sonst freigegeben. Die **Seite in der Bildmitte** ist
+die aktive (Kopfzeile, Lied-Punkte). **Malen:** Stift öffnet die sichtbare Seite in `PageDeck` mit `einzeln`
+(auch quer nur eine Seite), danach zurück an dieselbe Stelle (`ScrollPosition` in `utils/scrollPosition.ts`).
+Ein Tipp aufs Blatt = Leisten aus/ein. **Pedal-Tasten** für beide Modi stehen EINMAL in `utils/pedalTasten.ts`
+(→/↓/Bild↓/Leertaste weiter, ←/↑/Bild↑/Umschalt+Leertaste zurück; nicht bei gedrückt gehaltener Taste, mit
+Strg/⌘/Alt, in Eingaben oder Leertaste auf einem Knopf); im Scroll-Modus scrollt ein Tritt ⅔ Bildschirm
+(`SCHRITT_ANTEIL`, Alwin: 85 % war zu weit), die Fußpfeile ebenso. E2E: `e2e/chart-scrollen.spec.ts`.
+
 **Gesten:** **ein Finger blättert, zwei Finger zoomen + verschieben** (auch im Zeichenmodus – ein
 begonnener Strich wird bei Zweitfinger verworfen; Apple Pencil zeichnet, Finger zoomen). Pinch zoomt
 und **speichert automatisch** (kein „Fertig"-Modus); Zurücksetzen über den Knopf in der Kopfleiste.

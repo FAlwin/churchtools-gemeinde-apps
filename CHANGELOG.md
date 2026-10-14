@@ -7,6 +7,24 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu
+
+- **Scroll-Modus: Lieder untereinander statt blättern** (#551, Idee vom ChurchTools-Dev-Stammtisch):
+  - Unter **Mehr → Während des Spielens → Liedansicht** gibt es **Blättern** (wie bisher) und
+    **Scrollen**. Die Wahl gilt nur für dieses Gerät.
+  - Beim Scrollen stehen alle Seiten des Ablaufs untereinander, nahtlos und jede so breit wie der
+    Bildschirm – quer am iPad eine Seite statt zwei, die Schrift wird dadurch deutlich größer.
+  - Es sind dieselben Seiten wie beim Blättern: Anmerkungen und „Notizen von …“ stehen an derselben Stelle.
+  - Die Kopfzeile und die Punkte unten zeigen das Lied in der Bildmitte; ein Punkt holt sein Lied nach oben.
+  - Ein Tipp aufs Blatt blendet die Leisten aus und wieder ein.
+  - Pedal und Pfeile unten scrollen ⅔ Bildschirm weiter; eine gestrichelte Linie zeigt kurz, wo der
+    Bildschirm vorher endete.
+  - Zum Malen öffnet der Stift die sichtbare Seite einzeln (alle Werkzeuge wie gewohnt); danach geht es
+    an derselben Stelle weiter.
+- **Pedale:** Die Liedansicht versteht jetzt auch ↓/↑, Bild↓/Bild↑ und die Leertaste (Umschalt+Leertaste
+  zurück) – vorher nur ←/→, viele Bluetooth-Pedale taten darum nichts. Gedrückt gehaltene Tasten lösen
+  keinen Dauerlauf mehr aus. Gilt fürs Blättern wie fürs Scrollen.
+
 ### Behoben
 
 - **Gleiche Kategorie, verschiedene Geräte** (#558): ChurchTools nimmt dasselbe Kürzel für zwei Kategorien an

@@ -23,7 +23,7 @@ import { ZOOM_GRENZEN, type Blatt, type Flaeche } from '../utils/zoomAusschnitt'
 import { useLatestRef } from '../hooks/useLatestRef';
 import { useRefPair } from '../hooks/useRefPair';
 import { useLandscape } from '../hooks/useLandscape';
-import { joinKeys, splitKeys } from '../utils/pageKeys';
+import { eigenerSchluessel, joinKeys, splitKeys } from '../utils/pageKeys';
 import { readPageTexts } from '../utils/annotationKeys';
 import { ConfirmDialog } from './ConfirmDialog';
 import { PageDrawToolbar } from './PageDrawToolbar';
@@ -80,6 +80,11 @@ interface PageDeckProps {
   onZoomedChange?: (zoomed: boolean) => void;
   /** Erhöht sich, wenn der Reset-Knopf der Kopfleiste gedrückt wird → sichtbaren Zoom zurücksetzen. */
   resetZoomSignal?: number;
+  /**
+   * Immer nur EINE Seite, auch quer (#551): Zum Malen aus dem Scroll-Modus öffnet sich die gerade
+   * sichtbare Seite einzeln – im 2-up stünde sonst eine fremde Nachbarseite daneben.
+   */
+  einzeln?: boolean;
 }
 
 // Stabiler Default für `viewKeyFor` (kein Ansehen).
@@ -125,6 +130,7 @@ export function PageDeck({
   syncTick = 0,
   onZoomedChange,
   resetZoomSignal = 0,
+  einzeln = false,
 }: PageDeckProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   // Inline-Texteingabe direkt auf der Seite (blinkender Cursor statt separater Leiste).
@@ -159,7 +165,7 @@ export function PageDeck({
   const [confirmClear, setConfirmClear] = useState(false);
 
   const pageCount = pages.length;
-  const perView = landscape ? 2 : 1;
+  const perView = landscape && !einzeln ? 2 : 1;
 
   // Pinch-Zoom: Speichern, Wiederherstellen und der komplette Lebenslauf einer Geste.
   /**
@@ -202,7 +208,7 @@ export function PageDeck({
   const viewing = (p: number): boolean => overlayKeyFor(p) != null;
   /** WIRKSAMER eigener Schlüssel: beim Ansehen ohne Vorschau wird die eigene Ebene nicht gezeigt. */
   const ownKeyFor = (p: number): string | null =>
-    viewing(p) && !previewOwn ? null : drawKeyFor(p);
+    eigenerSchluessel(p, drawKeyFor, viewKeyFor, previewOwn);
 
   // Die Schlüssel selbst sind die Abhängigkeit – nicht die Funktionen, die sie liefern. Über die
   // Signatur bekommen die Arrays eine stabile Identität (Begründung in `utils/pageKeys.ts`).

@@ -2,9 +2,9 @@
 
 Schwerpunkt auf **reiner Logik und serverseitigem Verhalten, das man von Hand kaum
 vollständig durchprüfen kann**. Die App hat keine eigene DB; UI-Feinheiten werden
-zusätzlich manuell (bzw. auf Staging) geprüft. Stand 12.10.2026 (v2.34.1): **237 Vitest-Dateien** –
-**167 im Client-Lauf (1745 Tests, inkl. `ui/` und `shared/anmeldung`)** + **70 Server (832 Tests)** +
-**18 Playwright-E2E in 12 Dateien**. Die Zahlen sind mit `npm run test` und `npm run test:e2e`
+zusätzlich manuell (bzw. auf Staging) geprüft. Stand 15.10.2026 (Scroll-Modus #551): **296 Vitest-Dateien** –
+**225 im Client-Lauf (2389 Tests, inkl. `ui/`, `shared/` und Dienstplaner/Anmeldungen)** + **71 Server
+(835 Tests)** + **21 Playwright-E2E in 14 Dateien**. Die Zahlen sind mit `npm run test` und `npm run test:e2e`
 ausgezählt, nicht fortgeschrieben.
 
 ## Umfang
@@ -26,6 +26,7 @@ ausgezählt, nicht fortgeschrieben.
 | E2E Ablauf abschließen/öffnen                | aktiv (CI-Job `e2e`) | Playwright + CT-Stub         | `e2e/ablauf-abschliessen.spec.ts`             |
 | E2E Rückgängig nach Löschen/Verschieben      | aktiv (CI-Job `e2e`) | Playwright + CT-Stub         | `e2e/ablauf-rueckgaengig.spec.ts`             |
 | E2E Lied-Statistik aus ChurchTools           | aktiv (CI-Job `e2e`) | Playwright + CT-Stub         | `e2e/lied-statistik.spec.ts`                  |
+| E2E Scroll-Modus und Pedal (#551)            | aktiv (CI-Job `e2e`) | Playwright                   | `e2e/chart-scrollen.spec.ts`                  |
 
 **Befehle:** `npm test` (alle Vitest), `npm run test:cov` (mit Coverage),
 `npm run test:watch` (Watch-Modus, im Client), `npm run test:e2e` (Playwright).

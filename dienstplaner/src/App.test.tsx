@@ -234,7 +234,8 @@ describe('Termine im Reiter (E3-2)', () => {
     await screen.findByText(/^Im .* stehen keine Termine an\.$/);
     const [, von, bis, zeitzone] = vi.mocked(ladeZeitraum).mock.calls[0];
     expect([von.slice(0, 7), von.slice(8)]).toEqual([bis.slice(0, 7), '01']);
-    expect(zeitzone).toBe('Europe/Berlin');
+    // Dieselbe Zeitzone wie „ab heute“ (die des Browsers – in der CI UTC, nicht fest „Europe/Berlin“).
+    expect(zeitzone).toBe(termineLaden.mock.calls[0][2]);
     localStorage.clear();
   });
 });

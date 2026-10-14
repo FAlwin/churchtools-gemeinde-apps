@@ -1,0 +1,139 @@
+// Zeitraum-Knopf mit Menü (Entwurf „Zeitraum wählen“, 14.10.2026) – Tokens aus ui/design.
+@use '@ui/design/mixins' as m;
+
+.rahmen {
+  position: relative;
+}
+
+.knopf {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 170px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text);
+  font-family: var(--ui);
+  line-height: 1.15;
+  cursor: pointer;
+
+  b {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 14.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+
+    svg {
+      color: var(--text2);
+    }
+  }
+
+  small {
+    font-size: 11.5px;
+    color: var(--text2);
+    white-space: nowrap;
+  }
+}
+
+.menue {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 290px;
+  max-width: calc(100vw - 32px);
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+.option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--ui);
+  font-size: 14.5px;
+  text-align: left;
+  cursor: pointer;
+
+  small {
+    color: var(--text2);
+    font-size: 12.5px;
+  }
+
+  &[aria-pressed='true'] {
+    background: var(--blue-soft);
+    color: var(--blue-ink);
+    font-weight: 600;
+  }
+}
+
+.eigen {
+  margin: 6px 0 0;
+  padding: 8px 10px 4px;
+  border: 0;
+  border-top: 1px solid var(--hair);
+
+  legend {
+    float: left;
+    width: 100%;
+    margin-bottom: 6px;
+    padding: 0;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--text2);
+  }
+}
+
+.felder {
+  clear: both;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  input {
+    @include m.eingabefeld;
+    flex: 1;
+    min-width: 0;
+    height: 36px;
+    padding: 0 8px;
+    font-size: 14px;
+  }
+}
+
+.anzeigen {
+  width: 100%;
+  height: 36px;
+  margin-top: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--blue);
+  color: #fff;
+  font-family: var(--ui);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+}

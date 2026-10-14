@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { Segment } from '@ui/bedienung/Segment';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
@@ -22,7 +22,14 @@ import styles from './Termine.module.scss';
 export type TermineZustand =
   | { art: 'laedt' }
   | { art: 'fehler'; fehler: Fehlermeldung }
-  | { art: 'fertig'; zeilen: TerminZeile[]; plan: Plan; wochen: number };
+  | {
+      art: 'fertig';
+      zeilen: TerminZeile[];
+      plan: Plan;
+      wochen: number;
+      /** Weitere Wochen nachzuladen ging schief – das Bisherige bleibt stehen (vorübergehend ≠ ungültig). */
+      nachladeFehler?: Fehlermeldung;
+    };
 
 interface Props {
   zustand: TermineZustand;
@@ -39,6 +46,14 @@ interface Props {
  * Dienstgruppen. Nur lesen – Öffnen eines Termins kommt später.
  */
 export function Termine({ zustand, planer, onNochmal, onMehr }: Props) {
+  // Weitere Wochen laden im Hintergrund (das Bisherige bleibt stehen) – bis die Antwort da ist, sagt der
+  // Knopf es.
+  const [laeuft, setLaeuft] = useState(false);
+  useEffect(() => setLaeuft(false), [zustand]);
+  const mehr = () => {
+    setLaeuft(true);
+    onMehr();
+  };
   const [auswahl, setAuswahl] = useState<Auswahl>(leseAuswahl);
   const aendern = (a: Auswahl) => {
     setAuswahl(a);
@@ -107,10 +122,15 @@ export function Termine({ zustand, planer, onNochmal, onMehr }: Props) {
           </div>
         ))}
 
+        {zustand.art === 'fertig' && zustand.nachladeFehler && (
+          <div className={styles.hinweis}>
+            <FehlerKasten fehler={zustand.nachladeFehler} onNochmal={mehr} />
+          </div>
+        )}
         {zustand.art === 'fertig' && (
           <div className={styles.mehr}>
-            <button type="button" className={styles.knopf} onClick={onMehr}>
-              Weitere Termine laden
+            <button type="button" className={styles.knopf} onClick={mehr} disabled={laeuft}>
+              {laeuft ? 'wird geladen …' : 'Weitere Termine laden'}
             </button>
           </div>
         )}

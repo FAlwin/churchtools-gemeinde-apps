@@ -26,13 +26,29 @@ describe('Im Gerät merken (geraet.ts)', () => {
     expect(leseAuswahl()).toEqual(VORGABE);
     localStorage.setItem(
       'dienstplaner.planen.ansicht',
-      JSON.stringify({ breite: 'xl', unteransicht: 'personen', ausgeblendeteGruppen: [3, 'ohne'] }),
+      JSON.stringify({
+        breite: 'xl',
+        unteransicht: 'personen',
+        ausgeblendeteGruppen: [3, 'ohne'],
+        zeitraum: { art: 'eigen', von: '2026-02-30', bis: '2026-03-10' },
+      }),
     );
     expect(leseAnsicht()).toEqual({
       breite: 'm',
       unteransicht: 'personen',
       ausgeblendeteGruppen: ['ohne'],
       ausgeblendeteArten: [],
+      zeitraum: { art: 'abHeute' },
     });
+  });
+
+  it('ein gemerkter Monat bzw. eigener Zeitraum bleibt (Zeitraum-Knopf, 14.10.2026)', () => {
+    for (const zeitraum of [
+      { art: 'monat', monat: '2026-11' },
+      { art: 'eigen', von: '2026-10-20', bis: '2026-11-10' },
+    ]) {
+      localStorage.setItem('dienstplaner.planen.ansicht', JSON.stringify({ zeitraum }));
+      expect(leseAnsicht().zeitraum).toEqual(zeitraum);
+    }
   });
 });

@@ -167,7 +167,6 @@ function daten(fall: string): Record<string, unknown> {
         churchservice: fall === 'mitglied' ? MITGLIED : PLANER,
       },
     },
-    '/api/events': { data: TERMINE },
     // Ablauf nur am ersten Termin – die anderen zeigen „Noch kein Ablauf“ (ChurchTools: 404).
     '/api/events/101/agenda': {
       data: {
@@ -208,6 +207,13 @@ function daten(fall: string): Record<string, unknown> {
   };
 }
 
+/** Wie ChurchTools: nur Termine ab `from` (Tag) und vor `to` (Tag, ausgeschlossen) – sonst stimmt „Oktober“ nicht. */
+function termineVonBis(von: string | null, bis: string | null) {
+  return TERMINE.filter(
+    (t) => (!von || t.startDate.slice(0, 10) >= von) && (!bis || t.startDate.slice(0, 10) < bis),
+  );
+}
+
 export function demoStarten(fall: string): void {
   // ChurchTools gibt der Erweiterung einen Behälter mit fester Höhe (gemessen 07.10.2026); auf der nackten
   // Entwicklerseite übernimmt das `body`, sonst hätte die App die Höhe 0.
@@ -221,7 +227,11 @@ export function demoStarten(fall: string): void {
       return Promise.resolve(new Response('{}', { status: 502 }));
     }
     const werKann = /^\/api\/events\/(\d+)\/services\/\d+\/possiblepersons$/.exec(url.pathname);
-    const d = werKann ? werKannDemo(Number(werKann[1])) : antworten[url.pathname];
+    const d = werKann
+      ? werKannDemo(Number(werKann[1]))
+      : url.pathname === '/api/events'
+        ? { data: termineVonBis(url.searchParams.get('from'), url.searchParams.get('to')) }
+        : antworten[url.pathname];
     return Promise.resolve(
       d === undefined
         ? new Response('{}', { status: 404 })

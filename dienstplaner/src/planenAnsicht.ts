@@ -1,4 +1,5 @@
 import type { Breite } from '@shared/dienstplan/fenster';
+import { AB_HEUTE, zeitraumAus, type Zeitraum } from '@shared/dienstplan/zeitraum';
 import { leseImGeraet, merkeImGeraet, texte } from './geraet';
 
 /**
@@ -12,6 +13,8 @@ export interface PlanenAnsicht {
   ausgeblendeteGruppen: string[];
   /** Ausgeblendete Veranstaltungsarten (wie in der Termine-Liste). */
   ausgeblendeteArten: string[];
+  /** Ab heute, ein Monat oder ein eigener Zeitraum (Zeitraum-Knopf, 14.10.2026). */
+  zeitraum: Zeitraum;
 }
 
 const SCHLUESSEL = 'dienstplaner.planen.ansicht';
@@ -21,6 +24,7 @@ export const VORGABE_ANSICHT: PlanenAnsicht = {
   unteransicht: 'matrix',
   ausgeblendeteGruppen: [],
   ausgeblendeteArten: [],
+  zeitraum: AB_HEUTE,
 };
 
 export function leseAnsicht(): PlanenAnsicht {
@@ -32,6 +36,7 @@ export function leseAnsicht(): PlanenAnsicht {
       unteransicht: a.unteransicht === 'personen' ? 'personen' : 'matrix',
       ausgeblendeteGruppen: texte(a.ausgeblendeteGruppen),
       ausgeblendeteArten: texte(a.ausgeblendeteArten),
+      zeitraum: zeitraumAus(a.zeitraum),
     };
   });
 }

@@ -7,6 +7,22 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Hinzugefügt (Dienstplaner)
+
+- **Zeitraum wählen** (#549, Alwin: „was heißt weitere Termine laden? Macht man das nicht über das + oben?“):
+  - Der Datumsbereich in der Terminleiste der Matrix ist ein Knopf mit Menü: **Ab heute** (wie bisher,
+    passend zur Fensterbreite), **Dieser Monat**, **Nächster Monat** oder ein **eigener Zeitraum** von–bis.
+    Bei einem Monat oder eigenen Zeitraum stehen alle seine Termine in der Matrix; ‹ › springen um einen
+    Monat bzw. um die eigene Länge. Das Gerät merkt sich die Wahl.
+  - „Weitere Termine laden“ unter der Matrix entfällt: Bei „ab heute“ laden ＋ und › am Ende selbst nach,
+    am Handy der letzte Datums-Chip. Kommt nichts dazu (lange Lücke, oder ein Filter auf eine selten
+    eingesetzte Gruppe), wird weitergeladen, bis ein Jahr erreicht ist.
+  - Nachladen ist jetzt still: Das Bisherige bleibt stehen, statt dass die Seite neu lädt. Ein Fehler
+    dabei zeigt einen Fehlerkasten neben der Liste, und „Erneut versuchen“ lädt genau einen Schritt.
+    In „Termine“ zeigt der Knopf solange „wird geladen …“.
+  - Den Text einer Spanne („18.10. – 08.11.2026“) gab es zweimal, einmal ohne Jahreswechsel. Jetzt
+    nutzen beide `spanneText`, und ein einzelner Tag heißt „18.10.2026“ statt „18.10. – 18.10.2026“.
+
 ### Behoben (Dienstplaner)
 
 - **Matrix am Computer** (#546, Alwin):
@@ -14,8 +30,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
     dehnte. Beim Wischen rutschte dann der erste Termin unter die Dienst-Spalte. Jetzt hat die Tabelle
     feste Breiten, und die Uhrzeit bricht in schmalen Spalten um.
   - Die Dienst-Namen klebten am linken Rand, weil eine allgemeinere Tabellen-Regel den Abstand nahm.
-  - Nach „＋“ wurde die Terminleiste höher. Jetzt steht „an Fensterbreite anpassen“ in derselben Zeile
-    wie die Anzahl.
+  - Nach „＋“ wurde die Terminleiste höher, weil „an Fensterbreite anpassen“ eine eigene Zeile bekam.
+    Mit #549 entfällt dieser Knopf: Zurück zu „passend“ geht es über „Ab heute“ im Zeitraum-Menü.
 
 ### Geändert (Dienstplaner)
 
@@ -32,6 +48,11 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Intern
 
+- **Bausteine für den Zeitraum** (#549): `plusTage`, `monatPlus` und `letzterTag` liegen jetzt in
+  `shared/ct/datum.ts`. Die Musik-App holt sie von dort (`client/src/utils/monate.ts` und `wochen.ts`
+  geben sie nur weiter). Die Regeln des Zeitraums stehen in `shared/dienstplan/zeitraum.ts`. Das
+  Aufklapp-Menü (zu bei Tipp daneben oder Escape) ist ein gemeinsamer Hook `useAufklapp` für Filter- und
+  Zeitraum-Knopf. Die Demo (`?demo`) beachtet jetzt `from`/`to` wie ChurchTools.
 - **Monatsnamen an einer Stelle** (#535): Sie standen viermal von Hand im Code (`shared/ct/datum.ts`,
   `client/src/utils/monate.ts`, `client/src/pages/Agenda.tsx`, `shared/ct/mapEvent.ts`), und
   `kachel()` bildete die Kurzform noch einmal selbst. Jetzt gibt es `MONATE` und daraus abgeleitet

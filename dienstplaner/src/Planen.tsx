@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { Segment } from '@ui/bedienung/Segment';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
+import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { kachel, monatName, tagKurz } from '@shared/ct/datum';
 import type { Plan, PlanGruppe, PlanPlatz, PlanSpalte, PlanZeile } from '@shared/dienstplan/plan';
 import { artVon, veranstaltungsArten, WEITERE } from '@shared/dienstplan/termine';
@@ -17,7 +18,16 @@ import {
   type FensterSchritt,
 } from '@shared/dienstplan/fenster';
 import { werWieOft } from '@shared/dienstplan/werWieOft';
+import {
+  zeitraumGrenzen,
+  spanneText,
+  zeitraumText,
+  zeitraumVerschieben,
+  type Zeitraum,
+} from '@shared/dienstplan/zeitraum';
 import type { TermineZustand } from './Termine';
+import type { TermineDaten } from './ladeTermine';
+import { ZeitraumKnopf } from './ZeitraumKnopf';
 import { leseAnsicht, merkeAnsicht, type PlanenAnsicht } from './planenAnsicht';
 import { useBreite } from './useBreite';
 import { FilterKnopf } from './FilterKnopf';
@@ -29,7 +39,14 @@ interface Props {
   /** Schmaler Bildschirm: ein Termin auf einmal statt der Tabelle (Entwurf v17). */
   handy: boolean;
   onNochmal: () => void;
+  /** Weitere Wochen „ab heute“ nachladen – die Terminleiste ruft das am Ende selbst auf. */
   onMehr: () => void;
+  /** Lassen sich „ab heute“ noch weitere Wochen nachladen? */
+  mehrMoeglich: boolean;
+  /** Einen gewählten Zeitraum laden (Monat, von–bis) – nur für die Matrix, Start und Termine bleiben. */
+  ladeZeitraum: (von: string, bis: string) => Promise<TermineDaten>;
+  /** Heute (`YYYY-MM-DD`, Ortszeit der Gemeinde). */
+  heute: string;
 }
 
 /** Schlüssel einer Gruppe – `null` (ohne Dienstgruppe) bekommt einen eigenen. */
@@ -72,12 +89,21 @@ function freierPlatz(s: PlanSpalte, z: PlanZeile, plaetze: PlanPlatz[], nr: numb
 
 /**
  * **Planen** (Bauplan E3-4/E3-5, Entwurf v17): Termine als Spalten, Dienstgruppen und Dienste als Zeilen,
- * in jeder Zelle die Plätze. Darüber die Terminleiste (‹ ＋ Zeitraum ＋ ›, „passend zur Fensterbreite“),
- * Filter nach Veranstaltung und Gruppe, Spaltenbreite und „Wer wie oft?“. **Nur lesen** – Einteilen kommt
- * mit E4. Am Handy: eine Datumsleiste und darunter ein Termin.
+ * in jeder Zelle die Plätze. Darüber die Terminleiste mit dem **Zeitraum-Knopf** (Alwin, 14.10.2026): ab heute
+ * (passend zur Fensterbreite, ‹ ＋ ＋ › blättern und laden am Ende selbst nach), ein Monat oder ein eigener
+ * Zeitraum – dann stehen alle Termine des Bereichs da, und ‹ › springen um den ganzen Bereich. Dazu Filter,
+ * Spaltenbreite und „Wer wie oft?“. **Nur lesen** – Einteilen kommt mit E4. Am Handy: eine Datumsleiste und
+ * darunter ein Termin.
  */
-export function Planen({ zustand, handy, onNochmal, onMehr }: Props) {
-  const plan = zustand.art === 'fertig' ? zustand.plan : null;
+export function Planen({
+  zustand,
+  handy,
+  onNochmal,
+  onMehr,
+  mehrMoeglich,
+  ladeZeitraum,
+  heute,
+}: Props) {
   const [ansicht, setAnsichtRoh] = useState<PlanenAnsicht>(leseAnsicht);
   const setAnsicht = (a: PlanenAnsicht) => {
     setAnsichtRoh(a);
@@ -88,134 +114,251 @@ export function Planen({ zustand, handy, onNochmal, onMehr }: Props) {
   const [frei, setFrei] = useState<FreierPlatz | null>(null);
   const [rahmen, platz] = useBreite();
 
-  if (zustand.art === 'laedt') return <p className={styles.hinweis}>Termine werden geladen …</p>;
-  if (zustand.art === 'fehler')
-    return <FehlerKasten fehler={zustand.fehler} onNochmal={onNochmal} />;
-  if (!plan || plan.spalten.length === 0) {
-    return (
-      <section className={styles.karte}>
-        <p className={styles.hinweis} style={{ padding: 14 }}>
-          In den nächsten {zustand.wochen} Wochen stehen keine Termine an.
-        </p>
-      </section>
+  // Gewählter Zeitraum: eigene Abfrage, gemerkt mit ihrem Bereich – eine späte Antwort für einen alten
+  // Bereich zählt nicht mehr.
+  const grenzen = zeitraumGrenzen(ansicht.zeitraum);
+  const bereich = grenzen ? `${grenzen.von}|${grenzen.bis}` : null;
+  const [eigen, setEigen] = useState<{ bereich: string; zustand: TermineZustand } | null>(null);
+  const [versuch, setVersuch] = useState(0);
+  useEffect(() => {
+    if (!grenzen || !bereich) return;
+    let aktuell = true;
+    setEigen({ bereich, zustand: { art: 'laedt' } });
+    ladeZeitraum(grenzen.von, grenzen.bis).then(
+      (d) =>
+        aktuell &&
+        setEigen({
+          bereich,
+          zustand: { art: 'fertig', zeilen: d.zeilen, plan: d.plan, wochen: 0 },
+        }),
+      (e: unknown) =>
+        aktuell && setEigen({ bereich, zustand: { art: 'fehler', fehler: fehlerMeldung(e) } }),
     );
+    return () => {
+      aktuell = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `grenzen` steckt vollständig in `bereich`
+  }, [bereich, ladeZeitraum, versuch]);
+  const quelle: TermineZustand = !bereich
+    ? zustand
+    : eigen?.bereich === bereich
+      ? eigen.zustand
+      : { art: 'laedt' };
+
+  // „Ab heute“ am Ende: erst nachladen, dann den Schritt tun (Alwin: „Weitere Termine laden“ machte dasselbe
+  // wie ＋). Kommt nichts Neues, wird weitergeladen – eine lange Lücke (Sommerpause, oder ein Filter auf eine
+  // selten eingesetzte Gruppe) ist kein Ende. Schluss ist erst an der Ladegrenze (`mehrMoeglich`).
+  const [nachLaden, setNachLaden] = useState<{ was: FensterSchritt; laenge: number } | null>(null);
+  useEffect(() => {
+    if (!nachLaden || zustand.art !== 'fertig') return;
+    if (zustand.nachladeFehler) {
+      setNachLaden(null); // nicht als „Ende“ werten – ein Aussetzer ist kein Ende
+      return;
+    }
+    const d = fensterDaten(zustand.plan, ansicht, platz);
+    if (d.gefiltert.length > nachLaden.laenge) {
+      setFenster((f) => schritt(f, nachLaden.was, d.gefiltert.length, d.passend));
+    } else if (mehrMoeglich) {
+      onMehr(); // `nachLaden` bleibt stehen – der nächste Stand landet wieder hier
+      return;
+    }
+    setNachLaden(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nur, wenn neue Termine angekommen sind
+  }, [zustand]);
+  const kannNachladen = !bereich && mehrMoeglich && !nachLaden;
+
+  const waehleZeitraum = (z: Zeitraum) => {
+    if (z.art === 'abHeute') setFenster((f) => schritt(f, 'passend', 0, 0));
+    setAnsicht({ ...ansicht, zeitraum: z });
+  };
+
+  const plan = quelle.art === 'fertig' ? quelle.plan : null;
+  const d = plan ? fensterDaten(plan, ansicht, platz) : null;
+  const gesamt = d?.gefiltert.length ?? 0;
+  const f = sichtbar(fenster, gesamt, d?.passend ?? 0);
+  const imFenster = d ? (bereich ? d.gefiltert : d.gefiltert.slice(f.von, f.bis)) : [];
+  const nachladen = (was: FensterSchritt) => {
+    setNachLaden({ was, laenge: gesamt });
+    onMehr();
+  };
+  const gehe = (was: FensterSchritt) => {
+    const amEnde = (was === 'weiter' || was === 'spaeterDazu') && !f.danach;
+    if (amEnde && kannNachladen) {
+      nachladen(was);
+      return;
+    }
+    setFenster(schritt(fenster, was, gesamt, d?.passend ?? 0));
+  };
+
+  // Aufschrift des Zeitraum-Knopfs.
+  const anzahl = handy || bereich ? (d?.gefiltert.length ?? 0) : imFenster.length;
+  const terminText = `${anzahl} ${anzahl === 1 ? 'Termin' : 'Termine'}`;
+  const z = ansicht.zeitraum;
+  const zeile1 =
+    z.art !== 'abHeute'
+      ? zeitraumText(z)
+      : handy || !plan || imFenster.length === 0
+        ? 'Ab heute'
+        : spanneText(
+            plan.spalten[imFenster[0]].tag,
+            plan.spalten[imFenster[imFenster.length - 1]].tag,
+          );
+  const zeile2 =
+    quelle.art === 'laedt'
+      ? 'wird geladen …'
+      : nachLaden
+        ? 'weitere Termine werden geladen …'
+        : z.art === 'abHeute' && !handy && fenster.anzahl === null
+          ? `${terminText} · passend zur Fensterbreite`
+          : terminText;
+
+  const knopf = (
+    <ZeitraumKnopf
+      zeitraum={z}
+      zeile1={zeile1}
+      zeile2={zeile2}
+      heute={heute}
+      handy={handy}
+      onWahl={waehleZeitraum}
+    />
+  );
+  const leiste = (
+    <Terminleiste
+      knopf={knopf}
+      bereich={!!bereich}
+      handy={handy}
+      davor={bereich ? true : f.davor}
+      danach={bereich ? true : f.danach || kannNachladen}
+      onSchritt={gehe}
+      onVerschieben={(r) => setAnsicht({ ...ansicht, zeitraum: zeitraumVerschieben(z, r) })}
+    />
+  );
+
+  const arten = plan ? veranstaltungsArten(plan.spalten) : [];
+  const werkzeug = (
+    <div className={styles.werkzeug}>
+      <Segment
+        value={ansicht.unteransicht}
+        options={[
+          { value: 'matrix', label: 'Matrix' },
+          { value: 'personen', label: 'Wer wie oft?' },
+        ]}
+        onChange={(v) => setAnsicht({ ...ansicht, unteransicht: v })}
+        ariaLabel="Ansicht"
+        className={styles.ansicht}
+        verbunden
+      />
+      {!handy && leiste}
+      <div className={styles.rechts}>
+        {!handy && ansicht.unteransicht === 'matrix' && (
+          <Segment<Breite>
+            value={ansicht.breite}
+            options={[
+              { value: 's', label: 'S' },
+              { value: 'm', label: 'M' },
+              { value: 'l', label: 'L' },
+            ]}
+            onChange={(b) => setAnsicht({ ...ansicht, breite: b })}
+            ariaLabel="Spaltenbreite"
+            verbunden
+          />
+        )}
+        <FilterKnopf
+          abschnitte={[
+            {
+              titel: 'Veranstaltungen',
+              optionen: arten.map((art) => ({
+                wert: art,
+                text: art === WEITERE ? 'Weitere' : art,
+              })),
+              aus: ansicht.ausgeblendeteArten,
+              onAus: (ausgeblendeteArten) => setAnsicht({ ...ansicht, ausgeblendeteArten }),
+            },
+            {
+              titel: 'Gruppen',
+              optionen: (plan?.gruppen ?? []).map((g) => ({
+                wert: schluessel(g),
+                text: gruppenName(g),
+              })),
+              aus: ansicht.ausgeblendeteGruppen,
+              onAus: (ausgeblendeteGruppen) => setAnsicht({ ...ansicht, ausgeblendeteGruppen }),
+            },
+          ]}
+        />
+      </div>
+      {handy && leiste}
+    </div>
+  );
+
+  const hinweis = (text: string) => (
+    <section className={styles.karte}>
+      <p className={styles.hinweis} style={{ padding: 14 }}>
+        {text}
+      </p>
+    </section>
+  );
+
+  let inhalt: ReactNode;
+  if (quelle.art === 'laedt') inhalt = <p className={styles.hinweis}>Termine werden geladen …</p>;
+  else if (quelle.art === 'fehler')
+    inhalt = (
+      <FehlerKasten
+        fehler={quelle.fehler}
+        onNochmal={bereich ? () => setVersuch((v) => v + 1) : onNochmal}
+      />
+    );
+  else if (!plan || !d || plan.spalten.length === 0)
+    inhalt = hinweis(
+      z.art === 'abHeute'
+        ? `In den nächsten ${quelle.wochen} Wochen stehen keine Termine an.`
+        : z.art === 'monat'
+          ? `Im ${zeitraumText(z)} stehen keine Termine an.`
+          : `Vom ${zeitraumText(z).replace(' – ', ' bis ')} stehen keine Termine an.`,
+    );
+  else {
+    const gruppen = plan.gruppen.filter(
+      (g) => !ansicht.ausgeblendeteGruppen.includes(schluessel(g)),
+    );
+    // Vorgabe beim ersten Anzeigen: was man nicht plant, ist zugeklappt.
+    const zugeklappt = zu ?? new Set(plan.gruppen.filter((g) => !g.planbar).map(schluessel));
+    const umschalten = (k: string) => {
+      const neu = new Set(zugeklappt);
+      if (neu.has(k)) neu.delete(k);
+      else neu.add(k);
+      setZu(neu);
+    };
+    const haupt = arten[0] !== undefined && arten[0] !== WEITERE ? arten[0] : null;
+    const sicht: Sicht = {
+      plan,
+      spalten: handy ? d.gefiltert : imFenster,
+      gruppen,
+      zugeklappt,
+      neben: (s) => haupt !== null && s.name !== haupt,
+      onUmschalten: umschalten,
+      onFrei: (i, zl, nr) => setFrei(freierPlatz(plan.spalten[i], zl, zl.zellen[i] ?? [], nr)),
+    };
+    inhalt =
+      d.gefiltert.length === 0 || gruppen.length === 0 ? (
+        hinweis(
+          'Nichts eingeblendet – über „Filter“ eine Veranstaltung oder Gruppe wieder anhaken.',
+        )
+      ) : ansicht.unteransicht === 'personen' ? (
+        <WerWieOft sicht={sicht} />
+      ) : handy ? (
+        <HandyPlan sicht={sicht} amEnde={kannNachladen ? () => nachladen('passend') : undefined} />
+      ) : (
+        <TabellenPlan sicht={sicht} breite={ansicht.breite} platz={platz} />
+      );
   }
 
-  // Filter: Veranstaltungsarten (aus den Terminnamen, wie in der Termine-Liste) und Gruppen.
-  const arten = veranstaltungsArten(plan.spalten);
-  const haupt = arten[0] !== undefined && arten[0] !== WEITERE ? arten[0] : null;
-  const gefiltert = plan.spalten
-    .map((_, i) => i)
-    .filter((i) => !ansicht.ausgeblendeteArten.includes(artVon(plan.spalten[i], arten)));
-  const gruppen = plan.gruppen.filter((g) => !ansicht.ausgeblendeteGruppen.includes(schluessel(g)));
-
-  // Fenster über die gefilterten Termine.
-  const passend = passendeAnzahl(platz, ansicht.breite, gefiltert.length);
-  const f = sichtbar(fenster, gefiltert.length, passend);
-  const imFenster = gefiltert.slice(f.von, f.bis);
-  const gehe = (was: FensterSchritt) =>
-    setFenster(schritt(fenster, was, gefiltert.length, passend));
-
-  // Vorgabe beim ersten Anzeigen: was man nicht plant, ist zugeklappt.
-  const zugeklappt = zu ?? new Set(plan.gruppen.filter((g) => !g.planbar).map(schluessel));
-  const umschalten = (k: string) => {
-    const neu = new Set(zugeklappt);
-    if (neu.has(k)) neu.delete(k);
-    else neu.add(k);
-    setZu(neu);
-  };
-
-  const sicht: Sicht = {
-    plan,
-    spalten: handy ? gefiltert : imFenster,
-    gruppen,
-    zugeklappt,
-    neben: (s) => haupt !== null && s.name !== haupt,
-    onUmschalten: umschalten,
-    onFrei: (i, z, nr) => setFrei(freierPlatz(plan.spalten[i], z, z.zellen[i] ?? [], nr)),
-  };
-
+  const nachladeFehler = !bereich && zustand.art === 'fertig' ? zustand.nachladeFehler : undefined;
   return (
     <div className={styles.planen}>
-      <div className={styles.werkzeug}>
-        <Segment
-          value={ansicht.unteransicht}
-          options={[
-            { value: 'matrix', label: 'Matrix' },
-            { value: 'personen', label: 'Wer wie oft?' },
-          ]}
-          onChange={(v) => setAnsicht({ ...ansicht, unteransicht: v })}
-          ariaLabel="Ansicht"
-          className={styles.ansicht}
-          verbunden
-        />
-        {!handy && (
-          <Terminleiste
-            plan={plan}
-            spalten={imFenster}
-            davor={f.davor}
-            danach={f.danach}
-            festeAnzahl={fenster.anzahl !== null}
-            onSchritt={gehe}
-          />
-        )}
-        <div className={styles.rechts}>
-          {!handy && ansicht.unteransicht === 'matrix' && (
-            <Segment<Breite>
-              value={ansicht.breite}
-              options={[
-                { value: 's', label: 'S' },
-                { value: 'm', label: 'M' },
-                { value: 'l', label: 'L' },
-              ]}
-              onChange={(b) => setAnsicht({ ...ansicht, breite: b })}
-              ariaLabel="Spaltenbreite"
-              verbunden
-            />
-          )}
-          <FilterKnopf
-            abschnitte={[
-              {
-                titel: 'Veranstaltungen',
-                optionen: arten.map((art) => ({
-                  wert: art,
-                  text: art === WEITERE ? 'Weitere' : art,
-                })),
-                aus: ansicht.ausgeblendeteArten,
-                onAus: (ausgeblendeteArten) => setAnsicht({ ...ansicht, ausgeblendeteArten }),
-              },
-              {
-                titel: 'Gruppen',
-                optionen: plan.gruppen.map((g) => ({ wert: schluessel(g), text: gruppenName(g) })),
-                aus: ansicht.ausgeblendeteGruppen,
-                onAus: (ausgeblendeteGruppen) => setAnsicht({ ...ansicht, ausgeblendeteGruppen }),
-              },
-            ]}
-          />
-        </div>
-      </div>
-
-      <div ref={rahmen}>
-        {gefiltert.length === 0 || gruppen.length === 0 ? (
-          <section className={styles.karte}>
-            <p className={styles.hinweis} style={{ padding: 14 }}>
-              Nichts eingeblendet – über „Filter“ eine Veranstaltung oder Gruppe wieder anhaken.
-            </p>
-          </section>
-        ) : ansicht.unteransicht === 'personen' ? (
-          <WerWieOft sicht={sicht} />
-        ) : handy ? (
-          <HandyPlan sicht={sicht} />
-        ) : (
-          <TabellenPlan sicht={sicht} breite={ansicht.breite} platz={platz} />
-        )}
-      </div>
-
-      <div className={styles.mehr}>
-        <button type="button" className={styles.knopf} onClick={onMehr}>
-          Weitere Termine laden
-        </button>
-      </div>
+      {werkzeug}
+      {nachladeFehler && (
+        <FehlerKasten fehler={nachladeFehler} onNochmal={() => nachladen('weiter')} />
+      )}
+      <div ref={rahmen}>{inhalt}</div>
       <p className={styles.hinweis}>
         Welche Dienste du siehst, entscheidet ChurchTools. Hier stehen nur Dienstgruppen, die du
         ganz sehen darfst – deine eigenen Dienste findest du immer unter Start und Termine. Planen
@@ -228,80 +371,82 @@ export function Planen({ zustand, handy, onNochmal, onMehr }: Props) {
   );
 }
 
+/** Gefilterte Spalten und wie viele „passend“ ins Fenster gehen – für Anzeige und Nachladen gleich. */
+function fensterDaten(plan: Plan, ansicht: PlanenAnsicht, platz: number) {
+  const arten = veranstaltungsArten(plan.spalten);
+  const gefiltert = plan.spalten
+    .map((_, i) => i)
+    .filter((i) => !ansicht.ausgeblendeteArten.includes(artVon(plan.spalten[i], arten)));
+  return { gefiltert, passend: passendeAnzahl(platz, ansicht.breite, gefiltert.length) };
+}
+
+/**
+ * Die Terminleiste: ‹ ＋ [Zeitraum] ＋ › bei „ab heute“, ‹ [Zeitraum] › bei gewähltem Bereich. Am Handy nur
+ * Knopf und ‹ › für einen gewählten Bereich – geblättert wird dort in der Datumsleiste.
+ */
 function Terminleiste({
-  plan,
-  spalten,
+  knopf,
+  bereich,
+  handy,
   davor,
   danach,
-  festeAnzahl,
   onSchritt,
+  onVerschieben,
 }: {
-  plan: Plan;
-  spalten: number[];
+  knopf: ReactNode;
+  bereich: boolean;
+  handy: boolean;
   davor: boolean;
   danach: boolean;
-  festeAnzahl: boolean;
   onSchritt: (was: FensterSchritt) => void;
+  onVerschieben: (richtung: 1 | -1) => void;
 }) {
-  const erster = plan.spalten[spalten[0]];
-  const letzter = plan.spalten[spalten[spalten.length - 1]];
-  const kurz = (tag: string) => `${tag.slice(8, 10)}.${tag.slice(5, 7)}.`;
+  const pfeil = (richtung: 1 | -1, aktiv: boolean) => (
+    <button
+      type="button"
+      className={styles.leistenKnopf}
+      disabled={!aktiv}
+      aria-label={
+        bereich
+          ? richtung < 0
+            ? 'Zeitraum davor'
+            : 'Zeitraum danach'
+          : richtung < 0
+            ? 'Einen Termin zurück'
+            : 'Einen Termin weiter'
+      }
+      onClick={() =>
+        bereich ? onVerschieben(richtung) : onSchritt(richtung < 0 ? 'zurueck' : 'weiter')
+      }
+    >
+      <Icon name={richtung < 0 ? 'chev-left' : 'chev-right'} size={16} />
+    </button>
+  );
+  const dazu = (was: 'frueherDazu' | 'spaeterDazu', aktiv: boolean) => (
+    <button
+      type="button"
+      className={styles.leistenKnopf}
+      disabled={!aktiv}
+      aria-label={
+        was === 'frueherDazu' ? 'Früheren Termin dazunehmen' : 'Späteren Termin dazunehmen'
+      }
+      onClick={() => onSchritt(was)}
+    >
+      <Icon name="plus" size={16} />
+    </button>
+  );
+  const blaettern = !handy || bereich;
   return (
-    <div className={styles.leiste} role="group" aria-label="Zeitraum">
-      <button
-        type="button"
-        className={styles.leistenKnopf}
-        disabled={!davor}
-        aria-label="Einen Termin zurück"
-        onClick={() => onSchritt('zurueck')}
-      >
-        <Icon name="chev-left" size={16} />
-      </button>
-      <button
-        type="button"
-        className={styles.leistenKnopf}
-        disabled={!davor}
-        aria-label="Früheren Termin dazunehmen"
-        onClick={() => onSchritt('frueherDazu')}
-      >
-        <Icon name="plus" size={16} />
-      </button>
-      <span className={styles.zeitraum}>
-        <b>
-          {erster && letzter
-            ? `${kurz(erster.tag)} – ${kurz(letzter.tag)}${letzter.tag.slice(0, 4)}`
-            : '–'}
-        </b>
-        {/* Immer genau eine Zeile darunter – sonst springt die Leiste nach „＋“ (Alwin, 14.10.2026). */}
-        <small>
-          {spalten.length} {spalten.length === 1 ? 'Termin' : 'Termine'} ·{' '}
-          {festeAnzahl ? (
-            <button type="button" className={styles.anpassen} onClick={() => onSchritt('passend')}>
-              an Fensterbreite anpassen
-            </button>
-          ) : (
-            'passend zur Fensterbreite'
-          )}
-        </small>
-      </span>
-      <button
-        type="button"
-        className={styles.leistenKnopf}
-        disabled={!danach}
-        aria-label="Späteren Termin dazunehmen"
-        onClick={() => onSchritt('spaeterDazu')}
-      >
-        <Icon name="plus" size={16} />
-      </button>
-      <button
-        type="button"
-        className={styles.leistenKnopf}
-        disabled={!danach}
-        aria-label="Einen Termin weiter"
-        onClick={() => onSchritt('weiter')}
-      >
-        <Icon name="chev-right" size={16} />
-      </button>
+    <div
+      className={`${styles.leiste}${handy ? ' ' + styles.leisteHandy : ''}`}
+      role="group"
+      aria-label="Zeitraum"
+    >
+      {blaettern && pfeil(-1, davor)}
+      {!bereich && !handy && dazu('frueherDazu', davor)}
+      {knopf}
+      {!bereich && !handy && dazu('spaeterDazu', danach)}
+      {blaettern && pfeil(1, danach)}
     </div>
   );
 }
@@ -458,12 +603,19 @@ function TabellenPlan({ sicht, breite, platz }: { sicht: Sicht; breite: Breite; 
   );
 }
 
-function HandyPlan({ sicht }: { sicht: Sicht }) {
+function HandyPlan({ sicht, amEnde }: { sicht: Sicht; amEnde?: () => void }) {
   const { plan, spalten, gruppen, zugeklappt, neben, onUmschalten } = sicht;
   const [gewaehlt, setGewaehlt] = useState<number | null>(null);
   const id =
     gewaehlt !== null && spalten.some((i) => plan.spalten[i].id === gewaehlt) ? gewaehlt : null;
   const i = id === null ? spalten[0] : spalten.find((x) => plan.spalten[x].id === id)!;
+  // Letzten Termin der Datumsleiste gewählt → weitere Wochen im Hintergrund nachladen (statt „Weitere
+  // Termine laden“, 14.10.2026).
+  const amLetzten = spalten.length > 1 && i === spalten[spalten.length - 1];
+  useEffect(() => {
+    if (amLetzten && amEnde) amEnde();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nur beim Erreichen des letzten Termins
+  }, [amLetzten]);
   const s = plan.spalten[i];
   const k = kachel(s.tag);
   const st = standText(s);

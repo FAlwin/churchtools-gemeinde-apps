@@ -35,7 +35,7 @@ export const modulPort: ModulPort = {
 const modulSuche = merkeVersprechen<number>();
 
 export function modulId(): Promise<number> {
-  return modulSuche.hole('modul', () => kern.modulSuchen(modulPort));
+  return modulSuche.hole('modul', () => kern.modulSuchen(modulPort, 'Die Musik App'));
 }
 
 /** Nur für Tests: das gemerkte Modul vergessen. */

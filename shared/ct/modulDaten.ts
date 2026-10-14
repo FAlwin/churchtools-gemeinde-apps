@@ -45,16 +45,24 @@ export interface ModulPort {
   istNichtGefunden(e: unknown): boolean;
 }
 
-/** Die ID des eigenen Moduls. Kein Modul mit dem Kürzel → 404. */
-export async function modulSuchen(p: ModulPort): Promise<number> {
+/**
+ * Die ID des eigenen Moduls. Kein Modul mit dem Kürzel → 404 mit dem Namen des Aufrufers („Die Musik App“,
+ * „Der Dienstplaner“) – das Modul gehört nicht immer der Musik-App.
+ */
+export async function modulSuchen(p: ModulPort, wer: string): Promise<number> {
   const kuerzel = p.kuerzel();
   const module = await p.daten<{ id: number; shorty: string }[]>('/custommodules');
   const modul = (module ?? []).find((m) => m.shorty === kuerzel);
-  if (!modul) throw p.fehler(404, 'Die Musik App ist in ChurchTools nicht zu finden.');
+  if (!modul) throw p.fehler(404, `${wer} ist in ChurchTools nicht zu finden.`);
   return modul.id;
 }
 
-/** Die Kategorie mit diesem Kürzel – `null`, wenn es sie nicht gibt oder man sie nicht sehen darf. */
+/**
+ * Die Kategorie mit diesem Kürzel – `null`, wenn es sie nicht gibt oder man sie nicht sehen darf.
+ *
+ * ChurchTools nimmt **dasselbe Kürzel zweimal** an (gemessen 14.10.2026: zweimal 201). Dann nehmen alle
+ * Geräte dieselbe – die mit der **kleinsten ID** –, sonst schreibt der eine hier und liest der andere dort.
+ */
 export async function kategorieSuchen(
   p: ModulPort,
   modul: number,
@@ -63,7 +71,8 @@ export async function kategorieSuchen(
   const liste = await p.daten<{ id: number; shorty: string }[]>(
     `/custommodules/${modul}/customdatacategories`,
   );
-  return (liste ?? []).find((k) => k.shorty === kuerzel)?.id ?? null;
+  const ids = (liste ?? []).filter((k) => k.shorty === kuerzel).map((k) => k.id);
+  return ids.length ? Math.min(...ids) : null;
 }
 
 /**

@@ -7,6 +7,27 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Behoben
+
+- **Gleiche Kategorie, verschiedene Geräte** (#558): ChurchTools nimmt dasselbe Kürzel für zwei Kategorien an
+  (gemessen 14.10.2026). `kategorieSuchen` nahm bisher die erste in der Liste – je nach Antwort hätten zwei
+  Geräte in verschiedene Kategorien geschrieben. Jetzt nehmen alle die mit der kleinsten ID. Gilt auch für die
+  Einstellungen und Team-Notizen der Musik-App.
+
+### Intern
+
+- **Speicher-Kern für Entwürfe** (#558, Bauplan E4-3, erste Scheibe – noch ohne Oberfläche):
+  `shared/dienstplan/entwuerfe.ts`. Noch nicht gesendete Einteilungen liegen im Speicher der Erweiterung,
+  **eine Kategorie je Dienstgruppe** (Alwin), ein Wert je Platz (Termin + Dienst + `index`, nie die flüchtige
+  Platz-ID) mit Version, „von wem“ und dem, was beim Eintragen in ChurchTools stand. Speichern und Entfernen
+  lesen frisch, vergleichen die Version und lesen nach – eine andere Version ist ein Konflikt, nie ein stilles
+  Überschreiben; kein Schreibvorgang wird automatisch wiederholt. Doppelte Werte (zwei gleichzeitige
+  Anlegen) bekommen einen festen Gewinner. Ein Entwurf ist veraltet, sobald in ChurchTools etwas anderes
+  steht – dieselbe Regel wie beim Einteilen (`gleichePerson`). Der Stand der Schublade (fehlt, einrichtbar,
+  nur lesen, bereit) kommt aus den Rechten. Echt an der Test-Instanz geprüft (Wegwerf-Kategorie, danach
+  gelöscht).
+- **`modulSuchen`** meldet ein fehlendes Modul mit dem Namen des Aufrufers statt fest „Die Musik App“ (#558).
+
 ## [2.35.1] – 2026-10-14
 
 ### Hinzugefügt (Dienstplaner)

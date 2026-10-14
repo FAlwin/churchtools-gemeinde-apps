@@ -67,8 +67,8 @@ describe('Öffentliches Formular (A6-1)', () => {
       'https://test.church.tools/api/info',
     ]);
     expect(aufrufe.every((a) => a.credentials === 'omit')).toBe(true);
-    // A6-1: noch ein Probelauf – nichts wird abgeschickt.
-    expect(screen.getByText(/Probelauf – abgeschickt wird hier noch nichts/)).toBeTruthy();
+    // Ohne `?probe` ist es kein Probelauf mehr (A6-2).
+    expect(screen.queryByText(/Probelauf/)).toBeNull();
     expect(screen.queryByText(/gerade nicht anmelden/)).toBeNull();
   });
 

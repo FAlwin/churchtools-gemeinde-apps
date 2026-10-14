@@ -326,6 +326,8 @@ export function ctAblage(x: Feld): CtAblage {
  * ChurchTools-Anmeldeformular freigegeben sein – auch wenn unsere Seite sie nicht als Eingabe zeigt.
  */
 export const SYSTEMFELDER = [
+  // Variante A (A6-2, #548): Mitglied werden nur die Teilnehmenden – der Name der Kontaktperson steht hier.
+  { id: 'kontakt', name: 'Angemeldet von', fieldTypeCode: 'text', beimAnmelden: true },
   { id: 'betrag', name: 'Betrag', fieldTypeCode: 'text', beimAnmelden: true },
   {
     id: 'aufschluesselung',

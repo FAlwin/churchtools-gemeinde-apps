@@ -3,6 +3,7 @@ import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
 import { ApiError } from '@ui/ct/fehler';
 import {
   EINSTELLUNGEN_KENNUNG,
+  SYSTEMFELDER,
   HINWEIS_SATZ,
   einstellungenLesen,
   sicherungLesen,
@@ -313,9 +314,8 @@ describe('legeVeranstaltungAn', () => {
     expect(g.settings.emailVerificationMode).toBe('existing');
     const e = einstellungenLesen(g.note)!;
     expect(e.wer).toBe('kinder');
-    expect(Object.keys(e.ctFelder).sort()).toEqual(
-      ['aufschluesselung', 'auswahl', 'betrag', 'bezahlt', 'bezahltAm', 'extras'].sort(),
-    );
+    // Gegen die Liste selbst – jedes Systemfeld wird angelegt, auch „Angemeldet von“ (A6-2).
+    expect(Object.keys(e.ctFelder).sort()).toEqual(SYSTEMFELDER.map((f) => f.id).sort());
     expect(g.felder.find((f) => f.id === e.ctFelder.bezahlt)?.name).toBe('Bezahlt');
   });
 

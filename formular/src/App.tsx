@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { AnmeldeFormular } from '@ui/anmeldeformular/AnmeldeFormular';
 import { LADE_FEHLER_TEXT, ortAusLink, type LadeFehler } from '@shared/anmeldung/oeffentlich';
 import { LadeProblem, ladeVeranstaltung, type Geladen } from './laden';
+import { abschicken } from './senden';
 import s from './App.module.scss';
 
 /**
@@ -9,8 +10,8 @@ import s from './App.module.scss';
  * Instanz und welche Gruppe (`…/#test-ecg-donrath.church.tools/165`, gebaut von `anmeldeLink`). Gezeigt wird
  * dasselbe Formular wie im Baukasten (`ui/anmeldeformular`).
  *
- * **A6-1:** Abschicken ist noch ein Probelauf – es wird nichts an ChurchTools geschickt. Echt anmelden kommt in
- * A6-2.
+ * **A6-2:** Abschicken meldet wirklich bei ChurchTools an (`senden.ts`). Mit `?probe` in der Adresse („Extern
+ * öffnen und testen“) bleibt es ein Trockenlauf und schickt nichts.
  */
 
 type Stand =
@@ -88,6 +89,9 @@ export function App() {
   }
 
   const v = stand.daten.veranstaltung;
+  const ort = ortAusLink(hash)!;
+  const probe = new URLSearchParams(window.location.search).has('probe');
+  const heute = heuteLokal();
   return (
     <>
       {!v.offen && (
@@ -103,8 +107,11 @@ export function App() {
           bildUrl: v.bildUrl,
           freiePlaetze: v.freiePlaetze,
         }}
-        heute={heuteLokal()}
-        probe
+        heute={heute}
+        probe={probe}
+        onAbsenden={({ antworten, wahl }) =>
+          abschicken(ort, v.einstellungen, antworten, wahl, heute)
+        }
       />
     </>
   );

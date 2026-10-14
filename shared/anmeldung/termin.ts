@@ -10,9 +10,6 @@
 import type { TerminAngabe } from './formular';
 import { ortszeitAus, utcAus } from '../ct/zeit';
 
-/** Wo das öffentliche Formular liegt (GitHub Pages des Projekts, Bauplan §2) – für alle Gemeinden gleich. */
-export const FORMULAR_ADRESSE = 'https://falwin.github.io/churchtools-gemeinde-apps/';
-
 // Die Umrechnung UTC ↔ Ortszeit steht für alle Apps in `shared/ct/zeit.ts` (Dienstplaner E3-2).
 export { ortszeitAus, utcAus };
 
@@ -48,7 +45,11 @@ export function terminAusCt(
   };
 }
 
-/** Der Link zur Anmeldung, wie er in einem neu angelegten Termin steht: Formular + Instanz + Gruppe. */
-export function anmeldeLink(ctBasis: string, gruppeId: number): string {
-  return `${FORMULAR_ADRESSE}#${new URL(ctBasis).host}/${gruppeId}`;
+/**
+ * **Der Link zur Anmeldung**: Formular-Seite der Gemeinde + Instanz + Gruppe. Die Formular-Seite legt jede Gemeinde
+ * selbst auf ihren Webspace (Alwin, 14.10.2026: „Voraussetzung für diese Extension – auf keinen Fall soll unsere
+ * Domain da sichtbar werden“); die Adresse steht in den Einstellungen der Gemeinde (`formularAdresseAus`).
+ */
+export function anmeldeLink(formularAdresse: string, ctBasis: string, gruppeId: number): string {
+  return `${formularAdresse}#${new URL(ctBasis).host}/${gruppeId}`;
 }

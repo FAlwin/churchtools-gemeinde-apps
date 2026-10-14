@@ -3,9 +3,9 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 /**
- * Das öffentliche Formular (#474) – eine statische Seite, die für alle Gemeinden an EINER Adresse liegt
- * (GitHub Pages des Projekts, Bauplan §2). Relative Pfade (`base: './'`), damit sie unter
- * `…github.io/churchtools-gemeinde-apps/` genauso läuft wie lokal. Keine Erweiterung, also ohne den
+ * Das öffentliche Formular (#474) – eine statische Seite, die jede Gemeinde auf ihren eigenen Webspace legt.
+ * Relative Pfade (`base: './'`), damit sie auf dem Webspace jeder Gemeinde läuft – in der Wurzel einer Subdomain
+ * genauso wie in einem Unterordner (Alwin, 14.10.2026: jede Gemeinde ihre eigene Adresse). Keine Erweiterung, also ohne den
  * Erweiterungs-Bau.
  */
 export default defineConfig({

@@ -466,12 +466,12 @@ describe('Rechte und Kalender', () => {
       beginn: '2026-11-15T12:00',
       ende: '2026-11-15T14:00',
       ort: 'Saal',
-      gruppeId: 91,
+      link: 'https://anmeldung.beispiel.de/#ct.test/91',
       zeitzone: 'Europe/Berlin',
     });
     expect(t.startDate).toBe('2026-11-15T11:00:00Z');
     expect(termine.get(t.id)).toMatchObject({
-      link: 'https://falwin.github.io/churchtools-gemeinde-apps/#ct.test/91',
+      link: 'https://anmeldung.beispiel.de/#ct.test/91',
       address: { meetingAt: 'Saal' },
       isInternal: false,
     });
@@ -485,7 +485,7 @@ describe('Rechte und Kalender', () => {
         beginn: '2026-11-15T12:00',
         ende: '2026-11-15T14:00',
         ort: '',
-        gruppeId: 1,
+        link: null,
         zeitzone: 'Europe/Berlin',
       }),
     ).rejects.toBeInstanceOf(NichtUebernommen);

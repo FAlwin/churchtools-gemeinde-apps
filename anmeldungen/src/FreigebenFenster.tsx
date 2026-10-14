@@ -27,11 +27,14 @@ import f from './Formular.module.scss';
  */
 export function FreigebenFenster({
   id,
+  formularAdresse,
   hinweis,
   onClose,
   onFreigegeben,
 }: {
   id: number;
+  /** Formular-Seite der Gemeinde – ohne sie kann sich niemand anmelden, also kein Freigeben (A6-2). */
+  formularAdresse: string | null;
   /** Was vor dem Freigeben zu wissen ist (Zeitraum, Termin, Bankverbindung). */
   hinweis: ReactNode;
   onClose: () => void;
@@ -145,6 +148,12 @@ export function FreigebenFenster({
             : 'Für neue Personen ist noch nicht festgelegt, welchen Status, Standort und Bereich sie bekommen. Das legt ein Gruppen-Admin einmal für die Gemeinde fest (Startseite → Einstellungen).'}
         </p>
       )}
+      {!formularAdresse && (
+        <p className={f.fehler}>
+          Es gibt noch keine Adresse für das Anmeldeformular – ohne sie kann sich niemand anmelden.
+          Das legt ein Gruppen-Admin einmal fest (Startseite → Einstellungen).
+        </p>
+      )}
       {fehler && (
         <p className={f.fehler} role="alert">
           {fehler}
@@ -153,7 +162,7 @@ export function FreigebenFenster({
       <button
         type="button"
         className={f.knopf}
-        disabled={arbeitet || !vorgabenOk || gewaehlt.size === 0}
+        disabled={arbeitet || !vorgabenOk || gewaehlt.size === 0 || !formularAdresse}
         onClick={() => void los()}
       >
         {arbeitet ? 'Wird freigegeben …' : 'Jetzt freigeben'}

@@ -2,7 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@ui/ct/fehler';
 import { KeinSpeicherRecht } from '@ui/ct/verbindung';
 import * as E from './einrichten';
-import { gemeindeVorgaben, gespeicherteVorgaben, speichereGemeindeVorgaben } from './gemeinde';
+import {
+  formularAdresse,
+  gemeindeVorgaben,
+  pruefeFormularSeite,
+  gespeicherteVorgaben,
+  speichereGemeindeEinstellungen,
+} from './gemeinde';
 
 /**
  * Die Gemeinde-Einstellung der Anmeldungen (A6-2, #548) gegen einen nachgestellten Datenbereich – so, wie ihn die
@@ -43,6 +49,16 @@ vi.mock('@ui/ct/modulPort', async () => {
     },
   };
 });
+let config: unknown;
+vi.mock('@ui/ct/verbindung', async (original) => ({
+  ...(await original<typeof import('@ui/ct/verbindung')>()),
+  ctDaten: (pfad: string) =>
+    pfad === '/config'
+      ? config instanceof Error
+        ? Promise.reject(config)
+        : Promise.resolve(config)
+      : Promise.reject(new Error(pfad)),
+}));
 vi.mock('./einrichten', async (original) => ({
   ...(await original<typeof import('./einrichten')>()),
   stammdaten: vi.fn(),
@@ -58,6 +74,7 @@ const STAMM = {
   bereiche: [{ id: 1, name: 'Gemeindeliste' }],
 };
 const VORSCHLAG = { statusId: 2, campusId: 0, departmentId: 1 };
+const ADRESSE = 'https://anmeldung.beispiel.de/';
 
 beforeEach(() => {
   kategorien = [];
@@ -74,16 +91,22 @@ describe('Gemeinde-Einstellung: Vorgaben für neue Personen', () => {
   });
 
   it('gespeichert → gilt (auch „Freund“ statt „Interessent“), nachgelesen; zweites Speichern ändert denselben Wert', async () => {
-    await speichereGemeindeVorgaben({ statusId: 1, campusId: 0, departmentId: 1 });
+    await speichereGemeindeEinstellungen({
+      neuePersonen: { statusId: 1, campusId: 0, departmentId: 1 },
+      formularAdresse: ADRESSE,
+    });
     expect(kategorien.map((k) => k.shorty)).toEqual(['anmeldungen-einstellungen']);
     expect(await gemeindeVorgaben()).toEqual({ statusId: 1, campusId: 0, departmentId: 1 });
-    await speichereGemeindeVorgaben(VORSCHLAG);
+    await speichereGemeindeEinstellungen({ neuePersonen: VORSCHLAG, formularAdresse: ADRESSE });
     expect(werte).toHaveLength(1);
     expect(await gespeicherteVorgaben()).toEqual(VORSCHLAG);
   });
 
   it('Gespeichertes, das es in ChurchTools nicht mehr gibt (Standort gelöscht) → Vorschlag', async () => {
-    await speichereGemeindeVorgaben({ statusId: 1, campusId: 9, departmentId: 1 });
+    await speichereGemeindeEinstellungen({
+      neuePersonen: { statusId: 1, campusId: 9, departmentId: 1 },
+      formularAdresse: ADRESSE,
+    });
     expect(await gemeindeVorgaben()).toEqual(VORSCHLAG);
   });
 
@@ -93,14 +116,19 @@ describe('Gemeinde-Einstellung: Vorgaben für neue Personen', () => {
   });
 
   it('vorübergehend (503) → Fehler, NICHT still der Vorschlag', async () => {
-    await speichereGemeindeVorgaben({ statusId: 1, campusId: 0, departmentId: 1 });
+    await speichereGemeindeEinstellungen({
+      neuePersonen: { statusId: 1, campusId: 0, departmentId: 1 },
+      formularAdresse: ADRESSE,
+    });
     stoerung = new ApiError(503, 'kurz weg');
     await expect(gemeindeVorgaben()).rejects.toMatchObject({ status: 503 });
   });
 
   it('übernimmt ChurchTools den Wert nicht → Fehler statt „gespeichert“', async () => {
     schluckeWert = true;
-    await expect(speichereGemeindeVorgaben(VORSCHLAG)).rejects.toThrow(/nicht übernommen/);
+    await expect(
+      speichereGemeindeEinstellungen({ neuePersonen: VORSCHLAG, formularAdresse: ADRESSE }),
+    ).rejects.toThrow(/nicht übernommen/);
   });
 
   it('fremder oder kaputter Wert in der Kategorie zählt nicht', async () => {
@@ -110,5 +138,52 @@ describe('Gemeinde-Einstellung: Vorgaben für neue Personen', () => {
       { id: 2, dataCategoryId: 50, value: JSON.stringify({ art: 'andere', fassung: 1 }) },
     ];
     expect(await gespeicherteVorgaben()).toBeNull();
+  });
+
+  it('Adresse der Formular-Seite: ohne Einstellung null, gespeichert normalisiert, Unsinn abgelehnt', async () => {
+    expect(await formularAdresse()).toBeNull();
+    await speichereGemeindeEinstellungen({
+      neuePersonen: VORSCHLAG,
+      formularAdresse: 'anmeldung.beispiel.de',
+    });
+    expect(await formularAdresse()).toBe(ADRESSE);
+    await expect(
+      speichereGemeindeEinstellungen({ neuePersonen: VORSCHLAG, formularAdresse: 'http://x.de' }),
+    ).rejects.toMatchObject({ status: 422 });
+  });
+
+  it('ältere Einstellung ohne Adresse: Vorgaben gelten, Adresse fehlt', async () => {
+    kategorien = [{ id: 50, shorty: 'anmeldungen-einstellungen' }];
+    werte = [
+      {
+        id: 1,
+        dataCategoryId: 50,
+        value: JSON.stringify({
+          art: 'anmeldungen-einstellungen',
+          fassung: 1,
+          neuePersonen: VORSCHLAG,
+        }),
+      },
+    ];
+    expect(await gespeicherteVorgaben()).toEqual(VORSCHLAG);
+    expect(await formularAdresse()).toBeNull();
+  });
+
+  it('Seiten-Prüfung: antwortet die Seite, steht die Herkunft in ChurchTools – jeder Zweig einzeln', async () => {
+    const holen = vi.spyOn(globalThis, 'fetch');
+    holen.mockResolvedValue(new Response(null, { status: 200 }));
+    config = { access_control_allow_origins: '["https://anmeldung.beispiel.de"]' };
+    expect(await pruefeFormularSeite(ADRESSE)).toEqual({
+      erreichbar: true,
+      erlaubt: true,
+      herkunft: 'https://anmeldung.beispiel.de',
+    });
+    expect(holen.mock.calls[0][1]).toMatchObject({ mode: 'no-cors' });
+    config = { access_control_allow_origins: '["https://andere.de"]' };
+    expect((await pruefeFormularSeite(ADRESSE)).erlaubt).toBe(false);
+    config = new Error('kein Recht');
+    expect((await pruefeFormularSeite(ADRESSE)).erlaubt).toBeNull();
+    holen.mockRejectedValue(new TypeError('Failed to fetch'));
+    expect((await pruefeFormularSeite(ADRESSE)).erreichbar).toBe(false);
   });
 });

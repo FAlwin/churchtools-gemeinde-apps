@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
+import { formularAdresseAus } from '@shared/anmeldung/oeffentlich';
 import {
   stammName,
   vorgabenVollstaendig,
@@ -7,14 +8,22 @@ import {
   type Stammdaten,
 } from '@shared/anmeldung/vorbereiten';
 import { stammdaten } from './einrichten';
-import { gemeindeVorgaben, gespeicherteVorgaben, speichereGemeindeVorgaben } from './gemeinde';
+import {
+  gemeindeEinstellungen,
+  gemeindeVorgaben,
+  pruefeFormularSeite,
+  speichereGemeindeEinstellungen,
+  type SeitenPruefung,
+} from './gemeinde';
 import { fehlerMeldung } from './zustand';
 import f from './Formular.module.scss';
 
 /**
- * **Einstellungen der Gemeinde** (A6-2, #548) – nur für Gruppen-Admins. Zuerst: welchen Status, Standort und
- * Bereich neue Personen bekommen, die sich anmelden (Alwin, 14.10.2026: „einmal je Gemeinde“). ChurchTools nimmt
- * ohne diese Vorgaben keine Anmeldung an (gemessen).
+ * **Einstellungen der Gemeinde** (A6-2, #548) – nur für Gruppen-Admins:
+ * - die **Adresse der Formular-Seite** (Alwin, 14.10.2026: jede Gemeinde ihre eigene, „Voraussetzung für diese
+ *   Extension“) – geprüft, ob sie antwortet und in ChurchTools als erlaubte Herkunft steht;
+ * - welchen Status, Standort und Bereich neue Personen bekommen („einmal je Gemeinde“; ohne nimmt ChurchTools keine
+ *   Anmeldung an – gemessen).
  */
 export function GemeindeFenster({
   onClose,
@@ -26,6 +35,9 @@ export function GemeindeFenster({
   const [daten, setDaten] = useState<Stammdaten | null>(null);
   const [wahl, setWahl] = useState<Partial<NeuePersonVorgaben>>({});
   const [vorschlag, setVorschlag] = useState(false);
+  const [adresse, setAdresse] = useState('');
+  const [pruefung, setPruefung] = useState<SeitenPruefung | null>(null);
+  const [prueft, setPrueft] = useState(false);
   const [arbeitet, setArbeitet] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
 
@@ -33,17 +45,27 @@ export function GemeindeFenster({
     let aktuell = true;
     stammdaten()
       .then(async (s) => {
-        const [v, gespeichert] = await Promise.all([gemeindeVorgaben(s), gespeicherteVorgaben()]);
+        const [v, gespeichert] = await Promise.all([gemeindeVorgaben(s), gemeindeEinstellungen()]);
         if (!aktuell) return;
         setDaten(s);
         setWahl(v);
-        setVorschlag(!gespeichert);
+        setVorschlag(!gespeichert.neuePersonen);
+        setAdresse(gespeichert.formularAdresse ?? '');
       })
       .catch((e: unknown) => aktuell && setFehler(fehlerMeldung(e).text));
     return () => {
       aktuell = false;
     };
   }, []);
+
+  const gueltig = formularAdresseAus(adresse);
+
+  async function pruefen() {
+    if (!gueltig) return;
+    setPrueft(true);
+    setPruefung(await pruefeFormularSeite(gueltig));
+    setPrueft(false);
+  }
 
   const auswahl = (
     titel: string,
@@ -70,11 +92,11 @@ export function GemeindeFenster({
   );
 
   async function speichern() {
-    if (!vorgabenVollstaendig(wahl)) return;
+    if (!vorgabenVollstaendig(wahl) || !gueltig) return;
     setArbeitet(true);
     setFehler(null);
     try {
-      await speichereGemeindeVorgaben(wahl);
+      await speichereGemeindeEinstellungen({ neuePersonen: wahl, formularAdresse: gueltig });
       onGespeichert('Einstellungen der Gemeinde gespeichert.');
     } catch (e) {
       setFehler(fehlerMeldung(e).text);
@@ -84,6 +106,44 @@ export function GemeindeFenster({
 
   return (
     <Sheet title="Einstellungen der Gemeinde" onClose={onClose}>
+      <label className={f.feld}>
+        <span>Adresse des Anmeldeformulars</span>
+        <input
+          className={f.eingabe}
+          value={adresse}
+          placeholder="anmeldung.eure-gemeinde.de"
+          onChange={(e) => {
+            setAdresse(e.target.value);
+            setPruefung(null);
+          }}
+          onBlur={() => void pruefen()}
+        />
+      </label>
+      <p className={f.hinweis}>
+        Die Seite, auf der sich Gäste anmelden – das Formular-Paket vom Release, auf eurem Webspace.
+        Jeder Link zu einer Anmeldung beginnt mit dieser Adresse.
+      </p>
+      {adresse.trim() && !gueltig && (
+        <p className={f.fehler}>Bitte eine https-Adresse ohne „?“ und „#“ eintragen.</p>
+      )}
+      {prueft && <p className={f.hinweis}>Wird geprüft …</p>}
+      {pruefung && (
+        <ul className={f.liste} aria-label="Prüfung der Formular-Seite">
+          <li>
+            {pruefung.erreichbar
+              ? '✓ Die Seite antwortet.'
+              : '✗ Die Seite antwortet nicht – ist das Formular dort hochgeladen?'}
+          </li>
+          <li>
+            {pruefung.erlaubt === true
+              ? `✓ ${pruefung.herkunft} ist in ChurchTools als erlaubte Herkunft eingetragen.`
+              : pruefung.erlaubt === false
+                ? `✗ ${pruefung.herkunft} fehlt in ChurchTools bei den erlaubten Herkünften – ohne den Eintrag blockt der Browser das Formular.`
+                : '? Ob die Herkunft in ChurchTools erlaubt ist, ließ sich nicht lesen.'}
+          </li>
+        </ul>
+      )}
+
       <p className={f.hinweis}>
         Wer sich anmeldet und in ChurchTools noch nicht bekannt ist, wird dort neu angelegt – mit
         diesen Angaben. Ohne sie nimmt ChurchTools keine Anmeldung an. Gilt für alle
@@ -115,7 +175,7 @@ export function GemeindeFenster({
       <button
         type="button"
         className={f.knopf}
-        disabled={arbeitet || !vorgabenVollstaendig(wahl)}
+        disabled={arbeitet || !vorgabenVollstaendig(wahl) || !gueltig}
         onClick={() => void speichern()}
       >
         {arbeitet ? 'Wird gespeichert …' : 'Speichern'}

@@ -34,7 +34,7 @@ import {
 import { LOGO_KENNUNG, belegungAus, istLogoGruppe } from '@shared/anmeldung/uebersicht';
 import { felderNeuZuordnen, systemfeldAnlage } from '@shared/anmeldung/felder';
 import { neueEinstellungen, type Vorlage } from '@shared/anmeldung/vorlagen';
-import { anmeldeLink, utcAus, type CtTermin } from '@shared/anmeldung/termin';
+import { utcAus, type CtTermin } from '@shared/anmeldung/termin';
 import { darfAnlegen, darfEinrichten, darfVerschiebenUndLoeschen } from '@shared/anmeldung/rechte';
 import {
   fehlendeBedingungen,
@@ -921,7 +921,8 @@ export async function legeTerminAn(t: {
   beginn: string;
   ende: string;
   ort: string;
-  gruppeId: number;
+  /** Der Link zur Anmeldung (`anmeldeLink`) – `null`, solange die Gemeinde keine Formular-Seite hat. */
+  link: string | null;
   zeitzone: string;
 }): Promise<CtTermin> {
   const neu = await ctAnfrage<{ data?: CtTermin }>(`/calendars/${t.kalenderId}/appointments`, {
@@ -932,7 +933,7 @@ export async function legeTerminAn(t: {
       startDate: utcAus(t.beginn, t.zeitzone),
       endDate: utcAus(t.ende, t.zeitzone),
       isInternal: false,
-      link: anmeldeLink(ctBasis(), t.gruppeId),
+      ...(t.link ? { link: t.link } : {}),
       address: t.ort ? { meetingAt: t.ort } : null,
     }),
   });

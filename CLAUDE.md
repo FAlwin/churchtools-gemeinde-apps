@@ -192,7 +192,7 @@ churchtools-gemeinde-apps/
 ├── shared/anmeldung/        # Regeln der Anmeldungen: preis, formular (#474), uebersicht (#480), vorlagen, termin, felder, rechte (#486), bezahlung (#507), gestaltung + baukasten (A5)
 ├── anmeldungen/             # Anmeldungen: ChurchTools-Erweiterung für Veranstalter (#474, nur Erweiterung);
 │                            #   Formular-Baukasten = Baukasten.tsx (+ BaukastenLeiste, FeldBearbeiten, useSchlange)
-├── formular/                # Anmeldungen: öffentliches Formular, statisch (GitHub Pages), noch Platzhalter
+├── formular/                # Anmeldungen: öffentliches Formular, statisch – jede Gemeinde auf ihrem Webspace
 ├── dienstplaner/            # Dienstplaner: ChurchTools-Erweiterung für alle Dienstgruppen (Bauplan E2, vorerst nur Erweiterung)
 └── ui/                      # gemeinsame Browser-Bausteine aller Apps (Alias @ui, Dienstplaner E1, Anmeldungen #474)
     ├── design/              # _variables.scss (Tokens), _mixins.scss, _grundregeln.scss (Reset + Erweiterungs-Lehren)

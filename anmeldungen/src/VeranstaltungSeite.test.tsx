@@ -67,8 +67,15 @@ function stelle(
   m.istGruppenAdmin.mockResolvedValue(false);
 }
 
-function zeigen() {
-  render(<VeranstaltungSeite id={91} zeitzone={ZONE} onZurueck={() => {}} />);
+function zeigen(formularAdresse: string | null = 'https://anmeldung.beispiel.de/') {
+  render(
+    <VeranstaltungSeite
+      id={91}
+      zeitzone={ZONE}
+      formularAdresse={formularAdresse}
+      onZurueck={() => {}}
+    />,
+  );
 }
 
 const STAMM = {
@@ -174,6 +181,18 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     );
   });
 
+  it('ohne Adresse der Formular-Seite: Hinweis, Freigeben gesperrt', async () => {
+    stelle(true);
+    zeigen(null);
+    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    await screen.findByRole('button', { name: 'Alwin Friesen' });
+    expect(screen.getByText(/keine Adresse für das Anmeldeformular/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Jetzt freigeben' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+  });
+
   it('ohne gewählte Leitung lässt sich nicht freigeben', async () => {
     stelle(true);
     zeigen();
@@ -222,7 +241,8 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
         beginn: '2026-11-15T12:00',
         ende: '2026-11-15T14:00',
         ort: 'Saal',
-        gruppeId: 91,
+        // Der Link beginnt mit der Formular-Seite der Gemeinde (A6-2), nicht mit einer festen Adresse.
+        link: 'https://anmeldung.beispiel.de/#ct.test/91',
         zeitzone: ZONE,
       }),
     );
@@ -282,15 +302,10 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     const termin = await screen.findByRole('region', { name: 'Termin' });
     fireEvent.click(within(termin).getByRole('button', { name: 'Bearbeiten' }));
     const link = await screen.findByRole('textbox', { name: 'Link zur Anmeldung' });
-    expect(link).toHaveProperty(
-      'value',
-      'https://falwin.github.io/churchtools-gemeinde-apps/#ct.test/91',
-    );
+    expect(link).toHaveProperty('value', 'https://anmeldung.beispiel.de/#ct.test/91');
     fireEvent.click(screen.getByRole('button', { name: 'Link kopieren' }));
     expect(await screen.findByRole('button', { name: 'Link kopiert' })).toBeTruthy();
-    expect(kopieren).toHaveBeenCalledWith(
-      'https://falwin.github.io/churchtools-gemeinde-apps/#ct.test/91',
-    );
+    expect(kopieren).toHaveBeenCalledWith('https://anmeldung.beispiel.de/#ct.test/91');
   });
 
   it('Kopieren verweigert → Link bleibt markiert, mit Hinweis zum Kopieren von Hand', async () => {

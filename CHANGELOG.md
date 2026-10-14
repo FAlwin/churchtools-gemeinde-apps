@@ -126,6 +126,14 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
     Datenbereich der Erweiterung; ohne Einstellung der Vorschlag. Ein Aussetzer beim Lesen wirft, statt still den
     Vorschlag zu nehmen. Anschluss an den Datenbereich für die Erweiterungen in `ui/` (`ui/ct/modulPort.ts`); der
     gemeinsame Kern meldete fest „Musik App“, jetzt das Kürzel der Erweiterung.
+  - **Formular auf dem eigenen Webspace jeder Gemeinde** (Alwin, 14.10.2026: „Voraussetzung für diese Extension,
+    auf keinen Fall soll unsere Domain da sichtbar werden“). Statt einer festen Adresse (`FORMULAR_ADRESSE`,
+    GitHub Pages) trägt ein Gruppen-Admin unter „Einstellungen“ die Adresse der Formular-Seite ein; die
+    Erweiterung prüft, ob sie antwortet und in ChurchTools als erlaubte Herkunft steht. Ohne Adresse zeigt die
+    Startseite nur „Erst einrichten“, Freigeben ist gesperrt, und es gibt keinen Link. Am Release hängt das
+    Formular als `anmeldungen-formular-v….zip`; der Pages-Workflow ist weg. Gemessen: In ChurchTools selbst geht
+    es nicht (Erweiterungsseiten und ihre Dateien nur mit Login, kein Recht für nicht angemeldete Besucher,
+    Wiki-Dateien mit `Content-Security-Policy: sandbox`).
   - Die Preis-Buchung aus den Antworten steht an EINER Stelle (`buchungAus`) – angezeigter und gespeicherter
     Betrag können nicht auseinanderlaufen. Ein Test zählte die Systemfelder als Literal – jetzt gegen die Liste.
 - **Öffentliches Formular anzeigen** (A6-1, #542 – erste von fünf Scheiben von A6). Die Seite `formular/` liest

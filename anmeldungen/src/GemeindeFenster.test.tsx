@@ -11,8 +11,9 @@ vi.mock('./einrichten', async (original) => ({
 }));
 vi.mock('./gemeinde', () => ({
   gemeindeVorgaben: vi.fn(),
-  gespeicherteVorgaben: vi.fn(),
-  speichereGemeindeVorgaben: vi.fn(),
+  gemeindeEinstellungen: vi.fn(),
+  pruefeFormularSeite: vi.fn(),
+  speichereGemeindeEinstellungen: vi.fn(),
 }));
 const ei = vi.mocked(E);
 const gm = vi.mocked(G);
@@ -30,14 +31,18 @@ beforeEach(() => {
     bereiche: [{ id: 1, name: 'Gemeindeliste' }],
   });
   gm.gemeindeVorgaben.mockResolvedValue({ statusId: 2, departmentId: 1 });
-  gm.gespeicherteVorgaben.mockResolvedValue(null);
-  gm.speichereGemeindeVorgaben.mockResolvedValue();
+  gm.gemeindeEinstellungen.mockResolvedValue({ neuePersonen: null, formularAdresse: null });
+  gm.pruefeFormularSeite.mockResolvedValue({
+    erreichbar: true,
+    erlaubt: false,
+    herkunft: 'https://anmeldung.beispiel.de',
+  });
+  gm.speichereGemeindeEinstellungen.mockResolvedValue();
 });
 
 describe('Einstellungen der Gemeinde (A6-2)', () => {
-  it('Vorschlag vorbelegt; Standort muss man bei zwei wählen; „Mitglied“ steht nicht zur Wahl; Speichern', async () => {
-    const gespeichert = vi.fn();
-    render(<GemeindeFenster onClose={() => {}} onGespeichert={gespeichert} />);
+  it('Vorschlag vorbelegt; „Mitglied“ nicht wählbar; ohne Adresse und Standort kein Speichern', async () => {
+    render(<GemeindeFenster onClose={() => {}} onGespeichert={() => {}} />);
     const status = await screen.findByLabelText<HTMLSelectElement>('Status');
     expect(status.value).toBe('2');
     expect([...status.options].map((o) => o.textContent)).toEqual([
@@ -45,17 +50,46 @@ describe('Einstellungen der Gemeinde (A6-2)', () => {
       'Interessent',
     ]);
     expect(screen.getByText(/Noch nicht gespeichert – das ist der Vorschlag/)).toBeTruthy();
-    const knopf = screen.getByRole('button', { name: 'Speichern' });
-    expect(knopf).toHaveProperty('disabled', true);
     fireEvent.change(screen.getByLabelText('Standort'), { target: { value: '5' } });
-    fireEvent.click(knopf);
+    // Standort gewählt, aber noch keine Adresse.
+    expect(screen.getByRole('button', { name: 'Speichern' })).toHaveProperty('disabled', true);
+  });
+
+  it('Adresse: geprüft (antwortet, erlaubte Herkunft) – und normalisiert gespeichert', async () => {
+    const gespeichert = vi.fn();
+    render(<GemeindeFenster onClose={() => {}} onGespeichert={gespeichert} />);
+    fireEvent.change(await screen.findByLabelText('Standort'), { target: { value: '0' } });
+    const feld = screen.getByLabelText('Adresse des Anmeldeformulars');
+    fireEvent.change(feld, { target: { value: 'http://kaputt' } });
+    expect(screen.getByText(/https-Adresse/)).toBeTruthy();
+    fireEvent.change(feld, { target: { value: 'anmeldung.beispiel.de' } });
+    fireEvent.blur(feld);
     await waitFor(() =>
-      expect(gm.speichereGemeindeVorgaben).toHaveBeenCalledWith({
-        statusId: 2,
-        campusId: 5,
-        departmentId: 1,
+      expect(gm.pruefeFormularSeite).toHaveBeenCalledWith('https://anmeldung.beispiel.de/'),
+    );
+    expect(await screen.findByText(/Die Seite antwortet/)).toBeTruthy();
+    expect(screen.getByText(/fehlt in ChurchTools bei den erlaubten Herkünften/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() =>
+      expect(gm.speichereGemeindeEinstellungen).toHaveBeenCalledWith({
+        neuePersonen: { statusId: 2, campusId: 0, departmentId: 1 },
+        formularAdresse: 'https://anmeldung.beispiel.de/',
       }),
     );
     expect(gespeichert).toHaveBeenCalled();
+  });
+
+  it('gespeicherte Adresse steht vorne drin', async () => {
+    gm.gemeindeEinstellungen.mockResolvedValue({
+      neuePersonen: { statusId: 2, campusId: 0, departmentId: 1 },
+      formularAdresse: 'https://anmeldung.beispiel.de/',
+    });
+    render(<GemeindeFenster onClose={() => {}} onGespeichert={() => {}} />);
+    await waitFor(() =>
+      expect(screen.getByLabelText<HTMLInputElement>('Adresse des Anmeldeformulars').value).toBe(
+        'https://anmeldung.beispiel.de/',
+      ),
+    );
+    expect(screen.queryByText(/das ist der Vorschlag/)).toBeNull();
   });
 });

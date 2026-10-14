@@ -117,6 +117,7 @@ export function VeranstaltungSeite({
   reiter = 'veranstaltung',
   onReiter = () => {},
   gemeinde = null,
+  formularAdresse = null,
   zeitzone,
   teams = [],
   onZurueck,
@@ -127,6 +128,8 @@ export function VeranstaltungSeite({
   onReiter?: (r: Reiter) => void;
   /** Gemeindename für den Kopf des Formulars (Vorschau). */
   gemeinde?: string | null;
+  /** Adresse der Formular-Seite der Gemeinde (Einstellungen) – ohne sie gibt es keinen Link (A6-2). */
+  formularAdresse?: string | null;
   zeitzone: string;
   /** Die eigenen Gruppen – Ziele für „In ein anderes Team“. */
   teams?: MeineGruppe[];
@@ -376,6 +379,7 @@ export function VeranstaltungSeite({
           name={daten.name}
           termin={e.termin}
           zeitzone={zeitzone}
+          formularAdresse={formularAdresse}
           onClose={() => setFenster(null)}
           onGespeichert={gespeichert('Termin gespeichert.')}
         />
@@ -450,6 +454,7 @@ export function VeranstaltungSeite({
       {fenster === 'freigeben' && (
         <FreigebenFenster
           id={id}
+          formularAdresse={formularAdresse}
           hinweis={
             <p className={f.hinweis}>
               Danach können sich Gäste anmelden – sobald der Anmeldezeitraum begonnen hat

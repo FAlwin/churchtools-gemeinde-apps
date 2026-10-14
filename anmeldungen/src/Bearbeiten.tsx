@@ -111,6 +111,7 @@ export function TerminFenster({
   name,
   termin,
   zeitzone,
+  formularAdresse,
   onClose,
   onGespeichert,
 }: {
@@ -119,6 +120,8 @@ export function TerminFenster({
   /** Der bisherige Termin – „Neu anlegen“ beginnt mit seinen Angaben. */
   termin: OeffentlicheEinstellungen['termin'];
   zeitzone: string;
+  /** Formular-Seite der Gemeinde – ohne sie gibt es keinen Link (A6-2). */
+  formularAdresse: string | null;
   onClose: () => void;
   onGespeichert: () => void;
 }) {
@@ -261,7 +264,7 @@ export function TerminFenster({
             Dienste oder Bild darin überschreiben). Den Link zur Anmeldung kannst du dort selbst ins
             Feld „Link“ einfügen.
           </p>
-          <LinkKopieren link={anmeldeLink(ctBasis(), id)} />
+          {formularAdresse && <LinkKopieren link={anmeldeLink(formularAdresse, ctBasis(), id)} />}
         </>
       )}
 
@@ -339,7 +342,7 @@ export function TerminFenster({
                   beginn: `${neu.tag}T${neu.von}`,
                   ende: `${neu.bisTag || neu.tag}T${neu.bis}`,
                   ort: neu.ort.trim(),
-                  gruppeId: id,
+                  link: formularAdresse ? anmeldeLink(formularAdresse, ctBasis(), id) : null,
                   zeitzone,
                 });
                 await aendereEinstellungen(id, (e) => ({

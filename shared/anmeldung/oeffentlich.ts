@@ -36,6 +36,31 @@ export function ortAusLink(hash: string): AnmeldeOrt | null {
   return gruppeId > 0 ? { instanz, gruppeId } : null;
 }
 
+/**
+ * **Die Adresse der Formular-Seite aus einer Eingabe** – nur `https`, ohne `#` und `?`, mit `/` am Ende (so hängt
+ * `anmeldeLink` den Teil hinter `#` an). `null`, wenn es keine solche Adresse ist. „anmeldung.beispiel.de“ ohne
+ * `https://` wird ergänzt.
+ */
+export function formularAdresseAus(eingabe: string): string | null {
+  const t = eingabe.trim();
+  if (!t) return null;
+  let u: URL;
+  try {
+    u = new URL(/^[a-z]+:\/\//i.test(t) ? t : `https://${t}`);
+  } catch {
+    return null;
+  }
+  if (u.protocol !== 'https:' || u.username || u.password || u.search || u.hash) return null;
+  if (!u.hostname.includes('.')) return null;
+  const pfad = u.pathname.endsWith('/') ? u.pathname : `${u.pathname}/`;
+  return `${u.origin}${pfad}`;
+}
+
+/** Die Herkunft (`https://host[:port]`), die in ChurchTools als erlaubt eingetragen sein muss. */
+export function herkunftVon(formularAdresse: string): string {
+  return new URL(formularAdresse).origin;
+}
+
 /** Die Adresse der Schnittstelle einer Instanz. */
 export function apiBasis(ort: AnmeldeOrt): string {
   return `https://${ort.instanz}/api`;

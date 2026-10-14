@@ -16,6 +16,8 @@ export type Zustand =
       anlegen: { artId: number | null; teamIds: number[] };
       /** Gruppen-Admin: darf jede Veranstaltung freigeben (A5: Hinweis auf der Startseite). */
       admin: boolean;
+      /** Adresse der Formular-Seite der Gemeinde – `null`, solange keine eingerichtet ist (A6-2). */
+      formular: string | null;
     }
   | { art: 'fehler'; text: string; nochmal: boolean };
 

@@ -10,6 +10,8 @@ import { VeranstaltungSeite, type Reiter } from './VeranstaltungSeite';
 import { NeueVeranstaltung } from './NeueVeranstaltung';
 import { ArchivSeite } from './ArchivSeite';
 import { GemeindeFenster } from './GemeindeFenster';
+import { ErstEinrichten } from './ErstEinrichten';
+import { formularAdresse } from './gemeinde';
 import { RueckgaengigLeiste, type Aenderung } from './Rueckgaengig';
 import { fehlerZustand, type Zustand } from './zustand';
 import {
@@ -71,11 +73,12 @@ export function App() {
         // Erst die Gruppenart: Die Übersicht erkennt daran Veranstaltungen, deren Einstellungen in
         // ChurchTools überschrieben wurden, und repariert sie (A5).
         const anlegen = await anlegenMoeglich(teamIds);
-        const [uebersicht, admin] = await Promise.all([
+        const [uebersicht, admin, formular] = await Promise.all([
           ladeUebersicht(start.gruppen, new Date(), anlegen.artId),
           istGruppenAdmin(),
+          formularAdresse(),
         ]);
-        return { start, uebersicht, anlegen, admin };
+        return { start, uebersicht, anlegen, admin, formular };
       })
       .then(
         (d) => setZustand({ art: 'fertig', ...d }),
@@ -129,6 +132,7 @@ export function App() {
               r === 'veranstaltung' ? `#/v/${ansicht.id}` : `#/v/${ansicht.id}/${r}`;
           }}
           gemeinde={fertig?.start.gemeinde ?? null}
+          formularAdresse={fertig?.formular ?? null}
           zeitzone={zeitzone}
           teams={fertig?.start.gruppen ?? []}
           onZurueck={zurUebersicht}
@@ -185,7 +189,7 @@ export function App() {
               Einstellungen
             </button>
           )}
-          {anlegeTeams.length > 0 && (
+          {anlegeTeams.length > 0 && fertig?.formular && (
             <button type="button" className={s.neu} onClick={() => setNeu(true)}>
               <Icon name="plus" size={18} />
               Neue Veranstaltung
@@ -199,7 +203,10 @@ export function App() {
       }
     >
       {leiste}
-      {fertig && (
+      {fertig && !fertig.formular && (
+        <ErstEinrichten admin={fertig.admin} onEinstellungen={() => setEinstellungen(true)} />
+      )}
+      {fertig?.formular && (
         <Startseite
           start={fertig.start}
           uebersicht={fertig.uebersicht}
@@ -223,6 +230,8 @@ export function App() {
           onGespeichert={(text) => {
             setEinstellungen(false);
             setAenderung({ text, rueckgaengig: null });
+            // Die Adresse der Formular-Seite schaltet die Erweiterung frei – also neu laden.
+            laden();
           }}
         />
       )}

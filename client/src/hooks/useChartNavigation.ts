@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { MutableRefObject } from 'react';
 import type { SetlistPageOwner } from '../utils/chordPdf';
 import { useLandscape } from './useLandscape';
+import { pedalRichtung, type PedalRichtung } from '../utils/pedalTasten';
 
 interface UseChartNavigationArgs {
   /** Seiten-Besitzer des durchgehenden Stroms (ein Eintrag je PDF-Seite). */
@@ -10,13 +11,23 @@ interface UseChartNavigationArgs {
   startIndex: number;
   /** Tastatur-Navigation aussetzen, solange Editor/Zeichenmodus offen sind (per Ref, gegen Zyklen). */
   blockedRef: MutableRefObject<boolean>;
+  /**
+   * Wer das Pedal übernimmt, wenn nicht geblättert wird (#551): Im Scroll-Modus scrollt ein Tritt einen
+   * Schritt, statt eine Seite weiterzublättern. Ohne Angabe: blättern.
+   */
+  pedal?: (richtung: PedalRichtung) => void;
 }
 
 /**
  * Blättern im durchgehenden Seitenstrom: linke (sichtbare) Seite + aktive Hälfte, Quer-/Hochformat
  * (im 2-up nie eine Seite allein lassen), Sprung zum Start-Lied und Tastatur ←/→.
  */
-export function useChartNavigation({ owners, startIndex, blockedRef }: UseChartNavigationArgs) {
+export function useChartNavigation({
+  owners,
+  startIndex,
+  blockedRef,
+  pedal,
+}: UseChartNavigationArgs) {
   // Seiten-Position im Strom: linke (erste) sichtbare Seite + aktive Seite (angetippte Hälfte).
   const [streamPage, setStreamPage] = useState(0);
   const [activePage, setActivePage] = useState(0);
@@ -75,21 +86,20 @@ export function useChartNavigation({ owners, startIndex, blockedRef }: UseChartN
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [owners.length]);
 
-  // Tastatur ←/→ (aktuelle Funktionen über Ref, damit der Listener stabil bleibt).
-  const fns = useRef({ next, prev });
-  fns.current = { next, prev };
+  // Tastatur und Pedal (aktuelle Funktionen über Ref, damit der Listener stabil bleibt). Welche Taste
+  // was heißt, steht in `pedalRichtung` – vorher nur ←/→, viele Pedale senden aber ↓ oder Leertaste.
+  const fns = useRef({ next, prev, pedal });
+  fns.current = { next, prev, pedal };
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      const t = e.target as HTMLElement | null;
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
       if (blockedRef.current) return;
-      if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        fns.current.next();
-      } else if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        fns.current.prev();
-      }
+      const richtung = pedalRichtung(e);
+      if (richtung === null) return;
+      e.preventDefault();
+      const { next: vor, prev: zurueck, pedal: eigenes } = fns.current;
+      if (eigenes) eigenes(richtung);
+      else if (richtung === 1) vor();
+      else zurueck();
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

@@ -39,3 +39,18 @@ export function splitKeys(sig: string): (string | null)[] {
   if (sig === '') return [];
   return sig.split(SEP).map((s) => (s === NONE ? null : s));
 }
+
+/**
+ * **Welche EIGENE Ebene eine Seite zeigt** (#551 herausgelöst aus `PageDeck`): Wird gerade eine fremde
+ * Ebene angesehen („Notizen von …"), bleibt die eigene ausgeblendet – außer in der Vorschau
+ * „Zusammenführen", die beide übereinander zeigt. Blättern UND Scrollen fragen hier, damit die Regel
+ * nicht ein zweites Mal entsteht.
+ */
+export function eigenerSchluessel(
+  page: number,
+  drawKeyFor: (page: number) => string | null,
+  viewKeyFor: (page: number) => string | null,
+  previewOwn: boolean,
+): string | null {
+  return viewKeyFor(page) != null && !previewOwn ? null : drawKeyFor(page);
+}

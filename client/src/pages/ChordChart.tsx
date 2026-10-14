@@ -15,12 +15,17 @@ import { Icon } from '@ui/icons/icons';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ChordEditor } from '../components/ChordEditor';
 import { PageDeck } from '../components/PageDeck';
+import { ScrollDeck } from '../components/ScrollDeck';
+import { SCROLL_START, type ScrollPosition } from '../utils/scrollPosition';
+import { getLiedansicht } from '../utils/devicePrefs';
+import { eigenerSchluessel } from '../utils/pageKeys';
+import type { PedalRichtung } from '../utils/pedalTasten';
 import { useSongSettings } from '../hooks/useSongSettings';
 import { useLandscape } from '../hooks/useLandscape';
 import { useAppVollbild } from '../hooks/useAppVollbild';
 import { Coachmarks } from '../components/Coachmarks';
 import {
-  CHART_STEPS,
+  chartSchritte,
   HINT_VOLLBILD,
   TOUR_CHART,
   isTourDone,
@@ -275,8 +280,22 @@ export function ChordChart({
   // Blättern/Ausrichtung/Tastatur. Tastatur-Navigation pausiert, solange Editor oder Zeichenmodus
   // offen sind (per Ref übergeben, weil `showEditor` erst unten aus dem Editor-Hook kommt).
   const navBlockedRef = useRef(false);
+  /**
+   * Scroll-Modus (#551): Seiten untereinander statt blättern – eine Vorliebe dieses Geräts (Mehr →
+   * Liedansicht). Beim Öffnen gelesen; geändert wird sie nur unter „Mehr", also nie bei offenem Lied.
+   * Das Pedal scrollt dann einen Schritt (`schrittRef`, von `ScrollDeck` abgelegt), statt zu blättern.
+   * Zum Malen öffnet sich die sichtbare Seite einzeln; `scrollPos` bringt danach an dieselbe Stelle zurück.
+   */
+  const [scrollModus] = useState(() => getLiedansicht() === 'scrollen');
+  const schrittRef = useRef<((richtung: PedalRichtung) => void) | null>(null);
+  const scrollPos = useRef<ScrollPosition>(SCROLL_START);
   const { pageIdx, activeIdx, atStart, atEnd, next, prev, goToSong, setPage, setActivePage } =
-    useChartNavigation({ owners, startIndex, blockedRef: navBlockedRef });
+    useChartNavigation({
+      owners,
+      startIndex,
+      blockedRef: navBlockedRef,
+      pedal: scrollModus ? (r) => schrittRef.current?.(r) : undefined,
+    });
 
   const activeSongIdx = owners[activeIdx]?.songIdx ?? 0;
   const song = songs[activeSongIdx] ?? songs[songs.length - 1];
@@ -347,9 +366,14 @@ export function ChordChart({
   // Aktuell SICHTBARE Lieder (fürs Fußzeilen-Punkte-Highlight): im Querformat 2 Seiten → bis zu
   // 2 Lieder nebeneinander, beide markieren. matchMedia('orientation') ist beim Wechsel stabil.
   const landscape = useLandscape();
+  // Zwei Seiten nebeneinander gibt es nur beim Blättern im Querformat – im Scroll-Modus steht eine
+  // Seite in voller Breite (#551), und die sichtbare ist die aktive (`pageIdx` ist dort im Querformat
+  // auf die vorletzte Seite begrenzt und taugt nicht).
+  const nebeneinander = landscape && !scrollModus;
+  const sichtSeite = scrollModus ? activeIdx : pageIdx;
   const visibleSongIdx = new Set<number>();
-  if (owners[pageIdx]) visibleSongIdx.add(owners[pageIdx].songIdx);
-  if (landscape && owners[pageIdx + 1]) visibleSongIdx.add(owners[pageIdx + 1].songIdx);
+  if (owners[sichtSeite]) visibleSongIdx.add(owners[sichtSeite].songIdx);
+  if (nebeneinander && owners[pageIdx + 1]) visibleSongIdx.add(owners[pageIdx + 1].songIdx);
   if (visibleSongIdx.size === 0) visibleSongIdx.add(activeSongIdx);
 
   // ── abgeleitete Werte des AKTIVEN Lieds ──
@@ -389,7 +413,7 @@ export function ChordChart({
    * selben Lied, bleibt es bei einer Kapsel.
    */
   const andereHaelfte: AndereHaelfte | null = (() => {
-    if (!landscape) return null;
+    if (!nebeneinander) return null;
     for (const slot of [0, 1] as const) {
       const o = owners[pageIdx + slot];
       if (!o || o.songIdx === activeSongIdx) continue;
@@ -591,7 +615,11 @@ export function ChordChart({
     // nicht weiter untersucht – die Regel gilt so oder so).
     if (wirdAusgeblendet && !isTourDone(HINT_VOLLBILD)) {
       markTourDone(HINT_VOLLBILD);
-      showToast('Leisten ausgeblendet – nochmal in die Mitte tippen holt sie zurück.');
+      showToast(
+        scrollModus
+          ? 'Leisten ausgeblendet – nochmal aufs Blatt tippen holt sie zurück.'
+          : 'Leisten ausgeblendet – nochmal in die Mitte tippen holt sie zurück.',
+      );
     }
   };
 
@@ -626,7 +654,8 @@ export function ChordChart({
             showsDocument={activeDoc !== null}
             canUseGlobalNotes={canUseGlobalNotes}
             drawMode={drawMode}
-            zoomed={streamZoomed}
+            // Im Scroll-Modus gibt es keinen Zoom; ein Stand aus der Mal-Ansicht darf nicht stehen bleiben.
+            zoomed={streamZoomed && !(scrollModus && !drawMode)}
             bpmPulse={bpmPulse}
             pulsBpm={wirksamesTempo}
             klickBpm={klickTempo}
@@ -736,7 +765,22 @@ export function ChordChart({
           className={`${styles.chartArea}${leistenAus ? ' ' + styles.chartAreaVollbild : ''}`}
           data-tour="chart-blaettern"
         >
-          {songs.length > 0 ? (
+          {songs.length > 0 && scrollModus && !drawMode ? (
+            <ScrollDeck
+              pages={pages}
+              loading={pagesLoading}
+              error={pagesError}
+              loadingLabel="Lieder werden vorbereitet…"
+              ownKeyFor={(p) => eigenerSchluessel(p, drawKeyFor, viewKeyFor, viewMode === 'merge')}
+              overlayKeyFor={viewKeyFor}
+              seite={activeIdx}
+              onSeite={setPage}
+              positionRef={scrollPos}
+              onTipp={leistenUmschalten}
+              syncTick={syncTick}
+              schrittRef={schrittRef}
+            />
+          ) : songs.length > 0 ? (
             <PageDeck
               pages={pages}
               loading={pagesLoading}
@@ -747,7 +791,9 @@ export function ChordChart({
               previewOwn={viewMode === 'merge'}
               zoomKeyBaseFor={zoomKeyBaseFor}
               pageLabel={pageLabel}
-              pageIndex={pageIdx}
+              // Aus dem Scroll-Modus: die sichtbare Seite einzeln zum Malen (Alwin, 14.10.2026).
+              pageIndex={scrollModus ? activeIdx : pageIdx}
+              einzeln={scrollModus}
               onPageIndex={setPage}
               activePage={activeIdx}
               onActivePage={setActivePage}
@@ -806,10 +852,12 @@ export function ChordChart({
             songCount={songs.length}
             visibleSongIdx={visibleSongIdx}
             nextSongTitle={nextSong?.title ?? null}
-            atStart={atStart}
-            atEnd={atEnd}
-            onPrev={prev}
-            onNext={next}
+            // Im Scroll-Modus tun die Pfeile dasselbe wie das Pedal (ein Schritt). Ob oben/unten
+            // Schluss ist, weiß nur die Scroll-Fläche – am Rand tut ein Schritt einfach nichts.
+            atStart={scrollModus && !drawMode ? false : atStart}
+            atEnd={scrollModus && !drawMode ? false : atEnd}
+            onPrev={scrollModus && !drawMode ? () => schrittRef.current?.(-1) : prev}
+            onNext={scrollModus && !drawMode ? () => schrittRef.current?.(1) : next}
             onGoToSong={goToSong}
           />
         )}
@@ -947,7 +995,7 @@ export function ChordChart({
 
         {chartTour && (
           <Coachmarks
-            steps={CHART_STEPS}
+            steps={chartSchritte(scrollModus)}
             onClose={() => {
               markTourDone(TOUR_CHART);
               setChartTour(false);

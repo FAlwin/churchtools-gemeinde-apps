@@ -336,6 +336,8 @@
   ol {
     margin: 8px 0 14px;
     padding-left: 20px;
+    // ChurchTools (Tailwind) nimmt Listen die Nummern – hier sind es Schritte, sie sollen dastehen.
+    list-style: decimal;
   }
 
   li + li {

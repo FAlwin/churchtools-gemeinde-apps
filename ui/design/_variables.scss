@@ -135,7 +135,9 @@ html[data-theme='dark'][data-dunkel='churchtools'] {
   --green: #00a63e; // green-600
   --cp-dir: #5fd0c3;
 
-  --seg-on: #52525b; // `--color-basic-interactive` (zinc-600)
+  // Das Gewählte (Segmente, Auswahlknöpfe) – zinc-500, eine Stufe heller als `--color-basic-interactive`:
+  // Mit zinc-600 auf zinc-700 sah man in der Test-Instanz kaum, was gewählt ist (14.10.2026).
+  --seg-on: #71717a;
   --seg-track: #3f3f46;
   --chart-grund: var(--bg);
   --track-off: #52525b;

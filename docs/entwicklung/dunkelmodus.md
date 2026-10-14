@@ -18,7 +18,8 @@ blaugraues Dunkel und eigener Schalter Hell/Dunkel/Auto; Dienstplaner: immer hel
 | `--color-background-primary` | zinc-900 `#18181b`  | `--bg` (Seite)                     |
 | `--color-foreground-primary` | zinc-800 `#27272a`  | `--surface2`, `--nav-bg`           |
 | `--color-basic-divider`      | zinc-700 `#3f3f46`  | `--border`, `--hair`, `--surface3` |
-| `--color-basic-interactive`  | zinc-600 `#52525b`  | `--seg-on`, `--track-off`          |
+| `--color-basic-interactive`  | zinc-600 `#52525b`  | `--track-off`                      |
+| (eine Stufe heller)          | zinc-500 `#71717a`  | `--seg-on` (das Gewählte)          |
 | `--color-basic-primary`      | slate-50 `#f8fafc`  | `--text`                           |
 | `--color-basic-secondary`    | slate-300 `#cad5e2` | `--text2`                          |
 | `--color-basic-tertiary`     | slate-400 `#90a1b9` | `--text3`                          |

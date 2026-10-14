@@ -123,6 +123,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   bleiben sie zusammen rechts (vorher schwebte „Einstellungen“ mitten in der Zeile).
 - **Formular-Adresse zum Testen:** Neben `https://…` ist auch `http://localhost:<Port>` erlaubt (das Formular auf
   dem eigenen Rechner), bis die eigene Adresse der Gemeinde steht.
+- **„Erst einrichten“ mit Nummern:** Die Schritte waren in ChurchTools ohne Zahlen (ChurchTools nimmt Listen
+  die Nummern).
 - **Demo** (`?demo`) kennt die Gemeinde-Einstellungen (Formular-Adresse, Vorgaben); `?demo=einrichten`
   zeigt den Zustand davor. Seit A6-2 blieb die Demo sonst bei „Erst einrichten“ stehen.
 - **Echt anmelden** (A6-2, #548). Gemessen 14.10.2026 an der Test-Instanz (`messung-a6-2026-10-14.md`):

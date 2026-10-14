@@ -5,6 +5,7 @@ import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import { geburtsdatumAn, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import { ApiError } from '@ui/ct/fehler';
 import * as E from './einrichten';
+import * as G from './gemeinde';
 import { VeranstaltungSeite } from './VeranstaltungSeite';
 import { NeueVeranstaltung } from './NeueVeranstaltung';
 
@@ -17,6 +18,11 @@ vi.mock('./einrichten', async (original) => {
     anmeldungVon: vi.fn(),
     darfVeranstaltungEinrichten: vi.fn(),
     freigeben: vi.fn(),
+    leitungsKandidaten: vi.fn(),
+    meineId: vi.fn(),
+    stammdaten: vi.fn(),
+    anmeldenVorbereiten: vi.fn(),
+    anmeldeBedingungen: vi.fn(),
     aendereEinstellungen: vi.fn(),
     speichereAnmeldung: vi.fn(),
     kalenderListe: vi.fn(),
@@ -34,6 +40,8 @@ vi.mock('./einrichten', async (original) => {
   };
 });
 const m = vi.mocked(E);
+vi.mock('./gemeinde', () => ({ gemeindeVorgaben: vi.fn() }));
+const gm = vi.mocked(G);
 // „Neue Veranstaltung“ legt danach die Spalten an (A5) – hier nicht Gegenstand.
 vi.mock('./formularFelder', () => ({ felderAnlegen: vi.fn().mockResolvedValue(undefined) }));
 
@@ -63,8 +71,23 @@ function zeigen() {
   render(<VeranstaltungSeite id={91} zeitzone={ZONE} onZurueck={() => {}} />);
 }
 
+const STAMM = {
+  status: [{ id: 2, name: 'status.potential', nameTranslated: 'Interessent', isMember: false }],
+  standorte: [{ id: 0, name: 'Zentrale' }],
+  bereiche: [{ id: 1, name: 'Gemeindeliste' }],
+};
 beforeEach(() => {
   vi.stubGlobal('window', Object.assign(window, { settings: { base_url: 'https://ct.test/' } }));
+  // Freigeben (A6-2): Leitung, Vorgaben für neue Personen, Prüfung danach.
+  m.leitungsKandidaten.mockResolvedValue([
+    { personId: 1, name: 'Alwin Friesen', leitung: false },
+    { personId: 2, name: 'Bea Team', leitung: false },
+  ]);
+  m.meineId.mockResolvedValue(1);
+  m.stammdaten.mockResolvedValue(STAMM);
+  gm.gemeindeVorgaben.mockResolvedValue({ statusId: 2, campusId: 0, departmentId: 1 });
+  m.anmeldenVorbereiten.mockResolvedValue();
+  m.anmeldeBedingungen.mockResolvedValue([]);
 });
 
 describe('Veranstaltung laden scheitert – gemeinsamer Fehlerkasten (ui/erweiterung)', () => {
@@ -97,14 +120,69 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     expect(screen.queryByRole('button', { name: 'Freigeben' })).toBeNull();
   });
 
-  it('mit Recht: Entwurf freigeben (nach Rückfrage), danach neu geladen', async () => {
+  it('mit Recht: Entwurf freigeben (nach Rückfrage) – erst Leitung und Vorgaben, dann frei, dann neu geladen', async () => {
     stelle(true);
     m.freigeben.mockResolvedValue();
     zeigen();
     fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    // Wer freigibt, ist als Leitung vorgewählt; die Vorgaben stehen in Worten da.
+    expect(
+      (await screen.findByRole('button', { name: 'Alwin Friesen' })).getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(screen.getByText(/Interessent · Zentrale · Gemeindeliste/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Bea Team' }));
     fireEvent.click(screen.getByRole('button', { name: 'Jetzt freigeben' }));
+    await waitFor(() =>
+      expect(m.anmeldenVorbereiten).toHaveBeenCalledWith(91, [1, 2], {
+        statusId: 2,
+        campusId: 0,
+        departmentId: 1,
+      }),
+    );
     await waitFor(() => expect(m.freigeben).toHaveBeenCalledWith(91));
+    expect(m.anmeldenVorbereiten.mock.invocationCallOrder[0]).toBeLessThan(
+      m.freigeben.mock.invocationCallOrder[0],
+    );
     await waitFor(() => expect(m.kopfVon).toHaveBeenCalledTimes(2));
+  });
+
+  it('nimmt ChurchTools danach noch nicht an, sagt das Fenster, was fehlt', async () => {
+    stelle(true);
+    m.freigeben.mockResolvedValue();
+    m.anmeldeBedingungen.mockResolvedValue([
+      'Der Anmeldezeitraum hat noch nicht begonnen oder ist vorbei.',
+    ]);
+    zeigen();
+    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    await screen.findByRole('button', { name: 'Alwin Friesen' });
+    fireEvent.click(screen.getByRole('button', { name: 'Jetzt freigeben' }));
+    expect(await screen.findByText('Freigegeben – aber noch nicht offen')).toBeTruthy();
+    expect(screen.getByText(/Anmeldezeitraum hat noch nicht begonnen/)).toBeTruthy();
+  });
+
+  it('ohne vollständige Vorgaben für neue Personen: Hinweis, Freigeben gesperrt', async () => {
+    stelle(true);
+    gm.gemeindeVorgaben.mockResolvedValue({ statusId: 2 });
+    zeigen();
+    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    expect(
+      await screen.findByText(/legt ein Gruppen-Admin einmal für die Gemeinde fest/),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Jetzt freigeben' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+  });
+
+  it('ohne gewählte Leitung lässt sich nicht freigeben', async () => {
+    stelle(true);
+    zeigen();
+    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Alwin Friesen' }));
+    expect(screen.getByRole('button', { name: 'Jetzt freigeben' })).toHaveProperty(
+      'disabled',
+      true,
+    );
   });
 
   it('Freigabe scheitert → Meldung im Fenster, das Fenster bleibt offen', async () => {
@@ -112,6 +190,7 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     m.freigeben.mockRejectedValue(new E.NichtUebernommen('die Freigabe'));
     zeigen();
     fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    await screen.findByRole('button', { name: 'Alwin Friesen' });
     fireEvent.click(screen.getByRole('button', { name: 'Jetzt freigeben' }));
     expect(await screen.findByText(/ChurchTools hat die Freigabe nicht übernommen/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Jetzt freigeben' })).toBeTruthy();

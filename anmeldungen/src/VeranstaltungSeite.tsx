@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
-import { Sheet } from '@ui/fenster/Sheet';
 import { ctBasis } from '@ui/ct/basis';
 import { tagAusIso } from '@shared/ct/zeit';
 import { geburtsdatumAn, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
@@ -16,7 +15,6 @@ import {
   wiederherstellen,
   darfVeranstaltungEinrichten,
   einstellungenVon,
-  freigeben,
   kopfVon,
   type AnmeldeEinstellungen,
 } from './einrichten';
@@ -29,6 +27,7 @@ import {
 } from './Bearbeiten';
 import { PreisFensterZeigen, PreiseKarte, ProbeRechnen, type PreisFenster } from './Preise';
 import { VerwaltenFenster } from './Verwalten';
+import { FreigebenFenster } from './FreigebenFenster';
 import { Baukasten } from './Baukasten';
 import { Segment } from '@ui/bedienung/Segment';
 import type { Aenderung } from './Rueckgaengig';
@@ -141,8 +140,6 @@ export function VeranstaltungSeite({
   const [daten, setDaten] = useState<Daten | null>(null);
   const [fehler, setFehler] = useState<Fehlermeldung | null>(null);
   const [fenster, setFenster] = useState<Fenster>(null);
-  const [freigabeFehler, setFreigabeFehler] = useState<string | null>(null);
-  const [arbeitet, setArbeitet] = useState(false);
 
   const laden = useCallback(() => {
     setFehler(null);
@@ -451,41 +448,20 @@ export function VeranstaltungSeite({
         />
       )}
       {fenster === 'freigeben' && (
-        <Sheet title="Freigeben?" onClose={() => setFenster(null)}>
-          <p className={f.hinweis}>
-            Danach können sich Gäste anmelden – sobald der Anmeldezeitraum begonnen hat
-            {a.ab ? ` (${zeit(a.ab)})` : ''}.{!t && ' Es ist noch kein Termin gewählt.'}
-            {!a.ab &&
-              ' Es ist noch kein Anmeldebeginn gesetzt – ohne ihn nimmt ChurchTools nichts an.'}
-            {kostet && !b.iban && ' Es gibt Preise, aber noch keine Bankverbindung.'}
-          </p>
-          {freigabeFehler && (
-            <p className={f.fehler} role="alert">
-              {freigabeFehler}
+        <FreigebenFenster
+          id={id}
+          hinweis={
+            <p className={f.hinweis}>
+              Danach können sich Gäste anmelden – sobald der Anmeldezeitraum begonnen hat
+              {a.ab ? ` (${zeit(a.ab)})` : ''}.{!t && ' Es ist noch kein Termin gewählt.'}
+              {!a.ab &&
+                ' Es ist noch kein Anmeldebeginn gesetzt – ohne ihn nimmt ChurchTools nichts an.'}
+              {kostet && !b.iban && ' Es gibt Preise, aber noch keine Bankverbindung.'}
             </p>
-          )}
-          <button
-            type="button"
-            className={f.knopf}
-            disabled={arbeitet}
-            onClick={async () => {
-              setArbeitet(true);
-              setFreigabeFehler(null);
-              try {
-                await freigeben(id);
-                setArbeitet(false);
-                gespeichert(
-                  'Freigegeben – Gäste können sich anmelden, sobald der Zeitraum läuft.',
-                )();
-              } catch (err) {
-                setFreigabeFehler(fehlerMeldung(err).text);
-                setArbeitet(false);
-              }
-            }}
-          >
-            {arbeitet ? 'Wird freigegeben …' : 'Jetzt freigeben'}
-          </button>
-        </Sheet>
+          }
+          onClose={() => setFenster(null)}
+          onFreigegeben={(text) => gespeichert(text)()}
+        />
       )}
     </div>
   );

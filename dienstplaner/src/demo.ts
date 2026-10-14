@@ -89,6 +89,54 @@ const TERMINE = [
   },
 ];
 
+/**
+ * „Wer kann?“ in der Form, die E4-0 gemessen hat (`possiblepersons`): Punkte mit Begründungen, Auslastung je
+ * Monat, Abwesenheit mit Grund, Dienste am selben Tag. Ben hat einen „Hat zuvor abgesagt“-Abzug – der darf
+ * ihn nicht nach unten schieben (Alwin, 14.10.2026).
+ */
+function werKannDemo(eventId: number): unknown {
+  const t = TERMINE.find((x) => x.id === eventId);
+  const monat = (t?.startDate ?? zeit(0, '08:00')).slice(0, 7);
+  const person = (id: number, vorname: string, nachname: string) => ({
+    title: `${vorname} ${nachname}`,
+    domainIdentifier: String(id),
+    domainAttributes: { firstName: vorname, lastName: nachname },
+  });
+  const k = (
+    p: ReturnType<typeof person>,
+    o: { score?: number; hints?: object[]; monat?: number; abwesend?: string; amTag?: string[] },
+  ) => ({
+    person: p,
+    score: o.score ?? 0,
+    scoreHints: o.hints ?? [],
+    monthlyUtilization: o.monat ? { [monat]: o.monat } : {},
+    absences: o.abwesend
+      ? [{ absenceReason: { nameTranslated: o.abwesend }, comment: 'privat – wird nicht gezeigt' }]
+      : [],
+    servicesOnSameDay: (o.amTag ?? []).map((serviceName) => ({ eventService: { serviceName } })),
+    servicesPreviouslyDeclined: [],
+  });
+  return {
+    data: [
+      k(person(46, 'Anna', 'Klassen'), { score: -3, monat: 1 }),
+      k(person(49, 'Ben', 'Wiebe'), {
+        score: -500,
+        hints: [
+          {
+            score: -500,
+            reason: 'service.previously-declined',
+            nameTranslated: 'Hat zuvor abgesagt',
+          },
+        ],
+      }),
+      k(person(52, 'Clara', 'Dyck'), { score: -9, monat: 3 }),
+      k(person(55, 'David', 'Penner'), { score: -1000, abwesend: 'Urlaub' }),
+      k(person(1, 'Alwin', 'Friesen'), { score: -253, monat: 1, amTag: ['Ton'] }),
+      k(person(19, 'Spike', 'Musiker'), { score: -6, monat: 2 }),
+    ],
+  };
+}
+
 function daten(fall: string): Record<string, unknown> {
   return {
     '/api/whoami': { data: { id: 1, firstName: fall === 'mitglied' ? 'Spike' : 'Alwin' } },
@@ -172,7 +220,8 @@ export function demoStarten(fall: string): void {
     if (fall === 'fehler' && url.pathname.endsWith('/servicegroups')) {
       return Promise.resolve(new Response('{}', { status: 502 }));
     }
-    const d = antworten[url.pathname];
+    const werKann = /^\/api\/events\/(\d+)\/services\/\d+\/possiblepersons$/.exec(url.pathname);
+    const d = werKann ? werKannDemo(Number(werKann[1])) : antworten[url.pathname];
     return Promise.resolve(
       d === undefined
         ? new Response('{}', { status: 404 })

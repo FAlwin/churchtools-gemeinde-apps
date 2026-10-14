@@ -48,6 +48,11 @@ export function monatTitel(tag: string | null): string {
   return `${MONAT[datum(tag).getUTCMonth()]} ${tag.slice(0, 4)}`;
 }
 
+/** Der Monat eines Tages ausgeschrieben: „November“ („3× im November“ bei „Wer kann?“). */
+export function monatName(tag: string): string {
+  return MONAT[datum(tag).getUTCMonth()];
+}
+
 /** Tage von `heute` bis `tag` (beide `YYYY-MM-DD`). */
 export function tageBis(heute: string, tag: string): number {
   return Math.round((datum(tag).getTime() - datum(heute).getTime()) / 86_400_000);

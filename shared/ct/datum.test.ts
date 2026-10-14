@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { datumText, kachel, monatTitel, tagKurz, tageBis } from './datum';
+import { datumText, kachel, monatName, monatTitel, tagKurz, tageBis } from './datum';
 
 describe('Tage anzeigen', () => {
   it('Datum, kurzes Datum, Kachel und Monat', () => {
@@ -9,6 +9,8 @@ describe('Tage anzeigen', () => {
     expect(kachel('2026-03-01')).toEqual({ tag: '1', monat: 'MÄR' });
     expect(monatTitel('2026-12-31')).toBe('Dezember 2026');
     expect(monatTitel(null)).toBe('Ohne Datum');
+    expect(monatName('2026-11-08')).toBe('November');
+    expect(monatName('2027-03-01')).toBe('März');
   });
 
   it('Tage bis – auch über die Zeitumstellung (Ende Oktober) genau', () => {

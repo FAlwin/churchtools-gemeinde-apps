@@ -3,8 +3,8 @@ import { Icon } from '@ui/icons/icons';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { Segment } from '@ui/bedienung/Segment';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
-import { kachel, tagKurz } from '@shared/ct/datum';
-import type { Plan, PlanGruppe, PlanPlatz, PlanSpalte } from '@shared/dienstplan/plan';
+import { kachel, monatName, tagKurz } from '@shared/ct/datum';
+import type { Plan, PlanGruppe, PlanPlatz, PlanSpalte, PlanZeile } from '@shared/dienstplan/plan';
 import { artVon, veranstaltungsArten, WEITERE } from '@shared/dienstplan/termine';
 import {
   DIENST_SPALTE,
@@ -21,6 +21,7 @@ import type { TermineZustand } from './Termine';
 import { leseAnsicht, merkeAnsicht, type PlanenAnsicht } from './planenAnsicht';
 import { useBreite } from './useBreite';
 import { FilterChips } from './FilterChips';
+import { WerKann, type FreierPlatz } from './WerKann';
 import styles from './Planen.module.scss';
 
 interface Props {
@@ -45,6 +46,28 @@ interface Sicht {
   /** Spalten einer anderen Veranstaltung als der häufigsten – abgesetzt (Entwurf: Gebetsabende). */
   neben: (s: PlanSpalte) => boolean;
   onUmschalten: (k: string) => void;
+  /** Freien Platz antippen → „Wer kann?“ (nur wo man den Dienst planen darf). */
+  onFrei: (spalte: number, zeile: PlanZeile, nr: number) => void;
+}
+
+/** Darf man an diesem Termin diesen Dienst planen – über Recht, Leitung oder als Admin des Termins? */
+const darfPlanen = (z: PlanZeile, s: PlanSpalte) => z.planbar || s.admin;
+
+/** Was das Fach „Wer kann?“ über den angetippten Platz wissen muss. */
+function freierPlatz(s: PlanSpalte, z: PlanZeile, plaetze: PlanPlatz[], nr: number): FreierPlatz {
+  return {
+    eventId: s.id,
+    serviceId: z.dienst.id,
+    dienst: z.dienst.name,
+    termin: s.name,
+    tag: tagKurz(s.tag),
+    uhrzeit: s.uhrzeit,
+    monat: s.tag.slice(0, 7),
+    monatName: monatName(s.tag),
+    nr,
+    von: plaetze.length,
+    schonDa: plaetze.flatMap((p) => (p.personId !== null ? [p.personId] : [])),
+  };
 }
 
 /**
@@ -62,6 +85,7 @@ export function Planen({ zustand, handy, onNochmal, onMehr }: Props) {
   };
   const [fenster, setFenster] = useState<Fenster>({ start: 0, anzahl: null });
   const [zu, setZu] = useState<Set<string> | null>(null);
+  const [frei, setFrei] = useState<FreierPlatz | null>(null);
   const [rahmen, platz] = useBreite();
 
   if (zustand.art === 'laedt') return <p className={styles.hinweis}>Termine werden geladen …</p>;
@@ -108,6 +132,7 @@ export function Planen({ zustand, handy, onNochmal, onMehr }: Props) {
     zugeklappt,
     neben: (s) => haupt !== null && s.name !== haupt,
     onUmschalten: umschalten,
+    onFrei: (i, z, nr) => setFrei(freierPlatz(plan.spalten[i], z, z.zellen[i] ?? [], nr)),
   };
 
   return (
@@ -191,8 +216,10 @@ export function Planen({ zustand, handy, onNochmal, onMehr }: Props) {
         Welche Dienste du siehst, entscheidet ChurchTools. Hier stehen nur Dienstgruppen, die du
         ganz sehen darfst – deine eigenen Dienste findest du immer unter Start und Termine. Planen
         darfst du, wo du die Dienstgruppe bearbeiten darfst, die Gruppe eines Dienstes leitest oder
-        Admin des Termins bist. Einteilen kommt als Nächstes.
+        Admin des Termins bist. Einen freien Platz antippen zeigt, wer kann – Einteilen kommt als
+        Nächstes.
       </p>
+      {frei && <WerKann platz={frei} onClose={() => setFrei(null)} />}
     </div>
   );
 }
@@ -397,7 +424,14 @@ function TabellenPlan({ sicht, breite, platz }: { sicht: Sicht; breite: Breite; 
                                 –
                               </span>
                             ) : (
-                              <Plaetze plaetze={zelle} />
+                              <Plaetze
+                                plaetze={zelle}
+                                onFrei={
+                                  darfPlanen(z, plan.spalten[i])
+                                    ? (nr) => sicht.onFrei(i, z, nr)
+                                    : undefined
+                                }
+                              />
                             )}
                           </td>
                         );
@@ -470,7 +504,10 @@ function HandyPlan({ sicht }: { sicht: Sicht }) {
                 dienste.map((z) => (
                   <div key={z.dienst.id} className={styles.handyDienst}>
                     <span>{z.dienst.name}</span>
-                    <Plaetze plaetze={z.zellen[i]!} />
+                    <Plaetze
+                      plaetze={z.zellen[i]!}
+                      onFrei={darfPlanen(z, s) ? (nr) => sicht.onFrei(i, z, nr) : undefined}
+                    />
                   </div>
                 ))}
             </div>
@@ -545,12 +582,31 @@ function WerWieOft({ sicht }: { sicht: Sicht }) {
   );
 }
 
-function Plaetze({ plaetze }: { plaetze: PlanPlatz[] }) {
+function Plaetze({
+  plaetze,
+  onFrei,
+}: {
+  plaetze: PlanPlatz[];
+  /** Nur wo man planen darf: freier Platz wird ein Knopf (Platz 1 … n). */
+  onFrei?: (nr: number) => void;
+}) {
   return (
     <div className={styles.plaetze}>
-      {plaetze.map((p, i) => (
-        <Platz key={i} p={p} />
-      ))}
+      {plaetze.map((p, i) =>
+        p.art === 'frei' && onFrei ? (
+          <button
+            key={i}
+            type="button"
+            className={`${styles.platz} ${styles.frei} ${styles.freiKnopf}`}
+            onClick={() => onFrei(i + 1)}
+            aria-label={`frei – Wer kann? (Platz ${i + 1} von ${plaetze.length})`}
+          >
+            frei
+          </button>
+        ) : (
+          <Platz key={i} p={p} />
+        ),
+      )}
     </div>
   );
 }

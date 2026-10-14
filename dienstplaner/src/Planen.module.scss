@@ -252,6 +252,7 @@
 
 .frei {
   justify-content: center;
+  width: 100%;
   font-weight: 700;
   color: var(--red);
   background: color-mix(in srgb, var(--red) 10%, var(--surface2));
@@ -403,6 +404,22 @@
   padding: 6px 14px;
   border-radius: 10px;
   font-size: 14px;
+}
+
+// Freier Platz, den man planen darf: antippbar (E4-2 „Wer kann?“).
+.freiKnopf {
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover {
+    background: color-mix(in srgb, var(--red) 16%, var(--surface2));
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 1px;
+  }
 }
 
 // ── E3-5: Werkzeugleiste, Filter, Terminleiste ──────────────────────────────

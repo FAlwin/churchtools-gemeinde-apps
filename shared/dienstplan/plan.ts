@@ -34,6 +34,8 @@ export interface PlanPlatz {
   ich: boolean;
   /** Die Person – `null` bei freien, verborgenen und Gast-Plätzen („Wer wie oft?“ zählt danach). */
   personId: number | null;
+  /** `index` des Platzes in ChurchTools (`null` bei nur einem Platz) – damit findet der Schreibkern ihn. */
+  index: number | null;
 }
 
 export interface PlanSpalte {
@@ -51,6 +53,8 @@ export interface PlanSpalte {
 
 export interface PlanZeile {
   dienst: Dienst;
+  /** Darf man diesen Dienst planen (ohne Termin-Admin)? Dann lassen sich freie Plätze antippen (E4-2). */
+  planbar: boolean;
   /** Je Spalte die Plätze; `null` = der Dienst ist an diesem Termin nicht vorgesehen. */
   zellen: (PlanPlatz[] | null)[];
 }
@@ -72,12 +76,21 @@ export interface Plan {
 
 /** Ein Platz, wie er in der Matrix steht. */
 export function platzAus(p: RohPlatz, ichId: number): PlanPlatz {
+  const index = typeof p.index === 'number' ? p.index : null;
   if (istFrei(p)) {
-    return { art: 'frei', name: null, gast: false, verborgen: false, ich: false, personId: null };
+    return {
+      art: 'frei',
+      name: null,
+      gast: false,
+      verborgen: false,
+      ich: false,
+      personId: null,
+      index,
+    };
   }
   const art: PlatzArt = p.isAccepted === true ? 'zugesagt' : 'angefragt';
   if (p.personId === VERBORGENE_PERSON) {
-    return { art, name: null, gast: false, verborgen: true, ich: false, personId: null };
+    return { art, name: null, gast: false, verborgen: true, ich: false, personId: null, index };
   }
   return {
     art,
@@ -86,6 +99,7 @@ export function platzAus(p: RohPlatz, ichId: number): PlanPlatz {
     verborgen: false,
     ich: p.personId === ichId,
     personId: typeof p.personId === 'number' ? p.personId : null,
+    index,
   };
 }
 
@@ -162,8 +176,9 @@ export function planAus(
     const pg = gruppeFuer(g);
     for (const dienst of imGruppe) {
       const reihe = zellen.get(dienst.id)!;
-      pg.zeilen.push({ dienst, zellen: reihe });
-      if (o.planbar(dienst)) pg.planbar = true;
+      const planbar = o.planbar(dienst);
+      pg.zeilen.push({ dienst, planbar, zellen: reihe });
+      if (planbar) pg.planbar = true;
       reihe.forEach((plaetze, i) => {
         if (plaetze === null) return;
         pg.frei[i] = (pg.frei[i] ?? 0) + plaetze.filter((p) => p.art === 'frei').length;

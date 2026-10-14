@@ -70,7 +70,46 @@ describe('platzAus', () => {
       verborgen: true,
       ich: false,
       personId: null,
+      index: null,
     });
+  });
+
+  it('index von ChurchTools wird mitgegeben – damit findet der Schreibkern den Platz (E4-2)', () => {
+    expect(platzAus({ personId: null, name: null, index: 2 }, ICH).index).toBe(2);
+    expect(platzAus({ personId: 5, name: 'Anna', index: 1 }, ICH).index).toBe(1);
+    expect(platzAus({ personId: -2, name: 'X', index: 3 }, ICH).index).toBe(3);
+    expect(platzAus({ personId: 5, name: 'Anna' }, ICH).index).toBeNull();
+  });
+});
+
+describe('planAus – planbar je Zeile (E4-2)', () => {
+  it('jede Zeile weiß, ob man diesen Dienst planen darf', () => {
+    const p = planAus(
+      [
+        {
+          id: 1,
+          name: 'GD',
+          startDate: '2026-10-18T08:00:00Z',
+          endDate: '2026-10-18T09:00:00Z',
+          eventServices: [
+            { serviceId: 6, personId: null, name: null },
+            { serviceId: 7, personId: null, name: null },
+          ],
+        },
+      ],
+      {
+        ichId: ICH,
+        dienste: DIENSTE,
+        dienstgruppen: GRUPPEN,
+        zeitzone: 'Europe/Berlin',
+        planbar: (d) => d.id === 6,
+        ganzSichtbar: () => true,
+      },
+    );
+    expect(p.gruppen[0].zeilen.map((z) => [z.dienst.name, z.planbar])).toEqual([
+      ['Licht', false],
+      ['Ton', true],
+    ]);
   });
 });
 

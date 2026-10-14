@@ -5,6 +5,9 @@ import { diensteAus } from '@shared/ct/dienste';
 import { planAus } from '@shared/dienstplan/plan';
 import type { RohTermin } from '@shared/dienstplan/termine';
 import { Planen } from './Planen';
+import { ladeWerKann } from './ladeWerKann';
+
+vi.mock('./ladeWerKann', () => ({ ladeWerKann: vi.fn() }));
 
 const DIENSTE = diensteAus([
   { id: 1, name: 'Predigt', serviceGroupId: 1 },
@@ -329,5 +332,94 @@ describe('Planen – Wer wie oft? (E3-5)', () => {
       .map((r) => r.textContent);
     expect(zeilen).toEqual(['Anna Test', 'Ben Test']);
     expect(screen.getByText('Einsätze (Ø 1,5)')).toBeTruthy();
+  });
+});
+
+describe('Planen – freien Platz antippen → „Wer kann?“ (E4-2)', () => {
+  const laden = vi.mocked(ladeWerKann);
+  afterEach(() => laden.mockReset());
+
+  // Licht (Technik, planbar) ist frei; Predigt (Programm, nicht planbar) ist an Termin 21 frei, und an
+  // Termin 22 ist man Admin.
+  const ROH3 = [
+    {
+      id: 20,
+      name: 'Gottesdienst',
+      startDate: '2026-11-08T09:00:00Z',
+      endDate: '2026-11-08T10:30:00Z',
+      eventServices: [
+        { serviceId: 7, personId: 5, name: 'Anna Test', isAccepted: true, index: 1 },
+        { serviceId: 7, personId: null, name: null, index: 2 },
+        { serviceId: 1, personId: null, name: null },
+      ],
+    },
+    {
+      id: 22,
+      name: 'Gottesdienst',
+      startDate: '2026-11-15T09:00:00Z',
+      endDate: '2026-11-15T10:30:00Z',
+      adminIds: [1],
+      eventServices: [{ serviceId: 1, personId: null, name: null }],
+    },
+  ] as RohTermin[];
+  const PLAN3 = planAus(ROH3, {
+    ichId: 1,
+    dienste: DIENSTE,
+    dienstgruppen: GRUPPEN,
+    zeitzone: 'Europe/Berlin',
+    planbar: (d) => d.dienstgruppeId === 3,
+    ganzSichtbar: () => true,
+  });
+  const zeige3 = (handy = false) =>
+    render(
+      <Planen
+        zustand={{ art: 'fertig', zeilen: [], plan: PLAN3, wochen: 8 }}
+        handy={handy}
+        onNochmal={() => {}}
+        onMehr={() => {}}
+      />,
+    );
+
+  it('nur wo man planen darf, ist ein freier Platz ein Knopf – oder als Admin des Termins', () => {
+    zeige3();
+    fireEvent.click(screen.getByRole('button', { name: /Programm/, expanded: false })); // zu → auf
+    const licht = within(zeileVon('Licht'));
+    expect(licht.getAllByRole('button', { name: /Wer kann\?/ })).toHaveLength(1);
+    const predigt = zeileVon('Predigt').querySelectorAll('td');
+    expect(within(predigt[0] as HTMLElement).queryByRole('button')).toBeNull();
+    expect(within(predigt[0] as HTMLElement).getByText('frei')).toBeTruthy();
+    expect(
+      within(predigt[1] as HTMLElement).getByRole('button', { name: /Wer kann\?/ }),
+    ).toBeTruthy();
+  });
+
+  it('Antippen öffnet das Fach für genau diesen Platz; wer schon dort ist, steht nicht zur Wahl', async () => {
+    laden.mockResolvedValue([
+      { person: { domainIdentifier: '5', title: 'Anna Test' }, score: 0 },
+      { person: { domainIdentifier: '6', title: 'Ben Test' }, score: 0 },
+    ]);
+    zeige3();
+    fireEvent.click(
+      within(zeileVon('Licht')).getByRole('button', { name: 'frei – Wer kann? (Platz 2 von 2)' }),
+    );
+    expect(screen.getByText('Licht · So, 08.11.')).toBeTruthy();
+    expect(screen.getByText('Gottesdienst um 10:00 Uhr · Platz 2 von 2')).toBeTruthy();
+    const liste = await screen.findByRole('list', { name: 'Wer kann?' });
+    expect(
+      within(liste)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['Ben Testfrei0× im November']);
+    expect(laden).toHaveBeenCalledWith(20, 7);
+    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    expect(screen.queryByRole('list', { name: 'Wer kann?' })).toBeNull();
+  });
+
+  it('am Handy genauso', async () => {
+    laden.mockResolvedValue([]);
+    zeige3(true);
+    fireEvent.click(screen.getByRole('button', { name: 'frei – Wer kann? (Platz 2 von 2)' }));
+    expect(await screen.findByText(/schlägt ChurchTools niemanden vor/)).toBeTruthy();
+    expect(laden).toHaveBeenCalledWith(20, 7);
   });
 });

@@ -19,6 +19,7 @@ import { z } from 'zod';
 import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate';
 import type { PreisRegeln } from './preis';
 import { STANDARD_BEZAHLUNG, ZWECK_MAX, type Bezahlung } from './bezahlung';
+import { mitVorgaben, vorlageVon } from './gestaltung';
 
 export type Feldtyp =
   | 'name'
@@ -157,6 +158,18 @@ export function setzeGeburtsdatum(f: Formular, an: boolean): Formular {
       x.id === 'birth' ? { ...x, zustand: an ? ('pflicht' as const) : ('aus' as const) } : x,
     );
   return { anmeldung: neu(f.anmeldung), person: neu(f.person) };
+}
+
+/**
+ * **„Wer meldet sich an?“ ändern** – und ob das Geburtsdatum abgefragt wird. Die EINE Stelle für das Fenster
+ * im Reiter Veranstaltung und die Leiste im Baukasten.
+ */
+export function mitWer(
+  e: OeffentlicheEinstellungen,
+  wer: OeffentlicheEinstellungen['wer'],
+  geburtsdatum: boolean,
+): OeffentlicheEinstellungen {
+  return { ...e, wer, formular: setzeGeburtsdatum(e.formular, geburtsdatum) };
 }
 
 /** **Alter am Stichtag** (erster Tag der Veranstaltung), beides `YYYY-MM-DD`. `null`, wenn kein Geburtsdatum. */
@@ -340,14 +353,59 @@ export const BESCHREIBUNG_MAX = 5000;
  */
 export const EINSTELLUNGEN_KENNUNG = 'anmeldung:v1:';
 
+export type Schrift = 'standard' | 'rund' | 'serif' | 'klassisch' | 'lesbar';
+export type VorlageId = 'klassisch' | 'foto' | 'karte' | 'bunt' | 'geteilt' | 'gross';
+
+/**
+ * **Die Gestaltung des Formulars** (A5, Entwurf v3 vom 13.10.2026 – Alwin: „Diese Vorlagen sollten nicht so
+ * starr sein … entweder rauslassen oder änderbar machen“). Eine Vorlage ist nur der **Startpunkt**: Sie füllt
+ * alle Werte (`VORLAGEN_GESTALTUNG` in `gestaltung.ts`), danach ist jeder einzeln änderbar.
+ */
 export interface Gestaltung {
-  vorlage: 'klassisch' | 'foto' | 'karte' | 'bunt' | 'geteilt' | 'gross';
+  /** Der Startpunkt, aus dem die Werte stammen. */
+  vorlage: VorlageId;
+  /** Kopfband oben, Bild über die ganze Seite, zweigeteilt (Kopf links) oder Karte in der Mitte. */
+  aufbau: 'kopfband' | 'seite' | 'geteilt' | 'karte';
+  kopfHoehe: 'klein' | 'mittel' | 'gross';
+  kopfAusrichtung: 'links' | 'mitte';
+  /** Gemeindelogo aus ChurchTools, eigenes oder keins. */
+  logo: 'ct' | 'eigen' | 'keins';
+  /** Die Bildadresse des Logos (ChurchTools-Bilddienst, ohne Login abrufbar) – `null`, solange keins gefunden ist. */
+  logoUrl: string | null;
+  /** Logo oben in der Mitte über dem Titel (Alwin) oder links daneben. */
+  logoOrt: 'oben' | 'links';
+  /** Seite: einfarbig, mit Muster oder mit dem Titelbild. */
+  hintergrund: 'farbe' | 'muster' | 'bild';
+  muster: 'punkte' | 'konfetti' | 'sterne' | 'wellen' | 'raster';
+  musterfarbe: string;
+  /** Hauptfarbe (Kopf, Knöpfe, Häkchen). */
   farbe: string;
+  seitenfarbe: string;
+  kartenfarbe: string;
+  schriftfarbe: string;
+  /** Schriften – nur Systemschriften, nichts wird von Google geladen (Datenschutz). */
+  kopfSchrift: Schrift;
+  textSchrift: Schrift;
+  /** Größere Schrift (z. B. für Senioren). */
+  gross: boolean;
+  ecken: 'eckig' | 'rund' | 'sehrrund';
+  schatten: boolean;
+  rahmen: boolean;
+  /** Jeder Abschnitt in einer eigenen hellen Farbe (wie die alte Vorlage „Bunt“). */
+  bunt: boolean;
   feldstil: 'kasten' | 'linie' | 'gefuellt';
-  knoepfe: 'eckig' | 'rund';
+  knoepfe: 'eckig' | 'leicht' | 'rund';
+  knopfVoll: boolean;
+  breite: 'schmal' | 'normal' | 'breit';
+  /** Begrüßungstext unter dem Kopf. */
   text: string;
-  gemeindename: boolean;
 }
+
+/** Alles, was eine Vorlage als Startwert setzt (nicht: Logo, Begrüßung, Breite – die bleiben beim Wechsel). */
+export type GestaltungWerte = Omit<
+  Gestaltung,
+  'vorlage' | 'logo' | 'logoUrl' | 'logoOrt' | 'text' | 'breite'
+>;
 
 /**
  * **Wann und wo** (A2, #480). Der ChurchTools-Termin wird bewusst NICHT mit der Gruppe verknüpft (A0 #4:
@@ -461,6 +519,10 @@ const feldSchema = z.object({
   antworten: z.array(z.string().max(80)).max(20),
   verborgen: z.array(z.string().max(80)).max(20).optional(),
 });
+// Farben nur in Hex-Schreibweise – sie landen in einem style-Attribut.
+const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/);
+const hexOderNull = hex.nullable();
+const schrift = z.enum(['standard', 'rund', 'serif', 'klassisch', 'lesbar']);
 const zeitpunkt = z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
 const einstellungenSchema = z.object({
   termin: z
@@ -479,15 +541,45 @@ const einstellungenSchema = z.object({
     anmeldung: z.array(feldSchema).max(30),
     person: z.array(feldSchema).max(30),
   }),
-  gestaltung: z.object({
-    vorlage: z.enum(['klassisch', 'foto', 'karte', 'bunt', 'geteilt', 'gross']),
-    // Nur eine Farbe in Hex-Schreibweise – der Wert landet in einem style-Attribut.
-    farbe: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-    feldstil: z.enum(['kasten', 'linie', 'gefuellt']),
-    knoepfe: z.enum(['eckig', 'rund']),
-    text: z.string().max(1200),
-    gemeindename: z.boolean(),
-  }),
+  // Seit dem Entwurf v3 (A5) ist jede Angabe einzeln einstellbar. Ältere Einstellungen (nur Vorlage, Farbe,
+  // Feldstil, Knöpfe, Text) bleiben lesbar: Was fehlt, kommt aus ihrer Vorlage (`mitVorgaben`). Unbekannte
+  // Angaben (gemeindename, schrift … aus Zwischenständen) lässt zod weg.
+  gestaltung: z
+    .object({
+      vorlage: z.enum(['klassisch', 'foto', 'karte', 'bunt', 'geteilt', 'gross']),
+      farbe: hex,
+      feldstil: z.enum(['kasten', 'linie', 'gefuellt']),
+      knoepfe: z.enum(['eckig', 'leicht', 'rund']),
+      text: z.string().max(1200),
+      aufbau: z.enum(['kopfband', 'seite', 'geteilt', 'karte']).optional(),
+      kopfHoehe: z.enum(['klein', 'mittel', 'gross']).optional(),
+      kopfAusrichtung: z.enum(['links', 'mitte']).optional(),
+      logo: z.enum(['ct', 'eigen', 'keins']).optional(),
+      // Nur Adressen des ChurchTools-Bilddiensts – der Wert landet in einem style-/src-Attribut.
+      logoUrl: z
+        .string()
+        .max(300)
+        .regex(/^https:\/\/[^\s"'()<>]+$/)
+        .nullable()
+        .optional(),
+      logoOrt: z.enum(['oben', 'links']).optional(),
+      hintergrund: z.enum(['farbe', 'muster', 'bild']).optional(),
+      muster: z.enum(['punkte', 'konfetti', 'sterne', 'wellen', 'raster']).optional(),
+      musterfarbe: hexOderNull.optional(),
+      seitenfarbe: hexOderNull.optional(),
+      kartenfarbe: hexOderNull.optional(),
+      schriftfarbe: hexOderNull.optional(),
+      kopfSchrift: schrift.optional(),
+      textSchrift: schrift.optional(),
+      gross: z.boolean().optional(),
+      ecken: z.enum(['eckig', 'rund', 'sehrrund']).optional(),
+      schatten: z.boolean().optional(),
+      rahmen: z.boolean().optional(),
+      bunt: z.boolean().optional(),
+      knopfVoll: z.boolean().optional(),
+      breite: z.enum(['schmal', 'normal', 'breit']).optional(),
+    })
+    .transform((g): Gestaltung => mitVorgaben(g)),
   ctFelder: z.record(z.string(), z.number().int().positive()),
   wer: z.enum(['familie', 'einzeln', 'kinder']),
   plaetze: z.object({
@@ -544,8 +636,23 @@ function ausBase64url(code: string): Uint8Array {
  * eine volle Freizeit mit 10 Fragen braucht ungepackt 5.532).
  */
 export function einstellungenPacken(e: OeffentlicheEinstellungen): string {
-  return base64url(
-    deflateSync(strToU8(JSON.stringify(einstellungenSchema.parse(e))), { level: 9 }),
+  const geprueft = einstellungenSchema.parse(e);
+  const kurz = { ...geprueft, gestaltung: nurAbweichungen(geprueft.gestaltung) };
+  return base64url(deflateSync(strToU8(JSON.stringify(kurz)), { level: 9 }));
+}
+
+/**
+ * Von der Gestaltung nur, was vom Startpunkt abweicht (Entwurf v3: über zwanzig Angaben). Beim Lesen ergänzt
+ * `mitVorgaben` den Rest aus der Vorlage – derselbe Weg wie für ältere Einstellungen. Ohne das wuchs der Code
+ * auf über 1.000 Zeichen (gemessen) und brauchte für die Sicherung zwei Felder statt einem.
+ */
+function nurAbweichungen(g: Gestaltung): Partial<Gestaltung> {
+  const start = vorlageVon(g.vorlage).werte as Partial<Gestaltung>;
+  const pflicht = new Set<keyof Gestaltung>(['vorlage', 'farbe', 'feldstil', 'knoepfe', 'text']);
+  return Object.fromEntries(
+    Object.entries(g).filter(
+      ([k, v]) => pflicht.has(k as keyof Gestaltung) || start[k as keyof Gestaltung] !== v,
+    ),
   );
 }
 

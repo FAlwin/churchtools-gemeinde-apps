@@ -122,18 +122,41 @@ mitarbeiten (z. B. über den Status oder global über die Gruppen).
     dem gewählten Feld). Empfohlene Bausteine (Geburtsdatum, Telefon, Anschrift …) gibt es je einmal; ist
     einer schon im Formular, ist seine Kachel grau.
   - **Bearbeiten:** ein Feld anklicken – Frage, Hilfetext, Antworten und „Pflicht“ stehen direkt im Feld.
-    Verschieben am Griff links oder mit den Pfeilen, kopieren und entfernen oben rechts am Feld.
-  - **Kopf:** Name und Begrüßungstext direkt anklicken; „Titelbild ändern“ steht im Bild. Das Titelbild ist
-    das Gruppenbild in ChurchTools und öffentlich sichtbar.
-  - **Design:** Vorlage, Farbe, Feldstil, Knöpfe, Gemeindename – man sieht es sofort im Formular. Oben
+    Am gewählten Feld stehen unten Pfeile, Kopieren und Entfernen; am Computer lässt sich jedes Feld auch
+    ziehen. **Am Handy wird nicht gezogen** – Feld antippen und mit den Pfeilen verschieben; ein neuer Baustein
+    landet unter dem gewählten Feld.
+  - **Kopf:** Name und Begrüßungstext direkt anklicken; „Titelbild ändern“ (und entfernen) steht im Bild. Das
+    Titelbild ist das Gruppenbild in ChurchTools und öffentlich sichtbar.
+  - **Design:** Startpunkt, Farben, Schrift, Logo, Feldstil, Knöpfe … – man sieht es sofort im Formular. Oben
     „Computer/Handy“ und „Vorschau“ (zum Ausprobieren, ohne Bearbeiten).
+  - **Woher kommt was?** Ein kleines ⓘ steht dort, wo etwas Pflicht ist oder aus einer Einstellung kommt
+    (Name, E-Mail, Name jeder Person, Geburtsdatum, Datenschutz, „Wer nimmt teil?“, „Auswahl und Extras“);
+    antippen zeigt den Grund. **„Wer meldet sich an?“** und „Geburtsdatum abfragen“ lassen sich oben in der
+    Leiste „Bausteine“ umstellen – dieselbe Einstellung wie im Reiter Veranstaltung.
   - **Gespeichert wird von selbst**; oben steht, ob gerade gespeichert wird, und bei einem Fehler „Nochmal“.
     Nach jeder Änderung bietet die Leiste oben „Rückgängig“ an (nicht beim Titelbild).
   - Jedes Feld außer Name, E-Mail und Geburtsdatum wird in ChurchTools eine **Spalte der Mitgliederliste**
     (Sicherheitsstufe 3 – das Team sieht die Antworten). Hat schon jemand geantwortet, wird ein Feld oder
     eine Antwort beim Entfernen nur **ausgeblendet**; die Antworten bleiben, und unter „Ausgeblendet“ lässt
     sich das Feld zurückholen. Überschrift, Hinweistext und Trennlinie sind nur Text, ohne Spalte.
-  - Ziehen geht mit der Maus; auf dem Handy Bausteine antippen und mit den Pfeilen verschieben.
+  - Ziehen geht mit der Maus (es öffnet sich eine Lücke, wo der Baustein landet); auf dem Handy Bausteine
+    antippen und mit den Pfeilen verschieben. Alles lässt sich verschieben – nur Preisbereich und Datenschutz
+    stehen immer direkt vor „Verbindlich anmelden“.
+  - **Fragetyp ändern** (unten im gewählten Feld) geht nur, solange niemand geantwortet hat: ChurchTools kann
+    den Typ einer Spalte nicht ändern, die Erweiterung legt dafür eine neue an.
+  - **Design:** Eine Vorlage (Klassisch, Foto, Einladung, Bunt, Zweigeteilt, Groß und deutlich) ist nur der
+    Startpunkt – sie füllt alle Werte. Danach lässt sich alles einzeln ändern: Aufbau, Kopf, Logo, Hintergrund
+    (Farbe, Muster, Titelbild), Farben, Schriften, Abschnitte, Eingabefelder, Knopf, Breite. Ein anderer
+    Startpunkt setzt alles wieder auf dessen Werte (Logo, Begrüßung und Breite bleiben). Schriften kommen nur
+    vom Gerät selbst – nichts wird von Google geladen. Das Titelbild ändert man direkt im Bild.
+  - **Logo:** das Gemeindelogo aus ChurchTools (Einstellungen → Allgemein); die Erweiterung übernimmt es beim
+    Öffnen des Baukastens. Ist dort keins hinterlegt, gibt es keins. **Oder ein eigenes:** „Eigenes“ zeigt die
+    schon hochgeladenen Logos zur Auswahl, dazu „Neues hochladen“. Weil ChurchTools je Gruppe nur ein Bild kennt
+    (das Titelbild), liegt jedes eigene Logo als Bild einer **archivierten Hilfsgruppe** „Logo: …“ unter dem
+    Team (Gruppenart „Anmeldung“, Beschreibung „Logo für die Anmeldungen. Bitte nicht löschen …“). In der
+    Erweiterung tauchen diese Gruppen nicht als Veranstaltung auf. **Wird so eine Gruppe in ChurchTools
+    gelöscht, fehlt das Logo in jedem Formular, das es zeigt.** Entfernen geht in der Leiste nur für
+    Gruppen-Admins, mit Warnung; von selbst wird nichts gelöscht (Kopien nutzen dasselbe Logo).
 - **Wo die Einstellungen stehen:** in der Beschreibung der Gruppe, unsichtbar unter dem Satz „Diese
   Anmeldung wird mit der Erweiterung **Anmeldungen** verwaltet.“ Wer den Text in ChurchTools ändert,
   schadet nicht: Die Erweiterung stellt die Einstellungen aus ihrer Sicherung wieder her (in den

@@ -94,6 +94,26 @@
  * erkennt. Für einen Rahmen um ein Feld (Lupe + Eingabe) `$innen: true`: Dann färbt der Fokus des
  * inneren Felds den Rahmen.
  */
+/// **Datums- und Zeitfelder am iPhone** – Safari gibt ihnen eine eigene Mindestbreite und mittigen Text: Das
+/// Geburtsdatum ragte im Anmeldeformular rechts über die anderen Felder hinaus (Alwin, 14.10.2026, iPhone).
+/// Auf das Eingabefeld selbst anwenden; wirkt nur bei Datum und Uhrzeit.
+@mixin datumsfeld {
+  &[type='date'],
+  &[type='time'],
+  &[type='datetime-local'] {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    text-align: left;
+  }
+
+  &::-webkit-date-and-time-value {
+    text-align: left;
+  }
+}
+
 @mixin eingabefeld($innen: false) {
   background: var(--surface2);
   border: 1px solid var(--border);

@@ -5,7 +5,7 @@
  * Feld der Einstellungen an EINER Stelle einen Wert bekommt.
  */
 import { STANDARD_BEZAHLUNG } from './bezahlung';
-import { VORLAGEN_GESTALTUNG } from './gestaltung';
+import { mitVorgaben, vorlageVon } from './gestaltung';
 import { standardFormular, type Gestaltung, type OeffentlicheEinstellungen } from './formular';
 
 export type Vorlage = 'einfach' | 'kinder' | 'freizeit';
@@ -35,17 +35,16 @@ const GESTALTUNG: Record<Vorlage, Gestaltung['vorlage']> = {
   freizeit: 'foto',
 };
 
-/** Die Gestaltung einer neuen Veranstaltung: die Vorgaben der passenden Formular-Vorlage. */
+/** Die Gestaltung einer neuen Veranstaltung: die Werte des passenden Startpunkts (`mitVorgaben`). */
 function startGestaltung(vorlage: Vorlage): Gestaltung {
-  const v = VORLAGEN_GESTALTUNG.find((x) => x.id === GESTALTUNG[vorlage])!;
-  return {
+  const v = vorlageVon(GESTALTUNG[vorlage]);
+  return mitVorgaben({
     vorlage: v.id,
-    farbe: v.farbe,
-    feldstil: v.feldstil,
-    knoepfe: v.knoepfe,
+    farbe: v.werte.farbe,
+    feldstil: v.werte.feldstil,
+    knoepfe: v.werte.knoepfe,
     text: '',
-    gemeindename: true,
-  };
+  });
 }
 
 /** Die Startwerte einer neuen Veranstaltung: noch ohne Termin, kostenlos, ohne Konto, Löschfrist 3 Monate. */

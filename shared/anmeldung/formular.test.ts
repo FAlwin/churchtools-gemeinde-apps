@@ -22,12 +22,15 @@ import {
   nurText,
   pruefeAntworten,
   pruefeFormular,
+  mitWer,
   setzeGeburtsdatum,
   standardFormular,
   type Feld,
   type OeffentlicheEinstellungen,
 } from './formular';
 import { STANDARD_BEZAHLUNG } from './bezahlung';
+import { mitVorgaben } from './gestaltung';
+import { neueEinstellungen } from './vorlagen';
 
 /** Formular-Modell (#474). Die ChurchTools-Regeln dahinter sind in A0 an der Test-Instanz gemessen. */
 
@@ -68,6 +71,14 @@ describe('standardFormular und Geburtsdatum', () => {
     const an = setzeGeburtsdatum(standardFormular(), true);
     expect(an.person.find((x) => x.id === 'birth')?.zustand).toBe('pflicht');
     expect(geburtsdatumAn(setzeGeburtsdatum(an, false))).toBe(false);
+  });
+
+  it('mitWer: setzt „Wer meldet sich an?“ und das Geburtsdatum, sonst nichts', () => {
+    const e = neueEinstellungen('einfach');
+    const neu = mitWer(e, 'kinder', true);
+    expect(neu.wer).toBe('kinder');
+    expect(geburtsdatumAn(neu.formular)).toBe(true);
+    expect({ ...neu, wer: e.wer, formular: e.formular }).toEqual(e);
   });
 });
 
@@ -249,14 +260,13 @@ describe('Einstellungen in der Gruppen-Beschreibung', () => {
         extras: [{ bezeichnung: 'Bettwäsche leihen', preisCent: 800, gilt: 'person' }],
       },
       formular: standardFormular({ geburtsdatum: true }),
-      gestaltung: {
+      gestaltung: mitVorgaben({
         vorlage: 'karte',
         farbe: '#c9a54a',
         feldstil: 'linie',
         knoepfe: 'eckig',
         text: 'Gemeinsam ins neue Jahr.',
-        gemeindename: true,
-      },
+      }),
       ctFelder: { tel: 12, betrag: 33 },
       wer: 'familie',
       plaetze: { zeigen: 'knapp', knappUnter: 10 },

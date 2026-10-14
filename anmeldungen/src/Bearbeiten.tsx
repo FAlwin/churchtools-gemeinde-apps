@@ -3,7 +3,7 @@ import { Sheet } from '@ui/fenster/Sheet';
 import { Segment } from '@ui/bedienung/Segment';
 import { ctBasis } from '@ui/ct/basis';
 import { tagAusIso } from '@shared/ct/zeit';
-import { setzeGeburtsdatum, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
+import { mitWer, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import {
   NACHNAME,
   ZWECK_MAX,
@@ -31,7 +31,7 @@ import {
   type AnmeldeEinstellungen,
   type Kalender,
 } from './einrichten';
-import { WER_TEXT, datumText } from './anzeige';
+import { WER_TEXT, datumText, geburtsdatumNoetigText } from './anzeige';
 import { fehlerMeldung } from './zustand';
 import { useSpeichern } from './useSpeichern';
 import f from './Formular.module.scss';
@@ -491,21 +491,21 @@ export function AnmeldungFenster({
 /**
  * **Wer meldet sich an?** – und ob das Geburtsdatum abgefragt wird (A4: Preise nach Alter und der
  * Geschwister-Rabatt brauchen es; im Entwurf steht der Schalter hier). Geschaltet wird über
- * `setzeGeburtsdatum`, die eine Stelle, die auch der Formular-Baukasten (A5) nutzt.
+ * `mitWer`, die eine Stelle, die auch die Leiste im Formular-Baukasten nutzt.
  */
 export function WerFenster({
   id,
   wer,
   geburtsdatum,
-  brauchtAlter,
+  wozu,
   onClose,
   onGespeichert,
 }: {
   id: number;
   wer: OeffentlicheEinstellungen['wer'];
   geburtsdatum: boolean;
-  /** Gibt es Preise nach Alter oder einen Geschwister-Rabatt? */
-  brauchtAlter: boolean;
+  /** Wozu die Preise das Geburtsdatum brauchen (`wozuGeburtsdatum`). */
+  wozu: 'alter' | 'geschwister' | null;
   onClose: () => void;
   onGespeichert: () => void;
 }) {
@@ -540,26 +540,13 @@ export function WerFenster({
           ]}
         />
       </div>
-      {brauchtAlter && !geburt && (
-        <p className={f.fehler}>
-          Es gibt Preise nach Alter oder einen Geschwister-Rabatt. Ohne Geburtsdatum kann das
-          Formular sie nicht rechnen – jede Person zahlt dann den Grundpreis.
-        </p>
-      )}
+      {wozu && !geburt && <p className={f.fehler}>{geburtsdatumNoetigText(wozu)}</p>}
       <Fehler text={fehler} />
       <button
         type="button"
         className={f.knopf}
         disabled={arbeitet}
-        onClick={() =>
-          speichern(() =>
-            aendereEinstellungen(id, (e) => ({
-              ...e,
-              wer: wahl,
-              formular: setzeGeburtsdatum(e.formular, geburt),
-            })),
-          )
-        }
+        onClick={() => speichern(() => aendereEinstellungen(id, (e) => mitWer(e, wahl, geburt)))}
       >
         {arbeitet ? 'Wird gespeichert …' : 'Speichern'}
       </button>

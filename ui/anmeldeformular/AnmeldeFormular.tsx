@@ -9,8 +9,10 @@ import {
   type Feld,
   type OeffentlicheEinstellungen,
 } from '@shared/anmeldung/formular';
+import { amEnde } from '@shared/anmeldung/baukasten';
 import { berechnePreis, euroText, kannEtwasKosten, preisKurz } from '@shared/anmeldung/preis';
-import { leereAntworten, textAufFarbe } from './daten';
+import { SCHRIFT, leereAntworten, textAufFarbe } from './daten';
+import { titelbildGross } from '@shared/anmeldung/gestaltung';
 import s from './AnmeldeFormular.module.scss';
 
 /**
@@ -45,6 +47,31 @@ export interface BaukastenHaken {
   titel?: ReactNode;
   einleitung?: ReactNode;
   bild?: ReactNode;
+  /**
+   * Das kleine ⓘ „Woher kommt das?“ (Alwin, 14.10.2026) – an Feldern (`f.id`) hinter der Beschriftung, an den
+   * Bereichen „teil“ und „preis“ hinter der Überschrift. `null`, wo es nichts zu erklären gibt.
+   */
+  hinweis?: (wo: string) => ReactNode;
+  /** Der aufgeklappte Hinweis zu einem Bereich (bei Feldern zeigt ihn die Hülle). */
+  hinweisText?: (wo: string) => ReactNode;
+}
+
+/**
+ * Überschrift mit ⓘ dahinter – das ⓘ hängt am letzten Wort, sonst rutscht es am Handy allein in eine neue Zeile
+ * (Durchklicken 14.10.2026).
+ */
+function mitHinweis(text: string, knopf: ReactNode): ReactNode {
+  if (!knopf) return text;
+  const i = text.lastIndexOf(' ');
+  return (
+    <>
+      {text.slice(0, i + 1)}
+      <span className={s.zusammen}>
+        {text.slice(i + 1)}
+        {knopf}
+      </span>
+    </>
+  );
 }
 
 const WOCHENTAG = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
@@ -88,6 +115,7 @@ export function FeldEingabe({
   fehler = [],
   gesperrt = false,
   loeschtag = null,
+  zusatz = null,
 }: {
   feld: Feld;
   wert: Antwort;
@@ -97,6 +125,8 @@ export function FeldEingabe({
   fehler?: string[];
   gesperrt?: boolean;
   loeschtag?: string | null;
+  /** Steht hinter der (ersten) Beschriftung – im Baukasten das ⓘ. */
+  zusatz?: ReactNode;
 }) {
   const f = feld;
   const hatFehler = (unter = '') => fehler.includes(unter ? `${pfad}.${unter}` : pfad);
@@ -133,6 +163,7 @@ export function FeldEingabe({
               <span className={s.req} aria-hidden="true">
                 *
               </span>
+              {teil === 'vor' && zusatz}
             </label>
             <input
               id={`${id}-${teil}`}
@@ -176,6 +207,7 @@ export function FeldEingabe({
                 *
               </span>
             )}
+            {zusatz}
           </span>
         </label>
         {hilfe}
@@ -273,6 +305,7 @@ export function FeldEingabe({
       <label id={`${id}-l`} htmlFor={id}>
         {f.frage}
         <Pflicht f={f} />
+        {zusatz}
       </label>
       {eingabe}
       {!(f.typ === 'text' && f.hilfe) && hilfe}
@@ -285,32 +318,26 @@ export function FeldEingabe({
   );
 }
 
-/**
- * **Der Stil-Rahmen** – Vorlage, Farbe, Feldstil, Knöpfe – ohne Kopf und Abschnitte. Für einzelne Felder
- * außerhalb des Formulars (Baukasten, Feld-Fenster), damit sie genauso aussehen wie für Gäste.
- */
-export function FeldRahmen({
-  gestaltung: g,
-  children,
-}: {
-  gestaltung: OeffentlicheEinstellungen['gestaltung'];
-  children: React.ReactNode;
-}) {
+const SYMBOLE = {
+  leute:
+    'M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3 20c0-3 3-5 6-5s6 2 6 5M16 11a3 3 0 1 0 0-6M21 20c0-2.5-1.5-4.2-4-4.8',
+  uhr: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 7v5l3 2',
+  preis: 'M20 12v8H4v-8M2 7h20v5H2zM12 22V7M12 7c-2-4-6-4-6-1s6 1 6 1Zm0 0c2-4 6-4 6-1s-6 1-6 1Z',
+} as const;
+
+function Symbol({ name }: { name: keyof typeof SYMBOLE }) {
   return (
-    <div
-      className={[
-        s.pv,
-        s.rahmen,
-        s[`t-${g.vorlage}`],
-        s[`fs-${g.feldstil}`],
-        s[`bt-${g.knoepfe}`],
-      ].join(' ')}
-      style={
-        { '--p-accent': g.farbe, '--p-on-accent': textAufFarbe(g.farbe) } as React.CSSProperties
-      }
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
     >
-      {children}
-    </div>
+      <path d={SYMBOLE[name]} />
+    </svg>
   );
 }
 
@@ -340,12 +367,10 @@ export function AnmeldeFormular({
   const [fertig, setFertig] = useState(false);
 
   const sichtbar = (f: Feld) => f.zustand !== 'aus';
-  const kopf = e.formular.anmeldung.filter(
-    (f) => sichtbar(f) && f.id !== 'note' && f.typ !== 'price' && f.typ !== 'privacy',
-  );
-  const ende = e.formular.anmeldung.filter(
-    (f) => sichtbar(f) && (f.id === 'note' || f.typ === 'privacy'),
-  );
+  // In der gespeicherten Reihenfolge – im Baukasten lässt sich jedes Feld verschieben, auch Name, E-Mail und
+  // Bemerkungen. Nur der Datenschutz steht immer am Ende, direkt vor dem Absenden.
+  const kopf = e.formular.anmeldung.filter((f) => sichtbar(f) && !amEnde(f));
+  const ende = e.formular.anmeldung.filter((f) => sichtbar(f) && f.typ === 'privacy');
   const preisFeld = e.formular.anmeldung.find((f) => f.typ === 'price' && sichtbar(f));
   const personFelder = e.formular.person.filter(sichtbar);
   const loeschtag = loeschTag(e);
@@ -383,18 +408,49 @@ export function AnmeldeFormular({
     frei !== null &&
     (e.plaetze.zeigen === 'immer' || (e.plaetze.zeigen === 'knapp' && frei < e.plaetze.knappUnter));
 
+  // Jede Einstellung eine Klasse bzw. eine Variable (Entwurf v3) – keine starren Vorlagen mehr.
+  const mitBild = !!ansicht.bildUrl;
+  const logoOben = g.logo !== 'keins' && !!g.logoUrl && g.logoOrt === 'oben';
+  const bildAlsSeite = mitBild && (g.hintergrund === 'bild' || g.aufbau === 'seite');
   const klassen = [
     s.pv,
-    s[`t-${g.vorlage}`],
+    s[`a-${g.aufbau}`],
+    s[`kh-${g.kopfHoehe}`],
+    // Steht das Logo oben in der Mitte, steht auch der Titel mittig (Alwin, 14.10.2026) – sonst wirkt es schief.
+    g.kopfAusrichtung === 'mitte' || logoOben ? s['kopf-mitte'] : '',
     s[`fs-${g.feldstil}`],
     s[`bt-${g.knoepfe}`],
-    ansicht.bildUrl ? s['has-img'] : '',
+    g.knopfVoll ? s['bt-voll'] : '',
+    s[`br-${g.breite}`] ?? '',
+    s[`ek-${g.ecken}`],
+    g.schatten ? s.schatten : '',
+    g.rahmen ? s.rahmen : '',
+    g.bunt ? s.bunt : '',
+    g.gross ? s.gross : '',
+    g.hintergrund === 'muster' ? s[`m-${g.muster}`] : '',
+    bildAlsSeite ? s['bild-seite'] : mitBild ? s['bild-kopf'] : '',
   ].join(' ');
   const stil = {
     '--p-accent': g.farbe,
     '--p-on-accent': textAufFarbe(g.farbe),
-    ...(ansicht.bildUrl ? { '--user-img': `url("${ansicht.bildUrl}")` } : {}),
+    '--p-page': g.seitenfarbe,
+    // Text direkt auf der Seite (Hinweise, Begrüßung) muss auf der Seitenfarbe lesbar sein.
+    '--p-auf-seite': bildAlsSeite ? '#ffffff' : textAufFarbe(g.seitenfarbe),
+    '--p-card': g.kartenfarbe,
+    '--p-text': g.schriftfarbe,
+    '--p-muster': g.musterfarbe,
+    '--p-head': SCHRIFT[g.kopfSchrift],
+    '--p-body': SCHRIFT[g.textSchrift],
+    ...(mitBild ? { '--user-img': `url("${titelbildGross(ansicht.bildUrl!)}")` } : {}),
   } as React.CSSProperties;
+  const logo =
+    g.logo !== 'keins' && g.logoUrl ? (
+      <img
+        className={`${s.logo} ${g.logoOrt === 'oben' ? s['logo-oben'] : ''}`}
+        src={titelbildGross(g.logoUrl, 240)}
+        alt=""
+      />
+    ) : null;
 
   const huelle = (f: Feld, bereich: 'anmeldung' | 'person', inhalt: ReactNode) =>
     baukasten ? <Fragment key={f.id}>{baukasten.feld(f, bereich, inhalt)}</Fragment> : inhalt;
@@ -414,11 +470,14 @@ export function AnmeldeFormular({
       <div className={s['pv-shell']}>
         <aside className={s.side}>
           <header className={s.hero}>
-            <div className={s['hero-in']}>
-              {g.gemeindename && ansicht.gemeinde && <p className={s.org}>{ansicht.gemeinde}</p>}
-              <h1>{baukasten?.titel ?? ansicht.name}</h1>
-              <p className={s.sub}>{unter}</p>
-              <div className={s.orn} aria-hidden="true" />
+            <div
+              className={`${s['hero-in']} ${g.logoOrt === 'links' && logo ? s['mit-logo-links'] : ''}`}
+            >
+              {logo}
+              <div>
+                <h1>{baukasten?.titel ?? ansicht.name}</h1>
+                <p className={s.sub}>{unter}</p>
+              </div>
             </div>
             {baukasten?.bild}
           </header>
@@ -426,15 +485,18 @@ export function AnmeldeFormular({
             <div className={s.facts}>
               {freiZeigen && (
                 <span className={`${s.fact} ${s.hot}`}>
+                  <Symbol name="leute" />
                   noch <b>{frei === 1 ? '1 Platz' : `${frei} Plätze`}</b> frei
                 </span>
               )}
               {ansicht.anmeldeschluss && (
                 <span className={s.fact}>
+                  <Symbol name="uhr" />
                   Anmeldeschluss <b>{datumText(ansicht.anmeldeschluss)}</b>
                 </span>
               )}
               <span className={s.fact}>
+                <Symbol name="preis" />
                 <b>{preisKurz(e.preis)}</b>
               </span>
             </div>
@@ -469,7 +531,13 @@ export function AnmeldeFormular({
               }}
             >
               <section className={s.sec}>
-                <h2>{kinder ? 'Kontakt der Eltern' : 'Deine Kontaktdaten'}</h2>
+                <h2>
+                  {mitHinweis(
+                    kinder ? 'Kontakt der Eltern' : 'Deine Kontaktdaten',
+                    baukasten?.hinweis?.('kontakt'),
+                  )}
+                </h2>
+                {baukasten?.hinweisText?.('kontakt')}
                 {kopf.map((f) =>
                   huelle(
                     f,
@@ -481,23 +549,29 @@ export function AnmeldeFormular({
                       wert={antworten.anmeldung[f.id]}
                       onWert={(w) => setAnmeldung(f.id, w)}
                       fehler={fehler}
+                      zusatz={baukasten?.hinweis?.(f.id)}
                     />,
                   ),
                 )}
               </section>
               <section className={s.sec}>
                 <h2>
-                  {kinder
-                    ? 'Welche Kinder meldest du an?'
-                    : e.wer === 'einzeln'
-                      ? 'Wer nimmt teil?'
-                      : 'Wer nimmt teil?'}
+                  {mitHinweis(
+                    kinder ? 'Welche Kinder meldest du an?' : 'Wer nimmt teil?',
+                    baukasten?.hinweis?.('teil'),
+                  )}
                 </h2>
+                {baukasten?.hinweisText?.('teil')}
                 {personen.map((p, i) => (
                   <div key={i} className={s.person}>
                     <div className={s['person-top']}>
                       <strong>
                         {kinder ? 'Kind' : 'Person'} {i + 1}
+                        {baukasten && e.wer !== 'einzeln' && (
+                          <small className={s.wiederholt}>
+                            wiederholt sich für {kinder ? 'jedes Kind' : 'jede Person'}
+                          </small>
+                        )}
                       </strong>
                       {!baukasten && antworten.personen.length > 1 && (
                         <button
@@ -525,6 +599,7 @@ export function AnmeldeFormular({
                           wert={p[f.id]}
                           onWert={(w) => setPerson(i, f.id, w)}
                           fehler={fehler}
+                          zusatz={baukasten?.hinweis?.(f.id)}
                         />,
                       ),
                     )}
@@ -547,7 +622,8 @@ export function AnmeldeFormular({
               </section>
               {preisFeld && (e.preis.grundpreis.art === 'auswahl' || e.preis.extras.length > 0) && (
                 <section className={s.sec}>
-                  <h2>{preisFeld.frage}</h2>
+                  <h2>{mitHinweis(preisFeld.frage, baukasten?.hinweis?.('preis'))}</h2>
+                  {baukasten?.hinweisText?.('preis')}
                   {e.preis.grundpreis.art === 'auswahl' && (
                     <div className={s.pf}>
                       <label htmlFor="af-option">
@@ -605,6 +681,7 @@ export function AnmeldeFormular({
                       wert={antworten.anmeldung[f.id]}
                       onWert={(w) => setAnmeldung(f.id, w)}
                       fehler={fehler}
+                      zusatz={baukasten?.hinweis?.(f.id)}
                       loeschtag={loeschtag}
                     />,
                   ),

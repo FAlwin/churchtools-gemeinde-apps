@@ -78,13 +78,28 @@ export interface KaputteVeranstaltung {
 }
 
 /**
+ * **Kennung einer Logo-Gruppe** (eigenes Logo, Alwin 14.10.2026). ChurchTools kennt je Gruppe nur EIN Bild, das
+ * Titelbild belegt es schon – ein eigenes Logo liegt deshalb als Bild einer archivierten Hilfsgruppe derselben
+ * Art unter dem Team (gemessen: das Bild ist ohne Login abrufbar, auch archiviert; wird die Gruppe gelöscht, ist
+ * es weg). Die Beschreibung beginnt mit diesem Satz – daran wird sie erkannt und aus den Veranstaltungen
+ * herausgehalten.
+ */
+export const LOGO_KENNUNG = 'Logo für die Anmeldungen.';
+
+export function istLogoGruppe(beschreibung: string | null | undefined): boolean {
+  return !!beschreibung && beschreibung.startsWith(LOGO_KENNUNG);
+}
+
+/**
  * Ist die Untergruppe überhaupt eine Veranstaltung der Anmeldungen? An den Einstellungen in der Beschreibung –
- * oder, mit `artId`, an der Gruppenart „Anmeldung“ (dann auch, wenn die Einstellungen fehlen).
+ * oder, mit `artId`, an der Gruppenart „Anmeldung“ (dann auch, wenn die Einstellungen fehlen). Logo-Gruppen
+ * haben dieselbe Art, sind aber keine Veranstaltung.
  */
 export function istVeranstaltung(
   roh: Pick<VeranstaltungRoh, 'beschreibung' | 'typId'>,
   artId?: number | null,
 ): boolean {
+  if (istLogoGruppe(roh.beschreibung)) return false;
   if (traegtEinstellungen(roh.beschreibung)) return true;
   return artId !== undefined && artId !== null && roh.typId === artId;
 }

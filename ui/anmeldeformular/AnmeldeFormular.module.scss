@@ -1,12 +1,15 @@
-// **Das öffentliche Anmeldeformular – Aussehen** (A5): aus dem klickbaren Entwurf vom 09.10.2026 übernommen
-// (`anmeldungen-start.html`, Abschnitt „Öffentliches Formular“). Jede Vorlage bringt Layout, Schrift und
-// Farben mit – fest, unabhängig vom Hell/Dunkel des Betrachters.
+// **Das öffentliche Anmeldeformular – Aussehen** (A5). Seit dem Entwurf v3 (13.10.2026) gibt es keine starren
+// Vorlagen mehr: Jede Einstellung der Gestaltung ist eine Klasse oder Variable (Aufbau `a-*`, Kopfhöhe `kh-*`,
+// Muster `m-*`, Ecken `ek-*` …), die Vorlagen füllen nur Startwerte (`gestaltung.ts`). Farben fest, unabhängig
+// vom Hell/Dunkel des Betrachters.
 //
 // **Schriften:** Der Entwurf lud Google-Schriften. Das geschieht hier bewusst NICHT – das Laden von Google-
 // Servern überträgt die IP-Adresse der Gäste (in Deutschland datenschutzrechtlich heikel). Stattdessen
 // Systemschriften mit ähnlichem Charakter; ist die Wunschschrift zufällig installiert, wird sie genommen.
 //
 // Nur Klassen am Anfang jeder Regel: Der Erweiterungs-Build lehnt Regeln ab, die mit einem Element beginnen.
+
+@use '../design/mixins' as m;
 
 .pv {
   container: pv / inline-size;
@@ -47,13 +50,6 @@
 .pv .hero-in {
   position: relative;
   z-index: 1;
-}
-.pv .org {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
 }
 .pv .hero h1 {
   font-family: var(--p-head);
@@ -145,6 +141,14 @@
   width: 100%;
   padding: 0.6em 0.75em;
 }
+.pv .pf input {
+  @include m.datumsfeld;
+}
+// Genau so hoch wie die anderen Felder: Ohne eigenes Aussehen fällt ein leeres Datumsfeld am iPhone zusammen, in
+// Chrome war es durch das Kalender-Zeichen 2 px höher.
+.pv .pf input[type='date'] {
+  height: calc(1lh + 1.2em + 2px);
+}
 .pv .pf input::placeholder,
 .pv .pf textarea::placeholder {
   color: var(--p-muted);
@@ -176,12 +180,23 @@
 .pv .check.bad {
   color: var(--p-err);
 }
+// Grau hinterlegt statt gestrichelt (Entwurf v6, 14.10.2026: „mich verwirren die vielen gestrichelten Linien“).
 .pv .person {
-  border: 1px dashed var(--p-line-strong);
+  background: var(--p-fill);
+  border: 1px solid var(--p-line);
   border-radius: calc(var(--p-r) * 0.7);
   padding: 12px;
   display: grid;
   gap: 10px;
+}
+.pv .wiederholt {
+  margin-left: 8px;
+  font-size: 0.8em;
+  font-weight: 400;
+  color: var(--p-muted);
+}
+.pv .zusammen {
+  white-space: nowrap;
 }
 .pv .person-top {
   display: flex;
@@ -202,8 +217,9 @@
   font: inherit;
   font-weight: 700;
   color: var(--p-accent-text);
-  background: transparent;
-  border: 2px dashed color-mix(in srgb, var(--p-accent-text) 50%, transparent);
+  background: color-mix(in srgb, var(--p-accent) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--p-accent-text) 35%, transparent);
+  border-radius: calc(var(--p-r) * 0.7);
   padding: 0.7em;
   cursor: pointer;
 }
@@ -284,520 +300,13 @@
 .bt-eckig .addbtn {
   border-radius: 4px;
 }
+.bt-leicht .go,
+.bt-leicht .addbtn {
+  border-radius: 10px;
+}
 .bt-rund .go,
 .bt-rund .addbtn {
   border-radius: 999px;
-}
-
-/* ── 1 Klassisch: Kopfband + weiße Karten ── */
-.t-klassisch {
-  --p-head: Rockwell, 'Roboto Slab', 'Courier New', Georgia, serif;
-  --p-body: var(--ui);
-}
-.t-klassisch .hero {
-  padding: 30px 20px 34px;
-  background-image:
-    radial-gradient(circle at 88% 18%, rgba(255, 255, 255, 0.13) 0 17%, transparent 17.5%),
-    radial-gradient(
-      circle at 88% 18%,
-      transparent 0 26%,
-      rgba(255, 255, 255, 0.09) 26.3% 26.8%,
-      transparent 27.2%
-    ),
-    linear-gradient(135deg, var(--p-accent), color-mix(in srgb, var(--p-accent) 50%, #000));
-}
-.t-klassisch .hero h1 {
-  font-size: 30px;
-}
-.t-klassisch .org {
-  opacity: 0.85;
-}
-.t-klassisch .info,
-.t-klassisch .main {
-  width: 100%;
-  max-width: 680px;
-  margin-inline: auto;
-  padding-inline: 18px;
-}
-.t-klassisch .info {
-  padding-block: 18px 16px;
-}
-@container pv (min-width: 600px) {
-  .t-klassisch .hero {
-    padding: 48px 40px 52px;
-  }
-  .t-klassisch .hero h1 {
-    font-size: 40px;
-  }
-  .t-klassisch .hero-in {
-    max-width: 680px;
-    margin-inline: auto;
-  }
-}
-
-/* ── 2 Foto: Landschaft über die ganze Seite, Formular in dunklem Glasfeld ── */
-.t-foto {
-  --p-head: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
-  --p-body: var(--ui);
-  --p-text: #f4f7f2;
-  --p-muted: #c6d2c2;
-  --p-line: rgba(255, 255, 255, 0.22);
-  --p-line-strong: rgba(255, 255, 255, 0.55);
-  --p-card: transparent;
-  --p-field: rgba(255, 255, 255, 0.08);
-  --p-fill: rgba(255, 255, 255, 0.12);
-  --p-err: #ffb4a8;
-  --p-ink: #fff;
-  --p-accent-text: color-mix(in srgb, var(--p-accent) 45%, #fff);
-  background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 900' preserveAspectRatio='xMidYMid slice'%3E%3Cdefs%3E%3ClinearGradient id='s' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23365a8c'/%3E%3Cstop offset='.62' stop-color='%23f0c08a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='1200' height='900' fill='url(%23s)'/%3E%3Ccircle cx='880' cy='470' r='70' fill='%23ffe3a8'/%3E%3Cpath d='M0 520 L170 380 L300 470 L470 300 L640 460 L790 360 L960 480 L1110 390 L1200 440 V900 H0Z' fill='%237486a6'/%3E%3Cpath d='M0 590 L140 500 L260 560 L420 450 L560 560 L720 480 L880 580 L1040 500 L1200 560 V900 H0Z' fill='%23465f6c'/%3E%3Crect y='600' width='1200' height='300' fill='%232d4a56'/%3E%3Cpath d='M820 610 h120 M800 640 h160 M840 670 h80' stroke='%23ffe3a8' stroke-width='5' opacity='.5'/%3E%3Cpath d='M0 720 Q180 650 360 700 T720 690 T1200 700 V900 H0Z' fill='%231f3a2c'/%3E%3Cpath d='M60 700 l25 -90 l25 90Z M120 705 l30 -120 l30 120Z M1040 700 l28 -100 l28 100Z M1100 705 l22 -80 l22 80Z' fill='%23142a1f'/%3E%3C/svg%3E")
-      center / cover,
-    #2d4a56;
-}
-.t-foto .pv-shell {
-  width: calc(100% - 28px);
-  max-width: 620px;
-  margin: 28px auto;
-  padding: 22px 20px 4px;
-  background: rgba(10, 18, 15, 0.74);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 18px;
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-}
-.t-foto .hero h1 {
-  font-size: 32px;
-}
-.t-foto .org {
-  color: var(--p-accent-text);
-}
-.t-foto .info {
-  padding-block: 14px 18px;
-}
-.t-foto .fact {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-.t-foto .sec {
-  padding: 4px 0 16px;
-  border: 0;
-  border-bottom: 1px solid var(--p-line);
-  border-radius: 0;
-}
-.t-foto .formstack {
-  gap: 18px;
-}
-@container pv (min-width: 600px) {
-  .t-foto .pv-shell {
-    margin: 64px auto;
-    padding: 34px 36px 6px;
-  }
-  .t-foto .hero h1 {
-    font-size: 42px;
-  }
-}
-
-/* ── 3 Einladungskarte: cremefarbene Karte mit Goldrahmen auf Sternenhimmel ── */
-.t-karte {
-  --p-head: Didot, 'Bodoni 72', 'Playfair Display', Georgia, serif;
-  --p-body: var(--ui);
-  --p-text: #2a2418;
-  --p-muted: #6f6550;
-  --p-line: #e4dac2;
-  --p-line-strong: #b9a983;
-  --p-card: transparent;
-  --p-field: #fffdf6;
-  --p-fill: #f3ecd9;
-  --p-ink: #2a2418;
-  --p-accent-text: color-mix(in srgb, var(--p-accent) 75%, #000);
-  background:
-    radial-gradient(circle, rgba(246, 217, 138, 0.9) 0 1px, transparent 1.6px) 0 0 / 38px 38px,
-    radial-gradient(circle, rgba(255, 255, 255, 0.55) 0 1px, transparent 1.6px) 19px 23px / 53px
-      53px,
-    radial-gradient(ellipse at 50% 0%, #22346e, #0b1228 70%);
-}
-.t-karte .pv-shell {
-  width: calc(100% - 28px);
-  max-width: 600px;
-  margin: 26px auto;
-  padding: 30px 24px 6px;
-  background: #fbf7ec;
-  border: 1px solid var(--p-accent);
-  box-shadow:
-    inset 0 0 0 7px #fbf7ec,
-    inset 0 0 0 8px var(--p-accent),
-    0 20px 50px rgba(0, 0, 0, 0.45);
-}
-.t-karte .hero {
-  text-align: center;
-}
-.t-karte .org {
-  color: var(--p-accent-text);
-  letter-spacing: 0.3em;
-}
-.t-karte .hero h1 {
-  font-size: 34px;
-  font-style: italic;
-}
-.t-karte .sub {
-  font-weight: 400;
-  letter-spacing: 0.04em;
-}
-.t-karte .orn {
-  display: block;
-  position: relative;
-  height: 14px;
-  margin: 16px auto 0;
-  width: 70%;
-  background:
-    linear-gradient(var(--p-accent), var(--p-accent)) left center / 42% 1px no-repeat,
-    linear-gradient(var(--p-accent), var(--p-accent)) right center / 42% 1px no-repeat;
-}
-.t-karte .orn::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 9px;
-  height: 9px;
-  background: var(--p-accent);
-  transform: translate(-50%, -50%) rotate(45deg);
-}
-.t-karte .info {
-  text-align: center;
-  padding-block: 16px 18px;
-  justify-items: center;
-}
-.t-karte .facts {
-  justify-content: center;
-}
-.t-karte .fact {
-  background: transparent;
-  border-color: var(--p-line-strong);
-}
-.t-karte .sec {
-  padding: 0 0 16px;
-  border: 0;
-  border-bottom: 1px solid var(--p-line);
-  border-radius: 0;
-}
-.t-karte .sec h2 {
-  font-family: var(--p-body);
-  font-size: 0.8em;
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
-  color: var(--p-accent-text);
-}
-@container pv (min-width: 600px) {
-  .t-karte .pv-shell {
-    margin: 56px auto;
-    padding: 48px 52px 8px;
-  }
-  .t-karte .hero h1 {
-    font-size: 46px;
-  }
-}
-
-/* ── 4 Bunt: Konfetti, jeder Abschnitt ein Farbblock ── */
-.t-bunt {
-  --p-head: 'Arial Rounded MT Bold', 'Baloo 2', 'Trebuchet MS', sans-serif;
-  --p-body: var(--ui);
-  --p-text: #1d2b3a;
-  --p-muted: #4d5f73;
-  --p-line: rgba(29, 43, 58, 0.14);
-  --p-line-strong: rgba(29, 43, 58, 0.35);
-  --p-fill: #ffffff;
-  --p-field: #ffffff;
-  --p-r: 24px;
-  --p-ink: #13314a;
-  background:
-    radial-gradient(circle, #ffcf3f 0 3px, transparent 3.5px) 0 0 / 46px 46px,
-    radial-gradient(circle, #ff7aa8 0 3px, transparent 3.5px) 23px 15px / 52px 52px,
-    radial-gradient(circle, #5ccfa0 0 2.5px, transparent 3px) 10px 30px / 38px 38px,
-    radial-gradient(circle, #6aa8ff 0 3px, transparent 3.5px) 30px 6px / 60px 60px,
-    #f6fbff;
-}
-.t-bunt .hero {
-  margin: 14px 14px 0;
-  border-radius: 28px;
-  padding: 26px 20px 30px;
-  background-image:
-    radial-gradient(
-      circle at 86% 30%,
-      #ffd84d 0 30px,
-      rgba(255, 216, 77, 0.35) 31px 42px,
-      transparent 43px
-    ),
-    radial-gradient(ellipse 54px 20px at 16% 78%, #fff 96%, transparent),
-    radial-gradient(ellipse 36px 14px at 26% 70%, #fff 96%, transparent),
-    linear-gradient(#8fd3ff, #d9f1ff);
-}
-.t-bunt .org {
-  display: inline-block;
-  background: #ffcf3f;
-  color: #3b2a00;
-  padding: 3px 10px;
-  border-radius: 999px;
-  transform: rotate(-3deg);
-  letter-spacing: 0.06em;
-}
-.t-bunt .hero h1 {
-  font-size: 36px;
-  font-weight: 800;
-}
-.t-bunt .info,
-.t-bunt .main {
-  padding-inline: 14px;
-  max-width: 700px;
-  margin-inline: auto;
-  width: 100%;
-}
-.t-bunt .info {
-  padding-block: 16px;
-}
-.t-bunt .fact {
-  border: 0;
-  font-weight: 700;
-  color: #1d2b3a;
-}
-.t-bunt .fact:nth-child(1) {
-  background: #ffe58a;
-}
-.t-bunt .fact:nth-child(2) {
-  background: #c9f0dc;
-}
-.t-bunt .fact:nth-child(3) {
-  background: #ffd1e1;
-}
-.t-bunt .fact b {
-  color: inherit;
-}
-.t-bunt .sec {
-  border: 0;
-}
-.t-bunt .sec:nth-child(1) {
-  background: #fff4c7;
-}
-.t-bunt .sec:nth-child(2) {
-  background: #dff6ea;
-}
-.t-bunt .sec:nth-child(3) {
-  background: #e3efff;
-}
-.t-bunt .sec h2 {
-  font-size: 1.5em;
-}
-.t-bunt .person {
-  background: rgba(255, 255, 255, 0.6);
-  border: 2px dashed var(--p-line-strong);
-}
-@container pv (min-width: 600px) {
-  .t-bunt .hero {
-    margin: 22px auto 0;
-    max-width: 700px;
-    padding: 40px 36px 44px;
-  }
-  .t-bunt .hero h1 {
-    font-size: 46px;
-  }
-}
-
-/* ── 5 Zweigeteilt: Bild + Infos links, Formular rechts ── */
-.t-geteilt {
-  --p-head: Didot, 'DM Serif Display', Georgia, serif;
-  --p-body: var(--ui);
-  --p-page: #ffffff;
-  --p-text: #1b1d22;
-  --p-muted: #60646c;
-  --p-line: #e8e9ee;
-  --p-line-strong: #c7cad2;
-  --p-fill: #f1f3f6;
-  --p-field: #fff;
-  --p-r: 8px;
-}
-.t-geteilt .side {
-  color: #fff;
-  padding: 28px 22px;
-  background-image:
-    radial-gradient(
-      circle at 20% 88%,
-      color-mix(in srgb, var(--p-accent) 70%, #fff) 0 22%,
-      transparent 22.5%
-    ),
-    radial-gradient(
-      circle at 88% 16%,
-      color-mix(in srgb, var(--p-accent) 55%, #000) 0 30%,
-      transparent 30.5%
-    ),
-    radial-gradient(circle at 72% 72%, rgba(255, 255, 255, 0.12) 0 11%, transparent 11.5%),
-    linear-gradient(160deg, var(--p-accent), color-mix(in srgb, var(--p-accent) 45%, #000));
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-}
-.t-geteilt .hero {
-  color: #fff;
-}
-.t-geteilt .hero h1 {
-  font-size: 34px;
-  font-weight: 400;
-}
-.t-geteilt .org {
-  opacity: 0.85;
-}
-.t-geteilt .intro {
-  color: rgba(255, 255, 255, 0.92);
-}
-.t-geteilt .facts {
-  flex-direction: column;
-  gap: 6px;
-}
-.t-geteilt .fact {
-  background: transparent;
-  border: 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 0;
-  padding: 8px 0 0;
-  color: rgba(255, 255, 255, 0.8);
-}
-.t-geteilt .fact b,
-.t-geteilt .fact.hot b {
-  color: #fff;
-}
-.t-geteilt .main {
-  padding: 24px 22px 0;
-}
-.t-geteilt .sec {
-  border: 0;
-  border-bottom: 1px solid var(--p-line);
-  border-radius: 0;
-  padding: 0 0 18px;
-}
-.t-geteilt .sec h2 {
-  font-weight: 400;
-  font-size: 1.5em;
-}
-@container pv (min-width: 700px) {
-  .t-geteilt .pv-shell {
-    grid-template-columns: 40% 1fr;
-    min-height: 760px;
-  }
-  .t-geteilt .side {
-    padding: 40px 32px;
-    justify-content: space-between;
-  }
-  .t-geteilt .hero h1 {
-    font-size: 44px;
-  }
-  .t-geteilt .main {
-    padding: 40px 40px 0;
-  }
-}
-
-/* ── 6 Groß und deutlich: große Schrift, hoher Kontrast ── */
-.t-gross {
-  --p-head: 'Atkinson Hyperlegible', Verdana, var(--ui);
-  --p-body: 'Atkinson Hyperlegible', Verdana, var(--ui);
-  --p-fs: 19px;
-  --p-page: #ffffff;
-  --p-text: #111111;
-  --p-muted: #3d3d3d;
-  --p-line: #bdbdbd;
-  --p-line-strong: #3a3a3a;
-  --p-fill: #f0f0f0;
-  --p-field: #fff;
-  --p-r: 8px;
-}
-.t-gross .hero {
-  padding: 26px 20px;
-  background: var(--p-accent);
-  color: var(--p-on-accent);
-}
-.t-gross .hero h1 {
-  font-size: 34px;
-}
-.t-gross .sub {
-  font-size: 1.05em;
-}
-.t-gross .info,
-.t-gross .main {
-  width: 100%;
-  max-width: 680px;
-  margin-inline: auto;
-  padding-inline: 18px;
-}
-.t-gross .info {
-  padding-block: 20px;
-}
-.t-gross .facts {
-  flex-direction: column;
-  gap: 4px;
-}
-.t-gross .fact {
-  background: none;
-  border: 0;
-  border-radius: 0;
-  padding: 0;
-  font-size: 1em;
-  color: var(--p-text);
-}
-.t-gross .sec {
-  border: 2px solid var(--p-line);
-}
-.t-gross .pf label {
-  font-size: 0.95em;
-}
-.t-gross .pf input,
-.t-gross .pf textarea {
-  border-width: 2px;
-  padding: 0.7em 0.8em;
-}
-.t-gross .check input {
-  width: 1.4em;
-  height: 1.4em;
-}
-.t-gross .go {
-  font-size: 1.15em;
-  padding: 1em;
-}
-.t-gross .foot {
-  font-size: 15px;
-}
-@container pv (min-width: 600px) {
-  .t-gross .hero {
-    padding: 40px;
-  }
-  .t-gross .hero-in {
-    max-width: 680px;
-    margin-inline: auto;
-  }
-  .t-gross .hero h1 {
-    font-size: 44px;
-  }
-}
-
-/* Eigenes Bild: landet je nach Layout im Kopf, auf der ganzen Seite oder in der linken Hälfte */
-.has-img.t-klassisch .hero,
-.has-img.t-bunt .hero,
-.has-img.t-gross .hero {
-  background:
-    linear-gradient(rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.6)),
-    var(--user-img) center / cover;
-  color: #fff;
-}
-.has-img.t-foto,
-.has-img.t-karte {
-  background:
-    linear-gradient(rgba(0, 0, 0, 0.25), rgba(0, 0, 0, 0.35)),
-    var(--user-img) center / cover;
-}
-.has-img.t-geteilt .side {
-  background:
-    linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.65)),
-    var(--user-img) center / cover;
-}
-.has-img.t-bunt .org {
-  color: #3b2a00;
 }
 
 /* Felder, die es im ersten Formular-Entwurf noch nicht gab */
@@ -906,10 +415,301 @@
   padding: 0.6em 0.75em;
 }
 
-// Rahmen um einzelne Felder (Baukasten): ohne Seitenhintergrund der Vorlage, nur Schrift, Farben und Feldstil.
-.pv.rahmen {
+// ── Grundlage aller Aufbauten: Kopf, Inhalt in der Breite, Karten ──
+.pv {
+  --p-r: 12px;
+  --p-muted: color-mix(in srgb, var(--p-text) 62%, var(--p-card));
+  --p-line: color-mix(in srgb, var(--p-text) 14%, var(--p-card));
+  --p-line-strong: color-mix(in srgb, var(--p-text) 35%, var(--p-card));
+  --p-fill: color-mix(
+    in srgb,
+    var(--p-accent) 7%,
+    color-mix(in srgb, var(--p-text) 5%, var(--p-card))
+  );
+  --p-field: var(--p-card);
+  --p-accent-text: color-mix(in srgb, var(--p-accent) 85%, var(--p-text));
+  --p-kopf-h: 200px;
+  --p-weite: calc(680px * var(--p-breite, 1));
+  background-color: var(--p-page);
+  padding-bottom: 32px;
+}
+.pv .hero {
+  display: flex;
+  align-items: flex-end;
+  min-height: var(--p-kopf-h);
+  padding: 28px 20px;
+  background: linear-gradient(
+    135deg,
+    var(--p-accent),
+    color-mix(in srgb, var(--p-accent) 55%, #000)
+  );
+}
+.pv .hero-in {
+  width: 100%;
+  max-width: var(--p-weite);
+  margin-inline: auto;
+}
+.pv .hero h1 {
+  font-size: 30px;
+  color: inherit;
+}
+.pv .info,
+.pv .main {
+  width: 100%;
+  max-width: var(--p-weite);
+  margin-inline: auto;
+  padding-inline: 18px;
+}
+.pv .info {
+  padding-block: 16px 14px;
+  color: var(--p-auf-seite);
+}
+.pv .sec {
+  border-color: transparent;
+}
+@container pv (min-width: 600px) {
+  .pv .hero {
+    padding: 40px 36px;
+  }
+  .pv .hero h1 {
+    font-size: 40px;
+  }
+}
+
+// Kopfhöhe und Ausrichtung
+.kh-klein {
+  --p-kopf-h: 130px;
+}
+.kh-gross {
+  --p-kopf-h: 300px;
+}
+.kopf-mitte .hero-in {
+  text-align: center;
+}
+.kopf-mitte .facts {
+  justify-content: center;
+}
+
+// Logo: oben in der Mitte (Alwin) oder links neben dem Titel
+.pv .logo {
+  display: block;
+  width: 84px;
+  height: 84px;
+  object-fit: contain;
+  padding: 8px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+}
+.pv .logo-oben {
+  margin: 0 auto 14px;
+}
+.pv .mit-logo-links {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.kopf-mitte .mit-logo-links {
+  justify-content: center;
+  text-align: left;
+}
+
+// Titelbild im Kopf (abgedunkelt, damit die Schrift lesbar bleibt)
+.bild-kopf .hero {
+  background:
+    linear-gradient(transparent 25%, rgba(0, 0, 0, 0.55)),
+    var(--user-img) center / cover;
+}
+
+// Hintergrund der Seite: Titelbild …
+.bild-seite {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), var(--user-img);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+.bild-seite .hero {
+  background: none;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
+}
+// … oder Muster in der Musterfarbe
+.m-punkte {
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--p-muster) 70%, transparent) 0 2px,
+    transparent 2.5px
+  );
+  background-size: 22px 22px;
+}
+.m-konfetti {
+  background-image:
+    radial-gradient(circle, var(--p-muster) 0 3px, transparent 3.5px),
+    radial-gradient(circle, #ff7aa8 0 3px, transparent 3.5px),
+    radial-gradient(circle, #58c4a4 0 2.5px, transparent 3px);
+  background-size:
+    34px 34px,
+    46px 46px,
+    28px 28px;
+}
+.m-sterne {
+  background-image:
+    radial-gradient(
+      circle,
+      color-mix(in srgb, var(--p-muster) 85%, transparent) 0 1px,
+      transparent 1.6px
+    ),
+    radial-gradient(
+      circle,
+      color-mix(in srgb, var(--p-muster) 50%, transparent) 0 1.4px,
+      transparent 2px
+    );
+  background-size:
+    26px 26px,
+    61px 61px;
+}
+.m-wellen {
+  background-image: repeating-radial-gradient(
+    circle at 0 100%,
+    transparent 0 14px,
+    color-mix(in srgb, var(--p-muster) 28%, transparent) 14px 16px
+  );
+  background-size: 60px 60px;
+}
+.m-raster {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--p-muster) 24%, transparent) 1px, transparent 1px),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--p-muster) 24%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 24px 24px;
+}
+
+// ── Aufbau ──
+// Kopfband: Standard oben. „Bild über alles“: Kopf ohne Band, Karten leicht durchscheinend.
+.a-seite .hero {
+  background: none;
+  color: var(--p-auf-seite);
+}
+.a-seite .sec {
+  background: color-mix(in srgb, var(--p-card) 90%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+// Zweigeteilt: Kopf und Hinweise links (ab 760 px), Formular rechts.
+@container pv (min-width: 760px) {
+  .a-geteilt .pv-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 38%) minmax(0, 1fr);
+    min-height: 100%;
+  }
+  .a-geteilt .side {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(
+      160deg,
+      var(--p-accent),
+      color-mix(in srgb, var(--p-accent) 55%, #000)
+    );
+  }
+  .a-geteilt.bild-kopf .side {
+    background:
+      linear-gradient(transparent 30%, rgba(0, 0, 0, 0.6)),
+      var(--user-img) center / cover;
+  }
+  .a-geteilt .hero,
+  .a-geteilt.bild-kopf .hero {
+    background: none;
+    min-height: 0;
+    padding-top: 56px;
+  }
+  .a-geteilt .info {
+    color: #fff;
+  }
+  .a-geteilt .main {
+    padding-top: 40px;
+  }
+}
+// Karte: alles in einer Karte in der Mitte, mit feinem Rahmen in der Hauptfarbe.
+.a-karte .pv-shell {
+  width: calc(100% - 28px);
+  max-width: calc(var(--p-weite) - 40px);
+  margin: 28px auto;
+  padding: 30px 22px 8px;
+  background: var(--p-card);
+  border-radius: var(--p-r);
+  outline: 1px solid color-mix(in srgb, var(--p-accent) 60%, transparent);
+  outline-offset: -10px;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.3);
+}
+.a-karte .hero {
+  background: none;
+  color: var(--p-text);
+  min-height: 0;
+  padding: 0 0 6px;
+}
+.a-karte .info {
+  color: var(--p-text);
+}
+.a-karte .info,
+.a-karte .main {
+  padding-inline: 0;
+}
+.a-karte .sec {
   background: transparent;
-  padding: 0;
+  padding-inline: 0;
+  box-shadow: none !important;
+  border: 0 !important;
+}
+
+// ── Abschnitte: Ecken, Schatten, Rahmen, bunt ──
+.ek-eckig {
+  --p-r: 3px;
+}
+.ek-sehrrund {
+  --p-r: 22px;
+}
+.schatten .sec {
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+}
+.rahmen .sec {
+  border-color: var(--p-line);
+}
+.bunt .sec:nth-child(3n + 1) {
+  background: color-mix(in srgb, #ffcf3f 30%, var(--p-card));
+}
+.bunt .sec:nth-child(3n + 2) {
+  background: color-mix(in srgb, #58c4a4 24%, var(--p-card));
+}
+.bunt .sec:nth-child(3n) {
+  background: color-mix(in srgb, #8fc4ff 26%, var(--p-card));
+}
+.gross {
+  --p-fs: 19px;
+}
+
+// Knopf „Anmelden“: volle Breite oder so breit wie der Text
+.pv .go {
+  display: block;
+  width: auto;
+  margin-inline: auto;
+  padding-inline: 2.2em;
+}
+.bt-voll .go {
+  width: 100%;
+}
+
+// Breite des Formulars
+.br-schmal {
+  --p-breite: 0.85;
+}
+.br-breit {
+  --p-breite: 1.22;
 }
 
 // Baukasten-Bausteine „Überschrift“ und „Trennlinie“ (A5).
@@ -923,4 +723,12 @@
   border-top: 1px solid var(--p-line);
   margin: 4px 0;
   width: 100%;
+}
+
+.pv .fact svg {
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+  margin-right: 5px;
+  color: var(--p-accent-text);
 }

@@ -75,24 +75,30 @@ export const EMPFOHLEN: Empfohlen[] = [
 ];
 
 /**
- * Felder, die nur in EINEN Bereich passen: Das Geburtsdatum gehört zur Person (ChurchTools-Personenfeld, Preise
- * nach Alter), die Bemerkungen einmal ans Ende der Anmeldung. Wohin sie auch gezogen werden – sie landen dort.
+ * Felder, die nur in EINEN Bereich passen. Name und E-Mail gehören zur Anmeldung, der Name jeder Person und das
+ * Geburtsdatum (ChurchTools-Personenfeld, Preise nach Alter) zur Person, die Bemerkungen zur Anmeldung. Wohin
+ * sie auch gezogen werden – sie landen in ihrem Bereich; dort aber an jeder Stelle (Alwin, 13.10.2026: „Ich
+ * möchte alles verschieben können“).
  */
-export const BEREICH_FEST: Record<string, Bereich> = { birth: 'person', note: 'anmeldung' };
+export const BEREICH_FEST: Record<string, Bereich> = {
+  name: 'anmeldung',
+  mail: 'anmeldung',
+  note: 'anmeldung',
+  pname: 'person',
+  birth: 'person',
+};
 
-/** Name, E-Mail (bzw. der Name jeder Person) stehen immer oben. */
-function festOben(f: Feld): boolean {
-  return f.art === 'fest' && (f.typ === 'name' || f.typ === 'email');
+/**
+ * Preisbereich und Datenschutz stehen immer am Ende, direkt vor „Verbindlich anmelden“: Der Preis wird aus den
+ * Angaben darüber gerechnet, und die Einwilligung gehört unmittelbar vor das Absenden.
+ */
+export function amEnde(f: Feld): boolean {
+  return f.typ === 'price' || f.typ === 'privacy';
 }
 
-/** Bemerkungen, Preisbereich und Datenschutz stehen immer am Ende – so zeigt sie auch das Formular. */
-function festUnten(f: Feld): boolean {
-  return f.id === 'note' || f.typ === 'price' || f.typ === 'privacy';
-}
-
-/** Lässt sich das Feld im Baukasten verschieben? */
+/** Lässt sich das Feld im Baukasten verschieben? Alles außer Preisbereich und Datenschutz. */
 export function verschiebbar(f: Feld): boolean {
-  return !festOben(f) && !festUnten(f) && f.art !== 'fest';
+  return !amEnde(f);
 }
 
 /** In welchem Bereich steht das Feld? `null`, wenn es (noch) nicht im Formular ist. */
@@ -103,10 +109,10 @@ export function bereichVon(formular: Formular, feldId: string): Bereich | null {
 }
 
 /**
- * **Ein Feld einordnen**: vor `vorId` in `bereich`, oder – bei `null` – ans Ende des Bereichs (vor Bemerkungen,
- * Preis und Datenschutz). Steht das Feld schon im Formular, wird es verschoben, auch in den anderen Bereich;
- * sonst (`neu`) eingefügt. Oben und unten feste Felder bleiben, wo sie sind – eine Stelle davor oder dahinter wird
- * auf die nächste erlaubte geschoben. Feste Felder selbst bewegen sich nicht.
+ * **Ein Feld einordnen**: vor `vorId` in `bereich`, oder – bei `null` – ans Ende des Bereichs (vor Preis und
+ * Datenschutz). Steht das Feld schon im Formular, wird es verschoben, auch in den anderen Bereich (sofern es
+ * nicht an einen Bereich gebunden ist, `BEREICH_FEST`); sonst (`neu`) eingefügt. Eine Stelle hinter Preis oder
+ * Datenschutz wird auf die letzte erlaubte geschoben; die beiden selbst bewegen sich nicht.
  */
 export function einordnen(
   formular: Formular,
@@ -125,20 +131,14 @@ export function einordnen(
     person: formular.person.filter((f) => f.id !== feldId),
   };
   const liste = ohne[bereich];
-  let oben = 0;
-  while (oben < liste.length && festOben(liste[oben])) oben++;
   let unten = liste.length;
-  while (unten > oben && festUnten(liste[unten - 1])) unten--;
+  while (unten > 0 && amEnde(liste[unten - 1])) unten--;
   const vor = vorId === null ? -1 : liste.findIndex((f) => f.id === vorId);
-  // Neu eingefügte Bemerkungen gehören immer direkt vor Preis und Datenschutz, egal wohin gezogen.
-  const preisStelle = liste.findIndex((f) => f.typ === 'price' || f.typ === 'privacy');
-  const stelle = festUnten(feld)
-    ? preisStelle < 0
-      ? liste.length
-      : preisStelle
-    : vor < 0
-      ? unten
-      : Math.min(Math.max(vor, oben), unten);
+  // „Ans Ende“ heißt vor die Bemerkungen, wenn sie gerade den Bereich abschließen – sie fragen nach „sonst noch
+  // etwas?“. Wer ein Feld bewusst darunter zieht, gibt ein `vorId` an und bekommt genau diese Stelle.
+  let ende = unten;
+  if (liste[ende - 1]?.id === 'note' && feldId !== 'note') ende--;
+  const stelle = vor < 0 ? ende : Math.min(vor, unten);
   return { ...ohne, [bereich]: [...liste.slice(0, stelle), feld, ...liste.slice(stelle)] };
 }
 

@@ -92,6 +92,81 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Neu (Anmeldungen)
 
+- **Design frei einstellbar** (Entwurf v3, Alwin, 13.10.2026: „Diese Vorlagen sollten nicht so starr sein …
+  gefällt mir sehr gut, gerne so umsetzen“). Die sechs Vorlagen sind nur noch **Startpunkte**; danach ist alles
+  einzeln änderbar: Aufbau (Kopfband, Bild über alles, zweigeteilt, Karte), Kopfhöhe und Ausrichtung, Logo
+  (Gemeindelogo aus ChurchTools – oben in der Mitte oder links daneben – oder keins), Hintergrund (Farbe, Muster
+  Punkte/Konfetti/Sterne/Wellen/Raster in eigener Farbe, Titelbild), Haupt-, Seiten-, Formular- und
+  Schriftfarbe, Schrift für Überschriften und Text, größere Schrift, Ecken, Schatten, Rahmen, bunte Abschnitte,
+  Eingabefelder, Knopf. Die Leiste zeigt, was seit dem Startpunkt geändert ist. Ältere Einstellungen bekommen
+  das Fehlende aus ihrer Vorlage; gespeichert wird nur, was abweicht (sonst brauchte die Sicherung zwei Felder).
+  - Gemessen: Das Gemeindelogo steht angemeldet in `/config` (`site_logo`), ohne Login nicht; die Bildadresse
+    selbst ist öffentlich – die Erweiterung übernimmt sie in die Gestaltung.
+  - Ziehen ruckelt nicht mehr: Felder gleiten an ihren Platz, Mitscrollen gleichmäßig.
+  - Steht das Logo oben in der Mitte, steht auch der Titel mittig (Alwin, 14.10.2026) – sonst wirkt der Kopf
+    schief.
+  - Der Name im Baukasten bricht um, statt am Handy abgeschnitten zu werden; Enter speichert wie bisher.
+  - Beim Ziehen verschwindet das Feld, an seiner Stelle steht nur „Hier loslassen“ (Alwin, 14.10.2026: „muss
+    nicht mehr in grau angezeigt werden“). Ausgeblendet wird erst nach dem Start des Ziehens – während
+    `dragstart` bricht Chrome sonst ab; mit echter Maus geprüft (versteckt nach 9 ms, Ablegen 1 s später).
+  - **Datumsfeld am iPhone** (Alwin, 14.10.2026, Bildschirmfoto): Das Geburtsdatum ragte rechts über die
+    anderen Felder hinaus – Safari gibt Datums- und Zeitfeldern eine eigene Mindestbreite. Gemeinsamer Baustein
+    `datumsfeld` in `ui/design/_mixins.scss`, eingesetzt im Anmeldeformular und in den Fenstern der Anmeldungen;
+    gleiche Höhe wie die anderen Felder. In Chrome nachgemessen, am iPhone noch zu bestätigen.
+  - **Klarere Linien, am Handy kein Ziehen** (Entwurf v6, Alwin 14.10.2026: „mich verwirren die vielen
+    gestrichelten Linien“, „die 6 Punkte funktionieren nicht“, „am Handy passieren ungewollte Sachen“):
+    - Keine Rahmen mehr um Felder: Maus darüber = hellblau, gewählt = kräftiger blau (immer das
+      ChurchTools-Blau, nicht die Farbe des Designs). Gestrichelt ist nur noch die Lücke beim Ziehen.
+    - Der Personen-Teil ist grau hinterlegt; im Baukasten steht „wiederholt sich für jedes Kind“.
+      „+ Weitere Person“ und das Antwort-Muster sind nicht mehr gestrichelt (auch im öffentlichen Formular).
+    - Die 6 Punkte (Griff) sind weg; gezogen wird am ganzen Feld.
+    - Pfeile, Kopieren, Entfernen erscheinen **nur am gewählten Feld** (unten im Feld), nicht mehr beim
+      Darüberfahren – am Handy blieben sie nach dem Antippen über der Frage hängen. Name und E-Mail lassen sich
+      dafür wählen (nur ↑ ↓, „gehört immer dazu“).
+    - **Am Handy** (`pointer: coarse`) lässt sich nichts ziehen – Ziehen und Scrollen kamen sich in die Quere.
+      Feld antippen, ↑ ↓; ein neuer Baustein landet unter dem gewählten Feld.
+    - ⓘ auch an „Kontakt“ (einmal je Anmeldung); das ⓘ hängt am letzten Wort der Überschrift.
+  - **Woher kommt was?** (Alwin, 14.10.2026: „nicht ganz klar, was woher kommt und was warum Pflicht ist“;
+    Entwurf v5 nach einem verworfenen v4 mit Schlössern und Schildchen). Ein kleines ⓘ an Name, E-Mail, Name
+    jeder Person, Geburtsdatum, Datenschutz und an „Wer nimmt teil?“ / „Auswahl und Extras“; antippen zeigt
+    den Grund. Im Feld ist der Inhalt `inert` – der Tipp landet bei der Hülle, die das ⓘ an der Stelle sucht
+    (im Browser mit echter Maus geprüft). **„Wer meldet sich an?“** und „Geburtsdatum abfragen“ stehen jetzt
+    auch oben in der Leiste.
+  - Beim Bauen gefunden: Ob die Preise das Geburtsdatum brauchen, stand dreimal im Code – im Feld-Bearbeiten
+    ohne den Geschwister-Rabatt. Jetzt eine Stelle (`wozuGeburtsdatum`); ebenso „Wer meldet sich an?“ ändern
+    (`mitWer`) für Reiter und Leiste.
+  - **Eigenes Logo** (Alwin, 14.10.2026): unter „Logo → Eigenes“ die bisherigen Logos zur Auswahl und „Neues
+    hochladen“. Gemessen: ChurchTools kennt je Gruppe nur ein Bild, Anhänge sind nur vorübergehend und ohne
+    Bildadresse. Deshalb liegt jedes Logo als Bild einer Hilfsgruppe, die gleich archiviert angelegt wird (Art
+    und Team wie die Veranstaltung, also dieselben Rechte). Das Bild ist ohne Login abrufbar, auch archiviert;
+    wird die Gruppe gelöscht, ist es weg (404). Die Gruppen tragen eine Kennung und erscheinen weder in der
+    Übersicht noch im Archiv. Klappt das Hochladen nicht, wird die halbe Gruppe wieder entfernt. Entfernen nur
+    für Gruppen-Admins, mit Warnung; von selbst wird nichts gelöscht, weil Kopien dasselbe Logo nutzen.
+
+- **Feinheiten am Baukasten** (Alwin, 13.10.2026: „wenn du es genauso schaffst zu bauen, bin ich echt happy“).
+  - **Alles verschiebbar** – auch Name, E-Mail und Bemerkungen (jeweils in ihrem Bereich). Nur Preisbereich und
+    Datenschutz bleiben direkt vor dem Absenden. Das Formular zeigt die Anmeldung in der gespeicherten
+    Reihenfolge.
+  - **Beim Ziehen öffnet sich eine Lücke** „Hier loslassen“ (wie bei Campflow) statt der blauen Linie.
+  - **Mehr Design (wie Jotform):** Schrift (Rund, Mit Serifen, Klassisch, Gut lesbar – nur Systemschriften,
+    nichts von Google), eigene Farben für Seite, Formular und Schrift (zurück auf „wie Vorlage“), Breite des
+    Formulars. Ein Vorlagenwechsel nimmt die eigenen Farben zurück.
+  - **Kopf:** Preis, Plätze und Anmeldeschluss mit Symbol. Gemeindename und Zeichen im Kopf sind weg (Alwin).
+    „Titelbild ändern“ steht nur noch im Bild (dort auch „entfernen“), nicht mehr zusätzlich unter „Design“.
+  - **Titelbild scharf:** ChurchTools liefert als `imageUrl` ein Vorschaubild mit 150×150 Pixeln – das Bild war
+    verzogen und unscharf (Alwin). Jetzt in voller Breite über den Bilddienst (`?w=1600&h=0`, ohne Login
+    abrufbar, Seitenverhältnis bleibt; gemessen).
+  - **Ziehen** (Alwin: „Lücke springt“, „hakelig“): Die Stelle wird an den Plätzen vom Start des Ziehens
+    gerechnet, nicht an den Feldern, die die Lücke gerade verschoben hat – so springt sie nicht mehr hin und her
+    (wie SortableJS). Das ganze Feld lässt sich greifen, nicht nur der Griff; am Rand scrollt die Seite mit; ein
+    vorhandenes Feld wird beim Ziehen blass (ausblenden bricht das Ziehen in Chrome ab – kurz so ausgeliefert,
+    „geht jetzt gar nicht mehr“, mit echter Maus nachgestellt); „ganz unten“ im Kontakt heißt beim Ziehen
+    wirklich unter die Bemerkungen.
+  - **Leiste:** Gruppen zum Einklappen mit Zahlen („5 von 8 im Formular“), Haken an Bausteinen, die schon
+    drin sind, Kacheln heben sich beim Zeigen.
+  - **Fragetyp ändern** unten im Feld – solange niemand geantwortet hat. ChurchTools ändert den Typ einer
+    Spalte nicht (PATCH antwortet 200 und lässt ihn, gemessen); deshalb neue Spalte statt alter.
+
 - **Formular-Baukasten mit Design und Vorschau** (Bauplan A5) – ein Reiter „Formular“, aufgebaut nach Alwins
   Vorbildern vom 13.10.2026 (Baukasten wie Campflow, Design wie Jotform, Bearbeiten wie Google Forms).
   - **In der Mitte das echte Formular** – dieselbe Darstellung wie für Gäste. Bausteine aus der Leiste rechts

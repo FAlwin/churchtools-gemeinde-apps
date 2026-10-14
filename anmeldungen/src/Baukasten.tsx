@@ -1,17 +1,22 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { flushSync } from 'react-dom';
 import { Icon } from '@ui/icons/icons';
 import { Segment } from '@ui/bedienung/Segment';
 import { Sheet } from '@ui/fenster/Sheet';
 import { AnmeldeFormular, type BaukastenHaken } from '@ui/anmeldeformular/AnmeldeFormular';
 import { musterAntworten } from '@ui/anmeldeformular/daten';
 import {
+  geburtsdatumAn,
+  mitWer,
   platzBelegt,
   type Feld,
+  type Feldtyp,
   type Formular,
   type Gestaltung,
   type OeffentlicheEinstellungen,
 } from '@shared/anmeldung/formular';
 import {
+  amEnde,
   bereichVon,
   einordnen,
   naechsteId,
@@ -25,13 +30,23 @@ import {
   feldEinordnen,
   feldEntfernen,
   feldSpeichern,
+  feldTypAendern,
 } from './formularFelder';
-import { aendereEinstellungen, bildEntfernen, bildHochladen, umbenennen } from './einrichten';
+import {
+  aendereEinstellungen,
+  bildEntfernen,
+  bildHochladen,
+  gemeindeLogo,
+  umbenennen,
+} from './einrichten';
 import { FeldBearbeiten } from './FeldBearbeiten';
-import { BausteineTafel, DesignTafel, type NeuerBaustein } from './BaukastenLeiste';
+import { BausteineTafel, type NeuerBaustein } from './BaukastenLeiste';
+import { DesignTafel } from './DesignTafel';
 import { entwurfFehler, mitAntworten, type FeldEntwurf } from './baukastenEntwurf';
 import { BausteinSymbol } from './bausteinIcons';
 import { useSchlange } from './useSchlange';
+import { hinweisZu } from './hinweise';
+import { wozuGeburtsdatum } from '@shared/anmeldung/preis';
 import k from './Baukasten.module.scss';
 
 /**
@@ -51,11 +66,36 @@ export const PAUSE_FELD_MS = 1500;
 export const PAUSE_DESIGN_MS = 700;
 
 type Gezogen = { art: 'neu'; b: NeuerBaustein } | { art: 'feld'; id: string };
-/** Wo abgelegt wird: vor oder nach einem Feld (obere bzw. untere Hälfte). */
+/**
+ * Wo abgelegt wird: vor `vorId` im Bereich (`null` = ganz unten im Bereich, auch unter den Bemerkungen). Immer
+ * so ausgedrückt – „nach Feld A“ und „vor Feld B“ sind dieselbe Stelle, sonst spränge die Lücke.
+ */
 interface Ziel {
   bereich: Bereich;
-  feldId: string;
-  wo: 'vor' | 'nach';
+  vorId: string | null;
+}
+
+/** Wo ein Feld beim Start des Ziehens stand – relativ zur Bühne (scrollt mit). */
+interface Platz {
+  id: string;
+  bereich: Bereich;
+  oben: number;
+  unten: number;
+}
+
+/** Abstand zum Rand, ab dem beim Ziehen mitgescrollt wird, und das Tempo ganz am Rand (Pixel je Bild). */
+const RAND_SCROLL = 80;
+const TEMPO_SCROLL = 18;
+/** Wie lange die Felder zu ihrem neuen Platz gleiten, wenn die Lücke wandert. */
+const GLEITEN_MS = 160;
+
+/** Das nächste Element darüber, das scrollt (in ChurchTools ist das nicht das Fenster, sondern der Rahmen). */
+function scrollEltern(el: HTMLElement | null): HTMLElement {
+  for (let x = el?.parentElement; x; x = x.parentElement) {
+    const o = getComputedStyle(x).overflowY;
+    if ((o === 'auto' || o === 'scroll') && x.scrollHeight > x.clientHeight) return x;
+  }
+  return (document.scrollingElement as HTMLElement | null) ?? document.documentElement;
 }
 interface AntwortInfo {
   feldId: string;
@@ -70,6 +110,25 @@ const ersetzeFeld = (fo: Formular, feld: Feld): Formular => ({
   anmeldung: fo.anmeldung.map((f) => (f.id === feld.id ? feld : f)),
   person: fo.person.map((f) => (f.id === feld.id ? feld : f)),
 });
+
+/** Ein Textfeld so hoch wie sein Inhalt (nicht jeder Browser kann `field-sizing: content`). */
+function hoeheAnpassen(el: HTMLTextAreaElement | null) {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = `${el.scrollHeight}px`;
+}
+
+/** Name, E-Mail, Datenschutz, Preisbereich: gehören immer dazu – nicht zu bearbeiten oder zu entfernen. */
+const istFest = (f: Feld) => f.art === 'fest' || f.art === 'preis';
+
+/**
+ * **Ziehen nur mit Maus** (Alwin, 14.10.2026: „am Handy passieren immer wieder ungewollte Sachen“) – mit dem
+ * Finger stritten sich Ziehen und Scrollen. Am Handy: Feld antippen, unten ↑ ↓; neue Bausteine landen unter dem
+ * gewählten Feld.
+ */
+function mitMaus(): boolean {
+  return typeof matchMedia !== 'function' || !matchMedia('(pointer: coarse)').matches;
+}
 
 /** Setzt `inert`: Die Felder im Baukasten zeigen nur, wie es aussieht – Klicks gehen an die Hülle. */
 const inert = (el: HTMLElement | null) => el?.setAttribute('inert', '');
@@ -97,6 +156,10 @@ export function Baukasten({
   const { stand, tun, laeuft } = useSchlange(onGespeichert);
   const [lokalF, setLokalF] = useState<Formular | null>(null);
   const [lokalG, setLokalG] = useState<Gestaltung | null>(null);
+  const [lokalWer, setLokalWer] = useState<OeffentlicheEinstellungen['wer'] | null>(null);
+  /** Welches ⓘ gerade aufgeklappt ist (Feld-ID oder Bereich). */
+  const [offenerHinweis, setOffenerHinweis] = useState<string | null>(null);
+  const [ziehenAn] = useState(mitMaus);
   const [nameEntwurf, setNameEntwurf] = useState(name);
   const [aktiv, setAktiv] = useState<string | null>(null);
   const [entwurf, setEntwurf] = useState<FeldEntwurf | null>(null);
@@ -113,6 +176,7 @@ export function Baukasten({
 
   const formular = lokalF ?? e.formular;
   const gestaltung = lokalG ?? e.gestaltung;
+  const wer = lokalWer ?? e.wer;
 
   // Refs für die Zeitgeber: Sie feuern später und brauchen den Stand von dann, nicht den beim Anlegen.
   const formularRef = useRef(formular);
@@ -135,11 +199,25 @@ export function Baukasten({
       ?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
   });
 
+  // Das Gemeindelogo aus ChurchTools einmal holen (`undefined` = lädt noch, `null` = keins hinterlegt).
+  const [ctLogo, setCtLogo] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    let aktuell = true;
+    gemeindeLogo().then(
+      (url) => aktuell && setCtLogo(url),
+      () => aktuell && setCtLogo(null),
+    );
+    return () => {
+      aktuell = false;
+    };
+  }, []);
+
   // Neuer gespeicherter Stand: den Zwischenstand verwerfen – aber nur, wenn nichts mehr läuft oder wartet.
   useEffect(() => {
     if (laeuft() || designWartet.current) return;
     setLokalF(null);
     setLokalG(null);
+    setLokalWer(null);
   }, [e, laeuft]);
   useEffect(() => setNameEntwurf(name), [name]);
 
@@ -211,7 +289,8 @@ export function Baukasten({
           (x) => x.id === feldId,
         )
       : undefined;
-    neuerEntwurf(f ?? null);
+    // Feste Felder (Name, E-Mail) lassen sich wählen, um sie zu verschieben – bearbeitet werden sie nicht.
+    neuerEntwurf(f && !istFest(f) ? f : null);
   }
 
   // Zum gewählten Feld: wie oft beantwortet, und die IDs der Antworten (Umbenennen behält die Wahl).
@@ -269,6 +348,74 @@ export function Baukasten({
     designUhr.current = setTimeout(designSichern, PAUSE_DESIGN_MS);
   }
 
+  // Ist „Gemeindelogo“ gewählt und hat sich die Adresse in ChurchTools geändert (oder fehlt sie noch), gleich
+  // übernehmen – sonst zeigte das öffentliche Formular ein altes oder keins. Nur, wer bearbeiten darf.
+  const logoGeprueft = useRef(false);
+  useEffect(() => {
+    if (!darf || ctLogo === undefined || logoGeprueft.current) return;
+    logoGeprueft.current = true;
+    const g = lokalG ?? e.gestaltung;
+    if (g.logo === 'ct' && ctLogo && g.logoUrl !== ctLogo) gestalten({ ...g, logoUrl: ctLogo });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nur einmal, sobald das Logo bekannt ist
+  }, [ctLogo, darf]);
+
+  /**
+   * **„Wer meldet sich an?“ direkt im Baukasten** (Alwin, 14.10.2026) – dieselbe Änderung wie im Reiter
+   * Veranstaltung (`mitWer`), gleich im Formular zu sehen.
+   */
+  function werAendern(neu: OeffentlicheEinstellungen['wer'], geburt: boolean) {
+    feldSichern();
+    setLokalWer(neu);
+    setLokalF(mitWer({ ...e, formular: formularRef.current }, neu, geburt).formular);
+    void tun('„Wer meldet sich an?“ gespeichert.', () =>
+      aendereEinstellungen(id, (frisch) => mitWer(frisch, neu, geburt)),
+    );
+  }
+
+  // ── Das kleine ⓘ „Woher kommt das?“ (Entwurf v5, 14.10.2026) ──
+  const hinweisUmschalten = (wo: string) => setOffenerHinweis((alt) => (alt === wo ? null : wo));
+  /**
+   * Wurde auf ein ⓘ in einem Feld getippt? Der Inhalt eines Felds ist `inert` – der Tipp landet bei der Hülle,
+   * also wird das ⓘ an der Stelle gesucht.
+   */
+  function hinweisUnter(ev: React.MouseEvent<HTMLElement>): string | null {
+    const direkt = (ev.target as HTMLElement).closest<HTMLElement>('[data-hinweis]');
+    if (direkt) return direkt.dataset.hinweis ?? null;
+    for (const el of ev.currentTarget.querySelectorAll<HTMLElement>('[data-hinweis]')) {
+      const r = el.getBoundingClientRect();
+      const x = ev.clientX;
+      const y = ev.clientY;
+      if (r.width && x >= r.left - 4 && x <= r.right + 4 && y >= r.top - 4 && y <= r.bottom + 4)
+        return el.dataset.hinweis ?? null;
+    }
+    return null;
+  }
+  const hinweisKnopf = (wo: string) =>
+    hinweisZu(wo, wer) ? (
+      <button
+        type="button"
+        className={k.info}
+        data-hinweis={wo}
+        aria-label="Woher kommt das?"
+        aria-expanded={offenerHinweis === wo}
+        onClick={(ev) => {
+          ev.stopPropagation();
+          ev.preventDefault();
+          hinweisUmschalten(wo);
+        }}
+      >
+        <Icon name="info" size={16} />
+      </button>
+    ) : null;
+  const hinweisKasten = (wo: string) => {
+    const text = offenerHinweis === wo ? hinweisZu(wo, wer) : null;
+    return text ? (
+      <p className={k.hinweisKasten} role="note">
+        {text}
+      </p>
+    ) : null;
+  };
+
   /** Einen Baustein ins Formular setzen – vor `vorId` in `bereich`, sonst unter das gewählte Feld. */
   function einfuegen(b: NeuerBaustein, wohin?: { bereich: Bereich; vorId: string | null }) {
     feldSichern();
@@ -285,6 +432,29 @@ export function Baukasten({
     neuerEntwurf(feld);
     insBild.current = feld.id;
     void tun(`„${b.name}“ hinzugefügt.`, () => feldSpeichern(id, bereich, feld, undefined, vorId));
+  }
+
+  /** Fragetyp ändern – mit allem, was gerade am Feld geändert ist (`feldTypAendern`: neue Spalte). */
+  function typAendern(typ: Feldtyp) {
+    const d = entwurfRef.current;
+    if (!d || d.feld.typ === typ) return;
+    if (feldUhr.current) clearTimeout(feldUhr.current);
+    geaendert.current = false;
+    const bisher = d.antworten.map((a) => a.text.trim()).filter(Boolean);
+    const feld: Feld = {
+      ...d.feld,
+      typ,
+      frage: d.feld.frage.trim(),
+      antworten: mitAntworten({ ...d.feld, typ })
+        ? bisher.length >= 2
+          ? bisher
+          : ['Antwort 1', 'Antwort 2']
+        : [],
+    };
+    setLokalF(ersetzeFeld(formularRef.current, feld));
+    neuerEntwurf(feld);
+    setInfo(null);
+    void tun(`Fragetyp von „${feld.frage}“ geändert.`, () => feldTypAendern(id, feld));
   }
 
   function verschieben(feldId: string, bereich: Bereich, vorId: string | null) {
@@ -341,8 +511,10 @@ export function Baukasten({
     );
   }
 
-  /** Die sichtbaren Felder eines Bereichs – so, wie das Formular sie zeigt (Bemerkungen usw. stehen am Ende). */
+  /** Die sichtbaren Felder eines Bereichs – so, wie das Formular sie zeigt. */
   const sichtbareListe = (bereich: Bereich) => formular[bereich].filter(sichtbar);
+  /** Die Felder, zwischen die abgelegt werden kann (ohne Preis und Datenschutz am Ende). */
+  const ablageListe = (bereich: Bereich) => sichtbareListe(bereich).filter((x) => !amEnde(x));
 
   function hochRunter(f: Feld, bereich: Bereich, um: -1 | 1) {
     const liste = sichtbareListe(bereich).filter(verschiebbar);
@@ -352,12 +524,54 @@ export function Baukasten({
       verschieben(f.id, bereich, liste[i + 2]?.id ?? null);
   }
 
-  // ── Ziehen und Ablegen ──
-  function zielVorId(z: Ziel): string | null {
-    if (z.wo === 'vor') return z.feldId;
-    const liste = sichtbareListe(z.bereich);
-    const i = liste.findIndex((x) => x.id === z.feldId);
-    return liste[i + 1]?.id ?? null;
+  // ── Ziehen und Ablegen: Wo der Mauszeiger ist, öffnet sich eine Lücke (wie bei Campflow) ──
+  //
+  // Die Stelle wird an den Plätzen ausgerechnet, die die Felder beim START des Ziehens hatten – nicht an den
+  // Feldern, wie sie gerade stehen. Sonst verschiebt die Lücke die Felder, die neue Rechnung sieht eine andere
+  // Stelle, die Lücke springt dorthin … (Alwin, 13.10.2026: „Lücke springt“). So macht es auch SortableJS.
+  const plaetze = useRef<Platz[]>([]);
+  const buehneRef = useRef<HTMLDivElement>(null);
+
+  /** `mitLagen: false` – nur die Plätze neu, die Lagen fürs Gleiten bleiben (beim Ausblenden des Felds). */
+  function plaetzeMerken(mitLagen = true) {
+    const b = buehneRef.current;
+    if (!b) return;
+    const oben = b.getBoundingClientRect().top;
+    if (mitLagen)
+      lagen.current = new Map(
+        [...b.querySelectorAll<HTMLElement>('[data-feld]')].map((el) => [
+          el.dataset.feld!,
+          el.getBoundingClientRect().top - oben,
+        ]),
+      );
+    const weg = gezogen.current?.art === 'feld' ? gezogen.current.id : null;
+    plaetze.current = [...b.querySelectorAll<HTMLElement>('[data-feld][data-bereich]')]
+      .filter((el) => el.dataset.ende === undefined && el.dataset.feld !== weg)
+      .map((el) => {
+        const r = el.getBoundingClientRect();
+        return {
+          id: el.dataset.feld!,
+          bereich: el.dataset.bereich as Bereich,
+          oben: r.top - oben,
+          unten: r.bottom - oben,
+        };
+      });
+  }
+
+  /** Die Stelle für eine Höhe `y` (relativ zur Bühne): vor dem ersten Feld, dessen Mitte darunter liegt. */
+  function zielAus(y: number): Ziel | null {
+    const liste = plaetze.current;
+    for (let i = 0; i < liste.length; i++) {
+      const p = liste[i];
+      if (y >= (p.oben + p.unten) / 2) continue;
+      // Zwischen zwei Bereichen entscheidet, welchem der Mauszeiger näher ist.
+      const davor = liste[i - 1];
+      if (davor && davor.bereich !== p.bereich && y < (davor.unten + p.oben) / 2)
+        return { bereich: davor.bereich, vorId: null };
+      return { bereich: p.bereich, vorId: p.id };
+    }
+    const letzte = liste.at(-1);
+    return letzte ? { bereich: letzte.bereich, vorId: null } : null;
   }
 
   function ablegen(z: Ziel | null) {
@@ -366,22 +580,112 @@ export function Baukasten({
     setZiehtFeld(null);
     setZiel(null);
     if (!g || !z) return;
-    const vorId = zielVorId(z);
-    if (g.art === 'neu') einfuegen(g.b, { bereich: z.bereich, vorId });
+    // „Ganz unten“ heißt beim Ziehen wirklich ganz unten – auch unter den Bemerkungen, aber vor Preis und
+    // Datenschutz (`einordnen` setzt nichts dahinter). Ohne Angabe käme es VOR die Bemerkungen (Antippen).
+    const vorId = z.vorId ?? formularRef.current[z.bereich].find(amEnde)?.id ?? null;
+    const wohin = { bereich: z.bereich, vorId };
+    if (g.art === 'neu') einfuegen(g.b, wohin);
     else verschieben(g.id, z.bereich, vorId);
   }
 
-  function zielSetzen(z: Ziel) {
-    setZiel((alt) =>
-      alt && alt.bereich === z.bereich && alt.feldId === z.feldId && alt.wo === z.wo ? alt : z,
-    );
+  // ── Gleiten statt Springen (Alwin: „manchmal ruckelt es noch kräftig“) ──
+  // Wandert die Lücke, gleiten die Felder von ihrem alten zu ihrem neuen Platz (FLIP über die Web Animations
+  // API), statt schlagartig zu springen. Die Rechnung oben benutzt weiter die Plätze vom Start.
+  const lagen = useRef(new Map<string, number>());
+  useLayoutEffect(() => {
+    const b = buehneRef.current;
+    if (!b || !gezogen.current) return;
+    const oben = b.getBoundingClientRect().top;
+    const neu = new Map<string, number>();
+    for (const el of b.querySelectorAll<HTMLElement>('[data-feld]')) {
+      const id = el.dataset.feld!;
+      const jetzt = el.getBoundingClientRect().top - oben;
+      neu.set(id, jetzt);
+      const vorher = lagen.current.get(id);
+      if (vorher !== undefined && Math.abs(vorher - jetzt) > 1)
+        el.animate?.([{ transform: `translateY(${vorher - jetzt}px)` }, { transform: 'none' }], {
+          duration: GLEITEN_MS,
+          easing: 'ease-out',
+        });
+    }
+    lagen.current = neu;
+  }, [ziel]);
+
+  // Gleichmäßig mitscrollen, solange der Mauszeiger am Rand ist – je näher am Rand, desto schneller. Vorher
+  // gab es je Mausereignis einen festen Schritt, das ruckelte.
+  const scrollen = useRef<{ el: HTMLElement; tempo: number; laeuft: boolean }>({
+    el: document.documentElement,
+    tempo: 0,
+    laeuft: false,
+  });
+  function scrollSchritt() {
+    const s = scrollen.current;
+    if (!gezogen.current || s.tempo === 0) {
+      s.laeuft = false;
+      return;
+    }
+    // `?.`: Nicht jede Umgebung kennt `scrollBy` an Elementen (jsdom) – dann eben ohne Mitscrollen.
+    s.el.scrollBy?.(0, s.tempo);
+    requestAnimationFrame(scrollSchritt);
   }
+
+  function ueberBuehne(ev: React.DragEvent<HTMLDivElement>) {
+    if (!gezogen.current) return;
+    ev.preventDefault();
+    // Am Rand mitscrollen – in ChurchTools scrollt der Rahmen, nicht das Fenster.
+    const sc = scrollEltern(ev.currentTarget);
+    const r =
+      sc === document.scrollingElement
+        ? { top: 0, bottom: window.innerHeight }
+        : sc.getBoundingClientRect();
+    const vonOben = ev.clientY - r.top;
+    const vonUnten = r.bottom - ev.clientY;
+    const tempo =
+      vonOben < RAND_SCROLL
+        ? -Math.ceil(((RAND_SCROLL - vonOben) / RAND_SCROLL) * TEMPO_SCROLL)
+        : vonUnten < RAND_SCROLL
+          ? Math.ceil(((RAND_SCROLL - vonUnten) / RAND_SCROLL) * TEMPO_SCROLL)
+          : 0;
+    const s = scrollen.current;
+    s.el = sc;
+    s.tempo = tempo;
+    if (tempo !== 0 && !s.laeuft) {
+      s.laeuft = true;
+      s.el.scrollBy?.(0, tempo);
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(scrollSchritt);
+    }
+    const z = zielAus(ev.clientY - ev.currentTarget.getBoundingClientRect().top);
+    if (z) zielSetzen(z);
+  }
+
+  function zielSetzen(z: Ziel) {
+    setZiel((alt) => (alt && alt.bereich === z.bereich && alt.vorId === z.vorId ? alt : z));
+  }
+
+  /** Die Lücke selbst – nur zu sehen; abgelegt wird über die Bühne (`ueberBuehne`, `onDrop`). */
+  const luecke = () => (
+    <div key="luecke" className={k.luecke}>
+      Hier loslassen
+    </div>
+  );
 
   const ziehenBeginnen = (g: Gezogen) => {
     gezogen.current = g;
-    setZiehtFeld(g.art === 'feld' ? g.id : null);
+    plaetzeMerken();
+    if (g.art !== 'feld') return;
+    // Das gezogene Feld verschwindet, an seiner Stelle steht nur die Lücke (Alwin, 14.10.2026: „muss nicht mehr
+    // in grau angezeigt werden“). Erst NACH dem Start: Wird es noch während `dragstart` ausgeblendet, bricht
+    // Chrome das Ziehen sofort ab (13.10.2026, mit echter Maus nachgestellt). Danach die Plätze ohne das Feld.
+    window.setTimeout(() => {
+      if (gezogen.current !== g) return;
+      flushSync(() => setZiehtFeld(g.id));
+      plaetzeMerken(false);
+      const bereich = bereichVon(formularRef.current, g.id);
+      if (bereich) zielSetzen({ bereich, vorId: g.id });
+    }, 0);
   };
   const ziehenEnde = () => {
+    scrollen.current.tempo = 0;
     gezogen.current = null;
     setZiehtFeld(null);
     setZiel(null);
@@ -409,23 +713,16 @@ export function Baukasten({
 
   // ── Die Hülle um jedes Feld ──
   function huelle(f: Feld, bereich: Bereich, inhalt: ReactNode): ReactNode {
-    const zielHier = (ev: React.DragEvent<HTMLDivElement>): Ziel => {
-      const r = ev.currentTarget.getBoundingClientRect();
-      return { bereich, feldId: f.id, wo: ev.clientY < r.top + r.height / 2 ? 'vor' : 'nach' };
-    };
-    const zielUeber = (ev: React.DragEvent<HTMLDivElement>) => {
-      if (!gezogen.current) return;
-      ev.preventDefault();
-      ev.stopPropagation();
-      zielSetzen(zielHier(ev));
-    };
     const beweglich = verschiebbar(f);
-    const istAktiv = aktiv === f.id && entwurf?.feld.id === f.id;
-    const fest = f.art === 'fest' || f.art === 'preis';
+    // Name, E-Mail, Datenschutz: verschiebbar (außer Datenschutz), aber nicht zu bearbeiten oder zu entfernen.
+    const fest = istFest(f);
+    const istAktiv = aktiv === f.id && (fest || entwurf?.feld.id === f.id);
     const liste = sichtbareListe(bereich).filter(verschiebbar);
     const i = liste.findIndex((x) => x.id === f.id);
-    const linie =
-      ziel && ziel.feldId === f.id ? (ziel.wo === 'vor' ? k.linieOben : k.linieUnten) : '';
+    const hierLuecke = !!ziel && ziel.bereich === bereich;
+    const lueckeDavor = hierLuecke && ziel.vorId === f.id;
+    const lueckeDanach =
+      hierLuecke && ziel.vorId === null && ablageListe(bereich).at(-1)?.id === f.id;
     const entfernt = info && info.feldId === f.id ? info : null;
     const entferntGewaehlt =
       entfernt && entwurf
@@ -478,73 +775,77 @@ export function Baukasten({
             <BausteinSymbol name="kopie" size={16} />
           </button>
         )}
-        <button
-          type="button"
-          aria-label={`${f.frage || 'Trennlinie'} entfernen`}
-          title={f.art === 'eigen' ? 'Entfernen' : 'Ausschalten'}
-          onClick={(ev) => {
-            ev.stopPropagation();
-            entfernen(f);
-          }}
-        >
-          <Icon name="trash" size={16} />
-        </button>
+        {!fest && (
+          <button
+            type="button"
+            aria-label={`${f.frage || 'Trennlinie'} entfernen`}
+            title={f.art === 'eigen' ? 'Entfernen' : 'Ausschalten'}
+            onClick={(ev) => {
+              ev.stopPropagation();
+              entfernen(f);
+            }}
+          >
+            <Icon name="trash" size={16} />
+          </button>
+        )}
       </>
     );
-    return (
+    // Das ganze Feld lässt sich greifen (Alwin: „hakelig“; die 6 Punkte als Griff sind weg, 14.10.2026) – außer
+    // beim Bearbeiten, sonst ließe sich im Text nichts markieren. Am Handy gar nicht (`ziehenAn`).
+    const ziehbar = beweglich && !istAktiv && ziehenAn;
+    return [
+      lueckeDavor && luecke(),
       <div
-        className={`${k.huelle} ${istAktiv ? k.aktiv : ''} ${fest ? k.fest : ''} ${linie} ${ziehtFeld === f.id ? k.wirdGezogen : ''}`}
+        key="feld"
+        className={`${k.huelle} ${istAktiv ? k.aktiv : ''} ${fest ? k.fest : ''} ${ziehbar ? k.ziehbar : ''} ${ziehtFeld === f.id ? k.wirdGezogen : ''}`}
         data-feld={f.id}
+        data-bereich={bereich}
+        data-ende={amEnde(f) ? '' : undefined}
+        draggable={ziehbar}
         onClick={(ev) => {
           ev.stopPropagation();
-          if (!fest) waehlen(f.id);
+          const h = hinweisUnter(ev);
+          if (h) return hinweisUmschalten(h);
+          if (beweglich || !fest) waehlen(f.id);
         }}
-        // Schon beim Hineinziehen „hier darf abgelegt werden“ melden – sonst legt der Browser nicht ab, wenn
-        // zwischen Hineinziehen und Loslassen kein `dragover` kam (gefunden beim Durchklicken 13.10.2026).
-        onDragEnter={zielUeber}
-        onDragOver={zielUeber}
-        onDrop={(ev) => {
-          ev.preventDefault();
+        onDragStart={(ev) => {
+          if (!ziehbar) return;
           ev.stopPropagation();
-          // Aus dem Ereignis selbst, nicht aus `ziel`: Der Zustand kann einen Schritt hinterher sein.
-          ablegen(zielHier(ev));
+          ev.dataTransfer.effectAllowed = 'move';
+          ev.dataTransfer.setData('text/plain', f.id);
+          ev.dataTransfer.setDragImage(ev.currentTarget, 24, 24);
+          // Ausgeblendet wird erst nach dem Start (`ziehenBeginnen`) – sonst bricht Chrome das Ziehen ab.
+          ziehenBeginnen({ art: 'feld', id: f.id });
         }}
+        onDragEnd={ziehenEnde}
       >
-        {beweglich && (
-          <span
-            className={k.griff}
-            draggable
-            title="Ziehen zum Verschieben"
-            onDragStart={(ev) => {
-              ev.dataTransfer.effectAllowed = 'move';
-              ev.dataTransfer.setData('text/plain', f.id);
-              const h = ev.currentTarget.parentElement;
-              if (h) ev.dataTransfer.setDragImage(h, 24, 24);
-              ziehenBeginnen({ art: 'feld', id: f.id });
-            }}
-            onDragEnd={ziehenEnde}
-          >
-            <Icon name="grip" size={16} />
-          </span>
-        )}
-        {fest && <span className={k.festSchild}>gehört immer dazu</span>}
-        {!fest && !istAktiv && <div className={k.werkzeug}>{werkzeug}</div>}
-        {istAktiv && entwurf ? (
+        {istAktiv && !fest && entwurf ? (
           <FeldBearbeiten
             entwurf={entwurf}
             onAendern={aendern}
             beantwortet={entfernt ? entfernt.beantwortet : null}
             entferntGewaehlt={entferntGewaehlt}
-            altersPreise={e.preis.alter.length > 0}
+            wozuGeburtsdatum={wozuGeburtsdatum(e.preis)}
             werkzeug={werkzeug}
+            onTyp={typAendern}
           />
         ) : (
-          <div ref={inert} className={k.inhalt}>
-            {inhalt}
-          </div>
+          <>
+            <div ref={inert} className={k.inhalt}>
+              {inhalt}
+            </div>
+            {hinweisKasten(f.id)}
+            {istAktiv && (
+              <div className={k.festFuss}>
+                <span>gehört immer dazu</span>
+                <span className={k.werkzeugUnten}>{werkzeug}</span>
+              </div>
+            )}
+          </>
         )}
-      </div>
-    );
+      </div>,
+      lueckeDanach && luecke(),
+    ];
   }
 
   // Das bearbeitete Feld so zeigen, wie es gerade im Baukasten steht (für die Vorschau).
@@ -559,21 +860,34 @@ export function Baukasten({
   const ansicht = {
     name: nameEntwurf || name,
     gemeinde,
-    einstellungen: { ...e, formular: anzeigeFormular, gestaltung },
+    einstellungen: { ...e, wer, formular: anzeigeFormular, gestaltung },
     bildUrl,
   };
 
   const haken: BaukastenHaken = {
     feld: huelle,
+    hinweis: hinweisKnopf,
+    hinweisText: hinweisKasten,
+    // Ein mehrzeiliges Feld, damit lange Namen umbrechen wie im Formular (am Handy wurde „TEST A5 Bauka…“
+    // abgeschnitten); Enter speichert statt einer neuen Zeile.
     titel: (
-      <input
+      <textarea
+        ref={hoeheAnpassen}
         className={k.titel}
         value={nameEntwurf}
         maxLength={100}
+        rows={1}
         aria-label="Name der Veranstaltung"
-        onChange={(ev) => setNameEntwurf(ev.target.value)}
+        onChange={(ev) => {
+          setNameEntwurf(ev.target.value.replace(/\n/g, ' '));
+          hoeheAnpassen(ev.target);
+        }}
         onBlur={nameSichern}
-        onKeyDown={(ev) => ev.key === 'Enter' && ev.currentTarget.blur()}
+        onKeyDown={(ev) => {
+          if (ev.key !== 'Enter') return;
+          ev.preventDefault();
+          ev.currentTarget.blur();
+        }}
       />
     ),
     einleitung: (
@@ -588,16 +902,34 @@ export function Baukasten({
         onBlur={designSichern}
       />
     ),
+    // Das Titelbild gibt es nur hier, direkt im Bild (Alwin: „Titelbild ändern gibt es zweimal“).
     bild: (
-      <button
-        type="button"
-        className={k.bildKnopf}
-        disabled={bildArbeitet}
-        onClick={() => bildDatei.current?.click()}
-      >
-        <BausteinSymbol name="bild" size={16} />
-        {bildArbeitet ? 'Wird hochgeladen …' : 'Titelbild ändern'}
-      </button>
+      <div className={k.bildKnoepfe}>
+        <button
+          type="button"
+          className={k.bildKnopf}
+          disabled={bildArbeitet}
+          onClick={() => bildDatei.current?.click()}
+        >
+          <BausteinSymbol name="bild" size={16} />
+          {bildArbeitet
+            ? 'Wird hochgeladen …'
+            : bildUrl
+              ? 'Titelbild ändern'
+              : 'Titelbild hochladen'}
+        </button>
+        {bildUrl && !bildArbeitet && (
+          <button
+            type="button"
+            className={k.bildKnopf}
+            aria-label="Titelbild entfernen"
+            title="Titelbild entfernen – dann gilt das Bild der Vorlage"
+            onClick={bildWeg}
+          >
+            <Icon name="trash" size={16} />
+          </button>
+        )}
+      </div>
     ),
   };
 
@@ -608,7 +940,11 @@ export function Baukasten({
   const tafelBausteine = (
     <BausteineTafel
       formular={formular}
-      wer={e.wer}
+      wer={wer}
+      geburtsdatum={geburtsdatumAn(formular)}
+      wozuGeburtsdatum={wozuGeburtsdatum(e.preis)}
+      onWer={werAendern}
+      ziehbar={ziehenAn}
       onNeu={(b) => {
         setBlatt(null);
         einfuegen(b);
@@ -626,10 +962,8 @@ export function Baukasten({
     <DesignTafel
       gestaltung={gestaltung}
       onGestaltung={gestalten}
-      bildUrl={bildUrl}
-      bildArbeitet={bildArbeitet}
-      onBild={bildWaehlen}
-      onBildWeg={bildWeg}
+      ctLogo={ctLogo}
+      veranstaltungId={id}
     />
   );
 
@@ -693,8 +1027,19 @@ export function Baukasten({
 
       <div className={`${k.flaeche} ${zeigeVorschau ? k.ohneLeiste : ''}`}>
         <div
+          ref={buehneRef}
           className={`${k.buehne} ${geraet === 'handy' ? k.handy : ''}`}
           onClick={() => !zeigeVorschau && waehlen(null)}
+          // Schon beim Hineinziehen „hier darf abgelegt werden“ melden – sonst legt der Browser nicht ab, wenn
+          // zwischen Hineinziehen und Loslassen kein `dragover` kam (gefunden beim Durchklicken 13.10.2026).
+          onDragEnter={ueberBuehne}
+          onDragOver={ueberBuehne}
+          onDrop={(ev) => {
+            if (!gezogen.current) return;
+            ev.preventDefault();
+            // Dort, wo die Lücke zu sehen ist; ohne Lücke (kein `dragover` vorher) aus dem Ereignis selbst.
+            ablegen(ziel ?? zielAus(ev.clientY - ev.currentTarget.getBoundingClientRect().top));
+          }}
         >
           {zeigeVorschau ? (
             <AnmeldeFormular

@@ -5,7 +5,8 @@ import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import { berechnePreis, euroText } from '@shared/anmeldung/preis';
 import { alterAm, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import { AnmeldeFormular } from './AnmeldeFormular';
-import { musterAntworten, textAufFarbe } from './daten';
+import { SCHRIFT, musterAntworten, textAufFarbe } from './daten';
+import { titelbildGross } from '@shared/anmeldung/gestaltung';
 
 const HEUTE = '2026-10-13';
 
@@ -61,10 +62,11 @@ const zeigen = (e: OeffentlicheEinstellungen, mitMuster = true) =>
   );
 
 describe('Anmeldeformular (A5)', () => {
-  it('Kopf: Gemeinde, Name, Datum und Ort, Preis in einem Wort; „noch 3 Plätze“ nur wenn knapp', () => {
+  it('Kopf: Name, Datum und Ort, Preis in einem Wort; „noch 3 Plätze“ nur wenn knapp; kein Gemeindename', () => {
     const e = freizeit();
     zeigen(e);
-    expect(screen.getByText('ECG Donrath')).toBeTruthy();
+    // Gemeindename im Kopf gibt es nicht mehr (Alwin, 13.10.2026: „kann weg“); unten im Fuß steht er noch.
+    expect(screen.getAllByText(/ECG Donrath/).every((x) => x.closest('footer'))).toBe(true);
     expect(screen.getByRole('heading', { level: 1, name: 'Silvesterfreizeit' })).toBeTruthy();
     expect(screen.getByText('Mo, 28.12.2026 – Sa, 02.01.2027 · Haus Lutzenberg')).toBeTruthy();
     expect(screen.getByText('ab 65,52 € p. P.')).toBeTruthy();
@@ -127,6 +129,8 @@ describe('Anmeldeformular (A5)', () => {
     const k = zeigen(neueEinstellungen('kinder'));
     expect(screen.getByText('Kontakt der Eltern')).toBeTruthy();
     expect(screen.getByRole('button', { name: '+ Weiteres Kind' })).toBeTruthy();
+    // Der Satz „wiederholt sich …“ ist nur für den Baukasten – Gäste sehen ihn nicht.
+    expect(screen.queryByText(/wiederholt sich/)).toBeNull();
     k.unmount();
     zeigen({ ...neueEinstellungen('einfach'), wer: 'einzeln' }, false);
     expect(screen.queryByRole('button', { name: /Weitere Person/ })).toBeNull();
@@ -137,21 +141,62 @@ describe('Anmeldeformular (A5)', () => {
     expect(screen.getByText('Die Teilnahme ist kostenlos.')).toBeTruthy();
   });
 
-  it('Gestaltung: Vorlage, Feldstil, Knöpfe als Klassen; Gemeindename abschaltbar', () => {
+  it('Gestaltung: jede Einstellung eine Klasse (Aufbau, Kopf, Muster, Ecken, Abschnitte, Felder, Knopf)', () => {
     const e = freizeit();
     e.gestaltung = {
       ...e.gestaltung,
-      vorlage: 'bunt',
+      aufbau: 'karte',
+      kopfHoehe: 'gross',
+      kopfAusrichtung: 'mitte',
+      hintergrund: 'muster',
+      muster: 'sterne',
+      ecken: 'sehrrund',
+      schatten: true,
+      rahmen: true,
+      bunt: true,
+      gross: true,
       feldstil: 'linie',
       knoepfe: 'rund',
-      gemeindename: false,
+      knopfVoll: false,
     };
     const { container } = zeigen(e);
-    const wurzel = container.firstElementChild!;
-    expect(wurzel.className).toMatch(/t-bunt/);
-    expect(wurzel.className).toMatch(/fs-linie/);
-    expect(wurzel.className).toMatch(/bt-rund/);
-    expect(screen.queryByText('ECG Donrath')).toBeNull();
+    const k = container.firstElementChild!.className;
+    for (const klasse of [
+      'a-karte',
+      'kh-gross',
+      'kopf-mitte',
+      'm-sterne',
+      'ek-sehrrund',
+      'schatten',
+      'rahmen',
+      'bunt',
+      'gross',
+      'fs-linie',
+      'bt-rund',
+    ])
+      expect(k).toMatch(new RegExp(klasse));
+    expect(k).not.toMatch(/bt-voll|t-bunt/);
+  });
+
+  it('Muster nur bei „Muster“; Titelbild als Seite nur bei „Titelbild“ oder „Bild über alles“', () => {
+    const e = freizeit();
+    e.gestaltung = { ...e.gestaltung, aufbau: 'kopfband', hintergrund: 'farbe', muster: 'sterne' };
+    const mitBild = (g: typeof e.gestaltung) =>
+      render(
+        <AnmeldeFormular
+          ansicht={{
+            name: 'X',
+            gemeinde: null,
+            einstellungen: { ...e, gestaltung: g },
+            bildUrl: 'https://ct.test/b',
+          }}
+          heute={HEUTE}
+        />,
+      ).container.firstElementChild!.className;
+    expect(mitBild(e.gestaltung)).toMatch(/bild-kopf/);
+    expect(mitBild(e.gestaltung)).not.toMatch(/m-sterne|bild-seite/);
+    expect(mitBild({ ...e.gestaltung, hintergrund: 'bild' })).toMatch(/bild-seite/);
+    expect(mitBild({ ...e.gestaltung, aufbau: 'seite' })).toMatch(/bild-seite/);
   });
 
   it('Schrift auf der Akzentfarbe: hell auf dunkel, dunkel auf hell', () => {
@@ -224,5 +269,127 @@ describe('Haken für den Baukasten (A5)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Verbindlich anmelden' }));
     expect(screen.queryByText('Danke für die Anmeldung!')).toBeNull();
     expect(screen.queryByText(/abgeschickt wird hier nichts/)).toBeNull();
+  });
+});
+
+describe('Feinheiten (A5): Schrift, Farben, Breite, Titelbild', () => {
+  it('Farben, Schriften und Breite landen als Variablen bzw. Klasse am Formular', () => {
+    const e = freizeit();
+    e.gestaltung = {
+      ...e.gestaltung,
+      kopfSchrift: 'rund',
+      textSchrift: 'lesbar',
+      breite: 'breit',
+      seitenfarbe: '#112233',
+      kartenfarbe: '#fefefe',
+      schriftfarbe: '#222222',
+      musterfarbe: '#abcdef',
+    };
+    const { container } = render(
+      <AnmeldeFormular ansicht={{ name: 'X', gemeinde: 'ECG', einstellungen: e }} heute={HEUTE} />,
+    );
+    const pv = container.firstElementChild as HTMLElement;
+    expect(pv.style.getPropertyValue('--p-page')).toBe('#112233');
+    expect(pv.style.getPropertyValue('--p-card')).toBe('#fefefe');
+    expect(pv.style.getPropertyValue('--p-text')).toBe('#222222');
+    expect(pv.style.getPropertyValue('--p-muster')).toBe('#abcdef');
+    expect(pv.style.getPropertyValue('--p-head')).toBe(SCHRIFT.rund);
+    expect(pv.style.getPropertyValue('--p-body')).toBe(SCHRIFT.lesbar);
+    // Auf dunkler Seite helle Schrift für Hinweise und Begrüßung
+    expect(pv.style.getPropertyValue('--p-auf-seite')).toBe('#ffffff');
+    expect(pv.className).toMatch(/br-breit/);
+  });
+
+  it('Logo: oben in der Mitte (Standard), links daneben oder keins; ohne Adresse keins', () => {
+    const e = freizeit();
+    const logo = (g: Partial<typeof e.gestaltung>) => {
+      const { container, unmount } = render(
+        <AnmeldeFormular
+          ansicht={{
+            name: 'X',
+            gemeinde: null,
+            einstellungen: { ...e, gestaltung: { ...e.gestaltung, ...g } },
+          }}
+          heute={HEUTE}
+        />,
+      );
+      const img = container.querySelector('img');
+      const r = img ? `${img.getAttribute('src')}|${img.className}` : null;
+      unmount();
+      return r;
+    };
+    expect(logo({ logo: 'ct', logoUrl: 'https://ct.test/images/558/x' })).toMatch(
+      /^https:\/\/ct.test\/images\/558\/x\?w=240&h=0\|.*logo-oben/,
+    );
+    expect(logo({ logo: 'ct', logoUrl: 'https://ct.test/l', logoOrt: 'links' })).not.toMatch(
+      /logo-oben/,
+    );
+    expect(logo({ logo: 'keins', logoUrl: 'https://ct.test/l' })).toBeNull();
+    expect(logo({ logo: 'ct', logoUrl: null })).toBeNull();
+  });
+
+  it('Logo oben in der Mitte → Titel auch mittig (Alwin, 14.10.2026); links daneben → wie eingestellt', () => {
+    const e = freizeit();
+    const klasse = (g: Partial<typeof e.gestaltung>) => {
+      const { container, unmount } = render(
+        <AnmeldeFormular
+          ansicht={{
+            name: 'X',
+            gemeinde: null,
+            einstellungen: {
+              ...e,
+              gestaltung: { ...e.gestaltung, kopfAusrichtung: 'links', ...g },
+            },
+          }}
+          heute={HEUTE}
+        />,
+      );
+      const k = container.firstElementChild!.className;
+      unmount();
+      return k;
+    };
+    expect(klasse({ logo: 'ct', logoUrl: 'https://ct.test/l', logoOrt: 'oben' })).toMatch(
+      /kopf-mitte/,
+    );
+    expect(klasse({ logo: 'ct', logoUrl: 'https://ct.test/l', logoOrt: 'links' })).not.toMatch(
+      /kopf-mitte/,
+    );
+    expect(klasse({ logo: 'keins', logoUrl: 'https://ct.test/l', logoOrt: 'oben' })).not.toMatch(
+      /kopf-mitte/,
+    );
+  });
+
+  it('Titelbild in voller Größe, nicht das 150-Pixel-Vorschaubild (Alwin: „verzogen und unscharf“)', () => {
+    const { container } = render(
+      <AnmeldeFormular
+        ansicht={{
+          name: 'X',
+          gemeinde: null,
+          einstellungen: freizeit(),
+          bildUrl: 'https://ct.test/images/555/abc',
+        }}
+        heute={HEUTE}
+      />,
+    );
+    const pv = container.firstElementChild as HTMLElement;
+    expect(pv.style.getPropertyValue('--user-img')).toBe(
+      'url("https://ct.test/images/555/abc?w=1600&h=0")',
+    );
+    expect(titelbildGross('https://ct.test/b?x=1', 800)).toBe('https://ct.test/b?x=1&w=800&h=0');
+  });
+});
+
+describe('Reihenfolge (Feinheiten A5)', () => {
+  it('das Formular zeigt die gespeicherte Reihenfolge – auch Bemerkungen ganz oben; Datenschutz am Ende', () => {
+    const e = freizeit();
+    const note = e.formular.anmeldung.find((f) => f.id === 'note')!;
+    e.formular.anmeldung = [note, ...e.formular.anmeldung.filter((f) => f.id !== 'note')];
+    const { container } = render(
+      <AnmeldeFormular ansicht={{ name: 'X', gemeinde: null, einstellungen: e }} heute={HEUTE} />,
+    );
+    const text = container.textContent ?? '';
+    expect(text.indexOf('Bemerkungen')).toBeGreaterThan(-1);
+    expect(text.indexOf('Bemerkungen')).toBeLessThan(text.indexOf('E-Mail'));
+    expect(text.indexOf('Ich bin einverstanden')).toBeGreaterThan(text.indexOf('Bemerkungen'));
   });
 });

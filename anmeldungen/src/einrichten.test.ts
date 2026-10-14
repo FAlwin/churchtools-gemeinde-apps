@@ -17,6 +17,9 @@ import {
   bildHochladen,
   einstellungenVon,
   kopfVon,
+  logoEntfernen,
+  logoHochladen,
+  logoListe,
   anlegenMoeglich,
   freigeben,
   kalenderListe,
@@ -34,9 +37,16 @@ import {
   verschieben,
   wiederherstellen,
 } from './einrichten';
-import { feldEntfernen, feldSpeichern, felderAnlegen, feldEinordnen } from './formularFelder';
+import {
+  feldEntfernen,
+  feldSpeichern,
+  felderAnlegen,
+  feldEinordnen,
+  feldTypAendern,
+} from './formularFelder';
 import type { Feld } from '@shared/anmeldung/formular';
 import { EMPFOHLEN } from '@shared/anmeldung/baukasten';
+import { LOGO_KENNUNG } from '@shared/anmeldung/uebersicht';
 
 /**
  * Anlegen und Einrichten (A3, #486) gegen eine nachgestellte ChurchTools-Instanz, die sich merkt, was
@@ -147,7 +157,7 @@ function ct() {
         .map((g) => ({
           id: g.id,
           name: g.name,
-          information: { note: g.note, groupStatusId: g.status },
+          information: { note: g.note, groupStatusId: g.status, imageUrl: g.bild ?? null },
         }));
       return json(200, { data, meta: { pagination: { lastPage: 1 } } });
     }
@@ -908,6 +918,27 @@ describe('Formularfelder in ChurchTools (A5)', () => {
     expect(ctFeld(id, 'foto')).toMatchObject({ useInRegistrationForm: true });
   });
 
+  it('Fragetyp ändern: ohne Antworten neue Spalte mit neuem Typ; mit Antworten abgelehnt, nichts geändert', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'anmeldung', feld());
+    const alt = ctFeld(id, 'f1');
+    expect(alt.fieldTypeCode).toBe('select');
+    await feldTypAendern(id, feld({ typ: 'radio' }));
+    const neuesFeld = ctFeld(id, 'f1');
+    expect(neuesFeld.id).not.toBe(alt.id);
+    expect(neuesFeld.fieldTypeCode).toBe('radioselect');
+    expect(gruppen.get(id)!.felder.some((f) => f.id === alt.id)).toBe(false);
+    mitglieder.set(id, [
+      { groupMemberStatus: 'active', fields: [{ id: neuesFeld.id, value: 'x' }] },
+    ]);
+    const vorher = gruppen.get(id)!.note;
+    await expect(feldTypAendern(id, feld({ typ: 'select' }))).rejects.toMatchObject({
+      status: 409,
+    });
+    expect(ctFeld(id, 'f1').id).toBe(neuesFeld.id);
+    expect(gruppen.get(id)!.note).toBe(vorher);
+  });
+
   it('Name, E-Mail, Datenschutz lassen sich nicht entfernen', async () => {
     const id = await neu();
     await expect(feldEntfernen(id, 'mail')).rejects.toMatchObject({ status: 422 });
@@ -944,5 +975,54 @@ describe('Titelbild (A5)', () => {
     expect(aufrufe.some((a) => a.includes('groupimage'))).toBe(false);
     schlucken.add('BILD');
     await expect(bildHochladen(id, bild())).rejects.toBeInstanceOf(NichtUebernommen);
+  });
+});
+
+describe('Eigenes Logo (14.10.2026)', () => {
+  const logo = (name = 'Jugend.png') => new File(['x'], name, { type: 'image/png' });
+  it('Hilfsgruppe: gleich archiviert, Art und Team wie die Veranstaltung, mit Kennung; danach in der Liste', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    const l = await logoHochladen(id, logo());
+    expect(l).toEqual({ id: l.id, name: 'Jugend', url: 'https://ct.test/images/1/abc' });
+    const g = gruppen.get(l.id)!;
+    expect(g).toMatchObject({ name: 'Logo: Jugend', typ: 5, status: STATUS.archiviert, parent: 7 });
+    expect(g.note.startsWith(LOGO_KENNUNG)).toBe(true);
+    // Nie als Entwurf angelegt: kein PATCH auf den Status.
+    expect(aufrufe.filter((a) => a === `PATCH /groups/${l.id}`)).toEqual([]);
+    expect(await logoListe(id)).toEqual([l]);
+    // Und weder im Archiv der Veranstaltungen noch als Veranstaltung.
+    expect((await archivListe(5)).map((a) => a.id)).not.toContain(l.id);
+  });
+  it('Liste: nur Logo-Gruppen mit Bild – archivierte Veranstaltungen nicht', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    await setzeStatus(id, STATUS.archiviert);
+    await bildHochladen(id, logo());
+    expect(await logoListe(id)).toEqual([]);
+  });
+  it('Bild nicht übernommen → die halbe Gruppe wird wieder entfernt, Fehler kommt an', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    const vorher = gruppen.size;
+    schlucken.add('BILD');
+    await expect(logoHochladen(id, logo())).rejects.toBeInstanceOf(NichtUebernommen);
+    expect(gruppen.size).toBe(vorher);
+  });
+  it('kein Bild → abgelehnt, bevor eine Gruppe entsteht', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    const vorher = gruppen.size;
+    await expect(
+      logoHochladen(id, new File(['x'], 'a.pdf', { type: 'application/pdf' })),
+    ).rejects.toMatchObject({ status: 422 });
+    expect(gruppen.size).toBe(vorher);
+  });
+  it('entfernen: nur Logo-Gruppen, nachgeprüft', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    const l = await logoHochladen(id, logo());
+    await expect(logoEntfernen(id)).rejects.toMatchObject({ status: 409 });
+    expect(gruppen.has(id)).toBe(true);
+    schlucken.add('DELETE');
+    await expect(logoEntfernen(l.id)).rejects.toBeInstanceOf(NichtUebernommen);
+    schlucken.delete('DELETE');
+    await logoEntfernen(l.id);
+    expect(gruppen.has(l.id)).toBe(false);
   });
 });

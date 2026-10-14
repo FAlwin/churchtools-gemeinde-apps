@@ -1,4 +1,4 @@
-import type { Antworten, OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
+import type { Antworten, OeffentlicheEinstellungen, Schrift } from '@shared/anmeldung/formular';
 
 /** Hilfen zum Anmeldeformular (A5) – getrennt von den Komponenten (React Fast Refresh). */
 
@@ -49,3 +49,12 @@ export function musterAntworten(e: OeffentlicheEinstellungen, heute: string): An
     })),
   };
 }
+
+/** Die Schriften – nur Systemschriften (Datenschutz: nichts von Google). Die EINE Stelle, auch für die Leiste. */
+export const SCHRIFT: Record<Schrift, string> = {
+  standard: 'var(--ui)',
+  rund: "ui-rounded, 'SF Pro Rounded', 'Arial Rounded MT Bold', 'Trebuchet MS', sans-serif",
+  serif: "Georgia, 'Iowan Old Style', 'Times New Roman', serif",
+  klassisch: "'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif",
+  lesbar: "Verdana, Tahoma, 'Segoe UI', sans-serif",
+};

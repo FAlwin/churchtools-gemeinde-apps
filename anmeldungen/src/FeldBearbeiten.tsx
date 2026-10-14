@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { Schalter } from '@ui/bedienung/Schalter';
-import { nurText, type Feld } from '@shared/anmeldung/formular';
+import { BAUSTEINE, nurText, type Feld, type Feldtyp } from '@shared/anmeldung/formular';
 import {
   entwurfFehler,
   mitAntworten,
   type AntwortEntwurf,
   type FeldEntwurf,
 } from './baukastenEntwurf';
+import { geburtsdatumNoetigText } from './anzeige';
 import k from './Baukasten.module.scss';
 
 /**
@@ -15,6 +16,8 @@ import k from './Baukasten.module.scss';
  * stehen genau dort, wo das Feld im Formular steht. Gespeichert wird vom Baukasten (beim Verlassen des Felds oder
  * nach einer Pause) – diese Komponente meldet nur Änderungen.
  */
+
+const FRAGETYPEN = BAUSTEINE.filter((x) => x.gruppe === 'frage');
 
 /** Wie die Eingabe aussieht – damit man beim Bearbeiten sieht, was Gäste ausfüllen (Google Forms: „Kurzantwort“). */
 function Muster({ f }: { f: Feld }) {
@@ -47,8 +50,9 @@ export function FeldBearbeiten({
   onAendern,
   beantwortet,
   entferntGewaehlt,
-  altersPreise,
+  wozuGeburtsdatum: wozu,
   werkzeug,
+  onTyp,
 }: {
   entwurf: FeldEntwurf;
   onAendern: (d: FeldEntwurf) => void;
@@ -56,10 +60,12 @@ export function FeldBearbeiten({
   beantwortet: number | null;
   /** Entfernte Antworten, die schon jemand gewählt hat – bleiben in ChurchTools, im Formular ausgeblendet. */
   entferntGewaehlt: string[];
-  /** Es gibt Preise nach Alter – das Geburtsdatum ist dann unverzichtbar. */
-  altersPreise: boolean;
+  /** Wozu die Preise das Geburtsdatum brauchen (`wozuGeburtsdatum`) – dann ist es unverzichtbar. */
+  wozuGeburtsdatum: 'alter' | 'geschwister' | null;
   /** Verschieben, kopieren, entfernen – unten im Feld wie bei Google Forms, nicht über dem Text. */
   werkzeug?: ReactNode;
+  /** Fragetyp ändern (nur eigene Fragen, solange niemand geantwortet hat – ChurchTools ändert den Typ nicht). */
+  onTyp?: (typ: Feldtyp) => void;
 }) {
   const f = d.feld;
   const setFeld = (neu: Partial<Feld>) => onAendern({ ...d, feld: { ...f, ...neu } });
@@ -150,13 +156,28 @@ export function FeldBearbeiten({
         </div>
       )}
       <div className={k.fuss}>
-        <span>
-          {text
-            ? 'Nur Text, keine Frage'
-            : eigen
-              ? 'Wird eine Spalte in ChurchTools'
-              : 'Empfohlener Baustein'}
-        </span>
+        {eigen && !text && onTyp ? (
+          <select
+            className={k.typ}
+            value={f.typ}
+            aria-label="Fragetyp"
+            disabled={!!beantwortet}
+            title={
+              beantwortet
+                ? 'Hier wurde schon geantwortet – der Fragetyp lässt sich nicht mehr ändern.'
+                : 'Fragetyp ändern'
+            }
+            onChange={(e) => onTyp(e.target.value as Feldtyp)}
+          >
+            {FRAGETYPEN.map((x) => (
+              <option key={x.typ} value={x.typ}>
+                {x.name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <span>{text ? 'Nur Text, keine Frage' : 'Empfohlener Baustein'}</span>
+        )}
         {werkzeug && <span className={k.werkzeugUnten}>{werkzeug}</span>}
         {!text && (
           <button
@@ -172,9 +193,9 @@ export function FeldBearbeiten({
           </button>
         )}
       </div>
-      {f.id === 'birth' && altersPreise && (
+      {f.id === 'birth' && wozu && (
         <p className={k.notiz} role="note">
-          Es gibt Preise nach Alter – ohne Geburtsdatum kann das Formular sie nicht rechnen.
+          {geburtsdatumNoetigText(wozu)}
         </p>
       )}
       {fehler && (

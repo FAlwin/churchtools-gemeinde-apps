@@ -5,7 +5,7 @@ import { ctBasis } from '@ui/ct/basis';
 import { tagAusIso } from '@shared/ct/zeit';
 import { geburtsdatumAn, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import { ortszeitAus } from '@shared/anmeldung/termin';
-import { kannEtwasKosten } from '@shared/anmeldung/preis';
+import { kannEtwasKosten, wozuGeburtsdatum } from '@shared/anmeldung/preis';
 import { ibanText, verwendungszweck } from '@shared/anmeldung/bezahlung';
 import type { MeineGruppe } from '@shared/ct/gruppen';
 import {
@@ -216,8 +216,6 @@ export function VeranstaltungSeite({
   const geburt = geburtsdatumAn(e.formular);
   const kostet = kannEtwasKosten(e.preis);
   const b = e.bezahlung;
-  const brauchtAlter =
-    e.preis.alter.length > 0 || e.preis.anpassungen.some((x) => x.bedingung === 'abKind');
 
   return (
     <div className={v.seite}>
@@ -400,7 +398,7 @@ export function VeranstaltungSeite({
           id={id}
           wer={e.wer}
           geburtsdatum={geburt}
-          brauchtAlter={brauchtAlter}
+          wozu={wozuGeburtsdatum(e.preis)}
           onClose={() => setFenster(null)}
           onGespeichert={gespeichert('„Wer meldet sich an?“ gespeichert.')}
         />

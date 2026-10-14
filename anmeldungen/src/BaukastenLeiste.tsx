@@ -1,27 +1,21 @@
-import { useRef, useState } from 'react';
-import { Segment } from '@ui/bedienung/Segment';
+import { useState } from 'react';
+import { Icon } from '@ui/icons/icons';
 import { Schalter } from '@ui/bedienung/Schalter';
-import {
-  BAUSTEINE,
-  type Feld,
-  type Feldtyp,
-  type Formular,
-  type Gestaltung,
-} from '@shared/anmeldung/formular';
+import { BAUSTEINE, type Feld, type Feldtyp, type Formular } from '@shared/anmeldung/formular';
 import {
   EMPFOHLEN,
   bausteinFeld,
   neueFeldKennung,
   type Bereich,
 } from '@shared/anmeldung/baukasten';
-import { FARBEN, VORLAGEN_GESTALTUNG, vorlageWechseln } from '@shared/anmeldung/gestaltung';
 import { BausteinSymbol, type BausteinIcon } from './bausteinIcons';
+import { WER_TEXT, geburtsdatumNoetigText } from './anzeige';
 import k from './Baukasten.module.scss';
 
 /**
  * **Die Leiste rechts im Baukasten** (A5): „Bausteine“ wie bei Campflow (Kacheln zum Ziehen oder Antippen, mit
- * Suche) und „Design“ wie bei Jotform (Vorlagen-Galerie, Farben, Feldstil, Knöpfe, Titelbild). Sie ändert nichts
- * selbst – sie meldet dem Baukasten, was gezogen, angetippt oder gewählt wurde.
+ * Suche); „Design“ steht in `DesignTafel.tsx`. Sie ändert nichts selbst – sie meldet dem Baukasten, was gezogen
+ * oder angetippt wurde.
  */
 
 /** Ein Baustein, der ins Formular kommt: das fertige Feld und wohin es beim Antippen gehört. */
@@ -57,6 +51,56 @@ const SYMBOL_TYP: Partial<Record<Feldtyp, BausteinIcon>> = {
   trenner: 'trenner',
 };
 
+type Wer = 'familie' | 'einzeln' | 'kinder';
+
+/**
+ * **„Wer meldet sich an?“ oben in der Leiste** (Alwin, 14.10.2026: „ja, auch im Baukasten“) – dieselbe
+ * Einstellung wie im Reiter Veranstaltung; bestimmt den Bereich „Wer nimmt teil?“ und „+ Weitere Person“.
+ */
+function WerWahl({
+  wer,
+  geburtsdatum,
+  wozuGeburtsdatum: wozu,
+  onWer,
+}: {
+  wer: Wer;
+  geburtsdatum: boolean;
+  wozuGeburtsdatum: 'alter' | 'geschwister' | null;
+  onWer: (wer: Wer, geburtsdatum: boolean) => void;
+}) {
+  return (
+    <div className={k.werWahl}>
+      <h3 className={k.gruppe}>Wer meldet sich an?</h3>
+      {(Object.keys(WER_TEXT) as Wer[]).map((x) => (
+        <button
+          key={x}
+          type="button"
+          className={k.vorlage}
+          aria-pressed={x === wer}
+          onClick={() => x !== wer && onWer(x, geburtsdatum)}
+        >
+          <b>{WER_TEXT[x][0]}</b>
+          <small>{WER_TEXT[x][1]}</small>
+        </button>
+      ))}
+      <button
+        type="button"
+        className={k.schalterZeile}
+        aria-pressed={geburtsdatum}
+        onClick={() => onWer(wer, !geburtsdatum)}
+      >
+        <Schalter an={geburtsdatum} />
+        Geburtsdatum abfragen (Pflicht)
+      </button>
+      {wozu && !geburtsdatum && (
+        <p className={k.fehler} role="alert">
+          {geburtsdatumNoetigText(wozu)}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function alleFelder(f: Formular): Feld[] {
   return [...f.anmeldung, ...f.person];
 }
@@ -65,12 +109,14 @@ function Kachel({
   name,
   symbol,
   benutzt,
+  ziehbar,
   onNeu,
   onZiehen,
 }: {
   name: string;
   symbol: BausteinIcon;
   benutzt: boolean;
+  ziehbar: boolean;
   onNeu: () => void;
   onZiehen: () => void;
 }) {
@@ -80,9 +126,15 @@ function Kachel({
       role="button"
       tabIndex={benutzt ? -1 : 0}
       className={k.kachel}
-      draggable={!benutzt}
+      draggable={!benutzt && ziehbar}
       aria-disabled={benutzt}
-      title={benutzt ? 'Ist schon im Formular' : 'Ins Formular ziehen oder antippen'}
+      title={
+        benutzt
+          ? 'Ist schon im Formular'
+          : ziehbar
+            ? 'Ins Formular ziehen oder antippen'
+            : 'Antippen'
+      }
       onClick={() => !benutzt && onNeu()}
       onKeyDown={(e) => {
         if (benutzt || (e.key !== 'Enter' && e.key !== ' ')) return;
@@ -95,15 +147,45 @@ function Kachel({
         onZiehen();
       }}
     >
+      {benutzt && (
+        <span className={k.haken} aria-hidden="true">
+          <Icon name="check" size={14} stroke={2.6} />
+        </span>
+      )}
       <BausteinSymbol name={symbol} />
       {name}
     </div>
   );
 }
 
+/** Kopf einer Kachel-Gruppe – zum Ein- und Ausklappen, mit Zahl. */
+function GruppenKopf({
+  name,
+  zahl,
+  offen,
+  onKlick,
+}: {
+  name: string;
+  zahl: string;
+  offen: boolean;
+  onKlick: () => void;
+}) {
+  return (
+    <button type="button" className={k.gruppenKopf} aria-expanded={offen} onClick={onKlick}>
+      <Icon name="chev-down" size={14} stroke={2.4} />
+      {name}
+      <span className={k.zahl}>{zahl}</span>
+    </button>
+  );
+}
+
 export function BausteineTafel({
   formular,
   wer,
+  geburtsdatum,
+  wozuGeburtsdatum,
+  onWer,
+  ziehbar,
   onNeu,
   onZiehen,
   ausgeblendet,
@@ -111,7 +193,12 @@ export function BausteineTafel({
   platz,
 }: {
   formular: Formular;
-  wer: 'familie' | 'einzeln' | 'kinder';
+  wer: Wer;
+  geburtsdatum: boolean;
+  wozuGeburtsdatum: 'alter' | 'geschwister' | null;
+  onWer: (wer: Wer, geburtsdatum: boolean) => void;
+  /** Mit Maus: Kacheln lassen sich ziehen; am Handy nur antippen (landet unter dem gewählten Feld). */
+  ziehbar: boolean;
   onNeu: (b: NeuerBaustein) => void;
   onZiehen: (b: NeuerBaustein) => void;
   /** Eigene Felder, die ausgeblendet sind (Antworten bleiben) – lassen sich zurückholen. */
@@ -121,6 +208,8 @@ export function BausteineTafel({
   platz: number;
 }) {
   const [suche, setSuche] = useState('');
+  const [offen, setOffen] = useState({ empfohlen: true, frage: true, gestaltung: true });
+  const umschalten = (g: keyof typeof offen) => setOffen({ ...offen, [g]: !offen[g] });
   const passt = (name: string) => name.toLowerCase().includes(suche.trim().toLowerCase());
   const da = new Map(alleFelder(formular).map((f) => [f.id, f]));
 
@@ -157,18 +246,30 @@ export function BausteineTafel({
         aria-label="Bausteine durchsuchen"
         onChange={(e) => setSuche(e.target.value)}
       />
+      {!suche.trim() && (
+        <WerWahl
+          wer={wer}
+          geburtsdatum={geburtsdatum}
+          wozuGeburtsdatum={wozuGeburtsdatum}
+          onWer={onWer}
+        />
+      )}
       {empfohlen.length > 0 && (
         <>
-          <h3 className={k.gruppe}>
-            Empfohlen <small>· mit fester Bedeutung, je einmal</small>
-          </h3>
-          <div className={k.kacheln}>
+          <GruppenKopf
+            name="Empfohlen"
+            zahl={`${empfohlen.filter((x) => x.benutzt).length} von ${empfohlen.length} im Formular`}
+            offen={offen.empfohlen}
+            onKlick={() => umschalten('empfohlen')}
+          />
+          <div className={k.kacheln} hidden={!offen.empfohlen}>
             {empfohlen.map(({ b, benutzt, id }) => (
               <Kachel
                 key={id}
                 name={b.name}
                 symbol={SYMBOL_EMPFOHLEN[id]}
                 benutzt={benutzt}
+                ziehbar={ziehbar}
                 onNeu={() => onNeu(b)}
                 onZiehen={() => onZiehen(b)}
               />
@@ -181,14 +282,20 @@ export function BausteineTafel({
         if (!liste.length) return null;
         return (
           <div key={gruppe}>
-            <h3 className={k.gruppe}>{gruppe === 'frage' ? 'Eigene Fragen' : 'Gestaltung'}</h3>
-            <div className={k.kacheln}>
+            <GruppenKopf
+              name={gruppe === 'frage' ? 'Eigene Fragen' : 'Gestaltung'}
+              zahl={String(liste.length)}
+              offen={offen[gruppe]}
+              onKlick={() => umschalten(gruppe)}
+            />
+            <div className={k.kacheln} hidden={!offen[gruppe]}>
               {liste.map(({ typ, b }) => (
                 <Kachel
                   key={typ}
                   name={b.name}
                   symbol={SYMBOL_TYP[typ] ?? 'text'}
                   benutzt={false}
+                  ziehbar={ziehbar}
                   onNeu={() => onNeu(b)}
                   onZiehen={() => onZiehen(b)}
                 />
@@ -225,139 +332,6 @@ export function BausteineTafel({
           <small>Es wird knapp – lange Hilfetexte oder der Begrüßungstext kürzen hilft.</small>
         )}
       </div>
-    </div>
-  );
-}
-
-export function DesignTafel({
-  gestaltung: g,
-  onGestaltung,
-  bildUrl,
-  bildArbeitet,
-  onBild,
-  onBildWeg,
-}: {
-  gestaltung: Gestaltung;
-  onGestaltung: (g: Gestaltung) => void;
-  bildUrl: string | null;
-  bildArbeitet: boolean;
-  onBild: (datei: File) => void;
-  onBildWeg: () => void;
-}) {
-  const datei = useRef<HTMLInputElement>(null);
-  const vorlage = VORLAGEN_GESTALTUNG.find((x) => x.id === g.vorlage)!;
-  return (
-    <div className={k.tafel}>
-      <h3 className={k.gruppe}>Vorlagen</h3>
-      <div className={k.vorlagen}>
-        {VORLAGEN_GESTALTUNG.map((x) => (
-          <button
-            key={x.id}
-            type="button"
-            className={k.vorlage}
-            aria-pressed={x.id === g.vorlage}
-            onClick={() => onGestaltung(vorlageWechseln(g, x.id))}
-          >
-            <span
-              className={`${k.mini} ${k[`mini-${x.id}`]}`}
-              style={{ '--m': x.farbe } as React.CSSProperties}
-            />
-            <b>{x.name}</b>
-            <small>{x.hinweis}</small>
-          </button>
-        ))}
-      </div>
-
-      <h3 className={k.gruppe}>Farbe</h3>
-      <div className={k.farben} role="group" aria-label="Farbe">
-        {FARBEN.map(([hex, name]) => (
-          <button
-            key={hex}
-            type="button"
-            className={k.farbe}
-            aria-label={name}
-            aria-pressed={g.farbe.toLowerCase() === hex}
-            style={{ background: hex }}
-            onClick={() => onGestaltung({ ...g, farbe: hex })}
-          />
-        ))}
-        <label className={k.eigeneFarbe}>
-          <input
-            type="color"
-            value={g.farbe}
-            aria-label="Eigene Farbe"
-            onChange={(e) => onGestaltung({ ...g, farbe: e.target.value })}
-          />
-          eigene
-        </label>
-      </div>
-
-      <h3 className={k.gruppe}>Eingabefelder</h3>
-      <Segment
-        ariaLabel="Eingabefelder"
-        value={g.feldstil}
-        onChange={(feldstil) => onGestaltung({ ...g, feldstil })}
-        options={[
-          { value: 'kasten', label: 'Kasten' },
-          { value: 'linie', label: 'Linie' },
-          { value: 'gefuellt', label: 'Gefüllt' },
-        ]}
-      />
-
-      <h3 className={k.gruppe}>Knöpfe</h3>
-      <Segment
-        ariaLabel="Knöpfe"
-        value={g.knoepfe}
-        onChange={(knoepfe) => onGestaltung({ ...g, knoepfe })}
-        options={[
-          { value: 'eckig', label: 'Eckig' },
-          { value: 'rund', label: 'Rund' },
-        ]}
-      />
-
-      <h3 className={k.gruppe}>Titelbild</h3>
-      <div className={k.reihe}>
-        <button
-          type="button"
-          className={k.knopfLeise}
-          disabled={bildArbeitet}
-          onClick={() => datei.current?.click()}
-        >
-          {bildArbeitet ? 'Wird hochgeladen …' : bildUrl ? 'Anderes Bild' : 'Eigenes Bild'}
-        </button>
-        {bildUrl && (
-          <button type="button" className={k.textKnopf} disabled={bildArbeitet} onClick={onBildWeg}>
-            Bild der Vorlage nehmen
-          </button>
-        )}
-        <input
-          ref={datei}
-          type="file"
-          accept="image/*"
-          hidden
-          aria-label="Titelbild wählen"
-          onChange={(e) => {
-            const d = e.target.files?.[0];
-            e.target.value = '';
-            if (d) onBild(d);
-          }}
-        />
-      </div>
-      <p className={k.klein}>
-        Bei „{vorlage.name}“ landet es als {vorlage.bildOrt}. Es ist das Gruppenbild in ChurchTools
-        und öffentlich sichtbar.
-      </p>
-
-      <h3 className={k.gruppe}>Kopf</h3>
-      <button
-        type="button"
-        className={k.schalterZeile}
-        aria-pressed={g.gemeindename}
-        onClick={() => onGestaltung({ ...g, gemeindename: !g.gemeindename })}
-      >
-        Gemeindename zeigen
-        <Schalter an={g.gemeindename} />
-      </button>
     </div>
   );
 }

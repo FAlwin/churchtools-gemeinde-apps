@@ -34,6 +34,10 @@
 // unsichtbar (exakt die Seitenfarbe).
 .dateInput {
   @include m.eingabefeld;
+  // Am iPhone breiter als die Spalte und mittig (#539). Die Felder starten leer („Alle“) – ohne feste Höhe
+  // fiele ein leeres Feld zusammen; die Höhe ist dieselbe wie vorher (in Chrome nachgemessen: 36 px).
+  @include m.datumsfeld;
+  height: calc(1lh + 18px);
   flex: 1;
   min-width: 0;
   padding: 8px 10px;

@@ -7,6 +7,29 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Behoben
+
+- **Gleiche Kategorie, verschiedene Geräte** (#558): ChurchTools nimmt dasselbe Kürzel für zwei Kategorien an
+  (gemessen 14.10.2026). `kategorieSuchen` nahm bisher die erste in der Liste – je nach Antwort hätten zwei
+  Geräte in verschiedene Kategorien geschrieben. Jetzt nehmen alle die mit der kleinsten ID. Gilt auch für die
+  Einstellungen und Team-Notizen der Musik-App.
+
+### Intern
+
+- **Speicher-Kern für Entwürfe** (#558, Bauplan E4-3, erste Scheibe – noch ohne Oberfläche):
+  `shared/dienstplan/entwuerfe.ts`. Noch nicht gesendete Einteilungen liegen im Speicher der Erweiterung,
+  **eine Kategorie je Dienstgruppe** (Alwin), ein Wert je Platz (Termin + Dienst + `index`, nie die flüchtige
+  Platz-ID) mit Version, „von wem“ und dem, was beim Eintragen in ChurchTools stand. Speichern und Entfernen
+  lesen frisch, vergleichen die Version und lesen nach – eine andere Version ist ein Konflikt, nie ein stilles
+  Überschreiben; kein Schreibvorgang wird automatisch wiederholt. Doppelte Werte (zwei gleichzeitige
+  Anlegen) bekommen einen festen Gewinner. Ein Entwurf ist veraltet, sobald in ChurchTools etwas anderes
+  steht – dieselbe Regel wie beim Einteilen (`gleichePerson`). Der Stand der Schublade (fehlt, einrichtbar,
+  nur lesen, bereit) kommt aus den Rechten. Echt an der Test-Instanz geprüft (Wegwerf-Kategorie, danach
+  gelöscht).
+- **`modulSuchen`** meldet ein fehlendes Modul mit dem Namen des Aufrufers statt fest „Die Musik App“ (#558).
+
+## [2.35.1] – 2026-10-14
+
 ### Hinzugefügt (Dienstplaner)
 
 - **Zeitraum wählen** (#549, Alwin: „was heißt weitere Termine laden? Macht man das nicht über das + oben?“):
@@ -48,17 +71,6 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Intern
 
-- **Speicher-Kern für Entwürfe** (#558, Bauplan E4-3, erste Scheibe – noch ohne Oberfläche):
-  `shared/dienstplan/entwuerfe.ts`. Noch nicht gesendete Einteilungen liegen im Speicher der Erweiterung,
-  **eine Kategorie je Dienstgruppe** (Alwin), ein Wert je Platz (Termin + Dienst + `index`, nie die flüchtige
-  Platz-ID) mit Version, „von wem“ und dem, was beim Eintragen in ChurchTools stand. Speichern und Entfernen
-  lesen frisch, vergleichen die Version und lesen nach – eine andere Version ist ein Konflikt, nie ein stilles
-  Überschreiben; kein Schreibvorgang wird automatisch wiederholt. Doppelte Werte (zwei gleichzeitige
-  Anlegen) bekommen einen festen Gewinner. Ein Entwurf ist veraltet, sobald in ChurchTools etwas anderes
-  steht – dieselbe Regel wie beim Einteilen (`gleichePerson`). Der Stand der Schublade (fehlt, einrichtbar,
-  nur lesen, bereit) kommt aus den Rechten. Echt an der Test-Instanz geprüft (Wegwerf-Kategorie, danach
-  gelöscht).
-- **`modulSuchen`** meldet ein fehlendes Modul mit dem Namen des Aufrufers statt fest „Die Musik App“ (#558).
 - **Bausteine für den Zeitraum** (#549): `plusTage`, `monatPlus` und `letzterTag` liegen jetzt in
   `shared/ct/datum.ts`. Die Musik-App holt sie von dort (`client/src/utils/monate.ts` und `wochen.ts`
   geben sie nur weiter). Die Regeln des Zeitraums stehen in `shared/dienstplan/zeitraum.ts`. Das
@@ -73,10 +85,15 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Behoben
 
-- **Gleiche Kategorie, verschiedene Geräte** (#558): ChurchTools nimmt dasselbe Kürzel für zwei Kategorien an
-  (gemessen 14.10.2026). `kategorieSuchen` nahm bisher die erste in der Liste – je nach Antwort hätten zwei
-  Geräte in verschiedene Kategorien geschrieben. Jetzt nehmen alle die mit der kleinsten ID. Gilt auch für die
-  Einstellungen und Team-Notizen der Musik-App.
+- **Endlosschleife beim ersten Öffnen eines Ablaufs** (#555, kritisch): Hatte jemand für einen Ablauf noch
+  keinen „gesehen“-Stand – also bei jedem neuen Gottesdienst beim ersten Öffnen –, speicherte die App den
+  Stand immer wieder, solange die Ablauf-Ansicht offen war: rund **6 ChurchTools-Anfragen pro Sekunde** je
+  Gerät (gemessen in der Test-Instanz: 280 Anfragen in 45 s). Seit v2.34.1 (#484) in Web-App und
+  Erweiterung. Ursache: Nach dem Speichern setzte die App nur die markierten Punkte im Speicher auf
+  „gesehen“; Punkte ganz ohne Angabe blieben so – und das galt wieder als „noch nie gesehen“. Jetzt
+  bekommt jeder Punkt „gesehen“; ein Test verdrahtet den Ablauf wie die App selbst und zählt: genau ein
+  Schreiben.
+
 - **Datumsfelder am iPhone** (#539): Safari gibt Datumsfeldern eine eigene Mindestbreite und mittigen Text –
   im Anmeldeformular ragte das Geburtsdatum dadurch über die Nachbarfelder (Bildschirmfoto von Alwin). In der
   Musik-App betraf es „Abwesenheit eintragen“ (Von/Bis zweispaltig) und den Zeitraum der Statistik. Neuer

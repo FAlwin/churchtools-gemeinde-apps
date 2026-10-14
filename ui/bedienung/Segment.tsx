@@ -17,6 +17,12 @@ interface SegmentProps<T extends string> {
   className?: string;
   /** Ausgegraute Optionen (z. B. „Vergangene" ohne Netz) – bleiben tippbar, der Aufrufer erklärt warum. */
   dimmed?: T[];
+  /**
+   * **Verbunden:** alle Optionen auf einer gemeinsamen Schiene (iOS-Art) statt einzelner Knöpfe. Der
+   * Dienstplaner nutzt das (Alwin, 14.10.2026: „zu viele verschiedene Buttons“); ohne die Angabe bleibt es
+   * bei den einzelnen Knöpfen, wie Alwin sie am 09.10.2026 für die Musik-App festgelegt hat.
+   */
+  verbunden?: boolean;
 }
 
 /**
@@ -35,10 +41,11 @@ export function Segment<T extends string>({
   ariaLabel,
   className,
   dimmed = [],
+  verbunden = false,
 }: SegmentProps<T>) {
   return (
     <div
-      className={`${styles.seg}${className ? ' ' + className : ''}`}
+      className={`${styles.seg}${verbunden ? ' ' + styles.verbunden : ''}${className ? ' ' + className : ''}`}
       role="group"
       aria-label={ariaLabel}
     >

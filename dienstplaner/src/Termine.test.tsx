@@ -73,15 +73,18 @@ describe('Termine (E3-2)', () => {
   it('Filter nach Veranstaltung: Reihen und „Weitere“; abwählen blendet aus', () => {
     zeige();
     fireEvent.click(screen.getByRole('button', { name: 'Alle' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
     const filter = screen.getByRole('group', { name: 'Veranstaltungen' });
     expect(
       within(filter)
-        .getAllByRole('button')
-        .map((b) => b.textContent),
+        .getAllByRole('checkbox')
+        .map((b) => b.closest('label')!.textContent),
     ).toEqual(['Gebetsabend', 'Gottesdienst', 'Weitere']);
-    fireEvent.click(within(filter).getByRole('button', { name: 'Gebetsabend' }));
-    fireEvent.click(within(filter).getByRole('button', { name: 'Weitere' }));
+    fireEvent.click(within(filter).getByRole('checkbox', { name: 'Gebetsabend' }));
+    fireEvent.click(within(filter).getByRole('checkbox', { name: 'Weitere' }));
     expect(titel()).toEqual(['Gottesdienst', 'Gottesdienst']);
+    // Der Knopf sagt, wie viel ausgeblendet ist.
+    expect(screen.getByRole('button', { name: 'Filter, 2 ausgeblendet' })).toBeTruthy();
   });
 
   it('die Wahl bleibt nach dem Neuladen erhalten (im Gerät gemerkt)', () => {

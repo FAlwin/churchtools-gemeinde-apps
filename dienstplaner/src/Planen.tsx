@@ -20,7 +20,7 @@ import { werWieOft } from '@shared/dienstplan/werWieOft';
 import type { TermineZustand } from './Termine';
 import { leseAnsicht, merkeAnsicht, type PlanenAnsicht } from './planenAnsicht';
 import { useBreite } from './useBreite';
-import { FilterChips } from './FilterChips';
+import { FilterKnopf } from './FilterKnopf';
 import { WerKann, type FreierPlatz } from './WerKann';
 import styles from './Planen.module.scss';
 
@@ -147,6 +147,7 @@ export function Planen({ zustand, handy, onNochmal, onMehr }: Props) {
           onChange={(v) => setAnsicht({ ...ansicht, unteransicht: v })}
           ariaLabel="Ansicht"
           className={styles.ansicht}
+          verbunden
         />
         {!handy && (
           <Terminleiste
@@ -158,44 +159,47 @@ export function Planen({ zustand, handy, onNochmal, onMehr }: Props) {
             onSchritt={gehe}
           />
         )}
-        {!handy && ansicht.unteransicht === 'matrix' && (
-          <Segment<Breite>
-            value={ansicht.breite}
-            options={[
-              { value: 's', label: 'S' },
-              { value: 'm', label: 'M' },
-              { value: 'l', label: 'L' },
+        <div className={styles.rechts}>
+          {!handy && ansicht.unteransicht === 'matrix' && (
+            <Segment<Breite>
+              value={ansicht.breite}
+              options={[
+                { value: 's', label: 'S' },
+                { value: 'm', label: 'M' },
+                { value: 'l', label: 'L' },
+              ]}
+              onChange={(b) => setAnsicht({ ...ansicht, breite: b })}
+              ariaLabel="Spaltenbreite"
+              verbunden
+            />
+          )}
+          <FilterKnopf
+            abschnitte={[
+              {
+                titel: 'Veranstaltungen',
+                optionen: arten.map((art) => ({
+                  wert: art,
+                  text: art === WEITERE ? 'Weitere' : art,
+                })),
+                aus: ansicht.ausgeblendeteArten,
+                onAus: (ausgeblendeteArten) => setAnsicht({ ...ansicht, ausgeblendeteArten }),
+              },
+              {
+                titel: 'Gruppen',
+                optionen: plan.gruppen.map((g) => ({ wert: schluessel(g), text: gruppenName(g) })),
+                aus: ansicht.ausgeblendeteGruppen,
+                onAus: (ausgeblendeteGruppen) => setAnsicht({ ...ansicht, ausgeblendeteGruppen }),
+              },
             ]}
-            onChange={(b) => setAnsicht({ ...ansicht, breite: b })}
-            ariaLabel="Spaltenbreite"
           />
-        )}
-      </div>
-
-      <div className={styles.filter}>
-        {arten.length > 1 && (
-          <FilterChips
-            name="Veranstaltungen"
-            optionen={arten.map((art) => ({ wert: art, text: art === WEITERE ? 'Weitere' : art }))}
-            aus={ansicht.ausgeblendeteArten}
-            onAus={(ausgeblendeteArten) => setAnsicht({ ...ansicht, ausgeblendeteArten })}
-          />
-        )}
-        {plan.gruppen.length > 1 && (
-          <FilterChips
-            name="Gruppen"
-            optionen={plan.gruppen.map((g) => ({ wert: schluessel(g), text: gruppenName(g) }))}
-            aus={ansicht.ausgeblendeteGruppen}
-            onAus={(ausgeblendeteGruppen) => setAnsicht({ ...ansicht, ausgeblendeteGruppen })}
-          />
-        )}
+        </div>
       </div>
 
       <div ref={rahmen}>
         {gefiltert.length === 0 || gruppen.length === 0 ? (
           <section className={styles.karte}>
             <p className={styles.hinweis} style={{ padding: 14 }}>
-              Nichts eingeblendet – oben eine Veranstaltung oder Gruppe antippen.
+              Nichts eingeblendet – über „Filter“ eine Veranstaltung oder Gruppe wieder anhaken.
             </p>
           </section>
         ) : ansicht.unteransicht === 'personen' ? (

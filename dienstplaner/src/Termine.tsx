@@ -16,7 +16,7 @@ import {
 import type { Plan } from '@shared/dienstplan/plan';
 import { leseAuswahl, merkeAuswahl } from './auswahl';
 import { Plakette } from './Plakette';
-import { FilterChips } from './FilterChips';
+import { FilterKnopf } from './FilterKnopf';
 import styles from './Termine.module.scss';
 
 export type TermineZustand =
@@ -62,18 +62,22 @@ export function Termine({ zustand, planer, onNochmal, onMehr }: Props) {
             ]}
             onChange={(v) => aendern({ ...auswahl, nurMeine: v === 'meine' })}
             ariaLabel="Welche Termine"
+            verbunden
           />
-          {arten.length > 1 && (
-            <FilterChips
-              name="Veranstaltungen"
-              optionen={arten.map((art) => ({
-                wert: art,
-                text: art === WEITERE ? 'Weitere' : art,
-              }))}
-              aus={auswahl.ausgeblendet}
-              onAus={(ausgeblendet) => aendern({ ...auswahl, ausgeblendet })}
-            />
-          )}
+          <FilterKnopf
+            className={styles.filterRechts}
+            abschnitte={[
+              {
+                titel: 'Veranstaltungen',
+                optionen: arten.map((art) => ({
+                  wert: art,
+                  text: art === WEITERE ? 'Weitere' : art,
+                })),
+                aus: auswahl.ausgeblendet,
+                onAus: (ausgeblendet) => aendern({ ...auswahl, ausgeblendet }),
+              },
+            ]}
+          />
         </div>
 
         {zustand.art === 'laedt' && <p className={styles.hinweis}>Termine werden geladen …</p>}

@@ -91,6 +91,7 @@ export function App() {
         options={reiter.map((r) => ({ value: r.id, label: r.label }))}
         onChange={wechseln}
         ariaLabel="Bereiche"
+        verbunden
       />
     ) : undefined;
   const unten =

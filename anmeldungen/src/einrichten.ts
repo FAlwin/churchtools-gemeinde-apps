@@ -61,6 +61,7 @@ interface GruppeRoh {
     signUpOpeningDate?: string | null;
     signUpClosingDate?: string | null;
     emailVerificationMode?: string;
+    visibility?: string;
   };
 }
 
@@ -581,11 +582,26 @@ const STATUS_WAS: Record<number, string> = {
 /**
  * **Status setzen** – freigeben, Freigabe zurücknehmen, archivieren, wiederherstellen. Darf, wer einrichten
  * darf (gemessen 13.10.2026: Organisator 200 für 1 ↔ 2 ↔ 3). Nachgelesen.
+ *
+ * **Freigeben macht die Gruppe auch für Gäste lesbar** (`visibility: 'public'`, A6-1 #542): Ohne das liefert
+ * `/publicgroups/{id}` ohne Login 403, auch bei Status 1 – das öffentliche Formular bliebe leer (gemessen
+ * 14.10.2026; `isPublic` allein ignoriert ChurchTools still, A5). Eine Liste aller öffentlichen Gruppen gibt es
+ * nicht, gefunden wird die Anmeldung nur über ihren Link. Hier und nicht nur in `freigeben`, weil auch
+ * „Verwalten“ und „Rückgängig“ über diese Funktion freigeben.
  */
 export async function setzeStatus(id: number, statusId: number): Promise<void> {
-  await ctAnfrage(`/groups/${id}`, { method: 'PATCH', body: json({ groupStatusId: statusId }) });
-  if ((await gruppe(id)).information?.groupStatusId !== statusId)
+  const fuerGaeste = statusId === STATUS.freigegeben;
+  await ctAnfrage(`/groups/${id}`, {
+    method: 'PATCH',
+    body: json(
+      fuerGaeste ? { groupStatusId: statusId, visibility: 'public' } : { groupStatusId: statusId },
+    ),
+  });
+  const g = await gruppe(id);
+  if (g.information?.groupStatusId !== statusId)
     throw new NichtUebernommen(STATUS_WAS[statusId] ?? 'den Status');
+  if (fuerGaeste && g.settings?.visibility !== 'public')
+    throw new NichtUebernommen('die Freigabe für Gäste (öffentlich lesbar)');
 }
 
 /**

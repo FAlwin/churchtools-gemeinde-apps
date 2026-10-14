@@ -111,6 +111,20 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Neu (Anmeldungen)
 
+- **Öffentliches Formular anzeigen** (A6-1, #542 – erste von fünf Scheiben von A6). Die Seite `formular/` liest
+  die Veranstaltung **ohne Login** aus ChurchTools (`/publicgroups/{id}`, `/info`) und zeigt sie mit demselben
+  Formular wie der Baukasten. Link wie gehabt `…/#<instanz>/<gruppe>` (`ortAusLink` ist das Gegenstück zu
+  `anmeldeLink`, nur Rechnername und Nummer). Abschicken ist noch ein **Probelauf** – echt anmelden kommt in A6-2.
+  - Fehlerfälle einzeln: nicht freigegeben (403), nicht gefunden (404), keine Anmeldung hinterlegt, vorübergehend
+    (429/5xx/Zeitüberschreitung nach 15 s → „Noch einmal versuchen“), keine Verbindung (Netz weg oder Seite für
+    diese Gemeinde nicht freigeschaltet – sieht für den Browser gleich aus). Nimmt ChurchTools gerade keine
+    Anmeldungen an (`canSignUp`), steht das oben.
+  - **Freigeben macht die Anmeldung für Gäste lesbar** (`visibility: 'public'`, nachgelesen). Gemessen 14.10.:
+    Ohne das liefert `/publicgroups` ohne Login 403, auch freigegeben – alle freigegebenen Testgruppen waren
+    unsichtbar. Eine Liste aller öffentlichen Gruppen gibt es nicht (404); gefunden wird eine Anmeldung nur über
+    ihren Link. Die Regel steht in `setzeStatus`, weil auch „Verwalten“ und „Rückgängig“ darüber freigeben.
+  - Die Tests von `formular/` liefen bisher gar nicht mit – jetzt im gemeinsamen Testlauf.
+
 - **Design frei einstellbar** (Entwurf v3, Alwin, 13.10.2026: „Diese Vorlagen sollten nicht so starr sein …
   gefällt mir sehr gut, gerne so umsetzen“). Die sechs Vorlagen sind nur noch **Startpunkte**; danach ist alles
   einzeln änderbar: Aufbau (Kopfband, Bild über alles, zweigeteilt, Karte), Kopfhöhe und Ausrichtung, Logo

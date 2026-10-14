@@ -80,6 +80,10 @@ von Untergruppen** → bei „Personen und Gruppen“:
 „Grundeinstellungen bearbeiten“ ist in ChurchTools **ein** Schalter für Plätze, Anmeldezeitraum **und**
 Status – wer eine Veranstaltung einrichten darf, darf sie also auch freigeben.
 
+**Freigeben macht die Anmeldung für Gäste lesbar:** Die Erweiterung stellt die Gruppe dabei auf „öffentlich“
+(`visibility`). Nur so kann das Formular sie ohne Login lesen. In einer öffentlichen Liste taucht sie dadurch
+nicht auf – gefunden wird sie nur über ihren Link.
+
 Fehlt Schritt 3, zeigt die Startseite bei der Gruppe „Untergruppen für dich nicht freigegeben“ statt die
 Veranstaltungen stillschweigend wegzulassen.
 

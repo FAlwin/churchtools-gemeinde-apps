@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
@@ -79,6 +79,14 @@ export function WerKann({
   const [konflikt, setKonflikt] = useState<{ ziel: EntwurfZiel; jetzt: Entwurf | null } | null>(
     null,
   );
+
+  // Ein Hinweis (Konflikt, Fehler) steht unter der langen Liste – am Handy sah man ihn nach dem Tippen oben
+  // gar nicht (in der Test-Instanz gefunden, 14.10.2026). Deshalb rollt das Fach ihn ins Bild.
+  const hinweisRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (meldung || konflikt)
+      hinweisRef.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+  }, [meldung, konflikt]);
 
   const bereit = eintragen?.art === 'bereit' ? eintragen : null;
   const waehle = async (ziel: EntwurfZiel, erwartet: number | null) => {
@@ -211,37 +219,43 @@ export function WerKann({
         </>
       )}
       <EintragenStand eintragen={eintragen} laeuft={laeuft} />
-      {meldung && (
-        <p className={styles.fehler} role="alert">
-          {meldung}
-        </p>
-      )}
-      {konflikt && (
-        <div className={styles.konflikt} role="alert">
-          <p>
-            <b>
-              {konflikt.jetzt
-                ? `${konflikt.jetzt.von.name} hat diesen Platz eben geändert:`
-                : 'Jemand hat diesen Platz eben geändert.'}
-            </b>{' '}
-            {konflikt.jetzt && `Entwurf „${konflikt.jetzt.ziel.name}“. `}
-            Dein „{konflikt.ziel.name}“ wurde nicht gespeichert.
+      <div ref={hinweisRef}>
+        {meldung && (
+          <p className={styles.fehler} role="alert">
+            {meldung}
           </p>
-          <div className={styles.knoepfe}>
-            <button type="button" className={`${styles.knopf} ${styles.primaer}`} onClick={onClose}>
-              {konflikt.jetzt ? `Entwurf von ${konflikt.jetzt.von.name} lassen` : 'So lassen'}
-            </button>
-            <button
-              type="button"
-              className={styles.knopf}
-              disabled={laeuft}
-              onClick={() => void waehle(konflikt.ziel, konflikt.jetzt?.version ?? null)}
-            >
-              Trotzdem {konflikt.ziel.name} eintragen
-            </button>
+        )}
+        {konflikt && (
+          <div className={styles.konflikt} role="alert">
+            <p>
+              <b>
+                {konflikt.jetzt
+                  ? `${konflikt.jetzt.von.name} hat diesen Platz eben geändert:`
+                  : 'Jemand hat diesen Platz eben geändert.'}
+              </b>{' '}
+              {konflikt.jetzt && `Entwurf „${konflikt.jetzt.ziel.name}“. `}
+              Dein „{konflikt.ziel.name}“ wurde nicht gespeichert.
+            </p>
+            <div className={styles.knoepfe}>
+              <button
+                type="button"
+                className={`${styles.knopf} ${styles.primaer}`}
+                onClick={onClose}
+              >
+                {konflikt.jetzt ? `Entwurf von ${konflikt.jetzt.von.name} lassen` : 'So lassen'}
+              </button>
+              <button
+                type="button"
+                className={styles.knopf}
+                disabled={laeuft}
+                onClick={() => void waehle(konflikt.ziel, konflikt.jetzt?.version ?? null)}
+              >
+                Trotzdem {konflikt.ziel.name} eintragen
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </Sheet>
   );
 }

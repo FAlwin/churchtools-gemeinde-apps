@@ -153,6 +153,27 @@ describe('WerKann – Eintragen', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it('ein Hinweis (Konflikt, Fehler) wird ins Bild gerollt – er steht unter der langen Liste', async () => {
+    laden.mockResolvedValue([k(1, 'Anna')]);
+    const rollen = vi.fn();
+    Element.prototype.scrollIntoView = rollen;
+    try {
+      const onWahl = vi
+        .fn()
+        .mockResolvedValueOnce({ ok: false, grund: 'konflikt', jetzt: spikeEntwurf() })
+        .mockResolvedValueOnce({ ok: false, grund: 'voruebergehend' });
+      render(<WerKann platz={PLATZ} onClose={() => {}} eintragen={{ art: 'bereit', onWahl }} />);
+      fireEvent.click(await screen.findByRole('button', { name: /^Anna/ }));
+      await screen.findByRole('button', { name: 'Entwurf von Spike lassen' });
+      expect(rollen).toHaveBeenCalledTimes(1);
+      fireEvent.click(screen.getByRole('button', { name: /^Anna/ }));
+      await screen.findByText(/antwortet gerade nicht/);
+      expect(rollen).toHaveBeenCalledTimes(2);
+    } finally {
+      delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+    }
+  });
+
   it('Konflikt „lassen“ schließt das Fach, ohne zu speichern', async () => {
     laden.mockResolvedValue([k(1, 'Anna')]);
     const onWahl = vi

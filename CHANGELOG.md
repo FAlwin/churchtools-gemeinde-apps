@@ -9,6 +9,16 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Hinzugefügt (Dienstplaner)
 
+- **Entwürfe ändern und entfernen** (#564, Bauplan E4-3-3): Einen Entwurf in der Matrix antippen öffnet sein Fach –
+  wer, „Eingetragen von Spike, heute 18:42“, „Beim Senden: Anfrage senden | Direkt zuteilen“ (nicht bei Gästen),
+  „Andere Person wählen“ (ersetzt ihn, „direkt“ bleibt) und „Entfernen“. Ein Konflikt mit einem anderen Planer
+  steht da, mit „So lassen“ oder bewusst „Trotzdem …“.
+- **Veraltete Entwürfe** (Alwin: Schild am Platz): Steht in ChurchTools inzwischen etwas anderes als beim
+  Eintragen, zeigt die Matrix ChurchTools und darunter ein kleines Schild „Entwurf veraltet“. Antippen sagt, was
+  dort jetzt steht, und bietet „Entwurf verwerfen“. Verglichen wird mit derselben Regel wie beim Einteilen – jeder
+  Platz trägt dazu seine Belegung aus `belegungAus`.
+- **Leiste unten:** „N Entwürfe noch nicht gesendet“ (nur gültige im geladenen Zeitraum, am Handy kurz „N
+  Entwürfe · Senden folgt“). Senden selbst kommt mit E4-4.
 - **Als Entwurf eintragen** (#561, Bauplan E4-3-2, Entwurf `e4-3-entwurf.html`): Im Fach „Wer kann?“ sind die
   Personen jetzt antippbar – sie stehen danach **als Entwurf** im Plan (blau gestrichelt mit Stift), **noch ohne
   Anfrage**. Darunter „Jemand ohne ChurchTools-Konto“ für einen Gast. Fremde Entwürfe tragen den Namen des

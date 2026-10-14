@@ -15,6 +15,7 @@ import {
 import { merkeVersprechen } from '@shared/ct/versprechenMerker';
 import type { Dienstgruppe } from '@shared/ct/dienstgruppen';
 import {
+  entwurfEntfernen,
   entwurfSpeichern,
   ortSchluessel,
   schublade,
@@ -27,6 +28,7 @@ import {
   type EntwurfGrund,
   type SchubladenStand,
 } from '@shared/dienstplan/entwuerfe';
+import type { PlatzOrt } from '@shared/dienstplan/einteilen';
 import { entwurfPortFuer } from '@ui/ct/modulPort';
 import { MODUL_KUERZEL, type Start } from './start';
 
@@ -106,6 +108,18 @@ export function speichereEntwurf(
   return entwurfSpeichern(port, daten.modul, kategorie, eingabe, erwartet);
 }
 
+/** Einen Entwurf entfernen – nur, wenn noch die gesehene Version dasteht (im Kern). */
+export function entferneEntwurf(
+  daten: EntwuerfeDaten,
+  gruppeId: number,
+  ort: PlatzOrt,
+  erwartet: number,
+): Promise<EntwurfErgebnis> {
+  const kategorie = daten.schubladen.get(gruppeId)?.kategorie;
+  if (kategorie == null) return Promise.resolve({ ok: false, grund: 'kein-recht' });
+  return entwurfEntfernen(port, daten.modul, kategorie, ort, erwartet);
+}
+
 const VERWEIGERT_ANLEGEN =
   'ChurchTools erlaubt dir nicht, Kategorien anzulegen. Das kann die Gemeinde-Verwaltung einrichten.';
 
@@ -132,6 +146,12 @@ export interface EntwurfAnschluss {
     eingabe: EntwurfEingabe,
     erwartet: number | null,
   ): Promise<EntwurfErgebnis>;
+  entfernen(
+    daten: EntwuerfeDaten,
+    gruppeId: number,
+    ort: PlatzOrt,
+    erwartet: number,
+  ): Promise<EntwurfErgebnis>;
   einrichten(gruppe: Dienstgruppe): Promise<void>;
 }
 
@@ -141,6 +161,7 @@ export function entwurfAnschluss(start: Start, gruppen: () => Dienstgruppe[]): E
     ich: { personId: start.ichId, name: start.vorname },
     laden: () => ladeEntwuerfe(gruppen()),
     speichern: speichereEntwurf,
+    entfernen: entferneEntwurf,
     einrichten: async (gruppe) => {
       await richteSchubladeEin(gruppe);
     },

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { Segment } from '@ui/bedienung/Segment';
@@ -41,6 +41,7 @@ import { leseAnsicht, merkeAnsicht, type PlanenAnsicht } from './planenAnsicht';
 import { useBreite } from './useBreite';
 import { FilterKnopf } from './FilterKnopf';
 import { WerKann, type Eintragen, type FreierPlatz } from './WerKann';
+import { EntwurfFach } from './EntwurfFach';
 import { grundText, type EntwuerfeDaten, type EntwurfAnschluss } from './ladeEntwuerfe';
 import styles from './Planen.module.scss';
 
@@ -60,6 +61,9 @@ interface Props {
   /** Eintragen als Entwurf (E4-3) – ohne Anschluss bleibt „Wer kann?“ nur zum Ansehen. */
   entwuerfe?: EntwurfAnschluss;
 }
+
+/** Ein Entwurf an einem Platz – und ob er veraltet ist (in ChurchTools steht inzwischen etwas anderes). */
+type EntwurfAmPlatz = { entwurf: Entwurf; veraltet: boolean };
 
 type EntwuerfeZustand =
   | { art: 'laedt' }
@@ -82,8 +86,11 @@ interface Sicht {
   onUmschalten: (k: string) => void;
   /** Freien Platz antippen → „Wer kann?“ (nur wo man den Dienst planen darf). */
   onFrei: (spalte: number, zeile: PlanZeile, nr: number) => void;
-  /** Der (gültige) Entwurf an einem freien Platz – sonst `null`. */
-  entwurf: (spalte: number, zeile: PlanZeile, p: PlanPlatz) => Entwurf | null;
+  /** Der Entwurf an einem Platz – mit „veraltet“, wenn in ChurchTools inzwischen etwas anderes steht. */
+  entwurf: (spalte: number, zeile: PlanZeile, p: PlanPlatz) => EntwurfAmPlatz | null;
+  /** Einen Entwurf antippen → Entwurfs-Fach (E4-3-3; nur wo man planen und die Schublade ändern darf). */
+  onEntwurf: (spalte: number, zeile: PlanZeile, nr: number) => void;
+  darfAendern: (zeile: PlanZeile) => boolean;
   /** Die eigene Person – eigene Entwürfe stehen ohne „von …“. */
   ichId: number | null;
 }
@@ -136,6 +143,13 @@ export function Planen({
   const [fenster, setFenster] = useState<Fenster>({ start: 0, anzahl: null });
   const [zu, setZu] = useState<Set<string> | null>(null);
   const [frei, setFrei] = useState<FreierPlatz | null>(null);
+  // Ein angetippter Entwurf (E4-3-3) – und ob „Andere Person wählen“ einen Entwurf ersetzt (seine Version).
+  const [fach, setFach] = useState<{
+    platz: FreierPlatz;
+    entwurf: Entwurf;
+    inChurchTools: string | null;
+  } | null>(null);
+  const [ersetzt, setErsetzt] = useState<number | null>(null);
   const [rahmen, platz] = useBreite();
   const { toast, showToast } = useToast();
 
@@ -155,6 +169,24 @@ export function Planen({
     };
   }, [entwuerfe, ewVersuch]);
   const ewNeu = useCallback(() => setEwVersuch((v) => v + 1), []);
+  /**
+   * Der Entwurf an einem Platz. Gültig ist er nur, wenn am Platz in ChurchTools noch dasselbe steht wie beim
+   * Eintragen (Entwürfe entstehen an freien Plätzen) – sonst ist er **veraltet**: Es gilt ChurchTools, und am
+   * Platz steht nur ein Schild (Alwin, 14.10.2026). Verglichen wird mit derselben Regel wie beim Einteilen
+   * (`p.belegung`, `gleichePerson`).
+   */
+  const entwurfAmPlatz = (s: PlanSpalte, zl: PlanZeile, p: PlanPlatz): EntwurfAmPlatz | null => {
+    if (ew.art !== 'fertig') return null;
+    const e = ew.daten.entwuerfe.get(
+      ortSchluessel({ eventId: s.id, serviceId: zl.dienst.id, index: p.index }),
+    );
+    if (!e) return null;
+    return { entwurf: e, veraltet: entwurfVeraltet(e, p.belegung) };
+  };
+  /** Darf man die Entwürfe dieser Gruppe ändern? (Schublade bereit) */
+  const darfAendern = (zl: PlanZeile) =>
+    ew.art === 'fertig' &&
+    ew.daten.schubladen.get(zl.dienst.dienstgruppeId ?? 0)?.stand === 'bereit';
   /** Einen Entwurf (oder sein Fehlen) in die geladenen Daten übernehmen – ohne alles neu zu laden. */
   const ewSetzen = (k: string, e: Entwurf | null) =>
     setEw((alt) => {
@@ -387,13 +419,18 @@ export function Planen({
       neben: (s) => haupt !== null && s.name !== haupt,
       onUmschalten: umschalten,
       onFrei: (i, zl, nr) => setFrei(freierPlatz(plan.spalten[i], zl, zl.zellen[i] ?? [], nr)),
-      entwurf: (i, zl, p) => {
-        if (ew.art !== 'fertig' || p.art !== 'frei') return null;
-        const e = ew.daten.entwuerfe.get(
-          ortSchluessel({ eventId: plan.spalten[i].id, serviceId: zl.dienst.id, index: p.index }),
-        );
-        // Steht in ChurchTools inzwischen etwas anderes als beim Eintragen, gilt ChurchTools.
-        return e && !entwurfVeraltet(e, { art: 'frei' }) ? e : null;
+      entwurf: (i, zl, p) => entwurfAmPlatz(plan.spalten[i], zl, p),
+      darfAendern,
+      onEntwurf: (i, zl, nr) => {
+        const plaetze = zl.zellen[i] ?? [];
+        const p = plaetze[nr - 1];
+        const a = p ? entwurfAmPlatz(plan.spalten[i], zl, p) : null;
+        if (!p || !a) return;
+        setFach({
+          platz: freierPlatz(plan.spalten[i], zl, plaetze, nr),
+          entwurf: a.entwurf,
+          inChurchTools: a.veraltet ? stehtInChurchTools(p) : null,
+        });
       },
       ichId: entwuerfe?.ich.personId ?? null,
     };
@@ -410,6 +447,18 @@ export function Planen({
         <TabellenPlan sicht={sicht} breite={ansicht.breite} platz={platz} />
       );
   }
+
+  /** Nach einer Änderung im Entwurfs-Fach: Ergebnis übernehmen, bei Erfolg schließen und Bescheid geben. */
+  const nachFach = (r: EntwurfErgebnis, k: string, text: () => string) => {
+    if (r.ok) {
+      ewSetzen(k, r.entwurf);
+      setFach(null);
+      showToast(text());
+    } else if (r.grund === 'konflikt') {
+      // Was jetzt dasteht, zeigt auch die Matrix sofort.
+      ewSetzen(k, r.jetzt ?? null);
+    }
+  };
 
   /** Ob und wie man an diesem Platz eintragen kann – aus Anschluss, Schublade und Rechten. */
   const eintragenFuer = (f: FreierPlatz): Eintragen | undefined => {
@@ -447,17 +496,27 @@ export function Planen({
     const ort = { eventId: f.eventId, serviceId: f.serviceId, index: f.index };
     return {
       art: 'bereit',
+      erwartet: ersetzt,
       onWahl: async (ziel: EntwurfZiel, erwartet: number | null): Promise<EntwurfErgebnis> => {
+        // Ersetzt man einen Entwurf („Andere Person wählen“), bleibt „Beim Senden“ wie es war.
+        const bisher = erwartet !== null ? daten.entwuerfe.get(ortSchluessel(ort)) : undefined;
         const r = await entwuerfe.speichern(
           daten,
           f.gruppeId,
-          { ort, ziel, modus: 'anfrage', gesehen: { art: 'frei' }, von: entwuerfe.ich },
+          {
+            ort,
+            ziel,
+            modus: bisher?.modus ?? 'anfrage',
+            gesehen: { art: 'frei' },
+            von: entwuerfe.ich,
+          },
           erwartet,
         );
         const k = ortSchluessel(ort);
         if (r.ok) {
           ewSetzen(k, r.entwurf);
           setFrei(null);
+          setErsetzt(null);
           showToast(`${ziel.name} eingetragen – noch nicht gesendet.`);
         } else if (r.grund === 'konflikt') {
           // Was jetzt dasteht, zeigt auch die Matrix sofort.
@@ -467,6 +526,29 @@ export function Planen({
       },
     };
   };
+
+  // Die Leiste unten (E4-3-3): gültige Entwürfe im geladenen Zeitraum – veraltete werden nie gesendet.
+  const offen = plan
+    ? plan.gruppen.reduce(
+        (n, g) =>
+          n +
+          g.zeilen.reduce(
+            (m, zl) =>
+              m +
+              zl.zellen.reduce(
+                (k, zelle, i) =>
+                  k +
+                  (zelle ?? []).filter((p) => {
+                    const a = entwurfAmPlatz(plan.spalten[i], zl, p);
+                    return a !== null && !a.veraltet;
+                  }).length,
+                0,
+              ),
+            0,
+          ),
+        0,
+      )
+    : 0;
 
   const nachladeFehler = !bereich && zustand.art === 'fertig' ? zustand.nachladeFehler : undefined;
   return (
@@ -483,8 +565,65 @@ export function Planen({
         Admin des Termins bist. Einen freien Platz antippen zeigt, wer kann – dort trägst du
         jemanden als Entwurf ein. Gesendet wird noch nichts.
       </p>
+      {fach && entwuerfe && ew.art === 'fertig' && (
+        <EntwurfFach
+          platz={fach.platz}
+          entwurf={fach.entwurf}
+          inChurchTools={fach.inChurchTools}
+          onClose={() => setFach(null)}
+          onModus={async (modus, erwartet) => {
+            const e = fach.entwurf;
+            const r = await entwuerfe.speichern(
+              ew.daten,
+              fach.platz.gruppeId,
+              { ort: e.ort, ziel: e.ziel, modus, gesehen: e.gesehen, von: entwuerfe.ich },
+              erwartet,
+            );
+            nachFach(r, ortSchluessel(e.ort), () =>
+              modus === 'direkt'
+                ? `${e.ziel.name} wird beim Senden direkt zugeteilt.`
+                : `${e.ziel.name} bekommt beim Senden eine Anfrage.`,
+            );
+            return r;
+          }}
+          onEntfernen={async (erwartet) => {
+            const e = fach.entwurf;
+            const r = await entwuerfe.entfernen(ew.daten, fach.platz.gruppeId, e.ort, erwartet);
+            nachFach(r, ortSchluessel(e.ort), () =>
+              fach.inChurchTools !== null ? 'Entwurf verworfen.' : 'Entwurf entfernt.',
+            );
+            return r;
+          }}
+          onAnderePerson={() => {
+            // „Wer kann?“ für denselben Platz – es ersetzt den Entwurf (mit seiner Version).
+            setErsetzt(fach.entwurf.version);
+            setFrei(fach.platz);
+            setFach(null);
+          }}
+        />
+      )}
       {frei && (
-        <WerKann platz={frei} onClose={() => setFrei(null)} eintragen={eintragenFuer(frei)} />
+        <WerKann
+          platz={frei}
+          onClose={() => {
+            setFrei(null);
+            setErsetzt(null);
+          }}
+          eintragen={eintragenFuer(frei)}
+        />
+      )}
+      {offen > 0 && (
+        <div className={styles.sendeLeiste} role="status" aria-label="Noch nicht gesendet">
+          {/* Am Handy kürzer, wie im Entwurf (Abschnitt 6) – sonst bricht alles um. */}
+          <span>
+            {offen} {offen === 1 ? 'Entwurf' : 'Entwürfe'}
+            {handy ? '' : ' noch nicht gesendet'}
+            <small>{handy ? 'Senden folgt' : 'Senden kommt mit dem nächsten Schritt'}</small>
+          </span>
+          <button type="button" className={styles.leistenKnopf} disabled>
+            {handy ? 'Ansehen' : 'Ansehen und senden'}
+          </button>
+        </div>
       )}
       <Toast message={toast} />
     </div>
@@ -708,6 +847,11 @@ function TabellenPlan({ sicht, breite, platz }: { sicht: Sicht; breite: Breite; 
                                     : undefined
                                 }
                                 entwurf={(p) => sicht.entwurf(i, z, p)}
+                                onEntwurf={
+                                  darfPlanen(z, plan.spalten[i]) && sicht.darfAendern(z)
+                                    ? (nr) => sicht.onEntwurf(i, z, nr)
+                                    : undefined
+                                }
                                 ichId={sicht.ichId}
                               />
                             )}
@@ -793,6 +937,11 @@ function HandyPlan({ sicht, amEnde }: { sicht: Sicht; amEnde?: () => void }) {
                       plaetze={z.zellen[i]!}
                       onFrei={darfPlanen(z, s) ? (nr) => sicht.onFrei(i, z, nr) : undefined}
                       entwurf={(p) => sicht.entwurf(i, z, p)}
+                      onEntwurf={
+                        darfPlanen(z, s) && sicht.darfAendern(z)
+                          ? (nr) => sicht.onEntwurf(i, z, nr)
+                          : undefined
+                      }
                       ichId={sicht.ichId}
                     />
                   </div>
@@ -873,45 +1022,104 @@ function Plaetze({
   plaetze,
   onFrei,
   entwurf,
+  onEntwurf,
   ichId = null,
 }: {
   plaetze: PlanPlatz[];
   /** Nur wo man planen darf: freier Platz wird ein Knopf (Platz 1 … n). */
   onFrei?: (nr: number) => void;
-  /** Der Entwurf an einem freien Platz (E4-3) – steht dann statt „frei“ da. */
-  entwurf?: (p: PlanPlatz) => Entwurf | null;
+  /** Der Entwurf an einem Platz (E4-3) – gültig steht er statt „frei“ da, veraltet als Schild darunter. */
+  entwurf?: (p: PlanPlatz) => EntwurfAmPlatz | null;
+  /** Entwurf bzw. Schild antippen → Entwurfs-Fach (nur wo man planen und ändern darf). */
+  onEntwurf?: (nr: number) => void;
   ichId?: number | null;
 }) {
   return (
     <div className={styles.plaetze}>
       {plaetze.map((p, i) => {
-        const e = entwurf?.(p) ?? null;
-        return e ? (
-          <EntwurfPlatz key={i} e={e} eigener={e.von.personId === ichId} />
-        ) : p.art === 'frei' && onFrei ? (
-          <button
-            key={i}
-            type="button"
-            className={`${styles.platz} ${styles.frei} ${styles.freiKnopf}`}
-            onClick={() => onFrei(i + 1)}
-            aria-label={`frei – Wer kann? (Platz ${i + 1} von ${plaetze.length})`}
-          >
-            frei
-          </button>
-        ) : (
-          <Platz key={i} p={p} />
+        const a = entwurf?.(p) ?? null;
+        const oeffnen = onEntwurf ? () => onEntwurf(i + 1) : undefined;
+        if (a && !a.veraltet) {
+          return (
+            <EntwurfPlatz
+              key={i}
+              e={a.entwurf}
+              eigener={a.entwurf.von.personId === ichId}
+              onOeffnen={oeffnen}
+            />
+          );
+        }
+        const platz =
+          p.art === 'frei' && onFrei ? (
+            <button
+              type="button"
+              className={`${styles.platz} ${styles.frei} ${styles.freiKnopf}`}
+              onClick={() => onFrei(i + 1)}
+              aria-label={`frei – Wer kann? (Platz ${i + 1} von ${plaetze.length})`}
+            >
+              frei
+            </button>
+          ) : (
+            <Platz p={p} />
+          );
+        if (!a) return <Fragment key={i}>{platz}</Fragment>;
+        // Veraltet: ChurchTools gilt – darunter ein Schild, das zum Entwurf führt (Alwin, 14.10.2026).
+        const text = `Entwurf veraltet: „${a.entwurf.ziel.name}“ von ${a.entwurf.von.name}`;
+        return (
+          <Fragment key={i}>
+            {platz}
+            {oeffnen ? (
+              <button
+                type="button"
+                className={`${styles.veraltet} ${styles.veraltetKnopf}`}
+                onClick={oeffnen}
+                aria-label={text}
+              >
+                <Icon name="pencil" size={10} /> Entwurf veraltet
+              </button>
+            ) : (
+              <span className={styles.veraltet} title={text}>
+                <Icon name="pencil" size={10} /> Entwurf veraltet
+              </span>
+            )}
+          </Fragment>
         );
       })}
     </div>
   );
 }
 
+/** Was jetzt in ChurchTools am Platz steht – für das Fach eines veralteten Entwurfs. */
+function stehtInChurchTools(p: PlanPlatz): string {
+  if (p.art === 'frei') return 'Der Platz ist dort wieder frei.';
+  if (p.verborgen) return 'Dort ist jemand eingetragen (Name nicht sichtbar).';
+  if (p.gast) return `${p.name} steht dort als Gast.`;
+  return p.art === 'zugesagt' ? `${p.name} hat dort zugesagt.` : `${p.name} ist dort angefragt.`;
+}
+
 /** Ein Entwurf – noch nicht gesendet: gestrichelt mit Stift, „von …“ wenn von jemand anderem (E4-3). */
-function EntwurfPlatz({ e, eigener }: { e: Entwurf; eigener: boolean }) {
+function EntwurfPlatz({
+  e,
+  eigener,
+  onOeffnen,
+}: {
+  e: Entwurf;
+  eigener: boolean;
+  /** Antippen öffnet das Entwurfs-Fach (E4-3-3) – nur wo man ändern darf. */
+  onOeffnen?: () => void;
+}) {
   const gast = e.ziel.art === 'gast';
+  const Tag = onOeffnen ? 'button' : 'span';
   return (
-    <span
-      className={`${styles.platz} ${styles.entwurf}`}
+    <Tag
+      {...(onOeffnen
+        ? {
+            type: 'button' as const,
+            onClick: onOeffnen,
+            'aria-label': `Entwurf von ${e.von.name}: ${e.ziel.name}${gast ? ' (Gast)' : ''}`,
+          }
+        : {})}
+      className={`${styles.platz} ${styles.entwurf}${onOeffnen ? ' ' + styles.entwurfKnopf : ''}`}
       title={`Entwurf von ${e.von.name} – noch nicht gesendet`}
     >
       <span className={styles.ic} aria-label="Entwurf, noch nicht gesendet">
@@ -921,7 +1129,7 @@ function EntwurfPlatz({ e, eigener }: { e: Entwurf; eigener: boolean }) {
       {gast && <span className={styles.gast}>Gast</span>}
       {!gast && e.modus === 'direkt' && <span className={styles.direkt}>direkt</span>}
       {!eigener && <span className={styles.von}>{e.von.name}</span>}
-    </span>
+    </Tag>
   );
 }
 

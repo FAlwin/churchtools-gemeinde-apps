@@ -1,0 +1,47 @@
+// Lade- und Fehlerseite des öffentlichen Formulars (A6-1) – das Formular selbst gestaltet `ui/anmeldeformular`.
+.mitte {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+}
+.leise {
+  color: var(--text2);
+}
+.karte {
+  max-width: 460px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px 22px;
+
+  h1 {
+    margin: 0 0 8px;
+    font-size: 20px;
+  }
+
+  p {
+    margin: 0;
+    color: var(--text2);
+    line-height: 1.5;
+  }
+}
+.knopf {
+  margin-top: 16px;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 16px;
+  background: var(--blue);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.zu {
+  margin: 0;
+  padding: 10px 16px;
+  background: #fff4d6;
+  color: #5c4a00;
+  text-align: center;
+  font-size: 14px;
+}

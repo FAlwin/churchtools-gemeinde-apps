@@ -341,17 +341,22 @@ function Symbol({ name }: { name: keyof typeof SYMBOLE }) {
   );
 }
 
-/** Das ganze Formular. `vorschau`: mit Musterdaten, „Absenden“ zeigt nur, wie die Bestätigung aussähe. */
+/**
+ * Das ganze Formular. `vorschau`: mit Musterdaten, „Absenden“ zeigt nur, wie die Bestätigung aussähe. `probe`:
+ * das öffentliche Formular, das noch nichts abschickt (A6-1) – sonst wie für Gäste.
+ */
 export function AnmeldeFormular({
   ansicht,
   heute,
   vorschau = false,
+  probe = false,
   start,
   baukasten,
 }: {
   ansicht: Ansicht;
   heute: string;
   vorschau?: boolean;
+  probe?: boolean;
   /** Anfangswerte (Vorschau: `musterAntworten`). */
   start?: Antworten;
   /** Im Baukasten: Felder auswählen, ziehen, bearbeiten (siehe `BaukastenHaken`). */
@@ -514,8 +519,10 @@ export function AnmeldeFormular({
                   : ''}
                 .
               </p>
-              {vorschau && (
-                <p className={s.vorschauhinweis}>Vorschau – abgeschickt wurde nichts.</p>
+              {(vorschau || probe) && (
+                <p className={s.vorschauhinweis}>
+                  {vorschau ? 'Vorschau' : 'Probelauf'} – abgeschickt wurde nichts.
+                </p>
               )}
               <button type="button" className={s.addbtn} onClick={() => setFertig(false)}>
                 Zurück zum Formular
@@ -732,6 +739,9 @@ export function AnmeldeFormular({
                   <p className={s.hintline}>
                     Vorschau mit Musterdaten – abgeschickt wird hier nichts.
                   </p>
+                )}
+                {probe && (
+                  <p className={s.hintline}>Probelauf – abgeschickt wird hier noch nichts.</p>
                 )}
               </section>
             </form>

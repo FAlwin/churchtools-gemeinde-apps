@@ -232,6 +232,7 @@ function ct() {
           if (k === 'note') g.note = String(v);
           else if (k === 'name') g.name = String(v);
           else if (k === 'groupStatusId') g.status = Number(v);
+          else if (k === 'visibility' && schlucken.has('SICHTBAR')) continue;
           else if (k !== 'information') g.settings[k] = v; // verschachtelt: still ignoriert (gemessen)
         }
       }
@@ -576,6 +577,27 @@ describe('Preise und Bezahlung (A4)', () => {
     expect(await anmeldungenZahl(93)).toBeNull();
     mitglieder.set(94, 502);
     await expect(anmeldungenZahl(94)).rejects.toBeInstanceOf(ApiError);
+  });
+});
+
+describe('Freigeben macht die Anmeldung für Gäste lesbar (A6-1, #542)', () => {
+  it('freigeben setzt visibility public – auch über setzeStatus (Verwalten, Rückgängig); Entwurf fasst sie nicht an', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    expect(gruppen.get(id)!.settings.visibility).toBeUndefined();
+    await freigeben(id);
+    expect(gruppen.get(id)!.settings.visibility).toBe('public');
+    gruppen.get(id)!.settings.visibility = 'restricted';
+    await setzeStatus(id, STATUS.entwurf);
+    expect(gruppen.get(id)!.settings.visibility).toBe('restricted');
+    await setzeStatus(id, STATUS.freigegeben);
+    expect(gruppen.get(id)!.settings.visibility).toBe('public');
+  });
+  it('übernimmt ChurchTools die Sichtbarkeit nicht, sagt es das (statt „freigegeben“ zu melden)', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    schlucken.add('SICHTBAR');
+    await expect(freigeben(id)).rejects.toMatchObject({
+      message: expect.stringMatching(/Freigabe für Gäste/),
+    });
   });
 });
 

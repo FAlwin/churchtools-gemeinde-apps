@@ -220,7 +220,7 @@ describe('Planen – Terminleiste (E3-5)', () => {
   });
 
   /** So breit, dass genau eine Spalte (M = 176 px) neben die Dienst-Spalte passt. */
-  function schmal() {
+  function schmal(breite = 400) {
     vi.stubGlobal(
       'ResizeObserver',
       class {
@@ -231,8 +231,29 @@ describe('Planen – Terminleiste (E3-5)', () => {
         disconnect() {}
       },
     );
-    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(400);
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(breite);
   }
+
+  it('„passend“ ist nie breiter als der Platz – feste Breiten statt vom Inhalt gedehnter Spalten', () => {
+    // 14.10.2026: Der Inhalt dehnte die Spalten, „passend“ ragte heraus; beim Wischen rutschte der erste
+    // Termin unter die Dienst-Spalte. Die Tabelle trägt jetzt ihre Breite selbst.
+    for (const platz of [400, 640, 1086]) {
+      schmal(platz);
+      const { unmount } = render(
+        <Planen
+          zustand={{ art: 'fertig', zeilen: [], plan: PLAN2, wochen: 8 }}
+          handy={false}
+          onNochmal={() => {}}
+          onMehr={() => {}}
+        />,
+      );
+      const breite = parseInt(screen.getByRole('table').style.width, 10);
+      expect(breite).toBeGreaterThan(178);
+      expect(breite).toBeLessThanOrEqual(platz);
+      unmount();
+      vi.restoreAllMocks();
+    }
+  });
 
   it('passend zur Fensterbreite; weiter/zurück verschiebt um einen Termin', () => {
     schmal();
@@ -257,7 +278,10 @@ describe('Planen – Terminleiste (E3-5)', () => {
     fireEvent.click(leiste.getByRole('button', { name: 'Späteren Termin dazunehmen' }));
     expect(spaltenNamen()).toEqual(['Gottesdienst', 'Gebetsabend']);
     expect(leiste.getByText('18.10. – 21.10.2026')).toBeTruthy();
-    fireEvent.click(leiste.getByRole('button', { name: 'an Fensterbreite anpassen' }));
+    // Dieselbe Zeile wie „N Termine“ – die Leiste soll nach „＋“ nicht höher werden (14.10.2026).
+    const anpassen = leiste.getByRole('button', { name: 'an Fensterbreite anpassen' });
+    expect(anpassen.closest('small')!.textContent).toBe('2 Termine · an Fensterbreite anpassen');
+    fireEvent.click(anpassen);
     expect(spaltenNamen()).toEqual(['Gottesdienst']);
   });
 });

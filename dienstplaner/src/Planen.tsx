@@ -272,15 +272,17 @@ function Terminleiste({
             ? `${kurz(erster.tag)} – ${kurz(letzter.tag)}${letzter.tag.slice(0, 4)}`
             : '–'}
         </b>
+        {/* Immer genau eine Zeile darunter – sonst springt die Leiste nach „＋“ (Alwin, 14.10.2026). */}
         <small>
-          {spalten.length} {spalten.length === 1 ? 'Termin' : 'Termine'}
-          {!festeAnzahl && ' · passend zur Fensterbreite'}
+          {spalten.length} {spalten.length === 1 ? 'Termin' : 'Termine'} ·{' '}
+          {festeAnzahl ? (
+            <button type="button" className={styles.anpassen} onClick={() => onSchritt('passend')}>
+              an Fensterbreite anpassen
+            </button>
+          ) : (
+            'passend zur Fensterbreite'
+          )}
         </small>
-        {festeAnzahl && (
-          <button type="button" className={styles.anpassen} onClick={() => onSchritt('passend')}>
-            an Fensterbreite anpassen
-          </button>
-        )}
       </span>
       <button
         type="button"
@@ -357,7 +359,12 @@ function TabellenPlan({ sicht, breite, platz }: { sicht: Sicht; breite: Breite; 
     `${s.abgesagt ? ' ' + styles.abgesagtSpalte : ''}${neben(s) ? ' ' + styles.neben : ''}`;
   return (
     <div className={styles.rahmen}>
-      <table className={styles.plan} style={{ ['--cw' as string]: `${cw}px` }}>
+      {/* Feste Breiten: Sonst dehnt der Inhalt die Spalten, und „passend“ passt nicht mehr – dann rutscht
+          der erste Termin beim Wischen unter die Dienst-Spalte (Alwin, 14.10.2026). */}
+      <table
+        className={styles.plan}
+        style={{ ['--cw' as string]: `${cw}px`, width: DIENST_SPALTE + spalten.length * cw }}
+      >
         <thead>
           <tr>
             <th className={`${styles.svc} ${styles.svcKopf}`} scope="col">

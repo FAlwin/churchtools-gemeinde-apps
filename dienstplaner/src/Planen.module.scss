@@ -18,6 +18,7 @@
 .plan {
   --svcw: 178px;
   --cw: 172px;
+  table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
 
@@ -58,6 +59,12 @@
   }
 }
 
+// Abstand der Dienst-Spalte – mit `.plan` davor, sonst nimmt ihn `.plan th { padding: 0 }` weg (die Namen
+// klebten am Rand, Alwin 14.10.2026). Die Gruppenzeile setzt ihren Abstand selbst (Knopf über die ganze Breite).
+.plan .svc {
+  padding: 10px 12px;
+}
+
 // Die Kopfzelle „Dienst“: über allem, unten bündig. Mit `.plan` davor, damit sie die Tabellenregeln schlägt –
 // ein Element-Selektor vorne (`thead …`) gälte im Erweiterungs-Bau als globale Regel (Packprüfung).
 .plan .svcKopf {
@@ -85,10 +92,12 @@
   gap: 8px;
   margin-bottom: 6px;
 
+  // Darf in schmalen Spalten (S) umbrechen – „Mi ·“ über „19:00“ –, statt die Spalte zu verbreitern.
   small {
+    min-width: 0;
     color: var(--text2);
     font-size: 12.5px;
-    white-space: nowrap;
+    line-height: 1.25;
   }
 }
 

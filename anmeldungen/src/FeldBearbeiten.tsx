@@ -8,6 +8,7 @@ import {
   type AntwortEntwurf,
   type FeldEntwurf,
 } from './baukastenEntwurf';
+import { geburtsdatumNoetigText } from './anzeige';
 import k from './Baukasten.module.scss';
 
 /**
@@ -49,7 +50,7 @@ export function FeldBearbeiten({
   onAendern,
   beantwortet,
   entferntGewaehlt,
-  altersPreise,
+  wozuGeburtsdatum: wozu,
   werkzeug,
   onTyp,
 }: {
@@ -59,8 +60,8 @@ export function FeldBearbeiten({
   beantwortet: number | null;
   /** Entfernte Antworten, die schon jemand gewählt hat – bleiben in ChurchTools, im Formular ausgeblendet. */
   entferntGewaehlt: string[];
-  /** Es gibt Preise nach Alter – das Geburtsdatum ist dann unverzichtbar. */
-  altersPreise: boolean;
+  /** Wozu die Preise das Geburtsdatum brauchen (`wozuGeburtsdatum`) – dann ist es unverzichtbar. */
+  wozuGeburtsdatum: 'alter' | 'geschwister' | null;
   /** Verschieben, kopieren, entfernen – unten im Feld wie bei Google Forms, nicht über dem Text. */
   werkzeug?: ReactNode;
   /** Fragetyp ändern (nur eigene Fragen, solange niemand geantwortet hat – ChurchTools ändert den Typ nicht). */
@@ -192,9 +193,9 @@ export function FeldBearbeiten({
           </button>
         )}
       </div>
-      {f.id === 'birth' && altersPreise && (
+      {f.id === 'birth' && wozu && (
         <p className={k.notiz} role="note">
-          Es gibt Preise nach Alter – ohne Geburtsdatum kann das Formular sie nicht rechnen.
+          {geburtsdatumNoetigText(wozu)}
         </p>
       )}
       {fehler && (

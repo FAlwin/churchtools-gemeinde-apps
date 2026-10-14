@@ -52,6 +52,21 @@ export const WER_TEXT: Record<OeffentlicheEinstellungen['wer'], [string, string]
   kinder: ['Nur Kinder', 'Eltern geben ihre Kontaktdaten an, angemeldet werden die Kinder'],
 };
 
+const WOZU_GEBURTSDATUM = {
+  alter: 'Es gibt Preise nach Alter',
+  geschwister: 'Es gibt einen Geschwister-Rabatt',
+} as const;
+
+/** Warnung auf der Preise-Karte: Die Preise brauchen das Geburtsdatum, es wird aber nicht abgefragt. */
+export function ohneGeburtsdatumText(wozu: 'alter' | 'geschwister'): string {
+  return `${WOZU_GEBURTSDATUM[wozu]}, aber das Geburtsdatum wird nicht abgefragt. Ohne Alter zahlt jede Person den Grundpreis.`;
+}
+
+/** Warnung dort, wo man das Geburtsdatum ausschaltet („Wer meldet sich an?“, Baukasten). */
+export function geburtsdatumNoetigText(wozu: 'alter' | 'geschwister'): string {
+  return `${WOZU_GEBURTSDATUM[wozu]}. Ohne Geburtsdatum kann das Formular sie nicht rechnen – jede Person zahlt dann den Grundpreis.`;
+}
+
 /**
  * **Ein Euro-Betrag aus einem Eingabefeld, in Cent** (A4): „12“, „12,5“, „12,50“, „12.50“, „1.234,50“,
  * auch mit „€“. `null`, wenn es kein Betrag ist; leer gilt als 0. Mehr als zwei Nachkommastellen lehnt es

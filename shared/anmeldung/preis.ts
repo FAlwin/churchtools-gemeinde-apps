@@ -305,6 +305,17 @@ export function pruefeRegeln(regeln: PreisRegeln): string[] {
 }
 
 /**
+ * **Wozu die Preise das Geburtsdatum brauchen** – Preise nach Alter oder ein Geschwister-Rabatt; `null`, wenn
+ * gar nicht. Die EINE Stelle für Preise-Karte, „Wer meldet sich an?“, Baukasten und Feld-Bearbeiten (stand
+ * vorher dreimal da, einmal ohne den Geschwister-Rabatt).
+ */
+export function wozuGeburtsdatum(regeln: PreisRegeln): 'alter' | 'geschwister' | null {
+  if (regeln.alter.length > 0) return 'alter';
+  if (regeln.anpassungen.some((a) => a.bedingung === 'abKind')) return 'geschwister';
+  return null;
+}
+
+/**
  * **Kann eine Anmeldung überhaupt etwas kosten?** (A4) – sobald irgendein Baustein einen Betrag hat:
  * Grundpreis oder eine Option, ein fester Preis nach Alter, ein Zuschlag oder ein Extra. Rabatte allein
  * kosten nichts. Daran hängt, ob eine Bankverbindung nötig ist (Freigeben, Karte „Bezahlung“).

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Icon } from '@ui/icons/icons';
+import { Schalter } from '@ui/bedienung/Schalter';
 import { BAUSTEINE, type Feld, type Feldtyp, type Formular } from '@shared/anmeldung/formular';
 import {
   EMPFOHLEN,
@@ -8,6 +9,7 @@ import {
   type Bereich,
 } from '@shared/anmeldung/baukasten';
 import { BausteinSymbol, type BausteinIcon } from './bausteinIcons';
+import { WER_TEXT, geburtsdatumNoetigText } from './anzeige';
 import k from './Baukasten.module.scss';
 
 /**
@@ -48,6 +50,56 @@ const SYMBOL_TYP: Partial<Record<Feldtyp, BausteinIcon>> = {
   info: 'info',
   trenner: 'trenner',
 };
+
+type Wer = 'familie' | 'einzeln' | 'kinder';
+
+/**
+ * **„Wer meldet sich an?“ oben in der Leiste** (Alwin, 14.10.2026: „ja, auch im Baukasten“) – dieselbe
+ * Einstellung wie im Reiter Veranstaltung; bestimmt den Bereich „Wer nimmt teil?“ und „+ Weitere Person“.
+ */
+function WerWahl({
+  wer,
+  geburtsdatum,
+  wozuGeburtsdatum: wozu,
+  onWer,
+}: {
+  wer: Wer;
+  geburtsdatum: boolean;
+  wozuGeburtsdatum: 'alter' | 'geschwister' | null;
+  onWer: (wer: Wer, geburtsdatum: boolean) => void;
+}) {
+  return (
+    <div className={k.werWahl}>
+      <h3 className={k.gruppe}>Wer meldet sich an?</h3>
+      {(Object.keys(WER_TEXT) as Wer[]).map((x) => (
+        <button
+          key={x}
+          type="button"
+          className={k.vorlage}
+          aria-pressed={x === wer}
+          onClick={() => x !== wer && onWer(x, geburtsdatum)}
+        >
+          <b>{WER_TEXT[x][0]}</b>
+          <small>{WER_TEXT[x][1]}</small>
+        </button>
+      ))}
+      <button
+        type="button"
+        className={k.schalterZeile}
+        aria-pressed={geburtsdatum}
+        onClick={() => onWer(wer, !geburtsdatum)}
+      >
+        <Schalter an={geburtsdatum} />
+        Geburtsdatum abfragen (Pflicht)
+      </button>
+      {wozu && !geburtsdatum && (
+        <p className={k.fehler} role="alert">
+          {geburtsdatumNoetigText(wozu)}
+        </p>
+      )}
+    </div>
+  );
+}
 
 function alleFelder(f: Formular): Feld[] {
   return [...f.anmeldung, ...f.person];
@@ -122,6 +174,9 @@ function GruppenKopf({
 export function BausteineTafel({
   formular,
   wer,
+  geburtsdatum,
+  wozuGeburtsdatum,
+  onWer,
   onNeu,
   onZiehen,
   ausgeblendet,
@@ -129,7 +184,10 @@ export function BausteineTafel({
   platz,
 }: {
   formular: Formular;
-  wer: 'familie' | 'einzeln' | 'kinder';
+  wer: Wer;
+  geburtsdatum: boolean;
+  wozuGeburtsdatum: 'alter' | 'geschwister' | null;
+  onWer: (wer: Wer, geburtsdatum: boolean) => void;
   onNeu: (b: NeuerBaustein) => void;
   onZiehen: (b: NeuerBaustein) => void;
   /** Eigene Felder, die ausgeblendet sind (Antworten bleiben) – lassen sich zurückholen. */
@@ -177,6 +235,14 @@ export function BausteineTafel({
         aria-label="Bausteine durchsuchen"
         onChange={(e) => setSuche(e.target.value)}
       />
+      {!suche.trim() && (
+        <WerWahl
+          wer={wer}
+          geburtsdatum={geburtsdatum}
+          wozuGeburtsdatum={wozuGeburtsdatum}
+          onWer={onWer}
+        />
+      )}
       {empfohlen.length > 0 && (
         <>
           <GruppenKopf

@@ -22,6 +22,7 @@ import {
   nurText,
   pruefeAntworten,
   pruefeFormular,
+  mitWer,
   setzeGeburtsdatum,
   standardFormular,
   type Feld,
@@ -29,6 +30,7 @@ import {
 } from './formular';
 import { STANDARD_BEZAHLUNG } from './bezahlung';
 import { mitVorgaben } from './gestaltung';
+import { neueEinstellungen } from './vorlagen';
 
 /** Formular-Modell (#474). Die ChurchTools-Regeln dahinter sind in A0 an der Test-Instanz gemessen. */
 
@@ -69,6 +71,14 @@ describe('standardFormular und Geburtsdatum', () => {
     const an = setzeGeburtsdatum(standardFormular(), true);
     expect(an.person.find((x) => x.id === 'birth')?.zustand).toBe('pflicht');
     expect(geburtsdatumAn(setzeGeburtsdatum(an, false))).toBe(false);
+  });
+
+  it('mitWer: setzt „Wer meldet sich an?“ und das Geburtsdatum, sonst nichts', () => {
+    const e = neueEinstellungen('einfach');
+    const neu = mitWer(e, 'kinder', true);
+    expect(neu.wer).toBe('kinder');
+    expect(geburtsdatumAn(neu.formular)).toBe(true);
+    expect({ ...neu, wer: e.wer, formular: e.formular }).toEqual(e);
   });
 });
 

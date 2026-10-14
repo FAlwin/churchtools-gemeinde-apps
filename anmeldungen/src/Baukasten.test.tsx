@@ -11,7 +11,7 @@ import {
 } from '@testing-library/react';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import { vorlageVon } from '@shared/anmeldung/gestaltung';
-import type { OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
+import { geburtsdatumAn, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import * as FF from './formularFelder';
 import * as EI from './einrichten';
 import { ApiError } from '@ui/ct/fehler';
@@ -384,8 +384,73 @@ describe('Baukasten (A5): direkt im Feld bearbeiten', () => {
     expect(screen.queryByRole('button', { name: 'E-Mail entfernen' })).toBeNull();
     fireEvent.click(huelle('mail'));
     expect(screen.queryByLabelText('Frage')).toBeNull();
-    expect(huelle('priv').querySelector('button')).toBeNull();
+    // Keine Werkzeuge – nur das ⓘ „Woher kommt das?“.
+    expect(
+      [...huelle('priv').querySelectorAll('button')].map((b) => b.getAttribute('aria-label')),
+    ).toEqual(['Woher kommt das?']);
     expect(huelle('priv').getAttribute('draggable')).toBe('false');
+  });
+});
+
+describe('Baukasten: Woher kommt was (Entwurf v5, 14.10.2026)', () => {
+  it('ⓘ nur an Pflicht- und Herkunfts-Stellen; Antippen klappt den Grund auf und wieder zu, ohne das Feld zu wählen', () => {
+    const { huelle, container } = zeigen();
+    const orte = [...container.querySelectorAll<HTMLElement>('[data-hinweis]')].map(
+      (el) => el.dataset.hinweis,
+    );
+    // Die Kinder-Vorlage fragt das Geburtsdatum ab – es kommt aus „Wer meldet sich an?“.
+    expect(orte).toEqual(['name', 'mail', 'teil', 'pname', 'birth', 'priv']);
+    // Ein ⓘ im (inerten) Feld: Der Tipp landet bei der Hülle.
+    fireEvent.click(huelle('mail').querySelector('[data-hinweis]')!);
+    expect(screen.getByRole('note').textContent).toMatch(/schickt ChurchTools die Bestätigung/);
+    expect(screen.queryByLabelText('Frage')).toBeNull();
+    fireEvent.click(huelle('mail').querySelector('[data-hinweis]')!);
+    expect(screen.queryByRole('note')).toBeNull();
+    // Am Bereich: nennt die Einstellung und den Knopf „+ Weiteres Kind“.
+    fireEvent.click(container.querySelector('[data-hinweis="teil"]')!);
+    expect(screen.getByRole('note').textContent).toMatch(/hier: Nur Kinder.*Weiteres Kind/);
+  });
+
+  it('im Browser ist der Feldinhalt inert: Der Tipp landet bei der Hülle und trifft das ⓘ an seiner Stelle', () => {
+    const { huelle } = zeigen();
+    const i = huelle('mail').querySelector<HTMLElement>('[data-hinweis]')!;
+    i.getBoundingClientRect = () =>
+      ({ left: 100, right: 120, top: 50, bottom: 70, width: 20, height: 20 }) as DOMRect;
+    fireEvent.click(huelle('mail'), { clientX: 300, clientY: 60 });
+    expect(screen.queryByRole('note')).toBeNull();
+    fireEvent.click(huelle('mail'), { clientX: 110, clientY: 60 });
+    expect(screen.getByRole('note').textContent).toMatch(/schickt ChurchTools die Bestätigung/);
+  });
+
+  it('ein normales Feld antippen wählt es weiter aus (kein ⓘ dort)', () => {
+    const { huelle } = zeigen();
+    expect(huelle('allergy').querySelector('[data-hinweis]')).toBeNull();
+    fireEvent.click(huelle('allergy'));
+    expect(screen.getByLabelText('Frage')).toBeTruthy();
+  });
+
+  it('„Wer meldet sich an?“ in der Leiste: Formular ändert sich sofort, gespeichert wie im Reiter', async () => {
+    const { container } = zeigen();
+    const leiste = screen.getByRole('complementary', { name: 'Bausteine und Design' });
+    fireEvent.click(within(leiste).getByRole('button', { name: /^Einzelpersonen/ }));
+    expect(screen.queryByText(/Weiteres Kind|Weitere Person/)).toBeNull();
+    // Die Kinder-Vorlage fragt es ab – ausschalten.
+    expect(container.querySelector('[data-feld="birth"]')).toBeTruthy();
+    fireEvent.click(within(leiste).getByRole('button', { name: /Geburtsdatum abfragen/ }));
+    expect(container.querySelector('[data-feld="birth"]')).toBeNull();
+    await waitFor(() => expect(ei.aendereEinstellungen).toHaveBeenCalledTimes(2));
+    const zuletzt = ei.aendereEinstellungen.mock.calls[1][1](neueEinstellungen('kinder'));
+    expect(zuletzt.wer).toBe('einzeln');
+    expect(geburtsdatumAn(zuletzt.formular)).toBe(false);
+  });
+
+  it('Preise nach Alter, Geburtsdatum aus → Warnung in der Leiste', () => {
+    const e = einstellungen();
+    e.preis = { ...e.preis, alter: [{ von: 0, bis: 2, art: 'frei', wert: 0 }] };
+    zeigen(e);
+    expect(screen.queryByRole('alert')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Geburtsdatum abfragen/ }));
+    expect(screen.getByRole('alert').textContent).toMatch(/Es gibt Preise nach Alter/);
   });
 });
 

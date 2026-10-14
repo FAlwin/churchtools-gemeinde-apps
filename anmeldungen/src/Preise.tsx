@@ -13,11 +13,20 @@ import {
   type Geltung,
   type Grundpreis,
   type PreisRegeln,
+  wozuGeburtsdatum,
 } from '@shared/anmeldung/preis';
 import { aenderePreise } from './einrichten';
 import { Fehler } from './Bearbeiten';
 import { useSpeichern } from './useSpeichern';
-import { JE, alterText, anpassungText, centAus, euroEingabe, grundpreisText } from './anzeige';
+import {
+  JE,
+  alterText,
+  anpassungText,
+  centAus,
+  euroEingabe,
+  grundpreisText,
+  ohneGeburtsdatumText,
+} from './anzeige';
 import s from './Startseite.module.scss';
 import v from './VeranstaltungSeite.module.scss';
 import f from './Formular.module.scss';
@@ -91,7 +100,7 @@ export function PreiseKarte({
 }) {
   const auf = (w: PreisFenster) => (darf ? () => onOeffnen(w) : undefined);
   let nr = 0;
-  const kindRabatt = preis.anpassungen.some((a) => a.bedingung === 'abKind');
+  const wozu = wozuGeburtsdatum(preis);
   return (
     <section className={s.karte} aria-label="Preise">
       <div className={s.kopf}>
@@ -100,15 +109,9 @@ export function PreiseKarte({
       <p className={v.reihenfolge}>
         Gerechnet wird in dieser Reihenfolge: Grundpreis → Alter → Rabatte und Zuschläge → Extras
       </p>
-      {(preis.alter.length > 0 || kindRabatt) && !geburtsdatum && (
+      {wozu && !geburtsdatum && (
         <div className={v.warnung} role="alert">
-          <p>
-            {preis.alter.length > 0
-              ? 'Es gibt Preise nach Alter'
-              : 'Es gibt einen Geschwister-Rabatt'}
-            , aber das Geburtsdatum wird nicht abgefragt. Ohne Alter zahlt jede Person den
-            Grundpreis.
-          </p>
+          <p>{ohneGeburtsdatumText(wozu)}</p>
           {darf && (
             <button type="button" className={v.bearbeiten} onClick={onGeburtsdatum}>
               Geburtsdatum abfragen

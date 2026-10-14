@@ -6,6 +6,8 @@ import { Sheet } from '@ui/fenster/Sheet';
 import { AnmeldeFormular, type BaukastenHaken } from '@ui/anmeldeformular/AnmeldeFormular';
 import { musterAntworten } from '@ui/anmeldeformular/daten';
 import {
+  geburtsdatumAn,
+  mitWer,
   platzBelegt,
   type Feld,
   type Feldtyp,
@@ -43,6 +45,8 @@ import { DesignTafel } from './DesignTafel';
 import { entwurfFehler, mitAntworten, type FeldEntwurf } from './baukastenEntwurf';
 import { BausteinSymbol } from './bausteinIcons';
 import { useSchlange } from './useSchlange';
+import { hinweisZu } from './hinweise';
+import { wozuGeburtsdatum } from '@shared/anmeldung/preis';
 import k from './Baukasten.module.scss';
 
 /**
@@ -140,6 +144,9 @@ export function Baukasten({
   const { stand, tun, laeuft } = useSchlange(onGespeichert);
   const [lokalF, setLokalF] = useState<Formular | null>(null);
   const [lokalG, setLokalG] = useState<Gestaltung | null>(null);
+  const [lokalWer, setLokalWer] = useState<OeffentlicheEinstellungen['wer'] | null>(null);
+  /** Welches ⓘ gerade aufgeklappt ist (Feld-ID oder Bereich). */
+  const [offenerHinweis, setOffenerHinweis] = useState<string | null>(null);
   const [nameEntwurf, setNameEntwurf] = useState(name);
   const [aktiv, setAktiv] = useState<string | null>(null);
   const [entwurf, setEntwurf] = useState<FeldEntwurf | null>(null);
@@ -156,6 +163,7 @@ export function Baukasten({
 
   const formular = lokalF ?? e.formular;
   const gestaltung = lokalG ?? e.gestaltung;
+  const wer = lokalWer ?? e.wer;
 
   // Refs für die Zeitgeber: Sie feuern später und brauchen den Stand von dann, nicht den beim Anlegen.
   const formularRef = useRef(formular);
@@ -196,6 +204,7 @@ export function Baukasten({
     if (laeuft() || designWartet.current) return;
     setLokalF(null);
     setLokalG(null);
+    setLokalWer(null);
   }, [e, laeuft]);
   useEffect(() => setNameEntwurf(name), [name]);
 
@@ -335,6 +344,63 @@ export function Baukasten({
     if (g.logo === 'ct' && ctLogo && g.logoUrl !== ctLogo) gestalten({ ...g, logoUrl: ctLogo });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- nur einmal, sobald das Logo bekannt ist
   }, [ctLogo, darf]);
+
+  /**
+   * **„Wer meldet sich an?“ direkt im Baukasten** (Alwin, 14.10.2026) – dieselbe Änderung wie im Reiter
+   * Veranstaltung (`mitWer`), gleich im Formular zu sehen.
+   */
+  function werAendern(neu: OeffentlicheEinstellungen['wer'], geburt: boolean) {
+    feldSichern();
+    setLokalWer(neu);
+    setLokalF(mitWer({ ...e, formular: formularRef.current }, neu, geburt).formular);
+    void tun('„Wer meldet sich an?“ gespeichert.', () =>
+      aendereEinstellungen(id, (frisch) => mitWer(frisch, neu, geburt)),
+    );
+  }
+
+  // ── Das kleine ⓘ „Woher kommt das?“ (Entwurf v5, 14.10.2026) ──
+  const hinweisUmschalten = (wo: string) => setOffenerHinweis((alt) => (alt === wo ? null : wo));
+  /**
+   * Wurde auf ein ⓘ in einem Feld getippt? Der Inhalt eines Felds ist `inert` – der Tipp landet bei der Hülle,
+   * also wird das ⓘ an der Stelle gesucht.
+   */
+  function hinweisUnter(ev: React.MouseEvent<HTMLElement>): string | null {
+    const direkt = (ev.target as HTMLElement).closest<HTMLElement>('[data-hinweis]');
+    if (direkt) return direkt.dataset.hinweis ?? null;
+    for (const el of ev.currentTarget.querySelectorAll<HTMLElement>('[data-hinweis]')) {
+      const r = el.getBoundingClientRect();
+      const x = ev.clientX;
+      const y = ev.clientY;
+      if (r.width && x >= r.left - 4 && x <= r.right + 4 && y >= r.top - 4 && y <= r.bottom + 4)
+        return el.dataset.hinweis ?? null;
+    }
+    return null;
+  }
+  const hinweisKnopf = (wo: string) =>
+    hinweisZu(wo, wer) ? (
+      <button
+        type="button"
+        className={k.info}
+        data-hinweis={wo}
+        aria-label="Woher kommt das?"
+        aria-expanded={offenerHinweis === wo}
+        onClick={(ev) => {
+          ev.stopPropagation();
+          ev.preventDefault();
+          hinweisUmschalten(wo);
+        }}
+      >
+        <Icon name="info" size={16} />
+      </button>
+    ) : null;
+  const hinweisKasten = (wo: string) => {
+    const text = offenerHinweis === wo ? hinweisZu(wo, wer) : null;
+    return text ? (
+      <p className={k.hinweisKasten} role="note">
+        {text}
+      </p>
+    ) : null;
+  };
 
   /** Einen Baustein ins Formular setzen – vor `vorId` in `bereich`, sonst unter das gewählte Feld. */
   function einfuegen(b: NeuerBaustein, wohin?: { bereich: Bereich; vorId: string | null }) {
@@ -724,6 +790,8 @@ export function Baukasten({
         draggable={ziehbar}
         onClick={(ev) => {
           ev.stopPropagation();
+          const h = hinweisUnter(ev);
+          if (h) return hinweisUmschalten(h);
           if (!fest) waehlen(f.id);
         }}
         onDragStart={(ev) => {
@@ -750,14 +818,17 @@ export function Baukasten({
             onAendern={aendern}
             beantwortet={entfernt ? entfernt.beantwortet : null}
             entferntGewaehlt={entferntGewaehlt}
-            altersPreise={e.preis.alter.length > 0}
+            wozuGeburtsdatum={wozuGeburtsdatum(e.preis)}
             werkzeug={werkzeug}
             onTyp={typAendern}
           />
         ) : (
-          <div ref={inert} className={k.inhalt}>
-            {inhalt}
-          </div>
+          <>
+            <div ref={inert} className={k.inhalt}>
+              {inhalt}
+            </div>
+            {hinweisKasten(f.id)}
+          </>
         )}
       </div>,
       lueckeDanach && luecke(),
@@ -776,12 +847,14 @@ export function Baukasten({
   const ansicht = {
     name: nameEntwurf || name,
     gemeinde,
-    einstellungen: { ...e, formular: anzeigeFormular, gestaltung },
+    einstellungen: { ...e, wer, formular: anzeigeFormular, gestaltung },
     bildUrl,
   };
 
   const haken: BaukastenHaken = {
     feld: huelle,
+    hinweis: hinweisKnopf,
+    hinweisText: hinweisKasten,
     // Ein mehrzeiliges Feld, damit lange Namen umbrechen wie im Formular (am Handy wurde „TEST A5 Bauka…“
     // abgeschnitten); Enter speichert statt einer neuen Zeile.
     titel: (
@@ -854,7 +927,10 @@ export function Baukasten({
   const tafelBausteine = (
     <BausteineTafel
       formular={formular}
-      wer={e.wer}
+      wer={wer}
+      geburtsdatum={geburtsdatumAn(formular)}
+      wozuGeburtsdatum={wozuGeburtsdatum(e.preis)}
+      onWer={werAendern}
       onNeu={(b) => {
         setBlatt(null);
         einfuegen(b);

@@ -26,6 +26,15 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   - Beim Ziehen verschwindet das Feld, an seiner Stelle steht nur „Hier loslassen“ (Alwin, 14.10.2026: „muss
     nicht mehr in grau angezeigt werden“). Ausgeblendet wird erst nach dem Start des Ziehens – während
     `dragstart` bricht Chrome sonst ab; mit echter Maus geprüft (versteckt nach 9 ms, Ablegen 1 s später).
+  - **Woher kommt was?** (Alwin, 14.10.2026: „nicht ganz klar, was woher kommt und was warum Pflicht ist“;
+    Entwurf v5 nach einem verworfenen v4 mit Schlössern und Schildchen). Ein kleines ⓘ an Name, E-Mail, Name
+    jeder Person, Geburtsdatum, Datenschutz und an „Wer nimmt teil?“ / „Auswahl und Extras“; antippen zeigt
+    den Grund. Im Feld ist der Inhalt `inert` – der Tipp landet bei der Hülle, die das ⓘ an der Stelle sucht
+    (im Browser mit echter Maus geprüft). **„Wer meldet sich an?“** und „Geburtsdatum abfragen“ stehen jetzt
+    auch oben in der Leiste.
+  - Beim Bauen gefunden: Ob die Preise das Geburtsdatum brauchen, stand dreimal im Code – im Feld-Bearbeiten
+    ohne den Geschwister-Rabatt. Jetzt eine Stelle (`wozuGeburtsdatum`); ebenso „Wer meldet sich an?“ ändern
+    (`mitWer`) für Reiter und Leiste.
   - **Eigenes Logo** (Alwin, 14.10.2026): unter „Logo → Eigenes“ die bisherigen Logos zur Auswahl und „Neues
     hochladen“. Gemessen: ChurchTools kennt je Gruppe nur ein Bild, Anhänge sind nur vorübergehend und ohne
     Bildadresse. Deshalb liegt jedes Logo als Bild einer Hilfsgruppe, die gleich archiviert angelegt wird (Art

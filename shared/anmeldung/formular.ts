@@ -160,6 +160,18 @@ export function setzeGeburtsdatum(f: Formular, an: boolean): Formular {
   return { anmeldung: neu(f.anmeldung), person: neu(f.person) };
 }
 
+/**
+ * **„Wer meldet sich an?“ ändern** – und ob das Geburtsdatum abgefragt wird. Die EINE Stelle für das Fenster
+ * im Reiter Veranstaltung und die Leiste im Baukasten.
+ */
+export function mitWer(
+  e: OeffentlicheEinstellungen,
+  wer: OeffentlicheEinstellungen['wer'],
+  geburtsdatum: boolean,
+): OeffentlicheEinstellungen {
+  return { ...e, wer, formular: setzeGeburtsdatum(e.formular, geburtsdatum) };
+}
+
 /** **Alter am Stichtag** (erster Tag der Veranstaltung), beides `YYYY-MM-DD`. `null`, wenn kein Geburtsdatum. */
 export function alterAm(geburt: string, stichtag: string): number | null {
   const g = /^(\d{4})-(\d{2})-(\d{2})$/.exec(geburt);

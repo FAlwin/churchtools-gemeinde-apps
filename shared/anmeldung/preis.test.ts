@@ -5,6 +5,7 @@ import {
   kannEtwasKosten,
   preisKurz,
   pruefeRegeln,
+  wozuGeburtsdatum,
   type Buchung,
   type PreisRegeln,
 } from './preis';
@@ -432,6 +433,23 @@ describe('kannEtwasKosten (A4: braucht es eine Bankverbindung?)', () => {
     wert: 500,
     gilt: 'person' as const,
   };
+  it('wozuGeburtsdatum: Preise nach Alter, Geschwister-Rabatt (ab dem x-ten Kind) oder gar nicht', () => {
+    expect(wozuGeburtsdatum(leer)).toBeNull();
+    expect(wozuGeburtsdatum({ ...leer, anpassungen: [{ ...rabatt, art: 'rabatt' }] })).toBeNull();
+    expect(
+      wozuGeburtsdatum({
+        ...leer,
+        anpassungen: [{ ...rabatt, art: 'rabatt', bedingung: 'abKind' }],
+      }),
+    ).toBe('geschwister');
+    expect(
+      wozuGeburtsdatum({
+        ...leer,
+        alter: [{ von: 0, bis: 2, art: 'frei', wert: 0 }],
+        anpassungen: [{ ...rabatt, art: 'rabatt', bedingung: 'abKind' }],
+      }),
+    ).toBe('alter');
+  });
   it('kostenlos und nur Rabatte → nein', () => {
     expect(kannEtwasKosten(leer)).toBe(false);
     expect(kannEtwasKosten({ ...leer, anpassungen: [{ ...rabatt, art: 'rabatt' }] })).toBe(false);

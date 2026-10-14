@@ -125,8 +125,12 @@ mitarbeiten (z. B. über den Status oder global über die Gruppen).
     Verschieben am Griff links oder mit den Pfeilen, kopieren und entfernen oben rechts am Feld.
   - **Kopf:** Name und Begrüßungstext direkt anklicken; „Titelbild ändern“ (und entfernen) steht im Bild. Das
     Titelbild ist das Gruppenbild in ChurchTools und öffentlich sichtbar.
-  - **Design:** Vorlage, Farbe, Feldstil, Knöpfe, Gemeindename – man sieht es sofort im Formular. Oben
+  - **Design:** Startpunkt, Farben, Schrift, Logo, Feldstil, Knöpfe … – man sieht es sofort im Formular. Oben
     „Computer/Handy“ und „Vorschau“ (zum Ausprobieren, ohne Bearbeiten).
+  - **Woher kommt was?** Ein kleines ⓘ steht dort, wo etwas Pflicht ist oder aus einer Einstellung kommt
+    (Name, E-Mail, Name jeder Person, Geburtsdatum, Datenschutz, „Wer nimmt teil?“, „Auswahl und Extras“);
+    antippen zeigt den Grund. **„Wer meldet sich an?“** und „Geburtsdatum abfragen“ lassen sich oben in der
+    Leiste „Bausteine“ umstellen – dieselbe Einstellung wie im Reiter Veranstaltung.
   - **Gespeichert wird von selbst**; oben steht, ob gerade gespeichert wird, und bei einem Fehler „Nochmal“.
     Nach jeder Änderung bietet die Leiste oben „Rückgängig“ an (nicht beim Titelbild).
   - Jedes Feld außer Name, E-Mail und Geburtsdatum wird in ChurchTools eine **Spalte der Mitgliederliste**

@@ -1098,3 +1098,47 @@
   font-size: 12px;
   color: var(--red);
 }
+
+// ── „Wer meldet sich an?“ in der Leiste und das ⓘ „Woher kommt das?“ (Entwurf v5, 14.10.2026) ──
+.werWahl {
+  display: grid;
+  gap: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+
+  .gruppe {
+    margin-top: 4px;
+  }
+}
+.info {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-left: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--p-muted, #9ca3af);
+  vertical-align: middle;
+  cursor: pointer;
+
+  &:hover,
+  &[aria-expanded='true'] {
+    color: var(--blue);
+    background: rgba(37, 99, 235, 0.1);
+  }
+}
+.hinweisKasten {
+  position: relative;
+  margin: 8px 0 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #1f2937;
+  color: #f3f4f6;
+  font-family: var(--ui, inherit);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.45;
+}

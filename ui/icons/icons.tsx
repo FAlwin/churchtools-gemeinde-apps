@@ -19,6 +19,7 @@ export type IconName =
   | 'search'
   | 'sun'
   | 'moon'
+  | 'info'
   | 'lock'
   | 'lock-open'
   | 'type'
@@ -203,6 +204,14 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
       return (
         <svg {...p}>
           <path d="M20.5 14.3A8.5 8.5 0 0 1 9.7 3.5 8.5 8.5 0 1 0 20.5 14.3Z" />
+        </svg>
+      );
+    case 'info':
+      // Kleines ⓘ – „Woher kommt das?“ im Formular-Baukasten der Anmeldungen (14.10.2026).
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 11v5.5M12 7.6v.1" />
         </svg>
       );
     case 'lock':

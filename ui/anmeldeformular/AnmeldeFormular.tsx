@@ -47,6 +47,13 @@ export interface BaukastenHaken {
   titel?: ReactNode;
   einleitung?: ReactNode;
   bild?: ReactNode;
+  /**
+   * Das kleine ⓘ „Woher kommt das?“ (Alwin, 14.10.2026) – an Feldern (`f.id`) hinter der Beschriftung, an den
+   * Bereichen „teil“ und „preis“ hinter der Überschrift. `null`, wo es nichts zu erklären gibt.
+   */
+  hinweis?: (wo: string) => ReactNode;
+  /** Der aufgeklappte Hinweis zu einem Bereich (bei Feldern zeigt ihn die Hülle). */
+  hinweisText?: (wo: string) => ReactNode;
 }
 
 const WOCHENTAG = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
@@ -90,6 +97,7 @@ export function FeldEingabe({
   fehler = [],
   gesperrt = false,
   loeschtag = null,
+  zusatz = null,
 }: {
   feld: Feld;
   wert: Antwort;
@@ -99,6 +107,8 @@ export function FeldEingabe({
   fehler?: string[];
   gesperrt?: boolean;
   loeschtag?: string | null;
+  /** Steht hinter der (ersten) Beschriftung – im Baukasten das ⓘ. */
+  zusatz?: ReactNode;
 }) {
   const f = feld;
   const hatFehler = (unter = '') => fehler.includes(unter ? `${pfad}.${unter}` : pfad);
@@ -135,6 +145,7 @@ export function FeldEingabe({
               <span className={s.req} aria-hidden="true">
                 *
               </span>
+              {teil === 'vor' && zusatz}
             </label>
             <input
               id={`${id}-${teil}`}
@@ -178,6 +189,7 @@ export function FeldEingabe({
                 *
               </span>
             )}
+            {zusatz}
           </span>
         </label>
         {hilfe}
@@ -275,6 +287,7 @@ export function FeldEingabe({
       <label id={`${id}-l`} htmlFor={id}>
         {f.frage}
         <Pflicht f={f} />
+        {zusatz}
       </label>
       {eingabe}
       {!(f.typ === 'text' && f.hilfe) && hilfe}
@@ -512,18 +525,17 @@ export function AnmeldeFormular({
                       wert={antworten.anmeldung[f.id]}
                       onWert={(w) => setAnmeldung(f.id, w)}
                       fehler={fehler}
+                      zusatz={baukasten?.hinweis?.(f.id)}
                     />,
                   ),
                 )}
               </section>
               <section className={s.sec}>
                 <h2>
-                  {kinder
-                    ? 'Welche Kinder meldest du an?'
-                    : e.wer === 'einzeln'
-                      ? 'Wer nimmt teil?'
-                      : 'Wer nimmt teil?'}
+                  {kinder ? 'Welche Kinder meldest du an?' : 'Wer nimmt teil?'}
+                  {baukasten?.hinweis?.('teil')}
                 </h2>
+                {baukasten?.hinweisText?.('teil')}
                 {personen.map((p, i) => (
                   <div key={i} className={s.person}>
                     <div className={s['person-top']}>
@@ -556,6 +568,7 @@ export function AnmeldeFormular({
                           wert={p[f.id]}
                           onWert={(w) => setPerson(i, f.id, w)}
                           fehler={fehler}
+                          zusatz={baukasten?.hinweis?.(f.id)}
                         />,
                       ),
                     )}
@@ -578,7 +591,11 @@ export function AnmeldeFormular({
               </section>
               {preisFeld && (e.preis.grundpreis.art === 'auswahl' || e.preis.extras.length > 0) && (
                 <section className={s.sec}>
-                  <h2>{preisFeld.frage}</h2>
+                  <h2>
+                    {preisFeld.frage}
+                    {baukasten?.hinweis?.('preis')}
+                  </h2>
+                  {baukasten?.hinweisText?.('preis')}
                   {e.preis.grundpreis.art === 'auswahl' && (
                     <div className={s.pf}>
                       <label htmlFor="af-option">
@@ -636,6 +653,7 @@ export function AnmeldeFormular({
                       wert={antworten.anmeldung[f.id]}
                       onWert={(w) => setAnmeldung(f.id, w)}
                       fehler={fehler}
+                      zusatz={baukasten?.hinweis?.(f.id)}
                       loeschtag={loeschtag}
                     />,
                   ),

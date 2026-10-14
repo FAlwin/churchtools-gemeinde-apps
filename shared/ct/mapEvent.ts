@@ -2,9 +2,9 @@ import type { Service } from '../types/index';
 import type { CtEvent } from './typen';
 import { tagAusIso } from './zeit';
 import { ctId } from './ctId';
+import { MONATE_KURZ } from './datum';
 
 const TZ = 'Europe/Berlin';
-const MONTHS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
 
 function parts(iso: string): { day: string; month: string; weekday: string; time: string } {
   const d = new Date(iso);
@@ -18,7 +18,7 @@ function parts(iso: string): { day: string; month: string; weekday: string; time
     minute: '2-digit',
     timeZone: TZ,
   }).format(d);
-  return { day, month: MONTHS[monthNum - 1] ?? '', weekday, time: `${time} Uhr` };
+  return { day, month: MONATE_KURZ[monthNum - 1] ?? '', weekday, time: `${time} Uhr` };
 }
 
 /** Wandelt ein ChurchTools-Event in unser Service-Format um. */

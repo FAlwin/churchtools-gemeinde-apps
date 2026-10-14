@@ -6,7 +6,11 @@
  */
 
 const WOCHENTAG = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
-const MONAT = [
+/**
+ * **Die Monatsnamen – einmal für alle Apps.** Standen bis 14.10.2026 viermal von Hand da (hier, in
+ * `client/src/utils/monate.ts`, `client/src/pages/Agenda.tsx` und `shared/ct/mapEvent.ts`).
+ */
+export const MONATE = [
   'Januar',
   'Februar',
   'März',
@@ -19,7 +23,13 @@ const MONAT = [
   'Oktober',
   'November',
   'Dezember',
-];
+] as const;
+
+/**
+ * Kurzform für Monatsleiste, Raster und Terminkarten: „Jan“, „Mär“, „Okt“ – bei allen zwölf Monaten genau
+ * die ersten drei Buchstaben, deshalb abgeleitet statt einer zweiten Liste.
+ */
+export const MONATE_KURZ: readonly string[] = MONATE.map((m) => m.slice(0, 3));
 
 /** Ein Kalendertag ohne Zeitzonen-Fallen: gerechnet wird in UTC, der Tag selbst ist schon Ortszeit. */
 function datum(tag: string): Date {
@@ -39,18 +49,18 @@ export function tagKurz(tag: string): string {
 /** Für die Datumskachel: „14“ und „NOV“. */
 export function kachel(tag: string): { tag: string; monat: string } {
   const d = datum(tag);
-  return { tag: String(d.getUTCDate()), monat: MONAT[d.getUTCMonth()].slice(0, 3).toUpperCase() };
+  return { tag: String(d.getUTCDate()), monat: MONATE_KURZ[d.getUTCMonth()].toUpperCase() };
 }
 
 /** Monatsüberschrift: „November 2026“; ohne Datum „Ohne Datum“. */
 export function monatTitel(tag: string | null): string {
   if (!tag) return 'Ohne Datum';
-  return `${MONAT[datum(tag).getUTCMonth()]} ${tag.slice(0, 4)}`;
+  return `${MONATE[datum(tag).getUTCMonth()]} ${tag.slice(0, 4)}`;
 }
 
 /** Der Monat eines Tages ausgeschrieben: „November“ („3× im November“ bei „Wer kann?“). */
 export function monatName(tag: string): string {
-  return MONAT[datum(tag).getUTCMonth()];
+  return MONATE[datum(tag).getUTCMonth()];
 }
 
 /** Tage von `heute` bis `tag` (beide `YYYY-MM-DD`). */

@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { datumText, kachel, monatName, monatTitel, tagKurz, tageBis } from './datum';
+import {
+  datumText,
+  kachel,
+  MONATE,
+  MONATE_KURZ,
+  monatName,
+  monatTitel,
+  tagKurz,
+  tageBis,
+} from './datum';
 
 describe('Tage anzeigen', () => {
   it('Datum, kurzes Datum, Kachel und Monat', () => {
@@ -16,5 +25,27 @@ describe('Tage anzeigen', () => {
   it('Tage bis – auch über die Zeitumstellung (Ende Oktober) genau', () => {
     expect(tageBis('2026-10-12', '2026-11-07')).toBe(26);
     expect(tageBis('2026-10-24', '2026-10-26')).toBe(2);
+  });
+});
+
+describe('Monatsnamen – eine Quelle für alle Apps', () => {
+  // So standen sie bis 14.10.2026 in vier Listen (datum, monate, Agenda, mapEvent) – die Anzeige bleibt gleich.
+  const LANG =
+    'Januar Februar März April Mai Juni Juli August September Oktober November Dezember'.split(' ');
+  const KURZ = 'Jan Feb Mär Apr Mai Jun Jul Aug Sep Okt Nov Dez'.split(' ');
+  const tag = (m: number) => `2027-${String(m + 1).padStart(2, '0')}-15`;
+
+  it('lang und kurz, alle zwölf', () => {
+    expect([...MONATE]).toEqual(LANG);
+    expect([...MONATE_KURZ]).toEqual(KURZ);
+  });
+
+  it('monatName, monatTitel und die Datumskachel über alle zwölf Monate', () => {
+    for (let m = 0; m < 12; m++) {
+      expect(monatName(tag(m))).toBe(LANG[m]);
+      expect(monatTitel(tag(m))).toBe(`${LANG[m]} 2027`);
+      expect(kachel(tag(m)).monat).toBe(KURZ[m].toUpperCase());
+    }
+    expect(kachel('2027-03-01').monat).toBe('MÄR');
   });
 });

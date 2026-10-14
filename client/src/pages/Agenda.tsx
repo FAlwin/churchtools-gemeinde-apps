@@ -13,6 +13,7 @@ import { AblaufAnlegenFenster } from '../components/AblaufAnlegenFenster';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineServices } from '../hooks/useOfflineServices';
 import { heuteIso } from '../utils/heute';
+import { monatLabel, monatVon } from '../utils/monate';
 import { saveServiceOffline } from '../services/offline';
 import { liedAnzahl } from '../utils/songFilter';
 import { queryClient } from '../queryClient';
@@ -41,29 +42,13 @@ interface AgendaProps {
   kannAblaufAnlegen?: boolean;
 }
 
-const MONTHS = [
-  'Januar',
-  'Februar',
-  'März',
-  'April',
-  'Mai',
-  'Juni',
-  'Juli',
-  'August',
-  'September',
-  'Oktober',
-  'November',
-  'Dezember',
-];
-
 const OFFLINE_HINT = 'Offline nicht verfügbar – einmal online öffnen oder vorher speichern.';
 
 /** Gruppiert Gottesdienste nach „Monat JJJJ" (Reihenfolge der Eingabe bleibt erhalten). */
 function groupByMonth(list: Service[]): { key: string; items: Service[] }[] {
   const groups: { key: string; items: Service[] }[] = [];
   for (const s of list) {
-    const [y, m] = s.date.split('-');
-    const key = `${MONTHS[Number(m) - 1]} ${y}`;
+    const key = monatLabel(monatVon(s.date));
     let g = groups.find((x) => x.key === key);
     if (!g) {
       g = { key, items: [] };

@@ -170,12 +170,23 @@
 .pv .check.bad {
   color: var(--p-err);
 }
+// Grau hinterlegt statt gestrichelt (Entwurf v6, 14.10.2026: „mich verwirren die vielen gestrichelten Linien“).
 .pv .person {
-  border: 1px dashed var(--p-line-strong);
+  background: var(--p-fill);
+  border: 1px solid var(--p-line);
   border-radius: calc(var(--p-r) * 0.7);
   padding: 12px;
   display: grid;
   gap: 10px;
+}
+.pv .wiederholt {
+  margin-left: 8px;
+  font-size: 0.8em;
+  font-weight: 400;
+  color: var(--p-muted);
+}
+.pv .zusammen {
+  white-space: nowrap;
 }
 .pv .person-top {
   display: flex;
@@ -196,8 +207,9 @@
   font: inherit;
   font-weight: 700;
   color: var(--p-accent-text);
-  background: transparent;
-  border: 2px dashed color-mix(in srgb, var(--p-accent-text) 50%, transparent);
+  background: color-mix(in srgb, var(--p-accent) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--p-accent-text) 35%, transparent);
+  border-radius: calc(var(--p-r) * 0.7);
   padding: 0.7em;
   cursor: pointer;
 }

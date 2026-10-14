@@ -149,45 +149,45 @@
   }
 }
 
-// ── Die Hülle um jedes Feld im Formular (Campflow: gestrichelt beim Zeigen, Griff links, Werkzeug rechts) ──
+// ── Die Hülle um jedes Feld im Formular ──
+// Keine Rahmen (Alwin, 14.10.2026: „diese ganzen Linien und Rahmen verwirren“): Maus darüber = hellblau, gewählt
+// = kräftiger blau. Gestrichelt ist nur noch die Lücke beim Ziehen. Werkzeuge stehen nur im gewählten Feld.
+// Immer das ChurchTools-Blau, nicht die Farbe des Designs – Bearbeiten sieht bei jedem Design gleich aus.
 .huelle {
   position: relative;
-  border: 1.5px dashed transparent;
   border-radius: 10px;
   padding: 8px 10px;
   margin: -8px -10px;
   cursor: pointer;
+  transition: background-color 0.12s;
 
-  &:hover {
-    border-color: var(--p-line-strong, #9fb0b4);
+  // Nur mit Maus – am Handy bliebe der Zustand nach dem Antippen hängen.
+  @media (hover: hover) {
+    &:hover {
+      background: color-mix(in srgb, var(--blue, #2563eb) 7%, transparent);
+    }
   }
 }
-.aktiv {
+.aktiv,
+.aktiv:hover {
   cursor: default;
-  border: 1.5px solid var(--p-accent, #2563eb);
   // Durchscheinend statt Kartenfarbe: Auf farbigen Karten (Vorlage „Bunt“) sah ein weißer Grund aus, als fiele das
   // Feld aus der Karte heraus (Durchklicken 13.10.2026).
-  background: color-mix(in srgb, var(--p-accent, #2563eb) 6%, transparent);
-
-  &:hover {
-    border-color: var(--p-accent, #2563eb);
-  }
+  background: color-mix(in srgb, var(--blue, #2563eb) 18%, transparent);
 }
 .fest {
   cursor: default;
-
-  &:hover .festSchild {
-    opacity: 1;
-  }
 }
-.festSchild {
-  position: absolute;
-  right: 8px;
-  top: 6px;
-  font-size: 11px;
+// Fuß eines gewählten festen Felds (Name, E-Mail): nur verschieben.
+.festFuss {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--blue, #2563eb) 25%, transparent);
+  font-size: 0.87em;
   color: var(--p-muted, #5b6b70);
-  opacity: 0;
-  transition: opacity 0.15s;
 }
 // Die Lücke beim Ziehen (Campflow): öffnet sich sanft dort, wo abgelegt wird; die Felder rücken auseinander.
 .luecke {
@@ -195,10 +195,10 @@
   place-items: center;
   height: 64px;
   margin: 4px 0;
-  border: 2px dashed var(--p-accent, #2563eb);
+  border: 2px dashed var(--blue, #2563eb);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--p-accent, #2563eb) 7%, transparent);
-  color: var(--p-accent-text, #2563eb);
+  background: color-mix(in srgb, var(--blue, #2563eb) 7%, transparent);
+  color: var(--blue, #2563eb);
   font-size: 13px;
   font-weight: 600;
   animation: luecke-auf 0.16s ease-out;
@@ -209,58 +209,6 @@
   from {
     opacity: 0;
   }
-}
-.griff {
-  position: absolute;
-  left: -24px;
-  top: 8px;
-  width: 22px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  color: var(--p-muted, #5b6b70);
-  cursor: grab;
-  opacity: 0;
-}
-.huelle:hover .griff,
-.aktiv .griff {
-  opacity: 1;
-}
-.werkzeug {
-  position: absolute;
-  right: 6px;
-  top: 4px;
-  display: none;
-  gap: 2px;
-  z-index: 1;
-  background: var(--p-card, #fff);
-  border-radius: 8px;
-
-  button {
-    width: 28px;
-    height: 28px;
-    border: 0;
-    border-radius: 6px;
-    background: none;
-    color: var(--p-muted, #5b6b70);
-    display: grid;
-    place-items: center;
-    cursor: pointer;
-
-    &:hover:not(:disabled) {
-      background: var(--p-fill, #eef3f3);
-      color: var(--p-text, #17242a);
-    }
-
-    &:disabled {
-      opacity: 0.35;
-      cursor: default;
-    }
-  }
-}
-.huelle:hover .werkzeug,
-.aktiv .werkzeug {
-  display: flex;
 }
 .inhalt {
   pointer-events: none;
@@ -300,7 +248,7 @@
   font: inherit;
   color: inherit;
   background: transparent;
-  border: 1.5px dashed transparent;
+  border: 0;
   border-radius: 8px;
   padding: 4px 6px;
   margin-left: -6px;
@@ -315,14 +263,9 @@
     background: color-mix(in srgb, var(--p-card, #fff) 88%, transparent);
   }
 
-  &:hover {
-    border-color: var(--p-line-strong, #9fb0b4);
-  }
-
   &:focus {
     outline: none;
-    border-style: solid;
-    border-color: var(--p-accent, #2563eb);
+    box-shadow: 0 0 0 2px var(--p-accent, #2563eb);
   }
 
   &::placeholder {
@@ -510,7 +453,8 @@
   }
 }
 .muster {
-  border: 1px dashed var(--p-line-strong, #9fb0b4);
+  border: 1px solid var(--p-line, #dde5e6);
+  background: color-mix(in srgb, var(--p-card, #fff) 70%, transparent);
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 0.87em;

@@ -56,6 +56,24 @@ export interface BaukastenHaken {
   hinweisText?: (wo: string) => ReactNode;
 }
 
+/**
+ * Überschrift mit ⓘ dahinter – das ⓘ hängt am letzten Wort, sonst rutscht es am Handy allein in eine neue Zeile
+ * (Durchklicken 14.10.2026).
+ */
+function mitHinweis(text: string, knopf: ReactNode): ReactNode {
+  if (!knopf) return text;
+  const i = text.lastIndexOf(' ');
+  return (
+    <>
+      {text.slice(0, i + 1)}
+      <span className={s.zusammen}>
+        {text.slice(i + 1)}
+        {knopf}
+      </span>
+    </>
+  );
+}
+
 const WOCHENTAG = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 
 function datumText(tag: string): string {
@@ -513,7 +531,13 @@ export function AnmeldeFormular({
               }}
             >
               <section className={s.sec}>
-                <h2>{kinder ? 'Kontakt der Eltern' : 'Deine Kontaktdaten'}</h2>
+                <h2>
+                  {mitHinweis(
+                    kinder ? 'Kontakt der Eltern' : 'Deine Kontaktdaten',
+                    baukasten?.hinweis?.('kontakt'),
+                  )}
+                </h2>
+                {baukasten?.hinweisText?.('kontakt')}
                 {kopf.map((f) =>
                   huelle(
                     f,
@@ -532,8 +556,10 @@ export function AnmeldeFormular({
               </section>
               <section className={s.sec}>
                 <h2>
-                  {kinder ? 'Welche Kinder meldest du an?' : 'Wer nimmt teil?'}
-                  {baukasten?.hinweis?.('teil')}
+                  {mitHinweis(
+                    kinder ? 'Welche Kinder meldest du an?' : 'Wer nimmt teil?',
+                    baukasten?.hinweis?.('teil'),
+                  )}
                 </h2>
                 {baukasten?.hinweisText?.('teil')}
                 {personen.map((p, i) => (
@@ -541,6 +567,11 @@ export function AnmeldeFormular({
                     <div className={s['person-top']}>
                       <strong>
                         {kinder ? 'Kind' : 'Person'} {i + 1}
+                        {baukasten && e.wer !== 'einzeln' && (
+                          <small className={s.wiederholt}>
+                            wiederholt sich für {kinder ? 'jedes Kind' : 'jede Person'}
+                          </small>
+                        )}
                       </strong>
                       {!baukasten && antworten.personen.length > 1 && (
                         <button
@@ -591,10 +622,7 @@ export function AnmeldeFormular({
               </section>
               {preisFeld && (e.preis.grundpreis.art === 'auswahl' || e.preis.extras.length > 0) && (
                 <section className={s.sec}>
-                  <h2>
-                    {preisFeld.frage}
-                    {baukasten?.hinweis?.('preis')}
-                  </h2>
+                  <h2>{mitHinweis(preisFeld.frage, baukasten?.hinweis?.('preis'))}</h2>
                   {baukasten?.hinweisText?.('preis')}
                   {e.preis.grundpreis.art === 'auswahl' && (
                     <div className={s.pf}>

@@ -109,12 +109,14 @@ function Kachel({
   name,
   symbol,
   benutzt,
+  ziehbar,
   onNeu,
   onZiehen,
 }: {
   name: string;
   symbol: BausteinIcon;
   benutzt: boolean;
+  ziehbar: boolean;
   onNeu: () => void;
   onZiehen: () => void;
 }) {
@@ -124,9 +126,15 @@ function Kachel({
       role="button"
       tabIndex={benutzt ? -1 : 0}
       className={k.kachel}
-      draggable={!benutzt}
+      draggable={!benutzt && ziehbar}
       aria-disabled={benutzt}
-      title={benutzt ? 'Ist schon im Formular' : 'Ins Formular ziehen oder antippen'}
+      title={
+        benutzt
+          ? 'Ist schon im Formular'
+          : ziehbar
+            ? 'Ins Formular ziehen oder antippen'
+            : 'Antippen'
+      }
       onClick={() => !benutzt && onNeu()}
       onKeyDown={(e) => {
         if (benutzt || (e.key !== 'Enter' && e.key !== ' ')) return;
@@ -177,6 +185,7 @@ export function BausteineTafel({
   geburtsdatum,
   wozuGeburtsdatum,
   onWer,
+  ziehbar,
   onNeu,
   onZiehen,
   ausgeblendet,
@@ -188,6 +197,8 @@ export function BausteineTafel({
   geburtsdatum: boolean;
   wozuGeburtsdatum: 'alter' | 'geschwister' | null;
   onWer: (wer: Wer, geburtsdatum: boolean) => void;
+  /** Mit Maus: Kacheln lassen sich ziehen; am Handy nur antippen (landet unter dem gewählten Feld). */
+  ziehbar: boolean;
   onNeu: (b: NeuerBaustein) => void;
   onZiehen: (b: NeuerBaustein) => void;
   /** Eigene Felder, die ausgeblendet sind (Antworten bleiben) – lassen sich zurückholen. */
@@ -258,6 +269,7 @@ export function BausteineTafel({
                 name={b.name}
                 symbol={SYMBOL_EMPFOHLEN[id]}
                 benutzt={benutzt}
+                ziehbar={ziehbar}
                 onNeu={() => onNeu(b)}
                 onZiehen={() => onZiehen(b)}
               />
@@ -283,6 +295,7 @@ export function BausteineTafel({
                   name={b.name}
                   symbol={SYMBOL_TYP[typ] ?? 'text'}
                   benutzt={false}
+                  ziehbar={ziehbar}
                   onNeu={() => onNeu(b)}
                   onZiehen={() => onZiehen(b)}
                 />

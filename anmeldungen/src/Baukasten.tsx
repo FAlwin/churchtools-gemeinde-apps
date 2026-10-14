@@ -118,6 +118,18 @@ function hoeheAnpassen(el: HTMLTextAreaElement | null) {
   el.style.height = `${el.scrollHeight}px`;
 }
 
+/** Name, E-Mail, Datenschutz, Preisbereich: gehören immer dazu – nicht zu bearbeiten oder zu entfernen. */
+const istFest = (f: Feld) => f.art === 'fest' || f.art === 'preis';
+
+/**
+ * **Ziehen nur mit Maus** (Alwin, 14.10.2026: „am Handy passieren immer wieder ungewollte Sachen“) – mit dem
+ * Finger stritten sich Ziehen und Scrollen. Am Handy: Feld antippen, unten ↑ ↓; neue Bausteine landen unter dem
+ * gewählten Feld.
+ */
+function mitMaus(): boolean {
+  return typeof matchMedia !== 'function' || !matchMedia('(pointer: coarse)').matches;
+}
+
 /** Setzt `inert`: Die Felder im Baukasten zeigen nur, wie es aussieht – Klicks gehen an die Hülle. */
 const inert = (el: HTMLElement | null) => el?.setAttribute('inert', '');
 
@@ -147,6 +159,7 @@ export function Baukasten({
   const [lokalWer, setLokalWer] = useState<OeffentlicheEinstellungen['wer'] | null>(null);
   /** Welches ⓘ gerade aufgeklappt ist (Feld-ID oder Bereich). */
   const [offenerHinweis, setOffenerHinweis] = useState<string | null>(null);
+  const [ziehenAn] = useState(mitMaus);
   const [nameEntwurf, setNameEntwurf] = useState(name);
   const [aktiv, setAktiv] = useState<string | null>(null);
   const [entwurf, setEntwurf] = useState<FeldEntwurf | null>(null);
@@ -276,7 +289,8 @@ export function Baukasten({
           (x) => x.id === feldId,
         )
       : undefined;
-    neuerEntwurf(f ?? null);
+    // Feste Felder (Name, E-Mail) lassen sich wählen, um sie zu verschieben – bearbeitet werden sie nicht.
+    neuerEntwurf(f && !istFest(f) ? f : null);
   }
 
   // Zum gewählten Feld: wie oft beantwortet, und die IDs der Antworten (Umbenennen behält die Wahl).
@@ -700,9 +714,9 @@ export function Baukasten({
   // ── Die Hülle um jedes Feld ──
   function huelle(f: Feld, bereich: Bereich, inhalt: ReactNode): ReactNode {
     const beweglich = verschiebbar(f);
-    const istAktiv = aktiv === f.id && entwurf?.feld.id === f.id;
     // Name, E-Mail, Datenschutz: verschiebbar (außer Datenschutz), aber nicht zu bearbeiten oder zu entfernen.
-    const fest = f.art === 'fest' || f.art === 'preis';
+    const fest = istFest(f);
+    const istAktiv = aktiv === f.id && (fest || entwurf?.feld.id === f.id);
     const liste = sichtbareListe(bereich).filter(verschiebbar);
     const i = liste.findIndex((x) => x.id === f.id);
     const hierLuecke = !!ziel && ziel.bereich === bereich;
@@ -776,9 +790,9 @@ export function Baukasten({
         )}
       </>
     );
-    // Das ganze Feld lässt sich greifen, nicht nur der kleine Griff (Alwin: „hakelig“) – außer beim Bearbeiten,
-    // sonst ließe sich im Text nichts markieren.
-    const ziehbar = beweglich && !istAktiv;
+    // Das ganze Feld lässt sich greifen (Alwin: „hakelig“; die 6 Punkte als Griff sind weg, 14.10.2026) – außer
+    // beim Bearbeiten, sonst ließe sich im Text nichts markieren. Am Handy gar nicht (`ziehenAn`).
+    const ziehbar = beweglich && !istAktiv && ziehenAn;
     return [
       lueckeDavor && luecke(),
       <div
@@ -792,7 +806,7 @@ export function Baukasten({
           ev.stopPropagation();
           const h = hinweisUnter(ev);
           if (h) return hinweisUmschalten(h);
-          if (!fest) waehlen(f.id);
+          if (beweglich || !fest) waehlen(f.id);
         }}
         onDragStart={(ev) => {
           if (!ziehbar) return;
@@ -805,14 +819,7 @@ export function Baukasten({
         }}
         onDragEnd={ziehenEnde}
       >
-        {beweglich && (
-          <span className={k.griff} aria-hidden="true">
-            <Icon name="grip" size={16} />
-          </span>
-        )}
-        {fest && !beweglich && <span className={k.festSchild}>gehört immer dazu</span>}
-        {(beweglich || !fest) && !istAktiv && <div className={k.werkzeug}>{werkzeug}</div>}
-        {istAktiv && entwurf ? (
+        {istAktiv && !fest && entwurf ? (
           <FeldBearbeiten
             entwurf={entwurf}
             onAendern={aendern}
@@ -828,6 +835,12 @@ export function Baukasten({
               {inhalt}
             </div>
             {hinweisKasten(f.id)}
+            {istAktiv && (
+              <div className={k.festFuss}>
+                <span>gehört immer dazu</span>
+                <span className={k.werkzeugUnten}>{werkzeug}</span>
+              </div>
+            )}
           </>
         )}
       </div>,
@@ -931,6 +944,7 @@ export function Baukasten({
       geburtsdatum={geburtsdatumAn(formular)}
       wozuGeburtsdatum={wozuGeburtsdatum(e.preis)}
       onWer={werAendern}
+      ziehbar={ziehenAn}
       onNeu={(b) => {
         setBlatt(null);
         einfuegen(b);

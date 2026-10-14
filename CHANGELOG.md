@@ -26,6 +26,19 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   - Beim Ziehen verschwindet das Feld, an seiner Stelle steht nur „Hier loslassen“ (Alwin, 14.10.2026: „muss
     nicht mehr in grau angezeigt werden“). Ausgeblendet wird erst nach dem Start des Ziehens – während
     `dragstart` bricht Chrome sonst ab; mit echter Maus geprüft (versteckt nach 9 ms, Ablegen 1 s später).
+  - **Klarere Linien, am Handy kein Ziehen** (Entwurf v6, Alwin 14.10.2026: „mich verwirren die vielen
+    gestrichelten Linien“, „die 6 Punkte funktionieren nicht“, „am Handy passieren ungewollte Sachen“):
+    - Keine Rahmen mehr um Felder: Maus darüber = hellblau, gewählt = kräftiger blau (immer das
+      ChurchTools-Blau, nicht die Farbe des Designs). Gestrichelt ist nur noch die Lücke beim Ziehen.
+    - Der Personen-Teil ist grau hinterlegt; im Baukasten steht „wiederholt sich für jedes Kind“.
+      „+ Weitere Person“ und das Antwort-Muster sind nicht mehr gestrichelt (auch im öffentlichen Formular).
+    - Die 6 Punkte (Griff) sind weg; gezogen wird am ganzen Feld.
+    - Pfeile, Kopieren, Entfernen erscheinen **nur am gewählten Feld** (unten im Feld), nicht mehr beim
+      Darüberfahren – am Handy blieben sie nach dem Antippen über der Frage hängen. Name und E-Mail lassen sich
+      dafür wählen (nur ↑ ↓, „gehört immer dazu“).
+    - **Am Handy** (`pointer: coarse`) lässt sich nichts ziehen – Ziehen und Scrollen kamen sich in die Quere.
+      Feld antippen, ↑ ↓; ein neuer Baustein landet unter dem gewählten Feld.
+    - ⓘ auch an „Kontakt“ (einmal je Anmeldung); das ⓘ hängt am letzten Wort der Überschrift.
   - **Woher kommt was?** (Alwin, 14.10.2026: „nicht ganz klar, was woher kommt und was warum Pflicht ist“;
     Entwurf v5 nach einem verworfenen v4 mit Schlössern und Schildchen). Ein kleines ⓘ an Name, E-Mail, Name
     jeder Person, Geburtsdatum, Datenschutz und an „Wer nimmt teil?“ / „Auswahl und Extras“; antippen zeigt

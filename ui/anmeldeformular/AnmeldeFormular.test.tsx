@@ -129,6 +129,8 @@ describe('Anmeldeformular (A5)', () => {
     const k = zeigen(neueEinstellungen('kinder'));
     expect(screen.getByText('Kontakt der Eltern')).toBeTruthy();
     expect(screen.getByRole('button', { name: '+ Weiteres Kind' })).toBeTruthy();
+    // Der Satz „wiederholt sich …“ ist nur für den Baukasten – Gäste sehen ihn nicht.
+    expect(screen.queryByText(/wiederholt sich/)).toBeNull();
     k.unmount();
     zeigen({ ...neueEinstellungen('einfach'), wer: 'einzeln' }, false);
     expect(screen.queryByRole('button', { name: /Weitere Person/ })).toBeNull();

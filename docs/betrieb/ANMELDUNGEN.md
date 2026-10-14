@@ -122,7 +122,9 @@ mitarbeiten (z. B. über den Status oder global über die Gruppen).
     dem gewählten Feld). Empfohlene Bausteine (Geburtsdatum, Telefon, Anschrift …) gibt es je einmal; ist
     einer schon im Formular, ist seine Kachel grau.
   - **Bearbeiten:** ein Feld anklicken – Frage, Hilfetext, Antworten und „Pflicht“ stehen direkt im Feld.
-    Verschieben am Griff links oder mit den Pfeilen, kopieren und entfernen oben rechts am Feld.
+    Am gewählten Feld stehen unten Pfeile, Kopieren und Entfernen; am Computer lässt sich jedes Feld auch
+    ziehen. **Am Handy wird nicht gezogen** – Feld antippen und mit den Pfeilen verschieben; ein neuer Baustein
+    landet unter dem gewählten Feld.
   - **Kopf:** Name und Begrüßungstext direkt anklicken; „Titelbild ändern“ (und entfernen) steht im Bild. Das
     Titelbild ist das Gruppenbild in ChurchTools und öffentlich sichtbar.
   - **Design:** Startpunkt, Farben, Schrift, Logo, Feldstil, Knöpfe … – man sieht es sofort im Formular. Oben

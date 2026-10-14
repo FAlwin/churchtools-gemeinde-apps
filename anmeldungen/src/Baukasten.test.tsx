@@ -273,8 +273,10 @@ describe('Baukasten (A5): Bausteine ins Formular', () => {
     expect(scroll.mock.calls[0][1]).toBeGreaterThan(0);
   });
 
-  it('Pfeile verschieben ohne Ziehen (Handy, Tastatur)', async () => {
-    zeigen();
+  it('Pfeile verschieben ohne Ziehen (Handy, Tastatur) – nur am gewählten Feld, nicht schon beim Darüberfahren', async () => {
+    const { huelle } = zeigen();
+    expect(screen.queryByRole('button', { name: 'Gruppe nach oben' })).toBeNull();
+    fireEvent.click(huelle('f1'));
     fireEvent.click(screen.getByRole('button', { name: 'Gruppe nach oben' }));
     await waitFor(() => expect(ff.feldEinordnen).toHaveBeenCalledWith(91, 'f1', 'person', 'foto'));
     expect(screen.getByRole('button', { name: 'Gruppe nach unten' })).toHaveProperty(
@@ -360,7 +362,8 @@ describe('Baukasten (A5): direkt im Feld bearbeiten', () => {
 
   it('entfernen: die Meldung sagt, was passiert ist (Antworten bleiben)', async () => {
     ff.feldEntfernen.mockResolvedValue({ art: 'ausgeblendet', antworten: 3 });
-    const { gespeichert } = zeigen();
+    const { gespeichert, huelle } = zeigen();
+    fireEvent.click(huelle('f1'));
     fireEvent.click(screen.getByRole('button', { name: 'Gruppe entfernen' }));
     await waitFor(() => expect(ff.feldEntfernen).toHaveBeenCalledWith(91, 'f1'));
     await waitFor(() =>
@@ -380,10 +383,13 @@ describe('Baukasten (A5): direkt im Feld bearbeiten', () => {
 
   it('Name und E-Mail: verschieben ja, entfernen und bearbeiten nein; Datenschutz bleibt ganz, wo er ist', () => {
     const { huelle } = zeigen();
+    expect(screen.queryByRole('button', { name: 'E-Mail nach oben' })).toBeNull();
+    // Gewählt: nur verschieben – nicht bearbeiten, nicht entfernen.
+    fireEvent.click(huelle('mail'));
     expect(screen.getByRole('button', { name: 'E-Mail nach oben' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'E-Mail entfernen' })).toBeNull();
-    fireEvent.click(huelle('mail'));
     expect(screen.queryByLabelText('Frage')).toBeNull();
+    expect(huelle('mail').textContent).toContain('gehört immer dazu');
     // Keine Werkzeuge – nur das ⓘ „Woher kommt das?“.
     expect(
       [...huelle('priv').querySelectorAll('button')].map((b) => b.getAttribute('aria-label')),
@@ -399,7 +405,7 @@ describe('Baukasten: Woher kommt was (Entwurf v5, 14.10.2026)', () => {
       (el) => el.dataset.hinweis,
     );
     // Die Kinder-Vorlage fragt das Geburtsdatum ab – es kommt aus „Wer meldet sich an?“.
-    expect(orte).toEqual(['name', 'mail', 'teil', 'pname', 'birth', 'priv']);
+    expect(orte).toEqual(['kontakt', 'name', 'mail', 'teil', 'pname', 'birth', 'priv']);
     // Ein ⓘ im (inerten) Feld: Der Tipp landet bei der Hülle.
     fireEvent.click(huelle('mail').querySelector('[data-hinweis]')!);
     expect(screen.getByRole('note').textContent).toMatch(/schickt ChurchTools die Bestätigung/);
@@ -420,6 +426,18 @@ describe('Baukasten: Woher kommt was (Entwurf v5, 14.10.2026)', () => {
     expect(screen.queryByRole('note')).toBeNull();
     fireEvent.click(huelle('mail'), { clientX: 110, clientY: 60 });
     expect(screen.getByRole('note').textContent).toMatch(/schickt ChurchTools die Bestätigung/);
+  });
+
+  it('das ⓘ hängt am letzten Wort der Überschrift (rutscht am Handy nicht allein in eine neue Zeile)', () => {
+    const { container } = zeigen();
+    expect(container.querySelector('[data-hinweis="teil"]')!.parentElement!.textContent).toBe(
+      'an?',
+    );
+  });
+
+  it('der Personen-Teil sagt im Baukasten, dass er sich wiederholt', () => {
+    zeigen();
+    expect(screen.getByText('wiederholt sich für jedes Kind')).toBeTruthy();
   });
 
   it('ein normales Feld antippen wählt es weiter aus (kein ⓘ dort)', () => {
@@ -454,12 +472,41 @@ describe('Baukasten: Woher kommt was (Entwurf v5, 14.10.2026)', () => {
   });
 });
 
+describe('Baukasten am Handy (Entwurf v6, 14.10.2026): antippen statt ziehen', () => {
+  const finger = (an: boolean) =>
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: an && q === '(pointer: coarse)' }));
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('mit dem Finger lässt sich nichts ziehen – weder Felder noch Bausteine; Antippen setzt unter das gewählte Feld', async () => {
+    finger(true);
+    const { huelle } = zeigen();
+    expect(huelle('allergy').getAttribute('draggable')).toBe('false');
+    expect(screen.getByRole('button', { name: 'Ja / Nein' }).getAttribute('draggable')).toBe(
+      'false',
+    );
+    fireEvent.click(huelle('allergy'));
+    fireEvent.click(screen.getByRole('button', { name: 'Ja / Nein' }));
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
+    expect(ff.feldSpeichern.mock.calls[0][4]).toBe('foto');
+  });
+
+  it('mit Maus bleibt Ziehen', () => {
+    finger(false);
+    const { huelle } = zeigen();
+    expect(huelle('allergy').getAttribute('draggable')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Ja / Nein' }).getAttribute('draggable')).toBe(
+      'true',
+    );
+  });
+});
+
 describe('Baukasten (A5): Speichern eins nach dem anderen', () => {
   it('das zweite Speichern beginnt erst, wenn das erste fertig ist', async () => {
     let fertig!: () => void;
     ff.feldSpeichern.mockReturnValueOnce(new Promise((r) => (fertig = () => r({} as never))));
-    zeigen();
+    const { huelle } = zeigen();
     fireEvent.click(screen.getByRole('button', { name: 'Kurzer Text' }));
+    fireEvent.click(huelle('f1'));
     fireEvent.click(screen.getByRole('button', { name: 'Gruppe nach oben' }));
     await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
     expect(ff.feldEinordnen).not.toHaveBeenCalled();
@@ -471,7 +518,8 @@ describe('Baukasten (A5): Speichern eins nach dem anderen', () => {
   it('ein Fehler wird gezeigt; „Nochmal“ wiederholt genau diese Aufgabe', async () => {
     const fehler = new ApiError(504, 'Zeitüberschreitung');
     ff.feldEinordnen.mockRejectedValueOnce(fehler);
-    zeigen();
+    const { huelle } = zeigen();
+    fireEvent.click(huelle('f1'));
     fireEvent.click(screen.getByRole('button', { name: 'Gruppe nach oben' }));
     const meldung = await screen.findByRole('alert');
     expect(meldung.textContent).toContain(fehlerMeldung(fehler).text);

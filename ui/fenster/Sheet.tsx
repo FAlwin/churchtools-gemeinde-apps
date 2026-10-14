@@ -10,7 +10,11 @@ interface SheetProps {
   cancelLabel?: string;
 }
 
-/** Zentriertes Dialog-Fenster (Modal) mit Titel und Abbrechen-Button. */
+/**
+ * Zentriertes Dialog-Fenster (Modal) mit Titel und Abbrechen-Button. **Das Fenster scrollt selbst** (bis
+ * 88 % Höhe) – Inhalten darin **keine eigene Scrollfläche** geben (`max-height` + `overflow`): zwei
+ * Scrollbereiche ineinander sind am Handy unbedienbar (Alwin, 14.10.2026, „Wer kann?“).
+ */
 export function Sheet({ title, onClose, children, cancelLabel = 'Abbrechen' }: SheetProps) {
   // Hält den Dialog über der iOS-Tastatur frei und verhindert, dass die Seite verrutscht (#207).
   const overlayRef = useOverlayKeyboardInset();

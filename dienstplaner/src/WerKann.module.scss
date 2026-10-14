@@ -22,12 +22,12 @@
   font-size: 15px;
 }
 
+// Kein eigener Scrollbereich: Das Fenster (Sheet) scrollt schon selbst – zwei ineinander sind am Handy
+// unbedienbar (Alwin, 14.10.2026).
 .liste {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: min(55vh, 460px);
-  overflow-y: auto;
   margin: 0;
   padding: 0;
   list-style: none;

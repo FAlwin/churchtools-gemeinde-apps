@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { kandidatenAus, kandidatHinweis, type Kandidat } from '@shared/dienstplan/werKann';
+import type { Entwurf, EntwurfErgebnis, EntwurfZiel } from '@shared/dienstplan/entwuerfe';
 import { ladeWerKann } from './ladeWerKann';
+import { grundText } from './ladeEntwuerfe';
 import styles from './WerKann.module.scss';
 
 /** Welcher freie Platz – alles, was das Fach zum Laden und für die Überschrift braucht. */
@@ -23,7 +25,24 @@ export interface FreierPlatz {
   von: number;
   /** Wer an diesem Dienst schon eingeteilt ist – steht nicht in der Liste. */
   schonDa: number[];
+  /** `index` des Platzes in ChurchTools – damit findet der Entwurf ihn wieder (nie die Platz-ID). */
+  index: number | null;
+  /** Die Dienstgruppe – in deren Schublade liegt der Entwurf. */
+  gruppeId: number;
 }
+
+/**
+ * Ob und wie man hier eintragen kann (E4-3-2). Ohne Angabe ist das Fach nur zum Ansehen (wie E4-2).
+ * `bereit.onWahl` speichert den Entwurf; bei Erfolg schließt der Aufrufer das Fach.
+ */
+export type Eintragen =
+  | { art: 'laedt' }
+  | { art: 'gesperrt'; text: string; onNochmal?: () => void }
+  | { art: 'einrichten'; gruppe: string; onEinrichten: () => Promise<void> }
+  | {
+      art: 'bereit';
+      onWahl: (ziel: EntwurfZiel, erwartet: number | null) => Promise<EntwurfErgebnis>;
+    };
 
 type Zustand =
   | { art: 'laedt' }
@@ -35,13 +54,52 @@ const SUCHE_AB = 7;
 
 /**
  * **Das Fach „Wer kann?“** (Bauplan E4-2, Entwurf v17): die Kandidaten für einen freien Platz, „frei und
- * selten dran“ zuerst, mit Abwesenheit, Diensten am selben Tag und Einsätzen im Monat. **Nur ansehen** –
- * Einteilen kommt mit E4-3. Frühere Absagen stehen bewusst nicht da (siehe `werKann.ts`).
+ * selten dran“ zuerst, mit Abwesenheit, Diensten am selben Tag und Einsätzen im Monat. Frühere Absagen
+ * stehen bewusst nicht da (siehe `werKann.ts`).
+ *
+ * **Eintragen (E4-3-2):** Person antippen = Entwurf, „Jemand ohne ChurchTools-Konto“ = Gast. Hat ein anderer
+ * Planer den Platz eben geändert, steht das da – „lassen“ oder bewusst „trotzdem“ (Alwin, 14.10.2026). Die
+ * Wahl geht bei einem Fehler nie verloren: Das Fach bleibt offen, ein zweiter Tipp versucht es erneut.
  */
-export function WerKann({ platz, onClose }: { platz: FreierPlatz; onClose: () => void }) {
+export function WerKann({
+  platz,
+  onClose,
+  eintragen,
+}: {
+  platz: FreierPlatz;
+  onClose: () => void;
+  eintragen?: Eintragen;
+}) {
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
   const [versuch, setVersuch] = useState(0);
   const [suche, setSuche] = useState('');
+  const [gast, setGast] = useState('');
+  const [laeuft, setLaeuft] = useState(false);
+  const [meldung, setMeldung] = useState<string | null>(null);
+  const [konflikt, setKonflikt] = useState<{ ziel: EntwurfZiel; jetzt: Entwurf | null } | null>(
+    null,
+  );
+
+  // Ein Hinweis (Konflikt, Fehler) steht unter der langen Liste – am Handy sah man ihn nach dem Tippen oben
+  // gar nicht (in der Test-Instanz gefunden, 14.10.2026). Deshalb rollt das Fach ihn ins Bild.
+  const hinweisRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (meldung || konflikt)
+      hinweisRef.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+  }, [meldung, konflikt]);
+
+  const bereit = eintragen?.art === 'bereit' ? eintragen : null;
+  const waehle = async (ziel: EntwurfZiel, erwartet: number | null) => {
+    if (!bereit || laeuft) return;
+    setLaeuft(true);
+    setMeldung(null);
+    setKonflikt(null);
+    const r = await bereit.onWahl(ziel, erwartet);
+    setLaeuft(false);
+    if (r.ok) return;
+    if (r.grund === 'konflikt') setKonflikt({ ziel, jetzt: r.jetzt ?? null });
+    else setMeldung(grundText(r.grund));
+  };
 
   useEffect(() => {
     let aktuell = true;
@@ -94,11 +152,8 @@ export function WerKann({ platz, onClose }: { platz: FreierPlatz; onClose: () =>
                 .filter((k) => q === '' || k.name.toLowerCase().includes(q))
                 .map((k) => {
                   const h = kandidatHinweis(k);
-                  return (
-                    <li
-                      key={k.personId}
-                      className={`${styles.kandidat}${k.abwesend ? ' ' + styles.blass : ''}`}
-                    >
+                  const inhalt = (
+                    <>
                       <span className={styles.wer}>
                         <b>{k.name}</b>
                         <small className={h.warnung ? styles.warnung : undefined}>{h.text}</small>
@@ -106,14 +161,162 @@ export function WerKann({ platz, onClose }: { platz: FreierPlatz; onClose: () =>
                       <span className={styles.anzahl}>
                         {k.imMonat}× im {platz.monatName}
                       </span>
+                    </>
+                  );
+                  const klasse = `${styles.kandidat}${k.abwesend ? ' ' + styles.blass : ''}`;
+                  return (
+                    <li key={k.personId}>
+                      {bereit ? (
+                        <button
+                          type="button"
+                          className={`${klasse} ${styles.waehlbar}`}
+                          disabled={laeuft}
+                          onClick={() =>
+                            void waehle({ art: 'person', personId: k.personId, name: k.name }, null)
+                          }
+                        >
+                          {inhalt}
+                        </button>
+                      ) : (
+                        <div className={klasse}>{inhalt}</div>
+                      )}
                     </li>
                   );
                 })}
             </ul>
           )}
-          <p className={styles.hinweis}>Einteilen kommt als Nächstes – vorerst nur zum Ansehen.</p>
+          {bereit && (
+            <form
+              className={styles.gastZeile}
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (gast.trim().length >= 2) void waehle({ art: 'gast', name: gast.trim() }, null);
+              }}
+            >
+              <h3 className={styles.titel}>Jemand ohne ChurchTools-Konto</h3>
+              <div className={styles.gastFeld}>
+                <input
+                  className={styles.suche}
+                  placeholder="z. B. Andreas Reimer"
+                  aria-label="Name eines Gastes"
+                  value={gast}
+                  onChange={(e) => setGast(e.target.value)}
+                  autoComplete="off"
+                />
+                <button
+                  type="submit"
+                  className={styles.knopf}
+                  disabled={laeuft || gast.trim().length < 2}
+                >
+                  Eintragen
+                </button>
+              </div>
+              <p className={styles.hinweis}>
+                Zum Beispiel ein Gastprediger. Er bekommt keine Anfrage, sein Name steht im Plan.
+              </p>
+            </form>
+          )}
         </>
       )}
+      <EintragenStand eintragen={eintragen} laeuft={laeuft} />
+      <div ref={hinweisRef}>
+        {meldung && (
+          <p className={styles.fehler} role="alert">
+            {meldung}
+          </p>
+        )}
+        {konflikt && (
+          <div className={styles.konflikt} role="alert">
+            <p>
+              <b>
+                {konflikt.jetzt
+                  ? `${konflikt.jetzt.von.name} hat diesen Platz eben geändert:`
+                  : 'Jemand hat diesen Platz eben geändert.'}
+              </b>{' '}
+              {konflikt.jetzt && `Entwurf „${konflikt.jetzt.ziel.name}“. `}
+              Dein „{konflikt.ziel.name}“ wurde nicht gespeichert.
+            </p>
+            <div className={styles.knoepfe}>
+              <button
+                type="button"
+                className={`${styles.knopf} ${styles.primaer}`}
+                onClick={onClose}
+              >
+                {konflikt.jetzt ? `Entwurf von ${konflikt.jetzt.von.name} lassen` : 'So lassen'}
+              </button>
+              <button
+                type="button"
+                className={styles.knopf}
+                disabled={laeuft}
+                onClick={() => void waehle(konflikt.ziel, konflikt.jetzt?.version ?? null)}
+              >
+                Trotzdem {konflikt.ziel.name} eintragen
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </Sheet>
+  );
+}
+
+/** Was unter der Liste steht, wenn (noch) nicht eingetragen werden kann. */
+function EintragenStand({ eintragen, laeuft }: { eintragen?: Eintragen; laeuft: boolean }) {
+  const [einrichten, setEinrichten] = useState<
+    { art: 'bereit' } | { art: 'laeuft' } | { art: 'fehler'; text: string }
+  >({ art: 'bereit' });
+  if (!eintragen) {
+    return <p className={styles.hinweis}>Eintragen kann hier nur, wer diesen Dienst plant.</p>;
+  }
+  if (eintragen.art === 'bereit') {
+    return laeuft ? <p className={styles.hinweis}>Wird eingetragen …</p> : null;
+  }
+  if (eintragen.art === 'laedt') return <p className={styles.hinweis}>Entwürfe werden geladen …</p>;
+  if (eintragen.art === 'gesperrt') {
+    return (
+      <div className={styles.konflikt}>
+        <p>{eintragen.text}</p>
+        {eintragen.onNochmal && (
+          <button type="button" className={styles.knopf} onClick={eintragen.onNochmal}>
+            Erneut versuchen
+          </button>
+        )}
+      </div>
+    );
+  }
+  const los = async () => {
+    setEinrichten({ art: 'laeuft' });
+    try {
+      await eintragen.onEinrichten();
+      setEinrichten({ art: 'bereit' });
+    } catch (e) {
+      setEinrichten({
+        art: 'fehler',
+        text: e instanceof Error ? e.message : 'Einrichten hat nicht geklappt.',
+      });
+    }
+  };
+  return (
+    <div className={styles.konflikt}>
+      <p>
+        <b>Entwürfe für „{eintragen.gruppe}“ einrichten.</b> Für diese Dienstgruppe gibt es in
+        ChurchTools noch keinen Platz für Entwürfe – oder du darfst ihn nur nicht sehen. Dann bitte
+        erst nach dem Recht fragen, sonst entsteht ein zweiter. Danach stellst du in ChurchTools
+        ein, welche Planer ihn sehen und ändern dürfen.
+      </p>
+      <button
+        type="button"
+        className={`${styles.knopf} ${styles.primaer}`}
+        disabled={einrichten.art === 'laeuft'}
+        onClick={() => void los()}
+      >
+        {einrichten.art === 'laeuft' ? 'Wird eingerichtet …' : 'Einrichten'}
+      </button>
+      {einrichten.art === 'fehler' && (
+        <p className={styles.fehler} role="alert">
+          {einrichten.text}
+        </p>
+      )}
+    </div>
   );
 }

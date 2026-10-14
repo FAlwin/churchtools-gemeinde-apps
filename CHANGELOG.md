@@ -7,6 +7,26 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Hinzugefügt (Dienstplaner)
+
+- **Als Entwurf eintragen** (#561, Bauplan E4-3-2, Entwurf `e4-3-entwurf.html`): Im Fach „Wer kann?“ sind die
+  Personen jetzt antippbar – sie stehen danach **als Entwurf** im Plan (blau gestrichelt mit Stift), **noch ohne
+  Anfrage**. Darunter „Jemand ohne ChurchTools-Konto“ für einen Gast. Fremde Entwürfe tragen den Namen des
+  Planers, Gäste das Schild „Gast“. Hat jemand anderes den Platz eben geändert, steht das da – mit „Entwurf von X
+  lassen“ oder „Trotzdem … eintragen“ (Alwin). Fehlt einer Dienstgruppe der Speicher, bietet der Dienstplaner
+  „Einrichten“ an (nur wer in ChurchTools Kategorien anlegen darf), sonst sagt er genau, welches Recht fehlt.
+  Gesendet wird noch nichts – das kommt mit E4-4.
+
+### Intern
+
+- **Gemeinsame Bausteine statt Kopien** (#561): Der Browser-Anschluss an den Speicher der Erweiterung
+  (`ui/ct/modulPort.ts`), das Kürzel aus der Bau-Adresse (`ui/erweiterung/kuerzel.ts`) und der Hinweis-Toast
+  (`ui/fenster/Toast.tsx`, `useToast.ts`) standen nur in der Musik-App; jetzt nutzen beide Apps dieselben. Die
+  Musik-App reicht sie nur weiter, ihr Verhalten bleibt gleich. `kategorieAusListe` hält die Regel „bei gleichem
+  Kürzel die kleinste ID“ für eine schon geladene Liste – ohne sie nachzubauen.
+- Die Demo (`?demo`) spielt den Speicher nach (Kategorien, Werte, Rechte des Anlegers) und hat einen Entwurf von
+  Spike.
+
 ### Behoben
 
 - **Gleiche Kategorie, verschiedene Geräte** (#558): ChurchTools nimmt dasselbe Kürzel für zwei Kategorien an

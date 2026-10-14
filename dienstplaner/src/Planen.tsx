@@ -1,9 +1,11 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { Segment } from '@ui/bedienung/Segment';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
+import { Toast } from '@ui/fenster/Toast';
+import { useToast } from '@ui/fenster/useToast';
 import { kachel, monatName, tagKurz } from '@shared/ct/datum';
 import type { Plan, PlanGruppe, PlanPlatz, PlanSpalte, PlanZeile } from '@shared/dienstplan/plan';
 import { artVon, veranstaltungsArten, WEITERE } from '@shared/dienstplan/termine';
@@ -19,6 +21,13 @@ import {
 } from '@shared/dienstplan/fenster';
 import { werWieOft } from '@shared/dienstplan/werWieOft';
 import {
+  entwurfVeraltet,
+  ortSchluessel,
+  type Entwurf,
+  type EntwurfErgebnis,
+  type EntwurfZiel,
+} from '@shared/dienstplan/entwuerfe';
+import {
   zeitraumGrenzen,
   spanneText,
   zeitraumText,
@@ -31,7 +40,8 @@ import { ZeitraumKnopf } from './ZeitraumKnopf';
 import { leseAnsicht, merkeAnsicht, type PlanenAnsicht } from './planenAnsicht';
 import { useBreite } from './useBreite';
 import { FilterKnopf } from './FilterKnopf';
-import { WerKann, type FreierPlatz } from './WerKann';
+import { WerKann, type Eintragen, type FreierPlatz } from './WerKann';
+import { grundText, type EntwuerfeDaten, type EntwurfAnschluss } from './ladeEntwuerfe';
 import styles from './Planen.module.scss';
 
 interface Props {
@@ -47,7 +57,14 @@ interface Props {
   ladeZeitraum: (von: string, bis: string) => Promise<TermineDaten>;
   /** Heute (`YYYY-MM-DD`, Ortszeit der Gemeinde). */
   heute: string;
+  /** Eintragen als Entwurf (E4-3) – ohne Anschluss bleibt „Wer kann?“ nur zum Ansehen. */
+  entwuerfe?: EntwurfAnschluss;
 }
+
+type EntwuerfeZustand =
+  | { art: 'laedt' }
+  | { art: 'fehler'; text: string }
+  | { art: 'fertig'; daten: EntwuerfeDaten };
 
 /** Schlüssel einer Gruppe – `null` (ohne Dienstgruppe) bekommt einen eigenen. */
 const schluessel = (g: PlanGruppe) => (g.gruppe ? String(g.gruppe.id) : 'ohne');
@@ -65,6 +82,10 @@ interface Sicht {
   onUmschalten: (k: string) => void;
   /** Freien Platz antippen → „Wer kann?“ (nur wo man den Dienst planen darf). */
   onFrei: (spalte: number, zeile: PlanZeile, nr: number) => void;
+  /** Der (gültige) Entwurf an einem freien Platz – sonst `null`. */
+  entwurf: (spalte: number, zeile: PlanZeile, p: PlanPlatz) => Entwurf | null;
+  /** Die eigene Person – eigene Entwürfe stehen ohne „von …“. */
+  ichId: number | null;
 }
 
 /** Darf man an diesem Termin diesen Dienst planen – über Recht, Leitung oder als Admin des Termins? */
@@ -84,6 +105,8 @@ function freierPlatz(s: PlanSpalte, z: PlanZeile, plaetze: PlanPlatz[], nr: numb
     nr,
     von: plaetze.length,
     schonDa: plaetze.flatMap((p) => (p.personId !== null ? [p.personId] : [])),
+    index: plaetze[nr - 1]?.index ?? null,
+    gruppeId: z.dienst.dienstgruppeId ?? 0,
   };
 }
 
@@ -103,6 +126,7 @@ export function Planen({
   mehrMoeglich,
   ladeZeitraum,
   heute,
+  entwuerfe,
 }: Props) {
   const [ansicht, setAnsichtRoh] = useState<PlanenAnsicht>(leseAnsicht);
   const setAnsicht = (a: PlanenAnsicht) => {
@@ -113,6 +137,33 @@ export function Planen({
   const [zu, setZu] = useState<Set<string> | null>(null);
   const [frei, setFrei] = useState<FreierPlatz | null>(null);
   const [rahmen, platz] = useBreite();
+  const { toast, showToast } = useToast();
+
+  // Entwürfe (E4-3): geladen beim Öffnen, neu nach dem Einrichten einer Schublade oder „Erneut versuchen“.
+  const [ew, setEw] = useState<EntwuerfeZustand>({ art: 'laedt' });
+  const [ewVersuch, setEwVersuch] = useState(0);
+  useEffect(() => {
+    if (!entwuerfe) return;
+    let aktuell = true;
+    setEw({ art: 'laedt' });
+    entwuerfe.laden().then(
+      (daten) => aktuell && setEw({ art: 'fertig', daten }),
+      (e: unknown) => aktuell && setEw({ art: 'fehler', text: fehlerMeldung(e).text }),
+    );
+    return () => {
+      aktuell = false;
+    };
+  }, [entwuerfe, ewVersuch]);
+  const ewNeu = useCallback(() => setEwVersuch((v) => v + 1), []);
+  /** Einen Entwurf (oder sein Fehlen) in die geladenen Daten übernehmen – ohne alles neu zu laden. */
+  const ewSetzen = (k: string, e: Entwurf | null) =>
+    setEw((alt) => {
+      if (alt.art !== 'fertig') return alt;
+      const map = new Map(alt.daten.entwuerfe);
+      if (e) map.set(k, e);
+      else map.delete(k);
+      return { art: 'fertig', daten: { ...alt.daten, entwuerfe: map } };
+    });
 
   // Gewählter Zeitraum: eigene Abfrage, gemerkt mit ihrem Bereich – eine späte Antwort für einen alten
   // Bereich zählt nicht mehr.
@@ -336,6 +387,15 @@ export function Planen({
       neben: (s) => haupt !== null && s.name !== haupt,
       onUmschalten: umschalten,
       onFrei: (i, zl, nr) => setFrei(freierPlatz(plan.spalten[i], zl, zl.zellen[i] ?? [], nr)),
+      entwurf: (i, zl, p) => {
+        if (ew.art !== 'fertig' || p.art !== 'frei') return null;
+        const e = ew.daten.entwuerfe.get(
+          ortSchluessel({ eventId: plan.spalten[i].id, serviceId: zl.dienst.id, index: p.index }),
+        );
+        // Steht in ChurchTools inzwischen etwas anderes als beim Eintragen, gilt ChurchTools.
+        return e && !entwurfVeraltet(e, { art: 'frei' }) ? e : null;
+      },
+      ichId: entwuerfe?.ich.personId ?? null,
     };
     inhalt =
       d.gefiltert.length === 0 || gruppen.length === 0 ? (
@@ -351,6 +411,63 @@ export function Planen({
       );
   }
 
+  /** Ob und wie man an diesem Platz eintragen kann – aus Anschluss, Schublade und Rechten. */
+  const eintragenFuer = (f: FreierPlatz): Eintragen | undefined => {
+    if (!entwuerfe) return undefined;
+    if (ew.art === 'laedt') return { art: 'laedt' };
+    if (ew.art === 'fehler') return { art: 'gesperrt', text: ew.text, onNochmal: ewNeu };
+    const daten = ew.daten;
+    const s = daten.schubladen.get(f.gruppeId);
+    if (!s) {
+      return { art: 'gesperrt', text: 'Für diesen Dienst kannst du hier keine Entwürfe anlegen.' };
+    }
+    if (s.fehler) return { art: 'gesperrt', text: grundText(s.fehler), onNochmal: ewNeu };
+    if (s.stand === 'einrichtbar') {
+      return {
+        art: 'einrichten',
+        gruppe: s.gruppe.name,
+        onEinrichten: async () => {
+          await entwuerfe.einrichten(s.gruppe);
+          ewNeu();
+        },
+      };
+    }
+    if (s.stand === 'fehlt') {
+      return {
+        art: 'gesperrt',
+        text: `Für „${s.gruppe.name}“ gibt es noch keinen Platz für Entwürfe – oder dir fehlt das Recht, ihn zu sehen. Bitte die Gemeinde-Verwaltung fragen.`,
+      };
+    }
+    if (s.stand === 'nur-lesen') {
+      return {
+        art: 'gesperrt',
+        text: `Du darfst die Entwürfe von „${s.gruppe.name}“ ansehen, aber nicht ändern. Bitte die Gemeinde-Verwaltung nach dem Recht fragen.`,
+      };
+    }
+    const ort = { eventId: f.eventId, serviceId: f.serviceId, index: f.index };
+    return {
+      art: 'bereit',
+      onWahl: async (ziel: EntwurfZiel, erwartet: number | null): Promise<EntwurfErgebnis> => {
+        const r = await entwuerfe.speichern(
+          daten,
+          f.gruppeId,
+          { ort, ziel, modus: 'anfrage', gesehen: { art: 'frei' }, von: entwuerfe.ich },
+          erwartet,
+        );
+        const k = ortSchluessel(ort);
+        if (r.ok) {
+          ewSetzen(k, r.entwurf);
+          setFrei(null);
+          showToast(`${ziel.name} eingetragen – noch nicht gesendet.`);
+        } else if (r.grund === 'konflikt') {
+          // Was jetzt dasteht, zeigt auch die Matrix sofort.
+          ewSetzen(k, r.jetzt ?? null);
+        }
+        return r;
+      },
+    };
+  };
+
   const nachladeFehler = !bereich && zustand.art === 'fertig' ? zustand.nachladeFehler : undefined;
   return (
     <div className={styles.planen}>
@@ -363,10 +480,13 @@ export function Planen({
         Welche Dienste du siehst, entscheidet ChurchTools. Hier stehen nur Dienstgruppen, die du
         ganz sehen darfst – deine eigenen Dienste findest du immer unter Start und Termine. Planen
         darfst du, wo du die Dienstgruppe bearbeiten darfst, die Gruppe eines Dienstes leitest oder
-        Admin des Termins bist. Einen freien Platz antippen zeigt, wer kann – Einteilen kommt als
-        Nächstes.
+        Admin des Termins bist. Einen freien Platz antippen zeigt, wer kann – dort trägst du
+        jemanden als Entwurf ein. Gesendet wird noch nichts.
       </p>
-      {frei && <WerKann platz={frei} onClose={() => setFrei(null)} />}
+      {frei && (
+        <WerKann platz={frei} onClose={() => setFrei(null)} eintragen={eintragenFuer(frei)} />
+      )}
+      <Toast message={toast} />
     </div>
   );
 }
@@ -587,6 +707,8 @@ function TabellenPlan({ sicht, breite, platz }: { sicht: Sicht; breite: Breite; 
                                     ? (nr) => sicht.onFrei(i, z, nr)
                                     : undefined
                                 }
+                                entwurf={(p) => sicht.entwurf(i, z, p)}
+                                ichId={sicht.ichId}
                               />
                             )}
                           </td>
@@ -670,6 +792,8 @@ function HandyPlan({ sicht, amEnde }: { sicht: Sicht; amEnde?: () => void }) {
                     <Plaetze
                       plaetze={z.zellen[i]!}
                       onFrei={darfPlanen(z, s) ? (nr) => sicht.onFrei(i, z, nr) : undefined}
+                      entwurf={(p) => sicht.entwurf(i, z, p)}
+                      ichId={sicht.ichId}
                     />
                   </div>
                 ))}
@@ -748,15 +872,23 @@ function WerWieOft({ sicht }: { sicht: Sicht }) {
 function Plaetze({
   plaetze,
   onFrei,
+  entwurf,
+  ichId = null,
 }: {
   plaetze: PlanPlatz[];
   /** Nur wo man planen darf: freier Platz wird ein Knopf (Platz 1 … n). */
   onFrei?: (nr: number) => void;
+  /** Der Entwurf an einem freien Platz (E4-3) – steht dann statt „frei“ da. */
+  entwurf?: (p: PlanPlatz) => Entwurf | null;
+  ichId?: number | null;
 }) {
   return (
     <div className={styles.plaetze}>
-      {plaetze.map((p, i) =>
-        p.art === 'frei' && onFrei ? (
+      {plaetze.map((p, i) => {
+        const e = entwurf?.(p) ?? null;
+        return e ? (
+          <EntwurfPlatz key={i} e={e} eigener={e.von.personId === ichId} />
+        ) : p.art === 'frei' && onFrei ? (
           <button
             key={i}
             type="button"
@@ -768,9 +900,28 @@ function Plaetze({
           </button>
         ) : (
           <Platz key={i} p={p} />
-        ),
-      )}
+        );
+      })}
     </div>
+  );
+}
+
+/** Ein Entwurf – noch nicht gesendet: gestrichelt mit Stift, „von …“ wenn von jemand anderem (E4-3). */
+function EntwurfPlatz({ e, eigener }: { e: Entwurf; eigener: boolean }) {
+  const gast = e.ziel.art === 'gast';
+  return (
+    <span
+      className={`${styles.platz} ${styles.entwurf}`}
+      title={`Entwurf von ${e.von.name} – noch nicht gesendet`}
+    >
+      <span className={styles.ic} aria-label="Entwurf, noch nicht gesendet">
+        <Icon name="pencil" size={11} />
+      </span>
+      <span className={styles.name}>{e.ziel.name}</span>
+      {gast && <span className={styles.gast}>Gast</span>}
+      {!gast && e.modus === 'direkt' && <span className={styles.direkt}>direkt</span>}
+      {!eigener && <span className={styles.von}>{e.von.name}</span>}
+    </span>
   );
 }
 

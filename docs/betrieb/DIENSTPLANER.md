@@ -2,7 +2,7 @@
 
 > **Stand: E3 fertig (14.10.2026)** – mit drei Rollen geprüft (Test-Instanz) und lesend an der Live-Instanz. Die Erweiterung startet in ChurchTools – **nur lesen**. **Planen**:
 > Termine als Spalten, Dienstgruppen und Dienste als Zeilen, in jeder Zelle die Plätze; freien Platz antippen →
-> „Wer kann?“ (E4-2, nur ansehen); Zeitraum wählen (ab heute, ein Monat oder von–bis), Terminleiste,
+> „Wer kann?“ (E4-2) und dort **als Entwurf eintragen** (E4-3-2, Person oder Gast – noch ohne Anfrage); Zeitraum wählen (ab heute, ein Monat oder von–bis), Terminleiste,
 > Spaltenbreite, Filter nach Veranstaltung und Gruppe, „Wer wie oft?“; am Handy ein Termin auf einmal. **Start**: „Als
 > Nächstes“ (dein Dienst, Team, Lieder, Musik-App), deine offenen Anfragen, deine nächsten Dienste,
 > Abwesenheiten und für Planer die freien Plätze der nächsten 6 Wochen. Die Reiter
@@ -44,11 +44,25 @@ deren Sitzung. **Ein eigenes Rechte-System gibt es nicht.**
 | Leitung der Gruppe eines Dienstes | diesen Dienst planen             | Rolle mit Leitung in der ChurchTools-Gruppe des Dienstes             |
 | Admin eines Termins               | an diesem Termin planen          | als Admin am Termin eingetragen                                      |
 | Ablauf-Pflege                     | Abläufe bearbeiten (ab E6)       | Recht „Ablauf bearbeiten“ für den Kalender                           |
+| Planer mit Entwürfen              | Entwürfe einer Gruppe eintragen  | Rechte auf die Kategorie „Entwürfe <Gruppe>“ (s. u.)                 |
 
 Gemessen an der Test-Instanz (08. und 13.10.2026). Alle drei Wege gelten seit E3-4 (eine Regel:
 `darfDienstPlanen`). Der Reiter „Planen“ erscheint für globale Planer und Gruppenleitungen; wer nur Admin
 einzelner Termine ist, sieht das an diesen Terminen. „Planen“ heißt bis E4 nur ansehen – eingeteilt wird
 noch in ChurchTools.
+
+**Entwürfe – eine Kategorie je Dienstgruppe** (E4-3, Alwin 14.10.2026): Noch nicht gesendete Einteilungen liegen
+in ChurchTools im Speicher des Dienstplaners, je Dienstgruppe in einer eigenen Kategorie „Entwürfe <Gruppe>“
+(Kürzel `dienstplaner-entwuerfe-<ID>`). So schützt ChurchTools die Gruppen voneinander.
+
+- **Einrichten:** Fehlt einer Gruppe die Kategorie, zeigt „Wer kann?“ den Knopf **„Einrichten“** – nur wer in
+  ChurchTools Kategorien anlegen darf. Wer sie anlegt, bekommt sofort alle Rechte darauf (gemessen).
+- **Freischalten:** Danach in ChurchTools für die anderen Planer dieser Gruppe die Rechte auf diese Kategorie
+  setzen: **Daten sehen** (Entwürfe ansehen) und **Daten anlegen, ändern, löschen** (eintragen). Ohne die drei
+  zum Ändern steht „ansehen, aber nicht ändern“ da.
+- **Vorsicht:** ChurchTools nimmt dasselbe Kürzel zweimal an (gemessen). Sieht jemand die Kategorie nur nicht,
+  weil ihm das Sehrecht fehlt, legt „Einrichten“ eine zweite an. Deshalb zuerst das Recht geben, nicht einrichten.
+  Gibt es doch zwei, nehmen alle Geräte die mit der kleinsten Nummer.
 
 **Den Menüpunkt sehen:** Erweiterung **„Dienstplaner“ sehen** – für alle, die Dienste haben. Ohne dieses
 Recht zeigt ChurchTools selbst „Keine ausreichende Berechtigung“.

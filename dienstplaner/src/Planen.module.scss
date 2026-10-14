@@ -295,6 +295,30 @@
   font-weight: 700;
 }
 
+// Entwurf: noch nicht gesendet (E4-3, Entwurf v17) – blau gestrichelt mit Stift.
+.entwurf {
+  border: 1.5px dashed var(--blue);
+  background: var(--blue-soft);
+
+  .ic {
+    background: var(--blue);
+    color: #fff;
+  }
+}
+
+// „von Spike“ bzw. „direkt“ am Entwurf – kleine Schilder wie „Gast“.
+.von,
+.direkt {
+  flex: none;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--surface2);
+  color: var(--blue-ink);
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 // ── Handy: Datumsleiste und ein Termin ──────────────────────────────────────
 .datumsleiste {
   display: flex;

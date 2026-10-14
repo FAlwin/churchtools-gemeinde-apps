@@ -295,6 +295,108 @@
   font-weight: 700;
 }
 
+// Entwurf: noch nicht gesendet (E4-3, Entwurf v17) – blau gestrichelt mit Stift.
+.entwurf {
+  border: 1.5px dashed var(--blue);
+  background: var(--blue-soft);
+
+  .ic {
+    background: var(--blue);
+    color: #fff;
+  }
+}
+
+// Entwurf antippbar (E4-3-3) – wie der freie Platz ein Knopf.
+.entwurfKnopf {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    border-style: solid;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 1px;
+  }
+}
+
+// „Entwurf veraltet“ – kleines Schild unter dem Platz (Alwin, 14.10.2026): ChurchTools gilt, der Entwurf
+// wird nie gesendet; antippen führt zu „Entwurf verwerfen“.
+.veraltet {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  padding: 1px 6px;
+  border: 1px dashed var(--text3);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text2);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+// Als Knopf (wo man ändern darf). Eigene Klasse statt `button.veraltet`: Im Erweiterungs-Bau muss jede Regel mit
+// einer Klasse beginnen, sonst greift sie in ChurchTools (Paketprüfung).
+.veraltetKnopf {
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text);
+  }
+}
+
+// Leiste unten (E4-3-3): „N Entwürfe noch nicht gesendet“ – bleibt beim Scrollen sichtbar. Eigener Name:
+// `.leiste` ist die Terminleiste oben (im Browser-Check aufgefallen, 14.10.2026).
+.sendeLeiste {
+  position: sticky;
+  bottom: 12px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 560px;
+  margin: 12px auto 0;
+  padding: 8px 8px 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface2);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+
+  small {
+    display: block;
+    color: var(--text2);
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  button {
+    flex: none;
+    white-space: nowrap;
+  }
+}
+
+// „von Spike“ bzw. „direkt“ am Entwurf – kleine Schilder wie „Gast“.
+.von,
+.direkt {
+  flex: none;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--surface2);
+  color: var(--blue-ink);
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 // ── Handy: Datumsleiste und ein Termin ──────────────────────────────────────
 .datumsleiste {
   display: flex;

@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { ApiError } from '@ui/ct/fehler';
 import { diensteAus } from '@shared/ct/dienste';
 import { planAus, type Plan } from '@shared/dienstplan/plan';
 import type { Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import type { RohTermin } from '@shared/dienstplan/termine';
+import type { Entwurf } from '@shared/dienstplan/entwuerfe';
+import type { EntwuerfeDaten, EntwurfAnschluss, Schublade } from './ladeEntwuerfe';
 import { Planen } from './Planen';
 import type { TermineZustand } from './Termine';
 import { ladeWerKann } from './ladeWerKann';
@@ -648,5 +651,408 @@ describe('Planen – „ab heute“ lädt am Ende selbst nach (14.10.2026)', () 
     expect(onMehr).not.toHaveBeenCalled();
     fireEvent.click(chips[chips.length - 1]);
     expect(onMehr).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── Eintragen als Entwurf (E4-3-2) ───────────────────────────────────────────
+describe('Planen – Entwürfe (E4-3-2)', () => {
+  const laden = vi.mocked(ladeWerKann);
+  afterEach(() => {
+    laden.mockReset();
+    localStorage.clear();
+  });
+
+  // Licht: Platz 1 belegt (Anna), Platz 2 frei; Ton: ein freier Platz ohne index.
+  const PLAN4 = planAus(
+    [
+      {
+        id: 20,
+        name: 'Gottesdienst',
+        startDate: '2026-11-08T09:00:00Z',
+        endDate: '2026-11-08T10:30:00Z',
+        eventServices: [
+          { serviceId: 7, personId: 5, name: 'Anna Test', isAccepted: true, index: 1 },
+          { serviceId: 7, personId: null, name: null, index: 2 },
+          { serviceId: 6, personId: null, name: null },
+        ],
+      },
+    ] as RohTermin[],
+    {
+      ichId: 1,
+      dienste: DIENSTE,
+      dienstgruppen: GRUPPEN,
+      zeitzone: 'Europe/Berlin',
+      planbar: (d) => d.dienstgruppeId === 3,
+      ganzSichtbar: () => true,
+    },
+  );
+  const TECHNIK = { id: 3, name: 'Technik', fuerAlle: false };
+  const ALWIN = { personId: 1, name: 'Alwin' };
+  const entwurf = (x: Partial<Entwurf> = {}): Entwurf => ({
+    ort: { eventId: 20, serviceId: 7, index: 2 },
+    ziel: { art: 'person', personId: 46, name: 'Ben Test' },
+    modus: 'anfrage',
+    gesehen: { art: 'frei' },
+    von: ALWIN,
+    zeit: '2026-10-14T20:00:00.000Z',
+    version: 1,
+    ...x,
+  });
+  const daten = (
+    entwuerfe: Entwurf[] = [],
+    schublade: Partial<Schublade> = {},
+  ): EntwuerfeDaten => ({
+    modul: 16,
+    schubladen: new Map([[3, { gruppe: TECHNIK, kategorie: 30, stand: 'bereit', ...schublade }]]),
+    entwuerfe: new Map(
+      entwuerfe.map((e) => [`${e.ort.eventId}|${e.ort.serviceId}|${e.ort.index ?? '-'}`, e]),
+    ),
+  });
+  function zeige4(a: Partial<EntwurfAnschluss>) {
+    const anschluss: EntwurfAnschluss = {
+      ich: ALWIN,
+      laden: vi.fn(() => Promise.resolve(daten())),
+      speichern: vi.fn(),
+      entfernen: vi.fn(),
+      einrichten: vi.fn(() => Promise.resolve()),
+      ...a,
+    };
+    render(
+      <Planen
+        zustand={{ art: 'fertig', zeilen: [], plan: PLAN4, wochen: 8 }}
+        handy={false}
+        onNochmal={() => {}}
+        onMehr={() => {}}
+        {...ZUSATZ}
+        entwuerfe={anschluss}
+      />,
+    );
+    return anschluss;
+  }
+  const entwuerfeInMatrix = () =>
+    screen.queryAllByTitle(/^Entwurf von/).map((e) => `${e.title}: ${e.textContent}`);
+
+  it('Entwurf am freien Platz statt „frei“: eigener ohne Namen, fremder mit „von“, Gast und direkt als Schild', async () => {
+    zeige4({
+      laden: () =>
+        Promise.resolve(
+          daten([
+            entwurf({ von: { personId: 19, name: 'Spike' }, modus: 'direkt' }),
+            entwurf({
+              ort: { eventId: 20, serviceId: 6, index: null },
+              ziel: { art: 'gast', name: 'Max' },
+            }),
+            // An Platz 1 steht in ChurchTools Anna – dort zeigt die Matrix ChurchTools, nie einen Entwurf.
+            entwurf({
+              ort: { eventId: 20, serviceId: 7, index: 1 },
+              ziel: { art: 'gast', name: 'Zoe' },
+            }),
+          ]),
+        ),
+    });
+    await waitFor(() => expect(entwuerfeInMatrix()).toHaveLength(2));
+    expect(entwuerfeInMatrix()).toEqual([
+      'Entwurf von Spike – noch nicht gesendet: Ben TestdirektSpike',
+      'Entwurf von Alwin – noch nicht gesendet: MaxGast',
+    ]);
+    // Platz 1 (in ChurchTools belegt) bleibt, wie er ist.
+    expect(screen.getByText('Anna Test')).toBeTruthy();
+  });
+
+  it('ein veralteter Entwurf (beim Eintragen stand dort jemand) wird nicht gezeigt – ChurchTools gilt', async () => {
+    zeige4({
+      laden: () =>
+        Promise.resolve(
+          daten([
+            entwurf({ gesehen: { art: 'anfrage', personId: 9 } }),
+            // Ein gültiger daneben – erst wenn er dasteht, ist fertig geladen (sonst wäre [] geschenkt).
+            entwurf({
+              ort: { eventId: 20, serviceId: 6, index: null },
+              ziel: { art: 'gast', name: 'Max' },
+            }),
+          ]),
+        ),
+    });
+    await waitFor(() => expect(entwuerfeInMatrix()).toHaveLength(1));
+    expect(entwuerfeInMatrix()).toEqual(['Entwurf von Alwin – noch nicht gesendet: MaxGast']);
+    expect(
+      within(zeileVon('Licht')).getByRole('button', { name: 'frei – Wer kann? (Platz 2 von 2)' }),
+    ).toBeTruthy();
+  });
+
+  it('Eintragen: richtiger Platz (Termin, Dienst, index), Anfrage, „gesehen: frei“, von mir – dann Fach zu, Hinweis, Entwurf im Plan', async () => {
+    laden.mockResolvedValue([{ person: { domainIdentifier: '46', title: 'Ben Test' }, score: 0 }]);
+    const speichern = vi.fn(
+      (_d: EntwuerfeDaten, _g: number, eingabe: Omit<Entwurf, 'zeit' | 'version'>) =>
+        Promise.resolve({ ok: true as const, entwurf: { ...eingabe, zeit: 'jetzt', version: 1 } }),
+    );
+    zeige4({ speichern });
+    const licht = within(zeileVon('Licht'));
+    fireEvent.click(await licht.findByRole('button', { name: 'frei – Wer kann? (Platz 2 von 2)' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Ben Test/ }));
+    await waitFor(() => expect(speichern).toHaveBeenCalled());
+    expect(speichern.mock.calls[0].slice(1)).toEqual([
+      3,
+      {
+        ort: { eventId: 20, serviceId: 7, index: 2 },
+        ziel: { art: 'person', personId: 46, name: 'Ben Test' },
+        modus: 'anfrage',
+        gesehen: { art: 'frei' },
+        von: ALWIN,
+      },
+      null,
+    ]);
+    expect(await screen.findByText('Ben Test eingetragen – noch nicht gesendet.')).toBeTruthy();
+    expect(screen.queryByRole('list', { name: 'Wer kann?' })).toBeNull();
+    expect(entwuerfeInMatrix()).toEqual(['Entwurf von Alwin – noch nicht gesendet: Ben Test']);
+  });
+
+  it('Konflikt: Was jetzt dasteht, zeigt die Matrix sofort; das Fach bleibt offen', async () => {
+    laden.mockResolvedValue([{ person: { domainIdentifier: '46', title: 'Ben Test' }, score: 0 }]);
+    const spike = entwurf({
+      von: { personId: 19, name: 'Spike' },
+      ziel: { art: 'gast', name: 'Max' },
+      version: 2,
+    });
+    zeige4({ speichern: () => Promise.resolve({ ok: false, grund: 'konflikt', jetzt: spike }) });
+    fireEvent.click(
+      await within(zeileVon('Licht')).findByRole('button', {
+        name: 'frei – Wer kann? (Platz 2 von 2)',
+      }),
+    );
+    fireEvent.click(await screen.findByRole('button', { name: /Ben Test/ }));
+    expect(await screen.findByRole('button', { name: 'Entwurf von Spike lassen' })).toBeTruthy();
+    expect(entwuerfeInMatrix()).toEqual(['Entwurf von Spike – noch nicht gesendet: MaxGastSpike']);
+  });
+
+  it('Schublade einrichtbar: „Einrichten“ legt sie für DIESE Gruppe an und lädt danach neu', async () => {
+    laden.mockResolvedValue([]);
+    const a = zeige4({
+      laden: vi.fn(() => Promise.resolve(daten([], { kategorie: null, stand: 'einrichtbar' }))),
+    });
+    await waitFor(() => expect(a.laden).toHaveBeenCalledTimes(1));
+    fireEvent.click(
+      await within(zeileVon('Ton')).findByRole('button', { name: /frei – Wer kann/ }),
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Einrichten' }));
+    await waitFor(() => expect(a.laden).toHaveBeenCalledTimes(2));
+    expect(a.einrichten).toHaveBeenCalledWith(TECHNIK);
+  });
+
+  it('fehlt / nur lesen / Laden gescheitert → eigener Text, keine Knöpfe an den Personen; „Erneut versuchen“ lädt neu', async () => {
+    laden.mockResolvedValue([{ person: { domainIdentifier: '46', title: 'Ben Test' }, score: 0 }]);
+    const oeffne = async () =>
+      fireEvent.click(
+        await within(zeileVon('Ton')).findByRole('button', { name: /frei – Wer kann/ }),
+      );
+    for (const [s, text] of [
+      [
+        { kategorie: null, stand: 'fehlt' },
+        /noch keinen Platz für Entwürfe – oder dir fehlt das Recht/,
+      ],
+      [{ stand: 'nur-lesen' }, /ansehen, aber nicht ändern/],
+      [{ fehler: 'voruebergehend' }, /antwortet gerade nicht/],
+    ] as const) {
+      zeige4({ laden: () => Promise.resolve(daten([], s as Partial<Schublade>)) });
+      await oeffne();
+      expect(await screen.findByText(text)).toBeTruthy();
+      await screen.findByRole('list', { name: 'Wer kann?' });
+      expect(screen.queryByRole('button', { name: /Ben Test/ })).toBeNull();
+      cleanup();
+    }
+    const nochmal = vi
+      .fn()
+      .mockRejectedValueOnce(new ApiError(503, 'weg'))
+      .mockResolvedValueOnce(daten());
+    zeige4({ laden: nochmal });
+    await oeffne();
+    fireEvent.click(await screen.findByRole('button', { name: 'Erneut versuchen' }));
+    await waitFor(() => expect(nochmal).toHaveBeenCalledTimes(2));
+    expect(await screen.findByRole('button', { name: /Ben Test/ })).toBeTruthy();
+  });
+  // ── E4-3-3: Entwürfe ändern, entfernen, Leiste, veraltet ──────────────────
+  const SPIKE = { personId: 19, name: 'Spike' };
+  const offenTexte = () =>
+    screen.queryByRole('status', { name: 'Noch nicht gesendet' })?.textContent ?? null;
+
+  it('Entwurf antippen öffnet das Fach – nur wo man die Schublade ändern darf', async () => {
+    zeige4({ laden: () => Promise.resolve(daten([entwurf({ von: SPIKE })])) });
+    fireEvent.click(await screen.findByRole('button', { name: /^Entwurf von Spike/ }));
+    expect(screen.getByText(/^Eingetragen von Spike, /)).toBeTruthy();
+    cleanup();
+    zeige4({
+      laden: () => Promise.resolve(daten([entwurf({ von: SPIKE })], { stand: 'nur-lesen' })),
+    });
+    await waitFor(() => expect(entwuerfeInMatrix()).toHaveLength(1));
+    expect(screen.queryByRole('button', { name: /^Entwurf von Spike/ })).toBeNull();
+  });
+
+  it('veraltet: ChurchTools steht da, darunter das Schild; antippen → „Entwurf verwerfen“ mit Version, danach weg', async () => {
+    const entfernen = vi.fn(() => Promise.resolve({ ok: true as const, entwurf: null }));
+    zeige4({
+      laden: () =>
+        Promise.resolve(
+          daten([entwurf({ ort: { eventId: 20, serviceId: 7, index: 1 }, version: 4 })]),
+        ),
+      entfernen,
+    });
+    const schild = await screen.findByRole('button', {
+      name: 'Entwurf veraltet: „Ben Test“ von Alwin',
+    });
+    expect(screen.getByText('Anna Test')).toBeTruthy();
+    fireEvent.click(schild);
+    expect(screen.getByText(/Anna Test hat dort zugesagt\./)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Entwurf verwerfen' }));
+    await waitFor(() =>
+      expect(entfernen).toHaveBeenCalledWith(
+        expect.anything(),
+        3,
+        { eventId: 20, serviceId: 7, index: 1 },
+        4,
+      ),
+    );
+    expect(await screen.findByText('Entwurf verworfen.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^Entwurf veraltet/ })).toBeNull();
+  });
+
+  it('auch veraltet: Beim Eintragen stand dort jemand, inzwischen ist der Platz frei – Schild statt Entwurf', async () => {
+    zeige4({
+      laden: () => Promise.resolve(daten([entwurf({ gesehen: { art: 'anfrage', personId: 9 } })])),
+    });
+    expect(await screen.findByRole('button', { name: /^Entwurf veraltet/ })).toBeTruthy();
+    expect(
+      within(zeileVon('Licht')).getByRole('button', { name: 'frei – Wer kann? (Platz 2 von 2)' }),
+    ).toBeTruthy();
+  });
+
+  it('„Direkt zuteilen“ im Fach speichert denselben Entwurf mit neuem Modus und seiner Version', async () => {
+    const speichern = vi.fn(
+      (
+        _d: EntwuerfeDaten,
+        _g: number,
+        e: Omit<Entwurf, 'zeit' | 'version'>,
+        _erwartet: number | null,
+      ) => Promise.resolve({ ok: true as const, entwurf: { ...e, zeit: 'jetzt', version: 2 } }),
+    );
+    zeige4({ laden: () => Promise.resolve(daten([entwurf({ von: SPIKE })])), speichern });
+    fireEvent.click(await screen.findByRole('button', { name: /^Entwurf von Spike/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Direkt zuteilen' }));
+    await waitFor(() => expect(speichern).toHaveBeenCalled());
+    expect(speichern.mock.calls[0].slice(1)).toEqual([
+      3,
+      {
+        ort: { eventId: 20, serviceId: 7, index: 2 },
+        ziel: { art: 'person', personId: 46, name: 'Ben Test' },
+        modus: 'direkt',
+        gesehen: { art: 'frei' },
+        von: ALWIN,
+      },
+      1,
+    ]);
+    expect(await screen.findByText('Ben Test wird beim Senden direkt zugeteilt.')).toBeTruthy();
+    expect(entwuerfeInMatrix()).toEqual([
+      'Entwurf von Alwin – noch nicht gesendet: Ben Testdirekt',
+    ]);
+  });
+
+  it('„Andere Person wählen“: „Wer kann?“ ersetzt mit der Version und behält „direkt“; danach ist ein neues Eintragen wieder ohne Version', async () => {
+    laden.mockResolvedValue([{ person: { domainIdentifier: '47', title: 'Finn Test' }, score: 0 }]);
+    const speichern = vi.fn(
+      (
+        _d: EntwuerfeDaten,
+        _g: number,
+        e: Omit<Entwurf, 'zeit' | 'version'>,
+        _erwartet: number | null,
+      ) => Promise.resolve({ ok: true as const, entwurf: { ...e, zeit: 'jetzt', version: 8 } }),
+    );
+    zeige4({
+      laden: () => Promise.resolve(daten([entwurf({ modus: 'direkt', version: 7 })])),
+      speichern,
+    });
+    fireEvent.click(await screen.findByRole('button', { name: /^Entwurf von Alwin/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Andere Person wählen' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Finn Test/ }));
+    await waitFor(() => expect(speichern).toHaveBeenCalledTimes(1));
+    expect(speichern.mock.calls[0][2]).toMatchObject({
+      ziel: { art: 'person', personId: 47, name: 'Finn Test' },
+      modus: 'direkt',
+    });
+    expect(speichern.mock.calls[0][3]).toBe(7);
+    // Ein anderer freier Platz danach: wieder neu (ohne Version), nicht „ersetzen“.
+    fireEvent.click(
+      await within(zeileVon('Ton')).findByRole('button', { name: /frei – Wer kann/ }),
+    );
+    fireEvent.click(await screen.findByRole('button', { name: /^Finn Test/ }));
+    await waitFor(() => expect(speichern).toHaveBeenCalledTimes(2));
+    expect(speichern.mock.calls[1][3]).toBeNull();
+    expect(speichern.mock.calls[1][2]).toMatchObject({ modus: 'anfrage' });
+  });
+
+  it('„Wer kann?“ zum Ersetzen geschlossen → das nächste Eintragen ist wieder neu', async () => {
+    laden.mockResolvedValue([{ person: { domainIdentifier: '47', title: 'Finn Test' }, score: 0 }]);
+    const speichern = vi.fn(() => Promise.resolve({ ok: true as const, entwurf: null }));
+    zeige4({ laden: () => Promise.resolve(daten([entwurf({ version: 7 })])), speichern });
+    fireEvent.click(await screen.findByRole('button', { name: /^Entwurf von Alwin/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Andere Person wählen' }));
+    await screen.findByRole('button', { name: /^Finn Test/ });
+    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    fireEvent.click(
+      await within(zeileVon('Ton')).findByRole('button', { name: /frei – Wer kann/ }),
+    );
+    fireEvent.click(await screen.findByRole('button', { name: /^Finn Test/ }));
+    await waitFor(() => expect(speichern).toHaveBeenCalledTimes(1));
+    expect((speichern.mock.calls[0] as unknown[])[3]).toBeNull();
+  });
+
+  it('Leiste: zählt nur gültige Entwürfe, Einzahl/Mehrzahl, am Handy kurz; ohne Entwürfe keine Leiste', async () => {
+    zeige4({
+      laden: () =>
+        Promise.resolve(
+          daten([
+            entwurf(),
+            entwurf({
+              ort: { eventId: 20, serviceId: 6, index: null },
+              ziel: { art: 'gast', name: 'Max' },
+            }),
+            entwurf({ ort: { eventId: 20, serviceId: 7, index: 1 } }), // veraltet – zählt nicht
+          ]),
+        ),
+    });
+    await waitFor(() =>
+      expect(offenTexte()).toBe(
+        '2 Entwürfe noch nicht gesendetSenden kommt mit dem nächsten SchrittAnsehen und senden',
+      ),
+    );
+    expect(screen.getByRole('button', { name: 'Ansehen und senden' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    cleanup();
+    zeige4({ laden: () => Promise.resolve(daten([entwurf()])) });
+    await waitFor(() => expect(offenTexte()).toMatch(/^1 Entwurf noch nicht gesendet/));
+    cleanup();
+    const a: EntwurfAnschluss = {
+      ich: ALWIN,
+      laden: () => Promise.resolve(daten([entwurf()])),
+      speichern: vi.fn(),
+      entfernen: vi.fn(),
+      einrichten: vi.fn(),
+    };
+    render(
+      <Planen
+        zustand={{ art: 'fertig', zeilen: [], plan: PLAN4, wochen: 8 }}
+        handy
+        onNochmal={() => {}}
+        onMehr={() => {}}
+        {...ZUSATZ}
+        entwuerfe={a}
+      />,
+    );
+    await waitFor(() => expect(offenTexte()).toBe('1 EntwurfSenden folgtAnsehen'));
+    cleanup();
+    const leer = zeige4({});
+    await waitFor(() => expect(leer.laden).toHaveBeenCalled());
+    await screen.findAllByRole('button', { name: /frei – Wer kann/ });
+    expect(offenTexte()).toBeNull();
   });
 });

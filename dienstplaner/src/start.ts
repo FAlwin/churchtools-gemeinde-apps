@@ -18,6 +18,10 @@ import {
 } from '@shared/ct/dienstRechte';
 import { dienstgruppenAus, type Dienstgruppe } from '@shared/ct/dienstgruppen';
 import { diensteAus, type Dienst } from '@shared/ct/dienste';
+import { kuerzelAusBasis } from '@ui/erweiterung/kuerzel';
+
+/** Das Kürzel des Dienstplaners in ChurchTools – aus der Bau-Adresse (`/ccm/dienstplaner/`). */
+export const MODUL_KUERZEL = kuerzelAusBasis(import.meta.env.BASE_URL) ?? 'dienstplaner';
 
 export interface Start {
   /** Die eigene Person – daran erkennt die Termine-Liste die eigenen Dienste. */

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ErweiterungsSeite, type SeitenZustand } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { ReiterLeiste } from '@ui/bedienung/ReiterLeiste';
@@ -13,6 +13,7 @@ import { ladeTermine, ladeZeitraum, MAX_WOCHEN, WOCHEN_JE_SCHRITT } from './lade
 import { adresseFuer, reiterAusAdresse, sichtbareReiter, type ReiterId } from './reiter';
 import { leseAuswahl, merkeAuswahl } from './auswahl';
 import { tagAusIso } from '@shared/ct/zeit';
+import { entwurfAnschluss } from './ladeEntwuerfe';
 
 /**
  * Der Dienstplaner in ChurchTools (Bauplan E2/E3): Start · Termine · Planen · Abwesenheiten. Am Computer
@@ -50,6 +51,11 @@ export function App() {
 
   // Global, als Leitung der Gruppe eines Dienstes – dieselbe Regel wie in der Matrix (`planbar`).
   const darfPlanen = !!start && planbareDienstgruppen(start).length > 0;
+  // Eintragen als Entwurf (E4-3) – je Start einmal; die Schubladen gehören zu den planbaren Gruppen.
+  const entwuerfe = useMemo(
+    () => (start ? entwurfAnschluss(start, () => planbareDienstgruppen(start)) : undefined),
+    [start],
+  );
   const reiter = sichtbareReiter(darfPlanen);
   const aktiv = reiterAusAdresse(hash, reiter);
 
@@ -152,6 +158,7 @@ export function App() {
           mehrMoeglich={geladen < MAX_WOCHEN}
           ladeZeitraum={zeitraumLaden}
           heute={tagAusIso(new Date().toISOString(), zeitzone)}
+          entwuerfe={entwuerfe}
         />
       )}
       {aktiv === 'abwesenheiten' && <Demnaechst reiter={aktiv} />}

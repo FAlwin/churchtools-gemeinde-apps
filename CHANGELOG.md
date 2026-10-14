@@ -25,6 +25,36 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   zurück) – vorher nur ←/→, viele Bluetooth-Pedale taten darum nichts. Gedrückt gehaltene Tasten lösen
   keinen Dauerlauf mehr aus. Gilt fürs Blättern wie fürs Scrollen.
 
+### Hinzugefügt (Dienstplaner)
+
+- **Entwürfe ändern und entfernen** (#564, Bauplan E4-3-3): Einen Entwurf in der Matrix antippen öffnet sein Fach –
+  wer, „Eingetragen von Spike, heute 18:42“, „Beim Senden: Anfrage senden | Direkt zuteilen“ (nicht bei Gästen),
+  „Andere Person wählen“ (ersetzt ihn, „direkt“ bleibt) und „Entfernen“. Ein Konflikt mit einem anderen Planer
+  steht da, mit „So lassen“ oder bewusst „Trotzdem …“.
+- **Veraltete Entwürfe** (Alwin: Schild am Platz): Steht in ChurchTools inzwischen etwas anderes als beim
+  Eintragen, zeigt die Matrix ChurchTools und darunter ein kleines Schild „Entwurf veraltet“. Antippen sagt, was
+  dort jetzt steht, und bietet „Entwurf verwerfen“. Verglichen wird mit derselben Regel wie beim Einteilen – jeder
+  Platz trägt dazu seine Belegung aus `belegungAus`.
+- **Leiste unten:** „N Entwürfe noch nicht gesendet“ (nur gültige im geladenen Zeitraum, am Handy kurz „N
+  Entwürfe · Senden folgt“). Senden selbst kommt mit E4-4.
+- **Als Entwurf eintragen** (#561, Bauplan E4-3-2, Entwurf `e4-3-entwurf.html`): Im Fach „Wer kann?“ sind die
+  Personen jetzt antippbar – sie stehen danach **als Entwurf** im Plan (blau gestrichelt mit Stift), **noch ohne
+  Anfrage**. Darunter „Jemand ohne ChurchTools-Konto“ für einen Gast. Fremde Entwürfe tragen den Namen des
+  Planers, Gäste das Schild „Gast“. Hat jemand anderes den Platz eben geändert, steht das da – mit „Entwurf von X
+  lassen“ oder „Trotzdem … eintragen“ (Alwin). Fehlt einer Dienstgruppe der Speicher, bietet der Dienstplaner
+  „Einrichten“ an (nur wer in ChurchTools Kategorien anlegen darf), sonst sagt er genau, welches Recht fehlt.
+  Gesendet wird noch nichts – das kommt mit E4-4.
+
+### Intern
+
+- **Gemeinsame Bausteine statt Kopien** (#561): Der Browser-Anschluss an den Speicher der Erweiterung
+  (`ui/ct/modulPort.ts`), das Kürzel aus der Bau-Adresse (`ui/erweiterung/kuerzel.ts`) und der Hinweis-Toast
+  (`ui/fenster/Toast.tsx`, `useToast.ts`) standen nur in der Musik-App; jetzt nutzen beide Apps dieselben. Die
+  Musik-App reicht sie nur weiter, ihr Verhalten bleibt gleich. `kategorieAusListe` hält die Regel „bei gleichem
+  Kürzel die kleinste ID“ für eine schon geladene Liste – ohne sie nachzubauen.
+- Die Demo (`?demo`) spielt den Speicher nach (Kategorien, Werte, Rechte des Anlegers) und hat einen Entwurf von
+  Spike.
+
 ### Behoben
 
 - **Gleiche Kategorie, verschiedene Geräte** (#558): ChurchTools nimmt dasselbe Kürzel für zwei Kategorien an

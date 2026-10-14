@@ -12,6 +12,7 @@
 import type { Dienst } from '../ct/dienste';
 import type { Dienstgruppe } from '../ct/dienstgruppen';
 import { ortszeitAus } from '../ct/zeit';
+import { belegungAus, type Belegung } from './einteilen';
 import {
   istFrei,
   istTerminAdmin,
@@ -24,6 +25,11 @@ export type PlatzArt = 'frei' | 'zugesagt' | 'angefragt';
 
 export interface PlanPlatz {
   art: PlatzArt;
+  /**
+   * Wie ChurchTools den Platz belegt hat – mit derselben Regel wie der Schreibkern (`belegungAus`). Daran
+   * prüft die Matrix, ob ein Entwurf veraltet ist (E4-3-3).
+   */
+  belegung: Belegung;
   /** Der Name zum Anzeigen; `null` bei freien und verborgenen Plätzen. */
   name: string | null;
   /** Eingetragen ohne Person (nur ein Name) – in ChurchTools ein Gast. */
@@ -77,8 +83,10 @@ export interface Plan {
 /** Ein Platz, wie er in der Matrix steht. */
 export function platzAus(p: RohPlatz, ichId: number): PlanPlatz {
   const index = typeof p.index === 'number' ? p.index : null;
+  const belegung = belegungAus(p);
   if (istFrei(p)) {
     return {
+      belegung,
       art: 'frei',
       name: null,
       gast: false,
@@ -90,9 +98,19 @@ export function platzAus(p: RohPlatz, ichId: number): PlanPlatz {
   }
   const art: PlatzArt = p.isAccepted === true ? 'zugesagt' : 'angefragt';
   if (p.personId === VERBORGENE_PERSON) {
-    return { art, name: null, gast: false, verborgen: true, ich: false, personId: null, index };
+    return {
+      belegung,
+      art,
+      name: null,
+      gast: false,
+      verborgen: true,
+      ich: false,
+      personId: null,
+      index,
+    };
   }
   return {
+    belegung,
     art,
     name: String(p.name).trim(),
     gast: p.personId == null,

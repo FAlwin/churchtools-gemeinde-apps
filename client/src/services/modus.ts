@@ -5,6 +5,7 @@
  * `reachability.ts` braucht die Antwort, und `api` → `reachability` → `ctRuntime` → `api` wäre ein
  * Kreis, in dem `ApiError` beim Laden noch nicht existiert.
  */
+import { kuerzelAusBasis } from '@ui/erweiterung/kuerzel';
 
 /** Läuft dieser Build als ChurchTools-Extension? (`vite build --mode extension`) */
 export const istExtension: boolean = import.meta.env.MODE === 'extension';
@@ -19,6 +20,5 @@ export { ctBasis } from '@ui/ct/basis';
  */
 export function erweiterungsKuerzel(): string | null {
   if (!istExtension) return null;
-  const m = /^\/ccm\/([^/]+)\/$/.exec(import.meta.env.BASE_URL);
-  return m ? decodeURIComponent(m[1]) : null;
+  return kuerzelAusBasis(import.meta.env.BASE_URL);
 }

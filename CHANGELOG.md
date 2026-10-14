@@ -26,6 +26,10 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   - Beim Ziehen verschwindet das Feld, an seiner Stelle steht nur „Hier loslassen“ (Alwin, 14.10.2026: „muss
     nicht mehr in grau angezeigt werden“). Ausgeblendet wird erst nach dem Start des Ziehens – während
     `dragstart` bricht Chrome sonst ab; mit echter Maus geprüft (versteckt nach 9 ms, Ablegen 1 s später).
+  - **Datumsfeld am iPhone** (Alwin, 14.10.2026, Bildschirmfoto): Das Geburtsdatum ragte rechts über die
+    anderen Felder hinaus – Safari gibt Datums- und Zeitfeldern eine eigene Mindestbreite. Gemeinsamer Baustein
+    `datumsfeld` in `ui/design/_mixins.scss`, eingesetzt im Anmeldeformular und in den Fenstern der Anmeldungen;
+    gleiche Höhe wie die anderen Felder. In Chrome nachgemessen, am iPhone noch zu bestätigen.
   - **Klarere Linien, am Handy kein Ziehen** (Entwurf v6, Alwin 14.10.2026: „mich verwirren die vielen
     gestrichelten Linien“, „die 6 Punkte funktionieren nicht“, „am Handy passieren ungewollte Sachen“):
     - Keine Rahmen mehr um Felder: Maus darüber = hellblau, gewählt = kräftiger blau (immer das

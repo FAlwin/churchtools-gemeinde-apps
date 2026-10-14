@@ -9,6 +9,8 @@
 //
 // Nur Klassen am Anfang jeder Regel: Der Erweiterungs-Build lehnt Regeln ab, die mit einem Element beginnen.
 
+@use '../design/mixins' as m;
+
 .pv {
   container: pv / inline-size;
   --p-accent: #00616e;
@@ -138,6 +140,14 @@
   color: var(--p-text);
   width: 100%;
   padding: 0.6em 0.75em;
+}
+.pv .pf input {
+  @include m.datumsfeld;
+}
+// Genau so hoch wie die anderen Felder: Ohne eigenes Aussehen fällt ein leeres Datumsfeld am iPhone zusammen, in
+// Chrome war es durch das Kalender-Zeichen 2 px höher.
+.pv .pf input[type='date'] {
+  height: calc(1lh + 1.2em + 2px);
 }
 .pv .pf input::placeholder,
 .pv .pf textarea::placeholder {

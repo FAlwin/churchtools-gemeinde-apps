@@ -83,3 +83,94 @@
   font-size: 12.5px;
   line-height: 1.45;
 }
+
+// ── Eintragen (E4-3-2) ──────────────────────────────────────────────────────
+// Kandidat als Knopf: dieselbe Karte, nur antippbar.
+.waehlbar {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: var(--blue);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 1px;
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.gastZeile {
+  margin-top: 10px;
+}
+
+.gastFeld {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+
+  .suche {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+  }
+}
+
+.knopf {
+  flex: none;
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+}
+
+.primaer {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: #fff;
+}
+
+.knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+// Konflikt, fehlende Schublade, gesperrt – ein gelber Kasten wie im Entwurf (Abschnitt 4/5).
+.konflikt {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fef3c7;
+  color: #78350f;
+  font-size: 14px;
+  line-height: 1.45;
+
+  p {
+    margin: 0 0 8px;
+  }
+}
+
+.fehler {
+  margin: 10px 0 0;
+  color: var(--red);
+  font-size: 13.5px;
+}

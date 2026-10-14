@@ -68,10 +68,27 @@ export async function kategorieSuchen(
   modul: number,
   kuerzel: string,
 ): Promise<number | null> {
-  const liste = await p.daten<{ id: number; shorty: string }[]>(
-    `/custommodules/${modul}/customdatacategories`,
+  return kategorieAusListe(await kategorienLesen(p, modul), kuerzel);
+}
+
+/** Alle Kategorien des Moduls, die man sehen darf (ohne Recht: leer, kein Fehler – gemessen). */
+export async function kategorienLesen(
+  p: ModulPort,
+  modul: number,
+): Promise<{ id: number; shorty: string }[]> {
+  return (
+    (await p.daten<{ id: number; shorty: string }[]>(
+      `/custommodules/${modul}/customdatacategories`,
+    )) ?? []
   );
-  const ids = (liste ?? []).filter((k) => k.shorty === kuerzel).map((k) => k.id);
+}
+
+/** Die Regel aus `kategorieSuchen` für eine schon geladene Liste: bei gleichem Kürzel die kleinste ID. */
+export function kategorieAusListe(
+  liste: readonly { id: number; shorty: string }[],
+  kuerzel: string,
+): number | null {
+  const ids = liste.filter((k) => k.shorty === kuerzel).map((k) => k.id);
   return ids.length ? Math.min(...ids) : null;
 }
 

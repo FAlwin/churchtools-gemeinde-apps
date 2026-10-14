@@ -22,6 +22,8 @@ const PLATZ: FreierPlatz = {
   nr: 1,
   von: 2,
   schonDa: [9],
+  index: 1,
+  gruppeId: 3,
 };
 const k = (id: number, name: string, o: Partial<RohKandidat> = {}): RohKandidat => ({
   person: { domainIdentifier: String(id), title: name },
@@ -89,5 +91,133 @@ describe('WerKann', () => {
     render(<WerKann platz={PLATZ} onClose={onClose} />);
     fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+});
+
+// ── Eintragen als Entwurf (E4-3-2) ───────────────────────────────────────────
+describe('WerKann – Eintragen', () => {
+  const spikeEntwurf = (version = 2) => ({
+    ort: { eventId: 166, serviceId: 6, index: 1 },
+    ziel: { art: 'person' as const, personId: 47, name: 'Finn' },
+    modus: 'anfrage' as const,
+    gesehen: { art: 'frei' as const },
+    von: { personId: 19, name: 'Spike' },
+    zeit: '2026-10-14T20:00:00.000Z',
+    version,
+  });
+
+  it('ohne Anschluss nur zum Ansehen: keine Knöpfe, kein Gast-Feld', async () => {
+    laden.mockResolvedValue([k(1, 'Anna')]);
+    render(<WerKann platz={PLATZ} onClose={() => {}} />);
+    await screen.findByRole('list', { name: 'Wer kann?' });
+    expect(screen.queryByRole('button', { name: /Anna/ })).toBeNull();
+    expect(screen.queryByLabelText('Name eines Gastes')).toBeNull();
+  });
+
+  it('bereit: Person antippen trägt sie ein (noch ohne Version); Gast über das Feld', async () => {
+    laden.mockResolvedValue([k(1, 'Anna')]);
+    const onWahl = vi.fn(() => Promise.resolve({ ok: true as const, entwurf: null }));
+    render(<WerKann platz={PLATZ} onClose={() => {}} eintragen={{ art: 'bereit', onWahl }} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Anna/ }));
+    expect(onWahl).toHaveBeenCalledWith({ art: 'person', personId: 1, name: 'Anna' }, null);
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Anna/ })).toHaveProperty('disabled', false),
+    );
+    const feld = screen.getByLabelText('Name eines Gastes');
+    const eintragen = screen.getByRole('button', { name: 'Eintragen' });
+    fireEvent.change(feld, { target: { value: ' M ' } });
+    expect(eintragen).toHaveProperty('disabled', true); // zu kurz
+    // Auch die Eingabetaste (Formular abschicken) trägt keinen zu kurzen Namen ein.
+    fireEvent.submit(feld.closest('form')!);
+    expect(onWahl).toHaveBeenCalledTimes(1);
+    fireEvent.change(feld, { target: { value: ' Max Gast ' } });
+    fireEvent.click(eintragen);
+    expect(onWahl).toHaveBeenLastCalledWith({ art: 'gast', name: 'Max Gast' }, null);
+  });
+
+  it('Konflikt: sagt wer und was; „lassen“ schließt, „trotzdem“ speichert mit SEINER Version', async () => {
+    laden.mockResolvedValue([k(1, 'Anna')]);
+    const onWahl = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, grund: 'konflikt', jetzt: spikeEntwurf() })
+      .mockResolvedValueOnce({ ok: true, entwurf: null });
+    const onClose = vi.fn();
+    render(<WerKann platz={PLATZ} onClose={onClose} eintragen={{ art: 'bereit', onWahl }} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Anna/ }));
+    const hinweis = await screen.findByRole('alert');
+    expect(hinweis.textContent).toContain('Spike hat diesen Platz eben geändert:');
+    expect(hinweis.textContent).toContain('Entwurf „Finn“');
+    expect(hinweis.textContent).toContain('Dein „Anna“ wurde nicht gespeichert.');
+    fireEvent.click(screen.getByRole('button', { name: 'Trotzdem Anna eintragen' }));
+    expect(onWahl).toHaveBeenLastCalledWith({ art: 'person', personId: 1, name: 'Anna' }, 2);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('Konflikt „lassen“ schließt das Fach, ohne zu speichern', async () => {
+    laden.mockResolvedValue([k(1, 'Anna')]);
+    const onWahl = vi
+      .fn()
+      .mockResolvedValue({ ok: false, grund: 'konflikt', jetzt: spikeEntwurf() });
+    const onClose = vi.fn();
+    render(<WerKann platz={PLATZ} onClose={onClose} eintragen={{ art: 'bereit', onWahl }} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Anna/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Entwurf von Spike lassen' }));
+    expect(onClose).toHaveBeenCalled();
+    expect(onWahl).toHaveBeenCalledTimes(1);
+  });
+
+  it('anderer Fehler → eigener Text, das Fach bleibt offen und ein zweiter Tipp versucht es erneut', async () => {
+    laden.mockResolvedValue([k(1, 'Anna')]);
+    const onWahl = vi.fn().mockResolvedValue({ ok: false, grund: 'voruebergehend' });
+    render(<WerKann platz={PLATZ} onClose={() => {}} eintragen={{ art: 'bereit', onWahl }} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Anna/ }));
+    expect((await screen.findByRole('alert')).textContent).toMatch(/antwortet gerade nicht/);
+    fireEvent.click(screen.getByRole('button', { name: /Anna/ }));
+    await waitFor(() => expect(onWahl).toHaveBeenCalledTimes(2));
+  });
+
+  it('gesperrt: Text und „Erneut versuchen“; lädt: Hinweis – beide ohne Knöpfe an den Personen', async () => {
+    laden.mockResolvedValue([k(1, 'Anna')]);
+    const onNochmal = vi.fn();
+    const { rerender } = render(
+      <WerKann
+        platz={PLATZ}
+        onClose={() => {}}
+        eintragen={{ art: 'gesperrt', text: 'Kein Platz.', onNochmal }}
+      />,
+    );
+    await screen.findByRole('list', { name: 'Wer kann?' });
+    expect(screen.getByText('Kein Platz.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Anna/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Erneut versuchen' }));
+    expect(onNochmal).toHaveBeenCalled();
+    rerender(<WerKann platz={PLATZ} onClose={() => {}} eintragen={{ art: 'laedt' }} />);
+    expect(screen.getByText('Entwürfe werden geladen …')).toBeTruthy();
+  });
+
+  it('Schublade fehlt, aber anlegbar: „Einrichten“ mit Warnung; ein Fehler dabei steht da', async () => {
+    laden.mockResolvedValue([]);
+    const onEinrichten = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new ApiError(403, 'ChurchTools erlaubt dir nicht, Kategorien anzulegen.'),
+      )
+      .mockResolvedValueOnce(undefined);
+    render(
+      <WerKann
+        platz={PLATZ}
+        onClose={() => {}}
+        eintragen={{ art: 'einrichten', gruppe: 'Technik', onEinrichten }}
+      />,
+    );
+    expect(screen.getByText(/Entwürfe für „Technik“ einrichten/)).toBeTruthy();
+    expect(screen.getByText(/sonst entsteht ein zweiter/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Einrichten' }));
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      'ChurchTools erlaubt dir nicht, Kategorien anzulegen.',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Einrichten' }));
+    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
+    expect(onEinrichten).toHaveBeenCalledTimes(2);
   });
 });

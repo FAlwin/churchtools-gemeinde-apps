@@ -189,7 +189,6 @@ function daten(fall: string): Record<string, unknown> {
         },
       ],
     },
-    '/api/custommodules': { data: [{ id: 10, shorty: 'musik-app', name: 'Musik App' }] },
     '/api/services': {
       data: [
         { id: 6, name: 'Ton', serviceGroupId: 3, groupIds: [7] },
@@ -214,15 +213,121 @@ function termineVonBis(von: string | null, bis: string | null) {
   );
 }
 
+/**
+ * Der Speicher der Erweiterung (Entwürfe, E4-3) – wie gemessen: Kategorien je Modul, Werte als Text, wer
+ * eine Kategorie anlegt, bekommt sofort alle Rechte darauf. Musik hat schon eine Schublade mit einem
+ * Entwurf von Spike; für Technik zeigt „Einrichten“, wie es beim ersten Mal aussieht.
+ */
+function speicherDemo(fall: string) {
+  const kategorien = [{ id: 40, shorty: 'dienstplaner-entwuerfe-4', name: 'Entwürfe Musik' }];
+  const spike = {
+    art: 'dienstplaner-entwurf',
+    fassung: 1,
+    ort: { eventId: 106, serviceId: 9, index: null },
+    ziel: { art: 'person', personId: 46, name: 'Anna Test' },
+    modus: 'anfrage',
+    gesehen: { art: 'frei' },
+    von: { personId: 19, name: 'Spike' },
+    zeit: zeit(0, '07:00'),
+    version: 1,
+  };
+  const werte = new Map<number, { id: number; dataCategoryId: number; value: string }[]>([
+    [40, [{ id: 400, dataCategoryId: 40, value: JSON.stringify(spike) }]],
+  ]);
+  let naechste = 500;
+  const ids = () => kategorien.map((k) => k.id);
+  const rechte = () =>
+    fall === 'mitglied'
+      ? {}
+      : {
+          view: true,
+          'create custom category': true,
+          'view custom category': ids(),
+          'view custom data': ids(),
+          'create custom data': ids(),
+          'edit custom data': ids(),
+          'delete custom data': ids(),
+        };
+  /** Antwort auf eine Anfrage an den Speicher – `undefined`, wenn sie nicht dorthin geht. */
+  const anfrage = (
+    methode: string,
+    pfad: string,
+    rumpf: unknown,
+  ): { status: number; data?: unknown } | undefined => {
+    if (pfad === '/api/custommodules') {
+      return {
+        status: 200,
+        data: [
+          { id: 10, shorty: 'musik-app', name: 'Musik App' },
+          { id: 16, shorty: 'dienstplaner', name: 'Dienstplaner' },
+        ],
+      };
+    }
+    if (pfad === '/api/custommodules/16/customdatacategories') {
+      if (methode === 'GET') return { status: 200, data: kategorien };
+      const r = rumpf as { name: string; shorty: string };
+      const k = { id: naechste++, shorty: r.shorty, name: r.name };
+      kategorien.push(k);
+      werte.set(k.id, []);
+      return { status: 201, data: k };
+    }
+    const m =
+      /^\/api\/custommodules\/16\/customdatacategories\/(\d+)\/customdatavalues(?:\/(\d+))?$/.exec(
+        pfad,
+      );
+    if (!m) return undefined;
+    const liste = werte.get(Number(m[1]));
+    if (!liste) return { status: 404 };
+    if (methode === 'GET') return { status: 200, data: liste };
+    if (methode === 'POST') {
+      const w = {
+        id: naechste++,
+        dataCategoryId: Number(m[1]),
+        value: (rumpf as { value: string }).value,
+      };
+      liste.push(w);
+      return { status: 201, data: w };
+    }
+    const i = liste.findIndex((w) => w.id === Number(m[2]));
+    if (i < 0) return { status: 404 };
+    if (methode === 'PUT') liste[i] = { ...liste[i], value: (rumpf as { value: string }).value };
+    else liste.splice(i, 1);
+    return { status: methode === 'PUT' ? 200 : 204 };
+  };
+  return { anfrage, rechte };
+}
+
 export function demoStarten(fall: string): void {
   // ChurchTools gibt der Erweiterung einen Behälter mit fester Höhe (gemessen 07.10.2026); auf der nackten
   // Entwicklerseite übernimmt das `body`, sonst hätte die App die Höhe 0.
   document.body.style.cssText = 'margin: 0; height: 100vh;';
   const antworten = daten(fall);
-  window.fetch = (input) => {
+  const speicher = speicherDemo(fall);
+  const mitDienstplanerRechten = (roh: unknown) => {
+    const r = roh as { data: Record<string, unknown> };
+    return { data: { ...r.data, dienstplaner: speicher.rechte() } };
+  };
+  window.fetch = (input, init) => {
     const url = new URL(
       typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
     );
+    const methode = init?.method ?? 'GET';
+    const s = speicher.anfrage(
+      methode,
+      url.pathname,
+      typeof init?.body === 'string' ? (JSON.parse(init.body) as unknown) : undefined,
+    );
+    if (s) {
+      return Promise.resolve(
+        new Response(s.status === 204 ? null : JSON.stringify({ data: s.data ?? null }), {
+          status: s.status,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+    }
+    if (url.pathname === '/api/csrftoken') {
+      return Promise.resolve(new Response(JSON.stringify({ data: 'demo' }), { status: 200 }));
+    }
     if (fall === 'fehler' && url.pathname.endsWith('/servicegroups')) {
       return Promise.resolve(new Response('{}', { status: 502 }));
     }
@@ -231,7 +336,9 @@ export function demoStarten(fall: string): void {
       ? werKannDemo(Number(werKann[1]))
       : url.pathname === '/api/events'
         ? { data: termineVonBis(url.searchParams.get('from'), url.searchParams.get('to')) }
-        : antworten[url.pathname];
+        : url.pathname === '/api/permissions/global'
+          ? mitDienstplanerRechten(antworten[url.pathname])
+          : antworten[url.pathname];
     return Promise.resolve(
       d === undefined
         ? new Response('{}', { status: 404 })

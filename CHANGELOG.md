@@ -7,6 +7,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+## [2.36.0] – 2026-10-15
+
 ### Neu
 
 - **Scroll-Modus: Lieder untereinander statt blättern** (#551, Idee vom ChurchTools-Dev-Stammtisch):

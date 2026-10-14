@@ -719,6 +719,12 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **v2.36.0 (15.10.2026) = Scroll-Modus + Pedal-Tasten** (PR #567, #551; dazu aus dem anderen Teil des
+  Repos Dienstplaner E4-3-1 bis E4-3-3). Mehr → Liedansicht: Blättern / Scrollen je Gerät; Scrollen zeigt
+  dieselben Seiten nahtlos untereinander in voller Breite (`ScrollDeck`), Malen über die einzeln geöffnete
+  Seite (`PageDeck einzeln`), Pedal ⅔ Bildschirm. Pedal-Regel für beide Modi in `utils/pedalTasten.ts`.
+  Idee vom ChurchTools-Dev-Stammtisch (14.10.2026); von dort auch #552/#553 (Ideen), #554 (Teilende-Suche
+  skaliert nicht), #557 (Polling gemessen), #565 (Dunkelmodus wie ChurchTools, nach A6-2).
 - **v2.35.1 (14.10.2026) = Hotfix Endlosschleife #555** (PR #556; dazu aus dem anderen Teil des Repos
   Dienstplaner E3-4/E3-5/E4-1/E4-2, Anmeldungen A5/A6-1 und die gemeinsamen Fixes #536 Monatsnamen, #538
   kein Scrollen im Scrollen in Fenstern, #540 Datumsfelder). Seit v2.34.1 (#484) speicherte die App beim

@@ -17,6 +17,14 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Bearbeiten, oder Leitung einer Gruppe des Dienstes (`siehtDienstGanz`, eine Regel). Die eigenen
   Dienste stehen weiter unter Start und Termine. Die Prüfung mit drei Rollen (Admin, Leitung von
   Technik, Mitglied) war sonst ohne Befund.
+- „Wer wie oft?“ brach im Reiter Planen bei mittlerer Breite zweizeilig um (#529).
+
+### Geprüft (Dienstplaner, E3)
+
+- **E3 abgeschlossen** (14.10.2026): lesend an der Live-Instanz mit Alwins Konto gegengeprüft, nur GET,
+  mit den Regeln des Dienstplaners über die echten Antworten. 18 Termine in 8 Wochen (217 KB, 0,2 s),
+  7 Dienstgruppen, 199 Plätze. Kein unbekannter Dienst, Kopfzeile und Zeilen zählen gleich, „Wer wie
+  oft?“ zählt jeden besetzten Platz genau einmal. Uhrzeiten stimmen über die Zeitumstellung hinweg.
 
 ### Neu (Dienstplaner, E3-5)
 

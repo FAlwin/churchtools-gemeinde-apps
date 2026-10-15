@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
+import type { Start } from './start';
 import {
   _vergissModul,
   entferneEntwurf,
+  entwurfAnschluss,
   ladeEntwuerfe,
   richteSchubladeEin,
   sendeEntwuerfe,
@@ -238,5 +240,24 @@ describe('sendeEntwuerfe (Durchstich mit den echten Anschlüssen)', () => {
       name: null,
       isAccepted: false,
     });
+  });
+});
+
+describe('Anzahl der Plätze (E4-5-3, Durchstich über den Anschluss)', () => {
+  it('liest frisch, schreibt eventservices, liest nach – erst dann „ok“', async () => {
+    let plaetze = [{ id: 1, serviceId: 8, index: null, personId: null, name: null }];
+    const spy = ct({
+      'GET /api/csrftoken': () => json(200, { data: 'tok' }),
+      'GET /api/events/20': () => json(200, { data: { id: 20, eventServices: plaetze } }),
+      'PUT /api/events/20/eventservices': (init) => {
+        const b = JSON.parse(String(init?.body)) as { services: { count: number }[] };
+        expect(b).toEqual({ eventId: 20, services: [{ serviceId: 8, count: 2 }] });
+        plaetze = [...plaetze, { id: 2, serviceId: 8, index: null, personId: null, name: null }];
+        return new Response(null, { status: 204 });
+      },
+    });
+    const a = entwurfAnschluss({ ichId: 1, vorname: 'Alwin' } as Start, () => []);
+    expect(await a.anzahl(20, 8, 1, 2)).toEqual({ ok: true, anzahl: 2 });
+    expect(spy.mock.calls.filter((c) => c[1]?.method === 'PUT')).toHaveLength(1);
   });
 });

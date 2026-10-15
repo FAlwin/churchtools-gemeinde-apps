@@ -44,6 +44,7 @@ import { FilterKnopf } from './FilterKnopf';
 import { WerKann, type Eintragen, type FreierPlatz } from './WerKann';
 import { EntwurfFach } from './EntwurfFach';
 import { BelegtFach } from './BelegtFach';
+import { PlaetzeFach, type PlaetzeZeile } from './PlaetzeFach';
 import { SendenFach, type SendeZeile } from './SendenFach';
 import { grundText, type EntwuerfeDaten, type EntwurfAnschluss } from './ladeEntwuerfe';
 import styles from './Planen.module.scss';
@@ -97,6 +98,8 @@ interface Sicht {
   onEntwurf: (spalte: number, zeile: PlanZeile, nr: number) => void;
   /** Einen belegten Platz antippen → zurückziehen oder ersetzen (E4-5; nur wo man den Dienst planen darf). */
   onBelegt: (spalte: number, zeile: PlanZeile, nr: number) => void;
+  /** Regler in der Gruppenzeile → Plätze-Fach (E4-5-3); `undefined`, wo man keinen Dienst der Gruppe plant. */
+  onPlaetze: (spalte: number, gruppe: PlanGruppe) => (() => void) | undefined;
   darfAendern: (zeile: PlanZeile) => boolean;
   /** Die eigene Person – eigene Entwürfe stehen ohne „von …“. */
   ichId: number | null;
@@ -137,7 +140,8 @@ function bisherAus(p: PlanPlatz | undefined): Pick<FreierPlatz, 'bisher'> {
  * (passend zur Fensterbreite, ‹ ＋ ＋ › blättern und laden am Ende selbst nach), ein Monat oder ein eigener
  * Zeitraum – dann stehen alle Termine des Bereichs da, und ‹ › springen um den ganzen Bereich. Dazu Filter,
  * Spaltenbreite und „Wer wie oft?“. Eingeteilt wird über Entwürfe (E4): freien Platz antippen → „Wer kann?“,
- * belegten Platz → zurückziehen oder ersetzen (E4-5), gesendet über die Leiste unten. Am Handy: eine Datumsleiste
+ * belegten Platz → zurückziehen oder ersetzen (E4-5), gesendet über die Leiste unten; der Regler in der Gruppenzeile
+ * ändert die Anzahl der Plätze (E4-5-3, sofort). Am Handy: eine Datumsleiste
  * und darunter ein Termin.
  */
 export function Planen({
@@ -161,6 +165,10 @@ export function Planen({
   const [frei, setFrei] = useState<FreierPlatz | null>(null);
   // Das Fenster am belegten Platz (E4-5): zurückziehen oder ersetzen.
   const [belegt, setBelegt] = useState<FreierPlatz | null>(null);
+  // Das Plätze-Fach (E4-5-3): Termin und Gruppe.
+  const [plaetzeFach, setPlaetzeFach] = useState<{ spalte: number; gruppe: PlanGruppe } | null>(
+    null,
+  );
   // Ein angetippter Entwurf (E4-3-3) – und ob „Andere Person wählen“ einen Entwurf ersetzt (seine Version).
   const [fach, setFach] = useState<{
     platz: FreierPlatz;
@@ -443,6 +451,12 @@ export function Planen({
       onUmschalten: umschalten,
       onFrei: (i, zl, nr) => setFrei(freierPlatz(plan.spalten[i], zl, zl.zellen[i] ?? [], nr)),
       onBelegt: (i, zl, nr) => setBelegt(freierPlatz(plan.spalten[i], zl, zl.zellen[i] ?? [], nr)),
+      onPlaetze: (i, g) =>
+        entwuerfe &&
+        !plan.spalten[i].abgesagt &&
+        g.zeilen.some((z) => darfPlanen(z, plan.spalten[i]))
+          ? () => setPlaetzeFach({ spalte: i, gruppe: g })
+          : undefined,
       entwurf: (i, zl, p) => entwurfAmPlatz(plan.spalten[i], zl, p),
       darfAendern,
       onEntwurf: (i, zl, nr) => {
@@ -471,6 +485,34 @@ export function Planen({
         <TabellenPlan sicht={sicht} breite={ansicht.breite} platz={platz} />
       );
   }
+
+  /** ChurchTools hat sich geändert (gesendet, Plätze): die Termine neu – leise, ohne „wird geladen“. */
+  const leiseNeuLaden = () => {
+    if (bereich) {
+      leiseNeu.current = true;
+      setVersuch((v) => v + 1);
+    } else onAktualisieren?.();
+  };
+
+  /**
+   * Die Dienste einer Gruppe an einem Termin fürs Plätze-Fach – nur, wo man plant. Nicht unter „belegt“; liegen dort
+   * Entwürfe, bleibt die Zahl, wie sie ist (ChurchTools nummeriert die Plätze dabei neu – gemessen 15.10.2026).
+   */
+  const plaetzeZeilen = (s: PlanSpalte, i: number, g: PlanGruppe): PlaetzeZeile[] =>
+    g.zeilen
+      .filter((zl) => darfPlanen(zl, s))
+      .map((zl) => {
+        const zelle = zl.zellen[i] ?? [];
+        const belegtZahl = zelle.filter((p) => p.art !== 'frei').length;
+        const entwuerfeHier = zelle.filter((p) => entwurfAmPlatz(s, zl, p) !== null).length;
+        return {
+          serviceId: zl.dienst.id,
+          name: zl.dienst.name,
+          anzahl: zelle.length,
+          belegt: belegtZahl,
+          entwuerfe: entwuerfeHier,
+        };
+      });
 
   /** Nach einer Änderung im Entwurfs-Fach: Ergebnis übernehmen, bei Erfolg schließen und Bescheid geben. */
   const nachFach = (r: EntwurfErgebnis, k: string, text: () => string) => {
@@ -603,8 +645,9 @@ export function Planen({
         darfst du, wo du die Dienstgruppe bearbeiten darfst, die Gruppe eines Dienstes leitest oder
         Admin des Termins bist. Einen freien Platz antippen zeigt, wer kann – dort trägst du
         jemanden als Entwurf ein. Einen belegten Platz antippen: zurückziehen oder durch jemand
-        anderen ersetzen, ebenfalls als Entwurf. Gesendet wird erst mit „Ansehen und senden“ – dann
-        bekommen die Angefragten eine Mitteilung von ChurchTools.
+        anderen ersetzen, ebenfalls als Entwurf. Der Regler in der Gruppenzeile ändert die Anzahl
+        der Plätze – sofort. Gesendet wird erst mit „Ansehen und senden“ – dann bekommen die
+        Angefragten eine Mitteilung von ChurchTools.
       </p>
       {fach && entwuerfe && ew.art === 'fertig' && (
         <EntwurfFach
@@ -719,13 +762,28 @@ export function Planen({
           onClose={(gesendet) => {
             setSendenListe(null);
             if (gesendet) {
-              // ChurchTools hat sich geändert: Matrix und Entwürfe neu – leise, ohne „wird geladen“.
               ewNeu();
-              if (bereich) {
-                leiseNeu.current = true;
-                setVersuch((v) => v + 1);
-              } else onAktualisieren?.();
+              leiseNeuLaden();
             }
+          }}
+        />
+      )}
+      {plaetzeFach && entwuerfe && plan && (
+        <PlaetzeFach
+          titel={`${gruppenName(plaetzeFach.gruppe)} · Plätze`}
+          unter={`${plan.spalten[plaetzeFach.spalte].name} · ${tagKurz(plan.spalten[plaetzeFach.spalte].tag)}`}
+          zeilen={plaetzeZeilen(
+            plan.spalten[plaetzeFach.spalte],
+            plaetzeFach.spalte,
+            plaetzeFach.gruppe,
+          )}
+          aendern={(z, gesehen, neu) =>
+            entwuerfe.anzahl(plan.spalten[plaetzeFach.spalte].id, z.serviceId, gesehen, neu)
+          }
+          onGespeichert={showToast}
+          onClose={(geaendert) => {
+            setPlaetzeFach(null);
+            if (geaendert) leiseNeuLaden();
           }}
         />
       )}
@@ -831,6 +889,22 @@ function GruppenStand({ frei }: { frei: number | null }) {
   );
 }
 
+/** Regler in der Gruppenzeile (E4-5-3, wie im Gesamtentwurf) – nur, wo man einen Dienst der Gruppe plant. */
+function ReglerKnopf({ onKlick, text }: { onKlick?: () => void; text: string }) {
+  if (!onKlick) return null;
+  return (
+    <button
+      type="button"
+      className={styles.regler}
+      onClick={onKlick}
+      aria-label={text}
+      title={text}
+    >
+      <Icon name="regler" size={14} />
+    </button>
+  );
+}
+
 function GruppenKnopf({
   g,
   offen,
@@ -924,7 +998,13 @@ function TabellenPlan({ sicht, breite, platz }: { sicht: Sicht; breite: Breite; 
                 </th>
                 {spalten.map((i) => (
                   <td key={i}>
-                    <GruppenStand frei={g.frei[i]} />
+                    <div className={styles.gruppenZelle}>
+                      <GruppenStand frei={g.frei[i]} />
+                      <ReglerKnopf
+                        onKlick={sicht.onPlaetze(i, g)}
+                        text={`Plätze ${gruppenName(g)} am ${tagKurz(plan.spalten[i].tag)} ändern`}
+                      />
+                    </div>
                   </td>
                 ))}
               </tr>,
@@ -1037,6 +1117,10 @@ function HandyPlan({ sicht, amEnde }: { sicht: Sicht; amEnde?: () => void }) {
               <div className={styles.handyGruppenKopf}>
                 <GruppenKnopf g={g} offen={offen} onUmschalten={() => onUmschalten(gk)} />
                 <GruppenStand frei={g.frei[i]} />
+                <ReglerKnopf
+                  onKlick={sicht.onPlaetze(i, g)}
+                  text={`Plätze ${gruppenName(g)} am ${tagKurz(s.tag)} ändern`}
+                />
               </div>
               {offen &&
                 dienste.map((z) => (

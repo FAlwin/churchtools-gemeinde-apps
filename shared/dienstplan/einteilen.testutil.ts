@@ -48,20 +48,41 @@ export function nachbau(plaetze: RohPlatz[]) {
       ct.dazwischen?.();
       ct.dazwischen = null;
       ct.geschrieben.push({ pfad, method: auftrag.method, json: auftrag.json });
-      const id = Number(/servicerequests\/(\d+)/.exec(pfad)![1]);
-      const tun = () => {
-        if (pfad.endsWith('/decline'))
-          ersetze(id, { personId: null, name: null, isAccepted: false });
-        else {
-          const j = auftrag.json as {
-            personId: number | null;
-            name: string | null;
-            isAccepted: boolean;
+      const tun = pfad.endsWith('/eventservices')
+        ? // Anzahl der Plätze (E4-5-3, gemessen E0): mehr → neue freie Plätze; weniger → leere zuerst weg.
+          () => {
+            const j = auftrag.json as { services: { serviceId: number; count: number }[] };
+            for (const { serviceId, count } of j.services) {
+              const eigene = () => ct.plaetze.filter((p) => p.serviceId === serviceId);
+              while (eigene().length < count) {
+                ct.plaetze.push({
+                  id: naechsteId++,
+                  serviceId,
+                  index: null,
+                  personId: null,
+                  name: null,
+                });
+              }
+              for (const p of [...eigene()].reverse()) {
+                if (eigene().length <= count) break;
+                if (!p.name) ct.plaetze.splice(ct.plaetze.indexOf(p), 1);
+              }
+            }
+          }
+        : () => {
+            const id = Number(/servicerequests\/(\d+)/.exec(pfad)![1]);
+            if (pfad.endsWith('/decline'))
+              ersetze(id, { personId: null, name: null, isAccepted: false });
+            else {
+              const j = auftrag.json as {
+                personId: number | null;
+                name: string | null;
+                isAccepted: boolean;
+              };
+              const name = j.name ?? (j.personId === null ? null : `Person ${j.personId}`);
+              ersetze(id, { personId: j.personId, name, isAccepted: j.isAccepted });
+            }
           };
-          const name = j.name ?? (j.personId === null ? null : `Person ${j.personId}`);
-          ersetze(id, { personId: j.personId, name, isAccepted: j.isAccepted });
-        }
-      };
       if (ct.schreibenFehler !== undefined) {
         if (ct.trotzdemSchreiben) tun();
         return Promise.reject(new Fehler(ct.schreibenFehler));

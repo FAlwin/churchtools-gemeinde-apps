@@ -180,6 +180,39 @@
   font-weight: 700;
 }
 
+// Gruppenzeile je Termin: Stand links, Regler rechts (E4-5-3).
+.gruppenZelle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  padding-right: 6px;
+}
+
+// Regler (Plätze ändern) – leise, erst beim Zeigen deutlicher.
+.regler {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface2);
+    color: var(--text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 1px;
+  }
+}
+
 .gruppenStand {
   flex: none;
   white-space: nowrap;

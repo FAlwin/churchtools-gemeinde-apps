@@ -3,14 +3,14 @@
 > **Stand: E4-4 (15.10.2026)** – E3 mit drei Rollen geprüft (Test-Instanz) und lesend an der Live-Instanz; seit
 > E4-4 **teilt der Dienstplaner auch ein** (s. „Senden“). **Planen**:
 > Termine als Spalten, Dienstgruppen und Dienste als Zeilen, in jeder Zelle die Plätze; freien Platz antippen →
-> „Wer kann?“ (E4-2) und dort **als Entwurf eintragen** (E4-3, Person oder Gast; Entwurf antippen = ändern oder entfernen, veraltete mit Schild); belegten Platz antippen → **zurückziehen oder ersetzen** (E4-5, ebenfalls als Entwurf); unten **„Ansehen und senden“** (E4-4): Anfrage, direkt zuteilen, Gast eintragen, zurückziehen; Zeitraum wählen (ab heute, ein Monat oder von–bis), Terminleiste,
+> „Wer kann?“ (E4-2) und dort **als Entwurf eintragen** (E4-3, Person oder Gast; Entwurf antippen = ändern oder entfernen, veraltete mit Schild); belegten Platz antippen → **zurückziehen oder ersetzen** (E4-5, ebenfalls als Entwurf); Regler in der Gruppenzeile → **Anzahl der Plätze** je Termin (sofort); unten **„Ansehen und senden“** (E4-4): Anfrage, direkt zuteilen, Gast eintragen, zurückziehen; Zeitraum wählen (ab heute, ein Monat oder von–bis), Terminleiste,
 > Spaltenbreite, Filter nach Veranstaltung und Gruppe, „Wer wie oft?“; am Handy ein Termin auf einmal. **Start**: „Als
 > Nächstes“ (dein Dienst, Team, Lieder, Musik-App), deine offenen Anfragen, deine nächsten Dienste,
 > Abwesenheiten und für Planer die freien Plätze der nächsten 6 Wochen. Die Reiter
 > Start · Termine · Planen · Abwesenheiten stehen (am Computer oben, am Handy unten; „Planen“ nur für
 > Planer). **Termine**: Liste nach Monaten, „Meine | Alle“, Filter nach Veranstaltung (aus den
 > Terminnamen), die eigenen Dienste (zugesagt/angefragt), für Planer die freien Plätze ihrer
-> Dienstgruppen. Anzahl der Plätze, Zauberstab und Abwesenheiten folgen (Bauplan E4-5-3–E9). Hell oder dunkel wie in ChurchTools gewählt (seit 15.10.2026). Diese Anleitung wächst mit.
+> Dienstgruppen. Zauberstab und Abwesenheiten folgen (Bauplan E5–E9). Hell oder dunkel wie in ChurchTools gewählt (seit 15.10.2026). Diese Anleitung wächst mit.
 
 Der Dienstplaner plant die Dienste **aller** Dienstgruppen (Musik, Technik, Predigt, Moderation …) nach
 dem Vorbild von Planning Center Services. **Alles liegt in ChurchTools** – es gibt keinen eigenen Server.

@@ -94,6 +94,11 @@ describe('ladeEntwuerfe', () => {
       ['Programm', null, 'fehlt'],
     ]);
     expect([...d.entwuerfe.keys()]).toEqual(['20|7|-', '21|7|-']);
+    // Je Entwurf die Gruppe seiner Schublade (#582 – verwerfen auch ohne Matrix-Zeile).
+    expect([...d.gruppeJe]).toEqual([
+      ['20|7|-', 3],
+      ['21|7|-', 3],
+    ]);
   });
 
   it('Rechte jedes Mal frisch – nach dem Einrichten sind sie neu (im Browser-Check gefunden)', async () => {

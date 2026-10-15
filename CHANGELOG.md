@@ -17,6 +17,15 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Hinzugefügt (Dienstplaner)
 
+- **Entwürfe ohne Platz und alte Entwürfe** (#582, Entwurf `entwuerfe-ohne-platz.html`): Ein Entwurf findet seinen
+  Platz über Termin, Dienst und Platznummer. Ändert jemand in ChurchTools die Platzzahl (die Plätze werden dabei neu
+  nummeriert – gemessen), steht jetzt beim Dienst am Termin ein Schild **„Entwurf ohne Platz“**; antippen nennt den
+  Grund und bietet „Entwurf verwerfen“. Gehört der Dienst nicht mehr zum Termin, ist der Termin **vorbei** oder
+  **gelöscht** (ChurchTools antwortet 404 – gemessen), zeigt ein Hinweis über der Matrix „N alte Entwürfe“; die Liste
+  hat „Alle verwerfen“ (einer nach dem anderen, Ergebnis je Zeile). Termine außerhalb des Zeitraums fragt der
+  Dienstplaner einmal nach (höchstens 4 gleichzeitig); ein künftiger Termin dort ist normal, ein Fehler beim Fragen
+  meldet nichts als alt. Den Hinweis sehen alle Planer der Gruppe, die deren Entwürfe ändern dürfen (Alwin,
+  15.10.2026). Bisher blieben solche Entwürfe unsichtbar für immer in der Schublade.
 - **Anzahl der Plätze ändern** (#580, Bauplan E4-5-3, Entwurf `e4-5-entwurf.html`): Regler-Symbol in der Gruppenzeile
   je Termin (nur wo man einen Dienst der Gruppe plant, nicht an abgesagten Terminen) → Fenster „Technik · Plätze“
   mit − / + je Dienst. Jeder Tipp gilt **sofort** (Alwin, 15.10.2026): frisch lesen, mit der gesehenen Zahl

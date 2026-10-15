@@ -584,6 +584,38 @@
   }
 }
 
+// Alte Entwürfe (#582): Hinweis über der Matrix, rot getönt wie die Warnungen (kein Gelb/Orange).
+.alteHinweis {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 10px;
+  padding: 8px 8px 8px 12px;
+  border-radius: var(--r-card);
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+.alteKnopf {
+  flex: none;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text);
+  font: 600 13.5px var(--ui);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 1px;
+  }
+}
+
 .hinweis {
   margin: 8px 2px 0;
   color: var(--text2);

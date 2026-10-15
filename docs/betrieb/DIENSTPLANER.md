@@ -79,6 +79,11 @@ Entwurf. Hinweise (abwesend, am Tag schon eingeteilt) stehen vorher da, senden g
   inzwischen zugesagt hat – wer gerade zugesagt hat, wird nicht still ausgetragen oder ersetzt (Alwin, 15.10.2026). Erst wenn die Person nachgelesen am Platz steht, wird
   der Entwurf entfernt. Antwortet ChurchTools nicht oder ist man abgemeldet, hält das Senden an; der Rest bleibt
   Entwurf. Nichts wird von selbst wiederholt – „Erneut senden“ ist ein bewusster zweiter Klick.
+- **Entwürfe ohne Platz, alte Entwürfe:** Ändert jemand direkt in ChurchTools die Platzzahl (die Plätze werden dabei
+  neu nummeriert) oder nimmt den Dienst heraus, oder ist der Termin vorbei bzw. gelöscht, passt ein Entwurf nirgends
+  mehr. Dann steht beim Dienst ein Schild „Entwurf ohne Platz“ bzw. über der Matrix „N alte Entwürfe“ – beides mit
+  „verwerfen“. In ChurchTools ändert sich dabei nichts. Im Dienstplaner selbst ist die Platzzahl gesperrt, solange
+  dort Entwürfe liegen.
 
 **Den Menüpunkt sehen:** Erweiterung **„Dienstplaner“ sehen** – für alle, die Dienste haben. Ohne dieses
 Recht zeigt ChurchTools selbst „Keine ausreichende Berechtigung“.

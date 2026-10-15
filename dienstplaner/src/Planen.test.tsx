@@ -9,6 +9,7 @@ import type { Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import type { RohTermin } from '@shared/dienstplan/termine';
 import type { Entwurf } from '@shared/dienstplan/entwuerfe';
 import type { SendeErgebnis } from '@shared/dienstplan/senden';
+import type { TerminStand } from './terminStand';
 import type { EntwuerfeDaten, EntwurfAnschluss, Schublade } from './ladeEntwuerfe';
 import { Planen } from './Planen';
 import type { TermineZustand } from './Termine';
@@ -709,6 +710,9 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     entwuerfe: new Map(
       entwuerfe.map((e) => [`${e.ort.eventId}|${e.ort.serviceId}|${e.ort.index ?? '-'}`, e]),
     ),
+    gruppeJe: new Map(
+      entwuerfe.map((e) => [`${e.ort.eventId}|${e.ort.serviceId}|${e.ort.index ?? '-'}`, 3]),
+    ),
   });
   /** Der Anschluss zum Anfassen – eine Stelle für alle Tests (jede neue Funktion kommt nur hier dazu). */
   const nachgebaut = (a: Partial<EntwurfAnschluss> = {}): EntwurfAnschluss => ({
@@ -720,6 +724,7 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     senden: vi.fn(),
     hinweise: vi.fn(() => Promise.resolve(new Map())),
     anzahl: vi.fn(),
+    termine: vi.fn(() => Promise.resolve(new Map())),
     ...a,
   });
   function zeige4(
@@ -1444,5 +1449,141 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     fireEvent.click(await screen.findByRole('button', { name: /^Plätze Technik am .* ändern$/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
     expect(neu).not.toHaveBeenCalled();
+  });
+
+  // ── #582: Entwürfe ohne Platz und alte Entwürfe ─────────────────────────────
+  it('Platznummer passt nicht mehr → Schild „Entwurf ohne Platz“; antippen → Grund, verwerfen mit der Gruppe', async () => {
+    const entfernen = vi.fn(() => Promise.resolve({ ok: true as const, entwurf: null }));
+    zeige4({
+      laden: () =>
+        Promise.resolve(
+          daten([
+            entwurf({ ort: { eventId: 20, serviceId: 7, index: 3 } }), // Licht hat nur 1 und 2
+            entwurf({ ort: { eventId: 20, serviceId: 6, index: 1 } }), // Ton: ein Platz ohne Nummer
+            entwurf(), // Licht Platz 2 – den gibt es: kein Schild, sondern der Entwurf selbst
+          ]),
+        ),
+      entfernen,
+    });
+    const schilder = await screen.findAllByRole('button', { name: /^Entwurf ohne Platz/ });
+    expect(schilder).toHaveLength(2);
+    expect(
+      within(zeileVon('Licht')).getAllByRole('button', { name: /^Entwurf ohne Platz/ }),
+    ).toHaveLength(1);
+    fireEvent.click(schilder[0]);
+    expect(screen.getByText(/Diesen Platz gibt es so nicht mehr/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Entwurf verwerfen' }));
+    await waitFor(() => expect(entfernen).toHaveBeenCalledTimes(1));
+    expect((entfernen.mock.calls[0] as unknown[]).slice(1)).toEqual([
+      3,
+      { eventId: 20, serviceId: 7, index: 3 },
+      1,
+    ]);
+    // Ohne passenden Platz zählt er nicht als „noch nicht gesendet“ (wird nie gesendet) – nur der gültige.
+    expect(offenTexte()).toMatch(/^1 Entwurf/);
+  });
+
+  it('Termin nicht geladen → nachfragen: gelöscht und vorbei sind „alt“, künftig und unbekannt nicht', async () => {
+    const termine = vi.fn(() =>
+      Promise.resolve(
+        new Map<number, TerminStand>([
+          [90, { art: 'da', name: 'Gottesdienst', tag: '2026-10-04' }],
+          [91, { art: 'weg' }],
+          [92, { art: 'da', name: 'Gottesdienst', tag: '2026-12-06' }],
+          [93, { art: 'unbekannt' }],
+        ]),
+      ),
+    );
+    zeige4({
+      laden: () =>
+        Promise.resolve(
+          daten(
+            [90, 91, 92, 93].map((ev) =>
+              entwurf({ ort: { eventId: ev, serviceId: 7, index: null } }),
+            ),
+          ),
+        ),
+      termine,
+    });
+    expect((await screen.findByRole('status', { name: 'Alte Entwürfe' })).textContent).toMatch(
+      /^2 alte Entwürfe/,
+    );
+    expect(termine).toHaveBeenCalledWith([90, 91, 92, 93]);
+    expect(termine).toHaveBeenCalledTimes(1);
+  });
+
+  it('Dienst gehört nicht mehr zum Termin → alt; „Alle verwerfen“ mit der Gruppe der Schublade, danach neu laden', async () => {
+    const plan = planAus(
+      [
+        {
+          id: 20,
+          name: 'Gottesdienst',
+          startDate: '2026-11-08T09:00:00Z',
+          endDate: '2026-11-08T10:30:00Z',
+          eventServices: [{ serviceId: 6, personId: null, name: null, index: null }],
+        },
+        {
+          id: 21,
+          name: 'Gebetsabend',
+          startDate: '2026-11-12T17:00:00Z',
+          endDate: '2026-11-12T18:00:00Z',
+          eventServices: [{ serviceId: 7, personId: null, name: null, index: null }],
+        },
+      ] as RohTermin[],
+      {
+        ichId: 1,
+        dienste: DIENSTE,
+        dienstgruppen: GRUPPEN,
+        zeitzone: 'Europe/Berlin',
+        planbar: (d) => d.dienstgruppeId === 3,
+        ganzSichtbar: () => true,
+      },
+    );
+    const laden = vi.fn(() =>
+      Promise.resolve(daten([entwurf({ ort: { eventId: 21, serviceId: 6, index: null } })])),
+    );
+    const entfernen = vi.fn(() => Promise.resolve({ ok: true as const, entwurf: null }));
+    render(
+      <Planen
+        zustand={{ art: 'fertig', zeilen: [], plan, wochen: 8 }}
+        handy={false}
+        onNochmal={() => {}}
+        onMehr={() => {}}
+        {...ZUSATZ}
+        entwuerfe={nachgebaut({ laden, entfernen })}
+      />,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Ansehen' }));
+    expect(
+      screen.getByText(/Gebetsabend, Do, 12\.11\. – Dienst gehört nicht mehr zum Termin/),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Verwerfen' }));
+    await waitFor(() => expect(entfernen).toHaveBeenCalledTimes(1));
+    expect((entfernen.mock.calls[0] as unknown[]).slice(1)).toEqual([
+      3,
+      { eventId: 21, serviceId: 6, index: null },
+      1,
+    ]);
+    fireEvent.click(await screen.findByRole('button', { name: 'Schließen' }));
+    await waitFor(() => expect(laden).toHaveBeenCalledTimes(2));
+  });
+
+  it('alte Entwürfe nur aus Schubladen, die man ändern darf', async () => {
+    const termine = vi.fn(() =>
+      Promise.resolve(new Map<number, TerminStand>([[91, { art: 'weg' }]])),
+    );
+    const a = zeige4({
+      laden: vi.fn(() =>
+        Promise.resolve(
+          daten([entwurf({ ort: { eventId: 91, serviceId: 7, index: null } })], {
+            stand: 'nur-lesen',
+          }),
+        ),
+      ),
+      termine,
+    });
+    await waitFor(() => expect(termine).toHaveBeenCalled());
+    await waitFor(() => expect(a.laden).toHaveBeenCalled());
+    expect(screen.queryByRole('status', { name: 'Alte Entwürfe' })).toBeNull();
   });
 });

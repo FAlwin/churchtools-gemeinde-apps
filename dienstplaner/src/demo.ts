@@ -119,7 +119,12 @@ const NAMEN: Record<number, string> = {
 function einteilenDemo(methode: string, pfad: string, rumpf: unknown): unknown {
   const termin = /^\/api\/events\/(\d+)$/.exec(pfad);
   if (termin && methode === 'GET') {
-    const t = TERMINE.find((x) => x.id === Number(termin[1]));
+    // 90: ein vergangener Termin (nicht in der Liste „ab heute“); 91 gibt es nicht → 404 (gemessen).
+    const t =
+      TERMINE.find((x) => x.id === Number(termin[1])) ??
+      (Number(termin[1]) === 90
+        ? { id: 90, name: 'Gottesdienst', startDate: zeit(-10, '08:00'), eventServices: [] }
+        : undefined);
     return t ? { data: t } : undefined;
   }
   // Anzahl der Plätze (E4-5-3), wie gemessen: mehr → neue freie Plätze, weniger → leere zuerst weg.
@@ -325,6 +330,11 @@ function speicherDemo(fall: string) {
     gesehen: { art: 'zusage', personId: 19 },
     von: { personId: 1, name: 'Alwin' },
   };
+  const alt = (eventId: number, index: number | null, name: string, personId: number) => ({
+    ...spike,
+    ort: { eventId, serviceId: 9, index },
+    ziel: { art: 'person', personId, name },
+  });
   const werte = new Map<number, { id: number; dataCategoryId: number; value: string }[]>([
     [
       40,
@@ -333,6 +343,12 @@ function speicherDemo(fall: string) {
         { id: 401, dataCategoryId: 40, value: JSON.stringify(veraltet) },
         { id: 402, dataCategoryId: 40, value: JSON.stringify(zurueck) },
         { id: 403, dataCategoryId: 40, value: JSON.stringify(ersetzen) },
+        // #582: ohne Platz (103 hat nur einen Gesang-Platz, ohne Nummer), Dienst nicht mehr im Termin (102),
+        // Termin vorbei (90) und gelöscht (91).
+        { id: 404, dataCategoryId: 40, value: JSON.stringify(alt(103, 1, 'Ben Wiebe', 49)) },
+        { id: 405, dataCategoryId: 40, value: JSON.stringify(alt(102, null, 'Clara Dyck', 52)) },
+        { id: 406, dataCategoryId: 40, value: JSON.stringify(alt(90, null, 'Anna Klassen', 46)) },
+        { id: 407, dataCategoryId: 40, value: JSON.stringify(alt(91, null, 'David Penner', 55)) },
       ],
     ],
   ]);

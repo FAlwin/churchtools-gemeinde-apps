@@ -66,9 +66,9 @@ describe('terminAusCt', () => {
 });
 
 describe('anmeldeLink', () => {
-  it('Formular-Adresse + Instanz + Gruppe', () => {
-    expect(anmeldeLink('https://test-ecg-donrath.church.tools', 60)).toBe(
-      'https://falwin.github.io/churchtools-gemeinde-apps/#test-ecg-donrath.church.tools/60',
-    );
+  it('Formular-Seite der Gemeinde + Instanz + Gruppe', () => {
+    expect(
+      anmeldeLink('https://anmeldung.beispiel.de/', 'https://test-ecg-donrath.church.tools', 60),
+    ).toBe('https://anmeldung.beispiel.de/#test-ecg-donrath.church.tools/60');
   });
 });

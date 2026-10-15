@@ -3,6 +3,7 @@ import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
 import { ApiError } from '@ui/ct/fehler';
 import {
   EINSTELLUNGEN_KENNUNG,
+  SYSTEMFELDER,
   HINWEIS_SATZ,
   einstellungenLesen,
   sicherungLesen,
@@ -17,6 +18,9 @@ import {
   bildHochladen,
   einstellungenVon,
   kopfVon,
+  anmeldenVorbereiten,
+  anmeldeBedingungen,
+  leitungsKandidaten,
   logoEntfernen,
   logoHochladen,
   logoListe,
@@ -72,10 +76,14 @@ let schlucken: Set<string>;
 let termine: Map<number, Record<string, unknown>>;
 let aufrufe: string[];
 /** Mitglieder je Gruppe; `403`/`502` = so antwortet ChurchTools auf `/members`. */
-let mitglieder: Map<
-  number,
-  { groupMemberStatus: string; fields?: { id: number; value: unknown }[] }[] | 403 | 502
->;
+interface Mitglied {
+  groupMemberStatus: string;
+  personId?: number;
+  groupTypeRoleId?: number;
+  person?: { domainAttributes?: { firstName?: string; lastName?: string } };
+  fields?: { id: number; value: unknown }[];
+}
+let mitglieder: Map<number, Mitglied[] | 403 | 502>;
 /** Wie ChurchTools: Antwortmöglichkeiten ohne ID bekommen eine neue (gemessen A5). */
 let naechsteOption = 1;
 const mitIds = (o: unknown) =>
@@ -175,6 +183,47 @@ function ct() {
         })),
       });
     }
+    if (m === 'GET' && pfad === '/group/roles')
+      return json(200, {
+        data: [
+          { id: 32, groupTypeId: 5, type: 'participant' },
+          { id: 35, groupTypeId: 5, type: 'leader', isLeader: true },
+        ],
+      });
+    r = /^\/groups\/(\d+)\/members\/(\d+)$/.exec(pfad);
+    if (r && m === 'PUT') {
+      const gid = Number(r[1]);
+      const liste = mitglieder.get(gid);
+      const alt = Array.isArray(liste) ? liste : [];
+      const neu = {
+        personId: Number(r[2]),
+        groupTypeRoleId: Number(body.groupTypeRoleId),
+        groupMemberStatus: String(body.groupMemberStatus),
+        person: { domainAttributes: { firstName: `P${r[2]}`, lastName: 'Test' } },
+      };
+      if (!schlucken.has('LEITUNG'))
+        mitglieder.set(gid, [...alt.filter((x) => x.personId !== neu.personId), neu]);
+      return json(200, { data: neu });
+    }
+    r = /^\/publicgroups\/(\d+)$/.exec(pfad);
+    if (r && m === 'GET') {
+      const g = gruppen.get(Number(r[1]));
+      if (!g || g.settings.visibility !== 'public' || g.status !== 1) return json(403, {});
+      const liste = mitglieder.get(g.id);
+      const nm = (g.settings.newMember ?? {}) as Record<string, unknown>;
+      return json(200, {
+        data: {
+          signUpConditions: {
+            groupIsActive: true,
+            groupHasLeader: Array.isArray(liste) && liste.some((x) => x.groupTypeRoleId === 35),
+            newPersonStatusIsSet: typeof nm.statusId === 'number',
+            newPersonStationIsSet: typeof nm.campusId === 'number',
+            newPersonDepartmentIsSet: typeof nm.departmentId === 'number',
+            canSignUp: false,
+          },
+        },
+      });
+    }
     r = /^\/groups\/(\d+)\/members$/.exec(pfad);
     if (r) {
       const m = mitglieder.get(Number(r[1])) ?? [];
@@ -233,7 +282,17 @@ function ct() {
           else if (k === 'name') g.name = String(v);
           else if (k === 'groupStatusId') g.status = Number(v);
           else if (k === 'visibility' && schlucken.has('SICHTBAR')) continue;
-          else if (k !== 'information') g.settings[k] = v; // verschachtelt: still ignoriert (gemessen)
+          // Gemessen 14.10.2026: verschachtelt still ignoriert, flach gespeichert (unter `newMember`).
+          else if (k === 'newMember') continue;
+          else if (/^newPerson(Status|Campus|Department)Id$/.test(k)) {
+            if (schlucken.has('VORGABEN')) continue;
+            const feld = {
+              newPersonStatusId: 'statusId',
+              newPersonCampusId: 'campusId',
+              newPersonDepartmentId: 'departmentId',
+            }[k]!;
+            g.settings.newMember = { ...(g.settings.newMember as object), [feld]: v };
+          } else if (k !== 'information') g.settings[k] = v; // verschachtelt: still ignoriert (gemessen)
         }
       }
       return json(200, {
@@ -313,9 +372,8 @@ describe('legeVeranstaltungAn', () => {
     expect(g.settings.emailVerificationMode).toBe('existing');
     const e = einstellungenLesen(g.note)!;
     expect(e.wer).toBe('kinder');
-    expect(Object.keys(e.ctFelder).sort()).toEqual(
-      ['aufschluesselung', 'auswahl', 'betrag', 'bezahlt', 'bezahltAm', 'extras'].sort(),
-    );
+    // Gegen die Liste selbst – jedes Systemfeld wird angelegt, auch „Angemeldet von“ (A6-2).
+    expect(Object.keys(e.ctFelder).sort()).toEqual(SYSTEMFELDER.map((f) => f.id).sort());
     expect(g.felder.find((f) => f.id === e.ctFelder.bezahlt)?.name).toBe('Bezahlt');
   });
 
@@ -408,12 +466,12 @@ describe('Rechte und Kalender', () => {
       beginn: '2026-11-15T12:00',
       ende: '2026-11-15T14:00',
       ort: 'Saal',
-      gruppeId: 91,
+      link: 'https://anmeldung.beispiel.de/#ct.test/91',
       zeitzone: 'Europe/Berlin',
     });
     expect(t.startDate).toBe('2026-11-15T11:00:00Z');
     expect(termine.get(t.id)).toMatchObject({
-      link: 'https://falwin.github.io/churchtools-gemeinde-apps/#ct.test/91',
+      link: 'https://anmeldung.beispiel.de/#ct.test/91',
       address: { meetingAt: 'Saal' },
       isInternal: false,
     });
@@ -427,7 +485,7 @@ describe('Rechte und Kalender', () => {
         beginn: '2026-11-15T12:00',
         ende: '2026-11-15T14:00',
         ort: '',
-        gruppeId: 1,
+        link: null,
         zeitzone: 'Europe/Berlin',
       }),
     ).rejects.toBeInstanceOf(NichtUebernommen);
@@ -1046,5 +1104,92 @@ describe('Eigenes Logo (14.10.2026)', () => {
     schlucken.delete('DELETE');
     await logoEntfernen(l.id);
     expect(gruppen.has(l.id)).toBe(false);
+  });
+});
+
+describe('Anmelden vorbereiten (A6-2, #548)', () => {
+  const V = { statusId: 2, campusId: 0, departmentId: 1 };
+  async function alteVeranstaltung() {
+    // Wie vor A6-2 angelegt: ohne „Angemeldet von“.
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    const g = gruppen.get(id)!;
+    const e = einstellungenLesen(g.note)!;
+    g.felder = g.felder.filter((f) => f.id !== e.ctFelder.kontakt);
+    delete e.ctFelder.kontakt;
+    await aendereEinstellungen(id, () => e);
+    return id;
+  }
+
+  it('ergänzt fehlende Systemfelder, setzt Leitung und Vorgaben (flach) – danach nimmt ChurchTools an', async () => {
+    const id = await alteVeranstaltung();
+    expect(await anmeldeBedingungen(id)).toEqual([
+      'Die Veranstaltung ist für Gäste nicht lesbar (nicht freigegeben oder nicht öffentlich).',
+    ]);
+    await anmeldenVorbereiten(id, [1, 4], V);
+    await freigeben(id);
+    expect(await anmeldeBedingungen(id)).toEqual([]);
+    const e = einstellungenLesen(gruppen.get(id)!.note)!;
+    expect(gruppen.get(id)!.felder.find((f) => f.id === e.ctFelder.kontakt)?.name).toBe(
+      'Angemeldet von',
+    );
+    expect(gruppen.get(id)!.settings.newMember).toEqual(V);
+    // Nur das Fehlende angelegt: jedes Systemfeld genau einmal, die alten Nummern bleiben.
+    for (const name of ['Betrag', 'Bezahlt', 'Angemeldet von'])
+      expect(
+        gruppen.get(id)!.felder.filter((f) => f.name === name),
+        name,
+      ).toHaveLength(1);
+  });
+
+  it('übernimmt ChurchTools die Vorgaben nicht → Fehler statt „freigegeben“', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    schlucken.add('VORGABEN');
+    await expect(anmeldenVorbereiten(id, [1], V)).rejects.toThrow(/Vorgaben/);
+  });
+
+  it('vor dem Vorbereiten fehlen Leitung und Vorgaben – in Worten', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    await freigeben(id);
+    expect(await anmeldeBedingungen(id)).toEqual([
+      'Die Gruppe hat keine Leitung.',
+      'Für neue Personen fehlt der Status.',
+      'Für neue Personen fehlt der Standort.',
+      'Für neue Personen fehlt der Bereich.',
+    ]);
+  });
+
+  it('übernimmt ChurchTools die Leitung nicht → Fehler statt „freigegeben“', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    schlucken.add('LEITUNG');
+    await expect(anmeldenVorbereiten(id, [1], V)).rejects.toThrow(/Leitung/);
+  });
+
+  it('ohne Leitung → abgelehnt, bevor etwas geschrieben wird', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    aufrufe.length = 0;
+    await expect(anmeldenVorbereiten(id, [], V)).rejects.toMatchObject({ status: 422 });
+    expect(aufrufe.filter((a) => !a.startsWith('GET'))).toEqual([]);
+  });
+
+  it('Leitungs-Kandidaten: Team und Gruppe zusammen, wer schon Leitung ist, markiert', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    mitglieder.set(7, [
+      {
+        personId: 4,
+        groupMemberStatus: 'active',
+        person: { domainAttributes: { firstName: 'Bea', lastName: 'Team' } },
+      },
+      {
+        personId: 1,
+        groupMemberStatus: 'active',
+        person: { domainAttributes: { firstName: 'Alwin', lastName: 'F' } },
+      },
+    ]);
+    await anmeldenVorbereiten(id, [1], V);
+    // Nach Namen sortiert; die Angaben der Gruppe (hier „P1 Test“) überschreiben die des Teams.
+    expect(await leitungsKandidaten(id)).toEqual([
+      { personId: 4, name: 'Bea Team', leitung: false },
+      { personId: 1, name: 'P1 Test', leitung: true },
+    ]);
   });
 });

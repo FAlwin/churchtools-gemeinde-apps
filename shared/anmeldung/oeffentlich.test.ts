@@ -5,7 +5,9 @@ import { anmeldeLink } from './termin';
 import {
   LADE_FEHLER_TEXT,
   apiBasis,
+  formularAdresseAus,
   freiePlaetzeAus,
+  herkunftVon,
   ladeFehlerAus,
   ortAusLink,
   veranstaltungAus,
@@ -13,7 +15,11 @@ import {
 
 describe('ortAusLink – das Gegenstück zu anmeldeLink', () => {
   it('liest, was anmeldeLink baut (gegen den Erzeuger, nicht gegen ein Literal)', () => {
-    const link = anmeldeLink('https://test-ecg-donrath.church.tools/', 165);
+    const link = anmeldeLink(
+      'https://anmeldung.beispiel.de/',
+      'https://test-ecg-donrath.church.tools/',
+      165,
+    );
     expect(ortAusLink(new URL(link).hash)).toEqual({
       instanz: 'test-ecg-donrath.church.tools',
       gruppeId: 165,
@@ -93,5 +99,35 @@ describe('ladeFehlerAus – jeder Zweig einzeln', () => {
   it('keine Antwort (Netz weg oder Herkunft nicht erlaubt) – mit „Nochmal“ und Hinweis an die Gemeinde', () => {
     expect(ladeFehlerAus('netz')).toBe('keine-verbindung');
     expect(LADE_FEHLER_TEXT['keine-verbindung'].text).toMatch(/Gemeinde Bescheid/);
+  });
+});
+
+describe('formularAdresseAus – die Adresse der Formular-Seite der Gemeinde', () => {
+  it('ergänzt https:// und den Schrägstrich; mit Pfad erlaubt', () => {
+    expect(formularAdresseAus('anmeldung.ecg-donrath.de')).toBe(
+      'https://anmeldung.ecg-donrath.de/',
+    );
+    expect(formularAdresseAus(' https://www.beispiel.de/anmeldung ')).toBe(
+      'https://www.beispiel.de/anmeldung/',
+    );
+    expect(herkunftVon('https://www.beispiel.de/anmeldung/')).toBe('https://www.beispiel.de');
+  });
+  it('kein https, Zugangsdaten, ?, #, kein Punkt, leer → null', () => {
+    for (const x of [
+      '',
+      'http://anmeldung.beispiel.de',
+      'https://user:pw@anmeldung.beispiel.de',
+      'https://anmeldung.beispiel.de/?x=1',
+      'https://anmeldung.beispiel.de/#a',
+      'localhost',
+      'http://localhost.beispiel.de',
+      'javascript:alert(1)',
+    ])
+      expect(formularAdresseAus(x), x).toBeNull();
+  });
+  it('zum Testen: http://localhost mit Port (nur mit ausdrücklichem http://)', () => {
+    expect(formularAdresseAus('http://localhost:5177')).toBe('http://localhost:5177/');
+    expect(formularAdresseAus('http://127.0.0.1:5177/')).toBe('http://127.0.0.1:5177/');
+    expect(herkunftVon('http://localhost:5177/')).toBe('http://localhost:5177');
   });
 });

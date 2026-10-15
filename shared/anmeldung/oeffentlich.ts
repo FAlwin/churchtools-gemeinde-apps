@@ -36,6 +36,40 @@ export function ortAusLink(hash: string): AnmeldeOrt | null {
   return gruppeId > 0 ? { instanz, gruppeId } : null;
 }
 
+/**
+ * Zum Testen (Alwin, 14.10.2026: bis die eigene Adresse steht): das Formular auf dem eigenen Rechner
+ * (`npm run dev -w formular` → `http://localhost:5177`). Nur mit ausdrücklichem `http://` – und ChurchTools muss
+ * die Herkunft ohnehin erlauben, für Gäste ist so ein Link nutzlos.
+ */
+const LOKAL = /^(localhost|127\.0\.0\.1)$/;
+
+/**
+ * **Die Adresse der Formular-Seite aus einer Eingabe** – nur `https` (zum Testen auch `http://localhost`), ohne `#` und `?`, mit `/` am Ende (so hängt
+ * `anmeldeLink` den Teil hinter `#` an). `null`, wenn es keine solche Adresse ist. „anmeldung.beispiel.de“ ohne
+ * `https://` wird ergänzt.
+ */
+export function formularAdresseAus(eingabe: string): string | null {
+  const t = eingabe.trim();
+  if (!t) return null;
+  let u: URL;
+  try {
+    u = new URL(/^[a-z]+:\/\//i.test(t) ? t : `https://${t}`);
+  } catch {
+    return null;
+  }
+  if (u.username || u.password || u.search || u.hash) return null;
+  if (u.protocol === 'http:') {
+    if (!LOKAL.test(u.hostname)) return null;
+  } else if (u.protocol !== 'https:' || !u.hostname.includes('.')) return null;
+  const pfad = u.pathname.endsWith('/') ? u.pathname : `${u.pathname}/`;
+  return `${u.origin}${pfad}`;
+}
+
+/** Die Herkunft (`https://host[:port]`), die in ChurchTools als erlaubt eingetragen sein muss. */
+export function herkunftVon(formularAdresse: string): string {
+  return new URL(formularAdresse).origin;
+}
+
 /** Die Adresse der Schnittstelle einer Instanz. */
 export function apiBasis(ort: AnmeldeOrt): string {
   return `https://${ort.instanz}/api`;

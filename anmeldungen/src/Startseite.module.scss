@@ -325,3 +325,22 @@
   font-weight: 700;
   cursor: pointer;
 }
+
+// „Erst einrichten“ (A6-2): Was zu tun ist, solange die Formular-Seite fehlt.
+.einrichten {
+  padding: 0 16px 16px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text);
+
+  ol {
+    margin: 8px 0 14px;
+    padding-left: 20px;
+    // ChurchTools (Tailwind) nimmt Listen die Nummern – hier sind es Schritte, sie sollen dastehen.
+    list-style: decimal;
+  }
+
+  li + li {
+    margin-top: 6px;
+  }
+}

@@ -3,7 +3,7 @@
  * nach – in der Form, die an der Test-Instanz gemessen wurde (12.10.2026) –, damit die Seite ohne Instanz
  * zu sehen und zu bedienen ist. Seit A3 merkt sich die Demo auch, was geschrieben wird (Anlegen,
  * Einrichten, Termine), bis die Seite neu geladen wird. `?demo=leer` zeigt „keine Gruppen",
- * `?demo=fehler` den Fehlerfall, `?demo=admin` einen Gruppen-Admin (verschieben, endgültig löschen). Wird nie mitgebaut (siehe `main.tsx`).
+ * `?demo=fehler` den Fehlerfall, `?demo=einrichten` die Erweiterung vor dem Einrichten (keine Formular-Adresse), `?demo=admin` einen Gruppen-Admin (verschieben, endgültig löschen). Wird nie mitgebaut (siehe `main.tsx`).
  *
  * Die Beschreibungen entstehen mit `einstellungenAlsText` – wie im Betrieb.
  */
@@ -213,6 +213,7 @@ export function demoStarten(fall: string): void {
   // ChurchTools gibt der Erweiterung einen Behälter mit fester Höhe (gemessen 07.10.2026); auf der nackten
   // Entwicklerseite übernimmt das `body`, sonst hätte die App die Höhe 0.
   document.body.style.cssText = 'margin: 0; height: 100vh;';
+  if (fall === 'einrichten') DATEN.werte = [];
   const gruppen = demoGruppen();
   const antwort = (daten: unknown, status = 200) =>
     Promise.resolve(
@@ -465,6 +466,60 @@ export function demoStarten(fall: string): void {
       const id = Number(r[2]);
       return antwort({ data: { appointment: { base: TERMINE.find((t) => t.id === id) } } });
     }
+    // Datenbereich der Erweiterung (A6-2): die Einstellungen der Gemeinde. Vorbelegt mit einer Formular-
+    // Adresse, damit die Startseite zu sehen ist; `?demo=einrichten` zeigt den Zustand davor.
+    // Stammdaten für die Vorgaben neuer Personen (gemessen 14.10.2026 in der Test-Instanz).
+    if (pfad === '/statuses')
+      return antwort({
+        data: [
+          { id: 2, name: 'status.potential', nameTranslated: 'Interessent', isMember: false },
+          { id: 3, name: 'status.member', nameTranslated: 'Mitglied', isMember: true },
+        ],
+      });
+    if (pfad === '/campuses') return antwort({ data: [{ id: 0, name: 'Zentrale' }] });
+    if (pfad === '/departments') return antwort({ data: [{ id: 1, name: 'Gemeindeliste' }] });
+    if (pfad === '/config')
+      return antwort({
+        data: { access_control_allow_origins: '["https://anmeldung.beispiel.de"]' },
+      });
+    if (pfad === '/custommodules') return antwort({ data: [{ id: 7, shorty: 'anmeldungen' }] });
+    if (pfad === '/custommodules/7/customdatacategories') {
+      if (m === 'POST') {
+        DATEN.kategorien.push({ id: 50, shorty: String(body.shorty) });
+        return antwort({ data: { id: 50 } }, 201);
+      }
+      return antwort({ data: DATEN.kategorien });
+    }
+    r = /^\/custommodules\/7\/customdatacategories\/50\/customdatavalues(?:\/(\d+))?$/.exec(pfad);
+    if (r) {
+      if (m === 'POST')
+        DATEN.werte.push({ id: naechste++, dataCategoryId: 50, value: String(body.value) });
+      if (m === 'PUT') {
+        const w = DATEN.werte.find((x) => x.id === Number(r[1]));
+        if (w) w.value = String(body.value);
+      }
+      return antwort({ data: m === 'GET' ? DATEN.werte : {} }, m === 'POST' ? 201 : 200);
+    }
     return antwort({}, 404);
   };
 }
+
+/** Was die Demo im Datenbereich der Erweiterung hält (`?demo=einrichten`: noch nichts). */
+const DATEN: {
+  kategorien: { id: number; shorty: string }[];
+  werte: { id: number; dataCategoryId: number; value: string }[];
+} = {
+  kategorien: [{ id: 50, shorty: 'anmeldungen-einstellungen' }],
+  werte: [
+    {
+      id: 1,
+      dataCategoryId: 50,
+      value: JSON.stringify({
+        art: 'anmeldungen-einstellungen',
+        fassung: 1,
+        neuePersonen: { statusId: 2, campusId: 0, departmentId: 1 },
+        formularAdresse: 'https://anmeldung.beispiel.de/',
+      }),
+    },
+  ],
+};

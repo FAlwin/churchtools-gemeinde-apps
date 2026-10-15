@@ -1,7 +1,5 @@
 import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import {
-  alterAm,
-  geburtsdatumAn,
   nurText,
   pruefeAntworten,
   type Antwort,
@@ -10,6 +8,7 @@ import {
   type OeffentlicheEinstellungen,
 } from '@shared/anmeldung/formular';
 import { amEnde } from '@shared/anmeldung/baukasten';
+import { buchungAus, type PreisWahl } from '@shared/anmeldung/senden';
 import { berechnePreis, euroText, kannEtwasKosten, preisKurz } from '@shared/anmeldung/preis';
 import { SCHRIFT, leereAntworten, textAufFarbe } from './daten';
 import { titelbildGross } from '@shared/anmeldung/gestaltung';
@@ -73,6 +72,15 @@ function mitHinweis(text: string, knopf: ReactNode): ReactNode {
     </>
   );
 }
+
+/** Was nach dem Abschicken herauskam (A6-2): angemeldet – oder schon bekannt, dann per Mail bestätigen. */
+export type Abgeschickt = { art: 'angemeldet' } | { art: 'bestaetigen'; mail: string };
+
+/**
+ * **Echt abschicken** (öffentliches Formular, A6-2). Wirft bei einem Fehler einen `Error`, dessen Text die Person
+ * liest – die Eingaben bleiben stehen.
+ */
+export type Abschicken = (a: { antworten: Antworten; wahl: PreisWahl }) => Promise<Abgeschickt>;
 
 const WOCHENTAG = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 
@@ -343,7 +351,8 @@ function Symbol({ name }: { name: keyof typeof SYMBOLE }) {
 
 /**
  * Das ganze Formular. `vorschau`: mit Musterdaten, „Absenden“ zeigt nur, wie die Bestätigung aussähe. `probe`:
- * das öffentliche Formular, das noch nichts abschickt (A6-1) – sonst wie für Gäste.
+ * das öffentliche Formular als Trockenlauf („Extern öffnen und testen“) – sonst wie für Gäste, schickt aber nichts.
+ * Mit `onAbsenden` (öffentliches Formular, A6-2) wird wirklich angemeldet.
  */
 export function AnmeldeFormular({
   ansicht,
@@ -352,11 +361,14 @@ export function AnmeldeFormular({
   probe = false,
   start,
   baukasten,
+  onAbsenden,
 }: {
   ansicht: Ansicht;
   heute: string;
   vorschau?: boolean;
   probe?: boolean;
+  /** Nur im öffentlichen Formular: wirklich an ChurchTools schicken. Ohne → nur prüfen (Vorschau, Probelauf). */
+  onAbsenden?: Abschicken;
   /** Anfangswerte (Vorschau: `musterAntworten`). */
   start?: Antworten;
   /** Im Baukasten: Felder auswählen, ziehen, bearbeiten (siehe `BaukastenHaken`). */
@@ -369,7 +381,10 @@ export function AnmeldeFormular({
   const [option, setOption] = useState(0);
   const [extras, setExtras] = useState<boolean[]>(e.preis.extras.map(() => false));
   const [fehler, setFehler] = useState<string[]>([]);
-  const [fertig, setFertig] = useState(false);
+  const [fertig, setFertig] = useState<Abgeschickt | null>(null);
+  const [sendet, setSendet] = useState(false);
+  const [sendeFehler, setSendeFehler] = useState<string | null>(null);
+  const echt = !!onAbsenden && !vorschau && !probe && !baukasten;
 
   const sichtbar = (f: Feld) => f.zustand !== 'aus';
   // In der gespeicherten Reihenfolge – im Baukasten lässt sich jedes Feld verschieben, auch Name, E-Mail und
@@ -379,20 +394,10 @@ export function AnmeldeFormular({
   const preisFeld = e.formular.anmeldung.find((f) => f.typ === 'price' && sichtbar(f));
   const personFelder = e.formular.person.filter(sichtbar);
   const loeschtag = loeschTag(e);
-  const stichtag = (e.termin?.beginn ?? heute).slice(0, 10);
-  const mitGeburt = geburtsdatumAn(e.formular);
-
+  // Dieselbe Buchung wie beim Abschicken (`buchungAus`) – angezeigter und gespeicherter Betrag sind eine Regel.
   const preis = useMemo(
-    () =>
-      berechnePreis(e.preis, {
-        alter: antworten.personen.map((p) =>
-          mitGeburt && typeof p.birth === 'string' ? alterAm(p.birth, stichtag) : null,
-        ),
-        option,
-        angemeldetAm: heute,
-        extras,
-      }),
-    [e.preis, antworten.personen, option, extras, heute, stichtag, mitGeburt],
+    () => berechnePreis(e.preis, buchungAus(e, antworten, { option, extras }, heute)),
+    [e, antworten, option, extras, heute],
   );
   const kostet = kannEtwasKosten(e.preis);
 
@@ -461,11 +466,25 @@ export function AnmeldeFormular({
     baukasten ? <Fragment key={f.id}>{baukasten.feld(f, bereich, inhalt)}</Fragment> : inhalt;
   const personen = baukasten ? antworten.personen.slice(0, 1) : antworten.personen;
 
-  function absenden() {
-    if (baukasten) return;
+  async function absenden() {
+    if (baukasten || sendet) return;
     const offen = pruefeAntworten(e.formular, antworten);
     setFehler(offen);
-    if (offen.length === 0) setFertig(true);
+    if (offen.length > 0) return;
+    if (!echt || !onAbsenden) {
+      setFertig({ art: 'angemeldet' });
+      return;
+    }
+    setSendet(true);
+    setSendeFehler(null);
+    try {
+      setFertig(await onAbsenden({ antworten, wahl: { option, extras } }));
+    } catch (fehler) {
+      // Vorübergehend ist nicht endgültig: Die Eingaben bleiben stehen, ein zweiter Klick versucht es noch einmal.
+      setSendeFehler(fehler instanceof Error ? fehler.message : 'Das hat nicht geklappt.');
+    } finally {
+      setSendet(false);
+    }
   }
 
   const zeilen = preis.posten.filter((p) => p.betragCent !== null);
@@ -510,23 +529,39 @@ export function AnmeldeFormular({
         </aside>
         <div className={s.main}>
           {fertig ? (
-            <div className={`${s.sec} ${s.done}`}>
-              <h2>Danke für die Anmeldung!</h2>
-              <p>
-                Die Bestätigung kommt per E-Mail
-                {typeof antworten.anmeldung.mail === 'string'
-                  ? ` an ${antworten.anmeldung.mail}`
-                  : ''}
-                .
-              </p>
+            <div className={`${s.sec} ${s.done}`} role="status">
+              {fertig.art === 'bestaetigen' ? (
+                <>
+                  <h2>Fast geschafft!</h2>
+                  <p>
+                    Du bist bei der Gemeinde schon bekannt. Bitte bestätige die Anmeldung über den
+                    Link in der E-Mail{fertig.mail ? ` an ${fertig.mail}` : ''} – erst dann ist sie
+                    gültig.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2>Danke für die Anmeldung!</h2>
+                  <p>
+                    Die Bestätigung kommt per E-Mail
+                    {typeof antworten.anmeldung.mail === 'string'
+                      ? ` an ${antworten.anmeldung.mail}`
+                      : ''}
+                    .
+                  </p>
+                </>
+              )}
               {(vorschau || probe) && (
                 <p className={s.vorschauhinweis}>
                   {vorschau ? 'Vorschau' : 'Probelauf'} – abgeschickt wurde nichts.
                 </p>
               )}
-              <button type="button" className={s.addbtn} onClick={() => setFertig(false)}>
-                Zurück zum Formular
-              </button>
+              {/* Nach einer echten Anmeldung kein „Zurück“ – ein zweites Abschicken wäre eine zweite Anmeldung. */}
+              {!echt && (
+                <button type="button" className={s.addbtn} onClick={() => setFertig(null)}>
+                  Zurück zum Formular
+                </button>
+              )}
             </div>
           ) : (
             <form
@@ -534,7 +569,7 @@ export function AnmeldeFormular({
               noValidate
               onSubmit={(ev) => {
                 ev.preventDefault();
-                absenden();
+                void absenden();
               }}
             >
               <section className={s.sec}>
@@ -732,17 +767,20 @@ export function AnmeldeFormular({
                     Bitte die markierten Angaben ergänzen.
                   </p>
                 )}
-                <button type="submit" className={s.go}>
-                  Verbindlich anmelden
+                {sendeFehler && (
+                  <p className={s.warnline} role="alert">
+                    {sendeFehler}
+                  </p>
+                )}
+                <button type="submit" className={s.go} disabled={sendet} aria-busy={sendet}>
+                  {sendet ? 'Wird gesendet …' : 'Verbindlich anmelden'}
                 </button>
                 {vorschau && !baukasten && (
                   <p className={s.hintline}>
                     Vorschau mit Musterdaten – abgeschickt wird hier nichts.
                   </p>
                 )}
-                {probe && (
-                  <p className={s.hintline}>Probelauf – abgeschickt wird hier noch nichts.</p>
-                )}
+                {probe && <p className={s.hintline}>Probelauf – abgeschickt wird hier nichts.</p>}
               </section>
             </form>
           )}

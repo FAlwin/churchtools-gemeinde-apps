@@ -43,6 +43,13 @@ jobs:
           VITE_KEY: anmeldungen
           VITE_APP_VERSION: ${{ env.VERSION }}
 
+      # Das öffentliche Formular legt jede Gemeinde auf ihren EIGENEN Webspace (Alwin, 14.10.2026: Voraussetzung
+      # für die Erweiterung, keine fremde Domain). Deshalb als Paket am Release – entpacken und hochladen.
+      - name: Formular bauen und packen
+        run: |
+          npm run build -w formular
+          (cd formular/dist && zip -qr "../../anmeldungen/releases/anmeldungen-formular-${VERSION}.zip" .)
+
       - name: GitHub Release veröffentlichen
         uses: softprops/action-gh-release@v2
         with:
@@ -57,6 +64,13 @@ jobs:
             **Administration → Erweiterungen → Erweiterung hinzufügen** hochladen. **Kürzel: `anmeldungen`**
             (genau so – sonst lädt sie nicht), Name frei. Zum Aktualisieren beim Eintrag auf den Stift und die
             neue ZIP hochladen.
+
+            **Formular für Gäste:** `anmeldungen-formular-${{ env.VERSION }}.zip` entpacken und auf euren eigenen
+            Webspace legen (z. B. Subdomain `anmeldung.eure-gemeinde.de`), die Adresse in ChurchTools als erlaubte
+            Herkunft eintragen und in der Erweiterung unter „Einstellungen“ angeben. Ohne das ist die Erweiterung
+            nicht nutzbar. Beim Aktualisieren den Inhalt ersetzen.
             Anleitung: https://github.com/FAlwin/churchtools-gemeinde-apps/blob/main/docs/betrieb/ANMELDUNGEN.md
-          files: anmeldungen/releases/anmeldungen-${{ env.VERSION }}.zip
+          files: |
+            anmeldungen/releases/anmeldungen-${{ env.VERSION }}.zip
+            anmeldungen/releases/anmeldungen-formular-${{ env.VERSION }}.zip
           fail_on_unmatched_files: true

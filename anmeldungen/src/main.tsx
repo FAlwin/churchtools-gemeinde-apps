@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { verbindungEinrichten } from '@ui/ct/verbindung';
+import { folgeChurchToolsThema } from '@ui/design/thema';
 import { App } from './App';
 import './main.scss';
 
@@ -9,6 +10,8 @@ import './main.scss';
  * legt die App in den Bereich unter der ChurchTools-Leiste (`ui/design/_grundregeln.scss`).
  */
 document.documentElement.classList.add('ct-extension');
+// Hell oder dunkel, wie in ChurchTools eingestellt (14.10.2026, `docs/entwicklung/dunkelmodus.md`).
+folgeChurchToolsThema();
 
 // Ohne Recht: anlegen, einrichten, Kalender (A3) – deshalb allgemein, mit dem Weg zum Recht.
 verbindungEinrichten({

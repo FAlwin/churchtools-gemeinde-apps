@@ -2,7 +2,7 @@
   "name": "@worship/formular",
   "version": "0.1.0",
   "private": true,
-  "description": "Öffentliches Anmeldeformular und „Deine Anmeldung“ (#474) – statische Seite, zentral für alle Gemeinden bereitgestellt (GitHub Pages). Spricht ChurchTools direkt an, ohne Server.",
+  "description": "Öffentliches Anmeldeformular und „Deine Anmeldung“ (#474) – statische Seite, die jede Gemeinde auf ihren eigenen Webspace legt (Paket am Release). Spricht ChurchTools direkt an, ohne Server.",
   "type": "module",
   "scripts": {
     "dev": "vite",

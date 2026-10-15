@@ -10,7 +10,8 @@ import { datumText } from './anzeige';
 import { tagAusIso } from '@shared/ct/zeit';
 import { ladeStart } from './start';
 import { ladeUebersicht, type Uebersicht } from './veranstaltungen';
-import { anlegenMoeglich } from './einrichten';
+import { anlegenMoeglich, istGruppenAdmin } from './einrichten';
+import { formularAdresse } from './gemeinde';
 
 vi.mock('./start', () => ({ ladeStart: vi.fn() }));
 // Die Veranstaltungsseite als Attrappe: Ein Knopf meldet „archiviert“ – wie „Verwalten → Löschen“.
@@ -35,6 +36,9 @@ vi.mock('./einrichten', async (original) => ({
   anlegenMoeglich: vi.fn(),
   istGruppenAdmin: vi.fn().mockResolvedValue(false),
 }));
+vi.mock('./gemeinde', () => ({ formularAdresse: vi.fn() }));
+const adresse = vi.mocked(formularAdresse);
+const admin = vi.mocked(istGruppenAdmin);
 const laden = vi.mocked(ladeStart);
 const ladenUebersicht = vi.mocked(ladeUebersicht);
 const anlegen = vi.mocked(anlegenMoeglich);
@@ -45,6 +49,11 @@ const LEER: Uebersicht = {
   offen: new Map(),
   verborgen: new Map(),
 };
+
+beforeEach(() => {
+  adresse.mockResolvedValue('https://anmeldung.beispiel.de/');
+  admin.mockResolvedValue(false);
+});
 
 describe('App der Anmeldungen (#474, #480)', () => {
   beforeEach(() => anlegen.mockResolvedValue({ artId: 5, teamIds: [] }));
@@ -152,6 +161,34 @@ describe('Anlegen auf der Startseite (A3, #486)', () => {
     render(<App />);
     expect(await screen.findByText(/fehlt die Gruppenart „Anmeldung“/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Neue Veranstaltung/ })).toBeNull();
+  });
+});
+
+describe('Erst einrichten: ohne Adresse der Formular-Seite (A6-2)', () => {
+  const START = {
+    vorname: 'Alwin',
+    gemeinde: null,
+    gruppen: [{ id: 7, name: 'Technik', leitung: true }],
+  };
+  beforeEach(() => {
+    laden.mockResolvedValue(START);
+    ladenUebersicht.mockResolvedValue(LEER);
+    anlegen.mockResolvedValue({ artId: 5, teamIds: [7] });
+    adresse.mockResolvedValue(null);
+  });
+  it('Admin: Anleitung und „Einstellungen“; keine Übersicht, kein Anlegen', async () => {
+    admin.mockResolvedValue(true);
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: 'Erst einrichten' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Einstellungen öffnen' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Einstellungen$/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Neue Veranstaltung/ })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Veranstaltungen' })).toBeNull();
+  });
+  it('ohne Admin-Recht: nur der Hinweis, wer es einrichten muss', async () => {
+    render(<App />);
+    expect(await screen.findByText(/Ein Gruppen-Admin muss zuerst die Adresse/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Einstellungen/ })).toBeNull();
   });
 });
 

@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import { geburtsdatumAn, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import { ApiError } from '@ui/ct/fehler';
+import { ZEITRAUM_ZU } from '@shared/anmeldung/vorbereiten';
 import * as E from './einrichten';
+import * as G from './gemeinde';
 import { VeranstaltungSeite } from './VeranstaltungSeite';
 import { NeueVeranstaltung } from './NeueVeranstaltung';
 
@@ -17,6 +19,11 @@ vi.mock('./einrichten', async (original) => {
     anmeldungVon: vi.fn(),
     darfVeranstaltungEinrichten: vi.fn(),
     freigeben: vi.fn(),
+    leitungsKandidaten: vi.fn(),
+    meineId: vi.fn(),
+    stammdaten: vi.fn(),
+    anmeldenVorbereiten: vi.fn(),
+    anmeldeBedingungen: vi.fn(),
     aendereEinstellungen: vi.fn(),
     speichereAnmeldung: vi.fn(),
     kalenderListe: vi.fn(),
@@ -34,6 +41,8 @@ vi.mock('./einrichten', async (original) => {
   };
 });
 const m = vi.mocked(E);
+vi.mock('./gemeinde', () => ({ gemeindeVorgaben: vi.fn() }));
+const gm = vi.mocked(G);
 // „Neue Veranstaltung“ legt danach die Spalten an (A5) – hier nicht Gegenstand.
 vi.mock('./formularFelder', () => ({ felderAnlegen: vi.fn().mockResolvedValue(undefined) }));
 
@@ -59,12 +68,34 @@ function stelle(
   m.istGruppenAdmin.mockResolvedValue(false);
 }
 
-function zeigen() {
-  render(<VeranstaltungSeite id={91} zeitzone={ZONE} onZurueck={() => {}} />);
+function zeigen(formularAdresse: string | null = 'https://anmeldung.beispiel.de/') {
+  render(
+    <VeranstaltungSeite
+      id={91}
+      zeitzone={ZONE}
+      formularAdresse={formularAdresse}
+      onZurueck={() => {}}
+    />,
+  );
 }
 
+const STAMM = {
+  status: [{ id: 2, name: 'status.potential', nameTranslated: 'Interessent', isMember: false }],
+  standorte: [{ id: 0, name: 'Zentrale' }],
+  bereiche: [{ id: 1, name: 'Gemeindeliste' }],
+};
 beforeEach(() => {
   vi.stubGlobal('window', Object.assign(window, { settings: { base_url: 'https://ct.test/' } }));
+  // Freigeben (A6-2): Leitung, Vorgaben für neue Personen, Prüfung danach.
+  m.leitungsKandidaten.mockResolvedValue([
+    { personId: 1, name: 'Alwin Friesen', leitung: false },
+    { personId: 2, name: 'Bea Team', leitung: false },
+  ]);
+  m.meineId.mockResolvedValue(1);
+  m.stammdaten.mockResolvedValue(STAMM);
+  gm.gemeindeVorgaben.mockResolvedValue({ statusId: 2, campusId: 0, departmentId: 1 });
+  m.anmeldenVorbereiten.mockResolvedValue();
+  m.anmeldeBedingungen.mockResolvedValue([]);
 });
 
 describe('Veranstaltung laden scheitert – gemeinsamer Fehlerkasten (ui/erweiterung)', () => {
@@ -97,14 +128,81 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     expect(screen.queryByRole('button', { name: 'Freigeben' })).toBeNull();
   });
 
-  it('mit Recht: Entwurf freigeben (nach Rückfrage), danach neu geladen', async () => {
+  it('mit Recht: Entwurf freigeben (nach Rückfrage) – erst Leitung und Vorgaben, dann frei, dann neu geladen', async () => {
     stelle(true);
     m.freigeben.mockResolvedValue();
     zeigen();
     fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    // Wer freigibt, ist als Leitung vorgewählt; die Vorgaben stehen in Worten da.
+    expect(
+      (await screen.findByRole('button', { name: 'Alwin Friesen' })).getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(screen.getByText(/Interessent · Zentrale · Gemeindeliste/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Bea Team' }));
     fireEvent.click(screen.getByRole('button', { name: 'Jetzt freigeben' }));
+    await waitFor(() =>
+      expect(m.anmeldenVorbereiten).toHaveBeenCalledWith(91, [1, 2], {
+        statusId: 2,
+        campusId: 0,
+        departmentId: 1,
+      }),
+    );
     await waitFor(() => expect(m.freigeben).toHaveBeenCalledWith(91));
+    expect(m.anmeldenVorbereiten.mock.invocationCallOrder[0]).toBeLessThan(
+      m.freigeben.mock.invocationCallOrder[0],
+    );
     await waitFor(() => expect(m.kopfVon).toHaveBeenCalledTimes(2));
+  });
+
+  it('nimmt ChurchTools danach noch nicht an, sagt das Fenster, was fehlt', async () => {
+    stelle(true);
+    m.freigeben.mockResolvedValue();
+    m.anmeldeBedingungen.mockResolvedValue([
+      'Der Anmeldezeitraum hat noch nicht begonnen oder ist vorbei.',
+    ]);
+    zeigen();
+    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    await screen.findByRole('button', { name: 'Alwin Friesen' });
+    fireEvent.click(screen.getByRole('button', { name: 'Jetzt freigeben' }));
+    expect(await screen.findByText('Freigegeben – aber noch nicht offen')).toBeTruthy();
+    expect(screen.getByText(/Anmeldezeitraum hat noch nicht begonnen/)).toBeTruthy();
+  });
+
+  it('ohne vollständige Vorgaben für neue Personen: Hinweis, Freigeben gesperrt', async () => {
+    stelle(true);
+    gm.gemeindeVorgaben.mockResolvedValue({ statusId: 2 });
+    zeigen();
+    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    expect(
+      await screen.findByText(/legt ein Gruppen-Admin einmal für die Gemeinde fest/),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Jetzt freigeben' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+  });
+
+  it('ohne Adresse der Formular-Seite: Hinweis, Freigeben gesperrt', async () => {
+    stelle(true);
+    zeigen(null);
+    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    await screen.findByRole('button', { name: 'Alwin Friesen' });
+    expect(screen.getByText(/keine Adresse für das Anmeldeformular/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Jetzt freigeben' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+  });
+
+  it('ohne gewählte Leitung lässt sich nicht freigeben', async () => {
+    stelle(true);
+    zeigen();
+    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Alwin Friesen' }));
+    expect(screen.getByRole('button', { name: 'Jetzt freigeben' })).toHaveProperty(
+      'disabled',
+      true,
+    );
   });
 
   it('Freigabe scheitert → Meldung im Fenster, das Fenster bleibt offen', async () => {
@@ -112,6 +210,7 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     m.freigeben.mockRejectedValue(new E.NichtUebernommen('die Freigabe'));
     zeigen();
     fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    await screen.findByRole('button', { name: 'Alwin Friesen' });
     fireEvent.click(screen.getByRole('button', { name: 'Jetzt freigeben' }));
     expect(await screen.findByText(/ChurchTools hat die Freigabe nicht übernommen/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Jetzt freigeben' })).toBeTruthy();
@@ -143,7 +242,8 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
         beginn: '2026-11-15T12:00',
         ende: '2026-11-15T14:00',
         ort: 'Saal',
-        gruppeId: 91,
+        // Der Link beginnt mit der Formular-Seite der Gemeinde (A6-2), nicht mit einer festen Adresse.
+        link: 'https://anmeldung.beispiel.de/#ct.test/91',
         zeitzone: ZONE,
       }),
     );
@@ -203,15 +303,10 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     const termin = await screen.findByRole('region', { name: 'Termin' });
     fireEvent.click(within(termin).getByRole('button', { name: 'Bearbeiten' }));
     const link = await screen.findByRole('textbox', { name: 'Link zur Anmeldung' });
-    expect(link).toHaveProperty(
-      'value',
-      'https://falwin.github.io/churchtools-gemeinde-apps/#ct.test/91',
-    );
+    expect(link).toHaveProperty('value', 'https://anmeldung.beispiel.de/#ct.test/91');
     fireEvent.click(screen.getByRole('button', { name: 'Link kopieren' }));
     expect(await screen.findByRole('button', { name: 'Link kopiert' })).toBeTruthy();
-    expect(kopieren).toHaveBeenCalledWith(
-      'https://falwin.github.io/churchtools-gemeinde-apps/#ct.test/91',
-    );
+    expect(kopieren).toHaveBeenCalledWith('https://anmeldung.beispiel.de/#ct.test/91');
   });
 
   it('Kopieren verweigert → Link bleibt markiert, mit Hinweis zum Kopieren von Hand', async () => {
@@ -226,6 +321,119 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Link kopieren' }));
     expect(await screen.findByText(/kopiere ihn von Hand/)).toBeTruthy();
     expect(screen.getByRole('textbox', { name: 'Link zur Anmeldung' })).toBeTruthy();
+  });
+
+  it('freigegeben: Karte „Anmeldelink“ oben – Kopieren (kurz „Kopiert“), Öffnen, Teilen', async () => {
+    stelle(true, 1);
+    const kopieren = vi.fn().mockResolvedValue(undefined);
+    const teilen = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: kopieren },
+      configurable: true,
+    });
+    Object.defineProperty(navigator, 'share', { value: teilen, configurable: true });
+    // Auch wenn der Test scheitert: Das Teilen-Menü darf nicht in den nächsten Test durchsickern.
+    onTestFinished(() => void delete (navigator as { share?: unknown }).share);
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Anmeldelink' });
+    const LINK = 'https://anmeldung.beispiel.de/#ct.test/91';
+    expect(await within(karte).findByRole('textbox', { name: 'Anmeldelink' })).toHaveProperty(
+      'value',
+      LINK,
+    );
+    expect(within(karte).getByRole('link', { name: 'Öffnen' }).getAttribute('href')).toBe(LINK);
+    vi.useFakeTimers();
+    try {
+      fireEvent.click(within(karte).getByRole('button', { name: 'Kopieren' }));
+      await act(async () => {});
+      expect(kopieren).toHaveBeenCalledWith(LINK);
+      expect(within(karte).getByRole('button', { name: 'Kopiert' })).toBeTruthy();
+      await act(async () => {
+        vi.advanceTimersByTime(1600);
+      });
+      expect(within(karte).getByRole('button', { name: 'Kopieren' })).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+    fireEvent.click(within(karte).getByRole('button', { name: 'Teilen' }));
+    expect(teilen).toHaveBeenCalledWith({ title: 'Gemeindeessen', url: LINK });
+  });
+
+  it('Anmeldelink: nicht im Entwurf, nicht ohne Formular-Adresse; ohne Teilen-Menü kein „Teilen“', async () => {
+    stelle(true, 2);
+    zeigen();
+    await screen.findByRole('region', { name: 'Termin' });
+    expect(screen.queryByRole('region', { name: 'Anmeldelink' })).toBeNull();
+    cleanup();
+    stelle(true, 1);
+    zeigen(null);
+    await screen.findByRole('region', { name: 'Termin' });
+    expect(screen.queryByRole('region', { name: 'Anmeldelink' })).toBeNull();
+    cleanup();
+    stelle(true, 1);
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Anmeldelink' });
+    await within(karte).findByRole('button', { name: 'Kopieren' });
+    expect(within(karte).queryByRole('button', { name: 'Teilen' })).toBeNull();
+  });
+
+  it('Anmeldelink: nimmt ChurchTools nichts an → kein Link, was fehlt, „Jetzt einrichten“ öffnet das Freigeben', async () => {
+    stelle(true, 1);
+    m.anmeldeBedingungen.mockResolvedValue(['Die Gruppe hat keine Leitung.']);
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Anmeldelink' });
+    expect(await within(karte).findByText('Die Gruppe hat keine Leitung.')).toBeTruthy();
+    expect(within(karte).queryByRole('textbox', { name: 'Anmeldelink' })).toBeNull();
+    expect(m.anmeldeBedingungen).toHaveBeenCalledWith(91);
+    fireEvent.click(within(karte).getByRole('button', { name: 'Jetzt einrichten' }));
+    expect(await screen.findByRole('button', { name: 'Jetzt freigeben' })).toBeTruthy();
+  });
+
+  it('Anmeldelink: nach „Jetzt einrichten“ prüft die Karte neu und zeigt den Link', async () => {
+    stelle(true, 1);
+    m.freigeben.mockResolvedValue();
+    // Erst gesperrt (Karte), danach nimmt ChurchTools an (Fenster nach dem Freigeben, Karte nach dem Neuladen).
+    m.anmeldeBedingungen.mockResolvedValueOnce(['Die Gruppe hat keine Leitung.']);
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Anmeldelink' });
+    fireEvent.click(await within(karte).findByRole('button', { name: 'Jetzt einrichten' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Jetzt freigeben' }));
+    await waitFor(() => expect(m.freigeben).toHaveBeenCalledWith(91));
+    expect(
+      await within(await screen.findByRole('region', { name: 'Anmeldelink' })).findByRole(
+        'textbox',
+        { name: 'Anmeldelink' },
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText('Die Gruppe hat keine Leitung.')).toBeNull();
+  });
+
+  it('Anmeldelink: ohne Recht kein „Jetzt einrichten“, sondern wer es kann', async () => {
+    stelle(false, 1);
+    m.anmeldeBedingungen.mockResolvedValue(['Die Gruppe hat keine Leitung.']);
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Anmeldelink' });
+    expect(await within(karte).findByText('Einrichten kann die Leitung der Gruppe.')).toBeTruthy();
+    expect(within(karte).queryByRole('button', { name: 'Jetzt einrichten' })).toBeNull();
+  });
+
+  it('Anmeldelink: fehlt nur der laufende Zeitraum → Link bleibt, mit Hinweis', async () => {
+    stelle(true, 1);
+    m.anmeldeBedingungen.mockResolvedValue([ZEITRAUM_ZU]);
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Anmeldelink' });
+    expect(await within(karte).findByRole('textbox', { name: 'Anmeldelink' })).toBeTruthy();
+    expect(within(karte).getByText(/funktioniert, sobald er beginnt/)).toBeTruthy();
+    expect(within(karte).queryByRole('alert')).toBeNull();
+  });
+
+  it('Anmeldelink: Prüfung scheitert vorübergehend → Link bleibt (nicht verstecken), mit Hinweis', async () => {
+    stelle(true, 1);
+    m.anmeldeBedingungen.mockRejectedValue(new ApiError(503, 'kurz weg'));
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Anmeldelink' });
+    expect(await within(karte).findByRole('textbox', { name: 'Anmeldelink' })).toBeTruthy();
+    expect(within(karte).getByText(/ließ sich gerade nicht prüfen/)).toBeTruthy();
   });
 
   it('Anmeldung: Beginn 0:00 und Schluss 23:59 in Ortszeit, als UTC gespeichert', async () => {

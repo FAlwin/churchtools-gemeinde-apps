@@ -12,7 +12,8 @@ Die Werte wurden von Screenshots der App abgelesen (Entscheidung Alwin anhand de
 
 ## Farben – nur über Tokens
 
-Einzige Quelle: `ui/design/_variables.scss` (Light = `:root`, Dark = `html[data-theme='dark']`).
+Einzige Quelle: `ui/design/_variables.scss` (Light = `:root`, Dark = `html[data-theme='dark']`, dunkel wie
+ChurchTools = `html[data-theme='dark'][data-dunkel='churchtools']`).
 **Einzige Ausnahme: `--sat`** (Safe-Area oben) wird in JS gemessen – siehe Tabelle unten und die Regel
 am Ende dieses Dokuments.
 **Keine rohen Hex-/rgba-Werte in Komponenten** (Ausnahmen: reine Schatten, Overlays, `#fff` auf farbigen Flächen).
@@ -83,6 +84,10 @@ nutzt bewusst Monospace (`'JetBrains Mono', monospace`) für die Roh-Bearbeitung
 Hell/Dunkel/Auto über `useSettings` → `data-theme` auf `<html>`. Komponenten dürfen sich
 **nicht** selbst um Dark Mode kümmern – die Tokens schalten um. Falls doch nötig:
 `:global(html[data-theme='dark'])` nur als letzte Option.
+
+**Dunkel wie ChurchTools** (seit 14.10.2026, bisher nur in den Anmeldungen): eigener Farbblock
+`html[data-theme='dark'][data-dunkel='churchtools']`, umgeschaltet nach der ChurchTools-Wahl
+(`ui/design/thema.ts`). Wie eine App umsteigt: [dunkelmodus.md](dunkelmodus.md).
 
 ## Abstand nach oben (Safe Area) – verbindlich
 

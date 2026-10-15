@@ -11,11 +11,11 @@ selbst ändern oder absagen. **Alles liegt in ChurchTools** – es gibt keinen e
 
 Sie besteht aus zwei Teilen:
 
-|              | **Erweiterung** (für das Team)              | **Formular** (für Teilnehmende)                                 |
-| ------------ | ------------------------------------------- | --------------------------------------------------------------- |
-| Wo           | Menüpunkt in ChurchTools                    | eine Adresse für alle Gemeinden (GitHub Pages des Projekts)     |
-| Anmelden     | Wer in ChurchTools angemeldet ist, ist drin | ohne Konto; ändern und absagen über den Link in der Bestätigung |
-| Installieren | ZIP hochladen (unten)                       | nichts – ab A6: eine Adresse als erlaubte Herkunft eintragen    |
+|              | **Erweiterung** (für das Team)              | **Formular** (für Teilnehmende)                                  |
+| ------------ | ------------------------------------------- | ---------------------------------------------------------------- |
+| Wo           | Menüpunkt in ChurchTools                    | eigene Adresse der Gemeinde (z. B. `anmeldung.eure-gemeinde.de`) |
+| Anmelden     | Wer in ChurchTools angemeldet ist, ist drin | ohne Konto; ändern und absagen über den Link in der Bestätigung  |
+| Installieren | ZIP hochladen (unten)                       | Formular-Paket auf den eigenen Webspace legen (unten)            |
 
 ## Installieren
 
@@ -32,6 +32,28 @@ Sie besteht aus zwei Teilen:
 4. **Speichern.**
 
 **Aktualisieren:** beim Eintrag auf den Stift und die neue ZIP hochladen, sonst nichts ändern.
+
+### Das Formular für Gäste (Voraussetzung)
+
+Gäste ohne Konto können Seiten von Erweiterungen nicht öffnen (gemessen: ChurchTools zeigt ihnen die
+Login-Seite, auch für die Dateien der Erweiterung, und es gibt kein Recht für nicht angemeldete Besucher).
+Das Formular ist deshalb eine kleine Seite **auf eurem eigenen Webspace** – ohne Server-Logik, sie spricht
+direkt mit eurem ChurchTools. **Ohne sie ist die Erweiterung nicht nutzbar** (Alwin, 14.10.2026); die
+Startseite zeigt bis dahin nur „Erst einrichten“.
+
+1. Beim Anbieter eurer Website eine Subdomain anlegen, z. B. `anmeldung.eure-gemeinde.de` (mit HTTPS).
+2. Am Release die Datei **`anmeldungen-formular-v….zip`** herunterladen, **entpacken** und den Inhalt
+   (`index.html`, Ordner `assets`) in den Ordner der Subdomain hochladen. Aktualisieren: Inhalt ersetzen.
+3. In ChurchTools die Adresse als **erlaubte Herkunft** eintragen (Einstellung
+   `access_control_allow_origins`, z. B. `https://anmeldung.eure-gemeinde.de`) – sonst blockt der Browser
+   jede Anfrage des Formulars. Das gibt keine Daten frei, es erlaubt nur dieser Seite, die Schnittstellen zu
+   nutzen, die ChurchTools für Gäste ohnehin hat.
+4. In der Erweiterung **„Einstellungen“** (nur Gruppen-Admins): die Adresse eintragen. Die Erweiterung prüft,
+   ob die Seite antwortet und ob sie als erlaubte Herkunft eingetragen ist.
+
+Jeder Link zu einer Anmeldung lautet dann `https://anmeldung.eure-gemeinde.de/#eure-instanz.church.tools/<Nummer>`
+– hinter `#` stehen Instanz und Gruppe. Damit Veranstalter die Adresse bekommen, brauchen sie das Recht, die
+Kategorie „Einstellungen der Anmeldungen“ zu **sehen**.
 
 ## In ChurchTools einrichten
 
@@ -83,6 +105,25 @@ Status – wer eine Veranstaltung einrichten darf, darf sie also auch freigeben.
 **Freigeben macht die Anmeldung für Gäste lesbar:** Die Erweiterung stellt die Gruppe dabei auf „öffentlich“
 (`visibility`). Nur so kann das Formular sie ohne Login lesen. In einer öffentlichen Liste taucht sie dadurch
 nicht auf – gefunden wird sie nur über ihren Link.
+
+**Freigeben richtet das Anmelden ein** (A6-2): ChurchTools nimmt eine Anmeldung erst an, wenn die Gruppe eine
+**Leitung** hat und feststeht, welchen **Status, Standort und Bereich** neue Personen bekommen. Beim Freigeben
+wählt man die Leitung (Leute aus dem Team; wer freigibt, ist vorgewählt) – sie bekommt in dieser Gruppe die Rolle
+„Leiter“, sieht die Anmeldungen auch direkt in ChurchTools und ist dort Ansprechpartner. Danach fragt die
+Erweiterung ChurchTools wie ein Gast, ob Anmeldungen angenommen werden, und sagt sonst, was fehlt.
+
+**Einstellungen der Gemeinde** (Startseite → „Einstellungen“, nur Gruppen-Admins): Status, Standort und Bereich
+für neue Personen – einmal für alle Veranstaltungen. Ohne gespeicherte Einstellung gilt der Vorschlag
+„Interessent“ und – wenn es nur einen gibt – der einzige Standort und Bereich. Gespeichert im Datenbereich der
+Erweiterung (Kategorie „Einstellungen der Anmeldungen“, beim ersten Speichern angelegt). Damit Veranstalter die
+gespeicherte Wahl beim Freigeben bekommen, brauchen sie in ChurchTools das Recht, diese Kategorie zu **sehen**;
+ohne das gilt für sie der Vorschlag.
+
+**Wer bei einer Anmeldung Mitglied wird** (Alwin, 14.10.2026, „Variante A“): genau die Personen unter „Wer
+nimmt teil?“. Name der Kontaktperson („Angemeldet von“), Telefon, Bemerkungen, Betrag, Aufschlüsselung, Auswahl
+und Extras stehen als Felder bei der **ersten** Person; alle bekommen die E-Mail-Adresse der Kontaktperson. Bei
+„Nur Kinder“ belegen Eltern so keinen Platz. Ist jemand schon bekannt (Name und Adresse), schickt ChurchTools
+eine Mail zum Bestätigen – erst danach gilt die Anmeldung.
 
 Fehlt Schritt 3, zeigt die Startseite bei der Gruppe „Untergruppen für dich nicht freigegeben“ statt die
 Veranstaltungen stillschweigend wegzulassen.
@@ -187,5 +228,5 @@ mitarbeiten (z. B. über den Status oder global über die Gruppen).
   `http://localhost:5176/ccm/anmeldungen/?demo` (`?demo=leer`, `?demo=fehler` für die Sonderfälle).
 - Release: Tag `anmeldung-vX.Y.Z` (Workflow `anmeldungen-release.yml`, **nie „latest"** – sonst sähen
   die Musik-Apps einen falschen Update-Hinweis).
-- Formular veröffentlichen: Workflow `formular-pages.yml`, vorerst nur von Hand; GitHub Pages muss dafür in
-  den Repo-Einstellungen eingeschaltet sein.
+- Formular: `npm run dev -w formular` (Port 5177; die Test-Instanz erlaubt `http://localhost:5177`). Am Release
+  hängt es als `anmeldungen-formular-v….zip` – jede Gemeinde legt es auf ihren eigenen Webspace.

@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
-import { Sheet } from '@ui/fenster/Sheet';
 import { ctBasis } from '@ui/ct/basis';
 import { tagAusIso } from '@shared/ct/zeit';
 import { geburtsdatumAn, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
-import { ortszeitAus } from '@shared/anmeldung/termin';
+import { anmeldeLink, ortszeitAus } from '@shared/anmeldung/termin';
 import { kannEtwasKosten, wozuGeburtsdatum } from '@shared/anmeldung/preis';
 import { ibanText, verwendungszweck } from '@shared/anmeldung/bezahlung';
 import type { MeineGruppe } from '@shared/ct/gruppen';
@@ -16,7 +15,6 @@ import {
   wiederherstellen,
   darfVeranstaltungEinrichten,
   einstellungenVon,
-  freigeben,
   kopfVon,
   type AnmeldeEinstellungen,
 } from './einrichten';
@@ -29,6 +27,8 @@ import {
 } from './Bearbeiten';
 import { PreisFensterZeigen, PreiseKarte, ProbeRechnen, type PreisFenster } from './Preise';
 import { VerwaltenFenster } from './Verwalten';
+import { FreigebenFenster } from './FreigebenFenster';
+import { AnmeldeLinkKarte } from './AnmeldeLink';
 import { Baukasten } from './Baukasten';
 import { Segment } from '@ui/bedienung/Segment';
 import type { Aenderung } from './Rueckgaengig';
@@ -118,6 +118,7 @@ export function VeranstaltungSeite({
   reiter = 'veranstaltung',
   onReiter = () => {},
   gemeinde = null,
+  formularAdresse = null,
   zeitzone,
   teams = [],
   onZurueck,
@@ -128,6 +129,8 @@ export function VeranstaltungSeite({
   onReiter?: (r: Reiter) => void;
   /** Gemeindename für den Kopf des Formulars (Vorschau). */
   gemeinde?: string | null;
+  /** Adresse der Formular-Seite der Gemeinde (Einstellungen) – ohne sie gibt es keinen Link (A6-2). */
+  formularAdresse?: string | null;
   zeitzone: string;
   /** Die eigenen Gruppen – Ziele für „In ein anderes Team“. */
   teams?: MeineGruppe[];
@@ -141,8 +144,6 @@ export function VeranstaltungSeite({
   const [daten, setDaten] = useState<Daten | null>(null);
   const [fehler, setFehler] = useState<Fehlermeldung | null>(null);
   const [fenster, setFenster] = useState<Fenster>(null);
-  const [freigabeFehler, setFreigabeFehler] = useState<string | null>(null);
-  const [arbeitet, setArbeitet] = useState(false);
 
   const laden = useCallback(() => {
     setFehler(null);
@@ -248,6 +249,16 @@ export function VeranstaltungSeite({
         <p className={v.hinweis}>
           Einrichten und freigeben kann die Leitung der Gruppe. Du kannst alles ansehen.
         </p>
+      )}
+      {/* Erst freigegeben nimmt das Formular etwas an – vorher gibt es keinen Link (14.10.2026). */}
+      {!entwurf && formularAdresse && (
+        <AnmeldeLinkKarte
+          id={id}
+          link={anmeldeLink(formularAdresse, ctBasis(), id)}
+          titel={daten.name}
+          stand={daten}
+          onEinrichten={darf ? () => setFenster('freigeben') : undefined}
+        />
       )}
 
       <Segment<Reiter>
@@ -379,6 +390,7 @@ export function VeranstaltungSeite({
           name={daten.name}
           termin={e.termin}
           zeitzone={zeitzone}
+          formularAdresse={formularAdresse}
           onClose={() => setFenster(null)}
           onGespeichert={gespeichert('Termin gespeichert.')}
         />
@@ -451,41 +463,21 @@ export function VeranstaltungSeite({
         />
       )}
       {fenster === 'freigeben' && (
-        <Sheet title="Freigeben?" onClose={() => setFenster(null)}>
-          <p className={f.hinweis}>
-            Danach können sich Gäste anmelden – sobald der Anmeldezeitraum begonnen hat
-            {a.ab ? ` (${zeit(a.ab)})` : ''}.{!t && ' Es ist noch kein Termin gewählt.'}
-            {!a.ab &&
-              ' Es ist noch kein Anmeldebeginn gesetzt – ohne ihn nimmt ChurchTools nichts an.'}
-            {kostet && !b.iban && ' Es gibt Preise, aber noch keine Bankverbindung.'}
-          </p>
-          {freigabeFehler && (
-            <p className={f.fehler} role="alert">
-              {freigabeFehler}
+        <FreigebenFenster
+          id={id}
+          formularAdresse={formularAdresse}
+          hinweis={
+            <p className={f.hinweis}>
+              Danach können sich Gäste anmelden – sobald der Anmeldezeitraum begonnen hat
+              {a.ab ? ` (${zeit(a.ab)})` : ''}.{!t && ' Es ist noch kein Termin gewählt.'}
+              {!a.ab &&
+                ' Es ist noch kein Anmeldebeginn gesetzt – ohne ihn nimmt ChurchTools nichts an.'}
+              {kostet && !b.iban && ' Es gibt Preise, aber noch keine Bankverbindung.'}
             </p>
-          )}
-          <button
-            type="button"
-            className={f.knopf}
-            disabled={arbeitet}
-            onClick={async () => {
-              setArbeitet(true);
-              setFreigabeFehler(null);
-              try {
-                await freigeben(id);
-                setArbeitet(false);
-                gespeichert(
-                  'Freigegeben – Gäste können sich anmelden, sobald der Zeitraum läuft.',
-                )();
-              } catch (err) {
-                setFreigabeFehler(fehlerMeldung(err).text);
-                setArbeitet(false);
-              }
-            }}
-          >
-            {arbeitet ? 'Wird freigegeben …' : 'Jetzt freigeben'}
-          </button>
-        </Sheet>
+          }
+          onClose={() => setFenster(null)}
+          onFreigegeben={(text) => gespeichert(text)()}
+        />
       )}
     </div>
   );

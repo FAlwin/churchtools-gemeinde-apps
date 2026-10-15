@@ -10,6 +10,7 @@
 import { ZodError } from 'zod';
 import { ctAlleSeiten, ctAnfrage, ctBasis, ctDaten } from '@ui/ct/verbindung';
 import { ApiError } from '@ui/ct/fehler';
+import { angemeldeteId } from '@ui/ct/ich';
 import {
   SYSTEMFELDER,
   einstellungenAlsText,
@@ -33,8 +34,14 @@ import {
 import { LOGO_KENNUNG, belegungAus, istLogoGruppe } from '@shared/anmeldung/uebersicht';
 import { felderNeuZuordnen, systemfeldAnlage } from '@shared/anmeldung/felder';
 import { neueEinstellungen, type Vorlage } from '@shared/anmeldung/vorlagen';
-import { anmeldeLink, utcAus, type CtTermin } from '@shared/anmeldung/termin';
+import { utcAus, type CtTermin } from '@shared/anmeldung/termin';
 import { darfAnlegen, darfEinrichten, darfVerschiebenUndLoeschen } from '@shared/anmeldung/rechte';
+import {
+  fehlendeBedingungen,
+  type NeuePersonVorgaben,
+  type Stammdaten,
+  type Stammdatum,
+} from '@shared/anmeldung/vorbereiten';
 
 /** ChurchTools hat geantwortet, aber nicht übernommen, was geschickt wurde. */
 export class NichtUebernommen extends ApiError {
@@ -62,6 +69,11 @@ interface GruppeRoh {
     signUpClosingDate?: string | null;
     emailVerificationMode?: string;
     visibility?: string;
+    newMember?: {
+      statusId?: number | null;
+      campusId?: number | null;
+      departmentId?: number | null;
+    };
   };
 }
 
@@ -365,9 +377,16 @@ export async function einstellungenVon(id: number): Promise<OeffentlicheEinstell
   throw new ApiError(422, 'Die Einstellungen dieser Veranstaltung lassen sich nicht lesen.');
 }
 
-async function systemfelderAnlegen(id: number): Promise<Record<string, number>> {
-  const ctFelder: Record<string, number> = {};
-  for (const f of SYSTEMFELDER) {
+/**
+ * Legt die Systemfelder an, die noch fehlen – beim Anlegen alle, beim Freigeben die neuen (A6-2: „Angemeldet von“
+ * gab es vorher nicht). Gibt alle Nummern zurück, vorhandene eingeschlossen.
+ */
+async function systemfelderAnlegen(
+  id: number,
+  vorhanden: Record<string, number> = {},
+): Promise<Record<string, number>> {
+  const ctFelder: Record<string, number> = { ...vorhanden };
+  for (const f of SYSTEMFELDER.filter((x) => vorhanden[x.id] === undefined)) {
     const neu = await ctAnfrage<{ data?: { id?: number } }>(`/groups/${id}/memberfields/group`, {
       method: 'POST',
       body: json(systemfeldAnlage(f)),
@@ -566,6 +585,139 @@ export async function anmeldungVon(id: number): Promise<AnmeldeEinstellungen> {
 /** Entwurf → aktiv. Ab jetzt sehen Gäste die Anmeldung (sobald der Zeitraum begonnen hat). */
 export async function freigeben(id: number): Promise<void> {
   await setzeStatus(id, STATUS.freigegeben);
+}
+
+// ── Anmelden vorbereiten (A6-2, #548) ──────────────────────────────────────────────────────────
+
+/** Status, Standorte, Bereiche der Gemeinde – zur Wahl der Vorgaben für neue Personen. */
+export async function stammdaten(): Promise<Stammdaten> {
+  const [status, standorte, bereiche] = await Promise.all([
+    ctDaten<Stammdatum[]>('/statuses'),
+    ctDaten<Stammdatum[]>('/campuses'),
+    ctDaten<Stammdatum[]>('/departments'),
+  ]);
+  return { status: status ?? [], standorte: standorte ?? [], bereiche: bereiche ?? [] };
+}
+
+/** Die angemeldete Person (`/whoami`, mit der Unterscheidung abgemeldet/vorübergehend aus `angemeldeteId`). */
+export async function meineId(): Promise<number> {
+  return angemeldeteId(await ctDaten<unknown>('/whoami'));
+}
+
+export interface LeitungsKandidat {
+  personId: number;
+  name: string;
+  /** Ist schon Leitung dieser Anmeldung. */
+  leitung: boolean;
+}
+
+interface MitgliedRoh {
+  personId?: number;
+  groupTypeRoleId?: number;
+  groupMemberStatus?: string;
+  person?: { title?: string; domainAttributes?: { firstName?: string; lastName?: string } };
+}
+
+const personName = (m: MitgliedRoh) => {
+  const d = m.person?.domainAttributes;
+  return (`${d?.firstName ?? ''} ${d?.lastName ?? ''}`.trim() || m.person?.title) ?? '';
+};
+
+/** Die Leiter-Rolle der Gruppenart (`type: 'leader'`, gemessen: „Anmeldung“ → 35). */
+async function leiterRolle(gruppenart: number): Promise<number> {
+  const rollen =
+    await ctDaten<{ id: number; groupTypeId: number; type?: string; isLeader?: boolean }[]>(
+      '/group/roles',
+    );
+  const r = rollen.find((x) => x.groupTypeId === gruppenart && (x.type === 'leader' || x.isLeader));
+  if (!r) throw new ApiError(422, 'Die Gruppenart dieser Veranstaltung hat keine Leiter-Rolle.');
+  return r.id;
+}
+
+/**
+ * **Wer Leitung werden kann** (Alwin, 14.10.2026: „beim Freigeben auswählen“) – die Mitglieder des Teams, dazu wer
+ * schon Leitung dieser Anmeldung ist. Wie viele man im Team sieht, entscheiden die Rechte in ChurchTools (gemessen
+ * A0: Teilnehmende sehen nur sich selbst).
+ */
+export async function leitungsKandidaten(id: number): Promise<LeitungsKandidat[]> {
+  const g = await gruppe(id);
+  const rolle = await leiterRolle(Number(g.information?.groupTypeId));
+  const team = await teamVon(id);
+  const [hier, imTeam] = await Promise.all([
+    ctAlleSeiten<MitgliedRoh>(`/groups/${id}/members`),
+    team ? ctAlleSeiten<MitgliedRoh>(`/groups/${team.id}/members`) : Promise.resolve([]),
+  ]);
+  const liste = new Map<number, LeitungsKandidat>();
+  for (const m of [...imTeam, ...hier]) {
+    if (typeof m.personId !== 'number') continue;
+    const leitung = hier.some((x) => x.personId === m.personId && x.groupTypeRoleId === rolle);
+    liste.set(m.personId, { personId: m.personId, name: personName(m), leitung });
+  }
+  return [...liste.values()].sort((a, b) => a.name.localeCompare(b.name, 'de'));
+}
+
+/**
+ * **Anmelden vorbereiten** – was ChurchTools vor der ersten Anmeldung braucht (gemessen 14.10.2026):
+ * 1. fehlende Systemfelder (z. B. „Angemeldet von“ bei älteren Veranstaltungen),
+ * 2. die gewählte Leitung (Rolle `leader`),
+ * 3. die Vorgaben für neue Personen – **flach** als `newPersonStatusId/CampusId/DepartmentId`
+ *    (`newMember: {…}` meldet 200 und speichert nichts).
+ * Jeder Schritt wird nachgelesen.
+ */
+export async function anmeldenVorbereiten(
+  id: number,
+  leitung: number[],
+  v: NeuePersonVorgaben,
+): Promise<void> {
+  if (leitung.length === 0)
+    throw new ApiError(422, 'Bitte mindestens eine Person als Leitung wählen.');
+  const e = await einstellungenVon(id);
+  if (SYSTEMFELDER.some((f) => e.ctFelder[f.id] === undefined))
+    await einstellungenSchreiben(id, { ...e, ctFelder: await systemfelderAnlegen(id, e.ctFelder) });
+
+  const g = await gruppe(id);
+  const rolle = await leiterRolle(Number(g.information?.groupTypeId));
+  for (const personId of leitung)
+    await ctAnfrage(`/groups/${id}/members/${personId}`, {
+      method: 'PUT',
+      body: json({ groupTypeRoleId: rolle, groupMemberStatus: 'active' }),
+    });
+  const mitglieder = await ctAlleSeiten<MitgliedRoh>(`/groups/${id}/members`);
+  if (
+    !leitung.every((p) => mitglieder.some((m) => m.personId === p && m.groupTypeRoleId === rolle))
+  )
+    throw new NichtUebernommen('die Leitung');
+
+  await ctAnfrage(`/groups/${id}`, {
+    method: 'PATCH',
+    body: json({
+      newPersonStatusId: v.statusId,
+      newPersonCampusId: v.campusId,
+      newPersonDepartmentId: v.departmentId,
+    }),
+  });
+  const n = (await gruppe(id)).settings?.newMember;
+  if (
+    n?.statusId !== v.statusId ||
+    n?.campusId !== v.campusId ||
+    n?.departmentId !== v.departmentId
+  )
+    throw new NichtUebernommen('die Vorgaben für neue Personen');
+}
+
+/**
+ * **Nimmt ChurchTools jetzt Anmeldungen an?** So, wie Gäste es sehen: `/publicgroups/{id}` ohne Login. Leer = ja.
+ * Antwortet ChurchTools nicht, kommt der Fehler hoch – „vorübergehend“ ist kein „alles fehlt“.
+ */
+export async function anmeldeBedingungen(id: number): Promise<string[]> {
+  const r = await fetch(`${ctBasis()}/api/publicgroups/${id}`, { credentials: 'omit' });
+  if (r.status === 401 || r.status === 403)
+    return [
+      'Die Veranstaltung ist für Gäste nicht lesbar (nicht freigegeben oder nicht öffentlich).',
+    ];
+  if (!r.ok) throw new ApiError(r.status, 'ChurchTools antwortet gerade nicht.');
+  const j = (await r.json()) as { data?: { signUpConditions?: Record<string, unknown> } };
+  return fehlendeBedingungen(j.data?.signUpConditions);
 }
 
 // ── Verwalten: umbenennen, Status, verschieben, Archiv, löschen (A4-Nachtrag) ───────────────────
@@ -769,7 +921,8 @@ export async function legeTerminAn(t: {
   beginn: string;
   ende: string;
   ort: string;
-  gruppeId: number;
+  /** Der Link zur Anmeldung (`anmeldeLink`) – `null`, solange die Gemeinde keine Formular-Seite hat. */
+  link: string | null;
   zeitzone: string;
 }): Promise<CtTermin> {
   const neu = await ctAnfrage<{ data?: CtTermin }>(`/calendars/${t.kalenderId}/appointments`, {
@@ -780,7 +933,7 @@ export async function legeTerminAn(t: {
       startDate: utcAus(t.beginn, t.zeitzone),
       endDate: utcAus(t.ende, t.zeitzone),
       isInternal: false,
-      link: anmeldeLink(ctBasis(), t.gruppeId),
+      ...(t.link ? { link: t.link } : {}),
       address: t.ort ? { meetingAt: t.ort } : null,
     }),
   });

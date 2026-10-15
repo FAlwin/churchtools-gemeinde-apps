@@ -7,7 +7,9 @@
  * fehlendem Recht übersetzt `fehlerAus` schon in `KeinSpeicherRecht` – „abgemeldet“ ist nur ein 401, bei
  * dem wirklich niemand mehr angemeldet ist.
  */
-import type { ModulPort } from '@shared/ct/modulDaten';
+import { modulSuchen, type ModulPort } from '@shared/ct/modulDaten';
+import { merkeVersprechen } from '@shared/ct/versprechenMerker';
+import { kuerzelAusBasis } from '../erweiterung/kuerzel';
 import type { EntwurfPort } from '@shared/dienstplan/entwuerfe';
 import { ApiError } from './fehler';
 import { ctAnfrage, ctDaten, KeinSpeicherRecht } from './verbindung';
@@ -39,4 +41,21 @@ export function entwurfPortFuer(kuerzel: () => string | null): EntwurfPort {
     istAbgemeldet: (e) => e instanceof ApiError && e.status === 401,
     jetzt: () => new Date().toISOString(),
   };
+}
+
+/**
+ * **Der Anschluss der Erweiterung, in der dieser Code gerade läuft** – Kürzel aus der eigenen Adresse
+ * (`/ccm/<kürzel>/`). Genutzt von den Anmeldungen (Einstellungen der Gemeinde, A6-2 #548).
+ */
+export const modulPort: ModulPort = modulPortFuer(() => kuerzelAusBasis(import.meta.env.BASE_URL));
+
+/** Die ID des eigenen Moduls – je Seite einmal gesucht; ein Fehlschlag wird nicht gemerkt. */
+const suche = merkeVersprechen<number>();
+export function modulId(): Promise<number> {
+  return suche.hole('modul', () => modulSuchen(modulPort, 'Die Erweiterung „Anmeldungen“'));
+}
+
+/** Nur für Tests. */
+export function _vergissModul(): void {
+  suche.vergiss();
 }

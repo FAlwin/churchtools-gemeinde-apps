@@ -1,7 +1,8 @@
 // ── Globale Design-Variablen – Look der ChurchTools-APP ─────────────
 // Einzige Quelle für Farben, Rundungen, Schriften, Breakpoints.
 // Komponenten importieren diese Datei, statt Werte zu duplizieren.
-// Theme-Umschaltung über [data-theme] auf <html>.
+// Theme-Umschaltung über [data-theme] auf <html>; dunkel wie ChurchTools zusätzlich mit
+// [data-dunkel='churchtools'] (`ui/design/thema.ts`, `docs/entwicklung/dunkelmodus.md`).
 //
 // Seit #393 (19.09.2026) folgt die App der ChurchTools-**App** (iOS/Android), nicht mehr dem
 // ChurchTools-Web: kräftigeres Blau, hellblaue Datumskacheln, Karten mit feinem Rand statt Schatten,
@@ -95,6 +96,55 @@ html[data-theme='dark'] {
   // (siehe hell). Halbdurchsichtig ergab die Leiste #1d2a36 statt #1e2a35 – dieselbe Naht.
   --nav-bg: #1e2a35;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+// ── Dunkel wie ChurchTools ───────────────────────────────────────────
+// Alwin, 14.10.2026: „so einen Dunkelmodus wie die ChurchTools-App“. Gilt, wo eine App sich dafür
+// anmeldet (`data-dunkel='churchtools'` auf <html>, gesetzt von `ui/design/thema.ts`) – bisher die
+// Erweiterung „Anmeldungen“. Der Dunkelmodus oben (`html[data-theme='dark']`) bleibt der der Musik-App,
+// bis sie umsteigt. Wie eine App umsteigt: `docs/entwicklung/dunkelmodus.md`.
+//
+// Die Werte sind die von ChurchTools selbst – gemessen in der Test-Instanz mit `body.dark` (14.10.2026),
+// ChurchTools nutzt die Tailwind-4-Farben:
+// Seite `--color-background-primary` (zinc-900), Karten/Leiste/Eingabefelder `--color-foreground-primary`
+// (zinc-800), Rand `--color-basic-divider` (zinc-700), Text `--color-basic-primary/secondary/tertiary`
+// (slate-50/300/400), Blau `--color-accent-bright` (blue-500), Link `--color-link`, Grün wie der Knopf
+// „Gruppe erstellen“ (green-600).
+html[data-theme='dark'][data-dunkel='churchtools'] {
+  color-scheme: dark; // Auswahllisten, Datumsfelder, Rollbalken des Browsers ebenfalls dunkel
+
+  --bg: #18181b;
+  --surface2: #27272a;
+  --surface3: #3f3f46;
+  --border: #3f3f46;
+  --hair: #3f3f46;
+  --section: #18181b;
+
+  --text: #f8fafc;
+  --text2: #cad5e2;
+  --text3: #90a1b9;
+
+  // Ein Blau für Flächen UND Text: blue-500 trägt weiße Schrift und ist auf den Karten lesbar.
+  // Reiner Text (`--blue-ink`) nimmt die Link-Farbe von ChurchTools.
+  --blue: #2b7fff;
+  --blue-ink: #669cff;
+  --blue-soft: rgba(43, 127, 255, 0.18);
+  --blue-tile: #1c398e; // `--color-accent-b-pale` (blue-900)
+  --blue-tile-text: #dbeafe; // `--color-accent-primary` (blue-100)
+  --red: #ff6467; // red-400
+  --green: #00a63e; // green-600
+  --cp-dir: #5fd0c3;
+
+  // Das Gewählte (Segmente, Auswahlknöpfe) – zinc-500, eine Stufe heller als `--color-basic-interactive`:
+  // Mit zinc-600 auf zinc-700 sah man in der Test-Instanz kaum, was gewählt ist (14.10.2026).
+  --seg-on: #71717a;
+  --seg-track: #3f3f46;
+  --chart-grund: var(--bg);
+  --track-off: #52525b;
+  --scrim: rgba(0, 0, 0, 0.6);
+
+  --nav-bg: #27272a;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 // ── Abstand oben: Leisten und Inhalt ohne Leiste ────────────────────

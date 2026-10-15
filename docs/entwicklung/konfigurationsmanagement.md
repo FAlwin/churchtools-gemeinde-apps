@@ -10,7 +10,7 @@ ChurchTools ist Datenquelle).
 - Tests (`client/src/**/*.test.ts(x)`, `server/src/**/*.test.ts`, `e2e/`) + Testkonzept
   (`docs/entwicklung/testkonzept.md`)
 - `.env.example`, Deploy-Dateien (`Dockerfile`, `docker-compose.dev.yml`, `deploy/`)
-- CI/CD (`.github/workflows/`: `ci.yml`, `staging.yml`, `release.yml`, `anmeldungen-release.yml`, `formular-pages.yml`), Issue-Vorlagen (`.github/ISSUE_TEMPLATE/`)
+- CI/CD (`.github/workflows/`: `ci.yml`, `staging.yml`, `release.yml`, `anmeldungen-release.yml`), Issue-Vorlagen (`.github/ISSUE_TEMPLATE/`)
 - Laufzeit-Konfiguration der Instanz (`site.json` auf dem Volume: Gemeindename + Links)
 
 ## Versionierung

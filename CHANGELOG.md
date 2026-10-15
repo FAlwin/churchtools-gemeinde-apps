@@ -7,6 +7,59 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Anmeldungen)
+
+- **Dunkelmodus wie ChurchTools** (Alwin, 14.10.2026). Die Anmeldungen sind hell oder dunkel, je nachdem, was
+  in ChurchTools eingestellt ist (gemessen: Klasse `light`/`dark` an `<body>`, unabhängig vom Gerät), und
+  schalten mit um. Die Farben sind die von ChurchTools (Tailwind 4: zinc-900 Seite, zinc-800 Karten …).
+  Die Formular-Vorschau im Baukasten bleibt in ihrem eigenen Design. Gemeinsamer Baustein für alle Apps:
+  `ui/design/thema.ts` und ein eigener Farbblock in `_variables.scss`; die Musik-App und der Dienstplaner
+  bleiben, wie sie sind, bis sie umsteigen (`docs/entwicklung/dunkelmodus.md`). Der Erweiterungs-Bau
+  schreibt dafür jetzt auch Selektoren mit mehreren Attributen am `html` richtig um.
+- **Zahnrad wie in ChurchTools:** Der Knopf „Einstellungen“ zeigt das Zahnrad von „System-Einstellungen“
+  (Font Awesome „gear“, solid; CC BY 4.0). Stehen „Einstellungen“ und „Neue Veranstaltung“ beide im Kopf,
+  bleiben sie zusammen rechts (vorher schwebte „Einstellungen“ mitten in der Zeile).
+- **Formular-Adresse zum Testen:** Neben `https://…` ist auch `http://localhost:<Port>` erlaubt (das Formular auf
+  dem eigenen Rechner), bis die eigene Adresse der Gemeinde steht.
+- **Karte „Anmeldelink“** (Entwurf `link-kopieren-v2`, Alwin: „B – bitte mit einheitlichen Buttons“): Ist eine
+  Veranstaltung freigegeben und die Formular-Adresse eingerichtet, steht oben auf ihrer Seite der Link als Text,
+  dazu drei gleiche Knöpfe **Kopieren** (danach kurz „Kopiert“), **Öffnen** (neuer Tab) und **Teilen** (Teilen-Menü
+  des Geräts; fehlt, wo der Browser keins hat). Vorher stand der Link nur im Termin-Fenster. Das Kopieren beider
+  Stellen läuft über einen gemeinsamen Hook (`useLinkKopieren.ts`).
+  **Erst geprüft, dann gezeigt** (Alwin, 15.10.2026): Die Karte fragt wie ein Gast bei ChurchTools nach. Nimmt
+  ChurchTools nichts an (z. B. vor A6-2 freigegeben und nicht öffentlich – der Link führte zu „nicht geöffnet“),
+  steht statt des Links, was fehlt, und „Jetzt einrichten“ öffnet das Freigeben-Fenster; danach prüft sie neu.
+  Fehlt nur der laufende Anmeldezeitraum oder lässt sich gerade nicht prüfen, bleibt der Link mit Hinweis.
+- **„Erst einrichten“ mit Nummern:** Die Schritte waren in ChurchTools ohne Zahlen (ChurchTools nimmt Listen
+  die Nummern).
+- **Demo** (`?demo`) kennt die Gemeinde-Einstellungen (Formular-Adresse, Vorgaben); `?demo=einrichten`
+  zeigt den Zustand davor. Seit A6-2 blieb die Demo sonst bei „Erst einrichten“ stehen.
+- **Echt anmelden** (A6-2, #548). Gemessen 14.10.2026 an der Test-Instanz (`messung-a6-2026-10-14.md`):
+  Familie, Kind allein, Geschwister mit derselben Adresse, dieselbe Person doppelt.
+  - **Öffentliches Formular:** Token → Formular-Aufbau (Feldnummern) → Anmeldung, ohne Login. **Variante A**
+    (Alwin): Mitglied werden nur die Teilnehmenden; was es einmal je Anmeldung gibt (neues Systemfeld „Angemeldet
+    von“, Telefon, Bemerkungen, Betrag, Aufschlüsselung, Auswahl, Extras), steht bei der ersten Person. Antworten
+    im Format von ChurchTools (Auswahl als Options-ID, Ankreuzen `1`, Mehrfachauswahl als Text). Passt etwas nicht
+    zu ChurchTools, wird nichts geschickt. Schon bekannt → „Fast geschafft, bitte per Mail bestätigen“. Fehler
+    einzeln, die Eingaben bleiben. `?probe` = Trockenlauf.
+  - **Freigeben** wählt die Leitung (ohne nimmt ChurchTools nichts an), setzt die Vorgaben für neue Personen –
+    **flach** (`newPersonStatusId/CampusId/DepartmentId`; `newMember: {…}` meldet 200 und speichert nichts) –,
+    ergänzt fehlende Systemfelder und fragt danach wie ein Gast, ob Anmeldungen angenommen werden.
+  - **Einstellungen der Gemeinde** (Gruppen-Admins): Vorgaben für neue Personen einmal je Gemeinde, im
+    Datenbereich der Erweiterung; ohne Einstellung der Vorschlag. Ein Aussetzer beim Lesen wirft, statt still den
+    Vorschlag zu nehmen. Anschluss an den Datenbereich über `modulPortFuer` (`ui/ct/modulPort.ts`, derselbe wie
+    beim Dienstplaner; beim Zusammenführen mit E4-3 lagen zwei Fassungen vor – jetzt eine).
+  - **Formular auf dem eigenen Webspace jeder Gemeinde** (Alwin, 14.10.2026: „Voraussetzung für diese Extension,
+    auf keinen Fall soll unsere Domain da sichtbar werden“). Statt einer festen Adresse (`FORMULAR_ADRESSE`,
+    GitHub Pages) trägt ein Gruppen-Admin unter „Einstellungen“ die Adresse der Formular-Seite ein; die
+    Erweiterung prüft, ob sie antwortet und in ChurchTools als erlaubte Herkunft steht. Ohne Adresse zeigt die
+    Startseite nur „Erst einrichten“, Freigeben ist gesperrt, und es gibt keinen Link. Am Release hängt das
+    Formular als `anmeldungen-formular-v….zip`; der Pages-Workflow ist weg. Gemessen: In ChurchTools selbst geht
+    es nicht (Erweiterungsseiten und ihre Dateien nur mit Login, kein Recht für nicht angemeldete Besucher,
+    Wiki-Dateien mit `Content-Security-Policy: sandbox`).
+  - Die Preis-Buchung aus den Antworten steht an EINER Stelle (`buchungAus`) – angezeigter und gespeicherter
+    Betrag können nicht auseinanderlaufen. Ein Test zählte die Systemfelder als Literal – jetzt gegen die Liste.
+
 ## [2.36.0] – 2026-10-15
 
 ### Neu

@@ -7,6 +7,14 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Dienstplaner)
+
+- **Dunkelmodus wie ChurchTools** (#563, Alwin: „genauso“ wie bei den Anmeldungen): Der Dienstplaner ist hell oder
+  dunkel, je nachdem, was in ChurchTools gewählt ist, und schaltet ohne Neuladen mit um (`folgeChurchToolsThema()`
+  aus `ui/design/thema.ts`). Bisher war er immer hell. Der Hinweiskasten in „Wer kann?“ und im Entwurfs-Fach hatte
+  als Einziges feste Farben (Gelb) – er nutzt jetzt wie die Warnungen der Anmeldungen `--red` aus den Tokens. Alle
+  Seiten hell und dunkel durchgesehen (Start, Termine, Planen, Fächer, Menüs, Handy).
+
 ### Neu (Anmeldungen)
 
 - **Dunkelmodus wie ChurchTools** (Alwin, 14.10.2026). Die Anmeldungen sind hell oder dunkel, je nachdem, was

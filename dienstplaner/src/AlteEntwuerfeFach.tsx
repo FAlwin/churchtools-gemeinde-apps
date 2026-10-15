@@ -100,7 +100,11 @@ export function AlteEntwuerfeFach({
             disabled={laeuft}
             onClick={() => void los()}
           >
-            {laeuft ? 'Wird verworfen …' : `Alle ${zeilen.length} verwerfen`}
+            {laeuft
+              ? 'Wird verworfen …'
+              : zeilen.length === 1
+                ? 'Verwerfen'
+                : `Alle ${zeilen.length} verwerfen`}
           </button>
         </div>
       )}

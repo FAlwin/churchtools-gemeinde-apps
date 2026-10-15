@@ -1557,7 +1557,7 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     expect(
       screen.getByText(/Gebetsabend, Do, 12\.11\. – Dienst gehört nicht mehr zum Termin/),
     ).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Alle 1 verwerfen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Verwerfen' }));
     await waitFor(() => expect(entfernen).toHaveBeenCalledTimes(1));
     expect((entfernen.mock.calls[0] as unknown[]).slice(1)).toEqual([
       3,

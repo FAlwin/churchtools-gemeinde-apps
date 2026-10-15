@@ -17,6 +17,13 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Hinzugefügt (Dienstplaner)
 
+- **Anzahl der Plätze ändern** (#580, Bauplan E4-5-3, Entwurf `e4-5-entwurf.html`): Regler-Symbol in der Gruppenzeile
+  je Termin (nur wo man einen Dienst der Gruppe plant, nicht an abgesagten Terminen) → Fenster „Technik · Plätze“
+  mit − / + je Dienst. Jeder Tipp gilt **sofort** (Alwin, 15.10.2026): frisch lesen, mit der gesehenen Zahl
+  vergleichen (sonst „Jemand hat die Zahl eben geändert“), schreiben, nachlesen – nie automatisch wiederholt.
+  Belegte Plätze und freie mit Entwurf lassen sich nicht wegnehmen. ChurchTools verschickt dabei nichts
+  (gemessen). Kein „Auf Vorlage zurücksetzen“: Ein Termin verweist nicht auf seine Vorlage (gemessen). Danach lädt
+  die Matrix leise neu – dieselbe Funktion wie nach dem Senden.
 - **Belegten Platz zurückziehen oder ersetzen** (#578, Bauplan E4-5-2, Entwurf `e4-5-entwurf.html`): Wo man plant,
   ist jetzt auch ein belegter Platz antippbar. Ein Fenster zeigt, wer dort steht und wie (angefragt, zugesagt, Gast),
   dazu „Andere Person wählen“ und „Zurückziehen“ – beides wird ein **Entwurf** und geht erst mit „Ansehen und
@@ -40,6 +47,10 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Intern (Dienstplaner)
 
+- **Kern für die Platzzahl** (#580, `shared/dienstplan/anzahl.ts`) mit derselben Fehler-Zuordnung wie der
+  Schreibkern (`lesegrund`, eine Stelle statt zwei). Der ChurchTools-Nachbau der Tests kann jetzt auch die
+  Platzzahl (mehr → neue freie Plätze, weniger → leere zuerst weg), und im Planen-Test gibt es nur noch **einen**
+  nachgebauten Anschluss statt dreier Kopien.
 - **Zurückziehen und Ersetzen im Kern** (#576, Bauplan E4-5-1 – noch ohne Oberfläche): Ein Entwurf kann jetzt auch
   „frei“ als Ziel haben (die Einteilung zurückziehen; beim Senden `decline`) und an einem belegten Platz eine andere
   Person eintragen (ersetzen). Neue Regel `gleicherStand` für beide Stellen – Schild „veraltet“ und Prüfung vor dem

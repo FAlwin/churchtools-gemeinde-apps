@@ -710,20 +710,23 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
       entwuerfe.map((e) => [`${e.ort.eventId}|${e.ort.serviceId}|${e.ort.index ?? '-'}`, e]),
     ),
   });
+  /** Der Anschluss zum Anfassen – eine Stelle für alle Tests (jede neue Funktion kommt nur hier dazu). */
+  const nachgebaut = (a: Partial<EntwurfAnschluss> = {}): EntwurfAnschluss => ({
+    ich: ALWIN,
+    laden: vi.fn(() => Promise.resolve(daten())),
+    speichern: vi.fn(),
+    entfernen: vi.fn(),
+    einrichten: vi.fn(() => Promise.resolve()),
+    senden: vi.fn(),
+    hinweise: vi.fn(() => Promise.resolve(new Map())),
+    anzahl: vi.fn(),
+    ...a,
+  });
   function zeige4(
     a: Partial<EntwurfAnschluss>,
     props: Partial<ComponentProps<typeof Planen>> = {},
   ) {
-    const anschluss: EntwurfAnschluss = {
-      ich: ALWIN,
-      laden: vi.fn(() => Promise.resolve(daten())),
-      speichern: vi.fn(),
-      entfernen: vi.fn(),
-      einrichten: vi.fn(() => Promise.resolve()),
-      senden: vi.fn(),
-      hinweise: vi.fn(() => Promise.resolve(new Map())),
-      ...a,
-    };
+    const anschluss = nachgebaut(a);
     render(
       <Planen
         zustand={{ art: 'fertig', zeilen: [], plan: PLAN4, wochen: 8 }}
@@ -1033,15 +1036,7 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     zeige4({ laden: () => Promise.resolve(daten([entwurf()])) });
     await waitFor(() => expect(offenTexte()).toMatch(/^1 Entwurf noch nicht gesendet/));
     cleanup();
-    const a: EntwurfAnschluss = {
-      ich: ALWIN,
-      laden: () => Promise.resolve(daten([entwurf()])),
-      speichern: vi.fn(),
-      entfernen: vi.fn(),
-      einrichten: vi.fn(),
-      senden: vi.fn(),
-      hinweise: vi.fn(() => Promise.resolve(new Map())),
-    };
+    const a = nachgebaut({ laden: () => Promise.resolve(daten([entwurf()])) });
     render(
       <Planen
         zustand={{ art: 'fertig', zeilen: [], plan: PLAN4, wochen: 8 }}
@@ -1255,15 +1250,7 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
           onNochmal={() => {}}
           onMehr={() => {}}
           {...ZUSATZ}
-          entwuerfe={{
-            ich: ALWIN,
-            laden,
-            speichern: vi.fn(),
-            entfernen: vi.fn(),
-            einrichten: vi.fn(),
-            senden: vi.fn(),
-            hinweise: vi.fn(() => Promise.resolve(new Map())),
-          }}
+          entwuerfe={nachgebaut({ laden })}
         />,
       );
     anzeigen(planAus(roh(5, 'Anna Test'), opt(false)));
@@ -1310,5 +1297,130 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Ansehen und senden' }));
     expect(screen.getByRole('checkbox', { name: 'Zurückziehen: Anna Test – Licht' })).toBeTruthy();
     expect(screen.getByText(/1 zurückgezogen/)).toBeTruthy();
+  });
+
+  // ── E4-5-3: Anzahl der Plätze (Regler) ───────────────────────────────────────
+  it('Regler in der Gruppenzeile → Plätze-Fach; „−“ nicht unter belegte und freie Plätze mit Entwurf', async () => {
+    zeige4({ laden: () => Promise.resolve(daten([entwurf()])) }); // Entwurf an Licht Platz 2
+    await waitFor(() => expect(entwuerfeInMatrix()).toHaveLength(1));
+    fireEvent.click(screen.getByRole('button', { name: 'Plätze Technik am So, 08.11. ändern' }));
+    expect(screen.getByText('Technik · Plätze')).toBeTruthy();
+    expect(screen.getByText('Gottesdienst · So, 08.11.')).toBeTruthy();
+    expect(screen.getByLabelText('Licht: 2 Plätze')).toBeTruthy();
+    expect(screen.getByLabelText('Ton: 1 Plätze')).toBeTruthy();
+    // Licht: Anna (belegt) + Entwurf am freien Platz → nicht unter 2.
+    expect(screen.getByRole('button', { name: 'Licht: ein Platz weniger' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    expect(screen.getByRole('button', { name: 'Ton: ein Platz weniger' })).toHaveProperty(
+      'disabled',
+      false,
+    );
+  });
+
+  it('„+“ speichert über den Anschluss (Termin, Dienst, gesehen, neu); Schließen lädt die Termine leise neu', async () => {
+    const onAktualisieren = vi.fn();
+    const anzahl = vi.fn(() => Promise.resolve({ ok: true as const, anzahl: 2 }));
+    zeige4({ anzahl }, { onAktualisieren });
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Plätze Technik am So, 08.11. ändern' }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Ton: ein Platz mehr' }));
+    await waitFor(() => expect(anzahl).toHaveBeenCalledWith(20, 6, 1, 2));
+    expect(await screen.findByText('Ton: jetzt 2 Plätze.')).toBeTruthy();
+    expect(onAktualisieren).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    expect(onAktualisieren).toHaveBeenCalledTimes(1);
+  });
+
+  it('im Plätze-Fach nur die Dienste, die man plant (Planrecht je Dienst)', async () => {
+    const plan = planAus(
+      [
+        {
+          id: 20,
+          name: 'Gottesdienst',
+          startDate: '2026-11-08T09:00:00Z',
+          endDate: '2026-11-08T10:30:00Z',
+          eventServices: [
+            { serviceId: 7, personId: null, name: null, index: null },
+            { serviceId: 6, personId: null, name: null, index: null },
+          ],
+        },
+      ] as RohTermin[],
+      {
+        ichId: 1,
+        dienste: DIENSTE,
+        dienstgruppen: GRUPPEN,
+        zeitzone: 'Europe/Berlin',
+        planbar: (d) => d.id === 7,
+        ganzSichtbar: () => true,
+      },
+    );
+    render(
+      <Planen
+        zustand={{ art: 'fertig', zeilen: [], plan, wochen: 8 }}
+        handy={false}
+        onNochmal={() => {}}
+        onMehr={() => {}}
+        {...ZUSATZ}
+        entwuerfe={nachgebaut()}
+      />,
+    );
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Plätze Technik am So, 08.11. ändern' }),
+    );
+    expect(screen.getByLabelText('Licht: 1 Plätze')).toBeTruthy();
+    expect(screen.queryByLabelText('Ton: 1 Plätze')).toBeNull();
+  });
+
+  it('kein Regler, wo man nicht plant und an abgesagten Terminen; ohne Änderung kein Neuladen', async () => {
+    const roh = (abgesagt: boolean) =>
+      [
+        {
+          id: 20,
+          name: 'Gottesdienst',
+          startDate: '2026-11-08T09:00:00Z',
+          endDate: '2026-11-08T10:30:00Z',
+          isCanceled: abgesagt,
+          eventServices: [{ serviceId: 7, personId: null, name: null, index: null }],
+        },
+      ] as RohTermin[];
+    const opt = (planbar: boolean) => ({
+      ichId: 1,
+      dienste: DIENSTE,
+      dienstgruppen: GRUPPEN,
+      zeitzone: 'Europe/Berlin',
+      planbar: () => planbar,
+      ganzSichtbar: () => true,
+    });
+    const anzeigen = (plan: Plan, handy = false, onAktualisieren = vi.fn()) => {
+      render(
+        <Planen
+          zustand={{ art: 'fertig', zeilen: [], plan, wochen: 8 }}
+          handy={handy}
+          onNochmal={() => {}}
+          onMehr={() => {}}
+          {...ZUSATZ}
+          entwuerfe={nachgebaut()}
+          onAktualisieren={onAktualisieren}
+        />,
+      );
+      return onAktualisieren;
+    };
+    const regler = () => screen.queryAllByRole('button', { name: /^Plätze .* ändern$/ });
+    anzeigen(planAus(roh(false), opt(false)));
+    await screen.findAllByText('Gottesdienst');
+    expect(regler()).toEqual([]);
+    cleanup();
+    anzeigen(planAus(roh(true), opt(true)));
+    await screen.findAllByText('Gottesdienst');
+    expect(regler()).toEqual([]);
+    cleanup();
+    // Am Handy dieselbe Regel (eigene Stelle im Code); Öffnen und ohne Änderung schließen lädt nichts neu.
+    const neu = anzeigen(planAus(roh(false), opt(true)), true);
+    fireEvent.click(await screen.findByRole('button', { name: /^Plätze Technik am .* ändern$/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    expect(neu).not.toHaveBeenCalled();
   });
 });

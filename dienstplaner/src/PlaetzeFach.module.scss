@@ -1,0 +1,65 @@
+// Plätze-Fach (E4-5-3, Entwurf Abschnitt 4) – Tokens aus ui/design; Knöpfe und Hinweise aus WerKann.module.scss.
+
+.liste {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+
+.zeile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+}
+
+.dienst {
+  flex: 1;
+  min-width: 0;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text);
+
+  small {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 400;
+    color: var(--text2);
+  }
+}
+
+.rund {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface2);
+  color: var(--text);
+  font: 700 17px var(--ui);
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 1px;
+  }
+}
+
+.zahl {
+  width: 22px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}

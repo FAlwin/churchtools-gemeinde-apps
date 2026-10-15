@@ -75,7 +75,7 @@ const TERMINE = [
     startDate: zeit(16, '17:00'),
     endDate: zeit(16, '19:00'),
     isCanceled: true,
-    eventServices: [],
+    eventServices: [] as ReturnType<typeof platz>[],
   },
   {
     id: 105,
@@ -93,12 +93,13 @@ const TERMINE = [
   },
 ];
 // Wie ChurchTools: Hat ein Dienst mehrere Plätze, sind sie durchgezählt (1, 2, …), sonst `null`.
-for (const t of TERMINE) {
+function durchzaehlen(t: (typeof TERMINE)[number]) {
   for (const p of t.eventServices) {
     const gleiche = t.eventServices.filter((q) => q.serviceId === p.serviceId);
-    if (gleiche.length > 1) p.index = gleiche.indexOf(p) + 1;
+    p.index = gleiche.length > 1 ? gleiche.indexOf(p) + 1 : null;
   }
 }
+TERMINE.forEach(durchzaehlen);
 
 /** Namen, die ChurchTools beim Einteilen an den Platz schreibt (Personen aus „Wer kann?“). */
 const NAMEN: Record<number, string> = {
@@ -120,6 +121,24 @@ function einteilenDemo(methode: string, pfad: string, rumpf: unknown): unknown {
   if (termin && methode === 'GET') {
     const t = TERMINE.find((x) => x.id === Number(termin[1]));
     return t ? { data: t } : undefined;
+  }
+  // Anzahl der Plätze (E4-5-3), wie gemessen: mehr → neue freie Plätze, weniger → leere zuerst weg.
+  const anzahl = /^\/api\/events\/(\d+)\/eventservices$/.exec(pfad);
+  if (anzahl && methode === 'PUT') {
+    const t = TERMINE.find((x) => x.id === Number(anzahl[1]));
+    const r = rumpf as { services: { serviceId: number; count: number }[] };
+    if (t) {
+      for (const { serviceId, count } of r.services) {
+        const eigene = () => t.eventServices.filter((q) => q.serviceId === serviceId);
+        while (eigene().length < count) t.eventServices.push(platz(serviceId, null, null));
+        for (const q of [...eigene()].reverse()) {
+          if (eigene().length <= count) break;
+          if (!q.name) t.eventServices.splice(t.eventServices.indexOf(q), 1);
+        }
+      }
+      durchzaehlen(t);
+    }
+    return { data: null };
   }
   const m = /^\/api\/events\/(\d+)\/servicerequests\/(\d+)(\/decline)?$/.exec(pfad);
   if (!m) return undefined;

@@ -115,6 +115,15 @@ function rumpf(ziel: Exclude<Belegung, { art: 'frei' }>): unknown {
   return { personId: ziel.personId, name: null, isAccepted: ziel.art === 'zusage' };
 }
 
+/** Warum das Lesen eines Termins scheiterte – eine Zuordnung für alle, die Termine frisch lesen (auch `plaetze.ts`). */
+export function lesegrund(port: DienstPort, e: unknown): Grund {
+  const s = port.status(e);
+  if (s === 401) return 'abgemeldet';
+  if (s === 403) return 'kein-recht';
+  if (s === 404) return 'weg';
+  return 'voruebergehend';
+}
+
 /** Lesen; `Grund`, wenn es nicht geht. */
 async function lesen(
   port: DienstPort,
@@ -124,11 +133,7 @@ async function lesen(
   try {
     t = await port.termin(ort.eventId);
   } catch (e) {
-    const s = port.status(e);
-    if (s === 401) return { grund: 'abgemeldet' };
-    if (s === 403) return { grund: 'kein-recht' };
-    if (s === 404) return { grund: 'weg' };
-    return { grund: 'voruebergehend' };
+    return { grund: lesegrund(port, e) };
   }
   const platz = platzFinden(t, ort);
   return platz ? { platz } : { grund: 'weg' };

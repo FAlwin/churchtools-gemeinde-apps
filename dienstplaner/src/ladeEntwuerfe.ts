@@ -33,6 +33,7 @@ import { entwurfPortFuer } from '@ui/ct/modulPort';
 import { MODUL_KUERZEL, type Start } from './start';
 import { sende, type SendeEintrag, type SendeErgebnis } from '@shared/dienstplan/senden';
 import { dienstPort } from './dienstPort';
+import { anzahlAendern, type AnzahlErgebnis } from '@shared/dienstplan/anzahl';
 import { ladeSendeHinweise, type SendeHinweis } from './sendeHinweise';
 
 const port = entwurfPortFuer(() => MODUL_KUERZEL);
@@ -173,6 +174,8 @@ export interface EntwurfAnschluss {
   hinweise(
     zeilen: readonly { entwurf: Entwurf; tag: string }[],
   ): Promise<Map<string, SendeHinweis>>;
+  /** Anzahl der Plätze eines Dienstes am Termin sofort ändern (E4-5-3) – im Kern `anzahl.ts`. */
+  anzahl(eventId: number, serviceId: number, gesehen: number, neu: number): Promise<AnzahlErgebnis>;
 }
 
 /** Der echte Anschluss für die App. */
@@ -184,6 +187,8 @@ export function entwurfAnschluss(start: Start, gruppen: () => Dienstgruppe[]): E
     entfernen: entferneEntwurf,
     senden: sendeEntwuerfe,
     hinweise: ladeSendeHinweise,
+    anzahl: (eventId, serviceId, gesehen, neu) =>
+      anzahlAendern(dienstPort, eventId, serviceId, gesehen, neu),
     einrichten: async (gruppe) => {
       await richteSchubladeEin(gruppe);
     },

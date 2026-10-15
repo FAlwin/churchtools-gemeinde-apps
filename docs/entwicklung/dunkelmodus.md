@@ -1,9 +1,9 @@
 # Dunkelmodus wie ChurchTools
 
 Seit 14.10.2026 (Alwin: „so einen Dunkelmodus wie die ChurchTools-App … so dokumentieren, dass die anderen
-Apps z. B. die Musik-App auch diesen Modus anpassen kann“). **Umgestellt ist bisher nur die Erweiterung
-„Anmeldungen“.** Die Musik-App und der Dienstplaner nutzen weiter ihren bisherigen Stand (Musik-App: eigenes
-blaugraues Dunkel und eigener Schalter Hell/Dunkel/Auto; Dienstplaner: immer hell).
+Apps z. B. die Musik-App auch diesen Modus anpassen kann“). **Umgestellt sind die Erweiterungen „Anmeldungen“
+und „Dienstplaner“** (Dienstplaner seit 15.10.2026, #563). Die Musik-App nutzt weiter ihren bisherigen Stand (eigenes
+blaugraues Dunkel und eigener Schalter Hell/Dunkel/Auto).
 
 ## Was ChurchTools macht (gemessen in der Test-Instanz, 14.10.2026)
 
@@ -43,7 +43,7 @@ blaugraues Dunkel und eigener Schalter Hell/Dunkel/Auto; Dienstplaner: immer hel
 
 ## Eine App umstellen
 
-### Erweiterung (z. B. Dienstplaner)
+### Erweiterung (so beim Dienstplaner gemacht, 15.10.2026)
 
 In `main.tsx` direkt nach `classList.add('ct-extension')`:
 

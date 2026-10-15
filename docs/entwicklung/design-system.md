@@ -85,7 +85,7 @@ Hell/Dunkel/Auto über `useSettings` → `data-theme` auf `<html>`. Komponenten 
 **nicht** selbst um Dark Mode kümmern – die Tokens schalten um. Falls doch nötig:
 `:global(html[data-theme='dark'])` nur als letzte Option.
 
-**Dunkel wie ChurchTools** (seit 14.10.2026, bisher nur in den Anmeldungen): eigener Farbblock
+**Dunkel wie ChurchTools** (seit 14.10.2026 in den Anmeldungen, seit 15.10.2026 im Dienstplaner): eigener Farbblock
 `html[data-theme='dark'][data-dunkel='churchtools']`, umgeschaltet nach der ChurchTools-Wahl
 (`ui/design/thema.ts`). Wie eine App umsteigt: [dunkelmodus.md](dunkelmodus.md).
 

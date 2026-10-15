@@ -9,7 +9,7 @@
 > Start · Termine · Planen · Abwesenheiten stehen (am Computer oben, am Handy unten; „Planen“ nur für
 > Planer). **Termine**: Liste nach Monaten, „Meine | Alle“, Filter nach Veranstaltung (aus den
 > Terminnamen), die eigenen Dienste (zugesagt/angefragt), für Planer die freien Plätze ihrer
-> Dienstgruppen. Einteilen und Abwesenheiten folgen (Bauplan E4–E9). Diese Anleitung wächst mit.
+> Dienstgruppen. Einteilen und Abwesenheiten folgen (Bauplan E4–E9). Hell oder dunkel wie in ChurchTools gewählt (seit 15.10.2026). Diese Anleitung wächst mit.
 
 Der Dienstplaner plant die Dienste **aller** Dienstgruppen (Musik, Technik, Predigt, Moderation …) nach
 dem Vorbild von Planning Center Services. **Alles liegt in ChurchTools** – es gibt keinen eigenen Server.

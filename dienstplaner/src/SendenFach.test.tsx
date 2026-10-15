@@ -25,6 +25,7 @@ const zeile = (e: Entwurf, tag: string, dienst: string): SendeZeile => ({
   tag,
   termin: 'Gottesdienst',
   dienst,
+  bisher: null,
 });
 
 // Zwei Termine: am 25.10. Anfrage (Ton) und Direkt (Licht), am 01.11. ein Gast (fremd, von Spike).
@@ -141,6 +142,36 @@ describe('SendenFach (E4-4-2)', () => {
     expect(screen.queryByText(/Ben Test/)).toBeNull();
     expect(screen.getByText('angefragt')).toBeTruthy();
     expect(screen.getByText('als Gast eingetragen')).toBeTruthy();
+  });
+
+  it('E4-5: Zurückziehen und Ersetzen – Satz oben und Hinweis je Zeile (wer was mitbekommt)', async () => {
+    const zurueck: SendeZeile = {
+      ...zeile(
+        entwurf(22, 6, { ziel: { art: 'frei' }, gesehen: { art: 'anfrage', personId: 49 } }),
+        '2026-11-08',
+        'Ton',
+      ),
+      bisher: 'Ben Test',
+    };
+    const ersetzt: SendeZeile = {
+      ...zeile(entwurf(22, 7, { gesehen: { art: 'zusage', personId: 52 } }), '2026-11-08', 'Licht'),
+      bisher: 'Clara Test',
+    };
+    zeige({ zeilen: [zurueck, ersetzt] });
+    await screen.findByRole('button', { name: 'Jetzt senden (2)' });
+    const satz = [...document.querySelectorAll('p')]
+      .map((p) => p.textContent ?? '')
+      .find((t) => t.includes('zurückgezogen'));
+    expect(satz).toContain('1 ersetzt – wer dort stand, bekommt „Du wurdest … ausgetragen“.');
+    expect(satz).toContain('1 zurückgezogen – ChurchTools sagt den Personen nicht Bescheid.');
+    expect(screen.getByRole('checkbox', { name: 'Zurückziehen: Ben Test – Ton' })).toBeTruthy();
+    expect(
+      screen.getByRole('checkbox', { name: 'Anfrage an Anna Test statt Clara Test – Licht' }),
+    ).toBeTruthy();
+    expect(screen.getByText(/ChurchTools sagt Ben Test nicht Bescheid/).className).toMatch(
+      /warnung/,
+    );
+    expect(screen.getByText(/Clara Test bekommt von ChurchTools/).className).not.toMatch(/warnung/);
   });
 
   it('nichts ausgewählt → kein Senden-Knopf', async () => {

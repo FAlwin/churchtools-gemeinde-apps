@@ -1147,4 +1147,168 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     expect(screen.getAllByRole('button', { name: /frei – Wer kann/ }).length).toBeGreaterThan(0);
     await act(async () => antwort!({ zeilen: [], plan: PLAN4 }));
   });
+
+  // ── E4-5-2: belegter Platz – zurückziehen oder ersetzen ─────────────────────
+  const ANNA_KNOPF = 'Anna Test – zugesagt: zurückziehen oder ersetzen';
+  const gespeichert = () =>
+    vi.fn((_d: EntwuerfeDaten, _g: number, e: Omit<Entwurf, 'version' | 'zeit'>) =>
+      Promise.resolve({
+        ok: true as const,
+        entwurf: { ...e, zeit: '2026-10-15T10:00:00.000Z', version: 1 },
+      }),
+    );
+
+  it('Belegten Platz antippen → Fenster; „Zurückziehen“ speichert „frei“ mit dem, was jetzt dort steht', async () => {
+    const speichern = gespeichert();
+    zeige4({ speichern });
+    fireEvent.click(await screen.findByRole('button', { name: ANNA_KNOPF }));
+    expect(screen.getByText(/– hat zugesagt\./)).toBeTruthy();
+    expect(screen.getByText(/ChurchTools sagt Anna Test nicht Bescheid/)).toBeTruthy();
+    expect(
+      screen.getByText(/Anna Test bekommt von ChurchTools „Du wurdest … ausgetragen“/),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Zurückziehen' }));
+    await waitFor(() => expect(speichern).toHaveBeenCalledTimes(1));
+    expect(speichern.mock.calls[0].slice(1)).toEqual([
+      3,
+      {
+        ort: { eventId: 20, serviceId: 7, index: 1 },
+        ziel: { art: 'frei' },
+        modus: 'anfrage',
+        gesehen: { art: 'zusage', personId: 5 },
+        von: ALWIN,
+      },
+      null,
+    ]);
+    expect(
+      await screen.findByText('Anna Test wird beim Senden zurückgezogen – noch nicht gesendet.'),
+    ).toBeTruthy();
+    // Danach steht dort der Entwurf (rot, durchgestrichen) statt des Knopfs.
+    expect(
+      screen.getByRole('button', { name: 'Entwurf von Alwin: Anna Test zurückziehen' }),
+    ).toBeTruthy();
+    expect(screen.queryByRole('button', { name: ANNA_KNOPF })).toBeNull();
+  });
+
+  it('„Andere Person wählen“ → „Wer kann?“ mit „statt“; der Entwurf merkt sich, wer dort stand', async () => {
+    laden.mockResolvedValue([{ person: { domainIdentifier: '46', title: 'Ben Test' }, score: 0 }]);
+    const speichern = gespeichert();
+    zeige4({ speichern });
+    fireEvent.click(await screen.findByRole('button', { name: ANNA_KNOPF }));
+    fireEvent.click(screen.getByRole('button', { name: 'Andere Person wählen' }));
+    expect(await screen.findByText(/· statt Anna Test/)).toBeTruthy();
+    fireEvent.click(await screen.findByRole('button', { name: /^Ben Test/ }));
+    await waitFor(() => expect(speichern).toHaveBeenCalledTimes(1));
+    expect((speichern.mock.calls[0][2] as Entwurf).gesehen).toEqual({ art: 'zusage', personId: 5 });
+    expect(
+      await screen.findByText('Ben Test statt Anna Test eingetragen – noch nicht gesendet.'),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Entwurf von Alwin: Ben Test statt Anna Test' }),
+    ).toBeTruthy();
+  });
+
+  it('liegt dort ein veralteter Entwurf, ist der Platz kein Knopf – erst den Entwurf verwerfen (Schild)', async () => {
+    zeige4({
+      laden: () =>
+        Promise.resolve(daten([entwurf({ ort: { eventId: 20, serviceId: 7, index: 1 } })])),
+    });
+    expect(await screen.findByRole('button', { name: /^Entwurf veraltet/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: ANNA_KNOPF })).toBeNull();
+  });
+
+  it('Konflikt beim Zurückziehen (eben hat jemand einen Entwurf angelegt) → sagt es, Fenster bleibt', async () => {
+    const speichern = vi.fn(() =>
+      Promise.resolve({ ok: false as const, grund: 'konflikt' as const, jetzt: null }),
+    );
+    zeige4({ speichern });
+    fireEvent.click(await screen.findByRole('button', { name: ANNA_KNOPF }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zurückziehen' }));
+    expect((await screen.findByRole('alert')).textContent).toMatch(/eben jemand einen Entwurf/);
+    expect(screen.getByRole('button', { name: 'Zurückziehen' })).toBeTruthy();
+  });
+
+  it('nicht antippbar: wo man nicht plant, bei verborgenem Namen – und ohne Änderungsrecht nur der Hinweis', async () => {
+    const roh = (personId: number, name: string) =>
+      [
+        {
+          id: 20,
+          name: 'Gottesdienst',
+          startDate: '2026-11-08T09:00:00Z',
+          endDate: '2026-11-08T10:30:00Z',
+          eventServices: [{ serviceId: 7, personId, name, isAccepted: true, index: null }],
+        },
+      ] as RohTermin[];
+    const opt = (planbar: boolean) => ({
+      ichId: 1,
+      dienste: DIENSTE,
+      dienstgruppen: GRUPPEN,
+      zeitzone: 'Europe/Berlin',
+      planbar: () => planbar,
+      ganzSichtbar: () => true,
+    });
+    const anzeigen = (plan: Plan, laden = () => Promise.resolve(daten()), handy = false) =>
+      render(
+        <Planen
+          zustand={{ art: 'fertig', zeilen: [], plan, wochen: 8 }}
+          handy={handy}
+          onNochmal={() => {}}
+          onMehr={() => {}}
+          {...ZUSATZ}
+          entwuerfe={{
+            ich: ALWIN,
+            laden,
+            speichern: vi.fn(),
+            entfernen: vi.fn(),
+            einrichten: vi.fn(),
+            senden: vi.fn(),
+            hinweise: vi.fn(() => Promise.resolve(new Map())),
+          }}
+        />,
+      );
+    anzeigen(planAus(roh(5, 'Anna Test'), opt(false)));
+    // Was man nicht plant, ist zugeklappt – aufklappen, dann steht Anna da, aber nicht antippbar.
+    fireEvent.click(await screen.findByRole('button', { name: /Technik/, expanded: false }));
+    expect(await screen.findByText('Anna Test')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /zurückziehen oder ersetzen/ })).toBeNull();
+    cleanup();
+    // Am Handy dieselbe Regel (eigene Stelle im Code) – erst mit Planrecht antippbar.
+    anzeigen(planAus(roh(5, 'Anna Test'), opt(true)), undefined, true);
+    expect(await screen.findByRole('button', { name: /^Anna Test – zugesagt/ })).toBeTruthy();
+    cleanup();
+    anzeigen(planAus(roh(5, 'Anna Test'), opt(false)), undefined, true);
+    fireEvent.click(await screen.findByRole('button', { name: /Technik/, expanded: false }));
+    expect(await screen.findByText('Anna Test')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /zurückziehen oder ersetzen/ })).toBeNull();
+    cleanup();
+    anzeigen(planAus(roh(-2, 'Geheim'), opt(true)));
+    expect(await screen.findByText('Nicht sichtbar')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /zurückziehen oder ersetzen/ })).toBeNull();
+    cleanup();
+    anzeigen(planAus(roh(5, 'Anna Test'), opt(true)), () =>
+      Promise.resolve(daten([], { stand: 'nur-lesen' })),
+    );
+    fireEvent.click(await screen.findByRole('button', { name: /^Anna Test – zugesagt/ }));
+    await waitFor(() => expect(screen.getByText(/ansehen, aber nicht ändern/)).toBeTruthy());
+    expect(screen.queryByRole('button', { name: 'Zurückziehen' })).toBeNull();
+  });
+
+  it('Senden-Fach: wer dort steht, kommt mit (aus derselben Matrix)', async () => {
+    zeige4({
+      laden: () =>
+        Promise.resolve(
+          daten([
+            entwurf({
+              ort: { eventId: 20, serviceId: 7, index: 1 },
+              ziel: { art: 'frei' },
+              gesehen: { art: 'zusage', personId: 5 },
+            }),
+          ]),
+        ),
+    });
+    await waitFor(() => expect(offenTexte()).toMatch(/^1 Entwurf/));
+    fireEvent.click(screen.getByRole('button', { name: 'Ansehen und senden' }));
+    expect(screen.getByRole('checkbox', { name: 'Zurückziehen: Anna Test – Licht' })).toBeTruthy();
+    expect(screen.getByText(/1 zurückgezogen/)).toBeTruthy();
+  });
 });

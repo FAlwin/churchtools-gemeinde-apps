@@ -43,6 +43,7 @@ import { useBreite } from './useBreite';
 import { FilterKnopf } from './FilterKnopf';
 import { WerKann, type Eintragen, type FreierPlatz } from './WerKann';
 import { EntwurfFach } from './EntwurfFach';
+import { BelegtFach } from './BelegtFach';
 import { SendenFach, type SendeZeile } from './SendenFach';
 import { grundText, type EntwuerfeDaten, type EntwurfAnschluss } from './ladeEntwuerfe';
 import styles from './Planen.module.scss';
@@ -94,6 +95,8 @@ interface Sicht {
   entwurf: (spalte: number, zeile: PlanZeile, p: PlanPlatz) => EntwurfAmPlatz | null;
   /** Einen Entwurf antippen → Entwurfs-Fach (E4-3-3; nur wo man planen und die Schublade ändern darf). */
   onEntwurf: (spalte: number, zeile: PlanZeile, nr: number) => void;
+  /** Einen belegten Platz antippen → zurückziehen oder ersetzen (E4-5; nur wo man den Dienst planen darf). */
+  onBelegt: (spalte: number, zeile: PlanZeile, nr: number) => void;
   darfAendern: (zeile: PlanZeile) => boolean;
   /** Die eigene Person – eigene Entwürfe stehen ohne „von …“. */
   ichId: number | null;
@@ -118,7 +121,14 @@ function freierPlatz(s: PlanSpalte, z: PlanZeile, plaetze: PlanPlatz[], nr: numb
     schonDa: plaetze.flatMap((p) => (p.personId !== null ? [p.personId] : [])),
     index: plaetze[nr - 1]?.index ?? null,
     gruppeId: z.dienst.dienstgruppeId ?? 0,
+    ...bisherAus(plaetze[nr - 1]),
   };
+}
+
+/** Wer jetzt dort steht (E4-5) – nur bei belegten Plätzen mit sichtbarem Namen (verborgene haben keinen). */
+function bisherAus(p: PlanPlatz | undefined): Pick<FreierPlatz, 'bisher'> {
+  if (!p || p.art === 'frei' || p.name === null) return {};
+  return { bisher: { belegung: p.belegung, name: p.name, gast: p.gast } };
 }
 
 /**
@@ -126,8 +136,9 @@ function freierPlatz(s: PlanSpalte, z: PlanZeile, plaetze: PlanPlatz[], nr: numb
  * in jeder Zelle die Plätze. Darüber die Terminleiste mit dem **Zeitraum-Knopf** (Alwin, 14.10.2026): ab heute
  * (passend zur Fensterbreite, ‹ ＋ ＋ › blättern und laden am Ende selbst nach), ein Monat oder ein eigener
  * Zeitraum – dann stehen alle Termine des Bereichs da, und ‹ › springen um den ganzen Bereich. Dazu Filter,
- * Spaltenbreite und „Wer wie oft?“. **Nur lesen** – Einteilen kommt mit E4. Am Handy: eine Datumsleiste und
- * darunter ein Termin.
+ * Spaltenbreite und „Wer wie oft?“. Eingeteilt wird über Entwürfe (E4): freien Platz antippen → „Wer kann?“,
+ * belegten Platz → zurückziehen oder ersetzen (E4-5), gesendet über die Leiste unten. Am Handy: eine Datumsleiste
+ * und darunter ein Termin.
  */
 export function Planen({
   zustand,
@@ -148,6 +159,8 @@ export function Planen({
   const [fenster, setFenster] = useState<Fenster>({ start: 0, anzahl: null });
   const [zu, setZu] = useState<Set<string> | null>(null);
   const [frei, setFrei] = useState<FreierPlatz | null>(null);
+  // Das Fenster am belegten Platz (E4-5): zurückziehen oder ersetzen.
+  const [belegt, setBelegt] = useState<FreierPlatz | null>(null);
   // Ein angetippter Entwurf (E4-3-3) – und ob „Andere Person wählen“ einen Entwurf ersetzt (seine Version).
   const [fach, setFach] = useState<{
     platz: FreierPlatz;
@@ -429,6 +442,7 @@ export function Planen({
       neben: (s) => haupt !== null && s.name !== haupt,
       onUmschalten: umschalten,
       onFrei: (i, zl, nr) => setFrei(freierPlatz(plan.spalten[i], zl, zl.zellen[i] ?? [], nr)),
+      onBelegt: (i, zl, nr) => setBelegt(freierPlatz(plan.spalten[i], zl, zl.zellen[i] ?? [], nr)),
       entwurf: (i, zl, p) => entwurfAmPlatz(plan.spalten[i], zl, p),
       darfAendern,
       onEntwurf: (i, zl, nr) => {
@@ -508,16 +522,18 @@ export function Planen({
       art: 'bereit',
       erwartet: ersetzt,
       onWahl: async (ziel: Besetzung, erwartet: number | null): Promise<EntwurfErgebnis> => {
-        // Ersetzt man einen Entwurf („Andere Person wählen“), bleibt „Beim Senden“ wie es war.
-        const bisher = erwartet !== null ? daten.entwuerfe.get(ortSchluessel(ort)) : undefined;
+        // Ersetzt man einen Entwurf („Andere Person wählen“), bleibt „Beim Senden“ wie es war. „Gesehen“ ist, was
+        // jetzt in ChurchTools steht – frei, oder die Person, die ersetzt wird (E4-5); bei einem gültigen Entwurf
+        // ist das genau, was er gesehen hat (`gleicherStand`).
+        const alt = erwartet !== null ? daten.entwuerfe.get(ortSchluessel(ort)) : undefined;
         const r = await entwuerfe.speichern(
           daten,
           f.gruppeId,
           {
             ort,
             ziel,
-            modus: bisher?.modus ?? 'anfrage',
-            gesehen: { art: 'frei' },
+            modus: alt?.modus ?? 'anfrage',
+            gesehen: f.bisher?.belegung ?? { art: 'frei' },
             von: entwuerfe.ich,
           },
           erwartet,
@@ -527,7 +543,11 @@ export function Planen({
           ewSetzen(k, r.entwurf);
           setFrei(null);
           setErsetzt(null);
-          showToast(`${ziel.name} eingetragen – noch nicht gesendet.`);
+          showToast(
+            f.bisher
+              ? `${ziel.name} statt ${f.bisher.name} eingetragen – noch nicht gesendet.`
+              : `${ziel.name} eingetragen – noch nicht gesendet.`,
+          );
         } else if (r.grund === 'konflikt') {
           // Was jetzt dasteht, zeigt auch die Matrix sofort.
           ewSetzen(k, r.jetzt ?? null);
@@ -559,6 +579,7 @@ export function Planen({
               tag: spalte.tag,
               termin: spalte.name,
               dienst: zl.dienst.name,
+              bisher: p.art === 'frei' || p.verborgen ? null : p.name,
             });
           }
         }
@@ -581,8 +602,9 @@ export function Planen({
         ganz sehen darfst – deine eigenen Dienste findest du immer unter Start und Termine. Planen
         darfst du, wo du die Dienstgruppe bearbeiten darfst, die Gruppe eines Dienstes leitest oder
         Admin des Termins bist. Einen freien Platz antippen zeigt, wer kann – dort trägst du
-        jemanden als Entwurf ein. Gesendet wird erst mit „Ansehen und senden“ – dann bekommen die
-        Angefragten eine Mitteilung von ChurchTools.
+        jemanden als Entwurf ein. Einen belegten Platz antippen: zurückziehen oder durch jemand
+        anderen ersetzen, ebenfalls als Entwurf. Gesendet wird erst mit „Ansehen und senden“ – dann
+        bekommen die Angefragten eine Mitteilung von ChurchTools.
       </p>
       {fach && entwuerfe && ew.art === 'fertig' && (
         <EntwurfFach
@@ -629,6 +651,47 @@ export function Planen({
             setErsetzt(null);
           }}
           eintragen={eintragenFuer(frei)}
+        />
+      )}
+      {belegt?.bisher && entwuerfe && (
+        <BelegtFach
+          platz={{ ...belegt, bisher: belegt.bisher }}
+          eintragen={eintragenFuer(belegt)}
+          onClose={() => setBelegt(null)}
+          onAnderePerson={() => {
+            // „Wer kann?“ für denselben Platz – die Wahl ersetzt die Person, die dort steht.
+            setFrei(belegt);
+            setBelegt(null);
+          }}
+          onZurueckziehen={async () => {
+            const b = belegt.bisher;
+            if (!b) return { ok: false, grund: 'voruebergehend' };
+            const ort = {
+              eventId: belegt.eventId,
+              serviceId: belegt.serviceId,
+              index: belegt.index,
+            };
+            if (ew.art !== 'fertig') return { ok: false, grund: 'voruebergehend' };
+            const r = await entwuerfe.speichern(
+              ew.daten,
+              belegt.gruppeId,
+              {
+                ort,
+                ziel: { art: 'frei' },
+                modus: 'anfrage',
+                gesehen: b.belegung,
+                von: entwuerfe.ich,
+              },
+              null,
+            );
+            const k = ortSchluessel(ort);
+            if (r.ok) {
+              ewSetzen(k, r.entwurf);
+              setBelegt(null);
+              showToast(`${b.name} wird beim Senden zurückgezogen – noch nicht gesendet.`);
+            } else if (r.grund === 'konflikt') ewSetzen(k, r.jetzt ?? null);
+            return r;
+          }}
         />
       )}
       {offen > 0 && (
@@ -888,6 +951,11 @@ function TabellenPlan({ sicht, breite, platz }: { sicht: Sicht; breite: Breite; 
                                     : undefined
                                 }
                                 entwurf={(p) => sicht.entwurf(i, z, p)}
+                                onBelegt={
+                                  darfPlanen(z, plan.spalten[i])
+                                    ? (nr) => sicht.onBelegt(i, z, nr)
+                                    : undefined
+                                }
                                 onEntwurf={
                                   darfPlanen(z, plan.spalten[i]) && sicht.darfAendern(z)
                                     ? (nr) => sicht.onEntwurf(i, z, nr)
@@ -978,6 +1046,7 @@ function HandyPlan({ sicht, amEnde }: { sicht: Sicht; amEnde?: () => void }) {
                       plaetze={z.zellen[i]!}
                       onFrei={darfPlanen(z, s) ? (nr) => sicht.onFrei(i, z, nr) : undefined}
                       entwurf={(p) => sicht.entwurf(i, z, p)}
+                      onBelegt={darfPlanen(z, s) ? (nr) => sicht.onBelegt(i, z, nr) : undefined}
                       onEntwurf={
                         darfPlanen(z, s) && sicht.darfAendern(z)
                           ? (nr) => sicht.onEntwurf(i, z, nr)
@@ -1064,11 +1133,14 @@ function Plaetze({
   onFrei,
   entwurf,
   onEntwurf,
+  onBelegt,
   ichId = null,
 }: {
   plaetze: PlanPlatz[];
   /** Nur wo man planen darf: freier Platz wird ein Knopf (Platz 1 … n). */
   onFrei?: (nr: number) => void;
+  /** Nur wo man planen darf: ein belegter Platz (ohne Entwurf, Name sichtbar) wird ein Knopf (E4-5). */
+  onBelegt?: (nr: number) => void;
   /** Der Entwurf an einem Platz (E4-3) – gültig steht er statt „frei“ da, veraltet als Schild darunter. */
   entwurf?: (p: PlanPlatz) => EntwurfAmPlatz | null;
   /** Entwurf bzw. Schild antippen → Entwurfs-Fach (nur wo man planen und ändern darf). */
@@ -1085,6 +1157,7 @@ function Plaetze({
             <EntwurfPlatz
               key={i}
               e={a.entwurf}
+              bisher={p.art === 'frei' || p.verborgen ? null : p.name}
               eigener={a.entwurf.von.personId === ichId}
               onOeffnen={oeffnen}
             />
@@ -1100,6 +1173,8 @@ function Plaetze({
             >
               frei
             </button>
+          ) : p.art !== 'frei' && !p.verborgen && !a && onBelegt ? (
+            <Platz p={p} onAntippen={() => onBelegt(i + 1)} />
           ) : (
             <Platz p={p} />
           );
@@ -1141,15 +1216,24 @@ function stehtInChurchTools(p: PlanPlatz): string {
 /** Ein Entwurf – noch nicht gesendet: gestrichelt mit Stift, „von …“ wenn von jemand anderem (E4-3). */
 function EntwurfPlatz({
   e,
+  bisher,
   eigener,
   onOeffnen,
 }: {
   e: Entwurf;
+  /** Wer in ChurchTools dort steht (E4-5): wird zurückgezogen bzw. ersetzt. */
+  bisher: string | null;
   eigener: boolean;
   /** Antippen öffnet das Entwurfs-Fach (E4-3-3) – nur wo man ändern darf. */
   onOeffnen?: () => void;
 }) {
   const gast = e.ziel.art === 'gast';
+  // Zurückziehen (rot, der Name durchgestrichen) oder Ersetzen („Neu statt Alt“) – Entwurf Abschnitt 2.
+  const zurueck = e.ziel.art === 'frei';
+  const statt = !zurueck && e.gesehen.art !== 'frei' ? bisher : null;
+  const was = zurueck
+    ? `${bisher ?? 'Einteilung'} zurückziehen`
+    : `${zielText(e.ziel)}${gast ? ' (Gast)' : ''}${statt ? ` statt ${statt}` : ''}`;
   const Tag = onOeffnen ? 'button' : 'span';
   return (
     <Tag
@@ -1157,16 +1241,29 @@ function EntwurfPlatz({
         ? {
             type: 'button' as const,
             onClick: onOeffnen,
-            'aria-label': `Entwurf von ${e.von.name}: ${zielText(e.ziel)}${gast ? ' (Gast)' : ''}`,
+            'aria-label': `Entwurf von ${e.von.name}: ${was}`,
           }
         : {})}
-      className={`${styles.platz} ${styles.entwurf}${onOeffnen ? ' ' + styles.entwurfKnopf : ''}`}
-      title={`Entwurf von ${e.von.name} – noch nicht gesendet`}
+      className={`${styles.platz} ${zurueck ? styles.zurueck : styles.entwurf}${onOeffnen ? ' ' + styles.entwurfKnopf : ''}`}
+      title={
+        zurueck
+          ? `Wird zurückgezogen – Entwurf von ${e.von.name}, noch nicht gesendet`
+          : `Entwurf von ${e.von.name} – noch nicht gesendet`
+      }
     >
       <span className={styles.ic} aria-label="Entwurf, noch nicht gesendet">
-        <Icon name="pencil" size={11} />
+        {zurueck ? '−' : <Icon name="pencil" size={11} />}
       </span>
-      <span className={styles.name}>{zielText(e.ziel)}</span>
+      {zurueck ? (
+        // Kein Textschild: In schmalen Spalten bliebe vom Namen sonst nur ein Buchstabe (Browser-Check 15.10.) –
+        // rot, „−“ und durchgestrichen sagen „kommt weg“, der Vorleser sagt es über `aria-label`.
+        <span className={`${styles.name} ${styles.durch}`}>{bisher ?? 'Einteilung'}</span>
+      ) : (
+        <span className={styles.name}>
+          {zielText(e.ziel)}
+          {statt && <span className={styles.statt}> statt {statt}</span>}
+        </span>
+      )}
       {gast && <span className={styles.gast}>Gast</span>}
       {!gast && e.modus === 'direkt' && <span className={styles.direkt}>direkt</span>}
       {!eigener && <span className={styles.von}>{e.von.name}</span>}
@@ -1175,12 +1272,22 @@ function EntwurfPlatz({
 }
 
 /** Ein Platz – zugesagt (Haken), angefragt („?“), frei, verborgen oder Gast. */
-function Platz({ p }: { p: PlanPlatz }) {
+function Platz({ p, onAntippen }: { p: PlanPlatz; onAntippen?: () => void }) {
   if (p.art === 'frei') return <span className={`${styles.platz} ${styles.frei}`}>frei</span>;
+  const stand = p.art === 'zugesagt' ? 'zugesagt' : 'angefragt';
+  // Antippbar (E4-5): zurückziehen oder ersetzen – ein Knopf mit demselben Aussehen.
+  const Tag = onAntippen ? 'button' : 'span';
   return (
-    <span
-      className={`${styles.platz} ${styles[p.art]}${p.ich ? ' ' + styles.ich : ''}`}
-      title={p.art === 'zugesagt' ? 'zugesagt' : 'angefragt'}
+    <Tag
+      {...(onAntippen
+        ? {
+            type: 'button' as const,
+            onClick: onAntippen,
+            'aria-label': `${p.name ?? ''}${p.gast ? ' (Gast)' : ''} – ${stand}: zurückziehen oder ersetzen`,
+          }
+        : {})}
+      className={`${styles.platz} ${styles[p.art]}${p.ich ? ' ' + styles.ich : ''}${onAntippen ? ' ' + styles.belegtKnopf : ''}`}
+      title={stand}
     >
       <span className={styles.ic} aria-label={p.art}>
         {p.art === 'zugesagt' ? <Icon name="check" size={11} /> : '?'}
@@ -1191,6 +1298,6 @@ function Platz({ p }: { p: PlanPlatz }) {
         <span className={styles.name}>{p.name}</span>
       )}
       {p.gast && <span className={styles.gast}>Gast</span>}
-    </span>
+    </Tag>
   );
 }

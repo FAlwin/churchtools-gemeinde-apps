@@ -9,6 +9,7 @@ import {
   type Entwurf,
   type EntwurfErgebnis,
 } from '@shared/dienstplan/entwuerfe';
+import type { Belegung } from '@shared/dienstplan/einteilen';
 import { ladeWerKann } from './ladeWerKann';
 import { grundText } from './ladeEntwuerfe';
 import { useInsBild } from './useInsBild';
@@ -35,6 +36,11 @@ export interface FreierPlatz {
   index: number | null;
   /** Die Dienstgruppe – in deren Schublade liegt der Entwurf. */
   gruppeId: number;
+  /**
+   * Wer jetzt in ChurchTools dort steht (E4-5) – dann ersetzt die Wahl diese Person, und der Entwurf merkt sich
+   * die Belegung als „gesehen“. Fehlt bei freien Plätzen (und bei verborgenen Namen).
+   */
+  bisher?: { belegung: Belegung; name: string; gast: boolean };
 }
 
 /**
@@ -123,6 +129,7 @@ export function WerKann({
     <Sheet title={`${platz.dienst} · ${platz.tag}`} onClose={onClose} cancelLabel="Schließen">
       <p className={styles.unter}>
         {platz.termin} um {platz.uhrzeit} Uhr · Platz {platz.nr} von {platz.von}
+        {platz.bisher && <> · statt {platz.bisher.name}</>}
       </p>
       {zustand.art === 'laedt' && <p className={styles.hinweis}>„Wer kann?“ wird geladen …</p>}
       {zustand.art === 'fehler' && (
@@ -265,8 +272,8 @@ export function WerKann({
   );
 }
 
-/** Was unter der Liste steht, wenn (noch) nicht eingetragen werden kann. */
-function EintragenStand({ eintragen, laeuft }: { eintragen?: Eintragen; laeuft: boolean }) {
+/** Was unter der Liste steht, wenn (noch) nicht eingetragen werden kann – auch im Fenster am belegten Platz. */
+export function EintragenStand({ eintragen, laeuft }: { eintragen?: Eintragen; laeuft: boolean }) {
   const [einrichten, setEinrichten] = useState<
     { art: 'bereit' } | { art: 'laeuft' } | { art: 'fehler'; text: string }
   >({ art: 'bereit' });

@@ -120,6 +120,15 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Intern
 
+- **Zurückziehen und Ersetzen im Kern** (#576, Bauplan E4-5-1 – noch ohne Oberfläche): Ein Entwurf kann jetzt auch
+  „frei“ als Ziel haben (die Einteilung zurückziehen; beim Senden `decline`) und an einem belegten Platz eine andere
+  Person eintragen (ersetzen). Neue Regel `gleicherStand` für beide Stellen – Schild „veraltet“ und Prüfung vor dem
+  Schreiben: Hat eine angefragte Person inzwischen zugesagt, ist das eine Änderung; der Entwurf wird nicht gesendet
+  (Alwin, 15.10.2026). Bisher zählte eine Zusage derselben Person als „unverändert“. Anzeige-Texte für das neue Ziel
+  aus einer Stelle (`zielText`).
+- **Gemessen** (15.10.2026, E4-5-0): Ersetzen schickt der bisherigen Person die Push-Mitteilung „Dienstaustragung – Du
+  wurdest aus dem Dienst … ausgetragen“ (angefragt wie zugesagt); Zurückziehen schickt nichts; die Platzzahl ändern
+  verschickt nichts. Keine Mails.
 - **Senden-Kern** (#570, Bauplan E4-4-1 – noch ohne Oberfläche): `shared/dienstplan/senden.ts` macht aus Entwürfen
   echte Einteilungen. Je Eintrag, einer nach dem anderen: Entwurf noch in derselben Fassung? → einteilen mit dem
   Schreibkern (frisch lesen, schreiben, nachlesen; `gesehen` als erwartete Belegung) → **erst danach** den Entwurf

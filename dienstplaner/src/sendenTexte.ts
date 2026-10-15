@@ -7,6 +7,7 @@ import type { SendeErgebnis } from '@shared/dienstplan/senden';
 
 /** Was beim Senden passiert – „Anfrage an Anna“, „Direkt zuteilen: David“, „Gast eintragen: Max“. */
 export function aktionText(e: Entwurf): string {
+  if (e.ziel.art === 'frei') return 'Zurückziehen';
   if (e.ziel.art === 'gast') return `Gast eintragen: ${e.ziel.name}`;
   return e.modus === 'direkt' ? `Direkt zuteilen: ${e.ziel.name}` : `Anfrage an ${e.ziel.name}`;
 }

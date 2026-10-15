@@ -3,7 +3,12 @@ import { Sheet } from '@ui/fenster/Sheet';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { kandidatenAus, kandidatHinweis, type Kandidat } from '@shared/dienstplan/werKann';
-import type { Entwurf, EntwurfErgebnis, EntwurfZiel } from '@shared/dienstplan/entwuerfe';
+import {
+  zielText,
+  type Besetzung,
+  type Entwurf,
+  type EntwurfErgebnis,
+} from '@shared/dienstplan/entwuerfe';
 import { ladeWerKann } from './ladeWerKann';
 import { grundText } from './ladeEntwuerfe';
 import { useInsBild } from './useInsBild';
@@ -42,7 +47,7 @@ export type Eintragen =
   | { art: 'einrichten'; gruppe: string; onEinrichten: () => Promise<void> }
   | {
       art: 'bereit';
-      onWahl: (ziel: EntwurfZiel, erwartet: number | null) => Promise<EntwurfErgebnis>;
+      onWahl: (ziel: Besetzung, erwartet: number | null) => Promise<EntwurfErgebnis>;
       /** Ersetzt einen Entwurf („Andere Person wählen“, E4-3-3): dessen Version. Sonst `null` (neu). */
       erwartet?: number | null;
     };
@@ -79,15 +84,13 @@ export function WerKann({
   const [gast, setGast] = useState('');
   const [laeuft, setLaeuft] = useState(false);
   const [meldung, setMeldung] = useState<string | null>(null);
-  const [konflikt, setKonflikt] = useState<{ ziel: EntwurfZiel; jetzt: Entwurf | null } | null>(
-    null,
-  );
+  const [konflikt, setKonflikt] = useState<{ ziel: Besetzung; jetzt: Entwurf | null } | null>(null);
 
   // Ein Hinweis (Konflikt, Fehler) steht unter der langen Liste – ins Bild rollen (`useInsBild`).
   const hinweisRef = useInsBild<HTMLDivElement>(meldung ?? konflikt);
 
   const bereit = eintragen?.art === 'bereit' ? eintragen : null;
-  const waehle = async (ziel: EntwurfZiel, erwartet: number | null) => {
+  const waehle = async (ziel: Besetzung, erwartet: number | null) => {
     if (!bereit || laeuft) return;
     setLaeuft(true);
     setMeldung(null);
@@ -235,7 +238,7 @@ export function WerKann({
                   ? `${konflikt.jetzt.von.name} hat diesen Platz eben geändert:`
                   : 'Jemand hat diesen Platz eben geändert.'}
               </b>{' '}
-              {konflikt.jetzt && `Entwurf „${konflikt.jetzt.ziel.name}“. `}
+              {konflikt.jetzt && `Entwurf „${zielText(konflikt.jetzt.ziel)}“. `}
               Dein „{konflikt.ziel.name}“ wurde nicht gespeichert.
             </p>
             <div className={styles.knoepfe}>

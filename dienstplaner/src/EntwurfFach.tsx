@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { Segment } from '@ui/bedienung/Segment';
-import type { Entwurf, EntwurfErgebnis } from '@shared/dienstplan/entwuerfe';
+import { zielText, type Entwurf, type EntwurfErgebnis } from '@shared/dienstplan/entwuerfe';
 import { wannText } from '@shared/ct/zeit';
 import type { FreierPlatz } from './WerKann';
 import { grundText } from './ladeEntwuerfe';
@@ -78,7 +78,7 @@ export function EntwurfFach({
         <div className={styles.konflikt}>
           <p>
             <b>Inzwischen in ChurchTools geändert:</b> {inChurchTools} Der Entwurf „
-            {entwurf.ziel.name}“ von {von} passt nicht mehr dazu.
+            {zielText(entwurf.ziel)}“ von {von} passt nicht mehr dazu.
           </p>
           <p>Was in ChurchTools steht, gilt. Dieser Entwurf wird nie gesendet.</p>
           <button
@@ -93,7 +93,7 @@ export function EntwurfFach({
       ) : (
         <>
           <div className={eigen.status}>
-            <b>{entwurf.ziel.name}</b>
+            <b>{zielText(entwurf.ziel)}</b>
             {gast && ' (Gast)'} – Entwurf, noch nicht gesendet.
             <small>
               Eingetragen von {von}, {wannText(entwurf.zeit, zeitzone)}
@@ -163,7 +163,7 @@ export function EntwurfFach({
                   ? `${konflikt.jetzt.von.name} hat diesen Entwurf eben geändert:`
                   : 'Jemand hat diesen Entwurf eben entfernt.'}
               </b>{' '}
-              {konflikt.jetzt && `„${konflikt.jetzt.ziel.name}“. `}
+              {konflikt.jetzt && `„${zielText(konflikt.jetzt.ziel)}“. `}
               Nichts{' '}
               {konflikt.was === 'ändern'
                 ? 'geändert'

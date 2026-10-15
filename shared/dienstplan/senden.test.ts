@@ -41,7 +41,8 @@ function aufbau(entwuerfe: Entwurf[], plaetze = PLAETZE) {
 }
 
 describe('zielAus', () => {
-  it('Anfrage → angefragt, direkt → zugesagt, Gast → Name', () => {
+  it('Anfrage → angefragt, direkt → zugesagt, Gast → Name, zurückziehen → frei', () => {
+    expect(zielAus(entwurf(6, { ziel: { art: 'frei' } }))).toEqual({ art: 'frei' });
     expect(zielAus(entwurf(6))).toEqual({ art: 'anfrage', personId: 46 });
     expect(zielAus(entwurf(6, { modus: 'direkt' }))).toEqual({ art: 'zusage', personId: 46 });
     expect(zielAus(entwurf(6, { ziel: { art: 'gast', name: 'Max' }, modus: 'direkt' }))).toEqual({
@@ -144,6 +145,48 @@ describe('sende', () => {
     a.c.ct.trotzdemSchreiben = true;
     expect(await sende(a.eintraege, a.anschluss)).toEqual([{ art: 'gesendet' }]);
     expect(a.offen()).toEqual([]);
+  });
+
+  it('E4-5 Zurückziehen: Platz wird frei (decline), erst danach ist der Entwurf weg', async () => {
+    const a = aufbau(
+      [entwurf(6, { ziel: { art: 'frei' }, gesehen: { art: 'anfrage', personId: 46 } })],
+      [{ ...PLAETZE[0], personId: 46, name: 'Anna Test', isAccepted: false }],
+    );
+    expect(await sende(a.eintraege, a.anschluss)).toEqual([{ art: 'gesendet' }]);
+    expect(a.c.ct.geschrieben.map((g) => [g.method, g.pfad])).toEqual([
+      ['POST', '/events/7/servicerequests/1/decline'],
+    ]);
+    expect(a.platz(6)).toMatchObject({ personId: null, name: null });
+    expect(a.offen()).toEqual([]);
+  });
+
+  it('E4-5 Ersetzen: die gesehene Person steht noch da → die neue wird eingeteilt', async () => {
+    const a = aufbau(
+      [entwurf(6, { gesehen: { art: 'zusage', personId: 50 } })],
+      [{ ...PLAETZE[0], personId: 50, name: 'Clara Test', isAccepted: true }],
+    );
+    expect(await sende(a.eintraege, a.anschluss)).toEqual([{ art: 'gesendet' }]);
+    expect([a.platz(6).personId, a.platz(6).isAccepted]).toEqual([46, false]);
+    expect(a.offen()).toEqual([]);
+  });
+
+  it('E4-5: angefragte Person hat inzwischen zugesagt → nicht austragen (Konflikt), Entwurf bleibt (Alwin, 15.10.)', async () => {
+    const a = aufbau(
+      [
+        entwurf(6, { ziel: { art: 'frei' }, gesehen: { art: 'anfrage', personId: 46 } }),
+        entwurf(7, { gesehen: { art: 'anfrage', personId: 47 } }),
+      ],
+      [
+        { ...PLAETZE[0], personId: 46, name: 'Anna Test', isAccepted: true },
+        { ...PLAETZE[1], personId: 47, name: 'Ben Test', isAccepted: true },
+      ],
+    );
+    expect(await sende(a.eintraege, a.anschluss)).toEqual([
+      { art: 'nicht-gesendet', grund: 'konflikt', jetzt: { art: 'zusage', personId: 46 } },
+      { art: 'nicht-gesendet', grund: 'konflikt', jetzt: { art: 'zusage', personId: 47 } },
+    ]);
+    expect(a.c.ct.geschrieben).toEqual([]);
+    expect(a.offen()).toHaveLength(2);
   });
 
   it('kein Recht bzw. Platz weg → nicht gesendet, aber weitermachen', async () => {

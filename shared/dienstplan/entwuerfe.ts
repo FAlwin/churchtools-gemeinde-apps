@@ -30,15 +30,28 @@ import {
   type ModulPort,
   type Wert,
 } from '../ct/modulDaten';
-import { gleichePerson, type Belegung, type PlatzOrt } from './einteilen';
+import { gleicherStand, type Belegung, type PlatzOrt } from './einteilen';
 
 const ART = 'dienstplaner-entwurf';
 const FASSUNG = 1;
 
-/** Wer eingetragen werden soll: eine Person mit Konto oder ein Gast (nur ein Name, bekommt nie eine Anfrage). */
+/**
+ * Was am Platz stehen soll: eine Person mit Konto, ein Gast (nur ein Name, bekommt nie eine Anfrage) – oder
+ * **frei** (E4-5: die Einteilung zurückziehen). Steht beim Eintragen schon jemand da (`gesehen`), wird er
+ * ersetzt bzw. ausgetragen.
+ */
 export type EntwurfZiel =
   | { art: 'person'; personId: number; name: string }
-  | { art: 'gast'; name: string };
+  | { art: 'gast'; name: string }
+  | { art: 'frei' };
+
+/** Wer eingetragen wird – eine Person oder ein Gast (das „Wer kann?“-Fach kennt nur diese beiden). */
+export type Besetzung = Exclude<EntwurfZiel, { art: 'frei' }>;
+
+/** Das Ziel in Worten, für jede Anzeige: der Name, bei „frei“ „Zurückziehen“. Eine Stelle statt vieler. */
+export function zielText(z: EntwurfZiel): string {
+  return z.art === 'frei' ? 'Zurückziehen' : z.name;
+}
 
 export interface Entwurf {
   ort: PlatzOrt;
@@ -156,6 +169,7 @@ const istText = (x: unknown): x is string => typeof x === 'string' && x.trim() !
 
 function zielGueltig(z: unknown): z is EntwurfZiel {
   const v = z as Partial<Record<string, unknown>> | null;
+  if (v?.art === 'frei') return true;
   if (!v || !istText(v.name)) return false;
   return v.art === 'gast' || (v.art === 'person' && istZahl(v.personId));
 }
@@ -253,11 +267,11 @@ export async function schubladeLesen(
 
 /**
  * Steht in ChurchTools am Platz inzwischen etwas anderes als beim Eintragen? Dann gilt ChurchTools, und der
- * Entwurf wird nie gesendet (Alwin, 14.10.2026). Dieselbe Regel wie beim Einteilen (`gleichePerson`): Hat die
- * gesehene Person inzwischen nur zugesagt, ist das keine Änderung.
+ * Entwurf wird nie gesendet (Alwin, 14.10.2026). Dieselbe Regel wie beim Senden (`gleicherStand`): Hat eine
+ * angefragte Person inzwischen zugesagt, ist auch das eine Änderung (Alwin, 15.10.2026).
  */
 export function entwurfVeraltet(entwurf: Entwurf, inChurchTools: Belegung): boolean {
-  return !gleichePerson(entwurf.gesehen, inChurchTools);
+  return !gleicherStand(entwurf.gesehen, inChurchTools);
 }
 
 // ── Speichern und Entfernen ──────────────────────────────────────────────────
@@ -265,10 +279,12 @@ export function entwurfVeraltet(entwurf: Entwurf, inChurchTools: Belegung): bool
 /** Gleicher Inhalt (wer, wie gesendet, auf welchem Stand) – egal wer und wann. */
 function gleicherInhalt(a: EntwurfEingabe, b: EntwurfEingabe): boolean {
   const ziel =
-    a.ziel.art === 'gast'
-      ? b.ziel.art === 'gast' && a.ziel.name.trim() === b.ziel.name.trim()
-      : b.ziel.art === 'person' && a.ziel.personId === b.ziel.personId;
-  return ziel && a.modus === b.modus && gleichePerson(a.gesehen, b.gesehen);
+    a.ziel.art === 'frei'
+      ? b.ziel.art === 'frei'
+      : a.ziel.art === 'gast'
+        ? b.ziel.art === 'gast' && a.ziel.name.trim() === b.ziel.name.trim()
+        : b.ziel.art === 'person' && a.ziel.personId === b.ziel.personId;
+  return ziel && a.modus === b.modus && gleicherStand(a.gesehen, b.gesehen);
 }
 
 /**

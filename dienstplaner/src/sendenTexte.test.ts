@@ -20,6 +20,7 @@ describe('aktionText', () => {
     expect(aktionText(e())).toBe('Anfrage an Anna Test');
     expect(aktionText(e({ modus: 'direkt' }))).toBe('Direkt zuteilen: Anna Test');
     expect(aktionText(gast)).toBe('Gast eintragen: Max');
+    expect(aktionText(e({ ziel: { art: 'frei' } }))).toBe('Zurückziehen');
   });
 });
 

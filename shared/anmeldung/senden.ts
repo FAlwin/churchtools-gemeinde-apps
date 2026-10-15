@@ -16,7 +16,10 @@
 import {
   alterAm,
   ctAblage,
+  ctZusatzSpalten,
+  erziehungAus,
   geburtsdatumAn,
+  unterschriftAus,
   type Antwort,
   type Antworten,
   type Feld,
@@ -116,6 +119,33 @@ function nameVon(w: Antwort): { vor: string; nach: string } {
 }
 
 /**
+ * **Erziehungsberechtigte lesbar** (A6-2b) – eine Zeile je Person („Erna Muster, 0151 2345678“), darunter das
+ * Häkchen. `null`, wenn nichts eingetragen ist.
+ */
+export function erziehungText(w: Antwort): string | null {
+  const e = erziehungAus(w);
+  const zeilen = e.personen
+    .map((p) =>
+      [`${p.vor ?? ''} ${p.nach ?? ''}`.trim(), (p.tel ?? '').trim()].filter(Boolean).join(', '),
+    )
+    .filter(Boolean);
+  if (zeilen.length === 0 && !e.einverstanden) return null;
+  if (e.einverstanden) zeilen.push('✓ erziehungsberechtigt und einverstanden');
+  return zeilen.join('\n');
+}
+
+/** Tag `YYYY-MM-DD` → `TT.MM.JJJJ`. */
+const tagText = (tag: string) => tag.slice(0, 10).split('-').reverse().join('.');
+
+/**
+ * **Die lesbare Spalte der Unterschrift** (Alwin, 15.10.2026: „zwei Spalten“) – wer und wann: „✓ Erna Muster,
+ * 15.10.2026“. Die Striche stehen in der zweiten Spalte (`ctZusatzSpalten`).
+ */
+export function unterschriftLesbar(name: string, heute: string): string {
+  return `✓ ${name ? `${name}, ` : 'unterschrieben am '}${tagText(heute)}`;
+}
+
+/**
  * Eine Antwort im Format, das ChurchTools für das Gruppenfeld annimmt (gemessen A0/A6): Ankreuzen `1`, Ja/Nein und
  * Auswahl als Options-ID, Mehrfachauswahl als Text („Wandern, Spiele“), sonst der Text. `null` = leer, nichts
  * schicken.
@@ -129,6 +159,9 @@ export function ctWert(f: Feld, w: Antwort, ct: CtFormFeld): string | null {
     return String(o.id);
   }
   if (f.typ === 'multi') return Array.isArray(w) && w.length ? w.join(', ') : null;
+  if (f.typ === 'erziehungsberechtigte') return erziehungText(w);
+  // Die Unterschrift baut `anmeldungAufbauen` (sie braucht Name und Tag).
+  if (f.typ === 'unterschrift') return null;
   return typeof w === 'string' && w.trim() ? w.trim() : null;
 }
 
@@ -163,14 +196,36 @@ export function anmeldungAufbauen(
   const mail = typeof mailWert === 'string' ? mailWert.trim() : '';
   const namePerson = e.formular.person.find((f) => f.typ === 'name');
 
-  /** Ein Gruppenfeld unseres Formulars → Wert für ChurchTools (`null` = leer). */
-  const feldWert = (f: Feld, w: Antwort): FormWert | null => {
+  // Wer unterschreibt: die erste erziehungsberechtigte Person, sonst der Kontakt.
+  const elternFeld = e.formular.anmeldung.find(
+    (f) => f.typ === 'erziehungsberechtigte' && f.zustand !== 'aus',
+  );
+  const ersteEltern = elternFeld ? erziehungAus(a.anmeldung[elternFeld.id]).personen[0] : undefined;
+  const unterzeichner =
+    `${ersteEltern?.vor ?? ''} ${ersteEltern?.nach ?? ''}`.trim() ||
+    `${kontakt.vor} ${kontakt.nach}`.trim();
+
+  /** Ein Gruppenfeld unseres Formulars (samt weiterer Spalten) → Werte für ChurchTools. */
+  const feldWerte = (f: Feld, w: Antwort): FormWert[] => {
     const ablage = ctAblage(f);
-    if (ablage.ort !== 'gruppenfeld') return null;
-    const ctFeld = gruppenfeld(e.ctFelder[f.id]);
-    if (!ctFeld) throw new PasstNicht(`das Feld „${f.frage}“ fehlt im Anmeldeformular`);
+    if (ablage.ort !== 'gruppenfeld') return [];
+    const spalte = (schluessel: string, name: string) => {
+      const ctFeld = gruppenfeld(e.ctFelder[schluessel]);
+      if (!ctFeld) throw new PasstNicht(`das Feld „${name}“ fehlt im Anmeldeformular`);
+      return ctFeld;
+    };
+    const ctFeld = spalte(f.id, f.frage);
+    if (f.typ === 'unterschrift') {
+      const striche = unterschriftAus(w);
+      if (!striche) return [];
+      const daten = ctZusatzSpalten(f)[0];
+      return [
+        { id: String(ctFeld.id), type: 'custom', value: unterschriftLesbar(unterzeichner, heute) },
+        { id: String(spalte(daten.schluessel, daten.name).id), type: 'custom', value: striche },
+      ];
+    }
     const wert = ctWert(f, w, ctFeld);
-    return wert === null ? null : { id: String(ctFeld.id), type: 'custom', value: wert };
+    return wert === null ? [] : [{ id: String(ctFeld.id), type: 'custom', value: wert }];
   };
   /** Ein Systemfeld (Betrag, Auswahl …) → Wert für ChurchTools. */
   const systemWert = (id: string, wert: string): FormWert => {
@@ -183,10 +238,8 @@ export function anmeldungAufbauen(
   const einmal: FormWert[] = [];
   if (kontakt.vor || kontakt.nach)
     einmal.push(systemWert('kontakt', `${kontakt.vor} ${kontakt.nach}`.trim()));
-  for (const f of e.formular.anmeldung.filter(sichtbar)) {
-    const w = feldWert(f, a.anmeldung[f.id]);
-    if (w) einmal.push(w);
-  }
+  for (const f of e.formular.anmeldung.filter(sichtbar))
+    einmal.push(...feldWerte(f, a.anmeldung[f.id]));
   if (kannEtwasKosten(e.preis)) {
     einmal.push(systemWert('betrag', euroText(preis.gesamtCent)));
     einmal.push(systemWert('aufschluesselung', aufschluesselungText(preis)));
@@ -207,10 +260,7 @@ export function anmeldungAufbauen(
     const geburt = e.formular.person.find((f) => f.id === 'birth' && sichtbar(f));
     if (geburt && typeof p.birth === 'string' && p.birth.trim())
       form.push({ id: pflichtPerson('birthday'), type: 'person', value: p.birth.trim() });
-    for (const f of e.formular.person.filter(sichtbar)) {
-      const w = feldWert(f, p[f.id]);
-      if (w) form.push(w);
-    }
+    for (const f of e.formular.person.filter(sichtbar)) form.push(...feldWerte(f, p[f.id]));
     if (i === 0) form.push(...einmal);
     if (datenschutz) form.push({ id: String(datenschutz.id), type: 'privacy', value: 'true' });
     return { form };

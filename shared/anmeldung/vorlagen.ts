@@ -6,7 +6,13 @@
  */
 import { STANDARD_BEZAHLUNG } from './bezahlung';
 import { mitVorgaben, vorlageVon } from './gestaltung';
-import { standardFormular, type Gestaltung, type OeffentlicheEinstellungen } from './formular';
+import {
+  standardFormular,
+  type Formular,
+  type Gestaltung,
+  type OeffentlicheEinstellungen,
+} from './formular';
+import { EMPFOHLEN, einordnen } from './baukasten';
 
 export type Vorlage = 'einfach' | 'kinder' | 'freizeit';
 
@@ -20,7 +26,7 @@ export const VORLAGEN: { id: Vorlage; name: string; beschreibung: string }[] = [
     id: 'kinder',
     name: 'Kinder-Event',
     beschreibung:
-      'Eltern melden ihre Kinder an; Geburtsdatum, Telefon und Foto-Erlaubnis sind Pflicht',
+      'Eltern melden ihre Kinder an; Geburtsdatum, Telefon, Foto-Erlaubnis, Erziehungsberechtigte und Unterschrift sind Pflicht',
   },
   {
     id: 'freizeit',
@@ -34,6 +40,19 @@ const GESTALTUNG: Record<Vorlage, Gestaltung['vorlage']> = {
   kinder: 'bunt',
   freizeit: 'foto',
 };
+
+/**
+ * **Kinder-Event:** dazu „Erziehungsberechtigte“ und „Unterschrift“ (Alwin, 14.10.2026: „bei Vorlage Kinder drin“) –
+ * über dieselben Bausteine und dieselbe Einordnung wie im Baukasten, damit Vorlage und Kachel nicht auseinanderlaufen.
+ */
+function kinderFormular(): Formular {
+  let f = standardFormular({ geburtsdatum: true, telefon: 'pflicht', foto: 'pflicht' });
+  for (const id of ['eltern', 'sign']) {
+    const b = EMPFOHLEN.find((x) => x.id === id)!;
+    f = einordnen(f, b.feld.id, b.bereich, null, b.feld);
+  }
+  return f;
+}
 
 /** Die Gestaltung einer neuen Veranstaltung: die Werte des passenden Startpunkts (`mitVorgaben`). */
 function startGestaltung(vorlage: Vorlage): Gestaltung {
@@ -59,7 +78,7 @@ export function neueEinstellungen(vorlage: Vorlage): OeffentlicheEinstellungen {
     },
     formular:
       vorlage === 'kinder'
-        ? standardFormular({ geburtsdatum: true, telefon: 'pflicht', foto: 'pflicht' })
+        ? kinderFormular()
         : vorlage === 'freizeit'
           ? standardFormular({ geburtsdatum: true })
           : standardFormular(),

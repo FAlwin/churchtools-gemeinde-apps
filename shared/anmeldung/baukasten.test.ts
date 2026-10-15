@@ -134,7 +134,10 @@ describe('Empfohlene Bausteine (A5)', () => {
     for (const x of EMPFOHLEN) {
       expect(x.feld.id).toBe(x.id);
       expect(x.feld.art).toBe('standard');
-      expect(x.feld.zustand).toBe(x.id === 'birth' ? 'pflicht' : 'freiwillig');
+      // Pflicht beim Einfügen: Geburtsdatum (Preise nach Alter) und die Bausteine für Kinder-Events (A6-2b).
+      expect(x.feld.zustand).toBe(
+        ['birth', 'eltern', 'sign'].includes(x.id) ? 'pflicht' : 'freiwillig',
+      );
       const imGrund = [...grund.anmeldung, ...grund.person].find((f) => f.id === x.id);
       if (imGrund) expect(x.feld.frage).toBe(imGrund.frage);
     }

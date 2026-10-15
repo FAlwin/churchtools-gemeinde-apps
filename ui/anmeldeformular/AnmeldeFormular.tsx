@@ -12,6 +12,7 @@ import { buchungAus, type PreisWahl } from '@shared/anmeldung/senden';
 import { berechnePreis, euroText, kannEtwasKosten, preisKurz } from '@shared/anmeldung/preis';
 import { SCHRIFT, leereAntworten, textAufFarbe } from './daten';
 import { titelbildGross } from '@shared/anmeldung/gestaltung';
+import { ErziehungsEingabe, UnterschriftEingabe } from './Bausteine';
 import s from './AnmeldeFormular.module.scss';
 
 /**
@@ -159,6 +160,22 @@ export function FeldEingabe({
         {f.hilfe && <span>{f.hilfe}</span>}
       </div>
     );
+
+  // A6-2b: zusammengesetzte Bausteine (`Bausteine.tsx`).
+  if (f.typ === 'erziehungsberechtigte' || f.typ === 'unterschrift') {
+    const Eingabe = f.typ === 'erziehungsberechtigte' ? ErziehungsEingabe : UnterschriftEingabe;
+    return (
+      <Eingabe
+        feld={f}
+        wert={wert}
+        onWert={onWert}
+        pfad={pfad}
+        fehler={fehler}
+        gesperrt={gesperrt}
+        zusatz={zusatz}
+      />
+    );
+  }
 
   if (f.typ === 'name') {
     const n = (wert ?? {}) as { vor?: string; nach?: string };

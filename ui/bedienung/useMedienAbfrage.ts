@@ -23,8 +23,16 @@ export function useMedienAbfrage(abfrage: string, ohneFenster = false): boolean 
     const nachfuehren = () => setTrifft(mq.matches);
     // Die Abfrage kann sich zwischen erstem Zeichnen und diesem Effekt geändert haben.
     nachfuehren();
-    mq.addEventListener('change', nachfuehren);
-    return () => mq.removeEventListener('change', nachfuehren);
+    // Ältere Safari (vor iOS 14) kennen an `MediaQueryList` nur `addListener` – das öffentliche Anmeldeformular
+    // öffnen Gäste mit allen möglichen Handys (A6-2b). Ohne beides: kein Nachführen, aber auch kein Absturz.
+    if (typeof mq.addEventListener === 'function') {
+      mq.addEventListener('change', nachfuehren);
+      return () => mq.removeEventListener('change', nachfuehren);
+    }
+    if (typeof mq.addListener === 'function') {
+      mq.addListener(nachfuehren);
+      return () => mq.removeListener(nachfuehren);
+    }
   }, [abfrage]);
 
   return trifft;

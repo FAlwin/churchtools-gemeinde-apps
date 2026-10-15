@@ -38,7 +38,10 @@ export type Feldtyp =
   | 'ueberschrift'
   | 'trenner'
   | 'privacy'
-  | 'price';
+  | 'price'
+  // A6-2b: zusammengesetzte Bausteine (Alwin, 14./15.10.2026, Entwurf `a6-2b-entwurf-v2`).
+  | 'erziehungsberechtigte'
+  | 'unterschrift';
 
 /**
  * **Nur Text, keine Frage** – Hinweistext, Zwischenüberschrift, Trennlinie (A5). Keine Antwort, keine Spalte in
@@ -184,8 +187,48 @@ export function alterAm(geburt: string, stichtag: string): number | null {
   return alter < 0 ? null : alter;
 }
 
-/** Antwort eines Feldes: Text, Ja/Nein, angekreuzt, gewählte Antworten. */
-export type Antwort = string | boolean | string[] | { vor: string; nach: string } | undefined;
+/** Eine erziehungsberechtigte Person (Baustein „Erziehungsberechtigte“). */
+export interface Erziehungsberechtigter {
+  vor: string;
+  nach: string;
+  tel: string;
+}
+
+/** Antwort des Bausteins „Erziehungsberechtigte“: eine Person Pflicht, eine zweite freiwillig, dazu das Häkchen. */
+export interface ErziehungsAntwort {
+  personen: Erziehungsberechtigter[];
+  einverstanden: boolean;
+}
+
+/** Antwort des Bausteins „Unterschrift“: die Striche als Text (`unterschrift.ts`). */
+export interface UnterschriftAntwort {
+  striche: string;
+}
+
+/** Antwort eines Feldes: Text, Ja/Nein, angekreuzt, gewählte Antworten, Name, zusammengesetzte Bausteine. */
+export type Antwort =
+  | string
+  | boolean
+  | string[]
+  | { vor: string; nach: string }
+  | ErziehungsAntwort
+  | UnterschriftAntwort
+  | undefined;
+
+/** Die Antwort als „Erziehungsberechtigte“ – oder leer, wenn sie etwas anderes ist. */
+export function erziehungAus(w: Antwort): ErziehungsAntwort {
+  const x = w as Partial<ErziehungsAntwort> | undefined;
+  return {
+    personen: Array.isArray(x?.personen) ? x.personen : [],
+    einverstanden: x?.einverstanden === true,
+  };
+}
+
+/** Die Striche der Unterschrift – `''`, wenn (noch) nicht unterschrieben. */
+export function unterschriftAus(w: Antwort): string {
+  const x = w as Partial<UnterschriftAntwort> | undefined;
+  return typeof x?.striche === 'string' ? x.striche : '';
+}
 
 export interface Antworten {
   anmeldung: Record<string, Antwort>;
@@ -219,6 +262,19 @@ export function pruefeAntworten(f: Formular, a: Antworten): string[] {
     }
     if (x.typ === 'multi') {
       if (!Array.isArray(wert) || wert.length === 0) fehlt.push(pfad);
+      return;
+    }
+    // Erziehungsberechtigte: die erste Person ganz (Name, Telefon) und das Häkchen; die zweite ist freiwillig.
+    if (x.typ === 'erziehungsberechtigte') {
+      const e = erziehungAus(wert);
+      const erste = e.personen[0];
+      for (const teil of ['vor', 'nach', 'tel'] as const)
+        if (!erste?.[teil]?.trim()) fehlt.push(`${pfad}.0.${teil}`);
+      if (!e.einverstanden) fehlt.push(`${pfad}.ok`);
+      return;
+    }
+    if (x.typ === 'unterschrift') {
+      if (!unterschriftAus(wert)) fehlt.push(pfad);
       return;
     }
     if (typeof wert !== 'string' || !wert.trim()) fehlt.push(pfad);
@@ -313,11 +369,29 @@ export function ctAblage(x: Feld): CtAblage {
     case 'tel':
     case 'text':
       return { ort: 'gruppenfeld', fieldTypeCode: 'text', optionen: [] };
+    // A6-2b: Erziehungsberechtigte lesbar als Text („Erna Muster, 0151 …“); bei der Unterschrift „✓ Erna Muster,
+    // 15.10.2026“ – die Striche liegen in einer zweiten Spalte (`ctZusatzSpalten`).
     case 'textarea':
+    case 'erziehungsberechtigte':
       return { ort: 'gruppenfeld', fieldTypeCode: 'textarea', optionen: [] };
+    case 'unterschrift':
+      return { ort: 'gruppenfeld', fieldTypeCode: 'text', optionen: [] };
     case 'number':
       return { ort: 'gruppenfeld', fieldTypeCode: 'number', optionen: [] };
   }
+}
+
+/**
+ * **Weitere Spalten eines Felds** – bisher nur die Striche der Unterschrift (Alwin, 15.10.2026: „zwei Spalten“):
+ * In der ersten steht lesbar, wer wann unterschrieben hat, in dieser die Striche (höchstens 4.000 Zeichen, gemessen).
+ * Ihre Nummer steht in `ctFelder` unter `<Feld-ID>.<schluessel>`.
+ */
+export function ctZusatzSpalten(
+  x: Feld,
+): { schluessel: string; name: string; fieldTypeCode: 'textarea' }[] {
+  return x.typ === 'unterschrift'
+    ? [{ schluessel: `${x.id}.daten`, name: `${x.frage} (Daten)`, fieldTypeCode: 'textarea' }]
+    : [];
 }
 
 /**
@@ -514,6 +588,10 @@ const feldSchema = z.object({
     'trenner',
     'privacy',
     'price',
+    // Seit A6-2b. Ein älteres Formular-Paket kennt sie nicht und kann solche Formulare nicht lesen – das Paket
+    // deshalb immer zusammen mit der Erweiterung aktualisieren (docs/betrieb/ANMELDUNGEN.md).
+    'erziehungsberechtigte',
+    'unterschrift',
   ]),
   frage: z.string().max(200),
   hilfe: z.string().max(400),

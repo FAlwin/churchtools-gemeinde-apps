@@ -58,6 +58,30 @@ export const EMPFOHLEN: Empfohlen[] = [
       'Name und Telefonnummer',
     ),
   },
+  // A6-2b (Alwin, 14./15.10.2026, Entwurf `a6-2b-entwurf-v2`): einmal je Anmeldung, gilt für alle Kinder.
+  {
+    id: 'eltern',
+    name: 'Erziehungsberechtigte',
+    bereich: 'anmeldung',
+    feld: {
+      ...neuesStandardFeld(
+        'eltern',
+        'erziehungsberechtigte',
+        'Erziehungsberechtigte',
+        'Für alle angemeldeten Kinder.',
+      ),
+      zustand: 'pflicht',
+    },
+  },
+  {
+    id: 'sign',
+    name: 'Unterschrift',
+    bereich: 'anmeldung',
+    feld: {
+      ...neuesStandardFeld('sign', 'unterschrift', 'Unterschrift', 'Mit dem Finger oder der Maus.'),
+      zustand: 'pflicht',
+    },
+  },
   { id: 'allergy', name: 'Allergien & Essen', bereich: 'person', feld: ausGrund('allergy') },
   {
     id: 'health',
@@ -84,6 +108,9 @@ export const BEREICH_FEST: Record<string, Bereich> = {
   name: 'anmeldung',
   mail: 'anmeldung',
   note: 'anmeldung',
+  // Einmal je Anmeldung – für alle Kinder dieselben Erziehungsberechtigten, eine Unterschrift (A6-2b).
+  eltern: 'anmeldung',
+  sign: 'anmeldung',
   pname: 'person',
   birth: 'person',
 };

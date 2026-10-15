@@ -73,6 +73,8 @@ interface G {
 let gruppen: Map<number, G>;
 let naechste: number;
 let schlucken: Set<string>;
+/** Neue Spalten: liefert `true` → ChurchTools legt sie mit anderem Namen an (nicht übernommen, A6-2b). */
+let schluckeNach: (() => boolean) | null = null;
 let termine: Map<number, Record<string, unknown>>;
 let aufrufe: string[];
 /** Mitglieder je Gruppe; `403`/`502` = so antwortet ChurchTools auf `/members`. */
@@ -257,7 +259,7 @@ function ct() {
       g.felder.push({
         ...body,
         id,
-        name: String(body.name),
+        name: schluckeNach?.() ? 'etwas anderes' : String(body.name),
         note: null,
         options: mitIds(body.options),
       });
@@ -333,6 +335,7 @@ beforeEach(() => {
   gruppen = new Map();
   naechste = 100;
   schlucken = new Set();
+  schluckeNach = null;
   termine = new Map();
   aufrufe = [];
   mitglieder = new Map();
@@ -869,6 +872,49 @@ describe('Formularfelder in ChurchTools (A5)', () => {
     expect(gruppen.get(id)!.felder).toHaveLength(anzahl);
     // … und rührt vorhandene Spalten nicht an (kein Schreibaufruf an den Feldern).
     expect(aufrufe.filter((a) => !a.startsWith('GET') && a.includes('/memberfields'))).toEqual([]);
+  });
+
+  it('A6-2b Kinder-Vorlage: Erziehungsberechtigte (lesbar) und Unterschrift in zwei Spalten, beide Pflicht', async () => {
+    const id = await legeVeranstaltungAn({
+      name: 'Kindertag',
+      teamId: 7,
+      artId: 5,
+      vorlage: 'kinder',
+    });
+    await felderAnlegen(id);
+    expect(ctFeld(id, 'eltern')).toMatchObject({
+      name: 'Erziehungsberechtigte',
+      fieldTypeCode: 'textarea',
+      requiredInRegistrationForm: true,
+    });
+    expect(ctFeld(id, 'sign')).toMatchObject({
+      name: 'Unterschrift',
+      fieldTypeCode: 'text',
+      requiredInRegistrationForm: true,
+    });
+    expect(ctFeld(id, 'sign.daten')).toMatchObject({
+      name: 'Unterschrift (Daten)',
+      fieldTypeCode: 'textarea',
+      useInRegistrationForm: true,
+      requiredInRegistrationForm: true,
+      securityLevel: 3,
+    });
+    // Ausschalten nimmt beide Spalten aus dem Anmeldeformular – die Spalten (und Antworten) bleiben.
+    await feldEntfernen(id, 'sign');
+    expect(ctFeld(id, 'sign').useInRegistrationForm).toBe(false);
+    expect(ctFeld(id, 'sign.daten').useInRegistrationForm).toBe(false);
+  });
+
+  it('A6-2b: nimmt ChurchTools die Spalte für die Striche nicht an → Fehler, Einstellungen unverändert', async () => {
+    const id = await neu();
+    const sign = EMPFOHLEN.find((x) => x.id === 'sign')!.feld;
+    const vorher = gruppen.get(id)!.note;
+    let n = 0;
+    // Die erste Spalte (lesbar) geht durch, die zweite (Striche) wird still geschluckt.
+    schluckeNach = () => ++n > 1;
+    await expect(feldSpeichern(id, 'anmeldung', sign)).rejects.toBeInstanceOf(NichtUebernommen);
+    schluckeNach = null;
+    expect(gruppen.get(id)!.note).toBe(vorher);
   });
 
   it('neue Frage: Spalte mit Antworten angelegt, ins Formular vor die Bemerkungen', async () => {

@@ -44,6 +44,8 @@ Startseite zeigt bis dahin nur „Erst einrichten“.
 1. Beim Anbieter eurer Website eine Subdomain anlegen, z. B. `anmeldung.eure-gemeinde.de` (mit HTTPS).
 2. Am Release die Datei **`anmeldungen-formular-v….zip`** herunterladen, **entpacken** und den Inhalt
    (`index.html`, Ordner `assets`) in den Ordner der Subdomain hochladen. Aktualisieren: Inhalt ersetzen.
+   **Immer zusammen mit der Erweiterung aktualisieren:** Ein älteres Formular-Paket kennt neue Bausteine nicht
+   (z. B. „Erziehungsberechtigte“, „Unterschrift“ seit A6-2b) und kann Formulare mit ihnen nicht anzeigen.
 3. In ChurchTools die Adresse als **erlaubte Herkunft** eintragen (Einstellung
    `access_control_allow_origins`, z. B. `https://anmeldung.eure-gemeinde.de`) – sonst blockt der Browser
    jede Anfrage des Formulars. Das gibt keine Daten frei, es erlaubt nur dieser Seite, die Schnittstellen zu
@@ -178,6 +180,15 @@ mitarbeiten (z. B. über den Status oder global über die Gruppen).
     (Name, E-Mail, Name jeder Person, Geburtsdatum, Datenschutz, „Wer nimmt teil?“, „Auswahl und Extras“);
     antippen zeigt den Grund. **„Wer meldet sich an?“** und „Geburtsdatum abfragen“ lassen sich oben in der
     Leiste „Bausteine“ umstellen – dieselbe Einstellung wie im Reiter Veranstaltung.
+  - **Erziehungsberechtigte und Unterschrift** (empfohlene Bausteine, in der Vorlage „Kinder-Event“ schon drin,
+    je einmal je Anmeldung): Bei „Erziehungsberechtigte“ tragen Gäste Name und Telefon ein (eine zweite Person
+    freiwillig) und setzen das Häkchen „erziehungsberechtigt und einverstanden“. Die **Unterschrift** zeichnen sie
+    mit Finger oder Maus; **am Handy** öffnet ein Tipp die Fläche im Vollbild (quer gehalten wird sie groß). In
+    ChurchTools stehen sie bei der ersten angemeldeten Person: „Erziehungsberechtigte“ lesbar, „Unterschrift“
+    lesbar als „✓ Erna Muster, 15.10.2026“ und die Striche in der Spalte „Unterschrift (Daten)“ (die man in der
+    Liste ausblenden kann). Als Bild zu sehen ist die Unterschrift später im Reiter Anmeldungen und auf der
+    Druckliste. Ein ChurchTools-Feld fasst höchstens 4.000 Zeichen (gemessen) – eine Unterschrift braucht meist
+    einige hundert.
   - **Gespeichert wird von selbst**; oben steht, ob gerade gespeichert wird, und bei einem Fehler „Nochmal“.
     Nach jeder Änderung bietet die Leiste oben „Rückgängig“ an (nicht beim Titelbild).
   - Jedes Feld außer Name, E-Mail und Geburtsdatum wird in ChurchTools eine **Spalte der Mitgliederliste**

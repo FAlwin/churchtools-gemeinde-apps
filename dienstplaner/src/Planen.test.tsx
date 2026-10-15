@@ -1300,7 +1300,7 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
   });
 
   // ── E4-5-3: Anzahl der Plätze (Regler) ───────────────────────────────────────
-  it('Regler in der Gruppenzeile → Plätze-Fach; „−“ nicht unter belegte und freie Plätze mit Entwurf', async () => {
+  it('Regler in der Gruppenzeile → Plätze-Fach; liegt an einem Dienst ein Entwurf, bleibt seine Zahl', async () => {
     zeige4({ laden: () => Promise.resolve(daten([entwurf()])) }); // Entwurf an Licht Platz 2
     await waitFor(() => expect(entwuerfeInMatrix()).toHaveLength(1));
     fireEvent.click(screen.getByRole('button', { name: 'Plätze Technik am So, 08.11. ändern' }));
@@ -1308,8 +1308,30 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     expect(screen.getByText('Gottesdienst · So, 08.11.')).toBeTruthy();
     expect(screen.getByLabelText('Licht: 2 Plätze')).toBeTruthy();
     expect(screen.getByLabelText('Ton: 1 Plätze')).toBeTruthy();
-    // Licht: Anna (belegt) + Entwurf am freien Platz → nicht unter 2.
-    expect(screen.getByRole('button', { name: 'Licht: ein Platz weniger' })).toHaveProperty(
+    // Licht: Entwurf an Platz 2 → weder weniger noch mehr (ChurchTools nummeriert die Plätze sonst neu).
+    for (const k of ['Licht: ein Platz weniger', 'Licht: ein Platz mehr']) {
+      expect(screen.getByRole('button', { name: k })).toHaveProperty('disabled', true);
+    }
+    expect(screen.getByText(/Hier liegt ein Entwurf/)).toBeTruthy();
+    cleanup();
+    // Auch ein Entwurf an einem belegten Platz (zurückziehen) sperrt die Zahl.
+    zeige4({
+      laden: () =>
+        Promise.resolve(
+          daten([
+            entwurf({
+              ort: { eventId: 20, serviceId: 7, index: 1 },
+              ziel: { art: 'frei' },
+              gesehen: { art: 'zusage', personId: 5 },
+            }),
+          ]),
+        ),
+    });
+    expect(
+      await screen.findByRole('button', { name: 'Entwurf von Alwin: Anna Test zurückziehen' }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Plätze Technik am So, 08.11. ändern' }));
+    expect(screen.getByRole('button', { name: 'Licht: ein Platz mehr' })).toHaveProperty(
       'disabled',
       true,
     );

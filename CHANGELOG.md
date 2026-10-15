@@ -21,8 +21,10 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   je Termin (nur wo man einen Dienst der Gruppe plant, nicht an abgesagten Terminen) → Fenster „Technik · Plätze“
   mit − / + je Dienst. Jeder Tipp gilt **sofort** (Alwin, 15.10.2026): frisch lesen, mit der gesehenen Zahl
   vergleichen (sonst „Jemand hat die Zahl eben geändert“), schreiben, nachlesen – nie automatisch wiederholt.
-  Belegte Plätze und freie mit Entwurf lassen sich nicht wegnehmen. ChurchTools verschickt dabei nichts
-  (gemessen). Kein „Auf Vorlage zurücksetzen“: Ein Termin verweist nicht auf seine Vorlage (gemessen). Danach lädt
+  Belegte Plätze lassen sich nicht wegnehmen. **Liegen an einem Dienst Entwürfe, bleibt seine Zahl** („erst
+  senden oder entfernen“) – gemessen nummeriert ChurchTools die Plätze beim Ändern neu (ein einzelner Platz hat keine
+  Nummer, ab zwei heißen sie 1, 2, …), ein Entwurf fände seinen Platz sonst nicht mehr. ChurchTools verschickt dabei
+  nichts (gemessen). Kein „Auf Vorlage zurücksetzen“: Ein Termin verweist nicht auf seine Vorlage (gemessen). Danach lädt
   die Matrix leise neu – dieselbe Funktion wie nach dem Senden.
 - **Belegten Platz zurückziehen oder ersetzen** (#578, Bauplan E4-5-2, Entwurf `e4-5-entwurf.html`): Wo man plant,
   ist jetzt auch ein belegter Platz antippbar. Ein Fenster zeigt, wer dort steht und wie (angefragt, zugesagt, Gast),

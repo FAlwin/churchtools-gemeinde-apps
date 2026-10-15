@@ -5,9 +5,10 @@ import type { AnzahlErgebnis } from '@shared/dienstplan/anzahl';
 import { PlaetzeFach, type PlaetzeZeile } from './PlaetzeFach';
 import { anzahlFehlerText } from './plaetzeTexte';
 
-const LICHT: PlaetzeZeile = { serviceId: 7, name: 'Licht', anzahl: 1, belegt: 0, min: 0 };
-const TON: PlaetzeZeile = { serviceId: 6, name: 'Ton', anzahl: 1, belegt: 1, min: 1 };
-const VIDEO: PlaetzeZeile = { serviceId: 8, name: 'Video', anzahl: 0, belegt: 0, min: 0 };
+const LICHT: PlaetzeZeile = { serviceId: 7, name: 'Licht', anzahl: 1, belegt: 0, entwuerfe: 0 };
+const TON: PlaetzeZeile = { serviceId: 6, name: 'Ton', anzahl: 1, belegt: 1, entwuerfe: 0 };
+const VIDEO: PlaetzeZeile = { serviceId: 8, name: 'Video', anzahl: 0, belegt: 0, entwuerfe: 0 };
+const KAMERA: PlaetzeZeile = { serviceId: 9, name: 'Kamera', anzahl: 1, belegt: 0, entwuerfe: 1 };
 type Aendern = (z: PlaetzeZeile, gesehen: number, neu: number) => Promise<AnzahlErgebnis>;
 
 function zeige(aendern: Aendern = (_z, _g, neu) => Promise.resolve({ ok: true, anzahl: neu })) {
@@ -16,7 +17,7 @@ function zeige(aendern: Aendern = (_z, _g, neu) => Promise.resolve({ ok: true, a
     <PlaetzeFach
       titel="Technik · Plätze"
       unter="Gottesdienst · So, 25.10."
-      zeilen={[LICHT, TON, VIDEO]}
+      zeilen={[LICHT, TON, VIDEO, KAMERA]}
       {...p}
     />,
   );
@@ -29,12 +30,19 @@ const zahl = (dienst: string) =>
 describe('PlaetzeFach (E4-5-3)', () => {
   it('je Dienst Zahl und Stand; „−“ gesperrt bei belegten und bei 0', () => {
     zeige();
-    expect(screen.getByText('frei')).toBeTruthy();
+    expect(screen.getAllByText('frei')).toHaveLength(2); // Licht und Kamera
     expect(screen.getByText('1 belegt')).toBeTruthy();
     expect(screen.getByText('nicht vorgesehen')).toBeTruthy();
     expect(knopf('Ton: ein Platz weniger')).toHaveProperty('disabled', true);
     expect(knopf('Video: ein Platz weniger')).toHaveProperty('disabled', true);
     expect(knopf('Licht: ein Platz weniger')).toHaveProperty('disabled', false);
+  });
+
+  it('liegen Entwürfe dort, bleibt die Zahl (ChurchTools nummeriert sonst die Plätze neu) – mit Hinweis', () => {
+    zeige();
+    expect(knopf('Kamera: ein Platz mehr')).toHaveProperty('disabled', true);
+    expect(knopf('Kamera: ein Platz weniger')).toHaveProperty('disabled', true);
+    expect(screen.getByText(/Hier liegt ein Entwurf – erst senden oder entfernen\./)).toBeTruthy();
   });
 
   it('„+“ speichert sofort mit der gesehenen Zahl; danach zählt die neue, der Aufrufer sagt Bescheid', async () => {

@@ -7,14 +7,18 @@ import { useInsBild } from './useInsBild';
 import styles from './WerKann.module.scss';
 import eigen from './PlaetzeFach.module.scss';
 
-/** Ein Dienst im Fach: wie viele Plätze, wie viele belegt, und wie weit es höchstens hinunter geht. */
+/** Ein Dienst im Fach: wie viele Plätze, wie viele belegt, und wie viele Entwürfe dort liegen. */
 export interface PlaetzeZeile {
   serviceId: number;
   name: string;
   anzahl: number;
   belegt: number;
-  /** Belegte und freie Plätze mit Entwurf – darunter geht es nicht (der Entwurf verlöre seinen Platz). */
-  min: number;
+  /**
+   * Entwürfe an diesem Dienst und Termin (gültig oder veraltet). Dann bleibt die Zahl, wie sie ist: Gemessen
+   * (15.10.2026) nummeriert ChurchTools die Plätze beim Ändern neu (ein einzelner Platz hat keine Nummer, ab zwei
+   * heißen sie 1, 2, …) – ein Entwurf fände seinen Platz nicht mehr.
+   */
+  entwuerfe: number;
 }
 
 /**
@@ -83,11 +87,19 @@ export function PlaetzeFach({
                 <small>
                   {n === 0 ? 'nicht vorgesehen' : z.belegt > 0 ? `${z.belegt} belegt` : 'frei'}
                 </small>
+                {z.entwuerfe > 0 && (
+                  <small className={eigen.gesperrt}>
+                    {z.entwuerfe === 1
+                      ? 'Hier liegt ein Entwurf'
+                      : `Hier liegen ${z.entwuerfe} Entwürfe`}{' '}
+                    – erst senden oder entfernen.
+                  </small>
+                )}
               </span>
               <button
                 type="button"
                 className={eigen.rund}
-                disabled={laeuft !== null || n <= z.min}
+                disabled={laeuft !== null || n <= z.belegt || z.entwuerfe > 0}
                 aria-label={`${z.name}: ein Platz weniger`}
                 onClick={() => void setze(z, n - 1)}
               >
@@ -99,7 +111,7 @@ export function PlaetzeFach({
               <button
                 type="button"
                 className={eigen.rund}
-                disabled={laeuft !== null}
+                disabled={laeuft !== null || z.entwuerfe > 0}
                 aria-label={`${z.name}: ein Platz mehr`}
                 onClick={() => void setze(z, n + 1)}
               >

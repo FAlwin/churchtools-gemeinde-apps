@@ -495,8 +495,8 @@ export function Planen({
   };
 
   /**
-   * Die Dienste einer Gruppe an einem Termin fürs Plätze-Fach – nur, wo man plant. Nicht unter „belegt“ und nicht
-   * unter freie Plätze mit gültigem Entwurf (der verlöre sonst seinen Platz; ChurchTools nimmt leere zuerst weg).
+   * Die Dienste einer Gruppe an einem Termin fürs Plätze-Fach – nur, wo man plant. Nicht unter „belegt“; liegen dort
+   * Entwürfe, bleibt die Zahl, wie sie ist (ChurchTools nummeriert die Plätze dabei neu – gemessen 15.10.2026).
    */
   const plaetzeZeilen = (s: PlanSpalte, i: number, g: PlanGruppe): PlaetzeZeile[] =>
     g.zeilen
@@ -504,16 +504,13 @@ export function Planen({
       .map((zl) => {
         const zelle = zl.zellen[i] ?? [];
         const belegtZahl = zelle.filter((p) => p.art !== 'frei').length;
-        const mitEntwurf = zelle.filter((p) => {
-          const a = p.art === 'frei' ? entwurfAmPlatz(s, zl, p) : null;
-          return a !== null && !a.veraltet;
-        }).length;
+        const entwuerfeHier = zelle.filter((p) => entwurfAmPlatz(s, zl, p) !== null).length;
         return {
           serviceId: zl.dienst.id,
           name: zl.dienst.name,
           anzahl: zelle.length,
           belegt: belegtZahl,
-          min: belegtZahl + mitEntwurf,
+          entwuerfe: entwuerfeHier,
         };
       });
 

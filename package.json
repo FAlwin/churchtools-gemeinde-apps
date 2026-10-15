@@ -24,7 +24,8 @@
     "testplan": "node scripts/testplan.mjs",
     "format": "prettier --write \"**/*.{ts,tsx,scss,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,scss,json,md}\"",
-    "doc-check": "node scripts/doc-kommentare.mjs"
+    "doc-check": "node scripts/doc-kommentare.mjs",
+    "formular:hochladen": "npm run build --workspace=formular && node scripts/formular-hochladen.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",

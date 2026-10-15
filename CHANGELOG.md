@@ -22,6 +22,9 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   - Spalten anlegen/ändern und nachlesen steht an EINER Stelle (`spalteSpeichern`), die Hauptspalte und die
     weitere nutzen sie.
   - **Formular-Paket mit aktualisieren:** Ein älteres Paket kennt die neuen Feldtypen nicht.
+- **Formular hochladen per Skript** (`npm run formular:hochladen`, Alwin: Zugangsdaten im Mac-Schlüsselbund): FTPS
+  mit `curl`, Passwort nur aus dem Schlüsselbund (über die Standardeingabe, nie in der Befehlszeile); erst neue
+  Dateien, dann `index.html`, dann Prüfung im Netz, dann alte Dateien löschen.
 - `useMedienAbfrage` meldet sich bei älteren Safari (vor iOS 14, nur `addListener`) richtig an statt abzustürzen –
   das öffentliche Formular öffnen Gäste mit allen möglichen Handys.
 

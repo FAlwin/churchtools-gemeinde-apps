@@ -46,6 +46,13 @@ Startseite zeigt bis dahin nur „Erst einrichten“.
    (`index.html`, Ordner `assets`) in den Ordner der Subdomain hochladen. Aktualisieren: Inhalt ersetzen.
    **Immer zusammen mit der Erweiterung aktualisieren:** Ein älteres Formular-Paket kennt neue Bausteine nicht
    (z. B. „Erziehungsberechtigte“, „Unterschrift“ seit A6-2b) und kann Formulare mit ihnen nicht anzeigen.
+   **Per Skript (macOS):** Zugangsdaten einmal im Schlüsselbund ablegen –
+   `security add-internet-password -s <FTP-Server> -a <FTP-Benutzer> -r "ftp " -w` (fragt nach dem Passwort) –,
+   danach `ANMELDUNG_FTP_SERVER=<FTP-Server> ANMELDUNG_FORMULAR_ADRESSE=https://anmeldung.… npm run
+formular:hochladen` (optional `ANMELDUNG_FTP_ORDNER`). Das Skript baut das Formular, lädt per FTPS erst die neuen
+   Dateien und zuletzt `index.html`, prüft die Seite im Netz und löscht erst dann alte Dateien. Das Passwort steht
+   nirgends sonst. Als FTP-Server den Namen nehmen, auf den das Zertifikat des Anbieters lautet (bei Hetzner
+   `wwwNNN.your-server.de`), sonst lehnt die verschlüsselte Verbindung ab.
 3. In ChurchTools die Adresse als **erlaubte Herkunft** eintragen (Einstellung
    `access_control_allow_origins`, z. B. `https://anmeldung.eure-gemeinde.de`) – sonst blockt der Browser
    jede Anfrage des Formulars. Das gibt keine Daten frei, es erlaubt nur dieser Seite, die Schnittstellen zu

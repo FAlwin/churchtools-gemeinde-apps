@@ -35,6 +35,16 @@ export function alteAssets(vorhanden, neu) {
   return vorhanden.filter((n) => n && n !== '.' && n !== '..' && !behalten.has(n));
 }
 
+/**
+ * **Fremde Dateien im Zielordner** – alles außer unserem Paket (`index.html`, `assets`). Ist die Liste nicht leer,
+ * wird NICHTS hochgeladen: Gemessen 15.10.2026 landet der Haupt-FTP-Zugang einer Website direkt im WordPress-Ordner –
+ * eine `index.html` dort hätte Vorrang vor `index.php` und legte die ganze Website lahm.
+ */
+export function fremdeDateien(liste) {
+  const unsere = new Set(['index.html', 'assets', '.', '..', '']);
+  return liste.map((n) => n.trim()).filter((n) => !unsere.has(n));
+}
+
 /** Eine `curl`-Konfiguration mit den Zugangsdaten – sie geht über die Standardeingabe, nicht in die Befehlszeile. */
 export function curlKonfig(benutzer, passwort) {
   const sicher = (s) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
@@ -102,6 +112,22 @@ async function main() {
   const { benutzer, passwort } = zugangAusSchluesselbund(server);
   const k = curlKonfig(benutzer, passwort);
   const basis = `ftp://${server}${ordnerPfad(process.env.ANMELDUNG_FTP_ORDNER)}`;
+
+  // 0. Nur in einen Ordner, in dem höchstens unser eigenes Paket liegt (siehe `fremdeDateien`).
+  let ziel;
+  try {
+    ziel = curl(k, ['--list-only', basis]).split(/\r?\n/);
+  } catch {
+    throw new Error(
+      `Den Ordner ${basis} gibt es (noch) nicht – erst die Subdomain mit ihrem Ordner anlegen.`,
+    );
+  }
+  const fremd = fremdeDateien(ziel);
+  if (fremd.length)
+    throw new Error(
+      `Im Ordner ${basis} liegen fremde Dateien (${fremd.slice(0, 5).join(', ')}${fremd.length > 5 ? ' …' : ''}) – ` +
+        'das ist nicht der Ordner des Formulars. Nichts hochgeladen. ANMELDUNG_FTP_ORDNER prüfen.',
+    );
 
   // 1. Neue Dateien, 2. index.html zuletzt.
   for (const n of gebaut) {

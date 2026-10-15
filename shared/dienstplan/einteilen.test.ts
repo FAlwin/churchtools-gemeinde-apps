@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { belegungAus, platzEinteilen, type PlatzOrt } from './einteilen';
+import {
+  belegungAus,
+  gleicherStand,
+  platzEinteilen,
+  type Belegung,
+  type PlatzOrt,
+} from './einteilen';
 import { Fehler, nachbau } from './einteilen.testutil';
 import type { RohPlatz } from './termine';
 
@@ -15,6 +21,23 @@ const frei = (id: number, extra: object = {}): RohPlatz => ({
 });
 const anna = (id: number, zugesagt = false): RohPlatz =>
   frei(id, { personId: 46, name: 'Anna', isAccepted: zugesagt });
+
+describe('gleicherStand (Steht noch da, was der Planer gesehen hat?)', () => {
+  it('genau gleich – eine Zusage derselben Person ist eine Änderung, Gast-Namen ohne Leerzeichen am Rand', () => {
+    const b: Belegung[] = [
+      { art: 'frei' },
+      { art: 'anfrage', personId: 46 },
+      { art: 'zusage', personId: 46 },
+      { art: 'anfrage', personId: 49 },
+      { art: 'gast', name: 'Max' },
+    ];
+    // Nur die Diagonale ist gleich.
+    expect(b.map((x) => b.map((y) => gleicherStand(x, y)))).toEqual(
+      b.map((_, i) => b.map((__, j) => i === j)),
+    );
+    expect(gleicherStand({ art: 'gast', name: ' Max ' }, { art: 'gast', name: 'Max' })).toBe(true);
+  });
+});
 
 describe('belegungAus', () => {
   it('frei, Anfrage, Zusage, Gast – frei entscheidet allein der Name', () => {
@@ -123,10 +146,30 @@ describe('platzEinteilen – jeder Fehlerzweig einzeln', () => {
     expect(ct.geschrieben).toEqual([]);
   });
 
-  it('gesehene Anfrage wurde inzwischen zugesagt: dieselbe Person, kein Konflikt', async () => {
-    const { port } = nachbau([anna(5, true)]);
+  it('gesehene Anfrage wurde inzwischen zugesagt → Konflikt, nicht austragen (Alwin, 15.10.)', async () => {
+    const { ct, port } = nachbau([anna(5, true)]);
     const r = await platzEinteilen(port, TON, { art: 'anfrage', personId: 46 }, { art: 'frei' });
+    expect(r).toEqual({ ok: false, grund: 'konflikt', jetzt: { art: 'zusage', personId: 46 } });
+    expect(ct.geschrieben).toEqual([]);
+  });
+
+  it('Ersetzen (E4-5): gesehene Person noch da → die andere auf die frisch gelesene ID', async () => {
+    const { ct, port } = nachbau([anna(5)]);
+    const r = await platzEinteilen(
+      port,
+      TON,
+      { art: 'anfrage', personId: 46 },
+      { art: 'anfrage', personId: 49 },
+    );
     expect(r).toMatchObject({ ok: true });
+    expect(ct.geschrieben).toEqual([
+      {
+        pfad: '/events/7/servicerequests/5',
+        method: 'PUT',
+        json: { personId: 49, name: null, isAccepted: false },
+      },
+    ]);
+    expect(ct.plaetze[0]).toMatchObject({ personId: 49 });
   });
 
   it('Gast mit anderem Namen ist ein Konflikt', async () => {

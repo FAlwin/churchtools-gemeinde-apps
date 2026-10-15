@@ -13,6 +13,7 @@ import {
   ortSchluessel,
   schublade,
   schubladenStand,
+  zielText,
   type Entwurf,
   type EntwurfEingabe,
 } from './entwuerfe';
@@ -86,6 +87,15 @@ describe('Lesen', () => {
     expect(entwurfAus(wert(5, entwurf({ ziel: { art: 'gast', name: '  ' } })))).toBeNull();
     expect(entwurfAus(wert(6, { ...entwurf(), ort: { eventId: 1, serviceId: 2 } }))).toBeNull();
     expect(entwurfAus(wert(7, { ...entwurf(), gesehen: { art: 'anfrage' } }))).toBeNull();
+    expect(entwurfAus(wert(8, { ...entwurf(), ziel: { art: 'leer' } }))).toBeNull();
+  });
+
+  it('E4-5: Ziel „frei“ (zurückziehen) braucht keinen Namen; in Worten „Zurückziehen“', () => {
+    const zurueck = entwurf({ ziel: { art: 'frei' }, gesehen: { art: 'anfrage', personId: 47 } });
+    expect(entwurfAus(wert(9, zurueck))).toEqual(zurueck);
+    expect(zielText(zurueck.ziel)).toBe('Zurückziehen');
+    expect(zielText({ art: 'gast', name: 'Max' })).toBe('Max');
+    expect(zielText({ art: 'person', personId: 46, name: 'Anna Test' })).toBe('Anna Test');
   });
 
   it('zwei Werte für denselben Platz: höhere Version, dann spätere Zeit, dann höhere ID gewinnt', () => {
@@ -165,6 +175,32 @@ describe('Speichern', () => {
     const { s, port } = speicher([wert(100, entwurf())]);
     expect(await entwurfSpeichern(port, MODUL, KAT, eingabe(), null)).toMatchObject({ ok: true });
     expect(s.schreibvorgaenge).toEqual([]);
+  });
+
+  it('E4-5: „Zurückziehen“ ist ein eigener Inhalt – gleich ohne Schreiben, statt einer Person mit Schreiben', async () => {
+    const gesehen = { art: 'anfrage', personId: 47 } as const;
+    const zurueck = eingabe({ ziel: { art: 'frei' }, gesehen });
+    const a = speicher([wert(100, entwurf({ ziel: { art: 'frei' }, gesehen }))]);
+    expect(await entwurfSpeichern(a.port, MODUL, KAT, zurueck, null)).toMatchObject({ ok: true });
+    expect(a.s.schreibvorgaenge).toEqual([]);
+    const b = speicher([wert(100, entwurf({ gesehen }))]);
+    expect(await entwurfSpeichern(b.port, MODUL, KAT, zurueck, 1)).toMatchObject({
+      ok: true,
+      entwurf: { ziel: { art: 'frei' }, version: 2 },
+    });
+    // Liegt dort „Zurückziehen“, ist eine Person ein anderer Inhalt (kein stilles „schon gespeichert“).
+    const d = speicher([wert(100, entwurf({ ziel: { art: 'frei' }, gesehen }))]);
+    expect(await entwurfSpeichern(d.port, MODUL, KAT, eingabe({ gesehen }), null)).toMatchObject({
+      ok: false,
+      grund: 'konflikt',
+    });
+    // Gleiches Ziel, aber anderer Stand gesehen (inzwischen zugesagt) → auch ein anderer Inhalt.
+    const c = speicher([wert(100, entwurf({ ziel: { art: 'frei' }, gesehen }))]);
+    const neu = eingabe({ ziel: { art: 'frei' }, gesehen: { art: 'zusage', personId: 47 } });
+    expect(await entwurfSpeichern(c.port, MODUL, KAT, neu, null)).toMatchObject({
+      ok: false,
+      grund: 'konflikt',
+    });
   });
 
   it('gleichzeitig angelegt (zwei POST) und der andere gewinnt → konflikt, nicht „gespeichert“', async () => {
@@ -339,12 +375,16 @@ describe('Entfernen', () => {
 });
 
 describe('Veraltet (in ChurchTools steht inzwischen etwas anderes)', () => {
-  it('dieselbe Regel wie beim Einteilen: nur eine andere Person zählt, eine Zusage derselben nicht', () => {
+  it('dieselbe Regel wie beim Senden: jede Änderung zählt – auch die Zusage der angefragten Person (Alwin, 15.10.)', () => {
     const frei = entwurf({ gesehen: { art: 'frei' } });
     expect(entwurfVeraltet(frei, { art: 'frei' })).toBe(false);
     expect(entwurfVeraltet(frei, { art: 'anfrage', personId: 47 })).toBe(true);
     const angefragt = entwurf({ gesehen: { art: 'anfrage', personId: 47 } });
-    expect(entwurfVeraltet(angefragt, { art: 'zusage', personId: 47 })).toBe(false);
+    expect(entwurfVeraltet(angefragt, { art: 'anfrage', personId: 47 })).toBe(false);
+    expect(entwurfVeraltet(angefragt, { art: 'zusage', personId: 47 })).toBe(true);
+    const zugesagt = entwurf({ gesehen: { art: 'zusage', personId: 47 } });
+    expect(entwurfVeraltet(zugesagt, { art: 'zusage', personId: 47 })).toBe(false);
+    expect(entwurfVeraltet(zugesagt, { art: 'anfrage', personId: 47 })).toBe(true);
     expect(entwurfVeraltet(angefragt, { art: 'anfrage', personId: 48 })).toBe(true);
     expect(entwurfVeraltet(angefragt, { art: 'frei' })).toBe(true);
     const gast = entwurf({ gesehen: { art: 'gast', name: 'Max ' } });

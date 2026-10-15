@@ -71,9 +71,12 @@ Entwurf. Hinweise (abwesend, am Tag schon eingeteilt) stehen vorher da, senden g
 
 - **Mitteilungen schickt ChurchTools**, nicht der Dienstplaner. Gemessen (14./15.10.2026): Eine **Anfrage** und
   **„Direkt zuteilen“** lösen die Push-Mitteilung der ChurchTools-App aus, aber keine Mail je Einteilung. Ein **Gast**
-  bekommt nichts. **Austragen** durch einen Planer benachrichtigt die Person **nicht**.
+  bekommt nichts. **Austragen** (zurückziehen) durch einen Planer benachrichtigt die Person **nicht**; wird sie
+  dagegen durch eine andere Person **ersetzt**, bekommt sie „Dienstaustragung – Du wurdest aus dem Dienst …
+  ausgetragen“ (gemessen 15.10.2026, angefragt wie zugesagt). Eine Platzzahl zu ändern verschickt nichts.
 - **Sicher:** Je Platz frisch lesen → schreiben → nachlesen. Steht inzwischen jemand anderes da, wird nichts
-  überschrieben („Konflikt“, der Entwurf ist dann veraltet). Erst wenn die Person nachgelesen am Platz steht, wird
+  überschrieben („Konflikt“, der Entwurf ist dann veraltet). Das gilt auch, wenn eine angefragte Person
+  inzwischen zugesagt hat – wer gerade zugesagt hat, wird nicht still ausgetragen oder ersetzt (Alwin, 15.10.2026). Erst wenn die Person nachgelesen am Platz steht, wird
   der Entwurf entfernt. Antwortet ChurchTools nicht oder ist man abgemeldet, hält das Senden an; der Rest bleibt
   Entwurf. Nichts wird von selbst wiederholt – „Erneut senden“ ist ein bewusster zweiter Klick.
 

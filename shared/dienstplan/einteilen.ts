@@ -72,9 +72,8 @@ export function belegungAus(p: RohPlatz): Belegung {
 }
 
 /**
- * Ist die gesehene Belegung noch dieselbe? Eine Anfrage, die inzwischen zugesagt wurde, zählt als
- * dieselbe Person – geändert hat sich dann nur die Antwort, nicht die Einteilung. Auch der Entwurfs-Speicher
- * (`entwuerfe.ts`) prüft damit, ob ein Entwurf veraltet ist – eine Regel für beide.
+ * Dieselbe Person (bzw. derselbe Gast, beide frei)? Eine Anfrage und eine Zusage derselben Person zählen gleich –
+ * nur für „Steht das Ziel schon da?“ (`erfuellt`), nicht für „Steht noch da, was der Planer gesehen hat?“.
  */
 export function gleichePerson(a: Belegung, b: Belegung): boolean {
   if (a.art === 'frei' || b.art === 'frei') return a.art === b.art;
@@ -82,6 +81,19 @@ export function gleichePerson(a: Belegung, b: Belegung): boolean {
     return a.art === 'gast' && b.art === 'gast' && a.name.trim() === b.name.trim();
   }
   return a.personId === b.personId;
+}
+
+/**
+ * **Steht am Platz noch genau, was der Planer gesehen hat?** Strenger als `gleichePerson`: Hat eine angefragte
+ * Person inzwischen zugesagt, ist das eine Änderung – wer gerade zugesagt hat, wird nicht still ausgetragen oder
+ * ersetzt (Alwin, 15.10.2026). Eine Regel für beide Stellen: das Senden hier (Konflikt statt Schreiben) und das
+ * Schild „veraltet“ im Entwurfs-Speicher (`entwurfVeraltet`). An freien Plätzen ändert sich nichts.
+ */
+export function gleicherStand(a: Belegung, b: Belegung): boolean {
+  if (a.art !== b.art) return false;
+  if (a.art === 'frei') return true;
+  if (a.art === 'gast') return b.art === 'gast' && a.name.trim() === b.name.trim();
+  return b.art !== 'frei' && b.art !== 'gast' && a.personId === b.personId;
 }
 
 /** Steht das Ziel am Platz? Eine Anfrage ist auch erfüllt, wenn die Person schon zugesagt hat. */
@@ -138,7 +150,7 @@ export async function platzEinteilen(
   if ('grund' in erst) return { ok: false, grund: erst.grund };
   const ist = belegungAus(erst.platz);
   if (erfuellt(ist, ziel)) return { ok: true, platzId: erst.platz.id as number };
-  if (!gleichePerson(ist, vorher)) return { ok: false, grund: 'konflikt', jetzt: ist };
+  if (!gleicherStand(ist, vorher)) return { ok: false, grund: 'konflikt', jetzt: ist };
 
   // 2. Schreiben – nie wiederholt.
   const pfad = `/events/${ort.eventId}/servicerequests/${erst.platz.id as number}`;

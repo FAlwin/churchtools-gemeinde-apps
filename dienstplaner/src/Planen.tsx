@@ -23,9 +23,10 @@ import { werWieOft } from '@shared/dienstplan/werWieOft';
 import {
   entwurfVeraltet,
   ortSchluessel,
+  zielText,
+  type Besetzung,
   type Entwurf,
   type EntwurfErgebnis,
-  type EntwurfZiel,
 } from '@shared/dienstplan/entwuerfe';
 import {
   zeitraumGrenzen,
@@ -177,9 +178,9 @@ export function Planen({
   const ewNeu = useCallback(() => setEwVersuch((v) => v + 1), []);
   /**
    * Der Entwurf an einem Platz. Gültig ist er nur, wenn am Platz in ChurchTools noch dasselbe steht wie beim
-   * Eintragen (Entwürfe entstehen an freien Plätzen) – sonst ist er **veraltet**: Es gilt ChurchTools, und am
-   * Platz steht nur ein Schild (Alwin, 14.10.2026). Verglichen wird mit derselben Regel wie beim Einteilen
-   * (`p.belegung`, `gleichePerson`).
+   * Eintragen – sonst ist er **veraltet**: Es gilt ChurchTools, und am Platz steht nur ein Schild (Alwin,
+   * 14.10.2026). Verglichen wird mit derselben Regel wie beim Senden (`p.belegung`, `gleicherStand` – auch eine
+   * inzwischen gegebene Zusage zählt als Änderung, Alwin 15.10.2026).
    */
   const entwurfAmPlatz = (s: PlanSpalte, zl: PlanZeile, p: PlanPlatz): EntwurfAmPlatz | null => {
     if (ew.art !== 'fertig') return null;
@@ -506,7 +507,7 @@ export function Planen({
     return {
       art: 'bereit',
       erwartet: ersetzt,
-      onWahl: async (ziel: EntwurfZiel, erwartet: number | null): Promise<EntwurfErgebnis> => {
+      onWahl: async (ziel: Besetzung, erwartet: number | null): Promise<EntwurfErgebnis> => {
         // Ersetzt man einen Entwurf („Andere Person wählen“), bleibt „Beim Senden“ wie es war.
         const bisher = erwartet !== null ? daten.entwuerfe.get(ortSchluessel(ort)) : undefined;
         const r = await entwuerfe.speichern(
@@ -599,8 +600,8 @@ export function Planen({
             );
             nachFach(r, ortSchluessel(e.ort), () =>
               modus === 'direkt'
-                ? `${e.ziel.name} wird beim Senden direkt zugeteilt.`
-                : `${e.ziel.name} bekommt beim Senden eine Anfrage.`,
+                ? `${zielText(e.ziel)} wird beim Senden direkt zugeteilt.`
+                : `${zielText(e.ziel)} bekommt beim Senden eine Anfrage.`,
             );
             return r;
           }}
@@ -1104,7 +1105,7 @@ function Plaetze({
           );
         if (!a) return <Fragment key={i}>{platz}</Fragment>;
         // Veraltet: ChurchTools gilt – darunter ein Schild, das zum Entwurf führt (Alwin, 14.10.2026).
-        const text = `Entwurf veraltet: „${a.entwurf.ziel.name}“ von ${a.entwurf.von.name}`;
+        const text = `Entwurf veraltet: „${zielText(a.entwurf.ziel)}“ von ${a.entwurf.von.name}`;
         return (
           <Fragment key={i}>
             {platz}
@@ -1156,7 +1157,7 @@ function EntwurfPlatz({
         ? {
             type: 'button' as const,
             onClick: onOeffnen,
-            'aria-label': `Entwurf von ${e.von.name}: ${e.ziel.name}${gast ? ' (Gast)' : ''}`,
+            'aria-label': `Entwurf von ${e.von.name}: ${zielText(e.ziel)}${gast ? ' (Gast)' : ''}`,
           }
         : {})}
       className={`${styles.platz} ${styles.entwurf}${onOeffnen ? ' ' + styles.entwurfKnopf : ''}`}
@@ -1165,7 +1166,7 @@ function EntwurfPlatz({
       <span className={styles.ic} aria-label="Entwurf, noch nicht gesendet">
         <Icon name="pencil" size={11} />
       </span>
-      <span className={styles.name}>{e.ziel.name}</span>
+      <span className={styles.name}>{zielText(e.ziel)}</span>
       {gast && <span className={styles.gast}>Gast</span>}
       {!gast && e.modus === 'direkt' && <span className={styles.direkt}>direkt</span>}
       {!eigener && <span className={styles.von}>{e.von.name}</span>}

@@ -17,6 +17,8 @@
  * und nichts wird verworfen – „Erneut senden“ ist eine bewusste zweite Entscheidung.
  *
  * Gemessen (14./15.10.2026): Anfrage und direktes Zuteilen lösen die Push-Mitteilung der ChurchTools-App aus.
+ * E4-5 (Ziel „frei“ = zurückziehen, `decline`): **keine** Mitteilung. Ersetzen (eine andere Person auf einen
+ * belegten Platz): die bisherige Person bekommt „Dienstaustragung – Du wurdest aus dem Dienst … ausgetragen“.
  */
 import { platzEinteilen, type Belegung, type DienstPort, type Grund } from './einteilen';
 import {
@@ -50,6 +52,7 @@ export interface SendeAnschluss {
 
 /** Was in ChurchTools am Platz stehen soll. */
 export function zielAus(e: Entwurf): Belegung {
+  if (e.ziel.art === 'frei') return { art: 'frei' };
   if (e.ziel.art === 'gast') return { art: 'gast', name: e.ziel.name };
   return e.modus === 'direkt'
     ? { art: 'zusage', personId: e.ziel.personId }

@@ -384,6 +384,20 @@
   }
 }
 
+// „Ansehen und senden“ – ab E4-4-2 aktiv, blau wie die anderen Hauptknöpfe.
+.sendenKnopf {
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  background: var(--blue);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 // „von Spike“ bzw. „direkt“ am Entwurf – kleine Schilder wie „Gast“.
 .von,
 .direkt {

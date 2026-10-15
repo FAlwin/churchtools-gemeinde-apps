@@ -31,6 +31,9 @@ import {
 import type { PlatzOrt } from '@shared/dienstplan/einteilen';
 import { entwurfPortFuer } from '@ui/ct/modulPort';
 import { MODUL_KUERZEL, type Start } from './start';
+import { sende, type SendeEintrag, type SendeErgebnis } from '@shared/dienstplan/senden';
+import { dienstPort } from './dienstPort';
+import { ladeSendeHinweise, type SendeHinweis } from './sendeHinweise';
 
 const port = entwurfPortFuer(() => MODUL_KUERZEL);
 
@@ -120,6 +123,15 @@ export function entferneEntwurf(
   return entwurfEntfernen(port, daten.modul, kategorie, ort, erwartet);
 }
 
+/** Entwürfe senden (E4-4) – einer nach dem anderen, im Kern (`senden.ts`). */
+export function sendeEntwuerfe(
+  daten: EntwuerfeDaten,
+  eintraege: readonly SendeEintrag[],
+  melde: (index: number, ergebnis: SendeErgebnis) => void,
+): Promise<SendeErgebnis[]> {
+  return sende(eintraege, { dienst: dienstPort, entwurf: port, modul: daten.modul }, melde);
+}
+
 const VERWEIGERT_ANLEGEN =
   'ChurchTools erlaubt dir nicht, Kategorien anzulegen. Das kann die Gemeinde-Verwaltung einrichten.';
 
@@ -153,6 +165,14 @@ export interface EntwurfAnschluss {
     erwartet: number,
   ): Promise<EntwurfErgebnis>;
   einrichten(gruppe: Dienstgruppe): Promise<void>;
+  senden(
+    daten: EntwuerfeDaten,
+    eintraege: readonly SendeEintrag[],
+    melde: (index: number, ergebnis: SendeErgebnis) => void,
+  ): Promise<SendeErgebnis[]>;
+  hinweise(
+    zeilen: readonly { entwurf: Entwurf; tag: string }[],
+  ): Promise<Map<string, SendeHinweis>>;
 }
 
 /** Der echte Anschluss für die App. */
@@ -162,6 +182,8 @@ export function entwurfAnschluss(start: Start, gruppen: () => Dienstgruppe[]): E
     laden: () => ladeEntwuerfe(gruppen()),
     speichern: speichereEntwurf,
     entfernen: entferneEntwurf,
+    senden: sendeEntwuerfe,
+    hinweise: ladeSendeHinweise,
     einrichten: async (gruppe) => {
       await richteSchubladeEin(gruppe);
     },

@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { Segment } from '@ui/bedienung/Segment';
@@ -42,6 +42,7 @@ import { useBreite } from './useBreite';
 import { FilterKnopf } from './FilterKnopf';
 import { WerKann, type Eintragen, type FreierPlatz } from './WerKann';
 import { EntwurfFach } from './EntwurfFach';
+import { SendenFach, type SendeZeile } from './SendenFach';
 import { grundText, type EntwuerfeDaten, type EntwurfAnschluss } from './ladeEntwuerfe';
 import styles from './Planen.module.scss';
 
@@ -50,6 +51,8 @@ interface Props {
   /** Schmaler Bildschirm: ein Termin auf einmal statt der Tabelle (Entwurf v17). */
   handy: boolean;
   onNochmal: () => void;
+  /** Nach dem Senden leise neu laden (ohne „wird geladen“) – die Matrix zeigt dann, was in ChurchTools steht. */
+  onAktualisieren?: () => void;
   /** Weitere Wochen „ab heute“ nachladen – die Terminleiste ruft das am Ende selbst auf. */
   onMehr: () => void;
   /** Lassen sich „ab heute“ noch weitere Wochen nachladen? */
@@ -129,6 +132,7 @@ export function Planen({
   zustand,
   handy,
   onNochmal,
+  onAktualisieren,
   onMehr,
   mehrMoeglich,
   ladeZeitraum,
@@ -150,6 +154,8 @@ export function Planen({
     inChurchTools: string | null;
   } | null>(null);
   const [ersetzt, setErsetzt] = useState<number | null>(null);
+  // Das offene Senden-Fach mit seiner Liste (beim Öffnen festgehalten).
+  const [sendenListe, setSendenListe] = useState<SendeZeile[] | null>(null);
   const [rahmen, platz] = useBreite();
   const { toast, showToast } = useToast();
 
@@ -203,10 +209,13 @@ export function Planen({
   const bereich = grenzen ? `${grenzen.von}|${grenzen.bis}` : null;
   const [eigen, setEigen] = useState<{ bereich: string; zustand: TermineZustand } | null>(null);
   const [versuch, setVersuch] = useState(0);
+  // Nach dem Senden leise neu laden: Das Bisherige bleibt stehen, bis das Neue da ist (wie „ab heute“).
+  const leiseNeu = useRef(false);
   useEffect(() => {
     if (!grenzen || !bereich) return;
     let aktuell = true;
-    setEigen({ bereich, zustand: { art: 'laedt' } });
+    if (!leiseNeu.current) setEigen({ bereich, zustand: { art: 'laedt' } });
+    leiseNeu.current = false;
     ladeZeitraum(grenzen.von, grenzen.bis).then(
       (d) =>
         aktuell &&
@@ -528,27 +537,35 @@ export function Planen({
   };
 
   // Die Leiste unten (E4-3-3): gültige Entwürfe im geladenen Zeitraum – veraltete werden nie gesendet.
-  const offen = plan
-    ? plan.gruppen.reduce(
-        (n, g) =>
-          n +
-          g.zeilen.reduce(
-            (m, zl) =>
-              m +
-              zl.zellen.reduce(
-                (k, zelle, i) =>
-                  k +
-                  (zelle ?? []).filter((p) => {
-                    const a = entwurfAmPlatz(plan.spalten[i], zl, p);
-                    return a !== null && !a.veraltet;
-                  }).length,
-                0,
-              ),
-            0,
-          ),
-        0,
-      )
-    : 0;
+  // Die Leiste unten und das Senden-Fach (E4-4): **eine** Regel für Zählen und Senden (Bauplan: „Zählen und
+  // Senden aus derselben Regel“) – gültige Entwürfe im geladenen Zeitraum, wo man planen und die Schublade ändern
+  // darf; nach Terminen geordnet.
+  const sendbareZeilen = (): SendeZeile[] => {
+    if (!plan || ew.art !== 'fertig') return [];
+    const zeilen: SendeZeile[] = [];
+    plan.spalten.forEach((spalte, i) => {
+      for (const g of plan.gruppen) {
+        for (const zl of g.zeilen) {
+          if (!darfPlanen(zl, spalte) || !darfAendern(zl)) continue;
+          const kategorie = ew.daten.schubladen.get(zl.dienst.dienstgruppeId ?? 0)?.kategorie;
+          if (kategorie == null) continue;
+          for (const p of zl.zellen[i] ?? []) {
+            const a = entwurfAmPlatz(spalte, zl, p);
+            if (!a || a.veraltet) continue;
+            zeilen.push({
+              entwurf: a.entwurf,
+              kategorie,
+              tag: spalte.tag,
+              termin: spalte.name,
+              dienst: zl.dienst.name,
+            });
+          }
+        }
+      }
+    });
+    return zeilen;
+  };
+  const offen = sendbareZeilen().length;
 
   const nachladeFehler = !bereich && zustand.art === 'fertig' ? zustand.nachladeFehler : undefined;
   return (
@@ -563,7 +580,8 @@ export function Planen({
         ganz sehen darfst – deine eigenen Dienste findest du immer unter Start und Termine. Planen
         darfst du, wo du die Dienstgruppe bearbeiten darfst, die Gruppe eines Dienstes leitest oder
         Admin des Termins bist. Einen freien Platz antippen zeigt, wer kann – dort trägst du
-        jemanden als Entwurf ein. Gesendet wird noch nichts.
+        jemanden als Entwurf ein. Gesendet wird erst mit „Ansehen und senden“ – dann bekommen die
+        Angefragten eine Mitteilung von ChurchTools.
       </p>
       {fach && entwuerfe && ew.art === 'fertig' && (
         <EntwurfFach
@@ -618,12 +636,34 @@ export function Planen({
           <span>
             {offen} {offen === 1 ? 'Entwurf' : 'Entwürfe'}
             {handy ? '' : ' noch nicht gesendet'}
-            <small>{handy ? 'Senden folgt' : 'Senden kommt mit dem nächsten Schritt'}</small>
           </span>
-          <button type="button" className={styles.leistenKnopf} disabled>
-            {handy ? 'Ansehen' : 'Ansehen und senden'}
+          <button
+            type="button"
+            className={styles.sendenKnopf}
+            onClick={() => setSendenListe(sendbareZeilen())}
+          >
+            {handy ? 'Ansehen & senden' : 'Ansehen und senden'}
           </button>
         </div>
+      )}
+      {sendenListe && entwuerfe && ew.art === 'fertig' && (
+        <SendenFach
+          zeilen={sendenListe}
+          ichId={entwuerfe.ich.personId}
+          hinweise={(z) => entwuerfe.hinweise(z)}
+          senden={(eintraege, melde) => entwuerfe.senden(ew.daten, eintraege, melde)}
+          onClose={(gesendet) => {
+            setSendenListe(null);
+            if (gesendet) {
+              // ChurchTools hat sich geändert: Matrix und Entwürfe neu – leise, ohne „wird geladen“.
+              ewNeu();
+              if (bereich) {
+                leiseNeu.current = true;
+                setVersuch((v) => v + 1);
+              } else onAktualisieren?.();
+            }
+          }}
+        />
       )}
       <Toast message={toast} />
     </div>

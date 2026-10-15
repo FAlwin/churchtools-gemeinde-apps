@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
-import { _vergissModul, entferneEntwurf, ladeEntwuerfe, richteSchubladeEin } from './ladeEntwuerfe';
+import {
+  _vergissModul,
+  entferneEntwurf,
+  ladeEntwuerfe,
+  richteSchubladeEin,
+  sendeEntwuerfe,
+} from './ladeEntwuerfe';
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -181,5 +187,56 @@ describe('entferneEntwurf', () => {
     spy.mockClear();
     expect(await entferneEntwurf(d, 1, ort, 1)).toEqual({ ok: false, grund: 'kein-recht' });
     expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe('sendeEntwuerfe (Durchstich mit den echten Anschlüssen)', () => {
+  it('liest frisch, schreibt den Platz, liest nach – erst dann wird der Entwurf gelöscht', async () => {
+    // Wie gemessen: ChurchTools schreibt beim Einteilen den Namen an den Platz – ohne Namen gilt er als frei.
+    let platz = {
+      id: 807,
+      serviceId: 7,
+      index: null,
+      personId: null as number | null,
+      name: null as string | null,
+    };
+    let werte = [wert(100, 20)];
+    const reihe: string[] = [];
+    const spy = ct({
+      ...GRUND,
+      'GET /api/csrftoken': () => json(200, { data: 'tok' }),
+      'GET /api/events/20': () => {
+        reihe.push(`lesen ${platz.personId ?? 'frei'}`);
+        return json(200, { data: { id: 20, eventServices: [platz] } });
+      },
+      'PUT /api/events/20/servicerequests/807': (init) => {
+        reihe.push('schreiben');
+        const b = JSON.parse(String(init?.body)) as { personId: number };
+        platz = { ...platz, id: 900, personId: b.personId, name: 'Ben Test' };
+        return json(200, {});
+      },
+      'GET /api/custommodules/16/customdatacategories/30/customdatavalues': () =>
+        json(200, { data: werte }),
+      'DELETE /api/custommodules/16/customdatacategories/30/customdatavalues/100': () => {
+        reihe.push(`löschen bei ${platz.personId}`);
+        werte = [];
+        return new Response(null, { status: 204 });
+      },
+    });
+    const d = await ladeEntwuerfe([TECHNIK]);
+    const e = d.entwuerfe.get('20|7|-')!;
+    const gemeldet: unknown[] = [];
+    const r = await sendeEntwuerfe(d, [{ entwurf: e, kategorie: 30 }], (i, x) =>
+      gemeldet.push([i, x]),
+    );
+    expect(r).toEqual([{ art: 'gesendet' }]);
+    expect(gemeldet).toEqual([[0, { art: 'gesendet' }]]);
+    expect(reihe).toEqual(['lesen frei', 'schreiben', 'lesen 46', 'löschen bei 46']);
+    const put = spy.mock.calls.find((c) => c[1]?.method === 'PUT')!;
+    expect(JSON.parse(String(put[1]?.body))).toEqual({
+      personId: 46,
+      name: null,
+      isAccepted: false,
+    });
   });
 });

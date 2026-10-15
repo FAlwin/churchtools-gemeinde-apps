@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
@@ -7,6 +8,7 @@ import { planAus, type Plan } from '@shared/dienstplan/plan';
 import type { Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import type { RohTermin } from '@shared/dienstplan/termine';
 import type { Entwurf } from '@shared/dienstplan/entwuerfe';
+import type { SendeErgebnis } from '@shared/dienstplan/senden';
 import type { EntwuerfeDaten, EntwurfAnschluss, Schublade } from './ladeEntwuerfe';
 import { Planen } from './Planen';
 import type { TermineZustand } from './Termine';
@@ -708,13 +710,18 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
       entwuerfe.map((e) => [`${e.ort.eventId}|${e.ort.serviceId}|${e.ort.index ?? '-'}`, e]),
     ),
   });
-  function zeige4(a: Partial<EntwurfAnschluss>) {
+  function zeige4(
+    a: Partial<EntwurfAnschluss>,
+    props: Partial<ComponentProps<typeof Planen>> = {},
+  ) {
     const anschluss: EntwurfAnschluss = {
       ich: ALWIN,
       laden: vi.fn(() => Promise.resolve(daten())),
       speichern: vi.fn(),
       entfernen: vi.fn(),
       einrichten: vi.fn(() => Promise.resolve()),
+      senden: vi.fn(),
+      hinweise: vi.fn(() => Promise.resolve(new Map())),
       ...a,
     };
     render(
@@ -725,6 +732,7 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
         onMehr={() => {}}
         {...ZUSATZ}
         entwuerfe={anschluss}
+        {...props}
       />,
     );
     return anschluss;
@@ -1019,13 +1027,7 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
         ),
     });
     await waitFor(() =>
-      expect(offenTexte()).toBe(
-        '2 Entwürfe noch nicht gesendetSenden kommt mit dem nächsten SchrittAnsehen und senden',
-      ),
-    );
-    expect(screen.getByRole('button', { name: 'Ansehen und senden' })).toHaveProperty(
-      'disabled',
-      true,
+      expect(offenTexte()).toBe('2 Entwürfe noch nicht gesendetAnsehen und senden'),
     );
     cleanup();
     zeige4({ laden: () => Promise.resolve(daten([entwurf()])) });
@@ -1037,6 +1039,8 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
       speichern: vi.fn(),
       entfernen: vi.fn(),
       einrichten: vi.fn(),
+      senden: vi.fn(),
+      hinweise: vi.fn(() => Promise.resolve(new Map())),
     };
     render(
       <Planen
@@ -1048,11 +1052,99 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
         entwuerfe={a}
       />,
     );
-    await waitFor(() => expect(offenTexte()).toBe('1 EntwurfSenden folgtAnsehen'));
+    await waitFor(() => expect(offenTexte()).toBe('1 EntwurfAnsehen & senden'));
     cleanup();
     const leer = zeige4({});
     await waitFor(() => expect(leer.laden).toHaveBeenCalled());
     await screen.findAllByRole('button', { name: /frei – Wer kann/ });
     expect(offenTexte()).toBeNull();
+  });
+
+  // ── E4-4-2: Senden-Fach ──────────────────────────────────────────────────
+  /** Senden, das alles schafft – und dabei jeden Eintrag meldet wie der Kern. */
+  const gesendet = () =>
+    vi.fn(
+      (
+        _d: EntwuerfeDaten,
+        eintraege: readonly unknown[],
+        melde: (i: number, r: SendeErgebnis) => void,
+      ) => {
+        const r = eintraege.map((_, i): SendeErgebnis => {
+          melde(i, { art: 'gesendet' });
+          return { art: 'gesendet' };
+        });
+        return Promise.resolve(r);
+      },
+    );
+
+  it('„Ansehen und senden“ öffnet das Fach mit genau den gezählten Entwürfen (eine Regel), samt Kategorie', async () => {
+    const senden = gesendet();
+    zeige4({
+      laden: () =>
+        Promise.resolve(
+          daten([entwurf(), entwurf({ ort: { eventId: 20, serviceId: 7, index: 1 } })]), // 2. veraltet
+        ),
+      senden,
+    });
+    await waitFor(() => expect(offenTexte()).toMatch(/^1 Entwurf/));
+    fireEvent.click(screen.getByRole('button', { name: 'Ansehen und senden' }));
+    expect(screen.getAllByRole('checkbox').map((c) => c.getAttribute('aria-label'))).toEqual([
+      'Anfrage an Ben Test – Licht',
+    ]);
+    fireEvent.click(await screen.findByRole('button', { name: 'Jetzt senden (1)' }));
+    await screen.findByText('Gesendet');
+    expect(senden.mock.calls[0][1]).toEqual([{ entwurf: entwurf(), kategorie: 30 }]);
+  });
+
+  it('ohne Änderungsrecht auf die Schublade: keine Leiste – ein Entwurf ließe sich nach dem Senden nicht entfernen', async () => {
+    const a = zeige4({
+      laden: vi.fn(() => Promise.resolve(daten([entwurf()], { stand: 'nur-lesen' }))),
+    });
+    await waitFor(() => expect(a.laden).toHaveBeenCalled());
+    await screen.findAllByRole('button', { name: /frei – Wer kann/ });
+    expect(offenTexte()).toBeNull();
+  });
+
+  it('nach dem Senden: Entwürfe und Termine neu (ab heute über den Aufrufer); Abbrechen lädt nichts', async () => {
+    const onAktualisieren = vi.fn();
+    const laden = vi.fn(() => Promise.resolve(daten([entwurf()])));
+    zeige4({ laden, senden: gesendet() }, { onAktualisieren });
+    await waitFor(() => expect(offenTexte()).toMatch(/^1 Entwurf/));
+    fireEvent.click(screen.getByRole('button', { name: 'Ansehen und senden' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Abbrechen' }));
+    expect(laden).toHaveBeenCalledTimes(1);
+    expect(onAktualisieren).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Ansehen und senden' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Jetzt senden (1)' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Schließen' }));
+    await waitFor(() => expect(laden).toHaveBeenCalledTimes(2));
+    expect(onAktualisieren).toHaveBeenCalledTimes(1);
+  });
+
+  it('nach dem Senden im gewählten Monat: denselben Zeitraum neu laden – leise, die Matrix bleibt stehen', async () => {
+    localStorage.setItem(
+      'dienstplaner.planen.ansicht',
+      JSON.stringify({ zeitraum: { art: 'monat', monat: '2026-11' } }),
+    );
+    let antwort: ((d: { zeilen: []; plan: Plan }) => void) | null = null;
+    const ladeZeitraum = vi
+      .fn<(von: string, bis: string) => Promise<{ zeilen: []; plan: Plan }>>()
+      .mockResolvedValueOnce({ zeilen: [], plan: PLAN4 })
+      .mockImplementation(() => new Promise((r) => (antwort = r)));
+    const onAktualisieren = vi.fn();
+    zeige4(
+      { laden: () => Promise.resolve(daten([entwurf()])), senden: gesendet() },
+      { ladeZeitraum, onAktualisieren },
+    );
+    await waitFor(() => expect(offenTexte()).toMatch(/^1 Entwurf/));
+    fireEvent.click(screen.getByRole('button', { name: 'Ansehen und senden' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Jetzt senden (1)' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Schließen' }));
+    await waitFor(() => expect(ladeZeitraum).toHaveBeenCalledTimes(2));
+    expect(ladeZeitraum).toHaveBeenLastCalledWith('2026-11-01', '2026-11-30');
+    expect(onAktualisieren).not.toHaveBeenCalled();
+    // Noch keine Antwort – die Matrix steht weiter da (kein „wird geladen“).
+    expect(screen.getAllByRole('button', { name: /frei – Wer kann/ }).length).toBeGreaterThan(0);
+    await act(async () => antwort!({ zeilen: [], plan: PLAN4 }));
   });
 });

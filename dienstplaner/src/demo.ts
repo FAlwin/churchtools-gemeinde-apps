@@ -25,14 +25,18 @@ function zeit(tage: number, uhr: string): string {
   return `${d.toISOString().slice(0, 10)}T${uhr}:00Z`;
 }
 
-/** Plätze wie gemessen (Live, 13.10.2026): frei = ohne Namen; `isAccepted` = zugesagt. */
+/** Plätze wie gemessen (Live, 13.10.2026): frei = ohne Namen; `isAccepted` = zugesagt. Jeder Platz hat eine ID,
+ * die sich wie in ChurchTools bei jedem Schreiben ändert (E0). */
+let naechstePlatzId = 700;
 const platz = (
   serviceId: number,
   personId: number | null,
   name: string | null,
   isAccepted = false,
 ) => ({
+  id: naechstePlatzId++,
   serviceId,
+  index: null as number | null,
   personId,
   name,
   isAccepted,
@@ -88,6 +92,55 @@ const TERMINE = [
     eventServices: [platz(6, 19, 'Spike', true), platz(7, 1, 'Alwin', true), platz(9, null, null)],
   },
 ];
+// Wie ChurchTools: Hat ein Dienst mehrere Plätze, sind sie durchgezählt (1, 2, …), sonst `null`.
+for (const t of TERMINE) {
+  for (const p of t.eventServices) {
+    const gleiche = t.eventServices.filter((q) => q.serviceId === p.serviceId);
+    if (gleiche.length > 1) p.index = gleiche.indexOf(p) + 1;
+  }
+}
+
+/** Namen, die ChurchTools beim Einteilen an den Platz schreibt (Personen aus „Wer kann?“). */
+const NAMEN: Record<number, string> = {
+  1: 'Alwin',
+  19: 'Spike',
+  46: 'Anna Klassen',
+  49: 'Ben Wiebe',
+  52: 'Clara Dyck',
+  55: 'David Penner',
+};
+
+/**
+ * Einteilen (E4-4) wie gemessen: `PUT …/servicerequests/{platz}` mit Person bzw. Name, `POST …/decline` leert;
+ * jedes Schreiben vergibt dem Platz eine **neue ID**, eine veraltete ID ändert nichts. Gesendet wird an
+ * Anna, Ben, … – die Demo verschickt natürlich nichts.
+ */
+function einteilenDemo(methode: string, pfad: string, rumpf: unknown): unknown {
+  const termin = /^\/api\/events\/(\d+)$/.exec(pfad);
+  if (termin && methode === 'GET') {
+    const t = TERMINE.find((x) => x.id === Number(termin[1]));
+    return t ? { data: t } : undefined;
+  }
+  const m = /^\/api\/events\/(\d+)\/servicerequests\/(\d+)(\/decline)?$/.exec(pfad);
+  if (!m) return undefined;
+  const p = TERMINE.find((x) => x.id === Number(m[1]))?.eventServices.find(
+    (q) => q.id === Number(m[2]),
+  );
+  if (p) {
+    const r = (m[3] ? { personId: null, name: null, isAccepted: false } : rumpf) as {
+      personId: number | null;
+      name: string | null;
+      isAccepted: boolean;
+    };
+    Object.assign(p, {
+      id: naechstePlatzId++,
+      personId: r.personId,
+      name: r.personId === null ? r.name : (NAMEN[r.personId] ?? `Person ${r.personId}`),
+      isAccepted: r.isAccepted,
+    });
+  }
+  return { data: null };
+}
 
 /**
  * „Wer kann?“ in der Form, die E4-0 gemessen hat (`possiblepersons`): Punkte mit Begründungen, Auslastung je
@@ -345,13 +398,26 @@ export function demoStarten(fall: string): void {
       return Promise.resolve(new Response('{}', { status: 502 }));
     }
     const werKann = /^\/api\/events\/(\d+)\/services\/\d+\/possiblepersons$/.exec(url.pathname);
-    const d = werKann
-      ? werKannDemo(Number(werKann[1]))
-      : url.pathname === '/api/events'
-        ? { data: termineVonBis(url.searchParams.get('from'), url.searchParams.get('to')) }
-        : url.pathname === '/api/permissions/global'
-          ? mitDienstplanerRechten(antworten[url.pathname])
-          : antworten[url.pathname];
+    const eingeteilt = einteilenDemo(
+      methode,
+      url.pathname,
+      typeof init?.body === 'string' ? (JSON.parse(init.body) as unknown) : undefined,
+    );
+    if (eingeteilt && methode !== 'GET') {
+      // Wie ChurchTools etwas Zeit lassen, damit der Fortschritt im Senden-Fach zu sehen ist.
+      return new Promise((fertig) =>
+        setTimeout(() => fertig(new Response(JSON.stringify(eingeteilt), { status: 200 })), 600),
+      );
+    }
+    const d = eingeteilt
+      ? eingeteilt
+      : werKann
+        ? werKannDemo(Number(werKann[1]))
+        : url.pathname === '/api/events'
+          ? { data: termineVonBis(url.searchParams.get('from'), url.searchParams.get('to')) }
+          : url.pathname === '/api/permissions/global'
+            ? mitDienstplanerRechten(antworten[url.pathname])
+            : antworten[url.pathname];
     return Promise.resolve(
       d === undefined
         ? new Response('{}', { status: 404 })

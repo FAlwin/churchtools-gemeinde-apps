@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Entwurf } from '@shared/dienstplan/entwuerfe';
 import type { SendeErgebnis } from '@shared/dienstplan/senden';
-import { aktionText, ergebnisText, wiederholbar } from './sendenTexte';
+import { aktionText, bisherHinweis, ergebnisText, wegHinweis, wiederholbar } from './sendenTexte';
 
 const e = (x: Partial<Entwurf> = {}): Entwurf => ({
   ort: { eventId: 7, serviceId: 6, index: null },
@@ -21,6 +21,43 @@ describe('aktionText', () => {
     expect(aktionText(e({ modus: 'direkt' }))).toBe('Direkt zuteilen: Anna Test');
     expect(aktionText(gast)).toBe('Gast eintragen: Max');
     expect(aktionText(e({ ziel: { art: 'frei' } }))).toBe('Zurückziehen');
+  });
+});
+
+describe('E4-5: belegter Platz – zurückziehen und ersetzen', () => {
+  const anna = { art: 'anfrage', personId: 46 } as const;
+  it('„Zurückziehen: Ben“, „… statt Anna“ – „statt“ nur, wo jemand stand', () => {
+    expect(aktionText(e({ ziel: { art: 'frei' }, gesehen: anna }), 'Ben Test')).toBe(
+      'Zurückziehen: Ben Test',
+    );
+    expect(aktionText(e({ gesehen: anna }), 'Anna X')).toBe('Anfrage an Anna Test statt Anna X');
+    expect(aktionText(e({ gesehen: anna, modus: 'direkt' }), 'Anna X')).toBe(
+      'Direkt zuteilen: Anna Test statt Anna X',
+    );
+    expect(aktionText({ ...gast, gesehen: anna }, 'Anna X')).toBe(
+      'Gast eintragen: Max statt Anna X',
+    );
+    // Am freien Platz kein „statt“, auch wenn ein Name mitkommt.
+    expect(aktionText(e(), 'Anna X')).toBe('Anfrage an Anna Test');
+    expect(ergebnisText({ art: 'gesendet' }, e({ ziel: { art: 'frei' } }))).toBe('zurückgezogen');
+  });
+
+  it('was die bisherige Person mitbekommt (gemessen 15.10.): zurückziehen nichts, ersetzen „ausgetragen“', () => {
+    expect(bisherHinweis({ art: 'frei' }, anna, 'Ben')).toEqual({
+      text: 'ChurchTools sagt Ben nicht Bescheid – sag es am besten selbst.',
+      warnung: true,
+    });
+    expect(bisherHinweis(e().ziel, { art: 'zusage', personId: 46 }, 'Ben')).toEqual({
+      text: 'Ben bekommt von ChurchTools „Du wurdest … ausgetragen“.',
+      warnung: false,
+    });
+    // Ein Gast bekommt nie etwas; am freien Platz und ohne Namen gibt es niemanden zu warnen.
+    expect(bisherHinweis({ art: 'frei' }, { art: 'gast', name: 'Max' }, 'Max')).toBeNull();
+    expect(bisherHinweis(e().ziel, { art: 'frei' }, 'Ben')).toBeNull();
+    expect(bisherHinweis({ art: 'frei' }, anna, null)).toBeNull();
+    expect(wegHinweis('zurueckziehen', anna, 'Ben')).toEqual(
+      bisherHinweis({ art: 'frei' }, anna, 'Ben'),
+    );
   });
 });
 

@@ -291,12 +291,29 @@ function speicherDemo(fall: string) {
     ziel: { art: 'person', personId: 47, name: 'Finn Test' },
     von: { personId: 1, name: 'Alwin' },
   };
+  // E4-5: am ersten Gottesdienst Alwins Anfrage (Gesang 1) zurückziehen (von Spike) und Spike (Gesang 2, zugesagt)
+  // durch Clara ersetzen.
+  const zurueck = {
+    ...spike,
+    ort: { eventId: 101, serviceId: 9, index: 1 },
+    ziel: { art: 'frei' },
+    gesehen: { art: 'anfrage', personId: 1 },
+  };
+  const ersetzen = {
+    ...spike,
+    ort: { eventId: 101, serviceId: 9, index: 2 },
+    ziel: { art: 'person', personId: 52, name: 'Clara Dyck' },
+    gesehen: { art: 'zusage', personId: 19 },
+    von: { personId: 1, name: 'Alwin' },
+  };
   const werte = new Map<number, { id: number; dataCategoryId: number; value: string }[]>([
     [
       40,
       [
         { id: 400, dataCategoryId: 40, value: JSON.stringify(spike) },
         { id: 401, dataCategoryId: 40, value: JSON.stringify(veraltet) },
+        { id: 402, dataCategoryId: 40, value: JSON.stringify(zurueck) },
+        { id: 403, dataCategoryId: 40, value: JSON.stringify(ersetzen) },
       ],
     ],
   ]);

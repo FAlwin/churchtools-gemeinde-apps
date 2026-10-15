@@ -306,6 +306,46 @@
   }
 }
 
+// Entwurf „zurückziehen“ (E4-5, Entwurf Abschnitt 2): rot gestrichelt, der Name durchgestrichen.
+.zurueck {
+  border: 1.5px dashed var(--red);
+  background: color-mix(in srgb, var(--red) 7%, var(--surface2));
+
+  .ic {
+    background: var(--red);
+    color: #fff;
+  }
+}
+
+.durch {
+  color: var(--text2);
+  text-decoration: line-through;
+}
+
+// Ersetzen: „Greta statt Anna“ – der Alte klein und durchgestrichen.
+.statt {
+  color: var(--text3);
+  font-size: 12px;
+  text-decoration: line-through;
+}
+
+// Ein belegter Platz zum Antippen (E4-5) – sieht aus wie bisher, ist aber ein Knopf.
+.belegtKnopf {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--blue);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 1px;
+  }
+}
+
 // Entwurf antippbar (E4-3-3) – wie der freie Platz ein Knopf.
 .entwurfKnopf {
   width: 100%;

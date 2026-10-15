@@ -3,7 +3,7 @@ import { Sheet } from '@ui/fenster/Sheet';
 import { tagKurz } from '@shared/ct/datum';
 import { ortSchluessel, type Entwurf } from '@shared/dienstplan/entwuerfe';
 import type { SendeEintrag, SendeErgebnis } from '@shared/dienstplan/senden';
-import { aktionText, ergebnisText, wiederholbar } from './sendenTexte';
+import { aktionText, bisherHinweis, ergebnisText, wiederholbar } from './sendenTexte';
 import type { SendeHinweis } from './sendeHinweise';
 import styles from './SendenFach.module.scss';
 
@@ -15,6 +15,8 @@ export interface SendeZeile {
   tag: string;
   termin: string;
   dienst: string;
+  /** Wer in ChurchTools dort steht (E4-5: wird zurückgezogen bzw. ersetzt); `null` am freien Platz. */
+  bisher: string | null;
 }
 
 type Phase = 'liste' | 'laeuft' | 'fertig';
@@ -97,6 +99,11 @@ export function SendenFach({
   const anfragen = zaehle((e) => e.ziel.art === 'person' && e.modus === 'anfrage');
   const direkt = zaehle((e) => e.ziel.art === 'person' && e.modus === 'direkt');
   const gaeste = zaehle((e) => e.ziel.art === 'gast');
+  // E4-5: Wer an einem belegten Platz herausfällt – gemessen, was er mitbekommt (`bisherHinweis`).
+  const zurueck = zaehle((e) => e.ziel.art === 'frei');
+  const ersetzt = zaehle(
+    (e) => e.ziel.art !== 'frei' && e.gesehen.art !== 'frei' && e.gesehen.art !== 'gast',
+  );
   const mitHinweis = gewaehlt.filter((z) => {
     const h = hw?.get(schluessel(z));
     return h && 'text' in h;
@@ -155,7 +162,17 @@ export function SendenFach({
               <b>
                 {gaeste} {gaeste === 1 ? 'Gast' : 'Gäste'}
               </b>{' '}
-              – nur der Name im Plan.
+              – nur der Name im Plan.{' '}
+            </>
+          )}
+          {ersetzt > 0 && (
+            <>
+              <b>{ersetzt} ersetzt</b> – wer dort stand, bekommt „Du wurdest … ausgetragen“.{' '}
+            </>
+          )}
+          {zurueck > 0 && (
+            <>
+              <b>{zurueck} zurückgezogen</b> – ChurchTools sagt den Personen <b>nicht</b> Bescheid.
             </>
           )}
           {gewaehlt.length === 0 && 'Nichts ausgewählt.'}
@@ -178,6 +195,7 @@ export function SendenFach({
             const r = ergebnisse.get(k);
             const h = hw?.get(k);
             const fremd = e.von.personId !== ichId ? `von ${e.von.name}` : null;
+            const weg = fuerBisher(z);
             return (
               <li key={k} className={styles.zeile}>
                 {phase === 'liste' ? (
@@ -185,7 +203,7 @@ export function SendenFach({
                     type="checkbox"
                     className={styles.haken}
                     checked={haken.has(k)}
-                    aria-label={`${aktionText(e)} – ${z.dienst}`}
+                    aria-label={`${aktionText(e, z.bisher)} – ${z.dienst}`}
                     onChange={() =>
                       setHaken((alt) => {
                         const neu = new Set(alt);
@@ -199,10 +217,15 @@ export function SendenFach({
                   <Zeichen r={r} laeuft={jetzt === k} />
                 )}
                 <span className={styles.was}>
-                  {aktionText(e)}
+                  {aktionText(e, z.bisher)}
                   {phase === 'liste' ? (
                     <>
                       {fremd && <small>{fremd}</small>}
+                      {weg && (
+                        <small className={weg.warnung ? styles.warnung : undefined}>
+                          {weg.text}
+                        </small>
+                      )}
                       {h && 'text' in h && <small className={styles.warnung}>{h.text}</small>}
                       {/* Ehrlich bleiben: Ohne Antwort ist „kein Hinweis“ nicht dasselbe wie „alles gut“. */}
                       {h && 'ungeprueft' in h && <small>Hinweise nicht geprüft</small>}
@@ -249,6 +272,9 @@ export function SendenFach({
     </Sheet>
   );
 }
+
+/** Was die bisherige Person mitbekommt (E4-5) – die gemessene Regel aus `sendenTexte.ts`. */
+const fuerBisher = (z: SendeZeile) => bisherHinweis(z.entwurf.ziel, z.entwurf.gesehen, z.bisher);
 
 /** Stand einer Zeile beim Senden: ✓ gesendet, × nicht, ! Konflikt/geändert, ○ wartet, ◌ läuft. */
 function Zeichen({ r, laeuft }: { r: SendeErgebnis | undefined; laeuft: boolean }) {

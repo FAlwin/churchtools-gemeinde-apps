@@ -2,14 +2,50 @@
  * Texte und Regeln des Senden-Fachs (E4-4-2) – eigene Datei, damit `SendenFach.tsx` nur die Komponente
  * exportiert (Fast Refresh).
  */
-import type { Entwurf } from '@shared/dienstplan/entwuerfe';
+import type { Belegung } from '@shared/dienstplan/einteilen';
+import type { Entwurf, EntwurfZiel } from '@shared/dienstplan/entwuerfe';
 import type { SendeErgebnis } from '@shared/dienstplan/senden';
 
-/** Was beim Senden passiert – „Anfrage an Anna“, „Direkt zuteilen: David“, „Gast eintragen: Max“. */
-export function aktionText(e: Entwurf): string {
-  if (e.ziel.art === 'frei') return 'Zurückziehen';
-  if (e.ziel.art === 'gast') return `Gast eintragen: ${e.ziel.name}`;
-  return e.modus === 'direkt' ? `Direkt zuteilen: ${e.ziel.name}` : `Anfrage an ${e.ziel.name}`;
+/**
+ * Was beim Senden passiert – „Anfrage an Anna“, „Direkt zuteilen: David“, „Gast eintragen: Max“; an einem belegten
+ * Platz (E4-5) „Zurückziehen: Ben“ bzw. „Anfrage an Greta statt Anna“. `bisher`: wer jetzt dort steht.
+ */
+export function aktionText(e: Entwurf, bisher: string | null = null): string {
+  if (e.ziel.art === 'frei') return bisher ? `Zurückziehen: ${bisher}` : 'Zurückziehen';
+  const statt = e.gesehen.art !== 'frei' && bisher ? ` statt ${bisher}` : '';
+  if (e.ziel.art === 'gast') return `Gast eintragen: ${e.ziel.name}${statt}`;
+  return e.modus === 'direkt'
+    ? `Direkt zuteilen: ${e.ziel.name}${statt}`
+    : `Anfrage an ${e.ziel.name}${statt}`;
+}
+
+/**
+ * **Was die bisherige Person mitbekommt**, wenn sie zurückgezogen oder ersetzt wird – gemessen 15.10.2026
+ * (E4-5-0): Zurückziehen → **nichts**, Ersetzen → Push „Dienstaustragung – Du wurdest … ausgetragen“. Gäste
+ * bekommen nie etwas. Eine Stelle für das Fenster am Platz, das Entwurfs-Fach und das Senden-Fach.
+ */
+export function bisherHinweis(
+  ziel: EntwurfZiel,
+  gesehen: Belegung,
+  bisher: string | null,
+): { text: string; warnung: boolean } | null {
+  return wegHinweis(ziel.art === 'frei' ? 'zurueckziehen' : 'ersetzen', gesehen, bisher);
+}
+
+/** Dasselbe nach dem Weg – für das Fenster am Platz, das beide Wege zur Wahl stellt. */
+export function wegHinweis(
+  weg: 'zurueckziehen' | 'ersetzen',
+  gesehen: Belegung,
+  bisher: string | null,
+): { text: string; warnung: boolean } | null {
+  if (gesehen.art === 'frei' || gesehen.art === 'gast' || !bisher) return null;
+  if (weg === 'zurueckziehen') {
+    return {
+      text: `ChurchTools sagt ${bisher} nicht Bescheid – sag es am besten selbst.`,
+      warnung: true,
+    };
+  }
+  return { text: `${bisher} bekommt von ChurchTools „Du wurdest … ausgetragen“.`, warnung: false };
 }
 
 /** Diese Gründe lohnen „Erneut senden“; die anderen brauchen erst einen Blick in die Matrix. */
@@ -22,11 +58,13 @@ export const wiederholbar = (r: SendeErgebnis | undefined): boolean =>
 export function ergebnisText(r: SendeErgebnis, e: Entwurf): string {
   if (r.art === 'gesendet') {
     const was =
-      e.ziel.art === 'gast'
-        ? 'als Gast eingetragen'
-        : e.modus === 'direkt'
-          ? 'direkt zugeteilt'
-          : 'angefragt';
+      e.ziel.art === 'frei'
+        ? 'zurückgezogen'
+        : e.ziel.art === 'gast'
+          ? 'als Gast eingetragen'
+          : e.modus === 'direkt'
+            ? 'direkt zugeteilt'
+            : 'angefragt';
     return r.entwurfBlieb
       ? `${was} – der Entwurf blieb stehen und lässt sich in der Matrix verwerfen`
       : was;

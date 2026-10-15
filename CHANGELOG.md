@@ -102,6 +102,16 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Intern
 
+- **Senden-Kern** (#570, Bauplan E4-4-1 – noch ohne Oberfläche): `shared/dienstplan/senden.ts` macht aus Entwürfen
+  echte Einteilungen. Je Eintrag, einer nach dem anderen: Entwurf noch in derselben Fassung? → einteilen mit dem
+  Schreibkern (frisch lesen, schreiben, nachlesen; `gesehen` als erwartete Belegung) → **erst danach** den Entwurf
+  entfernen. Ergebnis je Eintrag (gesendet, ggf. „Entwurf blieb“; nicht gesendet mit Grund; nicht versucht). Bei
+  „abgemeldet“ und vorübergehenden Fehlern wird angehalten, der Rest bleibt Entwurf; nichts wird automatisch
+  wiederholt oder verworfen. Echt an der Test-Instanz geprüft (direkt zugeteilt + Gast, danach ausgetragen).
+- **Gemessen** (15.10.2026): „Direkt zuteilen“ über die Schnittstelle löst die Push-Mitteilung „Diensteinteilung“
+  aus wie eine Anfrage; Austragen durch einen Planer benachrichtigt die Person **nicht**.
+- Die ChurchTools-Nachbauten der Tests (`einteilen.testutil.ts`, `entwuerfe.testutil.ts`) nutzen Schreibkern,
+  Entwürfe und Senden gemeinsam statt in Kopien.
 - **Gemeinsame Bausteine statt Kopien** (#561): Der Browser-Anschluss an den Speicher der Erweiterung
   (`ui/ct/modulPort.ts`), das Kürzel aus der Bau-Adresse (`ui/erweiterung/kuerzel.ts`) und der Hinweis-Toast
   (`ui/fenster/Toast.tsx`, `useToast.ts`) standen nur in der Musik-App; jetzt nutzen beide Apps dieselben. Die

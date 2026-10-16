@@ -93,14 +93,20 @@ describe('Planen – Tabelle (E3-4)', () => {
     ]);
   });
 
-  it('was man plant, ist aufgeklappt (Technik), der Rest zu (Programm) – „du planst“ an der Gruppe', () => {
+  it('was man plant, ist aufgeklappt (Technik), der Rest zu (Programm) – „nur ansehen“ nur am Rest', () => {
     zeige();
     expect(
       tabelle()
         .getByRole('button', { name: /Technik/ })
         .getAttribute('aria-expanded'),
     ).toBe('true');
-    expect(tabelle().getByRole('button', { name: /Technik/ }).textContent).toContain('du planst');
+    expect(tabelle().getByRole('button', { name: /Technik/ }).textContent).not.toContain(
+      'nur ansehen',
+    );
+    expect(tabelle().getByRole('button', { name: /Programm/ }).textContent).toContain(
+      'nur ansehen',
+    );
+    expect(screen.queryByText('du planst')).toBeNull();
     expect(
       tabelle()
         .getByRole('button', { name: /Programm/ })
@@ -459,6 +465,24 @@ describe('Planen – freien Platz antippen → „Wer kann?“ (E4-2)', () => {
     expect(laden).toHaveBeenCalledWith(20, 7);
     fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
     expect(screen.queryByRole('list', { name: 'Wer kann?' })).toBeNull();
+  });
+
+  // Alwin, 16.10.2026: „nur ansehen“ folgt derselben Regel wie die Knöpfe – Admin eines Termins zählt mit.
+  it('„nur ansehen“: in der Tabelle nicht, sobald man an einem gezeigten Termin Admin ist', () => {
+    zeige3();
+    expect(screen.queryByText('nur ansehen')).toBeNull();
+  });
+
+  it('„nur ansehen“ am Handy je Termin: am Termin ohne Admin ja, am Termin mit Admin nein', () => {
+    zeige3(true);
+    const programm = () => screen.getByRole('button', { name: /Programm/ });
+    expect(programm().textContent).toContain('nur ansehen');
+    expect(screen.getByRole('button', { name: /Technik/ }).textContent).not.toContain(
+      'nur ansehen',
+    );
+    const leiste = within(screen.getByRole('group', { name: 'Termine' }));
+    fireEvent.click(leiste.getAllByRole('button')[1]);
+    expect(programm().textContent).not.toContain('nur ansehen');
   });
 
   it('am Handy genauso', async () => {

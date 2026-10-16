@@ -2,7 +2,8 @@
 
 > **Stand: E4-4 (15.10.2026)** – E3 mit drei Rollen geprüft (Test-Instanz) und lesend an der Live-Instanz; seit
 > E4-4 **teilt der Dienstplaner auch ein** (s. „Senden“). **Planen**:
-> Termine als Spalten, Dienstgruppen und Dienste als Zeilen, in jeder Zelle die Plätze; freien Platz antippen →
+> Termine als Spalten, Dienstgruppen und Dienste als Zeilen, in jeder Zelle die Plätze (Gruppen, in denen man nicht
+> einteilen darf: „nur ansehen“); freien Platz antippen →
 > „Wer kann?“ (E4-2) und dort **als Entwurf eintragen** (E4-3, Person oder Gast; Entwurf antippen = ändern oder entfernen, veraltete mit Schild); belegten Platz antippen → **zurückziehen oder ersetzen** (E4-5, ebenfalls als Entwurf); Regler in der Gruppenzeile → **Anzahl der Plätze** je Termin (sofort); unten **„Ansehen und senden“** (E4-4): Anfrage, direkt zuteilen, Gast eintragen, zurückziehen; Zeitraum wählen (ab heute, ein Monat oder von–bis), Terminleiste,
 > Spaltenbreite, Filter nach Veranstaltung und Gruppe, „Wer wie oft?“; am Handy ein Termin auf einmal. **Start**: „Als
 > Nächstes“ (dein Dienst, Team, Lieder, Musik-App), deine offenen Anfragen, deine nächsten Dienste,

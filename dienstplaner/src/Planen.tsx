@@ -114,6 +114,10 @@ interface Sicht {
 /** Darf man an diesem Termin diesen Dienst planen – über Recht, Leitung oder als Admin des Termins? */
 const darfPlanen = (z: PlanZeile, s: PlanSpalte) => z.planbar || s.admin;
 
+/** Darf man in dieser Gruppe an keinem der gezeigten Termine einteilen? Dieselbe Regel wie `darfPlanen`. */
+const nurAnsehen = (g: PlanGruppe, spalten: PlanSpalte[]) =>
+  !g.zeilen.some((z) => spalten.some((s) => darfPlanen(z, s)));
+
 /** Was das Fach „Wer kann?“ über den angetippten Platz wissen muss. */
 function freierPlatz(s: PlanSpalte, z: PlanZeile, plaetze: PlanPlatz[], nr: number): FreierPlatz {
   return {
@@ -1025,14 +1029,21 @@ function ReglerKnopf({ onKlick, text }: { onKlick?: () => void; text: string }) 
   );
 }
 
+/**
+ * Kopf einer Gruppe: aufklappen, Name – und rechts „nur ansehen“, wo man nicht einteilen darf (Alwin, 16.10.2026:
+ * „du planst“ an jeder planbaren Gruppe war unklar und stand je nach Namenslänge woanders). Planbare Gruppen brauchen
+ * kein Schild: Dort sind die Plätze antippbar.
+ */
 function GruppenKnopf({
   g,
   offen,
   onUmschalten,
+  nurAnsehen,
 }: {
   g: PlanGruppe;
   offen: boolean;
   onUmschalten: () => void;
+  nurAnsehen: boolean;
 }) {
   return (
     <button
@@ -1045,7 +1056,7 @@ function GruppenKnopf({
         <Icon name="chev-down" size={16} />
       </span>
       {gruppenName(g)}
-      {g.planbar && <span className={styles.duPlanst}>du planst</span>}
+      {nurAnsehen && <span className={styles.nurAnsehen}>nur ansehen</span>}
     </button>
   );
 }
@@ -1114,7 +1125,15 @@ function TabellenPlan({ sicht, breite, platz }: { sicht: Sicht; breite: Breite; 
             return [
               <tr key={`g-${k}`} className={styles.gruppe}>
                 <th className={styles.svc} style={{ padding: 0 }} scope="row">
-                  <GruppenKnopf g={g} offen={offen} onUmschalten={() => onUmschalten(k)} />
+                  <GruppenKnopf
+                    g={g}
+                    offen={offen}
+                    onUmschalten={() => onUmschalten(k)}
+                    nurAnsehen={nurAnsehen(
+                      g,
+                      spalten.map((i) => plan.spalten[i]),
+                    )}
+                  />
                 </th>
                 {spalten.map((i) => (
                   <td key={i}>
@@ -1241,7 +1260,12 @@ function HandyPlan({ sicht, amEnde }: { sicht: Sicht; amEnde?: () => void }) {
           return (
             <div key={gk} className={styles.handyGruppe}>
               <div className={styles.handyGruppenKopf}>
-                <GruppenKnopf g={g} offen={offen} onUmschalten={() => onUmschalten(gk)} />
+                <GruppenKnopf
+                  g={g}
+                  offen={offen}
+                  onUmschalten={() => onUmschalten(gk)}
+                  nurAnsehen={nurAnsehen(g, [s])}
+                />
                 <GruppenStand frei={g.frei[i]} />
                 <ReglerKnopf
                   onKlick={sicht.onPlaetze(i, g)}

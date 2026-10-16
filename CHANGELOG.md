@@ -56,6 +56,13 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Regel: gültige Entwürfe im geladenen Zeitraum, wo man planen und die Entwürfe der Gruppe ändern darf.
   Damit ist die Leiste aus E4-3-3 („Senden folgt“) aktiv.
 
+### Geändert (Dienstplaner)
+
+- **Planen: „nur ansehen“ statt „du planst“** (#586) – das Schild „du planst“ an jeder planbaren Dienstgruppe war
+  unklar und stand je nach Namenslänge woanders. Jetzt tragen planbare Gruppen kein Schild mehr (dort sind die Plätze
+  antippbar); ein graues „nur ansehen“ steht nur dort, wo man an keinem der gezeigten Termine einteilen darf –
+  dieselbe Regel wie die Knöpfe (Gruppe planbar oder Admin des Termins), am Handy je Termin.
+
 ### Behoben (Dienstplaner)
 
 - **Drei Anzeige-Funde aus der Prüfung mit zwei Planern** (#584, 16.10.2026, Messprotokoll): **a)** Nach einem Konflikt im

@@ -61,6 +61,7 @@ export type IconName =
   | 'cloud-download'
   | 'user-slash'
   | 'regler'
+  | 'zauberstab'
   | 'zahnrad';
 
 interface IconProps {
@@ -274,6 +275,14 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
           <circle cx="15" cy="7" r="2" />
           <circle cx="9" cy="12" r="2" />
           <circle cx="17" cy="17" r="2" />
+        </svg>
+      );
+    // Ersatz für den ChurchTools-Zauberstab (`fa-magic`), wo dessen Schrift fehlt – Demo, NAS-App (E5-2).
+    case 'zauberstab':
+      return (
+        <svg {...p}>
+          <path d="M4 20 15 9M13.5 7.5l3 3" />
+          <path d="M18 3v3M16.5 4.5h3M20 10v2M19 11h2M10 3v2M9 4h2" />
         </svg>
       );
     case 'columns':

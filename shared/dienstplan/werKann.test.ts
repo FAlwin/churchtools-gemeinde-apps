@@ -134,6 +134,35 @@ describe('kandidatenAus', () => {
     });
   });
 
+  it('Hauptgrund = ChurchTools-Text zum größten Abzug, ohne „hat zuvor abgesagt“; ohne Abzug null', () => {
+    const [anna, k] = kandidatenAus(
+      [
+        roh(1, 'Ben', {
+          score: -780,
+          scoreHints: [
+            {
+              score: -30,
+              reason: 'preference.daytime',
+              nameTranslated: 'Einteilung morgens gewünscht',
+            },
+            { score: -250, reason: 'service.same-day', nameTranslated: 'Heute bereits eingeteilt' },
+            { score: -500, reason: FRUEHER_ABGESAGT, nameTranslated: 'Hat zuvor abgesagt' },
+            { score: 10, reason: 'preference.with-partner', nameTranslated: 'Mit Partner' },
+          ],
+        }),
+        roh(2, 'Anna', {
+          scoreHints: [{ score: 10, reason: 'preference.daytime', nameTranslated: 'passt' }],
+        }),
+      ],
+      O,
+    );
+    expect(k.name).toBe('Ben Test');
+    expect(k.hauptGrund).toBe('Heute bereits eingeteilt');
+    // Nur ein Zuschlag, kein Abzug → kein Grund.
+    expect(anna.hauptGrund).toBeNull();
+    expect(kandidatenAus([roh(2, 'Anna')], O)[0].hauptGrund).toBeNull();
+  });
+
   it('ohne Vorliebe oder mit unbrauchbarem Wert: `hoechstensImMonat` = null; „nie“ (0) bleibt 0', () => {
     const h = (wert: unknown) =>
       kandidatenAus(

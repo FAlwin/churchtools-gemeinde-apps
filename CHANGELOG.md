@@ -9,6 +9,16 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Neu (Dienstplaner)
 
+- **Zauberstab – automatische Planung** (#591, Bauplan E5-2, Entwurf `e5-entwurf.html`, Alwin 16.10.2026): In der
+  Gruppenzeile je Termin und im Gruppenkopf für alle gezeigten Termine steht der Zauberstab – mit **genau dem Symbol
+  aus ChurchTools** (`fa-magic` aus der Schrift, die ChurchTools schon lädt; nichts kopiert, Font Awesome Pro). Er
+  lädt „Wer kann?“ für alle freien Plätze (mit Fortschritt, abbrechbar) und zeigt die Vorschläge zum Prüfen: je
+  Platz eine Auswahl, oben „Passt“, darunter „Passt eher nicht“ mit dem Grund von ChurchTools. „Neu vorschlagen“
+  rechnet mit den von Hand gewählten Namen neu; „Übernehmen“ legt **Entwürfe** an (gesendet wird wie immer mit
+  „Ansehen und senden“). Plätze mit Entwurf bleiben, wie sie sind; vorhandene Entwürfe der Gruppe zählen mit. Ein
+  Konflikt mit einem anderen Planer steht an der Zeile und sofort in der Matrix. Die Eingabe eines neuen Entwurfs
+  kommt jetzt für „Wer kann?“, Zurückziehen, Art ändern und Zauberstab aus **einer** Funktion.
+
 - **Dunkelmodus wie ChurchTools** (#563, Alwin: „genauso“ wie bei den Anmeldungen): Der Dienstplaner ist hell oder
   dunkel, je nachdem, was in ChurchTools gewählt ist, und schaltet ohne Neuladen mit um (`folgeChurchToolsThema()`
   aus `ui/design/thema.ts`). Bisher war er immer hell. Der Hinweiskasten in „Wer kann?“ und im Entwurfs-Fach hatte

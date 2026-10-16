@@ -15,6 +15,7 @@ import {
   stammdaten,
   type LeitungsKandidat,
 } from './einrichten';
+import { pflichtNachziehen } from './formularFelder';
 import { gemeindeVorgaben } from './gemeinde';
 import { fehlerMeldung } from './zustand';
 import f from './Formular.module.scss';
@@ -86,6 +87,7 @@ export function FreigebenFenster({
     setFehler(null);
     try {
       await anmeldenVorbereiten(id, [...gewaehlt], vorgaben);
+      await pflichtNachziehen(id);
       await freigeben(id);
       const offen = await anmeldeBedingungen(id);
       if (offen.length === 0) {

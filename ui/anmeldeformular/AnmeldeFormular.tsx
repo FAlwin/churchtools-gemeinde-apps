@@ -1,5 +1,6 @@
 import { Fragment, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
+  mailGueltig,
   nurText,
   pruefeAntworten,
   type Antwort,
@@ -865,8 +866,14 @@ export function AnmeldeFormular({
         </form>
       )}
       <footer className={s.foot}>
-        {ansicht.gemeinde ?? 'Gemeinde'} · Fragen beantwortet das Team als Antwort auf die
-        Bestätigungsmail.
+        {ansicht.gemeinde ?? 'Gemeinde'}
+        {/* Nicht „Antwort auf die Bestätigungsmail“: Die Mail von ChurchTools kommt von noreply (A6-4). */}
+        {mailGueltig(e.kontakt) && (
+          <>
+            {' · Fragen an '}
+            <a href={`mailto:${e.kontakt}`}>{e.kontakt}</a>
+          </>
+        )}
       </footer>
     </FormularRahmen>
   );

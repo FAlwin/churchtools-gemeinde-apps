@@ -191,6 +191,17 @@ describe('Deine Anmeldung (A6-4)', () => {
 });
 
 describe('Ein gewöhnlicher Formular-Link bleibt das Formular', () => {
+  it('Fuß des Formulars nennt den Kontakt – nicht „Antwort auf die Bestätigungsmail“ (die kommt von noreply)', async () => {
+    window.location.hash = '#test.church.tools/66';
+    render(<App />);
+    await screen.findByRole('button', { name: 'Verbindlich anmelden' });
+    const fuss = document.querySelector('footer')!;
+    expect(fuss.textContent).not.toMatch(/Bestätigungsmail/);
+    expect(
+      within(fuss).getByRole('link', { name: 'kinder@gemeinde.test' }).getAttribute('href'),
+    ).toBe('mailto:kinder@gemeinde.test');
+  });
+
   it('#instanz/gruppe ohne „abmelden“ → Anmeldeformular, kein signoutdata', async () => {
     window.location.hash = '#test.church.tools/66';
     render(<App />);

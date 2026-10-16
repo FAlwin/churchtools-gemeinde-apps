@@ -7,6 +7,17 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Behoben (Anmeldungen, #597)
+
+- **Anmeldung mit zwei oder mehr Personen scheiterte** („Das Feld darf nicht leer sein“) – gefunden beim echten Test
+  von A6-4. Felder der Anmeldung (Telefon, Erziehungsberechtigte, Unterschrift …) waren in ChurchTools „Pflicht“;
+  ChurchTools prüft das bei **jeder** Person, die Antworten der Anmeldung stehen aber nur bei der ersten. Jetzt sind
+  diese Spalten in ChurchTools nie Pflicht (geprüft wird im Formular), Personen-Felder bleiben wie bisher (Alwin:
+  „In CT nicht Pflicht“). **Ältere Veranstaltungen zieht „Freigeben“ nach** (`pflichtNachziehen`, über
+  `feldSpeichern` und nachgelesen). Bereits freigegebene: das Feld im Baukasten einmal speichern (dieselbe Regel).
+- Fuß des Formulars: statt „Fragen … als Antwort auf die Bestätigungsmail“ (die Mail kommt von noreply) steht der
+  **Kontakt der Veranstaltung**, wenn einer eingetragen ist.
+
 ### Neu (Anmeldungen, A6-4, #595)
 
 - **„Deine Anmeldung“** (Alwin, 16.10.2026: „Unsere Seite“, Entwurf `a6-4-deine-anmeldung-v1`). Gemessen: ChurchTools

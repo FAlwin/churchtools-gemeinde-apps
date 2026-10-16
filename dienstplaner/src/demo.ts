@@ -49,6 +49,7 @@ const TERMINE = [
     startDate: zeit(4, '08:00'),
     endDate: zeit(4, '10:00'),
     eventServices: [
+      platz(1, 19, 'Spike', true),
       platz(6, 1, 'Alwin', true),
       platz(7, null, null),
       platz(9, 1, 'Alwin'),
@@ -268,6 +269,8 @@ function daten(fall: string): Record<string, unknown> {
     },
     '/api/services': {
       data: [
+        // Predigt (Programm): der Demo-Planer darf sie nur ansehen – zeigt „nur ansehen“ (16.10.2026).
+        { id: 1, name: 'Predigt', serviceGroupId: 1, groupIds: [] },
         { id: 6, name: 'Ton', serviceGroupId: 3, groupIds: [7] },
         { id: 7, name: 'Licht', serviceGroupId: 3, groupIds: [7] },
         { id: 9, name: 'Gesang', serviceGroupId: 4, groupIds: [9] },

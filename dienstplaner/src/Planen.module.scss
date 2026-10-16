@@ -168,16 +168,18 @@
   transition: transform 0.15s;
 }
 
-.duPlanst {
+// „nur ansehen“ (16.10.2026): leise, grau, immer am rechten Rand der Spalte.
+.nurAnsehen {
   margin-left: auto;
   flex: none;
   white-space: nowrap;
   padding: 1px 7px;
+  border: 1px solid var(--border);
   border-radius: 999px;
-  background: var(--blue-soft);
-  color: var(--blue-ink);
+  background: var(--surface2);
+  color: var(--text2);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 // Gruppenzeile je Termin: Stand links, Regler rechts (E4-5-3).

@@ -418,6 +418,31 @@ function speicherDemo(fall: string) {
   return { anfrage, rechte };
 }
 
+/** Vorlieben der Demo (E5-3): je Gruppe je Person die Zeile, wie `getServiceGroupPersonWeight` sie liefert. */
+const vorliebenDemoSpeicher = new Map<
+  string,
+  Record<string, Record<string, Record<string, string>>>
+>();
+function vorliebenDemo(f: URLSearchParams): unknown {
+  const g = f.get('servicegroup_id') ?? '';
+  const zeilen = vorliebenDemoSpeicher.get(g) ?? {};
+  if (f.get('func') === 'editServiceGroupPersonWeight') {
+    const pid = f.get('person_id') ?? '';
+    zeilen[pid] = {
+      [g]: {
+        person_id: pid,
+        servicegroup_id: g,
+        max_per_month: f.get('max_per_month') ?? '4',
+        relation_weight: f.get('relation_weight') ?? '0',
+        morning_weight: f.get('morning_weight') ?? '0',
+      },
+    };
+    vorliebenDemoSpeicher.set(g, zeilen);
+    return null;
+  }
+  return Object.keys(zeilen).length ? zeilen : [];
+}
+
 export function demoStarten(fall: string): void {
   // ChurchTools gibt der Erweiterung einen Behälter mit fester Höhe (gemessen 07.10.2026); auf der nackten
   // Entwicklerseite übernimmt das `body`, sonst hätte die App die Höhe 0.
@@ -443,6 +468,14 @@ export function demoStarten(fall: string): void {
         new Response(s.status === 204 ? null : JSON.stringify({ data: s.data ?? null }), {
           status: s.status,
           headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+    }
+    // Alte Schnittstelle (E5-3, Stift): Vorlieben je Gruppe – wie gemessen, alles Zeichenketten.
+    if (url.pathname === '/index.php' && init?.body instanceof URLSearchParams) {
+      return Promise.resolve(
+        new Response(JSON.stringify({ status: 'success', data: vorliebenDemo(init.body) }), {
+          status: 200,
         }),
       );
     }

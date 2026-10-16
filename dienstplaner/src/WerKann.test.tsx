@@ -4,9 +4,10 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { ApiError } from '@ui/ct/fehler';
 import type { RohKandidat } from '@shared/dienstplan/werKann';
 import { WerKann, type FreierPlatz } from './WerKann';
-import { ladeWerKann } from './ladeWerKann';
+import { ladeWerKann, vergissWerKann } from './ladeWerKann';
+import { STANDARD } from '@shared/dienstplan/vorlieben';
 
-vi.mock('./ladeWerKann', () => ({ ladeWerKann: vi.fn() }));
+vi.mock('./ladeWerKann', () => ({ ladeWerKann: vi.fn(), vergissWerKann: vi.fn() }));
 const laden = vi.mocked(ladeWerKann);
 afterEach(() => laden.mockReset());
 
@@ -240,5 +241,37 @@ describe('WerKann – Eintragen', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Einrichten' }));
     await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
     expect(onEinrichten).toHaveBeenCalledTimes(2);
+  });
+
+  it('Stift (E5-3): neben jedem Namen; speichern → „Wer kann?“ neu (mit neuen Punkten), Hinweis', async () => {
+    laden.mockResolvedValue([k(1, 'Anna'), k(2, 'Ben')]);
+    const vorlieben = {
+      lesen: vi.fn(() => Promise.resolve({ ok: true as const, vorliebe: STANDARD })),
+      speichern: vi.fn(() => Promise.resolve({ ok: true as const })),
+    };
+    render(
+      <WerKann
+        platz={PLATZ}
+        onClose={() => {}}
+        stift={{ vorlieben, gruppe: { id: 3, name: 'Technik' } }}
+      />,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Vorlieben von Ben' }));
+    expect(await screen.findByText('Vorlieben · Ben')).toBeTruthy();
+    fireEvent.change(await screen.findByRole('combobox', { name: 'Tageszeit' }), {
+      target: { value: '1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await screen.findByText('Vorlieben von Ben gespeichert.');
+    expect(vergissWerKann).toHaveBeenCalledWith(166, 6);
+    await waitFor(() => expect(laden).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText('Vorlieben · Ben')).toBeNull();
+  });
+
+  it('ohne `stift` kein Stift (Termin-Admin ohne Gruppenrecht)', async () => {
+    laden.mockResolvedValue([k(1, 'Anna')]);
+    render(<WerKann platz={PLATZ} onClose={() => {}} />);
+    await screen.findByText('Anna');
+    expect(screen.queryByRole('button', { name: /^Vorlieben von/ })).toBeNull();
   });
 });

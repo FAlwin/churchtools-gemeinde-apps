@@ -1,13 +1,14 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
 import type { RohKandidat } from '@shared/dienstplan/werKann';
 import type { EntwurfErgebnis } from '@shared/dienstplan/entwuerfe';
 import { ZauberstabFach, type Wahl, type ZauberZeile } from './ZauberstabFach';
-import { ladeWerKann } from './ladeWerKann';
+import { ladeWerKann, vergissWerKann } from './ladeWerKann';
+import { STANDARD } from '@shared/dienstplan/vorlieben';
 
-vi.mock('./ladeWerKann', () => ({ ladeWerKann: vi.fn() }));
+vi.mock('./ladeWerKann', () => ({ ladeWerKann: vi.fn(), vergissWerKann: vi.fn() }));
 const laden = vi.mocked(ladeWerKann);
 afterEach(() => laden.mockReset());
 
@@ -34,6 +35,7 @@ const zeile = (terminId: number, uhr: string, o: Partial<ZauberZeile> = {}): Zau
   index: null,
   gruppeId: 3,
   gesehen: { art: 'frei' },
+  stift: true,
   ...o,
 });
 const NEUN = zeile(9, '09:00');
@@ -58,6 +60,7 @@ function zeige(o: Partial<Parameters<typeof ZauberstabFach>[0]> = {}) {
       mitEntwurf={0}
       uebernehmen={uebernehmen}
       onClose={onClose}
+      gruppe={{ id: 3, name: 'Technik' }}
       {...o}
     />,
   );
@@ -207,6 +210,53 @@ describe('ZauberstabFach (E5-2)', () => {
     offen.forEach((r) => r([ANNA]));
     await new Promise((r) => setTimeout(r, 0));
     expect(laden).toHaveBeenCalledTimes(4);
+  });
+
+  it('Stift (E5-3): je Zeile; ohne gewählte Person gesperrt; ohne Anschluss oder ohne Gruppenrecht keiner', async () => {
+    laden.mockResolvedValue([ANNA, BEN]);
+    const vorlieben = {
+      lesen: vi.fn(() => Promise.resolve({ ok: true as const, vorliebe: STANDARD })),
+      speichern: vi.fn(() => Promise.resolve({ ok: true as const })),
+    };
+    zeige({ vorlieben, zeilen: [NEUN, zeile(11, '11:00', { stift: false })] });
+    await screen.findByText('2 Vorschläge');
+    expect(
+      screen
+        .getAllByRole('button', { name: /^Vorlieben von/ })
+        .map((b) => b.getAttribute('aria-label')),
+    ).toEqual(['Vorlieben von Anna']);
+    fireEvent.change(auswahl('09:00'), { target: { value: '' } });
+    expect(
+      screen.getByRole('button', { name: 'Vorlieben von der gewählten Person' }),
+    ).toHaveProperty('disabled', true);
+    cleanup();
+    zeige();
+    await screen.findByText('2 Vorschläge');
+    expect(screen.queryByRole('button', { name: /^Vorlieben von/ })).toBeNull();
+  });
+
+  it('Stift speichern → alles neu laden (neue Punkte), von Hand Gewähltes bleibt, Hinweis', async () => {
+    laden.mockResolvedValue([ANNA, BEN]);
+    const vorlieben = {
+      lesen: vi.fn(() => Promise.resolve({ ok: true as const, vorliebe: STANDARD })),
+      speichern: vi.fn(() => Promise.resolve({ ok: true as const })),
+    };
+    zeige({ vorlieben });
+    await screen.findByText('2 Vorschläge');
+    fireEvent.change(auswahl('09:00'), { target: { value: '2' } }); // Ben um 9, von Hand
+    // Ben steht jetzt an beiden Plätzen (die Handwahl rechnet erst „Neu vorschlagen“ durch) – der Stift um 9 Uhr.
+    fireEvent.click(screen.getAllByRole('button', { name: 'Vorlieben von Ben' })[0]);
+    fireEvent.change(await screen.findByRole('combobox', { name: 'Wie oft höchstens?' }), {
+      target: { value: '1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await screen.findByText('Vorlieben von Ben gespeichert – Vorschläge neu berechnet.');
+    expect(vergissWerKann).toHaveBeenCalledWith(9, 6);
+    expect(vergissWerKann).toHaveBeenCalledWith(11, 6);
+    await waitFor(() => expect(laden).toHaveBeenCalledTimes(4));
+    await screen.findByText('2 Vorschläge');
+    expect(gewaehlt('09:00')).toBe('Ben (0×)');
+    expect(gewaehlt('11:00')).toBe('Anna (0×)');
   });
 
   it('Plätze mit Entwurf: der Hinweis, dass sie bleiben', async () => {

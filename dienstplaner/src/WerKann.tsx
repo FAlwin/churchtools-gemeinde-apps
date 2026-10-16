@@ -10,7 +10,9 @@ import {
   type EntwurfErgebnis,
 } from '@shared/dienstplan/entwuerfe';
 import type { Belegung } from '@shared/dienstplan/einteilen';
-import { ladeWerKann } from './ladeWerKann';
+import { ladeWerKann, vergissWerKann } from './ladeWerKann';
+import { StiftKnopf, VorliebenFach } from './VorliebenFach';
+import type { EntwurfAnschluss } from './ladeEntwuerfe';
 import { grundText } from './ladeEntwuerfe';
 import { useInsBild } from './useInsBild';
 import styles from './WerKann.module.scss';
@@ -41,6 +43,8 @@ export interface FreierPlatz {
    * die Belegung als „gesehen“. Fehlt bei freien Plätzen (und bei verborgenen Namen).
    */
   bisher?: { belegung: Belegung; name: string; gast: boolean };
+  /** Plant man die Dienstgruppe (nicht nur als Termin-Admin)? Nur dann gibt es den Stift (E5-3). */
+  stift?: boolean;
 }
 
 /**
@@ -79,10 +83,13 @@ export function WerKann({
   platz,
   onClose,
   eintragen,
+  stift,
 }: {
   platz: FreierPlatz;
   onClose: () => void;
   eintragen?: Eintragen;
+  /** Der Stift (E5-3): Vorlieben der Kandidaten für diese Dienstgruppe ändern. Ohne Angabe kein Stift. */
+  stift?: { vorlieben: EntwurfAnschluss['vorlieben']; gruppe: { id: number; name: string } };
 }) {
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
   const [versuch, setVersuch] = useState(0);
@@ -91,6 +98,8 @@ export function WerKann({
   const [laeuft, setLaeuft] = useState(false);
   const [meldung, setMeldung] = useState<string | null>(null);
   const [konflikt, setKonflikt] = useState<{ ziel: Besetzung; jetzt: Entwurf | null } | null>(null);
+  const [stiftFuer, setStiftFuer] = useState<{ id: number; name: string } | null>(null);
+  const [notiz, setNotiz] = useState<string | null>(null);
 
   // Ein Hinweis (Konflikt, Fehler) steht unter der langen Liste – ins Bild rollen (`useInsBild`).
   const hinweisRef = useInsBild<HTMLDivElement>(meldung ?? konflikt);
@@ -148,6 +157,7 @@ export function WerKann({
               autoComplete="off"
             />
           )}
+          {notiz && <p className={styles.notiz}>{notiz}</p>}
           <h3 className={styles.titel}>Wer kann? Oben: frei und selten dran</h3>
           {zustand.liste.length === 0 ? (
             <p className={styles.hinweis}>
@@ -173,7 +183,7 @@ export function WerKann({
                   );
                   const klasse = `${styles.kandidat}${k.abwesend ? ' ' + styles.blass : ''}`;
                   return (
-                    <li key={k.personId}>
+                    <li key={k.personId} className={stift ? styles.mitStift : undefined}>
                       {bereit ? (
                         <button
                           type="button"
@@ -190,6 +200,13 @@ export function WerKann({
                         </button>
                       ) : (
                         <div className={klasse}>{inhalt}</div>
+                      )}
+                      {stift && (
+                        <StiftKnopf
+                          name={k.name}
+                          disabled={laeuft}
+                          onKlick={() => setStiftFuer({ id: k.personId, name: k.name })}
+                        />
                       )}
                     </li>
                   );
@@ -268,6 +285,21 @@ export function WerKann({
           </div>
         )}
       </div>
+      {stiftFuer && stift && (
+        <VorliebenFach
+          person={stiftFuer}
+          gruppe={stift.gruppe}
+          vorlieben={stift.vorlieben}
+          onClose={(gespeichert) => {
+            setStiftFuer(null);
+            if (!gespeichert) return;
+            // ChurchTools rechnet mit der neuen Vorliebe neue Punkte – die Liste neu laden.
+            vergissWerKann(platz.eventId, platz.serviceId);
+            setNotiz(`Vorlieben von ${stiftFuer.name} gespeichert.`);
+            setVersuch((v) => v + 1);
+          }}
+        />
+      )}
     </Sheet>
   );
 }

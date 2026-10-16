@@ -77,6 +77,14 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Neu (Dienstplaner)
 
+- **Stift – Vorlieben einer Person** (#600, Bauplan E5-3, Entwurf `e5-entwurf.html`): Neben jedem Namen im
+  Zauberstab-Fenster und in „Wer kann?“ steht der Stift (Symbol aus ChurchTools, `fa-pen`). Er öffnet die drei
+  Vorlieben, die ChurchTools beim Zauberstab nutzt – wie oft höchstens, Tageszeit, mit Ehepartner – für diese
+  Dienstgruppe. Gespeichert wird **sofort in ChurchTools** und **nachgelesen**: Ohne Recht meldet ChurchTools zwar
+  Erfolg, übernimmt aber nichts (gemessen 16.10.2026) – dann steht das im Fenster, und die Eingabe bleibt. Danach
+  rechnet „Wer kann?“ bzw. der Zauberstab mit den neuen Punkten neu; von Hand Gewähltes bleibt. Den Stift gibt es nur,
+  wo man die Dienstgruppe plant (nicht als bloßer Admin eines Termins). Keine eigenen Vorlieben (Alwin, 16.10.).
+
 - **Zauberstab – automatische Planung** (#591, Bauplan E5-2, Entwurf `e5-entwurf.html`, Alwin 16.10.2026): In der
   Gruppenzeile je Termin und im Gruppenkopf für alle gezeigten Termine steht der Zauberstab – mit **genau dem Symbol
   aus ChurchTools** (`fa-magic` aus der Schrift, die ChurchTools schon lädt; nichts kopiert, Font Awesome Pro). Er

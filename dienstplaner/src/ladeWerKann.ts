@@ -27,6 +27,14 @@ export async function ladeWerKann(eventId: number, serviceId: number): Promise<R
   return roh as RohKandidat[];
 }
 
+/**
+ * „Wer kann?“ für diesen Termin und Dienst vergessen – nach dem Ändern einer Vorliebe (E5-3) rechnet ChurchTools neue
+ * Punkte, die gemerkte Liste wäre dann veraltet.
+ */
+export function vergissWerKann(eventId: number, serviceId: number): void {
+  memo.delete(`${eventId}|${serviceId}`);
+}
+
 /** Nur für Tests. */
 export function _vergissWerKann(): void {
   memo.clear();

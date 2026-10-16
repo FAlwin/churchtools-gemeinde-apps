@@ -13,7 +13,9 @@ import {
 import type { EntwurfErgebnis } from '@shared/dienstplan/entwuerfe';
 import type { Belegung } from '@shared/dienstplan/einteilen';
 import { abfrageSchluessel, ladeZauberstab } from './ladeZauberstab';
-import { grundText } from './ladeEntwuerfe';
+import { grundText, type EntwurfAnschluss } from './ladeEntwuerfe';
+import { vergissWerKann } from './ladeWerKann';
+import { StiftKnopf, VorliebenFach } from './VorliebenFach';
 import styles from './ZauberstabFach.module.scss';
 
 /** Ein freier Platz im Fenster – was der Kern braucht und was die Zeile zeigt. */
@@ -37,6 +39,8 @@ export interface ZauberZeile {
   index: number | null;
   gruppeId: number;
   gesehen: Belegung;
+  /** Darf man hier Vorlieben ändern (Stift, E5-3)? Nur wo man die Dienstgruppe plant – nicht als Termin-Admin. */
+  stift: boolean;
 }
 
 /** Was übernommen wird. */
@@ -81,6 +85,8 @@ export function ZauberstabFach({
   mitEntwurf,
   uebernehmen,
   onClose,
+  gruppe,
+  vorlieben,
 }: {
   titel: string;
   unter: string;
@@ -94,6 +100,10 @@ export function ZauberstabFach({
     melde: (index: number, ergebnis: EntwurfErgebnis) => void,
   ) => Promise<void>;
   onClose: (eingetragen: number) => void;
+  /** Die Dienstgruppe – für den Stift (E5-3). */
+  gruppe: { id: number; name: string };
+  /** Ohne Anschluss kein Stift. */
+  vorlieben?: EntwurfAnschluss['vorlieben'];
 }) {
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt', fertig: 0, gesamt: 0 });
   const [versuch, setVersuch] = useState(0);
@@ -116,6 +126,11 @@ export function ZauberstabFach({
 
   // Abbrechen hält die Abfragen selbst an – nicht erst, wenn der Aufrufer das Fenster entfernt.
   const abbruch = useRef<AbortController | null>(null);
+  // Der Stift (E5-3): für wen das Vorlieben-Fenster offen ist; nach dem Speichern wird neu geladen und mit den von Hand
+  // gewählten Namen neu gerechnet (`fest`) – die Handwahl bleibt, wie bei „Neu vorschlagen“.
+  const [stiftFuer, setStiftFuer] = useState<{ id: number; name: string } | null>(null);
+  const [notiz, setNotiz] = useState<string | null>(null);
+  const festNachLaden = useRef<Map<string, number | null>>(new Map());
   useEffect(() => {
     const ab = new AbortController();
     abbruch.current = ab;
@@ -132,8 +147,9 @@ export function ZauberstabFach({
           roh: m.get(abfrageSchluessel(z.terminId, z.serviceId)) ?? [],
         }));
         setRoh(m);
-        setWahl(vorschlagen(p, { eingeplant }));
-        setHand(new Set());
+        const fest = festNachLaden.current;
+        setWahl(vorschlagen(p, { eingeplant, fest }));
+        setHand(new Set(fest.keys()));
         setZustand({ art: 'pruefen' });
       },
       (e: unknown) => {
@@ -244,6 +260,8 @@ export function ZauberstabFach({
         </>
       )}
 
+      {notiz && <p className={styles.notiz}>{notiz}</p>}
+
       {zustand.art === 'fehler' && (
         <FehlerKasten fehler={zustand.fehler} onNochmal={() => setVersuch((v) => v + 1)} />
       )}
@@ -332,6 +350,15 @@ export function ZauberstabFach({
                         </optgroup>
                       )}
                     </select>
+                    {vorlieben && z.stift && (
+                      <StiftKnopf
+                        name={gewaehlt?.name ?? 'der gewählten Person'}
+                        disabled={!gewaehlt || zustand.art !== 'pruefen'}
+                        onKlick={() =>
+                          gewaehlt && setStiftFuer({ id: gewaehlt.personId, name: gewaehlt.name })
+                        }
+                      />
+                    )}
                     <small
                       className={
                         r
@@ -383,6 +410,24 @@ export function ZauberstabFach({
             </div>
           )}
         </>
+      )}
+      {stiftFuer && vorlieben && (
+        <VorliebenFach
+          person={stiftFuer}
+          gruppe={gruppe}
+          vorlieben={vorlieben}
+          onClose={(gespeichert) => {
+            setStiftFuer(null);
+            if (!gespeichert) return;
+            // ChurchTools rechnet mit der neuen Vorliebe neue Punkte – alles neu laden, die Handwahl bleibt.
+            festNachLaden.current = new Map(
+              [...hand].map((k) => [k, wahl.get(k) ?? null] as const),
+            );
+            for (const z of zeilen) vergissWerKann(z.terminId, z.serviceId);
+            setNotiz(`Vorlieben von ${stiftFuer.name} gespeichert – Vorschläge neu berechnet.`);
+            setVersuch((v) => v + 1);
+          }}
+        />
       )}
     </Sheet>
   );

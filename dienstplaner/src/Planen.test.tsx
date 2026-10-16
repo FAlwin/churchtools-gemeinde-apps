@@ -10,12 +10,13 @@ import type { RohTermin } from '@shared/dienstplan/termine';
 import type { Entwurf, EntwurfEingabe, EntwurfErgebnis } from '@shared/dienstplan/entwuerfe';
 import type { SendeErgebnis } from '@shared/dienstplan/senden';
 import type { TerminStand } from './terminStand';
+import { STANDARD } from '@shared/dienstplan/vorlieben';
 import type { EntwuerfeDaten, EntwurfAnschluss, Schublade } from './ladeEntwuerfe';
 import { Planen } from './Planen';
 import type { TermineZustand } from './Termine';
 import { ladeWerKann } from './ladeWerKann';
 
-vi.mock('./ladeWerKann', () => ({ ladeWerKann: vi.fn() }));
+vi.mock('./ladeWerKann', () => ({ ladeWerKann: vi.fn(), vergissWerKann: vi.fn() }));
 
 const DIENSTE = diensteAus([
   { id: 1, name: 'Predigt', serviceGroupId: 1 },
@@ -485,6 +486,42 @@ describe('Planen – freien Platz antippen → „Wer kann?“ (E4-2)', () => {
     expect(programm().textContent).not.toContain('nur ansehen');
   });
 
+  it('Stift (E5-3) in „Wer kann?“ nur, wo man die Gruppe plant – nicht als bloßer Termin-Admin', async () => {
+    laden.mockResolvedValue([{ person: { domainIdentifier: '6', title: 'Ben Test' }, score: 0 }]);
+    render(
+      <Planen
+        zustand={{ art: 'fertig', zeilen: [], plan: PLAN3, wochen: 8 }}
+        handy={false}
+        onNochmal={() => {}}
+        onMehr={() => {}}
+        {...ZUSATZ}
+        entwuerfe={{
+          ich: { personId: 1, name: 'Alwin' },
+          laden: () => new Promise<never>(() => {}),
+          speichern: vi.fn(),
+          entfernen: vi.fn(),
+          einrichten: vi.fn(),
+          senden: vi.fn(),
+          hinweise: vi.fn(),
+          anzahl: vi.fn(),
+          termine: vi.fn(() => Promise.resolve(new Map())),
+          vorlieben: { lesen: vi.fn(), speichern: vi.fn() },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Programm/, expanded: false }));
+    fireEvent.click(
+      within(zeileVon('Licht')).getByRole('button', { name: 'frei – Wer kann? (Platz 2 von 2)' }),
+    );
+    expect(await screen.findByRole('button', { name: 'Vorlieben von Ben Test' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    // Predigt an Termin 22: nur als Admin des Termins planbar → „Wer kann?“ ja, Stift nein.
+    const predigt = zeileVon('Predigt').querySelectorAll('td');
+    fireEvent.click(within(predigt[1] as HTMLElement).getByRole('button', { name: /Wer kann\?/ }));
+    await screen.findByText('Ben Test');
+    expect(screen.queryByRole('button', { name: /^Vorlieben von/ })).toBeNull();
+  });
+
   it('am Handy genauso', async () => {
     laden.mockResolvedValue([]);
     zeige3(true);
@@ -749,6 +786,10 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     hinweise: vi.fn(() => Promise.resolve(new Map())),
     anzahl: vi.fn(),
     termine: vi.fn(() => Promise.resolve(new Map())),
+    vorlieben: {
+      lesen: vi.fn(() => Promise.resolve({ ok: true as const, vorliebe: STANDARD })),
+      speichern: vi.fn(() => Promise.resolve({ ok: true as const })),
+    },
     ...a,
   });
   function zeige4(
@@ -829,7 +870,7 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     zeige4({ speichern });
     const licht = within(zeileVon('Licht'));
     fireEvent.click(await licht.findByRole('button', { name: 'frei – Wer kann? (Platz 2 von 2)' }));
-    fireEvent.click(await screen.findByRole('button', { name: /Ben Test/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Ben Test/ }));
     await waitFor(() => expect(speichern).toHaveBeenCalled());
     expect(speichern.mock.calls[0].slice(1)).toEqual([
       3,
@@ -860,7 +901,7 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
         name: 'frei – Wer kann? (Platz 2 von 2)',
       }),
     );
-    fireEvent.click(await screen.findByRole('button', { name: /Ben Test/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Ben Test/ }));
     expect(await screen.findByRole('button', { name: 'Entwurf von Spike lassen' })).toBeTruthy();
     expect(entwuerfeInMatrix()).toEqual(['Entwurf von Spike – noch nicht gesendet: MaxGastSpike']);
   });
@@ -897,7 +938,7 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
       await oeffne();
       expect(await screen.findByText(text)).toBeTruthy();
       await screen.findByRole('list', { name: 'Wer kann?' });
-      expect(screen.queryByRole('button', { name: /Ben Test/ })).toBeNull();
+      expect(screen.queryByRole('button', { name: /^Ben Test/ })).toBeNull();
       cleanup();
     }
     const nochmal = vi
@@ -908,7 +949,7 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     await oeffne();
     fireEvent.click(await screen.findByRole('button', { name: 'Erneut versuchen' }));
     await waitFor(() => expect(nochmal).toHaveBeenCalledTimes(2));
-    expect(await screen.findByRole('button', { name: /Ben Test/ })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /^Ben Test/ })).toBeTruthy();
   });
   // ── E4-3-3: Entwürfe ändern, entfernen, Leiste, veraltet ──────────────────
   const SPIKE = { personId: 19, name: 'Spike' };
@@ -1847,6 +1888,45 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
         'Entwurf von Spike – noch nicht gesendet: MaxGastSpike',
       ]),
     );
+  });
+
+  it('Zauberstab am Termin, an dem man nur Admin ist: Vorschläge ja, Stift nein (Vorlieben gehören zur Gruppe)', async () => {
+    laden.mockResolvedValue([{ person: { domainIdentifier: '46', title: 'Ben Test' }, score: 0 }]);
+    const nurAdmin = planAus(
+      [
+        {
+          id: 22,
+          name: 'Gottesdienst',
+          startDate: '2026-11-15T09:00:00Z',
+          endDate: '2026-11-15T10:30:00Z',
+          adminIds: [1],
+          eventServices: [{ serviceId: 1, personId: null, name: null }],
+        },
+      ] as RohTermin[],
+      {
+        ichId: 1,
+        dienste: DIENSTE,
+        dienstgruppen: GRUPPEN,
+        zeitzone: 'Europe/Berlin',
+        planbar: (d) => d.dienstgruppeId === 3,
+        ganzSichtbar: () => true,
+      },
+    );
+    const d = daten();
+    d.schubladen.set(1, {
+      gruppe: { id: 1, name: 'Programm', fuerAlle: false },
+      kategorie: 31,
+      stand: 'bereit',
+    });
+    zeige4(
+      { laden: () => Promise.resolve(d) },
+      { zustand: { art: 'fertig', zeilen: [], plan: nurAdmin, wochen: 8 } },
+    );
+    fireEvent.click(
+      await screen.findByRole('button', { name: /^Automatische Planung Programm am/ }),
+    );
+    await screen.findByText('1 Vorschlag');
+    expect(screen.queryByRole('button', { name: /^Vorlieben von/ })).toBeNull();
   });
 
   it('Zauberstab: vorhandene Entwürfe der Gruppe zählen mit – Ben hat am Tag schon einen', async () => {

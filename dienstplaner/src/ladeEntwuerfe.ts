@@ -36,6 +36,8 @@ import { dienstPort } from './dienstPort';
 import { anzahlAendern, type AnzahlErgebnis } from '@shared/dienstplan/anzahl';
 import { ladeSendeHinweise, type SendeHinweis } from './sendeHinweise';
 import { ladeTerminStaende, type TerminStand } from './terminStand';
+import { ladeVorliebe, speichereVorliebe } from './ladeVorlieben';
+import type { Vorliebe, VorliebenGrund } from '@shared/dienstplan/vorlieben';
 
 const port = entwurfPortFuer(() => MODUL_KUERZEL);
 
@@ -185,6 +187,18 @@ export interface EntwurfAnschluss {
   termine(ids: readonly number[]): Promise<Map<number, TerminStand>>;
   /** Anzahl der Plätze eines Dienstes am Termin sofort ändern (E4-5-3) – im Kern `anzahl.ts`. */
   anzahl(eventId: number, serviceId: number, gesehen: number, neu: number): Promise<AnzahlErgebnis>;
+  /** Vorlieben einer Person je Dienstgruppe – der Stift (E5-3), sofort in ChurchTools; im Kern `vorlieben.ts`. */
+  vorlieben: {
+    lesen(
+      gruppeId: number,
+      personId: number,
+    ): Promise<{ ok: true; vorliebe: Vorliebe } | { ok: false; grund: VorliebenGrund }>;
+    speichern(
+      gruppeId: number,
+      personId: number,
+      v: Vorliebe,
+    ): Promise<{ ok: true } | { ok: false; grund: VorliebenGrund }>;
+  };
 }
 
 /** Der echte Anschluss für die App. */
@@ -199,6 +213,7 @@ export function entwurfAnschluss(start: Start, gruppen: () => Dienstgruppe[]): E
     termine: (ids) => ladeTerminStaende(ids),
     anzahl: (eventId, serviceId, gesehen, neu) =>
       anzahlAendern(dienstPort, eventId, serviceId, gesehen, neu),
+    vorlieben: { lesen: ladeVorliebe, speichern: speichereVorliebe },
     einrichten: async (gruppe) => {
       await richteSchubladeEin(gruppe);
     },

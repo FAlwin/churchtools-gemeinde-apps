@@ -144,6 +144,7 @@ function freierPlatz(s: PlanSpalte, z: PlanZeile, plaetze: PlanPlatz[], nr: numb
     schonDa: plaetze.flatMap((p) => (p.personId !== null ? [p.personId] : [])),
     index: plaetze[nr - 1]?.index ?? null,
     gruppeId: z.dienst.dienstgruppeId ?? 0,
+    stift: z.planbar,
     ...bisherAus(plaetze[nr - 1]),
   };
 }
@@ -197,6 +198,7 @@ export function Planen({
     zeilen: ZauberZeile[];
     mitEntwurf: number;
     eingeplant: Eingeplant[];
+    gruppe: { id: number; name: string };
   } | null>(null);
   // Ein angetippter Entwurf (E4-3-3) – und ob „Andere Person wählen“ einen Entwurf ersetzt (seine Version).
   const [fach, setFach] = useState<{
@@ -593,6 +595,7 @@ export function Planen({
             unter: zauberUnter(plan, idx),
             ...z,
             eingeplant: zauberEingeplant(g),
+            gruppe: { id: g.gruppe?.id ?? 0, name: gruppenName(g) },
           });
       },
       darfAendern,
@@ -682,6 +685,7 @@ export function Planen({
             index: p.index,
             gruppeId: zl.dienst.dienstgruppeId ?? 0,
             gesehen: p.belegung,
+            stift: zl.planbar,
           });
         });
       }
@@ -761,6 +765,14 @@ export function Planen({
       const jetzt = r.jetzt;
       if (jetzt) setFach((f) => (f ? { ...f, entwurf: jetzt } : f));
     }
+  };
+
+  /** Der Stift in „Wer kann?“ (E5-3) – nur, wo man die Dienstgruppe plant (nicht nur als Termin-Admin). */
+  const stiftFuer = (f: FreierPlatz) => {
+    const g = plan?.gruppen.find((x) => x.gruppe?.id === f.gruppeId);
+    return entwuerfe && f.stift && g
+      ? { vorlieben: entwuerfe.vorlieben, gruppe: { id: f.gruppeId, name: gruppenName(g) } }
+      : undefined;
   };
 
   /** Ob und wie man an diesem Platz eintragen kann – aus Anschluss, Schublade und Rechten. */
@@ -890,8 +902,9 @@ export function Planen({
         jemanden als Entwurf ein. Einen belegten Platz antippen: zurückziehen oder durch jemand
         anderen ersetzen, ebenfalls als Entwurf. Der Regler in der Gruppenzeile ändert die Anzahl
         der Plätze – sofort. Der Zauberstab schlägt für die freien Plätze Personen vor – nach der
-        Rangfolge von ChurchTools, ebenfalls als Entwurf. Gesendet wird erst mit „Ansehen und
-        senden“ – dann bekommen die Angefragten eine Mitteilung von ChurchTools.
+        Rangfolge von ChurchTools, ebenfalls als Entwurf. Der Stift neben einem Namen ändert dessen
+        Vorlieben – sofort in ChurchTools. Gesendet wird erst mit „Ansehen und senden“ – dann
+        bekommen die Angefragten eine Mitteilung von ChurchTools.
       </p>
       {fach && entwuerfe && ew.art === 'fertig' && (
         <EntwurfFach
@@ -938,6 +951,7 @@ export function Planen({
             setErsetzt(null);
           }}
           eintragen={eintragenFuer(frei)}
+          stift={stiftFuer(frei)}
         />
       )}
       {belegt?.bisher && entwuerfe && (
@@ -1020,6 +1034,7 @@ export function Planen({
       {zauber && (
         <ZauberstabFach
           {...zauber}
+          vorlieben={entwuerfe?.vorlieben}
           uebernehmen={zauberUebernehmen}
           onClose={(n) => {
             setZauber(null);

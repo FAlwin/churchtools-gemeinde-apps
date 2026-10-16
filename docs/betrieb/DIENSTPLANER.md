@@ -4,7 +4,7 @@
 > E4-4 **teilt der Dienstplaner auch ein** (s. „Senden“). **Planen**:
 > Termine als Spalten, Dienstgruppen und Dienste als Zeilen, in jeder Zelle die Plätze (Gruppen, in denen man nicht
 > einteilen darf: „nur ansehen“); freien Platz antippen →
-> „Wer kann?“ (E4-2) und dort **als Entwurf eintragen** (E4-3, Person oder Gast; Entwurf antippen = ändern oder entfernen, veraltete mit Schild); belegten Platz antippen → **zurückziehen oder ersetzen** (E4-5, ebenfalls als Entwurf); Regler in der Gruppenzeile → **Anzahl der Plätze** je Termin (sofort); **Zauberstab** in der Gruppenzeile bzw. im Gruppenkopf → Vorschläge nach der ChurchTools-Rangfolge zum Prüfen, übernommen als Entwurf (E5); unten **„Ansehen und senden“** (E4-4): Anfrage, direkt zuteilen, Gast eintragen, zurückziehen; Zeitraum wählen (ab heute, ein Monat oder von–bis), Terminleiste,
+> „Wer kann?“ (E4-2) und dort **als Entwurf eintragen** (E4-3, Person oder Gast; Entwurf antippen = ändern oder entfernen, veraltete mit Schild); belegten Platz antippen → **zurückziehen oder ersetzen** (E4-5, ebenfalls als Entwurf); Regler in der Gruppenzeile → **Anzahl der Plätze** je Termin (sofort); **Zauberstab** in der Gruppenzeile bzw. im Gruppenkopf → Vorschläge nach der ChurchTools-Rangfolge zum Prüfen, übernommen als Entwurf (E5); **Stift** neben einem Namen (Zauberstab, „Wer kann?“) → Vorlieben der Person für die Gruppe, sofort in ChurchTools (E5); unten **„Ansehen und senden“** (E4-4): Anfrage, direkt zuteilen, Gast eintragen, zurückziehen; Zeitraum wählen (ab heute, ein Monat oder von–bis), Terminleiste,
 > Spaltenbreite, Filter nach Veranstaltung und Gruppe, „Wer wie oft?“; am Handy ein Termin auf einmal. **Start**: „Als
 > Nächstes“ (dein Dienst, Team, Lieder, Musik-App), deine offenen Anfragen, deine nächsten Dienste,
 > Abwesenheiten und für Planer die freien Plätze der nächsten 6 Wochen. Die Reiter
@@ -104,6 +104,7 @@ aufrufen). Testnutzer Spike (19) hat nur „Dienstplaner sehen“.
 - Code: `dienstplaner/` (Erweiterung), Regeln in `shared/ct/` (`dienstRechte.ts`, `dienstgruppen.ts`),
   ChurchTools-Verbindung, Anmeldung und Seitenrahmen in `ui/` (`ui/ct/`, `ui/erweiterung/`) – dieselben
   wie bei den Anmeldungen.
+- Vorlieben (Stift, E5-3): nur über die alte Schnittstelle, an einer Stelle `shared/dienstplan/vorlieben.ts` (Erfolg erst nach dem Nachlesen – ohne Recht meldet ChurchTools `success` und schreibt nichts).
 - Zauberstab (E5): Regeln in `shared/dienstplan/zauberstab.ts`, Fenster `dienstplaner/src/ZauberstabFach.tsx`, Symbol aus der ChurchTools-Schrift über `CtSymbol.tsx` – wie der ChurchTools-Zauberstab (über −100),
   eigene Vorschläge zählen mit den Abzügen von ChurchTools mit (Messprotokoll E5-0); geladen in
   `dienstplaner/src/ladeZauberstab.ts`.

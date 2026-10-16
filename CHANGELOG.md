@@ -25,6 +25,11 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 - **Formular hochladen per Skript** (`npm run formular:hochladen`, Alwin: Zugangsdaten im Mac-Schlüsselbund): FTPS
   mit `curl`, Passwort nur aus dem Schlüsselbund (über die Standardeingabe, nie in der Befehlszeile); erst neue
   Dateien, dann `index.html`, dann Prüfung im Netz, dann alte Dateien löschen.
+- **Aktionen sehen klickbar aus** (Alwin, 16.10.2026: „die Einstellungsbuttons sehen irgendwie ausgegraut und nicht
+  klickbar aus“): „Veranstaltung verwalten“ zeigt weiße Zeilen mit dunkler Schrift und Pfeil („Löschen“ rot);
+  „Bearbeiten“, „Verwalten“, „Link kopieren“ und die kleinen Knöpfe in den Preisen haben dunkle Schrift und werden beim
+  Darüberfahren hellblau. Neue Knopf-Art `aktionKnopf` in `ui/design/_mixins.scss` – grau bleibt nur, was eine
+  **Wahl** ist (`auswahlKnopf`: Vorlage, Schrift, Filter).
 - `useMedienAbfrage` meldet sich bei älteren Safari (vor iOS 14, nur `addListener`) richtig an statt abzustürzen –
   das öffentliche Formular öffnen Gäste mit allen möglichen Handys.
 

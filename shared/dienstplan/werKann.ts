@@ -19,6 +19,11 @@ export interface Kandidat {
   name: string;
   /** Punkte für die Reihenfolge: ChurchTools' `score` ohne den Abzug für frühere Absagen. */
   punkte: number;
+  /**
+   * Der Abzug „hat zuvor abgesagt“ (`service.previously-declined`, sonst 0). „Wer kann?“ zählt ihn nicht (s. o.);
+   * der Zauberstab schon – wie ChurchTools (Alwin, 16.10.2026).
+   */
+  frueherAbgesagt: number;
   /** Grund der Abwesenheit an diesem Tag, sonst `null`. */
   abwesend: string | null;
   /** Dienste, die die Person an diesem Tag schon hat. */
@@ -115,6 +120,7 @@ export function kandidatenAus(
       personId,
       name,
       punkte: (typeof k.score === 'number' ? k.score : 0) - abzug,
+      frueherAbgesagt: abzug,
       abwesend: abwesend
         ? text(abwesend.absenceReason?.nameTranslated) ||
           text(abwesend.absenceReason?.name) ||

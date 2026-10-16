@@ -46,6 +46,8 @@ describe('kandidatenAus', () => {
       ['Ben Test', -3],
       ['Anna Test', -5],
     ]);
+    // Der Abzug selbst bleibt erhalten – der Zauberstab zählt ihn (E5-2).
+    expect(k.map((x) => x.frueherAbgesagt)).toEqual([-500, 0]);
   });
 
   it('Abwesenheit: der Grund, nicht der (private) Kommentar', () => {

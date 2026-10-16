@@ -59,6 +59,8 @@ function eherNichtText(k: Bewertet): string {
   if (h.warnung) return h.text;
   if (k.laufGrund === 'am-tag') return 'an diesem Tag schon vorgeschlagen';
   if (k.laufGrund === 'hoechstens') return `höchstens ${k.hoechstensImMonat}× im Monat`;
+  // ChurchTools unterscheidet nicht, ob jemand selbst abgesagt hat oder vom Planer herausgenommen wurde (E4-0).
+  if (k.frueherAbgesagt < 0) return 'hat zuvor abgesagt oder wurde herausgenommen';
   return k.hauptGrund ?? 'passt laut ChurchTools nicht';
 }
 

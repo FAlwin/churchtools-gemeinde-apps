@@ -5,8 +5,10 @@
  * **Wie der ChurchTools-Zauberstab** (nachgelesen 16.10.2026 in `cs_listview.js`, `selectPossiblePersonForService`):
  * je freiem Platz die Person mit der höchsten Punktzahl, **nur wenn sie über −100 liegt**, und nur wenn sie in
  * diesem Termin noch keinen Vorschlag hat. Die Punktzahl rechnet ChurchTools (`possiblepersons`); die Kandidaten
- * kommen aus derselben Funktion wie „Wer kann?“ (`kandidatenAus`) – also zählt auch hier der Abzug „hat zuvor
- * abgesagt“ nicht (Alwin, 14.10.).
+ * kommen aus derselben Funktion wie „Wer kann?“ (`kandidatenAus`). **Anders als dort zählt hier der Abzug „hat zuvor
+ * abgesagt“ (−500) mit – wie im ChurchTools-Zauberstab** (Alwin, 16.10.2026, nach der Prüfung an Termin 148). Er
+ * trifft auch, wer vom Planer herausgenommen wurde (ChurchTools unterscheidet das nicht); der Planer kann so jemanden
+ * im Fenster trotzdem bewusst wählen.
  *
  * **Anders als ChurchTools: Der Lauf geht über mehrere Termine, und die eigenen Vorschläge zählen mit** (Alwin,
  * 16.10.: „mitzählen“). ChurchTools kennt sie nicht und würde sonst an jedem Sonntag dieselbe Person nennen.
@@ -45,7 +47,7 @@ export interface Eingeplant {
 }
 
 export interface Bewertet extends Kandidat {
-  /** Die Punktzahl mit den Abzügen aus dem Lauf. */
+  /** ChurchTools' Punktzahl (mit „hat zuvor abgesagt“) und die Abzüge aus dem Lauf. */
   wert: number;
   /** Wie oft die Person im Lauf schon eingeplant ist (alle Termine). */
   imLauf: number;
@@ -101,7 +103,7 @@ export function bewerte(platz: ZauberPlatz, eingeplant: readonly Eingeplant[]): 
       laufGrund ??= 'hoechstens';
     }
 
-    const wert = k.punkte + abzug;
+    const wert = k.punkte + k.frueherAbgesagt + abzug;
     return { ...k, wert, imLauf: meine.length, laufGrund, passt: wert > GRENZE };
   });
   return out.sort(

@@ -76,14 +76,14 @@ describe('Zauberstab – die Regel von ChurchTools', () => {
     expect(v.get('a')).toBe(BEN);
   });
 
-  it('„hat zuvor abgesagt“ zählt nicht – dieselbe Funktion wie „Wer kann?“ (Alwin, 14.10.)', () => {
-    const v = vorschlagen([
-      platz('a', '2026-10-25', [
-        roh(ANNA, 'Anna', { score: -500, scoreHints: [{ score: -500, reason: FRUEHER_ABGESAGT }] }),
-        roh(BEN, 'Ben', { score: -5 }),
-      ]),
+  it('„hat zuvor abgesagt“ zählt hier mit – wie im ChurchTools-Zauberstab (Alwin, 16.10.)', () => {
+    const platzA = platz('a', '2026-10-25', [
+      roh(ANNA, 'Anna', { score: -500, scoreHints: [{ score: -500, reason: FRUEHER_ABGESAGT }] }),
+      roh(BEN, 'Ben', { score: -5 }),
     ]);
-    expect(v.get('a')).toBe(ANNA);
+    expect(vorschlagen([platzA]).get('a')).toBe(BEN);
+    const [, anna] = bewerte(platzA, []);
+    expect(anna).toMatchObject({ punkte: 0, frueherAbgesagt: -500, wert: -500, passt: false });
   });
 });
 

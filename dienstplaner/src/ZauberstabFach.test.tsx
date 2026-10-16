@@ -106,6 +106,22 @@ describe('ZauberstabFach (E5-2)', () => {
     expect(screen.getByText('Achtung: abwesend: Urlaub')).toBeTruthy();
   });
 
+  it('„hat zuvor abgesagt“ (wie ChurchTools): passt eher nicht, ehrlich benannt – bewusst wählbar', async () => {
+    laden.mockResolvedValue([
+      k(1, 'Anna', {
+        score: -500,
+        scoreHints: [{ score: -500, reason: 'service.previously-declined' }],
+      }),
+    ]);
+    zeige({ zeilen: [NEUN] });
+    await screen.findByText('0 Vorschläge');
+    expect(
+      screen.getByRole('option', { name: 'Anna – hat zuvor abgesagt oder wurde herausgenommen' }),
+    ).toBeTruthy();
+    fireEvent.change(auswahl('09:00'), { target: { value: '1' } });
+    expect(screen.getByRole('button', { name: '1 als Entwurf übernehmen' })).toBeTruthy();
+  });
+
   it('von Hand gewählt bleibt bei „Neu vorschlagen“, der Rest richtet sich danach', async () => {
     laden.mockResolvedValue([ANNA, BEN]);
     zeige();

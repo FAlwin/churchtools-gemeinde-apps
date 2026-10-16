@@ -1586,4 +1586,44 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     await waitFor(() => expect(a.laden).toHaveBeenCalled());
     expect(screen.queryByRole('status', { name: 'Alte Entwürfe' })).toBeNull();
   });
+
+  // ── Prüfung mit zwei Planern (16.10.2026): Funde a und b ─────────────────────
+  it('a) Konflikt im Entwurfs-Fach → das Fach zeigt die neue Fassung, der Hinweis nennt sie', async () => {
+    const SPIKE_X = { personId: 19, name: 'Spike' };
+    const neu = entwurf({ von: SPIKE_X, modus: 'direkt', version: 2 });
+    const entfernen = vi.fn(() =>
+      Promise.resolve({ ok: false as const, grund: 'konflikt' as const, jetzt: neu }),
+    );
+    zeige4({ laden: () => Promise.resolve(daten([entwurf({ von: SPIKE_X })])), entfernen });
+    fireEvent.click(await screen.findByRole('button', { name: /^Entwurf von Spike/ }));
+    expect(
+      screen.getByRole('button', { name: 'Anfrage senden' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Entfernen' }));
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'Spike hat diesen Entwurf eben geändert: Direkt zuteilen: Ben Test.',
+    );
+    expect(
+      screen.getByRole('button', { name: 'Direkt zuteilen' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+  });
+
+  it('b) Senden ohne Erfolg, aber mit Konflikt → Entwürfe und Termine laden trotzdem neu', async () => {
+    const onAktualisieren = vi.fn();
+    const laden = vi.fn(() => Promise.resolve(daten([entwurf()])));
+    const senden = vi.fn(
+      (_d: EntwuerfeDaten, e: readonly unknown[], melde: (i: number, r: SendeErgebnis) => void) => {
+        const r: SendeErgebnis = { art: 'nicht-gesendet', grund: 'konflikt' };
+        e.forEach((_, i) => melde(i, r));
+        return Promise.resolve(e.map(() => r));
+      },
+    );
+    zeige4({ laden, senden }, { onAktualisieren });
+    await waitFor(() => expect(offenTexte()).toMatch(/^1 Entwurf/));
+    fireEvent.click(screen.getByRole('button', { name: 'Ansehen und senden' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Jetzt senden (1)' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Schließen' }));
+    await waitFor(() => expect(laden).toHaveBeenCalledTimes(2));
+    expect(onAktualisieren).toHaveBeenCalledTimes(1);
+  });
 });

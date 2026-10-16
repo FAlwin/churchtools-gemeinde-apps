@@ -6,7 +6,7 @@ import { wannText } from '@shared/ct/zeit';
 import type { FreierPlatz } from './WerKann';
 import { grundText } from './ladeEntwuerfe';
 import { useInsBild } from './useInsBild';
-import { bisherHinweis } from './sendenTexte';
+import { aktionText, bisherHinweis } from './sendenTexte';
 // Dieselben Fach-Bausteine (Knöpfe, Hinweiskasten, Unterzeile) wie „Wer kann?“ – ein Aussehen für beide Fächer.
 import styles from './WerKann.module.scss';
 import eigen from './EntwurfFach.module.scss';
@@ -173,7 +173,7 @@ export function EntwurfFach({
                   ? `${konflikt.jetzt.von.name} hat diesen Entwurf eben geändert:`
                   : 'Jemand hat diesen Entwurf eben entfernt.'}
               </b>{' '}
-              {konflikt.jetzt && `„${zielText(konflikt.jetzt.ziel)}“. `}
+              {konflikt.jetzt && `${aktionText(konflikt.jetzt, bisher)}. `}
               Nichts{' '}
               {konflikt.was === 'ändern'
                 ? 'geändert'

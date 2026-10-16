@@ -241,4 +241,20 @@ describe('SendenFach (E4-4-2)', () => {
     fireEvent.click(knopf('Schließen'));
     expect(a.onClose).toHaveBeenLastCalledWith(false);
   });
+
+  it('nichts gesendet, aber Konflikt → Schließen lässt neu laden (die Matrix wäre sonst veraltet)', async () => {
+    const s = sendenMit(
+      new Map<string, SendeErgebnis>([
+        [
+          k(ANNA),
+          { art: 'nicht-gesendet', grund: 'konflikt', jetzt: { art: 'anfrage', personId: 64 } },
+        ],
+      ]),
+    );
+    const a = zeige({ zeilen: [ANNA], senden: s.senden });
+    fireEvent.click(await screen.findByRole('button', { name: 'Jetzt senden (1)' }));
+    await screen.findByText('0 gesendet, 1 nicht');
+    fireEvent.click(knopf('Schließen'));
+    expect(a.onClose).toHaveBeenLastCalledWith(true);
+  });
 });

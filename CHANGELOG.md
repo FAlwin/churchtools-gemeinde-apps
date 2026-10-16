@@ -56,6 +56,16 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Regel: gültige Entwürfe im geladenen Zeitraum, wo man planen und die Entwürfe der Gruppe ändern darf.
   Damit ist die Leiste aus E4-3-3 („Senden folgt“) aktiv.
 
+### Behoben (Dienstplaner)
+
+- **Drei Anzeige-Funde aus der Prüfung mit zwei Planern** (#584, 16.10.2026, Messprotokoll): **a)** Nach einem Konflikt im
+  Entwurfs-Fach zeigt das Fach die neue Fassung des anderen Planers, und der Hinweis nennt sie mit Art („Spike hat
+  diesen Entwurf eben geändert: Direkt zuteilen: Anna“) – vorher stand dort die alte Fassung und nur der Name.
+  **b)** Geht beim Senden nichts durch, hat sich aber etwas geändert (Konflikt, Entwurf geändert oder weg, Platz
+  weg), lädt die Matrix nach dem Schließen trotzdem neu (`neuLaden`) – vorher zeigte sie den Entwurf weiter als
+  gültig. **c)** Hat ein anderer Planer den Entwurf eben gesendet oder entfernt, heißt es jetzt genau das („Den
+  Entwurf gibt es nicht mehr …“, neuer Grund `entwurf-weg` im Senden-Kern) statt „eben geändert“.
+
 ### Intern (Dienstplaner)
 
 - **Kern für die Platzzahl** (#580, `shared/dienstplan/anzahl.ts`) mit derselben Fehler-Zuordnung wie der

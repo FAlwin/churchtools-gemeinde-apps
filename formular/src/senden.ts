@@ -2,7 +2,11 @@ import {
   abmeldeDatenAus,
   abmeldeVorlage,
   apiBasis,
+  platzPlan,
+  platzStandAus,
   type AbmeldeDaten,
+  type OeffentlicheGruppeRoh,
+  type PlatzStand,
   type AbmeldeOrt,
   type AnmeldeOrt,
 } from '@shared/anmeldung/oeffentlich';
@@ -10,18 +14,22 @@ import type { Antworten, OeffentlicheEinstellungen } from '@shared/anmeldung/for
 import {
   PasstNicht,
   anmeldungAufbauen,
+  personenNamen,
+  type Abgeschickt,
   type CtFormular,
   type PreisWahl,
 } from '@shared/anmeldung/senden';
 import { WARTEN_MS } from './laden';
 
 /**
- * **Eine Anmeldung abschicken** (A6-2, #548) – ohne Login, drei Schritte wie gemessen (14.10.2026): Token holen,
- * Formular-Aufbau mit den Feldnummern lesen, anmelden. Die Antwort enthält keine Personen; ob jemand schon bekannt
- * ist, sagt `verificationNotice` – dann bestätigt die Person per Mail, bis dahin ändert sich nichts.
+ * **Eine Anmeldung abschicken** (A6-2, #548) – ohne Login, wie gemessen (14.10.2026): Token holen, Formular-Aufbau mit
+ * den Feldnummern lesen, anmelden. Die Antwort enthält keine Personen; ob jemand schon bekannt ist, sagt
+ * `verificationNotice` – dann bestätigt die Person per Mail, bis dahin ändert sich nichts.
+ *
+ * **Jede Person einzeln** (#602, gemessen 16.10.2026): Mehrere Personen in einer Anmeldung ohne Beziehung lassen
+ * ChurchTools abstürzen (500); mit Beziehung „Kind“ würde das erste Kind zur Mutter des zweiten. Deshalb je Person
+ * ein eigener Token und eine eigene Anmeldung – Betrag & Co. bleiben bei der ersten (`anmeldungAufbauen`).
  */
-
-export type Gesendet = { art: 'angemeldet' } | { art: 'bestaetigen'; mail: string };
 
 /** Was beim Abschicken schiefgehen kann – je Fall ein Satz für die Person, die sich anmeldet. */
 export class SendeProblem extends Error {
@@ -33,6 +41,11 @@ export class SendeProblem extends Error {
 
 const VORUEBERGEHEND =
   'ChurchTools antwortet gerade nicht. Deine Angaben sind noch da – bitte gleich noch einmal versuchen.';
+/** 500: kein „antwortet gerade nicht“ – ChurchTools hat geantwortet, mit einem Fehler (#602: so fiel er auf). */
+const SERVERFEHLER =
+  'ChurchTools hat einen Fehler gemeldet. Deine Angaben sind noch da – bitte noch einmal versuchen. Klappt es wieder nicht, gib bitte der Gemeinde Bescheid.';
+const AUSGEBUCHT =
+  'Inzwischen ist kein Platz mehr frei, und es gibt keine Warteliste. Abgeschickt wurde nichts.';
 
 /** Texte für die endgültigen Fälle – je Aufruf anders (anmelden, „Deine Anmeldung“). */
 export interface AnfrageTexte {
@@ -80,7 +93,8 @@ export async function anfrage(
   } finally {
     clearTimeout(uhr);
   }
-  if (r.status === 429 || r.status >= 500) throw new SendeProblem(VORUEBERGEHEND);
+  if (r.status === 500) throw new SendeProblem(SERVERFEHLER);
+  if (r.status === 429 || r.status > 500) throw new SendeProblem(VORUEBERGEHEND);
   if (r.status === 401 || r.status === 403) throw new SendeProblem(texte.gesperrt);
   if (r.status === 404 && texte.nichtGefunden) throw new SendeProblem(texte.nichtGefunden);
   if (!r.ok) {
@@ -103,13 +117,11 @@ export async function abschicken(
   heute: string,
   /** Adresse dieser Seite (ohne `#`) – „Austreten“ in der Mail führt hierher zurück (A6-4). */
   formularBasis: string,
-): Promise<Gesendet> {
+  /** Nur diese Personen (Index) – „Noch einmal“ für die offen gebliebenen. Ohne: alle. */
+  nur?: number[],
+): Promise<Abgeschickt> {
   const basis = `${apiBasis(ort)}/publicgroups/${ort.gruppeId}`;
-  const t = (await anfrage(`${basis}/token`, { method: 'POST', body: '{}' })) as {
-    data?: { token?: string };
-  } | null;
-  const token = t?.data?.token;
-  if (!token) throw new SendeProblem(VORUEBERGEHEND);
+  let token = await neuerToken(basis);
   const f = (await anfrage(`${basis}/form?token=${encodeURIComponent(token)}`)) as {
     data?: CtFormular;
   } | null;
@@ -124,18 +136,77 @@ export async function abschicken(
       );
     throw fehler;
   }
-  const antwort = (await anfrage(`${basis}/signup`, {
-    method: 'POST',
-    // A6-4: „Austreten“ in der Mail von ChurchTools führt auf „Deine Anmeldung“ (gemessen 16.10.2026).
-    body: JSON.stringify({
-      token,
-      ...anmeldung,
-      signOutUrlTemplate: abmeldeVorlage(formularBasis, ort.instanz),
-    }),
-  })) as { verificationNotice?: boolean; verificationEmail?: string | null } | null;
-  if (antwort?.verificationNotice)
-    return { art: 'bestaetigen', mail: antwort.verificationEmail ?? '' };
-  return { art: 'angemeldet' };
+  const namen = personenNamen(e, antworten);
+  const mail = typeof antworten.anmeldung.mail === 'string' ? antworten.anmeldung.mail.trim() : '';
+  const ergebnis: Abgeschickt = { personen: [], mail };
+  const reihe = nur ?? antworten.personen.map((_, i) => i);
+  for (const [n, i] of reihe.entries()) {
+    try {
+      // Direkt davor frisch nachsehen: Ob es ein Platz oder die Warteliste wird, sagt nur dieser Stand (gemessen).
+      const platz = platzPlan(await platzStand(ort), 1)[0];
+      if (platz === 'kein') throw new SendeProblem(AUSGEBUCHT);
+      if (n > 0) token = await neuerToken(basis);
+      const antwort = (await anfrage(`${basis}/signup`, {
+        method: 'POST',
+        // A6-4: „Austreten“ in der Mail von ChurchTools führt auf „Deine Anmeldung“ (gemessen 16.10.2026).
+        body: JSON.stringify({
+          token,
+          forms: [anmeldung.forms[i]],
+          hasAcceptedPrivacyForSelf: anmeldung.hasAcceptedPrivacyForSelf,
+          signOutUrlTemplate: abmeldeVorlage(formularBasis, ort.instanz),
+        }),
+      })) as { verificationNotice?: boolean; verificationEmail?: string | null } | null;
+      if (antwort?.verificationNotice && antwort.verificationEmail)
+        ergebnis.mail = antwort.verificationEmail;
+      ergebnis.personen.push({
+        index: i,
+        name: namen[i],
+        ergebnis: antwort?.verificationNotice
+          ? 'bestaetigen'
+          : platz === 'platz'
+            ? 'angemeldet'
+            : 'warteliste',
+      });
+    } catch (fehler) {
+      // Noch niemand angemeldet → wie bisher: Meldung am Formular, die Eingaben bleiben.
+      if (ergebnis.personen.length === 0) throw fehler;
+      // Sonst sagt die Ergebnis-Seite genau, wer drin ist; „Noch einmal“ schickt nur den Rest.
+      const ausgebucht = fehler instanceof SendeProblem && fehler.message === AUSGEBUCHT;
+      for (const j of reihe.slice(n))
+        ergebnis.personen.push({
+          index: j,
+          name: namen[j],
+          ergebnis: ausgebucht ? 'ausgebucht' : 'offen',
+        });
+      ergebnis.meldung = ausgebucht
+        ? 'Inzwischen ist kein Platz mehr frei, und es gibt keine Warteliste.'
+        : fehler instanceof Error
+          ? fehler.message
+          : 'Das hat nicht geklappt.';
+      break;
+    }
+  }
+  return ergebnis;
+}
+
+async function neuerToken(basis: string): Promise<string> {
+  const t = (await anfrage(`${basis}/token`, { method: 'POST', body: '{}' })) as {
+    data?: { token?: string };
+  } | null;
+  if (!t?.data?.token) throw new SendeProblem(VORUEBERGEHEND);
+  return t.data.token;
+}
+
+/**
+ * **Freie Plätze und Warteliste – frisch von ChurchTools** (#602), ohne Login. Für den Hinweis beim Hinzufügen einer
+ * Person und vor jeder einzelnen Anmeldung.
+ */
+export async function platzStand(ort: AnmeldeOrt): Promise<PlatzStand> {
+  const g = (await anfrage(`${apiBasis(ort)}/publicgroups/${ort.gruppeId}`)) as {
+    data?: OeffentlicheGruppeRoh;
+  } | null;
+  if (!g?.data) throw new SendeProblem(VORUEBERGEHEND);
+  return platzStandAus(g.data);
 }
 
 const ABSAGEN: AnfrageTexte = {

@@ -9,7 +9,14 @@ import {
   type OeffentlicheEinstellungen,
 } from '@shared/anmeldung/formular';
 import { amEnde } from '@shared/anmeldung/baukasten';
-import { buchungAus, type PreisWahl } from '@shared/anmeldung/senden';
+import {
+  buchungAus,
+  personenNamen,
+  type Abgeschickt,
+  type PersonErgebnis,
+  type PreisWahl,
+} from '@shared/anmeldung/senden';
+import { platzPlan, type PlatzStand } from '@shared/anmeldung/oeffentlich';
 import { berechnePreis, euroText, kannEtwasKosten, preisKurz } from '@shared/anmeldung/preis';
 import { SCHRIFT, leereAntworten, textAufFarbe } from './daten';
 import { titelbildGross } from '@shared/anmeldung/gestaltung';
@@ -33,6 +40,8 @@ export interface Ansicht {
   bildUrl?: string | null;
   /** Freie Plätze, falls bekannt – angezeigt nach `plaetze.zeigen`. */
   freiePlaetze?: number | null;
+  /** Gibt es eine Warteliste? (#602: Hinweis an der Person, die keinen Platz mehr bekommt.) */
+  warteliste?: boolean;
   /** Letzter Anmeldetag, `YYYY-MM-DD`. */
   anmeldeschluss?: string | null;
 }
@@ -76,14 +85,24 @@ function mitHinweis(text: string, knopf: ReactNode): ReactNode {
   );
 }
 
-/** Was nach dem Abschicken herauskam (A6-2): angemeldet – oder schon bekannt, dann per Mail bestätigen. */
-export type Abgeschickt = { art: 'angemeldet' } | { art: 'bestaetigen'; mail: string };
-
 /**
  * **Echt abschicken** (öffentliches Formular, A6-2). Wirft bei einem Fehler einen `Error`, dessen Text die Person
- * liest – die Eingaben bleiben stehen.
+ * liest – die Eingaben bleiben stehen. Kommt nur ein Teil durch (#602: jede Person einzeln), sagt das Ergebnis es je
+ * Person; `nur` schickt dann die offen gebliebenen noch einmal.
  */
-export type Abschicken = (a: { antworten: Antworten; wahl: PreisWahl }) => Promise<Abgeschickt>;
+export type Abschicken = (a: {
+  antworten: Antworten;
+  wahl: PreisWahl;
+  nur?: number[];
+}) => Promise<Abgeschickt>;
+
+const ERGEBNIS_TEXT: Record<PersonErgebnis, string> = {
+  angemeldet: '✓ angemeldet',
+  warteliste: 'Warteliste',
+  bestaetigen: 'per Mail bestätigen',
+  ausgebucht: 'kein Platz mehr',
+  offen: 'nicht angemeldet',
+};
 
 const WOCHENTAG = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 
@@ -478,6 +497,7 @@ export function AnmeldeFormular({
   start,
   baukasten,
   onAbsenden,
+  plaetzeNachfragen,
 }: {
   ansicht: Ansicht;
   heute: string;
@@ -485,6 +505,8 @@ export function AnmeldeFormular({
   probe?: boolean;
   /** Nur im öffentlichen Formular: wirklich an ChurchTools schicken. Ohne → nur prüfen (Vorschau, Probelauf). */
   onAbsenden?: Abschicken;
+  /** Nur im öffentlichen Formular: freie Plätze frisch von ChurchTools – beim Hinzufügen einer Person (#602). */
+  plaetzeNachfragen?: () => Promise<PlatzStand>;
   /** Anfangswerte (Vorschau: `musterAntworten`). */
   start?: Antworten;
   /** Im Baukasten: Felder auswählen, ziehen, bearbeiten (siehe `BaukastenHaken`). */
@@ -500,6 +522,14 @@ export function AnmeldeFormular({
   const [fertig, setFertig] = useState<Abgeschickt | null>(null);
   const [sendet, setSendet] = useState(false);
   const [sendeFehler, setSendeFehler] = useState<string | null>(null);
+  const [nochmalFehler, setNochmalFehler] = useState<string | null>(null);
+  // Freie Plätze (#602): beim Laden, beim Hinzufügen frisch nachgefragt. Ohne Angabe (Vorschau) kein Hinweis.
+  const [platz, setPlatz] = useState<PlatzStand | null>(() =>
+    ansicht.freiePlaetze === undefined
+      ? null
+      : { freiePlaetze: ansicht.freiePlaetze, warteliste: ansicht.warteliste === true },
+  );
+  const [fragtNach, setFragtNach] = useState(false);
   const echt = !!onAbsenden && !vorschau && !probe && !baukasten;
   // A6-3 Spam-Schutz (`spamschutz.ts`): Honigtopf und Mindest-Ausfüllzeit seit dem Laden. Doppel-Absenden verhindert
   // schon `sendet` – React zeichnet nach jedem Klick neu (gegengeprüft 16.10.2026).
@@ -529,7 +559,7 @@ export function AnmeldeFormular({
       personen: a.personen.map((p, j) => (i === j ? { ...p, [id]: w } : p)),
     }));
 
-  const frei = ansicht.freiePlaetze ?? null;
+  const frei = platz ? platz.freiePlaetze : (ansicht.freiePlaetze ?? null);
   const freiZeigen =
     frei !== null &&
     (e.plaetze.zeigen === 'immer' || (e.plaetze.zeigen === 'knapp' && frei < e.plaetze.knappUnter));
@@ -537,6 +567,53 @@ export function AnmeldeFormular({
   const huelle = (f: Feld, bereich: 'anmeldung' | 'person', inhalt: ReactNode) =>
     baukasten ? <Fragment key={f.id}>{baukasten.feld(f, bereich, inhalt)}</Fragment> : inhalt;
   const personen = baukasten ? antworten.personen.slice(0, 1) : antworten.personen;
+  // Wer bekommt was – dieselbe Regel wie beim Abschicken (`platzPlan`).
+  const plan = platz && !baukasten ? platzPlan(platz, antworten.personen.length) : null;
+  const naechster =
+    platz && !baukasten ? platzPlan(platz, antworten.personen.length + 1).at(-1) : 'platz';
+  const nichtAlle = !!plan && plan.some((x) => x !== 'platz');
+  const alleWarten = !!plan && plan.length > 0 && plan.every((x) => x === 'warteliste');
+  const wer = kinder ? 'Kind' : 'Person';
+
+  async function hinzufuegen() {
+    if (baukasten || fragtNach) return;
+    let stand = platz;
+    if (plaetzeNachfragen) {
+      setFragtNach(true);
+      try {
+        stand = await plaetzeNachfragen();
+        setPlatz(stand);
+      } catch {
+        // Vorübergehend ist nicht ungültig: mit dem letzten Stand weiter, ChurchTools entscheidet beim Absenden.
+      } finally {
+        setFragtNach(false);
+      }
+    }
+    if (stand && platzPlan(stand, antworten.personen.length + 1).at(-1) === 'kein') return;
+    setAntworten((a) => ({ ...a, personen: [...a.personen, {}] }));
+  }
+
+  async function nochmal(offen: number[]) {
+    if (!onAbsenden || sendet) return;
+    setSendet(true);
+    setNochmalFehler(null);
+    try {
+      const neu = await onAbsenden({ antworten, wahl: { option, extras }, nur: offen });
+      setFertig((alt) =>
+        alt
+          ? {
+              ...alt,
+              personen: alt.personen.map((x) => neu.personen.find((y) => y.index === x.index) ?? x),
+              meldung: neu.meldung,
+            }
+          : neu,
+      );
+    } catch (fehler) {
+      setNochmalFehler(fehler instanceof Error ? fehler.message : 'Das hat nicht geklappt.');
+    } finally {
+      setSendet(false);
+    }
+  }
 
   async function absenden() {
     if (baukasten || sendet) return;
@@ -544,7 +621,14 @@ export function AnmeldeFormular({
     setFehler(offen);
     if (offen.length > 0) return;
     if (!echt || !onAbsenden) {
-      setFertig({ art: 'angemeldet' });
+      setFertig({
+        personen: personenNamen(e, antworten).map((name, index) => ({
+          index,
+          name,
+          ergebnis: 'angemeldet',
+        })),
+        mail: typeof antworten.anmeldung.mail === 'string' ? antworten.anmeldung.mail : '',
+      });
       return;
     }
     const spam = spamGrund({
@@ -599,39 +683,15 @@ export function AnmeldeFormular({
       }
     >
       {fertig ? (
-        <div className={`${s.sec} ${s.done}`} role="status">
-          {fertig.art === 'bestaetigen' ? (
-            <>
-              <h2>Fast geschafft!</h2>
-              <p>
-                Du bist bei der Gemeinde schon bekannt. Bitte bestätige die Anmeldung über den Link
-                in der E-Mail{fertig.mail ? ` an ${fertig.mail}` : ''} – erst dann ist sie gültig.
-              </p>
-            </>
-          ) : (
-            <>
-              <h2>Danke für die Anmeldung!</h2>
-              <p>
-                Die Bestätigung kommt per E-Mail
-                {typeof antworten.anmeldung.mail === 'string'
-                  ? ` an ${antworten.anmeldung.mail}`
-                  : ''}
-                .
-              </p>
-            </>
-          )}
-          {(vorschau || probe) && (
-            <p className={s.vorschauhinweis}>
-              {vorschau ? 'Vorschau' : 'Probelauf'} – abgeschickt wurde nichts.
-            </p>
-          )}
-          {/* Nach einer echten Anmeldung kein „Zurück“ – ein zweites Abschicken wäre eine zweite Anmeldung. */}
-          {!echt && (
-            <button type="button" className={s.addbtn} onClick={() => setFertig(null)}>
-              Zurück zum Formular
-            </button>
-          )}
-        </div>
+        <Ergebnis
+          fertig={fertig}
+          echt={echt}
+          hinweis={vorschau ? 'Vorschau' : probe ? 'Probelauf' : null}
+          sendet={sendet}
+          fehler={nochmalFehler}
+          onNochmal={(offen) => void nochmal(offen)}
+          onZurueck={() => setFertig(null)}
+        />
       ) : (
         <form
           className={s.formstack}
@@ -673,16 +733,29 @@ export function AnmeldeFormular({
               )}
             </h2>
             {baukasten?.hinweisText?.('teil')}
+            {alleWarten && (
+              <div className={s.platzBanner} role="status">
+                <b>Alle Plätze sind belegt.</b> Anmeldungen kommen auf die Warteliste und rücken
+                nach, wenn Plätze frei werden.
+              </div>
+            )}
             {personen.map((p, i) => (
               <div key={i} className={s.person}>
                 <div className={s['person-top']}>
                   <strong>
-                    {kinder ? 'Kind' : 'Person'} {i + 1}
+                    {wer} {i + 1}
                     {baukasten && e.wer !== 'einzeln' && (
                       <small className={s.wiederholt}>
                         wiederholt sich für {kinder ? 'jedes Kind' : 'jede Person'}
                       </small>
                     )}
+                    {nichtAlle && plan?.[i] === 'platz' && (
+                      <small className={s.platzJa}>bekommt einen Platz</small>
+                    )}
+                    {plan?.[i] === 'warteliste' && (
+                      <small className={s.platzWarte}>Warteliste</small>
+                    )}
+                    {plan?.[i] === 'kein' && <small className={s.platzNein}>kein Platz</small>}
                   </strong>
                   {!baukasten && antworten.personen.length > 1 && (
                     <button
@@ -699,6 +772,19 @@ export function AnmeldeFormular({
                     </button>
                   )}
                 </div>
+                {plan?.[i] === 'warteliste' && !alleWarten && (
+                  <p className={s.platzHinweis}>
+                    Für {wer} {i + 1} ist kein Platz mehr frei – es kommt auf die <b>Warteliste</b>{' '}
+                    und rückt nach, wenn ein Platz frei wird. Wenn du das nicht möchtest:
+                    „Entfernen“.
+                  </p>
+                )}
+                {plan?.[i] === 'kein' && (
+                  <p className={`${s.platzHinweis} ${s.platzHinweisRot}`}>
+                    Für {wer} {i + 1} ist kein Platz mehr frei, und es gibt keine Warteliste – bitte
+                    „Entfernen“.
+                  </p>
+                )}
                 {personFelder.map((f) =>
                   huelle(
                     f,
@@ -716,13 +802,18 @@ export function AnmeldeFormular({
                 )}
               </div>
             ))}
+            {e.wer !== 'einzeln' && naechster === 'kein' && (
+              <p className={`${s.platzHinweis} ${s.platzHinweisRot}`} role="status">
+                <b>Kein Platz mehr frei</b> – {kinder ? 'ein weiteres Kind' : 'eine weitere Person'}{' '}
+                kann nicht angemeldet werden (es gibt keine Warteliste).
+              </p>
+            )}
             {e.wer !== 'einzeln' && (
               <button
                 type="button"
                 className={s.addbtn}
-                onClick={() =>
-                  !baukasten && setAntworten((a) => ({ ...a, personen: [...a.personen, {}] }))
-                }
+                disabled={naechster === 'kein' || fragtNach}
+                onClick={() => void hinzufuegen()}
               >
                 + {kinder ? 'Weiteres Kind' : 'Weitere Person'}
               </button>
@@ -856,7 +947,11 @@ export function AnmeldeFormular({
               </div>
             )}
             <button type="submit" className={s.go} disabled={sendet} aria-busy={sendet}>
-              {sendet ? 'Wird gesendet …' : 'Verbindlich anmelden'}
+              {sendet
+                ? 'Wird gesendet …'
+                : alleWarten
+                  ? 'Auf die Warteliste'
+                  : 'Verbindlich anmelden'}
             </button>
             {vorschau && !baukasten && (
               <p className={s.hintline}>Vorschau mit Musterdaten – abgeschickt wird hier nichts.</p>
@@ -876,5 +971,107 @@ export function AnmeldeFormular({
         )}
       </footer>
     </FormularRahmen>
+  );
+}
+
+/**
+ * **Die Seite nach dem Abschicken** (#602): je Person, was herauskam. Alle angemeldet → „Danke“ wie bisher; sonst die
+ * Liste. Offen gebliebene schickt „Noch einmal“ erneut – nur sie, keine Doppelanmeldung.
+ */
+function Ergebnis({
+  fertig,
+  echt,
+  hinweis,
+  sendet,
+  fehler,
+  onNochmal,
+  onZurueck,
+}: {
+  fertig: Abgeschickt;
+  echt: boolean;
+  /** „Vorschau“ / „Probelauf“ – abgeschickt wurde nichts. */
+  hinweis: string | null;
+  sendet: boolean;
+  fehler: string | null;
+  onNochmal: (offen: number[]) => void;
+  onZurueck: () => void;
+}) {
+  const p = fertig.personen;
+  const hat = (x: PersonErgebnis) => p.some((y) => y.ergebnis === x);
+  const offen = p.filter((x) => x.ergebnis === 'offen');
+  const liste = p.length > 1 || p.some((x) => x.ergebnis !== 'angemeldet');
+  const titel = offen.length
+    ? 'Fast fertig'
+    : hat('bestaetigen') && p.every((x) => x.ergebnis === 'bestaetigen')
+      ? 'Fast geschafft!'
+      : hat('angemeldet') || hat('bestaetigen')
+        ? 'Danke für die Anmeldung!'
+        : hat('warteliste')
+          ? 'Auf der Warteliste'
+          : 'Nicht angemeldet';
+  const namen = (l: { name: string }[]) =>
+    l.length === 1
+      ? l[0].name
+      : `${l
+          .slice(0, -1)
+          .map((x) => x.name)
+          .join(', ')} und ${l[l.length - 1].name}`;
+  return (
+    <div className={`${s.sec} ${s.done}`} role="status">
+      <h2>{titel}</h2>
+      {liste && (
+        <ul className={s.ergebnisListe}>
+          {p.map((x) => (
+            <li key={x.index}>
+              <b>{x.name}</b>
+              <span className={s[`ergebnis-${x.ergebnis}`]}>{ERGEBNIS_TEXT[x.ergebnis]}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {hat('bestaetigen') && (
+        <p>
+          {p.length > 1
+            ? 'Wer schon bekannt ist, bestätigt'
+            : 'Du bist bei der Gemeinde schon bekannt. Bitte bestätige'}{' '}
+          die Anmeldung über den Link in der E-Mail{fertig.mail ? ` an ${fertig.mail}` : ''} – erst
+          dann ist sie gültig.
+        </p>
+      )}
+      {hat('warteliste') && <p>Auf der Warteliste rückt man nach, sobald ein Platz frei wird.</p>}
+      {hat('ausgebucht') && <p>{fertig.meldung}</p>}
+      {(hat('angemeldet') || hat('warteliste')) && (
+        <p>
+          Die Bestätigung kommt per E-Mail{fertig.mail ? ` an ${fertig.mail}` : ''}
+          {p.length > 1 ? ' – für jede Person eine eigene' : ''}.
+        </p>
+      )}
+      {offen.length > 0 && (
+        <>
+          <p>{fertig.meldung}</p>
+          {fehler && (
+            <p className={s.warnline} role="alert">
+              {fehler}
+            </p>
+          )}
+          <button
+            type="button"
+            className={s.go}
+            disabled={sendet}
+            aria-busy={sendet}
+            onClick={() => onNochmal(offen.map((x) => x.index))}
+          >
+            {sendet ? 'Wird gesendet …' : `${namen(offen)} noch einmal anmelden`}
+          </button>
+        </>
+      )}
+      {hinweis && <p className={s.vorschauhinweis}>{hinweis} – abgeschickt wurde nichts.</p>}
+      {/* Nach einer echten Anmeldung kein „Zurück“ – ein zweites Abschicken wäre eine zweite Anmeldung. */}
+      {!echt && (
+        <button type="button" className={s.addbtn} onClick={onZurueck}>
+          Zurück zum Formular
+        </button>
+      )}
+    </div>
   );
 }

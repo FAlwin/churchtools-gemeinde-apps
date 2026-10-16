@@ -7,6 +7,25 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Behoben (Anmeldungen, #602)
+
+- **Anmeldung mit mehreren Personen stürzte in ChurchTools ab** (500 `updatePerson … null`) – gefunden beim echten
+  Test mit zwei Kindern. Gemessen: Weitere Personen in **einer** Anmeldung brauchen eine Beziehung zur ersten; ohne
+  stürzt ChurchTools ab, mit „Kind“ würde das erste Kind zur Mutter des zweiten. Jetzt wird **jede Person einzeln**
+  angemeldet (eigener Token, eigene Mail, eigener „Austreten“-Link); Betrag, „Angemeldet von“, Telefon … stehen wie
+  bisher bei der ersten.
+- **Plätze schon beim Hinzufügen** (Alwin, Entwurf `a6-mehrere-personen-v2`): „+ Weiteres Kind“ fragt die freien
+  Plätze frisch ab. Mit Warteliste steht an der Person „Warteliste“ samt Satz; ohne Warteliste ist der Knopf
+  gesperrt, sobald alles vergeben ist („Kein Platz mehr frei“). Alles belegt → Hinweis oben, Knopf „Auf die
+  Warteliste“. Die Regel steht an einer Stelle (`platzPlan`) – Formular und Absenden nutzen sie.
+- **Ergebnis je Person:** Vor jeder Person wird frisch nachgesehen (gemessen: genau so vergibt ChurchTools Platz oder
+  Warteliste). Ändert sich dazwischen etwas, zeigt die Danke-Seite je Person „angemeldet“, „Warteliste“, „kein Platz
+  mehr“ oder „nicht angemeldet“; „… noch einmal anmelden“ schickt **nur die Offenen**.
+- **500 sagt nicht mehr „antwortet gerade nicht“**, sondern „ChurchTools hat einen Fehler gemeldet … sonst der
+  Gemeinde Bescheid geben“.
+- Farben `--p-ok` / `--p-warn` im Formular als Tokens statt Einzelwerten.
+- **Formular-Paket mit aktualisieren.**
+
 ### Behoben (Anmeldungen, #597)
 
 - **Anmeldung mit zwei oder mehr Personen scheiterte** („Das Feld darf nicht leer sein“) – gefunden beim echten Test

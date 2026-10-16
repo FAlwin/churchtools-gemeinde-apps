@@ -44,6 +44,21 @@ Startseite zeigt bis dahin nur „Erst einrichten“.
 1. Beim Anbieter eurer Website eine Subdomain anlegen, z. B. `anmeldung.eure-gemeinde.de` (mit HTTPS).
 2. Am Release die Datei **`anmeldungen-formular-v….zip`** herunterladen, **entpacken** und den Inhalt
    (`index.html`, Ordner `assets`) in den Ordner der Subdomain hochladen. Aktualisieren: Inhalt ersetzen.
+   **Immer zusammen mit der Erweiterung aktualisieren:** Ein älteres Formular-Paket kennt neue Bausteine nicht
+   (z. B. „Erziehungsberechtigte“, „Unterschrift“ seit A6-2b) und kann Formulare mit ihnen nicht anzeigen.
+   **Per Skript (macOS):** Zugangsdaten einmal im Schlüsselbund ablegen –
+   `security add-internet-password -s <FTP-Server> -a <FTP-Benutzer> -r "ftp " -w` (fragt nach dem Passwort) –,
+   danach `ANMELDUNG_FTP_SERVER=<FTP-Server> ANMELDUNG_FORMULAR_ADRESSE=https://anmeldung.… npm run
+formular:hochladen` (optional `ANMELDUNG_FTP_ORDNER`; `ANMELDUNG_FTP_BENUTZER`, sobald es für denselben Server mehrere
+   Schlüsselbund-Einträge gibt). Am besten ein **eigener FTP-Zugang nur für den Ordner der Subdomain**, nicht der der Website. Das Skript baut das Formular, lädt per FTPS erst die neuen
+   Dateien und zuletzt `index.html`, prüft die Seite im Netz und löscht erst dann alte Dateien. Das Passwort steht
+   nirgends sonst. Als FTP-Server den Namen nehmen, auf den das Zertifikat des Anbieters lautet (bei Hetzner
+   `wwwNNN.your-server.de`), sonst lehnt die verschlüsselte Verbindung ab.
+   **ECG Donrath** (eingerichtet 16.10.2026, Webspace bei Hetzner, verwaltet von Willi Heidebrecht): Formular unter
+   `https://anmeldung.ecg-donrath.de`, FTP-Server `www622.your-server.de`, eigener FTP-Benutzer `whebde_1` nur für den
+   Ordner der Subdomain (Passwort im Schlüsselbund auf Alwins Mac). Hochladen:
+   `ANMELDUNG_FTP_SERVER=www622.your-server.de ANMELDUNG_FTP_BENUTZER=whebde_1 ANMELDUNG_FORMULAR_ADRESSE=https://anmeldung.ecg-donrath.de npm run formular:hochladen`.
+   Nie `whebde_0` nehmen – das ist der Zugang der Website (WordPress); das Skript bricht dort ohnehin ab.
 3. In ChurchTools die Adresse als **erlaubte Herkunft** eintragen (Einstellung
    `access_control_allow_origins`, z. B. `https://anmeldung.eure-gemeinde.de`) – sonst blockt der Browser
    jede Anfrage des Formulars. Das gibt keine Daten frei, es erlaubt nur dieser Seite, die Schnittstellen zu
@@ -178,6 +193,15 @@ mitarbeiten (z. B. über den Status oder global über die Gruppen).
     (Name, E-Mail, Name jeder Person, Geburtsdatum, Datenschutz, „Wer nimmt teil?“, „Auswahl und Extras“);
     antippen zeigt den Grund. **„Wer meldet sich an?“** und „Geburtsdatum abfragen“ lassen sich oben in der
     Leiste „Bausteine“ umstellen – dieselbe Einstellung wie im Reiter Veranstaltung.
+  - **Erziehungsberechtigte und Unterschrift** (empfohlene Bausteine, in der Vorlage „Kinder-Event“ schon drin,
+    je einmal je Anmeldung): Bei „Erziehungsberechtigte“ tragen Gäste Name und Telefon ein (eine zweite Person
+    freiwillig) und setzen das Häkchen „erziehungsberechtigt und einverstanden“. Die **Unterschrift** zeichnen sie
+    mit Finger oder Maus; **am Handy** öffnet ein Tipp die Fläche im Vollbild (quer gehalten wird sie groß). In
+    ChurchTools stehen sie bei der ersten angemeldeten Person: „Erziehungsberechtigte“ lesbar, „Unterschrift“
+    lesbar als „✓ Erna Muster, 15.10.2026“ und die Striche in der Spalte „Unterschrift (Daten)“ (die man in der
+    Liste ausblenden kann). Als Bild zu sehen ist die Unterschrift später im Reiter Anmeldungen und auf der
+    Druckliste. Ein ChurchTools-Feld fasst höchstens 4.000 Zeichen (gemessen) – eine Unterschrift braucht meist
+    einige hundert.
   - **Gespeichert wird von selbst**; oben steht, ob gerade gespeichert wird, und bei einem Fehler „Nochmal“.
     Nach jeder Änderung bietet die Leiste oben „Rückgängig“ an (nicht beim Titelbild).
   - Jedes Feld außer Name, E-Mail und Geburtsdatum wird in ChurchTools eine **Spalte der Mitgliederliste**

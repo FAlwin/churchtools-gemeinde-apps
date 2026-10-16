@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Icon } from '@ui/icons/icons';
 import { Sheet } from '@ui/fenster/Sheet';
 import type { MeineGruppe } from '@shared/ct/gruppen';
 import { STATUS, setzeStatus, umbenennen, verschieben } from './einrichten';
@@ -195,34 +196,61 @@ export function VerwaltenFenster({
   return (
     <Sheet title="Veranstaltung verwalten" onClose={onClose}>
       <div className={f.optionen} style={{ marginBottom: 14 }}>
-        <button type="button" className={f.option} onClick={() => setAnsicht('name')}>
-          Umbenennen
-          <small>Jetzt: „{name}“</small>
-        </button>
+        <Aktion titel="Umbenennen" text={`Jetzt: „${name}“`} onClick={() => setAnsicht('name')} />
         {statusId === STATUS.freigegeben && (
-          <button type="button" className={f.option} onClick={() => setAnsicht('zurueck')}>
-            Freigabe zurücknehmen
-            <small>Wieder Entwurf – Gäste können sich nicht mehr anmelden</small>
-          </button>
+          <Aktion
+            titel="Freigabe zurücknehmen"
+            text="Wieder Entwurf – Gäste können sich nicht mehr anmelden"
+            onClick={() => setAnsicht('zurueck')}
+          />
         )}
-        <button
-          type="button"
-          className={f.option}
-          disabled={!admin}
-          onClick={() => setAnsicht('verschieben')}
-        >
-          In ein anderes Team
-          <small>
-            {admin
+        <Aktion
+          titel="In ein anderes Team"
+          text={
+            admin
               ? `Jetzt: ${team?.name ?? '–'}`
-              : 'Nur Gruppen-Admins – ChurchTools erlaubt es sonst nicht.'}
-          </small>
-        </button>
-        <button type="button" className={f.option} onClick={() => setAnsicht('archiv')}>
-          Löschen
-          <small>Kommt ins Archiv und lässt sich dort wiederherstellen</small>
-        </button>
+              : 'Nur Gruppen-Admins – ChurchTools erlaubt es sonst nicht.'
+          }
+          gesperrt={!admin}
+          onClick={() => setAnsicht('verschieben')}
+        />
+        <Aktion
+          titel="Löschen"
+          text="Kommt ins Archiv und lässt sich dort wiederherstellen"
+          gefahr
+          onClick={() => setAnsicht('archiv')}
+        />
       </div>
     </Sheet>
+  );
+}
+
+/** Eine Zeile im Fenster „Veranstaltung verwalten“ – eine Aktion, keine Wahl (siehe `.aktion`). */
+function Aktion({
+  titel,
+  text,
+  gesperrt = false,
+  gefahr = false,
+  onClick,
+}: {
+  titel: string;
+  text: string;
+  gesperrt?: boolean;
+  gefahr?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={gefahr ? `${f.aktion} ${f.aktionGefahr}` : f.aktion}
+      disabled={gesperrt}
+      onClick={onClick}
+    >
+      <span>
+        {titel}
+        <small>{text}</small>
+      </span>
+      <Icon name="chev-right" size={18} />
+    </button>
   );
 }

@@ -40,6 +40,20 @@ function Muster({ f }: { f: Feld }) {
       );
     case 'trenner':
       return <hr className={k.musterLinie} />;
+    // A6-2b: Was Gäste dort ausfüllen, steht in der Vorschau des Felds – hier nur ein Satz dazu.
+    case 'erziehungsberechtigte':
+      return (
+        <div className={k.muster}>
+          Name und Telefon (eine zweite Person freiwillig), Häkchen „erziehungsberechtigt und
+          einverstanden“
+        </div>
+      );
+    case 'unterschrift':
+      return (
+        <div className={`${k.muster} ${k.musterLang}`}>
+          Unterschrift mit Finger oder Maus – am Handy im Vollbild
+        </div>
+      );
     default:
       return null;
   }

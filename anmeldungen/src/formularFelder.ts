@@ -17,6 +17,7 @@ import { ApiError } from '@ui/ct/fehler';
 import {
   SYSTEMFELDER,
   ctAblage,
+  ctZusatzSpalten,
   pruefeFormular,
   type Feld,
   type Formular,
@@ -26,6 +27,7 @@ import {
   ctFeldName,
   feldDefinition,
   optionenPlanen,
+  type CtFeldDefinition,
   type CtOption,
 } from '@shared/anmeldung/felder';
 import { bereichVon, einordnen, type Bereich } from '@shared/anmeldung/baukasten';
@@ -130,10 +132,7 @@ export async function feldSpeichern(
   let verborgen: string[] | undefined;
   const ablage = ctAblage(feld);
   if (ablage.ort === 'gruppenfeld' && (ctId !== undefined || feld.zustand !== 'aus')) {
-    const felder = await ctFelderLesen(id);
-    const bisher = ctId !== undefined ? felder.get(ctId) : undefined;
-    const andere = [...felder.values()].filter((f) => f.id !== bisher?.id).map((f) => f.name);
-    const name = ctFeldName(feld.frage, [...andere, ...SYSTEMFELDER.map((s) => s.name)]);
+    const { bisher, name } = await spalteUndName(id, ctId, feld.frage);
     let optionen: CtOption[] | undefined;
     if (feld.typ === 'radio' || feld.typ === 'select') {
       const gewaehlt = bisher
@@ -150,31 +149,18 @@ export async function feldSpeichern(
       // Ja/Nein: die vorhandenen IDs behalten (sonst entstünden neue und die Wahl wäre weg).
       optionen = optionenVon(bisher);
     }
-    const definition = feldDefinition(feld, name, optionen)!;
-    if (bisher) {
-      await ctAnfrage(`/groups/${id}/memberfields/group/${bisher.id}`, {
-        method: 'PATCH',
-        body: json(definition),
-      });
-    } else {
-      // Neu – oder die Spalte wurde inzwischen gelöscht (z. B. „Rückgängig“ nach dem Entfernen): neu anlegen.
-      const neu = await ctAnfrage<{ data?: { id?: number } }>(`/groups/${id}/memberfields/group`, {
-        method: 'POST',
-        body: json(definition),
-      });
-      ctId = neu?.data?.id;
-      if (typeof ctId !== 'number') throw new NichtUebernommen(`das Feld „${feld.frage}“`);
-    }
-    const nachher = (await ctFelderLesen(id)).get(ctId);
-    const namenNachher = optionenVon(nachher).map((o) => o.name);
-    if (
-      !nachher ||
-      nachher.name !== definition.name ||
-      nachher.useInRegistrationForm !== definition.useInRegistrationForm ||
-      nachher.requiredInRegistrationForm !== definition.requiredInRegistrationForm ||
-      (definition.options && definition.options.some((o) => !namenNachher.includes(o.name)))
-    )
-      throw new NichtUebernommen(`das Feld „${feld.frage}“`);
+    ctId = await spalteSpeichern(id, bisher, feldDefinition(feld, name, optionen)!, feld.frage);
+  }
+
+  // Weitere Spalten des Felds (A6-2b: die Striche der Unterschrift) – angelegt, sobald das Feld eingeschaltet ist,
+  // danach mit ihm ein- und ausgeschaltet. Dieselbe Regel wie oben (`spalteSpeichern`).
+  const zusatz: Record<string, number> = {};
+  for (const z of ctZusatzSpalten(feld)) {
+    const zId = e.ctFelder[z.schluessel];
+    if (zId === undefined && feld.zustand === 'aus') continue;
+    const { bisher, name } = await spalteUndName(id, zId, z.name);
+    const definition = feldDefinition({ ...feld, typ: 'textarea' }, name)!;
+    zusatz[z.schluessel] = await spalteSpeichern(id, bisher, definition, z.name);
   }
 
   const gespeichert: Feld = { ...feld, verborgen };
@@ -182,8 +168,65 @@ export async function feldSpeichern(
   return aendereEinstellungen(id, (frisch) => ({
     ...frisch,
     formular: ersetzen(frisch.formular, bereich, gespeichert, vorId),
-    ctFelder: ctId !== undefined ? { ...frisch.ctFelder, [feld.id]: ctId } : frisch.ctFelder,
+    ctFelder: {
+      ...frisch.ctFelder,
+      ...(ctId !== undefined ? { [feld.id]: ctId } : {}),
+      ...zusatz,
+    },
   }));
+}
+
+/**
+ * Die vorhandene Spalte (falls es sie noch gibt) und ein Name, den keine andere Spalte und kein Systemfeld trägt –
+ * ChurchTools unterscheidet Spalten in Listen und Mails nur am Namen.
+ */
+async function spalteUndName(
+  id: number,
+  ctId: number | undefined,
+  wunsch: string,
+): Promise<{ bisher: CtFeld | undefined; name: string }> {
+  const felder = await ctFelderLesen(id);
+  const bisher = ctId !== undefined ? felder.get(ctId) : undefined;
+  const andere = [...felder.values()].filter((f) => f.id !== bisher?.id).map((f) => f.name);
+  return { bisher, name: ctFeldName(wunsch, [...andere, ...SYSTEMFELDER.map((x) => x.name)]) };
+}
+
+/**
+ * **Eine Spalte anlegen oder ändern – und nachlesen**: Vorhanden → `PATCH`, sonst (neu oder inzwischen gelöscht,
+ * z. B. „Rückgängig“ nach dem Entfernen) `POST`. Danach muss dastehen, was geschickt wurde (Name, im
+ * Anmeldeformular, Pflicht, Antworten) – ein 200 allein beweist das nicht. Gibt die Nummer der Spalte zurück.
+ */
+async function spalteSpeichern(
+  id: number,
+  bisher: CtFeld | undefined,
+  definition: CtFeldDefinition,
+  was: string,
+): Promise<number> {
+  let ctId = bisher?.id;
+  if (bisher) {
+    await ctAnfrage(`/groups/${id}/memberfields/group/${bisher.id}`, {
+      method: 'PATCH',
+      body: json(definition),
+    });
+  } else {
+    const neu = await ctAnfrage<{ data?: { id?: number } }>(`/groups/${id}/memberfields/group`, {
+      method: 'POST',
+      body: json(definition),
+    });
+    ctId = neu?.data?.id;
+    if (typeof ctId !== 'number') throw new NichtUebernommen(`das Feld „${was}“`);
+  }
+  const nachher = (await ctFelderLesen(id)).get(ctId!);
+  const namenNachher = optionenVon(nachher).map((o) => o.name);
+  if (
+    !nachher ||
+    nachher.name !== definition.name ||
+    nachher.useInRegistrationForm !== definition.useInRegistrationForm ||
+    nachher.requiredInRegistrationForm !== definition.requiredInRegistrationForm ||
+    (definition.options && definition.options.some((o) => !namenNachher.includes(o.name)))
+  )
+    throw new NichtUebernommen(`das Feld „${was}“`);
+  return ctId!;
 }
 
 /**

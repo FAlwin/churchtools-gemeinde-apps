@@ -27,6 +27,27 @@ describe('useMedienAbfrage', () => {
     expect(ab).toHaveBeenCalled();
   });
 
+  it('ältere Safari (nur addListener) folgt ebenfalls; ganz ohne Anmelden kein Absturz (A6-2b)', () => {
+    let trifft = false;
+    let melde: () => void = () => {};
+    const ab = vi.fn();
+    vi.stubGlobal('matchMedia', () => ({
+      get matches() {
+        return trifft;
+      },
+      addListener: (f: () => void) => (melde = f),
+      removeListener: ab,
+    }));
+    const { result, unmount } = renderHook(() => useMedienAbfrage('(pointer: coarse)'));
+    trifft = true;
+    act(() => melde());
+    expect(result.current).toBe(true);
+    unmount();
+    expect(ab).toHaveBeenCalled();
+    vi.stubGlobal('matchMedia', () => ({ matches: true }));
+    expect(renderHook(() => useMedienAbfrage('(pointer: coarse)')).result.current).toBe(true);
+  });
+
   it('ohne matchMedia gilt die Vorgabe', () => {
     vi.stubGlobal('matchMedia', undefined);
     expect(renderHook(() => useMedienAbfrage('(x)', true)).result.current).toBe(true);

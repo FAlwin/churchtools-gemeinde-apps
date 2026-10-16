@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Antworten, OeffentlicheEinstellungen } from './formular';
 import { neueEinstellungen } from './vorlagen';
+import { unterschriftText } from './unterschrift';
 import {
   PasstNicht,
   anmeldungAufbauen,
@@ -37,6 +38,10 @@ const CT: CtFormular = {
         { id: '114', name: 'Nein' },
       ],
     },
+    // A6-2b: Erziehungsberechtigte (eine Spalte), Unterschrift (lesbar + Striche).
+    { id: 615, type: 'custom', name: 'Erziehungsberechtigte' },
+    { id: 618, type: 'custom', name: 'Unterschrift' },
+    { id: 621, type: 'custom', name: 'Unterschrift (Daten)' },
     { id: -2, type: 'privacy', name: 'privacy' },
   ],
   addChildForm: [{ id: 16, type: 'person', name: 'birthday' }],
@@ -68,9 +73,19 @@ function einstellungen(): OeffentlicheEinstellungen {
     note: 606,
     allergy: 609,
     foto: 612,
+    eltern: 615,
+    sign: 618,
+    'sign.daten': 621,
   };
   return e;
 }
+
+const STRICHE = unterschriftText([
+  [
+    [10, 10],
+    [50, 40],
+  ],
+])!;
 
 function antworten(): Antworten {
   return {
@@ -79,6 +94,14 @@ function antworten(): Antworten {
       mail: 'maria@beispiel.test',
       tel: '0151 111',
       note: '',
+      eltern: {
+        personen: [
+          { vor: 'Maria', nach: 'Beispiel', tel: '0151 111' },
+          { vor: 'Tom', nach: 'Beispiel', tel: '' },
+        ],
+        einverstanden: true,
+      },
+      sign: { striche: STRICHE },
       priv: true,
     },
     personen: [
@@ -175,6 +198,47 @@ describe('anmeldungAufbauen – Variante A', () => {
     expect(() =>
       anmeldungAufbauen(einstellungen(), a, { option: 0, extras: [] }, HEUTE, CT),
     ).toThrow(/Vielleicht/);
+  });
+
+  it('A6-2b: Erziehungsberechtigte lesbar und die Unterschrift in zwei Spalten – nur bei der ersten Person', () => {
+    const [erste, zweite] = anmeldungAufbauen(
+      einstellungen(),
+      antworten(),
+      { option: 0, extras: [] },
+      HEUTE,
+      CT,
+    ).forms;
+    expect(wert(erste.form, 615)).toBe(
+      'Maria Beispiel, 0151 111\nTom Beispiel\n✓ erziehungsberechtigt und einverstanden',
+    );
+    // Unterschrieben hat die erste erziehungsberechtigte Person, am Tag der Anmeldung.
+    expect(wert(erste.form, 618)).toBe('✓ Maria Beispiel, 14.10.2026');
+    expect(wert(erste.form, 621)).toBe(STRICHE);
+    for (const id of [615, 618, 621]) expect(wert(zweite.form, id), String(id)).toBeUndefined();
+  });
+
+  it('A6-2b: ohne Erziehungsberechtigte unterschreibt der Kontakt; ohne Unterschrift (freiwillig) keine der Spalten', () => {
+    const e = einstellungen();
+    e.formular.anmeldung = e.formular.anmeldung.map((f) =>
+      f.id === 'eltern' ? { ...f, zustand: 'aus' as const } : f,
+    );
+    const [erste] = anmeldungAufbauen(e, antworten(), { option: 0, extras: [] }, HEUTE, CT).forms;
+    expect(wert(erste.form, 615)).toBeUndefined();
+    expect(wert(erste.form, 618)).toBe('✓ Maria Beispiel, 14.10.2026');
+    const a = antworten();
+    a.anmeldung.name = { vor: '', nach: '' };
+    a.anmeldung.sign = { striche: '' };
+    const [ohne] = anmeldungAufbauen(e, a, { option: 0, extras: [] }, HEUTE, CT).forms;
+    expect(wert(ohne.form, 618)).toBeUndefined();
+    expect(wert(ohne.form, 621)).toBeUndefined();
+  });
+
+  it('A6-2b: fehlt die Spalte für die Striche → PasstNicht (sonst wäre nur „✓“ gespeichert, ohne Unterschrift)', () => {
+    const e = einstellungen();
+    delete e.ctFelder['sign.daten'];
+    expect(() => anmeldungAufbauen(e, antworten(), { option: 0, extras: [] }, HEUTE, CT)).toThrow(
+      /Unterschrift \(Daten\)/,
+    );
   });
 
   it('Auswahl und Extras als Namen', () => {

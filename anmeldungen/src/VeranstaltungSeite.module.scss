@@ -61,7 +61,7 @@
 }
 
 .bearbeiten {
-  @include m.auswahlKnopf;
+  @include m.aktionKnopf;
   padding: 5px 12px;
   border-radius: 999px;
   font-size: 13px;

@@ -34,6 +34,8 @@ const SYMBOL_EMPFOHLEN: Record<string, BausteinIcon> = {
   health: 'gesund',
   foto: 'foto',
   note: 'notiz',
+  eltern: 'eltern',
+  sign: 'unterschrift',
 };
 
 const SYMBOL_TYP: Partial<Record<Feldtyp, BausteinIcon>> = {

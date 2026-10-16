@@ -41,6 +41,45 @@
   gap: 6px;
 }
 
+// **Aktionen** (Alwin, 16.10.2026: „die Einstellungsbuttons sehen ausgegraut und nicht klickbar aus“) – anders als
+// `.option` (eine Wahl, grau = nicht gewählt) führt eine Aktion etwas aus: weiße Zeile, dunkle Schrift, Pfeil rechts.
+.aktion {
+  @include m.aktionKnopf;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 10px;
+  // Im Fenster weiß wie eine Liste – die Knopf-Art liefert Schrift, Rand, Darüberfahren und „gesperrt“.
+  background: var(--surface2);
+  font-size: 15px;
+  text-align: left;
+
+  > span {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  small {
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--text2);
+  }
+
+  > svg {
+    flex: none;
+    color: var(--text3);
+  }
+}
+
+.aktionGefahr {
+  color: var(--red);
+}
+
 .listenEintrag {
   list-style: none;
 
@@ -123,7 +162,7 @@
 }
 
 .kopieren {
-  @include m.auswahlKnopf;
+  @include m.aktionKnopf;
   height: 42px;
   border-radius: 10px;
   font-size: 15px;
@@ -146,7 +185,7 @@
 }
 
 .klein {
-  @include m.auswahlKnopf;
+  @include m.aktionKnopf;
   flex: none !important;
   width: 42px;
   height: 42px;

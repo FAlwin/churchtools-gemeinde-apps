@@ -732,3 +732,183 @@
   margin-right: 5px;
   color: var(--p-accent-text);
 }
+
+// ── Zusammengesetzte Bausteine (A6-2b): Erziehungsberechtigte, Unterschrift ─────────────────────────────────
+.pv .baustein {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.pv .bausteinKopf {
+  display: grid;
+  gap: 2px;
+}
+.pv .bausteinKopf b {
+  font-size: 0.93em;
+}
+.pv .bausteinKopf .opt {
+  font-weight: 400;
+  color: var(--p-muted);
+}
+.pv .zweitePerson {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--p-line);
+  padding-top: 10px;
+}
+.pv .baustein .err {
+  color: var(--p-err);
+  font-size: 0.8em;
+  font-weight: 700;
+}
+
+// Zeichenfläche: überall 2:1 (sonst würde die Unterschrift verzerrt), weiß wie Papier – auch im dunklen Design.
+.pv .zeichen,
+.vollbild .zeichen {
+  position: relative;
+  aspect-ratio: 2 / 1;
+  width: 100%;
+  background: #fff;
+  border: 1.5px solid var(--p-line, #dde5e6);
+  border-radius: calc(var(--p-r, 12px) * 0.7);
+  touch-action: none;
+  overflow: hidden;
+  color: #9fb0b4;
+}
+.pv .zeichen canvas,
+.vollbild .zeichen canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+.pv .zeichenLinie,
+.vollbild .zeichenLinie {
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  bottom: 26%;
+  border-bottom: 1.5px solid #c9d3d6;
+  pointer-events: none;
+}
+.pv .zeichenX,
+.vollbild .zeichenX {
+  position: absolute;
+  left: 5%;
+  bottom: calc(26% + 4px);
+  font-size: 18px;
+  pointer-events: none;
+}
+.pv .zeichenLeer,
+.vollbild .zeichenLeer {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  pointer-events: none;
+}
+.pv .bad .zeichen {
+  border-color: var(--p-err);
+}
+.pv .tippfeld {
+  aspect-ratio: 2 / 1;
+  width: 100%;
+  display: grid;
+  place-items: center;
+  font: inherit;
+  font-weight: 700;
+  color: var(--p-muted);
+  background: #fff;
+  border: 1.5px dashed var(--p-line);
+  border-radius: calc(var(--p-r) * 0.7);
+  cursor: pointer;
+  padding: 6px;
+}
+.pv .bad .tippfeld {
+  border-color: var(--p-err);
+}
+.pv .unterschriftBild {
+  width: 100%;
+  height: 100%;
+  color: #17242a;
+}
+
+// Vollbild zum Unterschreiben am Handy – hängt an `body`, außerhalb des Formulars.
+.vollbild {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  padding: max(12px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  background: #fff;
+  color: #17242a;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+.vollbildKopf,
+.vollbildFuss {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.vollbildKopf b {
+  font-size: 18px;
+}
+.vollbildFuss {
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+.quer {
+  margin: 6px 0;
+  text-align: center;
+  font-size: 13px;
+  color: #5b6b70;
+}
+.vollbildFlaeche {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+}
+// So breit wie möglich, aber so, dass die 2:1-Fläche in die Höhe passt.
+.vollbildFlaeche .zeichen {
+  width: min(100%, calc((100dvh - 150px) * 2));
+}
+.vollbildKnopf {
+  height: 44px;
+  padding: 0 18px;
+  border: 1px solid #dde5e6;
+  border-radius: 999px;
+  background: #eef3f3;
+  color: #17242a;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.vollbildFertig {
+  background: var(--p-accent, #2563eb);
+  border-color: var(--p-accent, #2563eb);
+  color: #fff;
+}
+@media (orientation: landscape) {
+  .quer {
+    display: none;
+  }
+  .vollbild {
+    padding-top: max(8px, env(safe-area-inset-top));
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  .vollbildFuss {
+    margin-top: 4px;
+  }
+  .vollbildKnopf {
+    height: 38px;
+  }
+  .vollbildFlaeche .zeichen {
+    width: min(100%, calc((100dvh - 96px) * 2));
+  }
+}

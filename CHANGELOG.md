@@ -7,6 +7,32 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Anmeldungen, A6-2b, #574)
+
+- **Bausteine „Erziehungsberechtigte“ und „Unterschrift“** (Alwin, 14./15.10.2026, Entwurf `a6-2b-entwurf-v2`).
+  Empfohlene Bausteine, je einmal je Anmeldung, in der Vorlage „Kinder-Event“ schon als Pflicht dabei.
+  - **Erziehungsberechtigte:** Name und Telefon (erste Person Pflicht, zweite freiwillig), Häkchen
+    „erziehungsberechtigt und einverstanden“. In ChurchTools eine lesbare Spalte.
+  - **Unterschrift** mit Finger oder Maus; **am Handy im Vollbild** („Tippen zum Unterschreiben“, quer groß,
+    „Abbrechen“ stellt die vorige wieder her). Gemessen: Ein ChurchTools-Feld fasst höchstens **4.000 Zeichen**,
+    nicht anhebbar (`maxLength` höher → 200, ignoriert). Gespeichert werden deshalb die geglätteten Striche
+    (`shared/anmeldung/unterschrift.ts`, meist einige hundert Zeichen; wird es zu lang, stärker geglättet). In
+    ChurchTools **zwei Spalten** (Alwin): „Unterschrift“ lesbar („✓ Erna Muster, 15.10.2026“) und „Unterschrift
+    (Daten)“. Ein Feld kann dafür jetzt weitere Spalten haben (`ctZusatzSpalten`, in `ctFelder` als `sign.daten`).
+  - Spalten anlegen/ändern und nachlesen steht an EINER Stelle (`spalteSpeichern`), die Hauptspalte und die
+    weitere nutzen sie.
+  - **Formular-Paket mit aktualisieren:** Ein älteres Paket kennt die neuen Feldtypen nicht.
+- **Formular hochladen per Skript** (`npm run formular:hochladen`, Alwin: Zugangsdaten im Mac-Schlüsselbund): FTPS
+  mit `curl`, Passwort nur aus dem Schlüsselbund (über die Standardeingabe, nie in der Befehlszeile); erst neue
+  Dateien, dann `index.html`, dann Prüfung im Netz, dann alte Dateien löschen.
+- **Aktionen sehen klickbar aus** (Alwin, 16.10.2026: „die Einstellungsbuttons sehen irgendwie ausgegraut und nicht
+  klickbar aus“): „Veranstaltung verwalten“ zeigt weiße Zeilen mit dunkler Schrift und Pfeil („Löschen“ rot);
+  „Bearbeiten“, „Verwalten“, „Link kopieren“ und die kleinen Knöpfe in den Preisen haben dunkle Schrift und werden beim
+  Darüberfahren hellblau. Neue Knopf-Art `aktionKnopf` in `ui/design/_mixins.scss` – grau bleibt nur, was eine
+  **Wahl** ist (`auswahlKnopf`: Vorlage, Schrift, Filter).
+- `useMedienAbfrage` meldet sich bei älteren Safari (vor iOS 14, nur `addListener`) richtig an statt abzustürzen –
+  das öffentliche Formular öffnen Gäste mit allen möglichen Handys.
+
 ### Neu (Dienstplaner)
 
 - **Dunkelmodus wie ChurchTools** (#563, Alwin: „genauso“ wie bei den Anmeldungen): Der Dienstplaner ist hell oder

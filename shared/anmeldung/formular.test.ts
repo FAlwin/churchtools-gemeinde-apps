@@ -133,6 +133,40 @@ describe('pruefeAntworten', () => {
     expect(pruefeAntworten(f, { ...gut, personen: [] })).toEqual(['personen']);
   });
 
+  it('A6-2b: Erziehungsberechtigte (erste Person ganz, Häkchen) und Unterschrift als Pflicht; freiwillig ohne Prüfung', () => {
+    const k = neueEinstellungen('kinder').formular;
+    const basis = {
+      anmeldung: { ...gut.anmeldung, tel: '0151 1' },
+      personen: [{ pname: { vor: 'Kim', nach: 'B' }, birth: '2017-01-01', foto: 'Ja' }],
+    };
+    expect(pruefeAntworten(k, basis)).toEqual([
+      'anmeldung.eltern.0.vor',
+      'anmeldung.eltern.0.nach',
+      'anmeldung.eltern.0.tel',
+      'anmeldung.eltern.ok',
+      'anmeldung.sign',
+    ]);
+    const voll = {
+      ...basis,
+      anmeldung: {
+        ...basis.anmeldung,
+        eltern: { personen: [{ vor: 'Erna', nach: 'M', tel: '0151' }], einverstanden: true },
+        sign: { striche: 'u1;AAAA' },
+      },
+    };
+    expect(pruefeAntworten(k, voll)).toEqual([]);
+    // Die zweite Person ist freiwillig – halb ausgefüllt ist kein Fehler.
+    voll.anmeldung.eltern.personen.push({ vor: 'Tom', nach: '', tel: '' });
+    expect(pruefeAntworten(k, voll)).toEqual([]);
+    const frei = {
+      anmeldung: k.anmeldung.map((x) =>
+        ['eltern', 'sign'].includes(x.id) ? { ...x, zustand: 'freiwillig' as const } : x,
+      ),
+      person: k.person,
+    };
+    expect(pruefeAntworten(frei, basis)).toEqual([]);
+  });
+
   it('Pflicht-Kästchen muss angekreuzt, Mehrfach-Pflicht mindestens eine Antwort haben', () => {
     const g = standardFormular();
     g.anmeldung.splice(

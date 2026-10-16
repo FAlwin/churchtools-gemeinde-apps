@@ -613,7 +613,8 @@ describe('Baukasten (Feinheiten): Leiste, Fragetyp, Design', () => {
     expect(kopf.getAttribute('aria-expanded')).toBe('false');
     expect(screen.queryByRole('button', { name: 'Kurzer Text' })).toBeNull();
     expect(screen.getByRole('button', { name: /Empfohlen/ }).textContent).toMatch(
-      /5 von 8 im Formular/,
+      // Kinder-Vorlage: seit A6-2b mit Erziehungsberechtigten und Unterschrift.
+      /7 von 10 im Formular/,
     );
     const telefon = screen.getByRole('button', { name: 'Telefon' });
     expect(telefon.querySelector('[class*="haken"]')).toBeTruthy();

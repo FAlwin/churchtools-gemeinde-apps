@@ -153,6 +153,30 @@
     box-shadow 0.14s;
 }
 
+/**
+ * **Ein Knopf, der etwas TUT** („Bearbeiten“, „Verwalten“, „Link kopieren“ …) – im Unterschied zu `auswahlKnopf`
+ * (eine Wahl; grau heißt dort „nicht gewählt“). Mit grauer Schrift sahen Aktionen gesperrt aus (Alwin, 16.10.2026:
+ * „sehen irgendwie ausgegraut und nicht klickbar aus“) – deshalb dunkle Schrift und hellblau beim Darüberfahren.
+ */
+@mixin aktionKnopf {
+  border: 1px solid var(--border);
+  background: var(--surface3);
+  color: var(--text);
+  font-family: var(--ui);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.14s;
+
+  &:hover:not(:disabled) {
+    background: var(--blue-soft);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+}
+
 /** Der gewählte Knopf der Reihe – hell und leicht abgehoben, wie bisher im Umschalter. */
 @mixin auswahlKnopfAn {
   background: var(--seg-on);

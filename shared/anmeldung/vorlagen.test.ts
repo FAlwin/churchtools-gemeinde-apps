@@ -17,6 +17,17 @@ describe('Vorlagen (A3, #486)', () => {
     expect(neueEinstellungen('einfach').wer).toBe('familie');
     expect(geburtsdatumAn(neueEinstellungen('einfach').formular)).toBe(false);
   });
+  it('Kinder (A6-2b): Erziehungsberechtigte und Unterschrift als Pflicht, je Anmeldung, eingeordnet wie im Baukasten', () => {
+    const ids = neueEinstellungen('kinder').formular.anmeldung.map((f) => f.id);
+    // Dieselbe Regel wie beim Antippen einer Kachel: vor die Bemerkungen, die den Bereich abschließen.
+    expect(ids.slice(-5)).toEqual(['eltern', 'sign', 'note', 'price', 'priv']);
+    for (const f of neueEinstellungen('kinder').formular.anmeldung.filter((x) =>
+      ['eltern', 'sign'].includes(x.id),
+    ))
+      expect(f.zustand).toBe('pflicht');
+    for (const v of ['einfach', 'freizeit'] as const)
+      expect(neueEinstellungen(v).formular.anmeldung.some((f) => f.id === 'eltern')).toBe(false);
+  });
   it('Start: ohne Termin, kostenlos, Löschfrist 3 Monate', () => {
     const e = neueEinstellungen('einfach');
     expect(e.termin).toBeNull();

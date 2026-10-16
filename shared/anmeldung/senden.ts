@@ -118,6 +118,30 @@ function nameVon(w: Antwort): { vor: string; nach: string } {
   return { vor: (n.vor ?? '').trim(), nach: (n.nach ?? '').trim() };
 }
 
+/** Die Namen der Teilnehmenden, wie sie auf der Ergebnis-Seite stehen – ohne Namen „Kind 2“ bzw. „Person 2“. */
+export function personenNamen(e: OeffentlicheEinstellungen, a: Antworten): string[] {
+  const feld = e.formular.person.find((f) => f.typ === 'name');
+  return a.personen.map((p, i) => {
+    const n = nameVon(feld ? p[feld.id] : undefined);
+    return `${n.vor} ${n.nach}`.trim() || `${e.wer === 'kinder' ? 'Kind' : 'Person'} ${i + 1}`;
+  });
+}
+
+/**
+ * **Was je Person herauskam** (#602 – jede Person wird einzeln angemeldet): angemeldet, auf der Warteliste, schon
+ * bekannt (per Mail bestätigen), ausgebucht (voll, keine Warteliste – nichts geschickt) oder offen (Fehler, „Noch
+ * einmal“ schickt sie erneut).
+ */
+export type PersonErgebnis = 'angemeldet' | 'warteliste' | 'bestaetigen' | 'ausgebucht' | 'offen';
+
+export interface Abgeschickt {
+  personen: { index: number; name: string; ergebnis: PersonErgebnis }[];
+  /** Adresse, an die ChurchTools die Bestätigungen schickt. */
+  mail: string;
+  /** Warum Personen offen geblieben sind. */
+  meldung?: string;
+}
+
 /**
  * **Erziehungsberechtigte lesbar** (A6-2b) – eine Zeile je Person („Erna Muster, 0151 2345678“), darunter das
  * Häkchen. `null`, wenn nichts eingetragen ist.

@@ -148,13 +148,10 @@ export interface OeffentlicheGruppeRoh {
 }
 
 /** Alles, was die Seite zum Zeigen braucht. */
-export interface OeffentlicheVeranstaltung {
+export interface OeffentlicheVeranstaltung extends PlatzStand {
   name: string;
   einstellungen: OeffentlicheEinstellungen;
   bildUrl: string | null;
-  /** Freie Plätze, `null` ohne Platzgrenze. Nie unter 0. */
-  freiePlaetze: number | null;
-  warteliste: boolean;
   /** Nimmt ChurchTools gerade Anmeldungen an? */
   offen: boolean;
 }
@@ -170,10 +167,41 @@ export function veranstaltungAus(g: OeffentlicheGruppeRoh): OeffentlicheVeransta
     name: (g.name ?? '').trim(),
     einstellungen,
     bildUrl: g.information?.imageUrl || null,
-    freiePlaetze: freiePlaetzeAus(g.maxMemberCount, g.currentMemberCount),
-    warteliste: g.allowWaitinglist === true,
+    ...platzStandAus(g),
     offen: g.canSignUp === true,
   };
+}
+
+/** Freie Plätze und ob es eine Warteliste gibt – wie ChurchTools sie Gästen meldet. */
+export interface PlatzStand {
+  /** `null` ohne Platzgrenze. Nie unter 0. */
+  freiePlaetze: number | null;
+  warteliste: boolean;
+}
+
+export function platzStandAus(g: OeffentlicheGruppeRoh): PlatzStand {
+  return {
+    freiePlaetze: freiePlaetzeAus(g.maxMemberCount, g.currentMemberCount),
+    warteliste: g.allowWaitinglist === true,
+  };
+}
+
+/** Was eine Person bekommt: einen Platz, die Warteliste – oder nichts (voll, keine Warteliste). */
+export type Platz = 'platz' | 'warteliste' | 'kein';
+
+/**
+ * **Wer bekommt was** (#602) – in der Reihenfolge des Formulars: die ersten bekommen die freien Plätze, der Rest die
+ * Warteliste (oder nichts). Gemessen 16.10.2026: Genau so vergibt ChurchTools bei Einzel-Anmeldungen nacheinander.
+ * Die EINE Regel für den Hinweis beim Hinzufügen und das Ergebnis nach dem Absenden.
+ */
+export function platzPlan(stand: PlatzStand, anzahl: number): Platz[] {
+  return Array.from({ length: anzahl }, (_, i) =>
+    stand.freiePlaetze === null || i < stand.freiePlaetze
+      ? 'platz'
+      : stand.warteliste
+        ? 'warteliste'
+        : 'kein',
+  );
 }
 
 /** Freie Plätze aus Grenze und Belegung – `null` ohne Grenze. */

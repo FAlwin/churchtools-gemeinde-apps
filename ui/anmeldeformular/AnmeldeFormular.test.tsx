@@ -7,6 +7,7 @@ import { alterAm, type OeffentlicheEinstellungen } from '@shared/anmeldung/formu
 import { AnmeldeFormular } from './AnmeldeFormular';
 import { SCHRIFT, musterAntworten, textAufFarbe } from './daten';
 import { titelbildGross } from '@shared/anmeldung/gestaltung';
+import type { Abgeschickt } from '@shared/anmeldung/senden';
 
 const HEUTE = '2026-10-13';
 
@@ -396,9 +397,13 @@ describe('Reihenfolge (Feinheiten A5)', () => {
 
 describe('Spam-Schutz im echten Formular (A6-3, #593)', () => {
   afterEach(() => vi.useRealTimers());
+  const ANGEMELDET: Abgeschickt = {
+    personen: [{ index: 0, name: 'Maria Beispiel', ergebnis: 'angemeldet' }],
+    mail: '',
+  };
 
   /** Echtes Formular (mit `onAbsenden`), vollständig ausgefüllt, Uhr gestellt. */
-  function echt(onAbsenden = vi.fn().mockResolvedValue({ art: 'angemeldet' })) {
+  function echt(onAbsenden = vi.fn().mockResolvedValue(ANGEMELDET)) {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-10-16T10:00:00Z'));
     const e = freizeit();
@@ -444,15 +449,15 @@ describe('Spam-Schutz im echten Formular (A6-3, #593)', () => {
   });
 
   it('zweimal Absenden im selben Augenblick → nur EINE Anmeldung', async () => {
-    let fertig: (w: { art: 'angemeldet' }) => void = () => {};
-    const onAbsenden = vi.fn(() => new Promise<{ art: 'angemeldet' }>((r) => (fertig = r)));
+    let fertig: (w: Abgeschickt) => void = () => {};
+    const onAbsenden = vi.fn(() => new Promise<Abgeschickt>((r) => (fertig = r)));
     echt(onAbsenden);
     vi.setSystemTime(new Date('2026-10-16T10:01:00Z'));
     const form = screen.getByRole('button', { name: 'Verbindlich anmelden' }).closest('form')!;
     fireEvent.submit(form);
     fireEvent.submit(form);
     expect(onAbsenden).toHaveBeenCalledTimes(1);
-    await act(async () => fertig({ art: 'angemeldet' }));
+    await act(async () => fertig(ANGEMELDET));
   });
 
   it('Vorschau: kein Honigtopf, keine Wartezeit', () => {

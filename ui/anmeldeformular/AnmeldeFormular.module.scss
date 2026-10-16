@@ -25,6 +25,8 @@
   --p-field: #fff;
   --p-fill: #eef3f3;
   --p-err: #b42318;
+  --p-ok: #1f8a5b;
+  --p-warn: #9a6700;
   --p-r: 10px;
   --p-fs: 15px;
   --p-head: Georgia, serif;
@@ -928,7 +930,7 @@
   margin-left: 6px;
   font-size: 0.8em;
   font-weight: 600;
-  color: #1f8a5b;
+  color: var(--p-ok);
 }
 .pv .abgesagt {
   opacity: 0.6;
@@ -992,4 +994,73 @@
   color: var(--p-err);
   font-size: 0.87em;
   font-weight: 700;
+}
+
+/* Mehrere Personen (#602): Platz, Warteliste, Ergebnis je Person */
+.pv .platzJa,
+.pv .platzWarte,
+.pv .platzNein {
+  margin-left: 8px;
+  font-size: 0.78em;
+  font-weight: 600;
+}
+.pv .platzJa {
+  color: var(--p-ok);
+}
+.pv .platzWarte {
+  color: var(--p-warn);
+}
+.pv .platzNein {
+  color: var(--p-err);
+}
+.pv .platzHinweis {
+  font-size: 0.88em;
+  line-height: 1.45;
+  margin: 6px 0 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--p-warn) 40%, transparent);
+  background: color-mix(in srgb, var(--p-warn) 7%, var(--p-card));
+}
+.pv .platzHinweisRot {
+  border-color: color-mix(in srgb, var(--p-err) 40%, transparent);
+  background: color-mix(in srgb, var(--p-err) 6%, var(--p-card));
+}
+.pv .platzBanner {
+  font-size: 0.92em;
+  line-height: 1.45;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--p-warn) 40%, transparent);
+  background: color-mix(in srgb, var(--p-warn) 7%, var(--p-card));
+}
+.pv .ergebnisListe {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 12px;
+  display: grid;
+  gap: 6px;
+}
+.pv .ergebnisListe li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--p-text) 5%, transparent);
+}
+.pv .ergebnis-angemeldet {
+  color: var(--p-ok);
+  font-weight: 600;
+}
+.pv .ergebnis-warteliste,
+.pv .ergebnis-bestaetigen {
+  color: var(--p-warn);
+  font-weight: 600;
+}
+.pv .ergebnis-ausgebucht,
+.pv .ergebnis-offen {
+  color: var(--p-err);
+  font-weight: 600;
 }

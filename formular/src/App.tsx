@@ -8,7 +8,7 @@ import {
 } from '@shared/anmeldung/oeffentlich';
 import { AbmeldeSeite } from './AbmeldeSeite';
 import { LadeProblem, ladeVeranstaltung, type Geladen } from './laden';
-import { abschicken } from './senden';
+import { abschicken, platzStand } from './senden';
 import s from './App.module.scss';
 
 /**
@@ -118,10 +118,12 @@ export function App() {
           einstellungen: v.einstellungen,
           bildUrl: v.bildUrl,
           freiePlaetze: v.freiePlaetze,
+          warteliste: v.warteliste,
         }}
         heute={heute}
         probe={probe}
-        onAbsenden={({ antworten, wahl }) =>
+        plaetzeNachfragen={() => platzStand(ort)}
+        onAbsenden={({ antworten, wahl, nur }) =>
           abschicken(
             ort,
             v.einstellungen,
@@ -129,6 +131,7 @@ export function App() {
             wahl,
             heute,
             `${window.location.origin}${window.location.pathname}`,
+            nur,
           )
         }
       />

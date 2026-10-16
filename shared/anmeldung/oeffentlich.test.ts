@@ -10,6 +10,7 @@ import {
   abmeldeOrtAusLink,
   abmeldeVorlage,
   freiePlaetzeAus,
+  platzPlan,
   herkunftVon,
   ladeFehlerAus,
   ortAusLink,
@@ -199,5 +200,25 @@ describe('„Deine Anmeldung“ (A6-4) – Link aus der Mail', () => {
       mail: '',
       personen: [],
     });
+  });
+});
+
+describe('platzPlan (#602) – wer bekommt einen Platz, wer die Warteliste', () => {
+  it('in Formular-Reihenfolge: erst die freien Plätze, dann Warteliste oder nichts', () => {
+    expect(platzPlan({ freiePlaetze: 1, warteliste: true }, 3)).toEqual([
+      'platz',
+      'warteliste',
+      'warteliste',
+    ]);
+    expect(platzPlan({ freiePlaetze: 1, warteliste: false }, 2)).toEqual(['platz', 'kein']);
+    expect(platzPlan({ freiePlaetze: 0, warteliste: true }, 1)).toEqual(['warteliste']);
+  });
+  it('ohne Platzgrenze bekommt jeder einen Platz', () => {
+    expect(platzPlan({ freiePlaetze: null, warteliste: false }, 4)).toEqual([
+      'platz',
+      'platz',
+      'platz',
+      'platz',
+    ]);
   });
 });

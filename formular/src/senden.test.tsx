@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { einstellungenAlsText } from '@shared/anmeldung/formular';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import { App } from './App';
@@ -106,6 +106,8 @@ describe('Echt anmelden (A6-2)', () => {
     expect(aufrufe.map((a) => `${a.methode} ${a.pfad}`).slice(2)).toEqual([
       'POST /api/publicgroups/66/token',
       'GET /api/publicgroups/66/form',
+      // #602: direkt vor der Anmeldung frisch nachsehen, ob noch ein Platz frei ist.
+      'GET /api/publicgroups/66',
       'POST /api/publicgroups/66/signup',
     ]);
     expect(aufrufe.every((a) => a.credentials === 'omit')).toBe(true);
@@ -194,5 +196,148 @@ describe('Echt anmelden (A6-2)', () => {
     await ausfuellenUndAbschicken();
     expect(await screen.findByText(/Probelauf – abgeschickt wurde nichts/)).toBeTruthy();
     await waitFor(() => expect(aufrufe.some((a) => a.pfad.endsWith('/token'))).toBe(false));
+  });
+});
+
+describe('Mehrere Personen (#602) – jede einzeln, Plätze beim Hinzufügen', () => {
+  const gruppe = (aktuell: number, max: number | null, warteliste: boolean) => ({
+    status: 200,
+    body: {
+      data: {
+        ...GRUPPE,
+        maxMemberCount: max,
+        currentMemberCount: aktuell,
+        allowWaitinglist: warteliste,
+      },
+    },
+  });
+  const feld = (id: string) => document.getElementById(id) as HTMLInputElement;
+
+  async function zweiPersonen() {
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Gemeindeessen' });
+    fireEvent.change(feld('af-anmeldung.name-vor'), { target: { value: 'Maria' } });
+    fireEvent.change(feld('af-anmeldung.name-nach'), { target: { value: 'Beispiel' } });
+    fireEvent.change(feld('af-anmeldung.mail'), { target: { value: 'maria@beispiel.test' } });
+    fireEvent.change(feld('af-anmeldung.tel'), { target: { value: '0151 111' } });
+    fireEvent.change(feld('af-personen.0.pname-vor'), { target: { value: 'Jonas' } });
+    fireEvent.change(feld('af-personen.0.pname-nach'), { target: { value: 'Beispiel' } });
+    fireEvent.click(screen.getByRole('button', { name: '+ Weitere Person' }));
+    await waitFor(() => expect(document.getElementById('af-personen.1.pname-vor')).toBeTruthy());
+    fireEvent.change(feld('af-personen.1.pname-vor'), { target: { value: 'Lea' } });
+    fireEvent.change(feld('af-personen.1.pname-nach'), { target: { value: 'Beispiel' } });
+    fireEvent.click(screen.getByRole('checkbox', { name: /einverstanden/ }));
+  }
+  const abschicken = () => {
+    vi.setSystemTime(new Date('2026-10-16T10:00:30Z'));
+    fireEvent.click(
+      screen.getByRole('button', { name: /Verbindlich anmelden|Auf die Warteliste/ }),
+    );
+  };
+  const vornamen = () =>
+    geschickt().map((a) =>
+      (a.body as { forms: { form: { id: string; value: string }[] }[] }).forms.map(
+        (f) => f.form.find((x) => x.id === '2')?.value,
+      ),
+    );
+
+  it('zwei Personen → zwei Anmeldungen mit eigenem Token, je eine Person; Kontakt nur bei der ersten', async () => {
+    antworten['POST /api/publicgroups/66/token'] = [
+      { status: 200, body: { data: { token: 'T1' } } },
+      { status: 200, body: { data: { token: 'T2' } } },
+    ];
+    await zweiPersonen();
+    abschicken();
+    expect(await screen.findByText('Danke für die Anmeldung!')).toBeTruthy();
+    expect(vornamen()).toEqual([['Jonas'], ['Lea']]);
+    const b = geschickt().map(
+      (a) => a.body as { token: string; forms: { form: { id: string }[] }[] },
+    );
+    expect(b.map((x) => x.token)).toEqual(['T1', 'T2']);
+    const hat = (i: number, id: string) => b[i].forms[0].form.some((x) => x.id === id);
+    expect([hat(0, '580'), hat(1, '580'), hat(0, '603'), hat(1, '603')]).toEqual([
+      true,
+      false,
+      true,
+      false,
+    ]);
+    const liste = screen.getByRole('list');
+    expect(within(liste).getAllByText('✓ angemeldet')).toHaveLength(2);
+    expect(screen.getByText(/für jede Person eine eigene/)).toBeTruthy();
+  });
+
+  it('mit Warteliste: beim Hinzufügen frisch gefragt → „Warteliste“ an der Person; danach je Person das Ergebnis', async () => {
+    antworten['GET /api/publicgroups/66'] = [
+      gruppe(3, 10, true), // Laden: 7 frei
+      gruppe(9, 10, true), // „+ Weitere Person“: inzwischen nur noch 1 frei
+      gruppe(9, 10, true), // vor Jonas
+      gruppe(10, 10, true), // vor Lea: voll → Warteliste
+    ];
+    await zweiPersonen();
+    // Schildchen an Person 2 und der Satz darunter.
+    expect(screen.getAllByText('Warteliste').map((x) => x.tagName)).toEqual(['SMALL', 'B']);
+    expect(screen.getByText(/Für Person 2 ist kein Platz mehr frei/)).toBeTruthy();
+    expect(screen.getByText('bekommt einen Platz')).toBeTruthy();
+    abschicken();
+    const liste = await screen.findByRole('list');
+    expect(within(liste).getByText('✓ angemeldet')).toBeTruthy();
+    expect(within(liste).getByText('Warteliste')).toBeTruthy();
+    expect(vornamen()).toEqual([['Jonas'], ['Lea']]);
+  });
+
+  it('ohne Warteliste und kein Platz mehr → „+ Weitere Person“ fügt nicht hinzu und ist gesperrt, mit Grund', async () => {
+    antworten['GET /api/publicgroups/66'] = [gruppe(3, 10, false), gruppe(9, 10, false)];
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Gemeindeessen' });
+    const knopf = screen.getByRole('button', { name: '+ Weitere Person' });
+    fireEvent.click(knopf);
+    expect(await screen.findByText(/Kein Platz mehr frei/)).toBeTruthy();
+    expect(document.getElementById('af-personen.1.pname-vor')).toBeNull();
+    expect(knopf).toHaveProperty('disabled', true);
+  });
+
+  it('Platz-Abfrage beim Hinzufügen scheitert → trotzdem hinzugefügt (vorübergehend ist nicht ungültig)', async () => {
+    antworten['GET /api/publicgroups/66'] = [gruppe(3, 10, false), { status: 503 }];
+    await zweiPersonen();
+    expect(feld('af-personen.1.pname-vor').value).toBe('Lea');
+  });
+
+  it('zweite scheitert (503) → Ergebnis je Person; „noch einmal“ schickt NUR die zweite', async () => {
+    antworten['POST /api/publicgroups/66/signup'] = [
+      { status: 200, body: { verificationNotice: false } },
+      { status: 503 },
+      { status: 200, body: { verificationNotice: false } },
+    ];
+    await zweiPersonen();
+    abschicken();
+    expect(await screen.findByText('Fast fertig')).toBeTruthy();
+    expect(screen.getByText('nicht angemeldet')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Lea Beispiel noch einmal anmelden' }));
+    await waitFor(() => expect(geschickt()).toHaveLength(3));
+    expect(vornamen()).toEqual([['Jonas'], ['Lea'], ['Lea']]);
+    expect(await screen.findByText('Danke für die Anmeldung!')).toBeTruthy();
+    expect(within(screen.getByRole('list')).getAllByText('✓ angemeldet')).toHaveLength(2);
+  });
+
+  it('dazwischen voll ohne Warteliste → zweite „kein Platz mehr“, nichts für sie geschickt', async () => {
+    antworten['GET /api/publicgroups/66'] = [
+      gruppe(3, 10, false),
+      gruppe(3, 10, false),
+      gruppe(9, 10, false),
+      gruppe(10, 10, false),
+    ];
+    await zweiPersonen();
+    abschicken();
+    expect(await screen.findByText('kein Platz mehr')).toBeTruthy();
+    expect(vornamen()).toEqual([['Jonas']]);
+    expect(screen.queryByRole('button', { name: /noch einmal anmelden/ })).toBeNull();
+  });
+
+  it('500 → ehrliche Meldung („Fehler gemeldet … Gemeinde Bescheid“), nicht „antwortet gerade nicht“', async () => {
+    antworten['POST /api/publicgroups/66/signup'] = [{ status: 500 }];
+    await ausfuellenUndAbschicken();
+    const meldung = (await screen.findByRole('alert')).textContent;
+    expect(meldung).toMatch(/Fehler gemeldet/);
+    expect(meldung).toMatch(/Gemeinde Bescheid/);
   });
 });

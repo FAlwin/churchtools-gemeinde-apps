@@ -70,6 +70,11 @@ formular:hochladen` (optional `ANMELDUNG_FTP_ORDNER`; `ANMELDUNG_FTP_BENUTZER`, 
 Sekunden. Gäste merken davon nichts. Ein Captcha gibt es bewusst nicht – ohne eigenen Server ließe es sich nicht
 prüfen. Was trotzdem durchkommt, entfernt die Leitung in ChurchTools (später im Reiter Anmeldungen).
 
+**Mehrere Personen:** Das Formular meldet jede Person einzeln bei ChurchTools an (eine Anmeldung mit mehreren
+Personen ohne Familienbeziehung lässt ChurchTools abstürzen – gemessen). Beim Hinzufügen einer Person prüft es die
+freien Plätze: Mit Warteliste steht an der Person „Warteliste“, ohne Warteliste lässt sich niemand mehr hinzufügen,
+wenn alles vergeben ist. Nach dem Absenden steht je Person, was daraus wurde.
+
 **„Deine Anmeldung“:** Nach dem Anmelden schickt ChurchTools jeder angemeldeten Person seine Bestätigungsmail
 (Text nicht änderbar). Der Link „Austreten“ darin führt auf eure Formular-Seite
 (`…/#<instanz>/<Nummer>/abmelden/<Schlüssel>`) im Design der Veranstaltung: Dort sieht man, wer angemeldet ist, kann

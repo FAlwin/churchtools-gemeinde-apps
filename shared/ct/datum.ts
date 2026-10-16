@@ -85,6 +85,12 @@ export function monatPlus(monat: string, n: number): string {
   return `${j}-${String(m + 1).padStart(2, '0')}`;
 }
 
+/** Monate von `von` bis `bis` (`YYYY-MM` oder `YYYY-MM-DD`, nur der Monat zählt): `2026-11` → `2027-01` = 2. */
+export function monateBis(von: string, bis: string): number {
+  const nr = (x: string) => Number(x.slice(0, 4)) * 12 + Number(x.slice(5, 7));
+  return nr(bis) - nr(von);
+}
+
 /** Letzter Tag des Monats als `YYYY-MM-DD` – Schaltjahre inklusive (UTC, wie alles hier). */
 export function letzterTag(monat: string): string {
   const jahr = Number(monat.slice(0, 4));

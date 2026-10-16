@@ -111,6 +111,46 @@ describe('kandidatenAus', () => {
         .name,
     ).toBe('Nur Titel');
   });
+
+  it('für den Zauberstab (E5-1): Gründe, Abstand davor/danach, „höchstens N× im Monat“ (Form gemessen E5-0)', () => {
+    const [k] = kandidatenAus(
+      [
+        roh(1, 'Ben', {
+          score: -60,
+          scoreHints: [
+            { score: -50, reason: 'last.service.near' },
+            { score: -10, reason: 'next.service.near' },
+          ],
+          serviceGroupPreferences: { maxPerMonth: 2 },
+        }),
+      ],
+      O,
+    );
+    expect(k).toMatchObject({
+      gruende: ['last.service.near', 'next.service.near'],
+      abstandDavor: -50,
+      abstandDanach: -10,
+      hoechstensImMonat: 2,
+    });
+  });
+
+  it('ohne Vorliebe oder mit unbrauchbarem Wert: `hoechstensImMonat` = null; „nie“ (0) bleibt 0', () => {
+    const h = (wert: unknown) =>
+      kandidatenAus(
+        [
+          roh(1, 'Ben', {
+            serviceGroupPreferences: wert === undefined ? null : { maxPerMonth: wert },
+          }),
+        ],
+        O,
+      )[0].hoechstensImMonat;
+    expect([h(undefined), h('2'), h(-1), h(1.5), h(0)]).toEqual([null, null, null, null, 0]);
+    expect(kandidatenAus([roh(1, 'Ben')], O)[0]).toMatchObject({
+      gruende: [],
+      abstandDavor: 0,
+      abstandDanach: 0,
+    });
+  });
 });
 
 describe('kandidatHinweis', () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   datumText,
+  monateBis,
   kachel,
   MONATE,
   MONATE_KURZ,
@@ -47,5 +48,14 @@ describe('Monatsnamen – eine Quelle für alle Apps', () => {
       expect(kachel(tag(m)).monat).toBe(KURZ[m].toUpperCase());
     }
     expect(kachel('2027-03-01').monat).toBe('MÄR');
+  });
+});
+
+describe('monateBis (Zauberstab E5-1)', () => {
+  it('zählt nur den Monat, auch über den Jahreswechsel und rückwärts', () => {
+    expect(monateBis('2026-11-30', '2026-11-01')).toBe(0);
+    expect(monateBis('2026-10-31', '2026-11-01')).toBe(1);
+    expect(monateBis('2026-11', '2027-01')).toBe(2);
+    expect(monateBis('2027-01-15', '2026-11-15')).toBe(-2);
   });
 });

@@ -312,6 +312,7 @@ describe('Einstellungen in der Gruppen-Beschreibung', () => {
         fristTage: 14,
         zweck: 'Silvester [Nachname]',
       },
+      kontakt: 'freizeit@gemeinde.test',
     };
   }
 
@@ -400,12 +401,20 @@ describe('Einstellungen in der Gruppen-Beschreibung', () => {
   });
 
   it('ältere Einstellungen ohne später hinzugekommene Angaben bleiben lesbar (mit Standardwert)', () => {
-    const { termin: _t, loeschfristMonate: _l, bezahlung: _b, ...alt } = einstellungen();
+    const {
+      termin: _t,
+      loeschfristMonate: _l,
+      bezahlung: _b,
+      kontakt: _k,
+      ...alt
+    } = einstellungen();
     const gelesen = einstellungenLesen(EINSTELLUNGEN_KENNUNG + JSON.stringify(alt));
     expect(gelesen?.termin).toBeNull();
     expect(gelesen?.loeschfristMonate).toBe(3);
     // Seit A4: ohne Bankverbindung, 14 Tage, Zweck nur mit Nachnamen.
     expect(gelesen?.bezahlung).toEqual(STANDARD_BEZAHLUNG);
+    // Seit A6-4: ohne Kontakt.
+    expect(gelesen?.kontakt).toBe('');
     // Jede gelesene Veranstaltung bekommt ihr eigenes Objekt – sonst änderte eine die nächste mit.
     const zweite = einstellungenLesen(EINSTELLUNGEN_KENNUNG + JSON.stringify(alt));
     expect(zweite?.bezahlung).not.toBe(gelesen?.bezahlung);

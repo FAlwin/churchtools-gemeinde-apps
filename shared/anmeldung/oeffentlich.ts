@@ -36,6 +36,67 @@ export function ortAusLink(hash: string): AnmeldeOrt | null {
   return gruppeId > 0 ? { instanz, gruppeId } : null;
 }
 
+/** „Deine Anmeldung“ (A6-4): wo die Anmeldung liegt und mit welchem Schlüssel aus der Mail. */
+export interface AbmeldeOrt extends AnmeldeOrt {
+  token: string;
+}
+
+/**
+ * **Wohin „Austreten“ in der Mail von ChurchTools führt** (A6-4, gemessen 16.10.2026): ChurchTools nimmt beim Anmelden
+ * `signOutUrlTemplate` mit und ersetzt darin `$groupId` und `$token`. So landet der Link auf unserer Seite
+ * „Deine Anmeldung“ statt auf der von ChurchTools. `formularBasis`: Adresse der Formular-Seite ohne `#`.
+ */
+export function abmeldeVorlage(formularBasis: string, instanz: string): string {
+  return `${formularBasis.split('#')[0]}#${instanz}/$groupId/abmelden/$token`;
+}
+
+/** **Den Link aus der Mail lesen** – das Gegenstück zu `abmeldeVorlage`. `null`, wenn es keiner ist. */
+export function abmeldeOrtAusLink(hash: string): AbmeldeOrt | null {
+  const m = /^#?([^/]+)\/(\d{1,9})\/abmelden\/([A-Za-z0-9_-]{8,64})\/?$/.exec(hash.trim());
+  if (!m) return null;
+  const ort = ortAusLink(`${m[1]}/${m[2]}`);
+  return ort ? { ...ort, token: m[3] } : null;
+}
+
+/** Was ChurchTools zum Link aus der Mail herausgibt (ohne Login) – keine Antworten, kein Betrag (gemessen). */
+export interface AbmeldeDaten {
+  /** Name der Veranstaltung (aus ChurchTools – falls die Veranstaltung selbst nicht mehr lesbar ist). */
+  veranstaltung: string;
+  /** Wer angemeldet hat (bei „Nur Kinder“ das Kind, an das die Mail ging). */
+  anmelder: string;
+  /** Sein Nachname – für den Verwendungszweck. */
+  nachname: string;
+  mail: string;
+  /** Wen man mit diesem Link abmelden darf. Leer, wenn schon abgesagt. */
+  personen: { id: number; name: string }[];
+}
+
+/** Die Antwort von `GET /publicgroups/{id}/signoutdata?token=` lesen. `null`, wenn sie anders aussieht. */
+export function abmeldeDatenAus(json: unknown): AbmeldeDaten | null {
+  const d = (json as { data?: Record<string, unknown> } | null)?.data;
+  if (!d || typeof d !== 'object') return null;
+  const person = (p: unknown) => {
+    const x = p as { domainIdentifier?: string | number; title?: string } | null;
+    const id = Number(x?.domainIdentifier);
+    return Number.isInteger(id) && id > 0 && typeof x?.title === 'string'
+      ? { id, name: x.title }
+      : null;
+  };
+  const liste = Array.isArray(d.selfSignOutPersons) ? d.selfSignOutPersons : [];
+  const requester = d.requester as {
+    title?: string;
+    domainAttributes?: { lastName?: string };
+  } | null;
+  const text = (x: unknown) => (typeof x === 'string' ? x : '');
+  return {
+    veranstaltung: text((d.group as { title?: string } | null)?.title),
+    anmelder: text(requester?.title),
+    nachname: text(requester?.domainAttributes?.lastName),
+    mail: typeof d.requesterEmail === 'string' ? d.requesterEmail : '',
+    personen: liste.map(person).filter((p): p is { id: number; name: string } => p !== null),
+  };
+}
+
 /**
  * Zum Testen (Alwin, 14.10.2026: bis die eigene Adresse steht): das Formular auf dem eigenen Rechner
  * (`npm run dev -w formular` → `http://localhost:5177`). Nur mit ausdrücklichem `http://` – und ChurchTools muss
@@ -127,6 +188,7 @@ export function freiePlaetzeAus(
 /** Warum die Seite nichts zeigen kann – je Fall eine eigene Meldung. */
 export type LadeFehler =
   | 'link' // kein gültiger Link
+  | 'abmeldelink' // „Deine Anmeldung“: der Schlüssel aus der Mail passt nicht (404, A6-4)
   | 'nicht-freigegeben' // 403
   | 'nicht-gefunden' // 404
   | 'keine-anmeldung' // Gruppe ohne unsere Einstellungen
@@ -152,6 +214,11 @@ export const LADE_FEHLER_TEXT: Record<
   link: {
     titel: 'Dieser Link ist unvollständig',
     text: 'Bitte den Link zur Anmeldung noch einmal vollständig aus der Einladung kopieren.',
+    nochmal: false,
+  },
+  abmeldelink: {
+    titel: 'Dieser Link gilt nicht',
+    text: 'Der Link aus der Bestätigungsmail passt zu keiner Anmeldung (mehr). Bei Fragen hilft die Gemeinde weiter.',
     nochmal: false,
   },
   'nicht-freigegeben': {

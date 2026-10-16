@@ -116,6 +116,10 @@ describe('Echt anmelden (A6-2)', () => {
     };
     expect(body.token).toBe('T1');
     expect(body.hasAcceptedPrivacyForSelf).toBe(true);
+    // A6-4: „Austreten“ in der Mail von ChurchTools führt auf „Deine Anmeldung“ – auf unserer Seite.
+    expect((body as unknown as { signOutUrlTemplate: string }).signOutUrlTemplate).toBe(
+      `${window.location.origin}/#test.church.tools/$groupId/abmelden/$token`,
+    );
     expect(body.forms).toHaveLength(1);
     const w = (id: string) => body.forms[0].form.find((x) => x.id === id)?.value;
     expect([w('2'), w('3'), w('14'), w('580'), w('603')]).toEqual([

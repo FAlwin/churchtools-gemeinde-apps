@@ -7,6 +7,24 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Anmeldungen, A6-4, #595)
+
+- **„Deine Anmeldung“** (Alwin, 16.10.2026: „Unsere Seite“, Entwurf `a6-4-deine-anmeldung-v1`). Gemessen: ChurchTools
+  schickt nach dem Anmelden seine Standard-Mail („Hallo … Austreten“, je Person eine, Text nicht änderbar); wohin
+  „Austreten“ führt, bestimmt `signOutUrlTemplate` beim Anmelden. Das Formular schickt es jetzt mit – der Link führt
+  auf `…/#<instanz>/<gruppe>/abmelden/<schlüssel>` auf unserer Seite, im Design der Veranstaltung (gemeinsamer
+  `FormularRahmen` mit dem Formular, keine Kopie der Gestaltungsregeln):
+  - **Angemeldet:** jede Person mit „Absagen“ und Rückfrage darunter. Nach dem Absagen (`signout`, 204) wird
+    **nachgelesen** – steht die Person noch da, gibt es eine Fehlermeldung statt „abgesagt“. Vorübergehende Fehler
+    lassen die Rückfrage offen, ein zweiter Klick versucht es erneut.
+  - **Bezahlung:** Bankdaten und Verwendungszweck, wenn die Veranstaltung etwas kostet und ein Konto hat (den Betrag
+    gibt ChurchTools ohne Login nicht heraus).
+  - **Etwas ändern?** Ändern geht ohne Login nicht – die Seite nennt den **Kontakt für Rückfragen** (neu je
+    Veranstaltung im Fenster „Anmeldung“, auf der Karte zu sehen) und bietet „Weitere Person anmelden“.
+  - Falscher oder verbrauchter Link → „Dieser Link gilt nicht“; Veranstaltung nicht mehr lesbar → Seite schlicht,
+    Absagen geht trotzdem.
+  - **Formular-Paket mit aktualisieren** – erst ein neues Paket schickt den Link mit.
+
 ### Neu (Anmeldungen, A6-3, #593)
 
 - **Spam-Schutz im öffentlichen Formular – unsichtbar** (Alwin, 16.10.2026: „nur unsichtbar“). Gemessen: ChurchTools

@@ -237,6 +237,11 @@ export interface Antworten {
 
 const MAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
+/** Sieht wie eine E-Mail-Adresse aus – dieselbe Prüfung für das Formular und den Kontakt der Veranstaltung. */
+export function mailGueltig(s: string): boolean {
+  return MAIL.test(s.trim());
+}
+
 /**
  * **Welche Pflichtangaben fehlen** – Schlüssel wie `anmeldung.mail`, `personen.1.birth`,
  * `anmeldung.name.vor`. Leer = alles da. Dieselbe Prüfung im Formular und in der Nachprüfung.
@@ -245,7 +250,7 @@ export function pruefeAntworten(f: Formular, a: Antworten): string[] {
   const fehlt: string[] = [];
   const pruefe = (x: Feld, wert: Antwort, pfad: string) => {
     if (nurText(x.typ) || x.typ === 'price' || x.zustand === 'aus') return;
-    if (x.typ === 'email' && typeof wert === 'string' && wert.trim() && !MAIL.test(wert.trim())) {
+    if (x.typ === 'email' && typeof wert === 'string' && wert.trim() && !mailGueltig(wert)) {
       fehlt.push(pfad);
       return;
     }
@@ -517,6 +522,11 @@ export interface OeffentlicheEinstellungen {
   loeschfristMonate: number;
   /** Konto, Zahlungsfrist, Verwendungszweck (A4) – öffentlich lesbar, siehe `bezahlung.ts`. */
   bezahlung: Bezahlung;
+  /**
+   * **Kontakt für Rückfragen** (A6-4, Alwin 16.10.2026: „je Veranstaltung“) – E-Mail-Adresse, steht auf „Deine
+   * Anmeldung“. Die Mail von ChurchTools kommt von noreply; Antworten darauf landen nirgends. Leer = keine Angabe.
+   */
+  kontakt: string;
 }
 
 const geltung = z.enum(['person', 'anmeldung']);
@@ -679,6 +689,8 @@ const einstellungenSchema = z.object({
       zweck: z.string().max(ZWECK_MAX),
     })
     .default(() => ({ ...STANDARD_BEZAHLUNG })),
+  // Seit A6-4. Mit Standardwert, damit ältere Einstellungen lesbar bleiben.
+  kontakt: z.string().max(120).default(''),
 });
 
 // ── Speicherformat v2 (A5): unsichtbar, gepackt, mit Sicherung ──────────────────────────────────

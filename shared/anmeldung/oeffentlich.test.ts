@@ -6,6 +6,9 @@ import {
   LADE_FEHLER_TEXT,
   apiBasis,
   formularAdresseAus,
+  abmeldeDatenAus,
+  abmeldeOrtAusLink,
+  abmeldeVorlage,
   freiePlaetzeAus,
   herkunftVon,
   ladeFehlerAus,
@@ -129,5 +132,72 @@ describe('formularAdresseAus – die Adresse der Formular-Seite der Gemeinde', (
     expect(formularAdresseAus('http://localhost:5177')).toBe('http://localhost:5177/');
     expect(formularAdresseAus('http://127.0.0.1:5177/')).toBe('http://127.0.0.1:5177/');
     expect(herkunftVon('http://localhost:5177/')).toBe('http://localhost:5177');
+  });
+});
+
+describe('„Deine Anmeldung“ (A6-4) – Link aus der Mail', () => {
+  it('liest, was abmeldeVorlage baut, nachdem ChurchTools $groupId und $token ersetzt hat (gegen den Erzeuger)', () => {
+    const vorlage = abmeldeVorlage(
+      'https://anmeldung.beispiel.de/',
+      'test-ecg-donrath.church.tools',
+    );
+    expect(vorlage).toBe(
+      'https://anmeldung.beispiel.de/#test-ecg-donrath.church.tools/$groupId/abmelden/$token',
+    );
+    const link = vorlage.replace('$groupId', '165').replace('$token', 'ltmB5wFTNw2N8Izw1bJ3');
+    expect(abmeldeOrtAusLink(new URL(link).hash)).toEqual({
+      instanz: 'test-ecg-donrath.church.tools',
+      gruppeId: 165,
+      token: 'ltmB5wFTNw2N8Izw1bJ3',
+    });
+    // Ein alter `#…` an der Basis fliegt raus; der Anmeldelink ist KEIN Abmeldelink und umgekehrt.
+    expect(abmeldeVorlage('https://a.de/#x/1', 'i.de')).toBe(
+      'https://a.de/#i.de/$groupId/abmelden/$token',
+    );
+    expect(abmeldeOrtAusLink('#test.church.tools/165')).toBeNull();
+    expect(ortAusLink('#test.church.tools/165/abmelden/ltmB5wFTNw2N8Izw1bJ3')).toBeNull();
+  });
+
+  it('kaputte Links → null (falscher Token, kein Rechnername, Gruppe 0)', () => {
+    for (const h of [
+      '#test.church.tools/165/abmelden/kurz',
+      '#test.church.tools/165/abmelden/mit leer zeichen',
+      '#localhost/165/abmelden/ltmB5wFTNw2N8Izw1bJ3',
+      '#test.church.tools/0/abmelden/ltmB5wFTNw2N8Izw1bJ3',
+    ])
+      expect(abmeldeOrtAusLink(h), h).toBeNull();
+  });
+
+  it('liest signoutdata so, wie ChurchTools es am 16.10.2026 geliefert hat', () => {
+    const d = abmeldeDatenAus({
+      data: {
+        token: 'ltmB5wFTNw2N8Izw1bJ3',
+        requester: {
+          title: 'Kalle Testkind A6g',
+          domainIdentifier: '84',
+          domainAttributes: { firstName: 'Kalle', lastName: 'Testkind A6g' },
+        },
+        requesterEmail: 'friesen.alwin+a6g@ecg-donrath.de',
+        group: { title: 'TEST A5 Baukasten', domainIdentifier: '165' },
+        selfSignOutPersons: [{ title: 'Kalle Testkind A6g', domainIdentifier: '84' }, { foo: 1 }],
+        leaderSignOutPersons: [],
+        groupHasAutoAccept: true,
+      },
+    });
+    expect(d).toEqual({
+      veranstaltung: 'TEST A5 Baukasten',
+      anmelder: 'Kalle Testkind A6g',
+      nachname: 'Testkind A6g',
+      mail: 'friesen.alwin+a6g@ecg-donrath.de',
+      personen: [{ id: 84, name: 'Kalle Testkind A6g' }],
+    });
+    expect(abmeldeDatenAus({})).toBeNull();
+    expect(abmeldeDatenAus({ data: { requester: null } })).toEqual({
+      veranstaltung: '',
+      anmelder: '',
+      nachname: '',
+      mail: '',
+      personen: [],
+    });
   });
 });

@@ -367,6 +367,103 @@ function Symbol({ name }: { name: keyof typeof SYMBOLE }) {
   );
 }
 
+/** Termin in einer Zeile: „Sa, 21.11.2026 · Gemeindehaus“ (mehrtägig mit „–“), sonst „Termin folgt“. */
+function terminZeile(e: OeffentlicheEinstellungen): string {
+  const t = e.termin;
+  return t
+    ? `${datumText(t.beginn.slice(0, 10))}${t.ende && t.ende.slice(0, 10) !== t.beginn.slice(0, 10) ? ` – ${datumText(t.ende.slice(0, 10))}` : ''}${t.ort ? ` · ${t.ort}` : ''}`
+    : 'Termin folgt';
+}
+
+/**
+ * **Der Rahmen des Formulars** – Gestaltung (Farben, Schriften, Aufbau), Kopf mit Logo und Titelbild, Seitenleiste.
+ * Die EINE Stelle dafür: das Anmeldeformular und „Deine Anmeldung“ (A6-4) sehen gleich aus, ohne die Regeln zu
+ * kopieren. `info` steht unter dem Kopf (Fakten, Begrüßung), `children` im Hauptbereich.
+ */
+export function FormularRahmen({
+  ansicht,
+  titel,
+  kopfZusatz,
+  info,
+  children,
+}: {
+  ansicht: Ansicht;
+  titel: ReactNode;
+  kopfZusatz?: ReactNode;
+  info?: ReactNode;
+  children: ReactNode;
+}) {
+  const e = ansicht.einstellungen;
+  const g = e.gestaltung;
+  const unter = terminZeile(e);
+  // Jede Einstellung eine Klasse bzw. eine Variable (Entwurf v3) – keine starren Vorlagen mehr.
+  const mitBild = !!ansicht.bildUrl;
+  const logoOben = g.logo !== 'keins' && !!g.logoUrl && g.logoOrt === 'oben';
+  const bildAlsSeite = mitBild && (g.hintergrund === 'bild' || g.aufbau === 'seite');
+  const klassen = [
+    s.pv,
+    s[`a-${g.aufbau}`],
+    s[`kh-${g.kopfHoehe}`],
+    // Steht das Logo oben in der Mitte, steht auch der Titel mittig (Alwin, 14.10.2026) – sonst wirkt es schief.
+    g.kopfAusrichtung === 'mitte' || logoOben ? s['kopf-mitte'] : '',
+    s[`fs-${g.feldstil}`],
+    s[`bt-${g.knoepfe}`],
+    g.knopfVoll ? s['bt-voll'] : '',
+    s[`br-${g.breite}`] ?? '',
+    s[`ek-${g.ecken}`],
+    g.schatten ? s.schatten : '',
+    g.rahmen ? s.rahmen : '',
+    g.bunt ? s.bunt : '',
+    g.gross ? s.gross : '',
+    g.hintergrund === 'muster' ? s[`m-${g.muster}`] : '',
+    bildAlsSeite ? s['bild-seite'] : mitBild ? s['bild-kopf'] : '',
+  ].join(' ');
+  const stil = {
+    '--p-accent': g.farbe,
+    '--p-on-accent': textAufFarbe(g.farbe),
+    '--p-page': g.seitenfarbe,
+    // Text direkt auf der Seite (Hinweise, Begrüßung) muss auf der Seitenfarbe lesbar sein.
+    '--p-auf-seite': bildAlsSeite ? '#ffffff' : textAufFarbe(g.seitenfarbe),
+    '--p-card': g.kartenfarbe,
+    '--p-text': g.schriftfarbe,
+    '--p-muster': g.musterfarbe,
+    '--p-head': SCHRIFT[g.kopfSchrift],
+    '--p-body': SCHRIFT[g.textSchrift],
+    ...(mitBild ? { '--user-img': `url("${titelbildGross(ansicht.bildUrl!)}")` } : {}),
+  } as React.CSSProperties;
+  const logo =
+    g.logo !== 'keins' && g.logoUrl ? (
+      <img
+        className={`${s.logo} ${g.logoOrt === 'oben' ? s['logo-oben'] : ''}`}
+        src={titelbildGross(g.logoUrl, 240)}
+        alt=""
+      />
+    ) : null;
+
+  return (
+    <div className={klassen} style={stil}>
+      <div className={s['pv-shell']}>
+        <aside className={s.side}>
+          <header className={s.hero}>
+            <div
+              className={`${s['hero-in']} ${g.logoOrt === 'links' && logo ? s['mit-logo-links'] : ''}`}
+            >
+              {logo}
+              <div>
+                <h1>{titel}</h1>
+                <p className={s.sub}>{unter}</p>
+              </div>
+            </div>
+            {kopfZusatz}
+          </header>
+          {info}
+        </aside>
+        <div className={s.main}>{children}</div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Das ganze Formular. `vorschau`: mit Musterdaten, „Absenden“ zeigt nur, wie die Bestätigung aussähe. `probe`:
  * das öffentliche Formular als Trockenlauf („Extern öffnen und testen“) – sonst wie für Gäste, schickt aber nichts.
@@ -431,58 +528,10 @@ export function AnmeldeFormular({
       personen: a.personen.map((p, j) => (i === j ? { ...p, [id]: w } : p)),
     }));
 
-  const t = e.termin;
-  const unter = t
-    ? `${datumText(t.beginn.slice(0, 10))}${t.ende && t.ende.slice(0, 10) !== t.beginn.slice(0, 10) ? ` – ${datumText(t.ende.slice(0, 10))}` : ''}${t.ort ? ` · ${t.ort}` : ''}`
-    : 'Termin folgt';
   const frei = ansicht.freiePlaetze ?? null;
   const freiZeigen =
     frei !== null &&
     (e.plaetze.zeigen === 'immer' || (e.plaetze.zeigen === 'knapp' && frei < e.plaetze.knappUnter));
-
-  // Jede Einstellung eine Klasse bzw. eine Variable (Entwurf v3) – keine starren Vorlagen mehr.
-  const mitBild = !!ansicht.bildUrl;
-  const logoOben = g.logo !== 'keins' && !!g.logoUrl && g.logoOrt === 'oben';
-  const bildAlsSeite = mitBild && (g.hintergrund === 'bild' || g.aufbau === 'seite');
-  const klassen = [
-    s.pv,
-    s[`a-${g.aufbau}`],
-    s[`kh-${g.kopfHoehe}`],
-    // Steht das Logo oben in der Mitte, steht auch der Titel mittig (Alwin, 14.10.2026) – sonst wirkt es schief.
-    g.kopfAusrichtung === 'mitte' || logoOben ? s['kopf-mitte'] : '',
-    s[`fs-${g.feldstil}`],
-    s[`bt-${g.knoepfe}`],
-    g.knopfVoll ? s['bt-voll'] : '',
-    s[`br-${g.breite}`] ?? '',
-    s[`ek-${g.ecken}`],
-    g.schatten ? s.schatten : '',
-    g.rahmen ? s.rahmen : '',
-    g.bunt ? s.bunt : '',
-    g.gross ? s.gross : '',
-    g.hintergrund === 'muster' ? s[`m-${g.muster}`] : '',
-    bildAlsSeite ? s['bild-seite'] : mitBild ? s['bild-kopf'] : '',
-  ].join(' ');
-  const stil = {
-    '--p-accent': g.farbe,
-    '--p-on-accent': textAufFarbe(g.farbe),
-    '--p-page': g.seitenfarbe,
-    // Text direkt auf der Seite (Hinweise, Begrüßung) muss auf der Seitenfarbe lesbar sein.
-    '--p-auf-seite': bildAlsSeite ? '#ffffff' : textAufFarbe(g.seitenfarbe),
-    '--p-card': g.kartenfarbe,
-    '--p-text': g.schriftfarbe,
-    '--p-muster': g.musterfarbe,
-    '--p-head': SCHRIFT[g.kopfSchrift],
-    '--p-body': SCHRIFT[g.textSchrift],
-    ...(mitBild ? { '--user-img': `url("${titelbildGross(ansicht.bildUrl!)}")` } : {}),
-  } as React.CSSProperties;
-  const logo =
-    g.logo !== 'keins' && g.logoUrl ? (
-      <img
-        className={`${s.logo} ${g.logoOrt === 'oben' ? s['logo-oben'] : ''}`}
-        src={titelbildGross(g.logoUrl, 240)}
-        alt=""
-      />
-    ) : null;
 
   const huelle = (f: Feld, bereich: 'anmeldung' | 'person', inhalt: ReactNode) =>
     baukasten ? <Fragment key={f.id}>{baukasten.feld(f, bereich, inhalt)}</Fragment> : inhalt;
@@ -520,322 +569,305 @@ export function AnmeldeFormular({
   const zeilen = preis.posten.filter((p) => p.betragCent !== null);
 
   return (
-    <div className={klassen} style={stil}>
-      <div className={s['pv-shell']}>
-        <aside className={s.side}>
-          <header className={s.hero}>
-            <div
-              className={`${s['hero-in']} ${g.logoOrt === 'links' && logo ? s['mit-logo-links'] : ''}`}
-            >
-              {logo}
-              <div>
-                <h1>{baukasten?.titel ?? ansicht.name}</h1>
-                <p className={s.sub}>{unter}</p>
-              </div>
-            </div>
-            {baukasten?.bild}
-          </header>
-          <div className={s.info}>
-            <div className={s.facts}>
-              {freiZeigen && (
-                <span className={`${s.fact} ${s.hot}`}>
-                  <Symbol name="leute" />
-                  noch <b>{frei === 1 ? '1 Platz' : `${frei} Plätze`}</b> frei
-                </span>
-              )}
-              {ansicht.anmeldeschluss && (
-                <span className={s.fact}>
-                  <Symbol name="uhr" />
-                  Anmeldeschluss <b>{datumText(ansicht.anmeldeschluss)}</b>
-                </span>
-              )}
-              <span className={s.fact}>
-                <Symbol name="preis" />
-                <b>{preisKurz(e.preis)}</b>
+    <FormularRahmen
+      ansicht={ansicht}
+      titel={baukasten?.titel ?? ansicht.name}
+      kopfZusatz={baukasten?.bild}
+      info={
+        <div className={s.info}>
+          <div className={s.facts}>
+            {freiZeigen && (
+              <span className={`${s.fact} ${s.hot}`}>
+                <Symbol name="leute" />
+                noch <b>{frei === 1 ? '1 Platz' : `${frei} Plätze`}</b> frei
               </span>
-            </div>
-            {baukasten?.einleitung ?? (g.text && <p className={s.intro}>{g.text}</p>)}
+            )}
+            {ansicht.anmeldeschluss && (
+              <span className={s.fact}>
+                <Symbol name="uhr" />
+                Anmeldeschluss <b>{datumText(ansicht.anmeldeschluss)}</b>
+              </span>
+            )}
+            <span className={s.fact}>
+              <Symbol name="preis" />
+              <b>{preisKurz(e.preis)}</b>
+            </span>
           </div>
-        </aside>
-        <div className={s.main}>
-          {fertig ? (
-            <div className={`${s.sec} ${s.done}`} role="status">
-              {fertig.art === 'bestaetigen' ? (
-                <>
-                  <h2>Fast geschafft!</h2>
-                  <p>
-                    Du bist bei der Gemeinde schon bekannt. Bitte bestätige die Anmeldung über den
-                    Link in der E-Mail{fertig.mail ? ` an ${fertig.mail}` : ''} – erst dann ist sie
-                    gültig.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <h2>Danke für die Anmeldung!</h2>
-                  <p>
-                    Die Bestätigung kommt per E-Mail
-                    {typeof antworten.anmeldung.mail === 'string'
-                      ? ` an ${antworten.anmeldung.mail}`
-                      : ''}
-                    .
-                  </p>
-                </>
-              )}
-              {(vorschau || probe) && (
-                <p className={s.vorschauhinweis}>
-                  {vorschau ? 'Vorschau' : 'Probelauf'} – abgeschickt wurde nichts.
-                </p>
-              )}
-              {/* Nach einer echten Anmeldung kein „Zurück“ – ein zweites Abschicken wäre eine zweite Anmeldung. */}
-              {!echt && (
-                <button type="button" className={s.addbtn} onClick={() => setFertig(null)}>
-                  Zurück zum Formular
-                </button>
-              )}
-            </div>
+          {baukasten?.einleitung ?? (g.text && <p className={s.intro}>{g.text}</p>)}
+        </div>
+      }
+    >
+      {fertig ? (
+        <div className={`${s.sec} ${s.done}`} role="status">
+          {fertig.art === 'bestaetigen' ? (
+            <>
+              <h2>Fast geschafft!</h2>
+              <p>
+                Du bist bei der Gemeinde schon bekannt. Bitte bestätige die Anmeldung über den Link
+                in der E-Mail{fertig.mail ? ` an ${fertig.mail}` : ''} – erst dann ist sie gültig.
+              </p>
+            </>
           ) : (
-            <form
-              className={s.formstack}
-              noValidate
-              onSubmit={(ev) => {
-                ev.preventDefault();
-                void absenden();
-              }}
-            >
-              <section className={s.sec}>
-                <h2>
-                  {mitHinweis(
-                    kinder ? 'Kontakt der Eltern' : 'Deine Kontaktdaten',
-                    baukasten?.hinweis?.('kontakt'),
+            <>
+              <h2>Danke für die Anmeldung!</h2>
+              <p>
+                Die Bestätigung kommt per E-Mail
+                {typeof antworten.anmeldung.mail === 'string'
+                  ? ` an ${antworten.anmeldung.mail}`
+                  : ''}
+                .
+              </p>
+            </>
+          )}
+          {(vorschau || probe) && (
+            <p className={s.vorschauhinweis}>
+              {vorschau ? 'Vorschau' : 'Probelauf'} – abgeschickt wurde nichts.
+            </p>
+          )}
+          {/* Nach einer echten Anmeldung kein „Zurück“ – ein zweites Abschicken wäre eine zweite Anmeldung. */}
+          {!echt && (
+            <button type="button" className={s.addbtn} onClick={() => setFertig(null)}>
+              Zurück zum Formular
+            </button>
+          )}
+        </div>
+      ) : (
+        <form
+          className={s.formstack}
+          noValidate
+          onSubmit={(ev) => {
+            ev.preventDefault();
+            void absenden();
+          }}
+        >
+          <section className={s.sec}>
+            <h2>
+              {mitHinweis(
+                kinder ? 'Kontakt der Eltern' : 'Deine Kontaktdaten',
+                baukasten?.hinweis?.('kontakt'),
+              )}
+            </h2>
+            {baukasten?.hinweisText?.('kontakt')}
+            {kopf.map((f) =>
+              huelle(
+                f,
+                'anmeldung',
+                <FeldEingabe
+                  key={f.id}
+                  feld={f}
+                  pfad={`anmeldung.${f.id}`}
+                  wert={antworten.anmeldung[f.id]}
+                  onWert={(w) => setAnmeldung(f.id, w)}
+                  fehler={fehler}
+                  zusatz={baukasten?.hinweis?.(f.id)}
+                />,
+              ),
+            )}
+          </section>
+          <section className={s.sec}>
+            <h2>
+              {mitHinweis(
+                kinder ? 'Welche Kinder meldest du an?' : 'Wer nimmt teil?',
+                baukasten?.hinweis?.('teil'),
+              )}
+            </h2>
+            {baukasten?.hinweisText?.('teil')}
+            {personen.map((p, i) => (
+              <div key={i} className={s.person}>
+                <div className={s['person-top']}>
+                  <strong>
+                    {kinder ? 'Kind' : 'Person'} {i + 1}
+                    {baukasten && e.wer !== 'einzeln' && (
+                      <small className={s.wiederholt}>
+                        wiederholt sich für {kinder ? 'jedes Kind' : 'jede Person'}
+                      </small>
+                    )}
+                  </strong>
+                  {!baukasten && antworten.personen.length > 1 && (
+                    <button
+                      type="button"
+                      className={s.xbtn}
+                      onClick={() =>
+                        setAntworten((a) => ({
+                          ...a,
+                          personen: a.personen.filter((_, j) => j !== i),
+                        }))
+                      }
+                    >
+                      Entfernen
+                    </button>
                   )}
-                </h2>
-                {baukasten?.hinweisText?.('kontakt')}
-                {kopf.map((f) =>
+                </div>
+                {personFelder.map((f) =>
                   huelle(
                     f,
-                    'anmeldung',
+                    'person',
                     <FeldEingabe
                       key={f.id}
                       feld={f}
-                      pfad={`anmeldung.${f.id}`}
-                      wert={antworten.anmeldung[f.id]}
-                      onWert={(w) => setAnmeldung(f.id, w)}
+                      pfad={`personen.${i}.${f.id}`}
+                      wert={p[f.id]}
+                      onWert={(w) => setPerson(i, f.id, w)}
                       fehler={fehler}
                       zusatz={baukasten?.hinweis?.(f.id)}
                     />,
                   ),
                 )}
-              </section>
-              <section className={s.sec}>
-                <h2>
-                  {mitHinweis(
-                    kinder ? 'Welche Kinder meldest du an?' : 'Wer nimmt teil?',
-                    baukasten?.hinweis?.('teil'),
-                  )}
-                </h2>
-                {baukasten?.hinweisText?.('teil')}
-                {personen.map((p, i) => (
-                  <div key={i} className={s.person}>
-                    <div className={s['person-top']}>
-                      <strong>
-                        {kinder ? 'Kind' : 'Person'} {i + 1}
-                        {baukasten && e.wer !== 'einzeln' && (
-                          <small className={s.wiederholt}>
-                            wiederholt sich für {kinder ? 'jedes Kind' : 'jede Person'}
-                          </small>
-                        )}
-                      </strong>
-                      {!baukasten && antworten.personen.length > 1 && (
-                        <button
-                          type="button"
-                          className={s.xbtn}
-                          onClick={() =>
-                            setAntworten((a) => ({
-                              ...a,
-                              personen: a.personen.filter((_, j) => j !== i),
-                            }))
-                          }
-                        >
-                          Entfernen
-                        </button>
-                      )}
-                    </div>
-                    {personFelder.map((f) =>
-                      huelle(
-                        f,
-                        'person',
-                        <FeldEingabe
-                          key={f.id}
-                          feld={f}
-                          pfad={`personen.${i}.${f.id}`}
-                          wert={p[f.id]}
-                          onWert={(w) => setPerson(i, f.id, w)}
-                          fehler={fehler}
-                          zusatz={baukasten?.hinweis?.(f.id)}
-                        />,
-                      ),
-                    )}
-                  </div>
-                ))}
-                {e.wer !== 'einzeln' && (
-                  <button
-                    type="button"
-                    className={s.addbtn}
-                    onClick={() =>
-                      !baukasten && setAntworten((a) => ({ ...a, personen: [...a.personen, {}] }))
-                    }
+              </div>
+            ))}
+            {e.wer !== 'einzeln' && (
+              <button
+                type="button"
+                className={s.addbtn}
+                onClick={() =>
+                  !baukasten && setAntworten((a) => ({ ...a, personen: [...a.personen, {}] }))
+                }
+              >
+                + {kinder ? 'Weiteres Kind' : 'Weitere Person'}
+              </button>
+            )}
+            {fehler.includes('personen') && (
+              <p className={s.warnline}>Bitte mindestens eine Person eintragen.</p>
+            )}
+          </section>
+          {preisFeld && (e.preis.grundpreis.art === 'auswahl' || e.preis.extras.length > 0) && (
+            <section className={s.sec}>
+              <h2>{mitHinweis(preisFeld.frage, baukasten?.hinweis?.('preis'))}</h2>
+              {baukasten?.hinweisText?.('preis')}
+              {e.preis.grundpreis.art === 'auswahl' && (
+                <div className={s.pf}>
+                  <label htmlFor="af-option">
+                    {e.preis.grundpreis.auswahlName}
+                    <span className={s.req} aria-hidden="true">
+                      *
+                    </span>
+                  </label>
+                  <select
+                    id="af-option"
+                    value={option}
+                    onChange={(ev) => setOption(Number(ev.target.value))}
                   >
-                    + {kinder ? 'Weiteres Kind' : 'Weitere Person'}
-                  </button>
-                )}
-                {fehler.includes('personen') && (
-                  <p className={s.warnline}>Bitte mindestens eine Person eintragen.</p>
-                )}
-              </section>
-              {preisFeld && (e.preis.grundpreis.art === 'auswahl' || e.preis.extras.length > 0) && (
-                <section className={s.sec}>
-                  <h2>{mitHinweis(preisFeld.frage, baukasten?.hinweis?.('preis'))}</h2>
-                  {baukasten?.hinweisText?.('preis')}
-                  {e.preis.grundpreis.art === 'auswahl' && (
-                    <div className={s.pf}>
-                      <label htmlFor="af-option">
-                        {e.preis.grundpreis.auswahlName}
-                        <span className={s.req} aria-hidden="true">
-                          *
+                    {e.preis.grundpreis.optionen.map((o, i) => (
+                      <option key={o.name} value={i}>
+                        {o.name} · {euroText(o.preisCent)} pro Person
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {e.preis.extras.length > 0 && (
+                <div className={s.pf}>
+                  <span className={s.lab}>Extras</span>
+                  <div className={s.choices}>
+                    {e.preis.extras.map((x, i) => (
+                      <label key={x.bezeichnung} className={s.choice}>
+                        <input
+                          type="checkbox"
+                          checked={extras[i] ?? false}
+                          onChange={(ev) =>
+                            setExtras(extras.map((c, j) => (i === j ? ev.target.checked : c)))
+                          }
+                        />
+                        <span>
+                          {x.bezeichnung} (+{euroText(x.preisCent)}
+                          {x.gilt === 'person' ? ' pro Person' : ''})
                         </span>
                       </label>
-                      <select
-                        id="af-option"
-                        value={option}
-                        onChange={(ev) => setOption(Number(ev.target.value))}
-                      >
-                        {e.preis.grundpreis.optionen.map((o, i) => (
-                          <option key={o.name} value={i}>
-                            {o.name} · {euroText(o.preisCent)} pro Person
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  {e.preis.extras.length > 0 && (
-                    <div className={s.pf}>
-                      <span className={s.lab}>Extras</span>
-                      <div className={s.choices}>
-                        {e.preis.extras.map((x, i) => (
-                          <label key={x.bezeichnung} className={s.choice}>
-                            <input
-                              type="checkbox"
-                              checked={extras[i] ?? false}
-                              onChange={(ev) =>
-                                setExtras(extras.map((c, j) => (i === j ? ev.target.checked : c)))
-                              }
-                            />
-                            <span>
-                              {x.bezeichnung} (+{euroText(x.preisCent)}
-                              {x.gilt === 'person' ? ' pro Person' : ''})
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </section>
-              )}
-              <section className={s.sec}>
-                {ende.map((f) =>
-                  huelle(
-                    f,
-                    'anmeldung',
-                    <FeldEingabe
-                      key={f.id}
-                      feld={f}
-                      pfad={`anmeldung.${f.id}`}
-                      wert={antworten.anmeldung[f.id]}
-                      onWert={(w) => setAnmeldung(f.id, w)}
-                      fehler={fehler}
-                      zusatz={baukasten?.hinweis?.(f.id)}
-                      loeschtag={loeschtag}
-                    />,
-                  ),
-                )}
-                {kostet && (
-                  <div className={s.sumbox} aria-label="Preis">
-                    {zeilen.map((p, i) => (
-                      <div key={i} className={s.sl}>
-                        <span>
-                          {p.text} <small>{p.hinweis}</small>
-                        </span>
-                        <span>
-                          {p.betragCent! < 0
-                            ? `−${euroText(-p.betragCent!)}`
-                            : euroText(p.betragCent!)}
-                        </span>
-                      </div>
                     ))}
                   </div>
-                )}
-                <div className={s.sum}>
-                  <div>
-                    {antworten.personen.length === 1
-                      ? '1 Person'
-                      : `${antworten.personen.length} Personen`}
-                    <small>
-                      {kostet
-                        ? 'Die Bankverbindung kommt mit der Bestätigung per E-Mail.'
-                        : 'Die Teilnahme ist kostenlos.'}
-                    </small>
-                  </div>
-                  <div className={s.big}>{kostet ? euroText(preis.gesamtCent) : 'kostenlos'}</div>
                 </div>
-                {preis.ausgebucht && (
-                  <p className={s.warnline}>
-                    Diese Auswahl ist ausgebucht – die Anmeldung kommt auf die Warteliste.
-                  </p>
-                )}
-                {fehler.length > 0 && (
-                  <p className={s.warnline} role="alert">
-                    Bitte die markierten Angaben ergänzen.
-                  </p>
-                )}
-                {sendeFehler && (
-                  <p className={s.warnline} role="alert">
-                    {sendeFehler}
-                  </p>
-                )}
-                {echt && (
-                  // Honigtopf (A6-3): für Menschen unsichtbar und nicht erreichbar, Bots füllen ihn aus.
-                  <div className={s.honigtopf} aria-hidden="true">
-                    <label>
-                      Bitte leer lassen
-                      <input
-                        ref={honigtopf}
-                        name={HONIGTOPF_NAME}
-                        type="text"
-                        tabIndex={-1}
-                        autoComplete="off"
-                        defaultValue=""
-                      />
-                    </label>
-                  </div>
-                )}
-                <button type="submit" className={s.go} disabled={sendet} aria-busy={sendet}>
-                  {sendet ? 'Wird gesendet …' : 'Verbindlich anmelden'}
-                </button>
-                {vorschau && !baukasten && (
-                  <p className={s.hintline}>
-                    Vorschau mit Musterdaten – abgeschickt wird hier nichts.
-                  </p>
-                )}
-                {probe && <p className={s.hintline}>Probelauf – abgeschickt wird hier nichts.</p>}
-              </section>
-            </form>
+              )}
+            </section>
           )}
-          <footer className={s.foot}>
-            {ansicht.gemeinde ?? 'Gemeinde'} · Fragen beantwortet das Team als Antwort auf die
-            Bestätigungsmail.
-          </footer>
-        </div>
-      </div>
-    </div>
+          <section className={s.sec}>
+            {ende.map((f) =>
+              huelle(
+                f,
+                'anmeldung',
+                <FeldEingabe
+                  key={f.id}
+                  feld={f}
+                  pfad={`anmeldung.${f.id}`}
+                  wert={antworten.anmeldung[f.id]}
+                  onWert={(w) => setAnmeldung(f.id, w)}
+                  fehler={fehler}
+                  zusatz={baukasten?.hinweis?.(f.id)}
+                  loeschtag={loeschtag}
+                />,
+              ),
+            )}
+            {kostet && (
+              <div className={s.sumbox} aria-label="Preis">
+                {zeilen.map((p, i) => (
+                  <div key={i} className={s.sl}>
+                    <span>
+                      {p.text} <small>{p.hinweis}</small>
+                    </span>
+                    <span>
+                      {p.betragCent! < 0 ? `−${euroText(-p.betragCent!)}` : euroText(p.betragCent!)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className={s.sum}>
+              <div>
+                {antworten.personen.length === 1
+                  ? '1 Person'
+                  : `${antworten.personen.length} Personen`}
+                <small>
+                  {kostet
+                    ? 'Die Bankverbindung kommt mit der Bestätigung per E-Mail.'
+                    : 'Die Teilnahme ist kostenlos.'}
+                </small>
+              </div>
+              <div className={s.big}>{kostet ? euroText(preis.gesamtCent) : 'kostenlos'}</div>
+            </div>
+            {preis.ausgebucht && (
+              <p className={s.warnline}>
+                Diese Auswahl ist ausgebucht – die Anmeldung kommt auf die Warteliste.
+              </p>
+            )}
+            {fehler.length > 0 && (
+              <p className={s.warnline} role="alert">
+                Bitte die markierten Angaben ergänzen.
+              </p>
+            )}
+            {sendeFehler && (
+              <p className={s.warnline} role="alert">
+                {sendeFehler}
+              </p>
+            )}
+            {echt && (
+              // Honigtopf (A6-3): für Menschen unsichtbar und nicht erreichbar, Bots füllen ihn aus.
+              <div className={s.honigtopf} aria-hidden="true">
+                <label>
+                  Bitte leer lassen
+                  <input
+                    ref={honigtopf}
+                    name={HONIGTOPF_NAME}
+                    type="text"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    defaultValue=""
+                  />
+                </label>
+              </div>
+            )}
+            <button type="submit" className={s.go} disabled={sendet} aria-busy={sendet}>
+              {sendet ? 'Wird gesendet …' : 'Verbindlich anmelden'}
+            </button>
+            {vorschau && !baukasten && (
+              <p className={s.hintline}>Vorschau mit Musterdaten – abgeschickt wird hier nichts.</p>
+            )}
+            {probe && <p className={s.hintline}>Probelauf – abgeschickt wird hier nichts.</p>}
+          </section>
+        </form>
+      )}
+      <footer className={s.foot}>
+        {ansicht.gemeinde ?? 'Gemeinde'} · Fragen beantwortet das Team als Antwort auf die
+        Bestätigungsmail.
+      </footer>
+    </FormularRahmen>
   );
 }

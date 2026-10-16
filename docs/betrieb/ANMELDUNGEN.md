@@ -66,6 +66,10 @@ formular:hochladen` (optional `ANMELDUNG_FTP_ORDNER`; `ANMELDUNG_FTP_BENUTZER`, 
 4. In der Erweiterung **„Einstellungen“** (nur Gruppen-Admins): die Adresse eintragen. Die Erweiterung prüft,
    ob die Seite antwortet und ob sie als erlaubte Herkunft eingetragen ist.
 
+**Spam-Schutz** (unsichtbar): ein verstecktes Feld, das nur Bots ausfüllen, und eine Mindest-Ausfüllzeit von 3
+Sekunden. Gäste merken davon nichts. Ein Captcha gibt es bewusst nicht – ohne eigenen Server ließe es sich nicht
+prüfen. Was trotzdem durchkommt, entfernt die Leitung in ChurchTools (später im Reiter Anmeldungen).
+
 Jeder Link zu einer Anmeldung lautet dann `https://anmeldung.eure-gemeinde.de/#eure-instanz.church.tools/<Nummer>`
 – hinter `#` stehen Instanz und Gruppe. Damit Veranstalter die Adresse bekommen, brauchen sie das Recht, die
 Kategorie „Einstellungen der Anmeldungen“ zu **sehen**.

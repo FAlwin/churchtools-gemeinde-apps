@@ -42,6 +42,9 @@ let antworten: Record<string, Antwort[]>;
 let aufrufe: { methode: string; pfad: string; body?: unknown; credentials?: string }[];
 
 beforeEach(() => {
+  // Nur die Uhr gestellt (A6-3: Mindest-Ausfüllzeit), die Zeitgeber laufen echt – `findBy…` wartet weiter.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-10-16T10:00:00Z'));
   aufrufe = [];
   antworten = {
     'GET /api/publicgroups/66': [{ status: 200, body: { data: GRUPPE } }],
@@ -74,6 +77,7 @@ beforeEach(() => {
   window.location.hash = '#test.church.tools/66';
 });
 afterEach(() => {
+  vi.useRealTimers();
   window.location.hash = '';
   window.history.replaceState(null, '', '/');
 });
@@ -89,6 +93,8 @@ async function ausfuellenUndAbschicken() {
   fireEvent.change(feld('af-personen.0.pname-vor'), { target: { value: 'Jonas' } });
   fireEvent.change(feld('af-personen.0.pname-nach'), { target: { value: 'Beispiel' } });
   fireEvent.click(screen.getByRole('checkbox', { name: /einverstanden/ }));
+  // Ein Mensch braucht länger als die Mindest-Ausfüllzeit (A6-3).
+  vi.setSystemTime(new Date('2026-10-16T10:00:30Z'));
   fireEvent.click(screen.getByRole('button', { name: 'Verbindlich anmelden' }));
 }
 const geschickt = () => aufrufe.filter((a) => a.pfad.endsWith('/signup'));

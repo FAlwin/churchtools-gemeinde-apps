@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import { berechnePreis, euroText } from '@shared/anmeldung/preis';
 import { alterAm, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
@@ -391,5 +391,75 @@ describe('Reihenfolge (Feinheiten A5)', () => {
     expect(text.indexOf('Bemerkungen')).toBeGreaterThan(-1);
     expect(text.indexOf('Bemerkungen')).toBeLessThan(text.indexOf('E-Mail'));
     expect(text.indexOf('Ich bin einverstanden')).toBeGreaterThan(text.indexOf('Bemerkungen'));
+  });
+});
+
+describe('Spam-Schutz im echten Formular (A6-3, #593)', () => {
+  afterEach(() => vi.useRealTimers());
+
+  /** Echtes Formular (mit `onAbsenden`), vollständig ausgefüllt, Uhr gestellt. */
+  function echt(onAbsenden = vi.fn().mockResolvedValue({ art: 'angemeldet' })) {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-16T10:00:00Z'));
+    const e = freizeit();
+    const r = render(
+      <AnmeldeFormular
+        ansicht={{ name: 'Freizeit', gemeinde: 'ECG', einstellungen: e, freiePlaetze: 3 }}
+        heute={HEUTE}
+        start={musterAntworten(e, HEUTE)}
+        onAbsenden={onAbsenden}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText(/Ich bin einverstanden/));
+    return { onAbsenden, ...r };
+  }
+  const absenden = () =>
+    fireEvent.click(screen.getByRole('button', { name: 'Verbindlich anmelden' }));
+
+  it('zu schnell → nichts geschickt, Bitte zu prüfen; nach 3 Sekunden geht es durch', async () => {
+    const { onAbsenden } = echt();
+    vi.setSystemTime(new Date('2026-10-16T10:00:01Z'));
+    absenden();
+    expect(onAbsenden).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert').textContent).toMatch(/kurz prüfen/);
+    vi.setSystemTime(new Date('2026-10-16T10:00:04Z'));
+    absenden();
+    await act(async () => {});
+    expect(onAbsenden).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Danke für die Anmeldung!')).toBeTruthy();
+  });
+
+  it('Honigtopf gefüllt → nichts geschickt, sichtbare Meldung (nicht still „Danke“)', async () => {
+    const { onAbsenden, container } = echt();
+    vi.setSystemTime(new Date('2026-10-16T10:01:00Z'));
+    const topf = container.querySelector<HTMLInputElement>('input[name="af-zusatz-hinweis"]')!;
+    expect(topf.tabIndex).toBe(-1);
+    expect(topf.closest('[aria-hidden="true"]')).toBeTruthy();
+    fireEvent.change(topf, { target: { value: 'http://spam.example' } });
+    absenden();
+    await act(async () => {});
+    expect(onAbsenden).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert').textContent).toMatch(/neu laden/);
+    expect(screen.queryByText('Danke für die Anmeldung!')).toBeNull();
+  });
+
+  it('zweimal Absenden im selben Augenblick → nur EINE Anmeldung', async () => {
+    let fertig: (w: { art: 'angemeldet' }) => void = () => {};
+    const onAbsenden = vi.fn(() => new Promise<{ art: 'angemeldet' }>((r) => (fertig = r)));
+    echt(onAbsenden);
+    vi.setSystemTime(new Date('2026-10-16T10:01:00Z'));
+    const form = screen.getByRole('button', { name: 'Verbindlich anmelden' }).closest('form')!;
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    expect(onAbsenden).toHaveBeenCalledTimes(1);
+    await act(async () => fertig({ art: 'angemeldet' }));
+  });
+
+  it('Vorschau: kein Honigtopf, keine Wartezeit', () => {
+    const { container } = zeigen(freizeit());
+    expect(container.querySelector('input[name="af-zusatz-hinweis"]')).toBeNull();
+    fireEvent.click(screen.getByLabelText(/Ich bin einverstanden/));
+    absenden();
+    expect(screen.getByText('Danke für die Anmeldung!')).toBeTruthy();
   });
 });

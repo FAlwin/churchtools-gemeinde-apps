@@ -912,3 +912,13 @@
     width: min(100%, calc((100dvh - 96px) * 2));
   }
 }
+
+// Honigtopf (A6-3): außerhalb des Bildschirms, nicht nur versteckt – manche Bots überspringen `display: none`.
+.pv .honigtopf {
+  position: absolute;
+  left: -10000px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}

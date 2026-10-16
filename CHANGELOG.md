@@ -174,6 +174,11 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Behoben (Dienstplaner)
 
+- **„Platz x von y“ nach der Platznummer** (#604, gefunden beim E5-Vergleich mit dem ChurchTools-Zauberstab, 16.10.2026):
+  ChurchTools liefert die Plätze eines Dienstes nicht immer in ihrer Reihenfolge (gemessen: Gesang 2 vor Gesang 1). Die
+  Matrix zeigte sie so, und „Platz x von y“ zählte nach der Position – der freie Gesang 2 hieß „Platz 1 von 2“. Jetzt
+  sortiert `planAus` die Plätze nach ihrer Nummer; gespeichert wurde schon vorher richtig.
+
 - **Drei Anzeige-Funde aus der Prüfung mit zwei Planern** (#584, 16.10.2026, Messprotokoll): **a)** Nach einem Konflikt im
   Entwurfs-Fach zeigt das Fach die neue Fassung des anderen Planers, und der Hinweis nennt sie mit Art („Spike hat
   diesen Entwurf eben geändert: Direkt zuteilen: Anna“) – vorher stand dort die alte Fassung und nur der Name.

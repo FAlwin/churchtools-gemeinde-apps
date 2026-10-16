@@ -183,6 +183,21 @@ describe('planAus', () => {
     expect(ton.zellen.map((c) => c?.map((x) => x.name) ?? null)).toEqual([['Alwin'], ['Anna']]);
   });
 
+  it('Plätze in der Reihenfolge der Platznummer – ChurchTools liefert sie nicht immer so (gemessen 16.10.2026)', () => {
+    // Wie an Termin 148: Gesang index 2 (frei) vor index 1 (Ella).
+    const p = plan([
+      termin(148, '2026-10-25T09:00:00Z', [
+        { serviceId: 9, personId: null, name: null, index: 2 },
+        { serviceId: 9, personId: 70, name: 'Ella Test', isAccepted: true, index: 1 },
+      ]),
+    ]);
+    const gesang = p.gruppen.flatMap((g) => g.zeilen).find((z) => z.dienst.name === 'Gesang')!;
+    expect(gesang.zellen[0]!.map((x) => [x.index, x.name])).toEqual([
+      [1, 'Ella Test'],
+      [2, null],
+    ]);
+  });
+
   it('freie Plätze je Gruppe und Spalte; null, wo die Gruppe nichts hat', () => {
     const p = plan(roh);
     expect(p.gruppen.map((g) => [g.gruppe?.name, g.frei])).toEqual([

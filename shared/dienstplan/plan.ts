@@ -170,6 +170,11 @@ export function planAus(
       (reihe[i] ??= []).push(platzAus(p, o.ichId));
     }
   });
+  // In der Reihenfolge der Platznummer (`index`), nicht wie ChurchTools sie liefert – gemessen 16.10.2026: Gesang mit
+  // `index 2` (frei) kam vor `index 1`; „Platz 1 von 2“ zeigte dann auf Platz 2. Alles danach zählt so (Matrix, „Wer
+  // kann?“, Zauberstab, „Platz x von y“); gespeichert wird ohnehin über den `index`.
+  for (const reihe of zellen.values())
+    for (const zelle of reihe) zelle?.sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
 
   const gruppen: PlanGruppe[] = [];
   const gruppeFuer = (g: Dienstgruppe | null): PlanGruppe => {

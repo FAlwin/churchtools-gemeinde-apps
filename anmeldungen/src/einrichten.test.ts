@@ -45,6 +45,7 @@ import {
   feldEntfernen,
   feldSpeichern,
   felderAnlegen,
+  pflichtNachziehen,
   feldEinordnen,
   feldTypAendern,
 } from './formularFelder';
@@ -847,7 +848,7 @@ describe('Formularfelder in ChurchTools (A5)', () => {
     return gruppen.get(id)!.felder.find((f) => f.id === e.ctFelder[feldId])!;
   };
 
-  it('Vorlage anlegen: Telefon, Bemerkungen, Allergien werden Spalten – Stufe 3, Pflicht wie im Formular', async () => {
+  it('Vorlage anlegen: Telefon, Bemerkungen, Allergien werden Spalten – Stufe 3, Pflicht nur bei Personen-Feldern', async () => {
     const id = await legeVeranstaltungAn({
       name: 'Kindertag',
       teamId: 7,
@@ -856,11 +857,14 @@ describe('Formularfelder in ChurchTools (A5)', () => {
     });
     await felderAnlegen(id);
     const tel = ctFeld(id, 'tel');
+    // Telefon gehört zur Anmeldung (steht nur bei der ersten Person) → in ChurchTools nie Pflicht (#597).
     expect(tel).toMatchObject({
       name: 'Telefon',
       securityLevel: 3,
-      requiredInRegistrationForm: true,
+      requiredInRegistrationForm: false,
     });
+    // „Fotos?“ steht bei jeder Person → Pflicht wie im Formular.
+    expect(ctFeld(id, 'foto')).toMatchObject({ requiredInRegistrationForm: true });
     expect(ctFeld(id, 'allergy')).toMatchObject({ useInRegistrationForm: true, securityLevel: 3 });
     // Name, E-Mail, Geburtsdatum stehen an der Person – keine Spalte.
     const e = einstellungenLesen(gruppen.get(id)!.note)!;
@@ -874,7 +878,7 @@ describe('Formularfelder in ChurchTools (A5)', () => {
     expect(aufrufe.filter((a) => !a.startsWith('GET') && a.includes('/memberfields'))).toEqual([]);
   });
 
-  it('A6-2b Kinder-Vorlage: Erziehungsberechtigte (lesbar) und Unterschrift in zwei Spalten, beide Pflicht', async () => {
+  it('A6-2b Kinder-Vorlage: Erziehungsberechtigte (lesbar) und Unterschrift in zwei Spalten, in ChurchTools nicht Pflicht', async () => {
     const id = await legeVeranstaltungAn({
       name: 'Kindertag',
       teamId: 7,
@@ -885,24 +889,45 @@ describe('Formularfelder in ChurchTools (A5)', () => {
     expect(ctFeld(id, 'eltern')).toMatchObject({
       name: 'Erziehungsberechtigte',
       fieldTypeCode: 'textarea',
-      requiredInRegistrationForm: true,
+      requiredInRegistrationForm: false,
     });
     expect(ctFeld(id, 'sign')).toMatchObject({
       name: 'Unterschrift',
       fieldTypeCode: 'text',
-      requiredInRegistrationForm: true,
+      requiredInRegistrationForm: false,
     });
     expect(ctFeld(id, 'sign.daten')).toMatchObject({
       name: 'Unterschrift (Daten)',
       fieldTypeCode: 'textarea',
       useInRegistrationForm: true,
-      requiredInRegistrationForm: true,
+      requiredInRegistrationForm: false,
       securityLevel: 3,
     });
     // Ausschalten nimmt beide Spalten aus dem Anmeldeformular – die Spalten (und Antworten) bleiben.
     await feldEntfernen(id, 'sign');
     expect(ctFeld(id, 'sign').useInRegistrationForm).toBe(false);
     expect(ctFeld(id, 'sign.daten').useInRegistrationForm).toBe(false);
+  });
+
+  it('#597 ältere Veranstaltung: pflichtNachziehen nimmt „Pflicht“ von den Spalten der Anmeldung – Personen-Felder bleiben', async () => {
+    const id = await legeVeranstaltungAn({
+      name: 'Kindertag',
+      teamId: 7,
+      artId: 5,
+      vorlage: 'kinder',
+    });
+    await felderAnlegen(id);
+    // So wie bis 16.10.2026 angelegt: auch die Felder der Anmeldung Pflicht.
+    for (const k of ['tel', 'eltern', 'sign', 'sign.daten'])
+      ctFeld(id, k).requiredInRegistrationForm = true;
+    await pflichtNachziehen(id);
+    for (const k of ['tel', 'eltern', 'sign', 'sign.daten'])
+      expect([k, ctFeld(id, k).requiredInRegistrationForm]).toEqual([k, false]);
+    expect(ctFeld(id, 'foto').requiredInRegistrationForm).toBe(true);
+    // Stimmt schon alles, wird nichts geschrieben.
+    aufrufe = [];
+    await pflichtNachziehen(id);
+    expect(aufrufe.filter((a) => !a.startsWith('GET'))).toEqual([]);
   });
 
   it('A6-2b: nimmt ChurchTools die Spalte für die Striche nicht an → Fehler, Einstellungen unverändert', async () => {

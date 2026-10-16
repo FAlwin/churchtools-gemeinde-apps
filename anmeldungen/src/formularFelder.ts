@@ -149,7 +149,12 @@ export async function feldSpeichern(
       // Ja/Nein: die vorhandenen IDs behalten (sonst entstünden neue und die Wahl wäre weg).
       optionen = optionenVon(bisher);
     }
-    ctId = await spalteSpeichern(id, bisher, feldDefinition(feld, name, optionen)!, feld.frage);
+    ctId = await spalteSpeichern(
+      id,
+      bisher,
+      feldDefinition(feld, bereich, name, optionen)!,
+      feld.frage,
+    );
   }
 
   // Weitere Spalten des Felds (A6-2b: die Striche der Unterschrift) – angelegt, sobald das Feld eingeschaltet ist,
@@ -159,7 +164,7 @@ export async function feldSpeichern(
     const zId = e.ctFelder[z.schluessel];
     if (zId === undefined && feld.zustand === 'aus') continue;
     const { bisher, name } = await spalteUndName(id, zId, z.name);
-    const definition = feldDefinition({ ...feld, typ: 'textarea' }, name)!;
+    const definition = feldDefinition({ ...feld, typ: 'textarea' }, bereich, name)!;
     zusatz[z.schluessel] = await spalteSpeichern(id, bisher, definition, z.name);
   }
 
@@ -314,6 +319,24 @@ export async function feldEinordnen(
     ...frisch,
     formular: einordnen(frisch.formular, feldId, bereich, vorId),
   }));
+}
+
+/**
+ * **Ältere Veranstaltungen nachziehen** (#597): Felder der Anmeldung, deren Spalte (oder weitere Spalte) in
+ * ChurchTools noch „Pflicht“ ist, neu speichern – über `feldSpeichern`, also mit der Regel aus `feldDefinition` und
+ * nachgelesen. Was schon stimmt, bleibt unberührt. Aufgerufen beim Freigeben (`anmeldenVorbereiten`).
+ */
+export async function pflichtNachziehen(id: number): Promise<void> {
+  const e = await einstellungenVon(id);
+  const felder = await ctFelderLesen(id);
+  for (const f of e.formular.anmeldung) {
+    const spalten = [f.id, ...ctZusatzSpalten(f).map((z) => z.schluessel)];
+    const pflicht = (s: string) => {
+      const ctId = e.ctFelder[s];
+      return ctId !== undefined && felder.get(ctId)?.requiredInRegistrationForm === true;
+    };
+    if (spalten.some(pflicht)) await feldSpeichern(id, 'anmeldung', f);
+  }
 }
 
 /**

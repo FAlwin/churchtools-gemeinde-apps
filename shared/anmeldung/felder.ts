@@ -6,6 +6,7 @@
  * Deshalb wird nach dem Kopieren über den Namen neu zugeordnet.
  */
 import { SYSTEMFELDER, ctAblage, type Feld } from './formular';
+import type { Bereich } from './baukasten';
 
 /** Der Rumpf für `POST /groups/{id}/memberfields/group` (Pflichtangaben gemessen 12.10.2026). */
 export function systemfeldAnlage(f: (typeof SYSTEMFELDER)[number]) {
@@ -112,9 +113,15 @@ export function optionenPlanen(
  * **Die Definition eines Formularfelds in ChurchTools** – `null`, wenn es kein Gruppenfeld ist (Name, E-Mail,
  * Geburtsdatum liegen an der Person; Hinweistext, Preis, Datenschutz haben keine Spalte). Ausgeschaltet heißt:
  * nicht im Anmeldeformular – die Spalte (und ihre Antworten) bleibt.
+ *
+ * **Felder der Anmeldung sind in ChurchTools nie Pflicht** (#597, gemessen 16.10.2026): ChurchTools prüft „Pflicht“
+ * bei **jeder** angemeldeten Person, die Antworten der Anmeldung (Telefon, Erziehungsberechtigte, Unterschrift …)
+ * stehen aber nur bei der ersten (`anmeldungAufbauen`). Mit zwei Kindern lehnte ChurchTools deshalb ab („Das Feld
+ * darf nicht leer sein“). Ob alles ausgefüllt ist, prüft unser Formular (`pruefeAntworten`).
  */
 export function feldDefinition(
   f: Feld,
+  bereich: Bereich,
   name: string,
   optionen?: CtOption[],
 ): CtFeldDefinition | null {
@@ -126,7 +133,7 @@ export function feldDefinition(
     fieldTypeCode: ablage.fieldTypeCode,
     securityLevel: STUFE_ANTWORTEN,
     useInRegistrationForm: f.zustand !== 'aus',
-    requiredInRegistrationForm: f.zustand === 'pflicht',
+    requiredInRegistrationForm: bereich === 'person' && f.zustand === 'pflicht',
     ...(mitOptionen ? { options: optionen ?? ablage.optionen.map((n) => ({ name: n })) } : {}),
   };
 }

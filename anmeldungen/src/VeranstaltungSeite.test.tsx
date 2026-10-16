@@ -7,6 +7,7 @@ import { ApiError } from '@ui/ct/fehler';
 import { ZEITRAUM_ZU } from '@shared/anmeldung/vorbereiten';
 import * as E from './einrichten';
 import * as G from './gemeinde';
+import * as FF from './formularFelder';
 import { VeranstaltungSeite } from './VeranstaltungSeite';
 import { NeueVeranstaltung } from './NeueVeranstaltung';
 
@@ -44,7 +45,12 @@ const m = vi.mocked(E);
 vi.mock('./gemeinde', () => ({ gemeindeVorgaben: vi.fn() }));
 const gm = vi.mocked(G);
 // „Neue Veranstaltung“ legt danach die Spalten an (A5) – hier nicht Gegenstand.
-vi.mock('./formularFelder', () => ({ felderAnlegen: vi.fn().mockResolvedValue(undefined) }));
+// Freigeben zieht ältere Veranstaltungen nach (#597).
+vi.mock('./formularFelder', () => ({
+  felderAnlegen: vi.fn().mockResolvedValue(undefined),
+  pflichtNachziehen: vi.fn().mockResolvedValue(undefined),
+}));
+const ff = vi.mocked(FF);
 
 const ZONE = 'Europe/Berlin';
 
@@ -149,6 +155,11 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     );
     await waitFor(() => expect(m.freigeben).toHaveBeenCalledWith(91));
     expect(m.anmeldenVorbereiten.mock.invocationCallOrder[0]).toBeLessThan(
+      m.freigeben.mock.invocationCallOrder[0],
+    );
+    // #597: vor dem Freigeben „Pflicht“ von den Spalten der Anmeldung nehmen.
+    expect(ff.pflichtNachziehen).toHaveBeenCalledWith(91);
+    expect(ff.pflichtNachziehen.mock.invocationCallOrder[0]).toBeLessThan(
       m.freigeben.mock.invocationCallOrder[0],
     );
     await waitFor(() => expect(m.kopfVon).toHaveBeenCalledTimes(2));

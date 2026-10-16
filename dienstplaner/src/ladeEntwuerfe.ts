@@ -31,6 +31,11 @@ import {
 import type { PlatzOrt } from '@shared/dienstplan/einteilen';
 import { entwurfPortFuer } from '@ui/ct/modulPort';
 import { MODUL_KUERZEL, type Start } from './start';
+import { sende, type SendeEintrag, type SendeErgebnis } from '@shared/dienstplan/senden';
+import { dienstPort } from './dienstPort';
+import { anzahlAendern, type AnzahlErgebnis } from '@shared/dienstplan/anzahl';
+import { ladeSendeHinweise, type SendeHinweis } from './sendeHinweise';
+import { ladeTerminStaende, type TerminStand } from './terminStand';
 
 const port = entwurfPortFuer(() => MODUL_KUERZEL);
 
@@ -60,6 +65,8 @@ export interface EntwuerfeDaten {
   schubladen: Map<number, Schublade>;
   /** Je Platz (`ortSchluessel`) der Entwurf. */
   entwuerfe: Map<string, Entwurf>;
+  /** Je Platz die Dienstgruppe, in deren Schublade der Entwurf liegt – zum Verwerfen auch ohne Matrix-Zeile. */
+  gruppeJe: Map<string, number>;
 }
 
 /**
@@ -78,6 +85,7 @@ export async function ladeEntwuerfe(gruppen: Dienstgruppe[]): Promise<EntwuerfeD
   const rechte = modulRechteAus(rechteRoh?.[MODUL_KUERZEL]);
   const schubladen = new Map<number, Schublade>();
   const entwuerfe = new Map<string, Entwurf>();
+  const gruppeJe = new Map<string, number>();
   await Promise.all(
     gruppen.map(async (gruppe) => {
       const kategorie = kategorieAusListe(liste, schublade(gruppe).kuerzel);
@@ -90,10 +98,13 @@ export async function ladeEntwuerfe(gruppen: Dienstgruppe[]): Promise<EntwuerfeD
         s.fehler = l.grund;
         return;
       }
-      for (const [k, { entwurf }] of l.inhalt.je) entwuerfe.set(k, entwurf);
+      for (const [k, { entwurf }] of l.inhalt.je) {
+        entwuerfe.set(k, entwurf);
+        gruppeJe.set(k, gruppe.id);
+      }
     }),
   );
-  return { modul, schubladen, entwuerfe };
+  return { modul, schubladen, entwuerfe, gruppeJe };
 }
 
 /** Einen Entwurf speichern (frisch lesen, Version vergleichen, schreiben, nachlesen – im Kern). */
@@ -118,6 +129,15 @@ export function entferneEntwurf(
   const kategorie = daten.schubladen.get(gruppeId)?.kategorie;
   if (kategorie == null) return Promise.resolve({ ok: false, grund: 'kein-recht' });
   return entwurfEntfernen(port, daten.modul, kategorie, ort, erwartet);
+}
+
+/** Entwürfe senden (E4-4) – einer nach dem anderen, im Kern (`senden.ts`). */
+export function sendeEntwuerfe(
+  daten: EntwuerfeDaten,
+  eintraege: readonly SendeEintrag[],
+  melde: (index: number, ergebnis: SendeErgebnis) => void,
+): Promise<SendeErgebnis[]> {
+  return sende(eintraege, { dienst: dienstPort, entwurf: port, modul: daten.modul }, melde);
 }
 
 const VERWEIGERT_ANLEGEN =
@@ -153,6 +173,18 @@ export interface EntwurfAnschluss {
     erwartet: number,
   ): Promise<EntwurfErgebnis>;
   einrichten(gruppe: Dienstgruppe): Promise<void>;
+  senden(
+    daten: EntwuerfeDaten,
+    eintraege: readonly SendeEintrag[],
+    melde: (index: number, ergebnis: SendeErgebnis) => void,
+  ): Promise<SendeErgebnis[]>;
+  hinweise(
+    zeilen: readonly { entwurf: Entwurf; tag: string }[],
+  ): Promise<Map<string, SendeHinweis>>;
+  /** Gibt es diese Termine noch, und wann waren sie? (Entwürfe ohne Platz, #582) */
+  termine(ids: readonly number[]): Promise<Map<number, TerminStand>>;
+  /** Anzahl der Plätze eines Dienstes am Termin sofort ändern (E4-5-3) – im Kern `anzahl.ts`. */
+  anzahl(eventId: number, serviceId: number, gesehen: number, neu: number): Promise<AnzahlErgebnis>;
 }
 
 /** Der echte Anschluss für die App. */
@@ -162,6 +194,11 @@ export function entwurfAnschluss(start: Start, gruppen: () => Dienstgruppe[]): E
     laden: () => ladeEntwuerfe(gruppen()),
     speichern: speichereEntwurf,
     entfernen: entferneEntwurf,
+    senden: sendeEntwuerfe,
+    hinweise: ladeSendeHinweise,
+    termine: (ids) => ladeTerminStaende(ids),
+    anzahl: (eventId, serviceId, gesehen, neu) =>
+      anzahlAendern(dienstPort, eventId, serviceId, gesehen, neu),
     einrichten: async (gruppe) => {
       await richteSchubladeEin(gruppe);
     },

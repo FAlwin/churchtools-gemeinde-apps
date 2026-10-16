@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { Segment } from '@ui/bedienung/Segment';
-import type { Entwurf, EntwurfErgebnis } from '@shared/dienstplan/entwuerfe';
+import { zielText, type Entwurf, type EntwurfErgebnis } from '@shared/dienstplan/entwuerfe';
 import { wannText } from '@shared/ct/zeit';
 import type { FreierPlatz } from './WerKann';
 import { grundText } from './ladeEntwuerfe';
 import { useInsBild } from './useInsBild';
+import { aktionText, bisherHinweis } from './sendenTexte';
 // Dieselben Fach-Bausteine (Knöpfe, Hinweiskasten, Unterzeile) wie „Wer kann?“ – ein Aussehen für beide Fächer.
 import styles from './WerKann.module.scss';
 import eigen from './EntwurfFach.module.scss';
@@ -68,6 +69,11 @@ export function EntwurfFach({
 
   const gast = entwurf.ziel.art === 'gast';
   const von = entwurf.von.name;
+  // E4-5: an einem belegten Platz – zurückziehen oder ersetzen; was die Person mitbekommt, ist gemessen.
+  const bisher = platz.bisher?.name ?? null;
+  const zurueck = entwurf.ziel.art === 'frei';
+  const statt = !zurueck && entwurf.gesehen.art !== 'frei' ? bisher : null;
+  const weg = bisherHinweis(entwurf.ziel, entwurf.gesehen, bisher);
   return (
     <Sheet title={`${platz.dienst} · ${platz.tag}`} onClose={onClose} cancelLabel="Schließen">
       <p className={styles.unter}>
@@ -78,7 +84,7 @@ export function EntwurfFach({
         <div className={styles.konflikt}>
           <p>
             <b>Inzwischen in ChurchTools geändert:</b> {inChurchTools} Der Entwurf „
-            {entwurf.ziel.name}“ von {von} passt nicht mehr dazu.
+            {zielText(entwurf.ziel)}“ von {von} passt nicht mehr dazu.
           </p>
           <p>Was in ChurchTools steht, gilt. Dieser Entwurf wird nie gesendet.</p>
           <button
@@ -93,13 +99,17 @@ export function EntwurfFach({
       ) : (
         <>
           <div className={eigen.status}>
-            <b>{entwurf.ziel.name}</b>
-            {gast && ' (Gast)'} – Entwurf, noch nicht gesendet.
+            <b>{zurueck ? `Zurückziehen: ${bisher ?? 'Einteilung'}` : zielText(entwurf.ziel)}</b>
+            {gast && ' (Gast)'}
+            {statt && ` statt ${statt}`} – Entwurf, noch nicht gesendet.
             <small>
               Eingetragen von {von}, {wannText(entwurf.zeit, zeitzone)}
             </small>
           </div>
-          {gast ? (
+          {weg && <p className={weg.warnung ? styles.fehler : styles.hinweis}>{weg.text}</p>}
+          {zurueck ? (
+            <p className={styles.hinweis}>Beim Senden wird der Platz wieder frei.</p>
+          ) : gast ? (
             <p className={styles.hinweis}>
               Ein Gast bekommt keine Anfrage – sein Name steht beim Senden einfach im Plan.
             </p>
@@ -163,7 +173,7 @@ export function EntwurfFach({
                   ? `${konflikt.jetzt.von.name} hat diesen Entwurf eben geändert:`
                   : 'Jemand hat diesen Entwurf eben entfernt.'}
               </b>{' '}
-              {konflikt.jetzt && `„${konflikt.jetzt.ziel.name}“. `}
+              {konflikt.jetzt && `${aktionText(konflikt.jetzt, bisher)}. `}
               Nichts{' '}
               {konflikt.was === 'ändern'
                 ? 'geändert'

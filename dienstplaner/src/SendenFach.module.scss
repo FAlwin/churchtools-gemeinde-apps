@@ -1,0 +1,161 @@
+// Senden-Fach (E4-4-2, Entwurf e4-4-entwurf.html) – nur Tokens aus ui/design (hell und dunkel, #563).
+
+.zusammen {
+  margin: 0 0 10px;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.fortschritt {
+  height: 6px;
+  margin: 0 0 12px;
+  border-radius: 3px;
+  background: var(--hair);
+  overflow: hidden;
+
+  i {
+    display: block;
+    height: 100%;
+    background: var(--blue);
+    transition: width 0.2s;
+  }
+}
+
+.liste {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.kopf {
+  padding: 7px 12px;
+  background: var(--section);
+  color: var(--text2);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.zeile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--hair);
+  background: var(--surface2);
+  font-size: 14px;
+}
+
+.haken {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--blue);
+}
+
+.was {
+  flex: 1;
+  min-width: 0;
+  color: var(--text);
+
+  small {
+    display: block;
+    color: var(--text2);
+    font-size: 12px;
+    line-height: 1.35;
+  }
+}
+
+.warnung {
+  color: var(--red) !important;
+}
+
+.dienst {
+  flex: none;
+  color: var(--text2);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.hinweis {
+  margin: 10px 2px 0;
+  color: var(--text2);
+  font-size: 12.5px;
+}
+
+// Wie der Hinweiskasten in „Wer kann?“ – aus `--red`, hell und dunkel ohne eigene Farben.
+.kasten {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.knoepfe {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.primaer {
+  height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--blue);
+  border-radius: var(--r-ctrl);
+  background: var(--blue);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.zeichen {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.zOk {
+  background: var(--green);
+  color: #fff;
+}
+
+.zFehl {
+  background: var(--red);
+  color: #fff;
+}
+
+// Konflikt / geändert: nicht kaputt, nur „anders als gedacht“ – rot umrandet statt gefüllt.
+.zAchtung {
+  border: 1.5px solid var(--red);
+  color: var(--red);
+}
+
+.zWarte {
+  border: 1.5px solid var(--text3);
+}
+
+.zLauf {
+  border: 2px solid var(--blue);
+  border-right-color: transparent;
+  animation: drehen 0.8s linear infinite;
+}
+
+@keyframes drehen {
+  to {
+    transform: rotate(360deg);
+  }
+}

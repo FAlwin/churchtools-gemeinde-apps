@@ -25,14 +25,18 @@ function zeit(tage: number, uhr: string): string {
   return `${d.toISOString().slice(0, 10)}T${uhr}:00Z`;
 }
 
-/** Plätze wie gemessen (Live, 13.10.2026): frei = ohne Namen; `isAccepted` = zugesagt. */
+/** Plätze wie gemessen (Live, 13.10.2026): frei = ohne Namen; `isAccepted` = zugesagt. Jeder Platz hat eine ID,
+ * die sich wie in ChurchTools bei jedem Schreiben ändert (E0). */
+let naechstePlatzId = 700;
 const platz = (
   serviceId: number,
   personId: number | null,
   name: string | null,
   isAccepted = false,
 ) => ({
+  id: naechstePlatzId++,
   serviceId,
+  index: null as number | null,
   personId,
   name,
   isAccepted,
@@ -45,6 +49,7 @@ const TERMINE = [
     startDate: zeit(4, '08:00'),
     endDate: zeit(4, '10:00'),
     eventServices: [
+      platz(1, 19, 'Spike', true),
       platz(6, 1, 'Alwin', true),
       platz(7, null, null),
       platz(9, 1, 'Alwin'),
@@ -71,7 +76,7 @@ const TERMINE = [
     startDate: zeit(16, '17:00'),
     endDate: zeit(16, '19:00'),
     isCanceled: true,
-    eventServices: [],
+    eventServices: [] as ReturnType<typeof platz>[],
   },
   {
     id: 105,
@@ -88,6 +93,79 @@ const TERMINE = [
     eventServices: [platz(6, 19, 'Spike', true), platz(7, 1, 'Alwin', true), platz(9, null, null)],
   },
 ];
+// Wie ChurchTools: Hat ein Dienst mehrere Plätze, sind sie durchgezählt (1, 2, …), sonst `null`.
+function durchzaehlen(t: (typeof TERMINE)[number]) {
+  for (const p of t.eventServices) {
+    const gleiche = t.eventServices.filter((q) => q.serviceId === p.serviceId);
+    p.index = gleiche.length > 1 ? gleiche.indexOf(p) + 1 : null;
+  }
+}
+TERMINE.forEach(durchzaehlen);
+
+/** Namen, die ChurchTools beim Einteilen an den Platz schreibt (Personen aus „Wer kann?“). */
+const NAMEN: Record<number, string> = {
+  1: 'Alwin',
+  19: 'Spike',
+  46: 'Anna Klassen',
+  49: 'Ben Wiebe',
+  52: 'Clara Dyck',
+  55: 'David Penner',
+};
+
+/**
+ * Einteilen (E4-4) wie gemessen: `PUT …/servicerequests/{platz}` mit Person bzw. Name, `POST …/decline` leert;
+ * jedes Schreiben vergibt dem Platz eine **neue ID**, eine veraltete ID ändert nichts. Gesendet wird an
+ * Anna, Ben, … – die Demo verschickt natürlich nichts.
+ */
+function einteilenDemo(methode: string, pfad: string, rumpf: unknown): unknown {
+  const termin = /^\/api\/events\/(\d+)$/.exec(pfad);
+  if (termin && methode === 'GET') {
+    // 90: ein vergangener Termin (nicht in der Liste „ab heute“); 91 gibt es nicht → 404 (gemessen).
+    const t =
+      TERMINE.find((x) => x.id === Number(termin[1])) ??
+      (Number(termin[1]) === 90
+        ? { id: 90, name: 'Gottesdienst', startDate: zeit(-10, '08:00'), eventServices: [] }
+        : undefined);
+    return t ? { data: t } : undefined;
+  }
+  // Anzahl der Plätze (E4-5-3), wie gemessen: mehr → neue freie Plätze, weniger → leere zuerst weg.
+  const anzahl = /^\/api\/events\/(\d+)\/eventservices$/.exec(pfad);
+  if (anzahl && methode === 'PUT') {
+    const t = TERMINE.find((x) => x.id === Number(anzahl[1]));
+    const r = rumpf as { services: { serviceId: number; count: number }[] };
+    if (t) {
+      for (const { serviceId, count } of r.services) {
+        const eigene = () => t.eventServices.filter((q) => q.serviceId === serviceId);
+        while (eigene().length < count) t.eventServices.push(platz(serviceId, null, null));
+        for (const q of [...eigene()].reverse()) {
+          if (eigene().length <= count) break;
+          if (!q.name) t.eventServices.splice(t.eventServices.indexOf(q), 1);
+        }
+      }
+      durchzaehlen(t);
+    }
+    return { data: null };
+  }
+  const m = /^\/api\/events\/(\d+)\/servicerequests\/(\d+)(\/decline)?$/.exec(pfad);
+  if (!m) return undefined;
+  const p = TERMINE.find((x) => x.id === Number(m[1]))?.eventServices.find(
+    (q) => q.id === Number(m[2]),
+  );
+  if (p) {
+    const r = (m[3] ? { personId: null, name: null, isAccepted: false } : rumpf) as {
+      personId: number | null;
+      name: string | null;
+      isAccepted: boolean;
+    };
+    Object.assign(p, {
+      id: naechstePlatzId++,
+      personId: r.personId,
+      name: r.personId === null ? r.name : (NAMEN[r.personId] ?? `Person ${r.personId}`),
+      isAccepted: r.isAccepted,
+    });
+  }
+  return { data: null };
+}
 
 /**
  * „Wer kann?“ in der Form, die E4-0 gemessen hat (`possiblepersons`): Punkte mit Begründungen, Auslastung je
@@ -191,6 +269,8 @@ function daten(fall: string): Record<string, unknown> {
     },
     '/api/services': {
       data: [
+        // Predigt (Programm): der Demo-Planer darf sie nur ansehen – zeigt „nur ansehen“ (16.10.2026).
+        { id: 1, name: 'Predigt', serviceGroupId: 1, groupIds: [] },
         { id: 6, name: 'Ton', serviceGroupId: 3, groupIds: [7] },
         { id: 7, name: 'Licht', serviceGroupId: 3, groupIds: [7] },
         { id: 9, name: 'Gesang', serviceGroupId: 4, groupIds: [9] },
@@ -238,12 +318,40 @@ function speicherDemo(fall: string) {
     ziel: { art: 'person', personId: 47, name: 'Finn Test' },
     von: { personId: 1, name: 'Alwin' },
   };
+  // E4-5: am ersten Gottesdienst Alwins Anfrage (Gesang 1) zurückziehen (von Spike) und Spike (Gesang 2, zugesagt)
+  // durch Clara ersetzen.
+  const zurueck = {
+    ...spike,
+    ort: { eventId: 101, serviceId: 9, index: 1 },
+    ziel: { art: 'frei' },
+    gesehen: { art: 'anfrage', personId: 1 },
+  };
+  const ersetzen = {
+    ...spike,
+    ort: { eventId: 101, serviceId: 9, index: 2 },
+    ziel: { art: 'person', personId: 52, name: 'Clara Dyck' },
+    gesehen: { art: 'zusage', personId: 19 },
+    von: { personId: 1, name: 'Alwin' },
+  };
+  const alt = (eventId: number, index: number | null, name: string, personId: number) => ({
+    ...spike,
+    ort: { eventId, serviceId: 9, index },
+    ziel: { art: 'person', personId, name },
+  });
   const werte = new Map<number, { id: number; dataCategoryId: number; value: string }[]>([
     [
       40,
       [
         { id: 400, dataCategoryId: 40, value: JSON.stringify(spike) },
         { id: 401, dataCategoryId: 40, value: JSON.stringify(veraltet) },
+        { id: 402, dataCategoryId: 40, value: JSON.stringify(zurueck) },
+        { id: 403, dataCategoryId: 40, value: JSON.stringify(ersetzen) },
+        // #582: ohne Platz (103 hat nur einen Gesang-Platz, ohne Nummer), Dienst nicht mehr im Termin (102),
+        // Termin vorbei (90) und gelöscht (91).
+        { id: 404, dataCategoryId: 40, value: JSON.stringify(alt(103, 1, 'Ben Wiebe', 49)) },
+        { id: 405, dataCategoryId: 40, value: JSON.stringify(alt(102, null, 'Clara Dyck', 52)) },
+        { id: 406, dataCategoryId: 40, value: JSON.stringify(alt(90, null, 'Anna Klassen', 46)) },
+        { id: 407, dataCategoryId: 40, value: JSON.stringify(alt(91, null, 'David Penner', 55)) },
       ],
     ],
   ]);
@@ -345,13 +453,26 @@ export function demoStarten(fall: string): void {
       return Promise.resolve(new Response('{}', { status: 502 }));
     }
     const werKann = /^\/api\/events\/(\d+)\/services\/\d+\/possiblepersons$/.exec(url.pathname);
-    const d = werKann
-      ? werKannDemo(Number(werKann[1]))
-      : url.pathname === '/api/events'
-        ? { data: termineVonBis(url.searchParams.get('from'), url.searchParams.get('to')) }
-        : url.pathname === '/api/permissions/global'
-          ? mitDienstplanerRechten(antworten[url.pathname])
-          : antworten[url.pathname];
+    const eingeteilt = einteilenDemo(
+      methode,
+      url.pathname,
+      typeof init?.body === 'string' ? (JSON.parse(init.body) as unknown) : undefined,
+    );
+    if (eingeteilt && methode !== 'GET') {
+      // Wie ChurchTools etwas Zeit lassen, damit der Fortschritt im Senden-Fach zu sehen ist.
+      return new Promise((fertig) =>
+        setTimeout(() => fertig(new Response(JSON.stringify(eingeteilt), { status: 200 })), 600),
+      );
+    }
+    const d = eingeteilt
+      ? eingeteilt
+      : werKann
+        ? werKannDemo(Number(werKann[1]))
+        : url.pathname === '/api/events'
+          ? { data: termineVonBis(url.searchParams.get('from'), url.searchParams.get('to')) }
+          : url.pathname === '/api/permissions/global'
+            ? mitDienstplanerRechten(antworten[url.pathname])
+            : antworten[url.pathname];
     return Promise.resolve(
       d === undefined
         ? new Response('{}', { status: 404 })

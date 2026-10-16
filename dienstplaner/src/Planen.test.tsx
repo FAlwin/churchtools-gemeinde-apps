@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
@@ -7,6 +8,8 @@ import { planAus, type Plan } from '@shared/dienstplan/plan';
 import type { Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import type { RohTermin } from '@shared/dienstplan/termine';
 import type { Entwurf } from '@shared/dienstplan/entwuerfe';
+import type { SendeErgebnis } from '@shared/dienstplan/senden';
+import type { TerminStand } from './terminStand';
 import type { EntwuerfeDaten, EntwurfAnschluss, Schublade } from './ladeEntwuerfe';
 import { Planen } from './Planen';
 import type { TermineZustand } from './Termine';
@@ -90,14 +93,20 @@ describe('Planen – Tabelle (E3-4)', () => {
     ]);
   });
 
-  it('was man plant, ist aufgeklappt (Technik), der Rest zu (Programm) – „du planst“ an der Gruppe', () => {
+  it('was man plant, ist aufgeklappt (Technik), der Rest zu (Programm) – „nur ansehen“ nur am Rest', () => {
     zeige();
     expect(
       tabelle()
         .getByRole('button', { name: /Technik/ })
         .getAttribute('aria-expanded'),
     ).toBe('true');
-    expect(tabelle().getByRole('button', { name: /Technik/ }).textContent).toContain('du planst');
+    expect(tabelle().getByRole('button', { name: /Technik/ }).textContent).not.toContain(
+      'nur ansehen',
+    );
+    expect(tabelle().getByRole('button', { name: /Programm/ }).textContent).toContain(
+      'nur ansehen',
+    );
+    expect(screen.queryByText('du planst')).toBeNull();
     expect(
       tabelle()
         .getByRole('button', { name: /Programm/ })
@@ -458,6 +467,24 @@ describe('Planen – freien Platz antippen → „Wer kann?“ (E4-2)', () => {
     expect(screen.queryByRole('list', { name: 'Wer kann?' })).toBeNull();
   });
 
+  // Alwin, 16.10.2026: „nur ansehen“ folgt derselben Regel wie die Knöpfe – Admin eines Termins zählt mit.
+  it('„nur ansehen“: in der Tabelle nicht, sobald man an einem gezeigten Termin Admin ist', () => {
+    zeige3();
+    expect(screen.queryByText('nur ansehen')).toBeNull();
+  });
+
+  it('„nur ansehen“ am Handy je Termin: am Termin ohne Admin ja, am Termin mit Admin nein', () => {
+    zeige3(true);
+    const programm = () => screen.getByRole('button', { name: /Programm/ });
+    expect(programm().textContent).toContain('nur ansehen');
+    expect(screen.getByRole('button', { name: /Technik/ }).textContent).not.toContain(
+      'nur ansehen',
+    );
+    const leiste = within(screen.getByRole('group', { name: 'Termine' }));
+    fireEvent.click(leiste.getAllByRole('button')[1]);
+    expect(programm().textContent).not.toContain('nur ansehen');
+  });
+
   it('am Handy genauso', async () => {
     laden.mockResolvedValue([]);
     zeige3(true);
@@ -707,16 +734,28 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     entwuerfe: new Map(
       entwuerfe.map((e) => [`${e.ort.eventId}|${e.ort.serviceId}|${e.ort.index ?? '-'}`, e]),
     ),
+    gruppeJe: new Map(
+      entwuerfe.map((e) => [`${e.ort.eventId}|${e.ort.serviceId}|${e.ort.index ?? '-'}`, 3]),
+    ),
   });
-  function zeige4(a: Partial<EntwurfAnschluss>) {
-    const anschluss: EntwurfAnschluss = {
-      ich: ALWIN,
-      laden: vi.fn(() => Promise.resolve(daten())),
-      speichern: vi.fn(),
-      entfernen: vi.fn(),
-      einrichten: vi.fn(() => Promise.resolve()),
-      ...a,
-    };
+  /** Der Anschluss zum Anfassen – eine Stelle für alle Tests (jede neue Funktion kommt nur hier dazu). */
+  const nachgebaut = (a: Partial<EntwurfAnschluss> = {}): EntwurfAnschluss => ({
+    ich: ALWIN,
+    laden: vi.fn(() => Promise.resolve(daten())),
+    speichern: vi.fn(),
+    entfernen: vi.fn(),
+    einrichten: vi.fn(() => Promise.resolve()),
+    senden: vi.fn(),
+    hinweise: vi.fn(() => Promise.resolve(new Map())),
+    anzahl: vi.fn(),
+    termine: vi.fn(() => Promise.resolve(new Map())),
+    ...a,
+  });
+  function zeige4(
+    a: Partial<EntwurfAnschluss>,
+    props: Partial<ComponentProps<typeof Planen>> = {},
+  ) {
+    const anschluss = nachgebaut(a);
     render(
       <Planen
         zustand={{ art: 'fertig', zeilen: [], plan: PLAN4, wochen: 8 }}
@@ -725,6 +764,7 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
         onMehr={() => {}}
         {...ZUSATZ}
         entwuerfe={anschluss}
+        {...props}
       />,
     );
     return anschluss;
@@ -1019,25 +1059,13 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
         ),
     });
     await waitFor(() =>
-      expect(offenTexte()).toBe(
-        '2 Entwürfe noch nicht gesendetSenden kommt mit dem nächsten SchrittAnsehen und senden',
-      ),
-    );
-    expect(screen.getByRole('button', { name: 'Ansehen und senden' })).toHaveProperty(
-      'disabled',
-      true,
+      expect(offenTexte()).toBe('2 Entwürfe noch nicht gesendetAnsehen und senden'),
     );
     cleanup();
     zeige4({ laden: () => Promise.resolve(daten([entwurf()])) });
     await waitFor(() => expect(offenTexte()).toMatch(/^1 Entwurf noch nicht gesendet/));
     cleanup();
-    const a: EntwurfAnschluss = {
-      ich: ALWIN,
-      laden: () => Promise.resolve(daten([entwurf()])),
-      speichern: vi.fn(),
-      entfernen: vi.fn(),
-      einrichten: vi.fn(),
-    };
+    const a = nachgebaut({ laden: () => Promise.resolve(daten([entwurf()])) });
     render(
       <Planen
         zustand={{ art: 'fertig', zeilen: [], plan: PLAN4, wochen: 8 }}
@@ -1048,11 +1076,578 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
         entwuerfe={a}
       />,
     );
-    await waitFor(() => expect(offenTexte()).toBe('1 EntwurfSenden folgtAnsehen'));
+    await waitFor(() => expect(offenTexte()).toBe('1 EntwurfAnsehen & senden'));
     cleanup();
     const leer = zeige4({});
     await waitFor(() => expect(leer.laden).toHaveBeenCalled());
     await screen.findAllByRole('button', { name: /frei – Wer kann/ });
     expect(offenTexte()).toBeNull();
+  });
+
+  // ── E4-4-2: Senden-Fach ──────────────────────────────────────────────────
+  /** Senden, das alles schafft – und dabei jeden Eintrag meldet wie der Kern. */
+  const gesendet = () =>
+    vi.fn(
+      (
+        _d: EntwuerfeDaten,
+        eintraege: readonly unknown[],
+        melde: (i: number, r: SendeErgebnis) => void,
+      ) => {
+        const r = eintraege.map((_, i): SendeErgebnis => {
+          melde(i, { art: 'gesendet' });
+          return { art: 'gesendet' };
+        });
+        return Promise.resolve(r);
+      },
+    );
+
+  it('„Ansehen und senden“ öffnet das Fach mit genau den gezählten Entwürfen (eine Regel), samt Kategorie', async () => {
+    const senden = gesendet();
+    zeige4({
+      laden: () =>
+        Promise.resolve(
+          daten([entwurf(), entwurf({ ort: { eventId: 20, serviceId: 7, index: 1 } })]), // 2. veraltet
+        ),
+      senden,
+    });
+    await waitFor(() => expect(offenTexte()).toMatch(/^1 Entwurf/));
+    fireEvent.click(screen.getByRole('button', { name: 'Ansehen und senden' }));
+    expect(screen.getAllByRole('checkbox').map((c) => c.getAttribute('aria-label'))).toEqual([
+      'Anfrage an Ben Test – Licht',
+    ]);
+    fireEvent.click(await screen.findByRole('button', { name: 'Jetzt senden (1)' }));
+    await screen.findByText('Gesendet');
+    expect(senden.mock.calls[0][1]).toEqual([{ entwurf: entwurf(), kategorie: 30 }]);
+  });
+
+  it('ohne Änderungsrecht auf die Schublade: keine Leiste – ein Entwurf ließe sich nach dem Senden nicht entfernen', async () => {
+    const a = zeige4({
+      laden: vi.fn(() => Promise.resolve(daten([entwurf()], { stand: 'nur-lesen' }))),
+    });
+    await waitFor(() => expect(a.laden).toHaveBeenCalled());
+    await screen.findAllByRole('button', { name: /frei – Wer kann/ });
+    expect(offenTexte()).toBeNull();
+  });
+
+  it('nach dem Senden: Entwürfe und Termine neu (ab heute über den Aufrufer); Abbrechen lädt nichts', async () => {
+    const onAktualisieren = vi.fn();
+    const laden = vi.fn(() => Promise.resolve(daten([entwurf()])));
+    zeige4({ laden, senden: gesendet() }, { onAktualisieren });
+    await waitFor(() => expect(offenTexte()).toMatch(/^1 Entwurf/));
+    fireEvent.click(screen.getByRole('button', { name: 'Ansehen und senden' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Abbrechen' }));
+    expect(laden).toHaveBeenCalledTimes(1);
+    expect(onAktualisieren).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Ansehen und senden' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Jetzt senden (1)' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Schließen' }));
+    await waitFor(() => expect(laden).toHaveBeenCalledTimes(2));
+    expect(onAktualisieren).toHaveBeenCalledTimes(1);
+  });
+
+  it('nach dem Senden im gewählten Monat: denselben Zeitraum neu laden – leise, die Matrix bleibt stehen', async () => {
+    localStorage.setItem(
+      'dienstplaner.planen.ansicht',
+      JSON.stringify({ zeitraum: { art: 'monat', monat: '2026-11' } }),
+    );
+    let antwort: ((d: { zeilen: []; plan: Plan }) => void) | null = null;
+    const ladeZeitraum = vi
+      .fn<(von: string, bis: string) => Promise<{ zeilen: []; plan: Plan }>>()
+      .mockResolvedValueOnce({ zeilen: [], plan: PLAN4 })
+      .mockImplementation(() => new Promise((r) => (antwort = r)));
+    const onAktualisieren = vi.fn();
+    zeige4(
+      { laden: () => Promise.resolve(daten([entwurf()])), senden: gesendet() },
+      { ladeZeitraum, onAktualisieren },
+    );
+    await waitFor(() => expect(offenTexte()).toMatch(/^1 Entwurf/));
+    fireEvent.click(screen.getByRole('button', { name: 'Ansehen und senden' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Jetzt senden (1)' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Schließen' }));
+    await waitFor(() => expect(ladeZeitraum).toHaveBeenCalledTimes(2));
+    expect(ladeZeitraum).toHaveBeenLastCalledWith('2026-11-01', '2026-11-30');
+    expect(onAktualisieren).not.toHaveBeenCalled();
+    // Noch keine Antwort – die Matrix steht weiter da (kein „wird geladen“).
+    expect(screen.getAllByRole('button', { name: /frei – Wer kann/ }).length).toBeGreaterThan(0);
+    await act(async () => antwort!({ zeilen: [], plan: PLAN4 }));
+  });
+
+  // ── E4-5-2: belegter Platz – zurückziehen oder ersetzen ─────────────────────
+  const ANNA_KNOPF = 'Anna Test – zugesagt: zurückziehen oder ersetzen';
+  const gespeichert = () =>
+    vi.fn((_d: EntwuerfeDaten, _g: number, e: Omit<Entwurf, 'version' | 'zeit'>) =>
+      Promise.resolve({
+        ok: true as const,
+        entwurf: { ...e, zeit: '2026-10-15T10:00:00.000Z', version: 1 },
+      }),
+    );
+
+  it('Belegten Platz antippen → Fenster; „Zurückziehen“ speichert „frei“ mit dem, was jetzt dort steht', async () => {
+    const speichern = gespeichert();
+    zeige4({ speichern });
+    fireEvent.click(await screen.findByRole('button', { name: ANNA_KNOPF }));
+    expect(screen.getByText(/– hat zugesagt\./)).toBeTruthy();
+    expect(screen.getByText(/ChurchTools sagt Anna Test nicht Bescheid/)).toBeTruthy();
+    expect(
+      screen.getByText(/Anna Test bekommt von ChurchTools „Du wurdest … ausgetragen“/),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Zurückziehen' }));
+    await waitFor(() => expect(speichern).toHaveBeenCalledTimes(1));
+    expect(speichern.mock.calls[0].slice(1)).toEqual([
+      3,
+      {
+        ort: { eventId: 20, serviceId: 7, index: 1 },
+        ziel: { art: 'frei' },
+        modus: 'anfrage',
+        gesehen: { art: 'zusage', personId: 5 },
+        von: ALWIN,
+      },
+      null,
+    ]);
+    expect(
+      await screen.findByText('Anna Test wird beim Senden zurückgezogen – noch nicht gesendet.'),
+    ).toBeTruthy();
+    // Danach steht dort der Entwurf (rot, durchgestrichen) statt des Knopfs.
+    expect(
+      screen.getByRole('button', { name: 'Entwurf von Alwin: Anna Test zurückziehen' }),
+    ).toBeTruthy();
+    expect(screen.queryByRole('button', { name: ANNA_KNOPF })).toBeNull();
+  });
+
+  it('„Andere Person wählen“ → „Wer kann?“ mit „statt“; der Entwurf merkt sich, wer dort stand', async () => {
+    laden.mockResolvedValue([{ person: { domainIdentifier: '46', title: 'Ben Test' }, score: 0 }]);
+    const speichern = gespeichert();
+    zeige4({ speichern });
+    fireEvent.click(await screen.findByRole('button', { name: ANNA_KNOPF }));
+    fireEvent.click(screen.getByRole('button', { name: 'Andere Person wählen' }));
+    expect(await screen.findByText(/· statt Anna Test/)).toBeTruthy();
+    fireEvent.click(await screen.findByRole('button', { name: /^Ben Test/ }));
+    await waitFor(() => expect(speichern).toHaveBeenCalledTimes(1));
+    expect((speichern.mock.calls[0][2] as Entwurf).gesehen).toEqual({ art: 'zusage', personId: 5 });
+    expect(
+      await screen.findByText('Ben Test statt Anna Test eingetragen – noch nicht gesendet.'),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Entwurf von Alwin: Ben Test statt Anna Test' }),
+    ).toBeTruthy();
+  });
+
+  it('liegt dort ein veralteter Entwurf, ist der Platz kein Knopf – erst den Entwurf verwerfen (Schild)', async () => {
+    zeige4({
+      laden: () =>
+        Promise.resolve(daten([entwurf({ ort: { eventId: 20, serviceId: 7, index: 1 } })])),
+    });
+    expect(await screen.findByRole('button', { name: /^Entwurf veraltet/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: ANNA_KNOPF })).toBeNull();
+  });
+
+  it('Konflikt beim Zurückziehen (eben hat jemand einen Entwurf angelegt) → sagt es, Fenster bleibt', async () => {
+    const speichern = vi.fn(() =>
+      Promise.resolve({ ok: false as const, grund: 'konflikt' as const, jetzt: null }),
+    );
+    zeige4({ speichern });
+    fireEvent.click(await screen.findByRole('button', { name: ANNA_KNOPF }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zurückziehen' }));
+    expect((await screen.findByRole('alert')).textContent).toMatch(/eben jemand einen Entwurf/);
+    expect(screen.getByRole('button', { name: 'Zurückziehen' })).toBeTruthy();
+  });
+
+  it('nicht antippbar: wo man nicht plant, bei verborgenem Namen – und ohne Änderungsrecht nur der Hinweis', async () => {
+    const roh = (personId: number, name: string) =>
+      [
+        {
+          id: 20,
+          name: 'Gottesdienst',
+          startDate: '2026-11-08T09:00:00Z',
+          endDate: '2026-11-08T10:30:00Z',
+          eventServices: [{ serviceId: 7, personId, name, isAccepted: true, index: null }],
+        },
+      ] as RohTermin[];
+    const opt = (planbar: boolean) => ({
+      ichId: 1,
+      dienste: DIENSTE,
+      dienstgruppen: GRUPPEN,
+      zeitzone: 'Europe/Berlin',
+      planbar: () => planbar,
+      ganzSichtbar: () => true,
+    });
+    const anzeigen = (plan: Plan, laden = () => Promise.resolve(daten()), handy = false) =>
+      render(
+        <Planen
+          zustand={{ art: 'fertig', zeilen: [], plan, wochen: 8 }}
+          handy={handy}
+          onNochmal={() => {}}
+          onMehr={() => {}}
+          {...ZUSATZ}
+          entwuerfe={nachgebaut({ laden })}
+        />,
+      );
+    anzeigen(planAus(roh(5, 'Anna Test'), opt(false)));
+    // Was man nicht plant, ist zugeklappt – aufklappen, dann steht Anna da, aber nicht antippbar.
+    fireEvent.click(await screen.findByRole('button', { name: /Technik/, expanded: false }));
+    expect(await screen.findByText('Anna Test')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /zurückziehen oder ersetzen/ })).toBeNull();
+    cleanup();
+    // Am Handy dieselbe Regel (eigene Stelle im Code) – erst mit Planrecht antippbar.
+    anzeigen(planAus(roh(5, 'Anna Test'), opt(true)), undefined, true);
+    expect(await screen.findByRole('button', { name: /^Anna Test – zugesagt/ })).toBeTruthy();
+    cleanup();
+    anzeigen(planAus(roh(5, 'Anna Test'), opt(false)), undefined, true);
+    fireEvent.click(await screen.findByRole('button', { name: /Technik/, expanded: false }));
+    expect(await screen.findByText('Anna Test')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /zurückziehen oder ersetzen/ })).toBeNull();
+    cleanup();
+    anzeigen(planAus(roh(-2, 'Geheim'), opt(true)));
+    expect(await screen.findByText('Nicht sichtbar')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /zurückziehen oder ersetzen/ })).toBeNull();
+    cleanup();
+    anzeigen(planAus(roh(5, 'Anna Test'), opt(true)), () =>
+      Promise.resolve(daten([], { stand: 'nur-lesen' })),
+    );
+    fireEvent.click(await screen.findByRole('button', { name: /^Anna Test – zugesagt/ }));
+    await waitFor(() => expect(screen.getByText(/ansehen, aber nicht ändern/)).toBeTruthy());
+    expect(screen.queryByRole('button', { name: 'Zurückziehen' })).toBeNull();
+  });
+
+  it('Senden-Fach: wer dort steht, kommt mit (aus derselben Matrix)', async () => {
+    zeige4({
+      laden: () =>
+        Promise.resolve(
+          daten([
+            entwurf({
+              ort: { eventId: 20, serviceId: 7, index: 1 },
+              ziel: { art: 'frei' },
+              gesehen: { art: 'zusage', personId: 5 },
+            }),
+          ]),
+        ),
+    });
+    await waitFor(() => expect(offenTexte()).toMatch(/^1 Entwurf/));
+    fireEvent.click(screen.getByRole('button', { name: 'Ansehen und senden' }));
+    expect(screen.getByRole('checkbox', { name: 'Zurückziehen: Anna Test – Licht' })).toBeTruthy();
+    expect(screen.getByText(/1 zurückgezogen/)).toBeTruthy();
+  });
+
+  // ── E4-5-3: Anzahl der Plätze (Regler) ───────────────────────────────────────
+  it('Regler in der Gruppenzeile → Plätze-Fach; liegt an einem Dienst ein Entwurf, bleibt seine Zahl', async () => {
+    zeige4({ laden: () => Promise.resolve(daten([entwurf()])) }); // Entwurf an Licht Platz 2
+    await waitFor(() => expect(entwuerfeInMatrix()).toHaveLength(1));
+    fireEvent.click(screen.getByRole('button', { name: 'Plätze Technik am So, 08.11. ändern' }));
+    expect(screen.getByText('Technik · Plätze')).toBeTruthy();
+    expect(screen.getByText('Gottesdienst · So, 08.11.')).toBeTruthy();
+    expect(screen.getByLabelText('Licht: 2 Plätze')).toBeTruthy();
+    expect(screen.getByLabelText('Ton: 1 Plätze')).toBeTruthy();
+    // Licht: Entwurf an Platz 2 → weder weniger noch mehr (ChurchTools nummeriert die Plätze sonst neu).
+    for (const k of ['Licht: ein Platz weniger', 'Licht: ein Platz mehr']) {
+      expect(screen.getByRole('button', { name: k })).toHaveProperty('disabled', true);
+    }
+    expect(screen.getByText(/Hier liegt ein Entwurf/)).toBeTruthy();
+    cleanup();
+    // Auch ein Entwurf an einem belegten Platz (zurückziehen) sperrt die Zahl.
+    zeige4({
+      laden: () =>
+        Promise.resolve(
+          daten([
+            entwurf({
+              ort: { eventId: 20, serviceId: 7, index: 1 },
+              ziel: { art: 'frei' },
+              gesehen: { art: 'zusage', personId: 5 },
+            }),
+          ]),
+        ),
+    });
+    expect(
+      await screen.findByRole('button', { name: 'Entwurf von Alwin: Anna Test zurückziehen' }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Plätze Technik am So, 08.11. ändern' }));
+    expect(screen.getByRole('button', { name: 'Licht: ein Platz mehr' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    expect(screen.getByRole('button', { name: 'Ton: ein Platz weniger' })).toHaveProperty(
+      'disabled',
+      false,
+    );
+  });
+
+  it('„+“ speichert über den Anschluss (Termin, Dienst, gesehen, neu); Schließen lädt die Termine leise neu', async () => {
+    const onAktualisieren = vi.fn();
+    const anzahl = vi.fn(() => Promise.resolve({ ok: true as const, anzahl: 2 }));
+    zeige4({ anzahl }, { onAktualisieren });
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Plätze Technik am So, 08.11. ändern' }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Ton: ein Platz mehr' }));
+    await waitFor(() => expect(anzahl).toHaveBeenCalledWith(20, 6, 1, 2));
+    expect(await screen.findByText('Ton: jetzt 2 Plätze.')).toBeTruthy();
+    expect(onAktualisieren).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    expect(onAktualisieren).toHaveBeenCalledTimes(1);
+  });
+
+  it('im Plätze-Fach nur die Dienste, die man plant (Planrecht je Dienst)', async () => {
+    const plan = planAus(
+      [
+        {
+          id: 20,
+          name: 'Gottesdienst',
+          startDate: '2026-11-08T09:00:00Z',
+          endDate: '2026-11-08T10:30:00Z',
+          eventServices: [
+            { serviceId: 7, personId: null, name: null, index: null },
+            { serviceId: 6, personId: null, name: null, index: null },
+          ],
+        },
+      ] as RohTermin[],
+      {
+        ichId: 1,
+        dienste: DIENSTE,
+        dienstgruppen: GRUPPEN,
+        zeitzone: 'Europe/Berlin',
+        planbar: (d) => d.id === 7,
+        ganzSichtbar: () => true,
+      },
+    );
+    render(
+      <Planen
+        zustand={{ art: 'fertig', zeilen: [], plan, wochen: 8 }}
+        handy={false}
+        onNochmal={() => {}}
+        onMehr={() => {}}
+        {...ZUSATZ}
+        entwuerfe={nachgebaut()}
+      />,
+    );
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Plätze Technik am So, 08.11. ändern' }),
+    );
+    expect(screen.getByLabelText('Licht: 1 Plätze')).toBeTruthy();
+    expect(screen.queryByLabelText('Ton: 1 Plätze')).toBeNull();
+  });
+
+  it('kein Regler, wo man nicht plant und an abgesagten Terminen; ohne Änderung kein Neuladen', async () => {
+    const roh = (abgesagt: boolean) =>
+      [
+        {
+          id: 20,
+          name: 'Gottesdienst',
+          startDate: '2026-11-08T09:00:00Z',
+          endDate: '2026-11-08T10:30:00Z',
+          isCanceled: abgesagt,
+          eventServices: [{ serviceId: 7, personId: null, name: null, index: null }],
+        },
+      ] as RohTermin[];
+    const opt = (planbar: boolean) => ({
+      ichId: 1,
+      dienste: DIENSTE,
+      dienstgruppen: GRUPPEN,
+      zeitzone: 'Europe/Berlin',
+      planbar: () => planbar,
+      ganzSichtbar: () => true,
+    });
+    const anzeigen = (plan: Plan, handy = false, onAktualisieren = vi.fn()) => {
+      render(
+        <Planen
+          zustand={{ art: 'fertig', zeilen: [], plan, wochen: 8 }}
+          handy={handy}
+          onNochmal={() => {}}
+          onMehr={() => {}}
+          {...ZUSATZ}
+          entwuerfe={nachgebaut()}
+          onAktualisieren={onAktualisieren}
+        />,
+      );
+      return onAktualisieren;
+    };
+    const regler = () => screen.queryAllByRole('button', { name: /^Plätze .* ändern$/ });
+    anzeigen(planAus(roh(false), opt(false)));
+    await screen.findAllByText('Gottesdienst');
+    expect(regler()).toEqual([]);
+    cleanup();
+    anzeigen(planAus(roh(true), opt(true)));
+    await screen.findAllByText('Gottesdienst');
+    expect(regler()).toEqual([]);
+    cleanup();
+    // Am Handy dieselbe Regel (eigene Stelle im Code); Öffnen und ohne Änderung schließen lädt nichts neu.
+    const neu = anzeigen(planAus(roh(false), opt(true)), true);
+    fireEvent.click(await screen.findByRole('button', { name: /^Plätze Technik am .* ändern$/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    expect(neu).not.toHaveBeenCalled();
+  });
+
+  // ── #582: Entwürfe ohne Platz und alte Entwürfe ─────────────────────────────
+  it('Platznummer passt nicht mehr → Schild „Entwurf ohne Platz“; antippen → Grund, verwerfen mit der Gruppe', async () => {
+    const entfernen = vi.fn(() => Promise.resolve({ ok: true as const, entwurf: null }));
+    zeige4({
+      laden: () =>
+        Promise.resolve(
+          daten([
+            entwurf({ ort: { eventId: 20, serviceId: 7, index: 3 } }), // Licht hat nur 1 und 2
+            entwurf({ ort: { eventId: 20, serviceId: 6, index: 1 } }), // Ton: ein Platz ohne Nummer
+            entwurf(), // Licht Platz 2 – den gibt es: kein Schild, sondern der Entwurf selbst
+          ]),
+        ),
+      entfernen,
+    });
+    const schilder = await screen.findAllByRole('button', { name: /^Entwurf ohne Platz/ });
+    expect(schilder).toHaveLength(2);
+    expect(
+      within(zeileVon('Licht')).getAllByRole('button', { name: /^Entwurf ohne Platz/ }),
+    ).toHaveLength(1);
+    fireEvent.click(schilder[0]);
+    expect(screen.getByText(/Diesen Platz gibt es so nicht mehr/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Entwurf verwerfen' }));
+    await waitFor(() => expect(entfernen).toHaveBeenCalledTimes(1));
+    expect((entfernen.mock.calls[0] as unknown[]).slice(1)).toEqual([
+      3,
+      { eventId: 20, serviceId: 7, index: 3 },
+      1,
+    ]);
+    // Ohne passenden Platz zählt er nicht als „noch nicht gesendet“ (wird nie gesendet) – nur der gültige.
+    expect(offenTexte()).toMatch(/^1 Entwurf/);
+  });
+
+  it('Termin nicht geladen → nachfragen: gelöscht und vorbei sind „alt“, künftig und unbekannt nicht', async () => {
+    const termine = vi.fn(() =>
+      Promise.resolve(
+        new Map<number, TerminStand>([
+          [90, { art: 'da', name: 'Gottesdienst', tag: '2026-10-04' }],
+          [91, { art: 'weg' }],
+          [92, { art: 'da', name: 'Gottesdienst', tag: '2026-12-06' }],
+          [93, { art: 'unbekannt' }],
+        ]),
+      ),
+    );
+    zeige4({
+      laden: () =>
+        Promise.resolve(
+          daten(
+            [90, 91, 92, 93].map((ev) =>
+              entwurf({ ort: { eventId: ev, serviceId: 7, index: null } }),
+            ),
+          ),
+        ),
+      termine,
+    });
+    expect((await screen.findByRole('status', { name: 'Alte Entwürfe' })).textContent).toMatch(
+      /^2 alte Entwürfe/,
+    );
+    expect(termine).toHaveBeenCalledWith([90, 91, 92, 93]);
+    expect(termine).toHaveBeenCalledTimes(1);
+  });
+
+  it('Dienst gehört nicht mehr zum Termin → alt; „Alle verwerfen“ mit der Gruppe der Schublade, danach neu laden', async () => {
+    const plan = planAus(
+      [
+        {
+          id: 20,
+          name: 'Gottesdienst',
+          startDate: '2026-11-08T09:00:00Z',
+          endDate: '2026-11-08T10:30:00Z',
+          eventServices: [{ serviceId: 6, personId: null, name: null, index: null }],
+        },
+        {
+          id: 21,
+          name: 'Gebetsabend',
+          startDate: '2026-11-12T17:00:00Z',
+          endDate: '2026-11-12T18:00:00Z',
+          eventServices: [{ serviceId: 7, personId: null, name: null, index: null }],
+        },
+      ] as RohTermin[],
+      {
+        ichId: 1,
+        dienste: DIENSTE,
+        dienstgruppen: GRUPPEN,
+        zeitzone: 'Europe/Berlin',
+        planbar: (d) => d.dienstgruppeId === 3,
+        ganzSichtbar: () => true,
+      },
+    );
+    const laden = vi.fn(() =>
+      Promise.resolve(daten([entwurf({ ort: { eventId: 21, serviceId: 6, index: null } })])),
+    );
+    const entfernen = vi.fn(() => Promise.resolve({ ok: true as const, entwurf: null }));
+    render(
+      <Planen
+        zustand={{ art: 'fertig', zeilen: [], plan, wochen: 8 }}
+        handy={false}
+        onNochmal={() => {}}
+        onMehr={() => {}}
+        {...ZUSATZ}
+        entwuerfe={nachgebaut({ laden, entfernen })}
+      />,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Ansehen' }));
+    expect(
+      screen.getByText(/Gebetsabend, Do, 12\.11\. – Dienst gehört nicht mehr zum Termin/),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Verwerfen' }));
+    await waitFor(() => expect(entfernen).toHaveBeenCalledTimes(1));
+    expect((entfernen.mock.calls[0] as unknown[]).slice(1)).toEqual([
+      3,
+      { eventId: 21, serviceId: 6, index: null },
+      1,
+    ]);
+    fireEvent.click(await screen.findByRole('button', { name: 'Schließen' }));
+    await waitFor(() => expect(laden).toHaveBeenCalledTimes(2));
+  });
+
+  it('alte Entwürfe nur aus Schubladen, die man ändern darf', async () => {
+    const termine = vi.fn(() =>
+      Promise.resolve(new Map<number, TerminStand>([[91, { art: 'weg' }]])),
+    );
+    const a = zeige4({
+      laden: vi.fn(() =>
+        Promise.resolve(
+          daten([entwurf({ ort: { eventId: 91, serviceId: 7, index: null } })], {
+            stand: 'nur-lesen',
+          }),
+        ),
+      ),
+      termine,
+    });
+    await waitFor(() => expect(termine).toHaveBeenCalled());
+    await waitFor(() => expect(a.laden).toHaveBeenCalled());
+    expect(screen.queryByRole('status', { name: 'Alte Entwürfe' })).toBeNull();
+  });
+
+  // ── Prüfung mit zwei Planern (16.10.2026): Funde a und b ─────────────────────
+  it('a) Konflikt im Entwurfs-Fach → das Fach zeigt die neue Fassung, der Hinweis nennt sie', async () => {
+    const SPIKE_X = { personId: 19, name: 'Spike' };
+    const neu = entwurf({ von: SPIKE_X, modus: 'direkt', version: 2 });
+    const entfernen = vi.fn(() =>
+      Promise.resolve({ ok: false as const, grund: 'konflikt' as const, jetzt: neu }),
+    );
+    zeige4({ laden: () => Promise.resolve(daten([entwurf({ von: SPIKE_X })])), entfernen });
+    fireEvent.click(await screen.findByRole('button', { name: /^Entwurf von Spike/ }));
+    expect(
+      screen.getByRole('button', { name: 'Anfrage senden' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Entfernen' }));
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'Spike hat diesen Entwurf eben geändert: Direkt zuteilen: Ben Test.',
+    );
+    expect(
+      screen.getByRole('button', { name: 'Direkt zuteilen' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+  });
+
+  it('b) Senden ohne Erfolg, aber mit Konflikt → Entwürfe und Termine laden trotzdem neu', async () => {
+    const onAktualisieren = vi.fn();
+    const laden = vi.fn(() => Promise.resolve(daten([entwurf()])));
+    const senden = vi.fn(
+      (_d: EntwuerfeDaten, e: readonly unknown[], melde: (i: number, r: SendeErgebnis) => void) => {
+        const r: SendeErgebnis = { art: 'nicht-gesendet', grund: 'konflikt' };
+        e.forEach((_, i) => melde(i, r));
+        return Promise.resolve(e.map(() => r));
+      },
+    );
+    zeige4({ laden, senden }, { onAktualisieren });
+    await waitFor(() => expect(offenTexte()).toMatch(/^1 Entwurf/));
+    fireEvent.click(screen.getByRole('button', { name: 'Ansehen und senden' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Jetzt senden (1)' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Schließen' }));
+    await waitFor(() => expect(laden).toHaveBeenCalledTimes(2));
+    expect(onAktualisieren).toHaveBeenCalledTimes(1);
   });
 });

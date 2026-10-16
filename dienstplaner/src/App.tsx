@@ -155,6 +155,7 @@ export function App() {
           handy={handy}
           onNochmal={() => termineLaden(start, wochen)}
           onMehr={mehrLaden}
+          onAktualisieren={() => termineLaden(start, geladen, true)}
           mehrMoeglich={geladen < MAX_WOCHEN}
           ladeZeitraum={zeitraumLaden}
           heute={tagAusIso(new Date().toISOString(), zeitzone)}

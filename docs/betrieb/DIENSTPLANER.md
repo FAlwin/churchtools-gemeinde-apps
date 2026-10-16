@@ -1,15 +1,17 @@
 # Dienstplaner – ChurchTools-Erweiterung
 
-> **Stand: E3 fertig (14.10.2026)** – mit drei Rollen geprüft (Test-Instanz) und lesend an der Live-Instanz. Die Erweiterung startet in ChurchTools – **nur lesen**. **Planen**:
-> Termine als Spalten, Dienstgruppen und Dienste als Zeilen, in jeder Zelle die Plätze; freien Platz antippen →
-> „Wer kann?“ (E4-2) und dort **als Entwurf eintragen** (E4-3, Person oder Gast – noch ohne Anfrage; Entwurf antippen = ändern oder entfernen, veraltete mit Schild, Leiste „N noch nicht gesendet“); Zeitraum wählen (ab heute, ein Monat oder von–bis), Terminleiste,
+> **Stand: E4-4 (15.10.2026)** – E3 mit drei Rollen geprüft (Test-Instanz) und lesend an der Live-Instanz; seit
+> E4-4 **teilt der Dienstplaner auch ein** (s. „Senden“). **Planen**:
+> Termine als Spalten, Dienstgruppen und Dienste als Zeilen, in jeder Zelle die Plätze (Gruppen, in denen man nicht
+> einteilen darf: „nur ansehen“); freien Platz antippen →
+> „Wer kann?“ (E4-2) und dort **als Entwurf eintragen** (E4-3, Person oder Gast; Entwurf antippen = ändern oder entfernen, veraltete mit Schild); belegten Platz antippen → **zurückziehen oder ersetzen** (E4-5, ebenfalls als Entwurf); Regler in der Gruppenzeile → **Anzahl der Plätze** je Termin (sofort); unten **„Ansehen und senden“** (E4-4): Anfrage, direkt zuteilen, Gast eintragen, zurückziehen; Zeitraum wählen (ab heute, ein Monat oder von–bis), Terminleiste,
 > Spaltenbreite, Filter nach Veranstaltung und Gruppe, „Wer wie oft?“; am Handy ein Termin auf einmal. **Start**: „Als
 > Nächstes“ (dein Dienst, Team, Lieder, Musik-App), deine offenen Anfragen, deine nächsten Dienste,
 > Abwesenheiten und für Planer die freien Plätze der nächsten 6 Wochen. Die Reiter
 > Start · Termine · Planen · Abwesenheiten stehen (am Computer oben, am Handy unten; „Planen“ nur für
 > Planer). **Termine**: Liste nach Monaten, „Meine | Alle“, Filter nach Veranstaltung (aus den
 > Terminnamen), die eigenen Dienste (zugesagt/angefragt), für Planer die freien Plätze ihrer
-> Dienstgruppen. Einteilen und Abwesenheiten folgen (Bauplan E4–E9). Diese Anleitung wächst mit.
+> Dienstgruppen. Zauberstab und Abwesenheiten folgen (Bauplan E5–E9). Hell oder dunkel wie in ChurchTools gewählt (seit 15.10.2026). Diese Anleitung wächst mit.
 
 Der Dienstplaner plant die Dienste **aller** Dienstgruppen (Musik, Technik, Predigt, Moderation …) nach
 dem Vorbild von Planning Center Services. **Alles liegt in ChurchTools** – es gibt keinen eigenen Server.
@@ -48,8 +50,8 @@ deren Sitzung. **Ein eigenes Rechte-System gibt es nicht.**
 
 Gemessen an der Test-Instanz (08. und 13.10.2026). Alle drei Wege gelten seit E3-4 (eine Regel:
 `darfDienstPlanen`). Der Reiter „Planen“ erscheint für globale Planer und Gruppenleitungen; wer nur Admin
-einzelner Termine ist, sieht das an diesen Terminen. „Planen“ heißt bis E4 nur ansehen – eingeteilt wird
-noch in ChurchTools.
+einzelner Termine ist, sieht das an diesen Terminen. Seit E4-4 wird im Dienstplaner auch eingeteilt – mit genau
+diesen Rechten; ChurchTools prüft sie beim Schreiben selbst noch einmal.
 
 **Entwürfe – eine Kategorie je Dienstgruppe** (E4-3, Alwin 14.10.2026): Noch nicht gesendete Einteilungen liegen
 in ChurchTools im Speicher des Dienstplaners, je Dienstgruppe in einer eigenen Kategorie „Entwürfe <Gruppe>“
@@ -63,6 +65,26 @@ in ChurchTools im Speicher des Dienstplaners, je Dienstgruppe in einer eigenen K
 - **Vorsicht:** ChurchTools nimmt dasselbe Kürzel zweimal an (gemessen). Sieht jemand die Kategorie nur nicht,
   weil ihm das Sehrecht fehlt, legt „Einrichten“ eine zweite an. Deshalb zuerst das Recht geben, nicht einrichten.
   Gibt es doch zwei, nehmen alle Geräte die mit der kleinsten Nummer.
+
+**Senden** (E4-4, 15.10.2026): „Ansehen und senden“ zeigt alle gültigen Entwürfe im geladenen Zeitraum, wo man
+planen und die Entwürfe der Gruppe ändern darf – auch die anderer Planer. Je Zeile ein Häkchen; Abgewähltes bleibt
+Entwurf. Hinweise (abwesend, am Tag schon eingeteilt) stehen vorher da, senden geht trotzdem.
+
+- **Mitteilungen schickt ChurchTools**, nicht der Dienstplaner. Gemessen (14./15.10.2026): Eine **Anfrage** und
+  **„Direkt zuteilen“** lösen die Push-Mitteilung der ChurchTools-App aus, aber keine Mail je Einteilung. Ein **Gast**
+  bekommt nichts. **Austragen** (zurückziehen) durch einen Planer benachrichtigt die Person **nicht**; wird sie
+  dagegen durch eine andere Person **ersetzt**, bekommt sie „Dienstaustragung – Du wurdest aus dem Dienst …
+  ausgetragen“ (gemessen 15.10.2026, angefragt wie zugesagt). Eine Platzzahl zu ändern verschickt nichts.
+- **Sicher:** Je Platz frisch lesen → schreiben → nachlesen. Steht inzwischen jemand anderes da, wird nichts
+  überschrieben („Konflikt“, der Entwurf ist dann veraltet). Das gilt auch, wenn eine angefragte Person
+  inzwischen zugesagt hat – wer gerade zugesagt hat, wird nicht still ausgetragen oder ersetzt (Alwin, 15.10.2026). Erst wenn die Person nachgelesen am Platz steht, wird
+  der Entwurf entfernt. Antwortet ChurchTools nicht oder ist man abgemeldet, hält das Senden an; der Rest bleibt
+  Entwurf. Nichts wird von selbst wiederholt – „Erneut senden“ ist ein bewusster zweiter Klick.
+- **Entwürfe ohne Platz, alte Entwürfe:** Ändert jemand direkt in ChurchTools die Platzzahl (die Plätze werden dabei
+  neu nummeriert) oder nimmt den Dienst heraus, oder ist der Termin vorbei bzw. gelöscht, passt ein Entwurf nirgends
+  mehr. Dann steht beim Dienst ein Schild „Entwurf ohne Platz“ bzw. über der Matrix „N alte Entwürfe“ – beides mit
+  „verwerfen“. In ChurchTools ändert sich dabei nichts. Im Dienstplaner selbst ist die Platzzahl gesperrt, solange
+  dort Entwürfe liegen.
 
 **Den Menüpunkt sehen:** Erweiterung **„Dienstplaner“ sehen** – für alle, die Dienste haben. Ohne dieses
 Recht zeigt ChurchTools selbst „Keine ausreichende Berechtigung“.

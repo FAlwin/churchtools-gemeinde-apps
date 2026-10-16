@@ -154,13 +154,15 @@
   margin-top: 10px;
 }
 
-// Konflikt, fehlende Schublade, gesperrt – ein gelber Kasten wie im Entwurf (Abschnitt 4/5).
+// Konflikt, fehlende Schublade, gesperrt (Entwurf Abschnitt 4/5). Aus den Tokens wie die Warnungen der
+// Anmeldungen (`color-mix` mit `--red`) – hell und dunkel ohne eigene Farben (Dark Mode #563, statt Gelb:
+// feste Farben und kein Orange im ChurchTools-Look).
 .konflikt {
   margin-top: 12px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: #fef3c7;
-  color: #78350f;
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+  color: var(--text);
   font-size: 14px;
   line-height: 1.45;
 

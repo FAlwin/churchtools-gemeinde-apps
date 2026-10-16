@@ -85,6 +85,34 @@ describe('EntwurfFach (E4-3-3)', () => {
     await waitFor(() => expect(p.onEntfernen).toHaveBeenCalledWith(3));
   });
 
+  it('E4-5 Zurückziehen: „Zurückziehen: Anna“, Warnung, kein „Beim Senden“', () => {
+    zeige({
+      entwurf: entwurf({ ziel: { art: 'frei' }, gesehen: { art: 'zusage', personId: 46 } }),
+      platz: {
+        ...PLATZ,
+        bisher: { belegung: { art: 'zusage', personId: 46 }, name: 'Anna Test', gast: false },
+      },
+    });
+    expect(screen.getByText('Zurückziehen: Anna Test')).toBeTruthy();
+    expect(screen.getByText(/ChurchTools sagt Anna Test nicht Bescheid/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Direkt zuteilen' })).toBeNull();
+  });
+
+  it('E4-5 Ersetzen: „Ben Test statt Anna“, „Beim Senden“ bleibt, Anna bekommt „ausgetragen“', () => {
+    zeige({
+      entwurf: entwurf({ gesehen: { art: 'anfrage', personId: 47 } }),
+      platz: {
+        ...PLATZ,
+        bisher: { belegung: { art: 'anfrage', personId: 47 }, name: 'Anna Test', gast: false },
+      },
+    });
+    expect(screen.getByText(/statt Anna Test – Entwurf, noch nicht gesendet\./)).toBeTruthy();
+    expect(
+      screen.getByText(/Anna Test bekommt von ChurchTools „Du wurdest … ausgetragen“/),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Direkt zuteilen' })).toBeTruthy();
+  });
+
   it('veraltet: sagt, was in ChurchTools steht; nur „Entwurf verwerfen“', async () => {
     const p = zeige({ inChurchTools: 'Clara Test ist dort angefragt.' });
     expect(screen.getByText(/Inzwischen in ChurchTools geändert:/)).toBeTruthy();
@@ -109,7 +137,8 @@ describe('EntwurfFach (E4-3-3)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Direkt zuteilen' }));
     const hinweis = await screen.findByRole('alert');
     expect(hinweis.textContent).toContain('Alwin hat diesen Entwurf eben geändert:');
-    expect(hinweis.textContent).toContain('„Max“');
+    // Was jetzt dasteht, mit Art (Prüfung mit zwei Planern, 16.10.2026: vorher nur der Name).
+    expect(hinweis.textContent).toContain('Gast eintragen: Max.');
     expect(hinweis.textContent).toContain('Nichts geändert.');
     fireEvent.click(screen.getByRole('button', { name: 'Trotzdem ändern' }));
     await waitFor(() => expect(onModus).toHaveBeenLastCalledWith('direkt', 5));

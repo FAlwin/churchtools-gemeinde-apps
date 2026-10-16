@@ -1,6 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
-import { _vergissModul, entferneEntwurf, ladeEntwuerfe, richteSchubladeEin } from './ladeEntwuerfe';
+import type { Start } from './start';
+import {
+  _vergissModul,
+  entferneEntwurf,
+  entwurfAnschluss,
+  ladeEntwuerfe,
+  richteSchubladeEin,
+  sendeEntwuerfe,
+} from './ladeEntwuerfe';
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -86,6 +94,11 @@ describe('ladeEntwuerfe', () => {
       ['Programm', null, 'fehlt'],
     ]);
     expect([...d.entwuerfe.keys()]).toEqual(['20|7|-', '21|7|-']);
+    // Je Entwurf die Gruppe seiner Schublade (#582 – verwerfen auch ohne Matrix-Zeile).
+    expect([...d.gruppeJe]).toEqual([
+      ['20|7|-', 3],
+      ['21|7|-', 3],
+    ]);
   });
 
   it('Rechte jedes Mal frisch – nach dem Einrichten sind sie neu (im Browser-Check gefunden)', async () => {
@@ -181,5 +194,75 @@ describe('entferneEntwurf', () => {
     spy.mockClear();
     expect(await entferneEntwurf(d, 1, ort, 1)).toEqual({ ok: false, grund: 'kein-recht' });
     expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe('sendeEntwuerfe (Durchstich mit den echten Anschlüssen)', () => {
+  it('liest frisch, schreibt den Platz, liest nach – erst dann wird der Entwurf gelöscht', async () => {
+    // Wie gemessen: ChurchTools schreibt beim Einteilen den Namen an den Platz – ohne Namen gilt er als frei.
+    let platz = {
+      id: 807,
+      serviceId: 7,
+      index: null,
+      personId: null as number | null,
+      name: null as string | null,
+    };
+    let werte = [wert(100, 20)];
+    const reihe: string[] = [];
+    const spy = ct({
+      ...GRUND,
+      'GET /api/csrftoken': () => json(200, { data: 'tok' }),
+      'GET /api/events/20': () => {
+        reihe.push(`lesen ${platz.personId ?? 'frei'}`);
+        return json(200, { data: { id: 20, eventServices: [platz] } });
+      },
+      'PUT /api/events/20/servicerequests/807': (init) => {
+        reihe.push('schreiben');
+        const b = JSON.parse(String(init?.body)) as { personId: number };
+        platz = { ...platz, id: 900, personId: b.personId, name: 'Ben Test' };
+        return json(200, {});
+      },
+      'GET /api/custommodules/16/customdatacategories/30/customdatavalues': () =>
+        json(200, { data: werte }),
+      'DELETE /api/custommodules/16/customdatacategories/30/customdatavalues/100': () => {
+        reihe.push(`löschen bei ${platz.personId}`);
+        werte = [];
+        return new Response(null, { status: 204 });
+      },
+    });
+    const d = await ladeEntwuerfe([TECHNIK]);
+    const e = d.entwuerfe.get('20|7|-')!;
+    const gemeldet: unknown[] = [];
+    const r = await sendeEntwuerfe(d, [{ entwurf: e, kategorie: 30 }], (i, x) =>
+      gemeldet.push([i, x]),
+    );
+    expect(r).toEqual([{ art: 'gesendet' }]);
+    expect(gemeldet).toEqual([[0, { art: 'gesendet' }]]);
+    expect(reihe).toEqual(['lesen frei', 'schreiben', 'lesen 46', 'löschen bei 46']);
+    const put = spy.mock.calls.find((c) => c[1]?.method === 'PUT')!;
+    expect(JSON.parse(String(put[1]?.body))).toEqual({
+      personId: 46,
+      name: null,
+      isAccepted: false,
+    });
+  });
+});
+
+describe('Anzahl der Plätze (E4-5-3, Durchstich über den Anschluss)', () => {
+  it('liest frisch, schreibt eventservices, liest nach – erst dann „ok“', async () => {
+    let plaetze = [{ id: 1, serviceId: 8, index: null, personId: null, name: null }];
+    const spy = ct({
+      'GET /api/csrftoken': () => json(200, { data: 'tok' }),
+      'GET /api/events/20': () => json(200, { data: { id: 20, eventServices: plaetze } }),
+      'PUT /api/events/20/eventservices': (init) => {
+        const b = JSON.parse(String(init?.body)) as { services: { count: number }[] };
+        expect(b).toEqual({ eventId: 20, services: [{ serviceId: 8, count: 2 }] });
+        plaetze = [...plaetze, { id: 2, serviceId: 8, index: null, personId: null, name: null }];
+        return new Response(null, { status: 204 });
+      },
+    });
+    const a = entwurfAnschluss({ ichId: 1, vorname: 'Alwin' } as Start, () => []);
+    expect(await a.anzahl(20, 8, 1, 2)).toEqual({ ok: true, anzahl: 2 });
+    expect(spy.mock.calls.filter((c) => c[1]?.method === 'PUT')).toHaveLength(1);
   });
 });

@@ -33,6 +33,102 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 - `useMedienAbfrage` meldet sich bei älteren Safari (vor iOS 14, nur `addListener`) richtig an statt abzustürzen –
   das öffentliche Formular öffnen Gäste mit allen möglichen Handys.
 
+### Neu (Dienstplaner)
+
+- **Dunkelmodus wie ChurchTools** (#563, Alwin: „genauso“ wie bei den Anmeldungen): Der Dienstplaner ist hell oder
+  dunkel, je nachdem, was in ChurchTools gewählt ist, und schaltet ohne Neuladen mit um (`folgeChurchToolsThema()`
+  aus `ui/design/thema.ts`). Bisher war er immer hell. Der Hinweiskasten in „Wer kann?“ und im Entwurfs-Fach hatte
+  als Einziges feste Farben (Gelb) – er nutzt jetzt wie die Warnungen der Anmeldungen `--red` aus den Tokens. Alle
+  Seiten hell und dunkel durchgesehen (Start, Termine, Planen, Fächer, Menüs, Handy).
+
+### Hinzugefügt (Dienstplaner)
+
+- **Entwürfe ohne Platz und alte Entwürfe** (#582, Entwurf `entwuerfe-ohne-platz.html`): Ein Entwurf findet seinen
+  Platz über Termin, Dienst und Platznummer. Ändert jemand in ChurchTools die Platzzahl (die Plätze werden dabei neu
+  nummeriert – gemessen), steht jetzt beim Dienst am Termin ein Schild **„Entwurf ohne Platz“**; antippen nennt den
+  Grund und bietet „Entwurf verwerfen“. Gehört der Dienst nicht mehr zum Termin, ist der Termin **vorbei** oder
+  **gelöscht** (ChurchTools antwortet 404 – gemessen), zeigt ein Hinweis über der Matrix „N alte Entwürfe“; die Liste
+  hat „Alle verwerfen“ (einer nach dem anderen, Ergebnis je Zeile). Termine außerhalb des Zeitraums fragt der
+  Dienstplaner einmal nach (höchstens 4 gleichzeitig); ein künftiger Termin dort ist normal, ein Fehler beim Fragen
+  meldet nichts als alt. Den Hinweis sehen alle Planer der Gruppe, die deren Entwürfe ändern dürfen (Alwin,
+  15.10.2026). Bisher blieben solche Entwürfe unsichtbar für immer in der Schublade.
+- **Anzahl der Plätze ändern** (#580, Bauplan E4-5-3, Entwurf `e4-5-entwurf.html`): Regler-Symbol in der Gruppenzeile
+  je Termin (nur wo man einen Dienst der Gruppe plant, nicht an abgesagten Terminen) → Fenster „Technik · Plätze“
+  mit − / + je Dienst. Jeder Tipp gilt **sofort** (Alwin, 15.10.2026): frisch lesen, mit der gesehenen Zahl
+  vergleichen (sonst „Jemand hat die Zahl eben geändert“), schreiben, nachlesen – nie automatisch wiederholt.
+  Belegte Plätze lassen sich nicht wegnehmen. **Liegen an einem Dienst Entwürfe, bleibt seine Zahl** („erst
+  senden oder entfernen“) – gemessen nummeriert ChurchTools die Plätze beim Ändern neu (ein einzelner Platz hat keine
+  Nummer, ab zwei heißen sie 1, 2, …), ein Entwurf fände seinen Platz sonst nicht mehr. ChurchTools verschickt dabei
+  nichts (gemessen). Kein „Auf Vorlage zurücksetzen“: Ein Termin verweist nicht auf seine Vorlage (gemessen). Danach lädt
+  die Matrix leise neu – dieselbe Funktion wie nach dem Senden.
+- **Belegten Platz zurückziehen oder ersetzen** (#578, Bauplan E4-5-2, Entwurf `e4-5-entwurf.html`): Wo man plant,
+  ist jetzt auch ein belegter Platz antippbar. Ein Fenster zeigt, wer dort steht und wie (angefragt, zugesagt, Gast),
+  dazu „Andere Person wählen“ und „Zurückziehen“ – beides wird ein **Entwurf** und geht erst mit „Ansehen und
+  senden“ an ChurchTools (Alwin, 15.10.2026). Vorher steht da, was die Person mitbekommt (gemessen):
+  Zurückziehen – ChurchTools sagt **nicht** Bescheid; Ersetzen – „Du wurdest … ausgetragen“. In der Matrix steht
+  Zurückziehen rot gestrichelt mit durchgestrichenem Namen, Ersetzen als „Greta statt Anna“; das Entwurfs-Fach und
+  das Senden-Fach („Zurückziehen: Ben“, „Anfrage an Greta statt Anna“, Satz oben und Hinweis je Zeile) sagen
+  dasselbe. Die Texte zur Mitteilung stehen an einer Stelle (`bisherHinweis`). Verborgene Namen und Plätze mit
+  einem veralteten Entwurf sind kein Knopf. Fenster als Modal, auch am Handy.
+- **Entwürfe senden** (#573, Bauplan E4-4-2, Entwurf `e4-4-entwurf.html`): Die Leiste unten heißt jetzt
+  „Ansehen und senden“. Das Fach listet die Entwürfe nach Terminen mit **Häkchen je Zeile** (abgewählte bleiben
+  Entwurf), auch die anderer Planer („von Spike“), und sagt vorher, was passiert: Anfragen und direkt Zugeteilte
+  bekommen eine Mitteilung in der ChurchTools-App, Gäste stehen nur mit Namen im Plan. **Vorher geprüft**: Ist
+  jemand an dem Tag abwesend oder schon eingeteilt, steht das rot an der Zeile (aus „Wer kann?“, höchstens 4
+  Abfragen gleichzeitig); ließ sich das nicht prüfen, steht „Hinweise nicht geprüft“. Gesendet wird einer nach dem
+  anderen mit Fortschritt, das Fenster lässt sich dabei nicht schließen. Danach das Ergebnis je Zeile (gesendet,
+  oder warum nicht); nichts wird verworfen, „Erneut senden“ versucht nur, was sich lohnt (vorübergehend, nicht
+  angekommen, abgemeldet). Ist etwas gesendet, laden Matrix und Entwürfe danach leise neu. Gezählt und gesendet wird nach **einer**
+  Regel: gültige Entwürfe im geladenen Zeitraum, wo man planen und die Entwürfe der Gruppe ändern darf.
+  Damit ist die Leiste aus E4-3-3 („Senden folgt“) aktiv.
+
+### Geändert (Dienstplaner)
+
+- **Planen: „nur ansehen“ statt „du planst“** (#586) – das Schild „du planst“ an jeder planbaren Dienstgruppe war
+  unklar und stand je nach Namenslänge woanders. Jetzt tragen planbare Gruppen kein Schild mehr (dort sind die Plätze
+  antippbar); ein graues „nur ansehen“ steht nur dort, wo man an keinem der gezeigten Termine einteilen darf –
+  dieselbe Regel wie die Knöpfe (Gruppe planbar oder Admin des Termins), am Handy je Termin.
+
+### Behoben (Dienstplaner)
+
+- **Drei Anzeige-Funde aus der Prüfung mit zwei Planern** (#584, 16.10.2026, Messprotokoll): **a)** Nach einem Konflikt im
+  Entwurfs-Fach zeigt das Fach die neue Fassung des anderen Planers, und der Hinweis nennt sie mit Art („Spike hat
+  diesen Entwurf eben geändert: Direkt zuteilen: Anna“) – vorher stand dort die alte Fassung und nur der Name.
+  **b)** Geht beim Senden nichts durch, hat sich aber etwas geändert (Konflikt, Entwurf geändert oder weg, Platz
+  weg), lädt die Matrix nach dem Schließen trotzdem neu (`neuLaden`) – vorher zeigte sie den Entwurf weiter als
+  gültig. **c)** Hat ein anderer Planer den Entwurf eben gesendet oder entfernt, heißt es jetzt genau das („Den
+  Entwurf gibt es nicht mehr …“, neuer Grund `entwurf-weg` im Senden-Kern) statt „eben geändert“.
+
+### Intern (Dienstplaner)
+
+- **Kern für die Platzzahl** (#580, `shared/dienstplan/anzahl.ts`) mit derselben Fehler-Zuordnung wie der
+  Schreibkern (`lesegrund`, eine Stelle statt zwei). Der ChurchTools-Nachbau der Tests kann jetzt auch die
+  Platzzahl (mehr → neue freie Plätze, weniger → leere zuerst weg), und im Planen-Test gibt es nur noch **einen**
+  nachgebauten Anschluss statt dreier Kopien.
+- **Zurückziehen und Ersetzen im Kern** (#576, Bauplan E4-5-1 – noch ohne Oberfläche): Ein Entwurf kann jetzt auch
+  „frei“ als Ziel haben (die Einteilung zurückziehen; beim Senden `decline`) und an einem belegten Platz eine andere
+  Person eintragen (ersetzen). Neue Regel `gleicherStand` für beide Stellen – Schild „veraltet“ und Prüfung vor dem
+  Schreiben: Hat eine angefragte Person inzwischen zugesagt, ist das eine Änderung; der Entwurf wird nicht gesendet
+  (Alwin, 15.10.2026). Bisher zählte eine Zusage derselben Person als „unverändert“. Anzeige-Texte für das neue Ziel
+  aus einer Stelle (`zielText`).
+- **Gemessen** (15.10.2026, E4-5-0): Ersetzen schickt der bisherigen Person die Push-Mitteilung „Dienstaustragung – Du
+  wurdest aus dem Dienst … ausgetragen“ (angefragt wie zugesagt); Zurückziehen schickt nichts; die Platzzahl ändern
+  verschickt nichts. Keine Mails.
+- **Senden-Kern** (#570, Bauplan E4-4-1 – noch ohne Oberfläche): `shared/dienstplan/senden.ts` macht aus Entwürfen
+  echte Einteilungen. Je Eintrag, einer nach dem anderen: Entwurf noch in derselben Fassung? → einteilen mit dem
+  Schreibkern (frisch lesen, schreiben, nachlesen; `gesehen` als erwartete Belegung) → **erst danach** den Entwurf
+  entfernen. Ergebnis je Eintrag (gesendet, ggf. „Entwurf blieb“; nicht gesendet mit Grund; nicht versucht). Bei
+  „abgemeldet“ und vorübergehenden Fehlern wird angehalten, der Rest bleibt Entwurf; nichts wird automatisch
+  wiederholt oder verworfen. Echt an der Test-Instanz geprüft (direkt zugeteilt + Gast, danach ausgetragen).
+- **Gemessen** (15.10.2026): „Direkt zuteilen“ über die Schnittstelle löst die Push-Mitteilung „Diensteinteilung“
+  aus wie eine Anfrage; Austragen durch einen Planer benachrichtigt die Person **nicht**.
+- Die ChurchTools-Nachbauten der Tests (`einteilen.testutil.ts`, `entwuerfe.testutil.ts`) nutzen Schreibkern,
+  Entwürfe und Senden gemeinsam statt in Kopien.
+- **Browser-Anschluss des Schreibkerns** (#573, `dienstplaner/src/dienstPort.ts`): Termin frisch lesen und Platz
+  schreiben mit der Sitzung der Seite. Liefert ChurchTools einen Termin ohne Platzliste, gilt das als
+  „vorübergehend“, nicht als „Platz weg“. Die Hinweise vor dem Senden nutzen `mapLimit` (keine eigene Kopie).
+  Die Demo (`?demo`) spielt jetzt auch das Einteilen nach (neue Platz-ID je Schreiben, wie gemessen).
+
 ### Neu (Anmeldungen)
 
 - **Dunkelmodus wie ChurchTools** (Alwin, 14.10.2026). Die Anmeldungen sind hell oder dunkel, je nachdem, was
@@ -128,16 +224,6 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Intern
 
-- **Senden-Kern** (#570, Bauplan E4-4-1 – noch ohne Oberfläche): `shared/dienstplan/senden.ts` macht aus Entwürfen
-  echte Einteilungen. Je Eintrag, einer nach dem anderen: Entwurf noch in derselben Fassung? → einteilen mit dem
-  Schreibkern (frisch lesen, schreiben, nachlesen; `gesehen` als erwartete Belegung) → **erst danach** den Entwurf
-  entfernen. Ergebnis je Eintrag (gesendet, ggf. „Entwurf blieb“; nicht gesendet mit Grund; nicht versucht). Bei
-  „abgemeldet“ und vorübergehenden Fehlern wird angehalten, der Rest bleibt Entwurf; nichts wird automatisch
-  wiederholt oder verworfen. Echt an der Test-Instanz geprüft (direkt zugeteilt + Gast, danach ausgetragen).
-- **Gemessen** (15.10.2026): „Direkt zuteilen“ über die Schnittstelle löst die Push-Mitteilung „Diensteinteilung“
-  aus wie eine Anfrage; Austragen durch einen Planer benachrichtigt die Person **nicht**.
-- Die ChurchTools-Nachbauten der Tests (`einteilen.testutil.ts`, `entwuerfe.testutil.ts`) nutzen Schreibkern,
-  Entwürfe und Senden gemeinsam statt in Kopien.
 - **Gemeinsame Bausteine statt Kopien** (#561): Der Browser-Anschluss an den Speicher der Erweiterung
   (`ui/ct/modulPort.ts`), das Kürzel aus der Bau-Adresse (`ui/erweiterung/kuerzel.ts`) und der Hinweis-Toast
   (`ui/fenster/Toast.tsx`, `useToast.ts`) standen nur in der Musik-App; jetzt nutzen beide Apps dieselben. Die

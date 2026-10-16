@@ -168,16 +168,51 @@
   transition: transform 0.15s;
 }
 
-.duPlanst {
+// „nur ansehen“ (16.10.2026): leise, grau, immer am rechten Rand der Spalte.
+.nurAnsehen {
   margin-left: auto;
   flex: none;
   white-space: nowrap;
   padding: 1px 7px;
+  border: 1px solid var(--border);
   border-radius: 999px;
-  background: var(--blue-soft);
-  color: var(--blue-ink);
+  background: var(--surface2);
+  color: var(--text2);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
+}
+
+// Gruppenzeile je Termin: Stand links, Regler rechts (E4-5-3).
+.gruppenZelle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  padding-right: 6px;
+}
+
+// Regler (Plätze ändern) – leise, erst beim Zeigen deutlicher.
+.regler {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface2);
+    color: var(--text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 1px;
+  }
 }
 
 .gruppenStand {
@@ -306,6 +341,46 @@
   }
 }
 
+// Entwurf „zurückziehen“ (E4-5, Entwurf Abschnitt 2): rot gestrichelt, der Name durchgestrichen.
+.zurueck {
+  border: 1.5px dashed var(--red);
+  background: color-mix(in srgb, var(--red) 7%, var(--surface2));
+
+  .ic {
+    background: var(--red);
+    color: #fff;
+  }
+}
+
+.durch {
+  color: var(--text2);
+  text-decoration: line-through;
+}
+
+// Ersetzen: „Greta statt Anna“ – der Alte klein und durchgestrichen.
+.statt {
+  color: var(--text3);
+  font-size: 12px;
+  text-decoration: line-through;
+}
+
+// Ein belegter Platz zum Antippen (E4-5) – sieht aus wie bisher, ist aber ein Knopf.
+.belegtKnopf {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--blue);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 1px;
+  }
+}
+
 // Entwurf antippbar (E4-3-3) – wie der freie Platz ein Knopf.
 .entwurfKnopf {
   width: 100%;
@@ -382,6 +457,20 @@
     flex: none;
     white-space: nowrap;
   }
+}
+
+// „Ansehen und senden“ – ab E4-4-2 aktiv, blau wie die anderen Hauptknöpfe.
+.sendenKnopf {
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  background: var(--blue);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 // „von Spike“ bzw. „direkt“ am Entwurf – kleine Schilder wie „Gast“.
@@ -494,6 +583,38 @@
     font-size: 13px;
     font-weight: 600;
     color: var(--text2);
+  }
+}
+
+// Alte Entwürfe (#582): Hinweis über der Matrix, rot getönt wie die Warnungen (kein Gelb/Orange).
+.alteHinweis {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 10px;
+  padding: 8px 8px 8px 12px;
+  border-radius: var(--r-card);
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+.alteKnopf {
+  flex: none;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text);
+  font: 600 13.5px var(--ui);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 1px;
   }
 }
 

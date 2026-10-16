@@ -3,7 +3,13 @@ import { Sheet } from '@ui/fenster/Sheet';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { kandidatenAus, kandidatHinweis, type Kandidat } from '@shared/dienstplan/werKann';
-import type { Entwurf, EntwurfErgebnis, EntwurfZiel } from '@shared/dienstplan/entwuerfe';
+import {
+  zielText,
+  type Besetzung,
+  type Entwurf,
+  type EntwurfErgebnis,
+} from '@shared/dienstplan/entwuerfe';
+import type { Belegung } from '@shared/dienstplan/einteilen';
 import { ladeWerKann } from './ladeWerKann';
 import { grundText } from './ladeEntwuerfe';
 import { useInsBild } from './useInsBild';
@@ -30,6 +36,11 @@ export interface FreierPlatz {
   index: number | null;
   /** Die Dienstgruppe – in deren Schublade liegt der Entwurf. */
   gruppeId: number;
+  /**
+   * Wer jetzt in ChurchTools dort steht (E4-5) – dann ersetzt die Wahl diese Person, und der Entwurf merkt sich
+   * die Belegung als „gesehen“. Fehlt bei freien Plätzen (und bei verborgenen Namen).
+   */
+  bisher?: { belegung: Belegung; name: string; gast: boolean };
 }
 
 /**
@@ -42,7 +53,7 @@ export type Eintragen =
   | { art: 'einrichten'; gruppe: string; onEinrichten: () => Promise<void> }
   | {
       art: 'bereit';
-      onWahl: (ziel: EntwurfZiel, erwartet: number | null) => Promise<EntwurfErgebnis>;
+      onWahl: (ziel: Besetzung, erwartet: number | null) => Promise<EntwurfErgebnis>;
       /** Ersetzt einen Entwurf („Andere Person wählen“, E4-3-3): dessen Version. Sonst `null` (neu). */
       erwartet?: number | null;
     };
@@ -79,15 +90,13 @@ export function WerKann({
   const [gast, setGast] = useState('');
   const [laeuft, setLaeuft] = useState(false);
   const [meldung, setMeldung] = useState<string | null>(null);
-  const [konflikt, setKonflikt] = useState<{ ziel: EntwurfZiel; jetzt: Entwurf | null } | null>(
-    null,
-  );
+  const [konflikt, setKonflikt] = useState<{ ziel: Besetzung; jetzt: Entwurf | null } | null>(null);
 
   // Ein Hinweis (Konflikt, Fehler) steht unter der langen Liste – ins Bild rollen (`useInsBild`).
   const hinweisRef = useInsBild<HTMLDivElement>(meldung ?? konflikt);
 
   const bereit = eintragen?.art === 'bereit' ? eintragen : null;
-  const waehle = async (ziel: EntwurfZiel, erwartet: number | null) => {
+  const waehle = async (ziel: Besetzung, erwartet: number | null) => {
     if (!bereit || laeuft) return;
     setLaeuft(true);
     setMeldung(null);
@@ -120,6 +129,7 @@ export function WerKann({
     <Sheet title={`${platz.dienst} · ${platz.tag}`} onClose={onClose} cancelLabel="Schließen">
       <p className={styles.unter}>
         {platz.termin} um {platz.uhrzeit} Uhr · Platz {platz.nr} von {platz.von}
+        {platz.bisher && <> · statt {platz.bisher.name}</>}
       </p>
       {zustand.art === 'laedt' && <p className={styles.hinweis}>„Wer kann?“ wird geladen …</p>}
       {zustand.art === 'fehler' && (
@@ -235,7 +245,7 @@ export function WerKann({
                   ? `${konflikt.jetzt.von.name} hat diesen Platz eben geändert:`
                   : 'Jemand hat diesen Platz eben geändert.'}
               </b>{' '}
-              {konflikt.jetzt && `Entwurf „${konflikt.jetzt.ziel.name}“. `}
+              {konflikt.jetzt && `Entwurf „${zielText(konflikt.jetzt.ziel)}“. `}
               Dein „{konflikt.ziel.name}“ wurde nicht gespeichert.
             </p>
             <div className={styles.knoepfe}>
@@ -262,8 +272,8 @@ export function WerKann({
   );
 }
 
-/** Was unter der Liste steht, wenn (noch) nicht eingetragen werden kann. */
-function EintragenStand({ eintragen, laeuft }: { eintragen?: Eintragen; laeuft: boolean }) {
+/** Was unter der Liste steht, wenn (noch) nicht eingetragen werden kann – auch im Fenster am belegten Platz. */
+export function EintragenStand({ eintragen, laeuft }: { eintragen?: Eintragen; laeuft: boolean }) {
   const [einrichten, setEinrichten] = useState<
     { art: 'bereit' } | { art: 'laeuft' } | { art: 'fehler'; text: string }
   >({ art: 'bereit' });

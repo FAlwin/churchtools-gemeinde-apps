@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { Segment } from '@ui/bedienung/Segment';
@@ -23,9 +23,10 @@ import { werWieOft } from '@shared/dienstplan/werWieOft';
 import {
   entwurfVeraltet,
   ortSchluessel,
+  zielText,
+  type Besetzung,
   type Entwurf,
   type EntwurfErgebnis,
-  type EntwurfZiel,
 } from '@shared/dienstplan/entwuerfe';
 import {
   zeitraumGrenzen,
@@ -42,6 +43,11 @@ import { useBreite } from './useBreite';
 import { FilterKnopf } from './FilterKnopf';
 import { WerKann, type Eintragen, type FreierPlatz } from './WerKann';
 import { EntwurfFach } from './EntwurfFach';
+import { BelegtFach } from './BelegtFach';
+import { PlaetzeFach, type PlaetzeZeile } from './PlaetzeFach';
+import { AlteEntwuerfeFach, type AlterEntwurf } from './AlteEntwuerfeFach';
+import type { TerminStand } from './terminStand';
+import { SendenFach, type SendeZeile } from './SendenFach';
 import { grundText, type EntwuerfeDaten, type EntwurfAnschluss } from './ladeEntwuerfe';
 import styles from './Planen.module.scss';
 
@@ -50,6 +56,8 @@ interface Props {
   /** Schmaler Bildschirm: ein Termin auf einmal statt der Tabelle (Entwurf v17). */
   handy: boolean;
   onNochmal: () => void;
+  /** Nach dem Senden leise neu laden (ohne „wird geladen“) – die Matrix zeigt dann, was in ChurchTools steht. */
+  onAktualisieren?: () => void;
   /** Weitere Wochen „ab heute“ nachladen – die Terminleiste ruft das am Ende selbst auf. */
   onMehr: () => void;
   /** Lassen sich „ab heute“ noch weitere Wochen nachladen? */
@@ -90,6 +98,14 @@ interface Sicht {
   entwurf: (spalte: number, zeile: PlanZeile, p: PlanPlatz) => EntwurfAmPlatz | null;
   /** Einen Entwurf antippen → Entwurfs-Fach (E4-3-3; nur wo man planen und die Schublade ändern darf). */
   onEntwurf: (spalte: number, zeile: PlanZeile, nr: number) => void;
+  /** Einen belegten Platz antippen → zurückziehen oder ersetzen (E4-5; nur wo man den Dienst planen darf). */
+  onBelegt: (spalte: number, zeile: PlanZeile, nr: number) => void;
+  /** Entwürfe ohne Platz an diesem Termin und Dienst (#582) – Schild darunter. */
+  ohnePlatz: (spalte: number, zeile: PlanZeile) => Entwurf[];
+  /** Schild antippen → Entwurfs-Fach mit „Entwurf verwerfen“ (nur wo man planen und ändern darf). */
+  onOhnePlatz: (spalte: number, zeile: PlanZeile, e: Entwurf) => void;
+  /** Regler in der Gruppenzeile → Plätze-Fach (E4-5-3); `undefined`, wo man keinen Dienst der Gruppe plant. */
+  onPlaetze: (spalte: number, gruppe: PlanGruppe) => (() => void) | undefined;
   darfAendern: (zeile: PlanZeile) => boolean;
   /** Die eigene Person – eigene Entwürfe stehen ohne „von …“. */
   ichId: number | null;
@@ -97,6 +113,10 @@ interface Sicht {
 
 /** Darf man an diesem Termin diesen Dienst planen – über Recht, Leitung oder als Admin des Termins? */
 const darfPlanen = (z: PlanZeile, s: PlanSpalte) => z.planbar || s.admin;
+
+/** Darf man in dieser Gruppe an keinem der gezeigten Termine einteilen? Dieselbe Regel wie `darfPlanen`. */
+const nurAnsehen = (g: PlanGruppe, spalten: PlanSpalte[]) =>
+  !g.zeilen.some((z) => spalten.some((s) => darfPlanen(z, s)));
 
 /** Was das Fach „Wer kann?“ über den angetippten Platz wissen muss. */
 function freierPlatz(s: PlanSpalte, z: PlanZeile, plaetze: PlanPlatz[], nr: number): FreierPlatz {
@@ -114,7 +134,14 @@ function freierPlatz(s: PlanSpalte, z: PlanZeile, plaetze: PlanPlatz[], nr: numb
     schonDa: plaetze.flatMap((p) => (p.personId !== null ? [p.personId] : [])),
     index: plaetze[nr - 1]?.index ?? null,
     gruppeId: z.dienst.dienstgruppeId ?? 0,
+    ...bisherAus(plaetze[nr - 1]),
   };
+}
+
+/** Wer jetzt dort steht (E4-5) – nur bei belegten Plätzen mit sichtbarem Namen (verborgene haben keinen). */
+function bisherAus(p: PlanPlatz | undefined): Pick<FreierPlatz, 'bisher'> {
+  if (!p || p.art === 'frei' || p.name === null) return {};
+  return { bisher: { belegung: p.belegung, name: p.name, gast: p.gast } };
 }
 
 /**
@@ -122,13 +149,16 @@ function freierPlatz(s: PlanSpalte, z: PlanZeile, plaetze: PlanPlatz[], nr: numb
  * in jeder Zelle die Plätze. Darüber die Terminleiste mit dem **Zeitraum-Knopf** (Alwin, 14.10.2026): ab heute
  * (passend zur Fensterbreite, ‹ ＋ ＋ › blättern und laden am Ende selbst nach), ein Monat oder ein eigener
  * Zeitraum – dann stehen alle Termine des Bereichs da, und ‹ › springen um den ganzen Bereich. Dazu Filter,
- * Spaltenbreite und „Wer wie oft?“. **Nur lesen** – Einteilen kommt mit E4. Am Handy: eine Datumsleiste und
- * darunter ein Termin.
+ * Spaltenbreite und „Wer wie oft?“. Eingeteilt wird über Entwürfe (E4): freien Platz antippen → „Wer kann?“,
+ * belegten Platz → zurückziehen oder ersetzen (E4-5), gesendet über die Leiste unten; der Regler in der Gruppenzeile
+ * ändert die Anzahl der Plätze (E4-5-3, sofort). Am Handy: eine Datumsleiste
+ * und darunter ein Termin.
  */
 export function Planen({
   zustand,
   handy,
   onNochmal,
+  onAktualisieren,
   onMehr,
   mehrMoeglich,
   ladeZeitraum,
@@ -143,6 +173,12 @@ export function Planen({
   const [fenster, setFenster] = useState<Fenster>({ start: 0, anzahl: null });
   const [zu, setZu] = useState<Set<string> | null>(null);
   const [frei, setFrei] = useState<FreierPlatz | null>(null);
+  // Das Fenster am belegten Platz (E4-5): zurückziehen oder ersetzen.
+  const [belegt, setBelegt] = useState<FreierPlatz | null>(null);
+  // Das Plätze-Fach (E4-5-3): Termin und Gruppe.
+  const [plaetzeFach, setPlaetzeFach] = useState<{ spalte: number; gruppe: PlanGruppe } | null>(
+    null,
+  );
   // Ein angetippter Entwurf (E4-3-3) – und ob „Andere Person wählen“ einen Entwurf ersetzt (seine Version).
   const [fach, setFach] = useState<{
     platz: FreierPlatz;
@@ -150,6 +186,8 @@ export function Planen({
     inChurchTools: string | null;
   } | null>(null);
   const [ersetzt, setErsetzt] = useState<number | null>(null);
+  // Das offene Senden-Fach mit seiner Liste (beim Öffnen festgehalten).
+  const [sendenListe, setSendenListe] = useState<SendeZeile[] | null>(null);
   const [rahmen, platz] = useBreite();
   const { toast, showToast } = useToast();
 
@@ -171,9 +209,9 @@ export function Planen({
   const ewNeu = useCallback(() => setEwVersuch((v) => v + 1), []);
   /**
    * Der Entwurf an einem Platz. Gültig ist er nur, wenn am Platz in ChurchTools noch dasselbe steht wie beim
-   * Eintragen (Entwürfe entstehen an freien Plätzen) – sonst ist er **veraltet**: Es gilt ChurchTools, und am
-   * Platz steht nur ein Schild (Alwin, 14.10.2026). Verglichen wird mit derselben Regel wie beim Einteilen
-   * (`p.belegung`, `gleichePerson`).
+   * Eintragen – sonst ist er **veraltet**: Es gilt ChurchTools, und am Platz steht nur ein Schild (Alwin,
+   * 14.10.2026). Verglichen wird mit derselben Regel wie beim Senden (`p.belegung`, `gleicherStand` – auch eine
+   * inzwischen gegebene Zusage zählt als Änderung, Alwin 15.10.2026).
    */
   const entwurfAmPlatz = (s: PlanSpalte, zl: PlanZeile, p: PlanPlatz): EntwurfAmPlatz | null => {
     if (ew.art !== 'fertig') return null;
@@ -203,10 +241,13 @@ export function Planen({
   const bereich = grenzen ? `${grenzen.von}|${grenzen.bis}` : null;
   const [eigen, setEigen] = useState<{ bereich: string; zustand: TermineZustand } | null>(null);
   const [versuch, setVersuch] = useState(0);
+  // Nach dem Senden leise neu laden: Das Bisherige bleibt stehen, bis das Neue da ist (wie „ab heute“).
+  const leiseNeu = useRef(false);
   useEffect(() => {
     if (!grenzen || !bereich) return;
     let aktuell = true;
-    setEigen({ bereich, zustand: { art: 'laedt' } });
+    if (!leiseNeu.current) setEigen({ bereich, zustand: { art: 'laedt' } });
+    leiseNeu.current = false;
     ladeZeitraum(grenzen.von, grenzen.bis).then(
       (d) =>
         aktuell &&
@@ -256,6 +297,74 @@ export function Planen({
   };
 
   const plan = quelle.art === 'fertig' ? quelle.plan : null;
+
+  // Entwürfe ohne Platz (#582): Am geladenen Termin passt die Platznummer nicht mehr (Platzzahl in ChurchTools
+  // geändert – gemessen: dann wird neu nummeriert) → Schild beim Dienst. Gehört der Dienst nicht mehr zum Termin,
+  // oder ist der Termin vorbei bzw. gelöscht → „alte Entwürfe“ zum Aufräumen. Termine außerhalb des Zeitraums werden
+  // einmal nachgefragt; ein künftiger Termin dort ist normal.
+  const [staende, setStaende] = useState<Map<number, TerminStand>>(new Map());
+  const lage = entwurfsLage();
+  const fremdSchluessel = lage.fremd.join(',');
+  useEffect(() => {
+    if (!entwuerfe || !fremdSchluessel) return;
+    let aktuell = true;
+    const ids = fremdSchluessel.split(',').map(Number);
+    entwuerfe.termine(ids).then(
+      (m) => aktuell && setStaende((alt) => new Map([...alt, ...m])),
+      () => {}, // „unbekannt“: nichts als alt melden (vorübergehend ist nicht gelöscht)
+    );
+    return () => {
+      aktuell = false;
+    };
+  }, [entwuerfe, fremdSchluessel]);
+  function entwurfsLage() {
+    const schilder = new Map<string, Entwurf[]>();
+    const alte: AlterEntwurf[] = [];
+    const fremd = new Set<number>();
+    if (!plan || ew.art !== 'fertig') return { schilder, alte, fremd: [] as number[] };
+    const spalteJe = new Map(plan.spalten.map((sp, i) => [sp.id, i]));
+    const zeileJe = new Map(plan.gruppen.flatMap((g) => g.zeilen).map((zl) => [zl.dienst.id, zl]));
+    const aendern = (gruppeId: number) => ew.daten.schubladen.get(gruppeId)?.stand === 'bereit';
+    for (const [k, e] of ew.daten.entwuerfe) {
+      const gruppeId = ew.daten.gruppeJe.get(k);
+      if (gruppeId === undefined) continue;
+      const i = spalteJe.get(e.ort.eventId);
+      const dienst = zeileJe.get(e.ort.serviceId)?.dienst.name;
+      if (i === undefined) {
+        const st = staende.get(e.ort.eventId);
+        if (!st) fremd.add(e.ort.eventId);
+        else if (aendern(gruppeId) && st.art === 'weg') {
+          alte.push({ entwurf: e, gruppeId, grund: 'termin-weg', dienst });
+        } else if (aendern(gruppeId) && st.art === 'da' && st.tag < heute) {
+          alte.push({ entwurf: e, gruppeId, grund: 'vorbei', termin: st, dienst });
+        }
+        continue;
+      }
+      const sp = plan.spalten[i];
+      const zl = zeileJe.get(e.ort.serviceId);
+      // Dienst gar nicht in der Matrix (z. B. Gruppe nicht ganz sichtbar) – dann nichts behaupten.
+      if (!zl) continue;
+      const zelle = zl.zellen[i];
+      if (zelle === null) {
+        if (aendern(gruppeId)) {
+          alte.push({
+            entwurf: e,
+            gruppeId,
+            grund: 'dienst-weg',
+            termin: { name: sp.name, tag: sp.tag },
+            dienst,
+          });
+        }
+        continue;
+      }
+      if (zelle.some((p) => p.index === e.ort.index)) continue;
+      const sk = `${sp.id}|${zl.dienst.id}`;
+      schilder.set(sk, [...(schilder.get(sk) ?? []), e]);
+    }
+    return { schilder, alte, fremd: [...fremd].sort((a, b) => a - b) };
+  }
+  // Das Fach „Alte Entwürfe“ (offen mit der Liste, beim Öffnen festgehalten).
+  const [alteListe, setAlteListe] = useState<AlterEntwurf[] | null>(null);
   const d = plan ? fensterDaten(plan, ansicht, platz) : null;
   const gesamt = d?.gefiltert.length ?? 0;
   const f = sichtbar(fenster, gesamt, d?.passend ?? 0);
@@ -419,6 +528,13 @@ export function Planen({
       neben: (s) => haupt !== null && s.name !== haupt,
       onUmschalten: umschalten,
       onFrei: (i, zl, nr) => setFrei(freierPlatz(plan.spalten[i], zl, zl.zellen[i] ?? [], nr)),
+      onBelegt: (i, zl, nr) => setBelegt(freierPlatz(plan.spalten[i], zl, zl.zellen[i] ?? [], nr)),
+      onPlaetze: (i, g) =>
+        entwuerfe &&
+        !plan.spalten[i].abgesagt &&
+        g.zeilen.some((z) => darfPlanen(z, plan.spalten[i]))
+          ? () => setPlaetzeFach({ spalte: i, gruppe: g })
+          : undefined,
       entwurf: (i, zl, p) => entwurfAmPlatz(plan.spalten[i], zl, p),
       darfAendern,
       onEntwurf: (i, zl, nr) => {
@@ -432,6 +548,19 @@ export function Planen({
           inChurchTools: a.veraltet ? stehtInChurchTools(p) : null,
         });
       },
+      ohnePlatz: (i, zl) => lage.schilder.get(`${plan.spalten[i].id}|${zl.dienst.id}`) ?? [],
+      onOhnePlatz: (i, zl, e) =>
+        setFach({
+          platz: {
+            ...freierPlatz(plan.spalten[i], zl, zl.zellen[i] ?? [], 1),
+            nr: e.ort.index ?? 1,
+            index: e.ort.index,
+            bisher: undefined,
+          },
+          entwurf: e,
+          inChurchTools:
+            'Diesen Platz gibt es so nicht mehr – die Platzzahl wurde in ChurchTools geändert.',
+        }),
       ichId: entwuerfe?.ich.personId ?? null,
     };
     inhalt =
@@ -448,6 +577,34 @@ export function Planen({
       );
   }
 
+  /** ChurchTools hat sich geändert (gesendet, Plätze): die Termine neu – leise, ohne „wird geladen“. */
+  const leiseNeuLaden = () => {
+    if (bereich) {
+      leiseNeu.current = true;
+      setVersuch((v) => v + 1);
+    } else onAktualisieren?.();
+  };
+
+  /**
+   * Die Dienste einer Gruppe an einem Termin fürs Plätze-Fach – nur, wo man plant. Nicht unter „belegt“; liegen dort
+   * Entwürfe, bleibt die Zahl, wie sie ist (ChurchTools nummeriert die Plätze dabei neu – gemessen 15.10.2026).
+   */
+  const plaetzeZeilen = (s: PlanSpalte, i: number, g: PlanGruppe): PlaetzeZeile[] =>
+    g.zeilen
+      .filter((zl) => darfPlanen(zl, s))
+      .map((zl) => {
+        const zelle = zl.zellen[i] ?? [];
+        const belegtZahl = zelle.filter((p) => p.art !== 'frei').length;
+        const entwuerfeHier = zelle.filter((p) => entwurfAmPlatz(s, zl, p) !== null).length;
+        return {
+          serviceId: zl.dienst.id,
+          name: zl.dienst.name,
+          anzahl: zelle.length,
+          belegt: belegtZahl,
+          entwuerfe: entwuerfeHier,
+        };
+      });
+
   /** Nach einer Änderung im Entwurfs-Fach: Ergebnis übernehmen, bei Erfolg schließen und Bescheid geben. */
   const nachFach = (r: EntwurfErgebnis, k: string, text: () => string) => {
     if (r.ok) {
@@ -455,8 +612,11 @@ export function Planen({
       setFach(null);
       showToast(text());
     } else if (r.grund === 'konflikt') {
-      // Was jetzt dasteht, zeigt auch die Matrix sofort.
+      // Was jetzt dasteht, zeigt die Matrix sofort – und das offene Fach auch (sonst zeigte es die alte Fassung,
+      // Prüfung mit zwei Planern 16.10.2026). Ist der Entwurf weg, bleibt das Fach mit seinem Hinweis stehen.
       ewSetzen(k, r.jetzt ?? null);
+      const jetzt = r.jetzt;
+      if (jetzt) setFach((f) => (f ? { ...f, entwurf: jetzt } : f));
     }
   };
 
@@ -497,17 +657,19 @@ export function Planen({
     return {
       art: 'bereit',
       erwartet: ersetzt,
-      onWahl: async (ziel: EntwurfZiel, erwartet: number | null): Promise<EntwurfErgebnis> => {
-        // Ersetzt man einen Entwurf („Andere Person wählen“), bleibt „Beim Senden“ wie es war.
-        const bisher = erwartet !== null ? daten.entwuerfe.get(ortSchluessel(ort)) : undefined;
+      onWahl: async (ziel: Besetzung, erwartet: number | null): Promise<EntwurfErgebnis> => {
+        // Ersetzt man einen Entwurf („Andere Person wählen“), bleibt „Beim Senden“ wie es war. „Gesehen“ ist, was
+        // jetzt in ChurchTools steht – frei, oder die Person, die ersetzt wird (E4-5); bei einem gültigen Entwurf
+        // ist das genau, was er gesehen hat (`gleicherStand`).
+        const alt = erwartet !== null ? daten.entwuerfe.get(ortSchluessel(ort)) : undefined;
         const r = await entwuerfe.speichern(
           daten,
           f.gruppeId,
           {
             ort,
             ziel,
-            modus: bisher?.modus ?? 'anfrage',
-            gesehen: { art: 'frei' },
+            modus: alt?.modus ?? 'anfrage',
+            gesehen: f.bisher?.belegung ?? { art: 'frei' },
             von: entwuerfe.ich,
           },
           erwartet,
@@ -517,7 +679,11 @@ export function Planen({
           ewSetzen(k, r.entwurf);
           setFrei(null);
           setErsetzt(null);
-          showToast(`${ziel.name} eingetragen – noch nicht gesendet.`);
+          showToast(
+            f.bisher
+              ? `${ziel.name} statt ${f.bisher.name} eingetragen – noch nicht gesendet.`
+              : `${ziel.name} eingetragen – noch nicht gesendet.`,
+          );
         } else if (r.grund === 'konflikt') {
           // Was jetzt dasteht, zeigt auch die Matrix sofort.
           ewSetzen(k, r.jetzt ?? null);
@@ -528,27 +694,36 @@ export function Planen({
   };
 
   // Die Leiste unten (E4-3-3): gültige Entwürfe im geladenen Zeitraum – veraltete werden nie gesendet.
-  const offen = plan
-    ? plan.gruppen.reduce(
-        (n, g) =>
-          n +
-          g.zeilen.reduce(
-            (m, zl) =>
-              m +
-              zl.zellen.reduce(
-                (k, zelle, i) =>
-                  k +
-                  (zelle ?? []).filter((p) => {
-                    const a = entwurfAmPlatz(plan.spalten[i], zl, p);
-                    return a !== null && !a.veraltet;
-                  }).length,
-                0,
-              ),
-            0,
-          ),
-        0,
-      )
-    : 0;
+  // Die Leiste unten und das Senden-Fach (E4-4): **eine** Regel für Zählen und Senden (Bauplan: „Zählen und
+  // Senden aus derselben Regel“) – gültige Entwürfe im geladenen Zeitraum, wo man planen und die Schublade ändern
+  // darf; nach Terminen geordnet.
+  const sendbareZeilen = (): SendeZeile[] => {
+    if (!plan || ew.art !== 'fertig') return [];
+    const zeilen: SendeZeile[] = [];
+    plan.spalten.forEach((spalte, i) => {
+      for (const g of plan.gruppen) {
+        for (const zl of g.zeilen) {
+          if (!darfPlanen(zl, spalte) || !darfAendern(zl)) continue;
+          const kategorie = ew.daten.schubladen.get(zl.dienst.dienstgruppeId ?? 0)?.kategorie;
+          if (kategorie == null) continue;
+          for (const p of zl.zellen[i] ?? []) {
+            const a = entwurfAmPlatz(spalte, zl, p);
+            if (!a || a.veraltet) continue;
+            zeilen.push({
+              entwurf: a.entwurf,
+              kategorie,
+              tag: spalte.tag,
+              termin: spalte.name,
+              dienst: zl.dienst.name,
+              bisher: p.art === 'frei' || p.verborgen ? null : p.name,
+            });
+          }
+        }
+      }
+    });
+    return zeilen;
+  };
+  const offen = sendbareZeilen().length;
 
   const nachladeFehler = !bereich && zustand.art === 'fertig' ? zustand.nachladeFehler : undefined;
   return (
@@ -557,13 +732,33 @@ export function Planen({
       {nachladeFehler && (
         <FehlerKasten fehler={nachladeFehler} onNochmal={() => nachladen('weiter')} />
       )}
+      {lage.alte.length > 0 && entwuerfe && ew.art === 'fertig' && (
+        <div className={styles.alteHinweis} role="status" aria-label="Alte Entwürfe">
+          <span>
+            <b>
+              {lage.alte.length} {lage.alte.length === 1 ? 'alter Entwurf' : 'alte Entwürfe'}
+            </b>{' '}
+            – Termin vorbei oder gelöscht, oder der Dienst gehört nicht mehr dazu.
+          </span>
+          <button
+            type="button"
+            className={styles.alteKnopf}
+            onClick={() => setAlteListe(lage.alte)}
+          >
+            Ansehen
+          </button>
+        </div>
+      )}
       <div ref={rahmen}>{inhalt}</div>
       <p className={styles.hinweis}>
         Welche Dienste du siehst, entscheidet ChurchTools. Hier stehen nur Dienstgruppen, die du
         ganz sehen darfst – deine eigenen Dienste findest du immer unter Start und Termine. Planen
         darfst du, wo du die Dienstgruppe bearbeiten darfst, die Gruppe eines Dienstes leitest oder
         Admin des Termins bist. Einen freien Platz antippen zeigt, wer kann – dort trägst du
-        jemanden als Entwurf ein. Gesendet wird noch nichts.
+        jemanden als Entwurf ein. Einen belegten Platz antippen: zurückziehen oder durch jemand
+        anderen ersetzen, ebenfalls als Entwurf. Der Regler in der Gruppenzeile ändert die Anzahl
+        der Plätze – sofort. Gesendet wird erst mit „Ansehen und senden“ – dann bekommen die
+        Angefragten eine Mitteilung von ChurchTools.
       </p>
       {fach && entwuerfe && ew.art === 'fertig' && (
         <EntwurfFach
@@ -581,8 +776,8 @@ export function Planen({
             );
             nachFach(r, ortSchluessel(e.ort), () =>
               modus === 'direkt'
-                ? `${e.ziel.name} wird beim Senden direkt zugeteilt.`
-                : `${e.ziel.name} bekommt beim Senden eine Anfrage.`,
+                ? `${zielText(e.ziel)} wird beim Senden direkt zugeteilt.`
+                : `${zielText(e.ziel)} bekommt beim Senden eine Anfrage.`,
             );
             return r;
           }}
@@ -612,18 +807,109 @@ export function Planen({
           eintragen={eintragenFuer(frei)}
         />
       )}
+      {belegt?.bisher && entwuerfe && (
+        <BelegtFach
+          platz={{ ...belegt, bisher: belegt.bisher }}
+          eintragen={eintragenFuer(belegt)}
+          onClose={() => setBelegt(null)}
+          onAnderePerson={() => {
+            // „Wer kann?“ für denselben Platz – die Wahl ersetzt die Person, die dort steht.
+            setFrei(belegt);
+            setBelegt(null);
+          }}
+          onZurueckziehen={async () => {
+            const b = belegt.bisher;
+            if (!b) return { ok: false, grund: 'voruebergehend' };
+            const ort = {
+              eventId: belegt.eventId,
+              serviceId: belegt.serviceId,
+              index: belegt.index,
+            };
+            if (ew.art !== 'fertig') return { ok: false, grund: 'voruebergehend' };
+            const r = await entwuerfe.speichern(
+              ew.daten,
+              belegt.gruppeId,
+              {
+                ort,
+                ziel: { art: 'frei' },
+                modus: 'anfrage',
+                gesehen: b.belegung,
+                von: entwuerfe.ich,
+              },
+              null,
+            );
+            const k = ortSchluessel(ort);
+            if (r.ok) {
+              ewSetzen(k, r.entwurf);
+              setBelegt(null);
+              showToast(`${b.name} wird beim Senden zurückgezogen – noch nicht gesendet.`);
+            } else if (r.grund === 'konflikt') ewSetzen(k, r.jetzt ?? null);
+            return r;
+          }}
+        />
+      )}
       {offen > 0 && (
         <div className={styles.sendeLeiste} role="status" aria-label="Noch nicht gesendet">
           {/* Am Handy kürzer, wie im Entwurf (Abschnitt 6) – sonst bricht alles um. */}
           <span>
             {offen} {offen === 1 ? 'Entwurf' : 'Entwürfe'}
             {handy ? '' : ' noch nicht gesendet'}
-            <small>{handy ? 'Senden folgt' : 'Senden kommt mit dem nächsten Schritt'}</small>
           </span>
-          <button type="button" className={styles.leistenKnopf} disabled>
-            {handy ? 'Ansehen' : 'Ansehen und senden'}
+          <button
+            type="button"
+            className={styles.sendenKnopf}
+            onClick={() => setSendenListe(sendbareZeilen())}
+          >
+            {handy ? 'Ansehen & senden' : 'Ansehen und senden'}
           </button>
         </div>
+      )}
+      {sendenListe && entwuerfe && ew.art === 'fertig' && (
+        <SendenFach
+          zeilen={sendenListe}
+          ichId={entwuerfe.ich.personId}
+          hinweise={(z) => entwuerfe.hinweise(z)}
+          senden={(eintraege, melde) => entwuerfe.senden(ew.daten, eintraege, melde)}
+          onClose={(geaendert) => {
+            setSendenListe(null);
+            if (geaendert) {
+              ewNeu();
+              leiseNeuLaden();
+            }
+          }}
+        />
+      )}
+      {alteListe && entwuerfe && ew.art === 'fertig' && (
+        <AlteEntwuerfeFach
+          zeilen={alteListe}
+          ichId={entwuerfe.ich.personId}
+          verwerfen={(a) =>
+            entwuerfe.entfernen(ew.daten, a.gruppeId, a.entwurf.ort, a.entwurf.version)
+          }
+          onClose={(geaendert) => {
+            setAlteListe(null);
+            if (geaendert) ewNeu();
+          }}
+        />
+      )}
+      {plaetzeFach && entwuerfe && plan && (
+        <PlaetzeFach
+          titel={`${gruppenName(plaetzeFach.gruppe)} · Plätze`}
+          unter={`${plan.spalten[plaetzeFach.spalte].name} · ${tagKurz(plan.spalten[plaetzeFach.spalte].tag)}`}
+          zeilen={plaetzeZeilen(
+            plan.spalten[plaetzeFach.spalte],
+            plaetzeFach.spalte,
+            plaetzeFach.gruppe,
+          )}
+          aendern={(z, gesehen, neu) =>
+            entwuerfe.anzahl(plan.spalten[plaetzeFach.spalte].id, z.serviceId, gesehen, neu)
+          }
+          onGespeichert={showToast}
+          onClose={(geaendert) => {
+            setPlaetzeFach(null);
+            if (geaendert) leiseNeuLaden();
+          }}
+        />
       )}
       <Toast message={toast} />
     </div>
@@ -727,14 +1013,37 @@ function GruppenStand({ frei }: { frei: number | null }) {
   );
 }
 
+/** Regler in der Gruppenzeile (E4-5-3, wie im Gesamtentwurf) – nur, wo man einen Dienst der Gruppe plant. */
+function ReglerKnopf({ onKlick, text }: { onKlick?: () => void; text: string }) {
+  if (!onKlick) return null;
+  return (
+    <button
+      type="button"
+      className={styles.regler}
+      onClick={onKlick}
+      aria-label={text}
+      title={text}
+    >
+      <Icon name="regler" size={14} />
+    </button>
+  );
+}
+
+/**
+ * Kopf einer Gruppe: aufklappen, Name – und rechts „nur ansehen“, wo man nicht einteilen darf (Alwin, 16.10.2026:
+ * „du planst“ an jeder planbaren Gruppe war unklar und stand je nach Namenslänge woanders). Planbare Gruppen brauchen
+ * kein Schild: Dort sind die Plätze antippbar.
+ */
 function GruppenKnopf({
   g,
   offen,
   onUmschalten,
+  nurAnsehen,
 }: {
   g: PlanGruppe;
   offen: boolean;
   onUmschalten: () => void;
+  nurAnsehen: boolean;
 }) {
   return (
     <button
@@ -747,7 +1056,7 @@ function GruppenKnopf({
         <Icon name="chev-down" size={16} />
       </span>
       {gruppenName(g)}
-      {g.planbar && <span className={styles.duPlanst}>du planst</span>}
+      {nurAnsehen && <span className={styles.nurAnsehen}>nur ansehen</span>}
     </button>
   );
 }
@@ -816,11 +1125,25 @@ function TabellenPlan({ sicht, breite, platz }: { sicht: Sicht; breite: Breite; 
             return [
               <tr key={`g-${k}`} className={styles.gruppe}>
                 <th className={styles.svc} style={{ padding: 0 }} scope="row">
-                  <GruppenKnopf g={g} offen={offen} onUmschalten={() => onUmschalten(k)} />
+                  <GruppenKnopf
+                    g={g}
+                    offen={offen}
+                    onUmschalten={() => onUmschalten(k)}
+                    nurAnsehen={nurAnsehen(
+                      g,
+                      spalten.map((i) => plan.spalten[i]),
+                    )}
+                  />
                 </th>
                 {spalten.map((i) => (
                   <td key={i}>
-                    <GruppenStand frei={g.frei[i]} />
+                    <div className={styles.gruppenZelle}>
+                      <GruppenStand frei={g.frei[i]} />
+                      <ReglerKnopf
+                        onKlick={sicht.onPlaetze(i, g)}
+                        text={`Plätze ${gruppenName(g)} am ${tagKurz(plan.spalten[i].tag)} ändern`}
+                      />
+                    </div>
                   </td>
                 ))}
               </tr>,
@@ -847,6 +1170,17 @@ function TabellenPlan({ sicht, breite, platz }: { sicht: Sicht; breite: Breite; 
                                     : undefined
                                 }
                                 entwurf={(p) => sicht.entwurf(i, z, p)}
+                                ohnePlatz={sicht.ohnePlatz(i, z)}
+                                onOhnePlatz={
+                                  darfPlanen(z, plan.spalten[i]) && sicht.darfAendern(z)
+                                    ? (e) => sicht.onOhnePlatz(i, z, e)
+                                    : undefined
+                                }
+                                onBelegt={
+                                  darfPlanen(z, plan.spalten[i])
+                                    ? (nr) => sicht.onBelegt(i, z, nr)
+                                    : undefined
+                                }
                                 onEntwurf={
                                   darfPlanen(z, plan.spalten[i]) && sicht.darfAendern(z)
                                     ? (nr) => sicht.onEntwurf(i, z, nr)
@@ -926,8 +1260,17 @@ function HandyPlan({ sicht, amEnde }: { sicht: Sicht; amEnde?: () => void }) {
           return (
             <div key={gk} className={styles.handyGruppe}>
               <div className={styles.handyGruppenKopf}>
-                <GruppenKnopf g={g} offen={offen} onUmschalten={() => onUmschalten(gk)} />
+                <GruppenKnopf
+                  g={g}
+                  offen={offen}
+                  onUmschalten={() => onUmschalten(gk)}
+                  nurAnsehen={nurAnsehen(g, [s])}
+                />
                 <GruppenStand frei={g.frei[i]} />
+                <ReglerKnopf
+                  onKlick={sicht.onPlaetze(i, g)}
+                  text={`Plätze ${gruppenName(g)} am ${tagKurz(s.tag)} ändern`}
+                />
               </div>
               {offen &&
                 dienste.map((z) => (
@@ -937,6 +1280,13 @@ function HandyPlan({ sicht, amEnde }: { sicht: Sicht; amEnde?: () => void }) {
                       plaetze={z.zellen[i]!}
                       onFrei={darfPlanen(z, s) ? (nr) => sicht.onFrei(i, z, nr) : undefined}
                       entwurf={(p) => sicht.entwurf(i, z, p)}
+                      ohnePlatz={sicht.ohnePlatz(i, z)}
+                      onOhnePlatz={
+                        darfPlanen(z, s) && sicht.darfAendern(z)
+                          ? (e) => sicht.onOhnePlatz(i, z, e)
+                          : undefined
+                      }
+                      onBelegt={darfPlanen(z, s) ? (nr) => sicht.onBelegt(i, z, nr) : undefined}
                       onEntwurf={
                         darfPlanen(z, s) && sicht.darfAendern(z)
                           ? (nr) => sicht.onEntwurf(i, z, nr)
@@ -1023,11 +1373,19 @@ function Plaetze({
   onFrei,
   entwurf,
   onEntwurf,
+  onBelegt,
+  ohnePlatz = [],
+  onOhnePlatz,
   ichId = null,
 }: {
   plaetze: PlanPlatz[];
+  /** Entwürfe dieses Dienstes am Termin, deren Platz es nicht mehr gibt (#582) – als Schild darunter. */
+  ohnePlatz?: Entwurf[];
+  onOhnePlatz?: (e: Entwurf) => void;
   /** Nur wo man planen darf: freier Platz wird ein Knopf (Platz 1 … n). */
   onFrei?: (nr: number) => void;
+  /** Nur wo man planen darf: ein belegter Platz (ohne Entwurf, Name sichtbar) wird ein Knopf (E4-5). */
+  onBelegt?: (nr: number) => void;
   /** Der Entwurf an einem Platz (E4-3) – gültig steht er statt „frei“ da, veraltet als Schild darunter. */
   entwurf?: (p: PlanPlatz) => EntwurfAmPlatz | null;
   /** Entwurf bzw. Schild antippen → Entwurfs-Fach (nur wo man planen und ändern darf). */
@@ -1044,6 +1402,7 @@ function Plaetze({
             <EntwurfPlatz
               key={i}
               e={a.entwurf}
+              bisher={p.art === 'frei' || p.verborgen ? null : p.name}
               eigener={a.entwurf.von.personId === ichId}
               onOeffnen={oeffnen}
             />
@@ -1059,12 +1418,14 @@ function Plaetze({
             >
               frei
             </button>
+          ) : p.art !== 'frei' && !p.verborgen && !a && onBelegt ? (
+            <Platz p={p} onAntippen={() => onBelegt(i + 1)} />
           ) : (
             <Platz p={p} />
           );
         if (!a) return <Fragment key={i}>{platz}</Fragment>;
         // Veraltet: ChurchTools gilt – darunter ein Schild, das zum Entwurf führt (Alwin, 14.10.2026).
-        const text = `Entwurf veraltet: „${a.entwurf.ziel.name}“ von ${a.entwurf.von.name}`;
+        const text = `Entwurf veraltet: „${zielText(a.entwurf.ziel)}“ von ${a.entwurf.von.name}`;
         return (
           <Fragment key={i}>
             {platz}
@@ -1085,6 +1446,26 @@ function Plaetze({
           </Fragment>
         );
       })}
+      {ohnePlatz.map((e) => {
+        // Entwurf ohne Platz (#582): Platzzahl in ChurchTools geändert – Schild wie „veraltet“.
+        const text = `Entwurf ohne Platz: „${zielText(e.ziel)}“ von ${e.von.name}`;
+        const k = `ohne-${e.ort.index ?? '-'}`;
+        return onOhnePlatz ? (
+          <button
+            key={k}
+            type="button"
+            className={`${styles.veraltet} ${styles.veraltetKnopf}`}
+            onClick={() => onOhnePlatz(e)}
+            aria-label={text}
+          >
+            <Icon name="pencil" size={10} /> Entwurf ohne Platz
+          </button>
+        ) : (
+          <span key={k} className={styles.veraltet} title={text}>
+            <Icon name="pencil" size={10} /> Entwurf ohne Platz
+          </span>
+        );
+      })}
     </div>
   );
 }
@@ -1100,15 +1481,24 @@ function stehtInChurchTools(p: PlanPlatz): string {
 /** Ein Entwurf – noch nicht gesendet: gestrichelt mit Stift, „von …“ wenn von jemand anderem (E4-3). */
 function EntwurfPlatz({
   e,
+  bisher,
   eigener,
   onOeffnen,
 }: {
   e: Entwurf;
+  /** Wer in ChurchTools dort steht (E4-5): wird zurückgezogen bzw. ersetzt. */
+  bisher: string | null;
   eigener: boolean;
   /** Antippen öffnet das Entwurfs-Fach (E4-3-3) – nur wo man ändern darf. */
   onOeffnen?: () => void;
 }) {
   const gast = e.ziel.art === 'gast';
+  // Zurückziehen (rot, der Name durchgestrichen) oder Ersetzen („Neu statt Alt“) – Entwurf Abschnitt 2.
+  const zurueck = e.ziel.art === 'frei';
+  const statt = !zurueck && e.gesehen.art !== 'frei' ? bisher : null;
+  const was = zurueck
+    ? `${bisher ?? 'Einteilung'} zurückziehen`
+    : `${zielText(e.ziel)}${gast ? ' (Gast)' : ''}${statt ? ` statt ${statt}` : ''}`;
   const Tag = onOeffnen ? 'button' : 'span';
   return (
     <Tag
@@ -1116,16 +1506,29 @@ function EntwurfPlatz({
         ? {
             type: 'button' as const,
             onClick: onOeffnen,
-            'aria-label': `Entwurf von ${e.von.name}: ${e.ziel.name}${gast ? ' (Gast)' : ''}`,
+            'aria-label': `Entwurf von ${e.von.name}: ${was}`,
           }
         : {})}
-      className={`${styles.platz} ${styles.entwurf}${onOeffnen ? ' ' + styles.entwurfKnopf : ''}`}
-      title={`Entwurf von ${e.von.name} – noch nicht gesendet`}
+      className={`${styles.platz} ${zurueck ? styles.zurueck : styles.entwurf}${onOeffnen ? ' ' + styles.entwurfKnopf : ''}`}
+      title={
+        zurueck
+          ? `Wird zurückgezogen – Entwurf von ${e.von.name}, noch nicht gesendet`
+          : `Entwurf von ${e.von.name} – noch nicht gesendet`
+      }
     >
       <span className={styles.ic} aria-label="Entwurf, noch nicht gesendet">
-        <Icon name="pencil" size={11} />
+        {zurueck ? '−' : <Icon name="pencil" size={11} />}
       </span>
-      <span className={styles.name}>{e.ziel.name}</span>
+      {zurueck ? (
+        // Kein Textschild: In schmalen Spalten bliebe vom Namen sonst nur ein Buchstabe (Browser-Check 15.10.) –
+        // rot, „−“ und durchgestrichen sagen „kommt weg“, der Vorleser sagt es über `aria-label`.
+        <span className={`${styles.name} ${styles.durch}`}>{bisher ?? 'Einteilung'}</span>
+      ) : (
+        <span className={styles.name}>
+          {zielText(e.ziel)}
+          {statt && <span className={styles.statt}> statt {statt}</span>}
+        </span>
+      )}
       {gast && <span className={styles.gast}>Gast</span>}
       {!gast && e.modus === 'direkt' && <span className={styles.direkt}>direkt</span>}
       {!eigener && <span className={styles.von}>{e.von.name}</span>}
@@ -1134,12 +1537,22 @@ function EntwurfPlatz({
 }
 
 /** Ein Platz – zugesagt (Haken), angefragt („?“), frei, verborgen oder Gast. */
-function Platz({ p }: { p: PlanPlatz }) {
+function Platz({ p, onAntippen }: { p: PlanPlatz; onAntippen?: () => void }) {
   if (p.art === 'frei') return <span className={`${styles.platz} ${styles.frei}`}>frei</span>;
+  const stand = p.art === 'zugesagt' ? 'zugesagt' : 'angefragt';
+  // Antippbar (E4-5): zurückziehen oder ersetzen – ein Knopf mit demselben Aussehen.
+  const Tag = onAntippen ? 'button' : 'span';
   return (
-    <span
-      className={`${styles.platz} ${styles[p.art]}${p.ich ? ' ' + styles.ich : ''}`}
-      title={p.art === 'zugesagt' ? 'zugesagt' : 'angefragt'}
+    <Tag
+      {...(onAntippen
+        ? {
+            type: 'button' as const,
+            onClick: onAntippen,
+            'aria-label': `${p.name ?? ''}${p.gast ? ' (Gast)' : ''} – ${stand}: zurückziehen oder ersetzen`,
+          }
+        : {})}
+      className={`${styles.platz} ${styles[p.art]}${p.ich ? ' ' + styles.ich : ''}${onAntippen ? ' ' + styles.belegtKnopf : ''}`}
+      title={stand}
     >
       <span className={styles.ic} aria-label={p.art}>
         {p.art === 'zugesagt' ? <Icon name="check" size={11} /> : '?'}
@@ -1150,6 +1563,6 @@ function Platz({ p }: { p: PlanPlatz }) {
         <span className={styles.name}>{p.name}</span>
       )}
       {p.gast && <span className={styles.gast}>Gast</span>}
-    </span>
+    </Tag>
   );
 }

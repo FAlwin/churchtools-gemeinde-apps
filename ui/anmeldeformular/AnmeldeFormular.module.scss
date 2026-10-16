@@ -945,6 +945,26 @@
   background: var(--p-err);
   color: #fff;
 }
+/* „Absagen“ je Person (Entwurf a6-4: rote Pille) – sieht klickbar aus, ist aber nicht der Hauptknopf. */
+.pv .absagenKnopf {
+  font: inherit;
+  font-size: 0.87em;
+  font-weight: 600;
+  color: var(--p-err);
+  background: var(--p-card);
+  border: 1px solid color-mix(in srgb, var(--p-err) 35%, transparent);
+  border-radius: 999px;
+  padding: 6px 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.pv .absagenKnopf:hover {
+  background: color-mix(in srgb, var(--p-err) 8%, var(--p-card));
+}
+.pv .absagenKnopf:focus-visible {
+  outline: 2px solid var(--p-text);
+  outline-offset: 2px;
+}
 .pv .bank {
   display: grid;
   grid-template-columns: max-content 1fr;

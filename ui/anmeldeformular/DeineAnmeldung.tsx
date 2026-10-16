@@ -84,7 +84,7 @@ export function DeineAnmeldung({
                 {rueckfrage !== p.id && (
                   <button
                     type="button"
-                    className={s.xbtn}
+                    className={s.absagenKnopf}
                     onClick={() => {
                       setRueckfrage(p.id);
                       setFehler(null);

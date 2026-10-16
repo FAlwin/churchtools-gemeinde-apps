@@ -35,6 +35,7 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   - Falscher oder verbrauchter Link → „Dieser Link gilt nicht“; Veranstaltung nicht mehr lesbar → Seite schlicht,
     Absagen geht trotzdem.
   - **Formular-Paket mit aktualisieren** – erst ein neues Paket schickt den Link mit.
+  - „Absagen“ je Person als rote Pille wie im Entwurf (erst als grauer Link gebaut, Alwin: „Absagen-Knopf rot“).
 
 ### Neu (Anmeldungen, A6-3, #593)
 

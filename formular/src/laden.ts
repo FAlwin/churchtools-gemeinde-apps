@@ -1,7 +1,10 @@
 import { gemeindeNameAus } from '@shared/ct/info';
 import {
+  abmeldeDatenAus,
   apiBasis,
   ladeFehlerAus,
+  type AbmeldeDaten,
+  type AbmeldeOrt,
   veranstaltungAus,
   type AnmeldeOrt,
   type LadeFehler,
@@ -59,4 +62,41 @@ export async function ladeVeranstaltung(ort: AnmeldeOrt): Promise<Geladen> {
   );
   if (!veranstaltung) throw new LadeProblem('keine-anmeldung');
   return { veranstaltung, gemeinde: gemeindeNameAus(info) };
+}
+
+export interface AbmeldungGeladen {
+  abmeldung: AbmeldeDaten;
+  /** `null`, wenn die Veranstaltung selbst nicht mehr lesbar ist (z. B. beendet) – absagen geht trotzdem. */
+  veranstaltung: OeffentlicheVeranstaltung | null;
+  gemeinde: string | null;
+}
+
+/**
+ * **„Deine Anmeldung“ laden** (A6-4): was ChurchTools zum Schlüssel aus der Mail herausgibt (`signoutdata`, ohne Login)
+ * und die Veranstaltung für Kopf, Bankdaten und Kontakt. Ein falscher Schlüssel ist 404 (gemessen) → „Link gilt
+ * nicht“. Ist nur die Veranstaltung nicht mehr lesbar (403/404), zeigt die Seite trotzdem, wer angemeldet ist;
+ * Vorübergehendes wirft – dann „noch einmal versuchen“.
+ */
+export async function ladeAbmeldung(ort: AbmeldeOrt): Promise<AbmeldungGeladen> {
+  const [roh, geladen] = await Promise.all([
+    anfrage(
+      `${apiBasis(ort)}/publicgroups/${ort.gruppeId}/signoutdata?token=${encodeURIComponent(ort.token)}`,
+    ).catch((e: unknown) => {
+      if (e instanceof LadeProblem && e.art === 'nicht-gefunden')
+        throw new LadeProblem('abmeldelink');
+      throw e;
+    }),
+    ladeVeranstaltung(ort).catch((e: unknown) => {
+      if (e instanceof LadeProblem && ['voruebergehend', 'keine-verbindung'].includes(e.art))
+        throw e;
+      return null;
+    }),
+  ]);
+  const abmeldung = abmeldeDatenAus(roh);
+  if (!abmeldung) throw new LadeProblem('voruebergehend');
+  return {
+    abmeldung,
+    veranstaltung: geladen?.veranstaltung ?? null,
+    gemeinde: geladen?.gemeinde ?? null,
+  };
 }

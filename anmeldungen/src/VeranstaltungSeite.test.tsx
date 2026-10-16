@@ -457,6 +457,24 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
       }),
     );
   });
+
+  it('Kontakt für Rückfragen (A6-4): ungültig → Speichern gesperrt; gültig → in die Einstellungen, auf der Karte', async () => {
+    stelle(true);
+    m.speichereAnmeldung.mockResolvedValue();
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Anmeldung' });
+    expect(within(karte).getByText('Kontakt')).toBeTruthy();
+    fireEvent.click(within(karte).getByRole('button', { name: 'Bearbeiten' }));
+    const feld = screen.getByLabelText('Kontakt für Rückfragen (E-Mail)');
+    fireEvent.change(feld, { target: { value: 'kinder@' } });
+    expect(screen.getByText('Bitte eine gültige E-Mail-Adresse eintragen.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Speichern' })).toHaveProperty('disabled', true);
+    fireEvent.change(feld, { target: { value: ' kinder@gemeinde.test ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(m.aendereEinstellungen).toHaveBeenCalled());
+    const aendern = m.aendereEinstellungen.mock.calls[0][1];
+    expect(aendern(neueEinstellungen('einfach')).kontakt).toBe('kinder@gemeinde.test');
+  });
 });
 
 describe('Bezahlung, Freigeben, Geburtsdatum (A4)', () => {

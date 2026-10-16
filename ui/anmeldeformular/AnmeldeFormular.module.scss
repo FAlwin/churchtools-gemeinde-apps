@@ -922,3 +922,54 @@
   height: 1px;
   overflow: hidden;
 }
+
+// „Deine Anmeldung“ (A6-4) – Absagen mit Rückfrage, Bankdaten.
+.pv .angemeldet {
+  margin-left: 6px;
+  font-size: 0.8em;
+  font-weight: 600;
+  color: #1f8a5b;
+}
+.pv .abgesagt {
+  opacity: 0.6;
+}
+.pv .rueckfrage {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid var(--p-line);
+  padding-top: 10px;
+  font-size: 0.93em;
+  line-height: 1.45;
+}
+.pv .goRot {
+  background: var(--p-err);
+  color: #fff;
+}
+.pv .bank {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: 0.93em;
+
+  dt {
+    color: var(--p-muted);
+  }
+  dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+}
+.pv .mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.pv a.addbtn {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+}
+.pv .rueckfrage .err {
+  color: var(--p-err);
+  font-size: 0.87em;
+  font-weight: 700;
+}

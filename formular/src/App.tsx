@@ -1,6 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AnmeldeFormular } from '@ui/anmeldeformular/AnmeldeFormular';
-import { LADE_FEHLER_TEXT, ortAusLink, type LadeFehler } from '@shared/anmeldung/oeffentlich';
+import {
+  LADE_FEHLER_TEXT,
+  abmeldeOrtAusLink,
+  ortAusLink,
+  type LadeFehler,
+} from '@shared/anmeldung/oeffentlich';
+import { AbmeldeSeite } from './AbmeldeSeite';
 import { LadeProblem, ladeVeranstaltung, type Geladen } from './laden';
 import { abschicken } from './senden';
 import s from './App.module.scss';
@@ -12,6 +18,8 @@ import s from './App.module.scss';
  *
  * **A6-2:** Abschicken meldet wirklich bei ChurchTools an (`senden.ts`). Mit `?probe` in der Adresse („Extern
  * öffnen und testen“) bleibt es ein Trockenlauf und schickt nichts.
+ *
+ * **A6-4:** `…/abmelden/<schlüssel>` (der Link „Austreten“ aus der Mail) öffnet „Deine Anmeldung“ (`AbmeldeSeite`).
  */
 
 type Stand =
@@ -28,6 +36,7 @@ function heuteLokal(): string {
 
 export function App() {
   const [hash, setHash] = useState(() => window.location.hash);
+  const abmelden = useMemo(() => abmeldeOrtAusLink(hash), [hash]);
   const [stand, setStand] = useState<Stand>({ art: 'laedt' });
 
   useEffect(() => {
@@ -37,6 +46,7 @@ export function App() {
   }, []);
 
   const laden = useCallback(() => {
+    if (abmeldeOrtAusLink(hash)) return () => {};
     const ort = ortAusLink(hash);
     if (!ort) {
       setStand({ art: 'fehler', fehler: 'link' });
@@ -63,6 +73,8 @@ export function App() {
   useEffect(() => {
     if (stand.art === 'fertig') document.title = `Anmeldung: ${stand.daten.veranstaltung.name}`;
   }, [stand]);
+
+  if (abmelden) return <AbmeldeSeite key={hash} ort={abmelden} />;
 
   if (stand.art === 'laedt')
     return (
@@ -110,7 +122,14 @@ export function App() {
         heute={heute}
         probe={probe}
         onAbsenden={({ antworten, wahl }) =>
-          abschicken(ort, v.einstellungen, antworten, wahl, heute)
+          abschicken(
+            ort,
+            v.einstellungen,
+            antworten,
+            wahl,
+            heute,
+            `${window.location.origin}${window.location.pathname}`,
+          )
         }
       />
     </>

@@ -326,6 +326,7 @@ export function VeranstaltungSeite({
                     ? 'nie'
                     : `wenn weniger als ${e.plaetze.knappUnter} frei sind`}
               </Zeile>
+              <Zeile titel="Kontakt">{e.kontakt || '–'}</Zeile>
             </Karte>
             <Karte titel="Wer meldet sich an?" onBearbeiten={bearbeiten('wer')}>
               <Zeile titel="Anmeldung">{WER_TEXT[e.wer][0]}</Zeile>
@@ -400,6 +401,7 @@ export function VeranstaltungSeite({
           id={id}
           anmeldung={a}
           plaetze={e.plaetze}
+          kontakt={e.kontakt}
           zeitzone={zeitzone}
           onClose={() => setFenster(null)}
           onGespeichert={gespeichert('Anmeldung gespeichert.')}

@@ -70,6 +70,13 @@ formular:hochladen` (optional `ANMELDUNG_FTP_ORDNER`; `ANMELDUNG_FTP_BENUTZER`, 
 Sekunden. Gäste merken davon nichts. Ein Captcha gibt es bewusst nicht – ohne eigenen Server ließe es sich nicht
 prüfen. Was trotzdem durchkommt, entfernt die Leitung in ChurchTools (später im Reiter Anmeldungen).
 
+**„Deine Anmeldung“:** Nach dem Anmelden schickt ChurchTools jeder angemeldeten Person seine Bestätigungsmail
+(Text nicht änderbar). Der Link „Austreten“ darin führt auf eure Formular-Seite
+(`…/#<instanz>/<Nummer>/abmelden/<Schlüssel>`) im Design der Veranstaltung: Dort sieht man, wer angemeldet ist, kann
+einzelne Personen **absagen** (mit Rückfrage), sieht die **Bankdaten** (wenn etwas kostet) und an wen man für
+Änderungen schreibt – den **Kontakt für Rückfragen** stellt ihr je Veranstaltung im Fenster „Anmeldung“ ein. Angaben
+ändern geht dort nicht: Ohne Login gibt ChurchTools sie nicht heraus.
+
 Jeder Link zu einer Anmeldung lautet dann `https://anmeldung.eure-gemeinde.de/#eure-instanz.church.tools/<Nummer>`
 – hinter `#` stehen Instanz und Gruppe. Damit Veranstalter die Adresse bekommen, brauchen sie das Recht, die
 Kategorie „Einstellungen der Anmeldungen“ zu **sehen**.

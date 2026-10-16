@@ -88,5 +88,6 @@ export function neueEinstellungen(vorlage: Vorlage): OeffentlicheEinstellungen {
     plaetze: { zeigen: 'knapp', knappUnter: 5 },
     loeschfristMonate: 3,
     bezahlung: { ...STANDARD_BEZAHLUNG },
+    kontakt: '',
   };
 }

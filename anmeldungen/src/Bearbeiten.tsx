@@ -4,7 +4,7 @@ import { useLinkKopieren } from './useLinkKopieren';
 import { Segment } from '@ui/bedienung/Segment';
 import { ctBasis } from '@ui/ct/basis';
 import { tagAusIso } from '@shared/ct/zeit';
-import { mitWer, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
+import { mailGueltig, mitWer, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import {
   NACHNAME,
   ZWECK_MAX,
@@ -357,6 +357,7 @@ export function AnmeldungFenster({
   id,
   anmeldung,
   plaetze,
+  kontakt,
   zeitzone,
   onClose,
   onGespeichert,
@@ -364,6 +365,8 @@ export function AnmeldungFenster({
   id: number;
   anmeldung: AnmeldeEinstellungen;
   plaetze: OeffentlicheEinstellungen['plaetze'];
+  /** Kontakt für Rückfragen (A6-4) – steht auf „Deine Anmeldung“. */
+  kontakt: string;
   zeitzone: string;
   onClose: () => void;
   onGespeichert: () => void;
@@ -375,14 +378,17 @@ export function AnmeldungFenster({
   const [warteliste, setWarteliste] = useState(anmeldung.warteliste);
   const [zeigen, setZeigen] = useState(plaetze.zeigen);
   const [knapp, setKnapp] = useState(String(plaetze.knappUnter));
+  const [mail, setMail] = useState(kontakt);
   const { arbeitet, fehler, speichern } = useSpeichern(onGespeichert);
+  const mailOk = !mail.trim() || mailGueltig(mail);
 
   const maxZahl = max.trim() === '' ? null : Number(max);
   const gueltig =
     (maxZahl === null || (Number.isInteger(maxZahl) && maxZahl > 0)) &&
     (!ab || !bis || ab <= bis) &&
     Number.isInteger(Number(knapp)) &&
-    Number(knapp) > 0;
+    Number(knapp) > 0 &&
+    mailOk;
 
   return (
     <Sheet title="Anmeldung" onClose={onClose}>
@@ -452,6 +458,24 @@ export function AnmeldungFenster({
           />
         </label>
       )}
+      <label className={f.feld}>
+        <span>Kontakt für Rückfragen (E-Mail)</span>
+        <input
+          type="email"
+          className={f.eingabe}
+          maxLength={120}
+          placeholder="z. B. kinder@gemeinde.de"
+          value={mail}
+          onChange={(e) => setMail(e.target.value)}
+        />
+      </label>
+      {mailOk ? (
+        <p className={f.hinweis}>
+          Steht auf „Deine Anmeldung“ – dorthin führt der Link in der Bestätigungsmail.
+        </p>
+      ) : (
+        <p className={f.fehler}>Bitte eine gültige E-Mail-Adresse eintragen.</p>
+      )}
       <Fehler text={fehler} />
       <button
         type="button"
@@ -468,6 +492,7 @@ export function AnmeldungFenster({
             await aendereEinstellungen(id, (e) => ({
               ...e,
               plaetze: { zeigen, knappUnter: Number(knapp) },
+              kontakt: mail.trim(),
             }));
           })
         }

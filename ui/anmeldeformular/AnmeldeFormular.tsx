@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   nurText,
   pruefeAntworten,
@@ -12,6 +12,7 @@ import { buchungAus, type PreisWahl } from '@shared/anmeldung/senden';
 import { berechnePreis, euroText, kannEtwasKosten, preisKurz } from '@shared/anmeldung/preis';
 import { SCHRIFT, leereAntworten, textAufFarbe } from './daten';
 import { titelbildGross } from '@shared/anmeldung/gestaltung';
+import { HONIGTOPF_NAME, SPAM_TEXT, spamGrund } from '@shared/anmeldung/spamschutz';
 import { ErziehungsEingabe, UnterschriftEingabe } from './Bausteine';
 import s from './AnmeldeFormular.module.scss';
 
@@ -402,6 +403,10 @@ export function AnmeldeFormular({
   const [sendet, setSendet] = useState(false);
   const [sendeFehler, setSendeFehler] = useState<string | null>(null);
   const echt = !!onAbsenden && !vorschau && !probe && !baukasten;
+  // A6-3 Spam-Schutz (`spamschutz.ts`): Honigtopf und Mindest-Ausfüllzeit seit dem Laden. Doppel-Absenden verhindert
+  // schon `sendet` – React zeichnet nach jedem Klick neu (gegengeprüft 16.10.2026).
+  const honigtopf = useRef<HTMLInputElement>(null);
+  const [geladen] = useState(() => Date.now());
 
   const sichtbar = (f: Feld) => f.zustand !== 'aus';
   // In der gespeicherten Reihenfolge – im Baukasten lässt sich jedes Feld verschieben, auch Name, E-Mail und
@@ -490,6 +495,14 @@ export function AnmeldeFormular({
     if (offen.length > 0) return;
     if (!echt || !onAbsenden) {
       setFertig({ art: 'angemeldet' });
+      return;
+    }
+    const spam = spamGrund({
+      honigtopf: honigtopf.current?.value ?? '',
+      seitDemLadenMs: Date.now() - geladen,
+    });
+    if (spam) {
+      setSendeFehler(SPAM_TEXT[spam]);
       return;
     }
     setSendet(true);
@@ -788,6 +801,22 @@ export function AnmeldeFormular({
                   <p className={s.warnline} role="alert">
                     {sendeFehler}
                   </p>
+                )}
+                {echt && (
+                  // Honigtopf (A6-3): für Menschen unsichtbar und nicht erreichbar, Bots füllen ihn aus.
+                  <div className={s.honigtopf} aria-hidden="true">
+                    <label>
+                      Bitte leer lassen
+                      <input
+                        ref={honigtopf}
+                        name={HONIGTOPF_NAME}
+                        type="text"
+                        tabIndex={-1}
+                        autoComplete="off"
+                        defaultValue=""
+                      />
+                    </label>
+                  </div>
                 )}
                 <button type="submit" className={s.go} disabled={sendet} aria-busy={sendet}>
                   {sendet ? 'Wird gesendet …' : 'Verbindlich anmelden'}

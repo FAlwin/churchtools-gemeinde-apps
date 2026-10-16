@@ -7,6 +7,18 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Anmeldungen, A6-3, #593)
+
+- **Spam-Schutz im öffentlichen Formular – unsichtbar** (Alwin, 16.10.2026: „nur unsichtbar“). Gemessen: ChurchTools
+  hat beim öffentlichen Anmelden keinen eigenen Schutz. Ein Captcha ohne eigenen Server ließe sich nicht prüfen (ein
+  Bot schickt dann direkt an ChurchTools) – deshalb:
+  - **Honigtopf:** ein Feld außerhalb des Bildschirms, ohne Tabulator, für Vorleser verborgen. Gefüllt → nichts
+    geschickt, mit **sichtbarer** Meldung („Seite neu laden“) – nie still „Danke“, falls ein Browser es doch füllt.
+  - **Mindest-Ausfüllzeit 3 Sekunden:** schneller → „Bitte kurz prüfen und noch einmal tippen“; beim zweiten Tippen
+    geht es durch.
+  - Doppel-Absenden verhindert schon „Wird gesendet …“ (gegengeprüft; eine zusätzliche Sperre wäre wirkungslos).
+  - Regeln in `shared/anmeldung/spamschutz.ts`; Vorschau, Probelauf und Baukasten sind nicht betroffen.
+
 ### Neu (Anmeldungen, A6-2b, #574)
 
 - **Bausteine „Erziehungsberechtigte“ und „Unterschrift“** (Alwin, 14./15.10.2026, Entwurf `a6-2b-entwurf-v2`).

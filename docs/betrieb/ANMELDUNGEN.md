@@ -54,6 +54,11 @@ formular:hochladen` (optional `ANMELDUNG_FTP_ORDNER`; `ANMELDUNG_FTP_BENUTZER`, 
    Dateien und zuletzt `index.html`, prüft die Seite im Netz und löscht erst dann alte Dateien. Das Passwort steht
    nirgends sonst. Als FTP-Server den Namen nehmen, auf den das Zertifikat des Anbieters lautet (bei Hetzner
    `wwwNNN.your-server.de`), sonst lehnt die verschlüsselte Verbindung ab.
+   **ECG Donrath** (eingerichtet 16.10.2026, Webspace bei Hetzner, verwaltet von Willi Heidebrecht): Formular unter
+   `https://anmeldung.ecg-donrath.de`, FTP-Server `www622.your-server.de`, eigener FTP-Benutzer `whebde_1` nur für den
+   Ordner der Subdomain (Passwort im Schlüsselbund auf Alwins Mac). Hochladen:
+   `ANMELDUNG_FTP_SERVER=www622.your-server.de ANMELDUNG_FTP_BENUTZER=whebde_1 ANMELDUNG_FORMULAR_ADRESSE=https://anmeldung.ecg-donrath.de npm run formular:hochladen`.
+   Nie `whebde_0` nehmen – das ist der Zugang der Website (WordPress); das Skript bricht dort ohnehin ab.
 3. In ChurchTools die Adresse als **erlaubte Herkunft** eintragen (Einstellung
    `access_control_allow_origins`, z. B. `https://anmeldung.eure-gemeinde.de`) – sonst blockt der Browser
    jede Anfrage des Formulars. Das gibt keine Daten frei, es erlaubt nur dieser Seite, die Schnittstellen zu

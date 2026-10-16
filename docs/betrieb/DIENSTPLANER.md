@@ -104,6 +104,9 @@ aufrufen). Testnutzer Spike (19) hat nur „Dienstplaner sehen“.
 - Code: `dienstplaner/` (Erweiterung), Regeln in `shared/ct/` (`dienstRechte.ts`, `dienstgruppen.ts`),
   ChurchTools-Verbindung, Anmeldung und Seitenrahmen in `ui/` (`ui/ct/`, `ui/erweiterung/`) – dieselben
   wie bei den Anmeldungen.
+- Zauberstab (E5, im Bau): Regeln in `shared/dienstplan/zauberstab.ts` – wie der ChurchTools-Zauberstab (über −100),
+  eigene Vorschläge zählen mit den Abzügen von ChurchTools mit (Messprotokoll E5-0); geladen in
+  `dienstplaner/src/ladeZauberstab.ts`.
 - Ansehen ohne ChurchTools: `npm run dev -w dienstplaner`, dann
   `http://localhost:5178/ccm/dienstplaner/?demo` (`?demo=mitglied`, `?demo=fehler` für die Sonderfälle).
 - Release: Tag `dienstplan-vX.Y.Z` → `dienstplaner-release.yml` → gemeinsame Vorlage

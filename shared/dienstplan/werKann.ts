@@ -25,6 +25,13 @@ export interface Kandidat {
   amTag: string[];
   /** Dienste in dieser Dienstgruppe im Monat des Termins. */
   imMonat: number;
+  /** Die Gründe aus ChurchTools' `scoreHints` (`reason`) – der Zauberstab prüft daran, was schon abgezogen ist. */
+  gruende: string[];
+  /** ChurchTools' Abzug für den nächsten Dienst davor bzw. danach (`last/next.service.near`, 0 = keiner). */
+  abstandDavor: number;
+  abstandDanach: number;
+  /** Vorliebe „höchstens N× im Monat“ (`serviceGroupPreferences.maxPerMonth`), `null` = keine gespeichert. */
+  hoechstensImMonat: number | null;
 }
 
 interface RohHinweis {
@@ -43,12 +50,20 @@ export interface RohKandidat {
   monthlyUtilization?: Record<string, unknown> | null;
   absences?: { absenceReason?: { nameTranslated?: unknown; name?: unknown } | null }[] | null;
   servicesOnSameDay?: { eventService?: { serviceName?: unknown } | null }[] | null;
+  /** Gemessen E5-0 (16.10.2026): `{personId, serviceGroupId, maxPerMonth, relationWeight, morningWeight, …}`. */
+  serviceGroupPreferences?: { maxPerMonth?: unknown } | null;
 }
 
 /** Der Abzug, den ChurchTools für frühere Absagen gibt – siehe oben, warum er nicht zählt. */
 export const FRUEHER_ABGESAGT = 'service.previously-declined';
 
 const text = (x: unknown): string => (typeof x === 'string' ? x.trim() : '');
+
+/** Summe der Abzüge mit diesem Grund (ChurchTools gibt je Grund höchstens einen). */
+const abzugFuer = (hinweise: RohHinweis[], grund: string): number =>
+  hinweise
+    .filter((h) => h.reason === grund && typeof h.score === 'number')
+    .reduce((s, h) => s + (h.score as number), 0);
 
 function nameAus(p: NonNullable<RohKandidat['person']>): string {
   const a = p.domainAttributes;
@@ -71,9 +86,9 @@ export function kandidatenAus(
     const name = nameAus(k.person);
     if (!Number.isInteger(personId) || personId <= 0 || name === '' || o.schonDa.has(personId))
       continue;
-    const abzug = (k.scoreHints ?? [])
-      .filter((h) => h.reason === FRUEHER_ABGESAGT && typeof h.score === 'number')
-      .reduce((s, h) => s + (h.score as number), 0);
+    const hinweise = k.scoreHints ?? [];
+    const abzug = abzugFuer(hinweise, FRUEHER_ABGESAGT);
+    const hoechstens = k.serviceGroupPreferences?.maxPerMonth;
     const abwesend = (k.absences ?? [])[0];
     const monat = k.monthlyUtilization?.[o.monat];
     out.push({
@@ -91,6 +106,13 @@ export function kandidatenAus(
         ),
       ],
       imMonat: typeof monat === 'number' ? monat : 0,
+      gruende: hinweise.map((h) => text(h.reason)).filter(Boolean),
+      abstandDavor: abzugFuer(hinweise, 'last.service.near'),
+      abstandDanach: abzugFuer(hinweise, 'next.service.near'),
+      hoechstensImMonat:
+        typeof hoechstens === 'number' && Number.isInteger(hoechstens) && hoechstens >= 0
+          ? hoechstens
+          : null,
     });
   }
   return out.sort((a, b) => b.punkte - a.punkte || a.name.localeCompare(b.name, 'de'));

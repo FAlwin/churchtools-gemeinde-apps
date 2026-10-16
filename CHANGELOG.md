@@ -75,6 +75,17 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Intern (Dienstplaner)
 
+- **Zauberstab-Kern** (#588, Bauplan E5-1 – noch ohne Oberfläche, `shared/dienstplan/zauberstab.ts`): Vorschläge für
+  freie Plätze nach der Regel des ChurchTools-Zauberstabs (höchste Punktzahl über −100, Punkte rechnet ChurchTools,
+  Kandidaten aus derselben Funktion wie „Wer kann?“). Über mehrere Termine zählen die eigenen Vorschläge, von Hand
+  gewählte Namen und vorhandene Entwürfe **wie echte Einteilungen mit den Abzügen von ChurchTools selbst** (Alwin,
+  16.10.2026: „mitzählen“): selber Tag −250, Monat −3/−2/−1, Abstand −50/−10 (der nähere zählt), „höchstens N× im
+  Monat“ erreicht −100; bei Gleichstand zuerst, wer im Lauf seltener dran ist. Laden mit höchstens 4 Abfragen
+  gleichzeitig, Fortschritt und Abbrechen; ein Fehler hält den Lauf an. `monateBis` neben `tageBis` in
+  `shared/ct/datum.ts`.
+- **Gemessen** (16.10.2026, E5-0): Der ChurchTools-Zauberstab arbeitet nur je Termin; die Abzüge für Monat (−3 je
+  Dienst im Monat, −2 / −1 daneben) und Abstand (−50 unter 7, −10 unter 14 Tagen) und die Form der Vorlieben in „Wer
+  kann?“ (`serviceGroupPreferences.maxPerMonth` …) stehen im Messprotokoll.
 - **Kern für die Platzzahl** (#580, `shared/dienstplan/anzahl.ts`) mit derselben Fehler-Zuordnung wie der
   Schreibkern (`lesegrund`, eine Stelle statt zwei). Der ChurchTools-Nachbau der Tests kann jetzt auch die
   Platzzahl (mehr → neue freie Plätze, weniger → leere zuerst weg), und im Planen-Test gibt es nur noch **einen**

@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { Entwurf } from '@shared/dienstplan/entwuerfe';
 import type { SendeErgebnis } from '@shared/dienstplan/senden';
-import { aktionText, bisherHinweis, ergebnisText, wegHinweis, wiederholbar } from './sendenTexte';
+import {
+  aktionText,
+  bisherHinweis,
+  ergebnisText,
+  neuLaden,
+  wegHinweis,
+  wiederholbar,
+} from './sendenTexte';
 
 const e = (x: Partial<Entwurf> = {}): Entwurf => ({
   ort: { eventId: 7, serviceId: 6, index: null },
@@ -75,11 +82,31 @@ describe('wiederholbar („Erneut senden“)', () => {
       { art: 'gesendet', entwurfBlieb: 'voruebergehend' },
       { art: 'nicht-gesendet', grund: 'konflikt' },
       { art: 'nicht-gesendet', grund: 'entwurf-geaendert' },
+      { art: 'nicht-gesendet', grund: 'entwurf-weg' },
       { art: 'nicht-gesendet', grund: 'weg' },
       { art: 'nicht-gesendet', grund: 'kein-recht' },
     ];
     expect(ja.map(wiederholbar)).toEqual(ja.map(() => true));
     expect(nein.map(wiederholbar)).toEqual(nein.map(() => false));
+  });
+});
+
+describe('neuLaden (Prüfung mit zwei Planern, 16.10.2026)', () => {
+  it('neu laden, sobald sich etwas geändert hat – auch ohne Erfolg; nicht bei „nichts passiert“', () => {
+    expect(neuLaden([{ art: 'gesendet' }])).toBe(true);
+    for (const grund of [
+      'konflikt',
+      'entwurf-geaendert',
+      'entwurf-weg',
+      'weg',
+      'nicht-angekommen',
+    ] as const) {
+      expect(neuLaden([{ art: 'nicht-gesendet', grund }])).toBe(true);
+    }
+    for (const grund of ['kein-recht', 'abgemeldet', 'voruebergehend'] as const) {
+      expect(neuLaden([{ art: 'nicht-gesendet', grund }, { art: 'nicht-versucht' }])).toBe(false);
+    }
+    expect(neuLaden([])).toBe(false);
   });
 });
 
@@ -97,6 +124,7 @@ describe('ergebnisText', () => {
     const gruende = [
       'konflikt',
       'entwurf-geaendert',
+      'entwurf-weg',
       'weg',
       'kein-recht',
       'abgemeldet',
@@ -105,8 +133,10 @@ describe('ergebnisText', () => {
     ] as const;
     const texte = gruende.map((grund) => ergebnisText({ art: 'nicht-gesendet', grund }, e()));
     expect(new Set(texte).size).toBe(gruende.length);
-    expect(texte[0]).toMatch(/veraltet/);
-    expect(texte[4]).toMatch(/neu laden/);
+    const text = (g: (typeof gruende)[number]) => texte[gruende.indexOf(g)];
+    expect(text('konflikt')).toMatch(/veraltet/);
+    expect(text('abgemeldet')).toMatch(/neu laden/);
+    expect(text('entwurf-weg')).toMatch(/gesendet oder entfernt/);
     expect(ergebnisText({ art: 'nicht-versucht' }, e())).toMatch(/bleibt/);
   });
 });

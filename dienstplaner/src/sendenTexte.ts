@@ -48,6 +48,23 @@ export function wegHinweis(
   return { text: `${bisher} bekommt von ChurchTools „Du wurdest … ausgetragen“.`, warnung: false };
 }
 
+/**
+ * **Muss die Matrix danach neu laden?** Ja, sobald sich in ChurchTools oder in der Schublade etwas geändert hat –
+ * auch wenn nichts gesendet wurde (Konflikt, Entwurf geändert/weg, Platz weg). Sonst zeigte sie einen veralteten
+ * Entwurf weiter als gültig (Prüfung mit zwei Planern, 16.10.2026).
+ */
+const GEAENDERT = new Set([
+  'konflikt',
+  'entwurf-geaendert',
+  'entwurf-weg',
+  'weg',
+  'nicht-angekommen',
+]);
+export const neuLaden = (ergebnisse: Iterable<SendeErgebnis>): boolean =>
+  [...ergebnisse].some(
+    (r) => r.art === 'gesendet' || (r.art === 'nicht-gesendet' && GEAENDERT.has(r.grund)),
+  );
+
 /** Diese Gründe lohnen „Erneut senden“; die anderen brauchen erst einen Blick in die Matrix. */
 const WIEDERHOLBAR = new Set(['voruebergehend', 'nicht-angekommen', 'abgemeldet']);
 export const wiederholbar = (r: SendeErgebnis | undefined): boolean =>
@@ -73,6 +90,8 @@ export function ergebnisText(r: SendeErgebnis, e: Entwurf): string {
   switch (r.grund) {
     case 'konflikt':
       return 'Inzwischen steht dort jemand anderes (in ChurchTools eingetragen). Nicht gesendet – der Entwurf ist jetzt veraltet.';
+    case 'entwurf-weg':
+      return 'Den Entwurf gibt es nicht mehr – ein anderer Planer hat ihn eben gesendet oder entfernt. Nicht gesendet.';
     case 'entwurf-geaendert':
       return 'Ein anderer Planer hat den Entwurf eben geändert. Nicht gesendet – bitte in der Matrix ansehen.';
     case 'weg':

@@ -40,7 +40,7 @@ export type SendeErgebnis =
   /** Eingeteilt und nachgelesen. `entwurfBlieb`: Der Entwurf ließ sich danach nicht entfernen (veraltet). */
   | { art: 'gesendet'; entwurfBlieb?: EntwurfGrund }
   /** Nicht eingeteilt – der Entwurf bleibt. `jetzt`: was in ChurchTools am Platz steht (bei Konflikt). */
-  | { art: 'nicht-gesendet'; grund: Grund | 'entwurf-geaendert'; jetzt?: Belegung }
+  | { art: 'nicht-gesendet'; grund: Grund | 'entwurf-geaendert' | 'entwurf-weg'; jetzt?: Belegung }
   /** Nach „abgemeldet“ oder einem vorübergehenden Fehler gar nicht erst versucht – der Entwurf bleibt. */
   | { art: 'nicht-versucht' };
 
@@ -109,9 +109,10 @@ async function einen(
       grund: f === 'kein-recht' || f === 'abgemeldet' ? f : 'voruebergehend',
     };
   }
-  if (f.get(ortSchluessel(entwurf.ort)) !== entwurf.version) {
-    return { art: 'nicht-gesendet', grund: 'entwurf-geaendert' };
-  }
+  // Weg: ein anderer Planer hat ihn eben gesendet oder entfernt; andere Version: geändert (zwei Planer, 16.10.2026).
+  const version = f.get(ortSchluessel(entwurf.ort));
+  if (version === undefined) return { art: 'nicht-gesendet', grund: 'entwurf-weg' };
+  if (version !== entwurf.version) return { art: 'nicht-gesendet', grund: 'entwurf-geaendert' };
 
   // 2. Einteilen – frisch lesen, schreiben, nachlesen (im Schreibkern).
   const r = await platzEinteilen(a.dienst, entwurf.ort, entwurf.gesehen, zielAus(entwurf));

@@ -3,7 +3,7 @@ import { Sheet } from '@ui/fenster/Sheet';
 import { tagKurz } from '@shared/ct/datum';
 import { ortSchluessel, type Entwurf } from '@shared/dienstplan/entwuerfe';
 import type { SendeEintrag, SendeErgebnis } from '@shared/dienstplan/senden';
-import { aktionText, bisherHinweis, ergebnisText, wiederholbar } from './sendenTexte';
+import { aktionText, bisherHinweis, ergebnisText, neuLaden, wiederholbar } from './sendenTexte';
 import type { SendeHinweis } from './sendeHinweise';
 import styles from './SendenFach.module.scss';
 
@@ -25,7 +25,8 @@ type Phase = 'liste' | 'laeuft' | 'fertig';
  * **Das Senden-Fach** (Bauplan E4-4-2, Entwurf `e4-4-entwurf.html`): die Entwürfe nach Terminen mit Häkchen je
  * Zeile (Alwin, 15.10.), Hinweise „abwesend / am Tag schon“ (vorher geprüft), dann senden – einer nach dem
  * anderen mit Fortschritt – und das Ergebnis je Zeile. Nichts wird verworfen; „Erneut senden“ versucht nur, was
- * sich lohnt. `onClose(true)`, wenn etwas gesendet wurde – dann lädt der Aufrufer Matrix und Entwürfe neu.
+ * sich lohnt. `onClose(true)`, wenn sich etwas geändert hat (`neuLaden`, auch bei einem Konflikt) – dann lädt der
+ * Aufrufer Matrix und Entwürfe neu.
  */
 export function SendenFach({
   zeilen,
@@ -41,7 +42,7 @@ export function SendenFach({
     eintraege: SendeEintrag[],
     melde: (index: number, ergebnis: SendeErgebnis) => void,
   ) => Promise<SendeErgebnis[]>;
-  onClose: (gesendet: boolean) => void;
+  onClose: (neuLaden: boolean) => void;
 }) {
   const schluessel = (z: SendeZeile) => ortSchluessel(z.entwurf.ort);
   const [haken, setHaken] = useState<Set<string>>(() => new Set(zeilen.map(schluessel)));
@@ -132,7 +133,7 @@ export function SendenFach({
   return (
     <Sheet
       title={titel}
-      onClose={() => phase !== 'laeuft' && onClose(gesendet > 0)}
+      onClose={() => phase !== 'laeuft' && onClose(neuLaden(ergebnisse.values()))}
       cancelLabel={
         phase === 'laeuft'
           ? 'Bitte warten – wird gesendet …'
@@ -289,7 +290,8 @@ function Zeichen({ r, laeuft }: { r: SendeErgebnis | undefined; laeuft: boolean 
     );
   }
   const gelb =
-    r.art === 'nicht-gesendet' && (r.grund === 'konflikt' || r.grund === 'entwurf-geaendert');
+    r.art === 'nicht-gesendet' &&
+    (r.grund === 'konflikt' || r.grund === 'entwurf-geaendert' || r.grund === 'entwurf-weg');
   return (
     <span
       className={`${styles.zeichen} ${gelb ? styles.zAchtung : styles.zFehl}`}

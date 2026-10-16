@@ -608,8 +608,11 @@ export function Planen({
       setFach(null);
       showToast(text());
     } else if (r.grund === 'konflikt') {
-      // Was jetzt dasteht, zeigt auch die Matrix sofort.
+      // Was jetzt dasteht, zeigt die Matrix sofort – und das offene Fach auch (sonst zeigte es die alte Fassung,
+      // Prüfung mit zwei Planern 16.10.2026). Ist der Entwurf weg, bleibt das Fach mit seinem Hinweis stehen.
       ewSetzen(k, r.jetzt ?? null);
+      const jetzt = r.jetzt;
+      if (jetzt) setFach((f) => (f ? { ...f, entwurf: jetzt } : f));
     }
   };
 
@@ -863,9 +866,9 @@ export function Planen({
           ichId={entwuerfe.ich.personId}
           hinweise={(z) => entwuerfe.hinweise(z)}
           senden={(eintraege, melde) => entwuerfe.senden(ew.daten, eintraege, melde)}
-          onClose={(gesendet) => {
+          onClose={(geaendert) => {
             setSendenListe(null);
-            if (gesendet) {
+            if (geaendert) {
               ewNeu();
               leiseNeuLaden();
             }

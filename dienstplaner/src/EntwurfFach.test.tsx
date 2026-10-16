@@ -137,7 +137,8 @@ describe('EntwurfFach (E4-3-3)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Direkt zuteilen' }));
     const hinweis = await screen.findByRole('alert');
     expect(hinweis.textContent).toContain('Alwin hat diesen Entwurf eben geändert:');
-    expect(hinweis.textContent).toContain('„Max“');
+    // Was jetzt dasteht, mit Art (Prüfung mit zwei Planern, 16.10.2026: vorher nur der Name).
+    expect(hinweis.textContent).toContain('Gast eintragen: Max.');
     expect(hinweis.textContent).toContain('Nichts geändert.');
     fireEvent.click(screen.getByRole('button', { name: 'Trotzdem ändern' }));
     await waitFor(() => expect(onModus).toHaveBeenLastCalledWith('direkt', 5));

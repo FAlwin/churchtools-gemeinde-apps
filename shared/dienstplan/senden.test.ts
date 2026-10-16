@@ -113,6 +113,15 @@ describe('sende', () => {
     expect(a.c.ct.geschrieben).toEqual([]);
   });
 
+  it('Entwurf inzwischen weg (ein anderer hat ihn gesendet oder entfernt) → „entwurf-weg“, nichts geschrieben', async () => {
+    const a = aufbau([entwurf(6)]);
+    a.sp.s.werte = [];
+    expect(await sende(a.eintraege, a.anschluss)).toEqual([
+      { art: 'nicht-gesendet', grund: 'entwurf-weg' },
+    ]);
+    expect(a.c.ct.geschrieben).toEqual([]);
+  });
+
   it('abgemeldet → anhalten: der Rest wird gar nicht erst versucht und bleibt Entwurf', async () => {
     const a = aufbau([entwurf(6), entwurf(7), entwurf(9)]);
     a.c.ct.lesenFehler = [401];

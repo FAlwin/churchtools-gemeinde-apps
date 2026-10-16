@@ -49,7 +49,8 @@ Startseite zeigt bis dahin nur „Erst einrichten“.
    **Per Skript (macOS):** Zugangsdaten einmal im Schlüsselbund ablegen –
    `security add-internet-password -s <FTP-Server> -a <FTP-Benutzer> -r "ftp " -w` (fragt nach dem Passwort) –,
    danach `ANMELDUNG_FTP_SERVER=<FTP-Server> ANMELDUNG_FORMULAR_ADRESSE=https://anmeldung.… npm run
-formular:hochladen` (optional `ANMELDUNG_FTP_ORDNER`). Das Skript baut das Formular, lädt per FTPS erst die neuen
+formular:hochladen` (optional `ANMELDUNG_FTP_ORDNER`; `ANMELDUNG_FTP_BENUTZER`, sobald es für denselben Server mehrere
+   Schlüsselbund-Einträge gibt). Am besten ein **eigener FTP-Zugang nur für den Ordner der Subdomain**, nicht der der Website. Das Skript baut das Formular, lädt per FTPS erst die neuen
    Dateien und zuletzt `index.html`, prüft die Seite im Netz und löscht erst dann alte Dateien. Das Passwort steht
    nirgends sonst. Als FTP-Server den Namen nehmen, auf den das Zertifikat des Anbieters lautet (bei Hetzner
    `wwwNNN.your-server.de`), sonst lehnt die verschlüsselte Verbindung ab.

@@ -12,7 +12,9 @@
  *
  *   ANMELDUNG_FTP_SERVER=<FTP-Server> ANMELDUNG_FORMULAR_ADRESSE=https://anmeldung.… npm run formular:hochladen
  *
- * Optional `ANMELDUNG_FTP_ORDNER` (Ordner im FTP-Zugang, Standard: dessen Wurzel).
+ * Optional `ANMELDUNG_FTP_ORDNER` (Ordner im FTP-Zugang, Standard: dessen Wurzel) und `ANMELDUNG_FTP_BENUTZER` –
+ * Pflicht, sobald es für denselben Server mehrere Einträge im Schlüsselbund gibt (z. B. Website und Formular), sonst
+ * nähme `security` irgendeinen davon.
  *
  * **Reihenfolge, damit nie eine halbe Seite online ist:** erst die neuen Dateien unter `assets/`, dann
  * `index.html` – sie verweist auf die neuen Dateien –, dann wird die Seite **im Netz nachgeprüft** (lädt sie genau
@@ -57,16 +59,17 @@ export function ordnerPfad(o) {
   return t ? `/${t}/` : '/';
 }
 
-function zugangAusSchluesselbund(server) {
+function zugangAusSchluesselbund(server, gewuenscht) {
   const lies = (args) =>
     execFileSync('security', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  const wer = gewuenscht ? ['-a', gewuenscht] : [];
   let info;
   try {
-    info = lies(['find-internet-password', '-s', server]);
+    info = lies(['find-internet-password', '-s', server, ...wer]);
   } catch {
     throw new Error(
-      `Im Schlüsselbund gibt es keinen Eintrag für „${server}“. Einmal anlegen:\n` +
-        `  security add-internet-password -s ${server} -a <FTP-Benutzer> -r "ftp " -w`,
+      `Im Schlüsselbund gibt es keinen Eintrag für „${server}“${gewuenscht ? ` mit „${gewuenscht}“` : ''}. Einmal anlegen:\n` +
+        `  security add-internet-password -s ${server} -a ${gewuenscht ?? '<FTP-Benutzer>'} -r "ftp " -w`,
     );
   }
   const benutzer = /"acct"<blob>="([^"]*)"/.exec(info)?.[1];
@@ -109,7 +112,10 @@ async function main() {
   if (neu.length === 0 || neu.some((n) => !gebaut.includes(n)))
     throw new Error('formular/dist passt nicht zusammen – erst „npm run build -w formular“.');
 
-  const { benutzer, passwort } = zugangAusSchluesselbund(server);
+  const { benutzer, passwort } = zugangAusSchluesselbund(
+    server,
+    process.env.ANMELDUNG_FTP_BENUTZER,
+  );
   const k = curlKonfig(benutzer, passwort);
   const basis = `ftp://${server}${ordnerPfad(process.env.ANMELDUNG_FTP_ORDNER)}`;
 

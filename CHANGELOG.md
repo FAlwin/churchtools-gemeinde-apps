@@ -77,6 +77,20 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Neu (Dienstplaner)
 
+- **Zauberstab – automatische Planung** (#591, Bauplan E5-2, Entwurf `e5-entwurf.html`, Alwin 16.10.2026): In der
+  Gruppenzeile je Termin und im Gruppenkopf für alle gezeigten Termine steht der Zauberstab – mit **genau dem Symbol
+  aus ChurchTools** (`fa-magic` aus der Schrift, die ChurchTools schon lädt; nichts kopiert, Font Awesome Pro). Er
+  lädt „Wer kann?“ für alle freien Plätze (mit Fortschritt, abbrechbar) und zeigt die Vorschläge zum Prüfen: je
+  Platz eine Auswahl, oben „Passt“, darunter „Passt eher nicht“ mit dem Grund von ChurchTools. „Neu vorschlagen“
+  rechnet mit den von Hand gewählten Namen neu; „Übernehmen“ legt **Entwürfe** an (gesendet wird wie immer mit
+  „Ansehen und senden“). **„Hat zuvor abgesagt“ zieht der Zauberstab ab wie ChurchTools** (−500, also „passt eher
+  nicht“ – Alwin, 16.10., nach der Prüfung an der Test-Instanz; „Wer kann?“ bleibt ohne diesen Abzug). Weil
+  ChurchTools eine Absage nicht von „vom Planer herausgenommen“ unterscheidet, heißt der Grund ehrlich „hat zuvor
+  abgesagt oder wurde herausgenommen“; bewusst wählen geht trotzdem. Plätze mit Entwurf bleiben, wie sie sind;
+  vorhandene Entwürfe der Gruppe zählen mit. Ein
+  Konflikt mit einem anderen Planer steht an der Zeile und sofort in der Matrix. Die Eingabe eines neuen Entwurfs
+  kommt jetzt für „Wer kann?“, Zurückziehen, Art ändern und Zauberstab aus **einer** Funktion.
+
 - **Dunkelmodus wie ChurchTools** (#563, Alwin: „genauso“ wie bei den Anmeldungen): Der Dienstplaner ist hell oder
   dunkel, je nachdem, was in ChurchTools gewählt ist, und schaltet ohne Neuladen mit um (`folgeChurchToolsThema()`
   aus `ui/design/thema.ts`). Bisher war er immer hell. Der Hinweiskasten in „Wer kann?“ und im Entwurfs-Fach hatte
@@ -145,7 +159,7 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 - **Zauberstab-Kern** (#588, Bauplan E5-1 – noch ohne Oberfläche, `shared/dienstplan/zauberstab.ts`): Vorschläge für
   freie Plätze nach der Regel des ChurchTools-Zauberstabs (höchste Punktzahl über −100, Punkte rechnet ChurchTools,
-  Kandidaten aus derselben Funktion wie „Wer kann?“). Über mehrere Termine zählen die eigenen Vorschläge, von Hand
+  Kandidaten aus derselben Funktion wie „Wer kann?“; „hat zuvor abgesagt“ zählt hier mit, s. E5-2). Über mehrere Termine zählen die eigenen Vorschläge, von Hand
   gewählte Namen und vorhandene Entwürfe **wie echte Einteilungen mit den Abzügen von ChurchTools selbst** (Alwin,
   16.10.2026: „mitzählen“): selber Tag −250, Monat −3/−2/−1, Abstand −50/−10 (der nähere zählt), „höchstens N× im
   Monat“ erreicht −100; bei Gleichstand zuerst, wer im Lauf seltener dran ist. Laden mit höchstens 4 Abfragen

@@ -1,0 +1,161 @@
+// Zauberstab-Fenster (E5-2, Entwurf e5-entwurf.html) – nur Tokens aus ui/design (hell und dunkel, #563).
+
+.unter {
+  margin: -4px 0 12px;
+  color: var(--text2);
+  font-size: 13px;
+}
+
+.zusammen {
+  margin: 0 0 10px;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+
+  small {
+    display: block;
+    color: var(--text2);
+    font-size: 12.5px;
+  }
+}
+
+.leise {
+  color: var(--text2);
+}
+
+.warnung {
+  color: var(--red) !important;
+}
+
+.ok {
+  color: var(--green) !important;
+}
+
+.hinweis {
+  margin: 10px 2px 0;
+  color: var(--text2);
+  font-size: 12.5px;
+}
+
+.fortschritt {
+  height: 6px;
+  margin: 0 0 12px;
+  border-radius: 3px;
+  background: var(--hair);
+  overflow: hidden;
+
+  i {
+    display: block;
+    height: 100%;
+    background: var(--blue);
+    transition: width 0.2s;
+  }
+}
+
+.termin {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface2);
+
+  h4 {
+    margin: 0 0 6px;
+    color: var(--text);
+    font-size: 14px;
+  }
+}
+
+.zeile {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 3px 10px;
+  align-items: center;
+  padding: 7px 0;
+  border-top: 1px solid var(--hair);
+
+  &:first-of-type {
+    border-top: 0;
+  }
+
+  > small {
+    grid-column: 2;
+    color: var(--text2);
+    font-size: 12px;
+    line-height: 1.35;
+  }
+}
+
+.dienst {
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 600;
+
+  small {
+    display: block;
+    color: var(--text2);
+    font-size: 11.5px;
+    font-weight: 400;
+  }
+}
+
+.auswahl {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.leer {
+  border-color: color-mix(in srgb, var(--red) 55%, transparent);
+  color: var(--red);
+}
+
+.knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.zweit,
+.primaer {
+  height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primaer {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: #fff;
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+}
+
+@media (max-width: 480px) {
+  .zeile {
+    grid-template-columns: 74px minmax(0, 1fr);
+  }
+
+  .knoepfe button {
+    flex: 1;
+  }
+}

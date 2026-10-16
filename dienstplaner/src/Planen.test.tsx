@@ -7,7 +7,7 @@ import { diensteAus } from '@shared/ct/dienste';
 import { planAus, type Plan } from '@shared/dienstplan/plan';
 import type { Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import type { RohTermin } from '@shared/dienstplan/termine';
-import type { Entwurf } from '@shared/dienstplan/entwuerfe';
+import type { Entwurf, EntwurfEingabe, EntwurfErgebnis } from '@shared/dienstplan/entwuerfe';
 import type { SendeErgebnis } from '@shared/dienstplan/senden';
 import type { TerminStand } from './terminStand';
 import type { EntwuerfeDaten, EntwurfAnschluss, Schublade } from './ladeEntwuerfe';
@@ -1649,5 +1649,220 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Schließen' }));
     await waitFor(() => expect(laden).toHaveBeenCalledTimes(2));
     expect(onAktualisieren).toHaveBeenCalledTimes(1);
+  });
+
+  // ── Zauberstab (E5-2) ──────────────────────────────────────────────────────
+  const zauberKnoepfe = () =>
+    screen
+      .queryAllByRole('button', { name: /^Automatische Planung/ })
+      .map((b) => b.getAttribute('aria-label'));
+
+  it('Zauberstab (E5-2): in der Gruppenzeile, wo etwas frei ist und man eintragen darf – nicht bei „nur ansehen“', async () => {
+    zeige4({});
+    await waitFor(() =>
+      expect(zauberKnoepfe()).toEqual(['Automatische Planung Technik am So, 08.11.']),
+    );
+  });
+
+  it('Zauberstab: nicht, wenn alle freien Plätze einen Entwurf haben, die Schublade nur lesbar ist oder der Termin vorbei ist', async () => {
+    const zweiEntwuerfe = daten([
+      entwurf(),
+      entwurf({ ort: { eventId: 20, serviceId: 6, index: null } }),
+    ]);
+    zeige4({ laden: () => Promise.resolve(zweiEntwuerfe) });
+    await waitFor(() => expect(entwuerfeInMatrix()).toHaveLength(2));
+    expect(zauberKnoepfe()).toEqual([]);
+    cleanup();
+
+    zeige4({ laden: () => Promise.resolve(daten([], { stand: 'nur-lesen' })) });
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Plätze Technik/ })).toBeTruthy(),
+    );
+    expect(zauberKnoepfe()).toEqual([]);
+    cleanup();
+
+    zeige4({}, { heute: '2026-11-09' });
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Plätze Technik/ })).toBeTruthy(),
+    );
+    expect(zauberKnoepfe()).toEqual([]);
+    cleanup();
+
+    // Abgesagt: dort plant niemand – auf die geladenen Entwürfe warten, dann zählen.
+    const anschluss = zeige4(
+      {},
+      {
+        zustand: {
+          art: 'fertig',
+          zeilen: [],
+          plan: { ...PLAN4, spalten: PLAN4.spalten.map((x) => ({ ...x, abgesagt: true })) },
+          wochen: 8,
+        },
+      },
+    );
+    await waitFor(() => expect(anschluss.laden).toHaveBeenCalled());
+    await act(async () => {});
+    expect(zauberKnoepfe()).toEqual([]);
+  });
+
+  it('Zauberstab übernehmen: je Vorschlag ein Entwurf (Anfrage, „gesehen“ = frei, neu) – danach in der Matrix', async () => {
+    laden.mockResolvedValue([
+      { person: { domainIdentifier: '46', title: 'Ben Test' }, score: 0 },
+      { person: { domainIdentifier: '47', title: 'Clara Test' }, score: -5 },
+    ]);
+    const speichern = vi.fn(
+      (_d: EntwuerfeDaten, _g: number, e: EntwurfEingabe, _v: number | null) =>
+        Promise.resolve<EntwurfErgebnis>({
+          ok: true,
+          entwurf: { ...e, zeit: '2026-10-16T12:00:00.000Z', version: 1 },
+        }),
+    );
+    zeige4({ speichern });
+    fireEvent.click(
+      await screen.findByRole('button', { name: /^Automatische Planung Technik am/ }),
+    );
+    // In der Reihenfolge der Matrix: Licht Platz 2, dann Ton. Ben ist der Beste, aber nur einmal am Tag – Ton bekommt Clara.
+    fireEvent.click(await screen.findByRole('button', { name: '2 als Entwurf übernehmen' }));
+    await waitFor(() => expect(speichern).toHaveBeenCalledTimes(2));
+    expect(speichern.mock.calls.map((c) => [c[1], c[2], c[3]])).toEqual([
+      [
+        3,
+        {
+          ort: { eventId: 20, serviceId: 7, index: 2 },
+          ziel: { art: 'person', personId: 46, name: 'Ben Test' },
+          modus: 'anfrage',
+          gesehen: { art: 'frei' },
+          von: ALWIN,
+        },
+        null,
+      ],
+      [
+        3,
+        {
+          ort: { eventId: 20, serviceId: 6, index: null },
+          ziel: { art: 'person', personId: 47, name: 'Clara Test' },
+          modus: 'anfrage',
+          gesehen: { art: 'frei' },
+          von: ALWIN,
+        },
+        null,
+      ],
+    ]);
+    await screen.findByText('2 Vorschläge als Entwurf eingetragen – noch nicht gesendet.');
+    expect(entwuerfeInMatrix()).toHaveLength(2);
+    expect(zauberKnoepfe()).toEqual([]);
+  });
+
+  it('Zauberstab im Gruppenkopf für alle gezeigten Termine (ab zwei) – am Handy nur je Termin', async () => {
+    const zwei = planAus(
+      [20, 21].map((id, n) => ({
+        id,
+        name: 'Gottesdienst',
+        startDate: `2026-11-${String(8 + 7 * n).padStart(2, '0')}T09:00:00Z`,
+        endDate: `2026-11-${String(8 + 7 * n).padStart(2, '0')}T10:30:00Z`,
+        eventServices: [{ serviceId: 6, personId: null, name: null }],
+      })),
+      {
+        ichId: 1,
+        dienste: DIENSTE,
+        dienstgruppen: GRUPPEN,
+        zeitzone: 'Europe/Berlin',
+        planbar: (d) => d.dienstgruppeId === 3,
+        ganzSichtbar: () => true,
+      },
+    );
+    const zeige2 = (handy: boolean) =>
+      render(
+        <Planen
+          zustand={{ art: 'fertig', zeilen: [], plan: zwei, wochen: 8 }}
+          handy={handy}
+          onNochmal={() => {}}
+          onMehr={() => {}}
+          {...ZUSATZ}
+          entwuerfe={nachgebaut()}
+        />,
+      );
+    laden.mockResolvedValue([{ person: { domainIdentifier: '46', title: 'Ben Test' }, score: 0 }]);
+    zeige2(false);
+    await waitFor(() =>
+      expect(zauberKnoepfe()).toEqual([
+        'Automatische Planung Technik für alle gezeigten Termine',
+        'Automatische Planung Technik am So, 08.11.',
+        'Automatische Planung Technik am So, 15.11.',
+      ]),
+    );
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Automatische Planung Technik für alle gezeigten Termine',
+      }),
+    );
+    expect(await screen.findByText('So, 08.11. – So, 15.11. · 2 Termine')).toBeTruthy();
+    await screen.findByText('2 Vorschläge'); // Ben an beiden Sonntagen (andere Tage, eine Woche Abstand)
+    cleanup();
+
+    zeige2(true);
+    await waitFor(() =>
+      expect(zauberKnoepfe()).toEqual(['Automatische Planung Technik am So, 08.11.']),
+    );
+  });
+
+  it('Zauberstab: Entwürfe anderer Gruppen zählen nicht mit (ChurchTools zählt je Dienstgruppe)', async () => {
+    laden.mockResolvedValue([
+      { person: { domainIdentifier: '46', title: 'Ben Test' }, score: 0 },
+      { person: { domainIdentifier: '47', title: 'Clara Test' }, score: -5 },
+    ]);
+    const fremd = entwurf({ ort: { eventId: 20, serviceId: 1, index: null } }); // Ben, Predigt (Programm)
+    const d = daten([fremd]);
+    d.gruppeJe.set('20|1|-', 1);
+    zeige4({ laden: () => Promise.resolve(d) });
+    fireEvent.click(
+      await screen.findByRole('button', { name: /^Automatische Planung Technik am/ }),
+    );
+    await screen.findByText('2 Vorschläge');
+    expect(
+      screen.getByRole<HTMLSelectElement>('combobox', { name: /^Licht/ }).selectedOptions[0]
+        .textContent,
+    ).toBe('Ben Test (0×)');
+  });
+
+  it('Zauberstab: Konflikt beim Übernehmen → was der andere eingetragen hat, steht sofort in der Matrix', async () => {
+    laden.mockResolvedValue([{ person: { domainIdentifier: '46', title: 'Ben Test' }, score: 0 }]);
+    const anderer = entwurf({
+      ort: { eventId: 20, serviceId: 7, index: 2 },
+      ziel: { art: 'gast', name: 'Max' },
+      von: { personId: 19, name: 'Spike' },
+    });
+    const speichern = vi.fn(() =>
+      Promise.resolve<EntwurfErgebnis>({ ok: false, grund: 'konflikt', jetzt: anderer }),
+    );
+    zeige4({ speichern });
+    fireEvent.click(
+      await screen.findByRole('button', { name: /^Automatische Planung Technik am/ }),
+    );
+    fireEvent.click(await screen.findByRole('button', { name: '1 als Entwurf übernehmen' }));
+    await screen.findByText(/0 eingetragen/);
+    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    await waitFor(() =>
+      expect(entwuerfeInMatrix()).toEqual([
+        'Entwurf von Spike – noch nicht gesendet: MaxGastSpike',
+      ]),
+    );
+  });
+
+  it('Zauberstab: vorhandene Entwürfe der Gruppe zählen mit – Ben hat am Tag schon einen', async () => {
+    laden.mockResolvedValue([
+      { person: { domainIdentifier: '46', title: 'Ben Test' }, score: 0 },
+      { person: { domainIdentifier: '47', title: 'Clara Test' }, score: -5 },
+    ]);
+    zeige4({ laden: () => Promise.resolve(daten([entwurf()])) }); // Ben auf Licht Platz 2
+    fireEvent.click(
+      await screen.findByRole('button', { name: /^Automatische Planung Technik am/ }),
+    );
+    await screen.findByText('1 Vorschlag');
+    expect(
+      screen.getByRole<HTMLSelectElement>('combobox', { name: /^Ton/ }).selectedOptions[0]
+        .textContent,
+    ).toBe('Clara Test (0×)');
+    expect(screen.getByText(/1 Platz mit Entwurf bleibt|1 Platz mit Entwurf bleiben/)).toBeTruthy();
   });
 });

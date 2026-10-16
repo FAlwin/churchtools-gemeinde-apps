@@ -27,7 +27,9 @@ import {
   type Besetzung,
   type Entwurf,
   type EntwurfErgebnis,
+  type EntwurfZiel,
 } from '@shared/dienstplan/entwuerfe';
+import type { Belegung, PlatzOrt } from '@shared/dienstplan/einteilen';
 import {
   zeitraumGrenzen,
   spanneText,
@@ -45,6 +47,9 @@ import { WerKann, type Eintragen, type FreierPlatz } from './WerKann';
 import { EntwurfFach } from './EntwurfFach';
 import { BelegtFach } from './BelegtFach';
 import { PlaetzeFach, type PlaetzeZeile } from './PlaetzeFach';
+import { ZauberstabFach, type Wahl, type ZauberZeile } from './ZauberstabFach';
+import { CtSymbol } from './CtSymbol';
+import type { Eingeplant } from '@shared/dienstplan/zauberstab';
 import { AlteEntwuerfeFach, type AlterEntwurf } from './AlteEntwuerfeFach';
 import type { TerminStand } from './terminStand';
 import { SendenFach, type SendeZeile } from './SendenFach';
@@ -106,6 +111,11 @@ interface Sicht {
   onOhnePlatz: (spalte: number, zeile: PlanZeile, e: Entwurf) => void;
   /** Regler in der Gruppenzeile → Plätze-Fach (E4-5-3); `undefined`, wo man keinen Dienst der Gruppe plant. */
   onPlaetze: (spalte: number, gruppe: PlanGruppe) => (() => void) | undefined;
+  /**
+   * Zauberstab (E5-2): automatische Planung für diese Termine der Gruppe; `undefined`, wo es nichts zu füllen gibt
+   * (kein freier Platz ohne Entwurf, den man planen und als Entwurf eintragen darf).
+   */
+  onZauberstab: (spalten: number[], gruppe: PlanGruppe) => (() => void) | undefined;
   darfAendern: (zeile: PlanZeile) => boolean;
   /** Die eigene Person – eigene Entwürfe stehen ohne „von …“. */
   ichId: number | null;
@@ -179,6 +189,15 @@ export function Planen({
   const [plaetzeFach, setPlaetzeFach] = useState<{ spalte: number; gruppe: PlanGruppe } | null>(
     null,
   );
+  // Das Zauberstab-Fenster (E5-2): Gruppe und Termine (Indizes in `plan.spalten`).
+  // Beim Öffnen festgehalten – sonst verschwänden Zeilen, sobald ein Vorschlag als Entwurf dasteht.
+  const [zauber, setZauber] = useState<{
+    titel: string;
+    unter: string;
+    zeilen: ZauberZeile[];
+    mitEntwurf: number;
+    eingeplant: Eingeplant[];
+  } | null>(null);
   // Ein angetippter Entwurf (E4-3-3) – und ob „Andere Person wählen“ einen Entwurf ersetzt (seine Version).
   const [fach, setFach] = useState<{
     platz: FreierPlatz;
@@ -234,6 +253,35 @@ export function Planen({
       else map.delete(k);
       return { art: 'fertig', daten: { ...alt.daten, entwuerfe: map } };
     });
+  /**
+   * Einen Entwurf speichern und das Ergebnis gleich in die geladenen Daten übernehmen – bei einem Konflikt das, was
+   * jetzt dasteht. **Eine Stelle** für „Wer kann?“, Zurückziehen und Zauberstab (E5-2): Wer die Eingabe ändert
+   * (etwa „direkt zuteilen“ als Vorgabe je Dienst), ändert sie für alle.
+   */
+  const entwurfSpeichern = async (
+    daten: EntwuerfeDaten,
+    gruppeId: number,
+    e: { ort: PlatzOrt; ziel: EntwurfZiel; gesehen: Belegung; modus?: Entwurf['modus'] },
+    erwartet: number | null,
+  ): Promise<EntwurfErgebnis> => {
+    if (!entwuerfe) return { ok: false, grund: 'voruebergehend' };
+    const r = await entwuerfe.speichern(
+      daten,
+      gruppeId,
+      {
+        ort: e.ort,
+        ziel: e.ziel,
+        modus: e.modus ?? 'anfrage',
+        gesehen: e.gesehen,
+        von: entwuerfe.ich,
+      },
+      erwartet,
+    );
+    const k = ortSchluessel(e.ort);
+    if (r.ok) ewSetzen(k, r.entwurf);
+    else if (r.grund === 'konflikt') ewSetzen(k, r.jetzt ?? null);
+    return r;
+  };
 
   // Gewählter Zeitraum: eigene Abfrage, gemerkt mit ihrem Bereich – eine späte Antwort für einen alten
   // Bereich zählt nicht mehr.
@@ -536,6 +584,17 @@ export function Planen({
           ? () => setPlaetzeFach({ spalte: i, gruppe: g })
           : undefined,
       entwurf: (i, zl, p) => entwurfAmPlatz(plan.spalten[i], zl, p),
+      onZauberstab: (idx, g) => {
+        const z = entwuerfe ? zauberZeilen(idx, g) : null;
+        if (!z || z.zeilen.length === 0) return undefined;
+        return () =>
+          setZauber({
+            titel: `Automatische Planung · ${gruppenName(g)}`,
+            unter: zauberUnter(plan, idx),
+            ...z,
+            eingeplant: zauberEingeplant(g),
+          });
+      },
       darfAendern,
       onEntwurf: (i, zl, nr) => {
         const plaetze = zl.zellen[i] ?? [];
@@ -584,6 +643,90 @@ export function Planen({
       setVersuch((v) => v + 1);
     } else onAktualisieren?.();
   };
+
+  /**
+   * Die freien Plätze für den Zauberstab (E5-2): nicht abgesagt, nicht vorbei, wo man den Dienst planen und die
+   * Entwürfe der Gruppe ändern darf – **ohne Entwurf** (die bleiben, wie sie sind; gezählt in `mitEntwurf`).
+   * Der Reihe nach: Termin, Dienst, Platz – so rechnet auch der Kern.
+   */
+  function zauberZeilen(
+    idx: number[],
+    g: PlanGruppe,
+  ): { zeilen: ZauberZeile[]; mitEntwurf: number } {
+    const zeilen: ZauberZeile[] = [];
+    let mitEntwurf = 0;
+    if (!plan || ew.art !== 'fertig') return { zeilen, mitEntwurf };
+    for (const i of [...idx].sort((a, b) => a - b)) {
+      const s = plan.spalten[i];
+      if (s.abgesagt || s.tag < heute) continue;
+      for (const zl of g.zeilen) {
+        if (!darfPlanen(zl, s) || !darfAendern(zl)) continue;
+        const zelle = zl.zellen[i] ?? [];
+        zelle.forEach((p, n) => {
+          if (p.art !== 'frei') return;
+          if (entwurfAmPlatz(s, zl, p)) {
+            mitEntwurf++;
+            return;
+          }
+          zeilen.push({
+            schluessel: ortSchluessel({ eventId: s.id, serviceId: zl.dienst.id, index: p.index }),
+            terminId: s.id,
+            serviceId: zl.dienst.id,
+            tag: s.tag,
+            schonDa: zelle.flatMap((x) => (x.personId !== null ? [x.personId] : [])),
+            dienst: zl.dienst.name,
+            nr: n + 1,
+            von: zelle.length,
+            kopf: `${tagKurz(s.tag)} · ${s.name} · ${s.uhrzeit} Uhr`,
+            monatName: monatName(s.tag),
+            index: p.index,
+            gruppeId: zl.dienst.dienstgruppeId ?? 0,
+            gesehen: p.belegung,
+          });
+        });
+      }
+    }
+    return { zeilen, mitEntwurf };
+  }
+
+  /**
+   * Was im Lauf schon feststeht (Alwin, 16.10.: „mitzählen“): Entwürfe mit Person in der Schublade dieser Gruppe,
+   * an Terminen der Matrix (dort kennen wir den Tag).
+   */
+  function zauberEingeplant(g: PlanGruppe): Eingeplant[] {
+    if (!plan || ew.art !== 'fertig' || !g.gruppe) return [];
+    const tagJe = new Map(plan.spalten.map((s) => [s.id, s.tag]));
+    const out: Eingeplant[] = [];
+    for (const [k, e] of ew.daten.entwuerfe) {
+      const tag = tagJe.get(e.ort.eventId);
+      if (ew.daten.gruppeJe.get(k) !== g.gruppe.id || !tag || e.ziel.art !== 'person') continue;
+      out.push({ personId: e.ziel.personId, tag });
+    }
+    return out;
+  }
+
+  /** Übernehmen (E5-2): je Vorschlag ein Entwurf, einer nach dem anderen – wie „Wer kann?“ ihn anlegt. */
+  async function zauberUebernehmen(
+    wahlen: Wahl[],
+    melde: (index: number, ergebnis: EntwurfErgebnis) => void,
+  ): Promise<void> {
+    if (!entwuerfe || ew.art !== 'fertig') return;
+    const daten = ew.daten;
+    for (const [i, w] of wahlen.entries()) {
+      const ort = { eventId: w.zeile.terminId, serviceId: w.zeile.serviceId, index: w.zeile.index };
+      const r = await entwurfSpeichern(
+        daten,
+        w.zeile.gruppeId,
+        {
+          ort,
+          ziel: { art: 'person', personId: w.personId, name: w.name },
+          gesehen: w.zeile.gesehen,
+        },
+        null,
+      );
+      melde(i, r);
+    }
+  }
 
   /**
    * Die Dienste einer Gruppe an einem Termin fürs Plätze-Fach – nur, wo man plant. Nicht unter „belegt“; liegen dort
@@ -662,21 +805,13 @@ export function Planen({
         // jetzt in ChurchTools steht – frei, oder die Person, die ersetzt wird (E4-5); bei einem gültigen Entwurf
         // ist das genau, was er gesehen hat (`gleicherStand`).
         const alt = erwartet !== null ? daten.entwuerfe.get(ortSchluessel(ort)) : undefined;
-        const r = await entwuerfe.speichern(
+        const r = await entwurfSpeichern(
           daten,
           f.gruppeId,
-          {
-            ort,
-            ziel,
-            modus: alt?.modus ?? 'anfrage',
-            gesehen: f.bisher?.belegung ?? { art: 'frei' },
-            von: entwuerfe.ich,
-          },
+          { ort, ziel, modus: alt?.modus, gesehen: f.bisher?.belegung ?? { art: 'frei' } },
           erwartet,
         );
-        const k = ortSchluessel(ort);
         if (r.ok) {
-          ewSetzen(k, r.entwurf);
           setFrei(null);
           setErsetzt(null);
           showToast(
@@ -684,9 +819,6 @@ export function Planen({
               ? `${ziel.name} statt ${f.bisher.name} eingetragen – noch nicht gesendet.`
               : `${ziel.name} eingetragen – noch nicht gesendet.`,
           );
-        } else if (r.grund === 'konflikt') {
-          // Was jetzt dasteht, zeigt auch die Matrix sofort.
-          ewSetzen(k, r.jetzt ?? null);
         }
         return r;
       },
@@ -757,8 +889,9 @@ export function Planen({
         Admin des Termins bist. Einen freien Platz antippen zeigt, wer kann – dort trägst du
         jemanden als Entwurf ein. Einen belegten Platz antippen: zurückziehen oder durch jemand
         anderen ersetzen, ebenfalls als Entwurf. Der Regler in der Gruppenzeile ändert die Anzahl
-        der Plätze – sofort. Gesendet wird erst mit „Ansehen und senden“ – dann bekommen die
-        Angefragten eine Mitteilung von ChurchTools.
+        der Plätze – sofort. Der Zauberstab schlägt für die freien Plätze Personen vor – nach der
+        Rangfolge von ChurchTools, ebenfalls als Entwurf. Gesendet wird erst mit „Ansehen und
+        senden“ – dann bekommen die Angefragten eine Mitteilung von ChurchTools.
       </p>
       {fach && entwuerfe && ew.art === 'fertig' && (
         <EntwurfFach
@@ -768,10 +901,10 @@ export function Planen({
           onClose={() => setFach(null)}
           onModus={async (modus, erwartet) => {
             const e = fach.entwurf;
-            const r = await entwuerfe.speichern(
+            const r = await entwurfSpeichern(
               ew.daten,
               fach.platz.gruppeId,
-              { ort: e.ort, ziel: e.ziel, modus, gesehen: e.gesehen, von: entwuerfe.ich },
+              { ort: e.ort, ziel: e.ziel, modus, gesehen: e.gesehen },
               erwartet,
             );
             nachFach(r, ortSchluessel(e.ort), () =>
@@ -826,24 +959,16 @@ export function Planen({
               index: belegt.index,
             };
             if (ew.art !== 'fertig') return { ok: false, grund: 'voruebergehend' };
-            const r = await entwuerfe.speichern(
+            const r = await entwurfSpeichern(
               ew.daten,
               belegt.gruppeId,
-              {
-                ort,
-                ziel: { art: 'frei' },
-                modus: 'anfrage',
-                gesehen: b.belegung,
-                von: entwuerfe.ich,
-              },
+              { ort, ziel: { art: 'frei' }, gesehen: b.belegung },
               null,
             );
-            const k = ortSchluessel(ort);
             if (r.ok) {
-              ewSetzen(k, r.entwurf);
               setBelegt(null);
               showToast(`${b.name} wird beim Senden zurückgezogen – noch nicht gesendet.`);
-            } else if (r.grund === 'konflikt') ewSetzen(k, r.jetzt ?? null);
+            }
             return r;
           }}
         />
@@ -889,6 +1014,21 @@ export function Planen({
           onClose={(geaendert) => {
             setAlteListe(null);
             if (geaendert) ewNeu();
+          }}
+        />
+      )}
+      {zauber && (
+        <ZauberstabFach
+          {...zauber}
+          uebernehmen={zauberUebernehmen}
+          onClose={(n) => {
+            setZauber(null);
+            if (n > 0)
+              showToast(
+                n === 1
+                  ? '1 Vorschlag als Entwurf eingetragen – noch nicht gesendet.'
+                  : `${n} Vorschläge als Entwurf eingetragen – noch nicht gesendet.`,
+              );
           }}
         />
       )}
@@ -1013,6 +1153,29 @@ function GruppenStand({ frei }: { frei: number | null }) {
   );
 }
 
+/** Untertitel des Zauberstab-Fensters: ein Termin mit Namen, sonst die Spanne mit Anzahl. */
+function zauberUnter(plan: Plan, idx: number[]): string {
+  const sp = [...idx].sort((a, b) => a - b).map((i) => plan.spalten[i]);
+  if (sp.length === 1) return `${tagKurz(sp[0].tag)} · ${sp[0].name} · ${sp[0].uhrzeit} Uhr`;
+  return `${tagKurz(sp[0].tag)} – ${tagKurz(sp[sp.length - 1].tag)} · ${sp.length} Termine`;
+}
+
+/** Zauberstab (E5-2) – das Symbol aus ChurchTools (`fa-magic`, Alwin 16.10.), nur wo es etwas zu füllen gibt. */
+function ZauberKnopf({ onKlick, text }: { onKlick?: () => void; text: string }) {
+  if (!onKlick) return null;
+  return (
+    <button
+      type="button"
+      className={styles.zauber}
+      onClick={onKlick}
+      aria-label={text}
+      title={text}
+    >
+      <CtSymbol name="magic" size={14} />
+    </button>
+  );
+}
+
 /** Regler in der Gruppenzeile (E4-5-3, wie im Gesamtentwurf) – nur, wo man einen Dienst der Gruppe plant. */
 function ReglerKnopf({ onKlick, text }: { onKlick?: () => void; text: string }) {
   if (!onKlick) return null;
@@ -1125,24 +1288,38 @@ function TabellenPlan({ sicht, breite, platz }: { sicht: Sicht; breite: Breite; 
             return [
               <tr key={`g-${k}`} className={styles.gruppe}>
                 <th className={styles.svc} style={{ padding: 0 }} scope="row">
-                  <GruppenKnopf
-                    g={g}
-                    offen={offen}
-                    onUmschalten={() => onUmschalten(k)}
-                    nurAnsehen={nurAnsehen(
-                      g,
-                      spalten.map((i) => plan.spalten[i]),
+                  <div className={styles.gruppenKopfZeile}>
+                    <GruppenKnopf
+                      g={g}
+                      offen={offen}
+                      onUmschalten={() => onUmschalten(k)}
+                      nurAnsehen={nurAnsehen(
+                        g,
+                        spalten.map((i) => plan.spalten[i]),
+                      )}
+                    />
+                    {spalten.length > 1 && (
+                      <ZauberKnopf
+                        onKlick={sicht.onZauberstab(spalten, g)}
+                        text={`Automatische Planung ${gruppenName(g)} für alle gezeigten Termine`}
+                      />
                     )}
-                  />
+                  </div>
                 </th>
                 {spalten.map((i) => (
                   <td key={i}>
                     <div className={styles.gruppenZelle}>
                       <GruppenStand frei={g.frei[i]} />
-                      <ReglerKnopf
-                        onKlick={sicht.onPlaetze(i, g)}
-                        text={`Plätze ${gruppenName(g)} am ${tagKurz(plan.spalten[i].tag)} ändern`}
-                      />
+                      <span className={styles.gruppenKnoepfe}>
+                        <ZauberKnopf
+                          onKlick={sicht.onZauberstab([i], g)}
+                          text={`Automatische Planung ${gruppenName(g)} am ${tagKurz(plan.spalten[i].tag)}`}
+                        />
+                        <ReglerKnopf
+                          onKlick={sicht.onPlaetze(i, g)}
+                          text={`Plätze ${gruppenName(g)} am ${tagKurz(plan.spalten[i].tag)} ändern`}
+                        />
+                      </span>
                     </div>
                   </td>
                 ))}
@@ -1267,6 +1444,10 @@ function HandyPlan({ sicht, amEnde }: { sicht: Sicht; amEnde?: () => void }) {
                   nurAnsehen={nurAnsehen(g, [s])}
                 />
                 <GruppenStand frei={g.frei[i]} />
+                <ZauberKnopf
+                  onKlick={sicht.onZauberstab([i], g)}
+                  text={`Automatische Planung ${gruppenName(g)} am ${tagKurz(s.tag)}`}
+                />
                 <ReglerKnopf
                   onKlick={sicht.onPlaetze(i, g)}
                   text={`Plätze ${gruppenName(g)} am ${tagKurz(s.tag)} ändern`}

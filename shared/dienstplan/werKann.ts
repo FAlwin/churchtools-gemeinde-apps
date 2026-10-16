@@ -19,6 +19,11 @@ export interface Kandidat {
   name: string;
   /** Punkte für die Reihenfolge: ChurchTools' `score` ohne den Abzug für frühere Absagen. */
   punkte: number;
+  /**
+   * Der Abzug „hat zuvor abgesagt“ (`service.previously-declined`, sonst 0). „Wer kann?“ zählt ihn nicht (s. o.);
+   * der Zauberstab schon – wie ChurchTools (Alwin, 16.10.2026).
+   */
+  frueherAbgesagt: number;
   /** Grund der Abwesenheit an diesem Tag, sonst `null`. */
   abwesend: string | null;
   /** Dienste, die die Person an diesem Tag schon hat. */
@@ -32,11 +37,17 @@ export interface Kandidat {
   abstandDanach: number;
   /** Vorliebe „höchstens N× im Monat“ (`serviceGroupPreferences.maxPerMonth`), `null` = keine gespeichert. */
   hoechstensImMonat: number | null;
+  /**
+   * ChurchTools' eigener Text zum größten Abzug (`nameTranslated`, z. B. „Heute bereits eingeteilt“) – so zeigt es
+   * auch der ChurchTools-Zauberstab. Ohne den Abzug für frühere Absagen (zählt nicht, s. o.); `null` ohne Abzug.
+   */
+  hauptGrund: string | null;
 }
 
 interface RohHinweis {
   score?: unknown;
   reason?: unknown;
+  nameTranslated?: unknown;
 }
 
 export interface RohKandidat {
@@ -64,6 +75,20 @@ const abzugFuer = (hinweise: RohHinweis[], grund: string): number =>
   hinweise
     .filter((h) => h.reason === grund && typeof h.score === 'number')
     .reduce((s, h) => s + (h.score as number), 0);
+
+/** Der Text zum größten Abzug – wie der ChurchTools-Zauberstab (`sortBy(scoreHints, 'score')[0]`). */
+function hauptGrundAus(hinweise: RohHinweis[]): string | null {
+  const abzuege = hinweise.filter(
+    (h) =>
+      h.reason !== FRUEHER_ABGESAGT &&
+      typeof h.score === 'number' &&
+      h.score < 0 &&
+      text(h.nameTranslated) !== '',
+  );
+  if (abzuege.length === 0) return null;
+  const groesster = abzuege.reduce((a, b) => ((b.score as number) < (a.score as number) ? b : a));
+  return text(groesster.nameTranslated);
+}
 
 function nameAus(p: NonNullable<RohKandidat['person']>): string {
   const a = p.domainAttributes;
@@ -95,6 +120,7 @@ export function kandidatenAus(
       personId,
       name,
       punkte: (typeof k.score === 'number' ? k.score : 0) - abzug,
+      frueherAbgesagt: abzug,
       abwesend: abwesend
         ? text(abwesend.absenceReason?.nameTranslated) ||
           text(abwesend.absenceReason?.name) ||
@@ -113,6 +139,7 @@ export function kandidatenAus(
         typeof hoechstens === 'number' && Number.isInteger(hoechstens) && hoechstens >= 0
           ? hoechstens
           : null,
+      hauptGrund: hauptGrundAus(hinweise),
     });
   }
   return out.sort((a, b) => b.punkte - a.punkte || a.name.localeCompare(b.name, 'de'));

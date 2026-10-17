@@ -20,7 +20,7 @@ import type {
 } from '../types/index';
 import { isoTag } from './zeit';
 import { agendaSignatureList, diffAgendaItems, fingerprintRohtext } from './agendaDiff';
-import { formatBerlinTime, isHeaderType, responsibleEntries } from './agendaFormat';
+import { ablaufZeileAus } from './ablaufZeile';
 import {
   documentsOf,
   isOriginalChordpro,
@@ -355,30 +355,15 @@ export async function ablaufPunkte(
   const changedIds = diff ? new Set(diff.changedIds) : null;
   const newIds = diff ? new Set(diff.newIds) : null;
   const built = await Promise.all(
-    items.map(async (item): Promise<AgendaItem> => {
-      const song = item.song ? await baueLied(leser, item.song) : null;
-      const durationSec = item.duration ?? 0;
-      // Uhrzeit MASSGEBLICH aus startTimes[eventId]: ist der Eintrag null, hat der Nutzer die
-      // Uhrzeit in ChurchTools ausgeblendet (Auge) → keine Zeit anzeigen. Das Feld `start` bleibt
-      // auch dann gefüllt und ist daher unbrauchbar. Fallback auf `start`, falls startTimes fehlt.
-      const stEntry = item.startTimes ? item.startTimes[String(eventId)] : undefined;
-      const timeSource = stEntry === undefined ? item.start : stEntry;
-      return {
-        id: item.id,
-        title: item.title,
-        type: item.type ?? null,
-        isHeader: isHeaderType(item.type),
-        responsible: responsibleEntries(item),
-        responsibleText: item.responsible?.text ?? '',
-        song,
-        time: formatBerlinTime(timeSource),
-        vorBeginn: item.isBeforeEvent ?? false,
-        durationMin: durationSec > 0 ? Math.round(durationSec / 60) : null,
-        note: item.note ?? '',
+    items.map(
+      async (item): Promise<AgendaItem> => ({
+        // Uhrzeit (mit „Auge“), Vorlauf, Dauer, Notiz, Zuständige: eine Stelle für Musik-App und Dienstplaner (E6-1a).
+        ...ablaufZeileAus(item, eventId, leser.zeitzone),
+        song: item.song ? await baueLied(leser, item.song) : null,
         changed: changedIds ? changedIds.has(item.id) : undefined,
         neu: newIds ? newIds.has(item.id) : undefined,
-      };
-    }),
+      }),
+    ),
   );
   // Entfernte Punkte (Etappe B) als Platzhalter an ihrer alten Position – der Client nennt sie in der
   // Hinweisleiste. Ohne Diff (nie gesehen) gibt es keine.

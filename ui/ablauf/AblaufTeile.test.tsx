@@ -2,7 +2,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import type { AgendaItem } from '@shared/types/index';
-import { ItemTitle, ResponsibleLine } from './AgendaRowParts';
+import { ItemTitle, ResponsibleLine } from './AblaufTeile';
 
 /**
  * #198: Die Bausteine einer Ablaufzeile, ausgelagert aus `Setlist.tsx`. Beide werden an ZWEI

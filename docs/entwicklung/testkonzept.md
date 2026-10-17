@@ -332,7 +332,7 @@ gehen vor, leerer Wert zählt nicht, eine Version bestimmt den Kopf ihres eigene
 `navStorage`, `dndAutoScroll`, `annotations.keys`, `queryClient` sowie die Komponenten
 `Section`/`Segment`. Dazu `queryClient.session401` – der **globale 401-Fänger** (#186): ein 401 aus
 einer Query **oder** Mutation löst den Sitzung-abgelaufen-Pfad aus, ein 502 (offline) bewusst nicht.
-Neu seit v2.14.x: `utils/agendaItemTitle` (Anzeige-Regeln für Lied-Punkte, #200 – inkl. „keine
+Neu seit v2.14.x: `shared/ct/ablaufZeile` (vorher `utils/agendaItemTitle`; Anzeige-Regeln für Lied-Punkte, #200 – inkl. „keine
 Dopplung" und Groß-/Kleinschreibung) und `ui/fenster/useOverlayKeyboardInset` (Tastatur-Aussparung #207, jsdom:
 Höhe korrekt, nie negativ, Listener an/ab, Scroll-Reset, kein Absturz ohne `visualViewport`).
 

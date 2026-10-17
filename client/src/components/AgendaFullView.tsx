@@ -12,9 +12,8 @@
  */
 import { Fragment, useEffect, useState } from 'react';
 import type { AgendaItem } from '@shared/types/index';
-import { itemLabel } from '../utils/agendaItemTitle';
+import { beginnStelle, itemLabel } from '@shared/ct/ablaufZeile';
 import { vanishedRows, type ShownRow } from '../utils/vanishedRows';
-import { beginnStelle } from '../utils/vorlauf';
 import {
   hatAenderungen,
   meldungAus,
@@ -22,7 +21,7 @@ import {
   zusammenfassen,
   type AenderungsMeldung,
 } from '../utils/ablaufAenderungen';
-import { BeginnLinie, ItemTitle, ResponsibleLine } from './AgendaRowParts';
+import { BeginnLinie, ItemTitle, ResponsibleLine } from '@ui/ablauf/AblaufTeile';
 import { AblaufHinweis } from './AblaufHinweis';
 import { useKurzerHinweis } from '../hooks/useKurzerHinweis';
 import styles from '../pages/Setlist.module.scss';

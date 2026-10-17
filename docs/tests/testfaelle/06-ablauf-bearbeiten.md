@@ -49,8 +49,8 @@ Schritt 6 genau den Liednamen einträgst, steht er nur **einmal** da, nicht dopp
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `client/src/utils/agendaItemTitle.ts`, `client/src/utils/agendaItemChanges.ts`, `client/src/components/AgendaRowParts.tsx`
-- **Automatisiert:** ja – `client/src/utils/agendaItemTitle.test.ts`, `client/src/utils/agendaItemChanges.test.ts`
+- **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `shared/ct/ablaufZeile.ts`, `client/src/utils/agendaItemChanges.ts`, `ui/ablauf/AblaufTeile.tsx`
+- **Automatisiert:** ja – `shared/ct/ablaufZeile.test.ts`, `client/src/utils/agendaItemChanges.test.ts`
 - **Historie:** #200
 
 </details>

@@ -11,12 +11,7 @@ import {
 } from './arrangementFiles.js';
 import { metaValue } from './chordproMeta.js';
 import { setlistFingerprint, diffAgendaItems } from './agendaDiff.js';
-import {
-  isHeaderType,
-  formatBerlinTime,
-  cleanServiceName,
-  responsibleEntries,
-} from './agendaFormat.js';
+import { isHeaderType, cleanServiceName, responsibleEntries } from './agendaFormat.js';
 
 describe('diffAgendaItems (#161 – was hat sich im Ablauf geändert)', () => {
   const s = (id: number, sig: string) => ({ id, sig });
@@ -218,16 +213,8 @@ describe('isHeaderType', () => {
   it('undefined → false', () => expect(isHeaderType(undefined)).toBe(false));
 });
 
-describe('formatBerlinTime (Zeitzone Europe/Berlin)', () => {
-  it('UTC → deutsche Sommerzeit (CEST, +2)', () => {
-    expect(formatBerlinTime('2026-06-30T09:05:00Z')).toBe('11:05');
-  });
-  it('UTC → deutsche Winterzeit (CET, +1)', () => {
-    expect(formatBerlinTime('2026-01-15T09:05:00Z')).toBe('10:05');
-  });
-  it('null → null', () => expect(formatBerlinTime(null)).toBeNull());
-  it('ungültiges Datum → null', () => expect(formatBerlinTime('keine-zeit')).toBeNull());
-});
+// `formatBerlinTime` (fest Europe/Berlin) ist seit E6-1a weg – die Uhrzeit rechnet `ablaufUhrzeit` in der Zeitzone der
+// Gemeinde (#414); Tests in `shared/ct/ablaufZeile.test.ts`.
 
 describe('cleanServiceName (CT-Dienst-Token säubern)', () => {
   it('entfernt Klammern und nachgestelltes Fragezeichen', () => {

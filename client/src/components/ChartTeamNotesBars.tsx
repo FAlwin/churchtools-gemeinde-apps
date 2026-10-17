@@ -6,7 +6,7 @@ import styles from '../pages/ChordChart.module.scss';
  *
  * Sie treten immer gemeinsam auf, stehen aber an verschiedenen Stellen der Seite: oben das Banner
  * mit der Auskunft, WESSEN Ebene man gerade sieht, unten die Leiste, mit der man sie übernimmt.
- * Deshalb zwei Komponenten in einer Datei – wie `AgendaRowParts`.
+ * Deshalb zwei Komponenten in einer Datei – wie `ui/ablauf/AblaufTeile`.
  *
  * Das Banner ist kein Schmuck: Beim Ansehen zeigt das Blatt eine fremde Ansicht, unter Umständen in
  * einer anderen Version als der eigenen. Ohne den Hinweis hält man das für sein eigenes Lied.

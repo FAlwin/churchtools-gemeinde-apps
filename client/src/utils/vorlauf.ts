@@ -8,27 +8,8 @@
  */
 import type { AgendaItem } from '@shared/types/index';
 
-/** Was eine Zeile mindestens tragen muss – auch die „entfernt"-Platzhalter der Ansicht (#161). */
-type Zeile = { removed?: boolean; vorBeginn?: boolean };
-
-/**
- * Vor welcher Zeile die Linie „Beginn" steht – `-1`, wenn es keinen Vorlauf gibt (dann wäre die
- * Linie nur Lärm). Sind ALLE Punkte Vorlauf, steht sie am Ende (`zeilen.length`).
- *
- * „Entfernt"-Platzhalter zählen nicht: Sie tragen nie `vorBeginn` und würden die Linie sonst vor
- * einen Punkt ziehen, den es nicht mehr gibt. (Die Ansicht zeigt sie seit 12.10.2026 gar nicht mehr als
- * Zeile, sondern nennt sie in der Hinweisleiste – die Regel bleibt für jeden Aufrufer richtig.)
- */
-export function beginnStelle(zeilen: readonly Zeile[]): number {
-  let vorlauf = false;
-  for (let i = 0; i < zeilen.length; i++) {
-    const z = zeilen[i];
-    if (z.removed) continue;
-    if (z.vorBeginn) vorlauf = true;
-    else return vorlauf ? i : -1;
-  }
-  return vorlauf ? zeilen.length : -1;
-}
+// `beginnStelle` (wo die Linie „Beginn“ steht) liegt seit E6-1a in `@shared/ct/ablaufZeile` – der Dienstplaner braucht
+// sie auch.
 
 /**
  * Der Vorlauf nach dem Umsortieren – so, wie ChurchTools ihn danach rechnen wird.

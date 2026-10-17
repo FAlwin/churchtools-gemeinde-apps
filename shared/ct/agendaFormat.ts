@@ -13,18 +13,6 @@ export function isHeaderType(type?: string): boolean {
   return !!type && /header|überschrift|heading|section/i.test(type);
 }
 
-/** Formatiert eine CT-Startzeit (ISO/UTC) als deutsche Ortszeit „HH:MM"; null bei fehlender/ungültiger Zeit. */
-export function formatBerlinTime(iso?: string | null): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  return new Intl.DateTimeFormat('de-DE', {
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Europe/Berlin',
-  }).format(d);
-}
-
 /**
  * Säubert ein CT-Dienst-Token zum reinen Namen: entfernt alle eckigen Klammern und ein
  * etwaiges nachgestelltes „?" (CT-Offen-Marker). „[Kamera Studio]?" → „Kamera Studio".

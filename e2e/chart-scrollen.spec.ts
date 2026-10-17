@@ -6,11 +6,13 @@ import { TOUR_CHART } from '../client/src/utils/onboarding';
  * untereinander, jede in voller Breite. Als E2E, weil es um echte Geometrie geht – gerenderte Seiten,
  * CSS, Scrollen – und weil der lokale Browser den Seitenaufbau drosselt, sobald die Vorschau verdeckt ist.
  *
- * Geprüft wird der Weg, den Alwin am Gerät geht: Pedal (↓, Leertaste) scrollt ⅔ Bildschirm, die
- * Kopfzeile folgt dem Lied in der Bildmitte, ein Tipp blendet die Leisten aus, ein Lied-Punkt springt
- * hin, und Anmerken öffnet die sichtbare Seite einzeln – danach steht man wieder an derselben Stelle.
+ * Geprüft wird der Weg, den Alwin am Gerät geht: je Lied EINE lange Seite (Rolle, #607), Pedal (↓,
+ * Leertaste) scrollt ⅔ Bildschirm, die Kopfzeile folgt dem Lied in der Bildmitte, ein Tipp blendet die
+ * Leisten aus, ein Lied-Punkt springt hin. Malen auf der Rolle kommt mit #608 – bis dahin kein „Anmerken".
  */
-test.use({ viewport: { width: 390, height: 844 } });
+// Niedriges Fenster: Die Demo-Lieder sind kurz, als Rollen (#607) stünden sie auf einem ganzen iPhone-
+// Bildschirm komplett da – und es gäbe nichts zu scrollen.
+test.use({ viewport: { width: 390, height: 420 } });
 
 const deck = (page: Page) => page.getByTestId('scroll-deck');
 
@@ -32,7 +34,7 @@ async function ruhig(page: Page): Promise<number> {
 
 const kopfTitel = (page: Page) => page.locator('[class*="hdr"]').first();
 
-test('Scrollen: Seiten untereinander, Pedal, Tipp, Lied-Punkt und Malen', async ({ page }) => {
+test('Scrollen: Rollen untereinander, Pedal, Tipp, Lied-Punkt', async ({ page }) => {
   await page.addInitScript((tour: string) => {
     localStorage.setItem(`worship:onboard-${tour}`, '1');
     localStorage.setItem('worship:liedansicht', 'scrollen');
@@ -42,9 +44,16 @@ test('Scrollen: Seiten untereinander, Pedal, Tipp, Lied-Punkt und Malen', async 
   // Die Seiten stehen untereinander, jede so breit wie der Bildschirm, ohne Lücke.
   await expect(deck(page)).toBeVisible({ timeout: 30_000 });
   await expect
-    .poll(() => deck(page).evaluate((el) => el.scrollHeight > el.clientHeight * 1.5), {
-      timeout: 30_000,
-    })
+    .poll(
+      () =>
+        deck(page).evaluate(
+          (el) =>
+            el.querySelectorAll('canvas').length === 3 && el.scrollHeight > el.clientHeight * 2,
+        ),
+      {
+        timeout: 30_000,
+      },
+    )
     .toBe(true);
   const seiten = await deck(page).evaluate((el) =>
     [...el.querySelectorAll('canvas')].map((c) => {
@@ -52,7 +61,10 @@ test('Scrollen: Seiten untereinander, Pedal, Tipp, Lied-Punkt und Malen', async 
       return { top: box.offsetTop, h: box.offsetHeight, w: box.offsetWidth };
     }),
   );
-  expect(seiten.length).toBeGreaterThanOrEqual(3);
+  // Je Lied EINE Rolle (#607): drei Demo-Lieder, drei Seiten – und keine davon im A4-Format (die
+  // Demo-Lieder sind kurz, ihre Rolle ist deutlich niedriger als ein A4-Blatt).
+  expect(seiten.length).toBe(3);
+  for (const s of seiten) expect(s.h / s.w).toBeLessThan(1.2);
   for (let i = 1; i < seiten.length; i++) {
     // nahtlos (±1 px: offsetTop/offsetHeight runden je für sich)
     expect(Math.abs(seiten[i].top - (seiten[i - 1].top + seiten[i - 1].h))).toBeLessThanOrEqual(1);
@@ -80,15 +92,11 @@ test('Scrollen: Seiten untereinander, Pedal, Tipp, Lied-Punkt und Malen', async 
   await deck(page).click({ position: { x: 195, y: 200 } });
   await expect(kopfTitel(page)).toBeVisible();
 
-  // Anmerken öffnet die sichtbare Seite einzeln; „Anmerken beenden" bringt an dieselbe Stelle zurück.
-  const vorDemMalen = await ruhig(page);
+  // Malen auf der Rolle kommt mit #608 – bis dahin bietet das Werkzeug-Menü kein „Anmerken" an.
   await page.getByRole('button', { name: 'Werkzeuge' }).click();
-  await page.getByRole('menuitem', { name: 'Anmerken' }).click();
-  await expect(deck(page)).toHaveCount(0);
-  await expect(kopfTitel(page)).toContainText('Welch ein Freund');
-  await page.getByRole('button', { name: 'Anmerken beenden' }).click();
-  await expect(deck(page)).toBeVisible();
-  expect(await ruhig(page)).toBe(vorDemMalen);
+  await expect(page.getByRole('menuitem', { name: 'Tempo' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Anmerken' })).toHaveCount(0);
+  await page.locator('[class*="scrim"]').first().click(); // Menü schließen
 
   // Ein Lied-Punkt unten holt das Lied an den Anfang des Bildschirms; der Pfeil unten scrollt wie das Pedal.
   const punkte = page.locator('[class*="dots"] > div');
@@ -122,21 +130,10 @@ test.describe('iPad quer', () => {
     // Beim Blättern stünden hier zwei Lieder mit je eigener Kapsel (#421) – im Scroll-Modus nicht.
     await expect(page.locator('[class*="kapselPaar"]')).toHaveCount(0);
 
-    // Anmerken oben im Ablauf: eine Seite, nicht das 2-up (dort stünde das nächste Lied daneben).
-    const anmerken = page.getByRole('button', { name: 'Anmerken', exact: true });
-    await anmerken.click();
-    await expect(deck(page)).toHaveCount(0);
-    await expect(page.locator('[class*="_slot_"]')).toHaveCount(1);
-    await page.getByRole('button', { name: 'Anmerken beenden' }).click();
-    await expect(deck(page)).toBeVisible();
-
-    // Ganz nach unten: Das letzte Lied steht in der Mitte. Anmerken öffnet GENAU diese Seite einzeln –
-    // nicht das 2-up mit der Vorseite (beim Blättern ist die linke Seite quer auf die vorletzte begrenzt).
+    // Ganz nach unten: Die Kopfzeile zeigt das letzte Lied (die Seite in der Mitte zählt).
     await deck(page).evaluate((el) => (el.scrollTop = el.scrollHeight));
     await expect(kopfTitel(page)).toContainText('Treu');
-    await anmerken.click();
-    await expect(deck(page)).toHaveCount(0);
-    await expect(page.locator('[class*="_slot_"]')).toHaveCount(1);
-    await expect(kopfTitel(page)).toContainText('Treu');
+    // Malen auf der Rolle kommt mit #608 – bis dahin kein Stift in der Kopfzeile.
+    await expect(page.getByRole('button', { name: 'Anmerken', exact: true })).toHaveCount(0);
   });
 });

@@ -232,7 +232,16 @@ export function ChordChart({
   // Aufbau in `useChartStream` – bewusst NACH dem Zeichnen, mit stehenbleibendem
   // altem Ergebnis (#197).
   const logo = useAppLogo();
-  const stream = useChartStream({ songs, songsSig, settings: effSettings, logo });
+  // Scroll-Modus (#551) – Erklärung unten bei der Navigation. Hier schon gebraucht: Im Scroll-Modus ist
+  // jedes Lied EINE lange Seite (#607).
+  const [scrollModus] = useState(() => getLiedansicht() === 'scrollen');
+  const stream = useChartStream({
+    songs,
+    songsSig,
+    settings: effSettings,
+    logo,
+    rolle: scrollModus,
+  });
 
   // Durchgehender Strom: Akkord- UND Dokument-Seiten in Setlist-Reihenfolge zu EINER Seiten-Liste
   // (jedes Lied steuert je nach viewSource seine Akkorde ODER sein hochgeladenes Dokument bei).
@@ -284,9 +293,10 @@ export function ChordChart({
    * Scroll-Modus (#551): Seiten untereinander statt blättern – eine Vorliebe dieses Geräts (Mehr →
    * Liedansicht). Beim Öffnen gelesen; geändert wird sie nur unter „Mehr", also nie bei offenem Lied.
    * Das Pedal scrollt dann einen Schritt (`schrittRef`, von `ScrollDeck` abgelegt), statt zu blättern.
-   * Zum Malen öffnet sich die sichtbare Seite einzeln; `scrollPos` bringt danach an dieselbe Stelle zurück.
+   * Seit #607 ist jedes Lied eine lange Seite mit eigenen Anmerkungen; bis das Malen darauf da ist
+   * (#608), gibt es im Scroll-Modus kein „Anmerken" (`malenAus` an der Kopfzeile). `scrollPos` hält die
+   * Stelle über einen Neuaufbau der Seiten hinweg.
    */
-  const [scrollModus] = useState(() => getLiedansicht() === 'scrollen');
   const schrittRef = useRef<((richtung: PedalRichtung) => void) | null>(null);
   const scrollPos = useRef<ScrollPosition>(SCROLL_START);
   const { pageIdx, activeIdx, atStart, atEnd, next, prev, goToSong, setPage, setActivePage } =
@@ -632,6 +642,7 @@ export function ChordChart({
           <ChartHeader
             andereHaelfte={andereHaelfte}
             querformat={landscape}
+            malenAus={scrollModus}
             offenesWerkzeug={offenesWerkzeug}
             /**
              * **Derselbe Titel wie auf dem Blatt** – über `chartHead`, nicht über `song.title`.

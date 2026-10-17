@@ -39,6 +39,8 @@ interface UseChartStreamArgs {
    * Bewusst hereingereicht statt hier vorgeladen: „Als PDF teilen" braucht dasselbe Bild.
    */
   logo: HTMLImageElement | null;
+  /** Scroll-Modus (#607): je Lied eine lange Seite statt A4. */
+  rolle?: boolean;
 }
 
 export function useChartStream({
@@ -46,6 +48,7 @@ export function useChartStream({
   songsSig,
   settings,
   logo,
+  rolle = false,
 }: UseChartStreamArgs): ChartStream | null {
   const [stream, setStream] = useState<ChartStream | null>(null);
   useEffect(() => {
@@ -60,9 +63,10 @@ export function useChartStream({
         const st = settings[s.id] ?? loadSettings(s);
         return { ...s, chordpro: versionText(s, st.versionKey), versionKey: st.versionKey };
       });
-      const { doc, owners } = generateSetlistPdfWithOwners(songsForPdf, (s) =>
-        pdfOptionsForSong(s, settings[s.id] ?? loadSettings(s), logo),
-      );
+      const { doc, owners } = generateSetlistPdfWithOwners(songsForPdf, (s) => ({
+        ...pdfOptionsForSong(s, settings[s.id] ?? loadSettings(s), logo),
+        rolle,
+      }));
       // Zwischenzeitlich hat sich die Eingabe geändert → dieses Ergebnis ist veraltet, verwerfen.
       if (cancelled) return;
       setStream({ data: doc.output('arraybuffer'), owners });
@@ -83,7 +87,7 @@ export function useChartStream({
       cancelScheduled();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [songsSig, settings, logo]);
+  }, [songsSig, settings, logo, rolle]);
 
   return stream;
 }

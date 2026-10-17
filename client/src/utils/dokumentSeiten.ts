@@ -7,6 +7,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 // Worker inline im Bundle (../pdfSetup) → Charts rendern auch offline (#32).
 import '../pdfSetup';
 import type { SongDocument } from '@shared/types/index';
+import { wirksamerMassstab } from './leinwand';
 
 const RENDER_SCALE = 2;
 
@@ -42,7 +43,7 @@ async function seiteZeichnen(
   scale: number,
 ): Promise<HTMLCanvasElement> {
   const page = await pdf.getPage(nr);
-  const vp = page.getViewport({ scale });
+  const vp = page.getViewport({ scale: wirksamerMassstab(page.getViewport({ scale: 1 }), scale) });
   const c = document.createElement('canvas');
   c.width = Math.ceil(vp.width);
   c.height = Math.ceil(vp.height);

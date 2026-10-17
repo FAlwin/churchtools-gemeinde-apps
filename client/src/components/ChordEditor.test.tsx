@@ -28,7 +28,13 @@ vi.mock('./ChordProInput', async () => {
     }),
   };
 });
-vi.mock('./PdfPreview', () => ({ PdfPreview: () => null }));
+const vorschau = vi.hoisted(() => ({ props: [] as { rolle?: boolean }[] }));
+vi.mock('./PdfPreview', () => ({
+  PdfPreview: (p: { rolle?: boolean }) => {
+    vorschau.props.push(p);
+    return null;
+  },
+}));
 vi.mock('@ui/fenster/useOverlayKeyboardInset', () => ({
   useOverlayKeyboardInset: () => undefined,
 }));
@@ -149,5 +155,24 @@ describe('ChordEditor – Ablauf und Weiterschalt-Punkt', () => {
   it('ohne unbekannte Namen kein Hinweis', () => {
     zeige({ initialText: '{flow: Vers}\n{comment: Vers}\nA', mitVersionsname: false });
     expect(screen.queryByRole('status')).toBeNull();
+  });
+});
+
+/** Die Vorschau folgt der Liedansicht dieses Geräts (#607, Rückmeldung b). */
+describe('ChordEditor – Vorschau im Scroll-Modus', () => {
+  beforeEach(() => {
+    vorschau.props.length = 0;
+    localStorage.removeItem('worship:liedansicht');
+  });
+
+  it('beim Blättern: A4', () => {
+    zeige({ mitVersionsname: false });
+    expect(vorschau.props.at(-1)?.rolle).toBe(false);
+  });
+
+  it('beim Scrollen: die lange Seite', () => {
+    localStorage.setItem('worship:liedansicht', 'scrollen');
+    zeige({ mitVersionsname: false });
+    expect(vorschau.props.at(-1)?.rolle).toBe(true);
   });
 });

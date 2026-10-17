@@ -154,6 +154,11 @@ describe('ChartHeader – der Werkzeuge-Knopf', () => {
     ]);
   });
 
+  it('im Scroll-Modus kein Anmerken, bis das Malen auf der Rolle da ist (#607/#608)', () => {
+    zeige({ werkzeugeOffen: true, malenAus: true });
+    expect(eintraege()).toEqual(['AussehenAa', 'Tempo']);
+  });
+
   it('lässt bei einem Dokument Aussehen und Notizen weg (sie wirken nur auf Akkorde)', () => {
     zeige({ werkzeugeOffen: true, showsDocument: true, canUseGlobalNotes: true });
     expect(eintraege()).toEqual(['Tempo', 'Anmerken']);
@@ -344,6 +349,12 @@ describe('ChartHeader – Werkzeuge einzeln im Querformat', () => {
     expect(onAppearance).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('button', { name: 'Tempo' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Anmerken' })).toBeTruthy();
+  });
+
+  it('im Scroll-Modus auch quer kein Stift (#607/#608)', () => {
+    zeige({ querformat: true, malenAus: true });
+    expect(screen.getByRole('button', { name: 'Tempo' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Anmerken' })).toBeNull();
   });
 
   it('die Knöpfe zeigen ihren Zustand: Puls voll blau, offenes Fenster hellblau, Zeichnen voll blau', () => {

@@ -1,0 +1,114 @@
+/**
+ * **Eine Ablaufzeile zum Anzeigen** – die Regeln, die Musik-App und Dienstplaner (Bauplan E6-1) gleich brauchen,
+ * an einer Stelle: Uhrzeit (mit „Auge“), Vorlauf, Dauer, Notiz, Zuständige, Überschrift, Bezeichnung mit Lied.
+ * Vorher steckten sie in `ablaufPunkte` (Musik-App, `setlistKern.ts`) und in `client/src/utils/` – der Dienstplaner
+ * hätte sie sonst nachgebaut.
+ *
+ * Lieder werden hier **nicht** aufgelöst (keine Akkord-Dateien): Der Dienstplaner zeigt nur den Liednamen, die
+ * Musik-App ergänzt das ganze Lied in `ablaufPunkte`.
+ */
+import type { AgendaItem } from '../types/index';
+import type { CtAgendaItem } from './typen';
+import { isHeaderType, responsibleEntries } from './agendaFormat';
+import { ortszeitAus } from './zeit';
+
+/** Was eine Zeile zeigt – `AgendaItem` der Musik-App passt hinein (das Lied dort trägt mehr). */
+export type AblaufZeile = Omit<AgendaItem, 'song' | 'changed' | 'neu' | 'removed'> & {
+  song: { title: string } | null;
+  removed?: boolean;
+};
+
+/**
+ * Die Uhrzeit eines Punkts an diesem Termin, in der Zeitzone der Gemeinde („10:05“) – `null`, wenn ChurchTools
+ * keine nennt. **Maßgeblich ist `startTimes[termin]`:** Ist der Eintrag `null`, hat jemand den Punkt an diesem
+ * Termin ausgeblendet (Auge); `start` bleibt dann gefüllt und ist unbrauchbar. Fehlt `startTimes` ganz, gilt `start`.
+ *
+ * Vorher fest `Europe/Berlin` (`formatBerlinTime`) – obwohl der Leser die Zeitzone der Gemeinde kennt (#414).
+ */
+export function ablaufUhrzeit(
+  item: CtAgendaItem,
+  eventId: number,
+  zeitzone: string,
+): string | null {
+  const eintrag = item.startTimes ? item.startTimes[String(eventId)] : undefined;
+  const iso = eintrag === undefined ? item.start : eintrag;
+  if (!iso || Number.isNaN(Date.parse(iso))) return null;
+  return ortszeitAus(iso, zeitzone).slice(11, 16);
+}
+
+/** Ein ChurchTools-Punkt als Zeile – ohne Lied-Auflösung. */
+export function ablaufZeileAus(item: CtAgendaItem, eventId: number, zeitzone: string): AblaufZeile {
+  const sekunden = item.duration ?? 0;
+  return {
+    id: item.id,
+    title: item.title,
+    type: item.type ?? null,
+    isHeader: isHeaderType(item.type),
+    responsible: responsibleEntries(item),
+    responsibleText: item.responsible?.text ?? '',
+    song: item.song ? { title: item.song.title } : null,
+    time: ablaufUhrzeit(item, eventId, zeitzone),
+    vorBeginn: item.isBeforeEvent ?? false,
+    durationMin: sekunden > 0 ? Math.round(sekunden / 60) : null,
+    note: item.note ?? '',
+  };
+}
+
+// ── Bezeichnung (#200) ───────────────────────────────────────────────────────
+// ChurchTools speichert bei einem Lied-Punkt zwei Dinge: den eigenen Titel (oft schlicht „Lied“) und das Lied.
+// Angezeigt wird beides: **Lied** – *Du großer Gott*. (Aus `client/src/utils/agendaItemTitle.ts` hierher.)
+
+/** Das Minimum, das für die Bezeichnung nötig ist. */
+interface TitelQuelle {
+  title: string;
+  song: { title: string } | null;
+}
+
+export interface TitelTeile {
+  /** Hauptbezeichnung: der eigene Titel – bzw. der Liedname, wenn es keinen eigenen gibt. */
+  title: string;
+  /** Zusätzlich anzuzeigender Liedname; null, wenn er nichts hinzufügt (kein Lied / Dopplung). */
+  songName: string | null;
+}
+
+/**
+ * Zerlegt einen Punkt in die Anzeige-Teile. Der Liedname entfällt, wenn er nichts hinzufügt: ohne eigenen Titel
+ * (dann IST der Liedname die Bezeichnung) oder wenn der Titel schon derselbe ist.
+ */
+export function itemTitleParts(item: TitelQuelle): TitelTeile {
+  const own = item.title.trim();
+  const song = item.song?.title.trim() ?? '';
+  // Auch ohne Lied getrimmt zurückgeben (#215).
+  if (!song) return { title: own, songName: null };
+  if (!own || own.toLocaleLowerCase('de') === song.toLocaleLowerCase('de')) {
+    return { title: song, songName: null };
+  }
+  return { title: own, songName: song };
+}
+
+/** Einzeilige Klartext-Bezeichnung für Dialoge/Meldungen (z. B. „Lied – Du großer Gott“). */
+export function itemLabel(item: TitelQuelle): string {
+  const { title, songName } = itemTitleParts(item);
+  return songName ? `${title} – ${songName}` : title;
+}
+
+// ── Vorlauf (#423) ───────────────────────────────────────────────────────────
+
+/** Was eine Zeile mindestens tragen muss – auch die „entfernt“-Platzhalter der Musik-App (#161). */
+type MitVorlauf = { removed?: boolean; vorBeginn?: boolean };
+
+/**
+ * Vor welcher Zeile die Linie „Beginn“ steht – `-1`, wenn es keinen Vorlauf gibt (dann wäre die Linie nur Lärm).
+ * Sind ALLE Punkte Vorlauf, steht sie am Ende. „Entfernt“-Platzhalter zählen nicht.
+ * (Aus `client/src/utils/vorlauf.ts` hierher.)
+ */
+export function beginnStelle(zeilen: readonly MitVorlauf[]): number {
+  let vorlauf = false;
+  for (let i = 0; i < zeilen.length; i++) {
+    const z = zeilen[i];
+    if (z.removed) continue;
+    if (z.vorBeginn) vorlauf = true;
+    else return vorlauf ? i : -1;
+  }
+  return vorlauf ? zeilen.length : -1;
+}

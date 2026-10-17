@@ -253,6 +253,15 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Intern (Dienstplaner)
 
+- **Ablauf-Zeile als gemeinsamer Baustein** (#620, Bauplan E6-1a – für Nutzer unsichtbar): Die Regeln einer Ablaufzeile
+  (Uhrzeit mit „Auge“, Vorlauf, Dauer, Notiz, Zuständige, Bezeichnung mit Lied, Linie „Beginn“) liegen jetzt in
+  `shared/ct/ablaufZeile.ts`, die Bausteine (Bezeichnung, Zuständige, Beginn-Linie) in `ui/ablauf/AblaufTeile` – vorher
+  in der Musik-App (`utils/agendaItemTitle`, `utils/vorlauf`, `components/AgendaRowParts`). Die Musik-App nutzt sie
+  unverändert; der Dienstplaner bekommt sie für die Termin-Ansicht (E6-1b) statt eines Nachbaus.
+- **Behoben dabei (Musik-App):** Die Uhrzeit im Ablauf war fest auf `Europe/Berlin` gerechnet (`formatBerlinTime`),
+  obwohl der Leser die Zeitzone der Gemeinde kennt (#414). Jetzt gilt die Zeitzone der Gemeinde; für die ECG ändert
+  sich nichts. `formatBerlinTime` entfällt.
+
 - **Zauberstab-Kern** (#588, Bauplan E5-1 – noch ohne Oberfläche, `shared/dienstplan/zauberstab.ts`): Vorschläge für
   freie Plätze nach der Regel des ChurchTools-Zauberstabs (höchste Punktzahl über −100, Punkte rechnet ChurchTools,
   Kandidaten aus derselben Funktion wie „Wer kann?“; „hat zuvor abgesagt“ zählt hier mit, s. E5-2). Über mehrere Termine zählen die eigenen Vorschläge, von Hand

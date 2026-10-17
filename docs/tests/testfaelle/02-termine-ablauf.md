@@ -56,8 +56,8 @@ anderen Stelle und wurde früher übersehen.
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/AgendaRowParts.tsx`, `server/src/services/agendaFormat.ts`
-- **Automatisiert:** ja – `client/src/components/AgendaRowParts.test.tsx`, `server/src/services/setlistBuilder.test.ts`
+- **Betrifft:** `ui/ablauf/AblaufTeile.tsx`, `shared/ct/ablaufZeile.ts`, `server/src/services/agendaFormat.ts`
+- **Automatisiert:** ja – `ui/ablauf/AblaufTeile.test.tsx`, `shared/ct/ablaufZeile.test.ts`, `server/src/services/setlistBuilder.test.ts`
 - **Historie:** #38
 
 </details>

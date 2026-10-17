@@ -1,19 +1,20 @@
 /**
- * Die Bausteine EINER Ablaufzeile (#198 – vorher in `pages/Setlist.tsx`).
+ * Die Bausteine EINER Ablaufzeile (#198 – vorher in `pages/Setlist.tsx`; seit E6-1a in `ui/ablauf`, damit
+ * Musik-App und Dienstplaner dieselben nutzen).
  *
  * Drei kleine Teile, die immer zusammen auftreten: die Bezeichnung des Punkts, das Icon der
  * Zuständigen und deren Zeile. Sie werden von der Ablauf-Ansicht UND von der sortierbaren Zeile
  * im Bearbeiten-Modus verwendet – deshalb gemeinsam und außerhalb beider.
  */
-import type { AgendaItem } from '@shared/types/index';
-import { itemTitleParts } from '../utils/agendaItemTitle';
-import styles from '../pages/Setlist.module.scss';
+import type { AblaufZeile } from '@shared/ct/ablaufZeile';
+import { itemTitleParts } from '@shared/ct/ablaufZeile';
+import styles from './AblaufTeile.module.scss';
 
 /**
  * Bezeichnung eines Ablaufpunkts wie in ChurchTools (#200): eigener Titel, dahinter – falls er
- * etwas hinzufügt – der Liedname. Die Regeln stecken in `utils/agendaItemTitle`.
+ * etwas hinzufügt – der Liedname. Die Regeln stecken in `@shared/ct/ablaufZeile`.
  */
-export function ItemTitle({ item }: { item: AgendaItem }) {
+export function ItemTitle({ item }: { item: Pick<AblaufZeile, 'title' | 'song'> }) {
   const { title, songName } = itemTitleParts(item);
   return (
     <span className={styles.flowTitle}>
@@ -43,7 +44,7 @@ export function RespIcon() {
 }
 
 /** Zeile der Zuständigen: besetzte als Name, offene Dienste rot mit „?". */
-export function ResponsibleLine({ entries }: { entries: AgendaItem['responsible'] }) {
+export function ResponsibleLine({ entries }: { entries: AblaufZeile['responsible'] }) {
   if (entries.length === 0) return null;
   return (
     <div className={styles.resp}>

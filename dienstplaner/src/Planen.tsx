@@ -7,7 +7,14 @@ import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { Toast } from '@ui/fenster/Toast';
 import { useToast } from '@ui/fenster/useToast';
 import { kachel, monatName, tagKurz } from '@shared/ct/datum';
-import type { Plan, PlanGruppe, PlanPlatz, PlanSpalte, PlanZeile } from '@shared/dienstplan/plan';
+import {
+  gruppenName,
+  type Plan,
+  type PlanGruppe,
+  type PlanPlatz,
+  type PlanSpalte,
+  type PlanZeile,
+} from '@shared/dienstplan/plan';
 import { artVon, veranstaltungsArten, WEITERE } from '@shared/dienstplan/termine';
 import {
   DIENST_SPALTE,
@@ -73,6 +80,8 @@ interface Props {
   heute: string;
   /** Eintragen als Entwurf (E4-3) – ohne Anschluss bleibt „Wer kann?“ nur zum Ansehen. */
   entwuerfe?: EntwurfAnschluss;
+  /** Termin öffnen → Termin-Ansicht mit Ablauf und Diensten (E6-1b). */
+  onTermin?: (id: number) => void;
 }
 
 /** Ein Entwurf an einem Platz – und ob er veraltet ist (in ChurchTools steht inzwischen etwas anderes). */
@@ -85,7 +94,6 @@ type EntwuerfeZustand =
 
 /** Schlüssel einer Gruppe – `null` (ohne Dienstgruppe) bekommt einen eigenen. */
 const schluessel = (g: PlanGruppe) => (g.gruppe ? String(g.gruppe.id) : 'ohne');
-const gruppenName = (g: PlanGruppe) => g.gruppe?.name ?? 'Weitere Dienste';
 
 /** Was die Matrix gerade zeigt – aus Plan, Filtern und Fenster. */
 interface Sicht {
@@ -119,6 +127,8 @@ interface Sicht {
   darfAendern: (zeile: PlanZeile) => boolean;
   /** Die eigene Person – eigene Entwürfe stehen ohne „von …“. */
   ichId: number | null;
+  /** Termin öffnen → Termin-Ansicht (E6-1b). */
+  onTermin?: (id: number) => void;
 }
 
 /** Darf man an diesem Termin diesen Dienst planen – über Recht, Leitung oder als Admin des Termins? */
@@ -175,6 +185,7 @@ export function Planen({
   ladeZeitraum,
   heute,
   entwuerfe,
+  onTermin,
 }: Props) {
   const [ansicht, setAnsichtRoh] = useState<PlanenAnsicht>(leseAnsicht);
   const setAnsicht = (a: PlanenAnsicht) => {
@@ -624,6 +635,7 @@ export function Planen({
             'Diesen Platz gibt es so nicht mehr – die Platzzahl wurde in ChurchTools geändert.',
         }),
       ichId: entwuerfe?.ich.personId ?? null,
+      onTermin,
     };
     inhalt =
       d.gefiltert.length === 0 || gruppen.length === 0 ? (
@@ -1278,9 +1290,20 @@ function TabellenPlan({ sicht, breite, platz }: { sicht: Sicht; breite: Breite; 
                       {tagKurz(s.tag).slice(0, 2)} · {s.uhrzeit}
                     </small>
                   </div>
-                  <span className={styles.kopfName} title={s.name}>
-                    {s.name}
-                  </span>
+                  {sicht.onTermin ? (
+                    <button
+                      type="button"
+                      className={`${styles.kopfName} ${styles.kopfLink}`}
+                      title={`${s.name} öffnen – Ablauf und Dienste`}
+                      onClick={() => sicht.onTermin?.(s.id)}
+                    >
+                      {s.name}
+                    </button>
+                  ) : (
+                    <span className={styles.kopfName} title={s.name}>
+                      {s.name}
+                    </span>
+                  )}
                   <div className={styles.fuellung} aria-hidden="true">
                     <i
                       style={{
@@ -1443,6 +1466,15 @@ function HandyPlan({ sicht, amEnde }: { sicht: Sicht; amEnde?: () => void }) {
               <span className={st.offen ? styles.offen : styles.besetzt}>{st.text}</span>
             </small>
           </div>
+          {sicht.onTermin && (
+            <button
+              type="button"
+              className={styles.handyOeffnen}
+              onClick={() => sicht.onTermin?.(s.id)}
+            >
+              Ablauf &amp; Dienste <Icon name="chev-right" size={14} />
+            </button>
+          )}
         </div>
         {gruppen.map((g) => {
           const dienste = g.zeilen.filter((z) => z.zellen[i] !== null);
@@ -1564,7 +1596,8 @@ function WerWieOft({ sicht }: { sicht: Sicht }) {
   );
 }
 
-function Plaetze({
+/** Die Plätze eines Dienstes am Termin – auch in der Termin-Ansicht (E6-1b, dort ohne Knöpfe). */
+export function Plaetze({
   plaetze,
   onFrei,
   entwurf,

@@ -80,6 +80,9 @@ export interface Plan {
   gruppen: PlanGruppe[];
 }
 
+/** Der Name einer Gruppe in Matrix und Termin-Ansicht – Dienste ohne (bekannte) Dienstgruppe stehen unter „Weitere Dienste“. */
+export const gruppenName = (g: PlanGruppe) => g.gruppe?.name ?? 'Weitere Dienste';
+
 /** Ein Platz, wie er in der Matrix steht. */
 export function platzAus(p: RohPlatz, ichId: number): PlanPlatz {
   const index = typeof p.index === 'number' ? p.index : null;

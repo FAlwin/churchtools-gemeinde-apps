@@ -7,6 +7,21 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Dienstplaner, E6-1b, #625)
+
+- **Termin-Ansicht – Ablauf und Dienste eines Termins** (Bauplan E6-1b, Entwurf `e6-entwurf.html`): Eine Zeile in
+  „Termine“, „Ablauf & Dienste“ bei „Als Nächstes“ auf der Startseite oder der Name im Spaltenkopf der Matrix (am
+  Handy „Ablauf & Dienste“ im Kopf des Termins) öffnet den Termin – mit eigener Adresse (`#/termin/<id>`), Neuladen
+  und Zurück gehen also. Oben Datum, Beginn und „Ende ca.“, ‹ › blättert durch die geladenen Termine; „zurück“ führt
+  zum Reiter, von dem man kam (der bleibt hervorgehoben). Darunter **der Ablauf wie in der Musik-App** (Alwin,
+  17.10.2026: „so wie bei der Musik App, die Dauer bitte neben Zeit“) – mit Vorlauf und Linie „Beginn“, Notizen und
+  Zuständigen; Lieder nur zum Ansehen. Darunter **die Dienste** nach Gruppe, mit denselben Plätzen wie in „Planen“.
+  Nur ansehen – Bearbeiten kommt mit E6-3.
+- **Musik-App (sichtbar unverändert):** Die Ablauf-Ansicht und die sortierbare Zeile nutzen jetzt denselben Baustein
+  `ui/ablauf/AblaufListe` (vorher fest in `AgendaFullView`, Styles 1:1 aus `Setlist.module.scss` verschoben).
+- Ein Ablauf ohne Punkte-Liste zählt als leer – an einer Stelle (`ladeAblauf`), die auch die Lieder der Startseite
+  nutzen; vorher prüfte jeder Aufrufer selbst.
+
 ### Behoben (Anmeldungen, #619)
 
 - **Wer wartet, kommt zuerst:** Gemessen 17.10.2026 – wartet jemand, stellt ChurchTools jede neue Anmeldung hinten an,

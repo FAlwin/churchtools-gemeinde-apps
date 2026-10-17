@@ -1,0 +1,175 @@
+// Termin-Ansicht (E6-1b, Entwurf e6-entwurf.html) – Tokens und Bausteine aus ui/design, Karten wie Startseite/Termine.
+@use '@ui/design/mixins' as m;
+
+.seite {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.kopf {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+// Datum und Name – am Computer zwischen „zurück“ und ‹ ›, am Handy darunter in voller Breite.
+.termin {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.titel {
+  flex: 1;
+  min-width: 0;
+
+  h2 {
+    margin: 0;
+    color: var(--text);
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  p {
+    margin: 2px 0 0;
+    color: var(--text2);
+    font-size: 13px;
+  }
+}
+
+.abgesagt {
+  color: var(--red);
+}
+
+.zurueck {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 34px;
+  padding: 0 12px 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.blaettern {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.rund {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text2);
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+.karte {
+  @include m.card-list;
+}
+
+.kartenKopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--hair);
+
+  h3 {
+    margin: 0;
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 600;
+  }
+}
+
+.leise {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--blue);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.ablaufGrund {
+  background: var(--bg);
+}
+
+.hinweis {
+  margin: 0;
+  padding: 14px;
+  color: var(--text2);
+  font-size: 14px;
+}
+
+.gruppe {
+  border-top: 1px solid var(--hair);
+
+  &:first-of-type {
+    border-top: 0;
+  }
+
+  h4 {
+    margin: 0;
+    padding: 9px 14px;
+    background: var(--section);
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+  }
+}
+
+.dienst {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 8px 14px;
+  border-top: 1px solid var(--hair);
+  font-size: 14px;
+
+  > span {
+    padding-top: 6px;
+    color: var(--text);
+    font-weight: 600;
+  }
+}
+
+@media (max-width: 759px) {
+  .termin {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .dienst {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+
+    > span {
+      padding-top: 0;
+    }
+  }
+}

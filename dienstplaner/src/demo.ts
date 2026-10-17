@@ -246,13 +246,57 @@ function daten(fall: string): Record<string, unknown> {
       },
     },
     // Ablauf nur am ersten Termin – die anderen zeigen „Noch kein Ablauf“ (ChurchTools: 404).
+    // Wie gemessen (E6-0): `startTimes` je Termin, Dauer in Sekunden, `isBeforeEvent` für den Vorlauf, Zuständige
+    // aufgelöst; der Termin beginnt um 08:00 UTC.
     '/api/events/101/agenda': {
       data: {
         items: [
-          { id: 1, type: 'header', title: 'Ankommen' },
-          { id: 2, type: 'song', title: 'Halleluja', song: { title: 'Halleluja' } },
-          { id: 3, type: 'song', title: 'Treu', song: { title: 'Treu' } },
-          { id: 4, type: 'normal', title: 'Predigt' },
+          {
+            id: 5,
+            type: 'normal',
+            title: 'Soundcheck',
+            duration: 1800,
+            isBeforeEvent: true,
+            startTimes: { '101': zeit(4, '07:30') },
+            responsible: {
+              text: '[Ton]',
+              persons: [{ service: '[Ton]', person: { title: 'Alwin Friesen' } }],
+            },
+          },
+          { id: 1, type: 'header', title: 'Ankommen', startTimes: { '101': zeit(4, '08:00') } },
+          {
+            id: 2,
+            type: 'song',
+            title: 'Lied',
+            duration: 300,
+            startTimes: { '101': zeit(4, '08:00') },
+            song: { title: 'Halleluja' },
+            responsible: { text: '[Gesang]', persons: [{ service: '[Gesang]', person: null }] },
+          },
+          {
+            id: 3,
+            type: 'song',
+            title: 'Treu',
+            duration: 300,
+            startTimes: { '101': zeit(4, '08:05') },
+            song: { title: 'Treu' },
+          },
+          {
+            id: 4,
+            type: 'normal',
+            title: 'Predigt',
+            duration: 1800,
+            note: 'Thema: Psalm 23',
+            startTimes: { '101': zeit(4, '08:10') },
+            responsible: { text: 'Gastprediger' },
+          },
+          {
+            id: 6,
+            type: 'normal',
+            title: 'Abkündigungen',
+            duration: 300,
+            startTimes: { '101': null },
+          },
         ],
       },
     },

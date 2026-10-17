@@ -181,3 +181,13 @@ describe('Startseite (E3-3)', () => {
     expect(onNochmal).toHaveBeenCalled();
   });
 });
+
+describe('Startseite → Termin-Ansicht (E6-1b)', () => {
+  it('„Ablauf & Dienste“ bei „Als Nächstes“ öffnet genau diesen Termin', async () => {
+    const onTermin = vi.fn();
+    zeige(ZEILEN, { onTermin });
+    fireEvent.click(held().getByRole('button', { name: 'Ablauf & Dienste' }));
+    expect(onTermin).toHaveBeenCalledWith(1);
+    await waitFor(() => expect(lieder).toHaveBeenCalled());
+  });
+});

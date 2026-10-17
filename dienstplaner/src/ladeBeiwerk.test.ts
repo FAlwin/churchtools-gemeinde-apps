@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@ui/ct/fehler';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
-import { ladeAbwesenheiten, ladeLieder, ladeMusikApp } from './ladeBeiwerk';
+import { ladeAblauf, ladeAbwesenheiten, ladeLieder, ladeMusikApp } from './ladeBeiwerk';
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -74,5 +74,23 @@ describe('ladeMusikApp', () => {
     vi.restoreAllMocks();
     ct(() => json(200, { data: [{ shorty: 'dienstplaner' }] }));
     expect(await ladeMusikApp()).toBeNull();
+  });
+});
+
+describe('ladeAblauf (Termin-Ansicht, E6-1b)', () => {
+  it('der Ablauf; kein Ablauf (404) → null – dieselbe Regel wie die Lieder der Startseite', async () => {
+    const spy = ct(() => json(200, { data: { items: [{ id: 1, title: 'Predigt' }] } }));
+    expect((await ladeAblauf(7))?.items.map((i) => i.title)).toEqual(['Predigt']);
+    expect(String(spy.mock.calls[0][0])).toBe('https://ct.test/api/events/7/agenda');
+    vi.restoreAllMocks();
+    ct(() => json(404, { message: 'Not found.' }));
+    expect(await ladeAblauf(7)).toBeNull();
+    vi.restoreAllMocks();
+    // Ablauf da, aber ohne Inhalt → leer (nicht „kein Ablauf“).
+    ct(() => json(200, { data: null }));
+    expect(await ladeAblauf(7)).toEqual({ items: [] });
+    vi.restoreAllMocks();
+    ct(() => json(502, {}));
+    await expect(ladeAblauf(7)).rejects.toBeInstanceOf(ApiError);
   });
 });

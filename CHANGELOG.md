@@ -22,6 +22,25 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 - Ein Ablauf ohne Punkte-Liste zählt als leer – an einer Stelle (`ladeAblauf`), die auch die Lieder der Startseite
   nutzen; vorher prüfte jeder Aufrufer selbst.
 
+### Neu (Anmeldungen, A6-5c, #623)
+
+- **Nachprüfung** (Entwurf `a6-5c-nachpruefung-v1`, Alwin 17.10.2026: „nachrechnen + markieren“) – neue Karte auf der
+  Veranstaltungsseite, geprüft beim Öffnen und mit „Neu prüfen“, **nichts wird automatisch geändert**:
+  - **Plätze** wie ChurchTools (ohne Leitung) und ein Hinweis, wenn Plätze frei sind, aber jemand wartet – ChurchTools
+    lässt dann niemanden von selbst nachrücken (#619).
+  - **Belegung je Auswahl** – ausgebucht, überbucht (rot).
+  - **Betrag je Anmeldung** (Anmelde-Nr.), nachgerechnet mit derselben Regel wie im Formular (`betragAus`) aus dem, was
+    in ChurchTools steht (Geburtstag, Auswahl, Extras, wer einen Platz hat, Anmeldetag): **nachgerückt** (neuer
+    Betrag), **Preise nach der Anmeldung geändert** (nur Info), **weniger als gemeldet** (hat jemand abgesagt?),
+    **weicht ab** (rot, bitte prüfen), **Auswahl fehlt** (die gespeicherte Auswahl gibt es nicht mehr – keine
+    geratene Zahl; echter Test: Preise von „fest“ auf „nach Auswahl“ umgestellt). Anmeldungen ohne Anmelde-Nr. (vor dem 17.10.2026) werden beim Betrag nicht
+    geprüft – dort wäre jede Prüfung ein Fehlalarm.
+  - Mit Hinweisen steht die Karte oben unter dem Anmeldelink, sonst klein unten; in Entwürfen gibt es keine.
+- Die Erweiterung merkt sich, **wann die Preise zuletzt geändert** wurden (`preiseGeaendert`).
+- **Startseite und „Es gibt schon N Anmeldungen“ zählen ohne Leitung** – bisher zählte die Leitung als Teilnehmer
+  mit, eine Veranstaltung konnte so zu früh „voll“ wirken (gemessen: ChurchTools zählt nur Teilnehmer).
+- „Heute“ steht an EINER Stelle (`heuteImKalender`) – das Formular und die Startseite hatten je eine eigene Fassung.
+
 ### Behoben (Anmeldungen, #619)
 
 - **Wer wartet, kommt zuerst:** Gemessen 17.10.2026 – wartet jemand, stellt ChurchTools jede neue Anmeldung hinten an,

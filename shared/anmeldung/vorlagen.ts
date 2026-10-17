@@ -89,5 +89,6 @@ export function neueEinstellungen(vorlage: Vorlage): OeffentlicheEinstellungen {
     loeschfristMonate: 3,
     bezahlung: { ...STANDARD_BEZAHLUNG },
     kontakt: '',
+    preiseGeaendert: null,
   };
 }

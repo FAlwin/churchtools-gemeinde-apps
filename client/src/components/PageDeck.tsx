@@ -1,26 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { flushSync } from 'react-dom';
 import {
   TransformWrapper,
   TransformComponent,
   type ReactZoomPanPinchRef,
 } from 'react-zoom-pan-pinch';
 import type { DrawTool } from '../types/index';
-import {
-  usePageDraw,
-  type PageTextObj,
-  type TextStyle,
-  DEFAULT_TEXT_STYLE,
-} from '../hooks/usePageDraw';
+import { usePageDraw, type PageTextObj } from '../hooks/usePageDraw';
 import { pushField } from '../services/annotations';
-import { useKeyboardInsets } from '../hooks/useKeyboardInsets';
+import { useTextEingabe } from '../hooks/useTextEingabe';
 import { useSlideTransition, type SlideSlot } from '../hooks/useSlideTransition';
 import { usePointerStrokes } from '../hooks/usePointerStrokes';
 import { usePageNavigation } from '../hooks/usePageNavigation';
 import { usePageCanvases } from '../hooks/usePageCanvases';
 import { useZoomOrchestration } from '../hooks/useZoomOrchestration';
 import { ZOOM_GRENZEN, type Blatt, type Flaeche } from '../utils/zoomAusschnitt';
-import { useLatestRef } from '../hooks/useLatestRef';
 import { useRefPair } from '../hooks/useRefPair';
 import { useLandscape } from '../hooks/useLandscape';
 import { eigenerSchluessel, joinKeys, splitKeys } from '../utils/pageKeys';
@@ -80,11 +73,6 @@ interface PageDeckProps {
   onZoomedChange?: (zoomed: boolean) => void;
   /** Erhöht sich, wenn der Reset-Knopf der Kopfleiste gedrückt wird → sichtbaren Zoom zurücksetzen. */
   resetZoomSignal?: number;
-  /**
-   * Immer nur EINE Seite, auch quer (#551): Zum Malen aus dem Scroll-Modus öffnet sich die gerade
-   * sichtbare Seite einzeln – im 2-up stünde sonst eine fremde Nachbarseite daneben.
-   */
-  einzeln?: boolean;
 }
 
 // Stabiler Default für `viewKeyFor` (kein Ansehen).
@@ -130,20 +118,8 @@ export function PageDeck({
   syncTick = 0,
   onZoomedChange,
   resetZoomSignal = 0,
-  einzeln = false,
 }: PageDeckProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
-  // Inline-Texteingabe direkt auf der Seite (blinkender Cursor statt separater Leiste).
-  const editRefs = useRef<(HTMLSpanElement | null)[]>([null, null]);
-  const textCommitLock = useRef<[boolean, boolean]>([false, false]); // gegen Doppel-Commit (Blur + Tipp)
-  // Zieh-Knopf am Auswahlrahmen: Startgröße + Start-Y + Ebenenhöhe für die Größenänderung.
-  const resizeDrag = useRef<{
-    slot: number;
-    id: number;
-    startY: number;
-    startSize: number;
-    layerH: number;
-  } | null>(null);
   const contentRefs = useRefPair<HTMLCanvasElement>();
   const annoRefs = useRefPair<HTMLCanvasElement>();
   // Schreibgeschützte Striche des jeweils ANDEREN Bereichs (Team-Ebene bzw. beim Team-Bearbeiten
@@ -156,16 +132,12 @@ export function PageDeck({
   // Wird bei App-Rückkehr hochgezählt → erzwingt einen sauberen Remount der Zoom-Ebenen (steckt im
   // TransformWrapper-key), damit ein nach dem Backgrounding veralteter Zoom-Zustand aufgelöst wird.
   const [remountEpoch, setRemountEpoch] = useState(0);
-  const [textSize, setTextSize] = useState(1.5); // cqh = % der Seitenhöhe (~13 pt, nahe der Liedtext-Größe)
-  // Aktueller „Pinsel"-Stil für NEU platzierten Text (bei ausgewähltem Text wirken die Format-
-  // Knöpfe direkt auf das Objekt via dr_.setStyle). Startet normal & mittig (DEFAULT_TEXT_STYLE).
-  const [textStyle, setTextStyle] = useState<TextStyle>(DEFAULT_TEXT_STYLE);
   // Strichstärke je Werkzeug (Canvas-Pixel bei Renderskala 2) – einstellbar über die Werkzeugleiste.
   const [toolSizes, setToolSizes] = useState({ pen: 3, marker: 18, eraser: 26 });
   const [confirmClear, setConfirmClear] = useState(false);
 
   const pageCount = pages.length;
-  const perView = landscape && !einzeln ? 2 : 1;
+  const perView = landscape ? 2 : 1;
 
   // Pinch-Zoom: Speichern, Wiederherstellen und der komplette Lebenslauf einer Geste.
   /**
@@ -239,7 +211,6 @@ export function PageDeck({
   const draws = [drawA, drawB];
   const activeSlot = Math.max(0, Math.min(perView - 1, activePage - pageIndex));
   const activeDraw = draws[activeSlot];
-  const drawsRef = useLatestRef(draws);
 
   // Texte des Overlay-Bereichs (nur lesend) je sichtbarem Slot – direkt aus localStorage.
   //
@@ -271,135 +242,33 @@ export function PageDeck({
     onActivePage,
   });
 
-  // Offene Inline-Eingabe eines Slots übernehmen (leerer Text = verwerfen). Lock verhindert
-  // Doppel-Commit, wenn Blur UND Außen-Tipp im selben Moment feuern.
-  function commitInlineText(slot: number) {
-    const d = draws[slot];
-    if (!d.pending || textCommitLock.current[slot]) return;
-    textCommitLock.current[slot] = true;
-    const el = editRefs.current[slot];
-    // innerText (nicht textContent) → erhält Zeilenumbrüche als \n; nur Ränder trimmen,
-    // interne Umbrüche/Abstände bleiben erhalten.
-    const value = (el?.innerText ?? '')
-      .replace(/\u00A0/g, ' ')
-      .replace(/\n{3,}/g, '\n\n')
-      .replace(/[ \t]+\n/g, '\n')
-      .trim();
-    d.confirmText(value, drawColor, textSize, textStyle);
-  }
-  const commitRef = useLatestRef(commitInlineText);
-
-  // Beim Text-Bearbeiten die iOS-Tastatur „vermeiden" (nur den Chart-Bereich anheben) – ausgelagert
-  // in useKeyboardInsets. preLiftForEditor wird synchron in der Tipp-Geste (focusEditor) genutzt.
-  const anyPending = !!(drawA.pending || drawB.pending);
-  const { preLiftForEditor } = useKeyboardInsets({
-    rootRef,
+  // Textfelder: platzieren, tippen, übernehmen, Größe ziehen – gemeinsam mit der Rolle (#608).
+  const {
     editRefs,
-    anyPending,
-    pendingSlot: drawA.pending ? 0 : 1,
+    textSize,
+    setTextSize,
+    textStyle,
+    setTextStyle,
+    commitInlineText,
+    focusEditor,
+    layerDown,
+    handleResizeDown,
+    handleResizeMove,
+    handleResizeUp,
+  } = useTextEingabe({
+    rootRef,
+    draws,
+    layerRefs,
+    drawMode,
+    drawTool,
+    drawColor,
+    perView,
+    activeSlot,
+    pageIndex,
+    onActivePage,
   });
 
-  // Inline-Eingabe fokussieren + Cursor ans Ende. MUSS synchron in der Tipp-Geste passieren,
-  // damit iOS die Tastatur öffnet (asynchroner Fokus per setTimeout wird von iOS ignoriert).
-  function focusEditor(slot: number) {
-    const el = editRefs.current[slot];
-    if (!el) return;
-    // VOR dem Fokus den Chart-Bereich anheben (gelernte Tastaturhöhe) – Details im Hook.
-    preLiftForEditor(slot);
-    el.focus();
-    const range = document.createRange();
-    range.selectNodeContents(el);
-    range.collapse(false);
-    const sel = window.getSelection();
-    sel?.removeAllRanges();
-    sel?.addRange(range);
-  }
-
-  // Text platzieren (Tipp mit Text-Werkzeug auf leere Stelle der Seite) → blinkender Cursor
-  // direkt an der Stelle (Inline-Eingabe wie in Word/GoodNotes).
-  function layerDown(e: React.PointerEvent, slot: number) {
-    if (!drawMode || drawTool !== 'text') return;
-    // #53: Text nur auf der aktiven Seite – Tipp auf die inaktive Seite aktiviert sie nur.
-    if (perView === 2 && slot !== activeSlot) {
-      e.stopPropagation();
-      onActivePage(pageIndex + slot);
-      return;
-    }
-    const layer = layerRefs[slot].current;
-    if (!layer) return;
-    e.stopPropagation();
-    const d = draws[slot];
-    // Offene Inline-Eingabe? → Tipp daneben übernimmt den Text (steht dann fest), kein neues Feld.
-    if (d.pending) {
-      commitInlineText(slot);
-      return;
-    }
-    // Ist ein Text ausgewählt? → Tipp ins Leere hebt die Auswahl auf (Rahmen weg), kein neues Feld.
-    if (d.selectedId !== null) {
-      d.setSelectedId(null);
-      return;
-    }
-    const rect = layer.getBoundingClientRect();
-    const fx = (e.clientX - rect.left) / rect.width;
-    const fy = (e.clientY - rect.top) / rect.height;
-    // flushSync → die Inline-Eingabe wird SOFORT (synchron) eingehängt, danach fokussieren wir
-    // noch innerhalb der Tipp-Geste → iOS öffnet die Tastatur.
-    flushSync(() => d.placeText(fx, fy, e.clientX, e.clientY));
-    focusEditor(slot);
-  }
-
-  // Zieh-Knopf am Auswahlrahmen: Größe des ausgewählten Textes per Ziehen ändern.
-  function handleResizeDown(e: React.PointerEvent, slot: number, id: number, size: number) {
-    e.stopPropagation();
-    const layer = layerRefs[slot].current;
-    if (!layer) return;
-    draws[slot].pushHistory();
-    resizeDrag.current = {
-      slot,
-      id,
-      startY: e.clientY,
-      startSize: size,
-      layerH: layer.clientHeight,
-    };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  }
-  function handleResizeMove(e: React.PointerEvent) {
-    const r = resizeDrag.current;
-    if (!r || r.layerH <= 0) return;
-    e.stopPropagation();
-    // Ziehen nach unten = größer: Y-Weg in % der Seitenhöhe direkt auf die cqh-Größe addieren.
-    const next = r.startSize + ((e.clientY - r.startY) / r.layerH) * 100;
-    draws[r.slot].setSize(r.id, next);
-  }
-  function handleResizeUp(e: React.PointerEvent) {
-    if (!resizeDrag.current) return;
-    e.stopPropagation();
-    resizeDrag.current = null;
-  }
-
   // ── Effekte ──
-
-  // Anmerkungsmodus verlassen → Text-Auswahl aufheben. Sonst bliebe der gestrichelte Rahmen des
-  // zuletzt bearbeiteten Textes stehen (er hängt an selectedId) und verschwände erst beim
-  // nächsten Seitenwechsel.
-  const setSelectedA = drawA.setSelectedId;
-  const setSelectedB = drawB.setSelectedId;
-  useEffect(() => {
-    if (!drawMode) {
-      setSelectedA(null);
-      setSelectedB(null);
-    }
-  }, [drawMode, setSelectedA, setSelectedB]);
-
-  // Wechselt die AKTIVE Hälfte (2-up), darf auf der nun inaktiven keine Auswahl/Eingabe
-  // zurückbleiben – sonst stehen Auswahlrahmen auf beiden Seiten gleichzeitig. Eine offene
-  // Inline-Eingabe dort wird zuerst übernommen (nichts geht verloren).
-  useEffect(() => {
-    if (perView !== 2) return;
-    const other = activeSlot === 0 ? 1 : 0;
-    if (drawsRef.current[other].pending) commitRef.current(other);
-    drawsRef.current[other].setSelectedId(null);
-  }, [activeSlot, perView, drawsRef, commitRef]);
 
   // Bei App-Rückkehr (iOS-PWA) kann der Container neu vermessen worden sein, ohne dass sich die
   // Ausrichtung ändert → die Zoom-Ebene bliebe mit einem veralteten Transform „stecken". Ein
@@ -527,14 +396,6 @@ export function PageDeck({
     const maxVisible = pageIndex + perView - 1;
     if (activePage < pageIndex || activePage > maxVisible) onActivePage(pageIndex);
   }, [perView, pageIndex, activePage, onActivePage]);
-
-  // Lock wieder freigeben, sobald die jeweilige Eingabe geschlossen/geöffnet wurde.
-  useEffect(() => {
-    textCommitLock.current[0] = false;
-  }, [drawA.pending]);
-  useEffect(() => {
-    textCommitLock.current[1] = false;
-  }, [drawB.pending]);
 
   // Blättern per Wisch/Tipp (drei Zonen) – ausgelagert in usePageNavigation.
   const { onTouchStart, onTouchEnd, onClick } = usePageNavigation({

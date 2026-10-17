@@ -60,7 +60,11 @@ export interface Streifen {
   seite: number;
   quelle: Rechteck;
   ziel: { x: number; y: number };
-  /** `kern` = der Teil selbst; `luecke` = Leerraum dahinter, am Ende des vorigen Stücks gezeigt. */
+  /**
+   * `kern` = steht auf der Rolle genau so (ein Teil, der Titelkopf oder der Abstand zum nächsten Teil in
+   * derselben Spalte); `luecke` = Leerraum am Spalten-/Seitenende, am Ende des vorigen Stücks gezeigt –
+   * dort kann er über dem nächsten Teil liegen. Gemalt wird auf der Rolle nur in Kernen (#608).
+   */
   art: 'kern' | 'luecke';
 }
 
@@ -102,13 +106,18 @@ export function streifen(abb: Abbildung): Streifen[] {
       const hier = a4.stuecke
         .filter((s) => s.seite === seite && s.spalte === spalte)
         .sort((a, b) => a.y0 - b.y0);
-      const luecke = (y0: number, y1: number, verschiebeX: number) => {
+      const luecke = (
+        y0: number,
+        y1: number,
+        verschiebeX: number,
+        art: Streifen['art'] = 'luecke',
+      ) => {
         if (y1 > y0)
           out.push({
             seite,
             quelle: { x: x0, y: y0, w: x1 - x0, h: y1 - y0 },
             ziel: { x: x0 - verschiebeX, y: lueckenZiel },
-            art: 'luecke',
+            art,
           });
       };
       const verschiebung = spaltenX(spalte, a4.spalten) - MARGIN;
@@ -127,10 +136,10 @@ export function streifen(abb: Abbildung): Streifen[] {
           art: 'kern',
         });
         lueckenZiel = ziel + (s.y1 - s.y0);
-        // Dahinter bis zum nächsten Stück (der Abstand zwischen zwei Teilen – auf der Rolle genauso)
-        // bzw. bis zum Spalten-Ende (die Lücke).
-        const bis = i < hier.length - 1 ? hier[i + 1].y0 : PAGE_H;
-        luecke(s.y1, bis, verschiebung);
+        // Dahinter bis zum nächsten Stück – der Abstand zwischen zwei Teilen steht auf der Rolle genauso
+        // (also ein Kern) – bzw. bis zum Spalten-Ende (die echte Lücke).
+        if (i < hier.length - 1) luecke(s.y1, hier[i + 1].y0, verschiebung, 'kern');
+        else luecke(s.y1, PAGE_H, verschiebung);
       });
     }
   }
@@ -143,7 +152,7 @@ export function a4NachRolle(
   seite: number,
   x: number,
   y: number,
-): { x: number; y: number } | null {
+): { x: number; y: number; art: Streifen['art'] } | null {
   const st = liste.find(
     (s) =>
       s.seite === seite &&
@@ -153,7 +162,38 @@ export function a4NachRolle(
       y < s.quelle.y + s.quelle.h,
   );
   if (!st) return null;
-  return { x: st.ziel.x + (x - st.quelle.x), y: st.ziel.y + (y - st.quelle.y) };
+  return { x: st.ziel.x + (x - st.quelle.x), y: st.ziel.y + (y - st.quelle.y), art: st.art };
+}
+
+/**
+ * **Zurück: ein Punkt der Rolle auf seine A4-Seite** (#608 – was auf der Rolle gemalt wird, wird auf den
+ * A4-Seiten gespeichert). Nur über Kerne: Die sind auf der Rolle überschneidungsfrei, eine Lücke dagegen
+ * liegt dort über dem nächsten Teil und wäre mehrdeutig. Liegt der Punkt in keinem Kern (rechts neben
+ * einem schmalen 2-Spalten-Streifen, unter dem letzten Teil), zählt der nächstgelegene.
+ */
+export function rolleNachA4(
+  liste: Streifen[],
+  x: number,
+  y: number,
+): { seite: number; x: number; y: number } | null {
+  const kerne = liste.filter((s) => s.art === 'kern' && s.quelle.h > 0);
+  if (kerne.length === 0) return null;
+  const innen = (s: Streifen) =>
+    x >= s.ziel.x && x < s.ziel.x + s.quelle.w && y >= s.ziel.y && y < s.ziel.y + s.quelle.h;
+  const abstand = (s: Streifen) => {
+    const dy =
+      y < s.ziel.y ? s.ziel.y - y : y >= s.ziel.y + s.quelle.h ? y - (s.ziel.y + s.quelle.h) : 0;
+    const dx =
+      x < s.ziel.x ? s.ziel.x - x : x >= s.ziel.x + s.quelle.w ? x - (s.ziel.x + s.quelle.w) : 0;
+    return dy * 1000 + dx; // erst die Höhe, dann die Seite
+  };
+  const st = kerne.find(innen) ?? [...kerne].sort((a, b) => abstand(a) - abstand(b))[0];
+  const klemme = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+  return {
+    seite: st.seite,
+    x: klemme(st.quelle.x + (x - st.ziel.x), st.quelle.x, st.quelle.x + st.quelle.w),
+    y: klemme(st.quelle.y + (y - st.ziel.y), st.quelle.y, st.quelle.y + st.quelle.h - 0.01),
+  };
 }
 
 /** Was eine Seite des Scroll-Modus an Anmerkungen zeigt: eine Seite selbst oder – bei der Rolle – alle
@@ -174,7 +214,7 @@ export function textAufRolle<T extends { fx: number; fy: number; sizeCqh: number
   liste: Streifen[],
   seite: number,
   rollenHoehe: number,
-): T | null {
+): (T & { art: Streifen['art'] }) | null {
   const ziel = a4NachRolle(liste, seite, text.fx * PAGE_W, text.fy * PAGE_H);
   if (!ziel) return null;
   return {
@@ -182,6 +222,26 @@ export function textAufRolle<T extends { fx: number; fy: number; sizeCqh: number
     fx: ziel.x / PAGE_W,
     fy: ziel.y / rollenHoehe,
     sizeCqh: (text.sizeCqh * PAGE_H) / rollenHoehe,
+    art: ziel.art,
+  };
+}
+
+/** Umgekehrt: ein Textfeld der Rolle auf seine A4-Seite – Lage und Größe (#608). */
+export function textAufSeite<T extends { fx: number; fy: number; sizeCqh: number }>(
+  text: T,
+  liste: Streifen[],
+  rollenHoehe: number,
+): { seite: number; text: T } | null {
+  const ziel = rolleNachA4(liste, text.fx * PAGE_W, text.fy * rollenHoehe);
+  if (!ziel) return null;
+  return {
+    seite: ziel.seite,
+    text: {
+      ...text,
+      fx: ziel.x / PAGE_W,
+      fy: ziel.y / PAGE_H,
+      sizeCqh: (text.sizeCqh * rollenHoehe) / PAGE_H,
+    },
   };
 }
 
@@ -195,11 +255,12 @@ export function stricheAufRolle(
   liste: Streifen[],
   seite: number,
   rolleBreitePx: number,
+  nur?: Streifen['art'],
 ): void {
   const q = bild.width / PAGE_W; // Bildpunkte je mm im Bild
   const z = rolleBreitePx / PAGE_W; // Bildpunkte je mm auf der Rolle
   for (const s of liste) {
-    if (s.seite !== seite || s.quelle.h <= 0) continue;
+    if (s.seite !== seite || s.quelle.h <= 0 || (nur && s.art !== nur)) continue;
     ctx.drawImage(
       bild,
       s.quelle.x * q,
@@ -210,6 +271,37 @@ export function stricheAufRolle(
       s.ziel.y * z,
       s.quelle.w * z,
       s.quelle.h * z,
+    );
+  }
+}
+
+/**
+ * **Zurück: die Kerne der Rolle in eine A4-Seite schreiben** (#608). Jeder Kern dieser Seite wird auf der
+ * Seite geleert und aus der Rolle neu gefüllt – Lücken bleiben unberührt (die werden auf der Rolle nicht
+ * bearbeitet). `ctx` gehört zur Leinwand der A4-Seite, mit den bisherigen Strichen darauf.
+ */
+export function kerneAufSeite(
+  ctx: CanvasRenderingContext2D,
+  rolle: CanvasImageSource & { width: number },
+  liste: Streifen[],
+  seite: number,
+  seiteBreitePx: number,
+): void {
+  const q = seiteBreitePx / PAGE_W; // Bildpunkte je mm auf der A4-Seite
+  const z = rolle.width / PAGE_W; // Bildpunkte je mm auf der Rolle
+  for (const s of liste) {
+    if (s.seite !== seite || s.art !== 'kern' || s.quelle.h <= 0) continue;
+    ctx.clearRect(s.quelle.x * q, s.quelle.y * q, s.quelle.w * q, s.quelle.h * q);
+    ctx.drawImage(
+      rolle,
+      s.ziel.x * z,
+      s.ziel.y * z,
+      s.quelle.w * z,
+      s.quelle.h * z,
+      s.quelle.x * q,
+      s.quelle.y * q,
+      s.quelle.w * q,
+      s.quelle.h * q,
     );
   }
 }

@@ -465,9 +465,18 @@ Schlüssel. Blatt-Maße EINMAL in `utils/blattMasse.ts`. Achtung: `composeStream
 Scroll-Modus kein Spalten-Schalter (`ohneSpalten`). Welche
 eigene Ebene gilt, entscheidet für Blättern UND Scrollen `pageKeys.eigenerSchluessel`.
 Leinwände nur in Bildschirmnähe (IntersectionObserver), sonst freigegeben. Die **Seite in der Bildmitte** ist
-die aktive (Kopfzeile, Lied-Punkte). **Malen:** bis #608 (direkt auf der Rolle, zwei Finger scrollen) gibt es
-im Scroll-Modus kein „Anmerken" (`malenAus` → `verfuegbareWerkzeuge`). Die Position (`ScrollPosition` in
-`utils/scrollPosition.ts`) überdauert einen Neuaufbau der Seiten.
+die aktive (Kopfzeile, Lied-Punkte). **Malen (#608):** direkt auf der Seite in der Bildmitte
+(`components/RollenMalen.tsx`) – derselbe Kern wie beim Blättern (`usePageDraw`, `usePointerStrokes`,
+`PageTextLayer`, `PageDrawToolbar`, Text-Bedienung in `hooks/useTextEingabe.ts`, aus `PageDeck` herausgelöst).
+Bei der Rolle wird in einem nur lokalen **Entwurf** gemalt (Kerne der A4-Seiten in Rollen-Koordinaten,
+Schlüssel `worship:rolle-entwurf:…`); `utils/rolleSpeichern.ts` schreibt jede Änderung Kern für Kern auf die
+A4-Seiten zurück (Striche gesammelt nach 700 ms und beim Verlassen, Texte sofort; Texte in Lücken bleiben).
+Ein Finger malt, **zwei Finger scrollen** (selbst gemacht in `ScrollDeck`, die Mal-Leinwand hat
+`touch-action: none`); ein Tipp schaltet beim Malen keine Leisten. Gemalt wird auf EINER Seite (`malSeite`,
+beim Einschalten die in der Bildmitte); ein Tipp auf eine andere macht sie dazu, die übrigen sind abgeblendet
+(wie `slotInactive` im Querformat, #53). Der Scroll-Container trägt
+`data-eigener-scroll` – `useKeyboardInsets` setzt ihn beim Tippen NICHT auf 0. Die Position (`ScrollPosition`
+in `utils/scrollPosition.ts`) überdauert einen Neuaufbau der Seiten.
 Ein Tipp aufs Blatt = Leisten aus/ein. **Pedal-Tasten** für beide Modi stehen EINMAL in `utils/pedalTasten.ts`
 (→/↓/Bild↓/Leertaste weiter, ←/↑/Bild↑/Umschalt+Leertaste zurück; nicht bei gedrückt gehaltener Taste, mit
 Strg/⌘/Alt, in Eingaben oder Leertaste auf einem Knopf); im Scroll-Modus scrollt ein Tritt ⅔ Bildschirm

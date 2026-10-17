@@ -7,6 +7,8 @@ import {
   type MutableRefObject,
 } from 'react';
 import type { PageTextObj } from '../hooks/usePageDraw';
+import type { DrawTool } from '../types/index';
+import { RollenMalen } from './RollenMalen';
 import { useLatestRef } from '../hooks/useLatestRef';
 import { readPageTexts } from '../utils/annotationKeys';
 import { textObjStyle } from '../utils/textObjStyle';
@@ -46,6 +48,17 @@ interface ScrollDeckProps {
   syncTick?: number;
   /** Hier legt die Ansicht ihren Pedal-Schritt ab (die Navigation ruft ihn bei einer Pedal-Taste). */
   schrittRef: MutableRefObject<((richtung: PedalRichtung) => void) | null>;
+  /**
+   * Malen (#608): Ist es gesetzt, liegt über der Seite in der Bildmitte (`seite`) die Mal-Ebene. Ein
+   * Finger malt, zwei Finger scrollen; ein Tipp schaltet dann keine Leisten.
+   */
+  malen?: {
+    drawTool: DrawTool;
+    setDrawTool: (t: DrawTool) => void;
+    drawColor: string;
+    setDrawColor: (c: string) => void;
+    drawColors: string[];
+  };
 }
 
 /**
@@ -73,7 +86,24 @@ export function ScrollDeck({
   onTipp,
   syncTick = 0,
   schrittRef,
+  malen,
 }: ScrollDeckProps) {
+  const huelleRef = useRef<HTMLDivElement | null>(null);
+  const [leiste, setLeiste] = useState<HTMLDivElement | null>(null);
+  // Nach dem Zurückschreiben auf die A4-Seiten neu lesen (Stift aus → die Anzeige zeigt das Gemalte).
+  const [gespeichert, setGespeichert] = useState(0);
+  // Auf welcher Seite gemalt wird: beim Einschalten des Stifts die in der Bildmitte; ein Tipp auf eine
+  // andere Seite macht sie zur Mal-Seite (wie beim Blättern im Querformat, #53) – ohne Strich.
+  const [malSeite, setMalSeite] = useState(seite);
+  const malenAn = !!malen;
+  const [warAn, setWarAn] = useState(malenAn);
+  if (malenAn !== warAn) {
+    setWarAn(malenAn);
+    if (malenAn) setMalSeite(seite);
+  }
+  // Zwei Finger scrollen, während der Stift an ist – die Mal-Leinwand lässt den Browser nicht scrollen.
+  const zweiFinger = useRef<number | null>(null);
+  const mitteY = (t: React.TouchList) => (t[0].clientY + t[1].clientY) / 2;
   const rootRef = useRef<HTMLDivElement | null>(null);
   const seitenRefs = useRef<(HTMLDivElement | null)[]>([]);
   // Die zuletzt GEMELDETE Seite – weicht `seite` davon ab, kam der Wunsch von außen (Lied-Punkt).
@@ -162,33 +192,74 @@ export function ScrollDeck({
   }, [schrittRef]);
 
   return (
-    <div ref={rootRef} className={styles.root} data-testid="scroll-deck" onClick={() => onTipp?.()}>
-      {loading && (
-        <div className={deck.center}>
-          <Spinner />
-          <span>{loadingLabel}</span>
-        </div>
-      )}
-      {error && <div className={deck.center}>⚠️ {error}</div>}
-      {!loading && (
-        <div className={styles.inhalt}>
-          {pages.map((src, p) => (
-            <ScrollSeite
-              key={p}
-              src={src}
-              root={rootRef}
-              quelle={anmerkungFuer(p)}
-              syncTick={syncTick}
-              seitenRef={(n) => {
-                seitenRefs.current[p] = n;
-              }}
-            />
-          ))}
-          {merker && (
-            <div key={merker.n} className={styles.merker} style={{ top: merker.top }} aria-hidden />
-          )}
-        </div>
-      )}
+    <div ref={huelleRef} className={styles.huelle}>
+      <div
+        ref={rootRef}
+        className={styles.root}
+        data-testid="scroll-deck"
+        data-eigener-scroll=""
+        onClick={() => {
+          if (!malen) onTipp?.();
+        }}
+        onTouchStart={(e) => {
+          zweiFinger.current = malen && e.touches.length === 2 ? mitteY(e.touches) : null;
+        }}
+        onTouchMove={(e) => {
+          if (!malen || e.touches.length !== 2 || zweiFinger.current === null) return;
+          const jetzt = mitteY(e.touches);
+          if (rootRef.current) rootRef.current.scrollTop -= jetzt - zweiFinger.current;
+          zweiFinger.current = jetzt;
+        }}
+        onTouchEnd={(e) => {
+          if (e.touches.length < 2) zweiFinger.current = null;
+        }}
+      >
+        {loading && (
+          <div className={deck.center}>
+            <Spinner />
+            <span>{loadingLabel}</span>
+          </div>
+        )}
+        {error && <div className={deck.center}>⚠️ {error}</div>}
+        {!loading && (
+          <div className={styles.inhalt}>
+            {pages.map((src, p) => (
+              <ScrollSeite
+                key={p}
+                src={src}
+                root={rootRef}
+                quelle={anmerkungFuer(p)}
+                syncTick={syncTick + gespeichert}
+                gedimmt={!!malen && p !== malSeite}
+                onAktivieren={malen && p !== malSeite ? () => setMalSeite(p) : undefined}
+                malen={
+                  malen && p === malSeite
+                    ? {
+                        ...malen,
+                        rootRef: huelleRef,
+                        leisteZiel: leiste,
+                        onGespeichert: () => setGespeichert((n) => n + 1),
+                      }
+                    : undefined
+                }
+                seitenRef={(n) => {
+                  seitenRefs.current[p] = n;
+                }}
+              />
+            ))}
+            {merker && (
+              <div
+                key={merker.n}
+                className={styles.merker}
+                style={{ top: merker.top }}
+                aria-hidden
+              />
+            )}
+          </div>
+        )}
+      </div>
+      {/* Werkzeugleiste beim Malen – außerhalb der Scroll-Fläche, damit sie stehen bleibt. */}
+      <div ref={setLeiste} className={styles.leiste} />
     </div>
   );
 }
@@ -198,6 +269,15 @@ interface ScrollSeiteProps {
   root: MutableRefObject<HTMLDivElement | null>;
   quelle: Anmerkungsquelle;
   syncTick: number;
+  /** Beim Malen: nicht die Mal-Seite – abgeblendet, ein Tipp macht sie zur Mal-Seite. */
+  gedimmt?: boolean;
+  onAktivieren?: () => void;
+  /** Nur auf der Mal-Seite, solange der Stift an ist (#608). */
+  malen?: NonNullable<ScrollDeckProps['malen']> & {
+    rootRef: MutableRefObject<HTMLDivElement | null>;
+    leisteZiel: HTMLElement | null;
+    onGespeichert: () => void;
+  };
   seitenRef: (n: HTMLDivElement | null) => void;
 }
 
@@ -224,7 +304,20 @@ function ladeBild(key: string | null): Promise<HTMLImageElement | null> {
  * (`textObjStyle`, #113). Bei der Rolle kommen Striche und Texte von den A4-Seiten des Lieds, Streifen für
  * Streifen umgerechnet (#614).
  */
-function ScrollSeite({ src, root, quelle, syncTick, seitenRef }: ScrollSeiteProps) {
+function ScrollSeite({
+  src,
+  root,
+  quelle,
+  syncTick,
+  seitenRef,
+  malen,
+  gedimmt = false,
+  onAktivieren,
+}: ScrollSeiteProps) {
+  // Beim Malen liegen die eigenen Anmerkungen der Kerne in der Mal-Ebene (dort bearbeitbar) – hier
+  // also nur noch das, was dort nicht steht: fremde Ebene und eigene Lücken. Ohne Abbildung (hochgeladenes
+  // PDF) liegt die ganze eigene Ebene in der Mal-Ebene.
+  const bearbeiten = !!malen;
   // Die Schlüssel sind die Abhängigkeit – nicht das je Render neu gebaute Objekt (vgl. `utils/pageKeys`).
   const schluessel = quelle.seiten.map((x) => `${x.own ?? ''}|${x.over ?? ''}`).join('\u0001');
   const abbildung = quelle.abbildung;
@@ -281,8 +374,18 @@ function ScrollSeite({ src, root, quelle, syncTick, seitenRef }: ScrollSeiteProp
           bilder.forEach((paar, seite) => {
             const bild = paar[ebene];
             if (!bild) return;
-            if (liste) stricheAufRolle(ctx, bild, liste, seite, c.width);
-            else ctx.drawImage(bild, 0, 0);
+            const eigen = ebene === 1;
+            // Beim Malen stehen die eigenen Kerne in der Mal-Ebene – hier nur noch die Lücken.
+            if (liste)
+              stricheAufRolle(
+                ctx,
+                bild,
+                liste,
+                seite,
+                c.width,
+                eigen && bearbeiten ? 'luecke' : undefined,
+              );
+            else if (!(eigen && bearbeiten)) ctx.drawImage(bild, 0, 0);
           });
         }
       },
@@ -290,21 +393,27 @@ function ScrollSeite({ src, root, quelle, syncTick, seitenRef }: ScrollSeiteProp
     return () => {
       aktuell = false;
     };
-  }, [nah, src, seiten, liste, syncTick]);
+  }, [nah, src, seiten, liste, syncTick, bearbeiten]);
 
   const texte = useMemo(
     () =>
       seiten.flatMap((x, seite) => {
-        const roh = [...readPageTexts<PageTextObj>(x.over), ...readPageTexts<PageTextObj>(x.own)];
-        if (!liste) return roh;
-        return roh.flatMap((t) => {
+        const fremd = readPageTexts<PageTextObj>(x.over);
+        const eigen = readPageTexts<PageTextObj>(x.own);
+        if (!liste) return bearbeiten ? fremd : [...fremd, ...eigen];
+        return [
+          ...fremd.map((t) => ({ t, eigen: false })),
+          ...eigen.map((t) => ({ t, eigen: true })),
+        ].flatMap(({ t, eigen: istEigen }) => {
           const z = textAufRolle(t, liste, seite, hoeheMm);
-          return z ? [{ ...z, id: seite * 1_000_000 + t.id }] : [];
+          // Beim Malen stehen eigene Texte der Kerne in der Mal-Ebene (dort bearbeitbar).
+          if (!z || (istEigen && bearbeiten && z.art === 'kern')) return [];
+          return [{ ...z, id: seite * 1_000_000 + t.id }];
         });
       }),
     // syncTick ist das Signal, dass sich der Speicher geändert hat (wie in PageDeck).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [seiten, liste, hoeheMm, syncTick],
+    [seiten, liste, hoeheMm, syncTick, bearbeiten],
   );
 
   const seitenformat = `${src.width} / ${src.height}`;
@@ -314,8 +423,16 @@ function ScrollSeite({ src, root, quelle, syncTick, seitenRef }: ScrollSeiteProp
         boxRef.current = n;
         seitenRef(n);
       }}
-      className={styles.seite}
+      className={`${styles.seite}${gedimmt ? ' ' + styles.gedimmt : ''}`}
       style={{ aspectRatio: seitenformat }}
+      onPointerDown={
+        onAktivieren
+          ? (e) => {
+              e.stopPropagation();
+              onAktivieren();
+            }
+          : undefined
+      }
     >
       <canvas ref={canvasRef} className={styles.leinwand} />
       {texte.length > 0 && (
@@ -326,6 +443,22 @@ function ScrollSeite({ src, root, quelle, syncTick, seitenRef }: ScrollSeiteProp
             </div>
           ))}
         </div>
+      )}
+      {malen && (
+        <RollenMalen
+          quelle={quelle}
+          breitePx={src.width}
+          hoehePx={src.height}
+          hoeheMm={hoeheMm}
+          rootRef={malen.rootRef}
+          leisteZiel={malen.leisteZiel}
+          drawTool={malen.drawTool}
+          setDrawTool={malen.setDrawTool}
+          drawColor={malen.drawColor}
+          setDrawColor={malen.setDrawColor}
+          drawColors={malen.drawColors}
+          onGespeichert={malen.onGespeichert}
+        />
       )}
     </div>
   );

@@ -8,6 +8,7 @@
  * fehlt, statt „gespeichert“ zu melden.
  */
 import { ZodError } from 'zod';
+import { heuteImKalender } from '@shared/ct/zeit';
 import { ctAlleSeiten, ctAnfrage, ctBasis, ctDaten } from '@ui/ct/verbindung';
 import { ApiError } from '@ui/ct/fehler';
 import { angemeldeteId } from '@ui/ct/ich';
@@ -503,7 +504,12 @@ export async function aenderePreise(
       ...o,
       belegt: belegt.get(o.name) ?? 0,
     }));
-    return { ...e, preis: { ...neu, grundpreis: { ...neu.grundpreis, optionen } } };
+    return {
+      ...e,
+      preis: { ...neu, grundpreis: { ...neu.grundpreis, optionen } },
+      // A6-5c: Die Nachprüfung erkennt daran, dass ein Betrag nur wegen späterer Preise abweicht.
+      preiseGeaendert: heuteImKalender(),
+    };
   });
 }
 
@@ -574,11 +580,11 @@ export async function speichereBezahlung(id: number, b: Bezahlung): Promise<void
  */
 export async function anmeldungenZahl(id: number): Promise<number | null> {
   try {
-    const mitglieder = await ctAlleSeiten<Parameters<typeof belegungAus>[0][number]>(
-      `/groups/${id}/members`,
-      200,
-    );
-    const b = belegungAus(mitglieder, undefined);
+    const [mitglieder, leitung] = await Promise.all([
+      ctAlleSeiten<Parameters<typeof belegungAus>[0][number]>(`/groups/${id}/members`, 200),
+      leitungsRollen(),
+    ]);
+    const b = belegungAus(mitglieder, undefined, leitung);
     return b.aktiv + b.wartend;
   } catch (e) {
     if (e instanceof ApiError && e.status === 403) return null;
@@ -671,12 +677,23 @@ const personName = (m: MitgliedRoh) => {
 };
 
 /** Die Leiter-Rolle der Gruppenart (`type: 'leader'`, gemessen: „Anmeldung“ → 35). */
+interface RolleRoh {
+  id: number;
+  groupTypeId: number;
+  type?: string;
+  isLeader?: boolean;
+}
+const istLeitung = (r: RolleRoh) => r.type === 'leader' || r.isLeader === true;
+
+/** **Die Leitungsrollen** (alle Gruppenarten) – sie zählen nicht als Teilnehmer (`belegungAus`, #623). */
+export async function leitungsRollen(): Promise<Set<number>> {
+  const rollen = await ctDaten<RolleRoh[]>('/group/roles');
+  return new Set(rollen.filter(istLeitung).map((r) => r.id));
+}
+
 async function leiterRolle(gruppenart: number): Promise<number> {
-  const rollen =
-    await ctDaten<{ id: number; groupTypeId: number; type?: string; isLeader?: boolean }[]>(
-      '/group/roles',
-    );
-  const r = rollen.find((x) => x.groupTypeId === gruppenart && (x.type === 'leader' || x.isLeader));
+  const rollen = await ctDaten<RolleRoh[]>('/group/roles');
+  const r = rollen.find((x) => x.groupTypeId === gruppenart && istLeitung(x));
   if (!r) throw new ApiError(422, 'Die Gruppenart dieser Veranstaltung hat keine Leiter-Rolle.');
   return r.id;
 }

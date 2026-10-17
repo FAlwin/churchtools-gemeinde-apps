@@ -28,14 +28,14 @@ import { useRueckgaengig } from '../hooks/useRueckgaengig';
 import { SchwebePlus } from '../components/SchwebePlus';
 import { AgendaFullView } from '../components/AgendaFullView';
 import { SortableRow } from '../components/AgendaSortableRow';
-import { BeginnLinie } from '../components/AgendaRowParts';
+import { BeginnLinie } from '@ui/ablauf/AblaufTeile';
 import { ItemActionSheet } from '../components/ItemActionSheet';
 import { Icon } from '@ui/icons/icons';
-import { itemLabel } from '../utils/agendaItemTitle';
+import { beginnStelle, itemLabel } from '@shared/ct/ablaufZeile';
 import { ApiError } from '../services/api';
 import { useAblaufAbschliessen } from '../hooks/useServices';
 import type { NeuerAgendaPunkt } from '../utils/agendaItemChanges';
-import { beginnStelle, vorlaufNachUmsortieren } from '../utils/vorlauf';
+import { vorlaufNachUmsortieren } from '../utils/vorlauf';
 import { Coachmarks } from '../components/Coachmarks';
 import {
   SETLIST_STEPS,

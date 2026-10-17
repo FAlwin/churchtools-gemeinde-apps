@@ -8,7 +8,7 @@ import type { AgendaItem } from '@shared/types/index';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Icon } from '@ui/icons/icons';
-import { ItemTitle, ResponsibleLine } from './AgendaRowParts';
+import { ItemTitle, ResponsibleLine } from '@ui/ablauf/AblaufTeile';
 import styles from '../pages/Setlist.module.scss';
 
 /** Eine sortierbare Zeile im Bearbeiten-Modus. Tippen auf den Titel öffnet das Aktionsmenü. */

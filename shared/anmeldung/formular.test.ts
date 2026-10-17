@@ -315,6 +315,7 @@ describe('Einstellungen in der Gruppen-Beschreibung', () => {
         zweck: 'Silvester [Nachname]',
       },
       kontakt: 'freizeit@gemeinde.test',
+      preiseGeaendert: '2026-10-01',
     };
   }
 
@@ -408,6 +409,7 @@ describe('Einstellungen in der Gruppen-Beschreibung', () => {
       loeschfristMonate: _l,
       bezahlung: _b,
       kontakt: _k,
+      preiseGeaendert: _p,
       ...alt
     } = einstellungen();
     const gelesen = einstellungenLesen(EINSTELLUNGEN_KENNUNG + JSON.stringify(alt));
@@ -415,8 +417,9 @@ describe('Einstellungen in der Gruppen-Beschreibung', () => {
     expect(gelesen?.loeschfristMonate).toBe(3);
     // Seit A4: ohne Bankverbindung, 14 Tage, Zweck nur mit Nachnamen.
     expect(gelesen?.bezahlung).toEqual(STANDARD_BEZAHLUNG);
-    // Seit A6-4: ohne Kontakt.
+    // Seit A6-4: ohne Kontakt; seit A6-5c: ohne Datum der Preisänderung.
     expect(gelesen?.kontakt).toBe('');
+    expect(gelesen?.preiseGeaendert).toBeNull();
   });
 
   it('A6-5b: Optionen ohne „Personen je …“ (vor dem 17.10.2026 gespeichert) bleiben lesbar', () => {

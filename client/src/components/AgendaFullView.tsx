@@ -10,9 +10,9 @@
  * (Alwin: „nur ein kurzer Hinweis und fertig"). Vorher leuchteten Punkte auf und entfernte zerfielen in
  * Partikel – das Abfotografieren dafür ließ die ChurchTools-Erweiterung hängen.
  */
-import { Fragment, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { AgendaItem } from '@shared/types/index';
-import { beginnStelle, itemLabel } from '@shared/ct/ablaufZeile';
+import { itemLabel } from '@shared/ct/ablaufZeile';
 import { vanishedRows, type ShownRow } from '../utils/vanishedRows';
 import {
   hatAenderungen,
@@ -21,10 +21,9 @@ import {
   zusammenfassen,
   type AenderungsMeldung,
 } from '../utils/ablaufAenderungen';
-import { BeginnLinie, ItemTitle, ResponsibleLine } from '@ui/ablauf/AblaufTeile';
 import { AblaufHinweis } from './AblaufHinweis';
 import { useKurzerHinweis } from '../hooks/useKurzerHinweis';
-import styles from '../pages/Setlist.module.scss';
+import { AblaufListe } from '@ui/ablauf/AblaufListe';
 
 export function AgendaFullView({
   items,
@@ -50,7 +49,6 @@ export function AgendaFullView({
     onSichtbar?.(true);
     return () => onSichtbar?.(false);
   }, [onSichtbar]);
-  let songIndex = -1;
   // Lokal erkannte Löschungen (#178): Punkte, die seit dem Gesehen-Stand hinzukamen und wieder
   // gelöscht wurden, kennt der Server nicht → er liefert für sie KEINEN removed-Platzhalter. Die Ansicht
   // merkt sich deshalb selbst, was sie zuletzt gezeigt hat, damit auch solche Punkte als „Entfernt"
@@ -78,78 +76,19 @@ export function AgendaFullView({
         ])
       : '',
   );
-  const zeilen = items.filter((i) => !i.removed);
-  // Die Linie „Beginn" vor dem ersten Punkt nach dem Vorlauf (#423) – nur, wenn es Vorlauf gibt.
-  const stelle = beginnStelle(zeilen);
+  // Die Liste selbst ist der gemeinsame Baustein (`ui/ablauf/AblaufListe`, E6-1b) – hier kommen nur die
+  // Schildchen „neu/geändert“ (solange der Hinweis steht) und das Antippen der Lieder dazu.
+  const schild = (id: number) =>
+    !sichtbar ? null : meldung.neu.has(id) ? 'neu' : meldung.geaendert.has(id) ? 'geändert' : null;
   return (
-    <div className={styles.flowList}>
-      {sichtbar && <AblaufHinweis aenderungen={zusammenfassung} />}
-      {zeilen.map((item, i) => (
-        <Fragment key={item.id}>
-          {i === stelle && <BeginnLinie zeit={beginn} />}
-          {zeile(item)}
-        </Fragment>
-      ))}
-      {stelle === zeilen.length && <BeginnLinie zeit={beginn} />}
-    </div>
+    <AblaufListe
+      zeilen={items}
+      beginn={beginn}
+      onLied={onSelect}
+      schild={schild}
+      kopf={sichtbar && <AblaufHinweis aenderungen={zusammenfassung} />}
+    />
   );
-
-  function zeile(item: AgendaItem) {
-    const showTime = !!item.time;
-    // Neu/geändert/verschoben (#161): ein Schildchen, solange der Hinweis unten steht – keine Bewegung.
-    const schild = !sichtbar
-      ? null
-      : meldung.neu.has(item.id)
-        ? 'neu'
-        : meldung.geaendert.has(item.id)
-          ? 'geändert'
-          : null;
-    const tag = schild && <span className={styles.aenderungsTag}>{schild}</span>;
-    const vl = item.vorBeginn ? ` ${styles.vorlauf}` : '';
-    if (item.isHeader) {
-      return (
-        <div key={item.id} className={styles.sectionBand}>
-          {showTime && <span className={styles.bandTime}>{item.time}</span>}
-          {item.title}
-          {tag}
-        </div>
-      );
-    }
-    const timeCol = <div className={styles.flowTime}>{showTime ? item.time : ''}</div>;
-    const body = (
-      <div className={styles.flowBody}>
-        <div className={styles.flowHead}>
-          <ItemTitle item={item} />
-          {item.song && <span className={styles.flowSongTag}>🎵</span>}
-          {tag}
-          {item.durationMin && <span className={styles.flowDur}>{item.durationMin} Min</span>}
-        </div>
-        {item.note && <div className={styles.flowNote}>{item.note}</div>}
-        <ResponsibleLine entries={item.responsible} />
-      </div>
-    );
-    if (item.song) {
-      songIndex += 1;
-      const idx = songIndex;
-      return (
-        <button
-          key={item.id}
-          className={`${styles.flowRowBtn} ${styles.songRow}${vl}`}
-          data-tour={idx === 0 ? 'setlist-song' : undefined}
-          onClick={() => onSelect(idx)}
-        >
-          {timeCol}
-          {body}
-        </button>
-      );
-    }
-    return (
-      <div key={item.id} className={`${styles.flowRow}${vl}`}>
-        {timeCol}
-        {body}
-      </div>
-    );
-  }
 }
 
 /** Was die Ansicht zuletzt gezeigt hat – und was die letzte Aktualisierung gebracht hat. */

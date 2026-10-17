@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { LEERER_PLAN, zeile } from '@shared/dienstplan/zeile.testutil';
 import { Termine } from './Termine';
 
@@ -177,5 +177,26 @@ describe('Termine (E3-2)', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Erneut versuchen' }));
     expect(onNochmal).toHaveBeenCalled();
+  });
+});
+
+describe('Termine → Termin-Ansicht (E6-1b)', () => {
+  it('eine Zeile antippen öffnet den Termin; ohne Anschluss bleibt die Zeile reiner Text', () => {
+    const onTermin = vi.fn();
+    render(
+      <Termine
+        zustand={{ art: 'fertig', zeilen: ZEILEN, plan: LEERER_PLAN, wochen: 8 }}
+        planer
+        onNochmal={() => {}}
+        onMehr={() => {}}
+        onTermin={onTermin}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Alle' }));
+    fireEvent.click(screen.getByRole('button', { name: /Gebetsabend.*21/ }));
+    expect(onTermin).toHaveBeenCalledWith(2);
+    cleanup();
+    zeige();
+    expect(screen.queryByRole('button', { name: /Gottesdienst/ })).toBeNull();
   });
 });

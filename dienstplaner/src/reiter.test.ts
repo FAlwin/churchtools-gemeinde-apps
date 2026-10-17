@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { adresseFuer, reiterAusAdresse, sichtbareReiter } from './reiter';
+import {
+  adresseFuer,
+  adresseFuerTermin,
+  reiterAusAdresse,
+  sichtbareReiter,
+  terminAusAdresse,
+} from './reiter';
 
 describe('Reiter des Dienstplaners', () => {
   it('„Planen“ nur mit Planer-Recht, die übrigen immer – in der Reihenfolge des Entwurfs', () => {
@@ -24,6 +30,16 @@ describe('Reiter des Dienstplaners', () => {
     expect(adresseFuer('start')).toBe('');
     for (const r of sichtbareReiter(true)) {
       expect(reiterAusAdresse(adresseFuer(r.id) || '#/', sichtbareReiter(true))).toBe(r.id);
+    }
+  });
+});
+
+describe('Adresse der Termin-Ansicht (E6-1b)', () => {
+  it('#/termin/<id> → Termin, alles andere → keiner; hin und zurück gleich', () => {
+    expect(terminAusAdresse('#/termin/148')).toBe(148);
+    expect(terminAusAdresse(adresseFuerTermin(7))).toBe(7);
+    for (const h of ['', '#/termine', '#/termin/', '#/termin/abc', '#/termin/148/x']) {
+      expect(terminAusAdresse(h)).toBeNull();
     }
   });
 });

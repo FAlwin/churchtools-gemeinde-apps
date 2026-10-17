@@ -111,6 +111,24 @@
   white-space: nowrap;
 }
 
+// Name im Spaltenkopf als Knopf zur Termin-Ansicht (E6-1b) – sieht aus wie der Name, unterstrichen beim Zeigen.
+.kopfLink {
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--blue);
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 .fuellung {
   height: 4px;
   margin-top: 6px;
@@ -580,6 +598,22 @@
 .chipBesetzt {
   composes: chipStand;
   color: var(--green);
+}
+
+.handyOeffnen {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--blue);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .handyKopf {

@@ -10,7 +10,24 @@ import { render, screen, fireEvent } from '@testing-library/react';
  * 1034 Tests waren grün – `NewSongSheet.test` und `EditSongSheet.test` mocken den Editor. Deshalb hier
  * die Regel selbst: Der Name sperrt nur, wenn er auch gefragt wird; leerer Text sperrt immer.
  */
-vi.mock('./ChordProInput', () => ({ ChordProInput: () => <div data-testid="eingabe" /> }));
+// Die Eingabe ist eine Attrappe; ihre Befehle (Einfügen …) landen hier, damit die Bausteine prüfbar sind.
+const eingabe = vi.hoisted(() => ({
+  insert: vi.fn(),
+  einfuegenAn: vi.fn(),
+  springeZu: vi.fn(),
+  appendChord: vi.fn(),
+  undo: vi.fn(),
+  redo: vi.fn(),
+}));
+vi.mock('./ChordProInput', async () => {
+  const { forwardRef, useImperativeHandle } = await import('react');
+  return {
+    ChordProInput: forwardRef(function Attrappe(_p, ref) {
+      useImperativeHandle(ref, () => eingabe);
+      return <div data-testid="eingabe" />;
+    }),
+  };
+});
 vi.mock('./PdfPreview', () => ({ PdfPreview: () => null }));
 vi.mock('@ui/fenster/useOverlayKeyboardInset', () => ({
   useOverlayKeyboardInset: () => undefined,
@@ -88,5 +105,49 @@ describe('ChordEditor – Tonart-Zeile (#398)', () => {
   it('zeigt ohne Tonart keine Zeile – beim Original-Notenblatt gibt es sie nicht', () => {
     zeige();
     expect(screen.queryByText(/^Tonart/)).toBeNull();
+  });
+});
+
+/** Flow-Zeile und Weiterschalt-Punkt (#606). */
+describe('ChordEditor – Ablauf und Weiterschalt-Punkt', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  function format(name: string) {
+    fireEvent.click(screen.getByRole('button', { name: /Format/ }));
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(name) }));
+  }
+
+  it('„Ablauf" setzt die vorbefüllte Flow-Zeile vor den ersten Teil, Cursor vor die Klammer', () => {
+    const text = '{title: Treu}\n{comment: Vers}\nA\n{comment: Chorus}\nB';
+    zeige({ initialText: text, mitVersionsname: false });
+    format('Ablauf');
+    const zeile = '{flow: Vers, Chorus}';
+    expect(eingabe.einfuegenAn).toHaveBeenCalledWith(14, `${zeile}\n`, zeile.length - 1);
+  });
+
+  it('gibt es schon eine Flow-Zeile, springt „Ablauf" dorthin statt eine zweite einzufügen', () => {
+    zeige({ initialText: '{title: T}\n{flow: Vers}\n{comment: Vers}\nA', mitVersionsname: false });
+    format('Ablauf');
+    expect(eingabe.springeZu).toHaveBeenCalledWith(11);
+    expect(eingabe.einfuegenAn).not.toHaveBeenCalled();
+  });
+
+  it('„Weiterschalt-Punkt" fügt ---- in einer eigenen Zeile ein', () => {
+    zeige({ mitVersionsname: false });
+    format('Weiterschalt-Punkt');
+    expect(eingabe.insert).toHaveBeenCalledWith('----', { block: true });
+  });
+
+  it('nennt Namen im Flow, zu denen es keinen Teil gibt', () => {
+    zeige({
+      initialText: '{flow: Vers, Refrain}\n{comment: Vers}\nA',
+      mitVersionsname: false,
+    });
+    expect(screen.getByRole('status').textContent).toContain('Refrain');
+  });
+
+  it('ohne unbekannte Namen kein Hinweis', () => {
+    zeige({ initialText: '{flow: Vers}\n{comment: Vers}\nA', mitVersionsname: false });
+    expect(screen.queryByRole('status')).toBeNull();
   });
 });

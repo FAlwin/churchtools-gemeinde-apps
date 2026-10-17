@@ -297,6 +297,18 @@
   border-color: var(--blue);
 }
 
+// Flow-Zeile mit Namen ohne passenden Teil (#606) – unter der Werkzeugleiste, in beiden Ansichten sichtbar.
+.flowHinweis {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 8px 14px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text);
+  background: var(--blue-soft);
+  border-bottom: 1px solid var(--border);
+}
+
 .split {
   flex: 1;
   min-height: 0;

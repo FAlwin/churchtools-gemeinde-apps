@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseChordPro, parseLine, parseMetadata } from './chordpro';
+import { flowEinfuegen, parseChordPro, parseLine, parseMetadata, teileImFlow } from './chordpro';
 
 describe('parseLine', () => {
   it('gibt reinen Text ohne Akkorde als ein Paar zurück', () => {
@@ -86,5 +86,116 @@ describe('parseMetadata', () => {
   it('ignoriert unbekannte Direktiven', () => {
     const meta = parseMetadata('{foo: bar}\n{title: X}');
     expect(meta).toEqual({ title: 'X' });
+  });
+});
+
+describe('Weiterschalt-Punkt ---- (#606)', () => {
+  it('erscheint nicht als Text, die Stelle wird gemerkt', () => {
+    const [vers] = parseChordPro('{comment: Vers 1}\nZeile 1\nZeile 2\n----\nZeile 3\nZeile 4');
+    expect(vers.lines).toEqual(['Zeile 1', 'Zeile 2', 'Zeile 3', 'Zeile 4']);
+    expect(vers.umbrueche).toEqual([2]);
+  });
+
+  it('auch mit mehr Strichen und Leerraum drumherum', () => {
+    const [vers] = parseChordPro('{comment: Vers}\nA\n   ------   \nB');
+    expect(vers.umbrueche).toEqual([1]);
+  });
+
+  it('am Anfang oder Ende eines Teils trennt er nichts – und fällt weg', () => {
+    const [vers] = parseChordPro('{comment: Vers}\n----\nA\nB\n----\n');
+    expect(vers.lines).toEqual(['A', 'B']);
+    expect(vers.umbrueche).toBeUndefined();
+  });
+
+  it('drei Bindestriche sind normaler Text', () => {
+    const [vers] = parseChordPro('{comment: Vers}\nA\n---\nB');
+    expect(vers.lines).toEqual(['A', '---', 'B']);
+  });
+});
+
+describe('teileImFlow – {flow: …} (#606)', () => {
+  const TEXT = [
+    '{flow: Intro, Vers 1, Chorus 1, Vers 2, Chorus 1, Outro}',
+    '{comment: Intro}',
+    '[C]',
+    '{comment: Vers 1}',
+    'V1',
+    '{comment: Vers 2}',
+    'V2',
+    '{comment: Chorus 1}',
+    'C1',
+    '{comment: Bridge}',
+    'B',
+    '{comment: Outro}',
+    'O',
+  ].join('\n');
+
+  it('liest die Flow-Zeile als Angabe', () => {
+    expect(parseMetadata(TEXT).flow).toBe('Intro, Vers 1, Chorus 1, Vers 2, Chorus 1, Outro');
+  });
+
+  it('ordnet nach dem Flow, wiederholt voll, lässt Nicht-Genanntes weg', () => {
+    const { teile, unbekannt } = teileImFlow(parseChordPro(TEXT), parseMetadata(TEXT).flow);
+    expect(teile.map((t) => t.label)).toEqual([
+      'Intro',
+      'Vers 1',
+      'Chorus 1',
+      'Vers 2',
+      'Chorus 1',
+      'Outro',
+    ]);
+    expect(teile.map((t) => t.label)).not.toContain('Bridge');
+    expect(unbekannt).toEqual([]);
+  });
+
+  it('jeder Teil behält seine Stelle im Original (daran hängt die Abschnitts-Transponierung)', () => {
+    const { teile } = teileImFlow(parseChordPro(TEXT), parseMetadata(TEXT).flow);
+    expect(teile.map((t) => t.index)).toEqual([0, 1, 3, 2, 3, 5]);
+  });
+
+  it('Groß-/Kleinschreibung und Leerzeichen zählen nicht', () => {
+    const { teile } = teileImFlow(parseChordPro(TEXT), 'vers  1 ,CHORUS 1');
+    expect(teile.map((t) => t.label)).toEqual(['Vers 1', 'Chorus 1']);
+  });
+
+  it('meldet Namen ohne Teil – einmal je Name', () => {
+    const { teile, unbekannt } = teileImFlow(parseChordPro(TEXT), 'Vers 1, Refrain, Refrain, Coda');
+    expect(teile.map((t) => t.label)).toEqual(['Vers 1']);
+    expect(unbekannt).toEqual(['Refrain', 'Coda']);
+  });
+
+  it('passt KEIN Name, bleibt alles wie im Text – ein vertippter Flow macht das Blatt nicht leer', () => {
+    const { teile, unbekannt, flow } = teileImFlow(parseChordPro(TEXT), 'Refrain');
+    expect(teile).toHaveLength(6);
+    expect(unbekannt).toEqual(['Refrain']);
+    expect(flow).toEqual([]);
+  });
+
+  it('ohne Flow: alle Teile in Original-Reihenfolge', () => {
+    const { teile, flow } = teileImFlow(parseChordPro(TEXT), undefined);
+    expect(teile.map((t) => t.index)).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(flow).toEqual([]);
+  });
+});
+
+describe('flowEinfuegen – wohin der Editor die Flow-Zeile setzt (#606)', () => {
+  it('nach den allgemeinen Angaben, vor dem ersten Teil, vorbefüllt mit den Teilen', () => {
+    const text = '{title: Treu}\n{key: E}\n\n{comment: Vers}\nA\n{comment: Chorus}\nB';
+    const z = flowEinfuegen(text);
+    expect(z).toEqual({
+      vorhanden: false,
+      pos: text.indexOf('{comment: Vers}'),
+      zeile: '{flow: Vers, Chorus}',
+    });
+  });
+
+  it('auch vor Standard-Abschnitten und vor Liedzeilen ohne Überschrift', () => {
+    expect(flowEinfuegen('{title: X}\n{start_of_verse: V1}\nA').pos).toBe(11);
+    expect(flowEinfuegen('{title: X}\nGleich Text').pos).toBe(11);
+  });
+
+  it('gibt es schon eine Flow-Zeile, wird keine zweite eingefügt', () => {
+    const text = '{title: X}\n{flow: Vers}\n{comment: Vers}\nA';
+    expect(flowEinfuegen(text)).toEqual({ vorhanden: true, pos: 11 });
   });
 });

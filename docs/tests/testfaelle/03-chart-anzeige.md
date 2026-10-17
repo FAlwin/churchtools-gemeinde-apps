@@ -522,3 +522,31 @@ Einstellung gilt nur auf diesem Gerät.
 - **Historie:** #551 (ChurchTools-Dev-Stammtisch, 14.10.2026)
 
 </details>
+
+### TF-CHART-18 · Flow-Zeile und Weiterschalt-Punkt im Editor
+
+**Das brauchst du:** Ein Lied, das du bearbeiten darfst, mit mehreren Teilen (z. B. Vers 1, Chorus, Vers 2).
+
+**Das muss passieren:** Über **Format → Ablauf (Reihenfolge der Teile)** steht eine Zeile
+`{flow: …}` mit den vorhandenen Teilen **vor dem ersten Teil**. Stellt man sie um und wiederholt einen Teil,
+zeigt die Vorschau die Teile in dieser Reihenfolge, Wiederholungen voll, nicht genannte Teile nicht. Oben im
+Blatt steht „Ablauf: …“. Ein vertippter Name wird unter der Werkzeugleiste genannt. `----` erscheint nirgends.
+
+1. Lied öffnen → Version bearbeiten (oder neue Version).
+2. **Format → Ablauf (Reihenfolge der Teile)** → die Zeile steht vor dem ersten Teil.
+3. Zu `{flow: Vers 1, Chorus, Vers 2, Chorus}` ändern → Vorschau: Chorus zweimal, „Ablauf: …“ im Kopf.
+4. Einen Namen vertippen (`Refrain`) → Hinweis „… keinen Teil gibt: Refrain“.
+5. **Format → Weiterschalt-Punkt fürs Pedal** mitten in einem Vers → in der Vorschau unsichtbar.
+6. Speichern, Lied im Ablauf öffnen → das Blatt zeigt dieselbe Reihenfolge; „Als PDF teilen“ ebenso.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `client/src/utils/chordpro.ts`, `client/src/utils/chordPdf.ts`, `client/src/components/ChordEditor.tsx`, `client/src/components/ChordProInput.tsx`, `shared/ct/liedtext.ts`
+- **Automatisiert:** weitgehend – `chordpro.test.ts` (Flow, Rückfall, Einfügestelle, `----`),
+  `chordPdf.test.ts` (Reihenfolge, Wegweiser, `----` unsichtbar, Transponierung bei Wiederholung),
+  `ChordEditor.test.tsx` (Knöpfe, Hinweis), `songTextIndex.test.ts` (Suche). Von Hand bleibt der echte
+  Editor (Cursor, Einfügen) am Gerät
+- **Historie:** #606 (Rückmeldung Musik-Bereichsleiter, 17.10.2026)
+
+</details>

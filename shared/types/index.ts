@@ -611,6 +611,12 @@ export interface ChordProSection {
   type: string;
   label: string;
   lines: string[];
+  /**
+   * Weiterschalt-Punkte (`----` allein in einer Zeile, #606): Zeilen-Indizes in `lines`, VOR denen
+   * ein Trenner stand. Beim Weiterschalten mit dem Pedal verhält sich so eine Stelle wie ein neuer
+   * Song-Teil; zu sehen ist der Trenner nicht.
+   */
+  umbrueche?: number[];
 }
 
 /** Was der angemeldete Nutzer laut ChurchTools darf (steuert die sichtbare UI). */

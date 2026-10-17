@@ -546,5 +546,8 @@ describe('#619: wer wartet, kommt zuerst', () => {
     await screen.findByRole('heading', { name: 'Gemeindeessen' });
     expect(screen.getByText(/Alle Plätze sind belegt/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Auf die Warteliste' })).toBeTruthy();
+    // Oben nicht „noch 0 Plätze frei“.
+    expect(screen.queryByText(/noch 0/)).toBeNull();
+    expect(screen.getByText('ausgebucht')).toBeTruthy();
   });
 });

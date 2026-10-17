@@ -692,7 +692,16 @@ export function AnmeldeFormular({
             {freiZeigen && (
               <span className={`${s.fact} ${s.hot}`}>
                 <Symbol name="leute" />
-                noch <b>{frei === 1 ? '1 Platz' : `${frei} Plätze`}</b> frei
+                {frei === 0 ? (
+                  <>
+                    <b>ausgebucht</b>
+                    {platz?.warteliste ? ' – Warteliste' : ''}
+                  </>
+                ) : (
+                  <>
+                    noch <b>{frei === 1 ? '1 Platz' : `${frei} Plätze`}</b> frei
+                  </>
+                )}
               </span>
             )}
             {ansicht.anmeldeschluss && (

@@ -54,10 +54,19 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Seite** (#608): Stift an – ein Finger oder der Pencil malt, **zwei Finger scrollen**; gemalt wird auf dem
   Lied in der Bildmitte, ein Tipp auf ein anderes (abgeblendetes) Lied macht es zum Mal-Lied; Stift, Marker,
   Radierer, Text, Rückgängig und Löschen wie beim Blättern. Gespeichert wird auf den A4-Seiten, beim Blättern
-  steht es also am selben Teil. Was beim Blättern in einer Lücke steht, lässt sich auf der langen Seite nur
-  ansehen, nicht bearbeiten. Hochgeladene PDFs
+  steht es also am selben Teil. Was beim Blättern in einer Lücke steht, greift auf der langen Seite das Lasso
+  (siehe unten). Hochgeladene PDFs
   bleiben Seiten. Die **Vorschau im Editor** zeigt im Scroll-Modus ebenfalls die lange Seite. Sehr lange
   Seiten werden auf iPhone/iPad etwas weniger scharf gezeichnet statt gar nicht (Leinwand-Grenze von iOS).
+- **Lasso** (#615, Alwin 17.10.2026): neues Werkzeug in der Anmerken-Leiste, beim Blättern und auf der langen
+  Seite. Einkreisen wählt Striche und Texte aus; im Rahmen ziehen verschiebt, der blaue Punkt unten rechts
+  vergrößert oder verkleinert gleichmäßig; daneben tippen, ein anderes Werkzeug oder Stift aus legt ab.
+  **Rückgängig** nimmt die ganze Bewegung auf einmal zurück. Auf der langen Seite greift das Lasso auch, was beim
+  Blättern in einer Lücke am Seitenende steht und hier über dem nächsten Teil liegt – zurechtgerückt steht es danach
+  auch beim Blättern am neuen Platz (und nicht mehr in der Lücke). Unter den letzten Teil der langen Seite lässt
+  sich nichts ablegen: Dort gäbe es auf A4 keine Stelle, das Abgelegte wäre beim Speichern verloren. Das Lasso
+  sagt das („Hier wird nichts gespeichert“) und lässt die Auswahl schweben; muss es doch ablegen (Stift aus),
+  kehrt sie an ihre alte Stelle zurück.
 - **Flow-Zeile `{flow: …}`** (#606, Rückmeldung des Musik-Bereichsleiters): Steht im ChordPro z. B.
   `{flow: Intro, Vers 1, Chorus 1, Vers 2, Chorus 1, Bridge, Chorus 1, Outro}`, zeigt das Blatt die Teile in
   genau dieser Reihenfolge – Wiederholungen voll, nicht genannte Teile fallen weg. Die Namen sind die

@@ -320,6 +320,17 @@ export function DrawToolbar({
             )}
           </div>
         ))}
+        {/* Lasso (#615): einkreisen, dann verschieben oder am Griff vergrößern. Keine Einstellungen. */}
+        <div className={styles.toolSlot}>
+          <button
+            className={`${styles.toolBtn}${drawTool === 'lasso' ? ' ' + styles.on : ''}`}
+            onClick={() => chooseTool('lasso')}
+            title="Lasso – auswählen, verschieben, vergrößern"
+            aria-label="Lasso"
+          >
+            <Icon name="lasso" size={20} stroke={2} />
+          </button>
+        </div>
         {allowText && (
           <div className={styles.toolSlot}>
             <button

@@ -4,14 +4,15 @@
  * Die Anmerkungen leben auf den A4-Seiten (#614). Gemalt wird auf der Rolle in einem **Entwurf**: einer
  * Leinwand und einer Textliste in Rollen-Koordinaten, die beim Start aus den KERNEN der A4-Seiten
  * zusammengesetzt werden. Jede Änderung geht von hier zurück auf die A4-Seiten – Kern für Kern (die
- * Lücken bleiben unberührt; sie liegen auf der Rolle über dem nächsten Teil und werden dort nicht
- * bearbeitet). Gespeichert wird wie beim Blättern: im Gerät (`lokalSchreiben`) und zum Konto (`pushField`).
+ * Lücken bleiben unberührt; sie liegen auf der Rolle über dem nächsten Teil). Nur das Lasso holt
+ * Lücken-Anmerkungen ausdrücklich in den Entwurf (`lueckenTexteHolen`, `lueckenStricheHolen`, #615). Gespeichert wird wie beim Blättern: im Gerät (`lokalSchreiben`) und zum Konto (`pushField`).
  */
 import type { AnnotationText } from '@shared/types/index';
 import { pushField } from '../services/annotations';
 import { lokalSchreiben } from './lokalSpeicher';
 import { readPageTexts, textSchluessel } from './annotationKeys';
 import { PAGE_H, PAGE_W } from './blattMasse';
+import { hatInhalt, imLasso, lassoPfad, pixelRahmen, type Punkt } from './lasso';
 import {
   a4NachRolle,
   kerneAufSeite,
@@ -145,4 +146,120 @@ export function texteZurueck(
     lokalSchreiben(textSchluessel(key), neu.length ? JSON.stringify(neu) : null);
     pushField(key, 'texts', neu);
   });
+}
+
+/**
+ * **Lasso auf der Rolle: die Texte aus den Lücken holen** (#615). Was beim Blättern in einer Lücke steht,
+ * zeigt die Rolle am Ende des vorigen Stücks – oft über dem nächsten Teil. Liegt seine Mitte in der
+ * Lasso-Form, wird es von seiner A4-Seite genommen und in Rollen-Koordinaten zurückgegeben; der Aufrufer
+ * legt es in den Entwurf, und beim Speichern landet es über `texteZurueck` im Kern, wo es jetzt steht.
+ */
+export function lueckenTexteHolen(
+  form: Punkt[],
+  rollenHoehe: number,
+  eigene: (string | null)[],
+  liste: Streifen[],
+): AnnotationText[] {
+  const geholt: AnnotationText[] = [];
+  eigene.forEach((key, seite) => {
+    if (!key) return;
+    const alle = readPageTexts<AnnotationText>(key);
+    const bleiben = alle.filter((t) => {
+      const z = textAufRolle(t, liste, seite, rollenHoehe);
+      if (!z || z.art !== 'luecke' || !imLasso({ x: z.fx, y: z.fy }, form)) return true;
+      const { art: _art, ...text } = z;
+      geholt.push(text);
+      return false;
+    });
+    if (bleiben.length === alle.length) return;
+    lokalSchreiben(textSchluessel(key), bleiben.length ? JSON.stringify(bleiben) : null);
+    pushField(key, 'texts', bleiben);
+  });
+  return geholt;
+}
+
+/**
+ * **Lasso auf der Rolle: die Striche aus den Lücken holen** (#615). Was in der Form liegt und auf der Rolle
+ * über einem Kern steht, wird auf die Entwurfs-Leinwand gezeichnet und auf seiner A4-Seite gelöscht – danach
+ * gehört es zum Entwurf und wandert beim Speichern in den Kern. Was über keinem Kern stünde (unter dem
+ * letzten Teil), bleibt in seiner Lücke: Im Entwurf ginge es beim Speichern verloren.
+ *
+ * Gibt zurück, ob etwas geholt wurde.
+ */
+export async function lueckenStricheHolen(
+  leinwand: HTMLCanvasElement,
+  form: Punkt[],
+  eigene: (string | null)[],
+  liste: Streifen[],
+): Promise<boolean> {
+  const W = leinwand.width;
+  const H = leinwand.height;
+  const ziel = leinwand.getContext('2d');
+  if (!ziel || !W || !H) return false;
+  const z = W / PAGE_W; // Bildpunkte je mm auf der Rolle
+  const { x: bx, y: by, w: bw, h: bh } = pixelRahmen(form, W, H);
+
+  // Die Maske: Lasso-Form, beschnitten auf die Kerne.
+  const maske = document.createElement('canvas');
+  maske.width = bw;
+  maske.height = bh;
+  const m = maske.getContext('2d');
+  if (!m) return false;
+  m.fill(lassoPfad(form, W, H, bx, by));
+  const kerne = new Path2D();
+  for (const s of liste)
+    if (s.art === 'kern' && s.quelle.h > 0)
+      kerne.rect(s.ziel.x * z - bx, s.ziel.y * z - by, s.quelle.w * z, s.quelle.h * z);
+  m.globalCompositeOperation = 'destination-in';
+  m.fill(kerne);
+
+  const bilder = await Promise.all(eigene.map((k) => bildLaden(lesen(k))));
+  let geholt = false;
+  eigene.forEach((key, seite) => {
+    const bild = bilder[seite];
+    if (!key || !bild) return;
+    const a4 = a4Leinwand(bild.width);
+    const a = a4.getContext('2d');
+    if (!a) return;
+    a.drawImage(bild, 0, 0, a4.width, a4.height);
+    const q = a4.width / PAGE_W; // Bildpunkte je mm auf der A4-Seite
+    let geaendert = false;
+    for (const s of liste) {
+      if (s.seite !== seite || s.art !== 'luecke' || s.quelle.h <= 0) continue;
+      // Wo die Lücke auf der Rolle steht – geschnitten mit dem Rahmen der Form.
+      const zx = s.ziel.x * z;
+      const zy = s.ziel.y * z;
+      const ix = Math.max(zx, bx);
+      const iy = Math.max(zy, by);
+      const iw = Math.min(zx + s.quelle.w * z, bx + bw) - ix;
+      const ih = Math.min(zy + s.quelle.h * z, by + bh) - iy;
+      if (iw <= 0 || ih <= 0) continue;
+      // Derselbe Ausschnitt auf der A4-Seite.
+      const ax = (s.quelle.x + (ix - zx) / z) * q;
+      const ay = (s.quelle.y + (iy - zy) / z) * q;
+      const aw = (iw / z) * q;
+      const ah = (ih / z) * q;
+      const stueck = document.createElement('canvas');
+      stueck.width = Math.ceil(iw);
+      stueck.height = Math.ceil(ih);
+      const st = stueck.getContext('2d');
+      if (!st) continue;
+      st.drawImage(a4, ax, ay, aw, ah, 0, 0, iw, ih);
+      st.globalCompositeOperation = 'destination-in';
+      st.drawImage(maske, ix - bx, iy - by, iw, ih, 0, 0, iw, ih);
+      if (!hatInhalt(stueck)) continue;
+      ziel.drawImage(stueck, 0, 0, iw, ih, ix, iy, iw, ih);
+      a.save();
+      a.globalCompositeOperation = 'destination-out';
+      a.drawImage(maske, ix - bx, iy - by, iw, ih, ax, ay, aw, ah);
+      a.restore();
+      geaendert = true;
+    }
+    if (!geaendert) return;
+    geholt = true;
+    const daten = a4.toDataURL('image/png', 0.7);
+    lokalSchreiben(key, daten);
+    pushField(key, 'strokes', daten);
+  });
+  return geholt;
 }

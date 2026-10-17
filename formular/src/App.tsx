@@ -1,3 +1,4 @@
+import { heuteImKalender } from '@shared/ct/zeit';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AnmeldeFormular } from '@ui/anmeldeformular/AnmeldeFormular';
 import {
@@ -26,13 +27,6 @@ type Stand =
   | { art: 'laedt' }
   | { art: 'fehler'; fehler: LadeFehler }
   | { art: 'fertig'; daten: Geladen };
-
-/** Heute im Kalender des Geräts (`YYYY-MM-DD`) – für das Alter am Stichtag und das Löschdatum. */
-function heuteLokal(): string {
-  const d = new Date();
-  const z = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
-}
 
 export function App() {
   const [hash, setHash] = useState(() => window.location.hash);
@@ -103,7 +97,7 @@ export function App() {
   const v = stand.daten.veranstaltung;
   const ort = ortAusLink(hash)!;
   const probe = new URLSearchParams(window.location.search).has('probe');
-  const heute = heuteLokal();
+  const heute = heuteImKalender();
   return (
     <>
       {!v.offen && (

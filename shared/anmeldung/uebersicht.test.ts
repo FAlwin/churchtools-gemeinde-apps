@@ -140,13 +140,15 @@ describe('belegungAus', () => {
           m('active', '0'),
           m('waiting'),
           m('requested'),
+          { ...m('active'), groupTypeRoleId: 35 }, // Leitung (#623)
         ],
         67,
+        new Set([35]),
       ),
     ).toEqual({ aktiv: 4, wartend: 1, unbezahlt: 3 });
   });
   it('ohne Feld „bezahlt“ gibt es nichts zu zahlen (null, nicht 0)', () => {
-    expect(belegungAus([m('active')], undefined)).toEqual({
+    expect(belegungAus([m('active')], undefined, new Set())).toEqual({
       aktiv: 1,
       wartend: 0,
       unbezahlt: null,

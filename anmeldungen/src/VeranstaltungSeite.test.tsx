@@ -8,6 +8,7 @@ import { ZEITRAUM_ZU } from '@shared/anmeldung/vorbereiten';
 import * as E from './einrichten';
 import * as G from './gemeinde';
 import * as FF from './formularFelder';
+import * as NP from './nachpruefung';
 import { VeranstaltungSeite } from './VeranstaltungSeite';
 import { NeueVeranstaltung } from './NeueVeranstaltung';
 
@@ -52,6 +53,31 @@ vi.mock('./formularFelder', () => ({
   pflichtNachziehen: vi.fn().mockResolvedValue(undefined),
 }));
 const ff = vi.mocked(FF);
+// A6-5c: Die Nachprüfung lädt eigene Daten – hier nachgestellt.
+vi.mock('./nachpruefung', () => ({ ladeNachpruefung: vi.fn().mockResolvedValue(null) }));
+const np = vi.mocked(NP);
+const PRUEF_OK = {
+  plaetze: { belegt: 9, wartend: 0, max: 10, wartenTrotzPlatz: false },
+  auswahl: null,
+  betraege: [],
+  geprueft: 3,
+  hinweise: 0,
+};
+const PRUEF_HINWEISE = {
+  ...PRUEF_OK,
+  plaetze: { belegt: 9, wartend: 2, max: 10, wartenTrotzPlatz: true },
+  betraege: [
+    {
+      grund: 'abweichend' as const,
+      nr: 'K9P2XR',
+      name: 'Erna Beispiel',
+      personId: 7,
+      gemeldetCent: 0,
+      sollCent: 9000,
+    },
+  ],
+  hinweise: 2,
+};
 
 const ZONE = 'Europe/Berlin';
 
@@ -665,5 +691,57 @@ describe('Neue Veranstaltung (A3, #486)', () => {
   it('ohne Namen nicht anlegbar', () => {
     render(<NeueVeranstaltung teams={TEAMS} artId={5} onFertig={() => {}} onClose={() => {}} />);
     expect(screen.getByRole('button', { name: 'Anlegen' })).toHaveProperty('disabled', true);
+  });
+});
+
+describe('Nachprüfung (A6-5c, #623)', () => {
+  const karten = () =>
+    [...document.querySelectorAll('section[aria-label]')].map((x) => x.getAttribute('aria-label'));
+
+  it('Entwurf → keine Nachprüfung, nichts geladen', async () => {
+    np.ladeNachpruefung.mockClear();
+    stelle(true, 2);
+    zeigen();
+    await screen.findByRole('region', { name: 'Anmeldung' });
+    expect(np.ladeNachpruefung).not.toHaveBeenCalled();
+    expect(screen.queryByRole('region', { name: 'Nachprüfung' })).toBeNull();
+  });
+
+  it('alles stimmt → klein unten, „Alles stimmt ✓“', async () => {
+    stelle(true, 1);
+    np.ladeNachpruefung.mockResolvedValue(PRUEF_OK);
+    zeigen();
+    expect(await screen.findByText('Alles stimmt ✓')).toBeTruthy();
+    expect(screen.getByText('Alle 3 Beträge stimmen.')).toBeTruthy();
+    expect(karten().indexOf('Nachprüfung')).toBeGreaterThan(karten().indexOf('Anmeldung'));
+  });
+
+  it('mit Hinweisen → oben unter dem Anmeldelink, mit Grund und Beträgen', async () => {
+    stelle(true, 1);
+    np.ladeNachpruefung.mockResolvedValue(PRUEF_HINWEISE);
+    zeigen();
+    expect(await screen.findByText('2 Hinweise')).toBeTruthy();
+    expect(karten().indexOf('Nachprüfung')).toBeLessThan(karten().indexOf('Anmeldung'));
+    expect(screen.getByText(/1 Platz ist frei, aber 2 warten/)).toBeTruthy();
+    expect(screen.getByText('Betrag weicht von den Regeln ab – bitte prüfen')).toBeTruthy();
+    expect(screen.getByText(/gemeldet nichts|gemeldet 0,00 €/)).toBeTruthy();
+  });
+
+  it('auch ohne Bearbeiten-Recht sichtbar; Mitglieder nicht lesbar (null) → keine Karte', async () => {
+    stelle(false, 1);
+    np.ladeNachpruefung.mockResolvedValue(null);
+    zeigen();
+    await screen.findByText(/Einrichten und freigeben kann die Leitung/);
+    await waitFor(() => expect(np.ladeNachpruefung).toHaveBeenCalled());
+    expect(screen.queryByRole('region', { name: 'Nachprüfung' })).toBeNull();
+  });
+
+  it('scheitert vorübergehend → Meldung, „Neu prüfen“ lädt noch einmal', async () => {
+    stelle(true, 1);
+    np.ladeNachpruefung.mockRejectedValueOnce(new Error('502')).mockResolvedValueOnce(PRUEF_OK);
+    zeigen();
+    expect(await screen.findByText(/Ließ sich gerade nicht prüfen/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Neu prüfen' }));
+    expect(await screen.findByText('Alles stimmt ✓')).toBeTruthy();
   });
 });

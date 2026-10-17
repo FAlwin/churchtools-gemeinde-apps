@@ -375,3 +375,123 @@
   align-self: flex-start;
   min-width: min(100%, 420px);
 }
+
+// ── Nachprüfung (A6-5c, #623) ───────────────────────────────────────────────────────────────────
+
+.pruefTeil {
+  padding: 12px 14px;
+  border-top: 1px solid var(--hair);
+
+  h3 {
+    margin: 0 0 6px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text2);
+  }
+}
+
+.pruefZeilen {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 16px;
+  margin: 0;
+  font-size: 15px;
+
+  dt {
+    color: var(--text);
+  }
+
+  dd {
+    margin: 0;
+    color: var(--text2);
+    text-align: right;
+  }
+
+  b {
+    color: var(--text);
+  }
+}
+
+.pruefZeile {
+  display: contents;
+}
+
+.pruefInfo {
+  color: var(--blue-ink) !important;
+  font-weight: 600;
+}
+
+.pruefRot,
+.pruefRot b {
+  color: var(--red) !important;
+  font-weight: 600;
+}
+
+.pruefGruen {
+  margin: 0;
+  color: var(--green);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.pruefHinweis {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.pruefFuss {
+  margin: 0;
+  padding: 10px 14px 14px;
+  border-top: 1px solid var(--hair);
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.befunde {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.befund {
+  display: grid;
+  gap: 3px;
+  padding: 10px 0;
+
+  & + & {
+    border-top: 1px solid var(--hair);
+  }
+}
+
+.befundOben {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 15px;
+}
+
+.befundGrund,
+.befundBetrag {
+  font-size: 13.5px;
+  color: var(--text2);
+  line-height: 1.4;
+}
+
+.befundBetrag b {
+  color: var(--text);
+}
+
+.nr {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  color: var(--text3);
+}

@@ -529,6 +529,11 @@ export interface OeffentlicheEinstellungen {
    * Anmeldung“. Die Mail von ChurchTools kommt von noreply; Antworten darauf landen nirgends. Leer = keine Angabe.
    */
   kontakt: string;
+  /**
+   * **Wann die Preise zuletzt geändert wurden** (`YYYY-MM-DD`, A6-5c #623) – damit die Nachprüfung erkennt, dass ein
+   * abweichender Betrag nur an einer späteren Preisänderung liegt. `null` = nicht bekannt (vor dem 17.10.2026).
+   */
+  preiseGeaendert: string | null;
 }
 
 const geltung = z.enum(['person', 'anmeldung']);
@@ -694,6 +699,11 @@ const einstellungenSchema = z.object({
     .default(() => ({ ...STANDARD_BEZAHLUNG })),
   // Seit A6-4. Mit Standardwert, damit ältere Einstellungen lesbar bleiben.
   kontakt: z.string().max(120).default(''),
+  preiseGeaendert: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable()
+    .default(null),
 });
 
 // ── Speicherformat v2 (A5): unsichtbar, gepackt, mit Sicherung ──────────────────────────────────

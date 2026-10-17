@@ -133,15 +133,24 @@ export function anmeldestand(
   return 'offen';
 }
 
-/** Mitglieder zählen. `bezahltFeldId` aus `ctFelder.bezahlt` der Einstellungen. */
+/**
+ * Mitglieder zählen. `bezahltFeldId` aus `ctFelder.bezahlt` der Einstellungen. **Ohne Leitung** (#623, gemessen
+ * 17.10.2026: ChurchTools zählt nur Teilnehmer – die Leitung belegt keinen Platz): `leitung` sind die Rollen-IDs.
+ */
 export function belegungAus(
-  mitglieder: { groupMemberStatus?: string; fields?: { id?: unknown; value?: unknown }[] }[],
+  mitglieder: {
+    groupMemberStatus?: string;
+    groupTypeRoleId?: number;
+    fields?: { id?: unknown; value?: unknown }[];
+  }[],
   bezahltFeldId: number | undefined,
+  leitung: ReadonlySet<number>,
 ): Belegung {
   let aktiv = 0;
   let wartend = 0;
   let unbezahlt = 0;
   for (const m of mitglieder) {
+    if (m.groupTypeRoleId !== undefined && leitung.has(m.groupTypeRoleId)) continue;
     if (m.groupMemberStatus === 'waiting') wartend++;
     if (m.groupMemberStatus !== 'active') continue;
     aktiv++;

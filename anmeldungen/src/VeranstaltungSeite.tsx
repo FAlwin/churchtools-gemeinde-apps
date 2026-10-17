@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { ctBasis } from '@ui/ct/basis';
 import { tagAusIso } from '@shared/ct/zeit';
@@ -30,6 +30,8 @@ import { PreisFensterZeigen, PreiseKarte, ProbeRechnen, type PreisFenster } from
 import { VerwaltenFenster } from './Verwalten';
 import { FreigebenFenster } from './FreigebenFenster';
 import { AnmeldeLinkKarte } from './AnmeldeLink';
+import { NachpruefungKarte, type NachpruefungStand } from './NachpruefungKarte';
+import { ladeNachpruefung } from './nachpruefung';
 import { Baukasten } from './Baukasten';
 import { Segment } from '@ui/bedienung/Segment';
 import type { Aenderung } from './Rueckgaengig';
@@ -145,6 +147,26 @@ export function VeranstaltungSeite({
   const [daten, setDaten] = useState<Daten | null>(null);
   const [fehler, setFehler] = useState<Fehlermeldung | null>(null);
   const [fenster, setFenster] = useState<Fenster>(null);
+  // A6-5c: Nachprüfung – `null` = keine Karte (Entwurf, oder Mitglieder nicht lesbar).
+  const [pruef, setPruef] = useState<NachpruefungStand | null>(null);
+  const pruefLauf = useRef(0);
+
+  const pruefen = useCallback(
+    (einstellungen: OeffentlicheEinstellungen, maxPlaetze: number | null) => {
+      const lauf = ++pruefLauf.current;
+      setPruef({ art: 'laedt' });
+      ladeNachpruefung(id, einstellungen, maxPlaetze).then(
+        (n) => lauf === pruefLauf.current && setPruef(n ? { art: 'fertig', n } : null),
+        (x: unknown) =>
+          lauf === pruefLauf.current &&
+          setPruef({
+            art: 'fehler',
+            text: `Ließ sich gerade nicht prüfen. ${fehlerMeldung(x).text}`,
+          }),
+      );
+    },
+    [id],
+  );
 
   const laden = useCallback(() => {
     setFehler(null);
@@ -165,10 +187,13 @@ export function VeranstaltungSeite({
           belegungNachziehen(id).catch((x: unknown) =>
             console.warn('Belegung der Auswahl nicht nachgezogen', x),
           );
+        // A6-5c: In einem Entwurf hat sich noch niemand angemeldet.
+        if (kopf.statusId !== 2) pruefen(einstellungen, anmeldung.maxPlaetze);
+        else setPruef(null);
       },
       (e: unknown) => setFehler(fehlerMeldung(e)),
     );
-  }, [id]);
+  }, [id, pruefen]);
 
   useEffect(laden, [laden]);
 
@@ -221,6 +246,10 @@ export function VeranstaltungSeite({
     const lokal = ortszeitAus(iso, zeitzone);
     return `${datumText(lokal.slice(0, 10))}`;
   };
+  const pruefOben = pruef?.art === 'fertig' && pruef.n.hinweise > 0;
+  const pruefKarte = pruef && (
+    <NachpruefungKarte stand={pruef} onNeu={() => pruefen(e, a.maxPlaetze)} />
+  );
   const t = e.termin;
   const geburt = geburtsdatumAn(e.formular);
   const kostet = kannEtwasKosten(e.preis);
@@ -268,6 +297,8 @@ export function VeranstaltungSeite({
           onEinrichten={darf ? () => setFenster('freigeben') : undefined}
         />
       )}
+      {/* Mit Hinweisen oben, sonst klein unten (Entwurf a6-5c). */}
+      {pruefOben && pruefKarte}
 
       <Segment<Reiter>
         className={v.reiter}
@@ -377,6 +408,7 @@ export function VeranstaltungSeite({
             <Karte titel="Datenschutz" onBearbeiten={bearbeiten('loeschfrist')}>
               <Zeile titel="Daten löschen">{e.loeschfristMonate} Monate nach dem Ende</Zeile>
             </Karte>
+            {!pruefOben && pruefKarte}
             <p className={v.hinweis}>
               Die Liste der Anmeldungen kommt in einem späteren Schritt dazu. Bis dahin: „In
               ChurchTools“.

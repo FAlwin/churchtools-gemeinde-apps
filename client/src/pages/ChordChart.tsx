@@ -18,7 +18,6 @@ import { PageDeck } from '../components/PageDeck';
 import { ScrollDeck } from '../components/ScrollDeck';
 import { SCROLL_START, type ScrollPosition } from '../utils/scrollPosition';
 import { getLiedansicht } from '../utils/devicePrefs';
-import { eigenerSchluessel } from '../utils/pageKeys';
 import type { PedalRichtung } from '../utils/pedalTasten';
 import { useSongSettings } from '../hooks/useSongSettings';
 import { useLandscape } from '../hooks/useLandscape';
@@ -33,6 +32,7 @@ import {
 } from '../utils/onboarding';
 import { VIEW_NS } from '../services/teamNotes';
 import {
+  anmerkungsquelleFuer,
   drawKeyForPage,
   pageLabelFor,
   viewKeyForPage,
@@ -527,6 +527,19 @@ export function ChordChart({
       ),
     [owners, viewingId, viewingSongId, viewingLyr, viewingArr],
   );
+  /** Scroll-Modus: welche Anmerkungen eine Seite zeigt – bei der Rolle die aller A4-Seiten des Lieds (#614). */
+  const anmerkungFuer = (page: number) =>
+    anmerkungsquelleFuer(
+      page,
+      owners,
+      publishedSettings,
+      effSettings,
+      viewingId == null || viewingSongId == null
+        ? null
+        : { songId: viewingSongId, lyr: viewingLyr, arrangementId: viewingArr },
+      VIEW_NS,
+      viewMode === 'merge',
+    );
 
   /**
    * „Als PDF teilen" – das aktive Lied als einzelne PDF, über das Teilen-Fenster (Anmerkungen ja/nein,
@@ -769,6 +782,7 @@ export function ChordChart({
           onEditCurrent={openEditCurrent}
           onNewVersion={openNewVersion}
           onDeleteVersion={() => setConfirmDelEdited(true)}
+          ohneSpalten={scrollModus}
         />
 
         {/* Anzeige-Bereich: EIN durchgehender Strom (Akkorde + Dokumente gemischt) */}
@@ -782,8 +796,7 @@ export function ChordChart({
               loading={pagesLoading}
               error={pagesError}
               loadingLabel="Lieder werden vorbereitet…"
-              ownKeyFor={(p) => eigenerSchluessel(p, drawKeyFor, viewKeyFor, viewMode === 'merge')}
-              overlayKeyFor={viewKeyFor}
+              anmerkungFuer={anmerkungFuer}
               seite={activeIdx}
               onSeite={setPage}
               positionRef={scrollPos}

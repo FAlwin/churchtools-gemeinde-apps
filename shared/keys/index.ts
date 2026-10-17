@@ -55,16 +55,6 @@ export function levelPrefix(
   return `song${songId}${arr}_v${versionKey}${lyricsOnly ? '_lyr' : ''}_`;
 }
 
-/**
- * **Die Seite der Rolle** (Scroll-Modus, #607): Ein Lied ist dort EINE lange Seite, mit eigenen
- * Anmerkungen – getrennt von den A4-Seiten (Entscheidung Alwin, 17.10.2026). Statt eines neuen
- * Schlüssel-Segments (wie `_lyr`) bekommt sie eine feste, hohe Seitennummer derselben Ebene. Dadurch
- * bleibt die Grammatik eine: Konto-Abgleich, Personen-Ablage, Team-Notizen („Notizen von …" übernimmt
- * die ganze Ebene, also auch die Rolle) und das Umziehen bei Versions-/Arrangement-Wechsel greifen
- * ohne Änderung. Ein Lied mit 1000 A4-Seiten gibt es nicht.
- */
-export const ROLLEN_SEITE = 1000;
-
 /** Schlüssel einer konkreten Lied-Seite (ohne Namensraum). */
 export function songPageKey(
   songId: number,

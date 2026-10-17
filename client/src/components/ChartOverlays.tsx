@@ -48,6 +48,8 @@ interface ChartOverlaysProps {
   onEditSong: () => void;
   onNewVersion: () => void;
   onDeleteVersion: () => void;
+  /** Scroll-Modus: kein Spalten-Schalter im Aussehen-Menü (die Rolle hat keine Spalten). */
+  ohneSpalten?: boolean;
 }
 
 export function ChartOverlays({
@@ -73,6 +75,7 @@ export function ChartOverlays({
   onEditSong,
   onNewVersion,
   onDeleteVersion,
+  ohneSpalten = false,
 }: ChartOverlaysProps) {
   const schliessen = () => onOverlay(null);
 
@@ -84,6 +87,7 @@ export function ChartOverlays({
         onFontSize={(fontSize) => onSetting({ fontSize })}
         onCols={(cols) => onSetting({ cols })}
         onClose={schliessen}
+        ohneSpalten={ohneSpalten}
       />
     );
   }

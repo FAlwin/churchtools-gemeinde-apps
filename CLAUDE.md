@@ -454,10 +454,15 @@ Touch-Regeln); `composePane` bleibt bewusst in PageDeck.
 (`devicePrefs.getLiedansicht`, `worship:liedansicht`). Scrollen zeigt die Seiten untereinander, jede in voller
 Breite, nahtlos (`components/ScrollDeck.tsx`). **Seit #607 ist jedes Lied dort EINE lange Seite** („Rolle“:
 `generateChordPdf(…, { rolle: true })`, eine Spalte, kein Umbruch, CCLI direkt unter dem letzten Teil; Höhe per
-Probesatz `rollenHoehe`, 120 mm bis 5 m). Die Rolle hat **eigene Anmerkungen** als Seite `ROLLEN_SEITE` (1000)
-derselben Ebene (`@shared/keys`) – keine neue Schlüssel-Grammatik, Team-Notizen/Umzüge greifen mit. Achtung:
-`composeStream` übernimmt `localPage` aus dem Blatt (nicht neu zählen!). Leinwand-Deckel für iOS
-`utils/leinwand.ts`. Hochgeladene PDFs bleiben Seiten. Die Editor-Vorschau folgt der Liedansicht. Welche
+Probesatz `rollenHoehe`, 120 mm bis 5 m). **Anmerkungen sind gemeinsam (#614):** gespeichert bleiben sie auf
+den A4-Seiten; die Rolle hat KEINE eigenen (`drawKeyForPage` liefert für sie `null`) und zeigt die aller A4-Seiten
+ihres Lieds umgerechnet. Dafür schreibt `generateChordPdf` beim Setzen die **Stücke** mit (Teil × Spalte × Seite,
+`satzplaene`), `utils/rollenAbbildung.ts` macht daraus Streifen (Kern + Lücke; Lücken → ans Ende des vorigen
+Stücks, 2 Spalten → an den linken Rand gerückt), `anmerkungsquelleFuer` (chartPageKeys) liefert je Seite die
+Schlüssel. Blatt-Maße EINMAL in `utils/blattMasse.ts`. Achtung: `composeStream` übernimmt `localPage` und
+`abbildung` aus dem Blatt (nicht neu zählen!). jsPDF-`addPage()` ohne Format nimmt das der VORIGEN Seite. Leinwand-Deckel für iOS
+`utils/leinwand.ts`. Hochgeladene PDFs bleiben Seiten. Die Editor-Vorschau folgt der Liedansicht. Im
+Scroll-Modus kein Spalten-Schalter (`ohneSpalten`). Welche
 eigene Ebene gilt, entscheidet für Blättern UND Scrollen `pageKeys.eigenerSchluessel`.
 Leinwände nur in Bildschirmnähe (IntersectionObserver), sonst freigegeben. Die **Seite in der Bildmitte** ist
 die aktive (Kopfzeile, Lied-Punkte). **Malen:** bis #608 (direkt auf der Rolle, zwei Finger scrollen) gibt es

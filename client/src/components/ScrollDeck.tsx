@@ -12,6 +12,13 @@ import { readPageTexts } from '../utils/annotationKeys';
 import { textObjStyle } from '../utils/textObjStyle';
 import type { PedalRichtung } from '../utils/pedalTasten';
 import { SCHRITT_ANTEIL, type ScrollPosition } from '../utils/scrollPosition';
+import {
+  stricheAufRolle,
+  streifen,
+  textAufRolle,
+  type Anmerkungsquelle,
+} from '../utils/rollenAbbildung';
+import { PAGE_W } from '../utils/blattMasse';
 import { Spinner } from './Spinner';
 import deck from './PageDeck.module.scss';
 import styles from './ScrollDeck.module.scss';
@@ -22,10 +29,11 @@ interface ScrollDeckProps {
   loading: boolean;
   error: string | null;
   loadingLabel: string;
-  /** Eigene Anmerkungen einer Seite – `null`, wenn sie gerade nicht gezeigt werden (Notizen von …). */
-  ownKeyFor: (page: number) => string | null;
-  /** Gerade angesehene fremde Ebene einer Seite (nur lesend) – oder `null`. */
-  overlayKeyFor: (page: number) => string | null;
+  /**
+   * Welche Anmerkungen eine Seite zeigt – eigene und gerade angesehene fremde. Bei der Rolle die ALLER
+   * A4-Seiten des Lieds samt Umrechnung (#614).
+   */
+  anmerkungFuer: (page: number) => Anmerkungsquelle;
   /** Die sichtbare Seite laut Navigation. Weicht sie von der gemeldeten ab (Tipp auf einen Lied-Punkt), wird sie nach oben geholt. */
   seite: number;
   /** Meldet, welche Seite gerade in der Bildmitte steht. */
@@ -58,8 +66,7 @@ export function ScrollDeck({
   loading,
   error,
   loadingLabel,
-  ownKeyFor,
-  overlayKeyFor,
+  anmerkungFuer,
   seite,
   onSeite,
   positionRef,
@@ -170,8 +177,7 @@ export function ScrollDeck({
               key={p}
               src={src}
               root={rootRef}
-              ownKey={ownKeyFor(p)}
-              overlayKey={overlayKeyFor(p)}
+              quelle={anmerkungFuer(p)}
               syncTick={syncTick}
               seitenRef={(n) => {
                 seitenRefs.current[p] = n;
@@ -190,8 +196,7 @@ export function ScrollDeck({
 interface ScrollSeiteProps {
   src: HTMLCanvasElement;
   root: MutableRefObject<HTMLDivElement | null>;
-  ownKey: string | null;
-  overlayKey: string | null;
+  quelle: Anmerkungsquelle;
   syncTick: number;
   seitenRef: (n: HTMLDivElement | null) => void;
 }
@@ -216,9 +221,24 @@ function ladeBild(key: string | null): Promise<HTMLImageElement | null> {
 /**
  * Eine Seite im Scroll-Modus: Seite, fremde Striche, eigene Striche (in DIESER Reihenfolge wie beim
  * Blättern, `composePane`) und darüber die Texte – mit demselben Stil wie in der Live-Ansicht
- * (`textObjStyle`, #113).
+ * (`textObjStyle`, #113). Bei der Rolle kommen Striche und Texte von den A4-Seiten des Lieds, Streifen für
+ * Streifen umgerechnet (#614).
  */
-function ScrollSeite({ src, root, ownKey, overlayKey, syncTick, seitenRef }: ScrollSeiteProps) {
+function ScrollSeite({ src, root, quelle, syncTick, seitenRef }: ScrollSeiteProps) {
+  // Die Schlüssel sind die Abhängigkeit – nicht das je Render neu gebaute Objekt (vgl. `utils/pageKeys`).
+  const schluessel = quelle.seiten.map((x) => `${x.own ?? ''}|${x.over ?? ''}`).join('\u0001');
+  const abbildung = quelle.abbildung;
+  const liste = useMemo(() => (abbildung ? streifen(abbildung) : null), [abbildung]);
+  const seiten = useMemo(
+    () =>
+      schluessel.split('\u0001').map((x) => {
+        const [own, over] = x.split('|');
+        return { own: own || null, over: over || null };
+      }),
+    [schluessel],
+  );
+  /** Höhe dieser Seite in mm (die Rolle ist so breit wie A4). */
+  const hoeheMm = (PAGE_W * src.height) / src.width;
   const boxRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [nah, setNah] = useState(false);
@@ -248,26 +268,43 @@ function ScrollSeite({ src, root, ownKey, overlayKey, syncTick, seitenRef }: Scr
       return;
     }
     let aktuell = true;
-    void Promise.all([ladeBild(overlayKey), ladeBild(ownKey)]).then(([fremd, eigen]) => {
-      if (!aktuell) return;
-      const ctx = c.getContext('2d');
-      if (!ctx) return;
-      c.width = src.width;
-      c.height = src.height;
-      ctx.drawImage(src, 0, 0);
-      if (fremd) ctx.drawImage(fremd, 0, 0);
-      if (eigen) ctx.drawImage(eigen, 0, 0);
-    });
+    void Promise.all(seiten.map((x) => Promise.all([ladeBild(x.over), ladeBild(x.own)]))).then(
+      (bilder) => {
+        if (!aktuell) return;
+        const ctx = c.getContext('2d');
+        if (!ctx) return;
+        c.width = src.width;
+        c.height = src.height;
+        ctx.drawImage(src, 0, 0);
+        // Erst alle fremden, dann alle eigenen Striche – die eigenen liegen obenauf (wie beim Blättern).
+        for (const ebene of [0, 1] as const) {
+          bilder.forEach((paar, seite) => {
+            const bild = paar[ebene];
+            if (!bild) return;
+            if (liste) stricheAufRolle(ctx, bild, liste, seite, c.width);
+            else ctx.drawImage(bild, 0, 0);
+          });
+        }
+      },
+    );
     return () => {
       aktuell = false;
     };
-  }, [nah, src, ownKey, overlayKey, syncTick]);
+  }, [nah, src, seiten, liste, syncTick]);
 
   const texte = useMemo(
-    () => [...readPageTexts<PageTextObj>(overlayKey), ...readPageTexts<PageTextObj>(ownKey)],
+    () =>
+      seiten.flatMap((x, seite) => {
+        const roh = [...readPageTexts<PageTextObj>(x.over), ...readPageTexts<PageTextObj>(x.own)];
+        if (!liste) return roh;
+        return roh.flatMap((t) => {
+          const z = textAufRolle(t, liste, seite, hoeheMm);
+          return z ? [{ ...z, id: seite * 1_000_000 + t.id }] : [];
+        });
+      }),
     // syncTick ist das Signal, dass sich der Speicher geändert hat (wie in PageDeck).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [overlayKey, ownKey, syncTick],
+    [seiten, liste, hoeheMm, syncTick],
   );
 
   const seitenformat = `${src.width} / ${src.height}`;

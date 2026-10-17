@@ -137,3 +137,33 @@ test.describe('iPad quer', () => {
     await expect(page.getByRole('button', { name: 'Anmerken', exact: true })).toHaveCount(0);
   });
 });
+
+test('Anmerkungen vom Blättern erscheinen auf der Rolle (#614)', async ({ page }) => {
+  // Ein Textfeld auf A4-Seite 1 von „Großer Gott" (Demo-Lied 999001), unten im Refrain.
+  await page.addInitScript((tour: string) => {
+    localStorage.setItem(`worship:onboard-${tour}`, '1');
+    localStorage.setItem('worship:liedansicht', 'scrollen');
+    localStorage.setItem(
+      'worship_docdraw_song999001_a999001_voriginal_0_text',
+      JSON.stringify([
+        { id: 1, fx: 0.7, fy: 0.25, text: 'leise!', color: '#d92d20', sizeCqh: 1.5, bold: true },
+      ]),
+    );
+  }, TOUR_CHART);
+  await page.goto('/?demo=chart');
+  await expect(deck(page)).toBeVisible({ timeout: 30_000 });
+  const text = deck(page).getByText('leise!');
+  await expect(text).toBeVisible({ timeout: 30_000 });
+  // Er steht auf der Rolle von „Großer Gott" (der ersten), nicht auf einer anderen.
+  const rolle1 = deck(page).locator('canvas').first();
+  const t = await text.boundingBox();
+  const r = await rolle1.boundingBox();
+  expect(t && r).toBeTruthy();
+  expect(t!.y).toBeGreaterThan(r!.y);
+  expect(t!.y + t!.height).toBeLessThan(r!.y + r!.height);
+  // Gleich groß wie auf A4 (1,5 % von 297 mm), nicht 1,5 % der viel kürzeren Rolle – sonst hätte die
+  // Rolle die Anmerkung als eigene Seite behandelt statt umgerechnet.
+  const pxProMm = r!.width / 210;
+  const schrift = await text.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+  expect(schrift).toBeCloseTo(0.015 * 297 * pxProMm, 0);
+});

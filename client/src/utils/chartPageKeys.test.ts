@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  anmerkungsquelleFuer,
   drawKeyForPage,
   isLyricsOnlyFor,
   pageLabelFor,
@@ -150,5 +151,43 @@ describe('pageLabelFor – „Seite x / y" nur bei mehrseitigen Einheiten', () =
 
   it('gibt null zurück, wenn es überhaupt keine Besitzer gibt', () => {
     expect(pageLabelFor(0, 0, [])).toBeNull();
+  });
+});
+
+describe('anmerkungsquelleFuer – was eine Seite des Scroll-Modus zeigt (#614)', () => {
+  const abbildung = {
+    a4: { stuecke: [], kopfEnde: 30, spalten: 1, seiten: 3 },
+    rolle: { stuecke: [], kopfEnde: 30, spalten: 1, seiten: 1, hoehe: 600 },
+  };
+  const rolle = owner({ abbildung });
+  const viewed = { songId: 12, lyr: false, arrangementId: 99 };
+
+  it('die Rolle hat KEINEN eigenen Schlüssel – ein Strich darauf landete sonst auf A4-Seite 1', () => {
+    expect(drawKeyForPage(0, [rolle], {}, {})).toBeNull();
+    expect(viewKeyForPage(0, [rolle], viewed, 'NS_')).toBeNull();
+  });
+
+  it('die Rolle zeigt die Anmerkungen ALLER A4-Seiten ihres Lieds', () => {
+    const q = anmerkungsquelleFuer(0, [rolle], {}, {}, null, 'NS_', false);
+    expect(q.abbildung).toBe(abbildung);
+    expect(q.seiten.map((x) => x.own)).toEqual(
+      [0, 1, 2].map((p) => drawKeyForPage(0, [owner({ localPage: p })], {}, {})),
+    );
+    expect(q.seiten.every((x) => x.over === null)).toBe(true);
+  });
+
+  it('beim Ansehen fremder Notizen: deren Ebene je A4-Seite, die eigene ausgeblendet – außer beim Zusammenführen', () => {
+    const q = anmerkungsquelleFuer(0, [rolle], {}, {}, viewed, 'NS_', false);
+    expect(q.seiten.map((x) => x.over)).toEqual(
+      [0, 1, 2].map((p) => viewKeyForPage(0, [owner({ localPage: p })], viewed, 'NS_')),
+    );
+    expect(q.seiten.every((x) => x.own === null)).toBe(true);
+    const zusammen = anmerkungsquelleFuer(0, [rolle], {}, {}, viewed, 'NS_', true);
+    expect(zusammen.seiten.every((x) => x.own !== null)).toBe(true);
+  });
+
+  it('eine A4-Seite (oder ein Dokument): nur ihre eigenen Schlüssel, ohne Abbildung', () => {
+    const q = anmerkungsquelleFuer(0, [owner()], {}, {}, null, 'NS_', false);
+    expect(q).toEqual({ seiten: [{ own: drawKeyForPage(0, [owner()], {}, {}), over: null }] });
   });
 });

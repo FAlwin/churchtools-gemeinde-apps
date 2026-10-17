@@ -4,6 +4,7 @@ import { loadSettings } from './chartSettings';
 import { generateChordPdf, type ChordPdfOptions } from './chordPdf';
 import { selectedVersionKey, versionText } from './songVersions';
 import type { StreamOwner } from './streamCompose';
+import { PAGE_H, PAGE_W } from './blattMasse';
 
 /**
  * **Den Ablauf als EIN PDF teilen – jedes Lied so, wie es angezeigt wird** (07.10.2026).
@@ -69,9 +70,9 @@ export function akkordeNichtGeladen(songs: SetlistSong[], teilbar: TeilbaresLied
   return songs.filter((s) => s.chordproFailed && !mitDokument.has(s.id)).map((s) => s.title);
 }
 
-// A4 hochkant in mm, wie `chordPdf.ts`.
-const SEITE_B = 210;
-const SEITE_H = 297;
+// A4 hochkant in mm – dieselben Maße wie das Liedblatt (`blattMasse.ts`), nicht ein zweites Mal hier.
+const SEITE_B = PAGE_W;
+const SEITE_H = PAGE_H;
 const RAND = 6;
 
 /** Wo eine Dokument-Seite auf A4 sitzt – eingepasst, mittig, Seitenverhältnis bleibt. */

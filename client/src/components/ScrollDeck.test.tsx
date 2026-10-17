@@ -6,6 +6,10 @@ import { ScrollDeck } from './ScrollDeck';
 import { SCROLL_START, type ScrollPosition } from '../utils/scrollPosition';
 import { textSchluessel } from '../utils/annotationKeys';
 import type { PedalRichtung } from '../utils/pedalTasten';
+import { satzplaene } from '../utils/chordPdf';
+import type { Anmerkungsquelle } from '../utils/rollenAbbildung';
+
+const KEINE = (): Anmerkungsquelle => ({ seiten: [{ own: null, over: null }] });
 
 /**
  * Scroll-Modus (#551). Was die Geometrie braucht (Seiten untereinander, Kopfzeile folgt der Bildmitte,
@@ -25,8 +29,8 @@ function text(id: number, t: string) {
 }
 
 function zeige(p: {
-  ownKeyFor?: (n: number) => string | null;
-  overlayKeyFor?: (n: number) => string | null;
+  anmerkungFuer?: (n: number) => Anmerkungsquelle;
+  pages?: HTMLCanvasElement[];
   onTipp?: () => void;
 }) {
   const schrittRef = createRef<((r: PedalRichtung) => void) | null>() as MutableRefObject<
@@ -35,12 +39,11 @@ function zeige(p: {
   const positionRef: MutableRefObject<ScrollPosition> = { current: SCROLL_START };
   render(
     <ScrollDeck
-      pages={[seite(), seite()]}
+      pages={p.pages ?? [seite(), seite()]}
       loading={false}
       error={null}
       loadingLabel="lädt"
-      ownKeyFor={p.ownKeyFor ?? (() => null)}
-      overlayKeyFor={p.overlayKeyFor ?? (() => null)}
+      anmerkungFuer={p.anmerkungFuer ?? KEINE}
       seite={0}
       onSeite={vi.fn()}
       positionRef={positionRef}
@@ -65,8 +68,7 @@ describe('ScrollDeck – Anmerkungen wie beim Blättern', () => {
     localStorage.setItem(textSchluessel('eigen_1'), JSON.stringify([text(1, 'leise!')]));
     localStorage.setItem(textSchluessel('fremd_0'), JSON.stringify([text(2, '2× Refrain')]));
     zeige({
-      ownKeyFor: (n) => `eigen_${n}`,
-      overlayKeyFor: (n) => (n === 0 ? 'fremd_0' : null),
+      anmerkungFuer: (n) => ({ seiten: [{ own: `eigen_${n}`, over: n === 0 ? 'fremd_0' : null }] }),
     });
     expect(screen.getByText('leise!')).toBeTruthy();
     expect(screen.getByText('2× Refrain')).toBeTruthy();
@@ -74,7 +76,7 @@ describe('ScrollDeck – Anmerkungen wie beim Blättern', () => {
 
   it('ohne eigenen Schlüssel (fremde Notizen werden angesehen) bleibt die eigene Ebene weg', () => {
     localStorage.setItem(textSchluessel('eigen_0'), JSON.stringify([text(1, 'meins')]));
-    zeige({ ownKeyFor: () => null });
+    zeige({ anmerkungFuer: () => ({ seiten: [{ own: null, over: null }] }) });
     expect(screen.queryByText('meins')).toBeNull();
   });
 });
@@ -108,8 +110,7 @@ describe('ScrollDeck – Bedienung', () => {
         loading={false}
         error={null}
         loadingLabel=""
-        ownKeyFor={() => null}
-        overlayKeyFor={() => null}
+        anmerkungFuer={KEINE}
         seite={0}
         onSeite={vi.fn()}
         positionRef={{ current: SCROLL_START }}
@@ -119,5 +120,53 @@ describe('ScrollDeck – Bedienung', () => {
     expect(schrittRef.current).not.toBeNull();
     unmount();
     expect(schrittRef.current).toBeNull();
+  });
+});
+
+describe('ScrollDeck – die Rolle zeigt die Anmerkungen der A4-Seiten (#614)', () => {
+  it('Texte von A4-Seite 2 stehen auf der Rolle beim richtigen Teil – höher gerückt', () => {
+    // Sechs Teile à neun Zeilen: Teil 6 springt auf A4-Seite 2.
+    const chordpro = Array.from(
+      { length: 6 },
+      (_, n) =>
+        `{comment: Vers ${n + 1}}\n${Array.from({ length: 9 }, () => '[C]Zeile').join('\n')}`,
+    ).join('\n');
+    const abbildung = satzplaene({
+      title: 'T',
+      author: '',
+      chordpro,
+      originalKey: 'C',
+      targetKey: 'C',
+      bpm: null,
+      timeSig: null,
+      ccli: null,
+    });
+    expect(abbildung.a4.seiten).toBeGreaterThanOrEqual(2);
+    const anfang = abbildung.a4.stuecke.find((s) => s.seite === 1)!;
+    // Ein Text am Anfang des Teils auf Seite 2 (A4: oben auf der Seite).
+    localStorage.setItem(
+      textSchluessel('a4_1'),
+      JSON.stringify([{ ...text(7, 'hier!'), fx: 0.5, fy: (anfang.y0 + 2) / 297, sizeCqh: 2 }]),
+    );
+    const rolleMm = abbildung.rolle.hoehe;
+    const rolle = document.createElement('canvas');
+    rolle.width = 210;
+    rolle.height = Math.round(rolleMm);
+    zeige({
+      pages: [rolle],
+      anmerkungFuer: () => ({
+        seiten: Array.from({ length: abbildung.a4.seiten }, (_, i) => ({
+          own: `a4_${i}`,
+          over: null,
+        })),
+        abbildung,
+      }),
+    });
+    const el = screen.getByText('hier!');
+    const r = abbildung.rolle.stuecke.find((s) => s.teil === anfang.teil)!;
+    const top = parseFloat(el.style.top);
+    // Auf der Rolle beim Teil, nicht 297 mm tiefer.
+    expect(top / 100).toBeCloseTo((r.y0 + 2) / (210 * (rolle.height / rolle.width)), 2);
+    // Die Größe (cqh) kann jsdom nicht lesen – geprüft in `rollenAbbildung.test.ts` (textAufRolle).
   });
 });

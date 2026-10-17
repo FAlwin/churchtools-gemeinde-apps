@@ -76,7 +76,12 @@ export function useSetlistPages({ chordPdfData, chordOwners, songs, settings, on
         const c = chordCanvases[i];
         if (!c) return;
         const list = chordBySong.get(o.songIdx) ?? [];
-        list.push({ canvas: c, versionKey: o.versionKey, localPage: o.localPage });
+        list.push({
+          canvas: c,
+          versionKey: o.versionKey,
+          localPage: o.localPage,
+          ...(o.abbildung ? { abbildung: o.abbildung } : {}),
+        });
         chordBySong.set(o.songIdx, list);
       });
 

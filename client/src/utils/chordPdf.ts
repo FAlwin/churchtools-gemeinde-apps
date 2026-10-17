@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import { parseChordPro, parseLine, parseMetadata } from './chordpro';
+import { parseChordPro, parseLine, parseMetadata, teileImFlow } from './chordpro';
 import { transposeChord } from './transpose';
 import type { SetlistSong } from '@shared/types/index';
 
@@ -168,12 +168,28 @@ export function generateChordPdf(
     y += subPt * PT_TO_MM + 1;
   }
 
+  // Flow (#606): Teile in der Reihenfolge der `{flow: …}`-Zeile; sie steht als Wegweiser im Kopf.
+  const { teile: sections, flow } = teileImFlow(
+    parseChordPro(song.chordpro ?? ''),
+    parseMetadata(song.chordpro ?? '').flow,
+  );
+  if (flow.length > 0) {
+    d.setFont('helvetica', 'normal');
+    d.setFontSize(subPt);
+    d.setTextColor(...MUTED_COLOR);
+    // Rechts bleibt das Logo frei – der Wegweiser kann mehrzeilig werden.
+    const breite = PAGE_W - 2 * MARGIN - (logo ? 22 : 0);
+    const zeilen = d.splitTextToSize(`Ablauf: ${flow.join(' – ')}`, breite) as string[];
+    for (const z of zeilen) {
+      d.text(z, MARGIN, y + subPt * PT_TO_MM);
+      y += subPt * PT_TO_MM + 1;
+    }
+  }
+
   // Spalten beginnen unter dem Titelkopf UND unter dem Logo (nur Seite 1).
   const startY = Math.max(y, logoBottom) + 4;
   y = startY;
   x = colX(0);
-
-  const sections = parseChordPro(song.chordpro);
 
   type Pair = { chord: string | null; text: string };
   // Eine Liedzeile in Token zerlegen (Akkord bleibt am ersten Wort) und an Wortgrenzen so
@@ -278,8 +294,9 @@ export function generateChordPdf(
     y += rowH;
   }
 
-  sections.forEach((sec, si) => {
-    const secSemi = semitones + (sectionSemitones?.[si] ?? 0);
+  sections.forEach((sec) => {
+    // Die Abschnitts-Transponierung hängt am Teil im ORIGINAL – auch wenn er im Flow wiederkehrt.
+    const secSemi = semitones + (sectionSemitones?.[sec.index] ?? 0);
 
     // Sektion vorab umbrechen + Gesamthöhe berechnen (Label + Zeilen/Leerzeilen).
     const blocks: ({ gap: true } | { rows: Pair[][] })[] = [];

@@ -152,6 +152,11 @@ describe('chordproZuText – die Regel, an der eine naive Suche scheitert', () =
     expect(text).toBe('deine treue');
   });
 
+  it('Weiterschalt-Punkte (----, #606) sind kein Liedtext – Bindestriche im Text bleiben', () => {
+    expect(chordproZuLesetext('Zeile eins\n----\nZeile zwei')).toBe('Zeile eins Zeile zwei');
+    expect(chordproZuLesetext('Hand- und Fußball')).toBe('Hand- und Fußball');
+  });
+
   it('schreibt klein und drückt Leerraum zusammen', () => {
     expect(chordproZuText('DEINE   Treue\n\n  trägt')).toBe('deine treue trägt');
   });

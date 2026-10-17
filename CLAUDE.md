@@ -541,6 +541,11 @@ client`, Kürzel `VITE_KEY`) baut die App als ChurchTools-Erweiterung unter `/cc
 
 - **ChordPro:** zwei Dialekte unterstützen – Standard (`{start_of_verse}`) UND
   SongSelect (`{comment: Vers}`, optionale Akkorde `[(E)]`, Bass-Akkorde `[E/G#]`)
+  - **`{flow: …}`** (#606) ordnet die Teile nach ihrer Überschrift (`teileImFlow` in `utils/chordpro.ts`;
+    Nicht-Genanntes fällt weg, kein Treffer → alles wie im Text; `index` = Stelle im Original für die
+    Abschnitts-Transponierung). Nur das Blatt (`chordPdf`) nutzt den Flow – Liedtext-Vorschau und
+    Abschnitts-Menü bleiben beim Original. **`----`** allein in einer Zeile = Weiterschalt-Punkt
+    (`ChordProSection.umbrueche`), nirgends als Text.
 - **Transponieren:** Original-Tonart aus der .chordpro-Datei, Ziel-Tonart aus dem
   ChurchTools-Arrangement-Feld; manuelles Transponieren nur lokal, kein Zurückschreiben
 - **CCLI:** Lizenznummer 2395145, SongSelect Premium; CCLI-Infos pro Song anzeigen

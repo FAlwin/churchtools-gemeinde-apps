@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChordProInput, type ChordProHandle } from './ChordProInput';
 import { PdfPreview } from './PdfPreview';
 import { Icon } from '@ui/icons/icons';
@@ -6,6 +6,7 @@ import { Spinner } from './Spinner';
 import { useOverlayKeyboardInset } from '@ui/fenster/useOverlayKeyboardInset';
 import styles from './ChordEditor.module.scss';
 import { shiftKey } from '../utils/transpose';
+import { flowEinfuegen, parseChordPro, parseMetadata, teileImFlow } from '../utils/chordpro';
 import { useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 
 interface ChordEditorProps {
@@ -50,10 +51,13 @@ const CHORD_QUALITIES: { tag: string; label: string }[] = [
   { tag: 'aug', label: 'aug' },
 ];
 // Format-Bausteine (echte ChordPro-Direktiven, chordpro.org) mit deutscher Erklärung.
-// `value` = mit Doppelpunkt-Wert. Hinweis: nur comment + title/artist/key/tempo/time wirken in der
-// App-Vorschau; die übrigen sind gültiges ChordPro und werden gespeichert (SongSelect/andere Tools).
-const FORMATS: { tag: string; label: string; value: boolean }[] = [
+// `value` = mit Doppelpunkt-Wert. Hinweis: comment, flow, title/artist/key/tempo/time und `----` wirken in
+// der App-Vorschau; die übrigen sind gültiges ChordPro und werden gespeichert (SongSelect/andere Tools).
+// `art` = Baustein mit eigener Einfüge-Regel statt „an der Cursorstelle" (#606).
+const FORMATS: { tag: string; label: string; value: boolean; art?: 'flow' | 'trenner' }[] = [
   { tag: 'comment', label: 'Abschnitt / Überschrift', value: true },
+  { tag: 'flow', label: 'Ablauf (Reihenfolge der Teile)', value: true, art: 'flow' },
+  { tag: '----', label: 'Weiterschalt-Punkt fürs Pedal', value: false, art: 'trenner' },
   { tag: 'title', label: 'Titel des Lieds', value: true },
   { tag: 'subtitle', label: 'Untertitel', value: true },
   { tag: 'artist', label: 'Interpret / Künstler', value: true },
@@ -104,6 +108,11 @@ export function ChordEditor({
   // Ohne Versionsname-Feld (Original-Notenblatt) darf der fehlende Name nicht sperren – sonst ist
   // Speichern dauerhaft grau. Im Browser gefunden (04.09.2026), 1034 grüne Tests hatten den Editor gemockt.
   const canSave = (!mitVersionsname || name.trim().length > 0) && text.trim().length > 0;
+  // Namen in der Flow-Zeile, zu denen es keinen Teil gibt (#606) – sonst fehlt still ein Teil.
+  const flowUnbekannt = useMemo(
+    () => teileImFlow(parseChordPro(text), parseMetadata(text).flow).unbekannt,
+    [text],
+  );
   const transposeLabel = semitones === 0 ? '±0' : semitones > 0 ? `+${semitones}` : `${semitones}`;
   // „Beide" gibt es nur auf breiten Fenstern; sonst als „Editor" behandeln.
   const effView: View = !wide && view === 'both' ? 'editor' : view;
@@ -153,10 +162,21 @@ export function ChordEditor({
     buildingRef.current = prev + suffix;
     rememberRecent(buildingRef.current, prev);
   }
-  function pickFormat(f: { tag: string; value: boolean }) {
+  function pickFormat(f: (typeof FORMATS)[number]) {
+    setOpenMenu(null);
+    if (f.art === 'trenner') {
+      editorRef.current?.insert('----', { block: true });
+      return;
+    }
+    if (f.art === 'flow') {
+      // Nach den allgemeinen Angaben, vor dem ersten Teil – vorbefüllt; gibt es schon eine, dorthin.
+      const ziel = flowEinfuegen(text);
+      if (ziel.vorhanden) editorRef.current?.springeZu(ziel.pos);
+      else editorRef.current?.einfuegenAn(ziel.pos, `${ziel.zeile}\n`, ziel.zeile.length - 1);
+      return;
+    }
     if (f.value) editorRef.current?.insert(`{${f.tag}: }`, { block: true, caretBack: 1 });
     else editorRef.current?.insert(`{${f.tag}}`, { block: true });
-    setOpenMenu(null);
   }
 
   return (
@@ -337,6 +357,15 @@ export function ChordEditor({
           </div>
         )}
       </div>
+
+      {flowUnbekannt.length > 0 && (
+        <p className={styles.flowHinweis} role="status">
+          Im Ablauf steht {flowUnbekannt.length === 1 ? 'ein Name' : 'Namen'}, zu{' '}
+          {flowUnbekannt.length === 1 ? 'dem' : 'denen'} es keinen Teil gibt:{' '}
+          <strong>{flowUnbekannt.join(', ')}</strong>. Die Namen müssen wie die Überschriften der
+          Teile heißen.
+        </p>
+      )}
 
       <div className={styles.split}>
         {/* Editor bleibt immer gemountet (Verlauf/Cursor erhalten), nur ausgeblendet. */}

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import { jsPDF } from 'jspdf';
 import { chartHead, generateChordPdf, generateSetlistPdfWithOwners } from './chordPdf';
 import type { SetlistSong } from '@shared/types/index';
 
@@ -207,5 +208,70 @@ describe('chartHead – Titel/Autor des Blatts', () => {
     const version = { ...original, chordpro: '{title: Lied – Akustik}\n[C]Text\n' };
     expect(chartHead(original).title).toBe('Lied lang');
     expect(chartHead(version).title).toBe('Lied – Akustik');
+  });
+});
+
+/** Was aufs Blatt geschrieben wird – in der Reihenfolge des Schreibens. */
+function geschrieben(
+  lied: SetlistSong,
+  opts: Parameters<typeof generateChordPdf>[1] = {},
+): string[] {
+  const d = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+  const texte: string[] = [];
+  const echt = d.text.bind(d);
+  vi.spyOn(d, 'text').mockImplementation(((t: string | string[], ...rest: unknown[]) => {
+    texte.push(...(Array.isArray(t) ? t : [t]));
+    return (echt as (...a: unknown[]) => jsPDF)(t, ...rest);
+  }) as typeof d.text);
+  generateChordPdf(lied, opts, d);
+  return texte;
+}
+
+describe('generateChordPdf – Flow und Weiterschalt-Punkt (#606)', () => {
+  const FLOW = song({
+    chordpro: [
+      '{flow: Intro, Vers 1, Chorus, Vers 2, Chorus}',
+      '{comment: Intro}',
+      '[C]Auftakt',
+      '{comment: Vers 1}',
+      '[C]Erster Vers',
+      '----',
+      '[C]Zweite Hälfte',
+      '{comment: Vers 2}',
+      '[C]Zweiter Vers',
+      '{comment: Chorus}',
+      '[C]Refrain',
+      '{comment: Bridge}',
+      '[C]Brücke',
+    ].join('\n'),
+  });
+
+  it('setzt die Teile in Flow-Reihenfolge, Wiederholung voll, Nicht-Genanntes weg', () => {
+    const labels = geschrieben(FLOW).filter((t) => /^(INTRO|VERS \d|CHORUS|BRIDGE)$/.test(t));
+    expect(labels).toEqual(['INTRO', 'VERS 1', 'CHORUS', 'VERS 2', 'CHORUS']);
+  });
+
+  it('der Flow steht als Wegweiser im Kopf', () => {
+    expect(geschrieben(FLOW)).toContain('Ablauf: Intro – Vers 1 – Chorus – Vers 2 – Chorus');
+  });
+
+  it('---- steht nirgends auf dem Blatt', () => {
+    const texte = geschrieben(FLOW);
+    expect(texte.some((t) => t.includes('----'))).toBe(false);
+    expect(texte.join(' ')).toContain('Zweite');
+  });
+
+  it('ohne Flow: kein Wegweiser, Reihenfolge wie im Text', () => {
+    const texte = geschrieben(song({ chordpro: '{comment: B}\nb\n{comment: A}\na' }));
+    expect(texte.some((t) => t.startsWith('Ablauf:'))).toBe(false);
+    expect(texte.filter((t) => t === 'A' || t === 'B')).toEqual(['B', 'A']);
+  });
+
+  it('die Abschnitts-Transponierung folgt dem Teil – auch bei der Wiederholung', () => {
+    // Chorus ist im Original Teil 3 → +2 Halbtöne: C wird D, und zwar BEIDE Male.
+    const akkorde = geschrieben(FLOW, { sectionSemitones: { 3: 2 } }).filter((t) =>
+      /^[A-G]$/.test(t),
+    );
+    expect(akkorde).toEqual(['C', 'C', 'C', 'D', 'C', 'D']);
   });
 });

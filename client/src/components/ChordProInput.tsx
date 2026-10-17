@@ -20,6 +20,10 @@ export interface ChordProHandle {
   /** Hängt `suffix` an den zuletzt gesetzten Akkord an (steht der Cursor direkt hinter `[…]`,
    *  wird der Zusatz VOR das `]` eingefügt, z. B. `[C]` + "m7" → `[Cm7]`). Sonst ohne Wirkung. */
   appendChord: (suffix: string) => void;
+  /** Fügt `text` an der Stelle `pos` ein und setzt den Cursor auf `pos + caret` (#606: Flow-Zeile). */
+  einfuegenAn: (pos: number, text: string, caret: number) => void;
+  /** Setzt den Cursor an `pos` (z. B. auf eine schon vorhandene Flow-Zeile). */
+  springeZu: (pos: number) => void;
   undo: () => void;
   redo: () => void;
 }
@@ -184,6 +188,26 @@ export const ChordProInput = forwardRef<ChordProHandle, ChordProInputProps>(func
       view.dispatch({
         changes: { from: insertPos, insert: suffix },
         selection: { anchor: sel.from + suffix.length },
+      });
+      view.focus();
+    },
+    einfuegenAn(pos, text, caret) {
+      const view = viewRef.current;
+      if (!view) return;
+      const an = Math.max(0, Math.min(pos, view.state.doc.length));
+      view.dispatch({
+        changes: { from: an, insert: text },
+        selection: { anchor: an + caret },
+        scrollIntoView: true,
+      });
+      view.focus();
+    },
+    springeZu(pos) {
+      const view = viewRef.current;
+      if (!view) return;
+      view.dispatch({
+        selection: { anchor: Math.max(0, Math.min(pos, view.state.doc.length)) },
+        scrollIntoView: true,
       });
       view.focus();
     },

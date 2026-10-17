@@ -81,6 +81,13 @@ export function parseChordPro(text: string): ChordProSection[] {
       continue;
     }
 
+    // Weiterschalt-Punkt (#606, wie bei OnSong): `----` allein in einer Zeile. Nicht als Text zeigen,
+    // nur die Stelle merken – vor der NÄCHSTEN Zeile dieses Teils.
+    if (TRENNER.test(ln)) {
+      if (current) (current.umbrueche ??= []).push(current.lines.length);
+      continue;
+    }
+
     // Sonstige Metadaten-Direktiven ({title}, {key}, {tempo} …) überspringen
     if (/^\{.*\}$/.test(ln)) continue;
 
@@ -98,15 +105,116 @@ export function parseChordPro(text: string): ChordProSection[] {
     current.lines.push(ln);
   }
 
-  // Nachlaufende Leerzeilen je Abschnitt entfernen; leere Abschnitte verwerfen
+  // Nachlaufende Leerzeilen je Abschnitt entfernen; leere Abschnitte verwerfen. Ein Trenner ganz am
+  // Anfang oder Ende eines Teils trennt nichts – er fällt weg.
   return sections
     .map((s) => {
       const ls = [...s.lines];
       while (ls.length && !ls[ls.length - 1]) ls.pop();
-      return { ...s, lines: ls };
+      const umbrueche = [...new Set(s.umbrueche ?? [])].filter((i) => i > 0 && i < ls.length);
+      const { umbrueche: _alt, ...rest } = s;
+      return umbrueche.length > 0 ? { ...rest, lines: ls, umbrueche } : { ...rest, lines: ls };
     })
     .filter((s) => s.lines.length > 0);
 }
+
+/** `----` (vier oder mehr Bindestriche) allein in einer Zeile = Weiterschalt-Punkt (#606). */
+const TRENNER = /^-{4,}$/;
+
+/** Ein Song-Teil in Flow-Reihenfolge – mit seiner Stelle im Original (für die Abschnitts-Transponierung). */
+export type FlowTeil = ChordProSection & { index: number };
+
+/** Namen vergleichen: Groß-/Kleinschreibung und mehrfache Leerzeichen zählen nicht. */
+function flowName(s: string): string {
+  return s.toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+/** Die Einträge einer Flow-Zeile („Intro, Vers 1, Chorus 1") – leere fallen weg. */
+export function flowEintraege(flow: string | undefined): string[] {
+  return (flow ?? '')
+    .split(',')
+    .map((e) => e.trim())
+    .filter(Boolean);
+}
+
+/**
+ * **Die Teile in der Reihenfolge der Flow-Zeile** (`{flow: …}`, #606, Alwin + Musik-Bereichsleiter).
+ *
+ * Zugeordnet wird über die Abschnitts-Überschrift (bei SongSelect `{comment: Vers 1}`). Entscheidungen
+ * (17.10.2026): Teile, die im Flow nicht vorkommen, fallen **weg** (wie bei OnSong); wiederholte Teile
+ * stehen jeweils voll da. Namen, zu denen es keinen Teil gibt, kommen in `unbekannt` (der Editor zeigt
+ * sie an).
+ *
+ * Ohne Flow – oder wenn KEIN Name passt – bleibt alles wie im Text: Ein vertippter Flow darf das Blatt
+ * nicht leer machen.
+ *
+ * `index` ist die Stelle im Original: Daran hängt die Abschnitts-Transponierung (`sectionSemitones`),
+ * die sich ein Teil also auch bei Wiederholung merkt.
+ */
+export function teileImFlow(
+  sections: ChordProSection[],
+  flow: string | undefined,
+): { teile: FlowTeil[]; unbekannt: string[]; flow: string[] } {
+  const alle = sections.map((s, index) => ({ ...s, index }));
+  const eintraege = flowEintraege(flow);
+  if (eintraege.length === 0) return { teile: alle, unbekannt: [], flow: [] };
+  const nachName = new Map<string, FlowTeil>();
+  for (const t of alle) {
+    const n = flowName(t.label);
+    if (n && !nachName.has(n)) nachName.set(n, t);
+  }
+  const teile: FlowTeil[] = [];
+  const unbekannt: string[] = [];
+  const gefunden: string[] = [];
+  for (const e of eintraege) {
+    const t = nachName.get(flowName(e));
+    if (t) {
+      teile.push(t);
+      gefunden.push(e);
+    } else if (!unbekannt.includes(e)) unbekannt.push(e);
+  }
+  if (teile.length === 0) return { teile: alle, unbekannt, flow: [] };
+  return { teile, unbekannt, flow: gefunden };
+}
+
+/**
+ * **Wo der Editor die Flow-Zeile einsetzt** (#606: „nach den allgemeinen Infos und vor den
+ * Bestandteilen"): vor dem ersten Song-Teil bzw. der ersten Liedzeile. Vorbefüllt mit den vorhandenen
+ * Teilen in ihrer Reihenfolge – umstellen und Wiederholungen eintragen geht dann schneller als tippen.
+ * Gibt es schon eine Flow-Zeile, liefert die Funktion deren Stelle (`vorhanden`), damit der Editor dorthin
+ * springt statt eine zweite einzufügen.
+ */
+export function flowEinfuegen(
+  text: string,
+): { vorhanden: true; pos: number } | { vorhanden: false; pos: number; zeile: string } {
+  const zeilen = text.split('\n');
+  let pos = 0;
+  let ziel = -1;
+  for (const raw of zeilen) {
+    const ln = raw.trim();
+    if (/^\{flow[:\s]/i.test(ln)) return { vorhanden: true, pos };
+    pos += raw.length + 1;
+  }
+  pos = 0;
+  for (const raw of zeilen) {
+    const ln = raw.trim();
+    const istKopf = ln === '' || (/^\{.*\}$/.test(ln) && !ABSCHNITT.test(ln));
+    if (!istKopf) {
+      ziel = pos;
+      break;
+    }
+    pos += raw.length + 1;
+  }
+  if (ziel === -1) ziel = text.length;
+  const namen = parseChordPro(text)
+    .map((s) => s.label.trim())
+    .filter(Boolean);
+  return { vorhanden: false, pos: ziel, zeile: `{flow: ${namen.join(', ')}}` };
+}
+
+/** Direktiven, die einen Song-Teil beginnen (beide Dialekte). */
+const ABSCHNITT =
+  /^\{(start_of_\w+|comment|verse|chorus|bridge|pre[-_]?chorus|intro|outro|tag)(?:[:\s].*)?\}$/i;
 
 /** Zerlegt eine einzelne Zeile in Akkord-/Text-Paare. */
 export function parseLine(line: string): ChordPair[] {
@@ -128,7 +236,7 @@ export function parseMetadata(text: string): Record<string, string> {
   for (const raw of text.split('\n')) {
     const m = raw
       .trim()
-      .match(/^\{(title|artist|key|tempo|time|ccli|composer|copyright)[:\s]+(.+?)\}$/i);
+      .match(/^\{(title|artist|key|tempo|time|ccli|composer|copyright|flow)[:\s]+(.+?)\}$/i);
     if (m) meta[m[1].toLowerCase()] = m[2].trim();
   }
   return meta;

@@ -21,6 +21,7 @@ import type { CtArrangementFile } from './typen';
 export function chordproZuLesetext(chordpro: string): string {
   return chordpro
     .replace(/\{[^}]*\}/g, ' ') // Direktiven samt Inhalt
+    .replace(/^\s*-{4,}\s*$/gm, ' ') // Weiterschalt-Punkte `----` (#606) sind kein Liedtext
     .replace(/\[[^\]]*\]/g, '') // Akkorde ERSATZLOS – sonst zerfallen Wörter
     .replace(/\s+/g, ' ')
     .trim();

@@ -7,6 +7,21 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Musik-App)
+
+- **Flow-Zeile `{flow: …}`** (#606, Rückmeldung des Musik-Bereichsleiters): Steht im ChordPro z. B.
+  `{flow: Intro, Vers 1, Chorus 1, Vers 2, Chorus 1, Bridge, Chorus 1, Outro}`, zeigt das Blatt die Teile in
+  genau dieser Reihenfolge – Wiederholungen voll, nicht genannte Teile fallen weg. Die Namen sind die
+  Überschriften der Teile (Groß-/Kleinschreibung egal). Der Ablauf steht als Wegweiser im Kopf des Blatts.
+  Gilt beim Blättern, im Teilen-PDF und in der Editor-Vorschau. Eine Abschnitts-Transponierung bleibt am
+  Teil, auch wenn er wiederkehrt. Passt kein einziger Name, bleibt das Blatt wie im Text.
+- **Editor → Format:** „Ablauf (Reihenfolge der Teile)“ setzt die Flow-Zeile nach den allgemeinen Angaben
+  vor den ersten Teil, vorbefüllt mit den vorhandenen Teilen (gibt es schon eine, springt der Cursor
+  dorthin). Namen ohne passenden Teil nennt ein Hinweis unter der Werkzeugleiste.
+- **Weiterschalt-Punkt `----`** (#606): vier Bindestriche allein in einer Zeile (Editor → Format →
+  „Weiterschalt-Punkt fürs Pedal“). Auf dem Blatt, in der Liedtext-Vorschau und in der Suche erscheint er
+  nicht; die Stelle wird für das Weiterschalten Teil für Teil gemerkt (#609).
+
 ### Behoben (Anmeldungen, #602)
 
 - **Anmeldung mit mehreren Personen stürzte in ChurchTools ab** (500 `updatePerson … null`) – gefunden beim echten

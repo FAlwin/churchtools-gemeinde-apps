@@ -4,12 +4,15 @@ import * as pdfjsLib from 'pdfjs-dist';
 import '../pdfSetup';
 import { type ChordPdfSong, generateChordPdf } from '../utils/chordPdf';
 import { parseMetadata } from '../utils/chordpro';
+import { wirksamerMassstab } from '../utils/leinwand';
 import styles from './PdfPreview.module.scss';
 
 interface PdfPreviewProps {
   title: string;
   text: string;
   semitones: number;
+  /** Scroll-Modus (#607): die Vorschau zeigt die lange Seite, wie sie im Liederheft erscheint. */
+  rolle?: boolean;
 }
 
 const MAX_PAGES = 8; // Sicherheitsdeckel – mehr Seiten hat kein Lied
@@ -18,7 +21,7 @@ const MAX_PAGES = 8; // Sicherheitsdeckel – mehr Seiten hat kein Lied
  *  Bühnen-/Druck-Ansicht und rendert ALLE Seiten untereinander (auf die Panel-Breite eingepasst,
  *  Retina-scharf). Entkoppelt (debounced), damit das Tippen flüssig bleibt; passt sich bei
  *  Größenänderung des Panels automatisch neu ein. */
-export function PdfPreview({ title, text, semitones }: PdfPreviewProps) {
+export function PdfPreview({ title, text, semitones, rolle = false }: PdfPreviewProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   // Erhöht sich bei Panel-Resize → Seiten neu einpassen (sonst bleibt eine beim ersten,
   // evtl. noch winzigen Layout gerenderte Mini-Vorschau stehen).
@@ -64,7 +67,9 @@ export function PdfPreview({ title, text, semitones }: PdfPreviewProps) {
 
       let bytes: ArrayBuffer;
       try {
-        bytes = generateChordPdf(song, { semitones, fontPt: 11, cols: 1 }).output('arraybuffer');
+        bytes = generateChordPdf(song, { semitones, fontPt: 11, cols: 1, rolle }).output(
+          'arraybuffer',
+        );
       } catch {
         return; // ungültiger Zwischenstand beim Tippen – nächster Lauf rendert neu
       }
@@ -81,13 +86,15 @@ export function PdfPreview({ title, text, semitones }: PdfPreviewProps) {
           const page = await pdf.getPage(i);
           const base = page.getViewport({ scale: 1 });
           const scale = width / base.width;
-          const vp = page.getViewport({ scale: scale * dpr });
+          // Dieselbe Obergrenze wie im Liederheft – eine lange Rolle bliebe sonst auf iOS leer.
+          const vp = page.getViewport({ scale: wirksamerMassstab(base, scale * dpr) });
           const canvas = document.createElement('canvas');
           canvas.className = styles.canvas;
           canvas.width = Math.ceil(vp.width);
           canvas.height = Math.ceil(vp.height);
-          canvas.style.width = `${Math.round(vp.width / dpr)}px`;
-          canvas.style.height = `${Math.round(vp.height / dpr)}px`;
+          // Angezeigt wird immer in Panelbreite – auch wenn die Leinwand gedeckelt kleiner gezeichnet ist.
+          canvas.style.width = `${Math.round(width)}px`;
+          canvas.style.height = `${Math.round((width * base.height) / base.width)}px`;
           const ctx = canvas.getContext('2d');
           if (!ctx) return;
           await page.render({ canvasContext: ctx, viewport: vp }).promise;
@@ -105,7 +112,7 @@ export function PdfPreview({ title, text, semitones }: PdfPreviewProps) {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [title, text, semitones, fitTick]);
+  }, [title, text, semitones, rolle, fitTick]);
 
   return <div ref={wrapRef} className={styles.wrap} />;
 }

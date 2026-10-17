@@ -14,10 +14,16 @@ export interface StreamOwner {
   docType?: 'pdf' | 'image';
 }
 
-/** Eine gerenderte Akkord-Seite mit ihrer Version (Reihenfolge = Seite im Lied). */
+/** Eine gerenderte Akkord-Seite mit ihrer Version und ihrer Seite im Lied (aus dem Blatt). */
 export interface ChordPage<T> {
   canvas: T;
   versionKey: string;
+  /**
+   * Die Seite, wie das Blatt sie zählt (`SetlistPageOwner.localPage`) – NICHT neu durchgezählt. Die Rolle
+   * des Scroll-Modus ist Seite `ROLLEN_SEITE` (#607); durchgezählt wäre sie Seite 0 und hätte die
+   * Anmerkungen der ersten A4-Seite bekommen.
+   */
+  localPage: number;
 }
 
 interface ComposeInput<T> {
@@ -75,7 +81,7 @@ export function composeStream<T>({ songs, settings, chordBySong, docPages }: Com
     // Ein gewähltes, aber nicht ladbares Dokument → Rückfall auf die Akkorde, und das wird gemeldet.
     if (doc) fellBackToChords.push(song.id);
 
-    for (const [localPage, { canvas, versionKey }] of (chordBySong.get(si) ?? []).entries()) {
+    for (const { canvas, versionKey, localPage } of chordBySong.get(si) ?? []) {
       pages.push(canvas);
       owners.push({
         songIdx: si,

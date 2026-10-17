@@ -4,7 +4,12 @@ import type { SetlistPageOwner } from '../utils/chordPdf';
 import { ladeDokument } from '../services/fileDownload';
 import { dokumentSeiten, renderPdfToCanvases } from '../utils/dokumentSeiten';
 import type { SongSettings } from '../utils/chartSettings';
-import { composeStream, docPagesToKeep, type StreamOwner } from '../utils/streamCompose';
+import {
+  composeStream,
+  docPagesToKeep,
+  type ChordPage,
+  type StreamOwner,
+} from '../utils/streamCompose';
 import { useLatestRef } from './useLatestRef';
 
 interface Args {
@@ -66,12 +71,12 @@ export function useSetlistPages({ chordPdfData, chordOwners, songs, settings, on
       // 1) Akkord-Seiten der kombinierten PDF rendern und je Lied gruppieren (Reihenfolge = localPage).
       const chordCanvases = await renderPdfToCanvases(chordPdfData.slice(0));
       if (cancelled) return;
-      const chordBySong = new Map<number, { canvas: HTMLCanvasElement; versionKey: string }[]>();
+      const chordBySong = new Map<number, ChordPage<HTMLCanvasElement>[]>();
       liveRef.current.chordOwners.forEach((o, i) => {
         const c = chordCanvases[i];
         if (!c) return;
         const list = chordBySong.get(o.songIdx) ?? [];
-        list.push({ canvas: c, versionKey: o.versionKey });
+        list.push({ canvas: c, versionKey: o.versionKey, localPage: o.localPage });
         chordBySong.set(o.songIdx, list);
       });
 

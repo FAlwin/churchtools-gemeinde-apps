@@ -492,9 +492,9 @@ einer Gemeinde ohne SongSelect Premium (07.10.2026).
 **Das brauchst du:** Ein iPad und ein iPhone (oder eins von beiden), einen Gottesdienst mit mehreren
 Liedern, davon eins mit Anmerkungen. Wenn vorhanden: ein Bluetooth-Pedal (AirTurn, PageFlip …).
 
-**Das muss passieren:** Mit **Mehr → Liedansicht: Scrollen** stehen die Lieder untereinander, jede Seite
-so breit wie der Bildschirm – quer am iPad **eine** Seite, nicht zwei. Zwischen den Seiten keine graue
-Lücke. Die Anmerkungen stehen an derselben Stelle wie beim Blättern. Ein Pedal-Tritt scrollt etwa ⅔
+**Das muss passieren:** Mit **Mehr → Liedansicht: Scrollen** stehen die Lieder untereinander, jedes Lied
+als **eine lange Seite** so breit wie der Bildschirm – quer am iPad **eine**, nicht zwei. Keine Lücken: weder
+am Ende einer früheren A4-Seite noch zwischen Outro und CCLI-Angabe (#607). Die Anmerkungen stehen an derselben Stelle wie beim Blättern. Ein Pedal-Tritt scrollt etwa ⅔
 Bildschirm weiter, eine blaue gestrichelte Linie zeigt kurz, wo der Bildschirm vorher endete. Gedrückt
 halten löst keinen Dauerlauf aus. Ein Tipp aufs Blatt blendet die Leisten aus und wieder ein. Die
 Einstellung gilt nur auf diesem Gerät.
@@ -506,8 +506,9 @@ Einstellung gilt nur auf diesem Gerät.
    mit dem anderen Pedal (↑ / Umschalt+Leertaste).
 4. Einmal aufs Blatt tippen → Leisten weg; nochmal → Leisten da.
 5. Einen Lied-Punkt unten antippen → dieses Lied steht oben.
-6. Anmerken (Stift): Die sichtbare Seite öffnet sich **einzeln** (quer: nicht zwei nebeneinander). Etwas
-   malen, **Anmerken beenden** → man steht wieder an derselben Stelle, die Anmerkung ist zu sehen.
+6. Ein Lied, das beim Blättern zwei Seiten hat: Beim Scrollen läuft es ohne Lücke durch. „Anmerken" gibt
+   es im Scroll-Modus noch nicht (kommt mit #608). Ein Lied bearbeiten: Die Vorschau zeigt ebenfalls die
+   lange Seite.
 7. Das iPad drehen: Hoch- und Querformat zeigen jeweils eine Seite in voller Breite.
 8. **Liedansicht: Blättern** wählen → alles wie bisher. Auf einem zweiten Gerät bleibt die eigene Wahl.
 
@@ -517,9 +518,10 @@ Einstellung gilt nur auf diesem Gerät.
 - **Betrifft:** `client/src/components/ScrollDeck.tsx`, `client/src/pages/ChordChart.tsx`, `client/src/utils/pedalTasten.ts`, `client/src/hooks/useChartNavigation.ts`, `client/src/components/PageDeck.tsx`, `client/src/utils/devicePrefs.ts`, `client/src/pages/Settings.tsx`
 - **Automatisiert:** weitgehend – `e2e/chart-scrollen.spec.ts` (Seiten nahtlos und voll breit, Pedal ⅔,
   Kopfzeile folgt der Mitte, Tipp, Lied-Punkt, Fußpfeil, Malen einzeln und zurück an dieselbe Stelle, quer
-  eine Seite), `pedalTasten.test.ts`, `ScrollDeck.test.tsx`, `useChartNavigation.test.ts`. Von Hand bleiben
+  eine Seite, je Lied eine Rolle), `chordPdf.test.ts` (Rolle), `pedalTasten.test.ts`, `ScrollDeck.test.tsx`,
+  `useChartNavigation.test.ts`. Von Hand bleiben
   ein echtes Pedal, das Wischen mit dem Finger und das Drehen
-- **Historie:** #551 (ChurchTools-Dev-Stammtisch, 14.10.2026)
+- **Historie:** #551 (ChurchTools-Dev-Stammtisch, 14.10.2026), #607 (eine lange Seite je Lied, 17.10.2026)
 
 </details>
 

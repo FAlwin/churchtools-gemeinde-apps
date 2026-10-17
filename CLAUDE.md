@@ -451,12 +451,18 @@ speichern + `restoreVisibleZoom`), `useKeyboardInsets` (iOS-Tastatur-Hub), `useS
 Touch-Regeln); `composePane` bleibt bewusst in PageDeck.
 
 **Scroll-Modus (#551, 14.10.2026):** Mehr → Liedansicht: **Blättern / Scrollen**, je Gerät
-(`devicePrefs.getLiedansicht`, `worship:liedansicht`). Scrollen zeigt **dieselben Seiten** untereinander,
-jede in voller Breite, nahtlos (`components/ScrollDeck.tsx`) – nur zum Lesen: Anmerkungen werden mitgezeichnet,
-nicht umgerechnet; welche eigene Ebene gilt, entscheidet für Blättern UND Scrollen `pageKeys.eigenerSchluessel`.
+(`devicePrefs.getLiedansicht`, `worship:liedansicht`). Scrollen zeigt die Seiten untereinander, jede in voller
+Breite, nahtlos (`components/ScrollDeck.tsx`). **Seit #607 ist jedes Lied dort EINE lange Seite** („Rolle“:
+`generateChordPdf(…, { rolle: true })`, eine Spalte, kein Umbruch, CCLI direkt unter dem letzten Teil; Höhe per
+Probesatz `rollenHoehe`, 120 mm bis 5 m). Die Rolle hat **eigene Anmerkungen** als Seite `ROLLEN_SEITE` (1000)
+derselben Ebene (`@shared/keys`) – keine neue Schlüssel-Grammatik, Team-Notizen/Umzüge greifen mit. Achtung:
+`composeStream` übernimmt `localPage` aus dem Blatt (nicht neu zählen!). Leinwand-Deckel für iOS
+`utils/leinwand.ts`. Hochgeladene PDFs bleiben Seiten. Die Editor-Vorschau folgt der Liedansicht. Welche
+eigene Ebene gilt, entscheidet für Blättern UND Scrollen `pageKeys.eigenerSchluessel`.
 Leinwände nur in Bildschirmnähe (IntersectionObserver), sonst freigegeben. Die **Seite in der Bildmitte** ist
-die aktive (Kopfzeile, Lied-Punkte). **Malen:** Stift öffnet die sichtbare Seite in `PageDeck` mit `einzeln`
-(auch quer nur eine Seite), danach zurück an dieselbe Stelle (`ScrollPosition` in `utils/scrollPosition.ts`).
+die aktive (Kopfzeile, Lied-Punkte). **Malen:** bis #608 (direkt auf der Rolle, zwei Finger scrollen) gibt es
+im Scroll-Modus kein „Anmerken" (`malenAus` → `verfuegbareWerkzeuge`). Die Position (`ScrollPosition` in
+`utils/scrollPosition.ts`) überdauert einen Neuaufbau der Seiten.
 Ein Tipp aufs Blatt = Leisten aus/ein. **Pedal-Tasten** für beide Modi stehen EINMAL in `utils/pedalTasten.ts`
 (→/↓/Bild↓/Leertaste weiter, ←/↑/Bild↑/Umschalt+Leertaste zurück; nicht bei gedrückt gehaltener Taste, mit
 Strg/⌘/Alt, in Eingaben oder Leertaste auf einem Knopf); im Scroll-Modus scrollt ein Tritt ⅔ Bildschirm

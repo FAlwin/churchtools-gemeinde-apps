@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
 import { jsPDF } from 'jspdf';
-import { chartHead, generateChordPdf, generateSetlistPdfWithOwners } from './chordPdf';
+import { chartHead, generateChordPdf, generateSetlistPdfWithOwners, rollenHoehe } from './chordPdf';
+import { ROLLEN_SEITE } from '@shared/keys/index';
 import type { SetlistSong } from '@shared/types/index';
 
 /**
@@ -273,5 +274,76 @@ describe('generateChordPdf – Flow und Weiterschalt-Punkt (#606)', () => {
       /^[A-G]$/.test(t),
     );
     expect(akkorde).toEqual(['C', 'C', 'C', 'D', 'C', 'D']);
+  });
+});
+
+/** Höhe der Seite `nr` (1-basiert) in mm. */
+function hoehe(d: jsPDF, nr = 1): number {
+  d.setPage(nr);
+  return d.internal.pageSize.getHeight();
+}
+
+describe('generateChordPdf – Rolle für den Scroll-Modus (#607)', () => {
+  it('ein langes Lied wird EINE Seite, so hoch wie sein Inhalt', () => {
+    const lang = longSong(150);
+    const a4 = generateChordPdf(lang);
+    const rolle = generateChordPdf(lang, { rolle: true });
+    expect(a4.getNumberOfPages()).toBeGreaterThan(1);
+    expect(rolle.getNumberOfPages()).toBe(1);
+    expect(hoehe(rolle)).toBeGreaterThan(297);
+    // Kürzer als die aneinandergereihten A4-Seiten: Die Lücken am Seitenende fallen weg.
+    expect(hoehe(rolle)).toBeLessThan(a4.getNumberOfPages() * 297);
+    expect(hoehe(rolle)).toBe(rollenHoehe(lang));
+  });
+
+  it('ein kurzes Lied ist kein schmaler Streifen – und keine volle A4-Seite', () => {
+    const h = hoehe(generateChordPdf(SHORT, { rolle: true }));
+    expect(h).toBeGreaterThanOrEqual(120);
+    expect(h).toBeLessThan(297);
+  });
+
+  it('zwei Spalten gibt es auf der Rolle nicht', () => {
+    // Lange Zeilen: In einer halben Spalte brächen sie um, die Rolle würde höher.
+    const zeile =
+      '[C]Eine lange Zeile, die in einer halben Spalte [G]sicher umbricht und weiterläuft';
+    const lang = song({
+      chordpro: `{comment: Vers}\n${Array.from({ length: 40 }, () => zeile).join('\n')}`,
+    });
+    expect(rollenHoehe(lang, { cols: 2 })).toBe(rollenHoehe(lang, { cols: 1 }));
+  });
+
+  it('die CCLI-Angabe steht direkt unter dem letzten Teil – nicht am Ende einer A4-Seite', () => {
+    // Lang genug, dass die Mindesthöhe der Rolle nicht greift.
+    const zeilenText = Array.from({ length: 40 }, (_, i) => `[C]Zeile ${i}`).join('\n');
+    const lied = song({ ccli: '123', chordpro: `{comment: Vers}\n${zeilenText}\n[C]Eine Zeile` });
+    const zeilen: { text: string; y: number }[] = [];
+    const d = generateChordPdf(lied, { rolle: true });
+    const h = hoehe(d);
+    const probe = new jsPDF({ unit: 'mm', format: [210, h] });
+    vi.spyOn(probe, 'text').mockImplementation(((t: string, _x: number, y: number) => {
+      zeilen.push({ text: t, y });
+      return probe;
+    }) as unknown as typeof probe.text);
+    generateChordPdf(lied, { rolle: true }, probe);
+    const ccli = zeilen.find((z) => z.text.startsWith('CCLI'));
+    const text = zeilen.find((z) => z.text.startsWith('Eine'));
+    expect(ccli && text).toBeTruthy();
+    // UNTER der letzten Zeile, aber gleich danach – und die Seite reicht über beides hinaus.
+    expect(ccli!.y).toBeGreaterThan(text!.y);
+    expect(ccli!.y - text!.y).toBeLessThan(15);
+    expect(h).toBeGreaterThan(ccli!.y);
+    expect(h - ccli!.y).toBeLessThan(20);
+  });
+
+  it('Ablauf mit Rolle: eine Seite je Lied, Besitzer auf der Rollen-Seite, A4-Lieder bleiben A4', () => {
+    const lieder = [longSong(60, 'A'), { ...SHORT, id: 2 }];
+    const { doc, owners } = generateSetlistPdfWithOwners(lieder, (s) => ({ rolle: s.id !== 2 }));
+    expect(owners.map((o) => [o.songId, o.localPage])).toEqual([
+      [1, ROLLEN_SEITE],
+      [2, 0],
+    ]);
+    expect(hoehe(doc, 1)).toBe(rollenHoehe(lieder[0]));
+    // Ohne ausdrückliches Format hätte `addPage()` das der ersten Seite genommen – also die Rolle.
+    expect(hoehe(doc, 2)).toBeCloseTo(297, 0);
   });
 });

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { composeStream, docPagesToKeep, type ChordPage } from './streamCompose';
+import { ROLLEN_SEITE } from '@shared/keys/index';
 import { DEFAULT_SETTINGS, type SongSettings } from './chartSettings';
 import type { SetlistSong } from '@shared/types/index';
 
@@ -31,12 +32,12 @@ const chords = (entries: Record<number, string[]>): Map<number, ChordPage<string
   new Map(
     Object.entries(entries).map(([si, names]) => [
       Number(si),
-      names.map((canvas) => ({ canvas, versionKey: 'original' })),
+      names.map((canvas, localPage) => ({ canvas, versionKey: 'original', localPage })),
     ]),
   );
 
 describe('composeStream – Reihenfolge und Besitzer', () => {
-  it('reiht die Akkord-Seiten in Ablauf-Reihenfolge und zählt localPage je Lied neu', () => {
+  it('reiht die Akkord-Seiten in Ablauf-Reihenfolge, localPage je Lied wie im Blatt', () => {
     const r = composeStream({
       songs: [song(10), song(11)],
       settings: settingsOf({}),
@@ -73,7 +74,7 @@ describe('composeStream – Reihenfolge und Besitzer', () => {
     const r = composeStream({
       songs: [song(10)],
       settings: settingsOf({}),
-      chordBySong: new Map([[0, [{ canvas: 'A1', versionKey: 'akustik' }]]]),
+      chordBySong: new Map([[0, [{ canvas: 'A1', versionKey: 'akustik', localPage: 0 }]]]),
       docPages: new Map(),
     });
     expect(r.owners[0].versionKey).toBe('akustik');
@@ -141,5 +142,20 @@ describe('docPagesToKeep – Vorrat begrenzen', () => {
 
   it('ohne gewähltes Dokument bleibt nichts übrig', () => {
     expect([...docPagesToKeep([song(10)], settingsOf({}))]).toEqual([]);
+  });
+});
+
+describe('composeStream – die Rolle des Scroll-Modus (#607)', () => {
+  it('übernimmt die Seitennummer aus dem Blatt, statt neu durchzuzählen', () => {
+    // Durchgezählt wäre die Rolle Seite 0 – und bekäme die Anmerkungen der ersten A4-Seite.
+    const { owners } = composeStream({
+      songs: [song(10)],
+      settings: {},
+      chordBySong: new Map([
+        [0, [{ canvas: 'R', versionKey: 'original', localPage: ROLLEN_SEITE }]],
+      ]),
+      docPages: new Map(),
+    });
+    expect(owners[0].localPage).toBe(ROLLEN_SEITE);
   });
 });

@@ -7,6 +7,7 @@ import { useOverlayKeyboardInset } from '@ui/fenster/useOverlayKeyboardInset';
 import styles from './ChordEditor.module.scss';
 import { shiftKey } from '../utils/transpose';
 import { flowEinfuegen, parseChordPro, parseMetadata, teileImFlow } from '../utils/chordpro';
+import { getLiedansicht } from '../utils/devicePrefs';
 import { useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 
 interface ChordEditorProps {
@@ -103,6 +104,8 @@ export function ChordEditor({
   const [view, setView] = useState<View>('both');
   const wide = useMedienAbfrage('(min-width: 768px)', true);
   const editorRef = useRef<ChordProHandle>(null);
+  // Die Vorschau zeigt das Blatt so, wie es im Liederheft dieses Geräts erscheint (#607).
+  const [rolle] = useState(() => getLiedansicht() === 'scrollen');
   const toolbarRef = useRef<HTMLDivElement>(null);
 
   // Ohne Versionsname-Feld (Original-Notenblatt) darf der fehlende Name nicht sperren – sonst ist
@@ -410,7 +413,7 @@ export function ChordEditor({
                 </button>
               </div>
             </div>
-            <PdfPreview title={songTitle} text={text} semitones={semitones} />
+            <PdfPreview title={songTitle} text={text} semitones={semitones} rolle={rolle} />
           </div>
         )}
       </div>

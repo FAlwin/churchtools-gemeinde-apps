@@ -2,6 +2,7 @@ import { jsPDF } from 'jspdf';
 import { parseChordPro, parseLine, parseMetadata, teileImFlow } from './chordpro';
 import { transposeChord } from './transpose';
 import type { SetlistSong } from '@shared/types/index';
+import { ROLLEN_SEITE } from '@shared/keys/index';
 
 /** Optionen für die PDF-Erzeugung aus ChordPro (Issue: PDF-Export). */
 export interface ChordPdfOptions {
@@ -21,6 +22,17 @@ export interface ChordPdfOptions {
   displayKey?: string;
   /** App-Logo oben rechts (HTMLImageElement oder PNG-DataURL). Optional. */
   logo?: HTMLImageElement | string | null;
+  /**
+   * **Eine lange Seite statt A4** (Scroll-Modus, #607): eine Spalte, kein Seitenumbruch, die Seite ist
+   * so hoch wie der Inhalt, die CCLI-Angabe steht direkt darunter. Keine Lücken mehr am Seitenende und
+   * zwischen Outro und Fußzeile (Rückmeldung Musik-Bereichsleiter, 17.10.2026).
+   */
+  rolle?: boolean;
+}
+
+/** Nur intern: Wohin die Messung der Rolle ihre Endhöhe schreibt. */
+interface Messung {
+  hoehe: number;
 }
 
 const PT_TO_MM = 0.352777;
@@ -74,18 +86,22 @@ export function generateChordPdf(
   song: ChordPdfSong,
   opts: ChordPdfOptions = {},
   doc?: jsPDF,
+  messung?: Messung,
 ): jsPDF {
   const {
     semitones = 0,
-    cols = 1,
+    cols: gewaehlteSpalten = 1,
     fontPt = 11,
     lyricsOnly = false,
     flat = false,
     sectionSemitones,
     displayKey,
     logo,
+    rolle = false,
   } = opts;
-  const d = doc ?? new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+  // Die Rolle hat immer eine Spalte – zwei Spalten auf einer endlos langen Seite ergäben keinen Sinn.
+  const cols = rolle ? 1 : gewaehlteSpalten;
+  const d = doc ?? (rolle ? rollenDokument(rollenHoehe(song, opts)) : neuesA4());
 
   const lyricH = fontPt * PT_TO_MM * 1.18; // Höhe einer Textzeile
   const chordPt = Math.max(8, Math.round(fontPt * 0.95));
@@ -98,7 +114,8 @@ export function generateChordPdf(
   const labelH = labelPt * PT_TO_MM * 1.3 + 2.5;
 
   const colW = (PAGE_W - 2 * MARGIN - (cols - 1) * COL_GAP) / cols;
-  const bottom = PAGE_H - MARGIN;
+  // Die Rolle bricht nie um – ihr „Seitenende" gibt es nicht.
+  const bottom = rolle ? Number.POSITIVE_INFINITY : PAGE_H - MARGIN;
   let col = 0;
   let pageNo = 0; // 0 = erste Seite (mit Titelkopf); darunter beginnen die Spalten tiefer
   let x = MARGIN;
@@ -347,15 +364,53 @@ export function generateChordPdf(
     y += sectionGap;
   });
 
-  // CCLI-Fußzeile (zentriert unten auf der letzten Seite), wenn vorhanden.
+  // CCLI-Fußzeile: auf A4 zentriert unten auf der letzten Seite, auf der Rolle direkt unter dem
+  // letzten Teil (sonst stünde dort wieder die Lücke, die die Rolle vermeiden soll).
+  const inhaltEnde = y - sectionGap; // nach dem letzten Teil steht noch der Abstand zum nächsten
+  const ccliY = rolle ? inhaltEnde + 6 : PAGE_H - 8;
   if (song.ccli) {
     d.setFont('helvetica', 'italic');
     d.setFontSize(8);
     d.setTextColor(...MUTED_COLOR);
-    d.text(`CCLI-Liednummer ${song.ccli}`, PAGE_W / 2, PAGE_H - 8, { align: 'center' });
+    d.text(`CCLI-Liednummer ${song.ccli}`, PAGE_W / 2, ccliY, { align: 'center' });
   }
+  if (messung) messung.hoehe = (song.ccli ? ccliY + 2 : inhaltEnde) + MARGIN;
 
   return d;
+}
+
+function neuesA4(): jsPDF {
+  return new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+}
+
+/** Mindesthöhe der Rolle – ein Lied aus zwei Zeilen soll nicht als schmaler Streifen erscheinen. */
+const ROLLE_MIN_H = 120;
+/**
+ * Höchsthöhe: Das PDF-Format erlaubt höchstens 14 400 Punkte (≈ 5,08 m) je Seitenkante – jsPDF kappt
+ * darüber still. 5 m Liedblatt gibt es nicht; die Grenze steht hier, damit die Probe sie nie reißt.
+ */
+const ROLLE_MAX_H = 5000;
+
+/** Hochkant bleibt hochkant: jsPDF dreht ein Format, das „portrait" heißt, aber breiter als hoch ist. */
+function rollenFormat(hoehe: number): { format: [number, number]; orientation: 'p' | 'l' } {
+  const h = Math.min(ROLLE_MAX_H, Math.max(ROLLE_MIN_H, hoehe));
+  return { format: [PAGE_W, h], orientation: h >= PAGE_W ? 'p' : 'l' };
+}
+
+function rollenDokument(hoehe: number): jsPDF {
+  return new jsPDF({ unit: 'mm', ...rollenFormat(hoehe) });
+}
+
+/**
+ * Wie hoch die Rolle eines Lieds wird (mm). jsPDF braucht die Seitengröße VOR dem Schreiben – also
+ * einmal zur Probe auf eine sehr lange Seite setzen und ablesen, wo der Inhalt endet. Gesetzt wird
+ * dabei mit genau derselben Funktion wie danach; eine zweite Höhenrechnung gibt es bewusst nicht.
+ */
+export function rollenHoehe(song: ChordPdfSong, opts: ChordPdfOptions = {}): number {
+  const probe = new jsPDF({ unit: 'mm', format: [PAGE_W, ROLLE_MAX_H], orientation: 'p' });
+  const messung: Messung = { hoehe: 0 };
+  generateChordPdf(song, { ...opts, rolle: true }, probe, messung);
+  return Math.min(ROLLE_MAX_H, Math.max(ROLLE_MIN_H, Math.ceil(messung.hoehe)));
 }
 
 /** Welches Lied (und welche Seite darin) gehört zu einer Seite der zusammengefassten PDF. */
@@ -376,17 +431,31 @@ export function generateSetlistPdfWithOwners(
   songs: (SetlistSong & { versionKey?: string })[],
   optsFor: (song: SetlistSong) => ChordPdfOptions,
 ): { doc: jsPDF; owners: SetlistPageOwner[] } {
-  const d = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+  let d: jsPDF | null = null;
   const owners: SetlistPageOwner[] = [];
   songs.forEach((song, si) => {
-    if (si > 0) d.addPage();
+    const opts = optsFor(song);
+    // Jede Seite bekommt ihr Format ausdrücklich: `addPage()` ohne Angabe nähme das der ERSTEN Seite –
+    // nach einer Rolle wäre das nächste A4-Blatt sonst so lang wie sie.
+    if (opts.rolle) {
+      const { format, orientation } = rollenFormat(rollenHoehe(song, opts));
+      if (d) d.addPage(format, orientation);
+      else d = new jsPDF({ unit: 'mm', format, orientation });
+    } else if (d) d.addPage('a4', 'p');
+    else d = neuesA4();
     const before = d.getNumberOfPages();
-    generateChordPdf(song, optsFor(song), d);
+    generateChordPdf(song, opts, d);
     const after = d.getNumberOfPages();
     const versionKey = song.versionKey ?? 'original';
     for (let p = 0; p <= after - before; p++) {
-      owners.push({ songIdx: si, songId: song.id, versionKey, localPage: p });
+      // Die Rolle ist eine eigene Seite derselben Ebene – mit eigenen Anmerkungen (#607).
+      owners.push({
+        songIdx: si,
+        songId: song.id,
+        versionKey,
+        localPage: opts.rolle ? ROLLEN_SEITE : p,
+      });
     }
   });
-  return { doc: d, owners };
+  return { doc: d ?? neuesA4(), owners };
 }

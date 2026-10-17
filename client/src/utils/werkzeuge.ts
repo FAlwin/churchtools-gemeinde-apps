@@ -26,6 +26,8 @@ export function verfuegbareWerkzeuge(b: {
   ansehen: boolean;
   gezoomt: boolean;
   teamNotizen: boolean;
+  /** Kein „Anmerken" – im Scroll-Modus, bis das Malen auf der langen Seite da ist (#608). */
+  malenAus?: boolean;
 }): WerkzeugId[] {
   const ids: WerkzeugId[] = [];
   if (!b.zeigtDokument && !b.ansehen) ids.push('aussehen');
@@ -33,7 +35,7 @@ export function verfuegbareWerkzeuge(b: {
   if (!b.ansehen) ids.push('tempo');
   if (b.gezoomt) ids.push('zoom');
   if (b.teamNotizen && !b.zeigtDokument) ids.push('team');
-  if (!b.ansehen) ids.push('anmerken');
+  if (!b.ansehen && !b.malenAus) ids.push('anmerken');
   return ids;
 }
 

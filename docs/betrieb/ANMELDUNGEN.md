@@ -70,6 +70,11 @@ formular:hochladen` (optional `ANMELDUNG_FTP_ORDNER`; `ANMELDUNG_FTP_BENUTZER`, 
 Sekunden. Gäste merken davon nichts. Ein Captcha gibt es bewusst nicht – ohne eigenen Server ließe es sich nicht
 prüfen. Was trotzdem durchkommt, entfernt die Leitung in ChurchTools (später im Reiter Anmeldungen).
 
+**Begrenzte Auswahl** (z. B. Zimmer): Je Option „Wie oft buchbar“ (jede Anmeldung belegt eins) und freiwillig
+„Für wie viele Personen“ (nur ein Hinweis im Formular). Die Erweiterung zählt die Belegung, sobald jemand mit
+Bearbeiten-Recht die Veranstaltung öffnet – erst dann sieht das Formular, was ausgebucht ist. Gäste können die
+Anmeldungen selbst nicht lesen. Ausgebuchte Optionen sind im Formular nicht mehr wählbar.
+
 **Mehrere Personen:** Das Formular meldet jede Person einzeln bei ChurchTools an (eine Anmeldung mit mehreren
 Personen ohne Familienbeziehung lässt ChurchTools abstürzen – gemessen). Beim Hinzufügen einer Person prüft es die
 freien Plätze: Mit Warteliste steht an der Person „Warteliste“, ohne Warteliste lässt sich niemand mehr hinzufügen,

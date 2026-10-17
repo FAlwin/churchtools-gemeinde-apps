@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { einstellungenAlsText } from '@shared/anmeldung/formular';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import { App } from './App';
@@ -437,5 +437,117 @@ describe('A6-5a (#612): Anmelde-Nr. und Betrag nur für Personen mit Platz', () 
     const nr = werte('700');
     expect(nr[0]).toMatch(/^[2-9A-HJKMNP-Z]{6}$/);
     expect(nr).toEqual([nr[0], nr[0], nr[0]]);
+  });
+});
+
+describe('A6-5b (#616): Kontingent je Auswahl', () => {
+  function zimmer(belegtZwei: number, belegtVier = 0) {
+    const e = einstellungen();
+    e.preis.grundpreis = {
+      art: 'auswahl',
+      betragCent: 0,
+      gilt: 'person',
+      auswahlName: 'Zimmer',
+      optionen: [
+        {
+          name: 'Zweibettzimmer',
+          preisCent: 5000,
+          kontingent: 3,
+          belegt: belegtZwei,
+          personenJe: 2,
+        },
+        {
+          name: 'Vierbettzimmer',
+          preisCent: 4000,
+          kontingent: 2,
+          belegt: belegtVier,
+          personenJe: 4,
+        },
+      ],
+    };
+    return e;
+  }
+  const gruppe = (e: ReturnType<typeof zimmer>) => ({
+    status: 200,
+    body: { data: { ...GRUPPE, information: { note: einstellungenAlsText(e), imageUrl: null } } },
+  });
+  const auswahl = () => document.getElementById('af-option') as HTMLSelectElement;
+
+  it('ausgebuchte Option ist nicht wählbar („– ausgebucht“), vorausgewählt die erste freie', async () => {
+    antworten['GET /api/publicgroups/66'] = [gruppe(zimmer(3))];
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Gemeindeessen' });
+    const [zwei, vier] = [...auswahl().options];
+    expect([zwei.disabled, zwei.textContent]).toEqual([
+      true,
+      expect.stringMatching(/– ausgebucht$/),
+    ]);
+    expect(vier.disabled).toBe(false);
+    expect(auswahl().value).toBe('1');
+  });
+
+  it('mehr Personen als vorgesehen → Hinweis, aber kein Hindernis', async () => {
+    antworten['GET /api/publicgroups/66'] = [gruppe(zimmer(0))];
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Gemeindeessen' });
+    expect(screen.queryByText(/Passt das\?/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '+ Weitere Person' }));
+    fireEvent.click(await screen.findByRole('button', { name: '+ Weitere Person' }));
+    await waitFor(() => expect(document.getElementById('af-personen.2.pname-vor')).toBeTruthy());
+    expect(
+      screen.getByText(/„Zweibettzimmer“ ist für 2 Personen gedacht – ihr meldet 3 an/),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Verbindlich anmelden' })).toHaveProperty(
+      'disabled',
+      false,
+    );
+  });
+
+  it('beim Absenden inzwischen ausgebucht (frisch gelesen) → Meldung, nichts geschickt', async () => {
+    antworten['GET /api/publicgroups/66'] = [gruppe(zimmer(2)), gruppe(zimmer(3))];
+    await ausfuellenUndAbschicken();
+    expect((await screen.findByRole('alert')).textContent).toMatch(
+      /„Zweibettzimmer“ ist inzwischen ausgebucht/,
+    );
+    expect(geschickt()).toHaveLength(0);
+    expect(aufrufe.some((a) => a.pfad.endsWith('/token'))).toBe(false);
+  });
+
+  it('alles ausgebucht → Hinweis, Absenden schickt nichts', async () => {
+    antworten['GET /api/publicgroups/66'] = [gruppe(zimmer(3, 2))];
+    await ausfuellenUndAbschicken();
+    expect(screen.getByText(/Alle Möglichkeiten sind ausgebucht/)).toBeTruthy();
+    await act(async () => {});
+    // Das Formular versucht es gar nicht erst – nur das Laden hat ChurchTools gefragt.
+    expect(
+      aufrufe.filter((a) => a.methode === 'GET' && a.pfad === '/api/publicgroups/66'),
+    ).toHaveLength(1);
+    expect(aufrufe.some((a) => a.pfad.endsWith('/token'))).toBe(false);
+  });
+});
+
+describe('#619: wer wartet, kommt zuerst', () => {
+  it('Plätze frei, aber jemand wartet → Formular sagt „Warteliste“, Knopf „Auf die Warteliste“', async () => {
+    antworten['GET /api/publicgroups/66'] = [
+      {
+        status: 200,
+        body: {
+          data: {
+            ...GRUPPE,
+            maxMemberCount: 10,
+            currentMemberCount: 3,
+            allowWaitinglist: true,
+            requestedWaitinglistSeatsCount: 1,
+          },
+        },
+      },
+    ];
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Gemeindeessen' });
+    expect(screen.getByText(/Alle Plätze sind belegt/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Auf die Warteliste' })).toBeTruthy();
+    // Oben nicht „noch 0 Plätze frei“.
+    expect(screen.queryByText(/noch 0/)).toBeNull();
+    expect(screen.getByText('ausgebucht')).toBeTruthy();
   });
 });

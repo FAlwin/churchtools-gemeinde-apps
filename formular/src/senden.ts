@@ -10,7 +10,12 @@ import {
   type AbmeldeOrt,
   type AnmeldeOrt,
 } from '@shared/anmeldung/oeffentlich';
-import type { Antworten, OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
+import {
+  einstellungenLesen,
+  type Antworten,
+  type OeffentlicheEinstellungen,
+} from '@shared/anmeldung/formular';
+import { optionRest } from '@shared/anmeldung/kontingent';
 import {
   PasstNicht,
   anmeldungAufbauen,
@@ -127,8 +132,15 @@ export async function abschicken(
   const { nur, nr } = weiteres;
   const basis = `${apiBasis(ort)}/publicgroups/${ort.gruppeId}`;
   // Wer bekommt einen Platz? Danach richtet sich der Betrag (A6-5a: Warteliste zahlt erst beim Nachrücken).
-  let stand: PlatzStand | null = await platzStand(ort);
+  const frisch = await frischeGruppe(ort);
+  let stand: PlatzStand | null = platzStandAus(frisch);
   const plan = platzPlan(stand, antworten.personen.length);
+  // A6-5b: Belegt die Anmeldung die Option (jemand bekommt einen Platz), muss sie noch frei sein.
+  const voll = !nur && plan.includes('platz') ? ausgebuchtSeitDemLaden(e, wahl, frisch) : null;
+  if (voll)
+    throw new SendeProblem(
+      `„${voll}“ ist inzwischen ausgebucht. Bitte eine andere Auswahl wählen – abgeschickt wurde nichts.`,
+    );
   let token = await neuerToken(basis);
   const f = (await anfrage(`${basis}/form?token=${encodeURIComponent(token)}`)) as {
     data?: CtFormular;
@@ -214,11 +226,34 @@ async function neuerToken(basis: string): Promise<string> {
  * Person und vor jeder einzelnen Anmeldung.
  */
 export async function platzStand(ort: AnmeldeOrt): Promise<PlatzStand> {
+  return platzStandAus(await frischeGruppe(ort));
+}
+
+/** Die öffentliche Gruppe, frisch – Plätze, Warteliste und die Einstellungen samt Belegung der Auswahl. */
+async function frischeGruppe(ort: AnmeldeOrt): Promise<OeffentlicheGruppeRoh> {
   const g = (await anfrage(`${apiBasis(ort)}/publicgroups/${ort.gruppeId}`)) as {
     data?: OeffentlicheGruppeRoh;
   } | null;
   if (!g?.data) throw new SendeProblem(VORUEBERGEHEND);
-  return platzStandAus(g.data);
+  return g.data;
+}
+
+/**
+ * **Ist die gewählte Option inzwischen ausgebucht?** (A6-5b) – gegen die frisch gelesenen Einstellungen (die Erweiterung
+ * schreibt dort die Belegung). Dann wird nichts geschickt.
+ */
+function ausgebuchtSeitDemLaden(
+  e: OeffentlicheEinstellungen,
+  wahl: PreisWahl,
+  frisch: OeffentlicheGruppeRoh,
+): string | null {
+  const g = e.preis.grundpreis;
+  if (g.art !== 'auswahl') return null;
+  const name = g.optionen[wahl.option]?.name;
+  const neu = einstellungenLesen(frisch.information?.note)?.preis.grundpreis.optionen.find(
+    (o) => o.name === name,
+  );
+  return neu && optionRest(neu) === 0 ? name : null;
 }
 
 const ABSAGEN: AnfrageTexte = {

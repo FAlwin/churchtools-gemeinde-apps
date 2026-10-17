@@ -16,6 +16,7 @@ vi.mock('./einrichten', async (original) => {
   return {
     ...echt,
     kopfVon: vi.fn(),
+    belegungNachziehen: vi.fn().mockResolvedValue(false),
     einstellungenVon: vi.fn(),
     anmeldungVon: vi.fn(),
     darfVeranstaltungEinrichten: vi.fn(),
@@ -132,6 +133,28 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     expect(await screen.findByText(/Einrichten und freigeben kann die Leitung/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Bearbeiten' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Freigeben' })).toBeNull();
+  });
+
+  it('A6-5b: mit Recht wird die Belegung der Auswahl beim Öffnen nachgezogen, ohne Recht nicht', async () => {
+    m.belegungNachziehen.mockClear();
+    stelle(false);
+    zeigen();
+    await screen.findByText(/Einrichten und freigeben kann die Leitung/);
+    expect(m.belegungNachziehen).not.toHaveBeenCalled();
+    cleanup();
+    stelle(true);
+    zeigen();
+    await waitFor(() => expect(m.belegungNachziehen).toHaveBeenCalledWith(91));
+  });
+
+  it('A6-5b: Nachziehen scheitert → die Seite bleibt, kein Fehler', async () => {
+    stelle(true);
+    m.belegungNachziehen.mockRejectedValueOnce(new Error('503'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    zeigen();
+    await waitFor(() => expect(warn).toHaveBeenCalled());
+    expect(screen.getByRole('region', { name: 'Anmeldung' })).toBeTruthy();
+    warn.mockRestore();
   });
 
   it('mit Recht: Entwurf freigeben (nach Rückfrage) – erst Leitung und Vorgaben, dann frei, dann neu geladen', async () => {

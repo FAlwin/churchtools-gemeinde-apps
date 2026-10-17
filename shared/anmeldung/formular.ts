@@ -546,6 +546,7 @@ const preisSchema = z.object({
           preisCent: cent,
           kontingent: z.number().int().min(0),
           belegt: z.number().int().min(0),
+          personenJe: z.number().int().min(0).default(0),
         }),
       )
       .max(30),

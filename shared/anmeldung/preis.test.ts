@@ -25,10 +25,10 @@ function silvester(): PreisRegeln {
       gilt: 'person',
       auswahlName: 'Zimmertyp',
       optionen: [
-        { name: '2-Bett-Zimmer', preisCent: 8352, kontingent: 6, belegt: 6 },
-        { name: '3-Bett-Zimmer', preisCent: 8152, kontingent: 4, belegt: 3 },
-        { name: '4-Bett-Zimmer', preisCent: 6552, kontingent: 5, belegt: 3 },
-        { name: '5-Bett-Zimmer', preisCent: 7086, kontingent: 3, belegt: 1 },
+        { name: '2-Bett-Zimmer', preisCent: 8352, kontingent: 6, belegt: 6, personenJe: 0 },
+        { name: '3-Bett-Zimmer', preisCent: 8152, kontingent: 4, belegt: 3, personenJe: 0 },
+        { name: '4-Bett-Zimmer', preisCent: 6552, kontingent: 5, belegt: 3, personenJe: 0 },
+        { name: '5-Bett-Zimmer', preisCent: 7086, kontingent: 3, belegt: 1, personenJe: 0 },
       ],
     },
     alter: [
@@ -379,7 +379,13 @@ describe('preisKurz (Listen-Zeile, A2)', () => {
     anpassungen: [],
     extras: [],
   });
-  const opt = (preisCent: number) => ({ name: 'x', preisCent, kontingent: 0, belegt: 0 });
+  const opt = (preisCent: number) => ({
+    name: 'x',
+    preisCent,
+    kontingent: 0,
+    belegt: 0,
+    personenJe: 0,
+  });
 
   it('fest: kostenlos, je Person, je Anmeldung', () => {
     expect(preisKurz(regeln({}))).toBe('kostenlos');
@@ -469,8 +475,8 @@ describe('kannEtwasKosten (A4: braucht es eine Bankverbindung?)', () => {
           art: 'auswahl',
           auswahlName: 'Zimmer',
           optionen: [
-            { name: 'A', preisCent: 0, kontingent: 0, belegt: 0 },
-            { name: 'B', preisCent: 100, kontingent: 0, belegt: 0 },
+            { name: 'A', preisCent: 0, kontingent: 0, belegt: 0, personenJe: 0 },
+            { name: 'B', preisCent: 100, kontingent: 0, belegt: 0, personenJe: 0 },
           ],
         },
       }),

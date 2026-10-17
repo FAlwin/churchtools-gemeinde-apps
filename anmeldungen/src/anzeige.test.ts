@@ -91,8 +91,8 @@ describe('Preis-Texte der Karte (A4)', () => {
         art: 'auswahl',
         auswahlName: 'Zimmer',
         optionen: [
-          { name: 'A', preisCent: 8900, kontingent: 0, belegt: 0 },
-          { name: 'B', preisCent: 6552, kontingent: 4, belegt: 0 },
+          { name: 'A', preisCent: 8900, kontingent: 0, belegt: 0, personenJe: 0 },
+          { name: 'B', preisCent: 6552, kontingent: 4, belegt: 0, personenJe: 0 },
         ],
       }),
     ).toBe('nach Auswahl „Zimmer“ · 2 Optionen, 65,52 €–89,00 € pro Person · mit Kontingent');

@@ -11,6 +11,7 @@ import {
   abmeldeVorlage,
   freiePlaetzeAus,
   platzPlan,
+  platzStandAus,
   herkunftVon,
   ladeFehlerAus,
   ortAusLink,
@@ -220,5 +221,34 @@ describe('platzPlan (#602) – wer bekommt einen Platz, wer die Warteliste', () 
       'platz',
       'platz',
     ]);
+  });
+});
+
+describe('platzStandAus (#619) – wer wartet, kommt zuerst', () => {
+  it('wartet jemand, gibt es für Gäste keinen freien Platz – auch wenn die Grenze höher liegt', () => {
+    expect(
+      platzStandAus({
+        maxMemberCount: 12,
+        currentMemberCount: 10,
+        allowWaitinglist: true,
+        requestedWaitinglistSeatsCount: 1,
+      }),
+    ).toEqual({ freiePlaetze: 0, warteliste: true });
+  });
+  it('niemand wartet → freie Plätze wie gehabt; ohne Grenze bleibt es unbegrenzt', () => {
+    expect(
+      platzStandAus({
+        maxMemberCount: 12,
+        currentMemberCount: 10,
+        requestedWaitinglistSeatsCount: 0,
+      }).freiePlaetze,
+    ).toBe(2);
+    expect(
+      platzStandAus({
+        maxMemberCount: null,
+        currentMemberCount: 10,
+        requestedWaitinglistSeatsCount: 3,
+      }).freiePlaetze,
+    ).toBeNull();
   });
 });

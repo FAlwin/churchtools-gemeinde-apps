@@ -20,8 +20,8 @@ function freizeit(): PreisRegeln {
       gilt: 'person',
       auswahlName: 'Zimmer',
       optionen: [
-        { name: '4-Bett-Zimmer', preisCent: 6552, kontingent: 8, belegt: 3 },
-        { name: '2-Bett-Zimmer', preisCent: 8900, kontingent: 4, belegt: 1 },
+        { name: '4-Bett-Zimmer', preisCent: 6552, kontingent: 8, belegt: 3, personenJe: 0 },
+        { name: '2-Bett-Zimmer', preisCent: 8900, kontingent: 4, belegt: 1, personenJe: 0 },
       ],
     },
     alter: [
@@ -183,6 +183,7 @@ describe('Preis-Fenster (A4)', () => {
       preisCent: 9250,
       kontingent: 4,
       belegt: 1,
+      personenJe: 0,
     });
     expect(neu.extras).toEqual(freizeit().extras);
     await waitFor(() => expect(gespeichert).toHaveBeenCalled());

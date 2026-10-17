@@ -347,6 +347,7 @@ interface OptionEntwurf {
   preis: string;
   kontingent: string;
   belegt: number;
+  personenJe: string;
 }
 
 function GrundpreisFenster(props: FensterProps) {
@@ -362,8 +363,9 @@ function GrundpreisFenster(props: FensterProps) {
           preis: euroEingabe(o.preisCent),
           kontingent: o.kontingent ? String(o.kontingent) : '',
           belegt: o.belegt,
+          personenJe: o.personenJe ? String(o.personenJe) : '',
         }))
-      : [{ name: '', preis: '0', kontingent: '', belegt: 0 }],
+      : [{ name: '', preis: '0', kontingent: '', belegt: 0, personenJe: '' }],
   );
 
   const setOption = (i: number, o: Partial<OptionEntwurf>) =>
@@ -384,6 +386,7 @@ function GrundpreisFenster(props: FensterProps) {
             preisCent: optionenCent[i] ?? 0,
             kontingent: Number(o.kontingent) || 0,
             belegt: o.belegt,
+            personenJe: Number(o.personenJe) || 0,
           }))
         : [],
   };
@@ -453,7 +456,7 @@ function GrundpreisFenster(props: FensterProps) {
                       onChange={(t) => setOption(i, { preis: t })}
                     />
                     <label className={f.feld}>
-                      <span>Kontingent</span>
+                      <span>Wie oft buchbar</span>
                       <input
                         className={f.eingabe}
                         inputMode="numeric"
@@ -465,6 +468,18 @@ function GrundpreisFenster(props: FensterProps) {
                       />
                     </label>
                   </div>
+                  <label className={f.feld}>
+                    <span>Für wie viele Personen (freiwillig)</span>
+                    <input
+                      className={f.eingabe}
+                      inputMode="numeric"
+                      placeholder="keine Angabe"
+                      value={o.personenJe}
+                      onChange={(e) =>
+                        setOption(i, { personenJe: e.target.value.replace(/\D/g, '') })
+                      }
+                    />
+                  </label>
                 </li>
               ))}
             </ul>
@@ -472,15 +487,20 @@ function GrundpreisFenster(props: FensterProps) {
               type="button"
               className={v.bearbeiten}
               onClick={() =>
-                setOptionen([...optionen, { name: '', preis: '0', kontingent: '', belegt: 0 }])
+                setOptionen([
+                  ...optionen,
+                  { name: '', preis: '0', kontingent: '', belegt: 0, personenJe: '' },
+                ])
               }
             >
               + Option
             </button>
           </div>
           <p className={f.hinweis}>
-            Kontingent: wie oft die Option gebucht werden kann, z. B. 6 Zweibettzimmer. Ist es
-            aufgebraucht, geht die Anmeldung auf die Warteliste.
+            „Wie oft buchbar“: z. B. 6 bei sechs Zweibettzimmern – jede Anmeldung mit dieser Option
+            belegt eins. Ist alles gebucht, kann man sie im Formular nicht mehr wählen. „Für wie
+            viele Personen“: z. B. 2 – meldet jemand mehr Personen an, weist das Formular darauf
+            hin, anmelden geht trotzdem.
           </p>
         </>
       )}
@@ -1040,7 +1060,7 @@ export function ProbeRechnen({
       </ul>
       {ergebnis.ausgebucht && (
         <p className={v.warnung} role="alert">
-          Diese Auswahl ist ausgebucht – die Anmeldung käme auf die Warteliste.
+          Diese Auswahl ist ausgebucht – im Formular ist sie nicht mehr wählbar.
         </p>
       )}
     </section>

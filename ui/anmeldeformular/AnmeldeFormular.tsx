@@ -19,6 +19,7 @@ import {
   type PreisWahl,
 } from '@shared/anmeldung/senden';
 import { platzPlan, type PlatzStand } from '@shared/anmeldung/oeffentlich';
+import { mehrAlsVorgesehen, optionRest } from '@shared/anmeldung/kontingent';
 import { euroText, kannEtwasKosten, preisKurz } from '@shared/anmeldung/preis';
 import { SCHRIFT, leereAntworten, textAufFarbe } from './daten';
 import { titelbildGross } from '@shared/anmeldung/gestaltung';
@@ -520,7 +521,13 @@ export function AnmeldeFormular({
   const g = e.gestaltung;
   const kinder = e.wer === 'kinder';
   const [antworten, setAntworten] = useState<Antworten>(start ?? leereAntworten());
-  const [option, setOption] = useState(0);
+  // A6-5b: Eine ausgebuchte Option ist nicht wählbar – vorausgewählt ist die erste freie.
+  const [option, setOption] = useState(() =>
+    Math.max(
+      0,
+      e.preis.grundpreis.optionen.findIndex((o) => optionRest(o) !== 0),
+    ),
+  );
   const [extras, setExtras] = useState<boolean[]>(e.preis.extras.map(() => false));
   const [fehler, setFehler] = useState<string[]>([]);
   const [fertig, setFertig] = useState<Abgeschickt | null>(null);
@@ -565,6 +572,9 @@ export function AnmeldeFormular({
     [e, antworten, option, extras, heute, platz, baukasten],
   );
   const preis = betrag.preis;
+  const gewaehlt =
+    e.preis.grundpreis.art === 'auswahl' ? e.preis.grundpreis.optionen[option] : undefined;
+  const personenMitPlatz = antworten.personen.length - betrag.warten.length;
   const kostet = kannEtwasKosten(e.preis);
 
   const setAnmeldung = (id: string, w: Antwort) =>
@@ -636,6 +646,8 @@ export function AnmeldeFormular({
     const offen = pruefeAntworten(e.formular, antworten);
     setFehler(offen);
     if (offen.length > 0) return;
+    // A6-5b: ausgebuchte Option – nichts schicken (der Hinweis steht schon über dem Knopf).
+    if (preis.ausgebucht && e.preis.grundpreis.art === 'auswahl') return;
     if (!echt || !onAbsenden) {
       setFertig({
         personen: personenNamen(e, antworten).map((name, index) => ({
@@ -680,7 +692,16 @@ export function AnmeldeFormular({
             {freiZeigen && (
               <span className={`${s.fact} ${s.hot}`}>
                 <Symbol name="leute" />
-                noch <b>{frei === 1 ? '1 Platz' : `${frei} Plätze`}</b> frei
+                {frei === 0 ? (
+                  <>
+                    <b>ausgebucht</b>
+                    {platz?.warteliste ? ' – Warteliste' : ''}
+                  </>
+                ) : (
+                  <>
+                    noch <b>{frei === 1 ? '1 Platz' : `${frei} Plätze`}</b> frei
+                  </>
+                )}
               </span>
             )}
             {ansicht.anmeldeschluss && (
@@ -856,11 +877,19 @@ export function AnmeldeFormular({
                     onChange={(ev) => setOption(Number(ev.target.value))}
                   >
                     {e.preis.grundpreis.optionen.map((o, i) => (
-                      <option key={o.name} value={i}>
+                      <option key={o.name} value={i} disabled={optionRest(o) === 0}>
                         {o.name} · {euroText(o.preisCent)} pro Person
+                        {optionRest(o) === 0 ? ' – ausgebucht' : ''}
                       </option>
                     ))}
                   </select>
+                  {gewaehlt && mehrAlsVorgesehen(gewaehlt, personenMitPlatz) && (
+                    <p className={s.platzHinweis}>
+                      „{gewaehlt.name}“ ist für {gewaehlt.personenJe}{' '}
+                      {gewaehlt.personenJe === 1 ? 'Person' : 'Personen'} gedacht – ihr meldet{' '}
+                      {personenMitPlatz} an. Passt das? Anmelden geht trotzdem.
+                    </p>
+                  )}
                 </div>
               )}
               {e.preis.extras.length > 0 && (
@@ -939,7 +968,9 @@ export function AnmeldeFormular({
             </div>
             {preis.ausgebucht && (
               <p className={s.warnline}>
-                Diese Auswahl ist ausgebucht – die Anmeldung kommt auf die Warteliste.
+                {e.preis.grundpreis.optionen.every((o) => optionRest(o) === 0)
+                  ? 'Alle Möglichkeiten sind ausgebucht – eine Anmeldung ist gerade nicht möglich.'
+                  : 'Diese Auswahl ist ausgebucht – bitte eine andere wählen.'}
               </p>
             )}
             {fehler.length > 0 && (

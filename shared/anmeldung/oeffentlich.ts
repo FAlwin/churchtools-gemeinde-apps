@@ -144,6 +144,8 @@ export interface OeffentlicheGruppeRoh {
   maxMemberCount?: number | null;
   currentMemberCount?: number | null;
   allowWaitinglist?: boolean;
+  /** Wie viele auf der Warteliste stehen (#619). */
+  requestedWaitinglistSeatsCount?: number | null;
   canSignUp?: boolean;
 }
 
@@ -179,9 +181,16 @@ export interface PlatzStand {
   warteliste: boolean;
 }
 
+/**
+ * **Freie Plätze für Gäste** – gemessen 17.10.2026 (#619): Wartet jemand, stellt ChurchTools jede neue Anmeldung
+ * hinten an, auch wenn Plätze frei sind (mehr Plätze lassen niemanden nachrücken). Für Gäste gibt es dann 0 freie
+ * Plätze. Die EINE Stelle – Anzeige, Hinweis beim Hinzufügen, Betrag und Ergebnis lesen sie.
+ */
 export function platzStandAus(g: OeffentlicheGruppeRoh): PlatzStand {
+  const frei = freiePlaetzeAus(g.maxMemberCount, g.currentMemberCount);
+  const wartet = (g.requestedWaitinglistSeatsCount ?? 0) > 0;
   return {
-    freiePlaetze: freiePlaetzeAus(g.maxMemberCount, g.currentMemberCount),
+    freiePlaetze: wartet && frei !== null ? 0 : frei,
     warteliste: g.allowWaitinglist === true,
   };
 }

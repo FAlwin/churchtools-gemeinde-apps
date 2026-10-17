@@ -150,13 +150,19 @@ export function VeranstaltungSeite({
   // A6-5c: Nachprüfung – `null` = keine Karte (Entwurf, oder Mitglieder nicht lesbar).
   const [pruef, setPruef] = useState<NachpruefungStand | null>(null);
   const pruefLauf = useRef(0);
+  // Wo die Karte zuletzt stand – beim „Neu prüfen“ bleibt sie dort, statt nach unten und zurück zu springen.
+  const [pruefWarOben, setPruefWarOben] = useState(false);
 
   const pruefen = useCallback(
     (einstellungen: OeffentlicheEinstellungen, maxPlaetze: number | null) => {
       const lauf = ++pruefLauf.current;
       setPruef({ art: 'laedt' });
       ladeNachpruefung(id, einstellungen, maxPlaetze).then(
-        (n) => lauf === pruefLauf.current && setPruef(n ? { art: 'fertig', n } : null),
+        (n) => {
+          if (lauf !== pruefLauf.current) return;
+          setPruef(n ? { art: 'fertig', n } : null);
+          setPruefWarOben(!!n && n.hinweise > 0);
+        },
         (x: unknown) =>
           lauf === pruefLauf.current &&
           setPruef({
@@ -246,7 +252,7 @@ export function VeranstaltungSeite({
     const lokal = ortszeitAus(iso, zeitzone);
     return `${datumText(lokal.slice(0, 10))}`;
   };
-  const pruefOben = pruef?.art === 'fertig' && pruef.n.hinweise > 0;
+  const pruefOben = pruef?.art === 'fertig' ? pruef.n.hinweise > 0 : pruefWarOben;
   const pruefKarte = pruef && (
     <NachpruefungKarte stand={pruef} onNeu={() => pruefen(e, a.maxPlaetze)} />
   );

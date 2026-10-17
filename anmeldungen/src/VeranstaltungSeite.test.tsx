@@ -748,6 +748,21 @@ describe('Nachprüfung (A6-5c, #623)', () => {
     expect(screen.queryByRole('region', { name: 'Nachprüfung' })).toBeNull();
   });
 
+  it('„Neu prüfen“: die Karte bleibt während des Prüfens oben (springt nicht)', async () => {
+    stelle(true, 1);
+    let fertig: (n: typeof PRUEF_HINWEISE) => void = () => {};
+    np.ladeNachpruefung
+      .mockResolvedValueOnce(PRUEF_HINWEISE)
+      .mockImplementationOnce(() => new Promise((r) => (fertig = r)));
+    zeigen();
+    await screen.findByText('3 Hinweise');
+    fireEvent.click(screen.getByRole('button', { name: 'Neu prüfen' }));
+    expect(await screen.findByRole('button', { name: 'Prüft …' })).toHaveProperty('disabled', true);
+    expect(karten().indexOf('Nachprüfung')).toBeLessThan(karten().indexOf('Anmeldung'));
+    await act(async () => fertig(PRUEF_HINWEISE));
+    expect(screen.getByText('3 Hinweise')).toBeTruthy();
+  });
+
   it('scheitert vorübergehend → Meldung, „Neu prüfen“ lädt noch einmal', async () => {
     stelle(true, 1);
     np.ladeNachpruefung.mockRejectedValueOnce(new Error('502')).mockResolvedValueOnce(PRUEF_OK);

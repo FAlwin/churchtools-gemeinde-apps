@@ -17,7 +17,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   - **Betrag je Anmeldung** (Anmelde-Nr.), nachgerechnet mit derselben Regel wie im Formular (`betragAus`) aus dem, was
     in ChurchTools steht (Geburtstag, Auswahl, Extras, wer einen Platz hat, Anmeldetag): **nachgerückt** (neuer
     Betrag), **Preise nach der Anmeldung geändert** (nur Info), **weniger als gemeldet** (hat jemand abgesagt?),
-    **weicht ab** (rot, bitte prüfen). Anmeldungen ohne Anmelde-Nr. (vor dem 17.10.2026) werden beim Betrag nicht
+    **weicht ab** (rot, bitte prüfen), **Auswahl fehlt** (die gespeicherte Auswahl gibt es nicht mehr – keine
+    geratene Zahl; echter Test: Preise von „fest“ auf „nach Auswahl“ umgestellt). Anmeldungen ohne Anmelde-Nr. (vor dem 17.10.2026) werden beim Betrag nicht
     geprüft – dort wäre jede Prüfung ein Fehlalarm.
   - Mit Hinweisen steht die Karte oben unter dem Anmeldelink, sonst klein unten; in Entwürfen gibt es keine.
 - Die Erweiterung merkt sich, **wann die Preise zuletzt geändert** wurden (`preiseGeaendert`).

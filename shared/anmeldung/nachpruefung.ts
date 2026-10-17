@@ -33,7 +33,11 @@ export interface PlatzZahlen {
   max: number | null;
 }
 
-export type BetragsGrund = 'nachgerueckt' | 'preise' | 'weniger' | 'abweichend';
+/**
+ * `auswahl`: Die gespeicherte Auswahl gibt es nicht (mehr) – nachrechnen geht nicht (echter Test 17.10.2026: Preise von
+ * „fest“ auf „nach Auswahl“ umgestellt, ältere Anmeldungen haben keine Auswahl). Keine geratene Zahl.
+ */
+export type BetragsGrund = 'nachgerueckt' | 'preise' | 'weniger' | 'abweichend' | 'auswahl';
 
 export interface Betragsbefund {
   grund: BetragsGrund;
@@ -43,7 +47,10 @@ export interface Betragsbefund {
   /** Person, bei der der Betrag steht (Link „In ChurchTools“). */
   personId: number;
   gemeldetCent: number | null;
-  sollCent: number;
+  /** `null`, wenn sich nicht nachrechnen lässt (Grund `auswahl`, oder `preise` mit fehlender Auswahl). */
+  sollCent: number | null;
+  /** Bei `auswahl`: was gespeichert ist (`null` = nichts). */
+  auswahl?: string | null;
   /** Bei `nachgerueckt`: wer. Bei `preise`: Anmeldetag und Tag der Preisänderung. */
   nachgerueckt?: string[];
   angemeldetAm?: string;
@@ -168,16 +175,19 @@ export function nachpruefen(
           ? 'nachgerueckt'
           : spaeterePreise
             ? 'preise'
-            : !unbekannt && gemeldet !== null && gemeldet > soll
-              ? 'weniger'
-              : 'abweichend';
+            : unbekannt
+              ? 'auswahl'
+              : gemeldet !== null && gemeldet > soll
+                ? 'weniger'
+                : 'abweichend';
       betraege.push({
         grund,
         nr,
         name: erste.felder.kontakt || erste.name,
         personId: erste.personId,
         gemeldetCent: gemeldet,
-        sollCent: soll,
+        sollCent: unbekannt ? null : soll,
+        ...(grund === 'auswahl' ? { auswahl: erste.felder.auswahl ?? null } : {}),
         ...(grund === 'nachgerueckt' ? { nachgerueckt } : {}),
         ...(grund === 'preise' ? { angemeldetAm, preiseGeaendert: e.preiseGeaendert! } : {}),
       });

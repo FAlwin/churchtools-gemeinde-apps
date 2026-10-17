@@ -24,6 +24,11 @@ function BetragsZeile({ b }: { b: Betragsbefund }) {
         Preise am {datumText(b.preiseGeaendert!)} geändert – nach der Anmeldung (
         {datumText(b.angemeldetAm!)}). Der Betrag bleibt, wie er ist.
       </span>
+    ) : b.grund === 'auswahl' ? (
+      <span className={v.pruefInfo}>
+        {b.auswahl ? `Die Auswahl „${b.auswahl}“ gibt es nicht mehr` : 'Keine Auswahl gespeichert'}{' '}
+        – nachrechnen geht nicht. Wurden die Preise nach der Anmeldung umgestellt?
+      </span>
     ) : b.grund === 'weniger' ? (
       <span className={v.pruefInfo}>Weniger als gemeldet – hat jemand abgesagt?</span>
     ) : (
@@ -46,7 +51,7 @@ function BetragsZeile({ b }: { b: Betragsbefund }) {
       <div className={v.befundGrund}>{grund}</div>
       <div className={v.befundBetrag}>
         gemeldet {betrag(b.gemeldetCent)}
-        {b.grund === 'nachgerueckt' ? (
+        {b.sollCent === null ? null : b.grund === 'nachgerueckt' ? (
           <>
             {' → '}
             <b>jetzt {euroText(b.sollCent)}</b>

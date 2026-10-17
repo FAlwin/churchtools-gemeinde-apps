@@ -75,8 +75,17 @@ const PRUEF_HINWEISE = {
       gemeldetCent: 0,
       sollCent: 9000,
     },
+    {
+      grund: 'auswahl' as const,
+      nr: '25QKHU',
+      name: 'Erna Nummer',
+      personId: 8,
+      gemeldetCent: 1500,
+      sollCent: null,
+      auswahl: null,
+    },
   ],
-  hinweise: 2,
+  hinweise: 3,
 };
 
 const ZONE = 'Europe/Berlin';
@@ -720,7 +729,10 @@ describe('Nachprüfung (A6-5c, #623)', () => {
     stelle(true, 1);
     np.ladeNachpruefung.mockResolvedValue(PRUEF_HINWEISE);
     zeigen();
-    expect(await screen.findByText('2 Hinweise')).toBeTruthy();
+    expect(await screen.findByText('3 Hinweise')).toBeTruthy();
+    // Auswahl fehlt: keine geratene Zahl.
+    const nummer = screen.getByText(/Keine Auswahl gespeichert/).closest('li')!;
+    expect(nummer.textContent).toMatch(/gemeldet 15,00 €$/);
     expect(karten().indexOf('Nachprüfung')).toBeLessThan(karten().indexOf('Anmeldung'));
     expect(screen.getByText(/1 Platz ist frei, aber 2 warten/)).toBeTruthy();
     expect(screen.getByText('Betrag weicht von den Regeln ab – bitte prüfen')).toBeTruthy();

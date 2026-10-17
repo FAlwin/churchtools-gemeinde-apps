@@ -223,3 +223,33 @@ describe('Plätze und Auswahl', () => {
     expect(nachpruefen(kinder15(), [], PLAETZE).auswahl).toBeNull();
   });
 });
+
+describe('Auswahl fehlt (echter Test 17.10.2026)', () => {
+  it('Preise auf „nach Auswahl“ umgestellt, ältere Anmeldung ohne Auswahl → „auswahl“, keine geratene Zahl', () => {
+    const vorher = kinder15();
+    const k = erste(vorher, 'Kalle Nummer', 'AAAAAA', [{ name: 'Kalle Nummer', platz: true }]);
+    const jetzt = kinder15();
+    jetzt.preis.grundpreis = {
+      art: 'auswahl',
+      betragCent: 0,
+      gilt: 'person',
+      auswahlName: 'Zimmer',
+      optionen: [{ name: 'Zwei', preisCent: 2000, kontingent: 0, belegt: 0, personenJe: 2 }],
+    };
+    const n = nachpruefen(jetzt, [k], PLAETZE);
+    expect(n.betraege).toEqual([
+      expect.objectContaining({
+        grund: 'auswahl',
+        auswahl: null,
+        sollCent: null,
+        gemeldetCent: 1500,
+      }),
+    ]);
+    expect(n.hinweise).toBe(1);
+    // Mit bekanntem Datum der Preisänderung ist es nur eine Info.
+    jetzt.preiseGeaendert = '2026-10-18';
+    expect(nachpruefen(jetzt, [k], PLAETZE).betraege[0]).toEqual(
+      expect.objectContaining({ grund: 'preise', sollCent: null }),
+    );
+  });
+});

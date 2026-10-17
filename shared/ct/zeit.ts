@@ -100,6 +100,11 @@ export function tagAusIso(zeitpunkt: string, zeitzone: string): string {
   return ortszeitAus(zeitpunkt, zeitzone).slice(0, 10);
 }
 
+/** **Heute im Kalender dieses Geräts** (`YYYY-MM-DD`) – die eine Stelle dafür (Formular und Erweiterung). */
+export function heuteImKalender(jetzt = new Date()): string {
+  return tagAusIso(jetzt.toISOString(), Intl.DateTimeFormat().resolvedOptions().timeZone);
+}
+
 /**
  * **Wann etwas zuletzt gespeichert wurde** – „heute 18:42“ bzw. „12.10. 18:42“, in Ortszeit der Gemeinde
  * (Dienstplaner E4-3-3: „Eingetragen von Spike, heute 18:42“). Auf `ortszeitAus` gebaut, nicht nachgerechnet.

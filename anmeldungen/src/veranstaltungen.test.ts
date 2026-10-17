@@ -45,8 +45,9 @@ const kind = (id: number, title: string, note: string, groupStatusId = 1, groupT
   domainAttributes: { note, groupStatusId, groupTypeId },
 });
 
-const mitglied = (status: string, bezahlt?: string) => ({
+const mitglied = (status: string, bezahlt?: string, rolle = 32) => ({
   groupMemberStatus: status,
+  groupTypeRoleId: rolle,
   fields: bezahlt === undefined ? [] : [{ id: 73, name: 'Bezahlt', value: bezahlt }],
 });
 
@@ -99,8 +100,17 @@ function standard(): Antworten {
         { id: 46, settings: { maxMembers: 20, signUpOpeningDate: '2026-09-15T00:00:00Z' } },
         { id: 52, settings: { maxMembers: 10 } },
       ]),
+    // #623: Die Leitung (Rolle 35) zählt nicht als Teilnehmer – wie bei ChurchTools selbst.
+    '/group/roles': () =>
+      json(200, {
+        data: [
+          { id: 32, groupTypeId: 5, type: 'participant', isLeader: false },
+          { id: 35, groupTypeId: 5, type: 'leader', isLeader: true },
+        ],
+      }),
     '/groups/40/members': () =>
       seite([
+        mitglied('active', undefined, 35),
         ...Array.from({ length: 5 }, () => mitglied('active')),
         mitglied('waiting'),
         mitglied('waiting'),

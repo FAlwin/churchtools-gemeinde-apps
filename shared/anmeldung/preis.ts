@@ -129,6 +129,13 @@ export function euroText(cent: number): string {
   return `${euroFormat.format(cent / 100)} €`;
 }
 
+/** **Zurück in Cent** – „1.234,50 €“ → 123450 (A6-5c: so steht der Betrag in ChurchTools). `null`, wenn es keiner ist. */
+export function centAusEuroText(text: string | null | undefined): number | null {
+  const m = /^\s*(-?[\d.]+),(\d{2})\s*€?\s*$/.exec(text ?? '');
+  if (!m) return null;
+  return Number(m[1].replace(/\./g, '')) * 100 + Number(m[2]) * (m[1].startsWith('-') ? -1 : 1);
+}
+
 /** Text einer Altersgruppe: „unter 3 Jahren“, „3–11 Jahre“, „ab 18 Jahren“. */
 export function altersText(r: Altersregel): string {
   if (r.bis === null) return `ab ${r.von} Jahren`;

@@ -599,6 +599,19 @@ describe('Preise und Bezahlung (A4)', () => {
     expect(aufrufe.some((a) => a.includes('/members'))).toBe(false);
   });
 
+  it('A6-5c: Preise ändern merkt sich den Tag (für die Nachprüfung)', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-18T09:00:00'));
+    try {
+      const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+      expect(einstellungenLesen(gruppen.get(id)!.note)!.preiseGeaendert).toBeNull();
+      await aenderePreise(id, (p) => ({ ...p, grundpreis: { ...p.grundpreis, betragCent: 900 } }));
+      expect(einstellungenLesen(gruppen.get(id)!.note)!.preiseGeaendert).toBe('2026-10-18');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('ungültige Preise → Meldung von pruefeRegeln, und es wird NICHTS geschrieben', async () => {
     const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
     const vorher = gruppen.get(id)!.note;

@@ -14,7 +14,7 @@
 import { ctAlleSeiten, ctDaten } from '@ui/ct/verbindung';
 import { ApiError } from '@ui/ct/fehler';
 import { mapLimit } from '@shared/ct/mapLimit';
-import { tagAusIso } from '@shared/ct/zeit';
+import { heuteImKalender } from '@shared/ct/zeit';
 import type { MeineGruppe } from '@shared/ct/gruppen';
 import { einstellungenLesen, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import {
@@ -34,7 +34,7 @@ import {
   type VeranstaltungRoh,
 } from '@shared/anmeldung/uebersicht';
 
-import { reparieren } from './einrichten';
+import { leitungsRollen, reparieren } from './einrichten';
 /** Gleichzeitige Anfragen – schont ChurchTools (#300), die Bremse in der Verbindung greift zusätzlich. */
 const PARALLEL = 3;
 
@@ -73,11 +73,6 @@ function detailsAus(g: GruppeRoh | undefined): VeranstaltungDetails {
   };
 }
 
-/** Der heutige Tag in der Zeitzone des Geräts – dieselbe Regel wie in der Musik-App (`tagAusIso`). */
-function heuteAus(jetzt: Date): string {
-  return tagAusIso(jetzt.toISOString(), Intl.DateTimeFormat().resolvedOptions().timeZone);
-}
-
 /**
  * Einstellungen aus der Sicherung (A5) – fehlt die Sicherung oder darf man die Felder nicht lesen (403), bleibt
  * die Veranstaltung ein Hinweis „lässt sich nicht lesen“; alles andere kann vorübergehend sein → werfen.
@@ -102,7 +97,7 @@ export async function ladeUebersicht(
   /** Gruppenart „Anmeldung“ – erkennt Veranstaltungen, deren Einstellungen in ChurchTools überschrieben wurden (A5). */
   artId: number | null = null,
 ): Promise<Uebersicht> {
-  const heute = heuteAus(jetzt);
+  const heute = heuteImKalender(jetzt);
   const kinderJeGruppe = new Map<number, VeranstaltungRoh[]>();
 
   const [hierarchie] = await Promise.all([
@@ -153,6 +148,7 @@ export async function ladeUebersicht(
   const anstehend = lesbar.filter(
     ({ r, e }) => phaseVon(r.statusId, e.termin, heute) === 'anstehend',
   );
+  const leitung = anstehend.length ? await leitungsRollen() : new Set<number>();
   await mapLimit(anstehend, PARALLEL, async ({ r, e: einstellungen }) => {
     const bezahlt = einstellungen.ctFelder.bezahlt;
     try {
@@ -160,7 +156,7 @@ export async function ladeUebersicht(
         `/groups/${r.id}/members`,
         200,
       );
-      belegung.set(r.id, belegungAus(mitglieder, bezahlt));
+      belegung.set(r.id, belegungAus(mitglieder, bezahlt, leitung));
     } catch (e) {
       // Kein Recht ist dauerhaft und betrifft nur diese Zeile; alles andere kann vorübergehend sein → werfen.
       if (e instanceof ApiError && e.status === 403) belegung.set(r.id, null);

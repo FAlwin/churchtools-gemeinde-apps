@@ -15,6 +15,7 @@ import {
   wiederherstellen,
   darfVeranstaltungEinrichten,
   einstellungenVon,
+  belegungNachziehen,
   kopfVon,
   type AnmeldeEinstellungen,
 } from './einrichten';
@@ -156,8 +157,15 @@ export function VeranstaltungSeite({
       teamVon(id),
       istGruppenAdmin(),
     ]).then(
-      ([kopf, einstellungen, anmeldung, darf, anmeldungen, team, admin]) =>
-        setDaten({ ...kopf, einstellungen, anmeldung, darf, anmeldungen, team, admin }),
+      ([kopf, einstellungen, anmeldung, darf, anmeldungen, team, admin]) => {
+        setDaten({ ...kopf, einstellungen, anmeldung, darf, anmeldungen, team, admin });
+        // A6-5b: Belegung der Auswahl für das Formular nachziehen – nebenher, ohne die Seite aufzuhalten. Scheitert
+        // es (z. B. vorübergehend), bleibt der alte Stand; beim nächsten Öffnen wird wieder gezählt.
+        if (darf)
+          belegungNachziehen(id).catch((x: unknown) =>
+            console.warn('Belegung der Auswahl nicht nachgezogen', x),
+          );
+      },
       (e: unknown) => setFehler(fehlerMeldung(e)),
     );
   }, [id]);

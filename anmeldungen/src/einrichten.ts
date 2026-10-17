@@ -23,6 +23,7 @@ import {
   type OeffentlicheEinstellungen,
 } from '@shared/anmeldung/formular';
 import { pruefeRegeln, type PreisRegeln } from '@shared/anmeldung/preis';
+import { optionenBelegt } from '@shared/anmeldung/kontingent';
 import {
   NACHNAME,
   ZWECK_MAX,
@@ -504,6 +505,52 @@ export async function aenderePreise(
     }));
     return { ...e, preis: { ...neu, grundpreis: { ...neu.grundpreis, optionen } } };
   });
+}
+
+/**
+ * **Belegung der Auswahl nachziehen** (A6-5b, #616) – Gäste können die Anmeldungen nicht lesen (gemessen 17.10.2026),
+ * deshalb zählt die Erweiterung (`optionenBelegt`: je Anmeldung einmal, wenn jemand einen Platz hat) und schreibt
+ * `belegt` in die Einstellungen; das Formular sperrt danach, was ausgebucht ist. Schreibt nur, wenn sich etwas
+ * geändert hat. Gibt zurück, ob geschrieben wurde.
+ */
+export async function belegungNachziehen(id: number): Promise<boolean> {
+  const e = await einstellungenVon(id);
+  const g = e.preis.grundpreis;
+  const auswahlId = e.ctFelder.auswahl;
+  if (g.art !== 'auswahl' || auswahlId === undefined || !g.optionen.some((o) => o.kontingent > 0))
+    return false;
+  const mitglieder = await ctAlleSeiten<{
+    groupMemberStatus?: string;
+    fields?: { id?: unknown; value?: unknown }[];
+  }>(`/groups/${id}/members`, 200);
+  const text = (m: (typeof mitglieder)[number], feldId: number | undefined) => {
+    const w = (m.fields ?? []).find((f) => Number(f.id) === feldId)?.value;
+    return typeof w === 'string' && w.trim() ? w.trim() : null;
+  };
+  const belegt = optionenBelegt(
+    g.optionen,
+    mitglieder.map((m) => ({
+      aktiv: m.groupMemberStatus === 'active',
+      nr: text(m, e.ctFelder.nr),
+      auswahl: text(m, auswahlId),
+    })),
+  );
+  if (belegt.every((b, i) => b === g.optionen[i].belegt)) return false;
+  const neu = new Map(g.optionen.map((o, i) => [o.name, belegt[i]]));
+  await aendereEinstellungen(id, (frisch) => ({
+    ...frisch,
+    preis: {
+      ...frisch.preis,
+      grundpreis: {
+        ...frisch.preis.grundpreis,
+        optionen: frisch.preis.grundpreis.optionen.map((o) => ({
+          ...o,
+          belegt: neu.get(o.name) ?? o.belegt,
+        })),
+      },
+    },
+  }));
+  return true;
 }
 
 /** **Bezahlung speichern** (A4) – IBAN und BIC ohne Leerzeichen, geprüft wie im Fenster. */

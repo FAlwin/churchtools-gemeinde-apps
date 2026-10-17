@@ -103,8 +103,8 @@ function demoGruppen(): Map<number, G> {
             gilt: 'person',
             auswahlName: 'Zimmer',
             optionen: [
-              { name: '4-Bett-Zimmer', preisCent: 6552, kontingent: 8, belegt: 0 },
-              { name: '2-Bett-Zimmer', preisCent: 8900, kontingent: 4, belegt: 0 },
+              { name: '4-Bett-Zimmer', preisCent: 6552, kontingent: 8, belegt: 0, personenJe: 0 },
+              { name: '2-Bett-Zimmer', preisCent: 8900, kontingent: 4, belegt: 0, personenJe: 0 },
             ],
           },
           73,
@@ -117,8 +117,20 @@ function demoGruppen(): Map<number, G> {
                 gilt: 'person',
                 auswahlName: 'Zimmer',
                 optionen: [
-                  { name: '4-Bett-Zimmer', preisCent: 6552, kontingent: 8, belegt: 0 },
-                  { name: '2-Bett-Zimmer', preisCent: 8900, kontingent: 4, belegt: 0 },
+                  {
+                    name: '4-Bett-Zimmer',
+                    preisCent: 6552,
+                    kontingent: 8,
+                    belegt: 0,
+                    personenJe: 0,
+                  },
+                  {
+                    name: '2-Bett-Zimmer',
+                    preisCent: 8900,
+                    kontingent: 4,
+                    belegt: 0,
+                    personenJe: 0,
+                  },
                 ],
               },
               alter: [

@@ -26,8 +26,8 @@ function freizeit(): OeffentlicheEinstellungen {
       gilt: 'person',
       auswahlName: 'Zimmer',
       optionen: [
-        { name: '4-Bett', preisCent: 6552, kontingent: 0, belegt: 0 },
-        { name: '2-Bett', preisCent: 8900, kontingent: 0, belegt: 0 },
+        { name: '4-Bett', preisCent: 6552, kontingent: 0, belegt: 0, personenJe: 0 },
+        { name: '2-Bett', preisCent: 8900, kontingent: 0, belegt: 0, personenJe: 0 },
       ],
     },
     alter: [{ von: 3, bis: 11, art: 'prozent', wert: 50 }],

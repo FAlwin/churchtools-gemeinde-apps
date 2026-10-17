@@ -287,7 +287,9 @@ describe('Einstellungen in der Gruppen-Beschreibung', () => {
           betragCent: 0,
           gilt: 'person',
           auswahlName: 'Zimmertyp',
-          optionen: [{ name: '4-Bett-Zimmer', preisCent: 6552, kontingent: 5, belegt: 0 }],
+          optionen: [
+            { name: '4-Bett-Zimmer', preisCent: 6552, kontingent: 5, belegt: 0, personenJe: 0 },
+          ],
         },
         alter: [{ von: 0, bis: 2, art: 'frei', wert: 0 }],
         anpassungen: [],
@@ -415,6 +417,18 @@ describe('Einstellungen in der Gruppen-Beschreibung', () => {
     expect(gelesen?.bezahlung).toEqual(STANDARD_BEZAHLUNG);
     // Seit A6-4: ohne Kontakt.
     expect(gelesen?.kontakt).toBe('');
+  });
+
+  it('A6-5b: Optionen ohne „Personen je …“ (vor dem 17.10.2026 gespeichert) bleiben lesbar', () => {
+    const e = einstellungen();
+    const alt = JSON.parse(JSON.stringify(e)) as Record<string, unknown> & {
+      preis: { grundpreis: { optionen: Record<string, unknown>[] } };
+    };
+    alt.preis.grundpreis.optionen = [
+      { name: '4-Bett-Zimmer', preisCent: 6552, kontingent: 5, belegt: 0 },
+    ];
+    const gelesen = einstellungenLesen(EINSTELLUNGEN_KENNUNG + JSON.stringify(alt));
+    expect(gelesen?.preis.grundpreis.optionen[0].personenJe).toBe(0);
     // Jede gelesene Veranstaltung bekommt ihr eigenes Objekt – sonst änderte eine die nächste mit.
     const zweite = einstellungenLesen(EINSTELLUNGEN_KENNUNG + JSON.stringify(alt));
     expect(zweite?.bezahlung).not.toBe(gelesen?.bezahlung);

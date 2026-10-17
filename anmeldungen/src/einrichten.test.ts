@@ -13,6 +13,7 @@ import {
   NichtUebernommen,
   aendereEinstellungen,
   aenderePreise,
+  belegungNachziehen,
   anmeldungenZahl,
   bildEntfernen,
   bildHochladen,
@@ -508,8 +509,8 @@ describe('Preise und Bezahlung (A4)', () => {
     gilt: 'person' as const,
     auswahlName: 'Zimmer',
     optionen: [
-      { name: '4-Bett', preisCent: 6552, kontingent: 8, belegt: belegt4 },
-      { name: '2-Bett', preisCent: 8900, kontingent: 4, belegt: 2 },
+      { name: '4-Bett', preisCent: 6552, kontingent: 8, belegt: belegt4, personenJe: 0 },
+      { name: '2-Bett', preisCent: 8900, kontingent: 4, belegt: 2, personenJe: 0 },
     ],
   });
 
@@ -542,9 +543,9 @@ describe('Preise und Bezahlung (A4)', () => {
       grundpreis: {
         ...p.grundpreis,
         optionen: [
-          { name: '2-Bett', preisCent: 9000, kontingent: 4, belegt: 0 },
-          { name: '4-Bett', preisCent: 6552, kontingent: 8, belegt: 0 },
-          { name: 'Neu', preisCent: 5000, kontingent: 0, belegt: 0 },
+          { name: '2-Bett', preisCent: 9000, kontingent: 4, belegt: 0, personenJe: 0 },
+          { name: '4-Bett', preisCent: 6552, kontingent: 8, belegt: 0, personenJe: 0 },
+          { name: 'Neu', preisCent: 5000, kontingent: 0, belegt: 0, personenJe: 0 },
         ],
       },
     }));
@@ -555,6 +556,47 @@ describe('Preise und Bezahlung (A4)', () => {
       ['Neu', 5000, 0],
     ]);
     expect(p.extras).toHaveLength(1);
+  });
+
+  it('A6-5b: belegungNachziehen zählt je Anmeldung mit Platz und schreibt „belegt“ – nur wenn sich etwas ändert', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'freizeit' });
+    await aendereEinstellungen(id, (e) => ({ ...e, preis: { ...e.preis, grundpreis: zimmer(0) } }));
+    const { auswahl, nr } = einstellungenLesen(gruppen.get(id)!.note)!.ctFelder;
+    const person = (status: string, n: string, wahl: string | null): Mitglied => ({
+      groupMemberStatus: status,
+      fields: [
+        { id: nr, value: n },
+        { id: auswahl, value: wahl },
+      ],
+    });
+    mitglieder.set(id, [
+      person('active', 'AAAAAA', '4-Bett'), // Familie A: drei Personen, ein Zimmer
+      person('active', 'AAAAAA', null),
+      person('active', 'AAAAAA', null),
+      person('waiting', 'BBBBBB', '4-Bett'), // nur Warteliste → kein Zimmer
+      person('active', 'CCCCCC', '2-Bett'),
+      { groupMemberStatus: 'active', fields: [] }, // Leitung
+    ]);
+    expect(await belegungNachziehen(id)).toBe(true);
+    const belegt = () =>
+      einstellungenLesen(gruppen.get(id)!.note)!.preis.grundpreis.optionen.map((o) => [
+        o.name,
+        o.belegt,
+      ]);
+    expect(belegt()).toEqual([
+      ['4-Bett', 1],
+      ['2-Bett', 1],
+    ]);
+    aufrufe = [];
+    expect(await belegungNachziehen(id)).toBe(false);
+    expect(aufrufe.filter((a) => !a.startsWith('GET'))).toEqual([]);
+  });
+
+  it('A6-5b: ohne Kontingent wird gar nicht gezählt', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    aufrufe = [];
+    expect(await belegungNachziehen(id)).toBe(false);
+    expect(aufrufe.some((a) => a.includes('/members'))).toBe(false);
   });
 
   it('ungültige Preise → Meldung von pruefeRegeln, und es wird NICHTS geschrieben', async () => {

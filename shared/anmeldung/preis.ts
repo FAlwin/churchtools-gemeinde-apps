@@ -17,6 +17,7 @@
  * so wie sie auch einzeln in der Aufschlüsselung stehen – die Summe der Zeilen ist damit immer der
  * Gesamtbetrag.
  */
+import { optionRest } from './kontingent';
 
 /** Gilt ein Betrag je Person oder einmal für die ganze Anmeldung? */
 export type Geltung = 'person' | 'anmeldung';
@@ -26,10 +27,18 @@ export interface PreisOption {
   name: string;
   /** Preis pro Person in Cent. */
   preisCent: number;
-  /** Wie oft die Option gebucht werden kann; 0 = unbegrenzt. */
+  /**
+   * Wie oft die Option gebucht werden kann; 0 = unbegrenzt. **Je Anmeldung einmal** (A6-5b, Alwin 17.10.2026: z. B.
+   * 6 Zweibettzimmer → 6), egal wie viele Personen.
+   */
   kontingent: number;
-  /** Wie oft sie schon gebucht ist (kommt aus den Anmeldungen, nicht aus den Regeln). */
+  /**
+   * Wie oft sie schon gebucht ist – zählt die Erweiterung aus den Anmeldungen (`optionenBelegt`) und schreibt es hierher,
+   * weil Gäste die Anmeldungen nicht lesen können (gemessen 17.10.2026).
+   */
   belegt: number;
+  /** Für wie viele Personen eine Buchung gedacht ist (z. B. 2 beim Zweibettzimmer); 0 = keine Angabe. Nur Hinweis. */
+  personenJe: number;
 }
 
 export interface Grundpreis {
@@ -103,7 +112,7 @@ export interface Posten {
 export interface Preisergebnis {
   posten: Posten[];
   gesamtCent: number;
-  /** Gewählte Option ist ausgebucht → die Anmeldung käme auf die Warteliste. */
+  /** Gewählte Option ist ausgebucht (A6-5b: im Formular dann nicht wählbar). */
   ausgebucht: boolean;
 }
 
@@ -161,7 +170,7 @@ export function berechnePreis(regeln: PreisRegeln, buchung: Buchung): Preisergeb
 
   const option = g.art === 'auswahl' ? g.optionen[buchung.option] : undefined;
   const basis = option ? option.preisCent : g.betragCent;
-  const ausgebucht = !!option && option.kontingent > 0 && option.belegt >= option.kontingent;
+  const ausgebucht = !!option && optionRest(option) === 0;
 
   // Je Person: Preis nach Grundpreis und Alter; Kinder vom ältesten an durchgezählt
   const personen = buchung.alter.map((alter) => ({ alter, preis: 0, kindNr: 0 }));

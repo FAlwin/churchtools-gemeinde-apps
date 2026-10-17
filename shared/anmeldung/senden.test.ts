@@ -251,8 +251,8 @@ describe('anmeldungAufbauen – Variante A', () => {
       gilt: 'person',
       auswahlName: 'Zimmer',
       optionen: [
-        { name: '2-Bett', preisCent: 1000, kontingent: 0, belegt: 0 },
-        { name: '4-Bett', preisCent: 800, kontingent: 0, belegt: 0 },
+        { name: '2-Bett', preisCent: 1000, kontingent: 0, belegt: 0, personenJe: 0 },
+        { name: '4-Bett', preisCent: 800, kontingent: 0, belegt: 0, personenJe: 0 },
       ],
     };
     e.preis.extras = [

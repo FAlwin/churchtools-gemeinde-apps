@@ -7,6 +7,21 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Anmeldungen, A6-5b, #616)
+
+- **Kontingent je Auswahl** (Alwin, 17.10.2026): Je Option „Wie oft buchbar“ – jede Anmeldung mit dieser Option
+  belegt eins (z. B. 6 Zweibettzimmer → 6) – und freiwillig „Für wie viele Personen“ (z. B. 2). Meldet jemand mehr
+  Personen an, sagt das Formular „… ist für 2 Personen gedacht – ihr meldet 3 an. Passt das?“; anmelden geht trotzdem.
+- **Ausgebucht → nicht mehr wählbar** („– ausgebucht“); vorausgewählt ist die erste freie Option, sind alle voll, geht
+  keine Anmeldung. Beim Absenden prüft das Formular den frischen Stand noch einmal und schickt sonst nichts.
+- Gemessen: Gäste können die Belegung nicht lesen (`/groups/{id}/statistics` 401). Deshalb **zählt die Erweiterung
+  beim Öffnen der Veranstaltung** (wer bearbeiten darf; je Anmelde-Nr. mit mindestens einer Person mit Platz,
+  `optionenBelegt`) und schreibt `belegt` in die Einstellungen – nur wenn sich etwas geändert hat; scheitert es, bleibt
+  der alte Stand. Sichtbar wird die Belegung mit der Nachprüfung (A6-5c).
+- „Ausgebucht“ ist EINE Regel (`optionRest`) – auch `berechnePreis` nutzt sie. Der alte Satz „… kommt auf die
+  Warteliste“ stimmte nicht (ChurchTools kennt keine Warteliste je Auswahl) und ist ersetzt.
+- **Formular-Paket mit aktualisieren.**
+
 ### Neu (Anmeldungen, A6-5a, #612)
 
 - **Anmelde-Nr. je Person** (Alwin, 17.10.2026): Seit #602 wird jede Person einzeln angemeldet – damit man in

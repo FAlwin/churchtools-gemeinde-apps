@@ -5,6 +5,7 @@ import {
   a4NachRolle,
   kerneAufSeite,
   rolleNachA4,
+  rahmenAufKernen,
   textAufSeite,
   stricheAufRolle,
   streifen,
@@ -271,5 +272,25 @@ describe('kerneAufSeite / stricheAufRolle(nur) – Striche zurückschreiben (#60
     expect(drawImage).toHaveBeenCalledTimes(
       st.filter((s) => s.seite === 0 && s.art === 'luecke' && s.quelle.h > 0).length,
     );
+  });
+});
+
+describe('rahmenAufKernen – wo das Lasso auf der Rolle ablegen darf (#615)', () => {
+  it('mitten im Lied ja, unter dem letzten Teil nein – dort gäbe es keine A4-Stelle zum Speichern', () => {
+    const a = abb();
+    const st = streifen(a);
+    const letzter = a.rolle.stuecke[a.rolle.stuecke.length - 1];
+    expect(rahmenAufKernen(st, { x: 20, y: letzter.y0 + 2, w: 60, h: 10 })).toBe(true);
+    // Reicht nur 1 mm unter das Ende des letzten Teils: schon nicht mehr.
+    expect(rahmenAufKernen(st, { x: 20, y: letzter.y1 - 9, w: 60, h: 10 })).toBe(false);
+    expect(rahmenAufKernen(st, { x: 20, y: a.rolle.hoehe - 5, w: 60, h: 4 })).toBe(false);
+  });
+
+  it('zwei Spalten: rechts neben dem schmalen Streifen nein', () => {
+    const st = streifen(abb({ cols: 2 }));
+    const kern = st.find((s) => s.art === 'kern' && s.seite === 0 && s.quelle.y > 40)!;
+    const y = kern.ziel.y + 1;
+    expect(rahmenAufKernen(st, { x: kern.ziel.x + 1, y, w: kern.quelle.w - 2, h: 1 })).toBe(true);
+    expect(rahmenAufKernen(st, { x: kern.ziel.x + kern.quelle.w + 5, y, w: 20, h: 1 })).toBe(false);
   });
 });

@@ -305,3 +305,22 @@ export function kerneAufSeite(
     );
   }
 }
+
+/**
+ * **Wird auf der Rolle hier gespeichert?** (#615) Nur was über einem Kern steht, kommt zurück auf eine
+ * A4-Seite (`kerneAufSeite`). Unter dem letzten Teil – und bei 2-Spalten-Liedern rechts neben dem schmalen
+ * Streifen – gäbe es kein Ziel; ein Strich dort wäre beim Speichern weg. Das Lasso legt deshalb nur ab, wo
+ * der ganze Rahmen auf Kernen liegt (geprüft an einem Raster von Punkten, Angaben in mm).
+ */
+export function rahmenAufKernen(liste: Streifen[], r: Rechteck, raster = 6): boolean {
+  const kerne = liste.filter((s) => s.art === 'kern' && s.quelle.h > 0);
+  const aufKern = (x: number, y: number) =>
+    kerne.some(
+      (s) =>
+        x >= s.ziel.x && x <= s.ziel.x + s.quelle.w && y >= s.ziel.y && y <= s.ziel.y + s.quelle.h,
+    );
+  for (let i = 0; i <= raster; i++)
+    for (let j = 0; j <= raster; j++)
+      if (!aufKern(r.x + (r.w * i) / raster, r.y + (r.h * j) / raster)) return false;
+  return true;
+}

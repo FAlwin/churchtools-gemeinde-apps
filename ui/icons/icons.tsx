@@ -43,6 +43,7 @@ export type IconName =
   | 'pause'
   | 'marker'
   | 'eraser'
+  | 'lasso'
   | 'eye'
   | 'eye-off'
   | 'zoom-reset'
@@ -428,6 +429,14 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
         <svg {...p}>
           <path d="m9 11-6 6v3h9l3-3" />
           <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4" />
+        </svg>
+      );
+    case 'lasso':
+      return (
+        <svg {...p}>
+          <path d="M7 22a5 5 0 0 1-2-4" />
+          <path d="M3.3 14A6.8 6.8 0 0 1 2 10c0-4.4 4.5-8 10-8s10 3.6 10 8-4.5 8-10 8a12 12 0 0 1-5-1" />
+          <path d="M5 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" />
         </svg>
       );
     case 'eraser':

@@ -509,22 +509,26 @@ Einstellung gilt nur auf diesem Gerät.
 6. Ein Lied, das beim Blättern zwei Seiten hat: Beim Scrollen läuft es ohne Lücke durch. Was man beim
    Blättern auf Seite 1 UND Seite 2 gemalt oder geschrieben hat, steht beim Scrollen am selben Teil (#614).
    Etwas in die leere Lücke am Ende von Seite 1 malen → beim Scrollen am Ende des Teils davor. Im
-   Aussehen-Menü gibt es keine Spalten. „Anmerken" gibt es im Scroll-Modus noch nicht (kommt mit #608). Ein
-   Lied bearbeiten: Die Vorschau zeigt ebenfalls die lange Seite.
-7. Das iPad drehen: Hoch- und Querformat zeigen jeweils eine Seite in voller Breite.
-8. **Liedansicht: Blättern** wählen → alles wie bisher. Auf einem zweiten Gerät bleibt die eigene Wahl.
+   Aussehen-Menü gibt es keine Spalten. Ein Lied bearbeiten: Die Vorschau zeigt ebenfalls die lange Seite.
+7. **Malen beim Scrollen (#608):** Stift an → die übrigen Lieder werden blass; ein Tipp auf eines macht es
+   zum Mal-Lied. Mit Finger UND Pencil malen, mit **zwei Fingern** scrollen (der
+   Strich bricht dabei ab, wie beim Zoomen). Marker, Radierer, Text (iPhone-Tastatur: das Lied springt dabei
+   NICHT an den Anfang), Rückgängig, „Alles löschen" ausprobieren. Stift aus → das Gemalte bleibt. Auf
+   **Blättern** umstellen → es steht dort am selben Teil, auch auf Seite 2.
+8. Das iPad drehen: Hoch- und Querformat zeigen jeweils eine Seite in voller Breite.
+9. **Liedansicht: Blättern** wählen → alles wie bisher. Auf einem zweiten Gerät bleibt die eigene Wahl.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/ScrollDeck.tsx`, `client/src/utils/rollenAbbildung.ts`, `client/src/pages/ChordChart.tsx`, `client/src/utils/pedalTasten.ts`, `client/src/hooks/useChartNavigation.ts`, `client/src/components/PageDeck.tsx`, `client/src/utils/devicePrefs.ts`, `client/src/pages/Settings.tsx`
+- **Betrifft:** `client/src/components/ScrollDeck.tsx`, `client/src/components/RollenMalen.tsx`, `client/src/utils/rolleSpeichern.ts`, `client/src/hooks/useTextEingabe.ts`, `client/src/utils/rollenAbbildung.ts`, `client/src/pages/ChordChart.tsx`, `client/src/utils/pedalTasten.ts`, `client/src/hooks/useChartNavigation.ts`, `client/src/components/PageDeck.tsx`, `client/src/utils/devicePrefs.ts`, `client/src/pages/Settings.tsx`
 - **Automatisiert:** weitgehend – `e2e/chart-scrollen.spec.ts` (Seiten nahtlos und voll breit, Pedal ⅔,
   Kopfzeile folgt der Mitte, Tipp, Lied-Punkt, Fußpfeil, Malen einzeln und zurück an dieselbe Stelle, quer
   eine Seite, je Lied eine Rolle), `chordPdf.test.ts` (Rolle), `pedalTasten.test.ts`, `ScrollDeck.test.tsx`,
   `useChartNavigation.test.ts`. Von Hand bleiben
   ein echtes Pedal, das Wischen mit dem Finger und das Drehen
 - **Historie:** #551 (ChurchTools-Dev-Stammtisch, 14.10.2026), #607 (eine lange Seite je Lied, 17.10.2026),
-  #614 (gemeinsame Anmerkungen)
+  #614 (gemeinsame Anmerkungen), #608 (Malen auf der langen Seite)
 
 </details>
 

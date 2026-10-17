@@ -14,9 +14,12 @@ function learnKbHeight(kb: number): void {
 // iOS scrollt beim Öffnen der Tastatur nicht nur das Fenster, sondern notfalls auch GECLIPPTE
 // Vorfahren (trotz overflow:hidden), um den Cursor freizustellen → alles zurückdrehen; das
 // Freistellen übernimmt unser gezielter transform-Hub auf dem Chart-Bereich.
-function resetRevealScrolls(el: HTMLElement): void {
+export function resetRevealScrolls(el: HTMLElement): void {
   if (window.scrollY !== 0) window.scrollTo(0, 0);
   for (let n = el.parentElement; n; n = n.parentElement) {
+    // Ein Container, der absichtlich scrollt (Scroll-Modus, #608), behält seine Stelle – sonst spränge
+    // das Liederheft beim Tippen eines Textfelds an den Anfang des Ablaufs.
+    if (n.dataset.eigenerScroll !== undefined) continue;
     if (n.scrollTop !== 0) n.scrollTop = 0;
     if (n.scrollLeft !== 0) n.scrollLeft = 0;
   }

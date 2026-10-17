@@ -76,8 +76,6 @@ interface ChartHeaderProps {
    * (`werkzeugeEinzeln`, Alwin 05.10.2026): einzeln, solange der Titel genug Platz behält.
    */
   querformat?: boolean;
-  /** Kein „Anmerken" anbieten (Scroll-Modus, bis #608). */
-  malenAus?: boolean;
   /** Welches Werkzeug-Fenster gerade offen ist – färbt seinen einzelnen Knopf hellblau. */
   offenesWerkzeug?: 'aussehen' | 'tempo' | null;
   /** Info-Zeile aus `deriveActiveSongView` – reine Daten, die Klassen setzt diese Komponente. */
@@ -145,7 +143,6 @@ export function ChartHeader({
   songTitle,
   andereHaelfte = null,
   querformat = false,
-  malenAus = false,
   offenesWerkzeug = null,
   headInfo,
   menuOpen,
@@ -214,7 +211,6 @@ export function ChartHeader({
   const aktiveWerkzeuge = verfuegbareWerkzeuge({
     zeigtDokument: showsDocument,
     ansehen: viewing,
-    malenAus,
     gezoomt: zoomed,
     teamNotizen: canUseGlobalNotes,
   });
@@ -298,7 +294,6 @@ export function ChartHeader({
     verfuegbareWerkzeuge({
       zeigtDokument: andereHaelfte.zeigtDokument,
       ansehen: false,
-      malenAus,
       gezoomt: false,
       teamNotizen: canUseGlobalNotes,
     }).map((id) => (

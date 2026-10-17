@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRef, type MutableRefObject } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { ScrollDeck } from './ScrollDeck';
 import { SCROLL_START, type ScrollPosition } from '../utils/scrollPosition';
 import { textSchluessel } from '../utils/annotationKeys';
@@ -28,10 +28,19 @@ function text(id: number, t: string) {
   return { id, fx: 0.5, fy: 0.5, text: t, color: '#000', sizeCqh: 2 };
 }
 
+const MALEN = {
+  drawTool: 'pen' as const,
+  setDrawTool: vi.fn(),
+  drawColor: '#000',
+  setDrawColor: vi.fn(),
+  drawColors: ['#000'],
+};
+
 function zeige(p: {
   anmerkungFuer?: (n: number) => Anmerkungsquelle;
   pages?: HTMLCanvasElement[];
   onTipp?: () => void;
+  malen?: typeof MALEN;
 }) {
   const schrittRef = createRef<((r: PedalRichtung) => void) | null>() as MutableRefObject<
     ((r: PedalRichtung) => void) | null
@@ -44,6 +53,7 @@ function zeige(p: {
       error={null}
       loadingLabel="lädt"
       anmerkungFuer={p.anmerkungFuer ?? KEINE}
+      malen={p.malen}
       seite={0}
       onSeite={vi.fn()}
       positionRef={positionRef}
@@ -168,5 +178,91 @@ describe('ScrollDeck – die Rolle zeigt die Anmerkungen der A4-Seiten (#614)', 
     // Auf der Rolle beim Teil, nicht 297 mm tiefer.
     expect(top / 100).toBeCloseTo((r.y0 + 2) / (210 * (rolle.height / rolle.width)), 2);
     // Die Größe (cqh) kann jsdom nicht lesen – geprüft in `rollenAbbildung.test.ts` (textAufRolle).
+  });
+});
+
+describe('ScrollDeck – malen (#608)', () => {
+  it('die Mal-Ebene liegt auf der Seite in der Bildmitte – nur solange der Stift an ist', () => {
+    zeige({});
+    expect(screen.queryByTestId('rollen-malen')).toBeNull();
+    cleanup();
+    zeige({ malen: MALEN });
+    expect(screen.getAllByTestId('rollen-malen')).toHaveLength(1);
+  });
+
+  it('beim Malen schaltet ein Tipp keine Leisten', () => {
+    const onTipp = vi.fn();
+    const { deck } = zeige({ onTipp, malen: MALEN });
+    fireEvent.click(deck);
+    expect(onTipp).not.toHaveBeenCalled();
+  });
+
+  it('zwei Finger scrollen; ein Finger nicht (der malt)', () => {
+    const { deck } = zeige({ malen: MALEN });
+    deck.scrollTop = 500;
+    const finger = (y: number) => ({ clientY: y }) as Touch;
+    fireEvent.touchStart(deck, { touches: [finger(300), finger(400)] });
+    fireEvent.touchMove(deck, { touches: [finger(250), finger(350)] });
+    expect(deck.scrollTop).toBe(550);
+    fireEvent.touchEnd(deck, { touches: [] });
+    fireEvent.touchStart(deck, { touches: [finger(300)] });
+    fireEvent.touchMove(deck, { touches: [finger(100)] });
+    expect(deck.scrollTop).toBe(550);
+  });
+
+  it('ohne Stift scrollt das Gerät selbst – kein eigenes Zwei-Finger-Scrollen', () => {
+    const { deck } = zeige({});
+    deck.scrollTop = 500;
+    const finger = (y: number) => ({ clientY: y }) as Touch;
+    fireEvent.touchStart(deck, { touches: [finger(300), finger(400)] });
+    fireEvent.touchMove(deck, { touches: [finger(250), finger(350)] });
+    expect(deck.scrollTop).toBe(500);
+  });
+
+  it('eigene Texte der Teile stehen beim Malen nur einmal da – in der Mal-Ebene', () => {
+    const chordpro = Array.from(
+      { length: 3 },
+      (_, n) =>
+        `{comment: Vers ${n + 1}}\n${Array.from({ length: 4 }, () => '[C]Zeile').join('\n')}`,
+    ).join('\n');
+    const abbildung = satzplaene({
+      title: 'T',
+      author: '',
+      chordpro,
+      originalKey: 'C',
+      targetKey: 'C',
+      bpm: null,
+      timeSig: null,
+      ccli: null,
+    });
+    const s0 = abbildung.a4.stuecke[0];
+    localStorage.setItem(
+      textSchluessel('a4_0'),
+      JSON.stringify([{ ...text(3, 'nur einmal'), fx: 0.5, fy: (s0.y0 + 2) / 297, sizeCqh: 2 }]),
+    );
+    const rolle = document.createElement('canvas');
+    rolle.width = 210;
+    rolle.height = Math.round(abbildung.rolle.hoehe);
+    zeige({
+      pages: [rolle],
+      malen: MALEN,
+      anmerkungFuer: () => ({ seiten: [{ own: 'a4_0', over: null }], abbildung }),
+    });
+    expect(screen.getAllByText('nur einmal')).toHaveLength(1);
+  });
+
+  it('ein Tipp auf ein anderes Lied macht es zur Mal-Seite – die übrigen sind abgeblendet', () => {
+    zeige({ malen: MALEN });
+    const seiten = () => [
+      ...screen.getByTestId('scroll-deck').querySelectorAll('[class*="seite"]'),
+    ];
+    const malIn = () =>
+      seiten().findIndex((el) => el.querySelector('[data-testid="rollen-malen"]'));
+    expect(malIn()).toBe(0);
+    expect(seiten()[1].className).toMatch(/gedimmt/);
+    fireEvent.pointerDown(seiten()[1]);
+    expect(malIn()).toBe(1);
+    expect(seiten()[0].className).toMatch(/gedimmt/);
+    expect(seiten()[1].className).not.toMatch(/gedimmt/);
   });
 });

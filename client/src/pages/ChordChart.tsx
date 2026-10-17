@@ -293,9 +293,9 @@ export function ChordChart({
    * Scroll-Modus (#551): Seiten untereinander statt blättern – eine Vorliebe dieses Geräts (Mehr →
    * Liedansicht). Beim Öffnen gelesen; geändert wird sie nur unter „Mehr", also nie bei offenem Lied.
    * Das Pedal scrollt dann einen Schritt (`schrittRef`, von `ScrollDeck` abgelegt), statt zu blättern.
-   * Seit #607 ist jedes Lied eine lange Seite mit eigenen Anmerkungen; bis das Malen darauf da ist
-   * (#608), gibt es im Scroll-Modus kein „Anmerken" (`malenAus` an der Kopfzeile). `scrollPos` hält die
-   * Stelle über einen Neuaufbau der Seiten hinweg.
+   * Seit #607 ist jedes Lied eine lange Seite; die Anmerkungen sind die der A4-Seiten (#614), gemalt
+   * wird direkt darauf (#608, `ScrollDeck` → `RollenMalen`). `scrollPos` hält die Stelle über einen
+   * Neuaufbau der Seiten hinweg.
    */
   const schrittRef = useRef<((richtung: PedalRichtung) => void) | null>(null);
   const scrollPos = useRef<ScrollPosition>(SCROLL_START);
@@ -655,7 +655,6 @@ export function ChordChart({
           <ChartHeader
             andereHaelfte={andereHaelfte}
             querformat={landscape}
-            malenAus={scrollModus}
             offenesWerkzeug={offenesWerkzeug}
             /**
              * **Derselbe Titel wie auf dem Blatt** – über `chartHead`, nicht über `song.title`.
@@ -679,7 +678,8 @@ export function ChordChart({
             canUseGlobalNotes={canUseGlobalNotes}
             drawMode={drawMode}
             // Im Scroll-Modus gibt es keinen Zoom; ein Stand aus der Mal-Ansicht darf nicht stehen bleiben.
-            zoomed={streamZoomed && !(scrollModus && !drawMode)}
+            // Im Scroll-Modus gibt es keinen Zoom.
+            zoomed={streamZoomed && !scrollModus}
             bpmPulse={bpmPulse}
             pulsBpm={wirksamesTempo}
             klickBpm={klickTempo}
@@ -790,7 +790,7 @@ export function ChordChart({
           className={`${styles.chartArea}${leistenAus ? ' ' + styles.chartAreaVollbild : ''}`}
           data-tour="chart-blaettern"
         >
-          {songs.length > 0 && scrollModus && !drawMode ? (
+          {songs.length > 0 && scrollModus ? (
             <ScrollDeck
               pages={pages}
               loading={pagesLoading}
@@ -803,6 +803,17 @@ export function ChordChart({
               onTipp={leistenUmschalten}
               syncTick={syncTick}
               schrittRef={schrittRef}
+              malen={
+                drawMode
+                  ? {
+                      drawTool,
+                      setDrawTool,
+                      drawColor,
+                      setDrawColor,
+                      drawColors: DRAW_COLORS,
+                    }
+                  : undefined
+              }
             />
           ) : songs.length > 0 ? (
             <PageDeck
@@ -815,9 +826,7 @@ export function ChordChart({
               previewOwn={viewMode === 'merge'}
               zoomKeyBaseFor={zoomKeyBaseFor}
               pageLabel={pageLabel}
-              // Aus dem Scroll-Modus: die sichtbare Seite einzeln zum Malen (Alwin, 14.10.2026).
-              pageIndex={scrollModus ? activeIdx : pageIdx}
-              einzeln={scrollModus}
+              pageIndex={pageIdx}
               onPageIndex={setPage}
               activePage={activeIdx}
               onActivePage={setActivePage}
@@ -878,10 +887,10 @@ export function ChordChart({
             nextSongTitle={nextSong?.title ?? null}
             // Im Scroll-Modus tun die Pfeile dasselbe wie das Pedal (ein Schritt). Ob oben/unten
             // Schluss ist, weiß nur die Scroll-Fläche – am Rand tut ein Schritt einfach nichts.
-            atStart={scrollModus && !drawMode ? false : atStart}
-            atEnd={scrollModus && !drawMode ? false : atEnd}
-            onPrev={scrollModus && !drawMode ? () => schrittRef.current?.(-1) : prev}
-            onNext={scrollModus && !drawMode ? () => schrittRef.current?.(1) : next}
+            atStart={scrollModus ? false : atStart}
+            atEnd={scrollModus ? false : atEnd}
+            onPrev={scrollModus ? () => schrittRef.current?.(-1) : prev}
+            onNext={scrollModus ? () => schrittRef.current?.(1) : next}
             onGoToSong={goToSong}
           />
         )}

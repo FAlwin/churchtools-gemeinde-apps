@@ -8,7 +8,7 @@ import { TOUR_CHART } from '../client/src/utils/onboarding';
  *
  * Geprüft wird der Weg, den Alwin am Gerät geht: je Lied EINE lange Seite (Rolle, #607), Pedal (↓,
  * Leertaste) scrollt ⅔ Bildschirm, die Kopfzeile folgt dem Lied in der Bildmitte, ein Tipp blendet die
- * Leisten aus, ein Lied-Punkt springt hin. Malen auf der Rolle kommt mit #608 – bis dahin kein „Anmerken".
+ * Leisten aus, ein Lied-Punkt springt hin. Gemalt wird direkt auf der Rolle (#608).
  */
 // Niedriges Fenster: Die Demo-Lieder sind kurz, als Rollen (#607) stünden sie auf einem ganzen iPhone-
 // Bildschirm komplett da – und es gäbe nichts zu scrollen.
@@ -92,12 +92,6 @@ test('Scrollen: Rollen untereinander, Pedal, Tipp, Lied-Punkt', async ({ page })
   await deck(page).click({ position: { x: 195, y: 200 } });
   await expect(kopfTitel(page)).toBeVisible();
 
-  // Malen auf der Rolle kommt mit #608 – bis dahin bietet das Werkzeug-Menü kein „Anmerken" an.
-  await page.getByRole('button', { name: 'Werkzeuge' }).click();
-  await expect(page.getByRole('menuitem', { name: 'Tempo' })).toBeVisible();
-  await expect(page.getByRole('menuitem', { name: 'Anmerken' })).toHaveCount(0);
-  await page.locator('[class*="scrim"]').first().click(); // Menü schließen
-
   // Ein Lied-Punkt unten holt das Lied an den Anfang des Bildschirms; der Pfeil unten scrollt wie das Pedal.
   const punkte = page.locator('[class*="dots"] > div');
   await punkte.nth(0).click();
@@ -133,8 +127,10 @@ test.describe('iPad quer', () => {
     // Ganz nach unten: Die Kopfzeile zeigt das letzte Lied (die Seite in der Mitte zählt).
     await deck(page).evaluate((el) => (el.scrollTop = el.scrollHeight));
     await expect(kopfTitel(page)).toContainText('Treu');
-    // Malen auf der Rolle kommt mit #608 – bis dahin kein Stift in der Kopfzeile.
-    await expect(page.getByRole('button', { name: 'Anmerken', exact: true })).toHaveCount(0);
+    // Der Stift ist da (#608) – gemalt wird auf der Rolle, nicht auf einer Einzelseite.
+    await page.getByRole('button', { name: 'Anmerken', exact: true }).click();
+    await expect(page.getByTestId('rollen-malen')).toBeVisible();
+    await expect(page.locator('[class*="_slot_"]')).toHaveCount(0);
   });
 });
 
@@ -166,4 +162,127 @@ test('Anmerkungen vom Blättern erscheinen auf der Rolle (#614)', async ({ page 
   const pxProMm = r!.width / 210;
   const schrift = await text.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
   expect(schrift).toBeCloseTo(0.015 * 297 * pxProMm, 0);
+});
+
+test('Malen auf der Rolle: ein Strich landet auf der A4-Seite und bleibt sichtbar (#608)', async ({
+  page,
+}) => {
+  await page.addInitScript((tour: string) => {
+    localStorage.setItem(`worship:onboard-${tour}`, '1');
+    localStorage.setItem('worship:liedansicht', 'scrollen');
+  }, TOUR_CHART);
+  await page.goto('/?demo=chart');
+  await expect
+    .poll(() => deck(page).evaluate((el) => el.querySelectorAll('canvas').length), {
+      timeout: 30_000,
+    })
+    .toBeGreaterThanOrEqual(3);
+
+  await page.getByRole('button', { name: 'Werkzeuge' }).click();
+  await page.getByRole('menuitem', { name: 'Anmerken' }).click();
+  const malen = page.getByTestId('rollen-malen');
+  await expect(malen).toBeVisible();
+  // Der Scroll-Modus bleibt – keine Einzelseite mehr.
+  await expect(deck(page)).toBeVisible();
+
+  // Ein waagerechter Strich mitten auf die erste Rolle.
+  const box = (await malen.boundingBox())!;
+  const y = box.y + Math.min(120, box.height / 2);
+  await page.mouse.move(box.x + 60, y);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 160, y, { steps: 8 });
+  await page.mouse.move(box.x + 260, y, { steps: 8 });
+  await page.mouse.up();
+
+  // Gespeichert auf der A4-Seite des Lieds (nicht auf einer Rollen-Ebene).
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () => localStorage.getItem('worship_docdraw_song999001_a999001_voriginal_0')?.length ?? 0,
+        ),
+      { timeout: 5_000 },
+    )
+    .toBeGreaterThan(500);
+
+  // Gespeichert als A4-Seite (Seitenverhältnis 297 : 210) – nicht als Bild der Rolle.
+  const verhaeltnis = await page.evaluate(async () => {
+    const img = new Image();
+    img.src = localStorage.getItem('worship_docdraw_song999001_a999001_voriginal_0')!;
+    await img.decode();
+    return img.height / img.width;
+  });
+  expect(verhaeltnis).toBeCloseTo(297 / 210, 2);
+
+  // Stift aus: Die Rolle zeigt den Strich jetzt aus der A4-Seite.
+  await page.getByRole('button', { name: 'Anmerken beenden' }).click();
+  await expect(malen).toHaveCount(0);
+  await expect
+    .poll(
+      () =>
+        deck(page).evaluate(
+          (el, p) => {
+            const c = el.querySelector('canvas')!;
+            const r = c.getBoundingClientRect();
+            const sx = c.width / r.width;
+            const px = c
+              .getContext('2d')!
+              .getImageData(
+                Math.round((p.x - r.left) * sx),
+                Math.round((p.y - r.top) * sx),
+                1,
+                1,
+              ).data;
+            return px[0] + px[1] + px[2] < 600; // nicht (fast) weiß
+          },
+          { x: box.x + 160, y },
+        ),
+      { timeout: 5_000 },
+    )
+    .toBe(true);
+});
+
+test.describe('mit Touch', () => {
+  test.use({ hasTouch: true });
+
+  test('Text auf der Rolle: landet als Textfeld auf der A4-Seite (#608)', async ({ page }) => {
+    await page.addInitScript((tour: string) => {
+      localStorage.setItem(`worship:onboard-${tour}`, '1');
+      localStorage.setItem('worship:liedansicht', 'scrollen');
+    }, TOUR_CHART);
+    await page.goto('/?demo=chart');
+    await expect
+      .poll(() => deck(page).evaluate((el) => el.querySelectorAll('canvas').length), {
+        timeout: 30_000,
+      })
+      .toBeGreaterThanOrEqual(3);
+    await page.getByRole('button', { name: 'Werkzeuge' }).click();
+    await page.getByRole('menuitem', { name: 'Anmerken' }).click();
+    await page.getByRole('button', { name: 'Text', exact: true }).click();
+
+    const malen = page.getByTestId('rollen-malen');
+    const box = (await malen.boundingBox())!;
+    // Antippen wie am iPad: Ein Maus-Klick verschöbe den Fokus nach dem Antippen wieder auf die Seite.
+    await page.touchscreen.tap(box.x + 200, box.y + 100);
+    await page.keyboard.type('leise!');
+    // Daneben tippen übernimmt den Text.
+    await page.touchscreen.tap(box.x + 80, box.y + 160);
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() =>
+            localStorage.getItem('worship_docdraw_song999001_a999001_voriginal_0_text'),
+          ),
+        { timeout: 5_000 },
+      )
+      .toContain('leise!');
+    // Auf der A4-Seite steht er, wo er auf der Rolle stand – in A4-Anteilen (die Rolle ist kürzer).
+    const fy = await page.evaluate(
+      () =>
+        JSON.parse(localStorage.getItem('worship_docdraw_song999001_a999001_voriginal_0_text')!)[0]
+          .fy,
+    );
+    const mm = ((box.y + 100 - box.y) * 210) / box.width;
+    expect(fy).toBeCloseTo(mm / 297, 2);
+  });
 });

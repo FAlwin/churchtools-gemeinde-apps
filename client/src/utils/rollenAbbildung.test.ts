@@ -3,6 +3,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { satzplaene } from './chordPdf';
 import {
   a4NachRolle,
+  kerneAufSeite,
+  rolleNachA4,
+  textAufSeite,
   stricheAufRolle,
   streifen,
   textAufRolle,
@@ -99,7 +102,7 @@ describe('a4NachRolle – eine Spalte: exakt', () => {
   });
 
   it('der Titelkopf bleibt, wo er ist', () => {
-    expect(a4NachRolle(streifen(abb()), 0, 40, 10)).toEqual({ x: 40, y: 10 });
+    expect(a4NachRolle(streifen(abb()), 0, 40, 10)).toMatchObject({ x: 40, y: 10 });
   });
 });
 
@@ -176,5 +179,97 @@ describe('stricheAufRolle – gemalte Striche Streifen für Streifen', () => {
       s0.quelle.w * 5,
       s0.quelle.h * 5,
     ]);
+  });
+});
+
+describe('rolleNachA4 – zurück auf die A4-Seite (#608)', () => {
+  it('hin und zurück landet jeder Punkt eines Teils wieder an seiner Stelle – auch auf Seite 2', () => {
+    const a = abb();
+    const st = streifen(a);
+    for (const s of a.a4.stuecke) {
+      for (const y of [s.y0 + 0.5, (s.y0 + s.y1) / 2, s.y1 - 0.5]) {
+        const r = a4NachRolle(st, s.seite, 70, y)!;
+        expect(r.art).toBe('kern');
+        const zurueck = rolleNachA4(st, r.x, r.y)!;
+        expect(zurueck.seite).toBe(s.seite);
+        expect(zurueck.x).toBeCloseTo(70, 5);
+        expect(zurueck.y).toBeCloseTo(y, 5);
+      }
+    }
+  });
+
+  it('der Abstand zwischen zwei Teilen einer Spalte ist ein Kern – hin und zurück genau', () => {
+    const a = abb();
+    const st = streifen(a);
+    const [s1, s2] = a.a4.stuecke.filter((s) => s.seite === 0);
+    const mitte = (s1.y1 + s2.y0) / 2;
+    const r = a4NachRolle(st, 0, 50, mitte)!;
+    expect(r.art).toBe('kern');
+    expect(rolleNachA4(st, r.x, r.y)).toMatchObject({ seite: 0, y: expect.closeTo(mitte, 5) });
+  });
+
+  it('unter dem letzten Teil der Rolle (CCLI-Bereich): zum letzten Teil, nicht ins Leere', () => {
+    const a = abb();
+    const st = streifen(a);
+    const z = rolleNachA4(st, 50, a.rolle.hoehe - 1)!;
+    const letzte = a.a4.stuecke.at(-1)!;
+    expect(z.seite).toBe(letzte.seite);
+  });
+});
+
+describe('textAufSeite – Textfelder zurück (#608)', () => {
+  it('Lage und Größe kommen dort an, wo sie herkamen', () => {
+    const a = abb();
+    const st = streifen(a);
+    const zweite = a.a4.stuecke.find((s) => s.seite === 1)!;
+    const t = {
+      id: 1,
+      fx: 0.3,
+      fy: (zweite.y0 + 3) / PAGE_H,
+      sizeCqh: 2,
+      text: 'x',
+      color: '#000',
+    };
+    const aufRolle = textAufRolle(t, st, 1, a.rolle.hoehe)!;
+    const zurueck = textAufSeite(aufRolle, st, a.rolle.hoehe)!;
+    expect(zurueck.seite).toBe(1);
+    expect(zurueck.text.fx).toBeCloseTo(0.3, 6);
+    expect(zurueck.text.fy).toBeCloseTo(t.fy, 6);
+    expect(zurueck.text.sizeCqh).toBeCloseTo(2, 6);
+  });
+});
+
+describe('kerneAufSeite / stricheAufRolle(nur) – Striche zurückschreiben (#608)', () => {
+  it('jeder Kern der Seite wird geleert und aus der Rolle gefüllt – Lücken nicht', () => {
+    const a = abb();
+    const st = streifen(a);
+    const clearRect = vi.fn();
+    const drawImage = vi.fn();
+    const ctx = { clearRect, drawImage } as unknown as CanvasRenderingContext2D;
+    const rolle = { width: 1050 } as unknown as HTMLCanvasElement; // 5 px je mm
+    kerneAufSeite(ctx, rolle, st, 1, 420); // A4-Seite: 2 px je mm
+    const kerne = st.filter((s) => s.seite === 1 && s.art === 'kern' && s.quelle.h > 0);
+    expect(drawImage).toHaveBeenCalledTimes(kerne.length);
+    expect(clearRect).toHaveBeenCalledTimes(kerne.length);
+    const [, sx, sy, , , dx, dy] = drawImage.mock.calls[0] as number[];
+    expect([sx, sy]).toEqual([kerne[0].ziel.x * 5, kerne[0].ziel.y * 5]);
+    expect([dx, dy]).toEqual([kerne[0].quelle.x * 2, kerne[0].quelle.y * 2]);
+  });
+
+  it('stricheAufRolle(…, "luecke") zeichnet nur die Lücken', () => {
+    const a = abb();
+    const st = streifen(a);
+    const drawImage = vi.fn();
+    stricheAufRolle(
+      { drawImage } as unknown as CanvasRenderingContext2D,
+      { width: 420 } as unknown as HTMLCanvasElement,
+      st,
+      0,
+      1050,
+      'luecke',
+    );
+    expect(drawImage).toHaveBeenCalledTimes(
+      st.filter((s) => s.seite === 0 && s.art === 'luecke' && s.quelle.h > 0).length,
+    );
   });
 });

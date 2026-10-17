@@ -28,8 +28,12 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   letzten Teil. **Die Anmerkungen sind dieselben wie beim Blättern** (#614): Die lange Seite zeigt sie
   umgerechnet an derselben Stelle im Teil; was beim Blättern in einer Lücke am Seitenende steht, erscheint am
   Ende des Teils davor; aus 2-Spalten-Liedern werden sie übernommen, stehen aber nur ungefähr (zurechtrücken
-  kommt mit dem Lasso, #615). Im Scroll-Modus gibt es keinen Spalten-Schalter. Malen auf der langen Seite
-  folgt (#608) – bis dahin gibt es im Scroll-Modus kein „Anmerken“. Hochgeladene PDFs
+  kommt mit dem Lasso, #615). Im Scroll-Modus gibt es keinen Spalten-Schalter. **Malen direkt auf der langen
+  Seite** (#608): Stift an – ein Finger oder der Pencil malt, **zwei Finger scrollen**; gemalt wird auf dem
+  Lied in der Bildmitte, ein Tipp auf ein anderes (abgeblendetes) Lied macht es zum Mal-Lied; Stift, Marker,
+  Radierer, Text, Rückgängig und Löschen wie beim Blättern. Gespeichert wird auf den A4-Seiten, beim Blättern
+  steht es also am selben Teil. Was beim Blättern in einer Lücke steht, lässt sich auf der langen Seite nur
+  ansehen, nicht bearbeiten. Hochgeladene PDFs
   bleiben Seiten. Die **Vorschau im Editor** zeigt im Scroll-Modus ebenfalls die lange Seite. Sehr lange
   Seiten werden auf iPhone/iPad etwas weniger scharf gezeichnet statt gar nicht (Leinwand-Grenze von iOS).
 - **Flow-Zeile `{flow: …}`** (#606, Rückmeldung des Musik-Bereichsleiters): Steht im ChordPro z. B.

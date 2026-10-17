@@ -7,6 +7,13 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Behoben (Anmeldungen, #619)
+
+- **Wer wartet, kommt zuerst:** Gemessen 17.10.2026 – wartet jemand, stellt ChurchTools jede neue Anmeldung hinten an,
+  auch wenn Plätze frei sind (mehr Plätze lassen niemanden nachrücken). Das Formular rechnete nur `max − belegt` und
+  zeigte „✓ angemeldet“ samt Betrag, obwohl ChurchTools auf die Warteliste setzte. Jetzt gibt es für Gäste keinen
+  freien Platz, solange jemand wartet (`platzStandAus`, die eine Stelle für Anzeige, Hinweis, Betrag und Ergebnis).
+
 ### Neu (Anmeldungen, A6-5b, #616)
 
 - **Kontingent je Auswahl** (Alwin, 17.10.2026): Je Option „Wie oft buchbar“ – jede Anmeldung mit dieser Option

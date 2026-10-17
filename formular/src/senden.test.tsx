@@ -525,3 +525,26 @@ describe('A6-5b (#616): Kontingent je Auswahl', () => {
     expect(aufrufe.some((a) => a.pfad.endsWith('/token'))).toBe(false);
   });
 });
+
+describe('#619: wer wartet, kommt zuerst', () => {
+  it('Plätze frei, aber jemand wartet → Formular sagt „Warteliste“, Knopf „Auf die Warteliste“', async () => {
+    antworten['GET /api/publicgroups/66'] = [
+      {
+        status: 200,
+        body: {
+          data: {
+            ...GRUPPE,
+            maxMemberCount: 10,
+            currentMemberCount: 3,
+            allowWaitinglist: true,
+            requestedWaitinglistSeatsCount: 1,
+          },
+        },
+      },
+    ];
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Gemeindeessen' });
+    expect(screen.getByText(/Alle Plätze sind belegt/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Auf die Warteliste' })).toBeTruthy();
+  });
+});

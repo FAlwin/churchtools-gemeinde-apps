@@ -1,8 +1,13 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
 import { jsPDF } from 'jspdf';
-import { chartHead, generateChordPdf, generateSetlistPdfWithOwners, rollenHoehe } from './chordPdf';
-import { ROLLEN_SEITE } from '@shared/keys/index';
+import {
+  chartHead,
+  generateChordPdf,
+  generateSetlistPdfWithOwners,
+  rollenHoehe,
+  satzplaene,
+} from './chordPdf';
 import type { SetlistSong } from '@shared/types/index';
 
 /**
@@ -335,15 +340,69 @@ describe('generateChordPdf – Rolle für den Scroll-Modus (#607)', () => {
     expect(h - ccli!.y).toBeLessThan(20);
   });
 
-  it('Ablauf mit Rolle: eine Seite je Lied, Besitzer auf der Rollen-Seite, A4-Lieder bleiben A4', () => {
-    const lieder = [longSong(60, 'A'), { ...SHORT, id: 2 }];
+  it('Ablauf mit Rolle: eine Seite je Lied mit Abbildung, A4-Lieder bleiben A4 ohne', () => {
+    // Das A4-Lied ist mehrseitig: Auch sein Seitenumbruch MITTEN im Lied muss A4 bleiben.
+    const lieder = [longSong(60, 'A'), { ...longSong(150, 'B'), id: 2 }];
     const { doc, owners } = generateSetlistPdfWithOwners(lieder, (s) => ({ rolle: s.id !== 2 }));
-    expect(owners.map((o) => [o.songId, o.localPage])).toEqual([
-      [1, ROLLEN_SEITE],
-      [2, 0],
-    ]);
+    expect(owners[0]).toMatchObject({ songId: 1, localPage: 0 });
+    expect(owners[0].abbildung).toBeTruthy();
+    const b = owners.filter((o) => o.songId === 2);
+    expect(b.length).toBeGreaterThan(1);
+    expect(b.every((o) => !o.abbildung)).toBe(true);
+    for (let i = 2; i <= doc.getNumberOfPages(); i++) expect(hoehe(doc, i)).toBeCloseTo(297, 0);
+    // Die Abbildung kennt die A4-Seiten des Lieds – dort liegen seine Anmerkungen (#614).
+    expect(owners[0].abbildung!.a4.seiten).toBe(generateChordPdf(lieder[0]).getNumberOfPages());
     expect(hoehe(doc, 1)).toBe(rollenHoehe(lieder[0]));
-    // Ohne ausdrückliches Format hätte `addPage()` das der ersten Seite genommen – also die Rolle.
-    expect(hoehe(doc, 2)).toBeCloseTo(297, 0);
+    // (Ohne ausdrückliches Format nähme `addPage()` das der vorigen Seite – nach der Rolle also die Rolle.)
+  });
+});
+
+describe('satzplaene – wo A4 und Rolle was stehen haben (#614)', () => {
+  const teile = (anzahl: number, zeilen: number) =>
+    song({
+      chordpro: Array.from(
+        { length: anzahl },
+        (_, n) =>
+          `{comment: Vers ${n + 1}}\n${Array.from({ length: zeilen }, () => '[C]Zeile mit [G]Text').join('\n')}`,
+      ).join('\n'),
+    });
+
+  it('jeder Teil steht auf der Rolle einmal, in Reihenfolge, ohne Lücken', () => {
+    const { rolle } = satzplaene(teile(4, 9));
+    expect(rolle.stuecke.map((s) => s.teil)).toEqual([0, 1, 2, 3]);
+    for (let i = 1; i < rolle.stuecke.length; i++) {
+      // Zwischen zwei Teilen nur der Abstand – kein Seitenende.
+      const abstand = rolle.stuecke[i].y0 - rolle.stuecke[i - 1].y1;
+      expect(abstand).toBeGreaterThan(0);
+      expect(abstand).toBeLessThan(10);
+    }
+  });
+
+  it('A4 mit einer Spalte: dieselben Stück-Höhen wie auf der Rolle (gleiche Umbrüche)', () => {
+    const { a4, rolle } = satzplaene(teile(6, 9));
+    const hoehenA4 = new Map<number, number>();
+    for (const s of a4.stuecke) hoehenA4.set(s.teil, (hoehenA4.get(s.teil) ?? 0) + s.y1 - s.y0);
+    for (const s of rolle.stuecke) expect(hoehenA4.get(s.teil)).toBeCloseTo(s.y1 - s.y0, 5);
+  });
+
+  it('ein Teil, der nicht mehr passt, springt auf A4 auf die nächste Seite', () => {
+    const { a4 } = satzplaene(teile(6, 9));
+    expect(a4.seiten).toBeGreaterThan(1);
+    expect(new Set(a4.stuecke.map((s) => s.seite)).size).toBe(a4.seiten);
+  });
+
+  it('ein Teil, der länger als eine Spalte ist, wird auf A4 zu mehreren Stücken mit Fortsetzung', () => {
+    const { a4 } = satzplaene(longSong(80));
+    const teil0 = a4.stuecke.filter((s) => s.teil === 0);
+    expect(teil0.length).toBeGreaterThan(1);
+    expect(teil0[0].imTeil).toBe(0);
+    expect(teil0[1].imTeil).toBeCloseTo(teil0[0].y1 - teil0[0].y0, 5);
+  });
+
+  it('kennt Spalten und Seiten des A4-Satzes', () => {
+    const { a4, rolle } = satzplaene(longSong(80), { cols: 2 });
+    expect(a4.spalten).toBe(2);
+    expect(rolle.spalten).toBe(1);
+    expect(a4.stuecke.some((s) => s.spalte === 1)).toBe(true);
   });
 });

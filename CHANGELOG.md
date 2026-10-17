@@ -25,8 +25,11 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 - **Scroll-Modus: je Lied eine lange Seite** (#607, Rückmeldung des Musik-Bereichsleiters): Statt
   aneinandergehängter A4-Seiten ist jedes Lied beim Scrollen eine durchgehende Seite in einer Spalte – keine
   Lücke mehr, wenn ein Teil nicht mehr auf die Seite passte, und die CCLI-Angabe steht direkt unter dem
-  letzten Teil. Die lange Seite hat **eigene Anmerkungen** (getrennt vom Blättern); malen lässt sich darauf
-  mit dem nächsten Schritt (#608) – bis dahin gibt es im Scroll-Modus kein „Anmerken“. Hochgeladene PDFs
+  letzten Teil. **Die Anmerkungen sind dieselben wie beim Blättern** (#614): Die lange Seite zeigt sie
+  umgerechnet an derselben Stelle im Teil; was beim Blättern in einer Lücke am Seitenende steht, erscheint am
+  Ende des Teils davor; aus 2-Spalten-Liedern werden sie übernommen, stehen aber nur ungefähr (zurechtrücken
+  kommt mit dem Lasso, #615). Im Scroll-Modus gibt es keinen Spalten-Schalter. Malen auf der langen Seite
+  folgt (#608) – bis dahin gibt es im Scroll-Modus kein „Anmerken“. Hochgeladene PDFs
   bleiben Seiten. Die **Vorschau im Editor** zeigt im Scroll-Modus ebenfalls die lange Seite. Sehr lange
   Seiten werden auf iPhone/iPad etwas weniger scharf gezeichnet statt gar nicht (Leinwand-Grenze von iOS).
 - **Flow-Zeile `{flow: …}`** (#606, Rückmeldung des Musik-Bereichsleiters): Steht im ChordPro z. B.

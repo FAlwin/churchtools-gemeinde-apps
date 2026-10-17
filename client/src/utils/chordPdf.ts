@@ -2,7 +2,8 @@ import { jsPDF } from 'jspdf';
 import { parseChordPro, parseLine, parseMetadata, teileImFlow } from './chordpro';
 import { transposeChord } from './transpose';
 import type { SetlistSong } from '@shared/types/index';
-import { ROLLEN_SEITE } from '@shared/keys/index';
+import type { Abbildung, Satzplan, Stueck } from './rollenAbbildung';
+import { MARGIN, PAGE_H, PAGE_W, spaltenBreite, spaltenX } from './blattMasse';
 
 /** Optionen für die PDF-Erzeugung aus ChordPro (Issue: PDF-Export). */
 export interface ChordPdfOptions {
@@ -30,17 +31,20 @@ export interface ChordPdfOptions {
   rolle?: boolean;
 }
 
-/** Nur intern: Wohin die Messung der Rolle ihre Endhöhe schreibt. */
-interface Messung {
+/**
+ * Nur intern: Was ein Satz-Durchlauf mitschreibt – Endhöhe (für die Rolle) und WO jedes Stück eines
+ * Teils steht (#614: daraus werden die Anmerkungen zwischen A4 und Rolle umgerechnet).
+ */
+interface Protokoll extends Satzplan {
   hoehe: number;
 }
 
+function leeresProtokoll(): Protokoll {
+  return { hoehe: 0, stuecke: [], kopfEnde: 0, spalten: 1, seiten: 1 };
+}
+
 const PT_TO_MM = 0.352777;
-// A4 Hochformat
-const PAGE_W = 210;
-const PAGE_H = 297;
-const MARGIN = 12;
-const COL_GAP = 8;
+// A4 Hochformat – Maße in `blattMasse.ts`, die Umrechnung der Anmerkungen nutzt dieselben (#614).
 // Alles schwarz halten (SongSelect-Look) – damit Akkorde auch auf S/W-Druckern klar sichtbar sind.
 const TEXT_COLOR: [number, number, number] = [20, 17, 15];
 const CHORD_COLOR: [number, number, number] = TEXT_COLOR;
@@ -86,7 +90,7 @@ export function generateChordPdf(
   song: ChordPdfSong,
   opts: ChordPdfOptions = {},
   doc?: jsPDF,
-  messung?: Messung,
+  protokoll?: Protokoll,
 ): jsPDF {
   const {
     semitones = 0,
@@ -113,7 +117,7 @@ export function generateChordPdf(
   const labelPt = Math.max(10, Math.round(fontPt * 1.0));
   const labelH = labelPt * PT_TO_MM * 1.3 + 2.5;
 
-  const colW = (PAGE_W - 2 * MARGIN - (cols - 1) * COL_GAP) / cols;
+  const colW = spaltenBreite(cols);
   // Die Rolle bricht nie um – ihr „Seitenende" gibt es nicht.
   const bottom = rolle ? Number.POSITIVE_INFINITY : PAGE_H - MARGIN;
   let col = 0;
@@ -122,9 +126,27 @@ export function generateChordPdf(
   let y = MARGIN;
 
   function colX(c: number): number {
-    return MARGIN + c * (colW + COL_GAP);
+    return spaltenX(c, cols);
   }
+  // ── Stücke mitschreiben (#614) ──
+  // Ein Stück ist ein zusammenhängender Lauf eines Teils in EINER Spalte einer Seite. Bricht ein Teil
+  // um, beginnt ein neues Stück desselben Teils; `imTeil` sagt, wie weit der Teil davor schon war.
+  let offen: Omit<Stueck, 'y1'> | null = null;
+  let imTeilLauf = 0;
+  function stueckOeffnen(teil: number) {
+    offen = { teil, seite: pageNo, spalte: col, x: colX(col), y0: y, imTeil: imTeilLauf };
+  }
+  function stueckSchliessen() {
+    const o = offen;
+    offen = null;
+    if (!o || y <= o.y0) return; // leeres Stück (Umbruch direkt am Anfang) – zählt nicht
+    protokoll?.stuecke.push({ ...o, y1: y });
+    imTeilLauf += y - o.y0;
+  }
+
   function nextColumn() {
+    const lief = offen?.teil;
+    stueckSchliessen();
     col += 1;
     if (col >= cols) {
       d.addPage();
@@ -134,6 +156,7 @@ export function generateChordPdf(
     x = colX(col);
     // Auf Seite 1 beginnen ALLE Spalten unter dem Titelkopf (sonst überlappt Spalte 2 den Titel).
     y = pageNo === 0 ? startY : MARGIN;
+    if (lief !== undefined) stueckOeffnen(lief);
   }
   function ensure(space: number) {
     if (y + space > bottom) nextColumn();
@@ -207,6 +230,10 @@ export function generateChordPdf(
   const startY = Math.max(y, logoBottom) + 4;
   y = startY;
   x = colX(0);
+  if (protokoll) {
+    protokoll.kopfEnde = startY;
+    protokoll.spalten = cols;
+  }
 
   type Pair = { chord: string | null; text: string };
   // Eine Liedzeile in Token zerlegen (Akkord bleibt am ersten Wort) und an Wortgrenzen so
@@ -311,7 +338,7 @@ export function generateChordPdf(
     y += rowH;
   }
 
-  sections.forEach((sec) => {
+  sections.forEach((sec, teil) => {
     // Die Abschnitts-Transponierung hängt am Teil im ORIGINAL – auch wenn er im Flow wiederkehrt.
     const secSemi = semitones + (sectionSemitones?.[sec.index] ?? 0);
 
@@ -343,6 +370,8 @@ export function generateChordPdf(
     const colTop = pageNo === 0 ? startY : MARGIN;
     if (y + secH > bottom && secH <= bottom - colTop) nextColumn();
 
+    imTeilLauf = 0;
+    stueckOeffnen(teil);
     if (sec.label) {
       ensure(labelH + rowH);
       d.setFont('helvetica', 'bold');
@@ -361,6 +390,7 @@ export function generateChordPdf(
         drawRow(row);
       }
     }
+    stueckSchliessen();
     y += sectionGap;
   });
 
@@ -374,7 +404,10 @@ export function generateChordPdf(
     d.setTextColor(...MUTED_COLOR);
     d.text(`CCLI-Liednummer ${song.ccli}`, PAGE_W / 2, ccliY, { align: 'center' });
   }
-  if (messung) messung.hoehe = (song.ccli ? ccliY + 2 : inhaltEnde) + MARGIN;
+  if (protokoll) {
+    protokoll.hoehe = (song.ccli ? ccliY + 2 : inhaltEnde) + MARGIN;
+    protokoll.seiten = pageNo + 1;
+  }
 
   return d;
 }
@@ -407,10 +440,31 @@ function rollenDokument(hoehe: number): jsPDF {
  * dabei mit genau derselben Funktion wie danach; eine zweite Höhenrechnung gibt es bewusst nicht.
  */
 export function rollenHoehe(song: ChordPdfSong, opts: ChordPdfOptions = {}): number {
+  return rollenProbe(song, opts).hoehe;
+}
+
+function rollenProbe(song: ChordPdfSong, opts: ChordPdfOptions): Protokoll {
   const probe = new jsPDF({ unit: 'mm', format: [PAGE_W, ROLLE_MAX_H], orientation: 'p' });
-  const messung: Messung = { hoehe: 0 };
-  generateChordPdf(song, { ...opts, rolle: true }, probe, messung);
-  return Math.min(ROLLE_MAX_H, Math.max(ROLLE_MIN_H, Math.ceil(messung.hoehe)));
+  const p = leeresProtokoll();
+  generateChordPdf(song, { ...opts, rolle: true }, probe, p);
+  p.hoehe = Math.min(ROLLE_MAX_H, Math.max(ROLLE_MIN_H, Math.ceil(p.hoehe)));
+  return p;
+}
+
+/**
+ * **Wo steht was – auf A4 und auf der Rolle?** (#614) Beide Sätze laufen durch DIESELBE Funktion; die
+ * A4-Seiten mit den Einstellungen des Lieds (auch 2 Spalten), die Rolle immer einspaltig. Daraus rechnet
+ * `rollenAbbildung.ts` die Anmerkungen um – sie bleiben auf den A4-Seiten gespeichert.
+ */
+export function satzplaene(
+  song: ChordPdfSong,
+  opts: ChordPdfOptions = {},
+): { a4: Satzplan; rolle: Satzplan & { hoehe: number } } {
+  const a4 = leeresProtokoll();
+  generateChordPdf(song, { ...opts, rolle: false }, neuesA4(), a4);
+  const { hoehe, ...rolle } = rollenProbe(song, opts);
+  const { hoehe: _a4Hoehe, ...a4Plan } = a4;
+  return { a4: a4Plan, rolle: { ...rolle, hoehe } };
 }
 
 /** Welches Lied (und welche Seite darin) gehört zu einer Seite der zusammengefassten PDF. */
@@ -420,6 +474,11 @@ export interface SetlistPageOwner {
   /** Schlüssel der angezeigten Version ('original' oder Slug) – für versionsbezogene Anmerkungen. */
   versionKey: string;
   localPage: number;
+  /**
+   * Nur bei der Rolle (Scroll-Modus): wo A4 und Rolle was stehen haben. Die Rolle hat KEINE eigenen
+   * Anmerkungen – sie zeigt die der A4-Seiten, umgerechnet (#614).
+   */
+  abbildung?: Abbildung;
 }
 
 /**
@@ -435,10 +494,12 @@ export function generateSetlistPdfWithOwners(
   const owners: SetlistPageOwner[] = [];
   songs.forEach((song, si) => {
     const opts = optsFor(song);
-    // Jede Seite bekommt ihr Format ausdrücklich: `addPage()` ohne Angabe nähme das der ERSTEN Seite –
-    // nach einer Rolle wäre das nächste A4-Blatt sonst so lang wie sie.
+    let abbildung: Abbildung | undefined;
+    // Jede Seite bekommt ihr Format ausdrücklich: `addPage()` ohne Angabe nimmt das der VORIGEN Seite
+    // (nachgemessen 17.10.2026) – nach einer Rolle wäre das nächste A4-Blatt sonst so lang wie sie.
     if (opts.rolle) {
-      const { format, orientation } = rollenFormat(rollenHoehe(song, opts));
+      abbildung = satzplaene(song, opts);
+      const { format, orientation } = rollenFormat(abbildung.rolle.hoehe);
       if (d) d.addPage(format, orientation);
       else d = new jsPDF({ unit: 'mm', format, orientation });
     } else if (d) d.addPage('a4', 'p');
@@ -448,12 +509,12 @@ export function generateSetlistPdfWithOwners(
     const after = d.getNumberOfPages();
     const versionKey = song.versionKey ?? 'original';
     for (let p = 0; p <= after - before; p++) {
-      // Die Rolle ist eine eigene Seite derselben Ebene – mit eigenen Anmerkungen (#607).
       owners.push({
         songIdx: si,
         songId: song.id,
         versionKey,
-        localPage: opts.rolle ? ROLLEN_SEITE : p,
+        localPage: p,
+        ...(abbildung ? { abbildung } : {}),
       });
     }
   });

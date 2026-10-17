@@ -1,5 +1,6 @@
 import type { SetlistSong } from '@shared/types/index';
 import type { SongSettings } from './chartSettings';
+import type { Abbildung } from './rollenAbbildung';
 
 /** Wem gehört eine Seite im durchgehenden Strom (Lied + Seite darin, Akkorde oder Dokument). */
 export interface StreamOwner {
@@ -12,18 +13,22 @@ export interface StreamOwner {
   arrangementId: number;
   fileId?: number;
   docType?: 'pdf' | 'image';
+  /**
+   * Nur bei der Rolle (Scroll-Modus): Die Seite hat keine eigenen Anmerkungen, sie zeigt die der A4-Seiten
+   * dieses Lieds umgerechnet (#614). Wer Schlüssel bildet, muss das wissen – sonst landeten Anmerkungen
+   * der Rolle auf A4-Seite 1.
+   */
+  abbildung?: Abbildung;
 }
 
 /** Eine gerenderte Akkord-Seite mit ihrer Version und ihrer Seite im Lied (aus dem Blatt). */
 export interface ChordPage<T> {
   canvas: T;
   versionKey: string;
-  /**
-   * Die Seite, wie das Blatt sie zählt (`SetlistPageOwner.localPage`) – NICHT neu durchgezählt. Die Rolle
-   * des Scroll-Modus ist Seite `ROLLEN_SEITE` (#607); durchgezählt wäre sie Seite 0 und hätte die
-   * Anmerkungen der ersten A4-Seite bekommen.
-   */
+  /** Die Seite, wie das Blatt sie zählt (`SetlistPageOwner.localPage`) – nicht neu durchgezählt. */
   localPage: number;
+  /** Die Rolle des Scroll-Modus: wo A4 und Rolle was stehen haben (#614). */
+  abbildung?: Abbildung;
 }
 
 interface ComposeInput<T> {
@@ -81,7 +86,7 @@ export function composeStream<T>({ songs, settings, chordBySong, docPages }: Com
     // Ein gewähltes, aber nicht ladbares Dokument → Rückfall auf die Akkorde, und das wird gemeldet.
     if (doc) fellBackToChords.push(song.id);
 
-    for (const { canvas, versionKey, localPage } of chordBySong.get(si) ?? []) {
+    for (const { canvas, versionKey, localPage, abbildung } of chordBySong.get(si) ?? []) {
       pages.push(canvas);
       owners.push({
         songIdx: si,
@@ -90,6 +95,7 @@ export function composeStream<T>({ songs, settings, chordBySong, docPages }: Com
         kind: 'chord',
         versionKey,
         arrangementId: song.arrangementId,
+        ...(abbildung ? { abbildung } : {}),
       });
     }
   });

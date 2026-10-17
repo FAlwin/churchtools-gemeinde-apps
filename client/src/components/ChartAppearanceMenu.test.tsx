@@ -52,4 +52,12 @@ describe('ChartAppearanceMenu', () => {
     screen.getByText('1 Spalte').click();
     expect(h.onCols).toHaveBeenLastCalledWith(1);
   });
+
+  it('im Scroll-Modus keine Spaltenwahl – die Rolle hat keine Spalten (17.10.2026)', () => {
+    const handlers = { onFontSize: vi.fn(), onCols: vi.fn(), onClose: vi.fn() };
+    render(<ChartAppearanceMenu fontSize={20} cols={2} ohneSpalten {...handlers} />);
+    expect(screen.queryByText('Spalten')).toBeNull();
+    expect(screen.queryByText('2 Spalten')).toBeNull();
+    expect(screen.getByText('A+')).toBeTruthy();
+  });
 });

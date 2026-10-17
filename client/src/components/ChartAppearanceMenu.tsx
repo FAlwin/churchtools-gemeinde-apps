@@ -13,6 +13,8 @@ interface ChartAppearanceMenuProps {
   onFontSize: (next: number) => void;
   onCols: (next: 1 | 2) => void;
   onClose: () => void;
+  /** Scroll-Modus: Die Rolle hat keine Spalten – der Schalter entfällt (Alwin, 17.10.2026). */
+  ohneSpalten?: boolean;
 }
 
 export function ChartAppearanceMenu({
@@ -21,6 +23,7 @@ export function ChartAppearanceMenu({
   onFontSize,
   onCols,
   onClose,
+  ohneSpalten = false,
 }: ChartAppearanceMenuProps) {
   return (
     <>
@@ -37,21 +40,23 @@ export function ChartAppearanceMenu({
           </button>
         </div>
 
-        <div className={styles.menuLbl}>Spalten</div>
-        <div className={styles.segGroup}>
-          <button
-            className={`${styles.segBtn}${cols === 1 ? ' ' + styles.on : ''}`}
-            onClick={() => onCols(1)}
-          >
-            1 Spalte
-          </button>
-          <button
-            className={`${styles.segBtn}${cols === 2 ? ' ' + styles.on : ''}`}
-            onClick={() => onCols(2)}
-          >
-            2 Spalten
-          </button>
-        </div>
+        {!ohneSpalten && <div className={styles.menuLbl}>Spalten</div>}
+        {!ohneSpalten && (
+          <div className={styles.segGroup}>
+            <button
+              className={`${styles.segBtn}${cols === 1 ? ' ' + styles.on : ''}`}
+              onClick={() => onCols(1)}
+            >
+              1 Spalte
+            </button>
+            <button
+              className={`${styles.segBtn}${cols === 2 ? ' ' + styles.on : ''}`}
+              onClick={() => onCols(2)}
+            >
+              2 Spalten
+            </button>
+          </div>
+        )}
       </div>
     </>
   );

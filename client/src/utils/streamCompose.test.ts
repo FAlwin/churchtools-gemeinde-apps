@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { composeStream, docPagesToKeep, type ChordPage } from './streamCompose';
-import { ROLLEN_SEITE } from '@shared/keys/index';
 import { DEFAULT_SETTINGS, type SongSettings } from './chartSettings';
 import type { SetlistSong } from '@shared/types/index';
 
@@ -145,17 +144,30 @@ describe('docPagesToKeep – Vorrat begrenzen', () => {
   });
 });
 
-describe('composeStream – die Rolle des Scroll-Modus (#607)', () => {
-  it('übernimmt die Seitennummer aus dem Blatt, statt neu durchzuzählen', () => {
-    // Durchgezählt wäre die Rolle Seite 0 – und bekäme die Anmerkungen der ersten A4-Seite.
+describe('composeStream – die Rolle des Scroll-Modus (#607/#614)', () => {
+  it('reicht die Abbildung der Rolle an den Besitzer durch', () => {
+    const abbildung = {
+      a4: { stuecke: [], kopfEnde: 30, spalten: 1, seiten: 1 },
+      rolle: { stuecke: [], kopfEnde: 30, spalten: 1, seiten: 1, hoehe: 200 },
+    };
     const { owners } = composeStream({
       songs: [song(10)],
       settings: {},
       chordBySong: new Map([
-        [0, [{ canvas: 'R', versionKey: 'original', localPage: ROLLEN_SEITE }]],
+        [0, [{ canvas: 'R', versionKey: 'original', localPage: 0, abbildung }]],
       ]),
       docPages: new Map(),
     });
-    expect(owners[0].localPage).toBe(ROLLEN_SEITE);
+    expect(owners[0].abbildung).toBe(abbildung);
+  });
+
+  it('A4-Seiten tragen keine Abbildung', () => {
+    const { owners } = composeStream({
+      songs: [song(10)],
+      settings: {},
+      chordBySong: chords({ 0: ['A1'] }),
+      docPages: new Map(),
+    });
+    expect(owners[0].abbildung).toBeUndefined();
   });
 });

@@ -2,6 +2,8 @@ import { ANNO_ZOOM_NS } from '@shared/keys/index';
 import { DEFAULT_SETTINGS, type SongSettings } from './chartSettings';
 import type { StreamOwner } from './streamCompose';
 import { drawKeyForOwner, viewKeyForOwner, zoomKeyBaseForOwner } from './streamKeys';
+import { eigenerSchluessel } from './pageKeys';
+import type { Anmerkungsquelle } from './rollenAbbildung';
 
 /**
  * Welche Anmerkungs-/Zoom-Ebene gehört zu welcher Seite des durchgehenden Stroms? (#314)
@@ -57,7 +59,9 @@ export function drawKeyForPage(
   live: Record<number, SongSettings>,
 ): string | null {
   const o = owners[page];
-  return o ? drawKeyForOwner(o, isLyricsOnlyFor(o.songId, published, live)) : null;
+  // Die Rolle hat keine eigenen Anmerkungen (#614) – ein Schlüssel hier schriebe auf A4-Seite 1.
+  if (!o || o.abbildung) return null;
+  return drawKeyForOwner(o, isLyricsOnlyFor(o.songId, published, live));
 }
 
 /**
@@ -95,7 +99,7 @@ export function viewKeyForPage(
 ): string | null {
   if (!viewed) return null;
   const o = owners[page];
-  if (!o) return null;
+  if (!o || o.abbildung) return null;
   return viewKeyForOwner(
     o,
     {
@@ -127,4 +131,59 @@ export function pageLabelFor(
   const unitPages = owners.filter((o) => o.songIdx === cur.songIdx).length;
   if (unitPages <= 1) return null;
   return `Seite ${cur.localPage + 1} / ${unitPages}`;
+}
+
+/**
+ * **Welche Anmerkungen eine Seite des Scroll-Modus zeigt** (#614). Eine A4-Seite (oder ein Dokument): ihre
+ * eigenen und die gerade angesehenen fremden. Die Rolle: die aller A4-Seiten ihres Lieds, mit Abbildung
+ * zum Umrechnen – die Rolle selbst hat keine.
+ *
+ * Für beide gilt dieselbe Regel wie beim Blättern (`eigenerSchluessel`: beim Ansehen fremder Notizen ist
+ * die eigene Ebene ausgeblendet, außer in der Vorschau „Zusammenführen").
+ */
+export function anmerkungsquelleFuer(
+  page: number,
+  owners: StreamOwner[],
+  published: Record<number, SongSettings>,
+  live: Record<number, SongSettings>,
+  viewed: ViewedLevel | null,
+  viewNamespace: string,
+  previewOwn: boolean,
+): Anmerkungsquelle {
+  const o = owners[page];
+  if (!o) return { seiten: [{ own: null, over: null }] };
+  if (!o.abbildung) {
+    const over = viewKeyForPage(page, owners, viewed, viewNamespace);
+    const own = eigenerSchluessel(
+      page,
+      (p) => drawKeyForPage(p, owners, published, live),
+      () => over,
+      previewOwn,
+    );
+    return { seiten: [{ own, over }] };
+  }
+  const lyr = isLyricsOnlyFor(o.songId, published, live);
+  const seiten = Array.from({ length: o.abbildung.a4.seiten }, (_, i) => {
+    const a4: StreamOwner = { ...o, localPage: i, abbildung: undefined };
+    const over = viewed
+      ? viewKeyForOwner(
+          a4,
+          {
+            songId: viewed.songId,
+            versionKey: a4.versionKey,
+            lyr: viewed.lyr,
+            arrangementId: viewed.arrangementId,
+          },
+          viewNamespace,
+        )
+      : null;
+    const own = eigenerSchluessel(
+      i,
+      () => drawKeyForOwner(a4, lyr),
+      () => over,
+      previewOwn,
+    );
+    return { own, over };
+  });
+  return { seiten, abbildung: o.abbildung };
 }

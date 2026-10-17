@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 import { useLatestRef } from './useLatestRef';
+import { PAGE_H, PAGE_W } from '../utils/blattMasse';
+
+/** Seitenverhältnis, bis die erste Seite gezeichnet ist. */
+const A4_FORMAT = `${PAGE_W} / ${PAGE_H}`;
 
 type CanvasRefs = MutableRefObject<HTMLCanvasElement | null>[];
 
@@ -61,7 +65,7 @@ export function usePageCanvases({
   overlayRefs,
   onAfterPaint,
 }: UsePageCanvasesParams) {
-  const [aspects, setAspects] = useState<string[]>(['210 / 297', '210 / 297']);
+  const [aspects, setAspects] = useState<string[]>([A4_FORMAT, A4_FORMAT]);
   // Vorab dekodierte Strich-Bilder (localStorage-PNGs) der Umgebung.
   const strokeImgCache = useRef<Map<string, HTMLImageElement>>(new Map());
   const afterPaint = useLatestRef(onAfterPaint);

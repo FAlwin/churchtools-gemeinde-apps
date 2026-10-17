@@ -1,8 +1,6 @@
-/**
- * Die Maße des Liedblatts (mm) – **eine Quelle** für den Satz (`chordPdf.ts`) und die Umrechnung der
- * Anmerkungen zwischen A4 und Rolle (`rollenAbbildung.ts`, #614). Stimmten die beiden nicht überein,
- * lägen die Anmerkungen beim Scrollen still daneben.
- */
+// Die Maße des Liedblatts (mm) – **eine Quelle** für den Satz (`chordPdf.ts`), das Teilen-PDF und die
+// Umrechnung der Anmerkungen zwischen A4 und Rolle (`rollenAbbildung.ts`, #614). Stimmten sie nicht
+// überein, lägen die Anmerkungen beim Scrollen still daneben.
 /** Breite einer Seite (A4 und Rolle). */
 export const PAGE_W = 210;
 /** Höhe einer A4-Seite. */

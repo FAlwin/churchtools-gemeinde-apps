@@ -6,7 +6,9 @@ import {
   PasstNicht,
   anmeldungAufbauen,
   aufschluesselungText,
+  betragAus,
   buchungAus,
+  neueAnmeldeNr,
   ctWert,
   type CtFormular,
 } from './senden';
@@ -317,5 +319,63 @@ describe('buchungAus – dieselbe Buchung für Anzeige und Speichern', () => {
         ausgebucht: false,
       }),
     ).toBe('Grundpreis (2 × 6,00 €): 12,00 €\nFrühbucher: −2,00 €\nGesamt: 10,00 €');
+  });
+});
+
+describe('A6-5a (#612): Anmelde-Nr. und Betrag nur für Personen mit Platz', () => {
+  const MIT_NR: CtFormular = {
+    ...CT,
+    form: [...CT.form, { id: 700, type: 'custom', name: 'Anmelde-Nr.' }],
+  };
+  const mitNr = () => {
+    const e = einstellungen();
+    e.ctFelder = { ...e.ctFelder, nr: 700 };
+    return e;
+  };
+  const wahl = { option: 0, extras: [] };
+
+  it('die Nr. steht bei JEDER Person, derselbe Wert', () => {
+    const [erste, zweite] = anmeldungAufbauen(mitNr(), antworten(), wahl, HEUTE, MIT_NR, {
+      nr: '7K2P9X',
+    }).forms;
+    expect([wert(erste.form, 700), wert(zweite.form, 700)]).toEqual(['7K2P9X', '7K2P9X']);
+  });
+
+  it('ältere Veranstaltung ohne das Feld → ohne Nr., kein Fehler', () => {
+    const [erste] = anmeldungAufbauen(einstellungen(), antworten(), wahl, HEUTE, CT, {
+      nr: '7K2P9X',
+    }).forms;
+    expect(erste.form.some((x) => x.value === '7K2P9X')).toBe(false);
+  });
+
+  it('Lena wartet → Betrag nur für Jonas, Aufschlüsselung nennt Lena', () => {
+    const [erste, zweite] = anmeldungAufbauen(einstellungen(), antworten(), wahl, HEUTE, CT, {
+      mitPlatz: [true, false],
+    }).forms;
+    expect(wert(erste.form, 585)).toBe('6,00 €');
+    expect(wert(erste.form, 588)).toMatch(
+      /Gesamt: 6,00 €\nLena Beispiel: Warteliste – Betrag folgt beim Nachrücken$/,
+    );
+    expect(wert(zweite.form, 585)).toBeUndefined();
+  });
+
+  it('alle warten → Betrag 0, nur die Wartelisten-Zeilen – auch keine Gebühr je Anmeldung', () => {
+    const e = einstellungen();
+    e.preis.grundpreis.gilt = 'anmeldung';
+    expect(betragAus(e, antworten(), wahl, HEUTE, [true, false]).gesamtCent).toBe(600);
+    const b = betragAus(e, antworten(), wahl, HEUTE, [false, false]);
+    expect([b.gesamtCent, b.posten, b.warten]).toEqual([
+      0,
+      [],
+      ['Jonas Beispiel', 'Lena Beispiel'],
+    ]);
+  });
+
+  it('ohne Angabe zählen alle (wie bisher)', () => {
+    expect(betragAus(einstellungen(), antworten(), wahl, HEUTE).gesamtCent).toBe(1200);
+  });
+
+  it('neueAnmeldeNr: sechs Zeichen ohne verwechselbare (0, O, 1, I, L)', () => {
+    for (let i = 0; i < 200; i++) expect(neueAnmeldeNr()).toMatch(/^[2-9A-HJKMNP-Z]{6}$/);
   });
 });

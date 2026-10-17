@@ -73,7 +73,10 @@ prüfen. Was trotzdem durchkommt, entfernt die Leitung in ChurchTools (später i
 **Mehrere Personen:** Das Formular meldet jede Person einzeln bei ChurchTools an (eine Anmeldung mit mehreren
 Personen ohne Familienbeziehung lässt ChurchTools abstürzen – gemessen). Beim Hinzufügen einer Person prüft es die
 freien Plätze: Mit Warteliste steht an der Person „Warteliste“, ohne Warteliste lässt sich niemand mehr hinzufügen,
-wenn alles vergeben ist. Nach dem Absenden steht je Person, was daraus wurde.
+wenn alles vergeben ist. Nach dem Absenden steht je Person, was daraus wurde. Wer zusammen angemeldet wurde,
+erkennt ihr in ChurchTools an der gleichen **Anmelde-Nr.** Betrag, „Angemeldet von“ und Aufschlüsselung stehen bei
+der ersten Person; der Betrag zählt nur, wer einen Platz bekommen hat – wer auf der Warteliste steht, zahlt erst beim
+Nachrücken (die Aufschlüsselung nennt ihn).
 
 **„Deine Anmeldung“:** Nach dem Anmelden schickt ChurchTools jeder angemeldeten Person seine Bestätigungsmail
 (Text nicht änderbar). Der Link „Austreten“ darin führt auf eure Formular-Seite

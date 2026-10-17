@@ -123,7 +123,7 @@ export function App() {
         heute={heute}
         probe={probe}
         plaetzeNachfragen={() => platzStand(ort)}
-        onAbsenden={({ antworten, wahl, nur }) =>
+        onAbsenden={({ antworten, wahl, nur, nr }) =>
           abschicken(
             ort,
             v.einstellungen,
@@ -131,7 +131,7 @@ export function App() {
             wahl,
             heute,
             `${window.location.origin}${window.location.pathname}`,
-            nur,
+            { nur, nr },
           )
         }
       />

@@ -104,10 +104,10 @@ describe('Echt anmelden (A6-2)', () => {
     await ausfuellenUndAbschicken();
     expect(await screen.findByText('Danke für die Anmeldung!')).toBeTruthy();
     expect(aufrufe.map((a) => `${a.methode} ${a.pfad}`).slice(2)).toEqual([
+      // #602/A6-5a: zuerst frisch nachsehen, wer einen Platz bekommt (Betrag), für die erste Person gleich mitbenutzt.
+      'GET /api/publicgroups/66',
       'POST /api/publicgroups/66/token',
       'GET /api/publicgroups/66/form',
-      // #602: direkt vor der Anmeldung frisch nachsehen, ob noch ein Platz frei ist.
-      'GET /api/publicgroups/66',
       'POST /api/publicgroups/66/signup',
     ]);
     expect(aufrufe.every((a) => a.credentials === 'omit')).toBe(true);
@@ -339,5 +339,103 @@ describe('Mehrere Personen (#602) – jede einzeln, Plätze beim Hinzufügen', (
     const meldung = (await screen.findByRole('alert')).textContent;
     expect(meldung).toMatch(/Fehler gemeldet/);
     expect(meldung).toMatch(/Gemeinde Bescheid/);
+  });
+});
+
+describe('A6-5a (#612): Anmelde-Nr. und Betrag nur für Personen mit Platz', () => {
+  function mitPreis() {
+    const e = einstellungen();
+    e.preis.grundpreis.betragCent = 1500;
+    e.ctFelder = { ...e.ctFelder, nr: 700, betrag: 701, aufschluesselung: 702 };
+    return e;
+  }
+  const gruppe = (aktuell: number) => ({
+    status: 200,
+    body: {
+      data: {
+        ...GRUPPE,
+        information: { note: einstellungenAlsText(mitPreis()), imageUrl: null },
+        maxMemberCount: 10,
+        currentMemberCount: aktuell,
+        allowWaitinglist: true,
+      },
+    },
+  });
+  const formMitNr = {
+    status: 200,
+    body: {
+      data: {
+        token: 'T1',
+        ...FORM,
+        form: [
+          ...FORM.form,
+          { id: 700, type: 'custom', name: 'Anmelde-Nr.' },
+          { id: 701, type: 'custom', name: 'Betrag' },
+          { id: 702, type: 'custom', name: 'Aufschlüsselung' },
+        ],
+      },
+    },
+  };
+  const feld = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const werte = (id: string) =>
+    geschickt().map(
+      (a) =>
+        (a.body as { forms: { form: { id: string; value: string }[] }[] }).forms[0].form.find(
+          (x) => x.id === id,
+        )?.value,
+    );
+
+  async function zweiePersonen() {
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Gemeindeessen' });
+    fireEvent.change(feld('af-anmeldung.name-vor'), { target: { value: 'Maria' } });
+    fireEvent.change(feld('af-anmeldung.name-nach'), { target: { value: 'Beispiel' } });
+    fireEvent.change(feld('af-anmeldung.mail'), { target: { value: 'maria@beispiel.test' } });
+    fireEvent.change(feld('af-anmeldung.tel'), { target: { value: '0151 111' } });
+    fireEvent.change(feld('af-personen.0.pname-vor'), { target: { value: 'Jonas' } });
+    fireEvent.change(feld('af-personen.0.pname-nach'), { target: { value: 'Beispiel' } });
+    fireEvent.click(screen.getByRole('button', { name: '+ Weitere Person' }));
+    await waitFor(() => expect(document.getElementById('af-personen.1.pname-vor')).toBeTruthy());
+    fireEvent.change(feld('af-personen.1.pname-vor'), { target: { value: 'Lea' } });
+    fireEvent.change(feld('af-personen.1.pname-nach'), { target: { value: 'Beispiel' } });
+    fireEvent.click(screen.getByRole('checkbox', { name: /einverstanden/ }));
+  }
+
+  it('1 Platz frei: das Formular zeigt 15 € und „Lea: Warteliste …“; geschickt wird dasselbe, Nr. bei beiden gleich', async () => {
+    antworten['GET /api/publicgroups/66'] = [gruppe(3), gruppe(9), gruppe(9), gruppe(10)];
+    antworten['GET /api/publicgroups/66/form'] = [formMitNr];
+    await zweiePersonen();
+    const preis = screen.getByRole('generic', { name: 'Preis' });
+    expect(preis.textContent).toMatch(/Lea Beispiel: Warteliste – Betrag folgt beim Nachrücken/);
+    // Die große Summe unten – nicht 30 € für beide.
+    expect(document.querySelector('[class*="big"]')?.textContent).toBe('15,00 €');
+    vi.setSystemTime(new Date('2026-10-16T10:00:30Z'));
+    fireEvent.click(screen.getByRole('button', { name: 'Verbindlich anmelden' }));
+    await screen.findByRole('list');
+    expect(werte('701')).toEqual(['15,00 €', undefined]);
+    expect(werte('702')[0]).toMatch(/Lea Beispiel: Warteliste – Betrag folgt beim Nachrücken/);
+    const [a, b] = werte('700');
+    expect(a).toMatch(/^[2-9A-HJKMNP-Z]{6}$/);
+    expect(b).toBe(a);
+  });
+
+  it('„noch einmal“ schickt dieselbe Nr.', async () => {
+    antworten['GET /api/publicgroups/66'] = [gruppe(3)];
+    antworten['GET /api/publicgroups/66/form'] = [formMitNr];
+    antworten['POST /api/publicgroups/66/signup'] = [
+      { status: 200, body: { verificationNotice: false } },
+      { status: 503 },
+      { status: 200, body: { verificationNotice: false } },
+    ];
+    await zweiePersonen();
+    vi.setSystemTime(new Date('2026-10-16T10:00:30Z'));
+    fireEvent.click(screen.getByRole('button', { name: 'Verbindlich anmelden' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Lea Beispiel noch einmal anmelden' }),
+    );
+    await waitFor(() => expect(geschickt()).toHaveLength(3));
+    const nr = werte('700');
+    expect(nr[0]).toMatch(/^[2-9A-HJKMNP-Z]{6}$/);
+    expect(nr).toEqual([nr[0], nr[0], nr[0]]);
   });
 });

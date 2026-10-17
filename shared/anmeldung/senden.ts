@@ -85,13 +85,18 @@ export function buchungAus(
   a: Antworten,
   wahl: PreisWahl,
   heute: string,
+  /**
+   * Wer einen Platz bekommt (A6-5a, #612; Index wie `a.personen`). Wer auf die Warteliste kommt, zählt nicht im
+   * Betrag – er folgt beim Nachrücken (Alwin, 17.10.2026). Ohne Angabe zählen alle.
+   */
+  mitPlatz?: boolean[],
 ): Buchung {
   const stichtag = (e.termin?.beginn ?? heute).slice(0, 10);
   const mitGeburt = geburtsdatumAn(e.formular);
   return {
-    alter: a.personen.map((p) =>
-      mitGeburt && typeof p.birth === 'string' ? alterAm(p.birth, stichtag) : null,
-    ),
+    alter: a.personen
+      .filter((_, i) => mitPlatz?.[i] !== false)
+      .map((p) => (mitGeburt && typeof p.birth === 'string' ? alterAm(p.birth, stichtag) : null)),
     option: wahl.option,
     angemeldetAm: heute,
     extras: wahl.extras,
@@ -189,9 +194,52 @@ export function ctWert(f: Feld, w: Antwort, ct: CtFormFeld): string | null {
   return typeof w === 'string' && w.trim() ? w.trim() : null;
 }
 
+/** Zeichen der Anmelde-Nr. – ohne 0/O, 1/I/L, damit man sie am Telefon nennen kann. */
+const NR_ZEICHEN = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+
+/** **Eine neue Anmelde-Nr.** (A6-5a, #612), z. B. „7K2P9X“ – sechs Zeichen, zufällig. */
+export function neueAnmeldeNr(): string {
+  return Array.from(
+    crypto.getRandomValues(new Uint8Array(6)),
+    (b) => NR_ZEICHEN[b % NR_ZEICHEN.length],
+  ).join('');
+}
+
+/**
+ * **Der Betrag einer Anmeldung** (A6-5a, #612) – die EINE Regel für die Anzeige im Formular und das Feld „Betrag“:
+ * Es zählt nur, wer einen Platz bekommt (`mitPlatz`); wer wartet, steht in `warten` und zahlt beim Nachrücken.
+ * Bekommt niemand einen Platz, ist der Betrag 0 – auch keine Gebühr je Anmeldung.
+ */
+export function betragAus(
+  e: OeffentlicheEinstellungen,
+  a: Antworten,
+  wahl: PreisWahl,
+  heute: string,
+  mitPlatz?: boolean[],
+): { preis: Preisergebnis; gesamtCent: number; posten: Preisergebnis['posten']; warten: string[] } {
+  const preis = berechnePreis(e.preis, buchungAus(e, a, wahl, heute, mitPlatz));
+  const keiner =
+    !!mitPlatz && a.personen.length > 0 && a.personen.every((_, i) => mitPlatz[i] === false);
+  const namen = personenNamen(e, a);
+  return {
+    preis,
+    gesamtCent: keiner ? 0 : preis.gesamtCent,
+    posten: keiner ? [] : preis.posten,
+    warten: a.personen.flatMap((_, i) => (mitPlatz?.[i] === false ? [namen[i]] : [])),
+  };
+}
+
+/** Zeile der Aufschlüsselung für jemanden auf der Warteliste. */
+export function wartelistenZeile(name: string): string {
+  return `${name}: Warteliste – Betrag folgt beim Nachrücken`;
+}
+
 /**
  * **Die Anmeldung für `signup`** – eine `form` je Person unter „Wer nimmt teil?“ (Variante A, siehe oben).
  * Wirft `PasstNicht`, wenn ein Feld oder eine Antwort in ChurchTools fehlt.
+ *
+ * A6-5a (#612): `nr` steht bei **jeder** Person (fehlt das Feld bei älteren Veranstaltungen, geht es ohne);
+ * `mitPlatz` sagt, wer im Betrag zählt (`buchungAus`).
  */
 export function anmeldungAufbauen(
   e: OeffentlicheEinstellungen,
@@ -199,6 +247,7 @@ export function anmeldungAufbauen(
   wahl: PreisWahl,
   heute: string,
   ct: CtFormular,
+  weiteres: { nr?: string; mitPlatz?: boolean[] } = {},
 ): Anmeldung {
   const alle = [...ct.form, ...(ct.addChildForm ?? [])];
   const person = (name: string) => alle.find((x) => x.type === 'person' && x.name === name);
@@ -258,15 +307,24 @@ export function anmeldungAufbauen(
     return { id: String(ctFeld.id), type: 'custom', value: wert };
   };
 
-  const preis = berechnePreis(e.preis, buchungAus(e, a, wahl, heute));
+  const { nr, mitPlatz } = weiteres;
+  const betrag = betragAus(e, a, wahl, heute, mitPlatz);
   const einmal: FormWert[] = [];
   if (kontakt.vor || kontakt.nach)
     einmal.push(systemWert('kontakt', `${kontakt.vor} ${kontakt.nach}`.trim()));
   for (const f of e.formular.anmeldung.filter(sichtbar))
     einmal.push(...feldWerte(f, a.anmeldung[f.id]));
   if (kannEtwasKosten(e.preis)) {
-    einmal.push(systemWert('betrag', euroText(preis.gesamtCent)));
-    einmal.push(systemWert('aufschluesselung', aufschluesselungText(preis)));
+    einmal.push(systemWert('betrag', euroText(betrag.gesamtCent)));
+    einmal.push(
+      systemWert(
+        'aufschluesselung',
+        [
+          ...(betrag.posten.length ? [aufschluesselungText(betrag.preis)] : []),
+          ...betrag.warten.map(wartelistenZeile),
+        ].join('\n'),
+      ),
+    );
   }
   const g = e.preis.grundpreis;
   if (g.art === 'auswahl' && g.optionen[wahl.option])
@@ -285,6 +343,7 @@ export function anmeldungAufbauen(
     if (geburt && typeof p.birth === 'string' && p.birth.trim())
       form.push({ id: pflichtPerson('birthday'), type: 'person', value: p.birth.trim() });
     for (const f of e.formular.person.filter(sichtbar)) form.push(...feldWerte(f, p[f.id]));
+    if (nr && e.ctFelder.nr !== undefined) form.push(systemWert('nr', nr));
     if (i === 0) form.push(...einmal);
     if (datenschutz) form.push({ id: String(datenschutz.id), type: 'privacy', value: 'true' });
     return { form };

@@ -117,10 +117,18 @@ export async function abschicken(
   heute: string,
   /** Adresse dieser Seite (ohne `#`) – „Austreten“ in der Mail führt hierher zurück (A6-4). */
   formularBasis: string,
-  /** Nur diese Personen (Index) – „Noch einmal“ für die offen gebliebenen. Ohne: alle. */
-  nur?: number[],
+  weiteres: {
+    /** Nur diese Personen (Index) – „Noch einmal“ für die offen gebliebenen. Ohne: alle. */
+    nur?: number[];
+    /** Anmelde-Nr. (A6-5a) – dieselbe bei jeder Person und bei „noch einmal“. */
+    nr?: string;
+  } = {},
 ): Promise<Abgeschickt> {
+  const { nur, nr } = weiteres;
   const basis = `${apiBasis(ort)}/publicgroups/${ort.gruppeId}`;
+  // Wer bekommt einen Platz? Danach richtet sich der Betrag (A6-5a: Warteliste zahlt erst beim Nachrücken).
+  let stand: PlatzStand | null = await platzStand(ort);
+  const plan = platzPlan(stand, antworten.personen.length);
   let token = await neuerToken(basis);
   const f = (await anfrage(`${basis}/form?token=${encodeURIComponent(token)}`)) as {
     data?: CtFormular;
@@ -128,7 +136,10 @@ export async function abschicken(
   if (!f?.data?.form) throw new SendeProblem(VORUEBERGEHEND);
   let anmeldung;
   try {
-    anmeldung = anmeldungAufbauen(e, antworten, wahl, heute, f.data);
+    anmeldung = anmeldungAufbauen(e, antworten, wahl, heute, f.data, {
+      nr,
+      mitPlatz: plan.map((x) => x === 'platz'),
+    });
   } catch (fehler) {
     if (fehler instanceof PasstNicht)
       throw new SendeProblem(
@@ -143,7 +154,8 @@ export async function abschicken(
   for (const [n, i] of reihe.entries()) {
     try {
       // Direkt davor frisch nachsehen: Ob es ein Platz oder die Warteliste wird, sagt nur dieser Stand (gemessen).
-      const platz = platzPlan(await platzStand(ort), 1)[0];
+      const platz = platzPlan(stand ?? (await platzStand(ort)), 1)[0];
+      stand = null;
       if (platz === 'kein') throw new SendeProblem(AUSGEBUCHT);
       if (n > 0) token = await neuerToken(basis);
       const antwort = (await anfrage(`${basis}/signup`, {

@@ -7,6 +7,19 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Anmeldungen, A6-5a, #612)
+
+- **Anmelde-Nr. je Person** (Alwin, 17.10.2026): Seit #602 wird jede Person einzeln angemeldet – damit man in
+  ChurchTools sieht, wer zusammengehört, steht bei **jeder** Person derselbe Wert im neuen Systemfeld „Anmelde-Nr.“
+  (sechs Zeichen ohne 0/O/1/I/L, z. B. „7K2P9X“; auch bei „noch einmal“ dieselbe). Grundlage für die Nachprüfung
+  (A6-5c) und die Liste (A7). Ältere Veranstaltungen ohne das Feld: Das Formular schickt ohne Nr. weiter;
+  „Freigeben“ legt das Feld an.
+- **Betrag nur für Personen mit Platz** (Alwin: „15 €, Rest beim Nachrücken“): Wer auf die Warteliste kommt, zählt
+  nicht im Betrag; die Aufschlüsselung nennt „<Name>: Warteliste – Betrag folgt beim Nachrücken“. Kommt niemand
+  unter, ist der Betrag 0 (auch keine Gebühr je Anmeldung). Formular-Anzeige und Feld „Betrag“ nutzen dieselbe Regel
+  (`betragAus`).
+- **Formular-Paket mit aktualisieren.**
+
 ### Neu (Musik-App)
 
 - **Flow-Zeile `{flow: …}`** (#606, Rückmeldung des Musik-Bereichsleiters): Steht im ChordPro z. B.

@@ -407,6 +407,8 @@ export function ctZusatzSpalten(
 export const SYSTEMFELDER = [
   // Variante A (A6-2, #548): Mitglied werden nur die Teilnehmenden – der Name der Kontaktperson steht hier.
   { id: 'kontakt', name: 'Angemeldet von', fieldTypeCode: 'text', beimAnmelden: true },
+  // A6-5a (#612): jede Person wird einzeln angemeldet (#602) – die Nummer hält eine Anmeldung zusammen.
+  { id: 'nr', name: 'Anmelde-Nr.', fieldTypeCode: 'text', beimAnmelden: true },
   { id: 'betrag', name: 'Betrag', fieldTypeCode: 'text', beimAnmelden: true },
   {
     id: 'aufschluesselung',

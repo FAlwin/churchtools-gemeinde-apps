@@ -379,6 +379,11 @@ describe('legeVeranstaltungAn', () => {
     // Gegen die Liste selbst – jedes Systemfeld wird angelegt, auch „Angemeldet von“ (A6-2).
     expect(Object.keys(e.ctFelder).sort()).toEqual(SYSTEMFELDER.map((f) => f.id).sort());
     expect(g.felder.find((f) => f.id === e.ctFelder.bezahlt)?.name).toBe('Bezahlt');
+    // A6-5a (#612): die Anmelde-Nr. – beim Anmelden befüllbar, sonst kann das Formular sie nicht schicken.
+    expect(g.felder.find((f) => f.id === e.ctFelder.nr)).toMatchObject({
+      name: 'Anmelde-Nr.',
+      useInRegistrationForm: true,
+    });
   });
 
   it('die Beschreibung steht VOR den Feldern – sonst bliebe bei einem Fehler eine unsichtbare Gruppe', async () => {
@@ -1181,12 +1186,13 @@ describe('Eigenes Logo (14.10.2026)', () => {
 describe('Anmelden vorbereiten (A6-2, #548)', () => {
   const V = { statusId: 2, campusId: 0, departmentId: 1 };
   async function alteVeranstaltung() {
-    // Wie vor A6-2 angelegt: ohne „Angemeldet von“.
+    // Wie vor A6-2 angelegt: ohne „Angemeldet von“ (und vor A6-5a ohne „Anmelde-Nr.“).
     const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
     const g = gruppen.get(id)!;
     const e = einstellungenLesen(g.note)!;
-    g.felder = g.felder.filter((f) => f.id !== e.ctFelder.kontakt);
+    g.felder = g.felder.filter((f) => f.id !== e.ctFelder.kontakt && f.id !== e.ctFelder.nr);
     delete e.ctFelder.kontakt;
+    delete e.ctFelder.nr;
     await aendereEinstellungen(id, () => e);
     return id;
   }
@@ -1205,7 +1211,7 @@ describe('Anmelden vorbereiten (A6-2, #548)', () => {
     );
     expect(gruppen.get(id)!.settings.newMember).toEqual(V);
     // Nur das Fehlende angelegt: jedes Systemfeld genau einmal, die alten Nummern bleiben.
-    for (const name of ['Betrag', 'Bezahlt', 'Angemeldet von'])
+    for (const name of ['Betrag', 'Bezahlt', 'Angemeldet von', 'Anmelde-Nr.'])
       expect(
         gruppen.get(id)!.felder.filter((f) => f.name === name),
         name,

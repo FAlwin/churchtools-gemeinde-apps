@@ -10,14 +10,16 @@ import {
 } from '@shared/anmeldung/formular';
 import { amEnde } from '@shared/anmeldung/baukasten';
 import {
-  buchungAus,
+  betragAus,
+  neueAnmeldeNr,
   personenNamen,
+  wartelistenZeile,
   type Abgeschickt,
   type PersonErgebnis,
   type PreisWahl,
 } from '@shared/anmeldung/senden';
 import { platzPlan, type PlatzStand } from '@shared/anmeldung/oeffentlich';
-import { berechnePreis, euroText, kannEtwasKosten, preisKurz } from '@shared/anmeldung/preis';
+import { euroText, kannEtwasKosten, preisKurz } from '@shared/anmeldung/preis';
 import { SCHRIFT, leereAntworten, textAufFarbe } from './daten';
 import { titelbildGross } from '@shared/anmeldung/gestaltung';
 import { HONIGTOPF_NAME, SPAM_TEXT, spamGrund } from '@shared/anmeldung/spamschutz';
@@ -94,6 +96,8 @@ export type Abschicken = (a: {
   antworten: Antworten;
   wahl: PreisWahl;
   nur?: number[];
+  /** Anmelde-Nr. (A6-5a) – einmal je Formular, bei „noch einmal“ dieselbe. */
+  nr: string;
 }) => Promise<Abgeschickt>;
 
 const ERGEBNIS_TEXT: Record<PersonErgebnis, string> = {
@@ -530,6 +534,7 @@ export function AnmeldeFormular({
       : { freiePlaetze: ansicht.freiePlaetze, warteliste: ansicht.warteliste === true },
   );
   const [fragtNach, setFragtNach] = useState(false);
+  const [nr] = useState(neueAnmeldeNr);
   const echt = !!onAbsenden && !vorschau && !probe && !baukasten;
   // A6-3 Spam-Schutz (`spamschutz.ts`): Honigtopf und Mindest-Ausfüllzeit seit dem Laden. Doppel-Absenden verhindert
   // schon `sendet` – React zeichnet nach jedem Klick neu (gegengeprüft 16.10.2026).
@@ -545,10 +550,21 @@ export function AnmeldeFormular({
   const personFelder = e.formular.person.filter(sichtbar);
   const loeschtag = loeschTag(e);
   // Dieselbe Buchung wie beim Abschicken (`buchungAus`) – angezeigter und gespeicherter Betrag sind eine Regel.
-  const preis = useMemo(
-    () => berechnePreis(e.preis, buchungAus(e, antworten, { option, extras }, heute)),
-    [e, antworten, option, extras, heute],
+  // A6-5a: Wer auf die Warteliste kommt, zählt nicht im Betrag – dieselbe Regel wie beim Abschicken (`betragAus`).
+  const betrag = useMemo(
+    () =>
+      betragAus(
+        e,
+        antworten,
+        { option, extras },
+        heute,
+        platz && !baukasten
+          ? platzPlan(platz, antworten.personen.length).map((x) => x === 'platz')
+          : undefined,
+      ),
+    [e, antworten, option, extras, heute, platz, baukasten],
   );
+  const preis = betrag.preis;
   const kostet = kannEtwasKosten(e.preis);
 
   const setAnmeldung = (id: string, w: Antwort) =>
@@ -598,7 +614,7 @@ export function AnmeldeFormular({
     setSendet(true);
     setNochmalFehler(null);
     try {
-      const neu = await onAbsenden({ antworten, wahl: { option, extras }, nur: offen });
+      const neu = await onAbsenden({ antworten, wahl: { option, extras }, nur: offen, nr });
       setFertig((alt) =>
         alt
           ? {
@@ -642,7 +658,7 @@ export function AnmeldeFormular({
     setSendet(true);
     setSendeFehler(null);
     try {
-      setFertig(await onAbsenden({ antworten, wahl: { option, extras } }));
+      setFertig(await onAbsenden({ antworten, wahl: { option, extras }, nr }));
     } catch (fehler) {
       // Vorübergehend ist nicht endgültig: Die Eingaben bleiben stehen, ein zweiter Klick versucht es noch einmal.
       setSendeFehler(fehler instanceof Error ? fehler.message : 'Das hat nicht geklappt.');
@@ -651,7 +667,7 @@ export function AnmeldeFormular({
     }
   }
 
-  const zeilen = preis.posten.filter((p) => p.betragCent !== null);
+  const zeilen = betrag.posten.filter((p) => p.betragCent !== null);
 
   return (
     <FormularRahmen
@@ -900,6 +916,12 @@ export function AnmeldeFormular({
                     </span>
                   </div>
                 ))}
+                {betrag.warten.map((name) => (
+                  <div key={name} className={s.sl}>
+                    <span>{wartelistenZeile(name)}</span>
+                    <span />
+                  </div>
+                ))}
               </div>
             )}
             <div className={s.sum}>
@@ -913,7 +935,7 @@ export function AnmeldeFormular({
                     : 'Die Teilnahme ist kostenlos.'}
                 </small>
               </div>
-              <div className={s.big}>{kostet ? euroText(preis.gesamtCent) : 'kostenlos'}</div>
+              <div className={s.big}>{kostet ? euroText(betrag.gesamtCent) : 'kostenlos'}</div>
             </div>
             {preis.ausgebucht && (
               <p className={s.warnline}>

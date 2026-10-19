@@ -112,3 +112,21 @@ export function beginnStelle(zeilen: readonly MitVorlauf[]): number {
   }
   return vorlauf ? zeilen.length : -1;
 }
+
+/**
+ * **Der Vorlauf nach dem Umsortieren** – so, wie ChurchTools ihn danach rechnen wird (#423; seit E6-2b-3 hier neben
+ * `beginnStelle`, vorher `client/src/utils/vorlauf.ts`). Die Grenze ist in ChurchTools eine **Platznummer** (gemessen
+ * 05.10.2026): Umsortieren lässt sie stehen, ein über die Grenze geschobener Punkt wechselt die Seite. Die Liste
+ * übernimmt das sofort, statt die Linie mit dem verschobenen Punkt wandern zu lassen und nach dem Neuladen
+ * umzuspringen. Unveränderte Punkte bleiben dieselben Objekte.
+ */
+export function vorlaufNachUmsortieren<T extends { vorBeginn?: boolean }>(
+  vorher: readonly T[],
+  nachher: T[],
+): T[] {
+  const anzahl = vorher.filter((i) => i.vorBeginn).length;
+  return nachher.map((item, i) => {
+    const vorBeginn = i < anzahl;
+    return (item.vorBeginn ?? false) === vorBeginn ? item : { ...item, vorBeginn };
+  });
+}

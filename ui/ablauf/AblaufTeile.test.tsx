@@ -78,8 +78,8 @@ describe('ResponsibleLine', () => {
 });
 
 /**
- * Die ausgelagerten Komponenten importieren `Setlist.module.scss` jetzt aus einem ANDEREN
- * Verzeichnis. Wäre der Pfad falsch, gäbe es keinen Fehler – CSS-Module liefern dann still
+ * Die Bausteine bringen ihr eigenes CSS-Modul mit (früher `Setlist.module.scss` aus einem anderen
+ * Verzeichnis). Wäre der Pfad falsch, gäbe es keinen Fehler – CSS-Module liefern dann still
  * `undefined`, und die Zeilen stünden ohne jedes Layout da. Deshalb hier ausdrücklich geprüft.
  */
 describe('CSS-Modul erreichbar', () => {

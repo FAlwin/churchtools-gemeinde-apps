@@ -34,6 +34,31 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   ESLint verbietet solche Effekt-Rümpfe jetzt im ganzen Repo (`no-restricted-syntax`); vier harmlose Stellen
   (Baukasten, Dienstplaner-Termine, Formular) entsprechend umgestellt.
 
+### Intern (Ablauf-Baustein, E6-2b-3, #643)
+
+- **Die Bearbeiten-Liste des Ablaufs ist ein gemeinsamer Baustein** (`ui/ablauf/useAblaufBearbeiten.tsx`, für Nutzer
+  unsichtbar): Ziehen, Punkt-Fenster, Plus, Löschen mit Rückfrage, „Rückgängig“ und der Hinweis bei abgeschlossenem
+  Ablauf – die Musik-App steckt ihre Liedwahl ein (`LiedVerknuepfen`, vorher `ItemActionSheet`), der Dienstplaner
+  nutzt die Liste ab E6-3. Mit umgezogen: `ConfirmDialog` (`ui/fenster`), `SchwebePlus` und die Ziehen-Hilfen
+  (`ui/bedienung`), die Vorlauf-Regel beim Umsortieren (`vorlaufNachUmsortieren`, jetzt neben `beginnStelle` in
+  `shared/ct/ablaufZeile.ts`). Fotos von Bearbeiten-Liste, „Eintrag bearbeiten“, Lösch-Rückfrage und „Neuer
+  Eintrag“ sind vorher und nachher byte-gleich.
+
+### Behoben (Musik-App, #643)
+
+- Scheiterte beim Bearbeiten des Ablaufs das **Verschieben oder Löschen**, standen danach längst entfernte Punkte
+  (die grauen „entfernt“-Platzhalter aus der Ansicht) wieder in der Bearbeiten-Liste. Ändern und „Rückgängig“
+  rollten schon richtig zurück – jetzt alle vier über dieselbe Stelle.
+
+### Intern (Ablauf-Baustein, E6-2b-2, #641)
+
+- **Das Punkt-Fenster ist ein gemeinsamer Baustein** (`ui/ablauf/PunktFenster.tsx`, für Nutzer unsichtbar): Titel,
+  Art, Dauer, Zuständig, Bemerkung, Vorlauf, Speichern, Löschen – ohne Dienste der Musik-App. Lieder verknüpfen
+  und lösen gibt es nur über den **Steckplatz `liedWahl`**: Die Musik-App steckt dort ihre Liedsuche ein
+  (`ItemActionSheet` ist jetzt eine dünne Hülle), der Dienstplaner lässt ihn leer und zeigt Lieder nur an (Alwin,
+  17.10.2026). Fotos von „Eintrag bearbeiten“, „Neuer Eintrag“ und „Lied verknüpfen“ sind vorher und nachher
+  byte-gleich.
+
 ### Intern (Ablauf-Baustein, E6-2b-1, #638)
 
 - **Bearbeiten-Bausteine des Ablaufs gemeinsam** (für Nutzer unsichtbar, Vorbereitung für das Bearbeiten im

@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
-import type { AgendaItem, AgendaServiceOption, SongSelectTreffer } from '@shared/types/index';
-import type { AgendaItemUpdate } from '../services/churchtoolsApi';
+import { useMemo, useState, type ReactNode } from 'react';
+import type { AgendaServiceOption } from '@shared/types/index';
+import type { AblaufZeile } from '@shared/ct/ablaufZeile';
+import type { PunktAenderung } from '@shared/ct/schreibKern';
 import {
   pendingAgendaFields,
   isDurationValid,
@@ -9,28 +10,46 @@ import {
   type NeuerAgendaPunkt,
   type PunktArt,
 } from '@shared/ct/agendaItemChanges';
-import { SongPicker } from './SongPicker';
-import { NewSongSheet } from './NewSongSheet';
-import { useCapabilities } from '../hooks/useServices';
-import { ResponsibleField } from '@ui/ablauf/ResponsibleField';
-import { Icon } from '@ui/icons/icons';
-import { useOverlayKeyboardInset } from '@ui/fenster/useOverlayKeyboardInset';
-import { Schalter } from '@ui/bedienung/Schalter';
-import { Segment } from '@ui/bedienung/Segment';
-import styles from './ItemActionSheet.module.scss';
+import { ResponsibleField } from './ResponsibleField';
+import { Icon } from '../icons/icons';
+import { useOverlayKeyboardInset } from '../fenster/useOverlayKeyboardInset';
+import { Schalter } from '../bedienung/Schalter';
+import { Segment } from '../bedienung/Segment';
+import styles from './PunktFenster.module.scss';
+
+/**
+ * Was die Liedwahl bekommt (Steckplatz `liedWahl`). Sie füllt im Lied-Modus das GANZE Fenster – auch ein
+ * Unterfenster wie „Neues Lied" ersetzt es, wie bisher.
+ */
+export interface LiedWahlArgs {
+  /** Ein Lied gewählt – vorgemerkt, geschrieben wird erst mit „Speichern". */
+  onGewaehlt: (arrangementId: number, name: string) => void;
+  /** Zurück ins Punkt-Fenster, ohne etwas vorzumerken. */
+  onAbbrechen: () => void;
+  /** Tipp auf den Hintergrund – schließt nur, wenn nichts vorgemerkt ist. */
+  onHintergrund: () => void;
+  /** Fehler des letzten Speicherns (steht auch im Lied-Modus). */
+  fehler: string | null;
+  busy: boolean;
+}
 
 interface Gemeinsam {
   onClose: () => void;
   /** Verfügbare ChurchTools-Dienste (Chips im Verantwortlich-Editor). */
   services: AgendaServiceOption[];
+  /**
+   * Lieder verknüpfen und lösen – nur die Musik-App kann das (Liedsuche, „Neues Lied", SongSelect). Ohne
+   * Steckplatz zeigt das Fenster das Lied nur an (Dienstplaner, Alwin 17.10.2026: „Lieder nur anzeigen").
+   */
+  liedWahl?: (args: LiedWahlArgs) => ReactNode;
 }
 
 /** Einen vorhandenen Punkt bearbeiten (der Normalfall – `modus` darf fehlen). */
 interface Bearbeiten extends Gemeinsam {
   modus?: 'bearbeiten';
-  item: AgendaItem;
+  item: AblaufZeile;
   /** Schreibt die geänderten Felder gesammelt (EIN Request). Wirft bei Fehler. */
-  onUpdate: (fields: AgendaItemUpdate) => Promise<void>;
+  onUpdate: (fields: PunktAenderung) => Promise<void>;
   /** Läuft der Punkt vor dem Beginn der Veranstaltung (Vorlauf, #423)? */
   vorBeginn: boolean;
   /** Schreibt den Vorlauf nach ChurchTools (gilt für den ganzen Block, siehe Schalter). Wirft bei Fehler. */
@@ -50,10 +69,10 @@ interface Neu extends Gemeinsam {
   onAdd: (punkt: NeuerAgendaPunkt) => Promise<void>;
 }
 
-type ItemActionSheetProps = Bearbeiten | Neu;
+export type PunktFensterProps = Bearbeiten | Neu;
 
 /** Der Ausgangsstand für „Neuer Eintrag": ein leerer Punkt, gegen den nichts verglichen wird. */
-const LEERER_PUNKT: AgendaItem = {
+const LEERER_PUNKT: AblaufZeile = {
   id: 0,
   title: '',
   type: null,
@@ -68,15 +87,16 @@ const LEERER_PUNKT: AgendaItem = {
 };
 
 /**
- * „Eintrag bearbeiten"-Dialog: ein zentriertes Modal mit allen Einstellungen auf einen Blick
+ * **Das Punkt-Fenster** (seit E6-2b-2 in `ui/ablauf`, vorher `client/src/components/ItemActionSheet.tsx`; die
+ * Musik-App steckt dort ihre Liedwahl ein). „Eintrag bearbeiten"-Dialog: ein zentriertes Modal mit allen Einstellungen auf einen Blick
  * (Titel, Lied, Dauer, Zuständig, Vor Gottesdienstbeginn, Löschen) – angelehnt an den
  * „Position bearbeiten"-Dialog in ChurchTools. NICHTS wird sofort geschrieben: auch Lied
  * verknüpfen/aufheben und der Vorlauf-Schalter werden nur vorgemerkt. Erst „Speichern" schreibt
  * alle Änderungen gesammelt nach ChurchTools; „Abbrechen" verwirft sie. (Löschen ist bewusst
  * separat und hat eine eigene Rückfrage.)
  */
-export function ItemActionSheet(props: ItemActionSheetProps) {
-  const { onClose, services } = props;
+export function PunktFenster(props: PunktFensterProps) {
+  const { onClose, services, liedWahl } = props;
   const neu = props.modus === 'neu';
   const item = props.modus === 'neu' ? LEERER_PUNKT : props.item;
   const vorBeginnStart = props.modus === 'neu' ? false : props.vorBeginn;
@@ -96,12 +116,6 @@ export function ItemActionSheet(props: ItemActionSheetProps) {
   // Verknüpfung wird vorgemerkt und erst beim Speichern nach ChurchTools geschrieben
   // ('keep' = unverändert, 'unlink' = Lied entfernen, 'link' = neues Arrangement verknüpfen).
   const [linkState, setLinkState] = useState<LinkState>({ kind: 'keep' });
-  // Der Anlege-Weg aus „Lied verknüpfen" (#391): „Neues Lied" (der Suchbegriff wird zum Titel) oder
-  // ein SongSelect-Treffer. Nur mit dem Recht, Lieder zu bearbeiten – beim Bearbeiten wie beim Anlegen.
-  const canEditSongs = useCapabilities(true).data?.canEditSongs ?? false;
-  const [neuesLied, setNeuesLied] = useState<{ treffer?: SongSelectTreffer; name?: string } | null>(
-    null,
-  );
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   // Dialog über der iOS-Tastatur freihalten; verhindert auch die verrutschte Kopfleiste (#207).
@@ -146,7 +160,6 @@ export function ItemActionSheet(props: ItemActionSheetProps) {
     // Neu ohne eigenen Titel: Der Punkt heißt wie das Lied (wie früher im „Lied hinzufügen").
     if (neu && !title.trim()) setTitle(name);
     setErr(null);
-    setNeuesLied(null);
     setSongMode(false);
   }
 
@@ -178,53 +191,15 @@ export function ItemActionSheet(props: ItemActionSheetProps) {
     if (!dirty) onClose();
   }
 
-  // Unterdialog: ein neues Lied anlegen und mit DIESEM Punkt verknüpfen. Bewusst ohne `eventId`: Das
-  // Lied darf nicht als neuer Punkt in den Ablauf, es gehört in den vorhandenen. Die Verknüpfung wird
-  // wie eine Auswahl aus der Suche nur vorgemerkt – geschrieben wird erst mit „Speichern"
-  // (Entscheidung Alwin, 18.09.2026: ein Fenster, ein Speicherweg).
-  if (neuesLied) {
-    return (
-      <NewSongSheet
-        startTreffer={neuesLied.treffer}
-        startName={neuesLied.name}
-        onClose={() => setNeuesLied(null)}
-        onVerknuepfen={liedGewaehlt}
-        /* Gibt es das Lied schon (gleiche CCLI-Nummer), wird es vorgemerkt wie eine Auswahl aus der
-           Suche – geschrieben wird auch hier erst mit „Speichern" (#395). */
-        onVorhandenes={(song) => liedGewaehlt(song.arrangementId, song.name)}
-      />
-    );
-  }
-
-  // Unterdialog: Lied suchen + verknüpfen.
-  if (songMode) {
-    return (
-      <div ref={overlayRef} className={styles.overlay} onClick={onOverlayClick}>
-        <div className={styles.card} onClick={(e) => e.stopPropagation()}>
-          <div className={styles.title}>Lied verknüpfen</div>
-          {err && <div className={styles.err}>{err}</div>}
-          <SongPicker
-            autoFocus
-            aktionLabel="Mit diesem Eintrag verknüpfen"
-            onPick={liedGewaehlt}
-            neuesLied={
-              canEditSongs
-                ? { label: 'Neues Lied', onClick: (name) => setNeuesLied({ name }) }
-                : undefined
-            }
-            /* Ohne das Recht, Lieder zu bearbeiten, erscheint SongSelect gar nicht –
-               ein Treffer, aus dem nichts werden kann, wäre eine Sackgasse (#378). */
-            onSongSelectTreffer={canEditSongs ? (treffer) => setNeuesLied({ treffer }) : undefined}
-          />
-          {/* „Abbrechen", nicht „Zurück" (Entscheidung Alwin, 04.09.2026): Dieser Knopf verlässt die
-              Suche ganz. Zur Trefferliste zurück führt der Pfeil oben in der Vorschau – zwei Knöpfe
-              mit demselben Wort und verschiedenen Zielen hatten in die Irre geführt. */}
-          <button className={styles.backBtn} onClick={() => setSongMode(false)} disabled={busy}>
-            Abbrechen
-          </button>
-        </div>
-      </div>
-    );
+  // Lied-Modus: Die Liedwahl (Steckplatz der Musik-App) füllt das ganze Fenster.
+  if (songMode && liedWahl) {
+    return liedWahl({
+      onGewaehlt: liedGewaehlt,
+      onAbbrechen: () => setSongMode(false),
+      onHintergrund: onOverlayClick,
+      fehler: err,
+      busy,
+    });
   }
 
   return (
@@ -267,38 +242,44 @@ export function ItemActionSheet(props: ItemActionSheetProps) {
           {/* Überschriften haben nur einen Titel – keine weiteren Felder. */}
           {!(neu ? art === 'ueberschrift' : item.isHeader) && (
             <>
-              {/* Dasselbe Liedfeld beim Anlegen wie beim Bearbeiten. */}
-              <div className={styles.field}>
-                <span className={styles.label}>Lied</span>
-                {effSong ? (
-                  <>
-                    {/* Liedname sichtbar halten – er kommt aus ChurchTools und ist hier nicht änderbar. */}
-                    <div className={styles.readonly}>{effSong.title}</div>
-                    <button className={styles.linkRow} disabled={busy} onClick={clearLink}>
-                      <Icon name="link" size={17} className={styles.linkIcon} />
-                      Verknüpfung aufheben
+              {/* Dasselbe Liedfeld beim Anlegen wie beim Bearbeiten. Ohne Liedwahl (Dienstplaner) nur, wenn es
+                  ein Lied gibt – ein leeres Feld, das man nicht bedienen kann, wäre nur Lärm. */}
+              {(effSong || liedWahl) && (
+                <div className={styles.field}>
+                  <span className={styles.label}>Lied</span>
+                  {effSong ? (
+                    <>
+                      {/* Liedname sichtbar halten – er kommt aus ChurchTools und ist hier nicht änderbar. */}
+                      <div className={styles.readonly}>{effSong.title}</div>
+                      {liedWahl && (
+                        <button className={styles.linkRow} disabled={busy} onClick={clearLink}>
+                          <Icon name="link" size={17} className={styles.linkIcon} />
+                          Verknüpfung aufheben
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    // Ohne Lied steht das Feld nur mit Liedwahl da (Bedingung oben) – hier also immer wählbar.
+                    <button
+                      className={styles.linkRow}
+                      disabled={busy}
+                      onClick={() => setSongMode(true)}
+                    >
+                      <Icon name="music" size={17} className={styles.linkIcon} />
+                      Lied verknüpfen
                     </button>
-                  </>
-                ) : (
-                  <button
-                    className={styles.linkRow}
-                    disabled={busy}
-                    onClick={() => setSongMode(true)}
-                  >
-                    <Icon name="music" size={17} className={styles.linkIcon} />
-                    Lied verknüpfen
-                  </button>
-                )}
-                {/* Beim Anlegen ist ohnehin alles erst mit „Hinzufügen" geschrieben – der Hinweis gilt
+                  )}
+                  {/* Beim Anlegen ist ohnehin alles erst mit „Hinzufügen" geschrieben – der Hinweis gilt
                       dem Bearbeiten, wo der Rest des Punkts schon in ChurchTools steht. */}
-                {!neu && linkState.kind !== 'keep' && (
-                  <span className={styles.pendingHint}>
-                    {linkState.kind === 'unlink'
-                      ? 'Wird beim Speichern entfernt.'
-                      : 'Wird beim Speichern verknüpft.'}
-                  </span>
-                )}
-              </div>
+                  {!neu && linkState.kind !== 'keep' && (
+                    <span className={styles.pendingHint}>
+                      {linkState.kind === 'unlink'
+                        ? 'Wird beim Speichern entfernt.'
+                        : 'Wird beim Speichern verknüpft.'}
+                    </span>
+                  )}
+                </div>
+              )}
 
               <div className={styles.field}>
                 <span className={styles.label}>Dauer (Minuten)</span>

@@ -18,7 +18,7 @@ import { useRefPair } from '../hooks/useRefPair';
 import { useLandscape } from '../hooks/useLandscape';
 import { eigenerSchluessel, joinKeys, splitKeys } from '../utils/pageKeys';
 import { readPageTexts } from '../utils/annotationKeys';
-import { ConfirmDialog } from './ConfirmDialog';
+import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { PageDrawToolbar } from './PageDrawToolbar';
 import { PageTextLayer } from './PageTextLayer';
 import { LassoEbene } from './LassoEbene';

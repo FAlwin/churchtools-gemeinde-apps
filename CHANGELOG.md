@@ -7,6 +7,15 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Intern (Ablauf-Baustein, E6-2b-2, #641)
+
+- **Das Punkt-Fenster ist ein gemeinsamer Baustein** (`ui/ablauf/PunktFenster.tsx`, für Nutzer unsichtbar): Titel,
+  Art, Dauer, Zuständig, Bemerkung, Vorlauf, Speichern, Löschen – ohne Dienste der Musik-App. Lieder verknüpfen
+  und lösen gibt es nur über den **Steckplatz `liedWahl`**: Die Musik-App steckt dort ihre Liedsuche ein
+  (`ItemActionSheet` ist jetzt eine dünne Hülle), der Dienstplaner lässt ihn leer und zeigt Lieder nur an (Alwin,
+  17.10.2026). Fotos von „Eintrag bearbeiten“, „Neuer Eintrag“ und „Lied verknüpfen“ sind vorher und nachher
+  byte-gleich.
+
 ### Intern (Ablauf-Baustein, E6-2b-1, #638)
 
 - **Bearbeiten-Bausteine des Ablaufs gemeinsam** (für Nutzer unsichtbar, Vorbereitung für das Bearbeiten im

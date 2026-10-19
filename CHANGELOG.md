@@ -7,6 +7,16 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Intern (Ablauf-Baustein, E6-2b-1, #638)
+
+- **Bearbeiten-Bausteine des Ablaufs gemeinsam** (für Nutzer unsichtbar, Vorbereitung für das Bearbeiten im
+  Dienstplaner, E6-3): die Feld-Regeln des Punkt-Fensters nach `shared/ct/agendaItemChanges.ts` (React-frei;
+  vergleichen nur noch die vier Felder, die sie brauchen), „Rückgängig“ nach `ui/bedienung/useRueckgaengig.ts`, das
+  Zuständig-Feld nach `ui/ablauf/ResponsibleField.tsx` und die Zeile zum Ziehen nach `ui/ablauf/AgendaSortableRow.tsx`
+  (Styles 1:1 aus `Setlist.module.scss`). Das Bildschirmfoto der Bearbeiten-Liste ist vorher und nachher
+  byte-gleich; ein E2E-Test prüft am Griff `touch-action: none` und die Breite (ohne ließe er sich am Handy nicht
+  ziehen).
+
 ### Geändert (Musik-App, E6-2a, #635)
 
 - **Ablauf bearbeiten – je Termin, wie in ChurchTools** (Alwin, 19.10.2026: „wie ChurchTools“): Den Stift im

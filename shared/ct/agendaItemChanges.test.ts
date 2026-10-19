@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import type { AgendaItem } from '@shared/types/index';
 import {
   pendingAgendaFields,
   durationTarget,
@@ -14,17 +13,10 @@ import {
  * kein „keine Dauer"), und ein leerer Titel wird gar nicht erst geschickt – CT braucht eine
  * Bezeichnung, und ein leerer Titel würde den Punkt im Ablauf namenlos machen.
  */
-function item(over: Partial<AgendaItem> = {}): AgendaItem {
-  return {
-    id: 1,
-    title: 'Lied',
-    durationMin: 5,
-    responsibleText: 'Anna',
-    note: 'Notiz',
-    isHeader: false,
-    song: null,
-    ...over,
-  } as unknown as AgendaItem;
+// Genau das, was die Regel vergleicht (seit E6-2b-1 nur noch diese vier Felder).
+type Punkt = Parameters<typeof pendingAgendaFields>[0];
+function item(over: Partial<Punkt> = {}): Punkt {
+  return { title: 'Lied', durationMin: 5, responsibleText: 'Anna', note: 'Notiz', ...over };
 }
 
 function draft(over: Partial<AgendaItemDraft> = {}): AgendaItemDraft {

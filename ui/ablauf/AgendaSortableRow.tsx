@@ -1,24 +1,25 @@
 /**
- * Eine sortierbare Zeile im Bearbeiten-Modus (#198 – vorher in `pages/Setlist.tsx`).
+ * Eine sortierbare Zeile im Bearbeiten-Modus (#198 – vorher in `pages/Setlist.tsx`; seit E6-2b-1 in `ui/ablauf`, damit
+ * Musik-App und Dienstplaner dieselbe Zeile nutzen).
  *
  * Tippen auf den Titel öffnet das Aktionsmenü; gezogen wird ausschließlich am Griff – sonst würde
  * jeder Tipp auf die Zeile ein Ziehen einleiten und das Menü ließe sich kaum öffnen.
  */
-import type { AgendaItem } from '@shared/types/index';
+import type { AblaufZeile } from '@shared/ct/ablaufZeile';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Icon } from '@ui/icons/icons';
-import { ItemTitle, ResponsibleLine } from '@ui/ablauf/AblaufTeile';
-import styles from '../pages/Setlist.module.scss';
-import zeile from '@ui/ablauf/AblaufListe.module.scss';
+import { Icon } from '../icons/icons';
+import { ItemTitle, ResponsibleLine } from './AblaufTeile';
+import styles from './AgendaSortableRow.module.scss';
+import zeile from './AblaufListe.module.scss';
 
 /** Eine sortierbare Zeile im Bearbeiten-Modus. Tippen auf den Titel öffnet das Aktionsmenü. */
-export function SortableRow({
+export function SortableRow<T extends AblaufZeile>({
   item,
   onOpenActions,
 }: {
-  item: AgendaItem;
-  onOpenActions: (item: AgendaItem) => void;
+  item: T;
+  onOpenActions: (item: T) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
@@ -93,5 +94,3 @@ export function SortableRow({
     </div>
   );
 }
-
-/** Kompletter Ablauf eines Gottesdienstes: anzeigen + (mit Rechten) per Drag & Drop umsortieren. */

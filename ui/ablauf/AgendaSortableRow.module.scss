@@ -1,0 +1,82 @@
+// Die Zeile zum Ziehen im Bearbeiten-Modus (E6-2b-1, vorher in `client/src/pages/Setlist.module.scss`) –
+// 1:1 verschoben, damit Musik-App und Dienstplaner (E6-3) dieselbe Zeile nutzen.
+
+// Bearbeiten-Modus spiegelt die Ansicht (.flowRow), damit beim Umschalten nichts springt.
+// Die Zeit-Spalte wird zum Ziehen-Griff (gleiche Breite wie .flowTime).
+.dragCol {
+  flex-shrink: 0;
+  width: 42px;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--text2);
+  cursor: grab;
+  touch-action: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+// Antippbarer Zeilen-Inhalt (öffnet das Aktionsmenü) – erbt die Ansicht-Typografie.
+.editBody {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+// „Bearbeiten"-Stift am rechten Rand – Akzentfarbe verdeutlicht, dass die Zeile antippbar ist.
+.rowEdit {
+  flex-shrink: 0;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--blue);
+  cursor: pointer;
+  padding: 4px 6px;
+}
+// Überschrift-Band im Bearbeiten-Modus: Griff + Zeit + Titel, sonst wie .sectionBand.
+.editBand {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+// Antippbarer Titel der Überschrift (öffnet das Aktionsmenü zum Umbenennen) – erbt die Band-Typografie.
+.bandEdit {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+}
+.bandHandle {
+  display: flex;
+  align-items: center;
+  border: none;
+  background: none;
+  color: var(--text2);
+  cursor: grab;
+  touch-action: none;
+  padding: 0 6px 0 0;
+  line-height: 1;
+
+  &:active {
+    cursor: grabbing;
+  }
+}

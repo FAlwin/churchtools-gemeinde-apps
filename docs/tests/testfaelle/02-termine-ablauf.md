@@ -224,8 +224,8 @@ Gottesdienstes **nicht** in den Vorlauf (die Linie „Beginn" bleibt, wo sie hin
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `shared/ct/schreibKern.ts`, `shared/ct/agendaPayload.ts`, `client/src/pages/Setlist.tsx`, `client/src/hooks/useRueckgaengig.ts`, `client/src/components/Toast.tsx`, `server/src/controllers/setlistController.ts`
-- **Automatisiert:** teilweise – `server/src/services/ablaufRueckgaengig.test.ts`, `client/src/pages/Setlist.rueckgaengig.test.tsx`, `client/src/hooks/useRueckgaengig.test.ts`, `e2e/ablauf-rueckgaengig.spec.ts`; gegen echtes ChurchTools nur von Hand
+- **Betrifft:** `shared/ct/schreibKern.ts`, `shared/ct/agendaPayload.ts`, `client/src/pages/Setlist.tsx`, `ui/bedienung/useRueckgaengig.ts`, `client/src/components/Toast.tsx`, `server/src/controllers/setlistController.ts`
+- **Automatisiert:** teilweise – `server/src/services/ablaufRueckgaengig.test.ts`, `client/src/pages/Setlist.rueckgaengig.test.tsx`, `ui/bedienung/useRueckgaengig.test.ts`, `e2e/ablauf-rueckgaengig.spec.ts`; gegen echtes ChurchTools nur von Hand
 - **Historie:** 12.10.2026 (Alwin). Nicht zurück kommt eine in ChurchTools ausgeblendete Uhrzeit – die Schnittstelle kennt das Feld nicht.
 
 </details>

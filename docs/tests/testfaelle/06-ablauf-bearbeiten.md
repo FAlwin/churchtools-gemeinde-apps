@@ -49,8 +49,8 @@ Schritt 6 genau den Liednamen einträgst, steht er nur **einmal** da, nicht dopp
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `shared/ct/ablaufZeile.ts`, `client/src/utils/agendaItemChanges.ts`, `ui/ablauf/AblaufTeile.tsx`
-- **Automatisiert:** ja – `shared/ct/ablaufZeile.test.ts`, `client/src/utils/agendaItemChanges.test.ts`
+- **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `shared/ct/ablaufZeile.ts`, `shared/ct/agendaItemChanges.ts`, `ui/ablauf/AblaufTeile.tsx`
+- **Automatisiert:** ja – `shared/ct/ablaufZeile.test.ts`, `shared/ct/agendaItemChanges.test.ts`
 - **Historie:** #200
 
 </details>
@@ -70,8 +70,8 @@ Zeile verschwunden (in ChurchTools steht dann 0 Minuten – „keine Dauer" kenn
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `client/src/utils/agendaItemChanges.ts`, `client/src/components/ResponsibleField.tsx`
-- **Automatisiert:** teilweise – `client/src/utils/agendaItemChanges.test.ts`
+- **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `shared/ct/agendaItemChanges.ts`, `ui/ablauf/ResponsibleField.tsx`
+- **Automatisiert:** teilweise – `shared/ct/agendaItemChanges.test.ts`
 - **Historie:** – (der frühere Schritt „Uhrzeit ausblenden" ist mit #423 entfallen, siehe TF-EDIT-08)
 
 </details>
@@ -92,7 +92,7 @@ tippen auf den Titel darf **kein** Ziehen auslösen.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/AgendaSortableRow.tsx`, `client/src/pages/Setlist.tsx`, `client/src/utils/dndAutoScroll.ts`
+- **Betrifft:** `ui/ablauf/AgendaSortableRow.tsx`, `client/src/pages/Setlist.tsx`, `client/src/utils/dndAutoScroll.ts`
 - **Automatisiert:** nein – Ziehen mit dem Finger
 - **Historie:** –
 
@@ -123,8 +123,8 @@ sich gleich setzen; ein zweites Fenster danach gibt es nicht mehr. Die Rückfrag
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `client/src/utils/agendaItemChanges.ts`, `client/src/components/SchwebePlus.tsx`, `client/src/pages/Setlist.tsx`, `client/src/components/ConfirmDialog.tsx`
-- **Automatisiert:** teilweise – `e2e/ablauf-hinzufuegen.spec.ts` (Plus nur im Bearbeiten-Modus, Text anlegen, steht in der Liste, Löschen), `client/src/components/ItemActionSheet.test.tsx` (Neuer Eintrag: Suche sofort offen, Titel = Liedname, Überschrift nur Titel, Fehler bleibt im Fenster), `client/src/utils/agendaItemChanges.test.ts` (`neuerAgendaPunkt`); von Hand bleibt das Schreiben nach ChurchTools
+- **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `shared/ct/agendaItemChanges.ts`, `client/src/components/SchwebePlus.tsx`, `client/src/pages/Setlist.tsx`, `client/src/components/ConfirmDialog.tsx`
+- **Automatisiert:** teilweise – `e2e/ablauf-hinzufuegen.spec.ts` (Plus nur im Bearbeiten-Modus, Text anlegen, steht in der Liste, Löschen), `client/src/components/ItemActionSheet.test.tsx` (Neuer Eintrag: Suche sofort offen, Titel = Liedname, Überschrift nur Titel, Fehler bleibt im Fenster), `shared/ct/agendaItemChanges.test.ts` (`neuerAgendaPunkt`); von Hand bleibt das Schreiben nach ChurchTools
 - **Historie:** schwebendes Plus und einheitlicher Dialog 05.10.2026 (vorher eigenes „Hinzufügen"-Blatt mit drei Formularen)
 
 </details>

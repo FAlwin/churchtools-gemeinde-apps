@@ -24,6 +24,8 @@ interface Props {
   onNochmal: () => void;
   /** „Alle“ bei „Deine nächsten Dienste“: zur Termine-Liste, Ansicht „Meine“. */
   onMeineTermine: () => void;
+  /** „Ablauf & Dienste“ → Termin-Ansicht (E6-1b). */
+  onTermin?: (id: number) => void;
 }
 
 /** So viele aus dem Team stehen im Kasten „Als Nächstes“; der Rest als „und N weitere“. */
@@ -32,10 +34,10 @@ const TEAM_ZEIGEN = 5;
 /**
  * **Die Startseite des Dienstplaners** (Bauplan E3-3, Entwurf v17): „Als Nächstes“, deine offenen
  * Anfragen, deine nächsten Dienste, Abwesenheiten und – für Planer – wie viel in den nächsten sechs Wochen
- * noch frei ist. Nur lesen: Zusagen/Absagen kommt mit E7 (bis dahin in der ChurchTools-App), Live und
- * „Ablauf & Dienste“ mit der Termin-Ansicht.
+ * noch frei ist. Nur lesen: Zusagen/Absagen kommt mit E7 (bis dahin in der ChurchTools-App), Live mit E6b;
+ * „Ablauf & Dienste“ öffnet die Termin-Ansicht (E6-1b).
  */
-export function Startseite({ start, termine, heute, onNochmal, onMeineTermine }: Props) {
+export function Startseite({ start, termine, heute, onNochmal, onMeineTermine, onTermin }: Props) {
   const planbar = planbareDienstgruppen(start);
   const zeilen = termine?.art === 'fertig' ? termine.zeilen : [];
   const u = startUebersicht(zeilen, { jetzt: new Date(), heute, planbar });
@@ -67,7 +69,7 @@ export function Startseite({ start, termine, heute, onNochmal, onMeineTermine }:
         )}
         {termine?.art === 'fertig' &&
           (u.naechster ? (
-            <AlsNaechstes termin={u.naechster} heute={heute} />
+            <AlsNaechstes termin={u.naechster} heute={heute} onTermin={onTermin} />
           ) : (
             <section className={styles.karte}>
               <p className={styles.hinweis}>
@@ -150,7 +152,15 @@ export function Startseite({ start, termine, heute, onNochmal, onMeineTermine }:
   );
 }
 
-function AlsNaechstes({ termin: z, heute }: { termin: TerminZeile; heute: string }) {
+function AlsNaechstes({
+  termin: z,
+  heute,
+  onTermin,
+}: {
+  termin: TerminZeile;
+  heute: string;
+  onTermin?: (id: number) => void;
+}) {
   const k = kachel(z.tag);
   const [lieder, setLieder] = useState<string[] | null | undefined>(undefined);
   const [musikApp, setMusikApp] = useState<string | null>(null);
@@ -198,11 +208,18 @@ function AlsNaechstes({ termin: z, heute }: { termin: TerminZeile; heute: string
           <span className={styles.leise}>Du hast an diesem Termin keinen Dienst.</span>
         )}
       </div>
-      {musikApp && (
+      {(musikApp || onTermin) && (
         <div className={styles.knoepfe}>
-          <a className={styles.knopf} href={musikApp}>
-            <Icon name="music" size={18} /> Musik-App
-          </a>
+          {musikApp && (
+            <a className={styles.knopf} href={musikApp}>
+              <Icon name="music" size={18} /> Musik-App
+            </a>
+          )}
+          {onTermin && (
+            <button type="button" className={styles.knopfLeise} onClick={() => onTermin(z.id)}>
+              Ablauf &amp; Dienste <Icon name="chev-right" size={16} />
+            </button>
+          )}
         </div>
       )}
       <div className={styles.info}>

@@ -84,15 +84,26 @@ export function mitglieder(
 }
 
 /** Der Verlaufseintrag „ist dazugekommen“ (Anmeldetag). */
-export const dazu = (memberId: number, am: string): VerlaufRoh => ({
+export const dazu = (
+  memberId: number,
+  am: string,
+  mehr: { origin?: string; zeit?: string; id?: number } = {},
+): VerlaufRoh => ({
+  id: mehr.id,
   memberId,
+  origin: mehr.origin ?? 'sign-up',
   previous: { membershipStatus: null },
   current: { membershipStatus: 'active' },
-  meta: { createdDate: `${am}T10:00:00Z`, createdPerson: { id: memberId } },
+  meta: { createdDate: `${am}T${mehr.zeit ?? '10:00:00'}Z`, createdPerson: { id: memberId } },
 });
 
 /** Eine Absage im Verlauf – die Felder mit Namen und lesbar, wie ChurchTools sie dort ablegt. */
-export function absage(m: MitgliedRoh, am: string, von: number): VerlaufRoh {
+export function absage(
+  m: MitgliedRoh,
+  am: string,
+  von: number,
+  mehr: { zeit?: string; id?: number } = {},
+): VerlaufRoh {
   const fields: Record<string, unknown> = {};
   for (const f of m.fields ?? []) {
     const feld = FELDER.get(Number(f.id))!;
@@ -103,7 +114,8 @@ export function absage(m: MitgliedRoh, am: string, von: number): VerlaufRoh {
     memberId: m.personId,
     previous: { membershipStatus: m.groupMemberStatus, fields },
     current: { membershipStatus: null, fields: null },
-    meta: { createdDate: `${am}T12:00:00Z`, createdPerson: { id: von } },
+    id: mehr.id,
+    meta: { createdDate: `${am}T${mehr.zeit ?? '12:00:00'}Z`, createdPerson: { id: von } },
   };
 }
 

@@ -73,7 +73,7 @@ prüfen. Was trotzdem durchkommt, entfernt die Leitung in ChurchTools (sehen kan
 **Nachprüfung:** Auf der Seite einer freigegebenen Veranstaltung rechnet die Erweiterung nach, was Gäste geschickt haben
 (Beträge je Anmelde-Nr., Belegung je Auswahl, Plätze) und zeigt Hinweise – geändert wird nichts. Wichtig: Wartet
 jemand, rückt in ChurchTools niemand von selbst nach, auch wenn ihr Plätze dazugebt; neue Anmeldungen kommen dann
-hinten an. Nachrücken lassen geht vorerst in ChurchTools.
+hinten an. Nachrücken lassen geht im Reiter „Anmeldungen“ (siehe unten).
 
 **Reiter „Anmeldungen“:** eine Zeile je Anmeldung (über die Anmelde-Nr.) mit Personen, Alter,
 Warteplatz, Betrag und Zahlung; oben Plätze, Warteliste und offene Zahlungen, dazu der Hinweis, wenn Plätze frei sind
@@ -83,6 +83,13 @@ oben. **Abgesagt** kommt aus dem Verlauf von ChurchTools: Er behält auch die An
 Betrag oder Unterschrift nicht verloren, wenn die erste Person einer Anmeldung absagt. Sehen kann die Liste, wer in
 ChurchTools die Mitglieder der Gruppe sehen darf. Gut zu wissen: Entfernt ihr in ChurchTools jemanden, bekommt die
 Person **keine** Mail; beim Nachrücken schickt ChurchTools nur „Deine Anmeldung war erfolgreich“ – ohne Betrag.
+
+**Nachrücken und Absagen:** Im Fenster einer Anmeldung hat jede wartende Person „Nachrücken lassen“, jede Person
+„Absagen“ – beides mit Rückfrage. Ist alles voll, erhöht das Nachrücken die Plätze. Wer nachrückt, bekommt eine eigene
+Zahlung (wie eine neue Anmeldung); beim Absagen wird die Zahlung der Anmeldung neu gerechnet und eine Rückzahlung
+notiert. Danach gibt es „Mail schreiben“ mit fertigem Text – ChurchTools selbst schickt beim Nachrücken nur „war
+erfolgreich“, beim Absagen gar nichts. Absagen lässt sich im Fenster rückgängig machen, Nachrücken nicht (sonst
+schickt ChurchTools „Du stehst auf der Warteliste“).
 
 **Zahlung:** Im Fenster einer Anmeldung markiert ihr sie als **bezahlt** (Zahlart und Tag), setzt das zurück oder
 **ändert den Betrag** (z. B. nach Absprache – in der Aufschlüsselung steht dann „Von Hand geändert am …“, und die

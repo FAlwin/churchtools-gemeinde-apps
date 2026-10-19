@@ -13,8 +13,8 @@ interface MitgliedFelder {
   fields?: { id?: unknown; value?: unknown }[];
 }
 
-/** Schreiben und nachlesen: Steht danach in jedem Feld, was geschickt wurde? */
-async function felderSchreiben(
+/** Schreiben und nachlesen: Steht danach in jedem Feld, was geschickt wurde? Auch für Nachrücken/Absagen (A7-3). */
+export async function felderSchreiben(
   id: number,
   personId: number,
   felder: Record<number, string | boolean | null>,

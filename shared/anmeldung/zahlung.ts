@@ -59,3 +59,33 @@ export function aufschluesselungMitHand(alt: string | null, cent: number, tag: s
   const zeilen = (alt ?? '').split('\n').filter((z) => z.trim() && !VON_HAND.test(z.trim()));
   return [...zeilen, vonHandZeile(cent, tag)].join('\n');
 }
+
+// ── Nachrücken und Absagen (A7-3) ───────────────────────────────────────────────────────────────
+
+/**
+ * **Erste Zeile der eigenen Zahlung einer Nachgerückten** (Alwin, 19.10.2026: „Eine neue Zahlung. Also so als ob ein
+ * Kind neu angemeldet wurde“) – daran erkennen Liste und Nachprüfung, dass der Betrag dieser Person zusätzlich zur
+ * Zahlung der Anmeldung gilt (`istNachrueckZahlung`, die Gegenseite).
+ */
+export function nachrueckKopf(tag: string): string {
+  return `Nachgerückt am ${tagPunkt(tag)}`;
+}
+
+const NACHRUECK = /^Nachgerückt am \d{2}\.\d{2}\.\d{4}$/;
+
+/** Ist das die Aufschlüsselung einer eigenen Zahlung (Nachgerückte)? */
+export function istNachrueckZahlung(aufschluesselung: string | null | undefined): boolean {
+  return NACHRUECK.test((aufschluesselung ?? '').split('\n')[0].trim());
+}
+
+/** Die Zeile in der Aufschlüsselung der Anmeldung, wenn jemand abgesagt hat. */
+export function absageZeile(
+  name: string,
+  tag: string,
+  z: { neuCent: number | null; rueckzahlungCent: number },
+): string {
+  const teile = [`Abgesagt am ${tagPunkt(tag)}: ${name}`];
+  if (z.neuCent !== null) teile.push(`Zahlung der Anmeldung jetzt ${euroText(z.neuCent)}`);
+  if (z.rueckzahlungCent > 0) teile.push(`Rückzahlung ${euroText(z.rueckzahlungCent)} offen`);
+  return teile.join(' – ');
+}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { fehlerMeldung } from './zustand';
 import v from './VeranstaltungSeite.module.scss';
@@ -83,18 +83,25 @@ export function RueckgaengigLeiste({
 export function RueckgaengigImFenster({
   aenderung,
   onRueckgaengig,
+  zusatz,
 }: {
   aenderung: Aenderung;
   /** Nach erfolgreichem Rückgängig – neu laden. */
   onRueckgaengig: () => void;
+  /** Ein weiterer Knopf neben „Rückgängig“ (A7-3: „Mail schreiben“) – nicht mehr nach dem Rückgängigmachen. */
+  zusatz?: ReactNode;
 }) {
   const { stand, fehler, zurueck } = useRueckgaengig(aenderung, onRueckgaengig);
+  // Die Zeile kann weit unten im Fenster entstehen (Knopf an einer Person) – sie soll zu sehen sein.
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => ref.current?.scrollIntoView?.({ block: 'nearest' }), []);
   return (
-    <div className={v.imFenster} role="status">
+    <div ref={ref} className={v.imFenster} role="status">
       <span>
         {stand === 'erledigt' ? 'Rückgängig gemacht.' : aenderung.text}
         {fehler && <span className={v.leisteFehler}> {fehler}</span>}
       </span>
+      {stand !== 'erledigt' && zusatz}
       {aenderung.rueckgaengig && stand !== 'erledigt' && (
         <button
           type="button"

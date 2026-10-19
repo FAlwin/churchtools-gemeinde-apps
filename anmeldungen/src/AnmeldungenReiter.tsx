@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { absagePlan, bescheidMail, nachrueckPlan, type Mail } from '@shared/anmeldung/bewegung';
 import { Icon } from '@ui/icons/icons';
 import { ctBasis } from '@ui/ct/basis';
 import { Sheet } from '@ui/fenster/Sheet';
@@ -20,6 +21,9 @@ import type { GeladenerStand } from './mitglieder';
 import { tagPunkt as lang } from '@shared/ct/datum';
 import { anzahlText } from './anzeige';
 import { AnmeldungZahlung } from './AnmeldungZahlung';
+import { AbsagenFrage, MailAnsicht, NachrueckenFrage } from './AnmeldungAktion';
+import { absagenLassen, nachrueckenLassen } from './bewegung';
+import { useSpeichern } from './useSpeichern';
 import { RueckgaengigImFenster, type Aenderung } from './Rueckgaengig';
 import s from './Startseite.module.scss';
 import v from './VeranstaltungSeite.module.scss';
@@ -85,18 +89,44 @@ function ZahlungPille({ x, kostet }: { x: ListenAnmeldung; kostet: boolean }) {
   return x.zahlungOffen ? <span className={`${a.pille} ${a.pilleOffen}`}>offen</span> : null;
 }
 
-/** **Das Fenster einer Anmeldung** – alle Antworten (A7-1), Betrag und Zahlung (A7-2). Nachrücken und Absagen: A7-3. */
+/** Was das Fenster gerade zeigt: die Anmeldung, eine Rückfrage oder die fertige Mail (A7-3). */
+export type FensterModus =
+  | { art: 'nach'; personId: number }
+  | { art: 'ab'; personId: number }
+  | { art: 'mail'; mail: Mail }
+  | null;
+
+/** Was zuletzt im Fenster geschah – mit „Rückgängig“ (falls möglich) und der Mail an die Familie. */
+export interface FensterMeldung {
+  aenderung: Aenderung;
+  mail: Mail | null;
+}
+
+/** Plätze und Warteliste – für Nachrücken und Absagen. */
+export interface PlatzLage {
+  belegt: number;
+  max: number | null;
+  wartende: { personId: number; name: string }[];
+}
+
+/**
+ * **Das Fenster einer Anmeldung** – alle Antworten (A7-1), Zahlungen (A7-2), Nachrücken und Absagen mit Rückfrage und
+ * fertiger Mail (A7-3). Was geändert wurde, steht oben mit „Rückgängig“ (Alwin, 19.10.2026: im Fenster).
+ */
 function AnmeldungAnsehen({
   x,
   e,
   kostet,
   onClose,
   id,
+  veranstaltung,
   zahlarten,
   heute,
   darf,
-  aenderung,
-  onGeaendert,
+  lage,
+  start,
+  meldung,
+  onGemeldet,
   onRueckgaengig,
 }: {
   x: ListenAnmeldung;
@@ -104,100 +134,252 @@ function AnmeldungAnsehen({
   kostet: boolean;
   onClose: () => void;
   id: number;
+  veranstaltung: string;
   zahlarten: string[];
   heute: string;
   darf: boolean;
-  /** Die letzte Änderung in diesem Fenster – ihr „Rückgängig“ steht im Fenster (Alwin, 19.10.2026). */
-  aenderung: Aenderung | null;
-  onGeaendert: (a: Aenderung) => void;
+  lage: PlatzLage;
+  /** Gleich mit einer Rückfrage öffnen (Knopf im Hinweis oben). */
+  start: FensterModus;
+  meldung: FensterMeldung | null;
+  onGemeldet: (m: FensterMeldung) => void;
   onRueckgaengig: () => void;
 }) {
+  const [modus, setModus] = useState<FensterModus>(start);
+  const { arbeitet, fehler, speichern } = useSpeichern(() => {});
   const einmal = antwortZeilen(e.formular.anmeldung, x.einmal, e.ctFelder);
   const kontakt = e.ctFelder.kontakt === undefined ? undefined : x.einmal[e.ctFelder.kontakt];
   const fuerAlle =
     x.personen.length === 1
       ? 'Für die Anmeldung'
       : `Für die ganze Anmeldung · gilt für ${x.personen.map((p) => p.vor).join(', ')}`;
+  const person = (pid: number) => x.personen.find((p) => p.personId === pid);
+  const mailFuer = (
+    art: 'nachgerueckt' | 'abgesagt',
+    p: ListenPerson,
+    betragCent: number,
+    rueckzahlungCent: number,
+  ) => bescheidMail(e, { art, veranstaltung, x, person: p, betragCent, rueckzahlungCent, heute });
+
+  const nachPlan =
+    modus?.art === 'nach' && person(modus.personId)?.status === 'wartet'
+      ? nachrueckPlan(e, x, modus.personId, lage, heute)
+      : null;
+  const abPlan =
+    modus?.art === 'ab' && person(modus.personId) ? absagePlan(e, x, modus.personId, heute) : null;
+
+  const titel = nachPlan
+    ? `${nachPlan.name} nachrücken lassen?`
+    : abPlan
+      ? `${abPlan.name} absagen?`
+      : modus?.art === 'mail'
+        ? 'Mail schreiben'
+        : x.wer;
+
+  const inhalt = nachPlan ? (
+    <NachrueckenFrage
+      plan={nachPlan}
+      vor={person(nachPlan.personId)!.vor}
+      arbeitet={arbeitet}
+      fehler={fehler}
+      onAbbrechen={() => setModus(null)}
+      onJa={() => {
+        const p = person(nachPlan.personId)!;
+        void speichern(
+          () => nachrueckenLassen(id, e, nachPlan),
+          () => {
+            setModus(null);
+            onGemeldet({
+              aenderung: { text: `${nachPlan.name} ist nachgerückt.`, rueckgaengig: null },
+              mail: mailFuer('nachgerueckt', p, nachPlan.zahlung?.betragCent ?? 0, 0),
+            });
+          },
+        );
+      }}
+    />
+  ) : abPlan ? (
+    <AbsagenFrage
+      plan={abPlan}
+      vor={person(abPlan.personId)!.vor}
+      uebergabeAn={abPlan.uebergabeAn === null ? null : (person(abPlan.uebergabeAn)?.vor ?? null)}
+      belegt={lage.belegt}
+      max={lage.max}
+      arbeitet={arbeitet}
+      fehler={fehler}
+      onAbbrechen={() => setModus(null)}
+      onJa={() => {
+        const p = person(abPlan.personId)!;
+        let zurueck: () => Promise<void> = async () => {};
+        void speichern(
+          async () => {
+            zurueck = await absagenLassen(id, e, abPlan);
+          },
+          () => {
+            setModus(null);
+            onGemeldet({
+              aenderung: { text: `${abPlan.name} ist abgesagt.`, rueckgaengig: () => zurueck() },
+              mail: mailFuer(
+                'abgesagt',
+                p,
+                0,
+                abPlan.haupt?.rueckzahlungCent ?? abPlan.rueckzahlungOhneRestCent,
+              ),
+            });
+          },
+        );
+      }}
+    />
+  ) : modus?.art === 'mail' ? (
+    <MailAnsicht mail={modus.mail} onZurueck={() => setModus(null)} />
+  ) : null;
+
   return (
-    <Sheet title={x.wer} onClose={onClose} cancelLabel="Schließen">
-      <p className={a.unterTitel}>
-        {x.nr && (
-          <>
-            Anmelde-Nr. <span className={v.nr}>{x.nr}</span> ·{' '}
-          </>
-        )}
-        {x.angemeldetAm && <>angemeldet am {lang(x.angemeldetAm)}</>}
-        {x.email && <> · {x.email}</>}
-      </p>
+    <Sheet title={titel} onClose={onClose} cancelLabel="Schließen">
+      {inhalt ?? (
+        <>
+          <p className={a.unterTitel}>
+            {x.nr && (
+              <>
+                Anmelde-Nr. <span className={v.nr}>{x.nr}</span> ·{' '}
+              </>
+            )}
+            {x.angemeldetAm && <>angemeldet am {lang(x.angemeldetAm)}</>}
+            {x.email && <> · {x.email}</>}
+          </p>
 
-      {(einmal.length > 0 || kontakt) && (
-        <section className={a.teil}>
-          <h3>{fuerAlle}</h3>
-          {x.einmalAusVerlauf && (
-            <p className={a.leise}>
-              Aus dem Verlauf von ChurchTools – die Person, bei der es stand, hat abgesagt.
-            </p>
-          )}
-          <Antworten
-            zeilen={[...(kontakt ? [{ frage: 'Angemeldet von', text: kontakt }] : []), ...einmal]}
-          />
-        </section>
-      )}
-
-      <section className={a.teil}>
-        <h3>{x.personen.length === 1 ? 'Person' : 'Personen'}</h3>
-        {x.personen.map((p) => (
-          <div key={p.personId} className={a.person}>
-            <div className={a.personOben}>
-              <b>
-                {ganzerName(p)}
-                {p.alter !== null && `, ${p.alter}`}
-              </b>
-              <PersonPille p={p} />
-            </div>
-            <Antworten
-              zeilen={[
-                ...(p.geburtstag ? [{ frage: 'Geburtsdatum', text: lang(p.geburtstag) }] : []),
-                ...antwortZeilen(e.formular.person, p.werte, e.ctFelder),
-              ]}
+          {meldung && (
+            <RueckgaengigImFenster
+              key={meldung.aenderung.text}
+              aenderung={meldung.aenderung}
+              onRueckgaengig={onRueckgaengig}
+              zusatz={
+                meldung.mail && (
+                  <button
+                    type="button"
+                    className={a.nachKnopf}
+                    onClick={() => setModus({ art: 'mail', mail: meldung.mail! })}
+                  >
+                    Mail schreiben
+                  </button>
+                )
+              }
             />
-            <a className={s.link} href={personLink(p.personId)}>
-              In ChurchTools
-              <Icon name="external" size={13} />
-            </a>
-          </div>
-        ))}
-      </section>
+          )}
 
-      {aenderung && (
-        <RueckgaengigImFenster
-          key={aenderung.text}
-          aenderung={aenderung}
-          onRueckgaengig={onRueckgaengig}
-        />
-      )}
+          {(einmal.length > 0 || kontakt) && (
+            <section className={a.teil}>
+              <h3>{fuerAlle}</h3>
+              {x.einmalAusVerlauf && (
+                <p className={a.leise}>
+                  Aus dem Verlauf von ChurchTools – die Person, bei der es stand, hat abgesagt.
+                </p>
+              )}
+              <Antworten
+                zeilen={[
+                  ...(kontakt ? [{ frage: 'Angemeldet von', text: kontakt }] : []),
+                  ...einmal,
+                ]}
+              />
+            </section>
+          )}
 
-      {kostet && (
-        <AnmeldungZahlung
-          key={`${x.schluessel}-${x.betragCent}-${x.bezahlt}`}
-          id={id}
-          x={x}
-          zahlarten={zahlarten}
-          heute={heute}
-          darf={darf}
-          onGeaendert={onGeaendert}
-        />
-      )}
+          <section className={a.teil}>
+            <h3>{x.personen.length === 1 ? 'Person' : 'Personen'}</h3>
+            {x.personen.map((p) => (
+              <div key={p.personId} className={a.person}>
+                <div className={a.personOben}>
+                  <b>
+                    {ganzerName(p)}
+                    {p.alter !== null && `, ${p.alter}`}
+                  </b>
+                  <PersonPille p={p} />
+                </div>
+                <Antworten
+                  zeilen={[
+                    ...(p.geburtstag ? [{ frage: 'Geburtsdatum', text: lang(p.geburtstag) }] : []),
+                    ...antwortZeilen(e.formular.person, p.werte, e.ctFelder),
+                  ]}
+                />
+                <div className={a.personAktionen}>
+                  {darf && p.status === 'wartet' && (
+                    <button
+                      type="button"
+                      className={a.nachKnopf}
+                      onClick={() => setModus({ art: 'nach', personId: p.personId })}
+                    >
+                      Nachrücken lassen
+                    </button>
+                  )}
+                  <a className={s.link} href={personLink(p.personId)}>
+                    In ChurchTools
+                    <Icon name="external" size={13} />
+                  </a>
+                  {darf && (
+                    <button
+                      type="button"
+                      className={a.absagenLink}
+                      onClick={() => setModus({ art: 'ab', personId: p.personId })}
+                    >
+                      Absagen
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </section>
 
-      {x.abgesagt.length > 0 && (
-        <section className={a.teil}>
-          <h3>Abgesagt</h3>
-          {x.abgesagt.map((b) => (
-            <p key={b.personId} className={a.leise}>
-              {b.name} – {absageText(b)}
-            </p>
-          ))}
-        </section>
+          {kostet &&
+            (x.zahlungen.length > 1 ? (
+              <section className={a.teil}>
+                <h3>Zahlungen</h3>
+                {x.zahlungen.map((z) => (
+                  <AnmeldungZahlung
+                    key={`${z.personId}-${z.betragCent}-${z.bezahlt}`}
+                    id={id}
+                    zahlung={z}
+                    wer={x.wer}
+                    titel={
+                      z.wofuer === 'nachgerueckt'
+                        ? `${z.name} – nachgerückt`
+                        : `Anmeldung (${z.name})`
+                    }
+                    zahlarten={zahlarten}
+                    heute={heute}
+                    darf={darf}
+                    onGeaendert={(aenderung) => onGemeldet({ aenderung, mail: null })}
+                  />
+                ))}
+                <p className={a.summe}>
+                  <span>Zusammen</span>
+                  <b>{euroText(x.betragCent ?? 0)}</b>
+                </p>
+              </section>
+            ) : (
+              x.zahlungen[0] && (
+                <AnmeldungZahlung
+                  key={`${x.zahlungen[0].personId}-${x.zahlungen[0].betragCent}-${x.zahlungen[0].bezahlt}`}
+                  id={id}
+                  zahlung={x.zahlungen[0]}
+                  wer={x.wer}
+                  zahlarten={zahlarten}
+                  heute={heute}
+                  darf={darf}
+                  onGeaendert={(aenderung) => onGemeldet({ aenderung, mail: null })}
+                />
+              )
+            ))}
+
+          {x.abgesagt.length > 0 && (
+            <section className={a.teil}>
+              <h3>Abgesagt</h3>
+              {x.abgesagt.map((b) => (
+                <p key={b.personId} className={a.leise}>
+                  {b.name} – {absageText(b)}
+                </p>
+              ))}
+            </section>
+          )}
+        </>
       )}
     </Sheet>
   );
@@ -208,10 +390,11 @@ const absageText = (b: Absage) =>
 
 /**
  * **Reiter „Anmeldungen“** (A7-1, Entwurf `a7-anmeldungen-v2`) – eine Zeile je Anmeldung, Zahlen, Hinweis „frei, aber
- * jemand wartet“, Filter und Suche; Klick öffnet das Fenster mit allen Antworten. Nur ansehen.
+ * jemand wartet“ (mit „Nachrücken lassen“, A7-3), Filter und Suche; Klick öffnet das Fenster der Anmeldung.
  */
 export function AnmeldungenReiter({
   id,
+  veranstaltung,
   e,
   maxPlaetze,
   entwurf,
@@ -224,6 +407,8 @@ export function AnmeldungenReiter({
   onGespeichert,
 }: {
   id: number;
+  /** Name der Veranstaltung – für die Mail an die Familie (A7-3). */
+  veranstaltung: string;
   e: OeffentlicheEinstellungen;
   maxPlaetze: number | null;
   entwurf: boolean;
@@ -243,11 +428,15 @@ export function AnmeldungenReiter({
   const [suche, setSuche] = useState('');
   const [offen, setOffen] = useState<string | null>(null);
   // Die letzte Änderung im offenen Fenster – mit dem Fenster weg.
-  const [aenderung, setAenderung] = useState<Aenderung | null>(null);
-  const oeffnen = (k: string | null) => {
+  const [meldung, setMeldung] = useState<FensterMeldung | null>(null);
+  const [startModus, setStartModus] = useState<FensterModus>(null);
+  const oeffnen = (k: string | null, modus: FensterModus = null) => {
     setOffen(k);
-    setAenderung(null);
+    setStartModus(modus);
+    setMeldung(null);
   };
+  // Hat die letzte Person einer Anmeldung abgesagt, ist sie aus der Liste weg – das Fenster bleibt für „Rückgängig“.
+  const zuletztOffen = useRef<ListenAnmeldung | null>(null);
   // Beim Neuladen (nach einer Änderung) bleibt der letzte Stand stehen – sonst ginge das offene Fenster zu.
   const letzter = useRef<GeladenerStand | null>(null);
   if (zustand?.art === 'fertig') letzter.current = zustand.stand;
@@ -299,6 +488,16 @@ export function AnmeldungenReiter({
   const zeilen =
     filter === 'offen' ? liste.filter((x) => x.zahlungOffen && zuX(x)) : liste.filter(zuX);
   const ausgewaehlt = offen ? liste.find((x) => x.schluessel === offen) : undefined;
+  if (ausgewaehlt) zuletztOffen.current = ausgewaehlt;
+  // Weg aus der Liste (letzte Person abgesagt), aber eben geändert → das Fenster bleibt mit „Rückgängig“ stehen.
+  const fensterX =
+    ausgewaehlt ??
+    (offen && meldung && zuletztOffen.current?.schluessel === offen ? zuletztOffen.current : null);
+  const lage: PlatzLage = {
+    belegt: z.belegt,
+    max: maxPlaetze,
+    wartende: wartende.map(({ p }) => ({ personId: p.personId, name: ganzerName(p) })),
+  };
   const nrFeld = e.ctFelder.nr;
   const gehoertZu = (b: Absage) => {
     const nr = nrFeld === undefined ? undefined : b.werte[nrFeld];
@@ -355,8 +554,24 @@ export function AnmeldungenReiter({
           </b>{' '}
           ChurchTools lässt niemanden von selbst nachrücken. Als Nächste wartet{' '}
           {ganzerName(wartende[0].p)}
-          {wartende[0].x.angemeldetAm && ` (seit ${kurz(wartende[0].x.angemeldetAm)})`}. Nachrücken
-          lassen: vorerst in ChurchTools.
+          {wartende[0].x.angemeldetAm && ` (seit ${kurz(wartende[0].x.angemeldetAm)})`}.
+          {darf && (
+            <>
+              {' '}
+              <button
+                type="button"
+                className={a.nachKnopf}
+                onClick={() =>
+                  oeffnen(wartende[0].x.schluessel, {
+                    art: 'nach',
+                    personId: wartende[0].p.personId,
+                  })
+                }
+              >
+                {wartende[0].p.vor} nachrücken lassen
+              </button>
+            </>
+          )}
         </p>
       )}
 
@@ -501,19 +716,24 @@ export function AnmeldungenReiter({
         </p>
       </section>
 
-      {ausgewaehlt && (
+      {fensterX && (
         <AnmeldungAnsehen
-          x={ausgewaehlt}
+          key={fensterX.schluessel}
+          x={fensterX}
           e={e}
           kostet={z.kostet}
           onClose={() => oeffnen(null)}
           id={id}
+          veranstaltung={veranstaltung}
           zahlarten={zahlarten}
           heute={heute}
-          darf={darf}
-          aenderung={aenderung}
-          onGeaendert={(neu) => {
-            setAenderung(neu);
+          darf={darf && !!ausgewaehlt}
+          lage={lage}
+          start={startModus}
+          meldung={meldung}
+          onGemeldet={(neu) => {
+            setMeldung(neu);
+            setStartModus(null);
             onGespeichert();
           }}
           onRueckgaengig={onGespeichert}

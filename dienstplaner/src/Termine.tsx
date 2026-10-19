@@ -38,14 +38,16 @@ interface Props {
   onNochmal: () => void;
   /** Die nächsten Wochen dazuladen. */
   onMehr: () => void;
+  /** Eine Zeile antippen → Termin-Ansicht (E6-1b). */
+  onTermin?: (id: number) => void;
 }
 
 /**
  * **Termine** (Bauplan E3-2, Entwurf v17): eine Liste nach Monaten, „Meine | Alle“ (Vorgabe Meine),
  * Filter nach Veranstaltung, Plaketten mit den eigenen Diensten; Planer sehen „N frei“ ihrer
- * Dienstgruppen. Nur lesen – Öffnen eines Termins kommt später.
+ * Dienstgruppen. Nur lesen; eine Zeile öffnet die Termin-Ansicht (E6-1b).
  */
-export function Termine({ zustand, planer, onNochmal, onMehr }: Props) {
+export function Termine({ zustand, planer, onNochmal, onMehr, onTermin }: Props) {
   // Weitere Wochen laden im Hintergrund (das Bisherige bleibt stehen) – bis die Antwort da ist, sagt der
   // Knopf es.
   const [laeuft, setLaeuft] = useState(false);
@@ -116,7 +118,7 @@ export function Termine({ zustand, planer, onNochmal, onMehr }: Props) {
             <h3 className={styles.monat}>{monatTitel(`${m.monat}-01`)}</h3>
             <ul className={styles.liste}>
               {m.zeilen.map((z) => (
-                <TerminReihe key={z.id} z={z} planer={planer} />
+                <TerminReihe key={z.id} z={z} planer={planer} onTermin={onTermin} />
               ))}
             </ul>
           </div>
@@ -143,10 +145,18 @@ export function Termine({ zustand, planer, onNochmal, onMehr }: Props) {
   );
 }
 
-function TerminReihe({ z, planer }: { z: TerminZeile; planer: boolean }) {
+function TerminReihe({
+  z,
+  planer,
+  onTermin,
+}: {
+  z: TerminZeile;
+  planer: boolean;
+  onTermin?: (id: number) => void;
+}) {
   const k = kachel(z.tag);
-  return (
-    <li className={styles.zeile}>
+  const inhalt = (
+    <>
       <DatumKachel tag={k.tag} monat={k.monat} />
       <div className={styles.mitte}>
         <b>{z.name}</b>
@@ -174,6 +184,22 @@ function TerminReihe({ z, planer }: { z: TerminZeile; planer: boolean }) {
             <Icon name="check" size={16} />
           </span>
         ))}
+    </>
+  );
+  // Antippen öffnet die Termin-Ansicht mit Ablauf und Diensten (E6-1b).
+  if (!onTermin) return <li className={styles.zeile}>{inhalt}</li>;
+  return (
+    <li className={styles.zeileLi}>
+      <button
+        type="button"
+        className={`${styles.zeile} ${styles.zeileKnopf}`}
+        onClick={() => onTermin(z.id)}
+      >
+        {inhalt}
+        <span className={styles.pfeil} aria-hidden>
+          <Icon name="chev-right" size={16} />
+        </span>
+      </button>
     </li>
   );
 }

@@ -12,12 +12,24 @@ import type { CtAbsence, CtAgenda } from '@shared/ct/typen';
  * Ablauf (ChurchTools: 404). Andere Fehler werden geworfen.
  */
 export async function ladeLieder(eventId: number): Promise<string[] | null> {
+  const ablauf = await ladeAblauf(eventId);
+  if (!ablauf) return null;
+  return ablauf.items
+    .filter((i) => i.type === 'song')
+    .map((i) => i.song?.title?.trim() || i.title.trim())
+    .filter((t) => t !== '');
+}
+
+/**
+ * Der Ablauf eines Termins (Startseite, Termin-Ansicht E6-1b). `null` = der Termin hat keinen Ablauf (ChurchTools:
+ * 404) – eine Stelle für diese Regel. Andere Fehler werden geworfen.
+ */
+export async function ladeAblauf(eventId: number): Promise<CtAgenda | null> {
   try {
     const ablauf = await ctDaten<CtAgenda | null>(`/events/${eventId}/agenda`);
-    return (ablauf?.items ?? [])
-      .filter((i) => i.type === 'song')
-      .map((i) => i.song?.title?.trim() || i.title.trim())
-      .filter((t) => t !== '');
+    // Ohne Punkte-Liste ist der Ablauf leer – `items` ist danach immer eine Liste (die Aufrufer prüfen das nicht noch
+    // einmal). `ctDaten` gibt bei `{ data: null }` den ganzen Körper zurück; der zählt nicht als Ablauf.
+    return ablauf && Array.isArray(ablauf.items) ? ablauf : { items: [] };
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) return null;
     throw e;

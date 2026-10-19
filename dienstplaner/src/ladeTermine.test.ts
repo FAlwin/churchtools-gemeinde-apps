@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@ui/ct/fehler';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
-import { ladeTermine, ladeZeitraum } from './ladeTermine';
+import { ladeTermin, ladeTermine, ladeZeitraum } from './ladeTermine';
 import type { Start } from './start';
 import { startFuer } from './start.testutil';
 
@@ -130,5 +130,31 @@ describe('ladeZeitraum (Zeitraum-Knopf, 14.10.2026)', () => {
       (x: unknown) => x,
     );
     expect((e as ApiError).status).toBe(502);
+  });
+});
+
+describe('ladeTermin (Termin-Ansicht, E6-1b)', () => {
+  it('ein Termin mit Plätzen – dieselben Regeln wie die Matrix (Plan + Liste)', async () => {
+    const spy = ct(() => json(200, { data: TERMINE.data[0] }));
+    const d = await ladeTermin(START, 7, 'Europe/Berlin');
+    expect(spy.mock.calls.map((c) => String(c[0]))).toEqual([
+      'https://ct.test/api/events/7?include=eventServices',
+    ]);
+    expect(d.plan.spalten.map((s) => [s.id, s.uhrzeit])).toEqual([[7, '10:00']]);
+    const ton = d.plan.gruppen.flatMap((g) => g.zeilen).find((z) => z.dienst.name === 'Ton')!;
+    expect(ton.zellen[0]!.map((p) => p.name)).toEqual(['Alwin']);
+    expect(d.zeilen.map((z) => z.endeUhrzeit)).toEqual(['12:00']);
+  });
+
+  it('ohne Plätze-Liste → Fehler 502 (sonst stünde „keine Dienste“ da); 404 kommt durch', async () => {
+    ct(() => json(200, { data: { id: 7, name: 'Gottesdienst' } }));
+    expect(
+      ((await ladeTermin(START, 7, 'Europe/Berlin').catch((x: unknown) => x)) as ApiError).status,
+    ).toBe(502);
+    vi.restoreAllMocks();
+    ct(() => json(404, { message: 'Not found.' }));
+    expect(
+      ((await ladeTermin(START, 7, 'Europe/Berlin').catch((x: unknown) => x)) as ApiError).status,
+    ).toBe(404);
   });
 });

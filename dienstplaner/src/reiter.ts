@@ -30,3 +30,13 @@ export function reiterAusAdresse(hash: string, erlaubt: Reiter<ReiterId>[]): Rei
 export function adresseFuer(id: ReiterId): string {
   return id === 'start' ? '' : `#/${id}`;
 }
+
+/** Die Termin-Ansicht (E6-1b) hat eine eigene Adresse (`#/termin/148`) – Neuladen und Zurück funktionieren. */
+export function terminAusAdresse(hash: string): number | null {
+  const id = /^#\/termin\/(\d+)$/.exec(hash)?.[1];
+  return id ? Number(id) : null;
+}
+
+export function adresseFuerTermin(id: number): string {
+  return `#/termin/${id}`;
+}

@@ -4,9 +4,11 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { ApiError } from '@ui/ct/fehler';
 import { App } from './App';
 import { ladeStart, type Start } from './start';
-import { ladeTermine, ladeZeitraum } from './ladeTermine';
+import { ladeTermin, ladeTermine, ladeZeitraum } from './ladeTermine';
 import { startFuer } from './start.testutil';
-import { LEERER_PLAN } from '@shared/dienstplan/zeile.testutil';
+import { LEERER_PLAN, zeile } from '@shared/dienstplan/zeile.testutil';
+import { planAus } from '@shared/dienstplan/plan';
+import type { RohTermin } from '@shared/dienstplan/termine';
 
 const KEINE_TERMINE = { zeilen: [], plan: LEERER_PLAN };
 
@@ -17,6 +19,7 @@ vi.mock('./start', async (original) => ({
 }));
 vi.mock('./ladeTermine', () => ({
   ladeTermine: vi.fn(),
+  ladeTermin: vi.fn(),
   ladeZeitraum: vi.fn(),
   WOCHEN_JE_SCHRITT: 8,
   MAX_WOCHEN: 52,
@@ -26,6 +29,7 @@ vi.mock('./ladeBeiwerk', () => ({
   ladeLieder: vi.fn(() => Promise.resolve(null)),
   ladeAbwesenheiten: vi.fn(() => Promise.resolve([])),
   ladeMusikApp: vi.fn(() => Promise.resolve(null)),
+  ladeAblauf: vi.fn(() => Promise.resolve(null)),
 }));
 const laden = vi.mocked(ladeStart);
 const termineLaden = vi.mocked(ladeTermine);
@@ -288,5 +292,94 @@ describe('Planen für Gruppenleiter (E3-4)', () => {
     render(<App />);
     const bereiche = await screen.findByRole('group', { name: 'Bereiche' });
     expect(within(bereiche).queryByRole('button', { name: 'Planen' })).toBeNull();
+  });
+});
+
+describe('Termin-Ansicht im Dienstplaner (E6-1b)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.location.hash = '';
+  });
+
+  // Drei Termine, wie sie die Liste geladen hat – ‹ › blättert in dieser Reihenfolge.
+  const roh = (id: number, name: string, tag: string) =>
+    ({
+      id,
+      name,
+      startDate: `${tag}T08:00:00Z`,
+      endDate: `${tag}T09:30:00Z`,
+      eventServices: [],
+    }) as RohTermin;
+  const ROH = [
+    roh(7, 'Gottesdienst', '2026-10-18'),
+    roh(8, 'Gebetsabend', '2026-10-21'),
+    roh(9, 'Jugend', '2026-10-24'),
+  ];
+  const s = start([3]);
+  const plan = (r: RohTermin[]) =>
+    planAus(r, {
+      ichId: 1,
+      dienste: s.dienste,
+      dienstgruppen: s.dienstgruppen,
+      zeitzone: 'Europe/Berlin',
+      planbar: () => false,
+      ganzSichtbar: () => true,
+    });
+  const MEIN = { meine: [{ dienst: 'Ton', zugesagt: true }] };
+
+  it('aus „Termine“: Zeile antippen → #/termin/<id>; „Termine“ bleibt hervorgehoben; ‹ › und zurück', async () => {
+    breite(false);
+    window.location.hash = '#/termine';
+    laden.mockResolvedValue(s);
+    termineLaden.mockResolvedValue({
+      zeilen: ROH.map((r) => zeile(r.id, r.name, r.startDate.slice(0, 10), MEIN)),
+      plan: plan(ROH),
+    });
+    vi.mocked(ladeTermin).mockImplementation((_s, id) =>
+      Promise.resolve({ zeilen: [], plan: plan(ROH.filter((r) => r.id === id)) }),
+    );
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: /Gebetsabend/ }));
+    expect(window.location.hash).toBe('#/termin/8');
+    expect(await screen.findByRole('heading', { name: 'Gebetsabend' })).toBeTruthy();
+    // Statt der Liste, nicht daneben.
+    expect(screen.queryByRole('region', { name: 'Termine' })).toBeNull();
+    const bereiche = screen.getByRole('group', { name: 'Bereiche' });
+    expect(
+      within(bereiche).getByRole('button', { name: 'Termine' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Nächster Termin' }));
+    expect(await screen.findByRole('heading', { name: 'Jugend' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Nächster Termin' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Voriger Termin' }));
+    expect(await screen.findByRole('heading', { name: 'Gebetsabend' })).toBeTruthy();
+
+    const zurueck = screen
+      .getAllByRole('button', { name: 'Termine' })
+      .find((b) => !bereiche.contains(b))!;
+    fireEvent.click(zurueck);
+    expect(window.location.hash).toBe('#/termine');
+    expect(await screen.findByRole('region', { name: 'Termine' })).toBeTruthy();
+  });
+
+  it('direkt über die Adresse (Neuladen): Termin-Ansicht ohne Gruß, zurück zu „Start“', async () => {
+    breite(false);
+    window.location.hash = '#/termin/7';
+    laden.mockResolvedValue(s);
+    vi.mocked(ladeTermin).mockResolvedValue({ zeilen: [], plan: plan([ROH[0]]) });
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: 'Gottesdienst' })).toBeTruthy();
+    expect(vi.mocked(ladeTermin).mock.calls[0][1]).toBe(7);
+    expect(screen.queryByText('Hallo Alwin')).toBeNull();
+    const bereiche = screen.getByRole('group', { name: 'Bereiche' });
+    fireEvent.click(
+      screen.getAllByRole('button', { name: 'Start' }).find((b) => !bereiche.contains(b))!,
+    );
+    expect(window.location.hash).toBe('');
+    expect(await screen.findByText('Hallo Alwin')).toBeTruthy();
   });
 });

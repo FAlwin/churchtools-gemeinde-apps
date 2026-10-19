@@ -10,6 +10,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Icon } from '@ui/icons/icons';
 import { ItemTitle, ResponsibleLine } from '@ui/ablauf/AblaufTeile';
 import styles from '../pages/Setlist.module.scss';
+import zeile from '@ui/ablauf/AblaufListe.module.scss';
 
 /** Eine sortierbare Zeile im Bearbeiten-Modus. Tippen auf den Titel öffnet das Aktionsmenü. */
 export function SortableRow({
@@ -32,7 +33,7 @@ export function SortableRow({
   // damit sich beim Umschalten in den Bearbeiten-Modus Position und Höhe nicht ändern.
   if (item.isHeader) {
     return (
-      <div ref={setNodeRef} style={style} className={`${styles.sectionBand} ${styles.editBand}`}>
+      <div ref={setNodeRef} style={style} className={`${zeile.sectionBand} ${styles.editBand}`}>
         <button
           className={styles.bandHandle}
           {...attributes}
@@ -62,7 +63,7 @@ export function SortableRow({
     <div
       ref={setNodeRef}
       style={style}
-      className={`${styles.flowRow}${item.song ? ' ' + styles.songRow : ''}`}
+      className={`${zeile.flowRow}${item.song ? ' ' + zeile.songRow : ''}`}
     >
       <button
         className={styles.dragCol}
@@ -74,12 +75,12 @@ export function SortableRow({
         <Icon name="grip" size={18} />
       </button>
       <button className={styles.editBody} data-tour="edit-item" onClick={() => onOpenActions(item)}>
-        <div className={styles.flowHead}>
+        <div className={zeile.flowHead}>
           <ItemTitle item={item} />
-          {item.song && <span className={styles.flowSongTag}>🎵</span>}
-          {item.durationMin && <span className={styles.flowDur}>{item.durationMin} Min</span>}
+          {item.song && <span className={zeile.flowSongTag}>🎵</span>}
+          {item.durationMin && <span className={zeile.flowDur}>{item.durationMin} Min</span>}
         </div>
-        {item.note && <div className={styles.flowNote}>{item.note}</div>}
+        {item.note && <div className={zeile.flowNote}>{item.note}</div>}
         <ResponsibleLine entries={item.responsible} />
       </button>
       <button

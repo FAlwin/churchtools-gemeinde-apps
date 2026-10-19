@@ -13,7 +13,7 @@ Bemerkung.
 <details><summary>Technisches</summary>
 
 - **Priorität:** kritisch
-- **Betrifft:** `client/src/pages/Agenda.tsx`, `client/src/pages/Setlist.tsx`, `client/src/components/AgendaFullView.tsx`, `server/src/services/setlistBuilder.ts`, `server/src/controllers/setlistController.ts`
+- **Betrifft:** `client/src/pages/Agenda.tsx`, `client/src/pages/Setlist.tsx`, `client/src/components/AgendaFullView.tsx`, `ui/ablauf/AblaufListe.tsx`, `server/src/services/setlistBuilder.ts`, `server/src/controllers/setlistController.ts`
 - **Automatisiert:** teilweise – `server/src/services/setlistBuilder.test.ts` (Daten), Anzeige nicht
 - **Historie:** –
 
@@ -35,8 +35,8 @@ anderes kommt, zählt die App die Zwischenpunkte fälschlich mit.
 <details><summary>Technisches</summary>
 
 - **Priorität:** kritisch
-- **Betrifft:** `client/src/components/AgendaFullView.tsx`, `client/src/pages/ChordChart.tsx`, `client/src/hooks/useChartNavigation.ts`
-- **Automatisiert:** ja – `client/src/components/AgendaFullView.test.tsx`
+- **Betrifft:** `client/src/components/AgendaFullView.tsx`, `ui/ablauf/AblaufListe.tsx`, `client/src/pages/ChordChart.tsx`, `client/src/hooks/useChartNavigation.ts`
+- **Automatisiert:** ja – `client/src/components/AgendaFullView.test.tsx`, `ui/ablauf/AblaufListe.test.tsx`
 - **Historie:** –
 
 </details>

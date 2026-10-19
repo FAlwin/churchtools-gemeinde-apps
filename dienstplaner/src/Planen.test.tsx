@@ -67,7 +67,7 @@ const ZUSATZ = {
   heute: '2026-10-14',
 };
 
-function zeige(handy = false) {
+function zeige(handy = false, onTermin?: (id: number) => void) {
   const onMehr = vi.fn();
   render(
     <Planen
@@ -75,6 +75,7 @@ function zeige(handy = false) {
       handy={handy}
       onNochmal={() => {}}
       onMehr={onMehr}
+      onTermin={onTermin}
       {...ZUSATZ}
     />,
   );
@@ -1944,5 +1945,28 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
         .textContent,
     ).toBe('Clara Test (0×)');
     expect(screen.getByText(/1 Platz mit Entwurf bleibt|1 Platz mit Entwurf bleiben/)).toBeTruthy();
+  });
+});
+
+describe('Planen → Termin-Ansicht (E6-1b)', () => {
+  it('Computer: der Name im Spaltenkopf öffnet den Termin', () => {
+    const onTermin = vi.fn();
+    zeige(false, onTermin);
+    fireEvent.click(screen.getByRole('button', { name: 'Gebetsabend' }));
+    expect(onTermin).toHaveBeenCalledWith(11);
+    expect(screen.getByRole('button', { name: 'Gottesdienst' }).title).toBe(
+      'Gottesdienst öffnen – Ablauf und Dienste',
+    );
+  });
+
+  it('Handy: „Ablauf & Dienste“ im Kopf des gewählten Termins', () => {
+    const onTermin = vi.fn();
+    zeige(true, onTermin);
+    fireEvent.click(screen.getByRole('button', { name: 'Ablauf & Dienste' }));
+    expect(onTermin).toHaveBeenCalledWith(10);
+    const leiste = within(screen.getByRole('group', { name: 'Termine' }));
+    fireEvent.click(leiste.getAllByRole('button')[1]);
+    fireEvent.click(screen.getByRole('button', { name: 'Ablauf & Dienste' }));
+    expect(onTermin).toHaveBeenLastCalledWith(11);
   });
 });

@@ -1,7 +1,9 @@
 # Dienstplaner – ChurchTools-Erweiterung
 
-> **Stand: E4-4 (15.10.2026)** – E3 mit drei Rollen geprüft (Test-Instanz) und lesend an der Live-Instanz; seit
-> E4-4 **teilt der Dienstplaner auch ein** (s. „Senden“). **Planen**:
+> **Stand: E6-1b (17.10.2026)** – E3 mit drei Rollen geprüft (Test-Instanz) und lesend an der Live-Instanz; seit
+> E4-4 **teilt der Dienstplaner auch ein** (s. „Senden“). **Termin-Ansicht** (E6-1b): Zeile in „Termine“,
+> „Ablauf & Dienste“ auf der Startseite oder der Name im Spaltenkopf von „Planen“ → Ablauf wie in der Musik-App
+> (Dauer neben der Zeit) und die Dienste des Termins, ‹ › blättert; nur ansehen (Bearbeiten ab E6-3). **Planen**:
 > Termine als Spalten, Dienstgruppen und Dienste als Zeilen, in jeder Zelle die Plätze (Gruppen, in denen man nicht
 > einteilen darf: „nur ansehen“); freien Platz antippen →
 > „Wer kann?“ (E4-2) und dort **als Entwurf eintragen** (E4-3, Person oder Gast; Entwurf antippen = ändern oder entfernen, veraltete mit Schild); belegten Platz antippen → **zurückziehen oder ersetzen** (E4-5, ebenfalls als Entwurf); Regler in der Gruppenzeile → **Anzahl der Plätze** je Termin (sofort); **Zauberstab** in der Gruppenzeile bzw. im Gruppenkopf → Vorschläge nach der ChurchTools-Rangfolge zum Prüfen, übernommen als Entwurf (E5); **Stift** neben einem Namen (Zauberstab, „Wer kann?“) → Vorlieben der Person für die Gruppe, sofort in ChurchTools (E5); unten **„Ansehen und senden“** (E4-4): Anfrage, direkt zuteilen, Gast eintragen, zurückziehen; Zeitraum wählen (ab heute, ein Monat oder von–bis), Terminleiste,
@@ -108,6 +110,9 @@ aufrufen). Testnutzer Spike (19) hat nur „Dienstplaner sehen“.
 - Zauberstab (E5): Regeln in `shared/dienstplan/zauberstab.ts`, Fenster `dienstplaner/src/ZauberstabFach.tsx`, Symbol aus der ChurchTools-Schrift über `CtSymbol.tsx` – wie der ChurchTools-Zauberstab (über −100),
   eigene Vorschläge zählen mit den Abzügen von ChurchTools mit (Messprotokoll E5-0); geladen in
   `dienstplaner/src/ladeZauberstab.ts`.
+- Termin-Ansicht (E6-1b): `dienstplaner/src/TerminAnsicht.tsx`, Adresse `#/termin/<id>` (`reiter.ts`); der Ablauf ist
+  derselbe Baustein wie in der Musik-App (`ui/ablauf/AblaufListe`, Regeln einer Zeile in `shared/ct/ablaufZeile.ts`).
+  Geladen wird frisch: `ladeTermin` (dieselbe Regel wie Liste und Matrix) und `ladeAblauf` (404 = kein Ablauf).
 - Ansehen ohne ChurchTools: `npm run dev -w dienstplaner`, dann
   `http://localhost:5178/ccm/dienstplaner/?demo` (`?demo=mitglied`, `?demo=fehler` für die Sonderfälle).
 - Release: Tag `dienstplan-vX.Y.Z` → `dienstplaner-release.yml` → gemeinsame Vorlage

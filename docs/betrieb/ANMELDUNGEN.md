@@ -87,7 +87,7 @@ Person **keine** Mail; beim Nachrücken schickt ChurchTools nur „Deine Anmeldu
 **Nachrücken und Absagen:** Im Fenster einer Anmeldung hat jede wartende Person „Nachrücken lassen“, jede Person
 „Absagen“ – beides mit Rückfrage. Ist alles voll, erhöht das Nachrücken die Plätze. Wer nachrückt, bekommt eine eigene
 Zahlung (wie eine neue Anmeldung); beim Absagen wird die Zahlung der Anmeldung neu gerechnet und eine Rückzahlung
-notiert. Danach gibt es „Mail schreiben“ mit fertigem Text – ChurchTools selbst schickt beim Nachrücken nur „war
+notiert – die Aufschlüsselung bekommt die Zeile „Abgesagt am …“, auch wenn der Betrag gleich bleibt (wer wartet). Danach gibt es „Mail schreiben“ mit fertigem Text – ChurchTools selbst schickt beim Nachrücken nur „war
 erfolgreich“, beim Absagen gar nichts. Absagen lässt sich im Fenster rückgängig machen, Nachrücken nicht (sonst
 schickt ChurchTools „Du stehst auf der Warteliste“).
 

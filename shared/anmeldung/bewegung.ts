@@ -137,7 +137,11 @@ export interface AbsagePlan {
   hatPlatz: boolean;
   /** Sagt die erste Person ab: wer Kontakt, Unterschrift und die Zahlung der Anmeldung bekommt. */
   uebergabeAn: number | null;
-  /** Neue Zahlung der Anmeldung – `null`, wenn sie bleibt, wie sie ist (oder niemand mehr da ist). */
+  /**
+   * Was bei der Zahlung der Anmeldung neu geschrieben wird – Betrag und Aufschlüsselung mit der Zeile „Abgesagt am …“,
+   * auch wenn der Betrag gleich bleibt (sonst stünde z. B. „Warteliste – Betrag folgt beim Nachrücken“ weiter da, 19.10.).
+   * `null`: nichts zu schreiben (kostenlos, kein Betrag gemeldet oder niemand mehr da).
+   */
   haupt: (ZahlungNeu & { vorherCent: number | null; rueckzahlungCent: number }) | null;
   /** Bereits bezahlt, und niemand bleibt übrig: alles zurückzahlen. */
   rueckzahlungOhneRestCent: number;
@@ -196,7 +200,8 @@ export function absagePlan(
     (hauptZahlung.bezahlt ? Math.max(0, (vorherCent ?? 0) - neu) : 0) +
     (eigene?.bezahlt ? (eigene.betragCent ?? 0) : 0);
   const geaendert = neu !== (vorherCent ?? 0);
-  if (!geaendert && rueck === 0 && uebergabeAn === null)
+  // Ohne gemeldeten Betrag bleibt alles, wie es ist – sonst stünde dort plötzlich „0,00 €“.
+  if (!geaendert && rueck === 0 && uebergabeAn === null && vorherCent === null)
     return { ...basis, uebergabeAn, haupt: null, rueckzahlungOhneRestCent: 0 };
   return {
     ...basis,

@@ -15,7 +15,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   wurde“) – der Betrag, um den die Anmeldung nach den Regeln teurer wird. **Kein Rückgängig** (zurück auf die
   Warteliste löst in ChurchTools die Mail „Du stehst auf der Warteliste“ aus – gemessen).
 - **Absagen** je Person, mit Rückfrage: Die Zahlung der Anmeldung wird neu gerechnet, eine Rückzahlung steht in der
-  Aufschlüsselung; sagt die erste Person ab, gehen Kontakt, Unterschrift und Zahlung an die nächste. **Rückgängig im
+  Aufschlüsselung (Zeile „Abgesagt am …“, auch wenn jemand Wartendes absagt und der Betrag bleibt); sagt die erste
+  Person ab, gehen Kontakt, Unterschrift und Zahlung an die nächste. **Rückgängig im
   Fenster** holt die Person mit allen Antworten zurück (gemessen: ohne Mail). Scheitert ein Schritt, wird
   Halbgeschriebenes zurückgenommen.
 - **„Mail schreiben“** nach dem Nachrücken bzw. Absagen: fertiger Text (Betrag, Frist, Bankdaten bzw. Rückzahlung),

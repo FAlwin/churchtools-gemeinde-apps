@@ -161,11 +161,23 @@ describe('Absagen', () => {
     ]);
   });
 
-  it('wer wartet, sagt ab → Betrag bleibt; die letzte Person (bezahlt) → alles zurück', () => {
+  it('wer wartet, sagt ab → Betrag bleibt, die Zeile „Warteliste“ bekommt ihre Absage; die letzte Person (bezahlt) → alles zurück', () => {
     const x = e();
-    expect(
-      absagePlan(x, anmeldung(x, mitglieder('AAAAAA', [true, false], JONAS)), LENA, HEUTE).haupt,
-    ).toBeNull();
+    const wartend = absagePlan(
+      x,
+      anmeldung(x, mitglieder('AAAAAA', [true, false], JONAS)),
+      LENA,
+      HEUTE,
+    ).haupt!;
+    expect([wartend.personId, wartend.betragCent, wartend.vorherCent]).toEqual([JONAS, 600, 600]);
+    expect(wartend.aufschluesselung.split('\n').slice(-2)).toEqual([
+      'Lena Beispiel: Warteliste – Betrag folgt beim Nachrücken',
+      'Abgesagt am 19.10.2026: Lena Beispiel',
+    ]);
+    // Ohne gemeldeten Betrag wird nichts geschrieben (sonst stünde dort plötzlich „0,00 €“).
+    const ohneBetrag = mitglieder('AAAAAA', [true, false], JONAS);
+    setze(ohneBetrag, JONAS, { [x.ctFelder.betrag]: null });
+    expect(absagePlan(x, anmeldung(x, ohneBetrag), LENA, HEUTE).haupt).toBeNull();
     const roh = mitglieder('AAAAAA', [true, true], JONAS, { bezahlt: true });
     const nurJonas = roh.filter((y) => y.personId === JONAS);
     const plan = absagePlan(x, anmeldung(x, nurJonas), JONAS, HEUTE);

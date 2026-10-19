@@ -103,7 +103,7 @@ const ITEM: AgendaItem = {
 };
 
 /** Die Angaben im Bearbeiten-Modus (der Dialog kennt seit 05.10.2026 auch „neu"). */
-type BearbeitenProps = Extract<Parameters<typeof ItemActionSheet>[0], { item: AgendaItem }>;
+type BearbeitenProps = Extract<Parameters<typeof ItemActionSheet>[0], { modus?: 'bearbeiten' }>;
 
 function zeige(overrides: Partial<BearbeitenProps> = {}) {
   const onUpdate = vi.fn().mockResolvedValue(undefined);

@@ -15,6 +15,7 @@ import {
   verwendungszweck,
   type Bezahlung,
 } from '@shared/anmeldung/bezahlung';
+import { zahlartenFuer } from '@shared/anmeldung/zahlung';
 import {
   anmeldeLink,
   ortszeitAus,
@@ -36,6 +37,7 @@ import { WER_TEXT, datumText, geburtsdatumNoetigText } from './anzeige';
 import { fehlerMeldung } from './zustand';
 import { useSpeichern } from './useSpeichern';
 import f from './Formular.module.scss';
+import s from './Startseite.module.scss';
 
 /**
  * **Die Fenster zum Einrichten einer Veranstaltung** (A3, #486). Jedes speichert über `einrichten.ts`
@@ -581,6 +583,7 @@ export function BezahlungFenster({
   id,
   bezahlung,
   kostet,
+  zahlarten,
   onClose,
   onGespeichert,
 }: {
@@ -588,6 +591,8 @@ export function BezahlungFenster({
   bezahlung: Bezahlung;
   /** Kann die Anmeldung etwas kosten (`kannEtwasKosten`)? */
   kostet: boolean;
+  /** Die Zahlarten der Gemeinde (A7-2) – hier nur an- und abwählen. */
+  zahlarten: string[];
   onClose: () => void;
   onGespeichert: () => void;
 }) {
@@ -596,6 +601,7 @@ export function BezahlungFenster({
   const [bic, setBic] = useState(bezahlung.bic);
   const [frist, setFrist] = useState(String(bezahlung.fristTage));
   const [zweck, setZweck] = useState(bezahlung.zweck);
+  const [ohne, setOhne] = useState(bezahlung.ohneZahlarten ?? []);
   const { arbeitet, fehler, speichern } = useSpeichern(onGespeichert);
 
   const neu: Bezahlung = {
@@ -604,8 +610,16 @@ export function BezahlungFenster({
     bic: ibanNormal(bic),
     fristTage: frist === '' ? -1 : Number(frist),
     zweck: zweck.trim(),
+    // Nur, was es bei der Gemeinde (noch) gibt – eine entfernte Zahlart der Gemeinde fällt hier mit weg.
+    ohneZahlarten: ohne.filter((z) => zahlarten.includes(z)),
   };
-  const probleme = pruefeBezahlung(neu);
+  const gewaehlt = zahlartenFuer(zahlarten, neu.ohneZahlarten ?? []);
+  const probleme = [
+    ...pruefeBezahlung(neu),
+    ...(zahlarten.length > 0 && gewaehlt.length === 0
+      ? ['Bitte mindestens eine Zahlart wählen.']
+      : []),
+  ];
 
   return (
     <Sheet title="Bezahlung" onClose={onClose}>
@@ -681,6 +695,26 @@ export function BezahlungFenster({
           {NACHNAME} wird durch den Nachnamen ersetzt, z. B. „{verwendungszweck(zweck, 'Müller')}“.
         </small>
       </label>
+      <div className={f.feld}>
+        <span>Zahlarten bei dieser Veranstaltung</span>
+        <div className={s.chips}>
+          {zahlarten.map((z) => (
+            <button
+              key={z}
+              type="button"
+              className={s.filterChip}
+              aria-pressed={!ohne.includes(z)}
+              onClick={() => setOhne(ohne.includes(z) ? ohne.filter((x) => x !== z) : [...ohne, z])}
+            >
+              {ohne.includes(z) ? z : `✓ ${z}`}
+            </button>
+          ))}
+        </div>
+        <small className={f.hinweis}>
+          Die Liste legt die Gemeinde fest („Einstellungen“). Beim Abhaken von „bezahlt“ stehen nur
+          die gewählten zur Wahl.
+        </small>
+      </div>
       {probleme
         .filter((p) => !p.startsWith('Die IBAN'))
         .map((p) => (

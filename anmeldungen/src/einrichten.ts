@@ -25,6 +25,7 @@ import {
 } from '@shared/anmeldung/formular';
 import { pruefeRegeln, type PreisRegeln } from '@shared/anmeldung/preis';
 import { optionenBelegt } from '@shared/anmeldung/kontingent';
+import { zahlartenSauber } from '@shared/anmeldung/zahlung';
 import {
   NACHNAME,
   ZWECK_MAX,
@@ -401,6 +402,18 @@ async function systemfelderAnlegen(
 }
 
 /**
+ * **Fehlende Systemfelder nachziehen** – beim Freigeben (A6-2: „Angemeldet von“) und beim ersten „bezahlt“ (A7-2:
+ * „Zahlart“). Die eine Stelle dafür. Gibt die (danach) gültigen Einstellungen zurück.
+ */
+export async function systemfelderNachziehen(id: number): Promise<OeffentlicheEinstellungen> {
+  const e = await einstellungenVon(id);
+  if (!SYSTEMFELDER.some((f) => e.ctFelder[f.id] === undefined)) return e;
+  const neu = { ...e, ctFelder: await systemfelderAnlegen(id, e.ctFelder) };
+  await einstellungenSchreiben(id, neu);
+  return neu;
+}
+
+/**
  * **Neue Veranstaltung** – als Entwurf (Status 2, für Gäste unsichtbar, A0 #7) vom Typ „Anmeldung“ unter dem
  * Team. Reihenfolge mit Absicht: Zuerst stehen die Einstellungen in der Beschreibung – dann ist die
  * Veranstaltung schon in der Liste zu sehen, auch wenn ein späterer Schritt scheitert, statt als
@@ -568,6 +581,8 @@ export async function speichereBezahlung(id: number, b: Bezahlung): Promise<void
     fristTage: b.fristTage,
     zweck: b.zweck.trim(),
   };
+  const ohne = zahlartenSauber(b.ohneZahlarten ?? []);
+  if (ohne.length) sauber.ohneZahlarten = ohne;
   const fehler = pruefeBezahlung(sauber);
   if (fehler.length) throw new ApiError(422, fehler.join(' '));
   await aendereEinstellungen(id, (e) => ({ ...e, bezahlung: sauber }));
@@ -735,9 +750,7 @@ export async function anmeldenVorbereiten(
 ): Promise<void> {
   if (leitung.length === 0)
     throw new ApiError(422, 'Bitte mindestens eine Person als Leitung wählen.');
-  const e = await einstellungenVon(id);
-  if (SYSTEMFELDER.some((f) => e.ctFelder[f.id] === undefined))
-    await einstellungenSchreiben(id, { ...e, ctFelder: await systemfelderAnlegen(id, e.ctFelder) });
+  await systemfelderNachziehen(id);
 
   const g = await gruppe(id);
   const rolle = await leiterRolle(Number(g.information?.groupTypeId));

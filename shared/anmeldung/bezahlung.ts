@@ -22,6 +22,11 @@ export interface Bezahlung {
   fristTage: number;
   /** Mit Platzhalter `[Nachname]`, der beim Versand ersetzt wird. */
   zweck: string;
+  /**
+   * Zahlarten der Gemeinde, die es bei dieser Veranstaltung nicht gibt (A7-2, `zahlung.ts`). Fehlt, wenn keine abgewählt
+   * ist – so bleiben die Einstellungen kurz (die Sicherung passt in EIN Feld, `gestaltung.test.ts`).
+   */
+  ohneZahlarten?: string[];
 }
 
 /** Der Platzhalter im Verwendungszweck. */

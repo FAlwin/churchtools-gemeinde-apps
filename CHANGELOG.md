@@ -7,6 +7,25 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Anmeldungen, A7-2)
+
+- **Zahlung im Fenster einer Anmeldung** (Entwurf `a7-anmeldungen-v2`): **als bezahlt markieren** mit Zahlart und Tag,
+  **zurücksetzen**, **Betrag ändern** – jeweils mit „Rückgängig“ **im Fenster selbst** (Alwin, 19.10.2026: „Rückgängig
+  bitte immer bei modalen im modal direkt rein“ – die Leiste unten lag hinter dem Fenster; `RueckgaengigImFenster`, ein
+  gemeinsamer Ablauf mit der Leiste). Geschrieben wird bei der ersten Person der Anmeldung
+  (`zahlungBei`), nachgelesen nach jedem Schreiben. Gemessen 19.10.2026: `PATCH /groups/{id}/members/{personId}` mit
+  `{fields: {…}}` ändert nur die geschickten Felder, keine Mail. Hat die erste Person abgesagt, wird nichts geschrieben
+  (kommt mit A7-3).
+- **Zahlarten** (Alwin, 19.10.2026: „je Gemeinde + je Veranstaltung“): Liste in den Einstellungen der Gemeinde
+  (vorbelegt Überweisung, Bar, PayPal), je Veranstaltung abwählbar (Karte „Bezahlung“, `ohneZahlarten` – nur gespeichert,
+  wenn etwas abgewählt ist). Neues Systemfeld **„Zahlart“**; ältere Veranstaltungen bekommen es beim ersten „bezahlt“
+  (`systemfelderNachziehen`, dieselbe Stelle wie beim Freigeben).
+- **Betrag von Hand:** In der Aufschlüsselung steht dann „Von Hand geändert am …“; die Nachprüfung meldet ihn danach
+  nicht mehr als abweichend (`vonHandZeile`/`vonHandBetrag`).
+- „TT.MM.JJJJ“ steht an EINER Stelle (`tagPunkt`) – Unterschrift, Zahlung und Reiter hatten je eine eigene Fassung.
+- Nach einer Zahlungsänderung lädt die Seite auch die Einstellungen neu (echter Test 19.10.2026: Das erste „bezahlt“ legte
+  das Feld „Zahlart“ an, ohne dessen Nummer fehlte die Zahlart in der Anzeige).
+
 ### Neu (Dienstplaner, E6-1b, #625)
 
 - **Termin-Ansicht – Ablauf und Dienste eines Termins** (Bauplan E6-1b, Entwurf `e6-entwurf.html`): Eine Zeile in

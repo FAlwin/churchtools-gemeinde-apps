@@ -10,6 +10,12 @@ import * as G from './gemeinde';
 import * as FF from './formularFelder';
 import * as NP from './nachpruefung';
 import * as MG from './mitglieder';
+import * as ZA from './zahlung';
+import {
+  e as eListe,
+  mitglieder as mitgliederListe,
+  stand as standListe,
+} from '@shared/anmeldung/liste.testdaten';
 import { VeranstaltungSeite } from './VeranstaltungSeite';
 import { NeueVeranstaltung } from './NeueVeranstaltung';
 
@@ -60,6 +66,13 @@ const mg = vi.mocked(MG);
 vi.mock('./nachpruefung', () => ({ nachpruefungAus: vi.fn() }));
 const np = vi.mocked(NP);
 const STAND = { mitglieder: [], absagen: [], verlaufGekuerzt: false };
+// A7-2: Zahlung schreiben – hier nur, ob die Seite danach richtig neu lädt.
+vi.mock('./zahlung', () => ({
+  zahlungSpeichern: vi.fn().mockResolvedValue(undefined),
+  betragAendern: vi.fn(),
+  betragWiederherstellen: vi.fn(),
+}));
+const za = vi.mocked(ZA);
 const PRUEF_OK = {
   plaetze: { belegt: 9, wartend: 0, max: 10, wartenTrotzPlatz: false },
   auswahl: null,
@@ -574,6 +587,38 @@ describe('Bezahlung, Freigeben, Geburtsdatum (A4)', () => {
     expect(screen.queryByText(/noch keine Bankverbindung/)).toBeNull();
   });
 
+  it('Bezahlung: Zahlarten der Gemeinde an- und abwählen (A7-2); keine gewählt → Speichern gesperrt', async () => {
+    stelle(true, 2);
+    m.speichereBezahlung.mockResolvedValue();
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Bezahlung' });
+    expect(within(karte).getByText('Überweisung, Bar, PayPal')).toBeTruthy();
+    fireEvent.click(within(karte).getByRole('button', { name: 'Bearbeiten' }));
+    fireEvent.click(screen.getByRole('button', { name: '✓ PayPal' }));
+    expect(screen.getByRole('button', { name: 'PayPal' })).toHaveProperty('ariaPressed', 'false');
+    fireEvent.click(screen.getByRole('button', { name: '✓ Überweisung' }));
+    fireEvent.click(screen.getByRole('button', { name: '✓ Bar' }));
+    expect(screen.getByText('Bitte mindestens eine Zahlart wählen.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Speichern' })).toHaveProperty('disabled', true);
+    fireEvent.click(screen.getByRole('button', { name: 'Bar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() =>
+      expect(m.speichereBezahlung).toHaveBeenCalledWith(
+        91,
+        expect.objectContaining({ ohneZahlarten: ['PayPal', 'Überweisung'] }),
+      ),
+    );
+  });
+
+  it('Bezahlung: abgewählte Zahlarten fehlen auf der Karte (A7-2)', async () => {
+    stelle(true, 2, {
+      bezahlung: { ...neueEinstellungen('einfach').bezahlung, ohneZahlarten: ['PayPal'] },
+    });
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Bezahlung' });
+    expect(within(karte).getByText('Überweisung, Bar')).toBeTruthy();
+  });
+
   it('Bezahlung: falsche IBAN → Meldung, Speichern gesperrt; richtige → gespeichert wie eingegeben', async () => {
     stelle(true, 2, { preis: zwoelfEuro });
     m.speichereBezahlung.mockResolvedValue();
@@ -598,6 +643,7 @@ describe('Bezahlung, Freigeben, Geburtsdatum (A4)', () => {
         bic: '',
         fristTage: 14,
         zweck: '[Nachname]',
+        ohneZahlarten: [],
       }),
     );
   });
@@ -778,5 +824,31 @@ describe('Nachprüfung (A6-5c, #623)', () => {
     expect(await screen.findByText(/Ließ sich gerade nicht prüfen/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Neu prüfen' }));
     expect(await screen.findByText('Alles stimmt ✓')).toBeTruthy();
+  });
+});
+
+describe('Reiter Anmeldungen (A7-2)', () => {
+  it('nach „bezahlt“ lädt die Seite auch die Einstellungen neu – das erste „bezahlt“ kann das Feld „Zahlart“ anlegen', async () => {
+    stelle(true, 1, eListe());
+    mg.ladeMitglieder.mockResolvedValue({
+      ...standListe(mitgliederListe('AAAAAA', [true, true], 10)),
+      verlaufGekuerzt: false,
+    });
+    np.nachpruefungAus.mockReturnValue(PRUEF_OK);
+    render(
+      <VeranstaltungSeite
+        id={91}
+        reiter="anmeldungen"
+        zeitzone={ZONE}
+        formularAdresse="https://anmeldung.beispiel.de/"
+        onZurueck={() => {}}
+      />,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: /Maria Beispiel/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Als bezahlt markieren' }));
+    await waitFor(() => expect(za.zahlungSpeichern).toHaveBeenCalled());
+    await waitFor(() => expect(m.einstellungenVon).toHaveBeenCalledTimes(2));
+    // Das Fenster bleibt dabei offen.
+    expect(screen.getByText(/Für die ganze Anmeldung/)).toBeTruthy();
   });
 });

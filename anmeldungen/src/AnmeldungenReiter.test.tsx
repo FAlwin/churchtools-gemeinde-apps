@@ -1,26 +1,45 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { AnmeldungenReiter, type MitgliederZustand } from './AnmeldungenReiter';
+import * as Z from './zahlung';
 import { STICHTAG, absage, dazu, e, mitglieder, stand } from '@shared/anmeldung/liste.testdaten';
 
+vi.mock('./zahlung', () => ({
+  zahlungSpeichern: vi.fn().mockResolvedValue(undefined),
+  betragAendern: vi.fn().mockResolvedValue(undefined),
+  betragWiederherstellen: vi.fn().mockResolvedValue(undefined),
+}));
+const zm = vi.mocked(Z);
+
 /**
- * Reiter „Anmeldungen“ (A7-1). Die Daten kommen aus dem, was das Formular schreibt (`liste.testdaten.ts`); gerechnet
+ * Reiter „Anmeldungen“ (A7-1, Zahlung A7-2). Die Daten kommen aus dem, was das Formular schreibt (`liste.testdaten.ts`); gerechnet
  * wird in `shared/anmeldung/liste.ts` (dort getestet) – hier nur, was man sieht und anklickt.
  */
-function zeigen(zustand: MitgliederZustand | null, max: number | null = 10, entwurf = false) {
+function zeigen(
+  zustand: MitgliederZustand | null,
+  max: number | null = 10,
+  entwurf = false,
+  darf = true,
+) {
   const onNeuLaden = vi.fn();
+  const onGespeichert = vi.fn();
   render(
     <AnmeldungenReiter
+      id={165}
       e={e()}
       maxPlaetze={max}
       entwurf={entwurf}
       zustand={zustand}
       stichtag={STICHTAG}
+      heute="2026-10-19"
+      darf={darf}
+      zahlarten={['Überweisung', 'Bar']}
       onNeuLaden={onNeuLaden}
+      onGespeichert={onGespeichert}
     />,
   );
-  return onNeuLaden;
+  return Object.assign(onNeuLaden, { onGespeichert });
 }
 const fertig = (
   roh = mitglieder('AAAAAA', [true, false], 10),
@@ -85,5 +104,94 @@ describe('Reiter Anmeldungen', () => {
     const neu = zeigen({ art: 'fehler', text: 'ChurchTools antwortet gerade nicht.' });
     fireEvent.click(screen.getByRole('button', { name: 'Nochmal' }));
     expect(neu).toHaveBeenCalled();
+  });
+});
+
+describe('Zahlung im Fenster (A7-2)', () => {
+  const oeffnen = () => fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));
+
+  it('als bezahlt markieren: Zahlart wählen, bei der ersten Person, mit „Rückgängig“', async () => {
+    const z = zeigen(fertig(mitglieder('AAAAAA', [true, true], 10)));
+    oeffnen();
+    fireEvent.click(screen.getByRole('button', { name: 'Bar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Als bezahlt markieren' }));
+    await waitFor(() => expect(z.onGespeichert).toHaveBeenCalled());
+    expect(zm.zahlungSpeichern).toHaveBeenCalledWith(165, 10, {
+      bezahlt: true,
+      am: '2026-10-19',
+      zahlart: 'Bar',
+    });
+    // „Rückgängig“ im Fenster selbst (Alwin, 19.10.2026) – nicht in der Leiste hinter dem Fenster.
+    const zeile = screen.getByRole('status');
+    expect(zeile.textContent).toMatch(/^Maria Beispiel: als bezahlt markiert \(Bar\)\./);
+    fireEvent.click(within(zeile).getByRole('button', { name: 'Rückgängig' }));
+    expect(await within(zeile).findByText('Rückgängig gemacht.')).toBeTruthy();
+    expect(zm.zahlungSpeichern).toHaveBeenLastCalledWith(165, 10, {
+      bezahlt: false,
+      am: null,
+      zahlart: null,
+    });
+    expect(z.onGespeichert).toHaveBeenCalledTimes(2);
+    // Fenster zu und wieder auf → keine alte Änderung mehr.
+    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    oeffnen();
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('bezahlt → Anzeige mit Zahlart, „Zurücksetzen“; in der Liste „✓ Bar“', async () => {
+    const z = zeigen(fertig(mitglieder('AAAAAA', [true, true], 10, { bezahlt: true })));
+    expect(screen.getByRole('button', { name: /Maria Beispiel/ }).textContent).toMatch(
+      /✓ Bar 18\.10\./,
+    );
+    oeffnen();
+    expect(screen.getByText('✓ bezahlt am 18.10.2026 · Bar')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Zurücksetzen' }));
+    await waitFor(() => expect(z.onGespeichert).toHaveBeenCalled());
+    expect(zm.zahlungSpeichern).toHaveBeenCalledWith(165, 10, {
+      bezahlt: false,
+      am: null,
+      zahlart: null,
+    });
+  });
+
+  it('Betrag ändern: nur ein gültiger, anderer Betrag; Rückgängig schreibt den alten zurück', async () => {
+    const z = zeigen(fertig(mitglieder('AAAAAA', [true, true], 10)));
+    oeffnen();
+    fireEvent.click(screen.getByRole('button', { name: 'Betrag ändern' }));
+    const feld = screen.getByLabelText('Neuer Betrag');
+    const speichern = () => screen.getByRole('button', { name: 'Speichern' });
+    expect(speichern()).toHaveProperty('disabled', true);
+    fireEvent.change(feld, { target: { value: 'zehn' } });
+    expect(screen.getByText(/Bitte einen Betrag/)).toBeTruthy();
+    fireEvent.change(feld, { target: { value: '10' } });
+    fireEvent.click(speichern());
+    await waitFor(() => expect(z.onGespeichert).toHaveBeenCalled());
+    expect(zm.betragAendern).toHaveBeenCalledWith(
+      165,
+      10,
+      1000,
+      expect.stringMatching(/Gesamt: 12,00 €$/),
+      '2026-10-19',
+    );
+    fireEvent.click(within(screen.getByRole('status')).getByRole('button', { name: 'Rückgängig' }));
+    await waitFor(() => expect(zm.betragWiederherstellen).toHaveBeenCalled());
+    expect(zm.betragWiederherstellen).toHaveBeenCalledWith(165, 10, {
+      betrag: '12,00 €',
+      aufschluesselung: expect.stringMatching(/Gesamt: 12,00 €$/),
+    });
+  });
+
+  it('ohne Recht nur Anzeige; erste Person abgesagt → nichts zum Klicken', () => {
+    zeigen(fertig(mitglieder('AAAAAA', [true, true], 10)), 10, false, false);
+    oeffnen();
+    expect(screen.getByText('Noch nicht bezahlt.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Als bezahlt markieren' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Betrag ändern' })).toBeNull();
+    cleanup();
+    const [jonas, lena] = mitglieder('AAAAAA', [true, true], 10);
+    zeigen(fertig([lena], [absage(jonas, '2026-10-18', 10)]));
+    oeffnen();
+    expect(screen.getByText(/hat abgesagt. Anpassen geht mit dem nächsten Schritt/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Betrag ändern' })).toBeNull();
   });
 });

@@ -638,6 +638,7 @@ describe('Preise und Bezahlung (A4)', () => {
       bic: 'cobadeff',
       fristTage: 10,
       zweck: ' X [Nachname] ',
+      ohneZahlarten: [' PayPal ', 'PayPal', ''],
     };
     await speichereBezahlung(id, b);
     expect(einstellungenLesen(gruppen.get(id)!.note)!.bezahlung).toEqual({
@@ -646,7 +647,11 @@ describe('Preise und Bezahlung (A4)', () => {
       bic: 'COBADEFF',
       fristTage: 10,
       zweck: 'X [Nachname]',
+      ohneZahlarten: ['PayPal'],
     });
+    // Nichts abgewählt → das Feld fehlt ganz (hält die Einstellungen kurz, A7-2).
+    await speichereBezahlung(id, { ...b, ohneZahlarten: [' '] });
+    expect('ohneZahlarten' in einstellungenLesen(gruppen.get(id)!.note)!.bezahlung).toBe(false);
     const vorher = gruppen.get(id)!.note;
     await expect(
       speichereBezahlung(id, { ...b, iban: 'DE89370400440532013001' }),

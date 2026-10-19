@@ -25,6 +25,7 @@ import {
   type Feld,
   type OeffentlicheEinstellungen,
 } from './formular';
+import { tagPunkt } from '../ct/datum';
 import {
   berechnePreis,
   euroText,
@@ -163,15 +164,12 @@ export function erziehungText(w: Antwort): string | null {
   return zeilen.join('\n');
 }
 
-/** Tag `YYYY-MM-DD` → `TT.MM.JJJJ`. */
-const tagText = (tag: string) => tag.slice(0, 10).split('-').reverse().join('.');
-
 /**
  * **Die lesbare Spalte der Unterschrift** (Alwin, 15.10.2026: „zwei Spalten“) – wer und wann: „✓ Erna Muster,
  * 15.10.2026“. Die Striche stehen in der zweiten Spalte (`ctZusatzSpalten`).
  */
 export function unterschriftLesbar(name: string, heute: string): string {
-  return `✓ ${name ? `${name}, ` : 'unterschrieben am '}${tagText(heute)}`;
+  return `✓ ${name ? `${name}, ` : 'unterschrieben am '}${tagPunkt(heute)}`;
 }
 
 /**

@@ -420,6 +420,9 @@ export const SYSTEMFELDER = [
   { id: 'extras', name: 'Extras', fieldTypeCode: 'text', beimAnmelden: true },
   { id: 'bezahlt', name: 'Bezahlt', fieldTypeCode: 'checkbox', beimAnmelden: false },
   { id: 'bezahltAm', name: 'Bezahlt am', fieldTypeCode: 'date', beimAnmelden: false },
+  // A7-2: Ältere Veranstaltungen bekommen das Feld beim ersten „bezahlt“ (`zahlungSpeichern`). Ans Ende: Die Reihenfolge
+  // bestimmt die Plätze der Sicherung (`sicherungSchreiben`).
+  { id: 'zahlart', name: 'Zahlart', fieldTypeCode: 'text', beimAnmelden: false },
 ] as const;
 
 // ── Öffentliche Einstellungen in der Gruppen-Beschreibung ──────────────────────────────────────
@@ -695,6 +698,8 @@ const einstellungenSchema = z.object({
       bic: z.string().max(11),
       fristTage: z.number().int().min(0).max(365),
       zweck: z.string().max(ZWECK_MAX),
+      // Seit A7-2: abgewählte Zahlarten der Gemeinde – nur, wenn welche abgewählt sind (hält die Einstellungen kurz).
+      ohneZahlarten: z.array(z.string().max(40)).max(20).optional(),
     })
     .default(() => ({ ...STANDARD_BEZAHLUNG })),
   // Seit A6-4. Mit Standardwert, damit ältere Einstellungen lesbar bleiben.

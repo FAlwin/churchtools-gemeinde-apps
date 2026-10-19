@@ -31,7 +31,9 @@ import { VerwaltenFenster } from './Verwalten';
 import { FreigebenFenster } from './FreigebenFenster';
 import { AnmeldeLinkKarte } from './AnmeldeLink';
 import { NachpruefungKarte, type NachpruefungStand } from './NachpruefungKarte';
-import { ladeNachpruefung } from './nachpruefung';
+import { nachpruefungAus } from './nachpruefung';
+import { ladeMitglieder } from './mitglieder';
+import { AnmeldungenReiter, type MitgliederZustand } from './AnmeldungenReiter';
 import { Baukasten } from './Baukasten';
 import { Segment } from '@ui/bedienung/Segment';
 import type { Aenderung } from './Rueckgaengig';
@@ -47,14 +49,14 @@ import f from './Formular.module.scss';
  * Anmeldung, wer sich anmeldet, Preise und Bezahlung (A4), Löschfrist; dazu Freigeben und „Probe rechnen“.
  * Bearbeiten darf, wem ChurchTools es erlaubt (Leitung und Organisatoren des Teams) – alle anderen sehen
  * die Karten ohne „Bearbeiten“ und dürfen probeweise rechnen.
- * Daneben der Reiter „Formular“ (A5): der Baukasten mit Bausteinen und Design. Die Anmeldungsliste (A7) folgt.
+ * Daneben der Reiter „Formular“ (A5): der Baukasten mit Bausteinen und Design, und der Reiter „Anmeldungen“ (A7).
  */
 
 /**
  * Die Reiter einer Veranstaltung (A5). „Gestaltung“ war bis zum Umbau am 13.10.2026 ein eigener Reiter – jetzt
- * steckt sie im Baukasten (Leiste „Design“). Die Anmeldungsliste (A7) kommt dazu.
+ * steckt sie im Baukasten (Leiste „Design“). Seit A7-1 dazu die Liste der Anmeldungen.
  */
-export type Reiter = 'veranstaltung' | 'formular';
+export type Reiter = 'veranstaltung' | 'formular' | 'anmeldungen';
 
 interface Daten {
   name: string;
@@ -147,28 +149,27 @@ export function VeranstaltungSeite({
   const [daten, setDaten] = useState<Daten | null>(null);
   const [fehler, setFehler] = useState<Fehlermeldung | null>(null);
   const [fenster, setFenster] = useState<Fenster>(null);
-  // A6-5c: Nachprüfung – `null` = keine Karte (Entwurf, oder Mitglieder nicht lesbar).
-  const [pruef, setPruef] = useState<NachpruefungStand | null>(null);
-  const pruefLauf = useRef(0);
-  // Wo die Karte zuletzt stand – beim „Neu prüfen“ bleibt sie dort, statt nach unten und zurück zu springen.
+  // A7-1: Mitglieder einmal laden – für die Liste und die Nachprüfung (A6-5c). `null` = Entwurf, nichts geladen.
+  const [mitglieder, setMitglieder] = useState<MitgliederZustand | null>(null);
+  const ladeLauf = useRef(0);
+  // Wo die Nachprüfung zuletzt stand – beim „Neu prüfen“ bleibt sie dort, statt nach unten und zurück zu springen.
   const [pruefWarOben, setPruefWarOben] = useState(false);
 
-  const pruefen = useCallback(
+  const mitgliederLaden = useCallback(
     (einstellungen: OeffentlicheEinstellungen, maxPlaetze: number | null) => {
-      const lauf = ++pruefLauf.current;
-      setPruef({ art: 'laedt' });
-      ladeNachpruefung(id, einstellungen, maxPlaetze).then(
-        (n) => {
-          if (lauf !== pruefLauf.current) return;
-          setPruef(n ? { art: 'fertig', n } : null);
-          setPruefWarOben(!!n && n.hinweise > 0);
+      const lauf = ++ladeLauf.current;
+      setMitglieder({ art: 'laedt' });
+      ladeMitglieder(id).then(
+        (stand) => {
+          if (lauf !== ladeLauf.current) return;
+          setMitglieder(stand ? { art: 'fertig', stand } : { art: 'verboten' });
+          setPruefWarOben(
+            !!stand && nachpruefungAus(einstellungen, stand, maxPlaetze).hinweise > 0,
+          );
         },
         (x: unknown) =>
-          lauf === pruefLauf.current &&
-          setPruef({
-            art: 'fehler',
-            text: `Ließ sich gerade nicht prüfen. ${fehlerMeldung(x).text}`,
-          }),
+          lauf === ladeLauf.current &&
+          setMitglieder({ art: 'fehler', text: fehlerMeldung(x).text }),
       );
     },
     [id],
@@ -194,12 +195,12 @@ export function VeranstaltungSeite({
             console.warn('Belegung der Auswahl nicht nachgezogen', x),
           );
         // A6-5c: In einem Entwurf hat sich noch niemand angemeldet.
-        if (kopf.statusId !== 2) pruefen(einstellungen, anmeldung.maxPlaetze);
-        else setPruef(null);
+        if (kopf.statusId !== 2) mitgliederLaden(einstellungen, anmeldung.maxPlaetze);
+        else setMitglieder(null);
       },
       (e: unknown) => setFehler(fehlerMeldung(e)),
     );
-  }, [id, pruefen]);
+  }, [id, mitgliederLaden]);
 
   useEffect(laden, [laden]);
 
@@ -252,10 +253,18 @@ export function VeranstaltungSeite({
     const lokal = ortszeitAus(iso, zeitzone);
     return `${datumText(lokal.slice(0, 10))}`;
   };
+  const pruef: NachpruefungStand | null =
+    !mitglieder || mitglieder.art === 'verboten'
+      ? null
+      : mitglieder.art === 'laedt'
+        ? { art: 'laedt' }
+        : mitglieder.art === 'fehler'
+          ? { art: 'fehler', text: `Ließ sich gerade nicht prüfen. ${mitglieder.text}` }
+          : { art: 'fertig', n: nachpruefungAus(e, mitglieder.stand, a.maxPlaetze) };
+  const neuLaden = () => mitgliederLaden(e, a.maxPlaetze);
   const pruefOben = pruef?.art === 'fertig' ? pruef.n.hinweise > 0 : pruefWarOben;
-  const pruefKarte = pruef && (
-    <NachpruefungKarte stand={pruef} onNeu={() => pruefen(e, a.maxPlaetze)} />
-  );
+  const pruefKarte = pruef && <NachpruefungKarte stand={pruef} onNeu={neuLaden} />;
+  const heute = tagAusIso(new Date().toISOString(), zeitzone);
   const t = e.termin;
   const geburt = geburtsdatumAn(e.formular);
   const kostet = kannEtwasKosten(e.preis);
@@ -314,6 +323,7 @@ export function VeranstaltungSeite({
         options={[
           { value: 'veranstaltung', label: 'Veranstaltung' },
           { value: 'formular', label: 'Formular' },
+          { value: 'anmeldungen', label: 'Anmeldungen' },
         ]}
       />
 
@@ -325,12 +335,23 @@ export function VeranstaltungSeite({
           einstellungen={e}
           bildUrl={daten.bildUrl}
           darf={darf}
-          heute={tagAusIso(new Date().toISOString(), zeitzone)}
+          heute={heute}
           onGespeichert={(text, umkehrbar) =>
             umkehrbar
               ? gespeichert(text)()
               : (onGeaendert({ text, rueckgaengig: null }, false), laden())
           }
+        />
+      )}
+
+      {reiter === 'anmeldungen' && (
+        <AnmeldungenReiter
+          e={e}
+          maxPlaetze={a.maxPlaetze}
+          entwurf={entwurf}
+          zustand={mitglieder}
+          stichtag={t?.beginn.slice(0, 10) ?? heute}
+          onNeuLaden={neuLaden}
         />
       )}
 
@@ -415,18 +436,9 @@ export function VeranstaltungSeite({
               <Zeile titel="Daten löschen">{e.loeschfristMonate} Monate nach dem Ende</Zeile>
             </Karte>
             {!pruefOben && pruefKarte}
-            <p className={v.hinweis}>
-              Die Liste der Anmeldungen kommt in einem späteren Schritt dazu. Bis dahin: „In
-              ChurchTools“.
-            </p>
           </div>
           <div className={`${s.spalte} ${v.klebt}`}>
-            <ProbeRechnen
-              preis={e.preis}
-              wer={e.wer}
-              geburtsdatum={geburt}
-              heute={tagAusIso(new Date().toISOString(), zeitzone)}
-            />
+            <ProbeRechnen preis={e.preis} wer={e.wer} geburtsdatum={geburt} heute={heute} />
           </div>
         </div>
       )}

@@ -75,6 +75,15 @@ prüfen. Was trotzdem durchkommt, entfernt die Leitung in ChurchTools (später i
 jemand, rückt in ChurchTools niemand von selbst nach, auch wenn ihr Plätze dazugebt; neue Anmeldungen kommen dann
 hinten an. Nachrücken lassen geht in ChurchTools (später in der Erweiterung).
 
+**Reiter „Anmeldungen“** (bisher nur ansehen): eine Zeile je Anmeldung (über die Anmelde-Nr.) mit Personen, Alter,
+Warteplatz, Betrag und Zahlung; oben Plätze, Warteliste und offene Zahlungen, dazu der Hinweis, wenn Plätze frei sind
+und jemand wartet. Filter: Alle, Zahlung offen, Warteliste, Abgesagt; Suche nach Namen. Ein Klick öffnet alle
+Antworten – was für die ganze Anmeldung gilt (Kontakt, Erziehungsberechtigte, Unterschrift als Bild), steht einmal
+oben. **Abgesagt** kommt aus dem Verlauf von ChurchTools: Er behält auch die Antworten der Abgesagten, deshalb gehen
+Betrag oder Unterschrift nicht verloren, wenn die erste Person einer Anmeldung absagt. Sehen kann die Liste, wer in
+ChurchTools die Mitglieder der Gruppe sehen darf. Gut zu wissen: Entfernt ihr in ChurchTools jemanden, bekommt die
+Person **keine** Mail; beim Nachrücken schickt ChurchTools nur „Deine Anmeldung war erfolgreich“ – ohne Betrag.
+
 **Begrenzte Auswahl** (z. B. Zimmer): Je Option „Wie oft buchbar“ (jede Anmeldung belegt eins) und freiwillig
 „Für wie viele Personen“ (nur ein Hinweis im Formular). Die Erweiterung zählt die Belegung, sobald jemand mit
 Bearbeiten-Recht die Veranstaltung öffnet – erst dann sieht das Formular, was ausgebucht ist. Gäste können die

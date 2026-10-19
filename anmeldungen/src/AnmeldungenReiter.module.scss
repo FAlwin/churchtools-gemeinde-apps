@@ -1,0 +1,295 @@
+// Reiter „Anmeldungen“ (A7-1, Entwurf a7-anmeldungen-v2) – Tokens der Musik-App, keine eigenen Farben.
+@use '@ui/design/mixins' as m;
+
+.reiter {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.zahlen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.zahl {
+  @include m.card-list;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+
+  span {
+    color: var(--text2);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  b {
+    color: var(--text);
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  small {
+    color: var(--text2);
+    font-size: 12px;
+  }
+}
+
+.suche {
+  @include m.eingabefeld;
+  flex: 1;
+  min-width: 120px;
+  max-width: 220px;
+  height: 30px;
+  margin-left: auto;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+
+.zeile,
+.zeileStill {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 14px;
+  background: none;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+
+.zeile {
+  cursor: pointer;
+
+  &:hover {
+    background: color-mix(in srgb, var(--blue) 5%, var(--surface2));
+  }
+}
+
+// Trennlinie zwischen den Einträgen – an der eigenen Klasse, nicht an `li` (der Paket-Wächter lässt keine Regeln
+// durch, die ChurchTools verändern würden).
+.eintrag + .eintrag {
+  box-shadow: inset 0 1px 0 var(--hair);
+}
+
+.links {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  b {
+    font-size: 15px;
+    font-weight: 700;
+  }
+}
+
+.personen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 0;
+  color: var(--text2);
+  font-size: 13.5px;
+}
+
+.p {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  & + &::before {
+    content: '·';
+    margin: 0 6px;
+    color: var(--text3);
+  }
+}
+
+.geld {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  font-size: 15px;
+  white-space: nowrap;
+
+  small {
+    color: var(--text2);
+    font-size: 13px;
+  }
+
+  @media (max-width: 520px) {
+    font-size: 14px;
+  }
+}
+
+.pille {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pilleWarte {
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+}
+
+.pilleOk {
+  background: color-mix(in srgb, var(--green) 14%, transparent);
+  color: var(--green);
+}
+
+.pilleOffen {
+  background: color-mix(in srgb, var(--red) 12%, transparent);
+  color: var(--red);
+}
+
+.leise {
+  margin: 0;
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.leer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 14px;
+  color: var(--text2);
+  font-size: 14px;
+
+  b {
+    color: var(--text);
+  }
+}
+
+.leerZeile {
+  margin: 0;
+  padding: 14px;
+  color: var(--text2);
+  font-size: 14px;
+}
+
+.linkKnopf {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--blue-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+// ── Fenster einer Anmeldung ───────────────────────────────────────────────────────────────────
+
+.unterTitel {
+  margin: -4px 0 10px;
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.teil {
+  padding: 12px 0;
+  border-top: 1px solid var(--hair);
+
+  h3 {
+    margin: 0 0 8px;
+    color: var(--text2);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+}
+
+.antworten {
+  display: grid;
+  grid-template-columns: minmax(110px, auto) 1fr;
+  gap: 4px 12px;
+  margin: 0 0 6px;
+  font-size: 14px;
+
+  @media (max-width: 420px) {
+    grid-template-columns: 1fr;
+    gap: 0 12px;
+  }
+}
+
+.antwort {
+  display: contents;
+
+  dt {
+    color: var(--text2);
+  }
+
+  dd {
+    margin: 0;
+    color: var(--text);
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+.mehrzeilig {
+  white-space: pre-line;
+  margin: 0;
+  font-size: 14px;
+}
+
+.unterschrift {
+  display: block;
+  width: 180px;
+  aspect-ratio: 2 / 1;
+  margin-bottom: 2px;
+  border: 1px solid var(--hair);
+  border-radius: 8px;
+  background: var(--surface3);
+  color: var(--text);
+
+  svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.person {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+
+  & + & {
+    margin-top: 8px;
+  }
+}
+
+.personOben {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 15px;
+}
+
+.summe {
+  display: flex;
+  justify-content: space-between;
+  margin: 6px 0;
+  padding-top: 6px;
+  border-top: 1px solid var(--hair);
+  font-size: 15px;
+}

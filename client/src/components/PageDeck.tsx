@@ -21,9 +21,11 @@ import { readPageTexts } from '../utils/annotationKeys';
 import { ConfirmDialog } from './ConfirmDialog';
 import { PageDrawToolbar } from './PageDrawToolbar';
 import { PageTextLayer } from './PageTextLayer';
+import { LassoEbene } from './LassoEbene';
 import { SlidePanes } from './SlidePanes';
 import { Spinner } from './Spinner';
 import styles from './PageDeck.module.scss';
+import { maltStriche } from '../utils/malwerkzeug';
 
 // Aus der Umrechnung (#420): Dieselben Grenzen gelten beim Wiederherstellen eines Ausschnitts.
 const MIN_SCALE = ZOOM_GRENZEN.min;
@@ -499,7 +501,7 @@ export function PageDeck({
                     ref={annoRefs[j]}
                     className={styles.annoCanvas}
                     style={{
-                      pointerEvents: drawMode && drawTool !== 'text' ? 'all' : 'none',
+                      pointerEvents: drawMode && maltStriche(drawTool) ? 'all' : 'none',
                       cursor: drawMode ? 'crosshair' : 'default',
                     }}
                     onPointerDown={(e) => strokeDown(e, j)}
@@ -528,7 +530,13 @@ export function PageDeck({
                     onResizeDown={(e, id, size) => handleResizeDown(e, j, id, size)}
                     onResizeMove={handleResizeMove}
                     onResizeUp={handleResizeUp}
-                  />
+                  >
+                    {/* Lasso nur auf der aktiven Seite. Nach einem Abgleich (syncTick) wird die Seite
+                        neu gezeichnet – vorher legt das Lasso seine Auswahl ab (key → neu einhängen). */}
+                    {drawMode && drawTool === 'lasso' && j === activeSlot && (
+                      <LassoEbene key={syncTick} leinwandRef={annoRefs[j]} draw={draws[j]} />
+                    )}
+                  </PageTextLayer>
                 </div>
               </TransformComponent>
             </TransformWrapper>

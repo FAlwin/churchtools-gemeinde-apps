@@ -475,7 +475,15 @@ Ein Finger malt, **zwei Finger scrollen** (selbst gemacht in `ScrollDeck`, die M
 `touch-action: none`); ein Tipp schaltet beim Malen keine Leisten. Gemalt wird auf EINER Seite (`malSeite`,
 beim Einschalten die in der Bildmitte); ein Tipp auf eine andere macht sie dazu, die übrigen sind abgeblendet
 (wie `slotInactive` im Querformat, #53). Der Scroll-Container trägt
-`data-eigener-scroll` – `useKeyboardInsets` setzt ihn beim Tippen NICHT auf 0. Die Position (`ScrollPosition`
+`data-eigener-scroll` – `useKeyboardInsets` setzt ihn beim Tippen NICHT auf 0. **Lasso (#615):**
+`components/LassoEbene.tsx`, ein Baustein für Blättern und Rolle (liegt als `children` in `PageTextLayer`, Rechnung
+in `utils/lasso.ts`). Striche werden ausgeschnitten und schweben bis zum Ablegen (dann `strichSpeicherFuer` – mit dem
+Schlüssel vom Zeitpunkt der Auswahl, weil schon weitergeblättert sein kann); Texte bewegen sich live
+(`aendereTexte`). Ein Verlaufsschritt; Rückgängig/Wiederherstellen/Löschen legen über `setAbschliessen` zuerst ab
+(und lassen den Schritt im Verlauf). Auf der Rolle holt `vorAuswahl` die Lücken-Anmerkungen von den A4-Seiten
+(`lueckenTexteHolen`/`lueckenStricheHolen`, Striche nur über Kernen) und `ablegbar` (`rahmenAufKernen`) sperrt das
+Ablegen unter dem letzten Teil – dort ginge es beim Speichern verloren. „Malt Striche?“ ist EINE Regel
+(`utils/malwerkzeug.ts`). Demo mit langem Lied: `?demo=chart&lied=lang`. Die Position (`ScrollPosition`
 in `utils/scrollPosition.ts`) überdauert einen Neuaufbau der Seiten.
 Ein Tipp aufs Blatt = Leisten aus/ein. **Pedal-Tasten** für beide Modi stehen EINMAL in `utils/pedalTasten.ts`
 (→/↓/Bild↓/Leertaste weiter, ←/↑/Bild↑/Umschalt+Leertaste zurück; nicht bei gedrückt gehaltener Taste, mit

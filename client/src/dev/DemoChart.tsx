@@ -66,6 +66,26 @@ const SONGS: SetlistSong[] = [
   ),
 ];
 
+/**
+ * `?demo=chart&lied=lang`: ein Lied über zwei A4-Seiten – sechs Teile à neun Zeilen, der letzte springt auf
+ * Seite 2. Auf der Rolle liegt die Lücke am Ende von Seite 1 dann über dem sechsten Teil (#615, Lasso).
+ */
+const LANG: SetlistSong[] = [
+  song(
+    999009,
+    'Langes Lied',
+    'C',
+    Array.from(
+      { length: 6 },
+      (_, n) =>
+        `{comment: Vers ${n + 1}}\n${Array.from({ length: 9 }, () => '[C]Zeile mit [G]Text').join('\n')}`,
+    ).join('\n'),
+  ),
+];
+
 export function DemoChart() {
-  return <ChordChart songs={SONGS} startIndex={0} onBack={() => undefined} canEditSong />;
+  const lang = new URLSearchParams(window.location.search).get('lied') === 'lang';
+  return (
+    <ChordChart songs={lang ? LANG : SONGS} startIndex={0} onBack={() => undefined} canEditSong />
+  );
 }

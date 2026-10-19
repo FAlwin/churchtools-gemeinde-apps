@@ -1,4 +1,4 @@
-import type { MutableRefObject, PointerEvent as ReactPointerEvent } from 'react';
+import type { MutableRefObject, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import type { DrawTool } from '../types/index';
 import type { usePageDraw, PageTextObj, TextStyle } from '../hooks/usePageDraw';
@@ -39,6 +39,8 @@ interface PageTextLayerProps {
   onResizeDown: (e: ReactPointerEvent, id: number, size: number) => void;
   onResizeMove: (e: ReactPointerEvent) => void;
   onResizeUp: (e: ReactPointerEvent) => void;
+  /** Liegt obenauf, deckungsgleich mit der Seite – das Lasso (#615). */
+  children?: ReactNode;
 }
 
 /**
@@ -69,6 +71,7 @@ export function PageTextLayer({
   onResizeDown,
   onResizeMove,
   onResizeUp,
+  children,
 }: PageTextLayerProps) {
   const textTool = drawMode && drawTool === 'text';
 
@@ -174,6 +177,7 @@ export function PageTextLayer({
             />
           );
         })()}
+      {children}
     </div>
   );
 }

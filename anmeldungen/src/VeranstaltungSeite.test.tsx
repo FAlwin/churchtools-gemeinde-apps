@@ -9,6 +9,7 @@ import * as E from './einrichten';
 import * as G from './gemeinde';
 import * as FF from './formularFelder';
 import * as NP from './nachpruefung';
+import * as MG from './mitglieder';
 import { VeranstaltungSeite } from './VeranstaltungSeite';
 import { NeueVeranstaltung } from './NeueVeranstaltung';
 
@@ -53,9 +54,12 @@ vi.mock('./formularFelder', () => ({
   pflichtNachziehen: vi.fn().mockResolvedValue(undefined),
 }));
 const ff = vi.mocked(FF);
-// A6-5c: Die Nachprüfung lädt eigene Daten – hier nachgestellt.
-vi.mock('./nachpruefung', () => ({ ladeNachpruefung: vi.fn().mockResolvedValue(null) }));
+// A6-5c/A7-1: Mitglieder laden und nachprüfen – hier nachgestellt (gerechnet wird in `shared`, dort getestet).
+vi.mock('./mitglieder', () => ({ ladeMitglieder: vi.fn().mockResolvedValue(null) }));
+const mg = vi.mocked(MG);
+vi.mock('./nachpruefung', () => ({ nachpruefungAus: vi.fn() }));
 const np = vi.mocked(NP);
+const STAND = { mitglieder: [], absagen: [], verlaufGekuerzt: false };
 const PRUEF_OK = {
   plaetze: { belegt: 9, wartend: 0, max: 10, wartenTrotzPlatz: false },
   auswahl: null,
@@ -708,17 +712,18 @@ describe('Nachprüfung (A6-5c, #623)', () => {
     [...document.querySelectorAll('section[aria-label]')].map((x) => x.getAttribute('aria-label'));
 
   it('Entwurf → keine Nachprüfung, nichts geladen', async () => {
-    np.ladeNachpruefung.mockClear();
+    mg.ladeMitglieder.mockClear();
     stelle(true, 2);
     zeigen();
     await screen.findByRole('region', { name: 'Anmeldung' });
-    expect(np.ladeNachpruefung).not.toHaveBeenCalled();
+    expect(mg.ladeMitglieder).not.toHaveBeenCalled();
     expect(screen.queryByRole('region', { name: 'Nachprüfung' })).toBeNull();
   });
 
   it('alles stimmt → klein unten, „Alles stimmt ✓“', async () => {
     stelle(true, 1);
-    np.ladeNachpruefung.mockResolvedValue(PRUEF_OK);
+    mg.ladeMitglieder.mockResolvedValue(STAND);
+    np.nachpruefungAus.mockReturnValue(PRUEF_OK);
     zeigen();
     expect(await screen.findByText('Alles stimmt ✓')).toBeTruthy();
     expect(screen.getByText('Alle 3 Beträge stimmen.')).toBeTruthy();
@@ -727,7 +732,8 @@ describe('Nachprüfung (A6-5c, #623)', () => {
 
   it('mit Hinweisen → oben unter dem Anmeldelink, mit Grund und Beträgen', async () => {
     stelle(true, 1);
-    np.ladeNachpruefung.mockResolvedValue(PRUEF_HINWEISE);
+    mg.ladeMitglieder.mockResolvedValue(STAND);
+    np.nachpruefungAus.mockReturnValue(PRUEF_HINWEISE);
     zeigen();
     expect(await screen.findByText('3 Hinweise')).toBeTruthy();
     // Auswahl fehlt: keine geratene Zahl.
@@ -741,31 +747,33 @@ describe('Nachprüfung (A6-5c, #623)', () => {
 
   it('auch ohne Bearbeiten-Recht sichtbar; Mitglieder nicht lesbar (null) → keine Karte', async () => {
     stelle(false, 1);
-    np.ladeNachpruefung.mockResolvedValue(null);
+    mg.ladeMitglieder.mockResolvedValue(null);
     zeigen();
     await screen.findByText(/Einrichten und freigeben kann die Leitung/);
-    await waitFor(() => expect(np.ladeNachpruefung).toHaveBeenCalled());
+    await waitFor(() => expect(mg.ladeMitglieder).toHaveBeenCalled());
     expect(screen.queryByRole('region', { name: 'Nachprüfung' })).toBeNull();
   });
 
   it('„Neu prüfen“: die Karte bleibt während des Prüfens oben (springt nicht)', async () => {
     stelle(true, 1);
-    let fertig: (n: typeof PRUEF_HINWEISE) => void = () => {};
-    np.ladeNachpruefung
-      .mockResolvedValueOnce(PRUEF_HINWEISE)
+    let fertig: (n: typeof STAND) => void = () => {};
+    np.nachpruefungAus.mockReturnValue(PRUEF_HINWEISE);
+    mg.ladeMitglieder
+      .mockResolvedValueOnce(STAND)
       .mockImplementationOnce(() => new Promise((r) => (fertig = r)));
     zeigen();
     await screen.findByText('3 Hinweise');
     fireEvent.click(screen.getByRole('button', { name: 'Neu prüfen' }));
     expect(await screen.findByRole('button', { name: 'Prüft …' })).toHaveProperty('disabled', true);
     expect(karten().indexOf('Nachprüfung')).toBeLessThan(karten().indexOf('Anmeldung'));
-    await act(async () => fertig(PRUEF_HINWEISE));
+    await act(async () => fertig(STAND));
     expect(screen.getByText('3 Hinweise')).toBeTruthy();
   });
 
   it('scheitert vorübergehend → Meldung, „Neu prüfen“ lädt noch einmal', async () => {
     stelle(true, 1);
-    np.ladeNachpruefung.mockRejectedValueOnce(new Error('502')).mockResolvedValueOnce(PRUEF_OK);
+    np.nachpruefungAus.mockReturnValue(PRUEF_OK);
+    mg.ladeMitglieder.mockRejectedValueOnce(new Error('502')).mockResolvedValueOnce(STAND);
     zeigen();
     expect(await screen.findByText(/Ließ sich gerade nicht prüfen/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Neu prüfen' }));

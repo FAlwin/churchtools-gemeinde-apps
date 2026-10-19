@@ -308,3 +308,40 @@ Minuten später liegen sie auch in ChurchTools – und damit in der Erweiterung.
 - **Historie:** Ablage in ChurchTools, 09.10.2026
 
 </details>
+
+### TF-ANNO-14 · Lasso: auswählen, verschieben, vergrößern
+
+**Das brauchst du:** Ein Lied mit ein paar Strichen und einem Text. Für Schritt 8 im Scroll-Modus ein Lied, bei dem
+beim Blättern unten auf Seite 1 etwas in die leere Lücke gemalt wurde.
+
+**Das muss passieren:** Was du einkreist, ist ausgewählt (gestrichelter Rahmen) – Striche UND Texte. Es lässt sich
+verschieben und am blauen Punkt gleichmäßig vergrößern. Nach dem Ablegen steht es an der neuen Stelle, auch nach dem
+Neuladen und beim Blättern bzw. Scrollen. **Rückgängig** nimmt die ganze Lasso-Bewegung auf einmal zurück. Nichts
+verschwindet und nichts steht doppelt da.
+
+1. Anmerkungsmodus einschalten, in der Leiste das **Lasso** wählen (Symbol Schlinge).
+2. Mit dem Finger um einen Strich und einen Text herumfahren – loslassen. Ein Rahmen erscheint.
+3. Im Rahmen ziehen: beides wandert mit.
+4. Am **blauen Punkt** unten rechts ziehen: beides wird größer, ohne zu verzerren.
+5. Daneben tippen → abgelegt. **Rückgängig** → alles wieder wie vorher, ein Tipp genügt.
+6. Erneut auswählen und verschieben, dann statt daneben zu tippen den **Stift** wählen → ebenfalls abgelegt.
+7. App schließen, neu öffnen: es steht an der neuen Stelle.
+8. **Scroll-Modus:** Was beim Blättern in der Lücke am Ende von Seite 1 steht, erscheint über dem Anfang des nächsten
+   Teils. Mit dem Lasso einkreisen und an die richtige Stelle schieben. Auf **Blättern** umstellen: Es steht jetzt
+   am selben Teil – und NICHT zusätzlich noch in der Lücke.
+9. **Scroll-Modus:** Eine Auswahl ganz nach unten unter den letzten Teil schieben und daneben tippen → Hinweis „Hier
+   wird nichts gespeichert – bitte aufs Lied schieben“, die Auswahl bleibt. Stift aus → sie springt an ihre alte
+   Stelle zurück.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `client/src/components/LassoEbene.tsx`, `client/src/utils/lasso.ts`, `client/src/utils/rolleSpeichern.ts`, `client/src/utils/rollenAbbildung.ts`, `client/src/hooks/usePageDraw.ts`, `client/src/components/RollenMalen.tsx`, `client/src/components/PageDeck.tsx`, `client/src/components/DrawToolbar.tsx`
+- **Automatisiert:** weitgehend – `e2e/chart-lasso.spec.ts` (Blättern: verschieben + Rückgängig, Griff +
+  Werkzeugwechsel; Rolle: verschieben, Lücken-Text, Lücken-Strich, Strich unter dem letzten Teil bleibt, Sperre mit
+  Rückgängig und mit Stift aus), `lasso.test.ts`, `rolleSpeichern.test.ts`, `rollenAbbildung.test.ts`. Von Hand
+  bleiben Finger/Pencil am Gerät, Zwei-Finger-Zoom bzw. -Scrollen während einer Auswahl und das Querformat (Lasso nur
+  auf der aktiven Seite)
+- **Historie:** #615 (Alwin, 17.10.2026: „Ans Lückenende … dann brauchen wir eine Art Lasso“)
+
+</details>

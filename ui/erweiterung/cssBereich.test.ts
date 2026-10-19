@@ -22,8 +22,8 @@ describe('imBereich', () => {
     expect(imBereich("html[data-theme='dark']")).toBe(`html[data-theme='dark'] ${BEREICH}`);
   });
 
-  it('auch mit mehreren Attributen (dunkel wie ChurchTools) – sonst stünde der Bereich VOR dem html', () => {
-    const sel = "html[data-theme='dark'][data-dunkel='churchtools']";
+  it('auch mit mehreren Attributen am html – sonst stünde der Bereich VOR dem html', () => {
+    const sel = "html[data-theme='dark'][data-dichte='eng']";
     expect(imBereich(sel)).toBe(`${sel} ${BEREICH}`);
   });
 

@@ -12,6 +12,7 @@ import ReactDOM from 'react-dom/client';
 import { PageDeck } from './components/PageDeck';
 import { textSchluessel } from './utils/annotationKeys';
 import './styles/main.scss';
+import type { DrawTool } from './types/index';
 
 // ── Kunstseiten: weiß mit großer Seitennummer + Linien (eindeutig unterscheidbar) ──
 function makePage(n: number): HTMLCanvasElement {
@@ -140,7 +141,7 @@ function Harness(): JSX.Element {
   const [activePage, setActivePage] = useState(0);
   const [drawMode] = useState(false);
   const [drawColor, setDrawColor] = useState('#c00000');
-  const [drawTool, setDrawTool] = useState<'pen' | 'marker' | 'eraser' | 'text'>('pen');
+  const [drawTool, setDrawTool] = useState<DrawTool>('pen');
 
   window.__go = (delta: number) => {
     const t = Math.max(0, Math.min(pages.length - 1, pageIndex + delta));

@@ -22,6 +22,26 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 - Ein Ablauf ohne Punkte-Liste zählt als leer – an einer Stelle (`ladeAblauf`), die auch die Lieder der Startseite
   nutzen; vorher prüfte jeder Aufrufer selbst.
 
+### Neu (Anmeldungen, A7-1)
+
+- **Reiter „Anmeldungen“** (Entwurf `a7-anmeldungen-v2`, nur ansehen): eine Zeile je Anmeldung (Anmelde-Nr.; ohne Nr.
+  je Person) mit Personen, Alter am ersten Tag, Warteplatz, Betrag und Zahlung; oben Plätze, Warteliste und offene
+  Zahlungen, dazu der Hinweis „Plätze frei – N warten“ (dieselbe Regel wie die Nachprüfung, `wartenTrotzPlatz`). Filter
+  Alle / Zahlung offen / Warteliste / Abgesagt, Suche. Das Fenster einer Anmeldung zeigt alle Antworten – was für die
+  ganze Anmeldung gilt (Kontakt, Erziehungsberechtigte, **Unterschrift als Bild**), einmal oben (Alwin, 19.10.2026).
+  Adresse `#/v/<Nummer>/anmeldungen`.
+- **Abgesagt aus dem Verlauf** (`/groups/{id}/members/history`, gemessen 19.10.2026): Er behält alle Antworten. Hat die
+  erste Person einer Anmeldung abgesagt, kommen Betrag, Kontakt und Unterschrift von dort.
+- Liste und Nachprüfung laden die Mitglieder **einmal gemeinsam** (`mitglieder.ts`, Rechnen in `shared/anmeldung/liste.ts`);
+  Auswahl-Felder erscheinen als Text statt als Options-Nummer.
+
+### Behoben (Anmeldungen, A7-1)
+
+- **Nachprüfung: Anmeldetag nach dem Nachrücken.** Gemessen 19.10.2026: Beim Nachrücken setzt ChurchTools das
+  Eintrittsdatum auf den Tag des Nachrückens. Die Nachprüfung nahm es als Anmeldetag – eine nachgerückte Anmeldung galt
+  so als später angemeldet (Frühbucher, „Preise nach der Anmeldung geändert“ wurde zu „weicht ab“). Jetzt kommt der
+  Anmeldetag aus dem Verlauf.
+
 ### Neu (Anmeldungen, A6-5c, #623)
 
 - **Nachprüfung** (Entwurf `a6-5c-nachpruefung-v1`, Alwin 17.10.2026: „nachrechnen + markieren“) – neue Karte auf der
@@ -76,6 +96,15 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   (`betragAus`).
 - **Formular-Paket mit aktualisieren.**
 
+### Geändert (Musik-App)
+
+- **Dunkelmodus wie ChurchTools** (#565, Alwin: „wir haben da so ein dunkles Blau, ChurchTools bleibt eher bei
+  Schwarz“): Im Dunkeln hat die Musik-App jetzt die Farben von ChurchTools – fast schwarzer Grund, graue Karten und
+  Leisten, ChurchTools-Blau –, genau wie Anmeldungen und Dienstplaner. Das frühere blaugraue Dunkel ist entfernt; es
+  gibt nur noch ein Dunkel für alle Apps. Auch der Kreis um das Logo (Anmelden, Mehr) ist jetzt grau statt blau, und
+  die iPhone-Statusleiste zieht mit. Der Schalter Hell / Dunkel / Auto unter Mehr bleibt; „Auto“ folgt dem Gerät.
+  Die Notenseite bleibt weiß.
+
 ### Neu (Musik-App)
 
 - **Scroll-Modus: je Lied eine lange Seite** (#607, Rückmeldung des Musik-Bereichsleiters): Statt
@@ -88,10 +117,19 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Seite** (#608): Stift an – ein Finger oder der Pencil malt, **zwei Finger scrollen**; gemalt wird auf dem
   Lied in der Bildmitte, ein Tipp auf ein anderes (abgeblendetes) Lied macht es zum Mal-Lied; Stift, Marker,
   Radierer, Text, Rückgängig und Löschen wie beim Blättern. Gespeichert wird auf den A4-Seiten, beim Blättern
-  steht es also am selben Teil. Was beim Blättern in einer Lücke steht, lässt sich auf der langen Seite nur
-  ansehen, nicht bearbeiten. Hochgeladene PDFs
+  steht es also am selben Teil. Was beim Blättern in einer Lücke steht, greift auf der langen Seite das Lasso
+  (siehe unten). Hochgeladene PDFs
   bleiben Seiten. Die **Vorschau im Editor** zeigt im Scroll-Modus ebenfalls die lange Seite. Sehr lange
   Seiten werden auf iPhone/iPad etwas weniger scharf gezeichnet statt gar nicht (Leinwand-Grenze von iOS).
+- **Lasso** (#615, Alwin 17.10.2026): neues Werkzeug in der Anmerken-Leiste, beim Blättern und auf der langen
+  Seite. Einkreisen wählt Striche und Texte aus; im Rahmen ziehen verschiebt, der blaue Punkt unten rechts
+  vergrößert oder verkleinert gleichmäßig; daneben tippen, ein anderes Werkzeug oder Stift aus legt ab.
+  **Rückgängig** nimmt die ganze Bewegung auf einmal zurück. Auf der langen Seite greift das Lasso auch, was beim
+  Blättern in einer Lücke am Seitenende steht und hier über dem nächsten Teil liegt – zurechtgerückt steht es danach
+  auch beim Blättern am neuen Platz (und nicht mehr in der Lücke). Unter den letzten Teil der langen Seite lässt
+  sich nichts ablegen: Dort gäbe es auf A4 keine Stelle, das Abgelegte wäre beim Speichern verloren. Das Lasso
+  sagt das („Hier wird nichts gespeichert“) und lässt die Auswahl schweben; muss es doch ablegen (Stift aus),
+  kehrt sie an ihre alte Stelle zurück.
 - **Flow-Zeile `{flow: …}`** (#606, Rückmeldung des Musik-Bereichsleiters): Steht im ChordPro z. B.
   `{flow: Intro, Vers 1, Chorus 1, Vers 2, Chorus 1, Bridge, Chorus 1, Outro}`, zeigt das Blatt die Teile in
   genau dieser Reihenfolge – Wiederholungen voll, nicht genannte Teile fallen weg. Die Namen sind die

@@ -5,6 +5,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import type { DrawTool } from '../types/index';
+import { maltStriche } from '../utils/malwerkzeug';
 
 /** Der Teil einer usePageDraw-Instanz, den die Zeichen-Engine ansteuert (Verlauf + Speichern). */
 interface StrokeDrawTarget {
@@ -99,7 +100,8 @@ export function usePointerStrokes({
   }
 
   function strokeDown(e: ReactPointerEvent, slot: number) {
-    if (!drawMode || drawTool === 'text') return;
+    // Text und Lasso malen keine Striche – sie haben ihre eigene Ebene.
+    if (!drawMode || !maltStriche(drawTool)) return;
     // Zweiter Zeiger während eines laufenden Strichs:
     if (stroke.current && e.pointerId !== strokePointer.current) {
       // Stift zeichnet + Finger dazu → Handballen ignorieren (Strich läuft weiter).

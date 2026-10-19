@@ -10,7 +10,9 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 ### Neu (Anmeldungen, A7-2)
 
 - **Zahlung im Fenster einer Anmeldung** (Entwurf `a7-anmeldungen-v2`): **als bezahlt markieren** mit Zahlart und Tag,
-  **zurücksetzen**, **Betrag ändern** – jeweils mit „Rückgängig“. Geschrieben wird bei der ersten Person der Anmeldung
+  **zurücksetzen**, **Betrag ändern** – jeweils mit „Rückgängig“ **im Fenster selbst** (Alwin, 19.10.2026: „Rückgängig
+  bitte immer bei modalen im modal direkt rein“ – die Leiste unten lag hinter dem Fenster; `RueckgaengigImFenster`, ein
+  gemeinsamer Ablauf mit der Leiste). Geschrieben wird bei der ersten Person der Anmeldung
   (`zahlungBei`), nachgelesen nach jedem Schreiben. Gemessen 19.10.2026: `PATCH /groups/{id}/members/{personId}` mit
   `{fields: {…}}` ändert nur die geschickten Felder, keine Mail. Hat die erste Person abgesagt, wird nichts geschrieben
   (kommt mit A7-3).

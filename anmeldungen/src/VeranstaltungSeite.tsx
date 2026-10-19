@@ -362,12 +362,10 @@ export function VeranstaltungSeite({
           darf={darf}
           zahlarten={zahlartenHier}
           onNeuLaden={neuLaden}
-          onGeaendert={(aenderung) => {
-            onGeaendert(aenderung, false);
-            // Alles neu laden, nicht nur die Mitglieder: Das erste „bezahlt“ legt bei älteren Veranstaltungen das Feld
-            // „Zahlart“ an – ohne seine Nummer aus den Einstellungen fehlte die Zahlart in der Anzeige (echter Test 19.10.2026).
-            laden();
-          }}
+          // Alles neu laden, nicht nur die Mitglieder: Das erste „bezahlt“ legt bei älteren Veranstaltungen das Feld
+          // „Zahlart“ an – ohne seine Nummer aus den Einstellungen fehlte die Zahlart in der Anzeige (echter Test 19.10.2026).
+          // „Rückgängig“ steht im Fenster, nicht in der Leiste unten (Alwin, 19.10.2026).
+          onGespeichert={laden}
         />
       )}
 

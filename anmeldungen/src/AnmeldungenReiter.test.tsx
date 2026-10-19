@@ -23,7 +23,7 @@ function zeigen(
   darf = true,
 ) {
   const onNeuLaden = vi.fn();
-  const onGeaendert = vi.fn();
+  const onGespeichert = vi.fn();
   render(
     <AnmeldungenReiter
       id={165}
@@ -36,10 +36,10 @@ function zeigen(
       darf={darf}
       zahlarten={['Überweisung', 'Bar']}
       onNeuLaden={onNeuLaden}
-      onGeaendert={onGeaendert}
+      onGespeichert={onGespeichert}
     />,
   );
-  return Object.assign(onNeuLaden, { onGeaendert });
+  return Object.assign(onNeuLaden, { onGespeichert });
 }
 const fertig = (
   roh = mitglieder('AAAAAA', [true, false], 10),
@@ -115,20 +115,27 @@ describe('Zahlung im Fenster (A7-2)', () => {
     oeffnen();
     fireEvent.click(screen.getByRole('button', { name: 'Bar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Als bezahlt markieren' }));
-    await waitFor(() => expect(z.onGeaendert).toHaveBeenCalled());
+    await waitFor(() => expect(z.onGespeichert).toHaveBeenCalled());
     expect(zm.zahlungSpeichern).toHaveBeenCalledWith(165, 10, {
       bezahlt: true,
       am: '2026-10-19',
       zahlart: 'Bar',
     });
-    const aenderung = z.onGeaendert.mock.calls[0][0];
-    expect(aenderung.text).toBe('Maria Beispiel: als bezahlt markiert (Bar).');
-    await aenderung.rueckgaengig();
+    // „Rückgängig“ im Fenster selbst (Alwin, 19.10.2026) – nicht in der Leiste hinter dem Fenster.
+    const zeile = screen.getByRole('status');
+    expect(zeile.textContent).toMatch(/^Maria Beispiel: als bezahlt markiert \(Bar\)\./);
+    fireEvent.click(within(zeile).getByRole('button', { name: 'Rückgängig' }));
+    expect(await within(zeile).findByText('Rückgängig gemacht.')).toBeTruthy();
     expect(zm.zahlungSpeichern).toHaveBeenLastCalledWith(165, 10, {
       bezahlt: false,
       am: null,
       zahlart: null,
     });
+    expect(z.onGespeichert).toHaveBeenCalledTimes(2);
+    // Fenster zu und wieder auf → keine alte Änderung mehr.
+    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    oeffnen();
+    expect(screen.queryByRole('status')).toBeNull();
   });
 
   it('bezahlt → Anzeige mit Zahlart, „Zurücksetzen“; in der Liste „✓ Bar“', async () => {
@@ -139,7 +146,7 @@ describe('Zahlung im Fenster (A7-2)', () => {
     oeffnen();
     expect(screen.getByText('✓ bezahlt am 18.10.2026 · Bar')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Zurücksetzen' }));
-    await waitFor(() => expect(z.onGeaendert).toHaveBeenCalled());
+    await waitFor(() => expect(z.onGespeichert).toHaveBeenCalled());
     expect(zm.zahlungSpeichern).toHaveBeenCalledWith(165, 10, {
       bezahlt: false,
       am: null,
@@ -158,7 +165,7 @@ describe('Zahlung im Fenster (A7-2)', () => {
     expect(screen.getByText(/Bitte einen Betrag/)).toBeTruthy();
     fireEvent.change(feld, { target: { value: '10' } });
     fireEvent.click(speichern());
-    await waitFor(() => expect(z.onGeaendert).toHaveBeenCalled());
+    await waitFor(() => expect(z.onGespeichert).toHaveBeenCalled());
     expect(zm.betragAendern).toHaveBeenCalledWith(
       165,
       10,
@@ -166,7 +173,8 @@ describe('Zahlung im Fenster (A7-2)', () => {
       expect.stringMatching(/Gesamt: 12,00 €$/),
       '2026-10-19',
     );
-    await z.onGeaendert.mock.calls[0][0].rueckgaengig();
+    fireEvent.click(within(screen.getByRole('status')).getByRole('button', { name: 'Rückgängig' }));
+    await waitFor(() => expect(zm.betragWiederherstellen).toHaveBeenCalled());
     expect(zm.betragWiederherstellen).toHaveBeenCalledWith(165, 10, {
       betrag: '12,00 €',
       aufschluesselung: expect.stringMatching(/Gesamt: 12,00 €$/),

@@ -20,7 +20,7 @@ import type { GeladenerStand } from './mitglieder';
 import { tagPunkt as lang } from '@shared/ct/datum';
 import { anzahlText } from './anzeige';
 import { AnmeldungZahlung } from './AnmeldungZahlung';
-import type { Aenderung } from './Rueckgaengig';
+import { RueckgaengigImFenster, type Aenderung } from './Rueckgaengig';
 import s from './Startseite.module.scss';
 import v from './VeranstaltungSeite.module.scss';
 import a from './AnmeldungenReiter.module.scss';
@@ -95,7 +95,9 @@ function AnmeldungAnsehen({
   zahlarten,
   heute,
   darf,
+  aenderung,
   onGeaendert,
+  onRueckgaengig,
 }: {
   x: ListenAnmeldung;
   e: OeffentlicheEinstellungen;
@@ -105,7 +107,10 @@ function AnmeldungAnsehen({
   zahlarten: string[];
   heute: string;
   darf: boolean;
+  /** Die letzte Änderung in diesem Fenster – ihr „Rückgängig“ steht im Fenster (Alwin, 19.10.2026). */
+  aenderung: Aenderung | null;
   onGeaendert: (a: Aenderung) => void;
+  onRueckgaengig: () => void;
 }) {
   const einmal = antwortZeilen(e.formular.anmeldung, x.einmal, e.ctFelder);
   const kontakt = e.ctFelder.kontakt === undefined ? undefined : x.einmal[e.ctFelder.kontakt];
@@ -164,6 +169,14 @@ function AnmeldungAnsehen({
         ))}
       </section>
 
+      {aenderung && (
+        <RueckgaengigImFenster
+          key={aenderung.text}
+          aenderung={aenderung}
+          onRueckgaengig={onRueckgaengig}
+        />
+      )}
+
       {kostet && (
         <AnmeldungZahlung
           key={`${x.schluessel}-${x.betragCent}-${x.bezahlt}`}
@@ -208,7 +221,7 @@ export function AnmeldungenReiter({
   darf,
   zahlarten,
   onNeuLaden,
-  onGeaendert,
+  onGespeichert,
 }: {
   id: number;
   e: OeffentlicheEinstellungen;
@@ -223,12 +236,18 @@ export function AnmeldungenReiter({
   /** Die Zahlarten dieser Veranstaltung (A7-2). */
   zahlarten: string[];
   onNeuLaden: () => void;
-  /** Nach einer Änderung: „Rückgängig“ anbieten; die Seite lädt die Mitglieder neu. */
-  onGeaendert: (a: Aenderung) => void;
+  /** Nach einer Änderung (und nach „Rückgängig“): Die Seite lädt neu – „Rückgängig“ selbst steht im Fenster. */
+  onGespeichert: () => void;
 }) {
   const [filter, setFilter] = useState<Filter>('alle');
   const [suche, setSuche] = useState('');
   const [offen, setOffen] = useState<string | null>(null);
+  // Die letzte Änderung im offenen Fenster – mit dem Fenster weg.
+  const [aenderung, setAenderung] = useState<Aenderung | null>(null);
+  const oeffnen = (k: string | null) => {
+    setOffen(k);
+    setAenderung(null);
+  };
   // Beim Neuladen (nach einer Änderung) bleibt der letzte Stand stehen – sonst ginge das offene Fenster zu.
   const letzter = useRef<GeladenerStand | null>(null);
   if (zustand?.art === 'fertig') letzter.current = zustand.stand;
@@ -361,7 +380,7 @@ export function AnmeldungenReiter({
           <ul className={s.liste}>
             {zeilen.map((x) => (
               <li key={x.schluessel} className={a.eintrag}>
-                <button type="button" className={a.zeile} onClick={() => setOffen(x.schluessel)}>
+                <button type="button" className={a.zeile} onClick={() => oeffnen(x.schluessel)}>
                   <span className={a.links}>
                     <b>
                       {x.wer}{' '}
@@ -405,7 +424,7 @@ export function AnmeldungenReiter({
               .filter(({ p, x }) => passt(ganzerName(p), x.wer, x.nr))
               .map(({ p, x }) => (
                 <li key={p.personId} className={a.eintrag}>
-                  <button type="button" className={a.zeile} onClick={() => setOffen(x.schluessel)}>
+                  <button type="button" className={a.zeile} onClick={() => oeffnen(x.schluessel)}>
                     <span className={a.links}>
                       <b>
                         {p.warteplatz ? `${p.warteplatz} · ` : ''}
@@ -487,12 +506,17 @@ export function AnmeldungenReiter({
           x={ausgewaehlt}
           e={e}
           kostet={z.kostet}
-          onClose={() => setOffen(null)}
+          onClose={() => oeffnen(null)}
           id={id}
           zahlarten={zahlarten}
           heute={heute}
           darf={darf}
-          onGeaendert={onGeaendert}
+          aenderung={aenderung}
+          onGeaendert={(neu) => {
+            setAenderung(neu);
+            onGespeichert();
+          }}
+          onRueckgaengig={onGespeichert}
         />
       )}
     </div>

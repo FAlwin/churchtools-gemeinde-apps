@@ -1,5 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { TOUR_CHART } from '../client/src/utils/onboarding';
+import { pedalZiel } from '../client/src/utils/pedalSchritt';
+import type { PedalRichtung } from '../client/src/utils/pedalTasten';
 
 /**
  * **Scroll-Modus** (#551, Dev-Stammtisch 14.10.2026): Mit „Liedansicht: Scrollen" stehen die Seiten
@@ -33,6 +35,47 @@ async function ruhig(page: Page): Promise<number> {
 }
 
 const kopfTitel = (page: Page) => page.locator('[class*="hdr"]').first();
+
+/** Wo das Pedal anhält – die Ansicht schreibt es bei jedem Tritt an die Scroll-Fläche (#609). */
+async function halteStellen(page: Page): Promise<number[]> {
+  return deck(page).evaluate((el) =>
+    (el.dataset.halte ?? '').split(',').filter(Boolean).map(Number),
+  );
+}
+
+/**
+ * Ein Pedal-Tritt – und die Prüfung, dass er dort landet, wo `pedalZiel` (die Regel der App) es mit den
+ * Halte-Stellen der Ansicht sagt; am Ende des Inhalts begrenzt der Browser.
+ */
+async function tritt(page: Page, taste: string, richtung: PedalRichtung) {
+  const vorher = await scrollTop(page);
+  const { hoehe, ende } = await deck(page).evaluate((el) => ({
+    hoehe: el.clientHeight,
+    ende: el.scrollHeight - el.clientHeight,
+  }));
+  await page.keyboard.press(taste);
+  const halte = await halteStellen(page);
+  const soll = Math.min(ende, pedalZiel(vorher, hoehe, halte, richtung));
+  expect(await ruhig(page)).toBe(soll);
+  return { vorher, nachher: soll, halte, hoehe };
+}
+
+/** Steht in diesen Zeilen der Scroll-Fläche (linke Hälfte der ersten Rolle) dunkle Schrift? */
+async function schriftZwischen(page: Page, y0: number, y1: number): Promise<boolean> {
+  return deck(page).evaluate(
+    (el, b) => {
+      const c = el.querySelector('canvas')!;
+      const box = c.parentElement!;
+      const s = c.height / box.offsetHeight;
+      const oben = Math.round((b.y0 - box.offsetTop) * s);
+      const hoch = Math.max(1, Math.round((b.y1 - b.y0) * s));
+      const d = c.getContext('2d')!.getImageData(0, oben, Math.round(c.width / 2), hoch).data;
+      for (let i = 0; i < d.length; i += 4) if (d[i] + d[i + 1] + d[i + 2] < 200) return true;
+      return false;
+    },
+    { y0, y1 },
+  );
+}
 
 test('Scrollen: Rollen untereinander, Pedal, Tipp, Lied-Punkt', async ({ page }) => {
   await page.addInitScript((tour: string) => {
@@ -72,19 +115,23 @@ test('Scrollen: Rollen untereinander, Pedal, Tipp, Lied-Punkt', async ({ page })
   }
   await expect(kopfTitel(page)).toContainText('Großer Gott');
 
-  // Pedal: ↓ und Leertaste scrollen je ⅔ der Höhe.
-  const hoehe = await deck(page).evaluate((el) => el.clientHeight);
-  const schritt = Math.round((hoehe * 2) / 3);
-  // Die Kopfzeile folgt dem Lied in der Bildmitte (Demo: drei Lieder, je eine Seite).
-  await page.keyboard.press('ArrowDown');
-  expect(await ruhig(page)).toBe(schritt);
-  await expect(kopfTitel(page)).toContainText('Welch ein Freund');
-  await page.keyboard.press('Space');
-  expect(await ruhig(page)).toBe(2 * schritt);
-  await expect(kopfTitel(page)).toContainText('Treu');
-  await page.keyboard.press('ArrowUp');
-  expect(await ruhig(page)).toBe(schritt);
-  await expect(kopfTitel(page)).toContainText('Welch ein Freund');
+  // Pedal Teil für Teil (#609): Die Demo-Lieder sind kurz – der nächste Teil-Anfang ist immer schon zu
+  // sehen, ein Tritt holt ihn also nach oben (kein ⅔-Schritt).
+  const erster = await tritt(page, 'ArrowDown', 1);
+  expect(erster.halte).toContain(erster.nachher);
+  // Oben steht jetzt die Überschrift des ersten Teils: Darüber die Luft (8 px), darunter Schrift.
+  expect(await schriftZwischen(page, erster.nachher + 1, erster.nachher + 6)).toBe(false);
+  expect(await schriftZwischen(page, erster.nachher + 8, erster.nachher + 30)).toBe(true);
+  // Weiter (↓ und Leertaste) bis zum nächsten Lied – jeder Tritt nach der Regel; die Kopfzeile folgt.
+  let schritte = 0;
+  while (!(await kopfTitel(page).textContent())?.includes('Welch ein Freund')) {
+    const t = await tritt(page, schritte % 2 ? 'Space' : 'ArrowDown', 1);
+    expect(t.nachher).toBeGreaterThan(t.vorher);
+    expect(t.nachher - t.vorher).toBeLessThanOrEqual(t.hoehe); // nie mehr als ein Bildschirm
+    expect(++schritte).toBeLessThan(12);
+  }
+  // Zurück: zum Anfang des aktuellen bzw. vorigen Teils.
+  await tritt(page, 'ArrowUp', -1);
 
   // Ein Tipp aufs Blatt blendet die Leisten aus – und wieder ein.
   await deck(page).click({ position: { x: 195, y: 200 } });
@@ -94,11 +141,54 @@ test('Scrollen: Rollen untereinander, Pedal, Tipp, Lied-Punkt', async ({ page })
 
   // Ein Lied-Punkt unten holt das Lied an den Anfang des Bildschirms; der Pfeil unten scrollt wie das Pedal.
   const punkte = page.locator('[class*="dots"] > div');
+  // Erst ein anderes Lied (nach dem Zurück-Tritt steht womöglich wieder das erste in der Mitte – ein Tipp
+  // auf den Punkt des Lieds, das gerade gilt, springt nicht), dann zurück zum ersten.
+  await punkte.nth(2).click();
+  await expect(kopfTitel(page)).toContainText('Treu');
   await punkte.nth(0).click();
   expect(await ruhig(page)).toBe(0);
   await expect(kopfTitel(page)).toContainText('Großer Gott');
   await page.getByRole('button', { name: 'Weiter / nächste Seite' }).click();
-  expect(await ruhig(page)).toBe(schritt);
+  expect(await ruhig(page)).toBe(pedalZiel(0, erster.hoehe, await halteStellen(page), 1));
+});
+
+test.describe('langes Lied, niedriges Fenster', () => {
+  // So niedrig, dass ein Teil (neun Zeilen) nicht mehr auf den Bildschirm passt.
+  test.use({ viewport: { width: 390, height: 300 } });
+
+  test('Pedal: lange Teile in ⅔-Schritten, hält am ---- (#609)', async ({ page }) => {
+    await page.addInitScript((tour: string) => {
+      localStorage.setItem(`worship:onboard-${tour}`, '1');
+      localStorage.setItem('worship:liedansicht', 'scrollen');
+    }, TOUR_CHART);
+    await page.goto('/?demo=chart&lied=lang');
+    await expect
+      .poll(() => deck(page).evaluate((el) => el.querySelectorAll('canvas').length), {
+        timeout: 30_000,
+      })
+      .toBeGreaterThan(0);
+    await expect
+      .poll(() => deck(page).evaluate((el) => el.scrollHeight > el.clientHeight * 3))
+      .toBe(true);
+
+    const erster = await tritt(page, 'ArrowDown', 1);
+    // Ein Lied: Titel, sechs Teile, ein ---- in Vers 3.
+    expect(erster.halte).toHaveLength(8);
+    const trenner = erster.halte[4];
+
+    const ziele: number[] = [erster.nachher];
+    let zweiDrittel = 0;
+    for (let i = 0; i < 40; i++) {
+      const t = await tritt(page, 'ArrowDown', 1);
+      if (t.nachher === t.vorher) break; // am Ende
+      expect(t.nachher - t.vorher).toBeLessThanOrEqual(t.hoehe);
+      if (!t.halte.includes(t.nachher)) zweiDrittel++;
+      ziele.push(t.nachher);
+    }
+    // Die Teile sind länger als der Bildschirm: Es gab ⅔-Schritte – und trotzdem hielt das Pedal am ----.
+    expect(zweiDrittel).toBeGreaterThan(0);
+    expect(ziele).toContain(trenner);
+  });
 });
 
 test.describe('iPad quer', () => {

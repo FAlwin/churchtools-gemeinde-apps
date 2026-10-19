@@ -92,17 +92,18 @@ describe('ScrollDeck – Anmerkungen wie beim Blättern', () => {
 });
 
 describe('ScrollDeck – Bedienung', () => {
-  it('Pedal: ein Schritt ist ⅔ der Höhe, vor und zurück', () => {
+  it('Pedal ohne Halte-Stellen (hochgeladenes PDF): ein Schritt ist ⅔ der Höhe, vor und zurück', () => {
     const { schrittRef, deck } = zeige({});
     Object.defineProperty(deck, 'clientHeight', { value: 600 });
     Object.defineProperty(deck, 'scrollHeight', { value: 5000 });
-    deck.scrollTop = 300;
+    deck.scrollTop = 500;
     const ziele: number[] = [];
     deck.scrollTo = ((o: ScrollToOptions) => ziele.push(o.top ?? NaN)) as typeof deck.scrollTo;
     schrittRef.current?.(1);
     schrittRef.current?.(-1);
     // ⅔ ist eine Entscheidung (Alwin, 14.10.2026: 85 % war zu weit) – deshalb die Zahl, nicht die Konstante.
-    expect(ziele).toEqual([700, -100]);
+    // Teil für Teil (#609) gilt nur, wo es Halte-Stellen gibt (Liedrollen) – hier keine.
+    expect(ziele).toEqual([900, 100]);
   });
 
   it('ein Tipp aufs Blatt schaltet die Leisten', () => {

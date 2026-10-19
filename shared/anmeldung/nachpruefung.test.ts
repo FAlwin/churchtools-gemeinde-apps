@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { neueEinstellungen } from './vorlagen';
-import { nachpruefen, type PruefMitglied } from './nachpruefung';
+import { nachpruefen, pruefMitgliederAus, type PruefMitglied } from './nachpruefung';
+import {
+  dazu,
+  e as eListe,
+  mitglieder as mitgliederListe,
+  stand as standListe,
+} from './liste.testdaten';
 import { aufschluesselungText, betragAus, wartelistenZeile } from './senden';
 import { euroText } from './preis';
 import type { OeffentlicheEinstellungen } from './formular';
@@ -251,5 +257,21 @@ describe('Auswahl fehlt (echter Test 17.10.2026)', () => {
     expect(nachpruefen(jetzt, [k], PLAETZE).betraege[0]).toEqual(
       expect.objectContaining({ grund: 'preise', sollCent: null }),
     );
+  });
+});
+
+describe('Anmeldetag aus dem Verlauf (A7-1, gemessen 19.10.2026)', () => {
+  it('nachgerückt: ChurchTools setzt das Eintrittsdatum neu – „Preise geändert“ zählt ab der Anmeldung', () => {
+    // Angemeldet am 17.10., Eintrittsdatum (nach dem Nachrücken) 19.10., Preise am 18.10. geändert.
+    const x = eListe();
+    const st = standListe(mitgliederListe('AAAAAA', [true, true], 10), [
+      dazu(10, '2026-10-17'),
+      dazu(11, '2026-10-17'),
+    ]);
+    x.preis.grundpreis.betragCent = 800;
+    x.preiseGeaendert = '2026-10-18';
+    const n = nachpruefen(x, pruefMitgliederAus(x, st), PLAETZE);
+    expect(n.betraege.map((b) => [b.grund, b.angemeldetAm])).toEqual([['preise', '2026-10-17']]);
+    expect(n.hinweise).toBe(0);
   });
 });

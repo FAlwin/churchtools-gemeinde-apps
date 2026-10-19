@@ -238,7 +238,7 @@ Zeiten intern in UTC, und 0:30 Uhr deutscher Zeit ist dort noch der Vortag (#414
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `server/src/utils/isoTag.ts`, `server/src/config.ts`, `server/src/services/absences.ts`, `server/src/services/ctWrite.ts`, `server/src/utils/mapEvent.ts`, `server/src/services/setlistBuilder.ts`
+- **Betrifft:** `server/src/utils/isoTag.ts`, `server/src/config.ts`, `server/src/services/absences.ts`, `server/src/services/ctWrite.ts`, `shared/ct/mapEvent.ts`, `server/src/services/setlistBuilder.ts`
 - **Automatisiert:** überwiegend – `server/src/utils/isoTag.test.ts` (Winter-/Sommerzeit, 23:59, Versatz, andere Zeitzone), `server/src/services/absences.test.ts` (0:30 Uhr gehört zum deutschen Tag, Termin über Mitternacht endet am Folgetag), `server/src/config.zeitzone.test.ts`; von Hand bleibt, dass ChurchTools den Eintrag am selben Tag anlegt
 - **Historie:** #414 (24.09.2026). An der Test-Instanz gemessen: ChurchTools legt eine Abwesenheit ab `2026-12-03T23:30:00Z` selbst am **04.12.** an – es rechnet also in deutscher Zeit, genau wie die App jetzt
 

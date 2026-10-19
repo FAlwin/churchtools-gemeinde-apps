@@ -41,6 +41,11 @@ export function datumText(tag: string): string {
   return `${tagKurz(tag)}${tag.slice(0, 4)}`;
 }
 
+/** „14.11.2026“ – ohne Wochentag (Unterschrift, Zahlung, Geburtsdatum). */
+export function tagPunkt(tag: string): string {
+  return tag.slice(0, 10).split('-').reverse().join('.');
+}
+
 /** „Sa, 14.11.“ – ohne Jahr, für Listen, in denen der Monat darüber steht. */
 export function tagKurz(tag: string): string {
   return `${WOCHENTAG[datum(tag).getUTCDay()]}, ${tag.slice(8, 10)}.${tag.slice(5, 7)}.`;

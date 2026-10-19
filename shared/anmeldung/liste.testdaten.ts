@@ -16,12 +16,13 @@ import { CT, antworten, einstellungen } from './senden.testdaten';
 export const NR = 669;
 export const BEZAHLT = 516;
 export const BEZAHLT_AM = 519;
+export const ZAHLART = 520;
 export const HEUTE = '2026-10-17';
 export const STICHTAG = '2026-11-20';
 
 export function e() {
   const x = einstellungen();
-  x.ctFelder = { ...x.ctFelder, nr: NR, bezahlt: BEZAHLT, bezahltAm: BEZAHLT_AM };
+  x.ctFelder = { ...x.ctFelder, nr: NR, bezahlt: BEZAHLT, bezahltAm: BEZAHLT_AM, zahlart: ZAHLART };
   return x;
 }
 export const CT_MIT_NR = {
@@ -44,6 +45,7 @@ export const FELDER = new Map<number, CtGruppenfeld>(
       ),
     { id: BEZAHLT, name: 'Bezahlt', fieldTypeCode: 'checkbox' },
     { id: BEZAHLT_AM, name: 'Bezahlt am', fieldTypeCode: 'date' },
+    { id: ZAHLART, name: 'Zahlart', fieldTypeCode: 'text' },
   ].map((f): [number, CtGruppenfeld] => [f.id, f]),
 );
 
@@ -76,6 +78,7 @@ export function mitglieder(
         .map((x) => ({ id: Number(x.id), value: x.value })),
       { id: BEZAHLT, value: extra.bezahlt && i === 0 ? '1' : '0' },
       { id: BEZAHLT_AM, value: extra.bezahlt && i === 0 ? '2026-10-18' : null },
+      { id: ZAHLART, value: extra.bezahlt && i === 0 ? 'Bar' : null },
     ],
   }));
 }

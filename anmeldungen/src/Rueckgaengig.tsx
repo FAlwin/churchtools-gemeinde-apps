@@ -14,16 +14,8 @@ export interface Aenderung {
   rueckgaengig: (() => Promise<void>) | null;
 }
 
-export function RueckgaengigLeiste({
-  aenderung,
-  onRueckgaengig,
-  onSchliessen,
-}: {
-  aenderung: Aenderung;
-  /** Nach erfolgreichem Rückgängig – die offene Seite lädt neu. */
-  onRueckgaengig: () => void;
-  onSchliessen: () => void;
-}) {
+/** Der Ablauf von „Rückgängig“ – EINE Stelle für die Leiste und für die Zeile im Fenster. */
+function useRueckgaengig(aenderung: Aenderung, onRueckgaengig: () => void) {
   const [stand, setStand] = useState<'bereit' | 'arbeitet' | 'erledigt'>('bereit');
   const [fehler, setFehler] = useState<string | null>(null);
 
@@ -40,6 +32,20 @@ export function RueckgaengigLeiste({
       setStand('bereit');
     }
   }
+  return { stand, fehler, zurueck };
+}
+
+export function RueckgaengigLeiste({
+  aenderung,
+  onRueckgaengig,
+  onSchliessen,
+}: {
+  aenderung: Aenderung;
+  /** Nach erfolgreichem Rückgängig – die offene Seite lädt neu. */
+  onRueckgaengig: () => void;
+  onSchliessen: () => void;
+}) {
+  const { stand, fehler, zurueck } = useRueckgaengig(aenderung, onRueckgaengig);
 
   return (
     <div className={v.leiste} role="status">
@@ -65,6 +71,40 @@ export function RueckgaengigLeiste({
       >
         <Icon name="x" size={16} />
       </button>
+    </div>
+  );
+}
+
+/**
+ * **„Rückgängig“ im Fenster** (Alwin, 19.10.2026: „Rückgängig bitte immer bei modalen im modal direkt rein“) – die
+ * Leiste unten liegt hinter einem offenen Fenster; der erste Klick darauf schloss nur das Fenster. Änderungen in einem
+ * Fenster zeigen ihr „Rückgängig“ deshalb hier, im Fenster selbst.
+ */
+export function RueckgaengigImFenster({
+  aenderung,
+  onRueckgaengig,
+}: {
+  aenderung: Aenderung;
+  /** Nach erfolgreichem Rückgängig – neu laden. */
+  onRueckgaengig: () => void;
+}) {
+  const { stand, fehler, zurueck } = useRueckgaengig(aenderung, onRueckgaengig);
+  return (
+    <div className={v.imFenster} role="status">
+      <span>
+        {stand === 'erledigt' ? 'Rückgängig gemacht.' : aenderung.text}
+        {fehler && <span className={v.leisteFehler}> {fehler}</span>}
+      </span>
+      {aenderung.rueckgaengig && stand !== 'erledigt' && (
+        <button
+          type="button"
+          className={v.leisteKnopf}
+          disabled={stand === 'arbeitet'}
+          onClick={zurueck}
+        >
+          {stand === 'arbeitet' ? 'Wird rückgängig gemacht …' : 'Rückgängig'}
+        </button>
+      )}
     </div>
   );
 }

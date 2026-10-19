@@ -74,7 +74,7 @@ anderen Stelle und wurde früher übersehen.
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `server/src/services/setlistBuilder.ts`, `server/src/utils/mapEvent.ts`, `client/src/pages/Agenda.tsx`
+- **Betrifft:** `server/src/services/setlistBuilder.ts`, `shared/ct/mapEvent.ts`, `client/src/pages/Agenda.tsx`
 - **Automatisiert:** nein – braucht zwei echte Termine am selben Tag
 - **Historie:** #36
 

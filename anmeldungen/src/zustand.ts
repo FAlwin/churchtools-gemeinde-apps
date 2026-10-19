@@ -18,6 +18,8 @@ export type Zustand =
       admin: boolean;
       /** Adresse der Formular-Seite der Gemeinde – `null`, solange keine eingerichtet ist (A6-2). */
       formular: string | null;
+      /** Zahlarten der Gemeinde (A7-2) – ohne gespeicherte Liste die Standardliste. */
+      zahlarten: string[];
     }
   | { art: 'fehler'; text: string; nochmal: boolean };
 

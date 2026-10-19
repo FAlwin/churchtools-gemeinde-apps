@@ -6,6 +6,7 @@ import { geburtsdatumAn, type OeffentlicheEinstellungen } from '@shared/anmeldun
 import { anmeldeLink, ortszeitAus } from '@shared/anmeldung/termin';
 import { kannEtwasKosten, wozuGeburtsdatum } from '@shared/anmeldung/preis';
 import { ibanText, verwendungszweck } from '@shared/anmeldung/bezahlung';
+import { STANDARD_ZAHLARTEN, zahlartenFuer } from '@shared/anmeldung/zahlung';
 import type { MeineGruppe } from '@shared/ct/gruppen';
 import {
   anmeldungVon,
@@ -124,6 +125,7 @@ export function VeranstaltungSeite({
   onReiter = () => {},
   gemeinde = null,
   formularAdresse = null,
+  zahlarten = [...STANDARD_ZAHLARTEN],
   zeitzone,
   teams = [],
   onZurueck,
@@ -136,6 +138,8 @@ export function VeranstaltungSeite({
   gemeinde?: string | null;
   /** Adresse der Formular-Seite der Gemeinde (Einstellungen) – ohne sie gibt es keinen Link (A6-2). */
   formularAdresse?: string | null;
+  /** Zahlarten der Gemeinde (A7-2). */
+  zahlarten?: string[];
   zeitzone: string;
   /** Die eigenen Gruppen – Ziele für „In ein anderes Team“. */
   teams?: MeineGruppe[];
@@ -269,6 +273,8 @@ export function VeranstaltungSeite({
   const geburt = geburtsdatumAn(e.formular);
   const kostet = kannEtwasKosten(e.preis);
   const b = e.bezahlung;
+  // Die Zahlarten dieser Veranstaltung – für die Karte „Bezahlung“ und den Reiter „Anmeldungen“ (A7-2).
+  const zahlartenHier = zahlartenFuer(zahlarten, b.ohneZahlarten ?? []);
 
   return (
     <div className={v.seite}>
@@ -346,12 +352,20 @@ export function VeranstaltungSeite({
 
       {reiter === 'anmeldungen' && (
         <AnmeldungenReiter
+          id={id}
           e={e}
           maxPlaetze={a.maxPlaetze}
           entwurf={entwurf}
           zustand={mitglieder}
           stichtag={t?.beginn.slice(0, 10) ?? heute}
+          heute={heute}
+          darf={darf}
+          zahlarten={zahlartenHier}
           onNeuLaden={neuLaden}
+          // Alles neu laden, nicht nur die Mitglieder: Das erste „bezahlt“ legt bei älteren Veranstaltungen das Feld
+          // „Zahlart“ an – ohne seine Nummer aus den Einstellungen fehlte die Zahlart in der Anzeige (echter Test 19.10.2026).
+          // „Rückgängig“ steht im Fenster, nicht in der Leiste unten (Alwin, 19.10.2026).
+          onGespeichert={laden}
         />
       )}
 
@@ -425,6 +439,7 @@ export function VeranstaltungSeite({
               <Zeile titel="Zahlungsfrist">
                 {b.fristTage === 0 ? 'keine' : `${b.fristTage} Tage nach der Anmeldung`}
               </Zeile>
+              <Zeile titel="Zahlarten">{zahlartenHier.join(', ')}</Zeile>
               <Zeile titel="Verwendungszweck">
                 {b.zweck || '–'}
                 {b.zweck.includes('[') && (
@@ -480,6 +495,7 @@ export function VeranstaltungSeite({
           id={id}
           bezahlung={b}
           kostet={kostet}
+          zahlarten={zahlarten}
           onClose={() => setFenster(null)}
           onGespeichert={gespeichert('Bezahlung gespeichert.')}
         />

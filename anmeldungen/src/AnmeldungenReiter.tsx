@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { ctBasis } from '@ui/ct/basis';
 import { Sheet } from '@ui/fenster/Sheet';
@@ -17,7 +17,10 @@ import {
   type ListenPerson,
 } from '@shared/anmeldung/liste';
 import type { GeladenerStand } from './mitglieder';
+import { tagPunkt as lang } from '@shared/ct/datum';
 import { anzahlText } from './anzeige';
+import { AnmeldungZahlung } from './AnmeldungZahlung';
+import { RueckgaengigImFenster, type Aenderung } from './Rueckgaengig';
 import s from './Startseite.module.scss';
 import v from './VeranstaltungSeite.module.scss';
 import a from './AnmeldungenReiter.module.scss';
@@ -33,8 +36,6 @@ type Filter = 'alle' | 'offen' | 'warte' | 'abgesagt';
 
 /** `TT.MM.` */
 const kurz = (tag: string | null) => (tag ? `${tag.slice(8, 10)}.${tag.slice(5, 7)}.` : '');
-/** `TT.MM.JJJJ` – ohne Wochentag (Geburtsdatum, Zahlung). */
-const lang = (tag: string) => `${kurz(tag)}${tag.slice(0, 4)}`;
 const ganzerName = (p: { vor: string; nach: string }) => `${p.vor} ${p.nach}`.trim();
 const personLink = (id: number) => `${ctBasis()}/?q=churchdb#PersonView/searchEntry:%23${id}/`;
 
@@ -77,23 +78,39 @@ function ZahlungPille({ x, kostet }: { x: ListenAnmeldung; kostet: boolean }) {
   if (x.bezahlt)
     return (
       <span className={`${a.pille} ${a.pilleOk}`}>
-        ✓ bezahlt{x.bezahltAm ? ` ${kurz(x.bezahltAm)}` : ''}
+        ✓ {x.zahlart ?? 'bezahlt'}
+        {x.bezahltAm ? ` ${kurz(x.bezahltAm)}` : ''}
       </span>
     );
   return x.zahlungOffen ? <span className={`${a.pille} ${a.pilleOffen}`}>offen</span> : null;
 }
 
-/** **Das Fenster einer Anmeldung** – nur ansehen (A7-1). Zahlung, Nachrücken und Absagen kommen in A7-2/A7-3. */
+/** **Das Fenster einer Anmeldung** – alle Antworten (A7-1), Betrag und Zahlung (A7-2). Nachrücken und Absagen: A7-3. */
 function AnmeldungAnsehen({
   x,
   e,
   kostet,
   onClose,
+  id,
+  zahlarten,
+  heute,
+  darf,
+  aenderung,
+  onGeaendert,
+  onRueckgaengig,
 }: {
   x: ListenAnmeldung;
   e: OeffentlicheEinstellungen;
   kostet: boolean;
   onClose: () => void;
+  id: number;
+  zahlarten: string[];
+  heute: string;
+  darf: boolean;
+  /** Die letzte Änderung in diesem Fenster – ihr „Rückgängig“ steht im Fenster (Alwin, 19.10.2026). */
+  aenderung: Aenderung | null;
+  onGeaendert: (a: Aenderung) => void;
+  onRueckgaengig: () => void;
 }) {
   const einmal = antwortZeilen(e.formular.anmeldung, x.einmal, e.ctFelder);
   const kontakt = e.ctFelder.kontakt === undefined ? undefined : x.einmal[e.ctFelder.kontakt];
@@ -152,25 +169,24 @@ function AnmeldungAnsehen({
         ))}
       </section>
 
+      {aenderung && (
+        <RueckgaengigImFenster
+          key={aenderung.text}
+          aenderung={aenderung}
+          onRueckgaengig={onRueckgaengig}
+        />
+      )}
+
       {kostet && (
-        <section className={a.teil}>
-          <h3>Betrag</h3>
-          {x.aufschluesselung && <p className={a.mehrzeilig}>{x.aufschluesselung}</p>}
-          <p className={a.summe}>
-            <span>Zu zahlen</span>
-            <b>{x.betragCent === null ? '–' : euroText(x.betragCent)}</b>
-          </p>
-          <p className={a.leise}>
-            {x.bezahlt
-              ? `Bezahlt${x.bezahltAm ? ` am ${lang(x.bezahltAm)}` : ''}.`
-              : x.zahlungOffen
-                ? 'Noch nicht bezahlt.'
-                : x.betragCent === null
-                  ? 'Kein Betrag gespeichert.'
-                  : ''}{' '}
-            Abhaken und ändern kommt mit dem nächsten Schritt – bis dahin in ChurchTools.
-          </p>
-        </section>
+        <AnmeldungZahlung
+          key={`${x.schluessel}-${x.betragCent}-${x.bezahlt}`}
+          id={id}
+          x={x}
+          zahlarten={zahlarten}
+          heute={heute}
+          darf={darf}
+          onGeaendert={onGeaendert}
+        />
       )}
 
       {x.abgesagt.length > 0 && (
@@ -195,25 +211,48 @@ const absageText = (b: Absage) =>
  * jemand wartet“, Filter und Suche; Klick öffnet das Fenster mit allen Antworten. Nur ansehen.
  */
 export function AnmeldungenReiter({
+  id,
   e,
   maxPlaetze,
   entwurf,
   zustand,
   stichtag,
+  heute,
+  darf,
+  zahlarten,
   onNeuLaden,
+  onGespeichert,
 }: {
+  id: number;
   e: OeffentlicheEinstellungen;
   maxPlaetze: number | null;
   entwurf: boolean;
   zustand: MitgliederZustand | null;
   /** Erster Tag der Veranstaltung (Alter), sonst heute. */
   stichtag: string;
+  heute: string;
+  /** Darf ändern (bezahlt, Betrag) – ChurchTools prüft es beim Schreiben ohnehin. */
+  darf: boolean;
+  /** Die Zahlarten dieser Veranstaltung (A7-2). */
+  zahlarten: string[];
   onNeuLaden: () => void;
+  /** Nach einer Änderung (und nach „Rückgängig“): Die Seite lädt neu – „Rückgängig“ selbst steht im Fenster. */
+  onGespeichert: () => void;
 }) {
   const [filter, setFilter] = useState<Filter>('alle');
   const [suche, setSuche] = useState('');
   const [offen, setOffen] = useState<string | null>(null);
-  const stand = zustand?.art === 'fertig' ? zustand.stand : null;
+  // Die letzte Änderung im offenen Fenster – mit dem Fenster weg.
+  const [aenderung, setAenderung] = useState<Aenderung | null>(null);
+  const oeffnen = (k: string | null) => {
+    setOffen(k);
+    setAenderung(null);
+  };
+  // Beim Neuladen (nach einer Änderung) bleibt der letzte Stand stehen – sonst ginge das offene Fenster zu.
+  const letzter = useRef<GeladenerStand | null>(null);
+  if (zustand?.art === 'fertig') letzter.current = zustand.stand;
+  const stand =
+    zustand?.art === 'fertig' ? zustand.stand : zustand?.art === 'laedt' ? letzter.current : null;
   const liste = useMemo(
     () => (stand ? anmeldungenAus(e, stand, stichtag) : []),
     [e, stand, stichtag],
@@ -228,7 +267,8 @@ export function AnmeldungenReiter({
         </span>
       </section>
     );
-  if (zustand.art === 'laedt') return <p className={s.leise}>Anmeldungen werden geladen …</p>;
+  if (zustand.art === 'laedt' && !stand)
+    return <p className={s.leise}>Anmeldungen werden geladen …</p>;
   if (zustand.art === 'verboten')
     return (
       <p className={v.hinweis}>
@@ -340,7 +380,7 @@ export function AnmeldungenReiter({
           <ul className={s.liste}>
             {zeilen.map((x) => (
               <li key={x.schluessel} className={a.eintrag}>
-                <button type="button" className={a.zeile} onClick={() => setOffen(x.schluessel)}>
+                <button type="button" className={a.zeile} onClick={() => oeffnen(x.schluessel)}>
                   <span className={a.links}>
                     <b>
                       {x.wer}{' '}
@@ -384,7 +424,7 @@ export function AnmeldungenReiter({
               .filter(({ p, x }) => passt(ganzerName(p), x.wer, x.nr))
               .map(({ p, x }) => (
                 <li key={p.personId} className={a.eintrag}>
-                  <button type="button" className={a.zeile} onClick={() => setOffen(x.schluessel)}>
+                  <button type="button" className={a.zeile} onClick={() => oeffnen(x.schluessel)}>
                     <span className={a.links}>
                       <b>
                         {p.warteplatz ? `${p.warteplatz} · ` : ''}
@@ -462,7 +502,22 @@ export function AnmeldungenReiter({
       </section>
 
       {ausgewaehlt && (
-        <AnmeldungAnsehen x={ausgewaehlt} e={e} kostet={z.kostet} onClose={() => setOffen(null)} />
+        <AnmeldungAnsehen
+          x={ausgewaehlt}
+          e={e}
+          kostet={z.kostet}
+          onClose={() => oeffnen(null)}
+          id={id}
+          zahlarten={zahlarten}
+          heute={heute}
+          darf={darf}
+          aenderung={aenderung}
+          onGeaendert={(neu) => {
+            setAenderung(neu);
+            onGespeichert();
+          }}
+          onRueckgaengig={onGespeichert}
+        />
       )}
     </div>
   );

@@ -133,6 +133,49 @@ describe('Verlauf: Anmeldetag und Absagen', () => {
   });
 });
 
+describe('Verlauf: Rückgängig und neue Anmeldung (A7-3, gemessen 19.10.2026)', () => {
+  it('vom Team wieder aufgenommen (gleiche Sekunde, nach der Nummer geordnet) → keine Absage, Anmeldetag bleibt', () => {
+    const [jonas] = mitglieder('AAAAAA', [true, true], 10);
+    const st = stand(
+      [jonas],
+      [
+        // ChurchTools liefert die neuesten zuerst – Wieder-Aufnehmen (id 3) vor dem Entfernen (id 2).
+        dazu(10, '2026-10-19', { origin: 'default', zeit: '11:46:30', id: 3 }),
+        absage(jonas, '2026-10-19', 1, { zeit: '11:46:30', id: 2 }),
+        dazu(10, '2026-10-17', { id: 1 }),
+      ],
+    );
+    expect(st.absagen).toEqual([]);
+    expect(st.mitglieder[0].angemeldetAm).toBe('2026-10-17');
+  });
+
+  it('in derselben Sekunde abgesagt und neu über das Formular angemeldet → neuer Anmeldetag (nach der Nummer)', () => {
+    const [jonas] = mitglieder('AAAAAA', [true, true], 10);
+    const st = stand(
+      [jonas],
+      [
+        dazu(10, '2026-10-19', { zeit: '11:46:30', id: 3 }),
+        absage(jonas, '2026-10-19', 10, { zeit: '11:46:30', id: 2 }),
+        dazu(10, '2026-10-17', { id: 1 }),
+      ],
+    );
+    expect(st.mitglieder[0].angemeldetAm).toBe('2026-10-19');
+  });
+
+  it('nach einer Absage neu über das Formular angemeldet → neuer Anmeldetag', () => {
+    const [jonas] = mitglieder('AAAAAA', [true, true], 10);
+    const st = stand(
+      [jonas],
+      [
+        dazu(10, '2026-10-19', { id: 3 }),
+        absage(jonas, '2026-10-18', 10, { id: 2 }),
+        dazu(10, '2026-10-17', { id: 1 }),
+      ],
+    );
+    expect(st.mitglieder[0].angemeldetAm).toBe('2026-10-19');
+  });
+});
+
 describe('Sonderfälle', () => {
   it('ohne Anmelde-Nr. (vor dem 17.10.2026): jede Person für sich', () => {
     const liste = anmeldungenAus(e(), stand(mitglieder(undefined, [true, true], 10)), STICHTAG);

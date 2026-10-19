@@ -7,6 +7,33 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Anmeldungen, A7-3)
+
+- **Nachrücken lassen** (Entwurf `a7-3-nachruecken-v1`, entschieden 19.10.2026): an jeder wartenden Person im Fenster
+  und im Hinweis „Plätze frei – N warten“, mit Rückfrage. Ist alles voll, werden die Plätze dabei erhöht (Alwin: „dann
+  ändert sich auch das Limit“). Die Nachgerückte bekommt **eine eigene Zahlung** („als ob ein Kind neu angemeldet
+  wurde“) – der Betrag, um den die Anmeldung nach den Regeln teurer wird. **Kein Rückgängig** (zurück auf die
+  Warteliste löst in ChurchTools die Mail „Du stehst auf der Warteliste“ aus – gemessen).
+- **Absagen** je Person, mit Rückfrage: Die Zahlung der Anmeldung wird neu gerechnet, eine Rückzahlung steht in der
+  Aufschlüsselung (Zeile „Abgesagt am …“, auch wenn jemand Wartendes absagt und der Betrag bleibt); sagt die erste
+  Person ab, gehen Kontakt, Unterschrift und Zahlung an die nächste. **Rückgängig im
+  Fenster** holt die Person mit allen Antworten zurück (gemessen: ohne Mail). Scheitert ein Schritt, wird
+  Halbgeschriebenes zurückgenommen.
+- **„Mail schreiben“** nach dem Nachrücken bzw. Absagen: fertiger Text (Betrag, Frist, Bankdaten bzw. Rückzahlung),
+  öffnet das Mailprogramm (`mailto:`) – ChurchTools selbst schickt nur „war erfolgreich“ bzw. nichts.
+- Eine Anmeldung kann **mehrere Zahlungen** haben (Fenster: „Zahlungen“); Liste, „Zahlung offen“ und Nachprüfung zählen
+  sie zusammen. „Betrag nach den Regeln“ steht an EINER Stelle (`sollBetrag`), die Nachprüfung, Nachrücken und Absagen
+  nutzen.
+
+### Behoben (Anmeldungen, A7-3)
+
+- Anmeldetag aus dem Verlauf: Einträge derselben Sekunde nach ihrer Nummer; wer vom Team wieder aufgenommen wird,
+  behält ihn (gemessen 19.10.2026: Entfernen und Wieder-Aufnehmen tragen dieselbe Sekunde).
+- Weiße Seite, sobald „Rückgängig“ im Fenster verschwand (z. B. „Mail schreiben“, Fenster schließen; seit A7-2):
+  Chrome 152 gibt bei `scrollIntoView` ein Promise zurück, der Effekt reichte es als Aufräum-Funktion an React weiter.
+  ESLint verbietet solche Effekt-Rümpfe jetzt im ganzen Repo (`no-restricted-syntax`); vier harmlose Stellen
+  (Baukasten, Dienstplaner-Termine, Formular) entsprechend umgestellt.
+
 ### Intern (Ablauf-Baustein, E6-2b-3, #643)
 
 - **Die Bearbeiten-Liste des Ablaufs ist ein gemeinsamer Baustein** (`ui/ablauf/useAblaufBearbeiten.tsx`, für Nutzer

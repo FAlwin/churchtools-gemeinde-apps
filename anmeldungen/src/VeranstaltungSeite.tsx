@@ -353,6 +353,7 @@ export function VeranstaltungSeite({
       {reiter === 'anmeldungen' && (
         <AnmeldungenReiter
           id={id}
+          veranstaltung={daten.name}
           e={e}
           maxPlaetze={a.maxPlaetze}
           entwurf={entwurf}

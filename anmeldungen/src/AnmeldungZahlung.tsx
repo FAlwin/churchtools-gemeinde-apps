@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { euroText } from '@shared/anmeldung/preis';
 import { tagPunkt } from '@shared/ct/datum';
-import type { ListenAnmeldung } from '@shared/anmeldung/liste';
+import type { Zahlung } from '@shared/anmeldung/liste';
 import type { Aenderung } from './Rueckgaengig';
 import { betragAendern, betragWiederherstellen, zahlungSpeichern } from './zahlung';
 import { centAus, euroEingabe } from './anzeige';
@@ -11,19 +11,26 @@ import s from './Startseite.module.scss';
 import a from './AnmeldungenReiter.module.scss';
 
 /**
- * **Betrag und Zahlung im Fenster einer Anmeldung** (A7-2, Entwurf `a7-anmeldungen-v2`): als bezahlt markieren (Zahlart,
- * Tag), zurücksetzen, Betrag von Hand ändern – jeweils mit „Rückgängig“. Bezahlt gilt für die ganze Anmeldung.
+ * **Eine Zahlung im Fenster einer Anmeldung** (A7-2, Entwurf `a7-anmeldungen-v2`): als bezahlt markieren (Zahlart,
+ * Tag), zurücksetzen, Betrag von Hand ändern – jeweils mit „Rückgängig“. Seit A7-3 kann eine Anmeldung mehrere haben
+ * (Nachgerückte mit eigener Zahlung); `titel` steht dann über jeder.
  */
 export function AnmeldungZahlung({
   id,
-  x,
+  zahlung,
+  wer,
+  titel,
   zahlarten,
   heute,
   darf,
   onGeaendert,
 }: {
   id: number;
-  x: ListenAnmeldung;
+  zahlung: Zahlung;
+  /** „Angemeldet von“ – für die Meldungen („Erna Zimmer: als bezahlt markiert“). */
+  wer: string;
+  /** Bei mehreren Zahlungen: wofür diese ist („Anmeldung (Kalle)“, „Kira – nachgerückt“). */
+  titel?: string;
   /** Die Zahlarten dieser Veranstaltung (Gemeinde ohne abgewählte). */
   zahlarten: string[];
   heute: string;
@@ -31,38 +38,38 @@ export function AnmeldungZahlung({
   onGeaendert: (a: Aenderung) => void;
 }) {
   const [art, setArt] = useState(
-    x.zahlart && zahlarten.includes(x.zahlart) ? x.zahlart : zahlarten[0],
+    zahlung.zahlart && zahlarten.includes(zahlung.zahlart) ? zahlung.zahlart : zahlarten[0],
   );
   const [am, setAm] = useState(heute);
   const [betragOffen, setBetragOffen] = useState(false);
-  const [betragText, setBetragText] = useState(euroEingabe(x.betragCent ?? 0));
+  const [betragText, setBetragText] = useState(euroEingabe(zahlung.betragCent ?? 0));
   const { arbeitet, fehler, speichern } = useSpeichern(() => {});
-  const bei = x.zahlungBei;
+  const bei = zahlung.personId;
   const neuerBetrag = centAus(betragText);
-  const vorher = { bezahlt: x.bezahlt, am: x.bezahltAm, zahlart: x.zahlart };
+  const vorher = { bezahlt: zahlung.bezahlt, am: zahlung.bezahltAm, zahlart: zahlung.zahlart };
   const zurueck = (personId: number) => () => zahlungSpeichern(id, personId, vorher);
 
-  const bezahltText = `bezahlt am ${x.bezahltAm ? tagPunkt(x.bezahltAm) : '–'}${x.zahlart ? ` · ${x.zahlart}` : ''}`;
+  const bezahltText = `bezahlt am ${zahlung.bezahltAm ? tagPunkt(zahlung.bezahltAm) : '–'}${zahlung.zahlart ? ` · ${zahlung.zahlart}` : ''}`;
 
   return (
-    <section className={a.teil}>
-      <h3>Betrag</h3>
-      {x.aufschluesselung && <p className={a.mehrzeilig}>{x.aufschluesselung}</p>}
+    <section className={titel ? a.zahlungKasten : a.teil}>
+      {titel ? <h4 className={a.zahlungTitel}>{titel}</h4> : <h3>Betrag</h3>}
+      {zahlung.aufschluesselung && <p className={a.mehrzeilig}>{zahlung.aufschluesselung}</p>}
       <p className={a.summe}>
         <span>Zu zahlen</span>
-        <b>{x.betragCent === null ? '–' : euroText(x.betragCent)}</b>
+        <b>{zahlung.betragCent === null ? '–' : euroText(zahlung.betragCent)}</b>
       </p>
 
       {bei === null ? (
         <p className={a.leise}>
-          Die Person, bei der Betrag und Zahlung stehen, hat abgesagt. Anpassen geht mit dem
-          nächsten Schritt – bis dahin in ChurchTools.
+          Die Person, bei der diese Zahlung stand, hat selbst abgesagt (Link in der Mail). Ändern
+          geht hier nicht mehr – bitte in ChurchTools.
         </p>
       ) : !darf ? (
-        <p className={a.leise}>{x.bezahlt ? `✓ ${bezahltText}` : 'Noch nicht bezahlt.'}</p>
+        <p className={a.leise}>{zahlung.bezahlt ? `✓ ${bezahltText}` : 'Noch nicht bezahlt.'}</p>
       ) : (
         <>
-          {x.bezahlt ? (
+          {zahlung.bezahlt ? (
             <div className={a.bezahlt}>
               <span>✓ {bezahltText}</span>
               <button
@@ -74,7 +81,7 @@ export function AnmeldungZahlung({
                     () => zahlungSpeichern(id, bei, { bezahlt: false, am: null, zahlart: null }),
                     () =>
                       onGeaendert({
-                        text: `${x.wer}: Zahlung zurückgesetzt.`,
+                        text: `${wer}: Zahlung zurückgesetzt.`,
                         rueckgaengig: zurueck(bei),
                       }),
                   )
@@ -84,8 +91,8 @@ export function AnmeldungZahlung({
               </button>
             </div>
           ) : (
-            x.betragCent !== null &&
-            x.betragCent > 0 && (
+            zahlung.betragCent !== null &&
+            zahlung.betragCent > 0 && (
               <>
                 <div className={f.feld}>
                   <span>Eingegangen per</span>
@@ -123,7 +130,7 @@ export function AnmeldungZahlung({
                         () => zahlungSpeichern(id, bei, { bezahlt: true, am, zahlart: art }),
                         () =>
                           onGeaendert({
-                            text: `${x.wer}: als bezahlt markiert (${art}).`,
+                            text: `${wer}: als bezahlt markiert (${art}).`,
                             rueckgaengig: zurueck(bei),
                           }),
                       )
@@ -152,19 +159,20 @@ export function AnmeldungZahlung({
               <button
                 type="button"
                 className={f.knopf}
-                disabled={arbeitet || neuerBetrag === null || neuerBetrag === x.betragCent}
+                disabled={arbeitet || neuerBetrag === null || neuerBetrag === zahlung.betragCent}
                 onClick={() =>
                   neuerBetrag !== null &&
                   speichern(
-                    () => betragAendern(id, bei, neuerBetrag, x.aufschluesselung, heute),
+                    () => betragAendern(id, bei, neuerBetrag, zahlung.aufschluesselung, heute),
                     () => (
                       setBetragOffen(false),
                       onGeaendert({
-                        text: `${x.wer}: Betrag auf ${euroText(neuerBetrag)} geändert.`,
+                        text: `${wer}: Betrag auf ${euroText(neuerBetrag)} geändert.`,
                         rueckgaengig: () =>
                           betragWiederherstellen(id, bei, {
-                            betrag: x.betragCent === null ? null : euroText(x.betragCent),
-                            aufschluesselung: x.aufschluesselung,
+                            betrag:
+                              zahlung.betragCent === null ? null : euroText(zahlung.betragCent),
+                            aufschluesselung: zahlung.aufschluesselung,
                           }),
                       })
                     ),

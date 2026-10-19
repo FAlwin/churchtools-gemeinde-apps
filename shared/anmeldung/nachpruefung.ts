@@ -2,16 +2,16 @@
  * **Nachprüfung** (A6-5c, #623; Entwurf `a6-5c-nachpruefung-v1`, Alwin 17.10.2026: „nachrechnen + markieren“) –
  * was Gäste ohne Server geschickt haben, gegen die Regeln gerechnet. Geändert wird nichts.
  *
- * Gerechnet wird mit denselben Regeln wie im Formular (`betragAus`, `optionenBelegt`, `optionRest`) – aus dem, was in
+ * Gerechnet wird mit denselben Regeln wie im Formular (`sollBetrag` → `betragAus`, `optionenBelegt`, `optionRest`) – aus dem, was in
  * ChurchTools steht: Geburtstag, Auswahl, Extras, wer einen Platz hat, Anmeldetag. Zusammengehalten über die
  * Anmelde-Nr. (A6-5a); Anmeldungen ohne Nr. (vor dem 17.10.2026) werden beim Betrag nicht geprüft – dort weiß man nicht,
  * wer dazugehörte, und jede Prüfung wäre ein Fehlalarm.
  */
-import type { Antworten, OeffentlicheEinstellungen } from './formular';
+import type { OeffentlicheEinstellungen } from './formular';
 import { optionenBelegt } from './kontingent';
 import { centAusEuroText, kannEtwasKosten } from './preis';
-import { betragAus } from './senden';
-import { vonHandBetrag } from './zahlung';
+import { istNachrueckZahlung, vonHandBetrag } from './zahlung';
+import { sollBetrag } from './sollbetrag';
 import type { Mitgliederstand } from './liste';
 
 /** Ein Mitglied der Veranstaltung, wie die Nachprüfung es braucht. */
@@ -172,8 +172,11 @@ export function nachpruefen(
       gruppen.set(m.felder.nr, [...(gruppen.get(m.felder.nr) ?? []), m]);
     }
     for (const [nr, personen] of gruppen) {
-      // Der Betrag steht bei der ersten Person der Anmeldung (Variante A).
-      const erste = personen.find((p) => p.felder.betrag !== undefined);
+      // Der Betrag steht bei der ersten Person der Anmeldung (Variante A); Nachgerückte haben seit A7-3 eine eigene
+      // Zahlung – sie ist nicht „die erste“, zählt aber mit.
+      const erste = personen.find(
+        (p) => p.felder.betrag !== undefined && !istNachrueckZahlung(p.felder.aufschluesselung),
+      );
       if (!erste) continue;
       const reihe = [erste, ...personen.filter((p) => p !== erste)];
       const angemeldetAm =
@@ -182,29 +185,29 @@ export function nachpruefen(
           .filter((s): s is string => !!s)
           .sort()[0] ?? null;
       if (!angemeldetAm) continue;
-      const option =
-        g.art === 'auswahl' ? g.optionen.findIndex((o) => o.name === erste.felder.auswahl) : 0;
-      const gewaehlt = new Set((erste.felder.extras ?? '').split(', ').filter(Boolean));
-      const antworten: Antworten = {
-        anmeldung: {},
-        personen: reihe.map((p) => ({ birth: p.geburtstag ?? undefined })),
-      };
-      const soll = betragAus(
-        e,
-        antworten,
-        {
-          option: Math.max(0, option),
-          extras: e.preis.extras.map((x) => gewaehlt.has(x.bezeichnung)),
-        },
+      const s = sollBetrag(e, {
+        personen: reihe.map((p) => ({ geburtstag: p.geburtstag, mitPlatz: p.status === 'aktiv' })),
+        auswahl: erste.felder.auswahl,
+        extras: erste.felder.extras,
         angemeldetAm,
-        reihe.map((p) => p.status === 'aktiv'),
-      ).gesamtCent;
-      const gemeldet = centAusEuroText(erste.felder.betrag);
+      });
+      const soll = s.cent;
+      const ersterBetrag = centAusEuroText(erste.felder.betrag);
+      // Alle Zahlungen der Anmeldung zusammen – die der Anmeldung und die eigenen der Nachgerückten (A7-3).
+      const gemeldet =
+        ersterBetrag === null
+          ? null
+          : reihe.reduce(
+              (summe, p) =>
+                summe + (p === erste ? ersterBetrag : (centAusEuroText(p.felder.betrag) ?? 0)),
+              0,
+            );
       geprueft++;
       // Von Hand geändert (A7-2) und seitdem unverändert → das Team hat entschieden, kein Befund.
-      if (gemeldet !== null && gemeldet === vonHandBetrag(erste.felder.aufschluesselung)) continue;
+      if (ersterBetrag !== null && ersterBetrag === vonHandBetrag(erste.felder.aufschluesselung))
+        continue;
       // Die gewählte Option gibt es nicht mehr (umbenannt, entfernt) → nachrechnen geht nicht.
-      const unbekannt = option < 0;
+      const unbekannt = s.auswahlFehlt;
       if (gemeldet === soll && !unbekannt) continue;
       const nachgerueckt = wartendeAus(erste.felder.aufschluesselung).filter((name) =>
         reihe.some((p) => p.status === 'aktiv' && p.name === name),

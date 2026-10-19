@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { AnmeldungenReiter, type MitgliederZustand } from './AnmeldungenReiter';
 import * as Z from './zahlung';
+import * as B from './bewegung';
 import { STICHTAG, absage, dazu, e, mitglieder, stand } from '@shared/anmeldung/liste.testdaten';
 
 vi.mock('./zahlung', () => ({
@@ -11,6 +12,11 @@ vi.mock('./zahlung', () => ({
   betragWiederherstellen: vi.fn().mockResolvedValue(undefined),
 }));
 const zm = vi.mocked(Z);
+vi.mock('./bewegung', () => ({
+  nachrueckenLassen: vi.fn().mockResolvedValue(undefined),
+  absagenLassen: vi.fn(),
+}));
+const bm = vi.mocked(B);
 
 /**
  * Reiter „Anmeldungen“ (A7-1, Zahlung A7-2). Die Daten kommen aus dem, was das Formular schreibt (`liste.testdaten.ts`); gerechnet
@@ -27,6 +33,7 @@ function zeigen(
   render(
     <AnmeldungenReiter
       id={165}
+      veranstaltung="Kinderfreizeit"
       e={e()}
       maxPlaetze={max}
       entwurf={entwurf}
@@ -191,7 +198,91 @@ describe('Zahlung im Fenster (A7-2)', () => {
     const [jonas, lena] = mitglieder('AAAAAA', [true, true], 10);
     zeigen(fertig([lena], [absage(jonas, '2026-10-18', 10)]));
     oeffnen();
-    expect(screen.getByText(/hat abgesagt. Anpassen geht mit dem nächsten Schritt/)).toBeTruthy();
+    expect(
+      screen.getByText(/hat selbst abgesagt \(Link in der Mail\)\. Ändern geht hier nicht mehr/),
+    ).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Betrag ändern' })).toBeNull();
+  });
+});
+
+describe('Nachrücken und Absagen (A7-3)', () => {
+  // Wie Chrome 152: `scrollIntoView` gibt ein Promise zurück (jsdom kennt es gar nicht). Stand das als Rückgabe in einem
+  // Effekt, hielt React es für die Aufräum-Funktion – „Mail schreiben“ ließ die Zeile verschwinden, die Seite wurde weiß.
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = () => Promise.resolve() as unknown as void;
+  });
+  afterEach(() => {
+    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+  });
+  const oeffnen = () => fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));
+  const karte = (text: string) => screen.getByText(text).closest('div')!.parentElement!;
+
+  it('Nachrücken: Rückfrage mit eigener Zahlung, danach „Mail schreiben“, aber kein Rückgängig', async () => {
+    const z = zeigen(fertig());
+    oeffnen();
+    fireEvent.click(
+      within(karte('Lena Beispiel, 7')).getByRole('button', { name: 'Nachrücken lassen' }),
+    );
+    expect(screen.getByText('Lena Beispiel nachrücken lassen?')).toBeTruthy();
+    expect(screen.getByText('Neue Zahlung für Lena').nextSibling?.textContent).toBe('6,00 €');
+    fireEvent.click(screen.getByRole('button', { name: 'Nachrücken lassen' }));
+    await waitFor(() => expect(z.onGespeichert).toHaveBeenCalled());
+    expect(bm.nachrueckenLassen).toHaveBeenCalledWith(
+      165,
+      expect.anything(),
+      expect.objectContaining({
+        personId: 11,
+        zahlung: expect.objectContaining({ betragCent: 600 }),
+      }),
+    );
+    const zeile = screen.getByRole('status');
+    expect(zeile.textContent).toMatch(/^Lena Beispiel ist nachgerückt\./);
+    expect(within(zeile).queryByRole('button', { name: 'Rückgängig' })).toBeNull();
+    fireEvent.click(within(zeile).getByRole('button', { name: 'Mail schreiben' }));
+    expect(screen.getByText('Kinderfreizeit: Lena hat einen Platz')).toBeTruthy();
+    expect(
+      screen.getByRole('link', { name: 'Im Mailprogramm öffnen' }).getAttribute('href'),
+    ).toMatch(/^mailto:maria%40beispiel\.test\?subject=/);
+  });
+
+  it('der Knopf im Hinweis oben öffnet gleich die Rückfrage; voll → Plätze erhöhen', () => {
+    zeigen(fertig());
+    fireEvent.click(screen.getByRole('button', { name: 'Lena nachrücken lassen' }));
+    expect(screen.getByText('Lena Beispiel nachrücken lassen?')).toBeTruthy();
+    cleanup();
+    zeigen(fertig(), 1);
+    oeffnen();
+    fireEvent.click(
+      within(karte('Lena Beispiel, 7')).getByRole('button', { name: 'Nachrücken lassen' }),
+    );
+    expect(screen.getByText(/Alle 1 Plätze sind belegt\./)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Plätze erhöhen und nachrücken' })).toBeTruthy();
+  });
+
+  it('Absagen: Rückfrage mit neuer Zahlung, danach Rückgängig im Fenster', async () => {
+    const zurueck = vi.fn().mockResolvedValue(undefined);
+    bm.absagenLassen.mockResolvedValue(zurueck);
+    const z = zeigen(fertig(mitglieder('AAAAAA', [true, true], 10)));
+    oeffnen();
+    fireEvent.click(within(karte('Lena Beispiel, 7')).getByRole('button', { name: 'Absagen' }));
+    expect(screen.getByText('Lena Beispiel absagen?')).toBeTruthy();
+    expect(screen.getByText('Zahlung der Anmeldung').nextSibling?.textContent).toBe(
+      '12,00 € 6,00 €',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Ja, absagen' }));
+    await waitFor(() => expect(z.onGespeichert).toHaveBeenCalled());
+    const zeile = screen.getByRole('status');
+    expect(zeile.textContent).toMatch(/^Lena Beispiel ist abgesagt\./);
+    expect(within(zeile).getByRole('button', { name: 'Mail schreiben' })).toBeTruthy();
+    fireEvent.click(within(zeile).getByRole('button', { name: 'Rückgängig' }));
+    await waitFor(() => expect(zurueck).toHaveBeenCalled());
+  });
+
+  it('ohne Recht keine Knöpfe zum Nachrücken oder Absagen', () => {
+    zeigen(fertig(), 10, false, false);
+    expect(screen.queryByRole('button', { name: 'Lena nachrücken lassen' })).toBeNull();
+    oeffnen();
+    expect(screen.queryByRole('button', { name: 'Nachrücken lassen' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Absagen' })).toBeNull();
   });
 });

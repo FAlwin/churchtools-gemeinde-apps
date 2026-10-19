@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { SongSelectTreffer } from '@shared/types/index';
-import { PunktFenster, type LiedWahlArgs, type PunktFensterProps } from '@ui/ablauf/PunktFenster';
+import type { LiedWahlArgs } from '@ui/ablauf/PunktFenster';
 import { useOverlayKeyboardInset } from '@ui/fenster/useOverlayKeyboardInset';
 import styles from '@ui/ablauf/PunktFenster.module.scss';
 import { SongPicker } from './SongPicker';
@@ -8,20 +8,18 @@ import { NewSongSheet } from './NewSongSheet';
 import { useCapabilities } from '../hooks/useServices';
 
 /**
- * **„Eintrag bearbeiten" der Musik-App** – das gemeinsame Punkt-Fenster (`ui/ablauf/PunktFenster`, E6-2b-2) mit
- * eingesteckter Liedwahl. Das Fenster selbst kennt keine Lieder-Dienste; der Dienstplaner nutzt es ohne
- * Liedwahl (dort werden Lieder nur angezeigt).
+ * **„Lied verknüpfen" der Musik-App** – die Liedwahl, die sie ins gemeinsame Punkt-Fenster (`ui/ablauf/PunktFenster`)
+ * steckt (E6-2b-2/3; vorher Unterdialog in `ItemActionSheet`). Liedsuche, und mit dem Recht, Lieder zu bearbeiten,
+ * der Anlege-Weg (#391) – „Neues Lied" (der Suchbegriff wird zum Titel) oder ein SongSelect-Treffer. Der Dienstplaner
+ * steckt nichts ein: Dort werden Lieder nur angezeigt.
  */
-// `liedWahl` ist optional und wird hier gesetzt – `Omit` würde die Unterscheidung neu/bearbeiten verwischen.
-export function ItemActionSheet(props: PunktFensterProps) {
-  return <PunktFenster {...props} liedWahl={(args) => <LiedVerknuepfen {...args} />} />;
-}
-
-/**
- * „Lied verknüpfen" (vorher als Unterdialog im Fenster): Liedsuche, und mit dem Recht, Lieder zu bearbeiten,
- * der Anlege-Weg (#391) – „Neues Lied" (der Suchbegriff wird zum Titel) oder ein SongSelect-Treffer.
- */
-function LiedVerknuepfen({ onGewaehlt, onAbbrechen, onHintergrund, fehler, busy }: LiedWahlArgs) {
+export function LiedVerknuepfen({
+  onGewaehlt,
+  onAbbrechen,
+  onHintergrund,
+  fehler,
+  busy,
+}: LiedWahlArgs) {
   const canEditSongs = useCapabilities(true).data?.canEditSongs ?? false;
   const [neuesLied, setNeuesLied] = useState<{ treffer?: SongSelectTreffer; name?: string } | null>(
     null,

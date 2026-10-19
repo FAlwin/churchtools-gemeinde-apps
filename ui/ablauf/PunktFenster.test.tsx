@@ -7,7 +7,7 @@ import { PunktFenster } from './PunktFenster';
 
 /**
  * Das Punkt-Fenster als gemeinsamer Baustein (E6-2b-2). Die Musik-App steckt ihre Liedwahl ein (geprüft in
- * `client/src/components/ItemActionSheet.test.tsx`); hier zählt der Vertrag: **ohne** Liedwahl nur anzeigen
+ * `client/src/components/LiedVerknuepfen.test.tsx`); hier zählt der Vertrag: **ohne** Liedwahl nur anzeigen
  * (Dienstplaner, „Lieder nur anzeigen"), **mit** Liedwahl füllt sie im Lied-Modus das Fenster und ihre Wahl wird
  * erst mit „Speichern" geschrieben.
  */

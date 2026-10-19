@@ -20,7 +20,7 @@ import {
   stricheZurueck,
   texteZurueck,
 } from '../utils/rolleSpeichern';
-import { ConfirmDialog } from './ConfirmDialog';
+import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { PageDrawToolbar } from './PageDrawToolbar';
 import { PageTextLayer } from './PageTextLayer';
 import { LassoEbene, type Dazugeholt } from './LassoEbene';

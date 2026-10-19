@@ -11,6 +11,7 @@ import type { Antworten, OeffentlicheEinstellungen } from './formular';
 import { optionenBelegt } from './kontingent';
 import { centAusEuroText, kannEtwasKosten } from './preis';
 import { betragAus } from './senden';
+import type { Mitgliederstand } from './liste';
 
 /** Ein Mitglied der Veranstaltung, wie die Nachprüfung es braucht. */
 export interface PruefMitglied {
@@ -76,6 +77,43 @@ export interface Nachpruefung {
   hinweise: number;
 }
 
+/**
+ * **Plätze frei, aber jemand wartet** – ChurchTools lässt dann niemanden von selbst nachrücken, Neue kommen hinten an
+ * (gemessen 17.10.2026, #619). Die eine Stelle für Nachprüfung und Liste (A7).
+ */
+export function wartenTrotzPlatz(p: PlatzZahlen): boolean {
+  return p.wartend > 0 && (p.max === null || p.belegt < p.max);
+}
+
+const SCHLUESSEL = ['nr', 'kontakt', 'betrag', 'aufschluesselung', 'auswahl', 'extras'] as const;
+
+/**
+ * Die Mitglieder für die Nachprüfung – aus demselben Stand wie die Liste (A7-1). `seit` ist der Anmeldetag aus dem
+ * Verlauf: Das Eintrittsdatum setzt ChurchTools beim Nachrücken neu (gemessen 19.10.2026) – damit galten nachgerückte
+ * Anmeldungen als später angemeldet (Frühbucher, „Preise nach der Anmeldung geändert“).
+ */
+export function pruefMitgliederAus(
+  e: OeffentlicheEinstellungen,
+  stand: Mitgliederstand,
+): PruefMitglied[] {
+  return stand.mitglieder.map((m) => {
+    const felder: PruefMitglied['felder'] = {};
+    for (const k of SCHLUESSEL) {
+      const id = e.ctFelder[k];
+      const w = id === undefined ? undefined : m.werte[id];
+      if (w !== undefined) felder[k] = w;
+    }
+    return {
+      personId: m.personId,
+      name: `${m.vor} ${m.nach}`.trim(),
+      status: m.status,
+      seit: m.angemeldetAm,
+      geburtstag: m.geburtstag,
+      felder,
+    };
+  });
+}
+
 /** Wer in der Aufschlüsselung als „Warteliste – Betrag folgt beim Nachrücken“ steht (`wartelistenZeile`). */
 function wartendeAus(aufschluesselung: string | undefined): string[] {
   return (aufschluesselung ?? '')
@@ -91,8 +129,7 @@ export function nachpruefen(
   plaetze: PlatzZahlen,
 ): Nachpruefung {
   // Plätze: frei, aber jemand wartet → niemand rückt von selbst nach (gemessen 17.10.2026, #619).
-  const wartenTrotzPlatz =
-    plaetze.wartend > 0 && (plaetze.max === null || plaetze.belegt < plaetze.max);
+  const warten = wartenTrotzPlatz(plaetze);
 
   // Belegung je Auswahl – dieselbe Zählung, die das Formular sperren lässt.
   const g = e.preis.grundpreis;
@@ -195,8 +232,14 @@ export function nachpruefen(
   }
 
   const hinweise =
-    (wartenTrotzPlatz ? 1 : 0) +
+    (warten ? 1 : 0) +
     (auswahl?.optionen.filter((o) => o.zustand === 'ueberbucht').length ?? 0) +
     betraege.filter((b) => b.grund !== 'preise').length;
-  return { plaetze: { ...plaetze, wartenTrotzPlatz }, auswahl, betraege, geprueft, hinweise };
+  return {
+    plaetze: { ...plaetze, wartenTrotzPlatz: warten },
+    auswahl,
+    betraege,
+    geprueft,
+    hinweise,
+  };
 }

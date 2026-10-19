@@ -7,6 +7,26 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Anmeldungen, A7-1)
+
+- **Reiter „Anmeldungen“** (Entwurf `a7-anmeldungen-v2`, nur ansehen): eine Zeile je Anmeldung (Anmelde-Nr.; ohne Nr.
+  je Person) mit Personen, Alter am ersten Tag, Warteplatz, Betrag und Zahlung; oben Plätze, Warteliste und offene
+  Zahlungen, dazu der Hinweis „Plätze frei – N warten“ (dieselbe Regel wie die Nachprüfung, `wartenTrotzPlatz`). Filter
+  Alle / Zahlung offen / Warteliste / Abgesagt, Suche. Das Fenster einer Anmeldung zeigt alle Antworten – was für die
+  ganze Anmeldung gilt (Kontakt, Erziehungsberechtigte, **Unterschrift als Bild**), einmal oben (Alwin, 19.10.2026).
+  Adresse `#/v/<Nummer>/anmeldungen`.
+- **Abgesagt aus dem Verlauf** (`/groups/{id}/members/history`, gemessen 19.10.2026): Er behält alle Antworten. Hat die
+  erste Person einer Anmeldung abgesagt, kommen Betrag, Kontakt und Unterschrift von dort.
+- Liste und Nachprüfung laden die Mitglieder **einmal gemeinsam** (`mitglieder.ts`, Rechnen in `shared/anmeldung/liste.ts`);
+  Auswahl-Felder erscheinen als Text statt als Options-Nummer.
+
+### Behoben (Anmeldungen, A7-1)
+
+- **Nachprüfung: Anmeldetag nach dem Nachrücken.** Gemessen 19.10.2026: Beim Nachrücken setzt ChurchTools das
+  Eintrittsdatum auf den Tag des Nachrückens. Die Nachprüfung nahm es als Anmeldetag – eine nachgerückte Anmeldung galt
+  so als später angemeldet (Frühbucher, „Preise nach der Anmeldung geändert“ wurde zu „weicht ab“). Jetzt kommt der
+  Anmeldetag aus dem Verlauf.
+
 ### Neu (Anmeldungen, A6-5c, #623)
 
 - **Nachprüfung** (Entwurf `a6-5c-nachpruefung-v1`, Alwin 17.10.2026: „nachrechnen + markieren“) – neue Karte auf der

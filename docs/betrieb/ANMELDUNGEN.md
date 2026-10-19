@@ -68,12 +68,21 @@ formular:hochladen` (optional `ANMELDUNG_FTP_ORDNER`; `ANMELDUNG_FTP_BENUTZER`, 
 
 **Spam-Schutz** (unsichtbar): ein verstecktes Feld, das nur Bots ausfüllen, und eine Mindest-Ausfüllzeit von 3
 Sekunden. Gäste merken davon nichts. Ein Captcha gibt es bewusst nicht – ohne eigenen Server ließe es sich nicht
-prüfen. Was trotzdem durchkommt, entfernt die Leitung in ChurchTools (später im Reiter Anmeldungen).
+prüfen. Was trotzdem durchkommt, entfernt die Leitung in ChurchTools (sehen kann sie es im Reiter „Anmeldungen“).
 
 **Nachprüfung:** Auf der Seite einer freigegebenen Veranstaltung rechnet die Erweiterung nach, was Gäste geschickt haben
 (Beträge je Anmelde-Nr., Belegung je Auswahl, Plätze) und zeigt Hinweise – geändert wird nichts. Wichtig: Wartet
 jemand, rückt in ChurchTools niemand von selbst nach, auch wenn ihr Plätze dazugebt; neue Anmeldungen kommen dann
-hinten an. Nachrücken lassen geht in ChurchTools (später in der Erweiterung).
+hinten an. Nachrücken lassen geht vorerst in ChurchTools.
+
+**Reiter „Anmeldungen“** (bisher nur ansehen): eine Zeile je Anmeldung (über die Anmelde-Nr.) mit Personen, Alter,
+Warteplatz, Betrag und Zahlung; oben Plätze, Warteliste und offene Zahlungen, dazu der Hinweis, wenn Plätze frei sind
+und jemand wartet. Filter: Alle, Zahlung offen, Warteliste, Abgesagt; Suche nach Namen. Ein Klick öffnet alle
+Antworten – was für die ganze Anmeldung gilt (Kontakt, Erziehungsberechtigte, Unterschrift als Bild), steht einmal
+oben. **Abgesagt** kommt aus dem Verlauf von ChurchTools: Er behält auch die Antworten der Abgesagten, deshalb gehen
+Betrag oder Unterschrift nicht verloren, wenn die erste Person einer Anmeldung absagt. Sehen kann die Liste, wer in
+ChurchTools die Mitglieder der Gruppe sehen darf. Gut zu wissen: Entfernt ihr in ChurchTools jemanden, bekommt die
+Person **keine** Mail; beim Nachrücken schickt ChurchTools nur „Deine Anmeldung war erfolgreich“ – ohne Betrag.
 
 **Begrenzte Auswahl** (z. B. Zimmer): Je Option „Wie oft buchbar“ (jede Anmeldung belegt eins) und freiwillig
 „Für wie viele Personen“ (nur ein Hinweis im Formular). Die Erweiterung zählt die Belegung, sobald jemand mit
@@ -228,8 +237,8 @@ mitarbeiten (z. B. über den Status oder global über die Gruppen).
     mit Finger oder Maus; **am Handy** öffnet ein Tipp die Fläche im Vollbild (quer gehalten wird sie groß). In
     ChurchTools stehen sie bei der ersten angemeldeten Person: „Erziehungsberechtigte“ lesbar, „Unterschrift“
     lesbar als „✓ Erna Muster, 15.10.2026“ und die Striche in der Spalte „Unterschrift (Daten)“ (die man in der
-    Liste ausblenden kann). Als Bild zu sehen ist die Unterschrift später im Reiter Anmeldungen und auf der
-    Druckliste. Ein ChurchTools-Feld fasst höchstens 4.000 Zeichen (gemessen) – eine Unterschrift braucht meist
+    Liste ausblenden kann). Als Bild zu sehen ist die Unterschrift im Fenster einer Anmeldung (Reiter
+    „Anmeldungen“), später auch auf der Druckliste. Ein ChurchTools-Feld fasst höchstens 4.000 Zeichen (gemessen) – eine Unterschrift braucht meist
     einige hundert.
   - **Gespeichert wird von selbst**; oben steht, ob gerade gespeichert wird, und bei einem Fehler „Nochmal“.
     Nach jeder Änderung bietet die Leiste oben „Rückgängig“ an (nicht beim Titelbild).

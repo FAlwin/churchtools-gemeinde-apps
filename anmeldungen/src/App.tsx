@@ -38,14 +38,14 @@ type Ansicht =
   | { art: 'archiv' };
 
 function ansichtAusAdresse(): Ansicht {
-  // `#/v/91` = Reiter „Veranstaltung“, `#/v/91/formular` (A5). `…/gestaltung` war bis zum Umbau am 13.10.2026
-  // ein eigener Reiter – alte Lesezeichen landen im Baukasten, der die Gestaltung jetzt enthält.
-  const m = /^#\/v\/(\d+)(?:\/(formular|gestaltung))?$/.exec(window.location.hash);
+  // `#/v/91` = Reiter „Veranstaltung“, `#/v/91/formular` (A5), `#/v/91/anmeldungen` (A7). `…/gestaltung` war bis
+  // zum Umbau am 13.10.2026 ein eigener Reiter – alte Lesezeichen landen im Baukasten, der die Gestaltung enthält.
+  const m = /^#\/v\/(\d+)(?:\/(formular|gestaltung|anmeldungen))?$/.exec(window.location.hash);
   if (m)
     return {
       art: 'veranstaltung',
       id: Number(m[1]),
-      reiter: m[2] ? 'formular' : 'veranstaltung',
+      reiter: m[2] === 'anmeldungen' ? 'anmeldungen' : m[2] ? 'formular' : 'veranstaltung',
     };
   if (window.location.hash === '#/archiv') return { art: 'archiv' };
   return { art: 'start' };

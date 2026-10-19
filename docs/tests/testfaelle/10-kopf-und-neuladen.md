@@ -121,3 +121,26 @@ in Bausteine geteilt, die Schalter sind jetzt je ein einziger Knopf).
 - **Historie:** #407
 
 </details>
+
+### TF-KOPF-04 · Dunkelmodus sieht aus wie ChurchTools
+
+**Das brauchst du:** Die installierte App auf dem iPhone und – zum Vergleich – ChurchTools im Dunkeln.
+
+**Das muss passieren:** Im Dunkeln ist die App fast schwarz mit grauen Karten und Leisten, kein Blaustich – wie
+ChurchTools, Anmeldungen und Dienstplaner. Die Statusleiste oben hat dieselbe Farbe wie die Leiste darunter (keine
+Kante). Die Notenseite bleibt weiß.
+
+1. Tab **Mehr** → **Dunkel**. Das Logo oben hat einen grauen Kreis, keinen blauen.
+2. **Termine**, einen Ablauf und ein Lied öffnen: überall grau-schwarz, Datumskacheln dunkelblau wie in ChurchTools.
+3. In der installierten App: oben unter der Uhr kein farbiger Streifen, der sich von der Leiste abhebt.
+4. **Auto** wählen und das Gerät auf hell/dunkel umstellen → die App folgt.
+5. Abmelden: Die Anmeldeseite ist ebenfalls grau-schwarz, das Logo grau umrandet.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `ui/design/_variables.scss`, `client/src/hooks/useSettings.ts`, `client/public/logo-rund-dunkel.png`
+- **Automatisiert:** teilweise – `client/src/hooks/useSettings.test.tsx` (theme-color aus `--nav-bg`); von Hand bleibt das Aussehen am Gerät
+- **Historie:** #565
+
+</details>

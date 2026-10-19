@@ -12,8 +12,8 @@ Die Werte wurden von Screenshots der App abgelesen (Entscheidung Alwin anhand de
 
 ## Farben – nur über Tokens
 
-Einzige Quelle: `ui/design/_variables.scss` (Light = `:root`, Dark = `html[data-theme='dark']`, dunkel wie
-ChurchTools = `html[data-theme='dark'][data-dunkel='churchtools']`).
+Einzige Quelle: `ui/design/_variables.scss` (Light = `:root`, Dark = `html[data-theme='dark']` – die Farben von
+ChurchTools).
 **Einzige Ausnahme: `--sat`** (Safe-Area oben) wird in JS gemessen – siehe Tabelle unten und die Regel
 am Ende dieses Dokuments.
 **Keine rohen Hex-/rgba-Werte in Komponenten** (Ausnahmen: reine Schatten, Overlays, `#fff` auf farbigen Flächen).
@@ -85,9 +85,9 @@ Hell/Dunkel/Auto über `useSettings` → `data-theme` auf `<html>`. Komponenten 
 **nicht** selbst um Dark Mode kümmern – die Tokens schalten um. Falls doch nötig:
 `:global(html[data-theme='dark'])` nur als letzte Option.
 
-**Dunkel wie ChurchTools** (seit 14.10.2026 in den Anmeldungen, seit 15.10.2026 im Dienstplaner): eigener Farbblock
-`html[data-theme='dark'][data-dunkel='churchtools']`, umgeschaltet nach der ChurchTools-Wahl
-(`ui/design/thema.ts`). Wie eine App umsteigt: [dunkelmodus.md](dunkelmodus.md).
+**Dunkel wie ChurchTools** – seit 19.10.2026 (#565) das einzige Dunkel, in allen Apps. Die Erweiterungen
+Anmeldungen und Dienstplaner folgen der ChurchTools-Wahl (`ui/design/thema.ts`), die Musik-App ihrem eigenen
+Schalter. Einzelheiten: [dunkelmodus.md](dunkelmodus.md).
 
 ## Abstand nach oben (Safe Area) – verbindlich
 

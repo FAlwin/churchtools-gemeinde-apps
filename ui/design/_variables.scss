@@ -1,8 +1,8 @@
 // ── Globale Design-Variablen – Look der ChurchTools-APP ─────────────
 // Einzige Quelle für Farben, Rundungen, Schriften, Breakpoints.
 // Komponenten importieren diese Datei, statt Werte zu duplizieren.
-// Theme-Umschaltung über [data-theme] auf <html>; dunkel wie ChurchTools zusätzlich mit
-// [data-dunkel='churchtools'] (`ui/design/thema.ts`, `docs/entwicklung/dunkelmodus.md`).
+// Theme-Umschaltung über [data-theme] auf <html>; das Dunkel ist das von ChurchTools
+// (`ui/design/thema.ts`, `docs/entwicklung/dunkelmodus.md`).
 //
 // Seit #393 (19.09.2026) folgt die App der ChurchTools-**App** (iOS/Android), nicht mehr dem
 // ChurchTools-Web: kräftigeres Blau, hellblaue Datumskacheln, Karten mit feinem Rand statt Schatten,
@@ -65,44 +65,11 @@
   --r-dialog: 14px; // zentrierte Dialoge (Sheet, ConfirmDialog)
 }
 
-// Dark Mode
-html[data-theme='dark'] {
-  --bg: #0f1822; // dunklere Basis → Karten/Leisten heben sich klar ab
-  --surface2: #1e2a35; // Karten / Listen
-  --surface3: #2b3a49; // Sekundärflächen, etwas heller
-  --border: rgba(255, 255, 255, 0.11);
-  --hair: rgba(255, 255, 255, 0.09);
-  --section: #17222d;
-
-  --text: #f4f7f9;
-  --text2: #9db0bf;
-  --text3: #67788a;
-
-  --blue: #4f8cff; // helleres Blau derselben Familie wie #2563eb
-  --blue-ink: #4f8cff;
-  --blue-soft: rgba(79, 140, 255, 0.16);
-  --blue-tile: #1e2f4d;
-  --blue-tile-text: #dbe6ff;
-  --red: #ff6b6b;
-  --green: #4cb98b;
-  --cp-dir: #5fd0c3; // Direktiven-Teal (heller für Dark Mode)
-
-  --seg-on: #3a4d5e;
-  --seg-track: #2b3a49; // hebt sich im Dunklen schon als `--surface3` ab – unverändert
-  --chart-grund: var(--bg); // im Dunklen bleibt der Kopf auf dem dunklen Grund
-  --track-off: #3a4856;
-
-  // Leisten heller als die Basis → klar abgesetzt. Deckend und gleich der dunklen `theme-color`
-  // (siehe hell). Halbdurchsichtig ergab die Leiste #1d2a36 statt #1e2a35 – dieselbe Naht.
-  --nav-bg: #1e2a35;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
-}
-
 // ── Dunkel wie ChurchTools ───────────────────────────────────────────
-// Alwin, 14.10.2026: „so einen Dunkelmodus wie die ChurchTools-App“. Gilt, wo eine App sich dafür
-// anmeldet (`data-dunkel='churchtools'` auf <html>, gesetzt von `ui/design/thema.ts`) – bisher die
-// Erweiterung „Anmeldungen“. Der Dunkelmodus oben (`html[data-theme='dark']`) bleibt der der Musik-App,
-// bis sie umsteigt. Wie eine App umsteigt: `docs/entwicklung/dunkelmodus.md`.
+// Alwin, 14.10.2026: „so einen Dunkelmodus wie die ChurchTools-App“. Seit 19.10.2026 (#565) das EINZIGE
+// Dunkel – Anmeldungen, Dienstplaner und Musik-App. Das frühere blaugraue Dunkel der Musik-App (Grund
+// #0f1822, Karten #1e2a35) ist entfernt; Alwin: „wir haben da so ein dunkles Blau, ChurchTools bleibt
+// eher bei Schwarz“.
 //
 // Die Werte sind die von ChurchTools selbst – gemessen in der Test-Instanz mit `body.dark` (14.10.2026),
 // ChurchTools nutzt die Tailwind-4-Farben:
@@ -110,7 +77,7 @@ html[data-theme='dark'] {
 // (zinc-800), Rand `--color-basic-divider` (zinc-700), Text `--color-basic-primary/secondary/tertiary`
 // (slate-50/300/400), Blau `--color-accent-bright` (blue-500), Link `--color-link`, Grün wie der Knopf
 // „Gruppe erstellen“ (green-600).
-html[data-theme='dark'][data-dunkel='churchtools'] {
+html[data-theme='dark'] {
   color-scheme: dark; // Auswahllisten, Datumsfelder, Rollbalken des Browsers ebenfalls dunkel
 
   --bg: #18181b;

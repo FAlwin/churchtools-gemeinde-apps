@@ -1,0 +1,78 @@
+// Lasso (#615): liegt deckungsgleich über der Seite (in ihrer Text-Ebene). Maße in px statt cqh – auf der
+// Rolle wäre ein cqh ein Hundertstel des ganzen Lieds.
+.ebene {
+  position: absolute;
+  inset: 0;
+  pointer-events: all;
+  touch-action: none;
+  cursor: crosshair;
+  line-height: 0;
+}
+
+.form {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+
+  polygon {
+    fill: var(--blue);
+    fill-opacity: 0.08;
+    stroke: var(--blue);
+    stroke-width: 1.5px;
+    stroke-dasharray: 5 4;
+    vector-effect: non-scaling-stroke;
+  }
+}
+
+.schwebe {
+  position: absolute;
+  pointer-events: none;
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.rahmen {
+  position: absolute;
+  outline: 1.5px dashed var(--blue);
+  outline-offset: 2px;
+  cursor: move;
+}
+
+.griff {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  transform: translate(50%, 50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--blue);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  cursor: nwse-resize;
+  touch-action: none;
+}
+
+// Unter dem letzten Teil der Rolle wird nichts gespeichert (#615) – sagen statt still verlieren.
+.hinweis {
+  position: absolute;
+  left: 0;
+  // Über den Rahmen: Gesperrt ist es unten, darunter stünde der Hinweis außerhalb der Rolle.
+  bottom: 100%;
+  margin-bottom: 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--text, #1b1b1f);
+  color: var(--bg, #fff);
+  font: 600 13px/1.3 var(--ui);
+  // Umbrechen statt aus dem Bild laufen – rechts steht die Werkzeugleiste.
+  width: max-content;
+  max-width: 220px;
+  pointer-events: none;
+}

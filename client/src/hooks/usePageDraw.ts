@@ -141,20 +141,30 @@ export function usePageDraw(
     }
   }, [texts, textKey, drawKey]);
 
-  function snapshot(): Snapshot {
+  function snapshot(t: PageTextObj[] = texts): Snapshot {
     const c = strokesRef.current;
     const img = c && c.width ? c.toDataURL('image/png', 0.7) : null;
-    return { img, texts };
+    return { img, texts: t };
+  }
+  /**
+   * Speichert eine Leinwand unter dem JETZIGEN Schlüssel – auch wenn er sich bis zum Aufruf ändert. Das
+   * Lasso (#615) übernimmt seine Auswahl womöglich erst, nachdem schon weitergeblättert wurde; dann gehört
+   * das Bild zur alten Seite, nicht zur neuen.
+   */
+  function strichSpeicherFuer(): (c: HTMLCanvasElement | null) => void {
+    const key = drawKey;
+    const push = pushRef.current;
+    return (c) => {
+      if (!key || !c || !c.width) return;
+      const data = c.toDataURL('image/png', 0.7);
+      // Gerätespeicher voll (#251): Die Anmerkung ist NICHT verloren – sie geht unten trotzdem zum
+      // Konto. `lokalSchreiben` meldet den vollen Speicher einmal je Sitzung.
+      lokalSchreiben(key, data);
+      push(key, 'strokes', data);
+    };
   }
   function saveStrokes() {
-    if (!drawKey) return;
-    const c = strokesRef.current;
-    if (!c || !c.width) return;
-    const data = c.toDataURL('image/png', 0.7);
-    // Gerätespeicher voll (#251): Die Anmerkung ist NICHT verloren – sie geht unten trotzdem zum
-    // Konto. `lokalSchreiben` meldet den vollen Speicher einmal je Sitzung.
-    lokalSchreiben(drawKey, data);
-    pushRef.current(drawKey, 'strokes', data);
+    strichSpeicherFuer()(strokesRef.current);
   }
   function applySnapshot(s: Snapshot) {
     setSelectedId(null);
@@ -179,8 +189,13 @@ export function usePageDraw(
       saveStrokes();
     }
   }
-  function pushHistory() {
-    history.current.push(snapshot());
+  /**
+   * Den jetzigen Stand in den Verlauf. `texte` nur, wenn sie im selben Zug geändert wurden und dieser
+   * Render sie noch nicht kennt – das Lasso auf der Rolle holt Texte aus den Lücken dazu (#615); ohne sie
+   * im Verlauf nähme Rückgängig sie wieder weg, obwohl sie auf den A4-Seiten schon gelöscht sind.
+   */
+  function pushHistory(texte?: PageTextObj[]) {
+    history.current.push(snapshot(texte));
     if (history.current.length > 30) history.current.shift();
     redoStack.current = [];
     setCanUndo(true);
@@ -192,7 +207,14 @@ export function usePageDraw(
     history.current.pop();
     setCanUndo(history.current.length > 0);
   }
+  // Eine schwebende Lasso-Auswahl (#615) muss erst abgelegt sein, bevor Rückgängig, Wiederherstellen oder
+  // Löschen die Leinwand anfassen – sonst legte das Lasso sie danach ein zweites Mal ab.
+  const abschliessen = useRef<(() => void) | null>(null);
+  function setAbschliessen(fn: (() => void) | null) {
+    abschliessen.current = fn;
+  }
   function undo() {
+    abschliessen.current?.();
     const p = history.current.pop();
     if (!p) return;
     redoStack.current.push(snapshot());
@@ -201,6 +223,7 @@ export function usePageDraw(
     applySnapshot(p);
   }
   function redo() {
+    abschliessen.current?.();
     const n = redoStack.current.pop();
     if (!n) return;
     history.current.push(snapshot());
@@ -310,7 +333,16 @@ export function usePageDraw(
     }
   }
 
+  /**
+   * Texte direkt ändern, OHNE eigenen Verlaufsschritt – fürs Lasso (#615): Es sichert den Verlauf einmal
+   * beim Auswählen und bewegt die Texte danach live. Gespeichert wird wie bei jeder Änderung.
+   */
+  function aendereTexte(fn: (alt: PageTextObj[]) => PageTextObj[]) {
+    setTexts(fn);
+  }
+
   function clearAll() {
+    abschliessen.current?.();
     pushHistory();
     const c = strokesRef.current;
     c?.getContext('2d')?.clearRect(0, 0, c.width, c.height);
@@ -332,6 +364,8 @@ export function usePageDraw(
     pushHistory,
     dropHistory,
     saveStrokes,
+    strichSpeicherFuer,
+    setAbschliessen,
     undo,
     redo,
     placeText,
@@ -343,6 +377,7 @@ export function usePageDraw(
     setStyle,
     resize,
     setSize,
+    aendereTexte,
     startDrag,
     moveDrag,
     endDrag,

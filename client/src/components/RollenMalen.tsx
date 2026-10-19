@@ -9,18 +9,24 @@ import { useLatestRef } from '../hooks/useLatestRef';
 import { pushField } from '../services/annotations';
 import { textSchluessel } from '../utils/annotationKeys';
 import { lokalSchreiben } from '../utils/lokalSpeicher';
-import { streifen, type Anmerkungsquelle } from '../utils/rollenAbbildung';
+import { rahmenAufKernen, streifen, type Anmerkungsquelle } from '../utils/rollenAbbildung';
+import { PAGE_W } from '../utils/blattMasse';
 import {
   bildLaden,
   entwurfStriche,
   entwurfTexte,
+  lueckenStricheHolen,
+  lueckenTexteHolen,
   stricheZurueck,
   texteZurueck,
 } from '../utils/rolleSpeichern';
 import { ConfirmDialog } from './ConfirmDialog';
 import { PageDrawToolbar } from './PageDrawToolbar';
 import { PageTextLayer } from './PageTextLayer';
+import { LassoEbene, type Dazugeholt } from './LassoEbene';
+import type { Punkt, Rahmen } from '../utils/lasso';
 import styles from './ScrollDeck.module.scss';
+import { maltStriche } from '../utils/malwerkzeug';
 
 /** So lange nach dem letzten Strich wird auf die A4-Seiten geschrieben – nicht bei jedem Strich. */
 const SPEICHERN_NACH_MS = 700;
@@ -177,6 +183,28 @@ export function RollenMalen({
     onActivePage: () => {},
   });
 
+  // Lasso (#615): Was beim Blättern in einer Lücke steht, liegt auf der Rolle über dem nächsten Teil – aber
+  // nicht im Entwurf. Das Lasso holt es vor dem Ausschneiden dazu („ans Lückenende, dann zurechtrücken").
+  async function lueckenHolen(form: Punkt[]): Promise<Dazugeholt> {
+    const c = annoRef.current;
+    if (!c || !liste) return { texte: [], striche: false };
+    const texte = lueckenTexteHolen(form, hoeheMm, eigene, liste);
+    const striche = await lueckenStricheHolen(c, form, eigene, liste);
+    if (texte.length || striche) onGespeichert();
+    return { texte, striche };
+  }
+
+  /** Nur über dem Lied ablegen – darunter gäbe es keine A4-Stelle (#615). */
+  function ablegbar(z: Rahmen): boolean {
+    if (!liste) return true;
+    return rahmenAufKernen(liste, {
+      x: z.x * PAGE_W,
+      y: z.y * hoeheMm,
+      w: z.w * PAGE_W,
+      h: z.h * hoeheMm,
+    });
+  }
+
   const text = useTextEingabe({
     rootRef,
     draws: [draw],
@@ -195,7 +223,7 @@ export function RollenMalen({
       <canvas
         ref={annoRef}
         className={styles.malLeinwand}
-        style={{ pointerEvents: drawTool !== 'text' ? 'all' : 'none' }}
+        style={{ pointerEvents: maltStriche(drawTool) ? 'all' : 'none' }}
         onPointerDown={(e) => strokeDown(e, 0)}
         onPointerMove={strokeMove}
         onPointerUp={strokeUp}
@@ -222,7 +250,16 @@ export function RollenMalen({
         onResizeDown={(e, id, size) => text.handleResizeDown(e, 0, id, size)}
         onResizeMove={text.handleResizeMove}
         onResizeUp={text.handleResizeUp}
-      />
+      >
+        {drawTool === 'lasso' && (
+          <LassoEbene
+            leinwandRef={annoRef}
+            draw={draw}
+            vorAuswahl={liste ? lueckenHolen : undefined}
+            ablegbar={ablegbar}
+          />
+        )}
+      </PageTextLayer>
       {leisteZiel &&
         createPortal(
           <>

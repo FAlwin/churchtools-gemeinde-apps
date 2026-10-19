@@ -21,6 +21,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 - **Betrag von Hand:** In der Aufschlüsselung steht dann „Von Hand geändert am …“; die Nachprüfung meldet ihn danach
   nicht mehr als abweichend (`vonHandZeile`/`vonHandBetrag`).
 - „TT.MM.JJJJ“ steht an EINER Stelle (`tagPunkt`) – Unterschrift, Zahlung und Reiter hatten je eine eigene Fassung.
+- Nach einer Zahlungsänderung lädt die Seite auch die Einstellungen neu (echter Test 19.10.2026: Das erste „bezahlt“ legte
+  das Feld „Zahlart“ an, ohne dessen Nummer fehlte die Zahlart in der Anzeige).
 
 ### Neu (Anmeldungen, A7-1)
 

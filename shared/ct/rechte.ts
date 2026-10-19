@@ -102,6 +102,8 @@ export function rechteAus(
     canViewSongs,
     canViewAgendas,
     canEditAgendas: isAdmin || has(cs['edit agenda']),
+    // Je Kalender – ausgewertet nur über `darfAblaufBearbeiten` (#635).
+    ablaufKalender: idsAusRecht(cs['edit agenda']),
     canEditSongs,
     // Dasselbe Recht, eigens benannt (siehe `UserCapabilities.canEditTempo`) – NICHT neu ausgewertet.
     canEditTempo: canEditSongs,

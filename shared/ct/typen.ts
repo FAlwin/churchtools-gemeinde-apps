@@ -23,6 +23,12 @@ export interface CtEvent {
   /** ID des zugehörigen Kalender-Termins (für den Untertitel) */
   appointmentId?: number;
   calendar?: { title?: string; domainIdentifier?: string };
+  /**
+   * Admins dieses Termins (Personen-IDs) – sie dürfen dessen Ablauf bearbeiten (E6-0). Kommen ohne `include` mit
+   * (gemessen 19.10.2026); ausgewertet nur über `terminAdminIds` (`ablaufRecht.ts`).
+   */
+  adminIds?: unknown;
+  eventAdminIds?: unknown;
 }
 
 /** Eine Ablauf-Vorlage aus `GET /api/agendatemplates` – nur die Felder, die die App nutzt. */

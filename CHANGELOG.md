@@ -7,6 +7,21 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Geändert (Musik-App, E6-2a, #635)
+
+- **Ablauf bearbeiten – je Termin, wie in ChurchTools** (Alwin, 19.10.2026: „wie ChurchTools“): Den Stift im
+  Ablauf, „Ablauf anlegen“ und „Zu Ablauf hinzufügen“ gibt es jetzt genau dort, wo ChurchTools das Bearbeiten
+  auch erlaubt – als Admin, mit „Abläufe bearbeiten“ (`edit agenda`) **für den Kalender dieses Termins** oder als
+  **Admin dieses Termins** (gemessen 17.10.2026). Bisher galt „irgendein Kalender“: Termin-Admins ohne
+  Kalender-Recht konnten nicht bearbeiten, und wer nur für einen anderen Kalender durfte, sah Knöpfe, die mit
+  „verboten“ endeten. Bei „Zu Ablauf hinzufügen“ stehen nur noch Termine zur Wahl, deren Ablauf man bearbeiten darf.
+- Kennt ein älterer Server den Kalender eines Termins noch nicht, bleibt es wie bisher (irgendein Recht genügt,
+  ChurchTools entscheidet) – niemand verliert den Stift.
+- Die Regel steht an **einer** Stelle (`shared/ct/ablaufRecht.ts`, `darfAblaufBearbeiten`); der Dienstplaner nutzt
+  sie ab E6-3, die Termin-Admins liest er schon darüber (`terminAdminIds`). Die Termine tragen die Admin-IDs als
+  Tatsache mit (`terminAdminIds`, kein zusätzlicher Abruf – `GET /events` liefert sie, gemessen 19.10.2026);
+  verglichen wird erst im Browser mit der eigenen Person. Neuer E2E-Test `e2e/ablauf-recht.spec.ts`.
+
 ### Neu (Anmeldungen, A7-2)
 
 - **Zahlung im Fenster einer Anmeldung** (Entwurf `a7-anmeldungen-v2`): **als bezahlt markieren** mit Zahlart und Tag,

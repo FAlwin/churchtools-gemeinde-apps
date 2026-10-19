@@ -42,6 +42,12 @@ export interface Service {
    * nicht.
    */
   kalenderId?: number;
+  /**
+   * Admins dieses Termins (Personen-IDs, `terminAdminIds`) – sie dürfen den Ablauf bearbeiten (#635). Eine
+   * Tatsache über den Termin, nichts Persönliches: verglichen wird erst im Browser mit der eigenen Person.
+   * Optional wie `kalenderId`.
+   */
+  terminAdminIds?: number[];
 }
 
 /**
@@ -623,7 +629,16 @@ export interface ChordProSection {
 export interface UserCapabilities {
   canViewSongs: boolean;
   canViewAgendas: boolean;
+  /**
+   * Irgendein `edit agenda` (oder Admin). **Ob ein bestimmter Ablauf bearbeitet werden darf, sagt erst
+   * `darfAblaufBearbeiten`** (`shared/ct/ablaufRecht.ts`, #635) – das Recht hängt am Kalender des Termins.
+   */
   canEditAgendas: boolean;
+  /**
+   * Kalender, in denen man Abläufe bearbeiten darf (`edit agenda`); `null` = alle (#635). Optional: ältere
+   * Server kennen es nicht – dann gilt `canEditAgendas` wie bisher.
+   */
+  ablaufKalender?: number[] | null;
   canEditSongs: boolean;
   /**
    * Darf das Tempo eines Arrangements in ChurchTools speichern (#335, Phase 3b) – dasselbe

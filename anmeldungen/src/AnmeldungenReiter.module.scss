@@ -293,3 +293,42 @@
   border-top: 1px solid var(--hair);
   font-size: 15px;
 }
+
+// ── Zahlung (A7-2) ──────────────────────────────────────────────────────────────────────────────
+
+.bezahlt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 6px 0;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--green) 10%, var(--surface2));
+  color: var(--green);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.zahlZeile {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin: 6px 0;
+
+  > button {
+    flex: none;
+    width: auto;
+    padding: 0 14px;
+  }
+}
+
+.amFeld {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text2);
+  font-size: 13px;
+}

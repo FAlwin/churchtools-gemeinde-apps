@@ -76,11 +76,11 @@ describe('Eine Anmeldung, zwei Kinder (wie das Formular sie schreibt)', () => {
       stand(mitglieder('AAAAAA', [true, true], 10, { bezahlt: true })),
       STICHTAG,
     );
-    expect([liste[0].bezahlt, liste[0].bezahltAm, liste[0].zahlungOffen]).toEqual([
-      true,
-      '2026-10-18',
-      false,
-    ]);
+    expect([liste[0].bezahlt, liste[0].bezahltAm, liste[0].zahlart, liste[0].zahlungOffen]).toEqual(
+      [true, '2026-10-18', 'Bar', false],
+    );
+    // Geschrieben wird bei der ersten Person (A7-2).
+    expect(liste[0].zahlungBei).toBe(10);
     expect(listenZahlen(x, liste)).toMatchObject({ offen: 0, offenCent: 0, eingegangenCent: 1200 });
   });
 });
@@ -113,6 +113,8 @@ describe('Verlauf: Anmeldetag und Absagen', () => {
       true,
       ['Lena'],
     ]);
+    // Die Zahlung steht bei niemandem mehr in der Gruppe – nicht still bei Lena schreiben (A7-2).
+    expect(a.zahlungBei).toBeNull();
     expect(a.abgesagt.map((b) => [b.name, b.am, b.selbst, b.warVorher])).toEqual([
       ['Jonas Beispiel', '2026-10-18', true, 'aktiv'],
     ]);

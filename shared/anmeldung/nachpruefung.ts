@@ -11,6 +11,7 @@ import type { Antworten, OeffentlicheEinstellungen } from './formular';
 import { optionenBelegt } from './kontingent';
 import { centAusEuroText, kannEtwasKosten } from './preis';
 import { betragAus } from './senden';
+import { vonHandBetrag } from './zahlung';
 import type { Mitgliederstand } from './liste';
 
 /** Ein Mitglied der Veranstaltung, wie die Nachprüfung es braucht. */
@@ -200,6 +201,8 @@ export function nachpruefen(
       ).gesamtCent;
       const gemeldet = centAusEuroText(erste.felder.betrag);
       geprueft++;
+      // Von Hand geändert (A7-2) und seitdem unverändert → das Team hat entschieden, kein Befund.
+      if (gemeldet !== null && gemeldet === vonHandBetrag(erste.felder.aufschluesselung)) continue;
       // Die gewählte Option gibt es nicht mehr (umbenannt, entfernt) → nachrechnen geht nicht.
       const unbekannt = option < 0;
       if (gemeldet === soll && !unbekannt) continue;

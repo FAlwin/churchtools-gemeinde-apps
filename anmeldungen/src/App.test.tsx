@@ -11,7 +11,7 @@ import { tagAusIso } from '@shared/ct/zeit';
 import { ladeStart } from './start';
 import { ladeUebersicht, type Uebersicht } from './veranstaltungen';
 import { anlegenMoeglich, istGruppenAdmin } from './einrichten';
-import { formularAdresse } from './gemeinde';
+import { gemeindeEinstellungen } from './gemeinde';
 
 vi.mock('./start', () => ({ ladeStart: vi.fn() }));
 // Die Veranstaltungsseite als Attrappe: Ein Knopf meldet „archiviert“ – wie „Verwalten → Löschen“.
@@ -36,8 +36,13 @@ vi.mock('./einrichten', async (original) => ({
   anlegenMoeglich: vi.fn(),
   istGruppenAdmin: vi.fn().mockResolvedValue(false),
 }));
-vi.mock('./gemeinde', () => ({ formularAdresse: vi.fn() }));
-const adresse = vi.mocked(formularAdresse);
+vi.mock('./gemeinde', () => ({ gemeindeEinstellungen: vi.fn() }));
+const gemeinde = vi.mocked(gemeindeEinstellungen);
+/** Die Adresse der Formular-Seite in den Einstellungen der Gemeinde (A6-2; seit A7-2 mit den Zahlarten geladen). */
+const adresse = {
+  mockResolvedValue: (formularAdresse: string | null) =>
+    gemeinde.mockResolvedValue({ neuePersonen: null, formularAdresse, zahlarten: ['Überweisung'] }),
+};
 const admin = vi.mocked(istGruppenAdmin);
 const laden = vi.mocked(ladeStart);
 const ladenUebersicht = vi.mocked(ladeUebersicht);

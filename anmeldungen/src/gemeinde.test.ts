@@ -4,6 +4,7 @@ import { KeinSpeicherRecht } from '@ui/ct/verbindung';
 import * as E from './einrichten';
 import {
   formularAdresse,
+  gemeindeEinstellungen,
   gemeindeVorgaben,
   pruefeFormularSeite,
   gespeicherteVorgaben,
@@ -75,6 +76,7 @@ const STAMM = {
 };
 const VORSCHLAG = { statusId: 2, campusId: 0, departmentId: 1 };
 const ADRESSE = 'https://anmeldung.beispiel.de/';
+const Z = ['Überweisung', 'Bar'];
 
 beforeEach(() => {
   kategorien = [];
@@ -94,10 +96,15 @@ describe('Gemeinde-Einstellung: Vorgaben für neue Personen', () => {
     await speichereGemeindeEinstellungen({
       neuePersonen: { statusId: 1, campusId: 0, departmentId: 1 },
       formularAdresse: ADRESSE,
+      zahlarten: Z,
     });
     expect(kategorien.map((k) => k.shorty)).toEqual(['anmeldungen-einstellungen']);
     expect(await gemeindeVorgaben()).toEqual({ statusId: 1, campusId: 0, departmentId: 1 });
-    await speichereGemeindeEinstellungen({ neuePersonen: VORSCHLAG, formularAdresse: ADRESSE });
+    await speichereGemeindeEinstellungen({
+      neuePersonen: VORSCHLAG,
+      formularAdresse: ADRESSE,
+      zahlarten: Z,
+    });
     expect(werte).toHaveLength(1);
     expect(await gespeicherteVorgaben()).toEqual(VORSCHLAG);
   });
@@ -106,6 +113,7 @@ describe('Gemeinde-Einstellung: Vorgaben für neue Personen', () => {
     await speichereGemeindeEinstellungen({
       neuePersonen: { statusId: 1, campusId: 9, departmentId: 1 },
       formularAdresse: ADRESSE,
+      zahlarten: Z,
     });
     expect(await gemeindeVorgaben()).toEqual(VORSCHLAG);
   });
@@ -119,6 +127,7 @@ describe('Gemeinde-Einstellung: Vorgaben für neue Personen', () => {
     await speichereGemeindeEinstellungen({
       neuePersonen: { statusId: 1, campusId: 0, departmentId: 1 },
       formularAdresse: ADRESSE,
+      zahlarten: Z,
     });
     stoerung = new ApiError(503, 'kurz weg');
     await expect(gemeindeVorgaben()).rejects.toMatchObject({ status: 503 });
@@ -127,7 +136,11 @@ describe('Gemeinde-Einstellung: Vorgaben für neue Personen', () => {
   it('übernimmt ChurchTools den Wert nicht → Fehler statt „gespeichert“', async () => {
     schluckeWert = true;
     await expect(
-      speichereGemeindeEinstellungen({ neuePersonen: VORSCHLAG, formularAdresse: ADRESSE }),
+      speichereGemeindeEinstellungen({
+        neuePersonen: VORSCHLAG,
+        formularAdresse: ADRESSE,
+        zahlarten: Z,
+      }),
     ).rejects.toThrow(/nicht übernommen/);
   });
 
@@ -145,10 +158,15 @@ describe('Gemeinde-Einstellung: Vorgaben für neue Personen', () => {
     await speichereGemeindeEinstellungen({
       neuePersonen: VORSCHLAG,
       formularAdresse: 'anmeldung.beispiel.de',
+      zahlarten: Z,
     });
     expect(await formularAdresse()).toBe(ADRESSE);
     await expect(
-      speichereGemeindeEinstellungen({ neuePersonen: VORSCHLAG, formularAdresse: 'http://x.de' }),
+      speichereGemeindeEinstellungen({
+        neuePersonen: VORSCHLAG,
+        formularAdresse: 'http://x.de',
+        zahlarten: Z,
+      }),
     ).rejects.toMatchObject({ status: 422 });
   });
 
@@ -167,6 +185,25 @@ describe('Gemeinde-Einstellung: Vorgaben für neue Personen', () => {
     ];
     expect(await gespeicherteVorgaben()).toEqual(VORSCHLAG);
     expect(await formularAdresse()).toBeNull();
+    // A7-2: ohne Zahlarten die Standardliste.
+    expect((await gemeindeEinstellungen()).zahlarten).toEqual(['Überweisung', 'Bar', 'PayPal']);
+  });
+
+  it('Zahlarten (A7-2): ohne Einstellung die Standardliste; gespeichert bereinigt; leer abgelehnt', async () => {
+    expect((await gemeindeEinstellungen()).zahlarten).toEqual(['Überweisung', 'Bar', 'PayPal']);
+    await speichereGemeindeEinstellungen({
+      neuePersonen: VORSCHLAG,
+      formularAdresse: ADRESSE,
+      zahlarten: [' Bar ', 'bar', 'Kartenzahlung', ''],
+    });
+    expect((await gemeindeEinstellungen()).zahlarten).toEqual(['Bar', 'Kartenzahlung']);
+    await expect(
+      speichereGemeindeEinstellungen({
+        neuePersonen: VORSCHLAG,
+        formularAdresse: ADRESSE,
+        zahlarten: [' '],
+      }),
+    ).rejects.toMatchObject({ status: 422 });
   });
 
   it('Seiten-Prüfung: antwortet die Seite, steht die Herkunft in ChurchTools – jeder Zweig einzeln', async () => {

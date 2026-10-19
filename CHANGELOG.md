@@ -7,6 +7,21 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Anmeldungen, A7-2)
+
+- **Zahlung im Fenster einer Anmeldung** (Entwurf `a7-anmeldungen-v2`): **als bezahlt markieren** mit Zahlart und Tag,
+  **zurücksetzen**, **Betrag ändern** – jeweils mit „Rückgängig“. Geschrieben wird bei der ersten Person der Anmeldung
+  (`zahlungBei`), nachgelesen nach jedem Schreiben. Gemessen 19.10.2026: `PATCH /groups/{id}/members/{personId}` mit
+  `{fields: {…}}` ändert nur die geschickten Felder, keine Mail. Hat die erste Person abgesagt, wird nichts geschrieben
+  (kommt mit A7-3).
+- **Zahlarten** (Alwin, 19.10.2026: „je Gemeinde + je Veranstaltung“): Liste in den Einstellungen der Gemeinde
+  (vorbelegt Überweisung, Bar, PayPal), je Veranstaltung abwählbar (Karte „Bezahlung“, `ohneZahlarten` – nur gespeichert,
+  wenn etwas abgewählt ist). Neues Systemfeld **„Zahlart“**; ältere Veranstaltungen bekommen es beim ersten „bezahlt“
+  (`systemfelderNachziehen`, dieselbe Stelle wie beim Freigeben).
+- **Betrag von Hand:** In der Aufschlüsselung steht dann „Von Hand geändert am …“; die Nachprüfung meldet ihn danach
+  nicht mehr als abweichend (`vonHandZeile`/`vonHandBetrag`).
+- „TT.MM.JJJJ“ steht an EINER Stelle (`tagPunkt`) – Unterschrift, Zahlung und Reiter hatten je eine eigene Fassung.
+
 ### Neu (Anmeldungen, A7-1)
 
 - **Reiter „Anmeldungen“** (Entwurf `a7-anmeldungen-v2`, nur ansehen): eine Zeile je Anmeldung (Anmelde-Nr.; ohne Nr.

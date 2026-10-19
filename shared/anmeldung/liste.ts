@@ -231,6 +231,9 @@ export interface ListenAnmeldung {
   aufschluesselung: string | null;
   bezahlt: boolean;
   bezahltAm: string | null;
+  zahlart: string | null;
+  /** Bei wem Betrag und Zahlung stehen (erste Person) – `null`, wenn sie abgesagt hat (dann aus dem Verlauf). */
+  zahlungBei: number | null;
   /** Kostet etwas, jemand hat einen Platz, und „Bezahlt“ ist nicht angekreuzt. */
   zahlungOffen: boolean;
 }
@@ -317,6 +320,9 @@ export function anmeldungenAus(
       bezahltAm:
         (e.ctFelder.bezahltAm === undefined ? undefined : w[e.ctFelder.bezahltAm]?.slice(0, 10)) ??
         null,
+      zahlart: (e.ctFelder.zahlart === undefined ? undefined : w[e.ctFelder.zahlart]) ?? null,
+      // Ohne Einmaliges (z. B. ältere Anmeldung ohne Betrag) die erste Person der Zeile.
+      zahlungBei: ausVerlauf ? null : (erste ?? reihe[0]).personId,
       zahlungOffen:
         kostet &&
         betragCent !== null &&

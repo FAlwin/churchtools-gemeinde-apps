@@ -12,6 +12,7 @@ import {
   type Wert,
 } from '@shared/ct/modulDaten';
 import { formularAdresseAus, herkunftVon } from '@shared/anmeldung/oeffentlich';
+import { STANDARD_ZAHLARTEN, zahlartenSauber } from '@shared/anmeldung/zahlung';
 import {
   vorgabenVollstaendig,
   vorgabenVorschlag,
@@ -30,6 +31,9 @@ import { stammdaten } from './einrichten';
  * ihren eigenen Webspace – „Voraussetzung für diese Extension, auf keinen Fall soll unsere Domain da sichtbar
  * werden“. Ohne Adresse gibt es keinen Link, und die Erweiterung zeigt nur, was einzurichten ist.
  *
+ * Seit A7-2 die **Zahlarten** (Alwin, 19.10.2026: „je Gemeinde + je Veranstaltung“) – ohne Eintrag Überweisung, Bar,
+ * PayPal; eine Veranstaltung kann einzelne abwählen.
+ *
  * Wer die Kategorie in ChurchTools nicht sehen darf, bekommt eine leere Liste (gemessen, Musik-App) – dann gilt
  * der Vorschlag bzw. „keine Adresse“. Netz, Drosselung, 5xx **werfen**: Ein Aussetzer darf nicht still die Wahl der
  * Gemeinde ersetzen.
@@ -46,12 +50,23 @@ interface Ablage {
   fassung: typeof FASSUNG;
   neuePersonen?: NeuePersonVorgaben | null;
   formularAdresse?: string | null;
+  zahlarten?: unknown[];
 }
 
 /** Was eine Gemeinde eingestellt hat – jeder Teil einzeln geprüft, Ungültiges zählt als „nicht eingestellt“. */
 export interface GemeindeEinstellungen {
   neuePersonen: NeuePersonVorgaben | null;
   formularAdresse: string | null;
+  /** Nie leer – ohne gespeicherte Liste die Standardliste. */
+  zahlarten: string[];
+}
+
+const standardZahlarten = () => [...STANDARD_ZAHLARTEN];
+
+/** Gespeicherte Zahlarten – fehlen sie oder ist die Liste leer, gilt die Standardliste. */
+function zahlartenAus(roh: unknown): string[] {
+  const z = Array.isArray(roh) ? zahlartenSauber(roh) : [];
+  return z.length ? z : standardZahlarten();
 }
 
 function ablageAus(w: Wert): GemeindeEinstellungen | null {
@@ -61,6 +76,7 @@ function ablageAus(w: Wert): GemeindeEinstellungen | null {
     neuePersonen: vorgabenVollstaendig(a.neuePersonen) ? a.neuePersonen : null,
     formularAdresse:
       typeof a.formularAdresse === 'string' ? formularAdresseAus(a.formularAdresse) : null,
+    zahlarten: zahlartenAus(a.zahlarten),
   };
 }
 
@@ -69,18 +85,22 @@ function unserWert(werte: Wert[]): Wert | null {
   return [...werte].sort((a, b) => a.id - b.id).find((w) => ablageAus(w) !== null) ?? null;
 }
 
-const NICHTS: GemeindeEinstellungen = { neuePersonen: null, formularAdresse: null };
+const NICHTS = (): GemeindeEinstellungen => ({
+  neuePersonen: null,
+  formularAdresse: null,
+  zahlarten: standardZahlarten(),
+});
 
 /** Was gespeichert ist – „nichts“, wenn es keine Einstellungen gibt oder man sie nicht sehen darf. */
 export async function gemeindeEinstellungen(): Promise<GemeindeEinstellungen> {
   try {
     const modul = await modulId();
     const kategorie = await kategorieSuchen(modulPort, modul, KATEGORIE_KUERZEL);
-    if (kategorie === null) return NICHTS;
+    if (kategorie === null) return NICHTS();
     const w = unserWert(await werteLesen(modulPort, modul, kategorie));
-    return w ? ablageAus(w)! : NICHTS;
+    return w ? ablageAus(w)! : NICHTS();
   } catch (e) {
-    if (istDauerhaftLeer(modulPort, e)) return NICHTS;
+    if (istDauerhaftLeer(modulPort, e)) return NICHTS();
     throw e;
   }
 }
@@ -120,15 +140,19 @@ export async function gemeindeVorgaben(s?: Stammdaten): Promise<Partial<NeuePers
 export async function speichereGemeindeEinstellungen(g: {
   neuePersonen: NeuePersonVorgaben;
   formularAdresse: string;
+  zahlarten: string[];
 }): Promise<void> {
   const adresse = formularAdresseAus(g.formularAdresse);
   if (!adresse)
     throw new ApiError(422, 'Bitte eine gültige https-Adresse für das Formular eintragen.');
+  const zahlarten = zahlartenSauber(g.zahlarten);
+  if (zahlarten.length === 0) throw new ApiError(422, 'Bitte mindestens eine Zahlart eintragen.');
   const text = JSON.stringify({
     art: ART,
     fassung: FASSUNG,
     neuePersonen: g.neuePersonen,
     formularAdresse: adresse,
+    zahlarten,
   } satisfies Ablage);
   const modul = await modulId();
   const kategorie = await kategorieSicherstellen(

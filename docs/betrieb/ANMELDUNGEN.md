@@ -75,7 +75,7 @@ prüfen. Was trotzdem durchkommt, entfernt die Leitung in ChurchTools (sehen kan
 jemand, rückt in ChurchTools niemand von selbst nach, auch wenn ihr Plätze dazugebt; neue Anmeldungen kommen dann
 hinten an. Nachrücken lassen geht vorerst in ChurchTools.
 
-**Reiter „Anmeldungen“** (bisher nur ansehen): eine Zeile je Anmeldung (über die Anmelde-Nr.) mit Personen, Alter,
+**Reiter „Anmeldungen“:** eine Zeile je Anmeldung (über die Anmelde-Nr.) mit Personen, Alter,
 Warteplatz, Betrag und Zahlung; oben Plätze, Warteliste und offene Zahlungen, dazu der Hinweis, wenn Plätze frei sind
 und jemand wartet. Filter: Alle, Zahlung offen, Warteliste, Abgesagt; Suche nach Namen. Ein Klick öffnet alle
 Antworten – was für die ganze Anmeldung gilt (Kontakt, Erziehungsberechtigte, Unterschrift als Bild), steht einmal
@@ -83,6 +83,13 @@ oben. **Abgesagt** kommt aus dem Verlauf von ChurchTools: Er behält auch die An
 Betrag oder Unterschrift nicht verloren, wenn die erste Person einer Anmeldung absagt. Sehen kann die Liste, wer in
 ChurchTools die Mitglieder der Gruppe sehen darf. Gut zu wissen: Entfernt ihr in ChurchTools jemanden, bekommt die
 Person **keine** Mail; beim Nachrücken schickt ChurchTools nur „Deine Anmeldung war erfolgreich“ – ohne Betrag.
+
+**Zahlung:** Im Fenster einer Anmeldung markiert ihr sie als **bezahlt** (Zahlart und Tag), setzt das zurück oder
+**ändert den Betrag** (z. B. nach Absprache – in der Aufschlüsselung steht dann „Von Hand geändert am …“, und die
+Nachprüfung meldet ihn nicht mehr). Bezahlt gilt für die ganze Anmeldung und steht in ChurchTools bei der ersten Person
+(„Bezahlt“, „Bezahlt am“, „Zahlart“). Nach jeder Änderung gibt es „Rückgängig“. Die **Zahlarten** legt ihr in den
+Einstellungen der Gemeinde fest (vorbelegt: Überweisung, Bar, PayPal); jede Veranstaltung kann einzelne abwählen
+(Karte „Bezahlung“).
 
 **Begrenzte Auswahl** (z. B. Zimmer): Je Option „Wie oft buchbar“ (jede Anmeldung belegt eins) und freiwillig
 „Für wie viele Personen“ (nur ein Hinweis im Formular). Die Erweiterung zählt die Belegung, sobald jemand mit

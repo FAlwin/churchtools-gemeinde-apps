@@ -7,6 +7,22 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Intern (Ablauf-Baustein, E6-2b-3, #643)
+
+- **Die Bearbeiten-Liste des Ablaufs ist ein gemeinsamer Baustein** (`ui/ablauf/useAblaufBearbeiten.tsx`, für Nutzer
+  unsichtbar): Ziehen, Punkt-Fenster, Plus, Löschen mit Rückfrage, „Rückgängig“ und der Hinweis bei abgeschlossenem
+  Ablauf – die Musik-App steckt ihre Liedwahl ein (`LiedVerknuepfen`, vorher `ItemActionSheet`), der Dienstplaner
+  nutzt die Liste ab E6-3. Mit umgezogen: `ConfirmDialog` (`ui/fenster`), `SchwebePlus` und die Ziehen-Hilfen
+  (`ui/bedienung`), die Vorlauf-Regel beim Umsortieren (`vorlaufNachUmsortieren`, jetzt neben `beginnStelle` in
+  `shared/ct/ablaufZeile.ts`). Fotos von Bearbeiten-Liste, „Eintrag bearbeiten“, Lösch-Rückfrage und „Neuer
+  Eintrag“ sind vorher und nachher byte-gleich.
+
+### Behoben (Musik-App, #643)
+
+- Scheiterte beim Bearbeiten des Ablaufs das **Verschieben oder Löschen**, standen danach längst entfernte Punkte
+  (die grauen „entfernt“-Platzhalter aus der Ansicht) wieder in der Bearbeiten-Liste. Ändern und „Rückgängig“
+  rollten schon richtig zurück – jetzt alle vier über dieselbe Stelle.
+
 ### Intern (Ablauf-Baustein, E6-2b-2, #641)
 
 - **Das Punkt-Fenster ist ein gemeinsamer Baustein** (`ui/ablauf/PunktFenster.tsx`, für Nutzer unsichtbar): Titel,

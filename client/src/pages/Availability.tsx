@@ -3,7 +3,7 @@ import type { Absence, AbsenceEvent, NeueAbsence } from '@shared/types/index';
 import { SeitenGeruest } from '../components/SeitenGeruest';
 import { CenterMessage } from '../components/CenterMessage';
 import { Icon } from '@ui/icons/icons';
-import { SchwebePlus } from '../components/SchwebePlus';
+import { SchwebePlus } from '@ui/bedienung/SchwebePlus';
 import { Coachmarks } from '../components/Coachmarks';
 import { MonatsLeiste } from '../components/MonatsLeiste';
 import { AbsenceSheet, type Entwurf } from '../components/AbsenceSheet';

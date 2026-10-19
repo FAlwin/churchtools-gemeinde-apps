@@ -28,7 +28,7 @@ bei jedem Testlauf mit dabei.
 <details><summary>Technisches</summary>
 
 - **Priorität:** kritisch
-- **Betrifft:** `server/src/services/agendaPayload.ts`, `server/src/services/ctWrite.ts`, `client/src/components/ItemActionSheet.tsx`, `ui/ablauf/PunktFenster.tsx`, `client/src/components/SongPicker.tsx`
+- **Betrifft:** `server/src/services/agendaPayload.ts`, `server/src/services/ctWrite.ts`, `client/src/components/LiedVerknuepfen.tsx`, `ui/ablauf/PunktFenster.tsx`, `client/src/components/SongPicker.tsx`
 - **Automatisiert:** teilweise – `server/src/services/agendaPayload.test.ts`
 - **Historie:** –
 
@@ -49,7 +49,7 @@ Schritt 6 genau den Liednamen einträgst, steht er nur **einmal** da, nicht dopp
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `ui/ablauf/PunktFenster.tsx`, `shared/ct/ablaufZeile.ts`, `shared/ct/agendaItemChanges.ts`, `ui/ablauf/AblaufTeile.tsx`
+- **Betrifft:** `client/src/components/LiedVerknuepfen.tsx`, `ui/ablauf/PunktFenster.tsx`, `shared/ct/ablaufZeile.ts`, `shared/ct/agendaItemChanges.ts`, `ui/ablauf/AblaufTeile.tsx`
 - **Automatisiert:** ja – `shared/ct/ablaufZeile.test.ts`, `shared/ct/agendaItemChanges.test.ts`
 - **Historie:** #200
 
@@ -70,7 +70,7 @@ Zeile verschwunden (in ChurchTools steht dann 0 Minuten – „keine Dauer" kenn
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `ui/ablauf/PunktFenster.tsx`, `shared/ct/agendaItemChanges.ts`, `ui/ablauf/ResponsibleField.tsx`
+- **Betrifft:** `client/src/components/LiedVerknuepfen.tsx`, `ui/ablauf/PunktFenster.tsx`, `shared/ct/agendaItemChanges.ts`, `ui/ablauf/ResponsibleField.tsx`
 - **Automatisiert:** teilweise – `shared/ct/agendaItemChanges.test.ts`
 - **Historie:** – (der frühere Schritt „Uhrzeit ausblenden" ist mit #423 entfallen, siehe TF-EDIT-08)
 
@@ -92,7 +92,7 @@ tippen auf den Titel darf **kein** Ziehen auslösen.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `ui/ablauf/AgendaSortableRow.tsx`, `client/src/pages/Setlist.tsx`, `client/src/utils/dndAutoScroll.ts`
+- **Betrifft:** `ui/ablauf/AgendaSortableRow.tsx`, `client/src/pages/Setlist.tsx`, `ui/bedienung/dndAutoScroll.ts`
 - **Automatisiert:** nein – Ziehen mit dem Finger
 - **Historie:** –
 
@@ -123,8 +123,8 @@ sich gleich setzen; ein zweites Fenster danach gibt es nicht mehr. Die Rückfrag
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `ui/ablauf/PunktFenster.tsx`, `shared/ct/agendaItemChanges.ts`, `client/src/components/SchwebePlus.tsx`, `client/src/pages/Setlist.tsx`, `client/src/components/ConfirmDialog.tsx`
-- **Automatisiert:** teilweise – `e2e/ablauf-hinzufuegen.spec.ts` (Plus nur im Bearbeiten-Modus, Text anlegen, steht in der Liste, Löschen), `client/src/components/ItemActionSheet.test.tsx`, `ui/ablauf/PunktFenster.test.tsx` (Neuer Eintrag: Suche sofort offen, Titel = Liedname, Überschrift nur Titel, Fehler bleibt im Fenster), `shared/ct/agendaItemChanges.test.ts` (`neuerAgendaPunkt`); von Hand bleibt das Schreiben nach ChurchTools
+- **Betrifft:** `client/src/components/LiedVerknuepfen.tsx`, `ui/ablauf/PunktFenster.tsx`, `shared/ct/agendaItemChanges.ts`, `ui/bedienung/SchwebePlus.tsx`, `client/src/pages/Setlist.tsx`, `ui/fenster/ConfirmDialog.tsx`
+- **Automatisiert:** teilweise – `e2e/ablauf-hinzufuegen.spec.ts` (Plus nur im Bearbeiten-Modus, Text anlegen, steht in der Liste, Löschen), `client/src/components/LiedVerknuepfen.test.tsx`, `ui/ablauf/PunktFenster.test.tsx` (Neuer Eintrag: Suche sofort offen, Titel = Liedname, Überschrift nur Titel, Fehler bleibt im Fenster), `shared/ct/agendaItemChanges.test.ts` (`neuerAgendaPunkt`); von Hand bleibt das Schreiben nach ChurchTools
 - **Historie:** schwebendes Plus und einheitlicher Dialog 05.10.2026 (vorher eigenes „Hinzufügen"-Blatt mit drei Formularen)
 
 </details>
@@ -148,7 +148,7 @@ verschobenen Symbole.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `ui/fenster/useOverlayKeyboardInset.ts`, `client/src/components/ItemActionSheet.tsx`, `ui/ablauf/PunktFenster.tsx`, `ui/fenster/Sheet.tsx`
+- **Betrifft:** `ui/fenster/useOverlayKeyboardInset.ts`, `client/src/components/LiedVerknuepfen.tsx`, `ui/ablauf/PunktFenster.tsx`, `ui/fenster/Sheet.tsx`
 - **Automatisiert:** teilweise – `ui/fenster/useOverlayKeyboardInset.test.tsx`
 - **Historie:** #207
 
@@ -184,8 +184,8 @@ dem Punkt, den du bearbeitet hast – in ChurchTools ein Lied-Punkt mit Arrangem
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `ui/ablauf/PunktFenster.tsx`, `client/src/components/NewSongSheet.tsx`, `client/src/components/SongPicker.tsx`
-- **Automatisiert:** teilweise – `client/src/components/ItemActionSheet.test.tsx`, `ui/ablauf/PunktFenster.test.tsx` (Weg nur mit Recht, ohne `eventId`, Vormerken statt Schreiben, Abbruch merkt nichts vor), `client/src/components/NewSongSheet.test.tsx` (Erfolgsansicht mit `onVerknuepfen`: Satz, „Zurück zum Eintrag" und „Fertig" tragen die Verknüpfung, kein „Noch ein Lied anlegen"); von Hand bleibt der Schreibvorgang gegen ChurchTools
+- **Betrifft:** `client/src/components/LiedVerknuepfen.tsx`, `ui/ablauf/PunktFenster.tsx`, `client/src/components/NewSongSheet.tsx`, `client/src/components/SongPicker.tsx`
+- **Automatisiert:** teilweise – `client/src/components/LiedVerknuepfen.test.tsx`, `ui/ablauf/PunktFenster.test.tsx` (Weg nur mit Recht, ohne `eventId`, Vormerken statt Schreiben, Abbruch merkt nichts vor), `client/src/components/NewSongSheet.test.tsx` (Erfolgsansicht mit `onVerknuepfen`: Satz, „Zurück zum Eintrag" und „Fertig" tragen die Verknüpfung, kein „Noch ein Lied anlegen"); von Hand bleibt der Schreibvorgang gegen ChurchTools
 - **Historie:** #391 (18.09.2026)
 
 </details>
@@ -217,8 +217,8 @@ der App wie im ChurchTools-Kalender.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `ui/ablauf/PunktFenster.tsx`, `client/src/components/AgendaFullView.tsx`, `client/src/pages/Setlist.tsx`, `client/src/utils/vorlauf.ts`, `server/src/services/ctWrite.ts`, `server/src/services/agendaPayload.ts`
-- **Automatisiert:** teilweise – `e2e/ablauf-vorlauf.spec.ts` (Schalter → Grenze im Stub → Linie in Bearbeiten-Liste und Ansicht, wieder aus), `client/src/utils/vorlauf.test.ts`, `server/src/services/agendaPayload.test.ts`, `server/src/services/ctWrite.test.ts`; von Hand bleiben die echten Uhrzeiten aus ChurchTools und das Ziehen über die Linie (Schritt 5)
+- **Betrifft:** `client/src/components/LiedVerknuepfen.tsx`, `ui/ablauf/PunktFenster.tsx`, `client/src/components/AgendaFullView.tsx`, `client/src/pages/Setlist.tsx`, `shared/ct/ablaufZeile.ts`, `server/src/services/ctWrite.ts`, `server/src/services/agendaPayload.ts`
+- **Automatisiert:** teilweise – `e2e/ablauf-vorlauf.spec.ts` (Schalter → Grenze im Stub → Linie in Bearbeiten-Liste und Ansicht, wieder aus), `shared/ct/ablaufVorlauf.test.ts`, `server/src/services/agendaPayload.test.ts`, `server/src/services/ctWrite.test.ts`; von Hand bleiben die echten Uhrzeiten aus ChurchTools und das Ziehen über die Linie (Schritt 5)
 - **Historie:** #423 (05.10.2026)
 
 </details>

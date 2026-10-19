@@ -25,7 +25,7 @@ import type { ArrangementAnsicht, ArrangementAuftrag } from '@shared/types/index
 import { Sheet } from '@ui/fenster/Sheet';
 import { Icon } from '@ui/icons/icons';
 import { CenterMessage } from './CenterMessage';
-import { ConfirmDialog } from './ConfirmDialog';
+import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { Coachmarks } from './Coachmarks';
 import {
   LIED_STAMMDATEN_STEPS,

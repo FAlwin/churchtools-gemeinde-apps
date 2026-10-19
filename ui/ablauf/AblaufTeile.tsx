@@ -71,7 +71,7 @@ export function ResponsibleLine({ entries }: { entries: AblaufZeile['responsible
 
 /**
  * Die Linie zwischen Vorlauf und Veranstaltung (#423): „Beginn · 10:00 Uhr". Steht in der Ansicht UND in
- * der Bearbeiten-Liste an derselben Stelle (`utils/vorlauf.ts`), damit sich beim Umschalten nichts
+ * der Bearbeiten-Liste an derselben Stelle (`beginnStelle` in `@shared/ct/ablaufZeile`), damit sich beim Umschalten nichts
  * verschiebt. Ohne Uhrzeit (sie fehlt nie, aber sicher ist sicher) steht nur „Beginn".
  */
 export function BeginnLinie({ zeit }: { zeit?: string }) {

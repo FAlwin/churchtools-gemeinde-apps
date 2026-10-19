@@ -52,7 +52,7 @@ interface Optionen {
   /**
    * Kann aus einem SongSelect-Treffer an dieser Stelle überhaupt ein Lied werden?
    *
-   * **Ohne diesen Weg gibt es SongSelect hier nicht.** In „Lied verknüpfen" (`ItemActionSheet`) wird
+   * **Ohne diesen Weg gibt es SongSelect hier nicht.** In „Lied verknüpfen" (`LiedVerknuepfen`) wird
    * einem **vorhandenen** Ablaufpunkt ein Lied zugeordnet; ein neu angelegtes Lied müsste dort in diesen
    * Punkt hineingeschrieben werden, was der Anlege-Weg nicht kann. Ein Angebot dorthin wäre eine
    * Sackgasse. Im Liederheft ist es ebenso: Dort schlägt man nach, SongSelect hat dort nichts zu suchen.

@@ -1,14 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import type { AgendaItem } from '@shared/types/index';
-import { vorlaufNachUmsortieren } from './vorlauf';
+import { vorlaufNachUmsortieren } from './ablaufZeile';
 
 /**
  * #423: Wo die Linie „Beginn" steht und wie sie beim Umsortieren an ihrem Platz bleibt. Beides teilen
  * Ansicht und Bearbeiten-Liste – stünde die Linie in einer der beiden woanders, sprängen die Zeilen
  * beim Umschalten.
  */
-const punkt = (id: number, vorBeginn: boolean): AgendaItem =>
-  ({ id, title: `P${id}`, vorBeginn }) as unknown as AgendaItem;
+const punkt = (id: number, vorBeginn: boolean) => ({ id, title: `P${id}`, vorBeginn });
 
 describe('vorlaufNachUmsortieren – die Grenze ist eine Platznummer (wie in ChurchTools)', () => {
   const vorher = [punkt(1, true), punkt(2, true), punkt(3, false), punkt(4, false)];

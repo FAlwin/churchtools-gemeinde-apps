@@ -28,6 +28,10 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 - Anmeldetag aus dem Verlauf: Einträge derselben Sekunde nach ihrer Nummer; wer vom Team wieder aufgenommen wird,
   behält ihn (gemessen 19.10.2026: Entfernen und Wieder-Aufnehmen tragen dieselbe Sekunde).
+- Weiße Seite, sobald „Rückgängig“ im Fenster verschwand (z. B. „Mail schreiben“, Fenster schließen; seit A7-2):
+  Chrome 152 gibt bei `scrollIntoView` ein Promise zurück, der Effekt reichte es als Aufräum-Funktion an React weiter.
+  ESLint verbietet solche Effekt-Rümpfe jetzt im ganzen Repo (`no-restricted-syntax`); vier harmlose Stellen
+  (Baukasten, Dienstplaner-Termine, Formular) entsprechend umgestellt.
 
 ### Neu (Anmeldungen, A7-2)
 

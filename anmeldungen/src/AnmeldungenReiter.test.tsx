@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { AnmeldungenReiter, type MitgliederZustand } from './AnmeldungenReiter';
 import * as Z from './zahlung';
@@ -206,6 +206,14 @@ describe('Zahlung im Fenster (A7-2)', () => {
 });
 
 describe('Nachrücken und Absagen (A7-3)', () => {
+  // Wie Chrome 152: `scrollIntoView` gibt ein Promise zurück (jsdom kennt es gar nicht). Stand das als Rückgabe in einem
+  // Effekt, hielt React es für die Aufräum-Funktion – „Mail schreiben“ ließ die Zeile verschwinden, die Seite wurde weiß.
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = () => Promise.resolve() as unknown as void;
+  });
+  afterEach(() => {
+    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+  });
   const oeffnen = () => fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));
   const karte = (text: string) => screen.getByText(text).closest('div')!.parentElement!;
 

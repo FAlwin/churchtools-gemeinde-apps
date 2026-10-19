@@ -109,6 +109,20 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      /**
+       * Ein Effekt gibt NUR seine Aufräum-Funktion zurück. `useEffect(() => el.scrollIntoView())` gab still den
+       * Rückgabewert weiter – seit Chrome 152 ein Promise; React rief es beim Verschwinden als Aufräum-Funktion auf, die
+       * Seite wurde weiß (Anmeldungen, 19.10.2026). TypeScript sieht das nicht (`scrollIntoView(): void`), also hier.
+       */
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            'CallExpression[callee.name=/^use(Layout|Insertion)?Effect$/] > ArrowFunctionExpression[body.type!=/^(BlockStatement|ArrowFunctionExpression|FunctionExpression)$/]',
+          message:
+            'Effekt-Rumpf in { } setzen: Der Wert eines Ausdrucks würde zur Aufräum-Funktion (Chrome 152: scrollIntoView liefert ein Promise → Absturz beim Verschwinden).',
+        },
+      ],
     },
   },
 

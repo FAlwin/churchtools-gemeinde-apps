@@ -219,7 +219,9 @@ export function Baukasten({
     setLokalG(null);
     setLokalWer(null);
   }, [e, laeuft]);
-  useEffect(() => setNameEntwurf(name), [name]);
+  useEffect(() => {
+    setNameEntwurf(name);
+  }, [name]);
 
   /** Das bearbeitete Feld speichern, falls es sich geändert hat und in Ordnung ist. */
   const feldSichern = useCallback(() => {

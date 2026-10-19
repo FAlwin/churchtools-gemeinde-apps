@@ -34,7 +34,7 @@ export function AbmeldeSeite({ ort }: { ort: AbmeldeOrt }) {
     };
   }, [ort]);
 
-  useEffect(() => laden(), [laden]);
+  useEffect(laden, [laden]);
 
   if (stand.art === 'laedt')
     return (

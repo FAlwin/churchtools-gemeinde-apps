@@ -92,9 +92,13 @@ export function RueckgaengigImFenster({
   zusatz?: ReactNode;
 }) {
   const { stand, fehler, zurueck } = useRueckgaengig(aenderung, onRueckgaengig);
-  // Die Zeile kann weit unten im Fenster entstehen (Knopf an einer Person) – sie soll zu sehen sein.
+  // Die Zeile kann weit unten im Fenster entstehen (Knopf an einer Person) – sie soll zu sehen sein. In geschweiften
+  // Klammern: Chrome 152 gibt bei `scrollIntoView` ein Promise zurück – als Rückgabe des Effekts hielt React es für
+  // die Aufräum-Funktion und stürzte ab, sobald die Zeile verschwand (19.10.2026, „Mail schreiben“ → weiße Seite).
   const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => ref.current?.scrollIntoView?.({ block: 'nearest' }), []);
+  useEffect(() => {
+    ref.current?.scrollIntoView?.({ block: 'nearest' });
+  }, []);
   return (
     <div ref={ref} className={v.imFenster} role="status">
       <span>

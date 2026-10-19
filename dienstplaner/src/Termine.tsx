@@ -51,7 +51,9 @@ export function Termine({ zustand, planer, onNochmal, onMehr, onTermin }: Props)
   // Weitere Wochen laden im Hintergrund (das Bisherige bleibt stehen) – bis die Antwort da ist, sagt der
   // Knopf es.
   const [laeuft, setLaeuft] = useState(false);
-  useEffect(() => setLaeuft(false), [zustand]);
+  useEffect(() => {
+    setLaeuft(false);
+  }, [zustand]);
   const mehr = () => {
     setLaeuft(true);
     onMehr();

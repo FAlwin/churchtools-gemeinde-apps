@@ -6,6 +6,8 @@ import { setSettingsSyncErrorHandler } from './services/userSettings';
 import { setAnnotationsSyncErrorHandler } from './services/annotations';
 import { Login } from './pages/Login';
 import { Agenda } from './pages/Agenda';
+import { ablaufRechteAus, darfAblaufBearbeiten } from '@shared/ct/ablaufRecht';
+import type { Service } from '@shared/types/index';
 import { useSettings } from './hooks/useSettings';
 import { useWakeLock } from './hooks/useWakeLock';
 import { useAuth } from './hooks/useAuth';
@@ -139,7 +141,10 @@ export default function App() {
   const sessionExpired = capsQuery.error instanceof ApiError && capsQuery.error.status === 401;
   const canViewAgendas = caps?.canViewAgendas ?? false;
   const canViewSongs = caps?.canViewSongs ?? false;
-  const canEditAgendas = caps?.canEditAgendas ?? false;
+  // Ob ein Ablauf bearbeitet werden darf, hängt am Termin (Kalender, Termin-Admin) – die eine Regel (#635).
+  const ablaufRechte = ablaufRechteAus(caps);
+  const ichId = auth.user?.id ?? null;
+  const darfAblauf = (s: Service): boolean => darfAblaufBearbeiten(ablaufRechte, s, ichId);
   const canEditSongs = caps?.canEditSongs ?? false;
   const isAdmin = caps?.isAdmin ?? false;
   const canUseAvailability = caps?.canUseAvailability ?? false;
@@ -152,6 +157,7 @@ export default function App() {
   // braucht – die Abfrage muss also vorher stehen.
   const [pollServices, setPollServices] = useState(true);
   const servicesQuery = useServices(auth.isAuthenticated && canViewAgendas, pollServices);
+  const bearbeitbareTermine = (servicesQuery.data ?? []).filter(darfAblauf);
   // Hält den nächsten Gottesdienst automatisch offline bereit (falls in den Einstellungen aktiv).
   useOfflineAutoSync(funktionen.offline ? servicesQuery.data : undefined);
   // Offline-Zustand: Liedersammlung braucht das Netz (Charts werden je Lied geladen) → Tab wird
@@ -202,7 +208,7 @@ export default function App() {
   const updateAgendaItem = useUpdateAgendaItem(service?.id ?? null);
   const setAgendaItemVorBeginn = useSetAgendaItemVorBeginn(service?.id ?? null);
   const agendaServices = useAgendaServices(
-    auth.isAuthenticated && canEditAgendas && view?.type === 'setlist',
+    auth.isAuthenticated && service !== null && darfAblauf(service) && view?.type === 'setlist',
   );
   const createAgendaItem = useCreateAgendaItem(service?.id ?? null);
   const songLibrary = useSongLibrary(
@@ -475,7 +481,7 @@ export default function App() {
           add: (data) => createAgendaItem.mutateAsync(data).then(() => undefined),
         }}
         services={agendaServices.data ?? []}
-        canEdit={canEditAgendas}
+        canEdit={darfAblauf(frischerTermin)}
         onAblaufSichtbar={setAblaufSichtbar}
       />
     );
@@ -550,7 +556,7 @@ export default function App() {
             isLoading={servicesQuery.isLoading}
             isError={servicesQuery.isError}
             onRetry={() => servicesQuery.refetch()}
-            kannAblaufAnlegen={canEditAgendas}
+            kannAblaufAnlegen={darfAblauf}
             onSelect={(s) => {
               setService(s);
               setView({ type: 'setlist' });
@@ -587,8 +593,9 @@ export default function App() {
               }
               openLibrarySong(e.songId, e.arrangementId);
             }}
-            canAddToAgenda={canEditAgendas}
-            services={servicesQuery.data ?? []}
+            /* Nur Termine, deren Ablauf man bearbeiten darf (#635) – sonst endete das Hinzufügen mit 403. */
+            canAddToAgenda={bearbeitbareTermine.length > 0}
+            services={bearbeitbareTermine}
             /* Anlegen braucht Netz: Es schreibt in ChurchTools (#322). */
             canCreateSong={canEditSongs && online}
             onOpenSong={openLibrarySong}

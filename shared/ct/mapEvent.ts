@@ -3,6 +3,7 @@ import type { CtEvent } from './typen';
 import { tagAusIso } from './zeit';
 import { ctId } from './ctId';
 import { MONATE_KURZ } from './datum';
+import { terminAdminIds } from './ablaufRecht';
 
 const TZ = 'Europe/Berlin';
 
@@ -46,5 +47,6 @@ export function mapEventToService(
     // Default; der Controller setzt es je Konto anhand des gemerkten Setlist-Stands (#143).
     setlistChanged: false,
     ...(kalenderId !== null ? { kalenderId } : {}),
+    terminAdminIds: terminAdminIds(ev),
   };
 }

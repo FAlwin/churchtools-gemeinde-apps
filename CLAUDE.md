@@ -1418,7 +1418,8 @@ Vollständige Endpunkt-Referenz: `docs/entwicklung/api-referenz.md`.
 
 - Server liest beim Login `/api/permissions/global` (Modul `churchservice`) → `parseCapabilities`
   (`server/src/services/ctCapabilities.ts`) leitet ab: `canViewSongs`/`canViewAgendas`/`canEditSongs`/
-  `canEditAgendas` (aus `view/edit songcategory|agenda`) + `isAdmin` (aus `ADMIN_PERMISSION`, Default
+  `canEditAgendas` (aus `view/edit songcategory|agenda`; **ob ein bestimmter Ablauf bearbeitbar ist, sagt erst
+  `darfAblaufBearbeiten`** in `shared/ct/ablaufRecht.ts` – Kalender des Termins, Termin-Admin, #635) + `isAdmin` (aus `ADMIN_PERMISSION`, Default
   `churchcore:administer persons`; **Admin ⇒ alles**). Die Fähigkeiten steuern die Client-UI (`App.tsx`,
   Tabs/Knöpfe); serverseitig erzwungen wird `requireSession` (alle Datenrouten) + `requireAdmin`
   (`PUT /api/site-config`, `GET /api/groups`, `GET /api/groups/:id/roles`). Fachliche Schreibrechte

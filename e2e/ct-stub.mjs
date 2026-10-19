@@ -250,7 +250,49 @@ const events = [
     calendar: { domainIdentifier: '6', title: 'Anlegeprobe' },
     appointmentId: null,
   },
+  /**
+   * **Wer darf bearbeiten** (#635, gemessen E6-0): Der Musiker hat `edit agenda` nur für Kalender 1. Ein
+   * Termin mit Ablauf in Kalender 2 → nur ansehen; einer in Kalender 3, dessen Admin er ist → bearbeiten.
+   * Beide nur gelesen, damit kein anderer Test etwas davon merkt.
+   */
+  {
+    id: EVENT_ID + 7,
+    startDate: isoInDays(10),
+    endDate: isoInDays(10, 12),
+    name: 'Fremder Kalender (Stub)',
+    calendar: { domainIdentifier: '2', title: 'Gebetsabend' },
+    appointmentId: null,
+    adminIds: [],
+    eventAdminIds: [],
+  },
+  {
+    id: EVENT_ID + 8,
+    startDate: isoInDays(11),
+    endDate: isoInDays(11, 12),
+    name: 'Termin-Admin (Stub)',
+    calendar: { domainIdentifier: '3', title: 'Jugend' },
+    appointmentId: null,
+    adminIds: [PERSON.id],
+    eventAdminIds: [],
+  },
 ];
+
+/** Die Abläufe der beiden Rechte-Termine (#635) – nur gelesen. */
+const agendaRecht = (calendarId) => ({
+  calendarId,
+  eventStartPosition: 0,
+  isLocked: false,
+  items: [
+    {
+      id: 990 + calendarId,
+      title: 'Begrüßung (Recht)',
+      type: 'normal',
+      duration: 300,
+      position: 0,
+      startTimes: {},
+    },
+  ],
+});
 
 /** Die Ablauf-Vorlage für „Ablauf anlegen" – Punkte wie in ChurchTools (`type` text/header). */
 const VORLAGE = {
@@ -658,6 +700,8 @@ const server = createServer((req, res) => {
     res.writeHead(204);
     return res.end();
   }
+  if (path === `/api/events/${EVENT_ID + 7}/agenda`) return json(res, { data: agendaRecht(2) });
+  if (path === `/api/events/${EVENT_ID + 8}/agenda`) return json(res, { data: agendaRecht(3) });
   if (path === `/api/events/${EVENT_ID + 3}/agenda`) {
     return json(res, { data: agendaAbschluss });
   }

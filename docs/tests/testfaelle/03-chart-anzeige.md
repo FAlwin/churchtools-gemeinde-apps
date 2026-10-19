@@ -559,3 +559,31 @@ Blatt steht „Ablauf: …“. Ein vertippter Name wird unter der Werkzeugleiste
 - **Historie:** #606 (Rückmeldung Musik-Bereichsleiter, 17.10.2026)
 
 </details>
+
+### TF-CHART-19 · Logo auf dem Liedblatt ein- und ausblenden (Admin)
+
+**Das brauchst du:** Ein Admin-Konto und ein Lied im Ablauf. Am besten in der Test-Instanz, denn der Schalter gilt
+für die ganze Gemeinde.
+
+**Das muss passieren:** Mit **Logo zeigen** aus stehen die bunten Balken oben rechts auf **keinem** Liedblatt mehr –
+nicht in der Anzeige, nicht im geteilten PDF, nicht im Liederheft und nicht in der Editor-Vorschau. Der Liedtext
+rückt oben etwas nach oben. Wieder an → überall wieder da.
+
+1. **Mehr → Verwaltung → „Liedblatt: Logo zeigen“** ausschalten.
+2. Ein Lied öffnen: oben rechts kein Logo.
+3. Im Lied **Als PDF teilen** → im PDF kein Logo.
+4. Im Ablauf **Als PDF teilen** (Liederheft) → auf keiner Seite ein Logo.
+5. Ein Lied bearbeiten: Die Vorschau zeigt ebenfalls kein Logo.
+6. Mit einem zweiten Konto (kein Admin) dasselbe Lied öffnen: auch dort kein Logo.
+7. Den Schalter wieder einschalten → Schritte 2–5 zeigen das Logo wieder.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `client/src/hooks/useAppLogo.ts`, `client/src/utils/logoAsset.ts`, `client/src/components/VerwaltungZeilen.tsx`, `client/src/hooks/useVerwaltung.ts`, `client/src/components/PdfPreview.tsx`, `client/src/pages/Setlist.tsx`, `shared/ct/einstellungen.ts`
+- **Automatisiert:** weitgehend – `e2e/chart-logo.spec.ts` (Liedblatt mit und ohne Logo, am gezeichneten Bild),
+  `useAppLogo.test.ts`, `Settings.test.tsx` (Schalter, Fehler), `siteConfig.test.ts` und `ctEinstellungen.test.ts`
+  (Speichern im Server bzw. in ChurchTools). Von Hand bleiben Liederheft, geteiltes PDF und Editor-Vorschau
+- **Historie:** Alwin, 19.10.2026
+
+</details>

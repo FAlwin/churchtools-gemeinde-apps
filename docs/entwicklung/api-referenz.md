@@ -47,7 +47,9 @@
   (`@shared/types`, seit v2.25.1 eine Quelle für Formular und Schema – vorher vierfach von Hand),
   IDs eindeutig. Seit 07.10.2026 auch `standardAnsicht` (`'akkorde'` | `'dokument'`, Standard
   `'akkorde'`) – was ein Lied beim ersten Öffnen zeigt; steht auch in der öffentlichen Antwort (das
-  Gerät merkt sie sich, sonst fiele sie beim Abmelden zurück)
+  Gerät merkt sie sich, sonst fiele sie beim Abmelden zurück). Seit 19.10.2026 auch `liedblattLogo`
+  (Ja/Nein, Standard ja) – das App-Logo oben rechts auf dem Liedblatt, im geteilten PDF, im Liederheft
+  und in der Editor-Vorschau; nur in der angemeldeten Antwort (ein Liedblatt gibt es erst nach dem Anmelden)
 
 - `POST /api/auth/login` {email, password} → `{authenticated, user}` + setzt signiertes Session-Cookie; holt dabei den persönlichen ChurchTools-Anmelde-Schlüssel (bestes Bemühen) und legt ihn verschlüsselt mit ins Cookie
 - `POST /api/auth/logout` → Session + ChurchTools-Session beenden (den Anmelde-Schlüssel widerruft er bewusst NICHT).

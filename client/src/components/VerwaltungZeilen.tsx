@@ -3,6 +3,8 @@ import type { Verwaltung } from '../hooks/useVerwaltung';
 import { KATEGORIE_NAME } from '../services/ctEinstellungen';
 import { TEILEN_KATEGORIE } from '../services/ctTeilen';
 import { funktionen } from '../services/funktionen';
+import { speicherFehler } from '../utils/speicherFehler';
+import { SchalterZeile } from './SchalterZeile';
 import styles from '../pages/Settings.module.scss';
 
 /**
@@ -39,6 +41,12 @@ export function VerwaltungZeilen({ site, v }: { site: SiteConfig; v: Verwaltung 
             {site.standardAnsicht === 'dokument' ? 'PDF zuerst' : 'Akkorde'}
           </span>
         </button>
+        <SchalterZeile
+          label="Liedblatt: Logo zeigen"
+          hinweis="Oben rechts auf jedem Liedblatt, im geteilten PDF und im Liederheft – für alle."
+          an={v.logoAn}
+          onUmschalten={v.toggleLogo}
+        />
         {funktionen.abwesenheiten && (
           <button className={`${styles.setRow} ${styles.tappable}`} onClick={v.openTerminArten}>
             <span className={styles.setLabel}>Abwesenheiten: Termin-Arten</span>
@@ -58,6 +66,7 @@ export function VerwaltungZeilen({ site, v }: { site: SiteConfig; v: Verwaltung 
           </span>
         </button>
       </div>
+      {v.logoFehler != null && <div className={styles.orgErr}>{speicherFehler(v.logoFehler)}</div>}
       {funktionen.einstellungenInChurchTools && (
         <p className={styles.installHint}>
           Damit alle diese Einstellungen bekommen, brauchen sie in ChurchTools für die Musik App die

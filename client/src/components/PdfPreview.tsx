@@ -5,6 +5,7 @@ import '../pdfSetup';
 import { type ChordPdfSong, generateChordPdf } from '../utils/chordPdf';
 import { parseMetadata } from '../utils/chordpro';
 import { wirksamerMassstab } from '../utils/leinwand';
+import { useAppLogo } from '../hooks/useAppLogo';
 import styles from './PdfPreview.module.scss';
 
 interface PdfPreviewProps {
@@ -26,6 +27,9 @@ export function PdfPreview({ title, text, semitones, rolle = false }: PdfPreview
   // Erhöht sich bei Panel-Resize → Seiten neu einpassen (sonst bleibt eine beim ersten,
   // evtl. noch winzigen Layout gerenderte Mini-Vorschau stehen).
   const [fitTick, setFitTick] = useState(0);
+  // Dasselbe Logo wie auf dem Blatt (samt Gemeinde-Schalter, 19.10.2026) – bis dahin fehlte es in der
+  // Vorschau ganz, und der Text stand dort höher als auf dem fertigen Blatt.
+  const logo = useAppLogo();
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -67,7 +71,7 @@ export function PdfPreview({ title, text, semitones, rolle = false }: PdfPreview
 
       let bytes: ArrayBuffer;
       try {
-        bytes = generateChordPdf(song, { semitones, fontPt: 11, cols: 1, rolle }).output(
+        bytes = generateChordPdf(song, { semitones, fontPt: 11, cols: 1, rolle, logo }).output(
           'arraybuffer',
         );
       } catch {
@@ -112,7 +116,7 @@ export function PdfPreview({ title, text, semitones, rolle = false }: PdfPreview
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [title, text, semitones, rolle, fitTick]);
+  }, [title, text, semitones, rolle, fitTick, logo]);
 
   return <div ref={wrapRef} className={styles.wrap} />;
 }

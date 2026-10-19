@@ -69,10 +69,10 @@ describe('useSettings – die Farbe der Systemleiste', () => {
     expect(farbe()).toBe('#ffffff');
 
     // Dunkles Theme wählen – im echten Betrieb ändert das die SCSS-Variable.
-    document.documentElement.style.setProperty('--nav-bg', '#1e2a35');
+    document.documentElement.style.setProperty('--nav-bg', '#27272a');
     act(() => result.current.setThemePref('dark'));
 
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
-    expect(farbe()).toBe('#1e2a35');
+    expect(farbe()).toBe('#27272a');
   });
 });

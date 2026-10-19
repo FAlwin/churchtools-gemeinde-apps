@@ -26,6 +26,21 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 - Nach einer Zahlungsänderung lädt die Seite auch die Einstellungen neu (echter Test 19.10.2026: Das erste „bezahlt“ legte
   das Feld „Zahlart“ an, ohne dessen Nummer fehlte die Zahlart in der Anzeige).
 
+### Neu (Dienstplaner, E6-1b, #625)
+
+- **Termin-Ansicht – Ablauf und Dienste eines Termins** (Bauplan E6-1b, Entwurf `e6-entwurf.html`): Eine Zeile in
+  „Termine“, „Ablauf & Dienste“ bei „Als Nächstes“ auf der Startseite oder der Name im Spaltenkopf der Matrix (am
+  Handy „Ablauf & Dienste“ im Kopf des Termins) öffnet den Termin – mit eigener Adresse (`#/termin/<id>`), Neuladen
+  und Zurück gehen also. Oben Datum, Beginn und „Ende ca.“, ‹ › blättert durch die geladenen Termine; „zurück“ führt
+  zum Reiter, von dem man kam (der bleibt hervorgehoben). Darunter **der Ablauf wie in der Musik-App** (Alwin,
+  17.10.2026: „so wie bei der Musik App, die Dauer bitte neben Zeit“) – mit Vorlauf und Linie „Beginn“, Notizen und
+  Zuständigen; Lieder nur zum Ansehen. Darunter **die Dienste** nach Gruppe, mit denselben Plätzen wie in „Planen“.
+  Nur ansehen – Bearbeiten kommt mit E6-3.
+- **Musik-App (sichtbar unverändert):** Die Ablauf-Ansicht und die sortierbare Zeile nutzen jetzt denselben Baustein
+  `ui/ablauf/AblaufListe` (vorher fest in `AgendaFullView`, Styles 1:1 aus `Setlist.module.scss` verschoben).
+- Ein Ablauf ohne Punkte-Liste zählt als leer – an einer Stelle (`ladeAblauf`), die auch die Lieder der Startseite
+  nutzen; vorher prüfte jeder Aufrufer selbst.
+
 ### Neu (Anmeldungen, A7-1)
 
 - **Reiter „Anmeldungen“** (Entwurf `a7-anmeldungen-v2`, nur ansehen): eine Zeile je Anmeldung (Anmelde-Nr.; ohne Nr.
@@ -99,6 +114,24 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   unter, ist der Betrag 0 (auch keine Gebühr je Anmeldung). Formular-Anzeige und Feld „Betrag“ nutzen dieselbe Regel
   (`betragAus`).
 - **Formular-Paket mit aktualisieren.**
+
+### Neu (Musik-App, Verwaltung)
+
+- **Liedblatt: Logo zeigen** (Alwin, 19.10.2026): Unter Mehr → Verwaltung schaltet ein Admin das App-Logo oben
+  rechts auf dem Liedblatt für die ganze Gemeinde aus oder wieder an. Es gilt überall, wo ein Liedblatt entsteht –
+  Anzeige, „Als PDF teilen“, Liederheft im Ablauf und Editor-Vorschau. Ohne Logo rückt der Liedtext oben etwas nach
+  oben. Vorgabe bleibt „an“. In der Erweiterung wird die Einstellung wie die übrigen in ChurchTools gespeichert.
+- **Editor-Vorschau mit Logo:** Bisher zeigte die Vorschau beim Bearbeiten nie ein Logo – der Text stand dort höher
+  als auf dem fertigen Blatt. Jetzt holt sie es wie das Blatt selbst.
+
+### Geändert (Musik-App)
+
+- **Dunkelmodus wie ChurchTools** (#565, Alwin: „wir haben da so ein dunkles Blau, ChurchTools bleibt eher bei
+  Schwarz“): Im Dunkeln hat die Musik-App jetzt die Farben von ChurchTools – fast schwarzer Grund, graue Karten und
+  Leisten, ChurchTools-Blau –, genau wie Anmeldungen und Dienstplaner. Das frühere blaugraue Dunkel ist entfernt; es
+  gibt nur noch ein Dunkel für alle Apps. Auch der Kreis um das Logo (Anmelden, Mehr) ist jetzt grau statt blau, und
+  die iPhone-Statusleiste zieht mit. Der Schalter Hell / Dunkel / Auto unter Mehr bleibt; „Auto“ folgt dem Gerät.
+  Die Notenseite bleibt weiß.
 
 ### Neu (Musik-App)
 

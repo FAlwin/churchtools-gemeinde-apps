@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ErweiterungsSeite, type SeitenZustand } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { ReiterLeiste } from '@ui/bedienung/ReiterLeiste';
@@ -10,7 +10,16 @@ import { Demnaechst } from './Demnaechst';
 import { Planen } from './Planen';
 import { Termine, type TermineZustand } from './Termine';
 import { ladeTermine, ladeZeitraum, MAX_WOCHEN, WOCHEN_JE_SCHRITT } from './ladeTermine';
-import { adresseFuer, reiterAusAdresse, sichtbareReiter, type ReiterId } from './reiter';
+import {
+  adresseFuer,
+  adresseFuerTermin,
+  ALLE_REITER,
+  reiterAusAdresse,
+  sichtbareReiter,
+  terminAusAdresse,
+  type ReiterId,
+} from './reiter';
+import { TerminAnsicht } from './TerminAnsicht';
 import { leseAuswahl, merkeAuswahl } from './auswahl';
 import { tagAusIso } from '@shared/ct/zeit';
 import { entwurfAnschluss } from './ladeEntwuerfe';
@@ -57,7 +66,11 @@ export function App() {
     [start],
   );
   const reiter = sichtbareReiter(darfPlanen);
-  const aktiv = reiterAusAdresse(hash, reiter);
+  // Termin-Ansicht (E6-1b): eigene Adresse; hervorgehoben bleibt der Reiter, von dem man kam – dorthin führt „zurück“.
+  const terminId = terminAusAdresse(hash);
+  const herkunft = useRef<ReiterId>('start');
+  if (terminId === null) herkunft.current = reiterAusAdresse(hash, reiter);
+  const aktiv = terminId === null ? reiterAusAdresse(hash, reiter) : herkunft.current;
 
   const termineLaden = useCallback(
     (s: Start, w: number, still = false) => {
@@ -102,6 +115,12 @@ export function App() {
   const wechseln = (id: ReiterId) => {
     window.location.hash = adresseFuer(id);
   };
+  const terminZeigen = (id: number) => {
+    window.location.hash = adresseFuerTermin(id);
+  };
+  // ‹ › in der Termin-Ansicht: die geladenen Termine in ihrer Reihenfolge (wie in Liste und Matrix).
+  const reihe = termine?.art === 'fertig' ? termine.plan.spalten.map((sp) => sp.id) : [];
+  const stelle = terminId === null ? -1 : reihe.indexOf(terminId);
 
   // Die Reiter erst zeigen, wenn klar ist, wer was darf – sonst taucht „Planen“ nachträglich auf.
   const fertig = zustand.art === 'fertig';
@@ -126,31 +145,47 @@ export function App() {
       zustand={zustand}
       reiter={oben}
       unten={unten}
-      gruss={aktiv === 'start'}
+      gruss={terminId === null && aktiv === 'start'}
       onNochmal={laden}
     >
-      {start && aktiv === 'start' && (
+      {start && terminId !== null && (
+        <TerminAnsicht
+          key={terminId}
+          start={start}
+          terminId={terminId}
+          zeitzone={zeitzone}
+          vorher={stelle > 0 ? reihe[stelle - 1] : null}
+          nachher={stelle >= 0 && stelle < reihe.length - 1 ? reihe[stelle + 1] : null}
+          zurueck={ALLE_REITER.find((r) => r.id === aktiv)?.label ?? 'Start'}
+          onTermin={terminZeigen}
+          onZurueck={() => wechseln(aktiv)}
+        />
+      )}
+      {start && terminId === null && aktiv === 'start' && (
         <Startseite
           start={start}
           termine={termine}
           heute={tagAusIso(new Date().toISOString(), zeitzone)}
           onNochmal={() => termineLaden(start, wochen)}
+          onTermin={terminZeigen}
           onMeineTermine={() => {
             merkeAuswahl({ ...leseAuswahl(), nurMeine: true });
             wechseln('termine');
           }}
         />
       )}
-      {aktiv === 'termine' && termine && start && (
+      {terminId === null && aktiv === 'termine' && termine && start && (
         <Termine
+          onTermin={terminZeigen}
           zustand={termine}
           planer={darfPlanen}
           onNochmal={() => termineLaden(start, wochen)}
           onMehr={mehrLaden}
         />
       )}
-      {aktiv === 'planen' && termine && start && (
+      {terminId === null && aktiv === 'planen' && termine && start && (
         <Planen
+          onTermin={terminZeigen}
           zustand={termine}
           handy={handy}
           onNochmal={() => termineLaden(start, wochen)}
@@ -162,7 +197,7 @@ export function App() {
           entwuerfe={entwuerfe}
         />
       )}
-      {aktiv === 'abwesenheiten' && <Demnaechst reiter={aktiv} />}
+      {terminId === null && aktiv === 'abwesenheiten' && <Demnaechst reiter={aktiv} />}
     </ErweiterungsSeite>
   );
 }

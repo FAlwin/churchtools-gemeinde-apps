@@ -68,7 +68,31 @@ async function ladeVonBis(
   if (!Array.isArray(termine)) {
     throw new ApiError(502, 'ChurchTools hat die Termine nicht vollständig geliefert.');
   }
-  const roh = termine as RohTermin[];
+  return datenAus(start, termine as RohTermin[], zeitzone);
+}
+
+/**
+ * **Ein Termin** für die Termin-Ansicht (E6-1b) – mit denselben Regeln wie Liste und Matrix (`datenAus`), damit die
+ * Dienste dort genauso stehen. Wirft wie `ctDaten` (404 = den Termin gibt es nicht mehr).
+ */
+export async function ladeTermin(
+  start: Start,
+  id: number,
+  zeitzone: string,
+): Promise<TermineDaten> {
+  const termin = await ctDaten<unknown>(`/events/${id}?include=eventServices`);
+  if (
+    !termin ||
+    typeof termin !== 'object' ||
+    !Array.isArray((termin as RohTermin).eventServices)
+  ) {
+    throw new ApiError(502, 'ChurchTools hat den Termin nicht vollständig geliefert.');
+  }
+  return datenAus(start, [termin as RohTermin], zeitzone);
+}
+
+/** Liste und Matrix aus den rohen Terminen – eine Stelle für den Zeitraum und den einzelnen Termin. */
+function datenAus(start: Start, roh: RohTermin[], zeitzone: string): TermineDaten {
   return {
     zeilen: termineAus(roh, {
       ichId: start.ichId,

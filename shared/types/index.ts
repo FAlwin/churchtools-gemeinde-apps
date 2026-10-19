@@ -827,6 +827,13 @@ export interface SiteConfig {
    */
   standardAnsicht?: StandardAnsicht;
   /**
+   * Das App-Logo oben rechts auf dem Liedblatt zeigen? (Alwin, 19.10.2026) – vom Admin unter Verwaltung
+   * → „Liedblatt: Logo zeigen“ für die ganze Gemeinde. Gilt überall, wo ein Liedblatt entsteht: Anzeige,
+   * „Als PDF teilen“, Liederheft, Editor-Vorschau. Fehlt es (Bestand), wird das Logo gezeigt. Die Regel
+   * steht in `client/src/utils/logoAsset.ts` (`logoZeigen`).
+   */
+  liedblattLogo?: boolean;
+  /**
    * Welche Termine OHNE Ablauf die Terminliste zeigt – mit „Ablauf anlegen" (Alwin, 13.10.2026). Nur
    * Termine aus `kalenderIds`, und – wenn gesetzt – nur solche, deren Name `suchwort` enthält
    * (Groß-/Kleinschreibung egal). Grund für das Suchwort: Bei der ECG liegen Gottesdienst und
@@ -950,5 +957,6 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   musicianGroupIds: [],
   terminArten: [],
   standardAnsicht: 'akkorde',
+  liedblattLogo: true,
   ablaufAnlegen: { kalenderIds: [], suchwort: '' },
 };

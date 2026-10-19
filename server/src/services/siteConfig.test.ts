@@ -122,6 +122,26 @@ describe('Liedblatt: Standard-Ansicht (07.10.2026)', () => {
   });
 });
 
+describe('Liedblatt: Logo zeigen (19.10.2026)', () => {
+  it('ohne Angabe wird es gezeigt – auch für Bestandsdateien', () => {
+    const r = siteConfigSchema.safeParse({ orgName: 'ECG' });
+    expect(r.success && r.data.liedblattLogo).toBe(true);
+  });
+
+  it('nimmt nur Ja/Nein an', () => {
+    expect(siteConfigSchema.safeParse({ orgName: 'ECG', liedblattLogo: 'nein' }).success).toBe(
+      false,
+    );
+  });
+
+  it('„aus" übersteht Speichern UND erneutes Einlesen der Datei', async () => {
+    const saved = await mod.saveSiteConfig({ orgName: 'ECG', liedblattLogo: false });
+    expect(saved.liedblattLogo).toBe(false);
+    mod.__resetForTests();
+    expect((await mod.getSiteConfig()).liedblattLogo).toBe(false);
+  });
+});
+
 describe('Termine ohne Ablauf (13.10.2026)', () => {
   it('ohne Angabe ist die Funktion aus – auch für Bestandsdateien', () => {
     const r = siteConfigSchema.safeParse({ orgName: 'ECG' });

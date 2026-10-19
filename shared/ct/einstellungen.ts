@@ -77,6 +77,8 @@ export const siteConfigSchema = z
       .default([]),
     // Liedblatt: Standard-Ansicht (07.10.2026); fehlt sie (Bestand), gilt „Akkorde".
     standardAnsicht: z.enum(['akkorde', 'dokument']).optional().default('akkorde'),
+    // Liedblatt: Logo zeigen (19.10.2026); fehlt es (Bestand), wird es gezeigt.
+    liedblattLogo: z.boolean().optional().default(true),
     // Termine ohne Ablauf (13.10.2026); fehlt es (Bestand), ist die Funktion aus.
     ablaufAnlegen: z
       .object({
@@ -100,6 +102,7 @@ export type EinstellbareWerte = Pick<
   | 'noteRoles'
   | 'terminArten'
   | 'standardAnsicht'
+  | 'liedblattLogo'
   | 'ablaufAnlegen'
 >;
 
@@ -111,6 +114,7 @@ export function einstellungenZusammensetzen({
   noteRoles = [],
   terminArten = [],
   standardAnsicht = 'akkorde',
+  liedblattLogo = true,
   ablaufAnlegen = { kalenderIds: [], suchwort: '' },
 }: Partial<EinstellbareWerte> & { orgName: string }): SiteConfig {
   // Duplikate entfernen (falls mehrfach übergeben).
@@ -130,6 +134,7 @@ export function einstellungenZusammensetzen({
     // Eine ID nur einmal – die gemerkte Auswahl auf dem Gerät hängt daran (#400).
     terminArten: terminArten.filter((t, i, alle) => alle.findIndex((x) => x.id === t.id) === i),
     standardAnsicht,
+    liedblattLogo,
     ablaufAnlegen: {
       kalenderIds: [...new Set(ablaufAnlegen.kalenderIds)],
       suchwort: ablaufAnlegen.suchwort.trim(),

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { NoteRolePerm, SiteConfig, StandardAnsicht } from '@shared/types/index';
 import { sameIdSet, sameRolePerms } from '../utils/adminDrafts';
 import { useGroups, useUpdateSiteConfig } from './useSiteConfig';
+import { logoZeigen } from '../utils/logoAsset';
 
 /** Welches Verwaltungs-Fenster gerade offen ist – je eins, gestapelt über „Anmerkungen". */
 export interface VerwaltungsFenster {
@@ -73,6 +74,17 @@ export function useVerwaltung(site: SiteConfig, isAdmin: boolean) {
     );
   }
 
+  // Verwaltung → „Liedblatt: Logo zeigen“ (19.10.2026): ein Schalter direkt in der Liste, ohne Fenster.
+  // Während des Speicherns zeigt er schon den neuen Stand; scheitert es, springt er zurück und darunter
+  // steht, warum.
+  const [logoFehler, setLogoFehler] = useState<unknown>(null);
+  const logoAn =
+    update.isPending && update.variables ? logoZeigen(update.variables) : logoZeigen(site);
+  function toggleLogo() {
+    setLogoFehler(null);
+    update.mutate({ ...site, liedblattLogo: !logoZeigen(site) }, { onError: setLogoFehler });
+  }
+
   function openGroups() {
     setGroupDraft(site.musicianGroupIds);
     setShowGroups(true);
@@ -138,6 +150,9 @@ export function useVerwaltung(site: SiteConfig, isAdmin: boolean) {
     ansichtDirty,
     openAnsicht,
     saveAnsicht,
+    logoAn,
+    toggleLogo,
+    logoFehler,
     closeAnsicht: () => setShowAnsicht(false),
     openOrg,
     saveOrg,

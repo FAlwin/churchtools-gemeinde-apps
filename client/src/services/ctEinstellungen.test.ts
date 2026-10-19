@@ -100,6 +100,14 @@ describe('Speichern', () => {
     expect(cfg.links).toEqual(EINGABE.links);
   });
 
+  it('„Logo aus" (19.10.2026) geht in ChurchTools und kommt zurück', async () => {
+    await einstellungenSpeichern({ ...EINGABE, liedblattLogo: false });
+    expect((gespeichert() as { config: { liedblattLogo: boolean } }).config.liedblattLogo).toBe(
+      false,
+    );
+    expect((await gemeindeKonfiguration()).liedblattLogo).toBe(false);
+  });
+
   it('der Name steht nicht im Wert – er kommt aus ChurchTools', async () => {
     await einstellungenSpeichern(EINGABE);
     const roh = gespeichert() as { config: Record<string, unknown> };

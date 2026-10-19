@@ -51,7 +51,8 @@ import { pullAnnotations } from '../services/annotations';
 import { TeilenFenster, type GebautesPdf } from '../components/TeilenFenster';
 import { dokumentSeiten } from '../utils/dokumentSeiten';
 import { ladeDokument } from '../services/fileDownload';
-import { loadSongPdfOpts, loadAppLogo } from '../utils/songPdfOpts';
+import { loadSongPdfOpts } from '../utils/songPdfOpts';
+import { useAppLogo } from '../hooks/useAppLogo';
 import { innerScrollOnly, resetViewportAfterDrag } from '../utils/dndAutoScroll';
 import styles from './Setlist.module.scss';
 import { schluessel } from '../hooks/abfrageSchluessel';
@@ -143,6 +144,8 @@ export function Setlist({
   const abschluss = useAblaufAbschliessen(service.id);
   const [abschliessenFrage, setAbschliessenFrage] = useState(false);
   const qc = useQueryClient();
+  // Liederheft: dasselbe Logo wie auf dem Liedblatt, vorgeladen – samt Gemeinde-Schalter (19.10.2026).
+  const logo = useAppLogo();
 
   /**
    * Eine Fehlermeldung zeigen – und hat in der Zwischenzeit jemand den Ablauf abgeschlossen (423 vom
@@ -294,7 +297,6 @@ export function Setlist({
   }
 
   async function ablaufPdf(mitAnmerkungen: boolean): Promise<GebautesPdf> {
-    const logo = await loadAppLogo();
     const optsFor = (s: SetlistSong) =>
       loadSongPdfOpts(s, logo, teilbar.find((t) => t.song.id === s.id)?.versionKey);
     // Die Anmerkungen liegen auf dem Gerät erst, wenn ein Lied einmal offen war – deshalb vorher vom

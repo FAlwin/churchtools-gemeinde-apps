@@ -61,6 +61,15 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   (`betragAus`).
 - **Formular-Paket mit aktualisieren.**
 
+### Neu (Musik-App, Verwaltung)
+
+- **Liedblatt: Logo zeigen** (Alwin, 19.10.2026): Unter Mehr → Verwaltung schaltet ein Admin das App-Logo oben
+  rechts auf dem Liedblatt für die ganze Gemeinde aus oder wieder an. Es gilt überall, wo ein Liedblatt entsteht –
+  Anzeige, „Als PDF teilen“, Liederheft im Ablauf und Editor-Vorschau. Ohne Logo rückt der Liedtext oben etwas nach
+  oben. Vorgabe bleibt „an“. In der Erweiterung wird die Einstellung wie die übrigen in ChurchTools gespeichert.
+- **Editor-Vorschau mit Logo:** Bisher zeigte die Vorschau beim Bearbeiten nie ein Logo – der Text stand dort höher
+  als auf dem fertigen Blatt. Jetzt holt sie es wie das Blatt selbst.
+
 ### Neu (Musik-App)
 
 - **Scroll-Modus: je Lied eine lange Seite** (#607, Rückmeldung des Musik-Bereichsleiters): Statt

@@ -604,9 +604,10 @@
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  margin-left: auto;
+  // Am Handy mit dem Finger: Trefferfläche ~40 px hoch, sichtbar bleibt nur der Text (Abstand innen = außen negativ).
+  margin: -10px -8px -10px auto;
   flex: none;
-  padding: 0;
+  padding: 10px 8px;
   border: 0;
   background: none;
   color: var(--blue);

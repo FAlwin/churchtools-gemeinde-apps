@@ -73,6 +73,10 @@ test('Verschieben → Rückgängig: die alte Reihenfolge kommt zurück', async (
   // Am Griff ziehen wie mit dem Finger: „Drei" über „Zwei" (in Schritten – dnd-kit startet erst
   // nach 6 px Bewegung).
   const griffe = page.getByRole('button', { name: 'Verschieben' });
+  // Der Griff ist ein Baustein aus `ui/ablauf` (E6-2b-1, Styles von `Setlist` dorthin verschoben): Ohne
+  // `touch-action: none` ließe er sich am Handy nicht ziehen, ohne die Breite spränge die Zeile beim Umschalten.
+  await expect(griffe.nth(2)).toHaveCSS('touch-action', 'none');
+  await expect(griffe.nth(2)).toHaveCSS('width', '42px');
   const von = (await griffe.nth(2).boundingBox())!;
   const nach = (await griffe.nth(1).boundingBox())!;
   await page.mouse.move(von.x + von.width / 2, von.y + von.height / 2);

@@ -66,15 +66,8 @@ test('Logo an (Vorgabe): oben rechts auf dem Liedblatt', async ({ page }) => {
 
 test('Logo von der Gemeinde ausgeblendet: das Liedblatt hat keins', async ({ page }) => {
   await liedOeffnen(page, false);
-  // Erst warten, bis die Seite gezeichnet ist (irgendein Text darauf), dann zählen.
-  await expect
-    .poll(() =>
-      page
-        .locator('canvas')
-        .first()
-        .evaluate((c: HTMLCanvasElement) => c.width),
-    )
-    .toBeGreaterThan(0);
-  await page.waitForTimeout(1_000);
-  expect(await logoPunkte(page)).toBe(0);
+  // Auf den ENDZUSTAND warten, nicht eine feste Zeit: Ohne gemerkte Einstellung (frische Anmeldung) zeichnet
+  // die App erst mit der Vorgabe (Logo an) und nach dem Laden der Einstellung neu. Unter Last dauerte das
+  // länger als die zuerst gewählte eine Sekunde (19.10.2026). -1 = Seite noch nicht gezeichnet.
+  await expect.poll(() => logoPunkte(page), { timeout: 15_000 }).toBe(0);
 });

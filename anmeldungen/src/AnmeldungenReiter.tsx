@@ -17,7 +17,7 @@ import {
   type ListenPerson,
 } from '@shared/anmeldung/liste';
 import type { GeladenerStand } from './mitglieder';
-import { anzahlText, datumText } from './anzeige';
+import { anzahlText } from './anzeige';
 import s from './Startseite.module.scss';
 import v from './VeranstaltungSeite.module.scss';
 import a from './AnmeldungenReiter.module.scss';
@@ -33,6 +33,8 @@ type Filter = 'alle' | 'offen' | 'warte' | 'abgesagt';
 
 /** `TT.MM.` */
 const kurz = (tag: string | null) => (tag ? `${tag.slice(8, 10)}.${tag.slice(5, 7)}.` : '');
+/** `TT.MM.JJJJ` – ohne Wochentag (Geburtsdatum, Zahlung). */
+const lang = (tag: string) => `${kurz(tag)}${tag.slice(0, 4)}`;
 const ganzerName = (p: { vor: string; nach: string }) => `${p.vor} ${p.nach}`.trim();
 const personLink = (id: number) => `${ctBasis()}/?q=churchdb#PersonView/searchEntry:%23${id}/`;
 
@@ -107,7 +109,7 @@ function AnmeldungAnsehen({
             Anmelde-Nr. <span className={v.nr}>{x.nr}</span> ·{' '}
           </>
         )}
-        {x.angemeldetAm && <>angemeldet am {datumText(x.angemeldetAm)}</>}
+        {x.angemeldetAm && <>angemeldet am {lang(x.angemeldetAm)}</>}
         {x.email && <> · {x.email}</>}
       </p>
 
@@ -138,7 +140,7 @@ function AnmeldungAnsehen({
             </div>
             <Antworten
               zeilen={[
-                ...(p.geburtstag ? [{ frage: 'Geburtsdatum', text: datumText(p.geburtstag) }] : []),
+                ...(p.geburtstag ? [{ frage: 'Geburtsdatum', text: lang(p.geburtstag) }] : []),
                 ...antwortZeilen(e.formular.person, p.werte, e.ctFelder),
               ]}
             />
@@ -160,7 +162,7 @@ function AnmeldungAnsehen({
           </p>
           <p className={a.leise}>
             {x.bezahlt
-              ? `Bezahlt${x.bezahltAm ? ` am ${datumText(x.bezahltAm)}` : ''}.`
+              ? `Bezahlt${x.bezahltAm ? ` am ${lang(x.bezahltAm)}` : ''}.`
               : x.zahlungOffen
                 ? 'Noch nicht bezahlt.'
                 : x.betragCent === null

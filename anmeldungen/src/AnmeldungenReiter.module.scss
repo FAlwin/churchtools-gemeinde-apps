@@ -214,23 +214,23 @@
 }
 
 .antworten {
-  display: grid;
-  grid-template-columns: minmax(110px, auto) 1fr;
-  gap: 4px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
   margin: 0 0 6px;
   font-size: 14px;
-
-  @media (max-width: 420px) {
-    grid-template-columns: 1fr;
-    gap: 0 12px;
-  }
 }
 
+// Frage klein darüber, Antwort darunter – das Fenster ist höchstens 380 px breit (Sheet), lange Fragen ließen der
+// Antwort daneben keinen Platz („Di, / 01.05.201 / 8“, echter Test 19.10.2026).
 .antwort {
-  display: contents;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 
   dt {
     color: var(--text2);
+    font-size: 12.5px;
   }
 
   dd {

@@ -435,6 +435,14 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   - Die Preis-Buchung aus den Antworten steht an EINER Stelle (`buchungAus`) – angezeigter und gespeicherter
     Betrag können nicht auseinanderlaufen. Ein Test zählte die Systemfelder als Literal – jetzt gegen die Liste.
 
+### Intern (Musik-App)
+
+- **Tote Hülle `server/src/utils/mapEvent.ts` entfernt** (für Nutzer unsichtbar): Sie reichte nur
+  `mapEventToService` aus `shared/ct/mapEvent.ts` mit der Zeitzone aus `config` weiter, wurde aber seit dem Umzug
+  der Regel nach `shared/` (#335) nirgends mehr importiert – auch nicht in Tests. Die Aufrufer
+  (`setlistKern`, `ablaufAnlegen`) geben die Zeitzone selbst mit. Die Testfälle TF-ABLAUF-04 und TF-VERF-08
+  verweisen unter »Betrifft« jetzt auf `shared/ct/mapEvent.ts`.
+
 ## [2.36.0] – 2026-10-15
 
 ### Neu

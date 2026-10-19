@@ -8,11 +8,11 @@ import {
   type LinkState,
   type NeuerAgendaPunkt,
   type PunktArt,
-} from '../utils/agendaItemChanges';
+} from '@shared/ct/agendaItemChanges';
 import { SongPicker } from './SongPicker';
 import { NewSongSheet } from './NewSongSheet';
 import { useCapabilities } from '../hooks/useServices';
-import { ResponsibleField } from './ResponsibleField';
+import { ResponsibleField } from '@ui/ablauf/ResponsibleField';
 import { Icon } from '@ui/icons/icons';
 import { useOverlayKeyboardInset } from '@ui/fenster/useOverlayKeyboardInset';
 import { Schalter } from '@ui/bedienung/Schalter';

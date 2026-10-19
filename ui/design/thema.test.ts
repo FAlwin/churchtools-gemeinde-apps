@@ -11,7 +11,6 @@ beforeEach(() => {
   hoerer.clear();
   document.body.className = '';
   delete document.documentElement.dataset.theme;
-  delete document.documentElement.dataset.dunkel;
   vi.stubGlobal('matchMedia', () => ({
     get matches() {
       return geraetDunkel;
@@ -36,7 +35,6 @@ describe('Hell/dunkel wie ChurchTools', () => {
     expect(churchToolsThema()).toBe('light');
     aufhoeren = folgeChurchToolsThema();
     expect(document.documentElement.dataset.theme).toBe('light');
-    expect(document.documentElement.dataset.dunkel).toBe('churchtools');
   });
 
   it('ChurchTools dunkel → dunkel, und zieht mit, wenn ChurchTools umschaltet', async () => {

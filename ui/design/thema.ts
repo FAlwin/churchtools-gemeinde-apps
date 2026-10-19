@@ -6,12 +6,11 @@
  * Dunkelmodus mit ChurchTools auf „hell“ hat `body.light`. Maßgeblich ist deshalb die **Klasse**, nicht
  * `prefers-color-scheme`.
  *
- * Diese Funktion meldet die App für das dunkle Farbschema von ChurchTools an (`data-dunkel='churchtools'`,
- * Farben in `_variables.scss`) und setzt `data-theme` auf `<html>` passend zur Klasse – und zieht mit,
- * wenn ChurchTools sie ändert. Läuft die App außerhalb von ChurchTools (Entwickeln mit `?demo`), hat
+ * Diese Funktion setzt `data-theme` auf `<html>` passend zur Klasse – und zieht mit, wenn ChurchTools sie
+ * ändert. Die Farben (die von ChurchTools) stehen in `_variables.scss`. Läuft die App außerhalb von ChurchTools (Entwickeln mit `?demo`), hat
  * `<body>` keine der Klassen; dann gilt die Einstellung des Geräts.
  *
- * Wie eine weitere App (z. B. die Musik-App) umsteigt: `docs/entwicklung/dunkelmodus.md`.
+ * Die Musik-App hat ihren eigenen Schalter (`client/src/hooks/useSettings.ts`), dieselben Farben.
  */
 
 export type Thema = 'light' | 'dark';
@@ -30,7 +29,6 @@ const GERAET_DUNKEL = '(prefers-color-scheme: dark)';
  */
 export function folgeChurchToolsThema(): () => void {
   const html = document.documentElement;
-  html.dataset.dunkel = 'churchtools';
   const geraet = typeof window.matchMedia === 'function' ? window.matchMedia(GERAET_DUNKEL) : null;
 
   const anwenden = () => {

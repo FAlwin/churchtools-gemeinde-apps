@@ -23,5 +23,4 @@ export function loadSongPdfOpts(
   return pdfOptionsForSong(song, loadSettings(song, versionKey), logo ?? null);
 }
 
-// Logo wird zentral aus dem eingebetteten Asset geladen (offline-sicher, siehe utils/logoAsset).
-export { loadAppLogo } from './logoAsset';
+// Das Logo kommt aus `hooks/useAppLogo` (eingebettetes Asset + Gemeinde-Schalter, siehe utils/logoAsset).

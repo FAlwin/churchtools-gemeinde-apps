@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { DEFAULT_SITE_CONFIG, type SiteConfig } from '@shared/types/index';
+import { speicherFehler } from '../utils/speicherFehler';
 
 /**
  * **„Mehr" – was die Seite tut, festgehalten VOR dem Aufteilen** (#407, 23.09.2026).
@@ -176,6 +177,28 @@ describe('Mehr – Verwaltung', () => {
     fireEvent.change(feld, { target: { value: 'ECG Lohmar' } });
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     expect(speichern.mock.calls[0][0]).toMatchObject({ orgName: 'ECG Lohmar' });
+  });
+
+  it('„Liedblatt: Logo zeigen" (19.10.2026): an, ein Tipp speichert „aus" für die Gemeinde', () => {
+    zeige({ isAdmin: true });
+    const zeile = screen.getByRole('button', { name: /Liedblatt: Logo zeigen/ });
+    expect(zeile.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(zeile);
+    expect(speichern).toHaveBeenCalledTimes(1);
+    expect(speichern.mock.calls[0][0]).toMatchObject({
+      orgName: 'ECG Donrath',
+      liedblattLogo: false,
+    });
+  });
+
+  it('scheitert das Speichern des Logo-Schalters, steht darunter warum', () => {
+    const fehler = new Error('Netz weg');
+    speichern.mockImplementationOnce((_cfg: unknown, o?: { onError?: (e: unknown) => void }) =>
+      o?.onError?.(fehler),
+    );
+    zeige({ isAdmin: true });
+    fireEvent.click(screen.getByRole('button', { name: /Liedblatt: Logo zeigen/ }));
+    expect(screen.getByText(speicherFehler(fehler))).toBeTruthy();
   });
 
   it('Links und Termin-Arten öffnen ihr Fenster', () => {

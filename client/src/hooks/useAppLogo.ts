@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { loadAppLogo } from '../utils/logoAsset';
+import { loadAppLogo, logoZeigen } from '../utils/logoAsset';
+import { useSiteConfig } from './useSiteConfig';
 
 /**
  * Das App-Logo für die PDF-Kopfzeile, einmalig vorgeladen (#314).
@@ -12,15 +13,21 @@ import { loadAppLogo } from '../utils/logoAsset';
  * dieses Projekt schon mehrfach getroffen.
  *
  * Dieser Hook ist nur die React-Hülle darum: Er hält das Ergebnis im Zustand, damit die PDF neu
- * gebaut wird, sobald das Bild da ist. Zwei Stellen brauchen es – der Seitenstrom und
- * „Als PDF teilen" –, deshalb der eigene Hook statt eines Vorladens im Strom-Hook.
+ * gebaut wird, sobald das Bild da ist. Alle Stellen, an denen ein Liedblatt entsteht, holen es hier –
+ * der Seitenstrom, „Als PDF teilen" und seit 19.10.2026 auch das Liederheft im Ablauf (vorher lud es
+ * selbst, mit einer eigenen Zeile; so gilt der Gemeinde-Schalter unten an EINER Stelle für alle).
  *
  * Solange das Bild lädt (oder es nicht laden konnte), ist der Wert `null`; die PDF entsteht dann
  * eben ohne Logo. Ein fehlendes Logo darf das Liederheft nicht aufhalten.
+ *
+ * Hat die Gemeinde das Logo ausgeblendet (Verwaltung → „Liedblatt: Logo zeigen“, `logoZeigen`), ist der
+ * Wert immer `null` – und folgt dem Schalter sofort.
  */
 export function useAppLogo(): HTMLImageElement | null {
+  const zeigen = logoZeigen(useSiteConfig().data);
   const [logo, setLogo] = useState<HTMLImageElement | null>(null);
   useEffect(() => {
+    if (!zeigen) return;
     let abgebrochen = false;
     void loadAppLogo().then((img) => {
       if (!abgebrochen) setLogo(img);
@@ -28,6 +35,6 @@ export function useAppLogo(): HTMLImageElement | null {
     return () => {
       abgebrochen = true;
     };
-  }, []);
-  return logo;
+  }, [zeigen]);
+  return zeigen ? logo : null;
 }

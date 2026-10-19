@@ -61,6 +61,15 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   (`betragAus`).
 - **Formular-Paket mit aktualisieren.**
 
+### Geändert (Musik-App)
+
+- **Dunkelmodus wie ChurchTools** (#565, Alwin: „wir haben da so ein dunkles Blau, ChurchTools bleibt eher bei
+  Schwarz“): Im Dunkeln hat die Musik-App jetzt die Farben von ChurchTools – fast schwarzer Grund, graue Karten und
+  Leisten, ChurchTools-Blau –, genau wie Anmeldungen und Dienstplaner. Das frühere blaugraue Dunkel ist entfernt; es
+  gibt nur noch ein Dunkel für alle Apps. Auch der Kreis um das Logo (Anmelden, Mehr) ist jetzt grau statt blau, und
+  die iPhone-Statusleiste zieht mit. Der Schalter Hell / Dunkel / Auto unter Mehr bleibt; „Auto“ folgt dem Gerät.
+  Die Notenseite bleibt weiß.
+
 ### Neu (Musik-App)
 
 - **Scroll-Modus: je Lied eine lange Seite** (#607, Rückmeldung des Musik-Bereichsleiters): Statt

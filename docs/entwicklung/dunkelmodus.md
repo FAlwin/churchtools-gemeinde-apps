@@ -1,9 +1,10 @@
 # Dunkelmodus wie ChurchTools
 
 Seit 14.10.2026 (Alwin: „so einen Dunkelmodus wie die ChurchTools-App … so dokumentieren, dass die anderen
-Apps z. B. die Musik-App auch diesen Modus anpassen kann“). **Umgestellt sind die Erweiterungen „Anmeldungen“
-und „Dienstplaner“** (Dienstplaner seit 15.10.2026, #563). Die Musik-App nutzt weiter ihren bisherigen Stand (eigenes
-blaugraues Dunkel und eigener Schalter Hell/Dunkel/Auto).
+Apps z. B. die Musik-App auch diesen Modus anpassen kann“). **Alle Apps nutzen es:** Anmeldungen (14.10.2026),
+Dienstplaner (15.10.2026, #563) und die Musik-App (19.10.2026, #565 – Alwin: „wir haben da so ein dunkles Blau,
+ChurchTools bleibt eher bei Schwarz“). Das frühere blaugraue Dunkel der Musik-App ist entfernt; es gibt nur noch
+dieses eine.
 
 ## Was ChurchTools macht (gemessen in der Test-Instanz, 14.10.2026)
 
@@ -30,22 +31,28 @@ blaugraues Dunkel und eigener Schalter Hell/Dunkel/Auto).
 
 ## Wie es gebaut ist
 
-1. **Farben:** `ui/design/_variables.scss`, Block `html[data-theme='dark'][data-dunkel='churchtools']`.
-   Er steht **neben** dem bisherigen Dunkel (`html[data-theme='dark']`) und gewinnt, weil er genauer ist.
-   Komponenten ändern sich nicht: Sie nutzen nur die Tokens (`--bg`, `--surface2` …).
-   `color-scheme: dark` sorgt dafür, dass auch Auswahllisten, Datumsfelder und Rollbalken dunkel werden.
-2. **Umschalten:** `ui/design/thema.ts` → `folgeChurchToolsThema()`. Die Funktion setzt
-   `data-dunkel="churchtools"` und `data-theme` passend zur Klasse an `<body>` auf `<html>` und zieht mit,
-   wenn ChurchTools umschaltet (MutationObserver). Außerhalb von ChurchTools (Entwickeln mit `?demo`)
-   gilt das Gerät.
-3. **Erweiterungs-Bau:** `ui/erweiterung/cssBereich.ts` schreibt `html[…][…]` auf
-   `html[…][…] <App-Bereich>` um. Die Farben gelten also nur in unserer App, nicht in ChurchTools.
+1. **Farben:** `ui/design/_variables.scss`, Block `html[data-theme='dark']` – die Werte der Tabelle oben.
+   Komponenten nutzen nur die Tokens (`--bg`, `--surface2` …). `color-scheme: dark` sorgt dafür, dass auch
+   Auswahllisten, Datumsfelder und Rollbalken dunkel werden.
+2. **Wer hell oder dunkel wählt:**
+   - **Erweiterungen „Anmeldungen“ und „Dienstplaner“:** ChurchTools. `ui/design/thema.ts` →
+     `folgeChurchToolsThema()` setzt `data-theme` auf `<html>` passend zur Klasse an `<body>` und zieht mit,
+     wenn ChurchTools umschaltet (MutationObserver). Außerhalb von ChurchTools (Entwickeln mit `?demo`) gilt
+     das Gerät.
+   - **Musik-App (App und Erweiterung):** ihr eigener Schalter unter Mehr → Hell / Dunkel / Auto
+     (`client/src/hooks/useSettings.ts`); „Auto“ folgt dem Gerät, auch in der Erweiterung (Alwin, 14.10.2026).
+     Die `theme-color` für iOS liest `useSettings` aus `--nav-bg` – sie ist im Dunkeln `#27272a`.
+3. **Erweiterungs-Bau:** `ui/erweiterung/cssBereich.ts` schreibt `html[…]` auf `html[…] <App-Bereich>` um. Die
+   Farben gelten also nur in unserer App, nicht in ChurchTools.
 
-## Eine App umstellen
+**Bilder:** Was einen dunklen Grund im Bild trägt, muss mitziehen. Das runde Logo der Musik-App
+(`client/public/logo-rund-dunkel.png`, Anmelden und Mehr) hatte einen blaugrauen Kreis `#16212a`; seit
+19.10.2026 ist er `#27272a` wie die Karten (umgefärbt aus der hellen Fassung, damit an den Balken kein blauer
+Saum bleibt).
 
-### Erweiterung (so beim Dienstplaner gemacht, 15.10.2026)
+## Eine neue App anschließen
 
-In `main.tsx` direkt nach `classList.add('ct-extension')`:
+Erweiterung: in `main.tsx` direkt nach `classList.add('ct-extension')`:
 
 ```ts
 import { folgeChurchToolsThema } from '@ui/design/thema';
@@ -56,18 +63,3 @@ Danach jede Seite im Dunkeln ansehen (`npm run dev -w <app>`, `?demo`, Browser a
 **feste Farben** in den `.module.scss` (`#fff`, `#…`, `rgba(…)`), die nicht aus den Tokens kommen. `#fff` auf
 blauen Knöpfen ist in Ordnung. Absichtlich helle Flächen (die Formular-Vorschau im Baukasten, die weiße
 Notenseite) bleiben hell.
-
-### Musik-App
-
-Sie hat einen eigenen Schalter (Einstellungen: Hell / Dunkel / Auto, `client/src/hooks/useSettings.ts`), der
-`data-theme` setzt. Zu entscheiden ist zweierlei:
-
-1. **Welches Dunkel?** Nur die ChurchTools-Farben übernehmen: in `useSettings` zusätzlich
-   `document.documentElement.dataset.dunkel = 'churchtools'` setzen. Der Schalter bleibt, wie er ist.
-   Achtung: Die `theme-color` für iOS liest `--nav-bg` – sie zieht automatisch mit (`#27272a`).
-2. **Wer entscheidet in der Erweiterung?** In ChurchTools könnte „Auto“ der ChurchTools-Wahl folgen statt dem
-   Gerät: `churchToolsThema()` aus `ui/design/thema.ts` liefert `light` / `dark` (oder `null` außerhalb von
-   ChurchTools). In der installierten App bleibt „Auto“ beim Gerät.
-
-Steigen alle Apps um, wird der ChurchTools-Block zum einzigen Dunkel: den alten Block löschen, das Attribut
-`data-dunkel` aus dem Selektor nehmen, `thema.ts` behalten.

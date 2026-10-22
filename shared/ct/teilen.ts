@@ -10,6 +10,10 @@
  *    Daten des Moduls, je Person ein Wert). Sonst müsste man jeden Musiker einzeln abfragen – genau die
  *    Last, mit der ChurchTools schon einmal gebremst hat (#300). Ein Eintrag, den die Person nicht in
  *    ihrer eigenen Datei bestätigt, bewirkt nichts.
+ *  - **Zu welchen Liedern** jemand Anmerkungen hat, steht seit #554 ebenfalls im Eintrag (`lieder`). So
+ *    liest „Wer teilt zu diesen Liedern?" nur die Dateien derer, die zu diesen Liedern etwas haben – nicht
+ *    die aller Teilenden (bei 200 Teilenden waren das ~400 Anfragen je Öffnen). Bestätigt wird weiter in der
+ *    eigenen Datei; ein Eintrag ohne `lieder` (ältere Fassung der App) wird gelesen wie bisher.
  *
  * Schutz ist das keiner: Die Anhänge an einer Person können Mitglieder, die die Person sehen dürfen,
  * ohnehin öffnen (Plan §2b, von Alwin hingenommen). „Teilen" sagt nur, wessen Notizen die App anbietet.
@@ -34,6 +38,7 @@ import {
   type GeteilteAblage,
   type PersonenAblage,
 } from './personenAblage';
+import { createTtlMemo } from './ttlMemo';
 
 export const TEILEN_KATEGORIE: KategorieAngabe = {
   kuerzel: 'musikapp-teilen',
@@ -49,6 +54,14 @@ interface Eintrag {
   personId: number;
   /** Nur zum Lesen in ChurchTools – angezeigt wird der Name aus der eigenen Datei der Person. */
   name: string;
+  /** Lieder, zu denen die Person Anmerkungen hat (aufsteigend, #554). Fehlt bei älteren Einträgen. */
+  lieder?: number[];
+}
+
+/** Ein Eintrag im Verzeichnis: wer – und zu welchen Liedern (`null` = unbekannt, also nachsehen). */
+export interface VerzeichnisEintrag {
+  personId: number;
+  lieder: number[] | null;
 }
 
 const VERWEIGERT =
@@ -77,6 +90,25 @@ export interface TeilenAnschluss {
 function personAus(w: Wert): number | null {
   const e = inhaltAus<Eintrag>(w, ART, FASSUNG);
   return e && Number.isInteger(e.personId) && e.personId > 0 ? e.personId : null;
+}
+
+/** Die Lieder eines Eintrags – `null`, wenn er keine (gültigen) nennt. */
+function liederAus(w: Wert): number[] | null {
+  const l = inhaltAus<Eintrag>(w, ART, FASSUNG)?.lieder;
+  return Array.isArray(l) && l.every((x) => Number.isInteger(x) && x > 0) ? l : null;
+}
+
+/**
+ * Was zuletzt für eine Person im Verzeichnis stand (Lieder als Schlüssel) – damit nicht jedes Speichern
+ * einer Anmerkung das Verzeichnis liest. Je Person: Der Server spricht für viele. Mit Verfallszeit: Das
+ * Verzeichnis kann sich auch anderswo ändern (ein anderes Gerät schaltet das Teilen neu ein, die Verwaltung
+ * räumt auf) – nach zehn Minuten wird wieder nachgesehen.
+ */
+const gemeldet = createTtlMemo<string>(10 * 60_000);
+
+/** Nur für Tests. */
+export function _vergissGemeldet(): void {
+  gemeldet.clear();
 }
 
 /**
@@ -115,7 +147,14 @@ export async function teilenSetzen(
     if (kategorie === null) throw t.modul.fehler(409, NICHT_EINGERICHTET);
     const werte = await werteLesen(t.modul, modul, kategorie);
     if (!werte.some((w) => personAus(w) === me.id)) {
-      const eintrag: Eintrag = { art: ART, fassung: FASSUNG, personId: me.id, name: me.name };
+      const { lieder } = await t.meineAblage.meinTeilenStand(t.ablage);
+      const eintrag: Eintrag = {
+        art: ART,
+        fassung: FASSUNG,
+        personId: me.id,
+        name: me.name,
+        lieder,
+      };
       await wertAnlegen(t.modul, modul, kategorie, JSON.stringify(eintrag), VERWEIGERT);
       // Nachsehen statt glauben (Lehre vom 11.08.2026).
       const nachher = await werteLesen(t.modul, modul, kategorie);
@@ -127,7 +166,13 @@ export async function teilenSetzen(
       }
     }
     await t.meineAblage.schreibeTeilen(t.ablage, true, me.name);
+    // Stand ich schon drin (etwa nach dem Umzug vom Volume), können die Lieder veraltet sein – nachführen.
+    // Best effort: Das Teilen gilt auch so.
+    await liederMelden(t).catch((e: unknown) => {
+      console.warn('[teilen] Lieder im Verzeichnis nicht nachgeführt:', e);
+    });
   } else {
+    gemeldet.delete(String(me.id));
     await t.meineAblage.schreibeTeilen(t.ablage, false, me.name);
     if (kategorie !== null) {
       try {
@@ -145,21 +190,27 @@ export async function teilenSetzen(
 }
 
 /**
- * Die Personen im Verzeichnis. Kein Verzeichnis zu sehen (kein Recht, kein Modul) → `[]`; alles andere
- * Vorübergehende wirft.
+ * Die Einträge im Verzeichnis – je Person einer. Stehen kurz zwei da (beim Erneuern, `liederMelden`), gilt
+ * die Vereinigung; nennt einer keine Lieder, ist es unbekannt. Kein Verzeichnis zu sehen (kein Recht, kein
+ * Modul) → `[]`; alles andere Vorübergehende wirft.
  */
-export async function verzeichnis(t: TeilenAnschluss): Promise<number[]> {
+export async function verzeichnis(t: TeilenAnschluss): Promise<VerzeichnisEintrag[]> {
   try {
     const modul = await t.modulId();
     const kategorie = await kategorieSuchen(t.modul, modul, TEILEN_KATEGORIE.kuerzel);
     if (kategorie === null) return [];
-    return [
-      ...new Set(
-        (await werteLesen(t.modul, modul, kategorie))
-          .map(personAus)
-          .filter((p): p is number => p !== null),
-      ),
-    ];
+    const je = new Map<number, number[] | null>();
+    for (const w of await werteLesen(t.modul, modul, kategorie)) {
+      const p = personAus(w);
+      if (p === null) continue;
+      const neu = liederAus(w);
+      const da = je.get(p);
+      je.set(
+        p,
+        da === undefined ? neu : da === null || neu === null ? null : [...new Set([...da, ...neu])],
+      );
+    }
+    return [...je].map(([personId, lieder]) => ({ personId, lieder }));
   } catch (e) {
     if (istDauerhaftLeer(t.modul, e)) return [];
     throw e;
@@ -170,16 +221,23 @@ export async function verzeichnis(t: TeilenAnschluss): Promise<number[]> {
  * Wer aus `personen` teilt Anmerkungen zu diesen Liedern (außer mir)? Eine Person, deren Ablage gerade
  * nicht zu lesen ist, fehlt in dieser Liste – das ist nur eine Anzeige, sie kommt beim nächsten Öffnen
  * wieder.
+ *
+ * `lieder` (aus dem Verzeichnis, #554): Nennt der Eintrag einer Person keines dieser Lieder, wird ihre
+ * Ablage gar nicht erst gelesen. Gelesen – und damit bestätigt – wird nur, wer passt oder unbekannt ist.
  */
 export async function teilende(
   t: TeilenAnschluss,
   personen: number[],
   songIds: number[],
+  lieder: ReadonlyMap<number, number[] | null> = new Map(),
 ): Promise<{ id: number; name: string; songs: number[] }[]> {
   const meineId = (await t.ich()).id;
+  const ids = new Set(songIds);
   const out: { id: number; name: string; songs: number[] }[] = [];
   for (const personId of personen) {
     if (personId === meineId) continue;
+    const bekannt = lieder.get(personId);
+    if (bekannt && !bekannt.some((s) => ids.has(s))) continue;
     try {
       const a = await t.fremdeAblage(personId);
       if (!a) continue;
@@ -190,6 +248,61 @@ export async function teilende(
     }
   }
   return out.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+}
+
+/**
+ * **Meine Lieder im Verzeichnis nachführen** (#554) – nach dem Speichern eigener Anmerkungen. Kostet nichts,
+ * solange sich die Lieder nicht ändern (gemerkt je Person); sonst wird der Eintrag erneuert: erst der neue,
+ * nachsehen, ob er da ist, DANN der alte weg (Lehre vom 11.08.2026 – so gibt es keinen Moment ohne Eintrag).
+ * Nur, wer teilt und schon im Verzeichnis steht: Ein- und Austragen bleibt Sache von `teilenSetzen`.
+ */
+export function liederMelden(t: TeilenAnschluss): Promise<void> {
+  // Nacheinander: Zwei Speichervorgänge kurz hintereinander legten sonst zwei neue Einträge an.
+  const lauf = meldeKette.then(() => liederMeldenJetzt(t));
+  meldeKette = lauf.catch(() => {});
+  return lauf;
+}
+let meldeKette: Promise<unknown> = Promise.resolve();
+
+async function liederMeldenJetzt(t: TeilenAnschluss): Promise<void> {
+  // Die eigene ID aus der Ablage (gemerkt) – `t.ich()` fragt ChurchTools und kostete je Speichern eine
+  // Anfrage. Den Namen braucht es nur für einen neuen Eintrag.
+  const meineId = await t.ablage.meineId();
+  const stand = await t.meineAblage.meinTeilenStand(t.ablage);
+  if (!stand.teilt) return;
+  const schluessel = stand.lieder.join(',');
+  if (gemeldet.get(String(meineId)) === schluessel) return;
+  const modul = await t.modulId();
+  const kategorie = await kategorieSuchen(t.modul, modul, TEILEN_KATEGORIE.kuerzel);
+  if (kategorie === null) return;
+  const passt = (w: Wert) => liederAus(w)?.join(',') === schluessel;
+  const meine = (await werteLesen(t.modul, modul, kategorie)).filter(
+    (w) => personAus(w) === meineId,
+  );
+  if (meine.length === 0) return;
+  if (meine.length === 1 && passt(meine[0])) {
+    gemeldet.set(String(meineId), schluessel);
+    return;
+  }
+  const me = await t.ich();
+  const eintrag: Eintrag = {
+    art: ART,
+    fassung: FASSUNG,
+    personId: me.id,
+    name: me.name,
+    lieder: stand.lieder,
+  };
+  await wertAnlegen(t.modul, modul, kategorie, JSON.stringify(eintrag), VERWEIGERT);
+  const nachher = (await werteLesen(t.modul, modul, kategorie)).filter(
+    (w) => personAus(w) === meineId,
+  );
+  const neu = nachher.find(passt);
+  // Nicht da: die alten Einträge stehen lassen – lieber veraltete Lieder als keine.
+  if (!neu) throw t.modul.fehler(502, 'ChurchTools hat den Eintrag nicht übernommen.');
+  for (const w of nachher) {
+    if (w.id !== neu.id) await wertLoeschen(t.modul, modul, kategorie, w.id, VERWEIGERT);
+  }
+  gemeldet.set(String(meineId), schluessel);
 }
 
 async function geteiltOderVerboten(t: TeilenAnschluss, personId: number): Promise<GeteilteAblage> {

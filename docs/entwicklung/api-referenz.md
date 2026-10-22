@@ -245,6 +245,9 @@ mit den Volume-Schreibfunktionen entfallen (12.10.2026); je Anfrage begrenzt wei
 Ob jemand teilt, steht in seiner eigenen Daten-Datei in ChurchTools. Gefunden wird man über das
 Verzeichnis der Erweiterung (Modul `ERWEITERUNG_KUERZEL`, Kategorie `musikapp-teilen`) und die Liste
 `sharing.json` auf dem Volume – gelesen als eines, geschrieben in beide (`services/ctTeilenServer.ts`).
+Seit #554 nennt ein Eintrag im Verzeichnis auch die Lieder mit Anmerkungen (`lieder`, nachgeführt nach jedem
+Speichern, `liederMelden`): `sharers` liest nur die Dateien derer, die zu den gefragten Liedern etwas haben
+(und Einträge ohne `lieder` wie bisher).
 
 - `GET/PUT /api/annotations/sharing` → eigenen Teilen-Schalter lesen/setzen
 - `GET  /api/annotations/sharers?songs=` → wer teilt für die gefragten Lieder geteilte Anmerkungen

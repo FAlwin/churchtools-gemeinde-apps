@@ -125,13 +125,13 @@ export function dataUrlAusBytes(bytes: Uint8Array): string {
 }
 
 /** Die neueste Fassung jeder Zeichnung dieser Lieder (Schlüssel → Datei), aus einer Dateiliste. */
-function neuesteBilder(l: Datei[], songIds: Set<number>): Map<string, Datei> {
+function neuesteBilder(l: Datei[], songIds: Set<number> | null): Map<string, Datei> {
   const neueste = new Map<string, Datei>();
   for (const f of l) {
     const key = f.name.match(BILD_RE)?.[1];
     if (!key) continue;
     const song = songIdOfAnnoKey(key);
-    if (song === null || !songIds.has(song)) continue;
+    if (song === null || (songIds !== null && !songIds.has(song))) continue;
     neueste.set(key, f); // aufsteigend sortiert → die letzte ist die neueste
   }
   return neueste;
@@ -208,21 +208,29 @@ export interface GeteilteAblage {
   daten: DatenDatei;
 }
 
-/** Zu welchen dieser Lieder hat die Person Anmerkungen (Striche oder Texte)? Zoom zählt nicht. */
-export function geteilteLieder(a: GeteilteAblage, songIds: number[]): number[] {
-  const ids = new Set(songIds);
+/**
+ * Zu welchen Liedern hat eine Ablage Anmerkungen (Striche oder Texte)? Zoom zählt nicht. `nur` = nur unter
+ * diesen Liedern suchen, `null` = alle. EINE Regel für fremde (`geteilteLieder`) und eigene Ablage
+ * (`meinTeilenStand`, #554) – sonst stünde im Verzeichnis etwas anderes, als beim Lesen gefunden wird.
+ */
+function liederMitAnmerkungen(l: Datei[], daten: DatenDatei, nur: Set<number> | null): number[] {
   const gefunden = new Set<number>();
-  for (const key of neuesteBilder(a.liste, ids).keys()) {
+  for (const key of neuesteBilder(l, nur).keys()) {
     const song = songIdOfAnnoKey(key);
     if (song !== null) gefunden.add(song);
   }
-  for (const [name, f] of Object.entries(a.daten.felder)) {
+  for (const [name, f] of Object.entries(daten.felder)) {
     const m = name.match(ANNO_FELD_RE);
     if (!m || m[2] !== 'texts' || !Array.isArray(f.w) || f.w.length === 0) continue;
     const song = songIdOfAnnoKey(m[1]);
-    if (song !== null && ids.has(song)) gefunden.add(song);
+    if (song !== null && (nur === null || nur.has(song))) gefunden.add(song);
   }
   return [...gefunden];
+}
+
+/** Zu welchen dieser Lieder hat die Person Anmerkungen (Striche oder Texte)? Zoom zählt nicht. */
+export function geteilteLieder(a: GeteilteAblage, songIds: number[]): number[] {
+  return liederMitAnmerkungen(a.liste, a.daten, new Set(songIds));
 }
 
 /** Die Lied-Einstellungen der Person – damit ihre Anmerkungen in IHRER Ansicht stehen. */
@@ -623,6 +631,22 @@ export function erstellePersonenAblage(
       return nacheinander(async () => {
         await aktualisiereListe(p);
         return teilenAus(await ladeDaten(p, liste ?? []))?.an ?? null;
+      });
+    },
+
+    /**
+     * Teile ich, und zu welchen Liedern habe ich Anmerkungen (aufsteigend)? Für das Verzeichnis „Wer teilt"
+     * (#554). Aus der zuletzt gelesenen eigenen Liste – nach dem Speichern ist sie frisch, es kostet also
+     * keine Anfrage.
+     */
+    meinTeilenStand(p: AblagePort): Promise<{ teilt: boolean; lieder: number[] }> {
+      return nacheinander(async () => {
+        const l = await dateien(p);
+        const daten = await ladeDaten(p, l);
+        return {
+          teilt: teilenAus(daten)?.an === true,
+          lieder: liederMitAnmerkungen(l, daten, null).sort((a, b) => a - b),
+        };
       });
     },
 

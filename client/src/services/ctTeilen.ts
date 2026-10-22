@@ -6,7 +6,13 @@
 import { ApiError } from './api';
 import { modulId, modulPort } from './ctModulDaten';
 import { meinStatus } from './ctLesen';
-import { ablagePort, eigeneAblage, geteilteAblage, type GeteilteAblage } from './personenAblage';
+import {
+  ablagePort,
+  beiAnmerkungGespeichert,
+  eigeneAblage,
+  geteilteAblage,
+  type GeteilteAblage,
+} from './personenAblage';
 import type { AnnotationText } from '@shared/types/index';
 import { merkeVersprechen } from '@shared/ct/versprechenMerker';
 import * as kern from '@shared/ct/teilen';
@@ -40,6 +46,7 @@ const anschluss: kern.TeilenAnschluss = {
 /** Nur für Tests. */
 export function _vergissAblagen(): void {
   ablagen.vergiss();
+  kern._vergissGemeldet();
 }
 
 /** Das Verzeichnis anlegen – beim Speichern der Gruppen durch einen Admin. */
@@ -52,13 +59,30 @@ export const teiltIch = (): Promise<{ enabled: boolean }> => kern.teiltIch(ansch
 export const teilenSetzen = (enabled: boolean): Promise<{ enabled: boolean }> =>
   kern.teilenSetzen(anschluss, enabled);
 
+/**
+ * Nach dem Speichern eigener Anmerkungen: die Lieder im Verzeichnis nachführen (#554). Still – ein Fehler
+ * kostet nur, dass andere eine Person zu einem neuen Lied erst beim nächsten Speichern finden.
+ */
+export function liederMeldenLeise(): Promise<void> {
+  return kern.liederMelden(anschluss).catch((e: unknown) => {
+    console.warn('[teilen] Lieder im Verzeichnis nicht nachgeführt:', e);
+  });
+}
+beiAnmerkungGespeichert(liederMeldenLeise);
+
 /** `GET /api/annotations/sharers?songs=…` – wer teilt Anmerkungen zu diesen Liedern (außer mir)? */
 export async function teilende(
   songIds: number[],
 ): Promise<{ id: number; name: string; songs: number[] }[]> {
-  const personen = await kern.verzeichnis(anschluss);
+  const eintraege = await kern.verzeichnis(anschluss);
+  const personen = eintraege.map((e) => e.personId);
   if (personen.length === 0) return [];
-  return kern.teilende(anschluss, personen, songIds);
+  return kern.teilende(
+    anschluss,
+    personen,
+    songIds,
+    new Map(eintraege.map((e) => [e.personId, e.lieder])),
+  );
 }
 
 /** `GET /api/annotations/of/:personId?songs=…` – geteilte Anmerkungen einer Person (ohne Zoom). */

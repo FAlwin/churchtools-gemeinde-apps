@@ -83,6 +83,15 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 - `NichtUebernommen` („ChurchTools hat … nicht übernommen“) steht jetzt in `ui/ct/fehler.ts`, und
   `ui/ct/fehlerMeldung.ts` kennt den Fall für alle Erweiterungen (vorher nur in den Anmeldungen).
 
+### Neu (Musik-App + Dienstplaner, #676)
+
+- **Hinweis für Bearbeitende, die nicht alle Dienstgruppen sehen:** „Du siehst nicht alle Dienstgruppen. ChurchTools
+  löscht beim Speichern oder Verschieben die Infos der Gruppen, die du nicht siehst.“ – über der Bearbeiten-Liste und
+  im Fenster eines Punkts. Gemessen 22.10.2026: ChurchTools zeigt jedem nur die Gruppen-Infos der Dienstgruppen, die er
+  sieht, und ersetzt sie beim Speichern eines Punkts; einen schonenden Schreibweg gibt es nicht. Wer alle sieht (oder
+  wenn die Dienstgruppen gerade nicht lesbar sind), sieht keinen Hinweis. Regel `siehtAlleDienstgruppen` in
+  `shared/ct/dienstRechte.ts`, für die Musik-App in den Rechten (`siehtAlleDienstgruppen`, Server und Erweiterung).
+
 ### Neu (Anmeldungen, A7-4c)
 
 - **Abgesagte zurückholen** (Entwurf `a7-4-von-hand-v1`): im Filter „Abgesagt“ (Zeile anklicken), im Fenster einer

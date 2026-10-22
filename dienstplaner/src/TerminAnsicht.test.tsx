@@ -415,4 +415,31 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Trotzdem speichern' }));
     await waitFor(() => expect(ct.schreiben).toEqual(['PUT /api/events/7/agenda/items/1']));
   });
+  it('Hinweis (#676): wer nicht alle Dienstgruppen sieht, bekommt ihn beim Bearbeiten – wer alle sieht, nicht', async () => {
+    ctMitAblauf();
+    // Sicht nur auf Technik (3), Programm und Musik nicht für alle sichtbar.
+    zeige({
+      start: startFuer({
+        rechte: {
+          ...startFuer().rechte,
+          ablaufKalender: [2],
+          sichtbareDienstgruppen: [3],
+          planbareDienstgruppen: [3],
+        },
+      }),
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
+    expect(screen.getByText(/Du siehst nicht alle Dienstgruppen/)).toBeTruthy();
+    cleanup();
+    vi.restoreAllMocks();
+
+    ctMitAblauf();
+    zeige({
+      start: startFuer({
+        rechte: { ...startFuer().rechte, ablaufKalender: [2], sichtbareDienstgruppen: null },
+      }),
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
+    expect(screen.queryByText(/Du siehst nicht alle Dienstgruppen/)).toBeNull();
+  });
 });

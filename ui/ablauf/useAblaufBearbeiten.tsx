@@ -31,7 +31,7 @@ import { useRueckgaengig } from '../bedienung/useRueckgaengig';
 import { useZiehSensoren } from '../bedienung/useZiehSensoren';
 import { innerScrollOnly, resetViewportAfterDrag } from '../bedienung/dndAutoScroll';
 import { SortableRow } from './AgendaSortableRow';
-import { BeginnLinie } from './AblaufTeile';
+import { BeginnLinie, VerborgeneGruppenHinweis } from './AblaufTeile';
 import { PunktFenster, type LiedWahlArgs } from './PunktFenster';
 import styles from './AblaufBearbeiten.module.scss';
 
@@ -85,6 +85,11 @@ export interface AblaufBearbeitenOptionen<T extends AblaufZeile> {
   dienste: AgendaServiceOption[];
   /** Liedwahl im Punkt-Fenster (Musik-App); ohne nur anzeigen (Dienstplaner). */
   liedWahl?: (args: LiedWahlArgs) => ReactNode;
+  /**
+   * Sieht der Bearbeitende nicht alle Dienstgruppen (`siehtAlleDienstgruppen`, #676)? Dann steht ein Hinweis über der
+   * Liste und im Punkt-Fenster.
+   */
+  gruppenVerborgen?: boolean;
   /** Zusätzlich bei jedem Schreibfehler – z. B. bei 423 (inzwischen abgeschlossen) die Termine neu holen. */
   beiFehler?: (e: unknown) => void;
 }
@@ -242,6 +247,11 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
           )}
         </div>
       )}
+      {o.gruppenVerborgen && (
+        <div className={styles.editHint}>
+          <VerborgeneGruppenHinweis />
+        </div>
+      )}
       {err && <div className={styles.editError}>{err}</div>}
       <DndContext
         sensors={sensors}
@@ -321,6 +331,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
           onSetVorBeginn={(vorBeginn) => aktionen.setVorBeginn(actionItem.id, vorBeginn)}
           onSetWeggelassen={(weg) => aktionen.setWeggelassen(actionItem.id, weg)}
           onRequestDelete={() => setPendingDelete(actionItem)}
+          gruppenVerborgen={o.gruppenVerborgen}
         />
       )}
 

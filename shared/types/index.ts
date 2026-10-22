@@ -703,6 +703,12 @@ export interface UserCapabilities {
    * nicht geladen werden". Fehlt das Feld (ältere Server), gilt `false`.
    */
   keineLiedRechte?: boolean;
+  /**
+   * Sieht man alle Dienstgruppen (`siehtAlleDienstgruppen`, `shared/ct/dienstRechte.ts`)? Wenn nicht, löscht das Ändern
+   * oder Umsortieren eines Ablaufpunkts unbemerkt die Gruppen-Infos der übrigen (gemessen 22.10.2026) – die App zeigt
+   * dann einen Hinweis. `undefined` = unbekannt (Dienstgruppen nicht lesbar, ältere Server): kein Hinweis.
+   */
+  siehtAlleDienstgruppen?: boolean;
 }
 
 // ── Verfügbarkeit / Abwesenheiten (#177) ──────────────────────────────────

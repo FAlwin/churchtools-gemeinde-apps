@@ -55,6 +55,8 @@ interface SetlistProps {
   services: AgendaServiceOption[];
   /** Darf der Nutzer den Ablauf bearbeiten? (blendet die Bearbeiten-UI aus) */
   canEdit?: boolean;
+  /** Sieht der Nutzer nicht alle Dienstgruppen (#676)? Dann warnt die Bearbeiten-Liste vor verlorenen Gruppen-Infos. */
+  gruppenVerborgen?: boolean;
   /** Steht die Ablauf-Ansicht gerade? (für das Gesehen-Merken, siehe `AgendaFullView.onSichtbar`) */
   onAblaufSichtbar?: (sichtbar: boolean) => void;
 }
@@ -71,6 +73,7 @@ export function Setlist({
   isReordering,
   services,
   canEdit = false,
+  gruppenVerborgen = false,
   onAblaufSichtbar,
 }: SetlistProps) {
   const [editMode, setEditMode] = useState(false);
@@ -102,6 +105,7 @@ export function Setlist({
     abgeschlossen,
     sperrHinweis: GESPERRT,
     speichertGerade: isReordering,
+    gruppenVerborgen,
     aktionen: actions,
     dienste: services,
     liedWahl: (args) => <LiedVerknuepfen {...args} />,

@@ -15,6 +15,20 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Handy ein Umschalter **Text | Vorschau**. Der Umschalter „Editor / Beide / Vorschau" entfällt. Am Text und
   am Speichern ändert sich nichts. Weitere Scheiben (Ablauf als Kärtchen, Akkorde als Kärtchen) folgen.
 
+### Neu (Anmeldungen, A7-4c)
+
+- **Abgesagte zurückholen** (Entwurf `a7-4-von-hand-v1`): im Filter „Abgesagt“ (Zeile anklicken), im Fenster einer
+  Anmeldung unter „Abgesagt“ und in der Suche von „＋ Von Hand“ („hat abgesagt – zurückholen“). Die Person kommt mit
+  allen Antworten von damals zurück (aus dem Verlauf; eine Auswahl wird wieder als Options-Nummer geschrieben, eine
+  Antwort, die es nicht mehr gibt, bleibt leer und wird genannt). Platz nach der Regel des Formulars.
+- **Zahlung** (Alwin, 22.10.2026): Besteht die Anmeldung noch, bekommt sie eine eigene Zahlung wie bei „Person dazu“
+  (Kopf „Zurückgeholt am …“, dieselbe Rechnung); Kontakt, Unterschrift und Auswahl bleiben bei der Anmeldung. War sie
+  allein, wird die Zahlung der Anmeldung nach den Regeln neu gerechnet und ist offen – hatte sie schon bezahlt, steht
+  der Hinweis „Rückzahlung prüfen“ da.
+- „Platz und Betrag“ ist ein Baustein für „Von Hand“, „Person dazu“ und „Zurückholen“ (`PlatzWahl`).
+- Titel eigener Zahlungen als Tabelle je Art („nachgerückt“, „dazu angemeldet“, „zurückgeholt“) – beim Durchklicken
+  stand die Zahlung einer Zurückgeholten als „Anmeldung (…)“ da.
+
 ### Neu (Organigramm, O2, #664)
 
 - **Der ganze Baum:** je Bereich (oberste Gruppe) eine Karte – große Bereiche zuerst –, darin die Gruppen als Zeilen

@@ -73,8 +73,21 @@ export const aktualisiereListe = (): Promise<void> => ablage.aktualisiereListe(p
 export const holeAnmerkungen = (songIds: number[]): Promise<Record<string, PageAnnotation>> =>
   ablage.holeAnmerkungen(port, songIds);
 
-export const schreibeAnmerkung = (key: string, teil: PageAnnotation): Promise<void> =>
-  ablage.schreibeAnmerkung(port, key, teil);
+/** Was nach dem Speichern eigener Anmerkungen nachzuziehen ist – das Verzeichnis der Team-Notizen (#554). */
+let nachAnmerkung: () => Promise<void> = () => Promise.resolve();
+/**
+ * Meldet `ctTeilen` beim Laden an: Dort hängt das Verzeichnis, und `ctTeilen` importiert diese Datei – ein
+ * Import in die Gegenrichtung ergäbe einen Ring. Hier, an der EINEN Schreibstelle, statt bei einem ihrer
+ * Aufrufer: Sonst führte ein anderer Schreibweg die Lieder nicht nach, und die Person fehlte zu neuen Liedern.
+ */
+export function beiAnmerkungGespeichert(fn: () => Promise<void>): void {
+  nachAnmerkung = fn;
+}
+
+export async function schreibeAnmerkung(key: string, teil: PageAnnotation): Promise<void> {
+  await ablage.schreibeAnmerkung(port, key, teil);
+  await nachAnmerkung();
+}
 
 export const holeEinstellungen = (songIds: number[]): Promise<Record<string, string>> =>
   ablage.holeEinstellungen(port, songIds);

@@ -7,6 +7,16 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Geändert (Musik-App, #554)
+
+- **Team-Notizen auch in großen Gemeinden schnell** (Frage aus dem ChurchTools-Dev-Stammtisch: „Wie
+  funktioniert das bei 6000 Mitgliedern?"): Der Eintrag im Verzeichnis „Wer teilt" nennt jetzt auch die Lieder,
+  zu denen jemand Anmerkungen hat; er wird nach dem Speichern eigener Anmerkungen nachgeführt (nur wenn sich die
+  Lieder ändern – sonst kostet es nichts). „Notizen von …" liest beim Öffnen eines Lieds deshalb nur noch die
+  Dateien derer, die zu diesen Liedern etwas haben, statt die aller Teilenden (bei 200 Teilenden waren das ~400
+  Anfragen je Öffnen). Ob jemand wirklich teilt und unter welchem Namen, steht weiter in seiner eigenen Datei und
+  wird dort geprüft. Einträge älterer Fassungen werden gelesen wie bisher.
+
 ### Neu (Anmeldungen, A7-4a)
 
 - **Anmeldung von Hand** (Entwurf `a7-4-von-hand-v1`, abgenommen 22.10.2026): Knopf „＋ Von Hand“ im Reiter

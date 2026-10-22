@@ -120,6 +120,20 @@ export async function teilenSetzen(
   return { enabled };
 }
 
+/**
+ * Nach dem Speichern eigener Anmerkungen: die Lieder im Verzeichnis der Erweiterung nachführen (#554).
+ * Still – ein Fehler kostet nur, dass andere die Person zu einem neuen Lied erst nach dem nächsten Speichern
+ * finden. Ohne Erweiterung gibt es kein Verzeichnis (und nichts zu tun).
+ */
+export async function liederMeldenLeise(cookie: string, userId: number): Promise<void> {
+  try {
+    if ((await modulIdOderNull(cookie)) === null) return;
+    await kern.liederMelden(anschlussFuer(cookie, userId));
+  } catch (e) {
+    console.warn('[teilen] Lieder im Verzeichnis nicht nachgeführt:', e);
+  }
+}
+
 /** Wer teilt Anmerkungen zu diesen Liedern (außer mir)? Aus beiden Verzeichnissen. */
 export async function teilende(
   cookie: string,
@@ -129,9 +143,11 @@ export async function teilende(
   const t = anschlussFuer(cookie, userId);
   const ausModul = (await modulIdOderNull(cookie)) === null ? [] : await kern.verzeichnis(t);
   const ausNas = (await listSharers()).map((s) => s.id);
-  const personen = [...new Set([...ausModul, ...ausNas])];
+  const personen = [...new Set([...ausModul.map((e) => e.personId), ...ausNas])];
   if (personen.length === 0) return [];
-  const out = await kern.teilende(t, personen, songIds);
+  // Wer nur auf dem Volume steht, hat keine Lieder im Verzeichnis – wird also gelesen wie bisher.
+  const lieder = new Map(ausModul.map((e) => [e.personId, e.lieder]));
+  const out = await kern.teilende(t, personen, songIds, lieder);
   // Wer auf dem Volume geteilt hat, aber noch nicht umgezogen ist (seitdem nicht angemeldet): weiter
   // vom Volume – sonst verschwänden seine Notizen für alle, bis er sich das nächste Mal anmeldet.
   const ids = new Set(songIds);

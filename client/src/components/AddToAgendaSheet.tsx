@@ -107,7 +107,7 @@ export function AddToAgendaSheet({ song, services, onClose }: AddToAgendaSheetPr
             <CenterMessage loading text="Arrangements werden geladen…" />
           ) : arrangements.isError ? (
             <CenterMessage
-              icon="⚠️"
+              icon="warnung"
               text="Arrangements konnten nicht geladen werden."
               onRetry={() => arrangements.refetch()}
             />

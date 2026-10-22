@@ -1,10 +1,12 @@
 import { Spinner } from './Spinner';
+import { Icon, type IconName } from '@ui/icons/icons';
 import styles from './CenterMessage.module.scss';
 
 interface CenterMessageProps {
   /** true → Ladekringel statt Icon. */
   loading?: boolean;
-  icon?: string;
+  /** Linien-Icon aus `ui/icons` – seit 22.10.2026 kein Emoji mehr (`keineBehelfszeichen.test.ts`). */
+  icon?: IconName;
   text: string;
   onRetry?: () => void;
   /** Optionale Zusatzaktion (z.B. Abmelden) mit eigenem Text. */
@@ -23,7 +25,15 @@ export function CenterMessage({
 }: CenterMessageProps) {
   return (
     <div className={styles.wrap}>
-      {loading ? <Spinner /> : icon && <div className={styles.icon}>{icon}</div>}
+      {loading ? (
+        <Spinner />
+      ) : (
+        icon && (
+          <div className={styles.icon}>
+            <Icon name={icon} size={36} stroke={1.6} />
+          </div>
+        )
+      )}
       <div className={styles.text}>{text}</div>
       {onRetry && (
         <button className={styles.retry} onClick={onRetry}>

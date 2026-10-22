@@ -295,7 +295,7 @@ export function NewSongSheet({
 
       {kategorien.isError ? (
         <CenterMessage
-          icon="⚠️"
+          icon="warnung"
           text="Die Lied-Kategorien konnten nicht geladen werden."
           onRetry={() => void kategorien.refetch()}
         />

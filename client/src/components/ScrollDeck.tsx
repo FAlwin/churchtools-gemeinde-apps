@@ -6,6 +6,7 @@ import {
   useState,
   type MutableRefObject,
 } from 'react';
+import { Icon } from '@ui/icons/icons';
 import type { PageTextObj } from '../hooks/usePageDraw';
 import type { DrawTool } from '../types/index';
 import { RollenMalen } from './RollenMalen';
@@ -247,7 +248,11 @@ export function ScrollDeck({
             <span>{loadingLabel}</span>
           </div>
         )}
-        {error && <div className={deck.center}>⚠️ {error}</div>}
+        {error && (
+          <div className={deck.center}>
+            <Icon name="warnung" size={18} /> {error}
+          </div>
+        )}
         {!loading && (
           <div className={styles.inhalt}>
             {pages.map((src, p) => (

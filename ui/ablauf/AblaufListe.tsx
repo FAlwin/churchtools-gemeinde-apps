@@ -14,6 +14,7 @@ import {
   WeggelassenHinweis,
   ZeitText,
 } from './AblaufTeile';
+import { Icon } from '../icons/icons';
 import styles from './AblaufListe.module.scss';
 
 export function AblaufListe({
@@ -79,7 +80,11 @@ export function AblaufListe({
       <div className={styles.flowBody}>
         <div className={styles.flowHead}>
           <ItemTitle item={item} />
-          {item.song && <span className={styles.flowSongTag}>🎵</span>}
+          {item.song && (
+            <span className={styles.flowSongTag}>
+              <Icon name="music" size={12} />
+            </span>
+          )}
           {tag}
           {weg}
           {!dauerNebenZeit && dauer && <span className={styles.flowDur}>{dauer}</span>}

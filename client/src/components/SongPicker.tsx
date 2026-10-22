@@ -205,7 +205,7 @@ export function SongPicker({
           <CenterMessage loading text="Lieder werden geladen…" />
         ) : lib.isError ? (
           <CenterMessage
-            icon="⚠️"
+            icon="warnung"
             text="Lieder konnten nicht geladen werden."
             onRetry={() => lib.refetch()}
           />

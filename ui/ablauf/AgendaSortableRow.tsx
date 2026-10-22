@@ -85,7 +85,11 @@ export function SortableRow<T extends AblaufZeile>({
       <button className={styles.editBody} data-tour="edit-item" onClick={() => onOpenActions(item)}>
         <div className={zeile.flowHead}>
           <ItemTitle item={item} />
-          {item.song && <span className={zeile.flowSongTag}>🎵</span>}
+          {item.song && (
+            <span className={zeile.flowSongTag}>
+              <Icon name="music" size={12} />
+            </span>
+          )}
           {item.weggelassen && <WeggelassenHinweis />}
           {item.durationMin && <span className={zeile.flowDur}>{item.durationMin} Min</span>}
         </div>

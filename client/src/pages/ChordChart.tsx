@@ -843,7 +843,9 @@ export function ChordChart({
             />
           ) : (
             <div className={styles.empty}>
-              <div className={styles.emptyIcon}>🎵</div>
+              <div className={styles.emptyIcon}>
+                <Icon name="music" size={36} stroke={1.6} />
+              </div>
               <div>Für dieses Lied ist keine Akkord-Datei in ChurchTools hinterlegt.</div>
               {canEditSong && (
                 <button className={styles.createBtn} onClick={openNewVersion}>

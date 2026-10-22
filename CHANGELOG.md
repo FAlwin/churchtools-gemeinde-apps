@@ -7,6 +7,13 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Geändert (Musik-App, #557)
+
+- **Weniger Last auf ChurchTools:** Ein offener Ablauf bzw. eine offene Liedansicht fragt jetzt alle 30 Sekunden
+  statt alle 8 Sekunden nach, ob sich der Ablauf geändert hat (Frage aus dem ChurchTools-Dev-Stammtisch). Das war
+  der größte Posten der Grundlast – je Gerät etwa 2 statt 7,5 Anfragen pro Minute. Eine Änderung am Ablauf kommt
+  dadurch nach höchstens 30 Sekunden an. Terminliste (1 Minute) und Liedtexte (1 Minute) bleiben, wie sie sind.
+
 ### Geändert (alle Apps, #654)
 
 - **Look der ChurchTools-Weboberfläche für alle Apps** – Erweiterungen und die Musik-App als PWA (Alwin, 22.10.2026;

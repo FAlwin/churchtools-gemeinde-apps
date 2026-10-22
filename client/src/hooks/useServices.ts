@@ -104,18 +104,24 @@ export function useMarkSetlistSeen() {
 }
 
 /**
- * Live-Abgleich für einen geöffneten Ablauf: pollt alle ~8 s den billigen Ablauf-Fingerabdruck
- * (kein ChordPro-Download; der Server bündelt Abfragen mehrerer Geräte in einem Kurz-Memo).
- * Die Auswertung (Ablauf neu laden / Hinweis im Liederheft) übernimmt App.tsx.
+ * Takt des Live-Abgleichs (#557, Alwin 22.10.2026: 30 s statt 8 s). Er war der größte Posten der Grundlast
+ * auf ChurchTools (~7,5 Anfragen je Minute und Gerät); eine Ablaufänderung kommt jetzt nach höchstens 30 s an.
+ */
+export const ABLAUF_ABGLEICH_MS = 30_000;
+
+/**
+ * Live-Abgleich für einen geöffneten Ablauf: pollt alle `ABLAUF_ABGLEICH_MS` den billigen
+ * Ablauf-Fingerabdruck (kein ChordPro-Download; der Server bündelt Abfragen mehrerer Geräte desselben
+ * Kontos in einem Kurz-Memo). Die Auswertung (Ablauf neu laden / Hinweis im Liederheft) übernimmt App.tsx.
  */
 export function useSetlistVersion(eventId: number | null, enabled: boolean) {
   return useQuery({
     queryKey: ['setlist-version', eventId],
     queryFn: () => api.getSetlistVersion(eventId as number),
     enabled: enabled && eventId !== null,
-    refetchInterval: 8_000,
+    refetchInterval: ABLAUF_ABGLEICH_MS,
     staleTime: 0,
-    // Kein Retry-Getrommel: schlägt ein Poll fehl (Netz-Aussetzer), kommt in 8 s der nächste.
+    // Kein Retry-Getrommel: schlägt ein Poll fehl (Netz-Aussetzer), kommt im nächsten Takt der nächste.
     retry: false,
   });
 }

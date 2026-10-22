@@ -246,11 +246,6 @@ export async function ctAnfrage<T = unknown>(
     // Datei-Uploads dürfen länger dauern als ein API-Aufruf – wie im Server (`CT_FILE_TIMEOUT_MS`).
     init.body instanceof FormData ? ZEIT_DATEI_MS : ZEIT_API_MS,
   );
-  return (await rumpfAus(res, method !== 'GET', init.verweigert)) as T;
-}
-
-/** Rumpf lesen und Fehler übersetzen – EINE Stelle für `ctAnfrage` und `ctAltAufruf`. */
-async function rumpfAus(res: Response, schreibend: boolean, verweigert?: string): Promise<unknown> {
   meldeErreichbar(![502, 503, 504].includes(res.status));
   if (res.status === 429) throw bremsen(res);
   const text = await res.text();
@@ -263,49 +258,10 @@ async function rumpfAus(res: Response, schreibend: boolean, verweigert?: string)
     }
   }
   if (!res.ok) {
-    if (schreibend) csrfVerwerfenBeiAblehnung(res.status);
-    throw await fehlerAus(res, body, verweigert);
+    if (method !== 'GET') csrfVerwerfenBeiAblehnung(res.status);
+    throw await fehlerAus(res, body, init.verweigert);
   }
-  return body;
-}
-
-/**
- * **Die alte Schnittstelle von ChurchTools** (`/?q=<modul>/ajax`, `{func, …}`) – nur, wo es keine REST-Schnittstelle
- * gibt. Nicht dokumentiert; die Weboberfläche von ChurchTools nutzt sie selbst (A7-5: Mails über `churchhome`
- * `sendEMailToPersonIds`, gemessen 22.10.2026). Antwort `{status, data, message}` – alles außer `success` wirft.
- */
-export async function ctAltAufruf<T = unknown>(
-  modul: string,
-  func: string,
-  daten: Record<string, unknown>,
-): Promise<T> {
-  pruefeBremse();
-  const headers: Record<string, string> = {
-    Accept: 'application/json',
-    'Content-Type': 'application/json',
-  };
-  const csrf = await holeCsrf();
-  if (csrf) headers['CSRF-Token'] = csrf;
-  const res = await mitZeitgrenze(
-    `${ctBasis()}/?q=${modul}/ajax`,
-    { method: 'POST', credentials: 'include', headers, body: JSON.stringify({ ...daten, func }) },
-    ZEIT_API_MS,
-  );
-  const body = (await rumpfAus(res, true)) as {
-    status?: unknown;
-    data?: unknown;
-    message?: unknown;
-  } | null;
-  if (body?.status === 'success') return body.data as T;
-  const meldung = typeof body?.message === 'string' ? body.message.trim() : '';
-  if (/session expired/i.test(meldung))
-    throw new ApiError(401, 'Bei ChurchTools nicht mehr angemeldet.');
-  throw new ApiError(
-    422,
-    meldung
-      ? `ChurchTools hat abgelehnt: ${meldung}`
-      : 'ChurchTools hat den Auftrag nicht angenommen.',
-  );
+  return body as T;
 }
 
 /**
@@ -352,21 +308,37 @@ function csrfVerwerfenBeiAblehnung(status: number): void {
   if (status === 401 || status === 403) csrfToken.vergiss();
 }
 
+/** Ein Fehler der alten Schnittstelle – `art` aus `ajaxNutzlast` (A7-5: „abgelehnt“ heißt sicher nicht ausgeführt). */
+export class AltFehler extends ApiError {
+  constructor(
+    status: number,
+    meldung: string,
+    readonly art: 'unlesbar' | 'abgelehnt' | 'innen',
+  ) {
+    super(status, meldung);
+    this.name = 'AltFehler';
+  }
+}
+
 /**
- * Eine Anfrage an die **alte** ChurchTools-Schnittstelle (`index.php?q=churchservice/ajax`, 3b-2) –
- * für Lied-Kategorien und Liederbücher (`getMasterData`). Wie im Server mit CSRF-Token und
- * `X-Requested-With` (ohne Token → 401, gemessen 07.10.2026). Ausgewertet wird über
- * `@shared/ct/altSchnittstelle`, dieselbe Regel wie im Server.
+ * Eine Anfrage an die **alte** ChurchTools-Schnittstelle (`index.php?q=<modul>/ajax`) – für Lied-Kategorien und
+ * Liederbücher (`churchservice` `getMasterData`, 3b-2) und für Mails (`churchhome` `sendEMailToPersonIds`, A7-5). Wie
+ * im Server mit CSRF-Token und `X-Requested-With` (ohne Token → 401, gemessen 07.10.2026). Ausgewertet wird über
+ * `@shared/ct/altSchnittstelle`, dieselbe Regel wie im Server. `json`: Felder als JSON-Rumpf (so schickt der
+ * Mail-Editor von ChurchTools, gemessen 22.10.2026), sonst als Formular.
  */
 export async function ctAltAnfrage(
   func: string,
   felder: Record<string, string> = {},
   meldungen: AjaxMeldungen = {},
+  ort: { modul?: string; json?: Record<string, unknown> } = {},
 ): Promise<unknown> {
   pruefeBremse();
   const m = ajaxMeldungen(meldungen);
   const headers: Record<string, string> = {
-    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+    'Content-Type': ort.json
+      ? 'application/json'
+      : 'application/x-www-form-urlencoded; charset=UTF-8',
     // Ohne diesen Kopf antwortet die alte Schnittstelle mit einer HTML-Seite statt JSON.
     'X-Requested-With': 'XMLHttpRequest',
     Accept: 'application/json',
@@ -374,12 +346,14 @@ export async function ctAltAnfrage(
   const csrf = await holeCsrf();
   if (csrf) headers['CSRF-Token'] = csrf;
   const res = await mitZeitgrenze(
-    `${ctBasis()}/index.php?q=churchservice/ajax`,
+    `${ctBasis()}/index.php?q=${ort.modul ?? 'churchservice'}/ajax`,
     {
       method: 'POST',
       credentials: 'include',
       headers,
-      body: new URLSearchParams({ func, ...felder }),
+      body: ort.json
+        ? JSON.stringify({ ...ort.json, ...felder, func })
+        : new URLSearchParams({ func, ...felder }),
     },
     ZEIT_DATEI_MS,
   );
@@ -397,7 +371,7 @@ export async function ctAltAnfrage(
     throw await fehlerAus(res, body, m.verweigert);
   }
   if (!res.ok) throw new ApiError(502, `${m.abgelehnt} (${res.status}).`);
-  return ajaxNutzlast(text, m, (status, meldung) => new ApiError(status, meldung));
+  return ajaxNutzlast(text, m, (status, meldung, art) => new AltFehler(status, meldung, art));
 }
 
 /**

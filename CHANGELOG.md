@@ -13,7 +13,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Anmeldungen, „Zahlung offen“ oder „Warteliste“, **je Anmeldung eine Mail** an den Kontakt (Alwin). ChurchTools
   verschickt (gemessen: Absender „Name <noreply@churchtools.de>“, Antworten an die Absenderin, jede Familie ihre eigene
   Mail) über die Schnittstelle, die auch sein Mail-Editor nutzt (`churchhome/ajax` → `sendEMailToPersonIds`, nicht
-  dokumentiert → `ctAltAufruf` in `ui/ct/verbindung.ts`).
+  dokumentiert) – über `ctAltAnfrage`, dieselbe Stelle wie Lied-Kategorien und SongSelect (jetzt mit Modul und
+  JSON-Rumpf; `AltFehler` sagt, ob ChurchTools ausdrücklich abgelehnt hat).
 - Platzhalter lesbar in eckigen Klammern (`[Betrag]`, `[Anmelde-Nr.]`, `[Angemeldet von]` …) – beim Senden zu den
   Platzhaltern von ChurchTools (`/placeholders/group/{id}`); unbekannte werden genannt und sperren das Senden.
 - Vorlagen „Leer“, „Zahlungserinnerung“ (Bankdaten aus „Bezahlung“) und „Infos vorab“ (Datum und Ort aus dem Termin);
@@ -21,6 +22,7 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   (aus zu Beginn).
 - Rückfrage mit Anzahl, danach **im Protokoll von ChurchTools nachgelesen**. Antwortet ChurchTools beim Senden nicht und
   steht nichts im Protokoll, heißt es „unklar, ob verschickt“ – ohne zweites Senden (sonst doppelte Mails).
+- Beim echten Test gefunden: Die Vorschau-Antwort von ChurchTools steht direkt da (`{subject, html}`), nicht in `data`.
 
 ### Neu (Musik-App, Lied-Editor L2)
 

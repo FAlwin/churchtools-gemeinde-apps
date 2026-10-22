@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   ctAlleSeiten,
-  ctAltAufruf,
+  ctAltAnfrage,
   ctAnfrage,
   fehlerAus,
   verbindungEinrichten,
@@ -132,39 +132,51 @@ describe('ctAlleSeiten (#480)', () => {
   });
 });
 
-describe('ctAltAufruf (alte Schnittstelle, A7-5)', () => {
-  it('schickt JSON mit func und CSRF-Token an /?q=<modul>/ajax; success → data', async () => {
+describe('ctAltAnfrage mit Modul und JSON (A7-5)', () => {
+  it('churchhome mit JSON-Rumpf: func, Felder, CSRF-Token, X-Requested-With; success → data', async () => {
     const spy = vi
       .spyOn(globalThis, 'fetch')
       .mockImplementation(async (url) =>
         String(url).endsWith('/api/csrftoken')
           ? json(200, { data: 'TOK' })
-          : json(200, { status: 'success', data: { n: 1 } }),
+          : json(200, { status: 'success', data: null }),
       );
     await expect(
-      ctAltAufruf('churchhome', 'sendEMailToPersonIds', { ids: '140' }),
-    ).resolves.toEqual({ n: 1 });
+      ctAltAnfrage('sendEMailToPersonIds', {}, {}, { modul: 'churchhome', json: { ids: '140' } }),
+    ).resolves.toBeNull();
     const [url, init] = spy.mock.calls.at(-1)!;
-    expect(url).toBe('https://ct.test/?q=churchhome/ajax');
+    expect(url).toBe('https://ct.test/index.php?q=churchhome/ajax');
     expect(JSON.parse(String(init!.body))).toEqual({ ids: '140', func: 'sendEMailToPersonIds' });
-    expect((init!.headers as Record<string, string>)['CSRF-Token']).toBe('TOK');
+    const kopf = init!.headers as Record<string, string>;
+    expect([kopf['CSRF-Token'], kopf['X-Requested-With'], kopf['Content-Type']]).toEqual([
+      'TOK',
+      'XMLHttpRequest',
+      'application/json',
+    ]);
   });
 
-  it('status error → Fehler mit der Meldung; abgelaufene Sitzung → 401', async () => {
+  it('status error → AltFehler „abgelehnt“ mit der Meldung; HTML statt JSON → „unlesbar“', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) =>
       String(url).endsWith('/api/csrftoken')
         ? json(200, { data: 'TOK' })
         : json(200, { status: 'error', message: 'Keine Empfänger' }),
     );
-    await expect(ctAltAufruf('churchhome', 'x', {})).rejects.toMatchObject({
-      status: 422,
-      message: 'ChurchTools hat abgelehnt: Keine Empfänger',
+    await expect(
+      ctAltAnfrage('x', {}, {}, { modul: 'churchhome', json: {} }),
+    ).rejects.toMatchObject({
+      art: 'abgelehnt',
+      status: 502,
+      message: 'Keine Empfänger',
     });
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) =>
       String(url).endsWith('/api/csrftoken')
         ? json(200, { data: 'TOK' })
-        : json(200, { status: 'error', message: 'Session expired!' }),
+        : new Response('<html>Anmelden</html>', { status: 200 }),
     );
-    await expect(ctAltAufruf('churchhome', 'x', {})).rejects.toMatchObject({ status: 401 });
+    await expect(
+      ctAltAnfrage('x', {}, {}, { modul: 'churchhome', json: {} }),
+    ).rejects.toMatchObject({
+      art: 'unlesbar',
+    });
   });
 });

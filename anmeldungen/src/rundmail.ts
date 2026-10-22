@@ -1,12 +1,13 @@
 /**
  * **Rundmail über ChurchTools** (A7-5) – gemessen 22.10.2026 (`messung-a7`, Abschnitt „Rundmail“):
- * - Senden: alte Schnittstelle `churchhome/ajax` → `sendEMailToPersonIds` (so sendet der Mail-Editor von ChurchTools).
+ * - Senden: alte Schnittstelle `churchhome/ajax` → `sendEMailToPersonIds` (so sendet der Mail-Editor von ChurchTools),
+ *   über `ctAltAnfrage` – dieselbe Stelle wie Lied-Kategorien und SongSelect.
  *   ChurchTools verschickt je Person eine eigene Mail, Absender „Name <noreply@churchtools.de>“, Antwort an die
  *   Absenderin.
  * - Platzhalter: `GET /placeholders/group/{id}` (alle Felder der Gruppe), Vorschau: `POST /emails/preview`.
  * - Nachweis: Ein „success“ allein beweist nichts – im Protokoll (`GET /logs`) steht je Mail „Speichere Mail an …“.
  */
-import { ChurchToolsBremst, ctAltAufruf, ctAnfrage, ctDaten } from '@ui/ct/verbindung';
+import { AltFehler, ChurchToolsBremst, ctAltAnfrage, ctAnfrage, ctDaten } from '@ui/ct/verbindung';
 import { ApiError } from '@ui/ct/fehler';
 
 const PLATZHALTER = /^\{\{\{?[^{}]+\}?\}\}$/;
@@ -42,14 +43,13 @@ export async function vorschauLaden(
   betreff: string,
   html: string,
 ): Promise<{ betreff: string; html: string }> {
-  const r = await ctAnfrage<{ data?: { html?: string; subject?: string } } | null>(
-    '/emails/preview',
-    {
-      method: 'POST',
-      body: JSON.stringify({ content: [html], subject: betreff, personId, groupId: gruppeId }),
-    },
-  );
-  const d = r?.data;
+  // Gemessen 22.10.2026: die Antwort steht direkt da (`{subject, html}`), nicht in `data` – beides annehmen.
+  type Vorschau = { html?: string; subject?: string };
+  const r = await ctAnfrage<(Vorschau & { data?: Vorschau }) | null>('/emails/preview', {
+    method: 'POST',
+    body: JSON.stringify({ content: [html], subject: betreff, personId, groupId: gruppeId }),
+  });
+  const d = r?.data ?? r;
   if (typeof d?.html !== 'string')
     throw new ApiError(502, 'ChurchTools hat keine Vorschau geliefert.');
   return { html: d.html, betreff: d.subject ?? betreff };
@@ -89,18 +89,29 @@ export async function rundmailSenden(
   const ab = Date.now() - 5_000;
   let unklar = false;
   try {
-    await ctAltAufruf('churchhome', 'sendEMailToPersonIds', {
-      ids: an.map((x) => x.personId).join(','),
-      betreff,
-      inhalt: html,
-      attachments: '',
-      domain_id: null,
-      group_id: gruppeId,
-      template_id: null,
-    });
+    await ctAltAnfrage(
+      'sendEMailToPersonIds',
+      {},
+      { verweigert: 'Mails über ChurchTools schicken darfst du hier nicht.' },
+      {
+        modul: 'churchhome',
+        json: {
+          ids: an.map((x) => x.personId).join(','),
+          betreff,
+          inhalt: html,
+          attachments: '',
+          domain_id: null,
+          group_id: gruppeId,
+          template_id: null,
+        },
+      },
+    );
   } catch (x) {
-    // Abgelehnt (4xx) oder gebremst (gar nicht erst geschickt): sicher nicht verschickt. Sonst – Zeitgrenze, Netz, 5xx –
-    // kann ChurchTools trotzdem gesendet haben: nachlesen statt raten.
+    // Sicher nicht verschickt: ChurchTools hat ausdrücklich abgelehnt, das Recht fehlt (4xx) oder es wurde gebremst
+    // (gar nicht erst geschickt). Sonst – Zeitgrenze, Netz, 5xx, unlesbare Antwort – kann ChurchTools trotzdem gesendet
+    // haben: nachlesen statt raten.
+    if (x instanceof AltFehler && x.art === 'abgelehnt')
+      throw new ApiError(422, `ChurchTools hat die Mails nicht angenommen: ${x.message}`);
     if (x instanceof ChurchToolsBremst || (x instanceof ApiError && x.status < 500)) throw x;
     unklar = true;
   }

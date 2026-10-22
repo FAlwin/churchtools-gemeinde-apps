@@ -22,6 +22,16 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   `client/src/utils/`), der blaue Hauptknopf als Mixin `hauptKnopfBreit`. Fotos des Fensters (Vorlage, früher, leer)
   sind vorher und nachher byte-gleich. Neu getestet: „Kalender unbekannt“ in der Musik-App legt nichts an.
 
+### Neu (Protokolle, S2-3)
+
+- **Vorlagen bearbeiten** (Verwaltung, nur Admins): Karte „Vorlagen“ unter den Gruppen mit Umfang und Punkten je
+  Vorlage; das Fenster wie im Entwurf – Name, Tagesordnungspunkte mit vorbereitetem Text und Reihenfolge, feste
+  Punkte („Offene To-Dos“, „Protokoll der letzten Sitzung“ – Titel änderbar), feste Aufgaben; „Neue Vorlage“ beginnt
+  mit „Gebet“ und „Offene To-Dos“; Löschen mit Rückfrage. Jeder Schreibschritt nachgelesen, zu lange Vorlagen
+  werden vorher abgelehnt.
+- Die drei Standard-Vorlagen entstehen nur noch, wenn die Kategorie „Vorlagen“ **neu angelegt** wird – hat ein Admin
+  alle gelöscht, kommen sie beim nächsten Einrichten nicht wieder (vorher: immer, wenn die Kategorie leer war).
+
 ### Neu (Organigramm, O3, #672)
 
 - **Reiter Organigramm · Personen · Hinweise** (am Handy unten): Personen und Hinweise gibt es nur für die **Leitung

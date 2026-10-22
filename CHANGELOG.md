@@ -19,6 +19,24 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   der Hinweis „Rückzahlung prüfen“ da.
 - „Platz und Betrag“ ist ein Baustein für „Von Hand“, „Person dazu“ und „Zurückholen“ (`PlatzWahl`).
 
+### Neu (Organigramm, O2, #664)
+
+- **Der ganze Baum:** je Bereich (oberste Gruppe) eine Karte – große Bereiche zuerst –, darin die Gruppen als Zeilen
+  mit Baumlinien, in der Farbe der Gruppe, mit Zahl der Personen, Leitung und den Diensten der Gruppe; im Kopf des
+  Bereichs die Personen des ganzen Bereichs (jede einmal) und die Leitung mit Bild.
+- **Gruppenfenster** (Klick auf eine Gruppe): Mitglieder nach Rollen in der Reihenfolge von ChurchTools, Ober- und
+  Untergruppen zum Weiterklicken, Dienste, „In ChurchTools öffnen“. Nur ansehen.
+- **Leitung aus ChurchTools:** `isLeader`, `sortKey`, `nameTranslated` der Gruppenrollen (gemessen 22.10.2026) –
+  die Namensliste aus O1 („Leiter“, „leader“, „Co-Leiter“) ist weg; die Rollen kommen aus dem Abruf, den `ladeIch`
+  ohnehin macht.
+- **Mitglieder aller Gruppen**, höchstens 4 Abrufe gleichzeitig. Ohne Leserecht (403) bleibt die Gruppe im Baum
+  („Mitglieder nicht sichtbar“); ein vorübergehender Fehler ist **kein** „nicht sichtbar“, sondern steht als solcher
+  da – mit „Erneut versuchen“, das nur die gescheiterten Gruppen nachlädt. Abgemeldet → Hinweis für alles.
+- **Gruppentypen ein-/ausblenden** (z. B. Verteiler), pro Gerät gemerkt; der Code kennt keinen Typ beim Namen.
+- Neue gemeinsame Bausteine `ui/bedienung/PersonBild` (Bild oder Initialen wie in ChurchTools) und
+  `ui/bedienung/GruppenKachel`. Die Dienste (`/services`) sind Beiwerk: fehlen sie, steht der Baum ohne Schildchen.
+- Nicht in O2: offene Plätze und Einsätze (kommen mit O3, sie brauchen die Termine).
+
 ### Neu (Anmeldungen, A7-4b)
 
 - **Person zur Anmeldung dazu** (Entwurf `a7-4-von-hand-v1`): „＋ Person dazu“ im Fenster einer Anmeldung (nur mit

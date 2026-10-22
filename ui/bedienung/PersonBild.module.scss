@@ -1,0 +1,11 @@
+// Person als Kreis (Organigramm O2) – Farben aus ui/design, kein eigener Wert.
+.kreis {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--text3);
+  color: #fff;
+  font-weight: 700;
+  object-fit: cover;
+}

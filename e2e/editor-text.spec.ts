@@ -76,10 +76,9 @@ test('mit Ablauf zeigt jedes Band, wie oft der Teil gesungen wird', async ({ pag
   await oeffnen(page);
   const zusatz = page.locator('.cm-cp-band-zusatz');
   await expect(zusatz).toHaveCount(0); // ohne Ablauf: nichts
-  await page
-    .getByRole('region', { name: 'Ablauf' })
-    .getByRole('button', { name: 'Chorus', exact: true })
-    .click();
+  const ablauf = page.getByRole('region', { name: 'Ablauf' });
+  await ablauf.getByRole('button', { name: 'Bearbeiten' }).click();
+  await ablauf.getByRole('button', { name: 'Chorus', exact: true }).click();
   await expect(zusatz).toHaveText(['1× im Ablauf', '2× im Ablauf']);
 });
 

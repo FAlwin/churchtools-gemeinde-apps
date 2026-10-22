@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -19,7 +19,7 @@ interface Props {
   text: string;
   /** Neue Reihenfolge übernehmen – leer heißt „wie im Text“ (die Flow-Zeile fällt weg). */
   setzen: (eintraege: string[]) => void;
-  /** Handy: Liste untereinander statt Kärtchen in Reihen. */
+  /** Handy: Liste untereinander statt Kärtchen in Reihen – im eigenen Reiter, deshalb immer offen. */
   kompakt?: boolean;
 }
 
@@ -31,9 +31,15 @@ interface Props {
  *
  * Ohne Flow-Zeile zeigt die Karte die Teile in der Reihenfolge des Texts – so wie das Blatt sie dann auch
  * zeigt. Die erste Änderung legt die Zeile an; „Wie im Text“ nimmt sie wieder heraus.
+ *
+ * **Breit eingeklappt** (Alwin am iPad, 22.10.2026: mit Tastatur blieb für den Text zu wenig Platz): eine
+ * Zeile mit dem Ablauf als Kurzform; ein eigener Ablauf ist als solcher markiert, damit man sieht, dass das
+ * Lied nicht in der Reihenfolge des Texts gesungen wird. Aufgeklappt wird nur zum Bearbeiten.
  */
 export function AblaufKarte({ text, setzen, kompakt = false }: Props) {
   const sensors = useZiehSensoren();
+  const [offenBreit, setOffen] = useState(false);
+  const offen = kompakt || offenBreit;
   const { eintraege, ausFlow, unbekannt, teile } = useMemo(() => {
     const abschnitte = parseChordPro(text);
     const flow = flowEintraege(parseMetadata(text).flow);
@@ -67,19 +73,57 @@ export function AblaufKarte({ text, setzen, kompakt = false }: Props) {
       aria-label="Ablauf"
       className={`${styles.karte}${kompakt ? ' ' + styles.kompakt : ''}`}
     >
-      <div className={styles.kopf}>
-        <span className={styles.titel}>Ablauf</span>
-        <span className={styles.hinweis}>
-          {ausFlow ? 'So wird das Lied gesungen' : 'Wie im Text'} · am Griff ziehen zum Verschieben
-        </span>
-        {ausFlow && (
-          <button type="button" className={styles.zurueck} onClick={() => setzen([])}>
-            Wie im Text
+      {!offen ? (
+        <div className={`${styles.kopf} ${styles.zu}`}>
+          <span className={styles.titel}>Ablauf</span>
+          {ausFlow ? (
+            <>
+              <span className={styles.eigen}>Eigener Ablauf</span>
+              <span className={styles.kurz}>{eintraege.join(' · ')}</span>
+            </>
+          ) : (
+            <span className={styles.kurz}>Wie im Text</span>
+          )}
+          {unbekannt.length > 0 && (
+            <span className={styles.fehltText}>
+              {unbekannt.length === 1 ? '1 Teil fehlt' : `${unbekannt.length} Teile fehlen`} im Text
+            </span>
+          )}
+          <button
+            type="button"
+            className={styles.zurueck}
+            aria-expanded={false}
+            onClick={() => setOffen(true)}
+          >
+            Bearbeiten
           </button>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className={styles.kopf}>
+          <span className={styles.titel}>Ablauf</span>
+          <span className={styles.hinweis}>
+            {ausFlow ? 'So wird das Lied gesungen' : 'Wie im Text'} · am Griff ziehen zum
+            Verschieben
+          </span>
+          {ausFlow && (
+            <button type="button" className={styles.zurueck} onClick={() => setzen([])}>
+              Wie im Text
+            </button>
+          )}
+          {!kompakt && (
+            <button
+              type="button"
+              className={styles.zurueck}
+              aria-expanded={true}
+              onClick={() => setOffen(false)}
+            >
+              Fertig
+            </button>
+          )}
+        </div>
+      )}
 
-      {teile.length === 0 ? (
+      {!offen ? null : teile.length === 0 ? (
         <p className={styles.leer}>
           Noch keine Teile mit Überschrift – zuerst im Text einen Teil anlegen (Format → Abschnitt).
         </p>
@@ -146,7 +190,9 @@ function Kaertchen({
   return (
     <li
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
+      // `Translate`, nicht `Transform`: Kärtchen sind verschieden breit, und `rectSortingStrategy` würde sie
+      // beim Ziehen auf die Größe des Nachbarn strecken (Alwin am iPad: „verziehen sich ganz komisch“).
+      style={{ transform: CSS.Translate.toString(transform), transition }}
       className={`${styles.kaertchen}${fehlt ? ' ' + styles.fehlt : ''}${isDragging ? ' ' + styles.zieht : ''}`}
     >
       <button

@@ -617,6 +617,8 @@ describe('Rundmail (A7-5)', () => {
       'Kinderfreizeit: Bitte noch überweisen',
     );
     expect(screen.getByText(/1 Mail/)).toBeTruthy();
+    // Platzhalter der Person gelten für die, an die die Mail geht (echter Test 22.10.2026).
+    expect(screen.getByText(/gelten für die Person, an die die Mail geht/)).toBeTruthy();
     const senden = screen.getByRole<HTMLButtonElement>('button', { name: 'Senden …' });
     await waitFor(() => expect(senden.disabled).toBe(false));
     fireEvent.click(senden);

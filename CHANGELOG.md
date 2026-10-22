@@ -22,7 +22,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   (aus zu Beginn).
 - Rückfrage mit Anzahl, danach **im Protokoll von ChurchTools nachgelesen**. Antwortet ChurchTools beim Senden nicht und
   steht nichts im Protokoll, heißt es „unklar, ob verschickt“ – ohne zweites Senden (sonst doppelte Mails).
-- Beim echten Test gefunden: Die Vorschau-Antwort von ChurchTools steht direkt da (`{subject, html}`), nicht in `data`.
+- Beim echten Test gefunden: Die Vorschau-Antwort von ChurchTools steht direkt da (`{subject, html}`), nicht in `data`;
+  Platzhalter der Person ([Vorname], [Wartelistenplatz]) gelten für die Person, an die die Mail geht – Hinweis im Fenster.
 
 ### Neu (Musik-App, Lied-Editor L2)
 

@@ -353,6 +353,11 @@ export function RundmailFenster({
             </button>
           ))}
         </p>
+        <p className={a.leise}>
+          [Vorname], [Nachname] und [Wartelistenplatz] gelten für die Person, an die die Mail geht –
+          die erste der Anmeldung. Wartet nur ein Geschwisterkind, bleibt [Wartelistenplatz] leer
+          (die Vorschau zeigt es).
+        </p>
         {unbekannt.length > 0 && (
           <p className={f.fehler}>
             Diese Platzhalter kennt ChurchTools hier nicht:{' '}

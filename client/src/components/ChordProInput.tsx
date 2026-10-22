@@ -25,9 +25,6 @@ import {
 export interface ChordProHandle {
   /** Fügt Text an der Cursorposition ein. `block` = auf eigener Zeile; `caretBack` = Cursor n Zeichen vor das Ende. */
   insert: (text: string, opts?: { block?: boolean; caretBack?: number }) => void;
-  /** Hängt `suffix` an den zuletzt gesetzten Akkord an (steht der Cursor direkt hinter `[…]`,
-   *  wird der Zusatz VOR das `]` eingefügt, z. B. `[C]` + "m7" → `[Cm7]`). Sonst ohne Wirkung. */
-  appendChord: (suffix: string) => void;
   /** Ersetzt `from`–`to` durch `insert` – wie eine Eingabe (Rückgängig), ohne den Cursor zu stehlen (L2: Ablauf-Kärtchen). */
   aendern: (from: number, to: number, insert: string) => void;
   undo: () => void;
@@ -345,26 +342,6 @@ export const ChordProInput = forwardRef<ChordProHandle, ChordProInputProps>(func
       view.dispatch({
         changes: { from: sel.from, to: sel.to, insert: ins },
         selection: { anchor: caret },
-      });
-      view.focus();
-    },
-    appendChord(suffix) {
-      const view = viewRef.current;
-      if (!view || !suffix) return;
-      const sel = view.state.selection.main;
-      if (sel.from !== sel.to || sel.from === 0) return; // Auswahl/Anfang → nichts anhängen
-      const doc = view.state.doc;
-      const line = doc.lineAt(sel.from);
-      const before = doc.sliceString(line.from, sel.from);
-      if (!before.endsWith(']')) return; // Cursor steht nicht direkt hinter einem Akkord
-      const open = before.lastIndexOf('[');
-      if (open === -1) return;
-      const inner = before.slice(open + 1, -1); // Inhalt zwischen [ und ]
-      if (inner.includes('[') || inner.includes(']')) return; // kein sauberes [..]
-      const insertPos = sel.from - 1; // direkt vor das ]
-      view.dispatch({
-        changes: { from: insertPos, insert: suffix },
-        selection: { anchor: sel.from + suffix.length },
       });
       view.focus();
     },

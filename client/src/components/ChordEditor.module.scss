@@ -112,9 +112,8 @@
   gap: 8px;
   padding: 6px 12px 6px;
   flex-shrink: 0;
-  // Eine feste Zeile (kein Umbruch), damit die Leiste beim Hinzukommen neuer „Zuletzt"-Chips
-  // nicht springt. WICHTIG: KEIN overflow:hidden hier – das würde die nach unten aufklappenden
-  // Akkord-/Format-Menüs abschneiden. Das Chip-Clipping macht .tbRecent selbst.
+  // Eine feste Zeile. WICHTIG: KEIN overflow:hidden hier – das würde das nach unten aufklappende
+  // Format-Menü abschneiden. Die Akkorde stehen darunter in einer eigenen Leiste (`AkkordLeiste`, L5).
   flex-wrap: nowrap;
   // Am Handy reicht eine Zeile seit dem Schalter „ChordPro-Text“ (L3) nicht mehr – dort darf sie umbrechen.
   @media (max-width: 479px) {
@@ -154,48 +153,6 @@
 .ddPanelWide {
   min-width: 300px;
 }
-// ── Akkord-Baukasten: Grundton → Art → optionaler Basston → Einfügen ──
-.cbPanel {
-  min-width: 330px;
-  max-width: min(420px, calc(100vw - 24px));
-  padding: 10px;
-}
-.cbLbl {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text3);
-  padding: 8px 2px 5px;
-  &:first-child {
-    padding-top: 2px;
-  }
-}
-.cbGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
-  gap: 5px;
-}
-.cbChip {
-  height: 34px;
-  border: 1.5px solid var(--border);
-  border-radius: var(--r-ctrl);
-  background: var(--surface3);
-  color: var(--text);
-  font-family: var(--ui);
-  font-size: 13.5px;
-  font-weight: 700;
-  cursor: pointer;
-  &:active {
-    background: var(--blue-soft);
-  }
-}
-// Grundton-Chips sind die primäre Aktion (fügen sofort ein) → kräftiger hervorheben.
-.cbRoot {
-  border-color: var(--blue);
-  color: var(--blue-ink);
-  font-weight: 800;
-}
 // Format-Eintrag: deutsche Erklärung zuerst, dann der Fach-Tag.
 .ddFormat {
   display: flex;
@@ -227,41 +184,6 @@
   background: var(--surface3);
   border-radius: var(--r-ctrl);
   padding: 1px 6px;
-}
-
-// Zuletzt genutzte Akkorde – direkt in der Toolbar (sichtbar nach der ersten Nutzung).
-// Nimmt den Restplatz und schneidet NUR die eigenen überzähligen Chips ab (nicht die Menüs).
-.tbRecent {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  flex-wrap: nowrap; // eine Zeile, kein Layout-Springen
-  flex: 1 1 auto;
-  overflow: hidden;
-  min-width: 0;
-}
-.tbRecentLbl,
-.recentChip {
-  flex-shrink: 0;
-}
-.tbRecentLbl {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text3);
-}
-.recentChip {
-  height: 30px;
-  padding: 0 10px;
-  border: 1.5px solid var(--blue);
-  border-radius: var(--r-ctrl);
-  background: var(--surface2);
-  color: var(--blue-ink);
-  font-family: var(--ui);
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
 }
 
 // L3: Schalter für den rohen ChordPro-Text (an = gedrückt, wie ein gewählter Umschalter).

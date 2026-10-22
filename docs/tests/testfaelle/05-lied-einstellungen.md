@@ -440,3 +440,36 @@ ein Kärtchen so, wie man es erwartet – ein Kärtchen verschwindet immer ganz 
 - **Historie:** Neuer Lied-Editor, Scheibe L3 (22.10.2026) – vor dem Mergen von L3 am echten iPad zu prüfen
 
 </details>
+
+### TF-EINST-16 · Lied-Editor: Akkorde einfügen mit der Leiste – am echten iPad
+
+**Das brauchst du:** Ein iPad mit Bildschirmtastatur, das Recht, Versionen anzulegen, und ein Testlied mit Tonart.
+**Auf Staging nicht speichern** – Staging hängt am echten ChurchTools.
+
+**Das muss passieren:** Unter der Werkzeugleiste stehen die Akkorde der Tonart (in E: E, F#m, G#m, A, B, C#m),
+daneben „Im Lied“ und „Anderer Akkord“. Ein Tipp setzt den Akkord an die Cursorstelle; die Tastatur bleibt dabei
+offen, und man kann direkt weiterschreiben.
+
+1. Lied öffnen → Version bearbeiten. In den Text tippen (Tastatur geht auf), dann in der Leiste **A** antippen:
+   Das Kärtchen „A“ steht an der Cursorstelle, **die Tastatur bleibt offen**, weitertippen geht dahinter.
+2. **E** in der Leiste **gedrückt halten**: Es erscheinen „Varianten von E“ (Em, E7, Em7, Esus4 …), kein
+   iOS-Menü (Kopieren/Nachschlagen). **Esus4** antippen → gesetzt. Nur E selbst wurde nicht gesetzt.
+3. **Anderer Akkord** → `em7` eintippen → Eingabetaste: Das Fenster schließt, „Em7“ steht im Text und
+   vorne unter **Im Lied**. Kein zusätzlicher Zeilenumbruch.
+4. **Anderer Akkord** → G, sus4, /B antippen: Die Vorschau zeigt „Gsus4/B“; **Einfügen** ist ohne Scrollen zu
+   sehen.
+5. Etwas Unlesbares eintippen (`Vers`) → rot, „Einfügen“ gesperrt.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `client/src/components/AkkordLeiste.tsx`, `client/src/components/AkkordFenster.tsx`, `client/src/components/ChordEditor.tsx`, `client/src/utils/transpose.ts`, `client/src/utils/chordpro.ts`
+- **Automatisiert:** weitgehend – `transpose.test.ts` (`tonartAkkorde`, `akkordLesen`, `akkordTeile`),
+  `chordpro.test.ts` (`akkordeImText`), `AkkordLeiste.test.tsx` (Gruppen, Gedrückthalten mit Fake-Timern),
+  `AkkordFenster.test.tsx`, `ChordEditor.test.tsx` (Tonart aus `{key}`), `e2e/editor-akkorde.spec.ts`
+  (antippen + weitertippen, eintippen + Eingabetaste ohne Zeilenumbruch, Gedrückthalten). **Von Hand bleibt das
+  echte iPad**: Tastatur bleibt offen, Gedrückthalten mit dem Finger ohne iOS-Menü.
+- **Historie:** Neuer Lied-Editor, Scheibe L5-1 (22.10.2026), Entwurf Variante A; Alwin: „Akkorde einfügen ist
+  noch nicht so intuitiv“
+
+</details>

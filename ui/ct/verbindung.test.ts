@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   ctAlleSeiten,
+  ctAltAufruf,
   ctAnfrage,
   fehlerAus,
   verbindungEinrichten,
@@ -128,5 +129,42 @@ describe('ctAlleSeiten (#480)', () => {
   it('mehr als maxSeiten → Fehler statt einer halben Liste', async () => {
     liste(50);
     await expect(ctAlleSeiten('/songs', 10, 3)).rejects.toThrow('mehr als 30 Einträge');
+  });
+});
+
+describe('ctAltAufruf (alte Schnittstelle, A7-5)', () => {
+  it('schickt JSON mit func und CSRF-Token an /?q=<modul>/ajax; success → data', async () => {
+    const spy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async (url) =>
+        String(url).endsWith('/api/csrftoken')
+          ? json(200, { data: 'TOK' })
+          : json(200, { status: 'success', data: { n: 1 } }),
+      );
+    await expect(
+      ctAltAufruf('churchhome', 'sendEMailToPersonIds', { ids: '140' }),
+    ).resolves.toEqual({ n: 1 });
+    const [url, init] = spy.mock.calls.at(-1)!;
+    expect(url).toBe('https://ct.test/?q=churchhome/ajax');
+    expect(JSON.parse(String(init!.body))).toEqual({ ids: '140', func: 'sendEMailToPersonIds' });
+    expect((init!.headers as Record<string, string>)['CSRF-Token']).toBe('TOK');
+  });
+
+  it('status error → Fehler mit der Meldung; abgelaufene Sitzung → 401', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) =>
+      String(url).endsWith('/api/csrftoken')
+        ? json(200, { data: 'TOK' })
+        : json(200, { status: 'error', message: 'Keine Empfänger' }),
+    );
+    await expect(ctAltAufruf('churchhome', 'x', {})).rejects.toMatchObject({
+      status: 422,
+      message: 'ChurchTools hat abgelehnt: Keine Empfänger',
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) =>
+      String(url).endsWith('/api/csrftoken')
+        ? json(200, { data: 'TOK' })
+        : json(200, { status: 'error', message: 'Session expired!' }),
+    );
+    await expect(ctAltAufruf('churchhome', 'x', {})).rejects.toMatchObject({ status: 401 });
   });
 });

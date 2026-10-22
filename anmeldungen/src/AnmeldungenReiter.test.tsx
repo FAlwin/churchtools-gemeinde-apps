@@ -7,6 +7,7 @@ import * as Z from './zahlung';
 import * as B from './bewegung';
 import * as H from './vonHand';
 import * as M from './mitglieder';
+import * as R from './rundmail';
 import {
   FELDER,
   STICHTAG,
@@ -37,6 +38,13 @@ vi.mock('./vonHand', () => ({
 }));
 const hm = vi.mocked(H);
 vi.mock('./mitglieder', () => ({ gruppenfelderLaden: vi.fn() }));
+vi.mock('./rundmail', () => ({
+  platzhalterLaden: vi.fn(),
+  vorschauLaden: vi.fn(),
+  rundmailSenden: vi.fn(),
+  UnklarObVerschickt: class extends Error {},
+}));
+const rm = vi.mocked(R);
 const mm = vi.mocked(M);
 
 /**
@@ -586,5 +594,79 @@ describe('Mail schreiben', () => {
       />,
     );
     expect(screen.getByText(/Öffnet dein Mailprogramm/)).toBeTruthy();
+  });
+});
+
+describe('Rundmail (A7-5)', () => {
+  const CT = new Map([
+    ['Angemeldet von', '{{{groupMemberField.angemeldet-von}}}'],
+    ['Anmelde-Nr.', '{{{groupMemberField.anmelde-nr-}}}'],
+    ['Betrag', '{{{groupMemberField.betrag}}}'],
+  ]);
+  beforeEach(() => {
+    rm.platzhalterLaden.mockResolvedValue(CT);
+    rm.rundmailSenden.mockResolvedValue({ bestaetigt: 1 });
+  });
+
+  it('Zahlungserinnerung an „Zahlung offen“: je Anmeldung eine Mail, Platzhalter für ChurchTools, Rückfrage, verschickt', async () => {
+    zeigen(fertig());
+    fireEvent.click(screen.getByRole('button', { name: /Zahlung offen/ }));
+    fireEvent.click(screen.getByRole('button', { name: '✉ Rundmail' }));
+    // Aus dem Filter „Zahlung offen“ → gleich mit der Zahlungserinnerung.
+    expect(screen.getByLabelText<HTMLInputElement>('Betreff').value).toBe(
+      'Kinderfreizeit: Bitte noch überweisen',
+    );
+    expect(screen.getByText(/1 Mail/)).toBeTruthy();
+    const senden = screen.getByRole<HTMLButtonElement>('button', { name: 'Senden …' });
+    await waitFor(() => expect(senden.disabled).toBe(false));
+    fireEvent.click(senden);
+    expect(screen.getByText('1 Mail jetzt senden?')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Ja, 1 Mail senden' }));
+    await screen.findByText(/laut Protokoll von ChurchTools übernommen/);
+    const [gruppe, an, betreff, html] = rm.rundmailSenden.mock.calls[0];
+    expect([gruppe, an, betreff]).toEqual([
+      165,
+      [{ personId: 10, email: 'maria@beispiel.test' }],
+      'Kinderfreizeit: Bitte noch überweisen',
+    ]);
+    expect(html).toMatch(/^<p>Hallo \{\{\{groupMemberField\.angemeldet-von\}\}\},<\/p>/);
+    expect(html).toContain('{{{groupMemberField.betrag}}}');
+  });
+
+  it('unbekannter Platzhalter → Hinweis, Senden gesperrt; eigener Text wird nicht still durch eine Vorlage ersetzt', async () => {
+    zeigen(fertig());
+    fireEvent.click(screen.getByRole('button', { name: '✉ Rundmail' }));
+    await waitFor(() => expect(rm.platzhalterLaden).toHaveBeenCalled());
+    fireEvent.change(screen.getByLabelText('Betreff'), { target: { value: 'Hallo' } });
+    fireEvent.change(screen.getByLabelText('Text'), { target: { value: 'Größe: [Schuhgröße]' } });
+    expect(
+      await screen.findByText(/Diese Platzhalter kennt ChurchTools hier nicht: \[Schuhgröße\]/),
+    ).toBeTruthy();
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Senden …' }).disabled).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Infos vorab' }));
+    expect(screen.getByText(/Deinen Text durch die Vorlage ersetzen\?/)).toBeTruthy();
+    expect(screen.getByLabelText<HTMLTextAreaElement>('Text').value).toBe('Größe: [Schuhgröße]');
+    fireEvent.click(screen.getByRole('button', { name: 'Ja, ersetzen' }));
+    expect(screen.getByLabelText<HTMLTextAreaElement>('Text').value).toMatch(
+      /^Hallo \[Angemeldet von\],/,
+    );
+  });
+
+  it('unklar, ob verschickt → Meldung, kein zweites Senden', async () => {
+    rm.rundmailSenden.mockRejectedValue(
+      Object.assign(new R.UnklarObVerschickt(), { message: 'unklar – bitte erst nachsehen' }),
+    );
+    zeigen(fertig());
+    fireEvent.click(screen.getByRole('button', { name: '✉ Rundmail' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zahlungserinnerung' }));
+    const senden = screen.getByRole<HTMLButtonElement>('button', { name: 'Senden …' });
+    await waitFor(() => expect(senden.disabled).toBe(false));
+    fireEvent.click(senden);
+    const ja = screen.getByRole('button', { name: 'Ja, 1 Mail senden' });
+    fireEvent.click(ja);
+    expect(await screen.findByText('unklar – bitte erst nachsehen')).toBeTruthy();
+    expect(
+      screen.getByRole<HTMLButtonElement>('button', { name: 'Ja, 1 Mail senden' }).disabled,
+    ).toBe(true);
   });
 });

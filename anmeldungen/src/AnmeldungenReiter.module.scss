@@ -491,3 +491,29 @@
   font-weight: 700;
   color: var(--text2);
 }
+
+// **Rundmail** (A7-5): mehrzeiliger Text, Platzhalter als kleine Knöpfe, Vorschau von ChurchTools im Rahmen.
+.rundmailText {
+  height: auto;
+  min-height: 220px;
+  padding: 10px 12px;
+  line-height: 1.5;
+  resize: vertical;
+  font: inherit;
+}
+
+.platzhalterKnopf {
+  margin: 2px 4px 2px 0;
+  border: 1px solid var(--border);
+  background: var(--surface3);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.vorschauRahmen {
+  display: block;
+  width: 100%;
+  min-height: 320px;
+  border: 0;
+  background: #fff;
+}

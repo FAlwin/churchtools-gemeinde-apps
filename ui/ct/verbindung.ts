@@ -246,6 +246,11 @@ export async function ctAnfrage<T = unknown>(
     // Datei-Uploads dürfen länger dauern als ein API-Aufruf – wie im Server (`CT_FILE_TIMEOUT_MS`).
     init.body instanceof FormData ? ZEIT_DATEI_MS : ZEIT_API_MS,
   );
+  return (await rumpfAus(res, method !== 'GET', init.verweigert)) as T;
+}
+
+/** Rumpf lesen und Fehler übersetzen – EINE Stelle für `ctAnfrage` und `ctAltAufruf`. */
+async function rumpfAus(res: Response, schreibend: boolean, verweigert?: string): Promise<unknown> {
   meldeErreichbar(![502, 503, 504].includes(res.status));
   if (res.status === 429) throw bremsen(res);
   const text = await res.text();
@@ -258,10 +263,49 @@ export async function ctAnfrage<T = unknown>(
     }
   }
   if (!res.ok) {
-    if (method !== 'GET') csrfVerwerfenBeiAblehnung(res.status);
-    throw await fehlerAus(res, body, init.verweigert);
+    if (schreibend) csrfVerwerfenBeiAblehnung(res.status);
+    throw await fehlerAus(res, body, verweigert);
   }
-  return body as T;
+  return body;
+}
+
+/**
+ * **Die alte Schnittstelle von ChurchTools** (`/?q=<modul>/ajax`, `{func, …}`) – nur, wo es keine REST-Schnittstelle
+ * gibt. Nicht dokumentiert; die Weboberfläche von ChurchTools nutzt sie selbst (A7-5: Mails über `churchhome`
+ * `sendEMailToPersonIds`, gemessen 22.10.2026). Antwort `{status, data, message}` – alles außer `success` wirft.
+ */
+export async function ctAltAufruf<T = unknown>(
+  modul: string,
+  func: string,
+  daten: Record<string, unknown>,
+): Promise<T> {
+  pruefeBremse();
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+  };
+  const csrf = await holeCsrf();
+  if (csrf) headers['CSRF-Token'] = csrf;
+  const res = await mitZeitgrenze(
+    `${ctBasis()}/?q=${modul}/ajax`,
+    { method: 'POST', credentials: 'include', headers, body: JSON.stringify({ ...daten, func }) },
+    ZEIT_API_MS,
+  );
+  const body = (await rumpfAus(res, true)) as {
+    status?: unknown;
+    data?: unknown;
+    message?: unknown;
+  } | null;
+  if (body?.status === 'success') return body.data as T;
+  const meldung = typeof body?.message === 'string' ? body.message.trim() : '';
+  if (/session expired/i.test(meldung))
+    throw new ApiError(401, 'Bei ChurchTools nicht mehr angemeldet.');
+  throw new ApiError(
+    422,
+    meldung
+      ? `ChurchTools hat abgelehnt: ${meldung}`
+      : 'ChurchTools hat den Auftrag nicht angenommen.',
+  );
 }
 
 /**

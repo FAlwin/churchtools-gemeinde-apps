@@ -404,7 +404,7 @@ export function bescheidMail(
   },
 ): Mail {
   const b = e.bezahlung;
-  const gruss = [...(e.kontakt ? ['', `Bei Fragen: ${e.kontakt}`] : []), '', 'Viele Grüße'];
+  const gruss = grussZeilen(e);
   const zahlen =
     a.betragCent <= 0
       ? []
@@ -464,6 +464,11 @@ export function bescheidMail(
       ...gruss,
     ].join('\n'),
   };
+}
+
+/** Der Schluss jeder Mail an Familien – „Bei Fragen: …“ und der Gruß (Bescheid A7-3/4, Rundmail A7-5). */
+export function grussZeilen(e: OeffentlicheEinstellungen): string[] {
+  return [...(e.kontakt ? ['', `Bei Fragen: ${e.kontakt}`] : []), '', 'Viele Grüße'];
 }
 
 /** Die Mail als `mailto:`-Link (Empfänger, Betreff, Text). */

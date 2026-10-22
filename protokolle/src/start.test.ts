@@ -2,15 +2,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ladeIch } from '@ui/ct/ich';
 import { modulId } from '@ui/ct/modulPort';
 import { kategorienLesen } from '@shared/ct/modulDaten';
+import { ctDaten } from '@ui/ct/verbindung';
 import { ladeStart } from './start';
 
 vi.mock('@ui/ct/ich', () => ({ ladeIch: vi.fn() }));
 vi.mock('@ui/ct/modulPort', () => ({ modulId: vi.fn(), modulPort: {} }));
 vi.mock('@shared/ct/modulDaten', () => ({ kategorienLesen: vi.fn() }));
+vi.mock('@ui/ct/verbindung', () => ({ ctDaten: vi.fn() }));
 
 const ich = vi.mocked(ladeIch);
 const modul = vi.mocked(modulId);
 const kategorien = vi.mocked(kategorienLesen);
+const daten = vi.mocked(ctDaten);
 
 beforeEach(() => {
   ich.mockResolvedValue({
@@ -28,6 +31,7 @@ beforeEach(() => {
     ],
   });
   modul.mockResolvedValue(20);
+  daten.mockResolvedValue({ churchcore: { 'administer persons': false } });
   kategorien.mockResolvedValue([
     { id: 60, shorty: 'protokolle-g11', name: 'Protokolle · Leitungsteam' },
   ]);
@@ -42,6 +46,13 @@ describe('ladeStart', () => {
       [11, 'Leitungsteam', 'unvollstaendig'],
       [19, 'Technik-Team', 'nicht-eingerichtet'],
     ]);
+    expect(s.darfVerwalten).toBe(false);
+  });
+
+  it('Admin (Rechte vergeben): darf verwalten – gelesen aus den globalen Rechten', async () => {
+    daten.mockResolvedValue({ churchcore: { 'administer persons': true } });
+    expect((await ladeStart()).darfVerwalten).toBe(true);
+    expect(daten).toHaveBeenCalledWith('/permissions/global');
   });
 
   it('wirft, wenn die Kategorien nicht lesbar sind – keine leere Liste', async () => {

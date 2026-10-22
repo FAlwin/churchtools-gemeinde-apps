@@ -15,6 +15,37 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Handy ein Umschalter **Text | Vorschau**. Der Umschalter „Editor / Beide / Vorschau" entfällt. Am Text und
   am Speichern ändert sich nichts. Weitere Scheiben (Ablauf als Kärtchen, Akkorde als Kärtchen) folgen.
 
+### Neu (Protokolle, S2-2)
+
+- **Reiter „Verwaltung“** (nur wer in ChurchTools Rechte vergeben darf): alle Gruppen der Gemeinde als Liste,
+  versteckte markiert, je Gruppe „eingerichtet“ oder „Einrichten“. Ein Tipp öffnet **„Gruppe einrichten“** wie im
+  Entwurf: je Rolle Kein Zugriff · Lesen + eigene To-Dos · Leitung, Tagesordnungspunkte vorschlagen oder direkt
+  eintragen, Kalender. Scheitert das Speichern, bleibt das Fenster offen und sagt warum; fehlt nach einem
+  abgebrochenen Versuch die Einstellung, sagt es „unvollständig“. Am Computer Reiter oben, am Handy unten.
+- Kalender-Rechte und „versteckte Gruppe sehen“ entzieht das Einrichten jetzt wieder (Herabstufen,
+  Kalenderwechsel) – **nur die selbst gesetzten**, von Hand gesetzte bleiben (Alwin, 22.10.2026).
+
+### Geändert (gemeinsam)
+
+- Der Reiter in der Adresse (`#/termine`) steht jetzt in `ui/bedienung/reiterAdresse.ts` – Dienstplaner und
+  Protokolle nutzen dieselbe Regel (vorher nur im Dienstplaner).
+
+### Neu (Protokolle, S2-1)
+
+- **Gruppe einrichten – der Kern ohne Oberfläche** (`protokolle/src/einrichten.ts`, Bauplan Protokolle S2-1): legt
+  die Kategorien „Protokolle · <Gruppe>“, „Mitarbeit · <Gruppe>“ und „Vorlagen“ an, richtet die Rechte je Rolle aus
+  (Leitung · Lesen + eigene To-Dos · Kein Zugriff, Kalender, „versteckte Gruppe sehen“), schreibt erst danach die
+  Einstellung der Gruppe und legt beim ersten Mal die drei Standard-Vorlagen an. **Jeder Schritt nachgelesen**;
+  erneut aufrufen ist gefahrlos. Gegen die Test-Instanz mit dem echten Code geprüft: ein entzogenes Leserecht wirkt
+  sofort (Messung `messung-s2-1-2026-10-22.md`: ein `PUT` an irgendeiner Rolle leert den Rechte-Zwischenspeicher
+  von ChurchTools). Jede Rolle mit Zugriff bekommt jetzt auch „Modul sehen“ (ohne das fehlt der Menüpunkt). Die Oberfläche folgt
+  mit S2-2.
+
+### Geändert (gemeinsam)
+
+- `NichtUebernommen` („ChurchTools hat … nicht übernommen“) steht jetzt in `ui/ct/fehler.ts`, und
+  `ui/ct/fehlerMeldung.ts` kennt den Fall für alle Erweiterungen (vorher nur in den Anmeldungen).
+
 ### Neu (Anmeldungen, A7-4c)
 
 - **Abgesagte zurückholen** (Entwurf `a7-4-von-hand-v1`): im Filter „Abgesagt“ (Zeile anklicken), im Fenster einer

@@ -1,0 +1,92 @@
+// Verwaltung der Protokolle (Bauplan S2-2) – Karte und Zeilen wie die Startseite, jede Zeile ein Knopf.
+@use '@ui/design/mixins' as m;
+
+.karte {
+  @include m.card-list;
+  max-width: 720px;
+}
+
+.kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px 4px;
+
+  h2 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+}
+
+.anzahl {
+  color: var(--text2);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.erklaerung {
+  padding: 0 14px 12px;
+  border-bottom: 1px solid var(--hair);
+  color: var(--text2);
+  font-size: 13.5px;
+}
+
+.liste {
+  list-style: none;
+
+  li {
+    border-bottom: 1px solid var(--hair);
+
+    &:last-child {
+      border-bottom: 0;
+    }
+  }
+}
+
+.zeile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 14px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface3);
+  }
+
+  svg {
+    flex: none;
+    color: var(--text3);
+  }
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.einrichten {
+  flex: none;
+  color: var(--blue);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ruhig {
+  color: var(--text2);
+  font-size: 14px;
+}

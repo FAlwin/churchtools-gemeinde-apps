@@ -34,8 +34,14 @@ geschützt, nicht nur in der Oberfläche (gemessen 16.10.2026):
   `protokolle-g<ID>`, nur die Leitung schreibt) und **„Mitarbeit · <Gruppe>“** (`mitarbeit-g<ID>`, To-Dos und
   Vorschläge). Dazu gemeinsam **„Vorlagen“** (`vorlagen`).
 - Die Rechte hängen an **„Rolle X in Gruppe Y“** und folgen einem Rollenwechsel sofort. Setzen kann sie nur ein
-  **Admin** – deshalb wird jede Gruppe einmal von einem Admin eingerichtet (kommt mit S2: „Gruppe einrichten“ in
-  der Erweiterung, ein Klick).
+  **Admin** (ChurchTools-Recht „Personen administrieren“) – deshalb wird jede Gruppe einmal von einem Admin
+  eingerichtet („Gruppe einrichten“ in der Erweiterung; der Kern steht seit S2-1, die Oberfläche kommt mit S2-2).
+- Beim Einrichten bekommt jede Rolle mit Zugriff: „Modul sehen“, Lesen in allen drei Kategorien, Schreiben in
+  „Mitarbeit“; die **Leitung** zusätzlich Schreiben und Löschen in „Protokolle“ und „Termine bearbeiten“ im gewählten
+  Kalender (alle anderen: „ansehen“). Gelöscht wird in „Mitarbeit“ nie – ein To-Do wird nur als gelöscht markiert.
+- Wird eine Rolle herabgestuft, entzieht das Einrichten die Rechte auf die eigenen Kategorien **sofort wirksam**.
+  Kalender-Rechte und „versteckte Gruppe sehen“ werden nur ergänzt, nie entzogen (sie können auch aus anderem
+  Grund gesetzt sein).
 - **Versteckte Gruppen** bleiben versteckt; ihre Mitglieder bekommen beim Einrichten zusätzlich „versteckte Gruppe
   sehen“. Ohne das sehen sie ihre eigene Gruppe in ChurchTools nicht (gemessen 22.10.2026).
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ApiError } from './fehler';
+import { ApiError, NichtUebernommen } from './fehler';
 import { ChurchToolsBremst } from './verbindung';
 import { fehlerMeldung } from './fehlerMeldung';
 
@@ -14,6 +14,13 @@ describe('fehlerMeldung', () => {
   it('5xx = vorübergehend: „antwortet gerade nicht“, mit „Erneut versuchen“', () => {
     expect(fehlerMeldung(new ApiError(502, 'x'))).toEqual({
       text: 'ChurchTools antwortet gerade nicht. Bitte versuch es gleich noch einmal.',
+      nochmal: true,
+    });
+  });
+
+  it('nicht übernommen (502 nach dem Nachlesen) sagt, WAS fehlt – nicht „antwortet gerade nicht“', () => {
+    expect(fehlerMeldung(new NichtUebernommen('die Rechte der Rollen'))).toEqual({
+      text: 'ChurchTools hat die Rechte der Rollen nicht übernommen. Bitte noch einmal versuchen.',
       nochmal: true,
     });
   });

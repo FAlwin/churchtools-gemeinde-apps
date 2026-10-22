@@ -188,12 +188,14 @@ churchtools-gemeinde-apps/
 │       ├── types/           # server-spezifische Typen
 │       └── utils/           # Hilfsfunktionen (u. a. isoTag.ts = die eine Datums-Formatierung)
 ├── shared/types/            # geteilte Typen (Service, SetlistSong, Setlist, …)
+├── shared/organigramm/      # Regeln des Organigramms: gruppen (Baum aus Gruppen + Hierarchie), farbe (eigene Farbe vor Typ), personen (jede Person einmal), rechte (O1)
 ├── shared/dienstplan/       # Regeln des Dienstplaners: termine (Liste, E3-2), start (Startseite, E3-3), plan (Matrix, E3-4), fenster + werWieOft (E3-5), einteilen (Schreibkern, E4-1), werKann (E4-2)
 ├── shared/anmeldung/        # Regeln der Anmeldungen: preis, formular (#474), uebersicht (#480), vorlagen, termin, felder, rechte (#486), bezahlung (#507), gestaltung + baukasten (A5)
 ├── anmeldungen/             # Anmeldungen: ChurchTools-Erweiterung für Veranstalter (#474, nur Erweiterung);
 │                            #   Formular-Baukasten = Baukasten.tsx (+ BaukastenLeiste, FeldBearbeiten, useSchlange)
 ├── formular/                # Anmeldungen: öffentliches Formular, statisch – jede Gemeinde auf ihrem Webspace
 ├── dienstplaner/            # Dienstplaner: ChurchTools-Erweiterung für alle Dienstgruppen (Bauplan E2, vorerst nur Erweiterung)
+├── organigramm/             # Organigramm: ChurchTools-Erweiterung, Gemeinde als Baum + Organisation weiterbauen (Bauplan O1, nur Erweiterung, Kürzel `organigramm`)
 ├── shared/protokolle/       # Regeln der Protokolle: dokument (Ableitung), speicher (Kopf + Teile), aufgaben, einrichten, vorlagen, platzhalter, gruppen (S1)
 ├── protokolle/              # Protokolle: ChurchTools-Erweiterung für Protokolle und To-Dos von Gruppen (Bauplan Protokolle, nur Erweiterung)
 └── ui/                      # gemeinsame Browser-Bausteine aller Apps (Alias @ui, Dienstplaner E1, Anmeldungen #474)

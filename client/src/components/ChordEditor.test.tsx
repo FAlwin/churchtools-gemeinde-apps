@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 
 /**
  * Der Speichern-Knopf des Editors – gegen die **echte** Komponente, nicht gegen eine Attrappe.
@@ -174,5 +174,51 @@ describe('ChordEditor – Vorschau im Scroll-Modus', () => {
     localStorage.setItem('worship:liedansicht', 'scrollen');
     zeige({ mitVersionsname: false });
     expect(vorschau.props.at(-1)?.rolle).toBe(true);
+  });
+});
+
+/** Aufbau seit L1 (neuer Lied-Editor, 22.10.2026): breit Text und Vorschau nebeneinander, schmal umschaltbar. */
+describe('ChordEditor – Aufbau (L1)', () => {
+  function breite(breit: boolean) {
+    window.matchMedia = vi.fn().mockReturnValue({
+      matches: breit,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    });
+  }
+
+  it('breit: Text- und Vorschau-Karte nebeneinander, kein Umschalter', () => {
+    breite(true);
+    zeige();
+    expect(screen.getByRole('region', { name: 'Text' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Vorschau' })).toBeTruthy();
+    expect(screen.queryByRole('group', { name: 'Ansicht' })).toBeNull();
+  });
+
+  it('schmal: „Text | Vorschau“ – die Text-Karte bleibt beim Wechsel erhalten (Verlauf, Cursor)', () => {
+    breite(false);
+    zeige();
+    const umschalter = screen.getByRole('group', { name: 'Ansicht' });
+    expect(screen.queryByRole('region', { name: 'Vorschau' })).toBeNull();
+    fireEvent.click(within(umschalter).getByRole('button', { name: 'Vorschau' }));
+    expect(screen.getByRole('region', { name: 'Vorschau' })).toBeTruthy();
+    // Ausgeblendet, aber noch da – sonst wären Rückgängig-Verlauf und Cursor weg.
+    expect(screen.getByTestId('eingabe')).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Text', hidden: true }).className).toMatch(
+      /paneHidden/,
+    );
+    fireEvent.click(within(umschalter).getByRole('button', { name: 'Text' }));
+    expect(screen.queryByRole('region', { name: 'Vorschau' })).toBeNull();
+  });
+
+  it('Rückgängig und Wiederholen stehen in der Text-Karte, nicht im Kopf', () => {
+    breite(true);
+    zeige();
+    const text = screen.getByRole('region', { name: 'Text' });
+    expect(within(text).getByRole('button', { name: 'Rückgängig' })).toBeTruthy();
+    expect(within(text).getByRole('button', { name: 'Wiederholen' })).toBeTruthy();
+    expect(
+      within(screen.getByRole('banner')).queryByRole('button', { name: 'Rückgängig' }),
+    ).toBeNull();
   });
 });

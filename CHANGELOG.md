@@ -7,6 +7,14 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Geändert (Musik-App, Lied-Editor L1)
+
+- **Der Lied-Editor im ChurchTools-Look** (erste Scheibe des neuen Editors; Alwin: „zu kompliziert und zu
+  altbacken"): weißer Kopf statt blauer Leiste – Abbrechen, Titel mit Tonart darunter, Speichern. Darunter
+  Karten: am iPad links der Text (Fassung, Akkord, Format, Rückgängig/Wiederholen), rechts die Vorschau; am
+  Handy ein Umschalter **Text | Vorschau**. Der Umschalter „Editor / Beide / Vorschau" entfällt. Am Text und
+  am Speichern ändert sich nichts. Weitere Scheiben (Ablauf als Kärtchen, Akkorde als Kärtchen) folgen.
+
 ### Neu (Protokolle, S2-2)
 
 - **Reiter „Verwaltung“** (nur wer in ChurchTools Rechte vergeben darf): alle Gruppen der Gemeinde als Liste,

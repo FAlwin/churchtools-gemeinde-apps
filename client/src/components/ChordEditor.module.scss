@@ -15,60 +15,83 @@
   animation: fadeIn 0.15s ease both;
 }
 
-.bar {
+// ── Kopf wie ChurchTools (L1, 22.10.2026): weiß, Titel + Tonart, Knöpfe rechts ──
+.kopf {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 14px;
+  padding: 10px 14px;
   // Min. 20px oben (siehe `--bar-pad-top` in `ui/design/_variables.scss`): fängt Safari-Tab (env=0) + kurzzeitiges Safe-Area-Zurücksetzen ab.
-  padding-top: max(20px, var(--sat, env(safe-area-inset-top, 0px)));
-  background: var(--blue);
+  padding-top: var(--bar-pad-top);
+  background: var(--nav-bg);
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
-.title {
+.kopfText {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.title {
   font-size: 16px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text);
   font-family: var(--ui);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.barBtn {
-  height: 38px;
+// Die Tonart des Texts (#398) – ruhig und klein unter dem Titel, aber immer sichtbar.
+.tonartZeile {
+  font-size: 12.5px;
+  color: var(--text2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  strong {
+    color: var(--text);
+    font-weight: 700;
+  }
+}
+.abbrechen {
+  @include m.aktionKnopf;
+  height: 36px;
   padding: 0 14px;
+  border-radius: var(--r-ctrl);
+  font-size: 14px;
+}
+.save {
+  height: 36px;
+  padding: 0 16px;
   border: none;
   border-radius: var(--r-ctrl);
+  background: var(--blue);
+  color: #fff;
+  font-family: var(--ui);
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  font-family: var(--ui);
-}
-.cancel {
-  background: rgba(0, 0, 0, 0.22);
-  color: #fff;
-}
-// Icon-Knopf in der blauen Leiste (z. B. Version löschen).
-.barIconBtn {
-  width: 42px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.22);
-  color: #fff;
   &:disabled {
     opacity: 0.5;
     cursor: default;
   }
 }
-.save {
-  background: #fff;
-  color: var(--blue);
+.iconBtn {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text2);
+  cursor: pointer;
   &:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: default;
   }
 }
@@ -80,25 +103,6 @@
   font-weight: 600;
   padding: 8px 14px;
   text-align: center;
-}
-
-// Meta-Zeile: Versionsname + Rückgängig/Wiederholen + Ansicht-Umschalter in EINER Zeile.
-.metaRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px 2px;
-  flex-shrink: 0;
-  flex-wrap: wrap; // auf schmalen Fenstern sauber umbrechen
-}
-.nameInput {
-  @include m.eingabefeld;
-  flex: 1;
-  min-width: 140px;
-  height: 38px;
-  padding: 0 12px;
-  font-family: var(--ui);
-  font-size: 15px;
 }
 
 // ── Eingabe-Toolbar ──
@@ -255,46 +259,12 @@
   cursor: pointer;
 }
 
-.iconBtn {
-  width: 36px;
-  height: 34px;
+// Rückgängig/Wiederholen rechts in der Werkzeugleiste der Text-Karte.
+.verlauf {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1.5px solid var(--border);
-  border-radius: var(--r-ctrl);
-  background: var(--surface2);
-  color: var(--text2);
-  cursor: pointer;
-  &:disabled {
-    opacity: 0.4;
-    cursor: default;
-  }
-}
-
-// ── Ansicht-Umschalter (Editor / Beide / Vorschau) – kompakt in der Meta-Zeile ──
-.viewSeg {
-  display: flex;
-  gap: 4px;
+  gap: 6px;
+  margin-left: auto;
   flex-shrink: 0;
-  margin-left: auto; // rechtsbündig in der Meta-Zeile
-}
-.vseg {
-  height: 34px;
-  padding: 0 12px;
-  border: 1.5px solid var(--border);
-  border-radius: var(--r-ctrl);
-  background: var(--surface2);
-  color: var(--text2);
-  font-family: var(--ui);
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.vsegOn {
-  background: var(--blue);
-  color: #fff;
-  border-color: var(--blue);
 }
 
 // Flow-Zeile mit Namen ohne passenden Teil (#606) – unter der Werkzeugleiste, in beiden Ansichten sichtbar.
@@ -309,36 +279,84 @@
   border-bottom: 1px solid var(--border);
 }
 
-.split {
+// Schmal: „Text | Vorschau“ unter dem Kopf.
+.umschalter {
+  margin: 10px 12px 0;
+  flex-shrink: 0;
+}
+
+// ── Inhalt: Karten. Breit Text links, Vorschau rechts; schmal eine von beiden. ──
+.inhalt {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
+  gap: 12px;
+  padding: 12px;
   @media (min-width: 768px) {
     flex-direction: row;
+    gap: 16px;
+    padding: 16px;
   }
 }
-// Ausgeblendeter (aber gemounteter) Bereich – !important, damit es die Pane-Anzeige sicher schlägt.
+.karte {
+  @include m.card-list;
+  // Die Akkord-/Format-Menüs klappen über den Kartenrand – die Karte darf sie nicht abschneiden.
+  overflow: visible;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.textKarte {
+  flex: 1;
+  min-width: 0;
+}
+// Ausgeblendeter (aber gemounteter) Bereich – !important, damit es die Anzeige sicher schlägt.
 .paneHidden {
   display: none !important;
 }
-
+.kartenKopf {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--section);
+  border-bottom: 1px solid var(--border);
+  border-radius: var(--r-card) var(--r-card) 0 0;
+  flex-shrink: 0;
+}
+.fassung {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  flex-shrink: 0;
+}
+.nameInput {
+  @include m.eingabefeld;
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  font-family: var(--ui);
+  font-size: 15px;
+}
 .editPane {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   border-top: 1px solid var(--border);
-  @media (min-width: 768px) {
-    border-right: 2px solid var(--border);
-  }
+  // Die Eingabe hat kein eigenes Rund – unten schließt die Karte ab.
+  border-radius: 0 0 var(--r-card) var(--r-card);
+  overflow: hidden;
 }
 .previewPane {
   flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  border-top: 1px solid var(--border);
+  min-width: 0;
+  overflow: hidden;
+  @media (min-width: 768px) {
+    flex: 0 1 44%;
+  }
 }
 
 .previewHead {
@@ -347,6 +365,8 @@
   justify-content: space-between;
   padding-right: 12px;
   flex-shrink: 0;
+  background: var(--section);
+  border-bottom: 1px solid var(--border);
 }
 .paneLbl {
   font-size: 10px;
@@ -391,16 +411,4 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
-}
-
-// Die Tonart des Texts, über dem Editor (#398) – ruhig und klein, aber immer sichtbar.
-.tonartZeile {
-  padding: 4px 14px 2px;
-  font-size: 12.5px;
-  color: var(--text2);
-
-  strong {
-    color: var(--text);
-    font-weight: 700;
-  }
 }

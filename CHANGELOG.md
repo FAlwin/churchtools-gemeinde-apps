@@ -27,6 +27,15 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   (stand fest auf „Anmeldungen“).
 - Zweige `feat/protokolle-**` / `fix/protokolle-**` bauen kein Staging-Image der Musik-App.
 
+### Behoben (Musik-App)
+
+- **Scroll-Modus: Eigene Textnotizen im Lied blieben beim Einschalten des Stifts nicht erhalten** (gefunden beim
+  Bau von #626, nur im unveröffentlichten Malen auf der langen Seite, #608): Beim Öffnen der Mal-Ebene wurde
+  einmal eine leere Textliste gespeichert, und die eigenen Texte im Liedbereich verschwanden von der A4-Seite –
+  auch im Konto. Zwei Ursachen, beide behoben: Die Anmerkungen starten jetzt gleich mit den gespeicherten
+  Texten statt leer, und der Entwurf der langen Seite wird neu angelegt, wenn die Mal-Ebene erneut eingehängt
+  wird. Beim Blättern ging dasselbe kurz hinaus, wurde aber sofort überschrieben.
+
 ### Neu (Anmeldungen, A7-4a)
 
 - **Anmeldung von Hand** (Entwurf `a7-4-von-hand-v1`, abgenommen 22.10.2026): Knopf „＋ Von Hand“ im Reiter

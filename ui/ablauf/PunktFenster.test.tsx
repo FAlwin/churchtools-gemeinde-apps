@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ablaufZeileAus } from '@shared/ct/ablaufZeile';
 import type { CtAgendaItem } from '@shared/ct/typen';
+import { ABLAUFPUNKT_GRENZEN } from '@shared/types/index';
 import { PunktFenster } from './PunktFenster';
 
 /**
@@ -146,5 +147,20 @@ describe('Konflikt: derselbe Punkt woanders geändert (E6-3c)', () => {
     expect(await screen.findByText('Keine Berechtigung')).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Trotzdem speichern' })).toBeNull();
+  });
+});
+
+describe('Feldgrenzen wie ChurchTools (#671)', () => {
+  it('Titel, Bemerkung und Zuständig lassen nicht mehr zu, als ChurchTools annimmt', () => {
+    zeige(zeile({ title: 'Predigt' }));
+    expect(screen.getByPlaceholderText('Titel').getAttribute('maxlength')).toBe(
+      String(ABLAUFPUNKT_GRENZEN.titel),
+    );
+    expect(screen.getByPlaceholderText('Optionale Notiz…').getAttribute('maxlength')).toBe(
+      String(ABLAUFPUNKT_GRENZEN.bemerkung),
+    );
+    expect(screen.getByPlaceholderText('z.B. [Musik] oder Name').getAttribute('maxlength')).toBe(
+      String(ABLAUFPUNKT_GRENZEN.zustaendig),
+    );
   });
 });

@@ -92,24 +92,33 @@ function initialenAus(name: string): string {
 }
 
 /**
- * Mitglieder einer Gruppe: nur **aktive, nicht beendete** (angefragte oder wartende zählen nicht – wie
- * `aktiveMitgliedschaften` in `shared/ct/gruppen.ts`). Die Personen kommen gleich mit, damit Namen und Bilder an
- * einer Stelle stehen.
+ * Mitglieder einer Gruppe: nur **aktive, nicht beendete** zählen als Mitglied (wie `aktiveMitgliedschaften` in
+ * `shared/ct/gruppen.ts`). **Angefragte** (`requested`) kommen getrennt – für den Hinweis „offene Anfragen“ (O3);
+ * wartende und beendete fallen weg. Die Personen kommen gleich mit, damit Namen und Bilder an einer Stelle stehen.
  */
 export function mitgliederAus(rows: readonly RohMitglied[] | null | undefined): {
   mitglieder: Mitglied[];
+  angefragt: Mitglied[];
   personen: Person[];
 } {
   const mitglieder: Mitglied[] = [];
+  const angefragt: Mitglied[] = [];
   const personen: Person[] = [];
   for (const r of rows ?? []) {
-    if (r.groupMemberStatus !== 'active' || r.memberEndDate) continue;
+    if (r.memberEndDate) continue;
+    const ziel =
+      r.groupMemberStatus === 'active'
+        ? mitglieder
+        : r.groupMemberStatus === 'requested'
+          ? angefragt
+          : null;
+    if (!ziel) continue;
     const personId = ctId(r.personId);
     if (personId === null) continue;
     const name = typeof r.person?.title === 'string' ? r.person.title.trim() : '';
     const bild = r.person?.imageUrl;
     const initialen = typeof r.person?.initials === 'string' ? r.person.initials.trim() : '';
-    mitglieder.push({ personId, rolleId: ctId(r.groupTypeRoleId) });
+    ziel.push({ personId, rolleId: ctId(r.groupTypeRoleId) });
     personen.push({
       id: personId,
       name: name || `Person ${personId}`,
@@ -117,5 +126,5 @@ export function mitgliederAus(rows: readonly RohMitglied[] | null | undefined): 
       initialen: initialen || initialenAus(name) || '?',
     });
   }
-  return { mitglieder, personen };
+  return { mitglieder, angefragt, personen };
 }

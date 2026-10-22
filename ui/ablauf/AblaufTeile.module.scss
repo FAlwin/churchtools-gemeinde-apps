@@ -77,3 +77,11 @@
   font-size: 11.5px;
   font-style: italic;
 }
+
+// Hinweis für Bearbeitende, die nicht alle Dienstgruppen sehen (#676) – dezent wie die übrigen Hinweise.
+.gruppenHinweis {
+  margin: 0;
+  color: var(--text2);
+  font-size: 12.5px;
+  line-height: 1.4;
+}

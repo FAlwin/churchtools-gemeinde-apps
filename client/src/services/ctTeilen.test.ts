@@ -348,3 +348,33 @@ describe('Recht auf Team-Notizen (wie im Server)', () => {
     expect((await meineRechte()).canUseAvailability).toBe(false);
   });
 });
+
+describe('meineRechte – sieht man alle Dienstgruppen? (#676, Weg der Erweiterung)', () => {
+  beforeEach(() => {
+    ct.liefere('/api/permissions/global', {
+      data: {
+        churchservice: { 'view songcategory': [1], 'view agenda': [1], 'view servicegroup': [3] },
+      },
+    });
+    ct.liefere(`/api/persons/${ICH}/groups`, { data: [] });
+  });
+
+  it('sieht Musik nicht → false', async () => {
+    ct.liefere('/api/servicegroups', {
+      data: [
+        { id: 1, name: 'Programm', viewAll: true },
+        { id: 3, name: 'Technik', viewAll: false },
+        { id: 4, name: 'Musik', viewAll: false },
+      ],
+    });
+    expect((await meineRechte()).siehtAlleDienstgruppen).toBe(false);
+  });
+
+  it('Dienstgruppen nicht lesbar → unbekannt, die übrigen Rechte bleiben', async () => {
+    ct.liefere('/api/servicegroups', {}, 500);
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const r = await meineRechte();
+    expect(r.siehtAlleDienstgruppen).toBeUndefined();
+    expect(r.canViewSongs).toBe(true);
+  });
+});

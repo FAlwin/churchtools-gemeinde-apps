@@ -32,6 +32,19 @@ export function ZeitText({ item }: { item: Pick<AblaufZeile, 'time' | 'weggelass
   return <>{item.weggelassen ? '—' : (item.time ?? '')}</>;
 }
 
+/**
+ * Der Hinweis für Bearbeitende, die nicht alle Dienstgruppen sehen (#676): ChurchTools löscht beim Ändern oder
+ * Verschieben die Gruppen-Infos, die man nicht sieht (gemessen 22.10.2026). Eine Stelle für Liste und Punkt-Fenster.
+ */
+export function VerborgeneGruppenHinweis() {
+  return (
+    <p className={styles.gruppenHinweis} role="note">
+      Du siehst nicht alle Dienstgruppen. ChurchTools löscht beim Speichern oder Verschieben die
+      Infos der Gruppen, die du nicht siehst.
+    </p>
+  );
+}
+
 /** Der Hinweis an einer weggelassenen Zeile (E6-3b) – neben dem Titel. */
 export function WeggelassenHinweis() {
   return <span className={styles.weggelassenTag}>an diesem Termin weggelassen</span>;

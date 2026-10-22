@@ -166,6 +166,16 @@
   white-space: nowrap;
 }
 
+.offen {
+  padding: 1px 6px;
+  border-radius: var(--r-ctrl);
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .keine {
   padding: 12px 16px;
   color: var(--text3);

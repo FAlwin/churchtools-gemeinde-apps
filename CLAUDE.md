@@ -24,7 +24,10 @@
   Version: Der Versionsstring steckt im ausgelieferten Bundle
   (`curl -s https://musik.ecg-donrath.de/ | grep -oE 'assets/index-[^"]+\.js'`, dann diese Datei holen
   und nach `v2.` greppen). `/api/health` nennt **keine** Version und taugt dafür nicht. Getestet wird
-  auf Staging (`musik-test.ecg-donrath.de`); dort läuft der zuletzt gepushte Stand (`staging-<sha>`).
+  auf Staging (`musik-test.ecg-donrath.de`). **Seit 22.10.2026 baut Staging von selbst nur `main`; ein Zweig
+  kommt auf Zuruf drauf: `gh workflow run staging.yml --ref <zweig>`** (vorher überschrieb jeder Push jeder
+  Sitzung die eine Test-Instanz). Die Version nennt den Zweig (`staging-feat-editor-l3-<sha>`). Danach kann ein
+  `main`-Merge sie wieder überschreiben – vor einem Test also im „Mehr“-Tab nachsehen.
   **v2.16.2 wurde übersprungen**, siehe unten.
 
   (Bis zum 23.09.2026 stand hier „Produktiv läuft v2.20.0, nicht ausgeliefert v2.21.0" – seit dem
@@ -188,7 +191,7 @@ churchtools-gemeinde-apps/
 │       ├── types/           # server-spezifische Typen
 │       └── utils/           # Hilfsfunktionen (u. a. isoTag.ts = die eine Datums-Formatierung)
 ├── shared/types/            # geteilte Typen (Service, SetlistSong, Setlist, …)
-├── shared/organigramm/      # Regeln des Organigramms: gruppen (Baum, Typen ausblenden), farbe (eigene vor Typ), mitglieder (Rollen aus CT: isLeader/sortKey), personen (jede Person einmal), rechte (O1/O2)
+├── shared/organigramm/      # Regeln des Organigramms: gruppen (Baum, Typen ausblenden), farbe (eigene vor Typ), mitglieder (Rollen aus CT: isLeader/sortKey), personen (jede Person einmal), rechte (O1/O2); einsaetze (Einsätze + offene Plätze aus Terminen), sichtbereich (Leitung eines Bereichs), hinweise (O3)
 ├── shared/dienstplan/       # Regeln des Dienstplaners: termine (Liste, E3-2), start (Startseite, E3-3), plan (Matrix, E3-4), fenster + werWieOft (E3-5), einteilen (Schreibkern, E4-1), werKann (E4-2)
 ├── shared/anmeldung/        # Regeln der Anmeldungen: preis, formular (#474), uebersicht (#480), vorlagen, termin, felder, rechte (#486), bezahlung (#507), gestaltung + baukasten (A5)
 ├── anmeldungen/             # Anmeldungen: ChurchTools-Erweiterung für Veranstalter (#474, nur Erweiterung);
@@ -213,6 +216,13 @@ churchtools-gemeinde-apps/
 ```
 
 ## Konventionen
+
+- **Mehrere Sitzungen arbeiten gleichzeitig in diesem Repo – zwei Regeln seit 22.10.2026 (Alwin):**
+  1. **CHANGELOG-Einträge nie direkt in `CHANGELOG.md`**, sondern als eigene Datei je PR in `changelog.d/`
+     (Zweig ohne Präfix als Name, Format in `changelog.d/README.md`). Sonst macht jeder fremde Merge den eigenen
+     PR konflikthaft. Der Release führt sie zusammen (`npm run changelog -- --version X.Y.Z`).
+  2. **Staging nur auf Zuruf:** Zweige bauen nicht mehr von selbst. Wer Alwin etwas zeigen will:
+     `gh workflow run staging.yml --ref <zweig>`, dann die Version (`staging-<zweig>-<sha>`) nennen.
 
 ### Allgemein
 
@@ -725,8 +735,10 @@ den Skill `/festhalten`, der genau das automatisiert.
    (z. B. auf gelöschte Dateien), keine Doppelungen (Changelog/API nur an einer Stelle).
 4. **Installations-Anleitung gegen die Realität prüfen:** `INSTALL.md` + `UPDATE.md` +
    die Setup-/Update-Skripte in `deploy/` müssen zum tatsächlichen Vorgehen passen.
-5. **CHANGELOG pflegen:** Abschnitt `[Unreleased]` mit den Änderungen seit dem letzten Tag füllen
-   und auf die neue Version (`## [X.Y.Z] – Datum`) hochziehen. Versionierung nach SemVer.
+5. **CHANGELOG pflegen:** Die Einträge liegen seit 22.10.2026 als Dateien in `changelog.d/` (eine je PR,
+   siehe `changelog.d/README.md`). `npm run changelog -- --version X.Y.Z` setzt sie unter `## [X.Y.Z] – Datum`
+   in `CHANGELOG.md` (neueste zuerst, dazu was noch direkt unter `[Unreleased]` stand) und löscht die Dateien;
+   danach lesen und gegen den Code prüfen. Versionierung nach SemVer.
 6. **Taggen:** `git tag vX.Y.Z && git push origin vX.Y.Z` → CI baut `:latest` + `:X.Y` + `:X`
    (Major-Tag, damit Gemeinden sicher auf `:2` bleiben können). Prod-Deploy bewusst, nicht nebenbei.
    **Die Anmeldungen haben einen eigenen Weg:** Tag `anmeldung-vX.Y.Z` (ab v0.1.0) →

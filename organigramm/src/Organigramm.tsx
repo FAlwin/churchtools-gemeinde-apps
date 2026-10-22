@@ -5,6 +5,7 @@ import { gruppenFarbe } from '@shared/organigramm/farbe';
 import { baumOhneTypen, nachfahren, type Knoten } from '@shared/organigramm/gruppen';
 import { istLeitung, rollenRang } from '@shared/organigramm/mitglieder';
 import { gruppenPersonen, teilbaumPersonen, type Mitglied } from '@shared/organigramm/personen';
+import { offenVonGruppe, type Einsaetze } from '@shared/organigramm/einsaetze';
 import type { MitgliederDaten, MitgliederStand } from './ladeMitglieder';
 import { leseAusgeblendet, merkeAusgeblendet } from './auswahl';
 import type { Start } from './start';
@@ -16,6 +17,8 @@ interface Props {
   start: Start;
   /** `null`, solange die Mitglieder laden. */
   mitglieder: MitgliederDaten | null;
+  /** Einsätze und offene Plätze (O3) – `null`, solange sie laden oder wenn sie gerade nicht ladbar sind. */
+  einsaetze: Einsaetze | null;
   onNachladen: () => void;
   onGruppe: (id: number) => void;
 }
@@ -25,7 +28,7 @@ interface Props {
  * Baumlinien – in der Farbe der Gruppe, mit Leitung, Zahl der Personen und den Diensten der Gruppe. Über dem Baum
  * lassen sich Gruppentypen ausblenden (z. B. Verteiler). Klick auf eine Gruppe → Gruppenfenster.
  */
-export function Organigramm({ start, mitglieder, onNachladen, onGruppe }: Props) {
+export function Organigramm({ start, mitglieder, einsaetze, onNachladen, onGruppe }: Props) {
   const [ausgeblendet, setAusgeblendet] = useState(leseAusgeblendet);
   const rang = useMemo(() => rollenRang(start.rollen), [start.rollen]);
   const name = (id: number) => mitglieder?.personen.get(id)?.name ?? '';
@@ -69,6 +72,8 @@ export function Organigramm({ start, mitglieder, onNachladen, onGruppe }: Props)
     gruppenPersonen(sichtbare(id), name, rang).filter((m) => istLeitung(start.rollen, m.rolleId));
   const dienste = (id: number) =>
     start.dienste ? [...start.dienste.values()].filter((d) => d.gruppenIds.includes(id)) : [];
+  const offen = (id: number) =>
+    einsaetze ? offenVonGruppe(start.dienste, einsaetze.offenJeDienst, id) : 0;
   const fehlerZahl = mitglieder
     ? [...mitglieder.je.values()].filter((s) => s.art === 'fehler').length
     : 0;
@@ -99,6 +104,11 @@ export function Organigramm({ start, mitglieder, onNachladen, onGruppe }: Props)
               {d.name}
             </span>
           ))}
+          {offen(k.gruppe.id) > 0 && (
+            <span className={styles.offen} title="Freie Plätze in den nächsten 3 Monaten">
+              {offen(k.gruppe.id)} offen
+            </span>
+          )}
         </span>
       </button>
       {k.kinder.length > 0 && (

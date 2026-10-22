@@ -32,7 +32,26 @@ const gruppe = (id: number, name: string, color: string | null = 'lime') => ({
 
 const GUT: Antworten = {
   '/whoami': () => json(200, { data: { id: 1, firstName: 'Alwin' } }),
-  '/persons/1/groups': () => json(200, { data: [] }),
+  '/persons/1/groups': () =>
+    json(200, {
+      data: [
+        {
+          group: { title: 'Technik', domainIdentifier: '7' },
+          groupTypeRoleId: 16,
+          groupMemberStatus: 'active',
+        },
+        {
+          group: { title: 'Stream', domainIdentifier: '12' },
+          groupTypeRoleId: 15,
+          groupMemberStatus: 'active',
+        },
+        {
+          group: { title: 'Alt', domainIdentifier: '99' },
+          groupTypeRoleId: 16,
+          groupMemberStatus: 'requested',
+        },
+      ],
+    }),
   '/group/roles': () =>
     json(200, {
       data: [
@@ -112,6 +131,8 @@ describe('ladeStart (Organigramm)', () => {
     // Rollen aus dem Abruf, den `ladeIch` schon macht – Leitung aus isLeader, auch beim englischen Namen
     expect(s.rollen.get(35)).toEqual({ id: 35, name: 'Leiter', leitung: true, sortKey: 1 });
     expect(s.dienste?.get(6)?.gruppenIds).toEqual([7]);
+    // Geleitet = aktive Mitgliedschaft mit Leitungs-Rolle (isLeader) – nicht Stream (Mitarbeiter), nicht angefragt
+    expect(s.geleitet).toEqual([7]);
     expect(s.rechte).toEqual({
       gruppenVerwalten: true,
       anlegbareTypen: [2],

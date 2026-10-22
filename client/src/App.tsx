@@ -487,6 +487,8 @@ export default function App() {
         }}
         services={agendaServices.data ?? []}
         canEdit={darfAblauf(frischerTermin)}
+        // Unbekannt (`undefined`) heißt: kein Hinweis.
+        gruppenVerborgen={caps?.siehtAlleDienstgruppen === false}
         onAblaufSichtbar={setAblaufSichtbar}
       />
     );

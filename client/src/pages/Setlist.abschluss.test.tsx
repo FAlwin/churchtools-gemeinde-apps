@@ -56,6 +56,7 @@ function zeige(
   abgeschlossen: boolean,
   remove: () => Promise<unknown> = () => Promise.resolve(),
   items: AgendaItem[] = [ITEM],
+  gruppenVerborgen = false,
 ) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const actions = {
@@ -79,6 +80,7 @@ function zeige(
         actions={actions as never}
         services={[]}
         canEdit
+        gruppenVerborgen={gruppenVerborgen}
       />
     </QueryClientProvider>,
   );
@@ -154,5 +156,13 @@ describe('Leerer Ablauf (13.10.2026)', () => {
     zeige(false, undefined, []);
     fireEvent.click(screen.getByTitle('Ablauf bearbeiten'));
     expect(screen.getByLabelText('Eintrag hinzufügen')).toBeTruthy();
+  });
+});
+
+describe('Hinweis: nicht alle Dienstgruppen sichtbar (#676)', () => {
+  it('die Musik-App reicht ihn an die Bearbeiten-Liste weiter', () => {
+    zeige(false, undefined, [ITEM], true);
+    fireEvent.click(screen.getByTitle('Ablauf bearbeiten'));
+    expect(screen.getByText(/Du siehst nicht alle Dienstgruppen/)).toBeTruthy();
   });
 });

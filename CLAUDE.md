@@ -765,6 +765,13 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **v2.37.0 (22.10.2026) = Rückmeldung des Musik-Bereichsleiters + Dev-Stammtisch-Fragen.** Flow-Zeile
+  `{flow:}` (#606), Scroll-Modus mit einer langen Seite je Lied (#607) und gemeinsamen Anmerkungen (#614), Malen
+  darauf (#608), Lasso (#615), Notizen unter dem Liedende (#626), Pedal Teil für Teil mit `----` (#609),
+  Dunkelmodus wie ChurchTools (#565), Logo auf dem Liedblatt schaltbar (Verwaltung), Ablauf-Abgleich 30 s
+  (#557), Inhaltsverzeichnis der Team-Notizen (#554); Fix #651 (eigene Texte beim Stift-an auf der Rolle).
+  Einführung: nur Text, nicht neu gezeigt (Alwin). Dazu aus dem anderen Teil des Repos Dienstplaner E6,
+  Anmeldungen A6-5/A7 und Protokolle S1. Offen in #557: Limit bei ChurchTools erfragen, nachmessen.
 - **v2.36.0 (15.10.2026) = Scroll-Modus + Pedal-Tasten** (PR #567, #551; dazu aus dem anderen Teil des
   Repos Dienstplaner E4-3-1 bis E4-3-3). Mehr → Liedansicht: Blättern / Scrollen je Gerät; Scrollen zeigt
   dieselben Seiten nahtlos untereinander in voller Breite (`ScrollDeck`), Malen über die einzeln geöffnete

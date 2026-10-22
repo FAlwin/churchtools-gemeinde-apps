@@ -25,6 +25,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   `ui/bedienung/GruppenKachel`. Die Dienste (`/services`) sind Beiwerk: fehlen sie, steht der Baum ohne Schildchen.
 - Nicht in O2: offene Plätze und Einsätze (kommen mit O3, sie brauchen die Termine).
 
+## [2.37.0] – 2026-10-22
+
 ### Geändert (Musik-App, #554)
 
 - **Team-Notizen auch in großen Gemeinden schnell** (Frage aus dem ChurchTools-Dev-Stammtisch: „Wie

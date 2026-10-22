@@ -18,6 +18,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   bekommt noch keine Zahlung – sie folgt beim Nachrücken.
 - Danach „Mail schreiben“ (an die Adresse der Anmeldung) und „Rückgängig“ im Fenster; Abbrechen führt zurück in die
   Anmeldung.
+- Unter einer eigenen Zahlung steht „Gilt nur für <Name>“ statt „Gilt für die ganze Anmeldung“ (auch bei
+  Nachgerückten; gefunden beim Durchklicken am 22.10.2026).
 
 ### Neu (Anmeldungen, A7-4a)
 

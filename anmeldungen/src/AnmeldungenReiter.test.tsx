@@ -470,6 +470,27 @@ describe('Person dazu (A7-4b)', () => {
   });
 });
 
+describe('Mehrere Zahlungen', () => {
+  it('eigene Zahlung (dazu angemeldet): eigener Titel, „gilt nur für“ statt „für die ganze Anmeldung“', () => {
+    const x = e();
+    const roh = mitglieder('AAAAAA', [true, false], 10);
+    roh[1].groupMemberStatus = 'active';
+    roh[1].waitinglistPosition = null;
+    roh[1].fields!.push(
+      { id: x.ctFelder.betrag, value: '6,00 €' },
+      {
+        id: x.ctFelder.aufschluesselung,
+        value: 'Dazu angemeldet am 22.10.2026\nFür Lena: 6,00 €',
+      },
+    );
+    zeigen(fertig(roh));
+    fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));
+    expect(screen.getByText('Lena – dazu angemeldet')).toBeTruthy();
+    expect(screen.getAllByText('Gilt für die ganze Anmeldung.')).toHaveLength(1);
+    expect(screen.getByText('Gilt nur für Lena.')).toBeTruthy();
+  });
+});
+
 describe('Mail schreiben', () => {
   it('ohne E-Mail-Adresse: kein Knopf zum Mailprogramm, dafür der Hinweis zum Kopieren', () => {
     const mail = { an: null, betreff: 'Kinderfreizeit: Anmeldung für Paula', text: 'Hallo' };

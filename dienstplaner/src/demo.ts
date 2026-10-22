@@ -245,61 +245,6 @@ function daten(fall: string): Record<string, unknown> {
         churchservice: fall === 'mitglied' ? MITGLIED : PLANER,
       },
     },
-    // Ablauf nur am ersten Termin – die anderen zeigen „Noch kein Ablauf“ (ChurchTools: 404).
-    // Wie gemessen (E6-0): `startTimes` je Termin, Dauer in Sekunden, `isBeforeEvent` für den Vorlauf, Zuständige
-    // aufgelöst; der Termin beginnt um 08:00 UTC.
-    '/api/events/101/agenda': {
-      data: {
-        items: [
-          {
-            id: 5,
-            type: 'normal',
-            title: 'Soundcheck',
-            duration: 1800,
-            isBeforeEvent: true,
-            startTimes: { '101': zeit(4, '07:30') },
-            responsible: {
-              text: '[Ton]',
-              persons: [{ service: '[Ton]', person: { title: 'Alwin Friesen' } }],
-            },
-          },
-          { id: 1, type: 'header', title: 'Ankommen', startTimes: { '101': zeit(4, '08:00') } },
-          {
-            id: 2,
-            type: 'song',
-            title: 'Lied',
-            duration: 300,
-            startTimes: { '101': zeit(4, '08:00') },
-            song: { title: 'Halleluja' },
-            responsible: { text: '[Gesang]', persons: [{ service: '[Gesang]', person: null }] },
-          },
-          {
-            id: 3,
-            type: 'song',
-            title: 'Treu',
-            duration: 300,
-            startTimes: { '101': zeit(4, '08:05') },
-            song: { title: 'Treu' },
-          },
-          {
-            id: 4,
-            type: 'normal',
-            title: 'Predigt',
-            duration: 1800,
-            note: 'Thema: Psalm 23',
-            startTimes: { '101': zeit(4, '08:10') },
-            responsible: { text: 'Gastprediger' },
-          },
-          {
-            id: 6,
-            type: 'normal',
-            title: 'Abkündigungen',
-            duration: 300,
-            startTimes: { '101': null },
-          },
-        ],
-      },
-    },
     // Abwesend am Tag der offenen Anfrage (Gesang, erster Gottesdienst) – die Startseite warnt.
     '/api/persons/1/absences': {
       data: [
@@ -335,6 +280,130 @@ function termineVonBis(von: string | null, bis: string | null) {
   return TERMINE.filter(
     (t) => (!von || t.startDate.slice(0, 10) >= von) && (!bis || t.startDate.slice(0, 10) < bis),
   );
+}
+
+/**
+ * **Der Ablauf des ersten Termins** (101) – zum Ansehen und, seit E6-3a, zum Bearbeiten. Die anderen Termine haben
+ * keinen („Noch kein Ablauf“, ChurchTools: 404). Wie gemessen (E6-0): `startTimes` je Termin, Dauer in Sekunden,
+ * `isBeforeEvent` für den Vorlauf, Zuständige aufgelöst; der Termin beginnt um 08:00 UTC. Die Uhrzeiten rechnet die
+ * Demo wie ChurchTools aus Reihenfolge, Dauer und Beginn-Grenze; ein ausgeblendeter Punkt („Abkündigungen“) hat
+ * keine Zeit und zählt nicht mit (E6-3-0). Geändert wird nur im Speicher.
+ */
+function ablaufDemo() {
+  type Punkt = { id: number; duration?: number; ausgeblendet?: boolean } & Record<string, unknown>;
+  let punkte: Punkt[] = [
+    {
+      id: 5,
+      type: 'normal',
+      title: 'Soundcheck',
+      duration: 1800,
+      responsible: {
+        text: '[Ton]',
+        persons: [{ service: '[Ton]', person: { title: 'Alwin Friesen' } }],
+      },
+    },
+    { id: 1, type: 'header', title: 'Ankommen' },
+    {
+      id: 2,
+      type: 'song',
+      title: 'Lied',
+      duration: 300,
+      song: { title: 'Halleluja' },
+      responsible: { text: '[Gesang]', persons: [{ service: '[Gesang]', person: null }] },
+    },
+    { id: 3, type: 'song', title: 'Treu', duration: 300, song: { title: 'Treu' } },
+    {
+      id: 4,
+      type: 'normal',
+      title: 'Predigt',
+      duration: 1800,
+      note: 'Thema: Psalm 23',
+      responsible: { text: 'Gastprediger' },
+    },
+    { id: 6, type: 'normal', title: 'Abkündigungen', duration: 300, ausgeblendet: true },
+  ];
+  let beginnPos = 1;
+  let naechsteId = 50;
+  const PFAD = '/api/events/101/agenda';
+
+  function lesen(): unknown {
+    const beginn = Date.parse(zeit(4, '08:00'));
+    const zeiten = new Map<number, string | null>();
+    // Vorlauf rückwärts vom Beginn, danach vorwärts.
+    let t = beginn;
+    for (let i = beginnPos - 1; i >= 0; i--) {
+      const p = punkte[i];
+      if (p.ausgeblendet) continue;
+      t -= (p.duration ?? 0) * 1000;
+      zeiten.set(p.id, new Date(t).toISOString());
+    }
+    t = beginn;
+    for (const p of punkte.slice(beginnPos)) {
+      if (p.ausgeblendet) continue;
+      zeiten.set(p.id, new Date(t).toISOString());
+      t += (p.duration ?? 0) * 1000;
+    }
+    return {
+      calendarId: 1,
+      eventStartPosition: beginnPos,
+      isLocked: false,
+      items: punkte.map(({ ausgeblendet: _a, ...p }, i) => ({
+        ...p,
+        position: i,
+        isBeforeEvent: i < beginnPos,
+        startTimes: { '101': zeiten.get(p.id) ?? null },
+      })),
+    };
+  }
+
+  /** `responsible` schreibt ChurchTools als Text und liefert es aufgelöst zurück – die Demo nur als Text. */
+  function felder(r: Record<string, unknown>): Record<string, unknown> {
+    const f: Record<string, unknown> = {};
+    for (const k of ['title', 'note', 'duration'] as const) if (r[k] !== undefined) f[k] = r[k];
+    if (typeof r.responsible === 'string') f.responsible = { text: r.responsible };
+    return f;
+  }
+
+  return {
+    anfrage(
+      methode: string,
+      pfad: string,
+      rumpf: unknown,
+    ): { status: number; data?: unknown } | null {
+      if (!pfad.startsWith(PFAD)) return null;
+      const r = (rumpf ?? {}) as Record<string, unknown>;
+      const punkt = /^\/items\/(\d+)$/.exec(pfad.slice(PFAD.length));
+      if (pfad === PFAD && methode === 'GET') return { status: 200, data: lesen() };
+      if (pfad === PFAD && methode === 'PUT') {
+        if (Array.isArray(r.items)) {
+          const ids = (r.items as { id: number }[]).map((i) => i.id);
+          punkte = ids.map((id) => punkte.find((p) => p.id === id)).filter((p) => p !== undefined);
+        }
+        if (typeof r.eventStartPosition === 'number') beginnPos = r.eventStartPosition;
+        return { status: 200, data: lesen() };
+      }
+      if (pfad === `${PFAD}/items` && methode === 'POST') {
+        const typ = r.type === 'text' ? 'normal' : r.type;
+        const neu: Punkt = { id: naechsteId++, type: typ, duration: 0, ...felder(r) };
+        punkte = [...punkte, neu];
+        return { status: 201, data: neu };
+      }
+      if (punkt) {
+        const id = Number(punkt[1]);
+        if (!punkte.some((p) => p.id === id)) return { status: 404 };
+        if (methode === 'DELETE') {
+          // Die Beginn-Grenze zieht ChurchTools nicht mit (gemessen 12.10.2026) – der Schreibkern schreibt sie nach.
+          punkte = punkte.filter((p) => p.id !== id);
+          return { status: 204 };
+        }
+        if (methode === 'PUT') {
+          punkte = punkte.map((p) => (p.id === id ? { ...p, ...felder(r) } : p));
+          return { status: 200, data: null };
+        }
+      }
+      return { status: 404 };
+    },
+  };
 }
 
 /**
@@ -493,6 +562,7 @@ export function demoStarten(fall: string): void {
   document.body.style.cssText = 'margin: 0; height: 100vh;';
   const antworten = daten(fall);
   const speicher = speicherDemo(fall);
+  const ablauf = ablaufDemo();
   const mitDienstplanerRechten = (roh: unknown) => {
     const r = roh as { data: Record<string, unknown> };
     return { data: { ...r.data, dienstplaner: speicher.rechte() } };
@@ -502,11 +572,10 @@ export function demoStarten(fall: string): void {
       typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
     );
     const methode = init?.method ?? 'GET';
-    const s = speicher.anfrage(
-      methode,
-      url.pathname,
-      typeof init?.body === 'string' ? (JSON.parse(init.body) as unknown) : undefined,
-    );
+    const rumpf = typeof init?.body === 'string' ? (JSON.parse(init.body) as unknown) : undefined;
+    const s =
+      speicher.anfrage(methode, url.pathname, rumpf) ??
+      ablauf.anfrage(methode, url.pathname, rumpf);
     if (s) {
       return Promise.resolve(
         new Response(s.status === 204 ? null : JSON.stringify({ data: s.data ?? null }), {

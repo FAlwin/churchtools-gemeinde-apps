@@ -12,6 +12,7 @@ import { isoTag } from '@shared/ct/zeit';
 import { plusTage } from '@shared/ct/datum';
 import { termineAus, type RohTermin, type TerminZeile } from '@shared/dienstplan/termine';
 import { planAus, type Plan } from '@shared/dienstplan/plan';
+import { kalenderVon, terminAdminIds, type AblaufTermin } from '@shared/ct/ablaufRecht';
 import { ganzSichtbar, planbar, type Start } from './start';
 
 /** Liste (Start, Termine) und Matrix (Planen) – aus derselben Antwort, eine Abfrage für alle drei Reiter. */
@@ -71,15 +72,16 @@ async function ladeVonBis(
   return datenAus(start, termine as RohTermin[], zeitzone);
 }
 
+/** Ein Termin für die Termin-Ansicht – dazu Kalender und Admins für die Bearbeiten-Regel des Ablaufs (E6-3a). */
+export interface TerminDaten extends TermineDaten {
+  ablaufTermin: AblaufTermin;
+}
+
 /**
  * **Ein Termin** für die Termin-Ansicht (E6-1b) – mit denselben Regeln wie Liste und Matrix (`datenAus`), damit die
  * Dienste dort genauso stehen. Wirft wie `ctDaten` (404 = den Termin gibt es nicht mehr).
  */
-export async function ladeTermin(
-  start: Start,
-  id: number,
-  zeitzone: string,
-): Promise<TermineDaten> {
+export async function ladeTermin(start: Start, id: number, zeitzone: string): Promise<TerminDaten> {
   const termin = await ctDaten<unknown>(`/events/${id}?include=eventServices`);
   if (
     !termin ||
@@ -88,7 +90,11 @@ export async function ladeTermin(
   ) {
     throw new ApiError(502, 'ChurchTools hat den Termin nicht vollständig geliefert.');
   }
-  return datenAus(start, [termin as RohTermin], zeitzone);
+  const roh = termin as RohTermin;
+  return {
+    ...datenAus(start, [roh], zeitzone),
+    ablaufTermin: { kalenderId: kalenderVon(roh), terminAdminIds: terminAdminIds(roh) },
+  };
 }
 
 /** Liste und Matrix aus den rohen Terminen – eine Stelle für den Zeitraum und den einzelnen Termin. */

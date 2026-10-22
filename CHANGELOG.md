@@ -30,6 +30,43 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Fehler, nicht als „niemand hat Einsätze“. Abgemeldet → Hinweis für die ganze Seite.
 - **Mitglieder:** angefragte (`requested`) kommen getrennt für den Hinweis; wartende und beendete fallen weg.
 
+### Neu (Musik-App, Lied-Editor L2)
+
+- **Ablauf als Kärtchen** (Alwin: „wie in ProPresenter“): Über dem Text stehen die Teile des Lieds als
+  Kärtchen in der Reihenfolge, in der gesungen wird. Am Griff ziehen verschiebt, **×** entfernt, **+ Vers 1**
+  usw. hängt einen Teil an, **Wie im Text** stellt die Reihenfolge des Texts wieder her; Rückgängig wirkt wie
+  beim Tippen. Ein Name, zu dem es keinen Teil gibt, ist rot markiert („fehlt im Text“). Am Handy ist
+  „Ablauf“ ein eigener Bereich neben Text und Vorschau. Gespeichert wird wie bisher die `{flow: …}`-Zeile –
+  im Text ist sie jetzt unsichtbar, und „Format → Ablauf“ entfällt.
+
+### Intern (gemeinsam)
+
+- Die Zieh-Einstellungen für umsortierbare Listen stehen einmal in `ui/bedienung/useZiehSensoren.ts` statt
+  in jeder Liste (Ablauf-Liste, Links der Verwaltung, Ablauf-Kärtchen).
+
+### Geändert (Musik-App, Lied-Editor L1)
+
+- **Der Lied-Editor im ChurchTools-Look** (erste Scheibe des neuen Editors; Alwin: „zu kompliziert und zu
+  altbacken"): weißer Kopf statt blauer Leiste – Abbrechen, Titel mit Tonart darunter, Speichern. Darunter
+  Karten: am iPad links der Text (Fassung, Akkord, Format, Rückgängig/Wiederholen), rechts die Vorschau; am
+  Handy ein Umschalter **Text | Vorschau**. Der Umschalter „Editor / Beide / Vorschau" entfällt. Am Text und
+  am Speichern ändert sich nichts. Weitere Scheiben (Ablauf als Kärtchen, Akkorde als Kärtchen) folgen.
+
+### Neu (Protokolle, S2-2)
+
+- **Reiter „Verwaltung“** (nur wer in ChurchTools Rechte vergeben darf): alle Gruppen der Gemeinde als Liste,
+  versteckte markiert, je Gruppe „eingerichtet“ oder „Einrichten“. Ein Tipp öffnet **„Gruppe einrichten“** wie im
+  Entwurf: je Rolle Kein Zugriff · Lesen + eigene To-Dos · Leitung, Tagesordnungspunkte vorschlagen oder direkt
+  eintragen, Kalender. Scheitert das Speichern, bleibt das Fenster offen und sagt warum; fehlt nach einem
+  abgebrochenen Versuch die Einstellung, sagt es „unvollständig“. Am Computer Reiter oben, am Handy unten.
+- Kalender-Rechte und „versteckte Gruppe sehen“ entzieht das Einrichten jetzt wieder (Herabstufen,
+  Kalenderwechsel) – **nur die selbst gesetzten**, von Hand gesetzte bleiben (Alwin, 22.10.2026).
+
+### Geändert (gemeinsam)
+
+- Der Reiter in der Adresse (`#/termine`) steht jetzt in `ui/bedienung/reiterAdresse.ts` – Dienstplaner und
+  Protokolle nutzen dieselbe Regel (vorher nur im Dienstplaner).
+
 ### Neu (Protokolle, S2-1)
 
 - **Gruppe einrichten – der Kern ohne Oberfläche** (`protokolle/src/einrichten.ts`, Bauplan Protokolle S2-1): legt

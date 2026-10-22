@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { flowEinfuegen, parseChordPro, parseLine, parseMetadata, teileImFlow } from './chordpro';
+import {
+  flowEinfuegen,
+  flowSetzen,
+  parseChordPro,
+  parseLine,
+  parseMetadata,
+  teileImFlow,
+} from './chordpro';
 
 describe('parseLine', () => {
   it('gibt reinen Text ohne Akkorde als ein Paar zurück', () => {
@@ -197,5 +204,45 @@ describe('flowEinfuegen – wohin der Editor die Flow-Zeile setzt (#606)', () =>
   it('gibt es schon eine Flow-Zeile, wird keine zweite eingefügt', () => {
     const text = '{title: X}\n{flow: Vers}\n{comment: Vers}\nA';
     expect(flowEinfuegen(text)).toEqual({ vorhanden: true, pos: 11 });
+  });
+});
+
+describe('flowSetzen – Ablauf aus den Kärtchen in den Text (Lied-Editor L2)', () => {
+  /** Die Änderung anwenden – so, wie der Editor es tut. */
+  function anwenden(text: string, eintraege: string[]): string {
+    const a = flowSetzen(text, eintraege);
+    return a ? text.slice(0, a.from) + a.insert + text.slice(a.to) : text;
+  }
+  const LIED = '{title: X}\n{key: G}\n\n{comment: Vers 1}\nA\n\n{comment: Refrain}\nB';
+
+  it('ohne Flow-Zeile: kommt nach den Kopfangaben – und wirkt wie gewünscht', () => {
+    const neu = anwenden(LIED, ['Refrain', 'Vers 1', 'Refrain']);
+    expect(neu).toContain('{key: G}\n\n{flow: Refrain, Vers 1, Refrain}\n{comment: Vers 1}');
+    expect(teileImFlow(parseChordPro(neu), parseMetadata(neu).flow).flow).toEqual([
+      'Refrain',
+      'Vers 1',
+      'Refrain',
+    ]);
+  });
+
+  it('mit Flow-Zeile: genau diese Zeile wird ersetzt, sonst nichts', () => {
+    const alt = anwenden(LIED, ['Vers 1', 'Refrain']);
+    const neu = anwenden(alt, ['Refrain']);
+    expect(neu).toBe(alt.replace('{flow: Vers 1, Refrain}', '{flow: Refrain}'));
+  });
+
+  it('leer = „wie im Text": die Zeile fällt samt Zeilenende weg – der Text ist wie vorher', () => {
+    const mit = anwenden(LIED, ['Refrain', 'Vers 1']);
+    expect(anwenden(mit, [])).toBe(LIED);
+  });
+
+  it('Flow-Zeile ganz am Ende: weg ohne Leerzeile', () => {
+    expect(anwenden('A\n{flow: Vers 1}', [])).toBe('A');
+  });
+
+  it('nichts zu tun: null', () => {
+    expect(flowSetzen(LIED, [])).toBeNull();
+    const mit = anwenden(LIED, ['Vers 1']);
+    expect(flowSetzen(mit, ['Vers 1'])).toBeNull();
   });
 });

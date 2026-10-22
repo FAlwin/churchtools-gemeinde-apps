@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChordProInput, type ChordProHandle } from './ChordProInput';
 import { PdfPreview } from './PdfPreview';
 import { Icon } from '@ui/icons/icons';
@@ -6,9 +6,11 @@ import { Spinner } from './Spinner';
 import { useOverlayKeyboardInset } from '@ui/fenster/useOverlayKeyboardInset';
 import styles from './ChordEditor.module.scss';
 import { shiftKey } from '../utils/transpose';
-import { flowEinfuegen, parseChordPro, parseMetadata, teileImFlow } from '../utils/chordpro';
+import { flowSetzen } from '../utils/chordpro';
+import { AblaufKarte } from './AblaufKarte';
 import { getLiedansicht } from '../utils/devicePrefs';
 import { useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
+import { Segment } from '@ui/bedienung/Segment';
 
 interface ChordEditorProps {
   songTitle: string;
@@ -55,9 +57,9 @@ const CHORD_QUALITIES: { tag: string; label: string }[] = [
 // `value` = mit Doppelpunkt-Wert. Hinweis: comment, flow, title/artist/key/tempo/time und `----` wirken in
 // der App-Vorschau; die übrigen sind gültiges ChordPro und werden gespeichert (SongSelect/andere Tools).
 // `art` = Baustein mit eigener Einfüge-Regel statt „an der Cursorstelle" (#606).
-const FORMATS: { tag: string; label: string; value: boolean; art?: 'flow' | 'trenner' }[] = [
+// Den Ablauf (`{flow}`) setzt seit L2 die Ablauf-Karte, nicht mehr dieses Menü.
+const FORMATS: { tag: string; label: string; value: boolean; art?: 'trenner' }[] = [
   { tag: 'comment', label: 'Abschnitt / Überschrift', value: true },
-  { tag: 'flow', label: 'Ablauf (Reihenfolge der Teile)', value: true, art: 'flow' },
   { tag: '----', label: 'Weiterschalt-Punkt fürs Pedal', value: false, art: 'trenner' },
   { tag: 'title', label: 'Titel des Lieds', value: true },
   { tag: 'subtitle', label: 'Untertitel', value: true },
@@ -72,11 +74,16 @@ const FORMATS: { tag: string; label: string; value: boolean; art?: 'flow' | 'tre
   { tag: 'new_page', label: 'Neuer Seitenumbruch', value: false },
 ];
 
-type View = 'both' | 'editor' | 'preview';
+/** Was am schmalen Bildschirm zu sehen ist – breit stehen Text und Vorschau nebeneinander. */
+type Bereich = 'text' | 'ablauf' | 'vorschau';
 
 /** Vollbild-Editor für eine ChordPro-Version: CodeMirror mit Syntax-Farben, Eingabe-Dropdowns
  *  (Akkorde/Format), zuletzt genutzte Akkorde, Rückgängig/Wiederholen und eine „wie gedruckt"-
- *  PDF-Vorschau mit Transponieren. Ansicht umschaltbar (Editor / Beide / Vorschau). */
+ *  PDF-Vorschau mit Transponieren.
+ *
+ *  **Aufbau seit L1 (neuer Lied-Editor, 22.10.2026, Entwurf C):** Kopf im ChurchTools-Look (weiß,
+ *  Titel + Fassung + Tonart), darunter Karten – breit Text links und Vorschau rechts, schmal ein
+ *  Umschalter „Text | Vorschau“. Bauplan: `gemeinde-apps/musik-planung/docs/bauplan-lied-editor.md`. */
 export function ChordEditor({
   songTitle,
   initialText,
@@ -101,7 +108,7 @@ export function ChordEditor({
   const buildingRef = useRef('');
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
-  const [view, setView] = useState<View>('both');
+  const [bereich, setBereich] = useState<Bereich>('text');
   const wide = useMedienAbfrage('(min-width: 768px)', true);
   const editorRef = useRef<ChordProHandle>(null);
   // Die Vorschau zeigt das Blatt so, wie es im Liederheft dieses Geräts erscheint (#607).
@@ -111,16 +118,11 @@ export function ChordEditor({
   // Ohne Versionsname-Feld (Original-Notenblatt) darf der fehlende Name nicht sperren – sonst ist
   // Speichern dauerhaft grau. Im Browser gefunden (04.09.2026), 1034 grüne Tests hatten den Editor gemockt.
   const canSave = (!mitVersionsname || name.trim().length > 0) && text.trim().length > 0;
-  // Namen in der Flow-Zeile, zu denen es keinen Teil gibt (#606) – sonst fehlt still ein Teil.
-  const flowUnbekannt = useMemo(
-    () => teileImFlow(parseChordPro(text), parseMetadata(text).flow).unbekannt,
-    [text],
-  );
   const transposeLabel = semitones === 0 ? '±0' : semitones > 0 ? `+${semitones}` : `${semitones}`;
-  // „Beide" gibt es nur auf breiten Fenstern; sonst als „Editor" behandeln.
-  const effView: View = !wide && view === 'both' ? 'editor' : view;
-  const showEditor = effView !== 'preview';
-  const showPreview = effView !== 'editor';
+  // Breit stehen Text und Vorschau nebeneinander; schmal zeigt der Umschalter eines von beiden.
+  const showEditor = wide || bereich === 'text';
+  const showAblauf = wide || bereich === 'ablauf';
+  const showPreview = wide || bereich === 'vorschau';
 
   // iOS-Tastatur: Der Overlay bleibt VOLLBILD (fixed, inset 0) – so schimmert hinter der
   // halbtransparenten Tastatur nichts von der dahinterliegenden Ansicht durch. Statt den Overlay
@@ -165,17 +167,15 @@ export function ChordEditor({
     buildingRef.current = prev + suffix;
     rememberRecent(buildingRef.current, prev);
   }
+  /** Ablauf-Karte (L2): die Kärtchen-Reihenfolge als EINE Änderung am Text – Rückgängig inklusive. */
+  function ablaufSetzen(eintraege: string[]) {
+    const a = flowSetzen(text, eintraege);
+    if (a) editorRef.current?.aendern(a.from, a.to, a.insert);
+  }
   function pickFormat(f: (typeof FORMATS)[number]) {
     setOpenMenu(null);
     if (f.art === 'trenner') {
       editorRef.current?.insert('----', { block: true });
-      return;
-    }
-    if (f.art === 'flow') {
-      // Nach den allgemeinen Angaben, vor dem ersten Teil – vorbefüllt; gibt es schon eine, dorthin.
-      const ziel = flowEinfuegen(text);
-      if (ziel.vorhanden) editorRef.current?.springeZu(ziel.pos);
-      else editorRef.current?.einfuegenAn(ziel.pos, `${ziel.zeile}\n`, ziel.zeile.length - 1);
       return;
     }
     if (f.value) editorRef.current?.insert(`{${f.tag}: }`, { block: true, caretBack: 1 });
@@ -184,14 +184,29 @@ export function ChordEditor({
 
   return (
     <div ref={overlayRef} className={styles.overlay}>
-      <div className={styles.bar}>
-        <button className={`${styles.barBtn} ${styles.cancel}`} onClick={onClose} disabled={saving}>
+      <header className={styles.kopf}>
+        <button className={styles.abbrechen} onClick={onClose} disabled={saving}>
           Abbrechen
         </button>
-        <span className={styles.title}>{songTitle}</span>
+        <div className={styles.kopfText}>
+          <span className={styles.title}>{songTitle}</span>
+          {/* Die Tonart, in der der Text steht – dieselbe wie im Kopf des Blatts (#398). Was hier
+              gespeichert wird, steht in genau dieser Tonart; die Vorschau beginnt bei ±0. */}
+          {tonart && (
+            <span className={styles.tonartZeile}>
+              Tonart <strong>{tonart}</strong>
+              {kapo > 0 && (
+                <>
+                  {' '}
+                  · mit Kapo {kapo} gegriffen als <strong>{shiftKey(tonart, -kapo)}</strong>
+                </>
+              )}
+            </span>
+          )}
+        </div>
         {!isNew && onDelete && (
           <button
-            className={`${styles.barBtn} ${styles.barIconBtn}`}
+            className={styles.iconBtn}
             onClick={onDelete}
             disabled={saving}
             title="Diese Version löschen"
@@ -201,191 +216,181 @@ export function ChordEditor({
           </button>
         )}
         <button
-          className={`${styles.barBtn} ${styles.save}`}
+          className={styles.save}
           onClick={() => onSave(text, name.trim())}
           disabled={saving || !canSave}
         >
           {saving ? <Spinner /> : 'Speichern'}
         </button>
-      </div>
-
-      {/* Die Tonart, in der der Text steht – dieselbe wie im Kopf des Blatts (#398). Was hier
-          gespeichert wird, steht in genau dieser Tonart; die Vorschau rechts beginnt bei ±0. */}
-      {tonart && (
-        <div className={styles.tonartZeile}>
-          Tonart <strong>{tonart}</strong>
-          {kapo > 0 && (
-            <>
-              {' '}
-              · mit Kapo {kapo} gegriffen als <strong>{shiftKey(tonart, -kapo)}</strong>
-            </>
-          )}
-        </div>
-      )}
+      </header>
 
       {error && <div className={styles.error}>{error}</div>}
 
-      {/* Meta-Zeile: Versionsname + Rückgängig/Wiederholen + Ansicht – kompakt in EINER Zeile,
-          damit möglichst viel Höhe für den eigentlichen Editor bleibt (v. a. mit Tastatur). */}
-      <div className={styles.metaRow}>
-        {mitVersionsname ? (
-          <input
-            id="versionName"
-            className={styles.nameInput}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Versionsname (z. B. Akustik, Jugend)"
-            aria-label="Versionsname"
-            maxLength={60}
-            spellCheck={false}
-          />
-        ) : (
-          /* Ohne Versionsname: Der Platz bleibt, damit Rückgängig/Wiederholen rechts stehen wie sonst. */
-          <span className={styles.nameInput} aria-hidden />
-        )}
-        <button
-          className={styles.iconBtn}
-          onClick={() => editorRef.current?.undo()}
-          disabled={!canUndo}
-          title="Rückgängig"
-          aria-label="Rückgängig"
-        >
-          <Icon name="undo" size={18} stroke={2} />
-        </button>
-        <button
-          className={styles.iconBtn}
-          onClick={() => editorRef.current?.redo()}
-          disabled={!canRedo}
-          title="Wiederholen"
-          aria-label="Wiederholen"
-        >
-          <Icon name="redo" size={18} stroke={2} />
-        </button>
-        <div className={styles.viewSeg}>
-          <button
-            className={`${styles.vseg}${effView === 'editor' ? ' ' + styles.vsegOn : ''}`}
-            onClick={() => setView('editor')}
-          >
-            Editor
-          </button>
-          {wide && (
-            <button
-              className={`${styles.vseg}${effView === 'both' ? ' ' + styles.vsegOn : ''}`}
-              onClick={() => setView('both')}
-            >
-              Beide
-            </button>
-          )}
-          <button
-            className={`${styles.vseg}${effView === 'preview' ? ' ' + styles.vsegOn : ''}`}
-            onClick={() => setView('preview')}
-          >
-            Vorschau
-          </button>
-        </div>
-      </div>
-
-      {/* Eingabe-Toolbar */}
-      <div className={styles.toolbar} ref={toolbarRef}>
-        <div className={styles.dd}>
-          <button
-            className={styles.ddBtn}
-            onClick={() => setOpenMenu((m) => (m === 'chord' ? null : 'chord'))}
-            aria-expanded={openMenu === 'chord'}
-          >
-            Akkord ▾
-          </button>
-          {openMenu === 'chord' && (
-            <div className={`${styles.ddPanel} ${styles.cbPanel}`}>
-              <div className={styles.cbLbl}>Grundton – tippen fügt sofort ein</div>
-              <div className={styles.cbGrid}>
-                {CHORD_ROOTS.map((r) => (
-                  <button
-                    key={r}
-                    className={`${styles.cbChip} ${styles.cbRoot}`}
-                    onClick={() => insertRoot(r)}
-                  >
-                    {r}
-                  </button>
-                ))}
-              </div>
-              <div className={styles.cbLbl}>Zusatz – hängt an den letzten Akkord an</div>
-              <div className={styles.cbGrid}>
-                {CHORD_QUALITIES.filter((q) => q.tag).map((q) => (
-                  <button key={q.tag} className={styles.cbChip} onClick={() => appendPart(q.tag)}>
-                    {q.label}
-                  </button>
-                ))}
-              </div>
-              <div className={styles.cbLbl}>Bass (Slash-Akkord, z. B. A/C#)</div>
-              <div className={styles.cbGrid}>
-                {CHORD_ROOTS.map((r) => (
-                  <button key={r} className={styles.cbChip} onClick={() => appendPart(`/${r}`)}>
-                    /{r}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className={styles.dd}>
-          <button
-            className={styles.ddBtn}
-            onClick={() => setOpenMenu((m) => (m === 'format' ? null : 'format'))}
-            aria-expanded={openMenu === 'format'}
-          >
-            Format ▾
-          </button>
-          {openMenu === 'format' && (
-            <div className={`${styles.ddPanel} ${styles.ddPanelWide}`}>
-              {FORMATS.map((f) => (
-                <button key={f.tag} className={styles.ddFormat} onClick={() => pickFormat(f)}>
-                  <span className={styles.ddFormatLabel}>{f.label}</span>
-                  <code className={styles.ddFormatTag}>{f.tag}</code>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {recent.length > 0 && (
-          <div className={styles.tbRecent}>
-            <span className={styles.tbRecentLbl}>Zuletzt</span>
-            {recent.slice(0, 6).map((c) => (
-              <button key={c} className={styles.recentChip} onClick={() => pickChord(c)}>
-                {c}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {flowUnbekannt.length > 0 && (
-        <p className={styles.flowHinweis} role="status">
-          Im Ablauf steht {flowUnbekannt.length === 1 ? 'ein Name' : 'Namen'}, zu{' '}
-          {flowUnbekannt.length === 1 ? 'dem' : 'denen'} es keinen Teil gibt:{' '}
-          <strong>{flowUnbekannt.join(', ')}</strong>. Die Namen müssen wie die Überschriften der
-          Teile heißen.
-        </p>
+      {!wide && (
+        <Segment
+          verbunden
+          className={styles.umschalter}
+          ariaLabel="Ansicht"
+          value={bereich}
+          onChange={setBereich}
+          options={[
+            { value: 'text', label: 'Text' },
+            { value: 'ablauf', label: 'Ablauf' },
+            { value: 'vorschau', label: 'Vorschau' },
+          ]}
+        />
       )}
 
-      <div className={styles.split}>
-        {/* Editor bleibt immer gemountet (Verlauf/Cursor erhalten), nur ausgeblendet. */}
-        <div className={`${styles.editPane}${showEditor ? '' : ' ' + styles.paneHidden}`}>
-          <ChordProInput
-            ref={editorRef}
-            initialText={initialText}
-            onChange={setText}
-            onHistory={(u, r) => {
-              setCanUndo(u);
-              setCanRedo(r);
-            }}
-          />
+      <div className={styles.inhalt}>
+        {/* Breit: links Ablauf + Text untereinander. Schmal: Ablauf als eigener Bereich (L2). */}
+        <div
+          className={`${styles.links}${showEditor || showAblauf ? '' : ' ' + styles.paneHidden}`}
+        >
+          {showAblauf && <AblaufKarte text={text} setzen={ablaufSetzen} kompakt={!wide} />}
+          {/* Die Text-Karte bleibt immer gemountet (Verlauf/Cursor erhalten), nur ausgeblendet. */}
+          <section
+            aria-label="Text"
+            className={`${styles.karte} ${styles.textKarte}${showEditor ? '' : ' ' + styles.paneHidden}`}
+          >
+            {mitVersionsname && (
+              <div className={styles.kartenKopf}>
+                <label className={styles.fassung} htmlFor="versionName">
+                  Fassung
+                </label>
+                <input
+                  id="versionName"
+                  className={styles.nameInput}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Name, z. B. Akustik oder Jugend"
+                  aria-label="Versionsname"
+                  maxLength={60}
+                  spellCheck={false}
+                />
+              </div>
+            )}
+
+            {/* Eingabe-Toolbar */}
+            <div className={styles.toolbar} ref={toolbarRef}>
+              <div className={styles.dd}>
+                <button
+                  className={styles.ddBtn}
+                  onClick={() => setOpenMenu((m) => (m === 'chord' ? null : 'chord'))}
+                  aria-expanded={openMenu === 'chord'}
+                >
+                  Akkord ▾
+                </button>
+                {openMenu === 'chord' && (
+                  <div className={`${styles.ddPanel} ${styles.cbPanel}`}>
+                    <div className={styles.cbLbl}>Grundton – tippen fügt sofort ein</div>
+                    <div className={styles.cbGrid}>
+                      {CHORD_ROOTS.map((r) => (
+                        <button
+                          key={r}
+                          className={`${styles.cbChip} ${styles.cbRoot}`}
+                          onClick={() => insertRoot(r)}
+                        >
+                          {r}
+                        </button>
+                      ))}
+                    </div>
+                    <div className={styles.cbLbl}>Zusatz – hängt an den letzten Akkord an</div>
+                    <div className={styles.cbGrid}>
+                      {CHORD_QUALITIES.filter((q) => q.tag).map((q) => (
+                        <button
+                          key={q.tag}
+                          className={styles.cbChip}
+                          onClick={() => appendPart(q.tag)}
+                        >
+                          {q.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className={styles.cbLbl}>Bass (Slash-Akkord, z. B. A/C#)</div>
+                    <div className={styles.cbGrid}>
+                      {CHORD_ROOTS.map((r) => (
+                        <button
+                          key={r}
+                          className={styles.cbChip}
+                          onClick={() => appendPart(`/${r}`)}
+                        >
+                          /{r}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className={styles.dd}>
+                <button
+                  className={styles.ddBtn}
+                  onClick={() => setOpenMenu((m) => (m === 'format' ? null : 'format'))}
+                  aria-expanded={openMenu === 'format'}
+                >
+                  Format ▾
+                </button>
+                {openMenu === 'format' && (
+                  <div className={`${styles.ddPanel} ${styles.ddPanelWide}`}>
+                    {FORMATS.map((f) => (
+                      <button key={f.tag} className={styles.ddFormat} onClick={() => pickFormat(f)}>
+                        <span className={styles.ddFormatLabel}>{f.label}</span>
+                        <code className={styles.ddFormatTag}>{f.tag}</code>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {recent.length > 0 && (
+                <div className={styles.tbRecent}>
+                  <span className={styles.tbRecentLbl}>Zuletzt</span>
+                  {recent.slice(0, 6).map((c) => (
+                    <button key={c} className={styles.recentChip} onClick={() => pickChord(c)}>
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* Rückgängig/Wiederholen gehören zum Text – hier statt im Kopf, damit der Titel am Handy Platz hat. */}
+              <div className={styles.verlauf}>
+                <button
+                  className={styles.iconBtn}
+                  onClick={() => editorRef.current?.undo()}
+                  disabled={!canUndo}
+                  title="Rückgängig"
+                  aria-label="Rückgängig"
+                >
+                  <Icon name="undo" size={18} stroke={2} />
+                </button>
+                <button
+                  className={styles.iconBtn}
+                  onClick={() => editorRef.current?.redo()}
+                  disabled={!canRedo}
+                  title="Wiederholen"
+                  aria-label="Wiederholen"
+                >
+                  <Icon name="redo" size={18} stroke={2} />
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.editPane}>
+              <ChordProInput
+                ref={editorRef}
+                initialText={initialText}
+                onChange={setText}
+                onHistory={(u, r) => {
+                  setCanUndo(u);
+                  setCanRedo(r);
+                }}
+              />
+            </div>
+          </section>
         </div>
 
         {showPreview && (
-          <div className={styles.previewPane}>
+          <section aria-label="Vorschau" className={`${styles.karte} ${styles.previewPane}`}>
             <div className={styles.previewHead}>
               <span className={styles.paneLbl}>Vorschau</span>
               <div className={styles.transpose}>
@@ -414,7 +419,7 @@ export function ChordEditor({
               </div>
             </div>
             <PdfPreview title={songTitle} text={text} semitones={semitones} rolle={rolle} />
-          </div>
+          </section>
         )}
       </div>
     </div>

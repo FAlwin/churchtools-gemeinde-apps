@@ -6,6 +6,7 @@ import { App } from './App';
 import { ladeStart, type Start } from './start';
 
 vi.mock('./start', () => ({ ladeStart: vi.fn() }));
+vi.mock('./Verwaltung', () => ({ Verwaltung: () => <p>VERWALTUNG</p> }));
 const laden = vi.mocked(ladeStart);
 
 const START: Start = {
@@ -13,6 +14,7 @@ const START: Start = {
   vorname: 'Alwin',
   gemeinde: 'ECG Donrath',
   modul: 20,
+  darfVerwalten: false,
   gruppen: [
     { id: 11, name: 'Leitungsteam', lage: 'eingerichtet', protokolle: 60, mitarbeit: 61 },
     { id: 7, name: 'Jugendleitung', lage: 'unvollstaendig', protokolle: 70, mitarbeit: null },
@@ -22,6 +24,7 @@ const START: Start = {
 
 beforeEach(() => {
   laden.mockResolvedValue(START);
+  window.location.hash = '';
 });
 
 describe('App (S1)', () => {
@@ -78,5 +81,22 @@ describe('App (S1)', () => {
       await screen.findByText('Die Erweiterung „Protokolle“ ist in ChurchTools nicht zu finden.'),
     ).toBeTruthy();
     expect(screen.queryByText(/keiner Gruppe/)).toBeNull();
+  });
+
+  it('kein Admin: keine Reiter – und #/verwaltung führt zum Start', async () => {
+    window.location.hash = '#/verwaltung';
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: 'Hallo Alwin' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Verwaltung' })).toBeNull();
+    expect(screen.queryByText('VERWALTUNG')).toBeNull();
+  });
+
+  it('Admin: Reiter Start · Verwaltung; „Verwaltung“ zeigt die Verwaltung ohne Gruß', async () => {
+    laden.mockResolvedValue({ ...START, darfVerwalten: true });
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Verwaltung' }));
+    expect(await screen.findByText('VERWALTUNG')).toBeTruthy();
+    expect(window.location.hash).toBe('#/verwaltung');
+    expect(screen.queryByRole('heading', { name: 'Hallo Alwin' })).toBeNull();
   });
 });

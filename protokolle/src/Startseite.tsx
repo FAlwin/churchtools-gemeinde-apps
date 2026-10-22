@@ -1,10 +1,11 @@
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
+import { Marke } from './Marke';
 import styles from './Startseite.module.scss';
 
-const LAGE: Record<ProtokollGruppe['lage'], { text: string; klasse: string }> = {
-  eingerichtet: { text: 'eingerichtet', klasse: styles.gut },
-  unvollstaendig: { text: 'unvollständig eingerichtet', klasse: styles.problem },
-  'nicht-eingerichtet': { text: 'nicht eingerichtet', klasse: styles.leise },
+const LAGE: Record<ProtokollGruppe['lage'], { text: string; art: 'gut' | 'problem' | 'leise' }> = {
+  eingerichtet: { text: 'eingerichtet', art: 'gut' },
+  unvollstaendig: { text: 'unvollständig eingerichtet', art: 'problem' },
+  'nicht-eingerichtet': { text: 'nicht eingerichtet', art: 'leise' },
 };
 
 /**
@@ -26,7 +27,7 @@ export function Startseite({ gruppen }: { gruppen: ProtokollGruppe[] }) {
           {gruppen.map((g) => (
             <li key={g.id} className={styles.zeile}>
               <span className={styles.name}>{g.name}</span>
-              <span className={`${styles.lage} ${LAGE[g.lage].klasse}`}>{LAGE[g.lage].text}</span>
+              <Marke art={LAGE[g.lage].art}>{LAGE[g.lage].text}</Marke>
             </li>
           ))}
         </ul>

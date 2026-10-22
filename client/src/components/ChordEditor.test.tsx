@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 
 /**
  * Der Speichern-Knopf des Editors – gegen die **echte** Komponente, nicht gegen eine Attrappe.
@@ -13,8 +13,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 // Die Eingabe ist eine Attrappe; ihre Befehle (Einfügen …) landen hier, damit die Bausteine prüfbar sind.
 const eingabe = vi.hoisted(() => ({
   insert: vi.fn(),
-  einfuegenAn: vi.fn(),
-  springeZu: vi.fn(),
+  aendern: vi.fn(),
   appendChord: vi.fn(),
   undo: vi.fn(),
   redo: vi.fn(),
@@ -40,6 +39,7 @@ vi.mock('@ui/fenster/useOverlayKeyboardInset', () => ({
 }));
 
 const { ChordEditor } = await import('./ChordEditor');
+const { flowSetzen } = await import('../utils/chordpro');
 
 function zeige(props: Partial<Parameters<typeof ChordEditor>[0]> = {}) {
   const onSave = vi.fn();
@@ -123,19 +123,43 @@ describe('ChordEditor – Ablauf und Weiterschalt-Punkt', () => {
     fireEvent.click(screen.getByRole('button', { name: new RegExp(name) }));
   }
 
-  it('„Ablauf" setzt die vorbefüllte Flow-Zeile vor den ersten Teil, Cursor vor die Klammer', () => {
+  // Seit L2 (22.10.2026) setzt die Ablauf-Karte die Flow-Zeile – erwartet wird genau die Änderung, die
+  // `flowSetzen` dafür liefert (der Erzeuger, nicht ein abgeschriebenes Literal).
+  function aenderungFuer(text: string, eintraege: string[]) {
+    const a = flowSetzen(text, eintraege)!;
+    return [a.from, a.to, a.insert];
+  }
+
+  it('„+ Chorus“ ohne Flow-Zeile: legt sie an – mit den Teilen wie im Text und Chorus dahinter', () => {
     const text = '{title: Treu}\n{comment: Vers}\nA\n{comment: Chorus}\nB';
     zeige({ initialText: text, mitVersionsname: false });
-    format('Ablauf');
-    const zeile = '{flow: Vers, Chorus}';
-    expect(eingabe.einfuegenAn).toHaveBeenCalledWith(14, `${zeile}\n`, zeile.length - 1);
+    const ablauf = screen.getByRole('region', { name: 'Ablauf' });
+    fireEvent.click(within(ablauf).getByRole('button', { name: 'Chorus' }));
+    expect(eingabe.aendern).toHaveBeenCalledWith(
+      ...aenderungFuer(text, ['Vers', 'Chorus', 'Chorus']),
+    );
   });
 
-  it('gibt es schon eine Flow-Zeile, springt „Ablauf" dorthin statt eine zweite einzufügen', () => {
-    zeige({ initialText: '{title: T}\n{flow: Vers}\n{comment: Vers}\nA', mitVersionsname: false });
-    format('Ablauf');
-    expect(eingabe.springeZu).toHaveBeenCalledWith(11);
-    expect(eingabe.einfuegenAn).not.toHaveBeenCalled();
+  it('× nimmt einen Eintrag heraus, „Wie im Text“ die ganze Zeile', () => {
+    const text = '{flow: Chorus, Vers}\n{comment: Vers}\nA\n{comment: Chorus}\nB';
+    zeige({ initialText: text, mitVersionsname: false });
+    const ablauf = screen.getByRole('region', { name: 'Ablauf' });
+    fireEvent.click(within(ablauf).getByRole('button', { name: 'Chorus aus dem Ablauf nehmen' }));
+    expect(eingabe.aendern).toHaveBeenLastCalledWith(...aenderungFuer(text, ['Vers']));
+    fireEvent.click(within(ablauf).getByRole('button', { name: 'Wie im Text' }));
+    expect(eingabe.aendern).toHaveBeenLastCalledWith(...aenderungFuer(text, []));
+  });
+
+  it('ohne Flow-Zeile kein „Wie im Text“ – es ist ja schon so', () => {
+    zeige({ initialText: '{comment: Vers}\nA', mitVersionsname: false });
+    const ablauf = screen.getByRole('region', { name: 'Ablauf' });
+    expect(within(ablauf).queryByRole('button', { name: 'Wie im Text' })).toBeNull();
+  });
+
+  it('das Format-Menü bietet keinen Ablauf mehr an – dafür ist die Karte da', () => {
+    zeige({ mitVersionsname: false });
+    fireEvent.click(screen.getByRole('button', { name: /Format/ }));
+    expect(screen.queryByRole('button', { name: /Reihenfolge der Teile/ })).toBeNull();
   });
 
   it('„Weiterschalt-Punkt" fügt ---- in einer eigenen Zeile ein', () => {
@@ -144,17 +168,16 @@ describe('ChordEditor – Ablauf und Weiterschalt-Punkt', () => {
     expect(eingabe.insert).toHaveBeenCalledWith('----', { block: true });
   });
 
-  it('nennt Namen im Flow, zu denen es keinen Teil gibt', () => {
+  it('nennt Namen im Ablauf, zu denen es keinen Teil gibt – am Kärtchen', () => {
     zeige({
       initialText: '{flow: Vers, Refrain}\n{comment: Vers}\nA',
       mitVersionsname: false,
     });
-    expect(screen.getByRole('status').textContent).toContain('Refrain');
-  });
-
-  it('ohne unbekannte Namen kein Hinweis', () => {
-    zeige({ initialText: '{flow: Vers}\n{comment: Vers}\nA', mitVersionsname: false });
-    expect(screen.queryByRole('status')).toBeNull();
+    const ablauf = screen.getByRole('region', { name: 'Ablauf' });
+    expect(within(ablauf).getAllByText('fehlt im Text')).toHaveLength(1);
+    expect(within(ablauf).getByText('Refrain').closest('li')?.textContent).toContain(
+      'fehlt im Text',
+    );
   });
 });
 
@@ -174,5 +197,51 @@ describe('ChordEditor – Vorschau im Scroll-Modus', () => {
     localStorage.setItem('worship:liedansicht', 'scrollen');
     zeige({ mitVersionsname: false });
     expect(vorschau.props.at(-1)?.rolle).toBe(true);
+  });
+});
+
+/** Aufbau seit L1 (neuer Lied-Editor, 22.10.2026): breit Text und Vorschau nebeneinander, schmal umschaltbar. */
+describe('ChordEditor – Aufbau (L1)', () => {
+  function breite(breit: boolean) {
+    window.matchMedia = vi.fn().mockReturnValue({
+      matches: breit,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    });
+  }
+
+  it('breit: Text- und Vorschau-Karte nebeneinander, kein Umschalter', () => {
+    breite(true);
+    zeige();
+    expect(screen.getByRole('region', { name: 'Text' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Vorschau' })).toBeTruthy();
+    expect(screen.queryByRole('group', { name: 'Ansicht' })).toBeNull();
+  });
+
+  it('schmal: „Text | Vorschau“ – die Text-Karte bleibt beim Wechsel erhalten (Verlauf, Cursor)', () => {
+    breite(false);
+    zeige();
+    const umschalter = screen.getByRole('group', { name: 'Ansicht' });
+    expect(screen.queryByRole('region', { name: 'Vorschau' })).toBeNull();
+    fireEvent.click(within(umschalter).getByRole('button', { name: 'Vorschau' }));
+    expect(screen.getByRole('region', { name: 'Vorschau' })).toBeTruthy();
+    // Ausgeblendet, aber noch da – sonst wären Rückgängig-Verlauf und Cursor weg.
+    expect(screen.getByTestId('eingabe')).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Text', hidden: true }).className).toMatch(
+      /paneHidden/,
+    );
+    fireEvent.click(within(umschalter).getByRole('button', { name: 'Text' }));
+    expect(screen.queryByRole('region', { name: 'Vorschau' })).toBeNull();
+  });
+
+  it('Rückgängig und Wiederholen stehen in der Text-Karte, nicht im Kopf', () => {
+    breite(true);
+    zeige();
+    const text = screen.getByRole('region', { name: 'Text' });
+    expect(within(text).getByRole('button', { name: 'Rückgängig' })).toBeTruthy();
+    expect(within(text).getByRole('button', { name: 'Wiederholen' })).toBeTruthy();
+    expect(
+      within(screen.getByRole('banner')).queryByRole('button', { name: 'Rückgängig' }),
+    ).toBeNull();
   });
 });

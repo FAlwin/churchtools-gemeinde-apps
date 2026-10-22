@@ -1,0 +1,182 @@
+@use '@ui/design/mixins' as m;
+
+// Ablauf als Kärtchen (Lied-Editor L2) – Karte wie die Text-Karte des Editors (`card-list`).
+.karte {
+  @include m.card-list;
+  flex-shrink: 0;
+}
+.kopf {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--section);
+  border-bottom: 1px solid var(--border);
+}
+.titel {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.hinweis {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text2);
+}
+.zurueck {
+  border: none;
+  background: none;
+  padding: 4px;
+  color: var(--blue-ink);
+  font-family: var(--ui);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.leer {
+  margin: 0;
+  padding: 12px;
+  font-size: 13px;
+  color: var(--text2);
+}
+
+// Kärtchen in Reihen (breit) – schmal untereinander (`.kompakt`).
+.reihe {
+  list-style: none;
+  margin: 0;
+  padding: 10px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.kaertchen {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 36px;
+  padding: 0 2px 0 0;
+  border: 1px solid var(--track-off);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text);
+  font-family: var(--ui);
+  font-size: 14px;
+}
+.zieht {
+  position: relative;
+  z-index: 2;
+  border-color: var(--blue);
+  background: var(--blue-tile);
+  color: var(--blue-tile-text);
+}
+// Name im Ablauf, zu dem es keinen Teil gibt (#606) – das Blatt überspringt ihn.
+.fehlt {
+  border-color: var(--red);
+}
+.fehltText {
+  font-size: 11px;
+  color: var(--red);
+}
+.griff {
+  height: 100%;
+  padding: 0 4px 0 8px;
+  display: flex;
+  align-items: center;
+  border: none;
+  background: none;
+  color: var(--text3);
+  cursor: grab;
+  // Der Griff zieht – auf dem Touchscreen darf er nicht die Seite scrollen.
+  touch-action: none;
+}
+.name {
+  font-weight: 700;
+  white-space: nowrap;
+}
+.weg {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--r-ctrl);
+  background: none;
+  color: var(--text2);
+  cursor: pointer;
+  &:hover {
+    background: var(--surface3);
+  }
+}
+
+.hinzu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+.hinzuLbl {
+  font-size: 12px;
+  color: var(--text2);
+}
+.hinzuKnopf {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px dashed var(--track-off);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--blue-ink);
+  font-family: var(--ui);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+// ── Handy: Liste mit Griff, Daumengröße ──
+.kompakt {
+  .reihe {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 0;
+    padding: 0;
+  }
+  .kaertchen {
+    height: 52px;
+    border: none;
+    border-top: 1px solid var(--hair);
+    border-radius: 0;
+    &:first-child {
+      border-top: none;
+    }
+  }
+  .griff {
+    padding: 0 8px 0 12px;
+  }
+  .name {
+    flex: 1;
+  }
+  .weg {
+    width: 44px;
+    height: 44px;
+  }
+  .hinzu {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 10px 12px 12px;
+    border-top: 1px solid var(--hair);
+  }
+  .hinzuLbl {
+    grid-column: 1 / -1;
+  }
+  .hinzuKnopf {
+    height: 44px;
+    justify-content: center;
+    font-size: 14px;
+  }
+}

@@ -147,6 +147,62 @@ describe('Verlauf: Rückgängig und neue Anmeldung (A7-3, gemessen 19.10.2026)',
     );
     expect(st.absagen).toEqual([]);
     expect(st.mitglieder[0].angemeldetAm).toBe('2026-10-17');
+    // Über das Formular gekommen – das Wieder-Aufnehmen durch das Team macht es nicht zu „von Hand“.
+    expect(st.mitglieder[0].vonHand).toBe(false);
+  });
+
+  it('vom Team eingetragen (A7-4) → „von Hand“, an der Anmeldung über die erste Person', () => {
+    const roh = mitglieder('AAAAAA', [true, false], 10);
+    const st = stand(roh, [dazu(10, '2026-10-22', { origin: 'default' }), dazu(11, '2026-10-17')]);
+    expect(st.mitglieder.map((m) => m.vonHand)).toEqual([true, false]);
+    expect(anmeldungenAus(e(), st, STICHTAG)[0].vonHand).toBe(true);
+    expect(anmeldungenAus(e(), stand(roh, [dazu(10, '2026-10-17')]), STICHTAG)[0].vonHand).toBe(
+      false,
+    );
+    // Abgesagt, später von Hand mit neuer Nr. angemeldet (echt geprüft 22.10.2026) → neuer Tag, „von Hand“.
+    const [nora] = mitglieder('NEU001', [false], 10);
+    const alt = absage(mitglieder('ALT001', [true], 10)[0], '2026-10-19', 1, { id: 2 });
+    const zurueck = stand(
+      [nora],
+      [
+        {
+          ...dazu(10, '2026-10-22', { origin: 'default', id: 3 }),
+          current: { membershipStatus: 'waiting', fields: { 'Anmelde-Nr.': 'NEU001' } },
+        },
+        alt,
+        dazu(10, '2026-10-17', { id: 1 }),
+      ],
+    );
+    expect([zurueck.mitglieder[0].angemeldetAm, zurueck.mitglieder[0].vonHand]).toEqual([
+      '2026-10-22',
+      true,
+    ]);
+    // Mit derselben Nr. (Rückgängig nach einer Absage, A7-3) bleibt der alte Tag.
+    const gleich = stand(
+      [nora],
+      [
+        {
+          ...dazu(10, '2026-10-22', { origin: 'default', id: 3 }),
+          current: { membershipStatus: 'waiting', fields: { 'Anmelde-Nr.': 'ALT001' } },
+        },
+        alt,
+        dazu(10, '2026-10-17', { id: 1 }),
+      ],
+    );
+    expect([gleich.mitglieder[0].angemeldetAm, gleich.mitglieder[0].vonHand]).toEqual([
+      '2026-10-17',
+      false,
+    ]);
+    // Von Hand, abgesagt, dann selbst über das Formular neu angemeldet → nicht mehr „von Hand“.
+    const neu = stand(roh, [
+      dazu(10, '2026-10-22', { origin: 'sign-up', zeit: '12:00:00', id: 3 }),
+      absage(roh[0], '2026-10-21', 1, { id: 2 }),
+      dazu(10, '2026-10-20', { origin: 'default', id: 1 }),
+    ]);
+    expect([neu.mitglieder[0].vonHand, neu.mitglieder[0].angemeldetAm]).toEqual([
+      false,
+      '2026-10-22',
+    ]);
   });
 
   it('in derselben Sekunde abgesagt und neu über das Formular angemeldet → neuer Anmeldetag (nach der Nummer)', () => {

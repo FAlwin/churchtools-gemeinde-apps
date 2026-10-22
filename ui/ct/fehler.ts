@@ -9,6 +9,8 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    /** Der Rumpf der Antwort, falls es einen gab – z. B. `args.duplicatePersonId` beim Anlegen einer Person (A7-4). */
+    public daten?: unknown,
   ) {
     super(message);
     this.name = 'ApiError';

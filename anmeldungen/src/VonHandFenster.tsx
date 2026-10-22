@@ -483,7 +483,7 @@ export function VonHandFenster({
                 {dabei.has(p.personId) ? (
                   <em className={`${a.pille} ${a.pilleOk} ${a.trefferMarke}`}>schon dabei</em>
                 ) : (
-                  <span className={a.nachKnopf}>Diese nehmen</span>
+                  <em className={`${a.nachKnopf} ${a.trefferMarke}`}>Diese nehmen</em>
                 )}
               </button>
             </li>
@@ -495,7 +495,8 @@ export function VonHandFenster({
           </button>
           <button
             type="button"
-            className={f.knopf}
+            // Der sichere Weg ist „Diese nehmen“ – „trotzdem“ legt ein Doppel an, deshalb nicht hervorgehoben.
+            className={a.linkKnopf}
             onClick={() => waehlen({ art: 'neu', neu, trotzdem: true })}
           >
             Trotzdem neu anlegen

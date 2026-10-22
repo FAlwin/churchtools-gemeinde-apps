@@ -208,8 +208,9 @@ export function MailAnsicht({ mail, onZurueck }: { mail: Mail; onZurueck: () => 
         <div className={a.mailText}>{mail.text}</div>
       </div>
       <p className={a.leise}>
-        Öffnet dein Mailprogramm mit diesem Text – du schickst selbst ab und kannst vorher noch
-        ändern.
+        {mail.an
+          ? 'Öffnet dein Mailprogramm mit diesem Text – du schickst selbst ab und kannst vorher noch ändern.'
+          : 'Ohne E-Mail-Adresse: Text kopieren und auf anderem Weg weitergeben (z. B. per Nachricht).'}
       </p>
       {kopiert === 'ja' && <p className={f.gut}>Kopiert.</p>}
       {kopiert === 'nein' && (

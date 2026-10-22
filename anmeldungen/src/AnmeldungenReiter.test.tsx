@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { AnmeldungenReiter, type MitgliederZustand } from './AnmeldungenReiter';
+import { MailAnsicht } from './AnmeldungAktion';
 import * as Z from './zahlung';
 import * as B from './bewegung';
 import * as H from './vonHand';
@@ -407,7 +408,25 @@ describe('Anmeldung von Hand (A7-4a)', () => {
     fireEvent.change(screen.getByLabelText('Geburtsdatum'), { target: { value: '2017-01-02' } });
     fireEvent.click(screen.getByRole('button', { name: 'Weiter' }));
     expect(await screen.findByText(/In ChurchTools gibt es schon Nina Neu\./)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Nina Neu.*Diese nehmen/ })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Trotzdem neu anlegen' }));
     expect(screen.getByText('Nina Neu anmelden')).toBeTruthy();
+  });
+});
+
+describe('Mail schreiben', () => {
+  it('ohne E-Mail-Adresse: kein Knopf zum Mailprogramm, dafür der Hinweis zum Kopieren', () => {
+    const mail = { an: null, betreff: 'Kinderfreizeit: Anmeldung für Paula', text: 'Hallo' };
+    render(<MailAnsicht mail={mail} onZurueck={() => {}} />);
+    expect(screen.queryByRole('link', { name: 'Im Mailprogramm öffnen' })).toBeNull();
+    expect(screen.getByText(/Ohne E-Mail-Adresse: Text kopieren/)).toBeTruthy();
+    cleanup();
+    render(
+      <MailAnsicht
+        mail={{ ...mail, an: 'friesen.alwin+a7h@ecg-donrath.de' }}
+        onZurueck={() => {}}
+      />,
+    );
+    expect(screen.getByText(/Öffnet dein Mailprogramm/)).toBeTruthy();
   });
 });

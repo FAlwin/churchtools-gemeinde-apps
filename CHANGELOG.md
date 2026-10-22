@@ -32,6 +32,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Nr. („Rückgängig“ nach einer Absage).
 - Liste: Warten alle Personen einer Anmeldung, steht „Betrag beim Nachrücken“ statt „0,00 €“ (das Formular schreibt
   bei der Warteliste 0,00 €).
+- „Mail schreiben“ ohne E-Mail-Adresse sagt jetzt „Text kopieren und anders weitergeben“ statt „Öffnet dein
+  Mailprogramm“; bei „gibt es schon“ ist „Diese nehmen“ der hervorgehobene Weg, „Trotzdem neu anlegen“ nicht mehr.
 
 ### Neu (Anmeldungen, A7-3)
 

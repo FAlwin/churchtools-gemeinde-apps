@@ -5,6 +5,7 @@ import {
   kachel,
   MONATE,
   MONATE_KURZ,
+  tagMonatKurz,
   monatName,
   monatTitel,
   tagKurz,
@@ -57,5 +58,12 @@ describe('monateBis (Zauberstab E5-1)', () => {
     expect(monateBis('2026-10-31', '2026-11-01')).toBe(1);
     expect(monateBis('2026-11', '2027-01')).toBe(2);
     expect(monateBis('2027-01-15', '2026-11-15')).toBe(-2);
+  });
+});
+
+describe('tagMonatKurz (E6-5a)', () => {
+  it('wie die Termine der Musik-App: Tag zweistellig, Monat kurz', () => {
+    expect(tagMonatKurz('2026-11-08')).toBe('08. Nov');
+    expect(tagMonatKurz('2026-03-21')).toBe('21. Mär');
   });
 });

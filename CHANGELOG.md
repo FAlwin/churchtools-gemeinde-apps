@@ -25,6 +25,21 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 - Beim echten Test gefunden: Die Vorschau-Antwort von ChurchTools steht direkt da (`{subject, html}`), nicht in `data`;
   Platzhalter der Person ([Vorname], [Wartelistenplatz]) gelten für die Person, an die die Mail geht – Hinweis im Fenster.
 
+### Neu (Dienstplaner, E6-5a, #681)
+
+- **Ablauf anlegen in der Termin-Ansicht:** Bei einem Termin ohne Ablauf steht für alle, die den Ablauf bearbeiten
+  dürfen, „Ablauf anlegen“ – mit denselben drei Wegen wie in der Musik-App: **aus einer Vorlage** (die des eigenen
+  Kalenders zuerst und vorausgewählt), **wie ein früherer Termin** (derselbe Kalender, bis 12 Wochen zurück, nur
+  Termine mit Ablauf, jüngster zuerst) oder **leer**. Danach steht der Ablauf da, und man ist gleich im Bearbeiten.
+  Angelegt wird über den vorhandenen Kern (prüft vorher, ob es schon einen gibt, und liest nachher nach).
+
+### Intern (Ablauf-Baustein, E6-5a, #681)
+
+- Das Fenster „Ablauf anlegen“ ist ein gemeinsamer Baustein (`ui/ablauf/AblaufAnlegenFenster`); die Musik-App behält
+  eine Hülle mit ihren Abfragen. Die Auswahl-Regeln stehen in `shared/ct/ablaufVorschlaege.ts` (vorher
+  `client/src/utils/`), der blaue Hauptknopf als Mixin `hauptKnopfBreit`. Fotos des Fensters (Vorlage, früher, leer)
+  sind vorher und nachher byte-gleich. Neu getestet: „Kalender unbekannt“ in der Musik-App legt nichts an.
+
 ### Neu (Protokolle, S2-3)
 
 - **Vorlagen bearbeiten** (Verwaltung, nur Admins): Karte „Vorlagen“ unter den Gruppen mit Umfang und Punkten je

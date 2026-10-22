@@ -44,12 +44,12 @@ const VORLAGEN: AblaufVorlage[] = [
   { id: 28, name: 'Sonntag', kalenderId: 2, punkte: 5 },
 ];
 
-function zeige(onAngelegt = vi.fn()) {
+function zeige(onAngelegt = vi.fn(), ziel: Service = ZIEL) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={qc}>
       <AblaufAnlegenFenster
-        termin={ZIEL}
+        termin={ziel}
         mitAblauf={FRUEHER}
         onClose={vi.fn()}
         onAngelegt={onAngelegt}
@@ -114,6 +114,18 @@ describe('AblaufAnlegenFenster', () => {
     await screen.findByRole('button', { name: /Sonntag/ });
     fireEvent.click(screen.getByRole('button', { name: 'Anlegen' }));
     expect((await screen.findByRole('alert')).textContent).toContain(ABLAUF_SCHON_DA);
+    expect(onAngelegt).not.toHaveBeenCalled();
+  });
+
+  it('Kalender unbekannt → Meldung im Fenster, nichts angelegt', async () => {
+    const { kalenderId: _k, ...ohneKalender } = ZIEL;
+    const { onAngelegt } = zeige(vi.fn(), ohneKalender);
+    await screen.findByRole('button', { name: /Sonntag/ });
+    fireEvent.click(screen.getByRole('button', { name: 'Anlegen' }));
+    expect((await screen.findByRole('alert')).textContent).toMatch(
+      /Kalender dieser Veranstaltung ist unbekannt/,
+    );
+    expect(api.ablaufAnlegen).not.toHaveBeenCalled();
     expect(onAngelegt).not.toHaveBeenCalled();
   });
 });

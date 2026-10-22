@@ -51,6 +51,15 @@ describe('verbindungEinrichten', () => {
     );
   });
 
+  it('der Rumpf der Antwort bleibt am Fehler – z. B. die Nummer der doppelten Person (A7-4)', async () => {
+    const doppelt = {
+      message: 'Es gibt bereits eine Person mit diesem Namen.',
+      args: { duplicatePersonId: 149 },
+    };
+    const e = await fehlerAus(json(400, doppelt), doppelt);
+    expect([e.status, e.message, e.daten]).toEqual([400, doppelt.message, doppelt]);
+  });
+
   it('eine Meldung des Aufrufs geht der eingestellten vor', async () => {
     verbindungEinrichten({ keinRecht: 'eingestellt' });
     expect((await fehlerAus(json(403, VERBOT), VERBOT, 'vom Aufruf')).message).toBe('vom Aufruf');

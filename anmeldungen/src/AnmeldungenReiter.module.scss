@@ -455,3 +455,39 @@
   white-space: pre-line;
   color: var(--text);
 }
+
+// **Anmeldung von Hand** (A7-4a) – beim Durchklicken am 22.10.2026: Die Suche quetschte das Feld neben dem breiten
+// Knopf zusammen, die Marker an Treffern zogen sich über die halbe Zeile, die Formularfelder klebten aneinander.
+.handSuche {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+
+  > input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  > button {
+    flex: none;
+    width: auto;
+    padding: 0 18px;
+  }
+}
+
+.trefferMarke {
+  flex: none;
+  font-style: normal;
+}
+
+.handFragen {
+  display: grid;
+  gap: 12px;
+}
+
+.feldTitel {
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text2);
+}

@@ -232,39 +232,60 @@ export interface Mail {
 }
 
 /**
- * **Die Mail an die Familie** – nach dem Nachrücken (Betrag, Bankdaten, Frist) oder nach dem Absagen (Rückzahlung).
- * Geschickt wird sie vom Team selbst (`mailto:`); ChurchTools hat dafür keine Schnittstelle (gemessen 19.10.2026).
+ * **Die Mail an die Familie** – nach dem Nachrücken (Betrag, Bankdaten, Frist), nach dem Absagen (Rückzahlung) oder
+ * nach einer Anmeldung von Hand (A7-4: Platz mit Betrag oder Warteliste). Geschickt wird sie vom Team selbst
+ * (`mailto:`); ChurchTools hat dafür keine Schnittstelle (gemessen 19.10.2026).
  */
 export function bescheidMail(
   e: OeffentlicheEinstellungen,
   a: {
-    art: 'nachgerueckt' | 'abgesagt';
+    art: 'nachgerueckt' | 'abgesagt' | 'angemeldet';
     veranstaltung: string;
-    x: ListenAnmeldung;
+    x: Pick<ListenAnmeldung, 'email' | 'wer' | 'nr'>;
     person: { vor: string; nach: string };
     betragCent: number;
     rueckzahlungCent: number;
     heute: string;
+    /** Nur `angemeldet`: Warteplatz (`null` = hat einen Platz). */
+    warteplatz?: number | null;
   },
 ): Mail {
   const b = e.bezahlung;
   const gruss = [...(e.kontakt ? ['', `Bei Fragen: ${e.kontakt}`] : []), '', 'Viele Grüße'];
+  const zahlen =
+    a.betragCent <= 0
+      ? []
+      : b.iban
+        ? [
+            '',
+            `Bitte überweise ${euroText(a.betragCent)}${
+              b.fristTage > 0 ? ` bis zum ${tagPunkt(plusTage(a.heute, b.fristTage))}` : ''
+            }:`,
+            `Kontoinhaber: ${b.kontoinhaber}`,
+            `IBAN: ${ibanText(b.iban)}`,
+            ...(b.bic ? [`BIC: ${b.bic}`] : []),
+            `Verwendungszweck: ${verwendungszweck(b.zweck, a.person.nach)}`,
+          ]
+        : ['', `Der Betrag: ${euroText(a.betragCent)}. Wie ihr bezahlt, sagen wir euch noch.`];
+  if (a.art === 'angemeldet') {
+    const wartet = a.warteplatz !== undefined && a.warteplatz !== null;
+    return {
+      an: a.x.email,
+      betreff: `${a.veranstaltung}: Anmeldung für ${a.person.vor}${wartet ? ' (Warteliste)' : ''}`,
+      text: [
+        `Hallo ${a.x.wer},`,
+        '',
+        wartet
+          ? `wie besprochen haben wir ${a.person.vor} für „${a.veranstaltung}“ angemeldet. Im Moment ist kein Platz frei – ${a.person.vor} steht auf der Warteliste (Platz ${a.warteplatz}). Sobald ein Platz frei wird, melden wir uns.`
+          : `wie besprochen haben wir ${a.person.vor} für „${a.veranstaltung}“ angemeldet – ${a.person.vor} ist dabei.`,
+        ...(a.x.nr ? ['', `Eure Anmelde-Nr.: ${a.x.nr}`] : []),
+        // Wer wartet, hat den Betrag 0 (`betragAus`) – dann gibt es keine Zahlungszeilen.
+        ...zahlen,
+        ...gruss,
+      ].join('\n'),
+    };
+  }
   if (a.art === 'nachgerueckt') {
-    const zahlen =
-      a.betragCent <= 0
-        ? []
-        : b.iban
-          ? [
-              '',
-              `Bitte überweise ${euroText(a.betragCent)}${
-                b.fristTage > 0 ? ` bis zum ${tagPunkt(plusTage(a.heute, b.fristTage))}` : ''
-              }:`,
-              `Kontoinhaber: ${b.kontoinhaber}`,
-              `IBAN: ${ibanText(b.iban)}`,
-              ...(b.bic ? [`BIC: ${b.bic}`] : []),
-              `Verwendungszweck: ${verwendungszweck(b.zweck, a.person.nach)}`,
-            ]
-          : ['', `Der Betrag: ${euroText(a.betragCent)}. Wie ihr bezahlt, sagen wir euch noch.`];
     return {
       an: a.x.email,
       betreff: `${a.veranstaltung}: ${a.person.vor} hat einen Platz`,

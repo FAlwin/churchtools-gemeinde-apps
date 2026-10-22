@@ -356,6 +356,8 @@ export function VeranstaltungSeite({
           veranstaltung={daten.name}
           e={e}
           maxPlaetze={a.maxPlaetze}
+          warteliste={a.warteliste}
+          anmeldeschluss={a.bis}
           entwurf={entwurf}
           zustand={mitglieder}
           stichtag={t?.beginn.slice(0, 10) ?? heute}

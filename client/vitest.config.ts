@@ -37,7 +37,7 @@ export default defineConfig({
     // Aufrufen des vorigen Tests). Dieselbe Fehlerklasse, dieselbe Antwort: einmal hier.
     clearMocks: true,
     // ui/ (gemeinsame Bausteine, #469), shared/ (Regeln aller Apps), anmeldungen/ (#474), formular/ (das
-    // öffentliche Formular, A6-1 #542), dienstplaner/ und scripts/ haben keinen eigenen Testlauf – ihre Tests laufen hier mit.
+    // öffentliche Formular, A6-1 #542), dienstplaner/, sitzungen/ und scripts/ haben keinen eigenen Testlauf – ihre Tests laufen hier mit.
     include: [
       'src/**/*.test.{ts,tsx}',
       '../ui/**/*.test.{ts,tsx}',
@@ -45,6 +45,7 @@ export default defineConfig({
       '../anmeldungen/src/**/*.test.{ts,tsx}',
       '../formular/src/**/*.test.{ts,tsx}',
       '../dienstplaner/src/**/*.test.{ts,tsx}',
+      '../sitzungen/src/**/*.test.{ts,tsx}',
       // Werkzeuge mit eigenen Regeln (Formular hochladen, 15.10.2026).
       '../scripts/**/*.test.mjs',
     ],

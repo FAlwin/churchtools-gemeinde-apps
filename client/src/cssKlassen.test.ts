@@ -14,7 +14,7 @@ import { dirname, join, resolve } from 'node:path';
  * `x.name` bzw. `x['name']`. Dynamische Zugriffe (`x[variable]`) prüft der Test nicht.
  */
 const WURZEL = resolve(__dirname, '../..');
-const ORDNER = ['client/src', 'ui', 'dienstplaner/src', 'anmeldungen/src'];
+const ORDNER = ['client/src', 'ui', 'dienstplaner/src', 'anmeldungen/src', 'sitzungen/src'];
 
 function dateien(ordner: string): string[] {
   return readdirSync(ordner).flatMap((n) => {

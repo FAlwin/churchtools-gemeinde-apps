@@ -1,0 +1,23 @@
+name: Release Sitzungen
+
+# Die Sitzungen haben ihren eigenen Release-Weg – getrennt von der Musik-App (Bauplan Sitzungen S1):
+# Tag `sitzungen-vX.Y.Z` → Erweiterung bauen und packen → GitHub Release mit der ZIP (`make_latest: false`,
+# siehe Vorlage). Der Tag-Filter `v*` der Musik-App greift hier nicht: `sitzungen-v…` beginnt nicht mit `v`.
+#
+# Ablauf: erst in main mergen (CI grün) → `git tag sitzungen-vX.Y.Z && git push origin sitzungen-vX.Y.Z`.
+on:
+  push:
+    tags:
+      - 'sitzungen-v*'
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    uses: ./.github/workflows/erweiterung-release.yml
+    with:
+      praefix: sitzungen-
+      workspace: sitzungen
+      kuerzel: sitzungen
+      titel: Sitzungen
+      anleitung: docs/betrieb/SITZUNGEN.md

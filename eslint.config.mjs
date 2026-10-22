@@ -65,6 +65,7 @@ export default tseslint.config(
             'anmeldungen/*.ts',
             'dienstplaner/*.ts',
             'formular/*.ts',
+            'sitzungen/*.ts',
             'e2e/*.mjs',
             'scripts/*.mjs',
             'server/scripts/*.ts',
@@ -99,6 +100,7 @@ export default tseslint.config(
       'anmeldungen/src/**/*.{ts,tsx}',
       'dienstplaner/src/**/*.{ts,tsx}',
       'formular/src/**/*.{ts,tsx}',
+      'sitzungen/src/**/*.{ts,tsx}',
       'ui/**/*.{ts,tsx}',
     ],
     languageOptions: {
@@ -184,6 +186,7 @@ export default tseslint.config(
       'anmeldungen/*.ts',
       'dienstplaner/*.ts',
       'formular/*.ts',
+      'sitzungen/*.ts',
       'e2e/*.mjs',
       'scripts/**/*.mjs',
       'server/scripts/**/*.ts',

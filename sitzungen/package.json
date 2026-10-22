@@ -1,0 +1,25 @@
+{
+  "name": "@worship/sitzungen",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sitzungen – ChurchTools-Erweiterung für Protokolle und To-Dos von Gruppen (z. B. Leitungskreis). Kein eigener Server: spricht ChurchTools direkt an.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build --mode extension",
+    "paket": "node ../scripts/paket-erweiterung.mjs"
+  },
+  "dependencies": {
+    "@worship/shared": "*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "6.0.2",
+    "sass": "^1.80.6",
+    "typescript": "^5.6.3",
+    "vite": "^8.0.16"
+  }
+}

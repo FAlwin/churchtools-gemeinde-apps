@@ -194,6 +194,8 @@ churchtools-gemeinde-apps/
 │                            #   Formular-Baukasten = Baukasten.tsx (+ BaukastenLeiste, FeldBearbeiten, useSchlange)
 ├── formular/                # Anmeldungen: öffentliches Formular, statisch – jede Gemeinde auf ihrem Webspace
 ├── dienstplaner/            # Dienstplaner: ChurchTools-Erweiterung für alle Dienstgruppen (Bauplan E2, vorerst nur Erweiterung)
+├── shared/sitzungen/        # Regeln der Sitzungen: dokument (Ableitung), speicher (Kopf + Teile), aufgaben, einrichten, vorlagen, platzhalter, gruppen (S1)
+├── sitzungen/               # Sitzungen: ChurchTools-Erweiterung für Protokolle und To-Dos von Gruppen (Bauplan Sitzungen, nur Erweiterung)
 └── ui/                      # gemeinsame Browser-Bausteine aller Apps (Alias @ui, Dienstplaner E1, Anmeldungen #474)
     ├── design/              # _variables.scss (Tokens), _mixins.scss, _grundregeln.scss (Reset + Erweiterungs-Lehren),
     │                        # thema.ts (hell/dunkel wie ChurchTools, docs/entwicklung/dunkelmodus.md)

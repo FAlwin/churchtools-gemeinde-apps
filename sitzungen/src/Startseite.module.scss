@@ -1,0 +1,87 @@
+// Startseite der Sitzungen (Bauplan S1) – Karte und Zeilen wie die Startseite des Dienstplaners, Farben nach dem
+// ChurchTools-Look: Grün = eingerichtet, Rot = Problem.
+@use '@ui/design/mixins' as m;
+
+.karte {
+  @include m.card-list;
+  max-width: 720px;
+}
+
+.kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--hair);
+
+  h2 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+}
+
+.anzahl {
+  color: var(--text2);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.liste {
+  list-style: none;
+}
+
+.zeile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--hair);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.name {
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.lage {
+  flex: none;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.gut {
+  background: color-mix(in srgb, var(--green) 16%, transparent);
+  color: var(--green);
+}
+
+.problem {
+  background: color-mix(in srgb, var(--red) 14%, transparent);
+  color: var(--red);
+}
+
+.leise {
+  background: var(--surface3);
+  color: var(--text2);
+}
+
+.leer,
+.fuss {
+  padding: 14px;
+  color: var(--text2);
+  font-size: 14px;
+}
+
+.fuss {
+  border-top: 1px solid var(--hair);
+}

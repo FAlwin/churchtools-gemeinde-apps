@@ -21,6 +21,9 @@ on:
       # Ebenso der Dienstplaner (eigene Erweiterung, kein Teil des Musik-App-Images).
       - '!feat/dienstplaner-**'
       - '!fix/dienstplaner-**'
+      # Und die Sitzungen (eigene Erweiterung, Bauplan Sitzungen).
+      - '!feat/sitzungen-**'
+      - '!fix/sitzungen-**'
 
 env:
   IMAGE: ghcr.io/falwin/churchtools-musik-app

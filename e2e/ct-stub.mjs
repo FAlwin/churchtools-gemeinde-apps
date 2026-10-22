@@ -696,6 +696,16 @@ const server = createServer((req, res) => {
     }
     return json(res, { data: permissions });
   }
+  // Dienstgruppen (#676): Der Test-Musiker hat kein Recht an „Technik“ – er sieht also nicht alle, und beim Bearbeiten
+  // steht der Hinweis, dass ChurchTools die Gruppen-Infos der übrigen löscht.
+  if (path === '/api/servicegroups') {
+    return json(res, {
+      data: [
+        { id: 1, name: 'Programm', viewAll: true },
+        { id: 3, name: 'Technik', viewAll: false },
+      ],
+    });
+  }
   if (path === '/api/events') return json(res, { data: events });
   // Punkte anlegen und löschen (05.10.2026, „Neuer Eintrag" über das schwebende Plus). Neue Punkte
   // kommen ans Ende – wie in ChurchTools.

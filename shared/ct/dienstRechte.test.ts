@@ -3,7 +3,10 @@ import {
   darfDienstgruppePlanen,
   darfDienstPlanen,
   dienstRechteAus,
+  siehtAlleDienstgruppen,
+  siehtAlleDienstgruppenAus,
   siehtDienstGanz,
+  siehtDienstgruppe,
 } from './dienstRechte';
 import { idsAusRecht } from './rechte';
 
@@ -156,5 +159,46 @@ describe('siehtDienstGanz – liefert ChurchTools alle Plätze? (gemessen 13.10.
       false,
     );
     expect(siehtDienstGanz(MITGLIED, lose, false, new Set([9]))).toBe(true);
+  });
+});
+
+/**
+ * Wer sieht welche Dienstgruppe – danach filtert ChurchTools auch die Gruppen-Infos am Ablaufpunkt (#676, gemessen
+ * 22.10.2026: Spike mit Sicht nur auf Technik bekam Programm (`viewAll`) und Technik, nicht Musik).
+ */
+describe('siehtDienstgruppe / siehtAlleDienstgruppen (#676)', () => {
+  const GRUPPEN = [
+    { id: 1, fuerAlle: true }, // Programm – für alle sichtbar
+    { id: 3, fuerAlle: false }, // Technik
+    { id: 4, fuerAlle: false }, // Musik
+  ];
+  const rechte = (sicht: number[] | null, planen: number[] | null = []) => ({
+    sichtbareDienstgruppen: sicht,
+    planbareDienstgruppen: planen,
+  });
+
+  it('für alle sichtbar, sehen oder bearbeiten – jeder Weg reicht', () => {
+    expect(siehtDienstgruppe(rechte([]), GRUPPEN[0])).toBe(true);
+    expect(siehtDienstgruppe(rechte([3]), GRUPPEN[1])).toBe(true);
+    expect(siehtDienstgruppe(rechte([], [4]), GRUPPEN[2])).toBe(true);
+    expect(siehtDienstgruppe(rechte(null), GRUPPEN[2])).toBe(true);
+    expect(siehtDienstgruppe(rechte([], null), GRUPPEN[2])).toBe(true);
+    expect(siehtDienstgruppe(rechte([3]), GRUPPEN[2])).toBe(false);
+  });
+
+  it('Spike wie gemessen (sieht nur Technik) → nicht alle; Alwin (alle Listen) → alle', () => {
+    expect(siehtAlleDienstgruppen(rechte([3], [3]), GRUPPEN)).toBe(false);
+    expect(siehtAlleDienstgruppen(rechte([1, 3, 4], [1, 3, 4]), GRUPPEN)).toBe(true);
+    expect(siehtAlleDienstgruppen(rechte([3], [4]), GRUPPEN)).toBe(true);
+  });
+
+  it('aus den Rohantworten – Dienstgruppen nicht als Liste → unbekannt (`undefined`), kein Wurf', () => {
+    const roh = (id: number, viewAll: boolean) => ({ id, name: `G${id}`, viewAll });
+    const gruppen = [roh(1, true), roh(3, false), roh(4, false)];
+    expect(siehtAlleDienstgruppenAus(ALWIN, gruppen)).toBe(true);
+    expect(siehtAlleDienstgruppenAus(SPIKE, gruppen)).toBe(false);
+    expect(siehtAlleDienstgruppenAus(SPIKE, [roh(1, true)])).toBe(true);
+    expect(siehtAlleDienstgruppenAus(ALWIN, null)).toBeUndefined();
+    expect(siehtAlleDienstgruppenAus(ALWIN, { data: [] })).toBeUndefined();
   });
 });

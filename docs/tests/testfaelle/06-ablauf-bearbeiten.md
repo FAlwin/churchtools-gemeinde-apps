@@ -297,3 +297,27 @@ nebeneinander), beide im Bearbeiten-Modus.
 - **Historie:** #659 (22.10.2026, entschieden mit Alwin: nur bei echtem Konflikt)
 
 </details>
+
+### TF-EDIT-12 · Hinweis, wenn man nicht alle Dienstgruppen sieht
+
+**Das brauchst du:** Ein Konto, das Abläufe bearbeiten darf, aber mindestens eine Dienstgruppe **nicht** sehen darf
+(Recht „Dienstgruppe sehen“ fehlt, und die Gruppe ist nicht „für alle sichtbar“). Dazu ein zweites Konto, das alle
+Gruppen sieht.
+
+**Das muss passieren:** Das eingeschränkte Konto liest beim Bearbeiten den Hinweis „Du siehst nicht alle Dienstgruppen.
+ChurchTools löscht beim Speichern oder Verschieben die Infos der Gruppen, die du nicht siehst.“ – über der Liste und
+im Fenster eines Punkts. Das andere Konto sieht ihn nicht. In der reinen Ansicht steht er nie.
+
+1. Mit dem eingeschränkten Konto einen Test-Termin öffnen: kein Hinweis.
+2. **Bearbeiten**: Der Hinweis steht über der Liste.
+3. Einen Punkt antippen: Der Hinweis steht auch im Fenster.
+4. Dasselbe mit dem Konto, das alle Gruppen sieht: kein Hinweis.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/ct/dienstRechte.ts`, `server/src/services/ctCapabilities.ts`, `client/src/services/ctLesen.ts`, `client/src/App.tsx`, `client/src/pages/Setlist.tsx`, `ui/ablauf/useAblaufBearbeiten.tsx`, `ui/ablauf/PunktFenster.tsx`, `ui/ablauf/AblaufTeile.tsx`
+- **Automatisiert:** ja – `shared/ct/dienstRechte.test.ts` (Regel), `server/src/services/churchtools.capabilities.test.ts` und `client/src/services/ctTeilen.test.ts` (Rechte, auch wenn die Dienstgruppen nicht lesbar sind), `ui/ablauf/useAblaufBearbeiten.test.tsx`, `client/src/pages/Setlist.abschluss.test.tsx`, `dienstplaner/src/TerminAnsicht.test.tsx`, `e2e/ablauf-gruppen-hinweis.spec.ts`; von Hand bleibt der Blick mit zwei echten Konten
+- **Historie:** #676 (22.10.2026, gemessen E6-4-0)
+
+</details>

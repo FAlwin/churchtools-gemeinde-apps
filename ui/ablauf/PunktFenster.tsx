@@ -15,6 +15,7 @@ import { Icon } from '../icons/icons';
 import { useOverlayKeyboardInset } from '../fenster/useOverlayKeyboardInset';
 import { Schalter } from '../bedienung/Schalter';
 import { Segment } from '../bedienung/Segment';
+import { VerborgeneGruppenHinweis } from './AblaufTeile';
 import styles from './PunktFenster.module.scss';
 
 /**
@@ -61,6 +62,8 @@ interface Bearbeiten extends Gemeinsam {
   onSetWeggelassen: (weggelassen: boolean) => Promise<void>;
   /** Löschen anstoßen (Bestätigung erfolgt im Eltern-Screen). */
   onRequestDelete: () => void;
+  /** Sieht der Bearbeitende nicht alle Dienstgruppen (#676)? Dann steht der Hinweis über den Knöpfen. */
+  gruppenVerborgen?: boolean;
 }
 
 /**
@@ -376,6 +379,8 @@ export function PunktFenster(props: PunktFensterProps) {
             </button>
           )}
         </div>
+
+        {props.modus !== 'neu' && props.gruppenVerborgen && <VerborgeneGruppenHinweis />}
 
         {konflikt && (
           <div className={styles.err} role="alert">

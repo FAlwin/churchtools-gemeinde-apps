@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   baumAus,
+  baumOhneTypen,
   elternAus,
+  knotenNachId,
   nachfahren,
   orgGruppenAus,
   type Knoten,
@@ -121,5 +123,46 @@ describe('nachfahren', () => {
   it('alle Gruppen unterhalb, ohne die Wurzel', () => {
     const [, gd] = baumAus(orgGruppenAus(ROH), elternAus(HIER));
     expect(nachfahren(gd).sort((a, b) => a - b)).toEqual([7, 12, 15]);
+  });
+});
+
+describe('baumOhneTypen', () => {
+  const t = (id: number, name: string, typId: number): OrgGruppe => ({
+    id,
+    name,
+    typId,
+    statusId: 1,
+    farbe: null,
+  });
+  // Leitung (Typ 2) → Infos (Verteiler, Typ 9) → Archiv (Typ 2); dazu Verteiler „Ankündigungen“ als Wurzel
+  const baum = baumAus(
+    [t(1, 'Leitung', 2), t(2, 'Infos', 9), t(3, 'Archiv', 2), t(4, 'Ankündigungen', 9)],
+    elternAus([
+      { groupId: 1, children: [2] },
+      { groupId: 2, children: [3] },
+    ]),
+  );
+
+  it('blendet den Typ samt allem darunter aus – auch als Wurzel', () => {
+    expect(namen(baumOhneTypen(baum, new Set([9])))).toEqual(['Leitung']);
+  });
+
+  it('ohne Auswahl bleibt alles', () => {
+    expect(namen(baumOhneTypen(baum, new Set()))).toEqual(namen(baum));
+  });
+});
+
+describe('knotenNachId', () => {
+  it('findet jede Gruppe, bei zwei Obergruppen den ersten Fund', () => {
+    const g3: OrgGruppe[] = [1, 2, 3].map((id) => ({
+      id,
+      name: String.fromCharCode(64 + id),
+      typId: null,
+      statusId: null,
+      farbe: null,
+    }));
+    const m = knotenNachId(baumAus(g3, new Map([[3, [1, 2]]])));
+    expect([...m.keys()].sort()).toEqual([1, 2, 3]);
+    expect(m.get(3)?.gruppe.name).toBe('C');
   });
 });

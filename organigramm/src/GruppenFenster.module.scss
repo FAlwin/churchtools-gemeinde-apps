@@ -1,0 +1,93 @@
+// Gruppenfenster (O2) – Werte aus ui/design.
+@use '@ui/design/mixins' as m;
+
+.kopf {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.meta,
+.leise {
+  color: var(--text2);
+  font-size: 14px;
+}
+
+.leise {
+  margin: 8px 0;
+}
+
+.link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--blue-ink);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.abschnitt {
+  padding: 10px 0;
+  border-top: 1px solid var(--hair);
+
+  h3 {
+    margin: 0 0 6px;
+    color: var(--text3);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  h3 + h3,
+  .gruppen + h3 {
+    margin-top: 10px;
+  }
+}
+
+.personen {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0;
+    font-size: 15px;
+  }
+}
+
+.gruppen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.gruppe {
+  @include m.aktionKnopf;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 4px;
+  border-radius: var(--r-ctrl);
+  font-size: 13px;
+}
+
+.dienste {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.oeffnen {
+  display: block;
+  margin-top: 12px;
+  padding: 9px 12px;
+  border-radius: var(--r-ctrl);
+  background: var(--blue);
+  color: #fff;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+}

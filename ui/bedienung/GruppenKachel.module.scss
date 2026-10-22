@@ -1,0 +1,9 @@
+// Gruppen-Kachel (Organigramm O2) – Rundung aus ui/design, Farbe kommt aus den Daten.
+.kachel {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  border-radius: var(--r-tile);
+  color: #fff;
+  font-weight: 700;
+}

@@ -33,7 +33,13 @@ const gruppe = (id: number, name: string, color: string | null = 'lime') => ({
 const GUT: Antworten = {
   '/whoami': () => json(200, { data: { id: 1, firstName: 'Alwin' } }),
   '/persons/1/groups': () => json(200, { data: [] }),
-  '/group/roles': () => json(200, { data: [{ id: 16, isLeader: true }] }),
+  '/group/roles': () =>
+    json(200, {
+      data: [
+        { id: 16, name: 'Leiter', nameTranslated: 'Leiter', isLeader: true, sortKey: 1 },
+        { id: 35, name: 'leader', nameTranslated: 'Leiter', isLeader: true, sortKey: 1 },
+      ],
+    }),
   '/info': () => json(200, { siteName: 'ECG' }),
   '/groups?limit=100&page=1': () =>
     json(200, {
@@ -47,7 +53,10 @@ const GUT: Antworten = {
         { groupId: 7, parents: [10], children: [12] },
       ],
     }),
-  '/group/grouptypes': () => json(200, { data: [{ id: 2, name: 'Dienst', color: 'lime' }] }),
+  '/group/grouptypes': () =>
+    json(200, { data: [{ id: 2, name: 'Dienst', nameTranslated: 'Dienst', color: 'lime' }] }),
+  '/services': () =>
+    json(200, { data: [{ id: 6, name: 'Ton', serviceGroupId: 3, sortKey: 0, groupIds: [7] }] }),
   '/permissions/global': () =>
     json(200, {
       data: {
@@ -74,6 +83,19 @@ afterEach(() => {
 });
 
 describe('ladeStart (Organigramm)', () => {
+  it('Dienste nicht lesbar → Baum trotzdem, Dienste = null (Beiwerk)', async () => {
+    ct({ ...GUT, '/services': () => json(500, {}) });
+    const s = await ladeStart();
+    expect(s.dienste).toBeNull();
+    expect(s.gruppen).toHaveLength(3);
+  });
+
+  it('Rollen werden nicht zweimal geholt (die von ladeIch genügen)', async () => {
+    const spy = ct(GUT);
+    await ladeStart();
+    expect(spy.mock.calls.filter((c) => String(c[0]).endsWith('/group/roles'))).toHaveLength(1);
+  });
+
   it('Person, Gemeinde, Gruppen, Baum, Typfarben und Rechte', async () => {
     ct(GUT);
     const s = await ladeStart();
@@ -85,6 +107,11 @@ describe('ladeStart (Organigramm)', () => {
     expect(s.baum[0].gruppe.name).toBe('Gottesdienst');
     expect(s.baum[0].kinder[0].kinder[0].gruppe).toMatchObject({ name: 'Stream', farbe: 'gray' });
     expect(s.typFarben.get(2)).toBe('lime');
+    expect(s.typNamen.get(2)).toBe('Dienst');
+    expect(s.eltern.get(12)).toEqual([7]);
+    // Rollen aus dem Abruf, den `ladeIch` schon macht – Leitung aus isLeader, auch beim englischen Namen
+    expect(s.rollen.get(35)).toEqual({ id: 35, name: 'Leiter', leitung: true, sortKey: 1 });
+    expect(s.dienste?.get(6)?.gruppenIds).toEqual([7]);
     expect(s.rechte).toEqual({
       gruppenVerwalten: true,
       anlegbareTypen: [2],

@@ -90,6 +90,17 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Texten statt leer, und der Entwurf der langen Seite wird neu angelegt, wenn die Mal-Ebene erneut eingehängt
   wird. Beim Blättern ging dasselbe kurz hinaus, wurde aber sofort überschrieben.
 
+### Neu (Musik-App + Dienstplaner, E6-3c, #659)
+
+- **Nichts wird still überschrieben, wenn zwei gleichzeitig bearbeiten** (entschieden mit Alwin 22.10.2026: nur bei
+  echtem Konflikt). Hat jemand – in der anderen App, auf einem anderen Gerät oder in ChurchTools – **denselben Punkt**
+  in einem Feld geändert, das ich im offenen Fenster auch ändere, fragt das Fenster: „Dieser Punkt wurde eben woanders
+  geändert … Trotzdem speichern oder verwerfen?“; die Liste dahinter ist schon neu geladen, meine Eingaben stehen noch
+  im Fenster. Hat jemand **umsortiert**, während ich ziehe, wird nicht auf der alten Reihenfolge geschrieben: Hinweis,
+  neu geladen, noch einmal ziehen. Änderungen an **anderen** Punkten oder Feldern gehen ohne Rückfrage durch.
+- Verglichen wird frisch vor dem Schreiben, Feld für Feld so, wie die Zeile es zeigt; ein Lied über sein Arrangement.
+  Vorlauf und Auge setzen einen Zielzustand und brauchen keinen Vergleich.
+
 ### Neu (Anmeldungen, A7-4a)
 
 - **Anmeldung von Hand** (Entwurf `a7-4-von-hand-v1`, abgenommen 22.10.2026): Knopf „＋ Von Hand“ im Reiter

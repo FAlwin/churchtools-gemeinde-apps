@@ -532,6 +532,8 @@ describe('TerminAnsicht – Ablauf anlegen (E6-5a)', () => {
     fireEvent.click(screen.getByRole('button', { name: /Wie eine frühere/ }));
     expect(await screen.findByText('3 Punkte')).toBeTruthy();
     expect(screen.getAllByRole('button', { name: /Gottesdienst/ })).toHaveLength(1);
+    // Datum wie in der Musik-App („11. Okt“, nicht „11. OKT“).
+    expect(screen.getByText('11. Okt · Gottesdienst')).toBeTruthy();
     // Zurück zur Vorlage und anlegen.
     fireEvent.click(screen.getByRole('button', { name: /Aus einer Vorlage/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Anlegen' }));

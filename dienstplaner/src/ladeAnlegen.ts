@@ -12,7 +12,7 @@ import type { CtAblaufVorlage, CtAgenda } from '@shared/ct/typen';
 import { vorlagenAus } from '@shared/ct/ablaufAnlegen';
 import { kopieVorschlaege } from '@shared/ct/ablaufVorschlaege';
 import { kalenderVon } from '@shared/ct/ablaufRecht';
-import { kachel, plusTage } from '@shared/ct/datum';
+import { plusTage, tagMonatKurz } from '@shared/ct/datum';
 import { tagAusIso } from '@shared/ct/zeit';
 import { mapLimit } from '@shared/ct/mapLimit';
 import type { KopieVorschlag } from '@ui/ablauf/AblaufAnlegenFenster';
@@ -77,11 +77,10 @@ export async function ladeKopieVorschlaege(
     .filter((t) => ablaeufe.has(t.id))
     .slice(0, VORSCHLAEGE)
     .map((t) => {
-      const k = kachel(tagAusIso(t.start, zeitzone));
       const n = ablaeufe.get(t.id)?.items.length ?? 0;
       return {
         id: t.id,
-        titel: `${k.tag}. ${k.monat} · ${t.name}`,
+        titel: `${tagMonatKurz(tagAusIso(t.start, zeitzone))} · ${t.name}`,
         meta: n === 0 ? 'leer' : n === 1 ? '1 Punkt' : `${n} Punkte`,
       };
     });

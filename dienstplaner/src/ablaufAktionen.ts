@@ -17,6 +17,7 @@ import {
   punktLoeschen,
   punktWiederherstellen,
   vorBeginnSetzen,
+  weglassenSetzen,
 } from '@shared/ct/schreibKern';
 
 export function ablaufAktionen(eventId: number, geschrieben: () => void): AblaufAktionen {
@@ -32,6 +33,7 @@ export function ablaufAktionen(eventId: number, geschrieben: () => void): Ablauf
     restore: (punkt) => danach(punktWiederherstellen(s, eventId, punkt)),
     update: (itemId, fields) => danach(punktAendern(s, eventId, itemId, fields)),
     setVorBeginn: (itemId, vorBeginn) => danach(vorBeginnSetzen(s, eventId, itemId, vorBeginn)),
+    setWeggelassen: (itemId, weg) => danach(weglassenSetzen(s, eventId, itemId, weg)),
     add: (data) => danach(punktAnlegen(s, eventId, data)),
   };
 }

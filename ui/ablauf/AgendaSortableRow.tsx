@@ -9,7 +9,7 @@ import type { AblaufZeile } from '@shared/ct/ablaufZeile';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Icon } from '../icons/icons';
-import { ItemTitle, ResponsibleLine } from './AblaufTeile';
+import { ItemTitle, ResponsibleLine, WeggelassenHinweis } from './AblaufTeile';
 import styles from './AgendaSortableRow.module.scss';
 import zeile from './AblaufListe.module.scss';
 
@@ -30,11 +30,17 @@ export function SortableRow<T extends AblaufZeile>({
     opacity: isDragging ? 0.6 : 1,
     zIndex: isDragging ? 1 : undefined,
   };
+  // An diesem Termin weggelassen (E6-3b): grau wie in der Ansicht.
+  const weg = item.weggelassen ? ` ${zeile.weggelassen}` : '';
   // Überschriften bleiben schmale Bänder wie in der Ansicht – nur mit Ziehen-Griff davor,
   // damit sich beim Umschalten in den Bearbeiten-Modus Position und Höhe nicht ändern.
   if (item.isHeader) {
     return (
-      <div ref={setNodeRef} style={style} className={`${zeile.sectionBand} ${styles.editBand}`}>
+      <div
+        ref={setNodeRef}
+        style={style}
+        className={`${zeile.sectionBand} ${styles.editBand}${weg}`}
+      >
         <button
           className={styles.bandHandle}
           {...attributes}
@@ -45,6 +51,7 @@ export function SortableRow<T extends AblaufZeile>({
         </button>
         <button className={styles.bandEdit} onClick={() => onOpenActions(item)}>
           {item.title}
+          {item.weggelassen && <WeggelassenHinweis />}
         </button>
         <button
           className={styles.rowEdit}
@@ -64,7 +71,7 @@ export function SortableRow<T extends AblaufZeile>({
     <div
       ref={setNodeRef}
       style={style}
-      className={`${zeile.flowRow}${item.song ? ' ' + zeile.songRow : ''}`}
+      className={`${zeile.flowRow}${item.song ? ' ' + zeile.songRow : ''}${weg}`}
     >
       <button
         className={styles.dragCol}
@@ -79,6 +86,7 @@ export function SortableRow<T extends AblaufZeile>({
         <div className={zeile.flowHead}>
           <ItemTitle item={item} />
           {item.song && <span className={zeile.flowSongTag}>🎵</span>}
+          {item.weggelassen && <WeggelassenHinweis />}
           {item.durationMin && <span className={zeile.flowDur}>{item.durationMin} Min</span>}
         </div>
         {item.note && <div className={zeile.flowNote}>{item.note}</div>}

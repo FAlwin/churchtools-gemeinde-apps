@@ -60,6 +60,8 @@ export interface AblaufAktionen {
   update: (itemId: number, fields: PunktAenderung) => Promise<void>;
   /** Legt fest, ob der Punkt (samt allen darüber bzw. darunter) vor dem Beginn läuft (#423). */
   setVorBeginn: (itemId: number, vorBeginn: boolean) => Promise<void>;
+  /** Lässt den Punkt an diesem Termin weg (Auge) oder zeigt ihn wieder (E6-3b, #652). */
+  setWeggelassen: (itemId: number, weggelassen: boolean) => Promise<void>;
   /** Legt einen neuen Punkt an. */
   add: (data: NeuerAgendaPunkt) => Promise<void>;
 }
@@ -297,6 +299,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
           onUpdate={(fields) => handleUpdate(actionItem.id, fields)}
           vorBeginn={actionItem.vorBeginn}
           onSetVorBeginn={(vorBeginn) => aktionen.setVorBeginn(actionItem.id, vorBeginn)}
+          onSetWeggelassen={(weg) => aktionen.setWeggelassen(actionItem.id, weg)}
           onRequestDelete={() => setPendingDelete(actionItem)}
         />
       )}

@@ -94,7 +94,20 @@ export function RollenMalen({
     return key;
   }, [liste, eigeneSig, eigene, hoeheMm]);
   useEffect(() => {
-    if (!entwurf) return;
+    if (!entwurf || !liste) return;
+    // Erneut eingehängt (StrictMode, 22.10.2026): Das Aufräumen unten hat die Texte des Entwurfs schon
+    // weggenommen, das Memo läuft nicht noch einmal. `usePageDraw` läse sie leer und schriebe „keine Texte"
+    // auf die A4-Seiten zurück – die eigenen Texte im Lied wären gelöscht. Also neu anlegen, aus den A4-Seiten
+    // (dort steht jede Änderung schon, Texte werden sofort gespeichert). Dieser Effekt läuft vor denen von
+    // `usePageDraw`.
+    let fehlt = false;
+    try {
+      fehlt = localStorage.getItem(textSchluessel(entwurf)) === null;
+    } catch {
+      /* Speicher gesperrt – dann liest auch `usePageDraw` nichts */
+    }
+    if (fehlt)
+      lokalSchreiben(textSchluessel(entwurf), JSON.stringify(entwurfTexte(eigene, liste, hoeheMm)));
     return () => {
       try {
         localStorage.removeItem(entwurf);
@@ -103,6 +116,8 @@ export function RollenMalen({
         /* Speicher gesperrt – dann gab es auch nichts zu räumen */
       }
     };
+    // Nur beim Wechsel des Entwurfs – `eigene`, `liste`, `hoeheMm` ändern ihn ohnehin mit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entwurf]);
 
   // Zurückschreiben: Texte sofort (billig), Striche gesammelt (ein Bild je A4-Seite kostet Zeit).

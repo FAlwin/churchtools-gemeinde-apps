@@ -199,6 +199,19 @@ export function setAgendaItemVorBeginn(
   });
 }
 
+/** Einen Punkt an diesem Termin weglassen (`true`) oder wieder zeigen (`false`) – Auge, E6-3b (#652). */
+export function setAgendaItemWeggelassen(
+  eventId: number,
+  itemId: number,
+  weggelassen: boolean,
+): Promise<{ ok: boolean }> {
+  if (istExtension) return extSchreiben.weglassen(eventId, itemId, weggelassen);
+  return apiFetch(`/api/services/${eventId}/agenda/items/${itemId}/weglassen`, {
+    method: 'PUT',
+    body: JSON.stringify({ weggelassen }),
+  });
+}
+
 /** Den Ablauf in ChurchTools abschließen (`true`) oder wieder öffnen (`false`) – 09.10.2026. */
 export function setAblaufAbgeschlossen(
   eventId: number,

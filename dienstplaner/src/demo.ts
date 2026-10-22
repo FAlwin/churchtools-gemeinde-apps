@@ -388,6 +388,14 @@ function ablaufDemo() {
         punkte = [...punkte, neu];
         return { status: 201, data: neu };
       }
+      // Auge (E6-3b): wie gemessen 204, ein zweites Mal ist harmlos.
+      const auge = /^\/items\/(\d+)\/(hide|unhide)$/.exec(pfad.slice(PFAD.length));
+      if (auge && methode === 'POST') {
+        const id = Number(auge[1]);
+        if (!punkte.some((p) => p.id === id)) return { status: 404 };
+        punkte = punkte.map((p) => (p.id === id ? { ...p, ausgeblendet: auge[2] === 'hide' } : p));
+        return { status: 204 };
+      }
       if (punkt) {
         const id = Number(punkt[1]);
         if (!punkte.some((p) => p.id === id)) return { status: 404 };

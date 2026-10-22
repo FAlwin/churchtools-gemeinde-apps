@@ -196,6 +196,8 @@ churchtools-gemeinde-apps/
 ├── formular/                # Anmeldungen: öffentliches Formular, statisch – jede Gemeinde auf ihrem Webspace
 ├── dienstplaner/            # Dienstplaner: ChurchTools-Erweiterung für alle Dienstgruppen (Bauplan E2, vorerst nur Erweiterung)
 ├── organigramm/             # Organigramm: ChurchTools-Erweiterung, Gemeinde als Baum + Organisation weiterbauen (Bauplan O1, nur Erweiterung, Kürzel `organigramm`)
+├── shared/protokolle/       # Regeln der Protokolle: dokument (Ableitung), speicher (Kopf + Teile), aufgaben, einrichten, vorlagen, platzhalter, gruppen (S1)
+├── protokolle/              # Protokolle: ChurchTools-Erweiterung für Protokolle und To-Dos von Gruppen (Bauplan Protokolle, nur Erweiterung)
 └── ui/                      # gemeinsame Browser-Bausteine aller Apps (Alias @ui, Dienstplaner E1, Anmeldungen #474)
     ├── design/              # _variables.scss (Tokens), _mixins.scss, _grundregeln.scss (Reset + Erweiterungs-Lehren),
     │                        # thema.ts (hell/dunkel wie ChurchTools, docs/entwicklung/dunkelmodus.md)
@@ -460,7 +462,10 @@ Probesatz `rollenHoehe`, 120 mm bis 5 m). **Anmerkungen sind gemeinsam (#614):**
 den A4-Seiten; die Rolle hat KEINE eigenen (`drawKeyForPage` liefert für sie `null`) und zeigt die aller A4-Seiten
 ihres Lieds umgerechnet. Dafür schreibt `generateChordPdf` beim Setzen die **Stücke** mit (Teil × Spalte × Seite,
 `satzplaene`), `utils/rollenAbbildung.ts` macht daraus Streifen (Kern + Lücke; Lücken → ans Ende des vorigen
-Stücks, 2 Spalten → an den linken Rand gerückt), `anmerkungsquelleFuer` (chartPageKeys) liefert je Seite die
+Stücks, 2 Spalten → an den linken Rand gerückt; der Platz unter dem letzten Teil ist ein Kern, und die Rolle wächst,
+soweit dort etwas steht – `rollenUnterkante`, in `ScrollSeite`; beim Malen bleibt die Höhe stehen, die Mal-Ebene
+kommt erst nach dem Ausmessen, `kerneAufSeite` schreibt nur zurück, was die Rolle abdeckt, #626),
+`anmerkungsquelleFuer` (chartPageKeys) liefert je Seite die
 Schlüssel. Blatt-Maße EINMAL in `utils/blattMasse.ts`. Achtung: `composeStream` übernimmt `localPage` und
 `abbildung` aus dem Blatt (nicht neu zählen!). jsPDF-`addPage()` ohne Format nimmt das der VORIGEN Seite. Leinwand-Deckel für iOS
 `utils/leinwand.ts`. Hochgeladene PDFs bleiben Seiten. Die Editor-Vorschau folgt der Liedansicht. Im
@@ -484,7 +489,7 @@ Schlüssel vom Zeitpunkt der Auswahl, weil schon weitergeblättert sein kann); T
 (`aendereTexte`). Ein Verlaufsschritt; Rückgängig/Wiederherstellen/Löschen legen über `setAbschliessen` zuerst ab
 (und lassen den Schritt im Verlauf). Auf der Rolle holt `vorAuswahl` die Lücken-Anmerkungen von den A4-Seiten
 (`lueckenTexteHolen`/`lueckenStricheHolen`, Striche nur über Kernen) und `ablegbar` (`rahmenAufKernen`) sperrt das
-Ablegen unter dem letzten Teil – dort ginge es beim Speichern verloren. „Malt Striche?“ ist EINE Regel
+Ablegen, wo kein Kern ist (2 Spalten: rechts neben dem schmalen Streifen) – dort ginge es beim Speichern verloren. „Malt Striche?“ ist EINE Regel
 (`utils/malwerkzeug.ts`). Demo mit langem Lied: `?demo=chart&lied=lang`. Die Position (`ScrollPosition`
 in `utils/scrollPosition.ts`) überdauert einen Neuaufbau der Seiten.
 Ein Tipp aufs Blatt = Leisten aus/ein. **Pedal-Tasten** für beide Modi stehen EINMAL in `utils/pedalTasten.ts`

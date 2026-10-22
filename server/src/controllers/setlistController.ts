@@ -27,6 +27,7 @@ import {
   reorderAgenda,
   restoreAgendaItem,
   setAgendaItemVorBeginn,
+  setAgendaItemWeggelassen,
   updateAgendaItem,
   setAblaufAbgeschlossen,
   createAblauf,
@@ -242,6 +243,21 @@ export async function putAgendaItemVorBeginn(req: Request, res: Response): Promi
   res.json({ ok: true });
 }
 
+const weglassenSchema = z.object({ weggelassen: z.boolean() });
+
+/**
+ * PUT /api/services/:eventId/agenda/items/:itemId/weglassen – den Punkt an diesem Termin weglassen (`true`) oder
+ * wieder zeigen (`false`), Auge in ChurchTools (E6-3b, #652).
+ */
+export async function putAgendaItemWeglassen(req: Request, res: Response): Promise<void> {
+  const eventId = idSchema.parse(req.params.eventId);
+  const itemId = idSchema.parse(req.params.itemId);
+  const { weggelassen } = weglassenSchema.parse(req.body);
+  await setAgendaItemWeggelassen(ctCookie(req), eventId, itemId, weggelassen);
+  // Ohne `invalidateSongUsageCache`: Wie der Vorlauf verschiebt das Auge nur Uhrzeiten, nicht die Lieder.
+  res.json({ ok: true });
+}
+
 const abgeschlossenSchema = z.object({ abgeschlossen: z.boolean() });
 
 /**
@@ -268,7 +284,7 @@ export async function deleteAgendaItemCtrl(req: Request, res: Response): Promise
 }
 
 /** Der Merkzettel aus dem Löschen – so, wie er zurückkommt (Grenzen wie ChurchTools, OpenAPI). */
-const geloeschterPunktSchema = z.object({
+export const geloeschterPunktSchema = z.object({
   felder: z.object({
     type: z.enum(['header', 'text', 'song']),
     title: z.string().max(100),
@@ -287,6 +303,8 @@ const geloeschterPunktSchema = z.object({
   }),
   nachId: z.number().int().positive().nullable(),
   vorBeginn: z.boolean(),
+  // E6-3b (#652): ohne diese Zeile striche zod das Feld still weg – das Auge ginge beim Zurückholen verloren.
+  weggelassen: z.boolean().optional(),
 });
 
 /** POST /api/services/:eventId/agenda/items/wiederherstellen – „Rückgängig" nach dem Löschen. */

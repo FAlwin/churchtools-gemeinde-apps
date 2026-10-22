@@ -91,6 +91,18 @@ notiert – die Aufschlüsselung bekommt die Zeile „Abgesagt am …“, auch w
 erfolgreich“, beim Absagen gar nichts. Absagen lässt sich im Fenster rückgängig machen, Nachrücken nicht (sonst
 schickt ChurchTools „Du stehst auf der Warteliste“).
 
+**Anmeldung von Hand** (Telefon, Papier, auch nach dem Anmeldeschluss): Knopf „＋ Von Hand“ im Reiter „Anmeldungen“.
+Erst die Person in ChurchTools suchen; gibt es sie nicht, legt ihr sie neu an (mit Geburtsdatum, E-Mail und wer dem
+Datenschutz zugestimmt hat – die Person selbst oder ein Elternteil). Kennt ChurchTools den Namen schon, fragt die
+Erweiterung nach, ob es dieselbe Person ist. Dann dieselben Fragen wie im Formular; die E-Mail-Adresse ist hier
+freiwillig. Unterschreiben kann nur die Familie selbst – liegt die Unterschrift auf Papier vor, schaltet ihr „liegt
+auf Papier vor“ ein, dann steht in ChurchTools „auf Papier – vermerkt von …“ mit eurem Namen und dem Tag. Platz wie im
+Formular: Wartet jemand oder ist alles voll, kommt die Person hinten auf die Warteliste – oder ihr gebt ihr trotzdem
+einen Platz (bei voller Gruppe werden dabei die Plätze erhöht). ChurchTools schickt keine Mail; danach gibt es „Mail
+schreiben“ und „Rückgängig“ (nimmt die Person wieder aus der Anmeldung – eine neu angelegte Person bleibt in
+ChurchTools). Neue Personen anlegen darf, wer in ChurchTools das Recht dazu hat; Status, Standort und Bereich kommen
+aus den Vorgaben beim Freigeben.
+
 **Zahlung:** Im Fenster einer Anmeldung markiert ihr sie als **bezahlt** (Zahlart und Tag), setzt das zurück oder
 **ändert den Betrag** (z. B. nach Absprache – in der Aufschlüsselung steht dann „Von Hand geändert am …“, und die
 Nachprüfung meldet ihn nicht mehr). Bezahlt gilt für die ganze Anmeldung und steht in ChurchTools bei der ersten Person

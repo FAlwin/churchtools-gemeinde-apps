@@ -24,6 +24,9 @@ on:
       # Und das Organigramm (eigene Erweiterung, Bauplan O1).
       - '!feat/organigramm-**'
       - '!fix/organigramm-**'
+      # Und die Protokolle (eigene Erweiterung, Bauplan Protokolle).
+      - '!feat/protokolle-**'
+      - '!fix/protokolle-**'
 
 env:
   IMAGE: ghcr.io/falwin/churchtools-musik-app

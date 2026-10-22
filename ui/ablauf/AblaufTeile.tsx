@@ -24,6 +24,19 @@ export function ItemTitle({ item }: { item: Pick<AblaufZeile, 'title' | 'song'> 
   );
 }
 
+/**
+ * Die Uhrzeit einer Zeile – an diesem Termin weggelassen (Auge, E6-3b) „—“, sonst die Zeit (oder nichts). Eine Stelle
+ * für Ansicht und Bearbeiten-Liste.
+ */
+export function ZeitText({ item }: { item: Pick<AblaufZeile, 'time' | 'weggelassen'> }) {
+  return <>{item.weggelassen ? '—' : (item.time ?? '')}</>;
+}
+
+/** Der Hinweis an einer weggelassenen Zeile (E6-3b) – neben dem Titel. */
+export function WeggelassenHinweis() {
+  return <span className={styles.weggelassenTag}>an diesem Termin weggelassen</span>;
+}
+
 /** Dezentes Linien-Icon für die Zuständigen (statt Emoji). */
 export function RespIcon() {
   return (

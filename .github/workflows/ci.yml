@@ -53,6 +53,10 @@ jobs:
       - name: Organigramm-Erweiterung packen
         run: npm run paket -w organigramm
 
+      # Die Protokolle (Bauplan Protokolle) sind ebenfalls nur Erweiterung – gleiche Prüfung beim Packen.
+      - name: Protokolle-Erweiterung packen
+        run: npm run paket -w protokolle
+
       - name: Test
         run: npm test
 

@@ -23,6 +23,7 @@ import { anzahlText } from './anzeige';
 import { AnmeldungZahlung } from './AnmeldungZahlung';
 import { AbsagenFrage, MailAnsicht, NachrueckenFrage } from './AnmeldungAktion';
 import { absagenLassen, nachrueckenLassen } from './bewegung';
+import { VonHandFenster } from './VonHandFenster';
 import { useSpeichern } from './useSpeichern';
 import { RueckgaengigImFenster, type Aenderung } from './Rueckgaengig';
 import s from './Startseite.module.scss';
@@ -100,6 +101,8 @@ export type FensterModus =
 export interface FensterMeldung {
   aenderung: Aenderung;
   mail: Mail | null;
+  /** Ein Satz unter der Zeile (A7-4: „Die neu angelegte Person bleibt in ChurchTools“). */
+  hinweis?: string;
 }
 
 /** Plätze und Warteliste – für Nachrücken und Absagen. */
@@ -244,26 +247,30 @@ function AnmeldungAnsehen({
               </>
             )}
             {x.angemeldetAm && <>angemeldet am {lang(x.angemeldetAm)}</>}
+            {x.vonHand && <> · von Hand</>}
             {x.email && <> · {x.email}</>}
           </p>
 
           {meldung && (
-            <RueckgaengigImFenster
-              key={meldung.aenderung.text}
-              aenderung={meldung.aenderung}
-              onRueckgaengig={onRueckgaengig}
-              zusatz={
-                meldung.mail && (
-                  <button
-                    type="button"
-                    className={a.nachKnopf}
-                    onClick={() => setModus({ art: 'mail', mail: meldung.mail! })}
-                  >
-                    Mail schreiben
-                  </button>
-                )
-              }
-            />
+            <>
+              <RueckgaengigImFenster
+                key={meldung.aenderung.text}
+                aenderung={meldung.aenderung}
+                onRueckgaengig={onRueckgaengig}
+                zusatz={
+                  meldung.mail && (
+                    <button
+                      type="button"
+                      className={a.nachKnopf}
+                      onClick={() => setModus({ art: 'mail', mail: meldung.mail! })}
+                    >
+                      Mail schreiben
+                    </button>
+                  )
+                }
+              />
+              {meldung.hinweis && <p className={a.leise}>{meldung.hinweis}</p>}
+            </>
           )}
 
           {(einmal.length > 0 || kontakt) && (
@@ -397,6 +404,8 @@ export function AnmeldungenReiter({
   veranstaltung,
   e,
   maxPlaetze,
+  warteliste,
+  anmeldeschluss,
   entwurf,
   zustand,
   stichtag,
@@ -411,6 +420,10 @@ export function AnmeldungenReiter({
   veranstaltung: string;
   e: OeffentlicheEinstellungen;
   maxPlaetze: number | null;
+  /** Gibt es eine Warteliste? (Anmeldung von Hand, A7-4) */
+  warteliste: boolean;
+  /** Ende des Anmeldezeitraums (ISO) – von Hand geht es auch danach. */
+  anmeldeschluss: string | null;
   entwurf: boolean;
   zustand: MitgliederZustand | null;
   /** Erster Tag der Veranstaltung (Alter), sonst heute. */
@@ -430,6 +443,7 @@ export function AnmeldungenReiter({
   // Die letzte Änderung im offenen Fenster – mit dem Fenster weg.
   const [meldung, setMeldung] = useState<FensterMeldung | null>(null);
   const [startModus, setStartModus] = useState<FensterModus>(null);
+  const [vonHand, setVonHand] = useState(false);
   const oeffnen = (k: string | null, modus: FensterModus = null) => {
     setOffen(k);
     setStartModus(modus);
@@ -589,6 +603,11 @@ export function AnmeldungenReiter({
             value={suche}
             onChange={(ev) => setSuche(ev.target.value)}
           />
+          {darf && (
+            <button type="button" className={a.nachKnopf} onClick={() => setVonHand(true)}>
+              ＋ Von Hand
+            </button>
+          )}
         </div>
 
         {(filter === 'alle' || filter === 'offen') && (
@@ -620,10 +639,12 @@ export function AnmeldungenReiter({
                     </span>
                   </span>
                   <span className={a.geld}>
-                    {!z.kostet ? null : x.betragCent !== null ? (
-                      <b>{euroText(x.betragCent)}</b>
-                    ) : x.personen.every((p) => p.status === 'wartet') ? (
+                    {/* Alle warten: Das Formular schreibt „0,00 €“ – gezahlt wird erst beim Nachrücken (22.10.2026). */}
+                    {!z.kostet ? null : x.personen.every((p) => p.status === 'wartet') &&
+                      !x.betragCent ? (
                       <small>Betrag beim Nachrücken</small>
+                    ) : x.betragCent !== null ? (
+                      <b>{euroText(x.betragCent)}</b>
                     ) : null}
                     <ZahlungPille x={x} kostet={z.kostet} />
                   </span>
@@ -715,6 +736,28 @@ export function AnmeldungenReiter({
           </button>
         </p>
       </section>
+
+      {vonHand && (
+        <VonHandFenster
+          id={id}
+          e={e}
+          veranstaltung={veranstaltung}
+          heute={heute}
+          lage={{ belegt: z.belegt, max: maxPlaetze, wartende: z.wartend, warteliste }}
+          anmeldeschluss={anmeldeschluss}
+          dabei={new Set(stand!.mitglieder.map((m) => m.personId))}
+          abgesagt={new Set(stand!.absagen.map((b) => b.personId))}
+          onClose={() => setVonHand(false)}
+          onFertig={(x) => {
+            setVonHand(false);
+            // Die neue Anmeldung öffnet sich, sobald sie geladen ist – mit „Mail schreiben“ und „Rückgängig“.
+            setOffen(x.nr);
+            setStartModus(null);
+            setMeldung({ aenderung: x.aenderung, mail: x.mail, hinweis: x.hinweis });
+            onGespeichert();
+          }}
+        />
+      )}
 
       {fensterX && (
         <AnmeldungAnsehen

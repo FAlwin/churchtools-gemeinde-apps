@@ -20,6 +20,7 @@ import {
   punktWiederherstellen,
   tempoSetzen,
   vorBeginnSetzen,
+  weglassenSetzen,
   type CtSchreiber,
   type GeloeschterPunkt,
   type NeuerPunkt,
@@ -257,6 +258,15 @@ export function setAgendaItemVorBeginn(
   vorBeginn: boolean,
 ): Promise<void> {
   return vorBeginnSetzen(schreiberFuer(cookie), eventId, itemId, vorBeginn);
+}
+
+export function setAgendaItemWeggelassen(
+  cookie: string,
+  eventId: number,
+  itemId: number,
+  weggelassen: boolean,
+): Promise<void> {
+  return weglassenSetzen(schreiberFuer(cookie), eventId, itemId, weggelassen);
 }
 
 /** Einen Ablauf anlegen (13.10.2026) – Regel in `@shared/ct/ablaufAnlegen`. */

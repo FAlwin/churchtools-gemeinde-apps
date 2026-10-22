@@ -18,6 +18,7 @@ import {
   punktWiederherstellen,
   tempoSetzen,
   vorBeginnSetzen,
+  weglassenSetzen,
   ablaufAbschliessen,
   type CtSchreiber,
   type GeloeschterPunkt,
@@ -119,6 +120,16 @@ export async function vorBeginn(
   wert: boolean,
 ): Promise<{ ok: boolean }> {
   await vorBeginnSetzen(schreiber, eventId, itemId, wert);
+  return OK;
+}
+
+/** `PUT /api/services/:id/agenda/items/:itemId/weglassen` (E6-3b) */
+export async function weglassen(
+  eventId: number,
+  itemId: number,
+  wert: boolean,
+): Promise<{ ok: boolean }> {
+  await weglassenSetzen(schreiber, eventId, itemId, wert);
   return OK;
 }
 

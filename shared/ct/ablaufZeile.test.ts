@@ -6,6 +6,7 @@ import {
   beginnStelle,
   itemLabel,
   itemTitleParts,
+  istWeggelassen,
 } from './ablaufZeile';
 
 /** Regeln der Anzeige-Bezeichnung (#200) – gelten in Liste, Vollansicht und Dialogen gleich. */
@@ -156,6 +157,7 @@ describe('ablaufZeileAus (E6-1a)', () => {
       vorBeginn: true,
       durationMin: 5,
       note: 'leise',
+      weggelassen: false,
     });
   });
   it('Überschrift; ohne Dauer → null', () => {
@@ -165,5 +167,35 @@ describe('ablaufZeileAus (E6-1a)', () => {
       'Europe/Berlin',
     );
     expect([z.isHeader, z.durationMin, z.song]).toEqual([true, null, null]);
+  });
+});
+
+describe('istWeggelassen (E6-3b) – das Auge an diesem Termin', () => {
+  const punkt = (startTimes?: Record<string, string | null>): CtAgendaItem => ({
+    id: 1,
+    title: 'Abkündigungen',
+    start: '2026-10-18T08:30:00Z',
+    startTimes,
+  });
+
+  it('`startTimes[termin]` ist null → weggelassen (gemessen E6-3-0)', () => {
+    expect(istWeggelassen(punkt({ '7': null }), 7)).toBe(true);
+    expect(ablaufZeileAus(punkt({ '7': null }), 7, 'Europe/Berlin')).toMatchObject({
+      weggelassen: true,
+      time: null,
+    });
+  });
+
+  it('mit Uhrzeit → nicht weggelassen', () => {
+    expect(istWeggelassen(punkt({ '7': '2026-10-18T08:30:00Z' }), 7)).toBe(false);
+  });
+
+  it('nur an einem ANDEREN Termin weggelassen (geteilter Ablauf) → hier nicht', () => {
+    expect(istWeggelassen(punkt({ '8': null, '7': '2026-10-18T08:30:00Z' }), 7)).toBe(false);
+    expect(istWeggelassen(punkt({ '8': null }), 7)).toBe(false);
+  });
+
+  it('ohne `startTimes` (ältere Antwort) → nicht weggelassen', () => {
+    expect(istWeggelassen(punkt(), 7)).toBe(false);
   });
 });

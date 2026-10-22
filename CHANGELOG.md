@@ -35,6 +35,22 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 - „Mail schreiben“ ohne E-Mail-Adresse sagt jetzt „Text kopieren und anders weitergeben“ statt „Öffnet dein
   Mailprogramm“; bei „gibt es schon“ ist „Diese nehmen“ der hervorgehobene Weg, „Trotzdem neu anlegen“ nicht mehr.
 
+### Neu (Musik-App + Dienstplaner, E6-3b, #652)
+
+- **Auge „An diesem Termin weglassen“** im Fenster eines Ablaufpunkts (Schalter unter „Vor Gottesdienstbeginn“,
+  gespeichert mit „Speichern“) – wie das Auge in ChurchTools: Der Punkt bleibt im Ablauf, hat an diesem Termin keine
+  Uhrzeit, und ChurchTools rechnet seine Zeit nicht mit (die Punkte darunter rücken vor). Gilt nur für diesen
+  Termin, auch wenn sich mehrere Termine den Ablauf teilen.
+- **Weggelassene Punkte sieht man jetzt:** grau, „—“ statt der Uhrzeit und „an diesem Termin weggelassen“ – in
+  Ansicht und Bearbeiten-Liste beider Apps. Vorher stand ein in ChurchTools ausgeblendeter Punkt nur ohne Uhrzeit da.
+
+### Behoben (Musik-App, E6-3b, #652)
+
+- „Rückgängig“ nach dem Löschen holte einen weggelassenen Punkt **als gezeigten** zurück – das Auge ging verloren
+  (der Schreibweg war bis zur Messung E6-3-0 unbekannt). Jetzt wird es wieder gesetzt; der Server lässt das Feld im
+  Merkzettel durch (zod hätte es sonst still gestrichen – der Test prüft das Schema jetzt gegen den echten
+  Merkzettel).
+
 ### Neu (Dienstplaner, E6-3a, #645)
 
 - **Ablauf in der Termin-Ansicht bearbeiten:** Wer in ChurchTools den Ablauf des Termins bearbeiten darf (Recht

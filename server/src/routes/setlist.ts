@@ -12,6 +12,7 @@ import {
   postAgendaItemWiederherstellen,
   putAgendaItem,
   putAgendaItemVorBeginn,
+  putAgendaItemWeglassen,
   putAblaufAbgeschlossen,
   postAgendaItem,
   getCapabilitiesCtrl,
@@ -101,6 +102,10 @@ router.put('/services/:eventId/agenda/items/:itemId', asyncHandler(putAgendaItem
 router.put(
   '/services/:eventId/agenda/items/:itemId/vor-beginn',
   asyncHandler(putAgendaItemVorBeginn),
+);
+router.put(
+  '/services/:eventId/agenda/items/:itemId/weglassen',
+  asyncHandler(putAgendaItemWeglassen),
 );
 router.delete('/services/:eventId/agenda/items/:itemId', asyncHandler(deleteAgendaItemCtrl));
 router.put('/services/:eventId/agenda/abgeschlossen', asyncHandler(putAblaufAbgeschlossen));

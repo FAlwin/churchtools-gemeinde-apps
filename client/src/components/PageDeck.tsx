@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Icon } from '@ui/icons/icons';
 import {
   TransformWrapper,
   TransformComponent,
@@ -442,7 +443,11 @@ export function PageDeck({
           <span>{loadingLabel}</span>
         </div>
       )}
-      {error && <div className={styles.center}>⚠️ {error}</div>}
+      {error && (
+        <div className={styles.center}>
+          <Icon name="warnung" size={18} /> {error}
+        </div>
+      )}
       {!loading && slots.length === 2 && <div className={styles.divider} />}
 
       <div className={styles.row} style={{ visibility: loading ? 'hidden' : 'visible' }}>

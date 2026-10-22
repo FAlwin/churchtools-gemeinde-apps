@@ -45,7 +45,7 @@ function SortableLink({
     <div ref={setNodeRef} style={style} className={styles.card}>
       <div className={styles.cardTop}>
         <button className={styles.handle} {...attributes} {...listeners} aria-label="Verschieben">
-          ⠿
+          <Icon name="grip" size={18} />
         </button>
         <input
           className={styles.labelInput}

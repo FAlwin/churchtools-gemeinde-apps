@@ -8,6 +8,11 @@ export type IconName =
   | 'calendar'
   | 'home'
   | 'grid'
+  | 'anhang'
+  | 'dokument'
+  | 'bild'
+  | 'warnung'
+  | 'offline'
   | 'calendar-fill'
   | 'music'
   | 'music-fill'
@@ -115,6 +120,44 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
       return (
         <svg {...f}>
           <path d="M6 2.2a1 1 0 0 1 1 1V4h10v-.8a1 1 0 1 1 2 0V4.5h.5A2.5 2.5 0 0 1 22 7v12.5A2.5 2.5 0 0 1 19.5 22h-15A2.5 2.5 0 0 1 2 19.5V7a2.5 2.5 0 0 1 2.5-2.5H5v-.3a1 1 0 0 1 1-1ZM4 9.5v10a.5.5 0 0 0 .5.5h15a.5.5 0 0 0 .5-.5v-10H4Z" />
+        </svg>
+      );
+    // Anhang, Dokument, Bild (22.10.2026): Ersatz für 📎 📄 🖼️ und 🖉 – Behelfszeichen fehlten auf iOS
+    // („Bearbeiten (neue Version)“ zeigte ein leeres Kästchen) und passten nicht zu den Linien-Icons.
+    case 'anhang':
+      return (
+        <svg {...p}>
+          <path d="M20 11.5l-7.8 7.8a5 5 0 0 1-7.07-7.07l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7l-8.5 8.5a1.7 1.7 0 0 1-2.36-2.36L15.3 7" />
+        </svg>
+      );
+    case 'dokument':
+      return (
+        <svg {...p}>
+          <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+          <path d="M14 3v5h5M9 13h6M9 17h6" />
+        </svg>
+      );
+    case 'bild':
+      return (
+        <svg {...p}>
+          <rect x="3" y="5" width="18" height="14" rx="2" />
+          <circle cx="9" cy="10" r="1.6" />
+          <path d="M21 16l-5-5-8 8" />
+        </svg>
+      );
+    // Warnung und Offline (22.10.2026): Ersatz für ⚠️ und 📴 in den Statusmeldungen (`CenterMessage`).
+    case 'warnung':
+      return (
+        <svg {...p}>
+          <path d="M10.3 4.2 2.6 17.5A2 2 0 0 0 4.3 20.5h15.4a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z" />
+          <path d="M12 9.5v4.5M12 17.2v.3" />
+        </svg>
+      );
+    case 'offline':
+      return (
+        <svg {...p}>
+          <path d="M17.5 18.5a4.3 4.3 0 0 0 .4-8.6 6 6 0 0 0-11.8 1.2 3.8 3.8 0 0 0 .4 7.4h11Z" />
+          <path d="M4 4l16 16" />
         </svg>
       );
     case 'music':

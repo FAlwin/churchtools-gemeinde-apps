@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
+import { relative } from 'node:path';
+import { dateien, ORDNER, WURZEL } from './quelltexte.testutil';
 
 /**
  * **Einmal geändert, überall geändert** (Alwin, 22.10.2026, #654): Rundungen stehen nur in `_variables.scss`
@@ -13,30 +13,7 @@ import { fileURLToPath } from 'node:url';
  * - Zeilen mit dem Vermerk „bewusst fest“ und einem Grund (z. B. der Handy-Rahmen in der Vorschau, die
  *   Knopfformen, die man im Anmeldeformular auswählt).
  */
-const WURZEL = fileURLToPath(new URL('../..', import.meta.url));
-// Alle Apps aus den Workspaces des Repos (+ ui/) – eine neue App ist so automatisch dabei, ohne dass jemand diese
-// Liste nachziehen muss (am 22.10.2026 kam „Protokolle“ parallel dazu und wäre sonst ungeprüft geblieben).
-const WORKSPACES = (
-  JSON.parse(readFileSync(join(WURZEL, 'package.json'), 'utf8')) as { workspaces: string[] }
-).workspaces;
-const ORDNER = [...WORKSPACES.map((w) => `${w}/src`), 'ui'];
 const AUSNAHMEN = new Set(['ui/design/_variables.scss']);
-
-function dateien(ordner: string, endungen: RegExp): string[] {
-  const voll = join(WURZEL, ordner);
-  if (!existsSync(voll)) return [];
-  const out: string[] = [];
-  const lauf = (d: string) => {
-    for (const name of readdirSync(d)) {
-      const p = join(d, name);
-      if (statSync(p).isDirectory()) {
-        if (name !== 'node_modules' && name !== 'dist' && !name.startsWith('dist-')) lauf(p);
-      } else if (endungen.test(name)) out.push(p);
-    }
-  };
-  lauf(voll);
-  return out;
-}
 
 /** Feste Rundungen in einer Zeile: Zahlen ≥ 4 px im Wert einer `…radius`-Angabe, ohne `calc(`. */
 function festeRundung(zeile: string): boolean {

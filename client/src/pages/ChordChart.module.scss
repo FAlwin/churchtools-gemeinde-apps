@@ -685,8 +685,13 @@
 }
 
 .emptyIcon {
-  font-size: 34px;
-  opacity: 0.5;
+  color: var(--text3);
+  line-height: 0;
+}
+// Symbol vor einem Dokument im Lied-Menü (PDF/Bild).
+.mmDocIcon {
+  vertical-align: -2px;
+  color: var(--text2);
 }
 
 .docRow {

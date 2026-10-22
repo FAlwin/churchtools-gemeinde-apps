@@ -115,7 +115,9 @@ export function ArrangementFilesSheet({
               onClick={() => onDownload(f)}
               title="Auf das Gerät laden"
             >
-              <span aria-hidden="true">{DATEI_SYMBOL[f.kind]}</span>
+              <span aria-hidden="true">
+                <Icon name={DATEI_SYMBOL[f.kind]} size={18} />
+              </span>
               <span className={styles.pickLevel}>
                 <span className={styles.pickName}>{dateiZeilen(f).titel}</span>
                 <span className={styles.pickSub}>{dateiZeilen(f).unter}</span>

@@ -585,7 +585,7 @@ export function Availability({ online, onToast, heute = heuteIso() }: Availabili
       {laedt ? (
         <CenterMessage loading text="Wird geladen…" />
       ) : fehler ? (
-        <CenterMessage icon="⚠️" text="Konnte nicht geladen werden." onRetry={neuLaden} />
+        <CenterMessage icon="warnung" text="Konnte nicht geladen werden." onRetry={neuLaden} />
       ) : (
         <div className={styles.wrap}>
           <Segment

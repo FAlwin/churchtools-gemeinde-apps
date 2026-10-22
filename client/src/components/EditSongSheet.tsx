@@ -276,7 +276,7 @@ export function EditSongSheet({
 
         {stammdaten.isError ? (
           <CenterMessage
-            icon="⚠️"
+            icon="warnung"
             text="Die Stammdaten konnten nicht geladen werden."
             onRetry={() => void stammdaten.refetch()}
           />

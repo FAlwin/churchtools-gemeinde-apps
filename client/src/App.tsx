@@ -350,7 +350,7 @@ export default function App() {
     return (
       <Screen>
         <CenterMessage
-          icon="⚠️"
+          icon="warnung"
           text="ChurchTools antwortet gerade nicht. Die Anmeldung bleibt bestehen – bitte gleich noch einmal versuchen."
           onRetry={auth.retryStatus}
           actionLabel={funktionen.abmelden ? 'Abmelden' : undefined}
@@ -390,7 +390,7 @@ export default function App() {
           // Offline und keine gespeicherten Berechtigungen (z. B. nach einem App-Update) → kein
           // Endlos-Warten, sondern klare Meldung + Rückweg (statt Sackgasse).
           <CenterMessage
-            icon="📴"
+            icon="offline"
             text="Offline – Berechtigungen nicht verfügbar. Bitte die App einmal online öffnen."
             actionLabel={funktionen.abmelden ? 'Abmelden' : undefined}
             onAction={funktionen.abmelden ? () => auth.logout() : undefined}
@@ -400,7 +400,7 @@ export default function App() {
           // für Lieder und Abläufe (echte Antwort, #444) – oder ChurchTools hatte einen Aussetzer
           // (leere Rechte-Antwort, 502, #99). „Erneut versuchen" gibt es in beiden Fällen.
           <CenterMessage
-            icon={capsQuery.error instanceof KeineLiedRechte ? '🔒' : '⚠️'}
+            icon={capsQuery.error instanceof KeineLiedRechte ? 'lock' : 'warnung'}
             text={
               capsQuery.error instanceof KeineLiedRechte
                 ? 'Dir fehlen in ChurchTools die Rechte für Lieder und Abläufe. Bitte frag die Verantwortlichen deiner Gemeinde.'
@@ -535,7 +535,7 @@ export default function App() {
         <Screen>
           {songChart.isError ? (
             <CenterMessage
-              icon="⚠️"
+              icon="warnung"
               text="Lied konnte nicht geladen werden."
               onRetry={() => songChart.refetch()}
             />

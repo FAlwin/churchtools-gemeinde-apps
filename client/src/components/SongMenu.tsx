@@ -122,7 +122,9 @@ export function SongMenu({
         {(!showsChords || sections.length > 0) && (
           <button className={styles.mmItem} onClick={pick(onSharePdf)}>
             <span>Als PDF teilen</span>
-            <span className={styles.mmValue}>⤴</span>
+            <span className={styles.mmValue}>
+              <Icon name="share" size={16} />
+            </span>
           </button>
         )}
         {canEditSong && showsChords && (
@@ -130,7 +132,9 @@ export function SongMenu({
             <span>
               {isOriginal ? 'Bearbeiten (neue Version)' : `„${currentVersion.name}" bearbeiten`}
             </span>
-            <span className={styles.mmValue}>🖉</span>
+            <span className={styles.mmValue}>
+              <Icon name="pencil" size={16} />
+            </span>
           </button>
         )}
         {/* Dateien des Arrangements (#321) – neben dem Bearbeiten, weil beides das Lied PFLEGT.
@@ -139,7 +143,9 @@ export function SongMenu({
         {canEditSong && (
           <button className={styles.mmItem} onClick={pick(onOpenFiles)}>
             <span>Dateien …</span>
-            <span className={styles.mmValue}>📎</span>
+            <span className={styles.mmValue}>
+              <Icon name="anhang" size={16} />
+            </span>
           </button>
         )}
         {/* Stammdaten (#322, Schritt 11) – direkt unter den Dateien, weil beides das LIED pflegt und
@@ -147,7 +153,9 @@ export function SongMenu({
         {canEditSong && (
           <button className={styles.mmItem} onClick={pick(onEditSong)}>
             <span>Stammdaten …</span>
-            <span className={styles.mmValue}>&#x270E;</span>
+            <span className={styles.mmValue}>
+              <Icon name="info" size={16} />
+            </span>
           </button>
         )}
 
@@ -185,7 +193,12 @@ export function SongMenu({
             onClick={pick(() => onChange({ viewSource: d.fileId }))}
           >
             <span>
-              {d.type === 'pdf' ? '📄' : '🖼️'} {d.name}
+              <Icon
+                name={d.type === 'pdf' ? 'dokument' : 'bild'}
+                size={14}
+                className={styles.mmDocIcon}
+              />{' '}
+              {d.name}
             </span>
             {set.viewSource === d.fileId && <span className={styles.mmCheck}>✓</span>}
           </button>

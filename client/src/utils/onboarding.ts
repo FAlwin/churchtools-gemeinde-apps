@@ -194,7 +194,7 @@ export const CHART_STEPS: CoachStep[] = [
 export const CHART_SCHRITT_SCROLLEN: CoachStep = {
   selector: '[data-tour="chart-blaettern"]',
   title: 'Scrollen',
-  body: 'Die Lieder stehen untereinander – wische nach oben und unten. Ein Pedal oder die Pfeiltasten scrollen ein Stück weiter. Ein Tipp aufs Blatt blendet die Leisten aus – dann hat das Blatt die ganze Fläche. Zum Blättern zurück: unter „Mehr" bei „Liedansicht".',
+  body: 'Die Lieder stehen untereinander – wische nach oben und unten. Ein Pedal oder die Pfeiltasten holen den nächsten Teil des Lieds nach oben – lange Teile in Stücken. Ein Tipp aufs Blatt blendet die Leisten aus – dann hat das Blatt die ganze Fläche. Zum Blättern zurück: unter „Mehr" bei „Liedansicht".',
 };
 
 /** Die Einführung der Chart-Ansicht passend zur Liedansicht dieses Geräts. */

@@ -494,16 +494,20 @@ Liedern, davon eins mit Anmerkungen. Wenn vorhanden: ein Bluetooth-Pedal (AirTur
 
 **Das muss passieren:** Mit **Mehr → Liedansicht: Scrollen** stehen die Lieder untereinander, jedes Lied
 als **eine lange Seite** so breit wie der Bildschirm – quer am iPad **eine**, nicht zwei. Keine Lücken: weder
-am Ende einer früheren A4-Seite noch zwischen Outro und CCLI-Angabe (#607). Die Anmerkungen stehen an derselben Stelle wie beim Blättern. Ein Pedal-Tritt scrollt etwa ⅔
-Bildschirm weiter, eine blaue gestrichelte Linie zeigt kurz, wo der Bildschirm vorher endete. Gedrückt
+am Ende einer früheren A4-Seite noch zwischen Outro und CCLI-Angabe (#607). Die Anmerkungen stehen an derselben Stelle wie beim Blättern. Ein Pedal-Tritt holt **den nächsten Teil** an
+den oberen Rand – bzw. die nächste Stelle mit `----` (#609). Ist ein Teil länger als der Bildschirm, geht es erst
+um etwa ⅔ weiter, damit nichts übersprungen wird; hochgeladene PDFs immer um ⅔. Zurück: an den Anfang des
+aktuellen bzw. vorigen Teils. Eine blaue gestrichelte Linie zeigt kurz, wo der Bildschirm vorher endete. Gedrückt
 halten löst keinen Dauerlauf aus. Ein Tipp aufs Blatt blendet die Leisten aus und wieder ein. Die
 Einstellung gilt nur auf diesem Gerät.
 
 1. **Mehr → Während des Spielens → Liedansicht: Scrollen** wählen.
 2. Einen Gottesdienst öffnen, ein Lied antippen. Mit dem Finger nach unten wischen: Die Kopfzeile zeigt
    immer das Lied in der Bildmitte, die Punkte unten folgen.
-3. Das Pedal treten (oder ↓ / Leertaste auf einer Tastatur): ein Schritt, die Linie blitzt kurz auf. Rückwärts
-   mit dem anderen Pedal (↑ / Umschalt+Leertaste).
+3. Das Pedal treten (oder ↓ / Leertaste auf einer Tastatur): Der nächste Teil steht oben, die Linie blitzt kurz
+   auf. Ein Lied mit `----` im Text: Das Pedal hält auch dort. Am Emporen-Monitor (oder einem kleinen Fenster)
+   ein Teil, der nicht ganz passt: erst ⅔ weiter, keine Zeile fehlt. Rückwärts mit dem anderen Pedal (↑ /
+   Umschalt+Leertaste) an den Anfang des Teils.
 4. Einmal aufs Blatt tippen → Leisten weg; nochmal → Leisten da.
 5. Einen Lied-Punkt unten antippen → dieses Lied steht oben.
 6. Ein Lied, das beim Blättern zwei Seiten hat: Beim Scrollen läuft es ohne Lücke durch. Was man beim
@@ -521,14 +525,15 @@ Einstellung gilt nur auf diesem Gerät.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/ScrollDeck.tsx`, `client/src/components/RollenMalen.tsx`, `client/src/utils/rolleSpeichern.ts`, `client/src/hooks/useTextEingabe.ts`, `client/src/utils/rollenAbbildung.ts`, `client/src/pages/ChordChart.tsx`, `client/src/utils/pedalTasten.ts`, `client/src/hooks/useChartNavigation.ts`, `client/src/components/PageDeck.tsx`, `client/src/utils/devicePrefs.ts`, `client/src/pages/Settings.tsx`
-- **Automatisiert:** weitgehend – `e2e/chart-scrollen.spec.ts` (Seiten nahtlos und voll breit, Pedal ⅔,
+- **Betrifft:** `client/src/components/ScrollDeck.tsx`, `client/src/components/RollenMalen.tsx`, `client/src/utils/rolleSpeichern.ts`, `client/src/hooks/useTextEingabe.ts`, `client/src/utils/rollenAbbildung.ts`, `client/src/pages/ChordChart.tsx`, `client/src/utils/pedalTasten.ts`, `client/src/utils/pedalSchritt.ts`, `client/src/hooks/useChartNavigation.ts`, `client/src/components/PageDeck.tsx`, `client/src/utils/devicePrefs.ts`, `client/src/pages/Settings.tsx`
+- **Automatisiert:** weitgehend – `e2e/chart-scrollen.spec.ts` (Seiten nahtlos und voll breit, Pedal Teil für
+  Teil samt ⅔ bei langen Teilen und Halt am `----`,
   Kopfzeile folgt der Mitte, Tipp, Lied-Punkt, Fußpfeil, Malen einzeln und zurück an dieselbe Stelle, quer
-  eine Seite, je Lied eine Rolle), `chordPdf.test.ts` (Rolle), `pedalTasten.test.ts`, `ScrollDeck.test.tsx`,
+  eine Seite, je Lied eine Rolle), `chordPdf.test.ts` (Rolle), `pedalTasten.test.ts`, `pedalSchritt.test.ts`, `ScrollDeck.test.tsx`,
   `useChartNavigation.test.ts`. Von Hand bleiben
   ein echtes Pedal, das Wischen mit dem Finger und das Drehen
 - **Historie:** #551 (ChurchTools-Dev-Stammtisch, 14.10.2026), #607 (eine lange Seite je Lied, 17.10.2026),
-  #614 (gemeinsame Anmerkungen), #608 (Malen auf der langen Seite)
+  #614 (gemeinsame Anmerkungen), #608 (Malen auf der langen Seite), #609 (Pedal Teil für Teil)
 
 </details>
 

@@ -4,6 +4,7 @@ import { satzplaene } from './chordPdf';
 import {
   a4NachRolle,
   kerneAufSeite,
+  pedalHalte,
   rolleNachA4,
   rahmenAufKernen,
   textAufSeite,
@@ -292,5 +293,60 @@ describe('rahmenAufKernen – wo das Lasso auf der Rolle ablegen darf (#615)', (
     const y = kern.ziel.y + 1;
     expect(rahmenAufKernen(st, { x: kern.ziel.x + 1, y, w: kern.quelle.w - 2, h: 1 })).toBe(true);
     expect(rahmenAufKernen(st, { x: kern.ziel.x + kern.quelle.w + 5, y, w: 20, h: 1 })).toBe(false);
+  });
+});
+
+describe('pedalHalte – wo das Pedal auf der Rolle anhält (#609)', () => {
+  // Drei Teile, im zweiten ein Weiterschalt-Punkt nach der zweiten Zeile.
+  const MIT_TRENNER = lied(
+    [
+      '{comment: Vers 1}',
+      '[C]Eins',
+      '[C]Zwei',
+      '{comment: Chorus}',
+      '[G]Drei',
+      '[G]Vier',
+      '----',
+      '[G]Fünf',
+      '{comment: Vers 2}',
+      '[C]Sechs',
+    ].join('\n'),
+  );
+
+  it('Titel, jeder Teil-Anfang und der ---- – in dieser Reihenfolge', () => {
+    const a = abb({}, MIT_TRENNER);
+    const halte = pedalHalte(a);
+    const teilAnfaenge = a.rolle.stuecke.filter((s) => s.imTeil === 0).map((s) => s.y0);
+    expect(teilAnfaenge).toHaveLength(3);
+    expect(a.rolle.weiterschalten).toHaveLength(1);
+    expect(halte).toEqual([
+      0,
+      teilAnfaenge[0],
+      teilAnfaenge[1],
+      a.rolle.weiterschalten[0].y,
+      teilAnfaenge[2],
+    ]);
+  });
+
+  it('der ---- liegt im Chorus, zwei Zeilen unter seinem Anfang', () => {
+    const a = abb({}, MIT_TRENNER);
+    const chorus = a.rolle.stuecke.find((s) => s.teil === 1)!;
+    const w = a.rolle.weiterschalten[0].y;
+    expect(w).toBeGreaterThan(chorus.y0);
+    expect(w).toBeLessThan(chorus.y1);
+    // Überschrift + zwei Zeilen von drei liegen darüber – also mehr als die Hälfte des Chorus.
+    expect(w - chorus.y0).toBeGreaterThan((chorus.y1 - chorus.y0) / 2);
+  });
+
+  it('kehrt ein Teil im Flow wieder, hält es bei jedem Vorkommen – samt seinem ----', () => {
+    const a = abb({}, lied(`{flow: Vers 1, Chorus, Vers 1, Chorus}\n${MIT_TRENNER.chordpro}`));
+    expect(a.rolle.weiterschalten).toHaveLength(2);
+    expect(pedalHalte(a)).toHaveLength(1 + 4 + 2);
+  });
+
+  it('ohne ---- nur Titel und Teil-Anfänge', () => {
+    const a = abb();
+    expect(a.rolle.weiterschalten).toEqual([]);
+    expect(pedalHalte(a)).toHaveLength(1 + 6);
   });
 });

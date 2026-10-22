@@ -35,6 +35,27 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 - „Mail schreiben“ ohne E-Mail-Adresse sagt jetzt „Text kopieren und anders weitergeben“ statt „Öffnet dein
   Mailprogramm“; bei „gibt es schon“ ist „Diese nehmen“ der hervorgehobene Weg, „Trotzdem neu anlegen“ nicht mehr.
 
+### Neu (Dienstplaner, E6-3a, #645)
+
+- **Ablauf in der Termin-Ansicht bearbeiten:** Wer in ChurchTools den Ablauf des Termins bearbeiten darf (Recht
+  „Ablauf bearbeiten“ für den Kalender des Termins oder Admin des Termins – dieselbe Regel wie in der Musik-App),
+  bekommt einen Stift. Danach dieselbe Liste wie in der Musik-App: am Griff ziehen, Punkt antippen und im Fenster
+  ändern, „Eintrag hinzufügen“, Löschen mit Rückfrage, „Rückgängig“ für Verschieben und Löschen, „vor Beginn“.
+  Lieder stehen nur da – ein Lied wählt man in der Musik-App. Gespeichert wird sofort in ChurchTools, danach wird der
+  Ablauf frisch gelesen; ist er abgeschlossen, ändert sich nichts und ein Hinweis sagt warum. War ein Punkt
+  inzwischen woanders gelöscht oder der Ablauf geändert, wird ebenfalls frisch gelesen.
+
+### Intern (Schreibweg, E6-3a, #645)
+
+- Der Schreiber des Browsers für die Ablauf-Regeln (`browserSchreiber`, samt Fehler-Übersetzung) steht jetzt in
+  `ui/ct/schreiber.ts` – Musik-App (Erweiterung) und Dienstplaner schreiben über denselben; die Regeln bleiben im
+  Schreibkern (`shared/ct/schreibKern.ts`). Den Kalender eines Termins liest eine Stelle (`kalenderVon`, vorher
+  zweimal nachgebaut).
+- Erweiterungsrahmen mit Reiterleiste (Handy): Die Fläche über der Leiste ist jetzt der Bezug für Schwebendes – das
+  Plus des Ablaufs stand sonst hinter der Leiste (im Browser gefunden und geprüft; der Dienstplaner hat keine E2E).
+- Demo des Dienstplaners (`?demo`): Der Ablauf des ersten Termins lässt sich bearbeiten (nur im Speicher), Uhrzeiten
+  rechnet die Demo wie ChurchTools.
+
 ### Neu (Anmeldungen, A7-3)
 
 - **Nachrücken lassen** (Entwurf `a7-3-nachruecken-v1`, entschieden 19.10.2026): an jeder wartenden Person im Fenster
@@ -240,6 +261,11 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ### Neu (Musik-App)
 
+- **Pedal Teil für Teil** (#609, Rückmeldung des Musik-Bereichsleiters): Im Scroll-Modus holt ein Pedal-Tritt
+  den nächsten Teil des Lieds an den oberen Rand – bzw. die nächste Stelle mit einem Weiterschalt-Punkt `----`.
+  Ist ein Teil länger als der Bildschirm (Emporen-Monitor), geht es erst um ⅔ weiter, damit keine Zeile
+  übersprungen wird. Zurück springt an den Anfang des aktuellen bzw. vorigen Teils. Die Pfeile unten tun dasselbe.
+  Hochgeladene PDFs scrollen weiter um ⅔.
 - **Scroll-Modus: je Lied eine lange Seite** (#607, Rückmeldung des Musik-Bereichsleiters): Statt
   aneinandergehängter A4-Seiten ist jedes Lied beim Scrollen eine durchgehende Seite in einer Spalte – keine
   Lücke mehr, wenn ein Teil nicht mehr auf die Seite passte, und die CCLI-Angabe steht direkt unter dem

@@ -156,8 +156,8 @@ describe('pageLabelFor – „Seite x / y" nur bei mehrseitigen Einheiten', () =
 
 describe('anmerkungsquelleFuer – was eine Seite des Scroll-Modus zeigt (#614)', () => {
   const abbildung = {
-    a4: { stuecke: [], kopfEnde: 30, spalten: 1, seiten: 3 },
-    rolle: { stuecke: [], kopfEnde: 30, spalten: 1, seiten: 1, hoehe: 600 },
+    a4: { stuecke: [], weiterschalten: [], kopfEnde: 30, spalten: 1, seiten: 3 },
+    rolle: { stuecke: [], weiterschalten: [], kopfEnde: 30, spalten: 1, seiten: 1, hoehe: 600 },
   };
   const rolle = owner({ abbildung });
   const viewed = { songId: 12, lyr: false, arrangementId: 99 };

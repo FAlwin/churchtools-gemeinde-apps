@@ -19,6 +19,7 @@ import {
 import { dienstgruppenAus, type Dienstgruppe } from '@shared/ct/dienstgruppen';
 import { diensteAus, type Dienst } from '@shared/ct/dienste';
 import { kuerzelAusBasis } from '@ui/erweiterung/kuerzel';
+import { darfAblaufBearbeiten, type AblaufTermin } from '@shared/ct/ablaufRecht';
 
 /** Das Kürzel des Dienstplaners in ChurchTools – aus der Bau-Adresse (`/ccm/dienstplaner/`). */
 export const MODUL_KUERZEL = kuerzelAusBasis(import.meta.env.BASE_URL) ?? 'dienstplaner';
@@ -68,6 +69,19 @@ export function geleiteteGruppen(start: Start): Set<number> {
 /** Darf man diesen Dienst planen (global, als Leitung oder als Admin des Termins)? */
 export function planbar(start: Start, dienst: Dienst, terminAdmin = false): boolean {
   return darfDienstPlanen(start.rechte, dienst, geleiteteGruppen(start), terminAdmin);
+}
+
+/**
+ * Darf man den Ablauf dieses Termins bearbeiten (E6-3a)? Dieselbe Regel wie in der Musik-App (`darfAblaufBearbeiten`):
+ * `edit agenda` für den Kalender des Termins oder Admin des Termins. Ein eigenes Admin-Recht wertet der Dienstplaner
+ * nicht aus – auch nicht beim Planen.
+ */
+export function ablaufBearbeitbar(start: Start, termin: AblaufTermin): boolean {
+  return darfAblaufBearbeiten(
+    { isAdmin: false, ablaufKalender: start.rechte.ablaufKalender },
+    termin,
+    start.ichId,
+  );
 }
 
 /** Liefert ChurchTools alle Plätze dieses Dienstes – oder nur die eigenen? (Matrix, „Wer wie oft?“) */

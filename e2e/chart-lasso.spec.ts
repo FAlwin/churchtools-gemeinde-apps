@@ -11,14 +11,22 @@ import { oeffneWerkzeug } from './werkzeug';
  */
 const SEITE = 'worship_docdraw_song999001_a999001_voriginal_0';
 
-async function vorbereiten(page: Page, ansicht: 'blaettern' | 'scrollen', texte?: unknown[]) {
+async function vorbereiten(
+  page: Page,
+  ansicht: 'blaettern' | 'scrollen',
+  texte?: unknown[],
+  spalten: 1 | 2 = 1,
+) {
   await page.addInitScript(
-    ({ tour, ansicht, texte, seite }) => {
+    ({ tour, ansicht, texte, seite, spalten }) => {
       localStorage.setItem(`worship:onboard-${tour}`, '1');
       localStorage.setItem('worship:liedansicht', ansicht);
       if (texte) localStorage.setItem(`${seite}_text`, JSON.stringify(texte));
+      // Zwei Spalten auf A4: Auf der Rolle stehen die Teile in schmalen Streifen – rechts daneben gibt es
+      // keine A4-Stelle (#615).
+      if (spalten === 2) localStorage.setItem('worship_cols_999001', '2');
     },
-    { tour: TOUR_CHART, ansicht, texte, seite: SEITE },
+    { tour: TOUR_CHART, ansicht, texte, seite: SEITE, spalten },
   );
   await page.goto('/?demo=chart');
   // Erst wenn das Blatt steht, gibt es die Werkzeuge (je nach Breite als Menü oder einzeln).
@@ -199,12 +207,10 @@ test.describe('Rolle', () => {
     expect(await strichBei(page, ...a4(b.x + 130, y))).toBe(0);
   });
 
-  test('ein Text aus der Lücke unter dem letzten Teil lässt sich greifen und zurechtrücken', async ({
-    page,
-  }) => {
+  test('ein Text unter dem letzten Teil lässt sich greifen und zurechtrücken', async ({ page }) => {
     await vorbereiten(page, 'scrollen');
-    // Knapp über dem Ende der ersten Rolle: auf A4 Leerraum unter dem letzten Teil (eine Lücke), auf der
-    // Rolle am Ende des Lieds – also innerhalb der Rolle.
+    // Knapp über dem Ende der ersten Rolle: auf A4 Leerraum unter dem letzten Teil – auf der Rolle steht er
+    // genauso darunter (#626).
     const rolle = (await page.getByTestId('scroll-deck').locator('canvas').first().boundingBox())!;
     const hoeheMm = (rolle.height * 210) / rolle.width;
     await page.evaluate(
@@ -278,10 +284,10 @@ test.describe('Rolle', () => {
     await expect(page.getByTestId('scroll-deck').getByText('Schluss!')).toBeVisible();
   });
 
-  test('unter das Lied geschoben: Hinweis statt Verlust – Rückgängig lässt den Strich, wo er war', async ({
+  test('neben den Streifen geschoben (2 Spalten): Hinweis statt Verlust – Rückgängig lässt den Strich, wo er war', async ({
     page,
   }) => {
-    await vorbereiten(page, 'scrollen');
+    await vorbereiten(page, 'scrollen', undefined, 2);
     await oeffneWerkzeug(page, 'Anmerken');
     const malen = page.getByTestId('rollen-malen');
     await expect(malen).toBeVisible({ timeout: 30_000 });
@@ -300,12 +306,11 @@ test.describe('Rolle', () => {
     await page.getByRole('button', { name: 'Lasso', exact: true }).click();
     await zug(page, umkreisen(b.x + 60, y - 15, b.x + 200, y + 15));
     await expect(page.getByTestId('lasso-auswahl')).toBeVisible();
-    // Bis ans untere Ende der Rolle – unter den letzten Teil.
-    const unten = b.y + b.height - 12;
+    // Nach rechts, über den Rand des schmalen Streifens hinaus – dort gibt es keine A4-Stelle.
     await zug(page, [
       [b.x + 130, y],
-      [b.x + 130, (y + unten) / 2],
-      [b.x + 130, unten],
+      [b.x + 200, y],
+      [b.x + 270, y],
     ]);
     await page.mouse.click(b.x + 30, y + 40);
     await expect(page.getByText('Hier wird nichts gespeichert')).toBeVisible();
@@ -397,10 +402,10 @@ test.describe('Rolle', () => {
       .toBe(true);
   });
 
-  test('unter das Lied geschoben und Stift aus: zurück an die alte Stelle, nicht verloren', async ({
+  test('neben den Streifen geschoben und Stift aus: zurück an die alte Stelle, nicht verloren', async ({
     page,
   }) => {
-    await vorbereiten(page, 'scrollen');
+    await vorbereiten(page, 'scrollen', undefined, 2);
     await oeffneWerkzeug(page, 'Anmerken');
     const malen = page.getByTestId('rollen-malen');
     await expect(malen).toBeVisible({ timeout: 30_000 });
@@ -418,44 +423,51 @@ test.describe('Rolle', () => {
     await page.getByRole('button', { name: 'Lasso', exact: true }).click();
     await zug(page, umkreisen(b.x + 60, y - 15, b.x + 200, y + 15));
     await expect(page.getByTestId('lasso-auswahl')).toBeVisible();
-    const unten = b.y + b.height - 12;
     await zug(page, [
       [b.x + 130, y],
-      [b.x + 130, (y + unten) / 2],
-      [b.x + 130, unten],
+      [b.x + 200, y],
+      [b.x + 270, y],
     ]);
-    // Stift aus, während die Auswahl noch unter dem Lied schwebt.
+    // Stift aus, während die Auswahl noch neben dem Streifen schwebt.
     await page.getByRole('button', { name: 'Anmerken beenden' }).click();
     await expect(malen).toHaveCount(0);
     await page.waitForTimeout(1_000); // Speichern der Rolle läuft verzögert
     expect(await strichBei(page, ...a4(b.x + 130, y))).toBeGreaterThan(100);
   });
 
-  test('ein Strich unter dem letzten Teil bleibt in seiner Lücke – das Lasso nimmt ihn nicht mit', async ({
+  /** Einen roten Strich quer über die erste A4-Seite des Demo-Lieds legen, bei `yMm`. */
+  async function roterStrich(page: Page, yMm: number) {
+    await page.evaluate(
+      ({ yMm, seite }) => {
+        const c = document.createElement('canvas');
+        c.width = 1191;
+        c.height = 1684;
+        const ctx = c.getContext('2d')!;
+        const mm = c.width / 210;
+        ctx.strokeStyle = '#ff0000';
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.moveTo(60 * mm, yMm * mm);
+        ctx.lineTo(150 * mm, yMm * mm);
+        ctx.stroke();
+        localStorage.setItem(seite, c.toDataURL());
+      },
+      { yMm, seite: SEITE },
+    );
+    await page.reload();
+    await expect(page.getByRole('button', { name: /^(Werkzeuge|Anmerken)$/ }).first()).toBeVisible({
+      timeout: 30_000,
+    });
+  }
+
+  test('ein Strich unter dem letzten Teil: das Lasso nimmt ihn mit, gespeichert an der neuen Stelle (#626)', async ({
     page,
   }) => {
     await vorbereiten(page, 'scrollen');
     const rolle = (await page.getByTestId('scroll-deck').locator('canvas').first().boundingBox())!;
     const hoeheMm = (rolle.height * 210) / rolle.width;
-    // Rot, 4 mm über dem Ende der Rolle: auf A4 Leerraum unter dem letzten Teil.
-    await page.evaluate((yMm) => {
-      const c = document.createElement('canvas');
-      c.width = 1191;
-      c.height = 1684;
-      const ctx = c.getContext('2d')!;
-      const mm = c.width / 210;
-      ctx.strokeStyle = '#ff0000';
-      ctx.lineWidth = 8;
-      ctx.beginPath();
-      ctx.moveTo(60 * mm, yMm * mm);
-      ctx.lineTo(150 * mm, yMm * mm);
-      ctx.stroke();
-      localStorage.setItem('worship_docdraw_song999001_a999001_voriginal_0', c.toDataURL());
-    }, hoeheMm - 4);
-    await page.reload();
-    await expect(page.getByRole('button', { name: /^(Werkzeuge|Anmerken)$/ }).first()).toBeVisible({
-      timeout: 30_000,
-    });
+    // Rot, 4 mm über dem Ende der Rolle: auf A4 Leerraum unter dem letzten Teil, auf der Rolle genauso darunter.
+    await roterStrich(page, hoeheMm - 4);
     await oeffneWerkzeug(page, 'Anmerken');
     const malen = page.getByTestId('rollen-malen');
     await expect(malen).toBeVisible({ timeout: 30_000 });
@@ -464,12 +476,45 @@ test.describe('Rolle', () => {
 
     await page.getByRole('button', { name: 'Lasso', exact: true }).click();
     await zug(page, umkreisen(b.x + 80, y - 6, b.x + 310, y + 6));
-    await page.waitForTimeout(500); // das Holen läuft asynchron
-    // Nichts Greifbares: kein Rahmen. Daneben tippen, Stift aus.
-    await expect(page.getByTestId('lasso-auswahl')).toHaveCount(0);
+    await expect(page.getByTestId('lasso-auswahl')).toBeVisible();
+    await zug(page, [
+      [b.x + 195, y],
+      [b.x + 195, y - 15],
+      [b.x + 195, y - 30],
+    ]);
     await page.mouse.click(b.x + 30, b.y + 110);
+    await expect(page.getByTestId('lasso-auswahl')).toHaveCount(0);
     await page.getByRole('button', { name: 'Anmerken beenden' }).click();
-    await page.waitForTimeout(1_000);
-    expect(await strichBei(page, 0.5, (hoeheMm - 4) / 297)).toBeGreaterThan(100);
+    const neuMm = hoeheMm - 4 - (30 * 210) / b.width;
+    await expect
+      .poll(() => strichBei(page, 0.5, neuMm / 297), { timeout: 5_000 })
+      .toBeGreaterThan(100);
+    expect(await strichBei(page, 0.5, (hoeheMm - 4) / 297)).toBe(0);
+  });
+
+  test('ein Strich weit unten auf der A4-Seite: die Rolle wächst, er steht so weit unter dem Lied wie auf A4 (#626)', async ({
+    page,
+  }) => {
+    await vorbereiten(page, 'scrollen');
+    const canvas = page.getByTestId('scroll-deck').locator('canvas').first();
+    const vorher = (await canvas.boundingBox())!;
+    const liedMm = (vorher.height * 210) / vorher.width;
+    // 270 mm: weit hinter dem Ende der Rolle (das Demo-Lied ist kurz).
+    expect(liedMm).toBeLessThan(250);
+    await roterStrich(page, 270);
+    /** Wo (mm von oben) die Rolle bei x = 105 mm Rot zeigt. */
+    const rotMm = () =>
+      canvas.evaluate((c: HTMLCanvasElement) => {
+        const d = c.getContext('2d')!.getImageData(Math.round(c.width / 2), 0, 1, c.height).data;
+        for (let y = 0; y < c.height; y++) {
+          const i = y * 4;
+          if (d[i] > 180 && d[i + 1] < 90 && d[i + 2] < 90) return (y * 210) / c.width;
+        }
+        return -1;
+      });
+    // Das Demo-Lied steht auf einer Seite: Rolle und A4 laufen bis zum Ende gleich – also auch bei 270 mm.
+    await expect.poll(rotMm, { timeout: 10_000 }).toBeCloseTo(270 - 0.7, 0);
+    const nachher = (await canvas.boundingBox())!;
+    expect((nachher.height * 210) / nachher.width).toBeGreaterThan(270);
   });
 });

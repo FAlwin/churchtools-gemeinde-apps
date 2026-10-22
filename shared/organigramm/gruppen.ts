@@ -129,3 +129,30 @@ export function nachfahren(knoten: Knoten): number[] {
   lauf(knoten);
   return [...ids];
 }
+
+/**
+ * Der Baum ohne ausgeblendete Gruppentypen (z. B. Verteiler) – mitsamt allem, was darunter hängt. Welche Typen das
+ * sind, wählt jede Person selbst; der Code kennt keinen Typ beim Namen (andere Gemeinden nennen ihre Typen anders).
+ */
+export function baumOhneTypen(
+  baum: readonly Knoten[],
+  ausgeblendet: ReadonlySet<number>,
+): Knoten[] {
+  if (ausgeblendet.size === 0) return [...baum];
+  const lauf = (k: Knoten): Knoten[] =>
+    k.gruppe.typId !== null && ausgeblendet.has(k.gruppe.typId)
+      ? []
+      : [{ gruppe: k.gruppe, kinder: k.kinder.flatMap(lauf) }];
+  return baum.flatMap(lauf);
+}
+
+/** Jede Gruppe des Baums nach ID (bei zwei Obergruppen der erste Fund) – fürs Gruppenfenster. */
+export function knotenNachId(baum: readonly Knoten[]): Map<number, Knoten> {
+  const m = new Map<number, Knoten>();
+  const lauf = (k: Knoten) => {
+    if (!m.has(k.gruppe.id)) m.set(k.gruppe.id, k);
+    k.kinder.forEach(lauf);
+  };
+  baum.forEach(lauf);
+  return m;
+}

@@ -9,7 +9,7 @@
   align-items: center;
   gap: 6px;
   background: var(--surface2);
-  border-radius: 18px;
+  border-radius: 999px; // Kapsel – unabhängig von den Rundungs-Stufen
   padding: 10px 8px;
   box-shadow: 0 6px 28px rgba(0, 0, 0, 0.2);
   border: 1px solid var(--border);
@@ -135,7 +135,7 @@
   align-items: center;
   gap: 5px;
   padding: 8px;
-  border-radius: 20px;
+  border-radius: 999px; // Kapsel
   white-space: normal;
   max-height: calc(100vh - 16px);
   overflow-y: auto;
@@ -216,7 +216,7 @@
   position: relative;
   width: 40px;
   height: 40px;
-  border-radius: 11px;
+  border-radius: var(--r-ctrl);
   border: 1.5px solid var(--border);
   background: var(--surface2);
   cursor: pointer;
@@ -244,7 +244,7 @@
 .clear {
   width: 40px;
   height: 40px;
-  border-radius: 11px;
+  border-radius: var(--r-ctrl);
   border: 1.5px solid rgba(178, 34, 71, 0.35);
   background: var(--surface2);
   cursor: pointer;
@@ -293,7 +293,7 @@
   height: 44px;
   border: 1px solid var(--border);
   border-right: none;
-  border-radius: 22px 0 0 22px;
+  border-radius: 999px 0 0 999px; // halbe Kapsel am Rand
   background: var(--surface2);
   color: var(--blue);
   display: flex;

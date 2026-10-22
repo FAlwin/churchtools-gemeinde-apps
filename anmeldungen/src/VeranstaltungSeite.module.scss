@@ -52,7 +52,7 @@
   height: 38px;
   padding: 0 16px;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--r-ctrl);
   background: var(--blue);
   color: #fff;
   font-size: 15px;
@@ -102,7 +102,7 @@
 .warnung {
   margin: 10px 14px 0;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--r-card);
   background: color-mix(in srgb, var(--red) 10%, transparent);
   color: var(--red);
   font-size: 14px;
@@ -290,7 +290,7 @@
   align-items: center;
   gap: 12px;
   padding: 10px 12px 10px 14px;
-  border-radius: 12px;
+  border-radius: var(--r-card);
   background: var(--surface2);
   border: 1px solid var(--border);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.16);
@@ -316,7 +316,7 @@
   gap: 10px;
   margin: 10px 0 4px;
   padding: 8px 8px 8px 12px;
-  border-radius: 10px;
+  border-radius: var(--r-card);
   background: var(--blue-soft);
   color: var(--text);
   font-size: 14px;
@@ -332,7 +332,7 @@
   height: 34px;
   padding: 0 14px;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--r-ctrl);
   background: var(--blue);
   color: #fff;
   font-family: inherit;
@@ -454,7 +454,7 @@
 .pruefHinweis {
   margin: 10px 0 0;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--r-card);
   background: var(--blue-soft);
   color: var(--text);
   font-size: 13.5px;

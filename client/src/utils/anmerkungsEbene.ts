@@ -17,7 +17,7 @@ import { textStyleOf } from './textObjStyle';
 
 /** Schrift der Anmerkungstexte – wie `--ui` in `_variables.scss`. */
 const SCHRIFT =
-  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
+  "'Lato', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif";
 
 function bildLaden(src: string): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {

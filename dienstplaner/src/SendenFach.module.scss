@@ -27,7 +27,7 @@
   padding: 0;
   list-style: none;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-card);
   overflow: hidden;
 }
 
@@ -91,7 +91,7 @@
 .kasten {
   margin-top: 12px;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--r-card);
   background: color-mix(in srgb, var(--red) 10%, transparent);
   color: var(--text);
   font-size: 14px;

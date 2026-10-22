@@ -1,0 +1,87 @@
+// Übersicht des Organigramms (O1) – Karten und Zeilen aus ui/design wie Dienstplaner und Anmeldungen.
+// Die Werte sind seit #654 die der ChurchTools-Weboberfläche – für alle Apps an einer Stelle (ui/design).
+@use '@ui/design/mixins' as m;
+
+.raster {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+
+  @media (max-width: 860px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.karte {
+  @include m.card-list;
+}
+
+.kopf {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--hair);
+
+  h2 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+}
+
+.liste {
+  list-style: none;
+}
+
+.zeile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  color: var(--text);
+
+  & + & {
+    box-shadow: inset 0 1px 0 var(--hair);
+  }
+}
+
+.mitte {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.leise {
+  color: var(--text2);
+  font-size: 14px;
+}
+
+// Gruppen-Kachel wie in ChurchTools: Anfangsbuchstabe auf der Farbe der Gruppe (Farbe kommt aus den Daten).
+.kachel {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-ctrl);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.text {
+  padding: 12px 14px;
+  color: var(--text2);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.bau {
+  grid-column: 1 / -1;
+  color: var(--text2);
+  font-size: 13px;
+}

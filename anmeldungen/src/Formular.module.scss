@@ -50,7 +50,7 @@
   gap: 12px;
   width: 100%;
   padding: 11px 12px;
-  border-radius: 10px;
+  border-radius: var(--r-ctrl);
   // Im Fenster weiß wie eine Liste – die Knopf-Art liefert Schrift, Rand, Darüberfahren und „gesperrt“.
   background: var(--surface2);
   font-size: 15px;
@@ -95,7 +95,7 @@
   align-items: flex-start;
   gap: 2px;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--r-card);
   text-align: left;
   font-size: 15px;
 
@@ -115,7 +115,7 @@
   width: 100%;
   height: 46px;
   border: none;
-  border-radius: 12px;
+  border-radius: var(--r-card);
   background: var(--blue);
   color: #fff;
   font-size: 15px;
@@ -164,7 +164,7 @@
 .kopieren {
   @include m.aktionKnopf;
   height: 42px;
-  border-radius: 10px;
+  border-radius: var(--r-ctrl);
   font-size: 15px;
 }
 
@@ -174,7 +174,7 @@
   list-style: none;
   padding: 10px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-card);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -189,7 +189,7 @@
   flex: none !important;
   width: 42px;
   height: 42px;
-  border-radius: 10px;
+  border-radius: var(--r-ctrl);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -212,7 +212,7 @@
   height: 42px;
   margin-top: 10px;
   border: 1px solid color-mix(in srgb, var(--red) 40%, transparent);
-  border-radius: 12px;
+  border-radius: var(--r-card);
   background: none;
   color: var(--red);
   font-family: inherit;
@@ -246,7 +246,7 @@
   margin: 0;
   padding: 0;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-card);
 }
 
 .zahlart {
@@ -281,6 +281,6 @@
   @include m.aktionKnopf;
   height: 42px;
   padding: 0 14px;
-  border-radius: 10px;
+  border-radius: var(--r-ctrl);
   font-size: 14px;
 }

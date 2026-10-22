@@ -208,7 +208,7 @@
   font-family: var(--ui);
   padding: 9px 14px;
   border: none;
-  border-radius: 12px;
+  border-radius: var(--r-card);
   cursor: pointer;
   box-shadow: 0 4px 16px rgba(0, 97, 161, 0.4);
 }

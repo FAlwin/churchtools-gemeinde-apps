@@ -1,7 +1,7 @@
 /**
  * Kurz-Memo für den Live-Abgleich des Ablaufs (#198 – vorher direkt im Controller).
  *
- * Viele offene Geräte pollen alle ~8 Sekunden. Damit ChurchTools davon nicht überrannt wird, hält
+ * Viele offene Geräte pollen alle 30 Sekunden (#557). Damit ChurchTools davon nicht überrannt wird, hält
  * dieses Memo den Fingerabdruck eines Termins ein paar Sekunden vor.
  *
  * **Der Schlüssel ist bewusst kontobezogen** (#199): Vorher teilten sich alle Konten einen Eintrag –

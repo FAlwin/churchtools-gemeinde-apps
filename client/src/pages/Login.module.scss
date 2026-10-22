@@ -87,7 +87,7 @@
 .offlineNote {
   margin: 4px 0 2px;
   padding: 10px 14px;
-  border-radius: 8px;
+  border-radius: var(--r-ctrl);
   background: var(--surface3, rgba(0, 0, 0, 0.06));
   color: var(--text2, #556);
   font-size: 13px;
@@ -97,7 +97,7 @@
 
 .btn {
   height: 48px;
-  border-radius: 8px;
+  border-radius: var(--r-ctrl);
   border: none;
   background: var(--blue);
   color: #fff;
@@ -136,7 +136,7 @@
 
 .linkBtn {
   height: 48px;
-  border-radius: 8px;
+  border-radius: var(--r-ctrl);
   border: 1.5px solid var(--blue);
   background: transparent;
   color: var(--blue);

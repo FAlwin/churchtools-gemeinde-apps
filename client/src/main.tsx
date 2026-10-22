@@ -10,6 +10,7 @@ import { SwUpdateProvider } from './hooks/useSwUpdate';
 import { initPwaInstall } from './services/pwaInstall';
 import { syncAppHeight } from '@ui/fenster/appHeight';
 import { istExtension } from './services/modus';
+import { latoMitbringen } from '@ui/design/schrift';
 import './styles/main.scss';
 
 // Früh registrieren: das `beforeinstallprompt`-Event feuert einmalig kurz nach dem Laden.
@@ -21,6 +22,8 @@ initPwaInstall();
 // ChurchTools-Extension (#335): Die App liegt unter der ChurchTools-Leiste – main.scss macht ihren
 // Bereich zum Bezugsrahmen der Vollbild-Fenster (`.ct-extension #root`).
 if (istExtension) document.documentElement.classList.add('ct-extension');
+// Schrift wie ChurchTools (#654): In ChurchTools ist Lato schon da, als PWA bringt die App sie mit.
+else void latoMitbringen();
 
 syncAppHeight();
 window.addEventListener('resize', syncAppHeight);

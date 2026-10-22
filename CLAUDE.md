@@ -188,12 +188,14 @@ churchtools-gemeinde-apps/
 │       ├── types/           # server-spezifische Typen
 │       └── utils/           # Hilfsfunktionen (u. a. isoTag.ts = die eine Datums-Formatierung)
 ├── shared/types/            # geteilte Typen (Service, SetlistSong, Setlist, …)
+├── shared/organigramm/      # Regeln des Organigramms: gruppen (Baum aus Gruppen + Hierarchie), farbe (eigene Farbe vor Typ), personen (jede Person einmal), rechte (O1)
 ├── shared/dienstplan/       # Regeln des Dienstplaners: termine (Liste, E3-2), start (Startseite, E3-3), plan (Matrix, E3-4), fenster + werWieOft (E3-5), einteilen (Schreibkern, E4-1), werKann (E4-2)
 ├── shared/anmeldung/        # Regeln der Anmeldungen: preis, formular (#474), uebersicht (#480), vorlagen, termin, felder, rechte (#486), bezahlung (#507), gestaltung + baukasten (A5)
 ├── anmeldungen/             # Anmeldungen: ChurchTools-Erweiterung für Veranstalter (#474, nur Erweiterung);
 │                            #   Formular-Baukasten = Baukasten.tsx (+ BaukastenLeiste, FeldBearbeiten, useSchlange)
 ├── formular/                # Anmeldungen: öffentliches Formular, statisch – jede Gemeinde auf ihrem Webspace
 ├── dienstplaner/            # Dienstplaner: ChurchTools-Erweiterung für alle Dienstgruppen (Bauplan E2, vorerst nur Erweiterung)
+├── organigramm/             # Organigramm: ChurchTools-Erweiterung, Gemeinde als Baum + Organisation weiterbauen (Bauplan O1, nur Erweiterung, Kürzel `organigramm`)
 ├── shared/protokolle/       # Regeln der Protokolle: dokument (Ableitung), speicher (Kopf + Teile), aufgaben, einrichten, vorlagen, platzhalter, gruppen (S1)
 ├── protokolle/              # Protokolle: ChurchTools-Erweiterung für Protokolle und To-Dos von Gruppen (Bauplan Protokolle, nur Erweiterung)
 └── ui/                      # gemeinsame Browser-Bausteine aller Apps (Alias @ui, Dienstplaner E1, Anmeldungen #474)
@@ -354,10 +356,9 @@ churchtools-gemeinde-apps/
 
 Das frühere White-Label (Farb-/Logo-Anpassung pro Gemeinde) wurde **zurückgebaut**: Die App ist eine
 **feste ChurchTools-Version** mit eigenem Schallwellen-Logo. Aussehen = ChurchTools-Designsprache
-(helle gruppierte Listen auf Grau, **blaue** Primärfarbe `#2563EB` – seit #393 der Look der ChurchTools-**App**,
-nicht mehr des Web-Clients: hellblaue Datumskacheln, 12-px-Karten mit feinem Rand, Gruppen-Überschriften in
-normaler Schreibung; System-Font, untere Tab-Bar,
-Light/Dark). Alle Design-Tokens in `ui/design/_variables.scss` (Single Source); `applyBranding.ts` setzt
+(helle gruppierte Listen auf Grau, **blaue** Primärfarbe `#155DFC` – seit #654 (22.10.2026) der Look der
+ChurchTools-**Weboberfläche** für alle Apps, auch die PWA; löst #393 (App-Look) ab: 8-px-Karten mit Rand und
+leichtem Schatten, Knöpfe 4 px, Schrift Lato; untere Tab-Bar, Light/Dark). Alle Design-Tokens in `ui/design/_variables.scss` (Single Source); `applyBranding.ts` setzt
 **keine** Laufzeit-Farben mehr. Logo-Assets in `client/public/` (`logo-rund-hell/-dunkel.png`,
 `icon-192/512.png`, `favicon.svg`); PWA-Manifest ist **statisch** (`public/manifest.webmanifest`).
 
@@ -428,7 +429,7 @@ niemand wieder ein `void`-Neuladen einhängt, dessen Ladeanzeige sofort verschwi
 nutzen das Gerüst – wer `Screen` direkt verwendet, braucht einen Grund (Login, Chart, Ladeschirme).
 
 **Design-Regeln (verbindlich):** `docs/entwicklung/design-system.md` – Farben nur über Tokens (es gibt **kein**
-`--orange`/`--teal`/`--chord`; Akzent = Blau, Destruktiv = Rot), System-Font, gemeinsame Bausteine
+`--orange`/`--teal`/`--chord`; Akzent = Blau, Destruktiv = Rot), Schrift Lato wie ChurchTools, gemeinsame Bausteine
 (SCSS-Mixins `ui/design/_mixins.scss`, `<Segment>`, `Icon`/Line-Icons statt Emojis).
 
 ## Akkord-Ansicht: durchgehender Seiten-Strom + Anmerkungen
@@ -496,7 +497,9 @@ Strg/⌘/Alt, in Eingaben oder Leertaste auf einem Knopf); im Scroll-Modus geht 
 (#609): zur nächsten Halte-Stelle (Titel, Teil-Anfang, `----`), wenn sie schon zu sehen ist, sonst ⅔ Bildschirm
 (`SCHRITT_ANTEIL`, Alwin: 85 % war zu weit) – Regel `pedalZiel` (`utils/pedalSchritt.ts`), Halte-Stellen
 `pedalHalte` (`utils/rollenAbbildung.ts`, aus dem Satzplan: `stuecke` + `weiterschalten`, beim Setzen der Rolle
-protokolliert). Hochgeladene PDFs haben keine Halte-Stellen → ⅔. Die Fußpfeile ebenso. Die Ansicht schreibt die
+protokolliert; Luft über einem Teil `HALTE_LUFT` in mm, höchstens der halbe Abstand zum Teil davor bzw. Kopf
+`KOPF_ABSTAND` – feste Bildpunkte ließen auf schmalen Handys einen Streifen der Zeile davor herein; am `----`
+keine Luft). Hochgeladene PDFs haben keine Halte-Stellen → ⅔. Die Fußpfeile ebenso. Die Ansicht schreibt die
 Halte-Stellen bei jedem Tritt nach `data-halte` (für den E2E). E2E: `e2e/chart-scrollen.spec.ts`.
 
 **Gesten:** **ein Finger blättert, zwei Finger zoomen + verschieben** (auch im Zeichenmodus – ein
@@ -586,7 +589,7 @@ client`, Kürzel `VITE_KEY`) baut die App als ChurchTools-Erweiterung unter `/cc
 - **Transponieren:** Original-Tonart aus der .chordpro-Datei, Ziel-Tonart aus dem
   ChurchTools-Arrangement-Feld; manuelles Transponieren nur lokal, kein Zurückschreiben
 - **CCLI:** Lizenznummer 2395145, SongSelect Premium; CCLI-Infos pro Song anzeigen
-- **Farben:** Primär Blau `#2563EB`, Destruktiv Rot `#D64545` (seit #393); Akkorde im Chart schwarz/fett
+- **Farben:** Primär Blau `#155DFC`, Destruktiv Rot `#E7000B` (seit #654, ChurchTools-Web); Akkorde im Chart schwarz/fett
   (SongSelect-Stil). Details: `docs/entwicklung/design-system.md`
 
 ## Onboarding / Geführte Einführung (VERBINDLICH)

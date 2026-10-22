@@ -180,7 +180,7 @@
   width: 24px;
   height: 24px;
   border: 2px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--r-ctrl);
   display: grid;
   place-items: center;
   color: #fff;

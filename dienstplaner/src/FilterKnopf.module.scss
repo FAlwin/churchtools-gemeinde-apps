@@ -44,7 +44,7 @@
   max-width: min(320px, calc(100vw - 32px));
   padding: 8px 12px 10px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--r-card);
   background: var(--surface2);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
 }

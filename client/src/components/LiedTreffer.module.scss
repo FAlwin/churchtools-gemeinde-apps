@@ -21,7 +21,7 @@
   text-align: left;
   padding: 12px 14px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-card);
   background: var(--surface2);
   color: var(--text);
   font-family: var(--ui);

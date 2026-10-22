@@ -56,7 +56,7 @@
 .miniSchalter {
   width: 34px;
   height: 20px;
-  border-radius: 10px;
+  border-radius: var(--r-ctrl);
   background: var(--seg-track);
   position: relative;
 
@@ -96,7 +96,7 @@
   grid-template-columns: minmax(0, 1fr);
 }
 .buehne {
-  border-radius: 14px;
+  border-radius: var(--r-dialog);
   overflow: hidden;
   border: 1px solid var(--border);
   min-width: 0;
@@ -106,7 +106,7 @@
   width: 100%;
   margin-inline: auto;
   border: 8px solid #1f2937;
-  border-radius: 32px;
+  border-radius: 32px; // bewusst fest: Rahmen eines Handys in der Vorschau, keine Oberfläche
 }
 .leiste {
   position: sticky;
@@ -115,7 +115,7 @@
   overflow: auto;
   background: var(--surface2);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--r-card);
   padding: 12px;
 
   @media (max-width: 899px) {
@@ -155,7 +155,7 @@
 // Immer das ChurchTools-Blau, nicht die Farbe des Designs – Bearbeiten sieht bei jedem Design gleich aus.
 .huelle {
   position: relative;
-  border-radius: 10px;
+  border-radius: var(--r-card);
   padding: 8px 10px;
   margin: -8px -10px;
   cursor: pointer;
@@ -164,7 +164,7 @@
   // Nur mit Maus – am Handy bliebe der Zustand nach dem Antippen hängen.
   @media (hover: hover) {
     &:hover {
-      background: color-mix(in srgb, var(--blue, #2563eb) 7%, transparent);
+      background: color-mix(in srgb, var(--blue, #155dfc) 7%, transparent);
     }
   }
 }
@@ -173,7 +173,7 @@
   cursor: default;
   // Durchscheinend statt Kartenfarbe: Auf farbigen Karten (Vorlage „Bunt“) sah ein weißer Grund aus, als fiele das
   // Feld aus der Karte heraus (Durchklicken 13.10.2026).
-  background: color-mix(in srgb, var(--blue, #2563eb) 18%, transparent);
+  background: color-mix(in srgb, var(--blue, #155dfc) 18%, transparent);
 }
 .fest {
   cursor: default;
@@ -185,7 +185,7 @@
   gap: 8px;
   margin-top: 10px;
   padding-top: 8px;
-  border-top: 1px solid color-mix(in srgb, var(--blue, #2563eb) 25%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--blue, #155dfc) 25%, transparent);
   font-size: 0.87em;
   color: var(--p-muted, #5b6b70);
 }
@@ -195,10 +195,10 @@
   place-items: center;
   height: 64px;
   margin: 4px 0;
-  border: 2px dashed var(--blue, #2563eb);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--blue, #2563eb) 7%, transparent);
-  color: var(--blue, #2563eb);
+  border: 2px dashed var(--blue, #155dfc);
+  border-radius: var(--r-card);
+  background: color-mix(in srgb, var(--blue, #155dfc) 7%, transparent);
+  color: var(--blue, #155dfc);
   font-size: 13px;
   font-weight: 600;
   animation: luecke-auf 0.16s ease-out;
@@ -230,7 +230,7 @@
   overflow: hidden;
   background: transparent;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--r-ctrl);
   padding: 0 4px;
   margin-left: -4px;
   outline: none;
@@ -249,7 +249,7 @@
   color: inherit;
   background: transparent;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--r-ctrl);
   padding: 4px 6px;
   margin-left: -6px;
   resize: none;
@@ -265,11 +265,11 @@
 
   &:focus {
     outline: none;
-    box-shadow: 0 0 0 2px var(--p-accent, #2563eb);
+    box-shadow: 0 0 0 2px var(--p-accent, #155dfc);
   }
 
   &::placeholder {
-    color: var(--p-accent-text, #2563eb);
+    color: var(--p-accent-text, #155dfc);
     font-weight: 600;
   }
 }
@@ -286,10 +286,10 @@
   align-items: center;
   gap: 6px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--r-ctrl);
   padding: 7px 12px;
   background: rgba(255, 255, 255, 0.95);
-  color: #111827;
+  color: var(--text);
   font: inherit;
   font-size: 13px;
   font-weight: 600;
@@ -310,8 +310,8 @@
   font-size: 1.05em;
   color: inherit;
   border: 0;
-  border-bottom: 2px solid var(--p-accent, #2563eb);
-  border-radius: 6px 6px 0 0;
+  border-bottom: 2px solid var(--p-accent, #155dfc);
+  border-radius: var(--r-ctrl) var(--r-ctrl) 0 0;
   background: var(--p-fill, #eef3f3);
   padding: 8px 10px;
   outline: none;
@@ -333,7 +333,7 @@
   outline: none;
 
   &:focus {
-    border-bottom: 2px solid var(--p-accent, #2563eb);
+    border-bottom: 2px solid var(--p-accent, #155dfc);
   }
 }
 .antworten {
@@ -362,7 +362,7 @@
     }
 
     &:focus {
-      border-bottom: 2px solid var(--p-accent, #2563eb);
+      border-bottom: 2px solid var(--p-accent, #155dfc);
     }
   }
 
@@ -370,7 +370,7 @@
     width: 28px;
     height: 28px;
     border: 0;
-    border-radius: 6px;
+    border-radius: var(--r-ctrl);
     background: none;
     color: var(--p-muted, #5b6b70);
     display: grid;
@@ -394,7 +394,7 @@
   border-radius: 50%;
 }
 .kaestchen {
-  border-radius: 4px;
+  border-radius: var(--r-ctrl);
 }
 .nummer {
   width: 18px;
@@ -406,7 +406,7 @@
   align-self: flex-start;
   border: 0;
   background: none;
-  color: var(--p-accent-text, #2563eb);
+  color: var(--p-accent-text, #155dfc);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
@@ -434,7 +434,7 @@
     width: 30px;
     height: 30px;
     border: 0;
-    border-radius: 6px;
+    border-radius: var(--r-ctrl);
     background: none;
     color: var(--p-muted, #5b6b70);
     display: grid;
@@ -455,7 +455,7 @@
 .muster {
   border: 1px solid var(--p-line, #dde5e6);
   background: color-mix(in srgb, var(--p-card, #fff) 70%, transparent);
-  border-radius: 8px;
+  border-radius: var(--r-ctrl);
   padding: 8px 10px;
   font-size: 0.87em;
   color: var(--p-muted, #5b6b70);
@@ -544,7 +544,7 @@
   gap: 6px;
   padding: 12px 6px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-tile);
   background: var(--surface2);
   color: var(--text);
   font-size: 13px;
@@ -646,7 +646,7 @@
   align-items: flex-start;
   gap: 2px;
   padding: 6px;
-  border-radius: 10px;
+  border-radius: var(--r-card);
   text-align: left;
   font-size: 13px;
 
@@ -665,7 +665,7 @@
 .mini {
   width: 100%;
   height: 52px;
-  border-radius: 7px;
+  border-radius: var(--r-ctrl);
   margin-bottom: 4px;
   background: #f3f6f6;
   border: 1px solid var(--border);
@@ -699,7 +699,7 @@
 .knopfLeise {
   @include m.auswahlKnopf;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--r-ctrl);
   font-size: 14px;
 }
 .textKnopf {
@@ -765,7 +765,7 @@
 
   &:not([aria-disabled='true']):hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 14px rgba(37, 99, 235, 0.14);
+    box-shadow: 0 6px 14px rgba(21, 93, 252, 0.14);
   }
 
   &:not([aria-disabled='true']):active {
@@ -789,7 +789,7 @@
   font-size: 0.95em;
   padding: 4px 8px;
   border: 1px solid var(--p-line, #dde5e6);
-  border-radius: 7px;
+  border-radius: var(--r-ctrl);
   background: var(--p-card, #fff);
   color: var(--p-text, #17242a);
 
@@ -817,7 +817,7 @@
   margin: 6px 0 0;
   padding: 7px 10px;
   border: 1px dashed var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-card);
   background: var(--surface3);
   font-size: 12px;
   color: var(--text2);
@@ -926,7 +926,7 @@
   gap: 2px;
   padding: 6px 2px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-tile);
   font-size: 11.5px;
   font-weight: 600;
   cursor: pointer;
@@ -959,7 +959,7 @@
 .schrift {
   @include m.auswahlKnopf;
   padding: 5px 10px;
-  border-radius: 8px;
+  border-radius: var(--r-ctrl);
   font-size: 14px;
 
   &[aria-pressed='true'] {
@@ -986,7 +986,7 @@
   place-items: center;
   min-height: 56px;
   padding: 6px;
-  border-radius: 10px;
+  border-radius: var(--r-tile);
   font-size: 12px;
 
   img {
@@ -1024,7 +1024,7 @@
   gap: 6px;
   padding: 8px;
   border: 1px solid var(--red);
-  border-radius: 10px;
+  border-radius: var(--r-card);
   font-size: 12px;
 
   p {
@@ -1064,21 +1064,21 @@
   border: 0;
   border-radius: 50%;
   background: none;
-  color: var(--p-muted, #9ca3af);
+  color: var(--p-muted, #90a1b9);
   vertical-align: middle;
   cursor: pointer;
 
   &:hover,
   &[aria-expanded='true'] {
     color: var(--blue);
-    background: rgba(37, 99, 235, 0.1);
+    background: rgba(21, 93, 252, 0.1);
   }
 }
 .hinweisKasten {
   position: relative;
   margin: 8px 0 4px;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--r-card);
   background: #1f2937;
   color: #f3f4f6;
   font-family: var(--ui, inherit);

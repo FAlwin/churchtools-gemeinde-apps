@@ -6,7 +6,7 @@ import { schluessel } from './abfrageSchluessel';
 
 /**
  * Live-Abgleich des geöffneten Ablaufs (#159/#161): Solange Ablauf oder Liederheft (aus dem
- * Ablauf) offen sind, wird alle ~8 s der billige Fingerabdruck gepollt. Ändert er sich:
+ * Ablauf) offen sind, wird alle 30 s (`ABLAUF_ABGLEICH_MS`, #557) der billige Fingerabdruck gepollt. Ändert er sich:
  * Die Ablauf-Ansicht lädt sofort nach (dort stört das nie); im Liederheft wird stattdessen
  * `chartOutdated` gesetzt (Hinweis-Balken) – NIE automatisch umsortieren, sonst springen mitten
  * im Spielen die Seiten unter den Fingern.

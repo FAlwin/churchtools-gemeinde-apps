@@ -48,7 +48,7 @@ export class ErrorBoundary extends Component<
           gap: 16,
           padding: 24,
           textAlign: 'center',
-          fontFamily: 'system-ui, -apple-system, sans-serif',
+          fontFamily: "'Lato', system-ui, -apple-system, sans-serif",
           color: '#556',
           background: '#f5f6f8',
         }}
@@ -63,8 +63,8 @@ export class ErrorBoundary extends Component<
             padding: '10px 20px',
             fontSize: 15,
             border: 'none',
-            borderRadius: 8,
-            background: '#2563eb',
+            borderRadius: 'var(--r-ctrl, 4px)',
+            background: '#155dfc',
             color: '#fff',
           }}
         >

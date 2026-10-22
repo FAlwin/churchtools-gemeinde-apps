@@ -4,6 +4,7 @@ import { satzplaene } from './chordPdf';
 import {
   a4NachRolle,
   kerneAufSeite,
+  HALTE_LUFT,
   pedalHalte,
   rollenUnterkante,
   rolleNachA4,
@@ -14,7 +15,7 @@ import {
   textAufRolle,
   type Abbildung,
 } from './rollenAbbildung';
-import { PAGE_H, PAGE_W } from './blattMasse';
+import { KOPF_ABSTAND, PAGE_H, PAGE_W } from './blattMasse';
 import type { SetlistSong } from '@shared/types/index';
 
 /**
@@ -343,14 +344,34 @@ describe('pedalHalte – wo das Pedal auf der Rolle anhält (#609)', () => {
     const teilAnfaenge = a.rolle.stuecke.filter((s) => s.imTeil === 0).map((s) => s.y0);
     expect(teilAnfaenge).toHaveLength(3);
     expect(a.rolle.weiterschalten).toHaveLength(1);
-    expect(halte).toEqual([
-      0,
-      teilAnfaenge[0],
-      teilAnfaenge[1],
-      a.rolle.weiterschalten[0].y,
-      teilAnfaenge[2],
-    ]);
+    expect(halte).toHaveLength(5);
+    expect(halte[0]).toBe(0);
+    // Ein Teil-Anfang samt Luft darüber, der ---- genau an seiner Zeile.
+    for (const [i, y0] of [teilAnfaenge[0], teilAnfaenge[1]].entries()) {
+      expect(halte[i + 1]).toBeLessThan(y0);
+      expect(halte[i + 1]).toBeGreaterThanOrEqual(y0 - HALTE_LUFT);
+    }
+    expect(halte[3]).toBe(a.rolle.weiterschalten[0].y);
+    expect(halte[4]).toBeLessThan(teilAnfaenge[2]);
   });
+
+  // Alwin 19.10.2026: Über Vers 1 schaute ein Streifen der Tonart-Zeile herein – die Luft (feste 8 px) war
+  // auf dem Handy größer als der Abstand zum Kopf. Geprüft am echten Satz, kleinste und große Schrift.
+  it.each([8, 11, 20])(
+    'die Luft über einem Teil reicht nie über die Mitte des Abstands zum Kopf bzw. Teil davor (%ipt)',
+    (fontPt) => {
+      const a = satzplaene(MIT_TRENNER, { fontPt });
+      const halte = pedalHalte(a);
+      const enden = [a.rolle.kopfEnde - KOPF_ABSTAND, ...a.rolle.stuecke.map((s) => s.y1)];
+      for (const s of a.rolle.stuecke.filter((st) => st.imTeil === 0)) {
+        const davor = Math.max(...enden.filter((e) => e <= s.y0));
+        const mitte = (davor + s.y0) / 2;
+        // Genau eine Halte-Stelle gehört zu diesem Teil: zwischen der Mitte des Abstands und dem Teil.
+        expect(halte.filter((h) => h >= mitte - 1e-9 && h < s.y0)).toHaveLength(1);
+        expect(halte.filter((h) => h > davor && h < mitte - 1e-9)).toEqual([]);
+      }
+    },
+  );
 
   it('der ---- liegt im Chorus, zwei Zeilen unter seinem Anfang', () => {
     const a = abb({}, MIT_TRENNER);

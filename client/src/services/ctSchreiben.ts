@@ -39,6 +39,7 @@ import type {
 import * as lieder from '@shared/ct/liedVerwaltung';
 import { ablaufAnlegen } from '@shared/ct/ablaufAnlegen';
 import type { AblaufQuelle } from '@shared/types/index';
+import type { PunktStand } from '@shared/ct/ablaufZeile';
 import type { CtVerwalter } from '@shared/ct/liedVerwaltung';
 import * as noten from '@shared/ct/notenblaetter';
 import type { CtNotenSchreiber } from '@shared/ct/notenblaetter';
@@ -78,8 +79,12 @@ const schreiber: CtSchreiber & CtVerwalter & CtNotenSchreiber = {
 const OK = { ok: true } as const;
 
 /** `PATCH /api/services/:id/agenda/order` */
-export async function reihenfolge(eventId: number, order: number[]): Promise<{ ok: boolean }> {
-  await ablaufUmsortieren(schreiber, eventId, order);
+export async function reihenfolge(
+  eventId: number,
+  order: number[],
+  gesehen?: number[],
+): Promise<{ ok: boolean }> {
+  await ablaufUmsortieren(schreiber, eventId, order, gesehen);
   return OK;
 }
 
@@ -94,8 +99,9 @@ export async function punkt(
   eventId: number,
   itemId: number,
   fields: PunktAenderung,
+  gesehen?: PunktStand,
 ): Promise<{ ok: boolean }> {
-  await punktAendern(schreiber, eventId, itemId, fields);
+  await punktAendern(schreiber, eventId, itemId, fields, gesehen);
   return OK;
 }
 

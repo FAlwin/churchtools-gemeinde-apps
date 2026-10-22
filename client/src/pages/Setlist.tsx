@@ -8,7 +8,11 @@ import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { AgendaFullView } from '../components/AgendaFullView';
 import { LiedVerknuepfen } from '../components/LiedVerknuepfen';
 import { Icon } from '@ui/icons/icons';
-import { useAblaufBearbeiten, type AblaufAktionen } from '@ui/ablauf/useAblaufBearbeiten';
+import {
+  useAblaufBearbeiten,
+  verlangtNeuLaden,
+  type AblaufAktionen,
+} from '@ui/ablauf/useAblaufBearbeiten';
 import { ApiError } from '../services/api';
 import { useAblaufAbschliessen } from '../hooks/useServices';
 import { Coachmarks } from '../components/Coachmarks';
@@ -105,6 +109,9 @@ export function Setlist({
       if (e instanceof ApiError && e.status === 423) {
         void qc.invalidateQueries({ queryKey: schluessel.termine() });
       }
+      // Ablauf inzwischen anders (E6-3c: auch 412) – frisch holen, statt bis zum nächsten Abgleich den alten zu zeigen.
+      if (verlangtNeuLaden(e))
+        void qc.invalidateQueries({ queryKey: schluessel.agenda(service.id) });
     },
   });
   const { fehlerZeigen } = bearbeiten;

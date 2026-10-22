@@ -11,6 +11,7 @@
  */
 import { kategorieName } from '@shared/protokolle/gruppen';
 import { kuerzelMitarbeit, kuerzelProtokolle, KUERZEL_VORLAGEN } from '@shared/protokolle/speicher';
+import { STANDARD_VORLAGEN } from '@shared/protokolle/vorlagen';
 
 const MODUL = 20;
 /** Schlüssel der Rechte wie gemessen (Modul 24, S2-1); die Nummern sind nur für die Demo. */
@@ -48,7 +49,21 @@ function speicherAnlegen(fall: string): Speicher {
             k(70, kuerzelProtokolle(7), kategorieName('Protokolle', 'Jugendleitung')),
             k(5, KUERZEL_VORLAGEN, 'Vorlagen'),
           ],
-    werte: new Map(),
+    // Die Kategorie „Vorlagen“ (5) mit den drei Standard-Vorlagen, wie nach dem ersten Einrichten (S2-3).
+    werte: new Map(
+      fall === 'leer'
+        ? []
+        : [
+            [
+              5,
+              STANDARD_VORLAGEN.map((v, i) => ({
+                id: 500 + i,
+                dataCategoryId: 5,
+                value: JSON.stringify(v),
+              })),
+            ],
+          ],
+    ),
     rechte: new Map(),
     naechste: 100,
   };
@@ -199,6 +214,8 @@ function antwort(
       liste.push({ id: s.naechste++, dataCategoryId: kategorie, value: String(rumpf.value) });
     const w = liste.find((x) => x.id === Number(wert[2]));
     if (methode === 'PUT' && w) w.value = String(rumpf.value);
+    if (methode === 'DELETE' && w) liste.splice(liste.indexOf(w), 1);
+    if (methode === 'DELETE') return { status: 204 };
     return { status: methode === 'POST' ? 201 : 200, data: methode === 'GET' ? liste : {} };
   }
   return null;

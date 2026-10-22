@@ -23,11 +23,12 @@ describe('ladeMitglieder (O2)', () => {
         { personId: 10, rolleId: 16 },
         { personId: 11, rolleId: 15 },
       ],
+      angefragt: [],
     });
     expect(d.je.get(2)).toEqual({ art: 'verborgen' });
     // Vorübergehend ist nicht ungültig: ein 502 ist KEIN „verborgen“
     expect(d.je.get(3)).toEqual({ art: 'fehler' });
-    expect(d.je.get(4)).toEqual({ art: 'sichtbar', mitglieder: [] });
+    expect(d.je.get(4)).toEqual({ art: 'sichtbar', mitglieder: [], angefragt: [] });
     expect([...d.personen.keys()]).toEqual([10, 11]);
   });
 
@@ -61,6 +62,19 @@ describe('ladeMitglieder (O2)', () => {
   });
 });
 
+describe('ladeMitglieder – Anfragen', () => {
+  it('angefragte Mitglieder kommen getrennt mit (für „offene Anfragen“)', async () => {
+    const d = await ladeMitglieder([1], () =>
+      Promise.resolve([mitglied(10), { ...mitglied(11), groupMemberStatus: 'requested' }]),
+    );
+    expect(d.je.get(1)).toEqual({
+      art: 'sichtbar',
+      mitglieder: [{ personId: 10, rolleId: 15 }],
+      angefragt: [{ personId: 11, rolleId: 15 }],
+    });
+  });
+});
+
 describe('fehlendeNachladen', () => {
   it('lädt nur die gescheiterten Gruppen neu, der Rest bleibt', async () => {
     const vorher = await ladeMitglieder([1, 2, 3], (pfad) =>
@@ -79,6 +93,7 @@ describe('fehlendeNachladen', () => {
     expect(nachher.je.get(2)).toEqual({
       art: 'sichtbar',
       mitglieder: [{ personId: 20, rolleId: 15 }],
+      angefragt: [],
     });
     expect(nachher.je.get(3)).toEqual({ art: 'verborgen' });
     expect([...nachher.personen.keys()].sort()).toEqual([10, 20]);

@@ -1,0 +1,81 @@
+// Hinweise (O3) – Karten wie „Status“ in ChurchTools; Werte aus ui/design.
+@use '@ui/design/mixins' as m;
+
+.liste {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.karte {
+  @include m.card-list;
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+}
+
+.symbol {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+
+  .warnung & {
+    background: color-mix(in srgb, var(--red) 10%, transparent);
+    color: var(--red);
+  }
+
+  .info & {
+    background: var(--blue-soft);
+    color: var(--blue);
+  }
+}
+
+.inhalt {
+  min-width: 0;
+
+  h3 {
+    margin: 4px 0 2px;
+    font-size: 15px;
+  }
+
+  p {
+    margin: 0 0 8px;
+    color: var(--text2);
+    font-size: 14px;
+  }
+}
+
+.verweise {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.verweis {
+  @include m.aktionKnopf;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px 2px 3px;
+  border-radius: var(--r-ctrl);
+  font-size: 13px;
+}
+
+.leise {
+  color: var(--text2);
+  font-size: 14px;
+}
+
+.link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--blue-ink);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}

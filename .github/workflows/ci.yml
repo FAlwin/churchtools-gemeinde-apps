@@ -32,6 +32,10 @@ jobs:
       - name: Verwaiste Doc-Kommentare
         run: npm run doc-check
 
+      # Einträge für den nächsten Release (changelog.d/, seit 22.10.2026) – Format prüfen, sonst fällt es erst beim Release auf.
+      - name: CHANGELOG-Einträge
+        run: npm run changelog -- --pruefen
+
       - name: Build
         run: npm run build
 

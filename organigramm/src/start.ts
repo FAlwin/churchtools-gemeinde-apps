@@ -22,6 +22,7 @@ import { typFarbenAus } from '@shared/organigramm/farbe';
 import { orgRechteAus, type OrgRechte } from '@shared/organigramm/rechte';
 import { rollenAus, type Rolle } from '@shared/organigramm/mitglieder';
 import { diensteAus, type Dienst } from '@shared/ct/dienste';
+import { meineGruppen } from '@shared/ct/gruppen';
 
 export interface Start {
   ichId: number;
@@ -45,6 +46,8 @@ export interface Start {
    */
   dienste: Map<number, Dienst> | null;
   rechte: OrgRechte;
+  /** Die Gruppen, die man selbst LEITET (`isLeader`) – daraus der Sichtbereich für Personen und Hinweise (O3). */
+  geleitet: number[];
 }
 
 /** **Wirft**, wenn etwas davon nicht lesbar ist – ein halber Baum sähe aus wie ein ganzer. */
@@ -96,5 +99,9 @@ export async function ladeStart(): Promise<Start> {
       ? diensteAus(diensteRoh as Parameters<typeof diensteAus>[0])
       : null,
     rechte: orgRechteAus(rechteRoh, (status, meldung) => new ApiError(status, meldung)),
+    // Dieselbe Leitungs-Regel wie im Dienstplaner (`meineGruppen`: nur aktive Mitgliedschaften, `isLeader`).
+    geleitet: meineGruppen(ich.mitgliedschaften, ich.rollen)
+      .filter((g) => g.leitung)
+      .map((g) => g.id),
   };
 }

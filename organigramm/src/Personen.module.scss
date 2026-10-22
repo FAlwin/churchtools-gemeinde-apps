@@ -1,0 +1,193 @@
+// Personen (O3) – Werte aus ui/design (Look der ChurchTools-Weboberfläche).
+@use '@ui/design/mixins' as m;
+
+.seite {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+// Filterkästchen wie „Follow-ups“ in ChurchTools: Zahl + Wort, gewählt = blau
+.kasten {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 110px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+
+  b {
+    font-size: 18px;
+  }
+
+  span {
+    color: var(--text2);
+    font-size: 13px;
+  }
+
+  &[aria-pressed='true'] {
+    border-color: var(--blue);
+    background: var(--blue);
+    color: #fff;
+
+    span {
+      color: #fff;
+    }
+  }
+}
+
+.suche {
+  @include m.eingabefeld;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
+.karte {
+  @include m.card-list;
+  overflow: auto;
+}
+
+.tabelle {
+  width: 100%;
+  border-collapse: collapse;
+
+  th {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--section);
+    color: var(--text2);
+    font-size: 12px;
+    font-weight: 700;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--hair);
+    vertical-align: middle;
+  }
+
+  tbody tr {
+    cursor: pointer;
+  }
+
+  tbody tr:hover td {
+    background: var(--section);
+  }
+}
+
+.person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gruppen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.gruppe,
+.gruppeLeitung {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 6px 1px 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.gruppeLeitung {
+  border-color: transparent;
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+  font-weight: 700;
+}
+
+.zahl,
+.zahlViel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.zahlViel b {
+  color: var(--red);
+}
+
+.balken {
+  width: 80px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface3);
+  overflow: hidden;
+
+  i {
+    display: block;
+    height: 100%;
+    background: var(--blue);
+  }
+
+  .zahlViel & i {
+    background: var(--red);
+  }
+}
+
+.spalteGruppen,
+.spalteKommend {
+  @media (max-width: 700px) {
+    display: none;
+  }
+}
+
+.leise,
+.fuss {
+  color: var(--text2);
+  font-size: 13px;
+}
+
+.hinweis {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 14px;
+}
+
+.link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--blue-ink);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}

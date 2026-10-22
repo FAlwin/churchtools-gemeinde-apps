@@ -1,65 +1,197 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ErweiterungsSeite, type SeitenZustand } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
+import { ApiError } from '@ui/ct/fehler';
+import { Segment } from '@ui/bedienung/Segment';
+import { ReiterLeiste, type Reiter } from '@ui/bedienung/ReiterLeiste';
+import { useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { knotenNachId, type Knoten } from '@shared/organigramm/gruppen';
+import { hatBereich, personenImBereich, sichtbereich } from '@shared/organigramm/sichtbereich';
+import { hinweiseAus } from '@shared/organigramm/hinweise';
+import type { Mitglied } from '@shared/organigramm/mitglieder';
 import { ladeStart, type Start } from './start';
 import { fehlendeNachladen, ladeMitglieder, type MitgliederDaten } from './ladeMitglieder';
+import { ladeEinsaetze, type EinsaetzeStand } from './ladeEinsaetze';
 import { Organigramm } from './Organigramm';
 import { GruppenFenster } from './GruppenFenster';
+import { Personen } from './Personen';
+import { PersonFenster } from './PersonFenster';
+import { Hinweise } from './Hinweise';
+
+type Ansicht = 'organigramm' | 'personen' | 'hinweise';
+const REITER: Reiter<Ansicht>[] = [
+  { id: 'organigramm', label: 'Organigramm', icon: 'grid' },
+  { id: 'personen', label: 'Personen', icon: 'people' },
+  { id: 'hinweise', label: 'Hinweise', icon: 'info' },
+];
+const ansichtAusAdresse = (hash: string): Ansicht =>
+  hash === '#personen' ? 'personen' : hash === '#hinweise' ? 'hinweise' : 'organigramm';
 
 /**
- * Das Organigramm in ChurchTools (Bauplan O2): erst Gruppen und Baum (schnell), dann die Mitglieder aller
- * Gruppen (gedrosselt) – der Baum steht schon, während sie laden. Scheitert der Start vorübergehend, gibt es
- * „Erneut versuchen“ statt eines halben Baums; scheitern einzelne Gruppen, sagt der Baum das dort.
+ * Das Organigramm in ChurchTools (Bauplan O2/O3): erst Gruppen und Baum (schnell), dann – nebeneinander – die
+ * Mitglieder aller Gruppen (gedrosselt) und die Termine mit den Einsätzen. Der Baum steht schon, während beides lädt.
+ * Personen und Hinweise gibt es nur für den eigenen Bereich (`sichtbereich`); wer nichts leitet und kein Admin ist,
+ * sieht nur das Organigramm – ohne Reiter.
  */
 export function App() {
   const [zustand, setZustand] = useState<SeitenZustand>({ art: 'laedt' });
   const [start, setStart] = useState<Start | null>(null);
   const [mitglieder, setMitglieder] = useState<MitgliederDaten | null>(null);
-  const [offen, setOffen] = useState<number | null>(null);
+  const [einsaetze, setEinsaetze] = useState<EinsaetzeStand>({ art: 'laedt' });
+  const [offeneGruppe, setOffeneGruppe] = useState<number | null>(null);
+  const [offenePerson, setOffenePerson] = useState<number | null>(null);
+  const [hash, setHash] = useState(() => window.location.hash);
+  const handy = useMedienAbfrage('(max-width: 759px)');
 
-  const mitgliederLaden = useCallback((s: Start) => {
-    setMitglieder(null);
-    ladeMitglieder(s.gruppen.map((g) => g.id)).then(setMitglieder, (e: unknown) =>
-      setZustand({ art: 'fehler', fehler: fehlerMeldung(e) }),
+  const abgemeldetOderFehler = useCallback(
+    (e: unknown) => setZustand({ art: 'fehler', fehler: fehlerMeldung(e) }),
+    [],
+  );
+
+  const einsaetzeLaden = useCallback(() => {
+    setEinsaetze({ art: 'laedt' });
+    ladeEinsaetze().then(
+      (x) => setEinsaetze({ art: 'fertig', einsaetze: x }),
+      (e: unknown) => {
+        // Abgemeldet gilt für alles; jeder andere Fehler ist vorübergehend und betrifft nur die Einsätze.
+        if (e instanceof ApiError && e.status === 401) abgemeldetOderFehler(e);
+        else setEinsaetze({ art: 'fehler' });
+      },
     );
-  }, []);
+  }, [abgemeldetOderFehler]);
 
   const laden = useCallback(() => {
     setZustand({ art: 'laedt' });
-    ladeStart().then(
-      (s) => {
-        setStart(s);
-        setZustand({ art: 'fertig', vorname: s.vorname, gemeinde: s.gemeinde });
-        mitgliederLaden(s);
-      },
-      (e: unknown) => setZustand({ art: 'fehler', fehler: fehlerMeldung(e) }),
-    );
-  }, [mitgliederLaden]);
+    ladeStart().then((s) => {
+      setStart(s);
+      setZustand({ art: 'fertig', vorname: s.vorname, gemeinde: s.gemeinde });
+      setMitglieder(null);
+      ladeMitglieder(s.gruppen.map((g) => g.id)).then(setMitglieder, abgemeldetOderFehler);
+      einsaetzeLaden();
+    }, abgemeldetOderFehler);
+  }, [abgemeldetOderFehler, einsaetzeLaden]);
 
   useEffect(laden, [laden]);
 
+  useEffect(() => {
+    const folgen = () => setHash(window.location.hash);
+    window.addEventListener('hashchange', folgen);
+    return () => window.removeEventListener('hashchange', folgen);
+  }, []);
+
   const nachladen = useCallback(() => {
     if (!mitglieder) return;
-    fehlendeNachladen(mitglieder).then(setMitglieder, (e: unknown) =>
-      setZustand({ art: 'fehler', fehler: fehlerMeldung(e) }),
-    );
-  }, [mitglieder]);
+    fehlendeNachladen(mitglieder).then(setMitglieder, abgemeldetOderFehler);
+  }, [mitglieder, abgemeldetOderFehler]);
 
   const knoten = useMemo(
     () => (start ? knotenNachId(start.baum) : new Map<number, Knoten>()),
     [start],
   );
-  const offenerKnoten = offen === null ? undefined : knoten.get(offen);
+  const bereich = useMemo(
+    () =>
+      start
+        ? sichtbereich(start.baum, start.geleitet, start.rechte.gruppenVerwalten)
+        : new Set<number>(),
+    [start],
+  );
+  const zeigtMehr = !!start && hatBereich(bereich);
+  const ansicht: Ansicht = zeigtMehr ? ansichtAusAdresse(hash) : 'organigramm';
+
+  // Lesbare Mitglieder und Anfragen – Grundlage für Personen, Hinweise und das Personenfenster.
+  const lesbar = useMemo(() => {
+    const m = new Map<number, Mitglied[]>();
+    const a = new Map<number, Mitglied[]>();
+    for (const [id, s] of mitglieder?.je ?? []) {
+      if (s.art !== 'sichtbar') continue;
+      m.set(id, s.mitglieder);
+      a.set(id, s.angefragt);
+    }
+    return { mitglieder: m, angefragt: a };
+  }, [mitglieder]);
+  const personen = useMemo(() => personenImBereich(lesbar.mitglieder, bereich), [lesbar, bereich]);
+  const hinweise = useMemo(
+    () =>
+      start && mitglieder
+        ? hinweiseAus({
+            ...lesbar,
+            rollen: start.rollen,
+            einsaetze: einsaetze.art === 'fertig' ? einsaetze.einsaetze : null,
+            dienste: start.dienste,
+            bereich,
+          })
+        : [],
+    [start, mitglieder, lesbar, einsaetze, bereich],
+  );
+
+  const wechseln = (id: Ansicht) => {
+    window.location.hash = id === 'organigramm' ? '' : id;
+    setHash(window.location.hash);
+  };
+  const fertig = zustand.art === 'fertig';
+  const oben =
+    fertig && zeigtMehr && !handy ? (
+      <Segment
+        value={ansicht}
+        options={REITER.map((r) => ({ value: r.id, label: r.label }))}
+        onChange={wechseln}
+        ariaLabel="Bereiche"
+        verbunden
+      />
+    ) : undefined;
+  const unten =
+    fertig && zeigtMehr && handy ? (
+      <ReiterLeiste reiter={REITER} aktiv={ansicht} onWechsel={wechseln} />
+    ) : undefined;
+
+  const offenerKnoten = offeneGruppe === null ? undefined : knoten.get(offeneGruppe);
+  // Personen gibt es nur im eigenen Bereich – eine Person außerhalb öffnet kein Fenster.
+  const offenePersonImBereich = offenePerson === null ? undefined : personen.get(offenePerson);
+  const gruppeOeffnen = (id: number) => {
+    setOffenePerson(null);
+    setOffeneGruppe(id);
+  };
+  const personOeffnen = (id: number) => {
+    setOffeneGruppe(null);
+    setOffenePerson(id);
+  };
 
   return (
-    <ErweiterungsSeite app="Organigramm" zustand={zustand} onNochmal={laden}>
-      {start && (
+    <ErweiterungsSeite
+      app="Organigramm"
+      zustand={zustand}
+      reiter={oben}
+      unten={unten}
+      onNochmal={laden}
+    >
+      {start && ansicht === 'organigramm' && (
         <Organigramm
           start={start}
           mitglieder={mitglieder}
+          einsaetze={einsaetze.art === 'fertig' ? einsaetze.einsaetze : null}
           onNachladen={nachladen}
-          onGruppe={setOffen}
+          onGruppe={gruppeOeffnen}
+        />
+      )}
+      {start && ansicht === 'personen' && (
+        <Personen
+          start={start}
+          mitglieder={mitglieder}
+          einsaetze={einsaetze}
+          bereich={bereich}
+          onPerson={personOeffnen}
+          onEinsaetzeNachladen={einsaetzeLaden}
+        />
+      )}
+      {start && ansicht === 'hinweise' && (
+        <Hinweise
+          start={start}
+          hinweise={hinweise}
+          mitglieder={mitglieder}
+          einsaetze={einsaetze}
+          onGruppe={gruppeOeffnen}
+          onPerson={personOeffnen}
+          onEinsaetzeNachladen={einsaetzeLaden}
         />
       )}
       {start && offenerKnoten && (
@@ -67,9 +199,19 @@ export function App() {
           start={start}
           knoten={offenerKnoten}
           mitglieder={mitglieder}
-          onGruppe={setOffen}
+          onGruppe={gruppeOeffnen}
           onNachladen={nachladen}
-          onSchliessen={() => setOffen(null)}
+          onSchliessen={() => setOffeneGruppe(null)}
+        />
+      )}
+      {start && offenePersonImBereich && (
+        <PersonFenster
+          start={start}
+          person={offenePersonImBereich}
+          mitglieder={mitglieder}
+          einsaetze={einsaetze}
+          onGruppe={gruppeOeffnen}
+          onSchliessen={() => setOffenePerson(null)}
         />
       )}
     </ErweiterungsSeite>

@@ -19,8 +19,17 @@ const ITEMS: AblaufZeile[] = [
   { ...zeile(2, 'Weg (entfernt)'), removed: true },
 ];
 
-function Harness({ aktionen, items = ITEMS }: { aktionen: AblaufAktionen; items?: AblaufZeile[] }) {
+function Harness({
+  aktionen,
+  items = ITEMS,
+  gruppenVerborgen,
+}: {
+  aktionen: AblaufAktionen;
+  items?: AblaufZeile[];
+  gruppenVerborgen?: boolean;
+}) {
   const b = useAblaufBearbeiten({
+    gruppenVerborgen,
     aktiv: true,
     bereit: true,
     items,
@@ -170,5 +179,22 @@ describe('Konflikt-Schutz in der Liste (E6-3c)', () => {
     for (const status of [403, 500]) expect(verlangtNeuLaden({ status })).toBe(false);
     expect(verlangtNeuLaden(new Error('Netz weg'))).toBe(false);
     expect(verlangtNeuLaden(null)).toBe(false);
+  });
+});
+
+describe('Hinweis: nicht alle Dienstgruppen sichtbar (#676)', () => {
+  const HINWEIS = /Du siehst nicht alle Dienstgruppen/;
+
+  it('steht über der Liste und im Punkt-Fenster', () => {
+    render(<Harness aktionen={aktionen()} gruppenVerborgen />);
+    expect(screen.getByTestId('liste').textContent).toMatch(HINWEIS);
+    fireEvent.click(screen.getByRole('button', { name: 'Bearbeiten' }));
+    expect(screen.getAllByText(HINWEIS)).toHaveLength(2);
+  });
+
+  it('wer alle sieht (oder unbekannt), sieht ihn nicht', () => {
+    render(<Harness aktionen={aktionen()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Bearbeiten' }));
+    expect(screen.queryByText(HINWEIS)).toBeNull();
   });
 });

@@ -25,6 +25,39 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 - Beim echten Test gefunden: Die Vorschau-Antwort von ChurchTools steht direkt da (`{subject, html}`), nicht in `data`;
   Platzhalter der Person ([Vorname], [Wartelistenplatz]) gelten für die Person, an die die Mail geht – Hinweis im Fenster.
 
+### Neu (Protokolle, S2-3)
+
+- **Vorlagen bearbeiten** (Verwaltung, nur Admins): Karte „Vorlagen“ unter den Gruppen mit Umfang und Punkten je
+  Vorlage; das Fenster wie im Entwurf – Name, Tagesordnungspunkte mit vorbereitetem Text und Reihenfolge, feste
+  Punkte („Offene To-Dos“, „Protokoll der letzten Sitzung“ – Titel änderbar), feste Aufgaben; „Neue Vorlage“ beginnt
+  mit „Gebet“ und „Offene To-Dos“; Löschen mit Rückfrage. Jeder Schreibschritt nachgelesen, zu lange Vorlagen
+  werden vorher abgelehnt.
+- Die drei Standard-Vorlagen entstehen nur noch, wenn die Kategorie „Vorlagen“ **neu angelegt** wird – hat ein Admin
+  alle gelöscht, kommen sie beim nächsten Einrichten nicht wieder (vorher: immer, wenn die Kategorie leer war).
+
+### Neu (Organigramm, O3, #672)
+
+- **Reiter Organigramm · Personen · Hinweise** (am Handy unten): Personen und Hinweise gibt es nur für die **Leitung
+  eines Bereichs** – wer eine Gruppe leitet, sieht sie samt allen Untergruppen; Gruppen-Admins sehen alles; wer nichts
+  leitet, sieht nur den Baum (auch nicht über die Adresse `#personen`). Das ist die Richtung, in der ChurchTools selbst
+  Rechte vererbt (O0 §5).
+- **Personen:** jede Person einmal, mit ihren Gruppen (Leitung hervorgehoben), Einsätzen der letzten 6 Monate (mit
+  Balken) und Einteilungen der nächsten 3. Filter „Fast jede Woche“ (ab 24 Einsätzen), „In 3+ Gruppen“, „Ohne
+  Einsatz“ (in einem Dienst-Team, aber weder vergangen noch kommend eingeteilt), „Leitung“; Suche nach Namen.
+- **Personenfenster:** Gruppen mit Rolle (zum Weiterklicken), Einsätze je Dienst, letzter Einsatz, „In ChurchTools
+  öffnen“.
+- **Hinweise:** Teams ohne Leitung (Gruppe mit Mitgliedern, niemand mit Leitungs-Rolle), Personen, die fast jede
+  Woche dienen, Personen in einem Dienst-Team ohne Einsatz, offene Mitgliedsanfragen. Filter und Hinweise nutzen
+  DIESELBEN Regeln (`fastJedeWoche`, `dienstTeamOhneEinsatz`).
+- **Offene Plätze** im Baum („x offen“): freie Plätze in kommenden Terminen – bei Diensten mit mehreren Gruppen nur an
+  der ersten. Ein Platz ist frei nach der Regel des Dienstplaners (`istFrei`); „Namen verbergen“ (`-2`), Gäste,
+  abgesagte Termine und ungültige Plätze zählen für niemanden.
+- **Einsätze laden** (`/events?include=eventServices`, 6 Monate zurück, 3 voraus) läuft neben dem Baum. Scheitert es
+  vorübergehend, sagen Personen und Hinweise das („Erneut versuchen“ lädt nur die Einsätze) – „fast jede Woche“ und
+  „ohne Einsatz“ entfallen dann, statt jede Person als „ohne Einsatz“ zu melden. Keine Liste von ChurchTools gilt als
+  Fehler, nicht als „niemand hat Einsätze“. Abgemeldet → Hinweis für die ganze Seite.
+- **Mitglieder:** angefragte (`requested`) kommen getrennt für den Hinweis; wartende und beendete fallen weg.
+
 ### Neu (Musik-App, Lied-Editor L2)
 
 - **Ablauf als Kärtchen** (Alwin: „wie in ProPresenter“): Über dem Text stehen die Teile des Lieds als
@@ -78,6 +111,15 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 - `NichtUebernommen` („ChurchTools hat … nicht übernommen“) steht jetzt in `ui/ct/fehler.ts`, und
   `ui/ct/fehlerMeldung.ts` kennt den Fall für alle Erweiterungen (vorher nur in den Anmeldungen).
 
+### Neu (Musik-App + Dienstplaner, #676)
+
+- **Hinweis für Bearbeitende, die nicht alle Dienstgruppen sehen:** „Du siehst nicht alle Dienstgruppen. ChurchTools
+  löscht beim Speichern oder Verschieben die Infos der Gruppen, die du nicht siehst.“ – über der Bearbeiten-Liste und
+  im Fenster eines Punkts. Gemessen 22.10.2026: ChurchTools zeigt jedem nur die Gruppen-Infos der Dienstgruppen, die er
+  sieht, und ersetzt sie beim Speichern eines Punkts; einen schonenden Schreibweg gibt es nicht. Wer alle sieht (oder
+  wenn die Dienstgruppen gerade nicht lesbar sind), sieht keinen Hinweis. Regel `siehtAlleDienstgruppen` in
+  `shared/ct/dienstRechte.ts`, für die Musik-App in den Rechten (`siehtAlleDienstgruppen`, Server und Erweiterung).
+
 ### Neu (Anmeldungen, A7-4c)
 
 - **Abgesagte zurückholen** (Entwurf `a7-4-von-hand-v1`): im Filter „Abgesagt“ (Zeile anklicken), im Fenster einer
@@ -91,6 +133,15 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 - „Platz und Betrag“ ist ein Baustein für „Von Hand“, „Person dazu“ und „Zurückholen“ (`PlatzWahl`).
 - Titel eigener Zahlungen als Tabelle je Art („nachgerückt“, „dazu angemeldet“, „zurückgeholt“) – beim Durchklicken
   stand die Zahlung einer Zurückgeholten als „Anmeldung (…)“ da.
+
+### Behoben (Musik-App + Dienstplaner, #671)
+
+- **Feldgrenzen eines Ablaufpunkts wie ChurchTools** (gemessen 22.10.2026: Titel bis 100, Zuständig bis 1000,
+  Bemerkung und Gruppen-Info je bis 4000 Zeichen). Der Server der Musik-App lehnte Bemerkungen über **2000** Zeichen
+  ab, obwohl ChurchTools 4000 annimmt (die Erweiterung ohne Server konnte schon mehr); Titel bis **255** ließ er
+  durch, ChurchTools lehnte sie dann ohne Grund ab („… fehlgeschlagen (400)“). Jetzt eine Quelle
+  (`ABLAUFPUNKT_GRENZEN` in `shared/types`) für die Server-Prüfung (Ändern, Anlegen, „Rückgängig“) und das
+  Punkt-Fenster beider Apps, das nicht mehr Zeichen zulässt, als ChurchTools speichert.
 
 ### Neu (Organigramm, O2, #664)
 

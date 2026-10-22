@@ -23,6 +23,7 @@ import { ctGet } from './ctHttp.js';
 import { capsMemo } from './ctSessionMemos.js';
 import { getSiteConfig } from './siteConfig.js';
 import { rechteAus } from '@shared/ct/rechte';
+import { siehtAlleDienstgruppenAus } from '@shared/ct/dienstRechte';
 import {
   aktiveMitgliedschaften,
   computeAvailabilityAllowed,
@@ -132,10 +133,34 @@ export async function getCapabilities(
     canUseAvailability = computeAvailabilityAllowed(memberships, musicianGroupIds);
   }
 
-  const full: UserCapabilities = { ...base, canUseGlobalNotes, canUseAvailability };
+  const full: UserCapabilities = {
+    ...base,
+    canUseGlobalNotes,
+    canUseAvailability,
+    siehtAlleDienstgruppen: await siehtAlleGruppen(cookie, data),
+  };
   // Gültige Rechte merken → überbrückt künftige Aussetzer. Best effort, blockiert die Antwort nicht.
   if (userId != null) void rememberCapabilities(userId, full);
   return full;
+}
+
+/**
+ * Sieht das Konto alle Dienstgruppen (Hinweis beim Bearbeiten, Regel in `@shared/ct/dienstRechte`)? Scheitert das Lesen
+ * der Dienstgruppen, bleibt es unbekannt – die Rechte als Ganzes scheitern daran nicht.
+ */
+async function siehtAlleGruppen(
+  cookie: string,
+  rechteRoh: Record<string, Record<string, unknown>>,
+): Promise<boolean | undefined> {
+  try {
+    return siehtAlleDienstgruppenAus(rechteRoh, await ctGet<unknown>(cookie, '/api/servicegroups'));
+  } catch (err) {
+    console.warn(
+      '[capabilities] Dienstgruppen nicht lesbar – Hinweis zu Gruppen-Infos bleibt aus:',
+      err,
+    );
+    return undefined;
+  }
 }
 
 /** Capabilities mit 5-Minuten-Memo je Session – für häufige Rechte-Checks (Team-Notizen). */

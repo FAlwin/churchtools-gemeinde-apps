@@ -1,10 +1,10 @@
 # Organigramm – ChurchTools-Erweiterung
 
-> **Stand: O3 (22.10.2026)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
-> offenen Plätzen; Gruppenfenster; Gruppentypen ausblendbar). Für die **Leitung eines Bereichs** dazu die Reiter
-> **Personen** (wer ist wo, wer dient wie oft, Personenfenster) und **Hinweise** (Teams ohne Leitung, fast jede Woche,
-> Dienst-Team ohne Einsatz, offene Anfragen). Als Nächstes (Bauplan O4–O8): Präsentation, Gruppen umhängen und
-> anlegen, Leitung und Mitglieder pflegen, Plan „neue Gliederung“ mit Umbau-Liste. Diese Anleitung wächst mit.
+> **Stand: O4 (22.10.2026)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
+> offenen Plätzen; Gruppenfenster; Gruppentypen ausblendbar) und die **Präsentation** (z. B. Mitgliederversammlung).
+> Für die **Leitung eines Bereichs** dazu die Reiter **Personen** und **Hinweise**. Als Nächstes (Bauplan O5–O8):
+> Gruppen umhängen und anlegen, Leitung und Mitglieder pflegen, Plan „neue Gliederung“ mit Umbau-Liste. Diese
+> Anleitung wächst mit.
 
 Das Organigramm zeigt die Gemeinde als Baum – Bereiche, Gruppen, Personen – so, wie die Gruppen-Hierarchie in
 ChurchTools steht, und hilft, die Organisation darin weiterzubauen. **Alles liegt in ChurchTools** – es gibt keinen
@@ -40,6 +40,22 @@ Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Gemessen an der Test-Insta
 | Leitung einer Gruppe            | Personen aufnehmen (ab O6) – **nicht** austragen, umhängen oder Gruppen anlegen     | Rolle mit Leitung                             |
 | Leitung einer Gruppe            | Reiter Personen und Hinweise für diese Gruppe **samt Untergruppen** (O3)            | Rolle mit Leitung                             |
 | Gruppen-Admin                   | alle Personen und Hinweise (O3); umhängen, anlegen, alles an Mitgliedern (ab O5/O6) | „Gruppen verwalten“ / „Gruppen bearbeiten“    |
+
+## Präsentation (ab O4)
+
+Über dem Baum steht **„Präsentieren“** – für alle, die die Erweiterung sehen. Die Präsentation legt sich über
+ChurchTools:
+
+- **Übersicht:** die Bereiche als Kacheln mit Leitung, Gruppen und Zahl der Personen. Klick auf eine Kachel öffnet
+  den Bereich.
+- **Bereich:** jede Gruppe als Spalte mit allen Personen darunter (jede einmal, Leitung zuerst); die Untergruppen
+  lassen sich aufklappen.
+- **Weiter/Zurück** unten, oder mit der Tastatur: Pfeile, Bild auf/ab, Leertaste · **Pos1** = Übersicht · **Esc** =
+  zurück zur Übersicht, dort schließen · **F** = Vollbild (am Laptop; am iPad gibt es den Knopf nicht).
+- Es gilt dieselbe Auswahl der Gruppentypen wie im Baum (z. B. Verteiler ausgeblendet).
+- Wer nicht alle Mitglieder sehen darf, sieht dort „Mitglieder nicht sichtbar“ – „gesucht“ steht nur, wo wirklich
+  niemand eingetragen ist.
+- Gezeigt wird der Stand **heute** in ChurchTools. Die „neue Gliederung“ kommt mit dem Plan (O7).
 
 ## Personen und Hinweise (ab O3)
 

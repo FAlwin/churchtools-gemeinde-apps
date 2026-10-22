@@ -20,6 +20,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Anmeldung.
 - Unter einer eigenen Zahlung steht „Gilt nur für <Name>“ statt „Gilt für die ganze Anmeldung“ (auch bei
   Nachgerückten; gefunden beim Durchklicken am 22.10.2026).
+- „Rückgängig“ im Fenster bricht in schmalen Fenstern (Handy) um – „Mail schreiben“ und „Rückgängig“ liefen dort
+  rechts aus dem Fenster.
 
 ### Geändert (Musik-App, #554)
 

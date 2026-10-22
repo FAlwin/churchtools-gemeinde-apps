@@ -1,14 +1,15 @@
-# Design-System (Look der ChurchTools-App)
+# Design-System (Look der ChurchTools-Weboberfläche)
 
 Verbindliche Regeln für das Aussehen. Ziel: Farben/Rundungen/Abstände kommen aus **einer Quelle**,
 damit nichts „durchsickert" (z. B. früher Orange).
 
-**Seit #393 (19.09.2026) ist das Vorbild die ChurchTools-App (iOS/Android), nicht der Web-Client:**
-kräftigeres Blau `#2563EB`, hellblaue Datumskacheln mit dunkler Schrift, weiße Karten mit 12 px Rundung und
-feinem Rand statt Schatten, Gruppen-Überschriften in normaler Schreibung (15 px, dunkel) statt Großbuchstaben.
-Die Werte wurden von Screenshots der App abgelesen (Entscheidung Alwin anhand der Entwürfe zu #177,
-`.entwuerfe/verfuegbar-runde3…8.html`) und sind am Gerät gegenzuhalten – nachgeschärft wird NUR in
-`_variables.scss`.
+**Seit #654 (22.10.2026) ist das Vorbild die ChurchTools-Weboberfläche – für ALLE Apps, auch die Musik-App
+als PWA** (Alwin: „CT-Web-Look für alle“, Geltung „überall“). Das löst #393 ab (19.09.2026: Look der
+ChurchTools-App). Werte gemessen in der Test-Instanz (`body.light`, ChurchTools' eigene Tokens
+`--color-background-*`, `--color-basic-*`, `--color-accent-*`, `--radius-*`, `--font-sans`): Seite slate-100,
+weiße Karten mit 8 px Rundung, Rand slate-200 und leichtem Schatten, Text slate-900/600/400, Blau blue-600
+`#155DFC`, Knöpfe 4 px, Schrift **Lato**. Nachgeschärft wird NUR in `_variables.scss` – vorher dort messen.
+Das Dunkel ist seit #565 das von ChurchTools (`dunkelmodus.md`).
 
 ## Farben – nur über Tokens
 
@@ -18,25 +19,25 @@ ChurchTools).
 am Ende dieses Dokuments.
 **Keine rohen Hex-/rgba-Werte in Komponenten** (Ausnahmen: reine Schatten, Overlays, `#fff` auf farbigen Flächen).
 
-| Token                                               | Zweck                                                                                                                                                       |
-| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--bg`                                              | Seitenhintergrund                                                                                                                                           |
-| `--surface2`                                        | Karten / Listen / Header                                                                                                                                    |
-| `--surface3`                                        | Sekundärflächen auf **weißen** Flächen (Kacheln, Pills, Tipp-Zustände). Im Hellen exakt `--bg` – direkt auf der Seite unsichtbar, deshalb nie für Felder    |
-| `--border` / `--hair`                               | Rahmen / 1px-Trenner                                                                                                                                        |
-| `--text` / `--text2` / `--text3`                    | Primär / Sekundär / Tertiär                                                                                                                                 |
-| `--blue` / `--blue-ink` / `--blue-soft`             | **Primär**: Buttons, Links, aktive Tabs, Akzente                                                                                                            |
-| `--blue-tile` / `--blue-tile-text`                  | Datumskachel (Tag / Monat) – hellblau mit dunkler Schrift wie „Anstehende Termine" in der App                                                               |
-| `--section`                                         | Band hinter Gruppen-Überschriften (für Listen im Stil „Dienste")                                                                                            |
-| `--red`                                             | **Destruktiv**: Abmelden, Löschen, offene Dienste, Abwesend                                                                                                 |
-| `--green`                                           | Bestätigt / offline vorhanden / Etikett (vorher drei verschiedene Fallback-Werte in drei Dateien)                                                           |
-| `--r-card` / `--r-tile` / `--r-ctrl` / `--r-dialog` | **Rundungen** (12 / 10 / 8 / 14 px): Karten, Kacheln, Bedienelemente, Dialoge – keine nackten Pixelwerte in neuen Komponenten                               |
-| `--seg-on` / `--track-off`                          | aktives Segment / Toggle-Schiene                                                                                                                            |
-| `--scrim`                                           | Overlay hinter Sheets/Dialogen                                                                                                                              |
-| `--nav-bg` / `--shadow`                             | Leisten (deckend, = `theme-color`) / Karten-Schatten                                                                                                        |
-| `--ui`                                              | System-Schriftfamilie (kein Web-Font)                                                                                                                       |
-| `--kb`                                              | **Höhe der iOS-Tastatur** – wird von `ui/fenster/useOverlayKeyboardInset` am `visualViewport` gemessen (nur auf Dialog-Overlays gesetzt, siehe Regel unten) |
-| `--sat`                                             | **stabile iOS-Safe-Area oben** – Ausnahme: wird in `client/src/main.tsx` per verstecktem Probe-Element **in JS gemessen**, steht NICHT in `_variables.scss` |
+| Token                                               | Zweck                                                                                                                                                           |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--bg`                                              | Seitenhintergrund                                                                                                                                               |
+| `--surface2`                                        | Karten / Listen / Header                                                                                                                                        |
+| `--surface3`                                        | Sekundärflächen auf **weißen** Flächen (Kacheln, Pills, Tipp-Zustände). Im Hellen exakt `--bg` – direkt auf der Seite unsichtbar, deshalb nie für Felder        |
+| `--border` / `--hair`                               | Rahmen / 1px-Trenner                                                                                                                                            |
+| `--text` / `--text2` / `--text3`                    | Primär / Sekundär / Tertiär                                                                                                                                     |
+| `--blue` / `--blue-ink` / `--blue-soft`             | **Primär**: Buttons, Links, aktive Tabs, Akzente                                                                                                                |
+| `--blue-tile` / `--blue-tile-text`                  | Datumskachel (Tag / Monat) – hellblau mit dunkler Schrift wie „Anstehende Termine" in der App                                                                   |
+| `--section`                                         | Band hinter Gruppen-Überschriften (für Listen im Stil „Dienste")                                                                                                |
+| `--red`                                             | **Destruktiv**: Abmelden, Löschen, offene Dienste, Abwesend                                                                                                     |
+| `--green`                                           | Bestätigt / offline vorhanden / Etikett (vorher drei verschiedene Fallback-Werte in drei Dateien)                                                               |
+| `--r-card` / `--r-tile` / `--r-ctrl` / `--r-dialog` | **Rundungen** (8 / 6 / 4 / 8 px, wie ChurchTools `--radius-lg/md/sm`): Karten, Kacheln, Bedienelemente, Dialoge – keine nackten Pixelwerte in neuen Komponenten |
+| `--seg-on` / `--track-off`                          | aktives Segment / Toggle-Schiene                                                                                                                                |
+| `--scrim`                                           | Overlay hinter Sheets/Dialogen                                                                                                                                  |
+| `--nav-bg` / `--shadow`                             | Leisten (deckend, = `theme-color`) / Karten-Schatten                                                                                                            |
+| `--ui`                                              | System-Schriftfamilie (kein Web-Font)                                                                                                                           |
+| `--kb`                                              | **Höhe der iOS-Tastatur** – wird von `ui/fenster/useOverlayKeyboardInset` am `visualViewport` gemessen (nur auf Dialog-Overlays gesetzt, siehe Regel unten)     |
+| `--sat`                                             | **stabile iOS-Safe-Area oben** – Ausnahme: wird in `client/src/main.tsx` per verstecktem Probe-Element **in JS gemessen**, steht NICHT in `_variables.scss`     |
 
 **Es gibt bewusst KEIN `--orange`, `--teal`, `--chord`.** Akzent = Blau, Destruktiv = Rot.
 Wer eine „auffällige" Farbe braucht: `--blue` (Aktion) oder `--red` (Warnung/Destruktiv).
@@ -48,8 +49,10 @@ plus freier Farbwähler.
 
 ## Schrift
 
-System-Font über `var(--ui)`. Kein Google-Font-Import. Ausnahme: der ChordPro-**Editor**
-nutzt bewusst Monospace (`'JetBrains Mono', monospace`) für die Roh-Bearbeitung.
+**Lato** über `var(--ui)` wie ChurchTools. In ChurchTools ist sie geladen; die Musik-App als PWA und das
+öffentliche Formular bringen sie selbst mit (`ui/design/schrift.ts`, Paket `@fontsource/lato`, offline im Service
+Worker) – kein Google-Font-Import. Erweiterungen laden sie **nicht** (eine zweite `@font-face` „Lato“ träfe
+ChurchTools). Ausnahme: der ChordPro-**Editor** nutzt bewusst Monospace (`'JetBrains Mono', monospace`) für die Roh-Bearbeitung.
 
 ## Wiederverwendbare Bausteine
 

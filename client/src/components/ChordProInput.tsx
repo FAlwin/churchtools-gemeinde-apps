@@ -100,7 +100,7 @@ const theme = EditorView.theme({
     color: 'var(--blue-ink)',
     fontWeight: '800',
     backgroundColor: 'var(--blue-soft)',
-    borderRadius: '5px',
+    borderRadius: 'var(--r-ctrl)',
     padding: '1px 4px',
     margin: '0 1px',
   },

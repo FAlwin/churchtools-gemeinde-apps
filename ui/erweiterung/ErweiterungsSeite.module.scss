@@ -116,7 +116,7 @@
 .knopf {
   padding: 8px 16px;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--r-ctrl);
   background: var(--blue);
   color: #fff;
   font-size: 15px;

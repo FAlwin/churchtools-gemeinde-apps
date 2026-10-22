@@ -7,6 +7,29 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Geändert (alle Apps, #654)
+
+- **Look der ChurchTools-Weboberfläche für alle Apps** – Erweiterungen und die Musik-App als PWA (Alwin, 22.10.2026;
+  löst #393 „Look der ChurchTools-App“ ab). Erste Scheibe: nur die Werte in `ui/design/_variables.scss`, gemessen in
+  der Test-Instanz an ChurchTools' eigenen Tokens: Seite slate-100, Karten weiß mit 8 px Rundung, Rand slate-200 und
+  leichtem Schatten, Text slate-900/600/400, Blau `#155DFC`, Knöpfe/Felder 4 px, Kacheln 6 px, Dialoge 8 px,
+  Schrift **Lato**. Rot und Grün eine Stufe dunkler als ChurchTools' Knopffarben, weil sie bei uns auch Text tragen.
+  Das Dunkel bleibt (seit #565 schon das von ChurchTools); Rundungen und Schrift gelten auch dort.
+- **Lato** bringen die Musik-App als PWA und das öffentliche Formular selbst mit (`ui/design/schrift.ts`,
+  `@fontsource/lato`, OFL; offline im Service Worker). In ChurchTools ist sie schon geladen – Erweiterungen laden
+  sie nicht. Ladebildschirm, Notfallansicht und die Schrift der Anmerkungstexte ziehen mit; die Ersatzwerte im
+  Baukasten der Anmeldungen ebenso.
+- **Rundungen nur noch über die gemeinsamen Werte** (Alwin: „einmal geändert, überall geändert“): 181 feste
+  Rundungen in Musik-App, Anmeldungen, Dienstplaner, Formular und `ui/` stehen jetzt auf `--r-ctrl` (Knöpfe,
+  Felder, Schildchen – 4 px), `--r-tile` (Kacheln – 6 px), `--r-card` (Flächen, Kästen – 8 px) oder `--r-dialog`
+  (Fenster – 8 px), zugeordnet nach Bedeutung, nicht nach der alten Zahl. Werkzeugleisten und Schalter sind
+  Kapseln (`999px`). Bewusst fest mit Vermerk: der Handy-Rahmen in der Formular-Vorschau und die wählbaren
+  Knopfformen des Anmeldeformulars; dessen übrige Rundungen hängen an seinem eigenen Wert `--p-r`.
+- **Neue Dauerprüfung** `ui/design/festeWerte.test.ts`: eine feste Rundung ab 4 px außerhalb von
+  `_variables.scss` lässt den Testlauf (und die CI) scheitern – außer mit Vermerk „bewusst fest“ und Grund.
+- Unverändert (eigene Gestaltung): das Aussehen des öffentlichen Anmeldeformulars je Veranstaltung (`--p-*`,
+  wählbare Farbe) und die Notenblätter.
+
 ### Neu (Organigramm, O1, #649)
 
 - **Neue Erweiterung „Organigramm“** (Kürzel `organigramm`, nur Erweiterung – Bauplan Organigramm, entschieden

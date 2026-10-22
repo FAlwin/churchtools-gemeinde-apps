@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import type { AgendaServiceOption } from '@shared/types/index';
+import { ABLAUFPUNKT_GRENZEN, type AgendaServiceOption } from '@shared/types/index';
 import type { AblaufZeile } from '@shared/ct/ablaufZeile';
 import type { PunktAenderung } from '@shared/ct/schreibKern';
 import {
@@ -244,6 +244,7 @@ export function PunktFenster(props: PunktFensterProps) {
             <input
               className={styles.input}
               value={title}
+              maxLength={ABLAUFPUNKT_GRENZEN.titel}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={
                 neu && art === 'ueberschrift'
@@ -324,6 +325,7 @@ export function PunktFenster(props: PunktFensterProps) {
                 <textarea
                   className={styles.textarea}
                   value={note}
+                  maxLength={ABLAUFPUNKT_GRENZEN.bemerkung}
                   rows={2}
                   placeholder="Optionale Notiz…"
                   onChange={(e) => setNote(e.target.value)}

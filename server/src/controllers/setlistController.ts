@@ -34,7 +34,7 @@ import {
 } from '../services/ctWrite.js';
 import { gesehenHolen, gesehenMerken } from '../services/kontoAblage.js';
 import { setlistGeaendert, standardFenster } from '@shared/ct/setlistKern';
-import type { AgendaServiceOption } from '@shared/types/index';
+import { ABLAUFPUNKT_GRENZEN, type AgendaServiceOption } from '@shared/types/index';
 import { ctCookie } from '../utils/ctCookie.js';
 import { accountKey } from '../middleware/session.js';
 import { idSchema } from './idSchemas.js';
@@ -182,17 +182,17 @@ export const updateItemSchema = z
   .object({
     // Was das Fenster beim Öffnen gesehen hat (E6-3c) – ohne diese Zeile striche zod es still weg.
     gesehen: punktStandSchema.optional(),
-    title: z.string().trim().min(1, 'Titel fehlt').max(255).optional(),
+    title: z.string().trim().min(1, 'Titel fehlt').max(ABLAUFPUNKT_GRENZEN.titel).optional(),
     // arrangementId verknüpft einen bestehenden Punkt mit einem Lied (wandelt ihn in type 'song').
     arrangementId: z.coerce.number().int().positive().optional(),
     // unlink löst eine bestehende Lied-Verknüpfung wieder (Punkt bleibt als leerer Text-Eintrag).
     unlink: z.boolean().optional(),
     // responsible: Textfeld der Zuständigen (z.B. „[Musik]"); CT löst Dienst-Tokens selbst auf.
-    responsible: z.string().trim().max(1000).optional(),
+    responsible: z.string().trim().max(ABLAUFPUNKT_GRENZEN.zustaendig).optional(),
     // durationMin: Dauer des Punkts in Minuten (0–600); Server rechnet in CT-Sekunden um.
     durationMin: z.coerce.number().int().min(0).max(600).optional(),
     // note: Bemerkung/Beschreibung des Punkts (frei, kann leeren String haben = löschen).
-    note: z.string().max(2000).optional(),
+    note: z.string().max(ABLAUFPUNKT_GRENZEN.bemerkung).optional(),
   })
   .refine(
     (d) =>
@@ -205,13 +205,13 @@ export const updateItemSchema = z
     { message: 'Titel, arrangementId, unlink, responsible, durationMin oder note erforderlich.' },
   );
 
-const createItemSchema = z
+export const createItemSchema = z
   .object({
     type: z.enum(['header', 'text', 'song']),
-    title: z.string().trim().max(255).optional(),
+    title: z.string().trim().max(ABLAUFPUNKT_GRENZEN.titel).optional(),
     arrangementId: z.coerce.number().int().positive().optional(),
-    responsible: z.string().trim().max(1000).optional(),
-    note: z.string().max(2000).optional(),
+    responsible: z.string().trim().max(ABLAUFPUNKT_GRENZEN.zustaendig).optional(),
+    note: z.string().max(ABLAUFPUNKT_GRENZEN.bemerkung).optional(),
     durationMin: z.coerce.number().int().min(0).optional(),
   })
   .refine((d) => d.type !== 'song' || d.arrangementId !== undefined, {
@@ -301,15 +301,15 @@ export async function deleteAgendaItemCtrl(req: Request, res: Response): Promise
 export const geloeschterPunktSchema = z.object({
   felder: z.object({
     type: z.enum(['header', 'text', 'song']),
-    title: z.string().max(100),
-    note: z.string().max(4000),
+    title: z.string().max(ABLAUFPUNKT_GRENZEN.titel),
+    note: z.string().max(ABLAUFPUNKT_GRENZEN.bemerkung),
     duration: z.number().int().min(0),
-    responsible: z.string().max(1000),
+    responsible: z.string().max(ABLAUFPUNKT_GRENZEN.zustaendig),
     serviceGroupNotes: z
       .array(
         z.object({
           serviceGroupId: z.number().int().positive(),
-          note: z.string().min(1).max(4000),
+          note: z.string().min(1).max(ABLAUFPUNKT_GRENZEN.gruppenInfo),
         }),
       )
       .max(100),

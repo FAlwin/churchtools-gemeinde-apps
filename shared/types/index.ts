@@ -227,6 +227,21 @@ export const LIED_GRENZEN = {
 } as const;
 
 /**
+ * Die Feldgrenzen eines **Ablaufpunkts** (#671) – **eine Quelle für Punkt-Fenster und Zod-Schemas** des Servers.
+ *
+ * Gemessen an der Test-Instanz (22.10.2026, `POST`/`PUT …/agenda/items`): Titel bis 100, Zuständig bis 1000,
+ * Bemerkung und Gruppen-Info je bis 4000 Zeichen (Umlaute zählen als ein Zeichen; eins mehr → 400). Vorher standen
+ * die Zahlen von Hand im Server und wichen ab: Bemerkung 2000 (zu streng – die Erweiterung ohne Server konnte mehr),
+ * Titel 255 (zu großzügig – ChurchTools lehnte dann ohne Grund ab), nur der Merkzettel für „Rückgängig“ hatte 100.
+ */
+export const ABLAUFPUNKT_GRENZEN = {
+  titel: 100,
+  zustaendig: 1000,
+  bemerkung: 4000,
+  gruppenInfo: 4000,
+} as const;
+
+/**
  * Die Feldgrenzen der **einstellbaren Listen** im Verwaltungs-Bereich – Links im „Mehr"-Tab und
  * Termin-Arten des Abwesenheiten-Filters (#400).
  *

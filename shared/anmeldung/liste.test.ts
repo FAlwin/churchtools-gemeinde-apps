@@ -76,11 +76,11 @@ describe('Eine Anmeldung, zwei Kinder (wie das Formular sie schreibt)', () => {
       stand(mitglieder('AAAAAA', [true, true], 10, { bezahlt: true })),
       STICHTAG,
     );
-    expect([liste[0].bezahlt, liste[0].bezahltAm, liste[0].zahlungOffen]).toEqual([
-      true,
-      '2026-10-18',
-      false,
-    ]);
+    expect([liste[0].bezahlt, liste[0].bezahltAm, liste[0].zahlart, liste[0].zahlungOffen]).toEqual(
+      [true, '2026-10-18', 'Bar', false],
+    );
+    // Geschrieben wird bei der ersten Person (A7-2).
+    expect(liste[0].zahlungBei).toBe(10);
     expect(listenZahlen(x, liste)).toMatchObject({ offen: 0, offenCent: 0, eingegangenCent: 1200 });
   });
 });
@@ -113,6 +113,8 @@ describe('Verlauf: Anmeldetag und Absagen', () => {
       true,
       ['Lena'],
     ]);
+    // Die Zahlung steht bei niemandem mehr in der Gruppe – nicht still bei Lena schreiben (A7-2).
+    expect(a.zahlungBei).toBeNull();
     expect(a.abgesagt.map((b) => [b.name, b.am, b.selbst, b.warVorher])).toEqual([
       ['Jonas Beispiel', '2026-10-18', true, 'aktiv'],
     ]);
@@ -128,6 +130,49 @@ describe('Verlauf: Anmeldetag und Absagen', () => {
       [absage(lena, '2026-10-18', 1), absage(jonas, '2026-10-18', 1), dazu(10, '2026-10-19')],
     );
     expect(st.absagen.map((b) => [b.personId, b.selbst])).toEqual([[11, false]]);
+  });
+});
+
+describe('Verlauf: Rückgängig und neue Anmeldung (A7-3, gemessen 19.10.2026)', () => {
+  it('vom Team wieder aufgenommen (gleiche Sekunde, nach der Nummer geordnet) → keine Absage, Anmeldetag bleibt', () => {
+    const [jonas] = mitglieder('AAAAAA', [true, true], 10);
+    const st = stand(
+      [jonas],
+      [
+        // ChurchTools liefert die neuesten zuerst – Wieder-Aufnehmen (id 3) vor dem Entfernen (id 2).
+        dazu(10, '2026-10-19', { origin: 'default', zeit: '11:46:30', id: 3 }),
+        absage(jonas, '2026-10-19', 1, { zeit: '11:46:30', id: 2 }),
+        dazu(10, '2026-10-17', { id: 1 }),
+      ],
+    );
+    expect(st.absagen).toEqual([]);
+    expect(st.mitglieder[0].angemeldetAm).toBe('2026-10-17');
+  });
+
+  it('in derselben Sekunde abgesagt und neu über das Formular angemeldet → neuer Anmeldetag (nach der Nummer)', () => {
+    const [jonas] = mitglieder('AAAAAA', [true, true], 10);
+    const st = stand(
+      [jonas],
+      [
+        dazu(10, '2026-10-19', { zeit: '11:46:30', id: 3 }),
+        absage(jonas, '2026-10-19', 10, { zeit: '11:46:30', id: 2 }),
+        dazu(10, '2026-10-17', { id: 1 }),
+      ],
+    );
+    expect(st.mitglieder[0].angemeldetAm).toBe('2026-10-19');
+  });
+
+  it('nach einer Absage neu über das Formular angemeldet → neuer Anmeldetag', () => {
+    const [jonas] = mitglieder('AAAAAA', [true, true], 10);
+    const st = stand(
+      [jonas],
+      [
+        dazu(10, '2026-10-19', { id: 3 }),
+        absage(jonas, '2026-10-18', 10, { id: 2 }),
+        dazu(10, '2026-10-17', { id: 1 }),
+      ],
+    );
+    expect(st.mitglieder[0].angemeldetAm).toBe('2026-10-19');
   });
 });
 

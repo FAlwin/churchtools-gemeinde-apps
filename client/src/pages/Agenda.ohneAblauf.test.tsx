@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DEFAULT_SITE_CONFIG, type Service, type SiteConfig } from '@shared/types/index';
 import { heuteIso } from '../utils/heute';
@@ -54,7 +54,7 @@ const MIT_REGEL: SiteConfig = {
   ablaufAnlegen: { kalenderIds: [2], suchwort: '' },
 };
 
-function zeige(kann: boolean, services: Service[] = [MIT]) {
+function zeige(kann: boolean | ((s: Service) => boolean), services: Service[] = [MIT]) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={qc}>
@@ -62,7 +62,7 @@ function zeige(kann: boolean, services: Service[] = [MIT]) {
         services={services}
         onSelect={vi.fn()}
         onOpenSongs={vi.fn()}
-        kannAblaufAnlegen={kann}
+        kannAblaufAnlegen={typeof kann === 'function' ? kann : () => kann}
       />
     </QueryClientProvider>,
   );
@@ -80,6 +80,17 @@ describe('Terminliste: Termine ohne Ablauf', () => {
     expect(await screen.findByText('Kein Ablauf')).toBeTruthy();
     fireEvent.click(screen.getByLabelText('Ablauf anlegen'));
     expect(await screen.findByRole('button', { name: 'Anlegen' })).toBeTruthy();
+  });
+
+  it('das Recht gilt je Termin (#635): gefragt wird mit genau diesem Termin', async () => {
+    const kann = vi.fn((s: Service) => s.id === OHNE.id);
+    zeige(kann);
+    expect(await screen.findByLabelText('Ablauf anlegen')).toBeTruthy();
+    expect(kann.mock.calls.map(([s]) => s.id)).toContain(OHNE.id);
+    cleanup();
+    zeige((s) => s.id !== OHNE.id);
+    expect(await screen.findByText('Kein Ablauf')).toBeTruthy();
+    expect(screen.queryByLabelText('Ablauf anlegen')).toBeNull();
   });
 
   it('ohne Recht: kein „Ablauf anlegen", und ein Tipp öffnet kein Fenster', async () => {

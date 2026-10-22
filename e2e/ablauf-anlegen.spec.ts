@@ -16,13 +16,13 @@ import {
  * Ist die Funktion eingeschaltet, stehen die Termine auch in den Listen der parallel laufenden Tests – und
  * die suchen „Gottesdienst (Stub)" (so passiert beim ersten vollen Lauf).
  */
-test('Termin ohne Ablauf: aus der Vorlage anlegen', async ({ page }) => {
-  await page.addInitScript(
-    (touren: string[]) => {
-      for (const t of touren) localStorage.setItem(`worship:onboard-${t}`, '1');
-    },
-    [TOUR_TERMINE, TOUR_CHART, TOUR_SETLIST, TOUR_SETLIST_EDIT],
-  );
+const TOUREN = [TOUR_TERMINE, TOUR_CHART, TOUR_SETLIST, TOUR_SETLIST_EDIT];
+const tourenAus = (touren: string[]) => {
+  for (const t of touren) localStorage.setItem(`worship:onboard-${t}`, '1');
+};
+
+test('Termin ohne Ablauf: aus der Vorlage anlegen', async ({ page, browser }) => {
+  await page.addInitScript(tourenAus, TOUREN);
 
   await page.goto('/');
   await page.getByLabel(/E-Mail/i).fill('admin@example.org');
@@ -47,6 +47,21 @@ test('Termin ohne Ablauf: aus der Vorlage anlegen', async ({ page }) => {
   const zeile = page.getByRole('button', { name: /Gottesdienst zur Anlegeprobe.*Kein Ablauf/ });
   await expect(zeile).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText('Gebetsabend zur Anlegeprobe')).toHaveCount(0);
+
+  // Je Termin (#635): Der Musiker darf nur Kalender 1 bearbeiten – er sieht den Termin aus „Anlegeprobe"
+  // (Kalender 6) mit „Kein Ablauf", aber ohne „Ablauf anlegen". Eigener Browser-Kontext = eigene Anmeldung.
+  const musiker = await browser.newContext();
+  const mPage = await musiker.newPage();
+  await mPage.addInitScript(tourenAus, TOUREN);
+  await mPage.goto('/');
+  await mPage.getByLabel(/E-Mail/i).fill('test@example.org');
+  await mPage.getByLabel(/Passwort/i).fill('egal-der-stub-prueft-nicht');
+  await mPage.getByRole('button', { name: /Anmelden/i }).click();
+  await expect(
+    mPage.getByRole('button', { name: /Gottesdienst zur Anlegeprobe.*Kein Ablauf/ }),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(mPage.getByLabel('Ablauf anlegen')).toHaveCount(0);
+  await musiker.close();
 
   // Anlegen: „Vorlage zuerst" – die Vorlage des Kalenders ist gewählt.
   await zeile.click();

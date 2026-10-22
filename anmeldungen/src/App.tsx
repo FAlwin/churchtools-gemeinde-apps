@@ -11,7 +11,7 @@ import { NeueVeranstaltung } from './NeueVeranstaltung';
 import { ArchivSeite } from './ArchivSeite';
 import { GemeindeFenster } from './GemeindeFenster';
 import { ErstEinrichten } from './ErstEinrichten';
-import { formularAdresse } from './gemeinde';
+import { gemeindeEinstellungen } from './gemeinde';
 import { RueckgaengigLeiste, type Aenderung } from './Rueckgaengig';
 import { fehlerZustand, type Zustand } from './zustand';
 import {
@@ -73,12 +73,19 @@ export function App() {
         // Erst die Gruppenart: Die Übersicht erkennt daran Veranstaltungen, deren Einstellungen in
         // ChurchTools überschrieben wurden, und repariert sie (A5).
         const anlegen = await anlegenMoeglich(teamIds);
-        const [uebersicht, admin, formular] = await Promise.all([
+        const [uebersicht, admin, gemeinde] = await Promise.all([
           ladeUebersicht(start.gruppen, new Date(), anlegen.artId),
           istGruppenAdmin(),
-          formularAdresse(),
+          gemeindeEinstellungen(),
         ]);
-        return { start, uebersicht, anlegen, admin, formular };
+        return {
+          start,
+          uebersicht,
+          anlegen,
+          admin,
+          formular: gemeinde.formularAdresse,
+          zahlarten: gemeinde.zahlarten,
+        };
       })
       .then(
         (d) => setZustand({ art: 'fertig', ...d }),
@@ -133,6 +140,7 @@ export function App() {
           }}
           gemeinde={fertig?.start.gemeinde ?? null}
           formularAdresse={fertig?.formular ?? null}
+          zahlarten={fertig?.zahlarten}
           zeitzone={zeitzone}
           teams={fertig?.start.gruppen ?? []}
           onZurueck={zurUebersicht}

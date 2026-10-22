@@ -313,6 +313,7 @@ describe('Einstellungen in der Gruppen-Beschreibung', () => {
         bic: '',
         fristTage: 14,
         zweck: 'Silvester [Nachname]',
+        ohneZahlarten: ['PayPal'],
       },
       kontakt: 'freizeit@gemeinde.test',
       preiseGeaendert: '2026-10-01',

@@ -1,6 +1,5 @@
-import type { NeuerPunkt } from '@shared/ct/schreibKern';
-import type { AgendaItem } from '@shared/types/index';
-import type { AgendaItemUpdate } from '../services/churchtoolsApi';
+import type { NeuerPunkt, PunktAenderung } from './schreibKern';
+import type { AblaufZeile } from './ablaufZeile';
 
 /**
  * Vorgemerkte Lied-Verknüpfung: Im Bearbeiten-Dialog wird NICHTS sofort geschrieben – auch
@@ -22,14 +21,19 @@ export interface AgendaItemDraft {
 }
 
 /**
- * Was der Bearbeiten-Dialog beim Speichern schreiben würde (#215, vorher in `ItemActionSheet`).
+ * Was der Bearbeiten-Dialog beim Speichern schreiben würde (#215, vorher in `ItemActionSheet`; seit E6-2b-1 in
+ * `shared/ct`, damit der Dienstplaner dieselben Regeln nutzt).
  *
  * Warum ausgelagert: Die Regeln hier sind Geschäftslogik, keine Darstellung – und mindestens zwei
  * davon sind alles andere als offensichtlich (leeres Dauer-Feld → `0`, leerer Titel wird gar nicht
  * geschrieben). In der Komponente liefen sie zudem bei **jedem Render** und waren nicht prüfbar.
  */
-export function pendingAgendaFields(item: AgendaItem, draft: AgendaItemDraft): AgendaItemUpdate {
-  const fields: AgendaItemUpdate = {};
+export function pendingAgendaFields(
+  // Nur was der Vergleich braucht – die Musik-App gibt ihren `AgendaItem`, der Dienstplaner seine Zeile (E6-2b-1).
+  item: Pick<AblaufZeile, 'title' | 'durationMin' | 'responsibleText' | 'note'>,
+  draft: AgendaItemDraft,
+): PunktAenderung {
+  const fields: PunktAenderung = {};
   if (draft.link.kind === 'link') fields.arrangementId = draft.link.arrangementId;
   if (draft.link.kind === 'unlink') fields.unlink = true;
   // Titel gilt für ALLE Punkte – auch für Lieder (#200): ChurchTools führt den Titel des

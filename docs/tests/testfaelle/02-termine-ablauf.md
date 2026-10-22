@@ -74,7 +74,7 @@ anderen Stelle und wurde früher übersehen.
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `server/src/services/setlistBuilder.ts`, `server/src/utils/mapEvent.ts`, `client/src/pages/Agenda.tsx`
+- **Betrifft:** `server/src/services/setlistBuilder.ts`, `shared/ct/mapEvent.ts`, `client/src/pages/Agenda.tsx`
 - **Automatisiert:** nein – braucht zwei echte Termine am selben Tag
 - **Historie:** #36
 
@@ -224,8 +224,8 @@ Gottesdienstes **nicht** in den Vorlauf (die Linie „Beginn" bleibt, wo sie hin
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `shared/ct/schreibKern.ts`, `shared/ct/agendaPayload.ts`, `client/src/pages/Setlist.tsx`, `client/src/hooks/useRueckgaengig.ts`, `client/src/components/Toast.tsx`, `server/src/controllers/setlistController.ts`
-- **Automatisiert:** teilweise – `server/src/services/ablaufRueckgaengig.test.ts`, `client/src/pages/Setlist.rueckgaengig.test.tsx`, `client/src/hooks/useRueckgaengig.test.ts`, `e2e/ablauf-rueckgaengig.spec.ts`; gegen echtes ChurchTools nur von Hand
+- **Betrifft:** `shared/ct/schreibKern.ts`, `shared/ct/agendaPayload.ts`, `client/src/pages/Setlist.tsx`, `ui/bedienung/useRueckgaengig.ts`, `client/src/components/Toast.tsx`, `server/src/controllers/setlistController.ts`
+- **Automatisiert:** teilweise – `server/src/services/ablaufRueckgaengig.test.ts`, `client/src/pages/Setlist.rueckgaengig.test.tsx`, `ui/bedienung/useRueckgaengig.test.ts`, `e2e/ablauf-rueckgaengig.spec.ts`; gegen echtes ChurchTools nur von Hand
 - **Historie:** 12.10.2026 (Alwin). Nicht zurück kommt eine in ChurchTools ausgeblendete Uhrzeit – die Schnittstelle kennt das Feld nicht.
 
 </details>
@@ -249,14 +249,14 @@ steht der Termin danach als normaler Termin – nur einmal.
 4. Für einen weiteren Termin **Wie eine frühere** wählen: Der Ablauf des letzten Sonntags kommt samt
    Liedern und Linie „Beginn" mit.
 5. Für einen dritten **Leer**: ein leerer Ablauf, Punkte über das Plus hinzufügen.
-6. Ohne Recht „Ablauf bearbeiten" (anderes Konto): Die Termine stehen mit „Kein Ablauf" da, aber ohne
-   „Ablauf anlegen".
+6. Ohne Recht „Ablauf bearbeiten" **für diesen Kalender** (anderes Konto): Die Termine stehen mit „Kein Ablauf"
+   da, aber ohne „Ablauf anlegen". Ist das Konto **Admin des Termins**, gibt es „Ablauf anlegen" trotzdem (#635).
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `shared/ct/ablaufAnlegen.ts`, `client/src/pages/Agenda.tsx`, `client/src/components/AblaufAnlegenFenster.tsx`, `client/src/components/AblaufAnlegenManager.tsx`, `client/src/utils/ablaufVorschlaege.ts`, `server/src/controllers/setlistController.ts`
-- **Automatisiert:** teilweise – `shared/ct/ablaufAnlegen.test.ts`, `client/src/components/AblaufAnlegenFenster.test.tsx`, `client/src/pages/Agenda.ohneAblauf.test.tsx`, `client/src/utils/ablaufVorschlaege.test.ts`, `e2e/ablauf-anlegen.spec.ts`; gegen echtes ChurchTools nur von Hand
+- **Betrifft:** `shared/ct/ablaufAnlegen.ts`, `shared/ct/ablaufRecht.ts`, `client/src/pages/Agenda.tsx`, `client/src/components/AblaufAnlegenFenster.tsx`, `client/src/components/AblaufAnlegenManager.tsx`, `client/src/utils/ablaufVorschlaege.ts`, `server/src/controllers/setlistController.ts`
+- **Automatisiert:** teilweise – `shared/ct/ablaufAnlegen.test.ts`, `client/src/components/AblaufAnlegenFenster.test.tsx`, `client/src/pages/Agenda.ohneAblauf.test.tsx` (auch: Recht je Termin, #635), `client/src/utils/ablaufVorschlaege.test.ts`, `e2e/ablauf-anlegen.spec.ts`; gegen echtes ChurchTools nur von Hand
 - **Historie:** 13.10.2026 (Alwin). Gemessen: `PUT /events/{id}/agenda` mit `template_id` / `event_id` / ohne legt an; auf einen vorhandenen Ablauf antwortet es 200 und ändert nichts – die App liest trotzdem vorher nach.
 
 </details>

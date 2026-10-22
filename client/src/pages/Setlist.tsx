@@ -1,41 +1,16 @@
-import { Fragment, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { AgendaItem, AgendaServiceOption, Service, SetlistSong } from '@shared/types/index';
-import type { AgendaItemUpdate } from '../services/churchtoolsApi';
-import type { GeloeschterPunkt } from '@shared/ct/schreibKern';
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  KeyboardSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  arrayMove,
-  sortableKeyboardCoordinates,
-} from '@dnd-kit/sortable';
 import { SeitenGeruest } from '../components/SeitenGeruest';
 import { RundKnopf } from '@ui/bedienung/KnopfReihe';
 import { CenterMessage } from '../components/CenterMessage';
-import { ConfirmDialog } from '../components/ConfirmDialog';
-import { Toast } from '../components/Toast';
-import { useToast } from '../hooks/useToast';
-import { useRueckgaengig } from '../hooks/useRueckgaengig';
-import { SchwebePlus } from '../components/SchwebePlus';
+import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { AgendaFullView } from '../components/AgendaFullView';
-import { SortableRow } from '../components/AgendaSortableRow';
-import { BeginnLinie } from '@ui/ablauf/AblaufTeile';
-import { ItemActionSheet } from '../components/ItemActionSheet';
+import { LiedVerknuepfen } from '../components/LiedVerknuepfen';
 import { Icon } from '@ui/icons/icons';
-import { beginnStelle, itemLabel } from '@shared/ct/ablaufZeile';
+import { useAblaufBearbeiten, type AblaufAktionen } from '@ui/ablauf/useAblaufBearbeiten';
 import { ApiError } from '../services/api';
 import { useAblaufAbschliessen } from '../hooks/useServices';
-import type { NeuerAgendaPunkt } from '../utils/agendaItemChanges';
-import { vorlaufNachUmsortieren } from '../utils/vorlauf';
 import { Coachmarks } from '../components/Coachmarks';
 import {
   SETLIST_STEPS,
@@ -53,32 +28,11 @@ import { dokumentSeiten } from '../utils/dokumentSeiten';
 import { ladeDokument } from '../services/fileDownload';
 import { loadSongPdfOpts } from '../utils/songPdfOpts';
 import { useAppLogo } from '../hooks/useAppLogo';
-import { innerScrollOnly, resetViewportAfterDrag } from '../utils/dndAutoScroll';
-import styles from './Setlist.module.scss';
 import { schluessel } from '../hooks/abfrageSchluessel';
 
 /** Der Hinweis, wenn man einen abgeschlossenen Ablauf ändern will (Alwin, 13.10.2026). */
 const GESPERRT =
   'Dieser Ablauf ist in ChurchTools abgeschlossen. Zum Ändern oben rechts das Schloss antippen.';
-
-/**
- * Gebündelte Bearbeiten-Aktionen des Ablaufs – EIN Objekt statt einzelner Callback-Props durch
- * alle Ebenen. Alle Aktionen werfen bei Fehler (z. B. fehlende Rechte); die UI zeigt die Meldung.
- */
-interface AgendaActions {
-  /** Speichert die neue Reihenfolge (Item-IDs). */
-  reorder: (order: number[]) => Promise<void>;
-  /** Löscht einen Ablaufpunkt; liefert den Merkzettel für „Rückgängig" (`null`: war schon weg). */
-  remove: (itemId: number) => Promise<GeloeschterPunkt | null>;
-  /** Legt einen eben gelöschten Punkt an seiner alten Stelle wieder an. */
-  restore: (punkt: GeloeschterPunkt) => Promise<void>;
-  /** Schreibt geänderte Felder eines Punkts gesammelt (ein Request). */
-  update: (itemId: number, fields: AgendaItemUpdate) => Promise<void>;
-  /** Legt fest, ob der Punkt (samt allen darüber bzw. darunter) vor dem Beginn läuft (#423). */
-  setVorBeginn: (itemId: number, vorBeginn: boolean) => Promise<void>;
-  /** Legt einen neuen Punkt an. */
-  add: (data: NeuerAgendaPunkt) => Promise<void>;
-}
 
 interface SetlistProps {
   service: Service;
@@ -90,8 +44,8 @@ interface SetlistProps {
   /** Wird mit dem Index des Lieds (nur Lieder gezählt) aufgerufen. */
   onSelect: (songIndex: number) => void;
   onBack: () => void;
-  /** Bearbeiten-Aktionen (Reihenfolge, Löschen, Feld-Änderungen, Anlegen). */
-  actions: AgendaActions;
+  /** Bearbeiten-Aktionen (Reihenfolge, Löschen, Feld-Änderungen, Anlegen) – `ui/ablauf/useAblaufBearbeiten`. */
+  actions: AblaufAktionen;
   isReordering?: boolean;
   /** Verfügbare ChurchTools-Dienste (Chips im Verantwortlich-Editor). */
   services: AgendaServiceOption[];
@@ -120,18 +74,6 @@ export function Setlist({
   // Modus beim ersten Wechsel dorthin. Startet erst, wenn die Ziel-Elemente gerendert sind.
   const [setlistTour, setSetlistTour] = useState(false);
   const [editTour, setEditTour] = useState(false);
-  // Bearbeiten-Modus/Drag arbeitet nur mit echten Punkten – die „entfernt"-Platzhalter (#161
-  // Etappe B) gehören ausschließlich in die read-only Ansicht.
-  const [localItems, setLocalItems] = useState<AgendaItem[]>(items.filter((i) => !i.removed));
-  const [err, setErr] = useState<string | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<AgendaItem | null>(null);
-  // „Neuer Eintrag" – derselbe Dialog wie Bearbeiten (05.10.2026). Dauer, Zuständige und Notiz
-  // werden gleich beim Anlegen gesetzt; der frühere zweite Dialog nach einem Lied entfällt.
-  const [neuOffen, setNeuOffen] = useState(false);
-  const [actionItem, setActionItem] = useState<AgendaItem | null>(null);
-  // „Rückgängig" für Löschen und Verschieben (Alwin, 12.10.2026) – Bearbeiten und Anlegen bewusst nicht.
-  const rueckgaengig = useRueckgaengig();
-
   /**
    * **Abgeschlossen** (Alwin, 09.10.2026): In ChurchTools kann man einen Ablauf abschließen; dann lässt
    * ChurchTools kein Ändern zu. Vorher meldete die App beim Löschen nur „Keine Berechtigung". In der Ansicht
@@ -140,26 +82,35 @@ export function Setlist({
    * Hinweis `GESPERRT` (Alwin, 13.10.2026: „nur der Knopf"; vorher ein großer Kasten über dem Ablauf).
    */
   const abgeschlossen = service.ablaufAbgeschlossen === true;
-  const { toast: sperrHinweis, showToast: zeigeSperrHinweis } = useToast();
   const abschluss = useAblaufAbschliessen(service.id);
   const [abschliessenFrage, setAbschliessenFrage] = useState(false);
   const qc = useQueryClient();
   // Liederheft: dasselbe Logo wie auf dem Liedblatt, vorgeladen – samt Gemeinde-Schalter (19.10.2026).
   const logo = useAppLogo();
 
-  /**
-   * Eine Fehlermeldung zeigen – und hat in der Zwischenzeit jemand den Ablauf abgeschlossen (423 vom
-   * Schreib-Kern), den Termin neu holen: Dann erscheint gleich der Hinweis mit „Ablauf öffnen".
-   */
-  function fehlerZeigen(e: unknown, sonst: string): void {
-    setErr(e instanceof Error ? e.message : sonst);
-    if (e instanceof ApiError && e.status === 423) {
-      void qc.invalidateQueries({ queryKey: schluessel.termine() });
-    }
-  }
+  // Die Bearbeiten-Liste (`ui/ablauf/useAblaufBearbeiten`, E6-2b-3). Hat in der Zwischenzeit jemand den Ablauf
+  // abgeschlossen (423 vom Schreib-Kern), den Termin neu holen: Dann erscheint gleich der Hinweis mit „Ablauf öffnen".
+  const bearbeiten = useAblaufBearbeiten({
+    aktiv: editMode,
+    bereit: !isLoading && !isError,
+    items,
+    beginn: service.time,
+    abgeschlossen,
+    sperrHinweis: GESPERRT,
+    speichertGerade: isReordering,
+    aktionen: actions,
+    dienste: services,
+    liedWahl: (args) => <LiedVerknuepfen {...args} />,
+    beiFehler: (e) => {
+      if (e instanceof ApiError && e.status === 423) {
+        void qc.invalidateQueries({ queryKey: schluessel.termine() });
+      }
+    },
+  });
+  const { fehlerZeigen } = bearbeiten;
 
   function abschlussSetzen(zu: boolean): void {
-    setErr(null);
+    bearbeiten.fehlerLoeschen();
     abschluss.mutate(zu, {
       onError: (e) =>
         fehlerZeigen(
@@ -168,11 +119,6 @@ export function Setlist({
         ),
     });
   }
-
-  // Server-Stand (auch nach dem Speichern) übernehmen – ohne „entfernt"-Platzhalter.
-  useEffect(() => {
-    setLocalItems(items.filter((i) => !i.removed));
-  }, [items]);
 
   // Einführung Ablauf-Ansicht beim ersten Öffnen (Daten geladen, Ansicht-Modus).
   useEffect(() => {
@@ -185,93 +131,6 @@ export function Setlist({
   useEffect(() => {
     if (editMode && !isTourDone(TOUR_SETLIST_EDIT)) setEditTour(true);
   }, [editMode]);
-
-  // „Fertig" beendet auch das Angebot „Rückgängig" – es gehört zum Bearbeiten.
-  const { verwerfen: rueckgaengigVerwerfen } = rueckgaengig;
-  useEffect(() => {
-    if (!editMode) rueckgaengigVerwerfen();
-  }, [editMode, rueckgaengigVerwerfen]);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
-
-  function handleDragEnd(e: DragEndEvent) {
-    resetViewportAfterDrag(); // #56: weggerutschte Kopfleiste zurückholen (auch ohne Umsortierung)
-    const { active, over } = e;
-    if (!over || active.id === over.id) return;
-    // Abgeschlossen: nicht speichern – der Punkt springt zurück, der Hinweis sagt warum.
-    if (abgeschlossen) {
-      zeigeSperrHinweis(GESPERRT);
-      return;
-    }
-    const oldIndex = localItems.findIndex((i) => i.id === active.id);
-    const newIndex = localItems.findIndex((i) => i.id === over.id);
-    if (oldIndex < 0 || newIndex < 0) return;
-    // Die Beginn-Grenze bleibt an ihrem Platz, wie ChurchTools sie nach dem Speichern rechnet (#423).
-    const vorher = localItems;
-    const next = vorlaufNachUmsortieren(localItems, arrayMove(localItems, oldIndex, newIndex));
-    setLocalItems(next); // optimistisch
-    setErr(null);
-    rueckgaengig.verwerfen();
-    actions
-      .reorder(next.map((i) => i.id))
-      .then(() =>
-        rueckgaengig.anbieten(`„${itemLabel(vorher[oldIndex])}" verschoben`, () => {
-          setLocalItems(vorher); // optimistisch zurück
-          return actions.reorder(vorher.map((i) => i.id));
-        }),
-      )
-      .catch((e: unknown) => {
-        setLocalItems(items); // zurückrollen
-        fehlerZeigen(e, 'Reihenfolge konnte nicht gespeichert werden.');
-      });
-  }
-
-  /** Schreibt Feld-Änderungen (ein Request); Titel optimistisch lokal spiegeln. */
-  function handleUpdate(itemId: number, fields: AgendaItemUpdate): Promise<void> {
-    setErr(null);
-    if (fields.title !== undefined) {
-      const title = fields.title;
-      setLocalItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, title } : i)));
-    }
-    // Fehler wird vom Aktionsmenü angezeigt – hier nur lokal zurückrollen und weiterwerfen.
-    return actions.update(itemId, fields).catch((e: unknown) => {
-      setLocalItems(items.filter((i) => !i.removed));
-      if (e instanceof ApiError && e.status === 423) {
-        void qc.invalidateQueries({ queryKey: schluessel.termine() });
-      }
-      throw e;
-    });
-  }
-
-  function confirmDelete() {
-    const target = pendingDelete;
-    if (!target) return;
-    setPendingDelete(null);
-    setErr(null);
-    setLocalItems((prev) => prev.filter((i) => i.id !== target.id)); // optimistisch
-    rueckgaengig.verwerfen();
-    actions
-      .remove(target.id)
-      .then((g) => {
-        if (g) rueckgaengig.anbieten(`„${itemLabel(target)}" gelöscht`, () => actions.restore(g));
-      })
-      .catch((e: unknown) => {
-        setLocalItems(items); // zurückrollen
-        fehlerZeigen(e, 'Punkt konnte nicht gelöscht werden.');
-      });
-  }
-
-  /** „Rückgängig" antippen – scheitert es (z. B. Ablauf inzwischen geändert), steht die Meldung oben. */
-  function rueckgaengigMachen(): void {
-    setErr(null);
-    rueckgaengig.ausloesen().catch((e: unknown) => {
-      setLocalItems(items.filter((i) => !i.removed));
-      fehlerZeigen(e, 'Rückgängig machen hat nicht geklappt.');
-    });
-  }
 
   // Alle Lieder des Ablaufs als eine PDF teilen – jedes Lied EXAKT wie in der App angezeigt
   // (gespeicherte Tonart/Kapo/Schrift/Spalten + gewählte Version + Logo im Kopf) – und seit 07.10.2026
@@ -368,7 +227,7 @@ export function Setlist({
         {canEdit && (
           <RundKnopf
             onClick={() => {
-              setErr(null);
+              bearbeiten.fehlerLoeschen();
               setEditMode((v) => !v);
             }}
             title={editMode ? 'Fertig' : 'Ablauf bearbeiten'}
@@ -405,59 +264,7 @@ export function Setlist({
         />
       )}
 
-      {pendingDelete && (
-        <ConfirmDialog
-          title="Eintrag löschen?"
-          message={`„${itemLabel(pendingDelete)}" wird aus dem Ablauf in ChurchTools entfernt.`}
-          confirmLabel="Löschen"
-          onConfirm={confirmDelete}
-          onCancel={() => setPendingDelete(null)}
-        />
-      )}
-
-      {/* Das Plus schwebt im Bearbeiten-Modus über dem Ablauf (Alwin, 05.10.2026) – vorher stand
-          „Eintrag hinzufügen" am Listenende. Auch bei einem leeren Ablauf, der sonst nicht zu füllen war. */}
-      {editMode && !isLoading && !isError && !neuOffen && (
-        <SchwebePlus
-          label="Eintrag hinzufügen"
-          dataTour="edit-add"
-          onClick={() => (abgeschlossen ? zeigeSperrHinweis(GESPERRT) : setNeuOffen(true))}
-        />
-      )}
-
-      {neuOffen && (
-        <ItemActionSheet
-          modus="neu"
-          services={services}
-          onClose={() => setNeuOffen(false)}
-          onAdd={(punkt) => {
-            setErr(null);
-            return actions.add(punkt); // wirft bei Fehler → der Dialog zeigt die Meldung, bleibt offen
-          }}
-        />
-      )}
-
-      {actionItem && (
-        <ItemActionSheet
-          // Beim Wechsel eines anderen Punkts frischen Dialog-Zustand aufbauen.
-          key={actionItem.id}
-          item={actionItem}
-          services={services}
-          onClose={() => setActionItem(null)}
-          onUpdate={(fields) => handleUpdate(actionItem.id, fields)}
-          vorBeginn={actionItem.vorBeginn}
-          onSetVorBeginn={(vorBeginn) => actions.setVorBeginn(actionItem.id, vorBeginn)}
-          onRequestDelete={() => setPendingDelete(actionItem)}
-        />
-      )}
-
-      {editMode && (
-        <Toast
-          message={rueckgaengig.angebot}
-          aktion={{ label: 'Rückgängig', onClick: rueckgaengigMachen }}
-        />
-      )}
-      {editMode && <Toast message={sperrHinweis} />}
+      {bearbeiten.ueberlagerung}
 
       {setlistTour && (
         <Coachmarks
@@ -480,9 +287,6 @@ export function Setlist({
     </>
   );
 
-  // Linie „Beginn" in der Bearbeiten-Liste – dieselbe Regel wie in der Ansicht (#423).
-  const beginnBeiBearbeiten = beginnStelle(localItems);
-
   return (
     <SeitenGeruest
       titel={service.name}
@@ -500,49 +304,7 @@ export function Setlist({
       ) : items.length === 0 ? (
         <CenterMessage icon="📋" text="Dieser Ablauf enthält noch keine Punkte." />
       ) : editMode ? (
-        <>
-          {/* Abgeschlossen: keine Anleitung zum Sortieren – der Knopf oben rechts sagt genug (Alwin). */}
-          {!abgeschlossen && (
-            <div className={styles.editHint}>
-              {isReordering ? (
-                'Speichere…'
-              ) : (
-                <>
-                  Ziehen <Icon name="grip" size={14} className={styles.hintIcon} /> zum Sortieren ·
-                  Eintrag antippen zum Bearbeiten.
-                </>
-              )}
-            </div>
-          )}
-          {err && <div className={styles.editError}>{err}</div>}
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-            onDragCancel={resetViewportAfterDrag}
-            autoScroll={innerScrollOnly}
-          >
-            <SortableContext
-              items={localItems.map((i) => i.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <div className={styles.list}>
-                {localItems.map((item, i) => (
-                  <Fragment key={item.id}>
-                    {i === beginnBeiBearbeiten && <BeginnLinie zeit={service.time} />}
-                    <SortableRow
-                      item={item}
-                      onOpenActions={(it) =>
-                        abgeschlossen ? zeigeSperrHinweis(GESPERRT) : setActionItem(it)
-                      }
-                    />
-                  </Fragment>
-                ))}
-                {beginnBeiBearbeiten === localItems.length && <BeginnLinie zeit={service.time} />}
-              </div>
-            </SortableContext>
-          </DndContext>
-        </>
+        bearbeiten.liste
       ) : (
         <AgendaFullView
           items={items}

@@ -18,7 +18,7 @@ interface SchalterZeileProps {
  * Zeile mit einem ZWEITEN Knopf darin, der per `stopPropagation` verhindern musste, dass ein Tipp
  * doppelt schaltet (dann springt der Wert zweimal, also gar nicht). Verschachtelte Bedienelemente
  * sind außerdem für Screenreader ein Ärgernis. Ein einziger Knopf braucht beides nicht. Der Schalter selbst ist
- * `Schalter` (#413) – derselbe wie in `LinksManager` und `ItemActionSheet`.
+ * `Schalter` (#413) – derselbe wie in `LinksManager` und im Punkt-Fenster (`ui/ablauf/PunktFenster`).
  */
 export function SchalterZeile({ label, an, onUmschalten, hinweis }: SchalterZeileProps) {
   return (

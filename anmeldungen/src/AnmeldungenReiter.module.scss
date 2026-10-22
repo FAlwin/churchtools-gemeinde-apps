@@ -293,3 +293,165 @@
   border-top: 1px solid var(--hair);
   font-size: 15px;
 }
+
+// ── Zahlung (A7-2) ──────────────────────────────────────────────────────────────────────────────
+
+.bezahlt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 6px 0;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--green) 10%, var(--surface2));
+  color: var(--green);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.zahlZeile {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin: 6px 0;
+
+  > button {
+    flex: none;
+    width: auto;
+    padding: 0 14px;
+  }
+}
+
+.amFeld {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text2);
+  font-size: 13px;
+}
+
+// Mehrere Zahlungen (A7-3): je Zahlung ein Kasten.
+.zahlungKasten {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.zahlungTitel {
+  margin: 0 0 6px;
+  color: var(--text);
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+// ── Nachrücken, Absagen, Mail (A7-3) ────────────────────────────────────────────────────────────
+
+.knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+
+  > a,
+  > button:last-child {
+    width: auto;
+    height: 42px;
+    padding: 0 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+  }
+}
+
+.gefahrKnopf {
+  border: 1px solid color-mix(in srgb, var(--red) 45%, var(--border));
+  border-radius: 12px;
+  background: var(--surface2);
+  color: var(--red);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+}
+
+.hinweisBlau,
+.hinweisRot {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.hinweisBlau {
+  background: var(--blue-soft);
+}
+
+.hinweisRot {
+  border: 1px solid color-mix(in srgb, var(--red) 40%, transparent);
+  background: color-mix(in srgb, var(--red) 7%, var(--surface2));
+}
+
+.personAktionen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.nachKnopf {
+  @include m.aktionKnopf;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+
+.absagenLink {
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--red);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mail {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.mailKopf {
+  padding: 8px 12px;
+  background: var(--surface3);
+  color: var(--text2);
+
+  b {
+    color: var(--text);
+  }
+}
+
+.mailText {
+  padding: 10px 12px;
+  white-space: pre-line;
+  color: var(--text);
+}

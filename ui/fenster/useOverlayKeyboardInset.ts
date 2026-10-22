@@ -21,8 +21,9 @@ import { syncAppHeight } from './appHeight';
  */
 export function useOverlayKeyboardInset(): (el: HTMLElement | null) => void {
   // Callback-Ref statt `useRef` (#215): Vorher las der Hook `ref.current` NUR beim Mount. Das ging
-  // gut, solange jeder Rückgabezweig dieselbe DOM-Wurzel wiederverwendet – im `ItemActionSheet`
-  // tun das die beiden Zweige (`songMode`) zufällig. Ein zusätzlicher Wrapper oder ein `key` hätte
+  // gut, solange jeder Rückgabezweig dieselbe DOM-Wurzel wiederverwendet – im früheren `ItemActionSheet`
+  // taten das die beiden Zweige (`songMode`) zufällig; seit E6-2b-2 hat die Liedwahl (`LiedVerknuepfen`) ihren
+  // eigenen Hook, was erst mit dem Callback-Ref geht. Ein zusätzlicher Wrapper oder ein `key` hätte
   // die Tastatur-Aussparung STILL abgeschaltet: kein Fehler, nur Knöpfe unter der Tastatur.
   // Über den State läuft der Effekt jetzt genau dann neu, wenn sich das Element wirklich ändert.
   const [el, setEl] = useState<HTMLElement | null>(null);

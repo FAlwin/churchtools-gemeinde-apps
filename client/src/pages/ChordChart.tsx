@@ -12,7 +12,7 @@ import { useWerkzeugSteuerung } from '../hooks/useWerkzeugSteuerung';
 import { TempoMenu } from '../components/TempoMenu';
 import { ImportPreviewBar, ViewingBanner } from '../components/ChartTeamNotesBars';
 import { Icon } from '@ui/icons/icons';
-import { ConfirmDialog } from '../components/ConfirmDialog';
+import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { ChordEditor } from '../components/ChordEditor';
 import { PageDeck } from '../components/PageDeck';
 import { ScrollDeck } from '../components/ScrollDeck';

@@ -31,7 +31,11 @@ beforeEach(() => {
     bereiche: [{ id: 1, name: 'Gemeindeliste' }],
   });
   gm.gemeindeVorgaben.mockResolvedValue({ statusId: 2, departmentId: 1 });
-  gm.gemeindeEinstellungen.mockResolvedValue({ neuePersonen: null, formularAdresse: null });
+  gm.gemeindeEinstellungen.mockResolvedValue({
+    neuePersonen: null,
+    formularAdresse: null,
+    zahlarten: ['Überweisung', 'Bar', 'PayPal'],
+  });
   gm.pruefeFormularSeite.mockResolvedValue({
     erreichbar: true,
     erlaubt: false,
@@ -74,6 +78,7 @@ describe('Einstellungen der Gemeinde (A6-2)', () => {
       expect(gm.speichereGemeindeEinstellungen).toHaveBeenCalledWith({
         neuePersonen: { statusId: 2, campusId: 0, departmentId: 1 },
         formularAdresse: 'https://anmeldung.beispiel.de/',
+        zahlarten: ['Überweisung', 'Bar', 'PayPal'],
       }),
     );
     expect(gespeichert).toHaveBeenCalled();
@@ -83,6 +88,7 @@ describe('Einstellungen der Gemeinde (A6-2)', () => {
     gm.gemeindeEinstellungen.mockResolvedValue({
       neuePersonen: { statusId: 2, campusId: 0, departmentId: 1 },
       formularAdresse: 'https://anmeldung.beispiel.de/',
+      zahlarten: ['Bar'],
     });
     render(<GemeindeFenster onClose={() => {}} onGespeichert={() => {}} />);
     await waitFor(() =>
@@ -91,5 +97,30 @@ describe('Einstellungen der Gemeinde (A6-2)', () => {
       ),
     );
     expect(screen.queryByText(/das ist der Vorschlag/)).toBeNull();
+  });
+
+  it('Zahlarten (A7-2): hinzufügen, entfernen – die letzte bleibt', async () => {
+    gm.gemeindeEinstellungen.mockResolvedValue({
+      neuePersonen: { statusId: 2, campusId: 0, departmentId: 1 },
+      formularAdresse: 'https://anmeldung.beispiel.de/',
+      zahlarten: ['Überweisung', 'Bar'],
+    });
+    render(<GemeindeFenster onClose={() => {}} onGespeichert={() => {}} />);
+    fireEvent.change(await screen.findByLabelText('Standort'), { target: { value: '0' } });
+    const neu = await screen.findByLabelText('Neue Zahlart');
+    fireEvent.change(neu, { target: { value: ' Kartenzahlung ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Überweisung entfernen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Bar entfernen' }));
+    expect(screen.getByRole('button', { name: 'Kartenzahlung entfernen' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() =>
+      expect(gm.speichereGemeindeEinstellungen).toHaveBeenCalledWith(
+        expect.objectContaining({ zahlarten: ['Kartenzahlung'] }),
+      ),
+    );
   });
 });

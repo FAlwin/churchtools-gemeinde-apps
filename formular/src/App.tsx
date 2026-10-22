@@ -62,7 +62,7 @@ export function App() {
     };
   }, [hash]);
 
-  useEffect(() => laden(), [laden]);
+  useEffect(laden, [laden]);
 
   useEffect(() => {
     if (stand.art === 'fertig') document.title = `Anmeldung: ${stand.daten.veranstaltung.name}`;

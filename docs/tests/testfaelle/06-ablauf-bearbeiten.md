@@ -28,7 +28,7 @@ bei jedem Testlauf mit dabei.
 <details><summary>Technisches</summary>
 
 - **Priorität:** kritisch
-- **Betrifft:** `server/src/services/agendaPayload.ts`, `server/src/services/ctWrite.ts`, `client/src/components/ItemActionSheet.tsx`, `client/src/components/SongPicker.tsx`
+- **Betrifft:** `server/src/services/agendaPayload.ts`, `server/src/services/ctWrite.ts`, `client/src/components/LiedVerknuepfen.tsx`, `ui/ablauf/PunktFenster.tsx`, `client/src/components/SongPicker.tsx`
 - **Automatisiert:** teilweise – `server/src/services/agendaPayload.test.ts`
 - **Historie:** –
 
@@ -49,8 +49,8 @@ Schritt 6 genau den Liednamen einträgst, steht er nur **einmal** da, nicht dopp
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `shared/ct/ablaufZeile.ts`, `client/src/utils/agendaItemChanges.ts`, `ui/ablauf/AblaufTeile.tsx`
-- **Automatisiert:** ja – `shared/ct/ablaufZeile.test.ts`, `client/src/utils/agendaItemChanges.test.ts`
+- **Betrifft:** `client/src/components/LiedVerknuepfen.tsx`, `ui/ablauf/PunktFenster.tsx`, `shared/ct/ablaufZeile.ts`, `shared/ct/agendaItemChanges.ts`, `ui/ablauf/AblaufTeile.tsx`
+- **Automatisiert:** ja – `shared/ct/ablaufZeile.test.ts`, `shared/ct/agendaItemChanges.test.ts`
 - **Historie:** #200
 
 </details>
@@ -70,8 +70,8 @@ Zeile verschwunden (in ChurchTools steht dann 0 Minuten – „keine Dauer" kenn
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `client/src/utils/agendaItemChanges.ts`, `client/src/components/ResponsibleField.tsx`
-- **Automatisiert:** teilweise – `client/src/utils/agendaItemChanges.test.ts`
+- **Betrifft:** `client/src/components/LiedVerknuepfen.tsx`, `ui/ablauf/PunktFenster.tsx`, `shared/ct/agendaItemChanges.ts`, `ui/ablauf/ResponsibleField.tsx`
+- **Automatisiert:** teilweise – `shared/ct/agendaItemChanges.test.ts`
 - **Historie:** – (der frühere Schritt „Uhrzeit ausblenden" ist mit #423 entfallen, siehe TF-EDIT-08)
 
 </details>
@@ -92,7 +92,7 @@ tippen auf den Titel darf **kein** Ziehen auslösen.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/AgendaSortableRow.tsx`, `client/src/pages/Setlist.tsx`, `client/src/utils/dndAutoScroll.ts`
+- **Betrifft:** `ui/ablauf/AgendaSortableRow.tsx`, `client/src/pages/Setlist.tsx`, `ui/bedienung/dndAutoScroll.ts`
 - **Automatisiert:** nein – Ziehen mit dem Finger
 - **Historie:** –
 
@@ -123,8 +123,8 @@ sich gleich setzen; ein zweites Fenster danach gibt es nicht mehr. Die Rückfrag
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `client/src/utils/agendaItemChanges.ts`, `client/src/components/SchwebePlus.tsx`, `client/src/pages/Setlist.tsx`, `client/src/components/ConfirmDialog.tsx`
-- **Automatisiert:** teilweise – `e2e/ablauf-hinzufuegen.spec.ts` (Plus nur im Bearbeiten-Modus, Text anlegen, steht in der Liste, Löschen), `client/src/components/ItemActionSheet.test.tsx` (Neuer Eintrag: Suche sofort offen, Titel = Liedname, Überschrift nur Titel, Fehler bleibt im Fenster), `client/src/utils/agendaItemChanges.test.ts` (`neuerAgendaPunkt`); von Hand bleibt das Schreiben nach ChurchTools
+- **Betrifft:** `client/src/components/LiedVerknuepfen.tsx`, `ui/ablauf/PunktFenster.tsx`, `shared/ct/agendaItemChanges.ts`, `ui/bedienung/SchwebePlus.tsx`, `client/src/pages/Setlist.tsx`, `ui/fenster/ConfirmDialog.tsx`
+- **Automatisiert:** teilweise – `e2e/ablauf-hinzufuegen.spec.ts` (Plus nur im Bearbeiten-Modus, Text anlegen, steht in der Liste, Löschen), `client/src/components/LiedVerknuepfen.test.tsx`, `ui/ablauf/PunktFenster.test.tsx` (Neuer Eintrag: Suche sofort offen, Titel = Liedname, Überschrift nur Titel, Fehler bleibt im Fenster), `shared/ct/agendaItemChanges.test.ts` (`neuerAgendaPunkt`); von Hand bleibt das Schreiben nach ChurchTools
 - **Historie:** schwebendes Plus und einheitlicher Dialog 05.10.2026 (vorher eigenes „Hinzufügen"-Blatt mit drei Formularen)
 
 </details>
@@ -148,7 +148,7 @@ verschobenen Symbole.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `ui/fenster/useOverlayKeyboardInset.ts`, `client/src/components/ItemActionSheet.tsx`, `ui/fenster/Sheet.tsx`
+- **Betrifft:** `ui/fenster/useOverlayKeyboardInset.ts`, `client/src/components/LiedVerknuepfen.tsx`, `ui/ablauf/PunktFenster.tsx`, `ui/fenster/Sheet.tsx`
 - **Automatisiert:** teilweise – `ui/fenster/useOverlayKeyboardInset.test.tsx`
 - **Historie:** #207
 
@@ -184,8 +184,8 @@ dem Punkt, den du bearbeitet hast – in ChurchTools ein Lied-Punkt mit Arrangem
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `client/src/components/NewSongSheet.tsx`, `client/src/components/SongPicker.tsx`
-- **Automatisiert:** teilweise – `client/src/components/ItemActionSheet.test.tsx` (Weg nur mit Recht, ohne `eventId`, Vormerken statt Schreiben, Abbruch merkt nichts vor), `client/src/components/NewSongSheet.test.tsx` (Erfolgsansicht mit `onVerknuepfen`: Satz, „Zurück zum Eintrag" und „Fertig" tragen die Verknüpfung, kein „Noch ein Lied anlegen"); von Hand bleibt der Schreibvorgang gegen ChurchTools
+- **Betrifft:** `client/src/components/LiedVerknuepfen.tsx`, `ui/ablauf/PunktFenster.tsx`, `client/src/components/NewSongSheet.tsx`, `client/src/components/SongPicker.tsx`
+- **Automatisiert:** teilweise – `client/src/components/LiedVerknuepfen.test.tsx`, `ui/ablauf/PunktFenster.test.tsx` (Weg nur mit Recht, ohne `eventId`, Vormerken statt Schreiben, Abbruch merkt nichts vor), `client/src/components/NewSongSheet.test.tsx` (Erfolgsansicht mit `onVerknuepfen`: Satz, „Zurück zum Eintrag" und „Fertig" tragen die Verknüpfung, kein „Noch ein Lied anlegen"); von Hand bleibt der Schreibvorgang gegen ChurchTools
 - **Historie:** #391 (18.09.2026)
 
 </details>
@@ -217,8 +217,32 @@ der App wie im ChurchTools-Kalender.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/ItemActionSheet.tsx`, `client/src/components/AgendaFullView.tsx`, `client/src/pages/Setlist.tsx`, `client/src/utils/vorlauf.ts`, `server/src/services/ctWrite.ts`, `server/src/services/agendaPayload.ts`
-- **Automatisiert:** teilweise – `e2e/ablauf-vorlauf.spec.ts` (Schalter → Grenze im Stub → Linie in Bearbeiten-Liste und Ansicht, wieder aus), `client/src/utils/vorlauf.test.ts`, `server/src/services/agendaPayload.test.ts`, `server/src/services/ctWrite.test.ts`; von Hand bleiben die echten Uhrzeiten aus ChurchTools und das Ziehen über die Linie (Schritt 5)
+- **Betrifft:** `client/src/components/LiedVerknuepfen.tsx`, `ui/ablauf/PunktFenster.tsx`, `client/src/components/AgendaFullView.tsx`, `client/src/pages/Setlist.tsx`, `shared/ct/ablaufZeile.ts`, `server/src/services/ctWrite.ts`, `server/src/services/agendaPayload.ts`
+- **Automatisiert:** teilweise – `e2e/ablauf-vorlauf.spec.ts` (Schalter → Grenze im Stub → Linie in Bearbeiten-Liste und Ansicht, wieder aus), `shared/ct/ablaufVorlauf.test.ts`, `server/src/services/agendaPayload.test.ts`, `server/src/services/ctWrite.test.ts`; von Hand bleiben die echten Uhrzeiten aus ChurchTools und das Ziehen über die Linie (Schritt 5)
 - **Historie:** #423 (05.10.2026)
+
+</details>
+
+### TF-EDIT-09 · Bearbeiten nur, wo ChurchTools es erlaubt
+
+**Das brauchst du:** Ein Konto, das in ChurchTools „Abläufe bearbeiten" nur für **einen** Kalender hat (z. B.
+Gottesdienst), einen Termin mit Ablauf in einem **anderen** Kalender und einen Termin in einem anderen Kalender,
+bei dem dieses Konto als **Admin des Termins** eingetragen ist.
+
+**Das muss passieren:** Den Stift („Ablauf bearbeiten") gibt es genau dort, wo ChurchTools das Bearbeiten auch
+erlaubt – nie ein Knopf, der mit „verboten" endet.
+
+1. Einen Termin aus dem erlaubten Kalender öffnen: Der Stift ist da.
+2. Den Termin aus dem anderen Kalender öffnen: Der Ablauf ist zu sehen, ein Stift **nicht**.
+3. Den Termin öffnen, dessen Admin das Konto ist: Der Stift ist da, obwohl das Recht für diesen Kalender fehlt.
+   Einen Punkt ändern und speichern – ChurchTools übernimmt es.
+4. Reiter **Lieder** → bei einem Lied **+** („Zu Ablauf hinzufügen"): Zur Wahl stehen nur die Termine aus 1 und 3.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/ct/ablaufRecht.ts`, `shared/ct/mapEvent.ts`, `shared/ct/rechte.ts`, `client/src/App.tsx`, `client/src/pages/Agenda.tsx`
+- **Automatisiert:** ja – `shared/ct/ablaufRecht.test.ts` (Regel, ältere Server), `client/src/pages/Agenda.ohneAblauf.test.tsx` (je Termin), `e2e/ablauf-recht.spec.ts` (Stift, „Zu Ablauf hinzufügen"), `e2e/ablauf-anlegen.spec.ts` (Musiker ohne Kalender-Recht: kein „Ablauf anlegen"); von Hand bleibt das Speichern als Termin-Admin gegen echtes ChurchTools (Schritt 3)
+- **Historie:** #635 (19.10.2026, gemessen E6-0 am 17.10.2026)
 
 </details>

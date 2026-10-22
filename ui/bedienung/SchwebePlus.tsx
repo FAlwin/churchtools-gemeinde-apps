@@ -1,4 +1,4 @@
-import { Icon } from '@ui/icons/icons';
+import { Icon } from '../icons/icons';
 import styles from './SchwebePlus.module.scss';
 
 /**

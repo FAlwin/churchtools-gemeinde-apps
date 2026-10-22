@@ -20,6 +20,7 @@ import {
   type OeffentlicheEinstellungen,
 } from './formular';
 import { centAusEuroText, kannEtwasKosten } from './preis';
+import { istNachrueckZahlung } from './zahlung';
 
 /** Ein Gruppenfeld der Veranstaltung, wie ChurchTools es beschreibt (`GET /groups/{id}/memberfields`). */
 export interface CtGruppenfeld {
@@ -42,7 +43,11 @@ export interface MitgliedRoh {
 
 /** Ein Eintrag aus `GET /groups/{id}/members/history`. */
 export interface VerlaufRoh {
+  /** Steigt mit jedem Eintrag – ordnet Einträge derselben Sekunde (gemessen 19.10.2026: Entfernen + Wieder-Aufnehmen). */
+  id?: number;
   memberId?: number;
+  /** `sign-up` = über das Formular, `default` = vom Team. */
+  origin?: string;
   current?: { membershipStatus?: string | null; fields?: Record<string, unknown> | null } | null;
   previous?: { membershipStatus?: string | null; fields?: Record<string, unknown> | null } | null;
   meta?: { createdDate?: string; createdPerson?: { id?: number } | null };
@@ -131,17 +136,31 @@ export function mitgliederstandAus(
   personen: ReadonlyMap<number, PersonDaten>,
 ): Mitgliederstand {
   const nachName = new Map([...felder.values()].map((f) => [f.name, f]));
-  // Verlauf der Reihe nach (ChurchTools liefert die neuesten zuerst).
+  // Verlauf der Reihe nach (ChurchTools liefert die neuesten zuerst); in derselben Sekunde nach der Nummer.
   const reihe = [...verlauf]
     .filter((v) => typeof v.memberId === 'number' && v.meta?.createdDate)
-    .sort((a, b) => a.meta!.createdDate!.localeCompare(b.meta!.createdDate!));
+    .sort(
+      (a, b) =>
+        a.meta!.createdDate!.localeCompare(b.meta!.createdDate!) || (a.id ?? 0) - (b.id ?? 0),
+    );
+  // Anmeldetag: der erste Eintrag, mit dem jemand dazukam. Wer vom Team wieder aufgenommen wird („Rückgängig“ nach
+  // einer Absage, A7-3), behält ihn; nur wer sich nach einer Absage neu über das Formular anmeldet, bekommt einen neuen.
   const dazu = new Map<number, string>();
+  const warWeg = new Set<number>();
   const weg = new Map<number, VerlaufRoh>();
   for (const v of reihe) {
     const vorher = v.previous?.membershipStatus ?? null;
     const jetzt = v.current?.membershipStatus ?? null;
-    if (!vorher && jetzt) dazu.set(v.memberId!, v.meta!.createdDate!);
-    if (vorher && !jetzt) weg.set(v.memberId!, v);
+    const id = v.memberId!;
+    if (!vorher && jetzt) {
+      if (!dazu.has(id) || (warWeg.has(id) && v.origin === 'sign-up'))
+        dazu.set(id, v.meta!.createdDate!);
+      warWeg.delete(id);
+    }
+    if (vorher && !jetzt) {
+      weg.set(id, v);
+      warWeg.add(id);
+    }
   }
 
   const mitglieder: ListenMitglied[] = [];
@@ -213,6 +232,26 @@ export interface ListenPerson {
   werte: Werte;
 }
 
+/**
+ * **Eine Zahlung** (A7-2/A7-3) – die der Anmeldung (bei der ersten Person) und je Nachgerückter eine eigene (Alwin,
+ * 19.10.2026: „als ob ein Kind neu angemeldet wurde“). Steht in den Feldern „Betrag“, „Aufschlüsselung“, „Bezahlt“ …
+ * der Person, bei der sie liegt.
+ */
+export interface Zahlung {
+  /** Bei wem sie steht – `null`, wenn die Person abgesagt hat (dann aus dem Verlauf, nur zum Ansehen). */
+  personId: number | null;
+  wofuer: 'anmeldung' | 'nachgerueckt';
+  /** Vorname der Person, bei der sie steht. */
+  name: string;
+  betragCent: number | null;
+  aufschluesselung: string | null;
+  bezahlt: boolean;
+  bezahltAm: string | null;
+  zahlart: string | null;
+  /** Kostet etwas, wer sie trägt, hat einen Platz, und „Bezahlt“ ist nicht angekreuzt. */
+  offen: boolean;
+}
+
 export interface ListenAnmeldung {
   /** Anmelde-Nr., ohne Nr. `p<Person>`. */
   schluessel: string;
@@ -227,16 +266,27 @@ export interface ListenAnmeldung {
   /** Was es einmal je Anmeldung gibt – bei der ersten Person, nach ihrer Absage aus dem Verlauf. */
   einmal: Werte;
   einmalAusVerlauf: boolean;
+  /** Die Zahlung der Anmeldung zuerst, dann die eigenen der Nachgerückten. Leer, wenn nichts kostet und nichts steht. */
+  zahlungen: Zahlung[];
+  /** Alle Zahlungen zusammen; `null`, wenn keine einen Betrag hat. */
   betragCent: number | null;
+  /** Aufschlüsselung, Tag und Zahlart der Zahlung der Anmeldung (für Liste und Mail). */
   aufschluesselung: string | null;
+  /** Alle Zahlungen mit Betrag sind bezahlt. */
   bezahlt: boolean;
   bezahltAm: string | null;
-  /** Kostet etwas, jemand hat einen Platz, und „Bezahlt“ ist nicht angekreuzt. */
+  zahlart: string | null;
+  /** Bei wem die Zahlung der Anmeldung steht – `null`, wenn die Person abgesagt hat (dann aus dem Verlauf). */
+  zahlungBei: number | null;
+  /** Mindestens eine Zahlung ist offen. */
   zahlungOffen: boolean;
 }
 
-/** Feldnummern dessen, was es einmal je Anmeldung gibt (Systemfelder und Felder der Anmeldung). */
-function einmalFelder(e: OeffentlicheEinstellungen): number[] {
+/**
+ * Feldnummern dessen, was es einmal je Anmeldung gibt (Systemfelder und Felder der Anmeldung) – auch für die Übergabe,
+ * wenn die erste Person absagt (A7-3).
+ */
+export function einmalFelder(e: OeffentlicheEinstellungen): number[] {
   const ids = (['kontakt', 'betrag', 'aufschluesselung', 'auswahl', 'extras'] as const).map(
     (k) => e.ctFelder[k],
   );
@@ -275,7 +325,10 @@ export function anmeldungenAus(
   for (const [schluessel, ms] of gruppen) {
     const nr = nrVon(ms[0].werte);
     const abgesagt = nr ? stand.absagen.filter((a) => nrVon(a.werte) === nr) : [];
-    const erste = ms.find((m) => traegt(m.werte));
+    const aufVon = (w: Werte) =>
+      e.ctFelder.aufschluesselung === undefined ? undefined : w[e.ctFelder.aufschluesselung];
+    // Die eigene Zahlung einer Nachgerückten (A7-3) macht sie nicht zur ersten Person.
+    const erste = ms.find((m) => traegt(m.werte) && !istNachrueckZahlung(aufVon(m.werte)));
     // Hat die erste Person abgesagt, steht das Einmalige nur noch im Verlauf (die neueste Absage, die es trägt).
     const ausVerlauf = erste
       ? undefined
@@ -293,8 +346,61 @@ export function anmeldungenAus(
       werte: m.werte,
     }));
     const kontakt = e.ctFelder.kontakt === undefined ? undefined : w[e.ctFelder.kontakt];
-    const betragCent = e.ctFelder.betrag === undefined ? null : euro(w[e.ctFelder.betrag]);
-    const bezahlt = e.ctFelder.bezahlt !== undefined && w[e.ctFelder.bezahlt] === '1';
+    const hatPlatz = (id: number | null) =>
+      id === null
+        ? personen.some((p) => p.status === 'aktiv')
+        : personen.some((p) => p.personId === id && p.status === 'aktiv');
+    const zahlungAus = (
+      werte: Werte,
+      personId: number | null,
+      wofuer: Zahlung['wofuer'],
+      name: string,
+      platz: boolean,
+    ): Zahlung => {
+      const f = e.ctFelder;
+      const betragCent = f.betrag === undefined ? null : euro(werte[f.betrag]);
+      const bezahlt = f.bezahlt !== undefined && werte[f.bezahlt] === '1';
+      return {
+        personId,
+        wofuer,
+        name,
+        betragCent,
+        aufschluesselung: aufVon(werte) ?? null,
+        bezahlt,
+        bezahltAm:
+          (f.bezahltAm === undefined ? undefined : werte[f.bezahltAm]?.slice(0, 10)) ?? null,
+        zahlart: (f.zahlart === undefined ? undefined : werte[f.zahlart]) ?? null,
+        offen: kostet && betragCent !== null && betragCent > 0 && !bezahlt && platz,
+      };
+    };
+    // Ohne Einmaliges (z. B. ältere Anmeldung ohne Betrag) die erste Person der Zeile.
+    const zahlungBei = ausVerlauf ? null : (erste ?? reihe[0]).personId;
+    const haupt = zahlungAus(
+      w,
+      zahlungBei,
+      'anmeldung',
+      ausVerlauf ? ausVerlauf.name.split(' ')[0] : reihe[0].vor,
+      hatPlatz(null),
+    );
+    const eigene = reihe
+      .filter(
+        (m) =>
+          m.personId !== zahlungBei &&
+          e.ctFelder.betrag !== undefined &&
+          m.werte[e.ctFelder.betrag] !== undefined,
+      )
+      .map((m) =>
+        zahlungAus(
+          m.werte,
+          m.personId,
+          istNachrueckZahlung(aufVon(m.werte)) ? 'nachgerueckt' : 'anmeldung',
+          m.vor,
+          hatPlatz(m.personId),
+        ),
+      );
+    const zahlungen =
+      kostet || haupt.betragCent !== null || eigene.length ? [haupt, ...eigene] : [];
+    const mitBetrag = zahlungen.filter((z) => z.betragCent !== null && z.betragCent > 0);
     const angemeldet = ms
       .map((m) => m.angemeldetAm)
       .filter((x): x is string => !!x)
@@ -309,20 +415,16 @@ export function anmeldungenAus(
       abgesagt,
       einmal: w,
       einmalAusVerlauf: !!ausVerlauf,
-      betragCent,
-      aufschluesselung:
-        (e.ctFelder.aufschluesselung === undefined ? undefined : w[e.ctFelder.aufschluesselung]) ??
-        null,
-      bezahlt,
-      bezahltAm:
-        (e.ctFelder.bezahltAm === undefined ? undefined : w[e.ctFelder.bezahltAm]?.slice(0, 10)) ??
-        null,
-      zahlungOffen:
-        kostet &&
-        betragCent !== null &&
-        betragCent > 0 &&
-        !bezahlt &&
-        personen.some((p) => p.status === 'aktiv'),
+      zahlungen,
+      betragCent: zahlungen.some((z) => z.betragCent !== null)
+        ? zahlungen.reduce((summe, z) => summe + (z.betragCent ?? 0), 0)
+        : null,
+      aufschluesselung: haupt.aufschluesselung,
+      bezahlt: mitBetrag.length > 0 && mitBetrag.every((z) => z.bezahlt),
+      bezahltAm: haupt.bezahltAm,
+      zahlart: haupt.zahlart,
+      zahlungBei,
+      zahlungOffen: zahlungen.some((z) => z.offen),
     });
   }
   return liste.sort(
@@ -359,11 +461,11 @@ export function listenZahlen(e: OeffentlicheEinstellungen, liste: ListenAnmeldun
     z.belegt += aktiv;
     z.wartend += a.personen.length - aktiv;
     if (aktiv) z.anmeldungen++;
-    if (a.zahlungOffen) {
-      z.offen++;
-      z.offenCent += a.betragCent ?? 0;
+    if (a.zahlungOffen) z.offen++;
+    for (const zahlung of a.zahlungen) {
+      if (zahlung.offen) z.offenCent += zahlung.betragCent ?? 0;
+      if (zahlung.bezahlt) z.eingegangenCent += zahlung.betragCent ?? 0;
     }
-    if (a.bezahlt) z.eingegangenCent += a.betragCent ?? 0;
   }
   return z;
 }

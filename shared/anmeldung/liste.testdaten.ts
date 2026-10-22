@@ -16,12 +16,13 @@ import { CT, antworten, einstellungen } from './senden.testdaten';
 export const NR = 669;
 export const BEZAHLT = 516;
 export const BEZAHLT_AM = 519;
+export const ZAHLART = 520;
 export const HEUTE = '2026-10-17';
 export const STICHTAG = '2026-11-20';
 
 export function e() {
   const x = einstellungen();
-  x.ctFelder = { ...x.ctFelder, nr: NR, bezahlt: BEZAHLT, bezahltAm: BEZAHLT_AM };
+  x.ctFelder = { ...x.ctFelder, nr: NR, bezahlt: BEZAHLT, bezahltAm: BEZAHLT_AM, zahlart: ZAHLART };
   return x;
 }
 export const CT_MIT_NR = {
@@ -44,6 +45,7 @@ export const FELDER = new Map<number, CtGruppenfeld>(
       ),
     { id: BEZAHLT, name: 'Bezahlt', fieldTypeCode: 'checkbox' },
     { id: BEZAHLT_AM, name: 'Bezahlt am', fieldTypeCode: 'date' },
+    { id: ZAHLART, name: 'Zahlart', fieldTypeCode: 'text' },
   ].map((f): [number, CtGruppenfeld] => [f.id, f]),
 );
 
@@ -76,20 +78,32 @@ export function mitglieder(
         .map((x) => ({ id: Number(x.id), value: x.value })),
       { id: BEZAHLT, value: extra.bezahlt && i === 0 ? '1' : '0' },
       { id: BEZAHLT_AM, value: extra.bezahlt && i === 0 ? '2026-10-18' : null },
+      { id: ZAHLART, value: extra.bezahlt && i === 0 ? 'Bar' : null },
     ],
   }));
 }
 
 /** Der Verlaufseintrag „ist dazugekommen“ (Anmeldetag). */
-export const dazu = (memberId: number, am: string): VerlaufRoh => ({
+export const dazu = (
+  memberId: number,
+  am: string,
+  mehr: { origin?: string; zeit?: string; id?: number } = {},
+): VerlaufRoh => ({
+  id: mehr.id,
   memberId,
+  origin: mehr.origin ?? 'sign-up',
   previous: { membershipStatus: null },
   current: { membershipStatus: 'active' },
-  meta: { createdDate: `${am}T10:00:00Z`, createdPerson: { id: memberId } },
+  meta: { createdDate: `${am}T${mehr.zeit ?? '10:00:00'}Z`, createdPerson: { id: memberId } },
 });
 
 /** Eine Absage im Verlauf – die Felder mit Namen und lesbar, wie ChurchTools sie dort ablegt. */
-export function absage(m: MitgliedRoh, am: string, von: number): VerlaufRoh {
+export function absage(
+  m: MitgliedRoh,
+  am: string,
+  von: number,
+  mehr: { zeit?: string; id?: number } = {},
+): VerlaufRoh {
   const fields: Record<string, unknown> = {};
   for (const f of m.fields ?? []) {
     const feld = FELDER.get(Number(f.id))!;
@@ -100,7 +114,8 @@ export function absage(m: MitgliedRoh, am: string, von: number): VerlaufRoh {
     memberId: m.personId,
     previous: { membershipStatus: m.groupMemberStatus, fields },
     current: { membershipStatus: null, fields: null },
-    meta: { createdDate: `${am}T12:00:00Z`, createdPerson: { id: von } },
+    id: mehr.id,
+    meta: { createdDate: `${am}T${mehr.zeit ?? '12:00:00'}Z`, createdPerson: { id: von } },
   };
 }
 

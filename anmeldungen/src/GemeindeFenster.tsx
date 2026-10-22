@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { formularAdresseAus } from '@shared/anmeldung/oeffentlich';
+import { ZAHLART_MAX, zahlartenSauber } from '@shared/anmeldung/zahlung';
 import {
   stammName,
   vorgabenVollstaendig,
@@ -23,7 +24,8 @@ import f from './Formular.module.scss';
  * - die **Adresse der Formular-Seite** (Alwin, 14.10.2026: jede Gemeinde ihre eigene, „Voraussetzung für diese
  *   Extension“) – geprüft, ob sie antwortet und in ChurchTools als erlaubte Herkunft steht;
  * - welchen Status, Standort und Bereich neue Personen bekommen („einmal je Gemeinde“; ohne nimmt ChurchTools keine
- *   Anmeldung an – gemessen).
+ *   Anmeldung an – gemessen);
+ * - die **Zahlarten** (A7-2) – jede Veranstaltung kann einzelne abwählen.
  */
 export function GemeindeFenster({
   onClose,
@@ -36,6 +38,8 @@ export function GemeindeFenster({
   const [wahl, setWahl] = useState<Partial<NeuePersonVorgaben>>({});
   const [vorschlag, setVorschlag] = useState(false);
   const [adresse, setAdresse] = useState('');
+  const [zahlarten, setZahlarten] = useState<string[]>([]);
+  const [neueZahlart, setNeueZahlart] = useState('');
   const [pruefung, setPruefung] = useState<SeitenPruefung | null>(null);
   const [prueft, setPrueft] = useState(false);
   const [arbeitet, setArbeitet] = useState(false);
@@ -51,6 +55,7 @@ export function GemeindeFenster({
         setWahl(v);
         setVorschlag(!gespeichert.neuePersonen);
         setAdresse(gespeichert.formularAdresse ?? '');
+        setZahlarten(gespeichert.zahlarten);
       })
       .catch((e: unknown) => aktuell && setFehler(fehlerMeldung(e).text));
     return () => {
@@ -91,12 +96,21 @@ export function GemeindeFenster({
     </label>
   );
 
+  const hinzufuegen = () => {
+    setZahlarten(zahlartenSauber([...zahlarten, neueZahlart]));
+    setNeueZahlart('');
+  };
+
   async function speichern() {
-    if (!vorgabenVollstaendig(wahl) || !gueltig) return;
+    if (!vorgabenVollstaendig(wahl) || !gueltig || zahlarten.length === 0) return;
     setArbeitet(true);
     setFehler(null);
     try {
-      await speichereGemeindeEinstellungen({ neuePersonen: wahl, formularAdresse: gueltig });
+      await speichereGemeindeEinstellungen({
+        neuePersonen: wahl,
+        formularAdresse: gueltig,
+        zahlarten,
+      });
       onGespeichert('Einstellungen der Gemeinde gespeichert.');
     } catch (e) {
       setFehler(fehlerMeldung(e).text);
@@ -167,6 +181,50 @@ export function GemeindeFenster({
       ) : (
         !fehler && <p className={f.hinweis}>Wird geladen …</p>
       )}
+      {daten && (
+        <div className={f.feld}>
+          <span>Zahlarten</span>
+          <ul className={f.zahlarten} aria-label="Zahlarten">
+            {zahlarten.map((z) => (
+              <li key={z} className={f.zahlart}>
+                {z}
+                <button
+                  type="button"
+                  className={f.textKnopf}
+                  aria-label={`${z} entfernen`}
+                  disabled={zahlarten.length === 1}
+                  onClick={() => setZahlarten(zahlarten.filter((x) => x !== z))}
+                >
+                  Entfernen
+                </button>
+              </li>
+            ))}
+          </ul>
+          <div className={f.hinzu}>
+            <input
+              className={f.eingabe}
+              value={neueZahlart}
+              maxLength={ZAHLART_MAX}
+              placeholder="z. B. Kartenzahlung"
+              aria-label="Neue Zahlart"
+              onChange={(e) => setNeueZahlart(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && neueZahlart.trim() && hinzufuegen()}
+            />
+            <button
+              type="button"
+              className={f.hinzuKnopf}
+              disabled={!neueZahlart.trim()}
+              onClick={hinzufuegen}
+            >
+              Hinzufügen
+            </button>
+          </div>
+          <small className={f.hinweis}>
+            Stehen beim Abhaken von „bezahlt“ zur Wahl. Jede Veranstaltung kann einzelne abwählen
+            (Karte „Bezahlung“). Entfernen ändert nichts an schon gespeicherten Zahlungen.
+          </small>
+        </div>
+      )}
       {fehler && (
         <p className={f.fehler} role="alert">
           {fehler}
@@ -175,7 +233,7 @@ export function GemeindeFenster({
       <button
         type="button"
         className={f.knopf}
-        disabled={arbeitet || !vorgabenVollstaendig(wahl) || !gueltig}
+        disabled={arbeitet || !vorgabenVollstaendig(wahl) || !gueltig || zahlarten.length === 0}
         onClick={() => void speichern()}
       >
         {arbeitet ? 'Wird gespeichert …' : 'Speichern'}

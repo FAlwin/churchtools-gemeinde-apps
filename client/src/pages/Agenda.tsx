@@ -36,10 +36,11 @@ interface AgendaProps {
   /** Öffnet direkt das „Liederheft" (Lieder-Charts) des Gottesdienstes. */
   onOpenSongs: (service: Service) => void;
   /**
-   * Darf Abläufe anlegen (Recht „Ablauf bearbeiten" in ChurchTools, 13.10.2026). Ohne das Recht stehen
-   * Termine ohne Ablauf trotzdem in der Liste – nur ohne „Ablauf anlegen".
+   * Darf für diesen Termin einen Ablauf anlegen (Recht „Ablauf bearbeiten" für seinen Kalender oder
+   * Termin-Admin – `darfAblaufBearbeiten`, #635). Ohne das Recht stehen Termine ohne Ablauf trotzdem in der
+   * Liste – nur ohne „Ablauf anlegen".
    */
-  kannAblaufAnlegen?: boolean;
+  kannAblaufAnlegen?: (s: Service) => boolean;
 }
 
 const OFFLINE_HINT = 'Offline nicht verfügbar – einmal online öffnen oder vorher speichern.';
@@ -67,7 +68,7 @@ export function Agenda({
   onRetry,
   onSelect,
   onOpenSongs,
-  kannAblaufAnlegen = false,
+  kannAblaufAnlegen = () => false,
 }: AgendaProps) {
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
   const [monthsBack, setMonthsBack] = useState(1);
@@ -136,7 +137,7 @@ export function Agenda({
         <button
           className={styles.cardMain}
           onClick={() =>
-            kannAblaufAnlegen
+            kannAblaufAnlegen(s)
               ? setAnlegenFuer(s)
               : showToast('Für diese Veranstaltung gibt es noch keinen Ablauf.')
           }
@@ -152,7 +153,7 @@ export function Agenda({
               <span>{s.time}</span>
             </div>
           </div>
-          {kannAblaufAnlegen && (
+          {kannAblaufAnlegen(s) && (
             <span className={styles.ablaufAnlegen} aria-label="Ablauf anlegen">
               <Icon name="plus" size={14} stroke={2.4} />
               Anlegen

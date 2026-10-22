@@ -77,7 +77,7 @@ interface NewSongSheetProps {
    *
    * Dort wird einem **vorhandenen** Ablaufpunkt ein Lied zugeordnet; das neue Lied darf also nicht als
    * eigener Punkt in den Ablauf, sondern geht als Verknüpfung an den Aufrufer zurück – seit 05.10.2026
-   * auch beim Anlegen eines neuen Punkts (`ItemActionSheet modus="neu"`).
+   * auch beim Anlegen eines neuen Punkts (`PunktFenster modus="neu"` mit `LiedVerknuepfen`).
    * Ist dieser Weg gesetzt, führt aus der Erfolgsansicht **jeder** Ausgang über ihn – der Knopf wie
    * das „Fertig" –, damit ein angelegtes Lied nie unverknüpft liegen bleibt. „Noch ein Lied anlegen"
    * entfällt: Ein Punkt trägt genau ein Lied.

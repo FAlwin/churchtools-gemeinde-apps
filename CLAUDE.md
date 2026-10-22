@@ -61,7 +61,7 @@
     wie im Ablauf; `neuesLied={{ label: 'Selbst eintippen' }}` gibt den Suchbegriff als `startName` ins
     leere Formular). Der „Neues Lied"-Kopf rendert im `SongPicker` – nur
     dort ist der Suchbegriff bekannt. **Neue Ablaufpunkte (05.10.2026)** legt derselbe Dialog an wie das
-    Bearbeiten (`ItemActionSheet modus="neu"`, Umschalter Programmpunkt · Überschrift, Lied = Programmpunkt mit „Lied verknüpfen", Nutzlast
+    Bearbeiten (`PunktFenster modus="neu"` in `ui/ablauf`, Liedwahl `LiedVerknuepfen`, Umschalter Programmpunkt · Überschrift, Lied = Programmpunkt mit „Lied verknüpfen", Nutzlast
     `neuerAgendaPunkt`); geöffnet über das schwebende Plus (`SchwebePlus`, auch in den Abwesenheiten).
     Das frühere `AddItemSheet` ist gelöscht.
 
@@ -256,7 +256,7 @@ churchtools-gemeinde-apps/
   `ui/fenster/useOverlayKeyboardInset` + `padding-bottom: calc(… + var(--kb, 0px))`. Der Hook misst die
   Tastaturhöhe am `visualViewport` und holt den von iOS hinterlassenen Dokument-Scroll zurück; ohne
   ihn liegen Trefferlisten/Knöpfe unter der Tastatur und die Kopfleiste bleibt verrutscht. Gilt für
-  `Sheet` (alle Dialoge), `ItemActionSheet` und den `ChordEditor`.
+  `Sheet` (alle Dialoge), das Punkt-Fenster (`ui/ablauf/PunktFenster`, mit `LiedVerknuepfen`) und den `ChordEditor`.
 - **Ein 401 heißt „Sitzung abgelaufen" und führt zum Login** (#186, #210, #211): Der globale Fänger
   sitzt in **`services/api.ts`** (`setSessionExpiredHandler`, registriert in `App.tsx`) – bewusst in
   `apiFetch` und nicht mehr am QueryClient, denn `services/annotations.ts` und
@@ -1422,7 +1422,8 @@ Vollständige Endpunkt-Referenz: `docs/entwicklung/api-referenz.md`.
 
 - Server liest beim Login `/api/permissions/global` (Modul `churchservice`) → `parseCapabilities`
   (`server/src/services/ctCapabilities.ts`) leitet ab: `canViewSongs`/`canViewAgendas`/`canEditSongs`/
-  `canEditAgendas` (aus `view/edit songcategory|agenda`) + `isAdmin` (aus `ADMIN_PERMISSION`, Default
+  `canEditAgendas` (aus `view/edit songcategory|agenda`; **ob ein bestimmter Ablauf bearbeitbar ist, sagt erst
+  `darfAblaufBearbeiten`** in `shared/ct/ablaufRecht.ts` – Kalender des Termins, Termin-Admin, #635) + `isAdmin` (aus `ADMIN_PERMISSION`, Default
   `churchcore:administer persons`; **Admin ⇒ alles**). Die Fähigkeiten steuern die Client-UI (`App.tsx`,
   Tabs/Knöpfe); serverseitig erzwungen wird `requireSession` (alle Datenrouten) + `requireAdmin`
   (`PUT /api/site-config`, `GET /api/groups`, `GET /api/groups/:id/roles`). Fachliche Schreibrechte

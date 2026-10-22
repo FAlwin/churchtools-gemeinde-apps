@@ -7,6 +7,102 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Anmeldungen, A7-3)
+
+- **Nachrücken lassen** (Entwurf `a7-3-nachruecken-v1`, entschieden 19.10.2026): an jeder wartenden Person im Fenster
+  und im Hinweis „Plätze frei – N warten“, mit Rückfrage. Ist alles voll, werden die Plätze dabei erhöht (Alwin: „dann
+  ändert sich auch das Limit“). Die Nachgerückte bekommt **eine eigene Zahlung** („als ob ein Kind neu angemeldet
+  wurde“) – der Betrag, um den die Anmeldung nach den Regeln teurer wird. **Kein Rückgängig** (zurück auf die
+  Warteliste löst in ChurchTools die Mail „Du stehst auf der Warteliste“ aus – gemessen).
+- **Absagen** je Person, mit Rückfrage: Die Zahlung der Anmeldung wird neu gerechnet, eine Rückzahlung steht in der
+  Aufschlüsselung (Zeile „Abgesagt am …“, auch wenn jemand Wartendes absagt und der Betrag bleibt); sagt die erste
+  Person ab, gehen Kontakt, Unterschrift und Zahlung an die nächste. **Rückgängig im
+  Fenster** holt die Person mit allen Antworten zurück (gemessen: ohne Mail). Scheitert ein Schritt, wird
+  Halbgeschriebenes zurückgenommen.
+- **„Mail schreiben“** nach dem Nachrücken bzw. Absagen: fertiger Text (Betrag, Frist, Bankdaten bzw. Rückzahlung),
+  öffnet das Mailprogramm (`mailto:`) – ChurchTools selbst schickt nur „war erfolgreich“ bzw. nichts.
+- Eine Anmeldung kann **mehrere Zahlungen** haben (Fenster: „Zahlungen“); Liste, „Zahlung offen“ und Nachprüfung zählen
+  sie zusammen. „Betrag nach den Regeln“ steht an EINER Stelle (`sollBetrag`), die Nachprüfung, Nachrücken und Absagen
+  nutzen.
+
+### Behoben (Anmeldungen, A7-3)
+
+- Anmeldetag aus dem Verlauf: Einträge derselben Sekunde nach ihrer Nummer; wer vom Team wieder aufgenommen wird,
+  behält ihn (gemessen 19.10.2026: Entfernen und Wieder-Aufnehmen tragen dieselbe Sekunde).
+- Weiße Seite, sobald „Rückgängig“ im Fenster verschwand (z. B. „Mail schreiben“, Fenster schließen; seit A7-2):
+  Chrome 152 gibt bei `scrollIntoView` ein Promise zurück, der Effekt reichte es als Aufräum-Funktion an React weiter.
+  ESLint verbietet solche Effekt-Rümpfe jetzt im ganzen Repo (`no-restricted-syntax`); vier harmlose Stellen
+  (Baukasten, Dienstplaner-Termine, Formular) entsprechend umgestellt.
+
+### Intern (Ablauf-Baustein, E6-2b-3, #643)
+
+- **Die Bearbeiten-Liste des Ablaufs ist ein gemeinsamer Baustein** (`ui/ablauf/useAblaufBearbeiten.tsx`, für Nutzer
+  unsichtbar): Ziehen, Punkt-Fenster, Plus, Löschen mit Rückfrage, „Rückgängig“ und der Hinweis bei abgeschlossenem
+  Ablauf – die Musik-App steckt ihre Liedwahl ein (`LiedVerknuepfen`, vorher `ItemActionSheet`), der Dienstplaner
+  nutzt die Liste ab E6-3. Mit umgezogen: `ConfirmDialog` (`ui/fenster`), `SchwebePlus` und die Ziehen-Hilfen
+  (`ui/bedienung`), die Vorlauf-Regel beim Umsortieren (`vorlaufNachUmsortieren`, jetzt neben `beginnStelle` in
+  `shared/ct/ablaufZeile.ts`). Fotos von Bearbeiten-Liste, „Eintrag bearbeiten“, Lösch-Rückfrage und „Neuer
+  Eintrag“ sind vorher und nachher byte-gleich.
+
+### Behoben (Musik-App, #643)
+
+- Scheiterte beim Bearbeiten des Ablaufs das **Verschieben oder Löschen**, standen danach längst entfernte Punkte
+  (die grauen „entfernt“-Platzhalter aus der Ansicht) wieder in der Bearbeiten-Liste. Ändern und „Rückgängig“
+  rollten schon richtig zurück – jetzt alle vier über dieselbe Stelle.
+
+### Intern (Ablauf-Baustein, E6-2b-2, #641)
+
+- **Das Punkt-Fenster ist ein gemeinsamer Baustein** (`ui/ablauf/PunktFenster.tsx`, für Nutzer unsichtbar): Titel,
+  Art, Dauer, Zuständig, Bemerkung, Vorlauf, Speichern, Löschen – ohne Dienste der Musik-App. Lieder verknüpfen
+  und lösen gibt es nur über den **Steckplatz `liedWahl`**: Die Musik-App steckt dort ihre Liedsuche ein
+  (`ItemActionSheet` ist jetzt eine dünne Hülle), der Dienstplaner lässt ihn leer und zeigt Lieder nur an (Alwin,
+  17.10.2026). Fotos von „Eintrag bearbeiten“, „Neuer Eintrag“ und „Lied verknüpfen“ sind vorher und nachher
+  byte-gleich.
+
+### Intern (Ablauf-Baustein, E6-2b-1, #638)
+
+- **Bearbeiten-Bausteine des Ablaufs gemeinsam** (für Nutzer unsichtbar, Vorbereitung für das Bearbeiten im
+  Dienstplaner, E6-3): die Feld-Regeln des Punkt-Fensters nach `shared/ct/agendaItemChanges.ts` (React-frei;
+  vergleichen nur noch die vier Felder, die sie brauchen), „Rückgängig“ nach `ui/bedienung/useRueckgaengig.ts`, das
+  Zuständig-Feld nach `ui/ablauf/ResponsibleField.tsx` und die Zeile zum Ziehen nach `ui/ablauf/AgendaSortableRow.tsx`
+  (Styles 1:1 aus `Setlist.module.scss`). Das Bildschirmfoto der Bearbeiten-Liste ist vorher und nachher
+  byte-gleich; ein E2E-Test prüft am Griff `touch-action: none` und die Breite (ohne ließe er sich am Handy nicht
+  ziehen).
+
+### Geändert (Musik-App, E6-2a, #635)
+
+- **Ablauf bearbeiten – je Termin, wie in ChurchTools** (Alwin, 19.10.2026: „wie ChurchTools“): Den Stift im
+  Ablauf, „Ablauf anlegen“ und „Zu Ablauf hinzufügen“ gibt es jetzt genau dort, wo ChurchTools das Bearbeiten
+  auch erlaubt – als Admin, mit „Abläufe bearbeiten“ (`edit agenda`) **für den Kalender dieses Termins** oder als
+  **Admin dieses Termins** (gemessen 17.10.2026). Bisher galt „irgendein Kalender“: Termin-Admins ohne
+  Kalender-Recht konnten nicht bearbeiten, und wer nur für einen anderen Kalender durfte, sah Knöpfe, die mit
+  „verboten“ endeten. Bei „Zu Ablauf hinzufügen“ stehen nur noch Termine zur Wahl, deren Ablauf man bearbeiten darf.
+- Kennt ein älterer Server den Kalender eines Termins noch nicht, bleibt es wie bisher (irgendein Recht genügt,
+  ChurchTools entscheidet) – niemand verliert den Stift.
+- Die Regel steht an **einer** Stelle (`shared/ct/ablaufRecht.ts`, `darfAblaufBearbeiten`); der Dienstplaner nutzt
+  sie ab E6-3, die Termin-Admins liest er schon darüber (`terminAdminIds`). Die Termine tragen die Admin-IDs als
+  Tatsache mit (`terminAdminIds`, kein zusätzlicher Abruf – `GET /events` liefert sie, gemessen 19.10.2026);
+  verglichen wird erst im Browser mit der eigenen Person. Neuer E2E-Test `e2e/ablauf-recht.spec.ts`.
+
+### Neu (Anmeldungen, A7-2)
+
+- **Zahlung im Fenster einer Anmeldung** (Entwurf `a7-anmeldungen-v2`): **als bezahlt markieren** mit Zahlart und Tag,
+  **zurücksetzen**, **Betrag ändern** – jeweils mit „Rückgängig“ **im Fenster selbst** (Alwin, 19.10.2026: „Rückgängig
+  bitte immer bei modalen im modal direkt rein“ – die Leiste unten lag hinter dem Fenster; `RueckgaengigImFenster`, ein
+  gemeinsamer Ablauf mit der Leiste). Geschrieben wird bei der ersten Person der Anmeldung
+  (`zahlungBei`), nachgelesen nach jedem Schreiben. Gemessen 19.10.2026: `PATCH /groups/{id}/members/{personId}` mit
+  `{fields: {…}}` ändert nur die geschickten Felder, keine Mail. Hat die erste Person abgesagt, wird nichts geschrieben
+  (kommt mit A7-3).
+- **Zahlarten** (Alwin, 19.10.2026: „je Gemeinde + je Veranstaltung“): Liste in den Einstellungen der Gemeinde
+  (vorbelegt Überweisung, Bar, PayPal), je Veranstaltung abwählbar (Karte „Bezahlung“, `ohneZahlarten` – nur gespeichert,
+  wenn etwas abgewählt ist). Neues Systemfeld **„Zahlart“**; ältere Veranstaltungen bekommen es beim ersten „bezahlt“
+  (`systemfelderNachziehen`, dieselbe Stelle wie beim Freigeben).
+- **Betrag von Hand:** In der Aufschlüsselung steht dann „Von Hand geändert am …“; die Nachprüfung meldet ihn danach
+  nicht mehr als abweichend (`vonHandZeile`/`vonHandBetrag`).
+- „TT.MM.JJJJ“ steht an EINER Stelle (`tagPunkt`) – Unterschrift, Zahlung und Reiter hatten je eine eigene Fassung.
+- Nach einer Zahlungsänderung lädt die Seite auch die Einstellungen neu (echter Test 19.10.2026: Das erste „bezahlt“ legte
+  das Feld „Zahlart“ an, ohne dessen Nummer fehlte die Zahlart in der Anzeige).
+
 ### Neu (Dienstplaner, E6-1b, #625)
 
 - **Termin-Ansicht – Ablauf und Dienste eines Termins** (Bauplan E6-1b, Entwurf `e6-entwurf.html`): Eine Zeile in
@@ -439,6 +535,14 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
     Wiki-Dateien mit `Content-Security-Policy: sandbox`).
   - Die Preis-Buchung aus den Antworten steht an EINER Stelle (`buchungAus`) – angezeigter und gespeicherter
     Betrag können nicht auseinanderlaufen. Ein Test zählte die Systemfelder als Literal – jetzt gegen die Liste.
+
+### Intern (Musik-App)
+
+- **Tote Hülle `server/src/utils/mapEvent.ts` entfernt** (für Nutzer unsichtbar): Sie reichte nur
+  `mapEventToService` aus `shared/ct/mapEvent.ts` mit der Zeitzone aus `config` weiter, wurde aber seit dem Umzug
+  der Regel nach `shared/` (#335) nirgends mehr importiert – auch nicht in Tests. Die Aufrufer
+  (`setlistKern`, `ablaufAnlegen`) geben die Zeitzone selbst mit. Die Testfälle TF-ABLAUF-04 und TF-VERF-08
+  verweisen unter »Betrifft« jetzt auf `shared/ct/mapEvent.ts`.
 
 ## [2.36.0] – 2026-10-15
 

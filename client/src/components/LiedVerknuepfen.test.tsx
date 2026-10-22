@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import type { AgendaItem, SongLibraryEntry, SongSelectTreffer } from '@shared/types/index';
+import type { PunktFensterProps } from '@ui/ablauf/PunktFenster';
 
 /**
  * „Eintrag bearbeiten" – geprüft wird der **Anlege-Weg aus „Lied verknüpfen"** (#391, 18.09.2026):
@@ -86,7 +87,13 @@ vi.mock('./NewSongSheet', () => ({
   ),
 }));
 
-const { ItemActionSheet } = await import('./ItemActionSheet');
+const { LiedVerknuepfen } = await import('./LiedVerknuepfen');
+const { PunktFenster } = await import('@ui/ablauf/PunktFenster');
+
+/** „Eintrag bearbeiten" der Musik-App: das gemeinsame Punkt-Fenster mit eingesteckter Liedwahl – wie in `Setlist`. */
+function ItemActionSheet(props: PunktFensterProps) {
+  return <PunktFenster {...props} liedWahl={(args) => <LiedVerknuepfen {...args} />} />;
+}
 
 const ITEM: AgendaItem = {
   id: 5,
@@ -103,7 +110,7 @@ const ITEM: AgendaItem = {
 };
 
 /** Die Angaben im Bearbeiten-Modus (der Dialog kennt seit 05.10.2026 auch „neu"). */
-type BearbeitenProps = Extract<Parameters<typeof ItemActionSheet>[0], { item: AgendaItem }>;
+type BearbeitenProps = Extract<Parameters<typeof ItemActionSheet>[0], { modus?: 'bearbeiten' }>;
 
 function zeige(overrides: Partial<BearbeitenProps> = {}) {
   const onUpdate = vi.fn().mockResolvedValue(undefined);

@@ -12,6 +12,7 @@
 import type { CtEvent } from '../ct/typen';
 import type { Dienst } from '../ct/dienste';
 import { ortszeitAus } from '../ct/zeit';
+import { terminAdminIds } from '../ct/ablaufRecht';
 
 export interface RohPlatz {
   /** Die Platz-ID – **ändert sich bei jedem Schreiben** (E0, Fallstrick 1). */
@@ -27,14 +28,12 @@ export interface RohPlatz {
 export interface RohTermin extends CtEvent {
   isCanceled?: boolean;
   eventServices?: RohPlatz[] | null;
-  /** Admins des Termins – sie dürfen dort einteilen (E0 §2). Gemessen: Listen von Personen-IDs. */
-  adminIds?: unknown;
-  eventAdminIds?: unknown;
+  // `adminIds`/`eventAdminIds` (Admins des Termins, dürfen dort einteilen – E0 §2) kommen aus `CtEvent`.
 }
 
-/** Ist die Person Admin dieses Termins (`adminIds` oder `eventAdminIds`)? */
+/** Ist die Person Admin dieses Termins (`adminIds` oder `eventAdminIds`)? – über `terminAdminIds`, wie der Ablauf. */
 export function istTerminAdmin(t: RohTermin, ichId: number): boolean {
-  return [t.adminIds, t.eventAdminIds].some((l) => Array.isArray(l) && l.includes(ichId));
+  return terminAdminIds(t).includes(ichId);
 }
 
 /** Ein eigener Dienst an einem Termin. */

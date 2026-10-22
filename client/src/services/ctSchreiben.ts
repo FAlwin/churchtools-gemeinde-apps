@@ -4,9 +4,9 @@
  *
  * **Hier stehen keine Regeln.** Wie ein Ablaufpunkt oder ein Arrangement geschrieben wird (frisch
  * lesen, Rumpf aus dem Ist-Zustand, Reihenfolge-Schutz, Vorlauf-Grenze), steht in
- * `@shared/ct/schreibKern` und gilt für beide Auslieferungen. Hier liegt nur der `CtSchreiber` des
- * Browsers: gelesen über den `leser` aus `ctLesen.ts`, geschrieben über `ctAnfrage` (Sitzung der
- * Seite, CSRF-Token, Bremse, Zeitgrenze).
+ * `@shared/ct/schreibKern` und gilt für beide Auslieferungen. Der `CtSchreiber` des Browsers steht seit
+ * E6-3a (#645) in `@ui/ct/schreiber` – der Dienstplaner schreibt über denselben. Hier kommen nur
+ * Liedverwaltung und Notenblätter dazu.
  *
  * Aufgerufen wird es nur aus der Weiche in `churchtoolsApi.ts`.
  */
@@ -18,6 +18,7 @@ import {
   punktWiederherstellen,
   tempoSetzen,
   vorBeginnSetzen,
+  weglassenSetzen,
   ablaufAbschliessen,
   type CtSchreiber,
   type GeloeschterPunkt,
@@ -44,43 +45,13 @@ import type { CtNotenSchreiber } from '@shared/ct/notenblaetter';
 import { notenblattAusSongSelect } from '@shared/ct/songselect';
 import { songSelect } from './ctSongSelect';
 import { ApiError } from './api';
-import { ChurchToolsBremst, ctAnfrage, KeinSpeicherRecht } from './ctRuntime';
+import { browserSchreiber, schreibFehler } from '@ui/ct/schreiber';
+import { ctAnfrage } from './ctRuntime';
 import { bearbeitbareKategorien, leser, quellen } from './ctLesen';
 
-/**
- * Ein Fehlschlag beim Schreiben, so gemeldet wie im Server: „<Was> fehlgeschlagen (<Status>)." als
- * 502. Die Zweige einzeln – was die Oberfläche anders behandeln muss, bleibt, wie es ist:
- *  - fehlendes Recht (`KeinSpeicherRecht`, mit der Meldung des Auftrags),
- *  - Drosselung (`ChurchToolsBremst`) und Zeitüberschreitung (504): „gleich nochmal",
- *  - abgemeldet (401) und „unklar" (503): sonst würde ein Sitzungsverlust zum Schreibfehler,
- *  - Netzfehler (kein `ApiError`): „nicht erreichbar" hat `ctRuntime` schon gemeldet.
- */
-function schreibFehler(e: unknown, auftrag: SchreibAuftrag): unknown {
-  if (!(e instanceof ApiError)) return e;
-  if (e instanceof KeinSpeicherRecht || e instanceof ChurchToolsBremst) return e;
-  if ([401, 503, 504].includes(e.status)) return e;
-  return new ApiError(502, `${auftrag.fehler} (${e.status}).`);
-}
-
-/** Der `CtSchreiber` des Browsers für die geteilten Schreib-Regeln. */
+/** Der `CtSchreiber` des Browsers (`@ui/ct/schreiber`) samt Liedverwaltung und Notenblättern. */
 const schreiber: CtSchreiber & CtVerwalter & CtNotenSchreiber = {
-  // Der `leser` fragt ChurchTools direkt, ohne Zwischenspeicher – frisch, wie die Regeln es verlangen.
-  agenda: (eventId) => leser.agenda(eventId),
-  song: (songId) => leser.song(songId),
-  async schreibe(pfad, auftrag) {
-    try {
-      // Der Rumpf geht zurück: Beim Anlegen steht darin die neue ID (3b-2).
-      return await ctAnfrage(pfad, {
-        method: auftrag.method,
-        body: auftrag.json === undefined ? undefined : JSON.stringify(auftrag.json),
-        verweigert: auftrag.verweigert,
-      });
-    } catch (e) {
-      if (auftrag.okBei404 && e instanceof ApiError && e.status === 404) return null;
-      throw schreibFehler(e, auftrag);
-    }
-  },
-  fehler: (status, meldung) => new ApiError(status, meldung),
+  ...browserSchreiber,
   // ── Liedverwaltung und Notenblätter (3b-2) ──
   alleLieder: () => leser.alleLieder(),
   bearbeitbareKategorien,
@@ -149,6 +120,16 @@ export async function vorBeginn(
   wert: boolean,
 ): Promise<{ ok: boolean }> {
   await vorBeginnSetzen(schreiber, eventId, itemId, wert);
+  return OK;
+}
+
+/** `PUT /api/services/:id/agenda/items/:itemId/weglassen` (E6-3b) */
+export async function weglassen(
+  eventId: number,
+  itemId: number,
+  wert: boolean,
+): Promise<{ ok: boolean }> {
+  await weglassenSetzen(schreiber, eventId, itemId, wert);
   return OK;
 }
 

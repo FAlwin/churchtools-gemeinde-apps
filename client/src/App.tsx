@@ -22,6 +22,7 @@ import {
   useRestoreAgendaItem,
   useUpdateAgendaItem,
   useSetAgendaItemVorBeginn,
+  useSetAgendaItemWeggelassen,
   useAgendaServices,
   useCreateAgendaItem,
   useSongLibrary,
@@ -207,6 +208,7 @@ export default function App() {
   const restoreAgendaItem = useRestoreAgendaItem(service?.id ?? null);
   const updateAgendaItem = useUpdateAgendaItem(service?.id ?? null);
   const setAgendaItemVorBeginn = useSetAgendaItemVorBeginn(service?.id ?? null);
+  const setAgendaItemWeggelassen = useSetAgendaItemWeggelassen(service?.id ?? null);
   const agendaServices = useAgendaServices(
     auth.isAuthenticated && service !== null && darfAblauf(service) && view?.type === 'setlist',
   );
@@ -478,6 +480,8 @@ export default function App() {
             updateAgendaItem.mutateAsync({ itemId, fields }).then(() => undefined),
           setVorBeginn: (itemId, vorBeginn) =>
             setAgendaItemVorBeginn.mutateAsync({ itemId, vorBeginn }).then(() => undefined),
+          setWeggelassen: (itemId, weggelassen) =>
+            setAgendaItemWeggelassen.mutateAsync({ itemId, weggelassen }).then(() => undefined),
           add: (data) => createAgendaItem.mutateAsync(data).then(() => undefined),
         }}
         services={agendaServices.data ?? []}

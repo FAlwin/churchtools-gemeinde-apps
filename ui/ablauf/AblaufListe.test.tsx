@@ -80,3 +80,29 @@ describe('AblaufListe', () => {
     expect(screen.queryByText('10:15')).toBeNull();
   });
 });
+
+describe('an diesem Termin weggelassen (E6-3b)', () => {
+  it('grau, „—“ statt der Uhrzeit und der Hinweis – auch bei einer Überschrift', () => {
+    render(
+      <AblaufListe
+        zeilen={[
+          z({ id: 1, title: 'Predigt', startTimes: { '7': '2026-10-18T08:00:00Z' } }),
+          z({ id: 2, title: 'Abkündigungen', duration: 300, startTimes: { '7': null } }),
+          z({ id: 3, title: 'Gebet', type: 'header', startTimes: { '7': null } }),
+        ]}
+      />,
+    );
+    const zeile = screen.getByText('Abkündigungen').closest('div[class*="flowRow"]')!;
+    expect(zeile.className).toMatch(/weggelassen/);
+    expect(zeile.textContent).toContain('—');
+    expect(zeile.textContent).toContain('an diesem Termin weggelassen');
+    const band = screen.getByText('Gebet').closest('div')!;
+    expect(band.className).toMatch(/weggelassen/);
+    expect(band.textContent).toContain('an diesem Termin weggelassen');
+    // Der gezeigte Punkt bleibt, wie er war.
+    const predigt = screen.getByText('Predigt').closest('div[class*="flowRow"]')!;
+    expect(predigt.className).not.toMatch(/weggelassen/);
+    expect(predigt.textContent).toContain('10:00');
+    expect(screen.getAllByText('an diesem Termin weggelassen')).toHaveLength(2);
+  });
+});

@@ -749,6 +749,19 @@ const server = createServer((req, res) => {
     });
     return;
   }
+  // Auge (E6-3b, gemessen E6-3-0): `hide` setzt `startTimes[termin]` auf null, `unhide` gibt die Zeit zurück; 204.
+  const auge = path.match(
+    new RegExp(`^/api/events/${EVENT_ID}/agenda/items/(\\d+)/(hide|unhide)$`),
+  );
+  if (auge && req.method === 'POST') {
+    const punkt = agenda.items.find((i) => i.id === Number(auge[1]));
+    if (!punkt) return json(res, { message: 'AgendaItem not found' }, 404);
+    if (auge[2] === 'hide') punkt.startTimes = { ...punkt.startTimes, [EVENT_ID]: null };
+    else punkt.startTimes = {};
+    res.writeHead(204);
+    res.end();
+    return;
+  }
   if (punktMatch && req.method === 'DELETE' && punktMatch[1]) {
     agenda.items = agenda.items.filter((i) => i.id !== Number(punktMatch[1]));
     agenda.items.forEach((i, n) => (i.position = n));

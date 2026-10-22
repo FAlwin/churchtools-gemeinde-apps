@@ -329,17 +329,20 @@ verschwindet und nichts steht doppelt da.
 8. **Scroll-Modus:** Was beim Blättern in der Lücke am Ende von Seite 1 steht, erscheint über dem Anfang des nächsten
    Teils. Mit dem Lasso einkreisen und an die richtige Stelle schieben. Auf **Blättern** umstellen: Es steht jetzt
    am selben Teil – und NICHT zusätzlich noch in der Lücke.
-9. **Scroll-Modus:** Eine Auswahl ganz nach unten unter den letzten Teil schieben und daneben tippen → Hinweis „Hier
-   wird nichts gespeichert – bitte aufs Lied schieben“, die Auswahl bleibt. Stift aus → sie springt an ihre alte
-   Stelle zurück.
+9. **Scroll-Modus, Lied mit 2 Spalten:** Eine Auswahl nach rechts neben den schmalen Streifen des Lieds schieben und
+   daneben tippen → Hinweis „Hier wird nichts gespeichert – bitte aufs Lied schieben“, die Auswahl bleibt. Stift
+   aus → sie springt an ihre alte Stelle zurück.
+10. **Scroll-Modus:** Beim Blättern ganz unten auf die letzte Seite schreiben (unter den letzten Teil). Auf
+    **Scrollen** umstellen: Die Notiz steht genauso weit unter dem letzten Teil, die lange Seite ist dafür länger
+    geworden. Mit dem Lasso etwas nach oben schieben, auf **Blättern** zurück: Sie steht dort ebenfalls höher.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
 - **Betrifft:** `client/src/components/LassoEbene.tsx`, `client/src/utils/lasso.ts`, `client/src/utils/rolleSpeichern.ts`, `client/src/utils/rollenAbbildung.ts`, `client/src/hooks/usePageDraw.ts`, `client/src/components/RollenMalen.tsx`, `client/src/components/PageDeck.tsx`, `client/src/components/DrawToolbar.tsx`
 - **Automatisiert:** weitgehend – `e2e/chart-lasso.spec.ts` (Blättern: verschieben + Rückgängig, Griff +
-  Werkzeugwechsel; Rolle: verschieben, Lücken-Text, Lücken-Strich, Strich unter dem letzten Teil bleibt, Sperre mit
-  Rückgängig und mit Stift aus), `lasso.test.ts`, `rolleSpeichern.test.ts`, `rollenAbbildung.test.ts`. Von Hand
+  Werkzeugwechsel; Rolle: verschieben, Lücken-Text, Lücken-Strich, Text und Strich unter dem letzten Teil, die Rolle
+  wächst für eine Notiz weit unten, Sperre neben dem 2-Spalten-Streifen mit Rückgängig und mit Stift aus), `lasso.test.ts`, `rolleSpeichern.test.ts`, `rollenAbbildung.test.ts`. Von Hand
   bleiben Finger/Pencil am Gerät, Zwei-Finger-Zoom bzw. -Scrollen während einer Auswahl und das Querformat (Lasso nur
   auf der aktiven Seite)
 - **Historie:** #615 (Alwin, 17.10.2026: „Ans Lückenende … dann brauchen wir eine Art Lasso“)

@@ -95,7 +95,7 @@ export async function stricheZurueck(
   eigene: (string | null)[],
   liste: Streifen[],
 ): Promise<void> {
-  let quelle: CanvasImageSource & { width: number };
+  let quelle: CanvasImageSource & { width: number; height: number };
   const bild = await bildLaden(rolle);
   if (bild) quelle = bild;
   else {

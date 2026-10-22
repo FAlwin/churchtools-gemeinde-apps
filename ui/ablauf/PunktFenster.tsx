@@ -54,6 +54,8 @@ interface Bearbeiten extends Gemeinsam {
   vorBeginn: boolean;
   /** Schreibt den Vorlauf nach ChurchTools (gilt für den ganzen Block, siehe Schalter). Wirft bei Fehler. */
   onSetVorBeginn: (vorBeginn: boolean) => Promise<void>;
+  /** Schreibt das Auge („an diesem Termin weglassen“, E6-3b) – der Stand kommt aus `item.weggelassen`. Wirft bei Fehler. */
+  onSetWeggelassen: (weggelassen: boolean) => Promise<void>;
   /** Löschen anstoßen (Bestätigung erfolgt im Eltern-Screen). */
   onRequestDelete: () => void;
 }
@@ -100,6 +102,7 @@ export function PunktFenster(props: PunktFensterProps) {
   const neu = props.modus === 'neu';
   const item = props.modus === 'neu' ? LEERER_PUNKT : props.item;
   const vorBeginnStart = props.modus === 'neu' ? false : props.vorBeginn;
+  const weggelassenStart = item.weggelassen ?? false;
   const isSong = !!item.song;
   // Neu: Programmpunkt oder Überschrift (Alwin, 05.10.2026: erst das Fenster, nicht die Liedsuche).
   // Ein Lied ist ein Programmpunkt mit verknüpftem Lied – wie beim Bearbeiten über „Lied verknüpfen".
@@ -113,6 +116,7 @@ export function PunktFenster(props: PunktFensterProps) {
   );
   // Vorlauf: lokal – wird wie alles andere erst beim Speichern übernommen.
   const [vorBeginn, setVorBeginn] = useState(vorBeginnStart);
+  const [weggelassen, setWeggelassen] = useState(weggelassenStart);
   // Verknüpfung wird vorgemerkt und erst beim Speichern nach ChurchTools geschrieben
   // ('keep' = unverändert, 'unlink' = Lied entfernen, 'link' = neues Arrangement verknüpfen).
   const [linkState, setLinkState] = useState<LinkState>({ kind: 'keep' });
@@ -152,7 +156,9 @@ export function PunktFenster(props: PunktFensterProps) {
   const dirty = neu
     ? !!(title.trim() || duration.trim() || responsible.trim() || note.trim()) ||
       linkState.kind === 'link'
-    : Object.keys(pending).length > 0 || vorBeginn !== vorBeginnStart;
+    : Object.keys(pending).length > 0 ||
+      vorBeginn !== vorBeginnStart ||
+      weggelassen !== weggelassenStart;
 
   /** Ein Lied wurde gewählt (Suche, „Neues Lied" oder „gibt es schon") – vorgemerkt, nicht geschrieben. */
   function liedGewaehlt(arrangementId: number, name: string) {
@@ -172,11 +178,13 @@ export function PunktFenster(props: PunktFensterProps) {
         onClose();
         return;
       }
-      const { onUpdate, onSetVorBeginn } = props;
+      const { onUpdate, onSetVorBeginn, onSetWeggelassen } = props;
       // Alle Feld-Änderungen in EINEM Request (kein Teilzustand bei Fehlern); nur der Vorlauf ist
       // in ChurchTools etwas anderes – eine Grenze am Ablauf, kein Feld des Punkts.
       if (Object.keys(pending).length > 0) await onUpdate(pending);
       if (vorBeginn !== vorBeginnStart) await onSetVorBeginn(vorBeginn);
+      // Das Auge zuletzt: Es gilt nur für diesen Termin und ändert nur Uhrzeiten (E6-3b).
+      if (weggelassen !== weggelassenStart) await onSetWeggelassen(weggelassen);
       onClose();
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Speichern fehlgeschlagen.');
@@ -335,6 +343,26 @@ export function PunktFenster(props: PunktFensterProps) {
                 </span>
               </span>
               <Schalter an={vorBeginn} />
+            </button>
+          )}
+
+          {/* Auge wie in ChurchTools (E6-3b, #652): bleibt im Ablauf, nur an diesem Termin ohne Zeit. */}
+          {!neu && (
+            <button
+              type="button"
+              className={styles.toggleRow}
+              onClick={() => setWeggelassen((w) => !w)}
+              aria-pressed={weggelassen}
+            >
+              <span className={styles.toggleText}>
+                <span className={styles.label}>An diesem Termin weglassen</span>
+                <span className={styles.toggleHint}>
+                  {weggelassen
+                    ? 'Bleibt im Ablauf, hat hier aber keine Uhrzeit und zählt nicht mit.'
+                    : 'Wird an diesem Termin gezeigt und mitgerechnet.'}
+                </span>
+              </span>
+              <Schalter an={weggelassen} />
             </button>
           )}
         </div>

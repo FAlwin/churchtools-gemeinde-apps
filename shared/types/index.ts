@@ -583,6 +583,11 @@ export interface AgendaItem {
   /** Notiz/Beschreibung des Punkts (frei, kann leer sein). */
   note: string;
   /**
+   * true, wenn der Punkt **an diesem Termin weggelassen** ist (Auge in ChurchTools, E6-3b): Er bleibt im Ablauf, hat
+   * hier keine Uhrzeit und zählt nicht mit (gemessen E6-3-0). Gesetzt von `ablaufZeileAus`; fehlt = nicht weggelassen.
+   */
+  weggelassen?: boolean;
+  /**
    * true, wenn dieser Punkt neu/geändert/verschoben ist gegenüber dem Stand, den das Konto zuletzt
    * gesehen hat (#161) – der Client zeigt dann ein Schildchen und zählt ihn in der Hinweisleiste.
    * `undefined`, wenn kein Vergleichsstand existiert (nie geöffnet) oder der Abruf ohne Diff lief.

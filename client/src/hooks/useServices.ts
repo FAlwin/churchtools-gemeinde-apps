@@ -267,6 +267,16 @@ export function useSetAgendaItemVorBeginn(eventId: number | null) {
   });
 }
 
+/** Einen Punkt an diesem Termin weglassen oder wieder zeigen (E6-3b) – die Uhrzeiten verschieben sich. */
+export function useSetAgendaItemWeggelassen(eventId: number | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { itemId: number; weggelassen: boolean }) =>
+      api.setAgendaItemWeggelassen(eventId as number, v.itemId, v.weggelassen),
+    onSuccess: () => qc.invalidateQueries({ queryKey: schluessel.agenda(eventId) }),
+  });
+}
+
 /**
  * Den Ablauf abschließen oder öffnen (09.10.2026). Danach Terminliste und Ablauf neu: Der Zustand
  * steht am Termin (`ablaufAbgeschlossen`), und wer bearbeitet, soll sofort sehen, ob er wieder darf.

@@ -203,6 +203,7 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
   ) {
     let items = ABLAUF.items.map((i, n) => ({ ...i, position: n }));
     let weiter = () => {};
+    let versteckt: number | null = null;
     let lesen = 0;
     const schreiben: string[] = [];
     const spy = vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
@@ -212,6 +213,11 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
       if (methode !== 'GET') {
         schreiben.push(`${methode} ${url.pathname}`);
         if (o.gesperrt) return Promise.resolve(json(403, { message: 'Forbidden' }));
+        const auge = /\/items\/(\d+)\/(hide|unhide)$/.exec(url.pathname);
+        if (auge) {
+          versteckt = auge[2] === 'hide' ? Number(auge[1]) : null;
+          return Promise.resolve(new Response(null, { status: 204 }));
+        }
         const id = Number(url.pathname.split('/').pop());
         if (methode === 'DELETE') items = items.filter((i) => i.id !== id);
         if (methode === 'PUT') {
@@ -228,8 +234,11 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
         if (o.lesenScheitertAb !== undefined && lesen >= o.lesenScheitertAb) {
           return Promise.resolve(json(502, {}));
         }
+        const mitAuge = items.map((i) =>
+          i.id === versteckt ? { ...i, startTimes: { '7': null } } : i,
+        );
         const antwort = json(200, {
-          data: { calendarId: 2, isLocked: o.gesperrt ?? false, items },
+          data: { calendarId: 2, isLocked: o.gesperrt ?? false, items: mitAuge },
         });
         if (o.lesenHaeltAb !== undefined && lesen >= o.lesenHaeltAb) {
           return new Promise<Response>((r) => (weiter = () => r(antwort)));
@@ -378,5 +387,15 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
     await new Promise((r) => setTimeout(r, 20));
     expect(screen.getByText('Gebet')).toBeTruthy();
     expect(screen.queryByText('Ankommen')).toBeNull();
+  });
+  it('Auge: Schalter „An diesem Termin weglassen“ schreibt `hide`; danach steht der Punkt mit Hinweis da', async () => {
+    const ct = ctMitAblauf();
+    zeige({ start: darfKalender([2]) });
+    fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: /An diesem Termin weglassen/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(ct.schreiben).toEqual(['POST /api/events/7/agenda/items/1/hide']));
+    expect(await screen.findByText('an diesem Termin weggelassen')).toBeTruthy();
   });
 });

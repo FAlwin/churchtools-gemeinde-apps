@@ -59,7 +59,11 @@ export function usePageDraw(
   // steckt bereits im `storageKey`-Präfix; nur die Push-Funktion unterscheidet sich.
   push: PushFn = pushField,
 ) {
-  const [texts, setTexts] = useState<PageTextObj[]>([]);
+  // Schon im ersten Render mit den gespeicherten Texten – nicht leer (22.10.2026): Der Speicher-Effekt läuft
+  // beim Einhängen einmal mit diesem Stand. War er leer, während `loadedJson` schon den geladenen Stand trug,
+  // ging „[]" als Änderung hinaus. Auf der Rolle (#608) löschte das die eigenen Texte der Kerne von den
+  // A4-Seiten – auch im Konto.
+  const [texts, setTexts] = useState<PageTextObj[]>(() => readPageTexts<PageTextObj>(storageKey));
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [pending, setPending] = useState<{
     fx: number;
@@ -86,7 +90,8 @@ export function usePageDraw(
   const drawKey = storageKey;
   const textKey = storageKey ? textSchluessel(storageKey) : null;
   // Zuletzt geladener Text-Stand (JSON) – verhindert das Zurück-Pushen gerade geladener Daten.
-  const loadedJson = useRef('[]');
+  const loadedJson = useRef<string | null>(null);
+  if (loadedJson.current === null) loadedJson.current = JSON.stringify(texts);
   // Push-Funktion als Ref: ein Wechsel (privat ↔ global) soll den Speicher-Effekt NICHT erneut
   // auslösen – gepusht wird immer mit der aktuellen Funktion, wenn sich wirklich Inhalt ändert.
   const pushRef = useRef(push);

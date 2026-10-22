@@ -220,7 +220,7 @@ describe('ScrollDeck – malen (#608)', () => {
     expect(deck.scrollTop).toBe(500);
   });
 
-  it('eigene Texte der Teile stehen beim Malen nur einmal da – in der Mal-Ebene', () => {
+  it('eigene Texte der Teile stehen beim Malen nur einmal da – in der Mal-Ebene', async () => {
     const chordpro = Array.from(
       { length: 3 },
       (_, n) =>
@@ -249,7 +249,41 @@ describe('ScrollDeck – malen (#608)', () => {
       malen: MALEN,
       anmerkungFuer: () => ({ seiten: [{ own: 'a4_0', over: null }], abbildung }),
     });
+    // Bis die Rolle ausgemessen ist (#626), zeigt die Seite den Text selbst – dann die Mal-Ebene.
     expect(screen.getAllByText('nur einmal')).toHaveLength(1);
+    await screen.findByTestId('rollen-malen');
+    expect(screen.getAllByText('nur einmal')).toHaveLength(1);
+  });
+
+  it('solange die Rolle noch ausgemessen wird (#626), steht der eigene Text trotzdem da', () => {
+    const chordpro = '{comment: Vers 1}\n[C]Zeile\n[C]Zeile';
+    const abbildung = satzplaene({
+      title: 'T',
+      author: '',
+      chordpro,
+      originalKey: 'C',
+      targetKey: 'C',
+      bpm: null,
+      timeSig: null,
+      ccli: null,
+    });
+    const s0 = abbildung.a4.stuecke[0];
+    localStorage.setItem(
+      textSchluessel('a4_0'),
+      JSON.stringify([{ ...text(4, 'gleich da'), fx: 0.5, fy: (s0.y0 + 2) / 297, sizeCqh: 2 }]),
+    );
+    // Ein eigener Strich: Ausgemessen wird erst, wenn sein Bild geladen ist – jsdom lädt es nie.
+    localStorage.setItem('a4_0', 'data:image/png;base64,AAAA');
+    const rolle = document.createElement('canvas');
+    rolle.width = 210;
+    rolle.height = Math.round(abbildung.rolle.hoehe);
+    zeige({
+      pages: [rolle],
+      malen: MALEN,
+      anmerkungFuer: () => ({ seiten: [{ own: 'a4_0', over: null }], abbildung }),
+    });
+    expect(screen.queryByTestId('rollen-malen')).toBeNull();
+    expect(screen.getAllByText('gleich da')).toHaveLength(1);
   });
 
   it('ein Tipp auf ein anderes Lied macht es zur Mal-Seite – die übrigen sind abgeblendet', () => {

@@ -22,6 +22,7 @@ function zeige(
 ) {
   const onUpdate = vi.fn().mockResolvedValue(undefined);
   const onClose = vi.fn();
+  const onSetWeggelassen = vi.fn().mockResolvedValue(undefined);
   render(
     <PunktFenster
       item={item}
@@ -29,12 +30,13 @@ function zeige(
       onUpdate={onUpdate}
       vorBeginn={false}
       onSetVorBeginn={vi.fn().mockResolvedValue(undefined)}
+      onSetWeggelassen={onSetWeggelassen}
       services={[]}
       onRequestDelete={vi.fn()}
       liedWahl={liedWahl}
     />,
   );
-  return { onUpdate, onClose };
+  return { onUpdate, onClose, onSetWeggelassen };
 }
 
 describe('PunktFenster ohne Liedwahl (Dienstplaner)', () => {
@@ -76,5 +78,29 @@ describe('PunktFenster mit Liedwahl (Musik-App)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'zurück' }));
     expect(screen.getByRole('button', { name: /Lied verknüpfen/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Speichern' })).toHaveProperty('disabled', true);
+  });
+});
+
+describe('Auge „An diesem Termin weglassen“ (E6-3b)', () => {
+  it('Schalter an + Speichern → schreibt nur das Weglassen, keine Felder', async () => {
+    const { onUpdate, onClose, onSetWeggelassen } = zeige(zeile({ title: 'Predigt' }));
+    const schalter = screen.getByRole('button', { name: /An diesem Termin weglassen/ });
+    expect(schalter.getAttribute('aria-pressed')).toBe('false');
+    // Ohne Änderung ist nichts zu speichern.
+    expect(screen.getByRole('button', { name: 'Speichern' })).toHaveProperty('disabled', true);
+    fireEvent.click(schalter);
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(onSetWeggelassen).toHaveBeenCalledWith(true);
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it('ein weggelassener Punkt startet mit Schalter an; aus + Speichern → wieder zeigen', async () => {
+    const { onSetWeggelassen } = zeige(zeile({ title: 'Predigt', startTimes: { '7': null } }));
+    const schalter = screen.getByRole('button', { name: /An diesem Termin weglassen/ });
+    expect(schalter.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(schalter);
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(onSetWeggelassen).toHaveBeenCalledWith(false));
   });
 });

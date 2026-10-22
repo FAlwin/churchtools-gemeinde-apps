@@ -1,9 +1,9 @@
-import { fehlerMeldung as allgemeineFehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
-import { NichtUebernommen } from './einrichten';
+import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import type { Start } from './start';
 import type { Uebersicht } from './veranstaltungen';
 
 export type { Fehlermeldung };
+export { fehlerMeldung };
 
 /** Was die Startseite gerade zeigt (#474, Übersicht seit A2 #480). */
 export type Zustand =
@@ -22,18 +22,6 @@ export type Zustand =
       zahlarten: string[];
     }
   | { art: 'fehler'; text: string; nochmal: boolean };
-
-/**
- * Was bei einem Fehler gesagt wird. Die allgemeinen Zweige (abgemeldet, vorübergehend, „ChurchTools sagt
- * Nein“) stehen EINMAL für alle Erweiterungen in `ui/ct/fehlerMeldung.ts`. Hier nur, was die Anmeldungen
- * zusätzlich kennen: Hat ChurchTools geantwortet, aber nicht übernommen (`NichtUebernommen`, A3), steht
- * genau das da – nicht „antwortet gerade nicht“. Muss VOR dem allgemeinen Teil stehen, denn
- * `NichtUebernommen` ist ein 502 und fiele dort unter „vorübergehend“.
- */
-export function fehlerMeldung(e: unknown): Fehlermeldung {
-  if (e instanceof NichtUebernommen) return { text: e.message, nochmal: true };
-  return allgemeineFehlerMeldung(e);
-}
 
 /** Die Startseite im Fehlerfall. */
 export function fehlerZustand(e: unknown): Zustand {

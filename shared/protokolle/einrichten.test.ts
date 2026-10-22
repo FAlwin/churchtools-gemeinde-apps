@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  abweichungen,
   ausrichten,
+  darfVerwalten,
+  istEinstellung,
+  vergebenNachher,
   rechteAus,
   rechteNummernAus,
   rechtRumpf,
@@ -58,6 +62,7 @@ const EINRICHTUNG: Einrichtung = {
 describe('rechteNummernAus', () => {
   it('findet die Nummern nach Schlüssel', () => {
     expect(N).toEqual({
+      modulSehen: 2090,
       kategorieSehen: 2091,
       datenSehen: 2095,
       datenAnlegen: 2096,
@@ -81,6 +86,7 @@ describe('sollRechte', () => {
   it('Leitung: lesen überall, schreiben Protokolle + Mitarbeit, Kalender bearbeiten, versteckte Gruppe sehen', () => {
     expect(von(72).sort()).toEqual(
       [
+        '2090:null',
         '2091:60',
         '2095:60',
         '2091:61',
@@ -100,6 +106,7 @@ describe('sollRechte', () => {
   });
   it('Mitglied: Protokolle nur lesen, Mitarbeit schreiben, Kalender nur sehen', () => {
     const m = von(71);
+    expect(m).toContain('2090:null'); // ohne „Modul sehen“ kein Menüpunkt
     expect(m).toContain('2095:60');
     expect(m).not.toContain('2096:60');
     expect(m).not.toContain('2097:60');
@@ -156,6 +163,109 @@ describe('ausrichten', () => {
     expect(a.entziehen.length).toBeGreaterThan(0);
     expect(a.nachschieben).not.toBeNull();
     expect(a.entziehen).not.toContainEqual(a.nachschieben);
+  });
+
+  it('bleibt gar kein Recht übrig: schiebt „Modul sehen“ an der ersten betroffenen Rolle nach', () => {
+    const nichts: Einrichtung = {
+      ...EINRICHTUNG,
+      rollen: EINRICHTUNG.rollen.map((r) => ({ ...r, stufe: 'keine' as const })),
+    };
+    const ist = [
+      { rolle: 71, authId: N.datenSehen, dataId: 60 },
+      { rolle: 72, authId: N.datenAendern, dataId: 60 },
+    ];
+    const a = ausrichten(sollRechte(nichts, N), ist, nichts, N);
+    expect(a.entziehen).toEqual(ist);
+    expect(a.nachschieben).toEqual({ rolle: 71, authId: N.modulSehen, dataId: null });
+  });
+
+  it('„Modul sehen“ wird nie entzogen – es kann auch aus anderem Grund gesetzt sein', () => {
+    const nichts: Einrichtung = { ...EINRICHTUNG, rollen: [{ rolle: 71, stufe: 'keine' }] };
+    const a = ausrichten([], [{ rolle: 71, authId: N.modulSehen, dataId: null }], nichts, N);
+    expect(a.entziehen).toEqual([]);
+  });
+});
+
+describe('Zusatzrechte (Kalender, 10119): nur selbst gesetzte werden entzogen', () => {
+  const ohneKalender: Einrichtung = { ...EINRICHTUNG, kalender: null, versteckt: false };
+  const kal = { rolle: 71, authId: 403, dataId: 15 };
+  const versteckt = { rolle: 71, authId: VERSTECKTE_GRUPPE_SEHEN, dataId: null };
+
+  it('von der Verwaltung gesetzt (in `vergeben`): wird beim Wechsel entzogen', () => {
+    const a = ausrichten(sollRechte(ohneKalender, N), [kal, versteckt], ohneKalender, N, [
+      kal,
+      versteckt,
+    ]);
+    expect(a.entziehen).toEqual([kal, versteckt]);
+  });
+
+  it('von Hand gesetzt (nicht in `vergeben`): bleibt', () => {
+    const a = ausrichten(sollRechte(ohneKalender, N), [kal, versteckt], ohneKalender, N, []);
+    expect(a.entziehen).toEqual([]);
+  });
+
+  it('vergebenNachher: gerade gesetzte und früher gesetzte Zusatzrechte im Soll – keine von Hand', () => {
+    const soll = sollRechte(EINRICHTUNG, N);
+    const zusatz = soll.filter((r) => [403, 404, VERSTECKTE_GRUPPE_SEHEN].includes(r.authId));
+    // zusatz[0] war schon von Hand da – also nicht in `setzen` und nicht gemerkt.
+    const gesetzt = zusatz.slice(1);
+    expect(vergebenNachher(soll, gesetzt, [], N)).toEqual(gesetzt);
+    // früher gesetzt, heute schon da (also nicht in `setzen`) – bleibt gemerkt
+    expect(vergebenNachher(soll, [], gesetzt, N)).toEqual(gesetzt);
+    // Datenrechte zählen nie als Zusatzrecht, auch wenn sie gerade gesetzt wurden
+    expect(vergebenNachher(soll, soll, [], N)).toEqual(zusatz);
+  });
+
+  it('nicht mehr im Soll: fällt aus `vergeben` heraus', () => {
+    expect(vergebenNachher(sollRechte(ohneKalender, N), [], [kal], N)).toEqual([]);
+  });
+});
+
+describe('abweichungen', () => {
+  const soll = sollRechte(EINRICHTUNG, N);
+  const weg = { rolle: 71, authId: N.datenAendern, dataId: 60 };
+  it('alles übernommen: nichts fehlt, nichts ist noch da', () => {
+    expect(abweichungen(soll, [weg], soll)).toEqual({ fehlt: [], nochDa: [] });
+  });
+  it('prüft das ganze Soll, nicht nur das gerade Gesetzte', () => {
+    const ohne = soll.slice(1);
+    expect(abweichungen(soll, [], ohne).fehlt).toEqual([soll[0]]);
+  });
+  it('meldet einen Entzug, den ChurchTools nicht übernommen hat', () => {
+    expect(abweichungen(soll, [weg], [...soll, weg]).nochDa).toEqual([weg]);
+  });
+});
+
+describe('darfVerwalten', () => {
+  it('nur mit „administer persons“ (wie gemessen: Alwin ja, Spike nein)', () => {
+    expect(darfVerwalten({ churchcore: { 'administer persons': true } })).toBe(true);
+    expect(darfVerwalten({ churchcore: { 'administer persons': false } })).toBe(false);
+    expect(darfVerwalten({ churchcore: {} })).toBe(false);
+    expect(darfVerwalten(null)).toBe(false);
+  });
+});
+
+describe('istEinstellung', () => {
+  const gut = {
+    art: 'einstellung',
+    fassung: 1,
+    gruppe: 194,
+    rollen: [{ rolle: 2126, stufe: 'leitung' }],
+    punkte: 'vorschlagen',
+    kalender: null,
+  };
+  it('erkennt die eigene Einstellung', () => {
+    expect(istEinstellung(gut)).toBe(true);
+    expect(istEinstellung({ ...gut, kalender: 4, punkte: 'direkt' })).toBe(true);
+    expect(istEinstellung({ ...gut, vergeben: [{ rolle: 1, authId: 403, dataId: 4 }] })).toBe(true);
+  });
+  it('lehnt Fremdes und Kaputtes ab', () => {
+    expect(istEinstellung(null)).toBe(false);
+    expect(istEinstellung({ ...gut, art: 'aufgabe' })).toBe(false);
+    expect(istEinstellung({ ...gut, fassung: 2 })).toBe(false);
+    expect(istEinstellung({ ...gut, rollen: [{ rolle: 1, stufe: 'chef' }] })).toBe(false);
+    expect(istEinstellung({ ...gut, punkte: 'egal' })).toBe(false);
+    expect(istEinstellung({ ...gut, vergeben: [{ rolle: 1 }] })).toBe(false);
   });
 });
 

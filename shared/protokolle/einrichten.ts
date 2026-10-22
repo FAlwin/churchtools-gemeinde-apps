@@ -8,12 +8,17 @@
  * - Die Nummern der Rechte sind **je Modul verschieden** → aus `GET /permissions/definitions` nach Schlüssel.
  * - `PUT` **ergänzt nur**; entzogen wird per `DELETE {authId, dataId}`. Ein entzogenes Recht wirkt weiter,
  *   **bis irgendein `PUT` folgt** → nach dem Entziehen ein vorhandenes Recht erneut setzen (`nachschieben`).
+ *   Der Zwischenspeicher gilt für alle Rollen: ein `PUT` an einer **anderen** Rolle leert ihn ebenso sofort,
+ *   auch wenn die Rolle mit dem Entzug danach gar kein Recht mehr hat (gemessen S2-1, 22.10.2026).
+ * - Setzen darf nur, wer „Personen administrieren“ hat (`churchcore: administer persons`); ein Mitglied bekommt
+ *   403 (gemessen S2-1).
  * - Versteckte Gruppen: ihre Mitglieder sehen die Gruppe nur mit „versteckte Gruppe sehen“ (10119) an der Rolle.
  * - Vorlagen lesen nur Nutzende eingerichteter Gruppen (Alwin, 22.10.2026) → Recht an deren Rollen.
  *
  * **Was hier ausgerichtet wird:** die Rechte auf UNSERE Kategorien (vollständig: hinzufügen und entziehen).
- * Kalenderrecht und 10119 werden nur **ergänzt**, nie entzogen – sie können auch aus anderen Gründen gesetzt
- * worden sein, und wir wissen nicht, ob wir sie vergeben haben.
+ * **Zusatzrechte** (Kalender, 10119) werden nur dann entzogen, wenn die Verwaltung sie **selbst gesetzt** hat –
+ * das merkt sich die Einstellung der Gruppe (`vergeben`, Alwin 22.10.2026). Was vorher schon von Hand da war,
+ * wird nie gemerkt und darum nie entzogen.
  */
 
 export type Stufe = 'keine' | 'mitglied' | 'leitung';
@@ -28,6 +33,8 @@ export const STUFEN: { wert: Stufe; text: string }[] = [
 export const VERSTECKTE_GRUPPE_SEHEN = 10119;
 
 export interface RechteNummern {
+  /** Das Modul überhaupt sehen (Menüpunkt) – ohne Daten. */
+  modulSehen: number;
   kategorieSehen: number;
   datenSehen: number;
   datenAnlegen: number;
@@ -56,6 +63,7 @@ export function rechteNummernAus(
     return typeof r?.authId === 'number' ? r.authId : null;
   };
   const n = {
+    modulSehen: nummer(modulKuerzel, 'view'),
     kategorieSehen: nummer(modulKuerzel, 'view custom category'),
     datenSehen: nummer(modulKuerzel, 'view custom data'),
     datenAnlegen: nummer(modulKuerzel, 'create custom data'),
@@ -92,6 +100,7 @@ export function sollRechte(e: Einrichtung, n: RechteNummern): Recht[] {
   const { protokolle, mitarbeit, vorlagen } = e.kategorien;
   for (const { rolle, stufe } of e.rollen) {
     if (stufe === 'keine') continue;
+    add(rolle, n.modulSehen, null);
     for (const k of [protokolle, mitarbeit, vorlagen]) {
       add(rolle, n.kategorieSehen, k);
       add(rolle, n.datenSehen, k);
@@ -120,14 +129,17 @@ const schluessel = (r: Recht): string => `${r.rolle}:${r.authId}:${r.dataId ?? '
  * (`GET /permissions/group_role/{rolle}`). Entzogen wird nur, was auf UNSERE Kategorien zeigt.
  *
  * `nachschieben`: ein Recht, das nach dem Entziehen erneut gesetzt wird, damit ChurchTools seinen
- * Zwischenspeicher leert (S0). `null`, wenn nichts entzogen wird – oder wenn danach keins mehr übrig ist; dann
- * muss der Aufrufer ein anderes vorhandenes Recht nehmen und das melden.
+ * Zwischenspeicher leert (S0; welche Rolle, ist gleich – S2-1). `null`, wenn nichts entzogen wird. Bleibt nach
+ * dem Entziehen gar kein Recht übrig (alle Rollen „Kein Zugriff“), wird „Modul sehen“ an die erste betroffene
+ * Rolle gesetzt: Das schadet nicht – ohne Kategorie-Rechte sieht sie nichts – und wird nie entzogen.
  */
 export function ausrichten(
   soll: readonly Recht[],
   ist: readonly Recht[],
   e: Pick<Einrichtung, 'kategorien'>,
   n: RechteNummern,
+  /** Zusatzrechte, die die Verwaltung früher selbst gesetzt hat (aus der Einstellung). */
+  vergeben: readonly Recht[] = [],
 ): { setzen: Recht[]; entziehen: Recht[]; nachschieben: Recht | null } {
   const unsere = new Set([e.kategorien.protokolle, e.kategorien.mitarbeit, e.kategorien.vorlagen]);
   const datenRechte = new Set([
@@ -137,8 +149,10 @@ export function ausrichten(
     n.datenAendern,
     n.datenLoeschen,
   ]);
+  const selbstGesetzt = new Set(vergeben.map(schluessel));
   const verwaltet = (r: Recht): boolean =>
-    datenRechte.has(r.authId) && r.dataId !== null && unsere.has(r.dataId);
+    (datenRechte.has(r.authId) && r.dataId !== null && unsere.has(r.dataId)) ||
+    selbstGesetzt.has(schluessel(r));
 
   const sollSet = new Set(soll.map(schluessel));
   const istSet = new Set(ist.map(schluessel));
@@ -148,7 +162,32 @@ export function ausrichten(
     ...soll,
     ...ist.filter((r) => !entziehen.some((x) => schluessel(x) === schluessel(r))),
   ];
-  return { setzen, entziehen, nachschieben: entziehen.length ? (bleibt[0] ?? null) : null };
+  if (!entziehen.length) return { setzen, entziehen, nachschieben: null };
+  const ersatz: Recht = { rolle: entziehen[0].rolle, authId: n.modulSehen, dataId: null };
+  return { setzen, entziehen, nachschieben: bleibt[0] ?? ersatz };
+}
+
+/** Kalender-Rechte und „versteckte Gruppe sehen“ – die Rechte, die auch aus anderem Grund gesetzt sein können. */
+export function istZusatzrecht(r: Recht, n: RechteNummern): boolean {
+  return (
+    r.authId === n.kalenderSehen ||
+    r.authId === n.kalenderBearbeiten ||
+    r.authId === VERSTECKTE_GRUPPE_SEHEN
+  );
+}
+
+/**
+ * **Welche Zusatzrechte die Verwaltung nach diesem Einrichten selbst gesetzt hat:** die im Soll, die sie gerade
+ * gesetzt hat oder schon früher gesetzt hatte. Eins, das vorher schon da war (von Hand), zählt nicht.
+ */
+export function vergebenNachher(
+  soll: readonly Recht[],
+  setzen: readonly Recht[],
+  vergeben: readonly Recht[],
+  n: RechteNummern,
+): Recht[] {
+  const gesetzt = new Set([...setzen, ...vergeben].map(schluessel));
+  return soll.filter((r) => istZusatzrecht(r, n) && gesetzt.has(schluessel(r)));
 }
 
 /**
@@ -168,4 +207,70 @@ export function rechteAus(rolle: number, zeilen: unknown): Recht[] {
 /** Der Rumpf für `PUT`/`DELETE /permissions/group_role/{rolle}`. */
 export function rechtRumpf(r: Recht): { authId: number; dataId?: number[] } {
   return r.dataId === null ? { authId: r.authId } : { authId: r.authId, dataId: [r.dataId] };
+}
+
+/** **Wer die Verwaltung sieht**: wer in ChurchTools Rechte setzen darf (`churchcore: administer persons`). */
+export function darfVerwalten(globaleRechte: unknown): boolean {
+  const cc = (globaleRechte as { churchcore?: Record<string, unknown> } | null)?.churchcore;
+  return cc?.['administer persons'] === true;
+}
+
+export type PunkteVonMitgliedern = 'vorschlagen' | 'direkt';
+
+/**
+ * **Die Einstellung einer Gruppe** – ein Wert in ihrer Kategorie „Protokolle“. Sie ist zugleich der Vermerk
+ * „eingerichtet“: geschrieben wird sie erst, wenn alle Rechte gesetzt und nachgelesen sind.
+ */
+export interface GruppenEinstellung {
+  art: 'einstellung';
+  fassung: 1;
+  gruppe: number;
+  /** Stufe je Rolle (`group_role`-ID); fehlende Rollen gelten als „Kein Zugriff“. */
+  rollen: { rolle: number; stufe: Stufe }[];
+  punkte: PunkteVonMitgliedern;
+  kalender: number | null;
+  /**
+   * Zusatzrechte (Kalender, 10119), die die Verwaltung selbst gesetzt hat – nur diese entzieht sie wieder.
+   * Fehlt bei Einstellungen von vor S2-2 (dann: keine).
+   */
+  vergeben?: Recht[];
+}
+
+export function istEinstellung(x: unknown): x is GruppenEinstellung {
+  const e = x as Partial<GruppenEinstellung> | null;
+  return (
+    !!e &&
+    e.art === 'einstellung' &&
+    e.fassung === 1 &&
+    typeof e.gruppe === 'number' &&
+    Array.isArray(e.rollen) &&
+    e.rollen.every((r) => typeof r?.rolle === 'number' && STUFEN.some((s) => s.wert === r.stufe)) &&
+    (e.punkte === 'vorschlagen' || e.punkte === 'direkt') &&
+    (e.kalender === null || typeof e.kalender === 'number') &&
+    (e.vergeben === undefined ||
+      (Array.isArray(e.vergeben) &&
+        e.vergeben.every(
+          (r) =>
+            typeof r?.rolle === 'number' &&
+            typeof r.authId === 'number' &&
+            (r.dataId === null || typeof r.dataId === 'number'),
+        )))
+  );
+}
+
+/**
+ * **Hat ChurchTools übernommen, was ausgerichtet werden sollte?** `nachher` = frisch gelesene Rechte der Rollen.
+ * Geprüft wird das ganze Soll (nicht nur das gerade Gesetzte) und jeder Entzug. Leer heißt: übernommen – ein
+ * 204 allein ist kein Beleg (Lehre vom 11.08.2026).
+ */
+export function abweichungen(
+  soll: readonly Recht[],
+  entzogen: readonly Recht[],
+  nachher: readonly Recht[],
+): { fehlt: Recht[]; nochDa: Recht[] } {
+  const da = new Set(nachher.map(schluessel));
+  return {
+    fehlt: soll.filter((r) => !da.has(schluessel(r))),
+    nochDa: entzogen.filter((r) => da.has(schluessel(r))),
+  };
 }

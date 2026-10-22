@@ -96,6 +96,10 @@ export interface Absage {
   selbst: boolean;
   warVorher: 'aktiv' | 'wartet';
   werte: Werte;
+  /** Erster Anmeldetag laut Verlauf – für den Betrag beim Zurückholen (A7-4c). */
+  angemeldetAm: string | null;
+  email: string | null;
+  geburtstag: string | null;
 }
 
 export interface Mitgliederstand {
@@ -232,6 +236,9 @@ export function mitgliederstandAus(
       selbst: v.meta?.createdPerson?.id === personId,
       warVorher: vorher.membershipStatus === 'waiting' ? 'wartet' : 'aktiv',
       werte,
+      angemeldetAm: tag(dazu.get(personId)),
+      email: personen.get(personId)?.email ?? null,
+      geburtstag: personen.get(personId)?.geburtstag ?? null,
     });
   }
   return { mitglieder, absagen };
@@ -259,7 +266,7 @@ export interface ListenPerson {
 export interface Zahlung {
   /** Bei wem sie steht – `null`, wenn die Person abgesagt hat (dann aus dem Verlauf, nur zum Ansehen). */
   personId: number | null;
-  wofuer: 'anmeldung' | 'nachgerueckt' | 'dazu';
+  wofuer: 'anmeldung' | 'nachgerueckt' | 'dazu' | 'zurueck';
   /** Vorname der Person, bei der sie steht. */
   name: string;
   betragCent: number | null;

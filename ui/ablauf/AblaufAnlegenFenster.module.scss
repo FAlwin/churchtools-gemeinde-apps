@@ -1,4 +1,6 @@
-// „Ablauf anlegen" (13.10.2026) – drei Wege als Karten, im gewählten die Auswahl darunter.
+// „Ablauf anlegen" (13.10.2026) – drei Wege als Karten, im gewählten die Auswahl darunter. Seit E6-5a ein gemeinsamer
+// Baustein für Musik-App und Dienstplaner (vorher `client/src/components/`).
+@use '../design/mixins' as m;
 .fuer {
   margin: -6px 0 14px;
   font-size: 13.5px;
@@ -139,5 +141,6 @@
 }
 
 .anlegen {
+  @include m.hauptKnopfBreit;
   margin-top: 14px;
 }

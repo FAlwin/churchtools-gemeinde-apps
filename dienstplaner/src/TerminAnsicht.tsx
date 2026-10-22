@@ -13,6 +13,12 @@ import { gruppenName } from '@shared/dienstplan/plan';
 import { ladeTermin, type TerminDaten } from './ladeTermine';
 import { ladeAblauf, ladeMusikApp } from './ladeBeiwerk';
 import { ablaufAktionen } from './ablaufAktionen';
+import { ladeKopieVorschlaege, ladeVorlagen, WOCHEN_ZURUECK } from './ladeAnlegen';
+import { AblaufAnlegenFenster, type KopieVorschlag } from '@ui/ablauf/AblaufAnlegenFenster';
+import { browserSchreiber } from '@ui/ct/schreiber';
+import { ablaufAnlegen } from '@shared/ct/ablaufAnlegen';
+import { vorlagenFuer } from '@shared/ct/ablaufVorschlaege';
+import type { AblaufQuelle, AblaufVorlage } from '@shared/types/index';
 import { Plaetze } from './Planen';
 import { ablaufBearbeitbar, type Start } from './start';
 import styles from './TerminAnsicht.module.scss';
@@ -67,6 +73,11 @@ export function TerminAnsicht({
   const [versuch, setVersuch] = useState(0);
   const [musikApp, setMusikApp] = useState<string | null>(null);
   const [bearbeiten, setBearbeiten] = useState(false);
+  // „Ablauf anlegen“ (E6-5a): Fenster und was es braucht – erst beim Öffnen geladen.
+  const [anlegen, setAnlegen] = useState<{
+    vorlagen: { liste: AblaufVorlage[]; laedt: boolean; fehler: boolean };
+    vorschlaege: KopieVorschlag[] | null;
+  } | null>(null);
   // Nur das zuletzt angestoßene Neu-Lesen zählt – sonst überschriebe eine langsame ältere Antwort eine neuere.
   const ladeNr = useRef(0);
 
@@ -74,6 +85,7 @@ export function TerminAnsicht({
     let aktuell = true;
     ladeNr.current++;
     setBearbeiten(false);
+    setAnlegen(null);
     setZustand({ art: 'laedt' });
     Promise.all([ladeTermin(start, terminId, zeitzone), ladeAblauf(terminId)]).then(
       ([daten, ablauf]) => aktuell && setZustand({ art: 'fertig', daten, ablauf }),
@@ -128,6 +140,41 @@ export function TerminAnsicht({
         if (nr === ladeNr.current) liste.fehlerZeigen(null, NEU_LADEN_FEHLT);
       },
     );
+  }
+
+  /** Fenster „Ablauf anlegen“ öffnen und Vorlagen + frühere Termine nachladen (Beiwerk: Fehler steht im Fenster). */
+  function anlegenOeffnen(ziel: { beginn: string; tag: string; kalenderId: number | null }): void {
+    setAnlegen({ vorlagen: { liste: [], laedt: true, fehler: false }, vorschlaege: null });
+    ladeVorlagen().then(
+      (liste) =>
+        setAnlegen(
+          (a) =>
+            a && {
+              ...a,
+              vorlagen: {
+                liste: vorlagenFuer(liste, ziel.kalenderId),
+                laedt: false,
+                fehler: false,
+              },
+            },
+        ),
+      () => setAnlegen((a) => a && { ...a, vorlagen: { liste: [], laedt: false, fehler: true } }),
+    );
+    ladeKopieVorschlaege({ id: terminId, ...ziel }, zeitzone).then(
+      (vorschlaege) => setAnlegen((a) => a && { ...a, vorschlaege }),
+      () => setAnlegen((a) => a && { ...a, vorschlaege: [] }),
+    );
+  }
+
+  /** Anlegen über den Schreibkern (prüft vorher und liest nachher nach), danach gleich bearbeiten. */
+  async function anlegenMit(quelle: AblaufQuelle, kalenderId: number | null): Promise<void> {
+    if (kalenderId === null) {
+      throw new Error('Der Kalender dieses Termins ist unbekannt. Bitte die Seite neu laden.');
+    }
+    await ablaufAnlegen(browserSchreiber, terminId, kalenderId, quelle);
+    setAnlegen(null);
+    setBearbeiten(true);
+    ablaufNeuLaden();
   }
 
   // Beiwerk wie auf der Startseite: scheitert es, fehlt nur der Knopf.
@@ -239,7 +286,25 @@ export function TerminAnsicht({
           </span>
         </div>
         {ablauf === null ? (
-          <p className={styles.hinweis}>Noch kein Ablauf.</p>
+          <div className={styles.ohneAblauf}>
+            <p className={styles.hinweis}>Noch kein Ablauf.</p>
+            {/* Wer den Ablauf bearbeiten darf, darf ihn auch anlegen (gemessen E6-0) – dieselbe Regel. */}
+            {darf && (
+              <button
+                type="button"
+                className={styles.anlegenKnopf}
+                onClick={() =>
+                  anlegenOeffnen({
+                    beginn: zustand.daten.zeilen[0]?.beginn ?? '',
+                    tag: s.tag,
+                    kalenderId: zustand.daten.ablaufTermin.kalenderId ?? null,
+                  })
+                }
+              >
+                <Icon name="plus" size={16} /> Ablauf anlegen
+              </button>
+            )}
+          </div>
         ) : bearbeiten ? (
           <div className={styles.ablaufGrund}>{liste.liste}</div>
         ) : zeilen.length === 0 ? (
@@ -275,6 +340,20 @@ export function TerminAnsicht({
         )}
       </section>
       {liste.ueberlagerung}
+      {anlegen && (
+        <AblaufAnlegenFenster
+          fuer={`${s.name} · ${datumText(s.tag)} · ${s.uhrzeit} Uhr`}
+          vorlagen={anlegen.vorlagen}
+          vorschlaege={anlegen.vorschlaege ?? []}
+          keineVorschlaege={
+            anlegen.vorschlaege === null
+              ? 'Frühere Termine werden geladen …'
+              : `Kein früherer Termin mit Ablauf in den letzten ${WOCHEN_ZURUECK} Wochen.`
+          }
+          onAnlegen={(q) => anlegenMit(q, zustand.daten.ablaufTermin.kalenderId ?? null)}
+          onClose={() => setAnlegen(null)}
+        />
+      )}
     </div>
   );
 }

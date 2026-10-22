@@ -16,8 +16,9 @@
  * - Vorlagen lesen nur Nutzende eingerichteter Gruppen (Alwin, 22.10.2026) → Recht an deren Rollen.
  *
  * **Was hier ausgerichtet wird:** die Rechte auf UNSERE Kategorien (vollständig: hinzufügen und entziehen).
- * Kalenderrecht und 10119 werden nur **ergänzt**, nie entzogen – sie können auch aus anderen Gründen gesetzt
- * worden sein, und wir wissen nicht, ob wir sie vergeben haben.
+ * **Zusatzrechte** (Kalender, 10119) werden nur dann entzogen, wenn die Verwaltung sie **selbst gesetzt** hat –
+ * das merkt sich die Einstellung der Gruppe (`vergeben`, Alwin 22.10.2026). Was vorher schon von Hand da war,
+ * wird nie gemerkt und darum nie entzogen.
  */
 
 export type Stufe = 'keine' | 'mitglied' | 'leitung';
@@ -137,6 +138,8 @@ export function ausrichten(
   ist: readonly Recht[],
   e: Pick<Einrichtung, 'kategorien'>,
   n: RechteNummern,
+  /** Zusatzrechte, die die Verwaltung früher selbst gesetzt hat (aus der Einstellung). */
+  vergeben: readonly Recht[] = [],
 ): { setzen: Recht[]; entziehen: Recht[]; nachschieben: Recht | null } {
   const unsere = new Set([e.kategorien.protokolle, e.kategorien.mitarbeit, e.kategorien.vorlagen]);
   const datenRechte = new Set([
@@ -146,8 +149,10 @@ export function ausrichten(
     n.datenAendern,
     n.datenLoeschen,
   ]);
+  const selbstGesetzt = new Set(vergeben.map(schluessel));
   const verwaltet = (r: Recht): boolean =>
-    datenRechte.has(r.authId) && r.dataId !== null && unsere.has(r.dataId);
+    (datenRechte.has(r.authId) && r.dataId !== null && unsere.has(r.dataId)) ||
+    selbstGesetzt.has(schluessel(r));
 
   const sollSet = new Set(soll.map(schluessel));
   const istSet = new Set(ist.map(schluessel));
@@ -160,6 +165,29 @@ export function ausrichten(
   if (!entziehen.length) return { setzen, entziehen, nachschieben: null };
   const ersatz: Recht = { rolle: entziehen[0].rolle, authId: n.modulSehen, dataId: null };
   return { setzen, entziehen, nachschieben: bleibt[0] ?? ersatz };
+}
+
+/** Kalender-Rechte und „versteckte Gruppe sehen“ – die Rechte, die auch aus anderem Grund gesetzt sein können. */
+export function istZusatzrecht(r: Recht, n: RechteNummern): boolean {
+  return (
+    r.authId === n.kalenderSehen ||
+    r.authId === n.kalenderBearbeiten ||
+    r.authId === VERSTECKTE_GRUPPE_SEHEN
+  );
+}
+
+/**
+ * **Welche Zusatzrechte die Verwaltung nach diesem Einrichten selbst gesetzt hat:** die im Soll, die sie gerade
+ * gesetzt hat oder schon früher gesetzt hatte. Eins, das vorher schon da war (von Hand), zählt nicht.
+ */
+export function vergebenNachher(
+  soll: readonly Recht[],
+  setzen: readonly Recht[],
+  vergeben: readonly Recht[],
+  n: RechteNummern,
+): Recht[] {
+  const gesetzt = new Set([...setzen, ...vergeben].map(schluessel));
+  return soll.filter((r) => istZusatzrecht(r, n) && gesetzt.has(schluessel(r)));
 }
 
 /**
@@ -201,6 +229,11 @@ export interface GruppenEinstellung {
   rollen: { rolle: number; stufe: Stufe }[];
   punkte: PunkteVonMitgliedern;
   kalender: number | null;
+  /**
+   * Zusatzrechte (Kalender, 10119), die die Verwaltung selbst gesetzt hat – nur diese entzieht sie wieder.
+   * Fehlt bei Einstellungen von vor S2-2 (dann: keine).
+   */
+  vergeben?: Recht[];
 }
 
 export function istEinstellung(x: unknown): x is GruppenEinstellung {
@@ -213,7 +246,15 @@ export function istEinstellung(x: unknown): x is GruppenEinstellung {
     Array.isArray(e.rollen) &&
     e.rollen.every((r) => typeof r?.rolle === 'number' && STUFEN.some((s) => s.wert === r.stufe)) &&
     (e.punkte === 'vorschlagen' || e.punkte === 'direkt') &&
-    (e.kalender === null || typeof e.kalender === 'number')
+    (e.kalender === null || typeof e.kalender === 'number') &&
+    (e.vergeben === undefined ||
+      (Array.isArray(e.vergeben) &&
+        e.vergeben.every(
+          (r) =>
+            typeof r?.rolle === 'number' &&
+            typeof r.authId === 'number' &&
+            (r.dataId === null || typeof r.dataId === 'number'),
+        )))
   );
 }
 

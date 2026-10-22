@@ -31,6 +31,7 @@ import {
   rechteNummernAus,
   rechtRumpf,
   sollRechte,
+  vergebenNachher,
   type GruppenEinstellung,
   type PunkteVonMitgliedern,
   type Recht,
@@ -163,6 +164,18 @@ export interface Wahl {
   kalender: number | null;
 }
 
+/**
+ * **Vorschlag für eine noch nicht eingerichtete Gruppe**: Leiter-Rollen schreiben, alle anderen lesen und
+ * haken eigene To-Dos ab. Der Admin sieht die Tabelle, bevor etwas gesetzt wird.
+ */
+export function vorschlag(rollen: readonly GruppenRolle[]): Wahl {
+  return {
+    rollen: rollen.map((r) => ({ rolle: r.id, stufe: r.leitung ? 'leitung' : 'mitglied' })),
+    punkte: 'vorschlagen',
+    kalender: null,
+  };
+}
+
 async function rechteDerRollen(rollen: readonly number[]): Promise<Recht[]> {
   const listen = await Promise.all(
     rollen.map(async (r) => rechteAus(r, await ctDaten(`/permissions/group_role/${r}`))),
@@ -222,9 +235,15 @@ export async function gruppeEinrichten(
     kalender: wahl.kalender,
     versteckt: gruppe.versteckt,
   };
-  const rollenIds = wahl.rollen.map((r) => r.rolle);
+  // Zusatzrechte, die die Verwaltung früher selbst gesetzt hat (Kalender, 10119) – nur die darf sie entziehen.
+  // Ihre Rollen werden mitgelesen, auch wenn eine davon heute nicht mehr in der Wahl steht.
+  const alt = await einstellungLesen(modul, gruppe.id);
+  const vergeben = alt?.inhalt.vergeben ?? [];
+  const rollenIds = [
+    ...new Set([...wahl.rollen.map((r) => r.rolle), ...vergeben.map((r) => r.rolle)]),
+  ];
   const soll = sollRechte(einrichtung, nummern);
-  const plan = ausrichten(soll, await rechteDerRollen(rollenIds), einrichtung, nummern);
+  const plan = ausrichten(soll, await rechteDerRollen(rollenIds), einrichtung, nummern, vergeben);
   for (const r of plan.setzen) await recht('PUT', r);
   for (const r of plan.entziehen) await recht('DELETE', r);
   // Ohne dieses PUT wirkt ein Entzug unbestimmt lange weiter (S0, S2-1) – auch ein entzogenes Leserecht.
@@ -232,7 +251,8 @@ export async function gruppeEinrichten(
   const { fehlt, nochDa } = abweichungen(soll, plan.entziehen, await rechteDerRollen(rollenIds));
   if (fehlt.length || nochDa.length) throw new NichtUebernommen('die Rechte der Rollen');
 
-  // 4. Die Einstellung – erst jetzt, sie ist der Vermerk „eingerichtet“.
+  // 4. Die Einstellung – erst jetzt, sie ist der Vermerk „eingerichtet“. Scheitert sie, bleiben die gerade
+  // gesetzten Zusatzrechte ungemerkt (und werden später nicht entzogen) – lieber das als ein falsches „eingerichtet“.
   const einstellung: GruppenEinstellung = {
     art: 'einstellung',
     fassung: 1,
@@ -240,8 +260,8 @@ export async function gruppeEinrichten(
     rollen: wahl.rollen,
     punkte: wahl.punkte,
     kalender: wahl.kalender,
+    vergeben: vergebenNachher(soll, plan.setzen, vergeben, nummern),
   };
-  const alt = await einstellungLesen(modul, gruppe.id);
   const text = JSON.stringify(einstellung);
   if (alt) await wertAendern(modulPort, modul, alt.kategorie, alt.id, text, NUR_ADMIN);
   else await wertAnlegen(modulPort, modul, kategorien.protokolle, text, NUR_ADMIN);

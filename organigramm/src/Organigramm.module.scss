@@ -7,6 +7,22 @@
   gap: 14px;
 }
 
+.oben {
+  display: flex;
+  justify-content: flex-end;
+}
+
+// Präsentation öffnen (O4) – ein Knopf, der etwas tut.
+.praesentieren {
+  @include m.aktionKnopf;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--r-ctrl);
+  font-size: 14px;
+}
+
 .filter {
   display: flex;
   flex-wrap: wrap;

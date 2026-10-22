@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { baumAus, elternAus, type OrgGruppe } from './gruppen';
 import { rollenAus, rollenRang, type Mitglied } from './mitglieder';
-import { gruppenPersonen, teilbaumPersonen } from './personen';
+import { gruppenLeitung, gruppenPersonen, teilbaumPersonen } from './personen';
 
 const g = (id: number, name: string): OrgGruppe => ({
   id,
@@ -73,5 +73,18 @@ describe('gruppenPersonen – eine Gruppe, gleiche Reihenfolge', () => {
   it('Leiter vor Co-Leiter vor Mitarbeiter, dann Name', () => {
     const l = gruppenPersonen([m(3, 15), m(2, 15), m(5, 17), m(4, 16)], name, RANG);
     expect(l.map((x) => x.personId)).toEqual([4, 5, 2, 3]);
+  });
+});
+
+describe('gruppenLeitung', () => {
+  it('nur Leitungs-Rollen, in der Reihenfolge von ChurchTools', () => {
+    expect(
+      gruppenLeitung([m(2, 15), m(5, 17), m(1, 16)], ROLLEN, name, RANG).map((x) => x.personId),
+    ).toEqual([1, 5]);
+  });
+  it('ohne Leitung → leer; unbekannte Rolle oder keine Rolle zählt nicht', () => {
+    expect(
+      gruppenLeitung([m(2, 15), m(3, 99), { personId: 4, rolleId: null }], ROLLEN, name, RANG),
+    ).toEqual([]);
   });
 });

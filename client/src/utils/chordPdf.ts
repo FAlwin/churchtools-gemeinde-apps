@@ -3,7 +3,7 @@ import { parseChordPro, parseLine, parseMetadata, teileImFlow } from './chordpro
 import { transposeChord } from './transpose';
 import type { SetlistSong } from '@shared/types/index';
 import type { Abbildung, Satzplan, Stueck } from './rollenAbbildung';
-import { MARGIN, PAGE_H, PAGE_W, spaltenBreite, spaltenX } from './blattMasse';
+import { KOPF_ABSTAND, MARGIN, PAGE_H, PAGE_W, spaltenBreite, spaltenX } from './blattMasse';
 
 /** Optionen für die PDF-Erzeugung aus ChordPro (Issue: PDF-Export). */
 export interface ChordPdfOptions {
@@ -227,7 +227,7 @@ export function generateChordPdf(
   }
 
   // Spalten beginnen unter dem Titelkopf UND unter dem Logo (nur Seite 1).
-  const startY = Math.max(y, logoBottom) + 4;
+  const startY = Math.max(y, logoBottom) + KOPF_ABSTAND;
   y = startY;
   x = colX(0);
   if (protokoll) {

@@ -497,7 +497,9 @@ Strg/⌘/Alt, in Eingaben oder Leertaste auf einem Knopf); im Scroll-Modus geht 
 (#609): zur nächsten Halte-Stelle (Titel, Teil-Anfang, `----`), wenn sie schon zu sehen ist, sonst ⅔ Bildschirm
 (`SCHRITT_ANTEIL`, Alwin: 85 % war zu weit) – Regel `pedalZiel` (`utils/pedalSchritt.ts`), Halte-Stellen
 `pedalHalte` (`utils/rollenAbbildung.ts`, aus dem Satzplan: `stuecke` + `weiterschalten`, beim Setzen der Rolle
-protokolliert). Hochgeladene PDFs haben keine Halte-Stellen → ⅔. Die Fußpfeile ebenso. Die Ansicht schreibt die
+protokolliert; Luft über einem Teil `HALTE_LUFT` in mm, höchstens der halbe Abstand zum Teil davor bzw. Kopf
+`KOPF_ABSTAND` – feste Bildpunkte ließen auf schmalen Handys einen Streifen der Zeile davor herein; am `----`
+keine Luft). Hochgeladene PDFs haben keine Halte-Stellen → ⅔. Die Fußpfeile ebenso. Die Ansicht schreibt die
 Halte-Stellen bei jedem Tritt nach `data-halte` (für den E2E). E2E: `e2e/chart-scrollen.spec.ts`.
 
 **Gesten:** **ein Finger blättert, zwei Finger zoomen + verschieben** (auch im Zeichenmodus – ein

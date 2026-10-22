@@ -345,7 +345,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   den nächsten Teil des Lieds an den oberen Rand – bzw. die nächste Stelle mit einem Weiterschalt-Punkt `----`.
   Ist ein Teil länger als der Bildschirm (Emporen-Monitor), geht es erst um ⅔ weiter, damit keine Zeile
   übersprungen wird. Zurück springt an den Anfang des aktuellen bzw. vorigen Teils. Die Pfeile unten tun dasselbe.
-  Hochgeladene PDFs scrollen weiter um ⅔.
+  Über dem Teil bleibt etwas Luft, ohne dass von der Zeile davor oder vom Titelkopf ein Streifen hereinschaut –
+  auch auf schmalen Handys. Hochgeladene PDFs scrollen weiter um ⅔.
 - **Scroll-Modus: je Lied eine lange Seite** (#607, Rückmeldung des Musik-Bereichsleiters): Statt
   aneinandergehängter A4-Seiten ist jedes Lied beim Scrollen eine durchgehende Seite in einer Spalte – keine
   Lücke mehr, wenn ein Teil nicht mehr auf die Seite passte, und die CCLI-Angabe steht direkt unter dem

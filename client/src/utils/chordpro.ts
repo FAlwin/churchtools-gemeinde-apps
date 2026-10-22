@@ -212,6 +212,39 @@ export function flowEinfuegen(
   return { vorhanden: false, pos: ziel, zeile: `{flow: ${namen.join(', ')}}` };
 }
 
+/**
+ * **Den Ablauf neu schreiben** (Lied-Editor L2, 22.10.2026: Ablauf als Kärtchen). Liefert die EINE Änderung am
+ * Text, die die Kärtchen-Reihenfolge in die `{flow: …}`-Zeile bringt – als `{ from, to, insert }`, damit der
+ * Editor sie wie eine Eingabe anwendet (Rückgängig inklusive):
+ *  - Es gibt eine Flow-Zeile → sie wird ersetzt.
+ *  - Es gibt keine → sie kommt dorthin, wo `flowEinfuegen` sie hinsetzt (nach den Kopfangaben).
+ *  - `eintraege` leer → die Zeile fällt samt Zeilenende weg: „wie im Text" (`teileImFlow` ohne Flow).
+ * `null`, wenn sich nichts ändert. Der Rest des Texts bleibt Zeichen für Zeichen, wie er war.
+ */
+export function flowSetzen(
+  text: string,
+  eintraege: string[],
+): { from: number; to: number; insert: string } | null {
+  const zeile = eintraege.length > 0 ? `{flow: ${eintraege.join(', ')}}` : '';
+  let pos = 0;
+  for (const raw of text.split('\n')) {
+    if (/^\{flow[:\s]/i.test(raw.trim())) {
+      if (raw === zeile) return null;
+      if (zeile) return { from: pos, to: pos + raw.length, insert: zeile };
+      // Weg damit – samt Zeilenende (am Textende das davor), sonst bliebe eine Leerzeile.
+      const ende = pos + raw.length;
+      if (ende < text.length) return { from: pos, to: ende + 1, insert: '' };
+      return { from: Math.max(0, pos - 1), to: ende, insert: '' };
+    }
+    pos += raw.length + 1;
+  }
+  if (!zeile) return null;
+  const ziel = flowEinfuegen(text);
+  // `flowEinfuegen` meldet hier immer „nicht vorhanden" – die Suche oben hat keine Zeile gefunden.
+  const an = ziel.pos;
+  return { from: an, to: an, insert: `${zeile}\n` };
+}
+
 /** Direktiven, die einen Song-Teil beginnen (beide Dialekte). */
 const ABSCHNITT =
   /^\{(start_of_\w+|comment|verse|chorus|bridge|pre[-_]?chorus|intro|outro|tag)(?:[:\s].*)?\}$/i;

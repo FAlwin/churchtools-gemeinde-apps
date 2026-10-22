@@ -1,22 +1,14 @@
 import { useState } from 'react';
 import { SITE_CONFIG_GRENZEN, type SiteConfig, type SiteLink } from '@shared/types/index';
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  KeyboardSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core';
+import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import {
   SortableContext,
   verticalListSortingStrategy,
   useSortable,
   arrayMove,
-  sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useZiehSensoren } from '@ui/bedienung/useZiehSensoren';
 import { innerScrollOnly } from '@ui/bedienung/dndAutoScroll';
 import { Schalter } from '@ui/bedienung/Schalter';
 import { Spinner } from './Spinner';
@@ -94,10 +86,7 @@ export function LinksManager({ site, onClose }: { site: SiteConfig; onClose: () 
   const [err, setErr] = useState<string | null>(null);
   const update = useUpdateSiteConfig();
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
+  const sensors = useZiehSensoren();
 
   function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e;

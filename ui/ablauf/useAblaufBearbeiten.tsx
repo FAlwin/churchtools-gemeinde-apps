@@ -9,21 +9,8 @@
  * (`fehlerZeigen`) – auch ein Fehler beim Abschließen steht in derselben Zeile.
  */
 import { Fragment, useEffect, useState, type ReactNode } from 'react';
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  KeyboardSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  arrayMove,
-  sortableKeyboardCoordinates,
-} from '@dnd-kit/sortable';
+import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import type { AgendaServiceOption } from '@shared/types/index';
 import type { GeloeschterPunkt, PunktAenderung } from '@shared/ct/schreibKern';
 import type { NeuerAgendaPunkt } from '@shared/ct/agendaItemChanges';
@@ -41,6 +28,7 @@ import { useToast } from '../fenster/useToast';
 import { Icon } from '../icons/icons';
 import { SchwebePlus } from '../bedienung/SchwebePlus';
 import { useRueckgaengig } from '../bedienung/useRueckgaengig';
+import { useZiehSensoren } from '../bedienung/useZiehSensoren';
 import { innerScrollOnly, resetViewportAfterDrag } from '../bedienung/dndAutoScroll';
 import { SortableRow } from './AgendaSortableRow';
 import { BeginnLinie } from './AblaufTeile';
@@ -140,10 +128,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
     if (!aktiv) rueckgaengigVerwerfen();
   }, [aktiv, rueckgaengigVerwerfen]);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
+  const sensors = useZiehSensoren();
 
   function handleDragEnd(e: DragEndEvent) {
     resetViewportAfterDrag(); // #56: weggerutschte Kopfleiste zurückholen (auch ohne Umsortierung)

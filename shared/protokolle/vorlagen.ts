@@ -129,3 +129,95 @@ export function wieLetztesMal(letztes: readonly Block[], neueId: () => string): 
     }));
   return mitNeuenIds(behalten, neueId);
 }
+
+/**
+ * **Eine Vorlage zum Bearbeiten** (Bauplan S2-3, Entwurf 7): Name, Tagesordnungspunkte mit vorbereitetem Text und
+ * festen Punkten („Offene To-Dos“, „Letztes Protokoll“) sowie feste Aufgaben. Gespeichert wird weiterhin das
+ * Dokument (`bloecke`) – die Verwaltung bearbeitet nur diese einfachere Sicht darauf.
+ */
+export interface VorlagenFormular {
+  name: string;
+  punkte: { titel: string; text: string; verweis: VerweisArt | null }[];
+  aufgaben: string[];
+}
+
+export type VerweisArt = 'offene-aufgaben' | 'letztes-protokoll';
+
+/**
+ * Vorlage → Formular. Jede Überschrift (Ebene 1) beginnt einen Punkt, Absätze darunter werden sein Text (eine Zeile
+ * je Absatz), ein Verweis macht ihn zum festen Punkt. Feste Aufgaben werden gesammelt, egal unter welchem Punkt sie
+ * stehen. Andere Blöcke kommen in Vorlagen nicht vor (sie entstehen nur über dieses Formular).
+ */
+export function alsFormular(v: Vorlage): VorlagenFormular {
+  const f: VorlagenFormular = { name: v.name, punkte: [], aufgaben: [] };
+  const aktuell = (): VorlagenFormular['punkte'][number] => {
+    if (!f.punkte.length) f.punkte.push({ titel: '', text: '', verweis: null });
+    return f.punkte[f.punkte.length - 1];
+  };
+  for (const b of v.bloecke) {
+    if (b.type === 'heading' && Number(b.props?.level ?? 1) === 1)
+      f.punkte.push({ titel: textAus(b.content), text: '', verweis: null });
+    else if (b.type === 'paragraph') {
+      const p = aktuell();
+      const t = textAus(b.content);
+      if (t) p.text = p.text ? `${p.text}\n${t}` : t;
+    } else if (b.type === BLOCK.verweis) {
+      const art = b.props?.art;
+      if (art === 'offene-aufgaben' || art === 'letztes-protokoll') aktuell().verweis = art;
+    } else if (b.type === BLOCK.aufgabe) {
+      const t = textAus(b.content);
+      if (t) f.aufgaben.push(t);
+    }
+  }
+  return f;
+}
+
+/** Was am Formular fehlt – leer heißt: speicherbar. */
+export function formularPruefen(f: VorlagenFormular): string[] {
+  const fehler: string[] = [];
+  if (!f.name.trim()) fehler.push('Die Vorlage braucht einen Namen.');
+  if (!f.punkte.some((p) => p.titel.trim()))
+    fehler.push('Die Vorlage braucht mindestens einen Tagesordnungspunkt.');
+  return fehler;
+}
+
+/**
+ * Formular → Vorlage. Punkte ohne Titel fallen weg, ebenso leere Zeilen und leere Aufgaben; die festen Aufgaben
+ * stehen unter dem letzten Punkt. `id` bleibt bei einer bestehenden Vorlage gleich.
+ */
+export function ausFormular(f: VorlagenFormular, id: string, neueId: () => string): Vorlage {
+  const bloecke: Block[] = [];
+  for (const p of f.punkte) {
+    const titel = p.titel.trim();
+    if (!titel) continue;
+    bloecke.push(punkt(neueId(), titel));
+    if (p.verweis) bloecke.push(verweis(neueId(), p.verweis));
+    for (const zeile of p.text.split('\n').map((z) => z.trim()))
+      if (zeile) bloecke.push(absatz(neueId(), zeile));
+  }
+  for (const a of f.aufgaben.map((x) => x.trim())) if (a) bloecke.push(aufgabe(neueId(), a));
+  return { art: 'vorlage', fassung: 1, id, name: f.name.trim(), bloecke };
+}
+
+export function istVorlage(x: unknown): x is Vorlage {
+  const v = x as Partial<Vorlage> | null;
+  return (
+    !!v &&
+    v.art === 'vorlage' &&
+    v.fassung === 1 &&
+    typeof v.id === 'string' &&
+    typeof v.name === 'string' &&
+    Array.isArray(v.bloecke)
+  );
+}
+
+/** Die Zeile in der Liste: „5 Punkte · 1 feste Aufgabe“. */
+export function vorlageKurz(v: Vorlage): string {
+  const f = alsFormular(v);
+  const n = f.punkte.length;
+  const a = f.aufgaben.length;
+  return [
+    `${n} ${n === 1 ? 'Punkt' : 'Punkte'}`,
+    ...(a ? [`${a} ${a === 1 ? 'feste Aufgabe' : 'feste Aufgaben'}`] : []),
+  ].join(' · ');
+}

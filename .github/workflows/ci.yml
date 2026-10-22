@@ -49,6 +49,10 @@ jobs:
       - name: Dienstplaner-Erweiterung packen
         run: npm run paket -w dienstplaner
 
+      # Das Organigramm (Bauplan O1) ist ebenfalls nur Erweiterung – gleiche Prüfung beim Packen.
+      - name: Organigramm-Erweiterung packen
+        run: npm run paket -w organigramm
+
       - name: Test
         run: npm test
 

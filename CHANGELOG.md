@@ -7,6 +7,18 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Organigramm, O1, #649)
+
+- **Neue Erweiterung „Organigramm“** (Kürzel `organigramm`, nur Erweiterung – Bauplan Organigramm, entschieden
+  22.10.2026). O1 „leer, aber echt“: lädt Person, Gemeinde, alle sichtbaren Gruppen (alle Seiten), Gruppentypen,
+  Hierarchie und Rechte und zeigt die **Bereiche** (oberste Gruppen) mit der Zahl ihrer Gruppen darunter, jede in
+  der **Farbe der Gruppe** (eigene Farbe vor Typfarbe, Alwin 19.10.2026). Gruppen-Admins sehen, dass sie Gruppen
+  verwalten dürfen. Eigener Release-Weg (Tag `organigramm-v*`, `make_latest: false`), Anleitung
+  `docs/betrieb/ORGANIGRAMM.md`; Staging baut `feat/organigramm-**` nicht.
+- **Regeln in `shared/organigramm/`** (aus dem abgenommenen Entwurf): Baum aus Gruppen + Hierarchie (Obergruppe
+  nicht sichtbar → Gruppe wird Wurzel; zwei Obergruppen → unter beiden; Kreise brechen nicht), Gruppenfarbe,
+  „jede Person einmal“ für Obergruppen (Leitung zuerst, auch die englische Rolle `leader`), Rechte aus `churchdb`.
+
 ### Neu (Anmeldungen, A7-3)
 
 - **Nachrücken lassen** (Entwurf `a7-3-nachruecken-v1`, entschieden 19.10.2026): an jeder wartenden Person im Fenster

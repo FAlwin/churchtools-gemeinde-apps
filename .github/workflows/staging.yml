@@ -21,6 +21,9 @@ on:
       # Ebenso der Dienstplaner (eigene Erweiterung, kein Teil des Musik-App-Images).
       - '!feat/dienstplaner-**'
       - '!fix/dienstplaner-**'
+      # Und das Organigramm (eigene Erweiterung, Bauplan O1).
+      - '!feat/organigramm-**'
+      - '!fix/organigramm-**'
 
 env:
   IMAGE: ghcr.io/falwin/churchtools-musik-app

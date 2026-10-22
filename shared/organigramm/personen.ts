@@ -8,7 +8,7 @@
  * die Namensliste aus O1 („Leiter“, „leader“, „Co-Leiter“) ist damit weg.
  */
 import { nachfahren, type Knoten } from './gruppen';
-import type { Mitglied } from './mitglieder';
+import { istLeitung, type Mitglied, type Rolle } from './mitglieder';
 
 export type { Mitglied } from './mitglieder';
 
@@ -45,4 +45,17 @@ export function gruppenPersonen(
   rang: Rang,
 ): Mitglied[] {
   return [...mitglieder].sort(reihenfolge(name, rang));
+}
+
+/**
+ * Die **Leitung** einer Gruppe (Rolle mit `isLeader`), in derselben Reihenfolge – EINE Regel für Baum und
+ * Präsentation (vorher stand sie als Zeile im Baum).
+ */
+export function gruppenLeitung(
+  mitglieder: readonly Mitglied[],
+  rollen: ReadonlyMap<number, Rolle>,
+  name: Name,
+  rang: Rang,
+): Mitglied[] {
+  return gruppenPersonen(mitglieder, name, rang).filter((m) => istLeitung(rollen, m.rolleId));
 }

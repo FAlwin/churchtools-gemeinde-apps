@@ -1,13 +1,14 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { GruppenKachel } from '@ui/bedienung/GruppenKachel';
 import { PersonBild } from '@ui/bedienung/PersonBild';
+import { Icon } from '@ui/icons/icons';
 import { gruppenFarbe } from '@shared/organigramm/farbe';
-import { baumOhneTypen, nachfahren, type Knoten } from '@shared/organigramm/gruppen';
-import { istLeitung, rollenRang } from '@shared/organigramm/mitglieder';
-import { gruppenPersonen, teilbaumPersonen, type Mitglied } from '@shared/organigramm/personen';
+import { baumOhneTypen, type Knoten } from '@shared/organigramm/gruppen';
+import { rollenRang } from '@shared/organigramm/mitglieder';
+import { gruppenLeitung, teilbaumPersonen, type Mitglied } from '@shared/organigramm/personen';
+import { bereicheSortiert } from '@shared/organigramm/praesentation';
 import { offenVonGruppe, type Einsaetze } from '@shared/organigramm/einsaetze';
 import type { MitgliederDaten, MitgliederStand } from './ladeMitglieder';
-import { leseAusgeblendet, merkeAusgeblendet } from './auswahl';
 import type { Start } from './start';
 import styles from './Organigramm.module.scss';
 
@@ -19,8 +20,15 @@ interface Props {
   mitglieder: MitgliederDaten | null;
   /** Einsätze und offene Plätze (O3) – `null`, solange sie laden oder wenn sie gerade nicht ladbar sind. */
   einsaetze: Einsaetze | null;
+  /** Lesbare Mitglieder je Gruppe – dieselbe Grundlage wie Personen, Hinweise und Präsentation. */
+  lesbar: ReadonlyMap<number, readonly Mitglied[]>;
+  /** Ausgeblendete Gruppentypen – liegen in `App`, weil die Präsentation dieselben ausblendet (O4). */
+  ausgeblendet: ReadonlySet<number>;
+  onTypUmschalten: (typ: number) => void;
   onNachladen: () => void;
   onGruppe: (id: number) => void;
+  /** Präsentation öffnen – erst, wenn die Mitglieder geladen sind. */
+  onPraesentieren: () => void;
 }
 
 /**
@@ -28,18 +36,22 @@ interface Props {
  * Baumlinien – in der Farbe der Gruppe, mit Leitung, Zahl der Personen und den Diensten der Gruppe. Über dem Baum
  * lassen sich Gruppentypen ausblenden (z. B. Verteiler). Klick auf eine Gruppe → Gruppenfenster.
  */
-export function Organigramm({ start, mitglieder, einsaetze, onNachladen, onGruppe }: Props) {
-  const [ausgeblendet, setAusgeblendet] = useState(leseAusgeblendet);
+export function Organigramm({
+  start,
+  mitglieder,
+  einsaetze,
+  lesbar,
+  ausgeblendet,
+  onTypUmschalten,
+  onNachladen,
+  onGruppe,
+  onPraesentieren,
+}: Props) {
   const rang = useMemo(() => rollenRang(start.rollen), [start.rollen]);
   const name = (id: number) => mitglieder?.personen.get(id)?.name ?? '';
-  // Große Bereiche zuerst (die meisten Gruppen darunter), dann nach Name – wie im abgenommenen Entwurf.
+  // Große Bereiche zuerst – dieselbe Reihenfolge wie in der Präsentation.
   const baum = useMemo(
-    () =>
-      baumOhneTypen(start.baum, ausgeblendet).sort(
-        (a, b) =>
-          nachfahren(b).length - nachfahren(a).length ||
-          a.gruppe.name.localeCompare(b.gruppe.name, 'de'),
-      ),
+    () => bereicheSortiert(baumOhneTypen(start.baum, ausgeblendet)),
     [start.baum, ausgeblendet],
   );
 
@@ -50,26 +62,10 @@ export function Organigramm({ start, mitglieder, einsaetze, onNachladen, onGrupp
       if (g.typId !== null) zahl.set(g.typId, (zahl.get(g.typId) ?? 0) + 1);
     return [...zahl].sort((a, b) => b[1] - a[1]);
   }, [start.gruppen]);
-  const umschalten = (typ: number) => {
-    const neu = new Set(ausgeblendet);
-    if (neu.has(typ)) neu.delete(typ);
-    else neu.add(typ);
-    merkeAusgeblendet(neu);
-    setAusgeblendet(neu);
-  };
 
   const stand = (id: number): MitgliederStand | undefined => mitglieder?.je.get(id);
-  const sichtbare = (id: number): Mitglied[] => {
-    const s = stand(id);
-    return s?.art === 'sichtbar' ? s.mitglieder : [];
-  };
-  const mitgliederMap = useMemo(() => {
-    const m = new Map<number, Mitglied[]>();
-    for (const [id, s] of mitglieder?.je ?? []) if (s.art === 'sichtbar') m.set(id, s.mitglieder);
-    return m;
-  }, [mitglieder]);
-  const leitung = (id: number) =>
-    gruppenPersonen(sichtbare(id), name, rang).filter((m) => istLeitung(start.rollen, m.rolleId));
+  const sichtbare = (id: number): readonly Mitglied[] => lesbar.get(id) ?? [];
+  const leitung = (id: number) => gruppenLeitung(sichtbare(id), start.rollen, name, rang);
   const dienste = (id: number) =>
     start.dienste ? [...start.dienste.values()].filter((d) => d.gruppenIds.includes(id)) : [];
   const offen = (id: number) =>
@@ -119,6 +115,18 @@ export function Organigramm({ start, mitglieder, einsaetze, onNachladen, onGrupp
 
   return (
     <div className={styles.seite}>
+      <div className={styles.oben}>
+        <button
+          type="button"
+          className={styles.praesentieren}
+          disabled={!mitglieder}
+          title={mitglieder ? undefined : 'Mitglieder werden geladen …'}
+          onClick={onPraesentieren}
+        >
+          <Icon name="play" size={16} />
+          Präsentieren
+        </button>
+      </div>
       {typen.length > 1 && (
         <div className={styles.filter} role="group" aria-label="Gruppentypen">
           {typen.map(([typ, n]) => (
@@ -127,7 +135,7 @@ export function Organigramm({ start, mitglieder, einsaetze, onNachladen, onGrupp
               type="button"
               className={styles.typ}
               aria-pressed={!ausgeblendet.has(typ)}
-              onClick={() => umschalten(typ)}
+              onClick={() => onTypUmschalten(typ)}
             >
               {start.typNamen.get(typ) ?? `Typ ${typ}`} <span className={styles.zahl}>{n}</span>
             </button>
@@ -150,9 +158,7 @@ export function Organigramm({ start, mitglieder, einsaetze, onNachladen, onGrupp
       <div className={styles.bereiche}>
         {baum.map((b) => {
           const l = leitung(b.gruppe.id);
-          const personen = mitglieder
-            ? teilbaumPersonen(b, mitgliederMap, name, rang).length
-            : null;
+          const personen = mitglieder ? teilbaumPersonen(b, lesbar, name, rang).length : null;
           return (
             <section key={b.gruppe.id} className={styles.karte} aria-label={b.gruppe.name}>
               <button type="button" className={styles.kopf} onClick={() => onGruppe(b.gruppe.id)}>

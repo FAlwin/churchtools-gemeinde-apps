@@ -5,7 +5,8 @@ import { ApiError } from '@ui/ct/fehler';
 import { Segment } from '@ui/bedienung/Segment';
 import { ReiterLeiste, type Reiter } from '@ui/bedienung/ReiterLeiste';
 import { useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
-import { knotenNachId, type Knoten } from '@shared/organigramm/gruppen';
+import { baumOhneTypen, knotenNachId, type Knoten } from '@shared/organigramm/gruppen';
+import { praesentationAus } from '@shared/organigramm/praesentation';
 import { hatBereich, personenImBereich, sichtbereich } from '@shared/organigramm/sichtbereich';
 import { hinweiseAus } from '@shared/organigramm/hinweise';
 import type { Mitglied } from '@shared/organigramm/mitglieder';
@@ -17,6 +18,8 @@ import { GruppenFenster } from './GruppenFenster';
 import { Personen } from './Personen';
 import { PersonFenster } from './PersonFenster';
 import { Hinweise } from './Hinweise';
+import { Praesentation } from './Praesentation';
+import { leseAusgeblendet, merkeAusgeblendet } from './auswahl';
 
 type Ansicht = 'organigramm' | 'personen' | 'hinweise';
 const REITER: Reiter<Ansicht>[] = [
@@ -31,7 +34,8 @@ const ansichtAusAdresse = (hash: string): Ansicht =>
  * Das Organigramm in ChurchTools (Bauplan O2/O3): erst Gruppen und Baum (schnell), dann – nebeneinander – die
  * Mitglieder aller Gruppen (gedrosselt) und die Termine mit den Einsätzen. Der Baum steht schon, während beides lädt.
  * Personen und Hinweise gibt es nur für den eigenen Bereich (`sichtbereich`); wer nichts leitet und kein Admin ist,
- * sieht nur das Organigramm – ohne Reiter.
+ * sieht nur das Organigramm – ohne Reiter. Die Präsentation (O4) gibt es für alle; sie blendet dieselben
+ * Gruppentypen aus wie der Baum (Alwin, 22.10.2026) – deshalb liegt diese Wahl hier und nicht im Baum.
  */
 export function App() {
   const [zustand, setZustand] = useState<SeitenZustand>({ art: 'laedt' });
@@ -40,6 +44,8 @@ export function App() {
   const [einsaetze, setEinsaetze] = useState<EinsaetzeStand>({ art: 'laedt' });
   const [offeneGruppe, setOffeneGruppe] = useState<number | null>(null);
   const [offenePerson, setOffenePerson] = useState<number | null>(null);
+  const [ausgeblendet, setAusgeblendet] = useState(leseAusgeblendet);
+  const [praesentiert, setPraesentiert] = useState(false);
   const [hash, setHash] = useState(() => window.location.hash);
   const handy = useMedienAbfrage('(max-width: 759px)');
 
@@ -110,6 +116,25 @@ export function App() {
     return { mitglieder: m, angefragt: a };
   }, [mitglieder]);
   const personen = useMemo(() => personenImBereich(lesbar.mitglieder, bereich), [lesbar, bereich]);
+  const praesentation = useMemo(
+    () =>
+      praesentiert && start && mitglieder
+        ? praesentationAus(
+            baumOhneTypen(start.baum, ausgeblendet),
+            lesbar.mitglieder,
+            start.rollen,
+            (id) => mitglieder.personen.get(id)?.name ?? '',
+          )
+        : null,
+    [praesentiert, start, mitglieder, lesbar, ausgeblendet],
+  );
+  const typUmschalten = (typ: number) => {
+    const neu = new Set(ausgeblendet);
+    if (neu.has(typ)) neu.delete(typ);
+    else neu.add(typ);
+    merkeAusgeblendet(neu);
+    setAusgeblendet(neu);
+  };
   const hinweise = useMemo(
     () =>
       start && mitglieder
@@ -169,8 +194,12 @@ export function App() {
           start={start}
           mitglieder={mitglieder}
           einsaetze={einsaetze.art === 'fertig' ? einsaetze.einsaetze : null}
+          lesbar={lesbar.mitglieder}
+          ausgeblendet={ausgeblendet}
+          onTypUmschalten={typUmschalten}
           onNachladen={nachladen}
           onGruppe={gruppeOeffnen}
+          onPraesentieren={() => setPraesentiert(true)}
         />
       )}
       {start && ansicht === 'personen' && (
@@ -212,6 +241,14 @@ export function App() {
           einsaetze={einsaetze}
           onGruppe={gruppeOeffnen}
           onSchliessen={() => setOffenePerson(null)}
+        />
+      )}
+      {start && mitglieder && praesentation && (
+        <Praesentation
+          start={start}
+          daten={praesentation}
+          mitglieder={mitglieder}
+          onSchliessen={() => setPraesentiert(false)}
         />
       )}
     </ErweiterungsSeite>

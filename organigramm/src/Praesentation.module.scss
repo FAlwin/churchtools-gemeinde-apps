@@ -1,0 +1,273 @@
+// Präsentation (O4) – im Look der ChurchTools-Weboberfläche über die gemeinsamen Werte (ui/design), keine festen.
+@use '@ui/design/mixins' as m;
+
+// Über der Leiste von ChurchTools – dieselbe Ebene wie das Vollbild der Musik-App (`_grundregeln.scss`),
+// unter der Einführung (3000).
+.praes {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ui);
+  font-size: 16px;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.kopf {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px clamp(16px, 2vw, 24px);
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+}
+
+.gemeinde {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.knopf {
+  @include m.aktionKnopf;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--r-ctrl);
+  font-size: 14px;
+}
+
+.primaer {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    background: var(--blue);
+  }
+}
+
+.buehne {
+  flex: 1;
+  overflow: auto;
+  padding: clamp(16px, 2.2vw, 32px);
+}
+
+.unten {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px clamp(16px, 2vw, 24px);
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+}
+
+.wo {
+  color: var(--text2);
+  font-size: 14px;
+  text-align: center;
+}
+
+.titel {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+
+  h1 {
+    margin: 0;
+    font-size: clamp(24px, 2.6vw, 34px);
+    font-weight: 700;
+  }
+}
+
+.meta {
+  color: var(--text2);
+  font-size: 15px;
+}
+
+.leitungRechts {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.label {
+  color: var(--text3);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.wer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.gesucht {
+  color: var(--text3);
+  font-style: italic;
+}
+
+// Übersicht: Bereiche als Kacheln
+.kacheln {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 16px;
+}
+
+.kachel {
+  @include m.card-list;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--section);
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+  }
+}
+
+.kachelKopf {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.abschnitt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.gruppen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+
+  > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+// Bereich: Gruppen als Spalten
+.spalten {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.spalte {
+  @include m.card-list;
+  padding: 14px 16px;
+}
+
+.spaltenKopf {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 17px;
+}
+
+.zahl {
+  margin-left: auto;
+  color: var(--text2);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.liste {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.rolle {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.auf {
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+
+  summary {
+    cursor: pointer;
+    color: var(--blue);
+    font-size: 14px;
+    font-weight: 600;
+  }
+}
+
+.untergruppe {
+  margin-top: 10px;
+}
+
+.untergruppeName {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  color: var(--text2);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .leitungRechts {
+    margin-left: 0;
+  }
+
+  .wo {
+    font-size: 13px;
+  }
+}

@@ -151,15 +151,26 @@ export async function markSetlistSeen(req: Request, res: Response): Promise<void
   res.json({ ok: true });
 }
 
-const orderSchema = z.object({
+export const orderSchema = z.object({
   order: z.array(z.coerce.number().int().positive()).min(1),
+  // Die Reihenfolge vor dem Ziehen (E6-3c, #659) – ohne diese Zeile striche zod sie still weg.
+  gesehen: z.array(z.coerce.number().int().positive()).optional(),
+});
+
+/** Was das Punkt-Fenster beim Öffnen gesehen hat (`PunktStand`, E6-3c) – Grenzen großzügig, es kommt aus ChurchTools. */
+const punktStandSchema = z.object({
+  title: z.string().max(4000),
+  responsibleText: z.string().max(4000),
+  durationMin: z.number().int().min(0).nullable(),
+  note: z.string().max(10000),
+  lied: z.union([z.number().int(), z.string().max(4000)]).nullable(),
 });
 
 /** PATCH /api/services/:eventId/agenda/order – neue Reihenfolge der Ablaufpunkte speichern. */
 export async function putAgendaOrder(req: Request, res: Response): Promise<void> {
   const eventId = idSchema.parse(req.params.eventId);
-  const { order } = orderSchema.parse(req.body);
-  await reorderAgenda(ctCookie(req), eventId, order);
+  const { order, gesehen } = orderSchema.parse(req.body);
+  await reorderAgenda(ctCookie(req), eventId, order, gesehen);
   // BEWUSST ohne `invalidateSongUsageCache` (#300): Die Reihenfolge ändert nicht, WELCHE Lieder an
   // welchem Datum gespielt wurden – die Statistik kann sich dadurch nicht ändern. Bitte nicht als
   // vergessene Lücke „nachrüsten". (Bis v2.32.0 kostete jedes Verwerfen einen Lauf mit ~250
@@ -167,8 +178,10 @@ export async function putAgendaOrder(req: Request, res: Response): Promise<void>
   res.json({ ok: true });
 }
 
-const updateItemSchema = z
+export const updateItemSchema = z
   .object({
+    // Was das Fenster beim Öffnen gesehen hat (E6-3c) – ohne diese Zeile striche zod es still weg.
+    gesehen: punktStandSchema.optional(),
     title: z.string().trim().min(1, 'Titel fehlt').max(255).optional(),
     // arrangementId verknüpft einen bestehenden Punkt mit einem Lied (wandelt ihn in type 'song').
     arrangementId: z.coerce.number().int().positive().optional(),
@@ -222,7 +235,8 @@ export async function putAgendaItem(req: Request, res: Response): Promise<void> 
   const eventId = idSchema.parse(req.params.eventId);
   const itemId = idSchema.parse(req.params.itemId);
   // „Aufheben leert den Titel": in `@shared/ct/schreibKern` (#335) – die Extension schreibt genauso.
-  await updateAgendaItem(ctCookie(req), eventId, itemId, updateItemSchema.parse(req.body));
+  const { gesehen, ...felder } = updateItemSchema.parse(req.body);
+  await updateAgendaItem(ctCookie(req), eventId, itemId, felder, gesehen);
   invalidateSongUsageCache();
   res.json({ ok: true });
 }

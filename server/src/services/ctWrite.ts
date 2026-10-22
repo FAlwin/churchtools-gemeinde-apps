@@ -26,6 +26,7 @@ import {
   type NeuerPunkt,
   type PunktAenderung,
 } from '@shared/ct/schreibKern';
+import type { PunktStand } from '@shared/ct/ablaufZeile';
 import { csrfWriteDenied, getCsrfToken } from './ctCsrf.js';
 import { BASE, CT_FILE_TIMEOUT_MS, ctFetch } from './ctHttp.js';
 import { getAgenda, getSong } from './ctRead.js';
@@ -216,8 +217,13 @@ export function schreiberFuer(cookie: string): CtSchreiber {
 
 // Ablauf: die Regeln stehen seit #335 (Phase 3b) in `@shared/ct/schreibKern` – hier nur die Anbindung.
 
-export function reorderAgenda(cookie: string, eventId: number, order: number[]): Promise<void> {
-  return ablaufUmsortieren(schreiberFuer(cookie), eventId, order);
+export function reorderAgenda(
+  cookie: string,
+  eventId: number,
+  order: number[],
+  gesehen?: number[],
+): Promise<void> {
+  return ablaufUmsortieren(schreiberFuer(cookie), eventId, order, gesehen);
 }
 
 export function createAgendaItem(cookie: string, eventId: number, data: NeuerPunkt): Promise<void> {
@@ -229,8 +235,9 @@ export function updateAgendaItem(
   eventId: number,
   itemId: number,
   fields: PunktAenderung,
+  gesehen?: PunktStand,
 ): Promise<void> {
-  return punktAendern(schreiberFuer(cookie), eventId, itemId, fields);
+  return punktAendern(schreiberFuer(cookie), eventId, itemId, fields, gesehen);
 }
 
 /** Löscht und liefert, was „Rückgängig" zum Wiederherstellen braucht (`null`: war schon weg). */

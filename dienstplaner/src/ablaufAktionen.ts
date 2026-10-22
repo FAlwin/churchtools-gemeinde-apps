@@ -28,10 +28,10 @@ export function ablaufAktionen(eventId: number, geschrieben: () => void): Ablauf
     return ergebnis;
   }
   return {
-    reorder: (order) => danach(ablaufUmsortieren(s, eventId, order)),
+    reorder: (order, gesehen) => danach(ablaufUmsortieren(s, eventId, order, gesehen)),
     remove: (itemId) => danach(punktLoeschen(s, eventId, itemId)),
     restore: (punkt) => danach(punktWiederherstellen(s, eventId, punkt)),
-    update: (itemId, fields) => danach(punktAendern(s, eventId, itemId, fields)),
+    update: (itemId, fields, gesehen) => danach(punktAendern(s, eventId, itemId, fields, gesehen)),
     setVorBeginn: (itemId, vorBeginn) => danach(vorBeginnSetzen(s, eventId, itemId, vorBeginn)),
     setWeggelassen: (itemId, weg) => danach(weglassenSetzen(s, eventId, itemId, weg)),
     add: (data) => danach(punktAnlegen(s, eventId, data)),

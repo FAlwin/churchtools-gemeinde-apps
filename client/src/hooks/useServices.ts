@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import type { PunktStand } from '@shared/ct/ablaufZeile';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   LIEDTEXT_SUCHE_MIN_ZEICHEN,
@@ -205,7 +206,8 @@ export function useAgenda(eventId: number | null) {
 export function useReorderAgenda(eventId: number | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (order: number[]) => api.reorderAgenda(eventId as number, order),
+    mutationFn: (v: { order: number[]; gesehen?: number[] }) =>
+      api.reorderAgenda(eventId as number, v.order, v.gesehen),
     onSuccess: () => qc.invalidateQueries({ queryKey: schluessel.agenda(eventId) }),
   });
 }
@@ -245,8 +247,8 @@ function useAgendaItemMutation<V, R>(eventId: number | null, mutationFn: (v: V) 
 export function useUpdateAgendaItem(eventId: number | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (v: { itemId: number; fields: api.AgendaItemUpdate }) =>
-      api.updateAgendaItem(eventId as number, v.itemId, v.fields),
+    mutationFn: (v: { itemId: number; fields: api.AgendaItemUpdate; gesehen?: PunktStand }) =>
+      api.updateAgendaItem(eventId as number, v.itemId, v.fields, v.gesehen),
     onSuccess: (_data, v) => {
       void qc.invalidateQueries({ queryKey: schluessel.agenda(eventId) });
       if (v.fields.arrangementId !== undefined || v.fields.unlink) {

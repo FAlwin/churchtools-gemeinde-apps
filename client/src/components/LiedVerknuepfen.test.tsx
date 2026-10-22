@@ -121,6 +121,7 @@ function zeige(overrides: Partial<BearbeitenProps> = {}) {
       onUpdate={onUpdate}
       vorBeginn={false}
       onSetVorBeginn={vi.fn().mockResolvedValue(undefined)}
+      onSetWeggelassen={vi.fn().mockResolvedValue(undefined)}
       services={[]}
       onRequestDelete={vi.fn()}
       {...overrides}

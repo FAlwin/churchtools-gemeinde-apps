@@ -7,6 +7,7 @@ import {
   deleteAgendaItem,
   restoreAgendaItem,
   setAgendaItemVorBeginn,
+  setAgendaItemWeggelassen,
   updateArrangementTempo,
   createAbsence,
   deleteAbsence,
@@ -150,6 +151,7 @@ const SCHREIBER: Array<[string, () => Promise<void>]> = [
       }),
   ],
   ['setAgendaItemVorBeginn', () => setAgendaItemVorBeginn(COOKIE, 9, 1, true)],
+  ['setAgendaItemWeggelassen', () => setAgendaItemWeggelassen(COOKIE, 9, 1, true)],
   [
     'createAbsence',
     async () => {

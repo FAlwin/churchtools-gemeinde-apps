@@ -3,6 +3,7 @@ import {
   punktAendern,
   punktLoeschen,
   punktWiederherstellen,
+  weglassenSetzen,
   type CtSchreiber,
   type GeloeschterPunkt,
   type SchreibAuftrag,
@@ -32,6 +33,8 @@ function fakeCt(start: Partial<CtAgendaItem>[], eventStartPosition = 0) {
   }));
   let esp = eventStartPosition;
   let naechsteId = 100;
+  /** An Termin 1 weggelassen (Auge) – wie gemessen: `startTimes['1']` ist dann `null`. */
+  const weg = new Set<number>();
   /** Wenn gesetzt: Das Anlegen meldet Erfolg, legt aber nichts an. */
   let anlegenLuegt = false;
   let lesefehler = 0;
@@ -59,6 +62,13 @@ function fakeCt(start: Partial<CtAgendaItem>[], eventStartPosition = 0) {
   const schreibe = vi.fn((pfad: string, a: SchreibAuftrag): Promise<unknown> => {
     const body = (a.json ?? {}) as Record<string, unknown>;
     const einzel = /\/agenda\/items\/(\d+)$/.exec(pfad);
+    const auge = /\/agenda\/items\/(\d+)\/(hide|unhide)$/.exec(pfad);
+    if (a.method === 'POST' && auge) {
+      const id = Number(auge[1]);
+      if (auge[2] === 'hide') weg.add(id);
+      else weg.delete(id);
+      return Promise.resolve(null);
+    }
     if (a.method === 'DELETE' && einzel) {
       items = items.filter((i) => i.id !== Number(einzel[1]));
       ordne();
@@ -96,7 +106,10 @@ function fakeCt(start: Partial<CtAgendaItem>[], eventStartPosition = 0) {
       return Promise.resolve({
         calendarId: 1,
         eventStartPosition: esp,
-        items: structuredClone(items),
+        items: structuredClone(items).map((i) => ({
+          ...i,
+          startTimes: { '1': weg.has(i.id) ? null : '2026-10-25T09:00:00Z' },
+        })),
       });
     },
     song: () => Promise.reject(new Error('nicht gebraucht')),
@@ -111,6 +124,7 @@ function fakeCt(start: Partial<CtAgendaItem>[], eventStartPosition = 0) {
     titelVorlauf: () => items.map((i) => `${i.title}${i.isBeforeEvent ? '*' : ''}`),
     anlegenLuegt: () => (anlegenLuegt = true),
     lesefehler: (n: number) => (lesefehler = n),
+    weggelassen: () => items.filter((i) => weg.has(i.id)).map((i) => i.title),
   };
 }
 
@@ -143,6 +157,7 @@ describe('Löschen merkt sich, was „Rückgängig" braucht', () => {
       },
       nachId: 1,
       vorBeginn: false,
+      weggelassen: false,
     });
     expect(ct.ids()).toEqual([1]);
   });
@@ -256,5 +271,54 @@ describe('Notizen je Dienstgruppe (gemessen 12.10.2026)', () => {
     const liste = (sortiert[1].json as { items: { id: number; serviceGroupNotes: unknown }[] })
       .items;
     expect(liste.find((i) => i.id === 1)?.serviceGroupNotes).toEqual(SG);
+  });
+});
+
+describe('Auge – an diesem Termin weglassen (E6-3b, #652)', () => {
+  it('schreibt hide bzw. unhide an diesem Termin', async () => {
+    const ct = fakeCt([{ title: 'A' }, { title: 'B' }]);
+    await weglassenSetzen(ct.s, 1, 2, true);
+    expect(ct.weggelassen()).toEqual(['B']);
+    expect(ct.schreibe).toHaveBeenLastCalledWith(
+      '/events/1/agenda/items/2/hide',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    await weglassenSetzen(ct.s, 1, 2, false);
+    expect(ct.weggelassen()).toEqual([]);
+    expect(ct.schreibe).toHaveBeenLastCalledWith(
+      '/events/1/agenda/items/2/unhide',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
+  it('steht schon so → kein Schreibvorgang', async () => {
+    const ct = fakeCt([{ title: 'A' }]);
+    await weglassenSetzen(ct.s, 1, 1, false);
+    expect(ct.schreibe).not.toHaveBeenCalled();
+  });
+
+  it('Punkt inzwischen weg → 404, nichts geschrieben', async () => {
+    const ct = fakeCt([{ title: 'A' }]);
+    await expect(weglassenSetzen(ct.s, 1, 99, true)).rejects.toMatchObject({ status: 404 });
+    expect(ct.schreibe).not.toHaveBeenCalled();
+  });
+
+  it('„Rückgängig“ nach dem Löschen holt das Weglassen mit zurück (vorher ging es verloren)', async () => {
+    const ct = fakeCt([{ title: 'A' }, { title: 'B' }, { title: 'C' }]);
+    await weglassenSetzen(ct.s, 1, 2, true);
+    const zettel = (await punktLoeschen(ct.s, 1, 2))!;
+    expect(zettel.weggelassen).toBe(true);
+    await punktWiederherstellen(ct.s, 1, zettel);
+    expect(ct.weggelassen()).toEqual(['B']);
+    expect(ct.titelVorlauf()).toEqual(['A', 'B', 'C']);
+  });
+
+  it('ein gezeigter Punkt kommt gezeigt zurück – kein hide', async () => {
+    const ct = fakeCt([{ title: 'A' }, { title: 'B' }]);
+    const zettel = (await punktLoeschen(ct.s, 1, 2))!;
+    expect(zettel.weggelassen).toBe(false);
+    await punktWiederherstellen(ct.s, 1, zettel);
+    expect(ct.weggelassen()).toEqual([]);
+    expect(ct.schreibe.mock.calls.some(([p]) => p.endsWith('/hide'))).toBe(false);
   });
 });

@@ -65,6 +65,7 @@ function zeige(zettel: GeloeschterPunkt | null) {
     restore: vi.fn(() => Promise.resolve()),
     add: vi.fn(() => Promise.resolve()),
     setVorBeginn: vi.fn(() => Promise.resolve()),
+    setWeggelassen: vi.fn(() => Promise.resolve()),
   };
   render(
     <QueryClientProvider client={new QueryClient()}>

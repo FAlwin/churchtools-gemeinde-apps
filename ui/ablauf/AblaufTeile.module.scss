@@ -69,3 +69,11 @@
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
 }
+
+// Hinweis an einer an diesem Termin weggelassenen Zeile (E6-3b).
+.weggelassenTag {
+  flex: none;
+  color: var(--text3);
+  font-size: 11.5px;
+  font-style: italic;
+}

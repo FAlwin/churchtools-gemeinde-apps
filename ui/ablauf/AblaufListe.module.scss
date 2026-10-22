@@ -126,3 +126,13 @@
   font-weight: 500;
   color: var(--text3);
 }
+
+// An diesem Termin weggelassen (Auge, E6-3b, Entwurf e6-entwurf.html Bild 2): grau, statt der Uhrzeit „—“, dazu
+// der Hinweis – in Ansicht und Bearbeiten-Liste gleich.
+.weggelassen {
+  opacity: 0.55;
+
+  .flowTime {
+    color: var(--text3);
+  }
+}

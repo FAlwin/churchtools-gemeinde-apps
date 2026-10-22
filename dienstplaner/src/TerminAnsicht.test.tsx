@@ -443,3 +443,112 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
     expect(screen.queryByText(/Du siehst nicht alle Dienstgruppen/)).toBeNull();
   });
 });
+
+/**
+ * Ablauf anlegen (E6-5a, #681) – mit dem echten Kern (`ablaufAnlegen`: vorher prüfen, nachher nachlesen) und den
+ * echten Regeln für die Vorschläge; ChurchTools ist nachgebaut und legt den Ablauf wirklich an.
+ */
+describe('TerminAnsicht – Ablauf anlegen (E6-5a)', () => {
+  const ZIEL = { ...TERMIN, calendar: { domainIdentifier: '2' } };
+  const frueher = (id: number, tag: string, kal: string) => ({
+    id,
+    name: 'Gottesdienst',
+    startDate: `${tag}T08:00:00Z`,
+    endDate: `${tag}T10:00:00Z`,
+    calendar: { domainIdentifier: kal },
+  });
+
+  function ctAnlegen() {
+    let angelegt: string | null = null;
+    const geschrieben: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      const url = new URL(String(input));
+      const p = url.pathname;
+      const m = init?.method ?? 'GET';
+      if (p.endsWith('/csrftoken')) return Promise.resolve(json(200, { data: 'tok' }));
+      if (m !== 'GET') {
+        geschrieben.push(`${m} ${p}${url.search}`);
+        if (p === '/api/events/7/agenda') angelegt = url.search;
+        return Promise.resolve(json(200, { data: {} }));
+      }
+      if (p === '/api/agendatemplates') {
+        return Promise.resolve(
+          json(200, {
+            data: [
+              { id: 30, name: 'Jugend', calendarId: 3, items: [{}] },
+              { id: 31, name: 'Sonntag', calendarId: 2, items: [{}, {}] },
+            ],
+          }),
+        );
+      }
+      if (p === '/api/events' && url.searchParams.get('from')) {
+        return Promise.resolve(
+          json(200, {
+            data: [
+              frueher(5, '2026-10-11', '2'), // mit Ablauf
+              frueher(6, '2026-10-04', '2'), // ohne Ablauf
+              frueher(8, '2026-10-11', '3'), // anderer Kalender
+              { ...ZIEL },
+            ],
+          }),
+        );
+      }
+      if (p === '/api/events/5/agenda') {
+        return Promise.resolve(json(200, { data: { items: [{ id: 1 }, { id: 2 }, { id: 3 }] } }));
+      }
+      if (p === '/api/events/7/agenda') {
+        return Promise.resolve(
+          angelegt === null
+            ? json(404, { message: 'Not found.' })
+            : json(200, {
+                data: { calendarId: 2, items: [{ id: 99, title: 'Begrüßung', type: 'normal' }] },
+              }),
+        );
+      }
+      if (/^\/api\/events\/\d+\/agenda$/.test(p)) return Promise.resolve(json(404, {}));
+      if (p === '/api/events/7') return Promise.resolve(json(200, { data: ZIEL }));
+      return Promise.resolve(json(200, { data: { id: 1 } }));
+    });
+    return { geschrieben, angelegt: () => angelegt };
+  }
+
+  const darf = startFuer({ rechte: { ...startFuer().rechte, ablaufKalender: [2] } });
+
+  it('ohne Recht kein Knopf – nur „Noch kein Ablauf.“', async () => {
+    ctAnlegen();
+    zeige();
+    expect(await screen.findByText('Noch kein Ablauf.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Ablauf anlegen/ })).toBeNull();
+  });
+
+  it('Vorlage des eigenen Kalenders vorausgewählt; früherer Termin nur mit Ablauf aus demselben Kalender; Anlegen schreibt und öffnet das Bearbeiten', async () => {
+    const ct = ctAnlegen();
+    zeige({ start: darf });
+    fireEvent.click(await screen.findByRole('button', { name: /Ablauf anlegen/ }));
+    // Vorlagen: „Sonntag“ (Kalender 2) zuerst und gewählt.
+    const sonntag = await screen.findByRole('button', { name: /Sonntag/ });
+    expect(sonntag.getAttribute('aria-pressed')).toBe('true');
+    // Wie ein früherer: nur Termin 5 (mit Ablauf, Kalender 2).
+    fireEvent.click(screen.getByRole('button', { name: /Wie eine frühere/ }));
+    expect(await screen.findByText('3 Punkte')).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: /Gottesdienst/ })).toHaveLength(1);
+    // Zurück zur Vorlage und anlegen.
+    fireEvent.click(screen.getByRole('button', { name: /Aus einer Vorlage/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Anlegen' }));
+    await waitFor(() => expect(ct.angelegt()).toBe('?template_id=31'));
+    expect(ct.geschrieben).toEqual(['PUT /api/events/7/agenda?template_id=31']);
+    // Danach: der Ablauf steht da, und man ist im Bearbeiten.
+    expect(await screen.findByRole('button', { name: 'Fertig' })).toBeTruthy();
+    expect(await screen.findByText('Begrüßung')).toBeTruthy();
+  });
+
+  it('„wie ein früherer“ kopiert per `event_id`', async () => {
+    const ct = ctAnlegen();
+    zeige({ start: darf });
+    fireEvent.click(await screen.findByRole('button', { name: /Ablauf anlegen/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Wie eine frühere/ }));
+    await screen.findByText('3 Punkte');
+    fireEvent.click(screen.getByRole('button', { name: 'Anlegen' }));
+    await waitFor(() => expect(ct.angelegt()).toBe('?event_id=5'));
+  });
+});

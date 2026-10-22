@@ -183,3 +183,25 @@
   color: var(--text);
   box-shadow: 0 1px 3px rgba(22, 33, 42, 0.12);
 }
+
+/**
+ * **Der breite blaue Hauptknopf** eines Fensters („Anlegen“, „Lied anlegen“) – vorher nur als `.primaryWide` in der
+ * Musik-App (`NewSongSheet.module.scss`); seit E6-5a nutzt ihn auch der gemeinsame Baustein „Ablauf anlegen“.
+ */
+@mixin hauptKnopfBreit {
+  width: 100%;
+  height: 46px;
+  border: none;
+  border-radius: var(--r-ctrl);
+  background: var(--blue);
+  color: #fff;
+  font-family: var(--ui);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}

@@ -255,8 +255,8 @@ steht der Termin danach als normaler Termin – nur einmal.
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `shared/ct/ablaufAnlegen.ts`, `shared/ct/ablaufRecht.ts`, `client/src/pages/Agenda.tsx`, `client/src/components/AblaufAnlegenFenster.tsx`, `client/src/components/AblaufAnlegenManager.tsx`, `client/src/utils/ablaufVorschlaege.ts`, `server/src/controllers/setlistController.ts`
-- **Automatisiert:** teilweise – `shared/ct/ablaufAnlegen.test.ts`, `client/src/components/AblaufAnlegenFenster.test.tsx`, `client/src/pages/Agenda.ohneAblauf.test.tsx` (auch: Recht je Termin, #635), `client/src/utils/ablaufVorschlaege.test.ts`, `e2e/ablauf-anlegen.spec.ts`; gegen echtes ChurchTools nur von Hand
+- **Betrifft:** `shared/ct/ablaufAnlegen.ts`, `shared/ct/ablaufRecht.ts`, `client/src/pages/Agenda.tsx`, `client/src/components/AblaufAnlegenFenster.tsx`, `ui/ablauf/AblaufAnlegenFenster.tsx`, `client/src/components/AblaufAnlegenManager.tsx`, `shared/ct/ablaufVorschlaege.ts`, `server/src/controllers/setlistController.ts`
+- **Automatisiert:** teilweise – `shared/ct/ablaufAnlegen.test.ts`, `client/src/components/AblaufAnlegenFenster.test.tsx`, `client/src/pages/Agenda.ohneAblauf.test.tsx` (auch: Recht je Termin, #635), `shared/ct/ablaufVorschlaege.test.ts`, `e2e/ablauf-anlegen.spec.ts`; gegen echtes ChurchTools nur von Hand
 - **Historie:** 13.10.2026 (Alwin). Gemessen: `PUT /events/{id}/agenda` mit `template_id` / `event_id` / ohne legt an; auf einen vorhandenen Ablauf antwortet es 200 und ändert nichts – die App liest trotzdem vorher nach.
 
 </details>

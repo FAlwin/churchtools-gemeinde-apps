@@ -246,3 +246,27 @@ erlaubt – nie ein Knopf, der mit „verboten" endet.
 - **Historie:** #635 (19.10.2026, gemessen E6-0 am 17.10.2026)
 
 </details>
+
+### TF-EDIT-10 · Einen Punkt an diesem Termin weglassen (Auge)
+
+**Das brauchst du:** Einen **Test-Termin** mit Ablauf und mindestens zwei Punkten mit Dauer.
+
+**Das muss passieren:** Der Punkt bleibt im Ablauf, steht aber grau mit „an diesem Termin weggelassen“ und „—“
+statt der Uhrzeit da. Die Punkte darunter rücken vor, genau wie in ChurchTools, wenn man dort das Auge schließt.
+
+1. Test-Termin öffnen, **Bearbeiten**, einen Punkt mit Dauer antippen (nicht den letzten).
+2. **An diesem Termin weglassen** einschalten, **Speichern**.
+3. Der Punkt steht grau mit dem Hinweis da; die Uhrzeit des nächsten Punkts ist um seine Dauer früher.
+4. In ChurchTools denselben Ablauf öffnen: Der Punkt hat das geschlossene Auge.
+5. Den Punkt löschen und **Rückgängig** antippen: Er kommt an seine Stelle zurück – und ist **weiter weggelassen**.
+6. Den Punkt öffnen, den Schalter ausschalten, **Speichern**: Er hat wieder eine Uhrzeit, die Zeiten darunter
+   stimmen wieder.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/ct/ablaufZeile.ts`, `shared/ct/schreibKern.ts`, `server/src/controllers/setlistController.ts`, `server/src/services/ctWrite.ts`, `client/src/services/churchtoolsApi.ts`, `client/src/services/ctSchreiben.ts`, `ui/ablauf/PunktFenster.tsx`, `ui/ablauf/AblaufListe.tsx`, `ui/ablauf/AgendaSortableRow.tsx`, `ui/ablauf/AblaufTeile.tsx`
+- **Automatisiert:** ja – `shared/ct/ablaufZeile.test.ts` (Merkmal), `server/src/services/ablaufRueckgaengig.test.ts` (hide/unhide, Rückgängig), `server/src/controllers/setlistController.merkzettel.test.ts` (Merkzettel durch das Schema), `client/src/services/ctSchreiben.test.ts` (Erweiterung), `ui/ablauf/*.test.tsx` (Fenster, Anzeige), `e2e/ablauf-weglassen.spec.ts` (ganzer Weg über den Server); von Hand bleibt der Blick in ChurchTools (Schritt 4)
+- **Historie:** #652 (22.10.2026, gemessen E6-3-0 am 19.10.2026)
+
+</details>

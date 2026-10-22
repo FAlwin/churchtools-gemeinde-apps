@@ -36,6 +36,15 @@ export function ablaufUhrzeit(
   return ortszeitAus(iso, zeitzone).slice(11, 16);
 }
 
+/**
+ * Ist der Punkt **an diesem Termin weggelassen** (Auge, E6-3b)? Dasselbe Merkmal wie bei der Uhrzeit: `startTimes`
+ * nennt den Termin, aber mit `null` (gemessen E6-3-0: `hide` setzt genau das, die Folgepunkte rücken vor). Fehlt
+ * `startTimes` oder der Termin darin, ist nichts weggelassen – ältere Antworten kennen das Feld nicht.
+ */
+export function istWeggelassen(item: CtAgendaItem, eventId: number): boolean {
+  return item.startTimes?.[String(eventId)] === null;
+}
+
 /** Ein ChurchTools-Punkt als Zeile – ohne Lied-Auflösung. */
 export function ablaufZeileAus(item: CtAgendaItem, eventId: number, zeitzone: string): AblaufZeile {
   const sekunden = item.duration ?? 0;
@@ -51,6 +60,7 @@ export function ablaufZeileAus(item: CtAgendaItem, eventId: number, zeitzone: st
     vorBeginn: item.isBeforeEvent ?? false,
     durationMin: sekunden > 0 ? Math.round(sekunden / 60) : null,
     note: item.note ?? '',
+    weggelassen: istWeggelassen(item, eventId),
   };
 }
 

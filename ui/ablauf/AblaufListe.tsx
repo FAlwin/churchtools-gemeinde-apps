@@ -7,7 +7,13 @@
  */
 import { Fragment, type ReactNode } from 'react';
 import { beginnStelle, type AblaufZeile } from '@shared/ct/ablaufZeile';
-import { BeginnLinie, ItemTitle, ResponsibleLine } from './AblaufTeile';
+import {
+  BeginnLinie,
+  ItemTitle,
+  ResponsibleLine,
+  WeggelassenHinweis,
+  ZeitText,
+} from './AblaufTeile';
 import styles from './AblaufListe.module.scss';
 
 export function AblaufListe({
@@ -38,24 +44,36 @@ export function AblaufListe({
   const zeile = (item: AblaufZeile) => {
     const tagText = schild?.(item.id) ?? null;
     const tag = tagText && <span className={styles.aenderungsTag}>{tagText}</span>;
-    const vl = item.vorBeginn ? ` ${styles.vorlauf}` : '';
+    const vl =
+      (item.vorBeginn ? ` ${styles.vorlauf}` : '') +
+      (item.weggelassen ? ` ${styles.weggelassen}` : '');
+    const weg = item.weggelassen && <WeggelassenHinweis />;
     if (item.isHeader) {
       return (
-        <div key={item.id} className={styles.sectionBand}>
-          {item.time && <span className={styles.bandTime}>{item.time}</span>}
+        <div key={item.id} className={`${styles.sectionBand}${vl}`}>
+          {(item.time || item.weggelassen) && (
+            <span className={styles.bandTime}>
+              <ZeitText item={item} />
+            </span>
+          )}
           {item.title}
           {tag}
+          {weg}
         </div>
       );
     }
     const dauer = item.durationMin ? `${item.durationMin} Min` : null;
     const zeit = dauerNebenZeit ? (
       <div className={`${styles.flowTime} ${styles.zeitMitDauer}`}>
-        <span>{item.time ?? ''}</span>
+        <span>
+          <ZeitText item={item} />
+        </span>
         {dauer && <span className={styles.zeitDauer}>{dauer}</span>}
       </div>
     ) : (
-      <div className={styles.flowTime}>{item.time ?? ''}</div>
+      <div className={styles.flowTime}>
+        <ZeitText item={item} />
+      </div>
     );
     const inhalt = (
       <div className={styles.flowBody}>
@@ -63,6 +81,7 @@ export function AblaufListe({
           <ItemTitle item={item} />
           {item.song && <span className={styles.flowSongTag}>🎵</span>}
           {tag}
+          {weg}
           {!dauerNebenZeit && dauer && <span className={styles.flowDur}>{dauer}</span>}
         </div>
         {item.note && <div className={styles.flowNote}>{item.note}</div>}

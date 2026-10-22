@@ -139,7 +139,12 @@ export function AnmeldungZahlung({
                     {arbeitet ? 'Wird gespeichert …' : 'Als bezahlt markieren'}
                   </button>
                 </div>
-                <p className={a.leise}>Gilt für die ganze Anmeldung.</p>
+                {/* Eine eigene Zahlung (nachgerückt, dazu angemeldet) gilt nur für ihre Person (Durchklicken 22.10.2026). */}
+                <p className={a.leise}>
+                  {zahlung.wofuer === 'anmeldung'
+                    ? 'Gilt für die ganze Anmeldung.'
+                    : `Gilt nur für ${zahlung.name}.`}
+                </p>
               </>
             )
           )}

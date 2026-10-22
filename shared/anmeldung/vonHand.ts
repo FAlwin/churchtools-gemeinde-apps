@@ -12,7 +12,7 @@
  *   **keine** Mail – Bescheid gibt es als fertige Mail (`bescheidMail`, Art `angemeldet`).
  */
 import type { Antworten, Feld, Formular, OeffentlicheEinstellungen } from './formular';
-import type { CtGruppenfeld } from './liste';
+import { einmalFelder, type CtGruppenfeld } from './liste';
 import { platzPlan, platzStandAus } from './oeffentlich';
 import { anmeldungAufbauen, type CtFormular, type PreisWahl } from './senden';
 
@@ -157,7 +157,16 @@ export function handFelder(
   wahl: PreisWahl,
   heute: string,
   felder: ReadonlyMap<number, CtGruppenfeld>,
-  w: { nr: string; mitPlatz: boolean; papier: string | null },
+  w: {
+    nr: string;
+    mitPlatz: boolean;
+    papier: string | null;
+    /**
+     * Person dazu (A7-4b): nur die Felder der Person und die Anmelde-Nr. – Kontakt, Unterschrift, Auswahl und die
+     * Zahlung der Anmeldung stehen schon bei der ersten Person und bleiben dort.
+     */
+    nurPerson?: boolean;
+  },
 ): Record<number, string> {
   // Gezeichnet wird von Hand nichts – auch keine alte Antwort darf als Unterschrift durchrutschen.
   const ohneStriche = (w: Record<string, unknown>, liste: Feld[]) =>
@@ -173,7 +182,10 @@ export function handFelder(
     mitPlatz: [w.mitPlatz],
     ...(w.papier ? { papier: w.papier } : {}),
   });
+  const einmal = new Set(w.nurPerson ? einmalFelder(e) : []);
   return Object.fromEntries(
-    forms[0].form.filter((x) => x.type === 'custom').map((x) => [Number(x.id), x.value]),
+    forms[0].form
+      .filter((x) => x.type === 'custom' && !einmal.has(Number(x.id)))
+      .map((x) => [Number(x.id), x.value]),
   );
 }

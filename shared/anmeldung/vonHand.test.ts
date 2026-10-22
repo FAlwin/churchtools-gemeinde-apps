@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { anmeldungenAus, type MitgliedRoh } from './liste';
 import { nachpruefen, pruefMitgliederAus } from './nachpruefung';
 import { pruefeAntworten } from './formular';
-import { FELDER, HEUTE, NR, STICHTAG, e, stand } from './liste.testdaten';
+import { FELDER, HEUTE, NR, STICHTAG, e, mitglieder, stand } from './liste.testdaten';
 import { CT_MIT_NR } from './liste.testdaten';
 import { antworten } from './senden.testdaten';
 import { anmeldungAufbauen, unterschriftAufPapier } from './senden';
-import { bescheidMail } from './bewegung';
+import { bescheidMail, dazuPlan } from './bewegung';
 import { handFelder, handFormular, handPlatz, handStart, mitUnterschrift } from './vonHand';
 
 /**
@@ -201,5 +201,94 @@ describe('Mail', () => {
     expect(warte.betreff).toBe('Kinderfreizeit: Anmeldung für Jonas (Warteliste)');
     expect(warte.text).toMatch(/Warteliste \(Platz 2\)/);
     expect(warte.text).not.toMatch(/überweise/);
+  });
+});
+
+describe('Person dazu (A7-4b)', () => {
+  it('eigene Zahlung wie beim Nachrücken; Liste und Nachprüfung lesen sie mit', () => {
+    const x = e();
+    const roh = mitglieder('AAAAAA', [true, false], JONAS);
+    const [a] = anmeldungenAus(x, stand(roh), STICHTAG);
+    const plan = dazuPlan(x, a, { vor: 'Paul', geburtstag: '2018-04-03' }, true, '2026-10-22');
+    expect(plan.zahlung?.betragCent).toBe(600);
+    expect(plan.zahlung?.aufschluesselung.split('\n')[0]).toBe('Dazu angemeldet am 22.10.2026');
+
+    // Geschrieben: nur Felder der Person + Nr. (Kontakt, Auswahl, Zahlung der Anmeldung bleiben bei Jonas) + Zahlung.
+    const antw = antworten();
+    antw.personen = [{ pname: { vor: 'Paul', nach: 'Beispiel' }, birth: '2018-04-03', foto: 'Ja' }];
+    const felder = handFelder(x, antw, { option: 0, extras: [] }, HEUTE, FELDER, {
+      nr: 'AAAAAA',
+      mitPlatz: true,
+      papier: null,
+      nurPerson: true,
+    });
+    expect([felder[x.ctFelder.kontakt], felder[x.ctFelder.betrag], felder[x.ctFelder.tel]]).toEqual(
+      [undefined, undefined, undefined],
+    );
+    expect(felder[NR]).toBe('AAAAAA');
+    felder[x.ctFelder.betrag] = '6,00 €';
+    felder[x.ctFelder.aufschluesselung] = plan.zahlung!.aufschluesselung;
+    const paul = {
+      ...mitglied(felder, 'active'),
+      personId: 12,
+      person: { domainAttributes: { firstName: 'Paul', lastName: 'Beispiel' } },
+    };
+    const st = stand([...roh, paul]);
+    const [nachher] = anmeldungenAus(x, st, STICHTAG);
+    expect(nachher.zahlungen.map((z) => [z.name, z.wofuer, z.betragCent])).toEqual([
+      ['Jonas', 'anmeldung', 600],
+      ['Paul', 'dazu', 600],
+    ]);
+    expect(nachher.zahlungBei).toBe(JONAS);
+    // Auch wenn ChurchTools Paul vor Jonas liefert.
+    expect(anmeldungenAus(x, stand([paul, ...roh]), STICHTAG)[0].zahlungBei).toBe(JONAS);
+    expect(
+      nachpruefen(x, pruefMitgliederAus(x, st), { belegt: 2, wartend: 1, max: 10 }).betraege,
+    ).toEqual([]);
+  });
+
+  it('mit Auswahl: Die Nachprüfung nimmt sie von der ersten Person – auch wenn ChurchTools Paul zuerst liefert', () => {
+    // Bei einem Festpreis ist egal, wer als „erste“ gilt; die Auswahl steht aber nur bei ihr (Gegenprobe 22.10.2026).
+    const x = e();
+    x.preis.grundpreis = {
+      art: 'auswahl',
+      betragCent: 0,
+      gilt: 'person',
+      auswahlName: 'Zimmer',
+      optionen: [{ name: 'Zelt', preisCent: 600, kontingent: 0, belegt: 0, personenJe: 0 }],
+    };
+    const roh = mitglieder('AAAAAA', [true, false], JONAS);
+    roh[0].fields!.push({ id: x.ctFelder.auswahl, value: 'Zelt' });
+    const [a] = anmeldungenAus(x, stand(roh), STICHTAG);
+    const plan = dazuPlan(x, a, { vor: 'Paul', geburtstag: '2018-04-03' }, true, HEUTE);
+    expect(plan).toMatchObject({ auswahlFehlt: false, zahlung: { betragCent: 600 } });
+    const paul: MitgliedRoh = {
+      personId: 12,
+      person: { domainAttributes: { firstName: 'Paul', lastName: 'Beispiel' } },
+      groupTypeRoleId: 32,
+      groupMemberStatus: 'active',
+      memberStartDate: HEUTE,
+      fields: [
+        { id: NR, value: 'AAAAAA' },
+        { id: x.ctFelder.betrag, value: '6,00 €' },
+        { id: x.ctFelder.aufschluesselung, value: plan.zahlung!.aufschluesselung },
+      ],
+    };
+    for (const reihe of [
+      [...roh, paul],
+      [paul, ...roh],
+    ])
+      expect(
+        nachpruefen(x, pruefMitgliederAus(x, stand(reihe)), { belegt: 2, wartend: 1, max: 10 })
+          .betraege,
+      ).toEqual([]);
+  });
+
+  it('wer wartet, zahlt beim Nachrücken – keine Zahlung; kostenlos – keine Zahlung', () => {
+    const x = e();
+    const [a] = anmeldungenAus(x, stand(mitglieder('AAAAAA', [true, false], JONAS)), STICHTAG);
+    expect(dazuPlan(x, a, { vor: 'Paul', geburtstag: null }, false, HEUTE).zahlung).toBeNull();
+    x.preis.grundpreis.betragCent = 0;
+    expect(dazuPlan(x, a, { vor: 'Paul', geburtstag: null }, true, HEUTE).zahlung).toBeNull();
   });
 });

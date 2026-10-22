@@ -12,20 +12,20 @@
 import { tagPunkt, plusTage } from '../ct/datum';
 import { ibanText, verwendungszweck } from './bezahlung';
 import type { OeffentlicheEinstellungen } from './formular';
-import type { ListenAnmeldung, ListenPerson } from './liste';
+import type { ListenAnmeldung } from './liste';
 import { euroText, kannEtwasKosten } from './preis';
 import { aufschluesselungText, wartelistenZeile } from './senden';
 import { sollBetrag } from './sollbetrag';
-import { absageZeile, nachrueckKopf } from './zahlung';
+import { absageZeile, dazuKopf, nachrueckKopf } from './zahlung';
 
 const ganz = (p: { vor: string; nach: string }) => `${p.vor} ${p.nach}`.trim();
 
 /** Was die Anmeldung nach den Regeln kostet, wenn `mitPlatz` sagt, wer einen Platz hat. */
-function soll(
+function soll<P extends { geburtstag: string | null }>(
   e: OeffentlicheEinstellungen,
   x: ListenAnmeldung,
-  personen: ListenPerson[],
-  mitPlatz: (p: ListenPerson) => boolean,
+  personen: P[],
+  mitPlatz: (p: P) => boolean,
   heute: string,
 ) {
   const f = e.ctFelder;
@@ -111,21 +111,71 @@ export function nachrueckPlan(
       },
     };
   }
-  const betrag = Math.max(0, s.cent - bisher);
   return {
     ...basis,
     auswahlFehlt: s.auswahlFehlt,
     zahlung: {
       art: 'eigene',
       personId,
-      betragCent: betrag,
-      aufschluesselung: [
-        nachrueckKopf(heute),
-        `Neu gerechnet für die Anmeldung: ${euroText(s.cent)}`,
-        `Bisher gemeldet: ${euroText(bisher)}`,
-        `Für ${p.vor}: ${euroText(betrag)}`,
-      ].join('\n'),
+      ...eigeneZahlung(p.vor, s.cent, bisher, nachrueckKopf(heute)),
     },
+  };
+}
+
+/**
+ * **Eine eigene Zahlung** (Alwin, 19.10.2026: „als ob ein Kind neu angemeldet wurde“) – um so viel wird die Anmeldung
+ * nach den Regeln teurer (Geschwisterrabatt eingerechnet). Die EINE Stelle für Nachrücken (A7-3) und Person dazu
+ * (A7-4b); die Kopfzeile sagt Liste und Nachprüfung, dass sie zusätzlich gilt (`istEigeneZahlung`).
+ */
+function eigeneZahlung(
+  vor: string,
+  sollCent: number,
+  bisherCent: number,
+  kopf: string,
+): Omit<ZahlungNeu, 'personId'> {
+  const betrag = Math.max(0, sollCent - bisherCent);
+  return {
+    betragCent: betrag,
+    aufschluesselung: [
+      kopf,
+      `Neu gerechnet für die Anmeldung: ${euroText(sollCent)}`,
+      `Bisher gemeldet: ${euroText(bisherCent)}`,
+      `Für ${vor}: ${euroText(betrag)}`,
+    ].join('\n'),
+  };
+}
+
+// ── Person dazu (A7-4b) ─────────────────────────────────────────────────────────────────────────
+
+export interface DazuPlan {
+  /** Die eigene Zahlung der neuen Person (`personId` wird beim Schreiben gesetzt) – `null`, wenn sie wartet oder
+   * nichts kostet: Wer wartet, zahlt beim Nachrücken (dann rechnet `nachrueckPlan`). */
+  zahlung: Omit<ZahlungNeu, 'personId'> | null;
+  auswahlFehlt: boolean;
+}
+
+/**
+ * **Eine Person kommt von Hand zu einer bestehenden Anmeldung dazu** (A7-4b, Entwurf `a7-4-von-hand-v1`): gleiche
+ * Anmelde-Nr., eine eigene Zahlung wie beim Nachrücken (Alwin, 22.10.2026). Gerechnet mit Auswahl, Extras und
+ * Anmeldetag der Anmeldung – so, wie die Nachprüfung nachrechnet.
+ */
+export function dazuPlan(
+  e: OeffentlicheEinstellungen,
+  x: ListenAnmeldung,
+  neu: { vor: string; geburtstag: string | null },
+  mitPlatz: boolean,
+  heute: string,
+): DazuPlan {
+  if (!mitPlatz || !kannEtwasKosten(e.preis)) return { zahlung: null, auswahlFehlt: false };
+  const alle = [
+    ...x.personen.map((p) => ({ geburtstag: p.geburtstag, platz: p.status === 'aktiv' })),
+    { geburtstag: neu.geburtstag, platz: true },
+  ];
+  const s = soll(e, x, alle, (p) => p.platz, heute);
+  const bisher = x.zahlungen.reduce((summe, z) => summe + (z.betragCent ?? 0), 0);
+  return {
+    zahlung: eigeneZahlung(neu.vor, s.cent, bisher, dazuKopf(heute)),
+    auswahlFehlt: s.auswahlFehlt,
   };
 }
 

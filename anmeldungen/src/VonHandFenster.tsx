@@ -20,7 +20,8 @@ import {
   neueAnmeldeNr,
   unterschriftAufPapier,
 } from '@shared/anmeldung/senden';
-import { bescheidMail, type Mail } from '@shared/anmeldung/bewegung';
+import { bescheidMail, dazuPlan, type Mail } from '@shared/anmeldung/bewegung';
+import type { ListenAnmeldung } from '@shared/anmeldung/liste';
 import { euroText, kannEtwasKosten } from '@shared/anmeldung/preis';
 import { optionRest } from '@shared/anmeldung/kontingent';
 import {
@@ -102,6 +103,7 @@ export function VonHandFenster({
   anmeldeschluss,
   dabei,
   abgesagt,
+  dazu = null,
   onClose,
   onFertig,
 }: {
@@ -116,6 +118,11 @@ export function VonHandFenster({
   dabei: ReadonlySet<number>;
   /** Wer abgesagt hat. */
   abgesagt: ReadonlySet<number>;
+  /**
+   * **Person dazu** (A7-4b): zu dieser Anmeldung (gleiche Anmelde-Nr.) – nur die Fragen der Person, eine eigene
+   * Zahlung; Kontakt, Unterschrift und Auswahl stehen schon bei der Anmeldung.
+   */
+  dazu?: ListenAnmeldung | null;
   onClose: () => void;
   onFertig: (x: VonHandFertig) => void;
 }) {
@@ -144,13 +151,29 @@ export function VonHandFenster({
   const [fehlerFelder, setFehlerFelder] = useState<string[]>([]);
   const [arbeitet, setArbeitet] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
-  const [nr] = useState(neueAnmeldeNr);
+  const [nr] = useState(() => dazu?.nr ?? neueAnmeldeNr());
 
   const hf = useMemo(() => handFormular(e.formular), [e.formular]);
   const mitGeburt = geburtsdatumAn(e.formular);
   const platz = handPlatz(lage, trotzdem);
   const mitPlatz = platz.status === 'active';
   const betrag = betragAus(e, antworten, { option, extras }, heute, [mitPlatz]);
+  // Person dazu: nur ihre Fragen werden geprüft – und sie bekommt eine eigene Zahlung (wie beim Nachrücken).
+  const pruefFormular = dazu ? { anmeldung: [], person: hf.person } : hf;
+  const birthAntwort = antworten.personen[0].birth;
+  const dz =
+    dazu && wahl
+      ? dazuPlan(
+          e,
+          dazu,
+          {
+            vor: wahl.art === 'da' ? wahl.p.vor : wahl.neu.vor,
+            geburtstag: typeof birthAntwort === 'string' && birthAntwort ? birthAntwort : null,
+          },
+          mitPlatz,
+          heute,
+        )
+      : null;
   const kostet = kannEtwasKosten(e.preis);
   const schlussVorbei = !!anmeldeschluss && Date.parse(anmeldeschluss) < Date.now();
   const sichtbar = (x: Feld) => x.zustand !== 'aus';
@@ -206,18 +229,24 @@ export function VonHandFenster({
 
   const anmelden = () => {
     if (!wahl) return;
-    const offen = pruefeAntworten(hf, antworten);
+    const offen = pruefeAntworten(pruefFormular, antworten);
     setFehlerFelder(offen);
     if (offen.length) return setFehler('Bitte die markierten Felder ausfüllen.');
     void laufen(async () => {
       try {
         const felder = await gruppenfelderLaden(id);
-        const vermerk = papier ? unterschriftAufPapier(await meinName(), heute) : null;
+        const vermerk = papier && !dazu ? unterschriftAufPapier(await meinName(), heute) : null;
         const werte = handFelder(e, antworten, { option, extras }, heute, felder, {
           nr,
           mitPlatz,
           papier: vermerk,
+          nurPerson: !!dazu,
         });
+        const cf = e.ctFelder;
+        if (dz?.zahlung && cf.betrag !== undefined && cf.aufschluesselung !== undefined) {
+          werte[cf.betrag] = euroText(dz.zahlung.betragCent);
+          werte[cf.aufschluesselung] = dz.zahlung.aufschluesselung;
+        }
         const birth = antworten.personen[0].birth;
         const r = await vonHandAnmelden(
           id,
@@ -261,13 +290,15 @@ export function VonHandFenster({
           mail: bescheidMail(e, {
             art: 'angemeldet',
             veranstaltung,
-            x: {
-              email: typeof an === 'string' && an.trim() ? an.trim() : null,
-              wer: (kontakt && nameAus(antworten.anmeldung[kontakt.id])) || name,
-              nr,
-            },
+            x: dazu
+              ? { email: dazu.email, wer: dazu.wer, nr }
+              : {
+                  email: typeof an === 'string' && an.trim() ? an.trim() : null,
+                  wer: (kontakt && nameAus(antworten.anmeldung[kontakt.id])) || name,
+                  nr,
+                },
             person,
-            betragCent: betrag.gesamtCent,
+            betragCent: dazu ? (dz?.zahlung?.betragCent ?? 0) : betrag.gesamtCent,
             rueckzahlungCent: 0,
             heute,
             warteplatz: r.warteplatz,
@@ -299,8 +330,11 @@ export function VonHandFenster({
   // ── 1 Suchen ──
   if (schritt === 'suchen')
     return (
-      <Sheet title="Anmeldung von Hand" onClose={onClose}>
-        <p className={a.unterTitel}>Wen meldest du an? Erst in ChurchTools suchen.</p>
+      <Sheet title={dazu ? 'Person zur Anmeldung dazu' : 'Anmeldung von Hand'} onClose={onClose}>
+        <p className={a.unterTitel}>
+          {dazu ? `Anmeldung von ${dazu.wer} · Nr. ${nr}. ` : ''}Wen meldest du an? Erst in
+          ChurchTools suchen.
+        </p>
         <form
           className={a.handSuche}
           onSubmit={(ev) => {
@@ -514,7 +548,8 @@ export function VonHandFenster({
   return (
     <Sheet title={`${person ? ganz(person) : ''} anmelden`} onClose={onClose}>
       <p className={a.unterTitel}>
-        {wahl?.art === 'neu' ? 'Neue Person · ' : ''}Anmelde-Nr. {nr}
+        {wahl?.art === 'neu' ? 'Neue Person · ' : ''}
+        {dazu ? `zur Anmeldung von ${dazu.wer} · ` : ''}Anmelde-Nr. {nr}
       </p>
       {schlussVorbei && (
         <p className={a.hinweisBlau}>
@@ -522,39 +557,46 @@ export function VonHandFenster({
         </p>
       )}
       <div className={`${pv.pv} ${pv['fs-kasten']}`} style={FARBEN}>
-        <section className={`${a.teil} ${a.handFragen}`}>
-          <h3>Für die Anmeldung</h3>
-          {hf.anmeldung.filter(sichtbar).map((x) => (
-            <div key={x.id} className={a.handFragen}>
-              {/* Der Name steht im Formular unter „Kontakt“ – hier braucht er eine eigene Überschrift. */}
-              {x.typ === 'name' && <p className={a.feldTitel}>Angemeldet von</p>}
-              <FeldEingabe
-                feld={x}
-                pfad={`anmeldung.${x.id}`}
-                wert={antworten.anmeldung[x.id]}
-                onWert={(w) => setAnmeldung(x.id, w)}
-                fehler={fehlerFelder}
-              />
-            </div>
-          ))}
-          {mitUnterschrift(e.formular) && (
-            <>
-              <button
-                type="button"
-                className={k.schalterZeile}
-                aria-pressed={papier}
-                onClick={() => setPapier(!papier)}
-              >
-                <Schalter an={papier} />
-                Unterschrift liegt auf Papier vor
-              </button>
-              <p className={a.leise}>
-                Unterschreiben kann hier nur die Familie selbst. Bei Papier steht in ChurchTools
-                „auf Papier – vermerkt von …“ mit deinem Namen und dem heutigen Tag.
-              </p>
-            </>
-          )}
-        </section>
+        {dazu ? (
+          <p className={a.leise}>
+            Kontakt, Unterschrift und Auswahl stehen schon bei der Anmeldung – hier nur die Fragen
+            für {vor}.
+          </p>
+        ) : (
+          <section className={`${a.teil} ${a.handFragen}`}>
+            <h3>Für die Anmeldung</h3>
+            {hf.anmeldung.filter(sichtbar).map((x) => (
+              <div key={x.id} className={a.handFragen}>
+                {/* Der Name steht im Formular unter „Kontakt“ – hier braucht er eine eigene Überschrift. */}
+                {x.typ === 'name' && <p className={a.feldTitel}>Angemeldet von</p>}
+                <FeldEingabe
+                  feld={x}
+                  pfad={`anmeldung.${x.id}`}
+                  wert={antworten.anmeldung[x.id]}
+                  onWert={(w) => setAnmeldung(x.id, w)}
+                  fehler={fehlerFelder}
+                />
+              </div>
+            ))}
+            {mitUnterschrift(e.formular) && (
+              <>
+                <button
+                  type="button"
+                  className={k.schalterZeile}
+                  aria-pressed={papier}
+                  onClick={() => setPapier(!papier)}
+                >
+                  <Schalter an={papier} />
+                  Unterschrift liegt auf Papier vor
+                </button>
+                <p className={a.leise}>
+                  Unterschreiben kann hier nur die Familie selbst. Bei Papier steht in ChurchTools
+                  „auf Papier – vermerkt von …“ mit deinem Namen und dem heutigen Tag.
+                </p>
+              </>
+            )}
+          </section>
+        )}
 
         <section className={`${a.teil} ${a.handFragen}`}>
           <h3>{person ? ganz(person) : 'Person'}</h3>
@@ -571,7 +613,7 @@ export function VonHandFenster({
           ))}
         </section>
 
-        {kostet && (g.art === 'auswahl' || e.preis.extras.length > 0) && (
+        {kostet && !dazu && (g.art === 'auswahl' || e.preis.extras.length > 0) && (
           <section className={`${a.teil} ${a.handFragen}`}>
             <h3>Auswahl</h3>
             {g.art === 'auswahl' && (
@@ -651,8 +693,24 @@ export function VonHandFenster({
         )}
         {kostet && (
           <p className={a.summe}>
-            <span>Betrag</span>
-            <b>{mitPlatz ? euroText(betrag.gesamtCent) : '0,00 € – folgt beim Nachrücken'}</b>
+            <span>{dazu ? `Neue Zahlung für ${vor}` : 'Betrag'}</span>
+            <b>
+              {!mitPlatz
+                ? `${dazu ? '' : '0,00 € – '}folgt beim Nachrücken`
+                : euroText(dazu ? (dz?.zahlung?.betragCent ?? 0) : betrag.gesamtCent)}
+            </b>
+          </p>
+        )}
+        {dazu && mitPlatz && kostet && (
+          <p className={a.leise}>
+            Wie beim Nachrücken: {vor} bekommt eine eigene Zahlung – um so viel wird die Anmeldung
+            nach den Regeln teurer. Die bisherige Zahlung bleibt, wie sie ist.
+          </p>
+        )}
+        {dz?.auswahlFehlt && (
+          <p className={f.fehler}>
+            Die gespeicherte Auswahl gibt es nicht mehr – der Betrag ist nach den heutigen Preisen
+            gerechnet. Bitte danach prüfen.
           </p>
         )}
         <p className={a.leise}>

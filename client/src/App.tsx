@@ -22,6 +22,7 @@ import {
   useRestoreAgendaItem,
   useUpdateAgendaItem,
   useSetAgendaItemVorBeginn,
+  useSetAgendaItemWeggelassen,
   useAgendaServices,
   useCreateAgendaItem,
   useSongLibrary,
@@ -207,6 +208,7 @@ export default function App() {
   const restoreAgendaItem = useRestoreAgendaItem(service?.id ?? null);
   const updateAgendaItem = useUpdateAgendaItem(service?.id ?? null);
   const setAgendaItemVorBeginn = useSetAgendaItemVorBeginn(service?.id ?? null);
+  const setAgendaItemWeggelassen = useSetAgendaItemWeggelassen(service?.id ?? null);
   const agendaServices = useAgendaServices(
     auth.isAuthenticated && service !== null && darfAblauf(service) && view?.type === 'setlist',
   );
@@ -470,14 +472,17 @@ export default function App() {
         onBack={() => setView(null)}
         isReordering={reorderAgenda.isPending}
         actions={{
-          reorder: (order) => reorderAgenda.mutateAsync(order).then(() => undefined),
+          reorder: (order, gesehen) =>
+            reorderAgenda.mutateAsync({ order, gesehen }).then(() => undefined),
           remove: (itemId) =>
             deleteAgendaItem.mutateAsync(itemId).then((r) => r.wiederherstellen ?? null),
           restore: (g) => restoreAgendaItem.mutateAsync(g).then(() => undefined),
-          update: (itemId, fields) =>
-            updateAgendaItem.mutateAsync({ itemId, fields }).then(() => undefined),
+          update: (itemId, fields, gesehen) =>
+            updateAgendaItem.mutateAsync({ itemId, fields, gesehen }).then(() => undefined),
           setVorBeginn: (itemId, vorBeginn) =>
             setAgendaItemVorBeginn.mutateAsync({ itemId, vorBeginn }).then(() => undefined),
+          setWeggelassen: (itemId, weggelassen) =>
+            setAgendaItemWeggelassen.mutateAsync({ itemId, weggelassen }).then(() => undefined),
           add: (data) => createAgendaItem.mutateAsync(data).then(() => undefined),
         }}
         services={agendaServices.data ?? []}

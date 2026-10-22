@@ -119,9 +119,10 @@ test('Scrollen: Rollen untereinander, Pedal, Tipp, Lied-Punkt', async ({ page })
   // sehen, ein Tritt holt ihn also nach oben (kein ⅔-Schritt).
   const erster = await tritt(page, 'ArrowDown', 1);
   expect(erster.halte).toContain(erster.nachher);
-  // Oben steht jetzt die Überschrift des ersten Teils: Darüber die Luft (8 px), darunter Schrift.
-  expect(await schriftZwischen(page, erster.nachher + 1, erster.nachher + 6)).toBe(false);
-  expect(await schriftZwischen(page, erster.nachher + 8, erster.nachher + 30)).toBe(true);
+  // Oben steht jetzt die Überschrift des ersten Teils: Darüber etwas Luft – ohne einen Streifen des
+  // Titelkopfs an der Kante –, darunter Schrift.
+  expect(await schriftZwischen(page, erster.nachher, erster.nachher + 3)).toBe(false);
+  expect(await schriftZwischen(page, erster.nachher + 3, erster.nachher + 30)).toBe(true);
   // Weiter (↓ und Leertaste) bis zum nächsten Lied – jeder Tritt nach der Regel; die Kopfzeile folgt.
   let schritte = 0;
   while (!(await kopfTitel(page).textContent())?.includes('Welch ein Freund')) {
@@ -153,8 +154,10 @@ test('Scrollen: Rollen untereinander, Pedal, Tipp, Lied-Punkt', async ({ page })
 });
 
 test.describe('langes Lied, niedriges Fenster', () => {
-  // So niedrig, dass ein Teil (neun Zeilen) nicht mehr auf den Bildschirm passt.
-  test.use({ viewport: { width: 390, height: 300 } });
+  // So niedrig, dass ein Teil (neun Zeilen) nicht mehr auf den Bildschirm passt – und so schmal wie ein
+  // kleines Handy: Dort war der Abstand über einem Teil kleiner als die Luft (feste 8 px), und oben schaute
+  // ein Streifen der Zeile davor herein (Alwin 19.10.2026).
+  test.use({ viewport: { width: 320, height: 300 } });
 
   test('Pedal: lange Teile in ⅔-Schritten, hält am ---- (#609)', async ({ page }) => {
     await page.addInitScript((tour: string) => {
@@ -175,6 +178,9 @@ test.describe('langes Lied, niedriges Fenster', () => {
     // Ein Lied: Titel, sechs Teile, ein ---- in Vers 3.
     expect(erster.halte).toHaveLength(8);
     const trenner = erster.halte[4];
+    // Vers 1 oben – vom Titelkopf darüber kein Streifen an der Kante.
+    expect(erster.nachher).toBe(erster.halte[1]);
+    expect(await schriftZwischen(page, erster.nachher, erster.nachher + 1)).toBe(false);
 
     const ziele: number[] = [erster.nachher];
     let zweiDrittel = 0;
@@ -183,6 +189,8 @@ test.describe('langes Lied, niedriges Fenster', () => {
       if (t.nachher === t.vorher) break; // am Ende
       expect(t.nachher - t.vorher).toBeLessThanOrEqual(t.hoehe);
       if (!t.halte.includes(t.nachher)) zweiDrittel++;
+      // An einer Halte-Stelle schneidet die Kante keine Zeile an – weder über einem Teil noch am ----.
+      else expect(await schriftZwischen(page, t.nachher, t.nachher + 1)).toBe(false);
       ziele.push(t.nachher);
     }
     // Die Teile sind länger als der Bildschirm: Es gab ⅔-Schritte – und trotzdem hielt das Pedal am ----.
@@ -330,6 +338,38 @@ test('Malen auf der Rolle: ein Strich landet auf der A4-Seite und bleibt sichtba
       { timeout: 5_000 },
     )
     .toBe(true);
+});
+
+// 22.10.2026: Beim Einschalten des Stifts ging einmal eine leere Textliste hinaus – auf der Rolle löschte das
+// die eigenen Texte im Lied von der A4-Seite (auch im Konto). Gefunden beim Bau von #626.
+test('Stift an auf der Rolle: eigene Texte im Lied bleiben – auf der A4-Seite und im Bild', async ({
+  page,
+}) => {
+  const SEITE = 'worship_docdraw_song999001_a999001_voriginal_0';
+  const text = JSON.stringify([
+    { id: 4, fx: 0.5, fy: 0.3, text: 'Bleib da', color: '#d92d20', sizeCqh: 1.2 },
+  ]);
+  await page.addInitScript(
+    ({ tour, seite, text }) => {
+      localStorage.setItem(`worship:onboard-${tour}`, '1');
+      localStorage.setItem('worship:liedansicht', 'scrollen');
+      localStorage.setItem(`${seite}_text`, text);
+    },
+    { tour: TOUR_CHART, seite: SEITE, text },
+  );
+  await page.goto('/?demo=chart');
+  await expect
+    .poll(() => deck(page).evaluate((el) => el.querySelectorAll('canvas').length), {
+      timeout: 30_000,
+    })
+    .toBeGreaterThanOrEqual(3);
+  await expect(deck(page).getByText('Bleib da')).toBeVisible();
+  await page.getByRole('button', { name: 'Werkzeuge' }).click();
+  await page.getByRole('menuitem', { name: 'Anmerken' }).click();
+  await expect(page.getByTestId('rollen-malen')).toBeVisible({ timeout: 30_000 });
+  await page.waitForTimeout(1_000); // Speichern der Rolle läuft verzögert
+  expect(await page.evaluate((k) => localStorage.getItem(`${k}_text`), SEITE)).toBe(text);
+  await expect(page.getByTestId('rollen-malen').getByText('Bleib da')).toBeVisible();
 });
 
 test.describe('mit Touch', () => {

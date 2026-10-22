@@ -12,7 +12,7 @@
   max-width: 460px;
   background: var(--surface2);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--r-dialog);
   padding: 24px 22px;
 
   h1 {
@@ -29,7 +29,7 @@
 .knopf {
   margin-top: 16px;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--r-ctrl);
   padding: 10px 16px;
   background: var(--blue);
   color: #fff;

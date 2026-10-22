@@ -14,7 +14,8 @@ import { ortszeitAus } from './zeit';
 
 /** Was eine Zeile zeigt – `AgendaItem` der Musik-App passt hinein (das Lied dort trägt mehr). */
 export type AblaufZeile = Omit<AgendaItem, 'song' | 'changed' | 'neu' | 'removed'> & {
-  song: { title: string } | null;
+  /** Das Lied – Name zum Anzeigen, Arrangement zum Vergleichen (E6-3c: ein anderes Arrangement ist ein anderes Lied). */
+  song: { title: string; arrangementId?: number } | null;
   removed?: boolean;
 };
 
@@ -36,6 +37,42 @@ export function ablaufUhrzeit(
   return ortszeitAus(iso, zeitzone).slice(11, 16);
 }
 
+/**
+ * Ist der Punkt **an diesem Termin weggelassen** (Auge, E6-3b)? Dasselbe Merkmal wie bei der Uhrzeit: `startTimes`
+ * nennt den Termin, aber mit `null` (gemessen E6-3-0: `hide` setzt genau das, die Folgepunkte rücken vor). Fehlt
+ * `startTimes` oder der Termin darin, ist nichts weggelassen – ältere Antworten kennen das Feld nicht.
+ */
+export function istWeggelassen(item: CtAgendaItem, eventId: number): boolean {
+  return item.startTimes?.[String(eventId)] === null;
+}
+
+/**
+ * **Was das Punkt-Fenster beim Öffnen gesehen hat** (E6-3c, #659) – die Felder, die man dort ändern kann, so wie die
+ * Zeile sie zeigt. Der Schreibkern vergleicht damit den frischen Stand (`punktAendern`): Hat jemand genau ein Feld
+ * geändert, das ich auch ändere, wird nicht still überschrieben. Beide Seiten laufen durch `ablaufZeileAus` – sonst
+ * hielte schon eine gerundete Dauer einen unveränderten Punkt für geändert.
+ */
+export interface PunktStand {
+  title: string;
+  responsibleText: string;
+  durationMin: number | null;
+  note: string;
+  /** Das Lied: sein Arrangement (ohne eins der Name), `null` ohne Lied. */
+  lied: number | string | null;
+}
+
+export function punktStand(
+  z: Pick<AblaufZeile, 'title' | 'responsibleText' | 'durationMin' | 'note' | 'song'>,
+): PunktStand {
+  return {
+    title: z.title,
+    responsibleText: z.responsibleText,
+    durationMin: z.durationMin,
+    note: z.note,
+    lied: z.song ? (z.song.arrangementId ?? z.song.title) : null,
+  };
+}
+
 /** Ein ChurchTools-Punkt als Zeile – ohne Lied-Auflösung. */
 export function ablaufZeileAus(item: CtAgendaItem, eventId: number, zeitzone: string): AblaufZeile {
   const sekunden = item.duration ?? 0;
@@ -46,11 +83,19 @@ export function ablaufZeileAus(item: CtAgendaItem, eventId: number, zeitzone: st
     isHeader: isHeaderType(item.type),
     responsible: responsibleEntries(item),
     responsibleText: item.responsible?.text ?? '',
-    song: item.song ? { title: item.song.title } : null,
+    song: item.song
+      ? {
+          title: item.song.title,
+          ...(typeof item.song.arrangementId === 'number'
+            ? { arrangementId: item.song.arrangementId }
+            : {}),
+        }
+      : null,
     time: ablaufUhrzeit(item, eventId, zeitzone),
     vorBeginn: item.isBeforeEvent ?? false,
     durationMin: sekunden > 0 ? Math.round(sekunden / 60) : null,
     note: item.note ?? '',
+    weggelassen: istWeggelassen(item, eventId),
   };
 }
 

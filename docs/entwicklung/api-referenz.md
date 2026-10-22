@@ -66,7 +66,7 @@
 - `GET  /api/ablauf-vorlagen` → `AblaufVorlage[]` (`GET /agendatemplates`, nach Namen sortiert)
 - `POST /api/services/:eventId/agenda` {kalenderId, quelle: {art:'vorlage', vorlageId} | {art:'kopie', eventId} | {art:'leer'}} → Ablauf anlegen (13.10.2026): `PUT /events/{id}/agenda` mit `?template_id=` bzw. `?event_id=`, Kalender im Rumpf. Liest **vorher** nach (gibt es schon einen → **409**, ohne zu schreiben) und **hinterher** (kein Ablauf da → **502**). Kopie aus sich selbst → 400.
 - `GET  /api/services/:eventId/setlist` → kompletter Ablauf (`AgendaItem[]`, Lieder mit `chordpro` + `versions[]` + documents[]; geänderte/entfernte Punkte markiert)
-- `GET  /api/services/:eventId/setlist/version` → billiger Fingerabdruck (sha256) des Ablaufs für den Live-Abgleich (8s-Poll; Server-5s-Memo je Event)
+- `GET  /api/services/:eventId/setlist/version` → billiger Fingerabdruck (sha256) des Ablaufs für den Live-Abgleich (30-s-Poll, #557; Server-5-s-Memo je Termin und Konto)
 - `POST /api/services/:eventId/seen` → aktuellen Ablauf-Stand als „gesehen"-Basislinie merken (steuert den „geändert"-Hinweis, #143/#161)
 - `PATCH /api/services/:eventId/agenda/order` → Reihenfolge zurückschreiben (ganze Liste)
 - `POST /api/services/:eventId/agenda/items` → Ablaufpunkt anlegen
@@ -245,6 +245,9 @@ mit den Volume-Schreibfunktionen entfallen (12.10.2026); je Anfrage begrenzt wei
 Ob jemand teilt, steht in seiner eigenen Daten-Datei in ChurchTools. Gefunden wird man über das
 Verzeichnis der Erweiterung (Modul `ERWEITERUNG_KUERZEL`, Kategorie `musikapp-teilen`) und die Liste
 `sharing.json` auf dem Volume – gelesen als eines, geschrieben in beide (`services/ctTeilenServer.ts`).
+Seit #554 nennt ein Eintrag im Verzeichnis auch die Lieder mit Anmerkungen (`lieder`, nachgeführt nach jedem
+Speichern, `liederMelden`): `sharers` liest nur die Dateien derer, die zu den gefragten Liedern etwas haben
+(und Einträge ohne `lieder` wie bisher).
 
 - `GET/PUT /api/annotations/sharing` → eigenen Teilen-Schalter lesen/setzen
 - `GET  /api/annotations/sharers?songs=` → wer teilt für die gefragten Lieder geteilte Anmerkungen

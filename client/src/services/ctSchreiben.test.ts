@@ -11,7 +11,9 @@ import {
   reihenfolge,
   tempo,
   vorBeginn,
+  weglassen,
 } from './ctSchreiben';
+import { ablaufZeileAus, punktStand } from '@shared/ct/ablaufZeile';
 import { _bremseLoesen, _vergissCsrf, ChurchToolsBremst, KeinSpeicherRecht } from './ctRuntime';
 import { FakeCt } from './ctFake.testutil';
 
@@ -241,5 +243,46 @@ describe('Fehler beim Schreiben – die Zweige einzeln', () => {
     const vorher = ct.aufrufe.length;
     await expect(punkt(500, 2, { note: 'x' })).rejects.toBeInstanceOf(ChurchToolsBremst);
     expect(ct.aufrufe.length).toBe(vorher);
+  });
+});
+
+describe('Auge – an diesem Termin weglassen (E6-3b)', () => {
+  it('schreibt `hide` mit CSRF und leerem Rumpf – wie gemessen', async () => {
+    await weglassen(500, 3, true);
+    expect(ct.geschrieben).toEqual([
+      { was: 'POST /api/events/500/agenda/items/3/hide', json: {}, csrf: 'csrf-123' },
+    ]);
+  });
+
+  it('weggelassen → `unhide`; steht schon so → nichts', async () => {
+    ct.liefere('/api/events/500/agenda', {
+      data: {
+        ...AGENDA,
+        items: AGENDA.items.map((i) => (i.id === 3 ? { ...i, startTimes: { '500': null } } : i)),
+      },
+    });
+    await weglassen(500, 3, true);
+    expect(ct.geschrieben).toHaveLength(0);
+    await weglassen(500, 3, false);
+    expect(ct.geschrieben.map((g) => g.was)).toEqual([
+      'POST /api/events/500/agenda/items/3/unhide',
+    ]);
+  });
+});
+
+describe('Konflikt (E6-3c) – der Weg der Erweiterung', () => {
+  it('derselbe Punkt inzwischen anders → 412, nichts geschrieben; ohne `gesehen` wird geschrieben', async () => {
+    const gesehen = punktStand(
+      ablaufZeileAus({ ...AGENDA.items[0], title: 'Vorspiel alt' }, 500, 'Europe/Berlin'),
+    );
+    await expect(punkt(500, 1, { title: 'Neu' }, gesehen)).rejects.toMatchObject({ status: 412 });
+    expect(ct.geschrieben).toHaveLength(0);
+    await punkt(500, 1, { title: 'Neu' });
+    expect(ct.geschrieben.map((g) => g.was)).toEqual(['PUT /api/events/500/agenda/items/1']);
+  });
+
+  it('Reihenfolge woanders geändert → 412', async () => {
+    await expect(reihenfolge(500, [3, 1, 2], [2, 1, 3])).rejects.toMatchObject({ status: 412 });
+    expect(ct.geschrieben).toHaveLength(0);
   });
 });

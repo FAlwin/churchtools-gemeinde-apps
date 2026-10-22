@@ -19,7 +19,7 @@
 
 .card {
   background: var(--surface2);
-  border-radius: 16px;
+  border-radius: var(--r-dialog);
   padding: 20px;
   width: min(380px, 100%);
   max-height: 88%;
@@ -38,7 +38,7 @@
 .err {
   margin: 0 0 12px;
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: var(--r-ctrl);
   background: rgba(178, 34, 71, 0.1);
   border: 1px solid rgba(178, 34, 71, 0.3);
   color: var(--red);
@@ -74,7 +74,7 @@
 
 .readonly {
   padding: 11px 13px;
-  border-radius: 10px;
+  border-radius: var(--r-ctrl);
   background: var(--surface3);
   color: var(--text);
   font-size: 15px;
@@ -98,7 +98,7 @@
   width: 100%;
   padding: 11px 13px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-ctrl);
   background: var(--surface2);
   color: var(--blue-ink);
   font-family: var(--ui);
@@ -137,7 +137,7 @@
   height: 46px;
   margin-top: 14px;
   border: none;
-  border-radius: 11px;
+  border-radius: var(--r-ctrl);
   background: var(--surface3);
   color: var(--text);
   font-family: var(--ui);
@@ -194,8 +194,12 @@
 }
 .cancelBtn {
   flex: 1;
-  height: 46px;
-  border-radius: 11px;
+  // Mindesthöhe statt fester Höhe (E6-3c): „Trotzdem speichern“ bricht auf schmalen Handys (unter ~360 px) um –
+  // mit fester Höhe war die zweite Zeile abgeschnitten. Einzeilig bleibt der Knopf 46 px hoch.
+  min-height: 46px;
+  padding: 4px 8px;
+  line-height: 1.2;
+  border-radius: var(--r-ctrl);
   border: none;
   background: var(--surface3);
   color: var(--text2);
@@ -211,8 +215,12 @@
 }
 .saveBtn {
   flex: 1;
-  height: 46px;
-  border-radius: 11px;
+  // Mindesthöhe statt fester Höhe (E6-3c): „Trotzdem speichern“ bricht auf schmalen Handys (unter ~360 px) um –
+  // mit fester Höhe war die zweite Zeile abgeschnitten. Einzeilig bleibt der Knopf 46 px hoch.
+  min-height: 46px;
+  padding: 4px 8px;
+  line-height: 1.2;
+  border-radius: var(--r-ctrl);
   border: none;
   background: var(--blue);
   color: #fff;

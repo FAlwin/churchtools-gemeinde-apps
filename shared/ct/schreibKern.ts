@@ -17,6 +17,7 @@
  */
 import { agendaItemWritePayload, beginnPositionFuer, dienstgruppenNotizen } from './agendaPayload';
 import { arrangementWritePayload, type ArrangementOverrides } from './arrangementPayload';
+import { ablaufZeileAus, istWeggelassen, punktStand, type PunktStand } from './ablaufZeile';
 import type { CtAgenda, CtAgendaItem, CtArrangement, CtSong } from './typen';
 
 /** Ein Schreibvorgang – Pfad ohne `/api`, wie beim `CtLeser`. */
@@ -51,6 +52,15 @@ export interface CtSchreiber {
 export const ABLAUF_VERWEIGERT = 'Keine Berechtigung, den Ablauf in ChurchTools zu ändern.';
 
 const ABLAUF_GEAENDERT = 'Der Ablauf hat sich geändert. Bitte neu laden und erneut versuchen.';
+
+/**
+ * Meldungen bei einem **echten Konflikt** (E6-3c, #659; entschieden mit Alwin 22.10.2026: nur dann, nicht bei jeder
+ * Änderung am Ablauf). Status **412**: Die Oberfläche erkennt daran, dass sie neu lesen und – beim Punkt – fragen soll.
+ */
+export const PUNKT_GEAENDERT =
+  'Dieser Punkt wurde eben woanders geändert. Der Ablauf ist neu geladen – deine Änderung steht noch hier.';
+export const REIHENFOLGE_GEAENDERT =
+  'Die Reihenfolge wurde eben woanders geändert. Der Ablauf ist neu geladen – bitte noch einmal ziehen.';
 
 /**
  * Meldung, wenn der Ablauf in ChurchTools **abgeschlossen** ist (Alwin, 09.10.2026). ChurchTools antwortet
@@ -134,6 +144,8 @@ export async function ablaufUmsortieren(
   s: CtSchreiber,
   eventId: number,
   orderedItemIds: number[],
+  /** Die Reihenfolge vor dem Ziehen (E6-3c) – weicht die frische ab, hat jemand anderes umsortiert: 412. */
+  gesehen?: readonly number[],
 ): Promise<void> {
   const { items } = await s.agenda(eventId);
   const byId = new Map(items.map((i) => [i.id, i]));
@@ -141,6 +153,9 @@ export async function ablaufUmsortieren(
   // Schutz: nur erlauben, wenn die übergebene Reihenfolge exakt dieselben Punkte enthält.
   const same = orderedItemIds.length === items.length && orderedItemIds.every((id) => byId.has(id));
   if (!same) throw s.fehler(409, ABLAUF_GEAENDERT);
+  if (gesehen && (gesehen.length !== items.length || items.some((it, k) => it.id !== gesehen[k]))) {
+    throw s.fehler(412, REIHENFOLGE_GEAENDERT);
+  }
 
   const payload = orderedItemIds.map((id, index) => ({
     id,
@@ -222,10 +237,22 @@ export async function punktAendern(
   eventId: number,
   itemId: number,
   fields: PunktAenderung,
+  /**
+   * Was das Fenster beim Öffnen gesehen hat (E6-3c). Steht in einem Feld, das hier geschrieben wird, inzwischen etwas
+   * anderes, hat es jemand geändert: 412 statt still zu überschreiben. Ohne = „Trotzdem speichern“.
+   */
+  gesehen?: PunktStand,
 ): Promise<void> {
   const { items } = await s.agenda(eventId);
   const it = items.find((i) => i.id === itemId);
   if (!it) throw s.fehler(404, 'Ablaufpunkt nicht gefunden.');
+  if (gesehen) {
+    // Die Zeitzone spielt für die verglichenen Felder keine Rolle (die Uhrzeit wird nicht verglichen).
+    const frisch = punktStand(ablaufZeileAus(it, eventId, 'UTC'));
+    if (geschriebeneFelder(fields).some((f) => frisch[f] !== gesehen[f])) {
+      throw s.fehler(412, PUNKT_GEAENDERT);
+    }
+  }
 
   const body = agendaItemWritePayload(it, {
     // Beim Aufheben der Lied-Verknüpfung den Titel leeren (der Liedtitel soll nicht als Text
@@ -246,15 +273,26 @@ export async function punktAendern(
   });
 }
 
+/** Welche Felder des Punkt-Stands eine Änderung schreibt – nur die werden auf Konflikt geprüft (E6-3c). */
+function geschriebeneFelder(f: PunktAenderung): (keyof PunktStand)[] {
+  const felder: (keyof PunktStand)[] = [];
+  if (f.title !== undefined) felder.push('title');
+  if (f.responsible !== undefined) felder.push('responsibleText');
+  if (f.durationMin !== undefined) felder.push('durationMin');
+  if (f.note !== undefined) felder.push('note');
+  if (f.arrangementId !== undefined || f.unlink) felder.push('lied');
+  return felder;
+}
+
 /**
  * Was „Rückgängig" nach dem Löschen braucht (Alwin, 12.10.2026): der Punkt, wie ChurchTools ihn beim
  * Anlegen nimmt, und wo er stand.
  *
  * Gemessen an der Test-Instanz (12.10.2026): Ein neu angelegter Punkt bekommt Titel, Dauer, Notiz,
  * Zuständige (ChurchTools ordnet die Personen über die Dienst-Platzhalter neu zu) und die Notizen je
- * Dienstgruppe vollständig zurück; die Stelle stellt danach das Umsortieren her. **Nicht** zurück
- * kommt eine in ChurchTools ausgeblendete Uhrzeit – die Schnittstelle kennt das Feld nicht. Der Punkt
- * hat danach eine neue ID.
+ * Dienstgruppe vollständig zurück; die Stelle stellt danach das Umsortieren her. Der Punkt hat danach eine neue
+ * ID. Das Auge („an diesem Termin weglassen“) kennt das Anlegen nicht – seit E6-3b (#652) wird es danach über
+ * `hide` wieder gesetzt (`weggelassen`); vorher ging es beim Zurückholen verloren.
  */
 export interface GeloeschterPunkt {
   felder: {
@@ -270,6 +308,8 @@ export interface GeloeschterPunkt {
   /** Der Punkt, hinter dem er stand – `null` = ganz vorne. */
   nachId: number | null;
   vorBeginn: boolean;
+  /** War der Punkt an diesem Termin weggelassen (Auge)? Fehlt bei Merkzetteln von vor E6-3b. */
+  weggelassen?: boolean;
 }
 
 /**
@@ -323,6 +363,7 @@ export async function punktLoeschen(
     },
     nachId: stelle > 0 ? items[stelle - 1].id : null,
     vorBeginn: it.isBeforeEvent ?? false,
+    weggelassen: istWeggelassen(it, eventId),
   };
 }
 
@@ -377,6 +418,40 @@ export async function punktWiederherstellen(
     await ablaufUmsortieren(s, eventId, reihenfolge);
   }
   await vorBeginnSetzen(s, eventId, neuId, g.vorBeginn);
+  if (g.weggelassen) await weglassenSetzen(s, eventId, neuId, true);
+}
+
+/**
+ * Einen Punkt **an diesem Termin weglassen** – oder wieder zeigen (Auge in ChurchTools, Bauplan E6-3b).
+ * Gemessen an der Test-Instanz (E6-3-0, 19.10.2026): `POST /events/{termin}/agenda/items/{punkt}/hide` bzw.
+ * `…/unhide` → 204. Der Punkt bleibt im Ablauf, `startTimes[termin]` wird `null`, und die Folgepunkte rücken vor –
+ * ChurchTools rechnet seine Zeit nicht mehr mit. Gilt nur für diesen Termin, auch wenn sich mehrere den Ablauf
+ * teilen.
+ *
+ * Frisch gelesen wie beim Ändern: Fehlt der Punkt, kommt 404 (sonst meldete ChurchTools nur „fehlgeschlagen“); steht
+ * er schon so, wird nichts geschrieben.
+ */
+export async function weglassenSetzen(
+  s: CtSchreiber,
+  eventId: number,
+  itemId: number,
+  weglassen: boolean,
+): Promise<void> {
+  const { items } = await s.agenda(eventId);
+  const it = items.find((i) => i.id === itemId);
+  if (!it) throw s.fehler(404, 'Ablaufpunkt nicht gefunden.');
+  if (istWeggelassen(it, eventId) === weglassen) return;
+  await ablaufSchreibe(
+    s,
+    eventId,
+    `/events/${eventId}/agenda/items/${itemId}/${weglassen ? 'hide' : 'unhide'}`,
+    {
+      method: 'POST',
+      json: {},
+      verweigert: ABLAUF_VERWEIGERT,
+      fehler: weglassen ? 'Punkt weglassen fehlgeschlagen' : 'Punkt wieder zeigen fehlgeschlagen',
+    },
+  );
 }
 
 /** Die ID aus der Antwort auf `POST …/agenda/items` (`{ data: { id } }`). */

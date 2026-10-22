@@ -14,13 +14,16 @@ import { readPageTexts } from '../utils/annotationKeys';
 import { textObjStyle } from '../utils/textObjStyle';
 import type { PedalRichtung } from '../utils/pedalTasten';
 import type { ScrollPosition } from '../utils/scrollPosition';
-import { HALTE_LUFT, pedalZiel } from '../utils/pedalSchritt';
+import { pedalZiel } from '../utils/pedalSchritt';
 import {
   pedalHalte,
+  ROLLEN_RAND_UNTEN,
+  rollenUnterkante,
   stricheAufRolle,
   streifen,
   textAufRolle,
   type Anmerkungsquelle,
+  type Rechteck,
 } from '../utils/rollenAbbildung';
 import { PAGE_W } from '../utils/blattMasse';
 import { Spinner } from './Spinner';
@@ -175,7 +178,7 @@ export function ScrollDeck({
 
   /**
    * Die Halte-Stellen des Pedals (#609) als Scroll-Positionen: je Liedrolle Titel, Teil-Anfänge und `----`
-   * (`pedalHalte`, in mm), mit etwas Luft darüber. Die Rolle ist so breit wie A4 – daraus der Maßstab.
+   * (`pedalHalte`, in mm, samt Luft darüber). Die Rolle ist so breit wie A4 – daraus der Maßstab.
    * Hochgeladene PDFs haben keine; dort bleibt es beim ⅔-Schritt.
    */
   function haltePunkte(): number[] {
@@ -185,8 +188,7 @@ export function ScrollDeck({
       const box = seitenRefs.current[p];
       if (!abb || !box) return;
       const pxProMm = box.offsetWidth / PAGE_W;
-      for (const mm of pedalHalte(abb))
-        out.push(Math.max(box.offsetTop, Math.round(box.offsetTop + mm * pxProMm - HALTE_LUFT)));
+      for (const mm of pedalHalte(abb)) out.push(Math.round(box.offsetTop + mm * pxProMm));
     });
     return out.sort((a, b) => a - b);
   }
@@ -324,6 +326,30 @@ function ladeBild(key: string | null): Promise<HTMLImageElement | null> {
 }
 
 /**
+ * Bis wohin (mm, A4) im Bereich `q` einer Seite Striche stehen – `null`, wenn er leer ist. Für das Wachsen der
+ * Rolle unter dem letzten Teil (#626, `rollenUnterkante`).
+ */
+function belegtBis(bild: HTMLImageElement, q: Rechteck): number | null {
+  const m = bild.width / PAGE_W; // Bildpunkte je mm im Bild
+  const x = Math.max(0, Math.floor(q.x * m));
+  const y = Math.max(0, Math.floor(q.y * m));
+  const w = Math.min(bild.width - x, Math.ceil(q.w * m));
+  const h = Math.min(bild.height - y, Math.ceil(q.h * m));
+  if (w <= 0 || h <= 0) return null;
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return null;
+  ctx.drawImage(bild, x, y, w, h, 0, 0, w, h);
+  const d = ctx.getImageData(0, 0, w, h).data;
+  for (let zeile = h - 1; zeile >= 0; zeile--)
+    for (let i = zeile * w * 4 + 3; i < (zeile + 1) * w * 4; i += 4)
+      if (d[i] > 0) return (y + zeile + 1) / m;
+  return null;
+}
+
+/**
  * Eine Seite im Scroll-Modus: Seite, fremde Striche, eigene Striche (in DIESER Reihenfolge wie beim
  * Blättern, `composePane`) und darüber die Texte – mit demselben Stil wie in der Live-Ansicht
  * (`textObjStyle`, #113). Bei der Rolle kommen Striche und Texte von den A4-Seiten des Lieds, Streifen für
@@ -339,10 +365,6 @@ function ScrollSeite({
   gedimmt = false,
   onAktivieren,
 }: ScrollSeiteProps) {
-  // Beim Malen liegen die eigenen Anmerkungen der Kerne in der Mal-Ebene (dort bearbeitbar) – hier
-  // also nur noch das, was dort nicht steht: fremde Ebene und eigene Lücken. Ohne Abbildung (hochgeladenes
-  // PDF) liegt die ganze eigene Ebene in der Mal-Ebene.
-  const bearbeiten = !!malen;
   // Die Schlüssel sind die Abhängigkeit – nicht das je Render neu gebaute Objekt (vgl. `utils/pageKeys`).
   const schluessel = quelle.seiten.map((x) => `${x.own ?? ''}|${x.over ?? ''}`).join('\u0001');
   const abbildung = quelle.abbildung;
@@ -355,8 +377,20 @@ function ScrollSeite({
       }),
     [schluessel],
   );
-  /** Höhe dieser Seite in mm (die Rolle ist so breit wie A4). */
-  const hoeheMm = (PAGE_W * src.height) / src.width;
+  /** Höhe des gesetzten Lieds in mm (die Rolle ist so breit wie A4). */
+  const basisMm = (PAGE_W * src.height) / src.width;
+  // Steht unter dem letzten Teil etwas (auf A4 ist dort oft Platz), wächst die Rolle bis dahin (#626).
+  // `null` = noch nicht ausgemessen – solange gibt es keine Mal-Ebene (sie rechnet in Anteilen der Höhe).
+  const [zusatzMm, setZusatzMm] = useState<number | null>(null);
+  // Beim Malen liegen die eigenen Anmerkungen der Kerne in der Mal-Ebene (dort bearbeitbar) – hier
+  // also nur noch das, was dort nicht steht: fremde Ebene und eigene Lücken. Ohne Abbildung (hochgeladenes
+  // PDF) liegt die ganze eigene Ebene in der Mal-Ebene. Bearbeitet wird erst, wenn die Mal-Ebene da ist
+  // (nach dem Ausmessen, #626) – bis dahin zeigt diese Seite alles selbst, sonst wären die eigenen Texte
+  // der Teile einen Moment lang verschwunden.
+  const bearbeiten = !!malen && zusatzMm !== null;
+  /** Höhe dieser Seite in mm – samt dem Platz für Anmerkungen unter dem Lied. */
+  const hoeheMm = basisMm + (zusatzMm ?? 0);
+  const hoehePx = Math.round((hoeheMm * src.width) / PAGE_W);
   const boxRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [nah, setNah] = useState(false);
@@ -377,6 +411,43 @@ function ScrollSeite({
   }, [root]);
 
   useEffect(() => {
+    if (!liste) {
+      setZusatzMm(0);
+      return;
+    }
+    let aktuell = true;
+    void Promise.all(seiten.map((x) => Promise.all([ladeBild(x.over), ladeBild(x.own)]))).then(
+      (bilder) => {
+        if (!aktuell) return;
+        let unten = 0;
+        bilder.forEach((paar, seite) => {
+          const striche = paar.filter((b): b is HTMLImageElement => !!b);
+          const texte = [
+            ...readPageTexts<PageTextObj>(seiten[seite].over),
+            ...readPageTexts<PageTextObj>(seiten[seite].own),
+          ];
+          const bis = (q: Rechteck) =>
+            striche.reduce<number | null>((m, b) => {
+              const v = belegtBis(b, q);
+              return v === null ? m : Math.max(m ?? 0, v);
+            }, null);
+          unten = Math.max(
+            unten,
+            rollenUnterkante(liste, seite, basisMm - ROLLEN_RAND_UNTEN, bis, texte),
+          );
+        });
+        const neu = Math.max(0, Math.ceil(unten + ROLLEN_RAND_UNTEN - basisMm));
+        // Beim Malen bleibt die Höhe, wie sie ist: Die Mal-Ebene rechnet in Anteilen der Höhe, ihr Entwurf und
+        // noch nicht gespeicherte Striche passten sonst nicht mehr. Nach dem Malen wird neu ausgemessen.
+        setZusatzMm((alt) => (bearbeiten && alt !== null ? alt : neu));
+      },
+    );
+    return () => {
+      aktuell = false;
+    };
+  }, [liste, seiten, basisMm, syncTick, bearbeiten]);
+
+  useEffect(() => {
     const c = canvasRef.current;
     if (!c) return;
     if (!nah) {
@@ -392,7 +463,7 @@ function ScrollSeite({
         const ctx = c.getContext('2d');
         if (!ctx) return;
         c.width = src.width;
-        c.height = src.height;
+        c.height = hoehePx;
         ctx.drawImage(src, 0, 0);
         // Erst alle fremden, dann alle eigenen Striche – die eigenen liegen obenauf (wie beim Blättern).
         for (const ebene of [0, 1] as const) {
@@ -418,7 +489,7 @@ function ScrollSeite({
     return () => {
       aktuell = false;
     };
-  }, [nah, src, seiten, liste, syncTick, bearbeiten]);
+  }, [nah, src, hoehePx, seiten, liste, syncTick, bearbeiten]);
 
   const texte = useMemo(
     () =>
@@ -441,7 +512,7 @@ function ScrollSeite({
     [seiten, liste, hoeheMm, syncTick, bearbeiten],
   );
 
-  const seitenformat = `${src.width} / ${src.height}`;
+  const seitenformat = `${src.width} / ${hoehePx}`;
   return (
     <div
       ref={(n) => {
@@ -469,11 +540,11 @@ function ScrollSeite({
           ))}
         </div>
       )}
-      {malen && (
+      {malen && bearbeiten && (
         <RollenMalen
           quelle={quelle}
           breitePx={src.width}
-          hoehePx={src.height}
+          hoehePx={hoehePx}
           hoeheMm={hoeheMm}
           rootRef={malen.rootRef}
           leisteZiel={malen.leisteZiel}

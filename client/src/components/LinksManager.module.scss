@@ -14,7 +14,7 @@
 .card {
   background: var(--surface2);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-card);
   padding: 10px 12px;
 }
 
@@ -92,7 +92,7 @@
 .add {
   margin-top: 12px;
   border: 1.5px dashed var(--blue);
-  border-radius: 9px;
+  border-radius: var(--r-ctrl);
   background: none;
   color: var(--blue);
   font-size: 14px;
@@ -117,7 +117,7 @@
   height: 48px;
   width: 100%;
   margin-top: 14px;
-  border-radius: 8px;
+  border-radius: var(--r-ctrl);
   border: none;
   background: var(--blue);
   color: #fff;

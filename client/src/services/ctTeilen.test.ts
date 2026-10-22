@@ -209,6 +209,93 @@ describe('Notizen von …', () => {
   });
 });
 
+describe('Inhaltsverzeichnis: Lieder im Eintrag (#554)', () => {
+  const WERTE = '/api/custommodules/10/customdatacategories/';
+  const eintraege = () =>
+    ct.werte.map((w) => JSON.parse(w.value) as { personId: number; lieder?: number[] });
+
+  /** Diese Person teilt und hat einen Text zu `lied` – über die echten Wege. */
+  async function teiltMit(id: number, vorname: string, lied: number): Promise<void> {
+    alsPerson(id, vorname);
+    await teilenSetzen(true);
+    await schreibeAnmerkung(songPageKey(lied, 'original', false, 0), {
+      texts: [{ id: 1, text: 'x', fx: 0, fy: 0 }] as never,
+    });
+  }
+
+  it('nach dem Speichern steht das Lied im Eintrag – weiter genau ein Eintrag je Person', async () => {
+    await annaTeilt();
+    expect(eintraege()).toEqual([expect.objectContaining({ personId: ANNA, lieder: [LIED] })]);
+    alsPerson(ANNA, 'Anna');
+    await schreibeAnmerkung(songPageKey(8, 'original', false, 0), { strokes: PNG });
+    expect(eintraege()).toEqual([expect.objectContaining({ personId: ANNA, lieder: [LIED, 8] })]);
+  });
+
+  it('wer schon Anmerkungen hat und das Teilen einschaltet, steht gleich mit seinen Liedern drin', async () => {
+    alsPerson(ANNA, 'Anna');
+    await schreibeAnmerkung(SEITE, { strokes: PNG }); // teilt noch nicht – nichts im Verzeichnis
+    expect(ct.werte).toEqual([]);
+    await teilenSetzen(true);
+    expect(eintraege()).toEqual([expect.objectContaining({ personId: ANNA, lieder: [LIED] })]);
+  });
+
+  it('stand man schon drin, bringt erneutes Einschalten die Lieder auf den Stand (Umzug vom Volume)', async () => {
+    await annaTeilt();
+    const w = ct.werte[0];
+    w.value = JSON.stringify({ ...(JSON.parse(w.value) as object), lieder: [] });
+    alsPerson(ANNA, 'Anna');
+    await teilenSetzen(true);
+    expect(eintraege()).toEqual([expect.objectContaining({ personId: ANNA, lieder: [LIED] })]);
+  });
+
+  it('gleiche Lieder: Speichern fasst das Verzeichnis nicht an', async () => {
+    await annaTeilt();
+    alsPerson(ANNA, 'Anna');
+    await schreibeAnmerkung(SEITE, { strokes: PNG }); // einmal nachsehen (frisch angemeldet)
+    const vorher = ct.zaehle(`GET ${WERTE}`) + ct.zaehle(`POST ${WERTE}`);
+    await schreibeAnmerkung(SEITE, { texts: [{ id: 2, text: 'y', fx: 0, fy: 0 }] as never });
+    expect(ct.zaehle(`GET ${WERTE}`) + ct.zaehle(`POST ${WERTE}`) - vorher).toBe(0);
+  });
+
+  it('„Wer teilt zu diesen Liedern?" liest nur die Ablagen derer, die zu ihnen etwas haben', async () => {
+    await annaTeilt();
+    for (let i = 0; i < 5; i++) await teiltMit(30 + i, `Person${i}`, 99); // Notizen nur zu Lied 99
+    alsPerson(ICH, 'Alwin');
+    const vorher = ct.zaehle('GET /api/files/person/');
+    expect(await teilende([LIED])).toMatchObject([{ id: ANNA, songs: [LIED] }]);
+    // Nur Annas Liste – nicht die der fünf anderen.
+    expect(ct.zaehle('GET /api/files/person/') - vorher).toBe(1);
+    expect(ct.zaehle(`GET /api/files/person/${ANNA}`)).toBeGreaterThan(0);
+  });
+
+  it('ein Eintrag ohne Lieder (ältere Fassung der App) wird gelesen wie bisher', async () => {
+    await annaTeilt();
+    const w = ct.werte[0];
+    const { lieder: _weg, ...alt } = JSON.parse(w.value) as { lieder?: number[] };
+    w.value = JSON.stringify(alt);
+    expect(await teilende([LIED])).toMatchObject([{ id: ANNA, songs: [LIED] }]);
+  });
+
+  it('übernimmt ChurchTools den neuen Eintrag nicht, bleibt der alte stehen', async () => {
+    await annaTeilt();
+    alsPerson(ANNA, 'Anna');
+    ct.wertSchreibenVerschwindet = true;
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await schreibeAnmerkung(songPageKey(8, 'original', false, 0), { strokes: PNG });
+    expect(eintraege()).toEqual([expect.objectContaining({ personId: ANNA, lieder: [LIED] })]);
+    expect(warn).toHaveBeenCalled();
+  });
+
+  it('die letzte Anmerkung zu einem Lied gelöscht: das Lied verschwindet aus dem Eintrag', async () => {
+    await annaTeilt();
+    alsPerson(ANNA, 'Anna');
+    await schreibeAnmerkung(SEITE, { strokes: null, texts: [] });
+    expect(eintraege()).toEqual([expect.objectContaining({ personId: ANNA, lieder: [] })]);
+    alsPerson(ICH, 'Alwin');
+    expect(await teilende([LIED])).toEqual([]);
+  });
+});
+
 describe('Recht auf Team-Notizen (wie im Server)', () => {
   const MUSIKTEAM = 9;
 

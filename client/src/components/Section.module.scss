@@ -16,7 +16,7 @@
   text-transform: uppercase;
   margin-bottom: 10px;
   padding: 3px 10px;
-  border-radius: 6px;
+  border-radius: var(--r-ctrl);
   color: var(--blue-ink);
   background: var(--blue-soft);
   font-family: var(--ui);
@@ -29,7 +29,7 @@
   display: inline-block;
   margin-left: 7px;
   padding: 1px 6px;
-  border-radius: 5px;
+  border-radius: var(--r-ctrl);
   background: var(--orange, #eb5e28);
   color: #fff;
   font-variant-numeric: tabular-nums;

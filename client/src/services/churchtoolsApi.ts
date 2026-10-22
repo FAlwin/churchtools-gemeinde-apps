@@ -1,6 +1,7 @@
 /**
  * Konkrete Backend-Endpunkte der Worship-App. Alle UI-Datenzugriffe laufen hierüber.
  */
+import type { PunktStand } from '@shared/ct/ablaufZeile';
 import type {
   AblaufQuelle,
   AblaufVorlage,
@@ -116,11 +117,16 @@ export function getSetlistVersion(eventId: number): Promise<{ hash: string }> {
 }
 
 /** Speichert die neue Reihenfolge der Ablaufpunkte (Liste der Item-IDs in Wunschreihenfolge). */
-export function reorderAgenda(eventId: number, order: number[]): Promise<{ ok: boolean }> {
-  if (istExtension) return extSchreiben.reihenfolge(eventId, order);
+export function reorderAgenda(
+  eventId: number,
+  order: number[],
+  /** Die Reihenfolge vor dem Ziehen (E6-3c) – hat inzwischen jemand umsortiert, kommt 412. */
+  gesehen?: number[],
+): Promise<{ ok: boolean }> {
+  if (istExtension) return extSchreiben.reihenfolge(eventId, order, gesehen);
   return apiFetch(`/api/services/${eventId}/agenda/order`, {
     method: 'PATCH',
-    body: JSON.stringify({ order }),
+    body: JSON.stringify({ order, gesehen }),
   });
 }
 
@@ -178,11 +184,13 @@ export function updateAgendaItem(
   eventId: number,
   itemId: number,
   fields: AgendaItemUpdate,
+  /** Was das Fenster beim Öffnen gesehen hat (E6-3c) – ohne = „Trotzdem speichern“. */
+  gesehen?: PunktStand,
 ): Promise<{ ok: boolean }> {
-  if (istExtension) return extSchreiben.punkt(eventId, itemId, fields);
+  if (istExtension) return extSchreiben.punkt(eventId, itemId, fields, gesehen);
   return apiFetch(`/api/services/${eventId}/agenda/items/${itemId}`, {
     method: 'PUT',
-    body: JSON.stringify(fields),
+    body: JSON.stringify({ ...fields, gesehen }),
   });
 }
 
@@ -196,6 +204,19 @@ export function setAgendaItemVorBeginn(
   return apiFetch(`/api/services/${eventId}/agenda/items/${itemId}/vor-beginn`, {
     method: 'PUT',
     body: JSON.stringify({ vorBeginn }),
+  });
+}
+
+/** Einen Punkt an diesem Termin weglassen (`true`) oder wieder zeigen (`false`) – Auge, E6-3b (#652). */
+export function setAgendaItemWeggelassen(
+  eventId: number,
+  itemId: number,
+  weggelassen: boolean,
+): Promise<{ ok: boolean }> {
+  if (istExtension) return extSchreiben.weglassen(eventId, itemId, weggelassen);
+  return apiFetch(`/api/services/${eventId}/agenda/items/${itemId}/weglassen`, {
+    method: 'PUT',
+    body: JSON.stringify({ weggelassen }),
   });
 }
 

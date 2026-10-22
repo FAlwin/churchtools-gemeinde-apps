@@ -30,8 +30,10 @@ import type { NeuerAgendaPunkt } from '@shared/ct/agendaItemChanges';
 import {
   beginnStelle,
   itemLabel,
+  punktStand,
   vorlaufNachUmsortieren,
   type AblaufZeile,
+  type PunktStand,
 } from '@shared/ct/ablaufZeile';
 import { ConfirmDialog } from '../fenster/ConfirmDialog';
 import { Toast } from '../fenster/Toast';
@@ -50,18 +52,30 @@ import styles from './AblaufBearbeiten.module.scss';
  * Aktionen werfen bei Fehler (z. B. fehlende Rechte); die Liste zeigt die Meldung.
  */
 export interface AblaufAktionen {
-  /** Speichert die neue Reihenfolge (Item-IDs). */
-  reorder: (order: number[]) => Promise<void>;
+  /** Speichert die neue Reihenfolge (Item-IDs); `gesehen` = die Reihenfolge davor (E6-3c, sonst 412). */
+  reorder: (order: number[], gesehen?: number[]) => Promise<void>;
   /** Löscht einen Ablaufpunkt; liefert den Merkzettel für „Rückgängig" (`null`: war schon weg). */
   remove: (itemId: number) => Promise<GeloeschterPunkt | null>;
   /** Legt einen eben gelöschten Punkt an seiner alten Stelle wieder an. */
   restore: (punkt: GeloeschterPunkt) => Promise<void>;
-  /** Schreibt geänderte Felder eines Punkts gesammelt (ein Request). */
-  update: (itemId: number, fields: PunktAenderung) => Promise<void>;
+  /** Schreibt geänderte Felder eines Punkts gesammelt (ein Request); `gesehen` wie beim Öffnen (E6-3c, sonst 412). */
+  update: (itemId: number, fields: PunktAenderung, gesehen?: PunktStand) => Promise<void>;
   /** Legt fest, ob der Punkt (samt allen darüber bzw. darunter) vor dem Beginn läuft (#423). */
   setVorBeginn: (itemId: number, vorBeginn: boolean) => Promise<void>;
+  /** Lässt den Punkt an diesem Termin weg (Auge) oder zeigt ihn wieder (E6-3b, #652). */
+  setWeggelassen: (itemId: number, weggelassen: boolean) => Promise<void>;
   /** Legt einen neuen Punkt an. */
   add: (data: NeuerAgendaPunkt) => Promise<void>;
+}
+
+/**
+ * Muss nach diesem Schreibfehler der Ablauf neu gelesen werden? Punkt weg (404), Ablauf anders (409), derselbe Punkt
+ * oder die Reihenfolge inzwischen geändert (412, E6-3c), abgeschlossen (423). Eine Stelle für Musik-App und
+ * Dienstplaner – sonst zeigte eine App nach dem Fehler den alten Stand.
+ */
+export function verlangtNeuLaden(e: unknown): boolean {
+  const status = (e as { status?: unknown } | null)?.status;
+  return typeof status === 'number' && [404, 409, 412, 423].includes(status);
 }
 
 export interface AblaufBearbeitenOptionen<T extends AblaufZeile> {
@@ -149,12 +163,14 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
     setLocalItems(next); // optimistisch
     setErr(null);
     rueckgaengig.verwerfen();
+    // `gesehen`: die Reihenfolge, auf der gezogen wurde – hat inzwischen jemand umsortiert, kommt 412 (E6-3c).
+    const ids = (liste: T[]) => liste.map((i) => i.id);
     aktionen
-      .reorder(next.map((i) => i.id))
+      .reorder(ids(next), ids(vorher))
       .then(() =>
         rueckgaengig.anbieten(`„${itemLabel(vorher[oldIndex])}" verschoben`, () => {
           setLocalItems(vorher); // optimistisch zurück
-          return aktionen.reorder(vorher.map((i) => i.id));
+          return aktionen.reorder(ids(vorher), ids(next));
         }),
       )
       .catch((e: unknown) => {
@@ -163,15 +179,33 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
       });
   }
 
-  /** Schreibt Feld-Änderungen (ein Request); Titel optimistisch lokal spiegeln. */
-  function handleUpdate(itemId: number, fields: PunktAenderung): Promise<void> {
+  /**
+   * Schreibt Feld-Änderungen (ein Request) und spiegelt die einfachen Felder optimistisch lokal – auch damit ein gleich
+   * wieder geöffnetes Fenster sie als „gesehen“ mitschickt und keinen Konflikt mit sich selbst meldet (E6-3c).
+   */
+  function handleUpdate(
+    itemId: number,
+    fields: PunktAenderung,
+    gesehen: PunktStand | undefined,
+  ): Promise<void> {
     setErr(null);
-    if (fields.title !== undefined) {
-      const title = fields.title;
-      setLocalItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, title } : i)));
-    }
+    setLocalItems((prev) =>
+      prev.map((i) =>
+        i.id === itemId
+          ? {
+              ...i,
+              ...(fields.title !== undefined ? { title: fields.title } : {}),
+              ...(fields.note !== undefined ? { note: fields.note } : {}),
+              ...(fields.responsible !== undefined ? { responsibleText: fields.responsible } : {}),
+              ...(fields.durationMin !== undefined
+                ? { durationMin: fields.durationMin > 0 ? fields.durationMin : null }
+                : {}),
+            }
+          : i,
+      ),
+    );
     // Fehler zeigt das Punkt-Fenster – hier nur lokal zurückrollen und weiterwerfen.
-    return aktionen.update(itemId, fields).catch((e: unknown) => {
+    return aktionen.update(itemId, fields, gesehen).catch((e: unknown) => {
       setLocalItems(serverStand());
       beiFehler?.(e);
       throw e;
@@ -294,9 +328,13 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
           services={o.dienste}
           liedWahl={o.liedWahl}
           onClose={() => setActionItem(null)}
-          onUpdate={(fields) => handleUpdate(actionItem.id, fields)}
+          // Verglichen wird mit dem Stand beim Öffnen; „Trotzdem speichern“ schreibt ohne Vergleich (E6-3c).
+          onUpdate={(fields, trotzdem) =>
+            handleUpdate(actionItem.id, fields, trotzdem ? undefined : punktStand(actionItem))
+          }
           vorBeginn={actionItem.vorBeginn}
           onSetVorBeginn={(vorBeginn) => aktionen.setVorBeginn(actionItem.id, vorBeginn)}
+          onSetWeggelassen={(weg) => aktionen.setWeggelassen(actionItem.id, weg)}
           onRequestDelete={() => setPendingDelete(actionItem)}
         />
       )}

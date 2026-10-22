@@ -17,7 +17,15 @@
  *
  * Alle Angaben in mm; die Rolle ist so breit wie A4.
  */
-import { MARGIN, PAGE_H, PAGE_W, COL_GAP, spaltenBreite, spaltenX } from './blattMasse';
+import {
+  KOPF_ABSTAND,
+  MARGIN,
+  PAGE_H,
+  PAGE_W,
+  COL_GAP,
+  spaltenBreite,
+  spaltenX,
+} from './blattMasse';
 
 /** Ein zusammenhängender Lauf eines Teils in einer Spalte einer Seite. */
 export interface Stueck {
@@ -66,9 +74,10 @@ export interface Streifen {
   quelle: Rechteck;
   ziel: { x: number; y: number };
   /**
-   * `kern` = steht auf der Rolle genau so (ein Teil, der Titelkopf oder der Abstand zum nächsten Teil in
-   * derselben Spalte); `luecke` = Leerraum am Spalten-/Seitenende, am Ende des vorigen Stücks gezeigt –
-   * dort kann er über dem nächsten Teil liegen. Gemalt wird auf der Rolle nur in Kernen (#608).
+   * `kern` = steht auf der Rolle genau so (ein Teil, der Titelkopf, der Abstand zum nächsten Teil in
+   * derselben Spalte oder der Platz unter dem letzten Teil, #626); `luecke` = Leerraum am Spalten-/Seitenende,
+   * am Ende des vorigen Stücks gezeigt – dort kann er über dem nächsten Teil liegen. Gemalt wird auf der
+   * Rolle nur in Kernen (#608).
    */
   art: 'kern' | 'luecke';
 }
@@ -95,6 +104,9 @@ function spaltenBereich(spalte: number, spalten: number): { x0: number; x1: numb
 export function streifen(abb: Abbildung): Streifen[] {
   const { a4 } = abb;
   const out: Streifen[] = [];
+  // Das letzte Stück des Lieds (Satz-Reihenfolge): Der Platz darunter ist auf der Rolle frei – dort steht er
+  // genauso wie auf A4, also als Kern (#626). Die Rolle wächst, wenn dort etwas steht (`rollenUnterkante`).
+  const letztes = a4.stuecke[a4.stuecke.length - 1];
   // Titelkopf: auf beiden gleich – er steht oben auf der ersten Seite bzw. der Rolle.
   out.push({
     seite: 0,
@@ -144,7 +156,7 @@ export function streifen(abb: Abbildung): Streifen[] {
         // Dahinter bis zum nächsten Stück – der Abstand zwischen zwei Teilen steht auf der Rolle genauso
         // (also ein Kern) – bzw. bis zum Spalten-Ende (die echte Lücke).
         if (i < hier.length - 1) luecke(s.y1, hier[i + 1].y0, verschiebung, 'kern');
-        else luecke(s.y1, PAGE_H, verschiebung);
+        else luecke(s.y1, PAGE_H, verschiebung, s === letztes ? 'kern' : 'luecke');
       });
     }
   }
@@ -174,7 +186,7 @@ export function a4NachRolle(
  * **Zurück: ein Punkt der Rolle auf seine A4-Seite** (#608 – was auf der Rolle gemalt wird, wird auf den
  * A4-Seiten gespeichert). Nur über Kerne: Die sind auf der Rolle überschneidungsfrei, eine Lücke dagegen
  * liegt dort über dem nächsten Teil und wäre mehrdeutig. Liegt der Punkt in keinem Kern (rechts neben
- * einem schmalen 2-Spalten-Streifen, unter dem letzten Teil), zählt der nächstgelegene.
+ * einem schmalen 2-Spalten-Streifen, tiefer als der Platz unter dem letzten Teil), zählt der nächstgelegene.
  */
 export function rolleNachA4(
   liste: Streifen[],
@@ -229,6 +241,42 @@ export function textAufRolle<T extends { fx: number; fy: number; sizeCqh: number
     sizeCqh: (text.sizeCqh * PAGE_H) / rollenHoehe,
     art: ziel.art,
   };
+}
+
+/** So viel Platz bleibt unter der untersten Anmerkung, wenn die Rolle für sie wächst (mm, #626). */
+export const ROLLEN_RAND_UNTEN = 6;
+
+/**
+ * **Wie weit die Anmerkungen einer A4-Seite auf der Rolle nach unten reichen** (mm, #626). Unter dem letzten
+ * Teil hat A4 oft noch Platz, die Rolle aber endet mit dem Lied – was dort gemalt oder geschrieben ist,
+ * stünde sonst hinter dem Liedende (unsichtbar bzw. über dem nächsten Lied). Die Rolle wächst bis hierher.
+ *
+ * `belegtBis(q)` sagt, bis wohin (mm, A4) in diesem Bereich der Seite Striche stehen (`null` = keine); gefragt
+ * wird nur für Bereiche, die auf der Rolle unter `ab` reichen – darüber ist die Rolle ohnehin lang genug.
+ * Texte stehen mit ihrer Mitte bei `fy` (`.textObj`), ihre Höhe folgt aus Größe und Zeilenzahl. 0 = nichts.
+ */
+export function rollenUnterkante(
+  liste: Streifen[],
+  seite: number,
+  ab: number,
+  belegtBis: (q: Rechteck) => number | null,
+  texte: readonly { fx: number; fy: number; sizeCqh: number; text: string }[],
+): number {
+  let unten = 0;
+  for (const s of liste) {
+    // (Rundung: Das Ende eines Stücks liegt auf der Rolle nicht aufs letzte Bit genau auf `ab`.)
+    if (s.seite !== seite || s.quelle.h <= 0 || s.ziel.y + s.quelle.h <= ab + 1e-6) continue;
+    const bis = belegtBis(s.quelle);
+    if (bis !== null) unten = Math.max(unten, s.ziel.y + (bis - s.quelle.y));
+  }
+  for (const t of texte) {
+    const mitte = a4NachRolle(liste, seite, t.fx * PAGE_W, t.fy * PAGE_H);
+    if (!mitte) continue;
+    // Zeilenhöhe 1.15 und etwas Innenabstand wie `.textObj`.
+    const hoch = (t.sizeCqh / 100) * PAGE_H * (t.text.split('\n').length * 1.15 + 0.4);
+    unten = Math.max(unten, mitte.y + hoch / 2);
+  }
+  return unten;
 }
 
 /** Umgekehrt: ein Textfeld der Rolle auf seine A4-Seite – Lage und Größe (#608). */
@@ -287,34 +335,39 @@ export function stricheAufRolle(
  */
 export function kerneAufSeite(
   ctx: CanvasRenderingContext2D,
-  rolle: CanvasImageSource & { width: number },
+  rolle: CanvasImageSource & { width: number; height: number },
   liste: Streifen[],
   seite: number,
   seiteBreitePx: number,
 ): void {
   const q = seiteBreitePx / PAGE_W; // Bildpunkte je mm auf der A4-Seite
   const z = rolle.width / PAGE_W; // Bildpunkte je mm auf der Rolle
+  const rollenEnde = rolle.height / z; // mm
   for (const s of liste) {
     if (s.seite !== seite || s.art !== 'kern' || s.quelle.h <= 0) continue;
-    ctx.clearRect(s.quelle.x * q, s.quelle.y * q, s.quelle.w * q, s.quelle.h * q);
+    // Nur, was die Rolle auch zeigt: Der Platz unter dem letzten Teil (#626) kann länger sein als die Rolle –
+    // was darunter auf A4 steht, darf beim Zurückschreiben nicht geleert werden.
+    const h = Math.min(s.quelle.h, rollenEnde - s.ziel.y);
+    if (h <= 0) continue;
+    ctx.clearRect(s.quelle.x * q, s.quelle.y * q, s.quelle.w * q, h * q);
     ctx.drawImage(
       rolle,
       s.ziel.x * z,
       s.ziel.y * z,
       s.quelle.w * z,
-      s.quelle.h * z,
+      h * z,
       s.quelle.x * q,
       s.quelle.y * q,
       s.quelle.w * q,
-      s.quelle.h * q,
+      h * q,
     );
   }
 }
 
 /**
  * **Wird auf der Rolle hier gespeichert?** (#615) Nur was über einem Kern steht, kommt zurück auf eine
- * A4-Seite (`kerneAufSeite`). Unter dem letzten Teil – und bei 2-Spalten-Liedern rechts neben dem schmalen
- * Streifen – gäbe es kein Ziel; ein Strich dort wäre beim Speichern weg. Das Lasso legt deshalb nur ab, wo
+ * A4-Seite (`kerneAufSeite`). Bei 2-Spalten-Liedern rechts neben dem schmalen Streifen – und tiefer, als die
+ * A4-Seite unter dem letzten Teil Platz hat – gäbe es kein Ziel; ein Strich dort wäre beim Speichern weg. Das Lasso legt deshalb nur ab, wo
  * der ganze Rahmen auf Kernen liegt (geprüft an einem Raster von Punkten, Angaben in mm).
  */
 export function rahmenAufKernen(liste: Streifen[], r: Rechteck, raster = 6): boolean {
@@ -330,16 +383,32 @@ export function rahmenAufKernen(liste: Streifen[], r: Rechteck, raster = 6): boo
   return true;
 }
 
+/** Luft über einem angesprungenen Teil (mm, #609) – die Überschrift klebt nicht an der Kante. */
+export const HALTE_LUFT = 2;
+
 /**
  * **Wo das Pedal auf der Rolle anhält** (#609, Alwin 17.10.2026: „Teil für Teil“): der Titel (Anfang der
- * Rolle), der Anfang jedes Teils und jeder Weiterschalt-Punkt `----` – sortiert, in mm von oben. Ein Teil,
- * der im Flow wiederkehrt, hält bei jedem Vorkommen.
+ * Rolle), der Anfang jedes Teils und jeder Weiterschalt-Punkt `----` – sortiert, in mm von oben, als
+ * Oberkante des Bildschirms. Ein Teil, der im Flow wiederkehrt, hält bei jedem Vorkommen.
+ *
+ * Über einem Teil bleibt `HALTE_LUFT` frei, höchstens aber die Hälfte des Abstands zum Teil davor bzw. zum
+ * Titelkopf – sonst schaut dessen letzte Zeile als Streifen herein (Alwin 19.10.2026). In mm, damit die
+ * Luft mit der Bildschirmbreite wächst und schrumpft wie der Abstand selbst; feste Bildpunkte waren auf
+ * schmalen Handys größer als der Abstand. Am `----` stoßen zwei Zeilen aneinander: dort keine Luft.
  */
 export function pedalHalte(abb: Abbildung): number[] {
   const { rolle } = abb;
+  // Die Rolle hat eine Spalte: Davor steht das Stück mit dem größten Ende darüber, sonst der Titelkopf.
+  const ueber = (y0: number) =>
+    Math.max(
+      rolle.kopfEnde - KOPF_ABSTAND,
+      ...rolle.stuecke.filter((s) => s.y1 <= y0).map((s) => s.y1),
+    );
   const stellen = [
     0,
-    ...rolle.stuecke.filter((s) => s.imTeil === 0).map((s) => s.y0),
+    ...rolle.stuecke
+      .filter((s) => s.imTeil === 0)
+      .map((s) => s.y0 - Math.min(HALTE_LUFT, (s.y0 - ueber(s.y0)) / 2)),
     ...rolle.weiterschalten.map((w) => w.y),
   ];
   return [...new Set(stellen)].sort((a, b) => a - b);

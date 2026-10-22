@@ -48,12 +48,17 @@ interface Gemeinsam {
 interface Bearbeiten extends Gemeinsam {
   modus?: 'bearbeiten';
   item: AblaufZeile;
-  /** Schreibt die geänderten Felder gesammelt (EIN Request). Wirft bei Fehler. */
-  onUpdate: (fields: PunktAenderung) => Promise<void>;
+  /**
+   * Schreibt die geänderten Felder gesammelt (EIN Request). Wirft bei Fehler. `trotzdem` (E6-3c): ohne Vergleich mit
+   * dem Stand beim Öffnen – nach der Rückfrage „Trotzdem speichern“.
+   */
+  onUpdate: (fields: PunktAenderung, trotzdem: boolean) => Promise<void>;
   /** Läuft der Punkt vor dem Beginn der Veranstaltung (Vorlauf, #423)? */
   vorBeginn: boolean;
   /** Schreibt den Vorlauf nach ChurchTools (gilt für den ganzen Block, siehe Schalter). Wirft bei Fehler. */
   onSetVorBeginn: (vorBeginn: boolean) => Promise<void>;
+  /** Schreibt das Auge („an diesem Termin weglassen“, E6-3b) – der Stand kommt aus `item.weggelassen`. Wirft bei Fehler. */
+  onSetWeggelassen: (weggelassen: boolean) => Promise<void>;
   /** Löschen anstoßen (Bestätigung erfolgt im Eltern-Screen). */
   onRequestDelete: () => void;
 }
@@ -100,6 +105,7 @@ export function PunktFenster(props: PunktFensterProps) {
   const neu = props.modus === 'neu';
   const item = props.modus === 'neu' ? LEERER_PUNKT : props.item;
   const vorBeginnStart = props.modus === 'neu' ? false : props.vorBeginn;
+  const weggelassenStart = item.weggelassen ?? false;
   const isSong = !!item.song;
   // Neu: Programmpunkt oder Überschrift (Alwin, 05.10.2026: erst das Fenster, nicht die Liedsuche).
   // Ein Lied ist ein Programmpunkt mit verknüpftem Lied – wie beim Bearbeiten über „Lied verknüpfen".
@@ -113,11 +119,14 @@ export function PunktFenster(props: PunktFensterProps) {
   );
   // Vorlauf: lokal – wird wie alles andere erst beim Speichern übernommen.
   const [vorBeginn, setVorBeginn] = useState(vorBeginnStart);
+  const [weggelassen, setWeggelassen] = useState(weggelassenStart);
   // Verknüpfung wird vorgemerkt und erst beim Speichern nach ChurchTools geschrieben
   // ('keep' = unverändert, 'unlink' = Lied entfernen, 'link' = neues Arrangement verknüpfen).
   const [linkState, setLinkState] = useState<LinkState>({ kind: 'keep' });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // Derselbe Punkt wurde inzwischen woanders geändert (412, E6-3c): fragen statt still überschreiben.
+  const [konflikt, setKonflikt] = useState<string | null>(null);
   // Dialog über der iOS-Tastatur freihalten; verhindert auch die verrutschte Kopfleiste (#207).
   const overlayRef = useOverlayKeyboardInset();
 
@@ -152,7 +161,9 @@ export function PunktFenster(props: PunktFensterProps) {
   const dirty = neu
     ? !!(title.trim() || duration.trim() || responsible.trim() || note.trim()) ||
       linkState.kind === 'link'
-    : Object.keys(pending).length > 0 || vorBeginn !== vorBeginnStart;
+    : Object.keys(pending).length > 0 ||
+      vorBeginn !== vorBeginnStart ||
+      weggelassen !== weggelassenStart;
 
   /** Ein Lied wurde gewählt (Suche, „Neues Lied" oder „gibt es schon") – vorgemerkt, nicht geschrieben. */
   function liedGewaehlt(arrangementId: number, name: string) {
@@ -163,23 +174,28 @@ export function PunktFenster(props: PunktFensterProps) {
     setSongMode(false);
   }
 
-  async function saveAll() {
+  async function saveAll(trotzdem = false) {
     setBusy(true);
     setErr(null);
+    setKonflikt(null);
     try {
       if (props.modus === 'neu') {
         if (neuerPunkt) await props.onAdd(neuerPunkt);
         onClose();
         return;
       }
-      const { onUpdate, onSetVorBeginn } = props;
+      const { onUpdate, onSetVorBeginn, onSetWeggelassen } = props;
       // Alle Feld-Änderungen in EINEM Request (kein Teilzustand bei Fehlern); nur der Vorlauf ist
       // in ChurchTools etwas anderes – eine Grenze am Ablauf, kein Feld des Punkts.
-      if (Object.keys(pending).length > 0) await onUpdate(pending);
+      if (Object.keys(pending).length > 0) await onUpdate(pending, trotzdem);
       if (vorBeginn !== vorBeginnStart) await onSetVorBeginn(vorBeginn);
+      // Das Auge zuletzt: Es gilt nur für diesen Termin und ändert nur Uhrzeiten (E6-3b).
+      if (weggelassen !== weggelassenStart) await onSetWeggelassen(weggelassen);
       onClose();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Speichern fehlgeschlagen.');
+      const meldung = e instanceof Error ? e.message : 'Speichern fehlgeschlagen.';
+      if ((e as { status?: unknown } | null)?.status === 412) setKonflikt(meldung);
+      else setErr(meldung);
       setBusy(false);
     }
   }
@@ -337,23 +353,53 @@ export function PunktFenster(props: PunktFensterProps) {
               <Schalter an={vorBeginn} />
             </button>
           )}
+
+          {/* Auge wie in ChurchTools (E6-3b, #652): bleibt im Ablauf, nur an diesem Termin ohne Zeit. */}
+          {!neu && (
+            <button
+              type="button"
+              className={styles.toggleRow}
+              onClick={() => setWeggelassen((w) => !w)}
+              aria-pressed={weggelassen}
+            >
+              <span className={styles.toggleText}>
+                <span className={styles.label}>An diesem Termin weglassen</span>
+                <span className={styles.toggleHint}>
+                  {weggelassen
+                    ? 'Bleibt im Ablauf, hat hier aber keine Uhrzeit und zählt nicht mit.'
+                    : 'Wird an diesem Termin gezeigt und mitgerechnet.'}
+                </span>
+              </span>
+              <Schalter an={weggelassen} />
+            </button>
+          )}
         </div>
+
+        {konflikt && (
+          <div className={styles.err} role="alert">
+            {konflikt} Trotzdem speichern oder verwerfen?
+          </div>
+        )}
 
         <div className={styles.actions}>
           <button className={styles.cancelBtn} onClick={onClose} disabled={busy}>
-            Abbrechen
+            {konflikt ? 'Verwerfen' : 'Abbrechen'}
           </button>
           {neu ? (
-            <button className={styles.saveBtn} onClick={saveAll} disabled={busy || !neuerPunkt}>
+            <button
+              className={styles.saveBtn}
+              onClick={() => void saveAll()}
+              disabled={busy || !neuerPunkt}
+            >
               {busy ? 'Füge hinzu…' : 'Hinzufügen'}
             </button>
           ) : (
             <button
               className={styles.saveBtn}
-              onClick={saveAll}
+              onClick={() => void saveAll(konflikt !== null)}
               disabled={busy || !durationValid || !dirty}
             >
-              {busy ? 'Speichere…' : 'Speichern'}
+              {busy ? 'Speichere…' : konflikt ? 'Trotzdem speichern' : 'Speichern'}
             </button>
           )}
         </div>

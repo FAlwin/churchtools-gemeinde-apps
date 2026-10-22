@@ -13,7 +13,7 @@
   padding: 10px 12px;
   background: var(--surface2);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--r-dialog);
   box-shadow: var(--shadow);
 }
 
@@ -41,7 +41,7 @@
 .load {
   background: var(--blue);
   border: none;
-  border-radius: 10px;
+  border-radius: var(--r-ctrl);
   padding: 8px 14px;
   font-size: 14px;
   font-weight: 600;

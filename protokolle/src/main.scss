@@ -1,0 +1,16 @@
+@use '@ui/design/variables' as *;
+// Reset, Erweiterungs-Lehren (Bereich unter der ChurchTools-Leiste, fette Schrift, Symbole), Fokus und
+// Bewegung – dieselben Grundregeln wie die anderen Apps des Repos.
+@use '@ui/design/grundregeln';
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+// In ChurchTools füllt die App ihren Bereich unter der Leiste (grundregeln: `.ct-extension #root`).
+// Gescrollt wird NICHT in `#root` (er bleibt `overflow: hidden`, der feste Rahmen für die Fenster),
+// sondern im Rollbereich des Seitenrahmens (`ui/erweiterung/ErweiterungsSeite.module.scss`, `.rolle`).

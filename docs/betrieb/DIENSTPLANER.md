@@ -1,9 +1,9 @@
 # Dienstplaner – ChurchTools-Erweiterung
 
-> **Stand: E6-3a (22.10.2026)** – E3 mit drei Rollen geprüft (Test-Instanz) und lesend an der Live-Instanz; seit
+> **Stand: E6-3c (22.10.2026)** – E3 mit drei Rollen geprüft (Test-Instanz) und lesend an der Live-Instanz; seit
 > E4-4 **teilt der Dienstplaner auch ein** (s. „Senden“). **Termin-Ansicht** (E6-1b): Zeile in „Termine“,
 > „Ablauf & Dienste“ auf der Startseite oder der Name im Spaltenkopf von „Planen“ → Ablauf wie in der Musik-App
-> (Dauer neben der Zeit) und die Dienste des Termins, ‹ › blättert; mit Ablauf-Recht **Stift** → bearbeiten wie in der Musik-App (E6-3a, ohne Liedwahl). **Planen**:
+> (Dauer neben der Zeit) und die Dienste des Termins, ‹ › blättert; mit Ablauf-Recht **Stift** → bearbeiten wie in der Musik-App (E6-3a, ohne Liedwahl), auch **„An diesem Termin weglassen“** (Auge, E6-3b); ändert jemand gleichzeitig denselben Punkt, fragt das Fenster „Trotzdem speichern oder verwerfen?“ (E6-3c). **Planen**:
 > Termine als Spalten, Dienstgruppen und Dienste als Zeilen, in jeder Zelle die Plätze (Gruppen, in denen man nicht
 > einteilen darf: „nur ansehen“); freien Platz antippen →
 > „Wer kann?“ (E4-2) und dort **als Entwurf eintragen** (E4-3, Person oder Gast; Entwurf antippen = ändern oder entfernen, veraltete mit Schild); belegten Platz antippen → **zurückziehen oder ersetzen** (E4-5, ebenfalls als Entwurf); Regler in der Gruppenzeile → **Anzahl der Plätze** je Termin (sofort); **Zauberstab** in der Gruppenzeile bzw. im Gruppenkopf → Vorschläge nach der ChurchTools-Rangfolge zum Prüfen, übernommen als Entwurf (E5); **Stift** neben einem Namen (Zauberstab, „Wer kann?“) → Vorlieben der Person für die Gruppe, sofort in ChurchTools (E5); unten **„Ansehen und senden“** (E4-4): Anfrage, direkt zuteilen, Gast eintragen, zurückziehen; Zeitraum wählen (ab heute, ein Monat oder von–bis), Terminleiste,

@@ -21,6 +21,98 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 - Unter einer eigenen Zahlung steht „Gilt nur für <Name>“ statt „Gilt für die ganze Anmeldung“ (auch bei
   Nachgerückten; gefunden beim Durchklicken am 22.10.2026).
 
+### Geändert (Musik-App, #554)
+
+- **Team-Notizen auch in großen Gemeinden schnell** (Frage aus dem ChurchTools-Dev-Stammtisch: „Wie
+  funktioniert das bei 6000 Mitgliedern?"): Der Eintrag im Verzeichnis „Wer teilt" nennt jetzt auch die Lieder,
+  zu denen jemand Anmerkungen hat; er wird nach dem Speichern eigener Anmerkungen nachgeführt (nur wenn sich die
+  Lieder ändern – sonst kostet es nichts). „Notizen von …" liest beim Öffnen eines Lieds deshalb nur noch die
+  Dateien derer, die zu diesen Liedern etwas haben, statt die aller Teilenden (bei 200 Teilenden waren das ~400
+  Anfragen je Öffnen). Ob jemand wirklich teilt und unter welchem Namen, steht weiter in seiner eigenen Datei und
+  wird dort geprüft. Einträge älterer Fassungen werden gelesen wie bisher.
+
+### Geändert (Musik-App, #557)
+
+- **Weniger Last auf ChurchTools:** Ein offener Ablauf bzw. eine offene Liedansicht fragt jetzt alle 30 Sekunden
+  statt alle 8 Sekunden nach, ob sich der Ablauf geändert hat (Frage aus dem ChurchTools-Dev-Stammtisch). Das war
+  der größte Posten der Grundlast – je Gerät etwa 2 statt 7,5 Anfragen pro Minute. Eine Änderung am Ablauf kommt
+  dadurch nach höchstens 30 Sekunden an. Terminliste (1 Minute) und Liedtexte (1 Minute) bleiben, wie sie sind.
+
+### Geändert (alle Apps, #654)
+
+- **Look der ChurchTools-Weboberfläche für alle Apps** – Erweiterungen und die Musik-App als PWA (Alwin, 22.10.2026;
+  löst #393 „Look der ChurchTools-App“ ab). Erste Scheibe: nur die Werte in `ui/design/_variables.scss`, gemessen in
+  der Test-Instanz an ChurchTools' eigenen Tokens: Seite slate-100, Karten weiß mit 8 px Rundung, Rand slate-200 und
+  leichtem Schatten, Text slate-900/600/400, Blau `#155DFC`, Knöpfe/Felder 4 px, Kacheln 6 px, Dialoge 8 px,
+  Schrift **Lato**. Rot und Grün eine Stufe dunkler als ChurchTools' Knopffarben, weil sie bei uns auch Text tragen.
+  Das Dunkel bleibt (seit #565 schon das von ChurchTools); Rundungen und Schrift gelten auch dort.
+- **Lato** bringen die Musik-App als PWA und das öffentliche Formular selbst mit (`ui/design/schrift.ts`,
+  `@fontsource/lato`, OFL; offline im Service Worker). In ChurchTools ist sie schon geladen – Erweiterungen laden
+  sie nicht. Ladebildschirm, Notfallansicht und die Schrift der Anmerkungstexte ziehen mit; die Ersatzwerte im
+  Baukasten der Anmeldungen ebenso.
+- **Rundungen nur noch über die gemeinsamen Werte** (Alwin: „einmal geändert, überall geändert“): 181 feste
+  Rundungen in Musik-App, Anmeldungen, Dienstplaner, Formular und `ui/` stehen jetzt auf `--r-ctrl` (Knöpfe,
+  Felder, Schildchen – 4 px), `--r-tile` (Kacheln – 6 px), `--r-card` (Flächen, Kästen – 8 px) oder `--r-dialog`
+  (Fenster – 8 px), zugeordnet nach Bedeutung, nicht nach der alten Zahl. Werkzeugleisten und Schalter sind
+  Kapseln (`999px`). Bewusst fest mit Vermerk: der Handy-Rahmen in der Formular-Vorschau und die wählbaren
+  Knopfformen des Anmeldeformulars; dessen übrige Rundungen hängen an seinem eigenen Wert `--p-r`.
+- **Neue Dauerprüfung** `ui/design/festeWerte.test.ts`: eine feste Rundung ab 4 px außerhalb von
+  `_variables.scss` lässt den Testlauf (und die CI) scheitern – außer mit Vermerk „bewusst fest“ und Grund.
+- Unverändert (eigene Gestaltung): das Aussehen des öffentlichen Anmeldeformulars je Veranstaltung (`--p-*`,
+  wählbare Farbe) und die Notenblätter.
+
+### Neu (Organigramm, O1, #649)
+
+- **Neue Erweiterung „Organigramm“** (Kürzel `organigramm`, nur Erweiterung – Bauplan Organigramm, entschieden
+  22.10.2026). O1 „leer, aber echt“: lädt Person, Gemeinde, alle sichtbaren Gruppen (alle Seiten), Gruppentypen,
+  Hierarchie und Rechte und zeigt die **Bereiche** (oberste Gruppen) mit der Zahl ihrer Gruppen darunter, jede in
+  der **Farbe der Gruppe** (eigene Farbe vor Typfarbe, Alwin 19.10.2026). Gruppen-Admins sehen, dass sie Gruppen
+  verwalten dürfen. Eigener Release-Weg (Tag `organigramm-v*`, `make_latest: false`), Anleitung
+  `docs/betrieb/ORGANIGRAMM.md`; Staging baut `feat/organigramm-**` nicht.
+- **Regeln in `shared/organigramm/`** (aus dem abgenommenen Entwurf): Baum aus Gruppen + Hierarchie (Obergruppe
+  nicht sichtbar → Gruppe wird Wurzel; zwei Obergruppen → unter beiden; Kreise brechen nicht), Gruppenfarbe,
+  „jede Person einmal“ für Obergruppen (Leitung zuerst, auch die englische Rolle `leader`), Rechte aus `churchdb`.
+
+### Neu (Protokolle, S1)
+
+- **Neue Erweiterung „Protokolle“** (Bauplan Protokolle, Grundgerüst): Protokolle und To-Dos für Gruppen wie den
+  Leitungskreis. In S1 zeigt sie, wer angemeldet ist, und **„Deine Gruppen“** mit dem Stand der Einrichtung
+  (eingerichtet · unvollständig · nicht eingerichtet) – auch für versteckte Gruppen, deren Mitglieder sie in
+  ChurchTools selbst nicht sehen (die Gruppen kommen aus den sichtbaren Kategorien `protokolle-g<ID>`).
+  Anleitung: `docs/betrieb/PROTOKOLLE.md`. Eigener Release-Weg: Tag `protokolle-vX.Y.Z` (`make_latest: false`).
+- Regeln ohne Oberfläche in `shared/protokolle/`: Protokoll als Dokument im Format des Editors (BlockNote) mit EINER
+  Ableitung für Tagesordnungspunkte, Beschlüsse, Aufgaben und Termine; Speicher als Kopf + gepackte Teile (je Wert
+  höchstens 10.000 Zeichen, gemessen); To-Dos (nie hart löschen); Rechte je Rolle beim Einrichten (nur Admin,
+  Ausrichten Soll/Ist); Vorlagen; Namen finden und ersetzen für „Mit KI füllen“.
+
+### Geändert (gemeinsam)
+
+- Packen von Text in einen ChurchTools-Wert (deflate + Base64url) steht jetzt an EINER Stelle (`shared/ct/packen.ts`);
+  die Anmeldungen nutzen sie für ihre Einstellungen (vorher eine private Kopie in `formular.ts`).
+- `modulId(wer)` in `ui/ct/modulPort.ts` nennt die Erweiterung in der Meldung „… ist in ChurchTools nicht zu finden“
+  (stand fest auf „Anmeldungen“).
+- Zweige `feat/protokolle-**` / `fix/protokolle-**` bauen kein Staging-Image der Musik-App.
+
+### Behoben (Musik-App)
+
+- **Scroll-Modus: Eigene Textnotizen im Lied blieben beim Einschalten des Stifts nicht erhalten** (gefunden beim
+  Bau von #626, nur im unveröffentlichten Malen auf der langen Seite, #608): Beim Öffnen der Mal-Ebene wurde
+  einmal eine leere Textliste gespeichert, und die eigenen Texte im Liedbereich verschwanden von der A4-Seite –
+  auch im Konto. Zwei Ursachen, beide behoben: Die Anmerkungen starten jetzt gleich mit den gespeicherten
+  Texten statt leer, und der Entwurf der langen Seite wird neu angelegt, wenn die Mal-Ebene erneut eingehängt
+  wird. Beim Blättern ging dasselbe kurz hinaus, wurde aber sofort überschrieben.
+
+### Neu (Musik-App + Dienstplaner, E6-3c, #659)
+
+- **Nichts wird still überschrieben, wenn zwei gleichzeitig bearbeiten** (entschieden mit Alwin 22.10.2026: nur bei
+  echtem Konflikt). Hat jemand – in der anderen App, auf einem anderen Gerät oder in ChurchTools – **denselben Punkt**
+  in einem Feld geändert, das ich im offenen Fenster auch ändere, fragt das Fenster: „Dieser Punkt wurde eben woanders
+  geändert … Trotzdem speichern oder verwerfen?“; die Liste dahinter ist schon neu geladen, meine Eingaben stehen noch
+  im Fenster. Hat jemand **umsortiert**, während ich ziehe, wird nicht auf der alten Reihenfolge geschrieben: Hinweis,
+  neu geladen, noch einmal ziehen. Änderungen an **anderen** Punkten oder Feldern gehen ohne Rückfrage durch.
+- Verglichen wird frisch vor dem Schreiben, Feld für Feld so, wie die Zeile es zeigt; ein Lied über sein Arrangement.
+  Vorlauf und Auge setzen einen Zielzustand und brauchen keinen Vergleich.
+
 ### Neu (Anmeldungen, A7-4a)
 
 - **Anmeldung von Hand** (Entwurf `a7-4-von-hand-v1`, abgenommen 22.10.2026): Knopf „＋ Von Hand“ im Reiter
@@ -48,6 +140,22 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   bei der Warteliste 0,00 €).
 - „Mail schreiben“ ohne E-Mail-Adresse sagt jetzt „Text kopieren und anders weitergeben“ statt „Öffnet dein
   Mailprogramm“; bei „gibt es schon“ ist „Diese nehmen“ der hervorgehobene Weg, „Trotzdem neu anlegen“ nicht mehr.
+
+### Neu (Musik-App + Dienstplaner, E6-3b, #652)
+
+- **Auge „An diesem Termin weglassen“** im Fenster eines Ablaufpunkts (Schalter unter „Vor Gottesdienstbeginn“,
+  gespeichert mit „Speichern“) – wie das Auge in ChurchTools: Der Punkt bleibt im Ablauf, hat an diesem Termin keine
+  Uhrzeit, und ChurchTools rechnet seine Zeit nicht mit (die Punkte darunter rücken vor). Gilt nur für diesen
+  Termin, auch wenn sich mehrere Termine den Ablauf teilen.
+- **Weggelassene Punkte sieht man jetzt:** grau, „—“ statt der Uhrzeit und „an diesem Termin weggelassen“ – in
+  Ansicht und Bearbeiten-Liste beider Apps. Vorher stand ein in ChurchTools ausgeblendeter Punkt nur ohne Uhrzeit da.
+
+### Behoben (Musik-App, E6-3b, #652)
+
+- „Rückgängig“ nach dem Löschen holte einen weggelassenen Punkt **als gezeigten** zurück – das Auge ging verloren
+  (der Schreibweg war bis zur Messung E6-3-0 unbekannt). Jetzt wird es wieder gesetzt; der Server lässt das Feld im
+  Merkzettel durch (zod hätte es sonst still gestrichen – der Test prüft das Schema jetzt gegen den echten
+  Merkzettel).
 
 ### Neu (Dienstplaner, E6-3a, #645)
 
@@ -279,13 +387,16 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   den nächsten Teil des Lieds an den oberen Rand – bzw. die nächste Stelle mit einem Weiterschalt-Punkt `----`.
   Ist ein Teil länger als der Bildschirm (Emporen-Monitor), geht es erst um ⅔ weiter, damit keine Zeile
   übersprungen wird. Zurück springt an den Anfang des aktuellen bzw. vorigen Teils. Die Pfeile unten tun dasselbe.
-  Hochgeladene PDFs scrollen weiter um ⅔.
+  Über dem Teil bleibt etwas Luft, ohne dass von der Zeile davor oder vom Titelkopf ein Streifen hereinschaut –
+  auch auf schmalen Handys. Hochgeladene PDFs scrollen weiter um ⅔.
 - **Scroll-Modus: je Lied eine lange Seite** (#607, Rückmeldung des Musik-Bereichsleiters): Statt
   aneinandergehängter A4-Seiten ist jedes Lied beim Scrollen eine durchgehende Seite in einer Spalte – keine
   Lücke mehr, wenn ein Teil nicht mehr auf die Seite passte, und die CCLI-Angabe steht direkt unter dem
   letzten Teil. **Die Anmerkungen sind dieselben wie beim Blättern** (#614): Die lange Seite zeigt sie
   umgerechnet an derselben Stelle im Teil; was beim Blättern in einer Lücke am Seitenende steht, erscheint am
-  Ende des Teils davor; aus 2-Spalten-Liedern werden sie übernommen, stehen aber nur ungefähr (zurechtrücken
+  Ende des Teils davor; was unten auf der letzten Seite unter dem letzten Teil steht, steht auf der langen Seite
+  genauso weit darunter – die Seite wird dafür so lang wie nötig, und dort lässt sich auch malen und mit dem Lasso
+  zurechtrücken (#626); aus 2-Spalten-Liedern werden sie übernommen, stehen aber nur ungefähr (zurechtrücken
   kommt mit dem Lasso, #615). Im Scroll-Modus gibt es keinen Spalten-Schalter. **Malen direkt auf der langen
   Seite** (#608): Stift an – ein Finger oder der Pencil malt, **zwei Finger scrollen**; gemalt wird auf dem
   Lied in der Bildmitte, ein Tipp auf ein anderes (abgeblendetes) Lied macht es zum Mal-Lied; Stift, Marker,
@@ -299,10 +410,10 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   vergrößert oder verkleinert gleichmäßig; daneben tippen, ein anderes Werkzeug oder Stift aus legt ab.
   **Rückgängig** nimmt die ganze Bewegung auf einmal zurück. Auf der langen Seite greift das Lasso auch, was beim
   Blättern in einer Lücke am Seitenende steht und hier über dem nächsten Teil liegt – zurechtgerückt steht es danach
-  auch beim Blättern am neuen Platz (und nicht mehr in der Lücke). Unter den letzten Teil der langen Seite lässt
-  sich nichts ablegen: Dort gäbe es auf A4 keine Stelle, das Abgelegte wäre beim Speichern verloren. Das Lasso
-  sagt das („Hier wird nichts gespeichert“) und lässt die Auswahl schweben; muss es doch ablegen (Stift aus),
-  kehrt sie an ihre alte Stelle zurück.
+  auch beim Blättern am neuen Platz (und nicht mehr in der Lücke). Wo es auf A4 keine Stelle gibt (bei
+  2-Spalten-Liedern rechts neben dem schmalen Streifen), lässt sich nichts ablegen – das Abgelegte wäre beim
+  Speichern verloren. Das Lasso sagt das („Hier wird nichts gespeichert“) und lässt die Auswahl schweben; muss es
+  doch ablegen (Stift aus), kehrt sie an ihre alte Stelle zurück.
 - **Flow-Zeile `{flow: …}`** (#606, Rückmeldung des Musik-Bereichsleiters): Steht im ChordPro z. B.
   `{flow: Intro, Vers 1, Chorus 1, Vers 2, Chorus 1, Bridge, Chorus 1, Outro}`, zeigt das Blatt die Teile in
   genau dieser Reihenfolge – Wiederholungen voll, nicht genannte Teile fallen weg. Die Namen sind die

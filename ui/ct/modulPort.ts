@@ -49,10 +49,14 @@ export function entwurfPortFuer(kuerzel: () => string | null): EntwurfPort {
  */
 export const modulPort: ModulPort = modulPortFuer(() => kuerzelAusBasis(import.meta.env.BASE_URL));
 
-/** Die ID des eigenen Moduls – je Seite einmal gesucht; ein Fehlschlag wird nicht gemerkt. */
+/**
+ * Die ID des eigenen Moduls – je Seite einmal gesucht; ein Fehlschlag wird nicht gemerkt. `wer` nennt die
+ * Erweiterung in der Meldung, wenn sie fehlt (bis 22.10.2026 stand hier fest „Anmeldungen“; die Protokolle
+ * nutzen denselben Anschluss).
+ */
 const suche = merkeVersprechen<number>();
-export function modulId(): Promise<number> {
-  return suche.hole('modul', () => modulSuchen(modulPort, 'Die Erweiterung „Anmeldungen“'));
+export function modulId(wer: string): Promise<number> {
+  return suche.hole('modul', () => modulSuchen(modulPort, wer));
 }
 
 /** Nur für Tests. */

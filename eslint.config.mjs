@@ -64,7 +64,9 @@ export default tseslint.config(
             'server/*.ts',
             'anmeldungen/*.ts',
             'dienstplaner/*.ts',
+            'organigramm/*.ts',
             'formular/*.ts',
+            'protokolle/*.ts',
             'e2e/*.mjs',
             'scripts/*.mjs',
             'server/scripts/*.ts',
@@ -92,13 +94,15 @@ export default tseslint.config(
     },
   },
 
-  // ── Client, Anmeldungen, Formular, Dienstplaner und gemeinsame Bausteine (ui/): Browser + React ──
+  // ── Client, Anmeldungen, Formular, Dienstplaner, Organigramm und gemeinsame Bausteine (ui/): Browser + React ──
   {
     files: [
       'client/src/**/*.{ts,tsx}',
       'anmeldungen/src/**/*.{ts,tsx}',
       'dienstplaner/src/**/*.{ts,tsx}',
+      'organigramm/src/**/*.{ts,tsx}',
       'formular/src/**/*.{ts,tsx}',
+      'protokolle/src/**/*.{ts,tsx}',
       'ui/**/*.{ts,tsx}',
     ],
     languageOptions: {
@@ -183,7 +187,9 @@ export default tseslint.config(
       'server/*.ts',
       'anmeldungen/*.ts',
       'dienstplaner/*.ts',
+      'organigramm/*.ts',
       'formular/*.ts',
+      'protokolle/*.ts',
       'e2e/*.mjs',
       'scripts/**/*.mjs',
       'server/scripts/**/*.ts',

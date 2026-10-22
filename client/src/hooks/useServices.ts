@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import type { PunktStand } from '@shared/ct/ablaufZeile';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   LIEDTEXT_SUCHE_MIN_ZEICHEN,
@@ -104,18 +105,24 @@ export function useMarkSetlistSeen() {
 }
 
 /**
- * Live-Abgleich für einen geöffneten Ablauf: pollt alle ~8 s den billigen Ablauf-Fingerabdruck
- * (kein ChordPro-Download; der Server bündelt Abfragen mehrerer Geräte in einem Kurz-Memo).
- * Die Auswertung (Ablauf neu laden / Hinweis im Liederheft) übernimmt App.tsx.
+ * Takt des Live-Abgleichs (#557, Alwin 22.10.2026: 30 s statt 8 s). Er war der größte Posten der Grundlast
+ * auf ChurchTools (~7,5 Anfragen je Minute und Gerät); eine Ablaufänderung kommt jetzt nach höchstens 30 s an.
+ */
+export const ABLAUF_ABGLEICH_MS = 30_000;
+
+/**
+ * Live-Abgleich für einen geöffneten Ablauf: pollt alle `ABLAUF_ABGLEICH_MS` den billigen
+ * Ablauf-Fingerabdruck (kein ChordPro-Download; der Server bündelt Abfragen mehrerer Geräte desselben
+ * Kontos in einem Kurz-Memo). Die Auswertung (Ablauf neu laden / Hinweis im Liederheft) übernimmt App.tsx.
  */
 export function useSetlistVersion(eventId: number | null, enabled: boolean) {
   return useQuery({
     queryKey: ['setlist-version', eventId],
     queryFn: () => api.getSetlistVersion(eventId as number),
     enabled: enabled && eventId !== null,
-    refetchInterval: 8_000,
+    refetchInterval: ABLAUF_ABGLEICH_MS,
     staleTime: 0,
-    // Kein Retry-Getrommel: schlägt ein Poll fehl (Netz-Aussetzer), kommt in 8 s der nächste.
+    // Kein Retry-Getrommel: schlägt ein Poll fehl (Netz-Aussetzer), kommt im nächsten Takt der nächste.
     retry: false,
   });
 }
@@ -199,7 +206,8 @@ export function useAgenda(eventId: number | null) {
 export function useReorderAgenda(eventId: number | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (order: number[]) => api.reorderAgenda(eventId as number, order),
+    mutationFn: (v: { order: number[]; gesehen?: number[] }) =>
+      api.reorderAgenda(eventId as number, v.order, v.gesehen),
     onSuccess: () => qc.invalidateQueries({ queryKey: schluessel.agenda(eventId) }),
   });
 }
@@ -239,8 +247,8 @@ function useAgendaItemMutation<V, R>(eventId: number | null, mutationFn: (v: V) 
 export function useUpdateAgendaItem(eventId: number | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (v: { itemId: number; fields: api.AgendaItemUpdate }) =>
-      api.updateAgendaItem(eventId as number, v.itemId, v.fields),
+    mutationFn: (v: { itemId: number; fields: api.AgendaItemUpdate; gesehen?: PunktStand }) =>
+      api.updateAgendaItem(eventId as number, v.itemId, v.fields, v.gesehen),
     onSuccess: (_data, v) => {
       void qc.invalidateQueries({ queryKey: schluessel.agenda(eventId) });
       if (v.fields.arrangementId !== undefined || v.fields.unlink) {
@@ -257,6 +265,16 @@ export function useSetAgendaItemVorBeginn(eventId: number | null) {
   return useMutation({
     mutationFn: (v: { itemId: number; vorBeginn: boolean }) =>
       api.setAgendaItemVorBeginn(eventId as number, v.itemId, v.vorBeginn),
+    onSuccess: () => qc.invalidateQueries({ queryKey: schluessel.agenda(eventId) }),
+  });
+}
+
+/** Einen Punkt an diesem Termin weglassen oder wieder zeigen (E6-3b) – die Uhrzeiten verschieben sich. */
+export function useSetAgendaItemWeggelassen(eventId: number | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { itemId: number; weggelassen: boolean }) =>
+      api.setAgendaItemWeggelassen(eventId as number, v.itemId, v.weggelassen),
     onSuccess: () => qc.invalidateQueries({ queryKey: schluessel.agenda(eventId) }),
   });
 }

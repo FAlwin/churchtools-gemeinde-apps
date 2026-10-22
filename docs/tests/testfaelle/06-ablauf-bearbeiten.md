@@ -246,3 +246,54 @@ erlaubt – nie ein Knopf, der mit „verboten" endet.
 - **Historie:** #635 (19.10.2026, gemessen E6-0 am 17.10.2026)
 
 </details>
+
+### TF-EDIT-10 · Einen Punkt an diesem Termin weglassen (Auge)
+
+**Das brauchst du:** Einen **Test-Termin** mit Ablauf und mindestens zwei Punkten mit Dauer.
+
+**Das muss passieren:** Der Punkt bleibt im Ablauf, steht aber grau mit „an diesem Termin weggelassen“ und „—“
+statt der Uhrzeit da. Die Punkte darunter rücken vor, genau wie in ChurchTools, wenn man dort das Auge schließt.
+
+1. Test-Termin öffnen, **Bearbeiten**, einen Punkt mit Dauer antippen (nicht den letzten).
+2. **An diesem Termin weglassen** einschalten, **Speichern**.
+3. Der Punkt steht grau mit dem Hinweis da; die Uhrzeit des nächsten Punkts ist um seine Dauer früher.
+4. In ChurchTools denselben Ablauf öffnen: Der Punkt hat das geschlossene Auge.
+5. Den Punkt löschen und **Rückgängig** antippen: Er kommt an seine Stelle zurück – und ist **weiter weggelassen**.
+6. Den Punkt öffnen, den Schalter ausschalten, **Speichern**: Er hat wieder eine Uhrzeit, die Zeiten darunter
+   stimmen wieder.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/ct/ablaufZeile.ts`, `shared/ct/schreibKern.ts`, `server/src/controllers/setlistController.ts`, `server/src/services/ctWrite.ts`, `client/src/services/churchtoolsApi.ts`, `client/src/services/ctSchreiben.ts`, `ui/ablauf/PunktFenster.tsx`, `ui/ablauf/AblaufListe.tsx`, `ui/ablauf/AgendaSortableRow.tsx`, `ui/ablauf/AblaufTeile.tsx`
+- **Automatisiert:** ja – `shared/ct/ablaufZeile.test.ts` (Merkmal), `server/src/services/ablaufRueckgaengig.test.ts` (hide/unhide, Rückgängig), `server/src/controllers/setlistController.merkzettel.test.ts` (Merkzettel durch das Schema), `client/src/services/ctSchreiben.test.ts` (Erweiterung), `ui/ablauf/*.test.tsx` (Fenster, Anzeige), `e2e/ablauf-weglassen.spec.ts` (ganzer Weg über den Server); von Hand bleibt der Blick in ChurchTools (Schritt 4)
+- **Historie:** #652 (22.10.2026, gemessen E6-3-0 am 19.10.2026)
+
+</details>
+
+### TF-EDIT-11 · Gleichzeitig bearbeitet – nichts wird still überschrieben
+
+**Das brauchst du:** Einen **Test-Termin** mit Ablauf, offen auf zwei Geräten (oder Musik-App und Dienstplaner
+nebeneinander), beide im Bearbeiten-Modus.
+
+**Das muss passieren:** Wer zuletzt speichert, überschreibt die Änderung des anderen nicht unbemerkt – aber
+Änderungen an verschiedenen Stellen gehen ohne Rückfrage durch.
+
+1. Gerät A: einen Punkt antippen (Fenster offen lassen).
+2. Gerät B: denselben Punkt umbenennen und speichern.
+3. Gerät A: den Titel ebenfalls ändern, **Speichern** → im Fenster steht „Dieser Punkt wurde eben woanders
+   geändert … Trotzdem speichern oder verwerfen?“, die Liste dahinter zeigt den Titel von B.
+4. **Trotzdem speichern** → der Titel von A steht in ChurchTools. (Gegenprobe: **Verwerfen** → der Titel von B bleibt.)
+5. Wiederholen, aber auf Gerät B nur die **Bemerkung** ändern: Auf Gerät A kommt beim Titel **keine** Rückfrage, und
+   beide Änderungen stehen danach in ChurchTools.
+6. Gerät B: zwei Punkte vertauschen. Gerät A (ohne neu zu laden): einen Punkt ziehen → Hinweis „Die Reihenfolge wurde
+   eben woanders geändert …“, die Liste zeigt die Reihenfolge von B.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/ct/schreibKern.ts`, `shared/ct/ablaufZeile.ts`, `server/src/controllers/setlistController.ts`, `server/src/services/ctWrite.ts`, `client/src/services/churchtoolsApi.ts`, `client/src/services/ctSchreiben.ts`, `client/src/pages/Setlist.tsx`, `ui/ablauf/PunktFenster.tsx`, `ui/ablauf/useAblaufBearbeiten.tsx`
+- **Automatisiert:** ja – `server/src/services/ablaufRueckgaengig.test.ts` (Vergleich je Feld, Lied über das Arrangement, Reihenfolge), `server/src/controllers/setlistController.gesehen.test.ts` (Schemas), `client/src/services/ctSchreiben.test.ts` (Erweiterung), `ui/ablauf/*.test.tsx` (Rückfrage, `gesehen`), `dienstplaner/src/TerminAnsicht.test.tsx`, `e2e/ablauf-konflikt.spec.ts` (ganzer Weg über den Server); von Hand bleiben zwei echte Geräte gegen echtes ChurchTools
+- **Historie:** #659 (22.10.2026, entschieden mit Alwin: nur bei echtem Konflikt)
+
+</details>

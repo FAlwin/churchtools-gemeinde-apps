@@ -40,7 +40,7 @@
 }
 .chip {
   padding: 9px 13px;
-  border-radius: 10px;
+  border-radius: var(--r-ctrl);
   border: 1.5px solid var(--border);
   background: var(--surface2);
   color: var(--text);

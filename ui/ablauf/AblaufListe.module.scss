@@ -23,7 +23,7 @@
   gap: 10px;
   padding: 10px 14px;
   background: var(--surface2);
-  border-radius: 9px;
+  border-radius: var(--r-ctrl);
   box-shadow: var(--shadow);
 }
 // Anklickbare Lied-Zeile (führt zu den Charts) – wie flowRow, aber als Button.
@@ -34,7 +34,7 @@
   padding: 10px 14px;
   background: var(--surface2);
   border: none;
-  border-radius: 9px;
+  border-radius: var(--r-ctrl);
   box-shadow: var(--shadow);
   cursor: pointer;
   text-align: left;
@@ -104,7 +104,7 @@
 .aenderungsTag {
   flex: none;
   padding: 1px 7px;
-  border-radius: 6px;
+  border-radius: var(--r-ctrl);
   background: var(--blue-soft);
   color: var(--blue-ink);
   font-size: 11px;
@@ -125,4 +125,14 @@
   font-size: 12px;
   font-weight: 500;
   color: var(--text3);
+}
+
+// An diesem Termin weggelassen (Auge, E6-3b, Entwurf e6-entwurf.html Bild 2): grau, statt der Uhrzeit „—“, dazu
+// der Hinweis – in Ansicht und Bearbeiten-Liste gleich.
+.weggelassen {
+  opacity: 0.55;
+
+  .flowTime {
+    color: var(--text3);
+  }
 }

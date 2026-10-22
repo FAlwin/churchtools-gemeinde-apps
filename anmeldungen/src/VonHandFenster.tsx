@@ -44,6 +44,7 @@ import {
   type NeuePerson,
 } from './vonHand';
 import { gruppenfelderLaden } from './mitglieder';
+import { PlatzWahl } from './PlatzWahl';
 import { fehlerMeldung } from './zustand';
 import type { Aenderung } from './Rueckgaengig';
 import f from './Formular.module.scss';
@@ -104,6 +105,7 @@ export function VonHandFenster({
   dabei,
   abgesagt,
   dazu = null,
+  onZurueckholen,
   onClose,
   onFertig,
 }: {
@@ -123,6 +125,8 @@ export function VonHandFenster({
    * Zahlung; Kontakt, Unterschrift und Auswahl stehen schon bei der Anmeldung.
    */
   dazu?: ListenAnmeldung | null;
+  /** Wer abgesagt hat, wird zurückgeholt (A7-4c) – mit den Antworten von damals statt einer neuen Anmeldung. */
+  onZurueckholen?: (personId: number) => void;
   onClose: () => void;
   onFertig: (x: VonHandFertig) => void;
 }) {
@@ -202,6 +206,12 @@ export function VonHandFenster({
     setFehler(null);
     setSchritt('antworten');
   };
+
+  /** Eine gefundene Person nehmen – wer abgesagt hat, wird zurückgeholt (A7-4c), mit den Antworten von damals. */
+  const nehmen = (p: Gefunden) =>
+    abgesagt.has(p.personId) && onZurueckholen
+      ? onZurueckholen(p.personId)
+      : waehlen({ art: 'da', p });
 
   const suchen = () =>
     laufen(async () => {
@@ -367,7 +377,7 @@ export function VonHandFenster({
                     type="button"
                     className={f.aktion}
                     disabled={ist}
-                    onClick={() => waehlen({ art: 'da', p })}
+                    onClick={() => nehmen(p)}
                   >
                     <span>
                       <b>{ganz(p)}</b>
@@ -382,7 +392,7 @@ export function VonHandFenster({
                     ) : (
                       abgesagt.has(p.personId) && (
                         <em className={`${a.pille} ${a.pilleWarte} ${a.trefferMarke}`}>
-                          hat abgesagt
+                          {onZurueckholen ? 'hat abgesagt – zurückholen' : 'hat abgesagt'}
                         </em>
                       )
                     )}
@@ -504,7 +514,7 @@ export function VonHandFenster({
                 type="button"
                 className={f.aktion}
                 disabled={dabei.has(p.personId)}
-                onClick={() => waehlen({ art: 'da', p })}
+                onClick={() => nehmen(p)}
               >
                 <span>
                   <b>{ganz(p)}</b>
@@ -651,56 +661,23 @@ export function VonHandFenster({
         )}
       </div>
 
-      <section className={a.teil}>
-        <h3>Platz und Betrag</h3>
-        <p className={a.summe}>
-          <span>Plätze</span>
-          <span>
-            {lage.max === null ? lage.belegt : `${lage.belegt} von ${lage.max}`}
-            {lage.wartende > 0 &&
-              ` · ${lage.wartende} ${lage.wartende === 1 ? 'wartet' : 'warten'}`}
-          </span>
-        </p>
-        <p className={a.summe}>
-          <span>{vor} kommt auf</span>
-          {mitPlatz ? (
-            <span className={`${a.pille} ${a.pilleOk}`}>
-              einen Platz{platz.neuesMax !== null ? ` (Plätze → ${platz.neuesMax})` : ''}
-            </span>
-          ) : (
-            <span className={`${a.pille} ${a.pilleWarte}`}>Warteliste {platz.warteplatz}</span>
-          )}
-        </p>
-        {platz.wuerdeWarten && !platz.nurMitPlatz && (
-          <button
-            type="button"
-            className={k.schalterZeile}
-            aria-pressed={trotzdem}
-            onClick={() => setTrotzdem(!trotzdem)}
-          >
-            <Schalter an={trotzdem} />
-            Trotzdem einen Platz geben
-            {lage.max !== null && lage.belegt >= lage.max
-              ? ` (Plätze auf ${lage.belegt + 1} erhöhen)`
-              : ''}
-          </button>
-        )}
-        {platz.nurMitPlatz && (
-          <p className={a.leise}>
-            Kein Platz frei und keine Warteliste – {vor} bekommt einen Platz
-            {platz.neuesMax !== null ? `, die Plätze werden auf ${platz.neuesMax} erhöht` : ''}.
-          </p>
-        )}
-        {kostet && (
-          <p className={a.summe}>
-            <span>{dazu ? `Neue Zahlung für ${vor}` : 'Betrag'}</span>
-            <b>
-              {!mitPlatz
-                ? `${dazu ? '' : '0,00 € – '}folgt beim Nachrücken`
-                : euroText(dazu ? (dz?.zahlung?.betragCent ?? 0) : betrag.gesamtCent)}
-            </b>
-          </p>
-        )}
+      <PlatzWahl
+        lage={lage}
+        platz={platz}
+        trotzdem={trotzdem}
+        onTrotzdem={setTrotzdem}
+        vor={vor}
+        betrag={
+          kostet
+            ? {
+                titel: dazu ? `Neue Zahlung für ${vor}` : 'Betrag',
+                wert: !mitPlatz
+                  ? `${dazu ? '' : '0,00 € – '}folgt beim Nachrücken`
+                  : euroText(dazu ? (dz?.zahlung?.betragCent ?? 0) : betrag.gesamtCent),
+              }
+            : null
+        }
+      >
         {dazu && mitPlatz && kostet && (
           <p className={a.leise}>
             Wie beim Nachrücken: {vor} bekommt eine eigene Zahlung – um so viel wird die Anmeldung
@@ -717,7 +694,7 @@ export function VonHandFenster({
           Wie im Formular: Wer wartet, zahlt erst beim Nachrücken. ChurchTools schickt beim Anmelden
           von Hand keine Mail – danach gibt es „Mail schreiben“.
         </p>
-      </section>
+      </PlatzWahl>
 
       {fehlerZeile}
       <div className={a.knoepfe}>

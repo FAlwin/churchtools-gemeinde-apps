@@ -79,14 +79,30 @@ export function dazuKopf(tag: string): string {
   return `Dazu angemeldet am ${tagPunkt(tag)}`;
 }
 
-const EIGENE = /^(Nachgerückt|Dazu angemeldet) am \d{2}\.\d{2}\.\d{4}$/;
+/**
+ * **Zeile bzw. Kopf beim Zurückholen einer Abgesagten** (A7-4c): Kopf ihrer eigenen Zahlung, wenn die Anmeldung noch
+ * besteht – sonst die letzte Zeile der neu gerechneten Zahlung der Anmeldung.
+ */
+export function zurueckKopf(tag: string): string {
+  return `Zurückgeholt am ${tagPunkt(tag)}`;
+}
 
-/** Wofür eine eigene Zahlung steht (nachgerückt, dazu angemeldet) – `null`, wenn es die Zahlung der Anmeldung ist. */
+const EIGENE = /^(Nachgerückt|Dazu angemeldet|Zurückgeholt) am \d{2}\.\d{2}\.\d{4}$/;
+const ART = {
+  Nachgerückt: 'nachgerueckt',
+  'Dazu angemeldet': 'dazu',
+  Zurückgeholt: 'zurueck',
+} as const;
+
+/**
+ * Wofür eine eigene Zahlung steht (nachgerückt, dazu angemeldet, zurückgeholt) – `null`, wenn es die Zahlung der
+ * Anmeldung ist (deren erste Zeile ist ein Posten, kein Kopf).
+ */
 export function eigeneZahlungArt(
   aufschluesselung: string | null | undefined,
-): 'nachgerueckt' | 'dazu' | null {
+): 'nachgerueckt' | 'dazu' | 'zurueck' | null {
   const m = EIGENE.exec((aufschluesselung ?? '').split('\n')[0].trim());
-  return m ? (m[1] === 'Nachgerückt' ? 'nachgerueckt' : 'dazu') : null;
+  return m ? ART[m[1] as keyof typeof ART] : null;
 }
 
 /**

@@ -15,10 +15,10 @@ import type { ReactNode } from 'react';
  * Geprüft wird das **Verhalten** (feuert der Takt?), nicht die Option: Ein Test, der nur nachsieht, ob
  * `refetchInterval` gesetzt ist, würde dieselbe Zeile zweimal hinschreiben und nichts beweisen.
  */
-vi.mock('../services/churchtoolsApi', () => ({ getServices: vi.fn() }));
+vi.mock('../services/churchtoolsApi', () => ({ getServices: vi.fn(), getSetlistVersion: vi.fn() }));
 
 const api = await import('../services/churchtoolsApi');
-const { useServices } = await import('./useServices');
+const { useServices, useSetlistVersion } = await import('./useServices');
 
 /**
  * Der Client wird je Test EINMAL angelegt, nicht im Wrapper: Stünde `new QueryClient()` im
@@ -38,6 +38,8 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.mocked(api.getServices).mockResolvedValue([]);
   vi.mocked(api.getServices).mockClear();
+  vi.mocked(api.getSetlistVersion).mockResolvedValue({ hash: 'h' });
+  vi.mocked(api.getSetlistVersion).mockClear();
 });
 afterEach(() => vi.useRealTimers());
 
@@ -105,5 +107,20 @@ describe('useServices – Takt nur bei sichtbarer Liste (#306)', () => {
     await vi.advanceTimersByTimeAsync(100);
     expect(result.current.data).toEqual([]);
     expect(result.current.isSuccess).toBe(true);
+  });
+});
+
+// #557: Der Live-Abgleich war mit 8 s der größte Posten der Grundlast (~7,5 Anfragen je Minute und Gerät).
+describe('useSetlistVersion – Live-Abgleich alle 30 Sekunden (#557)', () => {
+  it('nach 29 Sekunden noch nicht, nach 30 Sekunden erneut', async () => {
+    renderHook(() => useSetlistVersion(7, true), { wrapper });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(api.getSetlistVersion).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(29_000);
+    expect(api.getSetlistVersion).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(1_500);
+    expect(api.getSetlistVersion).toHaveBeenCalledTimes(2);
   });
 });

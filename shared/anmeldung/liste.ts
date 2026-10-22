@@ -75,6 +75,8 @@ export interface ListenMitglied {
   warteplatz: number | null;
   /** Tag der Anmeldung (`YYYY-MM-DD`) aus dem Verlauf, sonst das Eintrittsdatum. */
   angemeldetAm: string | null;
+  /** Vom Team eingetragen, nicht über das Formular (Verlauf: `origin: default`, A7-4). */
+  vonHand: boolean;
   email: string | null;
   geburtstag: string | null;
   werte: Werte;
@@ -146,6 +148,7 @@ export function mitgliederstandAus(
   // Anmeldetag: der erste Eintrag, mit dem jemand dazukam. Wer vom Team wieder aufgenommen wird („Rückgängig“ nach
   // einer Absage, A7-3), behält ihn; nur wer sich nach einer Absage neu über das Formular anmeldet, bekommt einen neuen.
   const dazu = new Map<number, string>();
+  const vonHand = new Set<number>();
   const warWeg = new Set<number>();
   const weg = new Map<number, VerlaufRoh>();
   for (const v of reihe) {
@@ -153,8 +156,11 @@ export function mitgliederstandAus(
     const jetzt = v.current?.membershipStatus ?? null;
     const id = v.memberId!;
     if (!vorher && jetzt) {
-      if (!dazu.has(id) || (warWeg.has(id) && v.origin === 'sign-up'))
+      if (!dazu.has(id) || (warWeg.has(id) && v.origin === 'sign-up')) {
         dazu.set(id, v.meta!.createdDate!);
+        if (v.origin === 'default') vonHand.add(id);
+        else vonHand.delete(id);
+      }
       warWeg.delete(id);
     }
     if (vorher && !jetzt) {
@@ -188,6 +194,7 @@ export function mitgliederstandAus(
             : 'sonst',
       warteplatz: m.groupMemberStatus === 'waiting' ? (m.waitinglistPosition ?? null) : null,
       angemeldetAm: tag(dazu.get(m.personId)) ?? tag(m.memberStartDate),
+      vonHand: vonHand.has(m.personId),
       email: p?.email ?? null,
       geburtstag: p?.geburtstag ?? null,
       werte,
@@ -260,6 +267,8 @@ export interface ListenAnmeldung {
   wer: string;
   email: string | null;
   angemeldetAm: string | null;
+  /** Die erste Person wurde vom Team eingetragen (A7-4). */
+  vonHand: boolean;
   /** Die erste Person (mit Betrag, Kontakt …) zuerst. */
   personen: ListenPerson[];
   abgesagt: Absage[];
@@ -411,6 +420,7 @@ export function anmeldungenAus(
       wer: kontakt || `${reihe[0].vor} ${reihe[0].nach}`.trim(),
       email: reihe.find((m) => m.email)?.email ?? null,
       angemeldetAm: angemeldet ?? null,
+      vonHand: reihe[0]?.vonHand ?? false,
       personen,
       abgesagt,
       einmal: w,

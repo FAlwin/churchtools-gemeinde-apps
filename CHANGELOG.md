@@ -7,6 +7,24 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Anmeldungen, A7-4a)
+
+- **Anmeldung von Hand** (Entwurf `a7-4-von-hand-v1`, abgenommen 22.10.2026): Knopf „＋ Von Hand“ im Reiter
+  „Anmeldungen“ – für Telefon, Papier und nach dem Anmeldeschluss. Erst in ChurchTools suchen (wer schon dabei ist, ist
+  gesperrt), sonst neu anlegen: mit den Vorgaben der Veranstaltung und der Zustimmung zum Datenschutz („außerhalb von
+  ChurchTools“, Person selbst oder Elternteil). Gleicher Name → Rückfrage „dieselbe Person?“ (`force` nur auf Wunsch).
+- Dieselben Fragen wie im Formular (`FeldEingabe` in den Farben der Erweiterung), E-Mail freiwillig; geschrieben wird
+  mit derselben Regel wie im Formular (`anmeldungAufbauen`: Felder, Betrag, Aufschlüsselung, Anmelde-Nr.).
+- **Unterschrift:** Schalter „liegt auf Papier vor“ → „✓ auf Papier – vermerkt von <Name>, <Tag>“; sonst leer (Alwin,
+  22.10.2026).
+- **Platz** nach der Regel des Formulars (wartet jemand oder voll → hinten an); „Trotzdem einen Platz geben“ erhöht bei
+  voller Gruppe die Plätze. Fehlt bei einer vorhandenen Person das Geburtsdatum, wird es nachgetragen.
+- Danach öffnet sich die neue Anmeldung mit **„Mail schreiben“** (fertiger Text: Platz mit Betrag und Bankdaten bzw.
+  Warteliste) und **„Rückgängig“** (nimmt die Person wieder heraus, setzt erhöhte Plätze zurück). Gemessen 19.10.2026:
+  Anlegen und Eintragen schicken keine Mail. Jeder Schritt wird nachgelesen; scheitert das Eintragen, werden die Plätze
+  zurückgesetzt.
+- Das Fenster einer Anmeldung zeigt „· von Hand“, wenn das Team sie eingetragen hat (Verlauf `origin: default`).
+
 ### Neu (Anmeldungen, A7-3)
 
 - **Nachrücken lassen** (Entwurf `a7-3-nachruecken-v1`, entschieden 19.10.2026): an jeder wartenden Person im Fenster

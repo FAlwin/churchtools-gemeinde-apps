@@ -4,7 +4,17 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { AnmeldungenReiter, type MitgliederZustand } from './AnmeldungenReiter';
 import * as Z from './zahlung';
 import * as B from './bewegung';
-import { STICHTAG, absage, dazu, e, mitglieder, stand } from '@shared/anmeldung/liste.testdaten';
+import * as H from './vonHand';
+import * as M from './mitglieder';
+import {
+  FELDER,
+  STICHTAG,
+  absage,
+  dazu,
+  e,
+  mitglieder,
+  stand,
+} from '@shared/anmeldung/liste.testdaten';
 
 vi.mock('./zahlung', () => ({
   zahlungSpeichern: vi.fn().mockResolvedValue(undefined),
@@ -17,6 +27,16 @@ vi.mock('./bewegung', () => ({
   absagenLassen: vi.fn(),
 }));
 const bm = vi.mocked(B);
+vi.mock('./vonHand', () => ({
+  personenSuchen: vi.fn(),
+  gleichNamige: vi.fn(),
+  meinName: vi.fn(),
+  vonHandAnmelden: vi.fn(),
+  GibtEsSchon: class extends Error {},
+}));
+const hm = vi.mocked(H);
+vi.mock('./mitglieder', () => ({ gruppenfelderLaden: vi.fn() }));
+const mm = vi.mocked(M);
 
 /**
  * Reiter „Anmeldungen“ (A7-1, Zahlung A7-2). Die Daten kommen aus dem, was das Formular schreibt (`liste.testdaten.ts`); gerechnet
@@ -36,6 +56,8 @@ function zeigen(
       veranstaltung="Kinderfreizeit"
       e={e()}
       maxPlaetze={max}
+      warteliste
+      anmeldeschluss={null}
       entwurf={entwurf}
       zustand={zustand}
       stichtag={STICHTAG}
@@ -284,5 +306,76 @@ describe('Nachrücken und Absagen (A7-3)', () => {
     oeffnen();
     expect(screen.queryByRole('button', { name: 'Nachrücken lassen' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Absagen' })).toBeNull();
+  });
+});
+
+describe('Anmeldung von Hand (A7-4a)', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = () => Promise.resolve() as unknown as void;
+    mm.gruppenfelderLaden.mockResolvedValue(FELDER);
+    hm.meinName.mockResolvedValue('Alwin Friesen');
+    hm.personenSuchen.mockResolvedValue([
+      { personId: 10, vor: 'Jonas', nach: 'Beispiel', geburtstag: '2017-05-01', email: null },
+      { personId: 50, vor: 'Paul', nach: 'Probe', geburtstag: '2016-04-03', email: null },
+    ]);
+  });
+  afterEach(() => {
+    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+  });
+  const feld = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const tippen = (id: string, wert: string) =>
+    fireEvent.change(feld(id), { target: { value: wert } });
+
+  it('suchen → wer dabei ist, ist gesperrt; wartet jemand, kommt Paul hinten an – oder bekommt trotzdem einen Platz', async () => {
+    const zurueck = vi.fn().mockResolvedValue(undefined);
+    hm.vonHandAnmelden.mockResolvedValue({ personId: 50, warteplatz: null, rueckgaengig: zurueck });
+    const z = zeigen(fertig());
+    fireEvent.click(screen.getByRole('button', { name: '＋ Von Hand' }));
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), {
+      target: { value: 'Probe' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Suchen' }));
+    const jonas = await screen.findByRole('button', { name: /Jonas Beispiel/ });
+    expect([(jonas as HTMLButtonElement).disabled, jonas.textContent]).toEqual([
+      true,
+      expect.stringMatching(/schon dabei/),
+    ]);
+    fireEvent.click(screen.getByRole('button', { name: /Paul Probe/ }));
+
+    expect(screen.getByText('Paul Probe anmelden')).toBeTruthy();
+    // Name aus ChurchTools – gesperrt; Unterschrift gibt es nur als Schalter.
+    expect(feld('af-personen.0.pname-vor').disabled).toBe(true);
+    expect(screen.getByRole('button', { name: 'Unterschrift liegt auf Papier vor' })).toBeTruthy();
+    // Lena wartet → Paul käme hinten an.
+    expect(screen.getByText('Warteliste 2')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Trotzdem einen Platz geben/ }));
+    expect(screen.getByText('einen Platz')).toBeTruthy();
+    expect(screen.getByText('Betrag').nextSibling?.textContent).toBe('6,00 €');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Anmelden' }));
+    expect(screen.getByText('Bitte die markierten Felder ausfüllen.')).toBeTruthy();
+    expect(hm.vonHandAnmelden).not.toHaveBeenCalled();
+
+    tippen('af-anmeldung.name-vor', 'Petra');
+    tippen('af-anmeldung.name-nach', 'Probe');
+    tippen('af-anmeldung.tel', '0170 1');
+    tippen('af-anmeldung.eltern-0-vor', 'Petra');
+    tippen('af-anmeldung.eltern-0-nach', 'Probe');
+    tippen('af-anmeldung.eltern-0-tel', '0170 1');
+    fireEvent.click(screen.getByLabelText(/einverstanden/));
+    fireEvent.click(screen.getByRole('radio', { name: 'Ja' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Unterschrift liegt auf Papier vor' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Anmelden' }));
+    await waitFor(() => expect(z.onGespeichert).toHaveBeenCalled());
+
+    const [gruppe, plan] = hm.vonHandAnmelden.mock.calls[0];
+    const x = e();
+    expect(gruppe).toBe(165);
+    expect(plan.person).toEqual({ art: 'da', personId: 50, geburtstagNachtragen: null });
+    expect(plan.platz).toMatchObject({ status: 'active', neuesMax: null });
+    expect(plan.felder[x.ctFelder.betrag]).toBe('6,00 €');
+    expect(plan.felder[x.ctFelder.kontakt]).toBe('Petra Probe');
+    expect(plan.felder[x.ctFelder.sign]).toMatch(/^✓ auf Papier – vermerkt von Alwin Friesen, /);
+    expect(plan.felder[plan.nrFeld!]).toMatch(/^[2-9A-Z]{6}$/);
   });
 });

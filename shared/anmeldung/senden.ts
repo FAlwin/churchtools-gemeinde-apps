@@ -173,6 +173,14 @@ export function unterschriftLesbar(name: string, heute: string): string {
 }
 
 /**
+ * **Die Unterschrift liegt auf Papier vor** (A7-4, Alwin 22.10.2026) – bei einer Anmeldung von Hand; vermerkt wird, wer
+ * es eingetragen hat und wann: „✓ auf Papier – vermerkt von Alwin Friesen, 22.10.2026“.
+ */
+export function unterschriftAufPapier(vermerktVon: string, heute: string): string {
+  return `✓ auf Papier – vermerkt von ${vermerktVon}, ${tagPunkt(heute)}`;
+}
+
+/**
  * Eine Antwort im Format, das ChurchTools für das Gruppenfeld annimmt (gemessen A0/A6): Ankreuzen `1`, Ja/Nein und
  * Auswahl als Options-ID, Mehrfachauswahl als Text („Wandern, Spiele“), sonst der Text. `null` = leer, nichts
  * schicken.
@@ -237,7 +245,8 @@ export function wartelistenZeile(name: string): string {
  * Wirft `PasstNicht`, wenn ein Feld oder eine Antwort in ChurchTools fehlt.
  *
  * A6-5a (#612): `nr` steht bei **jeder** Person (fehlt das Feld bei älteren Veranstaltungen, geht es ohne);
- * `mitPlatz` sagt, wer im Betrag zählt (`buchungAus`).
+ * `mitPlatz` sagt, wer im Betrag zählt (`buchungAus`). A7-4: `papier` steht ohne gezeichnete Unterschrift in ihrer
+ * lesbaren Spalte (`unterschriftAufPapier`).
  */
 export function anmeldungAufbauen(
   e: OeffentlicheEinstellungen,
@@ -245,7 +254,7 @@ export function anmeldungAufbauen(
   wahl: PreisWahl,
   heute: string,
   ct: CtFormular,
-  weiteres: { nr?: string; mitPlatz?: boolean[] } = {},
+  weiteres: { nr?: string; mitPlatz?: boolean[]; papier?: string } = {},
 ): Anmeldung {
   const alle = [...ct.form, ...(ct.addChildForm ?? [])];
   const person = (name: string) => alle.find((x) => x.type === 'person' && x.name === name);
@@ -288,7 +297,10 @@ export function anmeldungAufbauen(
     const ctFeld = spalte(f.id, f.frage);
     if (f.typ === 'unterschrift') {
       const striche = unterschriftAus(w);
-      if (!striche) return [];
+      if (!striche)
+        return weiteres.papier
+          ? [{ id: String(ctFeld.id), type: 'custom', value: weiteres.papier }]
+          : [];
       const daten = ctZusatzSpalten(f)[0];
       return [
         { id: String(ctFeld.id), type: 'custom', value: unterschriftLesbar(unterzeichner, heute) },

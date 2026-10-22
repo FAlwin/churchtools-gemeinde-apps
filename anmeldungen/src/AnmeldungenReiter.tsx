@@ -23,6 +23,7 @@ import { anzahlText } from './anzeige';
 import { AnmeldungZahlung } from './AnmeldungZahlung';
 import { AbsagenFrage, MailAnsicht, NachrueckenFrage } from './AnmeldungAktion';
 import { absagenLassen, nachrueckenLassen } from './bewegung';
+import { VonHandFenster } from './VonHandFenster';
 import { useSpeichern } from './useSpeichern';
 import { RueckgaengigImFenster, type Aenderung } from './Rueckgaengig';
 import s from './Startseite.module.scss';
@@ -244,6 +245,7 @@ function AnmeldungAnsehen({
               </>
             )}
             {x.angemeldetAm && <>angemeldet am {lang(x.angemeldetAm)}</>}
+            {x.vonHand && <> · von Hand</>}
             {x.email && <> · {x.email}</>}
           </p>
 
@@ -397,6 +399,8 @@ export function AnmeldungenReiter({
   veranstaltung,
   e,
   maxPlaetze,
+  warteliste,
+  anmeldeschluss,
   entwurf,
   zustand,
   stichtag,
@@ -411,6 +415,10 @@ export function AnmeldungenReiter({
   veranstaltung: string;
   e: OeffentlicheEinstellungen;
   maxPlaetze: number | null;
+  /** Gibt es eine Warteliste? (Anmeldung von Hand, A7-4) */
+  warteliste: boolean;
+  /** Ende des Anmeldezeitraums (ISO) – von Hand geht es auch danach. */
+  anmeldeschluss: string | null;
   entwurf: boolean;
   zustand: MitgliederZustand | null;
   /** Erster Tag der Veranstaltung (Alter), sonst heute. */
@@ -430,6 +438,7 @@ export function AnmeldungenReiter({
   // Die letzte Änderung im offenen Fenster – mit dem Fenster weg.
   const [meldung, setMeldung] = useState<FensterMeldung | null>(null);
   const [startModus, setStartModus] = useState<FensterModus>(null);
+  const [vonHand, setVonHand] = useState(false);
   const oeffnen = (k: string | null, modus: FensterModus = null) => {
     setOffen(k);
     setStartModus(modus);
@@ -589,6 +598,11 @@ export function AnmeldungenReiter({
             value={suche}
             onChange={(ev) => setSuche(ev.target.value)}
           />
+          {darf && (
+            <button type="button" className={a.nachKnopf} onClick={() => setVonHand(true)}>
+              ＋ Von Hand
+            </button>
+          )}
         </div>
 
         {(filter === 'alle' || filter === 'offen') && (
@@ -715,6 +729,28 @@ export function AnmeldungenReiter({
           </button>
         </p>
       </section>
+
+      {vonHand && (
+        <VonHandFenster
+          id={id}
+          e={e}
+          veranstaltung={veranstaltung}
+          heute={heute}
+          lage={{ belegt: z.belegt, max: maxPlaetze, wartende: z.wartend, warteliste }}
+          anmeldeschluss={anmeldeschluss}
+          dabei={new Set(stand!.mitglieder.map((m) => m.personId))}
+          abgesagt={new Set(stand!.absagen.map((b) => b.personId))}
+          onClose={() => setVonHand(false)}
+          onFertig={(x) => {
+            setVonHand(false);
+            // Die neue Anmeldung öffnet sich, sobald sie geladen ist – mit „Mail schreiben“ und „Rückgängig“.
+            setOffen(x.nr);
+            setStartModus(null);
+            setMeldung({ aenderung: x.aenderung, mail: x.mail });
+            onGespeichert();
+          }}
+        />
+      )}
 
       {fensterX && (
         <AnmeldungAnsehen

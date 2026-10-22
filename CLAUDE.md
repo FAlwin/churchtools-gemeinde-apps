@@ -472,7 +472,9 @@ Schlüssel. Blatt-Maße EINMAL in `utils/blattMasse.ts`. Achtung: `composeStream
 `~/ecg-donrath/gemeinde-apps/musik-planung/docs/`): gespeichert bleibt ChordPro Zeichen für Zeichen, neu ist nur
 die Darstellung. L1 = Kopf im CT-Look + Karten (breit Text/Vorschau nebeneinander, schmal `Segment` „Text | Vorschau“,
 die Text-Karte bleibt gemountet). L2 = `AblaufKarte` (Kärtchen ↔ `{flow}` über `flowSetzen`, eine Änderung im
-Editor, Rückgängig inklusive; die Flow-Zeile blendet `ChordProInput` aus). Liedinfo kommt in L4 nur aus ChurchTools;
+Editor, Rückgängig inklusive; die Flow-Zeile blendet `ChordProInput` aus). L3 = Akkord-Kärtchen, Teil-Bänder
+(`abschnittsKopf` – EINE Regel mit `parseChordPro`) und Pedal-Linie als Ersetzungen mit `atomicRanges`, Schalter
+„ChordPro-Text“ (Compartment); am echten iPad vor dem Merge geprüft (TF-EINST-15). Liedinfo kommt in L4 nur aus ChurchTools;
 `{key}` bleibt als notierte Tonart. Zieh-Einstellungen aller Listen: `ui/bedienung/useZiehSensoren`. Im
 Scroll-Modus kein Spalten-Schalter (`ohneSpalten`). Welche
 eigene Ebene gilt, entscheidet für Blättern UND Scrollen `pageKeys.eigenerSchluessel`.

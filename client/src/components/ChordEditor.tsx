@@ -109,6 +109,8 @@ export function ChordEditor({
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [bereich, setBereich] = useState<Bereich>('text');
+  // L3: Kärtchen und Bänder – oder der rohe ChordPro-Text für alle, die ihn direkt bearbeiten wollen.
+  const [roh, setRoh] = useState(false);
   const wide = useMedienAbfrage('(min-width: 768px)', true);
   const editorRef = useRef<ChordProHandle>(null);
   // Die Vorschau zeigt das Blatt so, wie es im Liederheft dieses Geräts erscheint (#607).
@@ -352,6 +354,15 @@ export function ChordEditor({
                   ))}
                 </div>
               )}
+              <button
+                type="button"
+                className={`${styles.rohKnopf}${roh ? ' ' + styles.rohAn : ''}`}
+                aria-pressed={roh}
+                onClick={() => setRoh((r) => !r)}
+                title="Den Text so zeigen, wie er gespeichert wird – mit [Akkorden] und {Angaben}"
+              >
+                ChordPro-Text
+              </button>
               {/* Rückgängig/Wiederholen gehören zum Text – hier statt im Kopf, damit der Titel am Handy Platz hat. */}
               <div className={styles.verlauf}>
                 <button
@@ -379,6 +390,7 @@ export function ChordEditor({
               <ChordProInput
                 ref={editorRef}
                 initialText={initialText}
+                roh={roh}
                 onChange={setText}
                 onHistory={(u, r) => {
                   setCanUndo(u);

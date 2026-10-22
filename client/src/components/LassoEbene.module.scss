@@ -59,7 +59,8 @@
   touch-action: none;
 }
 
-// Unter dem letzten Teil der Rolle wird nichts gespeichert (#615) – sagen statt still verlieren.
+// Wo die Rolle keinen Kern hat (2 Spalten: neben dem Streifen), wird nichts gespeichert (#615) – sagen statt
+// still verlieren.
 .hinweis {
   position: absolute;
   left: 0;

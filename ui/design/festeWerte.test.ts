@@ -14,14 +14,12 @@ import { fileURLToPath } from 'node:url';
  *   Knopfformen, die man im Anmeldeformular auswählt).
  */
 const WURZEL = fileURLToPath(new URL('../..', import.meta.url));
-const ORDNER = [
-  'client/src',
-  'anmeldungen/src',
-  'dienstplaner/src',
-  'organigramm/src',
-  'formular/src',
-  'ui',
-];
+// Alle Apps aus den Workspaces des Repos (+ ui/) – eine neue App ist so automatisch dabei, ohne dass jemand diese
+// Liste nachziehen muss (am 22.10.2026 kam „Protokolle“ parallel dazu und wäre sonst ungeprüft geblieben).
+const WORKSPACES = (
+  JSON.parse(readFileSync(join(WURZEL, 'package.json'), 'utf8')) as { workspaces: string[] }
+).workspaces;
+const ORDNER = [...WORKSPACES.map((w) => `${w}/src`), 'ui'];
 const AUSNAHMEN = new Set(['ui/design/_variables.scss']);
 
 function dateien(ordner: string, endungen: RegExp): string[] {
@@ -69,6 +67,19 @@ describe('Rundungen nur über die gemeinsamen Werte (#654)', () => {
       }
     }
     expect(funde).toEqual([]);
+  });
+
+  it('jede App des Repos wird geprüft (auch neu dazugekommene)', () => {
+    for (const app of [
+      'client',
+      'anmeldungen',
+      'dienstplaner',
+      'organigramm',
+      'protokolle',
+      'formular',
+    ]) {
+      expect(ORDNER).toContain(`${app}/src`);
+    }
   });
 
   it('die Prüfung selbst greift (Gegenprobe gegen die Erkennung)', () => {

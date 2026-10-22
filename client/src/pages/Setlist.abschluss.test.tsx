@@ -64,6 +64,7 @@ function zeige(
     remove: vi.fn(remove),
     add: vi.fn(() => Promise.resolve()),
     setVorBeginn: vi.fn(() => Promise.resolve()),
+    setWeggelassen: vi.fn(() => Promise.resolve()),
   };
   render(
     <QueryClientProvider client={qc}>

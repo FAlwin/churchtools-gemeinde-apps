@@ -5,6 +5,7 @@ import {
   a4NachRolle,
   kerneAufSeite,
   pedalHalte,
+  rollenUnterkante,
   rolleNachA4,
   rahmenAufKernen,
   textAufSeite,
@@ -248,7 +249,8 @@ describe('kerneAufSeite / stricheAufRolle(nur) – Striche zurückschreiben (#60
     const clearRect = vi.fn();
     const drawImage = vi.fn();
     const ctx = { clearRect, drawImage } as unknown as CanvasRenderingContext2D;
-    const rolle = { width: 1050 } as unknown as HTMLCanvasElement; // 5 px je mm
+    // 5 px je mm, so lang wie das gesetzte Lied
+    const rolle = { width: 1050, height: a.rolle.hoehe * 5 } as unknown as HTMLCanvasElement;
     kerneAufSeite(ctx, rolle, st, 1, 420); // A4-Seite: 2 px je mm
     const kerne = st.filter((s) => s.seite === 1 && s.art === 'kern' && s.quelle.h > 0);
     expect(drawImage).toHaveBeenCalledTimes(kerne.length);
@@ -256,6 +258,25 @@ describe('kerneAufSeite / stricheAufRolle(nur) – Striche zurückschreiben (#60
     const [, sx, sy, , , dx, dy] = drawImage.mock.calls[0] as number[];
     expect([sx, sy]).toEqual([kerne[0].ziel.x * 5, kerne[0].ziel.y * 5]);
     expect([dx, dy]).toEqual([kerne[0].quelle.x * 2, kerne[0].quelle.y * 2]);
+  });
+
+  it('unter dem letzten Teil nur, so weit die Rolle reicht – darunter bleibt die A4-Seite unberührt (#626)', () => {
+    const a = abb();
+    const st = streifen(a);
+    const letzter = a.a4.stuecke[a.a4.stuecke.length - 1];
+    const unten = st.find(
+      (s) => s.art === 'kern' && s.seite === letzter.seite && s.quelle.y === letzter.y1,
+    )!;
+    expect(unten.quelle.y + unten.quelle.h).toBe(PAGE_H);
+    const clearRect = vi.fn();
+    const ctx = { clearRect, drawImage: vi.fn() } as unknown as CanvasRenderingContext2D;
+    // Die Rolle reicht 10 mm unter den letzten Teil.
+    const rolle = { width: 210, height: unten.ziel.y + 10 } as unknown as HTMLCanvasElement;
+    kerneAufSeite(ctx, rolle, st, letzter.seite, 210);
+    const geleert = clearRect.mock.calls.find(
+      (c) => (c as number[])[1] === unten.quelle.y,
+    ) as number[];
+    expect(geleert[3]).toBeCloseTo(10, 6);
   });
 
   it('stricheAufRolle(…, "luecke") zeichnet nur die Lücken', () => {
@@ -277,14 +298,17 @@ describe('kerneAufSeite / stricheAufRolle(nur) – Striche zurückschreiben (#60
 });
 
 describe('rahmenAufKernen – wo das Lasso auf der Rolle ablegen darf (#615)', () => {
-  it('mitten im Lied ja, unter dem letzten Teil nein – dort gäbe es keine A4-Stelle zum Speichern', () => {
+  it('mitten im Lied ja, unter dem letzten Teil auch (#626) – aber nicht tiefer, als A4 Platz hat', () => {
     const a = abb();
     const st = streifen(a);
     const letzter = a.rolle.stuecke[a.rolle.stuecke.length - 1];
     expect(rahmenAufKernen(st, { x: 20, y: letzter.y0 + 2, w: 60, h: 10 })).toBe(true);
-    // Reicht nur 1 mm unter das Ende des letzten Teils: schon nicht mehr.
-    expect(rahmenAufKernen(st, { x: 20, y: letzter.y1 - 9, w: 60, h: 10 })).toBe(false);
-    expect(rahmenAufKernen(st, { x: 20, y: a.rolle.hoehe - 5, w: 60, h: 4 })).toBe(false);
+    // Unter dem letzten Teil: Der Platz bis zum Ende der A4-Seite steht auf der Rolle genauso darunter.
+    const platz = PAGE_H - a.a4.stuecke[a.a4.stuecke.length - 1].y1;
+    expect(rahmenAufKernen(st, { x: 20, y: letzter.y1 - 9, w: 60, h: 10 })).toBe(true);
+    expect(rahmenAufKernen(st, { x: 20, y: letzter.y1 + platz - 11, w: 60, h: 10 })).toBe(true);
+    // Reicht 1 mm über das Ende dieses Platzes hinaus: nicht mehr.
+    expect(rahmenAufKernen(st, { x: 20, y: letzter.y1 + platz - 9, w: 60, h: 10 })).toBe(false);
   });
 
   it('zwei Spalten: rechts neben dem schmalen Streifen nein', () => {
@@ -348,5 +372,41 @@ describe('pedalHalte – wo das Pedal auf der Rolle anhält (#609)', () => {
     const a = abb();
     expect(a.rolle.weiterschalten).toEqual([]);
     expect(pedalHalte(a)).toHaveLength(1 + 6);
+  });
+});
+
+describe('rollenUnterkante – wie weit die Rolle für Anmerkungen unter dem Lied wächst (#626)', () => {
+  const a = abb();
+  const st = streifen(a);
+  const letzter = a.a4.stuecke[a.a4.stuecke.length - 1];
+  const rollenEnde = a.rolle.stuecke[a.rolle.stuecke.length - 1].y1;
+
+  it('ein Strich unten auf der letzten Seite: so weit unter dem letzten Teil wie auf A4', () => {
+    // Striche bis 280 mm, aber nur im Bereich unter dem letzten Teil.
+    const bis = (q: { y: number; h: number }) => (q.y <= 280 && q.y + q.h >= 280 ? 280 : null);
+    expect(rollenUnterkante(st, letzter.seite, 0, bis, [])).toBeCloseTo(
+      rollenEnde + (280 - letzter.y1),
+      6,
+    );
+  });
+
+  it('ein Text unten auf der letzten Seite: seine Unterkante zählt', () => {
+    const t = { fx: 0.5, fy: 270 / PAGE_H, sizeCqh: 2, text: 'eins\nzwei' };
+    const groesse = 0.02 * PAGE_H;
+    expect(rollenUnterkante(st, letzter.seite, 0, () => null, [t])).toBeCloseTo(
+      rollenEnde + (270 - letzter.y1) + (groesse * (2 * 1.15 + 0.4)) / 2,
+      6,
+    );
+  });
+
+  it('nichts unter dem Lied: 0 – und gefragt wird nur nach Bereichen unter `ab`', () => {
+    const gefragt: number[] = [];
+    const bis = (q: { y: number }) => {
+      gefragt.push(q.y);
+      return null;
+    };
+    expect(rollenUnterkante(st, letzter.seite, rollenEnde, bis, [])).toBe(0);
+    // Nur der Platz unter dem letzten Teil reicht unter das Liedende.
+    expect(gefragt).toEqual([letzter.y1]);
   });
 });

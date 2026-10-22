@@ -19,11 +19,11 @@ const ITEMS: AblaufZeile[] = [
   { ...zeile(2, 'Weg (entfernt)'), removed: true },
 ];
 
-function Harness({ aktionen }: { aktionen: AblaufAktionen }) {
+function Harness({ aktionen, items = ITEMS }: { aktionen: AblaufAktionen; items?: AblaufZeile[] }) {
   const b = useAblaufBearbeiten({
     aktiv: true,
     bereit: true,
-    items: ITEMS,
+    items,
     beginn: '10:00',
     abgeschlossen: false,
     sperrHinweis: 'gesperrt',
@@ -44,6 +44,7 @@ const aktionen = (over: Partial<AblaufAktionen> = {}): AblaufAktionen => ({
   restore: vi.fn(() => Promise.resolve()),
   update: vi.fn(() => Promise.resolve()),
   setVorBeginn: vi.fn(() => Promise.resolve()),
+  setWeggelassen: vi.fn(() => Promise.resolve()),
   add: vi.fn(() => Promise.resolve()),
   ...over,
 });
@@ -95,5 +96,30 @@ describe('useAblaufBearbeiten', () => {
     fireEvent.click(screen.getByRole('button', { name: /Eintrag löschen/ }));
     fireEvent.click(screen.getByRole('button', { name: /^Löschen$/ }));
     await waitFor(() => expect(beiFehler).toHaveBeenCalledWith(fehler));
+  });
+});
+
+describe('Auge in der Bearbeiten-Liste (E6-3b)', () => {
+  const weg = ablaufZeileAus(
+    { id: 5, title: 'Abkündigungen', type: 'normal', startTimes: { '7': null } },
+    7,
+    'Europe/Berlin',
+  );
+
+  it('die weggelassene Zeile steht grau mit Hinweis – wie in der Ansicht', () => {
+    render(<Harness aktionen={aktionen()} items={[zeile(1, 'Begrüßung'), weg]} />);
+    const liste = screen.getByTestId('liste');
+    const zeileWeg = screen.getByText('Abkündigungen').closest('div[class*="flowRow"]')!;
+    expect(zeileWeg.className).toMatch(/weggelassen/);
+    expect(liste.textContent?.match(/an diesem Termin weggelassen/g)).toHaveLength(1);
+  });
+
+  it('der Schalter im Punkt-Fenster geht als `setWeggelassen` an die Aktionen – mit der ID des Punkts', async () => {
+    const a = aktionen();
+    render(<Harness aktionen={a} items={[weg]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Bearbeiten' }));
+    fireEvent.click(screen.getByRole('button', { name: /An diesem Termin weglassen/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(a.setWeggelassen).toHaveBeenCalledWith(5, false));
   });
 });

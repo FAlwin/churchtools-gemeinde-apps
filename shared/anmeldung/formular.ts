@@ -16,6 +16,7 @@
  *    `einstellungenAlsText`).
  */
 import { z } from 'zod';
+import { ausBase64url, base64url } from '../ct/packen';
 import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate';
 import type { PreisRegeln } from './preis';
 import { STANDARD_BEZAHLUNG, ZWECK_MAX, type Bezahlung } from './bezahlung';
@@ -725,20 +726,6 @@ export const HINWEIS_SATZ =
 /** Beginn der unsichtbaren Zeile; dahinter der gepackte Code (deflate, Base64url). */
 export const VERWEIS = '[anmeldung]: #v2:';
 const VERWEIS_ZEILE = /^\[anmeldung\]: #v2:([A-Za-z0-9_-]+)[ \t]*$/m;
-
-function base64url(bytes: Uint8Array): string {
-  let bin = '';
-  for (let i = 0; i < bytes.length; i += 0x8000)
-    bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-function ausBase64url(code: string): Uint8Array {
-  const bin = atob(code.replace(/-/g, '+').replace(/_/g, '/'));
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return bytes;
-}
 
 /**
  * **Die Einstellungen als gepackter Code** – geprüft (zod), als JSON, gepackt (deflate), Base64url. Packen

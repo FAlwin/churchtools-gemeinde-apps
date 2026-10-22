@@ -94,7 +94,7 @@ const NICHTS = (): GemeindeEinstellungen => ({
 /** Was gespeichert ist – „nichts“, wenn es keine Einstellungen gibt oder man sie nicht sehen darf. */
 export async function gemeindeEinstellungen(): Promise<GemeindeEinstellungen> {
   try {
-    const modul = await modulId();
+    const modul = await modulId('Die Erweiterung „Anmeldungen“');
     const kategorie = await kategorieSuchen(modulPort, modul, KATEGORIE_KUERZEL);
     if (kategorie === null) return NICHTS();
     const w = unserWert(await werteLesen(modulPort, modul, kategorie));
@@ -154,7 +154,7 @@ export async function speichereGemeindeEinstellungen(g: {
     formularAdresse: adresse,
     zahlarten,
   } satisfies Ablage);
-  const modul = await modulId();
+  const modul = await modulId('Die Erweiterung „Anmeldungen“');
   const kategorie = await kategorieSicherstellen(
     modulPort,
     modul,

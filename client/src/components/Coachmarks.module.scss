@@ -9,7 +9,7 @@
 // Spotlight-Loch: das Rechteck selbst ist „durchsichtig", der riesige Schatten dunkelt alles außen ab.
 .hole {
   position: fixed;
-  border-radius: 12px;
+  border-radius: var(--r-card);
   box-shadow:
     0 0 0 9999px rgba(10, 15, 25, 0.66),
     0 0 0 2px rgba(255, 255, 255, 0.9);
@@ -28,7 +28,7 @@
   max-width: 320px;
   margin: 0 auto;
   background: var(--surface2);
-  border-radius: 12px;
+  border-radius: var(--r-card);
   padding: 14px 16px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
   color: var(--text);
@@ -73,7 +73,7 @@
   font-weight: 600;
   padding: 7px 16px;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--r-ctrl);
   background: var(--blue);
   color: #fff;
   cursor: pointer;

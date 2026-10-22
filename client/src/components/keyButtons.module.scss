@@ -25,7 +25,7 @@
 
 .btn {
   height: 44px;
-  border-radius: 10px;
+  border-radius: var(--r-ctrl);
   border: 1.5px solid var(--border);
   background: var(--surface2);
   color: var(--text);
@@ -53,7 +53,7 @@
   width: 100%;
   height: 40px;
   margin-top: 8px;
-  border-radius: 10px;
+  border-radius: var(--r-ctrl);
   border: 1.5px solid var(--border);
   background: transparent;
   color: var(--blue-ink);
@@ -79,7 +79,7 @@
 .capoSounds {
   color: #fff;
   background: var(--blue);
-  border-radius: 5px;
+  border-radius: var(--r-ctrl);
   padding: 2px 8px;
   font-family: var(--ui);
 }

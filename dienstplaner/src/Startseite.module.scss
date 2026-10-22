@@ -184,7 +184,7 @@
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  border-radius: 10px;
+  border-radius: var(--r-ctrl);
   background: var(--blue);
   color: #fff;
   font-size: 15px;
@@ -198,7 +198,7 @@
   gap: 4px;
   padding: 8px 12px 8px 14px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-ctrl);
   background: var(--surface2);
   color: var(--text);
   font: inherit;

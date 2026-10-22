@@ -1,49 +1,54 @@
-// ── Globale Design-Variablen – Look der ChurchTools-APP ─────────────
+// ── Globale Design-Variablen – Look der ChurchTools-WEBOBERFLÄCHE ────
 // Einzige Quelle für Farben, Rundungen, Schriften, Breakpoints.
 // Komponenten importieren diese Datei, statt Werte zu duplizieren.
 // Theme-Umschaltung über [data-theme] auf <html>; das Dunkel ist das von ChurchTools
 // (`ui/design/thema.ts`, `docs/entwicklung/dunkelmodus.md`).
 //
-// Seit #393 (19.09.2026) folgt die App der ChurchTools-**App** (iOS/Android), nicht mehr dem
-// ChurchTools-Web: kräftigeres Blau, hellblaue Datumskacheln, Karten mit feinem Rand statt Schatten,
-// größere Rundungen. Die Werte wurden von Screenshots der App abgelesen (Entwürfe in `.entwuerfe/`,
-// Runde 3–8 zu #177) – wer sie nachschärft, tut es HIER und nirgends sonst.
+// Seit #654 (22.10.2026) folgen ALLE Apps – Erweiterungen und die Musik-App als PWA – der
+// ChurchTools-**Weboberfläche** (Alwin: „CT-Web-Look für alle“, Geltung „überall“). Das löst #393 ab
+// (19.09.2026: Look der ChurchTools-App). Die Werte sind die von ChurchTools selbst, gemessen in der
+// Test-Instanz mit `body.light` (22.10.2026): ChurchTools nutzt Tailwind 4 und benennt seine Farben
+// `--color-background-*`, `--color-foreground-*`, `--color-basic-*`, `--color-accent-*` … – die Namen
+// stehen unten jeweils dabei. Wer nachschärft, misst dort nach und ändert es HIER und nirgends sonst.
 
 // Farben (Light Mode)
 :root {
-  --bg: #eef1f6; // Seitenhintergrund (leicht blaustichiges Grau der App)
-  --surface2: #ffffff; // Karten / Listen / Header
-  --surface3: #eef1f6; // Sekundärflächen (Suchfeld, Kacheln, Segmente, Pills)
-  --border: #e2e6ee; // feiner Rand um Karten / Knöpfe / Inputs
-  --hair: #edf0f5; // Haarlinien-Trenner (1px)
-  --section: #e7ecf3; // Band hinter Gruppen-Überschriften („Dienste")
+  --bg: #f1f5f9; // Seite – `--color-background-primary` (slate-100)
+  --surface2: #ffffff; // Karten / Listen / Header – `--color-foreground-primary`
+  --surface3: #f1f5f9; // Sekundärflächen (Suchfeld, Kacheln, Segmente, Pills) – wie die Seite
+  --border: #e2e8f0; // Rand um Karten / Knöpfe / Inputs – `--color-basic-divider` (slate-200)
+  --hair: #e2e8f0; // Haarlinien-Trenner (1px) – ChurchTools trennt mit derselben Farbe wie der Rand
+  --section: #f8fafc; // Band hinter Gruppen-Überschriften – `--color-foreground-secondary` (slate-50)
 
-  --text: #111827; // Primärtext (fast schwarz, wie in der App)
-  --text2: #6b7280; // Sekundärtext
-  --text3: #9ca3af; // Tertiär / inaktive Icons / Platzhalter
+  --text: #0f172b; // `--color-basic-primary` (slate-900)
+  --text2: #45556c; // `--color-basic-secondary` (slate-600)
+  --text3: #90a1b9; // `--color-basic-tertiary` (slate-400)
 
-  --blue: #2563eb; // Primärfarbe (Buttons, Links, aktive Tabs, Plus-Knopf)
-  --blue-ink: #2563eb;
-  --blue-soft: rgba(37, 99, 235, 0.1); // Blau-Flächen (Verse-Label, sanfte Hervorhebung)
-  --blue-tile: #dbe7fb; // Datumskachel (Tag / Monat) wie „Anstehende Termine" in der App
-  --blue-tile-text: #111827; // Text auf der Datumskachel
-  --red: #d64545; // Destruktiv (Abmelden, Löschen, offene Dienste, Abwesend)
-  --green: #1f8a5b; // Bestätigt / offline vorhanden / Etikett
+  --blue: #155dfc; // `--color-accent-bright` (blue-600) – Knöpfe, Links, aktive Reiter
+  --blue-ink: #155dfc;
+  --blue-soft: rgba(21, 93, 252, 0.1); // Blau-Flächen (sanfte Hervorhebung)
+  --blue-tile: #dbeafe; // `--color-accent-b-pale` (blue-100) – Datumskachel, gewählter Eintrag
+  --blue-tile-text: #162456; // `--color-accent-primary` (blue-950)
+  // Rot und Grün tragen bei uns auch TEXT (offene Dienste, „zugesagt“). ChurchTools' `--color-error-bright`
+  // (red-500) und `--color-success-bright` (green-500, Knopf „Gruppe erstellen“) sind dafür auf Weiß zu blass –
+  // deshalb je eine Stufe dunkler aus derselben Tailwind-Reihe (wie im Dunkel green-600).
+  --red: #e7000b; // red-600
+  --green: #00a63e; // green-600
   --cp-dir: #0d7a6f; // ChordPro-Direktiven {…} im Editor (ChurchTools-passendes Teal)
 
   --seg-on: #ffffff; // aktives Segment / Toggle-Hintergrund
   // Schiene der Umschalter (Kommende/Vergangene …). Eigene Farbe seit dem 02.10.2026: Sie war
   // `--surface3` und damit exakt die Seitenfarbe `--bg` – der nicht gewählte Knopf sah aus wie
   // bloßer Text (Alwin: „muss deutlicher werden als nur ein Text").
-  --seg-track: #dde2ea;
+  --seg-track: #e2e8f0; // `--color-basic-divider` (slate-200)
   // Graue Fläche um die weiße Notenseite (Liedblatt, PDF-Vorschau). Bis zum 02.10.2026 stand der
   // Wert dreimal von Hand im CSS. Im Dunklen bewusst gleich: Die Seite selbst bleibt weiß.
   --blatt-umgebung: #e6e8ec;
   // Grund des Liedblatt-Bildschirms – dort sitzt der Kopf. Hell = die Fläche um die Seite, damit
   // Kopf und Blattfläche ohne Kante ineinander übergehen (02.10.2026).
   --chart-grund: var(--blatt-umgebung);
-  --track-off: #d1d5db; // Toggle-Schiene (aus)
-  --scrim: rgba(15, 22, 28, 0.5); // Overlay hinter Sheets/Dialogen
+  --track-off: #cad5e2; // Toggle-Schiene (aus) – `--color-basic-interactive` (slate-300)
+  --scrim: rgba(15, 23, 43, 0.5); // Overlay hinter Sheets/Dialogen (slate-900, halb)
 
   // Header / Tab-Bar / Chart-Kopf und -Fuß. **Deckend und exakt die `theme-color` aus index.html.**
   // Seit die App unter einer deckenden Statusleiste beginnt (22.09.2026, iOS 26/27), malt iOS den
@@ -55,14 +60,18 @@
   // Variable, und die `theme-color` für iOS wird in `hooks/useSettings.ts` daraus GELESEN – hier
   // ändern genügt also.
   --nav-bg: #ffffff;
-  --shadow: 0 1px 2px rgba(17, 24, 39, 0.04); // Karten: kaum Schatten, der Rand trägt
-  --ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --shadow: 0 1px 1px rgba(30, 41, 59, 0.1); // Karten wie `c-card` in ChurchTools (slate-800, 10 %)
+  // Schrift wie ChurchTools (`--font-sans`). In ChurchTools ist Lato schon geladen; die Musik-App als PWA und
+  // das öffentliche Formular bringen sie selbst mit (`ui/design/schrift.ts`), damit sie auch offline stimmt.
+  --ui:
+    'Lato', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial,
+    sans-serif;
 
-  // Rundungen – drei Stufen, wie in der App: Karten, Kacheln, Bedienelemente.
-  --r-card: 12px; // Karten, Listen-Container, Dialoge
-  --r-tile: 10px; // Datumskacheln, Noten-Kacheln
-  --r-ctrl: 8px; // Knöpfe, Segmente, Inputs, Pills
-  --r-dialog: 14px; // zentrierte Dialoge (Sheet, ConfirmDialog)
+  // Rundungen – wie ChurchTools (`--radius-*`): Karten `lg`, Kacheln `md`, Bedienelemente `sm`.
+  --r-card: 8px; // Karten, Listen-Container – `--radius-lg`
+  --r-tile: 6px; // Datumskacheln, Noten-Kacheln – `--radius-md`
+  --r-ctrl: 4px; // Knöpfe, Segmente, Inputs, Pills – `--radius-sm`
+  --r-dialog: 8px; // zentrierte Dialoge (Sheet, ConfirmDialog) – wie die Karten
 }
 
 // ── Dunkel wie ChurchTools ───────────────────────────────────────────
@@ -185,9 +194,17 @@ html[data-theme='dark'] {
 }
 
 // SCHRIFTEN
-// UI ist der System-Font (bewusst wie ChurchTools). $font-sans = Spiegelung als SCSS-Konstante.
+// UI ist Lato wie in ChurchTools (`--ui`). $font-sans = Spiegelung als SCSS-Konstante.
 $font-sans:
-  -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  'Lato',
+  ui-sans-serif,
+  system-ui,
+  -apple-system,
+  BlinkMacSystemFont,
+  'Segoe UI',
+  Roboto,
+  Arial,
+  sans-serif;
 $font-display: $font-sans;
 $font-mono: 'JetBrains Mono', monospace;
 $font-serif: 'Merriweather', serif;

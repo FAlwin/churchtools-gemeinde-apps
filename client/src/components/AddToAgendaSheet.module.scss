@@ -29,7 +29,7 @@
   text-align: left;
   padding: 12px 15px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-card);
   background: var(--surface2);
   color: var(--text);
   font-family: var(--ui);
@@ -96,7 +96,7 @@
 .err {
   margin: 0;
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: var(--r-ctrl);
   background: rgba(178, 34, 71, 0.1);
   border: 1px solid rgba(178, 34, 71, 0.3);
   color: var(--red);

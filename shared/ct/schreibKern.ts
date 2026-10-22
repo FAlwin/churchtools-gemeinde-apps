@@ -17,7 +17,7 @@
  */
 import { agendaItemWritePayload, beginnPositionFuer, dienstgruppenNotizen } from './agendaPayload';
 import { arrangementWritePayload, type ArrangementOverrides } from './arrangementPayload';
-import { istWeggelassen } from './ablaufZeile';
+import { ablaufZeileAus, istWeggelassen, punktStand, type PunktStand } from './ablaufZeile';
 import type { CtAgenda, CtAgendaItem, CtArrangement, CtSong } from './typen';
 
 /** Ein Schreibvorgang – Pfad ohne `/api`, wie beim `CtLeser`. */
@@ -52,6 +52,15 @@ export interface CtSchreiber {
 export const ABLAUF_VERWEIGERT = 'Keine Berechtigung, den Ablauf in ChurchTools zu ändern.';
 
 const ABLAUF_GEAENDERT = 'Der Ablauf hat sich geändert. Bitte neu laden und erneut versuchen.';
+
+/**
+ * Meldungen bei einem **echten Konflikt** (E6-3c, #659; entschieden mit Alwin 22.10.2026: nur dann, nicht bei jeder
+ * Änderung am Ablauf). Status **412**: Die Oberfläche erkennt daran, dass sie neu lesen und – beim Punkt – fragen soll.
+ */
+export const PUNKT_GEAENDERT =
+  'Dieser Punkt wurde eben woanders geändert. Der Ablauf ist neu geladen – deine Änderung steht noch hier.';
+export const REIHENFOLGE_GEAENDERT =
+  'Die Reihenfolge wurde eben woanders geändert. Der Ablauf ist neu geladen – bitte noch einmal ziehen.';
 
 /**
  * Meldung, wenn der Ablauf in ChurchTools **abgeschlossen** ist (Alwin, 09.10.2026). ChurchTools antwortet
@@ -135,6 +144,8 @@ export async function ablaufUmsortieren(
   s: CtSchreiber,
   eventId: number,
   orderedItemIds: number[],
+  /** Die Reihenfolge vor dem Ziehen (E6-3c) – weicht die frische ab, hat jemand anderes umsortiert: 412. */
+  gesehen?: readonly number[],
 ): Promise<void> {
   const { items } = await s.agenda(eventId);
   const byId = new Map(items.map((i) => [i.id, i]));
@@ -142,6 +153,9 @@ export async function ablaufUmsortieren(
   // Schutz: nur erlauben, wenn die übergebene Reihenfolge exakt dieselben Punkte enthält.
   const same = orderedItemIds.length === items.length && orderedItemIds.every((id) => byId.has(id));
   if (!same) throw s.fehler(409, ABLAUF_GEAENDERT);
+  if (gesehen && (gesehen.length !== items.length || items.some((it, k) => it.id !== gesehen[k]))) {
+    throw s.fehler(412, REIHENFOLGE_GEAENDERT);
+  }
 
   const payload = orderedItemIds.map((id, index) => ({
     id,
@@ -223,10 +237,22 @@ export async function punktAendern(
   eventId: number,
   itemId: number,
   fields: PunktAenderung,
+  /**
+   * Was das Fenster beim Öffnen gesehen hat (E6-3c). Steht in einem Feld, das hier geschrieben wird, inzwischen etwas
+   * anderes, hat es jemand geändert: 412 statt still zu überschreiben. Ohne = „Trotzdem speichern“.
+   */
+  gesehen?: PunktStand,
 ): Promise<void> {
   const { items } = await s.agenda(eventId);
   const it = items.find((i) => i.id === itemId);
   if (!it) throw s.fehler(404, 'Ablaufpunkt nicht gefunden.');
+  if (gesehen) {
+    // Die Zeitzone spielt für die verglichenen Felder keine Rolle (die Uhrzeit wird nicht verglichen).
+    const frisch = punktStand(ablaufZeileAus(it, eventId, 'UTC'));
+    if (geschriebeneFelder(fields).some((f) => frisch[f] !== gesehen[f])) {
+      throw s.fehler(412, PUNKT_GEAENDERT);
+    }
+  }
 
   const body = agendaItemWritePayload(it, {
     // Beim Aufheben der Lied-Verknüpfung den Titel leeren (der Liedtitel soll nicht als Text
@@ -245,6 +271,17 @@ export async function punktAendern(
     verweigert: ABLAUF_VERWEIGERT,
     fehler: 'Ablaufpunkt ändern fehlgeschlagen',
   });
+}
+
+/** Welche Felder des Punkt-Stands eine Änderung schreibt – nur die werden auf Konflikt geprüft (E6-3c). */
+function geschriebeneFelder(f: PunktAenderung): (keyof PunktStand)[] {
+  const felder: (keyof PunktStand)[] = [];
+  if (f.title !== undefined) felder.push('title');
+  if (f.responsible !== undefined) felder.push('responsibleText');
+  if (f.durationMin !== undefined) felder.push('durationMin');
+  if (f.note !== undefined) felder.push('note');
+  if (f.arrangementId !== undefined || f.unlink) felder.push('lied');
+  return felder;
 }
 
 /**

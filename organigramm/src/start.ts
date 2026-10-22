@@ -20,6 +20,8 @@ import {
 } from '@shared/organigramm/gruppen';
 import { typFarbenAus } from '@shared/organigramm/farbe';
 import { orgRechteAus, type OrgRechte } from '@shared/organigramm/rechte';
+import { rollenAus, type Rolle } from '@shared/organigramm/mitglieder';
+import { diensteAus, type Dienst } from '@shared/ct/dienste';
 
 export interface Start {
   ichId: number;
@@ -29,20 +31,32 @@ export interface Start {
   gruppen: OrgGruppe[];
   /** Der Baum daraus; Wurzeln = Bereiche. */
   baum: Knoten[];
+  /** Obergruppen je Gruppe (auch unsichtbare) – fürs Gruppenfenster („gehört zu …“). */
+  eltern: Map<number, number[]>;
   /** Farbname je Gruppentyp – für Gruppen ohne eigene Farbe. */
   typFarben: Map<number, string | null>;
+  /** Name je Gruppentyp (`nameTranslated`, sonst `name`) – für den Filter und das Gruppenfenster. */
+  typNamen: Map<number, string>;
+  /** Die Gruppenrollen der Gemeinde: Leitung (`isLeader`), Reihenfolge, Name (O2). */
+  rollen: Map<number, Rolle>;
+  /**
+   * Die Dienste der Gemeinde (`/services`, mit ihren ChurchTools-Gruppen) – oder `null`, wenn ChurchTools sie gerade
+   * nicht liefert. Sie sind Beiwerk wie der Gemeindename: Ohne sie fehlen nur die Dienst-Schildchen, der Baum steht.
+   */
+  dienste: Map<number, Dienst> | null;
   rechte: OrgRechte;
 }
 
 /** **Wirft**, wenn etwas davon nicht lesbar ist – ein halber Baum sähe aus wie ein ganzer. */
 export async function ladeStart(): Promise<Start> {
   const ich = await ladeIch();
-  const [gruppenRoh, hierarchieRoh, typenRoh, rechteRoh] = await Promise.all([
+  const [gruppenRoh, hierarchieRoh, typenRoh, rechteRoh, diensteRoh] = await Promise.all([
     // `groups` liefert ohne `limit` nur 10 (gemessen 12.10.2026) – deshalb alle Seiten.
     ctAlleSeiten<RohGruppe>('/groups'),
     ctDaten<unknown>('/groups/hierarchies'),
     ctDaten<unknown>('/group/grouptypes'),
     ctDaten<Record<string, Record<string, unknown>> | null>('/permissions/global'),
+    ctDaten<unknown>('/services').catch(() => null),
   ]);
   if (!Array.isArray(hierarchieRoh)) {
     throw new ApiError(502, 'ChurchTools hat die Gruppen-Hierarchie nicht geliefert.');
@@ -51,13 +65,36 @@ export async function ladeStart(): Promise<Start> {
     throw new ApiError(502, 'ChurchTools hat die Gruppentypen nicht geliefert.');
   }
   const gruppen = orgGruppenAus(gruppenRoh);
+  const eltern = elternAus(hierarchieRoh as RohHierarchie[]);
+  const typen = typenRoh as {
+    id?: unknown;
+    name?: unknown;
+    nameTranslated?: unknown;
+    color?: unknown;
+  }[];
   return {
     ichId: ich.id,
     vorname: ich.vorname,
     gemeinde: ich.gemeinde,
     gruppen,
-    baum: baumAus(gruppen, elternAus(hierarchieRoh as RohHierarchie[])),
-    typFarben: typFarbenAus(typenRoh as { id?: unknown; color?: unknown }[]),
+    baum: baumAus(gruppen, eltern),
+    eltern,
+    typFarben: typFarbenAus(typen),
+    typNamen: new Map(
+      typen.flatMap((t) => {
+        const name = [t.nameTranslated, t.name].find(
+          (n) => typeof n === 'string' && n.trim() !== '',
+        );
+        return typeof t.id === 'number' && typeof name === 'string'
+          ? [[t.id, name.trim()] as const]
+          : [];
+      }),
+    ),
+    // Die Rollen liest `ladeIch` schon (`/group/roles`) – roh, mit allen Feldern; kein zweiter Abruf.
+    rollen: rollenAus(ich.rollen),
+    dienste: Array.isArray(diensteRoh)
+      ? diensteAus(diensteRoh as Parameters<typeof diensteAus>[0])
+      : null,
     rechte: orgRechteAus(rechteRoh, (status, meldung) => new ApiError(status, meldung)),
   };
 }

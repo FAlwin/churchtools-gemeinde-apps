@@ -27,7 +27,10 @@ vi.mock('./ctPersonenAblage.js', async () => {
     __reset: () => ablagen.clear(),
   };
 });
-vi.mock('./ctTeilenServer.js', () => ({ teilenSetzen: vi.fn() }));
+vi.mock('./ctTeilenServer.js', () => ({
+  teilenSetzen: vi.fn(),
+  liederMeldenLeise: vi.fn(() => Promise.resolve()),
+}));
 
 const { config } = await import('../config.js');
 const annotations = await import('./annotations.js');
@@ -125,6 +128,16 @@ describe('Schreiben auf eine Seite, die erst auf dem Volume liegt', () => {
     expect(await konto.anmerkungenHolen(COOKIE, ICH, [1])).toEqual({});
     await fertigUmgezogen();
     expect(fake.aktuell.namen(ICH)).not.toContain(`musikapp_${NAS_SEITE}.png`);
+  });
+});
+
+describe('Verzeichnis der Team-Notizen (#554)', () => {
+  it('nach dem Speichern einer Anmerkung werden die Lieder gemeldet – für genau dieses Konto', async () => {
+    const teilen = await import('./ctTeilenServer.js');
+    vi.mocked(teilen.liederMeldenLeise).mockClear();
+    await fertigUmgezogen();
+    await konto.anmerkungSchreiben(COOKIE, ICH, CT_SEITE, { strokes: BILD });
+    expect(teilen.liederMeldenLeise).toHaveBeenCalledWith(COOKIE, ICH);
   });
 });
 

@@ -1,9 +1,11 @@
 # Organigramm – ChurchTools-Erweiterung
 
-> **Stand: O1 (22.10.2026)** – Grundgerüst: zeigt die Bereiche (oberste Gruppen) mit der Zahl ihrer Gruppen,
-> jede in der Farbe der Gruppe. Als Nächstes (Bauplan O2–O8): der ganze Baum mit Leitung und Mitgliedern,
-> Personen-Sicht und Hinweise (nur Leitung/Admin), Präsentation, Gruppen umhängen und anlegen, Leitung und
-> Mitglieder pflegen, Plan „neue Gliederung“ mit Umbau-Liste. Diese Anleitung wächst mit.
+> **Stand: O2 (22.10.2026)** – der ganze Baum: Bereiche als Karten (große zuerst), Gruppen als Zeilen mit
+> Baumlinien, in der Farbe der Gruppe, mit Personen, Leitung und Diensten; Klick öffnet das Gruppenfenster
+> (Mitglieder nach Rollen, Ober-/Untergruppen, „In ChurchTools öffnen“). Gruppentypen lassen sich ausblenden.
+> Gruppen, deren Mitglieder man nicht sehen darf, bleiben im Baum („Mitglieder nicht sichtbar“). Als Nächstes
+> (Bauplan O3–O8): offene Plätze, Personen-Sicht und Hinweise (nur Leitung/Admin), Präsentation, Gruppen umhängen
+> und anlegen, Leitung und Mitglieder pflegen, Plan „neue Gliederung“ mit Umbau-Liste. Diese Anleitung wächst mit.
 
 Das Organigramm zeigt die Gemeinde als Baum – Bereiche, Gruppen, Personen – so, wie die Gruppen-Hierarchie in
 ChurchTools steht, und hilft, die Organisation darin weiterzubauen. **Alles liegt in ChurchTools** – es gibt keinen

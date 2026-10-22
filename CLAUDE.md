@@ -188,7 +188,7 @@ churchtools-gemeinde-apps/
 │       ├── types/           # server-spezifische Typen
 │       └── utils/           # Hilfsfunktionen (u. a. isoTag.ts = die eine Datums-Formatierung)
 ├── shared/types/            # geteilte Typen (Service, SetlistSong, Setlist, …)
-├── shared/organigramm/      # Regeln des Organigramms: gruppen (Baum aus Gruppen + Hierarchie), farbe (eigene Farbe vor Typ), personen (jede Person einmal), rechte (O1)
+├── shared/organigramm/      # Regeln des Organigramms: gruppen (Baum, Typen ausblenden), farbe (eigene vor Typ), mitglieder (Rollen aus CT: isLeader/sortKey), personen (jede Person einmal), rechte (O1/O2)
 ├── shared/dienstplan/       # Regeln des Dienstplaners: termine (Liste, E3-2), start (Startseite, E3-3), plan (Matrix, E3-4), fenster + werWieOft (E3-5), einteilen (Schreibkern, E4-1), werKann (E4-2)
 ├── shared/anmeldung/        # Regeln der Anmeldungen: preis, formular (#474), uebersicht (#480), vorlagen, termin, felder, rechte (#486), bezahlung (#507), gestaltung + baukasten (A5)
 ├── anmeldungen/             # Anmeldungen: ChurchTools-Erweiterung für Veranstalter (#474, nur Erweiterung);
@@ -497,7 +497,9 @@ Strg/⌘/Alt, in Eingaben oder Leertaste auf einem Knopf); im Scroll-Modus geht 
 (#609): zur nächsten Halte-Stelle (Titel, Teil-Anfang, `----`), wenn sie schon zu sehen ist, sonst ⅔ Bildschirm
 (`SCHRITT_ANTEIL`, Alwin: 85 % war zu weit) – Regel `pedalZiel` (`utils/pedalSchritt.ts`), Halte-Stellen
 `pedalHalte` (`utils/rollenAbbildung.ts`, aus dem Satzplan: `stuecke` + `weiterschalten`, beim Setzen der Rolle
-protokolliert). Hochgeladene PDFs haben keine Halte-Stellen → ⅔. Die Fußpfeile ebenso. Die Ansicht schreibt die
+protokolliert; Luft über einem Teil `HALTE_LUFT` in mm, höchstens der halbe Abstand zum Teil davor bzw. Kopf
+`KOPF_ABSTAND` – feste Bildpunkte ließen auf schmalen Handys einen Streifen der Zeile davor herein; am `----`
+keine Luft). Hochgeladene PDFs haben keine Halte-Stellen → ⅔. Die Fußpfeile ebenso. Die Ansicht schreibt die
 Halte-Stellen bei jedem Tritt nach `data-halte` (für den E2E). E2E: `e2e/chart-scrollen.spec.ts`.
 
 **Gesten:** **ein Finger blättert, zwei Finger zoomen + verschieben** (auch im Zeichenmodus – ein
@@ -763,6 +765,13 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **v2.37.0 (22.10.2026) = Rückmeldung des Musik-Bereichsleiters + Dev-Stammtisch-Fragen.** Flow-Zeile
+  `{flow:}` (#606), Scroll-Modus mit einer langen Seite je Lied (#607) und gemeinsamen Anmerkungen (#614), Malen
+  darauf (#608), Lasso (#615), Notizen unter dem Liedende (#626), Pedal Teil für Teil mit `----` (#609),
+  Dunkelmodus wie ChurchTools (#565), Logo auf dem Liedblatt schaltbar (Verwaltung), Ablauf-Abgleich 30 s
+  (#557), Inhaltsverzeichnis der Team-Notizen (#554); Fix #651 (eigene Texte beim Stift-an auf der Rolle).
+  Einführung: nur Text, nicht neu gezeigt (Alwin). Dazu aus dem anderen Teil des Repos Dienstplaner E6,
+  Anmeldungen A6-5/A7 und Protokolle S1. Offen in #557: Limit bei ChurchTools erfragen, nachmessen.
 - **v2.36.0 (15.10.2026) = Scroll-Modus + Pedal-Tasten** (PR #567, #551; dazu aus dem anderen Teil des
   Repos Dienstplaner E4-3-1 bis E4-3-3). Mehr → Liedansicht: Blättern / Scrollen je Gerät; Scrollen zeigt
   dieselben Seiten nahtlos untereinander in voller Breite (`ScrollDeck`), Malen über die einzeln geöffnete

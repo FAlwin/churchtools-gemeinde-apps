@@ -9,6 +9,8 @@ export const PAGE_H = 297;
 export const MARGIN = 12;
 /** Abstand zwischen zwei Spalten. */
 export const COL_GAP = 8;
+/** Abstand vom Titelkopf (oder Logo) bis zum ersten Teil. */
+export const KOPF_ABSTAND = 4;
 
 /** Breite einer Spalte bei `spalten` Spalten. */
 export function spaltenBreite(spalten: number): number {

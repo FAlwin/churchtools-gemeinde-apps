@@ -21,7 +21,7 @@ import {
   type OeffentlicheEinstellungen,
 } from './formular';
 import { centAusEuroText, kannEtwasKosten } from './preis';
-import { istNachrueckZahlung } from './zahlung';
+import { eigeneZahlungArt, istEigeneZahlung } from './zahlung';
 
 /** Im Verlauf stehen die Felder mit ihrem Namen – so heißt die Anmelde-Nr. dort. */
 const NR_NAME = SYSTEMFELDER.find((f) => f.id === 'nr')!.name;
@@ -252,14 +252,14 @@ export interface ListenPerson {
 }
 
 /**
- * **Eine Zahlung** (A7-2/A7-3) – die der Anmeldung (bei der ersten Person) und je Nachgerückter eine eigene (Alwin,
- * 19.10.2026: „als ob ein Kind neu angemeldet wurde“). Steht in den Feldern „Betrag“, „Aufschlüsselung“, „Bezahlt“ …
+ * **Eine Zahlung** (A7-2/A7-3) – die der Anmeldung (bei der ersten Person) und je Nachgerückter bzw. später dazu
+ * angemeldeter Person (A7-4b) eine eigene (Alwin, 19.10.2026: „als ob ein Kind neu angemeldet wurde“). Steht in den Feldern „Betrag“, „Aufschlüsselung“, „Bezahlt“ …
  * der Person, bei der sie liegt.
  */
 export interface Zahlung {
   /** Bei wem sie steht – `null`, wenn die Person abgesagt hat (dann aus dem Verlauf, nur zum Ansehen). */
   personId: number | null;
-  wofuer: 'anmeldung' | 'nachgerueckt';
+  wofuer: 'anmeldung' | 'nachgerueckt' | 'dazu';
   /** Vorname der Person, bei der sie steht. */
   name: string;
   betragCent: number | null;
@@ -348,8 +348,8 @@ export function anmeldungenAus(
     const abgesagt = nr ? stand.absagen.filter((a) => nrVon(a.werte) === nr) : [];
     const aufVon = (w: Werte) =>
       e.ctFelder.aufschluesselung === undefined ? undefined : w[e.ctFelder.aufschluesselung];
-    // Die eigene Zahlung einer Nachgerückten (A7-3) macht sie nicht zur ersten Person.
-    const erste = ms.find((m) => traegt(m.werte) && !istNachrueckZahlung(aufVon(m.werte)));
+    // Eine eigene Zahlung (nachgerückt A7-3, dazu angemeldet A7-4b) macht die Person nicht zur ersten.
+    const erste = ms.find((m) => traegt(m.werte) && !istEigeneZahlung(aufVon(m.werte)));
     // Hat die erste Person abgesagt, steht das Einmalige nur noch im Verlauf (die neueste Absage, die es trägt).
     const ausVerlauf = erste
       ? undefined
@@ -414,7 +414,7 @@ export function anmeldungenAus(
         zahlungAus(
           m.werte,
           m.personId,
-          istNachrueckZahlung(aufVon(m.werte)) ? 'nachgerueckt' : 'anmeldung',
+          eigeneZahlungArt(aufVon(m.werte)) ?? 'anmeldung',
           m.vor,
           hatPlatz(m.personId),
         ),

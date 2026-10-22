@@ -275,6 +275,18 @@ const events = [
     adminIds: [PERSON.id],
     eventAdminIds: [],
   },
+  /**
+   * **Konflikt** (E6-3c, #659): Der Test ändert hier einen Punkt „von außen“ (wie die andere App), während sein
+   * Fenster offen ist. Eigener Termin, damit die parallel laufenden Tests nichts davon merken.
+   */
+  {
+    id: EVENT_ID + 9,
+    startDate: isoInDays(12),
+    endDate: isoInDays(12, 12),
+    name: 'Konflikt-Probe (Stub)',
+    calendar: { domainIdentifier: '1', title: 'Gottesdienst' },
+    appointmentId: null,
+  },
 ];
 
 /** Die Abläufe der beiden Rechte-Termine (#635) – nur gelesen. */
@@ -317,6 +329,23 @@ const agendaAbschluss = {
   items: [
     { id: 801, title: 'Ansage (Stub)', type: 'normal', duration: 300, position: 0, startTimes: {} },
   ],
+};
+
+/** Der Ablauf des Konflikt-Termins (E6-3c) – lesen, Punkte ändern (Felder ersetzen) und umsortieren. */
+const agendaKonflikt = {
+  calendarId: 2,
+  eventStartPosition: 0,
+  items: ['Ansage', 'Gebet'].map((title, n) => ({
+    id: 951 + n,
+    title: `${title} (Konflikt)`,
+    type: 'normal',
+    duration: 300,
+    position: n,
+    startTimes: {},
+    note: '',
+    responsible: { text: '' },
+    serviceGroupNotes: [],
+  })),
 };
 
 /**
@@ -743,6 +772,37 @@ const server = createServer((req, res) => {
         }
         if (typeof neu.eventStartPosition === 'number')
           a.eventStartPosition = neu.eventStartPosition;
+        return json(res, { data: a });
+      }
+      json(res, { message: 'Stub kennt das nicht' }, 400);
+    });
+    return;
+  }
+  // Konflikt-Termin (E6-3c): lesen, einen Punkt ändern (PUT ersetzt die Felder wie ChurchTools), umsortieren.
+  const kPunkt = path.match(new RegExp(`^/api/events/${EVENT_ID + 9}/agenda/items/(\\d+)$`));
+  if (path === `/api/events/${EVENT_ID + 9}/agenda` || kPunkt) {
+    const a = agendaKonflikt;
+    if (req.method === 'GET') return json(res, { data: a });
+    let body = '';
+    req.on('data', (chunk) => (body += chunk));
+    req.on('end', () => {
+      const neu = JSON.parse(body || '{}');
+      if (req.method === 'PUT' && kPunkt) {
+        const punkt = a.items.find((i) => i.id === Number(kPunkt[1]));
+        if (!punkt) return json(res, { message: 'AgendaItem not found' }, 404);
+        Object.assign(punkt, {
+          title: neu.title ?? punkt.title,
+          note: neu.note ?? '',
+          duration: neu.duration ?? 0,
+          responsible: { text: neu.responsible ?? '' },
+        });
+        return json(res, { data: punkt });
+      }
+      if (req.method === 'PUT' && !kPunkt) {
+        if (Array.isArray(neu.items)) {
+          a.items = neu.items.map((x) => a.items.find((i) => i.id === x.id)).filter(Boolean);
+          a.items.forEach((i, n) => (i.position = n));
+        }
         return json(res, { data: a });
       }
       json(res, { message: 'Stub kennt das nicht' }, 400);

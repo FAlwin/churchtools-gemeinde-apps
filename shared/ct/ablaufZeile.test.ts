@@ -152,7 +152,7 @@ describe('ablaufZeileAus (E6-1a)', () => {
       isHeader: false,
       responsible: [{ label: 'Ella', open: false }],
       responsibleText: '[Musik]',
-      song: { title: 'Way Maker' },
+      song: { title: 'Way Maker', arrangementId: 2 },
       time: '09:55',
       vorBeginn: true,
       durationMin: 5,

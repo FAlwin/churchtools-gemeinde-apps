@@ -7,6 +7,29 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Organigramm, O3, #672)
+
+- **Reiter Organigramm · Personen · Hinweise** (am Handy unten): Personen und Hinweise gibt es nur für die **Leitung
+  eines Bereichs** – wer eine Gruppe leitet, sieht sie samt allen Untergruppen; Gruppen-Admins sehen alles; wer nichts
+  leitet, sieht nur den Baum (auch nicht über die Adresse `#personen`). Das ist die Richtung, in der ChurchTools selbst
+  Rechte vererbt (O0 §5).
+- **Personen:** jede Person einmal, mit ihren Gruppen (Leitung hervorgehoben), Einsätzen der letzten 6 Monate (mit
+  Balken) und Einteilungen der nächsten 3. Filter „Fast jede Woche“ (ab 24 Einsätzen), „In 3+ Gruppen“, „Ohne
+  Einsatz“ (in einem Dienst-Team, aber weder vergangen noch kommend eingeteilt), „Leitung“; Suche nach Namen.
+- **Personenfenster:** Gruppen mit Rolle (zum Weiterklicken), Einsätze je Dienst, letzter Einsatz, „In ChurchTools
+  öffnen“.
+- **Hinweise:** Teams ohne Leitung (Gruppe mit Mitgliedern, niemand mit Leitungs-Rolle), Personen, die fast jede
+  Woche dienen, Personen in einem Dienst-Team ohne Einsatz, offene Mitgliedsanfragen. Filter und Hinweise nutzen
+  DIESELBEN Regeln (`fastJedeWoche`, `dienstTeamOhneEinsatz`).
+- **Offene Plätze** im Baum („x offen“): freie Plätze in kommenden Terminen – bei Diensten mit mehreren Gruppen nur an
+  der ersten. Ein Platz ist frei nach der Regel des Dienstplaners (`istFrei`); „Namen verbergen“ (`-2`), Gäste,
+  abgesagte Termine und ungültige Plätze zählen für niemanden.
+- **Einsätze laden** (`/events?include=eventServices`, 6 Monate zurück, 3 voraus) läuft neben dem Baum. Scheitert es
+  vorübergehend, sagen Personen und Hinweise das („Erneut versuchen“ lädt nur die Einsätze) – „fast jede Woche“ und
+  „ohne Einsatz“ entfallen dann, statt jede Person als „ohne Einsatz“ zu melden. Keine Liste von ChurchTools gilt als
+  Fehler, nicht als „niemand hat Einsätze“. Abgemeldet → Hinweis für die ganze Seite.
+- **Mitglieder:** angefragte (`requested`) kommen getrennt für den Hinweis; wartende und beendete fallen weg.
+
 ### Neu (Musik-App, Lied-Editor L2)
 
 - **Ablauf als Kärtchen** (Alwin: „wie in ProPresenter“): Über dem Text stehen die Teile des Lieds als

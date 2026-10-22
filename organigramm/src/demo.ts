@@ -62,12 +62,41 @@ const MITGLIEDER: Record<number, ReturnType<typeof m>[]> = {
   12: [m(1, 16), m(9, 15), m(11, 15)],
   15: [m(1, 16), m(10, 15)],
   47: [m(12, 16), m(4, 15), m(6, 15)],
-  49: [m(12, 16), m(4, 15)],
   11: [m(1, 16), m(2, 17), m(3, 15)],
   24: [m(5, 16), m(8, 15)],
   37: [m(3, 16)],
   34: [m(2, 39), m(4, 15), m(5, 15), m(6, 15)],
+  // Kim (11) hat bei Café Team 1 angefragt – „offene Anfrage“
+  49: [m(12, 16), m(4, 15), { ...m(11, 15), groupMemberStatus: 'requested' }],
 };
+
+// Termine: 26 Sonntage zurück, 12 voraus. Alex (1) dient fast jeden Sonntag, Jan (10) nie; freie Plätze kommen.
+const TAG = 86_400_000;
+const sonntag = (wochen: number) =>
+  new Date(Date.now() + wochen * 7 * TAG).toISOString().slice(0, 10) + 'T08:00:00Z';
+const platz = (serviceId: number, personId: number | null) => ({
+  serviceId,
+  personId,
+  name: personId ? NAMEN[personId - 1] : null,
+  isAccepted: true,
+});
+const TERMINE = Array.from({ length: 38 }, (_, i) => {
+  const w = i - 26;
+  const vorbei = w < 0;
+  return {
+    id: 500 + i,
+    name: 'Gottesdienst',
+    startDate: sonntag(w),
+    endDate: sonntag(w),
+    eventServices: [
+      platz(6, vorbei || w < 2 ? 1 : null),
+      platz(8, vorbei && i % 3 === 0 ? 11 : null),
+      platz(4, vorbei && i % 2 === 0 ? 5 : null),
+      platz(1, vorbei ? (i % 2 ? 2 : 3) : null),
+      platz(13, vorbei ? 12 : null),
+    ],
+  };
+});
 
 const HIERARCHIE = [
   { groupId: 10, parents: [], children: [6, 9, 7] },
@@ -116,6 +145,7 @@ function daten(fall: string): Record<string, unknown> {
     '/api/info': { siteName: 'Beispielgemeinde' },
     '/api/groups': { data: GRUPPEN, meta: { pagination: { lastPage: 1 } } },
     '/api/groups/hierarchies': { data: HIERARCHIE },
+    '/api/events': { data: TERMINE },
     '/api/group/grouptypes': {
       data: [
         { id: 1, name: 'Kleingruppe', color: 'sky' },

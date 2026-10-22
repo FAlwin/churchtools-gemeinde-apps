@@ -225,6 +225,34 @@ describe('gruppeEinrichten', () => {
     expect(einstellungen()).toEqual([expect.objectContaining({ punkte: 'direkt' })]);
   });
 
+  it('Herabstufen/Kalender weg: selbst gesetzte Kalender-Rechte gehen, von Hand gesetzte bleiben', async () => {
+    rechte.set(LEITER, new Set([schl(403, 4)])); // von Hand, vor dem Einrichten
+    await gruppeEinrichten(MODUL, GRUPPE, WAHL);
+    expect(von(LEITER)).toContain(schl(404, 4));
+    expect(von(TEILNEHMER)).toContain(schl(403, 4));
+    await gruppeEinrichten(MODUL, GRUPPE, {
+      ...WAHL,
+      rollen: [
+        { rolle: LEITER, stufe: 'leitung' },
+        { rolle: TEILNEHMER, stufe: 'keine' },
+      ],
+      kalender: null,
+    });
+    expect(von(TEILNEHMER)).not.toContain(schl(403, 4));
+    expect(von(LEITER)).not.toContain(schl(404, 4));
+    expect(von(LEITER)).toContain(schl(403, 4)); // von Hand – bleibt
+    expect(einstellungen()).toEqual([expect.objectContaining({ vergeben: [] })]);
+  });
+
+  it('Rolle fehlt in der neuen Wahl (z. B. gelöscht): ihre selbst gesetzten Kalender-Rechte gehen trotzdem', async () => {
+    await gruppeEinrichten(MODUL, GRUPPE, WAHL);
+    await gruppeEinrichten(MODUL, GRUPPE, {
+      ...WAHL,
+      rollen: [{ rolle: LEITER, stufe: 'leitung' }],
+    });
+    expect(von(TEILNEHMER)).not.toContain(schl(403, 4));
+  });
+
   it('Vorlagen schon da: keine zweiten Standard-Vorlagen', async () => {
     await gruppeEinrichten(MODUL, GRUPPE, WAHL);
     await gruppeEinrichten(MODUL, { id: 11, name: 'Gemeindeleitung', versteckt: true }, WAHL);

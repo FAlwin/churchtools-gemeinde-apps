@@ -1,4 +1,8 @@
 import type { Reiter } from '@ui/bedienung/ReiterLeiste';
+import {
+  adresseFuer as adresseVon,
+  reiterAusAdresse as ausAdresse,
+} from '@ui/bedienung/reiterAdresse';
 
 /** Die Bereiche des Dienstplaners (Entwurf v17): Start · Termine · Planen · Abwesenheiten. */
 export type ReiterId = 'start' | 'termine' | 'planen' | 'abwesenheiten';
@@ -18,17 +22,13 @@ export function sichtbareReiter(darfPlanen: boolean): Reiter<ReiterId>[] {
   return ALLE_REITER.filter((r) => r.id !== 'planen' || darfPlanen);
 }
 
-/**
- * Der Reiter steht in der Adresse (`#/termine`), damit Neuladen und der Zurück-Knopf funktionieren.
- * Unbekannt oder nicht erlaubt → Start.
- */
+/** Der Reiter aus der Adresse (`#/termine`) – Regel in `@ui/bedienung/reiterAdresse`. Unbekannt → Start. */
 export function reiterAusAdresse(hash: string, erlaubt: Reiter<ReiterId>[]): ReiterId {
-  const id = /^#\/([a-z]+)$/.exec(hash)?.[1];
-  return erlaubt.find((r) => r.id === id)?.id ?? 'start';
+  return ausAdresse(hash, erlaubt, 'start');
 }
 
 export function adresseFuer(id: ReiterId): string {
-  return id === 'start' ? '' : `#/${id}`;
+  return adresseVon(id, 'start');
 }
 
 /** Die Termin-Ansicht (E6-1b) hat eine eigene Adresse (`#/termin/148`) – Neuladen und Zurück funktionieren. */

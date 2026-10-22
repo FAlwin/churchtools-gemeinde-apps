@@ -4,6 +4,7 @@ import {
   ausrichten,
   darfVerwalten,
   istEinstellung,
+  vergebenNachher,
   rechteAus,
   rechteNummernAus,
   rechtRumpf,
@@ -185,6 +186,41 @@ describe('ausrichten', () => {
   });
 });
 
+describe('Zusatzrechte (Kalender, 10119): nur selbst gesetzte werden entzogen', () => {
+  const ohneKalender: Einrichtung = { ...EINRICHTUNG, kalender: null, versteckt: false };
+  const kal = { rolle: 71, authId: 403, dataId: 15 };
+  const versteckt = { rolle: 71, authId: VERSTECKTE_GRUPPE_SEHEN, dataId: null };
+
+  it('von der Verwaltung gesetzt (in `vergeben`): wird beim Wechsel entzogen', () => {
+    const a = ausrichten(sollRechte(ohneKalender, N), [kal, versteckt], ohneKalender, N, [
+      kal,
+      versteckt,
+    ]);
+    expect(a.entziehen).toEqual([kal, versteckt]);
+  });
+
+  it('von Hand gesetzt (nicht in `vergeben`): bleibt', () => {
+    const a = ausrichten(sollRechte(ohneKalender, N), [kal, versteckt], ohneKalender, N, []);
+    expect(a.entziehen).toEqual([]);
+  });
+
+  it('vergebenNachher: gerade gesetzte und früher gesetzte Zusatzrechte im Soll – keine von Hand', () => {
+    const soll = sollRechte(EINRICHTUNG, N);
+    const zusatz = soll.filter((r) => [403, 404, VERSTECKTE_GRUPPE_SEHEN].includes(r.authId));
+    // zusatz[0] war schon von Hand da – also nicht in `setzen` und nicht gemerkt.
+    const gesetzt = zusatz.slice(1);
+    expect(vergebenNachher(soll, gesetzt, [], N)).toEqual(gesetzt);
+    // früher gesetzt, heute schon da (also nicht in `setzen`) – bleibt gemerkt
+    expect(vergebenNachher(soll, [], gesetzt, N)).toEqual(gesetzt);
+    // Datenrechte zählen nie als Zusatzrecht, auch wenn sie gerade gesetzt wurden
+    expect(vergebenNachher(soll, soll, [], N)).toEqual(zusatz);
+  });
+
+  it('nicht mehr im Soll: fällt aus `vergeben` heraus', () => {
+    expect(vergebenNachher(sollRechte(ohneKalender, N), [], [kal], N)).toEqual([]);
+  });
+});
+
 describe('abweichungen', () => {
   const soll = sollRechte(EINRICHTUNG, N);
   const weg = { rolle: 71, authId: N.datenAendern, dataId: 60 };
@@ -221,6 +257,7 @@ describe('istEinstellung', () => {
   it('erkennt die eigene Einstellung', () => {
     expect(istEinstellung(gut)).toBe(true);
     expect(istEinstellung({ ...gut, kalender: 4, punkte: 'direkt' })).toBe(true);
+    expect(istEinstellung({ ...gut, vergeben: [{ rolle: 1, authId: 403, dataId: 4 }] })).toBe(true);
   });
   it('lehnt Fremdes und Kaputtes ab', () => {
     expect(istEinstellung(null)).toBe(false);
@@ -228,6 +265,7 @@ describe('istEinstellung', () => {
     expect(istEinstellung({ ...gut, fassung: 2 })).toBe(false);
     expect(istEinstellung({ ...gut, rollen: [{ rolle: 1, stufe: 'chef' }] })).toBe(false);
     expect(istEinstellung({ ...gut, punkte: 'egal' })).toBe(false);
+    expect(istEinstellung({ ...gut, vergeben: [{ rolle: 1 }] })).toBe(false);
   });
 });
 

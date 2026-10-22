@@ -309,11 +309,23 @@
 }
 
 // „Rückgängig“ im Fenster (Alwin, 19.10.2026) – wie die Leiste, aber im Fluss des Fensters statt unten fest.
+// Bricht um: In einem schmalen Fenster (Handy) schob der Text „Mail schreiben“ und „Rückgängig“ sonst rechts aus dem
+// Fenster (Durchklicken 22.10.2026). Der Text nimmt den Platz, die Knöpfe rutschen bei Bedarf darunter.
 .imFenster {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  justify-content: flex-end;
+  gap: 8px 10px;
+
+  > span:first-child {
+    flex: 1 1 12em;
+    min-width: 0;
+  }
+
+  > button {
+    flex: none;
+  }
   margin: 10px 0 4px;
   padding: 8px 8px 8px 12px;
   border-radius: var(--r-card);

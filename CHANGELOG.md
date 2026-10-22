@@ -7,6 +7,22 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Anmeldungen, A7-4b)
+
+- **Person zur Anmeldung dazu** (Entwurf `a7-4-von-hand-v1`): „＋ Person dazu“ im Fenster einer Anmeldung (nur mit
+  Anmelde-Nr.). Suchen oder neu anlegen wie bei A7-4a, dann nur die Fragen der Person – Kontakt, Unterschrift und
+  Auswahl stehen schon bei der Anmeldung. Gleiche Anmelde-Nr., Platz nach der Regel des Formulars.
+- **Eigene Zahlung** (Alwin, 22.10.2026) wie beim Nachrücken: um so viel wird die Anmeldung nach den Regeln teurer
+  (Kopfzeile „Dazu angemeldet am …“). Die Rechnung steht jetzt an EINER Stelle für Nachrücken und Person dazu
+  (`eigeneZahlung`); Liste und Nachprüfung erkennen beide Arten eigener Zahlung (`istEigeneZahlung`). Wer wartet,
+  bekommt noch keine Zahlung – sie folgt beim Nachrücken.
+- Danach „Mail schreiben“ (an die Adresse der Anmeldung) und „Rückgängig“ im Fenster; Abbrechen führt zurück in die
+  Anmeldung.
+- Unter einer eigenen Zahlung steht „Gilt nur für <Name>“ statt „Gilt für die ganze Anmeldung“ (auch bei
+  Nachgerückten; gefunden beim Durchklicken am 22.10.2026).
+- „Rückgängig“ im Fenster bricht in schmalen Fenstern (Handy) um – „Mail schreiben“ und „Rückgängig“ liefen dort
+  rechts aus dem Fenster.
+
 ## [2.37.0] – 2026-10-22
 
 ### Geändert (Musik-App, #554)

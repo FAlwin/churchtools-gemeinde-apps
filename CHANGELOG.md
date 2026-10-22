@@ -7,6 +7,20 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Musik-App, Lied-Editor L2)
+
+- **Ablauf als Kärtchen** (Alwin: „wie in ProPresenter“): Über dem Text stehen die Teile des Lieds als
+  Kärtchen in der Reihenfolge, in der gesungen wird. Am Griff ziehen verschiebt, **×** entfernt, **+ Vers 1**
+  usw. hängt einen Teil an, **Wie im Text** stellt die Reihenfolge des Texts wieder her; Rückgängig wirkt wie
+  beim Tippen. Ein Name, zu dem es keinen Teil gibt, ist rot markiert („fehlt im Text“). Am Handy ist
+  „Ablauf“ ein eigener Bereich neben Text und Vorschau. Gespeichert wird wie bisher die `{flow: …}`-Zeile –
+  im Text ist sie jetzt unsichtbar, und „Format → Ablauf“ entfällt.
+
+### Intern (gemeinsam)
+
+- Die Zieh-Einstellungen für umsortierbare Listen stehen einmal in `ui/bedienung/useZiehSensoren.ts` statt
+  in jeder Liste (Ablauf-Liste, Links der Verwaltung, Ablauf-Kärtchen).
+
 ### Geändert (Musik-App, Lied-Editor L1)
 
 - **Der Lied-Editor im ChurchTools-Look** (erste Scheibe des neuen Editors; Alwin: „zu kompliziert und zu

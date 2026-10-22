@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
-import { EditorState, RangeSetBuilder } from '@codemirror/state';
+import { EditorState, RangeSetBuilder, StateField } from '@codemirror/state';
 import { EditorView, Decoration, ViewPlugin, keymap } from '@codemirror/view';
 import type { DecorationSet, ViewUpdate } from '@codemirror/view';
 import {
@@ -20,10 +20,8 @@ export interface ChordProHandle {
   /** Hängt `suffix` an den zuletzt gesetzten Akkord an (steht der Cursor direkt hinter `[…]`,
    *  wird der Zusatz VOR das `]` eingefügt, z. B. `[C]` + "m7" → `[Cm7]`). Sonst ohne Wirkung. */
   appendChord: (suffix: string) => void;
-  /** Fügt `text` an der Stelle `pos` ein und setzt den Cursor auf `pos + caret` (#606: Flow-Zeile). */
-  einfuegenAn: (pos: number, text: string, caret: number) => void;
-  /** Setzt den Cursor an `pos` (z. B. auf eine schon vorhandene Flow-Zeile). */
-  springeZu: (pos: number) => void;
+  /** Ersetzt `from`–`to` durch `insert` – wie eine Eingabe (Rückgängig), ohne den Cursor zu stehlen (L2: Ablauf-Kärtchen). */
+  aendern: (from: number, to: number, insert: string) => void;
   undo: () => void;
   redo: () => void;
 }
@@ -76,6 +74,33 @@ const highlighter = ViewPlugin.fromClass(
   },
   { decorations: (v) => v.decorations },
 );
+
+/**
+ * **Die `{flow: …}`-Zeile ist im Text unsichtbar** (Lied-Editor L2, 22.10.2026): Den Ablauf bearbeitet man
+ * über die Kärtchen; im Text stünde sie nur doppelt. Sie bleibt im ChordPro (gespeichert wird Zeichen für
+ * Zeichen); der Cursor springt über sie hinweg.
+ */
+const FLOW_ZEILE = /^\s*\{flow[:\s][^}]*\}\s*$/i;
+function flowAusblenden(state: EditorState): DecorationSet {
+  const b = new RangeSetBuilder<Decoration>();
+  for (let n = 1; n <= state.doc.lines; n++) {
+    const line = state.doc.line(n);
+    if (!FLOW_ZEILE.test(line.text)) continue;
+    // Samt Zeilenende, sonst bliebe eine leere Zeile stehen (am Textende das davor).
+    if (n < state.doc.lines) b.add(line.from, line.to + 1, Decoration.replace({ block: true }));
+    else if (n > 1) b.add(line.from - 1, line.to, Decoration.replace({ block: true }));
+    else b.add(line.from, line.to, Decoration.replace({}));
+  }
+  return b.finish();
+}
+const flowFeld = StateField.define<DecorationSet>({
+  create: (st) => flowAusblenden(st),
+  update: (deko, tr) => (tr.docChanged ? flowAusblenden(tr.state) : deko),
+  provide: (f) => [
+    EditorView.decorations.from(f),
+    EditorView.atomicRanges.of((v) => v.state.field(f)),
+  ],
+});
 
 // Moderner, „un-typewriter"-Look: proportionale App-Schrift (ChordPro-Akkorde stehen inline in
 // [..], daher ist kein Monospace zum Ausrichten nötig), großzügige Zeilenhöhe, und Akkorde als
@@ -136,6 +161,7 @@ export const ChordProInput = forwardRef<ChordProHandle, ChordProInputProps>(func
           history(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           highlighter,
+          flowFeld,
           theme,
           EditorView.lineWrapping,
           EditorView.updateListener.of((u) => {
@@ -191,25 +217,10 @@ export const ChordProInput = forwardRef<ChordProHandle, ChordProInputProps>(func
       });
       view.focus();
     },
-    einfuegenAn(pos, text, caret) {
+    aendern(from, to, insert) {
       const view = viewRef.current;
       if (!view) return;
-      const an = Math.max(0, Math.min(pos, view.state.doc.length));
-      view.dispatch({
-        changes: { from: an, insert: text },
-        selection: { anchor: an + caret },
-        scrollIntoView: true,
-      });
-      view.focus();
-    },
-    springeZu(pos) {
-      const view = viewRef.current;
-      if (!view) return;
-      view.dispatch({
-        selection: { anchor: Math.max(0, Math.min(pos, view.state.doc.length)) },
-        scrollIntoView: true,
-      });
-      view.focus();
+      view.dispatch({ changes: { from, to, insert }, userEvent: 'input.ablauf' });
     },
     undo() {
       const v = viewRef.current;

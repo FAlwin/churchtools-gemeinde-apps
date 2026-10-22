@@ -366,10 +366,6 @@ function ScrollSeite({
   gedimmt = false,
   onAktivieren,
 }: ScrollSeiteProps) {
-  // Beim Malen liegen die eigenen Anmerkungen der Kerne in der Mal-Ebene (dort bearbeitbar) – hier
-  // also nur noch das, was dort nicht steht: fremde Ebene und eigene Lücken. Ohne Abbildung (hochgeladenes
-  // PDF) liegt die ganze eigene Ebene in der Mal-Ebene.
-  const bearbeiten = !!malen;
   // Die Schlüssel sind die Abhängigkeit – nicht das je Render neu gebaute Objekt (vgl. `utils/pageKeys`).
   const schluessel = quelle.seiten.map((x) => `${x.own ?? ''}|${x.over ?? ''}`).join('\u0001');
   const abbildung = quelle.abbildung;
@@ -387,6 +383,12 @@ function ScrollSeite({
   // Steht unter dem letzten Teil etwas (auf A4 ist dort oft Platz), wächst die Rolle bis dahin (#626).
   // `null` = noch nicht ausgemessen – solange gibt es keine Mal-Ebene (sie rechnet in Anteilen der Höhe).
   const [zusatzMm, setZusatzMm] = useState<number | null>(null);
+  // Beim Malen liegen die eigenen Anmerkungen der Kerne in der Mal-Ebene (dort bearbeitbar) – hier
+  // also nur noch das, was dort nicht steht: fremde Ebene und eigene Lücken. Ohne Abbildung (hochgeladenes
+  // PDF) liegt die ganze eigene Ebene in der Mal-Ebene. Bearbeitet wird erst, wenn die Mal-Ebene da ist
+  // (nach dem Ausmessen, #626) – bis dahin zeigt diese Seite alles selbst, sonst wären die eigenen Texte
+  // der Teile einen Moment lang verschwunden.
+  const bearbeiten = !!malen && zusatzMm !== null;
   /** Höhe dieser Seite in mm – samt dem Platz für Anmerkungen unter dem Lied. */
   const hoeheMm = basisMm + (zusatzMm ?? 0);
   const hoehePx = Math.round((hoeheMm * src.width) / PAGE_W);
@@ -539,7 +541,7 @@ function ScrollSeite({
           ))}
         </div>
       )}
-      {malen && zusatzMm !== null && (
+      {malen && bearbeiten && (
         <RollenMalen
           quelle={quelle}
           breitePx={src.width}

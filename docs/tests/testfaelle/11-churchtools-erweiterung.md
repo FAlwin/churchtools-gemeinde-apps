@@ -109,7 +109,7 @@ Arrangement, **Tonart und Dauer des Arrangements sind unverändert**.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/services/ctSchreiben.ts`, `shared/ct/schreibKern.ts`, `shared/ct/liedtext.ts`, `shared/ct/agendaPayload.ts`, `shared/ct/arrangementPayload.ts`, `client/src/services/ctRuntime.ts`, `ui/ct/verbindung.ts`, `client/src/components/TempoMenu.tsx`
+- **Betrifft:** `client/src/services/ctSchreiben.ts`, `ui/ct/schreiber.ts`, `shared/ct/schreibKern.ts`, `shared/ct/liedtext.ts`, `shared/ct/agendaPayload.ts`, `shared/ct/arrangementPayload.ts`, `client/src/services/ctRuntime.ts`, `ui/ct/verbindung.ts`, `client/src/components/TempoMenu.tsx`
 - **Automatisiert:** teilweise – `ctSchreiben.test.ts` gegen ein nachgebautes ChurchTools (Rümpfe
   gegen die Erzeuger, Fehlerzweige einzeln); ob ChurchTools die Rümpfe aus dem Browser genauso annimmt
   wie vom Server, nur hier
@@ -139,7 +139,7 @@ Auswahl der Kategorie zeigt nur die, in denen du Lieder bearbeiten darfst. Kein 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/services/ctSchreiben.ts`, `client/src/services/ctLesen.ts`, `client/src/services/ctRuntime.ts`, `ui/ct/verbindung.ts`, `shared/ct/liedVerwaltung.ts`, `shared/ct/notenblaetter.ts`, `shared/ct/stammdaten.ts`, `shared/ct/altSchnittstelle.ts`
+- **Betrifft:** `client/src/services/ctSchreiben.ts`, `ui/ct/schreiber.ts`, `client/src/services/ctLesen.ts`, `client/src/services/ctRuntime.ts`, `ui/ct/verbindung.ts`, `shared/ct/liedVerwaltung.ts`, `shared/ct/notenblaetter.ts`, `shared/ct/stammdaten.ts`, `shared/ct/altSchnittstelle.ts`
 - **Automatisiert:** teilweise – die Regeln über die Server-Tests (laufen durch den Kern),
   `ctSchreiben.lieder.test.ts` für den Weg des Browsers (alte Schnittstelle, Upload, CSRF); ob
   ChurchTools Upload und alte Schnittstelle aus der Einbettung genauso annimmt, nur hier
@@ -232,7 +232,7 @@ Server-Variante – aus dem Browser, ohne eigenen Server. Ohne `use ccli` ist So
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/services/ctSongSelect.ts`, `client/src/services/ctSchreiben.ts`, `client/src/services/ctRuntime.ts`, `ui/ct/verbindung.ts`, `shared/ct/songselect.ts`
+- **Betrifft:** `client/src/services/ctSongSelect.ts`, `client/src/services/ctSchreiben.ts`, `ui/ct/schreiber.ts`, `client/src/services/ctRuntime.ts`, `ui/ct/verbindung.ts`, `shared/ct/songselect.ts`
 - **Automatisiert:** teilweise – `ctSongSelect.test.ts` (Weg des Browsers: Funktion, CSRF,
   `X-Requested-With`, Lizenz, Reihenfolge, Tonart), Server-Tests über dieselben Regeln; ob ChurchTools die
   `getCCLI*`-Aufrufe aus dem Browser annimmt, nur hier

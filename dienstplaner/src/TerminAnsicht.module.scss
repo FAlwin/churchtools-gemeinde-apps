@@ -173,3 +173,10 @@
     }
   }
 }
+
+// Musik-App-Link und Stift nebeneinander rechts im Kartenkopf (E6-3a).
+.kopfKnoepfe {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}

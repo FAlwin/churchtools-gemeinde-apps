@@ -1,29 +1,43 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { AblaufListe } from '@ui/ablauf/AblaufListe';
+import { useAblaufBearbeiten } from '@ui/ablauf/useAblaufBearbeiten';
+import { ApiError } from '@ui/ct/fehler';
 import { ablaufZeileAus } from '@shared/ct/ablaufZeile';
 import { datumText, kachel } from '@shared/ct/datum';
 import type { CtAgenda } from '@shared/ct/typen';
 import { gruppenName } from '@shared/dienstplan/plan';
-import { ladeTermin, type TermineDaten } from './ladeTermine';
+import { ladeTermin, type TerminDaten } from './ladeTermine';
 import { ladeAblauf, ladeMusikApp } from './ladeBeiwerk';
+import { ablaufAktionen } from './ablaufAktionen';
 import { Plaetze } from './Planen';
-import type { Start } from './start';
+import { ablaufBearbeitbar, type Start } from './start';
 import styles from './TerminAnsicht.module.scss';
 
 type Zustand =
   | { art: 'laedt' }
   | { art: 'fehler'; fehler: Fehlermeldung }
-  | { art: 'fertig'; daten: TermineDaten; ablauf: CtAgenda | null };
+  | { art: 'fertig'; daten: TerminDaten; ablauf: CtAgenda | null };
+
+const NEU_LADEN_FEHLT =
+  'Gespeichert. Der Ablauf ließ sich danach nicht neu laden – zum Aktualisieren den Termin neu öffnen.';
+
+/** Hinweis, wenn man einen abgeschlossenen Ablauf ändern will – öffnen kann man ihn hier (noch) nicht. */
+const GESPERRT =
+  'Dieser Ablauf ist in ChurchTools abgeschlossen. Zum Ändern erst in ChurchTools oder in der Musik-App öffnen.';
 
 /**
  * **Die Termin-Ansicht** (Bauplan E6-1b, Entwurf `e6-entwurf.html` Bild 1): oben der Ablauf – derselbe Baustein wie in
  * der Musik-App (`ui/ablauf/AblaufListe`), die Dauer neben der Zeit (Alwin, 17.10.2026) –, darunter die Dienste des
- * Termins mit denselben Plätzen wie in „Planen“. Nur ansehen; Bearbeiten kommt mit E6-3. ‹ › blättert durch die
- * geladenen Termine.
+ * Termins mit denselben Plätzen wie in „Planen“. ‹ › blättert durch die geladenen Termine.
+ *
+ * **Bearbeiten** (E6-3a, #645): Wer den Ablauf bearbeiten darf (`ablaufBearbeitbar`, dieselbe Regel wie die
+ * Musik-App), bekommt einen Stift – danach dieselbe Bearbeiten-Liste wie in der Musik-App
+ * (`ui/ablauf/useAblaufBearbeiten`), ohne Liedwahl (Lieder wählt man in der Musik-App). Gespeichert wird sofort in
+ * ChurchTools; danach wird der Ablauf neu gelesen.
  *
  * Geladen wird der Termin frisch (`ladeTermin`, dieselbe Regel wie Liste und Matrix) – er kann auch außerhalb des
  * geladenen Zeitraums liegen (aus „Planen“ mit eigenem Zeitraum).
@@ -52,9 +66,14 @@ export function TerminAnsicht({
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
   const [versuch, setVersuch] = useState(0);
   const [musikApp, setMusikApp] = useState<string | null>(null);
+  const [bearbeiten, setBearbeiten] = useState(false);
+  // Nur das zuletzt angestoßene Neu-Lesen zählt – sonst überschriebe eine langsame ältere Antwort eine neuere.
+  const ladeNr = useRef(0);
 
   useEffect(() => {
     let aktuell = true;
+    ladeNr.current++;
+    setBearbeiten(false);
     setZustand({ art: 'laedt' });
     Promise.all([ladeTermin(start, terminId, zeitzone), ladeAblauf(terminId)]).then(
       ([daten, ablauf]) => aktuell && setZustand({ art: 'fertig', daten, ablauf }),
@@ -64,6 +83,51 @@ export function TerminAnsicht({
       aktuell = false;
     };
   }, [start, terminId, zeitzone, versuch]);
+
+  const ablauf = zustand.art === 'fertig' ? zustand.ablauf : null;
+  const zeilen = useMemo(
+    () => (ablauf?.items ?? []).map((i) => ablaufZeileAus(i, terminId, zeitzone)),
+    [ablauf, terminId, zeitzone],
+  );
+  const dienste = useMemo(
+    () => [...start.dienste.values()].map((d) => ({ id: d.id, name: d.name })),
+    [start.dienste],
+  );
+
+  const liste = useAblaufBearbeiten({
+    aktiv: bearbeiten,
+    bereit: ablauf !== null,
+    items: zeilen,
+    // Dieselbe Uhrzeit wie die Linie „Beginn“ in der Ansicht (`s.uhrzeit` unten).
+    beginn: zustand.art === 'fertig' ? (zustand.daten.plan.spalten[0]?.uhrzeit ?? '') : '',
+    abgeschlossen: ablauf?.isLocked === true,
+    sperrHinweis: GESPERRT,
+    aktionen: ablaufAktionen(terminId, () => ablaufNeuLaden()),
+    dienste,
+    // Abgeschlossen (423), Punkt weg (404) oder Ablauf inzwischen anders (409): frisch lesen, damit Liste und Hinweis
+    // stimmen. Einen Knopf „neu laden“ hat die Termin-Ansicht nicht.
+    beiFehler: (e) => {
+      if (e instanceof ApiError && [404, 409, 423].includes(e.status)) ablaufNeuLaden();
+    },
+  });
+
+  /**
+   * Nach dem Speichern nur den Ablauf neu lesen. Scheitert das, war das Speichern trotzdem gelungen: Der Stand bleibt
+   * stehen, oben steht ein Hinweis – zurückgerollt wird nichts.
+   */
+  function ablaufNeuLaden(): void {
+    const nr = ++ladeNr.current;
+    ladeAblauf(terminId).then(
+      (neu) => {
+        if (nr !== ladeNr.current) return;
+        setZustand((z) => (z.art === 'fertig' ? { ...z, ablauf: neu } : z));
+        if (neu === null) setBearbeiten(false); // inzwischen gelöscht
+      },
+      () => {
+        if (nr === ladeNr.current) liste.fehlerZeigen(null, NEU_LADEN_FEHLT);
+      },
+    );
+  }
 
   // Beiwerk wie auf der Startseite: scheitert es, fehlt nur der Knopf.
   useEffect(() => {
@@ -127,8 +191,7 @@ export function TerminAnsicht({
   // Nur Dienste, die es an diesem Termin gibt: `planAus` lässt die übrigen schon weg (ein Termin = eine Spalte).
   const gruppen = plan.gruppen;
   const ende = zustand.daten.zeilen[0]?.endeUhrzeit ?? null;
-  const ablauf = zustand.ablauf;
-  const items = ablauf?.items ?? []; // null = kein Ablauf
+  const darf = ablaufBearbeitbar(start, zustand.daten.ablaufTermin);
 
   return (
     <div className={styles.seite}>
@@ -151,24 +214,39 @@ export function TerminAnsicht({
       <section className={styles.karte} aria-label="Ablauf">
         <div className={styles.kartenKopf}>
           <h3>Ablauf</h3>
-          {musikApp && (
-            <a className={styles.leise} href={musikApp}>
-              <Icon name="music" size={16} /> Musik-App
-            </a>
-          )}
+          <span className={styles.kopfKnoepfe}>
+            {musikApp && !bearbeiten && (
+              <a className={styles.leise} href={musikApp}>
+                <Icon name="music" size={16} /> Musik-App
+              </a>
+            )}
+            {/* Auch bei einem leeren Ablauf – sonst ließe er sich nicht füllen (wie in der Musik-App). */}
+            {darf && ablauf !== null && (
+              <button
+                type="button"
+                className={styles.rund}
+                aria-label={bearbeiten ? 'Fertig' : 'Ablauf bearbeiten'}
+                title={bearbeiten ? 'Fertig' : 'Ablauf bearbeiten'}
+                onClick={() => {
+                  liste.fehlerLoeschen();
+                  setBearbeiten((b) => !b);
+                }}
+              >
+                <Icon name={bearbeiten ? 'check' : 'pencil'} size={16} />
+              </button>
+            )}
+          </span>
         </div>
         {ablauf === null ? (
           <p className={styles.hinweis}>Noch kein Ablauf.</p>
-        ) : items.length === 0 ? (
+        ) : bearbeiten ? (
+          <div className={styles.ablaufGrund}>{liste.liste}</div>
+        ) : zeilen.length === 0 ? (
           <p className={styles.hinweis}>Der Ablauf ist noch leer.</p>
         ) : (
           // Auf grauem Grund wie in der Musik-App – sonst stünden die Karten-Zeilen weiß auf weiß.
           <div className={styles.ablaufGrund}>
-            <AblaufListe
-              zeilen={items.map((i) => ablaufZeileAus(i, terminId, zeitzone))}
-              beginn={s.uhrzeit}
-              dauerNebenZeit
-            />
+            <AblaufListe zeilen={zeilen} beginn={s.uhrzeit} dauerNebenZeit />
           </div>
         )}
       </section>
@@ -195,6 +273,7 @@ export function TerminAnsicht({
           ))
         )}
       </section>
+      {liste.ueberlagerung}
     </div>
   );
 }

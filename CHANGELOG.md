@@ -27,6 +27,27 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   (stand fest auf „Anmeldungen“).
 - Zweige `feat/sitzungen-**` / `fix/sitzungen-**` bauen kein Staging-Image der Musik-App.
 
+### Neu (Dienstplaner, E6-3a, #645)
+
+- **Ablauf in der Termin-Ansicht bearbeiten:** Wer in ChurchTools den Ablauf des Termins bearbeiten darf (Recht
+  „Ablauf bearbeiten“ für den Kalender des Termins oder Admin des Termins – dieselbe Regel wie in der Musik-App),
+  bekommt einen Stift. Danach dieselbe Liste wie in der Musik-App: am Griff ziehen, Punkt antippen und im Fenster
+  ändern, „Eintrag hinzufügen“, Löschen mit Rückfrage, „Rückgängig“ für Verschieben und Löschen, „vor Beginn“.
+  Lieder stehen nur da – ein Lied wählt man in der Musik-App. Gespeichert wird sofort in ChurchTools, danach wird der
+  Ablauf frisch gelesen; ist er abgeschlossen, ändert sich nichts und ein Hinweis sagt warum. War ein Punkt
+  inzwischen woanders gelöscht oder der Ablauf geändert, wird ebenfalls frisch gelesen.
+
+### Intern (Schreibweg, E6-3a, #645)
+
+- Der Schreiber des Browsers für die Ablauf-Regeln (`browserSchreiber`, samt Fehler-Übersetzung) steht jetzt in
+  `ui/ct/schreiber.ts` – Musik-App (Erweiterung) und Dienstplaner schreiben über denselben; die Regeln bleiben im
+  Schreibkern (`shared/ct/schreibKern.ts`). Den Kalender eines Termins liest eine Stelle (`kalenderVon`, vorher
+  zweimal nachgebaut).
+- Erweiterungsrahmen mit Reiterleiste (Handy): Die Fläche über der Leiste ist jetzt der Bezug für Schwebendes – das
+  Plus des Ablaufs stand sonst hinter der Leiste (im Browser gefunden und geprüft; der Dienstplaner hat keine E2E).
+- Demo des Dienstplaners (`?demo`): Der Ablauf des ersten Termins lässt sich bearbeiten (nur im Speicher), Uhrzeiten
+  rechnet die Demo wie ChurchTools.
+
 ### Neu (Anmeldungen, A7-3)
 
 - **Nachrücken lassen** (Entwurf `a7-3-nachruecken-v1`, entschieden 19.10.2026): an jeder wartenden Person im Fenster

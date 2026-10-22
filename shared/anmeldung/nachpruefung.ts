@@ -10,7 +10,7 @@
 import type { OeffentlicheEinstellungen } from './formular';
 import { optionenBelegt } from './kontingent';
 import { centAusEuroText, kannEtwasKosten } from './preis';
-import { istNachrueckZahlung, vonHandBetrag } from './zahlung';
+import { istEigeneZahlung, vonHandBetrag } from './zahlung';
 import { sollBetrag } from './sollbetrag';
 import type { Mitgliederstand } from './liste';
 
@@ -172,10 +172,10 @@ export function nachpruefen(
       gruppen.set(m.felder.nr, [...(gruppen.get(m.felder.nr) ?? []), m]);
     }
     for (const [nr, personen] of gruppen) {
-      // Der Betrag steht bei der ersten Person der Anmeldung (Variante A); Nachgerückte haben seit A7-3 eine eigene
-      // Zahlung – sie ist nicht „die erste“, zählt aber mit.
+      // Der Betrag steht bei der ersten Person der Anmeldung (Variante A); Nachgerückte (A7-3) und später dazu
+      // Angemeldete (A7-4b) haben eine eigene Zahlung – sie ist nicht „die erste“, zählt aber mit.
       const erste = personen.find(
-        (p) => p.felder.betrag !== undefined && !istNachrueckZahlung(p.felder.aufschluesselung),
+        (p) => p.felder.betrag !== undefined && !istEigeneZahlung(p.felder.aufschluesselung),
       );
       if (!erste) continue;
       const reihe = [erste, ...personen.filter((p) => p !== erste)];

@@ -7,6 +7,18 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Anmeldungen, A7-4b)
+
+- **Person zur Anmeldung dazu** (Entwurf `a7-4-von-hand-v1`): „＋ Person dazu“ im Fenster einer Anmeldung (nur mit
+  Anmelde-Nr.). Suchen oder neu anlegen wie bei A7-4a, dann nur die Fragen der Person – Kontakt, Unterschrift und
+  Auswahl stehen schon bei der Anmeldung. Gleiche Anmelde-Nr., Platz nach der Regel des Formulars.
+- **Eigene Zahlung** (Alwin, 22.10.2026) wie beim Nachrücken: um so viel wird die Anmeldung nach den Regeln teurer
+  (Kopfzeile „Dazu angemeldet am …“). Die Rechnung steht jetzt an EINER Stelle für Nachrücken und Person dazu
+  (`eigeneZahlung`); Liste und Nachprüfung erkennen beide Arten eigener Zahlung (`istEigeneZahlung`). Wer wartet,
+  bekommt noch keine Zahlung – sie folgt beim Nachrücken.
+- Danach „Mail schreiben“ (an die Adresse der Anmeldung) und „Rückgängig“ im Fenster; Abbrechen führt zurück in die
+  Anmeldung.
+
 ### Neu (Anmeldungen, A7-4a)
 
 - **Anmeldung von Hand** (Entwurf `a7-4-von-hand-v1`, abgenommen 22.10.2026): Knopf „＋ Von Hand“ im Reiter

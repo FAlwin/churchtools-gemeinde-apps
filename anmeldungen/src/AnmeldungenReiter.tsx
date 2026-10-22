@@ -131,6 +131,7 @@ function AnmeldungAnsehen({
   meldung,
   onGemeldet,
   onRueckgaengig,
+  onPersonDazu,
 }: {
   x: ListenAnmeldung;
   e: OeffentlicheEinstellungen;
@@ -147,6 +148,8 @@ function AnmeldungAnsehen({
   meldung: FensterMeldung | null;
   onGemeldet: (m: FensterMeldung) => void;
   onRueckgaengig: () => void;
+  /** „＋ Person dazu“ (A7-4b) – nur mit Anmelde-Nr., sonst gäbe es nichts, das die Person zur Anmeldung zählt. */
+  onPersonDazu?: () => void;
 }) {
   const [modus, setModus] = useState<FensterModus>(start);
   const { arbeitet, fehler, speichern } = useSpeichern(() => {});
@@ -333,6 +336,11 @@ function AnmeldungAnsehen({
                 </div>
               </div>
             ))}
+            {onPersonDazu && (
+              <button type="button" className={a.linkKnopf} onClick={onPersonDazu}>
+                ＋ Person dazu
+              </button>
+            )}
           </section>
 
           {kostet &&
@@ -348,7 +356,9 @@ function AnmeldungAnsehen({
                     titel={
                       z.wofuer === 'nachgerueckt'
                         ? `${z.name} – nachgerückt`
-                        : `Anmeldung (${z.name})`
+                        : z.wofuer === 'dazu'
+                          ? `${z.name} – dazu angemeldet`
+                          : `Anmeldung (${z.name})`
                     }
                     zahlarten={zahlarten}
                     heute={heute}
@@ -443,7 +453,9 @@ export function AnmeldungenReiter({
   // Die letzte Änderung im offenen Fenster – mit dem Fenster weg.
   const [meldung, setMeldung] = useState<FensterMeldung | null>(null);
   const [startModus, setStartModus] = useState<FensterModus>(null);
-  const [vonHand, setVonHand] = useState(false);
+  // „Von Hand“ (A7-4a) – mit `dazu` zu einer bestehenden Anmeldung (A7-4b). Das Fenster der Anmeldung ist so lange zu
+  // (kein Fenster im Fenster).
+  const [vonHand, setVonHand] = useState<{ dazu: ListenAnmeldung | null } | null>(null);
   const oeffnen = (k: string | null, modus: FensterModus = null) => {
     setOffen(k);
     setStartModus(modus);
@@ -604,7 +616,11 @@ export function AnmeldungenReiter({
             onChange={(ev) => setSuche(ev.target.value)}
           />
           {darf && (
-            <button type="button" className={a.nachKnopf} onClick={() => setVonHand(true)}>
+            <button
+              type="button"
+              className={a.nachKnopf}
+              onClick={() => setVonHand({ dazu: null })}
+            >
               ＋ Von Hand
             </button>
           )}
@@ -747,9 +763,14 @@ export function AnmeldungenReiter({
           anmeldeschluss={anmeldeschluss}
           dabei={new Set(stand!.mitglieder.map((m) => m.personId))}
           abgesagt={new Set(stand!.absagen.map((b) => b.personId))}
-          onClose={() => setVonHand(false)}
+          dazu={vonHand.dazu}
+          onClose={() => {
+            // Abbrechen bei „Person dazu“ führt zurück in die Anmeldung.
+            if (vonHand.dazu) oeffnen(vonHand.dazu.schluessel);
+            setVonHand(null);
+          }}
           onFertig={(x) => {
-            setVonHand(false);
+            setVonHand(null);
             // Die neue Anmeldung öffnet sich, sobald sie geladen ist – mit „Mail schreiben“ und „Rückgängig“.
             setOffen(x.nr);
             setStartModus(null);
@@ -780,6 +801,14 @@ export function AnmeldungenReiter({
             onGespeichert();
           }}
           onRueckgaengig={onGespeichert}
+          onPersonDazu={
+            darf && ausgewaehlt?.nr
+              ? () => {
+                  setVonHand({ dazu: ausgewaehlt });
+                  oeffnen(null);
+                }
+              : undefined
+          }
         />
       )}
     </div>

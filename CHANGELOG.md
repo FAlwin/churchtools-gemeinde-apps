@@ -243,7 +243,9 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Lücke mehr, wenn ein Teil nicht mehr auf die Seite passte, und die CCLI-Angabe steht direkt unter dem
   letzten Teil. **Die Anmerkungen sind dieselben wie beim Blättern** (#614): Die lange Seite zeigt sie
   umgerechnet an derselben Stelle im Teil; was beim Blättern in einer Lücke am Seitenende steht, erscheint am
-  Ende des Teils davor; aus 2-Spalten-Liedern werden sie übernommen, stehen aber nur ungefähr (zurechtrücken
+  Ende des Teils davor; was unten auf der letzten Seite unter dem letzten Teil steht, steht auf der langen Seite
+  genauso weit darunter – die Seite wird dafür so lang wie nötig, und dort lässt sich auch malen und mit dem Lasso
+  zurechtrücken (#626); aus 2-Spalten-Liedern werden sie übernommen, stehen aber nur ungefähr (zurechtrücken
   kommt mit dem Lasso, #615). Im Scroll-Modus gibt es keinen Spalten-Schalter. **Malen direkt auf der langen
   Seite** (#608): Stift an – ein Finger oder der Pencil malt, **zwei Finger scrollen**; gemalt wird auf dem
   Lied in der Bildmitte, ein Tipp auf ein anderes (abgeblendetes) Lied macht es zum Mal-Lied; Stift, Marker,
@@ -257,10 +259,10 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   vergrößert oder verkleinert gleichmäßig; daneben tippen, ein anderes Werkzeug oder Stift aus legt ab.
   **Rückgängig** nimmt die ganze Bewegung auf einmal zurück. Auf der langen Seite greift das Lasso auch, was beim
   Blättern in einer Lücke am Seitenende steht und hier über dem nächsten Teil liegt – zurechtgerückt steht es danach
-  auch beim Blättern am neuen Platz (und nicht mehr in der Lücke). Unter den letzten Teil der langen Seite lässt
-  sich nichts ablegen: Dort gäbe es auf A4 keine Stelle, das Abgelegte wäre beim Speichern verloren. Das Lasso
-  sagt das („Hier wird nichts gespeichert“) und lässt die Auswahl schweben; muss es doch ablegen (Stift aus),
-  kehrt sie an ihre alte Stelle zurück.
+  auch beim Blättern am neuen Platz (und nicht mehr in der Lücke). Wo es auf A4 keine Stelle gibt (bei
+  2-Spalten-Liedern rechts neben dem schmalen Streifen), lässt sich nichts ablegen – das Abgelegte wäre beim
+  Speichern verloren. Das Lasso sagt das („Hier wird nichts gespeichert“) und lässt die Auswahl schweben; muss es
+  doch ablegen (Stift aus), kehrt sie an ihre alte Stelle zurück.
 - **Flow-Zeile `{flow: …}`** (#606, Rückmeldung des Musik-Bereichsleiters): Steht im ChordPro z. B.
   `{flow: Intro, Vers 1, Chorus 1, Vers 2, Chorus 1, Bridge, Chorus 1, Outro}`, zeigt das Blatt die Teile in
   genau dieser Reihenfolge – Wiederholungen voll, nicht genannte Teile fallen weg. Die Namen sind die

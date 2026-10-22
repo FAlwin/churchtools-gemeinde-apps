@@ -178,7 +178,7 @@ export function a4NachRolle(
  * **Zurück: ein Punkt der Rolle auf seine A4-Seite** (#608 – was auf der Rolle gemalt wird, wird auf den
  * A4-Seiten gespeichert). Nur über Kerne: Die sind auf der Rolle überschneidungsfrei, eine Lücke dagegen
  * liegt dort über dem nächsten Teil und wäre mehrdeutig. Liegt der Punkt in keinem Kern (rechts neben
- * einem schmalen 2-Spalten-Streifen, unter dem letzten Teil), zählt der nächstgelegene.
+ * einem schmalen 2-Spalten-Streifen, tiefer als der Platz unter dem letzten Teil), zählt der nächstgelegene.
  */
 export function rolleNachA4(
   liste: Streifen[],
@@ -358,8 +358,8 @@ export function kerneAufSeite(
 
 /**
  * **Wird auf der Rolle hier gespeichert?** (#615) Nur was über einem Kern steht, kommt zurück auf eine
- * A4-Seite (`kerneAufSeite`). Unter dem letzten Teil – und bei 2-Spalten-Liedern rechts neben dem schmalen
- * Streifen – gäbe es kein Ziel; ein Strich dort wäre beim Speichern weg. Das Lasso legt deshalb nur ab, wo
+ * A4-Seite (`kerneAufSeite`). Bei 2-Spalten-Liedern rechts neben dem schmalen Streifen – und tiefer, als die
+ * A4-Seite unter dem letzten Teil Platz hat – gäbe es kein Ziel; ein Strich dort wäre beim Speichern weg. Das Lasso legt deshalb nur ab, wo
  * der ganze Rahmen auf Kernen liegt (geprüft an einem Raster von Punkten, Angaben in mm).
  */
 export function rahmenAufKernen(liste: Streifen[], r: Rechteck, raster = 6): boolean {

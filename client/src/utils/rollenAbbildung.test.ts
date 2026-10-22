@@ -273,7 +273,9 @@ describe('kerneAufSeite / stricheAufRolle(nur) – Striche zurückschreiben (#60
     // Die Rolle reicht 10 mm unter den letzten Teil.
     const rolle = { width: 210, height: unten.ziel.y + 10 } as unknown as HTMLCanvasElement;
     kerneAufSeite(ctx, rolle, st, letzter.seite, 210);
-    const geleert = clearRect.mock.calls.find((c) => (c as number[])[1] === unten.quelle.y) as number[];
+    const geleert = clearRect.mock.calls.find(
+      (c) => (c as number[])[1] === unten.quelle.y,
+    ) as number[];
     expect(geleert[3]).toBeCloseTo(10, 6);
   });
 

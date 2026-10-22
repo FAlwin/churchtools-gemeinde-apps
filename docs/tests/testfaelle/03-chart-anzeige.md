@@ -537,31 +537,39 @@ Einstellung gilt nur auf diesem Gerät.
 
 </details>
 
-### TF-CHART-18 · Flow-Zeile und Weiterschalt-Punkt im Editor
+### TF-CHART-18 · Ablauf als Kärtchen und Weiterschalt-Punkt im Editor
 
 **Das brauchst du:** Ein Lied, das du bearbeiten darfst, mit mehreren Teilen (z. B. Vers 1, Chorus, Vers 2).
 
-**Das muss passieren:** Über **Format → Ablauf (Reihenfolge der Teile)** steht eine Zeile
-`{flow: …}` mit den vorhandenen Teilen **vor dem ersten Teil**. Stellt man sie um und wiederholt einen Teil,
-zeigt die Vorschau die Teile in dieser Reihenfolge, Wiederholungen voll, nicht genannte Teile nicht. Oben im
-Blatt steht „Ablauf: …“. Ein vertippter Name wird unter der Werkzeugleiste genannt. `----` erscheint nirgends.
+**Das muss passieren:** Über dem Text steht die Karte **Ablauf** mit einem Kärtchen je Teil (ohne eigenen
+Ablauf: die Teile wie im Text). Kärtchen lassen sich am Griff verschieben, mit × entfernen und mit
+**+ Teil** anhängen; die Vorschau zeigt die Teile in dieser Reihenfolge, Wiederholungen voll, nicht genannte
+Teile nicht, oben im Blatt „Ablauf: …“. **Wie im Text** stellt die Reihenfolge des Texts wieder her. Im
+Text selbst sieht man keine `{flow: …}`-Zeile. `----` erscheint nirgends.
 
-1. Lied öffnen → Version bearbeiten (oder neue Version).
-2. **Format → Ablauf (Reihenfolge der Teile)** → die Zeile steht vor dem ersten Teil.
-3. Zu `{flow: Vers 1, Chorus, Vers 2, Chorus}` ändern → Vorschau: Chorus zweimal, „Ablauf: …“ im Kopf.
-4. Einen Namen vertippen (`Refrain`) → Hinweis „… keinen Teil gibt: Refrain“.
-5. **Format → Weiterschalt-Punkt fürs Pedal** mitten in einem Vers → in der Vorschau unsichtbar.
-6. Speichern, Lied im Ablauf öffnen → das Blatt zeigt dieselbe Reihenfolge; „Als PDF teilen“ ebenso.
+1. Lied öffnen → Version bearbeiten (oder neue Version). Die Karte **Ablauf** zeigt die Teile wie im Text.
+2. **+ Chorus** antippen, dann **Vers 2** am Griff hinter den letzten Chorus ziehen → Vorschau: Chorus
+   zweimal, „Ablauf: …“ im Kopf.
+3. **Rückgängig** (in der Text-Karte) → die letzte Änderung am Ablauf ist zurück.
+4. Ein Kärtchen mit **×** entfernen → der Teil fehlt in der Vorschau. **Wie im Text** → alles wie vorher.
+5. Ein Lied, in dessen Ablauf ein Name steht, den es nicht gibt (z. B. `Refrain`) → dieses Kärtchen ist
+   rot umrandet und sagt „fehlt im Text“.
+6. **Handy:** Umschalter **Ablauf** → eine Liste mit Griff und großem ×, darunter „Teil hinzufügen“.
+7. **Format → Weiterschalt-Punkt fürs Pedal** mitten in einem Vers → in der Vorschau unsichtbar.
+8. Speichern, Lied im Ablauf öffnen → das Blatt zeigt dieselbe Reihenfolge; „Als PDF teilen“ ebenso.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/utils/chordpro.ts`, `client/src/utils/chordPdf.ts`, `client/src/components/ChordEditor.tsx`, `client/src/components/ChordProInput.tsx`, `shared/ct/liedtext.ts`
+- **Betrifft:** `client/src/utils/chordpro.ts`, `client/src/utils/chordPdf.ts`, `client/src/components/ChordEditor.tsx`, `client/src/components/AblaufKarte.tsx`, `client/src/components/ChordProInput.tsx`, `shared/ct/liedtext.ts`
 - **Automatisiert:** weitgehend – `chordpro.test.ts` (Flow, Rückfall, Einfügestelle, `----`),
   `chordPdf.test.ts` (Reihenfolge, Wegweiser, `----` unsichtbar, Transponierung bei Wiederholung),
-  `ChordEditor.test.tsx` (Knöpfe, Hinweis), `songTextIndex.test.ts` (Suche). Von Hand bleibt der echte
-  Editor (Cursor, Einfügen) am Gerät
-- **Historie:** #606 (Rückmeldung Musik-Bereichsleiter, 17.10.2026)
+  `ChordEditor.test.tsx` (Ablauf-Karte: hinzufügen, entfernen, „Wie im Text“, unbekannte Namen),
+  `songTextIndex.test.ts` (Suche), `e2e/editor-ablauf.spec.ts` (hinzufügen, ziehen, Rückgängig, Handy;
+  gespeichert genau die Flow-Zeile von `flowSetzen`, im Text unsichtbar). Von Hand bleibt Ziehen mit dem
+  Finger am iPad und Handy
+- **Historie:** #606 (Rückmeldung Musik-Bereichsleiter, 17.10.2026), Ablauf als Kärtchen: Lied-Editor L2
+  (22.10.2026)
 
 </details>
 

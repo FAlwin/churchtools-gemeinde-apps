@@ -471,7 +471,9 @@ Schlüssel. Blatt-Maße EINMAL in `utils/blattMasse.ts`. Achtung: `composeStream
 **Neuer Lied-Editor in Scheiben L0–L6** (seit 22.10.2026; Bauplan + L0-Messung außerhalb des Repos in
 `~/ecg-donrath/gemeinde-apps/musik-planung/docs/`): gespeichert bleibt ChordPro Zeichen für Zeichen, neu ist nur
 die Darstellung. L1 = Kopf im CT-Look + Karten (breit Text/Vorschau nebeneinander, schmal `Segment` „Text | Vorschau“,
-die Text-Karte bleibt gemountet). Liedinfo kommt in L4 nur aus ChurchTools; `{key}` bleibt als notierte Tonart. Im
+die Text-Karte bleibt gemountet). L2 = `AblaufKarte` (Kärtchen ↔ `{flow}` über `flowSetzen`, eine Änderung im
+Editor, Rückgängig inklusive; die Flow-Zeile blendet `ChordProInput` aus). Liedinfo kommt in L4 nur aus ChurchTools;
+`{key}` bleibt als notierte Tonart. Zieh-Einstellungen aller Listen: `ui/bedienung/useZiehSensoren`. Im
 Scroll-Modus kein Spalten-Schalter (`ohneSpalten`). Welche
 eigene Ebene gilt, entscheidet für Blättern UND Scrollen `pageKeys.eigenerSchluessel`.
 Leinwände nur in Bildschirmnähe (IntersectionObserver), sonst freigegeben. Die **Seite in der Bildmitte** ist

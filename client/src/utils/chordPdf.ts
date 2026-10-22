@@ -40,7 +40,7 @@ interface Protokoll extends Satzplan {
 }
 
 function leeresProtokoll(): Protokoll {
-  return { hoehe: 0, stuecke: [], kopfEnde: 0, spalten: 1, seiten: 1 };
+  return { hoehe: 0, stuecke: [], weiterschalten: [], kopfEnde: 0, spalten: 1, seiten: 1 };
 }
 
 const PT_TO_MM = 0.352777;
@@ -380,16 +380,20 @@ export function generateChordPdf(
       d.text(sec.label.toUpperCase(), x, y + labelPt * PT_TO_MM);
       y += labelH;
     }
-    for (const b of blocks) {
+    blocks.forEach((b, zeile) => {
+      // Weiterschalt-Punkt `----` vor dieser Zeile (#609): Hier hält das Pedal auf der Rolle an. Die
+      // Blöcke stehen 1:1 für `sec.lines`, deren Stellen `umbrueche` zählt. (Auf A4 kann die Zeile danach
+      // noch in die nächste Spalte rutschen – gebraucht wird die Stelle nur auf der Rolle, die nie umbricht.)
+      if (sec.umbrueche?.includes(zeile)) protokoll?.weiterschalten.push({ seite: pageNo, y });
       if ('gap' in b) {
         y += emptyGap;
-        continue;
+        return;
       }
       for (const row of b.rows) {
         ensure(rowH);
         drawRow(row);
       }
-    }
+    });
     stueckSchliessen();
     y += sectionGap;
   });

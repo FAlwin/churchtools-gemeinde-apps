@@ -487,8 +487,12 @@ Ablegen unter dem letzten Teil – dort ginge es beim Speichern verloren. „Mal
 in `utils/scrollPosition.ts`) überdauert einen Neuaufbau der Seiten.
 Ein Tipp aufs Blatt = Leisten aus/ein. **Pedal-Tasten** für beide Modi stehen EINMAL in `utils/pedalTasten.ts`
 (→/↓/Bild↓/Leertaste weiter, ←/↑/Bild↑/Umschalt+Leertaste zurück; nicht bei gedrückt gehaltener Taste, mit
-Strg/⌘/Alt, in Eingaben oder Leertaste auf einem Knopf); im Scroll-Modus scrollt ein Tritt ⅔ Bildschirm
-(`SCHRITT_ANTEIL`, Alwin: 85 % war zu weit), die Fußpfeile ebenso. E2E: `e2e/chart-scrollen.spec.ts`.
+Strg/⌘/Alt, in Eingaben oder Leertaste auf einem Knopf); im Scroll-Modus geht ein Tritt **Teil für Teil**
+(#609): zur nächsten Halte-Stelle (Titel, Teil-Anfang, `----`), wenn sie schon zu sehen ist, sonst ⅔ Bildschirm
+(`SCHRITT_ANTEIL`, Alwin: 85 % war zu weit) – Regel `pedalZiel` (`utils/pedalSchritt.ts`), Halte-Stellen
+`pedalHalte` (`utils/rollenAbbildung.ts`, aus dem Satzplan: `stuecke` + `weiterschalten`, beim Setzen der Rolle
+protokolliert). Hochgeladene PDFs haben keine Halte-Stellen → ⅔. Die Fußpfeile ebenso. Die Ansicht schreibt die
+Halte-Stellen bei jedem Tritt nach `data-halte` (für den E2E). E2E: `e2e/chart-scrollen.spec.ts`.
 
 **Gesten:** **ein Finger blättert, zwei Finger zoomen + verschieben** (auch im Zeichenmodus – ein
 begonnener Strich wird bei Zweitfinger verworfen; Apple Pencil zeichnet, Finger zoomen). Pinch zoomt

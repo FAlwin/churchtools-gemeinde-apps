@@ -36,6 +36,11 @@ export interface Stueck {
 /** Was ein Satz-Durchlauf über die Lage der Teile weiß. */
 export interface Satzplan {
   stuecke: Stueck[];
+  /**
+   * Wo ein Weiterschalt-Punkt `----` steht (#606/#609): Seite und Höhe der Zeile danach, in mm. Auf der
+   * Rolle hält das Pedal dort an (`pedalHalte`).
+   */
+  weiterschalten: { seite: number; y: number }[];
   /** Wo unter dem Titelkopf die Teile beginnen (Seite 1). */
   kopfEnde: number;
   spalten: number;
@@ -323,4 +328,19 @@ export function rahmenAufKernen(liste: Streifen[], r: Rechteck, raster = 6): boo
     for (let j = 0; j <= raster; j++)
       if (!aufKern(r.x + (r.w * i) / raster, r.y + (r.h * j) / raster)) return false;
   return true;
+}
+
+/**
+ * **Wo das Pedal auf der Rolle anhält** (#609, Alwin 17.10.2026: „Teil für Teil“): der Titel (Anfang der
+ * Rolle), der Anfang jedes Teils und jeder Weiterschalt-Punkt `----` – sortiert, in mm von oben. Ein Teil,
+ * der im Flow wiederkehrt, hält bei jedem Vorkommen.
+ */
+export function pedalHalte(abb: Abbildung): number[] {
+  const { rolle } = abb;
+  const stellen = [
+    0,
+    ...rolle.stuecke.filter((s) => s.imTeil === 0).map((s) => s.y0),
+    ...rolle.weiterschalten.map((w) => w.y),
+  ];
+  return [...new Set(stellen)].sort((a, b) => a - b);
 }

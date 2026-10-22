@@ -13,8 +13,10 @@ import { useLatestRef } from '../hooks/useLatestRef';
 import { readPageTexts } from '../utils/annotationKeys';
 import { textObjStyle } from '../utils/textObjStyle';
 import type { PedalRichtung } from '../utils/pedalTasten';
-import { SCHRITT_ANTEIL, type ScrollPosition } from '../utils/scrollPosition';
+import type { ScrollPosition } from '../utils/scrollPosition';
+import { HALTE_LUFT, pedalZiel } from '../utils/pedalSchritt';
 import {
+  pedalHalte,
   stricheAufRolle,
   streifen,
   textAufRolle,
@@ -171,25 +173,48 @@ export function ScrollDeck({
     };
   }, [onSeiteRef, positionRef]);
 
-  // Pedal: ein Schritt von ⅔ Bildschirmhöhe; vorwärts zeigt eine Linie kurz die alte Unterkante.
+  /**
+   * Die Halte-Stellen des Pedals (#609) als Scroll-Positionen: je Liedrolle Titel, Teil-Anfänge und `----`
+   * (`pedalHalte`, in mm), mit etwas Luft darüber. Die Rolle ist so breit wie A4 – daraus der Maßstab.
+   * Hochgeladene PDFs haben keine; dort bleibt es beim ⅔-Schritt.
+   */
+  function haltePunkte(): number[] {
+    const out: number[] = [];
+    pages.forEach((_, p) => {
+      const abb = anmerkungFuer(p).abbildung;
+      const box = seitenRefs.current[p];
+      if (!abb || !box) return;
+      const pxProMm = box.offsetWidth / PAGE_W;
+      for (const mm of pedalHalte(abb))
+        out.push(Math.max(box.offsetTop, Math.round(box.offsetTop + mm * pxProMm - HALTE_LUFT)));
+    });
+    return out.sort((a, b) => a - b);
+  }
+  const halteRef = useLatestRef(haltePunkte);
+
+  // Pedal: Teil für Teil (#609) – zur nächsten Halte-Stelle, wenn sie schon zu sehen ist, sonst ⅔ weiter
+  // (`pedalZiel`). Vorwärts zeigt eine Linie kurz die alte Unterkante.
   useEffect(() => {
     schrittRef.current = (richtung) => {
       const el = rootRef.current;
       if (!el) return;
       const h = el.clientHeight;
+      const halte = halteRef.current();
+      // Für den Browser-Test lesbar: wo das Pedal anhält (#609).
+      el.dataset.halte = halte.join(',');
       const amEnde = el.scrollTop + h >= el.scrollHeight - 2;
       if (richtung === 1 && !amEnde)
         setMerker((m) => ({ top: el.scrollTop + h, n: (m?.n ?? 0) + 1 }));
       const ruhig = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
       el.scrollTo({
-        top: el.scrollTop + richtung * Math.round(h * SCHRITT_ANTEIL),
+        top: pedalZiel(el.scrollTop, h, halte, richtung),
         behavior: ruhig ? 'auto' : 'smooth',
       });
     };
     return () => {
       schrittRef.current = null;
     };
-  }, [schrittRef]);
+  }, [schrittRef, halteRef]);
 
   return (
     <div ref={huelleRef} className={styles.huelle}>

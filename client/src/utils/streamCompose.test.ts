@@ -147,8 +147,8 @@ describe('docPagesToKeep – Vorrat begrenzen', () => {
 describe('composeStream – die Rolle des Scroll-Modus (#607/#614)', () => {
   it('reicht die Abbildung der Rolle an den Besitzer durch', () => {
     const abbildung = {
-      a4: { stuecke: [], kopfEnde: 30, spalten: 1, seiten: 1 },
-      rolle: { stuecke: [], kopfEnde: 30, spalten: 1, seiten: 1, hoehe: 200 },
+      a4: { stuecke: [], weiterschalten: [], kopfEnde: 30, spalten: 1, seiten: 1 },
+      rolle: { stuecke: [], weiterschalten: [], kopfEnde: 30, spalten: 1, seiten: 1, hoehe: 200 },
     };
     const { owners } = composeStream({
       songs: [song(10)],

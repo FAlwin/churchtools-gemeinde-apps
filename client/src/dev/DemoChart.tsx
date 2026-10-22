@@ -68,7 +68,8 @@ const SONGS: SetlistSong[] = [
 
 /**
  * `?demo=chart&lied=lang`: ein Lied über zwei A4-Seiten – sechs Teile à neun Zeilen, der letzte springt auf
- * Seite 2. Auf der Rolle liegt die Lücke am Ende von Seite 1 dann über dem sechsten Teil (#615, Lasso).
+ * Seite 2. Auf der Rolle liegt die Lücke am Ende von Seite 1 dann über dem sechsten Teil (#615, Lasso). In
+ * Vers 3 steht nach der vierten Zeile ein Weiterschalt-Punkt `----` (#609, Pedal).
  */
 const LANG: SetlistSong[] = [
   song(
@@ -78,7 +79,9 @@ const LANG: SetlistSong[] = [
     Array.from(
       { length: 6 },
       (_, n) =>
-        `{comment: Vers ${n + 1}}\n${Array.from({ length: 9 }, () => '[C]Zeile mit [G]Text').join('\n')}`,
+        `{comment: Vers ${n + 1}}\n${Array.from({ length: 9 }, (_z, z) =>
+          n === 2 && z === 4 ? '----\n[C]Zeile mit [G]Text' : '[C]Zeile mit [G]Text',
+        ).join('\n')}`,
     ).join('\n'),
   ),
 ];

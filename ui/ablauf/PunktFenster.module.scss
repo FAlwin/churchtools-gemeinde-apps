@@ -194,7 +194,11 @@
 }
 .cancelBtn {
   flex: 1;
-  height: 46px;
+  // Mindesthöhe statt fester Höhe (E6-3c): „Trotzdem speichern“ bricht auf schmalen Handys (unter ~360 px) um –
+  // mit fester Höhe war die zweite Zeile abgeschnitten. Einzeilig bleibt der Knopf 46 px hoch.
+  min-height: 46px;
+  padding: 4px 8px;
+  line-height: 1.2;
   border-radius: var(--r-ctrl);
   border: none;
   background: var(--surface3);
@@ -211,7 +215,11 @@
 }
 .saveBtn {
   flex: 1;
-  height: 46px;
+  // Mindesthöhe statt fester Höhe (E6-3c): „Trotzdem speichern“ bricht auf schmalen Handys (unter ~360 px) um –
+  // mit fester Höhe war die zweite Zeile abgeschnitten. Einzeilig bleibt der Knopf 46 px hoch.
+  min-height: 46px;
+  padding: 4px 8px;
+  line-height: 1.2;
   border-radius: var(--r-ctrl);
   border: none;
   background: var(--blue);

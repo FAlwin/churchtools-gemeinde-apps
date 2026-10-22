@@ -290,9 +290,9 @@ stimmt das Blatt weiter – ohne dass du irgendwo rechnen musst.
 
 1. Das Lied öffnen, auf den Titel tippen und die Tonart auf **D** stellen. Das Blatt zeigt
    D-Akkorde.
-2. Titel → **Neue Version**. Der Editor zeigt **D-Akkorde** (nicht G), über dem Text steht
+2. Titel → **Neue Version**. Der Editor zeigt **D-Akkorde** (nicht G), im Kopf unter dem Titel steht
    „Tonart **D**". Im Text steht eine Zeile `{key: D}`.
-3. Einen Akkord ändern, Versionsname eingeben, **Speichern**. Das Blatt zeigt die neue Version
+3. Einen Akkord ändern, bei **Fassung** einen Namen eingeben, **Speichern**. Das Blatt zeigt die neue Version
    **in D** – nicht plötzlich in G.
 4. Diese Version erneut bearbeiten: Der Editor zeigt wieder D. Die Vorschau rechts steht auf ±0
    und sieht aus wie das Blatt.
@@ -377,5 +377,35 @@ zweiten Gerät.
   `setlistKern.test.ts` (`alterKey`), `ctWrite.test.ts` (Version über den alten Schlüssel gefunden).
   Von Hand: dass der Umzug VOR dem Lesen der Einstellungen läuft (erstes Öffnen) und ein zweites Gerät
 - **Historie:** Durchklick 3b-2 (07.10.2026)
+
+</details>
+
+### TF-EINST-14 · Lied-Editor: neuer Aufbau auf iPad und Handy
+
+**Das brauchst du:** Das Recht, Versionen anzulegen; ein iPad (oder breites Fenster) und ein Handy. Ein
+Testlied ist besser als ein echtes – Versionen landen in ChurchTools.
+
+**Das muss passieren:** Der Editor sieht aus wie ChurchTools (weißer Kopf statt blauer Leiste), und am
+Text ändert sich durch den neuen Aufbau nichts.
+
+1. Ein Lied öffnen, Titel → **Neue Version**. Oben steht ein weißer Kopf: **Abbrechen**, der Titel, darunter
+   die Tonart, rechts **Speichern**.
+2. **iPad:** Links die Karte **Fassung** mit Namensfeld, darunter **Akkord**, **Format** und rechts
+   **Rückgängig / Wiederholen**, darunter der Text. Rechts daneben die **Vorschau** mit Transponieren.
+3. **Handy:** Unter dem Kopf der Umschalter **Text | Vorschau**. Der Titel ist ganz zu lesen. Etwas tippen,
+   auf **Vorschau** und zurück auf **Text** wechseln: Der Text und **Rückgängig** sind noch da.
+4. Speichern, die Version erneut bearbeiten: Der Text steht genau so da wie vorher – keine Zeile mehr oder
+   weniger.
+5. **Dunkelmodus** einschalten und den Editor öffnen: dunkler Kopf und dunkle Karten, alles lesbar.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `client/src/components/ChordEditor.tsx`, `client/src/components/ChordEditor.module.scss`, `client/src/dev/DemoEditor.tsx`
+- **Automatisiert:** weitgehend – `ChordEditor.test.tsx` (breit beide Karten, schmal Umschalter und Text-Karte
+  bleibt erhalten, Rückgängig in der Text-Karte), `e2e/editor-aufbau.spec.ts` (iPad- und Handy-Breite, Titel
+  nicht abgeschnitten, Speichern liefert den Text Zeichen für Zeichen). Von Hand: echtes iPad/Handy mit
+  Bildschirmtastatur, Dunkelmodus
+- **Historie:** Neuer Lied-Editor, Scheibe L1 (22.10.2026, Entwurf C); Alwin: „zu kompliziert und zu altbacken"
 
 </details>

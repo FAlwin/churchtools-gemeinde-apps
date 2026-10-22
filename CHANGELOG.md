@@ -74,6 +74,15 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 - Titel eigener Zahlungen als Tabelle je Art („nachgerückt“, „dazu angemeldet“, „zurückgeholt“) – beim Durchklicken
   stand die Zahlung einer Zurückgeholten als „Anmeldung (…)“ da.
 
+### Behoben (Musik-App + Dienstplaner, #671)
+
+- **Feldgrenzen eines Ablaufpunkts wie ChurchTools** (gemessen 22.10.2026: Titel bis 100, Zuständig bis 1000,
+  Bemerkung und Gruppen-Info je bis 4000 Zeichen). Der Server der Musik-App lehnte Bemerkungen über **2000** Zeichen
+  ab, obwohl ChurchTools 4000 annimmt (die Erweiterung ohne Server konnte schon mehr); Titel bis **255** ließ er
+  durch, ChurchTools lehnte sie dann ohne Grund ab („… fehlgeschlagen (400)“). Jetzt eine Quelle
+  (`ABLAUFPUNKT_GRENZEN` in `shared/types`) für die Server-Prüfung (Ändern, Anlegen, „Rückgängig“) und das
+  Punkt-Fenster beider Apps, das nicht mehr Zeichen zulässt, als ChurchTools speichert.
+
 ### Neu (Organigramm, O2, #664)
 
 - **Der ganze Baum:** je Bereich (oberste Gruppe) eine Karte – große Bereiche zuerst –, darin die Gruppen als Zeilen

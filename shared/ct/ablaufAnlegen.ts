@@ -20,6 +20,7 @@ import type {
   Service,
 } from '../types/index';
 import { ctId } from './ctId';
+import { kalenderVon } from './ablaufRecht';
 import { mapEventToService } from './mapEvent';
 import { mapLimit } from './mapLimit';
 import { istNichtGefunden, standardFenster, type CtLeser } from './setlistKern';
@@ -34,7 +35,7 @@ import type { CtAblaufVorlage, CtEvent, CtKalender } from './typen';
  */
 export function brauchtAblauf(ev: CtEvent, regel: AblaufAnlegenRegel | undefined): boolean {
   if (!regel || regel.kalenderIds.length === 0) return false;
-  const kalender = ctId(ev.calendar?.domainIdentifier);
+  const kalender = kalenderVon(ev);
   if (kalender === null || !regel.kalenderIds.includes(kalender)) return false;
   const wort = regel.suchwort.trim().toLocaleLowerCase('de');
   return wort === '' || ev.name.toLocaleLowerCase('de').includes(wort);

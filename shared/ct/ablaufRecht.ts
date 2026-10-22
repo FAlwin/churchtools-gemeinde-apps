@@ -23,6 +23,15 @@ export interface AblaufTermin {
   terminAdminIds?: readonly number[];
 }
 
+/**
+ * Der Kalender eines Termins (`calendar.domainIdentifier`), `null` ohne brauchbare Angabe – eine Stelle dafür (#645;
+ * vorher zweimal `ctId(ev.calendar?.domainIdentifier)`). Der Untertitel (`setlistKern`) braucht die rohe Angabe für
+ * seinen Pfad und liest sie selbst.
+ */
+export function kalenderVon(ev: { calendar?: { domainIdentifier?: unknown } }): number | null {
+  return ctId(ev.calendar?.domainIdentifier);
+}
+
 /** Die Admins eines Termins aus der ChurchTools-Antwort (`adminIds` ∪ `eventAdminIds`), ohne Unbrauchbares. */
 export function terminAdminIds(ev: { adminIds?: unknown; eventAdminIds?: unknown }): number[] {
   const ids = new Set<number>();

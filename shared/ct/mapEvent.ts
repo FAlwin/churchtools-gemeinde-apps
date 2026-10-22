@@ -1,9 +1,8 @@
 import type { Service } from '../types/index';
 import type { CtEvent } from './typen';
 import { tagAusIso } from './zeit';
-import { ctId } from './ctId';
 import { MONATE_KURZ } from './datum';
-import { terminAdminIds } from './ablaufRecht';
+import { kalenderVon, terminAdminIds } from './ablaufRecht';
 
 const TZ = 'Europe/Berlin';
 
@@ -31,7 +30,7 @@ export function mapEventToService(
   zeitzone: string,
 ): Service {
   const p = parts(ev.startDate);
-  const kalenderId = ctId(ev.calendar?.domainIdentifier);
+  const kalenderId = kalenderVon(ev);
   return {
     id: ev.id,
     day: p.day,

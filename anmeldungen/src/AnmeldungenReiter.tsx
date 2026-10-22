@@ -26,6 +26,7 @@ import { AbsagenFrage, MailAnsicht, NachrueckenFrage } from './AnmeldungAktion';
 import { absagenLassen, nachrueckenLassen } from './bewegung';
 import { VonHandFenster, type VonHandFertig } from './VonHandFenster';
 import { ZurueckFenster } from './ZurueckFenster';
+import { RundmailFenster } from './RundmailFenster';
 import { useSpeichern } from './useSpeichern';
 import { RueckgaengigImFenster, type Aenderung } from './Rueckgaengig';
 import s from './Startseite.module.scss';
@@ -483,6 +484,7 @@ export function AnmeldungenReiter({
   const [vonHand, setVonHand] = useState<{ dazu: ListenAnmeldung | null } | null>(null);
   // Zurückholen (A7-4c) – `von`: die Anmeldung, in die „Abbrechen“ zurückführt.
   const [zurueck, setZurueck] = useState<{ b: Absage; von: string | null } | null>(null);
+  const [rundmail, setRundmail] = useState(false);
   const oeffnen = (k: string | null, modus: FensterModus = null) => {
     setOffen(k);
     setStartModus(modus);
@@ -650,6 +652,11 @@ export function AnmeldungenReiter({
             value={suche}
             onChange={(ev) => setSuche(ev.target.value)}
           />
+          {darf && liste.length > 0 && (
+            <button type="button" className={a.nachKnopf} onClick={() => setRundmail(true)}>
+              ✉ Rundmail
+            </button>
+          )}
           {darf && (
             <button
               type="button"
@@ -831,6 +838,18 @@ export function AnmeldungenReiter({
             setVonHand(null);
             fertig(x);
           }}
+        />
+      )}
+
+      {rundmail && (
+        <RundmailFenster
+          id={id}
+          e={e}
+          veranstaltung={veranstaltung}
+          liste={liste}
+          // Wie der Filter der Liste – „Zahlung offen“ beginnt mit der Zahlungserinnerung.
+          startFilter={filter === 'offen' ? 'offen' : filter === 'warte' ? 'warte' : 'alle'}
+          onClose={() => setRundmail(false)}
         />
       )}
 

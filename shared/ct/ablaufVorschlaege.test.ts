@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AblaufVorlage, Service } from '@shared/types/index';
+import type { AblaufVorlage, Service } from '../types/index';
 import { kopieVorschlaege, startQuelle, vorlagenFuer } from './ablaufVorschlaege';
 
 function termin(id: number, start: string, kalenderId?: number): Service {
@@ -80,5 +80,18 @@ describe('startQuelle – „Vorlage zuerst" (Alwin, 13.10.2026)', () => {
 
   it('weder noch: leer', () => {
     expect(startQuelle([], [])).toEqual({ art: 'leer' });
+  });
+});
+
+describe('Regeln für den Dienstplaner (E6-5a, #681)', () => {
+  it('funktionieren mit schlanken Terminen und `kalenderId: null` (Kalender unbekannt → alle)', () => {
+    const ziel = { id: 7, start: '2026-10-18T08:00:00Z', kalenderId: null };
+    const liste = [
+      { id: 5, start: '2026-10-11T08:00:00Z', kalenderId: 2 },
+      { id: 6, start: '2026-10-04T08:00:00Z', kalenderId: 3 },
+      { id: 9, start: '2026-10-25T08:00:00Z', kalenderId: 2 },
+    ];
+    expect(kopieVorschlaege(ziel, liste).map((t) => t.id)).toEqual([5, 6]);
+    expect(kopieVorschlaege({ ...ziel, kalenderId: 3 }, liste).map((t) => t.id)).toEqual([6]);
   });
 });

@@ -47,6 +47,12 @@ geschützt, nicht nur in der Oberfläche (gemessen 16.10.2026):
 - **Versteckte Gruppen** bleiben versteckt; ihre Mitglieder bekommen beim Einrichten zusätzlich „versteckte Gruppe
   sehen“. Ohne das sehen sie ihre eigene Gruppe in ChurchTools nicht (gemessen 22.10.2026).
 
+**Vorlagen** (Reiter „Verwaltung“, Karte „Vorlagen“): gelten für alle Gruppen. Beim ersten Einrichten einer Gruppe
+entstehen drei zum Anpassen (Leitungssitzung, Teamtreffen, Klausur). Je Vorlage: Name, Tagesordnungspunkte mit
+vorbereitetem Text, feste Punkte („Offene To-Dos“, „Protokoll der letzten Sitzung“ – füllen sich selbst) und feste
+Aufgaben, die bei jeder Sitzung mit dieser Vorlage angelegt werden. Lesen dürfen sie alle eingerichteten Gruppen,
+ändern nur Admins.
+
 | Stand auf der Startseite   | Bedeutung                                                         |
 | -------------------------- | ----------------------------------------------------------------- |
 | eingerichtet               | beide Kategorien der Gruppe sind sichtbar                         |

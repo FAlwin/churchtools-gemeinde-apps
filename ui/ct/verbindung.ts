@@ -308,21 +308,37 @@ function csrfVerwerfenBeiAblehnung(status: number): void {
   if (status === 401 || status === 403) csrfToken.vergiss();
 }
 
+/** Ein Fehler der alten Schnittstelle – `art` aus `ajaxNutzlast` (A7-5: „abgelehnt“ heißt sicher nicht ausgeführt). */
+export class AltFehler extends ApiError {
+  constructor(
+    status: number,
+    meldung: string,
+    readonly art: 'unlesbar' | 'abgelehnt' | 'innen',
+  ) {
+    super(status, meldung);
+    this.name = 'AltFehler';
+  }
+}
+
 /**
- * Eine Anfrage an die **alte** ChurchTools-Schnittstelle (`index.php?q=churchservice/ajax`, 3b-2) –
- * für Lied-Kategorien und Liederbücher (`getMasterData`). Wie im Server mit CSRF-Token und
- * `X-Requested-With` (ohne Token → 401, gemessen 07.10.2026). Ausgewertet wird über
- * `@shared/ct/altSchnittstelle`, dieselbe Regel wie im Server.
+ * Eine Anfrage an die **alte** ChurchTools-Schnittstelle (`index.php?q=<modul>/ajax`) – für Lied-Kategorien und
+ * Liederbücher (`churchservice` `getMasterData`, 3b-2) und für Mails (`churchhome` `sendEMailToPersonIds`, A7-5). Wie
+ * im Server mit CSRF-Token und `X-Requested-With` (ohne Token → 401, gemessen 07.10.2026). Ausgewertet wird über
+ * `@shared/ct/altSchnittstelle`, dieselbe Regel wie im Server. `json`: Felder als JSON-Rumpf (so schickt der
+ * Mail-Editor von ChurchTools, gemessen 22.10.2026), sonst als Formular.
  */
 export async function ctAltAnfrage(
   func: string,
   felder: Record<string, string> = {},
   meldungen: AjaxMeldungen = {},
+  ort: { modul?: string; json?: Record<string, unknown> } = {},
 ): Promise<unknown> {
   pruefeBremse();
   const m = ajaxMeldungen(meldungen);
   const headers: Record<string, string> = {
-    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+    'Content-Type': ort.json
+      ? 'application/json'
+      : 'application/x-www-form-urlencoded; charset=UTF-8',
     // Ohne diesen Kopf antwortet die alte Schnittstelle mit einer HTML-Seite statt JSON.
     'X-Requested-With': 'XMLHttpRequest',
     Accept: 'application/json',
@@ -330,12 +346,14 @@ export async function ctAltAnfrage(
   const csrf = await holeCsrf();
   if (csrf) headers['CSRF-Token'] = csrf;
   const res = await mitZeitgrenze(
-    `${ctBasis()}/index.php?q=churchservice/ajax`,
+    `${ctBasis()}/index.php?q=${ort.modul ?? 'churchservice'}/ajax`,
     {
       method: 'POST',
       credentials: 'include',
       headers,
-      body: new URLSearchParams({ func, ...felder }),
+      body: ort.json
+        ? JSON.stringify({ ...ort.json, ...felder, func })
+        : new URLSearchParams({ func, ...felder }),
     },
     ZEIT_DATEI_MS,
   );
@@ -353,7 +371,7 @@ export async function ctAltAnfrage(
     throw await fehlerAus(res, body, m.verweigert);
   }
   if (!res.ok) throw new ApiError(502, `${m.abgelehnt} (${res.status}).`);
-  return ajaxNutzlast(text, m, (status, meldung) => new ApiError(status, meldung));
+  return ajaxNutzlast(text, m, (status, meldung, art) => new AltFehler(status, meldung, art));
 }
 
 /**

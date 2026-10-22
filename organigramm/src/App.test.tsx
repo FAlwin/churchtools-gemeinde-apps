@@ -335,3 +335,117 @@ describe('O3: offene Plätze, Personen, Hinweise', () => {
     expect(await screen.findByText(/nicht mehr angemeldet/)).toBeTruthy();
   });
 });
+
+describe('O4: Präsentation', () => {
+  const oeffnen = async () => {
+    render(<App />);
+    const knopf = await screen.findByRole('button', { name: /Präsentieren/ });
+    await vi.waitFor(() => expect((knopf as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(knopf);
+    return screen.getByRole('dialog', { name: 'Präsentation' });
+  };
+  const wo = (d: HTMLElement) => d.querySelector('[aria-live]')?.textContent;
+
+  it('„Präsentieren“ erst, wenn die Mitglieder geladen sind – auch für alle ohne Leitung', async () => {
+    mitgliederLaden.mockReturnValue(new Promise(() => {}));
+    laden.mockResolvedValue(
+      start({ rechte: { gruppenVerwalten: false, anlegbareTypen: [], bearbeitbareGruppen: [] } }),
+    );
+    render(<App />);
+    const knopf = await screen.findByRole('button', { name: /Präsentieren/ });
+    expect((knopf as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('Übersicht: Bereiche wie im Baum, Summen, Leitung – „gesucht“ nur, wo man alles sieht', async () => {
+    const d = await oeffnen();
+    expect(within(d).getByRole('heading', { name: 'Unsere Bereiche' })).toBeTruthy();
+    expect(within(d).getByText('3 Bereiche · 1 Gruppe · 4 Personen')).toBeTruthy();
+    const kacheln = within(d)
+      .getAllByRole('heading', { level: 2 })
+      .map((h) => h.textContent);
+    expect(kacheln).toEqual(['Gottesdienst', 'Café', 'Infos']);
+    const kachel = (n: string) => within(d).getByRole('heading', { name: n }).closest('button')!;
+    expect(within(kachel('Gottesdienst')).getByText('1 Gruppe · 4 Personen')).toBeTruthy();
+    expect(within(kachel('Gottesdienst')).getByText('Alwin Friesen')).toBeTruthy();
+    // Café gerade nicht ladbar → nicht „gesucht“, und keine Leitungs-Zeile
+    expect(within(kachel('Café')).getByText('Mitglieder nicht sichtbar')).toBeTruthy();
+    expect(within(kachel('Café')).queryByText(/gesucht/)).toBeNull();
+    expect(within(kachel('Café')).queryByText('Leitung')).toBeNull();
+    expect(within(kachel('Infos')).getByText('Leitung')).toBeTruthy();
+    // Infos lesbar, aber leer → hier stimmt „gesucht“
+    expect(within(kachel('Infos')).getByText('Mitarbeitende gesucht')).toBeTruthy();
+    expect(within(kachel('Infos')).getByText('Leitung wird noch gesucht')).toBeTruthy();
+    expect(wo(d)).toBe('Übersicht');
+  });
+
+  it('Bereich: Gruppen als Spalten, jede Person einmal mit Leitung zuerst, Untergruppen mit Stand', async () => {
+    const d = await oeffnen();
+    fireEvent.click(within(d).getByRole('button', { name: 'Weiter ›' }));
+    expect(wo(d)).toBe('1 von 3 · Gottesdienst');
+    expect(within(d).getByRole('heading', { level: 1, name: 'Gottesdienst' })).toBeTruthy();
+    const technik = within(d).getByRole('region', { name: 'Technik' });
+    const namen = within(technik)
+      .getAllByRole('listitem')
+      .map((li) => li.textContent);
+    expect(namen).toEqual(['AAlwin FriesenLeiter', 'DDora DornCo-Leiter', 'CCarl Clau']);
+    fireEvent.click(within(technik).getByText('1 Untergruppe'));
+    expect(within(technik).getByText('Stream')).toBeTruthy();
+    expect(within(technik).getByText('Mitglieder nicht sichtbar')).toBeTruthy();
+  });
+
+  it('Tastatur: Pfeile, Bild auf/ab, Pos1, Esc zurück zur Übersicht und dort schließen', async () => {
+    const d = await oeffnen();
+    const taste = (key: string) => fireEvent.keyDown(window, { key });
+    taste('ArrowRight');
+    expect(wo(d)).toBe('1 von 3 · Gottesdienst');
+    taste('PageDown');
+    taste(' ');
+    expect(wo(d)).toBe('3 von 3 · Infos');
+    taste('ArrowRight'); // am Ende bleibt es stehen
+    expect(wo(d)).toBe('3 von 3 · Infos');
+    taste('PageUp');
+    expect(wo(d)).toBe('2 von 3 · Café');
+    taste('Home');
+    expect(wo(d)).toBe('Übersicht');
+    taste('ArrowLeft'); // vor der Übersicht gibt es nichts
+    expect(wo(d)).toBe('Übersicht');
+    taste('ArrowRight');
+    taste('Escape');
+    expect(wo(d)).toBe('Übersicht');
+    taste('Escape');
+    expect(screen.queryByRole('dialog', { name: 'Präsentation' })).toBeNull();
+  });
+
+  it('blendet dieselben Gruppentypen aus wie der Baum', async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: /^Verteiler/ }));
+    const knopf = screen.getByRole('button', { name: /Präsentieren/ });
+    await vi.waitFor(() => expect((knopf as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(knopf);
+    const d = screen.getByRole('dialog', { name: 'Präsentation' });
+    expect(within(d).getByText('2 Bereiche · 1 Gruppe · 4 Personen')).toBeTruthy();
+    expect(within(d).queryByRole('heading', { name: 'Infos' })).toBeNull();
+  });
+
+  it('Vollbild nur, wo der Browser es kann – Knopf und Taste F', async () => {
+    const d0 = await oeffnen();
+    expect(within(d0).queryByRole('button', { name: /Vollbild/ })).toBeNull();
+    fireEvent.click(within(d0).getByRole('button', { name: 'Schließen' }));
+
+    Object.defineProperty(document, 'fullscreenEnabled', { value: true, configurable: true });
+    const anfordern = vi.fn(() => Promise.resolve());
+    HTMLElement.prototype.requestFullscreen = anfordern;
+    try {
+      fireEvent.click(screen.getByRole('button', { name: /Präsentieren/ }));
+      const d = screen.getByRole('dialog', { name: 'Präsentation' });
+      fireEvent.click(within(d).getByRole('button', { name: 'Vollbild' }));
+      expect(anfordern).toHaveBeenCalledTimes(1);
+      fireEvent.keyDown(window, { key: 'f' });
+      expect(anfordern).toHaveBeenCalledTimes(2);
+    } finally {
+      Reflect.deleteProperty(document, 'fullscreenEnabled');
+      Reflect.deleteProperty(HTMLElement.prototype, 'requestFullscreen');
+    }
+  });
+});

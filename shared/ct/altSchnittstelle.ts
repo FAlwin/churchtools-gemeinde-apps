@@ -57,17 +57,21 @@ export function ajaxMeldungen(m: AjaxMeldungen = {}): Required<AjaxMeldungen> {
 export function ajaxNutzlast(
   rumpf: string,
   meldungen: Required<AjaxMeldungen>,
-  fehler: (status: number, meldung: string) => Error,
+  /**
+   * `art` sagt, was schiefging (A7-5): `unlesbar` (kein JSON – oft abgelaufene Sitzung), `abgelehnt` (ChurchTools
+   * antwortete `status` ≠ `success`), `innen` (innere Nutzlast unlesbar). Der Status bleibt 502.
+   */
+  fehler: (status: number, meldung: string, art: 'unlesbar' | 'abgelehnt' | 'innen') => Error,
 ): unknown {
   let aussen: { status?: string; data?: unknown; message?: string };
   try {
     aussen = JSON.parse(rumpf) as typeof aussen;
   } catch {
     // Kommt vor, wenn die Sitzung abgelaufen ist: Dann liefert das alte Modul eine Anmeldeseite.
-    throw fehler(502, meldungen.unlesbar);
+    throw fehler(502, meldungen.unlesbar, 'unlesbar');
   }
   if (aussen.status !== 'success') {
-    throw fehler(502, aussen.message ?? meldungen.fehlgeschlagen);
+    throw fehler(502, aussen.message ?? meldungen.fehlgeschlagen, 'abgelehnt');
   }
   const innen: unknown =
     typeof aussen.data === 'object' && aussen.data !== null && 'content' in aussen.data
@@ -77,6 +81,6 @@ export function ajaxNutzlast(
   try {
     return JSON.parse(innen);
   } catch {
-    throw fehler(502, meldungen.innenUnlesbar);
+    throw fehler(502, meldungen.innenUnlesbar, 'innen');
   }
 }

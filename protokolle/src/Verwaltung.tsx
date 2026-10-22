@@ -7,6 +7,7 @@ import { useToast } from '@ui/fenster/useToast';
 import { ladeVerwaltung, type Verwaltung as Daten, type VerwaltungsGruppe } from './einrichten';
 import { GruppeEinrichten } from './GruppeEinrichten';
 import { Marke } from './Marke';
+import { VorlagenKarte } from './VorlagenKarte';
 import styles from './Verwaltung.module.scss';
 
 type Zustand =
@@ -16,7 +17,7 @@ type Zustand =
 
 /**
  * **Verwaltung** (Bauplan S2-2, nur Admins): alle Gruppen der Gemeinde als Liste (Alwin, 22.10.2026), je Gruppe
- * „eingerichtet“ oder „Einrichten“. Ein Tipp öffnet das Fenster „Gruppe einrichten“. Die Vorlagen kommen mit S2-3.
+ * „eingerichtet“ oder „Einrichten“. Ein Tipp öffnet das Fenster „Gruppe einrichten“. Darunter die Vorlagen (S2-3).
  */
 export function Verwaltung({ modul }: { modul: number }) {
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
@@ -73,6 +74,7 @@ export function Verwaltung({ modul }: { modul: number }) {
           ))}
         </ul>
       </section>
+      <VorlagenKarte modul={modul} onHinweis={showToast} />
       {offen && (
         <GruppeEinrichten
           modul={modul}

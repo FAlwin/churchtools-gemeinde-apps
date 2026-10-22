@@ -255,6 +255,8 @@ export interface ListenPerson {
   geburtstag: string | null;
   status: 'aktiv' | 'wartet';
   warteplatz: number | null;
+  /** E-Mail-Adresse der Person in ChurchTools (A7-5: an wen die Rundmail je Anmeldung geht). */
+  email: string | null;
   werte: Werte;
 }
 
@@ -371,6 +373,7 @@ export function anmeldungenAus(
       geburtstag: m.geburtstag,
       status: m.status === 'wartet' ? 'wartet' : 'aktiv',
       warteplatz: m.warteplatz,
+      email: m.email,
       werte: m.werte,
     }));
     const kontakt = e.ctFelder.kontakt === undefined ? undefined : w[e.ctFelder.kontakt];

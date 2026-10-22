@@ -7,6 +7,49 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Anmeldungen, A7-5)
+
+- **Rundmail** (Entwurf `a7-5-rundmail-v1`, abgenommen 22.10.2026): „✉ Rundmail“ im Reiter Anmeldungen – an alle
+  Anmeldungen, „Zahlung offen“ oder „Warteliste“, **je Anmeldung eine Mail** an den Kontakt (Alwin). ChurchTools
+  verschickt (gemessen: Absender „Name <noreply@churchtools.de>“, Antworten an die Absenderin, jede Familie ihre eigene
+  Mail) über die Schnittstelle, die auch sein Mail-Editor nutzt (`churchhome/ajax` → `sendEMailToPersonIds`, nicht
+  dokumentiert) – über `ctAltAnfrage`, dieselbe Stelle wie Lied-Kategorien und SongSelect (jetzt mit Modul und
+  JSON-Rumpf; `AltFehler` sagt, ob ChurchTools ausdrücklich abgelehnt hat).
+- Platzhalter lesbar in eckigen Klammern (`[Betrag]`, `[Anmelde-Nr.]`, `[Angemeldet von]` …) – beim Senden zu den
+  Platzhaltern von ChurchTools (`/placeholders/group/{id}`); unbekannte werden genannt und sperren das Senden.
+- Vorlagen „Leer“, „Zahlungserinnerung“ (Bankdaten aus „Bezahlung“) und „Infos vorab“ (Datum und Ort aus dem Termin);
+  eigener Text wird nicht still überschrieben. Vorschau je Familie über ChurchTools (`/emails/preview`). „Kopie an mich“
+  (aus zu Beginn).
+- Rückfrage mit Anzahl, danach **im Protokoll von ChurchTools nachgelesen**. Antwortet ChurchTools beim Senden nicht und
+  steht nichts im Protokoll, heißt es „unklar, ob verschickt“ – ohne zweites Senden (sonst doppelte Mails).
+- Beim echten Test gefunden: Die Vorschau-Antwort von ChurchTools steht direkt da (`{subject, html}`), nicht in `data`;
+  Platzhalter der Person ([Vorname], [Wartelistenplatz]) gelten für die Person, an die die Mail geht – Hinweis im Fenster.
+
+### Neu (Dienstplaner, E6-5a, #681)
+
+- **Ablauf anlegen in der Termin-Ansicht:** Bei einem Termin ohne Ablauf steht für alle, die den Ablauf bearbeiten
+  dürfen, „Ablauf anlegen“ – mit denselben drei Wegen wie in der Musik-App: **aus einer Vorlage** (die des eigenen
+  Kalenders zuerst und vorausgewählt), **wie ein früherer Termin** (derselbe Kalender, bis 12 Wochen zurück, nur
+  Termine mit Ablauf, jüngster zuerst) oder **leer**. Danach steht der Ablauf da, und man ist gleich im Bearbeiten.
+  Angelegt wird über den vorhandenen Kern (prüft vorher, ob es schon einen gibt, und liest nachher nach).
+
+### Intern (Ablauf-Baustein, E6-5a, #681)
+
+- Das Fenster „Ablauf anlegen“ ist ein gemeinsamer Baustein (`ui/ablauf/AblaufAnlegenFenster`); die Musik-App behält
+  eine Hülle mit ihren Abfragen. Die Auswahl-Regeln stehen in `shared/ct/ablaufVorschlaege.ts` (vorher
+  `client/src/utils/`), der blaue Hauptknopf als Mixin `hauptKnopfBreit`. Fotos des Fensters (Vorlage, früher, leer)
+  sind vorher und nachher byte-gleich. Neu getestet: „Kalender unbekannt“ in der Musik-App legt nichts an.
+
+### Neu (Protokolle, S2-3)
+
+- **Vorlagen bearbeiten** (Verwaltung, nur Admins): Karte „Vorlagen“ unter den Gruppen mit Umfang und Punkten je
+  Vorlage; das Fenster wie im Entwurf – Name, Tagesordnungspunkte mit vorbereitetem Text und Reihenfolge, feste
+  Punkte („Offene To-Dos“, „Protokoll der letzten Sitzung“ – Titel änderbar), feste Aufgaben; „Neue Vorlage“ beginnt
+  mit „Gebet“ und „Offene To-Dos“; Löschen mit Rückfrage. Jeder Schreibschritt nachgelesen, zu lange Vorlagen
+  werden vorher abgelehnt.
+- Die drei Standard-Vorlagen entstehen nur noch, wenn die Kategorie „Vorlagen“ **neu angelegt** wird – hat ein Admin
+  alle gelöscht, kommen sie beim nächsten Einrichten nicht wieder (vorher: immer, wenn die Kategorie leer war).
+
 ### Neu (Organigramm, O3, #672)
 
 - **Reiter Organigramm · Personen · Hinweise** (am Handy unten): Personen und Hinweise gibt es nur für die **Leitung

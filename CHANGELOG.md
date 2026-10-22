@@ -7,6 +7,24 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Anmeldungen, A7-5)
+
+- **Rundmail** (Entwurf `a7-5-rundmail-v1`, abgenommen 22.10.2026): „✉ Rundmail“ im Reiter Anmeldungen – an alle
+  Anmeldungen, „Zahlung offen“ oder „Warteliste“, **je Anmeldung eine Mail** an den Kontakt (Alwin). ChurchTools
+  verschickt (gemessen: Absender „Name <noreply@churchtools.de>“, Antworten an die Absenderin, jede Familie ihre eigene
+  Mail) über die Schnittstelle, die auch sein Mail-Editor nutzt (`churchhome/ajax` → `sendEMailToPersonIds`, nicht
+  dokumentiert) – über `ctAltAnfrage`, dieselbe Stelle wie Lied-Kategorien und SongSelect (jetzt mit Modul und
+  JSON-Rumpf; `AltFehler` sagt, ob ChurchTools ausdrücklich abgelehnt hat).
+- Platzhalter lesbar in eckigen Klammern (`[Betrag]`, `[Anmelde-Nr.]`, `[Angemeldet von]` …) – beim Senden zu den
+  Platzhaltern von ChurchTools (`/placeholders/group/{id}`); unbekannte werden genannt und sperren das Senden.
+- Vorlagen „Leer“, „Zahlungserinnerung“ (Bankdaten aus „Bezahlung“) und „Infos vorab“ (Datum und Ort aus dem Termin);
+  eigener Text wird nicht still überschrieben. Vorschau je Familie über ChurchTools (`/emails/preview`). „Kopie an mich“
+  (aus zu Beginn).
+- Rückfrage mit Anzahl, danach **im Protokoll von ChurchTools nachgelesen**. Antwortet ChurchTools beim Senden nicht und
+  steht nichts im Protokoll, heißt es „unklar, ob verschickt“ – ohne zweites Senden (sonst doppelte Mails).
+- Beim echten Test gefunden: Die Vorschau-Antwort von ChurchTools steht direkt da (`{subject, html}`), nicht in `data`;
+  Platzhalter der Person ([Vorname], [Wartelistenplatz]) gelten für die Person, an die die Mail geht – Hinweis im Fenster.
+
 ### Neu (Dienstplaner, E6-5a, #681)
 
 - **Ablauf anlegen in der Termin-Ansicht:** Bei einem Termin ohne Ablauf steht für alle, die den Ablauf bearbeiten

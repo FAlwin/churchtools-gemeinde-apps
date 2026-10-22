@@ -114,6 +114,15 @@ zurück. Gehört sie zu einer Anmeldung, die es noch gibt, bekommt sie eine eige
 allein angemeldet, wird ihre Zahlung neu gerechnet und ist wieder offen. Hatte sie schon bezahlt, weist das Fenster
 darauf hin – dann bitte prüfen, ob schon zurückgezahlt wurde. ChurchTools schickt dabei keine Mail.
 
+**Rundmail:** „✉ Rundmail“ im Reiter „Anmeldungen“ schreibt an alle Anmeldungen, an die mit offener Zahlung oder an die
+mit Wartenden – je Anmeldung eine Mail an den Kontakt. ChurchTools verschickt sie mit deinem Namen als Absender;
+Antworten kommen bei dir an. Platzhalter wie `[Betrag]`, `[Anmelde-Nr.]` oder `[Angemeldet von]` füllt ChurchTools je
+Familie; die Vorschau zeigt, wie es bei jeder Familie aussieht. Vorlagen: Zahlungserinnerung (mit den Bankdaten aus
+„Bezahlung“) und Infos vorab. Verschickte Mails lassen sich nicht zurückholen. Gut zu wissen: Die Erweiterung nutzt dafür
+dieselbe Schnittstelle wie der Mail-Editor von ChurchTools; sie ist nicht offiziell beschrieben und könnte sich mit
+einem Update ändern – dann meldet das Fenster einen Fehler, und die Mail geht weiter über ChurchTools selbst
+(Mitgliederliste der Gruppe → „E-Mail“).
+
 **Zahlung:** Im Fenster einer Anmeldung markiert ihr sie als **bezahlt** (Zahlart und Tag), setzt das zurück oder
 **ändert den Betrag** (z. B. nach Absprache – in der Aufschlüsselung steht dann „Von Hand geändert am …“, und die
 Nachprüfung meldet ihn nicht mehr). Bezahlt gilt für die ganze Anmeldung und steht in ChurchTools bei der ersten Person

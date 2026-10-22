@@ -18,6 +18,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   allein, wird die Zahlung der Anmeldung nach den Regeln neu gerechnet und ist offen – hatte sie schon bezahlt, steht
   der Hinweis „Rückzahlung prüfen“ da.
 - „Platz und Betrag“ ist ein Baustein für „Von Hand“, „Person dazu“ und „Zurückholen“ (`PlatzWahl`).
+- Titel eigener Zahlungen als Tabelle je Art („nachgerückt“, „dazu angemeldet“, „zurückgeholt“) – beim Durchklicken
+  stand die Zahlung einer Zurückgeholten als „Anmeldung (…)“ da.
 
 ### Neu (Organigramm, O2, #664)
 

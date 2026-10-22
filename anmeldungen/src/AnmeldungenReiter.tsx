@@ -16,6 +16,7 @@ import {
   type AntwortZeile,
   type ListenAnmeldung,
   type ListenPerson,
+  type Zahlung,
 } from '@shared/anmeldung/liste';
 import type { GeladenerStand } from './mitglieder';
 import { tagPunkt as lang } from '@shared/ct/datum';
@@ -358,11 +359,9 @@ function AnmeldungAnsehen({
                     zahlung={z}
                     wer={x.wer}
                     titel={
-                      z.wofuer === 'nachgerueckt'
-                        ? `${z.name} – nachgerückt`
-                        : z.wofuer === 'dazu'
-                          ? `${z.name} – dazu angemeldet`
-                          : `Anmeldung (${z.name})`
+                      z.wofuer === 'anmeldung'
+                        ? `Anmeldung (${z.name})`
+                        : `${z.name} – ${EIGENE_ZAHLUNG[z.wofuer]}`
                     }
                     zahlarten={zahlarten}
                     heute={heute}
@@ -417,6 +416,16 @@ function AnmeldungAnsehen({
     </Sheet>
   );
 }
+
+/**
+ * Titel einer eigenen Zahlung je Art – als Tabelle, damit der Build eine neue Art meldet (A7-4c: „zurückgeholt“ fehlte
+ * zuerst und stand als „Anmeldung (Paula)“ da).
+ */
+const EIGENE_ZAHLUNG: Record<Exclude<Zahlung['wofuer'], 'anmeldung'>, string> = {
+  nachgerueckt: 'nachgerückt',
+  dazu: 'dazu angemeldet',
+  zurueck: 'zurückgeholt',
+};
 
 const absageText = (b: Absage) =>
   `am ${kurz(b.am)} ${b.selbst ? 'selbst abgesagt (Link in der Mail)' : 'vom Team entfernt'}`;

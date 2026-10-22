@@ -507,6 +507,20 @@ describe('Zurückholen (A7-4c)', () => {
     expect(plan.felder[x.ctFelder.aufschluesselung]).toMatch(/^Zurückgeholt am /);
   });
 
+  it('eigene Zahlung einer Zurückgeholten: Titel „– zurückgeholt“, nicht „Anmeldung (…)“', () => {
+    const x = e();
+    const roh = mitglieder('AAAAAA', [true, false], 10);
+    roh[1].groupMemberStatus = 'active';
+    roh[1].fields!.push(
+      { id: x.ctFelder.betrag, value: '6,00 €' },
+      { id: x.ctFelder.aufschluesselung, value: 'Zurückgeholt am 22.10.2026\nFür Lena: 6,00 €' },
+    );
+    zeigen(fertig(roh));
+    fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));
+    expect(screen.getByText('Lena – zurückgeholt')).toBeTruthy();
+    expect(screen.getByText('Gilt nur für Lena.')).toBeTruthy();
+  });
+
   it('im Fenster der Anmeldung unter „Abgesagt“; Abbrechen führt zurück in die Anmeldung', () => {
     zeigen(mitAbsage());
     fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));

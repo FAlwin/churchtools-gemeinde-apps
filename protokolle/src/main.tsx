@@ -6,7 +6,7 @@ import { App } from './App';
 import './main.scss';
 
 /**
- * Start der Sitzungen (Bauplan S1). Sie laufen nur als ChurchTools-Erweiterung – die Klasse `ct-extension` legt
+ * Start der Protokolle (Bauplan S1). Sie laufen nur als ChurchTools-Erweiterung – die Klasse `ct-extension` legt
  * die App in den Bereich unter der ChurchTools-Leiste (`ui/design/_grundregeln.scss`).
  */
 document.documentElement.classList.add('ct-extension');

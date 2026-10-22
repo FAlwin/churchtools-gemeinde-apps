@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { RohMitgliedschaft } from '../ct/gruppen';
-import { kategorieName, sitzungsGruppen } from './gruppen';
+import { kategorieName, protokollGruppen } from './gruppen';
 import { kuerzelMitarbeit, kuerzelProtokolle } from './speicher';
 
 /** Aufbau wie `GET /persons/{id}/groups` (gemessen; nur die gelesenen Felder). */
@@ -16,9 +16,9 @@ const mit = (
   ...extra,
 });
 
-describe('sitzungsGruppen', () => {
+describe('protokollGruppen', () => {
   it('versteckte Gruppe nur aus den Kategorien – mit Namen aus der Kategorie', () => {
-    const g = sitzungsGruppen(
+    const g = protokollGruppen(
       [mit(19, 'Technik-Team')],
       [
         {
@@ -43,7 +43,7 @@ describe('sitzungsGruppen', () => {
   });
 
   it('ohne Mitarbeit-Kategorie: unvollständig', () => {
-    const g = sitzungsGruppen(
+    const g = protokollGruppen(
       [mit(7, 'Jugendleitung')],
       [{ id: 70, shorty: kuerzelProtokolle(7), name: 'Protokolle · Jugendleitung' }],
     );
@@ -51,7 +51,7 @@ describe('sitzungsGruppen', () => {
   });
 
   it('nimmt bei doppeltem Kürzel die kleinste ID', () => {
-    const g = sitzungsGruppen(
+    const g = protokollGruppen(
       [],
       [
         { id: 90, shorty: kuerzelProtokolle(3), name: 'Protokolle · A' },
@@ -63,7 +63,7 @@ describe('sitzungsGruppen', () => {
   });
 
   it('lässt beendete und angefragte Mitgliedschaften weg; ohne jeden Namen ein Ersatzname', () => {
-    const g = sitzungsGruppen(
+    const g = protokollGruppen(
       [
         mit(1, 'Alt', { memberEndDate: '2026-01-01' }),
         mit(2, 'Wartet', { groupMemberStatus: 'requested' }),

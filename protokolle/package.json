@@ -1,8 +1,8 @@
 {
-  "name": "@worship/sitzungen",
+  "name": "@worship/protokolle",
   "version": "0.1.0",
   "private": true,
-  "description": "Sitzungen – ChurchTools-Erweiterung für Protokolle und To-Dos von Gruppen (z. B. Leitungskreis). Kein eigener Server: spricht ChurchTools direkt an.",
+  "description": "Protokolle – ChurchTools-Erweiterung für Protokolle und To-Dos von Gruppen (z. B. Leitungskreis). Kein eigener Server: spricht ChurchTools direkt an.",
   "type": "module",
   "scripts": {
     "dev": "vite",

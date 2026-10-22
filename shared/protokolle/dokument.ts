@@ -1,5 +1,5 @@
 /**
- * **Das Protokoll als Dokument** (Sitzungen, Bauplan S1/S4) – Blockmodell und die EINE Ableitung, aus der
+ * **Das Protokoll als Dokument** (Bauplan Protokolle S1/S4) – Blockmodell und die EINE Ableitung, aus der
  * Bereiche (Beschlüsse · To-Dos · Termine), Beschlüsse-Liste, PDF und Freigabe lesen. Lehre aus den Entwürfen
  * 2–7: Es gibt keine zweite Liste von Beschlüssen neben dem Dokument (Regel-Dopplung).
  *

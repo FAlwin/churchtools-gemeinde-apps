@@ -28,7 +28,7 @@ describe('App (S1)', () => {
   it('zeigt Gruß, Gemeinde und die Gruppen mit ihrem Stand', async () => {
     render(<App />);
     expect(await screen.findByRole('heading', { name: 'Hallo Alwin' })).toBeTruthy();
-    expect(screen.getByText('Sitzungen · ECG Donrath')).toBeTruthy();
+    expect(screen.getByText('Protokolle · ECG Donrath')).toBeTruthy();
     const liste = screen.getByRole('list');
     const zeilen = within(liste)
       .getAllByRole('listitem')
@@ -45,7 +45,7 @@ describe('App (S1)', () => {
     laden.mockResolvedValue({ ...START, gruppen: [] });
     render(<App />);
     expect(
-      await screen.findByText('Du bist in keiner Gruppe, die Sitzungen nutzen kann.'),
+      await screen.findByText('Du bist in keiner Gruppe, die hier Protokolle führen kann.'),
     ).toBeTruthy();
     expect(screen.queryByRole('list')).toBeNull();
   });
@@ -71,11 +71,11 @@ describe('App (S1)', () => {
   // Modulsuche; „Erneut versuchen“ bleibt (nach dem Hochladen der Erweiterung hilft es).
   it('Erweiterung fehlt (404): sagt das, statt „keine Gruppen“ zu zeigen', async () => {
     laden.mockRejectedValue(
-      new ApiError(404, 'Die Erweiterung „Sitzungen“ ist in ChurchTools nicht zu finden.'),
+      new ApiError(404, 'Die Erweiterung „Protokolle“ ist in ChurchTools nicht zu finden.'),
     );
     render(<App />);
     expect(
-      await screen.findByText('Die Erweiterung „Sitzungen“ ist in ChurchTools nicht zu finden.'),
+      await screen.findByText('Die Erweiterung „Protokolle“ ist in ChurchTools nicht zu finden.'),
     ).toBeTruthy();
     expect(screen.queryByText(/keiner Gruppe/)).toBeNull();
   });

@@ -1,5 +1,5 @@
 /**
- * **Wie Sitzungen im Erweiterungs-Speicher liegen** (Bauplan Sitzungen 3.3, gemessen in S0 am 22.10.2026).
+ * **Wie Sitzungen im Erweiterungs-Speicher liegen** (Bauplan Protokolle 3.3, gemessen in S0 am 22.10.2026).
  *
  * - Je Gruppe zwei Kategorien: `protokolle-g<ID>` (nur die Leitung schreibt) und `mitarbeit-g<ID>` (To-Dos und
  *   Vorschläge; Mitglieder dürfen schreiben). Dazu eine gemeinsame Kategorie `vorlagen`.

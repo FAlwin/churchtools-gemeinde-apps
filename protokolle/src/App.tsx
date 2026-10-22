@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ErweiterungsSeite, type SeitenZustand } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
-import type { SitzungsGruppe } from '@shared/sitzungen/gruppen';
+import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import { ladeStart } from './start';
 import { Startseite } from './Startseite';
 
 /**
- * Die Sitzungen in ChurchTools (Bauplan S1): vorerst der Kopf mit „Hallo …“ und „Deine Gruppen“. Scheitert das
+ * Die Protokolle in ChurchTools (Bauplan S1): vorerst der Kopf mit „Hallo …“ und „Deine Gruppen“. Scheitert das
  * Laden vorübergehend, gibt es „Erneut versuchen“ statt einer halben Seite.
  */
 export function App() {
   const [zustand, setZustand] = useState<SeitenZustand>({ art: 'laedt' });
-  const [gruppen, setGruppen] = useState<SitzungsGruppe[]>([]);
+  const [gruppen, setGruppen] = useState<ProtokollGruppe[]>([]);
 
   const laden = useCallback(() => {
     setZustand({ art: 'laedt' });
@@ -27,7 +27,7 @@ export function App() {
   useEffect(laden, [laden]);
 
   return (
-    <ErweiterungsSeite app="Sitzungen" zustand={zustand} onNochmal={laden}>
+    <ErweiterungsSeite app="Protokolle" zustand={zustand} onNochmal={laden}>
       <Startseite gruppen={gruppen} />
     </ErweiterungsSeite>
   );

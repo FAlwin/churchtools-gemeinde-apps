@@ -49,9 +49,9 @@ jobs:
       - name: Dienstplaner-Erweiterung packen
         run: npm run paket -w dienstplaner
 
-      # Die Sitzungen (Bauplan Sitzungen) sind ebenfalls nur Erweiterung – gleiche Prüfung beim Packen.
-      - name: Sitzungen-Erweiterung packen
-        run: npm run paket -w sitzungen
+      # Die Protokolle (Bauplan Protokolle) sind ebenfalls nur Erweiterung – gleiche Prüfung beim Packen.
+      - name: Protokolle-Erweiterung packen
+        run: npm run paket -w protokolle
 
       - name: Test
         run: npm test

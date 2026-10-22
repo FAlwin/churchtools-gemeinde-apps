@@ -1,7 +1,7 @@
 /**
  * **Text kompakt in einen ChurchTools-Wert packen** – deflate + Base64url. Stand bis 22.10.2026 nur privat in
- * `shared/anmeldung/formular.ts` (Einstellungen in der Gruppenbeschreibung); die Sitzungen brauchen dasselbe für
- * ihre Protokoll-Teile (Bauplan Sitzungen 3.3: ein langes Protokoll packt sich von ~80 Tsd. auf ~16 Tsd. Zeichen).
+ * `shared/anmeldung/formular.ts` (Einstellungen in der Gruppenbeschreibung); die Protokolle brauchen dasselbe für
+ * ihre Protokoll-Teile (Bauplan Protokolle 3.3: ein langes Protokoll packt sich von ~80 Tsd. auf ~16 Tsd. Zeichen).
  * Eine Stelle für beide, damit die beiden Kodierungen nicht auseinanderlaufen.
  */
 import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate';

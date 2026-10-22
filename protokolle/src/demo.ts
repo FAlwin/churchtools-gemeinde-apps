@@ -1,12 +1,12 @@
 /**
- * **Nur zum Entwickeln** (`npm run dev -w sitzungen`, dann `…/ccm/sitzungen/?demo`): spielt die
+ * **Nur zum Entwickeln** (`npm run dev -w protokolle`, dann `…/ccm/protokolle/?demo`): spielt die
  * ChurchTools-Antworten nach, in der Form, die an der Test-Instanz gemessen wurde (16.10. und 22.10.2026),
  * damit die Seite ohne Instanz zu sehen ist. Fälle: `?demo` (versteckte, eingerichtete Gruppe + nicht
  * eingerichtete), `?demo=leer` (in keiner Gruppe), `?demo=ohne-modul` (Erweiterung nicht installiert),
  * `?demo=fehler` (ChurchTools antwortet nicht). Wird nie mitgebaut (siehe `main.tsx`).
  */
-import { kategorieName } from '@shared/sitzungen/gruppen';
-import { kuerzelMitarbeit, kuerzelProtokolle, KUERZEL_VORLAGEN } from '@shared/sitzungen/speicher';
+import { kategorieName } from '@shared/protokolle/gruppen';
+import { kuerzelMitarbeit, kuerzelProtokolle, KUERZEL_VORLAGEN } from '@shared/protokolle/speicher';
 
 const MODUL = 20;
 
@@ -44,7 +44,7 @@ function antwort(fall: string, pfad: string): { status: number; data?: unknown }
           ? [{ id: 10, shorty: 'musik-app' }]
           : [
               { id: 10, shorty: 'musik-app' },
-              { id: MODUL, shorty: 'sitzungen' },
+              { id: MODUL, shorty: 'protokolle' },
             ],
     };
   if (pfad === `/api/custommodules/${MODUL}/customdatacategories`)

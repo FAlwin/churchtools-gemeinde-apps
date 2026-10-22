@@ -1,5 +1,5 @@
 /**
- * **Welche Rechte eine eingerichtete Gruppe braucht** (Bauplan Sitzungen S1/S2) – die eine Stelle für die
+ * **Welche Rechte eine eingerichtete Gruppe braucht** (Bauplan Protokolle S1/S2) – die eine Stelle für die
  * Verwaltung („Gruppe einrichten“) und für die Prüfung beim Start.
  *
  * Gemessen (16.10. und S0 am 22.10.2026):

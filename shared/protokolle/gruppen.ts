@@ -1,5 +1,5 @@
 /**
- * **Meine Gruppen in den Sitzungen** (Bauplan S1, Startseite) – welche Gruppen die angemeldete Person sieht und
+ * **Meine Gruppen in den Protokollen** (Bauplan S1, Startseite) – welche Gruppen die angemeldete Person sieht und
  * ob sie eingerichtet sind.
  *
  * Zwei Quellen, weil eine allein nicht reicht (S0, 22.10.2026):
@@ -14,7 +14,7 @@
 import { aktiveMitgliedschaften, type RohMitgliedschaft } from '../ct/gruppen';
 import { kuerzelLesen } from './speicher';
 
-export interface SitzungsGruppe {
+export interface ProtokollGruppe {
   id: number;
   name: string;
   lage: 'eingerichtet' | 'unvollstaendig' | 'nicht-eingerichtet';
@@ -36,12 +36,12 @@ function gruppenNameAus(kategorieName: string | undefined): string | null {
   return name || null;
 }
 
-export function sitzungsGruppen(
+export function protokollGruppen(
   mitgliedschaften: readonly RohMitgliedschaft[] | null | undefined,
   kategorien: readonly { id: number; shorty: string; name?: string }[],
-): SitzungsGruppe[] {
-  const gruppen = new Map<number, SitzungsGruppe>();
-  const hole = (id: number, name: string): SitzungsGruppe => {
+): ProtokollGruppe[] {
+  const gruppen = new Map<number, ProtokollGruppe>();
+  const hole = (id: number, name: string): ProtokollGruppe => {
     const g = gruppen.get(id) ?? {
       id,
       name,

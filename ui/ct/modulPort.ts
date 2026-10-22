@@ -51,7 +51,7 @@ export const modulPort: ModulPort = modulPortFuer(() => kuerzelAusBasis(import.m
 
 /**
  * Die ID des eigenen Moduls – je Seite einmal gesucht; ein Fehlschlag wird nicht gemerkt. `wer` nennt die
- * Erweiterung in der Meldung, wenn sie fehlt (bis 22.10.2026 stand hier fest „Anmeldungen“; die Sitzungen
+ * Erweiterung in der Meldung, wenn sie fehlt (bis 22.10.2026 stand hier fest „Anmeldungen“; die Protokolle
  * nutzen denselben Anschluss).
  */
 const suche = merkeVersprechen<number>();

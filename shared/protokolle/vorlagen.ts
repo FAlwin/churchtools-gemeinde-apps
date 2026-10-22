@@ -1,5 +1,5 @@
 /**
- * **Vorlagen für neue Sitzungen** (Sitzungen, Bauplan S1/S2) – gemeindeweit, mehrere zur Auswahl, dazu
+ * **Vorlagen für neue Sitzungen** (Bauplan Protokolle S1/S2) – gemeindeweit, mehrere zur Auswahl, dazu
  * „wie letztes Mal“ (entschieden 16.10.2026). Eine Vorlage ist ein kleines Dokument: Tagesordnungspunkte,
  * vorbereiteter Text je Punkt und feste Aufgaben, die bei jeder Sitzung dieser Art anfallen.
  *

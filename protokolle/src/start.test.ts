@@ -34,9 +34,9 @@ beforeEach(() => {
 });
 
 describe('ladeStart', () => {
-  it('sucht das eigene Modul unter dem Namen der Sitzungen und liest dessen Kategorien', async () => {
+  it('sucht das eigene Modul unter dem Namen der Protokolle und liest dessen Kategorien', async () => {
     const s = await ladeStart();
-    expect(modul).toHaveBeenCalledWith('Die Erweiterung „Sitzungen“');
+    expect(modul).toHaveBeenCalledWith('Die Erweiterung „Protokolle“');
     expect(kategorien).toHaveBeenCalledWith(expect.anything(), 20);
     expect(s.gruppen.map((g) => [g.id, g.name, g.lage])).toEqual([
       [11, 'Leitungsteam', 'unvollstaendig'],

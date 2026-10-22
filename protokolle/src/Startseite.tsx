@@ -1,17 +1,17 @@
-import type { SitzungsGruppe } from '@shared/sitzungen/gruppen';
+import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import styles from './Startseite.module.scss';
 
-const LAGE: Record<SitzungsGruppe['lage'], { text: string; klasse: string }> = {
+const LAGE: Record<ProtokollGruppe['lage'], { text: string; klasse: string }> = {
   eingerichtet: { text: 'eingerichtet', klasse: styles.gut },
   unvollstaendig: { text: 'unvollständig eingerichtet', klasse: styles.problem },
   'nicht-eingerichtet': { text: 'nicht eingerichtet', klasse: styles.leise },
 };
 
 /**
- * **Startseite der Sitzungen** (Bauplan S1) – vorerst nur „Deine Gruppen“ mit dem Stand der Einrichtung. Die
+ * **Startseite der Protokolle** (Bauplan S1) – vorerst nur „Deine Gruppen“ mit dem Stand der Einrichtung. Die
  * Bereiche des Entwurfs (Meine offenen To-Dos, Nächste Sitzungen) kommen mit S3.
  */
-export function Startseite({ gruppen }: { gruppen: SitzungsGruppe[] }) {
+export function Startseite({ gruppen }: { gruppen: ProtokollGruppe[] }) {
   const ohne = gruppen.some((g) => g.lage !== 'eingerichtet');
   return (
     <section className={styles.karte} aria-labelledby="deine-gruppen">
@@ -20,7 +20,7 @@ export function Startseite({ gruppen }: { gruppen: SitzungsGruppe[] }) {
         <span className={styles.anzahl}>{gruppen.length}</span>
       </div>
       {gruppen.length === 0 ? (
-        <p className={styles.leer}>Du bist in keiner Gruppe, die Sitzungen nutzen kann.</p>
+        <p className={styles.leer}>Du bist in keiner Gruppe, die hier Protokolle führen kann.</p>
       ) : (
         <ul className={styles.liste}>
           {gruppen.map((g) => (

@@ -1,5 +1,5 @@
 /**
- * **To-Dos der Sitzungen** (Bauplan S1/S7) – ein Wert je To-Do in der Kategorie „Mitarbeit“ der Gruppe, damit
+ * **To-Dos der Protokolle** (Bauplan S1/S7) – ein Wert je To-Do in der Kategorie „Mitarbeit“ der Gruppe, damit
  * Abhaken durch die Zuständigen das Protokoll nicht berührt.
  *
  * Entschieden 16.10.2026: Zuständige sind Personen der Gruppe; Externe nur als Name (ohne eigenen Zugriff).

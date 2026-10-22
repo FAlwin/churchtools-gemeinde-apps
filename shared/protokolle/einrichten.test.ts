@@ -12,7 +12,7 @@ import {
 
 /**
  * Aufbau wie die echte Antwort von `GET /permissions/definitions` (Test-Instanz, 16.10.2026: Block des Moduls
- * `dienstplaner`, hier unter dem Kürzel `sitzungen`; Kalender-Rechte 403/404 aus `churchcal`).
+ * `dienstplaner`, hier unter dem Kürzel `protokolle`; Kalender-Rechte 403/404 aus `churchcal`).
  */
 const DEFINITIONEN = {
   modules: [
@@ -25,8 +25,8 @@ const DEFINITIONEN = {
       ],
     },
     {
-      key: 'sitzungen',
-      name: 'Sitzungen',
+      key: 'protokolle',
+      name: 'Protokolle',
       permissions: [
         { authId: 2090, key: 'view', valueType: 'boolean' },
         { authId: 2091, key: 'view custom category', valueType: 'multiple' },
@@ -42,7 +42,7 @@ const DEFINITIONEN = {
   ],
 };
 
-const N = rechteNummernAus(DEFINITIONEN, 'sitzungen') as RechteNummern;
+const N = rechteNummernAus(DEFINITIONEN, 'protokolle') as RechteNummern;
 
 const EINRICHTUNG: Einrichtung = {
   rollen: [
@@ -69,7 +69,7 @@ describe('rechteNummernAus', () => {
   });
   it('gibt null, wenn das Modul fehlt – dann wird nichts gesetzt', () => {
     expect(rechteNummernAus(DEFINITIONEN, 'anderes')).toBeNull();
-    expect(rechteNummernAus(null, 'sitzungen')).toBeNull();
+    expect(rechteNummernAus(null, 'protokolle')).toBeNull();
   });
 });
 

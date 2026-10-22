@@ -90,6 +90,7 @@ export interface VonHandFertig {
   nr: string;
   aenderung: Aenderung;
   mail: Mail;
+  hinweis?: string;
 }
 
 export function VonHandFenster({
@@ -248,9 +249,15 @@ export function VonHandFenster({
           aenderung: {
             text: `${name} ist angemeldet – ${
               r.warteplatz === null ? 'hat einen Platz' : `Warteliste ${r.warteplatz}`
-            }.${wahl.art === 'neu' ? ' Neu in ChurchTools angelegt; „Rückgängig“ nimmt die Person nur aus der Anmeldung.' : ''}`,
+            }.`,
             rueckgaengig: r.rueckgaengig,
           },
+          // Der lange Satz stand zuerst in der Zeile mit „Rückgängig“ und drückte die Knöpfe zusammen (22.10.2026).
+          ...(wahl.art === 'neu'
+            ? {
+                hinweis: `${name} wurde in ChurchTools neu angelegt. „Rückgängig“ nimmt die Anmeldung zurück – die Person bleibt in ChurchTools.`,
+              }
+            : {}),
           mail: bescheidMail(e, {
             art: 'angemeldet',
             veranstaltung,
@@ -295,7 +302,7 @@ export function VonHandFenster({
       <Sheet title="Anmeldung von Hand" onClose={onClose}>
         <p className={a.unterTitel}>Wen meldest du an? Erst in ChurchTools suchen.</p>
         <form
-          className={f.zeile}
+          className={a.handSuche}
           onSubmit={(ev) => {
             ev.preventDefault();
             void suchen();
@@ -310,12 +317,7 @@ export function VonHandFenster({
             value={suche}
             onChange={(ev) => setSuche(ev.target.value)}
           />
-          <button
-            type="submit"
-            className={f.knopf}
-            disabled={arbeitet || suche.trim().length < 2}
-            style={{ flex: 'none' }}
-          >
+          <button type="submit" className={f.knopf} disabled={arbeitet || suche.trim().length < 2}>
             {arbeitet ? 'Sucht …' : 'Suchen'}
           </button>
         </form>
@@ -342,10 +344,12 @@ export function VonHandFenster({
                       </small>
                     </span>
                     {ist ? (
-                      <span className={`${a.pille} ${a.pilleOk}`}>schon dabei</span>
+                      <em className={`${a.pille} ${a.pilleOk} ${a.trefferMarke}`}>schon dabei</em>
                     ) : (
                       abgesagt.has(p.personId) && (
-                        <span className={`${a.pille} ${a.pilleWarte}`}>hat abgesagt</span>
+                        <em className={`${a.pille} ${a.pilleWarte} ${a.trefferMarke}`}>
+                          hat abgesagt
+                        </em>
                       )
                     )}
                   </button>
@@ -477,7 +481,7 @@ export function VonHandFenster({
                   </small>
                 </span>
                 {dabei.has(p.personId) ? (
-                  <span className={`${a.pille} ${a.pilleOk}`}>schon dabei</span>
+                  <em className={`${a.pille} ${a.pilleOk} ${a.trefferMarke}`}>schon dabei</em>
                 ) : (
                   <span className={a.nachKnopf}>Diese nehmen</span>
                 )}
@@ -517,17 +521,20 @@ export function VonHandFenster({
         </p>
       )}
       <div className={`${pv.pv} ${pv['fs-kasten']}`} style={FARBEN}>
-        <section className={a.teil}>
+        <section className={`${a.teil} ${a.handFragen}`}>
           <h3>Für die Anmeldung</h3>
           {hf.anmeldung.filter(sichtbar).map((x) => (
-            <FeldEingabe
-              key={x.id}
-              feld={x}
-              pfad={`anmeldung.${x.id}`}
-              wert={antworten.anmeldung[x.id]}
-              onWert={(w) => setAnmeldung(x.id, w)}
-              fehler={fehlerFelder}
-            />
+            <div key={x.id} className={a.handFragen}>
+              {/* Der Name steht im Formular unter „Kontakt“ – hier braucht er eine eigene Überschrift. */}
+              {x.typ === 'name' && <p className={a.feldTitel}>Angemeldet von</p>}
+              <FeldEingabe
+                feld={x}
+                pfad={`anmeldung.${x.id}`}
+                wert={antworten.anmeldung[x.id]}
+                onWert={(w) => setAnmeldung(x.id, w)}
+                fehler={fehlerFelder}
+              />
+            </div>
           ))}
           {mitUnterschrift(e.formular) && (
             <>
@@ -548,7 +555,7 @@ export function VonHandFenster({
           )}
         </section>
 
-        <section className={a.teil}>
+        <section className={`${a.teil} ${a.handFragen}`}>
           <h3>{person ? ganz(person) : 'Person'}</h3>
           {hf.person.filter(sichtbar).map((x) => (
             <FeldEingabe
@@ -564,7 +571,7 @@ export function VonHandFenster({
         </section>
 
         {kostet && (g.art === 'auswahl' || e.preis.extras.length > 0) && (
-          <section className={a.teil}>
+          <section className={`${a.teil} ${a.handFragen}`}>
             <h3>Auswahl</h3>
             {g.art === 'auswahl' && (
               <div className={pv.choices} role="radiogroup" aria-label={g.auswahlName}>

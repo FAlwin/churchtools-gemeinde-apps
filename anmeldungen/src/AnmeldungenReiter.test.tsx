@@ -85,6 +85,13 @@ describe('Reiter Anmeldungen', () => {
     expect(zeile.textContent).toMatch(/AAAAAA.*Jonas 9.*Lena 7.*Warteliste 1.*6,00 €.*offen/);
   });
 
+  it('alle warten (das Formular schreibt „0,00 €“) → „Betrag beim Nachrücken“ statt „0,00 €“', () => {
+    zeigen(fertig(mitglieder('AAAAAA', [false, false], 10)));
+    const zeile = screen.getByRole('button', { name: /Maria Beispiel/ });
+    expect(zeile.textContent).toMatch(/Betrag beim Nachrücken/);
+    expect(zeile.textContent).not.toMatch(/0,00 €/);
+  });
+
   it('kein Hinweis, wenn niemand wartet oder alles voll ist', () => {
     zeigen(fertig(mitglieder('AAAAAA', [true, true], 10)));
     expect(screen.queryByText(/warten?\./)).toBeNull();
@@ -377,5 +384,30 @@ describe('Anmeldung von Hand (A7-4a)', () => {
     expect(plan.felder[x.ctFelder.kontakt]).toBe('Petra Probe');
     expect(plan.felder[x.ctFelder.sign]).toMatch(/^✓ auf Papier – vermerkt von Alwin Friesen, /);
     expect(plan.felder[plan.nrFeld!]).toMatch(/^[2-9A-Z]{6}$/);
+  });
+
+  it('neue Person: gleicher Name → „dieselbe Person?“; trotzdem neu → Hinweis, dass sie in ChurchTools bleibt', async () => {
+    hm.personenSuchen.mockResolvedValue([]);
+    hm.gleichNamige.mockResolvedValue([
+      { personId: 77, vor: 'Nina', nach: 'Neu', geburtstag: null, email: null },
+    ]);
+    hm.vonHandAnmelden.mockResolvedValue({ personId: 200, warteplatz: 2, rueckgaengig: vi.fn() });
+    zeigen(fertig());
+    fireEvent.click(screen.getByRole('button', { name: '＋ Von Hand' }));
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), {
+      target: { value: 'Nina Neu' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Suchen' }));
+    fireEvent.click(await screen.findByRole('button', { name: /neue Person anlegen/ }));
+    expect(
+      [screen.getByLabelText('Vorname'), screen.getByLabelText('Nachname')].map(
+        (x) => (x as HTMLInputElement).value,
+      ),
+    ).toEqual(['Nina', 'Neu']);
+    fireEvent.change(screen.getByLabelText('Geburtsdatum'), { target: { value: '2017-01-02' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Weiter' }));
+    expect(await screen.findByText(/In ChurchTools gibt es schon Nina Neu\./)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Trotzdem neu anlegen' }));
+    expect(screen.getByText('Nina Neu anmelden')).toBeTruthy();
   });
 });

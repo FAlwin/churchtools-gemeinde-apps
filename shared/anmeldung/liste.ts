@@ -16,11 +16,15 @@ import {
   ctAblage,
   ctZusatzSpalten,
   nurText,
+  SYSTEMFELDER,
   type Feld,
   type OeffentlicheEinstellungen,
 } from './formular';
 import { centAusEuroText, kannEtwasKosten } from './preis';
 import { istNachrueckZahlung } from './zahlung';
+
+/** Im Verlauf stehen die Felder mit ihrem Namen – so heißt die Anmelde-Nr. dort. */
+const NR_NAME = SYSTEMFELDER.find((f) => f.id === 'nr')!.name;
 
 /** Ein Gruppenfeld der Veranstaltung, wie ChurchTools es beschreibt (`GET /groups/{id}/memberfields`). */
 export interface CtGruppenfeld {
@@ -146,17 +150,24 @@ export function mitgliederstandAus(
         a.meta!.createdDate!.localeCompare(b.meta!.createdDate!) || (a.id ?? 0) - (b.id ?? 0),
     );
   // Anmeldetag: der erste Eintrag, mit dem jemand dazukam. Wer vom Team wieder aufgenommen wird („Rückgängig“ nach
-  // einer Absage, A7-3), behält ihn; nur wer sich nach einer Absage neu über das Formular anmeldet, bekommt einen neuen.
+  // einer Absage, A7-3), behält ihn; wer sich nach einer Absage neu anmeldet – über das Formular oder von Hand mit
+  // einer neuen Anmelde-Nr. (A7-4, echt geprüft 22.10.2026) –, bekommt einen neuen.
   const dazu = new Map<number, string>();
   const vonHand = new Set<number>();
   const warWeg = new Set<number>();
   const weg = new Map<number, VerlaufRoh>();
+  const nrBeimGehen = new Map<number, unknown>();
+  const nrIn = (f: Record<string, unknown> | null | undefined) => f?.[NR_NAME] ?? null;
   for (const v of reihe) {
     const vorher = v.previous?.membershipStatus ?? null;
     const jetzt = v.current?.membershipStatus ?? null;
     const id = v.memberId!;
     if (!vorher && jetzt) {
-      if (!dazu.has(id) || (warWeg.has(id) && v.origin === 'sign-up')) {
+      const neu =
+        warWeg.has(id) &&
+        (v.origin === 'sign-up' ||
+          (nrIn(v.current?.fields) !== null && nrIn(v.current?.fields) !== nrBeimGehen.get(id)));
+      if (!dazu.has(id) || neu) {
         dazu.set(id, v.meta!.createdDate!);
         if (v.origin === 'default') vonHand.add(id);
         else vonHand.delete(id);
@@ -166,6 +177,7 @@ export function mitgliederstandAus(
     if (vorher && !jetzt) {
       weg.set(id, v);
       warWeg.add(id);
+      nrBeimGehen.set(id, nrIn(v.previous?.fields));
     }
   }
 

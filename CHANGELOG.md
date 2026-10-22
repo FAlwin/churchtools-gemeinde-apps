@@ -25,6 +25,14 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   zurückgesetzt.
 - Das Fenster einer Anmeldung zeigt „· von Hand“, wenn das Team sie eingetragen hat (Verlauf `origin: default`).
 
+### Behoben (Anmeldungen, beim Durchklicken von A7-4a am 22.10.2026)
+
+- Wer abgesagt hatte und später **mit neuer Anmelde-Nr.** wieder angemeldet wird (von Hand), bekam den alten
+  Anmeldetag – das hätte auch Frühbucher-Preise verschoben. Der Tag bleibt jetzt nur beim Zurückholen mit derselben
+  Nr. („Rückgängig“ nach einer Absage).
+- Liste: Warten alle Personen einer Anmeldung, steht „Betrag beim Nachrücken“ statt „0,00 €“ (das Formular schreibt
+  bei der Warteliste 0,00 €).
+
 ### Neu (Anmeldungen, A7-3)
 
 - **Nachrücken lassen** (Entwurf `a7-3-nachruecken-v1`, entschieden 19.10.2026): an jeder wartenden Person im Fenster

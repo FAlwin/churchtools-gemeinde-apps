@@ -101,6 +101,8 @@ export type FensterModus =
 export interface FensterMeldung {
   aenderung: Aenderung;
   mail: Mail | null;
+  /** Ein Satz unter der Zeile (A7-4: „Die neu angelegte Person bleibt in ChurchTools“). */
+  hinweis?: string;
 }
 
 /** Plätze und Warteliste – für Nachrücken und Absagen. */
@@ -250,22 +252,25 @@ function AnmeldungAnsehen({
           </p>
 
           {meldung && (
-            <RueckgaengigImFenster
-              key={meldung.aenderung.text}
-              aenderung={meldung.aenderung}
-              onRueckgaengig={onRueckgaengig}
-              zusatz={
-                meldung.mail && (
-                  <button
-                    type="button"
-                    className={a.nachKnopf}
-                    onClick={() => setModus({ art: 'mail', mail: meldung.mail! })}
-                  >
-                    Mail schreiben
-                  </button>
-                )
-              }
-            />
+            <>
+              <RueckgaengigImFenster
+                key={meldung.aenderung.text}
+                aenderung={meldung.aenderung}
+                onRueckgaengig={onRueckgaengig}
+                zusatz={
+                  meldung.mail && (
+                    <button
+                      type="button"
+                      className={a.nachKnopf}
+                      onClick={() => setModus({ art: 'mail', mail: meldung.mail! })}
+                    >
+                      Mail schreiben
+                    </button>
+                  )
+                }
+              />
+              {meldung.hinweis && <p className={a.leise}>{meldung.hinweis}</p>}
+            </>
           )}
 
           {(einmal.length > 0 || kontakt) && (
@@ -634,10 +639,12 @@ export function AnmeldungenReiter({
                     </span>
                   </span>
                   <span className={a.geld}>
-                    {!z.kostet ? null : x.betragCent !== null ? (
-                      <b>{euroText(x.betragCent)}</b>
-                    ) : x.personen.every((p) => p.status === 'wartet') ? (
+                    {/* Alle warten: Das Formular schreibt „0,00 €“ – gezahlt wird erst beim Nachrücken (22.10.2026). */}
+                    {!z.kostet ? null : x.personen.every((p) => p.status === 'wartet') &&
+                      !x.betragCent ? (
                       <small>Betrag beim Nachrücken</small>
+                    ) : x.betragCent !== null ? (
+                      <b>{euroText(x.betragCent)}</b>
                     ) : null}
                     <ZahlungPille x={x} kostet={z.kostet} />
                   </span>
@@ -746,7 +753,7 @@ export function AnmeldungenReiter({
             // Die neue Anmeldung öffnet sich, sobald sie geladen ist – mit „Mail schreiben“ und „Rückgängig“.
             setOffen(x.nr);
             setStartModus(null);
-            setMeldung({ aenderung: x.aenderung, mail: x.mail });
+            setMeldung({ aenderung: x.aenderung, mail: x.mail, hinweis: x.hinweis });
             onGespeichert();
           }}
         />

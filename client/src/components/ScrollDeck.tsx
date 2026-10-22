@@ -14,7 +14,7 @@ import { readPageTexts } from '../utils/annotationKeys';
 import { textObjStyle } from '../utils/textObjStyle';
 import type { PedalRichtung } from '../utils/pedalTasten';
 import type { ScrollPosition } from '../utils/scrollPosition';
-import { HALTE_LUFT, pedalZiel } from '../utils/pedalSchritt';
+import { pedalZiel } from '../utils/pedalSchritt';
 import {
   pedalHalte,
   stricheAufRolle,
@@ -175,7 +175,7 @@ export function ScrollDeck({
 
   /**
    * Die Halte-Stellen des Pedals (#609) als Scroll-Positionen: je Liedrolle Titel, Teil-Anfänge und `----`
-   * (`pedalHalte`, in mm), mit etwas Luft darüber. Die Rolle ist so breit wie A4 – daraus der Maßstab.
+   * (`pedalHalte`, in mm, samt Luft darüber). Die Rolle ist so breit wie A4 – daraus der Maßstab.
    * Hochgeladene PDFs haben keine; dort bleibt es beim ⅔-Schritt.
    */
   function haltePunkte(): number[] {
@@ -185,8 +185,7 @@ export function ScrollDeck({
       const box = seitenRefs.current[p];
       if (!abb || !box) return;
       const pxProMm = box.offsetWidth / PAGE_W;
-      for (const mm of pedalHalte(abb))
-        out.push(Math.max(box.offsetTop, Math.round(box.offsetTop + mm * pxProMm - HALTE_LUFT)));
+      for (const mm of pedalHalte(abb)) out.push(Math.round(box.offsetTop + mm * pxProMm));
     });
     return out.sort((a, b) => a - b);
   }

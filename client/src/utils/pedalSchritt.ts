@@ -1,9 +1,6 @@
 import type { PedalRichtung } from './pedalTasten';
 import { SCHRITT_ANTEIL } from './scrollPosition';
 
-/** So viel Luft bleibt über einem angesprungenen Teil (Bildpunkte) – die Überschrift klebt nicht am Rand. */
-export const HALTE_LUFT = 8;
-
 /** Unterhalb davon gilt eine Stelle als „schon da“ (Rundung beim Scrollen). */
 const SPIEL = 2;
 

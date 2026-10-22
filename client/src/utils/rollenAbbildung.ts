@@ -17,7 +17,15 @@
  *
  * Alle Angaben in mm; die Rolle ist so breit wie A4.
  */
-import { MARGIN, PAGE_H, PAGE_W, COL_GAP, spaltenBreite, spaltenX } from './blattMasse';
+import {
+  KOPF_ABSTAND,
+  MARGIN,
+  PAGE_H,
+  PAGE_W,
+  COL_GAP,
+  spaltenBreite,
+  spaltenX,
+} from './blattMasse';
 
 /** Ein zusammenhängender Lauf eines Teils in einer Spalte einer Seite. */
 export interface Stueck {
@@ -330,16 +338,32 @@ export function rahmenAufKernen(liste: Streifen[], r: Rechteck, raster = 6): boo
   return true;
 }
 
+/** Luft über einem angesprungenen Teil (mm, #609) – die Überschrift klebt nicht an der Kante. */
+export const HALTE_LUFT = 2;
+
 /**
  * **Wo das Pedal auf der Rolle anhält** (#609, Alwin 17.10.2026: „Teil für Teil“): der Titel (Anfang der
- * Rolle), der Anfang jedes Teils und jeder Weiterschalt-Punkt `----` – sortiert, in mm von oben. Ein Teil,
- * der im Flow wiederkehrt, hält bei jedem Vorkommen.
+ * Rolle), der Anfang jedes Teils und jeder Weiterschalt-Punkt `----` – sortiert, in mm von oben, als
+ * Oberkante des Bildschirms. Ein Teil, der im Flow wiederkehrt, hält bei jedem Vorkommen.
+ *
+ * Über einem Teil bleibt `HALTE_LUFT` frei, höchstens aber die Hälfte des Abstands zum Teil davor bzw. zum
+ * Titelkopf – sonst schaut dessen letzte Zeile als Streifen herein (Alwin 19.10.2026). In mm, damit die
+ * Luft mit der Bildschirmbreite wächst und schrumpft wie der Abstand selbst; feste Bildpunkte waren auf
+ * schmalen Handys größer als der Abstand. Am `----` stoßen zwei Zeilen aneinander: dort keine Luft.
  */
 export function pedalHalte(abb: Abbildung): number[] {
   const { rolle } = abb;
+  // Die Rolle hat eine Spalte: Davor steht das Stück mit dem größten Ende darüber, sonst der Titelkopf.
+  const ueber = (y0: number) =>
+    Math.max(
+      rolle.kopfEnde - KOPF_ABSTAND,
+      ...rolle.stuecke.filter((s) => s.y1 <= y0).map((s) => s.y1),
+    );
   const stellen = [
     0,
-    ...rolle.stuecke.filter((s) => s.imTeil === 0).map((s) => s.y0),
+    ...rolle.stuecke
+      .filter((s) => s.imTeil === 0)
+      .map((s) => s.y0 - Math.min(HALTE_LUFT, (s.y0 - ueber(s.y0)) / 2)),
     ...rolle.weiterschalten.map((w) => w.y),
   ];
   return [...new Set(stellen)].sort((a, b) => a - b);

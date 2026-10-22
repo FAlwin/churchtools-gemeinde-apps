@@ -23,6 +23,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 - „Rückgängig“ im Fenster bricht in schmalen Fenstern (Handy) um – „Mail schreiben“ und „Rückgängig“ liefen dort
   rechts aus dem Fenster.
 
+## [2.37.0] – 2026-10-22
+
 ### Geändert (Musik-App, #554)
 
 - **Team-Notizen auch in großen Gemeinden schnell** (Frage aus dem ChurchTools-Dev-Stammtisch: „Wie

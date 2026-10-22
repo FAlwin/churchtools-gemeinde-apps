@@ -7,6 +7,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+## [2.37.0] – 2026-10-22
+
 ### Geändert (Musik-App, #554)
 
 - **Team-Notizen auch in großen Gemeinden schnell** (Frage aus dem ChurchTools-Dev-Stammtisch: „Wie

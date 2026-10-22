@@ -14,14 +14,18 @@
 import type { ArrangementFileEntry, ArrangementFileKind } from '@shared/types/index';
 import { MAX_FILE_BYTES, MAX_FILE_TEXT } from '@shared/dateien/index';
 import { dateiGroesse } from './dateiGroesse';
+import type { IconName } from '@ui/icons/icons';
 
-/** Symbol je Art – dieselben Zeichen wie im Lied-Menü, damit eine Datei überall gleich aussieht. */
-export const DATEI_SYMBOL: Record<ArrangementFileKind, string> = {
-  'chordpro-original': '🎵',
-  'chordpro-version': '🎵',
-  pdf: '📄',
-  image: '🖼️',
-  other: '📎',
+/**
+ * Symbol je Art – Linien-Icons wie im Lied-Menü, damit eine Datei überall gleich aussieht (bis 22.10.2026
+ * Emoji: Sie passten nicht zu den Linien-Icons, und ein Zeichen fehlte auf iOS ganz).
+ */
+export const DATEI_SYMBOL: Record<ArrangementFileKind, IconName> = {
+  'chordpro-original': 'music',
+  'chordpro-version': 'music',
+  pdf: 'dokument',
+  image: 'bild',
+  other: 'anhang',
 };
 
 /**

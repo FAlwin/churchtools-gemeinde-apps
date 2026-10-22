@@ -209,11 +209,15 @@ export function AllSongs({
       {isLoading ? (
         <CenterMessage loading text="Lieder werden geladen…" />
       ) : isError ? (
-        <CenterMessage icon="⚠️" text="Lieder konnten nicht geladen werden." onRetry={onRetry} />
+        <CenterMessage
+          icon="warnung"
+          text="Lieder konnten nicht geladen werden."
+          onRetry={onRetry}
+        />
       ) : f.list.length === 0 ? (
         <>
           <CenterMessage
-            icon="🎵"
+            icon="music"
             text={
               query
                 ? `Keine Treffer für „${query}"`

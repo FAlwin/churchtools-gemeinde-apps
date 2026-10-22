@@ -311,9 +311,13 @@ export function Setlist({
       {isLoading ? (
         <CenterMessage loading text="Ablauf wird geladen…" />
       ) : isError ? (
-        <CenterMessage icon="⚠️" text="Ablauf konnte nicht geladen werden." onRetry={onRetry} />
+        <CenterMessage
+          icon="warnung"
+          text="Ablauf konnte nicht geladen werden."
+          onRetry={onRetry}
+        />
       ) : items.length === 0 ? (
-        <CenterMessage icon="📋" text="Dieser Ablauf enthält noch keine Punkte." />
+        <CenterMessage icon="calendar" text="Dieser Ablauf enthält noch keine Punkte." />
       ) : editMode ? (
         bearbeiten.liste
       ) : (

@@ -75,7 +75,8 @@
   gap: 7px;
 }
 .flowSongTag {
-  font-size: 12px;
+  display: flex;
+  color: var(--text3);
   flex-shrink: 0;
 }
 .flowDur {

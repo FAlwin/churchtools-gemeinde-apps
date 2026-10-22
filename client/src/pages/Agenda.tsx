@@ -301,29 +301,32 @@ export function Agenda({
           <CenterMessage loading text="Gottesdienste werden geladen…" />
         ) : isError ? (
           <CenterMessage
-            icon="⚠️"
+            icon="warnung"
             text="Gottesdienste konnten nicht geladen werden."
             onRetry={onRetry}
           />
         ) : upcoming.length === 0 ? (
-          <CenterMessage icon="📅" text="Keine kommenden Gottesdienste." />
+          <CenterMessage icon="calendar" text="Keine kommenden Gottesdienste." />
         ) : (
           groups(upcoming)
         )
       ) : !online ? (
-        <CenterMessage icon="📴" text="Vergangene Gottesdienste sind offline nicht verfügbar." />
+        <CenterMessage
+          icon="offline"
+          text="Vergangene Gottesdienste sind offline nicht verfügbar."
+        />
       ) : pastQuery.isLoading ? (
         <CenterMessage loading text="Vergangene werden geladen…" />
       ) : pastQuery.isError ? (
         <CenterMessage
-          icon="⚠️"
+          icon="warnung"
           text="Vergangene konnten nicht geladen werden."
           onRetry={() => pastQuery.refetch()}
         />
       ) : (
         <>
           {past.length === 0 ? (
-            <CenterMessage icon="📅" text="Keine vergangenen Gottesdienste im Zeitraum." />
+            <CenterMessage icon="calendar" text="Keine vergangenen Gottesdienste im Zeitraum." />
           ) : (
             groups(past)
           )}

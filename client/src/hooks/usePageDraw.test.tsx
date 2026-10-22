@@ -32,6 +32,26 @@ describe('usePageDraw', () => {
     expect(result.current.texts[0].text).toBe('Hallo');
   });
 
+  // 22.10.2026: Beim Einhängen ging einmal „[]" als Änderung hinaus – auf der Rolle (#608) löschte das die
+  // eigenen Texte der Kerne von den A4-Seiten, auch im Konto.
+  it.each([false, true])(
+    'beim Einhängen mit vorhandenen Texten wird nichts gespeichert – keine leere Liste (StrictMode: %s)',
+    (streng) => {
+      const key = 'worship_docdraw_song3_v1_0';
+      const gespeichert = JSON.stringify([
+        { id: 1, fx: 0.5, fy: 0.5, text: 'Bleib', color: '#000', sizeCqh: 2 },
+      ]);
+      localStorage.setItem(`${key}_text`, gespeichert);
+      const push = vi.fn();
+      const { strokesRef, layerRef } = refs();
+      renderHook(() => usePageDraw(key, strokesRef, layerRef, 0, push), {
+        wrapper: streng ? StrictMode : undefined,
+      });
+      expect(push.mock.calls.filter((c) => c[1] === 'texts')).toEqual([]);
+      expect(localStorage.getItem(`${key}_text`)).toBe(gespeichert);
+    },
+  );
+
   it('fügt Text hinzu, pusht ihn – und ein Re-Render ohne Änderung pusht NICHT erneut (Dedup)', () => {
     const key = 'worship_docdraw_song2_v1_0';
     const push = vi.fn();

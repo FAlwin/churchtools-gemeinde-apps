@@ -77,6 +77,8 @@ interface GruppeRoh {
       campusId?: number | null;
       departmentId?: number | null;
     };
+    /** Rolle für Anmeldungen, falls nicht die Standardrolle der Gruppenart. */
+    signUpOverrideRoleId?: number | null;
   };
 }
 
@@ -697,6 +699,7 @@ interface RolleRoh {
   groupTypeId: number;
   type?: string;
   isLeader?: boolean;
+  isDefault?: boolean;
 }
 const istLeitung = (r: RolleRoh) => r.type === 'leader' || r.isLeader === true;
 
@@ -711,6 +714,35 @@ async function leiterRolle(gruppenart: number): Promise<number> {
   const r = rollen.find((x) => x.groupTypeId === gruppenart && istLeitung(x));
   if (!r) throw new ApiError(422, 'Die Gruppenart dieser Veranstaltung hat keine Leiter-Rolle.');
   return r.id;
+}
+
+/**
+ * **Die Rolle der Teilnehmenden** (A7-4) – wie ChurchTools beim Anmelden: die eingestellte Rolle der Gruppe, sonst die
+ * Standardrolle der Gruppenart (gemessen A6: „Anmeldung“ → 32 participant).
+ */
+export async function teilnehmerRolle(id: number): Promise<number> {
+  const g = await gruppe(id);
+  if (typeof g.settings?.signUpOverrideRoleId === 'number') return g.settings.signUpOverrideRoleId;
+  const rollen = (await ctDaten<RolleRoh[]>('/group/roles')).filter(
+    (r) => r.groupTypeId === Number(g.information?.groupTypeId) && !istLeitung(r),
+  );
+  const r = rollen.find((x) => x.isDefault) ?? rollen.find((x) => x.type === 'participant');
+  if (!r)
+    throw new ApiError(422, 'Die Gruppenart dieser Veranstaltung hat keine Teilnehmer-Rolle.');
+  return r.id;
+}
+
+/**
+ * **Vorgaben für neue Personen** (A7-4) – Status, Standort, Bereich, wie beim Anmelden über das Formular
+ * (`anmeldenVorbereiten`). Fehlt etwas, legt die Anmeldung von Hand keine Person an.
+ */
+export async function neuePersonVorgaben(id: number): Promise<NeuePersonVorgaben | null> {
+  const n = (await gruppe(id)).settings?.newMember;
+  return typeof n?.statusId === 'number' &&
+    typeof n.campusId === 'number' &&
+    typeof n.departmentId === 'number'
+    ? { statusId: n.statusId, campusId: n.campusId, departmentId: n.departmentId }
+    : null;
 }
 
 /**

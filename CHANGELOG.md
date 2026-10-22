@@ -7,6 +7,43 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Behoben (Musik-App)
+
+- **Scroll-Modus: Eigene Textnotizen im Lied blieben beim Einschalten des Stifts nicht erhalten** (gefunden beim
+  Bau von #626, nur im unveröffentlichten Malen auf der langen Seite, #608): Beim Öffnen der Mal-Ebene wurde
+  einmal eine leere Textliste gespeichert, und die eigenen Texte im Liedbereich verschwanden von der A4-Seite –
+  auch im Konto. Zwei Ursachen, beide behoben: Die Anmerkungen starten jetzt gleich mit den gespeicherten
+  Texten statt leer, und der Entwurf der langen Seite wird neu angelegt, wenn die Mal-Ebene erneut eingehängt
+  wird. Beim Blättern ging dasselbe kurz hinaus, wurde aber sofort überschrieben.
+
+### Neu (Anmeldungen, A7-4a)
+
+- **Anmeldung von Hand** (Entwurf `a7-4-von-hand-v1`, abgenommen 22.10.2026): Knopf „＋ Von Hand“ im Reiter
+  „Anmeldungen“ – für Telefon, Papier und nach dem Anmeldeschluss. Erst in ChurchTools suchen (wer schon dabei ist, ist
+  gesperrt), sonst neu anlegen: mit den Vorgaben der Veranstaltung und der Zustimmung zum Datenschutz („außerhalb von
+  ChurchTools“, Person selbst oder Elternteil). Gleicher Name → Rückfrage „dieselbe Person?“ (`force` nur auf Wunsch).
+- Dieselben Fragen wie im Formular (`FeldEingabe` in den Farben der Erweiterung), E-Mail freiwillig; geschrieben wird
+  mit derselben Regel wie im Formular (`anmeldungAufbauen`: Felder, Betrag, Aufschlüsselung, Anmelde-Nr.).
+- **Unterschrift:** Schalter „liegt auf Papier vor“ → „✓ auf Papier – vermerkt von <Name>, <Tag>“; sonst leer (Alwin,
+  22.10.2026).
+- **Platz** nach der Regel des Formulars (wartet jemand oder voll → hinten an); „Trotzdem einen Platz geben“ erhöht bei
+  voller Gruppe die Plätze. Fehlt bei einer vorhandenen Person das Geburtsdatum, wird es nachgetragen.
+- Danach öffnet sich die neue Anmeldung mit **„Mail schreiben“** (fertiger Text: Platz mit Betrag und Bankdaten bzw.
+  Warteliste) und **„Rückgängig“** (nimmt die Person wieder heraus, setzt erhöhte Plätze zurück). Gemessen 19.10.2026:
+  Anlegen und Eintragen schicken keine Mail. Jeder Schritt wird nachgelesen; scheitert das Eintragen, werden die Plätze
+  zurückgesetzt.
+- Das Fenster einer Anmeldung zeigt „· von Hand“, wenn das Team sie eingetragen hat (Verlauf `origin: default`).
+
+### Behoben (Anmeldungen, beim Durchklicken von A7-4a am 22.10.2026)
+
+- Wer abgesagt hatte und später **mit neuer Anmelde-Nr.** wieder angemeldet wird (von Hand), bekam den alten
+  Anmeldetag – das hätte auch Frühbucher-Preise verschoben. Der Tag bleibt jetzt nur beim Zurückholen mit derselben
+  Nr. („Rückgängig“ nach einer Absage).
+- Liste: Warten alle Personen einer Anmeldung, steht „Betrag beim Nachrücken“ statt „0,00 €“ (das Formular schreibt
+  bei der Warteliste 0,00 €).
+- „Mail schreiben“ ohne E-Mail-Adresse sagt jetzt „Text kopieren und anders weitergeben“ statt „Öffnet dein
+  Mailprogramm“; bei „gibt es schon“ ist „Diese nehmen“ der hervorgehobene Weg, „Trotzdem neu anlegen“ nicht mehr.
+
 ### Neu (Dienstplaner, E6-3a, #645)
 
 - **Ablauf in der Termin-Ansicht bearbeiten:** Wer in ChurchTools den Ablauf des Termins bearbeiten darf (Recht

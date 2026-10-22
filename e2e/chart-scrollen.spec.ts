@@ -332,6 +332,38 @@ test('Malen auf der Rolle: ein Strich landet auf der A4-Seite und bleibt sichtba
     .toBe(true);
 });
 
+// 22.10.2026: Beim Einschalten des Stifts ging einmal eine leere Textliste hinaus – auf der Rolle löschte das
+// die eigenen Texte im Lied von der A4-Seite (auch im Konto). Gefunden beim Bau von #626.
+test('Stift an auf der Rolle: eigene Texte im Lied bleiben – auf der A4-Seite und im Bild', async ({
+  page,
+}) => {
+  const SEITE = 'worship_docdraw_song999001_a999001_voriginal_0';
+  const text = JSON.stringify([
+    { id: 4, fx: 0.5, fy: 0.3, text: 'Bleib da', color: '#d92d20', sizeCqh: 1.2 },
+  ]);
+  await page.addInitScript(
+    ({ tour, seite, text }) => {
+      localStorage.setItem(`worship:onboard-${tour}`, '1');
+      localStorage.setItem('worship:liedansicht', 'scrollen');
+      localStorage.setItem(`${seite}_text`, text);
+    },
+    { tour: TOUR_CHART, seite: SEITE, text },
+  );
+  await page.goto('/?demo=chart');
+  await expect
+    .poll(() => deck(page).evaluate((el) => el.querySelectorAll('canvas').length), {
+      timeout: 30_000,
+    })
+    .toBeGreaterThanOrEqual(3);
+  await expect(deck(page).getByText('Bleib da')).toBeVisible();
+  await page.getByRole('button', { name: 'Werkzeuge' }).click();
+  await page.getByRole('menuitem', { name: 'Anmerken' }).click();
+  await expect(page.getByTestId('rollen-malen')).toBeVisible({ timeout: 30_000 });
+  await page.waitForTimeout(1_000); // Speichern der Rolle läuft verzögert
+  expect(await page.evaluate((k) => localStorage.getItem(`${k}_text`), SEITE)).toBe(text);
+  await expect(page.getByTestId('rollen-malen').getByText('Bleib da')).toBeVisible();
+});
+
 test.describe('mit Touch', () => {
   test.use({ hasTouch: true });
 

@@ -125,7 +125,7 @@ export async function fehlerAus(
     return new KeinSpeicherRecht(keinRecht);
   }
   if (res.status === 403 && istCtVerbot(body)) return new KeinSpeicherRecht(keinRecht);
-  return new ApiError(res.status, meldungAus(body, res.status));
+  return new ApiError(res.status, meldungAus(body, res.status), body);
 }
 
 // ── Die Bremse (#300, #335) ──────────────────────────────────────────────────

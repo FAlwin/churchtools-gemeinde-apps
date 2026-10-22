@@ -103,6 +103,17 @@ schreiben“ und „Rückgängig“ (nimmt die Person wieder aus der Anmeldung �
 ChurchTools). Neue Personen anlegen darf, wer in ChurchTools das Recht dazu hat; Status, Standort und Bereich kommen
 aus den Vorgaben beim Freigeben.
 
+**Person dazu:** Im Fenster einer Anmeldung (mit Anmelde-Nr.) holt „＋ Person dazu“ eine weitere Person in dieselbe
+Anmeldung – etwa ein Geschwisterkind, das am Telefon nachgemeldet wird. Gefragt wird nur, was die Person betrifft;
+Kontakt, Unterschrift und Auswahl gelten von der Anmeldung. Bekommt sie einen Platz, hat sie eine eigene Zahlung (wie
+beim Nachrücken): den Betrag, um den die Anmeldung teurer wird. Die bisherige Zahlung bleibt, wie sie ist.
+
+**Zurückholen:** Wer abgesagt hat, lässt sich zurückholen – im Filter „Abgesagt“ die Zeile anklicken, im Fenster einer
+Anmeldung unter „Abgesagt“ oder über die Suche bei „＋ Von Hand“. Die Person kommt mit allen Antworten von damals
+zurück. Gehört sie zu einer Anmeldung, die es noch gibt, bekommt sie eine eigene Zahlung (wie „Person dazu“); war sie
+allein angemeldet, wird ihre Zahlung neu gerechnet und ist wieder offen. Hatte sie schon bezahlt, weist das Fenster
+darauf hin – dann bitte prüfen, ob schon zurückgezahlt wurde. ChurchTools schickt dabei keine Mail.
+
 **Zahlung:** Im Fenster einer Anmeldung markiert ihr sie als **bezahlt** (Zahlart und Tag), setzt das zurück oder
 **ändert den Betrag** (z. B. nach Absprache – in der Aufschlüsselung steht dann „Von Hand geändert am …“, und die
 Nachprüfung meldet ihn nicht mehr). Bezahlt gilt für die ganze Anmeldung und steht in ChurchTools bei der ersten Person

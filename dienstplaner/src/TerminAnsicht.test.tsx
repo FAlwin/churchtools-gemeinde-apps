@@ -258,6 +258,8 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
       weiter: () => weiter(),
       /** Ein anderer löscht in ChurchTools einen Punkt. */
       fremdWeg: (id: number) => (items = items.filter((i) => i.id !== id)),
+      fremdTitel: (id: number, title: string) =>
+        (items = items.map((i) => (i.id === id ? { ...i, title } : i))),
     };
   }
 
@@ -397,5 +399,20 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     await waitFor(() => expect(ct.schreiben).toEqual(['POST /api/events/7/agenda/items/1/hide']));
     expect(await screen.findByText('an diesem Termin weggelassen')).toBeTruthy();
+  });
+  it('Konflikt: derselbe Punkt woanders geändert → Rückfrage, Ablauf neu gelesen; „Trotzdem speichern“ schreibt', async () => {
+    const ct = ctMitAblauf();
+    zeige({ start: darfKalender([2]) });
+    fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[0]);
+    ct.fremdTitel(1, 'Soundcheck von außen');
+    const vorher = ct.lesen();
+    fireEvent.change(screen.getByPlaceholderText('Titel'), { target: { value: 'Technik-Check' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    expect((await screen.findByRole('alert')).textContent).toContain('woanders geändert');
+    expect(ct.schreiben).toEqual([]);
+    await waitFor(() => expect(ct.lesen()).toBe(vorher + 2));
+    fireEvent.click(screen.getByRole('button', { name: 'Trotzdem speichern' }));
+    await waitFor(() => expect(ct.schreiben).toEqual(['PUT /api/events/7/agenda/items/1']));
   });
 });

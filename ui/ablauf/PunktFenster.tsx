@@ -48,8 +48,11 @@ interface Gemeinsam {
 interface Bearbeiten extends Gemeinsam {
   modus?: 'bearbeiten';
   item: AblaufZeile;
-  /** Schreibt die geänderten Felder gesammelt (EIN Request). Wirft bei Fehler. */
-  onUpdate: (fields: PunktAenderung) => Promise<void>;
+  /**
+   * Schreibt die geänderten Felder gesammelt (EIN Request). Wirft bei Fehler. `trotzdem` (E6-3c): ohne Vergleich mit
+   * dem Stand beim Öffnen – nach der Rückfrage „Trotzdem speichern“.
+   */
+  onUpdate: (fields: PunktAenderung, trotzdem: boolean) => Promise<void>;
   /** Läuft der Punkt vor dem Beginn der Veranstaltung (Vorlauf, #423)? */
   vorBeginn: boolean;
   /** Schreibt den Vorlauf nach ChurchTools (gilt für den ganzen Block, siehe Schalter). Wirft bei Fehler. */
@@ -122,6 +125,8 @@ export function PunktFenster(props: PunktFensterProps) {
   const [linkState, setLinkState] = useState<LinkState>({ kind: 'keep' });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // Derselbe Punkt wurde inzwischen woanders geändert (412, E6-3c): fragen statt still überschreiben.
+  const [konflikt, setKonflikt] = useState<string | null>(null);
   // Dialog über der iOS-Tastatur freihalten; verhindert auch die verrutschte Kopfleiste (#207).
   const overlayRef = useOverlayKeyboardInset();
 
@@ -169,9 +174,10 @@ export function PunktFenster(props: PunktFensterProps) {
     setSongMode(false);
   }
 
-  async function saveAll() {
+  async function saveAll(trotzdem = false) {
     setBusy(true);
     setErr(null);
+    setKonflikt(null);
     try {
       if (props.modus === 'neu') {
         if (neuerPunkt) await props.onAdd(neuerPunkt);
@@ -181,13 +187,15 @@ export function PunktFenster(props: PunktFensterProps) {
       const { onUpdate, onSetVorBeginn, onSetWeggelassen } = props;
       // Alle Feld-Änderungen in EINEM Request (kein Teilzustand bei Fehlern); nur der Vorlauf ist
       // in ChurchTools etwas anderes – eine Grenze am Ablauf, kein Feld des Punkts.
-      if (Object.keys(pending).length > 0) await onUpdate(pending);
+      if (Object.keys(pending).length > 0) await onUpdate(pending, trotzdem);
       if (vorBeginn !== vorBeginnStart) await onSetVorBeginn(vorBeginn);
       // Das Auge zuletzt: Es gilt nur für diesen Termin und ändert nur Uhrzeiten (E6-3b).
       if (weggelassen !== weggelassenStart) await onSetWeggelassen(weggelassen);
       onClose();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Speichern fehlgeschlagen.');
+      const meldung = e instanceof Error ? e.message : 'Speichern fehlgeschlagen.';
+      if ((e as { status?: unknown } | null)?.status === 412) setKonflikt(meldung);
+      else setErr(meldung);
       setBusy(false);
     }
   }
@@ -367,21 +375,31 @@ export function PunktFenster(props: PunktFensterProps) {
           )}
         </div>
 
+        {konflikt && (
+          <div className={styles.err} role="alert">
+            {konflikt} Trotzdem speichern oder verwerfen?
+          </div>
+        )}
+
         <div className={styles.actions}>
           <button className={styles.cancelBtn} onClick={onClose} disabled={busy}>
-            Abbrechen
+            {konflikt ? 'Verwerfen' : 'Abbrechen'}
           </button>
           {neu ? (
-            <button className={styles.saveBtn} onClick={saveAll} disabled={busy || !neuerPunkt}>
+            <button
+              className={styles.saveBtn}
+              onClick={() => void saveAll()}
+              disabled={busy || !neuerPunkt}
+            >
               {busy ? 'Füge hinzu…' : 'Hinzufügen'}
             </button>
           ) : (
             <button
               className={styles.saveBtn}
-              onClick={saveAll}
+              onClick={() => void saveAll(konflikt !== null)}
               disabled={busy || !durationValid || !dirty}
             >
-              {busy ? 'Speichere…' : 'Speichern'}
+              {busy ? 'Speichere…' : konflikt ? 'Trotzdem speichern' : 'Speichern'}
             </button>
           )}
         </div>

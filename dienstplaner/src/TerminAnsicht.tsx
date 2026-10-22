@@ -4,8 +4,7 @@ import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { AblaufListe } from '@ui/ablauf/AblaufListe';
-import { useAblaufBearbeiten } from '@ui/ablauf/useAblaufBearbeiten';
-import { ApiError } from '@ui/ct/fehler';
+import { useAblaufBearbeiten, verlangtNeuLaden } from '@ui/ablauf/useAblaufBearbeiten';
 import { ablaufZeileAus } from '@shared/ct/ablaufZeile';
 import { datumText, kachel } from '@shared/ct/datum';
 import type { CtAgenda } from '@shared/ct/typen';
@@ -104,10 +103,10 @@ export function TerminAnsicht({
     sperrHinweis: GESPERRT,
     aktionen: ablaufAktionen(terminId, () => ablaufNeuLaden()),
     dienste,
-    // Abgeschlossen (423), Punkt weg (404) oder Ablauf inzwischen anders (409): frisch lesen, damit Liste und Hinweis
+    // Ablauf inzwischen anders (404/409/412/423, Regel `verlangtNeuLaden`): frisch lesen, damit Liste und Hinweis
     // stimmen. Einen Knopf „neu laden“ hat die Termin-Ansicht nicht.
     beiFehler: (e) => {
-      if (e instanceof ApiError && [404, 409, 423].includes(e.status)) ablaufNeuLaden();
+      if (verlangtNeuLaden(e)) ablaufNeuLaden();
     },
   });
 

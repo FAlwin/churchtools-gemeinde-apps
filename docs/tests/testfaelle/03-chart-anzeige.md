@@ -505,7 +505,7 @@ Einstellung gilt nur auf diesem Gerät.
 2. Einen Gottesdienst öffnen, ein Lied antippen. Mit dem Finger nach unten wischen: Die Kopfzeile zeigt
    immer das Lied in der Bildmitte, die Punkte unten folgen.
 3. Das Pedal treten (oder ↓ / Leertaste auf einer Tastatur): Der nächste Teil steht oben, die Linie blitzt kurz
-   auf. Ein Lied mit `----` im Text: Das Pedal hält auch dort. Am Emporen-Monitor (oder einem kleinen Fenster)
+   auf. Am oberen Rand schaut nichts von der Zeile davor (oder vom Liedkopf über dem ersten Teil) herein. Ein Lied mit `----` im Text: Das Pedal hält auch dort. Am Emporen-Monitor (oder einem kleinen Fenster)
    ein Teil, der nicht ganz passt: erst ⅔ weiter, keine Zeile fehlt. Rückwärts mit dem anderen Pedal (↑ /
    Umschalt+Leertaste) an den Anfang des Teils.
 4. Einmal aufs Blatt tippen → Leisten weg; nochmal → Leisten da.

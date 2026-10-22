@@ -38,6 +38,73 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 - `NichtUebernommen` („ChurchTools hat … nicht übernommen“) steht jetzt in `ui/ct/fehler.ts`, und
   `ui/ct/fehlerMeldung.ts` kennt den Fall für alle Erweiterungen (vorher nur in den Anmeldungen).
 
+### Neu (Anmeldungen, A7-4c)
+
+- **Abgesagte zurückholen** (Entwurf `a7-4-von-hand-v1`): im Filter „Abgesagt“ (Zeile anklicken), im Fenster einer
+  Anmeldung unter „Abgesagt“ und in der Suche von „＋ Von Hand“ („hat abgesagt – zurückholen“). Die Person kommt mit
+  allen Antworten von damals zurück (aus dem Verlauf; eine Auswahl wird wieder als Options-Nummer geschrieben, eine
+  Antwort, die es nicht mehr gibt, bleibt leer und wird genannt). Platz nach der Regel des Formulars.
+- **Zahlung** (Alwin, 22.10.2026): Besteht die Anmeldung noch, bekommt sie eine eigene Zahlung wie bei „Person dazu“
+  (Kopf „Zurückgeholt am …“, dieselbe Rechnung); Kontakt, Unterschrift und Auswahl bleiben bei der Anmeldung. War sie
+  allein, wird die Zahlung der Anmeldung nach den Regeln neu gerechnet und ist offen – hatte sie schon bezahlt, steht
+  der Hinweis „Rückzahlung prüfen“ da.
+- „Platz und Betrag“ ist ein Baustein für „Von Hand“, „Person dazu“ und „Zurückholen“ (`PlatzWahl`).
+- Titel eigener Zahlungen als Tabelle je Art („nachgerückt“, „dazu angemeldet“, „zurückgeholt“) – beim Durchklicken
+  stand die Zahlung einer Zurückgeholten als „Anmeldung (…)“ da.
+
+### Neu (Organigramm, O2, #664)
+
+- **Der ganze Baum:** je Bereich (oberste Gruppe) eine Karte – große Bereiche zuerst –, darin die Gruppen als Zeilen
+  mit Baumlinien, in der Farbe der Gruppe, mit Zahl der Personen, Leitung und den Diensten der Gruppe; im Kopf des
+  Bereichs die Personen des ganzen Bereichs (jede einmal) und die Leitung mit Bild.
+- **Gruppenfenster** (Klick auf eine Gruppe): Mitglieder nach Rollen in der Reihenfolge von ChurchTools, Ober- und
+  Untergruppen zum Weiterklicken, Dienste, „In ChurchTools öffnen“. Nur ansehen.
+- **Leitung aus ChurchTools:** `isLeader`, `sortKey`, `nameTranslated` der Gruppenrollen (gemessen 22.10.2026) –
+  die Namensliste aus O1 („Leiter“, „leader“, „Co-Leiter“) ist weg; die Rollen kommen aus dem Abruf, den `ladeIch`
+  ohnehin macht.
+- **Mitglieder aller Gruppen**, höchstens 4 Abrufe gleichzeitig. Ohne Leserecht (403) bleibt die Gruppe im Baum
+  („Mitglieder nicht sichtbar“); ein vorübergehender Fehler ist **kein** „nicht sichtbar“, sondern steht als solcher
+  da – mit „Erneut versuchen“, das nur die gescheiterten Gruppen nachlädt. Abgemeldet → Hinweis für alles.
+- **Gruppentypen ein-/ausblenden** (z. B. Verteiler), pro Gerät gemerkt; der Code kennt keinen Typ beim Namen.
+- Neue gemeinsame Bausteine `ui/bedienung/PersonBild` (Bild oder Initialen wie in ChurchTools) und
+  `ui/bedienung/GruppenKachel`. Die Dienste (`/services`) sind Beiwerk: fehlen sie, steht der Baum ohne Schildchen.
+- Nicht in O2: offene Plätze und Einsätze (kommen mit O3, sie brauchen die Termine).
+
+### Neu (Anmeldungen, A7-4b)
+
+- **Person zur Anmeldung dazu** (Entwurf `a7-4-von-hand-v1`): „＋ Person dazu“ im Fenster einer Anmeldung (nur mit
+  Anmelde-Nr.). Suchen oder neu anlegen wie bei A7-4a, dann nur die Fragen der Person – Kontakt, Unterschrift und
+  Auswahl stehen schon bei der Anmeldung. Gleiche Anmelde-Nr., Platz nach der Regel des Formulars.
+- **Eigene Zahlung** (Alwin, 22.10.2026) wie beim Nachrücken: um so viel wird die Anmeldung nach den Regeln teurer
+  (Kopfzeile „Dazu angemeldet am …“). Die Rechnung steht jetzt an EINER Stelle für Nachrücken und Person dazu
+  (`eigeneZahlung`); Liste und Nachprüfung erkennen beide Arten eigener Zahlung (`istEigeneZahlung`). Wer wartet,
+  bekommt noch keine Zahlung – sie folgt beim Nachrücken.
+- Danach „Mail schreiben“ (an die Adresse der Anmeldung) und „Rückgängig“ im Fenster; Abbrechen führt zurück in die
+  Anmeldung.
+- Unter einer eigenen Zahlung steht „Gilt nur für <Name>“ statt „Gilt für die ganze Anmeldung“ (auch bei
+  Nachgerückten; gefunden beim Durchklicken am 22.10.2026).
+- „Rückgängig“ im Fenster bricht in schmalen Fenstern (Handy) um – „Mail schreiben“ und „Rückgängig“ liefen dort
+  rechts aus dem Fenster.
+
+## [2.37.0] – 2026-10-22
+
+### Geändert (Musik-App, #554)
+
+- **Team-Notizen auch in großen Gemeinden schnell** (Frage aus dem ChurchTools-Dev-Stammtisch: „Wie
+  funktioniert das bei 6000 Mitgliedern?"): Der Eintrag im Verzeichnis „Wer teilt" nennt jetzt auch die Lieder,
+  zu denen jemand Anmerkungen hat; er wird nach dem Speichern eigener Anmerkungen nachgeführt (nur wenn sich die
+  Lieder ändern – sonst kostet es nichts). „Notizen von …" liest beim Öffnen eines Lieds deshalb nur noch die
+  Dateien derer, die zu diesen Liedern etwas haben, statt die aller Teilenden (bei 200 Teilenden waren das ~400
+  Anfragen je Öffnen). Ob jemand wirklich teilt und unter welchem Namen, steht weiter in seiner eigenen Datei und
+  wird dort geprüft. Einträge älterer Fassungen werden gelesen wie bisher.
+
+### Geändert (Musik-App, #557)
+
+- **Weniger Last auf ChurchTools:** Ein offener Ablauf bzw. eine offene Liedansicht fragt jetzt alle 30 Sekunden
+  statt alle 8 Sekunden nach, ob sich der Ablauf geändert hat (Frage aus dem ChurchTools-Dev-Stammtisch). Das war
+  der größte Posten der Grundlast – je Gerät etwa 2 statt 7,5 Anfragen pro Minute. Eine Änderung am Ablauf kommt
+  dadurch nach höchstens 30 Sekunden an. Terminliste (1 Minute) und Liedtexte (1 Minute) bleiben, wie sie sind.
+
 ### Geändert (alle Apps, #654)
 
 - **Look der ChurchTools-Weboberfläche für alle Apps** – Erweiterungen und die Musik-App als PWA (Alwin, 22.10.2026;
@@ -101,6 +168,17 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   auch im Konto. Zwei Ursachen, beide behoben: Die Anmerkungen starten jetzt gleich mit den gespeicherten
   Texten statt leer, und der Entwurf der langen Seite wird neu angelegt, wenn die Mal-Ebene erneut eingehängt
   wird. Beim Blättern ging dasselbe kurz hinaus, wurde aber sofort überschrieben.
+
+### Neu (Musik-App + Dienstplaner, E6-3c, #659)
+
+- **Nichts wird still überschrieben, wenn zwei gleichzeitig bearbeiten** (entschieden mit Alwin 22.10.2026: nur bei
+  echtem Konflikt). Hat jemand – in der anderen App, auf einem anderen Gerät oder in ChurchTools – **denselben Punkt**
+  in einem Feld geändert, das ich im offenen Fenster auch ändere, fragt das Fenster: „Dieser Punkt wurde eben woanders
+  geändert … Trotzdem speichern oder verwerfen?“; die Liste dahinter ist schon neu geladen, meine Eingaben stehen noch
+  im Fenster. Hat jemand **umsortiert**, während ich ziehe, wird nicht auf der alten Reihenfolge geschrieben: Hinweis,
+  neu geladen, noch einmal ziehen. Änderungen an **anderen** Punkten oder Feldern gehen ohne Rückfrage durch.
+- Verglichen wird frisch vor dem Schreiben, Feld für Feld so, wie die Zeile es zeigt; ein Lied über sein Arrangement.
+  Vorlauf und Auge setzen einen Zielzustand und brauchen keinen Vergleich.
 
 ### Neu (Anmeldungen, A7-4a)
 
@@ -376,7 +454,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   den nächsten Teil des Lieds an den oberen Rand – bzw. die nächste Stelle mit einem Weiterschalt-Punkt `----`.
   Ist ein Teil länger als der Bildschirm (Emporen-Monitor), geht es erst um ⅔ weiter, damit keine Zeile
   übersprungen wird. Zurück springt an den Anfang des aktuellen bzw. vorigen Teils. Die Pfeile unten tun dasselbe.
-  Hochgeladene PDFs scrollen weiter um ⅔.
+  Über dem Teil bleibt etwas Luft, ohne dass von der Zeile davor oder vom Titelkopf ein Streifen hereinschaut –
+  auch auf schmalen Handys. Hochgeladene PDFs scrollen weiter um ⅔.
 - **Scroll-Modus: je Lied eine lange Seite** (#607, Rückmeldung des Musik-Bereichsleiters): Statt
   aneinandergehängter A4-Seiten ist jedes Lied beim Scrollen eine durchgehende Seite in einer Spalte – keine
   Lücke mehr, wenn ein Teil nicht mehr auf die Seite passte, und die CCLI-Angabe steht direkt unter dem

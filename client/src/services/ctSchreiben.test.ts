@@ -13,6 +13,7 @@ import {
   vorBeginn,
   weglassen,
 } from './ctSchreiben';
+import { ablaufZeileAus, punktStand } from '@shared/ct/ablaufZeile';
 import { _bremseLoesen, _vergissCsrf, ChurchToolsBremst, KeinSpeicherRecht } from './ctRuntime';
 import { FakeCt } from './ctFake.testutil';
 
@@ -266,5 +267,22 @@ describe('Auge – an diesem Termin weglassen (E6-3b)', () => {
     expect(ct.geschrieben.map((g) => g.was)).toEqual([
       'POST /api/events/500/agenda/items/3/unhide',
     ]);
+  });
+});
+
+describe('Konflikt (E6-3c) – der Weg der Erweiterung', () => {
+  it('derselbe Punkt inzwischen anders → 412, nichts geschrieben; ohne `gesehen` wird geschrieben', async () => {
+    const gesehen = punktStand(
+      ablaufZeileAus({ ...AGENDA.items[0], title: 'Vorspiel alt' }, 500, 'Europe/Berlin'),
+    );
+    await expect(punkt(500, 1, { title: 'Neu' }, gesehen)).rejects.toMatchObject({ status: 412 });
+    expect(ct.geschrieben).toHaveLength(0);
+    await punkt(500, 1, { title: 'Neu' });
+    expect(ct.geschrieben.map((g) => g.was)).toEqual(['PUT /api/events/500/agenda/items/1']);
+  });
+
+  it('Reihenfolge woanders geändert → 412', async () => {
+    await expect(reihenfolge(500, [3, 1, 2], [2, 1, 3])).rejects.toMatchObject({ status: 412 });
+    expect(ct.geschrieben).toHaveLength(0);
   });
 });

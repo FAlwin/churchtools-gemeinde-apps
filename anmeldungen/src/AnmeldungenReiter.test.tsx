@@ -414,6 +414,164 @@ describe('Anmeldung von Hand (A7-4a)', () => {
   });
 });
 
+describe('Person dazu (A7-4b)', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = () => Promise.resolve() as unknown as void;
+    mm.gruppenfelderLaden.mockResolvedValue(FELDER);
+    hm.personenSuchen.mockResolvedValue([
+      { personId: 50, vor: 'Paul', nach: 'Beispiel', geburtstag: '2018-04-03', email: null },
+    ]);
+  });
+  afterEach(() => {
+    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+  });
+
+  it('aus dem Fenster der Anmeldung: nur die Fragen der Person, gleiche Nr., eigene Zahlung; Abbrechen führt zurück', async () => {
+    hm.vonHandAnmelden.mockResolvedValue({ personId: 50, warteplatz: null, rueckgaengig: vi.fn() });
+    const z = zeigen(fertig());
+    fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));
+    fireEvent.click(screen.getByRole('button', { name: '＋ Person dazu' }));
+    expect(screen.getByText('Person zur Anmeldung dazu')).toBeTruthy();
+    // Abbrechen → zurück in die Anmeldung.
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    expect(screen.getByRole('button', { name: '＋ Person dazu' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '＋ Person dazu' }));
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), {
+      target: { value: 'Paul' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Suchen' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Paul Beispiel/ }));
+    expect(screen.getByText(/zur Anmeldung von Maria Beispiel · Anmelde-Nr\. AAAAAA/)).toBeTruthy();
+    expect(screen.queryByText('Für die Anmeldung')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Unterschrift liegt auf Papier vor' })).toBeNull();
+    // Lena wartet → Paul käme hinten an; trotzdem einen Platz → eigene Zahlung.
+    expect(screen.getByText('Neue Zahlung für Paul').nextSibling?.textContent).toBe(
+      'folgt beim Nachrücken',
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Trotzdem einen Platz geben/ }));
+    expect(screen.getByText('Neue Zahlung für Paul').nextSibling?.textContent).toBe('6,00 €');
+    fireEvent.click(screen.getByRole('radio', { name: 'Ja' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Anmelden' }));
+    await waitFor(() => expect(z.onGespeichert).toHaveBeenCalled());
+
+    const plan = hm.vonHandAnmelden.mock.calls.at(-1)![1];
+    const x = e();
+    expect(plan.felder[plan.nrFeld!]).toBe('AAAAAA');
+    expect(plan.felder[x.ctFelder.kontakt]).toBeUndefined();
+    expect(plan.felder[x.ctFelder.betrag]).toBe('6,00 €');
+    expect(plan.felder[x.ctFelder.aufschluesselung]).toMatch(/^Dazu angemeldet am /);
+  });
+
+  it('ohne Anmelde-Nr. (ältere Anmeldung) gibt es „Person dazu“ nicht', () => {
+    zeigen(fertig(mitglieder(undefined, [true, false], 10)));
+    fireEvent.click(screen.getAllByRole('button', { name: /Maria Beispiel/ })[0]);
+    expect(screen.queryByRole('button', { name: '＋ Person dazu' })).toBeNull();
+  });
+});
+
+describe('Zurückholen (A7-4c)', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = () => Promise.resolve() as unknown as void;
+    mm.gruppenfelderLaden.mockResolvedValue(FELDER);
+    hm.vonHandAnmelden.mockResolvedValue({ personId: 11, warteplatz: null, rueckgaengig: vi.fn() });
+  });
+  afterEach(() => {
+    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+  });
+  const mitAbsage = () => {
+    const [jonas, lena] = mitglieder('AAAAAA', [true, false], 10);
+    return fertig(
+      [jonas],
+      [dazu(10, '2026-10-17'), dazu(11, '2026-10-17'), absage(lena, '2026-10-19', 1)],
+    );
+  };
+
+  it('Filter „Abgesagt“: Zeile anklicken → Rückfrage mit Platz und eigener Zahlung → zurück mit den alten Antworten', async () => {
+    const z = zeigen(mitAbsage());
+    fireEvent.click(screen.getByRole('button', { name: /Abgesagt/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Lena Beispiel.*Zurückholen/ }));
+    expect(screen.getByText('Lena Beispiel zurückholen?')).toBeTruthy();
+    // Solange die Felder laden, steht nicht kurz der Satz für „allein“ da.
+    expect(screen.queryByText(/Kontakt, Unterschrift, Fragen/)).toBeNull();
+    expect(await screen.findByText(/in die Anmeldung von Maria Beispiel/)).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getByText('Neue Zahlung für Lena').nextSibling?.textContent).toBe('6,00 €'),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Zurückholen' }));
+    await waitFor(() => expect(z.onGespeichert).toHaveBeenCalled());
+    const [, plan] = hm.vonHandAnmelden.mock.calls.at(-1)!;
+    const x = e();
+    expect(plan.person).toEqual({ art: 'da', personId: 11, geburtstagNachtragen: null });
+    expect([plan.felder[x.ctFelder.foto], plan.felder[plan.nrFeld!]]).toEqual(['114', 'AAAAAA']);
+    expect(plan.felder[x.ctFelder.aufschluesselung]).toMatch(/^Zurückgeholt am /);
+  });
+
+  it('eigene Zahlung einer Zurückgeholten: Titel „– zurückgeholt“, nicht „Anmeldung (…)“', () => {
+    const x = e();
+    const roh = mitglieder('AAAAAA', [true, false], 10);
+    roh[1].groupMemberStatus = 'active';
+    roh[1].fields!.push(
+      { id: x.ctFelder.betrag, value: '6,00 €' },
+      { id: x.ctFelder.aufschluesselung, value: 'Zurückgeholt am 22.10.2026\nFür Lena: 6,00 €' },
+    );
+    zeigen(fertig(roh));
+    fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));
+    expect(screen.getByText('Lena – zurückgeholt')).toBeTruthy();
+    expect(screen.getByText('Gilt nur für Lena.')).toBeTruthy();
+  });
+
+  it('im Fenster der Anmeldung unter „Abgesagt“; Abbrechen führt zurück in die Anmeldung', () => {
+    zeigen(mitAbsage());
+    fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zurückholen' }));
+    expect(screen.getByText('Lena Beispiel zurückholen?')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    expect(screen.getByRole('button', { name: '＋ Person dazu' })).toBeTruthy();
+  });
+
+  it('in der Suche von „Von Hand“: wer abgesagt hat, wird zurückgeholt statt neu angemeldet', async () => {
+    hm.personenSuchen.mockResolvedValue([
+      { personId: 11, vor: 'Lena', nach: 'Beispiel', geburtstag: '2019-02-02', email: null },
+    ]);
+    zeigen(mitAbsage());
+    fireEvent.click(screen.getByRole('button', { name: '＋ Von Hand' }));
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), {
+      target: { value: 'Lena' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Suchen' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Lena Beispiel.*zurückholen/ }));
+    expect(screen.getByText('Lena Beispiel zurückholen?')).toBeTruthy();
+  });
+
+  it('ohne Recht zum Ändern: Zeile nur zum Ansehen', () => {
+    zeigen(mitAbsage(), 10, false, false);
+    fireEvent.click(screen.getByRole('button', { name: /Abgesagt/ }));
+    expect(screen.queryByRole('button', { name: /Lena Beispiel/ })).toBeNull();
+  });
+});
+
+describe('Mehrere Zahlungen', () => {
+  it('eigene Zahlung (dazu angemeldet): eigener Titel, „gilt nur für“ statt „für die ganze Anmeldung“', () => {
+    const x = e();
+    const roh = mitglieder('AAAAAA', [true, false], 10);
+    roh[1].groupMemberStatus = 'active';
+    roh[1].waitinglistPosition = null;
+    roh[1].fields!.push(
+      { id: x.ctFelder.betrag, value: '6,00 €' },
+      {
+        id: x.ctFelder.aufschluesselung,
+        value: 'Dazu angemeldet am 22.10.2026\nFür Lena: 6,00 €',
+      },
+    );
+    zeigen(fertig(roh));
+    fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));
+    expect(screen.getByText('Lena – dazu angemeldet')).toBeTruthy();
+    expect(screen.getAllByText('Gilt für die ganze Anmeldung.')).toHaveLength(1);
+    expect(screen.getByText('Gilt nur für Lena.')).toBeTruthy();
+  });
+});
+
 describe('Mail schreiben', () => {
   it('ohne E-Mail-Adresse: kein Knopf zum Mailprogramm, dafür der Hinweis zum Kopieren', () => {
     const mail = { an: null, betreff: 'Kinderfreizeit: Anmeldung für Paula', text: 'Hallo' };

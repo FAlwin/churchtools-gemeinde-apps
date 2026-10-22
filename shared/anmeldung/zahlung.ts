@@ -65,17 +65,52 @@ export function aufschluesselungMitHand(alt: string | null, cent: number, tag: s
 /**
  * **Erste Zeile der eigenen Zahlung einer Nachgerückten** (Alwin, 19.10.2026: „Eine neue Zahlung. Also so als ob ein
  * Kind neu angemeldet wurde“) – daran erkennen Liste und Nachprüfung, dass der Betrag dieser Person zusätzlich zur
- * Zahlung der Anmeldung gilt (`istNachrueckZahlung`, die Gegenseite).
+ * Zahlung der Anmeldung gilt (`istEigeneZahlung`, die Gegenseite).
  */
 export function nachrueckKopf(tag: string): string {
   return `Nachgerückt am ${tagPunkt(tag)}`;
 }
 
-const NACHRUECK = /^Nachgerückt am \d{2}\.\d{2}\.\d{4}$/;
+/**
+ * **Erste Zeile der eigenen Zahlung einer Person, die von Hand zur Anmeldung dazukommt** (A7-4b, Alwin 22.10.2026:
+ * „eigene Zahlung“) – dieselbe Art Zahlung wie beim Nachrücken.
+ */
+export function dazuKopf(tag: string): string {
+  return `Dazu angemeldet am ${tagPunkt(tag)}`;
+}
 
-/** Ist das die Aufschlüsselung einer eigenen Zahlung (Nachgerückte)? */
-export function istNachrueckZahlung(aufschluesselung: string | null | undefined): boolean {
-  return NACHRUECK.test((aufschluesselung ?? '').split('\n')[0].trim());
+/**
+ * **Zeile bzw. Kopf beim Zurückholen einer Abgesagten** (A7-4c): Kopf ihrer eigenen Zahlung, wenn die Anmeldung noch
+ * besteht – sonst die letzte Zeile der neu gerechneten Zahlung der Anmeldung.
+ */
+export function zurueckKopf(tag: string): string {
+  return `Zurückgeholt am ${tagPunkt(tag)}`;
+}
+
+const EIGENE = /^(Nachgerückt|Dazu angemeldet|Zurückgeholt) am \d{2}\.\d{2}\.\d{4}$/;
+const ART = {
+  Nachgerückt: 'nachgerueckt',
+  'Dazu angemeldet': 'dazu',
+  Zurückgeholt: 'zurueck',
+} as const;
+
+/**
+ * Wofür eine eigene Zahlung steht (nachgerückt, dazu angemeldet, zurückgeholt) – `null`, wenn es die Zahlung der
+ * Anmeldung ist (deren erste Zeile ist ein Posten, kein Kopf).
+ */
+export function eigeneZahlungArt(
+  aufschluesselung: string | null | undefined,
+): 'nachgerueckt' | 'dazu' | 'zurueck' | null {
+  const m = EIGENE.exec((aufschluesselung ?? '').split('\n')[0].trim());
+  return m ? ART[m[1] as keyof typeof ART] : null;
+}
+
+/**
+ * Ist das die Aufschlüsselung einer **eigenen** Zahlung (Nachgerückte, A7-3; dazu angemeldet, A7-4b)? Sie gilt
+ * zusätzlich zur Zahlung der Anmeldung und macht die Person nicht zur ersten.
+ */
+export function istEigeneZahlung(aufschluesselung: string | null | undefined): boolean {
+  return eigeneZahlungArt(aufschluesselung) !== null;
 }
 
 /** Die Zeile in der Aufschlüsselung der Anmeldung, wenn jemand abgesagt hat. */

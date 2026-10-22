@@ -1,5 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
+import { ablaufZeileAus, punktStand } from '@shared/ct/ablaufZeile';
 import {
+  ablaufUmsortieren,
   punktAendern,
   punktLoeschen,
   punktWiederherstellen,
@@ -320,5 +322,87 @@ describe('Auge – an diesem Termin weglassen (E6-3b, #652)', () => {
     await punktWiederherstellen(ct.s, 1, zettel);
     expect(ct.weggelassen()).toEqual([]);
     expect(ct.schreibe.mock.calls.some(([p]) => p.endsWith('/hide'))).toBe(false);
+  });
+});
+
+describe('Nicht still überschreiben (E6-3c, #659)', () => {
+  /** Was das Fenster gesehen hätte – über denselben Weg wie die Oberfläche. */
+  const gesehen = (it: CtAgendaItem) => punktStand(ablaufZeileAus(it, 1, 'Europe/Berlin'));
+
+  it('nichts geändert → schreibt', async () => {
+    const ct = fakeCt([{ title: 'A' }, { title: 'B', note: 'n' }]);
+    await punktAendern(ct.s, 1, 2, { title: 'B2' }, gesehen(ct.item(2)!));
+    expect(ct.item(2)?.title).toBe('B2');
+  });
+
+  it('dasselbe Feld woanders geändert → 412, nichts geschrieben', async () => {
+    const ct = fakeCt([{ title: 'A' }, { title: 'B' }]);
+    const alt = gesehen(ct.item(2)!);
+    ct.item(2)!.title = 'B von außen';
+    await expect(punktAendern(ct.s, 1, 2, { title: 'B2' }, alt)).rejects.toMatchObject({
+      status: 412,
+    });
+    expect(ct.schreibe).not.toHaveBeenCalled();
+    expect(ct.item(2)?.title).toBe('B von außen');
+  });
+
+  it('ein ANDERES Feld woanders geändert → schreibt, die fremde Änderung bleibt', async () => {
+    const ct = fakeCt([{ title: 'A' }, { title: 'B' }]);
+    const alt = gesehen(ct.item(2)!);
+    ct.item(2)!.note = 'von außen';
+    await punktAendern(ct.s, 1, 2, { title: 'B2' }, alt);
+    expect(ct.item(2)).toMatchObject({ title: 'B2', note: 'von außen' });
+  });
+
+  it('jedes geschriebene Feld wird verglichen: Zuständig, Dauer, Notiz, Lied', async () => {
+    const faelle: [Partial<CtAgendaItem>, Parameters<typeof punktAendern>[3]][] = [
+      [{ responsible: { text: '[Ton]' } }, { responsible: '[Licht]' }],
+      [{ duration: 600 }, { durationMin: 7 }],
+      [{ note: 'außen' }, { note: 'meins' }],
+      [{ song: { songId: 1, arrangementId: 9 } as CtAgendaItem['song'] }, { arrangementId: 5 }],
+      [{ song: { songId: 1, arrangementId: 9 } as CtAgendaItem['song'] }, { unlink: true }],
+    ];
+    for (const [aussen, aenderung] of faelle) {
+      const ct = fakeCt([{ title: 'A', duration: 300 }]);
+      const alt = gesehen(ct.item(1)!);
+      Object.assign(ct.item(1)!, aussen);
+      await expect(punktAendern(ct.s, 1, 1, aenderung, alt)).rejects.toMatchObject({ status: 412 });
+    }
+  });
+
+  it('Lied: gleicher Name, anderes Arrangement ist ein anderes Lied → 412', async () => {
+    const lied = (arrangementId: number) =>
+      ({ songId: 1, arrangementId, title: 'Treu' }) as CtAgendaItem['song'];
+    const ct = fakeCt([{ title: 'Lied', type: 'song', song: lied(9) }]);
+    const alt = gesehen(ct.item(1)!);
+    ct.item(1)!.song = lied(10);
+    await expect(punktAendern(ct.s, 1, 1, { arrangementId: 11 }, alt)).rejects.toMatchObject({
+      status: 412,
+    });
+  });
+
+  it('die Dauer wird wie in der Zeile gerundet verglichen – 270 s sind „5 Min“, kein Konflikt mit sich selbst', async () => {
+    const ct = fakeCt([{ title: 'A', duration: 270 }]);
+    await punktAendern(ct.s, 1, 1, { durationMin: 6 }, gesehen(ct.item(1)!));
+    expect(ct.item(1)?.duration).toBe(360);
+  });
+
+  it('„Trotzdem speichern“ (ohne gesehen) schreibt auch bei Konflikt', async () => {
+    const ct = fakeCt([{ title: 'A' }]);
+    ct.item(1)!.title = 'von außen';
+    await punktAendern(ct.s, 1, 1, { title: 'meins' });
+    expect(ct.item(1)?.title).toBe('meins');
+  });
+
+  it('Reihenfolge: gleich wie gesehen → schreibt; woanders umsortiert → 412; ohne gesehen → schreibt', async () => {
+    const ct = fakeCt([{ title: 'A' }, { title: 'B' }, { title: 'C' }]);
+    await ablaufUmsortieren(ct.s, 1, [2, 1, 3], [1, 2, 3]);
+    expect(ct.ids()).toEqual([2, 1, 3]);
+    await expect(ablaufUmsortieren(ct.s, 1, [3, 2, 1], [1, 2, 3])).rejects.toMatchObject({
+      status: 412,
+    });
+    expect(ct.ids()).toEqual([2, 1, 3]);
+    await ablaufUmsortieren(ct.s, 1, [3, 2, 1]);
+    expect(ct.ids()).toEqual([3, 2, 1]);
   });
 });

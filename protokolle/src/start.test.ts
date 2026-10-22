@@ -44,8 +44,7 @@ describe('ladeStart', () => {
     expect(kategorien).toHaveBeenCalledWith(expect.anything(), 20);
     expect(s.gruppen.map((g) => [g.id, g.name, g.lage])).toEqual([
       [11, 'Leitungsteam', 'unvollstaendig'],
-      [19, 'Technik-Team', 'nicht-eingerichtet'],
-    ]);
+    ]); // Technik-Team (nur Mitgliedschaft, keine sichtbaren Protokolle) steht nicht in der Liste
     expect(s.darfVerwalten).toBe(false);
   });
 

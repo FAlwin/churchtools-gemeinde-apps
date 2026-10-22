@@ -1,6 +1,6 @@
 /**
  * **Was die Startseite der Protokolle braucht** (Bauplan S1): wer angemeldet ist, die Gemeinde und die Gruppen
- * mit „eingerichtet / nicht eingerichtet“. Die Regeln stehen in `@shared/protokolle/gruppen`; hier wird nur
+ * (nur die, deren Protokolle man sehen darf). Die Regeln stehen in `@shared/protokolle/gruppen`; hier wird nur
  * gelesen.
  *
  * Ein Fehler beim Lesen wird **geworfen**, nicht zu „keine Gruppen“ gemacht – vorübergehend ist nicht leer

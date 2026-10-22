@@ -17,7 +17,7 @@ const mit = (
 });
 
 describe('protokollGruppen', () => {
-  it('versteckte Gruppe nur aus den Kategorien – mit Namen aus der Kategorie', () => {
+  it('versteckte Gruppe nur aus den Kategorien; Gruppe ohne sichtbare Protokolle fehlt (kein Zugriff ≠ nicht eingerichtet)', () => {
     const g = protokollGruppen(
       [mit(19, 'Technik-Team')],
       [
@@ -32,13 +32,6 @@ describe('protokollGruppen', () => {
     );
     expect(g).toEqual([
       { id: 11, name: 'Leitungsteam', lage: 'eingerichtet', protokolle: 60, mitarbeit: 61 },
-      {
-        id: 19,
-        name: 'Technik-Team',
-        lage: 'nicht-eingerichtet',
-        protokolle: null,
-        mitarbeit: null,
-      },
     ]);
   });
 
@@ -71,5 +64,10 @@ describe('protokollGruppen', () => {
       [{ id: 50, shorty: kuerzelProtokolle(4) }],
     );
     expect(g.map((x) => [x.id, x.name])).toEqual([[4, 'Gruppe 4']]);
+  });
+
+  it('Name aus der Mitgliedschaft, wenn die Kategorie keinen trägt', () => {
+    const g = protokollGruppen([mit(4, 'Technik')], [{ id: 50, shorty: kuerzelProtokolle(4) }]);
+    expect(g.map((x) => [x.id, x.name, x.lage])).toEqual([[4, 'Technik', 'unvollstaendig']]);
   });
 });

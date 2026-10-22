@@ -23,7 +23,8 @@ import { anzahlText } from './anzeige';
 import { AnmeldungZahlung } from './AnmeldungZahlung';
 import { AbsagenFrage, MailAnsicht, NachrueckenFrage } from './AnmeldungAktion';
 import { absagenLassen, nachrueckenLassen } from './bewegung';
-import { VonHandFenster } from './VonHandFenster';
+import { VonHandFenster, type VonHandFertig } from './VonHandFenster';
+import { ZurueckFenster } from './ZurueckFenster';
 import { useSpeichern } from './useSpeichern';
 import { RueckgaengigImFenster, type Aenderung } from './Rueckgaengig';
 import s from './Startseite.module.scss';
@@ -132,6 +133,7 @@ function AnmeldungAnsehen({
   onGemeldet,
   onRueckgaengig,
   onPersonDazu,
+  onZurueckholen,
 }: {
   x: ListenAnmeldung;
   e: OeffentlicheEinstellungen;
@@ -150,6 +152,8 @@ function AnmeldungAnsehen({
   onRueckgaengig: () => void;
   /** „＋ Person dazu“ (A7-4b) – nur mit Anmelde-Nr., sonst gäbe es nichts, das die Person zur Anmeldung zählt. */
   onPersonDazu?: () => void;
+  /** „Zurückholen“ an einer Abgesagten (A7-4c). */
+  onZurueckholen?: (b: Absage) => void;
 }) {
   const [modus, setModus] = useState<FensterModus>(start);
   const { arbeitet, fehler, speichern } = useSpeichern(() => {});
@@ -392,6 +396,18 @@ function AnmeldungAnsehen({
               {x.abgesagt.map((b) => (
                 <p key={b.personId} className={a.leise}>
                   {b.name} – {absageText(b)}
+                  {onZurueckholen && (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className={a.linkKnopf}
+                        onClick={() => onZurueckholen(b)}
+                      >
+                        Zurückholen
+                      </button>
+                    </>
+                  )}
                 </p>
               ))}
             </section>
@@ -456,6 +472,8 @@ export function AnmeldungenReiter({
   // „Von Hand“ (A7-4a) – mit `dazu` zu einer bestehenden Anmeldung (A7-4b). Das Fenster der Anmeldung ist so lange zu
   // (kein Fenster im Fenster).
   const [vonHand, setVonHand] = useState<{ dazu: ListenAnmeldung | null } | null>(null);
+  // Zurückholen (A7-4c) – `von`: die Anmeldung, in die „Abbrechen“ zurückführt.
+  const [zurueck, setZurueck] = useState<{ b: Absage; von: string | null } | null>(null);
   const oeffnen = (k: string | null, modus: FensterModus = null) => {
     setOffen(k);
     setStartModus(modus);
@@ -528,6 +546,14 @@ export function AnmeldungenReiter({
   const gehoertZu = (b: Absage) => {
     const nr = nrFeld === undefined ? undefined : b.werte[nrFeld];
     return nr ? liste.find((x) => x.nr === nr) : undefined;
+  };
+
+  /** Nach „Von Hand“, „Person dazu“ und „Zurückholen“: Die Anmeldung öffnet sich, sobald sie geladen ist. */
+  const fertig = (x: VonHandFertig) => {
+    setOffen(x.nr);
+    setStartModus(null);
+    setMeldung({ aenderung: x.aenderung, mail: x.mail, hinweis: x.hinweis });
+    onGespeichert();
   };
 
   const filterKnopf = (f: Filter, text: string, n: number) => (
@@ -704,21 +730,38 @@ export function AnmeldungenReiter({
               .filter((b) => passt(b.name))
               .map((b) => {
                 const x = gehoertZu(b);
-                return (
+                const inhalt = (
+                  <span className={a.links}>
+                    <b>
+                      {b.name}{' '}
+                      {nrFeld !== undefined && b.werte[nrFeld] && (
+                        <span className={v.nr}>{b.werte[nrFeld]}</span>
+                      )}
+                    </b>
+                    <small className={a.leise}>
+                      {absageText(b)}
+                      {b.warVorher === 'wartet' && ' · stand auf der Warteliste'}
+                      {x && ` · gehörte zu ${x.wer}`}
+                    </small>
+                  </span>
+                );
+                // Wer ändern darf, holt mit einem Klick zurück (A7-4c).
+                return darf ? (
+                  <li key={b.personId} className={a.eintrag}>
+                    <button
+                      type="button"
+                      className={a.zeile}
+                      onClick={() => setZurueck({ b, von: null })}
+                    >
+                      {inhalt}
+                      <span className={a.geld}>
+                        <small>Zurückholen</small>
+                      </span>
+                    </button>
+                  </li>
+                ) : (
                   <li key={b.personId} className={`${a.eintrag} ${a.zeileStill}`}>
-                    <span className={a.links}>
-                      <b>
-                        {b.name}{' '}
-                        {nrFeld !== undefined && b.werte[nrFeld] && (
-                          <span className={v.nr}>{b.werte[nrFeld]}</span>
-                        )}
-                      </b>
-                      <small className={a.leise}>
-                        {absageText(b)}
-                        {b.warVorher === 'wartet' && ' · stand auf der Warteliste'}
-                        {x && ` · gehörte zu ${x.wer}`}
-                      </small>
-                    </span>
+                    {inhalt}
                   </li>
                 );
               })}
@@ -764,6 +807,12 @@ export function AnmeldungenReiter({
           dabei={new Set(stand!.mitglieder.map((m) => m.personId))}
           abgesagt={new Set(stand!.absagen.map((b) => b.personId))}
           dazu={vonHand.dazu}
+          onZurueckholen={(personId) => {
+            const b = stand!.absagen.find((y) => y.personId === personId);
+            if (!b) return;
+            setVonHand(null);
+            setZurueck({ b, von: null });
+          }}
           onClose={() => {
             // Abbrechen bei „Person dazu“ führt zurück in die Anmeldung.
             if (vonHand.dazu) oeffnen(vonHand.dazu.schluessel);
@@ -771,11 +820,27 @@ export function AnmeldungenReiter({
           }}
           onFertig={(x) => {
             setVonHand(null);
-            // Die neue Anmeldung öffnet sich, sobald sie geladen ist – mit „Mail schreiben“ und „Rückgängig“.
-            setOffen(x.nr);
-            setStartModus(null);
-            setMeldung({ aenderung: x.aenderung, mail: x.mail, hinweis: x.hinweis });
-            onGespeichert();
+            fertig(x);
+          }}
+        />
+      )}
+
+      {zurueck && (
+        <ZurueckFenster
+          id={id}
+          e={e}
+          veranstaltung={veranstaltung}
+          heute={heute}
+          lage={{ belegt: z.belegt, max: maxPlaetze, wartende: z.wartend, warteliste }}
+          b={zurueck.b}
+          liste={liste}
+          onClose={() => {
+            if (zurueck.von) oeffnen(zurueck.von);
+            setZurueck(null);
+          }}
+          onFertig={(x) => {
+            setZurueck(null);
+            fertig(x);
           }}
         />
       )}
@@ -801,6 +866,14 @@ export function AnmeldungenReiter({
             onGespeichert();
           }}
           onRueckgaengig={onGespeichert}
+          onZurueckholen={
+            darf && ausgewaehlt
+              ? (b) => {
+                  setZurueck({ b, von: ausgewaehlt.schluessel });
+                  oeffnen(null);
+                }
+              : undefined
+          }
           onPersonDazu={
             darf && ausgewaehlt?.nr
               ? () => {

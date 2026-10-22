@@ -30,6 +30,22 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   Fehler, nicht als „niemand hat Einsätze“. Abgemeldet → Hinweis für die ganze Seite.
 - **Mitglieder:** angefragte (`requested`) kommen getrennt für den Hinweis; wartende und beendete fallen weg.
 
+### Neu (Protokolle, S2-1)
+
+- **Gruppe einrichten – der Kern ohne Oberfläche** (`protokolle/src/einrichten.ts`, Bauplan Protokolle S2-1): legt
+  die Kategorien „Protokolle · <Gruppe>“, „Mitarbeit · <Gruppe>“ und „Vorlagen“ an, richtet die Rechte je Rolle aus
+  (Leitung · Lesen + eigene To-Dos · Kein Zugriff, Kalender, „versteckte Gruppe sehen“), schreibt erst danach die
+  Einstellung der Gruppe und legt beim ersten Mal die drei Standard-Vorlagen an. **Jeder Schritt nachgelesen**;
+  erneut aufrufen ist gefahrlos. Gegen die Test-Instanz mit dem echten Code geprüft: ein entzogenes Leserecht wirkt
+  sofort (Messung `messung-s2-1-2026-10-22.md`: ein `PUT` an irgendeiner Rolle leert den Rechte-Zwischenspeicher
+  von ChurchTools). Jede Rolle mit Zugriff bekommt jetzt auch „Modul sehen“ (ohne das fehlt der Menüpunkt). Die Oberfläche folgt
+  mit S2-2.
+
+### Geändert (gemeinsam)
+
+- `NichtUebernommen` („ChurchTools hat … nicht übernommen“) steht jetzt in `ui/ct/fehler.ts`, und
+  `ui/ct/fehlerMeldung.ts` kennt den Fall für alle Erweiterungen (vorher nur in den Anmeldungen).
+
 ### Neu (Anmeldungen, A7-4c)
 
 - **Abgesagte zurückholen** (Entwurf `a7-4-von-hand-v1`): im Filter „Abgesagt“ (Zeile anklicken), im Fenster einer

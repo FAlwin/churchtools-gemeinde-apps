@@ -16,3 +16,16 @@ export class ApiError extends Error {
     this.name = 'ApiError';
   }
 }
+
+/**
+ * **ChurchTools hat geantwortet, aber nicht übernommen, was geschickt wurde** – das Nachlesen zeigt etwas
+ * anderes als das 2xx versprach (Lehre vom 11.08.2026). Ein 502, aber nicht „vorübergehend“: Die Meldung sagt,
+ * WAS fehlt (`fehlerMeldung`). Stand bis 22.10.2026 nur in den Anmeldungen (A3); die Protokolle brauchen sie
+ * beim Einrichten (S2-1).
+ */
+export class NichtUebernommen extends ApiError {
+  constructor(was: string) {
+    super(502, `ChurchTools hat ${was} nicht übernommen. Bitte noch einmal versuchen.`);
+    this.name = 'NichtUebernommen';
+  }
+}

@@ -10,7 +10,7 @@
 import { ZodError } from 'zod';
 import { heuteImKalender } from '@shared/ct/zeit';
 import { ctAlleSeiten, ctAnfrage, ctBasis, ctDaten } from '@ui/ct/verbindung';
-import { ApiError } from '@ui/ct/fehler';
+import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
 import { angemeldeteId } from '@ui/ct/ich';
 import {
   SYSTEMFELDER,
@@ -46,13 +46,9 @@ import {
   type Stammdatum,
 } from '@shared/anmeldung/vorbereiten';
 
-/** ChurchTools hat geantwortet, aber nicht übernommen, was geschickt wurde. */
-export class NichtUebernommen extends ApiError {
-  constructor(was: string) {
-    super(502, `ChurchTools hat ${was} nicht übernommen. Bitte noch einmal versuchen.`);
-    this.name = 'NichtUebernommen';
-  }
-}
+// Steht seit S2-1 der Protokolle in `ui/ct/fehler.ts` (eine Klasse für alle Erweiterungen); hier weiterhin
+// ausgeführt, damit die vielen Aufrufer und Tests der Anmeldungen unverändert bleiben.
+export { NichtUebernommen };
 
 const json = (body: unknown) => JSON.stringify(body);
 

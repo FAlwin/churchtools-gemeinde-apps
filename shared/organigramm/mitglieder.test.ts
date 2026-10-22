@@ -44,8 +44,8 @@ describe('rollenRang / istLeitung', () => {
 });
 
 describe('mitgliederAus', () => {
-  it('nur aktive, nicht beendete; Name, Bild, Initialen', () => {
-    const { mitglieder, personen } = mitgliederAus([
+  it('Mitglied = aktiv und nicht beendet; angefragt getrennt; Name, Bild, Initialen', () => {
+    const { mitglieder, angefragt, personen } = mitgliederAus([
       {
         personId: 1,
         person: { title: 'Alwin Friesen', imageUrl: 'https://ct/images/1/abc', initials: 'AF' },
@@ -76,8 +76,11 @@ describe('mitgliederAus', () => {
       { personId: 1, rolleId: 16 },
       { personId: 4, rolleId: 15 },
     ]);
+    // Angefragt (Bea) getrennt – für „offene Anfragen“; beendet (Carl) fällt ganz weg
+    expect(angefragt).toEqual([{ personId: 2, rolleId: 15 }]);
     expect(personen).toEqual([
       { id: 1, name: 'Alwin Friesen', bild: 'https://ct/images/1/abc', initialen: 'AF' },
+      { id: 2, name: 'Bea', bild: null, initialen: 'B' },
       { id: 4, name: 'Dora Engel', bild: null, initialen: 'DE' },
     ]);
   });
@@ -86,5 +89,12 @@ describe('mitgliederAus', () => {
     const { mitglieder, personen } = mitgliederAus([{ personId: 9, groupMemberStatus: 'active' }]);
     expect(mitglieder).toEqual([{ personId: 9, rolleId: null }]);
     expect(personen[0]).toEqual({ id: 9, name: 'Person 9', bild: null, initialen: '?' });
+  });
+});
+
+describe('mitgliederAus – wartend', () => {
+  it('Warteliste (waiting) ist weder Mitglied noch Anfrage', () => {
+    const r = mitgliederAus([{ personId: 5, groupMemberStatus: 'waiting' }]);
+    expect(r).toEqual({ mitglieder: [], angefragt: [], personen: [] });
   });
 });

@@ -10,6 +10,7 @@
  * Gelesen wird über dieselben Regeln wie die Rechte der Musik-App (`rechte.ts`): leere Antwort =
  * Aussetzer (wirft), Listen über `idsAusRecht`.
  */
+import { dienstgruppenAus } from './dienstgruppen';
 import { idsAusRecht, rechteAntwortPruefen } from './rechte';
 
 export interface DienstRechte {
@@ -83,10 +84,50 @@ export function siehtDienstGanz(
 ): boolean {
   if (gruppeFuerAlle) return true;
   const gid = dienst.dienstgruppeId;
-  if (
-    gid !== null &&
-    (rechte.sichtbareDienstgruppen === null || rechte.sichtbareDienstgruppen.includes(gid))
-  )
-    return true;
+  if (gid !== null && siehtDienstgruppe(rechte, { id: gid, fuerAlle: gruppeFuerAlle })) return true;
   return darfDienstPlanen(rechte, dienst, geleiteteGruppen);
+}
+
+/**
+ * **Sieht man diese Dienstgruppe?** – der Kern von `siehtDienstGanz`, ohne die Gruppenleitung eines einzelnen Dienstes:
+ * „für alle sichtbar“ (`viewAll`), oder man darf sie sehen (`view servicegroup`) oder bearbeiten (`edit servicegroup`).
+ * Danach filtert ChurchTools auch die Gruppen-Infos eines Ablaufpunkts (`serviceGroupNotes`, gemessen 22.10.2026:
+ * Spike mit Sicht nur auf Technik bekam Programm (`viewAll`) und Technik, nicht Musik).
+ */
+export function siehtDienstgruppe(
+  rechte: Pick<DienstRechte, 'sichtbareDienstgruppen' | 'planbareDienstgruppen'>,
+  gruppe: { id: number; fuerAlle: boolean },
+): boolean {
+  if (gruppe.fuerAlle) return true;
+  if (rechte.sichtbareDienstgruppen === null || rechte.sichtbareDienstgruppen.includes(gruppe.id)) {
+    return true;
+  }
+  return rechte.planbareDienstgruppen === null || rechte.planbareDienstgruppen.includes(gruppe.id);
+}
+
+/**
+ * **Sieht man alle Dienstgruppen?** Wenn nicht, löscht man beim Ändern oder Umsortieren eines Ablaufpunkts unbemerkt die
+ * Gruppen-Infos, die man nicht sieht: `PUT …/agenda/items/{id}` ersetzt sie, und man kann nur mitschicken, was
+ * ChurchTools einem gezeigt hat (gemessen 22.10.2026, `messung-2026-10-07.md` E6-4-0). Musik-App und Dienstplaner
+ * zeigen dann einen Hinweis.
+ */
+export function siehtAlleDienstgruppen(
+  rechte: Pick<DienstRechte, 'sichtbareDienstgruppen' | 'planbareDienstgruppen'>,
+  gruppen: readonly { id: number; fuerAlle: boolean }[],
+): boolean {
+  return gruppen.every((g) => siehtDienstgruppe(rechte, g));
+}
+
+/**
+ * `siehtAlleDienstgruppen` aus den Rohantworten (`/permissions/global`, `/servicegroups`) – für die Rechte der
+ * Musik-App (Server und Erweiterung, eine Stelle). `undefined`, wenn die Dienstgruppen nicht als Liste kamen: Dann ist
+ * es unbekannt, und die Rechte scheitern daran nicht (vorübergehend ist nicht ungültig).
+ */
+export function siehtAlleDienstgruppenAus(
+  rechteRoh: Record<string, Record<string, unknown>>,
+  dienstgruppenRoh: unknown,
+): boolean | undefined {
+  if (!Array.isArray(dienstgruppenRoh)) return undefined;
+  const rechte = dienstRechteAus(rechteRoh, (_status, meldung) => new Error(meldung));
+  return siehtAlleDienstgruppen(rechte, dienstgruppenAus(dienstgruppenRoh));
 }

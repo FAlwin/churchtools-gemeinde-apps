@@ -124,3 +124,51 @@ describe('computeAvailabilityAllowed – Verfügbarkeit ohne Rollen-Filter (#177
     expect(ct.computeAvailabilityAllowed(m, [9])).toBe(true);
   });
 });
+
+describe('getCapabilities – sieht man alle Dienstgruppen? (#676)', () => {
+  const PERMS = {
+    data: {
+      churchcore: { 'administer persons': false },
+      churchservice: {
+        'view songcategory': [1],
+        'view agenda': [1],
+        'edit agenda': [1],
+        'view servicegroup': [3],
+        'edit servicegroup': [3],
+      },
+    },
+  };
+  const GRUPPEN = {
+    data: [
+      { id: 1, name: 'Programm', viewAll: true },
+      { id: 3, name: 'Technik', viewAll: false },
+      { id: 4, name: 'Musik', viewAll: false },
+    ],
+  };
+  function stub(gruppen: () => Response) {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string | URL) => {
+        const u = String(url);
+        if (u.includes('/api/permissions/global')) return jsonRes(PERMS);
+        if (u.includes('/api/servicegroups')) return gruppen();
+        throw new Error(`unerwarteter Aufruf: ${u}`);
+      }),
+    );
+  }
+
+  it('sieht Musik nicht → `siehtAlleDienstgruppen: false`', async () => {
+    stub(() => jsonRes(GRUPPEN));
+    const caps = await ct.getCapabilities('ChurchTools_s=gruppen1', 42);
+    expect(caps.siehtAlleDienstgruppen).toBe(false);
+    expect(caps.canEditAgendas).toBe(true);
+  });
+
+  it('Dienstgruppen nicht lesbar → unbekannt, die übrigen Rechte bleiben', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    stub(() => jsonRes({ message: 'kaputt' }, 500));
+    const caps = await ct.getCapabilities('ChurchTools_s=gruppen2', 42);
+    expect(caps.siehtAlleDienstgruppen).toBeUndefined();
+    expect(caps.canViewSongs).toBe(true);
+  });
+});

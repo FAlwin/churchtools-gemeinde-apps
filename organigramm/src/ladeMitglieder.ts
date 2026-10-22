@@ -21,7 +21,7 @@ import {
 } from '@shared/organigramm/mitglieder';
 
 export type MitgliederStand =
-  | { art: 'sichtbar'; mitglieder: Mitglied[] }
+  | { art: 'sichtbar'; mitglieder: Mitglied[]; angefragt: Mitglied[] }
   | { art: 'verborgen' }
   | { art: 'fehler' };
 
@@ -43,9 +43,13 @@ export async function ladeMitglieder(
   await mapLimit([...gruppenIds], GLEICHZEITIG, async (id) => {
     if (abgemeldet.fehler) return;
     try {
-      const { mitglieder, personen: p } = mitgliederAus(await holen(`/groups/${id}/members`));
+      const {
+        mitglieder,
+        angefragt,
+        personen: p,
+      } = mitgliederAus(await holen(`/groups/${id}/members`));
       for (const x of p) personen.set(x.id, x);
-      je.set(id, { art: 'sichtbar', mitglieder });
+      je.set(id, { art: 'sichtbar', mitglieder, angefragt });
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) abgemeldet.fehler = e;
       else if (e instanceof ApiError && e.status === 403) je.set(id, { art: 'verborgen' });

@@ -1,4 +1,4 @@
-import type { AgendaServiceOption } from '@shared/types/index';
+import { ABLAUFPUNKT_GRENZEN, type AgendaServiceOption } from '@shared/types/index';
 import styles from './ResponsibleField.module.scss';
 
 interface ResponsibleFieldProps {
@@ -24,6 +24,7 @@ export function ResponsibleField({ value, onChange, services, autoFocus }: Respo
         className={styles.input}
         placeholder="z.B. [Musik] oder Name"
         value={value}
+        maxLength={ABLAUFPUNKT_GRENZEN.zustaendig}
         autoFocus={autoFocus}
         onChange={(e) => onChange(e.target.value)}
       />

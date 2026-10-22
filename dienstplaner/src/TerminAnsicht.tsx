@@ -5,6 +5,7 @@ import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { AblaufListe } from '@ui/ablauf/AblaufListe';
 import { useAblaufBearbeiten, verlangtNeuLaden } from '@ui/ablauf/useAblaufBearbeiten';
+import { siehtAlleDienstgruppen } from '@shared/ct/dienstRechte';
 import { ablaufZeileAus } from '@shared/ct/ablaufZeile';
 import { datumText, kachel } from '@shared/ct/datum';
 import type { CtAgenda } from '@shared/ct/typen';
@@ -103,6 +104,7 @@ export function TerminAnsicht({
     sperrHinweis: GESPERRT,
     aktionen: ablaufAktionen(terminId, () => ablaufNeuLaden()),
     dienste,
+    gruppenVerborgen: !siehtAlleDienstgruppen(start.rechte, start.dienstgruppen),
     // Ablauf inzwischen anders (404/409/412/423, Regel `verlangtNeuLaden`): frisch lesen, damit Liste und Hinweis
     // stimmen. Einen Knopf „neu laden“ hat die Termin-Ansicht nicht.
     beiFehler: (e) => {

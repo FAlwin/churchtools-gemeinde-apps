@@ -9,6 +9,7 @@
  *
  * Aufgerufen wird es nur aus der Weiche in `churchtoolsApi.ts` und `fileDownload.ts`.
  */
+import { siehtAlleDienstgruppenAus } from '@shared/ct/dienstRechte';
 import {
   fensterOhneAblauf,
   kalenderAus,
@@ -207,7 +208,26 @@ export async function meineRechte(): Promise<UserCapabilities> {
   // Seit 3b-5 schreibt und liest die Extension alles selbst, auch SongSelect (`ctSongSelect.ts`) –
   // die Rechte gelten, wie ChurchTools sie meldet. Abwesenheiten bleiben aus (`canUseAvailability`,
   // in `rechteAus` false), bis sie gebaut sind.
-  return { ...rechte, canUseGlobalNotes: await darfTeamNotizen() };
+  return {
+    ...rechte,
+    canUseGlobalNotes: await darfTeamNotizen(),
+    siehtAlleDienstgruppen: await siehtAlleGruppen(roh),
+  };
+}
+
+/**
+ * Sieht das Konto alle Dienstgruppen (Hinweis beim Bearbeiten)? Wie im Server; scheitert das Lesen, bleibt es
+ * unbekannt.
+ */
+async function siehtAlleGruppen(
+  roh: Record<string, Record<string, unknown>>,
+): Promise<boolean | undefined> {
+  try {
+    return siehtAlleDienstgruppenAus(roh, await ctDaten<unknown>('/servicegroups'));
+  } catch (e) {
+    console.warn('[rechte] Dienstgruppen nicht lesbar – Hinweis zu Gruppen-Infos bleibt aus:', e);
+    return undefined;
+  }
 }
 
 /**

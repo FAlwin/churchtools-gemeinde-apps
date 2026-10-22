@@ -7,6 +7,21 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Protokolle, S2-2)
+
+- **Reiter „Verwaltung“** (nur wer in ChurchTools Rechte vergeben darf): alle Gruppen der Gemeinde als Liste,
+  versteckte markiert, je Gruppe „eingerichtet“ oder „Einrichten“. Ein Tipp öffnet **„Gruppe einrichten“** wie im
+  Entwurf: je Rolle Kein Zugriff · Lesen + eigene To-Dos · Leitung, Tagesordnungspunkte vorschlagen oder direkt
+  eintragen, Kalender. Scheitert das Speichern, bleibt das Fenster offen und sagt warum; fehlt nach einem
+  abgebrochenen Versuch die Einstellung, sagt es „unvollständig“. Am Computer Reiter oben, am Handy unten.
+- Kalender-Rechte und „versteckte Gruppe sehen“ entzieht das Einrichten jetzt wieder (Herabstufen,
+  Kalenderwechsel) – **nur die selbst gesetzten**, von Hand gesetzte bleiben (Alwin, 22.10.2026).
+
+### Geändert (gemeinsam)
+
+- Der Reiter in der Adresse (`#/termine`) steht jetzt in `ui/bedienung/reiterAdresse.ts` – Dienstplaner und
+  Protokolle nutzen dieselbe Regel (vorher nur im Dienstplaner).
+
 ### Neu (Protokolle, S2-1)
 
 - **Gruppe einrichten – der Kern ohne Oberfläche** (`protokolle/src/einrichten.ts`, Bauplan Protokolle S2-1): legt

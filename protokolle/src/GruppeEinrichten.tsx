@@ -89,7 +89,8 @@ export function GruppeEinrichten({
 
   // „Eingerichtet“ heißt: die Einstellung steht (sie wird als Letztes geschrieben). Die Liste sieht nur die
   // Kategorien – sind die da, die Einstellung aber nicht, ist ein früherer Versuch mittendrin gescheitert.
-  const gespeichert = laden.art === 'fertig' && laden.gespeichert;
+  // Solange geladen wird, gilt der Stand der Liste – sonst hieße eine eingerichtete Gruppe kurz „einrichten“.
+  const gespeichert = laden.art === 'fertig' ? laden.gespeichert : gruppe.eingerichtet;
   const unvollstaendig = laden.art === 'fertig' && !laden.gespeichert && gruppe.eingerichtet;
   const titel = `${gespeichert ? 'Gruppe' : 'Gruppe einrichten'}: ${gruppe.name}`;
   return (

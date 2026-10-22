@@ -49,7 +49,7 @@ const oeffnen = async (name: string) => {
   return screen.findByText(/Was darf welche Rolle/);
 };
 const auswahl = (rolle: string, stufe: string) =>
-  screen.getByRole('radio', { name: `${rolle}: ${stufe}` });
+  screen.getByRole<HTMLInputElement>('radio', { name: `${rolle}: ${stufe}` });
 
 describe('Verwaltung (S2-2)', () => {
   it('zeigt alle Gruppen mit Stand; versteckte sind markiert', async () => {
@@ -109,9 +109,18 @@ describe('Fenster „Gruppe einrichten“', () => {
     await oeffnen('Leitungsteam');
     expect(screen.getByText('Gruppe: Leitungsteam')).toBeTruthy();
     expect(auswahl('Teilnehmer', 'Kein Zugriff').checked).toBe(true);
-    expect(screen.getByLabelText('Kalender für die Sitzungstermine').value).toBe('4');
+    expect(screen.getByLabelText<HTMLSelectElement>('Kalender für die Sitzungstermine').value).toBe(
+      '4',
+    );
     expect(screen.getByRole('button', { name: 'Speichern' })).toBeTruthy();
     expect(screen.getByText(/in ChurchTools versteckt/)).toBeTruthy();
+  });
+
+  it('eingerichtete Gruppe heißt schon beim Laden „Gruppe: …“, nicht kurz „einrichten“', async () => {
+    m.ladeGruppe.mockReturnValue(new Promise(() => undefined));
+    render(<Verwaltung modul={24} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Leitungsteam/ }));
+    expect(await screen.findByText('Gruppe: Leitungsteam')).toBeTruthy();
   });
 
   it('Kategorien da, Einstellung fehlt: sagt „unvollständig“ und bietet Einrichten an', async () => {
@@ -128,7 +137,9 @@ describe('Fenster „Gruppe einrichten“', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Einrichten' }));
     expect(await screen.findByText(/die Rechte der Rollen nicht übernommen/)).toBeTruthy();
     expect(screen.getByText(/Was darf welche Rolle/)).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Einrichten' }).disabled).toBe(false);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Einrichten' }).disabled).toBe(
+      false,
+    );
   });
 
   it('während des Einrichtens: Knopf gesperrt, Abbrechen schließt nicht', async () => {
@@ -136,8 +147,10 @@ describe('Fenster „Gruppe einrichten“', () => {
     render(<Verwaltung modul={24} />);
     await oeffnen('Technik');
     fireEvent.click(screen.getByRole('button', { name: 'Einrichten' }));
-    const knopf = await screen.findByRole('button', { name: 'Wird eingerichtet …' });
-    expect((knopf as HTMLButtonElement).disabled).toBe(true);
+    const knopf = await screen.findByRole<HTMLButtonElement>('button', {
+      name: 'Wird eingerichtet …',
+    });
+    expect(knopf.disabled).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
     expect(screen.getByText(/Was darf welche Rolle/)).toBeTruthy();
   });

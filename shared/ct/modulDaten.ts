@@ -75,9 +75,9 @@ export async function kategorieSuchen(
 export async function kategorienLesen(
   p: ModulPort,
   modul: number,
-): Promise<{ id: number; shorty: string }[]> {
+): Promise<{ id: number; shorty: string; name?: string }[]> {
   return (
-    (await p.daten<{ id: number; shorty: string }[]>(
+    (await p.daten<{ id: number; shorty: string; name?: string }[]>(
       `/custommodules/${modul}/customdatacategories`,
     )) ?? []
   );

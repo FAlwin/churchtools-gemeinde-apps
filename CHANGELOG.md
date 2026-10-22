@@ -7,6 +7,26 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Protokolle, S1)
+
+- **Neue Erweiterung „Protokolle“** (Bauplan Protokolle, Grundgerüst): Protokolle und To-Dos für Gruppen wie den
+  Leitungskreis. In S1 zeigt sie, wer angemeldet ist, und **„Deine Gruppen“** mit dem Stand der Einrichtung
+  (eingerichtet · unvollständig · nicht eingerichtet) – auch für versteckte Gruppen, deren Mitglieder sie in
+  ChurchTools selbst nicht sehen (die Gruppen kommen aus den sichtbaren Kategorien `protokolle-g<ID>`).
+  Anleitung: `docs/betrieb/PROTOKOLLE.md`. Eigener Release-Weg: Tag `protokolle-vX.Y.Z` (`make_latest: false`).
+- Regeln ohne Oberfläche in `shared/protokolle/`: Protokoll als Dokument im Format des Editors (BlockNote) mit EINER
+  Ableitung für Tagesordnungspunkte, Beschlüsse, Aufgaben und Termine; Speicher als Kopf + gepackte Teile (je Wert
+  höchstens 10.000 Zeichen, gemessen); To-Dos (nie hart löschen); Rechte je Rolle beim Einrichten (nur Admin,
+  Ausrichten Soll/Ist); Vorlagen; Namen finden und ersetzen für „Mit KI füllen“.
+
+### Geändert (gemeinsam)
+
+- Packen von Text in einen ChurchTools-Wert (deflate + Base64url) steht jetzt an EINER Stelle (`shared/ct/packen.ts`);
+  die Anmeldungen nutzen sie für ihre Einstellungen (vorher eine private Kopie in `formular.ts`).
+- `modulId(wer)` in `ui/ct/modulPort.ts` nennt die Erweiterung in der Meldung „… ist in ChurchTools nicht zu finden“
+  (stand fest auf „Anmeldungen“).
+- Zweige `feat/protokolle-**` / `fix/protokolle-**` bauen kein Staging-Image der Musik-App.
+
 ### Behoben (Musik-App)
 
 - **Scroll-Modus: Eigene Textnotizen im Lied blieben beim Einschalten des Stifts nicht erhalten** (gefunden beim

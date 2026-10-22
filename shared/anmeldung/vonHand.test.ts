@@ -2,11 +2,24 @@ import { describe, expect, it } from 'vitest';
 import { anmeldungenAus, type MitgliedRoh } from './liste';
 import { nachpruefen, pruefMitgliederAus } from './nachpruefung';
 import { pruefeAntworten } from './formular';
-import { FELDER, HEUTE, NR, STICHTAG, e, mitglieder, stand } from './liste.testdaten';
+import {
+  BEZAHLT,
+  BEZAHLT_AM,
+  FELDER,
+  HEUTE,
+  NR,
+  STICHTAG,
+  ZAHLART,
+  absage,
+  dazu,
+  e,
+  mitglieder,
+  stand,
+} from './liste.testdaten';
 import { CT_MIT_NR } from './liste.testdaten';
 import { antworten } from './senden.testdaten';
 import { anmeldungAufbauen, unterschriftAufPapier } from './senden';
-import { bescheidMail, dazuPlan } from './bewegung';
+import { bescheidMail, dazuPlan, zurueckPlan } from './bewegung';
 import { handFelder, handFormular, handPlatz, handStart, mitUnterschrift } from './vonHand';
 
 /**
@@ -290,5 +303,97 @@ describe('Person dazu (A7-4b)', () => {
     expect(dazuPlan(x, a, { vor: 'Paul', geburtstag: null }, false, HEUTE).zahlung).toBeNull();
     x.preis.grundpreis.betragCent = 0;
     expect(dazuPlan(x, a, { vor: 'Paul', geburtstag: null }, true, HEUTE).zahlung).toBeNull();
+  });
+});
+
+describe('Zurückholen (A7-4c)', () => {
+  /** Was ChurchTools nach dem `PUT` mit diesen Feldern als Mitglied liefert. */
+  const zurueck = (personId: number, vor: string, felder: Record<number, string>): MitgliedRoh => ({
+    personId,
+    person: { domainAttributes: { firstName: vor, lastName: 'Beispiel' } },
+    groupTypeRoleId: 32,
+    groupMemberStatus: 'active',
+    memberStartDate: '2026-10-22',
+    fields: Object.entries(felder).map(([id, value]) => ({ id: Number(id), value })),
+  });
+
+  it('Anmeldung besteht noch: Antworten von damals (Auswahl wieder als Nummer), eigene Zahlung, nichts Einmaliges', () => {
+    const x = e();
+    const [jonas, lena] = mitglieder('AAAAAA', [true, false], JONAS);
+    const verlauf = [
+      dazu(JONAS, '2026-10-17'),
+      dazu(11, '2026-10-17'),
+      absage(lena, '2026-10-19', 1),
+    ];
+    const st = stand([jonas], verlauf);
+    // Wie wenn die Absagende die erste war: Kontakt und Auswahl stehen in ihren Antworten – jetzt hat sie jemand anderes.
+    const b = {
+      ...st.absagen[0],
+      werte: { ...st.absagen[0].werte, [x.ctFelder.kontakt]: 'Maria Beispiel' },
+    };
+    const plan = zurueckPlan(x, b, anmeldungenAus(x, st, STICHTAG), FELDER, true, '2026-10-22');
+    expect(plan.zuAnmeldung?.nr).toBe('AAAAAA');
+    expect(plan.felder[x.ctFelder.foto]).toBe('114');
+    expect(plan.felder[NR]).toBe('AAAAAA');
+    expect(plan.felder[x.ctFelder.kontakt]).toBeUndefined();
+    expect(plan.zahlung).toMatchObject({ betragCent: 600 });
+    expect(plan.zahlung!.aufschluesselung.split('\n')[0]).toBe('Zurückgeholt am 22.10.2026');
+
+    const nachher = stand([jonas, zurueck(11, 'Lena', plan.felder)], verlauf);
+    const [a] = anmeldungenAus(x, nachher, STICHTAG);
+    expect(a.zahlungen.map((z) => [z.name, z.wofuer, z.betragCent])).toEqual([
+      ['Jonas', 'anmeldung', 600],
+      ['Lena', 'zurueck', 600],
+    ]);
+    expect(
+      nachpruefen(x, pruefMitgliederAus(x, nachher), { belegt: 2, wartend: 0, max: 10 }).betraege,
+    ).toEqual([]);
+  });
+
+  it('allein: trägt die Anmeldung wieder – Zahlung neu und offen, Hinweis „war bezahlt“; Warteliste → 0 €', () => {
+    const x = e();
+    const [jonas] = mitglieder('BBBBBB', [true, false], JONAS, { bezahlt: true });
+    const verlauf = [dazu(JONAS, '2026-10-17'), absage(jonas, '2026-10-19', 1)];
+    const st = stand([], verlauf);
+    const [b] = st.absagen;
+    expect([b.angemeldetAm, b.geburtstag]).toEqual(['2026-10-17', '2017-05-01']);
+    const plan = zurueckPlan(x, b, [], FELDER, true, '2026-10-22');
+    expect(plan.zuAnmeldung).toBeNull();
+    expect(plan.warBezahlt).toBe('am 18.10.2026 (Bar)');
+    expect(plan.felder[x.ctFelder.kontakt]).toBe('Maria Beispiel');
+    expect([plan.felder[BEZAHLT], plan.felder[BEZAHLT_AM], plan.felder[ZAHLART]]).toEqual([
+      undefined,
+      undefined,
+      undefined,
+    ]);
+    expect(plan.zahlung?.betragCent).toBe(600);
+    expect(plan.zahlung!.aufschluesselung.split('\n').at(-1)).toBe('Zurückgeholt am 22.10.2026');
+
+    const nachher = stand([zurueck(JONAS, 'Jonas', plan.felder)], verlauf);
+    const [a] = anmeldungenAus(x, nachher, STICHTAG);
+    expect([a.zahlungBei, a.betragCent, a.zahlungOffen]).toEqual([JONAS, 600, true]);
+    expect(
+      nachpruefen(x, pruefMitgliederAus(x, nachher), { belegt: 1, wartend: 0, max: 10 }).betraege,
+    ).toEqual([]);
+
+    const wartet = zurueckPlan(x, b, [], FELDER, false, '2026-10-22');
+    expect(wartet.zahlung).toEqual({
+      betragCent: 0,
+      aufschluesselung:
+        'Jonas Beispiel: Warteliste – Betrag folgt beim Nachrücken\nZurückgeholt am 22.10.2026',
+    });
+  });
+
+  it('eine Antwort, die es nicht mehr gibt, bleibt leer und wird genannt', () => {
+    const x = e();
+    const [jonas] = mitglieder('BBBBBB', [true, false], JONAS);
+    const st = stand([], [dazu(JONAS, '2026-10-17'), absage(jonas, '2026-10-19', 1)]);
+    const b = {
+      ...st.absagen[0],
+      werte: { ...st.absagen[0].werte, [x.ctFelder.foto]: 'Vielleicht' },
+    };
+    const plan = zurueckPlan(x, b, [], FELDER, true, HEUTE);
+    expect(plan.felder[x.ctFelder.foto]).toBeUndefined();
+    expect(plan.verloren).toEqual(['Dürfen Fotos veröffentlicht werden?: Vielleicht']);
   });
 });

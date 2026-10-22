@@ -12,11 +12,11 @@
 import { tagPunkt, plusTage } from '../ct/datum';
 import { ibanText, verwendungszweck } from './bezahlung';
 import type { OeffentlicheEinstellungen } from './formular';
-import type { ListenAnmeldung } from './liste';
+import { einmalFelder, type Absage, type CtGruppenfeld, type ListenAnmeldung } from './liste';
 import { euroText, kannEtwasKosten } from './preis';
 import { aufschluesselungText, wartelistenZeile } from './senden';
 import { sollBetrag } from './sollbetrag';
-import { absageZeile, dazuKopf, nachrueckKopf } from './zahlung';
+import { absageZeile, dazuKopf, nachrueckKopf, zurueckKopf } from './zahlung';
 
 const ganz = (p: { vor: string; nach: string }) => `${p.vor} ${p.nach}`.trim();
 
@@ -165,6 +165,8 @@ export function dazuPlan(
   neu: { vor: string; geburtstag: string | null },
   mitPlatz: boolean,
   heute: string,
+  /** Kopf der eigenen Zahlung – beim Zurückholen (A7-4c) „Zurückgeholt am …“. */
+  kopf: string = dazuKopf(heute),
 ): DazuPlan {
   if (!mitPlatz || !kannEtwasKosten(e.preis)) return { zahlung: null, auswahlFehlt: false };
   const alle = [
@@ -174,9 +176,110 @@ export function dazuPlan(
   const s = soll(e, x, alle, (p) => p.platz, heute);
   const bisher = x.zahlungen.reduce((summe, z) => summe + (z.betragCent ?? 0), 0);
   return {
-    zahlung: eigeneZahlung(neu.vor, s.cent, bisher, dazuKopf(heute)),
+    zahlung: eigeneZahlung(neu.vor, s.cent, bisher, kopf),
     auswahlFehlt: s.auswahlFehlt,
   };
+}
+
+// ── Zurückholen (A7-4c) ─────────────────────────────────────────────────────────────────────────
+
+export interface ZurueckPlan {
+  /** Die Anmeldung, zu der die Person zurückkommt – `null`, wenn sie allein war (dann trägt sie sie wieder). */
+  zuAnmeldung: ListenAnmeldung | null;
+  /**
+   * Die Antworten von damals (aus dem Verlauf) zum Zurückschreiben – Auswahl wieder als Options-Nummer, ohne die alte
+   * Zahlung, dafür mit der neuen. Kommt sie zu einer bestehenden Anmeldung, ohne das Einmalige (das hat jetzt jemand
+   * anderes).
+   */
+  felder: Record<number, string>;
+  zahlung: { betragCent: number; aufschluesselung: string } | null;
+  /** Hatte vor der Absage schon bezahlt – „am 18.10.2026 (Bar)“ (Alwin, 22.10.2026: neu rechnen, Hinweis). */
+  warBezahlt: string | null;
+  /** Antworten, die es in ChurchTools nicht mehr gibt (z. B. eine entfernte Auswahl) – sie bleiben leer. */
+  verloren: string[];
+  auswahlFehlt: boolean;
+}
+
+/**
+ * **Eine Abgesagte zurückholen** (A7-4c, Entwurf `a7-4-von-hand-v1`): mit allen Antworten von damals (Verlauf), Platz
+ * nach der Regel des Formulars. Besteht ihre Anmeldung noch, bekommt sie eine eigene Zahlung wie bei „Person dazu“;
+ * war sie allein, wird die Zahlung der Anmeldung nach den heutigen Regeln neu gerechnet und ist offen (Alwin,
+ * 22.10.2026) – mit dem Hinweis, falls schon bezahlt war.
+ */
+export function zurueckPlan(
+  e: OeffentlicheEinstellungen,
+  b: Absage,
+  liste: ListenAnmeldung[],
+  gruppenfelder: ReadonlyMap<number, CtGruppenfeld>,
+  mitPlatz: boolean,
+  heute: string,
+): ZurueckPlan {
+  const f = e.ctFelder;
+  const nr = f.nr === undefined ? undefined : b.werte[f.nr];
+  const zuAnmeldung = (nr && liste.find((x) => x.nr === nr)) || null;
+  const zahlungsfelder = [f.betrag, f.aufschluesselung, f.bezahlt, f.bezahltAm, f.zahlart];
+  const weg = new Set<number | undefined>([
+    ...zahlungsfelder,
+    ...(zuAnmeldung ? einmalFelder(e) : []),
+  ]);
+  const felder: Record<number, string> = {};
+  const verloren: string[] = [];
+  for (const [id, wert] of Object.entries(b.werte)) {
+    const nummer = Number(id);
+    if (weg.has(nummer)) continue;
+    const feld = gruppenfelder.get(nummer);
+    if (!feld) continue;
+    // Im Verlauf steht eine Auswahl als Text – zurück schreibt ChurchTools sie als Options-Nummer (gemessen 22.10.2026).
+    if (feld.options?.length) {
+      const o = feld.options.find((x) => x.name.trim() === wert.trim());
+      if (o) felder[nummer] = String(o.id);
+      else verloren.push(`${feld.name}: ${wert}`);
+    } else felder[nummer] = wert;
+  }
+
+  const bezahlt = f.bezahlt !== undefined && b.werte[f.bezahlt] === '1';
+  const am = f.bezahltAm === undefined ? undefined : b.werte[f.bezahltAm];
+  const art = f.zahlart === undefined ? undefined : b.werte[f.zahlart];
+  const warBezahlt = bezahlt
+    ? [am && `am ${tagPunkt(am)}`, art && `(${art})`].filter(Boolean).join(' ') || 'ja'
+    : null;
+  const vor = b.name.split(' ')[0];
+
+  let zahlung: ZurueckPlan['zahlung'] = null;
+  let auswahlFehlt = false;
+  if (zuAnmeldung) {
+    const d = dazuPlan(
+      e,
+      zuAnmeldung,
+      { vor, geburtstag: b.geburtstag },
+      mitPlatz,
+      heute,
+      zurueckKopf(heute),
+    );
+    zahlung = d.zahlung;
+    auswahlFehlt = d.auswahlFehlt;
+  } else if (kannEtwasKosten(e.preis)) {
+    // Allein: die Zahlung der Anmeldung neu – wie eine neue Anmeldung, mit Auswahl, Extras und Anmeldetag von damals.
+    const s = sollBetrag(e, {
+      personen: [{ geburtstag: b.geburtstag, mitPlatz }],
+      auswahl: f.auswahl === undefined ? null : b.werte[f.auswahl],
+      extras: f.extras === undefined ? null : b.werte[f.extras],
+      angemeldetAm: b.angemeldetAm ?? heute,
+    });
+    auswahlFehlt = s.auswahlFehlt;
+    zahlung = {
+      betragCent: s.cent,
+      aufschluesselung: [
+        mitPlatz ? aufschluesselungText(s.preis) : wartelistenZeile(b.name),
+        zurueckKopf(heute),
+      ].join('\n'),
+    };
+  }
+  if (zahlung && f.betrag !== undefined && f.aufschluesselung !== undefined) {
+    felder[f.betrag] = euroText(zahlung.betragCent);
+    felder[f.aufschluesselung] = zahlung.aufschluesselung;
+  }
+  return { zuAnmeldung, felder, zahlung, warBezahlt, verloren, auswahlFehlt };
 }
 
 // ── Absagen ─────────────────────────────────────────────────────────────────────────────────────

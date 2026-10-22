@@ -25,6 +25,23 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   `ui/bedienung/GruppenKachel`. Die Dienste (`/services`) sind Beiwerk: fehlen sie, steht der Baum ohne Schildchen.
 - Nicht in O2: offene Plätze und Einsätze (kommen mit O3, sie brauchen die Termine).
 
+### Geändert (Musik-App, #554)
+
+- **Team-Notizen auch in großen Gemeinden schnell** (Frage aus dem ChurchTools-Dev-Stammtisch: „Wie
+  funktioniert das bei 6000 Mitgliedern?"): Der Eintrag im Verzeichnis „Wer teilt" nennt jetzt auch die Lieder,
+  zu denen jemand Anmerkungen hat; er wird nach dem Speichern eigener Anmerkungen nachgeführt (nur wenn sich die
+  Lieder ändern – sonst kostet es nichts). „Notizen von …" liest beim Öffnen eines Lieds deshalb nur noch die
+  Dateien derer, die zu diesen Liedern etwas haben, statt die aller Teilenden (bei 200 Teilenden waren das ~400
+  Anfragen je Öffnen). Ob jemand wirklich teilt und unter welchem Namen, steht weiter in seiner eigenen Datei und
+  wird dort geprüft. Einträge älterer Fassungen werden gelesen wie bisher.
+
+### Geändert (Musik-App, #557)
+
+- **Weniger Last auf ChurchTools:** Ein offener Ablauf bzw. eine offene Liedansicht fragt jetzt alle 30 Sekunden
+  statt alle 8 Sekunden nach, ob sich der Ablauf geändert hat (Frage aus dem ChurchTools-Dev-Stammtisch). Das war
+  der größte Posten der Grundlast – je Gerät etwa 2 statt 7,5 Anfragen pro Minute. Eine Änderung am Ablauf kommt
+  dadurch nach höchstens 30 Sekunden an. Terminliste (1 Minute) und Liedtexte (1 Minute) bleiben, wie sie sind.
+
 ### Geändert (alle Apps, #654)
 
 - **Look der ChurchTools-Weboberfläche für alle Apps** – Erweiterungen und die Musik-App als PWA (Alwin, 22.10.2026;
@@ -88,6 +105,17 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
   auch im Konto. Zwei Ursachen, beide behoben: Die Anmerkungen starten jetzt gleich mit den gespeicherten
   Texten statt leer, und der Entwurf der langen Seite wird neu angelegt, wenn die Mal-Ebene erneut eingehängt
   wird. Beim Blättern ging dasselbe kurz hinaus, wurde aber sofort überschrieben.
+
+### Neu (Musik-App + Dienstplaner, E6-3c, #659)
+
+- **Nichts wird still überschrieben, wenn zwei gleichzeitig bearbeiten** (entschieden mit Alwin 22.10.2026: nur bei
+  echtem Konflikt). Hat jemand – in der anderen App, auf einem anderen Gerät oder in ChurchTools – **denselben Punkt**
+  in einem Feld geändert, das ich im offenen Fenster auch ändere, fragt das Fenster: „Dieser Punkt wurde eben woanders
+  geändert … Trotzdem speichern oder verwerfen?“; die Liste dahinter ist schon neu geladen, meine Eingaben stehen noch
+  im Fenster. Hat jemand **umsortiert**, während ich ziehe, wird nicht auf der alten Reihenfolge geschrieben: Hinweis,
+  neu geladen, noch einmal ziehen. Änderungen an **anderen** Punkten oder Feldern gehen ohne Rückfrage durch.
+- Verglichen wird frisch vor dem Schreiben, Feld für Feld so, wie die Zeile es zeigt; ein Lied über sein Arrangement.
+  Vorlauf und Auge setzen einen Zielzustand und brauchen keinen Vergleich.
 
 ### Neu (Anmeldungen, A7-4a)
 

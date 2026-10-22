@@ -11,6 +11,7 @@ import { songIdOfAnnoKey, songIdOfSettingsKey } from '@shared/keys/index';
 import type { GesehenerStand, PageAnnotation } from '@shared/types/index';
 import { ablagePortFuer, ablageVon } from './ctPersonenAblage.js';
 import { altFuerLesen, merkeUeberschrieben, umzugAnstossen } from './ablageUmzug.js';
+import { liederMeldenLeise } from './ctTeilenServer.js';
 
 export async function anmerkungenHolen(
   cookie: string,
@@ -49,6 +50,9 @@ export async function anmerkungSchreiben(
   }
   await ablage.schreibeAnmerkung(port, key, auftrag);
   if (altSeite) await merkeUeberschrieben(userId, key);
+  // Das Verzeichnis der Team-Notizen nachführen (#554). Kostet nichts, solange sich die Lieder nicht ändern;
+  // ein Fehler dort wird nur gemeldet – die Anmerkung ist gespeichert.
+  await liederMeldenLeise(cookie, userId);
 }
 
 export async function einstellungenHolen(

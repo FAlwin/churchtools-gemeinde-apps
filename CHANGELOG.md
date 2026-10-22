@@ -7,6 +7,16 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Protokolle, S2-3)
+
+- **Vorlagen bearbeiten** (Verwaltung, nur Admins): Karte „Vorlagen“ unter den Gruppen mit Umfang und Punkten je
+  Vorlage; das Fenster wie im Entwurf – Name, Tagesordnungspunkte mit vorbereitetem Text und Reihenfolge, feste
+  Punkte („Offene To-Dos“, „Protokoll der letzten Sitzung“ – Titel änderbar), feste Aufgaben; „Neue Vorlage“ beginnt
+  mit „Gebet“ und „Offene To-Dos“; Löschen mit Rückfrage. Jeder Schreibschritt nachgelesen, zu lange Vorlagen
+  werden vorher abgelehnt.
+- Die drei Standard-Vorlagen entstehen nur noch, wenn die Kategorie „Vorlagen“ **neu angelegt** wird – hat ein Admin
+  alle gelöscht, kommen sie beim nächsten Einrichten nicht wieder (vorher: immer, wenn die Kategorie leer war).
+
 ### Neu (Musik-App, Lied-Editor L2)
 
 - **Ablauf als Kärtchen** (Alwin: „wie in ProPresenter“): Über dem Text stehen die Teile des Lieds als

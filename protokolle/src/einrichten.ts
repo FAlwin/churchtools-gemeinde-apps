@@ -8,7 +8,7 @@
  * 2. Kategorien „Protokolle“ und „Mitarbeit“ der Gruppe und die gemeinsamen „Vorlagen“ finden oder anlegen.
  * 3. Rechte ausrichten: setzen, entziehen, eins nachschieben (sonst wirkt ein Entzug weiter), nachlesen.
  * 4. **Erst dann** die Einstellung schreiben – sie ist der Vermerk „eingerichtet“.
- * 5. Sind die Vorlagen noch leer: die drei Standard-Vorlagen anlegen (Alwin, 22.10.2026).
+ *    Die Kategorie „Vorlagen“ bekommt beim Anlegen die drei Standard-Vorlagen (Alwin, 22.10.2026; `./vorlagen`).
  *
  * Erneut aufrufen ist gefahrlos (Soll gegen Ist) – auch nach einem Abbruch mittendrin. Ein Fehler wird
  * geworfen; es wird nichts gelöscht, was schon da war (vorübergehend ist nicht ungültig).
@@ -38,20 +38,14 @@ import {
   type Stufe,
 } from '@shared/protokolle/einrichten';
 import { kategorieName } from '@shared/protokolle/gruppen';
-import {
-  KUERZEL_VORLAGEN,
-  kuerzelLesen,
-  kuerzelMitarbeit,
-  kuerzelProtokolle,
-} from '@shared/protokolle/speicher';
-import { STANDARD_VORLAGEN } from '@shared/protokolle/vorlagen';
+import { kuerzelLesen, kuerzelMitarbeit, kuerzelProtokolle } from '@shared/protokolle/speicher';
 import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
 import { modulPort } from '@ui/ct/modulPort';
+import { NUR_ADMIN, vorlagenKategorie } from './vorlagen';
 import { ctAlleSeiten, ctAnfrage, ctDaten } from '@ui/ct/verbindung';
 
 /** Kürzel des Moduls – danach heißen die Rechte in `/permissions/definitions`. */
 const MODUL_KUERZEL = 'protokolle';
-const NUR_ADMIN = 'Das darf nur, wer in ChurchTools Rechte vergeben darf (Admin).';
 
 export interface VerwaltungsGruppe {
   id: number;
@@ -225,7 +219,8 @@ export async function gruppeEinrichten(
       kuerzelMitarbeit(gruppe.id),
       kategorieName('Mitarbeit', gruppe.name),
     ),
-    vorlagen: await kategorie(KUERZEL_VORLAGEN, 'Vorlagen'),
+    // „Vorlagen“: beim ersten Mal mit den drei Standard-Vorlagen (eine Stelle, `./vorlagen`).
+    vorlagen: await vorlagenKategorie(modul),
   };
 
   // 3. Rechte: Soll gegen Ist, dann nachlesen.
@@ -269,18 +264,5 @@ export async function gruppeEinrichten(
   if (JSON.stringify(gespeichert?.inhalt) !== text)
     throw new NichtUebernommen('die Einstellung der Gruppe');
 
-  // 5. Standard-Vorlagen, wenn noch keine da sind.
-  await standardVorlagenSicherstellen(modul, kategorien.vorlagen);
   return einstellung;
-}
-
-/** Legt die drei Standard-Vorlagen an, wenn die Kategorie „Vorlagen“ noch keine eigene Vorlage enthält. */
-async function standardVorlagenSicherstellen(modul: number, kategorie: number): Promise<void> {
-  const vorlagen = async (): Promise<number> =>
-    (await werteLesen(modulPort, modul, kategorie)).filter((w) => inhaltAus(w, 'vorlage', 1))
-      .length;
-  if ((await vorlagen()) > 0) return;
-  for (const v of STANDARD_VORLAGEN)
-    await wertAnlegen(modulPort, modul, kategorie, JSON.stringify(v), NUR_ADMIN);
-  if ((await vorlagen()) < STANDARD_VORLAGEN.length) throw new NichtUebernommen('die Vorlagen');
 }

@@ -7,6 +7,15 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Behoben (Musik-App)
+
+- **Scroll-Modus: Eigene Textnotizen im Lied blieben beim Einschalten des Stifts nicht erhalten** (gefunden beim
+  Bau von #626, nur im unveröffentlichten Malen auf der langen Seite, #608): Beim Öffnen der Mal-Ebene wurde
+  einmal eine leere Textliste gespeichert, und die eigenen Texte im Liedbereich verschwanden von der A4-Seite –
+  auch im Konto. Zwei Ursachen, beide behoben: Die Anmerkungen starten jetzt gleich mit den gespeicherten
+  Texten statt leer, und der Entwurf der langen Seite wird neu angelegt, wenn die Mal-Ebene erneut eingehängt
+  wird. Beim Blättern ging dasselbe kurz hinaus, wurde aber sofort überschrieben.
+
 ### Neu (Anmeldungen, A7-3)
 
 - **Nachrücken lassen** (Entwurf `a7-3-nachruecken-v1`, entschieden 19.10.2026): an jeder wartenden Person im Fenster

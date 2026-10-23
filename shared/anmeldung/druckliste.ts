@@ -262,11 +262,16 @@ export function kuecheTabelle(
       `${unter(KLEIN_UNTER)} unter ${KLEIN_UNTER}`,
     );
   }
-  if (f) zahlen.push(`${r.zeilen.filter((z) => 'zellen' in z).length} mit Hinweis`);
+  const mitHinweis = r.zeilen.filter((z) => 'zellen' in z).length;
+  if (f) zahlen.push(`${mitHinweis} mit Hinweis`);
   return {
     oben: zahlen.join(' · '),
     kopf: ['Name', ...(mitAlter ? ['Alter'] : []), 'Hinweis'],
-    zeilen: r.zeilen,
+    // Eine leere Tabelle sähe auf Papier nach einem Fehler aus (echter Test 23.10.2026: niemand hatte etwas angegeben).
+    zeilen:
+      f && mitHinweis === 0
+        ? [{ abschnitt: `Niemand hat bei „${f.frage}“ etwas angegeben.` }]
+        : r.zeilen,
     summe: r.summe,
   };
 }
@@ -354,10 +359,24 @@ export function druckTabelle(
   wahl: DruckWahl,
   mitWarteliste: boolean,
 ): DruckTabelle {
-  if (art === 'kueche') return kuecheTabelle(e, liste, mitWarteliste);
-  if (art === 'zimmer') return zimmerTabelle(e, liste, mitWarteliste);
-  if (art === 'abhol') return abholTabelle(e, liste, mitWarteliste);
-  return teilnehmerTabelle(e, liste, wahl, mitWarteliste);
+  const t =
+    art === 'kueche'
+      ? kuecheTabelle(e, liste, mitWarteliste)
+      : art === 'zimmer'
+        ? zimmerTabelle(e, liste, mitWarteliste)
+        : art === 'abhol'
+          ? abholTabelle(e, liste, mitWarteliste)
+          : teilnehmerTabelle(e, liste, wahl, mitWarteliste);
+  // Ganz leer (z. B. alle warten, gedruckt wird nur mit Platz): ein Satz statt einer leeren Tabelle – wie bei der Küche.
+  if (t.zeilen.length === 0)
+    t.zeilen = [
+      {
+        abschnitt: mitWarteliste
+          ? 'Niemand auf dieser Liste.'
+          : 'Niemand mit Platz – „Auch Warteliste“ nimmt die Wartenden dazu.',
+      },
+    ];
+  return t;
 }
 
 /** Dateiname des PDF: „Kinderfreizeit – Teilnehmer“ ohne Zeichen, die Dateisysteme nicht mögen. */

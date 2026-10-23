@@ -5,5 +5,7 @@
   „Erziehungsberechtigte“); „＋ weitere“ öffnet die übrigen, mit Hinweis und leerer Spalte zum Ausfüllen von Hand.
   Küche: Zahlen oben (Personen, Kinder unter 12 / unter 3), darunter nur, wer einen Hinweis hat. Zimmer: je Option die
   Anmeldungen. Abholliste: je Kind die Erziehungsberechtigten mit Telefon und „Abgeholt von / Uhrzeit“.
+- Leere Liste (niemand mit Hinweis, alle auf der Warteliste): ein Satz statt einer leeren Tabelle (echter Test
+  23.10.2026).
 - Teilnehmer, Küche und Abholliste teilen sich eine Zeilen-Regel (Platz, Warteliste, Summe); `listenPdf` kann eine fette
   Zeile über der Tabelle (`oben`, nur Seite 1).

@@ -5,6 +5,7 @@ import {
   DRUCK_STANDARD,
   abholTabelle,
   druckDateiname,
+  druckTabelle,
   kuecheTabelle,
   listenAngebot,
   zimmerTabelle,
@@ -137,6 +138,12 @@ describe('Weitere Listen (A8-2)', () => {
       { zellen: ['Beispiel, Jonas', '9', 'Nüsse'] },
     ]);
     expect(kuecheTabelle(e(), liste(), true).oben).toMatch(/^4 Personen/);
+    // Niemand hat etwas angegeben → ein Satz statt einer leeren Tabelle.
+    const leer = liste();
+    for (const x of leer) for (const p of x.personen) p.werte = {};
+    expect(kuecheTabelle(e(), leer, false).zeilen).toEqual([
+      { abschnitt: 'Niemand hat bei „Allergien oder Unverträglichkeiten“ etwas angegeben.' },
+    ]);
     const ohne = e();
     ohne.formular.person = ohne.formular.person.filter((f) => f.id !== 'allergy');
     const o = kuecheTabelle(ohne, liste(), false);
@@ -182,6 +189,20 @@ describe('Weitere Listen (A8-2)', () => {
     ohne.formular.anmeldung = ohne.formular.anmeldung.filter((f) => f.id !== 'eltern');
     expect(abholTabelle(ohne, liste(), false).zeilen[0]).toEqual({
       zellen: ['Beispiel, Jonas', 'Maria Beispiel, 0151 111', ''],
+    });
+  });
+
+  it('ganz leer: ein Satz statt einer leeren Tabelle', () => {
+    const alleWarten = liste().map((x) => ({
+      ...x,
+      personen: x.personen.map((p) => ({ ...p, status: 'wartet' as const })),
+    }));
+    for (const art of ['teilnehmer', 'zimmer', 'abhol'] as const)
+      expect(druckTabelle(art, e(), alleWarten, DRUCK_STANDARD, false).zeilen).toEqual([
+        { abschnitt: 'Niemand mit Platz – „Auch Warteliste“ nimmt die Wartenden dazu.' },
+      ]);
+    expect(druckTabelle('teilnehmer', e(), alleWarten, DRUCK_STANDARD, true).zeilen[0]).toEqual({
+      abschnitt: 'Warteliste',
     });
   });
 });

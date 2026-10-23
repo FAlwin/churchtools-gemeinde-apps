@@ -231,6 +231,17 @@ describe('Wiederherstellen', () => {
     expect(ct.titelVorlauf()).toEqual(['A*', 'B*', 'C', 'D']);
   });
 
+  it('der erste oder mittlere Vorlauf-Punkt zurück: die übrigen bleiben im Vorlauf (#700)', async () => {
+    // Die Grenze ist eine Platznummer (gemessen E6-6-0): Wer vor ihr einfügt, schob die anderen hinaus.
+    const ct = fakeCt([{ title: 'A' }, { title: 'B' }, { title: 'C' }, { title: 'D' }], 2);
+    await punktWiederherstellen(ct.s, 1, (await punktLoeschen(ct.s, 1, 1))!);
+    expect(ct.titelVorlauf()).toEqual(['A*', 'B*', 'C', 'D']);
+
+    const drei = fakeCt([{ title: 'A' }, { title: 'B' }, { title: 'C' }, { title: 'D' }], 3);
+    await punktWiederherstellen(drei.s, 1, (await punktLoeschen(drei.s, 1, 2))!);
+    expect(drei.titelVorlauf()).toEqual(['A*', 'B*', 'C*', 'D']);
+  });
+
   it('eine Überschrift wird nur mit Art und Titel angelegt (ChurchTools kennt dort nichts weiter)', async () => {
     const ct = fakeCt([{ title: 'Lobpreis', type: 'header' }]);
     await punktWiederherstellen(ct.s, 1, (await punktLoeschen(ct.s, 1, 1))!);

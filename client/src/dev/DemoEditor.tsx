@@ -37,7 +37,7 @@ const DEMO_LIEDINFO: LiedinfoQuelle = {
       arrangement: {
         ...DEMO_LIEDINFO.arrangement,
         ...(aenderung.arrangement ?? {}),
-      } as LiedinfoQuelle['arrangement'],
+      },
     });
   },
 };

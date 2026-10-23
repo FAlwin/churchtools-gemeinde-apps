@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anmeldeLink, ortszeitAus, terminAusCt, utcAus } from './termin';
+import { anmeldeLink, ortszeitAus, terminAusCt, terminZeile, utcAus } from './termin';
 
 const B = 'Europe/Berlin';
 
@@ -70,5 +70,19 @@ describe('anmeldeLink', () => {
     expect(
       anmeldeLink('https://anmeldung.beispiel.de/', 'https://test-ecg-donrath.church.tools', 60),
     ).toBe('https://anmeldung.beispiel.de/#test-ecg-donrath.church.tools/60');
+  });
+});
+
+describe('terminZeile (Formular und Aushang)', () => {
+  it('ein Tag mit Ort, mehrtägig mit „–“, ohne Termin „Termin folgt“', () => {
+    const t = { beginn: '2026-11-21T12:00', ende: null, ort: 'Gemeindehaus', terminId: null };
+    expect(terminZeile({ termin: t })).toBe('Sa, 21.11.2026 · Gemeindehaus');
+    expect(terminZeile({ termin: { ...t, ende: '2026-11-23T14:00', ort: '' } })).toBe(
+      'Sa, 21.11.2026 – Mo, 23.11.2026',
+    );
+    expect(terminZeile({ termin: { ...t, ende: '2026-11-21T18:00' } })).toBe(
+      'Sa, 21.11.2026 · Gemeindehaus',
+    );
+    expect(terminZeile({ termin: null })).toBe('Termin folgt');
   });
 });

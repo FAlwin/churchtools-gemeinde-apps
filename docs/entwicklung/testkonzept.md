@@ -123,6 +123,11 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
   ohne Schreiben, Kopie aus sich selbst/verbundenem Termin, „Erfolg ohne Wirkung“ → 502 (auch bei gleicher Zahl),
   geteilt für alle bzw. nur für diesen Termin, gescheitertes Anlegen nach dem Lösen; Server-Schema lässt den Stand
   aus `standAus` unverändert durch (`setlistController.gesehen.test.ts`). Jeder Teil einzeln gegengeprüft.
+  Dazu die Oberfläche (E6-5b-2): `NeuAufsetzen` (gezeigter Stand geht weiter, bei „Weiter“ frisch gelesen, leer ohne
+  Nachfrage, geteilt mit zwei Wegen, Fehler → Meldung und neu laden), der Knopf in `useAblaufBearbeiten` (Anleitung
+  genau einmal, abgeschlossen → Sperr-Hinweis), `ConfirmDialog` (zweiter Weg, ohne Abbrechen, beschäftigt),
+  `TerminAnsicht` und `e2e/ablauf-neu-aufsetzen.spec.ts`. Die Knopf-Höhe im gestapelten Dialog (`flex: none`) sieht
+  nur der Browser – dort gefunden und von Hand geprüft.
 - `hooks/abfrageSchluessel` – die Abfrage-Schlüssel (#492): Namen wie gespeichert (Literal, bewusst),
   engere Schlüssel liegen unter den weiteren (Erneuern trifft sie), Vorladen und `useSongChart` bzw.
   Offline-Vorrat und `useAgenda` teilen sich den Eintrag, der Offline-Vorrat holt trotzdem frisch

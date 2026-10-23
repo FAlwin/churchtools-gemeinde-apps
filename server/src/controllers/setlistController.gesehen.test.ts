@@ -46,14 +46,16 @@ describe('Neu aufsetzen (E6-5b, #691): der Stand der Nachfrage kommt unveränder
         Promise.resolve({ id, name: 'Termin', startDate: '2027-01-10T11:00:00Z', endDate: '' }),
     });
     for (const meta of [{ modifiedDate: '2026-10-23T10:00:00Z' }, undefined]) {
-      const gesehen = standAus(await ablaufBestandLesen(leser(meta), 166));
+      const gesehen = standAus(await ablaufBestandLesen(leser(meta), 166, 'Europe/Berlin'));
       for (const quelle of [
         { art: 'vorlage', vorlageId: 28 },
         { art: 'kopie', eventId: 142 },
         { art: 'leer' },
       ] as const) {
-        const rumpf = { kalenderId: 2, quelle, gesehen, nurDieser: true };
-        expect(ablaufNeuSchema.parse(JSON.parse(JSON.stringify(rumpf)))).toEqual(rumpf);
+        for (const kalenderId of [2, null]) {
+          const rumpf = { kalenderId, quelle, gesehen, nurDieser: true };
+          expect(ablaufNeuSchema.parse(JSON.parse(JSON.stringify(rumpf)))).toEqual(rumpf);
+        }
       }
     }
   });

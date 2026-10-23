@@ -153,7 +153,7 @@ export async function ablaufNeu(
 /** `PUT /api/services/:id/agenda/neu` (E6-5b) */
 export async function ablaufNeuAufsetzen(
   eventId: number,
-  kalenderId: number,
+  kalenderId: number | null,
   quelle: AblaufQuelle,
   gesehen: AblaufStand,
   nurDieser: boolean,

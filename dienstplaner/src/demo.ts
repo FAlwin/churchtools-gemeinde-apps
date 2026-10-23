@@ -275,6 +275,28 @@ function daten(fall: string): Record<string, unknown> {
   };
 }
 
+/** Eine Ablauf-Vorlage wie in der Test-Instanz (Vorlage 28, E6-5b). */
+const VORLAGEN = [
+  {
+    id: 28,
+    name: 'Gottesdienst',
+    calendarId: 1,
+    items: [
+      { title: 'Ankommen', duration: 600 },
+      { title: 'Lobpreis', duration: 1200 },
+      { title: 'Begrüßung', duration: 300 },
+      { title: 'Predigt', duration: 1800 },
+      { title: 'Segen', duration: 300 },
+    ],
+  },
+];
+
+/** Ein einzelner Termin (E6-5b: Name des verbundenen Termins in der Nachfrage). */
+function einTermin(id: number): { data: unknown } | undefined {
+  const t = TERMINE.find((x) => x.id === id);
+  return t && { data: t };
+}
+
 /** Wie ChurchTools: nur Termine ab `from` (Tag) und vor `to` (Tag, ausgeschlossen) – sonst stimmt „Oktober“ nicht. */
 function termineVonBis(von: string | null, bis: string | null) {
   return TERMINE.filter(
@@ -288,8 +310,11 @@ function termineVonBis(von: string | null, bis: string | null) {
  * `isBeforeEvent` für den Vorlauf, Zuständige aufgelöst; der Termin beginnt um 08:00 UTC. Die Uhrzeiten rechnet die
  * Demo wie ChurchTools aus Reihenfolge, Dauer und Beginn-Grenze; ein ausgeblendeter Punkt („Abkündigungen“) hat
  * keine Zeit und zählt nicht mit (E6-3-0). Geändert wird nur im Speicher.
+ *
+ * „Neu aufsetzen“ (E6-5b): Vorlage und leer wie gemessen – neue Punkt-IDs, gleicher Ablauf. Mit `?demo=geteilt` teilt
+ * sich 101 den Ablauf mit 102 (eine Spalte `startTimes` je Termin), damit die Nachfrage mit zwei Wegen zu sehen ist.
  */
-function ablaufDemo() {
+function ablaufDemo(fall: string) {
   type Punkt = { id: number; duration?: number; ausgeblendet?: boolean } & Record<string, unknown>;
   let punkte: Punkt[] = [
     {
@@ -331,7 +356,8 @@ function ablaufDemo() {
     const zeiten = new Map<number, string | null>();
     // Vorlauf rückwärts vom Beginn, danach vorwärts.
     let t = beginn;
-    for (let i = beginnPos - 1; i >= 0; i--) {
+    // Nach dem Leeren steht die Grenze hinter dem letzten Punkt – wie ChurchTools nicht darüber hinaus.
+    for (let i = Math.min(beginnPos, punkte.length) - 1; i >= 0; i--) {
       const p = punkte[i];
       if (p.ausgeblendet) continue;
       t -= (p.duration ?? 0) * 1000;
@@ -351,7 +377,10 @@ function ablaufDemo() {
         ...p,
         position: i,
         isBeforeEvent: i < beginnPos,
-        startTimes: { '101': zeiten.get(p.id) ?? null },
+        startTimes:
+          fall === 'geteilt'
+            ? { '101': zeiten.get(p.id) ?? null, '102': zeiten.get(p.id) ?? null }
+            : { '101': zeiten.get(p.id) ?? null },
       })),
     };
   }
@@ -369,11 +398,25 @@ function ablaufDemo() {
       methode: string,
       pfad: string,
       rumpf: unknown,
+      suche = new URLSearchParams(),
     ): { status: number; data?: unknown } | null {
+      if (pfad === '/api/agendatemplates') return { status: 200, data: VORLAGEN };
+      const vorlage = /^\/api\/agendatemplates\/(\d+)$/.exec(pfad);
+      if (vorlage) {
+        const v = VORLAGEN.find((x) => x.id === Number(vorlage[1]));
+        return v ? { status: 200, data: v } : { status: 404 };
+      }
       if (!pfad.startsWith(PFAD)) return null;
       const r = (rumpf ?? {}) as Record<string, unknown>;
       const punkt = /^\/items\/(\d+)$/.exec(pfad.slice(PFAD.length));
       if (pfad === PFAD && methode === 'GET') return { status: 200, data: lesen() };
+      if (pfad === PFAD && methode === 'PUT' && suche.has('template_id')) {
+        const v = VORLAGEN.find((x) => x.id === Number(suche.get('template_id')));
+        if (!v) return { status: 404 };
+        punkte = v.items.map((i) => ({ id: naechsteId++, type: 'normal', ...i }));
+        beginnPos = 0;
+        return { status: 200, data: lesen() };
+      }
       if (pfad === PFAD && methode === 'PUT') {
         if (Array.isArray(r.items)) {
           const ids = (r.items as { id: number }[]).map((i) => i.id);
@@ -570,7 +613,7 @@ export function demoStarten(fall: string): void {
   document.body.style.cssText = 'margin: 0; height: 100vh;';
   const antworten = daten(fall);
   const speicher = speicherDemo(fall);
-  const ablauf = ablaufDemo();
+  const ablauf = ablaufDemo(fall);
   const mitDienstplanerRechten = (roh: unknown) => {
     const r = roh as { data: Record<string, unknown> };
     return { data: { ...r.data, dienstplaner: speicher.rechte() } };
@@ -583,7 +626,7 @@ export function demoStarten(fall: string): void {
     const rumpf = typeof init?.body === 'string' ? (JSON.parse(init.body) as unknown) : undefined;
     const s =
       speicher.anfrage(methode, url.pathname, rumpf) ??
-      ablauf.anfrage(methode, url.pathname, rumpf);
+      ablauf.anfrage(methode, url.pathname, rumpf, url.searchParams);
     if (s) {
       return Promise.resolve(
         new Response(s.status === 204 ? null : JSON.stringify({ data: s.data ?? null }), {
@@ -622,11 +665,13 @@ export function demoStarten(fall: string): void {
       ? eingeteilt
       : werKann
         ? werKannDemo(Number(werKann[1]))
-        : url.pathname === '/api/events'
-          ? { data: termineVonBis(url.searchParams.get('from'), url.searchParams.get('to')) }
-          : url.pathname === '/api/permissions/global'
-            ? mitDienstplanerRechten(antworten[url.pathname])
-            : antworten[url.pathname];
+        : /^\/api\/events\/\d+$/.test(url.pathname)
+          ? einTermin(Number(url.pathname.split('/').pop()))
+          : url.pathname === '/api/events'
+            ? { data: termineVonBis(url.searchParams.get('from'), url.searchParams.get('to')) }
+            : url.pathname === '/api/permissions/global'
+              ? mitDienstplanerRechten(antworten[url.pathname])
+              : antworten[url.pathname];
     return Promise.resolve(
       d === undefined
         ? new Response('{}', { status: 404 })

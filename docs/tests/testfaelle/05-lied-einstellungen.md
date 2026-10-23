@@ -533,7 +533,8 @@ Text – mit Luft zwischen den Knöpfen, nichts gequetscht. Über der Tastatur i
 - **Automatisiert:** weitgehend – `useTastaturOffen.test.tsx` (Formel, Schwelle für die Hardware-Tastatur-Leiste),
   `e2e/editor-schreiben.spec.ts` mit nachgestellter Tastatur (`visualViewport` schrumpft): Ablauf/Fassung weg, eine
   Zeile, Platz für den Text, „Im Lied“ auf/zu/einfügen, Menü klappt über das Kärtchen, iOS verkleinert das
-  Fenster statt die Tastatur darüberzulegen, kurzer Fokusverlust, Tastatur für die Fassung. **Von Hand bleibt das echte
+  Fenster statt die Tastatur darüberzulegen, kurzer Fokusverlust, Tastatur für die Fassung, am Handy eine Zeile
+  zum Wischen statt Umbruch. **Von Hand bleibt das echte
   iPad**: ob Format/Rückgängig/„Im Lied“ die Tastatur wirklich offen lassen, Hardware-Tastatur.
 - **Historie:** Alwin am iPad, 23.10.2026 („das Bearbeitungsfenster ist bei aufgeklappter Tastatur deutlich zu
   klein“), Entwurf A mit „Im Lied“ als Ausklappmenü; Lied-Editor L5-3. Nachtest am selben Abend: „manchmal

@@ -188,6 +188,7 @@ function schreiber(start: { hatAblauf: boolean; anlegenWirkt?: boolean; leseFehl
       return hat ? Promise.resolve({ items: [] }) : keinAblauf();
     }),
     song: vi.fn(),
+    vorlage: vi.fn(),
     schreibe: vi.fn((pfad: string, auftrag: SchreibAuftrag) => {
       geschrieben.push({ pfad, auftrag });
       if (start.anlegenWirkt !== false) hat = true;

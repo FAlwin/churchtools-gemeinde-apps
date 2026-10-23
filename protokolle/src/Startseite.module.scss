@@ -1,10 +1,27 @@
-// Startseite der Protokolle (Bauplan S1) – Karte und Zeilen wie die Startseite des Dienstplaners, Farben nach dem
-// ChurchTools-Look; die Schilder stehen in `Marke`.
+// Startseite der Protokolle (Bauplan S1/S3-3, Entwurf 7) – zwei Spalten am Computer, eine am Handy; Karten und
+// Zeilen wie im Reiter „Sitzungen“, Farben nach dem ChurchTools-Look; die Schilder stehen in `Marke`.
 @use '@ui/design/mixins' as m;
+
+.raster {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+
+  @media (max-width: 900px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.spalte {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
 
 .karte {
   @include m.card-list;
-  max-width: 720px;
 }
 
 .kopf {
@@ -28,36 +45,142 @@
   font-weight: 600;
 }
 
+.heute {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+
+  h2 {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  p {
+    margin-top: 2px;
+    color: var(--text2);
+  }
+}
+
+.heuteKopf {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.heuteMarke {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 700;
+
+  &::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--red);
+  }
+}
+
+.hauptknopf {
+  @include m.hauptKnopfBreit;
+}
+
 .liste {
   list-style: none;
+
+  li {
+    border-bottom: 1px solid var(--hair);
+
+    &:last-child {
+      border-bottom: 0;
+    }
+  }
 }
 
 .zeile {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
-  padding: 11px 14px;
-  border-bottom: 1px solid var(--hair);
+  width: 100%;
+  padding: 10px 14px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
 
-  &:last-child {
-    border-bottom: 0;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface3);
+  }
+
+  > svg {
+    flex: none;
+    color: var(--text3);
   }
 }
 
-.name {
-  min-width: 0;
-  font-weight: 600;
-  overflow-wrap: anywhere;
+// Ein To-Do, dessen Sitzung nicht geladen ist: Zeile ohne Tipp.
+.still {
+  cursor: default;
+
+  &:hover {
+    background: none;
+  }
 }
 
-.leer,
+.text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  b {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  small {
+    color: var(--text2);
+    font-size: 13px;
+  }
+}
+
+.unter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.frist,
+.ueberfaellig {
+  flex: none;
+  font-size: 13px;
+  color: var(--text2);
+}
+
+.ueberfaellig {
+  color: var(--red);
+  font-weight: 600;
+}
+
+.innen,
 .fuss {
-  padding: 14px;
+  padding: 12px 14px;
   color: var(--text2);
   font-size: 14px;
 }
 
 .fuss {
   border-top: 1px solid var(--hair);
+  font-size: 13.5px;
 }

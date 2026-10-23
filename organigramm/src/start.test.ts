@@ -137,6 +137,7 @@ describe('ladeStart (Organigramm)', () => {
       gruppenVerwalten: true,
       anlegbareTypen: [2],
       bearbeitbareGruppen: [7],
+      bearbeitbareTypen: [],
     });
   });
 

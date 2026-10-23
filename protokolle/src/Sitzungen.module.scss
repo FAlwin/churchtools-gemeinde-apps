@@ -1,0 +1,115 @@
+// Reiter „Sitzungen“ (Bauplan S3-2) – Karten und Zeilen wie Startseite und Verwaltung.
+@use '@ui/design/mixins' as m;
+
+.seite {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 720px;
+}
+
+.kopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  h2 {
+    font-size: 18px;
+    font-weight: 700;
+  }
+}
+
+.karte {
+  @include m.card-list;
+}
+
+.kartenkopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--hair);
+
+  h3 {
+    font-size: 15px;
+    font-weight: 600;
+  }
+}
+
+.anzahl {
+  color: var(--text2);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.liste {
+  list-style: none;
+
+  li {
+    border-bottom: 1px solid var(--hair);
+
+    &:last-child {
+      border-bottom: 0;
+    }
+  }
+}
+
+.zeile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface3);
+  }
+
+  > svg {
+    flex: none;
+    color: var(--text3);
+  }
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  b {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  small {
+    color: var(--text2);
+    font-size: 13px;
+  }
+}
+
+.innen,
+.fuss {
+  padding: 12px 14px;
+  color: var(--text2);
+  font-size: 14px;
+}
+
+.fuss {
+  border-top: 1px solid var(--hair);
+  font-size: 13.5px;
+}
+
+.ruhig {
+  color: var(--text2);
+  font-size: 14px;
+}

@@ -154,3 +154,22 @@ test('Tastatur für ein anderes Feld (Fassung): keine Schreibansicht', async ({ 
   await expect(page.getByLabel('Versionsname')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Ablauf' })).toBeVisible();
 });
+
+test.describe('Handy', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('Schreibansicht am Handy: eine Zeile, die Akkorde werden gewischt statt umzubrechen', async ({
+    page,
+  }) => {
+    await inDenText(page);
+    await page.evaluate(() =>
+      (window as unknown as { tastatur: (px: number) => void }).tastatur(340),
+    );
+    await expect(page.getByLabel('Versionsname')).toBeHidden();
+    const format = (await page.getByRole('button', { name: /Format/ }).boundingBox())!;
+    const zurueck = (await page.getByRole('button', { name: 'Rückgängig' }).first().boundingBox())!;
+    expect(Math.abs(format.y - zurueck.y)).toBeLessThan(4);
+    const leiste = page.getByRole('group', { name: 'Akkorde' });
+    expect(await leiste.evaluate((e) => e.scrollWidth > e.clientWidth)).toBe(true);
+  });
+});

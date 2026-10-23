@@ -157,3 +157,39 @@ export function sperreLage(
   if (!Number.isFinite(alter) || alter > SPERRE_MINUTEN * 60_000) return 'frei';
   return sperre.von === ich ? 'meine' : 'fremd';
 }
+
+const STATUS: readonly SitzungsStatus[] = ['geplant', 'entwurf', 'frei'];
+
+/** Ist das ein Kopf-Wert der Protokolle (S3-1)? Fremde und kaputte Werte werden beim Lesen übergangen. */
+export function istKopf(x: unknown): x is ProtokollKopf {
+  const k = x as Partial<ProtokollKopf> | null;
+  return (
+    !!k &&
+    k.art === 'protokoll' &&
+    k.fassung === 1 &&
+    typeof k.sitzung === 'string' &&
+    typeof k.titel === 'string' &&
+    STATUS.includes(k.status as SitzungsStatus) &&
+    typeof k.beginn === 'string' &&
+    !Number.isNaN(Date.parse(k.beginn)) &&
+    (k.termin === null ||
+      (typeof k.termin?.kalender === 'number' && typeof k.termin.id === 'number')) &&
+    (k.treffen === null || typeof k.treffen === 'number') &&
+    typeof k.stand === 'string'
+  );
+}
+
+/** Ist das ein Teil-Wert der Protokolle (S3-1)? */
+export function istTeil(x: unknown): x is ProtokollTeil {
+  const t = x as Partial<ProtokollTeil> | null;
+  return (
+    !!t &&
+    t.art === 'protokoll-teil' &&
+    t.fassung === 1 &&
+    typeof t.sitzung === 'string' &&
+    typeof t.stand === 'string' &&
+    Number.isInteger(t.nr) &&
+    Number.isInteger(t.von) &&
+    typeof t.daten === 'string'
+  );
+}

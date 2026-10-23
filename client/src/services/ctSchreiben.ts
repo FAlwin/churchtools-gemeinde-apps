@@ -38,6 +38,7 @@ import type {
 } from '@shared/types/index';
 import * as lieder from '@shared/ct/liedVerwaltung';
 import { ablaufAnlegen } from '@shared/ct/ablaufAnlegen';
+import { ablaufNeuAufsetzen as neuAufsetzen, type AblaufStand } from '@shared/ct/ablaufNeu';
 import type { AblaufQuelle } from '@shared/types/index';
 import type { PunktStand } from '@shared/ct/ablaufZeile';
 import type { CtVerwalter } from '@shared/ct/liedVerwaltung';
@@ -139,7 +140,7 @@ export async function weglassen(
   return OK;
 }
 
-/** `PUT /api/services/:id/agenda/abgeschlossen` */
+/** `POST /api/services/:id/agenda` */
 export async function ablaufNeu(
   eventId: number,
   kalenderId: number,
@@ -149,6 +150,19 @@ export async function ablaufNeu(
   return OK;
 }
 
+/** `PUT /api/services/:id/agenda/neu` (E6-5b) */
+export async function ablaufNeuAufsetzen(
+  eventId: number,
+  kalenderId: number | null,
+  quelle: AblaufQuelle,
+  gesehen: AblaufStand,
+  nurDieser: boolean,
+): Promise<{ ok: boolean }> {
+  await neuAufsetzen(schreiber, eventId, kalenderId, quelle, gesehen, nurDieser);
+  return OK;
+}
+
+/** `PUT /api/services/:id/agenda/abgeschlossen` */
 export async function abgeschlossen(eventId: number, wert: boolean): Promise<{ ok: boolean }> {
   await ablaufAbschliessen(schreiber, eventId, wert);
   return OK;

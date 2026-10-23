@@ -60,16 +60,38 @@ export async function ladeMitglieder(
   return { je, personen };
 }
 
-/** Nur die Gruppen erneut laden, die vorübergehend gescheitert sind – der Rest bleibt stehen. */
-export async function fehlendeNachladen(
+/** Bestimmte Gruppen (nach)laden und mit dem Bisherigen zusammenführen – EINE Stelle für beide Fälle unten. */
+async function gruppenNachladen(
   daten: MitgliederDaten,
+  ids: readonly number[],
   holen?: (pfad: string) => Promise<RohMitglied[]>,
 ): Promise<MitgliederDaten> {
-  const offen = [...daten.je].filter(([, s]) => s.art === 'fehler').map(([id]) => id);
-  if (offen.length === 0) return daten;
-  const neu = await ladeMitglieder(offen, holen);
+  if (ids.length === 0) return daten;
+  const neu = await ladeMitglieder(ids, holen);
   return {
     je: new Map([...daten.je, ...neu.je]),
     personen: new Map([...daten.personen, ...neu.personen]),
   };
+}
+
+/** Nur die Gruppen erneut laden, die vorübergehend gescheitert sind – der Rest bleibt stehen. */
+export function fehlendeNachladen(
+  daten: MitgliederDaten,
+  holen?: (pfad: string) => Promise<RohMitglied[]>,
+): Promise<MitgliederDaten> {
+  const offen = [...daten.je].filter(([, s]) => s.art === 'fehler').map(([id]) => id);
+  return gruppenNachladen(daten, offen, holen);
+}
+
+/** Nach dem Anlegen (O5): die Mitglieder der Gruppen laden, die es vorher nicht gab. */
+export function neueGruppenNachladen(
+  daten: MitgliederDaten,
+  gruppenIds: readonly number[],
+  holen?: (pfad: string) => Promise<RohMitglied[]>,
+): Promise<MitgliederDaten> {
+  return gruppenNachladen(
+    daten,
+    gruppenIds.filter((id) => !daten.je.has(id)),
+    holen,
+  );
 }

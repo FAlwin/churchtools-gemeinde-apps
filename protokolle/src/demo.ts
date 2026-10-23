@@ -11,7 +11,114 @@
  */
 import { kategorieName } from '@shared/protokolle/gruppen';
 import { kuerzelMitarbeit, kuerzelProtokolle, KUERZEL_VORLAGEN } from '@shared/protokolle/speicher';
-import { STANDARD_VORLAGEN } from '@shared/protokolle/vorlagen';
+import { STANDARD_VORLAGEN, startDokument } from '@shared/protokolle/vorlagen';
+import { BLOCKNOTE_DOKUMENT } from '@shared/protokolle/dokument.testdaten';
+import { teileBauen } from '@shared/protokolle/speicher';
+import { neueAufgabe, statusSetzen } from '@shared/protokolle/aufgaben';
+import type { Block } from '@shared/protokolle/dokument';
+
+/**
+ * Zwei Protokolle des Leitungsteams (S3-2): ein freigegebenes (das echte BlockNote-Dokument aus S0) und ein Entwurf
+ * aus der Vorlage mit Beschluss, Aufgabe und Termin – im echten Speicherformat (Kopf + Teile).
+ */
+function protokollWerte(
+  kategorie: number,
+  start: number,
+): { id: number; dataCategoryId: number; value: string }[] {
+  let n = 0;
+  const entwurf: Block[] = [
+    ...startDokument(STANDARD_VORLAGEN[0], () => `d${++n}`),
+    {
+      id: 'd-b',
+      type: 'beschluss',
+      content: [{ type: 'text', text: 'Der Jugendraum wird im November gestrichen.', styles: {} }],
+      children: [],
+    },
+    {
+      id: 'd-a',
+      type: 'aufgabe',
+      props: { aufgabe: 'demo-a1' },
+      content: [{ type: 'text', text: 'Farbe besorgen', styles: {} }],
+      children: [],
+    },
+    {
+      id: 'd-t',
+      type: 'termin',
+      props: { datum: '2026-11-14' },
+      content: [{ type: 'text', text: 'Arbeitseinsatz', styles: {} }],
+      children: [],
+    },
+  ];
+  const werte: string[] = [
+    JSON.stringify({
+      art: 'einstellung',
+      fassung: 1,
+      gruppe: 11,
+      rollen: [],
+      punkte: 'vorschlagen',
+      kalender: 4,
+    }),
+  ];
+  for (const [sitzung, status, beginn, dok] of [
+    ['demo-okt', 'frei', '2026-10-14T17:00:00Z', BLOCKNOTE_DOKUMENT],
+    ['demo-entwurf', 'entwurf', '2026-10-21T17:00:00Z', entwurf],
+  ] as const) {
+    const t = teileBauen(dok, sitzung);
+    werte.push(
+      ...t.werte,
+      JSON.stringify({
+        art: 'protokoll',
+        fassung: 1,
+        sitzung,
+        titel: 'Leitungssitzung',
+        status,
+        beginn,
+        termin: null,
+        treffen: null,
+        freigabe: status === 'frei' ? { von: 1, am: '2026-10-15T08:00:00Z' } : null,
+        sperre: null,
+        stand: t.stand,
+      }),
+    );
+  }
+  return werte.map((value, i) => ({ id: start + i, dataCategoryId: kategorie, value }));
+}
+
+/** Heute um `stunde` Uhr Ortszeit – damit die Demo immer eine Sitzung „Heute“ hat. */
+function heuteUm(stunde: number): string {
+  const d = new Date();
+  d.setHours(stunde, 0, 0, 0);
+  return d.toISOString();
+}
+
+/** Besprechungsanfragen wie in ChurchTools gemessen (S3-1 §2): Person als `domainIdentifier`, Antwort als `state`. */
+const ANFRAGEN: Record<string, { person: { domainIdentifier: string }; state: string }[]> = {
+  '114': [
+    { person: { domainIdentifier: '1' }, state: 'accepted' },
+    { person: { domainIdentifier: '19' }, state: 'declined' },
+  ],
+  '120': [
+    { person: { domainIdentifier: '1' }, state: 'accepted' },
+    { person: { domainIdentifier: '19' }, state: 'accepted' },
+    { person: { domainIdentifier: '23' }, state: 'pending' },
+  ],
+};
+
+const DEMO_AUFGABE = statusSetzen(
+  neueAufgabe({
+    id: 'demo-a1',
+    gruppe: 11,
+    sitzung: 'demo-entwurf',
+    text: 'Farbe besorgen',
+    wer: [1],
+    bis: '2026-11-01',
+    von: 1,
+    am: '2026-10-21T19:00:00Z',
+  }),
+  'arbeit',
+  1,
+  '2026-10-22T08:00:00Z',
+);
 
 const MODUL = 20;
 /** Schlüssel der Rechte wie gemessen (Modul 24, S2-1); die Nummern sind nur für die Demo. */
@@ -54,6 +161,8 @@ function speicherAnlegen(fall: string): Speicher {
       fall === 'leer'
         ? []
         : [
+            [60, protokollWerte(60, 600)],
+            [61, [{ id: 700, dataCategoryId: 61, value: JSON.stringify(DEMO_AUFGABE) }]],
             [
               5,
               STANDARD_VORLAGEN.map((v, i) => ({
@@ -127,6 +236,36 @@ function antwort(
         { id: 19, name: 'Technik-Team', settings: { isHidden: false } },
       ],
     };
+  // Kalender 4: Termine mit Besprechungsanfrage (Sitzungen; einer heute für „Heute“ auf der Startseite) und einer
+  // ohne (fällt weg); Treffen zur selben Minute wie 114.
+  if (pfad === '/api/calendars/appointments')
+    return {
+      status: 200,
+      data: [
+        {
+          base: { id: 120, title: 'Gebetsabend', calendar: { id: 4 } },
+          calculated: { startDate: heuteUm(19) },
+        },
+        {
+          base: { id: 114, title: 'Leitungssitzung', calendar: { id: 4 } },
+          calculated: { startDate: '2027-03-17T17:00:00Z' },
+        },
+        {
+          base: { id: 117, title: 'Raumputz', calendar: { id: 4 } },
+          calculated: { startDate: '2027-03-20T09:00:00Z' },
+        },
+      ],
+    };
+  const anfragen = /^\/api\/calendars\/\d+\/appointments\/(\d+)\/meetingrequests$/.exec(pfad);
+  if (anfragen) return { status: 200, data: ANFRAGEN[anfragen[1]] ?? [] };
+  const treffen = /^\/api\/groups\/(\d+)\/meetings$/.exec(pfad);
+  if (treffen)
+    return treffen[1] === '11'
+      ? { status: 200, data: [{ id: 15, startDate: '2027-03-17T17:00:00Z', isCanceled: false }] }
+      : {
+          status: 403,
+          data: { message: 'Forbidden to see group', messageKey: 'error.forbidden.view' },
+        };
   const rollen = /^\/api\/groups\/(\d+)\/roles$/.exec(pfad);
   if (rollen) return { status: 200, data: ROLLEN[Number(rollen[1])] ?? [] };
   if (pfad === '/api/calendars')
@@ -238,7 +377,9 @@ export function demoStarten(fall: string): void {
     const a = antwort(fall, speicher, methode, url.pathname, rumpf);
     if (!a) return new Response('{"message":"Nicht im Demo"}', { status: 404 });
     // `/info` kommt von ChurchTools ohne die Hülle `{ data: … }` (gemessen, `shared/ct/info.ts`).
-    const daten = url.pathname === '/api/info' ? a.data : { data: a.data ?? null };
+    // Fehler kommen von ChurchTools ohne Hülle (`messageKey` oben – daran erkennt `fehlerAus` ein Verbot).
+    const daten =
+      url.pathname === '/api/info' || a.status >= 400 ? a.data : { data: a.data ?? null };
     return new Response(a.status === 204 ? null : JSON.stringify(daten), {
       status: a.status,
       headers: { 'Content-Type': 'application/json' },

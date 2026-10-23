@@ -1,12 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
-import { ChordProInput, type ChordProHandle } from './ChordProInput';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ChordProInput, type AkkordAntippen, type ChordProHandle } from './ChordProInput';
 import { PdfPreview } from './PdfPreview';
 import { Icon } from '@ui/icons/icons';
 import { Spinner } from './Spinner';
 import { useOverlayKeyboardInset } from '@ui/fenster/useOverlayKeyboardInset';
 import styles from './ChordEditor.module.scss';
 import { shiftKey } from '../utils/transpose';
-import { flowSetzen, parseMetadata } from '../utils/chordpro';
+import { akkordVerschieben, flowSetzen, parseMetadata } from '../utils/chordpro';
+import { AkkordMenue } from './AkkordMenue';
 import { AkkordLeiste } from './AkkordLeiste';
 import { AkkordFenster } from './AkkordFenster';
 import { AblaufKarte } from './AblaufKarte';
@@ -88,7 +89,17 @@ export function ChordEditor({
   const [semitones, setSemitones] = useState(0);
   const [zuletzt, setZuletzt] = useState<string[]>([]); // nur in dieser Sitzung
   const [openMenu, setOpenMenu] = useState<'format' | null>(null);
-  const [akkordFenster, setAkkordFenster] = useState(false);
+  // „Anderer Akkord“ (neu) oder „Ändern“ eines angetippten Kärtchens (`ziel` = seine Stelle im Text).
+  const [akkordFenster, setAkkordFenster] = useState<{ ziel?: AkkordAntippen } | null>(null);
+  // Angetipptes Akkord-Kärtchen (L5-2): Menü ← → Ändern Entfernen.
+  const [menue, setMenue] = useState<AkkordAntippen | null>(null);
+  const menueZu = useCallback(() => setMenue(null), []);
+  // Das angetippte Kärtchen umrahmen, solange sein Menü offen ist.
+  const markiert = menue ? `${menue.von}-${menue.bis}` : '';
+  useEffect(() => {
+    const [von, bis] = markiert.split('-').map(Number);
+    editorRef.current?.markieren(markiert ? { von, bis } : null);
+  }, [markiert]);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [bereich, setBereich] = useState<Bereich>('text');
@@ -127,10 +138,30 @@ export function ChordEditor({
     return () => document.removeEventListener('pointerdown', onDown);
   }, [openMenu]);
 
-  /** Akkord an der Cursorstelle einfügen (L5) – und für „Im Lied“ vorne merken. */
-  function akkordSetzen(akkord: string) {
-    editorRef.current?.insert(`[${akkord}]`);
+  /**
+   * Akkord an der Cursorstelle einfügen (L5) – und für „Im Lied“ vorne merken. Ist ein Kärtchen angetippt (L5-2),
+   * wird stattdessen DIESES ersetzt (wie im Entwurf: Kärtchen antippen, anderen Akkord in der Leiste wählen).
+   */
+  function akkordSetzen(akkord: string, ziel: AkkordAntippen | null = menue) {
+    if (ziel) {
+      editorRef.current?.aendern(ziel.von, ziel.bis, `[${akkord}]`);
+      setMenue(null);
+    } else editorRef.current?.insert(`[${akkord}]`);
     setZuletzt((z) => [akkord, ...z.filter((a) => a !== akkord)].slice(0, 8));
+  }
+  /** Das angetippte Kärtchen eine Stelle weiter – das Menü wandert mit (mehrmals tippen geht). */
+  function schieben(richtung: -1 | 1) {
+    if (!menue) return;
+    const a = akkordVerschieben(text, menue.von, menue.bis, richtung);
+    if (!a) return;
+    editorRef.current?.aendern(a.from, a.to, a.insert);
+    const ort = editorRef.current?.stelle(a.neuVon);
+    setMenue({
+      ...menue,
+      von: a.neuVon,
+      bis: a.neuVon + (menue.bis - menue.von),
+      ...(ort ?? {}),
+    });
   }
   // Die Tonart, in der die Akkorde stehen: vom Aufrufer, sonst aus `{key}` des Texts.
   const textTonart = tonart ?? parseMetadata(text).key;
@@ -295,7 +326,11 @@ export function ChordEditor({
               text={text}
               zuletzt={zuletzt}
               waehlen={akkordSetzen}
-              anderer={() => setAkkordFenster(true)}
+              anderer={() => {
+                // Mit angetipptem Kärtchen ersetzt auch „Anderer Akkord“ dieses Kärtchen – wie die Leiste.
+                setAkkordFenster({ ziel: menue ?? undefined });
+                setMenue(null);
+              }}
             />
 
             <div className={styles.editPane}>
@@ -304,6 +339,7 @@ export function ChordEditor({
                 initialText={initialText}
                 roh={roh}
                 onChange={setText}
+                onAkkord={setMenue}
                 onHistory={(u, r) => {
                   setCanUndo(u);
                   setCanRedo(r);
@@ -346,14 +382,36 @@ export function ChordEditor({
           </section>
         )}
       </div>
+      {menue && (
+        <AkkordMenue
+          name={menue.name}
+          x={menue.x}
+          y={menue.y}
+          kannLinks={!!akkordVerschieben(text, menue.von, menue.bis, -1)}
+          kannRechts={!!akkordVerschieben(text, menue.von, menue.bis, 1)}
+          links={() => schieben(-1)}
+          rechts={() => schieben(1)}
+          aendern={() => {
+            setAkkordFenster({ ziel: menue });
+            setMenue(null);
+          }}
+          entfernen={() => {
+            editorRef.current?.aendern(menue.von, menue.bis, '');
+            setMenue(null);
+          }}
+          schliessen={menueZu}
+        />
+      )}
       {akkordFenster && (
         <AkkordFenster
+          start={akkordFenster.ziel?.name}
+          knopf={akkordFenster.ziel ? 'Übernehmen' : 'Einfügen'}
           grundton={textTonart?.replace(/m$/, '') || undefined}
           fertig={(a) => {
-            setAkkordFenster(false);
-            akkordSetzen(a);
+            akkordSetzen(a, akkordFenster.ziel ?? null);
+            setAkkordFenster(null);
           }}
-          onClose={() => setAkkordFenster(false)}
+          onClose={() => setAkkordFenster(null)}
         />
       )}
     </div>

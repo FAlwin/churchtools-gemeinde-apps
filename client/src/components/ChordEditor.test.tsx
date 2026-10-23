@@ -16,6 +16,8 @@ const eingabe = vi.hoisted(() => ({
   aendern: vi.fn(),
   undo: vi.fn(),
   redo: vi.fn(),
+  markieren: vi.fn(),
+  stelle: vi.fn(() => null),
 }));
 vi.mock('./ChordProInput', async () => {
   const { forwardRef, useImperativeHandle } = await import('react');

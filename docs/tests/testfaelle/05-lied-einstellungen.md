@@ -473,3 +473,33 @@ offen, und man kann direkt weiterschreiben.
   noch nicht so intuitiv“
 
 </details>
+
+### TF-EINST-17 · Lied-Editor: Akkord-Kärtchen antippen – am echten iPad
+
+**Das brauchst du:** Ein iPad, das Recht, Versionen anzulegen, und ein Testlied mit Akkorden. **Auf Staging nicht
+speichern** – Staging hängt am echten ChurchTools.
+
+**Das muss passieren:** Ein Tipp auf ein Akkord-Kärtchen setzt **nicht** den Cursor, sondern öffnet darunter ein
+kleines Menü (‹ › Ändern Entfernen); das Kärtchen ist blau umrahmt. Die Tastatur geht dabei nicht auf und nicht zu.
+
+1. Lied öffnen → Version bearbeiten. Mit dem Finger auf ein Kärtchen (z. B. „A“) tippen: Menü erscheint, das
+   Kärtchen ist umrahmt, **kein Cursor** springt davor oder dahinter, kein iOS-Menü (Auswählen/Einsetzen).
+2. Dreimal **›** antippen: Das Kärtchen wandert Buchstabe für Buchstabe nach rechts, Menü und Rahmen gehen mit.
+   Steht ein anderer Akkord direkt daneben, springt es über ihn hinweg.
+3. **Rückgängig** → ein Schritt zurück.
+4. Kärtchen antippen → in der Leiste **C#m** antippen: Das Kärtchen wird zu C#m (kein zweiter Akkord).
+5. Kärtchen antippen → **Ändern** → Art „7“ → **Übernehmen**. Kärtchen antippen → **Entfernen**.
+6. Neben das Menü in den Text tippen: Menü zu, Cursor steht dort.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `client/src/components/ChordProInput.tsx`, `client/src/components/AkkordMenue.tsx`, `client/src/components/ChordEditor.tsx`, `client/src/utils/chordpro.ts`
+- **Automatisiert:** weitgehend – `chordpro.test.ts` (`akkordVerschieben`: Nachbarzeichen, Nachbar-Akkord,
+  Zeilenrand), `e2e/editor-akkord-menue.spec.ts` (schieben + Menü wandert mit + Rahmen, Rückgängig, Entfernen,
+  Ändern, Leiste und „Anderer Akkord“ ersetzen, Zeilenrand gesperrt). **Von Hand bleibt das echte iPad**: Auf
+  dem Touchscreen könnte iOS beim Tipp aufs Kärtchen selbst einen Cursor setzen oder die Tastatur öffnen, bevor
+  der Editor den Tipp sieht – das lässt sich am Mac nicht nachstellen.
+- **Historie:** Neuer Lied-Editor, Scheibe L5-2 (23.10.2026), Entwurf Variante A
+
+</details>

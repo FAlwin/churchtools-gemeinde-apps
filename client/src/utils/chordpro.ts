@@ -270,6 +270,36 @@ export function akkordeImText(text: string): string[] {
   return [...zahl.entries()].sort((a, b) => b[1] - a[1]).map(([a]) => a);
 }
 
+/**
+ * **Ein Akkord im Text:** `[…]` innerhalb einer Zeile. EINE Grammatik für die Kärtchen im Editor (L3) und das
+ * Schieben (L5-2); `parseLine` liest Zeile für Zeile und braucht die Zeilengrenze deshalb nicht.
+ */
+export const AKKORD_KLAMMER = String.raw`\[([^\]\n]*)\]`;
+
+/**
+ * **Einen Akkord eine Stelle weiter setzen** (L5-2: Kärtchen-Menü ← →). `von`–`bis` ist der Akkord samt Klammern.
+ * Er tauscht den Platz mit dem Nachbarzeichen – steht dort ein anderer Akkord, springt er über ihn ganz hinweg
+ * (sonst zerfiele `[A][B]` zu Klammersalat). Über den Zeilenrand geht es nicht: dann `null`.
+ * Geliefert wird EINE Änderung für den Editor (Rückgängig je Schritt) und die neue Stelle des Akkords.
+ */
+export function akkordVerschieben(
+  text: string,
+  von: number,
+  bis: number,
+  richtung: -1 | 1,
+): { from: number; to: number; insert: string; neuVon: number } | null {
+  const akkord = text.slice(von, bis);
+  if (richtung === 1) {
+    const m = text.slice(bis).match(new RegExp(`^(?:${AKKORD_KLAMMER}|[^\\n])`));
+    if (!m) return null;
+    return { from: von, to: bis + m[0].length, insert: m[0] + akkord, neuVon: von + m[0].length };
+  }
+  const m = text.slice(0, von).match(new RegExp(`(?:${AKKORD_KLAMMER}|[^\\n])$`));
+  if (!m) return null;
+  const from = von - m[0].length;
+  return { from, to: bis, insert: akkord + m[0], neuVon: from };
+}
+
 /** Liest Metadaten ({title}, {key}, {tempo}, {ccli} …) aus dem ChordPro-Text. */
 export function parseMetadata(text: string): Record<string, string> {
   const meta: Record<string, string> = {};

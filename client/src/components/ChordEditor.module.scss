@@ -202,22 +202,6 @@
   color: var(--blue-ink);
 }
 
-// L3: Schalter für den rohen ChordPro-Text (an = gedrückt, wie ein gewählter Umschalter).
-.rohKnopf {
-  white-space: nowrap;
-  @include m.aktionKnopf;
-  height: 34px;
-  padding: 0 12px;
-  border-radius: var(--r-ctrl);
-  font-size: 13px;
-  flex-shrink: 0;
-}
-.rohAn {
-  @include m.auswahlKnopfAn;
-  border-color: var(--blue);
-  color: var(--blue-ink);
-}
-
 // Rückgängig/Wiederholen rechts in der Werkzeugleiste der Text-Karte.
 .verlauf {
   display: flex;

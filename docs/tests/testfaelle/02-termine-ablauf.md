@@ -220,13 +220,15 @@ Gottesdienstes **nicht** in den Vorlauf (die Linie „Beginn" bleibt, wo sie hin
 3. Unten auf **Rückgängig** tippen; in ChurchTools nachsehen, ob alles wieder da ist.
 4. Einen Punkt am Griff verschieben, dann **Rückgängig**.
 5. Einen Punkt aus dem Vorlauf löschen und auf die Linie „Beginn" achten; danach Rückgängig.
+6. Mit **zwei** Punkten im Vorlauf den **ersten** löschen und Rückgängig: Beide stehen wieder vor der Linie „Beginn"
+   (#700 – vorher fiel der zweite aus dem Vorlauf).
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
 - **Betrifft:** `shared/ct/schreibKern.ts`, `shared/ct/agendaPayload.ts`, `client/src/pages/Setlist.tsx`, `ui/bedienung/useRueckgaengig.ts`, `client/src/components/Toast.tsx`, `server/src/controllers/setlistController.ts`
 - **Automatisiert:** teilweise – `server/src/services/ablaufRueckgaengig.test.ts`, `client/src/pages/Setlist.rueckgaengig.test.tsx`, `ui/bedienung/useRueckgaengig.test.ts`, `e2e/ablauf-rueckgaengig.spec.ts`; gegen echtes ChurchTools nur von Hand
-- **Historie:** 12.10.2026 (Alwin). Nicht zurück kommt eine in ChurchTools ausgeblendete Uhrzeit – die Schnittstelle kennt das Feld nicht.
+- **Historie:** 12.10.2026 (Alwin). Nicht zurück kommt eine in ChurchTools ausgeblendete Uhrzeit – die Schnittstelle kennt das Feld nicht. #700 (23.10.2026): der erste/mittlere Vorlauf-Punkt zurück schob die übrigen aus dem Vorlauf.
 
 </details>
 

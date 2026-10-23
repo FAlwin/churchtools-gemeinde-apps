@@ -1,8 +1,9 @@
 # Protokolle – ChurchTools-Erweiterung
 
-> **Stand: S1 (22.10.2026)** – Grundgerüst. Die Erweiterung zeigt, wer angemeldet ist, und **„Deine Gruppen“** mit
-> dem Stand der Einrichtung (eingerichtet · unvollständig · nicht eingerichtet). Protokolle, To-Dos, Termine und
-> das Einrichten selbst folgen (Bauplan S2–S9 in `protokolle-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
+> **Stand: S2 (22.10.2026)** – Grundgerüst und Verwaltung. Die Startseite zeigt **„Deine Gruppen“** (die Gruppen,
+> deren Protokolle man sehen darf); Admins richten im Reiter **„Verwaltung“** Gruppen ein und pflegen die Vorlagen.
+> Protokolle, To-Dos und Termine folgen (Bauplan S3–S9 in `protokolle-planung/docs/bauplan.md`). Diese Anleitung
+> wächst mit.
 
 Die Protokolle sind für Gruppen wie den Leitungskreis: **Protokolle als Dokument** (wie Word, Loop oder Notion),
 daraus gesammelt Beschlüsse, To-Dos und Termine. **Alles liegt in ChurchTools** – es gibt keinen eigenen Server,
@@ -53,11 +54,18 @@ vorbereitetem Text, feste Punkte („Offene To-Dos“, „Protokoll der letzten 
 Aufgaben, die bei jeder Sitzung mit dieser Vorlage angelegt werden. Lesen dürfen sie alle eingerichteten Gruppen,
 ändern nur Admins.
 
+Auf der Startseite stehen nur Gruppen, deren Protokolle man sehen darf – eine Gruppe ohne Zugriff (oder noch nicht
+eingerichtet) fehlt dort; den Stand aller Gruppen sehen Admins in der Verwaltung.
+
 | Stand auf der Startseite   | Bedeutung                                                         |
 | -------------------------- | ----------------------------------------------------------------- |
 | eingerichtet               | beide Kategorien der Gruppe sind sichtbar                         |
 | unvollständig eingerichtet | nur die Protokoll-Kategorie ist sichtbar – Einrichten wiederholen |
-| nicht eingerichtet         | die Gruppe nutzt die Protokolle noch nicht                        |
+
+**Versteckte Gruppen und Gruppentypen:** „versteckte Gruppe sehen“ hilft nur, wenn die Rolle die Gruppe überhaupt
+sehen darf – das legt der **Gruppentyp** fest. In einem Typ, dessen Teilnehmer die Gruppe nicht sehen (in der
+Test-Instanz „Anmeldung“), sehen sie auch nach dem Einrichten die Mitglieder nicht. Für die Protokolle selbst spielt
+das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit später schon (gemessen 22.10.2026, S2-4).
 
 ## Für Entwickler
 

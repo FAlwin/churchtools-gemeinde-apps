@@ -18,7 +18,6 @@ const START: Start = {
   gruppen: [
     { id: 11, name: 'Leitungsteam', lage: 'eingerichtet', protokolle: 60, mitarbeit: 61 },
     { id: 7, name: 'Jugendleitung', lage: 'unvollstaendig', protokolle: 70, mitarbeit: null },
-    { id: 19, name: 'Technik-Team', lage: 'nicht-eingerichtet', protokolle: null, mitarbeit: null },
   ],
 };
 
@@ -36,12 +35,8 @@ describe('App (S1)', () => {
     const zeilen = within(liste)
       .getAllByRole('listitem')
       .map((z) => z.textContent);
-    expect(zeilen).toEqual([
-      'Leitungsteameingerichtet',
-      'Jugendleitungunvollständig eingerichtet',
-      'Technik-Teamnicht eingerichtet',
-    ]);
-    expect(screen.getByText(/richtet ein Admin in ChurchTools einmal ein/)).toBeTruthy();
+    expect(zeilen).toEqual(['Leitungsteameingerichtet', 'Jugendleitungunvollständig eingerichtet']);
+    expect(screen.getByText(/Fehlt eine Gruppe\? Ein Admin richtet sie ein/)).toBeTruthy();
   });
 
   it('ohne Gruppen: ein klarer Satz statt einer leeren Liste', async () => {
@@ -53,11 +48,10 @@ describe('App (S1)', () => {
     expect(screen.queryByRole('list')).toBeNull();
   });
 
-  it('alle eingerichtet: kein Hinweis aufs Einrichten', async () => {
-    laden.mockResolvedValue({ ...START, gruppen: [START.gruppen[0]] });
+  it('auch ohne Gruppen: der Hinweis, wie eine fehlende Gruppe dazukommt', async () => {
+    laden.mockResolvedValue({ ...START, gruppen: [] });
     render(<App />);
-    await screen.findByText('Leitungsteam');
-    expect(screen.queryByText(/richtet ein Admin/)).toBeNull();
+    expect(await screen.findByText(/Fehlt eine Gruppe\?/)).toBeTruthy();
   });
 
   it('vorübergehender Fehler: „Erneut versuchen“ lädt neu – nicht „keine Gruppen“', async () => {

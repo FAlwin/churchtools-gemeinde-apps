@@ -5,15 +5,14 @@ import styles from './Startseite.module.scss';
 const LAGE: Record<ProtokollGruppe['lage'], { text: string; art: 'gut' | 'problem' | 'leise' }> = {
   eingerichtet: { text: 'eingerichtet', art: 'gut' },
   unvollstaendig: { text: 'unvollständig eingerichtet', art: 'problem' },
-  'nicht-eingerichtet': { text: 'nicht eingerichtet', art: 'leise' },
 };
 
 /**
- * **Startseite der Protokolle** (Bauplan S1) – vorerst nur „Deine Gruppen“ mit dem Stand der Einrichtung. Die
+ * **Startseite der Protokolle** (Bauplan S1) – vorerst nur „Deine Gruppen“: die Gruppen, deren Protokolle man sehen
+ * darf (S2-4), mit dem Stand der Einrichtung. Die
  * Bereiche des Entwurfs (Meine offenen To-Dos, Nächste Sitzungen) kommen mit S3.
  */
 export function Startseite({ gruppen }: { gruppen: ProtokollGruppe[] }) {
-  const ohne = gruppen.some((g) => g.lage !== 'eingerichtet');
   return (
     <section className={styles.karte} aria-labelledby="deine-gruppen">
       <div className={styles.kopf}>
@@ -32,12 +31,10 @@ export function Startseite({ gruppen }: { gruppen: ProtokollGruppe[] }) {
           ))}
         </ul>
       )}
-      {ohne && (
-        <p className={styles.fuss}>
-          Eine Gruppe richtet ein Admin in ChurchTools einmal ein – danach können ihre Mitglieder
-          hier Protokolle und To-Dos führen.
-        </p>
-      )}
+      {/* Gruppen ohne Zugriff stehen nicht in der Liste (S2-4) – deshalb immer dieser Hinweis. */}
+      <p className={styles.fuss}>
+        Fehlt eine Gruppe? Ein Admin richtet sie ein oder gibt dir Zugriff.
+      </p>
     </section>
   );
 }

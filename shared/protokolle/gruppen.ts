@@ -1,15 +1,18 @@
 /**
- * **Meine Gruppen in den Protokollen** (Bauplan S1, Startseite) – welche Gruppen die angemeldete Person sieht und
- * ob sie eingerichtet sind.
+ * **Meine Gruppen in den Protokollen** (Bauplan S1, Startseite) – in welchen Gruppen die angemeldete Person
+ * Protokolle sehen darf.
  *
  * Zwei Quellen, weil eine allein nicht reicht (S0, 22.10.2026):
  * - die **sichtbaren Kategorien** `protokolle-g<ID>` – die einzige Quelle für Teilnehmer **versteckter**
  *   Gruppen (ChurchTools zeigt ihnen die eigene Gruppe nicht, 403). Den Namen trägt die Kategorie
  *   („Protokolle · Leitungsteam“, beim Einrichten gesetzt);
- * - die **aktiven Mitgliedschaften** (`/persons/{id}/groups`) – für Gruppen, die noch nicht eingerichtet sind.
+ * - die **aktiven Mitgliedschaften** (`/persons/{id}/groups`) – nur noch für den Namen, wenn die Kategorie keinen
+ *   trägt.
  *
- * Eingerichtet heißt: Die Protokoll-Kategorie der Gruppe ist sichtbar. Fehlt nur die Mitarbeit-Kategorie,
- * stimmt etwas nicht – das zeigt die Startseite als „unvollständig eingerichtet“.
+ * **Gezeigt wird nur, wo die Protokoll-Kategorie sichtbar ist** (S2-4, Alwin 22.10.2026): Ohne sie lässt sich
+ * „nicht eingerichtet“ nicht von „kein Zugriff“ unterscheiden – ein Mitglied ohne Zugriff sah seine eingerichtete
+ * Gruppe als „nicht eingerichtet“. Den Stand aller Gruppen sehen Admins in der Verwaltung. Fehlt nur die
+ * Mitarbeit-Kategorie, stimmt etwas nicht – das zeigt die Startseite als „unvollständig eingerichtet“.
  */
 import { aktiveMitgliedschaften, type RohMitgliedschaft } from '../ct/gruppen';
 import { kuerzelLesen } from './speicher';
@@ -17,7 +20,7 @@ import { kuerzelLesen } from './speicher';
 export interface ProtokollGruppe {
   id: number;
   name: string;
-  lage: 'eingerichtet' | 'unvollstaendig' | 'nicht-eingerichtet';
+  lage: 'eingerichtet' | 'unvollstaendig';
   protokolle: number | null;
   mitarbeit: number | null;
 }
@@ -45,7 +48,7 @@ export function protokollGruppen(
     const g = gruppen.get(id) ?? {
       id,
       name,
-      lage: 'nicht-eingerichtet',
+      lage: 'unvollstaendig',
       protokolle: null,
       mitarbeit: null,
     };
@@ -71,17 +74,11 @@ export function protokollGruppen(
     if (z.art === 'mitarbeit' && g.mitarbeit === null) g.mitarbeit = k.id;
   }
 
-  for (const g of gruppen.values()) {
-    g.lage =
-      g.protokolle !== null
-        ? g.mitarbeit !== null
-          ? 'eingerichtet'
-          : 'unvollstaendig'
-        : 'nicht-eingerichtet';
+  const sichtbar = [...gruppen.values()].filter((g) => g.protokolle !== null);
+  for (const g of sichtbar) {
+    g.lage = g.mitarbeit !== null ? 'eingerichtet' : 'unvollstaendig';
     if (!g.name) g.name = `Gruppe ${g.id}`;
   }
-  const rang = { eingerichtet: 0, unvollstaendig: 1, 'nicht-eingerichtet': 2 } as const;
-  return [...gruppen.values()].sort(
-    (a, b) => rang[a.lage] - rang[b.lage] || a.name.localeCompare(b.name, 'de'),
-  );
+  const rang = { eingerichtet: 0, unvollstaendig: 1 } as const;
+  return sichtbar.sort((a, b) => rang[a.lage] - rang[b.lage] || a.name.localeCompare(b.name, 'de'));
 }

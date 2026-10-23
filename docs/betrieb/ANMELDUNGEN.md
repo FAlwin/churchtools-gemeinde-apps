@@ -123,6 +123,11 @@ dieselbe Schnittstelle wie der Mail-Editor von ChurchTools; sie ist nicht offizi
 einem Update ändern – dann meldet das Fenster einen Fehler, und die Mail geht weiter über ChurchTools selbst
 (Mitgliederliste der Gruppe → „E-Mail“).
 
+**QR-Code und Aushang:** In der Karte „Anmeldelink“ öffnet „QR-Code“ ein Fenster mit dem QR-Code zum Anmeldelink.
+„QR-Code als Bild“ gibt ihn als PNG weiter (Beamer, Gemeindebrief), „Aushang als PDF“ ist ein A4-Blatt für Schaukasten
+und Foyer: Gemeinde, Titel, Termin, groß der QR-Code, darunter der Link und der Anmeldeschluss. Der QR-Code ist immer
+schwarz auf weiß – umgekehrt lesen ihn viele Handys nicht.
+
 **Druckliste:** „⎙ Druckliste“ im Reiter „Anmeldungen“ macht aus der Liste ein PDF zum Teilen (Handy, iPad) oder
 Herunterladen. Vorn stehen die Listen, die zum Formular passen; „＋ weitere“ öffnet die übrigen (ohne passende Frage
 bleibt die Spalte leer zum Ausfüllen von Hand):

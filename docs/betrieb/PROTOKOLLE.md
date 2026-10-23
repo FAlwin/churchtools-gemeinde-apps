@@ -1,9 +1,9 @@
 # Protokolle – ChurchTools-Erweiterung
 
-> **Stand: S2 (22.10.2026)** – Grundgerüst und Verwaltung. Die Startseite zeigt **„Deine Gruppen“** (die Gruppen,
-> deren Protokolle man sehen darf); Admins richten im Reiter **„Verwaltung“** Gruppen ein und pflegen die Vorlagen.
-> Protokolle, To-Dos und Termine folgen (Bauplan S3–S9 in `protokolle-planung/docs/bauplan.md`). Diese Anleitung
-> wächst mit.
+> **Stand: S3-3 (23.10.2026)** – Lesen. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
+> Sitzungen“ und „Deine Gruppen“; der Reiter **„Sitzungen“** zeigt je Gruppe Kommend und Protokolle zum Lesen; Admins
+> richten im Reiter **„Verwaltung“** Gruppen ein und pflegen die Vorlagen. Beschlüsse mit Suche, Schreiben und To-Dos
+> bearbeiten folgen (Bauplan S3-4–S9 in `protokolle-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
 
 Die Protokolle sind für Gruppen wie den Leitungskreis: **Protokolle als Dokument** (wie Word, Loop oder Notion),
 daraus gesammelt Beschlüsse, To-Dos und Termine. **Alles liegt in ChurchTools** – es gibt keinen eigenen Server,
@@ -53,6 +53,12 @@ entstehen drei zum Anpassen (Leitungssitzung, Teamtreffen, Klausur). Je Vorlage:
 vorbereitetem Text, feste Punkte („Offene To-Dos“, „Protokoll der letzten Sitzung“ – füllen sich selbst) und feste
 Aufgaben, die bei jeder Sitzung mit dieser Vorlage angelegt werden. Lesen dürfen sie alle eingerichteten Gruppen,
 ändern nur Admins.
+
+**Startseite:** „Heute“ erscheint nur, wenn heute eine Sitzung ansteht. „Meine offenen To-Dos“ sind die mir
+zugewiesenen, nicht erledigten aus allen Gruppen. „Nächste Sitzungen“ sind dieselben wie unter „Kommend“ im Reiter
+„Sitzungen“ (Termine **mit Besprechungsanfrage**, Gruppentreffen, begonnene Protokolle), ab heute über alle Gruppen;
+dahinter steht die eigene Antwort auf die Anfrage – wer nicht eingeladen ist, sieht keine. Ein Tipp öffnet die
+Sitzung bzw. die Gruppe im Reiter „Sitzungen“.
 
 Auf der Startseite stehen nur Gruppen, deren Protokolle man sehen darf – eine Gruppe ohne Zugriff (oder noch nicht
 eingerichtet) fehlt dort; den Stand aller Gruppen sehen Admins in der Verwaltung.

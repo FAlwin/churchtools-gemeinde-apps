@@ -41,6 +41,7 @@ const PROTOKOLL: Sitzung = {
   termin: null,
   treffen: null,
   kopf: KOPF,
+  anfragen: [],
 };
 const KOMMEND: Sitzung = {
   schluessel: 't:4:114',
@@ -49,6 +50,7 @@ const KOMMEND: Sitzung = {
   termin: { kalender: 4, id: 114 },
   treffen: 15,
   kopf: null,
+  anfragen: [{ person: 1, antwort: 'zugesagt' }],
 };
 const DATEN: L.GruppenSitzungen = {
   kommend: [KOMMEND],
@@ -119,6 +121,25 @@ describe('Reiter „Sitzungen“ (S3-2)', () => {
     fireEvent.click(await screen.findByText(/freigegeben am 15\.10\.2026/));
     expect(await screen.findByText(/nicht vollständig lesbar/)).toBeTruthy();
     expect(screen.queryByText('Andacht & Gebet')).toBeNull();
+  });
+
+  it('S3-3: Auswahl von der Startseite – diese Gruppe, die Sitzung gleich offen', async () => {
+    render(<Sitzungen modul={24} gruppen={GRUPPEN} auswahl={{ gruppe: 7, sitzung: 'p:okt' }} />);
+    expect(await screen.findByText('Andacht & Gebet')).toBeTruthy();
+    expect(m.ladeSitzungen).toHaveBeenCalledWith(24, GRUPPEN[1], expect.any(String));
+    // „Zurück“ führt zur Liste dieser Gruppe – die Auswahl öffnet die Sitzung nicht noch einmal.
+    fireEvent.click(screen.getByRole('button', { name: 'Sitzungen' }));
+    expect(await screen.findByRole('heading', { name: 'Jugendleitung' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Leitungsteam' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Jugendleitung' }));
+    expect(await screen.findByRole('region', { name: 'Kommend' })).toBeTruthy();
+    expect(screen.queryByText('Andacht & Gebet')).toBeNull();
+  });
+
+  it('S3-3: nur die Gruppe gewählt – die Liste, nichts geöffnet', async () => {
+    render(<Sitzungen modul={24} gruppen={GRUPPEN} auswahl={{ gruppe: 7 }} />);
+    expect(await screen.findByRole('region', { name: 'Kommend' })).toBeTruthy();
+    expect(m.ladeSitzungen).toHaveBeenCalledWith(24, GRUPPEN[1], expect.any(String));
   });
 
   it('keine Gruppe: ein Satz, kein Laden', () => {

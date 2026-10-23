@@ -47,8 +47,14 @@ export interface Nachbau {
   schlucken: Set<string>;
   schluckeWert: ((value: string) => boolean) | null;
   fehlerBei: { methode: string; status: number } | null;
-  /** Termine je Kalender; `anfragen` = Zahl der Besprechungsanfragen (S3-1). */
-  termine: { kalender: number; id: number; titel: string; beginn: string; anfragen: number }[];
+  /** Termine je Kalender mit ihren Besprechungsanfragen (Person + ChurchTools-Zustand, gemessen S3-3). */
+  termine: {
+    kalender: number;
+    id: number;
+    titel: string;
+    beginn: string;
+    anfragen: { person: number; state: string }[];
+  }[];
   /** Gruppentreffen je Gruppe; `treffenVerboten` = ChurchTools antwortet 403 (Gruppentyp, S2-4). */
   treffen: Map<number, { id: number; startDate: string; isCanceled?: boolean }[]>;
   treffenVerboten: boolean;
@@ -127,7 +133,11 @@ export function nachbauStarten(): Nachbau {
     if (anfr) {
       const t = s.termine.find((x) => x.id === Number(anfr[2]));
       return json(200, {
-        data: Array.from({ length: t?.anfragen ?? 0 }, (_, i) => ({ id: i + 1 })),
+        data: (t?.anfragen ?? []).map((x, i) => ({
+          id: i + 1,
+          person: { domainIdentifier: String(x.person) },
+          state: x.state,
+        })),
       });
     }
     const tr = /^\/groups\/(\d+)\/meetings$/.exec(pfad);

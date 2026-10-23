@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
@@ -48,15 +48,33 @@ function SitzungZeile({ s, onOeffnen }: { s: Sitzung; onOeffnen: () => void }) {
   );
 }
 
+/** Von der Startseite gewählt (S3-3): diese Gruppe – und, wenn angegeben, gleich diese Sitzung öffnen. */
+export interface SitzungsAuswahl {
+  gruppe: number;
+  sitzung?: string;
+}
+
 /**
  * **Reiter „Sitzungen“** (Bauplan S3-2, Entwurf 7): je Gruppe „Kommend“ (Termine mit Besprechungsanfrage,
  * Gruppentreffen, begonnene Protokolle) und „Protokolle“ (freigegeben). Ein Tipp öffnet die Sitzung zum Lesen.
  * Bei mehreren Gruppen wählt man sie oben.
  */
-export function Sitzungen({ modul, gruppen }: { modul: number; gruppen: ProtokollGruppe[] }) {
-  const [gruppeId, setGruppeId] = useState<number | null>(gruppen[0]?.id ?? null);
+export function Sitzungen({
+  modul,
+  gruppen,
+  auswahl = null,
+}: {
+  modul: number;
+  gruppen: ProtokollGruppe[];
+  auswahl?: SitzungsAuswahl | null;
+}) {
+  const [gruppeId, setGruppeId] = useState<number | null>(
+    auswahl?.gruppe ?? gruppen[0]?.id ?? null,
+  );
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
   const [offen, setOffen] = useState<Sitzung | null>(null);
+  // Die gewünschte Sitzung gilt nur für das erste Laden – danach bestimmt die Bedienung hier.
+  const wunsch = useRef(auswahl?.sitzung);
   const gruppe = gruppen.find((g) => g.id === gruppeId) ?? gruppen[0] ?? null;
 
   const laden = useCallback(() => {
@@ -64,7 +82,14 @@ export function Sitzungen({ modul, gruppen }: { modul: number; gruppen: Protokol
     setZustand({ art: 'laedt' });
     setOffen(null);
     Promise.all([ladeSitzungen(modul, gruppe, zeitzone), ladeAufgaben(modul, gruppe)]).then(
-      ([daten, aufgaben]) => setZustand({ art: 'fertig', daten, aufgaben }),
+      ([daten, aufgaben]) => {
+        setZustand({ art: 'fertig', daten, aufgaben });
+        const s = [...daten.kommend, ...daten.protokolle].find(
+          (x) => x.schluessel === wunsch.current,
+        );
+        wunsch.current = undefined;
+        if (s) setOffen(s);
+      },
       (e: unknown) => setZustand({ art: 'fehler', fehler: fehlerMeldung(e) }),
     );
   }, [modul, gruppe]);

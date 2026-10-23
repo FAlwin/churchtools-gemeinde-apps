@@ -490,7 +490,11 @@ Marke „Eigener Ablauf“, Ziehen mit `CSS.Translate` – `Transform` streckt v
 `akkordLesen`; Akkord-Grammatik EINMAL in `akkordTeile`, auch fürs Transponieren). L5-2 = Tipp aufs Kärtchen →
 `AkkordMenue` (Schieben über `akkordVerschieben`, Rahmen über das Feld `aktivFeld` in `ChordProInput` – eine
 CodeMirror-Markierung um ein ersetztes Kärtchen wird nicht gezeichnet; `AkkordWidget.ignoreEvent` lässt
-`mousedown` durch; Klammer-Grammatik der Kärtchen EINMAL in `AKKORD_KLAMMER`). Liedinfo kommt in L4 nur aus ChurchTools;
+`mousedown` durch; Klammer-Grammatik der Kärtchen EINMAL in `AKKORD_KLAMMER`). L5-3 = **Schreibansicht** (`schreiben` = Tastatur offen
+UND Fokus im Text): Ablauf, Fassung, Umschalter weg, `AkkordLeiste kompakt` in der Werkzeugleiste („Im Lied“ als
+Ausklappmenü). Tastaturhöhe EINMAL in `ui/fenster/useTastaturOffen.ts` (`tastaturHoehe`, auch für
+`useOverlayKeyboardInset` und `useKeyboardInsets`); Knöpfe um den Text mit `onMouseDown`-`preventDefault`, damit sie
+dem Text den Fokus (und damit die Tastatur) nicht nehmen. Liedinfo kommt in L4 nur aus ChurchTools;
 `{key}` bleibt als notierte Tonart. Zieh-Einstellungen aller Listen: `ui/bedienung/useZiehSensoren`. Im
 Scroll-Modus kein Spalten-Schalter (`ohneSpalten`). Welche
 eigene Ebene gilt, entscheidet für Blättern UND Scrollen `pageKeys.eigenerSchluessel`.

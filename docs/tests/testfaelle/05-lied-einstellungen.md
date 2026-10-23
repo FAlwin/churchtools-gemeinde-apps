@@ -503,3 +503,36 @@ kleines Menü (‹ › Ändern Entfernen); das Kärtchen ist blau umrahmt. Die T
 - **Historie:** Neuer Lied-Editor, Scheibe L5-2 (23.10.2026), Entwurf Variante A
 
 </details>
+
+### TF-EINST-18 · Lied-Editor: Schreibansicht bei offener Tastatur – am echten iPad
+
+**Das brauchst du:** Ein iPad (quer und hochkant) und gern ein Handy, das Recht, Versionen anzulegen, ein Testlied.
+**Auf Staging nicht speichern** – Staging hängt am echten ChurchTools.
+
+**Das muss passieren:** Sobald du in den Liedtext tippst und die Tastatur aufgeht, verschwinden Ablauf, Fassung und
+„ChordPro-Text“. Format, die Akkorde der Tonart, **Im Lied ▾**, **+** und Rückgängig stehen in einer Zeile über dem
+Text. Über der Tastatur ist Platz für deutlich mehr als zwei Zeilen. Tastatur zu → alles wie vorher.
+
+1. Lied öffnen → Version bearbeiten → in den Text tippen. Die Ansicht räumt auf, die eine Zeile passt am iPad quer
+   ganz (nichts abgeschnitten).
+2. **Im Lied** antippen → die übrigen Akkorde des Lieds klappen auf; einen antippen → er steht an der Cursorstelle,
+   die Tastatur bleibt offen. Noch einmal **Im Lied** → zu.
+3. **Format** antippen → das Menü öffnet, die Tastatur bleibt offen; „Weiterschalt-Punkt“ wählen.
+4. Ein Akkord-Kärtchen **direkt über der Tastatur** antippen: Das Menü klappt **nach oben** auf, nicht unter die
+   Tastatur.
+5. Tastatur schließen (Taste unten rechts): Ablauf und Fassung sind wieder da. Ins Feld **Fassung** tippen:
+   Die Ansicht bleibt, wie sie ist (nur der Liedtext löst die Schreibansicht aus).
+6. Mit angesteckter Hardware-Tastatur: keine Schreibansicht (es ist ja Platz).
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `client/src/components/ChordEditor.tsx`, `client/src/components/AkkordLeiste.tsx`, `client/src/components/AkkordMenue.tsx`, `client/src/components/ChordProInput.tsx`, `ui/fenster/useTastaturOffen.ts`
+- **Automatisiert:** weitgehend – `useTastaturOffen.test.tsx` (Formel, Schwelle für die Hardware-Tastatur-Leiste),
+  `e2e/editor-schreiben.spec.ts` mit nachgestellter Tastatur (`visualViewport` schrumpft): Ablauf/Fassung weg, eine
+  Zeile, Platz für den Text, „Im Lied“ auf/zu/einfügen, Menü klappt über das Kärtchen. **Von Hand bleibt das echte
+  iPad**: ob Format/Rückgängig/„Im Lied“ die Tastatur wirklich offen lassen, Hardware-Tastatur.
+- **Historie:** Alwin am iPad, 23.10.2026 („das Bearbeitungsfenster ist bei aufgeklappter Tastatur deutlich zu
+  klein“), Entwurf A mit „Im Lied“ als Ausklappmenü; Lied-Editor L5-3
+
+</details>

@@ -14,8 +14,32 @@
   }
   // Breit (iPad) passt fast alles – dort umbrechen statt wischen, damit nichts abgeschnitten aussieht.
   @media (min-width: 768px) {
-    flex-wrap: wrap;
-    overflow-x: visible;
+    &:not(.kompakt) {
+      flex-wrap: wrap;
+      overflow-x: visible;
+    }
+  }
+}
+// Schreibansicht: sitzt mit in der Werkzeugleiste, eine Zeile – am iPad quer passt sie ganz, am Handy wird gewischt.
+.kompakt {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  gap: 4px;
+  .gruppe {
+    gap: 4px;
+  }
+  .gruppe + .anderer,
+  .gruppe + .gruppe {
+    padding-left: 0;
+    border-left: none;
+  }
+  .chip {
+    min-width: 38px;
+    padding: 0 6px;
+  }
+  .anderer {
+    padding: 0 8px;
   }
 }
 .gruppe {

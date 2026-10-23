@@ -120,6 +120,10 @@
     flex-wrap: wrap;
   }
 }
+// Schreibansicht (Tastatur offen): Format, Akkorde und Rückgängig in EINER Zeile, nichts bricht um.
+.schreiben {
+  flex-wrap: nowrap;
+}
 .dd {
   position: relative;
 }

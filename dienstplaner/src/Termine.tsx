@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { Segment } from '@ui/bedienung/Segment';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
@@ -49,13 +49,13 @@ interface Props {
  */
 export function Termine({ zustand, planer, onNochmal, onMehr, onTermin }: Props) {
   // Weitere Wochen laden im Hintergrund (das Bisherige bleibt stehen) – bis die Antwort da ist, sagt der
-  // Knopf es.
-  const [laeuft, setLaeuft] = useState(false);
-  useEffect(() => {
-    setLaeuft(false);
-  }, [zustand]);
+  // Knopf es. „Läuft“, solange noch der Stand vom Klick dasteht: Mit der Antwort (oder dem Fehler) ist es schon in
+  // diesem Bild vorbei. Vorher räumte ein Effekt das ein Bild zu spät weg – dann stand „wird geladen …“ neben
+  // „Erneut versuchen“ (wie in Planen, `laedtNach`).
+  const [geklicktBei, setGeklicktBei] = useState<Props['zustand'] | null>(null);
+  const laeuft = geklicktBei !== null && geklicktBei === zustand;
   const mehr = () => {
-    setLaeuft(true);
+    setGeklicktBei(zustand);
     onMehr();
   };
   const [auswahl, setAuswahl] = useState<Auswahl>(leseAuswahl);

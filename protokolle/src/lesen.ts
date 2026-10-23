@@ -9,6 +9,7 @@
  */
 import { werteLesen, type Wert } from '@shared/ct/modulDaten';
 import { tagAusIso } from '@shared/ct/zeit';
+import { plusTage } from '@shared/ct/datum';
 import { mapLimit } from '@shared/ct/mapLimit';
 import { istEinstellung } from '@shared/protokolle/einrichten';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
@@ -50,12 +51,6 @@ const json = (w: Wert): unknown => {
   } catch {
     return null;
   }
-};
-
-const tagPlus = (tag: string, tage: number): string => {
-  const d = new Date(`${tag}T12:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + tage);
-  return d.toISOString().slice(0, 10);
 };
 
 interface TerminRoh {
@@ -124,7 +119,7 @@ export async function ladeSitzungen(
   }
   // „Heute“ in derselben Zeitzone wie die Sitzungen – sonst wäre kurz vor Mitternacht ein Tag verschoben.
   const heute = tagAusIso(jetzt.toISOString(), zeitzone);
-  const bis = tagPlus(heute, KOMMEND_TAGE);
+  const bis = plusTage(heute, KOMMEND_TAGE);
   const [termine, treffen] = await Promise.all([
     kalender === null ? Promise.resolve([]) : termineMitAnfrage(kalender, heute, bis),
     treffenLesen(gruppe.id, heute, bis),

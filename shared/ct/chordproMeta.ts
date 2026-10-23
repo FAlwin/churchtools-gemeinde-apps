@@ -3,7 +3,8 @@
  *
  * ChordPro schreibt Kopfangaben als `{title: …}`, `{artist: …}`, `{key: E}`, `{time: 4/4}`,
  * `{tempo: 72}`. Sie haben Vorrang vor dem, was ChurchTools am Lied/Arrangement hinterlegt hat –
- * wer die Datei bearbeitet, hat das letzte Wort.
+ * wer die Datei bearbeitet, hat das letzte Wort. Seit dem Lied-Editor L4 (23.10.2026) wandern sie beim Speichern
+ * im Editor und beim SongSelect-Import nach ChurchTools (`liedinfo.ts`) – `{key}` ausgenommen.
  */
 
 /**

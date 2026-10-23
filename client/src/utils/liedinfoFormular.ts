@@ -8,6 +8,7 @@ import {
   liedinfoAusDatei,
   liedinfoVergleich,
   liedinfoZeilenEntfernen,
+  tempoAusText,
   type Liedinfo,
   type LiedinfoFeld,
   type LiedinfoVergleich,
@@ -84,10 +85,8 @@ export function liedinfoAusFormular(f: LiedinfoFormular): Liedinfo {
 /** Einen Wert aus der Datei ins passende Formularfeld legen. */
 function setzeFeld(f: LiedinfoFormular, feld: LiedinfoFeld, wert: string): LiedinfoFormular {
   if (feld === 'tempo') {
-    const zahl = Math.round(Number(wert.replace(',', '.')));
-    return Number.isFinite(zahl) && zahl > 0
-      ? { ...f, arrangement: { ...f.arrangement, tempo: String(zahl) } }
-      : f;
+    const zahl = tempoAusText(wert);
+    return zahl === null ? f : { ...f, arrangement: { ...f.arrangement, tempo: String(zahl) } };
   }
   if (feld === 'beat') return { ...f, arrangement: { ...f.arrangement, beat: wert } };
   return { ...f, lied: { ...f.lied, [feld]: wert } };

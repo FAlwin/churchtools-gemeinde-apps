@@ -39,6 +39,8 @@ vi.mock('../hooks/useServices', () => ({
   // Liedinfo im Editor (L4) – hier ohne Daten: Der Editor zeigt dann keine Liedinfo.
   useSongStammdaten: () => ({ data: undefined }),
   useArrangements: () => ({ data: undefined }),
+  useLiedAendern: () => ({ mutateAsync: vi.fn() }),
+  useArrangementAendern: () => ({ mutateAsync: vi.fn() }),
 }));
 
 const anlegen = vi.fn();

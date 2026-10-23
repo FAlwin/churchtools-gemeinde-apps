@@ -25,6 +25,12 @@ export type LiedinfoFeld = (typeof LIEDINFO_FELDER)[number]['feld'];
 /** Werte je Feld als Text – fehlend oder leer heißt „nicht gesetzt“. */
 export type Liedinfo = Partial<Record<LiedinfoFeld, string | null>>;
 
+/** Ein Tempo aus einer Kopfzeile als ganze Zahl (`72`, `72,5` → 73) – `null`, wenn es keins ist. */
+export function tempoAusText(text: string): number | null {
+  const zahl = Math.round(Number(text.trim().replace(',', '.')));
+  return Number.isFinite(zahl) && zahl > 0 ? zahl : null;
+}
+
 /** Mehrere Zeilen desselben Felds (SongSelect: Original- und Übersetzungs-Autor) – keine geht verloren. */
 const TRENNER = ' / ';
 

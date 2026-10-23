@@ -310,7 +310,7 @@ mitarbeiten (z. B. über den Status oder global über die Gruppen).
     ChurchTools stehen sie bei der ersten angemeldeten Person: „Erziehungsberechtigte“ lesbar, „Unterschrift“
     lesbar als „✓ Erna Muster, 15.10.2026“ und die Striche in der Spalte „Unterschrift (Daten)“ (die man in der
     Liste ausblenden kann). Als Bild zu sehen ist die Unterschrift im Fenster einer Anmeldung (Reiter
-    „Anmeldungen“), später auch auf der Druckliste. Ein ChurchTools-Feld fasst höchstens 4.000 Zeichen (gemessen) – eine Unterschrift braucht meist
+    „Anmeldungen“); auf der Druckliste steht sie lesbar („✓ Erna Muster, 15.10.2026“). Ein ChurchTools-Feld fasst höchstens 4.000 Zeichen (gemessen) – eine Unterschrift braucht meist
     einige hundert.
   - **Gespeichert wird von selbst**; oben steht, ob gerade gespeichert wird, und bei einem Fehler „Nochmal“.
     Nach jeder Änderung bietet die Leiste oben „Rückgängig“ an (nicht beim Titelbild).

@@ -554,3 +554,116 @@ describe('TerminAnsicht – Ablauf anlegen (E6-5a)', () => {
     await waitFor(() => expect(ct.angelegt()).toBe('?event_id=5'));
   });
 });
+
+/**
+ * Neu aufsetzen (E6-5b, #691) – mit dem echten Kern (`ablaufNeuAufsetzen`: vorher vergleichen, nachher nachlesen);
+ * ChurchTools ist nachgebaut wie gemessen: Vorlage ersetzt mit neuen IDs, `DELETE` löst den geteilten Ablauf.
+ */
+describe('TerminAnsicht – Neu aufsetzen (E6-5b)', () => {
+  const ZIEL = { ...TERMIN, calendar: { domainIdentifier: '2' } };
+  const darf = startFuer({ rechte: { ...startFuer().rechte, ablaufKalender: [2] } });
+
+  function ctNeu(o: { geteilt?: boolean } = {}) {
+    let items: { id: number; title: string }[] | null = [
+      { id: 1, title: 'Alt eins' },
+      { id: 2, title: 'Alt zwei' },
+    ];
+    let geteilt = o.geteilt ?? false;
+    let ids = 100;
+    const geschrieben: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      const url = new URL(String(input));
+      const p = url.pathname;
+      const m = init?.method ?? 'GET';
+      if (p.endsWith('/csrftoken')) return Promise.resolve(json(200, { data: 'tok' }));
+      if (m !== 'GET') {
+        const rumpf = init?.body ? (JSON.parse(String(init.body)) as unknown) : null;
+        geschrieben.push(`${m} ${p}${url.search} ${JSON.stringify(rumpf)}`);
+        if (m === 'DELETE') {
+          items = null;
+          geteilt = false;
+          return Promise.resolve(new Response(null, { status: 204 }));
+        }
+        if (url.searchParams.get('template_id') === '31') {
+          items = [
+            { id: ids++, title: 'Neu eins' },
+            { id: ids++, title: 'Neu zwei' },
+          ];
+        }
+        return Promise.resolve(json(200, { data: {} }));
+      }
+      if (p === '/api/agendatemplates') {
+        return Promise.resolve(
+          json(200, { data: [{ id: 31, name: 'Sonntag', calendarId: 2, items: [{}, {}] }] }),
+        );
+      }
+      if (p === '/api/agendatemplates/31') {
+        return Promise.resolve(json(200, { data: { id: 31, items: [{}, {}] } }));
+      }
+      if (p === '/api/events/7/agenda') {
+        if (items === null) return Promise.resolve(json(404, { message: 'Not found.' }));
+        const keys = geteilt ? ['7', '8'] : ['7'];
+        return Promise.resolve(
+          json(200, {
+            data: {
+              calendarId: 2,
+              meta: { modifiedDate: '2026-10-23T10:00:00Z' },
+              items: items.map((i) => ({
+                ...i,
+                type: 'normal',
+                startTimes: Object.fromEntries(keys.map((k) => [k, '2026-10-18T08:00:00Z'])),
+              })),
+            },
+          }),
+        );
+      }
+      if (p === '/api/events/8') {
+        return Promise.resolve(
+          json(200, {
+            data: { id: 8, name: 'Abendgottesdienst', startDate: '2026-10-18T16:00:00Z' },
+          }),
+        );
+      }
+      if (p === '/api/events' && url.searchParams.get('from'))
+        return Promise.resolve(json(200, { data: [] }));
+      if (p === '/api/events/7') return Promise.resolve(json(200, { data: ZIEL }));
+      return Promise.resolve(json(200, { data: { id: 1 } }));
+    });
+    return { geschrieben };
+  }
+
+  async function bisZurNachfrage(): Promise<void> {
+    fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
+    fireEvent.click(screen.getByRole('button', { name: /Neu aufsetzen/ }));
+    await screen.findByRole('button', { name: /Sonntag/ });
+    fireEvent.click(screen.getByRole('button', { name: 'Weiter' }));
+  }
+
+  it('aus der Vorlage ersetzen: Nachfrage mit Zahl, ein PUT, danach die neuen Punkte – weiter im Bearbeiten', async () => {
+    const ct = ctNeu();
+    zeige({ start: darf });
+    await bisZurNachfrage();
+    expect(
+      await screen.findByText(
+        /Die 2 Punkte dieses Ablaufs werden durch die Vorlage „Sonntag“ ersetzt/,
+      ),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Ersetzen' }));
+    expect(await screen.findByText('Neu eins')).toBeTruthy();
+    expect(ct.geschrieben).toEqual(['PUT /api/events/7/agenda?template_id=31 {}']);
+    expect(screen.getByRole('button', { name: 'Fertig' })).toBeTruthy();
+  });
+
+  it('geteilt, nur für diesen Termin: nennt den anderen Termin, löst die Verbindung und legt mit dem Kalender an', async () => {
+    const ct = ctNeu({ geteilt: true });
+    zeige({ start: darf });
+    await bisZurNachfrage();
+    expect(await screen.findByText('So, 18.10. · 18:00 · Abendgottesdienst')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Nur für diesen Termin neu' }));
+    expect(await screen.findByText('Neu eins')).toBeTruthy();
+    expect(ct.geschrieben).toEqual([
+      'DELETE /api/events/7/agenda null',
+      'PUT /api/events/7/agenda?template_id=31 {"calendarId":2}',
+    ]);
+  });
+});

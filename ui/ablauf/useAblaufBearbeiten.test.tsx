@@ -23,18 +23,23 @@ function Harness({
   aktionen,
   items = ITEMS,
   gruppenVerborgen,
+  neuAufsetzen,
+  abgeschlossen = false,
 }: {
   aktionen: AblaufAktionen;
   items?: AblaufZeile[];
   gruppenVerborgen?: boolean;
+  neuAufsetzen?: () => void;
+  abgeschlossen?: boolean;
 }) {
   const b = useAblaufBearbeiten({
     gruppenVerborgen,
+    neuAufsetzen,
     aktiv: true,
     bereit: true,
     items,
     beginn: '10:00',
-    abgeschlossen: false,
+    abgeschlossen,
     sperrHinweis: 'gesperrt',
     aktionen,
     dienste: [],
@@ -196,5 +201,29 @@ describe('Hinweis: nicht alle Dienstgruppen sichtbar (#676)', () => {
     render(<Harness aktionen={aktionen()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Bearbeiten' }));
     expect(screen.queryByText(HINWEIS)).toBeNull();
+  });
+});
+
+describe('„Neu aufsetzen …“ in der Hinweiszeile (E6-5b)', () => {
+  it('steht nur, wenn der Aufrufer es anbietet – und ruft ihn', () => {
+    const { unmount } = render(<Harness aktionen={aktionen()} />);
+    expect(screen.queryByRole('button', { name: /Neu aufsetzen/ })).toBeNull();
+    unmount();
+
+    const neu = vi.fn();
+    render(<Harness aktionen={aktionen()} neuAufsetzen={neu} />);
+    // Die Anleitung genau einmal – in der Zeile mit dem Knopf, nicht noch einmal darüber.
+    expect(screen.getByTestId('liste').textContent?.split('zum Sortieren')).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: /Neu aufsetzen/ }));
+    expect(neu).toHaveBeenCalledTimes(1);
+  });
+
+  it('abgeschlossen: der Knopf steht allein (ohne Anleitung) und zeigt den Sperr-Hinweis statt zu öffnen', async () => {
+    const neu = vi.fn();
+    render(<Harness aktionen={aktionen()} neuAufsetzen={neu} abgeschlossen />);
+    expect(screen.getByTestId('liste').textContent).not.toContain('zum Sortieren');
+    fireEvent.click(screen.getByRole('button', { name: /Neu aufsetzen/ }));
+    expect(neu).not.toHaveBeenCalled();
+    expect(await screen.findByText('gesperrt')).toBeTruthy();
   });
 });

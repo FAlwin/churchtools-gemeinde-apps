@@ -462,7 +462,7 @@ export async function ablaufVorlagen(): Promise<AblaufVorlage[]> {
 
 /** `GET /api/services/:id/agenda/bestand` – was die Nachfrage „Neu aufsetzen“ zeigt (E6-5b). */
 export function ablaufBestand(eventId: number): Promise<AblaufBestand> {
-  return ablaufBestandLesen(browserAblaufLeser, eventId);
+  return ablaufBestandLesen(browserAblaufLeser, eventId, ZEITZONE);
 }
 
 /** `GET /api/kalender` – die Kalender, für die Verwaltung „Termine ohne Ablauf". */

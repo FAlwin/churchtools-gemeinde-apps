@@ -6,6 +6,7 @@
  * Minuten Vorhaltezeit halbieren sie. Ein Fehler wird bewusst NICHT gemerkt, sonst hielte ein
  * einzelner Aussetzer zehn Minuten.
  */
+import { config } from '../config.js';
 import { ctGet } from './ctHttp.js';
 import type {
   CtAbsence,
@@ -97,6 +98,7 @@ export function getAblaufBestand(cookie: string, eventId: number): Promise<Ablau
   return ablaufBestandLesen(
     { agenda: (id) => getAgenda(cookie, id), termin: (id) => getEvent(cookie, id) },
     eventId,
+    config.zeitzone,
   );
 }
 

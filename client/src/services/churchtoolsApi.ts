@@ -180,7 +180,7 @@ export function ablaufBestand(eventId: number): Promise<AblaufBestand> {
  */
 export function ablaufNeuAufsetzen(
   eventId: number,
-  kalenderId: number,
+  kalenderId: number | null,
   quelle: AblaufQuelle,
   gesehen: AblaufStand,
   nurDieser: boolean,

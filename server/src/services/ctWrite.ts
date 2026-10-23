@@ -292,7 +292,7 @@ export function createAblauf(
 export function setAblaufNeu(
   cookie: string,
   eventId: number,
-  kalenderId: number,
+  kalenderId: number | null,
   quelle: AblaufQuelle,
   gesehen: AblaufStand,
   nurDieser: boolean,

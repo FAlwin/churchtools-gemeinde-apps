@@ -40,7 +40,8 @@
   }
 
   h3 + h3,
-  .gruppen + h3 {
+  .gruppen + h3,
+  .dazu + h3 {
     margin-top: 10px;
   }
 }
@@ -90,4 +91,139 @@
   font-weight: 700;
   text-align: center;
   text-decoration: none;
+}
+
+// ── Struktur ändern (O5) ──────────────────────────────────────────────────────
+
+.mitAktion {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.klein {
+  @include m.aktionKnopf;
+  padding: 3px 8px;
+  border-radius: var(--r-ctrl);
+  font-size: 12px;
+}
+
+// „＋ Weitere Obergruppe“, „＋ Untergruppe anlegen“ – leise, wie ein Link mit Fläche beim Darüberfahren.
+.dazu {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  background: none;
+  color: var(--blue-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--blue-soft);
+  }
+}
+
+.schritt {
+  padding: 10px 0;
+  border-top: 1px solid var(--hair);
+
+  h3 {
+    margin: 0 0 8px;
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 700;
+  }
+}
+
+.frage {
+  margin: 0 0 6px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.beschriftung {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.feld {
+  @include m.eingabefeld;
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 15px;
+}
+
+.ziele {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.ziel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 6px;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--section);
+  }
+}
+
+.knoepfe {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.zweit {
+  @include m.aktionKnopf;
+  padding: 8px 14px;
+  border-radius: var(--r-ctrl);
+  font-size: 14px;
+}
+
+.primaer {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  background: var(--blue);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}
+
+.fehler {
+  margin: 8px 0;
+  color: var(--red);
+  font-size: 14px;
 }

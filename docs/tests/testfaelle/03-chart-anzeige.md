@@ -541,17 +541,21 @@ Einstellung gilt nur auf diesem Gerät.
 
 **Das brauchst du:** Ein Lied, das du bearbeiten darfst, mit mehreren Teilen (z. B. Vers 1, Chorus, Vers 2).
 
-**Das muss passieren:** Über dem Text steht die Karte **Ablauf** mit einem Kärtchen je Teil (ohne eigenen
-Ablauf: die Teile wie im Text). Kärtchen lassen sich am Griff verschieben, mit × entfernen und mit
+**Das muss passieren:** Über dem Text steht die Karte **Ablauf** – am iPad eingeklappt als eine Zeile: „Wie im
+Text“ oder, bei eigenem Ablauf, die Marke **Eigener Ablauf** mit der Reihenfolge. **Bearbeiten** klappt sie auf:
+ein Kärtchen je Teil (ohne eigenen Ablauf: die Teile wie im Text). Kärtchen lassen sich am Griff verschieben
+(ohne sich zu verziehen), mit × entfernen und mit
 **+ Teil** anhängen; die Vorschau zeigt die Teile in dieser Reihenfolge, Wiederholungen voll, nicht genannte
 Teile nicht, oben im Blatt „Ablauf: …“. **Wie im Text** stellt die Reihenfolge des Texts wieder her. Im
 Text selbst sieht man keine `{flow: …}`-Zeile. `----` erscheint nirgends.
 
-1. Lied öffnen → Version bearbeiten (oder neue Version). Die Karte **Ablauf** zeigt die Teile wie im Text.
+1. Lied öffnen → Version bearbeiten (oder neue Version). Die Karte **Ablauf** ist eine Zeile „Wie im Text“ →
+   **Bearbeiten** → die Teile wie im Text.
 2. **+ Chorus** antippen, dann **Vers 2** am Griff hinter den letzten Chorus ziehen → Vorschau: Chorus
    zweimal, „Ablauf: …“ im Kopf.
 3. **Rückgängig** (in der Text-Karte) → die letzte Änderung am Ablauf ist zurück.
-4. Ein Kärtchen mit **×** entfernen → der Teil fehlt in der Vorschau. **Wie im Text** → alles wie vorher.
+4. Ein Kärtchen mit **×** entfernen → der Teil fehlt in der Vorschau. **Fertig** → die Zeile zeigt **Eigener
+   Ablauf** und die Reihenfolge. **Bearbeiten** → **Wie im Text** → alles wie vorher.
 5. Ein Lied, in dessen Ablauf ein Name steht, den es nicht gibt (z. B. `Refrain`) → dieses Kärtchen ist
    rot umrandet und sagt „fehlt im Text“.
 6. **Handy:** Umschalter **Ablauf** → eine Liste mit Griff und großem ×, darunter „Teil hinzufügen“.
@@ -564,12 +568,13 @@ Text selbst sieht man keine `{flow: …}`-Zeile. `----` erscheint nirgends.
 - **Betrifft:** `client/src/utils/chordpro.ts`, `client/src/utils/chordPdf.ts`, `client/src/components/ChordEditor.tsx`, `client/src/components/AblaufKarte.tsx`, `client/src/components/ChordProInput.tsx`, `shared/ct/liedtext.ts`
 - **Automatisiert:** weitgehend – `chordpro.test.ts` (Flow, Rückfall, Einfügestelle, `----`),
   `chordPdf.test.ts` (Reihenfolge, Wegweiser, `----` unsichtbar, Transponierung bei Wiederholung),
-  `ChordEditor.test.tsx` (Ablauf-Karte: hinzufügen, entfernen, „Wie im Text“, unbekannte Namen),
+  `ChordEditor.test.tsx` (Ablauf-Karte: hinzufügen, entfernen, „Wie im Text“, unbekannte Namen, eingeklappt),
   `songTextIndex.test.ts` (Suche), `e2e/editor-ablauf.spec.ts` (hinzufügen, ziehen, Rückgängig, Handy;
-  gespeichert genau die Flow-Zeile von `flowSetzen`, im Text unsichtbar). Von Hand bleibt Ziehen mit dem
+  gespeichert genau die Flow-Zeile von `flowSetzen`, im Text unsichtbar; beim Ziehen nichts gestreckt;
+  eingeklappt). Von Hand bleibt Ziehen mit dem
   Finger am iPad und Handy
 - **Historie:** #606 (Rückmeldung Musik-Bereichsleiter, 17.10.2026), Ablauf als Kärtchen: Lied-Editor L2
-  (22.10.2026)
+  (22.10.2026); eingeklappt + Ziehen ohne Strecken nach Alwins iPad-Test (22.10.2026)
 
 </details>
 

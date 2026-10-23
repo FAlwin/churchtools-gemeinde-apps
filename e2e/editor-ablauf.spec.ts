@@ -25,6 +25,13 @@ async function oeffnen(page: Page) {
   await expect(page.getByRole('region', { name: 'Text' })).toBeAttached({ timeout: 30_000 });
 }
 
+/** Breit ist die Karte eingeklappt (Alwin, 22.10.2026) – zum Bearbeiten aufklappen. */
+async function ablaufOeffnen(page: Page) {
+  const ablauf = page.getByRole('region', { name: 'Ablauf' });
+  await ablauf.getByRole('button', { name: 'Bearbeiten' }).click();
+  return ablauf;
+}
+
 const kaertchen = (page: Page) =>
   page.getByRole('region', { name: 'Ablauf' }).getByRole('listitem').locator('span').first();
 
@@ -42,7 +49,7 @@ test.describe('breit (iPad)', () => {
     page,
   }) => {
     await oeffnen(page);
-    const ablauf = page.getByRole('region', { name: 'Ablauf' });
+    const ablauf = await ablaufOeffnen(page);
     expect(await reihenfolge(page)).toEqual(['Vers', 'Chorus']);
     await ablauf.getByRole('button', { name: 'Chorus', exact: true }).click();
     expect(await reihenfolge(page)).toEqual(['Vers', 'Chorus', 'Chorus']);
@@ -57,6 +64,15 @@ test.describe('breit (iPad)', () => {
     await page.mouse.down();
     await page.mouse.move(g.x + 20, g.y + g.height / 2, { steps: 5 });
     await page.mouse.move(z.x + z.width - 4, z.y + z.height / 2, { steps: 12 });
+    // Während des Ziehens wird nichts gestreckt (Alwin am iPad: „verziehen sich ganz komisch“) – die
+    // Kärtchen sind verschieden breit, verschoben werden darf nur, nicht skaliert.
+    const skalen = await ablauf.getByRole('listitem').evaluateAll((li) =>
+      li.map((x) => {
+        const m = new DOMMatrix(getComputedStyle(x).transform);
+        return [m.a, m.d];
+      }),
+    );
+    expect(skalen.flat().every((v) => Math.abs(v - 1) < 0.001)).toBe(true);
     await page.mouse.up();
     await expect.poll(() => reihenfolge(page)).toEqual(['Chorus', 'Chorus', 'Vers']);
     // dnd-kit fängt Klicks ab, bis das Ablegen ganz durch ist (damit das Ablegen nichts antippt) – in echt
@@ -71,7 +87,7 @@ test.describe('breit (iPad)', () => {
     page,
   }) => {
     await oeffnen(page);
-    const ablauf = page.getByRole('region', { name: 'Ablauf' });
+    const ablauf = await ablaufOeffnen(page);
     await ablauf.getByRole('button', { name: 'Chorus', exact: true }).click();
     await page
       .getByRole('region', { name: 'Text' })
@@ -84,6 +100,27 @@ test.describe('breit (iPad)', () => {
     expect(await reihenfolge(page)).toEqual(['Vers', 'Chorus']);
     await page.getByRole('button', { name: 'Speichern' }).click();
     expect(await gespeichert(page)).toBe(DEMO_EDITOR_TEXT);
+  });
+});
+
+test.describe('breit eingeklappt', () => {
+  test.use({ viewport: { width: 1180, height: 820 } });
+
+  test('eine Zeile; eigener Ablauf ist markiert, „Fertig“ klappt ein – der Text bekommt den Platz', async ({
+    page,
+  }) => {
+    await oeffnen(page);
+    const ablauf = page.getByRole('region', { name: 'Ablauf' });
+    await expect(ablauf).toContainText('Wie im Text');
+    await expect(ablauf.getByRole('listitem')).toHaveCount(0);
+    expect((await ablauf.boundingBox())!.height).toBeLessThan(60);
+
+    await ablauf.getByRole('button', { name: 'Bearbeiten' }).click();
+    await ablauf.getByRole('button', { name: 'Chorus', exact: true }).click();
+    await ablauf.getByRole('button', { name: 'Fertig' }).click();
+    await expect(ablauf.getByRole('listitem')).toHaveCount(0);
+    await expect(ablauf).toContainText('Eigener Ablauf');
+    await expect(ablauf).toContainText('Vers · Chorus · Chorus');
   });
 });
 

@@ -409,3 +409,34 @@ Text ändert sich durch den neuen Aufbau nichts.
 - **Historie:** Neuer Lied-Editor, Scheibe L1 (22.10.2026, Entwurf C); Alwin: „zu kompliziert und zu altbacken"
 
 </details>
+
+### TF-EINST-15 · Lied-Editor: Akkorde als Kärtchen, Teile als Band – am echten iPad
+
+**Das brauchst du:** Ein iPad (und gern ein Handy) mit Bildschirmtastatur, das Recht, Versionen anzulegen, und
+ein Testlied. **Auf Staging nicht speichern** – Staging hängt am echten ChurchTools.
+
+**Das muss passieren:** Im Text stehen keine Klammern mehr: Akkorde sind blaue Kärtchen, jeder Teil beginnt mit
+einem grauen Band, `----` ist die Linie „Pedal hält hier“. Tippen, Löschen und Rückgängig verhalten sich rund um
+ein Kärtchen so, wie man es erwartet – ein Kärtchen verschwindet immer ganz oder gar nicht.
+
+1. Ein Lied öffnen → Version bearbeiten. Akkorde sind Kärtchen, „VERS“ / „CHORUS“ stehen als Band darüber.
+2. Mit dem Finger **direkt hinter** ein Kärtchen tippen, auf der Bildschirmtastatur **Löschen**: das ganze
+   Kärtchen ist weg (nicht nur ein Teil, kein Buchstabe davor). **Rückgängig** → es ist wieder da.
+3. **Direkt vor** ein Kärtchen tippen und ein Wort schreiben: es steht vor dem Akkord, das Kärtchen bleibt heil.
+4. Mitten in einem Wort hinter einem Kärtchen **Diktieren** und einen Satz sprechen; **Autokorrektur** ein
+   Wort ersetzen lassen: Kärtchen bleiben, wo sie waren.
+5. Im Ablauf einen Chorus dazu: Am Band steht „2× im Ablauf“.
+6. **ChordPro-Text** antippen: der rohe Text mit `[E]` und `{comment: Vers}`; noch einmal → wieder Kärtchen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `client/src/components/ChordProInput.tsx`, `client/src/components/ChordEditor.tsx`, `client/src/utils/chordpro.ts`
+- **Automatisiert:** teilweise – `e2e/editor-text.spec.ts` (Kärtchen und Bänder, Rücktaste löscht den ganzen
+  Akkord, Rückgängig, Tippen davor, „× im Ablauf“, rohe Ansicht; Chromium in der CI, WebKit/Mac-Safari von Hand
+  am 22.10.2026 grün). **Von Hand bleibt das echte iPad**: Bildschirmtastatur, Diktieren, Autokorrektur – die
+  lassen sich nicht nachbilden (Messung L0). Klappt Schritt 2 nicht, liegt im Versuchszweig `spike/editor-l0`
+  ein eigener Lösch-Griff (`kaertchenLoeschen`) bereit.
+- **Historie:** Neuer Lied-Editor, Scheibe L3 (22.10.2026) – vor dem Mergen von L3 am echten iPad zu prüfen
+
+</details>

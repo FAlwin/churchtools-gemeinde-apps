@@ -35,6 +35,30 @@
   cursor: pointer;
   flex-shrink: 0;
 }
+// Eingeklappt: eine Zeile, die Kurzform darf abgeschnitten werden.
+.zu {
+  align-items: center;
+  border-bottom: none;
+  .kurz {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    color: var(--text2);
+  }
+}
+// Markierung: das Lied wird nicht in der Reihenfolge des Texts gesungen.
+.eigen {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: var(--r-ctrl);
+  background: var(--blue-tile);
+  color: var(--blue-tile-text);
+  font-size: 12px;
+  font-weight: 600;
+}
 .leer {
   margin: 0;
   padding: 12px;

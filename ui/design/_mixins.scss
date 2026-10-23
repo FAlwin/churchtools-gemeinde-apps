@@ -121,14 +121,17 @@
   color: var(--text);
   font-family: inherit;
 
+  // Im Fokus blauer Rand mit Schein – wie die Felder der ChurchTools-Fenster (E6-O F1, #716).
   @if $innen {
     &:focus-within {
       border-color: var(--blue);
+      box-shadow: 0 0 0 3px var(--blue-soft);
     }
   } @else {
     &:focus {
       outline: none;
       border-color: var(--blue);
+      box-shadow: 0 0 0 3px var(--blue-soft);
     }
   }
 }
@@ -186,7 +189,8 @@
 
 /**
  * **Der breite blaue Hauptknopf** eines Fensters („Anlegen“, „Lied anlegen“) – vorher nur als `.primaryWide` in der
- * Musik-App (`NewSongSheet.module.scss`); seit E6-5a nutzt ihn auch der gemeinsame Baustein „Ablauf anlegen“.
+ * Musik-App (`NewSongSheet.module.scss`). Läuft aus: Umgezogene Fenster (E6-O F1, #716) reichen ihren Hauptknopf als
+ * `FensterKnopf` in die Fußzeile von `Sheet`; „Ablauf anlegen“ war das erste.
  */
 @mixin hauptKnopfBreit {
   width: 100%;

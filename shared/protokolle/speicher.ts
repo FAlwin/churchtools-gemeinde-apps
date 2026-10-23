@@ -143,6 +143,17 @@ export function dokumentAusTeilen(
   }
 }
 
+/**
+ * **Das Dokument einer Sitzung** – ein geplantes Protokoll hat noch keins (`null`), sonst `dokumentAusTeilen`. Die
+ * eine Stelle dafür (Protokoll ansehen, Suche); vorher stand die Regel in der Ansicht.
+ */
+export function dokumentDerSitzung(
+  kopf: Pick<ProtokollKopf, 'sitzung' | 'stand' | 'status'> | null,
+  teile: readonly ProtokollTeil[],
+): Block[] | null {
+  return kopf && kopf.status !== 'geplant' ? dokumentAusTeilen(kopf, teile) : null;
+}
+
 /** Nach so vielen Minuten ohne Lebenszeichen gilt eine Schreibsperre als verlassen. */
 export const SPERRE_MINUTEN = 10;
 

@@ -11,6 +11,8 @@ import * as FF from './formularFelder';
 import * as NP from './nachpruefung';
 import * as MG from './mitglieder';
 import * as ZA from './zahlung';
+import * as TP from '@ui/teilen/sharePdf';
+import * as TF from '@ui/teilen/shareFile';
 import {
   e as eListe,
   mitglieder as mitgliederListe,
@@ -73,6 +75,18 @@ vi.mock('./zahlung', () => ({
   betragWiederherstellen: vi.fn(),
 }));
 const za = vi.mocked(ZA);
+vi.mock('@ui/teilen/sharePdf', () => ({ sharePdf: vi.fn(), downloadPdf: vi.fn() }));
+const tp = vi.mocked(TP);
+vi.mock('@ui/teilen/shareFile', async (original) => ({
+  ...(await original<typeof import('@ui/teilen/shareFile')>()),
+  shareOrDownload: vi.fn(),
+}));
+const tf = vi.mocked(TF);
+// jsdom kann keine Leinwand – das PNG kommt nachgestellt, das Muster bleibt echt.
+vi.mock('@ui/teilen/qr', async (original) => ({
+  ...(await original<typeof import('@ui/teilen/qr')>()),
+  qrPng: vi.fn(() => Promise.resolve(new Blob(['png'], { type: 'image/png' }))),
+}));
 const PRUEF_OK = {
   plaetze: { belegt: 9, wartend: 0, max: 10, wartenTrotzPlatz: false },
   auswahl: null,
@@ -850,5 +864,40 @@ describe('Reiter Anmeldungen (A7-2)', () => {
     await waitFor(() => expect(m.einstellungenVon).toHaveBeenCalledTimes(2));
     // Das Fenster bleibt dabei offen.
     expect(screen.getByText(/Für die ganze Anmeldung/)).toBeTruthy();
+  });
+});
+
+describe('QR-Code und Aushang (A8-4)', () => {
+  it('vierter Knopf der Karte: QR zum Link, Bild teilen, Aushang mit Termin und Anmeldeschluss in Ortszeit', async () => {
+    stelle(true, 1, {
+      termin: { beginn: '2026-11-21T12:00', ende: null, ort: 'Gemeindehaus', terminId: null },
+    });
+    // 0:30 Uhr Ortszeit am 11.11. ist in UTC noch der 10.11. – gezeigt wird der Tag in Ortszeit.
+    m.anmeldungVon.mockResolvedValue({
+      maxPlaetze: null,
+      warteliste: false,
+      ab: null,
+      bis: '2026-11-10T23:30:00Z',
+    });
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Anmeldelink' });
+    fireEvent.click(await within(karte).findByRole('button', { name: 'QR-Code' }));
+    const LINK = 'https://anmeldung.beispiel.de/#ct.test/91';
+    expect(screen.getByRole('img', { name: `QR-Code zu ${LINK}` })).toBeTruthy();
+    const aushang = await screen.findByRole('button', { name: 'Aushang als PDF' });
+    fireEvent.click(screen.getByRole('button', { name: 'QR-Code als Bild' }));
+    expect(tf.shareOrDownload.mock.calls[0][1]).toBe('Gemeindeessen – QR-Code.png');
+    fireEvent.click(aushang);
+    const [doc, name] = tp.sharePdf.mock.calls[0];
+    expect(name).toBe('Gemeindeessen – Aushang');
+    const roh = doc.output();
+    for (const t of [
+      '(Gemeindeessen)',
+      '(Sa, 21.11.2026 · Gemeindehaus)',
+      '(Jetzt anmelden)',
+      `(${LINK})`,
+      '(Anmeldung bis Mi, 11.11.2026)',
+    ])
+      expect(roh).toContain(t);
   });
 });

@@ -3,7 +3,7 @@ import { Icon } from '@ui/icons/icons';
 import { ctBasis } from '@ui/ct/basis';
 import { tagAusIso } from '@shared/ct/zeit';
 import { geburtsdatumAn, type OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
-import { anmeldeLink, ortszeitAus } from '@shared/anmeldung/termin';
+import { anmeldeLink, ortszeitAus, terminZeile } from '@shared/anmeldung/termin';
 import { kannEtwasKosten, wozuGeburtsdatum } from '@shared/anmeldung/preis';
 import { ibanText, verwendungszweck } from '@shared/anmeldung/bezahlung';
 import { STANDARD_ZAHLARTEN, zahlartenFuer } from '@shared/anmeldung/zahlung';
@@ -315,6 +315,11 @@ export function VeranstaltungSeite({
           link={anmeldeLink(formularAdresse, ctBasis(), id)}
           titel={daten.name}
           stand={daten}
+          aushang={{
+            gemeinde,
+            termin: terminZeile(e),
+            anmeldeschluss: a.bis ? tagAusIso(a.bis, zeitzone) : null,
+          }}
           onEinrichten={darf ? () => setFenster('freigeben') : undefined}
         />
       )}

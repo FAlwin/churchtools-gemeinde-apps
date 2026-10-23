@@ -31,6 +31,27 @@ function deriveSectionType(label: string): string {
   return 'verse';
 }
 
+/**
+ * **Beginnt diese Zeile einen Song-Teil?** Dann mit Typ und Überschrift, sonst `null`. EINE Regel für das
+ * Blatt (`parseChordPro`) und die Bänder im Editor (Lied-Editor L3) – beide Dialekte:
+ * `{start_of_verse: Vers 1}`, Kurzform `{chorus: 2}`, SongSelect `{comment: Vers}`.
+ */
+export function abschnittsKopf(zeile: string): { type: string; label: string } | null {
+  const ln = zeile.trim();
+  const start = ln.match(/^\{start_of_(\w+)(?:[:\s]+(.+?))?\}$/i);
+  if (start) return { type: start[1].toLowerCase(), label: start[2] || start[1] };
+  const kurz = ln.match(
+    /^\{(verse|chorus|bridge|pre[-_]?chorus|intro|outro|tag)(?:[:\s]+(.+?))?\}$/i,
+  );
+  if (kurz) return { type: kurz[1].toLowerCase().replace(/-/g, '_'), label: kurz[2] || kurz[1] };
+  const kommentar = ln.match(/^\{comment[:\s]+(.+?)\}$/i);
+  if (kommentar) {
+    const label = kommentar[1].trim();
+    return { type: deriveSectionType(label), label };
+  }
+  return null;
+}
+
 /** Zerlegt den rohen ChordPro-Text in Abschnitte. */
 export function parseChordPro(text: string): ChordProSection[] {
   const lines = text.split('\n');
@@ -40,14 +61,10 @@ export function parseChordPro(text: string): ChordProSection[] {
   for (const raw of lines) {
     const ln = raw.trim();
 
-    // Standard: {start_of_verse: Label}
-    const startMatch = ln.match(/^\{start_of_(\w+)(?:[:\s]+(.+?))?\}$/i);
-    if (startMatch) {
-      current = {
-        type: startMatch[1].toLowerCase(),
-        label: startMatch[2] || startMatch[1],
-        lines: [],
-      };
+    // Teil-Anfang (beide Dialekte) – die Regel steht in `abschnittsKopf`.
+    const kopf = abschnittsKopf(ln);
+    if (kopf) {
+      current = { ...kopf, lines: [] };
       sections.push(current);
       continue;
     }
@@ -55,29 +72,6 @@ export function parseChordPro(text: string): ChordProSection[] {
     // Standard: {end_of_verse}
     if (/^\{end_of_\w+\}$/i.test(ln)) {
       current = null;
-      continue;
-    }
-
-    // Standard-Kurzform: {verse}, {chorus: 2}, {pre-chorus} …
-    const shortMatch = ln.match(
-      /^\{(verse|chorus|bridge|pre[-_]?chorus|intro|outro|tag)(?:[:\s]+(.+?))?\}$/i,
-    );
-    if (shortMatch) {
-      current = {
-        type: shortMatch[1].toLowerCase().replace(/-/g, '_'),
-        label: shortMatch[2] || shortMatch[1],
-        lines: [],
-      };
-      sections.push(current);
-      continue;
-    }
-
-    // SongSelect-Dialekt: {comment: Vers}, {comment: Chorus 2}
-    const commentMatch = ln.match(/^\{comment[:\s]+(.+?)\}$/i);
-    if (commentMatch) {
-      const label = commentMatch[1].trim();
-      current = { type: deriveSectionType(label), label, lines: [] };
-      sections.push(current);
       continue;
     }
 
@@ -125,7 +119,7 @@ const TRENNER = /^-{4,}$/;
 export type FlowTeil = ChordProSection & { index: number };
 
 /** Namen vergleichen: Groß-/Kleinschreibung und mehrfache Leerzeichen zählen nicht. */
-function flowName(s: string): string {
+export function flowName(s: string): string {
   return s.toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
@@ -261,6 +255,19 @@ export function parseLine(line: string): ChordPair[] {
     pairs.push({ chord: m[1] || null, text: m[2] });
   }
   return pairs;
+}
+
+/**
+ * **Die Akkorde eines Lieds, häufigste zuerst** (L5: Reihe „Im Lied“ der Akkord-Leiste). Gelesen über
+ * `parseChordPro`/`parseLine` – dieselbe Grammatik wie das Blatt, Direktiven-Zeilen zählen nicht.
+ */
+export function akkordeImText(text: string): string[] {
+  const zahl = new Map<string, number>();
+  for (const teil of parseChordPro(text))
+    for (const zeile of teil.lines)
+      for (const p of parseLine(zeile))
+        if (p.chord) zahl.set(p.chord, (zahl.get(p.chord) ?? 0) + 1);
+  return [...zahl.entries()].sort((a, b) => b[1] - a[1]).map(([a]) => a);
 }
 
 /** Liest Metadaten ({title}, {key}, {tempo}, {ccli} …) aus dem ChordPro-Text. */

@@ -9,6 +9,8 @@ import {
   type OeffentlicheEinstellungen,
 } from '@shared/anmeldung/formular';
 import { amEnde } from '@shared/anmeldung/baukasten';
+import { datumText } from '@shared/ct/datum';
+import { terminZeile } from '@shared/anmeldung/termin';
 import {
   betragAus,
   neueAnmeldeNr,
@@ -108,13 +110,6 @@ const ERGEBNIS_TEXT: Record<PersonErgebnis, string> = {
   ausgebucht: 'kein Platz mehr',
   offen: 'nicht angemeldet',
 };
-
-const WOCHENTAG = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
-
-function datumText(tag: string): string {
-  const d = new Date(`${tag}T00:00:00Z`);
-  return `${WOCHENTAG[d.getUTCDay()]}, ${tag.slice(8, 10)}.${tag.slice(5, 7)}.${tag.slice(0, 4)}`;
-}
 
 /** Löschdatum: Ende (sonst Beginn) der Veranstaltung plus Löschfrist. */
 function loeschTag(e: OeffentlicheEinstellungen): string | null {
@@ -390,14 +385,6 @@ function Symbol({ name }: { name: keyof typeof SYMBOLE }) {
       <path d={SYMBOLE[name]} />
     </svg>
   );
-}
-
-/** Termin in einer Zeile: „Sa, 21.11.2026 · Gemeindehaus“ (mehrtägig mit „–“), sonst „Termin folgt“. */
-function terminZeile(e: OeffentlicheEinstellungen): string {
-  const t = e.termin;
-  return t
-    ? `${datumText(t.beginn.slice(0, 10))}${t.ende && t.ende.slice(0, 10) !== t.beginn.slice(0, 10) ? ` – ${datumText(t.ende.slice(0, 10))}` : ''}${t.ort ? ` · ${t.ort}` : ''}`
-    : 'Termin folgt';
 }
 
 /**

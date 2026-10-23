@@ -14,7 +14,6 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 const eingabe = vi.hoisted(() => ({
   insert: vi.fn(),
   aendern: vi.fn(),
-  appendChord: vi.fn(),
   undo: vi.fn(),
   redo: vi.fn(),
 }));
@@ -130,10 +129,45 @@ describe('ChordEditor – Ablauf und Weiterschalt-Punkt', () => {
     return [a.from, a.to, a.insert];
   }
 
+  /** Breit ist die Karte eingeklappt (Alwin, 22.10.2026) – zum Bearbeiten aufklappen. */
+  function ablaufOeffnen() {
+    const ablauf = screen.getByRole('region', { name: 'Ablauf' });
+    fireEvent.click(within(ablauf).getByRole('button', { name: 'Bearbeiten' }));
+    return ablauf;
+  }
+
+  it('breit eingeklappt: „Wie im Text“ ohne eigene Reihenfolge, keine Kärtchen', () => {
+    zeige({ initialText: '{comment: Vers}\nA\n{comment: Chorus}\nB', mitVersionsname: false });
+    const ablauf = screen.getByRole('region', { name: 'Ablauf' });
+    expect(within(ablauf).getByText('Wie im Text')).toBeTruthy();
+    expect(within(ablauf).queryByText('Eigener Ablauf')).toBeNull();
+    expect(within(ablauf).queryAllByRole('listitem')).toHaveLength(0);
+  });
+
+  it('breit eingeklappt: eigener Ablauf ist markiert, mit Kurzform und fehlenden Teilen', () => {
+    zeige({
+      initialText: '{flow: Chorus, Vers, Refrain}\n{comment: Vers}\nA\n{comment: Chorus}\nB',
+      mitVersionsname: false,
+    });
+    const ablauf = screen.getByRole('region', { name: 'Ablauf' });
+    expect(within(ablauf).getByText('Eigener Ablauf')).toBeTruthy();
+    expect(within(ablauf).getByText('Chorus · Vers · Refrain')).toBeTruthy();
+    expect(within(ablauf).getByText('1 Teil fehlt im Text')).toBeTruthy();
+  });
+
+  it('„Fertig“ klappt wieder ein', () => {
+    zeige({ initialText: '{comment: Vers}\nA', mitVersionsname: false });
+    const ablauf = ablaufOeffnen();
+    expect(within(ablauf).getAllByRole('listitem')).toHaveLength(1);
+    fireEvent.click(within(ablauf).getByRole('button', { name: 'Fertig' }));
+    expect(within(ablauf).queryAllByRole('listitem')).toHaveLength(0);
+    expect(within(ablauf).getByRole('button', { name: 'Bearbeiten' })).toBeTruthy();
+  });
+
   it('„+ Chorus“ ohne Flow-Zeile: legt sie an – mit den Teilen wie im Text und Chorus dahinter', () => {
     const text = '{title: Treu}\n{comment: Vers}\nA\n{comment: Chorus}\nB';
     zeige({ initialText: text, mitVersionsname: false });
-    const ablauf = screen.getByRole('region', { name: 'Ablauf' });
+    const ablauf = ablaufOeffnen();
     fireEvent.click(within(ablauf).getByRole('button', { name: 'Chorus' }));
     expect(eingabe.aendern).toHaveBeenCalledWith(
       ...aenderungFuer(text, ['Vers', 'Chorus', 'Chorus']),
@@ -143,7 +177,7 @@ describe('ChordEditor – Ablauf und Weiterschalt-Punkt', () => {
   it('× nimmt einen Eintrag heraus, „Wie im Text“ die ganze Zeile', () => {
     const text = '{flow: Chorus, Vers}\n{comment: Vers}\nA\n{comment: Chorus}\nB';
     zeige({ initialText: text, mitVersionsname: false });
-    const ablauf = screen.getByRole('region', { name: 'Ablauf' });
+    const ablauf = ablaufOeffnen();
     fireEvent.click(within(ablauf).getByRole('button', { name: 'Chorus aus dem Ablauf nehmen' }));
     expect(eingabe.aendern).toHaveBeenLastCalledWith(...aenderungFuer(text, ['Vers']));
     fireEvent.click(within(ablauf).getByRole('button', { name: 'Wie im Text' }));
@@ -152,7 +186,7 @@ describe('ChordEditor – Ablauf und Weiterschalt-Punkt', () => {
 
   it('ohne Flow-Zeile kein „Wie im Text“ – es ist ja schon so', () => {
     zeige({ initialText: '{comment: Vers}\nA', mitVersionsname: false });
-    const ablauf = screen.getByRole('region', { name: 'Ablauf' });
+    const ablauf = ablaufOeffnen();
     expect(within(ablauf).queryByRole('button', { name: 'Wie im Text' })).toBeNull();
   });
 
@@ -173,11 +207,39 @@ describe('ChordEditor – Ablauf und Weiterschalt-Punkt', () => {
       initialText: '{flow: Vers, Refrain}\n{comment: Vers}\nA',
       mitVersionsname: false,
     });
-    const ablauf = screen.getByRole('region', { name: 'Ablauf' });
+    const ablauf = ablaufOeffnen();
     expect(within(ablauf).getAllByText('fehlt im Text')).toHaveLength(1);
     expect(within(ablauf).getByText('Refrain').closest('li')?.textContent).toContain(
       'fehlt im Text',
     );
+  });
+});
+
+/** Akkorde einfügen (Lied-Editor L5, 22.10.2026): Leiste und „Anderer Akkord“ setzen `[…]` an den Cursor. */
+describe('ChordEditor – Akkorde einfügen', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('Akkord der Tonart antippen fügt ihn ein – Tonart aus der Angabe des Aufrufers', () => {
+    zeige({ tonart: 'G', mitVersionsname: false });
+    fireEvent.click(screen.getByRole('button', { name: 'Em' }));
+    expect(eingabe.insert).toHaveBeenCalledWith('[Em]');
+  });
+
+  it('ohne Angabe gilt die Tonart aus {key}', () => {
+    zeige({ initialText: '{key: F}\n[F]Zeile', mitVersionsname: false });
+    expect(screen.getByText('Tonart F')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Bb' }));
+    expect(eingabe.insert).toHaveBeenCalledWith('[Bb]');
+  });
+
+  it('„Anderer Akkord“: eintippen, einfügen – das Fenster schließt, der Akkord steht in „Im Lied“', () => {
+    zeige({ tonart: 'E', mitVersionsname: false });
+    fireEvent.click(screen.getByRole('button', { name: 'Anderer Akkord' }));
+    fireEvent.change(screen.getByPlaceholderText(/Em7/), { target: { value: 'gsus4' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Einfügen' }));
+    expect(eingabe.insert).toHaveBeenCalledWith('[Gsus4]');
+    expect(screen.queryByPlaceholderText(/Em7/)).toBeNull();
+    expect(screen.getByText('Im Lied').parentElement!.textContent).toContain('Gsus4');
   });
 });
 

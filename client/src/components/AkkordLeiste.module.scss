@@ -1,0 +1,88 @@
+@use '@ui/design/mixins' as m;
+
+// Akkord-Leiste (Lied-Editor L5) – eine Zeile unter der Werkzeugleiste; was nicht passt, wird gewischt.
+.leiste {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  // Breit (iPad) passt fast alles – dort umbrechen statt wischen, damit nichts abgeschnitten aussieht.
+  @media (min-width: 768px) {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}
+.gruppe {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  & + .gruppe,
+  & + .anderer {
+    padding-left: 8px;
+    border-left: 1px solid var(--hair);
+  }
+}
+.lbl {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text3);
+  white-space: nowrap;
+}
+.chip {
+  @include m.aktionKnopf;
+  flex-shrink: 0;
+  min-width: 44px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: var(--r-ctrl);
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  // Gedrückthalten zeigt Varianten – nicht das Text-/Link-Menü von iOS.
+  -webkit-touch-callout: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+.anderer {
+  @include m.aktionKnopf;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: var(--r-ctrl);
+  color: var(--blue-ink);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.varianten {
+  position: fixed;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: min(344px, calc(100vw - 32px));
+  padding: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2);
+}
+.variantenReihe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}

@@ -6,6 +6,7 @@ import { Sheet } from '@ui/fenster/Sheet';
 import { UnterschriftBild } from '@ui/anmeldeformular/Bausteine';
 import type { OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import { euroText } from '@shared/anmeldung/preis';
+import { zahlungTitel } from '@shared/anmeldung/zahlung';
 import { unterschriftLesen } from '@shared/anmeldung/unterschrift';
 import { wartenTrotzPlatz } from '@shared/anmeldung/nachpruefung';
 import {
@@ -16,7 +17,6 @@ import {
   type AntwortZeile,
   type ListenAnmeldung,
   type ListenPerson,
-  type Zahlung,
 } from '@shared/anmeldung/liste';
 import type { GeladenerStand } from './mitglieder';
 import { tagPunkt as lang } from '@shared/ct/datum';
@@ -360,11 +360,7 @@ function AnmeldungAnsehen({
                     id={id}
                     zahlung={z}
                     wer={x.wer}
-                    titel={
-                      z.wofuer === 'anmeldung'
-                        ? `Anmeldung (${z.name})`
-                        : `${z.name} – ${EIGENE_ZAHLUNG[z.wofuer]}`
-                    }
+                    titel={zahlungTitel(z)}
                     zahlarten={zahlarten}
                     heute={heute}
                     darf={darf}
@@ -418,16 +414,6 @@ function AnmeldungAnsehen({
     </Sheet>
   );
 }
-
-/**
- * Titel einer eigenen Zahlung je Art – als Tabelle, damit der Build eine neue Art meldet (A7-4c: „zurückgeholt“ fehlte
- * zuerst und stand als „Anmeldung (Paula)“ da).
- */
-const EIGENE_ZAHLUNG: Record<Exclude<Zahlung['wofuer'], 'anmeldung'>, string> = {
-  nachgerueckt: 'nachgerückt',
-  dazu: 'dazu angemeldet',
-  zurueck: 'zurückgeholt',
-};
 
 const absageText = (b: Absage) =>
   `am ${kurz(b.am)} ${b.selbst ? 'selbst abgesagt (Link in der Mail)' : 'vom Team entfernt'}`;

@@ -21,7 +21,9 @@ import {
   type ProtokollTeil,
 } from '@shared/protokolle/speicher';
 import {
+  antwortAus,
   sitzungenOrdnen,
+  type Anfrage,
   type Sitzung,
   type Termin,
   type Treffen,
@@ -59,27 +61,44 @@ interface TerminRoh {
   calculated?: { startDate?: string };
 }
 
-/** Kommende Termine im Kalender – nur die mit Besprechungsanfrage (Alwin, 23.10.2026). */
+/** Kommende Termine im Kalender – nur die mit Besprechungsanfrage (Alwin, 23.10.2026), samt den Antworten. */
 async function termineMitAnfrage(kalender: number, von: string, bis: string): Promise<Termin[]> {
   const roh =
     (await ctDaten<TerminRoh[]>(
       `/calendars/appointments?calendar_ids[]=${kalender}&from=${von}&to=${bis}`,
     )) ?? [];
-  const alle: Termin[] = [];
+  const alle: Omit<Termin, 'anfragen'>[] = [];
   for (const r of roh) {
     const b = r.base ?? r.appointment?.base;
     const beginn = r.calculated?.startDate;
     if (b && beginn) alle.push({ kalender, id: b.id, titel: b.title, beginn });
   }
   // Je Termin einmal fragen (die Liste zeigt es nicht – gemessen); eine Serie hat dieselbe ID → einmal genügt.
-  const mitAnfrage = new Set<number>();
+  const anfragen = new Map<number, Anfrage[]>();
   await mapLimit([...new Set(alle.map((t) => t.id))], GLEICHZEITIG, async (id) => {
-    const anfragen = await ctDaten<unknown[]>(
-      `/calendars/${kalender}/appointments/${id}/meetingrequests`,
-    );
-    if (Array.isArray(anfragen) && anfragen.length) mitAnfrage.add(id);
+    const liste =
+      (await ctDaten<AnfrageRoh[]>(`/calendars/${kalender}/appointments/${id}/meetingrequests`)) ??
+      [];
+    if (Array.isArray(liste) && liste.length)
+      anfragen.set(
+        id,
+        liste.map((a) => ({
+          person: Number(a.person?.domainIdentifier ?? a.inviteeId),
+          antwort: antwortAus(a.state),
+        })),
+      );
   });
-  return alle.filter((t) => mitAnfrage.has(t.id));
+  return alle.flatMap((t) => {
+    const a = anfragen.get(t.id);
+    return a ? [{ ...t, anfragen: a }] : [];
+  });
+}
+
+/** Eine Besprechungsanfrage, wie ChurchTools sie liefert (gemessen S3-3: `person.domainIdentifier`, `state`). */
+interface AnfrageRoh {
+  person?: { domainIdentifier?: string };
+  inviteeId?: number;
+  state?: string;
 }
 
 /** Gruppentreffen ab heute; abgesagte zählen nicht. `null` = nicht freigegeben (403). */
@@ -141,4 +160,31 @@ export async function ladeAufgaben(
   return (await werteLesen(modulPort, modul, gruppe.mitarbeit))
     .map(json)
     .filter((x): x is Aufgabe => istAufgabe(x) && !x.geloescht);
+}
+
+export interface GruppenUebersicht {
+  gruppe: ProtokollGruppe;
+  sitzungen: GruppenSitzungen;
+  aufgaben: Aufgabe[];
+}
+
+/**
+ * **Alles für die Startseite** (S3-3): Sitzungen und Aufgaben jeder Gruppe, höchstens zwei Gruppen gleichzeitig.
+ * Scheitert eine Gruppe, wird geworfen – lieber „Erneut versuchen“ als eine Startseite, der still eine Gruppe fehlt.
+ */
+export async function ladeUebersicht(
+  modul: number,
+  gruppen: readonly ProtokollGruppe[],
+  zeitzone = Intl.DateTimeFormat().resolvedOptions().timeZone,
+  jetzt = new Date(),
+): Promise<GruppenUebersicht[]> {
+  const ergebnis = new Map<number, GruppenUebersicht>();
+  await mapLimit([...gruppen], 2, async (gruppe) => {
+    const [sitzungen, aufgaben] = await Promise.all([
+      ladeSitzungen(modul, gruppe, zeitzone, jetzt),
+      ladeAufgaben(modul, gruppe),
+    ]);
+    ergebnis.set(gruppe.id, { gruppe, sitzungen, aufgaben });
+  });
+  return gruppen.map((g) => ergebnis.get(g.id)!);
 }

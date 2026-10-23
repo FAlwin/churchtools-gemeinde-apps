@@ -7,7 +7,12 @@ import { ladeStart, type Start } from './start';
 
 vi.mock('./start', () => ({ ladeStart: vi.fn() }));
 vi.mock('./Verwaltung', () => ({ Verwaltung: () => <p>VERWALTUNG</p> }));
-vi.mock('./Sitzungen', () => ({ Sitzungen: () => <p>SITZUNGEN</p> }));
+vi.mock('./Sitzungen', () => ({
+  Sitzungen: ({ auswahl }: { auswahl?: { gruppe: number; sitzung?: string } | null }) => (
+    <p>SITZUNGEN {auswahl ? `${auswahl.gruppe}/${auswahl.sitzung ?? '-'}` : 'ohne Auswahl'}</p>
+  ),
+}));
+vi.mock('./lesen', () => ({ ladeUebersicht: vi.fn(() => Promise.resolve([])) }));
 const laden = vi.mocked(ladeStart);
 
 const START: Start = {
@@ -99,8 +104,24 @@ describe('App (S1)', () => {
   it('„Sitzungen“ zeigt die Sitzungen ohne Gruß', async () => {
     render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: 'Sitzungen' }));
-    expect(await screen.findByText('SITZUNGEN')).toBeTruthy();
+    expect(await screen.findByText('SITZUNGEN ohne Auswahl')).toBeTruthy();
     expect(window.location.hash).toBe('#/sitzungen');
     expect(screen.queryByRole('heading', { name: 'Hallo Alwin' })).toBeNull();
+  });
+
+  it('S3-3: eine Gruppe auf der Startseite öffnet „Sitzungen“ mit dieser Gruppe', async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: /Jugendleitung/ }));
+    expect(await screen.findByText('SITZUNGEN 7/-')).toBeTruthy();
+    expect(window.location.hash).toBe('#/sitzungen');
+  });
+
+  it('S3-3: über den Reiter zurück und wieder hin – die alte Auswahl gilt nicht mehr', async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: /Jugendleitung/ }));
+    await screen.findByText('SITZUNGEN 7/-');
+    fireEvent.click(screen.getByRole('button', { name: 'Start' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Sitzungen' }));
+    expect(await screen.findByText('SITZUNGEN ohne Auswahl')).toBeTruthy();
   });
 });

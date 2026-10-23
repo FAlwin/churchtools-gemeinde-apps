@@ -84,6 +84,26 @@ function protokollWerte(
   return werte.map((value, i) => ({ id: start + i, dataCategoryId: kategorie, value }));
 }
 
+/** Heute um `stunde` Uhr Ortszeit – damit die Demo immer eine Sitzung „Heute“ hat. */
+function heuteUm(stunde: number): string {
+  const d = new Date();
+  d.setHours(stunde, 0, 0, 0);
+  return d.toISOString();
+}
+
+/** Besprechungsanfragen wie in ChurchTools gemessen (S3-1 §2): Person als `domainIdentifier`, Antwort als `state`. */
+const ANFRAGEN: Record<string, { person: { domainIdentifier: string }; state: string }[]> = {
+  '114': [
+    { person: { domainIdentifier: '1' }, state: 'accepted' },
+    { person: { domainIdentifier: '19' }, state: 'declined' },
+  ],
+  '120': [
+    { person: { domainIdentifier: '1' }, state: 'accepted' },
+    { person: { domainIdentifier: '19' }, state: 'accepted' },
+    { person: { domainIdentifier: '23' }, state: 'pending' },
+  ],
+};
+
 const DEMO_AUFGABE = statusSetzen(
   neueAufgabe({
     id: 'demo-a1',
@@ -216,11 +236,16 @@ function antwort(
         { id: 19, name: 'Technik-Team', settings: { isHidden: false } },
       ],
     };
-  // Kalender 4: ein Termin mit Besprechungsanfrage (Sitzung) und einer ohne (fällt weg); Treffen zur selben Minute.
+  // Kalender 4: Termine mit Besprechungsanfrage (Sitzungen; einer heute für „Heute“ auf der Startseite) und einer
+  // ohne (fällt weg); Treffen zur selben Minute wie 114.
   if (pfad === '/api/calendars/appointments')
     return {
       status: 200,
       data: [
+        {
+          base: { id: 120, title: 'Gebetsabend', calendar: { id: 4 } },
+          calculated: { startDate: heuteUm(19) },
+        },
         {
           base: { id: 114, title: 'Leitungssitzung', calendar: { id: 4 } },
           calculated: { startDate: '2027-03-17T17:00:00Z' },
@@ -232,7 +257,7 @@ function antwort(
       ],
     };
   const anfragen = /^\/api\/calendars\/\d+\/appointments\/(\d+)\/meetingrequests$/.exec(pfad);
-  if (anfragen) return { status: 200, data: anfragen[1] === '114' ? [{ id: 1 }] : [] };
+  if (anfragen) return { status: 200, data: ANFRAGEN[anfragen[1]] ?? [] };
   const treffen = /^\/api\/groups\/(\d+)\/meetings$/.exec(pfad);
   if (treffen)
     return treffen[1] === '11'

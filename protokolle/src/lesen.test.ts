@@ -73,9 +73,9 @@ describe('ladeSitzungen (S3-1)', () => {
         id: 114,
         titel: 'Leitungssitzung',
         beginn: '2027-03-17T17:00:00Z',
-        anfragen: 1,
+        anfragen: [{ person: 1, state: 'accepted' }],
       },
-      { kalender: 4, id: 115, titel: 'Raumputz', beginn: '2027-03-20T09:00:00Z', anfragen: 0 },
+      { kalender: 4, id: 115, titel: 'Raumputz', beginn: '2027-03-20T09:00:00Z', anfragen: [] },
     ];
     ct.treffen.set(194, [
       { id: 15, startDate: '2027-03-17T17:00:00Z' },
@@ -107,13 +107,39 @@ describe('ladeSitzungen (S3-1)', () => {
         id: 114,
         titel: 'Leitungssitzung',
         beginn: '2027-03-17T17:00:00Z',
-        anfragen: 2,
+        anfragen: [
+          { person: 1, state: 'accepted' },
+          { person: 19, state: 'pending' },
+        ],
       },
     ];
     ct.treffenVerboten = true;
     const s = await ladeSitzungen(MODUL, gruppe(), ZONE, JETZT);
     expect(s.treffenNichtFreigegeben).toBe(true);
     expect(s.kommend.map((x) => x.termin?.id)).toEqual([114]);
+  });
+
+  it('S3-3: Besprechungsanfragen mit Person und Antwort – für „du hast zugesagt“ und „2 von 3“', async () => {
+    await einrichten(4);
+    ct.termine = [
+      {
+        kalender: 4,
+        id: 114,
+        titel: 'Leitungssitzung',
+        beginn: '2027-03-17T17:00:00Z',
+        anfragen: [
+          { person: 1, state: 'accepted' },
+          { person: 19, state: 'declined' },
+          { person: 23, state: 'pending' },
+        ],
+      },
+    ];
+    const s = await ladeSitzungen(MODUL, gruppe(), ZONE, JETZT);
+    expect(s.kommend[0].anfragen).toEqual([
+      { person: 1, antwort: 'zugesagt' },
+      { person: 19, antwort: 'abgesagt' },
+      { person: 23, antwort: 'offen' },
+    ]);
   });
 
   it('ohne Kalender in der Einstellung: kein Kalender-Aufruf, nur Treffen', async () => {

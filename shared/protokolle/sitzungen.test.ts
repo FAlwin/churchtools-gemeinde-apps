@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { ProtokollKopf } from './speicher';
-import { sitzungenOrdnen, type Termin, type Treffen } from './sitzungen';
+import {
+  antwortAus,
+  meineAntwort,
+  naechsteSitzungen,
+  sitzungenOrdnen,
+  type Termin,
+  type Treffen,
+} from './sitzungen';
 
 const ZONE = 'Europe/Berlin';
 const kopf = (teil: Partial<ProtokollKopf>): ProtokollKopf => ({
@@ -22,6 +29,7 @@ const termin = (id: number, beginn: string, titel = 'Leitungssitzung'): Termin =
   id,
   titel,
   beginn,
+  anfragen: [{ person: 1, antwort: 'zugesagt' }],
 });
 const ordnen = (q: { termine?: Termin[]; treffen?: Treffen[]; koepfe?: ProtokollKopf[] }) =>
   sitzungenOrdnen({
@@ -108,5 +116,51 @@ describe('sitzungenOrdnen (S3-1)', () => {
       termine: [termin(1, '2027-01-01T17:00:00Z'), termin(2, '2027-01-01T17:00:00Z')],
     });
     expect(kommend).toHaveLength(2);
+  });
+});
+
+describe('Antworten und nächste Sitzungen (S3-3)', () => {
+  it('ChurchTools-Zustand → Antwort; Unbekanntes gilt als offen', () => {
+    expect(['accepted', 'declined', 'tentative', 'pending', undefined].map(antwortAus)).toEqual([
+      'zugesagt',
+      'abgesagt',
+      'vielleicht',
+      'offen',
+      'offen',
+    ]);
+  });
+
+  it('Termin bringt seine Anfragen mit; meine Antwort, oder null wenn nicht eingeladen', () => {
+    const t = {
+      ...termin(114, '2027-03-17T17:00:00Z'),
+      anfragen: [{ person: 19, antwort: 'abgesagt' as const }],
+    };
+    const { kommend } = ordnen({
+      termine: [t],
+      treffen: [{ id: 15, beginn: '2027-03-17T17:00:00Z' }],
+    });
+    expect(kommend[0].anfragen).toEqual([{ person: 19, antwort: 'abgesagt' }]);
+    expect(meineAntwort(kommend[0], 19)).toBe('abgesagt');
+    expect(meineAntwort(kommend[0], 1)).toBeNull();
+  });
+
+  it('über alle Gruppen, ab heute, früheste zuerst – ein Entwurf von gestern gehört nicht dazu', () => {
+    const a = ordnen({ termine: [termin(2, '2027-01-10T17:00:00Z')] }).kommend;
+    const b = ordnen({
+      termine: [termin(3, '2026-11-01T17:00:00Z')],
+      koepfe: [kopf({ sitzung: 'gestern', status: 'entwurf', beginn: '2026-10-22T17:00:00Z' })],
+    }).kommend;
+    const n = naechsteSitzungen(
+      [
+        { gruppe: { id: 1, name: 'A' }, kommend: a },
+        { gruppe: { id: 2, name: 'B' }, kommend: b },
+      ],
+      '2026-10-23',
+      ZONE,
+    );
+    expect(n.map((x) => [x.gruppe.name, x.sitzung.termin?.id ?? x.sitzung.schluessel])).toEqual([
+      ['B', 3],
+      ['A', 2],
+    ]);
   });
 });

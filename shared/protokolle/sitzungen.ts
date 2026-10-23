@@ -14,12 +14,33 @@
 import { tagAusIso } from '../ct/zeit';
 import type { ProtokollKopf } from './speicher';
 
+/** Die Antwort einer Person auf die Besprechungsanfrage (S3-3). */
+export type Antwort = 'zugesagt' | 'abgesagt' | 'vielleicht' | 'offen';
+
+export interface Anfrage {
+  person: number;
+  antwort: Antwort;
+}
+
+/**
+ * ChurchTools-Zustand einer Besprechungsanfrage → unsere Antwort. `accepted | declined | pending | tentative` laut
+ * OpenAPI der Test-Instanz (23.10.2026), `accepted` auch gemessen; Unbekanntes zählt als „offen“.
+ */
+export function antwortAus(state: unknown): Antwort {
+  if (state === 'accepted') return 'zugesagt';
+  if (state === 'declined') return 'abgesagt';
+  if (state === 'tentative') return 'vielleicht';
+  return 'offen';
+}
+
 export interface Termin {
   kalender: number;
   id: number;
   titel: string;
   /** Beginn, ISO (bei Serien der berechnete Beginn dieses Termins). */
   beginn: string;
+  /** Die Besprechungsanfragen – nur Termine mit mindestens einer kommen hier an. */
+  anfragen: Anfrage[];
 }
 
 export interface Treffen {
@@ -35,6 +56,8 @@ export interface Sitzung {
   termin: { kalender: number; id: number } | null;
   treffen: number | null;
   kopf: ProtokollKopf | null;
+  /** Besprechungsanfragen des Termins (leer ohne Termin). */
+  anfragen: Anfrage[];
 }
 
 /** Gleicher Beginn auf die Minute – so gehören Termin und Treffen derselben Sitzung zusammen. */
@@ -55,6 +78,7 @@ export function sitzungenOrdnen(q: {
     termin: k.termin,
     treffen: k.treffen,
     kopf: k,
+    anfragen: [],
   }));
   const zuKopf = (pruefen: (s: Sitzung) => boolean): Sitzung | undefined =>
     sitzungen.find((s) => s.kopf && pruefen(s));
@@ -66,6 +90,7 @@ export function sitzungenOrdnen(q: {
     if (da) {
       da.termin ??= { kalender: t.kalender, id: t.id };
       if (!da.kopf) da.titel = t.titel;
+      da.anfragen = t.anfragen;
       continue;
     }
     sitzungen.push({
@@ -75,6 +100,7 @@ export function sitzungenOrdnen(q: {
       termin: { kalender: t.kalender, id: t.id },
       treffen: null,
       kopf: null,
+      anfragen: t.anfragen,
     });
   }
   for (const t of q.treffen) {
@@ -92,6 +118,7 @@ export function sitzungenOrdnen(q: {
       termin: null,
       treffen: t.id,
       kopf: null,
+      anfragen: [],
     });
   }
 
@@ -103,4 +130,32 @@ export function sitzungenOrdnen(q: {
     .filter((s) => s.kopf?.status === 'frei')
     .sort((a, b) => zeit(b) - zeit(a));
   return { kommend, protokolle };
+}
+
+/** Meine Antwort auf die Besprechungsanfrage – `null`, wenn ich nicht eingeladen bin (oder es keinen Termin gibt). */
+export function meineAntwort(s: Pick<Sitzung, 'anfragen'>, ich: number): Antwort | null {
+  return s.anfragen.find((a) => a.person === ich)?.antwort ?? null;
+}
+
+export interface GruppenSitzung {
+  gruppe: { id: number; name: string };
+  sitzung: Sitzung;
+}
+
+/**
+ * **Nächste Sitzungen über alle Gruppen** (Startseite, S3-3): was ab heute ansteht und noch nicht freigegeben ist,
+ * früheste zuerst. Ein begonnenes Protokoll von gestern gehört nicht hierher (es steht unter „Sitzungen“).
+ */
+export function naechsteSitzungen(
+  jeGruppe: readonly { gruppe: { id: number; name: string }; kommend: readonly Sitzung[] }[],
+  heute: string,
+  zeitzone: string,
+): GruppenSitzung[] {
+  return jeGruppe
+    .flatMap((g) =>
+      g.kommend
+        .filter((s) => tagAusIso(s.beginn, zeitzone) >= heute)
+        .map((sitzung) => ({ gruppe: g.gruppe, sitzung })),
+    )
+    .sort((a, b) => Date.parse(a.sitzung.beginn) - Date.parse(b.sitzung.beginn));
 }

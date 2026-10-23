@@ -121,6 +121,21 @@ export function untergruppenVon(
   return s;
 }
 
+/**
+ * **Sieht man die Gruppe nach der Änderung weiter über `alt`?** Ja, wenn eine der Obergruppen, die ihr bleiben, `alt`
+ * selbst ist oder unter `alt` liegt – Rechte wirken nach unten (O0 §5). Dann stimmt „wer sie nur über … sah, sieht
+ * sie nicht mehr“ nicht (gefunden bei der Abnahme 23.10.2026: B von A nach C umgehängt, C liegt unter A). EINE Regel
+ * für Ändern und Lösen.
+ */
+export function weiterSichtbarUeber(
+  eltern: ReadonlyMap<number, readonly number[]>,
+  alt: number,
+  bleibende: readonly number[],
+): boolean {
+  const darunter = untergruppenVon(eltern, alt);
+  return bleibende.some((b) => b === alt || darunter.has(b));
+}
+
 /** Der Weg von oben bis zur Gruppe („Gottesdienst › Technik“) – über die jeweils erste Obergruppe, kreisfest. */
 export function pfadVon(
   gruppen: readonly OrgGruppe[],

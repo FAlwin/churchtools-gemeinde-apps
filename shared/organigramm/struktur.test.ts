@@ -11,6 +11,7 @@ import {
   pfadVon,
   untergruppeAnlegen,
   untergruppenVon,
+  weiterSichtbarUeber,
   type StrukturZugriff,
 } from './struktur';
 
@@ -223,5 +224,23 @@ describe('nameFehler / aktivStatus', () => {
     expect(aktivStatus(st, 1)).toBe(5);
     expect(aktivStatus([{ id: 2, name: 'pending' }], 1)).toBe(1);
     expect(aktivStatus(null, null)).toBeNull();
+  });
+});
+
+describe('weiterSichtbarUeber (Abnahme 23.10.2026)', () => {
+  // A (1) → C (3); B (2) hängt unter A
+  const e = new Map<number, number[]>([
+    [3, [1]],
+    [2, [1]],
+  ]);
+  it('neue Obergruppe liegt unter der alten → weiter sichtbar', () => {
+    expect(weiterSichtbarUeber(e, 1, [3])).toBe(true);
+  });
+  it('neue Obergruppe woanders → nicht mehr über die alte', () => {
+    expect(weiterSichtbarUeber(e, 1, [47])).toBe(false);
+  });
+  it('lösen, aber eine andere bleibende Obergruppe liegt unter der alten → weiter sichtbar', () => {
+    expect(weiterSichtbarUeber(e, 1, [3])).toBe(true);
+    expect(weiterSichtbarUeber(e, 1, [])).toBe(false);
   });
 });

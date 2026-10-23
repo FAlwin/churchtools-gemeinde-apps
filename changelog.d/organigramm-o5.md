@@ -14,6 +14,10 @@
   Fenster genau das. Danach lädt der Baum neu (Mitglieder nur für neue Gruppen); lädt er gerade nicht, bleibt der
   bisherige Stand stehen und das Fenster sagt es.
 - **Rückgängig im Fenster** für jede Änderung (auch: neue Gruppe wieder löschen).
+- Bei der Abnahme in der Test-Instanz (23.10.2026, leere Übungsgruppen) gefunden und behoben: Ohne Obergruppe heißt es
+  „unter …“ / „Einhängen“ statt „zusätzlich“ / „auch“; liegt die neue Obergruppe unter der alten (oder bleibt eine
+  darunter), sagt das Fenster „sieht es weiterhin“ statt „sieht es nicht mehr“ (`weiterSichtbarUeber`). „Eigener
+  Bereich“ zählt jetzt alle Obergruppen, auch die, die man nicht sehen darf.
 
 ### Intern (gemeinsam)
 

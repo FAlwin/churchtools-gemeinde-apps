@@ -15,6 +15,7 @@ import {
   obergruppeDazu,
   obergruppeLoesen,
   untergruppeAnlegen,
+  weiterSichtbarUeber,
 } from '@shared/organigramm/struktur';
 import { rollenRang } from '@shared/organigramm/mitglieder';
 import { gruppenPersonen } from '@shared/organigramm/personen';
@@ -71,6 +72,9 @@ export function GruppenFenster({
   const [fehler, setFehler] = useState<string | null>(null);
   const [aenderung, setAenderung] = useState<Aenderung | null>(null);
   const darf = darfStruktur(start.rechte, g);
+  // ALLE Obergruppen aus der Hierarchie (auch unsichtbare) – EINE Quelle für „erste?“, „letzte?“ und „weiter sichtbar?“.
+  const alleEltern = start.eltern.get(g.id) ?? [];
+  const ohneObergruppe = alleEltern.length === 0;
   const typen = darf ? anlegbareTypenAus(start.rechte, start.typNamen.keys()) : [];
 
   /** Einen neuen Schritt beginnen – die Meldung der letzten Änderung gehört dann nicht mehr dazu. */
@@ -297,7 +301,9 @@ export function GruppenFenster({
           titel={
             modus.zweck === 'aendern'
               ? `Statt „${modus.alt.name}“ unter …`
-              : `„${g.name}“ zusätzlich unter …`
+              : ohneObergruppe
+                ? `„${g.name}“ unter …`
+                : `„${g.name}“ zusätzlich unter …`
           }
           onWahl={(neu) =>
             setModus(
@@ -312,7 +318,14 @@ export function GruppenFenster({
       {modus.art === 'aendern' && (
         <Bestaetigen
           frage={`„${g.name}“ unter „${modus.neu.name}“ hängen statt unter „${modus.alt.name}“?`}
-          folgen={`Rechte wirken in ChurchTools nach unten: Wer in „${modus.neu.name}“ ist, sieht danach auch „${g.name}“ samt Untergruppen; wer es nur über „${modus.alt.name}“ sah, sieht es nicht mehr.`}
+          folgen={`Rechte wirken in ChurchTools nach unten: Wer in „${modus.neu.name}“ ist, sieht danach auch „${g.name}“ samt Untergruppen; ${
+            weiterSichtbarUeber(start.eltern, modus.alt.id, [
+              modus.neu.id,
+              ...alleEltern.filter((e) => e !== modus.alt.id),
+            ])
+              ? `wer in „${modus.alt.name}“ ist, sieht es weiterhin – „${modus.neu.name}“ liegt darunter.`
+              : `wer es nur über „${modus.alt.name}“ sah, sieht es nicht mehr.`
+          }`}
           knopf="Umhängen"
           arbeitet={arbeitet}
           onZurueck={() => setModus({ art: 'ansehen' })}
@@ -328,16 +341,22 @@ export function GruppenFenster({
       )}
       {modus.art === 'dazu' && (
         <Bestaetigen
-          frage={`„${g.name}“ zusätzlich unter „${modus.neu.name}“ hängen?`}
+          frage={
+            ohneObergruppe
+              ? `„${g.name}“ unter „${modus.neu.name}“ hängen?`
+              : `„${g.name}“ zusätzlich unter „${modus.neu.name}“ hängen?`
+          }
           folgen={`Rechte wirken in ChurchTools nach unten: Wer in „${modus.neu.name}“ ist, sieht danach auch „${g.name}“ samt Untergruppen.`}
-          knopf="Hinzufügen"
+          knopf={ohneObergruppe ? 'Einhängen' : 'Hinzufügen'}
           arbeitet={arbeitet}
           onZurueck={() => setModus({ art: 'ansehen' })}
           onJa={() => {
             const { neu } = modus;
             void ausfuehren(
               () => obergruppeDazu(z, g.id, neu.id),
-              `„${g.name}“ hängt jetzt auch unter „${neu.name}“.`,
+              ohneObergruppe
+                ? `„${g.name}“ hängt jetzt unter „${neu.name}“.`
+                : `„${g.name}“ hängt jetzt auch unter „${neu.name}“.`,
               () => obergruppeLoesen(z, g.id, neu.id),
             );
           }}
@@ -346,9 +365,15 @@ export function GruppenFenster({
       {modus.art === 'loesen' && (
         <Bestaetigen
           frage={`„${g.name}“ von „${modus.alt.name}“ lösen?`}
-          folgen={`${
-            obergruppen.length === 1 ? `„${g.name}“ ist danach ein eigener Bereich. ` : ''
-          }Wer „${g.name}“ nur über „${modus.alt.name}“ sah, sieht es danach nicht mehr.`}
+          folgen={`${alleEltern.length === 1 ? `„${g.name}“ ist danach ein eigener Bereich. ` : ''}${
+            weiterSichtbarUeber(
+              start.eltern,
+              modus.alt.id,
+              alleEltern.filter((e) => e !== modus.alt.id),
+            )
+              ? `Wer in „${modus.alt.name}“ ist, sieht „${g.name}“ weiterhin – über eine andere Obergruppe darunter.`
+              : `Wer „${g.name}“ nur über „${modus.alt.name}“ sah, sieht es danach nicht mehr.`
+          }`}
           knopf="Lösen"
           arbeitet={arbeitet}
           onZurueck={() => setModus({ art: 'ansehen' })}

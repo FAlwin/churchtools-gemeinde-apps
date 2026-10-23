@@ -540,7 +540,8 @@ describe('O5: Gruppen umhängen und anlegen', () => {
   const knopf = (name: string | RegExp) => screen.getByRole('button', { name });
   const ziel = (name: string) =>
     within(screen.getByRole('region', { name: /unter …$/ })).getByRole('button', {
-      name: new RegExp(name),
+      // Am Ende des Namens: „Gottesdienst“ soll nicht auch „Gottesdienst › Technik“ treffen.
+      name: new RegExp(`${name}$`),
     });
 
   it('Gruppen-Admin: Ändern, Lösen, weitere Obergruppe, Untergruppe anlegen', async () => {
@@ -649,6 +650,70 @@ describe('O5: Gruppen umhängen und anlegen', () => {
     fireEvent.click(knopf('Rückgängig'));
     await screen.findByText('Rückgängig gemacht.');
     expect(ct.log).toContain('loeschen 300');
+  });
+
+  it('ohne Obergruppe: „unter …“ und „Einhängen“ statt „zusätzlich“/„auch“ (Abnahme 23.10.2026)', async () => {
+    render(<App />);
+    await screen.findByText('3 Personen · Leitung: Alwin Friesen, Dora Dorn');
+    fireEvent.click(screen.getByRole('button', { name: /^Café/ }));
+    fireEvent.click(knopf('＋ Unter eine Gruppe hängen'));
+    expect(screen.getByRole('region', { name: '„Café“ unter …' })).toBeTruthy();
+    fireEvent.click(ziel('Gottesdienst'));
+    expect(screen.getByText('„Café“ unter „Gottesdienst“ hängen?')).toBeTruthy();
+    fireEvent.click(knopf('Einhängen'));
+    expect(await screen.findByText('„Café“ hängt jetzt unter „Gottesdienst“.')).toBeTruthy();
+  });
+
+  it('neue Obergruppe liegt unter der alten → „sieht es weiterhin“ statt „nicht mehr“ (Abnahme 23.10.2026)', async () => {
+    // Infos (34) hängt unter Gottesdienst (10); Technik (7) liegt ebenfalls unter Gottesdienst
+    const eltern = elternAus([
+      { groupId: 10, children: [7, 34] },
+      { groupId: 7, children: [12] },
+    ]);
+    laden.mockResolvedValue(start({ eltern, baum: baumAus(GRUPPEN, eltern) }));
+    ct.eltern.set(34, [10]);
+    render(<App />);
+    await screen.findByText('3 Personen · Leitung: Alwin Friesen, Dora Dorn');
+    fireEvent.click(zeile('Infos'));
+    fireEvent.click(knopf('Ändern'));
+    fireEvent.click(ziel('Technik'));
+    expect(
+      screen.getByText(/wer in „Gottesdienst“ ist, sieht es weiterhin – „Technik“ liegt darunter/),
+    ).toBeTruthy();
+    expect(screen.queryByText(/sieht es nicht mehr/)).toBeNull();
+  });
+
+  it('lösen, aber eine andere Obergruppe darunter bleibt → „sieht weiterhin“, kein „eigener Bereich“', async () => {
+    // Infos (34) hängt unter Gottesdienst (10) UND Technik (7, liegt unter Gottesdienst)
+    const eltern = elternAus([
+      { groupId: 10, children: [7, 34] },
+      { groupId: 7, children: [12, 34] },
+    ]);
+    laden.mockResolvedValue(start({ eltern, baum: baumAus(GRUPPEN, eltern) }));
+    render(<App />);
+    await screen.findByText('3 Personen · Leitung: Alwin Friesen, Dora Dorn');
+    fireEvent.click(screen.getAllByRole('button', { name: /^Infos/ })[0]);
+    // der „Lösen“-Knopf neben „Gottesdienst“ (nicht neben „Technik“)
+    const neben = screen
+      .getAllByRole('button', { name: /Gottesdienst$/ })
+      .map((b) => b.parentElement!)
+      .find((span) => within(span).queryByRole('button', { name: 'Lösen' }))!;
+    fireEvent.click(within(neben).getByRole('button', { name: 'Lösen' }));
+    const frage = screen.getByRole('region', { name: 'Bestätigen' }).textContent;
+    expect(frage).toContain('„Infos“ von „Gottesdienst“ lösen?');
+    expect(frage).toContain('Wer in „Gottesdienst“ ist, sieht „Infos“ weiterhin');
+    expect(frage).not.toContain('eigener Bereich');
+  });
+
+  it('eine unsichtbare Obergruppe bleibt → Lösen der sichtbaren macht KEINEN eigenen Bereich', async () => {
+    // Technik (7) hängt unter Gottesdienst (10) und einer Gruppe 99, die man nicht sehen darf
+    const eltern = new Map(ELTERN).set(7, [10, 99]);
+    laden.mockResolvedValue(start({ eltern }));
+    await technikOeffnen();
+    fireEvent.click(knopf('Lösen'));
+    expect(screen.getByRole('region', { name: 'Bestätigen' }).textContent).not.toContain(
+      'eigener Bereich',
+    );
   });
 
   it('ChurchTools lehnt ab → Meldung, kein Rückgängig; der Baum wird trotzdem neu gelesen', async () => {

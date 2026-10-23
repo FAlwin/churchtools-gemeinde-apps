@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { ablaufZeileAus, punktStand } from '@shared/ct/ablaufZeile';
-import { orderSchema, updateItemSchema } from './setlistController.js';
+import { ablaufBestandLesen, standAus } from '@shared/ct/ablaufNeu';
+import type { CtAgenda } from '@shared/ct/typen';
+import { ablaufNeuSchema, orderSchema, updateItemSchema } from './setlistController.js';
 
 /**
  * `gesehen` (E6-3c, #659) geht vom Client an den Server – zod würde ein Feld, das das Schema nicht kennt, **still**
@@ -26,5 +28,33 @@ describe('Server-Schemas lassen `gesehen` durch', () => {
       gesehen: [1, 2],
     });
     expect(orderSchema.parse({ order: [2, 1] })).toEqual({ order: [2, 1] });
+  });
+});
+
+describe('Neu aufsetzen (E6-5b, #691): der Stand der Nachfrage kommt unverändert an', () => {
+  it('`gesehen` aus `standAus(ablaufBestandLesen(…))` – mit verbundenen Terminen und ohne Stempel', async () => {
+    const leser = (meta?: { modifiedDate: string }) => ({
+      agenda: () =>
+        Promise.resolve<CtAgenda>({
+          meta,
+          items: [
+            { id: 11, title: 'A', startTimes: { '166': null, '171': '2027-01-10T09:00:00Z' } },
+            { id: 12, title: 'B', startTimes: { '166': '2027-01-10T09:05:00Z' } },
+          ],
+        }),
+      termin: (id: number) =>
+        Promise.resolve({ id, name: 'Termin', startDate: '2027-01-10T11:00:00Z', endDate: '' }),
+    });
+    for (const meta of [{ modifiedDate: '2026-10-23T10:00:00Z' }, undefined]) {
+      const gesehen = standAus(await ablaufBestandLesen(leser(meta), 166));
+      for (const quelle of [
+        { art: 'vorlage', vorlageId: 28 },
+        { art: 'kopie', eventId: 142 },
+        { art: 'leer' },
+      ] as const) {
+        const rumpf = { kalenderId: 2, quelle, gesehen, nurDieser: true };
+        expect(ablaufNeuSchema.parse(JSON.parse(JSON.stringify(rumpf)))).toEqual(rumpf);
+      }
+    }
   });
 });

@@ -19,7 +19,7 @@ import {
 import { getMemoizedVersion, rememberVersion } from '../services/versionMemo.js';
 import { getUserId } from '../services/ctAuth.js';
 import { getCapabilities } from '../services/ctCapabilities.js';
-import { getAblaufVorlagen, getCtServices } from '../services/ctRead.js';
+import { getAblaufBestand, getAblaufVorlagen, getCtServices } from '../services/ctRead.js';
 import { getSiteConfig } from '../services/siteConfig.js';
 import {
   createAgendaItem,
@@ -30,6 +30,7 @@ import {
   setAgendaItemWeggelassen,
   updateAgendaItem,
   setAblaufAbgeschlossen,
+  setAblaufNeu,
   createAblauf,
 } from '../services/ctWrite.js';
 import { gesehenHolen, gesehenMerken } from '../services/kontoAblage.js';
@@ -89,14 +90,13 @@ export async function getAblaufVorlagenCtrl(req: Request, res: Response): Promis
   res.json(await getAblaufVorlagen(ctCookie(req)));
 }
 
-const ablaufAnlegenSchema = z.object({
-  kalenderId: idSchema,
-  quelle: z.discriminatedUnion('art', [
-    z.object({ art: z.literal('vorlage'), vorlageId: idSchema }),
-    z.object({ art: z.literal('kopie'), eventId: idSchema }),
-    z.object({ art: z.literal('leer') }),
-  ]),
-});
+const quelleSchema = z.discriminatedUnion('art', [
+  z.object({ art: z.literal('vorlage'), vorlageId: idSchema }),
+  z.object({ art: z.literal('kopie'), eventId: idSchema }),
+  z.object({ art: z.literal('leer') }),
+]);
+
+const ablaufAnlegenSchema = z.object({ kalenderId: idSchema, quelle: quelleSchema });
 
 /**
  * POST /api/services/:eventId/agenda – einen Ablauf anlegen (13.10.2026). 409, wenn es schon einen
@@ -110,6 +110,37 @@ export async function postAblaufCtrl(req: Request, res: Response): Promise<void>
   }
   await createAblauf(ctCookie(req), eventId, kalenderId, quelle);
   // Kopie oder Vorlage können Lieder enthalten – die Statistik holt sie beim nächsten Blick neu.
+  invalidateSongUsageCache();
+  res.json({ ok: true });
+}
+
+/** GET /api/services/:eventId/agenda/bestand – was die Nachfrage „Neu aufsetzen“ zeigt (E6-5b, #691). */
+export async function getAblaufBestandCtrl(req: Request, res: Response): Promise<void> {
+  const eventId = idSchema.parse(req.params.eventId);
+  res.json(await getAblaufBestand(ctCookie(req), eventId));
+}
+
+/** Der Rumpf von „Neu aufsetzen“ – `gesehen` ist `standAus(bestand)` (`@shared/ct/ablaufNeu`). */
+export const ablaufNeuSchema = z.object({
+  kalenderId: idSchema,
+  quelle: quelleSchema,
+  gesehen: z.object({
+    punkte: z.array(idSchema).max(1000),
+    geaendert: z.string().max(40).nullable(),
+    verbunden: z.array(idSchema).max(100),
+  }),
+  nurDieser: z.boolean(),
+});
+
+/**
+ * PUT /api/services/:eventId/agenda/neu – einen bestehenden Ablauf neu aufsetzen (E6-5b, #691): 412, wenn er sich
+ * seit der Nachfrage geändert hat; Regel, Vergleich und Nachlesen in `@shared/ct/ablaufNeu`.
+ */
+export async function putAblaufNeuCtrl(req: Request, res: Response): Promise<void> {
+  const eventId = idSchema.parse(req.params.eventId);
+  const { kalenderId, quelle, gesehen, nurDieser } = ablaufNeuSchema.parse(req.body);
+  await setAblaufNeu(ctCookie(req), eventId, kalenderId, quelle, gesehen, nurDieser);
+  // Wie beim Anlegen: Vorlage oder Kopie bringen andere Lieder mit.
   invalidateSongUsageCache();
   res.json({ ok: true });
 }

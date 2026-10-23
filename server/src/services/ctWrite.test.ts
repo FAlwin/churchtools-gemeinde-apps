@@ -15,6 +15,7 @@ import {
   uploadPersonFile,
   deleteFile,
   setAblaufAbgeschlossen,
+  setAblaufNeu,
   createAblauf,
 } from './ctWrite.js';
 import * as ctWriteModul from './ctWrite.js';
@@ -83,6 +84,13 @@ const OHNE_ABLAUF = '/api/events/77/agenda';
 const ablaufStand = { angelegt: false };
 
 /**
+ * Veranstaltung MIT Ablauf für `setAblaufNeu` (E6-5b): Es vergleicht vorher mit dem gesehenen Stand (ein Punkt,
+ * ID 5) und liest hinterher nach, ob er ersetzt ist (geleert: keine Punkte). Wie oben beginnt jeder Aufruf von vorn.
+ */
+const MIT_ABLAUF = '/api/events/78/agenda';
+const neuStand = { ersetzt: false };
+
+/**
  * **Lesen gelingt immer** – scheitern soll erst der Schreibvorgang. Einige Schreiber lesen vorher
  * (Ablauf, Lied, Arrangement); scheiterte schon das Lesen, holte niemand ein Token, und der Test
  * bewiese nichts über `schreibe`. Eine Stelle für beide Attrappen unten.
@@ -92,6 +100,11 @@ function lesen(u: string, method: string): Response | null {
   if (u.includes(OHNE_ABLAUF)) {
     if (!ablaufStand.angelegt) return jsonRes(null, 404);
     ablaufStand.angelegt = false;
+    return jsonRes({ items: [] });
+  }
+  if (u.includes(MIT_ABLAUF)) {
+    if (!neuStand.ersetzt) return jsonRes({ items: [{ id: 5, title: 'Alt' }] });
+    neuStand.ersetzt = false;
     return jsonRes({ items: [] });
   }
   if (u.includes('/agenda')) return jsonRes({ items: [PUNKT] });
@@ -172,6 +185,18 @@ const SCHREIBER: Array<[string, () => Promise<void>]> = [
   ['deleteFile', () => deleteFile(COOKIE, 9)],
   ['setAblaufAbgeschlossen', () => setAblaufAbgeschlossen(COOKIE, 9, true)],
   ['createAblauf', () => createAblauf(COOKIE, 77, 2, { art: 'vorlage', vorlageId: 28 })],
+  [
+    'setAblaufNeu',
+    () =>
+      setAblaufNeu(
+        COOKIE,
+        78,
+        2,
+        { art: 'leer' },
+        { punkte: [5], geaendert: null, verbunden: [] },
+        false,
+      ),
+  ],
   // Läuft über `arrangementAendern` im Kern – steht trotzdem drin, damit ein späterer Umbau auffällt.
   ['updateArrangementTempo', () => updateArrangementTempo(COOKIE, 7, 70, 96)],
 ];
@@ -261,6 +286,7 @@ describe('Ohne Ablehnung bleibt das Token liegen – sonst spart der Speicher ni
       const gelesen = lesen(u, method);
       if (gelesen) return Promise.resolve(gelesen);
       if (u.includes(OHNE_ABLAUF)) ablaufStand.angelegt = true;
+      if (u.includes(MIT_ABLAUF)) neuStand.ersetzt = true;
       // Mit ID: Die Anlege-Funktionen verlangen sie (`neueId`), die übrigen übergehen sie.
       return Promise.resolve(jsonRes({ id: 1 }, 200));
     });

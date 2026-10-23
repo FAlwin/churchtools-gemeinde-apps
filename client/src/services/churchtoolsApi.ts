@@ -36,6 +36,7 @@ import * as ext from './ctLesen';
 import * as extSchreiben from './ctSchreiben';
 import * as extSongSelect from './ctSongSelect';
 import type { GeloeschterPunkt, NeuerPunkt, PunktAenderung } from '@shared/ct/schreibKern';
+import type { AblaufBestand, AblaufStand } from '@shared/ct/ablaufNeu';
 
 // Die Weiche zur ChurchTools-Extension (#335): Lesende Aufrufe gehen dort über `ctLesen.ts`, schreibende
 // über `ctSchreiben.ts` direkt an ChurchTools; was es dort (noch) nicht gibt, sagt `ohneServer`. Phase 3b
@@ -164,6 +165,31 @@ export function ablaufAnlegen(
   return apiFetch(`/api/services/${eventId}/agenda`, {
     method: 'POST',
     body: JSON.stringify({ kalenderId, quelle }),
+  });
+}
+
+/** Was die Nachfrage „Neu aufsetzen“ zeigt: Punkte und Termine, die denselben Ablauf teilen (E6-5b). */
+export function ablaufBestand(eventId: number): Promise<AblaufBestand> {
+  if (istExtension) return ext.ablaufBestand(eventId);
+  return apiFetch<AblaufBestand>(`/api/services/${eventId}/agenda/bestand`);
+}
+
+/**
+ * Einen bestehenden Ablauf neu aufsetzen (E6-5b) – `gesehen` ist der Stand der Nachfrage (`standAus`), `nurDieser`
+ * löst bei geteiltem Ablauf erst die Verbindung.
+ */
+export function ablaufNeuAufsetzen(
+  eventId: number,
+  kalenderId: number,
+  quelle: AblaufQuelle,
+  gesehen: AblaufStand,
+  nurDieser: boolean,
+): Promise<{ ok: boolean }> {
+  if (istExtension)
+    return extSchreiben.ablaufNeuAufsetzen(eventId, kalenderId, quelle, gesehen, nurDieser);
+  return apiFetch(`/api/services/${eventId}/agenda/neu`, {
+    method: 'PUT',
+    body: JSON.stringify({ kalenderId, quelle, gesehen, nurDieser }),
   });
 }
 

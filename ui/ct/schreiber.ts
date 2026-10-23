@@ -8,7 +8,8 @@
  * Reihenfolge-Schutz, Vorlauf-Grenze), steht im Schreibkern.
  */
 import type { CtSchreiber, SchreibAuftrag } from '@shared/ct/schreibKern';
-import type { CtAgenda, CtSong } from '@shared/ct/typen';
+import type { AblaufBestandLeser } from '@shared/ct/ablaufNeu';
+import type { CtAblaufVorlage, CtAgenda, CtEvent, CtSong } from '@shared/ct/typen';
 import { ApiError } from './fehler';
 import { ChurchToolsBremst, ctAnfrage, ctDaten, KeinSpeicherRecht } from './verbindung';
 
@@ -31,6 +32,7 @@ export const browserSchreiber: CtSchreiber = {
   // Ohne Zwischenspeicher – frisch, wie die Regeln es verlangen.
   agenda: (eventId) => ctDaten<CtAgenda>(`/events/${eventId}/agenda`),
   song: (songId) => ctDaten<CtSong>(`/songs/${songId}`),
+  vorlage: (vorlageId) => ctDaten<CtAblaufVorlage>(`/agendatemplates/${vorlageId}`),
   async schreibe(pfad, auftrag) {
     try {
       // Der Rumpf geht zurück: Beim Anlegen steht darin die neue ID (3b-2).
@@ -45,4 +47,10 @@ export const browserSchreiber: CtSchreiber = {
     }
   },
   fehler: (status, meldung) => new ApiError(status, meldung),
+};
+
+/** Was die Nachfrage „Neu aufsetzen“ liest (E6-5b) – frisch, wie der Schreiber. */
+export const browserAblaufLeser: AblaufBestandLeser = {
+  agenda: (eventId) => browserSchreiber.agenda(eventId),
+  termin: (eventId) => ctDaten<CtEvent>(`/events/${eventId}`),
 };

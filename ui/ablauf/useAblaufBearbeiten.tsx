@@ -92,6 +92,11 @@ export interface AblaufBearbeitenOptionen<T extends AblaufZeile> {
   gruppenVerborgen?: boolean;
   /** Zusätzlich bei jedem Schreibfehler – z. B. bei 423 (inzwischen abgeschlossen) die Termine neu holen. */
   beiFehler?: (e: unknown) => void;
+  /**
+   * „Neu aufsetzen …“ rechts in der Hinweiszeile (E6-5b, Entwurf A) – öffnet der Aufrufer (`NeuAufsetzen`). Ist der
+   * Ablauf abgeschlossen, steht der Knopf allein da und zeigt den Sperr-Hinweis wie das Plus.
+   */
+  neuAufsetzen?: () => void;
 }
 
 export function useAblaufBearbeiten<T extends AblaufZeile>(
@@ -232,19 +237,29 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
   // Linie „Beginn" in der Bearbeiten-Liste – dieselbe Regel wie in der Ansicht (#423).
   const beginnBeiBearbeiten = beginnStelle(localItems);
 
+  const anleitung = o.speichertGerade ? (
+    'Speichere…'
+  ) : (
+    <>
+      Ziehen <Icon name="grip" size={14} className={styles.hintIcon} /> zum Sortieren · Eintrag
+      antippen zum Bearbeiten.
+    </>
+  );
+
   const liste = (
     <>
       {/* Abgeschlossen: keine Anleitung zum Sortieren – der Knopf oben rechts sagt genug (Alwin). */}
-      {!abgeschlossen && (
-        <div className={styles.editHint}>
-          {o.speichertGerade ? (
-            'Speichere…'
-          ) : (
-            <>
-              Ziehen <Icon name="grip" size={14} className={styles.hintIcon} /> zum Sortieren ·
-              Eintrag antippen zum Bearbeiten.
-            </>
-          )}
+      {!abgeschlossen && !o.neuAufsetzen && <div className={styles.editHint}>{anleitung}</div>}
+      {o.neuAufsetzen && (
+        <div className={`${styles.editHint} ${styles.hintZeile}`}>
+          <span>{abgeschlossen ? null : anleitung}</span>
+          <button
+            type="button"
+            className={styles.neuAufsetzen}
+            onClick={() => (abgeschlossen ? zeigeSperrHinweis(o.sperrHinweis) : o.neuAufsetzen?.())}
+          >
+            <Icon name="refresh" size={14} /> Neu aufsetzen …
+          </button>
         </div>
       )}
       {o.gruppenVerborgen && (

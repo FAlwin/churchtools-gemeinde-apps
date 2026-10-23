@@ -321,3 +321,32 @@ im Fenster eines Punkts. Das andere Konto sieht ihn nicht. In der reinen Ansicht
 - **Historie:** #676 (22.10.2026, gemessen E6-4-0)
 
 </details>
+
+### TF-EDIT-13 · Ablauf neu aufsetzen (Vorlage, wie ein früherer, leer)
+
+**Das brauchst du:** Einen **Test-Termin** mit Ablauf, ein Konto, das den Ablauf bearbeiten darf, eine Ablauf-Vorlage.
+Für Schritt 5 zwei Test-Termine, die sich in ChurchTools einen Ablauf teilen (sonst überspringen).
+
+**Das muss passieren:** Der Ablauf wird erst nach einer klaren Nachfrage ersetzt – bei einem geteilten Ablauf nur
+für diesen Termin, wenn man das wählt.
+
+1. **Bearbeiten** → rechts in der Hinweiszeile **„Neu aufsetzen …“** → das Fenster „Ablauf neu aufsetzen“ mit
+   Vorlage, „Wie eine frühere“ und „Leer“.
+2. Vorlage wählen, **Weiter** → „Ablauf ersetzen?“ nennt die Zahl der Punkte und „Rückgängig geht danach nicht“.
+   **Abbrechen** → nichts ändert sich.
+3. Noch einmal, diesmal **Ersetzen** → die Punkte der Vorlage stehen da, man bleibt im Bearbeiten; in ChurchTools
+   steht dasselbe.
+4. **Leer** → „Ablauf leeren?“ → **Leeren** → keine Punkte mehr. Danach Vorlage wählen und **Weiter**: Es kommt
+   **keine** Nachfrage (es geht nichts verloren).
+5. Geteilter Ablauf: **Weiter** → die Nachfrage nennt den anderen Termin. **Nur für diesen Termin neu** → dieser Termin
+   hat den neuen Ablauf, der andere den alten (in ChurchTools nachsehen).
+6. Abgeschlossener Ablauf: **„Neu aufsetzen …“** zeigt den Sperr-Hinweis, kein Fenster.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/ct/ablaufNeu.ts`, `ui/ablauf/NeuAufsetzen.tsx`, `ui/ablauf/AblaufAnlegenFenster.tsx`, `ui/ablauf/useAblaufBearbeiten.tsx`, `ui/fenster/ConfirmDialog.tsx`, `client/src/components/AblaufAnlegenFenster.tsx`, `client/src/pages/Setlist.tsx`, `client/src/hooks/useServices.ts`, `client/src/services/churchtoolsApi.ts`, `client/src/services/ctSchreiben.ts`, `client/src/services/ctLesen.ts`, `server/src/controllers/setlistController.ts`, `server/src/services/ctWrite.ts`, `server/src/services/ctRead.ts`, `dienstplaner/src/TerminAnsicht.tsx`
+- **Automatisiert:** ja – `shared/ct/ablaufNeu.test.ts` (Regeln gegen eine Attrappe wie gemessen), `ui/ablauf/NeuAufsetzen.test.tsx`, `ui/ablauf/useAblaufBearbeiten.test.tsx`, `ui/fenster/ConfirmDialog.test.tsx`, `dienstplaner/src/TerminAnsicht.test.tsx`, `client/src/services/ctSchreiben.test.ts`, `server/src/controllers/setlistController.gesehen.test.ts`, `server/src/services/ctWrite.test.ts`, `e2e/ablauf-neu-aufsetzen.spec.ts` (ganzer Weg über den Server, geteilt); von Hand bleibt der Blick gegen echtes ChurchTools
+- **Historie:** #691 (23.10.2026, gemessen E6-5b-0, Entwurf abgenommen)
+
+</details>

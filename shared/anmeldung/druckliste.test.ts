@@ -8,6 +8,7 @@ import {
   druckTabelle,
   kuecheTabelle,
   listenAngebot,
+  zahlungenTabelle,
   zimmerTabelle,
   druckWahlFuer,
   teilnehmerSpalten,
@@ -112,6 +113,7 @@ describe('Weitere Listen (A8-2)', () => {
       ['kueche', 'Küche & Allergien', true],
       ['zimmer', 'Zimmer', false],
       ['abhol', 'Abholliste', true],
+      ['zahlungen', 'Zahlungen', true],
     ]);
     const x = e();
     x.preis.grundpreis = {
@@ -203,6 +205,34 @@ describe('Weitere Listen (A8-2)', () => {
       ]);
     expect(druckTabelle('teilnehmer', e(), alleWarten, DRUCK_STANDARD, true).zeilen[0]).toEqual({
       abschnitt: 'Warteliste',
+    });
+  });
+
+  it('Zahlungen (A8-3): je Zahlung eine Zeile, bezahlt mit Tag und Zahlart, Summen wie im Reiter', () => {
+    const t = zahlungenTabelle(e(), liste(), false);
+    expect(t.kopf).toEqual(['Anmeldung', 'Wofür', 'Betrag', 'Bezahlt']);
+    expect(t.zeilen).toEqual([
+      { zellen: ['Maria Beispiel · AAAAAA', 'Anmeldung (Jonas)', '12,00 €', '18.10.2026 · Bar'] },
+      { zellen: ['Maria Beispiel · BBBBBB', 'Anmeldung (Jonas)', '6,00 €', 'offen'] },
+    ]);
+    expect(t.summe).toBe('18,00 € zusammen · 12,00 € da · 6,00 € offen (1 Anmeldung)');
+    // Eine Anmeldung, in der alle warten: zahlt noch nichts – nur mit Warteliste gedruckt.
+    const roh = [...mitglieder('CCCCCC', [false, false], 30)];
+    const warten = anmeldungenAus(
+      e(),
+      mitgliederstandAus(roh, [], FELDER, new Set([35]), PERSONEN),
+      STICHTAG,
+    );
+    expect(zahlungenTabelle(e(), warten, false).zeilen).toEqual([]);
+    expect(zahlungenTabelle(e(), warten, true).zeilen).toEqual([
+      { zellen: ['Maria Beispiel · CCCCCC', 'Anmeldung (Jonas)', '0,00 €', 'wartet'] },
+    ]);
+    // Kostenlos: passt nicht, mit Hinweis.
+    const frei = e();
+    frei.preis.grundpreis = { ...frei.preis.grundpreis, betragCent: 0 };
+    expect(listenAngebot(frei).find((l) => l.art === 'zahlungen')).toMatchObject({
+      passt: false,
+      hinweis: expect.stringContaining('kostet nichts'),
     });
   });
 });

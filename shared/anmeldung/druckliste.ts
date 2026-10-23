@@ -8,7 +8,9 @@
  */
 import { tagPunkt } from '../ct/datum';
 import { ctAblage, nurText, type Feld, type OeffentlicheEinstellungen } from './formular';
-import { antwortText, type ListenAnmeldung, type ListenPerson } from './liste';
+import { antwortText, listenZahlen, type ListenAnmeldung, type ListenPerson } from './liste';
+import { euroText, kannEtwasKosten } from './preis';
+import { zahlungTitel } from './zahlung';
 import { EINVERSTANDEN_ZEILE } from './senden';
 
 /** Eine Zeile der Tabelle – oder eine Zwischenüberschrift (z. B. „Warteliste“). */
@@ -175,7 +177,7 @@ export function teilnehmerTabelle(
 
 // ── Weitere Listen (A8-2) ─────────────────────────────────────────────────────────────────────
 
-export type ListenArt = 'teilnehmer' | 'kueche' | 'zimmer' | 'abhol';
+export type ListenArt = 'teilnehmer' | 'kueche' | 'zimmer' | 'abhol' | 'zahlungen';
 
 /** Ein eingeschaltetes Feld des Formulars mit fester Bedeutung (Baustein). */
 const baustein = (e: OeffentlicheEinstellungen, id: string): Feld | undefined =>
@@ -192,7 +194,7 @@ export interface ListenAngebot {
 
 /**
  * **Welche Listen es gibt** (Alwin, 23.10.2026): Teilnehmer immer; Küche bei „Allergien & Essen“; Zimmer bei Auswahl im
- * Preis (Titel = Name der Auswahl); Abholliste bei „Erziehungsberechtigte“. Jede Liste geht immer – ohne passende Frage
+ * Preis (Titel = Name der Auswahl); Abholliste bei „Erziehungsberechtigte“; Zahlungen, wenn es etwas kostet (A8-3). Jede Liste geht immer – ohne passende Frage
  * bleibt die Spalte leer zum Ausfüllen von Hand.
  */
 export function listenAngebot(e: OeffentlicheEinstellungen): ListenAngebot[] {
@@ -220,6 +222,13 @@ export function listenAngebot(e: OeffentlicheEinstellungen): ListenAngebot[] {
       passt: !!baustein(e, 'eltern'),
       hinweis:
         'Im Formular gibt es keine Erziehungsberechtigten – statt ihrer steht da, wer angemeldet hat.',
+    },
+    {
+      art: 'zahlungen',
+      titel: 'Zahlungen',
+      passt: kannEtwasKosten(e.preis),
+      hinweis:
+        'Diese Veranstaltung kostet nichts – Beträge stehen nur da, wo jemand sie von Hand gesetzt hat.',
     },
   ].map((l) => ({ ...l, art: l.art as ListenArt, hinweis: l.passt ? null : l.hinweis }));
 }
@@ -351,6 +360,45 @@ export function abholTabelle(
   };
 }
 
+/**
+ * **Zahlungen** (A8-3) – je Zahlung eine Zeile: die der Anmeldung und die eigenen (nachgerückt, dazu angemeldet,
+ * zurückgeholt), wie im Fenster einer Anmeldung. Bezahlt mit Tag und Zahlart, sonst „offen“; wer nur wartet, zahlt
+ * noch nichts („wartet“). Unten die Summen – dieselbe Rechnung wie oben im Reiter (`listenZahlen`).
+ */
+export function zahlungenTabelle(
+  e: OeffentlicheEinstellungen,
+  liste: ListenAnmeldung[],
+  mitWarteliste: boolean,
+): DruckTabelle {
+  const gedruckt = liste
+    .filter((x) => x.personen.some((p) => p.status === 'aktiv' || mitWarteliste))
+    .sort((u, w) => vergleich(u.wer, w.wer));
+  const zeilen: DruckZeile[] = gedruckt.flatMap((x) =>
+    x.zahlungen.map((z) => ({
+      zellen: [
+        x.nr ? `${x.wer} · ${x.nr}` : x.wer,
+        zahlungTitel(z),
+        z.betragCent === null ? '' : euroText(z.betragCent),
+        z.bezahlt
+          ? [z.bezahltAm ? tagPunkt(z.bezahltAm) : 'bezahlt', z.zahlart].filter(Boolean).join(' · ')
+          : z.offen
+            ? 'offen'
+            : 'wartet',
+      ],
+    })),
+  );
+  const z = listenZahlen(e, gedruckt);
+  return {
+    kopf: ['Anmeldung', 'Wofür', 'Betrag', 'Bezahlt'],
+    zeilen,
+    summe: [
+      `${euroText(z.eingegangenCent + z.offenCent)} zusammen`,
+      `${euroText(z.eingegangenCent)} da`,
+      `${euroText(z.offenCent)} offen (${z.offen} ${z.offen === 1 ? 'Anmeldung' : 'Anmeldungen'})`,
+    ].join(' · '),
+  };
+}
+
 /** Die Tabelle zur gewählten Liste. */
 export function druckTabelle(
   art: ListenArt,
@@ -366,7 +414,9 @@ export function druckTabelle(
         ? zimmerTabelle(e, liste, mitWarteliste)
         : art === 'abhol'
           ? abholTabelle(e, liste, mitWarteliste)
-          : teilnehmerTabelle(e, liste, wahl, mitWarteliste);
+          : art === 'zahlungen'
+            ? zahlungenTabelle(e, liste, mitWarteliste)
+            : teilnehmerTabelle(e, liste, wahl, mitWarteliste);
   // Ganz leer (z. B. alle warten, gedruckt wird nur mit Platz): ein Satz statt einer leeren Tabelle – wie bei der Küche.
   if (t.zeilen.length === 0)
     t.zeilen = [

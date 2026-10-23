@@ -135,6 +135,9 @@ bleibt die Spalte leer zum Ausfüllen von Hand):
   Personen, dazu eine leere Spalte zum Einteilen.
 - **Abholliste** (bei „Erziehungsberechtigte“) – je Kind, wer es abholen darf, mit Telefon, und eine Spalte „Abgeholt
   von / Uhrzeit“.
+- **Zahlungen** (wenn die Veranstaltung etwas kostet) – je Zahlung eine Zeile (die der Anmeldung und die eigenen von
+  Nachgerückten, später Dazugekommenen und Zurückgeholten), bezahlt mit Tag und Zahlart oder „offen“, unten die Summen
+  wie oben im Reiter.
   Gedruckt wird,
   wer einen Platz hat; „Auch Warteliste“ nimmt die Wartenden in einem eigenen Abschnitt dazu. Oben stehen Gemeinde,
   Veranstaltung und Liste, unten Stand und Seitenzahl – auf jeder Seite. Ab sechs Spalten wird quer gedruckt. Die Wahl

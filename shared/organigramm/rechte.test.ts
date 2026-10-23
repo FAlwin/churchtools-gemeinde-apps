@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { anlegbareTypenAus, darfStruktur, orgRechteAus, type OrgRechte } from './rechte';
+import {
+  anlegbareTypenAus,
+  darfStruktur,
+  gruppenRechteAus,
+  KEINE_GRUPPENRECHTE,
+  mitgliederRechte,
+  orgRechteAus,
+  type OrgRechte,
+} from './rechte';
 
 const fehler = (status: number, meldung: string) => Object.assign(new Error(meldung), { status });
 
@@ -20,6 +28,9 @@ describe('orgRechteAus – wie an der Test-Instanz gemessen (22.10.2026)', () =>
       anlegbareTypen: [1, 2, 3, 4, 5],
       bearbeitbareGruppen: [6, 7, 10],
       bearbeitbareTypen: [],
+      mitgliederAlle: false,
+      mitgliederGruppen: [],
+      mitgliederTypen: [],
     });
   });
 
@@ -39,6 +50,9 @@ describe('orgRechteAus – wie an der Test-Instanz gemessen (22.10.2026)', () =>
       anlegbareTypen: [],
       bearbeitbareGruppen: [],
       bearbeitbareTypen: [],
+      mitgliederAlle: false,
+      mitgliederGruppen: [],
+      mitgliederTypen: [],
     });
   });
 
@@ -67,6 +81,9 @@ describe('darfStruktur / anlegbareTypenAus (O5)', () => {
     anlegbareTypen: [],
     bearbeitbareGruppen: [],
     bearbeitbareTypen: [],
+    mitgliederAlle: false,
+    mitgliederGruppen: [],
+    mitgliederTypen: [],
     ...x,
   });
   const technik = { id: 7, typId: 2 };
@@ -103,5 +120,82 @@ describe('darfStruktur / anlegbareTypenAus (O5)', () => {
     expect(
       orgRechteAus({ churchdb: { 'edit groups of grouptype': [1, 2] } }, fehler).bearbeitbareTypen,
     ).toEqual([1, 2]);
+  });
+});
+
+describe('Mitglieder pflegen (O6, gemessen 23.10.2026)', () => {
+  const r = (x: Partial<OrgRechte>): OrgRechte => ({
+    gruppenVerwalten: false,
+    anlegbareTypen: [],
+    bearbeitbareGruppen: [],
+    bearbeitbareTypen: [],
+    mitgliederAlle: false,
+    mitgliederGruppen: [],
+    mitgliederTypen: [],
+    ...x,
+  });
+  const lobpreis = { id: 9, typId: 2 };
+  // Leitung von Lobpreisteam in der Test-Instanz
+  const leitung = gruppenRechteAus({
+    churchdb: {
+      '+add person': true,
+      '+edit group memberships': true,
+      '+edit basic group memberships': true,
+      '+remove from group': false,
+    },
+  });
+
+  it('je Gruppe: Leitung darf aufnehmen und Rolle ändern, aber nicht beenden', () => {
+    expect(leitung).toEqual({ aufnehmen: true, rolleAendern: true, beenden: false });
+    expect(mitgliederRechte(r({}), leitung, lobpreis)).toEqual(leitung);
+  });
+
+  it('je Gruppe erlaubt auch Austragen (wo ChurchTools es der Rolle gibt) – ohne globales Recht', () => {
+    const mitAustragen = { aufnehmen: false, rolleAendern: false, beenden: true };
+    expect(mitgliederRechte(r({}), mitAustragen, lobpreis)).toEqual(mitAustragen);
+  });
+
+  it('nur Mitglied (alles false) oder Antwort ohne churchdb → nichts', () => {
+    expect(gruppenRechteAus({ churchdb: { '+add person': false } })).toEqual(KEINE_GRUPPENRECHTE);
+    expect(gruppenRechteAus(null)).toEqual(KEINE_GRUPPENRECHTE);
+    // nur `true` zählt – ChurchTools nutzt bei anderen Rechten Zahlen (Stufen)
+    expect(gruppenRechteAus({ churchdb: { '+add person': 1 } }).aufnehmen).toBe(false);
+  });
+
+  it('global: Gruppen-Admin, „edit group memberships“, Liste je Gruppe oder je Typ → alles', () => {
+    const alles = { aufnehmen: true, rolleAendern: true, beenden: true };
+    expect(mitgliederRechte(r({ gruppenVerwalten: true }), KEINE_GRUPPENRECHTE, lobpreis)).toEqual(
+      alles,
+    );
+    expect(mitgliederRechte(r({ mitgliederAlle: true }), KEINE_GRUPPENRECHTE, lobpreis)).toEqual(
+      alles,
+    );
+    expect(mitgliederRechte(r({ mitgliederGruppen: [9] }), KEINE_GRUPPENRECHTE, lobpreis)).toEqual(
+      alles,
+    );
+    expect(mitgliederRechte(r({ mitgliederTypen: [2] }), KEINE_GRUPPENRECHTE, lobpreis)).toEqual(
+      alles,
+    );
+    expect(mitgliederRechte(r({ mitgliederGruppen: [7] }), KEINE_GRUPPENRECHTE, lobpreis)).toEqual(
+      KEINE_GRUPPENRECHTE,
+    );
+  });
+
+  it('liest die globalen Listen aus der Antwort', () => {
+    const x = orgRechteAus(
+      {
+        churchdb: {
+          'edit group memberships': true,
+          'edit group memberships of group': [6, 9],
+          'edit group memberships of grouptype': [1, 2],
+        },
+      },
+      fehler,
+    );
+    expect([x.mitgliederAlle, x.mitgliederGruppen, x.mitgliederTypen]).toEqual([
+      true,
+      [6, 9],
+      [1, 2],
+    ]);
   });
 });

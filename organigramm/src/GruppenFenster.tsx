@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { RueckgaengigImFenster } from '@ui/fenster/Rueckgaengig';
 import type { Aenderung } from '@ui/fenster/aenderung';
@@ -8,7 +8,21 @@ import { PersonBild } from '@ui/bedienung/PersonBild';
 import { ctBasis } from '@ui/ct/basis';
 import { gruppenFarbe } from '@shared/organigramm/farbe';
 import type { Knoten, OrgGruppe } from '@shared/organigramm/gruppen';
-import { anlegbareTypenAus, darfStruktur } from '@shared/organigramm/rechte';
+import {
+  anlegbareTypenAus,
+  darfStruktur,
+  KEINE_GRUPPENRECHTE,
+  mitgliederRechte,
+  type GruppenRechte,
+} from '@shared/organigramm/rechte';
+import {
+  aufnehmen,
+  aufnehmenZurueck,
+  beenden,
+  beendenZurueck,
+  rolleAendern,
+} from '@shared/organigramm/mitgliedschaft';
+import { heuteImKalender } from '@shared/ct/zeit';
 import {
   gruppeWiederLoeschen,
   obergruppeAendern,
@@ -23,6 +37,8 @@ import type { MitgliederDaten } from './ladeMitglieder';
 import type { Start } from './start';
 import { ladeAktivStatus, strukturZugriff as z } from './struktur';
 import { Anlegen, Bestaetigen, ZielWaehlen } from './StrukturSchritte';
+import { PersonAufnehmen, RolleWaehlen } from './MitgliedSchritte';
+import { ladeGruppenRechte, mitgliedZugriff as mz } from './mitgliedschaft';
 import styles from './GruppenFenster.module.scss';
 
 const anzahl = (n: number, eins: string, mehr: string) => `${n} ${n === 1 ? eins : mehr}`;
@@ -36,6 +52,8 @@ interface Props {
   onSchliessen: () => void;
   /** Gruppen und Hierarchie neu laden (nach einer Änderung) – `false`, wenn das gerade nicht ging. */
   onStruktur: () => Promise<boolean>;
+  /** Die Mitglieder DIESER Gruppe neu laden (nach einer Änderung an ihnen, O6) – `false`, wenn das gerade nicht ging. */
+  onMitgliederNeu: () => Promise<boolean>;
 }
 
 /** Was das Fenster gerade zeigt: die Gruppe – oder einen Schritt, der die Struktur ändert (O5). */
@@ -46,7 +64,10 @@ type Modus =
   | { art: 'aendern'; alt: OrgGruppe; neu: OrgGruppe }
   | { art: 'dazu'; neu: OrgGruppe }
   | { art: 'loesen'; alt: OrgGruppe }
-  | { art: 'anlegen' };
+  | { art: 'anlegen' }
+  | { art: 'aufnehmen' }
+  | { art: 'rolle'; personId: number }
+  | { art: 'austragen'; personId: number };
 
 /**
  * **Das Gruppenfenster** (O2): Mitglieder nach Rollen (Leitung zuerst, Reihenfolge wie in ChurchTools), Ober- und
@@ -65,8 +86,10 @@ export function GruppenFenster({
   onNachladen,
   onSchliessen,
   onStruktur,
+  onMitgliederNeu,
 }: Props) {
   const g = knoten.gruppe;
+  const stand = mitglieder?.je.get(g.id);
   const [modus, setModus] = useState<Modus>({ art: 'ansehen' });
   const [arbeitet, setArbeitet] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -77,6 +100,33 @@ export function GruppenFenster({
   const ohneObergruppe = alleEltern.length === 0;
   const typen = darf ? anlegbareTypenAus(start.rechte, start.typNamen.keys()) : [];
 
+  // Mitglieder pflegen (O6): global ODER was die eigene Rolle in dieser Gruppe erlaubt. Die Rechte je Gruppe kommen nur
+  // dann aus ChurchTools, wenn die globalen nicht schon alles erlauben. Nicht ladbar → nur die globalen (sicher zu).
+  const global = mitgliederRechte(start.rechte, KEINE_GRUPPENRECHTE, g);
+  const allesGlobal = global.aufnehmen && global.rolleAendern && global.beenden;
+  const [intern, setIntern] = useState<GruppenRechte | 'laedt' | 'fehler'>(
+    allesGlobal ? KEINE_GRUPPENRECHTE : 'laedt',
+  );
+  useEffect(() => {
+    if (allesGlobal) return;
+    let aktiv = true;
+    ladeGruppenRechte(g.id).then(
+      (r) => aktiv && setIntern(r),
+      () => aktiv && setIntern('fehler'),
+    );
+    return () => {
+      aktiv = false;
+    };
+  }, [g.id, allesGlobal]);
+  const pflege =
+    stand?.art === 'sichtbar'
+      ? mitgliederRechte(start.rechte, typeof intern === 'string' ? KEINE_GRUPPENRECHTE : intern, g)
+      : KEINE_GRUPPENRECHTE;
+  // Was nach „Rückgängig“ neu geladen wird – dasselbe wie nach der Änderung selbst.
+  const [ladenNachZurueck, setLadenNachZurueck] = useState<() => Promise<boolean>>(
+    () => onStruktur,
+  );
+
   /** Einen neuen Schritt beginnen – die Meldung der letzten Änderung gehört dann nicht mehr dazu. */
   const beginnen = (m: Modus) => {
     setAenderung(null);
@@ -84,10 +134,10 @@ export function GruppenFenster({
     setModus(m);
   };
   /** Nach einer Änderung (oder einem Fehlschlag) den echten Stand zeigen; scheitert das Neuladen, sagen wir es. */
-  const neuLaden = async () => {
-    if (!(await onStruktur())) {
+  const neuLaden = async (laden: () => Promise<boolean>) => {
+    if (!(await laden())) {
       setFehler(
-        'Gespeichert – aber der Baum ließ sich gerade nicht neu laden. Bitte die Seite neu laden.',
+        'Gespeichert – aber die Anzeige ließ sich gerade nicht neu laden. Bitte die Seite neu laden.',
       );
     }
   };
@@ -96,6 +146,8 @@ export function GruppenFenster({
     tun: () => Promise<unknown>,
     text: string,
     zurueck: (() => Promise<unknown>) | null,
+    /** Was danach neu geladen wird: die Struktur (O5) oder die Mitglieder dieser Gruppe (O6). */
+    laden: () => Promise<boolean> = onStruktur,
   ) => {
     setArbeitet(true);
     setFehler(null);
@@ -111,12 +163,13 @@ export function GruppenFenster({
           : null,
       });
       setModus({ art: 'ansehen' });
-      await neuLaden();
+      setLadenNachZurueck(() => laden);
+      await neuLaden(laden);
     } catch (e) {
       setFehler(fehlerMeldung(e).text);
       setModus({ art: 'ansehen' });
-      // Auch nach einem Fehlschlag: Was ChurchTools jetzt hat, zeigt der neu geladene Baum.
-      await onStruktur();
+      // Auch nach einem Fehlschlag: Was ChurchTools jetzt hat, zeigt die neu geladene Anzeige.
+      await laden();
     } finally {
       setArbeitet(false);
     }
@@ -133,7 +186,36 @@ export function GruppenFenster({
       () => (neueId === null ? Promise.resolve() : gruppeWiederLoeschen(z, neueId)),
     );
   };
-  const stand = mitglieder?.je.get(g.id);
+  // ── Mitglieder (O6) – danach nur die Mitglieder dieser Gruppe neu laden ──
+  const personName = (id: number) => mitglieder?.personen.get(id)?.name ?? `Person ${id}`;
+  const rollenName = (id: number | null) =>
+    (id !== null ? start.rollen.get(id)?.name : undefined) ?? 'Mitglied';
+  const personAufnehmen = (personId: number, anzeige: string, rolleId: number) => {
+    let vorher: Awaited<ReturnType<typeof aufnehmen>> = null;
+    void ausfuehren(
+      async () => {
+        vorher = await aufnehmen(mz, g.id, personId, rolleId);
+      },
+      `„${anzeige}“ ist jetzt in „${g.name}“ (${rollenName(rolleId)}).`,
+      () => aufnehmenZurueck(mz, g.id, personId, vorher),
+      onMitgliederNeu,
+    );
+  };
+  const rolleSetzen = (personId: number, alt: number | null, neu: number) =>
+    void ausfuehren(
+      () => rolleAendern(mz, g.id, personId, neu),
+      `„${personName(personId)}“ ist jetzt ${rollenName(neu)}.`,
+      alt === null ? null : () => rolleAendern(mz, g.id, personId, alt),
+      onMitgliederNeu,
+    );
+  const austragen = (personId: number) =>
+    void ausfuehren(
+      () => beenden(mz, g.id, personId, heuteImKalender()),
+      `„${personName(personId)}“ ist ausgetragen – die Mitgliedschaft endet heute.`,
+      () => beendenZurueck(mz, g.id, personId),
+      onMitgliederNeu,
+    );
+
   const rang = rollenRang(start.rollen);
   const person = (id: number) => mitglieder?.personen.get(id);
   const name = (id: number) => person(id)?.name ?? '';
@@ -196,7 +278,27 @@ export function GruppenFenster({
               return (
                 <li key={id}>
                   {p && <PersonBild name={p.name} bild={p.bild} initialen={p.initialen} />}
-                  <span>{name(id)}</span>
+                  <span className={styles.personName}>{name(id)}</span>
+                  {modus.art === 'ansehen' && pflege.rolleAendern && (
+                    <button
+                      type="button"
+                      className={styles.klein}
+                      aria-label={`Rolle von ${name(id)}`}
+                      onClick={() => beginnen({ art: 'rolle', personId: id })}
+                    >
+                      Rolle
+                    </button>
+                  )}
+                  {modus.art === 'ansehen' && pflege.beenden && (
+                    <button
+                      type="button"
+                      className={styles.klein}
+                      aria-label={`${name(id)} austragen`}
+                      onClick={() => beginnen({ art: 'austragen', personId: id })}
+                    >
+                      Austragen
+                    </button>
+                  )}
                 </li>
               );
             })}
@@ -204,11 +306,66 @@ export function GruppenFenster({
         </section>
       ))}
 
+      {modus.art === 'ansehen' && pflege.aufnehmen && (
+        <button
+          type="button"
+          className={styles.dazu}
+          onClick={() => beginnen({ art: 'aufnehmen' })}
+        >
+          ＋ Person aufnehmen
+        </button>
+      )}
+      {stand?.art === 'sichtbar' && intern === 'fehler' && (
+        <p className={styles.leise}>
+          Deine Rechte für diese Gruppe ließen sich gerade nicht laden – Mitglieder pflegen geht
+          hier erst nach dem Neuladen.
+        </p>
+      )}
+      {modus.art === 'aufnehmen' && (
+        <PersonAufnehmen
+          start={start}
+          gruppe={g}
+          dabei={new Set(liste.map((m) => m.personId))}
+          arbeitet={arbeitet}
+          onAufnehmen={(p, rolle) =>
+            personAufnehmen(p.personId, `${p.vor} ${p.nach}`.trim(), rolle.id)
+          }
+          onZurueck={() => setModus({ art: 'ansehen' })}
+        />
+      )}
+      {modus.art === 'rolle' && (
+        <RolleWaehlen
+          start={start}
+          gruppe={g}
+          name={personName(modus.personId)}
+          jetzt={liste.find((m) => m.personId === modus.personId)?.rolleId ?? null}
+          arbeitet={arbeitet}
+          onAendern={(rolle) =>
+            rolleSetzen(
+              modus.personId,
+              liste.find((m) => m.personId === modus.personId)?.rolleId ?? null,
+              rolle.id,
+            )
+          }
+          onZurueck={() => setModus({ art: 'ansehen' })}
+        />
+      )}
+      {modus.art === 'austragen' && (
+        <Bestaetigen
+          frage={`„${personName(modus.personId)}“ aus „${g.name}“ austragen?`}
+          folgen="Die Mitgliedschaft endet heute; in ChurchTools bleibt sie in der Historie stehen. Über diese Gruppe sieht die Person danach nichts mehr."
+          knopf="Austragen"
+          arbeitet={arbeitet}
+          onZurueck={() => setModus({ art: 'ansehen' })}
+          onJa={() => austragen(modus.personId)}
+        />
+      )}
+
       {aenderung && (
         <RueckgaengigImFenster
           key={aenderung.text}
           aenderung={aenderung}
-          onRueckgaengig={() => void neuLaden()}
+          onRueckgaengig={() => void neuLaden(ladenNachZurueck)}
         />
       )}
       {fehler && (

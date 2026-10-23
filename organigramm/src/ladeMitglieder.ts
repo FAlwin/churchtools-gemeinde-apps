@@ -60,8 +60,11 @@ export async function ladeMitglieder(
   return { je, personen };
 }
 
-/** Bestimmte Gruppen (nach)laden und mit dem Bisherigen zusammenführen – EINE Stelle für beide Fälle unten. */
-async function gruppenNachladen(
+/**
+ * Bestimmte Gruppen (nach)laden und mit dem Bisherigen zusammenführen – EINE Stelle für die Fälle unten und für
+ * „diese Gruppe neu“ nach einer Änderung an ihren Mitgliedern (O6).
+ */
+export async function gruppenNachladen(
   daten: MitgliederDaten,
   ids: readonly number[],
   holen?: (pfad: string) => Promise<RohMitglied[]>,

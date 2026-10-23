@@ -129,7 +129,7 @@ describe('ladeStart (Organigramm)', () => {
     expect(s.typNamen.get(2)).toBe('Dienst');
     expect(s.eltern.get(12)).toEqual([7]);
     // Rollen aus dem Abruf, den `ladeIch` schon macht – Leitung aus isLeader, auch beim englischen Namen
-    expect(s.rollen.get(35)).toEqual({ id: 35, name: 'Leiter', leitung: true, sortKey: 1 });
+    expect(s.rollen.get(35)).toMatchObject({ id: 35, name: 'Leiter', leitung: true, sortKey: 1 });
     expect(s.dienste?.get(6)?.gruppenIds).toEqual([7]);
     // Geleitet = aktive Mitgliedschaft mit Leitungs-Rolle (isLeader) – nicht Stream (Mitarbeiter), nicht angefragt
     expect(s.geleitet).toEqual([7]);
@@ -138,6 +138,9 @@ describe('ladeStart (Organigramm)', () => {
       anlegbareTypen: [2],
       bearbeitbareGruppen: [7],
       bearbeitbareTypen: [],
+      mitgliederAlle: false,
+      mitgliederGruppen: [],
+      mitgliederTypen: [],
     });
   });
 

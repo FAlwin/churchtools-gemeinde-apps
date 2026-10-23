@@ -227,3 +227,29 @@
   color: var(--red);
   font-size: 14px;
 }
+
+// ── Mitglieder pflegen (O6) ───────────────────────────────────────────────────
+
+.personName {
+  flex: 1;
+  min-width: 0;
+}
+
+.suchzeile {
+  display: flex;
+  gap: 8px;
+
+  .feld {
+    flex: 1;
+  }
+}
+
+// „schon dabei“ in den Treffern der Suche
+.marke {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--section);
+  color: var(--text2);
+  font-size: 12px;
+}

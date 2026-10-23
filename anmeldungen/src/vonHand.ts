@@ -20,7 +20,8 @@ import {
   type AnmeldeEinstellungen,
 } from './einrichten';
 import { angemeldeteId } from '@ui/ct/ich';
-import { personenRoh, type PersonRoh } from './mitglieder';
+import { personenRoh } from './mitglieder';
+import { personenSuchen, type Gefunden } from '@ui/ct/personen';
 
 /** Vor- und Nachname der angemeldeten Person – für den Vermerk „Unterschrift auf Papier“. */
 export async function meinName(): Promise<string> {
@@ -32,48 +33,8 @@ export async function meinName(): Promise<string> {
     .trim();
 }
 
-/** Eine Person aus ChurchTools – Treffer der Suche. */
-export interface Gefunden {
-  personId: number;
-  vor: string;
-  nach: string;
-  geburtstag: string | null;
-  email: string | null;
-}
-
-interface TrefferRoh {
-  domainType?: string;
-  domainIdentifier?: string | number;
-  domainAttributes?: { isArchived?: boolean };
-}
-
-/** Mehr Treffer zeigt die Suche nicht – wer mehr findet, sucht genauer. */
-export const TREFFER_MAX = 20;
-
-const gefunden = (p: PersonRoh): Gefunden => ({
-  personId: p.id,
-  vor: p.firstName ?? '',
-  nach: p.lastName ?? '',
-  geburtstag: p.birthday || null,
-  email: p.email || null,
-});
-
-/** **Personen suchen** – ohne Archivierte, in der Reihenfolge von ChurchTools. */
-export async function personenSuchen(text: string): Promise<Gefunden[]> {
-  const q = text.trim();
-  if (q.length < 2) return [];
-  const treffer = await ctDaten<TrefferRoh[]>(
-    `/search?query=${encodeURIComponent(q)}&domain_types[]=person`,
-  );
-  const ids = treffer
-    .filter((t) => (t.domainType ?? 'person') === 'person' && !t.domainAttributes?.isArchived)
-    .map((t) => Number(t.domainIdentifier))
-    .filter((x) => Number.isInteger(x) && x > 0)
-    .slice(0, TREFFER_MAX);
-  if (ids.length === 0) return [];
-  const personen = new Map((await personenRoh(ids)).map((p) => [p.id, p]));
-  return ids.flatMap((id) => (personen.has(id) ? [gefunden(personen.get(id)!)] : []));
-}
+// Die Suche liegt seit O6 (23.10.2026) in `ui/ct/personen` – das Organigramm nimmt Personen genauso auf.
+export { personenSuchen, TREFFER_MAX, type Gefunden } from '@ui/ct/personen';
 
 const gleich = (x: string, y: string) => x.trim().toLowerCase() === y.trim().toLowerCase();
 

@@ -6,7 +6,9 @@
  * den Fehlerfall beim Start. Wird nie mitgebaut (siehe `main.tsx`). Keine echten Namen.
  *
  * Seit O5 auch schreibend: Umhängen, Lösen und Anlegen verändern die Gruppen und die Hierarchie dieser Sitzung,
- * mit den gemessenen Antworten (400 „schon gesetzt“, 204 beim Lösen, 201 mit ID beim Anlegen). Neu laden setzt zurück.
+ * mit den gemessenen Antworten (400 „schon gesetzt“, 204 beim Lösen, 201 mit ID beim Anlegen). Seit O6 ebenso
+ * Mitglieder (aufnehmen, Rolle, beenden per `memberEndDate`), Rechte je Gruppe und die Personensuche. Neu laden setzt
+ * zurück.
  */
 const gruppe = (id: number, name: string, groupTypeId: number, color: string | null) => ({
   id,
@@ -46,6 +48,7 @@ const NAMEN = [
 ];
 const m = (personId: number, groupTypeRoleId: number) => ({
   personId,
+  memberEndDate: null as string | null,
   person: {
     title: NAMEN[personId - 1],
     initials: NAMEN[personId - 1]
@@ -57,7 +60,7 @@ const m = (personId: number, groupTypeRoleId: number) => ({
   groupTypeRoleId,
   groupMemberStatus: 'active',
 });
-const MITGLIEDER: Record<number, ReturnType<typeof m>[]> = {
+const MITGLIEDER: Record<number, ReturnType<typeof m>[] | undefined> = {
   10: [m(1, 16), m(2, 16)],
   6: [m(2, 16), m(3, 15), m(4, 15)],
   9: [m(1, 16), m(5, 17), m(6, 15), m(7, 15), m(8, 15)],
@@ -128,7 +131,12 @@ const json = (d: unknown, status = 200) =>
   });
 
 /** Die schreibenden und die davon abhängigen lesenden Antworten (O5) – `undefined`, wenn es keine davon ist. */
-function struktur(method: string, pfad: string, body: unknown): Response | undefined {
+function struktur(
+  method: string,
+  pfad: string,
+  body: unknown,
+  suche: URLSearchParams,
+): Response | undefined {
   const eltern = /^\/api\/groups\/(\d+)\/parents\/(\d+)$/.exec(pfad);
   if (eltern) {
     const [id, p] = [Number(eltern[1]), Number(eltern[2])];
@@ -178,13 +186,70 @@ function struktur(method: string, pfad: string, body: unknown): Response | undef
     ELTERN.set(id, [d.parentGroupId]);
     return json({ data: { id } }, 201);
   }
+  // ── Mitglieder (O6) ──
+  const einer = /^\/api\/groups\/(\d+)\/members\/(\d+)$/.exec(pfad);
+  if (einer) {
+    const [g, p] = [Number(einer[1]), Number(einer[2])];
+    const liste = (MITGLIEDER[g] ??= []);
+    const x = liste.find((y) => y.personId === p);
+    if (method === 'GET') return x ? json({ data: x }) : json({}, 404);
+    if (method === 'DELETE') {
+      if (x) liste.splice(liste.indexOf(x), 1);
+      return json(null, 204);
+    }
+    if (method === 'PUT') {
+      const f = (body ?? {}) as Record<string, unknown>;
+      const neu = x ?? { ...m(p, 15), groupMemberStatus: 'active' };
+      if ('groupTypeRoleId' in f) neu.groupTypeRoleId = f.groupTypeRoleId as number;
+      if ('groupMemberStatus' in f) neu.groupMemberStatus = f.groupMemberStatus as string;
+      if ('memberEndDate' in f) neu.memberEndDate = f.memberEndDate as string | null;
+      if (!x) liste.push(neu);
+      return json({ data: neu });
+    }
+  }
   if (method !== 'GET') return undefined;
+  // Rechte je Gruppe: Admin bekommt sie global; als Mitglied leitet Alex nur Technik (7) – aufnehmen und Rolle ja,
+  // austragen nein (wie gemessen an der Leitung von Lobpreisteam).
+  if (/^\/api\/permissions\/internal\/groups\/\d+$/.test(pfad)) {
+    const leitet = pfad.endsWith('/7');
+    return json({
+      data: {
+        churchdb: {
+          '+add person': leitet,
+          '+edit group memberships': leitet,
+          '+remove from group': false,
+        },
+      },
+    });
+  }
+  if (pfad === '/api/search') {
+    const q = (suche.get('query') ?? '').toLowerCase();
+    return json({
+      data: NAMEN.flatMap((n, i) =>
+        n.toLowerCase().includes(q)
+          ? [{ domainType: 'person', domainIdentifier: String(i + 1), title: n }]
+          : [],
+      ),
+    });
+  }
+  if (pfad === '/api/persons') {
+    return json({
+      data: NAMEN.map((n, i) => ({
+        id: i + 1,
+        firstName: n.split(' ')[0],
+        lastName: n.split(' ')[1],
+      })),
+    });
+  }
+  const liste = /^\/api\/groups\/(\d+)\/members$/.exec(pfad);
+  if (liste) {
+    return json({
+      data: MITGLIEDER[Number(liste[1])] ?? [],
+      meta: { pagination: { lastPage: 1 } },
+    });
+  }
   if (pfad === '/api/groups') return json({ data: GRUPPEN, meta: { pagination: { lastPage: 1 } } });
   if (pfad === '/api/groups/hierarchies') return json({ data: hierarchie() });
-  const mitglieder = /^\/api\/groups\/(\d+)\/members$/.exec(pfad);
-  if (mitglieder && !(Number(mitglieder[1]) in MITGLIEDER)) {
-    return json({ data: [], meta: { pagination: { lastPage: 1 } } });
-  }
   return undefined;
 }
 
@@ -203,10 +268,66 @@ function daten(fall: string): Record<string, unknown> {
     },
     '/api/group/roles': {
       data: [
-        { id: 15, name: 'Mitarbeiter', nameTranslated: 'Mitarbeiter', isLeader: false, sortKey: 0 },
-        { id: 16, name: 'Leiter', nameTranslated: 'Leiter', isLeader: true, sortKey: 1 },
-        { id: 17, name: 'Co-Leiter', nameTranslated: 'Co-Leiter', isLeader: true, sortKey: 2 },
-        { id: 39, name: 'leader', nameTranslated: 'Leiter', isLeader: true, sortKey: 1 },
+        // Rollen gehören zu einem Gruppentyp (gemessen O6): Dienst 2, Verteiler 9, Veranstaltung 7
+        {
+          id: 15,
+          name: 'Mitarbeiter',
+          nameTranslated: 'Mitarbeiter',
+          isLeader: false,
+          sortKey: 0,
+          groupTypeId: 2,
+          isDefault: true,
+        },
+        {
+          id: 16,
+          name: 'Leiter',
+          nameTranslated: 'Leiter',
+          isLeader: true,
+          sortKey: 1,
+          groupTypeId: 2,
+        },
+        {
+          id: 17,
+          name: 'Co-Leiter',
+          nameTranslated: 'Co-Leiter',
+          isLeader: true,
+          sortKey: 2,
+          groupTypeId: 2,
+        },
+        {
+          id: 39,
+          name: 'leader',
+          nameTranslated: 'Leiter',
+          isLeader: true,
+          sortKey: 1,
+          groupTypeId: 9,
+        },
+        {
+          id: 40,
+          name: 'member',
+          nameTranslated: 'Empfänger',
+          isLeader: false,
+          sortKey: 0,
+          groupTypeId: 9,
+          isDefault: true,
+        },
+        {
+          id: 41,
+          name: 'Teilnehmer',
+          nameTranslated: 'Teilnehmer',
+          isLeader: false,
+          sortKey: 0,
+          groupTypeId: 7,
+          isDefault: true,
+        },
+        {
+          id: 42,
+          name: 'Leiter',
+          nameTranslated: 'Leiter',
+          isLeader: true,
+          sortKey: 1,
+          groupTypeId: 7,
+        },
       ],
     },
     '/api/services': {
@@ -282,7 +403,7 @@ export function demoStarten(fall: string): void {
     }
     if (fall !== 'fehler') {
       const body: unknown = typeof init?.body === 'string' ? JSON.parse(init.body) : null;
-      const s = struktur(method, url.pathname, body);
+      const s = struktur(method, url.pathname, body, url.searchParams);
       if (s) return Promise.resolve(s);
     }
     const d = antworten[url.pathname];

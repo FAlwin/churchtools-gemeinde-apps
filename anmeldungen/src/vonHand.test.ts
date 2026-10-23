@@ -4,7 +4,7 @@ import * as E from './einrichten';
 import * as M from './mitglieder';
 import { ApiError } from '@ui/ct/fehler';
 import type { HandPlatz } from '@shared/anmeldung/vonHand';
-import { GibtEsSchon, personenSuchen, vonHandAnmelden, type VonHandPlan } from './vonHand';
+import { GibtEsSchon, vonHandAnmelden, type VonHandPlan } from './vonHand';
 
 /**
  * Anmeldung von Hand schreiben (A7-4a) gegen ein nachgestelltes ChurchTools – so, wie es am 19.10.2026 gemessen
@@ -263,14 +263,4 @@ describe('neue Person', () => {
   });
 });
 
-describe('Suche', () => {
-  it('ohne Archivierte, in der Reihenfolge von ChurchTools; wen man nicht sehen darf, fehlt', async () => {
-    const t = await personenSuchen('Hanna');
-    expect(t.map((p) => p.personId)).toEqual([HANNA]);
-    expect(mi.personenRoh).toHaveBeenCalledWith([HANNA, 99]);
-  });
-  it('unter zwei Zeichen wird nicht gesucht', async () => {
-    expect(await personenSuchen(' H ')).toEqual([]);
-    expect(ct.ctDaten).not.toHaveBeenCalled();
-  });
-});
+// Die Tests der Suche stehen seit O6 bei ihr in `ui/ct/personen.test.ts`.

@@ -13,6 +13,7 @@ import type { Mitglied } from '@shared/organigramm/mitglieder';
 import { ladeStart, type Start } from './start';
 import {
   fehlendeNachladen,
+  gruppenNachladen,
   ladeMitglieder,
   neueGruppenNachladen,
   type MitgliederDaten,
@@ -116,6 +117,22 @@ export function App() {
       return false;
     }
   }, [mitglieder, abgemeldetOderFehler]);
+
+  // Nach einer Änderung an den Mitgliedern einer Gruppe (O6): nur diese Gruppe neu – über dieselbe Stelle wie das
+  // Nachladen gescheiterter Gruppen. Vorübergehende Fehler landen als „nicht ladbar“ bei der Gruppe (wie in O2).
+  const mitgliederNeu = useCallback(
+    async (gruppeId: number): Promise<boolean> => {
+      if (!mitglieder) return false;
+      try {
+        setMitglieder(await gruppenNachladen(mitglieder, [gruppeId]));
+        return true;
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 401) abgemeldetOderFehler(e);
+        return false;
+      }
+    },
+    [mitglieder, abgemeldetOderFehler],
+  );
 
   const knoten = useMemo(
     () => (start ? knotenNachId(start.baum) : new Map<number, Knoten>()),
@@ -260,6 +277,7 @@ export function App() {
           onNachladen={nachladen}
           onSchliessen={() => setOffeneGruppe(null)}
           onStruktur={strukturNeu}
+          onMitgliederNeu={() => mitgliederNeu(offenerKnoten.gruppe.id)}
         />
       )}
       {start && offenePersonImBereich && (

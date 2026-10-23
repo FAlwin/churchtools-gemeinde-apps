@@ -487,7 +487,10 @@ Marke „Eigener Ablauf“, Ziehen mit `CSS.Translate` – `Transform` streckt v
 (`abschnittsKopf` – EINE Regel mit `parseChordPro`) und Pedal-Linie als Ersetzungen mit `atomicRanges`, Schalter
 „ChordPro-Text“ (Compartment); am echten iPad vor dem Merge geprüft (TF-EINST-15). L5-1 = `AkkordLeiste` (Tonart über
 `tonartAkkorde`, „Im Lied“ über `akkordeImText`, Gedrückthalten = Varianten) und `AkkordFenster` (Eintippen über
-`akkordLesen`; Akkord-Grammatik EINMAL in `akkordTeile`, auch fürs Transponieren). Liedinfo kommt in L4 nur aus ChurchTools;
+`akkordLesen`; Akkord-Grammatik EINMAL in `akkordTeile`, auch fürs Transponieren). L5-2 = Tipp aufs Kärtchen →
+`AkkordMenue` (Schieben über `akkordVerschieben`, Rahmen über das Feld `aktivFeld` in `ChordProInput` – eine
+CodeMirror-Markierung um ein ersetztes Kärtchen wird nicht gezeichnet; `AkkordWidget.ignoreEvent` lässt
+`mousedown` durch; Klammer-Grammatik der Kärtchen EINMAL in `AKKORD_KLAMMER`). Liedinfo kommt in L4 nur aus ChurchTools;
 `{key}` bleibt als notierte Tonart. Zieh-Einstellungen aller Listen: `ui/bedienung/useZiehSensoren`. Im
 Scroll-Modus kein Spalten-Schalter (`ohneSpalten`). Welche
 eigene Ebene gilt, entscheidet für Blättern UND Scrollen `pageKeys.eigenerSchluessel`.

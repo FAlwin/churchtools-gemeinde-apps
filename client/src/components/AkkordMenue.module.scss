@@ -1,0 +1,46 @@
+// Menü am Akkord-Kärtchen (Lied-Editor L5-2) – schwebt unter dem Kärtchen wie die Varianten der Leiste.
+.menue {
+  position: fixed;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2);
+}
+.knopf {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 10px;
+  justify-content: center;
+  border: none;
+  border-radius: var(--r-ctrl);
+  background: none;
+  color: var(--text);
+  font-family: var(--ui);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  &:hover:not(:disabled) {
+    background: var(--surface3);
+  }
+  &:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+}
+.weg {
+  color: var(--red);
+}
+.trenner {
+  width: 1px;
+  align-self: stretch;
+  margin: 6px 2px;
+  background: var(--hair);
+}

@@ -24,10 +24,11 @@
   Version: Der Versionsstring steckt im ausgelieferten Bundle
   (`curl -s https://musik.ecg-donrath.de/ | grep -oE 'assets/index-[^"]+\.js'`, dann diese Datei holen
   und nach `v2.` greppen). `/api/health` nennt **keine** Version und taugt dafür nicht. Getestet wird
-  auf Staging (`musik-test.ecg-donrath.de`). **Seit 22.10.2026 baut Staging von selbst nur `main`; ein Zweig
-  kommt auf Zuruf drauf: `gh workflow run staging.yml --ref <zweig>`** (vorher überschrieb jeder Push jeder
-  Sitzung die eine Test-Instanz). Die Version nennt den Zweig (`staging-feat-editor-l3-<sha>`). Danach kann ein
-  `main`-Merge sie wieder überschreiben – vor einem Test also im „Mehr“-Tab nachsehen.
+  auf Staging (`musik-test.ecg-donrath.de`). **Seit 23.10.2026 baut Staging NUR auf Zuruf – auch `main`:
+  `gh workflow run staging.yml --ref <zweig>`** (vorher überschrieb jeder Push, zuletzt noch jeder `main`-Merge
+  einer anderen Sitzung, die eine Test-Instanz mitten in Alwins Test). Die Version nennt den Zweig
+  (`staging-feat-editor-l3-<sha>`); am ausgelieferten Bundle prüfen, nicht am Lauf. Vor einem Release `main`
+  ausdrücklich draufbauen (`--ref main`).
   **v2.16.2 wurde übersprungen**, siehe unten.
 
   (Bis zum 23.09.2026 stand hier „Produktiv läuft v2.20.0, nicht ausgeliefert v2.21.0" – seit dem
@@ -221,8 +222,8 @@ churchtools-gemeinde-apps/
   1. **CHANGELOG-Einträge nie direkt in `CHANGELOG.md`**, sondern als eigene Datei je PR in `changelog.d/`
      (Zweig ohne Präfix als Name, Format in `changelog.d/README.md`). Sonst macht jeder fremde Merge den eigenen
      PR konflikthaft. Der Release führt sie zusammen (`npm run changelog -- --version X.Y.Z`).
-  2. **Staging nur auf Zuruf:** Zweige bauen nicht mehr von selbst. Wer Alwin etwas zeigen will:
-     `gh workflow run staging.yml --ref <zweig>`, dann die Version (`staging-<zweig>-<sha>`) nennen.
+  2. **Staging nur auf Zuruf – auch `main` (seit 23.10.):** Nichts baut mehr von selbst. Wer Alwin etwas zeigen
+     will: `gh workflow run staging.yml --ref <zweig>`, dann die Version (`staging-<zweig>-<sha>`) nennen.
 
 ### Allgemein
 
@@ -680,7 +681,7 @@ Neue Nutzer bekommen beim ersten Mal eine geführte Einführung mit Hinweisblase
   Portweiterleitung 443/80 im Router (DSM-Admin-Ports bleiben zu). **Kein Cloudflare.**
 - **Anleitung (hostende Gemeinden):** `INSTALL.md` (image-basiert, empfohlen) + `UPDATE.md`.
   Build-aus-Quellcode-Variante: `docs/betrieb/DEPLOYMENT.md`.
-- **Images:** `.github/workflows/staging.yml` baut bei jedem Push (main, `feature/**`, `feat/**`, `fix/**` – #386) ein `:staging`-Image
+- **Images:** `.github/workflows/staging.yml` baut **auf Zuruf** (`gh workflow run staging.yml --ref <zweig>`, seit 23.10.2026; vorher bei jedem Push, #386) ein `:staging`-Image
   (amd64) nach GHCR; `release.yml` baut bei Tag `vX.Y.Z` Multi-Arch mit den Tags `vX.Y.Z`, `X.Y`,
   \*\*`X` (Major, z. B. `2`)\*\* und `latest`.
 - **Test-Instanz (Auto-Deploy):** `deploy/docker-compose.staging.yml` (Container `musik-app-test`, Port

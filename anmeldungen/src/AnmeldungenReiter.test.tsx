@@ -735,4 +735,26 @@ describe('Druckliste (A8-1)', () => {
     fireEvent.click(within(fenster).getByRole('button', { name: 'Teilen …' }));
     expect(em.aendereEinstellungen).not.toHaveBeenCalled();
   });
+
+  it('Listen nach dem Formular, „＋ weitere“ öffnet den Rest mit Hinweis (A8-2)', async () => {
+    zeigen(fertig());
+    await oeffnen();
+    // Kinder-Event: Küche und Abholliste passen, Zimmer (keine Auswahl im Preis) erst hinter „＋ weitere“.
+    expect(screen.getByRole('button', { name: 'Küche & Allergien' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Zimmer' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Abholliste' }));
+    await pdfFertig();
+    expect(
+      within(screen.getByLabelText('Vorschau')).getByText('Abgeholt von / Uhrzeit'),
+    ).toBeTruthy();
+    // Spalten gibt es nur bei den Teilnehmern.
+    expect(screen.queryByRole('button', { name: 'Telefon' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '＋ weitere' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zimmer' }));
+    expect(screen.getByText(/Im Preis gibt es keine Auswahl/)).toBeTruthy();
+    await pdfFertig();
+    fireEvent.click(screen.getByRole('button', { name: 'Herunterladen' }));
+    await waitFor(() => expect(tm.downloadPdf).toHaveBeenCalled());
+    expect(tm.downloadPdf.mock.calls.at(-1)![1]).toBe('Kinderfreizeit – Zimmer');
+  });
 });

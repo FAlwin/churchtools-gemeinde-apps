@@ -45,6 +45,20 @@ describe('Listen-PDF', () => {
     expect(roh.split('(Spalte 1)').length - 1).toBe(seiten);
   });
 
+  it('Zeile über der Tabelle nur auf der ersten Seite', async () => {
+    const doc = await listenPdf({
+      titel: 'T',
+      liste: 'Küche',
+      stand: 'Stand',
+      oben: '120 Personen · 40 Kinder unter 12',
+      kopf: ['Name', 'Hinweis'],
+      zeilen: Array.from({ length: 120 }, (_, i) => ({ zellen: [`Person ${i}`, 'Nüsse'] })),
+    });
+    const roh = doc.output();
+    expect(doc.getNumberOfPages()).toBeGreaterThan(1);
+    expect(roh.split('(120 Personen · 40 Kinder unter 12)').length - 1).toBe(1);
+  });
+
   it('viele Spalten → quer', async () => {
     const { doc } = await text(3, 7);
     expect(doc.internal.pageSize.getWidth()).toBeGreaterThan(doc.internal.pageSize.getHeight());

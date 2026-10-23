@@ -2,20 +2,17 @@ name: Staging-Image
 
 # Das Test-Image `:staging` (musik-test.ecg-donrath.de, der NAS zieht es per Watchtower).
 #
-# **Seit 22.10.2026 baut nur `main` von selbst; Zweige kommen auf Zuruf** (Alwin: „da haben sich wieder andere
-# vorgedrängelt“). Vorher baute jeder Push auf main, feat/**, fix/** – mit mehreren Sitzungen gleichzeitig
-# überschrieb jeder die eine Test-Instanz, und der Stand, den Alwin prüfen sollte, war oft schon weg. Wer einen
-# Zweig zeigen will, legt ihn ausdrücklich drauf:
+# **Seit 23.10.2026 baut Staging NUR auf Zuruf – auch `main`** (Alwin). Bis 22.10. baute jeder Push auf main,
+# feat/**, fix/**; dann nur noch main von selbst („da haben sich wieder andere vorgedrängelt“). Auch das reichte
+# nicht: Am 23.10. überschrieben main-Merges anderer Sitzungen zweimal an einem Nachmittag den Zweig, den Alwin
+# gerade am iPad prüfte. Es gibt nur EINE Test-Instanz – wer etwas zeigen will, legt es ausdrücklich drauf:
 #
-#   gh workflow run staging.yml --ref feat/mein-zweig
+#   gh workflow run staging.yml --ref feat/mein-zweig     (oder --ref main, z. B. vor einem Release)
 #
 # Die Version nennt den Zweig (`staging-feat-mein-zweig-<sha>`, im „Mehr“-Tab), damit man sieht, was läuft.
 # Der Server erkennt Staging am Präfix `staging-` (`server/src/config.ts`) – das bleibt.
 # Nur amd64 (Test-NAS ist x86_64) → schnell, ein einziger nativer Build.
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 env:

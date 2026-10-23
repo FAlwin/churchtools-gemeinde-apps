@@ -34,20 +34,35 @@ export function cleanServiceName(service?: string): string {
  * hier übersprungen.
  */
 export function responsibleEntries(item: {
-  responsible?: { text?: string; persons?: { service?: string; person?: { title?: string } }[] };
+  responsible?: {
+    text?: string;
+    persons?: {
+      service?: string;
+      person?: { title?: string; initials?: string | null; imageUrl?: string | null };
+    }[];
+  };
 }): ResponsibleEntry[] {
   const entries: ResponsibleEntry[] = [];
   const seen = new Set<string>();
-  const push = (label: string, open: boolean): void => {
+  const push = (label: string, open: boolean, extra: Partial<ResponsibleEntry> = {}): void => {
     if (!label) return;
     const key = `${label}|${open}`;
     if (seen.has(key)) return;
     seen.add(key);
-    entries.push({ label, open });
+    entries.push({ label, open, ...extra });
   };
   for (const p of item.responsible?.persons ?? []) {
     const name = p.person?.title?.trim();
-    push(name || cleanServiceName(p.service), !name);
+    if (!name) {
+      push(cleanServiceName(p.service), true);
+      continue;
+    }
+    // Kürzel und Foto für den Kreis rechts in der Zeile (E6-O1) – beides kommt mit dem Ablauf (gemessen E6-O0).
+    const bild = p.person?.imageUrl?.trim();
+    push(name, false, {
+      kuerzel: p.person?.initials?.trim() || kuerzelAus(name),
+      ...(bild ? { bild } : {}),
+    });
   }
   for (const part of (item.responsible?.text ?? '').split(',')) {
     const label = part.trim();
@@ -55,4 +70,12 @@ export function responsibleEntries(item: {
     push(label, false);
   }
   return entries;
+}
+
+/** Kürzel aus einem Namen („Anna Feld“ → „AF“) – nur, wenn ChurchTools keins liefert. */
+export function kuerzelAus(name: string): string {
+  const teile = name.trim().split(/\s+/).filter(Boolean);
+  const erste = teile[0]?.[0] ?? '';
+  const letzte = teile.length > 1 ? (teile[teile.length - 1][0] ?? '') : '';
+  return (erste + letzte).toLocaleUpperCase('de');
 }

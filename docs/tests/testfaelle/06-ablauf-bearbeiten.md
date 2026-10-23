@@ -196,13 +196,13 @@ dem Punkt, den du bearbeitet hast – in ChurchTools ein Lied-Punkt mit Arrangem
 (45 Minuten) ganz oben und mindestens zwei Punkten darunter.
 
 **Das muss passieren:** Der Soundcheck läuft **vor** dem Beginn. Er steht bei 09:15, der Punkt danach
-bei 10:00, und dazwischen steht die Linie **„Beginn · 10:00 Uhr"**. Der Termin selbst bleibt um 10:00, in
+bei 10:00, und dazwischen steht der graue Balken **„Beginn“** mit **10:00** rechts. Der Termin selbst bleibt um 10:00, in
 der App wie im ChurchTools-Kalender.
 
 1. Test-Termin öffnen → **Bearbeiten** → **Soundcheck** antippen.
 2. **Vor Gottesdienstbeginn** einschalten. Der Hinweis darunter lautet „Dieser und alle Punkte darüber
    laufen vor dem Beginn." **Speichern**.
-3. Die Linie „Beginn · 10:00 Uhr" steht unter dem Soundcheck. Mit **Fertig** zurück in die Ansicht: Dort
+3. Der Balken „Beginn“ (10:00) steht unter dem Soundcheck. Mit **Fertig** zurück in die Ansicht: Dort
    steht sie an derselben Stelle, der Soundcheck zeigt 09:15 in grauer Schrift.
 4. In ChurchTools im Browser den Ablauf öffnen: Der Soundcheck steht vor dem Veranstaltungsbeginn, der
    Termin beginnt weiter um 10:00.

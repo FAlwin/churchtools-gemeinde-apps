@@ -42,7 +42,7 @@ const ZEILEN = [
 ];
 
 describe('AblaufListe', () => {
-  it('Musik-App: Dauer rechts am Titel; Lieder antippbar mit ihrer Nummer im Ablauf', () => {
+  it('Musik-App: Lieder antippbar mit ihrer Nummer im Ablauf', () => {
     const onLied = vi.fn();
     render(<AblaufListe zeilen={ZEILEN} beginn="10:00" onLied={onLied} />);
     const lieder = screen.getAllByRole('button');
@@ -52,13 +52,10 @@ describe('AblaufListe', () => {
     ]);
     fireEvent.click(lieder[1]);
     expect(onLied).toHaveBeenCalledWith(1);
-    // Dauer nicht in der Zeit-Spalte
-    expect(screen.getByText('10:05').textContent).toBe('10:05');
-    expect(screen.getByText('5 Min')).toBeTruthy();
   });
 
-  it('Dienstplaner: Dauer neben der Zeit; ohne onLied keine Knöpfe', () => {
-    render(<AblaufListe zeilen={ZEILEN} beginn="10:00" dauerNebenZeit />);
+  it('beide Apps gleich (E6-O1): die Dauer steht in der Zeitspalte unter der Uhrzeit; ohne onLied keine Knöpfe', () => {
+    render(<AblaufListe zeilen={ZEILEN} beginn="10:00" />);
     expect(screen.queryAllByRole('button')).toHaveLength(0);
     expect(screen.getByText('10:05').parentElement!.textContent).toBe('10:055 Min');
     expect(screen.getByText('09:30').parentElement!.textContent).toBe('09:3030 Min');
@@ -104,5 +101,76 @@ describe('an diesem Termin weggelassen (E6-3b)', () => {
     expect(predigt.className).not.toMatch(/weggelassen/);
     expect(predigt.textContent).toContain('10:00');
     expect(screen.getAllByText('an diesem Termin weggelassen')).toHaveLength(2);
+  });
+});
+
+describe('wie die ChurchTools-App (E6-O1)', () => {
+  it('Lied: Titelzeile ohne Liedname, die Lied-Karte nennt Lied, Tonart · Tempo · Autor (was bekannt ist)', () => {
+    const mitAutor = {
+      ...z({
+        id: 3,
+        title: 'Lied',
+        type: 'song',
+        song: { title: 'Treu', key: 'A', bpm: 75 } as never,
+      }),
+    };
+    mitAutor.song = { ...mitAutor.song!, author: 'Uwe Peters' };
+    const ohne = z({ id: 4, title: 'Lied', type: 'song', song: { title: 'Halleluja' } as never });
+    render(<AblaufListe zeilen={[mitAutor, ohne]} />);
+    expect(screen.getByText('A · 75 bpm · Uwe Peters')).toBeTruthy();
+    expect(screen.getByText('Treu')).toBeTruthy();
+    // Ohne Tonart, Tempo und Autor nur der Liedname – keine leere Zeile mit Punkten.
+    const karte = screen.getByText('Halleluja').parentElement!;
+    expect(karte.textContent).toBe('Halleluja');
+    // Der Titel trägt den Liednamen nicht noch einmal („Lied – Treu“ wäre doppelt).
+    expect(screen.queryByText(/Lied – /)).toBeNull();
+  });
+
+  it('Kreise rechts: Foto, sonst Kürzel; ab drei Personen „+N“; offene Dienste nicht im Kreis, aber rot in der Zeile', () => {
+    const zeile = z({
+      id: 9,
+      title: 'Musik',
+      responsible: {
+        persons: [
+          {
+            service: '[Musik]',
+            person: { title: 'Anna Feld', initials: 'AF', imageUrl: 'https://ct.test/bild.jpg' },
+          },
+          { service: '[Musik]', person: { title: 'Lea Fromm', initials: 'LF' } },
+          { service: '[Musik]', person: { title: 'Ida Roth' } },
+          { service: '[Gesang]' },
+        ],
+      },
+    });
+    const { container } = render(<AblaufListe zeilen={[zeile]} />);
+    const bild = container.querySelector('img')!;
+    expect(bild.getAttribute('src')).toBe('https://ct.test/bild.jpg');
+    expect(screen.getByText('LF')).toBeTruthy();
+    // Ida Roth hat kein Kürzel von ChurchTools – gebildet wird es trotzdem, steht aber hinter „+1“.
+    expect(screen.getByText('+1')).toBeTruthy();
+    expect(screen.getByText(/Gesang \?/)).toBeTruthy();
+    expect(container.textContent).toContain('Anna Feld');
+  });
+
+  it('heißt der Punkt wie sein Lied: Name nur einmal – die Karte nennt dann nur Tonart · Tempo, ohne sie fehlt sie', () => {
+    const gleich = z({
+      id: 5,
+      title: 'Treu',
+      type: 'song',
+      song: { title: 'Treu', key: 'G', bpm: 70 } as never,
+    });
+    const ohneAlles = z({ id: 6, title: '', type: 'song', song: { title: 'Halleluja' } as never });
+    const { container } = render(<AblaufListe zeilen={[gleich, ohneAlles]} />);
+    expect(screen.getAllByText('Treu')).toHaveLength(1);
+    // Nur EINE Karte (Treu mit Tonart · Tempo) – für Halleluja wäre sie leer und fällt weg.
+    expect(container.querySelectorAll('[class*="liedKarte"]')).toHaveLength(1);
+    expect(screen.getByText('G · 70 bpm')).toBeTruthy();
+    expect(screen.getAllByText('Halleluja')).toHaveLength(1);
+  });
+
+  it('„Beginn“ ist ein Balken mit der Uhrzeit rechts – weiter als Trenner erkennbar', () => {
+    render(<AblaufListe zeilen={ZEILEN} beginn="10:00" />);
+    const balken = screen.getByRole('separator', { name: 'Beginn 10:00' });
+    expect(balken.textContent).toBe('Beginn10:00');
   });
 });

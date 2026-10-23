@@ -213,14 +213,14 @@ App das – nicht mehr „Keine Berechtigung".
 Punkt **an dieselbe Stelle** zurück – mit Dauer, Notiz, Zuständigen und Dienstgruppen-Notiz. Nach dem
 Verschieben gilt dasselbe für die alte Reihenfolge. Nach etwa 8 Sekunden oder mit „Fertig" verschwindet
 das Angebot. Wird ein Punkt **vor dem Gottesdienstbeginn** gelöscht, rutscht der erste Punkt des
-Gottesdienstes **nicht** in den Vorlauf (die Linie „Beginn" bleibt, wo sie hingehört).
+Gottesdienstes **nicht** in den Vorlauf (der Balken „Beginn" bleibt, wo er hingehört).
 
 1. Ablauf öffnen, „Ablauf bearbeiten" tippen.
 2. Den vorbereiteten Punkt antippen → „Eintrag löschen" → „Löschen".
 3. Unten auf **Rückgängig** tippen; in ChurchTools nachsehen, ob alles wieder da ist.
 4. Einen Punkt am Griff verschieben, dann **Rückgängig**.
-5. Einen Punkt aus dem Vorlauf löschen und auf die Linie „Beginn" achten; danach Rückgängig.
-6. Mit **zwei** Punkten im Vorlauf den **ersten** löschen und Rückgängig: Beide stehen wieder vor der Linie „Beginn"
+5. Einen Punkt aus dem Vorlauf löschen und auf den Balken „Beginn" achten; danach Rückgängig.
+6. Mit **zwei** Punkten im Vorlauf den **ersten** löschen und Rückgängig: Beide stehen wieder vor dem Balken „Beginn"
    (#700 – vorher fiel der zweite aus dem Vorlauf).
 
 <details><summary>Technisches</summary>
@@ -249,7 +249,7 @@ steht der Termin danach als normaler Termin – nur einmal.
 2. **Termine**: Der Gottesdienst ohne Ablauf steht da, der Gebetsabend nicht.
 3. Zeile antippen → Vorlage gewählt lassen → **Anlegen**. Der Ablauf öffnet sich; in ChurchTools nachsehen.
 4. Für einen weiteren Termin **Wie eine frühere** wählen: Der Ablauf des letzten Sonntags kommt samt
-   Liedern und Linie „Beginn" mit.
+   Liedern und Balken „Beginn" mit.
 5. Für einen dritten **Leer**: ein leerer Ablauf, Punkte über das Plus hinzufügen.
 6. Ohne Recht „Ablauf bearbeiten" **für diesen Kalender** (anderes Konto): Die Termine stehen mit „Kein Ablauf"
    da, aber ohne „Ablauf anlegen". Ist das Konto **Admin des Termins**, gibt es „Ablauf anlegen" trotzdem (#635).
@@ -260,5 +260,30 @@ steht der Termin danach als normaler Termin – nur einmal.
 - **Betrifft:** `shared/ct/ablaufAnlegen.ts`, `shared/ct/ablaufRecht.ts`, `client/src/pages/Agenda.tsx`, `client/src/components/AblaufAnlegenFenster.tsx`, `ui/ablauf/AblaufAnlegenFenster.tsx`, `client/src/components/AblaufAnlegenManager.tsx`, `shared/ct/ablaufVorschlaege.ts`, `server/src/controllers/setlistController.ts`
 - **Automatisiert:** teilweise – `shared/ct/ablaufAnlegen.test.ts`, `client/src/components/AblaufAnlegenFenster.test.tsx`, `client/src/pages/Agenda.ohneAblauf.test.tsx` (auch: Recht je Termin, #635), `shared/ct/ablaufVorschlaege.test.ts`, `e2e/ablauf-anlegen.spec.ts`; gegen echtes ChurchTools nur von Hand
 - **Historie:** 13.10.2026 (Alwin). Gemessen: `PUT /events/{id}/agenda` mit `template_id` / `event_id` / ohne legt an; auf einen vorhandenen Ablauf antwortet es 200 und ändert nichts – die App liest trotzdem vorher nach.
+
+</details>
+
+### TF-ABLAUF-12 · Der Ablauf sieht aus wie in der ChurchTools-App
+
+**Das brauchst du:** Einen Test-Termin mit Vorlauf (z. B. Soundcheck), einer Überschrift, einem Lied mit Arrangement
+(Tonart, Tempo) und Zuständigen – mindestens drei Personen bei einem Punkt, eine davon mit Foto in ChurchTools.
+
+**Das muss passieren:** Musik-App und Dienstplaner zeigen den Ablauf gleich: eine Liste mit feinen Linien (keine
+Karten), links die Uhrzeit fett und die Dauer klein darunter, der Titel fett, die Zuständigen grau darunter (offene
+Dienste rot mit „?“), rechts runde Kreise – Foto oder Kürzel, ab drei Personen „+N“. Überschriften und „Beginn“ stehen
+als graue Balken, das Lied mit blauem Streifen und einer Lied-Karte (Liedname, Tonart · Tempo · Autor).
+
+1. Termin in der Musik-App öffnen: Ansicht wie beschrieben; das Lied antippen öffnet das Blatt.
+2. Denselben Termin im Dienstplaner öffnen: dieselbe Liste; die Lied-Karte nennt auch den Autor.
+3. **Bearbeiten**: Griff links, Uhrzeit und Dauer wie in der Ansicht, rechts nur der Stift (keine Kreise); ein
+   weggelassener Punkt bleibt blass.
+4. Dunkelmodus in ChurchTools einschalten: alles lesbar, Kreise und Balken passen sich an.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `ui/ablauf/AblaufListe.tsx`, `ui/ablauf/AblaufTeile.tsx`, `ui/ablauf/AgendaSortableRow.tsx`, `shared/ct/agendaFormat.ts`, `shared/ct/ablaufZeile.ts`, `dienstplaner/src/TerminAnsicht.tsx`, `dienstplaner/src/ladeBeiwerk.ts`, `client/src/components/AgendaFullView.tsx`
+- **Automatisiert:** ja – `ui/ablauf/AblaufListe.test.tsx` (Dauer, Lied-Karte, Kreise, Balken), `ui/ablauf/useAblaufBearbeiten.test.tsx` (blass im Bearbeiten), `shared/ct/agendaFormat.test.ts` (Kürzel, Foto), `dienstplaner/src/TerminAnsicht.test.tsx` (Autor per Sammelabfrage, Fehlschlag), `client/src/components/AgendaFullView.test.tsx`; von Hand bleibt der Blick auf echte Fotos
+- **Historie:** #710 (23.10.2026, Entwurf `e6-optik-entwurf.html`, gemessen E6-O0)
 
 </details>

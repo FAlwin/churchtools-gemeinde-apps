@@ -19,23 +19,18 @@
   }
 }
 
-// Zuständige
+// Zuständige – grau unter dem Titel wie in der ChurchTools-App (E6-O1).
 .resp {
   display: flex;
   align-items: center;
-  gap: 5px;
-  margin-top: 5px;
-}
-.respIcon {
-  color: var(--text3);
-  flex-shrink: 0;
+  margin-top: 2px;
 }
 .respList {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 7px;
-  font-size: 12px;
+  gap: 2px 5px;
+  font-size: 12.5px;
 }
 .respName {
   color: var(--text2);
@@ -46,28 +41,96 @@
   font-weight: 700;
 }
 
-// Linie „Beginn · 10:00 Uhr" zwischen Vorlauf und Veranstaltung (#423). Eine Trennlinie, keine Karte:
-// Sie gehört zu keinem Punkt und darf deshalb nicht wie einer aussehen.
+// Balken „Beginn“ zwischen Vorlauf und Veranstaltung (#423) – wie „Eventstart“ in der ChurchTools-App (E6-O1): grau
+// über die ganze Breite wie eine Überschrift, aber blau – er gehört zu keinem Punkt.
 .beginnLinie {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
-  padding: 4px 2px;
+  padding: 8px 14px;
+  background: var(--surface3);
+  border-bottom: 1px solid var(--hair);
   color: var(--blue-ink);
-
-  &::before,
-  &::after {
-    content: '';
-    flex: 1;
-    border-top: 1.5px solid currentColor;
-    opacity: 0.45;
-  }
+  font-size: 13px;
+  font-weight: 700;
 }
 .beginnText {
-  font-size: 12.5px;
-  font-weight: 600;
   letter-spacing: 0.02em;
+}
+.beginnZeit {
   font-variant-numeric: tabular-nums;
+}
+
+// Lied-Karte in der Zeile (E6-O1): Liedname, darunter Tonart · Tempo · Autor.
+.liedKarte {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 6px;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  max-width: 100%;
+}
+.liedNote {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-ctrl);
+  background: var(--blue-soft);
+  color: var(--blue);
+  display: grid;
+  place-items: center;
+}
+.liedText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.liedTitel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.liedMeta {
+  font-size: 11.5px;
+  color: var(--text3);
+}
+
+// Runde Kürzel/Fotos rechts in der Zeile (E6-O1), überlappend wie in der ChurchTools-App.
+.kreise {
+  display: flex;
+  flex: none;
+  align-self: center;
+}
+.kreis {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  margin-left: -7px;
+  border: 2px solid var(--surface2);
+  background: var(--surface3);
+  color: var(--text2);
+  font-size: 10.5px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+
+  &:first-child {
+    margin-left: 0;
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
 }
 
 // Hinweis an einer an diesem Termin weggelassenen Zeile (E6-3b).

@@ -3,13 +3,15 @@
  * Musik-App und Dienstplaner dieselbe Zeile nutzen).
  *
  * Tippen auf den Titel öffnet das Aktionsmenü; gezogen wird ausschließlich am Griff – sonst würde
- * jeder Tipp auf die Zeile ein Ziehen einleiten und das Menü ließe sich kaum öffnen.
+ * jeder Tipp auf die Zeile ein Ziehen einleiten und das Menü ließe sich kaum öffnen. Aufbau seit E6-O1 wie die
+ * Ansicht (`ZeitSpalte`, `ZeilenInhalt` aus `AblaufListe`) – eine Stelle für beide.
  */
 import type { AblaufZeile } from '@shared/ct/ablaufZeile';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Icon } from '../icons/icons';
-import { ItemTitle, ResponsibleLine, WeggelassenHinweis } from './AblaufTeile';
+import { WeggelassenHinweis } from './AblaufTeile';
+import { ZeilenInhalt, ZeitSpalte } from './AblaufListe';
 import styles from './AgendaSortableRow.module.scss';
 import zeile from './AblaufListe.module.scss';
 
@@ -27,7 +29,8 @@ export function SortableRow<T extends AblaufZeile>({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.6 : 1,
+    // Nur beim Ziehen – ein festes `opacity: 1` überschrieb das Blass-Machen „weggelassen“ (seit E6-3b, gefunden E6-O1).
+    opacity: isDragging ? 0.6 : undefined,
     zIndex: isDragging ? 1 : undefined,
   };
   // An diesem Termin weggelassen (E6-3b): grau wie in der Ansicht.
@@ -64,9 +67,9 @@ export function SortableRow<T extends AblaufZeile>({
     );
   }
 
-  // Normale Zeile: gleiche Optik wie die Ansicht (Zeit-Spalte → Ziehen-Griff), Antippen öffnet
-  // das Aktionsmenü statt zu den Charts zu führen. Dauer + Zuständige bleiben sichtbar, damit die
-  // Zeilenhöhe exakt der Ansicht entspricht.
+  // Normale Zeile (E6-O1, Entwurf Variante 1 / B): Griff links, dann dieselbe Zeitspalte und derselbe Inhalt wie die
+  // Ansicht – damit beim Umschalten nichts springt –, rechts nur der Stift (keine Kreise). Antippen öffnet das
+  // Punkt-Fenster statt zu den Charts zu führen.
   return (
     <div
       ref={setNodeRef}
@@ -80,21 +83,11 @@ export function SortableRow<T extends AblaufZeile>({
         {...listeners}
         aria-label="Verschieben"
       >
-        <Icon name="grip" size={18} />
+        <Icon name="grip" size={16} />
       </button>
+      <ZeitSpalte item={item} />
       <button className={styles.editBody} data-tour="edit-item" onClick={() => onOpenActions(item)}>
-        <div className={zeile.flowHead}>
-          <ItemTitle item={item} />
-          {item.song && (
-            <span className={zeile.flowSongTag}>
-              <Icon name="music" size={12} />
-            </span>
-          )}
-          {item.weggelassen && <WeggelassenHinweis />}
-          {item.durationMin && <span className={zeile.flowDur}>{item.durationMin} Min</span>}
-        </div>
-        {item.note && <div className={zeile.flowNote}>{item.note}</div>}
-        <ResponsibleLine entries={item.responsible} />
+        <ZeilenInhalt item={item} />
       </button>
       <button
         className={styles.rowEdit}

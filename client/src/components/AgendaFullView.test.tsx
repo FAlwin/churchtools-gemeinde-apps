@@ -356,7 +356,8 @@ describe('AgendaFullView – Linie „Beginn" nach dem Vorlauf (#423)', () => {
       />,
     );
     const linie = screen.getByRole('separator', { name: 'Beginn 10:00' });
-    expect(linie.textContent).toBe('Beginn · 10:00');
+    // Seit E6-O1 ein Balken wie in der ChurchTools-App: „Beginn“ links, die Uhrzeit rechts.
+    expect(linie.textContent).toBe('Beginn10:00');
     const vorher = screen.getByText('Soundcheck');
     const nachher = screen.getByText('Begrüßung');
     // DOM-Reihenfolge: Soundcheck → Linie → Begrüßung.

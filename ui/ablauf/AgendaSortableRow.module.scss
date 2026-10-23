@@ -1,18 +1,20 @@
 // Die Zeile zum Ziehen im Bearbeiten-Modus (E6-2b-1, vorher in `client/src/pages/Setlist.module.scss`) –
 // 1:1 verschoben, damit Musik-App und Dienstplaner (E6-3) dieselbe Zeile nutzen.
 
-// Bearbeiten-Modus spiegelt die Ansicht (.flowRow), damit beim Umschalten nichts springt.
-// Die Zeit-Spalte wird zum Ziehen-Griff (gleiche Breite wie .flowTime).
+// Bearbeiten-Modus spiegelt die Ansicht (.flowRow), damit beim Umschalten nichts springt. Der Griff steht links VOR
+// der Zeitspalte (E6-O1, Entwurf Variante 1 / B) – schmal, damit dem Titel Platz bleibt.
 .dragCol {
   flex-shrink: 0;
-  width: 42px;
+  width: 18px;
+  margin-right: -4px;
   align-self: stretch;
   display: flex;
   align-items: center;
   justify-content: center;
   border: none;
   background: none;
-  color: var(--text2);
+  padding: 0;
+  color: var(--text3);
   cursor: grab;
   touch-action: none;
 
@@ -70,10 +72,10 @@
   align-items: center;
   border: none;
   background: none;
-  color: var(--text2);
+  color: var(--text3);
   cursor: grab;
   touch-action: none;
-  padding: 0 6px 0 0;
+  padding: 0 4px 0 0;
   line-height: 1;
 
   &:active {

@@ -624,6 +624,13 @@ export interface ResponsibleEntry {
   label: string;
   /** true = offener Dienst-Platz (noch niemand zugesagt) – wird hervorgehoben. */
   open: boolean;
+  /**
+   * Kürzel für den runden Kreis rechts in der Zeile (E6-O1) – `initials` von ChurchTools, sonst aus dem Namen. Nur bei
+   * Personen (gemessen E6-O0: kommt mit dem Ablauf, keine eigene Abfrage).
+   */
+  kuerzel?: string;
+  /** Foto der Person, wo ChurchTools eins hat (`imageUrl`; lädt ohne Anmeldung, ~4 KB – gemessen E6-O0). */
+  bild?: string;
 }
 
 /** Ein ChurchTools-Dienst (z.B. „Musik", „Predigt") – als Chip im Verantwortlich-Editor. */

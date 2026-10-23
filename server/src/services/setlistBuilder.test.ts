@@ -228,7 +228,7 @@ describe('responsibleEntries (Zuständige, dedupliziert)', () => {
   it('besetzte Person → open=false', () => {
     expect(
       responsibleEntries({ responsible: { persons: [{ person: { title: 'Max Muster' } }] } }),
-    ).toEqual([{ label: 'Max Muster', open: false }]);
+    ).toEqual([{ label: 'Max Muster', open: false, kuerzel: 'MM' }]); // Kürzel für den Kreis (E6-O1)
   });
   it('offener Dienstplatz → Dienstname, open=true', () => {
     expect(responsibleEntries({ responsible: { persons: [{ service: '[Musik]' }] } })).toEqual([
@@ -240,7 +240,7 @@ describe('responsibleEntries (Zuständige, dedupliziert)', () => {
       responsibleEntries({
         responsible: { persons: [{ person: { title: 'Anna' } }, { person: { title: 'Anna' } }] },
       }),
-    ).toEqual([{ label: 'Anna', open: false }]);
+    ).toEqual([{ label: 'Anna', open: false, kuerzel: 'A' }]);
   });
   it('leere Zuständigkeit → leeres Array', () => expect(responsibleEntries({})).toEqual([]));
   it('manuelle Freitext-Namen (nur text, persons leer) → als besetzte Personen', () => {
@@ -261,7 +261,7 @@ describe('responsibleEntries (Zuständige, dedupliziert)', () => {
           persons: [{ service: '[Moderation]', person: { title: 'Willi' } }],
         },
       }),
-    ).toEqual([{ label: 'Willi', open: false }]);
+    ).toEqual([{ label: 'Willi', open: false, kuerzel: 'W' }]);
   });
   it('Mischung aus Dienst und Freitext', () => {
     expect(
@@ -278,7 +278,7 @@ describe('responsibleEntries (Zuständige, dedupliziert)', () => {
       responsibleEntries({
         responsible: { text: 'Willi', persons: [{ person: { title: 'Willi' } }] },
       }),
-    ).toEqual([{ label: 'Willi', open: false }]);
+    ).toEqual([{ label: 'Willi', open: false, kuerzel: 'W' }]);
   });
 });
 

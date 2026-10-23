@@ -227,6 +227,16 @@ describe('Weitere Listen (A8-2)', () => {
     expect(zahlungenTabelle(e(), warten, true).zeilen).toEqual([
       { zellen: ['Maria Beispiel · CCCCCC', 'Anmeldung (Jonas)', '0,00 €', 'wartet'] },
     ]);
+    // Mit Platz, aber ohne Betrag (ältere Anmeldung): leer, nicht „wartet“ (echter Test 23.10.2026).
+    const ohneBetrag = liste();
+    ohneBetrag[1].zahlungen = ohneBetrag[1].zahlungen.map((z) => ({
+      ...z,
+      betragCent: null,
+      offen: false,
+    }));
+    expect(zahlungenTabelle(e(), ohneBetrag, false).zeilen[1]).toEqual({
+      zellen: ['Maria Beispiel · BBBBBB', 'Anmeldung (Jonas)', '', ''],
+    });
     // Kostenlos: passt nicht, mit Hinweis.
     const frei = e();
     frei.preis.grundpreis = { ...frei.preis.grundpreis, betragCent: 0 };

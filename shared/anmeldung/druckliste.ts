@@ -362,8 +362,8 @@ export function abholTabelle(
 
 /**
  * **Zahlungen** (A8-3) – je Zahlung eine Zeile: die der Anmeldung und die eigenen (nachgerückt, dazu angemeldet,
- * zurückgeholt), wie im Fenster einer Anmeldung. Bezahlt mit Tag und Zahlart, sonst „offen“; wer nur wartet, zahlt
- * noch nichts („wartet“). Unten die Summen – dieselbe Rechnung wie oben im Reiter (`listenZahlen`).
+ * zurückgeholt), wie im Fenster einer Anmeldung. Bezahlt mit Tag und Zahlart, sonst „offen“; steht wer zahlt auf der
+ * Warteliste, „wartet“; ohne Betrag bleibt es leer. Unten die Summen – dieselbe Rechnung wie oben im Reiter (`listenZahlen`).
  */
 export function zahlungenTabelle(
   e: OeffentlicheEinstellungen,
@@ -383,7 +383,11 @@ export function zahlungenTabelle(
           ? [z.bezahltAm ? tagPunkt(z.bezahltAm) : 'bezahlt', z.zahlart].filter(Boolean).join(' · ')
           : z.offen
             ? 'offen'
-            : 'wartet',
+            : // „wartet“ nur, wenn wer zahlt auf der Warteliste steht – ohne Betrag (ältere Anmeldung, kostenlos) bleibt
+              // es leer wie im Reiter (echter Test 23.10.2026: Anmeldungen mit Platz standen als „wartet“ da).
+              x.personen.find((p) => p.personId === z.personId)?.status === 'wartet'
+              ? 'wartet'
+              : '',
       ],
     })),
   );

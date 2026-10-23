@@ -8,10 +8,12 @@ import type { OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import { listenZahlen, type ListenAnmeldung } from '@shared/anmeldung/liste';
 import {
   druckDateiname,
+  druckTabelle,
   druckWahlFuer,
+  listenAngebot,
   teilnehmerSpalten,
-  teilnehmerTabelle,
   type DruckSortierung,
+  type ListenArt,
   type DruckWahl,
 } from '@shared/anmeldung/druckliste';
 import { aendereEinstellungen } from './einrichten';
@@ -30,10 +32,10 @@ const stempel = new Intl.DateTimeFormat('de-DE', {
 });
 
 /**
- * **Druckliste** (A8-1, Entwurf `a8-druckliste-v1`, abgenommen 23.10.2026) – die Teilnehmerliste als PDF: Spalten aus
- * den Fragen, Sortierung, auf Wunsch mit Warteliste; Vorschau und PDF kommen aus derselben Tabelle
- * (`teilnehmerTabelle`). Die Wahl merkt sich die Veranstaltung – gespeichert beim Teilen/Herunterladen, wenn sie sich
- * geändert hat und man die Veranstaltung ändern darf.
+ * **Druckliste** (A8, Entwurf `a8-druckliste-v1`, abgenommen 23.10.2026) – Listen als PDF, auf Wunsch mit Warteliste;
+ * Vorschau und PDF kommen aus derselben Tabelle (`druckTabelle`). Vorn stehen die Listen, die zum Formular passen,
+ * „＋ weitere“ öffnet den Rest (A8-2). Bei den Teilnehmern: Spalten aus den Fragen und Sortierung – die Wahl merkt sich
+ * die Veranstaltung, gespeichert beim Teilen/Herunterladen, wenn sie sich geändert hat und man sie ändern darf.
  *
  * Das PDF entsteht, sobald sich etwas ändert, nicht erst beim Antippen: iOS öffnet das Teilen-Menü nur direkt nach
  * dem Tippen (wie im Teilen-Fenster der Musik-App).
@@ -61,6 +63,10 @@ export function DrucklisteFenster({
   const gemerkt = useMemo(() => druckWahlFuer(e), [e]);
   const [wahl, setWahl] = useState<DruckWahl>(gemerkt);
   const [mitWarteliste, setMitWarteliste] = useState(false);
+  const angebot = useMemo(() => listenAngebot(e), [e]);
+  const [art, setArt] = useState<ListenArt>('teilnehmer');
+  const [alleZeigen, setAlleZeigen] = useState(false);
+  const gewaehlt = angebot.find((l) => l.art === art) ?? angebot[0];
   const [pdf, setPdf] = useState<jsPDF | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
   const [merkFehler, setMerkFehler] = useState<string | null>(null);
@@ -68,8 +74,8 @@ export function DrucklisteFenster({
 
   const spalten = teilnehmerSpalten(e);
   const tabelle = useMemo(
-    () => teilnehmerTabelle(e, liste, wahl, mitWarteliste),
-    [e, liste, wahl, mitWarteliste],
+    () => druckTabelle(art, e, liste, wahl, mitWarteliste),
+    [art, e, liste, wahl, mitWarteliste],
   );
   // Dieselben Zahlen wie oben im Reiter.
   const { belegt: mitPlatz, wartend } = listenZahlen(e, liste);
@@ -81,7 +87,7 @@ export function DrucklisteFenster({
     let aktuell = true;
     setPdf(null);
     setGeladen(false);
-    listenPdf({ titel, liste: 'Teilnehmer', stand, ...tabelle }).then(
+    listenPdf({ titel, liste: gewaehlt.titel, stand, ...tabelle }).then(
       (doc) => {
         if (aktuell) {
           setPdf(doc);
@@ -95,7 +101,7 @@ export function DrucklisteFenster({
     return () => {
       aktuell = false;
     };
-  }, [titel, stand, tabelle]);
+  }, [titel, stand, tabelle, gewaehlt.titel]);
 
   const umschalten = (schluessel: string) =>
     setWahl((w) => ({
@@ -118,7 +124,19 @@ export function DrucklisteFenster({
     );
   }
 
-  const datei = druckDateiname(veranstaltung, 'Teilnehmer');
+  const datei = druckDateiname(veranstaltung, gewaehlt.titel);
+  const sichtbar = angebot.filter((l) => l.passt || alleZeigen || l.art === art);
+  const listenKnopf = (l: (typeof angebot)[number]) => (
+    <button
+      key={l.art}
+      type="button"
+      className={s.filterChip}
+      aria-pressed={l.art === art}
+      onClick={() => setArt(l.art)}
+    >
+      {l.titel}
+    </button>
+  );
 
   return (
     <Sheet title="Druckliste" onClose={onClose}>
@@ -126,10 +144,14 @@ export function DrucklisteFenster({
       <section className={a.teil}>
         <h3>Liste</h3>
         <div className={d.chips}>
-          <button type="button" className={s.filterChip} aria-pressed="true">
-            Teilnehmer
-          </button>
+          {sichtbar.map(listenKnopf)}
+          {sichtbar.length < angebot.length && (
+            <button type="button" className={d.weitere} onClick={() => setAlleZeigen(true)}>
+              ＋ weitere
+            </button>
+          )}
         </div>
+        {gewaehlt.hinweis && <p className={a.hinweisBlau}>{gewaehlt.hinweis}</p>}
       </section>
       <section className={a.teil}>
         <h3>Einstellungen</h3>
@@ -147,43 +169,48 @@ export function DrucklisteFenster({
             />
           </div>
         )}
-        <div className={d.zeile}>
-          <span>Spalten</span>
-          <div className={d.chips}>
-            {spalten.map((x) => (
-              <button
-                key={x.schluessel}
-                type="button"
-                className={s.filterChip}
-                aria-pressed={wahl.spalten.includes(x.schluessel)}
-                onClick={() => umschalten(x.schluessel)}
-              >
-                {x.titel}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className={d.zeile}>
-          <span>Sortiert nach</span>
-          <Segment<DruckSortierung>
-            value={wahl.sortierung}
-            options={[
-              { value: 'nachname', label: 'Nachname' },
-              { value: 'alter', label: 'Alter' },
-              { value: 'anmeldung', label: 'Anmeldung' },
-            ]}
-            onChange={(v) => setWahl((w) => ({ ...w, sortierung: v }))}
-            ariaLabel="Sortiert nach"
-          />
-        </div>
+        {art === 'teilnehmer' && (
+          <>
+            <div className={d.zeile}>
+              <span>Spalten</span>
+              <div className={d.chips}>
+                {spalten.map((x) => (
+                  <button
+                    key={x.schluessel}
+                    type="button"
+                    className={s.filterChip}
+                    aria-pressed={wahl.spalten.includes(x.schluessel)}
+                    onClick={() => umschalten(x.schluessel)}
+                  >
+                    {x.titel}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className={d.zeile}>
+              <span>Sortiert nach</span>
+              <Segment<DruckSortierung>
+                value={wahl.sortierung}
+                options={[
+                  { value: 'nachname', label: 'Nachname' },
+                  { value: 'alter', label: 'Alter' },
+                  { value: 'anmeldung', label: 'Anmeldung' },
+                ]}
+                onChange={(v) => setWahl((w) => ({ ...w, sortierung: v }))}
+                ariaLabel="Sortiert nach"
+              />
+            </div>
+          </>
+        )}
       </section>
       <section className={a.teil}>
         <h3>Vorschau</h3>
         <div className={d.papier} aria-label="Vorschau">
           <div className={d.kopf}>
             <b>{titel}</b>
-            <span>Teilnehmer</span>
+            <span>{gewaehlt.titel}</span>
           </div>
+          {tabelle.oben && <p className={d.oben}>{tabelle.oben}</p>}
           <table>
             <thead>
               <tr>

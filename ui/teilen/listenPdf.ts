@@ -21,6 +21,8 @@ export interface ListenBlatt {
   stand: string;
   kopf: string[];
   zeilen: ListenZeile[];
+  /** Fett über der Tabelle, nur auf der ersten Seite – z. B. die Zahlen für die Küche. */
+  oben?: string;
   /** Fett unter der Tabelle. */
   summe?: string;
 }
@@ -113,6 +115,11 @@ export async function listenPdf(b: ListenBlatt): Promise<jsPDF> {
   const neueSeite = (erste: boolean) => {
     if (!erste) d.addPage();
     y = KOPF_UNTEN + 3;
+    if (erste && b.oben) {
+      d.setFont('helvetica', 'bold');
+      d.text(b.oben, RAND + POLSTER, y + 4);
+      y += 9;
+    }
     tabellenKopf();
   };
 

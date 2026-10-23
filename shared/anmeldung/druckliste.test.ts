@@ -3,7 +3,12 @@ import { anmeldungenAus, mitgliederstandAus } from './liste';
 import { FELDER, PERSONEN, STICHTAG, e, mitglieder } from './liste.testdaten';
 import {
   DRUCK_STANDARD,
+  abholTabelle,
   druckDateiname,
+  druckTabelle,
+  kuecheTabelle,
+  listenAngebot,
+  zimmerTabelle,
   druckWahlFuer,
   teilnehmerSpalten,
   teilnehmerTabelle,
@@ -97,5 +102,107 @@ describe('Teilnehmerliste', () => {
     expect(druckDateiname('Freizeit 2027/28: Teil "1"', 'Teilnehmer')).toBe(
       'Freizeit 2027 28 Teil 1 – Teilnehmer',
     );
+  });
+});
+
+describe('Weitere Listen (A8-2)', () => {
+  it('Angebot nach dem Formular: Kinder-Event mit Allergien und Eltern, ohne Auswahl im Preis', () => {
+    expect(listenAngebot(e()).map((l) => [l.art, l.titel, l.passt])).toEqual([
+      ['teilnehmer', 'Teilnehmer', true],
+      ['kueche', 'Küche & Allergien', true],
+      ['zimmer', 'Zimmer', false],
+      ['abhol', 'Abholliste', true],
+    ]);
+    const x = e();
+    x.preis.grundpreis = {
+      ...x.preis.grundpreis,
+      art: 'auswahl',
+      auswahlName: 'Zimmertyp',
+      optionen: [],
+    };
+    x.formular.person = x.formular.person.filter((f) => f.id !== 'allergy');
+    const a = listenAngebot(x);
+    expect(a.find((l) => l.art === 'zimmer')).toMatchObject({ titel: 'Zimmertyp', passt: true });
+    expect(a.find((l) => l.art === 'kueche')).toMatchObject({
+      passt: false,
+      hinweis: expect.stringContaining('keine Frage zu Allergien'),
+    });
+  });
+
+  it('Küche: Zahlen oben, nur wer einen Hinweis hat; ohne Frage alle mit leerer Spalte', () => {
+    const t = kuecheTabelle(e(), liste(), false);
+    expect(t.oben).toBe('3 Personen · 3 Kinder unter 12 · 0 unter 3 · 2 mit Hinweis');
+    expect(t.kopf).toEqual(['Name', 'Alter', 'Hinweis']);
+    expect(t.zeilen).toEqual([
+      { zellen: ['Beispiel, Jonas', '9', 'Nüsse'] },
+      { zellen: ['Beispiel, Jonas', '9', 'Nüsse'] },
+    ]);
+    expect(kuecheTabelle(e(), liste(), true).oben).toMatch(/^4 Personen/);
+    // Niemand hat etwas angegeben → ein Satz statt einer leeren Tabelle.
+    const leer = liste();
+    for (const x of leer) for (const p of x.personen) p.werte = {};
+    expect(kuecheTabelle(e(), leer, false).zeilen).toEqual([
+      { abschnitt: 'Niemand hat bei „Allergien oder Unverträglichkeiten“ etwas angegeben.' },
+    ]);
+    const ohne = e();
+    ohne.formular.person = ohne.formular.person.filter((f) => f.id !== 'allergy');
+    const o = kuecheTabelle(ohne, liste(), false);
+    expect(o.zeilen).toHaveLength(3);
+    expect(o.oben).toBe('3 Personen · 3 Kinder unter 12 · 0 unter 3');
+  });
+
+  it('Zimmer: je Option die Anmeldungen, Wartende markiert; ohne Auswahl alle', () => {
+    const x = e();
+    x.preis.grundpreis = {
+      ...x.preis.grundpreis,
+      art: 'auswahl',
+      auswahlName: 'Zimmertyp',
+      optionen: [
+        { name: 'Zweibett', preisCent: 0, kontingent: 0, belegt: 0, personenJe: 0 },
+        { name: 'Vierbett', preisCent: 0, kontingent: 0, belegt: 0, personenJe: 0 },
+      ],
+    };
+    const l = liste(x);
+    l[0].einmal[x.ctFelder.auswahl] = 'Vierbett';
+    l[1].einmal[x.ctFelder.auswahl] = 'Gibt es nicht mehr';
+    expect(zimmerTabelle(x, l, true).zeilen).toEqual([
+      { abschnitt: 'Vierbett' },
+      { zellen: ['Maria Beispiel', 'Jonas, Lena', ''] },
+      { abschnitt: 'Ohne Auswahl' },
+      { zellen: ['Maria Beispiel', 'Jonas, Lena (Warteliste)', ''] },
+    ]);
+    const ohne = zimmerTabelle(e(), liste(), false);
+    expect(ohne.zeilen).toEqual([
+      { zellen: ['Maria Beispiel', 'Jonas, Lena', ''] },
+      { zellen: ['Maria Beispiel', 'Jonas', ''] },
+    ]);
+    expect(ohne.summe).toBe('2 Anmeldungen · 3 Personen');
+  });
+
+  it('Abholliste: Erziehungsberechtigte ohne Einverständnis-Zeile; ohne Baustein der Kontakt mit Telefon', () => {
+    const t = abholTabelle(e(), liste(), false);
+    expect(t.kopf).toEqual(['Kind', 'Abholen dürfen', 'Abgeholt von / Uhrzeit']);
+    expect(t.zeilen[0]).toEqual({
+      zellen: ['Beispiel, Jonas', 'Maria Beispiel, 0151 111\nTom Beispiel', ''],
+    });
+    const ohne = e();
+    ohne.formular.anmeldung = ohne.formular.anmeldung.filter((f) => f.id !== 'eltern');
+    expect(abholTabelle(ohne, liste(), false).zeilen[0]).toEqual({
+      zellen: ['Beispiel, Jonas', 'Maria Beispiel, 0151 111', ''],
+    });
+  });
+
+  it('ganz leer: ein Satz statt einer leeren Tabelle', () => {
+    const alleWarten = liste().map((x) => ({
+      ...x,
+      personen: x.personen.map((p) => ({ ...p, status: 'wartet' as const })),
+    }));
+    for (const art of ['teilnehmer', 'zimmer', 'abhol'] as const)
+      expect(druckTabelle(art, e(), alleWarten, DRUCK_STANDARD, false).zeilen).toEqual([
+        { abschnitt: 'Niemand mit Platz – „Auch Warteliste“ nimmt die Wartenden dazu.' },
+      ]);
+    expect(druckTabelle('teilnehmer', e(), alleWarten, DRUCK_STANDARD, true).zeilen[0]).toEqual({
+      abschnitt: 'Warteliste',
+    });
   });
 });

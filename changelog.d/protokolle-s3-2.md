@@ -8,3 +8,10 @@
   Mail-Adressen), Aufgaben mit Stand und Frist aus „Mitarbeit“, Beschlüsse, Termine; unbekannte Blöcke zeigen ihren
   Text. Darunter die Bereiche **Beschlüsse · To-Dos · Termine** aus derselben Ableitung wie das Dokument. Ist ein
   Protokoll gerade nicht vollständig lesbar, steht das da statt eines halben Dokuments.
+
+### Geändert (gemeinsam)
+
+- **Listen in ChurchTools mit Punkten und Nummern:** ChurchTools (Tailwind) nimmt `ul`/`ol` ihre Zeichen – im
+  Protokoll fehlten so die Aufzählungszeichen (nur in ChurchTools sichtbar, nicht in der Demo). Die Regel steht jetzt
+  einmal als `listenMitZeichen` in `ui/design/_mixins.scss`; die zwei Einzelstellen der Anmeldungen nutzen sie mit.
+  Die Hauptknöpfe der Protokolle-Fenster nutzen den vorhandenen `hauptKnopfBreit` statt einer eigenen Kopie.

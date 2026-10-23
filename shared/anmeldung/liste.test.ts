@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { abgesagteIds, anmeldungenAus, antwortZeilen, listenZahlen } from './liste';
+import { abgesagteIds, anmeldungenAus, antwortText, antwortZeilen, listenZahlen } from './liste';
 import { unterschriftLesen } from './unterschrift';
 import { STRICHE } from './senden.testdaten';
 import { BEZAHLT, STICHTAG, absage, dazu, e, mitglieder, stand } from './liste.testdaten';
@@ -255,5 +255,23 @@ describe('Sonderfälle', () => {
     x.preis.grundpreis.betragCent = 0;
     const liste = anmeldungenAus(x, stand(mitglieder('AAAAAA', [true, true], 10)), STICHTAG);
     expect([liste[0].zahlungOffen, listenZahlen(x, liste).kostet]).toEqual([false, false]);
+  });
+});
+
+describe('Antwort als Text (Fenster und Druckliste, A8)', () => {
+  const feld = (typ: 'check' | 'text' | 'info') => ({
+    id: 'q',
+    art: 'eigen' as const,
+    typ,
+    frage: 'Frage',
+    hilfe: '',
+    zustand: 'freiwillig' as const,
+    antworten: [],
+  });
+  it('angekreuzt → „ja“, Text bleibt, ohne Antwort oder ohne eigene Spalte → nichts', () => {
+    expect(antwortText(feld('check'), { 7: '1' }, { q: 7 })).toBe('ja');
+    expect(antwortText(feld('text'), { 7: 'Hallo' }, { q: 7 })).toBe('Hallo');
+    expect(antwortText(feld('text'), {}, { q: 7 })).toBeNull();
+    expect(antwortText(feld('info'), { 7: 'x' }, { q: 7 })).toBeNull();
   });
 });

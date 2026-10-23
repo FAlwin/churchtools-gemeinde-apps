@@ -538,6 +538,8 @@ export interface OeffentlicheEinstellungen {
    * abweichender Betrag nur an einer späteren Preisänderung liegt. `null` = nicht bekannt (vor dem 17.10.2026).
    */
   preiseGeaendert: string | null;
+  /** Die gemerkte Wahl der Teilnehmerliste (A8-1) – Spalten und Sortierung; fehlt = Standard (`druckliste.ts`). */
+  druck?: { spalten: string[]; sortierung: 'nachname' | 'alter' | 'anmeldung' };
 }
 
 const geltung = z.enum(['person', 'anmeldung']);
@@ -710,6 +712,13 @@ const einstellungenSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .nullable()
     .default(null),
+  // Seit A8-1: nur, wenn jemand eine Liste mit eigener Wahl gedruckt hat (hält die Einstellungen kurz).
+  druck: z
+    .object({
+      spalten: z.array(z.string().max(60)).max(40),
+      sortierung: z.enum(['nachname', 'alter', 'anmeldung']),
+    })
+    .optional(),
 });
 
 // ── Speicherformat v2 (A5): unsichtbar, gepackt, mit Sicherung ──────────────────────────────────

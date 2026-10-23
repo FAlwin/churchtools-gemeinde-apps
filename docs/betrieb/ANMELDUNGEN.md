@@ -123,6 +123,14 @@ dieselbe Schnittstelle wie der Mail-Editor von ChurchTools; sie ist nicht offizi
 einem Update ändern – dann meldet das Fenster einen Fehler, und die Mail geht weiter über ChurchTools selbst
 (Mitgliederliste der Gruppe → „E-Mail“).
 
+**Druckliste:** „⎙ Druckliste“ im Reiter „Anmeldungen“ macht aus der Liste ein PDF zum Teilen (Handy, iPad) oder
+Herunterladen. Bisher gibt es die **Teilnehmerliste**: eine Zeile je Person, die Spalten wählt ihr aus den Fragen des
+Formulars (Alter, Angemeldet von, Telefon, Allergien …), sortiert nach Nachname, Alter oder Anmeldung. Gedruckt wird,
+wer einen Platz hat; „Auch Warteliste“ nimmt die Wartenden in einem eigenen Abschnitt dazu. Oben stehen Gemeinde,
+Veranstaltung und Liste, unten Stand und Seitenzahl – auf jeder Seite. Ab sechs Spalten wird quer gedruckt. Die Wahl
+der Spalten merkt sich die Veranstaltung (gespeichert beim Teilen/Herunterladen, wenn ihr sie ändern dürft). Das PDF
+verlässt ChurchTools – nur drucken, was gebraucht wird.
+
 **Zahlung:** Im Fenster einer Anmeldung markiert ihr sie als **bezahlt** (Zahlart und Tag), setzt das zurück oder
 **ändert den Betrag** (z. B. nach Absprache – in der Aufschlüsselung steht dann „Von Hand geändert am …“, und die
 Nachprüfung meldet ihn nicht mehr). Bezahlt gilt für die ganze Anmeldung und steht in ChurchTools bei der ersten Person

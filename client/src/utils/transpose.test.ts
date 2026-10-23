@@ -7,6 +7,9 @@ import {
   ALL_KEYS_MINOR,
   transposeChordpro,
   mitTonart,
+  akkordLesen,
+  akkordTeile,
+  tonartAkkorde,
 } from './transpose';
 
 describe('transposeChord', () => {
@@ -153,5 +156,50 @@ describe('mitTonart', () => {
     const r = mitTonart('[G]Text\n{key: G}', 'D');
     expect(r.match(/\{key/g)).toHaveLength(1);
     expect(r).toContain('{key: D}');
+  });
+});
+
+/** Lied-Editor L5 (22.10.2026): Akkorde einfügen – Leiste „Tonart …“ und „Anderer Akkord“. */
+describe('tonartAkkorde', () => {
+  it('Dur: I ii iii IV V vi in der Schreibweise der Tonart', () => {
+    expect(tonartAkkorde('E')).toEqual(['E', 'F#m', 'G#m', 'A', 'B', 'C#m']);
+    expect(tonartAkkorde('G')).toEqual(['G', 'Am', 'Bm', 'C', 'D', 'Em']);
+    expect(tonartAkkorde('F')).toEqual(['F', 'Gm', 'Am', 'Bb', 'C', 'Dm']);
+    expect(tonartAkkorde('Eb')).toEqual(['Eb', 'Fm', 'Gm', 'Ab', 'Bb', 'Cm']);
+  });
+  it('Moll: i III iv v VI VII, b-Schreibweise wie die parallele Dur-Tonart', () => {
+    expect(tonartAkkorde('Am')).toEqual(['Am', 'C', 'Dm', 'Em', 'F', 'G']);
+    expect(tonartAkkorde('Dm')).toEqual(['Dm', 'F', 'Gm', 'Am', 'Bb', 'C']);
+  });
+  it('unlesbare Tonart: keine Leiste', () => {
+    expect(tonartAkkorde('')).toEqual([]);
+    expect(tonartAkkorde('X')).toEqual([]);
+  });
+});
+
+describe('akkordLesen', () => {
+  it('macht aus Getipptem einen Akkord – Grundton und Bass groß, Art wie getippt', () => {
+    expect(akkordLesen('em7')).toBe('Em7');
+    expect(akkordLesen(' gsus4 ')).toBe('Gsus4');
+    expect(akkordLesen('d/f#')).toBe('D/F#');
+    expect(akkordLesen('Bb7sus4')).toBe('Bb7sus4');
+    expect(akkordLesen('C#m(maj7)')).toBe('C#m(maj7)');
+  });
+  it('deutsches H ist B', () => {
+    expect(akkordLesen('Hm')).toBe('Bm');
+    expect(akkordLesen('G/H')).toBe('G/B');
+  });
+  it('kein Akkord → null', () => {
+    expect(akkordLesen('')).toBeNull();
+    expect(akkordLesen('Vers')).toBeNull();
+    expect(akkordLesen('X7')).toBeNull();
+    expect(akkordLesen('C/Q')).toBeNull();
+    expect(akkordLesen('[G]')).toBeNull();
+  });
+  it('was akkordLesen liefert, zerlegt akkordTeile wieder – dieselbe Grammatik', () => {
+    for (const e of ['em7', 'd/f#', 'Hm', 'Bb7sus4']) {
+      expect(akkordTeile(akkordLesen(e)!)).not.toBeNull();
+    }
+    expect(akkordTeile('F#m7/A')).toEqual({ grund: 'F#', art: 'm7', bass: 'A' });
   });
 });

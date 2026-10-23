@@ -45,12 +45,77 @@ export function transposeChord(chord: string, semitones: number, flat = false): 
   const paren = chord.match(/^\((.+)\)$/);
   if (paren) return '(' + transposeChord(paren[1], semitones, flat) + ')';
   if (semitones === 0) return chord;
-  const m = chord.match(/^([A-G][#b]?)(.*?)(?:\/([A-G][#b]?))?$/);
-  if (!m) return chord;
-  const rootIndex = noteToIndex(m[1]);
+  const t = akkordTeile(chord);
+  if (!t) return chord;
+  const rootIndex = noteToIndex(t.grund);
   if (rootIndex === -1) return chord;
-  const bass = m[3] ? '/' + indexToNote(noteToIndex(m[3]) + semitones, flat) : '';
-  return indexToNote(rootIndex + semitones, flat) + m[2] + bass;
+  const bass = t.bass ? '/' + indexToNote(noteToIndex(t.bass) + semitones, flat) : '';
+  return indexToNote(rootIndex + semitones, flat) + t.art + bass;
+}
+
+/**
+ * **Die Teile eines Akkords:** Grundton, Art (`m7`, `sus4` …) und Bass nach dem Schrägstrich. EINE Regel für das
+ * Transponieren und den Akkord-Baukasten im Editor (L5). `null`, wenn es kein Akkord ist.
+ */
+export function akkordTeile(chord: string): { grund: string; art: string; bass: string } | null {
+  const m = chord.match(/^([A-G][#b]?)(.*?)(?:\/([A-G][#b]?))?$/);
+  return m ? { grund: m[1], art: m[2], bass: m[3] ?? '' } : null;
+}
+
+/** Ein Grundton, wie man ihn tippt: Großbuchstabe, deutsches H = B. */
+function grundton(eingabe: string): string {
+  const g = eingabe[0].toUpperCase() + eingabe.slice(1);
+  return g[0] === 'H' ? 'B' + g.slice(1) : g;
+}
+
+/**
+ * **Ein eingetippter Akkord** (L5, „Anderer Akkord“): `em7` → `Em7`, `d/f#` → `D/F#`, `Hm` → `Bm`. Die Art bleibt,
+ * wie sie getippt wurde (`7sus4`, `add9`, `m(maj7)` …). `null`, wenn es kein Akkord ist – dann fügt der Editor
+ * nichts ein.
+ */
+export function akkordLesen(eingabe: string): string | null {
+  const m = eingabe.trim().match(/^([A-Ha-h][#b]?)([A-Za-z0-9#+()°ø-]*?)(?:\/([A-Ha-h][#b]?))?$/);
+  if (!m) return null;
+  const grund = grundton(m[1]);
+  if (noteToIndex(grund) === -1) return null;
+  const bass = m[3] ? grundton(m[3]) : '';
+  if (bass && noteToIndex(bass) === -1) return null;
+  return grund + m[2] + (bass ? '/' + bass : '');
+}
+
+/** Dur-Tonarten, die man mit b schreibt (F, Bb, Eb, Ab, Db). */
+const B_DUR = new Set([5, 10, 3, 8, 1]);
+
+/**
+ * **Die Akkorde einer Tonart** (L5: die Leiste „Tonart E“) – die Stufen, mit denen die meisten Lieder auskommen:
+ * in Dur I ii iii IV V vi (E → E F#m G#m A B C#m), in Moll i III iv v VI VII. Schreibweise wie die Tonart:
+ * F → Bb, E → G#, Dm → Bb. Leer, wenn die Tonart nicht lesbar ist.
+ */
+export function tonartAkkorde(key: string): string[] {
+  const moll = /^[A-G][#b]?m$/.test(key.trim());
+  const grund = key.trim().replace(/m$/, '');
+  const i = noteToIndex(grund);
+  if (i === -1) return [];
+  const durIndex = (i + (moll ? 3 : 0)) % 12;
+  const flat = grund.includes('b') || (!grund.includes('#') && B_DUR.has(durIndex));
+  const stufen: [number, string][] = moll
+    ? [
+        [0, 'm'],
+        [3, ''],
+        [5, 'm'],
+        [7, 'm'],
+        [8, ''],
+        [10, ''],
+      ]
+    : [
+        [0, ''],
+        [2, 'm'],
+        [4, 'm'],
+        [5, ''],
+        [7, ''],
+        [9, 'm'],
+      ];
+  return stufen.map(([s, art]) => indexToNote(i + s, flat) + art);
 }
 
 /** Halbton-Differenz von Ausgangs- zu Zieltonart (0–11). */

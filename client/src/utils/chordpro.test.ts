@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  akkordeImText,
   flowEinfuegen,
   flowSetzen,
   parseChordPro,
@@ -244,5 +245,13 @@ describe('flowSetzen – Ablauf aus den Kärtchen in den Text (Lied-Editor L2)',
     expect(flowSetzen(LIED, [])).toBeNull();
     const mit = anwenden(LIED, ['Vers 1']);
     expect(flowSetzen(mit, ['Vers 1'])).toBeNull();
+  });
+});
+
+describe('akkordeImText (L5)', () => {
+  it('häufigste zuerst, Direktiven zählen nicht, jeder Akkord einmal', () => {
+    const text =
+      '{title: [X]}\n{comment: Vers}\n[G]Ein [D]Lied [G]heute\n{comment: Chorus}\n[Em7]la [G]la';
+    expect(akkordeImText(text)).toEqual(['G', 'D', 'Em7']);
   });
 });

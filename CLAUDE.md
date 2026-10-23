@@ -486,7 +486,9 @@ die Text-Karte bleibt gemountet). L2 = `AblaufKarte` (Kärtchen ↔ `{flow}` üb
 Editor, Rückgängig inklusive; die Flow-Zeile blendet `ChordProInput` aus; breit eingeklappt mit Kurzform und
 Marke „Eigener Ablauf“, Ziehen mit `CSS.Translate` – `Transform` streckt verschieden breite Kärtchen). L3 = Akkord-Kärtchen, Teil-Bänder
 (`abschnittsKopf` – EINE Regel mit `parseChordPro`) und Pedal-Linie als Ersetzungen mit `atomicRanges`, Schalter
-„ChordPro-Text“ (Compartment); am echten iPad vor dem Merge geprüft (TF-EINST-15). Liedinfo kommt in L4 nur aus ChurchTools;
+„ChordPro-Text“ (Compartment); am echten iPad vor dem Merge geprüft (TF-EINST-15). L5-1 = `AkkordLeiste` (Tonart über
+`tonartAkkorde`, „Im Lied“ über `akkordeImText`, Gedrückthalten = Varianten) und `AkkordFenster` (Eintippen über
+`akkordLesen`; Akkord-Grammatik EINMAL in `akkordTeile`, auch fürs Transponieren). Liedinfo kommt in L4 nur aus ChurchTools;
 `{key}` bleibt als notierte Tonart. Zieh-Einstellungen aller Listen: `ui/bedienung/useZiehSensoren`. Im
 Scroll-Modus kein Spalten-Schalter (`ohneSpalten`). Welche
 eigene Ebene gilt, entscheidet für Blättern UND Scrollen `pageKeys.eigenerSchluessel`.

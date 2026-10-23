@@ -257,6 +257,19 @@ export function parseLine(line: string): ChordPair[] {
   return pairs;
 }
 
+/**
+ * **Die Akkorde eines Lieds, häufigste zuerst** (L5: Reihe „Im Lied“ der Akkord-Leiste). Gelesen über
+ * `parseChordPro`/`parseLine` – dieselbe Grammatik wie das Blatt, Direktiven-Zeilen zählen nicht.
+ */
+export function akkordeImText(text: string): string[] {
+  const zahl = new Map<string, number>();
+  for (const teil of parseChordPro(text))
+    for (const zeile of teil.lines)
+      for (const p of parseLine(zeile))
+        if (p.chord) zahl.set(p.chord, (zahl.get(p.chord) ?? 0) + 1);
+  return [...zahl.entries()].sort((a, b) => b[1] - a[1]).map(([a]) => a);
+}
+
 /** Liest Metadaten ({title}, {key}, {tempo}, {ccli} …) aus dem ChordPro-Text. */
 export function parseMetadata(text: string): Record<string, string> {
   const meta: Record<string, string> = {};

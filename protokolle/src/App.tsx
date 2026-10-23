@@ -8,11 +8,12 @@ import { adresseFuer, reiterAusAdresse } from '@ui/bedienung/reiterAdresse';
 import { ladeStart, type Start } from './start';
 import { Startseite } from './Startseite';
 import { Verwaltung } from './Verwaltung';
+import { Sitzungen } from './Sitzungen';
 import { sichtbareReiter, type ReiterId } from './reiter';
 
 /**
- * Die Protokolle in ChurchTools (Bauplan S1/S2-2): Start und – nur für Admins – Verwaltung. Am Computer stehen die
- * Reiter oben neben dem Namen, am Handy unten (wie im Dienstplaner); wer nur „Start“ hat, sieht keine Reiter.
+ * Die Protokolle in ChurchTools (Bauplan S1/S2-2/S3-2): Start, Sitzungen und – nur für Admins – Verwaltung. Am
+ * Computer stehen die Reiter oben neben dem Namen, am Handy unten (wie im Dienstplaner).
  * Scheitert das Laden vorübergehend, gibt es „Erneut versuchen“ statt einer halben Seite.
  */
 export function App() {
@@ -73,6 +74,7 @@ export function App() {
       onNochmal={laden}
     >
       {start && aktiv === 'start' && <Startseite gruppen={start.gruppen} />}
+      {start && aktiv === 'sitzungen' && <Sitzungen modul={start.modul} gruppen={start.gruppen} />}
       {start && aktiv === 'verwaltung' && <Verwaltung modul={start.modul} />}
     </ErweiterungsSeite>
   );

@@ -112,7 +112,14 @@ export function ChordEditor({
   // und Akkorde rücken in EINE Zeile. Tastatur zu → alles wie vorher.
   const tastaturOffen = useTastaturOffen();
   const [textFokus, setTextFokus] = useState(false);
-  const schreiben = tastaturOffen && textFokus;
+  // Beginnt, wenn im Text getippt wird, und endet erst, wenn die Tastatur zugeht – nicht schon, wenn der Text kurz
+  // den Fokus verliert (ein Tipp auf einen Knopf kann ihn unter iOS nehmen, während die Tastatur offen bleibt; sonst
+  // spränge die Ansicht mitten im Tippen zurück).
+  const [schreiben, setSchreiben] = useState(false);
+  useEffect(() => {
+    if (!tastaturOffen) setSchreiben(false);
+    else if (textFokus) setSchreiben(true);
+  }, [tastaturOffen, textFokus]);
   const editorRef = useRef<ChordProHandle>(null);
   // Die Vorschau zeigt das Blatt so, wie es im Liederheft dieses Geräts erscheint (#607).
   const [rolle] = useState(() => getLiedansicht() === 'scrollen');

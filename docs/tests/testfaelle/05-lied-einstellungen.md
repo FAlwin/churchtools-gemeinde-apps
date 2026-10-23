@@ -523,6 +523,8 @@ Text. Über der Tastatur ist Platz für deutlich mehr als zwei Zeilen. Tastatur 
 5. Tastatur schließen (Taste unten rechts): Ablauf und Fassung sind wieder da. Ins Feld **Fassung** tippen:
    Die Ansicht bleibt, wie sie ist (nur der Liedtext löst die Schreibansicht aus).
 6. Mit angesteckter Hardware-Tastatur: keine Schreibansicht (es ist ja Platz).
+7. **Mehrmals hintereinander** (Tastatur zu, wieder in den Text tippen; auch nach Drehen des iPads und nach „Im
+   Lied“/„Format“): Die eine Zeile kommt **jedes Mal** – nicht nur manchmal.
 
 <details><summary>Technisches</summary>
 
@@ -530,9 +532,12 @@ Text. Über der Tastatur ist Platz für deutlich mehr als zwei Zeilen. Tastatur 
 - **Betrifft:** `client/src/components/ChordEditor.tsx`, `client/src/components/AkkordLeiste.tsx`, `client/src/components/AkkordMenue.tsx`, `client/src/components/ChordProInput.tsx`, `ui/fenster/useTastaturOffen.ts`
 - **Automatisiert:** weitgehend – `useTastaturOffen.test.tsx` (Formel, Schwelle für die Hardware-Tastatur-Leiste),
   `e2e/editor-schreiben.spec.ts` mit nachgestellter Tastatur (`visualViewport` schrumpft): Ablauf/Fassung weg, eine
-  Zeile, Platz für den Text, „Im Lied“ auf/zu/einfügen, Menü klappt über das Kärtchen. **Von Hand bleibt das echte
+  Zeile, Platz für den Text, „Im Lied“ auf/zu/einfügen, Menü klappt über das Kärtchen, iOS verkleinert das
+  Fenster statt die Tastatur darüberzulegen, kurzer Fokusverlust, Tastatur für die Fassung. **Von Hand bleibt das echte
   iPad**: ob Format/Rückgängig/„Im Lied“ die Tastatur wirklich offen lassen, Hardware-Tastatur.
 - **Historie:** Alwin am iPad, 23.10.2026 („das Bearbeitungsfenster ist bei aufgeklappter Tastatur deutlich zu
-  klein“), Entwurf A mit „Im Lied“ als Ausklappmenü; Lied-Editor L5-3
+  klein“), Entwurf A mit „Im Lied“ als Ausklappmenü; Lied-Editor L5-3. Nachtest am selben Abend: „manchmal
+  funktioniert's mit der einen Zeile, manchmal nicht“ → gegen die eingefrorene App-Höhe messen, Ansicht bis
+  Tastatur-zu halten
 
 </details>

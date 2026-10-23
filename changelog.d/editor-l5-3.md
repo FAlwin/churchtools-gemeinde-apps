@@ -4,7 +4,8 @@
   deutlich zu klein“): Solange im Liedtext getippt wird und die Bildschirmtastatur offen ist, verschwinden Ablauf,
   Fassung und „ChordPro-Text“; Format, die Akkorde der Tonart, **Im Lied** (als Ausklappmenü), **+** (anderer
   Akkord) und Rückgängig stehen in einer Zeile. Tastatur zu → alles wie vorher. Eine angesteckte Hardware-Tastatur
-  löst das nicht aus.
+  löst das nicht aus. Die Ansicht greift auch, wenn iOS das Fenster mit der Tastatur verkleinert, und springt nicht
+  zurück, wenn ein Knopf dem Text kurz den Fokus nimmt.
 
 ### Behoben (Musik-App, Lied-Editor L5)
 

@@ -27,6 +27,11 @@ test.beforeEach(async ({ page }) => {
       vv.height = window.innerHeight - px;
       vv.dispatchEvent(new Event('resize'));
     };
+    // iOS verkleinert manchmal das ganze Fenster: dann ist der sichtbare Bereich so hoch wie `innerHeight`.
+    (window as unknown as { sichtbar: () => void }).sichtbar = () => {
+      vv.height = window.innerHeight;
+      vv.dispatchEvent(new Event('resize'));
+    };
   });
 });
 const tastatur = (page: Page, px: number) =>
@@ -114,4 +119,38 @@ test('Kärtchen am unteren Rand: das Menü klappt nach oben, nicht unter die Tas
   const m = (await page.getByRole('group', { name: /^Akkord / }).boundingBox())!;
   expect(m.y + m.height).toBeLessThanOrEqual(sichtbarBis);
   expect(m.y + m.height).toBeLessThanOrEqual(unten + 2); // über dem Kärtchen
+});
+
+test('auch wenn iOS das Fenster mit der Tastatur verkleinert (statt sie darüberzulegen)', async ({
+  page,
+}) => {
+  await inDenText(page);
+  // Fenster schrumpft mit, `innerHeight` = sichtbarer Bereich – nur die beim Tippen eingefrorene App-Höhe weiß
+  // noch, wie groß es vorher war.
+  await page.setViewportSize({ width: 1180, height: HOEHE - TASTATUR });
+  await page.evaluate(() => (window as unknown as { sichtbar: () => void }).sichtbar());
+  await expect(page.getByRole('region', { name: 'Ablauf' })).toBeHidden();
+  await expect(page.getByLabel('Versionsname')).toBeHidden();
+});
+
+test('kurz ohne Fokus, Tastatur bleibt offen: die Schreibansicht bleibt – erst Tastatur zu beendet sie', async ({
+  page,
+}) => {
+  await inDenText(page);
+  await tastatur(page, TASTATUR);
+  await expect(page.getByRole('region', { name: 'Ablauf' })).toBeHidden();
+  await page.locator('.cm-content').evaluate((el) => el.blur());
+  await page.waitForTimeout(200);
+  await expect(page.getByRole('region', { name: 'Ablauf' })).toBeHidden();
+  await tastatur(page, 0);
+  await expect(page.getByRole('region', { name: 'Ablauf' })).toBeVisible();
+});
+
+test('Tastatur für ein anderes Feld (Fassung): keine Schreibansicht', async ({ page }) => {
+  await page.goto('/?demo=editor');
+  await page.getByLabel('Versionsname').click();
+  await tastatur(page, TASTATUR);
+  await page.waitForTimeout(200);
+  await expect(page.getByLabel('Versionsname')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Ablauf' })).toBeVisible();
 });

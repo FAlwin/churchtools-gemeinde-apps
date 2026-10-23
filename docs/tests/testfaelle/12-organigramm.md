@@ -55,3 +55,35 @@ nichts leitet, sieht nur den Baum – ohne Reiter.
 - **Historie:** #672 (Abnahme 22.10.2026 nur als Admin)
 
 </details>
+
+### TF-ORG-03 · Gruppe umhängen, Untergruppe anlegen – und zurück
+
+**Das brauchst du:** In der Test-Instanz ein Gruppen-Admin-Konto und zwei Gruppen nur zum Üben (z. B. „Übung A“ und
+„Übung B“, ohne Mitglieder). Nie in der Live-Instanz.
+
+**Das muss passieren:** Umhängen, Lösen, eine weitere Obergruppe und eine neue Untergruppe kommen genau so in
+ChurchTools an, wie das Fenster es sagt; „Rückgängig“ stellt den Stand vorher wieder her. Niemand bekommt dabei eine
+Mail.
+
+1. **Organigramm** öffnen, auf **Übung B** klicken. Unter „Gehört zu“ auf **＋ Unter eine Gruppe hängen** (bzw.
+   **Ändern**), **Übung A** wählen: Das Fenster sagt vorher, wer danach was sieht. **Hinzufügen**/**Umhängen**.
+2. Im Baum steht Übung B jetzt unter Übung A. In ChurchTools unter **Gruppen → Übung B → Gruppenhierarchie**
+   nachsehen: dieselbe Obergruppe.
+3. Im Fenster auf **Rückgängig**: Übung B steht wieder wie vorher – im Baum und in ChurchTools.
+4. Bei **Übung A** auf **＋ Untergruppe anlegen**, Name „Übung C“, Typ lassen, **Anlegen**: Übung C steht im Baum unter
+   Übung A, in ChurchTools mit Status „Aktiv“.
+5. **Rückgängig**: Übung C ist in ChurchTools gelöscht.
+6. Mit einem Konto, das nur eine Gruppe **leitet**, dieselbe Gruppe öffnen: keine Knöpfe zum Ändern oder Anlegen.
+7. Danach im Postfach der Beteiligten (und im ChurchTools-Protokoll) nachsehen: keine Mail zu diesen Änderungen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `organigramm/src/GruppenFenster.tsx`, `organigramm/src/StrukturSchritte.tsx`, `organigramm/src/struktur.ts`, `shared/organigramm/struktur.ts`, `shared/organigramm/rechte.ts`
+- **Automatisiert:** teilweise – `struktur.test.ts` (Regeln und Browser-Zugriff gegen nachgebaute Antworten),
+  `rechte.test.ts`, `App.test.tsx` („O5“); ob ChurchTools wirklich so antwortet und keine Mail schickt, prüft nur
+  dieser Fall
+- **Historie:** #694 (O0-Messung 22.10.2026: keine Mails bis 14:32 UTC; die angekündigte Nachprüfung nach Ablauf der
+  Mail-Warteschlange fehlt in der Messnotiz)
+
+</details>

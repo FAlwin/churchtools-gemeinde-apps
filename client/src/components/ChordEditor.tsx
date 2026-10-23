@@ -20,6 +20,7 @@ import type { LiedinfoVergleich } from '@shared/ct/liedinfo';
 import { LiedinfoKarte } from './LiedinfoKarte';
 import {
   liedinfoAusFormular,
+  liedinfoSpeichern,
   liedinfoStart,
   type LiedinfoFormular,
   type LiedinfoQuelle,
@@ -158,6 +159,32 @@ export function ChordEditor({
   useEffect(() => {
     if (liedinfo && !li) setLi(liedinfoStart(liedinfo, initialText));
   }, [liedinfo, li, initialText]);
+  const [liLaeuft, setLiLaeuft] = useState(false);
+  const [liFehler, setLiFehler] = useState<string | null>(null);
+  /**
+   * Speichern (L4-3): erst die Liedinfo nach ChurchTools, dann – mit dem Stand, den ChurchTools meldet – die
+   * Kopfzeilen aus dem Text, dann der Text. Scheitert die Liedinfo, wird gar nichts gespeichert (`liedinfoSpeichern`).
+   */
+  async function speichern(): Promise<void> {
+    setLiFehler(null);
+    let fertig = text;
+    if (li && liedinfo) {
+      setLiLaeuft(true);
+      try {
+        fertig = await liedinfoSpeichern(li.formular, liedinfo, text);
+      } catch (e) {
+        setLiFehler(
+          `Die Liedinfo wurde nicht gespeichert – das Notenblatt auch nicht: ${
+            e instanceof Error ? e.message : 'unbekannter Fehler'
+          }`,
+        );
+        return;
+      } finally {
+        setLiLaeuft(false);
+      }
+    }
+    onSave(fertig, name.trim());
+  }
   const zeigeInfo = !!li && (wide ? rechts === 'liedinfo' : bereich === 'infos');
   const showPreview = wide ? !zeigeInfo : bereich === 'vorschau';
   // Die Vorschau zeigt das Blatt, wie es NACH dem Speichern aussieht: Kopf aus der Liedinfo, deren Zeilen nicht mehr
@@ -285,14 +312,14 @@ export function ChordEditor({
         )}
         <button
           className={styles.save}
-          onClick={() => onSave(text, name.trim())}
-          disabled={saving || !canSave}
+          onClick={() => void speichern()}
+          disabled={saving || liLaeuft || !canSave}
         >
-          {saving ? <Spinner /> : 'Speichern'}
+          {saving || liLaeuft ? <Spinner /> : 'Speichern'}
         </button>
       </header>
 
-      {error && <div className={styles.error}>{error}</div>}
+      {(liFehler ?? error) && <div className={styles.error}>{liFehler ?? error}</div>}
 
       {!wide && !schreiben && (
         <Segment

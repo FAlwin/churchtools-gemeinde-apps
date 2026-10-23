@@ -3,6 +3,7 @@ import type { ArrangementAnsicht, LiedStammdatenAnsicht } from '@shared/types/in
 import {
   liedinfoAenderung,
   liedinfoAusStand,
+  liedinfoSpeichern,
   liedinfoStart,
   liedinfoUebernehmen,
   type LiedinfoQuelle,
@@ -87,5 +88,79 @@ describe('liedinfoAusStand', () => {
       tempo: '80',
       beat: '4/4',
     });
+  });
+});
+
+describe('liedinfoSpeichern – erst das Ergebnis in der Hand, dann aufräumen', () => {
+  it('schreibt die Änderung und entfernt nur, was ChurchTools danach wirklich hat', async () => {
+    const { formular } = liedinfoStart(QUELLE, DATEI);
+    const gesendet: unknown[] = [];
+    const text = await liedinfoSpeichern(
+      formular,
+      {
+        ...QUELLE,
+        // ChurchTools übernimmt den Autor NICHT (meldet ihn leer zurück) – die Zeile muss bleiben.
+        speichern: (a) => {
+          gesendet.push(a);
+          return Promise.resolve({ lied: LIED, arrangement: { ...ARR, tempo: 72 } });
+        },
+      },
+      DATEI,
+    );
+    expect(gesendet).toHaveLength(1);
+    expect(text).toBe('{artist: Tobias Gerster}\n{key: E}\nText');
+  });
+
+  it('scheitert das Schreiben, wirft es – und nichts wird entfernt', async () => {
+    const { formular } = liedinfoStart(QUELLE, DATEI);
+    await expect(
+      liedinfoSpeichern(
+        formular,
+        { ...QUELLE, speichern: () => Promise.reject(new Error('504')) },
+        DATEI,
+      ),
+    ).rejects.toThrow('504');
+  });
+
+  it('ohne Recht: der Text bleibt, wie er ist, und nichts wird geschrieben', async () => {
+    const { formular } = liedinfoStart({ ...QUELLE, darf: false }, DATEI);
+    let geschrieben = false;
+    const text = await liedinfoSpeichern(
+      formular,
+      {
+        ...QUELLE,
+        darf: false,
+        speichern: () => {
+          geschrieben = true;
+          return Promise.resolve({ lied: LIED, arrangement: ARR });
+        },
+      },
+      DATEI,
+    );
+    expect(text).toBe(DATEI);
+    expect(geschrieben).toBe(false);
+  });
+
+  it('nichts geändert: kein Schreiben, aber Zeilen mit gleichem Wert in ChurchTools gehen', async () => {
+    const quelle = {
+      ...QUELLE,
+      lied: { ...LIED, author: 'Tobias Gerster' },
+      arrangement: { ...ARR, tempo: 72 },
+    };
+    const { formular } = liedinfoStart(quelle, DATEI);
+    let geschrieben = false;
+    const text = await liedinfoSpeichern(
+      formular,
+      {
+        ...quelle,
+        speichern: () => {
+          geschrieben = true;
+          return Promise.resolve({ lied: LIED, arrangement: ARR });
+        },
+      },
+      DATEI,
+    );
+    expect(geschrieben).toBe(false);
+    expect(text).toBe('{key: E}\nText');
   });
 });

@@ -7,6 +7,7 @@ import type {
 import {
   liedinfoAusDatei,
   liedinfoVergleich,
+  liedinfoZeilenEntfernen,
   type Liedinfo,
   type LiedinfoFeld,
   type LiedinfoVergleich,
@@ -28,6 +29,23 @@ export interface LiedinfoQuelle {
   arrangement: ArrangementAnsicht;
   /** Darf diese Person die Stammdaten ändern? Sonst nur lesen – und die Kopfzeilen bleiben in der Datei. */
   darf: boolean;
+  /**
+   * Schreibt die Änderung nach ChurchTools und liefert den Stand, den ChurchTools DANACH meldet (nicht das
+   * Abgeschickte). Wirft bei jedem Fehler – dann wird nichts aus der Datei entfernt.
+   */
+  speichern?: (aenderung: LiedinfoAenderung) => Promise<LiedinfoStand>;
+}
+
+/** Lied und Arrangement, wie ChurchTools sie führt. */
+export interface LiedinfoStand {
+  lied: LiedStammdatenAnsicht;
+  arrangement: ArrangementAnsicht;
+}
+
+/** Was an ChurchTools geht – `null` je Teil: dort nichts geändert. */
+export interface LiedinfoAenderung {
+  lied: Partial<LiedStammdaten> | null;
+  arrangement: ArrangementAuftrag | null;
 }
 
 /**
@@ -114,10 +132,7 @@ export function liedinfoWert(f: LiedinfoFormular, feld: LiedinfoFeld): string {
  * **Was beim Speichern an ChurchTools geht** – über die Funktionen des Stammdaten-Blatts. `null` je Teil heißt:
  * dort hat sich nichts geändert.
  */
-export function liedinfoAenderung(
-  f: LiedinfoFormular,
-  quelle: LiedinfoQuelle,
-): { lied: Partial<LiedStammdaten> | null; arrangement: ArrangementAuftrag | null } {
+export function liedinfoAenderung(f: LiedinfoFormular, quelle: LiedinfoQuelle): LiedinfoAenderung {
   const lied = aenderungAus(f.lied, quelle.lied);
   return {
     lied: Object.keys(lied).length ? lied : null,
@@ -125,4 +140,29 @@ export function liedinfoAenderung(
       ? auftragAus(f.arrangement, quelle.arrangement)
       : null,
   };
+}
+
+/**
+ * **Speichern mit Liedinfo** (L4-3) – liefert den Text, der gespeichert wird. Reihenfolge nach Alwins Regel „erst das
+ * Ergebnis in der Hand, dann aufräumen“ (Lehre vom 11.08.2026):
+ *  1. Geänderte Liedinfo nach ChurchTools schreiben.
+ *  2. Aus dem Stand, den ChurchTools DANACH meldet, ablesen, welche Felder dort stehen.
+ *  3. Nur deren Kopfzeilen aus dem Text entfernen.
+ *
+ * Wirft das Schreiben (Netz, Recht, Zeitüberschreitung), wirft diese Funktion auch – der Aufrufer speichert dann
+ * nichts, und keine Zeile ist weg. Ohne Recht bleibt der Text, wie er ist.
+ */
+export async function liedinfoSpeichern(
+  f: LiedinfoFormular,
+  quelle: LiedinfoQuelle,
+  text: string,
+): Promise<string> {
+  if (!quelle.darf) return text;
+  const aenderung = liedinfoAenderung(f, quelle);
+  let stand: LiedinfoStand = { lied: quelle.lied, arrangement: quelle.arrangement };
+  if (aenderung.lied || aenderung.arrangement) {
+    if (!quelle.speichern) throw new Error('Die Liedinfo kann hier nicht gespeichert werden.');
+    stand = await quelle.speichern(aenderung);
+  }
+  return liedinfoZeilenEntfernen(text, liedinfoAusStand(stand.lied, stand.arrangement));
 }

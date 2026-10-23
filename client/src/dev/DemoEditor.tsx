@@ -29,11 +29,23 @@ const DEMO_LIEDINFO: LiedinfoQuelle = {
     dateien: 1,
   },
   darf: true,
+  // Wie ChurchTools: liefert den Stand nach dem Speichern. Für den E2E sichtbar gemacht.
+  speichern: (aenderung) => {
+    (window as unknown as { __liedinfo?: unknown }).__liedinfo = aenderung;
+    return Promise.resolve({
+      lied: { ...DEMO_LIEDINFO.lied, ...aenderung.lied },
+      arrangement: {
+        ...DEMO_LIEDINFO.arrangement,
+        ...(aenderung.arrangement ?? {}),
+      } as LiedinfoQuelle['arrangement'],
+    });
+  },
 };
 
 /** NUR Entwicklung (?demo=editor): zeigt den ChordPro-Editor mit einem Beispiel-Lied, um Toolbar,
  *  Syntax-Farben, Rückgängig/Wiederholen und die PDF-Vorschau ohne ChurchTools zu prüfen. */
 export function DemoEditor() {
+  const mitLiedinfo = new URLSearchParams(window.location.search).has('liedinfo');
   return (
     <div style={{ position: 'fixed', inset: 0 }}>
       <ChordEditor
@@ -42,7 +54,8 @@ export function DemoEditor() {
         initialName="Akustik"
         tonart="E"
         kapo={2}
-        liedinfo={DEMO_LIEDINFO}
+        // Mit `&liedinfo` (L4) – ohne bleibt die Demo wie vorher: gespeichert wird Zeichen für Zeichen.
+        liedinfo={mitLiedinfo ? DEMO_LIEDINFO : undefined}
         isNew={false}
         saving={false}
         error={null}

@@ -5,7 +5,7 @@ import { test, expect, type Page } from '@playwright/test';
  * „Gerster“ – im Notenblatt steht „Tobias Gerster“ (Hinweis am Feld).
  */
 async function oeffnen(page: Page) {
-  await page.goto('/?demo=editor');
+  await page.goto('/?demo=editor&liedinfo');
   await expect(page.locator('.cm-cp-akkord').first()).toBeVisible({ timeout: 30_000 });
 }
 
@@ -56,5 +56,39 @@ test.describe('schmal (Handy)', () => {
       .click();
     await expect(page.getByRole('region', { name: 'Liedinfo' })).toBeVisible();
     await expect(page.getByRole('region', { name: 'Text' })).toBeHidden();
+  });
+});
+
+test.describe('Speichern (L4-3)', () => {
+  test.use({ viewport: { width: 1180, height: 820 } });
+  const gespeichert = (page: Page) =>
+    page.evaluate(
+      () => (window as unknown as { __gespeichert?: { text: string } }).__gespeichert?.text,
+    );
+  const anCT = (page: Page) =>
+    page.evaluate(() => (window as unknown as { __liedinfo?: unknown }).__liedinfo);
+
+  test('Liedinfo geht an ChurchTools, die Kopfzeilen verlassen das Notenblatt – {key} bleibt', async ({
+    page,
+  }) => {
+    await oeffnen(page);
+    await page
+      .getByRole('group', { name: 'Rechte Spalte' })
+      .getByRole('button', { name: 'Liedinfo' })
+      .click();
+    const info = page.getByRole('region', { name: 'Liedinfo' });
+    await info.getByRole('button', { name: 'übernehmen' }).click();
+    await info.getByLabel('Takt').fill('6/8');
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await expect.poll(() => gespeichert(page)).toBeTruthy();
+    expect(await anCT(page)).toEqual({
+      lied: { author: 'Tobias Gerster' },
+      arrangement: expect.objectContaining({ name: 'Standard', beat: '6/8' }) as unknown,
+    });
+    const text = (await gespeichert(page))!;
+    expect(text).not.toContain('{title');
+    expect(text).not.toContain('{artist');
+    expect(text).toContain('{key: E}');
+    expect(text).toContain('[E]bleibst');
   });
 });

@@ -187,8 +187,9 @@ export function DrucklisteFenster({
           <table>
             <thead>
               <tr>
-                {tabelle.kopf.map((k) => (
-                  <th key={k}>{k}</th>
+                {/* Zwei Fragen können gleich heißen (Test-Instanz: zweimal „Anzahl“) – Schlüssel ist die Stelle. */}
+                {tabelle.kopf.map((k, i) => (
+                  <th key={i}>{k}</th>
                 ))}
               </tr>
             </thead>

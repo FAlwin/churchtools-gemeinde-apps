@@ -40,6 +40,7 @@ import {
   useSongSelectSong,
 } from '../hooks/useServices';
 import { useNeuesLied } from '../hooks/useNeuesLied';
+import { useLiedinfoQuelle } from '../hooks/useLiedinfoQuelle';
 import {
   LEERES_FORMULAR,
   formularAusTreffer,
@@ -161,6 +162,12 @@ export function NewSongSheet({
    * Startinhalt (das geholte Blatt oder das Gerüst aus dem Formular); `null` = Editor zu.
    */
   const [editor, setEditor] = useState<{ text: string } | null>(null);
+  // Liedinfo im Editor (L4): Wer ein Lied anlegt, darf seine Stammdaten ändern.
+  const liedinfo = useLiedinfoQuelle(
+    editor && neuesLied.ergebnis ? neuesLied.ergebnis.songId : null,
+    neuesLied.ergebnis?.arrangementId ?? null,
+    true,
+  );
   const [editorLaedt, setEditorLaedt] = useState(false);
   const editorOeffnen = async (): Promise<void> => {
     setEditorLaedt(true);
@@ -275,6 +282,7 @@ export function NewSongSheet({
             initialName=""
             isNew
             mitVersionsname={false}
+            liedinfo={liedinfo}
             saving={neuesLied.notenblattLaeuft}
             error={neuesLied.notenblattFehler}
             onSave={(text) => {

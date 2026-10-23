@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { metaValue, metaWerte } from './chordproMeta';
 import {
+  LIEDINFO_ZEILE,
   LIEDINFO_FELDER,
   liedinfoAusDatei,
   liedinfoVergleich,
@@ -106,5 +107,22 @@ Al - [G]lein Deine [Am7]Gnade ge - [G2/B]nügt`);
   it('eine Angabe mitten im Text (kein ChordPro-Kopf) bleibt stehen', () => {
     const t = 'Vers {title: kein Kopf} weiter';
     expect(liedinfoZeilenEntfernen(t, { name: 'X' })).toBe(t);
+  });
+});
+
+describe('LIEDINFO_ZEILE – dieselbe Grammatik wie das Entfernen', () => {
+  it('erkennt genau die Zeilen, die beim Speichern gehen können', () => {
+    const zeilen = SONGSELECT.split('\n');
+    const erkannt = zeilen.filter((z) => LIEDINFO_ZEILE.test(z));
+    const allesWeg = liedinfoZeilenEntfernen(SONGSELECT, {
+      name: 'x',
+      author: 'x',
+      ccli: 'x',
+      copyright: 'x',
+      tempo: '1',
+      beat: 'x',
+    }).split('\n');
+    expect(erkannt).toEqual(zeilen.filter((z) => !allesWeg.includes(z)));
+    expect(erkannt).toHaveLength(7);
   });
 });

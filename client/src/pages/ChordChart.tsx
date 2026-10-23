@@ -67,6 +67,7 @@ import { useArrangementDateien } from '../hooks/useArrangementDateien';
 import { loeschFrage } from '../utils/dateiVerwaltung';
 import { useSetlistPages } from '../hooks/useSetlistPages';
 import { useSongArrangements } from '../hooks/useServices';
+import { useLiedinfoQuelle } from '../hooks/useLiedinfoQuelle';
 import type { DrawTool } from '../types/index';
 import { beschreibeEbene, type NamenQuelle } from '../utils/annotationLevelLabel';
 import styles from './ChordChart.module.scss';
@@ -610,6 +611,12 @@ export function ChordChart({
   });
   // Tastatur-Navigation aussetzen, solange Editor oder Zeichenmodus offen sind.
   navBlockedRef.current = showEditor || drawMode;
+  // Liedinfo für den Editor (L4) – erst laden, wenn er offen ist.
+  const liedinfo = useLiedinfoQuelle(
+    showEditor && song ? song.id : null,
+    song?.arrangementId ?? null,
+    canEditSong,
+  );
 
   // Beim SCHLIESSEN des Editors die Anzeige neu ausrichten (Begründung im Hook).
   useResyncAfterEditor(showEditor, bumpSync);
@@ -869,6 +876,7 @@ export function ChordChart({
             onClose={() => setShowEditor(false)}
             tonart={curKey}
             kapo={set.capo}
+            liedinfo={liedinfo}
           />
         )}
 

@@ -27,6 +27,7 @@ import {
   parseMetadata,
   teileImFlow,
 } from '../utils/chordpro';
+import { LIEDINFO_ZEILE } from '@shared/ct/liedinfo';
 
 /** Imperative Schnittstelle für Toolbar-Aktionen (Einfügen / Rückgängig / Wiederholen). */
 export interface ChordProHandle {
@@ -108,11 +109,12 @@ const highlighter = ViewPlugin.fromClass(
  * Zeichen); der Cursor springt über sie hinweg.
  */
 const FLOW_ZEILE = /^\s*\{flow[:\s][^}]*\}\s*$/i;
-function flowAusblenden(state: EditorState): DecorationSet {
+/** Ganze Zeilen unsichtbar machen (Flow-Zeile, L2; Liedinfo-Kopfzeilen, L4) – der Cursor springt darüber. */
+function zeilenAusblenden(state: EditorState, muster: RegExp): DecorationSet {
   const b = new RangeSetBuilder<Decoration>();
   for (let n = 1; n <= state.doc.lines; n++) {
     const line = state.doc.line(n);
-    if (!FLOW_ZEILE.test(line.text)) continue;
+    if (!muster.test(line.text)) continue;
     // Samt Zeilenende, sonst bliebe eine leere Zeile stehen (am Textende das davor).
     if (n < state.doc.lines) b.add(line.from, line.to + 1, Decoration.replace({ block: true }));
     else if (n > 1) b.add(line.from - 1, line.to, Decoration.replace({ block: true }));
@@ -120,14 +122,24 @@ function flowAusblenden(state: EditorState): DecorationSet {
   }
   return b.finish();
 }
-const flowFeld = StateField.define<DecorationSet>({
-  create: (st) => flowAusblenden(st),
-  update: (deko, tr) => (tr.docChanged ? flowAusblenden(tr.state) : deko),
-  provide: (f) => [
-    EditorView.decorations.from(f),
-    EditorView.atomicRanges.of((v) => v.state.field(f)),
-  ],
-});
+function ausblendFeld(muster: RegExp) {
+  return StateField.define<DecorationSet>({
+    create: (st) => zeilenAusblenden(st, muster),
+    update: (deko, tr) => (tr.docChanged ? zeilenAusblenden(tr.state, muster) : deko),
+    provide: (f) => [
+      EditorView.decorations.from(f),
+      EditorView.atomicRanges.of((v) => v.state.field(f)),
+    ],
+  });
+}
+const flowFeld = ausblendFeld(FLOW_ZEILE);
+/**
+ * **Liedinfo-Kopfzeilen** (`{title}`, `{artist}` … – L4): Die Liedinfo zeigt sie, beim Speichern wandern sie nach
+ * ChurchTools. Im Text stünden sie doppelt; im „ChordPro-Text“ bleiben sie sichtbar. Dieselbe Grammatik wie das
+ * Entfernen (`LIEDINFO_ZEILE`).
+ */
+const kopfFeld = ausblendFeld(LIEDINFO_ZEILE);
+const kopf = new Compartment();
 
 // ── Darstellung wie Entwurf B (Lied-Editor L3, 22.10.2026) ──
 // Akkorde als Kärtchen, Teil-Anfänge als Band, `----` als Linie. Der Text bleibt ChordPro Zeichen für
@@ -338,12 +350,14 @@ interface ChordProInputProps {
   onAkkord?: (a: AkkordAntippen) => void;
   /** Der Text bekommt oder verliert den Fokus (Schreibansicht bei offener Tastatur). */
   onFokus?: (fokus: boolean) => void;
+  /** Liedinfo-Kopfzeilen ausblenden – die Liedinfo zeigt sie (L4). Im rohen Text bleiben sie sichtbar. */
+  kopfAusblenden?: boolean;
 }
 
 /** ChordPro-Eingabe auf Basis von CodeMirror: Syntax-Farben, echtes Rückgängig/Wiederholen,
  *  saubere Einfügung an der Cursorposition. */
 export const ChordProInput = forwardRef<ChordProHandle, ChordProInputProps>(function ChordProInput(
-  { initialText, onChange, onHistory, roh = false, onAkkord, onFokus },
+  { initialText, onChange, onHistory, roh = false, onAkkord, onFokus, kopfAusblenden = false },
   ref,
 ) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -366,6 +380,7 @@ export const ChordProInput = forwardRef<ChordProHandle, ChordProInputProps>(func
           aktivFeld,
           darstellung.of(roh ? [] : darstellungFeld),
           flowFeld,
+          kopf.of(kopfAusblenden && !roh ? kopfFeld : []),
           theme,
           EditorView.lineWrapping,
           EditorView.domEventHandlers({
@@ -407,9 +422,12 @@ export const ChordProInput = forwardRef<ChordProHandle, ChordProInputProps>(func
   // Umschalten zwischen Kärtchen und rohem Text – ohne den Editor neu zu bauen (Verlauf, Cursor bleiben).
   useEffect(() => {
     viewRef.current?.dispatch({
-      effects: darstellung.reconfigure(roh ? [] : darstellungFeld),
+      effects: [
+        darstellung.reconfigure(roh ? [] : darstellungFeld),
+        kopf.reconfigure(kopfAusblenden && !roh ? kopfFeld : []),
+      ],
     });
-  }, [roh]);
+  }, [roh, kopfAusblenden]);
 
   useImperativeHandle(ref, () => ({
     insert(text, opts) {

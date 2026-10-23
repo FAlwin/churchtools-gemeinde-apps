@@ -38,6 +38,7 @@ import { ArrangementListe } from './ArrangementListe';
 import { ArrangementSheet } from './ArrangementSheet';
 import { ChordEditor } from './ChordEditor';
 import { useNotenblatt } from '../hooks/useNotenblatt';
+import { useLiedinfoQuelle } from '../hooks/useLiedinfoQuelle';
 // Die Feld-Stile direkt aus dem Modul: Ein Re-Export über die Komponente bricht Fast Refresh.
 import {
   useArrangementAendern,
@@ -136,6 +137,8 @@ export function EditSongSheet({
    */
   const notenblatt = useNotenblatt({ songId, arrangementId });
   const [editor, setEditor] = useState<{ text: string } | null>(null);
+  // Liedinfo im Editor (L4): Wer dieses Blatt öffnen darf, darf die Stammdaten ändern.
+  const liedinfo = useLiedinfoQuelle(editor ? songId : null, arrangementId, true);
   const [editorLaedt, setEditorLaedt] = useState(false);
 
   const ist = stammdaten.data ?? null;
@@ -354,6 +357,7 @@ export function EditSongSheet({
           initialName=""
           isNew
           mitVersionsname={false}
+          liedinfo={liedinfo}
           saving={notenblatt.laeuft}
           error={notenblatt.fehler}
           onSave={(text) => {

@@ -88,13 +88,21 @@ export function liedinfoVergleich(datei: Liedinfo, ct: Liedinfo): LiedinfoVergle
  * Felds (zwei `{artist}`). Alles andere bleibt Zeichen für Zeichen.
  */
 export function liedinfoZeilenEntfernen(text: string, ctStand: Liedinfo): string {
-  let neu = text;
-  for (const { feld, zeile } of LIEDINFO_FELDER) {
-    if (!wert(ctStand[feld])) continue;
-    neu = neu.replace(
-      new RegExp(`^[ \\t]*\\{${zeile}\\s*:[^}\\n]*\\}[ \\t]*(?:\\r?\\n|$)`, 'gim'),
-      '',
-    );
-  }
-  return neu;
+  const weg = LIEDINFO_FELDER.filter(({ feld }) => wert(ctStand[feld])).map((f) => f.zeile);
+  if (!weg.length) return text;
+  return text.replace(new RegExp(`^${zeileKern(weg)}(?:\\r?\\n|$)`, 'gim'), '');
 }
+
+/** Eine Kopfzeile, die nur aus einer dieser Angaben besteht – EINE Grammatik für Entfernen und Ausblenden. */
+function zeileKern(zeilen: readonly string[]): string {
+  return `[ \\t]*\\{(?:${zeilen.join('|')})\\s*:[^}\\n]*\\}[ \\t]*`;
+}
+
+/**
+ * **Ist diese Zeile eine Liedinfo-Kopfzeile?** Der Editor blendet sie aus, sobald die Liedinfo sie zeigt (L4) –
+ * nach derselben Grammatik, nach der sie beim Speichern entfernt wird.
+ */
+export const LIEDINFO_ZEILE = new RegExp(
+  `^${zeileKern(LIEDINFO_FELDER.map((f) => f.zeile))}$`,
+  'i',
+);

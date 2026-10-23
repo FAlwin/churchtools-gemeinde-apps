@@ -8,6 +8,7 @@ import type { Sitzung } from '@shared/protokolle/sitzungen';
 import { alsGeloescht, neueAufgabe, statusSetzen, type Aufgabe } from '@shared/protokolle/aufgaben';
 import * as L from './lesen';
 import { Startseite } from './Startseite';
+import { uhrzeit } from './anzeige';
 
 vi.mock('./lesen', async (orig) => ({
   ...(await orig<typeof import('./lesen')>()),
@@ -21,7 +22,10 @@ const GRUPPEN: ProtokollGruppe[] = [
 ];
 const ICH = 1;
 
-// Heute ist Freitag, 23.10.2026, 10:00 Uhr in Berlin.
+// Heute ist Freitag, 23.10.2026, 10:00 Uhr in Berlin. Die Uhrzeiten zeigt die Seite in der Zeitzone des Geräts –
+// deshalb rechnet der Test sie mit demselben Baustein (die CI läuft in UTC, Alwins Rechner in Berlin).
+const ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
+const um = (s: Sitzung) => uhrzeit(s.beginn, ZONE);
 const JETZT = new Date('2026-10-23T08:00:00Z');
 
 function sitzung(s: Partial<Sitzung> & Pick<Sitzung, 'schluessel' | 'beginn' | 'titel'>): Sitzung {
@@ -199,9 +203,9 @@ describe('Startseite (S3-3)', () => {
     zeigen();
     await screen.findByText('Beamer-Angebote');
     expect(zeilen('Nächste Sitzungen')).toEqual([
-      '5NOVJugendleitungJugendleitung · Do, 05.11.2026 · 19:30 Uhr · noch nicht beantwortet',
-      '1DEZLeitungsteamWeihnachtsplanung · Di, 01.12.2026 · 19:00 Uhr',
-      '17MÄRLeitungsteamKlausur · Mi, 17.03.2027 · 18:00 Uhr · du hast abgesagt',
+      `5NOVJugendleitungJugendleitung · Do, 05.11.2026 · ${um(NOVEMBER)} · noch nicht beantwortet`,
+      `1DEZLeitungsteamWeihnachtsplanung · Di, 01.12.2026 · ${um(DEZEMBER)}`,
+      `17MÄRLeitungsteamKlausur · Mi, 17.03.2027 · ${um(MAERZ)} · du hast abgesagt`,
     ]);
     fireEvent.click(screen.getByRole('button', { name: /Weihnachtsplanung/ }));
     expect(onSitzung).toHaveBeenCalledWith(11, 't:4:130');

@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { ZEITRAUM_ZU } from '@shared/anmeldung/vorbereiten';
 import { anmeldeBedingungen } from './einrichten';
 import { useLinkKopieren } from './useLinkKopieren';
+import { QrFenster } from './QrFenster';
+import type { AushangDaten } from './aushang';
 import s from './Startseite.module.scss';
 import l from './AnmeldeLink.module.scss';
 
@@ -26,12 +28,14 @@ type Pruefung = { art: 'prueft' } | { art: 'fertig'; fehlt: string[] } | { art: 
  * - **Öffnen:** das Formular in einem neuen Tab – zum Selbst-Ausprobieren.
  * - **Teilen:** das Teilen-Menü des Geräts (am Handy WhatsApp, Mail …). Gibt es das nicht (manche Browser am
  *   Computer), fehlt der Knopf.
+ * - **QR-Code** (A8-4, Alwin 23.10.2026): öffnet `QrFenster` – QR-Code als Bild und Aushang als PDF.
  */
 export function AnmeldeLinkKarte({
   id,
   link,
   titel,
   stand,
+  aushang,
   onEinrichten,
 }: {
   id: number;
@@ -39,6 +43,8 @@ export function AnmeldeLinkKarte({
   titel: string;
   /** Ändert sich nach jedem Neuladen der Seite – dann wird neu geprüft (z. B. nach „Jetzt einrichten“). */
   stand: unknown;
+  /** Was außer Titel und Link auf den Aushang kommt (A8-4). */
+  aushang: Omit<AushangDaten, 'titel' | 'link'>;
   /** Öffnet das Freigeben-Fenster; fehlt ohne Recht zum Einrichten. */
   onEinrichten?: () => void;
 }) {
@@ -88,6 +94,7 @@ export function AnmeldeLinkKarte({
         <LinkZeile
           link={link}
           titel={titel}
+          aushang={aushang}
           hinweis={
             nurZeitraum
               ? 'Der Anmeldezeitraum läuft noch nicht – der Link funktioniert, sobald er beginnt.'
@@ -104,12 +111,22 @@ export function AnmeldeLinkKarte({
 function LinkZeile({
   link,
   titel,
+  aushang,
   hinweis,
 }: {
   link: string;
   titel: string;
+  aushang: Omit<AushangDaten, 'titel' | 'link'>;
   hinweis: string | null;
 }) {
+  const [qr, setQr] = useState(false);
+  // Nach einzelnen Angaben, nicht nach dem Objekt: Es entsteht bei jedem Zeichnen der Seite neu – das Fenster baute
+  // sonst Bild und PDF jedes Mal von vorn.
+  const { gemeinde, termin, anmeldeschluss } = aushang;
+  const daten = useMemo(
+    () => ({ gemeinde, termin, anmeldeschluss, titel, link }),
+    [gemeinde, termin, anmeldeschluss, titel, link],
+  );
   const feld = useRef<HTMLInputElement>(null);
   const { stand, kopieren } = useLinkKopieren(link, feld);
   const teilenGeht = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
@@ -147,8 +164,13 @@ function LinkZeile({
               Teilen
             </button>
           )}
+          <button type="button" className={l.knopf} onClick={() => setQr(true)}>
+            <Icon name="grid" size={15} />
+            QR-Code
+          </button>
         </div>
       </div>
+      {qr && <QrFenster daten={daten} onClose={() => setQr(false)} />}
       <p className={l.hinweis}>
         {stand === 'vonHand'
           ? 'Kopieren hat nicht geklappt – der Link ist markiert, bitte von Hand kopieren.'

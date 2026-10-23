@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { Profiler } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
@@ -191,6 +192,34 @@ describe('Termine im Reiter (E3-2)', () => {
     expect(termineLaden).toHaveBeenCalledTimes(2);
   });
 
+  it('Termine: im ersten Bild mit dem Fehler ist „Weitere Termine laden“ wieder frei – nicht noch „wird geladen …“', async () => {
+    breite(false);
+    window.location.hash = '#/termine';
+    laden.mockResolvedValue(start([3]));
+    // Wie bei Planen: `onRender` sieht jeden Commit vor den Effekten – vorher räumte ein Effekt „läuft“ ein Bild zu spät.
+    const imFehlerBild: string[] = [];
+    const pruefen = () => {
+      if (imFehlerBild.length > 0 || !screen.queryByRole('button', { name: 'Erneut versuchen' }))
+        return;
+      const knopf = screen
+        .getAllByRole('button')
+        .find((b) => /Termine laden|wird geladen/.test(b.textContent ?? ''));
+      imFehlerBild.push(
+        `${knopf?.textContent} ${(knopf as HTMLButtonElement | undefined)?.disabled ? 'gesperrt' : 'frei'}`,
+      );
+    };
+    render(
+      <Profiler id="termine" onRender={pruefen}>
+        <App />
+      </Profiler>,
+    );
+    const mehr = await screen.findByRole('button', { name: 'Weitere Termine laden' });
+    termineLaden.mockRejectedValueOnce(new ApiError(502, 'x'));
+    fireEvent.click(mehr);
+    await screen.findByRole('button', { name: 'Erneut versuchen' });
+    expect(imFehlerBild).toEqual(['Weitere Termine laden frei']);
+  });
+
   it('Nachladen ist still: das Bisherige bleibt stehen; ein Fehler dabei bleibt neben der Liste (14.10.2026)', async () => {
     breite(false);
     window.location.hash = '#/termine';
@@ -215,9 +244,30 @@ describe('Termine im Reiter (E3-2)', () => {
     termineLaden.mockImplementation((_s, w) =>
       w > 48 ? Promise.reject(new ApiError(502, 'x')) : Promise.resolve(KEINE_TERMINE),
     );
-    render(<App />);
+    // Schon im ERSTEN Bild mit dem Fehler muss ＋ wieder gehen. `onRender` läuft in jedem Commit nach dem Schreiben ins
+    // DOM, aber vor den Effekten – genau dort stand ＋ vorher noch gesperrt (ein Bild lang; je nach Last sah der Test
+    // es oder nicht).
+    const imFehlerBild: { gesperrt: boolean; zeile: string }[] = [];
+    const pruefen = () => {
+      if (imFehlerBild.length > 0 || !screen.queryByRole('button', { name: 'Erneut versuchen' }))
+        return;
+      const plus = screen.getByRole('button', { name: 'Späteren Termin dazunehmen' });
+      const leiste = plus.closest('[role="group"]');
+      imFehlerBild.push({
+        gesperrt: (plus as HTMLButtonElement).disabled,
+        zeile: leiste?.textContent ?? '',
+      });
+    };
+    render(
+      <Profiler id="planen" onRender={pruefen}>
+        <App />
+      </Profiler>,
+    );
     fireEvent.click(await screen.findByRole('button', { name: 'Späteren Termin dazunehmen' }));
     await screen.findByRole('button', { name: 'Erneut versuchen' });
+    expect(imFehlerBild).toHaveLength(1);
+    expect(imFehlerBild[0].gesperrt).toBe(false);
+    expect(imFehlerBild[0].zeile).not.toContain('werden geladen');
     expect(termineLaden.mock.calls.map((c) => c[1])).toEqual([8, 16, 24, 32, 40, 48, 56]);
     // Geladen sind 48 Wochen – also noch nicht am Ende, auch wenn der Versuch schon bei 56 war.
     expect(screen.getByRole('button', { name: 'Späteren Termin dazunehmen' })).toHaveProperty(

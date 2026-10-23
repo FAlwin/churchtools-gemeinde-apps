@@ -1,7 +1,7 @@
 import { Icon } from '@ui/icons/icons';
 import { tagPunkt } from '@shared/ct/datum';
 import { ableiten } from '@shared/protokolle/dokument';
-import { dokumentAusTeilen, type ProtokollTeil } from '@shared/protokolle/speicher';
+import { dokumentDerSitzung, type ProtokollTeil } from '@shared/protokolle/speicher';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
 import type { Aufgabe } from '@shared/protokolle/aufgaben';
 import { wannLang } from './anzeige';
@@ -30,7 +30,7 @@ export function SitzungAnsicht({
   onZurueck: () => void;
 }) {
   const kopf = sitzung.kopf;
-  const dokument = kopf && kopf.status !== 'geplant' ? dokumentAusTeilen(kopf, teile) : null;
+  const dokument = dokumentDerSitzung(kopf, teile);
   const a = dokument ? ableiten(dokument) : null;
   const punktText = (id: string | null): string => {
     const p = a?.punkte.find((x) => x.blockId === id);

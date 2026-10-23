@@ -4,6 +4,7 @@ import type { Block } from './dokument';
 import { BLOCKNOTE_DOKUMENT } from './dokument.testdaten';
 import {
   dokumentAusTeilen,
+  dokumentDerSitzung,
   istKopf,
   istTeil,
   kuerzelLesen,
@@ -103,6 +104,25 @@ describe('teileBauen / dokumentAusTeilen', () => {
     const { stand, werte } = teileBauen(BLOCKNOTE_DOKUMENT, 's5');
     const kaputt = teile(werte).map((t) => ({ ...t, daten: t.daten.slice(0, -5) }));
     expect(dokumentAusTeilen({ sitzung: 's5', stand }, kaputt)).toBeNull();
+  });
+});
+
+describe('dokumentDerSitzung (S3-4)', () => {
+  const { stand, werte } = teileBauen(BLOCKNOTE_DOKUMENT, 's6');
+  const t = teile(werte);
+
+  it('entworfen oder freigegeben: das Dokument aus den Teilen', () => {
+    expect(dokumentDerSitzung({ sitzung: 's6', stand, status: 'entwurf' }, t)).toEqual(
+      BLOCKNOTE_DOKUMENT,
+    );
+    expect(dokumentDerSitzung({ sitzung: 's6', stand, status: 'frei' }, t)).toEqual(
+      BLOCKNOTE_DOKUMENT,
+    );
+  });
+
+  it('geplant oder ohne Kopf: kein Dokument – auch wenn Teile da sind', () => {
+    expect(dokumentDerSitzung({ sitzung: 's6', stand, status: 'geplant' }, t)).toBeNull();
+    expect(dokumentDerSitzung(null, t)).toBeNull();
   });
 });
 

@@ -47,6 +47,19 @@ export interface Nachbau {
   schlucken: Set<string>;
   schluckeWert: ((value: string) => boolean) | null;
   fehlerBei: { methode: string; status: number } | null;
+  /** Termine je Kalender mit ihren Besprechungsanfragen (Person + ChurchTools-Zustand, gemessen S3-3). */
+  termine: {
+    kalender: number;
+    id: number;
+    titel: string;
+    beginn: string;
+    anfragen: { person: number; state: string }[];
+  }[];
+  /** Gruppentreffen je Gruppe; `treffenVerboten` = ChurchTools antwortet 403 (Gruppentyp, S2-4). */
+  treffen: Map<number, { id: number; startDate: string; isCanceled?: boolean }[]>;
+  treffenVerboten: boolean;
+  /** Zuletzt angefragter Zeitraum der Termine (`from`/`to`) – zum Prüfen. */
+  terminAnfrage: string | null;
   definitionen: unknown;
 }
 
@@ -71,6 +84,10 @@ export function nachbauStarten(): Nachbau {
     schlucken: new Set(),
     schluckeWert: null,
     fehlerBei: null,
+    termine: [],
+    treffen: new Map(),
+    treffenVerboten: false,
+    terminAnfrage: null,
     definitionen: DEFINITIONEN,
   };
   vi.stubGlobal('window', {
@@ -79,7 +96,8 @@ export function nachbauStarten(): Nachbau {
   });
   const antwort = (input: string | URL | Request, init: RequestInit | undefined): Response => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-    const pfad = new URL(url).pathname.replace(/^\/api/, '');
+    const adresse = new URL(url);
+    const pfad = adresse.pathname.replace(/^\/api/, '');
     const m = (init?.method ?? 'GET').toUpperCase();
     const body =
       typeof init?.body === 'string' ? (JSON.parse(init.body) as Record<string, unknown>) : {};
@@ -99,6 +117,35 @@ export function nachbauStarten(): Nachbau {
         meta: { pagination: { lastPage: 1 } },
       });
     if (pfad === '/calendars') return json(200, { data: [{ id: 4, name: 'Gemeindeleitung' }] });
+    if (pfad === '/calendars/appointments') {
+      const kal = adresse.searchParams.getAll('calendar_ids[]').map(Number);
+      s.terminAnfrage = `${adresse.searchParams.get('from')}..${adresse.searchParams.get('to')}`;
+      return json(200, {
+        data: s.termine
+          .filter((t) => kal.includes(t.kalender))
+          .map((t) => ({
+            base: { id: t.id, title: t.titel, calendar: { id: t.kalender } },
+            calculated: { startDate: t.beginn },
+          })),
+      });
+    }
+    const anfr = /^\/calendars\/(\d+)\/appointments\/(\d+)\/meetingrequests$/.exec(pfad);
+    if (anfr) {
+      const t = s.termine.find((x) => x.id === Number(anfr[2]));
+      return json(200, {
+        data: (t?.anfragen ?? []).map((x, i) => ({
+          id: i + 1,
+          person: { domainIdentifier: String(x.person) },
+          state: x.state,
+        })),
+      });
+    }
+    const tr = /^\/groups\/(\d+)\/meetings$/.exec(pfad);
+    if (tr) {
+      if (s.treffenVerboten)
+        return json(403, { message: 'Forbidden to see group', messageKey: 'error.forbidden.view' });
+      return json(200, { data: s.treffen.get(Number(tr[1])) ?? [] });
+    }
     if (pfad === '/groups/194/roles')
       return json(200, {
         data: [
@@ -173,3 +220,10 @@ export const rechteVon = (s: Nachbau, rolle: number): string[] =>
 /** Die Kategorie-ID zu einem Kürzel. */
 export const kategorieVon = (s: Nachbau, shorty: string): number =>
   s.kategorien.find((k) => k.shorty === shorty)!.id;
+
+/** Die Werte-Liste einer Kategorie – wird angelegt, falls noch nichts darin steht. */
+export const werteVon = (s: Nachbau, kategorie: number): { id: number; value: string }[] => {
+  const liste = s.werte.get(kategorie) ?? [];
+  s.werte.set(kategorie, liste);
+  return liste;
+};

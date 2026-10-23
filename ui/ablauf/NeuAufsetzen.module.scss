@@ -1,0 +1,17 @@
+// Die Termine, die ein geteilter Ablauf mittrifft (E6-5b) – zwischen Text und Knöpfen der Nachfrage.
+.andere {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 8px 10px;
+  background: var(--surface3);
+  border-radius: var(--r-ctrl);
+  font-size: 13px;
+  color: var(--text);
+
+  li {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 2px 0;
+  }
+}

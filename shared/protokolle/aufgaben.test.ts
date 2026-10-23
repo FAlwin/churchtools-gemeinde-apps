@@ -12,6 +12,7 @@ import {
   notizHinzufuegen,
   statusSetzen,
   type Aufgabe,
+  meineOffenen,
 } from './aufgaben';
 
 const basis = (text: string, extra: Partial<Parameters<typeof neueAufgabe>[0]> = {}): Aufgabe =>
@@ -135,5 +136,37 @@ describe('istAufgabe', () => {
     expect(istAufgabe(null)).toBe(false);
     expect(istAufgabe({ art: 'aufgabe', fassung: 2 })).toBe(false);
     expect(istAufgabe({ ...basis('X'), status: 'fertig' })).toBe(false);
+  });
+});
+
+describe('meineOffenen (S3-3)', () => {
+  const a = (id: string, teil: Partial<Aufgabe>): Aufgabe => ({
+    ...neueAufgabe({
+      id,
+      gruppe: 1,
+      sitzung: null,
+      text: id,
+      wer: [1],
+      von: 1,
+      am: '2026-10-01T10:00:00Z',
+    }),
+    ...teil,
+  });
+  it('nur meine, nicht erledigt, nicht gelöscht – überfällig, in Arbeit, offen; je nach Frist', () => {
+    const liste = [
+      a('offen-spaet', { bis: '2026-12-01' }),
+      a('offen-frueh', { bis: '2026-11-01' }),
+      a('arbeit', { status: 'arbeit', bis: '2026-12-24' }),
+      a('ueberfaellig', { bis: '2026-10-01' }),
+      a('erledigt', { status: 'erledigt' }),
+      a('fremd', { wer: [19] }),
+      a('weg', { geloescht: true }),
+    ];
+    expect(meineOffenen(liste, 1, '2026-10-23').map((x) => x.id)).toEqual([
+      'ueberfaellig',
+      'arbeit',
+      'offen-frueh',
+      'offen-spaet',
+    ]);
   });
 });

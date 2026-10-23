@@ -27,6 +27,7 @@ function schreiber(opts: {
         ? Promise.reject(new Error('Netz weg'))
         : Promise.resolve({ items: [], isLocked: opts.abgeschlossen }),
     song: () => Promise.reject(new Error('nicht gebraucht')),
+    vorlage: () => Promise.reject(new Error('nicht gebraucht')),
     schreibe,
     fehler: (status, meldung) => Object.assign(new Error(meldung), { status }),
   };

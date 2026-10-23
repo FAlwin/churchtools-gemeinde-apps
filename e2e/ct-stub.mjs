@@ -287,6 +287,26 @@ const events = [
     calendar: { domainIdentifier: '1', title: 'Gottesdienst' },
     appointmentId: null,
   },
+  /**
+   * **Neu aufsetzen** (E6-5b, #691): Die beiden teilen sich einen Ablauf, wie mit `…/agenda/integrate` in ChurchTools.
+   * Eigene Termine, damit parallel laufende Tests nichts merken.
+   */
+  {
+    id: EVENT_ID + 10,
+    startDate: isoInDays(14),
+    endDate: isoInDays(14, 12),
+    name: 'Neu-Probe (Stub)',
+    calendar: { domainIdentifier: '1', title: 'Gottesdienst' },
+    appointmentId: null,
+  },
+  {
+    id: EVENT_ID + 11,
+    startDate: isoInDays(14, 14),
+    endDate: isoInDays(14, 15),
+    name: 'Neu-Probe Teil 2 (Stub)',
+    calendar: { domainIdentifier: '1', title: 'Gottesdienst' },
+    appointmentId: null,
+  },
 ];
 
 /** Die Abläufe der beiden Rechte-Termine (#635) – nur gelesen. */
@@ -317,6 +337,60 @@ const VORLAGE = {
     { id: 2, type: 'text', title: 'Begrüßung (Vorlage)', duration: 300 },
   ],
 };
+
+/**
+ * **Neu aufsetzen** (E6-5b): Termin → Ablauf, wie gemessen (E6-5b-0) – Vorlage/Kopie ersetzen mit neuen Punkt-IDs,
+ * `items: []` leert, bei geteiltem Ablauf für alle; `DELETE` löst nur die Verbindung; ohne Ablauf legt `PUT` an.
+ * `POST /__stub/neu-zuruecksetzen` stellt den Anfang wieder her (1510 und 1511 teilen zwei Punkte).
+ */
+const NEU_TERMINE = [EVENT_ID + 10, EVENT_ID + 11];
+let neuIds = 960;
+const neuAblaeufe = new Map();
+const neuZuordnung = new Map();
+function neuZuruecksetzen() {
+  neuAblaeufe.clear();
+  neuZuordnung.clear();
+  neuAblaeufe.set(1, {
+    geaendert: 1,
+    items: [
+      { id: neuIds++, type: 'header', title: 'Ankommen (geteilt)', duration: 0 },
+      { id: neuIds++, type: 'text', title: 'Predigt (geteilt)', duration: 1800 },
+    ],
+  });
+  for (const t of NEU_TERMINE) neuZuordnung.set(t, 1);
+}
+neuZuruecksetzen();
+function neuLesen(eventId) {
+  const aid = neuZuordnung.get(eventId);
+  if (aid === undefined) return null;
+  const a = neuAblaeufe.get(aid);
+  const verbunden = [...neuZuordnung].filter(([, x]) => x === aid).map(([t]) => t);
+  return {
+    id: aid,
+    calendarId: 1,
+    eventStartPosition: 0,
+    isLocked: false,
+    meta: { modifiedDate: `2026-10-23T10:00:${String(a.geaendert % 60).padStart(2, '0')}Z` },
+    items: a.items.map((i, n) => ({
+      ...i,
+      position: n,
+      startTimes: Object.fromEntries(verbunden.map((t) => [t, isoInDays(14)])),
+    })),
+  };
+}
+function neuSetzen(eventId, punkte) {
+  const items = punkte.map((p) => ({ ...p, id: neuIds++ }));
+  const aid = neuZuordnung.get(eventId);
+  if (aid === undefined) {
+    const neu = Math.max(0, ...neuAblaeufe.keys()) + 1;
+    neuAblaeufe.set(neu, { geaendert: 1, items });
+    neuZuordnung.set(eventId, neu);
+    return;
+  }
+  const a = neuAblaeufe.get(aid);
+  a.items = items;
+  a.geaendert++;
+}
 
 /** Der angelegte Ablauf von „Anlegeprobe" – `null`, solange es keinen gibt (dann 404 wie gemessen). */
 let agendaAngelegt = null;
@@ -707,6 +781,44 @@ const server = createServer((req, res) => {
     });
   }
   if (path === '/api/events') return json(res, { data: events });
+  // Ein einzelner Termin (E6-5b: Name des verbundenen Termins in der Nachfrage).
+  const einTermin = path.match(/^\/api\/events\/(\d+)$/);
+  if (einTermin && req.method === 'GET') {
+    const e = events.find((x) => x.id === Number(einTermin[1]));
+    return e ? json(res, { data: e }) : json(res, { message: 'Event not found' }, 404);
+  }
+  if (path === `/api/agendatemplates/${VORLAGE.id}`) return json(res, { data: VORLAGE });
+  if (path === '/__stub/neu-zuruecksetzen' && req.method === 'POST') {
+    neuZuruecksetzen();
+    return json(res, { data: {} });
+  }
+  const neuPfad = path.match(/^\/api\/events\/(\d+)\/agenda$/);
+  if (neuPfad && NEU_TERMINE.includes(Number(neuPfad[1]))) {
+    const id = Number(neuPfad[1]);
+    if (req.method === 'GET') {
+      const a = neuLesen(id);
+      return a ? json(res, { data: a }) : json(res, { message: 'Agenda not found' }, 404);
+    }
+    if (req.method === 'DELETE') {
+      neuZuordnung.delete(id);
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+    let body = '';
+    req.on('data', (chunk) => (body += chunk));
+    req.on('end', () => {
+      const neu = JSON.parse(body || '{}');
+      const vorlage = url.searchParams.get('template_id');
+      const quelle = url.searchParams.get('event_id');
+      const ohneId = ({ id: _id, ...rest }) => rest;
+      if (vorlage === String(VORLAGE.id)) neuSetzen(id, VORLAGE.items.map(ohneId));
+      else if (quelle) neuSetzen(id, (neuLesen(Number(quelle))?.items ?? []).map(ohneId));
+      else if (Array.isArray(neu.items) || !neuZuordnung.has(id)) neuSetzen(id, []);
+      json(res, { data: neuLesen(id) });
+    });
+    return;
+  }
   // Punkte anlegen und löschen (05.10.2026, „Neuer Eintrag" über das schwebende Plus). Neue Punkte
   // kommen ans Ende – wie in ChurchTools.
   const punktMatch = path.match(new RegExp(`^/api/events/${EVENT_ID}/agenda/items(?:/(\\d+))?$`));

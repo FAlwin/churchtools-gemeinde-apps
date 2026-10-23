@@ -1,8 +1,9 @@
 # Protokolle – ChurchTools-Erweiterung
 
-> **Stand: S1 (22.10.2026)** – Grundgerüst. Die Erweiterung zeigt, wer angemeldet ist, und **„Deine Gruppen“** mit
-> dem Stand der Einrichtung (eingerichtet · unvollständig · nicht eingerichtet). Protokolle, To-Dos, Termine und
-> das Einrichten selbst folgen (Bauplan S2–S9 in `protokolle-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
+> **Stand: S3-3 (23.10.2026)** – Lesen. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
+> Sitzungen“ und „Deine Gruppen“; der Reiter **„Sitzungen“** zeigt je Gruppe Kommend und Protokolle zum Lesen; Admins
+> richten im Reiter **„Verwaltung“** Gruppen ein und pflegen die Vorlagen. Beschlüsse mit Suche, Schreiben und To-Dos
+> bearbeiten folgen (Bauplan S3-4–S9 in `protokolle-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
 
 Die Protokolle sind für Gruppen wie den Leitungskreis: **Protokolle als Dokument** (wie Word, Loop oder Notion),
 daraus gesammelt Beschlüsse, To-Dos und Termine. **Alles liegt in ChurchTools** – es gibt keinen eigenen Server,
@@ -53,11 +54,24 @@ vorbereitetem Text, feste Punkte („Offene To-Dos“, „Protokoll der letzten 
 Aufgaben, die bei jeder Sitzung mit dieser Vorlage angelegt werden. Lesen dürfen sie alle eingerichteten Gruppen,
 ändern nur Admins.
 
+**Startseite:** „Heute“ erscheint nur, wenn heute eine Sitzung ansteht. „Meine offenen To-Dos“ sind die mir
+zugewiesenen, nicht erledigten aus allen Gruppen. „Nächste Sitzungen“ sind dieselben wie unter „Kommend“ im Reiter
+„Sitzungen“ (Termine **mit Besprechungsanfrage**, Gruppentreffen, begonnene Protokolle), ab heute über alle Gruppen;
+dahinter steht die eigene Antwort auf die Anfrage – wer nicht eingeladen ist, sieht keine. Ein Tipp öffnet die
+Sitzung bzw. die Gruppe im Reiter „Sitzungen“.
+
+Auf der Startseite stehen nur Gruppen, deren Protokolle man sehen darf – eine Gruppe ohne Zugriff (oder noch nicht
+eingerichtet) fehlt dort; den Stand aller Gruppen sehen Admins in der Verwaltung.
+
 | Stand auf der Startseite   | Bedeutung                                                         |
 | -------------------------- | ----------------------------------------------------------------- |
 | eingerichtet               | beide Kategorien der Gruppe sind sichtbar                         |
 | unvollständig eingerichtet | nur die Protokoll-Kategorie ist sichtbar – Einrichten wiederholen |
-| nicht eingerichtet         | die Gruppe nutzt die Protokolle noch nicht                        |
+
+**Versteckte Gruppen und Gruppentypen:** „versteckte Gruppe sehen“ hilft nur, wenn die Rolle die Gruppe überhaupt
+sehen darf – das legt der **Gruppentyp** fest. In einem Typ, dessen Teilnehmer die Gruppe nicht sehen (in der
+Test-Instanz „Anmeldung“), sehen sie auch nach dem Einrichten die Mitglieder nicht. Für die Protokolle selbst spielt
+das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit später schon (gemessen 22.10.2026, S2-4).
 
 ## Für Entwickler
 

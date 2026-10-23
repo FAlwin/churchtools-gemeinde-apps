@@ -7,6 +7,12 @@ import { ladeStart, type Start } from './start';
 
 vi.mock('./start', () => ({ ladeStart: vi.fn() }));
 vi.mock('./Verwaltung', () => ({ Verwaltung: () => <p>VERWALTUNG</p> }));
+vi.mock('./Sitzungen', () => ({
+  Sitzungen: ({ auswahl }: { auswahl?: { gruppe: number; sitzung?: string } | null }) => (
+    <p>SITZUNGEN {auswahl ? `${auswahl.gruppe}/${auswahl.sitzung ?? '-'}` : 'ohne Auswahl'}</p>
+  ),
+}));
+vi.mock('./lesen', () => ({ ladeUebersicht: vi.fn(() => Promise.resolve([])) }));
 const laden = vi.mocked(ladeStart);
 
 const START: Start = {
@@ -18,7 +24,6 @@ const START: Start = {
   gruppen: [
     { id: 11, name: 'Leitungsteam', lage: 'eingerichtet', protokolle: 60, mitarbeit: 61 },
     { id: 7, name: 'Jugendleitung', lage: 'unvollstaendig', protokolle: 70, mitarbeit: null },
-    { id: 19, name: 'Technik-Team', lage: 'nicht-eingerichtet', protokolle: null, mitarbeit: null },
   ],
 };
 
@@ -36,12 +41,8 @@ describe('App (S1)', () => {
     const zeilen = within(liste)
       .getAllByRole('listitem')
       .map((z) => z.textContent);
-    expect(zeilen).toEqual([
-      'Leitungsteameingerichtet',
-      'Jugendleitungunvollständig eingerichtet',
-      'Technik-Teamnicht eingerichtet',
-    ]);
-    expect(screen.getByText(/richtet ein Admin in ChurchTools einmal ein/)).toBeTruthy();
+    expect(zeilen).toEqual(['Leitungsteameingerichtet', 'Jugendleitungunvollständig eingerichtet']);
+    expect(screen.getByText(/Fehlt eine Gruppe\? Ein Admin richtet sie ein/)).toBeTruthy();
   });
 
   it('ohne Gruppen: ein klarer Satz statt einer leeren Liste', async () => {
@@ -53,11 +54,10 @@ describe('App (S1)', () => {
     expect(screen.queryByRole('list')).toBeNull();
   });
 
-  it('alle eingerichtet: kein Hinweis aufs Einrichten', async () => {
-    laden.mockResolvedValue({ ...START, gruppen: [START.gruppen[0]] });
+  it('auch ohne Gruppen: der Hinweis, wie eine fehlende Gruppe dazukommt', async () => {
+    laden.mockResolvedValue({ ...START, gruppen: [] });
     render(<App />);
-    await screen.findByText('Leitungsteam');
-    expect(screen.queryByText(/richtet ein Admin/)).toBeNull();
+    expect(await screen.findByText(/Fehlt eine Gruppe\?/)).toBeTruthy();
   });
 
   it('vorübergehender Fehler: „Erneut versuchen“ lädt neu – nicht „keine Gruppen“', async () => {
@@ -83,10 +83,11 @@ describe('App (S1)', () => {
     expect(screen.queryByText(/keiner Gruppe/)).toBeNull();
   });
 
-  it('kein Admin: keine Reiter – und #/verwaltung führt zum Start', async () => {
+  it('kein Admin: Reiter Start · Sitzungen, kein „Verwaltung“ – und #/verwaltung führt zum Start', async () => {
     window.location.hash = '#/verwaltung';
     render(<App />);
     expect(await screen.findByRole('heading', { name: 'Hallo Alwin' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Sitzungen' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Verwaltung' })).toBeNull();
     expect(screen.queryByText('VERWALTUNG')).toBeNull();
   });
@@ -98,5 +99,29 @@ describe('App (S1)', () => {
     expect(await screen.findByText('VERWALTUNG')).toBeTruthy();
     expect(window.location.hash).toBe('#/verwaltung');
     expect(screen.queryByRole('heading', { name: 'Hallo Alwin' })).toBeNull();
+  });
+
+  it('„Sitzungen“ zeigt die Sitzungen ohne Gruß', async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Sitzungen' }));
+    expect(await screen.findByText('SITZUNGEN ohne Auswahl')).toBeTruthy();
+    expect(window.location.hash).toBe('#/sitzungen');
+    expect(screen.queryByRole('heading', { name: 'Hallo Alwin' })).toBeNull();
+  });
+
+  it('S3-3: eine Gruppe auf der Startseite öffnet „Sitzungen“ mit dieser Gruppe', async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: /Jugendleitung/ }));
+    expect(await screen.findByText('SITZUNGEN 7/-')).toBeTruthy();
+    expect(window.location.hash).toBe('#/sitzungen');
+  });
+
+  it('S3-3: über den Reiter zurück und wieder hin – die alte Auswahl gilt nicht mehr', async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: /Jugendleitung/ }));
+    await screen.findByText('SITZUNGEN 7/-');
+    fireEvent.click(screen.getByRole('button', { name: 'Start' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Sitzungen' }));
+    expect(await screen.findByText('SITZUNGEN ohne Auswahl')).toBeTruthy();
   });
 });

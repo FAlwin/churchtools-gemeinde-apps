@@ -145,6 +145,23 @@ export function gruppieren(liste: readonly Aufgabe[], heute: string): Gruppiert 
   return g;
 }
 
+/**
+ * **Die offenen To-Dos** – alles, was nicht erledigt und nicht gelöscht ist, in der Reihenfolge von `gruppieren`
+ * (überfällig, in Arbeit, offen; je nach Fälligkeit). Die eine Stelle dafür (Startseite: Zähler je Gruppe und „Meine“).
+ */
+export function offene(liste: readonly Aufgabe[], heute: string): Aufgabe[] {
+  const g = gruppieren(liste, heute);
+  return [...g.ueberfaellig, ...g.arbeit, ...g.offen];
+}
+
+/** **Meine offenen To-Dos** (Startseite, S3-3): die mir zugewiesenen unter `offene`. */
+export function meineOffenen(liste: readonly Aufgabe[], ich: number, heute: string): Aufgabe[] {
+  return offene(
+    liste.filter((a) => istMeine(a, ich)),
+    heute,
+  );
+}
+
 /** „Seit der Sitzung am … erledigt“ – erledigt nach `seit` (ISO). */
 export function erledigtSeit(liste: readonly Aufgabe[], seit: string): Aufgabe[] {
   return liste.filter((a) => {

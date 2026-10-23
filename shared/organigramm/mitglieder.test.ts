@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { istLeitung, mitgliederAus, rollenAus, rollenRang } from './mitglieder';
+import {
+  istLeitung,
+  mitgliederAus,
+  rollenAus,
+  rollenFuerTyp,
+  rollenRang,
+  standardRolle,
+} from './mitglieder';
 
 // Wie gemessen (Test-Instanz 22.10.2026)
 const ROLLEN = rollenAus([
@@ -13,14 +20,22 @@ const ROLLEN = rollenAus([
 
 describe('rollenAus', () => {
   it('übersetzter Name vor internem (leader → Leiter); Leitung aus isLeader', () => {
-    expect(ROLLEN.get(35)).toEqual({ id: 35, name: 'Leiter', leitung: true, sortKey: 1 });
+    expect(ROLLEN.get(35)).toMatchObject({ id: 35, name: 'Leiter', leitung: true, sortKey: 1 });
     expect(ROLLEN.get(15)?.leitung).toBe(false);
   });
 
   it('ohne ID fällt weg; ohne sortKey hinten; ohne Namen „Mitglied“', () => {
     const r = rollenAus([{ id: 1 }]);
     expect(ROLLEN.size).toBe(5);
-    expect(r.get(1)).toEqual({ id: 1, name: 'Mitglied', leitung: false, sortKey: 99 });
+    expect(r.get(1)).toEqual({
+      id: 1,
+      name: 'Mitglied',
+      leitung: false,
+      sortKey: 99,
+      typId: null,
+      standard: false,
+      versteckt: false,
+    });
   });
 
   it('nur `true` ist Leitung (kein „1“, kein „ja“)', () => {
@@ -96,5 +111,73 @@ describe('mitgliederAus – wartend', () => {
   it('Warteliste (waiting) ist weder Mitglied noch Anfrage', () => {
     const r = mitgliederAus([{ personId: 5, groupMemberStatus: 'waiting' }]);
     expect(r).toEqual({ mitglieder: [], angefragt: [], personen: [] });
+  });
+});
+
+describe('rollenFuerTyp / standardRolle (O6, gemessen 23.10.2026)', () => {
+  // Wie in der Test-Instanz: Dienst (2) und Kleingruppe (1) haben je eigene Rollen
+  const R = rollenAus([
+    {
+      id: 15,
+      nameTranslated: 'Mitarbeiter',
+      isLeader: false,
+      sortKey: 0,
+      groupTypeId: 2,
+      isDefault: true,
+    },
+    { id: 16, nameTranslated: 'Leiter', isLeader: true, sortKey: 1, groupTypeId: 2 },
+    { id: 17, nameTranslated: 'Co-Leiter', isLeader: true, sortKey: 2, groupTypeId: 2 },
+    {
+      id: 18,
+      nameTranslated: 'Coach',
+      isLeader: false,
+      sortKey: 3,
+      groupTypeId: 2,
+      isHidden: true,
+    },
+    {
+      id: 8,
+      nameTranslated: 'Teilnehmer',
+      isLeader: false,
+      sortKey: 0,
+      groupTypeId: 1,
+      isDefault: true,
+    },
+    { id: 9, nameTranslated: 'Leiter', isLeader: true, sortKey: 1, groupTypeId: 1 },
+  ]);
+
+  it('nur Rollen des Typs, ohne versteckte, Leitung zuerst', () => {
+    expect(rollenFuerTyp(R, 2).map((r) => r.id)).toEqual([16, 17, 15]);
+    expect(rollenFuerTyp(R, 1).map((r) => r.id)).toEqual([9, 8]);
+    expect(rollenFuerTyp(R, null)).toEqual([]);
+  });
+
+  it('Standardrolle: isDefault des Typs', () => {
+    expect(standardRolle(R, 2)?.id).toBe(15);
+    expect(standardRolle(R, 1)?.id).toBe(8);
+  });
+
+  it('isDefault zählt auch, wenn davor eine andere Rolle ohne Leitung steht', () => {
+    const r = rollenAus([
+      { id: 50, nameTranslated: 'Mitarbeiter', isLeader: false, sortKey: 0, groupTypeId: 4 },
+      {
+        id: 51,
+        nameTranslated: 'Teilnehmer',
+        isLeader: false,
+        sortKey: 1,
+        groupTypeId: 4,
+        isDefault: true,
+      },
+    ]);
+    expect(standardRolle(r, 4)?.id).toBe(51);
+  });
+
+  it('ohne isDefault: die erste, die keine Leitung ist; ohne Rollen null', () => {
+    const ohne = rollenAus([
+      { id: 16, nameTranslated: 'Leiter', isLeader: true, sortKey: 1, groupTypeId: 3 },
+      { id: 22, nameTranslated: 'Teilnehmer', isLeader: false, sortKey: 0, groupTypeId: 3 },
+    ]);
+    expect(standardRolle(ohne, 3)?.id).toBe(22);
+    expect(standardRolle(ohne, 7)).toBeNull();
   });
 });

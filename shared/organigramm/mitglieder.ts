@@ -16,6 +16,12 @@ export interface Rolle {
   name: string;
   leitung: boolean;
   sortKey: number;
+  /** Gruppentyp der Rolle – Rollen gehören immer zu EINEM Typ (gemessen O6, 23.10.2026). */
+  typId: number | null;
+  /** Rolle beim Aufnehmen (`isDefault`), z. B. „Mitarbeiter“ bei Diensten. */
+  standard: boolean;
+  /** In ChurchTools versteckt (`isHidden`) – nicht zur Wahl anbieten. */
+  versteckt: boolean;
 }
 
 export interface RohRolle {
@@ -24,6 +30,9 @@ export interface RohRolle {
   nameTranslated?: unknown;
   isLeader?: unknown;
   sortKey?: unknown;
+  groupTypeId?: unknown;
+  isDefault?: unknown;
+  isHidden?: unknown;
 }
 
 export function rollenAus(rows: readonly RohRolle[] | null | undefined): Map<number, Rolle> {
@@ -38,6 +47,9 @@ export function rollenAus(rows: readonly RohRolle[] | null | undefined): Map<num
       name: uebersetzt || roh || 'Mitglied',
       leitung: r.isLeader === true,
       sortKey: typeof r.sortKey === 'number' ? r.sortKey : 99,
+      typId: ctId(r.groupTypeId),
+      standard: r.isDefault === true,
+      versteckt: r.isHidden === true,
     });
   }
   return m;
@@ -53,6 +65,26 @@ export function rollenRang(rollen: ReadonlyMap<number, Rolle>): (rolleId: number
     if (!r) return 10_000;
     return (r.leitung ? 0 : 1_000) + r.sortKey;
   };
+}
+
+/**
+ * **Die Rollen, die zu einer Gruppe passen** (O6): die ihres Gruppentyps, ohne versteckte, Leitung zuerst – zur Wahl
+ * beim Aufnehmen und beim Rollenwechsel.
+ */
+export function rollenFuerTyp(rollen: ReadonlyMap<number, Rolle>, typId: number | null): Rolle[] {
+  const rang = rollenRang(rollen);
+  return [...rollen.values()]
+    .filter((r) => r.typId !== null && r.typId === typId && !r.versteckt)
+    .sort((a, b) => rang(a.id) - rang(b.id) || a.name.localeCompare(b.name, 'de'));
+}
+
+/** Die Rolle beim Aufnehmen: die Standardrolle des Typs, sonst die erste, die keine Leitung ist, sonst die erste. */
+export function standardRolle(
+  rollen: ReadonlyMap<number, Rolle>,
+  typId: number | null,
+): Rolle | null {
+  const passend = rollenFuerTyp(rollen, typId);
+  return passend.find((r) => r.standard) ?? passend.find((r) => !r.leitung) ?? passend[0] ?? null;
 }
 
 export function istLeitung(rollen: ReadonlyMap<number, Rolle>, rolleId: number | null): boolean {

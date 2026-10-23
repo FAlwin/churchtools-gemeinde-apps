@@ -1,10 +1,10 @@
 # Organigramm – ChurchTools-Erweiterung
 
-> **Stand: O5 (23.10.2026)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
-> offenen Plätzen; Gruppenfenster; Gruppentypen ausblendbar), die **Präsentation** und für Gruppen-Admins **Gruppen
-> umhängen und anlegen**. Für die **Leitung eines Bereichs** dazu die Reiter **Personen** und **Hinweise**. Als
-> Nächstes (Bauplan O6–O8): Leitung und Mitglieder pflegen, Plan „neue Gliederung“ mit Umbau-Liste. Diese Anleitung
-> wächst mit.
+> **Stand: O6 (23.10.2026)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
+> offenen Plätzen; Gruppenfenster; Gruppentypen ausblendbar), die **Präsentation**, für Gruppen-Admins **Gruppen
+> umhängen und anlegen** und – für alle, die es in ChurchTools dürfen – **Leitung und Mitglieder pflegen**. Für die
+> **Leitung eines Bereichs** dazu die Reiter **Personen** und **Hinweise**. Als Nächstes (Bauplan O7–O8): Plan „neue
+> Gliederung“ mit Umbau-Liste, dann der echte Umbau. Diese Anleitung wächst mit.
 
 Das Organigramm zeigt die Gemeinde als Baum – Bereiche, Gruppen, Personen – so, wie die Gruppen-Hierarchie in
 ChurchTools steht, und hilft, die Organisation darin weiterzubauen. **Alles liegt in ChurchTools** – es gibt keinen
@@ -33,13 +33,13 @@ eigenen Server.
 Die Erweiterung kann nichts, was die Person in ChurchTools nicht auch selbst dürfte – sie arbeitet mit deren
 Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Gemessen an der Test-Instanz (19. und 22.10.2026):
 
-| Wer                             | Sieht / darf                                                                             | Woher (ChurchTools)                           |
-| ------------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------- |
-| alle mit Zugang zur Erweiterung | die Gruppen, die ChurchTools ihnen zeigt, und den Baum                                   | Erweiterung „Organigramm“ sehen               |
-| Mitglied einer Gruppe           | deren Mitglieder **und die aller Untergruppen** – nicht die der Obergruppe               | Mitgliedschaft (Rechte wirken nur nach unten) |
-| Leitung einer Gruppe            | Personen aufnehmen (ab O6) – **nicht** austragen, umhängen oder Gruppen anlegen          | Rolle mit Leitung                             |
-| Leitung einer Gruppe            | Reiter Personen und Hinweise für diese Gruppe **samt Untergruppen** (O3)                 | Rolle mit Leitung                             |
-| Gruppen-Admin                   | alle Personen und Hinweise (O3); umhängen und anlegen (O5); alles an Mitgliedern (ab O6) | „Gruppen verwalten“ / „Gruppen bearbeiten“    |
+| Wer                             | Sieht / darf                                                                                | Woher (ChurchTools)                           |
+| ------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| alle mit Zugang zur Erweiterung | die Gruppen, die ChurchTools ihnen zeigt, und den Baum                                      | Erweiterung „Organigramm“ sehen               |
+| Mitglied einer Gruppe           | deren Mitglieder **und die aller Untergruppen** – nicht die der Obergruppe                  | Mitgliedschaft (Rechte wirken nur nach unten) |
+| Leitung einer Gruppe            | Personen aufnehmen, Rollen ändern (O6) – **nicht** austragen, umhängen oder Gruppen anlegen | Rolle mit Leitung                             |
+| Leitung einer Gruppe            | Reiter Personen und Hinweise für diese Gruppe **samt Untergruppen** (O3)                    | Rolle mit Leitung                             |
+| Gruppen-Admin                   | alle Personen und Hinweise (O3); umhängen und anlegen (O5); alles an Mitgliedern (O6)       | „Gruppen verwalten“ / „Gruppen bearbeiten“    |
 
 ## Präsentation (ab O4)
 
@@ -90,6 +90,20 @@ Im **Gruppenfenster** (Klick auf eine Gruppe) unter „Gehört zu“:
 Vor jeder Änderung steht, was sich an den **Rechten** ändert: Rechte wirken in ChurchTools nach unten – wer in der neuen
 Obergruppe ist, sieht danach auch diese Gruppe samt Untergruppen; wer sie nur über die alte sah, sieht sie nicht mehr.
 Danach zeigt das Fenster **„Rückgängig“** (auch eine neue Gruppe lässt sich so wieder löschen).
+
+## Leitung und Mitglieder pflegen (ab O6)
+
+Im **Gruppenfenster** – für alle, die es in ChurchTools dürfen. Die Erweiterung fragt ChurchTools je Gruppe, was die
+eigene Rolle dort erlaubt; Gruppen-Admins dürfen alles. In der Test-Instanz dürfen **Leitungen aufnehmen und Rollen
+ändern, aber nicht austragen** (dann fehlt der Knopf).
+
+- **＋ Person aufnehmen** – Namen suchen (mindestens zwei Buchstaben), Person wählen, Rolle wählen (vorbelegt mit der
+  Standardrolle, z. B. „Mitarbeiter“), **Aufnehmen**. Nur Personen, die es in ChurchTools schon gibt; wer schon dabei
+  ist, steht als „schon dabei“ da.
+- **Rolle** an einer Person – z. B. zur Leitung machen. Zur Wahl stehen die Rollen des Gruppentyps.
+- **Austragen** an einer Person – die Mitgliedschaft **endet heute**. Sie wird nicht gelöscht: In ChurchTools steht sie
+  weiter in der Historie der Person.
+- Nach jeder Änderung steht im Fenster **„Rückgängig“**.
 
 ## Was die Erweiterung speichert
 

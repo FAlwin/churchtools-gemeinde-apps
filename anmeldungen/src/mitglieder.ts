@@ -5,6 +5,7 @@
  */
 import { ctAlleSeiten, ctDaten } from '@ui/ct/verbindung';
 import { ApiError } from '@ui/ct/fehler';
+import { personenRoh } from '@ui/ct/personen';
 import {
   abgesagteIds,
   mitgliederstandAus,
@@ -36,28 +37,8 @@ async function ohne403<T>(p: Promise<T>, sonst: T): Promise<T> {
   }
 }
 
-/** Eine Person, wie `GET /persons?ids[]=…` sie liefert (soweit gebraucht). */
-export interface PersonRoh {
-  id: number;
-  firstName?: string;
-  lastName?: string;
-  email?: string | null;
-  birthday?: string | null;
-}
-
-/** **Personen je Nummer** – in Paketen, eine Anfrage je 50 Personen. Für die Liste und die Suche von Hand (A7-4). */
-export async function personenRoh(ids: number[]): Promise<PersonRoh[]> {
-  const alle: PersonRoh[] = [];
-  for (let i = 0; i < ids.length; i += 50) {
-    const teil = ids.slice(i, i + 50);
-    alle.push(
-      ...(await ctDaten<PersonRoh[]>(
-        `/persons?${teil.map((x) => `ids[]=${x}`).join('&')}&limit=${teil.length}`,
-      )),
-    );
-  }
-  return alle;
-}
+// Personen je Nummer: seit O6 (23.10.2026) in `ui/ct/personen` – dieselbe Abfrage wie die Suche dort.
+export { personenRoh, type PersonRoh } from '@ui/ct/personen';
 
 async function personenLaden(ids: number[]): Promise<Map<number, PersonDaten>> {
   const m = new Map<number, PersonDaten>();

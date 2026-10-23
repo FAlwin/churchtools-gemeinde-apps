@@ -1,14 +1,23 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
 import { baumAus, elternAus, type OrgGruppe } from '@shared/organigramm/gruppen';
 import { rollenAus } from '@shared/organigramm/mitglieder';
+import type { OrgRechte } from '@shared/organigramm/rechte';
 import { diensteAus } from '@shared/ct/dienste';
 import { App } from './App';
 import { ladeStart, type Start } from './start';
-import { fehlendeNachladen, ladeMitglieder, type MitgliederDaten } from './ladeMitglieder';
+import {
+  fehlendeNachladen,
+  gruppenNachladen,
+  ladeMitglieder,
+  type MitgliederDaten,
+} from './ladeMitglieder';
 import { ladeEinsaetze } from './ladeEinsaetze';
+import { ladeGruppenRechte } from './mitgliedschaft';
+import { personenSuchen } from '@ui/ct/personen';
+import { heuteImKalender } from '@shared/ct/zeit';
 import type { Einsaetze, PersonEinsatz } from '@shared/organigramm/einsaetze';
 
 vi.mock('./start', () => ({ ladeStart: vi.fn() }));
@@ -16,7 +25,52 @@ vi.mock('./ladeMitglieder', () => ({
   ladeMitglieder: vi.fn(),
   fehlendeNachladen: vi.fn(),
   neueGruppenNachladen: vi.fn((d: unknown) => Promise.resolve(d)),
+  gruppenNachladen: vi.fn((d: unknown) => Promise.resolve(d)),
 }));
+// Ein nachgebautes ChurchTools für Mitgliedschaften (O6): je Person Rolle/Status/Ende – und die Rechte je Gruppe.
+const cm = vi.hoisted(() => {
+  type M = { rolleId: number | null; status: string | null; ende: string | null };
+  const m = new Map<number, M>();
+  const log: string[] = [];
+  const rechte = {
+    wert: { aufnehmen: false, rolleAendern: false, beenden: false } as
+      | { aufnehmen: boolean; rolleAendern: boolean; beenden: boolean }
+      | Error,
+  };
+  return {
+    m,
+    log,
+    rechte,
+    zugriff: {
+      lesen: (_g: number, p: number) => Promise.resolve(m.has(p) ? { ...m.get(p)! } : null),
+      schreiben: (_g: number, p: number, f: Record<string, unknown>) => {
+        log.push(`schreiben ${p} ${JSON.stringify(f)}`);
+        const alt = m.get(p) ?? { rolleId: null, status: null, ende: null };
+        m.set(p, {
+          rolleId: 'groupTypeRoleId' in f ? (f.groupTypeRoleId as number) : alt.rolleId,
+          status: 'groupMemberStatus' in f ? (f.groupMemberStatus as string) : alt.status,
+          ende: 'memberEndDate' in f ? (f.memberEndDate as string | null) : alt.ende,
+        });
+        return Promise.resolve();
+      },
+      entfernen: (_g: number, p: number) => {
+        log.push(`entfernen ${p}`);
+        m.delete(p);
+        return Promise.resolve();
+      },
+      nichtUebernommen: (was: string) => new Error(`nicht übernommen: ${was}`),
+    },
+  };
+});
+vi.mock('./mitgliedschaft', () => ({
+  mitgliedZugriff: cm.zugriff,
+  ladeGruppenRechte: vi.fn(() =>
+    cm.rechte.wert instanceof Error
+      ? Promise.reject(cm.rechte.wert)
+      : Promise.resolve(cm.rechte.wert),
+  ),
+}));
+vi.mock('@ui/ct/personen', () => ({ personenSuchen: vi.fn() }));
 // Ein nachgebautes ChurchTools für die Struktur (O5): Obergruppen je Gruppe und ein Protokoll der Aufrufe.
 const ct = vi.hoisted(() => {
   const eltern = new Map<number, number[]>();
@@ -90,6 +144,18 @@ const ELTERN = elternAus([
   { groupId: 7, children: [12] },
 ]);
 
+/** Rechte ohne alles – Tests setzen nur, was sie brauchen (EINE Stelle, wenn ein Recht dazukommt). */
+const rechte = (x: Partial<OrgRechte> = {}): OrgRechte => ({
+  gruppenVerwalten: false,
+  anlegbareTypen: [],
+  bearbeitbareGruppen: [],
+  bearbeitbareTypen: [],
+  mitgliederAlle: false,
+  mitgliederGruppen: [],
+  mitgliederTypen: [],
+  ...x,
+});
+
 function start(extra: Partial<Start> = {}): Start {
   return {
     ichId: 1,
@@ -107,17 +173,13 @@ function start(extra: Partial<Start> = {}): Start {
       [9, 'Verteiler'],
     ]),
     rollen: rollenAus([
-      { id: 15, name: 'Mitarbeiter', isLeader: false, sortKey: 0 },
-      { id: 16, name: 'Leiter', isLeader: true, sortKey: 1 },
-      { id: 17, name: 'Co-Leiter', isLeader: true, sortKey: 2 },
+      // Rollen der Dienst-Gruppen (Typ 2), wie gemessen – Mitarbeiter ist die Standardrolle
+      { id: 15, name: 'Mitarbeiter', isLeader: false, sortKey: 0, groupTypeId: 2, isDefault: true },
+      { id: 16, name: 'Leiter', isLeader: true, sortKey: 1, groupTypeId: 2 },
+      { id: 17, name: 'Co-Leiter', isLeader: true, sortKey: 2, groupTypeId: 2 },
     ]),
     dienste: diensteAus([{ id: 6, name: 'Ton', serviceGroupId: 3, groupIds: [7] }]),
-    rechte: {
-      gruppenVerwalten: true,
-      anlegbareTypen: [],
-      bearbeitbareGruppen: [],
-      bearbeitbareTypen: [],
-    },
+    rechte: rechte({ gruppenVerwalten: true }),
     geleitet: [],
     ...extra,
   };
@@ -180,6 +242,12 @@ const EINSAETZE: Einsaetze = {
 };
 
 beforeEach(() => {
+  cm.m.clear();
+  cm.m.set(3, { rolleId: 15, status: 'active', ende: null });
+  cm.m.set(4, { rolleId: 17, status: 'active', ende: null });
+  cm.m.set(1, { rolleId: 16, status: 'active', ende: null });
+  cm.log.length = 0;
+  cm.rechte.wert = { aufnehmen: false, rolleAendern: false, beenden: false };
   ct.eltern.clear();
   ct.eltern.set(7, [10]);
   ct.eltern.set(12, [7]);
@@ -305,12 +373,7 @@ describe('O3: offene Plätze, Personen, Hinweise', () => {
     window.location.hash = '#personen';
     laden.mockResolvedValue(
       start({
-        rechte: {
-          gruppenVerwalten: false,
-          anlegbareTypen: [],
-          bearbeitbareGruppen: [],
-          bearbeitbareTypen: [],
-        },
+        rechte: rechte(),
       }),
     );
     render(<App />);
@@ -323,12 +386,7 @@ describe('O3: offene Plätze, Personen, Hinweise', () => {
     laden.mockResolvedValue(
       start({
         geleitet: [7],
-        rechte: {
-          gruppenVerwalten: false,
-          anlegbareTypen: [],
-          bearbeitbareGruppen: [],
-          bearbeitbareTypen: [],
-        },
+        rechte: rechte(),
       }),
     );
     render(<App />);
@@ -424,12 +482,7 @@ describe('O4: Präsentation', () => {
     mitgliederLaden.mockReturnValue(new Promise(() => {}));
     laden.mockResolvedValue(
       start({
-        rechte: {
-          gruppenVerwalten: false,
-          anlegbareTypen: [],
-          bearbeitbareGruppen: [],
-          bearbeitbareTypen: [],
-        },
+        rechte: rechte(),
       }),
     );
     render(<App />);
@@ -555,12 +608,7 @@ describe('O5: Gruppen umhängen und anlegen', () => {
   it('ohne Recht (z. B. nur Leitung): keine Knöpfe zum Ändern', async () => {
     laden.mockResolvedValue(
       start({
-        rechte: {
-          gruppenVerwalten: false,
-          anlegbareTypen: [],
-          bearbeitbareGruppen: [],
-          bearbeitbareTypen: [],
-        },
+        rechte: rechte(),
         geleitet: [7],
       }),
     );
@@ -738,5 +786,110 @@ describe('O5: Gruppen umhängen und anlegen', () => {
     expect(await screen.findByText(/ließ sich gerade nicht neu laden/)).toBeTruthy();
     // Die Seite steht noch (kein Fehler für alles), und Rückgängig ist da
     expect(knopf('Rückgängig')).toBeTruthy();
+  });
+});
+
+describe('O6: Leitung und Mitglieder', () => {
+  const technikOeffnen = async () => {
+    render(<App />);
+    await screen.findByText('3 Personen · Leitung: Alwin Friesen, Dora Dorn');
+    fireEvent.click(zeile('Technik'));
+  };
+  const knopf = (name: string | RegExp) => screen.getByRole('button', { name });
+  const suche = vi.mocked(personenSuchen);
+  const nurLeitung = () => laden.mockResolvedValue(start({ rechte: rechte(), geleitet: [7] }));
+
+  it('Gruppen-Admin: Rolle und Austragen an jeder Person, „＋ Person aufnehmen“ – ohne Rechte je Gruppe zu laden', async () => {
+    await technikOeffnen();
+    expect(knopf('Rolle von Carl Clau')).toBeTruthy();
+    expect(knopf('Carl Clau austragen')).toBeTruthy();
+    expect(knopf('＋ Person aufnehmen')).toBeTruthy();
+    expect(vi.mocked(ladeGruppenRechte)).not.toHaveBeenCalled();
+  });
+
+  it('Leitung (Rechte je Gruppe wie gemessen): aufnehmen und Rolle ja, austragen nein', async () => {
+    nurLeitung();
+    cm.rechte.wert = { aufnehmen: true, rolleAendern: true, beenden: false };
+    await technikOeffnen();
+    expect(await screen.findByRole('button', { name: '＋ Person aufnehmen' })).toBeTruthy();
+    expect(knopf('Rolle von Carl Clau')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Carl Clau austragen' })).toBeNull();
+    expect(vi.mocked(ladeGruppenRechte)).toHaveBeenCalledWith(7);
+  });
+
+  it('nur Mitglied: keine Knöpfe; Rechte nicht ladbar → Hinweis, Knöpfe bleiben zu', async () => {
+    nurLeitung();
+    await technikOeffnen();
+    await vi.waitFor(() => expect(vi.mocked(ladeGruppenRechte)).toHaveBeenCalled());
+    expect(screen.queryByRole('button', { name: /Person aufnehmen/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Rolle von/ })).toBeNull();
+    cleanup();
+    nurLeitung();
+    cm.rechte.wert = new Error('antwortet nicht');
+    await technikOeffnen();
+    expect(
+      await screen.findByText(/Rechte für diese Gruppe ließen sich gerade nicht laden/),
+    ).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Person aufnehmen/ })).toBeNull();
+  });
+
+  it('aufnehmen: Suche, „schon dabei“ gesperrt, Standardrolle, nachgelesen – Rückgängig löscht die neue Mitgliedschaft', async () => {
+    suche.mockResolvedValue([
+      { personId: 5, vor: 'Emil', nach: 'Ernst', geburtstag: null, email: null },
+      { personId: 1, vor: 'Alwin', nach: 'Friesen', geburtstag: null, email: null },
+    ]);
+    await technikOeffnen();
+    fireEvent.click(knopf('＋ Person aufnehmen'));
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), { target: { value: 'Em' } });
+    fireEvent.click(knopf('Suchen'));
+    const gefunden = await screen.findByRole('list', { name: 'Gefunden' });
+    const alwin = within(gefunden).getByRole('button', { name: /Alwin Friesen/ });
+    expect((alwin as HTMLButtonElement).disabled).toBe(true);
+    expect(alwin.textContent).toContain('schon dabei');
+    fireEvent.click(within(gefunden).getByRole('button', { name: /Emil Ernst/ }));
+    expect(screen.getByRole<HTMLSelectElement>('combobox', { name: 'Rolle' }).value).toBe('15');
+    fireEvent.click(knopf('Aufnehmen'));
+    expect(
+      await screen.findByText('„Emil Ernst“ ist jetzt in „Technik“ (Mitarbeiter).'),
+    ).toBeTruthy();
+    expect(cm.m.get(5)).toEqual({ rolleId: 15, status: 'active', ende: null });
+    // nur DIESE Gruppe neu laden, nicht alle
+    expect(vi.mocked(gruppenNachladen)).toHaveBeenLastCalledWith(expect.anything(), [7]);
+    fireEvent.click(knopf('Rückgängig'));
+    await screen.findByText('Rückgängig gemacht.');
+    expect(cm.log.at(-1)).toBe('entfernen 5');
+    expect(cm.m.has(5)).toBe(false);
+  });
+
+  it('Rolle ändern: Hinweis bei Leitung, nur die Rolle geschickt – Rückgängig setzt die alte', async () => {
+    await technikOeffnen();
+    fireEvent.click(knopf('Rolle von Carl Clau'));
+    const wahl = screen.getByRole<HTMLSelectElement>('combobox', { name: 'Rolle' });
+    expect(wahl.value).toBe('15');
+    fireEvent.change(wahl, { target: { value: '16' } });
+    expect(screen.getByText(/Als Leitung bekommt „Carl Clau“/)).toBeTruthy();
+    fireEvent.click(knopf('Ändern'));
+    expect(await screen.findByText('„Carl Clau“ ist jetzt Leiter.')).toBeTruthy();
+    expect(cm.log).toEqual(['schreiben 3 {"groupTypeRoleId":16}']);
+    fireEvent.click(knopf('Rückgängig'));
+    await screen.findByText('Rückgängig gemacht.');
+    expect(cm.m.get(3)?.rolleId).toBe(15);
+  });
+
+  it('austragen = beenden mit Datum heute (nicht löschen) – Rückgängig leert das Ende', async () => {
+    await technikOeffnen();
+    fireEvent.click(knopf('Carl Clau austragen'));
+    expect(screen.getByText(/bleibt sie in der Historie stehen/)).toBeTruthy();
+    fireEvent.click(
+      within(screen.getByRole('region', { name: 'Bestätigen' })).getByRole('button', {
+        name: 'Austragen',
+      }),
+    );
+    expect(await screen.findByText(/„Carl Clau“ ist ausgetragen/)).toBeTruthy();
+    expect(cm.m.get(3)?.ende).toBe(heuteImKalender());
+    expect(cm.log.some((l) => l.startsWith('entfernen'))).toBe(false);
+    fireEvent.click(knopf('Rückgängig'));
+    await screen.findByText('Rückgängig gemacht.');
+    expect(cm.m.get(3)?.ende).toBeNull();
   });
 });

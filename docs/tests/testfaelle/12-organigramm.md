@@ -87,3 +87,34 @@ Mail.
   Mail-Warteschlange fehlt in der Messnotiz)
 
 </details>
+
+### TF-ORG-04 · Person aufnehmen, Rolle ändern, austragen – und zurück
+
+**Das brauchst du:** In der Test-Instanz eine leere Übungsgruppe (z. B. „Übung Mitglieder“) und eine Testperson mit
+einer eigenen Plus-Adresse (z. B. „Mara Messung“). Dazu ein Konto, das eine Gruppe nur **leitet**. Nie in der
+Live-Instanz.
+
+**Das muss passieren:** Was das Fenster meldet, steht genau so in ChurchTools; Austragen beendet die Mitgliedschaft
+(sie bleibt in der Historie der Person), statt sie zu löschen. Niemand bekommt eine Mail.
+
+1. **Organigramm** öffnen, die Übungsgruppe anklicken, **＋ Person aufnehmen**, „Mara“ suchen, wählen, Rolle lassen,
+   **Aufnehmen**. In ChurchTools unter der Gruppe nachsehen: Mara ist dabei, mit dieser Rolle.
+2. Bei Mara **Rolle** → „Leiter“ → **Ändern**: In ChurchTools ist sie Leiterin.
+3. Bei Mara **Austragen** → **Austragen**: Sie verschwindet aus der Liste. In ChurchTools in Maras Person unter
+   **Gruppen** steht die Mitgliedschaft mit Enddatum heute.
+4. **Rückgängig**: Mara ist wieder dabei, ohne Enddatum.
+5. Mit dem Konto, das nur eine Gruppe **leitet**, diese Gruppe öffnen: „＋ Person aufnehmen“ und „Rolle“ sind da,
+   „Austragen“ nicht.
+6. Postfach der Plus-Adresse und ChurchTools-Protokoll ansehen: keine Mail zu diesen Schritten.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `organigramm/src/GruppenFenster.tsx`, `organigramm/src/MitgliedSchritte.tsx`, `organigramm/src/mitgliedschaft.ts`, `shared/organigramm/mitgliedschaft.ts`, `shared/organigramm/rechte.ts`, `ui/ct/personen.ts`
+- **Automatisiert:** teilweise – `mitgliedschaft.test.ts` (Regeln und Browser-Zugriff), `rechte.test.ts`,
+  `personen.test.ts`, `App.test.tsx` („O6“); ob ChurchTools wirklich so antwortet, keine Mail schickt und was eine
+  Leitung darf, prüft nur dieser Fall
+- **Historie:** #709 (Messung 23.10.2026: Aufnehmen/Rolle/Beenden per `PUT`, `DELETE` löscht spurlos; kein
+  Mail-Eintrag im Protokoll)
+
+</details>

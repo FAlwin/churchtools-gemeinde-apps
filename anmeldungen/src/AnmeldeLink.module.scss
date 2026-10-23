@@ -1,4 +1,5 @@
 // Karte „Anmeldelink“ (AnmeldeLink.tsx) – Entwurf link-kopieren-v2: Link als Text, drei gleiche Knöpfe.
+@use '@ui/design/mixins' as m;
 
 .zeile {
   display: flex;
@@ -76,10 +77,11 @@
   line-height: 1.45;
   color: var(--red);
 
+  @include m.listenMitZeichen; // ChurchTools (Tailwind) nimmt Listen die Punkte
+
   ul {
     margin: 0;
     padding-left: 20px;
-    list-style: disc; // ChurchTools (Tailwind) nimmt Listen die Punkte
     color: var(--text);
   }
 }

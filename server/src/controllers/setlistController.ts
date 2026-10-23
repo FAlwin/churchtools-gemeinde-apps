@@ -122,7 +122,8 @@ export async function getAblaufBestandCtrl(req: Request, res: Response): Promise
 
 /** Der Rumpf von „Neu aufsetzen“ – `gesehen` ist `standAus(bestand)` (`@shared/ct/ablaufNeu`). */
 export const ablaufNeuSchema = z.object({
-  kalenderId: idSchema,
+  // `null`: Kalender des Termins unbekannt – der Kern nimmt dann den des Ablaufs (nur beim Lösen gebraucht).
+  kalenderId: idSchema.nullable(),
   quelle: quelleSchema,
   gesehen: z.object({
     punkte: z.array(idSchema).max(1000),

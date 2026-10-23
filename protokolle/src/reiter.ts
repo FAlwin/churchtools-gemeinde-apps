@@ -1,10 +1,11 @@
 import type { Reiter } from '@ui/bedienung/ReiterLeiste';
 
-/** Die Bereiche der Protokolle: Start und – nur für Admins – Verwaltung (Entwurf 7, Bauplan S2-2). */
-export type ReiterId = 'start' | 'verwaltung';
+/** Die Bereiche der Protokolle: Start, Sitzungen (S3-2) und – nur für Admins – Verwaltung (Entwurf 7, S2-2). */
+export type ReiterId = 'start' | 'sitzungen' | 'verwaltung';
 
 export const ALLE_REITER: Reiter<ReiterId>[] = [
   { id: 'start', label: 'Start', icon: 'home' },
+  { id: 'sitzungen', label: 'Sitzungen', icon: 'calendar' },
   { id: 'verwaltung', label: 'Verwaltung', icon: 'regler' },
 ];
 

@@ -205,3 +205,26 @@
     cursor: default;
   }
 }
+
+/**
+ * **Listen mit Punkten und Nummern** – ChurchTools (Tailwind) nimmt `ul`/`ol` ihre Zeichen (gefunden in den
+ * Anmeldungen und im Protokoll-Lesen, S3-2, nur in ChurchTools, nicht in der Demo). Für jede Stelle, an der Listen wie
+ * Listen aussehen sollen; vorher stand die Regel zweimal einzeln in den Anmeldungen.
+ */
+@mixin listenMitZeichen {
+  ul {
+    list-style: disc;
+  }
+
+  ul ul {
+    list-style: circle;
+  }
+
+  ul ul ul {
+    list-style: square;
+  }
+
+  ol {
+    list-style: decimal;
+  }
+}

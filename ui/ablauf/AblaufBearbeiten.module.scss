@@ -28,3 +28,26 @@
   font-weight: 600;
   padding: 4px 16px;
 }
+// Hinweiszeile mit „Neu aufsetzen …“ rechts (E6-5b, Entwurf A).
+.hintZeile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.neuAufsetzen {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  font: 700 12.5px var(--ui);
+  color: var(--blue);
+  background: none;
+  border: 0;
+  padding: 4px 6px;
+  // Die Polsterung vergrößert nur die Tippfläche – die Zeile bleibt so hoch wie ohne Knopf.
+  margin: -4px -6px;
+  border-radius: var(--r-ctrl);
+  cursor: pointer;
+}

@@ -49,6 +49,8 @@ class FakeCt {
   wirkungslos = false;
   /** Das Anlegen nach dem Lösen scheitert. */
   anlegenScheitert = false;
+  /** Der Kalender, den `GET …/agenda` nennt (`null`: keiner). */
+  ablaufKalender: number | null = 2;
   private naechsteId = 1000;
   private uhr = 0;
 
@@ -85,7 +87,7 @@ class FakeCt {
     return {
       id: aid,
       isLocked: a.gesperrt,
-      calendarId: 2,
+      calendarId: this.ablaufKalender ?? undefined,
       meta: { modifiedDate: a.geaendert },
       items: a.ids.map((id, k) => ({
         id,
@@ -166,7 +168,7 @@ class FakeCt {
 
 /** Was die Nachfrage gezeigt hätte – über den Erzeuger, nicht hingeschrieben. */
 async function gesehenVon(ct: FakeCt, eventId: number): Promise<AblaufStand> {
-  return standAus(await ablaufBestandLesen(ct.leser(), eventId));
+  return standAus(await ablaufBestandLesen(ct.leser(), eventId, 'Europe/Berlin'));
 }
 
 const VORLAGE = { art: 'vorlage', vorlageId: 28 } as const;
@@ -190,15 +192,15 @@ describe('verbundeneTermine', () => {
 });
 
 describe('ablaufBestandLesen', () => {
-  it('Punkte in Reihenfolge, Änderungsstempel und die verbundenen Termine mit Namen', async () => {
+  it('Punkte in Reihenfolge, Änderungsstempel und die verbundenen Termine mit Namen und Ortszeit', async () => {
     const ct = new FakeCt();
     ct.ablaufAnlegen(166, GEBET);
     ct.teilen(171, 166);
-    const b = await ablaufBestandLesen(ct.leser(), 166);
+    const b = await ablaufBestandLesen(ct.leser(), 166, 'Europe/Berlin');
     expect(b.punkte).toHaveLength(2);
     expect(b.geaendert).toMatch(/^2026-10-23/);
     expect(b.verbunden).toEqual([
-      { id: 171, name: 'Gottesdienst (2. Teil)', start: '2027-01-10T11:00:00Z' },
+      { id: 171, name: 'Gottesdienst (2. Teil)', beginn: '2027-01-10T12:00' },
     ]);
   });
 
@@ -206,8 +208,8 @@ describe('ablaufBestandLesen', () => {
     const ct = new FakeCt();
     ct.ablaufAnlegen(166, GEBET);
     ct.teilen(999, 166);
-    expect((await ablaufBestandLesen(ct.leser(), 166)).verbunden).toEqual([
-      { id: 999, name: null, start: null },
+    expect((await ablaufBestandLesen(ct.leser(), 166, 'Europe/Berlin')).verbunden).toEqual([
+      { id: 999, name: null, beginn: null },
     ]);
   });
 });
@@ -390,6 +392,42 @@ describe('ablaufNeuAufsetzen', () => {
       });
       expect(ct.titelVon(166)).toBeNull();
       expect(ct.titelVon(171)).toEqual(GEBET);
+    });
+
+    it('nur für diesen Termin ohne Kalender des Termins: der des Ablaufs gilt', async () => {
+      const ct = new FakeCt();
+      ct.ablaufAnlegen(166, GEBET);
+      ct.teilen(171, 166);
+      await ablaufNeuAufsetzen(ct.schreiber(), 166, null, VORLAGE, await gesehenVon(ct, 166), true);
+      expect(ct.titelVon(166)).toHaveLength(5);
+      expect(ct.geschrieben[1].auftrag.json).toEqual({ calendarId: 2 });
+    });
+
+    it('nur für diesen Termin ganz ohne Kalender → 400 VOR dem Lösen, nichts geschrieben', async () => {
+      const ct = new FakeCt();
+      ct.ablaufAnlegen(166, GEBET);
+      ct.teilen(171, 166);
+      ct.ablaufKalender = null;
+      await expect(
+        ablaufNeuAufsetzen(ct.schreiber(), 166, null, VORLAGE, await gesehenVon(ct, 166), true),
+      ).rejects.toMatchObject({ status: 400 });
+      expect(ct.geschrieben).toEqual([]);
+      expect(ct.titelVon(166)).toEqual(GEBET);
+    });
+
+    it('ersetzen braucht keinen Kalender (gemessen) – auch ohne jeden geht es', async () => {
+      const ct = new FakeCt();
+      ct.ablaufAnlegen(166, GEBET);
+      ct.ablaufKalender = null;
+      await ablaufNeuAufsetzen(
+        ct.schreiber(),
+        166,
+        null,
+        VORLAGE,
+        await gesehenVon(ct, 166),
+        false,
+      );
+      expect(ct.titelVon(166)).toHaveLength(5);
     });
 
     it('`nurDieser` ohne Verbindung: ganz normales Ersetzen, kein DELETE', async () => {

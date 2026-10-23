@@ -39,7 +39,7 @@ export interface ChordProHandle {
   /** Das angetippte Kärtchen hervorheben (L5-2) – `null` nimmt die Markierung weg. */
   markieren: (bereich: { von: number; bis: number } | null) => void;
   /** Wo auf dem Bildschirm die Stelle `pos` steht (L5-2: Menü am verschobenen Kärtchen) – `null`, wenn unsichtbar. */
-  stelle: (pos: number) => { x: number; y: number } | null;
+  stelle: (pos: number) => { x: number; y: number; oben: number } | null;
 }
 
 /** Ein angetipptes Akkord-Kärtchen (L5-2): Stelle im Text samt Klammern und Platz auf dem Bildschirm. */
@@ -48,7 +48,9 @@ export interface AkkordAntippen {
   bis: number;
   name: string;
   x: number;
+  /** Unterkante und Oberkante des Kärtchens – das Menü steht darunter, ist dort kein Platz, darüber. */
   y: number;
+  oben: number;
 }
 
 const chordMark = Decoration.mark({ class: 'cm-cp-chord' });
@@ -334,12 +336,14 @@ interface ChordProInputProps {
   roh?: boolean;
   /** Ein Akkord-Kärtchen wurde angetippt (L5-2) – der Cursor bleibt, wo er war. */
   onAkkord?: (a: AkkordAntippen) => void;
+  /** Der Text bekommt oder verliert den Fokus (Schreibansicht bei offener Tastatur). */
+  onFokus?: (fokus: boolean) => void;
 }
 
 /** ChordPro-Eingabe auf Basis von CodeMirror: Syntax-Farben, echtes Rückgängig/Wiederholen,
  *  saubere Einfügung an der Cursorposition. */
 export const ChordProInput = forwardRef<ChordProHandle, ChordProInputProps>(function ChordProInput(
-  { initialText, onChange, onHistory, roh = false, onAkkord },
+  { initialText, onChange, onHistory, roh = false, onAkkord, onFokus },
   ref,
 ) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -347,6 +351,8 @@ export const ChordProInput = forwardRef<ChordProHandle, ChordProInputProps>(func
   // Der Editor wird nur einmal gebaut – der Rückruf kommt deshalb über einen Ref an die jeweils neueste Fassung.
   const onAkkordRef = useRef(onAkkord);
   onAkkordRef.current = onAkkord;
+  const onFokusRef = useRef(onFokus);
+  onFokusRef.current = onFokus;
 
   useEffect(() => {
     const view = new EditorView({
@@ -378,12 +384,13 @@ export const ChordProInput = forwardRef<ChordProHandle, ChordProInputProps>(func
               if (!treffer[0]) return false;
               e.preventDefault();
               const r = el.getBoundingClientRect();
-              onAkkordRef.current({ ...treffer[0], x: r.left, y: r.bottom });
+              onAkkordRef.current({ ...treffer[0], x: r.left, y: r.bottom, oben: r.top });
               return true;
             },
           }),
           EditorView.updateListener.of((u) => {
             if (u.docChanged) onChange(u.state.doc.toString());
+            if (u.focusChanged) onFokusRef.current?.(u.view.hasFocus);
             if (u.docChanged || u.selectionSet)
               onHistory?.(undoDepth(u.state) > 0, redoDepth(u.state) > 0);
           }),
@@ -446,7 +453,7 @@ export const ChordProInput = forwardRef<ChordProHandle, ChordProInputProps>(func
     },
     stelle(pos) {
       const k = viewRef.current?.coordsAtPos(pos, 1);
-      return k ? { x: k.left, y: k.bottom } : null;
+      return k ? { x: k.left, y: k.bottom, oben: k.top } : null;
     },
   }));
 

@@ -1,12 +1,13 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import styles from './AkkordMenue.module.scss';
 
 interface Props {
   name: string;
-  /** Platz auf dem Bildschirm: unter dem Kärtchen. */
+  /** Platz auf dem Bildschirm: unter dem Kärtchen (`y` = seine Unterkante, `oben` = seine Oberkante). */
   x: number;
   y: number;
+  oben: number;
   kannLinks: boolean;
   kannRechts: boolean;
   links: () => void;
@@ -15,6 +16,8 @@ interface Props {
   entfernen: () => void;
   schliessen: () => void;
 }
+
+const ABSTAND = 6;
 
 /**
  * **Menü am angetippten Akkord-Kärtchen** (Lied-Editor L5-2, Entwurf Variante A): eine Stelle nach links/rechts,
@@ -25,6 +28,7 @@ export function AkkordMenue({
   name,
   x,
   y,
+  oben,
   kannLinks,
   kannRechts,
   links,
@@ -34,6 +38,15 @@ export function AkkordMenue({
   schliessen,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
+  // Unter dem Kärtchen – reicht der sichtbare Bereich dort nicht (Tastatur offen, Kärtchen am unteren Rand: Alwin
+  // am iPad, 23.10.2026, das Menü lag unter der Tastatur), dann darüber.
+  const [top, setTop] = useState(y + ABSTAND);
+  useLayoutEffect(() => {
+    const h = ref.current?.offsetHeight ?? 0;
+    const vv = window.visualViewport;
+    const sichtbarBis = vv ? vv.offsetTop + vv.height : window.innerHeight;
+    setTop(y + ABSTAND + h > sichtbarBis ? Math.max(ABSTAND, oben - ABSTAND - h) : y + ABSTAND);
+  }, [y, oben]);
   useEffect(() => {
     const daneben = (e: PointerEvent) => {
       const ziel = e.target as HTMLElement;
@@ -64,7 +77,7 @@ export function AkkordMenue({
       className={styles.menue}
       role="group"
       aria-label={`Akkord ${name}`}
-      style={{ left: Math.max(16, Math.min(x - 8, window.innerWidth - 320)), top: y + 6 }}
+      style={{ left: Math.max(16, Math.min(x - 8, window.innerWidth - 320)), top }}
     >
       <button
         type="button"

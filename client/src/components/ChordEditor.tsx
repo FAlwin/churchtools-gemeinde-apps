@@ -13,6 +13,7 @@ import { AkkordFenster } from './AkkordFenster';
 import { AblaufKarte } from './AblaufKarte';
 import { getLiedansicht } from '../utils/devicePrefs';
 import { useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
+import { useTastaturOffen } from '@ui/fenster/useTastaturOffen';
 import { Segment } from '@ui/bedienung/Segment';
 
 interface ChordEditorProps {
@@ -106,6 +107,19 @@ export function ChordEditor({
   // L3: Kärtchen und Bänder – oder der rohe ChordPro-Text für alle, die ihn direkt bearbeiten wollen.
   const [roh, setRoh] = useState(false);
   const wide = useMedienAbfrage('(min-width: 768px)', true);
+  // **Schreibansicht** (23.10.2026, Alwin am iPad: „das Bearbeitungsfenster ist bei aufgeklappter Tastatur deutlich
+  // zu klein“, Entwurf A): Solange im Text getippt wird, verschwinden Ablauf, Fassung und Umschalter, und Werkzeuge
+  // und Akkorde rücken in EINE Zeile. Tastatur zu → alles wie vorher.
+  const tastaturOffen = useTastaturOffen();
+  const [textFokus, setTextFokus] = useState(false);
+  // Beginnt, wenn im Text getippt wird, und endet erst, wenn die Tastatur zugeht – nicht schon, wenn der Text kurz
+  // den Fokus verliert (ein Tipp auf einen Knopf kann ihn unter iOS nehmen, während die Tastatur offen bleibt; sonst
+  // spränge die Ansicht mitten im Tippen zurück).
+  const [schreiben, setSchreiben] = useState(false);
+  useEffect(() => {
+    if (!tastaturOffen) setSchreiben(false);
+    else if (textFokus) setSchreiben(true);
+  }, [tastaturOffen, textFokus]);
   const editorRef = useRef<ChordProHandle>(null);
   // Die Vorschau zeigt das Blatt so, wie es im Liederheft dieses Geräts erscheint (#607).
   const [rolle] = useState(() => getLiedansicht() === 'scrollen');
@@ -180,6 +194,24 @@ export function ChordEditor({
     else editorRef.current?.insert(`{${f.tag}}`, { block: true });
   }
 
+  // Knöpfe rund um den Text nehmen ihm den Fokus nicht – sonst ginge am iPad die Tastatur zu (und die
+  // Schreibansicht mit ihr), bevor der Knopf überhaupt wirkt.
+  const ohneFokus = (e: React.MouseEvent) => e.preventDefault();
+  const akkordLeiste = (
+    <AkkordLeiste
+      kompakt={schreiben}
+      tonart={textTonart}
+      text={text}
+      zuletzt={zuletzt}
+      waehlen={akkordSetzen}
+      anderer={() => {
+        // Mit angetipptem Kärtchen ersetzt auch „Anderer Akkord“ dieses Kärtchen – wie die Leiste.
+        setAkkordFenster({ ziel: menue ?? undefined });
+        setMenue(null);
+      }}
+    />
+  );
+
   return (
     <div ref={overlayRef} className={styles.overlay}>
       <header className={styles.kopf}>
@@ -224,7 +256,7 @@ export function ChordEditor({
 
       {error && <div className={styles.error}>{error}</div>}
 
-      {!wide && (
+      {!wide && !schreiben && (
         <Segment
           verbunden
           className={styles.umschalter}
@@ -244,13 +276,15 @@ export function ChordEditor({
         <div
           className={`${styles.links}${showEditor || showAblauf ? '' : ' ' + styles.paneHidden}`}
         >
-          {showAblauf && <AblaufKarte text={text} setzen={ablaufSetzen} kompakt={!wide} />}
+          {showAblauf && !schreiben && (
+            <AblaufKarte text={text} setzen={ablaufSetzen} kompakt={!wide} />
+          )}
           {/* Die Text-Karte bleibt immer gemountet (Verlauf/Cursor erhalten), nur ausgeblendet. */}
           <section
             aria-label="Text"
             className={`${styles.karte} ${styles.textKarte}${showEditor ? '' : ' ' + styles.paneHidden}`}
           >
-            {mitVersionsname && (
+            {mitVersionsname && !schreiben && (
               <div className={styles.kartenKopf}>
                 <label className={styles.fassung} htmlFor="versionName">
                   Fassung
@@ -269,10 +303,14 @@ export function ChordEditor({
             )}
 
             {/* Eingabe-Toolbar */}
-            <div className={styles.toolbar} ref={toolbarRef}>
+            <div
+              className={`${styles.toolbar}${schreiben ? ' ' + styles.schreiben : ''}`}
+              ref={toolbarRef}
+            >
               <div className={styles.dd}>
                 <button
                   className={styles.ddBtn}
+                  onMouseDown={ohneFokus}
                   onClick={() => setOpenMenu((m) => (m === 'format' ? null : 'format'))}
                   aria-expanded={openMenu === 'format'}
                 >
@@ -281,7 +319,12 @@ export function ChordEditor({
                 {openMenu === 'format' && (
                   <div className={`${styles.ddPanel} ${styles.ddPanelWide}`}>
                     {FORMATS.map((f) => (
-                      <button key={f.tag} className={styles.ddFormat} onClick={() => pickFormat(f)}>
+                      <button
+                        key={f.tag}
+                        className={styles.ddFormat}
+                        onMouseDown={ohneFokus}
+                        onClick={() => pickFormat(f)}
+                      >
                         <span className={styles.ddFormatLabel}>{f.label}</span>
                         <code className={styles.ddFormatTag}>{f.tag}</code>
                       </button>
@@ -289,20 +332,24 @@ export function ChordEditor({
                   </div>
                 )}
               </div>
+              {schreiben && akkordLeiste}
 
-              <button
-                type="button"
-                className={`${styles.rohKnopf}${roh ? ' ' + styles.rohAn : ''}`}
-                aria-pressed={roh}
-                onClick={() => setRoh((r) => !r)}
-                title="Den Text so zeigen, wie er gespeichert wird – mit [Akkorden] und {Angaben}"
-              >
-                ChordPro-Text
-              </button>
+              {!schreiben && (
+                <button
+                  type="button"
+                  className={`${styles.rohKnopf}${roh ? ' ' + styles.rohAn : ''}`}
+                  aria-pressed={roh}
+                  onClick={() => setRoh((r) => !r)}
+                  title="Den Text so zeigen, wie er gespeichert wird – mit [Akkorden] und {Angaben}"
+                >
+                  ChordPro-Text
+                </button>
+              )}
               {/* Rückgängig/Wiederholen gehören zum Text – hier statt im Kopf, damit der Titel am Handy Platz hat. */}
               <div className={styles.verlauf}>
                 <button
                   className={styles.iconBtn}
+                  onMouseDown={ohneFokus}
                   onClick={() => editorRef.current?.undo()}
                   disabled={!canUndo}
                   title="Rückgängig"
@@ -312,6 +359,7 @@ export function ChordEditor({
                 </button>
                 <button
                   className={styles.iconBtn}
+                  onMouseDown={ohneFokus}
                   onClick={() => editorRef.current?.redo()}
                   disabled={!canRedo}
                   title="Wiederholen"
@@ -321,17 +369,7 @@ export function ChordEditor({
                 </button>
               </div>
             </div>
-            <AkkordLeiste
-              tonart={textTonart}
-              text={text}
-              zuletzt={zuletzt}
-              waehlen={akkordSetzen}
-              anderer={() => {
-                // Mit angetipptem Kärtchen ersetzt auch „Anderer Akkord“ dieses Kärtchen – wie die Leiste.
-                setAkkordFenster({ ziel: menue ?? undefined });
-                setMenue(null);
-              }}
-            />
+            {!schreiben && akkordLeiste}
 
             <div className={styles.editPane}>
               <ChordProInput
@@ -340,6 +378,7 @@ export function ChordEditor({
                 roh={roh}
                 onChange={setText}
                 onAkkord={setMenue}
+                onFokus={setTextFokus}
                 onHistory={(u, r) => {
                   setCanUndo(u);
                   setCanRedo(r);
@@ -387,6 +426,7 @@ export function ChordEditor({
           name={menue.name}
           x={menue.x}
           y={menue.y}
+          oben={menue.oben}
           kannLinks={!!akkordVerschieben(text, menue.von, menue.bis, -1)}
           kannRechts={!!akkordVerschieben(text, menue.von, menue.bis, 1)}
           links={() => schieben(-1)}

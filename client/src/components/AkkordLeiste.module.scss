@@ -14,10 +14,20 @@
   }
   // Breit (iPad) passt fast alles – dort umbrechen statt wischen, damit nichts abgeschnitten aussieht.
   @media (min-width: 768px) {
-    flex-wrap: wrap;
-    overflow-x: visible;
+    &:not(.kompakt) {
+      flex-wrap: wrap;
+      overflow-x: visible;
+    }
   }
 }
+// Schreibansicht: sitzt mit in der Werkzeugleiste, eine Zeile mit denselben Abständen wie sonst – am iPad quer passt
+// sie („Anderer Akkord“ steht dann im Menü „Im Lied“), sonst wird gewischt.
+.kompakt {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+}
+
 .gruppe {
   display: flex;
   align-items: center;

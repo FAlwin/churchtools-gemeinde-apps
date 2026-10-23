@@ -7,6 +7,7 @@ import { ladeStart, type Start } from './start';
 
 vi.mock('./start', () => ({ ladeStart: vi.fn() }));
 vi.mock('./Verwaltung', () => ({ Verwaltung: () => <p>VERWALTUNG</p> }));
+vi.mock('./Sitzungen', () => ({ Sitzungen: () => <p>SITZUNGEN</p> }));
 const laden = vi.mocked(ladeStart);
 
 const START: Start = {
@@ -77,10 +78,11 @@ describe('App (S1)', () => {
     expect(screen.queryByText(/keiner Gruppe/)).toBeNull();
   });
 
-  it('kein Admin: keine Reiter – und #/verwaltung führt zum Start', async () => {
+  it('kein Admin: Reiter Start · Sitzungen, kein „Verwaltung“ – und #/verwaltung führt zum Start', async () => {
     window.location.hash = '#/verwaltung';
     render(<App />);
     expect(await screen.findByRole('heading', { name: 'Hallo Alwin' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Sitzungen' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Verwaltung' })).toBeNull();
     expect(screen.queryByText('VERWALTUNG')).toBeNull();
   });
@@ -91,6 +93,14 @@ describe('App (S1)', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Verwaltung' }));
     expect(await screen.findByText('VERWALTUNG')).toBeTruthy();
     expect(window.location.hash).toBe('#/verwaltung');
+    expect(screen.queryByRole('heading', { name: 'Hallo Alwin' })).toBeNull();
+  });
+
+  it('„Sitzungen“ zeigt die Sitzungen ohne Gruß', async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Sitzungen' }));
+    expect(await screen.findByText('SITZUNGEN')).toBeTruthy();
+    expect(window.location.hash).toBe('#/sitzungen');
     expect(screen.queryByRole('heading', { name: 'Hallo Alwin' })).toBeNull();
   });
 });

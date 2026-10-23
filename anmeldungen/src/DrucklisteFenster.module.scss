@@ -1,0 +1,82 @@
+// Druckliste (A8-1, Entwurf a8-druckliste-v1) – Tokens der Musik-App, keine eigenen Farben.
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.zeile {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 6px 0;
+
+  > span:first-child {
+    min-width: 96px;
+    color: var(--text2);
+    font-size: 13px;
+  }
+}
+
+// Das Blatt: so, wie es gedruckt wird – Kopf, Tabelle, Fuß mit Stand.
+.papier {
+  padding: 16px 18px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 12px;
+  overflow-x: auto;
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th {
+    padding: 4px 6px;
+    border-bottom: 1.5px solid var(--text);
+    font-size: 11px;
+    text-align: left;
+  }
+
+  td {
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--hair);
+    vertical-align: top;
+    white-space: pre-line;
+  }
+}
+
+.kopf {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+  border-bottom: 2px solid var(--text);
+
+  span {
+    color: var(--text2);
+  }
+}
+
+.abschnitt td {
+  padding-top: 12px;
+  font-weight: 700;
+}
+
+.summe {
+  margin: 8px 6px 0;
+  font-weight: 700;
+}
+
+.fuss {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 14px;
+  color: var(--text2);
+  font-size: 10.5px;
+}

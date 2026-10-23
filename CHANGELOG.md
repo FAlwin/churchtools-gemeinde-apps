@@ -7,6 +7,13 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Behoben (Musik-App + Dienstplaner, #700)
+
+- **Rückgängig nach dem Löschen** eines Punkts **vor dem Gottesdienstbeginn**: Kam der erste oder ein mittlerer
+  Vorlauf-Punkt zurück, fielen die übrigen aus dem Vorlauf (Uhrzeit und Lage zum Beginn stimmten nicht mehr). Die Grenze
+  ist in ChurchTools eine Platznummer – sie rückt jetzt beim Zurückholen um eins mit. Gefunden bei der Messung E6-6-0,
+  in der Test-Instanz nachgestellt und nach dem Fix dort geprüft. Betraf die Musik-App seit v2.34.1.
+
 ### Neu (Musik-App + Dienstplaner, E6-5b-2, #691)
 
 - **„Neu aufsetzen …“** im Bearbeiten (rechts in der Hinweiszeile; Entwurf `e6-5b-entwurf.html`, abgenommen 23.10.2026):

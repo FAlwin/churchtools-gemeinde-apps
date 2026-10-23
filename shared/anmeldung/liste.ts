@@ -533,8 +533,24 @@ export function antwortZeilen(
       if (w || striche) zeilen.push({ frage: f.frage, text: w ?? '', striche });
       continue;
     }
-    if (w === undefined) continue;
-    zeilen.push({ frage: f.frage, text: f.typ === 'check' ? 'ja' : w });
+    const text = antwortText(f, werte, ctFelder);
+    if (text !== null) zeilen.push({ frage: f.frage, text });
   }
   return zeilen;
+}
+
+/**
+ * **Eine Antwort als Text** – wie das Fenster sie zeigt und die Druckliste sie druckt (A8): Ankreuzen als „ja“, sonst der
+ * lesbare Wert; `null`, wenn nichts beantwortet ist oder das Feld keine eigene Spalte in ChurchTools hat.
+ */
+export function antwortText(
+  f: Feld,
+  werte: Werte,
+  ctFelder: OeffentlicheEinstellungen['ctFelder'],
+): string | null {
+  if (nurText(f.typ) || ctAblage(f).ort !== 'gruppenfeld') return null;
+  const id = ctFelder[f.id];
+  const w = id === undefined ? undefined : werte[id];
+  if (w === undefined) return null;
+  return f.typ === 'check' ? 'ja' : w;
 }

@@ -27,6 +27,7 @@ import { absagenLassen, nachrueckenLassen } from './bewegung';
 import { VonHandFenster, type VonHandFertig } from './VonHandFenster';
 import { ZurueckFenster } from './ZurueckFenster';
 import { RundmailFenster } from './RundmailFenster';
+import { DrucklisteFenster } from './DrucklisteFenster';
 import { useSpeichern } from './useSpeichern';
 import { RueckgaengigImFenster, type Aenderung } from './Rueckgaengig';
 import s from './Startseite.module.scss';
@@ -448,6 +449,7 @@ export function AnmeldungenReiter({
   heute,
   darf,
   zahlarten,
+  gemeinde = null,
   onNeuLaden,
   onGespeichert,
 }: {
@@ -469,6 +471,8 @@ export function AnmeldungenReiter({
   darf: boolean;
   /** Die Zahlarten dieser Veranstaltung (A7-2). */
   zahlarten: string[];
+  /** Name der Gemeinde aus ChurchTools – oben auf der Druckliste (A8). */
+  gemeinde?: string | null;
   onNeuLaden: () => void;
   /** Nach einer Änderung (und nach „Rückgängig“): Die Seite lädt neu – „Rückgängig“ selbst steht im Fenster. */
   onGespeichert: () => void;
@@ -485,6 +489,7 @@ export function AnmeldungenReiter({
   // Zurückholen (A7-4c) – `von`: die Anmeldung, in die „Abbrechen“ zurückführt.
   const [zurueck, setZurueck] = useState<{ b: Absage; von: string | null } | null>(null);
   const [rundmail, setRundmail] = useState(false);
+  const [druck, setDruck] = useState(false);
   const oeffnen = (k: string | null, modus: FensterModus = null) => {
     setOffen(k);
     setStartModus(modus);
@@ -652,6 +657,11 @@ export function AnmeldungenReiter({
             value={suche}
             onChange={(ev) => setSuche(ev.target.value)}
           />
+          {liste.length > 0 && (
+            <button type="button" className={a.nachKnopf} onClick={() => setDruck(true)}>
+              ⎙ Druckliste
+            </button>
+          )}
           {darf && liste.length > 0 && (
             <button type="button" className={a.nachKnopf} onClick={() => setRundmail(true)}>
               ✉ Rundmail
@@ -850,6 +860,19 @@ export function AnmeldungenReiter({
           // Wie der Filter der Liste – „Zahlung offen“ beginnt mit der Zahlungserinnerung.
           startFilter={filter === 'offen' ? 'offen' : filter === 'warte' ? 'warte' : 'alle'}
           onClose={() => setRundmail(false)}
+        />
+      )}
+
+      {druck && (
+        <DrucklisteFenster
+          id={id}
+          e={e}
+          veranstaltung={veranstaltung}
+          gemeinde={gemeinde}
+          liste={liste}
+          darf={darf}
+          onGemerkt={onGespeichert}
+          onClose={() => setDruck(false)}
         />
       )}
 

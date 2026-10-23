@@ -364,6 +364,7 @@ export function VeranstaltungSeite({
           heute={heute}
           darf={darf}
           zahlarten={zahlartenHier}
+          gemeinde={gemeinde}
           onNeuLaden={neuLaden}
           // Alles neu laden, nicht nur die Mitglieder: Das erste „bezahlt“ legt bei älteren Veranstaltungen das Feld
           // „Zahlart“ an – ohne seine Nummer aus den Einstellungen fehlte die Zahlart in der Anzeige (echter Test 19.10.2026).

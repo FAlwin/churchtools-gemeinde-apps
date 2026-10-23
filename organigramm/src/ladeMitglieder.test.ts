@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '@ui/ct/fehler';
-import { fehlendeNachladen, GLEICHZEITIG, ladeMitglieder } from './ladeMitglieder';
+import {
+  fehlendeNachladen,
+  GLEICHZEITIG,
+  ladeMitglieder,
+  neueGruppenNachladen,
+} from './ladeMitglieder';
 
 const mitglied = (personId: number, rolle = 15) => ({
   personId,
@@ -103,6 +108,31 @@ describe('fehlendeNachladen', () => {
     const vorher = await ladeMitglieder([1], () => Promise.resolve([]));
     let gefragt = false;
     const nachher = await fehlendeNachladen(vorher, () => {
+      gefragt = true;
+      return Promise.resolve([]);
+    });
+    expect(gefragt).toBe(false);
+    expect(nachher).toBe(vorher);
+  });
+});
+
+describe('neueGruppenNachladen (O5)', () => {
+  it('lädt nur Gruppen, die es vorher nicht gab – die bekannten bleiben, wie sie waren', async () => {
+    const vorher = await ladeMitglieder([1, 2], () => Promise.resolve([mitglied(10)]));
+    const gefragt: string[] = [];
+    const nachher = await neueGruppenNachladen(vorher, [1, 2, 300], (pfad) => {
+      gefragt.push(pfad);
+      return Promise.resolve([]);
+    });
+    expect(gefragt).toEqual(['/groups/300/members']);
+    expect(nachher.je.get(300)).toEqual({ art: 'sichtbar', mitglieder: [], angefragt: [] });
+    expect(nachher.je.get(1)).toBe(vorher.je.get(1));
+  });
+
+  it('keine neue Gruppe → kein Abruf', async () => {
+    const vorher = await ladeMitglieder([1], () => Promise.resolve([]));
+    let gefragt = false;
+    const nachher = await neueGruppenNachladen(vorher, [1], () => {
       gefragt = true;
       return Promise.resolve([]);
     });

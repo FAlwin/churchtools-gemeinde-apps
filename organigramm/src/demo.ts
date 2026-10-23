@@ -4,6 +4,9 @@
  * damit die Seite ohne Instanz zu sehen ist. `?demo=mitglied` zeigt jemanden ohne Gruppen-Admin-Recht (zwei
  * Gruppen ohne Leserecht), `?demo=wackel` eine Gruppe, deren Mitglieder vorübergehend nicht laden, `?demo=fehler`
  * den Fehlerfall beim Start. Wird nie mitgebaut (siehe `main.tsx`). Keine echten Namen.
+ *
+ * Seit O5 auch schreibend: Umhängen, Lösen und Anlegen verändern die Gruppen und die Hierarchie dieser Sitzung,
+ * mit den gemessenen Antworten (400 „schon gesetzt“, 204 beim Lösen, 201 mit ID beim Anlegen). Neu laden setzt zurück.
  */
 const gruppe = (id: number, name: string, groupTypeId: number, color: string | null) => ({
   id,
@@ -11,7 +14,7 @@ const gruppe = (id: number, name: string, groupTypeId: number, color: string | n
   information: { groupTypeId, groupStatusId: 1, color },
 });
 
-const GRUPPEN = [
+const GRUPPEN: ReturnType<typeof gruppe>[] = [
   gruppe(10, 'Gottesdienst', 2, 'lime'),
   gruppe(6, 'Predigt', 2, 'lime'),
   gruppe(9, 'Musikteam', 2, 'lime'),
@@ -105,6 +108,86 @@ const HIERARCHIE = [
   { groupId: 11, parents: [], children: [24] },
 ];
 
+/** Obergruppen je Gruppe – die veränderliche Fassung von `HIERARCHIE` (O5). */
+const ELTERN = new Map<number, number[]>();
+for (const h of HIERARCHIE)
+  for (const k of h.children) ELTERN.set(k, [...(ELTERN.get(k) ?? []), h.groupId]);
+
+function hierarchie() {
+  return GRUPPEN.map((g) => ({
+    groupId: g.id,
+    parents: ELTERN.get(g.id) ?? [],
+    children: [...ELTERN].filter(([, e]) => e.includes(g.id)).map(([k]) => k),
+  })).filter((h) => h.parents.length || h.children.length);
+}
+
+const json = (d: unknown, status = 200) =>
+  new Response(d === null ? null : JSON.stringify(d), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+/** Die schreibenden und die davon abhängigen lesenden Antworten (O5) – `undefined`, wenn es keine davon ist. */
+function struktur(method: string, pfad: string, body: unknown): Response | undefined {
+  const eltern = /^\/api\/groups\/(\d+)\/parents\/(\d+)$/.exec(pfad);
+  if (eltern) {
+    const [id, p] = [Number(eltern[1]), Number(eltern[2])];
+    const jetzt = ELTERN.get(id) ?? [];
+    if (method === 'PUT') {
+      if (jetzt.includes(p)) {
+        return json(
+          {
+            message: 'Die Gruppe ist bereits als Obergruppe gesetzt.',
+            messageKey: 'group.reference.already.exists',
+          },
+          400,
+        );
+      }
+      ELTERN.set(id, [...jetzt, p]);
+      return json({ data: null }, 201);
+    }
+    if (method === 'DELETE') {
+      ELTERN.set(
+        id,
+        jetzt.filter((x) => x !== p),
+      );
+      return json(null, 204);
+    }
+  }
+  const parents = /^\/api\/groups\/(\d+)\/parents$/.exec(pfad);
+  if (parents && method === 'GET') {
+    return json({
+      data: (ELTERN.get(Number(parents[1])) ?? []).map((p) => ({ domainIdentifier: String(p) })),
+    });
+  }
+  const eine = /^\/api\/groups\/(\d+)$/.exec(pfad);
+  if (eine) {
+    const id = Number(eine[1]);
+    const g = GRUPPEN.find((x) => x.id === id);
+    if (method === 'DELETE') {
+      if (g) GRUPPEN.splice(GRUPPEN.indexOf(g), 1);
+      ELTERN.delete(id);
+      return json(null, 204);
+    }
+    return g ? json({ data: g }) : json({}, 404);
+  }
+  if (pfad === '/api/groups' && method === 'POST') {
+    const d = body as { name: string; groupTypeId: number; parentGroupId: number };
+    const id = Math.max(100, ...GRUPPEN.map((x) => x.id)) + 1;
+    GRUPPEN.push(gruppe(id, d.name, d.groupTypeId, null));
+    ELTERN.set(id, [d.parentGroupId]);
+    return json({ data: { id } }, 201);
+  }
+  if (method !== 'GET') return undefined;
+  if (pfad === '/api/groups') return json({ data: GRUPPEN, meta: { pagination: { lastPage: 1 } } });
+  if (pfad === '/api/groups/hierarchies') return json({ data: hierarchie() });
+  const mitglieder = /^\/api\/groups\/(\d+)\/members$/.exec(pfad);
+  if (mitglieder && !(Number(mitglieder[1]) in MITGLIEDER)) {
+    return json({ data: [], meta: { pagination: { lastPage: 1 } } });
+  }
+  return undefined;
+}
+
 function daten(fall: string): Record<string, unknown> {
   const admin = fall !== 'mitglied';
   return {
@@ -143,8 +226,16 @@ function daten(fall: string): Record<string, unknown> {
       ]),
     ),
     '/api/info': { siteName: 'Beispielgemeinde' },
+    '/api/csrftoken': { data: 'demo' },
+    '/api/person/masterdata': {
+      data: {
+        groupStatuses: [
+          { id: 1, name: 'active', nameTranslated: 'Aktiv' },
+          { id: 2, name: 'pending', nameTranslated: 'Entwurf' },
+        ],
+      },
+    },
     '/api/groups': { data: GRUPPEN, meta: { pagination: { lastPage: 1 } } },
-    '/api/groups/hierarchies': { data: HIERARCHIE },
     '/api/events': { data: TERMINE },
     '/api/group/grouptypes': {
       data: [
@@ -174,10 +265,11 @@ export function demoStarten(fall: string): void {
   // Entwicklerseite übernimmt das `body`, sonst hätte die App die Höhe 0.
   document.body.style.cssText = 'margin: 0; height: 100vh;';
   const antworten = daten(fall);
-  window.fetch = (input) => {
+  window.fetch = (input, init) => {
     const url = new URL(
       typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
     );
+    const method = init?.method ?? 'GET';
     if (fall === 'fehler' && url.pathname.endsWith('/groups/hierarchies')) {
       return Promise.resolve(new Response('{}', { status: 502 }));
     }
@@ -187,6 +279,11 @@ export function demoStarten(fall: string): void {
     }
     if (fall === 'wackel' && url.pathname.endsWith('/groups/47/members')) {
       return Promise.resolve(new Response('{}', { status: 503 }));
+    }
+    if (fall !== 'fehler') {
+      const body: unknown = typeof init?.body === 'string' ? JSON.parse(init.body) : null;
+      const s = struktur(method, url.pathname, body);
+      if (s) return Promise.resolve(s);
     }
     const d = antworten[url.pathname];
     return Promise.resolve(

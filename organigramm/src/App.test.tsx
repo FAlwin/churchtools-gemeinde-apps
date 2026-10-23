@@ -12,7 +12,58 @@ import { ladeEinsaetze } from './ladeEinsaetze';
 import type { Einsaetze, PersonEinsatz } from '@shared/organigramm/einsaetze';
 
 vi.mock('./start', () => ({ ladeStart: vi.fn() }));
-vi.mock('./ladeMitglieder', () => ({ ladeMitglieder: vi.fn(), fehlendeNachladen: vi.fn() }));
+vi.mock('./ladeMitglieder', () => ({
+  ladeMitglieder: vi.fn(),
+  fehlendeNachladen: vi.fn(),
+  neueGruppenNachladen: vi.fn((d: unknown) => Promise.resolve(d)),
+}));
+// Ein nachgebautes ChurchTools für die Struktur (O5): Obergruppen je Gruppe und ein Protokoll der Aufrufe.
+const ct = vi.hoisted(() => {
+  const eltern = new Map<number, number[]>();
+  const gruppen = new Set<number>();
+  const log: string[] = [];
+  const panne: { setzen: Error | null } = { setzen: null };
+  return {
+    eltern,
+    gruppen,
+    log,
+    panne,
+    zugriff: {
+      obergruppen: (id: number) => Promise.resolve([...(eltern.get(id) ?? [])]),
+      setzen: (id: number, e: number) => {
+        log.push(`setzen ${id}→${e}`);
+        if (panne.setzen) return Promise.reject(panne.setzen);
+        eltern.set(id, [...new Set([...(eltern.get(id) ?? []), e])]);
+        return Promise.resolve();
+      },
+      loesen: (id: number, e: number) => {
+        log.push(`loesen ${id}→${e}`);
+        eltern.set(
+          id,
+          (eltern.get(id) ?? []).filter((x) => x !== e),
+        );
+        return Promise.resolve();
+      },
+      anlegen: (d: { name: string; typId: number; statusId: number; elternId: number }) => {
+        log.push(`anlegen ${d.name} Typ ${d.typId} Status ${d.statusId} unter ${d.elternId}`);
+        gruppen.add(300);
+        eltern.set(300, [d.elternId]);
+        return Promise.resolve(300);
+      },
+      gibtEs: (id: number) => Promise.resolve(gruppen.has(id)),
+      loeschen: (id: number) => {
+        log.push(`loeschen ${id}`);
+        gruppen.delete(id);
+        return Promise.resolve();
+      },
+      nichtUebernommen: (was: string) => new Error(`nicht übernommen: ${was}`),
+    },
+  };
+});
+vi.mock('./struktur', () => ({
+  strukturZugriff: ct.zugriff,
+  ladeAktivStatus: () => Promise.resolve(1),
+}));
 vi.mock('./ladeEinsaetze', () => ({ ladeEinsaetze: vi.fn() }));
 const laden = vi.mocked(ladeStart);
 const mitgliederLaden = vi.mocked(ladeMitglieder);
@@ -61,7 +112,12 @@ function start(extra: Partial<Start> = {}): Start {
       { id: 17, name: 'Co-Leiter', isLeader: true, sortKey: 2 },
     ]),
     dienste: diensteAus([{ id: 6, name: 'Ton', serviceGroupId: 3, groupIds: [7] }]),
-    rechte: { gruppenVerwalten: true, anlegbareTypen: [], bearbeitbareGruppen: [] },
+    rechte: {
+      gruppenVerwalten: true,
+      anlegbareTypen: [],
+      bearbeitbareGruppen: [],
+      bearbeitbareTypen: [],
+    },
     geleitet: [],
     ...extra,
   };
@@ -124,6 +180,12 @@ const EINSAETZE: Einsaetze = {
 };
 
 beforeEach(() => {
+  ct.eltern.clear();
+  ct.eltern.set(7, [10]);
+  ct.eltern.set(12, [7]);
+  ct.gruppen.clear();
+  ct.log.length = 0;
+  ct.panne.setzen = null;
   localStorage.clear();
   window.location.hash = '';
   laden.mockResolvedValue(start());
@@ -242,7 +304,14 @@ describe('O3: offene Plätze, Personen, Hinweise', () => {
   it('wer nichts leitet und kein Admin ist: keine Reiter, auch nicht über die Adresse', async () => {
     window.location.hash = '#personen';
     laden.mockResolvedValue(
-      start({ rechte: { gruppenVerwalten: false, anlegbareTypen: [], bearbeitbareGruppen: [] } }),
+      start({
+        rechte: {
+          gruppenVerwalten: false,
+          anlegbareTypen: [],
+          bearbeitbareGruppen: [],
+          bearbeitbareTypen: [],
+        },
+      }),
     );
     render(<App />);
     await screen.findByRole('region', { name: 'Gottesdienst' });
@@ -254,7 +323,12 @@ describe('O3: offene Plätze, Personen, Hinweise', () => {
     laden.mockResolvedValue(
       start({
         geleitet: [7],
-        rechte: { gruppenVerwalten: false, anlegbareTypen: [], bearbeitbareGruppen: [] },
+        rechte: {
+          gruppenVerwalten: false,
+          anlegbareTypen: [],
+          bearbeitbareGruppen: [],
+          bearbeitbareTypen: [],
+        },
       }),
     );
     render(<App />);
@@ -349,7 +423,14 @@ describe('O4: Präsentation', () => {
   it('„Präsentieren“ erst, wenn die Mitglieder geladen sind – auch für alle ohne Leitung', async () => {
     mitgliederLaden.mockReturnValue(new Promise(() => {}));
     laden.mockResolvedValue(
-      start({ rechte: { gruppenVerwalten: false, anlegbareTypen: [], bearbeitbareGruppen: [] } }),
+      start({
+        rechte: {
+          gruppenVerwalten: false,
+          anlegbareTypen: [],
+          bearbeitbareGruppen: [],
+          bearbeitbareTypen: [],
+        },
+      }),
     );
     render(<App />);
     const knopf = await screen.findByRole('button', { name: /Präsentieren/ });
@@ -447,5 +528,150 @@ describe('O4: Präsentation', () => {
       Reflect.deleteProperty(document, 'fullscreenEnabled');
       Reflect.deleteProperty(HTMLElement.prototype, 'requestFullscreen');
     }
+  });
+});
+
+describe('O5: Gruppen umhängen und anlegen', () => {
+  const technikOeffnen = async () => {
+    render(<App />);
+    await screen.findByText('3 Personen · Leitung: Alwin Friesen, Dora Dorn');
+    fireEvent.click(zeile('Technik'));
+  };
+  const knopf = (name: string | RegExp) => screen.getByRole('button', { name });
+  const ziel = (name: string) =>
+    within(screen.getByRole('region', { name: /unter …$/ })).getByRole('button', {
+      name: new RegExp(name),
+    });
+
+  it('Gruppen-Admin: Ändern, Lösen, weitere Obergruppe, Untergruppe anlegen', async () => {
+    await technikOeffnen();
+    expect(knopf('Ändern')).toBeTruthy();
+    expect(knopf('Lösen')).toBeTruthy();
+    expect(knopf('＋ Weitere Obergruppe')).toBeTruthy();
+    expect(knopf('＋ Untergruppe anlegen')).toBeTruthy();
+  });
+
+  it('ohne Recht (z. B. nur Leitung): keine Knöpfe zum Ändern', async () => {
+    laden.mockResolvedValue(
+      start({
+        rechte: {
+          gruppenVerwalten: false,
+          anlegbareTypen: [],
+          bearbeitbareGruppen: [],
+          bearbeitbareTypen: [],
+        },
+        geleitet: [7],
+      }),
+    );
+    await technikOeffnen();
+    expect(screen.queryByRole('button', { name: 'Ändern' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Untergruppe anlegen/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Weitere Obergruppe/ })).toBeNull();
+  });
+
+  it('Umhängen: Ziel ohne Kreis, Bestätigung mit Rechte-Folgen, erst neu dann alt – und Rückgängig im Fenster', async () => {
+    await technikOeffnen();
+    const vorher = laden.mock.calls.length;
+    fireEvent.click(knopf('Ändern'));
+    const ziele = within(screen.getByRole('region', { name: /unter …$/ }))
+      .getAllByRole('listitem')
+      .map((li) => li.textContent);
+    // nicht Technik selbst, nicht Stream (Untergruppe → Kreis), nicht Gottesdienst (ist schon Obergruppe)
+    expect(ziele).toEqual(['CCafé', 'IInfos']);
+    fireEvent.click(ziel('Café'));
+    expect(
+      screen.getByText('„Technik“ unter „Café“ hängen statt unter „Gottesdienst“?'),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/Wer in „Café“ ist, sieht danach auch „Technik“ samt Untergruppen/),
+    ).toBeTruthy();
+    fireEvent.click(knopf('Umhängen'));
+    expect(await screen.findByText('„Technik“ hängt jetzt unter „Café“.')).toBeTruthy();
+    expect(ct.log).toEqual(['setzen 7→47', 'loesen 7→10']);
+    // danach neu geladen
+    expect(laden.mock.calls.length).toBe(vorher + 1);
+
+    fireEvent.click(knopf('Rückgängig'));
+    expect(await screen.findByText('Rückgängig gemacht.')).toBeTruthy();
+    expect(ct.log.slice(2)).toEqual(['setzen 7→10', 'loesen 7→47']);
+    expect(ct.eltern.get(7)).toEqual([10]);
+  });
+
+  it('Lösen der letzten Obergruppe: „eigener Bereich“ – Rückgängig hängt wieder ein', async () => {
+    await technikOeffnen();
+    fireEvent.click(knopf('Lösen'));
+    expect(screen.getByText(/„Technik“ ist danach ein eigener Bereich/)).toBeTruthy();
+    fireEvent.click(
+      within(screen.getByRole('region', { name: 'Bestätigen' })).getByRole('button', {
+        name: 'Lösen',
+      }),
+    );
+    expect(
+      await screen.findByText('„Technik“ hängt nicht mehr unter „Gottesdienst“.'),
+    ).toBeTruthy();
+    expect(ct.eltern.get(7)).toEqual([]);
+    fireEvent.click(knopf('Rückgängig'));
+    await screen.findByText('Rückgängig gemacht.');
+    expect(ct.eltern.get(7)).toEqual([10]);
+    // Der nächste Schritt beginnt ohne die alte Meldung
+    fireEvent.click(knopf('＋ Weitere Obergruppe'));
+    expect(screen.queryByText('Rückgängig gemacht.')).toBeNull();
+  });
+
+  it('weitere Obergruppe dazu; Rückgängig löst sie wieder', async () => {
+    await technikOeffnen();
+    fireEvent.click(knopf('＋ Weitere Obergruppe'));
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Gruppe suchen' }), {
+      target: { value: 'caf' },
+    });
+    fireEvent.click(ziel('Café'));
+    fireEvent.click(knopf('Hinzufügen'));
+    expect(await screen.findByText('„Technik“ hängt jetzt auch unter „Café“.')).toBeTruthy();
+    expect(ct.eltern.get(7)).toEqual([10, 47]);
+    fireEvent.click(knopf('Rückgängig'));
+    await screen.findByText('Rückgängig gemacht.');
+    expect(ct.eltern.get(7)).toEqual([10]);
+  });
+
+  it('Untergruppe anlegen: Name nötig; Typ der Obergruppe, Status „aktiv“; Rückgängig löscht sie wieder', async () => {
+    await technikOeffnen();
+    fireEvent.click(knopf('＋ Untergruppe anlegen'));
+    fireEvent.click(knopf('Anlegen'));
+    expect(screen.getByText('Bitte einen Namen eingeben.')).toBeTruthy();
+    expect(ct.log).toEqual([]);
+    expect(screen.getByRole<HTMLSelectElement>('combobox', { name: 'Gruppentyp' }).value).toBe('2');
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), {
+      target: { value: ' Kamera ' },
+    });
+    fireEvent.click(knopf('Anlegen'));
+    expect(await screen.findByText('„Kamera“ ist angelegt.')).toBeTruthy();
+    expect(ct.log).toEqual(['anlegen Kamera Typ 2 Status 1 unter 7']);
+    fireEvent.click(knopf('Rückgängig'));
+    await screen.findByText('Rückgängig gemacht.');
+    expect(ct.log).toContain('loeschen 300');
+  });
+
+  it('ChurchTools lehnt ab → Meldung, kein Rückgängig; der Baum wird trotzdem neu gelesen', async () => {
+    await technikOeffnen();
+    const vorher = laden.mock.calls.length;
+    ct.panne.setzen = new ApiError(400, 'Das würde eine zyklische Abhängigkeit erzeugen.');
+    fireEvent.click(knopf('Ändern'));
+    fireEvent.click(ziel('Café'));
+    fireEvent.click(knopf('Umhängen'));
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Rückgängig' })).toBeNull();
+    expect(laden.mock.calls.length).toBe(vorher + 1);
+    expect(ct.eltern.get(7)).toEqual([10]);
+  });
+
+  it('gespeichert, aber der Baum lädt gerade nicht neu → sagen, nicht abmelden', async () => {
+    await technikOeffnen();
+    laden.mockRejectedValueOnce(new ApiError(503, 'antwortet nicht'));
+    fireEvent.click(knopf('Ändern'));
+    fireEvent.click(ziel('Café'));
+    fireEvent.click(knopf('Umhängen'));
+    expect(await screen.findByText(/ließ sich gerade nicht neu laden/)).toBeTruthy();
+    // Die Seite steht noch (kein Fehler für alles), und Rückgängig ist da
+    expect(knopf('Rückgängig')).toBeTruthy();
   });
 });

@@ -29,6 +29,9 @@ interface Props {
   /** Legt an; wirft bei Fehler – die Meldung steht dann im Fenster. */
   onAnlegen: (quelle: AblaufQuelle) => Promise<void>;
   onClose: () => void;
+  /** Für „Neu aufsetzen“ (E6-5b): eigener Titel und Hauptknopf („Weiter“ – erst die Nachfrage ersetzt etwas). */
+  titel?: string;
+  knopf?: { label: string; laeuft: string };
 }
 
 /**
@@ -44,6 +47,8 @@ export function AblaufAnlegenFenster({
   keineVorschlaege,
   onAnlegen,
   onClose,
+  titel = 'Ablauf anlegen',
+  knopf = { label: 'Anlegen', laeuft: 'Wird angelegt …' },
 }: Props) {
   const [gewaehlt, setGewaehlt] = useState<AblaufQuelle | null>(null);
   const [alleVorschlaege, setAlleVorschlaege] = useState(false);
@@ -67,14 +72,14 @@ export function AblaufAnlegenFenster({
     try {
       await onAnlegen(quelle);
     } catch (e) {
-      setFehler(e instanceof Error ? e.message : 'Ablauf anlegen fehlgeschlagen.');
+      setFehler(e instanceof Error ? e.message : `${titel} fehlgeschlagen.`);
     } finally {
       setLaeuft(false);
     }
   }
 
   return (
-    <Sheet title="Ablauf anlegen" onClose={onClose}>
+    <Sheet title={titel} onClose={onClose}>
       <p className={styles.fuer}>{fuer}</p>
 
       <div className={styles.optionen}>
@@ -150,7 +155,7 @@ export function AblaufAnlegenFenster({
       )}
 
       <button className={styles.anlegen} onClick={() => void bestaetigen()} disabled={laeuft}>
-        {laeuft ? 'Wird angelegt …' : 'Anlegen'}
+        {laeuft ? knopf.laeuft : knopf.label}
       </button>
     </Sheet>
   );

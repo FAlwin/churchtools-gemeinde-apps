@@ -11,7 +11,12 @@ import { hatBereich, personenImBereich, sichtbereich } from '@shared/organigramm
 import { hinweiseAus } from '@shared/organigramm/hinweise';
 import type { Mitglied } from '@shared/organigramm/mitglieder';
 import { ladeStart, type Start } from './start';
-import { fehlendeNachladen, ladeMitglieder, type MitgliederDaten } from './ladeMitglieder';
+import {
+  fehlendeNachladen,
+  ladeMitglieder,
+  neueGruppenNachladen,
+  type MitgliederDaten,
+} from './ladeMitglieder';
 import { ladeEinsaetze, type EinsaetzeStand } from './ladeEinsaetze';
 import { Organigramm } from './Organigramm';
 import { GruppenFenster } from './GruppenFenster';
@@ -88,6 +93,28 @@ export function App() {
   const nachladen = useCallback(() => {
     if (!mitglieder) return;
     fehlendeNachladen(mitglieder).then(setMitglieder, abgemeldetOderFehler);
+  }, [mitglieder, abgemeldetOderFehler]);
+
+  // Nach einer Änderung an der Struktur (O5): Gruppen und Hierarchie neu, Mitglieder nur für neue Gruppen. Ein
+  // vorübergehender Fehler lässt den bisherigen Stand stehen („vorübergehend ist nicht ungültig“) – nur „abgemeldet“
+  // gilt für die ganze Seite.
+  const strukturNeu = useCallback(async (): Promise<boolean> => {
+    try {
+      const s = await ladeStart();
+      setStart(s);
+      if (mitglieder) {
+        setMitglieder(
+          await neueGruppenNachladen(
+            mitglieder,
+            s.gruppen.map((g) => g.id),
+          ),
+        );
+      }
+      return true;
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) abgemeldetOderFehler(e);
+      return false;
+    }
   }, [mitglieder, abgemeldetOderFehler]);
 
   const knoten = useMemo(
@@ -225,12 +252,14 @@ export function App() {
       )}
       {start && offenerKnoten && (
         <GruppenFenster
+          key={offenerKnoten.gruppe.id}
           start={start}
           knoten={offenerKnoten}
           mitglieder={mitglieder}
           onGruppe={gruppeOeffnen}
           onNachladen={nachladen}
           onSchliessen={() => setOffeneGruppe(null)}
+          onStruktur={strukturNeu}
         />
       )}
       {start && offenePersonImBereich && (

@@ -1,0 +1,23 @@
+// QR-Code und Aushang (A8-4) – Tokens der Musik-App, keine eigenen Farben (der QR selbst ist bewusst schwarz auf weiß).
+
+.rahmen {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.qr {
+  width: min(240px, 70vw);
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+}
+
+.link {
+  margin: 4px 0 10px;
+  color: var(--text2);
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  text-align: center;
+  word-break: break-all;
+}

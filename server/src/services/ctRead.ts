@@ -6,6 +6,7 @@
  * Minuten Vorhaltezeit halbieren sie. Ein Fehler wird bewusst NICHT gemerkt, sonst hielte ein
  * einzelner Aussetzer zehn Minuten.
  */
+import { config } from '../config.js';
 import { ctGet } from './ctHttp.js';
 import type {
   CtAbsence,
@@ -18,6 +19,7 @@ import type {
 import { createTtlMemo } from './ttlMemo.js';
 import { dienstReihenfolge, untertitelAus } from '@shared/ct/setlistKern';
 import { kalenderAus, vorlagenAus } from '@shared/ct/ablaufAnlegen';
+import { ablaufBestandLesen, type AblaufBestand } from '@shared/ct/ablaufNeu';
 import type { CtAblaufVorlage, CtKalender } from '@shared/ct/typen';
 import type { AblaufVorlage, Kalender } from '@shared/types/index';
 
@@ -84,6 +86,25 @@ export function getAgenda(cookie: string, eventId: number): Promise<CtAgenda> {
 
 export function getSong(cookie: string, songId: number): Promise<CtSong> {
   return ctGet<CtSong>(cookie, `/api/songs/${songId}`);
+}
+
+/** Ein einzelner Termin – für die Termine, die einen Ablauf teilen (E6-5b). */
+export function getEvent(cookie: string, eventId: number): Promise<CtEvent> {
+  return ctGet<CtEvent>(cookie, `/api/events/${eventId}`);
+}
+
+/** Was die Nachfrage „Neu aufsetzen“ zeigt (E6-5b) – Regel in `@shared/ct/ablaufNeu`. */
+export function getAblaufBestand(cookie: string, eventId: number): Promise<AblaufBestand> {
+  return ablaufBestandLesen(
+    { agenda: (id) => getAgenda(cookie, id), termin: (id) => getEvent(cookie, id) },
+    eventId,
+    config.zeitzone,
+  );
+}
+
+/** Eine Ablauf-Vorlage samt Punkten – frisch, zum Nachzählen nach dem Neu-Aufsetzen (E6-5b). */
+export function getAblaufVorlage(cookie: string, vorlageId: number): Promise<CtAblaufVorlage> {
+  return ctGet<CtAblaufVorlage>(cookie, `/api/agendatemplates/${vorlageId}`);
 }
 
 /** Lädt die ChurchTools-Dienste (z.B. „Musik", „Predigt") für die Verantwortlich-Chips. */

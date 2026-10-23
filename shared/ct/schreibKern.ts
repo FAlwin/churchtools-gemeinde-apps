@@ -18,7 +18,7 @@
 import { agendaItemWritePayload, beginnPositionFuer, dienstgruppenNotizen } from './agendaPayload';
 import { arrangementWritePayload, type ArrangementOverrides } from './arrangementPayload';
 import { ablaufZeileAus, istWeggelassen, punktStand, type PunktStand } from './ablaufZeile';
-import type { CtAgenda, CtAgendaItem, CtArrangement, CtSong } from './typen';
+import type { CtAblaufVorlage, CtAgenda, CtAgendaItem, CtArrangement, CtSong } from './typen';
 
 /** Ein Schreibvorgang – Pfad ohne `/api`, wie beim `CtLeser`. */
 export interface SchreibAuftrag {
@@ -39,6 +39,8 @@ export interface CtSchreiber {
   agenda(eventId: number): Promise<CtAgenda>;
   /** Ein Lied samt Arrangements – **frisch**, nie aus einem Cache. */
   song(songId: number): Promise<CtSong>;
+  /** Eine Ablauf-Vorlage samt Punkten – **frisch** (`GET /agendatemplates/{id}`; E6-5b: zum Nachzählen). */
+  vorlage(vorlageId: number): Promise<CtAblaufVorlage>;
   /**
    * Schreibt; wirft bei Ablehnung (`verweigert`), Drosselung oder Fehlschlag (`fehler`). Liefert den
    * JSON-Rumpf der Antwort (`null` bei leerer Antwort) – beim Anlegen steht darin die neue ID.
@@ -76,7 +78,7 @@ export const ABLAUF_ABGESCHLOSSEN =
  * kommt die richtige Meldung (423); sonst bleibt es bei „Keine Berechtigung". Lässt sich der Ablauf gerade
  * nicht lesen, bleibt der ursprüngliche Fehler – geraten wird nicht.
  */
-async function ablaufSchreibe(
+export async function ablaufSchreibe(
   s: CtSchreiber,
   eventId: number,
   pfad: string,
@@ -376,7 +378,7 @@ function text(v: unknown, sonst = ''): string {
  * Legt einen gelöschten Punkt wieder an – an seiner alten Stelle und im alten Vorlauf-Zustand.
  *
  * Drei Schritte, jeder mit den vorhandenen Regeln: anlegen, per `ablaufUmsortieren` an die Stelle
- * schieben, per `vorBeginnSetzen` den Vorlauf richten. Ob der neue Punkt **wirklich** da ist, wird am
+ * schieben, den Vorlauf richten (Grenze mitziehen bzw. `vorBeginnSetzen`). Ob der neue Punkt **wirklich** da ist, wird am
  * frisch gelesenen Ablauf geprüft, nicht an der Antwort des Anlegens (Lehre vom 11.08.2026). Ist der
  * Vorgänger inzwischen auch weg, landet der Punkt am Ende.
  */
@@ -405,7 +407,8 @@ export async function punktWiederherstellen(
     fehler: 'Ablaufpunkt wiederherstellen fehlgeschlagen',
   });
   const neuId = neueId(antwort);
-  const { items } = await s.agenda(eventId);
+  const angelegt = await s.agenda(eventId);
+  const { items } = angelegt;
   if (neuId === null || !items.some((i) => i.id === neuId)) {
     throw s.fehler(502, 'Der Punkt wurde nicht wieder angelegt. Bitte den Ablauf neu laden.');
   }
@@ -417,7 +420,20 @@ export async function punktWiederherstellen(
   if (reihenfolge.some((id, k) => items[k]?.id !== id)) {
     await ablaufUmsortieren(s, eventId, reihenfolge);
   }
-  await vorBeginnSetzen(s, eventId, neuId, g.vorBeginn);
+  // Die Grenze ist eine Platznummer (#700, gemessen E6-6-0): Ein Vorlauf-Punkt an oder vor ihr schöbe die übrigen
+  // Vorlauf-Punkte hinaus – sie rückt deshalb um eins mit. (Angelegt wird hinten, das ließ sie unberührt.) Sonst gilt
+  // die Regel von `vorBeginnSetzen`.
+  const grenze = angelegt.eventStartPosition ?? 0;
+  if (g.vorBeginn && ziel <= grenze) {
+    await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda`, {
+      method: 'PUT',
+      json: { calendarId: angelegt.calendarId, eventStartPosition: grenze + 1 },
+      verweigert: ABLAUF_VERWEIGERT,
+      fehler: 'Gottesdienstbeginn nach dem Zurückholen nachziehen fehlgeschlagen',
+    });
+  } else {
+    await vorBeginnSetzen(s, eventId, neuId, g.vorBeginn);
+  }
   if (g.weggelassen) await weglassenSetzen(s, eventId, neuId, true);
 }
 

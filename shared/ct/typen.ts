@@ -70,7 +70,10 @@ export interface CtAgendaSong {
 
 /** Ein Ablauf, wie `GET /api/events/{id}/agenda` ihn liefert – nur die Felder, die die App nutzt. */
 export interface CtAgenda {
+  id?: number;
   items: CtAgendaItem[];
+  /** `modifiedDate` ändert sich bei jeder Änderung am Ablauf – nur sekundengenau (E0). */
+  meta?: { modifiedDate?: string };
   /**
    * Die Grenze „Beginn der Veranstaltung" (#423): Punkte mit `position` darunter sind Vorlauf und
    * werden rückwärts ab Veranstaltungsbeginn gerechnet. Eine Platznummer, kein Punkt – beim

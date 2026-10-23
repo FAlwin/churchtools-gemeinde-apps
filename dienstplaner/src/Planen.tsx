@@ -350,7 +350,11 @@ export function Planen({
     setNachLaden(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- nur, wenn neue Termine angekommen sind
   }, [zustand]);
-  const kannNachladen = !bereich && mehrMoeglich && !nachLaden;
+  // Ist das Nachladen gescheitert, lädt nichts mehr – schon in dem Bild, in dem der Fehler erscheint. `nachLaden` räumt
+  // der Effekt oben erst danach weg; bis dahin stand ＋ gesperrt neben „Erneut versuchen“ und die Leiste sagte „werden
+  // geladen …“ (ein Bild lang – genug, dass der Test unter Last daran scheiterte).
+  const laedtNach = nachLaden !== null && !(zustand.art === 'fertig' && zustand.nachladeFehler);
+  const kannNachladen = !bereich && mehrMoeglich && !laedtNach;
 
   const waehleZeitraum = (z: Zeitraum) => {
     if (z.art === 'abHeute') setFenster((f) => schritt(f, 'passend', 0, 0));
@@ -459,7 +463,7 @@ export function Planen({
   const zeile2 =
     quelle.art === 'laedt'
       ? 'wird geladen …'
-      : nachLaden
+      : laedtNach
         ? 'weitere Termine werden geladen …'
         : z.art === 'abHeute' && !handy && fenster.anzahl === null
           ? `${terminText} · passend zur Fensterbreite`

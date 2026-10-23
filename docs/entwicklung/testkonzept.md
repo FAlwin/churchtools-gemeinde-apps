@@ -117,6 +117,17 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
   schreiben), hinterher nachlesen (502). Dazu `AblaufAnlegenFenster` („Vorlage zuerst", Quelle, Fehler im
   Fenster), `Agenda.ohneAblauf` (nie doppelt, Knopf nur mit Recht, ohne Regel keine Abfrage) und
   `e2e/ablauf-anlegen.spec.ts` (Verwaltung → Liste → Anlegen über den echten Server, eigener Stub-Admin)
+- `shared/ct/ablaufNeu` – Ablauf neu aufsetzen (E6-5b, #691), gegen eine Attrappe, die sich wie gemessen verhält
+  (neue Punkt-IDs, geteilter Ablauf, `DELETE` löst nur die Verbindung, abgeschlossen → 403): Vorlage/Kopie/leer,
+  412 bei jeder Änderung seit der Nachfrage (Punkte, Stempel, Verbindung, weg – ohne Stempel kein Konflikt), 423
+  ohne Schreiben, Kopie aus sich selbst/verbundenem Termin, „Erfolg ohne Wirkung“ → 502 (auch bei gleicher Zahl),
+  geteilt für alle bzw. nur für diesen Termin, gescheitertes Anlegen nach dem Lösen; Server-Schema lässt den Stand
+  aus `standAus` unverändert durch (`setlistController.gesehen.test.ts`). Jeder Teil einzeln gegengeprüft.
+  Dazu die Oberfläche (E6-5b-2): `NeuAufsetzen` (gezeigter Stand geht weiter, bei „Weiter“ frisch gelesen, leer ohne
+  Nachfrage, geteilt mit zwei Wegen, Fehler → Meldung und neu laden), der Knopf in `useAblaufBearbeiten` (Anleitung
+  genau einmal, abgeschlossen → Sperr-Hinweis), `ConfirmDialog` (zweiter Weg, ohne Abbrechen, beschäftigt),
+  `TerminAnsicht` und `e2e/ablauf-neu-aufsetzen.spec.ts`. Die Knopf-Höhe im gestapelten Dialog (`flex: none`) sieht
+  nur der Browser – dort gefunden und von Hand geprüft.
 - `hooks/abfrageSchluessel` – die Abfrage-Schlüssel (#492): Namen wie gespeichert (Literal, bewusst),
   engere Schlüssel liegen unter den weiteren (Erneuern trifft sie), Vorladen und `useSongChart` bzw.
   Offline-Vorrat und `useAgenda` teilen sich den Eintrag, der Offline-Vorrat holt trotzdem frisch

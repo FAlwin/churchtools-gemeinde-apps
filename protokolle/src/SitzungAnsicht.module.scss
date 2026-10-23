@@ -1,0 +1,93 @@
+// Eine Sitzung ansehen (Bauplan S3-2) – Kopf, Protokoll als Blatt, darunter die Bereiche.
+@use '@ui/design/mixins' as m;
+
+.seite {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 760px;
+}
+
+.zurueck {
+  @include m.aktionKnopf;
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 32px;
+  padding: 0 10px 0 4px;
+  border-radius: var(--r-ctrl);
+  font-size: 14px;
+}
+
+.kopf {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  h2 {
+    font-size: 19px;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+
+  p {
+    color: var(--text2);
+    font-size: 14px;
+  }
+}
+
+.marken {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.karte {
+  @include m.card-list;
+  padding: 16px 18px;
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 15px;
+    font-weight: 700;
+  }
+}
+
+.anzahl {
+  color: var(--text2);
+  font-weight: 600;
+}
+
+.liste {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+
+  li {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  small {
+    color: var(--text2);
+    font-size: 12.5px;
+  }
+}
+
+.leer,
+.hinweis {
+  color: var(--text2);
+  font-size: 14px;
+}
+
+.fehler {
+  color: var(--red);
+  font-size: 14px;
+  font-weight: 600;
+}

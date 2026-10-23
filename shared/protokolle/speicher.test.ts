@@ -4,6 +4,8 @@ import type { Block } from './dokument';
 import { BLOCKNOTE_DOKUMENT } from './dokument.testdaten';
 import {
   dokumentAusTeilen,
+  istKopf,
+  istTeil,
   kuerzelLesen,
   kuerzelMitarbeit,
   kuerzelProtokolle,
@@ -120,5 +122,38 @@ describe('sperreLage', () => {
       'frei',
     );
     expect(sperreLage({ von: 2, name: 'Johann', seit: 'unsinn' }, 1, jetzt)).toBe('frei');
+  });
+});
+
+describe('istKopf / istTeil (S3-1)', () => {
+  const kopf = {
+    art: 'protokoll',
+    fassung: 1,
+    sitzung: 's1',
+    titel: 'Leitungssitzung',
+    status: 'frei',
+    beginn: '2026-10-14T17:00:00Z',
+    termin: { kalender: 4, id: 114 },
+    treffen: null,
+    freigabe: { von: 1, am: '2026-10-15T08:00:00Z' },
+    sperre: null,
+    stand: 'abc',
+  };
+  it('erkennt den eigenen Kopf, auch ohne Termin', () => {
+    expect(istKopf(kopf)).toBe(true);
+    expect(istKopf({ ...kopf, termin: null, treffen: 15, status: 'geplant' })).toBe(true);
+  });
+  it('lehnt Fremdes und Kaputtes ab', () => {
+    expect(istKopf(null)).toBe(false);
+    expect(istKopf({ ...kopf, art: 'einstellung' })).toBe(false);
+    expect(istKopf({ ...kopf, status: 'gelöscht' })).toBe(false);
+    expect(istKopf({ ...kopf, beginn: 'morgen' })).toBe(false);
+    expect(istKopf({ ...kopf, termin: { kalender: 4 } })).toBe(false);
+  });
+  it('erkennt die Teile, die teileBauen erzeugt', () => {
+    const { werte } = teileBauen(BLOCKNOTE_DOKUMENT, 's1');
+    expect(werte.map((w) => istTeil(JSON.parse(w)))).toEqual(werte.map(() => true));
+    expect(istTeil({ ...(JSON.parse(werte[0]) as object), nr: 'eins' })).toBe(false);
+    expect(istTeil(kopf)).toBe(false);
   });
 });

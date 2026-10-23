@@ -1,0 +1,52 @@
+// „Rückgängig“ im Fenster (Alwin, 19.10.2026) – aus den Anmeldungen (A7) hierher gezogen für alle Erweiterungen
+// (Organigramm O5, 23.10.2026). Werte aus ui/design.
+
+// Im Fluss des Fensters statt unten fest. Bricht um: In einem schmalen Fenster (Handy) schob der Text „Mail schreiben“
+// und „Rückgängig“ sonst rechts aus dem Fenster (Durchklicken 22.10.2026). Der Text nimmt den Platz, die Knöpfe
+// rutschen bei Bedarf darunter.
+.imFenster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 10px;
+
+  > span:first-child {
+    flex: 1 1 12em;
+    min-width: 0;
+  }
+
+  > button {
+    flex: none;
+  }
+  margin: 10px 0 4px;
+  padding: 8px 8px 8px 12px;
+  border-radius: var(--r-card);
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+// Auch von der Leiste der Anmeldungen genutzt (`RueckgaengigLeiste`).
+.fehler {
+  color: var(--red);
+}
+
+.knopf {
+  flex: none;
+  height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--r-ctrl);
+  background: var(--blue);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}

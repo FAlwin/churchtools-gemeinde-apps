@@ -5,6 +5,7 @@ import type { CtAgenda, CtSong } from '@shared/ct/typen';
 import { ApiError } from './api';
 import {
   abgeschlossen,
+  ablaufNeuAufsetzen,
   punkt,
   punktNeu,
   punktWeg,
@@ -16,6 +17,8 @@ import {
 import { ablaufZeileAus, punktStand } from '@shared/ct/ablaufZeile';
 import { _bremseLoesen, _vergissCsrf, ChurchToolsBremst, KeinSpeicherRecht } from './ctRuntime';
 import { FakeCt } from './ctFake.testutil';
+import { ablaufBestand } from './ctLesen';
+import { standAus } from '@shared/ct/ablaufNeu';
 
 /**
  * Der Schreib-Weg der Extension (#335, Phase 3b): Ablauf und Tempo direkt aus dem Browser, mit den
@@ -284,5 +287,24 @@ describe('Konflikt (E6-3c) – der Weg der Erweiterung', () => {
   it('Reihenfolge woanders geändert → 412', async () => {
     await expect(reihenfolge(500, [3, 1, 2], [2, 1, 3])).rejects.toMatchObject({ status: 412 });
     expect(ct.geschrieben).toHaveLength(0);
+  });
+});
+
+describe('Neu aufsetzen über die Erweiterung (E6-5b)', () => {
+  it('Bestand aus dem frischen Ablauf; leeren schreibt `items: []` mit CSRF – und erkennt, wenn sich nichts ändert', async () => {
+    const b = await ablaufBestand(500);
+    expect(b).toMatchObject({ punkte: [1, 2, 3], verbunden: [] });
+    // Die Attrappe antwortet danach unverändert – wie ein ChurchTools, das „200“ sagt und nichts tut.
+    await expect(
+      ablaufNeuAufsetzen(500, null, { art: 'leer' }, standAus(b), false),
+    ).rejects.toMatchObject({
+      status: 502,
+    });
+    expect(ct.geschrieben).toHaveLength(1);
+    expect(ct.geschrieben[0]).toMatchObject({
+      was: 'PUT /api/events/500/agenda',
+      json: { items: [] },
+      csrf: 'csrf-123',
+    });
   });
 });

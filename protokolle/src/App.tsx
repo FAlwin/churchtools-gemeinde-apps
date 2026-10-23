@@ -8,17 +8,20 @@ import { adresseFuer, reiterAusAdresse } from '@ui/bedienung/reiterAdresse';
 import { ladeStart, type Start } from './start';
 import { Startseite } from './Startseite';
 import { Verwaltung } from './Verwaltung';
+import { Sitzungen, type SitzungsAuswahl } from './Sitzungen';
 import { sichtbareReiter, type ReiterId } from './reiter';
 
 /**
- * Die Protokolle in ChurchTools (Bauplan S1/S2-2): Start und – nur für Admins – Verwaltung. Am Computer stehen die
- * Reiter oben neben dem Namen, am Handy unten (wie im Dienstplaner); wer nur „Start“ hat, sieht keine Reiter.
- * Scheitert das Laden vorübergehend, gibt es „Erneut versuchen“ statt einer halben Seite.
+ * Die Protokolle in ChurchTools (Bauplan S1/S2-2/S3-2): Start, Sitzungen und – nur für Admins – Verwaltung. Am
+ * Computer stehen die Reiter oben neben dem Namen, am Handy unten (wie im Dienstplaner).
+ * Scheitert das Laden vorübergehend, gibt es „Erneut versuchen“ statt einer halben Seite. Ein Tipp auf der Startseite
+ * (S3-3) öffnet den Reiter „Sitzungen“ mit der Gruppe – und, wenn gewählt, gleich der Sitzung.
  */
 export function App() {
   const [zustand, setZustand] = useState<SeitenZustand>({ art: 'laedt' });
   const [start, setStart] = useState<Start | null>(null);
   const [hash, setHash] = useState(() => window.location.hash);
+  const [auswahl, setAuswahl] = useState<SitzungsAuswahl | null>(null);
   const handy = useMedienAbfrage('(max-width: 759px)');
 
   const laden = useCallback(() => {
@@ -43,7 +46,12 @@ export function App() {
   const reiter = sichtbareReiter(start?.darfVerwalten ?? false);
   const aktiv = reiterAusAdresse<ReiterId>(hash, reiter, 'start');
   const wechseln = (id: ReiterId) => {
+    setAuswahl(null);
     window.location.hash = adresseFuer(id, 'start');
+  };
+  const zuSitzungen = (a: SitzungsAuswahl) => {
+    setAuswahl(a);
+    window.location.hash = adresseFuer('sitzungen', 'start');
   };
 
   // Reiter erst zeigen, wenn klar ist, wer was darf – und nur, wenn es mehr als einen gibt.
@@ -72,7 +80,23 @@ export function App() {
       gruss={aktiv === 'start'}
       onNochmal={laden}
     >
-      {start && aktiv === 'start' && <Startseite gruppen={start.gruppen} />}
+      {start && aktiv === 'start' && (
+        <Startseite
+          modul={start.modul}
+          ich={start.id}
+          gruppen={start.gruppen}
+          onSitzung={(gruppe, sitzung) => zuSitzungen({ gruppe, sitzung })}
+          onGruppe={(gruppe) => zuSitzungen({ gruppe })}
+        />
+      )}
+      {start && aktiv === 'sitzungen' && (
+        <Sitzungen
+          key={auswahl ? `${auswahl.gruppe}:${auswahl.sitzung ?? ''}` : 'reiter'}
+          modul={start.modul}
+          gruppen={start.gruppen}
+          auswahl={auswahl}
+        />
+      )}
       {start && aktiv === 'verwaltung' && <Verwaltung modul={start.modul} />}
     </ErweiterungsSeite>
   );

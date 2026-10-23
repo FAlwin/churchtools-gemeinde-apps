@@ -8,6 +8,8 @@ import * as B from './bewegung';
 import * as H from './vonHand';
 import * as M from './mitglieder';
 import * as R from './rundmail';
+import * as E from './einrichten';
+import * as T from '@ui/teilen/sharePdf';
 import {
   FELDER,
   STICHTAG,
@@ -45,6 +47,13 @@ vi.mock('./rundmail', () => ({
   UnklarObVerschickt: class extends Error {},
 }));
 const rm = vi.mocked(R);
+vi.mock('./einrichten', async (original) => ({
+  ...(await original<typeof import('./einrichten')>()),
+  aendereEinstellungen: vi.fn().mockResolvedValue(undefined),
+}));
+const em = vi.mocked(E);
+vi.mock('@ui/teilen/sharePdf', () => ({ sharePdf: vi.fn(), downloadPdf: vi.fn() }));
+const tm = vi.mocked(T);
 const mm = vi.mocked(M);
 
 /**
@@ -670,5 +679,82 @@ describe('Rundmail (A7-5)', () => {
     expect(
       screen.getByRole<HTMLButtonElement>('button', { name: 'Ja, 1 Mail senden' }).disabled,
     ).toBe(true);
+  });
+});
+
+describe('Druckliste (A8-1)', () => {
+  // Das Fenster (`Sheet`) hat keine eigene Rolle – gesucht wird auf der ganzen Seite.
+  const fenster = document.body;
+  // Das PDF ist fertig, sobald „Teilen …“ geht – nach jeder Änderung wird es neu gebaut.
+  const pdfFertig = () =>
+    waitFor(() =>
+      expect(
+        within(fenster).getByRole<HTMLButtonElement>('button', { name: 'Teilen …' }).disabled,
+      ).toBe(false),
+    );
+  const oeffnen = async () => {
+    fireEvent.click(screen.getByRole('button', { name: '⎙ Druckliste' }));
+    await pdfFertig();
+  };
+
+  it('Vorschau mit Platz; Warteliste zuschaltbar; unverändert herunterladen merkt nichts', async () => {
+    zeigen(fertig());
+    await oeffnen();
+    const vorschau = within(fenster).getByLabelText('Vorschau');
+    expect(within(vorschau).getByText('Beispiel, Jonas')).toBeTruthy();
+    expect(within(vorschau).queryByText('1. Beispiel, Lena')).toBeNull();
+    fireEvent.click(within(fenster).getByRole('button', { name: 'Auch Warteliste (2)' }));
+    expect(within(vorschau).getByText('1. Beispiel, Lena')).toBeTruthy();
+    await pdfFertig();
+    fireEvent.click(within(fenster).getByRole('button', { name: 'Herunterladen' }));
+    await waitFor(() => expect(tm.downloadPdf).toHaveBeenCalledTimes(1));
+    expect(tm.downloadPdf.mock.calls[0][1]).toBe('Kinderfreizeit – Teilnehmer');
+    expect(em.aendereEinstellungen).not.toHaveBeenCalled();
+  });
+
+  it('andere Spalten → beim Teilen gemerkt; ohne Recht nicht', async () => {
+    const r = zeigen(fertig());
+    await oeffnen();
+    fireEvent.click(within(fenster).getByRole('button', { name: 'Telefon' }));
+    await pdfFertig();
+    fireEvent.click(within(fenster).getByRole('button', { name: 'Teilen …' }));
+    expect(tm.sharePdf).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(r.onGespeichert).toHaveBeenCalled());
+    const aendern = em.aendereEinstellungen.mock.calls[0][1];
+    expect(aendern(e()).druck).toEqual({
+      spalten: ['alter', 'kontakt', 'frage:tel'],
+      sortierung: 'nachname',
+    });
+
+    cleanup();
+    em.aendereEinstellungen.mockClear();
+    zeigen(fertig(), 10, false, false);
+    await oeffnen();
+    fireEvent.click(within(fenster).getByRole('button', { name: 'Telefon' }));
+    await pdfFertig();
+    fireEvent.click(within(fenster).getByRole('button', { name: 'Teilen …' }));
+    expect(em.aendereEinstellungen).not.toHaveBeenCalled();
+  });
+
+  it('Listen nach dem Formular, „＋ weitere“ öffnet den Rest mit Hinweis (A8-2)', async () => {
+    zeigen(fertig());
+    await oeffnen();
+    // Kinder-Event: Küche und Abholliste passen, Zimmer (keine Auswahl im Preis) erst hinter „＋ weitere“.
+    expect(screen.getByRole('button', { name: 'Küche & Allergien' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Zimmer' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Abholliste' }));
+    await pdfFertig();
+    expect(
+      within(screen.getByLabelText('Vorschau')).getByText('Abgeholt von / Uhrzeit'),
+    ).toBeTruthy();
+    // Spalten gibt es nur bei den Teilnehmern.
+    expect(screen.queryByRole('button', { name: 'Telefon' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '＋ weitere' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zimmer' }));
+    expect(screen.getByText(/Im Preis gibt es keine Auswahl/)).toBeTruthy();
+    await pdfFertig();
+    fireEvent.click(screen.getByRole('button', { name: 'Herunterladen' }));
+    await waitFor(() => expect(tm.downloadPdf).toHaveBeenCalled());
+    expect(tm.downloadPdf.mock.calls.at(-1)![1]).toBe('Kinderfreizeit – Zimmer');
   });
 });

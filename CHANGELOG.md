@@ -7,6 +7,20 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Neu (Musik-App + Dienstplaner, E6-5b-2, #691)
+
+- **„Neu aufsetzen …“** im Bearbeiten (rechts in der Hinweiszeile; Entwurf `e6-5b-entwurf.html`, abgenommen 23.10.2026):
+  ersetzt einen bestehenden Ablauf aus einer **Vorlage**, **wie ein früherer Termin** oder **leer** – im selben
+  Fenster wie „Ablauf anlegen“, danach eine klare Nachfrage mit der Zahl der Punkte („Ablauf ersetzen?“ / „Ablauf
+  leeren?“). **Kein Rückgängig.** Ist der Ablauf leer, geht nichts verloren – dann ohne Nachfrage.
+- **Geteilter Ablauf** (in ChurchTools teilen sich mehrere Termine einen Ablauf): Die Nachfrage nennt die anderen
+  Termine und bietet **„Für alle ersetzen“** oder **„Nur für diesen Termin neu“** – dann behalten die anderen den
+  bisherigen Ablauf.
+- Hat jemand den Ablauf seit der Nachfrage geändert, wird nichts ersetzt: Meldung, Liste neu geladen. Abgeschlossen
+  zeigt der Knopf den Sperr-Hinweis wie das Plus.
+- Ersetzen braucht keinen Kalender des Termins mehr (gemessen); nur „Nur für diesen Termin neu“ nimmt ihn, sonst den
+  des bisherigen Ablaufs.
+
 ### Intern (Ablauf neu aufsetzen, E6-5b-1, #691)
 
 - **Kern für „Neu aufsetzen“** (`shared/ct/ablaufNeu.ts`, noch ohne Oberfläche): einen bestehenden Ablauf aus einer

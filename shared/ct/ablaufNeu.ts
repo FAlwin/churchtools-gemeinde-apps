@@ -18,6 +18,7 @@
 import type { AblaufQuelle } from '../types/index';
 import { ablaufAnlegen } from './ablaufAnlegen';
 import { istNichtGefunden } from './setlistKern';
+import { ortszeitAus } from './zeit';
 import {
   ABLAUF_ABGESCHLOSSEN,
   ABLAUF_VERWEIGERT,
@@ -26,11 +27,12 @@ import {
 } from './schreibKern';
 import type { CtAgenda, CtEvent } from './typen';
 
-/** Ein anderer Termin, der denselben Ablauf hat. `name`/`start` sind `null`, wenn er sich nicht lesen ließ. */
+/** Ein anderer Termin, der denselben Ablauf hat. `name`/`beginn` sind `null`, wenn er sich nicht lesen ließ. */
 export interface VerbundenerTermin {
   id: number;
   name: string | null;
-  start: string | null;
+  /** Beginn in der Zeitzone der Gemeinde, `YYYY-MM-DDTHH:mm` – zum Anzeigen ohne eigene Zeitzone. */
+  beginn: string | null;
 }
 
 /** Was die Nachfrage zeigt: die Punkte, die ersetzt würden, und die Termine, die es mittrifft. */
@@ -84,15 +86,16 @@ export function standAus(b: AblaufBestand): AblaufStand {
 export async function ablaufBestandLesen(
   l: AblaufBestandLeser,
   eventId: number,
+  zeitzone: string,
 ): Promise<AblaufBestand> {
   const agenda = await l.agenda(eventId);
   const verbunden = await Promise.all(
     verbundeneTermine(agenda, eventId).map(async (id): Promise<VerbundenerTermin> => {
       try {
         const t = await l.termin(id);
-        return { id, name: t.name, start: t.startDate };
+        return { id, name: t.name, beginn: ortszeitAus(t.startDate, zeitzone) };
       } catch {
-        return { id, name: null, start: null };
+        return { id, name: null, beginn: null };
       }
     }),
   );
@@ -122,13 +125,17 @@ function gleich(a: readonly number[], b: readonly number[]): boolean {
  * Ablauf anlegen – die anderen Termine behalten den bisherigen. Sonst wird der Ablauf ersetzt, bei einem geteilten für
  * alle verbundenen Termine.
  *
+ * Den Kalender braucht nur „nur für diesen Termin“ – dort entsteht ein neuer Ablauf (Pflichtfeld). Ersetzen geht ohne
+ * (gemessen E6-5b-0). Ohne `kalenderId` gilt der Kalender des bisherigen Ablaufs.
+ *
  * Wirft 412, wenn sich der Ablauf seit `gesehen` geändert hat (oder nicht mehr da ist), 423, wenn er abgeschlossen ist,
- * 400 bei einer Kopie aus sich selbst und 502, wenn das Nachlesen das Ersetzen nicht belegt.
+ * 400 bei einer Kopie aus sich selbst oder ohne jeden Kalender beim Lösen, 502, wenn das Nachlesen das Ersetzen nicht
+ * belegt.
  */
 export async function ablaufNeuAufsetzen(
   s: CtSchreiber,
   eventId: number,
-  kalenderId: number,
+  kalenderId: number | null,
   quelle: AblaufQuelle,
   gesehen: AblaufStand,
   nurDieser: boolean,
@@ -169,13 +176,18 @@ export async function ablaufNeuAufsetzen(
 
   // 3. Schreiben.
   if (nurDieser && verbunden.length > 0) {
+    // Vor dem Lösen prüfen – danach stünde der Termin ohne Ablauf da.
+    const kalender = kalenderId ?? ist.calendarId ?? null;
+    if (kalender === null) {
+      throw s.fehler(400, 'Der Kalender dieses Termins ist unbekannt. Bitte neu laden.');
+    }
     await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda`, {
       method: 'DELETE',
       verweigert: ABLAUF_VERWEIGERT,
       fehler: 'Verbindung zu den anderen Terminen lösen fehlgeschlagen',
     });
     try {
-      await ablaufAnlegen(s, eventId, kalenderId, quelle);
+      await ablaufAnlegen(s, eventId, kalender, quelle);
     } catch {
       throw s.fehler(502, GELOEST_OHNE_NEUEN);
     }

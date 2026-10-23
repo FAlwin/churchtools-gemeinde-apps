@@ -7,7 +7,8 @@
  * Der Termin wird nicht mit der Gruppe verknüpft (A0 #4: Termin löschen löscht sonst die Anmeldungen).
  * Datum und Ort sind eine Kopie, `terminId` merkt sich die Herkunft.
  */
-import type { TerminAngabe } from './formular';
+import type { OeffentlicheEinstellungen, TerminAngabe } from './formular';
+import { datumText } from '../ct/datum';
 import { ortszeitAus, utcAus } from '../ct/zeit';
 
 // Die Umrechnung UTC ↔ Ortszeit steht für alle Apps in `shared/ct/zeit.ts` (Dienstplaner E3-2).
@@ -52,4 +53,15 @@ export function terminAusCt(
  */
 export function anmeldeLink(formularAdresse: string, ctBasis: string, gruppeId: number): string {
   return `${formularAdresse}#${new URL(ctBasis).host}/${gruppeId}`;
+}
+
+/**
+ * **Termin in einer Zeile** – „Sa, 21.11.2026 · Gemeindehaus“ (mehrtägig mit „–“), sonst „Termin folgt“. So steht er im
+ * Formular und auf dem Aushang (A8-4).
+ */
+export function terminZeile(e: Pick<OeffentlicheEinstellungen, 'termin'>): string {
+  const t = e.termin;
+  return t
+    ? `${datumText(t.beginn.slice(0, 10))}${t.ende && t.ende.slice(0, 10) !== t.beginn.slice(0, 10) ? ` – ${datumText(t.ende.slice(0, 10))}` : ''}${t.ort ? ` · ${t.ort}` : ''}`
+    : 'Termin folgt';
 }

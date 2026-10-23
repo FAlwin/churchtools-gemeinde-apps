@@ -33,6 +33,7 @@ describe('geloeschterPunktSchema – lässt den Merkzettel vollständig durch', 
           ],
         }),
       song: () => Promise.reject(new Error('nicht gebraucht')),
+      vorlage: () => Promise.reject(new Error('nicht gebraucht')),
       schreibe: vi.fn(() => Promise.resolve(null)),
       fehler: (status, meldung) => Object.assign(new Error(meldung), { status }),
     };

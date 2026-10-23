@@ -10,6 +10,7 @@
 import type { HochzuladendeDatei } from '@shared/ct/notenblaetter';
 import { HttpError } from '../middleware/errorHandler.js';
 import { ablaufAnlegen } from '@shared/ct/ablaufAnlegen';
+import { ablaufNeuAufsetzen, type AblaufStand } from '@shared/ct/ablaufNeu';
 import type { AblaufQuelle } from '@shared/types/index';
 import {
   ablaufAbschliessen,
@@ -29,7 +30,7 @@ import {
 import type { PunktStand } from '@shared/ct/ablaufZeile';
 import { csrfWriteDenied, getCsrfToken } from './ctCsrf.js';
 import { BASE, CT_FILE_TIMEOUT_MS, ctFetch } from './ctHttp.js';
-import { getAgenda, getSong } from './ctRead.js';
+import { getAblaufVorlage, getAgenda, getSong } from './ctRead.js';
 
 /**
  * Der Schreibvorgang selbst – **einmal, für alle sieben** (#280).
@@ -210,6 +211,7 @@ export function schreiberFuer(cookie: string): CtSchreiber {
   return {
     agenda: (eventId) => getAgenda(cookie, eventId),
     song: (songId) => getSong(cookie, songId),
+    vorlage: (vorlageId) => getAblaufVorlage(cookie, vorlageId),
     schreibe: async (pfad, auftrag) => rumpfAus(await schreibe(cookie, `/api${pfad}`, auftrag)),
     fehler: (status, meldung) => new HttpError(status, meldung),
   };
@@ -284,6 +286,18 @@ export function createAblauf(
   quelle: AblaufQuelle,
 ): Promise<void> {
   return ablaufAnlegen(schreiberFuer(cookie), eventId, kalenderId, quelle);
+}
+
+/** Einen bestehenden Ablauf neu aufsetzen (E6-5b, #691) – Regel in `@shared/ct/ablaufNeu`. */
+export function setAblaufNeu(
+  cookie: string,
+  eventId: number,
+  kalenderId: number,
+  quelle: AblaufQuelle,
+  gesehen: AblaufStand,
+  nurDieser: boolean,
+): Promise<void> {
+  return ablaufNeuAufsetzen(schreiberFuer(cookie), eventId, kalenderId, quelle, gesehen, nurDieser);
 }
 
 /** Den Ablauf abschließen oder wieder öffnen (09.10.2026) – Regel in `@shared/ct/schreibKern`. */

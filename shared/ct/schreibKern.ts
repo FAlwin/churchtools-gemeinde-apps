@@ -18,7 +18,7 @@
 import { agendaItemWritePayload, beginnPositionFuer, dienstgruppenNotizen } from './agendaPayload';
 import { arrangementWritePayload, type ArrangementOverrides } from './arrangementPayload';
 import { ablaufZeileAus, istWeggelassen, punktStand, type PunktStand } from './ablaufZeile';
-import type { CtAgenda, CtAgendaItem, CtArrangement, CtSong } from './typen';
+import type { CtAblaufVorlage, CtAgenda, CtAgendaItem, CtArrangement, CtSong } from './typen';
 
 /** Ein Schreibvorgang – Pfad ohne `/api`, wie beim `CtLeser`. */
 export interface SchreibAuftrag {
@@ -39,6 +39,8 @@ export interface CtSchreiber {
   agenda(eventId: number): Promise<CtAgenda>;
   /** Ein Lied samt Arrangements – **frisch**, nie aus einem Cache. */
   song(songId: number): Promise<CtSong>;
+  /** Eine Ablauf-Vorlage samt Punkten – **frisch** (`GET /agendatemplates/{id}`; E6-5b: zum Nachzählen). */
+  vorlage(vorlageId: number): Promise<CtAblaufVorlage>;
   /**
    * Schreibt; wirft bei Ablehnung (`verweigert`), Drosselung oder Fehlschlag (`fehler`). Liefert den
    * JSON-Rumpf der Antwort (`null` bei leerer Antwort) – beim Anlegen steht darin die neue ID.
@@ -76,7 +78,7 @@ export const ABLAUF_ABGESCHLOSSEN =
  * kommt die richtige Meldung (423); sonst bleibt es bei „Keine Berechtigung". Lässt sich der Ablauf gerade
  * nicht lesen, bleibt der ursprüngliche Fehler – geraten wird nicht.
  */
-async function ablaufSchreibe(
+export async function ablaufSchreibe(
   s: CtSchreiber,
   eventId: number,
   pfad: string,

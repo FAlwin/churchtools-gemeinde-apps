@@ -115,6 +115,7 @@ function fakeCt(start: Partial<CtAgendaItem>[], eventStartPosition = 0) {
       });
     },
     song: () => Promise.reject(new Error('nicht gebraucht')),
+    vorlage: () => Promise.reject(new Error('nicht gebraucht')),
     schreibe,
     fehler: (status, meldung) => Object.assign(new Error(meldung), { status }),
   };

@@ -7,6 +7,17 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Intern (Ablauf neu aufsetzen, E6-5b-1, #691)
+
+- **Kern für „Neu aufsetzen“** (`shared/ct/ablaufNeu.ts`, noch ohne Oberfläche): einen bestehenden Ablauf aus einer
+  Vorlage, wie ein anderer Termin oder leer neu aufsetzen – gemessen (E6-5b-0) ersetzt ChurchTools dabei still und
+  bei einem **geteilten** Ablauf für alle Termine. Darum wird vorher mit dem Stand der Nachfrage verglichen (412,
+  nichts geschrieben), abgeschlossen gibt 423, und hinterher wird nachgelesen (Zahl der Punkte, kein alter übrig –
+  sonst 502). Bei geteiltem Ablauf geht auch „nur für diesen Termin“: Verbindung lösen, dann eigener Ablauf.
+- Wege dafür: Dienstplaner im Browser, Musik-App als Erweiterung und über den eigenen Server
+  (`GET /api/services/:id/agenda/bestand`, `PUT /api/services/:id/agenda/neu`). Der Schreib-Anschluss
+  `CtSchreiber` liest dazu auch eine Vorlage frisch (`vorlage`).
+
 ### Neu (Anmeldungen, A7-5)
 
 - **Rundmail** (Entwurf `a7-5-rundmail-v1`, abgenommen 22.10.2026): „✉ Rundmail“ im Reiter Anmeldungen – an alle

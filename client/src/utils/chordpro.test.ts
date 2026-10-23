@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
+  akkordVerschieben,
+  akkordeImText,
   flowEinfuegen,
   flowSetzen,
   parseChordPro,
@@ -244,5 +246,38 @@ describe('flowSetzen – Ablauf aus den Kärtchen in den Text (Lied-Editor L2)',
     expect(flowSetzen(LIED, [])).toBeNull();
     const mit = anwenden(LIED, ['Vers 1']);
     expect(flowSetzen(mit, ['Vers 1'])).toBeNull();
+  });
+});
+
+describe('akkordeImText (L5)', () => {
+  it('häufigste zuerst, Direktiven zählen nicht, jeder Akkord einmal', () => {
+    const text =
+      '{title: [X]}\n{comment: Vers}\n[G]Ein [D]Lied [G]heute\n{comment: Chorus}\n[Em7]la [G]la';
+    expect(akkordeImText(text)).toEqual(['G', 'D', 'Em7']);
+  });
+});
+
+describe('akkordVerschieben (L5-2)', () => {
+  /** Wendet die gelieferte Änderung an – so, wie der Editor es tut. */
+  function schieben(text: string, akkord: string, richtung: -1 | 1) {
+    const von = text.indexOf(akkord);
+    const a = akkordVerschieben(text, von, von + akkord.length, richtung);
+    if (!a) return null;
+    const neu = text.slice(0, a.from) + a.insert + text.slice(a.to);
+    expect(neu.slice(a.neuVon, a.neuVon + akkord.length)).toBe(akkord);
+    return neu;
+  }
+  it('tauscht mit dem Nachbarzeichen', () => {
+    expect(schieben('Du [E]bleibst', '[E]', 1)).toBe('Du b[E]leibst');
+    expect(schieben('Du [E]bleibst', '[E]', -1)).toBe('Du[E] bleibst');
+  });
+  it('springt über einen Nachbar-Akkord ganz hinweg', () => {
+    expect(schieben('a[E][F#m7]b', '[E]', 1)).toBe('a[F#m7][E]b');
+    expect(schieben('a[E][F#m7]b', '[F#m7]', -1)).toBe('a[F#m7][E]b');
+  });
+  it('nicht über den Zeilenrand', () => {
+    expect(schieben('Zeile eins\n[E]zwei', '[E]', -1)).toBeNull();
+    expect(schieben('eins[E]\nzwei', '[E]', 1)).toBeNull();
+    expect(schieben('[E]', '[E]', 1)).toBeNull();
   });
 });

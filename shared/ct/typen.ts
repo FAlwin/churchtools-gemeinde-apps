@@ -108,7 +108,13 @@ export interface CtAgendaItem {
    */
   isBeforeEvent?: boolean;
   /** Beim Lesen ein Objekt; beim Schreiben wird nur `text` als String gesendet. */
-  responsible?: { text?: string; persons?: { service?: string; person?: { title?: string } }[] };
+  responsible?: {
+    text?: string;
+    persons?: {
+      service?: string;
+      person?: { title?: string; initials?: string | null; imageUrl?: string | null };
+    }[];
+  };
   position?: number;
   song?: CtAgendaSong;
   /**

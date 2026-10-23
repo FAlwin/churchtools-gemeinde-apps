@@ -4,10 +4,10 @@
 // Bearbeiten-Liste. Unten Platz für das schwebende Plus (54 px + 16 px Rand, `SchwebePlus`): Sonst
 // läge es über dem Stift des letzten Punkts.
 .list {
-  padding: 12px 16px 76px;
+  padding: 0 0 76px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  background: var(--surface2);
 }
 
 // ── Bearbeiten-Modus ──

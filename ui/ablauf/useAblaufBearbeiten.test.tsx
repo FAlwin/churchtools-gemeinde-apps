@@ -123,8 +123,12 @@ describe('Auge in der Bearbeiten-Liste (E6-3b)', () => {
   it('die weggelassene Zeile steht grau mit Hinweis – wie in der Ansicht', () => {
     render(<Harness aktionen={aktionen()} items={[zeile(1, 'Begrüßung'), weg]} />);
     const liste = screen.getByTestId('liste');
-    const zeileWeg = screen.getByText('Abkündigungen').closest('div[class*="flowRow"]')!;
+    const zeileWeg = screen
+      .getByText('Abkündigungen')
+      .closest<HTMLElement>('div[class*="flowRow"]')!;
     expect(zeileWeg.className).toMatch(/weggelassen/);
+    // Kein festes Inline-`opacity` – das überschrieb das Blass-Machen der Klasse (seit E6-3b, gefunden in E6-O1).
+    expect(zeileWeg.style.opacity).toBe('');
     expect(liste.textContent?.match(/an diesem Termin weggelassen/g)).toHaveLength(1);
   });
 

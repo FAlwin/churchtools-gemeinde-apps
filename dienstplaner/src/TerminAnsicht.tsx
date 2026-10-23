@@ -11,7 +11,7 @@ import { datumText, kachel } from '@shared/ct/datum';
 import type { CtAgenda } from '@shared/ct/typen';
 import { gruppenName } from '@shared/dienstplan/plan';
 import { ladeTermin, type TerminDaten } from './ladeTermine';
-import { ladeAblauf, ladeMusikApp } from './ladeBeiwerk';
+import { ladeAblauf, ladeLiedAutoren, ladeMusikApp } from './ladeBeiwerk';
 import { ablaufAktionen } from './ablaufAktionen';
 import { ladeKopieVorschlaege, ladeVorlagen, WOCHEN_ZURUECK } from './ladeAnlegen';
 import { AblaufAnlegenFenster, type KopieVorschlag } from '@ui/ablauf/AblaufAnlegenFenster';
@@ -39,7 +39,7 @@ const GESPERRT =
 
 /**
  * **Die Termin-Ansicht** (Bauplan E6-1b, Entwurf `e6-entwurf.html` Bild 1): oben der Ablauf – derselbe Baustein wie in
- * der Musik-App (`ui/ablauf/AblaufListe`), die Dauer neben der Zeit (Alwin, 17.10.2026) –, darunter die Dienste des
+ * der Musik-App (`ui/ablauf/AblaufListe`; seit E6-O1 wie die ChurchTools-App, Dauer unter der Uhrzeit) –, darunter die Dienste des
  * Termins mit denselben Plätzen wie in „Planen“. ‹ › blättert durch die geladenen Termine.
  *
  * **Bearbeiten** (E6-3a, #645): Wer den Ablauf bearbeiten darf (`ablaufBearbeitbar`, dieselbe Regel wie die
@@ -74,6 +74,8 @@ export function TerminAnsicht({
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
   const [versuch, setVersuch] = useState(0);
   const [musikApp, setMusikApp] = useState<string | null>(null);
+  // Autoren für die Lied-Karte (E6-O1) – Beiwerk, je Ablauf eine Sammelabfrage; scheitert sie, fehlt nur der Autor.
+  const [autoren, setAutoren] = useState<Map<number, string>>(new Map());
   const [bearbeiten, setBearbeiten] = useState(false);
   // „Ablauf anlegen“ (E6-5a) und „Neu aufsetzen“ (E6-5b, `neu`): Fenster und was es braucht – erst beim Öffnen geladen.
   const [anlegen, setAnlegen] = useState<{
@@ -101,9 +103,30 @@ export function TerminAnsicht({
 
   const ablauf = zustand.art === 'fertig' ? zustand.ablauf : null;
   const zeilen = useMemo(
-    () => (ablauf?.items ?? []).map((i) => ablaufZeileAus(i, terminId, zeitzone)),
-    [ablauf, terminId, zeitzone],
+    () =>
+      (ablauf?.items ?? []).map((i) => {
+        const z = ablaufZeileAus(i, terminId, zeitzone);
+        const autor = i.song ? autoren.get(i.song.songId) : undefined;
+        return z.song && autor ? { ...z, song: { ...z.song, author: autor } } : z;
+      }),
+    [ablauf, terminId, zeitzone, autoren],
   );
+  // Lieder des Ablaufs: Autoren einmal je Stand nachladen (der Ablauf selbst nennt sie nicht, gemessen E6-O0).
+  const liedIds = useMemo(
+    () => (ablauf?.items ?? []).flatMap((i) => (i.song ? [i.song.songId] : [])).join(','),
+    [ablauf],
+  );
+  useEffect(() => {
+    let aktuell = true;
+    const ids = liedIds ? liedIds.split(',').map(Number) : [];
+    ladeLiedAutoren(ids).then(
+      (a) => aktuell && setAutoren(a),
+      () => aktuell && setAutoren(new Map()),
+    );
+    return () => {
+      aktuell = false;
+    };
+  }, [liedIds]);
   const dienste = useMemo(
     () => [...start.dienste.values()].map((d) => ({ id: d.id, name: d.name })),
     [start.dienste],
@@ -113,7 +136,7 @@ export function TerminAnsicht({
     aktiv: bearbeiten,
     bereit: ablauf !== null,
     items: zeilen,
-    // Dieselbe Uhrzeit wie die Linie „Beginn“ in der Ansicht (`s.uhrzeit` unten).
+    // Dieselbe Uhrzeit wie der Balken „Beginn“ in der Ansicht (`s.uhrzeit` unten).
     beginn: zustand.art === 'fertig' ? (zustand.daten.plan.spalten[0]?.uhrzeit ?? '') : '',
     abgeschlossen: ablauf?.isLocked === true,
     sperrHinweis: GESPERRT,
@@ -339,9 +362,9 @@ export function TerminAnsicht({
         ) : zeilen.length === 0 ? (
           <p className={styles.hinweis}>Der Ablauf ist noch leer.</p>
         ) : (
-          // Auf grauem Grund wie in der Musik-App – sonst stünden die Karten-Zeilen weiß auf weiß.
+          // Die Liste wie die ChurchTools-App (E6-O1): weiß mit feinen Linien, bis an den Rand der Karte.
           <div className={styles.ablaufGrund}>
-            <AblaufListe zeilen={zeilen} beginn={s.uhrzeit} dauerNebenZeit />
+            <AblaufListe zeilen={zeilen} beginn={s.uhrzeit} />
           </div>
         )}
       </section>

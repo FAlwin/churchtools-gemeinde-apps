@@ -14,9 +14,10 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 const eingabe = vi.hoisted(() => ({
   insert: vi.fn(),
   aendern: vi.fn(),
-  appendChord: vi.fn(),
   undo: vi.fn(),
   redo: vi.fn(),
+  markieren: vi.fn(),
+  stelle: vi.fn(() => null),
 }));
 vi.mock('./ChordProInput', async () => {
   const { forwardRef, useImperativeHandle } = await import('react');
@@ -213,6 +214,34 @@ describe('ChordEditor – Ablauf und Weiterschalt-Punkt', () => {
     expect(within(ablauf).getByText('Refrain').closest('li')?.textContent).toContain(
       'fehlt im Text',
     );
+  });
+});
+
+/** Akkorde einfügen (Lied-Editor L5, 22.10.2026): Leiste und „Anderer Akkord“ setzen `[…]` an den Cursor. */
+describe('ChordEditor – Akkorde einfügen', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('Akkord der Tonart antippen fügt ihn ein – Tonart aus der Angabe des Aufrufers', () => {
+    zeige({ tonart: 'G', mitVersionsname: false });
+    fireEvent.click(screen.getByRole('button', { name: 'Em' }));
+    expect(eingabe.insert).toHaveBeenCalledWith('[Em]');
+  });
+
+  it('ohne Angabe gilt die Tonart aus {key}', () => {
+    zeige({ initialText: '{key: F}\n[F]Zeile', mitVersionsname: false });
+    expect(screen.getByText('Tonart F')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Bb' }));
+    expect(eingabe.insert).toHaveBeenCalledWith('[Bb]');
+  });
+
+  it('„Anderer Akkord“: eintippen, einfügen – das Fenster schließt, der Akkord steht in „Im Lied“', () => {
+    zeige({ tonart: 'E', mitVersionsname: false });
+    fireEvent.click(screen.getByRole('button', { name: 'Anderer Akkord' }));
+    fireEvent.change(screen.getByPlaceholderText(/Em7/), { target: { value: 'gsus4' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Einfügen' }));
+    expect(eingabe.insert).toHaveBeenCalledWith('[Gsus4]');
+    expect(screen.queryByPlaceholderText(/Em7/)).toBeNull();
+    expect(screen.getByText('Im Lied').parentElement!.textContent).toContain('Gsus4');
   });
 });
 

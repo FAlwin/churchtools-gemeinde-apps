@@ -486,7 +486,17 @@ die Text-Karte bleibt gemountet). L2 = `AblaufKarte` (Kärtchen ↔ `{flow}` üb
 Editor, Rückgängig inklusive; die Flow-Zeile blendet `ChordProInput` aus; breit eingeklappt mit Kurzform und
 Marke „Eigener Ablauf“, Ziehen mit `CSS.Translate` – `Transform` streckt verschieden breite Kärtchen). L3 = Akkord-Kärtchen, Teil-Bänder
 (`abschnittsKopf` – EINE Regel mit `parseChordPro`) und Pedal-Linie als Ersetzungen mit `atomicRanges`, Schalter
-„ChordPro-Text“ (Compartment); am echten iPad vor dem Merge geprüft (TF-EINST-15). Liedinfo kommt in L4 nur aus ChurchTools;
+„ChordPro-Text“ (Compartment); am echten iPad vor dem Merge geprüft (TF-EINST-15). L5-1 = `AkkordLeiste` (Tonart über
+`tonartAkkorde`, „Im Lied“ über `akkordeImText`, Gedrückthalten = Varianten) und `AkkordFenster` (Eintippen über
+`akkordLesen`; Akkord-Grammatik EINMAL in `akkordTeile`, auch fürs Transponieren). L5-2 = Tipp aufs Kärtchen →
+`AkkordMenue` (Schieben über `akkordVerschieben`, Rahmen über das Feld `aktivFeld` in `ChordProInput` – eine
+CodeMirror-Markierung um ein ersetztes Kärtchen wird nicht gezeichnet; `AkkordWidget.ignoreEvent` lässt
+`mousedown` durch; Klammer-Grammatik der Kärtchen EINMAL in `AKKORD_KLAMMER`). L5-3 = **Schreibansicht** (`schreiben` = Tastatur offen
+UND Fokus im Text): Ablauf, Fassung, Umschalter weg, `AkkordLeiste kompakt` in der Werkzeugleiste („Im Lied“ als
+Ausklappmenü, darin „Anderer Akkord“ – sonst wird die Zeile zu eng), endet erst mit Tastatur-zu. Tastaturhöhe EINMAL in `ui/fenster/useTastaturOffen.ts` (`tastaturHoehe`,
+gemessen gegen die beim Tippen eingefrorene `--app-h` – iOS verkleinert manchmal das Fenster; auch für
+`useOverlayKeyboardInset` und `useKeyboardInsets`); Knöpfe um den Text mit `onMouseDown`-`preventDefault`, damit sie
+dem Text den Fokus (und damit die Tastatur) nicht nehmen. Liedinfo kommt in L4 nur aus ChurchTools;
 `{key}` bleibt als notierte Tonart. Zieh-Einstellungen aller Listen: `ui/bedienung/useZiehSensoren`. Im
 Scroll-Modus kein Spalten-Schalter (`ohneSpalten`). Welche
 eigene Ebene gilt, entscheidet für Blättern UND Scrollen `pageKeys.eigenerSchluessel`.

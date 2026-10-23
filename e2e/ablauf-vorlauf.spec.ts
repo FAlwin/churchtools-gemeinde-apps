@@ -11,7 +11,7 @@ import {
  * im Ablauf, ChurchTools rechnete ab 10:00 – der eigentliche Beginn landete bei 11:00.
  *
  * Geprüft wird der ganze Weg: Schalter im Dialog → eigener Server → ChurchTools (Stub) bekommt NUR
- * die Grenze → der neu geladene Ablauf zeigt die Linie „Beginn". Als E2E, weil die Teile einzeln
+ * die Grenze → der neu geladene Ablauf zeigt den Balken „Beginn". Als E2E, weil die Teile einzeln
  * getestet sind, das Zusammenspiel (Speichern, Neuladen, Linie in der Bearbeiten-Liste) aber nicht.
  *
  * Der Stub ist für alle Tests derselbe Prozess – der Test schaltet den Vorlauf am Ende wieder aus.

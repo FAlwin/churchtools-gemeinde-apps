@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { syncAppHeight } from './appHeight';
+import { tastaturHoehe } from './useTastaturOffen';
 
 /**
  * Hält einen Vollbild-Overlay über der iOS-Tastatur frei (#207).
@@ -32,7 +33,7 @@ export function useOverlayKeyboardInset(): (el: HTMLElement | null) => void {
     const vv = window.visualViewport;
     if (!vv || !el) return;
     const apply = () => {
-      const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      const kb = tastaturHoehe(vv);
       el.style.setProperty('--kb', `${kb}px`);
       if (window.scrollY !== 0 || vv.offsetTop !== 0) window.scrollTo(0, 0);
     };

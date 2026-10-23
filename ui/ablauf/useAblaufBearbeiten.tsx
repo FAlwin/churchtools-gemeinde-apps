@@ -73,7 +73,7 @@ export interface AblaufBearbeitenOptionen<T extends AblaufZeile> {
   bereit: boolean;
   /** Der Server-Stand (auch mit „entfernt"-Platzhaltern – die gehören nur in die Ansicht). */
   items: readonly T[];
-  /** Uhrzeit des Beginns für die Linie „Beginn" (#423). */
+  /** Uhrzeit des Beginns für den Balken „Beginn" (#423). */
   beginn: string;
   /** In ChurchTools abgeschlossen: nichts ändern, stattdessen `sperrHinweis` zeigen. */
   abgeschlossen: boolean;
@@ -234,7 +234,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
     });
   }
 
-  // Linie „Beginn" in der Bearbeiten-Liste – dieselbe Regel wie in der Ansicht (#423).
+  // Balken „Beginn" in der Bearbeiten-Liste – dieselbe Regel wie in der Ansicht (#423).
   const beginnBeiBearbeiten = beginnStelle(localItems);
 
   const anleitung = o.speichertGerade ? (

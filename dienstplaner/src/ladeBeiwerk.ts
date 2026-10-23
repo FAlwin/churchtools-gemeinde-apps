@@ -60,3 +60,23 @@ export async function ladeMusikApp(): Promise<string | null> {
   );
   return musik ? `${ctBasis()}/ccm/${String(musik.shorty)}/` : null;
 }
+
+/**
+ * Die Autoren der Lieder eines Ablaufs (E6-O1, für die Lied-Karte) – **eine** Abfrage für alle: `GET /songs?ids[]=…`
+ * (gemessen E6-O0: liefert genau die gewünschten, ~135 ms). Der Ablauf selbst nennt den Autor nicht. Beiwerk: Ohne
+ * Lieder gar keine Abfrage; was nicht als Liste kommt, wirft – die Karte steht dann ohne Autor da.
+ */
+export async function ladeLiedAutoren(songIds: readonly number[]): Promise<Map<number, string>> {
+  const ids = [...new Set(songIds)];
+  if (ids.length === 0) return new Map();
+  const q = ids.map((id) => `ids[]=${id}`).join('&');
+  const liste = await ctDaten<unknown>(`/songs?${q}`);
+  if (!Array.isArray(liste)) throw new ApiError(502, 'Lieder kamen nicht als Liste.');
+  const autoren = new Map<number, string>();
+  for (const s of liste as { id?: unknown; author?: unknown }[]) {
+    if (typeof s.id === 'number' && typeof s.author === 'string' && s.author.trim()) {
+      autoren.set(s.id, s.author.trim());
+    }
+  }
+  return autoren;
+}

@@ -440,3 +440,105 @@ ein Kärtchen so, wie man es erwartet – ein Kärtchen verschwindet immer ganz 
 - **Historie:** Neuer Lied-Editor, Scheibe L3 (22.10.2026) – vor dem Mergen von L3 am echten iPad zu prüfen
 
 </details>
+
+### TF-EINST-16 · Lied-Editor: Akkorde einfügen mit der Leiste – am echten iPad
+
+**Das brauchst du:** Ein iPad mit Bildschirmtastatur, das Recht, Versionen anzulegen, und ein Testlied mit Tonart.
+**Auf Staging nicht speichern** – Staging hängt am echten ChurchTools.
+
+**Das muss passieren:** Unter der Werkzeugleiste stehen die Akkorde der Tonart (in E: E, F#m, G#m, A, B, C#m),
+daneben „Im Lied“ und „Anderer Akkord“. Ein Tipp setzt den Akkord an die Cursorstelle; die Tastatur bleibt dabei
+offen, und man kann direkt weiterschreiben.
+
+1. Lied öffnen → Version bearbeiten. In den Text tippen (Tastatur geht auf), dann in der Leiste **A** antippen:
+   Das Kärtchen „A“ steht an der Cursorstelle, **die Tastatur bleibt offen**, weitertippen geht dahinter.
+2. **E** in der Leiste **gedrückt halten**: Es erscheinen „Varianten von E“ (Em, E7, Em7, Esus4 …), kein
+   iOS-Menü (Kopieren/Nachschlagen). **Esus4** antippen → gesetzt. Nur E selbst wurde nicht gesetzt.
+3. **Anderer Akkord** → `em7` eintippen → Eingabetaste: Das Fenster schließt, „Em7“ steht im Text und
+   vorne unter **Im Lied**. Kein zusätzlicher Zeilenumbruch.
+4. **Anderer Akkord** → G, sus4, /B antippen: Die Vorschau zeigt „Gsus4/B“; **Einfügen** ist ohne Scrollen zu
+   sehen.
+5. Etwas Unlesbares eintippen (`Vers`) → rot, „Einfügen“ gesperrt.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `client/src/components/AkkordLeiste.tsx`, `client/src/components/AkkordFenster.tsx`, `client/src/components/ChordEditor.tsx`, `client/src/utils/transpose.ts`, `client/src/utils/chordpro.ts`
+- **Automatisiert:** weitgehend – `transpose.test.ts` (`tonartAkkorde`, `akkordLesen`, `akkordTeile`),
+  `chordpro.test.ts` (`akkordeImText`), `AkkordLeiste.test.tsx` (Gruppen, Gedrückthalten mit Fake-Timern),
+  `AkkordFenster.test.tsx`, `ChordEditor.test.tsx` (Tonart aus `{key}`), `e2e/editor-akkorde.spec.ts`
+  (antippen + weitertippen, eintippen + Eingabetaste ohne Zeilenumbruch, Gedrückthalten). **Von Hand bleibt das
+  echte iPad**: Tastatur bleibt offen, Gedrückthalten mit dem Finger ohne iOS-Menü.
+- **Historie:** Neuer Lied-Editor, Scheibe L5-1 (22.10.2026), Entwurf Variante A; Alwin: „Akkorde einfügen ist
+  noch nicht so intuitiv“
+
+</details>
+
+### TF-EINST-17 · Lied-Editor: Akkord-Kärtchen antippen – am echten iPad
+
+**Das brauchst du:** Ein iPad, das Recht, Versionen anzulegen, und ein Testlied mit Akkorden. **Auf Staging nicht
+speichern** – Staging hängt am echten ChurchTools.
+
+**Das muss passieren:** Ein Tipp auf ein Akkord-Kärtchen setzt **nicht** den Cursor, sondern öffnet darunter ein
+kleines Menü (‹ › Ändern Entfernen); das Kärtchen ist blau umrahmt. Die Tastatur geht dabei nicht auf und nicht zu.
+
+1. Lied öffnen → Version bearbeiten. Mit dem Finger auf ein Kärtchen (z. B. „A“) tippen: Menü erscheint, das
+   Kärtchen ist umrahmt, **kein Cursor** springt davor oder dahinter, kein iOS-Menü (Auswählen/Einsetzen).
+2. Dreimal **›** antippen: Das Kärtchen wandert Buchstabe für Buchstabe nach rechts, Menü und Rahmen gehen mit.
+   Steht ein anderer Akkord direkt daneben, springt es über ihn hinweg.
+3. **Rückgängig** → ein Schritt zurück.
+4. Kärtchen antippen → in der Leiste **C#m** antippen: Das Kärtchen wird zu C#m (kein zweiter Akkord).
+5. Kärtchen antippen → **Ändern** → Art „7“ → **Übernehmen**. Kärtchen antippen → **Entfernen**.
+6. Neben das Menü in den Text tippen: Menü zu, Cursor steht dort.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `client/src/components/ChordProInput.tsx`, `client/src/components/AkkordMenue.tsx`, `client/src/components/ChordEditor.tsx`, `client/src/utils/chordpro.ts`
+- **Automatisiert:** weitgehend – `chordpro.test.ts` (`akkordVerschieben`: Nachbarzeichen, Nachbar-Akkord,
+  Zeilenrand), `e2e/editor-akkord-menue.spec.ts` (schieben + Menü wandert mit + Rahmen, Rückgängig, Entfernen,
+  Ändern, Leiste und „Anderer Akkord“ ersetzen, Zeilenrand gesperrt). **Von Hand bleibt das echte iPad**: Auf
+  dem Touchscreen könnte iOS beim Tipp aufs Kärtchen selbst einen Cursor setzen oder die Tastatur öffnen, bevor
+  der Editor den Tipp sieht – das lässt sich am Mac nicht nachstellen.
+- **Historie:** Neuer Lied-Editor, Scheibe L5-2 (23.10.2026), Entwurf Variante A
+
+</details>
+
+### TF-EINST-18 · Lied-Editor: Schreibansicht bei offener Tastatur – am echten iPad
+
+**Das brauchst du:** Ein iPad (quer und hochkant) und gern ein Handy, das Recht, Versionen anzulegen, ein Testlied.
+**Auf Staging nicht speichern** – Staging hängt am echten ChurchTools.
+
+**Das muss passieren:** Sobald du in den Liedtext tippst und die Tastatur aufgeht, verschwinden Ablauf, Fassung und
+„ChordPro-Text“. Format, die Akkorde der Tonart, **Im Lied ▾** und Rückgängig stehen in einer Zeile über dem
+Text – mit Luft zwischen den Knöpfen, nichts gequetscht. Über der Tastatur ist Platz für deutlich mehr als zwei Zeilen. Tastatur zu → alles wie vorher.
+
+1. Lied öffnen → Version bearbeiten → in den Text tippen. Die Ansicht räumt auf, die eine Zeile passt am iPad quer
+   ganz (nichts abgeschnitten).
+2. **Im Lied** antippen → die übrigen Akkorde des Lieds klappen auf; einen antippen → er steht an der Cursorstelle,
+   die Tastatur bleibt offen. Noch einmal **Im Lied** → zu. Unten im Menü: **Anderer Akkord** → das Fenster.
+3. **Format** antippen → das Menü öffnet, die Tastatur bleibt offen; „Weiterschalt-Punkt“ wählen.
+4. Ein Akkord-Kärtchen **direkt über der Tastatur** antippen: Das Menü klappt **nach oben** auf, nicht unter die
+   Tastatur.
+5. Tastatur schließen (Taste unten rechts): Ablauf und Fassung sind wieder da. Ins Feld **Fassung** tippen:
+   Die Ansicht bleibt, wie sie ist (nur der Liedtext löst die Schreibansicht aus).
+6. Mit angesteckter Hardware-Tastatur: keine Schreibansicht (es ist ja Platz).
+7. **Mehrmals hintereinander** (Tastatur zu, wieder in den Text tippen; auch nach Drehen des iPads und nach „Im
+   Lied“/„Format“): Die eine Zeile kommt **jedes Mal** – nicht nur manchmal.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `client/src/components/ChordEditor.tsx`, `client/src/components/AkkordLeiste.tsx`, `client/src/components/AkkordMenue.tsx`, `client/src/components/ChordProInput.tsx`, `ui/fenster/useTastaturOffen.ts`
+- **Automatisiert:** weitgehend – `useTastaturOffen.test.tsx` (Formel, Schwelle für die Hardware-Tastatur-Leiste),
+  `e2e/editor-schreiben.spec.ts` mit nachgestellter Tastatur (`visualViewport` schrumpft): Ablauf/Fassung weg, eine
+  Zeile, Platz für den Text, „Im Lied“ auf/zu/einfügen, Menü klappt über das Kärtchen, iOS verkleinert das
+  Fenster statt die Tastatur darüberzulegen, kurzer Fokusverlust, Tastatur für die Fassung, am Handy eine Zeile
+  zum Wischen statt Umbruch. **Von Hand bleibt das echte
+  iPad**: ob Format/Rückgängig/„Im Lied“ die Tastatur wirklich offen lassen, Hardware-Tastatur.
+- **Historie:** Alwin am iPad, 23.10.2026 („das Bearbeitungsfenster ist bei aufgeklappter Tastatur deutlich zu
+  klein“), Entwurf A mit „Im Lied“ als Ausklappmenü; Lied-Editor L5-3. Nachtest am selben Abend: „manchmal
+  funktioniert's mit der einen Zeile, manchmal nicht“ → gegen die eingefrorene App-Höhe messen, Ansicht bis
+  Tastatur-zu halten
+
+</details>

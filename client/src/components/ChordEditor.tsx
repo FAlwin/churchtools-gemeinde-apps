@@ -1,15 +1,19 @@
-import { useEffect, useRef, useState } from 'react';
-import { ChordProInput, type ChordProHandle } from './ChordProInput';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ChordProInput, type AkkordAntippen, type ChordProHandle } from './ChordProInput';
 import { PdfPreview } from './PdfPreview';
 import { Icon } from '@ui/icons/icons';
 import { Spinner } from './Spinner';
 import { useOverlayKeyboardInset } from '@ui/fenster/useOverlayKeyboardInset';
 import styles from './ChordEditor.module.scss';
 import { shiftKey } from '../utils/transpose';
-import { flowSetzen } from '../utils/chordpro';
+import { akkordVerschieben, flowSetzen, parseMetadata } from '../utils/chordpro';
+import { AkkordMenue } from './AkkordMenue';
+import { AkkordLeiste } from './AkkordLeiste';
+import { AkkordFenster } from './AkkordFenster';
 import { AblaufKarte } from './AblaufKarte';
 import { getLiedansicht } from '../utils/devicePrefs';
 import { useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
+import { useTastaturOffen } from '@ui/fenster/useTastaturOffen';
 import { Segment } from '@ui/bedienung/Segment';
 
 interface ChordEditorProps {
@@ -37,22 +41,6 @@ interface ChordEditorProps {
   kapo?: number;
 }
 
-// Grundtöne wie im ChurchTools-SongSelect-Editor (mit #/b).
-const CHORD_ROOTS = ['Ab', 'A', 'Bb', 'B', 'C', 'C#', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'Gb', 'G'];
-// Akkord-Arten für den Baukasten (Dur = kein Zusatz). Deckt die in Worship-Charts üblichen
-// Formen ab – inkl. 7er/4er-Familie (7, m7, maj7, sus4/sus2) und Slash-Bass über die Bass-Reihe.
-const CHORD_QUALITIES: { tag: string; label: string }[] = [
-  { tag: '', label: 'Dur' },
-  { tag: 'm', label: 'm' },
-  { tag: '7', label: '7' },
-  { tag: 'm7', label: 'm7' },
-  { tag: 'maj7', label: 'maj7' },
-  { tag: '6', label: '6' },
-  { tag: 'sus2', label: 'sus2' },
-  { tag: 'sus4', label: 'sus4' },
-  { tag: 'dim', label: 'dim' },
-  { tag: 'aug', label: 'aug' },
-];
 // Format-Bausteine (echte ChordPro-Direktiven, chordpro.org) mit deutscher Erklärung.
 // `value` = mit Doppelpunkt-Wert. Hinweis: comment, flow, title/artist/key/tempo/time und `----` wirken in
 // der App-Vorschau; die übrigen sind gültiges ChordPro und werden gespeichert (SongSelect/andere Tools).
@@ -77,9 +65,8 @@ const FORMATS: { tag: string; label: string; value: boolean; art?: 'trenner' }[]
 /** Was am schmalen Bildschirm zu sehen ist – breit stehen Text und Vorschau nebeneinander. */
 type Bereich = 'text' | 'ablauf' | 'vorschau';
 
-/** Vollbild-Editor für eine ChordPro-Version: CodeMirror mit Syntax-Farben, Eingabe-Dropdowns
- *  (Akkorde/Format), zuletzt genutzte Akkorde, Rückgängig/Wiederholen und eine „wie gedruckt"-
- *  PDF-Vorschau mit Transponieren.
+/** Vollbild-Editor für eine ChordPro-Version: CodeMirror mit Syntax-Farben, Akkord-Leiste (L5),
+ *  Format-Menü, Rückgängig/Wiederholen und eine „wie gedruckt"-PDF-Vorschau mit Transponieren.
  *
  *  **Aufbau seit L1 (neuer Lied-Editor, 22.10.2026, Entwurf C):** Kopf im ChurchTools-Look (weiß,
  *  Titel + Fassung + Tonart), darunter Karten – breit Text links und Vorschau rechts, schmal ein
@@ -101,17 +88,38 @@ export function ChordEditor({
   const [text, setText] = useState(initialText);
   const [name, setName] = useState(initialName);
   const [semitones, setSemitones] = useState(0);
-  const [recent, setRecent] = useState<string[]>([]); // nur in dieser Sitzung
-  const [openMenu, setOpenMenu] = useState<'chord' | 'format' | null>(null);
-  // Zuletzt gesetzter Akkord (für Zusatz-/Bass-Chips, die live anhängen) – nur zum Mitführen im
-  // „Zuletzt"-Verlauf; das eigentliche Anhängen liest der Editor direkt aus dem Dokument.
-  const buildingRef = useRef('');
+  const [zuletzt, setZuletzt] = useState<string[]>([]); // nur in dieser Sitzung
+  const [openMenu, setOpenMenu] = useState<'format' | null>(null);
+  // „Anderer Akkord“ (neu) oder „Ändern“ eines angetippten Kärtchens (`ziel` = seine Stelle im Text).
+  const [akkordFenster, setAkkordFenster] = useState<{ ziel?: AkkordAntippen } | null>(null);
+  // Angetipptes Akkord-Kärtchen (L5-2): Menü ← → Ändern Entfernen.
+  const [menue, setMenue] = useState<AkkordAntippen | null>(null);
+  const menueZu = useCallback(() => setMenue(null), []);
+  // Das angetippte Kärtchen umrahmen, solange sein Menü offen ist.
+  const markiert = menue ? `${menue.von}-${menue.bis}` : '';
+  useEffect(() => {
+    const [von, bis] = markiert.split('-').map(Number);
+    editorRef.current?.markieren(markiert ? { von, bis } : null);
+  }, [markiert]);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [bereich, setBereich] = useState<Bereich>('text');
   // L3: Kärtchen und Bänder – oder der rohe ChordPro-Text für alle, die ihn direkt bearbeiten wollen.
   const [roh, setRoh] = useState(false);
   const wide = useMedienAbfrage('(min-width: 768px)', true);
+  // **Schreibansicht** (23.10.2026, Alwin am iPad: „das Bearbeitungsfenster ist bei aufgeklappter Tastatur deutlich
+  // zu klein“, Entwurf A): Solange im Text getippt wird, verschwinden Ablauf, Fassung und Umschalter, und Werkzeuge
+  // und Akkorde rücken in EINE Zeile. Tastatur zu → alles wie vorher.
+  const tastaturOffen = useTastaturOffen();
+  const [textFokus, setTextFokus] = useState(false);
+  // Beginnt, wenn im Text getippt wird, und endet erst, wenn die Tastatur zugeht – nicht schon, wenn der Text kurz
+  // den Fokus verliert (ein Tipp auf einen Knopf kann ihn unter iOS nehmen, während die Tastatur offen bleibt; sonst
+  // spränge die Ansicht mitten im Tippen zurück).
+  const [schreiben, setSchreiben] = useState(false);
+  useEffect(() => {
+    if (!tastaturOffen) setSchreiben(false);
+    else if (textFokus) setSchreiben(true);
+  }, [tastaturOffen, textFokus]);
   const editorRef = useRef<ChordProHandle>(null);
   // Die Vorschau zeigt das Blatt so, wie es im Liederheft dieses Geräts erscheint (#607).
   const [rolle] = useState(() => getLiedansicht() === 'scrollen');
@@ -144,31 +152,33 @@ export function ChordEditor({
     return () => document.removeEventListener('pointerdown', onDown);
   }, [openMenu]);
 
-  // „Zuletzt genutzt" (Chips in der Werkzeugleiste): 1-Tipp-Wiederverwendung ganzer Akkorde.
-  function rememberRecent(chord: string, replaces?: string) {
-    setRecent((prev) => [chord, ...prev.filter((c) => c !== chord && c !== replaces)].slice(0, 8));
+  /**
+   * Akkord an der Cursorstelle einfügen (L5) – und für „Im Lied“ vorne merken. Ist ein Kärtchen angetippt (L5-2),
+   * wird stattdessen DIESES ersetzt (wie im Entwurf: Kärtchen antippen, anderen Akkord in der Leiste wählen).
+   */
+  function akkordSetzen(akkord: string, ziel: AkkordAntippen | null = menue) {
+    if (ziel) {
+      editorRef.current?.aendern(ziel.von, ziel.bis, `[${akkord}]`);
+      setMenue(null);
+    } else editorRef.current?.insert(`[${akkord}]`);
+    setZuletzt((z) => [akkord, ...z.filter((a) => a !== akkord)].slice(0, 8));
   }
-  // Ganzer Akkord aus einem „Zuletzt"-Chip → direkt einfügen und Menü schließen.
-  function pickChord(chord: string) {
-    editorRef.current?.insert(`[${chord}]`);
-    buildingRef.current = chord;
-    rememberRecent(chord);
-    setOpenMenu(null);
+  /** Das angetippte Kärtchen eine Stelle weiter – das Menü wandert mit (mehrmals tippen geht). */
+  function schieben(richtung: -1 | 1) {
+    if (!menue) return;
+    const a = akkordVerschieben(text, menue.von, menue.bis, richtung);
+    if (!a) return;
+    editorRef.current?.aendern(a.from, a.to, a.insert);
+    const ort = editorRef.current?.stelle(a.neuVon);
+    setMenue({
+      ...menue,
+      von: a.neuVon,
+      bis: a.neuVon + (menue.bis - menue.von),
+      ...(ort ?? {}),
+    });
   }
-  // Grundton antippen → sofort `[Root]` einfügen (Dur = 1 Tipp). Menü bleibt offen zum Verfeinern.
-  function insertRoot(root: string) {
-    editorRef.current?.insert(`[${root}]`);
-    buildingRef.current = root;
-    rememberRecent(root);
-  }
-  // Zusatz (m, 7, sus4 …) oder Bass (/X) an den zuletzt gesetzten Akkord anhängen.
-  function appendPart(suffix: string) {
-    editorRef.current?.appendChord(suffix);
-    const prev = buildingRef.current;
-    if (!prev) return;
-    buildingRef.current = prev + suffix;
-    rememberRecent(buildingRef.current, prev);
-  }
+  // Die Tonart, in der die Akkorde stehen: vom Aufrufer, sonst aus `{key}` des Texts.
+  const textTonart = tonart ?? parseMetadata(text).key;
   /** Ablauf-Karte (L2): die Kärtchen-Reihenfolge als EINE Änderung am Text – Rückgängig inklusive. */
   function ablaufSetzen(eintraege: string[]) {
     const a = flowSetzen(text, eintraege);
@@ -183,6 +193,24 @@ export function ChordEditor({
     if (f.value) editorRef.current?.insert(`{${f.tag}: }`, { block: true, caretBack: 1 });
     else editorRef.current?.insert(`{${f.tag}}`, { block: true });
   }
+
+  // Knöpfe rund um den Text nehmen ihm den Fokus nicht – sonst ginge am iPad die Tastatur zu (und die
+  // Schreibansicht mit ihr), bevor der Knopf überhaupt wirkt.
+  const ohneFokus = (e: React.MouseEvent) => e.preventDefault();
+  const akkordLeiste = (
+    <AkkordLeiste
+      kompakt={schreiben}
+      tonart={textTonart}
+      text={text}
+      zuletzt={zuletzt}
+      waehlen={akkordSetzen}
+      anderer={() => {
+        // Mit angetipptem Kärtchen ersetzt auch „Anderer Akkord“ dieses Kärtchen – wie die Leiste.
+        setAkkordFenster({ ziel: menue ?? undefined });
+        setMenue(null);
+      }}
+    />
+  );
 
   return (
     <div ref={overlayRef} className={styles.overlay}>
@@ -228,7 +256,7 @@ export function ChordEditor({
 
       {error && <div className={styles.error}>{error}</div>}
 
-      {!wide && (
+      {!wide && !schreiben && (
         <Segment
           verbunden
           className={styles.umschalter}
@@ -248,13 +276,15 @@ export function ChordEditor({
         <div
           className={`${styles.links}${showEditor || showAblauf ? '' : ' ' + styles.paneHidden}`}
         >
-          {showAblauf && <AblaufKarte text={text} setzen={ablaufSetzen} kompakt={!wide} />}
+          {showAblauf && !schreiben && (
+            <AblaufKarte text={text} setzen={ablaufSetzen} kompakt={!wide} />
+          )}
           {/* Die Text-Karte bleibt immer gemountet (Verlauf/Cursor erhalten), nur ausgeblendet. */}
           <section
             aria-label="Text"
             className={`${styles.karte} ${styles.textKarte}${showEditor ? '' : ' ' + styles.paneHidden}`}
           >
-            {mitVersionsname && (
+            {mitVersionsname && !schreiben && (
               <div className={styles.kartenKopf}>
                 <label className={styles.fassung} htmlFor="versionName">
                   Fassung
@@ -273,60 +303,14 @@ export function ChordEditor({
             )}
 
             {/* Eingabe-Toolbar */}
-            <div className={styles.toolbar} ref={toolbarRef}>
+            <div
+              className={`${styles.toolbar}${schreiben ? ' ' + styles.schreiben : ''}`}
+              ref={toolbarRef}
+            >
               <div className={styles.dd}>
                 <button
                   className={styles.ddBtn}
-                  onClick={() => setOpenMenu((m) => (m === 'chord' ? null : 'chord'))}
-                  aria-expanded={openMenu === 'chord'}
-                >
-                  Akkord ▾
-                </button>
-                {openMenu === 'chord' && (
-                  <div className={`${styles.ddPanel} ${styles.cbPanel}`}>
-                    <div className={styles.cbLbl}>Grundton – tippen fügt sofort ein</div>
-                    <div className={styles.cbGrid}>
-                      {CHORD_ROOTS.map((r) => (
-                        <button
-                          key={r}
-                          className={`${styles.cbChip} ${styles.cbRoot}`}
-                          onClick={() => insertRoot(r)}
-                        >
-                          {r}
-                        </button>
-                      ))}
-                    </div>
-                    <div className={styles.cbLbl}>Zusatz – hängt an den letzten Akkord an</div>
-                    <div className={styles.cbGrid}>
-                      {CHORD_QUALITIES.filter((q) => q.tag).map((q) => (
-                        <button
-                          key={q.tag}
-                          className={styles.cbChip}
-                          onClick={() => appendPart(q.tag)}
-                        >
-                          {q.label}
-                        </button>
-                      ))}
-                    </div>
-                    <div className={styles.cbLbl}>Bass (Slash-Akkord, z. B. A/C#)</div>
-                    <div className={styles.cbGrid}>
-                      {CHORD_ROOTS.map((r) => (
-                        <button
-                          key={r}
-                          className={styles.cbChip}
-                          onClick={() => appendPart(`/${r}`)}
-                        >
-                          /{r}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className={styles.dd}>
-                <button
-                  className={styles.ddBtn}
+                  onMouseDown={ohneFokus}
                   onClick={() => setOpenMenu((m) => (m === 'format' ? null : 'format'))}
                   aria-expanded={openMenu === 'format'}
                 >
@@ -335,7 +319,12 @@ export function ChordEditor({
                 {openMenu === 'format' && (
                   <div className={`${styles.ddPanel} ${styles.ddPanelWide}`}>
                     {FORMATS.map((f) => (
-                      <button key={f.tag} className={styles.ddFormat} onClick={() => pickFormat(f)}>
+                      <button
+                        key={f.tag}
+                        className={styles.ddFormat}
+                        onMouseDown={ohneFokus}
+                        onClick={() => pickFormat(f)}
+                      >
                         <span className={styles.ddFormatLabel}>{f.label}</span>
                         <code className={styles.ddFormatTag}>{f.tag}</code>
                       </button>
@@ -343,30 +332,24 @@ export function ChordEditor({
                   </div>
                 )}
               </div>
+              {schreiben && akkordLeiste}
 
-              {recent.length > 0 && (
-                <div className={styles.tbRecent}>
-                  <span className={styles.tbRecentLbl}>Zuletzt</span>
-                  {recent.slice(0, 6).map((c) => (
-                    <button key={c} className={styles.recentChip} onClick={() => pickChord(c)}>
-                      {c}
-                    </button>
-                  ))}
-                </div>
+              {!schreiben && (
+                <button
+                  type="button"
+                  className={`${styles.rohKnopf}${roh ? ' ' + styles.rohAn : ''}`}
+                  aria-pressed={roh}
+                  onClick={() => setRoh((r) => !r)}
+                  title="Den Text so zeigen, wie er gespeichert wird – mit [Akkorden] und {Angaben}"
+                >
+                  ChordPro-Text
+                </button>
               )}
-              <button
-                type="button"
-                className={`${styles.rohKnopf}${roh ? ' ' + styles.rohAn : ''}`}
-                aria-pressed={roh}
-                onClick={() => setRoh((r) => !r)}
-                title="Den Text so zeigen, wie er gespeichert wird – mit [Akkorden] und {Angaben}"
-              >
-                ChordPro-Text
-              </button>
               {/* Rückgängig/Wiederholen gehören zum Text – hier statt im Kopf, damit der Titel am Handy Platz hat. */}
               <div className={styles.verlauf}>
                 <button
                   className={styles.iconBtn}
+                  onMouseDown={ohneFokus}
                   onClick={() => editorRef.current?.undo()}
                   disabled={!canUndo}
                   title="Rückgängig"
@@ -376,6 +359,7 @@ export function ChordEditor({
                 </button>
                 <button
                   className={styles.iconBtn}
+                  onMouseDown={ohneFokus}
                   onClick={() => editorRef.current?.redo()}
                   disabled={!canRedo}
                   title="Wiederholen"
@@ -385,6 +369,7 @@ export function ChordEditor({
                 </button>
               </div>
             </div>
+            {!schreiben && akkordLeiste}
 
             <div className={styles.editPane}>
               <ChordProInput
@@ -392,6 +377,8 @@ export function ChordEditor({
                 initialText={initialText}
                 roh={roh}
                 onChange={setText}
+                onAkkord={setMenue}
+                onFokus={setTextFokus}
                 onHistory={(u, r) => {
                   setCanUndo(u);
                   setCanRedo(r);
@@ -434,6 +421,39 @@ export function ChordEditor({
           </section>
         )}
       </div>
+      {menue && (
+        <AkkordMenue
+          name={menue.name}
+          x={menue.x}
+          y={menue.y}
+          oben={menue.oben}
+          kannLinks={!!akkordVerschieben(text, menue.von, menue.bis, -1)}
+          kannRechts={!!akkordVerschieben(text, menue.von, menue.bis, 1)}
+          links={() => schieben(-1)}
+          rechts={() => schieben(1)}
+          aendern={() => {
+            setAkkordFenster({ ziel: menue });
+            setMenue(null);
+          }}
+          entfernen={() => {
+            editorRef.current?.aendern(menue.von, menue.bis, '');
+            setMenue(null);
+          }}
+          schliessen={menueZu}
+        />
+      )}
+      {akkordFenster && (
+        <AkkordFenster
+          start={akkordFenster.ziel?.name}
+          knopf={akkordFenster.ziel ? 'Übernehmen' : 'Einfügen'}
+          grundton={textTonart?.replace(/m$/, '') || undefined}
+          fertig={(a) => {
+            akkordSetzen(a, akkordFenster.ziel ?? null);
+            setAkkordFenster(null);
+          }}
+          onClose={() => setAkkordFenster(null)}
+        />
+      )}
     </div>
   );
 }

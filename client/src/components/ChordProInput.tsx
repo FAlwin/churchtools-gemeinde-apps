@@ -1,5 +1,11 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
-import { Compartment, EditorState, RangeSetBuilder, StateField } from '@codemirror/state';
+import {
+  Compartment,
+  EditorState,
+  RangeSetBuilder,
+  StateEffect,
+  StateField,
+} from '@codemirror/state';
 import { EditorView, Decoration, ViewPlugin, WidgetType, keymap } from '@codemirror/view';
 import type { DecorationSet, ViewUpdate } from '@codemirror/view';
 import {
@@ -13,6 +19,7 @@ import {
 } from '@codemirror/commands';
 import styles from './ChordProInput.module.scss';
 import {
+  AKKORD_KLAMMER,
   abschnittsKopf,
   flowEintraege,
   flowName,
@@ -25,13 +32,25 @@ import {
 export interface ChordProHandle {
   /** Fügt Text an der Cursorposition ein. `block` = auf eigener Zeile; `caretBack` = Cursor n Zeichen vor das Ende. */
   insert: (text: string, opts?: { block?: boolean; caretBack?: number }) => void;
-  /** Hängt `suffix` an den zuletzt gesetzten Akkord an (steht der Cursor direkt hinter `[…]`,
-   *  wird der Zusatz VOR das `]` eingefügt, z. B. `[C]` + "m7" → `[Cm7]`). Sonst ohne Wirkung. */
-  appendChord: (suffix: string) => void;
-  /** Ersetzt `from`–`to` durch `insert` – wie eine Eingabe (Rückgängig), ohne den Cursor zu stehlen (L2: Ablauf-Kärtchen). */
+  /** Ersetzt `from`–`to` durch `insert` – wie eine Eingabe (Rückgängig), ohne den Cursor zu stehlen (L2: Ablauf-Kärtchen, L5-2: Akkord-Menü). */
   aendern: (from: number, to: number, insert: string) => void;
   undo: () => void;
   redo: () => void;
+  /** Das angetippte Kärtchen hervorheben (L5-2) – `null` nimmt die Markierung weg. */
+  markieren: (bereich: { von: number; bis: number } | null) => void;
+  /** Wo auf dem Bildschirm die Stelle `pos` steht (L5-2: Menü am verschobenen Kärtchen) – `null`, wenn unsichtbar. */
+  stelle: (pos: number) => { x: number; y: number; oben: number } | null;
+}
+
+/** Ein angetipptes Akkord-Kärtchen (L5-2): Stelle im Text samt Klammern und Platz auf dem Bildschirm. */
+export interface AkkordAntippen {
+  von: number;
+  bis: number;
+  name: string;
+  x: number;
+  /** Unterkante und Oberkante des Kärtchens – das Menü steht darunter, ist dort kein Platz, darüber. */
+  y: number;
+  oben: number;
 }
 
 const chordMark = Decoration.mark({ class: 'cm-cp-chord' });
@@ -115,15 +134,22 @@ const flowFeld = StateField.define<DecorationSet>({
 // Zeichen; Kärtchen und Bänder sind `atomicRanges` (der Cursor springt darüber, Rücktaste löscht sie ganz –
 // gemessen in L0: Chromium und Mac-Safari; das echte iPad prüft Alwin vor dem Merge).
 class AkkordWidget extends WidgetType {
-  constructor(readonly name: string) {
+  constructor(
+    readonly name: string,
+    readonly aktiv = false,
+  ) {
     super();
   }
   eq(o: AkkordWidget) {
-    return o.name === this.name;
+    return o.name === this.name && o.aktiv === this.aktiv;
+  }
+  // Den Tipp aufs Kärtchen an den Editor durchreichen (L5-2: Menü) – ohne das schluckt CodeMirror ihn.
+  ignoreEvent(e: Event) {
+    return e.type !== 'mousedown';
   }
   toDOM() {
     const s = document.createElement('span');
-    s.className = 'cm-cp-akkord';
+    s.className = this.aktiv ? 'cm-cp-akkord cm-cp-aktiv' : 'cm-cp-akkord';
     s.textContent = this.name;
     return s;
   }
@@ -178,8 +204,24 @@ function ablaufZaehlung(text: string): Map<string, number> | null {
   return n;
 }
 
+/**
+ * L5-2: das angetippte Kärtchen (sein Menü ist offen) – es wird umrahmt. Eine Markierung um das Kärtchen zeichnet
+ * CodeMirror nicht (ersetzte Bereiche verdecken sie, gemessen 23.10.2026); deshalb weiß das Kärtchen es selbst.
+ */
+const aktivSetzen = StateEffect.define<{ von: number; bis: number } | null>();
+const aktivFeld = StateField.define<{ von: number; bis: number } | null>({
+  create: () => null,
+  update(wert, tr) {
+    for (const e of tr.effects) if (e.is(aktivSetzen)) return e.value;
+    return wert && tr.docChanged
+      ? { von: tr.changes.mapPos(wert.von, 1), bis: tr.changes.mapPos(wert.bis, -1) }
+      : wert;
+  },
+});
+
 function darstellungDeko(state: EditorState): DecorationSet {
   const b = new RangeSetBuilder<Decoration>();
+  const aktiv = state.field(aktivFeld, false);
   const zaehlung = ablaufZaehlung(state.doc.toString());
   for (let i = 1; i <= state.doc.lines; i++) {
     const line = state.doc.line(i);
@@ -194,20 +236,23 @@ function darstellungDeko(state: EditorState): DecorationSet {
       b.add(line.from, line.to, Decoration.replace({ widget: new HaltWidget() }));
       continue;
     }
-    const re = /\[([^\]\n]*)\]/g;
+    const re = new RegExp(AKKORD_KLAMMER, 'g');
     let m: RegExpExecArray | null;
     while ((m = re.exec(line.text)))
       b.add(
         line.from + m.index,
         line.from + m.index + m[0].length,
-        Decoration.replace({ widget: new AkkordWidget(m[1]) }),
+        Decoration.replace({
+          widget: new AkkordWidget(m[1], aktiv?.von === line.from + m.index),
+        }),
       );
   }
   return b.finish();
 }
 const darstellungFeld = StateField.define<DecorationSet>({
   create: (st) => darstellungDeko(st),
-  update: (deko, tr) => (tr.docChanged ? darstellungDeko(tr.state) : deko),
+  update: (deko, tr) =>
+    tr.docChanged || tr.effects.some((e) => e.is(aktivSetzen)) ? darstellungDeko(tr.state) : deko,
   provide: (f) => [
     EditorView.decorations.from(f),
     EditorView.atomicRanges.of((v) => v.state.field(f)),
@@ -258,6 +303,10 @@ const theme = EditorView.theme({
     fontSize: '13px',
     lineHeight: '22px',
   },
+  '.cm-cp-akkord.cm-cp-aktiv': {
+    outline: '2px solid var(--blue)',
+    outlineOffset: '1px',
+  },
   '.cm-cp-band-zeile': { display: 'inline-flex', alignItems: 'center', gap: '8px' },
   '.cm-cp-band': {
     padding: '0 10px',
@@ -285,16 +334,25 @@ interface ChordProInputProps {
   onHistory?: (canUndo: boolean, canRedo: boolean) => void;
   /** Den rohen ChordPro-Text zeigen statt Kärtchen und Bändern (L3). */
   roh?: boolean;
+  /** Ein Akkord-Kärtchen wurde angetippt (L5-2) – der Cursor bleibt, wo er war. */
+  onAkkord?: (a: AkkordAntippen) => void;
+  /** Der Text bekommt oder verliert den Fokus (Schreibansicht bei offener Tastatur). */
+  onFokus?: (fokus: boolean) => void;
 }
 
 /** ChordPro-Eingabe auf Basis von CodeMirror: Syntax-Farben, echtes Rückgängig/Wiederholen,
  *  saubere Einfügung an der Cursorposition. */
 export const ChordProInput = forwardRef<ChordProHandle, ChordProInputProps>(function ChordProInput(
-  { initialText, onChange, onHistory, roh = false },
+  { initialText, onChange, onHistory, roh = false, onAkkord, onFokus },
   ref,
 ) {
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  // Der Editor wird nur einmal gebaut – der Rückruf kommt deshalb über einen Ref an die jeweils neueste Fassung.
+  const onAkkordRef = useRef(onAkkord);
+  onAkkordRef.current = onAkkord;
+  const onFokusRef = useRef(onFokus);
+  onFokusRef.current = onFokus;
 
   useEffect(() => {
     const view = new EditorView({
@@ -304,12 +362,35 @@ export const ChordProInput = forwardRef<ChordProHandle, ChordProInputProps>(func
           history(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           highlighter,
+          // Vor der Darstellung: Sie liest beim Neuzeichnen, welches Kärtchen angetippt ist.
+          aktivFeld,
           darstellung.of(roh ? [] : darstellungFeld),
           flowFeld,
           theme,
           EditorView.lineWrapping,
+          EditorView.domEventHandlers({
+            // Tipp auf ein Kärtchen: Menü statt Cursor (sonst landet der Cursor davor oder dahinter).
+            mousedown(e, v) {
+              const el = (e.target as HTMLElement | null)?.closest?.('.cm-cp-akkord');
+              if (!el || !onAkkordRef.current) return false;
+              // Bereich und Name genau so, wie die Darstellung das Kärtchen gesetzt hat – kein eigenes Muster.
+              const pos = v.posAtDOM(el);
+              const treffer: { von: number; bis: number; name: string }[] = [];
+              v.state.field(darstellungFeld, false)?.between(pos, pos + 1, (von, bis, deko) => {
+                const w = (deko.spec as { widget?: unknown }).widget;
+                if (w instanceof AkkordWidget && von === pos)
+                  treffer.push({ von, bis, name: w.name });
+              });
+              if (!treffer[0]) return false;
+              e.preventDefault();
+              const r = el.getBoundingClientRect();
+              onAkkordRef.current({ ...treffer[0], x: r.left, y: r.bottom, oben: r.top });
+              return true;
+            },
+          }),
           EditorView.updateListener.of((u) => {
             if (u.docChanged) onChange(u.state.doc.toString());
+            if (u.focusChanged) onFokusRef.current?.(u.view.hasFocus);
             if (u.docChanged || u.selectionSet)
               onHistory?.(undoDepth(u.state) > 0, redoDepth(u.state) > 0);
           }),
@@ -348,26 +429,6 @@ export const ChordProInput = forwardRef<ChordProHandle, ChordProInputProps>(func
       });
       view.focus();
     },
-    appendChord(suffix) {
-      const view = viewRef.current;
-      if (!view || !suffix) return;
-      const sel = view.state.selection.main;
-      if (sel.from !== sel.to || sel.from === 0) return; // Auswahl/Anfang → nichts anhängen
-      const doc = view.state.doc;
-      const line = doc.lineAt(sel.from);
-      const before = doc.sliceString(line.from, sel.from);
-      if (!before.endsWith(']')) return; // Cursor steht nicht direkt hinter einem Akkord
-      const open = before.lastIndexOf('[');
-      if (open === -1) return;
-      const inner = before.slice(open + 1, -1); // Inhalt zwischen [ und ]
-      if (inner.includes('[') || inner.includes(']')) return; // kein sauberes [..]
-      const insertPos = sel.from - 1; // direkt vor das ]
-      view.dispatch({
-        changes: { from: insertPos, insert: suffix },
-        selection: { anchor: sel.from + suffix.length },
-      });
-      view.focus();
-    },
     aendern(from, to, insert) {
       const view = viewRef.current;
       if (!view) return;
@@ -386,6 +447,13 @@ export const ChordProInput = forwardRef<ChordProHandle, ChordProInputProps>(func
         redo(v);
         v.focus();
       }
+    },
+    markieren(bereich) {
+      viewRef.current?.dispatch({ effects: aktivSetzen.of(bereich) });
+    },
+    stelle(pos) {
+      const k = viewRef.current?.coordsAtPos(pos, 1);
+      return k ? { x: k.left, y: k.bottom, oben: k.top } : null;
     },
   }));
 

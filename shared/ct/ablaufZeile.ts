@@ -14,8 +14,18 @@ import { ortszeitAus } from './zeit';
 
 /** Was eine Zeile zeigt – `AgendaItem` der Musik-App passt hinein (das Lied dort trägt mehr). */
 export type AblaufZeile = Omit<AgendaItem, 'song' | 'changed' | 'neu' | 'removed'> & {
-  /** Das Lied – Name zum Anzeigen, Arrangement zum Vergleichen (E6-3c: ein anderes Arrangement ist ein anderes Lied). */
-  song: { title: string; arrangementId?: number } | null;
+  /**
+   * Das Lied – Name zum Anzeigen, Arrangement zum Vergleichen (E6-3c: ein anderes Arrangement ist ein anderes Lied).
+   * Tonart, Tempo und Autor für die Lied-Karte (E6-O1) – dieselben Namen wie `SetlistSong` der Musik-App, damit deren
+   * Punkte ohne Umbau passen. Den Autor liefert der Ablauf nicht (gemessen E6-O0); der Dienstplaner holt ihn nach.
+   */
+  song: {
+    title: string;
+    arrangementId?: number;
+    originalKey?: string | null;
+    bpm?: number | null;
+    author?: string | null;
+  } | null;
   removed?: boolean;
 };
 
@@ -89,6 +99,8 @@ export function ablaufZeileAus(item: CtAgendaItem, eventId: number, zeitzone: st
           ...(typeof item.song.arrangementId === 'number'
             ? { arrangementId: item.song.arrangementId }
             : {}),
+          originalKey: item.song.key ?? null,
+          bpm: item.song.bpm ?? null,
         }
       : null,
     time: ablaufUhrzeit(item, eventId, zeitzone),
@@ -143,7 +155,7 @@ export function itemLabel(item: TitelQuelle): string {
 type MitVorlauf = { removed?: boolean; vorBeginn?: boolean };
 
 /**
- * Vor welcher Zeile die Linie „Beginn“ steht – `-1`, wenn es keinen Vorlauf gibt (dann wäre die Linie nur Lärm).
+ * Vor welcher Zeile der Balken „Beginn“ steht – `-1`, wenn es keinen Vorlauf gibt (dann wäre er nur Lärm).
  * Sind ALLE Punkte Vorlauf, steht sie am Ende. „Entfernt“-Platzhalter zählen nicht.
  * (Aus `client/src/utils/vorlauf.ts` hierher.)
  */

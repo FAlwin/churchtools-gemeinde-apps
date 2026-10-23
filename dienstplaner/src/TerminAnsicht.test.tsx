@@ -667,3 +667,59 @@ describe('TerminAnsicht – Neu aufsetzen (E6-5b)', () => {
     ]);
   });
 });
+
+/** Lied-Karte (E6-O1): Den Autor liefert der Ablauf nicht – eine Sammelabfrage holt ihn; scheitert sie, fehlt nur er. */
+describe('TerminAnsicht – Autor auf der Lied-Karte (E6-O1)', () => {
+  const MIT_LIED = {
+    items: [
+      {
+        id: 1,
+        type: 'song',
+        title: 'Lied',
+        song: { songId: 41, title: 'Treu', key: 'A', bpm: 75 },
+      },
+      {
+        id: 2,
+        type: 'song',
+        title: 'Lied',
+        song: { songId: 42, title: 'Halleluja', key: null, bpm: null },
+      },
+    ],
+  };
+  function ctLieder(lieder: () => Response) {
+    const abfragen: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = new URL(String(input));
+      if (url.pathname === '/api/songs') {
+        abfragen.push(url.search);
+        return Promise.resolve(lieder());
+      }
+      if (url.pathname.endsWith('/agenda')) return Promise.resolve(json(200, { data: MIT_LIED }));
+      if (url.pathname.startsWith('/api/events/'))
+        return Promise.resolve(json(200, { data: TERMIN }));
+      return Promise.resolve(json(200, { data: [] }));
+    });
+    return abfragen;
+  }
+
+  it('eine Abfrage für alle Lieder; der Autor steht in der Karte', async () => {
+    const abfragen = ctLieder(() =>
+      json(200, {
+        data: [
+          { id: 41, author: 'Uwe Peters' },
+          { id: 42, author: '' },
+        ],
+      }),
+    );
+    zeige();
+    expect(await screen.findByText('A · 75 bpm · Uwe Peters')).toBeTruthy();
+    expect(abfragen).toEqual(['?ids[]=41&ids[]=42']); // so in der Test-Instanz gemessen (E6-O0)
+  });
+
+  it('scheitert die Abfrage, steht die Karte ohne Autor da – kein Fehler auf der Seite', async () => {
+    ctLieder(() => json(502, {}));
+    zeige();
+    expect(await screen.findByText('A · 75 bpm')).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+});

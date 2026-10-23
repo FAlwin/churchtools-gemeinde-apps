@@ -1,35 +1,67 @@
 /**
- * **Der Ablauf als Liste – wie in der Musik-App** (Bauplan E6-1b; vorher fest in `client/src/components/AgendaFullView.tsx`).
- * Jeder Punkt eine Karte mit Uhrzeit, Bezeichnung, Notiz und Zuständigen, Abschnitte als Band, die Linie „Beginn“
- * nach dem Vorlauf. Die Musik-App macht Lieder antippbar (→ Charts) und setzt Schildchen „neu/geändert“; der
- * Dienstplaner zeigt die Dauer neben der Zeit (Alwin, 17.10.2026). Die Regeln einer Zeile stehen in
- * `@shared/ct/ablaufZeile`.
+ * **Der Ablauf als Liste – wie die ChurchTools-App** (Bauplan E6-O1, Entwurf `e6-optik-entwurf.html`, abgenommen
+ * 23.10.2026; vorher Karten wie in der Musik-App, E6-1b). Eine Liste mit feinen Linien: links Uhrzeit fett, Dauer klein
+ * darunter; Titel, darunter die Zuständigen grau, Notiz und die Lied-Karte; rechts die Kreise (Foto oder Kürzel).
+ * Überschriften und „Beginn“ als graue Balken, Lieder mit blauem Streifen. Die Musik-App macht Lieder antippbar
+ * (→ Charts) und setzt Schildchen „neu/geändert“. Die Regeln einer Zeile stehen in `@shared/ct/ablaufZeile`.
  */
 import { Fragment, type ReactNode } from 'react';
-import { beginnStelle, type AblaufZeile } from '@shared/ct/ablaufZeile';
+import { beginnStelle, itemTitleParts, type AblaufZeile } from '@shared/ct/ablaufZeile';
 import {
   BeginnLinie,
   ItemTitle,
+  Kuerzel,
+  LiedKarte,
   ResponsibleLine,
   WeggelassenHinweis,
   ZeitText,
 } from './AblaufTeile';
-import { Icon } from '../icons/icons';
 import styles from './AblaufListe.module.scss';
+
+/** Uhrzeit fett, Dauer klein darunter (Variante 1) – eine Stelle für Ansicht und Bearbeiten-Liste. */
+export function ZeitSpalte({
+  item,
+}: {
+  item: Pick<AblaufZeile, 'time' | 'weggelassen' | 'durationMin'>;
+}) {
+  return (
+    <div className={styles.flowTime}>
+      <span>
+        <ZeitText item={item} />
+      </span>
+      {item.durationMin ? <span className={styles.zeitDauer}>{item.durationMin} Min</span> : null}
+    </div>
+  );
+}
+
+/** Titel, Zuständige, Notiz, Lied-Karte – was Ansicht und Bearbeiten-Liste in der Mitte einer Zeile zeigen. */
+export function ZeilenInhalt({ item, tag }: { item: AblaufZeile; tag?: ReactNode }) {
+  // Heißt der Punkt wie sein Lied (oder hat keinen eigenen Titel), steht der Liedname schon in der Titelzeile.
+  const liedImTitel = !!item.song && itemTitleParts(item).songName === null;
+  return (
+    <>
+      <div className={styles.flowHead}>
+        <ItemTitle item={item} ohneLiedname={!!item.song} />
+        {tag}
+        {item.weggelassen && <WeggelassenHinweis />}
+      </div>
+      <ResponsibleLine entries={item.responsible} />
+      {item.note && <div className={styles.flowNote}>{item.note}</div>}
+      {item.song && <LiedKarte song={item.song} ohneTitel={liedImTitel} />}
+    </>
+  );
+}
 
 export function AblaufListe({
   zeilen,
   beginn,
-  dauerNebenZeit = false,
   onLied,
   schild,
   kopf,
 }: {
   zeilen: readonly AblaufZeile[];
-  /** Uhrzeit des Veranstaltungsbeginns („10:00“) für die Linie nach dem Vorlauf (#423). */
+  /** Uhrzeit des Veranstaltungsbeginns („10:00“) für den Balken nach dem Vorlauf (#423). */
   beginn?: string;
-  /** Dauer neben der Uhrzeit statt rechts am Titel (Dienstplaner). */
-  dauerNebenZeit?: boolean;
   /** Lied-Zeilen antippbar machen (Musik-App: zu den Charts) – mit der Nummer des Lieds im Ablauf. */
   onLied?: (liedIndex: number) => void;
   /** Ein Schildchen am Punkt („neu“, „geändert“) – Musik-App. */
@@ -38,7 +70,7 @@ export function AblaufListe({
   kopf?: ReactNode;
 }) {
   const sichtbar = zeilen.filter((z) => !z.removed);
-  // Die Linie „Beginn“ vor dem ersten Punkt nach dem Vorlauf (#423) – nur, wenn es Vorlauf gibt.
+  // Der Balken „Beginn“ vor dem ersten Punkt nach dem Vorlauf (#423) – nur, wenn es Vorlauf gibt.
   const stelle = beginnStelle(sichtbar);
   let liedIndex = -1;
 
@@ -48,50 +80,23 @@ export function AblaufListe({
     const vl =
       (item.vorBeginn ? ` ${styles.vorlauf}` : '') +
       (item.weggelassen ? ` ${styles.weggelassen}` : '');
-    const weg = item.weggelassen && <WeggelassenHinweis />;
     if (item.isHeader) {
       return (
         <div key={item.id} className={`${styles.sectionBand}${vl}`}>
-          {(item.time || item.weggelassen) && (
-            <span className={styles.bandTime}>
-              <ZeitText item={item} />
-            </span>
-          )}
           {item.title}
           {tag}
-          {weg}
+          {item.weggelassen && <WeggelassenHinweis />}
         </div>
       );
     }
-    const dauer = item.durationMin ? `${item.durationMin} Min` : null;
-    const zeit = dauerNebenZeit ? (
-      <div className={`${styles.flowTime} ${styles.zeitMitDauer}`}>
-        <span>
-          <ZeitText item={item} />
-        </span>
-        {dauer && <span className={styles.zeitDauer}>{dauer}</span>}
-      </div>
-    ) : (
-      <div className={styles.flowTime}>
-        <ZeitText item={item} />
-      </div>
-    );
     const inhalt = (
-      <div className={styles.flowBody}>
-        <div className={styles.flowHead}>
-          <ItemTitle item={item} />
-          {item.song && (
-            <span className={styles.flowSongTag}>
-              <Icon name="music" size={12} />
-            </span>
-          )}
-          {tag}
-          {weg}
-          {!dauerNebenZeit && dauer && <span className={styles.flowDur}>{dauer}</span>}
+      <>
+        <ZeitSpalte item={item} />
+        <div className={styles.flowBody}>
+          <ZeilenInhalt item={item} tag={tag} />
         </div>
-        {item.note && <div className={styles.flowNote}>{item.note}</div>}
-        <ResponsibleLine entries={item.responsible} />
-      </div>
+        <Kuerzel entries={item.responsible} />
+      </>
     );
     if (item.song && onLied) {
       liedIndex += 1;
@@ -99,11 +104,10 @@ export function AblaufListe({
       return (
         <button
           key={item.id}
-          className={`${styles.flowRowBtn} ${styles.songRow}${vl}`}
+          className={`${styles.flowRow} ${styles.flowRowBtn} ${styles.songRow}${vl}`}
           data-tour={idx === 0 ? 'setlist-song' : undefined}
           onClick={() => onLied(idx)}
         >
-          {zeit}
           {inhalt}
         </button>
       );
@@ -113,7 +117,6 @@ export function AblaufListe({
         key={item.id}
         className={`${styles.flowRow}${item.song ? ` ${styles.songRow}` : ''}${vl}`}
       >
-        {zeit}
         {inhalt}
       </div>
     );

@@ -75,6 +75,8 @@ import { createTtlMemo } from '@shared/ct/ttlMemo';
 import { merkeVersprechen } from '@shared/ct/versprechenMerker';
 import { whoamiId } from '@shared/ct/whoami';
 import { angemeldeteId } from '@ui/ct/ich';
+import { browserAblaufLeser } from '@ui/ct/schreiber';
+import { ablaufBestandLesen, type AblaufBestand } from '@shared/ct/ablaufNeu';
 import { sanitizeFileContentType } from '@shared/dateien/index';
 import type { GesehenerStand } from '@shared/types/index';
 import { ApiError } from './api';
@@ -456,6 +458,11 @@ export async function termineOhneAblaufListe(): Promise<Service[]> {
 /** `GET /api/ablauf-vorlagen` – die Ablauf-Vorlagen aus ChurchTools. */
 export async function ablaufVorlagen(): Promise<AblaufVorlage[]> {
   return vorlagenAus(await ctDaten<CtAblaufVorlage[]>('/agendatemplates'));
+}
+
+/** `GET /api/services/:id/agenda/bestand` – was die Nachfrage „Neu aufsetzen“ zeigt (E6-5b). */
+export function ablaufBestand(eventId: number): Promise<AblaufBestand> {
+  return ablaufBestandLesen(browserAblaufLeser, eventId, ZEITZONE);
 }
 
 /** `GET /api/kalender` – die Kalender, für die Verwaltung „Termine ohne Ablauf". */

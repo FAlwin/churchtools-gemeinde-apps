@@ -148,6 +148,9 @@ export interface Abgeschickt {
   meldung?: string;
 }
 
+/** Die letzte Zeile der Erziehungsberechtigten, wenn eingewilligt – die Abholliste (A8-2) lässt sie weg. */
+export const EINVERSTANDEN_ZEILE = '✓ erziehungsberechtigt und einverstanden';
+
 /**
  * **Erziehungsberechtigte lesbar** (A6-2b) – eine Zeile je Person („Erna Muster, 0151 2345678“), darunter das
  * Häkchen. `null`, wenn nichts eingetragen ist.
@@ -160,7 +163,7 @@ export function erziehungText(w: Antwort): string | null {
     )
     .filter(Boolean);
   if (zeilen.length === 0 && !e.einverstanden) return null;
-  if (e.einverstanden) zeilen.push('✓ erziehungsberechtigt und einverstanden');
+  if (e.einverstanden) zeilen.push(EINVERSTANDEN_ZEILE);
   return zeilen.join('\n');
 }
 

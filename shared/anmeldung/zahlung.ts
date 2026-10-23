@@ -10,6 +10,7 @@
  * selbst überall.
  */
 import { tagPunkt } from '../ct/datum';
+import type { Zahlung } from './liste';
 import { centAusEuroText, euroText } from './preis';
 
 /** Vorbelegt, solange die Gemeinde nichts gespeichert hat. */
@@ -123,4 +124,21 @@ export function absageZeile(
   if (z.neuCent !== null) teile.push(`Zahlung der Anmeldung jetzt ${euroText(z.neuCent)}`);
   if (z.rueckzahlungCent > 0) teile.push(`Rückzahlung ${euroText(z.rueckzahlungCent)} offen`);
   return teile.join(' – ');
+}
+
+/**
+ * Titel einer eigenen Zahlung je Art – als Tabelle, damit der Build eine neue Art meldet (A7-4c: „zurückgeholt“ fehlte
+ * zuerst und stand als „Anmeldung (Paula)“ da).
+ */
+const EIGENE_ZAHLUNG: Record<Exclude<Zahlung['wofuer'], 'anmeldung'>, string> = {
+  nachgerueckt: 'nachgerückt',
+  dazu: 'dazu angemeldet',
+  zurueck: 'zurückgeholt',
+};
+
+/** **Wofür eine Zahlung ist** – „Anmeldung (Maria)“ oder „Lena – nachgerückt“; im Fenster und auf der Druckliste (A8-3). */
+export function zahlungTitel(z: Pick<Zahlung, 'wofuer' | 'name'>): string {
+  return z.wofuer === 'anmeldung'
+    ? `Anmeldung (${z.name})`
+    : `${z.name} – ${EIGENE_ZAHLUNG[z.wofuer]}`;
 }

@@ -20,6 +20,8 @@ import {
   getServicesOhneAblaufCtrl,
   getAblaufVorlagenCtrl,
   postAblaufCtrl,
+  getAblaufBestandCtrl,
+  putAblaufNeuCtrl,
 } from '../controllers/setlistController.js';
 import {
   postVersion,
@@ -69,6 +71,8 @@ router.get('/services', asyncHandler(getServices));
 router.get('/services/ohne-ablauf', asyncHandler(getServicesOhneAblaufCtrl));
 router.get('/ablauf-vorlagen', asyncHandler(getAblaufVorlagenCtrl));
 router.post('/services/:eventId/agenda', asyncHandler(postAblaufCtrl));
+router.get('/services/:eventId/agenda/bestand', asyncHandler(getAblaufBestandCtrl));
+router.put('/services/:eventId/agenda/neu', asyncHandler(putAblaufNeuCtrl));
 router.get('/services/:eventId/setlist', asyncHandler(getSetlist));
 router.get('/services/:eventId/setlist/version', asyncHandler(getSetlistVersion));
 router.post('/services/:eventId/seen', asyncHandler(markSetlistSeen));

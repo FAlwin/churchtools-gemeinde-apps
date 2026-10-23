@@ -1,0 +1,157 @@
+// Ein Protokoll lesen (Bauplan S3-2) – wie ein Dokument: ruhige Schrift, Punkte nummeriert, Aufgaben/Beschlüsse/
+// Termine als dezente Marken. Farben nur aus den gemeinsamen Werten (CT-Web-Look, #654).
+@use '@ui/design/mixins' as m;
+
+.blatt {
+  @include m.listenMitZeichen; // ohne das zeigt ChurchTools keine Aufzählungszeichen und Nummern (S3-2)
+
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.55;
+
+  p {
+    margin: 0 0 8px;
+  }
+
+  h4,
+  h5 {
+    margin: 14px 0 6px;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  h5 {
+    font-size: 14px;
+    color: var(--text2);
+  }
+
+  ul,
+  ol {
+    margin: 0 0 8px;
+    padding-left: 22px;
+  }
+
+  li {
+    margin: 2px 0;
+  }
+
+  // Unterpunkte direkt unter dem Punkt, nicht mit Abstand
+  li > ul,
+  li > ol {
+    margin: 2px 0 0;
+  }
+
+  blockquote {
+    margin: 0 0 8px;
+    padding: 2px 0 2px 12px;
+    border-left: 3px solid var(--border);
+    color: var(--text2);
+  }
+
+  code {
+    padding: 0 4px;
+    border-radius: var(--r-ctrl);
+    background: var(--surface3);
+    font-size: 0.92em;
+  }
+
+  a {
+    color: var(--blue);
+    text-decoration: underline; // in ChurchTools sonst ohne Unterstrich – als Link nicht erkennbar
+  }
+}
+
+.punkt {
+  display: flex;
+  gap: 6px;
+  margin: 18px 0 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--hair);
+  font-size: 16.5px;
+  font-weight: 700;
+
+  &:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+}
+
+.nr {
+  color: var(--text2);
+}
+
+.eingerueckt {
+  padding-left: 22px;
+}
+
+.ohnePunkt {
+  list-style: none;
+  padding-left: 4px !important;
+}
+
+.haken {
+  display: flex;
+  gap: 6px;
+}
+
+.kasten {
+  color: var(--text2);
+}
+
+.marke {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 7px 10px;
+  border-radius: var(--r-ctrl);
+  font-size: 14.5px;
+
+  svg {
+    flex: none;
+    margin-top: 2px;
+  }
+}
+
+.markeText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  small {
+    color: var(--text2);
+    font-size: 12.5px;
+  }
+}
+
+.aufgabe {
+  background: var(--surface3);
+}
+
+.beschluss {
+  background: color-mix(in srgb, var(--green) 12%, transparent);
+
+  b {
+    flex: none;
+    color: var(--green);
+  }
+}
+
+.termin {
+  background: var(--blue-soft);
+
+  svg {
+    color: var(--blue);
+  }
+}
+
+.verweis {
+  color: var(--text2);
+  font-size: 13.5px;
+  font-style: italic;
+}
+
+.leer {
+  color: var(--text2);
+}

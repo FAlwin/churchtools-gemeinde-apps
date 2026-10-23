@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { PunktStand } from '@shared/ct/ablaufZeile';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -14,6 +14,7 @@ import { sucheArt } from '../utils/liedFormular';
 import { heuteIso } from '../utils/heute';
 import { ohneMarkierungen } from '../utils/ablaufAenderungen';
 import type { GeloeschterPunkt } from '@shared/ct/schreibKern';
+import type { AblaufStand } from '@shared/ct/ablaufNeu';
 import * as api from '../services/churchtoolsApi';
 import { ApiError } from '../services/api';
 import { agendaAbfrage, liedblattAbfrage, schluessel } from './abfrageSchluessel';
@@ -188,6 +189,32 @@ export function useAblaufAnlegen() {
       void qc.invalidateQueries({ queryKey: schluessel.liedNutzung() });
     },
   });
+}
+
+/**
+ * „Neu aufsetzen“ (E6-5b): Lesen und Schreiben **ohne** Zwischenspeicher – der Kern vergleicht vor dem Schreiben genau
+ * den Stand, den die Nachfrage gezeigt hat. `neuLaden` holt danach Ablauf, Termine (Liedzahl) und Liedstatistik neu;
+ * `NeuAufsetzen` ruft es nach jedem Versuch, auch einem gescheiterten.
+ */
+export function useAblaufNeuAufsetzen(eventId: number) {
+  const qc = useQueryClient();
+  const bestandLesen = useCallback(() => api.ablaufBestand(eventId), [eventId]);
+  return {
+    bestandLesen,
+    neuAufsetzen: async (
+      kalenderId: number | null,
+      quelle: AblaufQuelle,
+      gesehen: AblaufStand,
+      nurDieser: boolean,
+    ): Promise<void> => {
+      await api.ablaufNeuAufsetzen(eventId, kalenderId, quelle, gesehen, nurDieser);
+    },
+    neuLaden: () => {
+      void qc.invalidateQueries({ queryKey: schluessel.agenda(eventId) });
+      void qc.invalidateQueries({ queryKey: schluessel.termine() });
+      void qc.invalidateQueries({ queryKey: schluessel.liedNutzung() });
+    },
+  };
 }
 
 /** Lädt alle Ablaufpunkte eines Gottesdienstes (Lieder inkl. ChordPro). */

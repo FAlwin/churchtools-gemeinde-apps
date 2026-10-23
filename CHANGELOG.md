@@ -7,6 +7,38 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+### Behoben (Musik-App + Dienstplaner, #700)
+
+- **Rückgängig nach dem Löschen** eines Punkts **vor dem Gottesdienstbeginn**: Kam der erste oder ein mittlerer
+  Vorlauf-Punkt zurück, fielen die übrigen aus dem Vorlauf (Uhrzeit und Lage zum Beginn stimmten nicht mehr). Die Grenze
+  ist in ChurchTools eine Platznummer – sie rückt jetzt beim Zurückholen um eins mit. Gefunden bei der Messung E6-6-0,
+  in der Test-Instanz nachgestellt und nach dem Fix dort geprüft. Betraf die Musik-App seit v2.34.1.
+
+### Neu (Musik-App + Dienstplaner, E6-5b-2, #691)
+
+- **„Neu aufsetzen …“** im Bearbeiten (rechts in der Hinweiszeile; Entwurf `e6-5b-entwurf.html`, abgenommen 23.10.2026):
+  ersetzt einen bestehenden Ablauf aus einer **Vorlage**, **wie ein früherer Termin** oder **leer** – im selben
+  Fenster wie „Ablauf anlegen“, danach eine klare Nachfrage mit der Zahl der Punkte („Ablauf ersetzen?“ / „Ablauf
+  leeren?“). **Kein Rückgängig.** Ist der Ablauf leer, geht nichts verloren – dann ohne Nachfrage.
+- **Geteilter Ablauf** (in ChurchTools teilen sich mehrere Termine einen Ablauf): Die Nachfrage nennt die anderen
+  Termine und bietet **„Für alle ersetzen“** oder **„Nur für diesen Termin neu“** – dann behalten die anderen den
+  bisherigen Ablauf.
+- Hat jemand den Ablauf seit der Nachfrage geändert, wird nichts ersetzt: Meldung, Liste neu geladen. Abgeschlossen
+  zeigt der Knopf den Sperr-Hinweis wie das Plus.
+- Ersetzen braucht keinen Kalender des Termins mehr (gemessen); nur „Nur für diesen Termin neu“ nimmt ihn, sonst den
+  des bisherigen Ablaufs.
+
+### Intern (Ablauf neu aufsetzen, E6-5b-1, #691)
+
+- **Kern für „Neu aufsetzen“** (`shared/ct/ablaufNeu.ts`, noch ohne Oberfläche): einen bestehenden Ablauf aus einer
+  Vorlage, wie ein anderer Termin oder leer neu aufsetzen – gemessen (E6-5b-0) ersetzt ChurchTools dabei still und
+  bei einem **geteilten** Ablauf für alle Termine. Darum wird vorher mit dem Stand der Nachfrage verglichen (412,
+  nichts geschrieben), abgeschlossen gibt 423, und hinterher wird nachgelesen (Zahl der Punkte, kein alter übrig –
+  sonst 502). Bei geteiltem Ablauf geht auch „nur für diesen Termin“: Verbindung lösen, dann eigener Ablauf.
+- Wege dafür: Dienstplaner im Browser, Musik-App als Erweiterung und über den eigenen Server
+  (`GET /api/services/:id/agenda/bestand`, `PUT /api/services/:id/agenda/neu`). Der Schreib-Anschluss
+  `CtSchreiber` liest dazu auch eine Vorlage frisch (`vorlage`).
+
 ### Neu (Anmeldungen, A7-5)
 
 - **Rundmail** (Entwurf `a7-5-rundmail-v1`, abgenommen 22.10.2026): „✉ Rundmail“ im Reiter Anmeldungen – an alle

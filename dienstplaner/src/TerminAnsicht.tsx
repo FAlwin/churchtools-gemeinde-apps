@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
@@ -15,8 +15,10 @@ import { ladeAblauf, ladeMusikApp } from './ladeBeiwerk';
 import { ablaufAktionen } from './ablaufAktionen';
 import { ladeKopieVorschlaege, ladeVorlagen, WOCHEN_ZURUECK } from './ladeAnlegen';
 import { AblaufAnlegenFenster, type KopieVorschlag } from '@ui/ablauf/AblaufAnlegenFenster';
-import { browserSchreiber } from '@ui/ct/schreiber';
+import { NeuAufsetzen } from '@ui/ablauf/NeuAufsetzen';
+import { browserAblaufLeser, browserSchreiber } from '@ui/ct/schreiber';
 import { ablaufAnlegen } from '@shared/ct/ablaufAnlegen';
+import { ablaufBestandLesen, ablaufNeuAufsetzen, type AblaufStand } from '@shared/ct/ablaufNeu';
 import { vorlagenFuer } from '@shared/ct/ablaufVorschlaege';
 import type { AblaufQuelle, AblaufVorlage } from '@shared/types/index';
 import { Plaetze } from './Planen';
@@ -73,8 +75,9 @@ export function TerminAnsicht({
   const [versuch, setVersuch] = useState(0);
   const [musikApp, setMusikApp] = useState<string | null>(null);
   const [bearbeiten, setBearbeiten] = useState(false);
-  // „Ablauf anlegen“ (E6-5a): Fenster und was es braucht – erst beim Öffnen geladen.
+  // „Ablauf anlegen“ (E6-5a) und „Neu aufsetzen“ (E6-5b, `neu`): Fenster und was es braucht – erst beim Öffnen geladen.
   const [anlegen, setAnlegen] = useState<{
+    neu: boolean;
     vorlagen: { liste: AblaufVorlage[]; laedt: boolean; fehler: boolean };
     vorschlaege: KopieVorschlag[] | null;
   } | null>(null);
@@ -122,7 +125,15 @@ export function TerminAnsicht({
     beiFehler: (e) => {
       if (verlangtNeuLaden(e)) ablaufNeuLaden();
     },
+    neuAufsetzen:
+      zustand.art === 'fertig' ? () => anlegenOeffnen(zielVon(zustand.daten), true) : undefined,
   });
+
+  // Fest je Termin – `NeuAufsetzen` liest damit beim Öffnen und bei „Weiter“.
+  const bestandLesen = useCallback(
+    () => ablaufBestandLesen(browserAblaufLeser, terminId, zeitzone),
+    [terminId, zeitzone],
+  );
 
   /**
    * Nach dem Speichern nur den Ablauf neu lesen. Scheitert das, war das Speichern trotzdem gelungen: Der Stand bleibt
@@ -142,9 +153,15 @@ export function TerminAnsicht({
     );
   }
 
-  /** Fenster „Ablauf anlegen“ öffnen und Vorlagen + frühere Termine nachladen (Beiwerk: Fehler steht im Fenster). */
-  function anlegenOeffnen(ziel: { beginn: string; tag: string; kalenderId: number | null }): void {
-    setAnlegen({ vorlagen: { liste: [], laedt: true, fehler: false }, vorschlaege: null });
+  /**
+   * Fenster „Ablauf anlegen“ bzw. „Neu aufsetzen“ (`neu`) öffnen und Vorlagen + frühere Termine nachladen (Beiwerk:
+   * Fehler steht im Fenster).
+   */
+  function anlegenOeffnen(
+    ziel: { beginn: string; tag: string; kalenderId: number | null },
+    neu = false,
+  ): void {
+    setAnlegen({ neu, vorlagen: { liste: [], laedt: true, fehler: false }, vorschlaege: null });
     ladeVorlagen().then(
       (liste) =>
         setAnlegen(
@@ -175,6 +192,19 @@ export function TerminAnsicht({
     setAnlegen(null);
     setBearbeiten(true);
     ablaufNeuLaden();
+  }
+
+  /**
+   * Neu aufsetzen über den Kern (vergleicht vorher mit der Nachfrage, liest nachher nach). Ohne Kalender nimmt er den
+   * des Ablaufs – gebraucht wird er nur beim Lösen.
+   */
+  function neuAufsetzenMit(
+    quelle: AblaufQuelle,
+    gesehen: AblaufStand,
+    nurDieser: boolean,
+    kalenderId: number | null,
+  ): Promise<void> {
+    return ablaufNeuAufsetzen(browserSchreiber, terminId, kalenderId, quelle, gesehen, nurDieser);
   }
 
   // Beiwerk wie auf der Startseite: scheitert es, fehlt nur der Knopf.
@@ -240,6 +270,11 @@ export function TerminAnsicht({
   const gruppen = plan.gruppen;
   const ende = zustand.daten.zeilen[0]?.endeUhrzeit ?? null;
   const darf = ablaufBearbeitbar(start, zustand.daten.ablaufTermin);
+  const fuer = `${s.name} · ${datumText(s.tag)} · ${s.uhrzeit} Uhr`;
+  const keineVorschlaege =
+    anlegen?.vorschlaege === null
+      ? 'Frühere Termine werden geladen …'
+      : `Kein früherer Termin mit Ablauf in den letzten ${WOCHEN_ZURUECK} Wochen.`;
 
   return (
     <div className={styles.seite}>
@@ -293,13 +328,7 @@ export function TerminAnsicht({
               <button
                 type="button"
                 className={styles.anlegenKnopf}
-                onClick={() =>
-                  anlegenOeffnen({
-                    beginn: zustand.daten.zeilen[0]?.beginn ?? '',
-                    tag: s.tag,
-                    kalenderId: zustand.daten.ablaufTermin.kalenderId ?? null,
-                  })
-                }
+                onClick={() => anlegenOeffnen(zielVon(zustand.daten))}
               >
                 <Icon name="plus" size={16} /> Ablauf anlegen
               </button>
@@ -340,20 +369,39 @@ export function TerminAnsicht({
         )}
       </section>
       {liste.ueberlagerung}
-      {anlegen && (
+      {anlegen && !anlegen.neu && (
         <AblaufAnlegenFenster
-          fuer={`${s.name} · ${datumText(s.tag)} · ${s.uhrzeit} Uhr`}
+          fuer={fuer}
           vorlagen={anlegen.vorlagen}
           vorschlaege={anlegen.vorschlaege ?? []}
-          keineVorschlaege={
-            anlegen.vorschlaege === null
-              ? 'Frühere Termine werden geladen …'
-              : `Kein früherer Termin mit Ablauf in den letzten ${WOCHEN_ZURUECK} Wochen.`
-          }
+          keineVorschlaege={keineVorschlaege}
           onAnlegen={(q) => anlegenMit(q, zustand.daten.ablaufTermin.kalenderId ?? null)}
+          onClose={() => setAnlegen(null)}
+        />
+      )}
+      {anlegen?.neu && (
+        <NeuAufsetzen
+          fuer={fuer}
+          vorlagen={anlegen.vorlagen}
+          vorschlaege={anlegen.vorschlaege ?? []}
+          keineVorschlaege={keineVorschlaege}
+          bestandLesen={bestandLesen}
+          neuAufsetzen={(q, gesehen, nurDieser) =>
+            neuAufsetzenMit(q, gesehen, nurDieser, zustand.daten.ablaufTermin.kalenderId ?? null)
+          }
+          neuLaden={ablaufNeuLaden}
           onClose={() => setAnlegen(null)}
         />
       )}
     </div>
   );
+}
+
+/** Was „Ablauf anlegen“ und „Neu aufsetzen“ über den Termin wissen müssen – eine Stelle für beide Knöpfe. */
+function zielVon(d: TerminDaten): { beginn: string; tag: string; kalenderId: number | null } {
+  return {
+    beginn: d.zeilen[0]?.beginn ?? '',
+    tag: d.plan.spalten[0].tag,
+    kalenderId: d.ablaufTermin.kalenderId ?? null,
+  };
 }

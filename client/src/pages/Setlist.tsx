@@ -7,6 +7,7 @@ import { CenterMessage } from '../components/CenterMessage';
 import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { AgendaFullView } from '../components/AgendaFullView';
 import { LiedVerknuepfen } from '../components/LiedVerknuepfen';
+import { AblaufNeuAufsetzen } from '../components/AblaufAnlegenFenster';
 import { Icon } from '@ui/icons/icons';
 import {
   useAblaufBearbeiten,
@@ -91,6 +92,8 @@ export function Setlist({
   const abgeschlossen = service.ablaufAbgeschlossen === true;
   const abschluss = useAblaufAbschliessen(service.id);
   const [abschliessenFrage, setAbschliessenFrage] = useState(false);
+  // „Neu aufsetzen …“ (E6-5b) – Fenster und Nachfrage in `AblaufNeuAufsetzen`.
+  const [neuAufsetzenOffen, setNeuAufsetzenOffen] = useState(false);
   const qc = useQueryClient();
   // Liederheft: dasselbe Logo wie auf dem Liedblatt, vorgeladen – samt Gemeinde-Schalter (19.10.2026).
   const logo = useAppLogo();
@@ -117,6 +120,7 @@ export function Setlist({
       if (verlangtNeuLaden(e))
         void qc.invalidateQueries({ queryKey: schluessel.agenda(service.id) });
     },
+    neuAufsetzen: () => setNeuAufsetzenOffen(true),
   });
   const { fehlerZeigen } = bearbeiten;
 
@@ -253,6 +257,10 @@ export function Setlist({
   /** Dialoge und Fenster schweben über dem Inhalt – sie scrollen nicht mit. */
   const ueberlagerung = (
     <>
+      {neuAufsetzenOffen && (
+        <AblaufNeuAufsetzen termin={service} onClose={() => setNeuAufsetzenOffen(false)} />
+      )}
+
       {teilenOffen && (
         <TeilenFenster
           titel="Ablauf teilen"

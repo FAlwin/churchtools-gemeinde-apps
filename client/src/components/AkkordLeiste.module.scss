@@ -20,28 +20,14 @@
     }
   }
 }
-// Schreibansicht: sitzt mit in der Werkzeugleiste, eine Zeile – am iPad quer passt sie ganz, am Handy wird gewischt.
+// Schreibansicht: sitzt mit in der Werkzeugleiste, eine Zeile mit denselben Abständen wie sonst – am iPad quer passt
+// sie („Anderer Akkord“ steht dann im Menü „Im Lied“), sonst wird gewischt.
 .kompakt {
   flex: 1 1 auto;
   min-width: 0;
   padding: 0;
-  gap: 4px;
-  .gruppe {
-    gap: 4px;
-  }
-  .gruppe + .anderer,
-  .gruppe + .gruppe {
-    padding-left: 0;
-    border-left: none;
-  }
-  .chip {
-    min-width: 38px;
-    padding: 0 6px;
-  }
-  .anderer {
-    padding: 0 8px;
-  }
 }
+
 .gruppe {
   display: flex;
   align-items: center;

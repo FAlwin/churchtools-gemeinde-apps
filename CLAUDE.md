@@ -492,7 +492,7 @@ Marke „Eigener Ablauf“, Ziehen mit `CSS.Translate` – `Transform` streckt v
 CodeMirror-Markierung um ein ersetztes Kärtchen wird nicht gezeichnet; `AkkordWidget.ignoreEvent` lässt
 `mousedown` durch; Klammer-Grammatik der Kärtchen EINMAL in `AKKORD_KLAMMER`). L5-3 = **Schreibansicht** (`schreiben` = Tastatur offen
 UND Fokus im Text): Ablauf, Fassung, Umschalter weg, `AkkordLeiste kompakt` in der Werkzeugleiste („Im Lied“ als
-Ausklappmenü), endet erst mit Tastatur-zu. Tastaturhöhe EINMAL in `ui/fenster/useTastaturOffen.ts` (`tastaturHoehe`,
+Ausklappmenü, darin „Anderer Akkord“ – sonst wird die Zeile zu eng), endet erst mit Tastatur-zu. Tastaturhöhe EINMAL in `ui/fenster/useTastaturOffen.ts` (`tastaturHoehe`,
 gemessen gegen die beim Tippen eingefrorene `--app-h` – iOS verkleinert manchmal das Fenster; auch für
 `useOverlayKeyboardInset` und `useKeyboardInsets`); Knöpfe um den Text mit `onMouseDown`-`preventDefault`, damit sie
 dem Text den Fokus (und damit die Tastatur) nicht nehmen. Liedinfo kommt in L4 nur aus ChurchTools;

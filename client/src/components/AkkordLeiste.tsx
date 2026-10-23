@@ -153,17 +153,21 @@ export function AkkordLeiste({ tonart, text, zuletzt, waehlen, anderer, kompakt 
           <Icon name="chev-down" size={15} stroke={2.2} />
         </button>
       )}
-      <button
-        type="button"
-        className={styles.anderer}
-        aria-label="Anderer Akkord"
-        title="Anderer Akkord"
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={anderer}
-      >
-        <Icon name="plus" size={15} stroke={2.2} />
-        {!kompakt && 'Anderer Akkord'}
-      </button>
+      {/* Schreibansicht mit „Im Lied“: „Anderer Akkord“ steht dort im Ausklappmenü – sonst wird die Zeile zu eng
+          (Alwin, 23.10.2026: „zu gequetscht“). */}
+      {!(kompakt && imLied.length > 0) && (
+        <button
+          type="button"
+          className={styles.anderer}
+          aria-label="Anderer Akkord"
+          title="Anderer Akkord"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={anderer}
+        >
+          <Icon name="plus" size={15} stroke={2.2} />
+          {!kompakt && 'Anderer Akkord'}
+        </button>
+      )}
 
       {liste && (
         <div
@@ -192,6 +196,20 @@ export function AkkordLeiste({ tonart, text, zuletzt, waehlen, anderer, kompakt 
                 {a}
               </button>
             ))}
+            {liste.titel === 'Im Lied' && (
+              <button
+                type="button"
+                className={styles.anderer}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  setListe(null);
+                  anderer();
+                }}
+              >
+                <Icon name="plus" size={15} stroke={2.2} />
+                Anderer Akkord
+              </button>
+            )}
           </div>
         </div>
       )}

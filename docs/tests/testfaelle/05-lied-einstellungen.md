@@ -510,13 +510,13 @@ kleines Menü (‹ › Ändern Entfernen); das Kärtchen ist blau umrahmt. Die T
 **Auf Staging nicht speichern** – Staging hängt am echten ChurchTools.
 
 **Das muss passieren:** Sobald du in den Liedtext tippst und die Tastatur aufgeht, verschwinden Ablauf, Fassung und
-„ChordPro-Text“. Format, die Akkorde der Tonart, **Im Lied ▾**, **+** und Rückgängig stehen in einer Zeile über dem
-Text. Über der Tastatur ist Platz für deutlich mehr als zwei Zeilen. Tastatur zu → alles wie vorher.
+„ChordPro-Text“. Format, die Akkorde der Tonart, **Im Lied ▾** und Rückgängig stehen in einer Zeile über dem
+Text – mit Luft zwischen den Knöpfen, nichts gequetscht. Über der Tastatur ist Platz für deutlich mehr als zwei Zeilen. Tastatur zu → alles wie vorher.
 
 1. Lied öffnen → Version bearbeiten → in den Text tippen. Die Ansicht räumt auf, die eine Zeile passt am iPad quer
    ganz (nichts abgeschnitten).
 2. **Im Lied** antippen → die übrigen Akkorde des Lieds klappen auf; einen antippen → er steht an der Cursorstelle,
-   die Tastatur bleibt offen. Noch einmal **Im Lied** → zu.
+   die Tastatur bleibt offen. Noch einmal **Im Lied** → zu. Unten im Menü: **Anderer Akkord** → das Fenster.
 3. **Format** antippen → das Menü öffnet, die Tastatur bleibt offen; „Weiterschalt-Punkt“ wählen.
 4. Ein Akkord-Kärtchen **direkt über der Tastatur** antippen: Das Menü klappt **nach oben** auf, nicht unter die
    Tastatur.

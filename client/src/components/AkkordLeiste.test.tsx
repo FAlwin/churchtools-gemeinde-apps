@@ -88,3 +88,29 @@ describe('AkkordLeiste', () => {
     expect(screen.queryByRole('group', { name: /Varianten/ })).toBeNull();
   });
 });
+
+describe('AkkordLeiste – Schreibansicht (kompakt)', () => {
+  it('„Im Lied“ klappt auf; „Anderer Akkord“ steht dort statt als eigener Knopf (nicht gequetscht)', () => {
+    const { anderer, waehlen } = zeige({ kompakt: true });
+    expect(screen.queryByRole('button', { name: 'Anderer Akkord' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Im Lied' }));
+    const menue = screen.getByRole('group', { name: 'Im Lied' });
+    fireEvent.click(within(menue).getByRole('button', { name: 'F#m7' }));
+    expect(waehlen).toHaveBeenCalledWith('F#m7');
+    fireEvent.click(screen.getByRole('button', { name: 'Im Lied' }));
+    fireEvent.click(
+      within(screen.getByRole('group', { name: 'Im Lied' })).getByRole('button', {
+        name: /Anderer Akkord/,
+      }),
+    );
+    expect(anderer).toHaveBeenCalled();
+    expect(screen.queryByRole('group', { name: 'Im Lied' })).toBeNull();
+  });
+
+  it('ohne weitere Akkorde im Lied bleibt „+“ als eigener Knopf', () => {
+    const { anderer } = zeige({ kompakt: true, text: '{key: E}\n[E]Nur Tonart [A]Akkorde' });
+    expect(screen.queryByRole('button', { name: 'Im Lied' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Anderer Akkord' }));
+    expect(anderer).toHaveBeenCalled();
+  });
+});

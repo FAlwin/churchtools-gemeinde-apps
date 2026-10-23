@@ -8,11 +8,36 @@ import { ladeStart, type Start } from './start';
 vi.mock('./start', () => ({ ladeStart: vi.fn() }));
 vi.mock('./Verwaltung', () => ({ Verwaltung: () => <p>VERWALTUNG</p> }));
 vi.mock('./Sitzungen', () => ({
-  Sitzungen: ({ auswahl }: { auswahl?: { gruppe: number; sitzung?: string } | null }) => (
-    <p>SITZUNGEN {auswahl ? `${auswahl.gruppe}/${auswahl.sitzung ?? '-'}` : 'ohne Auswahl'}</p>
+  Sitzungen: ({
+    auswahl,
+  }: {
+    auswahl?: { gruppe: number; sitzung?: string; punkt?: string | null } | null;
+  }) => (
+    <p>
+      SITZUNGEN{' '}
+      {auswahl
+        ? `${auswahl.gruppe}/${auswahl.sitzung ?? '-'}${auswahl.punkt ? `#${auswahl.punkt}` : ''}`
+        : 'ohne Auswahl'}
+    </p>
   ),
 }));
 vi.mock('./lesen', () => ({ ladeUebersicht: vi.fn(() => Promise.resolve([])) }));
+vi.mock('./Suche', () => ({
+  Suche: ({
+    begriff,
+    onTreffer,
+  }: {
+    begriff: string;
+    onTreffer: (g: number, s: string, p: string | null) => void;
+  }) => (
+    <div>
+      <p>SUCHE „{begriff}“</p>
+      <button type="button" onClick={() => onTreffer(7, 'p:okt', 'pkt-2')}>
+        TREFFER
+      </button>
+    </div>
+  ),
+}));
 const laden = vi.mocked(ladeStart);
 
 const START: Start = {
@@ -123,5 +148,41 @@ describe('App (S1)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Start' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Sitzungen' }));
     expect(await screen.findByText('SITZUNGEN ohne Auswahl')).toBeTruthy();
+  });
+
+  it('S3-4b: die Lupe klappt die Suche auf – sie ersetzt den Inhalt, der Gruß verschwindet', async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Suchen' }));
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'beamer' } });
+    expect(screen.getByText('SUCHE „beamer“')).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Hallo Alwin' })).toBeNull();
+    expect(screen.queryByText(/Deine Gruppen/)).toBeNull();
+  });
+
+  it('S3-4b: ✕ führt zurück – der Begriff ist beim nächsten Öffnen leer', async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Suchen' }));
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'beamer' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Suche schließen' }));
+    expect(await screen.findByRole('heading', { name: 'Hallo Alwin' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Suchen' }));
+    expect(screen.getByText('SUCHE „“')).toBeTruthy();
+  });
+
+  it('S3-4b: ein Reiter schließt die Suche', async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Suchen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sitzungen' }));
+    expect(await screen.findByText('SITZUNGEN ohne Auswahl')).toBeTruthy();
+    expect(screen.queryByRole('searchbox')).toBeNull();
+  });
+
+  it('S3-4b: ein Treffer öffnet „Sitzungen“ mit Gruppe, Sitzung und Punkt – die Suche ist zu', async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Suchen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'TREFFER' }));
+    expect(await screen.findByText('SITZUNGEN 7/p:okt#pkt-2')).toBeTruthy();
+    expect(window.location.hash).toBe('#/sitzungen');
+    expect(screen.queryByRole('searchbox')).toBeNull();
   });
 });

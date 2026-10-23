@@ -1,9 +1,10 @@
 # Protokolle – ChurchTools-Erweiterung
 
-> **Stand: S3-3 (23.10.2026)** – Lesen. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
-> Sitzungen“ und „Deine Gruppen“; der Reiter **„Sitzungen“** zeigt je Gruppe Kommend und Protokolle zum Lesen; Admins
-> richten im Reiter **„Verwaltung“** Gruppen ein und pflegen die Vorlagen. Beschlüsse mit Suche, Schreiben und To-Dos
-> bearbeiten folgen (Bauplan S3-4–S9 in `protokolle-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
+> **Stand: S3 (23.10.2026)** – Lesen. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
+> Sitzungen“ und „Deine Gruppen“; der Reiter **„Sitzungen“** zeigt je Gruppe Kommend und Protokolle zum Lesen; die
+> **Lupe** oben rechts sucht in allem (ohne Suchbegriff: alle Beschlüsse); Admins richten im Reiter **„Verwaltung“**
+> Gruppen ein und pflegen die Vorlagen. Schreiben und To-Dos bearbeiten folgen (Bauplan S4–S9 in
+> `protokolle-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
 
 Die Protokolle sind für Gruppen wie den Leitungskreis: **Protokolle als Dokument** (wie Word, Loop oder Notion),
 daraus gesammelt Beschlüsse, To-Dos und Termine. **Alles liegt in ChurchTools** – es gibt keinen eigenen Server,
@@ -59,6 +60,11 @@ zugewiesenen, nicht erledigten aus allen Gruppen. „Nächste Sitzungen“ sind 
 „Sitzungen“ (Termine **mit Besprechungsanfrage**, Gruppentreffen, begonnene Protokolle), ab heute über alle Gruppen;
 dahinter steht die eigene Antwort auf die Anfrage – wer nicht eingeladen ist, sieht keine. Ein Tipp öffnet die
 Sitzung bzw. die Gruppe im Reiter „Sitzungen“.
+
+**Suche (Lupe oben rechts):** sucht in Beschlüssen, To-Dos, Terminen und im Protokolltext aller eigenen Gruppen –
+auch im Tagesordnungspunkt und im Sitzungstitel; alle Wörter müssen vorkommen. Filter nach Art und Gruppe. Ohne
+Suchbegriff stehen dort **alle Beschlüsse**. Beschlüsse, Termine und Text kommen nur aus **freigegebenen**
+Protokollen, To-Dos aus allen. Ein Treffer öffnet die Sitzung am Tagesordnungspunkt.
 
 Auf der Startseite stehen nur Gruppen, deren Protokolle man sehen darf – eine Gruppe ohne Zugriff (oder noch nicht
 eingerichtet) fehlt dort; den Stand aller Gruppen sehen Admins in der Verwaltung.

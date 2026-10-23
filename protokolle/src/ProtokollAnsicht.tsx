@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { tagPunkt } from '@shared/ct/datum';
 import { ableiten, BLOCK, textAus, type Block } from '@shared/protokolle/dokument';
-import type { Aufgabe } from '@shared/protokolle/aufgaben';
+import { statusText, type Aufgabe } from '@shared/protokolle/aufgaben';
 import styles from './ProtokollAnsicht.module.scss';
 
 /**
@@ -63,12 +63,6 @@ export function Inhalt({ content }: { content: unknown }) {
   );
 }
 
-const STATUS_TEXT: Record<Aufgabe['status'], string> = {
-  offen: 'offen',
-  arbeit: 'in Arbeit',
-  erledigt: 'erledigt',
-};
-
 const VERWEIS_TEXT: Record<string, string> = {
   'offene-aufgaben': 'Hier stehen die offenen To-Dos der Gruppe.',
   'letztes-protokoll': 'Hier steht das Protokoll der letzten Sitzung.',
@@ -76,6 +70,8 @@ const VERWEIS_TEXT: Record<string, string> = {
 
 interface Kontext {
   nummern: Map<string, number>;
+  /** Der Punkt, zu dem die Suche gesprungen ist – kurz hervorgehoben. */
+  markiert: string | null;
   aufgaben: ReadonlyMap<string, Aufgabe>;
 }
 
@@ -138,7 +134,10 @@ function EinBlock({ b, k }: { b: Block; k: Kontext }) {
       return (
         <>
           {stufe <= 1 ? (
-            <h3 className={styles.punkt} id={`punkt-${b.id}`}>
+            <h3
+              className={`${styles.punkt}${k.markiert === b.id ? ` ${styles.markiert}` : ''}`}
+              id={`punkt-${b.id}`}
+            >
               {inhalt}
             </h3>
           ) : stufe === 2 ? (
@@ -166,7 +165,7 @@ function EinBlock({ b, k }: { b: Block; k: Kontext }) {
             <Inhalt content={b.content} />
             {a && (
               <small>
-                {STATUS_TEXT[a.status]}
+                {statusText(a.status)}
                 {a.bis ? ` · bis ${tagPunkt(a.bis)}` : ''}
               </small>
             )}
@@ -222,14 +221,17 @@ function EinBlock({ b, k }: { b: Block; k: Kontext }) {
 export function ProtokollAnsicht({
   dokument,
   aufgaben = [],
+  markiert = null,
 }: {
   dokument: readonly Block[];
   aufgaben?: readonly Aufgabe[];
+  markiert?: string | null;
 }) {
   const a = ableiten(dokument);
   const k: Kontext = {
     nummern: new Map(a.punkte.map((p) => [p.blockId, p.nummer])),
     aufgaben: new Map(aufgaben.map((x) => [x.id, x])),
+    markiert,
   };
   if (!dokument.length) return <p className={styles.leer}>Das Protokoll ist noch leer.</p>;
   return (

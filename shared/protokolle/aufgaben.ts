@@ -45,6 +45,11 @@ const FOLGE: Record<AufgabenStatus, AufgabenStatus> = {
   erledigt: 'offen',
 };
 
+/** **Wie ein Status heißt** – die eine Stelle dafür (Protokoll, Sitzung, Startseite, Suche). */
+export function statusText(s: AufgabenStatus): string {
+  return s === 'arbeit' ? 'in Arbeit' : s;
+}
+
 /** Der Kreis in der Liste: offen → in Arbeit → erledigt → wieder offen. */
 export function naechsterStatus(s: AufgabenStatus): AufgabenStatus {
   return FOLGE[s];

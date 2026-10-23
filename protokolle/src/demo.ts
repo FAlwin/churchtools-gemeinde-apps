@@ -18,8 +18,9 @@ import { neueAufgabe, statusSetzen } from '@shared/protokolle/aufgaben';
 import type { Block } from '@shared/protokolle/dokument';
 
 /**
- * Zwei Protokolle des Leitungsteams (S3-2): ein freigegebenes (das echte BlockNote-Dokument aus S0) und ein Entwurf
- * aus der Vorlage mit Beschluss, Aufgabe und Termin – im echten Speicherformat (Kopf + Teile).
+ * Drei Protokolle des Leitungsteams (S3-2, S3-4b): zwei freigegebene (das echte BlockNote-Dokument aus S0 und eins
+ * mit Beschlüssen und Termin für die Suche) und ein Entwurf aus der Vorlage mit Beschluss, Aufgabe und Termin – im
+ * echten Speicherformat (Kopf + Teile).
  */
 function protokollWerte(
   kategorie: number,
@@ -49,6 +50,43 @@ function protokollWerte(
       children: [],
     },
   ];
+  const t = (text: string) => [{ type: 'text', text, styles: {} }];
+  const september: Block[] = [
+    { id: 's-p1', type: 'heading', props: { level: 1 }, content: t('Finanzen'), children: [] },
+    {
+      id: 's-b1',
+      type: 'beschluss',
+      content: t('Die Kollekte im Oktober geht an die Mission.'),
+      children: [],
+    },
+    { id: 's-p2', type: 'heading', props: { level: 1 }, content: t('Technik'), children: [] },
+    {
+      id: 's-a1',
+      type: 'paragraph',
+      content: t('Der alte Beamer fällt immer wieder aus.'),
+      children: [],
+    },
+    {
+      id: 's-b2',
+      type: 'beschluss',
+      content: t('Zweites Beamer-Angebot wird angenommen.'),
+      children: [],
+    },
+    { id: 's-p3', type: 'heading', props: { level: 1 }, content: t('Freizeit'), children: [] },
+    {
+      id: 's-b3',
+      type: 'beschluss',
+      content: t('Gemeindefreizeit 2027 im Hunsrück.'),
+      children: [],
+    },
+    {
+      id: 's-t1',
+      type: 'termin',
+      props: { datum: '2027-01-15' },
+      content: t('Anmeldung zur Freizeit öffnet'),
+      children: [],
+    },
+  ];
   const werte: string[] = [
     JSON.stringify({
       art: 'einstellung',
@@ -61,6 +99,7 @@ function protokollWerte(
   ];
   for (const [sitzung, status, beginn, dok] of [
     ['demo-okt', 'frei', '2026-10-14T17:00:00Z', BLOCKNOTE_DOKUMENT],
+    ['demo-sept', 'frei', '2026-09-09T17:00:00Z', september],
     ['demo-entwurf', 'entwurf', '2026-10-21T17:00:00Z', entwurf],
   ] as const) {
     const t = teileBauen(dok, sitzung);

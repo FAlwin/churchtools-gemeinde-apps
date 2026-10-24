@@ -46,6 +46,7 @@ const START: Start = {
   gemeinde: 'ECG Donrath',
   modul: 20,
   darfVerwalten: false,
+  schreibbar: [],
   gruppen: [
     { id: 11, name: 'Leitungsteam', lage: 'eingerichtet', protokolle: 60, mitarbeit: 61 },
     { id: 7, name: 'Jugendleitung', lage: 'unvollstaendig', protokolle: 70, mitarbeit: null },

@@ -48,6 +48,11 @@
     color: var(--text2);
   }
 
+  mark {
+    background: var(--markiert);
+    color: inherit;
+  }
+
   code {
     padding: 0 4px;
     border-radius: var(--r-ctrl);
@@ -159,6 +164,12 @@
   svg {
     color: var(--blue);
   }
+}
+
+.linie {
+  margin: 12px 0;
+  border: 0;
+  border-top: 1px solid var(--border);
 }
 
 .verweis {

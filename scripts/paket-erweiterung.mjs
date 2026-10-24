@@ -13,6 +13,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { globaleRegeln } from './globaleCss.mjs';
 
 const app = process.cwd();
 const quelle = path.join(app, 'dist-extension');
@@ -53,32 +54,13 @@ if (/<script type="module"|<link rel="(?:stylesheet|modulepreload)"/.test(kopf))
  * zielen (`:root`, `html`, `body`, `*`, nackte Elemente) – sonst verbiegt sie ChurchTools' Menüs.
  * Umgeschrieben wird in `ui/erweiterung/cssBereich.ts`; ein zweiter `css`-Schlüssel in der
  * Vite-Konfiguration hatte das schon einmal still abgeschaltet, bei grünem Build. Deshalb hier am
- * Ergebnis geprüft, und das Packen bricht ab.
+ * Ergebnis geprüft, und das Packen bricht ab. Die Prüfung selbst steht seit 24.10.2026 in `globaleCss.mjs` (getestet).
  */
 const assets = path.join(quelle, 'assets');
 const funde = [];
 for (const datei of fs.readdirSync(assets).filter((d) => d.endsWith('.css'))) {
-  const css = fs
-    .readFileSync(path.join(assets, datei), 'utf8')
-    .replace(/@keyframes[^{]*\{(?:[^{}]*\{[^}]*\})*[^}]*\}/g, '');
-  for (const regel of css.match(/[^{}]+\{/g) ?? []) {
-    const selektor = regel.slice(0, -1).trim();
-    if (selektor.startsWith('@')) continue;
-    for (const teil of selektor.split(',')) {
-      const t = teil.trim();
-      if (t.startsWith('html[data-theme') && t.includes(':where(#root')) continue;
-      // Erlaubt: der App-Bereich (`:where(#root…`) und unsere Elemente außerhalb davon
-      // (`:where([data-gemeinde-app])`, die Schrift des Einführungs-Overlays) – beide treffen ChurchTools nicht.
-      if (
-        /^(:root|html|body|\*|:[a-z-]+|[a-z][a-z0-9]*)(\b|$)/.test(t) &&
-        !t.startsWith(':where(#root') &&
-        // `BEREICH_ATTRIBUT` aus cssBereich.ts – ändert es sich dort, bricht das Packen hier laut ab.
-        !t.startsWith(':where([data-gemeinde-app])')
-      ) {
-        funde.push(`${datei}: ${t}`);
-      }
-    }
-  }
+  for (const t of globaleRegeln(fs.readFileSync(path.join(assets, datei), 'utf8')))
+    funde.push(`${datei}: ${t}`);
 }
 if (funde.length > 0) {
   console.error('Globale CSS-Regeln im Extension-Build (würden ChurchTools verändern):');

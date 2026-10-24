@@ -454,12 +454,21 @@ export const ChordProInput = forwardRef<ChordProHandle, ChordProInputProps>(func
       const ende = opts?.amZeilenende ? view.state.doc.lineAt(auswahl.head).to : null;
       const sel = ende == null ? auswahl : { from: ende, to: ende };
       let ins = text;
+      let vorne = 0;
       if (opts?.block) {
         const before = sel.from > 0 ? view.state.doc.sliceString(sel.from - 1, sel.from) : '\n';
-        if (before !== '\n') ins = '\n' + ins;
+        if (before !== '\n') {
+          ins = '\n' + ins;
+          vorne = 1;
+        }
         if (!ins.endsWith('\n')) ins = ins + '\n';
       }
-      const caret = sel.from + ins.length - (opts?.caretBack ?? 0);
+      // `caretBack` zählt vom Ende des übergebenen TEXTS, nicht vom angehängten Zeilenumbruch: Sonst landete der
+      // Cursor bei `{capo: }` hinter der Klammer statt davor (Test-Instanz, 24.10.2026 – im Format-Menü schon so).
+      const caret =
+        opts?.caretBack != null
+          ? sel.from + vorne + text.length - opts.caretBack
+          : sel.from + ins.length;
       view.dispatch({
         changes: { from: sel.from, to: sel.to, insert: ins },
         selection: { anchor: caret },

@@ -71,6 +71,21 @@ test('Pedal-Halt wie bisher an den Cursor', async ({ page }) => {
   );
 });
 
+test('Kapo: der Cursor steht VOR der Klammer – eingetippt wird {capo: 2} (Test-Instanz 24.10.2026)', async ({
+  page,
+}) => {
+  await oeffnen(page);
+  await mittenInDieZeile(page);
+  await menue(page).click();
+  await page.getByRole('button', { name: /Kapo/ }).click();
+  await page.keyboard.type('2');
+  await page.getByRole('button', { name: 'Speichern' }).click();
+  const pos = DEMO_EDITOR_TEXT.indexOf('[E]bleibst');
+  expect(await gespeichert(page)).toBe(
+    DEMO_EDITOR_TEXT.slice(0, pos) + '\n{capo: 2}\n' + DEMO_EDITOR_TEXT.slice(pos),
+  );
+});
+
 test('Ende-Marken sind im Text unsichtbar, im ChordPro-Text sichtbar – gespeichert bleiben sie', async ({
   page,
 }) => {

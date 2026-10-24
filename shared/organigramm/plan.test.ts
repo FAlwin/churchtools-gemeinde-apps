@@ -47,7 +47,7 @@ const HEUTE: Heute = {
   ]),
 };
 /** In ChurchTools archiviert: keine (ChurchTools liefert archivierte Gruppen nur eigens – Messung O7-3). */
-const KEINE_ARCHIVIERT = new Set<number>();
+const KEINE_ARCHIVIERT = new Map<number, string>();
 const zeile = (a: PlanAenderungen, ref: number | string) =>
   planGruppen(HEUTE, a).find((x) => x.ref === ref)!;
 
@@ -180,7 +180,7 @@ describe('umbauSchritte', () => {
       ],
       eltern: new Map([...HEUTE.eltern, [47, [500]], [37, [500]]]),
     };
-    const s = umbauSchritte(danach, b, new Set([50]));
+    const s = umbauSchritte(danach, b, new Map([[50, 'Sommerfest']]));
     expect(s.find((x) => x.art === 'arch')).toMatchObject({ id: 50, erledigt: true });
     expect(s.filter((x) => x.art !== 'neu').every((x) => x.erledigt)).toBe(true);
     // Gemeinschaft hat der Umbau angelegt → bleibt als erledigt stehen (verschwindet nicht aus der Liste)
@@ -234,10 +234,21 @@ describe('umbauSchritte', () => {
       { art: 'arch', id: 50, erledigt: false, wartetAuf: null, untergruppen: [] },
     ]);
     const weg: Heute = { ...HEUTE, gruppen: HEUTE.gruppen.filter((x) => x.id !== 50) };
-    expect(umbauSchritte(weg, a, new Set([50]))[0].erledigt).toBe(true);
+    expect(umbauSchritte(weg, a, new Map([[50, 'Sommerfest']]))[0].erledigt).toBe(true);
     // archiviert-Liste unbekannt: die Gruppe ist aus der Liste verschwunden → gibt es nicht (mehr), kein Schritt
     expect(umbauSchritte(weg, a, null)).toEqual([]);
     expect(umbauSchritte(HEUTE, a, null)[0].erledigt).toBe(false);
+  });
+
+  it('umbenannt und danach archiviert: das Umbenennen bleibt als erledigt stehen (Test-Instanz 24.10.2026)', () => {
+    const a = archivieren(umbenennen(HEUTE, KEINE_AENDERUNGEN, 50, 'Herbstfest'), 50, true);
+    const weg: Heute = { ...HEUTE, gruppen: HEUTE.gruppen.filter((x) => x.id !== 50) };
+    expect(umbauSchritte(weg, a, new Map([[50, 'Herbstfest']]))).toEqual([
+      { art: 'name', id: 50, name: 'Herbstfest', erledigt: true, wartetAuf: null },
+      { art: 'arch', id: 50, erledigt: true, wartetAuf: null, untergruppen: [] },
+    ]);
+    // archiviert, aber unter altem Namen → Umbenennen offen
+    expect(umbauSchritte(weg, a, new Map([[50, 'Sommerfest']]))[0].erledigt).toBe(false);
   });
 
   it('Archivieren wartet, solange in ChurchTools noch Gruppen darunter hängen', () => {

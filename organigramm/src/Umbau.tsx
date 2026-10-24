@@ -82,6 +82,7 @@ export function Umbau({
 
   const fertig = schritte.filter((s) => s.erledigt).length;
   const offen = schritte.filter(ausfuehrbar);
+  const wartend = schritte.filter((s) => !s.erledigt && !ausfuehrbar(s)).length;
   const archivNamen = daten?.archivierteGruppen ?? null;
   const text = (s: Schritt) => schrittText(s, plan, typName, archivNamen);
 
@@ -309,7 +310,7 @@ export function Umbau({
       </section>
       {alleFragen && (
         <Sheet
-          title={`${offen.length} ${offen.length === 1 ? 'Schritt' : 'Schritte'} ausführen?`}
+          title="Alle offenen Schritte ausführen?"
           onClose={() => setAlleFragen(false)}
           knoepfe={
             <FensterKnopf art="haupt" onClick={() => void alle()}>
@@ -318,9 +319,11 @@ export function Umbau({
           }
         >
           <p className={baum.meta}>
-            Die Schritte ändern ChurchTools sofort, einer nach dem anderen – auch die, die erst
-            danach frei werden. Bei einem Fehler hält der Umbau an. Danach gibt es kein
-            „Rückgängig“.
+            {offen.length} {offen.length === 1 ? 'ist' : 'sind'} jetzt frei
+            {wartend > 0 &&
+              ` – ${wartend} ${wartend === 1 ? 'wartet' : 'warten'} noch; was dabei frei wird, kommt gleich mit dran`}
+            . Die Schritte ändern ChurchTools sofort, einer nach dem anderen. Bei einem Fehler hält
+            der Umbau an. Danach gibt es kein „Rückgängig“.
           </p>
         </Sheet>
       )}

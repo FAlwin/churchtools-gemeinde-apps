@@ -7,7 +7,8 @@
 - **Archivieren wartet**, solange in ChurchTools noch Gruppen darunter hängen (Alwin, 24.10.2026). Archivieren setzt
   den Status „archiviert“ – Mitglieder und Historie bleiben.
 - Erledigt ist, was ChurchTools schon so zeigt; eine neue Gruppe, die es dort schon gibt, lässt sich **im Plan
-  übernehmen**. Vom Umbau angelegte Gruppen bleiben als erledigt in der Liste.
+  übernehmen**. Vom Umbau angelegte Gruppen bleiben als erledigt in der Liste – ebenso ein Umbenennen, wenn die Gruppe
+  danach archiviert wurde (gefunden in der Test-Instanz).
 
 ### Intern (Organigramm)
 

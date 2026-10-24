@@ -41,7 +41,7 @@ const ct = () =>
     { 10: 'Gottesdienst', 7: 'Technik', 12: 'Stream', 47: 'Café', 37: 'Bibelarbeit' },
   );
 /** Die Schritte, wie sie der Umbau zeigt – aus dem Erzeuger, nicht von Hand. */
-const schritte = (a: PlanAenderungen, h: Heute = HEUTE) => umbauSchritte(h, a, new Set());
+const schritte = (a: PlanAenderungen, h: Heute = HEUTE) => umbauSchritte(h, a, new Map());
 
 describe('schrittAusfuehren + rueckgaengig (O7-3)', () => {
   it('neue Gruppe unter einer bestehenden: angelegt, aktiv, nachgelesen; Rückgängig löscht sie', async () => {

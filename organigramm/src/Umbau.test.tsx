@@ -229,6 +229,12 @@ describe('Umbau (O7-3)', () => {
   it('„Alle nacheinander“: nach Rückfrage alles in der richtigen Reihenfolge – auch, was erst frei wird', async () => {
     await zumUmbau();
     fireEvent.click(screen.getByRole('button', { name: 'Alle offenen nacheinander ausführen' }));
+    // Café wartet noch auf Gemeinschaft – die Rückfrage sagt, dass es mitkommt
+    expect(
+      within(screen.getByRole('dialog')).getByText(
+        /3 sind jetzt frei – 1 wartet noch; was dabei frei wird, kommt gleich mit dran/,
+      ),
+    ).toBeTruthy();
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Ausführen' }));
     await screen.findByText('4 von 4 erledigt', undefined, { timeout: 3000 });
     expect(h.ct.log).toEqual([

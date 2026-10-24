@@ -222,7 +222,7 @@ export type Schritt =
     };
 
 /**
- * Was zu tun ist, in der Reihenfolge, in der es geht. `archiviert` sind die IDs der Gruppen, die in ChurchTools den
+ * Was zu tun ist, in der Reihenfolge, in der es geht. `archiviert` sind die Gruppen (ID → Name), die in ChurchTools den
  * Status „archiviert“ haben (`null` = unbekannt → Archivieren gilt nie als erledigt). Eigens geladen, weil ChurchTools
  * archivierte Gruppen weder in der Gruppenliste noch in der Hierarchie liefert (Messung O7-3, 24.10.2026).
  *
@@ -233,7 +233,7 @@ export type Schritt =
 export function umbauSchritte(
   h: Heute,
   a: PlanAenderungen,
-  archiviert: Pick<ReadonlySet<number>, 'has'> | null,
+  archiviert: ReadonlyMap<number, string> | null,
 ): Schritt[] {
   // Schon angelegt (z. B. direkt in ChurchTools, oder das Speichern danach ging schief)? Gleicher Name unter
   // derselben Obergruppe – über die Reihenfolge, damit auch eine neue unter einer gefundenen neuen gefunden wird.
@@ -296,8 +296,11 @@ export function umbauSchritte(
     s.push({ art: 'um', id, eltern: e, erledigt, wartetAuf: erledigt ? null : wartet(e) });
   }
   for (const [k, name] of Object.entries(a.namen)) {
-    const g = h.gruppen.find((x) => x.id === Number(k));
-    if (g) s.push({ art: 'name', id: g.id, name, erledigt: g.name === name, wartetAuf: null });
+    const id = Number(k);
+    // Auch nach dem Archivieren (dann nur noch in der eigenen Liste mit Namen) – sonst fiele der Schritt weg.
+    const jetzt = h.gruppen.find((x) => x.id === id)?.name ?? archiviert?.get(id);
+    if (jetzt !== undefined)
+      s.push({ art: 'name', id, name, erledigt: jetzt === name, wartetAuf: null });
   }
   for (const id of a.archiv) {
     const schon = archiviert?.has(id) ?? false;

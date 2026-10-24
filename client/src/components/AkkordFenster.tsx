@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import { akkordLesen, akkordTeile } from '../utils/transpose';
 import styles from './AkkordFenster.module.scss';
@@ -73,7 +74,15 @@ export function AkkordFenster({
   }
 
   return (
-    <Sheet title={start ? 'Akkord ändern' : 'Anderer Akkord'} onClose={onClose}>
+    <Sheet
+      title={start ? 'Akkord ändern' : 'Anderer Akkord'}
+      onClose={onClose}
+      knoepfe={
+        <FensterKnopf disabled={unlesbar} onClick={() => fertig(akkord)}>
+          {knopf}
+        </FensterKnopf>
+      }
+    >
       <label className={styles.ein}>
         <span className={styles.lbl}>Eintippen</span>
         <input
@@ -123,15 +132,6 @@ export function AkkordFenster({
         (w) => (w ? '/' + w : 'ohne'),
         (bass) => setzen({ bass }),
       )}
-
-      <button
-        type="button"
-        className={styles.haupt}
-        disabled={unlesbar}
-        onClick={() => fertig(akkord)}
-      >
-        {knopf}
-      </button>
     </Sheet>
   );
 }

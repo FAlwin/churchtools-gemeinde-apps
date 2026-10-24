@@ -140,3 +140,20 @@ describe('ArrangementSheet – Standard und Löschen', () => {
     expect(screen.queryByRole('button', { name: /Arrangement löschen/ })).toBeNull();
   });
 });
+
+/** Fenster wie ChurchTools (E6-O F3, #726): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
+const knopfFolgeF3 = () =>
+  screen.getAllByRole('button').map((b) => (b.getAttribute('aria-label') ?? b.textContent)?.trim());
+
+describe('ArrangementSheet im ChurchTools-Aufbau', () => {
+  it('Speichern unten rechts; „Zum Standard machen“ und „Löschen …“ bleiben im Inhalt davor', () => {
+    zeige({ onStandard: vi.fn(), onLoeschen: vi.fn() });
+    expect(knopfFolgeF3()[0]).toBe('Fenster schließen');
+    expect(knopfFolgeF3().slice(-4)).toEqual([
+      'Zum Standard machen',
+      'Arrangement löschen …',
+      'Abbrechen',
+      'Speichern',
+    ]);
+  });
+});

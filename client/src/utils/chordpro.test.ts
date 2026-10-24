@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
+  ENDE_ZEILE,
   akkordVerschieben,
   akkordeImText,
   flowEinfuegen,
   flowSetzen,
+  neuerTeilName,
   parseChordPro,
   parseLine,
   parseMetadata,
@@ -279,5 +281,45 @@ describe('akkordVerschieben (L5-2)', () => {
     expect(schieben('Zeile eins\n[E]zwei', '[E]', -1)).toBeNull();
     expect(schieben('eins[E]\nzwei', '[E]', 1)).toBeNull();
     expect(schieben('[E]', '[E]', 1)).toBeNull();
+  });
+});
+
+describe('neuerTeilName – Menü „Einfügen“ (L6)', () => {
+  it('Vers nummeriert sich immer – auch ein unnummerierter Vers, „Strophe“ und „Verse“ zählen', () => {
+    expect(neuerTeilName('', 'Vers')).toBe('Vers 1');
+    expect(neuerTeilName('{comment: Vers}\nText', 'Vers')).toBe('Vers 2');
+    expect(neuerTeilName('{start_of_verse: Strophe 1}\nA\n{end_of_verse}', 'Vers')).toBe('Vers 2');
+    expect(neuerTeilName('{comment: Verse 2}', 'Vers')).toBe('Vers 3');
+  });
+
+  it('nach der höchsten Nummer, nicht nach der Anzahl – kein zweiter „Vers 3“', () => {
+    expect(neuerTeilName('{comment: Vers 1}\n{comment: Vers 3}', 'Vers')).toBe('Vers 4');
+  });
+
+  it('die übrigen Teile nur nummeriert, wenn es den Namen schon gibt', () => {
+    expect(neuerTeilName('{comment: Vers 1}', 'Refrain')).toBe('Refrain');
+    expect(neuerTeilName('{comment: Refrain}\nA', 'Refrain')).toBe('Refrain 2');
+    expect(neuerTeilName('{start_of_bridge: Bridge 2}', 'Bridge')).toBe('Bridge 3');
+    // Ein anderer Name mit gleichem Anfang zählt nicht mit.
+    expect(neuerTeilName('{comment: Pre-Chorus}', 'Chorus')).toBe('Chorus');
+  });
+
+  it('der neue Name ist für das Blatt ein eigener Teil', () => {
+    const text = `{comment: Vers}\nA\n{comment: ${neuerTeilName('{comment: Vers}', 'Vers')}}\nB`;
+    expect(parseChordPro(text).map((t) => t.label)).toEqual(['Vers', 'Vers 2']);
+  });
+});
+
+describe('ENDE_ZEILE – eine Regel für Blatt und Editor (L6)', () => {
+  it('erkennt Ende-Marken, auch eingerückt, sonst nichts', () => {
+    expect(ENDE_ZEILE.test('{end_of_verse}')).toBe(true);
+    expect(ENDE_ZEILE.test('  {END_OF_CHORUS} ')).toBe(true);
+    expect(ENDE_ZEILE.test('{end_of_verse} Text')).toBe(false);
+    expect(ENDE_ZEILE.test('{start_of_verse}')).toBe(false);
+  });
+
+  it('das Blatt schließt den Teil an genau dieser Zeile', () => {
+    const teile = parseChordPro('{start_of_verse: V}\nA\n  {end_of_verse}  \nB');
+    expect(teile.map((t) => t.lines)).toEqual([['A'], ['B']]);
   });
 });

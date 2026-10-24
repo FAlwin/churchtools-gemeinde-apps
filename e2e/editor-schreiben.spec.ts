@@ -58,8 +58,8 @@ test('Tastatur offen + Cursor im Text: Ablauf und Fassung weg, eine Zeile, der T
   await expect(page.getByRole('region', { name: 'Ablauf' })).toBeHidden();
   await expect(page.getByLabel('Versionsname')).toBeHidden();
   await expect(page.getByRole('button', { name: 'ChordPro-Text' })).toBeHidden();
-  // Format, Akkorde und Rückgängig stehen in EINER Zeile.
-  const format = (await page.getByRole('button', { name: /Format/ }).boundingBox())!;
+  // Einfügen, Akkorde und Rückgängig stehen in EINER Zeile.
+  const format = (await page.getByRole('button', { name: 'Einfügen', exact: true }).boundingBox())!;
   const tonart = (await page
     .getByRole('group', { name: 'Akkorde' })
     .getByRole('button', { name: 'E', exact: true })
@@ -166,7 +166,9 @@ test.describe('Handy', () => {
       (window as unknown as { tastatur: (px: number) => void }).tastatur(340),
     );
     await expect(page.getByLabel('Versionsname')).toBeHidden();
-    const format = (await page.getByRole('button', { name: /Format/ }).boundingBox())!;
+    const format = (await page
+      .getByRole('button', { name: 'Einfügen', exact: true })
+      .boundingBox())!;
     const zurueck = (await page.getByRole('button', { name: 'Rückgängig' }).first().boundingBox())!;
     expect(Math.abs(format.y - zurueck.y)).toBeLessThan(4);
     const leiste = page.getByRole('group', { name: 'Akkorde' });

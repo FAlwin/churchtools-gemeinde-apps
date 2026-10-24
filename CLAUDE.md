@@ -192,14 +192,14 @@ churchtools-gemeinde-apps/
 │       ├── types/           # server-spezifische Typen
 │       └── utils/           # Hilfsfunktionen (u. a. isoTag.ts = die eine Datums-Formatierung)
 ├── shared/types/            # geteilte Typen (Service, SetlistSong, Setlist, …)
-├── shared/organigramm/      # Regeln des Organigramms: gruppen (Baum, Typen ausblenden), farbe (eigene vor Typ), mitglieder (Rollen aus CT: isLeader/sortKey), personen (jede Person einmal), rechte (O1/O2); einsaetze (Einsätze + offene Plätze aus Terminen), sichtbereich (Leitung eines Bereichs), hinweise (O3); praesentation (Bereiche sortiert, Spalten, jede Person einmal – O4); struktur (umhängen/anlegen mit Nachlesen, Ziele ohne Kreis – O5); mitgliedschaft (aufnehmen/Rolle/beenden mit Nachlesen – O6); plan (Plan „neue Gliederung“ als Änderungen gegenüber heute, Umbau-Schritte, Plan-Baum ohne verlorene Kreise – O7)
+├── shared/organigramm/      # Regeln des Organigramms: gruppen (Baum, Typen ausblenden), farbe (eigene vor Typ), mitglieder (Rollen aus CT: isLeader/sortKey), personen (jede Person einmal), rechte (O1/O2); einsaetze (Einsätze + offene Plätze aus Terminen), sichtbereich (Leitung eines Bereichs), hinweise (O3); praesentation (Bereiche sortiert, Spalten, jede Person einmal – O4); struktur (umhängen/anlegen mit Nachlesen, Ziele ohne Kreis – O5); mitgliedschaft (aufnehmen/Rolle/beenden mit Nachlesen – O6); plan (Plan „neue Gliederung“ als Änderungen gegenüber heute, Umbau-Schritte, Plan-Baum ohne verlorene Kreise – O7); umbau (Schritt ausführen und zurücknehmen mit Nachlesen – O7-3)
 ├── shared/dienstplan/       # Regeln des Dienstplaners: termine (Liste, E3-2), start (Startseite, E3-3), plan (Matrix, E3-4), fenster + werWieOft (E3-5), einteilen (Schreibkern, E4-1), werKann (E4-2)
 ├── shared/anmeldung/        # Regeln der Anmeldungen: preis, formular (#474), uebersicht (#480), vorlagen, termin, felder, rechte (#486), bezahlung (#507), gestaltung + baukasten (A5)
 ├── anmeldungen/             # Anmeldungen: ChurchTools-Erweiterung für Veranstalter (#474, nur Erweiterung);
 │                            #   Formular-Baukasten = Baukasten.tsx (+ BaukastenLeiste, FeldBearbeiten, useSchlange)
 ├── formular/                # Anmeldungen: öffentliches Formular, statisch – jede Gemeinde auf ihrem Webspace
 ├── dienstplaner/            # Dienstplaner: ChurchTools-Erweiterung für alle Dienstgruppen (Bauplan E2, vorerst nur Erweiterung)
-├── organigramm/             # Organigramm: ChurchTools-Erweiterung, Gemeinde als Baum + Organisation weiterbauen (nur Erweiterung, Kürzel `organigramm`; Stand O7-2: Baum, Personen/Hinweise für Leitungen, Präsentation, Gruppen umhängen/anlegen, Mitglieder pflegen, Reiter „Neue Gliederung“ (Plan) für Admins – Anleitung `docs/betrieb/ORGANIGRAMM.md`, manuelle Tests TF-ORG)
+├── organigramm/             # Organigramm: ChurchTools-Erweiterung, Gemeinde als Baum + Organisation weiterbauen (nur Erweiterung, Kürzel `organigramm`; Stand O7: Baum, Personen/Hinweise für Leitungen, Präsentation (Admins auch „Neue Gliederung“), Gruppen umhängen/anlegen, Mitglieder pflegen, Reiter „Neue Gliederung“ (Plan und Umbau) für Admins – Anleitung `docs/betrieb/ORGANIGRAMM.md`, manuelle Tests TF-ORG)
 ├── shared/protokolle/       # Regeln der Protokolle: dokument (Ableitung), speicher (Kopf + Teile), aufgaben, einrichten, vorlagen, platzhalter, gruppen (S1)
 ├── protokolle/              # Protokolle: ChurchTools-Erweiterung für Protokolle und To-Dos von Gruppen (Bauplan Protokolle, nur Erweiterung)
 └── ui/                      # gemeinsame Browser-Bausteine aller Apps (Alias @ui, Dienstplaner E1, Anmeldungen #474)
@@ -500,7 +500,12 @@ dem Text den Fokus (und damit die Tastatur) nicht nehmen. L4 = **Liedinfo** (Tit
 Arrangement) aus ChurchTools: Regeln `shared/ct/liedinfo.ts`, Formular `utils/liedinfoFormular.ts` auf den Formularen
 des Stammdaten-Blatts, Laden/Speichern `hooks/useLiedinfoQuelle`. Kopfzeilen verlassen die Datei erst, wenn
 ChurchTools den Wert NACH dem Speichern meldet (`liedinfoSpeichern`, `liedinfoBeimImport` beim SongSelect-Import);
-ungespeicherte Lieder behalten den Vorrang der Datei. `{key}` bleibt als notierte Tonart. Zieh-Einstellungen aller Listen: `ui/bedienung/useZiehSensoren`. Im
+ungespeicherte Lieder behalten den Vorrang der Datei. `{key}` bleibt als notierte Tonart (in der Datei; im Text seit L6
+ausgeblendet, `TONART_ZEILE`). L6 = Menü **„Einfügen“** (`EinfuegenMenue`, Variante B) statt Format-Menü: Teile (Name über
+`neuerTeilName`, „Vers“ nummeriert sich; eingefügt HINTER der Cursor-Zeile, `insert(…, { amZeilenende })`), Pedal-Halt,
+„Nur für andere Programme“ (Kapo, Spalte, Seite, Untertitel) – KEINE Kopfangaben, die gehören in die Liedinfo und
+würden im Text unsichtbar eingefügt. Ende-Marken `{end_of_…}` im Text ausgeblendet (`ENDE_ZEILE`, EINE Regel mit
+`parseChordPro`). Zieh-Einstellungen aller Listen: `ui/bedienung/useZiehSensoren`. Im
 Scroll-Modus kein Spalten-Schalter (`ohneSpalten`). Welche
 eigene Ebene gilt, entscheidet für Blättern UND Scrollen `pageKeys.eigenerSchluessel`.
 Leinwände nur in Bildschirmnähe (IntersectionObserver), sonst freigegeben. Die **Seite in der Bildmitte** ist

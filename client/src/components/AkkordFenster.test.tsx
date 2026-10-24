@@ -59,3 +59,16 @@ describe('AkkordFenster', () => {
     expect(fertig).toHaveBeenCalledWith('F#m7/A');
   });
 });
+
+/** Fenster wie ChurchTools (E6-O F3, #726): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
+const knopfFolgeF3 = () =>
+  screen.getAllByRole('button').map((b) => (b.getAttribute('aria-label') ?? b.textContent)?.trim());
+
+describe('AkkordFenster im ChurchTools-Aufbau', () => {
+  it('X oben, unten Abbrechen und Einfügen', () => {
+    zeige();
+    expect(screen.getByRole('dialog', { name: 'Anderer Akkord' })).toBeTruthy();
+    expect(knopfFolgeF3()[0]).toBe('Fenster schließen');
+    expect(knopfFolgeF3().slice(-2)).toEqual(['Abbrechen', 'Einfügen']);
+  });
+});

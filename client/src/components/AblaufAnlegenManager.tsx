@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { SITE_CONFIG_GRENZEN, type SiteConfig } from '@shared/types/index';
 import { Icon } from '@ui/icons/icons';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
+import { Sheet } from '@ui/fenster/Sheet';
 import { Spinner } from './Spinner';
 import { useKalender, useUpdateSiteConfig } from '../hooks/useSiteConfig';
 import { sameIdSet } from '../utils/adminDrafts';
@@ -11,7 +13,7 @@ import styles from '../pages/Settings.module.scss';
  * Verwaltung → **„Termine ohne Ablauf"** (Alwin, 13.10.2026): aus welchen Kalendern Veranstaltungen
  * ohne Ablauf in der Terminliste erscheinen – mit „Ablauf anlegen". Dazu ein Suchwort, weil bei der ECG
  * Gottesdienst und Gebetsabend im selben Kalender liegen. Die Regel steht in `@shared/ct/ablaufAnlegen`
- * (`brauchtAblauf`).
+ * (`brauchtAblauf`). Zeichnet sein Fenster selbst, damit „Speichern“ unten rechts steht (E6-O F3, #726).
  */
 export function AblaufAnlegenManager({ site, onClose }: { site: SiteConfig; onClose: () => void }) {
   const gespeichert = site.ablaufAnlegen ?? { kalenderIds: [], suchwort: '' };
@@ -36,7 +38,21 @@ export function AblaufAnlegenManager({ site, onClose }: { site: SiteConfig; onCl
   }
 
   return (
-    <>
+    <Sheet
+      title="Termine ohne Ablauf"
+      onClose={onClose}
+      knoepfe={
+        geaendert ? (
+          <FensterKnopf onClick={speichern} disabled={update.isPending}>
+            {update.isPending
+              ? 'Wird gespeichert …'
+              : kalenderIds.length === 0
+                ? 'Speichern (Funktion aus)'
+                : 'Speichern'}
+          </FensterKnopf>
+        ) : null
+      }
+    >
       <p className={styles.sheetHint}>
         Veranstaltungen aus diesen Kalendern erscheinen in der Terminliste auch dann, wenn sie noch
         <strong> keinen Ablauf</strong> haben – mit „Ablauf anlegen“. Termine mit Ablauf stehen wie
@@ -81,17 +97,6 @@ export function AblaufAnlegenManager({ site, onClose }: { site: SiteConfig; onCl
         onChange={(e) => setSuchwort(e.target.value)}
       />
       {update.isError && <div className={styles.orgErr}>{speicherFehler(update.error)}</div>}
-      {geaendert && (
-        <button className={styles.orgSave} onClick={speichern} disabled={update.isPending}>
-          {update.isPending ? (
-            <Spinner />
-          ) : kalenderIds.length === 0 ? (
-            'Speichern (Funktion aus)'
-          ) : (
-            'Speichern'
-          )}
-        </button>
-      )}
-    </>
+    </Sheet>
   );
 }

@@ -50,25 +50,40 @@ export interface Start {
   geleitet: number[];
 }
 
-/** **Wirft**, wenn etwas davon nicht lesbar ist – ein halber Baum sähe aus wie ein ganzer. */
-export async function ladeStart(): Promise<Start> {
-  const ich = await ladeIch();
-  const [gruppenRoh, hierarchieRoh, typenRoh, rechteRoh, diensteRoh] = await Promise.all([
+/**
+ * **Gruppen und Hierarchie, frisch** – für den Start und für den Umbau (O7-3), der nach jedem Schritt neu nachsieht.
+ * Archivierte Gruppen liefert ChurchTools hier nicht (Messung O7-3). **Wirft**, wenn etwas davon nicht lesbar ist.
+ */
+export async function ladeGruppenbaum(): Promise<{
+  gruppen: OrgGruppe[];
+  eltern: Map<number, number[]>;
+}> {
+  const [gruppenRoh, hierarchieRoh] = await Promise.all([
     // `groups` liefert ohne `limit` nur 10 (gemessen 12.10.2026) – deshalb alle Seiten.
     ctAlleSeiten<RohGruppe>('/groups'),
     ctDaten<unknown>('/groups/hierarchies'),
-    ctDaten<unknown>('/group/grouptypes'),
-    ctDaten<Record<string, Record<string, unknown>> | null>('/permissions/global'),
-    ctDaten<unknown>('/services').catch(() => null),
   ]);
   if (!Array.isArray(hierarchieRoh)) {
     throw new ApiError(502, 'ChurchTools hat die Gruppen-Hierarchie nicht geliefert.');
   }
+  return {
+    gruppen: orgGruppenAus(gruppenRoh),
+    eltern: elternAus(hierarchieRoh as RohHierarchie[]),
+  };
+}
+
+/** **Wirft**, wenn etwas davon nicht lesbar ist – ein halber Baum sähe aus wie ein ganzer. */
+export async function ladeStart(): Promise<Start> {
+  const ich = await ladeIch();
+  const [{ gruppen, eltern }, typenRoh, rechteRoh, diensteRoh] = await Promise.all([
+    ladeGruppenbaum(),
+    ctDaten<unknown>('/group/grouptypes'),
+    ctDaten<Record<string, Record<string, unknown>> | null>('/permissions/global'),
+    ctDaten<unknown>('/services').catch(() => null),
+  ]);
   if (!Array.isArray(typenRoh)) {
     throw new ApiError(502, 'ChurchTools hat die Gruppentypen nicht geliefert.');
   }
-  const gruppen = orgGruppenAus(gruppenRoh);
-  const eltern = elternAus(hierarchieRoh as RohHierarchie[]);
   const typen = typenRoh as {
     id?: unknown;
     name?: unknown;

@@ -19,6 +19,7 @@
  */
 import { useState } from 'react';
 import { ARRANGEMENT_GRENZEN, type ArrangementAnsicht, type SongSource } from '@shared/types/index';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import { Icon } from '@ui/icons/icons';
 import feld from './SongFields.module.scss';
@@ -81,6 +82,11 @@ export function ArrangementSheet({
       title={arrangement ? arrangement.name : 'Weiteres Arrangement'}
       onClose={onClose}
       cancelLabel="Abbrechen"
+      knoepfe={
+        <FensterKnopf disabled={!bereit} onClick={() => onSave(auftragAus(formular, arrangement))}>
+          {speichert ? 'Wird gespeichert …' : 'Speichern'}
+        </FensterKnopf>
+      }
     >
       {fehler && <div className={styles.err}>{fehler}</div>}
 
@@ -209,14 +215,6 @@ export function ArrangementSheet({
             onChange={(e) => setze('description', e.target.value)}
           />
         </div>
-
-        <button
-          className={styles.primaryWide}
-          disabled={!bereit}
-          onClick={() => onSave(auftragAus(formular, arrangement))}
-        >
-          {speichert ? 'Wird gespeichert …' : 'Speichern'}
-        </button>
 
         {/* Beide Knöpfe nur an einem VORHANDENEN Arrangement: Beim Anlegen gibt es nichts, was
             Standard werden oder verschwinden könnte. Welche der beiden darüber hinaus sinnvoll

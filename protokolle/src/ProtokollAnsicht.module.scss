@@ -166,6 +166,12 @@
   }
 }
 
+.linie {
+  margin: 12px 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
 .verweis {
   color: var(--text2);
   font-size: 13.5px;

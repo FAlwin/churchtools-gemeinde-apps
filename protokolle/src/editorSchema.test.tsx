@@ -81,6 +81,18 @@ describe('Editor-Schema gegen Ableitung, Speicher und Ansicht', () => {
       ).toEqual([]);
   });
 
+  it('die Lese-Ansicht zeigt jede Blockart, die der Editor kennt (Trennlinie fehlte, gefunden 24.10.2026)', () => {
+    const doc = editorMit(PROTOKOLL).document as Block[];
+    const gezeigt = new Set<string>();
+    for (const typ of EDITOR_TYPEN) {
+      const block = doc.find((b) => b.type === typ) ?? { id: typ, type: typ, content: 'Inhalt' };
+      const { container, unmount } = render(<ProtokollAnsicht dokument={[block]} />);
+      if (container.querySelector('article')?.innerHTML) gezeigt.add(typ);
+      unmount();
+    }
+    expect([...EDITOR_TYPEN].filter((t) => !gezeigt.has(t))).toEqual([]);
+  });
+
   it('Markieren im Editor erscheint in der Lese-Ansicht als Markierung', () => {
     const e = editorMit([{ id: 'm', type: 'paragraph', content: 'ganz wichtig' }]);
     e.setTextCursorPosition('m', 'start');

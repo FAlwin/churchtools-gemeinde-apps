@@ -19,7 +19,8 @@
   Stand laden“ an. Verlassen mit Ungespeichertem fragt nach.
 - **Einfügen aus Word:** Aufzählungen und Nummerierungen aus Word kommen als echte, verschachtelte Listen an (vorher
   Absätze mit „·“).
-- **Markieren** erscheint auch in der Lese-Ansicht (neuer Wert `--markiert`).
+- **Markieren** und **Trennlinie** erscheinen auch in der Lese-Ansicht (neuer Wert `--markiert`); ein Test hält fest,
+  dass die Lese-Ansicht jede Blockart zeigt, die der Editor kennt.
 
 ### Intern (Protokolle, S4-1)
 

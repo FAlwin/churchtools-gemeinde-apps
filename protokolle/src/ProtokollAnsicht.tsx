@@ -196,6 +196,9 @@ function EinBlock({ b, k }: { b: Block; k: Kontext }) {
           {kinder}
         </div>
       );
+    case 'divider':
+      // Trennlinie aus der Werkzeugleiste (S4-1) – ohne Text, bis dahin fiel sie hier still weg.
+      return <hr className={styles.linie} />;
     case BLOCK.verweis:
       return (
         <p className={styles.verweis}>{VERWEIS_TEXT[String(b.props?.art)] ?? 'Fester Punkt'}</p>

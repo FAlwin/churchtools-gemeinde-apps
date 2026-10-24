@@ -137,6 +137,7 @@ function AnmeldungAnsehen({
   onRueckgaengig,
   onPersonDazu,
   onZurueckholen,
+  mitBestaetigung = false,
 }: {
   x: ListenAnmeldung;
   e: OeffentlicheEinstellungen;
@@ -157,6 +158,8 @@ function AnmeldungAnsehen({
   onPersonDazu?: () => void;
   /** „Zurückholen“ an einer Abgesagten (A7-4c). */
   onZurueckholen?: (b: Absage) => void;
+  /** Schickt ChurchTools beim Eintragen die Bestätigung (A9-1)? Dann sagt „Rückgängig“ nach dem Absagen das vorher. */
+  mitBestaetigung?: boolean;
 }) {
   const [modus, setModus] = useState<FensterModus>(start);
   const { arbeitet, fehler, speichern } = useSpeichern(() => {});
@@ -231,6 +234,12 @@ function AnmeldungAnsehen({
             setModus(null);
             onGemeldet({
               aenderung: { text: `${abPlan.name} ist abgesagt.`, rueckgaengig: () => zurueck() },
+              // A9-1 (Alwin, 24.10.2026): Rückgängig trägt neu ein – die Routine schickt die Bestätigung noch einmal.
+              ...(mitBestaetigung
+                ? {
+                    hinweis: `„Rückgängig“ trägt ${p.vor} wieder ein – ChurchTools schickt dabei die Bestätigung noch einmal.`,
+                  }
+                : {}),
               mail: mailFuer(
                 'abgesagt',
                 p,
@@ -438,6 +447,7 @@ export function AnmeldungenReiter({
   gemeinde = null,
   onNeuLaden,
   onGespeichert,
+  mitBestaetigung = false,
 }: {
   id: number;
   /** Name der Veranstaltung – für die Mail an die Familie (A7-3). */
@@ -462,6 +472,8 @@ export function AnmeldungenReiter({
   onNeuLaden: () => void;
   /** Nach einer Änderung (und nach „Rückgängig“): Die Seite lädt neu – „Rückgängig“ selbst steht im Fenster. */
   onGespeichert: () => void;
+  /** Bestätigungsmails eingerichtet (A9-1). */
+  mitBestaetigung?: boolean;
 }) {
   const [filter, setFilter] = useState<Filter>('alle');
   const [suche, setSuche] = useState('');
@@ -903,6 +915,7 @@ export function AnmeldungenReiter({
             onGespeichert();
           }}
           onRueckgaengig={onGespeichert}
+          mitBestaetigung={mitBestaetigung}
           onZurueckholen={
             darf && ausgewaehlt
               ? (b) => {

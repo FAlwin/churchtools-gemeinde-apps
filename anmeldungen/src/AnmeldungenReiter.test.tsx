@@ -65,6 +65,7 @@ function zeigen(
   max: number | null = 10,
   entwurf = false,
   darf = true,
+  mitBestaetigung = false,
 ) {
   const onNeuLaden = vi.fn();
   const onGespeichert = vi.fn();
@@ -84,6 +85,7 @@ function zeigen(
       zahlarten={['Überweisung', 'Bar']}
       onNeuLaden={onNeuLaden}
       onGespeichert={onGespeichert}
+      mitBestaetigung={mitBestaetigung}
     />,
   );
   return Object.assign(onNeuLaden, { onGespeichert });
@@ -323,6 +325,22 @@ describe('Nachrücken und Absagen (A7-3)', () => {
     expect(within(zeile).getByRole('button', { name: 'Mail schreiben' })).toBeTruthy();
     fireEvent.click(within(zeile).getByRole('button', { name: 'Rückgängig' }));
     await waitFor(() => expect(zurueck).toHaveBeenCalled());
+    // Ohne eingerichtete Mails kein Hinweis auf eine zweite Bestätigung.
+    expect(screen.queryByText(/schickt dabei die Bestätigung noch einmal/)).toBeNull();
+  });
+
+  it('Absagen mit Bestätigungsmails (A9-1): das Fenster sagt, dass „Rückgängig“ sie noch einmal schickt', async () => {
+    bm.absagenLassen.mockResolvedValue(vi.fn().mockResolvedValue(undefined));
+    const z = zeigen(fertig(mitglieder('AAAAAA', [true, true], 10)), 10, false, true, true);
+    oeffnen();
+    fireEvent.click(within(karte('Lena Beispiel, 7')).getByRole('button', { name: 'Absagen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ja, absagen' }));
+    await waitFor(() => expect(z.onGespeichert).toHaveBeenCalled());
+    expect(
+      screen.getByText(
+        '„Rückgängig“ trägt Lena wieder ein – ChurchTools schickt dabei die Bestätigung noch einmal.',
+      ),
+    ).toBeTruthy();
   });
 
   it('ohne Recht keine Knöpfe zum Nachrücken oder Absagen', () => {

@@ -82,14 +82,17 @@ Antworten – was für die ganze Anmeldung gilt (Kontakt, Erziehungsberechtigte,
 oben. **Abgesagt** kommt aus dem Verlauf von ChurchTools: Er behält auch die Antworten der Abgesagten, deshalb gehen
 Betrag oder Unterschrift nicht verloren, wenn die erste Person einer Anmeldung absagt. Sehen kann die Liste, wer in
 ChurchTools die Mitglieder der Gruppe sehen darf. Gut zu wissen: Entfernt ihr in ChurchTools jemanden, bekommt die
-Person **keine** Mail; beim Nachrücken schickt ChurchTools nur „Deine Anmeldung war erfolgreich“ – ohne Betrag.
+Person **keine** Mail. Wer auf „aktiv“ kommt (Nachrücken, von Hand, zurückgeholt), bekommt die **Bestätigung** aus der
+Karte „Mails“ – sofern die Mails eingerichtet sind (siehe „Mails“ unten); sonst nur „Deine Anmeldung war erfolgreich“
+ohne Betrag.
 
 **Nachrücken und Absagen:** Im Fenster einer Anmeldung hat jede wartende Person „Nachrücken lassen“, jede Person
 „Absagen“ – beides mit Rückfrage. Ist alles voll, erhöht das Nachrücken die Plätze. Wer nachrückt, bekommt eine eigene
 Zahlung (wie eine neue Anmeldung); beim Absagen wird die Zahlung der Anmeldung neu gerechnet und eine Rückzahlung
-notiert – die Aufschlüsselung bekommt die Zeile „Abgesagt am …“, auch wenn der Betrag gleich bleibt (wer wartet). Danach gibt es „Mail schreiben“ mit fertigem Text – ChurchTools selbst schickt beim Nachrücken nur „war
-erfolgreich“, beim Absagen gar nichts. Absagen lässt sich im Fenster rückgängig machen, Nachrücken nicht (sonst
-schickt ChurchTools „Du stehst auf der Warteliste“).
+notiert – die Aufschlüsselung bekommt die Zeile „Abgesagt am …“, auch wenn der Betrag gleich bleibt (wer wartet). Danach gibt es „Mail schreiben“ mit fertigem Text. Beim Nachrücken schickt ChurchTools die Bestätigung
+mit Betrag und Bankdaten (sind die Mails nicht eingerichtet: nur „war erfolgreich“), beim Absagen gar nichts. Absagen
+lässt sich im Fenster rückgängig machen – dabei kommt die Bestätigung noch einmal, das Fenster sagt es –, Nachrücken
+nicht (sonst schickt ChurchTools „Du stehst auf der Warteliste“).
 
 **Anmeldung von Hand** (Telefon, Papier, auch nach dem Anmeldeschluss): Knopf „＋ Von Hand“ im Reiter „Anmeldungen“.
 Erst die Person in ChurchTools suchen; gibt es sie nicht, legt ihr sie neu an (mit Geburtsdatum, E-Mail und wer dem
@@ -98,8 +101,8 @@ Erweiterung nach, ob es dieselbe Person ist. Dann dieselben Fragen wie im Formul
 freiwillig. Unterschreiben kann nur die Familie selbst – liegt die Unterschrift auf Papier vor, schaltet ihr „liegt
 auf Papier vor“ ein, dann steht in ChurchTools „auf Papier – vermerkt von …“ mit eurem Namen und dem Tag. Platz wie im
 Formular: Wartet jemand oder ist alles voll, kommt die Person hinten auf die Warteliste – oder ihr gebt ihr trotzdem
-einen Platz (bei voller Gruppe werden dabei die Plätze erhöht). ChurchTools schickt keine Mail; danach gibt es „Mail
-schreiben“ und „Rückgängig“ (nimmt die Person wieder aus der Anmeldung – eine neu angelegte Person bleibt in
+einen Platz (bei voller Gruppe werden dabei die Plätze erhöht). Sind die Mails eingerichtet, schickt ChurchTools die
+Bestätigung (mit E-Mail-Adresse; ohne Link zu „Deine Anmeldung“); danach gibt es „Mail schreiben“ und „Rückgängig“ (nimmt die Person wieder aus der Anmeldung – eine neu angelegte Person bleibt in
 ChurchTools). Neue Personen anlegen darf, wer in ChurchTools das Recht dazu hat; Status, Standort und Bereich kommen
 aus den Vorgaben beim Freigeben.
 
@@ -112,7 +115,8 @@ beim Nachrücken): den Betrag, um den die Anmeldung teurer wird. Die bisherige Z
 Anmeldung unter „Abgesagt“ oder über die Suche bei „＋ Von Hand“. Die Person kommt mit allen Antworten von damals
 zurück. Gehört sie zu einer Anmeldung, die es noch gibt, bekommt sie eine eigene Zahlung (wie „Person dazu“); war sie
 allein angemeldet, wird ihre Zahlung neu gerechnet und ist wieder offen. Hatte sie schon bezahlt, weist das Fenster
-darauf hin – dann bitte prüfen, ob schon zurückgezahlt wurde. ChurchTools schickt dabei keine Mail.
+darauf hin – dann bitte prüfen, ob schon zurückgezahlt wurde. Sind die Mails eingerichtet, bekommt sie die
+Bestätigung (beim Zurückholen auf die Warteliste die Mitteilung mit ihrem Platz).
 
 **Rundmail:** „✉ Rundmail“ im Reiter „Anmeldungen“ schreibt an alle Anmeldungen, an die mit offener Zahlung oder an die
 mit Wartenden – je Anmeldung eine Mail an den Kontakt. ChurchTools verschickt sie mit deinem Namen als Absender;
@@ -169,8 +173,20 @@ erkennt ihr in ChurchTools an der gleichen **Anmelde-Nr.** Betrag, „Angemeldet
 der ersten Person; der Betrag zählt nur, wer einen Platz bekommen hat – wer auf der Warteliste steht, zahlt erst beim
 Nachrücken (die Aufschlüsselung nennt ihn).
 
-**„Deine Anmeldung“:** Nach dem Anmelden schickt ChurchTools jeder angemeldeten Person seine Bestätigungsmail
-(Text nicht änderbar). Der Link „Austreten“ darin führt auf eure Formular-Seite
+**Mails** (A9): Beim Freigeben richtet die Erweiterung in ChurchTools zwei Abläufe (Routinen) ein und schaltet die
+Standard-Mail von ChurchTools aus. **Bestätigung** – nach dem Anmelden und beim Nachrücken: Termin, Anmelde-Nr., Betrag
+und Bankdaten (nur in der Mail zur ersten Person einer Anmeldung, dort steht der Betrag) und der Link zu „Deine
+Anmeldung“. **Warteliste** – mit dem Platz; bezahlt wird erst beim Nachrücken. Jede Person bekommt ihre eigene Mail an
+die Kontakt-Adresse (zwei Kinder = zwei Mails). Absender ist, wer freigibt (wenn Leitung), sonst die erste gewählte
+Leitung; Antworten gehen an diese Person. Die Karte „Mails“ im Reiter „Veranstaltung“ zeigt den Stand. Einrichten darf,
+wer in ChurchTools das Recht „Routinen verwalten“ hat – fehlt es, wird trotzdem freigegeben, und ChurchTools schickt
+seine Standard-Mail (ohne Betrag). Ältere Veranstaltungen (vor A9 freigegeben) behalten die Standard-Mail, bis sie
+eingerichtet werden. In ChurchTools heißen die Abläufe „Anmeldungen: Platz“ und „Anmeldungen: Warteliste“ – bitte dort
+nicht von Hand ändern; eine eigene Routine an derselben Stelle lässt die Erweiterung stehen.
+
+**„Deine Anmeldung“:** Den Link dazu schreibt das Formular beim Anmelden in das Feld „Link zur Anmeldung“, die
+Bestätigung setzt ihn ein. Ohne eingerichtete Mails steht er als „Austreten“ in der Standard-Mail von ChurchTools.
+Er führt auf eure Formular-Seite
 (`…/#<instanz>/<Nummer>/abmelden/<Schlüssel>`) im Design der Veranstaltung: Dort sieht man, wer angemeldet ist, kann
 einzelne Personen **absagen** (mit Rückfrage), sieht die **Bankdaten** (wenn etwas kostet) und an wen man für
 Änderungen schreibt – den **Kontakt für Rückfragen** stellt ihr je Veranstaltung im Fenster „Anmeldung“ ein. Angaben

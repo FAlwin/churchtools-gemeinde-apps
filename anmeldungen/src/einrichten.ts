@@ -38,7 +38,12 @@ import { LOGO_KENNUNG, belegungAus, istLogoGruppe } from '@shared/anmeldung/uebe
 import { felderNeuZuordnen, systemfeldAnlage } from '@shared/anmeldung/felder';
 import { neueEinstellungen, type Vorlage } from '@shared/anmeldung/vorlagen';
 import { utcAus, type CtTermin } from '@shared/anmeldung/termin';
-import { darfAnlegen, darfEinrichten, darfVerschiebenUndLoeschen } from '@shared/anmeldung/rechte';
+import {
+  darfAblaeufe,
+  darfAnlegen,
+  darfEinrichten,
+  darfVerschiebenUndLoeschen,
+} from '@shared/anmeldung/rechte';
 import {
   fehlendeBedingungen,
   type NeuePersonVorgaben,
@@ -126,6 +131,12 @@ export async function anlegenMoeglich(
   const artId = await anmeldungsArt();
   if (artId === null || teamIds.length === 0) return { artId, teamIds: [] };
   return { artId, teamIds: await teamsZumAnlegen(teamIds, artId) };
+}
+
+/** Darf man die Abläufe (Bestätigungsmails) dieser Veranstaltung einrichten? (A9-1) */
+export async function darfAblaeufeEinrichten(id: number): Promise<boolean> {
+  const [rechte, global] = await Promise.all([gruppenRechte(id), globaleRechte()]);
+  return darfAblaeufe(rechte, global.churchdb);
 }
 
 /** Darf man diese Veranstaltung einrichten und freigeben? */

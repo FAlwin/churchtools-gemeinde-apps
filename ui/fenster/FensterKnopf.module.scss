@@ -1,0 +1,45 @@
+// Knöpfe unten rechts im Fenster (E6-O F1, #716) – wie „Abbrechen“ / „Speichern“ in den ChurchTools-Fenstern.
+.knopf {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: var(--r-ctrl);
+  border: 1px solid transparent;
+  font-family: var(--ui);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    opacity 0.12s;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.haupt {
+  background: var(--blue);
+  color: #fff;
+}
+
+.gefahr {
+  background: var(--red);
+  color: #fff;
+}
+
+.zweit {
+  border-color: var(--border);
+  background: var(--surface2);
+  color: var(--blue-ink);
+
+  &:hover:not(:disabled) {
+    background: var(--blue-soft);
+  }
+}
+
+.hell {
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+}

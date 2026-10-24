@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import type { AblaufQuelle, AblaufVorlage } from '@shared/types/index';
 import { startQuelle } from '@shared/ct/ablaufVorschlaege';
+import { FensterKnopf } from '../fenster/FensterKnopf';
 import { Sheet } from '../fenster/Sheet';
 import { Icon, type IconName } from '../icons/icons';
 import styles from './AblaufAnlegenFenster.module.scss';
@@ -79,7 +80,15 @@ export function AblaufAnlegenFenster({
   }
 
   return (
-    <Sheet title={titel} onClose={onClose}>
+    <Sheet
+      title={titel}
+      onClose={onClose}
+      knoepfe={
+        <FensterKnopf onClick={() => void bestaetigen()} disabled={laeuft}>
+          {laeuft ? knopf.laeuft : knopf.label}
+        </FensterKnopf>
+      }
+    >
       <p className={styles.fuer}>{fuer}</p>
 
       <div className={styles.optionen}>
@@ -153,10 +162,6 @@ export function AblaufAnlegenFenster({
           {fehler}
         </p>
       )}
-
-      <button className={styles.anlegen} onClick={() => void bestaetigen()} disabled={laeuft}>
-        {laeuft ? knopf.laeuft : knopf.label}
-      </button>
     </Sheet>
   );
 }

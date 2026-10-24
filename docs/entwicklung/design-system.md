@@ -82,6 +82,23 @@ ChurchTools). Ausnahme: der ChordPro-**Editor** nutzt bewusst Monospace (`'JetBr
   vierte Suche oder eine weitere Liedliste braucht, nimmt diese drei, statt ihre Optik nachzubauen. Zwei
   frühere Anläufe (Quellen-`Segment` über der Liste, blaue Angebots-Knöpfe darunter) sind weg.
 
+## Fenster wie ChurchTools (E6-O F1, #716) – verbindlich für neue und umgezogene Fenster
+
+Entwurf `dienstplaner-planung/entwurf/fenster-entwurf.html`, abgenommen 23.10.2026 (Vorbild: Fenster der
+ChurchTools-Weboberfläche):
+
+- **Kopf:** Titel links, **X rechts** zum Schließen. **Fußzeile:** Knöpfe **rechts unten**, „Abbrechen“ mit Rahmen und
+  blauer Schrift, daneben der Hauptknopf – keine Knöpfe über die ganze Breite.
+- **`Sheet` mit `knoepfe`** bekommt diesen Aufbau; Kopf und Fuß stehen, der Inhalt dazwischen scrollt (die _eine_
+  Scrollfläche des Fensters). Ohne `knoepfe` bleibt der alte Aufbau, bis das Fenster umgezogen ist – App für App in
+  eigenen Scheiben. Der Hauptknopf zieht dabei aus dem Inhalt in `knoepfe` (statt `m.hauptKnopfBreit`).
+- **`FensterKnopf`** (`ui/fenster/FensterKnopf`) ist die EINE Bauart dieser Knöpfe: `haupt` (blau), `gefahr` (rot),
+  `zweit` (Rahmen, „Abbrechen“), `hell` (hellblau, ein zweiter Weg). Fenster gestalten ihre Knöpfe nicht selbst.
+- **`ConfirmDialog`** ist schon umgezogen: Titel und Text linksbündig, X rechts (nicht, wenn es kein Abbrechen
+  gibt), Knöpfe rechts unten; drei Wege (E6-5b) nebeneinander, am Handy untereinander mit der Bestätigung oben.
+- **Felder:** fette Beschriftung über dem Feld, gerahmte Eingabe (`m.eingabefeld`), im Fokus blauer Rand **mit
+  Schein**.
+
 ## Theme
 
 Hell/Dunkel/Auto über `useSettings` → `data-theme` auf `<html>`. Komponenten dürfen sich

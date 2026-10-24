@@ -1,4 +1,6 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
+import { Icon } from '../icons/icons';
+import { FensterKnopf } from './FensterKnopf';
 import styles from './ConfirmDialog.module.scss';
 
 interface ConfirmDialogProps {
@@ -12,8 +14,8 @@ interface ConfirmDialogProps {
   /** `true`: die Bestätigung zerstört nichts (blau statt rot), z. B. „Teilen". */
   harmlos?: boolean;
   /**
-   * Ein zweiter Weg neben der Bestätigung (E6-5b: „Nur für diesen Termin neu“). Dann stehen die Knöpfe untereinander:
-   * Bestätigung, zweiter Weg, Abbrechen.
+   * Ein zweiter Weg neben der Bestätigung (E6-5b: „Nur für diesen Termin neu“). Er steht zwischen Abbrechen und
+   * Bestätigung; am Handy stehen die drei untereinander, die Bestätigung oben.
    */
   zweit?: { label: string; onClick: () => void };
   /** Zwischen Text und Knöpfen – etwa die Termine, die es mittrifft. */
@@ -24,7 +26,11 @@ interface ConfirmDialogProps {
   beschaeftigt?: boolean;
 }
 
-/** Bestätigungs-Dialog – für destruktive Aktionen (rot) oder, mit `harmlos`, für einen zweiten Schritt. */
+/**
+ * Bestätigungs-Dialog – für destruktive Aktionen (rot) oder, mit `harmlos`, für einen zweiten Schritt. Aufbau wie die
+ * ChurchTools-Fenster (E6-O F1, #716): Titel links, X rechts, Knöpfe rechts unten. Ohne Abbrechen gibt es auch kein X –
+ * dann ist nur noch eine Meldung zu bestätigen.
+ */
 export function ConfirmDialog({
   title,
   message,
@@ -38,44 +44,52 @@ export function ConfirmDialog({
   fuss,
   beschaeftigt = false,
 }: ConfirmDialogProps) {
-  const abbrechen = cancelLabel !== null && (
-    <button className={`${styles.btn} ${styles.cancel}`} onClick={onCancel} disabled={beschaeftigt}>
-      {cancelLabel}
-    </button>
-  );
-  const bestaetigen = (
-    <button
-      className={`${styles.btn} ${harmlos ? styles.primary : styles.danger}`}
-      onClick={onConfirm}
-      disabled={beschaeftigt}
-    >
-      {confirmLabel}
-    </button>
-  );
+  const titelId = useId();
   return (
     <div className={styles.overlay} onClick={beschaeftigt ? undefined : onCancel}>
-      <div className={styles.card} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.title}>{title}</div>
-        <div className={styles.msg}>{message}</div>
-        {children}
-        {zweit ? (
-          <div className={styles.stapel}>
-            {bestaetigen}
+      <div
+        className={styles.card}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby={titelId}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className={styles.kopf}>
+          <div id={titelId} className={styles.title}>
+            {title}
+          </div>
+          {cancelLabel !== null && (
             <button
-              className={`${styles.btn} ${styles.zweit}`}
-              onClick={zweit.onClick}
+              className={styles.x}
+              aria-label="Schließen"
+              onClick={onCancel}
               disabled={beschaeftigt}
             >
-              {zweit.label}
+              <Icon name="x" size={20} />
             </button>
-            {abbrechen}
-          </div>
-        ) : (
-          <div className={styles.actions}>
-            {abbrechen}
-            {bestaetigen}
-          </div>
-        )}
+          )}
+        </div>
+        <div className={styles.msg}>{message}</div>
+        {children}
+        <div className={`${styles.actions}${zweit ? ' ' + styles.stapel : ''}`}>
+          {cancelLabel !== null && (
+            <FensterKnopf art="zweit" onClick={onCancel} disabled={beschaeftigt}>
+              {cancelLabel}
+            </FensterKnopf>
+          )}
+          {zweit && (
+            <FensterKnopf art="hell" onClick={zweit.onClick} disabled={beschaeftigt}>
+              {zweit.label}
+            </FensterKnopf>
+          )}
+          <FensterKnopf
+            art={harmlos ? 'haupt' : 'gefahr'}
+            onClick={onConfirm}
+            disabled={beschaeftigt}
+          >
+            {confirmLabel}
+          </FensterKnopf>
+        </div>
         {fuss && <p className={styles.fuss}>{fuss}</p>}
       </div>
     </div>

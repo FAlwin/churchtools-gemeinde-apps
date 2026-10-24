@@ -8,7 +8,7 @@
  *   **Teil-Werte** mit dem gepackten Dokument (deflate + Base64url, `shared/ct/packen.ts`).
  * - Beim Lesen gehört ein Teil nur dann zum Dokument, wenn sein `stand` zum Kopf passt – so liegt bei einem
  *   abgebrochenen Speichern immer noch ein vollständiger Stand vor (Reihenfolge des Schreibens: neue Teile →
- *   nachlesen → Kopf umstellen → nachlesen → alte Teile löschen; gebaut in S4-1).
+ *   nachlesen → Kopf umstellen → nachlesen → alte Teile löschen; gebaut in S4-1, `protokolle/src/schreiben.ts`).
  * - **Meine Gruppen** kommen aus den sichtbaren Kategorien: Teilnehmer versteckter Gruppen sehen ihre eigene
  *   Gruppe in ChurchTools nicht (S0, 403), die Kategorie aber schon.
  */
@@ -42,6 +42,19 @@ export interface Sperre {
   name: string;
   /** ISO-Zeit des letzten Lebenszeichens. */
   seit: string;
+  /**
+   * Kennung des Editor-Fensters (S4-1). Dieselbe Person in zwei Fenstern oder auf zwei Geräten sperrt sich gegenseitig
+   * – sonst überschriebe das eine Fenster still, was das andere gerade gespeichert hat. Fehlt sie (ältere Werte),
+   * ist die Sperre für jedes Fenster fremd.
+   */
+  fenster?: string;
+}
+
+/** Wer schreiben will: Person, Name für die Anzeige („Alwin schreibt gerade“) und das eigene Fenster. */
+export interface Schreiber {
+  person: number;
+  name: string;
+  fenster: string;
 }
 
 export interface ProtokollKopf {
@@ -126,9 +139,12 @@ export function dokumentAusTeilen(
   kopf: Pick<ProtokollKopf, 'sitzung' | 'stand'>,
   teile: readonly ProtokollTeil[],
 ): Block[] | null {
-  const passend = teile
-    .filter((t) => t.sitzung === kopf.sitzung && t.stand === kopf.stand)
-    .sort((a, b) => a.nr - b.nr);
+  // Gleicher Stand heißt gleicher Inhalt: Liegt ein Teil doppelt da (ein früheres Speichern mit demselben Text, dessen
+  // Aufräumen scheiterte), zählt er einmal – sonst wäre das Protokoll unlesbar, bis jemand von Hand aufräumt.
+  const jeNr = new Map<number, ProtokollTeil>();
+  for (const t of teile)
+    if (t.sitzung === kopf.sitzung && t.stand === kopf.stand && !jeNr.has(t.nr)) jeNr.set(t.nr, t);
+  const passend = [...jeNr.values()].sort((a, b) => a.nr - b.nr);
   if (!passend.length) return null;
   const anzahl = passend[0].von;
   if (passend.length !== anzahl || passend.some((t, i) => t.nr !== i || t.von !== anzahl))
@@ -157,16 +173,83 @@ export function dokumentDerSitzung(
 /** Nach so vielen Minuten ohne Lebenszeichen gilt eine Schreibsperre als verlassen. */
 export const SPERRE_MINUTEN = 10;
 
-/** Darf ich schreiben? `frei` = niemand, `meine` = ich selbst, `fremd` = jemand anderes schreibt gerade. */
+/**
+ * Darf ich schreiben? `frei` = niemand (oder die Sperre ist verlassen), `meine` = dieses Fenster, `fremd` = jemand
+ * anderes – oder ich selbst in einem anderen Fenster (`sperre.von === ich.person` unterscheidet das für die Anzeige).
+ */
 export function sperreLage(
   sperre: Sperre | null,
-  ich: number,
+  ich: Pick<Schreiber, 'person' | 'fenster'>,
   jetzt: Date,
 ): 'frei' | 'meine' | 'fremd' {
   if (!sperre) return 'frei';
   const alter = jetzt.getTime() - new Date(sperre.seit).getTime();
   if (!Number.isFinite(alter) || alter > SPERRE_MINUTEN * 60_000) return 'frei';
-  return sperre.von === ich ? 'meine' : 'fremd';
+  return sperre.von === ich.person && sperre.fenster === ich.fenster ? 'meine' : 'fremd';
+}
+
+/** Die Sperre dieses Fensters, Lebenszeichen jetzt. */
+export function sperreVon(ich: Schreiber, jetzt: Date): Sperre {
+  return { von: ich.person, name: ich.name, seit: jetzt.toISOString(), fenster: ich.fenster };
+}
+
+/** Ein Wert, wie er aus der Kategorie kommt (`Wert` aus `modulDaten`, hier ohne die Abhängigkeit). */
+interface RohWert {
+  id: number;
+  value: string;
+}
+
+/** Der Inhalt eines Werts als JSON – `null`, wenn er keins ist. Die eine Stelle dafür (Lesen, Schreiben). */
+export function wertInhalt(w: Pick<RohWert, 'value'>): unknown {
+  try {
+    return JSON.parse(w.value);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * **Was zu einer Sitzung in der Kategorie liegt** – der Kopf (bei mehreren mit derselben Sitzung der mit der kleinsten
+ * ID, wie bei Kategorien) und alle Teile. `kopf` ist `null`, wenn die Sitzung (noch) keinen hat.
+ */
+export function sitzungAusWerten(
+  werte: readonly RohWert[],
+  sitzung: string,
+): {
+  kopf: { id: number; inhalt: ProtokollKopf } | null;
+  teile: { id: number; teil: ProtokollTeil }[];
+} {
+  let kopf: { id: number; inhalt: ProtokollKopf } | null = null;
+  const teile: { id: number; teil: ProtokollTeil }[] = [];
+  for (const w of [...werte].sort((a, b) => a.id - b.id)) {
+    const x = wertInhalt(w);
+    if (istKopf(x) && x.sitzung === sitzung && !kopf) kopf = { id: w.id, inhalt: x };
+    else if (istTeil(x) && x.sitzung === sitzung) teile.push({ id: w.id, teil: x });
+  }
+  return { kopf, teile };
+}
+
+/**
+ * **Darf dieses Fenster jetzt schreiben?** Die eine Regel für Sperre nehmen und Speichern (S4-1), geprüft auf dem
+ * frisch gelesenen Kopf:
+ * - `weg` – die Sitzung hat keinen Kopf mehr;
+ * - `fest` – nicht (mehr) im Entwurf (freigegeben oder nur geplant);
+ * - `gesperrt` – jemand anderes (oder ein anderes Fenster) schreibt;
+ * - `veraendert` – der gespeicherte Stand ist nicht mehr der, auf dem dieses Fenster aufsetzt: Jemand hat
+ *   inzwischen gespeichert (etwa nachdem die eigene Sperre verfallen war). Überschreiben hieße, seinen Text still zu
+ *   verlieren – also neu laden;
+ * - `ok`.
+ */
+export function schreibLage(
+  kopf: ProtokollKopf | null,
+  ich: Pick<Schreiber, 'person' | 'fenster'>,
+  basisStand: string,
+  jetzt: Date,
+): 'ok' | 'weg' | 'fest' | 'gesperrt' | 'veraendert' {
+  if (!kopf) return 'weg';
+  if (kopf.status !== 'entwurf') return 'fest';
+  if (sperreLage(kopf.sperre, ich, jetzt) === 'fremd') return 'gesperrt';
+  return kopf.stand === basisStand ? 'ok' : 'veraendert';
 }
 
 const STATUS: readonly SitzungsStatus[] = ['geplant', 'entwurf', 'frei'];

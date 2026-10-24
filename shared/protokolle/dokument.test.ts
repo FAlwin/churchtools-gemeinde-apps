@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { ableiten, BLOCK, istDokument, mitNeuenIds, textAus, type Block } from './dokument';
+import {
+  ableiten,
+  BLOCK,
+  fremdeTypen,
+  istDokument,
+  mitNeuenIds,
+  textAus,
+  type Block,
+} from './dokument';
 import { BLOCKNOTE_DOKUMENT } from './dokument.testdaten';
 import { STANDARD_VORLAGEN, startDokument } from './vorlagen';
 
@@ -116,6 +124,26 @@ describe('ableiten – Beschlüsse, Termine und Unterpunkte', () => {
     expect(a.aufgaben).toEqual([
       { blockId: 'a1', text: 'Einladung schreiben', punkt: 'p2', aufgabe: 'mit-7' },
     ]);
+  });
+});
+
+describe('fremdeTypen (S4-1)', () => {
+  it('findet unbekannte Blockarten auch in Unterpunkten – einmal, sortiert', () => {
+    const dok: Block[] = [
+      { id: 'a', type: 'paragraph' },
+      { id: 'b', type: 'table', children: [{ id: 'c', type: 'image' }] },
+      { id: 'd', type: 'bulletListItem', children: [{ id: 'e', type: 'table' }] },
+    ];
+    expect(fremdeTypen(dok, new Set(['paragraph', 'bulletListItem']))).toEqual(['image', 'table']);
+  });
+  it('leer, wenn alles bekannt ist', () => {
+    const typen = new Set<string>();
+    const sammle = (b: Block): void => {
+      typen.add(b.type);
+      (b.children ?? []).forEach(sammle);
+    };
+    BLOCKNOTE_DOKUMENT.forEach(sammle);
+    expect(fremdeTypen(BLOCKNOTE_DOKUMENT, typen)).toEqual([]);
   });
 });
 

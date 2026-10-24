@@ -48,6 +48,11 @@
     color: var(--text2);
   }
 
+  mark {
+    background: var(--markiert);
+    color: inherit;
+  }
+
   code {
     padding: 0 4px;
     border-radius: var(--r-ctrl);

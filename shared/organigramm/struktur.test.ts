@@ -12,51 +12,8 @@ import {
   untergruppeAnlegen,
   untergruppenVon,
   weiterSichtbarUeber,
-  type StrukturZugriff,
 } from './struktur';
-
-/** Ein nachgebautes ChurchTools: Obergruppen je Gruppe, ein Protokoll der Aufrufe – und einstellbare Pannen. */
-function nachbau(start: Record<number, number[]>) {
-  const eltern = new Map(Object.entries(start).map(([k, v]) => [Number(k), [...v]]));
-  const gruppen = new Set([...eltern.keys(), ...[...eltern.values()].flat()]);
-  const log: string[] = [];
-  const panne = { setzenOhneWirkung: false, loesenOhneWirkung: false, loesenWirft: false };
-  const anlegenPanne = { verschwindet: false, ohneEltern: false, loeschenOhneWirkung: false };
-  let naechste = 900;
-  const z: StrukturZugriff = {
-    obergruppen: (id) => Promise.resolve([...(eltern.get(id) ?? [])]),
-    setzen: (id, e) => {
-      log.push(`setzen ${id}→${e}`);
-      if (!panne.setzenOhneWirkung) eltern.set(id, [...new Set([...(eltern.get(id) ?? []), e])]);
-      return Promise.resolve();
-    },
-    loesen: (id, e) => {
-      log.push(`loesen ${id}→${e}`);
-      if (panne.loesenWirft) return Promise.reject(new Error('Netz weg'));
-      if (!panne.loesenOhneWirkung)
-        eltern.set(
-          id,
-          (eltern.get(id) ?? []).filter((x) => x !== e),
-        );
-      return Promise.resolve();
-    },
-    anlegen: (d) => {
-      const id = naechste++;
-      log.push(`anlegen ${d.name} unter ${d.elternId}`);
-      if (!anlegenPanne.verschwindet) gruppen.add(id);
-      if (!anlegenPanne.ohneEltern) eltern.set(id, [d.elternId]);
-      return Promise.resolve(id);
-    },
-    gibtEs: (id) => Promise.resolve(gruppen.has(id)),
-    loeschen: (id) => {
-      log.push(`loeschen ${id}`);
-      if (!anlegenPanne.loeschenOhneWirkung) gruppen.delete(id);
-      return Promise.resolve();
-    },
-    nichtUebernommen: (was) => new Error(`nicht übernommen: ${was}`),
-  };
-  return { z, eltern, log, panne, anlegenPanne };
-}
+import { nachbau } from './struktur.testutil';
 
 describe('obergruppeAendern – erst neu setzen, dann alt lösen, nachlesen', () => {
   it('Reihenfolge: nie ohne Obergruppe; danach nur die neue', async () => {

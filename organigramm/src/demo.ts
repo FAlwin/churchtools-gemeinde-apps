@@ -116,12 +116,18 @@ const ELTERN = new Map<number, number[]>();
 for (const h of HIERARCHIE)
   for (const k of h.children) ELTERN.set(k, [...(ELTERN.get(k) ?? []), h.groupId]);
 
+// Archivierte Gruppen liefert ChurchTools weder in der Liste noch in der Hierarchie (Messung O7-3, 24.10.2026).
+const archiviert = (g: (typeof GRUPPEN)[number]) => g.information.groupStatusId === 3;
+
 function hierarchie() {
-  return GRUPPEN.map((g) => ({
-    groupId: g.id,
-    parents: ELTERN.get(g.id) ?? [],
-    children: [...ELTERN].filter(([, e]) => e.includes(g.id)).map(([k]) => k),
-  })).filter((h) => h.parents.length || h.children.length);
+  const da = new Set(GRUPPEN.filter((g) => !archiviert(g)).map((g) => g.id));
+  return GRUPPEN.filter((g) => da.has(g.id))
+    .map((g) => ({
+      groupId: g.id,
+      parents: (ELTERN.get(g.id) ?? []).filter((p) => da.has(p)),
+      children: [...ELTERN].filter(([k, e]) => da.has(k) && e.includes(g.id)).map(([k]) => k),
+    }))
+    .filter((h) => h.parents.length || h.children.length);
 }
 
 const json = (d: unknown, status = 200) =>
@@ -176,6 +182,13 @@ function struktur(
       if (g) GRUPPEN.splice(GRUPPEN.indexOf(g), 1);
       ELTERN.delete(id);
       return json(null, 204);
+    }
+    if (method === 'PATCH' && g) {
+      // Umbau (O7-3): Name bzw. Status, wie gemessen – auch ein leerer Name wird angenommen.
+      const f = (body ?? {}) as { name?: string; groupStatusId?: number };
+      if (f.name !== undefined) g.name = f.name;
+      if (f.groupStatusId !== undefined) g.information.groupStatusId = f.groupStatusId;
+      return json({ data: g });
     }
     return g ? json({ data: g }) : json({}, 404);
   }
@@ -248,7 +261,15 @@ function struktur(
       meta: { pagination: { lastPage: 1 } },
     });
   }
-  if (pfad === '/api/groups') return json({ data: GRUPPEN, meta: { pagination: { lastPage: 1 } } });
+  if (pfad === '/api/groups') {
+    const status = suche.get('group_status_ids[]');
+    return json({
+      data: GRUPPEN.filter((g) =>
+        status === null ? !archiviert(g) : g.information.groupStatusId === Number(status),
+      ),
+      meta: { pagination: { lastPage: 1 } },
+    });
+  }
   if (pfad === '/api/groups/hierarchies') return json({ data: hierarchie() });
   return undefined;
 }
@@ -417,10 +438,10 @@ function daten(fall: string): Record<string, unknown> {
         groupStatuses: [
           { id: 1, name: 'active', nameTranslated: 'Aktiv' },
           { id: 2, name: 'pending', nameTranslated: 'Entwurf' },
+          { id: 3, name: 'archived', nameTranslated: 'Archiviert' },
         ],
       },
     },
-    '/api/groups': { data: GRUPPEN, meta: { pagination: { lastPage: 1 } } },
     '/api/events': { data: TERMINE },
     '/api/group/grouptypes': {
       data: [

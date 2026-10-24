@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { GruppenKachel } from '@ui/bedienung/GruppenKachel';
@@ -12,6 +12,7 @@ import {
   planBaum,
   planGruppen,
   planUnterschied,
+  umbauSchritte,
   type Heute,
   type PlanAenderungen,
   type PlanGruppe,
@@ -23,6 +24,9 @@ import { ladePlan, speicherePlan, verwerfePlan } from './plan';
 import { konfliktText, planFehlerText } from './planTexte';
 import { NeuerBereichFenster, PlanFenster, type PlanSchritt } from './PlanFenster';
 import type { Start } from './start';
+import { ladeUmbauStatus } from './struktur';
+import { Umbau, type UmbauDaten } from './Umbau';
+import { Segment } from '@ui/bedienung/Segment';
 import baum from './Organigramm.module.scss';
 import styles from './NeueGliederung.module.scss';
 
@@ -49,7 +53,14 @@ const zeitzone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
  * Scheitert das Speichern, bleibt die Änderung als Schritt erhalten: „Nochmal“ wendet sie auf den Stand an, der jetzt
  * dasteht – auch nach einem Konflikt, ohne die Änderung des anderen zu überschreiben.
  */
-export function NeueGliederung({ start }: { start: Start }) {
+export function NeueGliederung({
+  start,
+  onStruktur,
+}: {
+  start: Start;
+  /** Nach einem Umbau-Schritt: Gruppen und Hierarchie der Seite neu lesen (wie nach O5). */
+  onStruktur: () => Promise<boolean>;
+}) {
   const heute = useMemo<Heute>(() => ({ gruppen: start.gruppen, eltern: start.eltern }), [start]);
   const [stand, setStand] = useState<Stand>({ art: 'laedt' });
   const [problem, setProblem] = useState<{ text: string; nochmal: PlanSchritt | null } | null>(
@@ -59,18 +70,40 @@ export function NeueGliederung({ start }: { start: Start }) {
   const [offen, setOffen] = useState<Ref | null>(null);
   const [neuerBereich, setNeuerBereich] = useState(false);
   const [verwerfenFragen, setVerwerfenFragen] = useState(false);
+  // Der zuletzt gelesene/gespeicherte Plan – auch für Abläufe, die über mehrere Schritte laufen (Umbau „Alle“): Die
+  // lesen sonst einen veralteten Stand aus dem Render und scheitern beim zweiten Speichern an der Version.
+  const aktuell = useRef<Versioniert<PlanAenderungen> | null | undefined>(undefined);
+  const planSetzen = useCallback((p: Versioniert<PlanAenderungen> | null) => {
+    aktuell.current = p;
+    setStand({ art: 'da', plan: p });
+  }, []);
+
+  const [ansicht, setAnsicht] = useState<'plan' | 'umbau'>('plan');
+  const [umbauDaten, setUmbauDaten] = useState<UmbauDaten | null>(null);
+  const [umbauFehler, setUmbauFehler] = useState(false);
+  const umbauDatenLaden = useCallback(async () => {
+    try {
+      setUmbauDaten(await ladeUmbauStatus());
+      setUmbauFehler(false);
+    } catch {
+      // Vorübergehend ist nicht ungültig: der letzte Stand bleibt; ohne ihn kann nur nichts ausgeführt werden.
+      setUmbauFehler(true);
+    }
+  }, []);
+  useEffect(() => {
+    void umbauDatenLaden();
+  }, [umbauDatenLaden]);
 
   const laden = useCallback(() => {
+    aktuell.current = undefined;
     setStand({ art: 'laedt' });
     setProblem(null);
     ladePlan().then(
       (r) =>
-        setStand(
-          r.ok ? { art: 'da', plan: r.daten } : { art: 'fehler', text: planFehlerText(r.grund) },
-        ),
+        r.ok ? planSetzen(r.daten) : setStand({ art: 'fehler', text: planFehlerText(r.grund) }),
       (e: unknown) => setStand({ art: 'fehler', text: fehlerMeldung(e).text }),
     );
-  }, []);
+  }, [planSetzen]);
   useEffect(laden, [laden]);
 
   const plan = useMemo(
@@ -78,6 +111,14 @@ export function NeueGliederung({ start }: { start: Start }) {
     [stand, heute],
   );
   const knoten = useMemo(() => planBaum(plan), [plan]);
+  const schritte = useMemo(
+    () =>
+      stand.art === 'da' && stand.plan
+        ? umbauSchritte(heute, stand.plan.inhalt, umbauDaten?.archivierteGruppen ?? null)
+        : [],
+    [stand, heute, umbauDaten],
+  );
+  const offenZahl = schritte.filter((x) => !x.erledigt).length;
   const ctGruppe = useMemo(() => new Map(start.gruppen.map((g) => [g.id, g])), [start.gruppen]);
   const farbe = (g: PlanGruppe) =>
     gruppenFarbe(
@@ -89,10 +130,11 @@ export function NeueGliederung({ start }: { start: Start }) {
     );
   const heuteName = (id: number) => ctGruppe.get(id)?.name ?? '';
 
+  /** Speichern; `true`, wenn es dasteht. */
   const schreiben = async (
     tun: () => Promise<SpeicherErgebnis<PlanAenderungen>>,
     nochmal: PlanSchritt | null,
-  ) => {
+  ): Promise<boolean> => {
     setArbeitet(true);
     setProblem(null);
     setOffen(null);
@@ -101,11 +143,11 @@ export function NeueGliederung({ start }: { start: Start }) {
     try {
       const r = await tun();
       if (r.ok) {
-        setStand({ art: 'da', plan: r.daten });
-        return;
+        planSetzen(r.daten);
+        return true;
       }
       // Was jetzt dasteht, gilt – sonst scheitert das nächste Speichern an der alten Version.
-      if (r.jetzt !== undefined) setStand({ art: 'da', plan: r.jetzt });
+      if (r.jetzt !== undefined) planSetzen(r.jetzt);
       if (r.grund === 'konflikt') {
         const jetzt = r.jetzt ?? null;
         setProblem({
@@ -116,27 +158,29 @@ export function NeueGliederung({ start }: { start: Start }) {
         const nochmalSinnvoll = r.grund === 'voruebergehend' || r.grund === 'nicht-angekommen';
         setProblem({ text: planFehlerText(r.grund), nochmal: nochmalSinnvoll ? nochmal : null });
       }
+      return false;
     } catch (e) {
       // Modul oder Kategorie nicht erreichbar (`speicherePlan` sucht sie vorher) – nichts geschrieben.
       const m = fehlerMeldung(e);
       setProblem({ text: m.text, nochmal: m.nochmal ? nochmal : null });
+      return false;
     } finally {
       setArbeitet(false);
     }
   };
 
-  const aendern = (schritt: PlanSchritt) => {
-    if (stand.art !== 'da') return;
-    const basis = stand.plan;
+  const aendern = (schritt: PlanSchritt): Promise<boolean> => {
+    const basis = aktuell.current;
+    if (basis === undefined) return Promise.resolve(false);
     const neu = schritt(basis?.inhalt ?? KEINE_AENDERUNGEN);
     const von = { personId: start.ichId, name: start.vorname };
-    void schreiben(() => speicherePlan(neu, von, basis?.version ?? null), schritt);
+    return schreiben(() => speicherePlan(neu, von, basis?.version ?? null), schritt);
   };
 
   const verwerfen = () => {
-    if (stand.art !== 'da' || !stand.plan) return;
-    const version = stand.plan.version;
-    void schreiben(() => verwerfePlan(version), null);
+    const basis = aktuell.current;
+    if (!basis) return;
+    void schreiben(() => verwerfePlan(basis.version), null);
   };
 
   const problemZeile = problem && (
@@ -147,7 +191,7 @@ export function NeueGliederung({ start }: { start: Start }) {
           type="button"
           className={baum.nochmal}
           disabled={arbeitet}
-          onClick={() => problem.nochmal && aendern(problem.nochmal)}
+          onClick={() => problem.nochmal && void aendern(problem.nochmal)}
         >
           Nochmal auf dem neuen Stand
         </button>
@@ -228,7 +272,7 @@ export function NeueGliederung({ start }: { start: Start }) {
             „Plan anlegen“ kopiert die heutige Gliederung aus ChurchTools. Daran ändert ihr dann,
             was neu werden soll.
           </p>
-          <FensterKnopf art="haupt" disabled={arbeitet} onClick={() => aendern((a) => a)}>
+          <FensterKnopf art="haupt" disabled={arbeitet} onClick={() => void aendern((a) => a)}>
             {arbeitet ? 'Wird angelegt …' : 'Plan anlegen'}
           </FensterKnopf>
         </section>
@@ -237,21 +281,32 @@ export function NeueGliederung({ start }: { start: Start }) {
       {stand.art === 'da' && stand.plan && (
         <>
           <div className={styles.leiste}>
+            <Segment
+              value={ansicht}
+              options={[
+                { value: 'plan', label: 'Plan' },
+                { value: 'umbau', label: `Umbau · ${offenZahl} offen` },
+              ]}
+              onChange={setAnsicht}
+              ariaLabel="Plan oder Umbau"
+            />
             <span className={baum.meta}>
               {arbeitet
                 ? 'Wird gespeichert …'
                 : `Gespeichert von ${stand.plan.von.name}, ${wannText(stand.plan.zeit, zeitzone())} · für alle Gruppen-Admins`}
             </span>
             <span className={styles.rechts}>
-              <button
-                type="button"
-                className={baum.praesentieren}
-                disabled={arbeitet}
-                onClick={() => setNeuerBereich(true)}
-              >
-                <Icon name="plus" size={16} />
-                Neuer Bereich
-              </button>
+              {ansicht === 'plan' && (
+                <button
+                  type="button"
+                  className={baum.praesentieren}
+                  disabled={arbeitet}
+                  onClick={() => setNeuerBereich(true)}
+                >
+                  <Icon name="plus" size={16} />
+                  Neuer Bereich
+                </button>
+              )}
               <button
                 type="button"
                 className={baum.nochmal}
@@ -262,21 +317,44 @@ export function NeueGliederung({ start }: { start: Start }) {
               </button>
             </span>
           </div>
-          <p className={baum.meta}>
-            Klick auf eine Gruppe: umbenennen, woanders einhängen, Untergruppe anlegen, archivieren.
-          </p>
-          <div className={baum.bereiche}>
-            {knoten.map((b) => (
-              <section key={String(b.gruppe.ref)} className={baum.karte} aria-label={b.gruppe.name}>
-                {zeile(b, true)}
-                {b.kinder.length > 0 ? (
-                  zeilen(b.kinder)
-                ) : (
-                  <p className={baum.keine}>Keine Untergruppen.</p>
-                )}
-              </section>
-            ))}
-          </div>
+          {ansicht === 'plan' ? (
+            <>
+              <p className={baum.meta}>
+                Klick auf eine Gruppe: umbenennen, woanders einhängen, Untergruppe anlegen,
+                archivieren.
+              </p>
+              <div className={baum.bereiche}>
+                {knoten.map((b) => (
+                  <section
+                    key={String(b.gruppe.ref)}
+                    className={baum.karte}
+                    aria-label={b.gruppe.name}
+                  >
+                    {zeile(b, true)}
+                    {b.kinder.length > 0 ? (
+                      zeilen(b.kinder)
+                    ) : (
+                      <p className={baum.keine}>Keine Untergruppen.</p>
+                    )}
+                  </section>
+                ))}
+              </div>
+            </>
+          ) : (
+            <Umbau
+              plan={plan}
+              schritte={schritte}
+              daten={umbauDaten}
+              datenFehler={umbauFehler}
+              typName={(id) => start.typNamen.get(id) ?? 'Gruppe'}
+              aktuellerPlan={() => aktuell.current?.inhalt ?? null}
+              planAendern={aendern}
+              onNeu={async () => {
+                await Promise.all([onStruktur(), umbauDatenLaden()]);
+              }}
+              onDatenNochmal={() => void umbauDatenLaden()}
+            />
+          )}
         </>
       )}
 

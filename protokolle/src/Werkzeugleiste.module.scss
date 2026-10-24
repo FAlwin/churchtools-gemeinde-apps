@@ -1,0 +1,71 @@
+// Feste Werkzeugleiste über dem Blatt (Protokolle S4-1, Entwurf 7). Am Handy waagrecht wischbar statt umbrechend.
+@use '@ui/design/mixins' as m;
+
+.leiste {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface2);
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.gruppe {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  padding-right: 6px;
+  border-right: 1px solid var(--hair);
+
+  &:last-child {
+    border-right: 0;
+  }
+}
+
+.knopf {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  background: transparent;
+  color: var(--text);
+  font-size: 15px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--surface3);
+  }
+
+  &[aria-pressed='true'] {
+    background: var(--blue-soft);
+    color: var(--blue);
+  }
+
+  &:disabled {
+    color: var(--text3);
+    cursor: default;
+  }
+}
+
+.textart {
+  flex: none;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}

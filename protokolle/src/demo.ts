@@ -4,7 +4,8 @@
  * damit die Seite ohne Instanz zu sehen ist. Fälle: `?demo` (Admin; versteckte, eingerichtete Gruppe + nicht
  * eingerichtete), `?demo=mitglied` (kein Admin, also keine Verwaltung), `?demo=leer` (in keiner Gruppe),
  * `?demo=ohne-modul` (Erweiterung nicht installiert), `?demo=fehler` (ChurchTools antwortet nicht),
- * `?demo=einrichten-fehler` (Rechte setzen scheitert vorübergehend). Wird nie mitgebaut (siehe `main.tsx`).
+ * `?demo=einrichten-fehler` (Rechte setzen scheitert vorübergehend), `?demo=gesperrt` (am Entwurf schreibt gerade
+ * Johann – Mitlesen und Übernehmen, S4-1). Wird nie mitgebaut (siehe `main.tsx`).
  *
  * Die Verwaltung (S2-2) schreibt hier in einen Speicher im Browser: Kategorien, Werte und Rechte bleiben bis
  * zum Neuladen – so lässt sich „Gruppe einrichten“ durchklicken.
@@ -25,6 +26,7 @@ import type { Block } from '@shared/protokolle/dokument';
 function protokollWerte(
   kategorie: number,
   start: number,
+  fall: string,
 ): { id: number; dataCategoryId: number; value: string }[] {
   let n = 0;
   const entwurf: Block[] = [
@@ -115,7 +117,10 @@ function protokollWerte(
         termin: null,
         treffen: null,
         freigabe: status === 'frei' ? { von: 1, am: '2026-10-15T08:00:00Z' } : null,
-        sperre: null,
+        sperre:
+          fall === 'gesperrt' && status === 'entwurf'
+            ? { von: 7, name: 'Johann', seit: new Date().toISOString(), fenster: 'demo' }
+            : null,
         stand: t.stand,
       }),
     );
@@ -200,7 +205,7 @@ function speicherAnlegen(fall: string): Speicher {
       fall === 'leer'
         ? []
         : [
-            [60, protokollWerte(60, 600)],
+            [60, protokollWerte(60, 600, fall)],
             [61, [{ id: 700, dataCategoryId: 61, value: JSON.stringify(DEMO_AUFGABE) }]],
             [
               5,
@@ -250,7 +255,19 @@ function antwort(
   if (pfad === '/api/permissions/global')
     return {
       status: 200,
-      data: { churchcore: { 'administer persons': fall !== 'mitglied' } },
+      data: {
+        churchcore: { 'administer persons': fall !== 'mitglied' },
+        // Die Leitung schreibt Protokolle (S4-1); als Mitglied nur „Mitarbeit“.
+        protokolle: {
+          'view custom data': [60, 61, 70, 5],
+          ...Object.fromEntries(
+            ['create custom data', 'edit custom data', 'delete custom data'].map((k) => [
+              k,
+              fall === 'mitglied' ? [61] : [60, 61],
+            ]),
+          ),
+        },
+      },
     };
   if (pfad === '/api/group/roles')
     return {

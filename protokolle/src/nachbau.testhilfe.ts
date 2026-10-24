@@ -2,7 +2,7 @@
  * **Eine nachgestellte ChurchTools-Instanz für die Tests der Protokolle** (S2-1, gemeinsam seit S2-3) – sie merkt
  * sich, was gesetzt wurde, und verhält sich wie gemessen: `PUT` ergänzt Rechte, `DELETE` entzieht, Zeilen je
  * `dataId`, Kategorien mit `shorty`, Werte je Kategorie. `schlucken` lässt ChurchTools „204“ sagen und nichts
- * speichern; `schluckeWert` dasselbe für neue Werte; `fehlerBei` antwortet jeder Anfrage dieser Art mit einem Fehler.
+ * speichern (bei Werten: `PUT WERT`, `DELETE WERT`); `schluckeWert` dasselbe für neue Werte; `fehlerBei` antwortet jeder Anfrage dieser Art mit einem Fehler.
  */
 import { vi } from 'vitest';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
@@ -194,7 +194,7 @@ export function nachbauStarten(): Nachbau {
       const wert = liste.find((x) => x.id === Number(w[2]));
       if (m === 'POST' && s.schluckeWert?.(String(body.value))) return json(201, { data: {} });
       if (m === 'POST') liste.push({ id: s.naechste++, value: String(body.value) });
-      if (m === 'PUT' && wert) wert.value = String(body.value);
+      if (m === 'PUT' && wert && !s.schlucken.has('PUT WERT')) wert.value = String(body.value);
       if (m === 'DELETE' && wert && !s.schlucken.has('DELETE WERT'))
         liste.splice(liste.indexOf(wert), 1);
       if ((m === 'PUT' || m === 'DELETE') && !wert) return json(404, { message: 'weg' });

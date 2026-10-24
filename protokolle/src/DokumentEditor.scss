@@ -1,0 +1,73 @@
+// BlockNote im Protokoll-Editor (S4-1) – auf unsere Werte gebracht. Hell und dunkel aus EINER Liste: die Werte schalten
+// selbst um (html[data-theme]). Doppelte Klasse, damit es gegen `.bn-root[data-color-scheme=dark]` gewinnt
+// (S0-Durchstich). Nur Selektoren mit Klasse – sie treffen ChurchTools nicht (cssBereich, Pack-Prüfung).
+.bn-root.bn-root.bn-root {
+  --bn-colors-editor-text: var(--text);
+  --bn-colors-editor-background: transparent;
+  --bn-colors-menu-text: var(--text);
+  --bn-colors-menu-background: var(--surface2);
+  --bn-colors-tooltip-text: var(--text);
+  --bn-colors-tooltip-background: var(--surface3);
+  --bn-colors-hovered-text: var(--text);
+  --bn-colors-hovered-background: var(--surface3);
+  --bn-colors-selected-text: #fff;
+  --bn-colors-selected-background: var(--blue);
+  --bn-colors-disabled-text: var(--text3);
+  --bn-colors-disabled-background: var(--surface3);
+  --bn-colors-border: var(--border);
+  --bn-colors-side-menu: var(--text3);
+  --bn-colors-highlights-yellow-background: var(--markiert);
+  --bn-font-family: var(--ui);
+  --bn-border-radius: var(--r-ctrl);
+}
+
+.bn-container .bn-editor {
+  padding-inline: 0;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+// Überschriften so groß wie in der Lese-Ansicht (`ProtokollAnsicht.module.scss`), nicht wie BlockNote (3em). Stufe 1 trägt
+// kein `data-level` – BlockNote lässt Standardwerte weg.
+.bn-container [data-content-type='heading'] {
+  --level: 16.5px;
+  padding-top: 12px;
+}
+
+.bn-container [data-content-type='heading'][data-level='2'] {
+  --level: 15px;
+}
+
+.bn-container [data-content-type='heading'][data-level='3'] {
+  --level: 14px;
+}
+
+// Tagesordnungspunkte (Überschrift 1 auf oberster Ebene) zählen mit – wie `ableiten`, Lese-Ansicht und PDF.
+.bn-container .bn-editor > .bn-block-group {
+  counter-reset: top-punkt;
+}
+
+.bn-container
+  .bn-editor
+  > .bn-block-group
+  > .bn-block-outer
+  > .bn-block
+  > .bn-block-content[data-content-type='heading']:not([data-level])
+  > h1::before {
+  counter-increment: top-punkt;
+  content: counter(top-punkt) '.';
+  margin-right: 6px;
+  color: var(--text2);
+}
+
+// Die eigenen Blöcke (Aufgabe, Beschluss, Termin) über die ganze Breite – wie in der Lese-Ansicht.
+.bn-container
+  .bn-block-content:is(
+    [data-content-type='aufgabe'],
+    [data-content-type='beschluss'],
+    [data-content-type='termin']
+  )
+  > * {
+  flex: 1;
+  margin: 0;
+}

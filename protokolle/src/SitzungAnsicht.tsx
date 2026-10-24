@@ -1,13 +1,13 @@
 import { useEffect } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { tagPunkt } from '@shared/ct/datum';
-import { ableiten } from '@shared/protokolle/dokument';
 import { dokumentDerSitzung, type ProtokollTeil } from '@shared/protokolle/speicher';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
-import { statusText, type Aufgabe } from '@shared/protokolle/aufgaben';
+import type { Aufgabe } from '@shared/protokolle/aufgaben';
 import { wannLang } from './anzeige';
 import { Marke } from './Marke';
 import { ProtokollAnsicht } from './ProtokollAnsicht';
+import { Bereiche } from './Bereiche';
 import styles from './SitzungAnsicht.module.scss';
 
 /**
@@ -36,12 +36,6 @@ export function SitzungAnsicht({
 }) {
   const kopf = sitzung.kopf;
   const dokument = dokumentDerSitzung(kopf, teile);
-  const a = dokument ? ableiten(dokument) : null;
-  const punktText = (id: string | null): string => {
-    const p = a?.punkte.find((x) => x.blockId === id);
-    return p ? `Punkt ${p.nummer} · ${p.titel}` : 'vor dem ersten Punkt';
-  };
-  const aufgabeVon = new Map(aufgaben.map((x) => [x.id, x]));
 
   // Zum Punkt springen, sobald er da ist. Effekt-Rumpf mit { } – `scrollIntoView` liefert in neuen Browsern ein
   // Promise, und ein zurückgegebenes Promise hielte React für die Aufräum-Funktion (Chrome 152, weiße Seite).
@@ -91,72 +85,12 @@ export function SitzungAnsicht({
         </p>
       )}
 
-      {dokument && a && (
+      {dokument && (
         <>
           <section className={styles.karte} aria-label="Protokoll">
             <ProtokollAnsicht dokument={dokument} aufgaben={aufgaben} markiert={springeZu} />
           </section>
-          <section className={styles.karte} aria-labelledby="beschluesse">
-            <h3 id="beschluesse">
-              Beschlüsse <span className={styles.anzahl}>{a.beschluesse.length}</span>
-            </h3>
-            {a.beschluesse.length ? (
-              <ul className={styles.liste}>
-                {a.beschluesse.map((b) => (
-                  <li key={b.blockId}>
-                    <span>{b.text}</span>
-                    <small>{punktText(b.punkt)}</small>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className={styles.leer}>Keine Beschlüsse.</p>
-            )}
-          </section>
-          <section className={styles.karte} aria-labelledby="todos">
-            <h3 id="todos">
-              To-Dos <span className={styles.anzahl}>{a.aufgaben.length}</span>
-            </h3>
-            {a.aufgaben.length ? (
-              <ul className={styles.liste}>
-                {a.aufgaben.map((x) => {
-                  const g = x.aufgabe ? aufgabeVon.get(x.aufgabe) : undefined;
-                  return (
-                    <li key={x.blockId}>
-                      <span>{x.text}</span>
-                      <small>
-                        {punktText(x.punkt)}
-                        {g ? ` · ${statusText(g.status)}` : ''}
-                        {g?.bis ? ` · bis ${tagPunkt(g.bis)}` : ''}
-                      </small>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className={styles.leer}>Keine To-Dos.</p>
-            )}
-          </section>
-          <section className={styles.karte} aria-labelledby="termine">
-            <h3 id="termine">
-              Termine <span className={styles.anzahl}>{a.termine.length}</span>
-            </h3>
-            {a.termine.length ? (
-              <ul className={styles.liste}>
-                {a.termine.map((t) => (
-                  <li key={t.blockId}>
-                    <span>
-                      {t.datum ? `${tagPunkt(t.datum)} – ` : ''}
-                      {t.text}
-                    </span>
-                    <small>{punktText(t.punkt)}</small>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className={styles.leer}>Keine Termine.</p>
-            )}
-          </section>
+          <Bereiche dokument={dokument} aufgaben={aufgaben} />
         </>
       )}
     </div>

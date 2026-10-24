@@ -98,6 +98,14 @@ describe('ProtokollAnsicht – eigene Blöcke und Sicherheit', () => {
     expect(screen.getByText('Böse').closest('a')).toBeNull();
   });
 
+  it('Markiertes (Hintergrundfarbe aus dem Editor) erscheint als Markierung', () => {
+    const markiert: Block[] = [
+      { id: 'm', type: 'paragraph', content: [text('wichtig', { backgroundColor: 'yellow' })] },
+    ];
+    render(<ProtokollAnsicht dokument={markiert} />);
+    expect(screen.getByText('wichtig').closest('mark')).not.toBeNull();
+  });
+
   it('leeres Dokument: ein Satz', () => {
     render(<ProtokollAnsicht dokument={[]} />);
     expect(screen.getByText('Das Protokoll ist noch leer.')).toBeTruthy();

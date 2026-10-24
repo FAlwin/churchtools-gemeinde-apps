@@ -3,6 +3,7 @@ import { Icon } from '@ui/icons/icons';
 import { tagPunkt } from '@shared/ct/datum';
 import { ableiten, BLOCK, textAus, type Block } from '@shared/protokolle/dokument';
 import { statusText, type Aufgabe } from '@shared/protokolle/aufgaben';
+import { VERWEIS_TEXT } from './anzeige';
 import styles from './ProtokollAnsicht.module.scss';
 
 /**
@@ -36,6 +37,9 @@ function textStueck(t: TextStueck, key: number): ReactNode {
   if (s.underline) el = <u>{el}</u>;
   if (s.italic) el = <em>{el}</em>;
   if (s.bold) el = <strong>{el}</strong>;
+  // Markieren (Werkzeugleiste, S4-1) – BlockNote speichert es als Hintergrundfarbe.
+  if (typeof s.backgroundColor === 'string' && s.backgroundColor !== 'default')
+    el = <mark>{el}</mark>;
   return <span key={key}>{el}</span>;
 }
 
@@ -62,11 +66,6 @@ export function Inhalt({ content }: { content: unknown }) {
     </>
   );
 }
-
-const VERWEIS_TEXT: Record<string, string> = {
-  'offene-aufgaben': 'Hier stehen die offenen To-Dos der Gruppe.',
-  'letztes-protokoll': 'Hier steht das Protokoll der letzten Sitzung.',
-};
 
 interface Kontext {
   nummern: Map<string, number>;
@@ -197,6 +196,9 @@ function EinBlock({ b, k }: { b: Block; k: Kontext }) {
           {kinder}
         </div>
       );
+    case 'divider':
+      // Trennlinie aus der Werkzeugleiste (S4-1) – ohne Text, bis dahin fiel sie hier still weg.
+      return <hr className={styles.linie} />;
     case BLOCK.verweis:
       return (
         <p className={styles.verweis}>{VERWEIS_TEXT[String(b.props?.art)] ?? 'Fester Punkt'}</p>

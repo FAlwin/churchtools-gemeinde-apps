@@ -11,7 +11,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { useZiehSensoren } from '@ui/bedienung/useZiehSensoren';
 import { innerScrollOnly } from '@ui/bedienung/dndAutoScroll';
 import { Schalter } from '@ui/bedienung/Schalter';
-import { Spinner } from './Spinner';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
+import { Sheet } from '@ui/fenster/Sheet';
 import { Icon } from '@ui/icons/icons';
 import { useUpdateSiteConfig } from '../hooks/useSiteConfig';
 import { neueId } from '../utils/ids';
@@ -80,7 +81,10 @@ function SortableLink({
   );
 }
 
-/** Admin-Verwaltung der frei konfigurierbaren Links (im Sheet eingebettet). */
+/**
+ * Admin-Fenster **„Links verwalten“** – zeichnet sein Fenster selbst, damit „Speichern“ unten rechts in der Fußzeile
+ * steht (E6-O F3, #726).
+ */
 export function LinksManager({ site, onClose }: { site: SiteConfig; onClose: () => void }) {
   const [links, setLinks] = useState<SiteLink[]>(site.links);
   const [err, setErr] = useState<string | null>(null);
@@ -120,38 +124,44 @@ export function LinksManager({ site, onClose }: { site: SiteConfig; onClose: () 
   }
 
   return (
-    <div className={styles.wrap}>
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-        autoScroll={innerScrollOnly}
-      >
-        <SortableContext items={links.map((l) => l.id)} strategy={verticalListSortingStrategy}>
-          <div className={styles.list}>
-            {links.map((l) => (
-              <SortableLink
-                key={l.id}
-                link={l}
-                onChange={(next) =>
-                  setLinks((cur) => cur.map((x) => (x.id === next.id ? next : x)))
-                }
-                onRemove={() => setLinks((cur) => cur.filter((x) => x.id !== l.id))}
-              />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
+    <Sheet
+      title="Links verwalten"
+      onClose={onClose}
+      knoepfe={
+        <FensterKnopf onClick={save} disabled={update.isPending}>
+          {update.isPending ? 'Wird gespeichert …' : 'Speichern'}
+        </FensterKnopf>
+      }
+    >
+      <div className={styles.wrap}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+          autoScroll={innerScrollOnly}
+        >
+          <SortableContext items={links.map((l) => l.id)} strategy={verticalListSortingStrategy}>
+            <div className={styles.list}>
+              {links.map((l) => (
+                <SortableLink
+                  key={l.id}
+                  link={l}
+                  onChange={(next) =>
+                    setLinks((cur) => cur.map((x) => (x.id === next.id ? next : x)))
+                  }
+                  onRemove={() => setLinks((cur) => cur.filter((x) => x.id !== l.id))}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
 
-      <button className={styles.add} onClick={() => setLinks((cur) => [...cur, newLink()])}>
-        <Icon name="plus" size={18} /> Link hinzufügen
-      </button>
+        <button className={styles.add} onClick={() => setLinks((cur) => [...cur, newLink()])}>
+          <Icon name="plus" size={18} /> Link hinzufügen
+        </button>
 
-      {err && <div className={styles.err}>{err}</div>}
-
-      <button className={styles.save} onClick={save} disabled={update.isPending}>
-        {update.isPending ? <Spinner /> : 'Speichern'}
-      </button>
-    </div>
+        {err && <div className={styles.err}>{err}</div>}
+      </div>
+    </Sheet>
   );
 }

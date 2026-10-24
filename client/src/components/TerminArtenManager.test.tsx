@@ -90,3 +90,16 @@ describe('TerminArtenManager', () => {
     expect((mutate.mock.calls[0][0] as SiteConfig).terminArten).toEqual([]);
   });
 });
+
+/** Fenster wie ChurchTools (E6-O F3, #726): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
+const knopfFolgeF3 = () =>
+  screen.getAllByRole('button').map((b) => (b.getAttribute('aria-label') ?? b.textContent)?.trim());
+
+describe('TerminArtenManager im ChurchTools-Aufbau', () => {
+  it('eigenes Fenster „Termin-Arten“, unten Abbrechen und Speichern', () => {
+    zeige();
+    expect(screen.getByRole('dialog', { name: 'Termin-Arten' })).toBeTruthy();
+    expect(knopfFolgeF3()[0]).toBe('Fenster schließen');
+    expect(knopfFolgeF3().slice(-2)).toEqual(['Abbrechen', 'Speichern']);
+  });
+});

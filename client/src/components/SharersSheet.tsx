@@ -63,6 +63,7 @@ export function SharersSheet({
       title={pickerPerson ? `Notizen von ${pickerPerson.name}` : 'Notizen von …'}
       onClose={onClose}
       cancelLabel="Schließen"
+      knoepfe={null}
     >
       {!pickerPerson ? (
         <>

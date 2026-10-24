@@ -1,6 +1,7 @@
 import { useId, type ReactNode } from 'react';
 import { Icon } from '../icons/icons';
 import { FensterKnopf } from './FensterKnopf';
+import { useKnopfZeile } from './useKnopfZeile';
 import { useOverlayKeyboardInset } from './useOverlayKeyboardInset';
 import styles from './Sheet.module.scss';
 
@@ -39,6 +40,7 @@ export function Sheet({
   // Hält den Dialog über der iOS-Tastatur frei und verhindert, dass die Seite verrutscht (#207).
   const overlayRef = useOverlayKeyboardInset();
   const titelId = useId();
+  const knopfZeile = useKnopfZeile<HTMLDivElement>();
 
   if (knoepfe !== undefined) {
     // Kopf und Fußzeile bleiben stehen, dazwischen scrollt der Inhalt – das ist die eine Scrollfläche des Fensters.
@@ -65,7 +67,11 @@ export function Sheet({
             </button>
           </div>
           <div className={styles.inhalt}>{children}</div>
-          <div className={styles.fuss}>
+          <div
+            ref={knopfZeile.ref}
+            className={styles.fuss}
+            data-stapel={knopfZeile.stapel || undefined}
+          >
             {cancelLabel !== null && (
               <FensterKnopf art="zweit" onClick={onClose} disabled={beschaeftigt}>
                 {cancelLabel}

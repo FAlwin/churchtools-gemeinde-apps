@@ -14,7 +14,7 @@ interface CapoPickerProps {
 /** Bottom-Sheet zur Kapo-Auswahl mit „Griff klingt wie"-Hinweis. */
 export function CapoPicker({ capo, shapeKey, soundingKey, onPick, onClose }: CapoPickerProps) {
   return (
-    <Sheet title="Kapo" onClose={onClose}>
+    <Sheet title="Kapo" onClose={onClose} knoepfe={null}>
       <div className={styles.capoHint}>
         {capo > 0 ? (
           <>

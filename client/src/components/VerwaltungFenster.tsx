@@ -1,4 +1,5 @@
 import type { NoteRolePerm, SiteConfig, StandardAnsicht } from '@shared/types/index';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import { speicherFehler } from '../utils/speicherFehler';
 import { Spinner } from './Spinner';
@@ -38,7 +39,15 @@ export function VerwaltungFenster({ site, isAdmin, v }: VerwaltungFensterProps) 
   return (
     <>
       {v.offen.org && (
-        <Sheet title="Organisation / Name" onClose={v.closeOrg}>
+        <Sheet
+          title="Organisation / Name"
+          onClose={v.closeOrg}
+          knoepfe={
+            <FensterKnopf onClick={v.saveOrg} disabled={v.update.isPending}>
+              {v.update.isPending ? 'Wird gespeichert …' : 'Speichern'}
+            </FensterKnopf>
+          }
+        >
           <input
             className={styles.orgInput}
             value={v.orgDraft}
@@ -50,42 +59,27 @@ export function VerwaltungFenster({ site, isAdmin, v }: VerwaltungFensterProps) 
           {v.update.isError && (
             <div className={styles.orgErr}>{speicherFehler(v.update.error)}</div>
           )}
-          <button className={styles.orgSave} onClick={v.saveOrg} disabled={v.update.isPending}>
-            {v.update.isPending ? <Spinner /> : 'Speichern'}
-          </button>
         </Sheet>
       )}
 
-      {v.offen.links && (
-        <Sheet title="Links verwalten" onClose={v.closeLinks}>
-          <LinksManager site={site} onClose={v.closeLinks} />
-        </Sheet>
-      )}
+      {v.offen.links && <LinksManager site={site} onClose={v.closeLinks} />}
 
-      {v.offen.terminArten && (
-        <Sheet title="Termin-Arten" onClose={v.closeTerminArten}>
-          <p className={styles.sheetHint}>
-            Im Tab „Abwesenheiten" lassen sich Termine nach Art filtern – etwa nur Gottesdienste.
-            Eine Art hat einen <strong>Namen</strong> (der Knopf) und ein <strong>Suchwort</strong>:
-            Kommt es im Terminnamen vor, gehört der Termin dazu. Geprüft wird von oben nach unten,
-            die erste passende Art gewinnt; alles Übrige landet unter „Sonstige". Ohne Arten gibt es
-            keinen Filter.
-          </p>
-          <TerminArtenManager site={site} onClose={v.closeTerminArten} />
-        </Sheet>
-      )}
+      {v.offen.terminArten && <TerminArtenManager site={site} onClose={v.closeTerminArten} />}
 
-      {v.offen.ablaufAnlegen && (
-        <Sheet title="Termine ohne Ablauf" onClose={v.closeAblaufAnlegen}>
-          <AblaufAnlegenManager site={site} onClose={v.closeAblaufAnlegen} />
-        </Sheet>
-      )}
+      {v.offen.ablaufAnlegen && <AblaufAnlegenManager site={site} onClose={v.closeAblaufAnlegen} />}
 
       {v.offen.ansicht && (
         <Sheet
           title="Liedblatt: Standard-Ansicht"
           onClose={v.closeAnsicht}
           cancelLabel={v.ansichtDirty ? 'Abbrechen' : 'Schließen'}
+          knoepfe={
+            v.ansichtDirty ? (
+              <FensterKnopf onClick={v.saveAnsicht} disabled={v.update.isPending}>
+                {v.update.isPending ? 'Wird gespeichert …' : 'Speichern'}
+              </FensterKnopf>
+            ) : null
+          }
         >
           <p className={styles.sheetHint}>
             Was ein Lied beim ersten Öffnen zeigt. Wer bei einem Lied selbst umstellt, behält seine
@@ -114,20 +108,11 @@ export function VerwaltungFenster({ site, isAdmin, v }: VerwaltungFensterProps) 
           {v.update.isError && (
             <div className={styles.orgErr}>{speicherFehler(v.update.error)}</div>
           )}
-          {v.ansichtDirty && (
-            <button
-              className={styles.orgSave}
-              onClick={v.saveAnsicht}
-              disabled={v.update.isPending}
-            >
-              {v.update.isPending ? <Spinner /> : 'Speichern'}
-            </button>
-          )}
         </Sheet>
       )}
 
       {v.offen.notes && (
-        <Sheet title="Anmerkungen" onClose={v.closeNotes} cancelLabel="Schließen">
+        <Sheet title="Anmerkungen" onClose={v.closeNotes} cancelLabel="Schließen" knoepfe={null}>
           <p className={styles.sheetHint}>
             Team-Anmerkungen sind für alle Musiker sichtbar. Lege zuerst die{' '}
             <strong>Gruppen</strong> fest, deren Mitglieder infrage kommen, und danach je Gruppe die{' '}
@@ -165,6 +150,17 @@ export function VerwaltungFenster({ site, isAdmin, v }: VerwaltungFensterProps) 
           title="Gruppen-Zuweisung"
           onClose={v.closeGroups}
           cancelLabel={v.groupsDirty ? 'Abbrechen' : 'Schließen'}
+          knoepfe={
+            v.groupsDirty && v.groupsQuery.data ? (
+              <FensterKnopf onClick={v.saveGroups} disabled={v.update.isPending}>
+                {v.update.isPending
+                  ? 'Wird gespeichert …'
+                  : v.groupDraft.length === 0
+                    ? 'Speichern (Funktion aus)'
+                    : `Speichern (${v.groupDraft.length} ${v.groupDraft.length === 1 ? 'Gruppe' : 'Gruppen'})`}
+              </FensterKnopf>
+            ) : null
+          }
         >
           <p className={styles.sheetHint}>
             Welche ChurchTools-Gruppen kommen für Team-Anmerkungen infrage? Die genauen Rechte legst
@@ -200,21 +196,6 @@ export function VerwaltungFenster({ site, isAdmin, v }: VerwaltungFensterProps) 
               {v.update.isError && (
                 <div className={styles.orgErr}>{speicherFehler(v.update.error)}</div>
               )}
-              {v.groupsDirty && (
-                <button
-                  className={styles.orgSave}
-                  onClick={v.saveGroups}
-                  disabled={v.update.isPending}
-                >
-                  {v.update.isPending ? (
-                    <Spinner />
-                  ) : v.groupDraft.length === 0 ? (
-                    'Speichern (Funktion aus)'
-                  ) : (
-                    `Speichern (${v.groupDraft.length} ${v.groupDraft.length === 1 ? 'Gruppe' : 'Gruppen'})`
-                  )}
-                </button>
-              )}
             </>
           )}
         </Sheet>
@@ -225,6 +206,13 @@ export function VerwaltungFenster({ site, isAdmin, v }: VerwaltungFensterProps) 
           title="Rollen-Zuweisung"
           onClose={v.closeRoles}
           cancelLabel={v.rolesDirty ? 'Abbrechen' : 'Schließen'}
+          knoepfe={
+            v.rolesDirty ? (
+              <FensterKnopf onClick={v.saveRoles} disabled={v.update.isPending}>
+                {v.update.isPending ? 'Wird gespeichert …' : 'Speichern'}
+              </FensterKnopf>
+            ) : null
+          }
         >
           <p className={styles.sheetHint}>
             Hake je Gruppe an, welche Rollen <strong>Team-Notizen</strong> nutzen dürfen (eigene
@@ -242,11 +230,6 @@ export function VerwaltungFenster({ site, isAdmin, v }: VerwaltungFensterProps) 
           ))}
           {v.update.isError && (
             <div className={styles.orgErr}>{speicherFehler(v.update.error)}</div>
-          )}
-          {v.rolesDirty && (
-            <button className={styles.orgSave} onClick={v.saveRoles} disabled={v.update.isPending}>
-              {v.update.isPending ? <Spinner /> : 'Speichern'}
-            </button>
           )}
         </Sheet>
       )}

@@ -22,6 +22,7 @@
  */
 import { useEffect, useState } from 'react';
 import type { ArrangementAnsicht, ArrangementAuftrag } from '@shared/types/index';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import { Icon } from '@ui/icons/icons';
 import { CenterMessage } from './CenterMessage';
@@ -274,6 +275,14 @@ export function EditSongSheet({
         title={ist?.name ?? songName ?? 'Lied ändern'}
         onClose={onClose}
         cancelLabel="Schließen"
+        knoepfe={
+          // Speichern nur, wo das Formular steht – also nicht beim Laden, Fehler oder ohne Kategorie (F3, #726).
+          !stammdaten.isError && ist && ist.categoryId !== null ? (
+            <FensterKnopf disabled={!bereit} onClick={() => void speichern()}>
+              {aendern.isPending ? 'Wird gespeichert …' : 'Speichern'}
+            </FensterKnopf>
+          ) : null
+        }
       >
         {fehler && <div className={styles.err}>{fehler}</div>}
 
@@ -301,14 +310,6 @@ export function EditSongSheet({
               kategorien={kategorieListe}
               warnung={warnung}
             />
-
-            <button
-              className={styles.primaryWide}
-              disabled={!bereit}
-              onClick={() => void speichern()}
-            >
-              {aendern.isPending ? 'Wird gespeichert …' : 'Speichern'}
-            </button>
 
             {/* Die Arrangements des Liedes (#396) – zwischen Stammdaten und Notenblatt, weil sie
                 zum Lied gehören, aber nicht zu seinen Stammdaten. */}

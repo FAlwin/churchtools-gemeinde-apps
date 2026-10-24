@@ -1,6 +1,7 @@
 import { useId, type ReactNode } from 'react';
 import { Icon } from '../icons/icons';
 import { FensterKnopf } from './FensterKnopf';
+import { useKnopfZeile } from './useKnopfZeile';
 import styles from './ConfirmDialog.module.scss';
 
 interface ConfirmDialogProps {
@@ -45,6 +46,7 @@ export function ConfirmDialog({
   beschaeftigt = false,
 }: ConfirmDialogProps) {
   const titelId = useId();
+  const knopfZeile = useKnopfZeile<HTMLDivElement>();
   return (
     <div className={styles.overlay} onClick={beschaeftigt ? undefined : onCancel}>
       <div
@@ -71,7 +73,11 @@ export function ConfirmDialog({
         </div>
         <div className={styles.msg}>{message}</div>
         {children}
-        <div className={styles.actions}>
+        <div
+          ref={knopfZeile.ref}
+          className={styles.actions}
+          data-stapel={knopfZeile.stapel || undefined}
+        >
           {cancelLabel !== null && (
             <FensterKnopf art="zweit" onClick={onCancel} disabled={beschaeftigt}>
               {cancelLabel}

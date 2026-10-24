@@ -90,7 +90,9 @@ ChurchTools-Weboberfläche):
 - **Kopf:** Titel links, **X rechts** zum Schließen (für Screenreader „Fenster schließen“, damit es sich vom Knopf
   „Schließen“ unterscheidet). **Fußzeile:** Knöpfe **rechts unten**, „Abbrechen“ mit Rahmen und blauer Schrift,
   daneben der Hauptknopf – am Rechner keine Knöpfe über die ganze Breite. **Am Handy** (≤ 480 px) stehen sie
-  untereinander über die volle Breite, der Hauptknopf oben (`m.fensterKnopfZeile`, E6-O F2 #720).
+  untereinander über die volle Breite, der Hauptknopf oben (`m.fensterKnopfZeile`, E6-O F2 #720). Passen sie auch am
+  Rechner nicht nebeneinander (drei lange Knöpfe), stehen sie ebenso untereinander – die Zeile misst sich selbst
+  (`useKnopfZeile`, F3 #726).
 - **`Sheet` mit `knoepfe`** bekommt diesen Aufbau; Kopf und Fuß stehen, der Inhalt dazwischen scrollt (die _eine_
   Scrollfläche des Fensters). Ohne `knoepfe` bleibt der alte Aufbau, bis das Fenster umgezogen ist – App für App in
   eigenen Scheiben (Dienstplaner F2, Musik-App F3; Anmeldungen, Organigramm und Protokolle folgen). Der Test

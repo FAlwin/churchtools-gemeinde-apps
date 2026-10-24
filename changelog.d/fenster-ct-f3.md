@@ -12,11 +12,18 @@
   Zurück zum Eintrag.
 - Speichern-Knöpfe zeigen „Wird gespeichert …“ statt eines Kreisels.
 
+### Geändert (alle Apps, E6-O F3)
+
+- **Passen die Knöpfe unten nicht nebeneinander, stehen sie untereinander** – auch am Rechner, der Hauptknopf oben
+  (Alwin). Vorher rutschte bei drei langen Knöpfen der Hauptknopf allein in eine zweite Zeile. Gilt für alle Fenster
+  und Bestätigungen, z. B. auch den Zauberstab im Dienstplaner bei vielen Vorschlägen.
+
 ### Intern (E6-O F3)
 
 - „Links verwalten“, „Termin-Arten“ und „Termine ohne Ablauf“ zeichnen ihr Fenster selbst, damit „Speichern“ in die
   Fußzeile kann.
 - Neuer Dauer-Test `ui/fenster/fensterAufbau.test.ts`: In umgezogenen Apps fällt jedes Fenster ohne `knoepfe` auf; die
   Liste der noch nicht umgezogenen Apps (Anmeldungen, Organigramm, Protokolle) muss ehrlich bleiben.
-- `FensterKnopf` kann ein Symbol neben der Beschriftung zeigen. Entfernt: `TeilenFenster.module.scss` und die
+- `FensterKnopf` kann ein Symbol neben der Beschriftung zeigen. Neuer Hook `ui/fenster/useKnopfZeile` (misst die
+  Knopfzeile, `data-stapel`/`data-messen` im Mixin `fensterKnopfZeile`). Entfernt: `TeilenFenster.module.scss` und die
   nachgebauten Hauptknöpfe (`.orgSave`, `.save`, `.primaryWide` u. a.).

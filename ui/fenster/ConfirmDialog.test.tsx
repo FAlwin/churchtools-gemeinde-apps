@@ -19,10 +19,10 @@ describe('ConfirmDialog', () => {
     const onCancel = vi.fn();
     render(<ConfirmDialog {...grund} onConfirm={onConfirm} onCancel={onCancel} />);
     expect(screen.getByRole('alertdialog', { name: 'Löschen?' })).toBeTruthy();
-    expect(knopfTexte()).toEqual(['Schließen', 'Abbrechen', 'Löschen']);
+    expect(knopfTexte()).toEqual(['Fenster schließen', 'Abbrechen', 'Löschen']);
     fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
     expect(onConfirm).toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
     expect(onCancel).toHaveBeenCalledTimes(2);
   });
@@ -40,7 +40,7 @@ describe('ConfirmDialog', () => {
         <p>Die Liste</p>
       </ConfirmDialog>,
     );
-    expect(knopfTexte()).toEqual(['Schließen', 'Abbrechen', 'Nur hier', 'Löschen']);
+    expect(knopfTexte()).toEqual(['Fenster schließen', 'Abbrechen', 'Nur hier', 'Löschen']);
     expect(screen.getByText('Die Liste')).toBeTruthy();
     expect(screen.getByText('Klein gedruckt')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Nur hier' }));

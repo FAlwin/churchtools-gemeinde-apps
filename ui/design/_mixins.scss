@@ -188,6 +188,71 @@
 }
 
 /**
+ * **Ein Knopf, der aussieht wie ein Link** – blaue, fette Schrift ohne Rahmen, für einen Nebenweg im Text
+ * („Erneut versuchen“, „Neu vorschlagen“ im Zauberstab, E6-O F2 #720). Vorher je eine Kopie in den Fenstern.
+ */
+@mixin textKnopf {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--blue);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+/**
+ * **Die Knopfzeile unten im Fenster** (`Sheet`, `ConfirmDialog`): am Rechner nebeneinander rechts unten, am Handy
+ * untereinander über die volle Breite, der Hauptknopf oben (Alwin, 24.10.2026, E6-O F2 #720 – lange Hauptknöpfe wie
+ * „3 als Entwurf übernehmen“ passten nicht neben „Abbrechen“). Die Knöpfe stehen im Markup als Abbrechen … Hauptknopf.
+ */
+@mixin fensterKnopfZeile {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+
+  @media (max-width: 480px) {
+    flex-direction: column-reverse;
+
+    > * {
+      width: 100%;
+    }
+  }
+}
+
+/**
+ * **Das X oben rechts im Fenster** (`Sheet`, `ConfirmDialog`) – EINE Bauart, gesperrt blass, solange etwas läuft
+ * (E6-O F2, #720; vorher je eine Kopie, nur die im `ConfirmDialog` kannte „gesperrt“).
+ */
+@mixin fensterX {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--text2);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--surface3);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+/**
  * **Der breite blaue Hauptknopf** eines Fensters („Anlegen“, „Lied anlegen“) – vorher nur als `.primaryWide` in der
  * Musik-App (`NewSongSheet.module.scss`). Läuft aus: Umgezogene Fenster (E6-O F1, #716) reichen ihren Hauptknopf als
  * `FensterKnopf` in die Fußzeile von `Sheet`; „Ablauf anlegen“ war das erste.

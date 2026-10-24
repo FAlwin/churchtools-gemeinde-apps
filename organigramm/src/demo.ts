@@ -3,7 +3,7 @@
  * ChurchTools-Antworten nach, in der Form, die gemessen wurde (Live 19.10.2026, Test-Instanz 22.10.2026),
  * damit die Seite ohne Instanz zu sehen ist. `?demo=mitglied` zeigt jemanden ohne Gruppen-Admin-Recht (zwei
  * Gruppen ohne Leserecht), `?demo=wackel` eine Gruppe, deren Mitglieder vorübergehend nicht laden, `?demo=fehler`
- * den Fehlerfall beim Start. Wird nie mitgebaut (siehe `main.tsx`). Keine echten Namen.
+ * den Fehlerfall beim Start, `?demo=konflikt` einen gleichzeitigen Plan-Schreiber (O7). Wird nie mitgebaut (siehe `main.tsx`). Keine echten Namen.
  *
  * Seit O5 auch schreibend: Umhängen, Lösen und Anlegen verändern die Gruppen und die Hierarchie dieser Sitzung,
  * mit den gemessenen Antworten (400 „schon gesetzt“, 204 beim Lösen, 201 mit ID beim Anlegen). Seit O6 ebenso
@@ -253,6 +253,70 @@ function struktur(
   return undefined;
 }
 
+// ── Speicher der Erweiterung (O7): der Plan „neue Gliederung“ ──
+const MODUL = 16;
+const KATEGORIEN: { id: number; shorty: string; name: string; customModuleId: number }[] = [];
+const WERTE: { id: number; dataCategoryId: number; value: string }[] = [];
+let naechsteId = 500;
+let beaWarSchon = false;
+
+/**
+ * Modul, Kategorien und Werte wie gemessen (O0 §6). `?demo=konflikt`: Beim ersten Ändern des Plans speichert „Bea“
+ * gleichzeitig – ChurchTools nimmt beides an, nachgelesen steht Beas Fassung da (so prüft man den Konflikt-Hinweis).
+ */
+function erweiterung(
+  fall: string,
+  method: string,
+  pfad: string,
+  body: unknown,
+): Response | undefined {
+  if (pfad === '/api/custommodules') {
+    return json({ data: [{ id: MODUL, shorty: 'organigramm', name: 'Organigramm' }] });
+  }
+  if (pfad === `/api/custommodules/${MODUL}/customdatacategories`) {
+    if (method === 'POST') {
+      const d = body as { shorty: string; name: string };
+      KATEGORIEN.push({ id: naechsteId++, shorty: d.shorty, name: d.name, customModuleId: MODUL });
+      return json({ data: {} }, 201);
+    }
+    return json({ data: KATEGORIEN });
+  }
+  const wert =
+    /^\/api\/custommodules\/\d+\/customdatacategories\/(\d+)\/customdatavalues(?:\/(\d+))?$/.exec(
+      pfad,
+    );
+  if (!wert) return undefined;
+  const kategorie = Number(wert[1]);
+  const w = WERTE.find((x) => x.id === Number(wert[2]));
+  const roh = (body as { value?: unknown } | null)?.value;
+  const value = typeof roh === 'string' ? roh : '';
+  if (method === 'POST') {
+    WERTE.push({ id: naechsteId++, dataCategoryId: kategorie, value });
+    return json({ data: {} }, 201);
+  }
+  if (method === 'PUT' && w) {
+    if (fall === 'konflikt' && !beaWarSchon) {
+      beaWarSchon = true;
+      const alt = JSON.parse(w.value) as { version: number; inhalt: { namen: object } };
+      w.value = JSON.stringify({
+        ...alt,
+        version: alt.version + 1,
+        zeit: new Date().toISOString(),
+        von: { personId: 2, name: 'Bea' },
+        inhalt: { ...alt.inhalt, namen: { ...alt.inhalt.namen, '47': 'Café' } },
+      });
+      return json({ data: {} });
+    }
+    w.value = value;
+    return json({ data: {} });
+  }
+  if (method === 'DELETE') {
+    if (w) WERTE.splice(WERTE.indexOf(w), 1);
+    return json(null, 204);
+  }
+  return json({ data: WERTE.filter((x) => x.dataCategoryId === kategorie) });
+}
+
 function daten(fall: string): Record<string, unknown> {
   const admin = fall !== 'mitglied';
   return {
@@ -403,7 +467,9 @@ export function demoStarten(fall: string): void {
     }
     if (fall !== 'fehler') {
       const body: unknown = typeof init?.body === 'string' ? JSON.parse(init.body) : null;
-      const s = struktur(method, url.pathname, body, url.searchParams);
+      const s =
+        struktur(method, url.pathname, body, url.searchParams) ??
+        erweiterung(fall, method, url.pathname, body);
       if (s) return Promise.resolve(s);
     }
     const d = antworten[url.pathname];

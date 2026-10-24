@@ -1,4 +1,5 @@
 // Zentriertes Dialog-Fenster (Modal) – einheitlich mit dem „Eintrag bearbeiten"-Dialog.
+@use '../design/mixins' as m;
 .overlay {
   // `fixed` (nicht `absolute`): sonst scrollt der Dialog mit dem Dokument mit, wenn iOS beim
   // Fokussieren eines Feldes die Seite hochschiebt (#207).
@@ -80,20 +81,7 @@
 }
 
 .x {
-  flex-shrink: 0;
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border: none;
-  border-radius: 50%;
-  background: none;
-  color: var(--text2);
-  cursor: pointer;
-
-  &:hover {
-    background: var(--surface3);
-  }
+  @include m.fensterX;
 }
 
 .inhalt {
@@ -104,9 +92,6 @@
 }
 
 .fuss {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
+  @include m.fensterKnopfZeile;
   padding: 12px 20px 18px;
 }

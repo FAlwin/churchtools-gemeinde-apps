@@ -1,4 +1,5 @@
 // Zauberstab-Fenster (E5-2, Entwurf e5-entwurf.html) – nur Tokens aus ui/design (hell und dunkel, #563).
+@use '@ui/design/mixins' as m;
 
 .unter {
   margin: -4px 0 12px;
@@ -30,6 +31,10 @@
 
 .leise {
   color: var(--text2);
+}
+
+.neu {
+  @include m.textKnopf;
 }
 
 .warnung {
@@ -126,45 +131,8 @@
   color: var(--red);
 }
 
-.knoepfe {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.zweit,
-.primaer {
-  height: 40px;
-  padding: 0 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-ctrl);
-  background: var(--surface2);
-  color: var(--text);
-  font: inherit;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.primaer {
-  border-color: var(--blue);
-  background: var(--blue);
-  color: #fff;
-
-  &:disabled {
-    opacity: 0.45;
-    cursor: default;
-  }
-}
-
 @media (max-width: 480px) {
   .zeile {
     grid-template-columns: 74px minmax(0, 1fr) auto;
-  }
-
-  .knoepfe button {
-    flex: 1;
   }
 }

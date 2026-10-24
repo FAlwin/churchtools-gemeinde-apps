@@ -13,9 +13,14 @@ interface SheetProps {
   /**
    * Die Knöpfe für die Fußzeile (`FensterKnopf`), rechts neben „Abbrechen“. Wer sie reicht, bekommt den Aufbau der
    * ChurchTools-Fenster (E6-O F1, #716): Kopf mit Titel und X, unten rechts die Knöpfe. Ohne bleibt der alte Aufbau –
-   * so ziehen die Fenster App für App um.
+   * so ziehen die Fenster App für App um. Ein Fenster nur zum Ansehen reicht `null` – dann steht unten nur „Schließen“.
    */
   knoepfe?: ReactNode;
+  /**
+   * Nur mit `knoepfe`: Während etwas läuft (senden, speichern …), sperrt das Fenster X, „Abbrechen“ und den Klick
+   * daneben – wie `ConfirmDialog`. Was gerade passiert, zeigt der Hauptknopf oder der Titel (E6-O F2, #720).
+   */
+  beschaeftigt?: boolean;
 }
 
 /**
@@ -29,6 +34,7 @@ export function Sheet({
   children,
   cancelLabel = 'Abbrechen',
   knoepfe,
+  beschaeftigt = false,
 }: SheetProps) {
   // Hält den Dialog über der iOS-Tastatur frei und verhindert, dass die Seite verrutscht (#207).
   const overlayRef = useOverlayKeyboardInset();
@@ -37,7 +43,7 @@ export function Sheet({
   if (knoepfe !== undefined) {
     // Kopf und Fußzeile bleiben stehen, dazwischen scrollt der Inhalt – das ist die eine Scrollfläche des Fensters.
     return (
-      <div ref={overlayRef} className={styles.overlay} onClick={onClose}>
+      <div ref={overlayRef} className={styles.overlay} onClick={beschaeftigt ? undefined : onClose}>
         <div
           className={`${styles.sheet} ${styles.ct}`}
           role="dialog"
@@ -49,14 +55,19 @@ export function Sheet({
             <div id={titelId} className={styles.kopfTitel}>
               {title}
             </div>
-            <button className={styles.x} aria-label="Schließen" onClick={onClose}>
+            <button
+              className={styles.x}
+              aria-label="Fenster schließen"
+              onClick={onClose}
+              disabled={beschaeftigt}
+            >
               <Icon name="x" size={20} />
             </button>
           </div>
           <div className={styles.inhalt}>{children}</div>
           <div className={styles.fuss}>
             {cancelLabel !== null && (
-              <FensterKnopf art="zweit" onClick={onClose}>
+              <FensterKnopf art="zweit" onClick={onClose} disabled={beschaeftigt}>
                 {cancelLabel}
               </FensterKnopf>
             )}

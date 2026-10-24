@@ -75,7 +75,12 @@ export function EntwurfFach({
   const statt = !zurueck && entwurf.gesehen.art !== 'frei' ? bisher : null;
   const weg = bisherHinweis(entwurf.ziel, entwurf.gesehen, bisher);
   return (
-    <Sheet title={`${platz.dienst} · ${platz.tag}`} onClose={onClose} cancelLabel="Schließen">
+    <Sheet
+      title={`${platz.dienst} · ${platz.tag}`}
+      onClose={onClose}
+      cancelLabel="Schließen"
+      knoepfe={null}
+    >
       <p className={styles.unter}>
         {platz.termin} um {platz.uhrzeit} Uhr · Platz {platz.nr} von {platz.von}
       </p>

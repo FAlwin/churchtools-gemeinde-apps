@@ -1,4 +1,5 @@
 // Bestätigung im Aufbau der ChurchTools-Fenster (E6-O F1, #716): Titel links + X, Text, Knöpfe rechts unten.
+@use '../design/mixins' as m;
 .overlay {
   // fixed + höchster z-index: Bestätigungen liegen IMMER zuoberst – auch über dem
   // Vollbild-Editor (z-index 120), z. B. beim Löschen einer Version aus dessen Kopfzeile.
@@ -39,25 +40,7 @@
 }
 
 .x {
-  flex-shrink: 0;
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border: none;
-  border-radius: 50%;
-  background: none;
-  color: var(--text2);
-  cursor: pointer;
-
-  &:hover:not(:disabled) {
-    background: var(--surface3);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
+  @include m.fensterX;
 }
 
 .msg {
@@ -68,21 +51,7 @@
 }
 
 .actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-// Drei Wege (E6-5b, geteilter Ablauf): am Handy untereinander, die Bestätigung oben, Abbrechen unten.
-@media (max-width: 480px) {
-  .stapel {
-    flex-direction: column-reverse;
-
-    > * {
-      width: 100%;
-    }
-  }
+  @include m.fensterKnopfZeile;
 }
 
 .fuss {

@@ -60,7 +60,12 @@ export function BelegtFach({
   };
 
   return (
-    <Sheet title={`${platz.dienst} · ${platz.tag}`} onClose={onClose} cancelLabel="Schließen">
+    <Sheet
+      title={`${platz.dienst} · ${platz.tag}`}
+      onClose={onClose}
+      cancelLabel="Schließen"
+      knoepfe={null}
+    >
       <p className={styles.unter}>
         {platz.termin} um {platz.uhrzeit} Uhr · Platz {platz.nr} von {platz.von}
       </p>

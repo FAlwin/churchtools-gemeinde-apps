@@ -1,11 +1,11 @@
 # Organigramm – ChurchTools-Erweiterung
 
-> **Stand: O7-3 (24.10.2026)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
-> offenen Plätzen; Gruppenfenster; Gruppentypen ausblendbar), die **Präsentation**, für Gruppen-Admins **Gruppen
-> umhängen und anlegen** und den Reiter **Neue Gliederung** (Plan und Umbau) und – für alle, die es in ChurchTools
-> dürfen – **Leitung und Mitglieder pflegen**. Für die **Leitung eines Bereichs** dazu die Reiter **Personen** und
-> **Hinweise**. Als Nächstes (Bauplan O7-4, O8): Präsentation der neuen Gliederung, dann der echte Umbau. Diese
-> Anleitung wächst mit.
+> **Stand: O7 (24.10.2026)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
+> offenen Plätzen; Gruppenfenster; Gruppentypen ausblendbar), die **Präsentation** (für Gruppen-Admins auch die
+> **neue Gliederung**), für Gruppen-Admins **Gruppen umhängen und anlegen** und den Reiter **Neue Gliederung** (Plan
+> und Umbau) und – für alle, die es in ChurchTools dürfen – **Leitung und Mitglieder pflegen**. Für die **Leitung eines
+> Bereichs** dazu die Reiter **Personen** und **Hinweise**. Als Nächstes (Bauplan O8): der echte Umbau der
+> Gemeindestruktur. Diese Anleitung wächst mit.
 
 Das Organigramm zeigt die Gemeinde als Baum – Bereiche, Gruppen, Personen – so, wie die Gruppen-Hierarchie in
 ChurchTools steht, und hilft, die Organisation darin weiterzubauen. **Alles liegt in ChurchTools** – es gibt keinen
@@ -56,7 +56,10 @@ ChurchTools:
 - Es gilt dieselbe Auswahl der Gruppentypen wie im Baum (z. B. Verteiler ausgeblendet).
 - Wer nicht alle Mitglieder sehen darf, sieht dort „Mitglieder nicht sichtbar“ – „gesucht“ steht nur, wo wirklich
   niemand eingetragen ist.
-- Gezeigt wird der Stand **heute** in ChurchTools. Die „neue Gliederung“ kommt in die Präsentation mit O7-4.
+- **Neue Gliederung | Heute** (ab O7-4, nur Gruppen-Admins mit einem Plan): Oben in der Präsentation umschalten. Sie
+  beginnt mit der **neuen Gliederung** – neue Gruppen und neue Namen aus dem Plan, Gruppen, die archiviert werden,
+  fehlen. Neue Gruppen haben noch niemanden („Mitarbeitende gesucht“). Wer kein Gruppen-Admin ist oder wenn es keinen
+  Plan gibt, sieht den Stand **heute** in ChurchTools, ohne Umschalter.
 
 ## Personen und Hinweise (ab O3)
 

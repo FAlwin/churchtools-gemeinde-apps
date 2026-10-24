@@ -11,6 +11,7 @@ import {
   neueGruppe,
   nichtAngelegt,
   planAus,
+  planAlsBaum,
   planBaum,
   planGruppen,
   planUnterschied,
@@ -407,5 +408,41 @@ describe('Ansicht (O7-2)', () => {
     // eine neue Gruppe: alles außer ihr selbst und ihrer Obergruppe
     expect(planZiele(plan, 'n2').map((z) => z.gruppe.ref)).not.toContain(gem);
     expect(planZiele(plan, 'n2').map((z) => z.gruppe.ref)).toContain(10);
+  });
+});
+
+describe('planAlsBaum – der Plan für die Präsentation (O7-4)', () => {
+  const zeige = (k: { gruppe: { id: number; name: string }; kinder: unknown[] }[]): unknown[] =>
+    k.map((x) =>
+      x.kinder.length
+        ? [x.gruppe.id, x.gruppe.name, zeige(x.kinder as typeof k)]
+        : [x.gruppe.id, x.gruppe.name],
+    );
+
+  it('bestehende Gruppen mit ID und Plan-Namen, neue mit eigener negativer ID; Archiviertes fehlt', () => {
+    const { a } = beispiel();
+    const { baum, neueIds } = planAlsBaum(planBaum(planGruppen(HEUTE, a)), HEUTE.gruppen);
+    expect(zeige(baum)).toEqual([
+      [
+        -1,
+        'Gemeinschaft',
+        [
+          [37, 'Bibelabend'],
+          [47, 'Café Team'],
+          [-2, 'Hauskreise'],
+        ],
+      ],
+      [10, 'Gottesdienst', [[7, 'Technik', [[12, 'Stream']]]]],
+    ]);
+    expect(neueIds).toEqual([-1, -2]);
+    // Farbe/Typ der bestehenden Gruppe bleiben (dieselbe Kachel wie heute)
+    expect(baum[1].gruppe).toEqual(g(10, 'Gottesdienst'));
+  });
+
+  it('wird ein Bereich archiviert, rücken seine Untergruppen hoch', () => {
+    const a = archivieren(KEINE_AENDERUNGEN, 10, true);
+    const { baum } = planAlsBaum(planBaum(planGruppen(HEUTE, a)), HEUTE.gruppen);
+    expect(zeige(baum)).toContainEqual([7, 'Technik', [[12, 'Stream']]]);
+    expect(zeige(baum).some((x) => (x as unknown[])[0] === 10)).toBe(false);
   });
 });

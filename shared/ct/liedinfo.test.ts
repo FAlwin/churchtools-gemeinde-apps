@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { metaValue, metaWerte } from './chordproMeta';
 import {
   LIEDINFO_ZEILE,
+  TONART_ZEILE,
   LIEDINFO_FELDER,
   liedinfoAusDatei,
   liedinfoVergleich,
@@ -124,5 +125,20 @@ describe('LIEDINFO_ZEILE – dieselbe Grammatik wie das Entfernen', () => {
     }).split('\n');
     expect(erkannt).toEqual(zeilen.filter((z) => !allesWeg.includes(z)));
     expect(erkannt).toHaveLength(7);
+  });
+});
+
+describe('TONART_ZEILE – {key} blendet der Editor aus, gespeichert bleibt sie (L6)', () => {
+  it('erkennt die Tonart-Zeile nach derselben Grammatik, aber keine Liedinfo', () => {
+    expect(TONART_ZEILE.test('{key: E}')).toBe(true);
+    expect(TONART_ZEILE.test('  {KEY:Bb} ')).toBe(true);
+    expect(TONART_ZEILE.test('{keys: E}')).toBe(false);
+    expect(TONART_ZEILE.test('{key: E} Text')).toBe(false);
+    expect(LIEDINFO_ZEILE.test('{key: E}')).toBe(false);
+  });
+
+  it('das Entfernen beim Speichern lässt {key} stehen, auch wenn ChurchTools alles hat', () => {
+    const voll = { name: 'x', author: 'x', ccli: 'x', copyright: 'x', tempo: '1', beat: 'x' };
+    expect(liedinfoZeilenEntfernen('{title: T}\n{key: E}\nText', voll)).toBe('{key: E}\nText');
   });
 });

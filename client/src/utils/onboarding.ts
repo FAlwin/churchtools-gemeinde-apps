@@ -171,7 +171,7 @@ export const CHART_STEPS: CoachStep[] = [
   {
     selector: '[data-tour="chart-lied"]',
     title: 'Lied-Optionen',
-    body: 'Im Querformat steht über jedem der beiden Lieder ein eigener Titel mit seinen Werkzeugen – ein Tipp auf den blassen Titel oder eines seiner Werkzeuge wählt dieses Lied aus. Tippe auf den Titel, um die Tonart zu ändern, eine Version zu wählen oder zu transponieren. Bearbeitest du eine Version, arbeitet der Editor in der Tonart, die hier eingestellt ist – gespeichert wird, was du siehst. Unter „Dateien …" verwaltest du die Notenblätter des Arrangements, unter „Stammdaten …" Name, Kategorie, Autor und Copyright des Liedes.',
+    body: 'Im Querformat steht über jedem der beiden Lieder ein eigener Titel mit seinen Werkzeugen – ein Tipp auf den blassen Titel oder eines seiner Werkzeuge wählt dieses Lied aus. Tippe auf den Titel, um die Tonart zu ändern, eine Version zu wählen oder zu transponieren. Bearbeitest du eine Version, arbeitet der Editor in der Tonart, die hier eingestellt ist – gespeichert wird, was du siehst. Unter „Dateien …" verwaltest du die Notenblätter des Arrangements, unter „Stammdaten …" Name, Kategorie, Autor und Copyright des Liedes. Autor, Tempo, Takt und CCLI-Nummer kannst du auch beim Bearbeiten unter „Liedinfo" ändern.',
   },
   {
     selector: '[data-tour="chart-werkzeuge"]',

@@ -10,7 +10,7 @@
  *   Entfernen nichts (gemessen 19.10.2026).
  */
 import { tagPunkt, plusTage } from '../ct/datum';
-import { ibanText, verwendungszweck } from './bezahlung';
+import { bankZeilen } from './bezahlung';
 import type { OeffentlicheEinstellungen } from './formular';
 import { einmalFelder, type Absage, type CtGruppenfeld, type ListenAnmeldung } from './liste';
 import { euroText, kannEtwasKosten } from './preis';
@@ -414,10 +414,7 @@ export function bescheidMail(
             `Bitte überweise ${euroText(a.betragCent)}${
               b.fristTage > 0 ? ` bis zum ${tagPunkt(plusTage(a.heute, b.fristTage))}` : ''
             }:`,
-            `Kontoinhaber: ${b.kontoinhaber}`,
-            `IBAN: ${ibanText(b.iban)}`,
-            ...(b.bic ? [`BIC: ${b.bic}`] : []),
-            `Verwendungszweck: ${verwendungszweck(b.zweck, a.person.nach)}`,
+            ...bankZeilen(b, a.person.nach),
           ]
         : ['', `Der Betrag: ${euroText(a.betragCent)}. Wie ihr bezahlt, sagen wir euch noch.`];
   if (a.art === 'angemeldet') {

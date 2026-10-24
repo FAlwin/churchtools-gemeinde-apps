@@ -47,7 +47,21 @@ export interface AbmeldeOrt extends AnmeldeOrt {
  * „Deine Anmeldung“ statt auf der von ChurchTools. `formularBasis`: Adresse der Formular-Seite ohne `#`.
  */
 export function abmeldeVorlage(formularBasis: string, instanz: string): string {
-  return `${formularBasis.split('#')[0]}#${instanz}/$groupId/abmelden/$token`;
+  return abmeldeLink(formularBasis, instanz, '$groupId', '$token');
+}
+
+/**
+ * **Der fertige Link zu „Deine Anmeldung“** (A9-1) – wie `abmeldeVorlage`, nur schon mit Gruppe und Schlüssel. Der
+ * Schlüssel aus `POST /publicgroups/{id}/token` ist derselbe, den ChurchTools zum Abmelden nimmt (gemessen 24.10.2026):
+ * Das Formular schreibt den Link vor dem Absenden ins Feld „Link zur Anmeldung“, die Bestätigungsmail setzt ihn ein.
+ */
+export function abmeldeLink(
+  formularBasis: string,
+  instanz: string,
+  gruppeId: number | string,
+  token: string,
+): string {
+  return `${formularBasis.split('#')[0]}#${instanz}/${gruppeId}/abmelden/${token}`;
 }
 
 /** **Den Link aus der Mail lesen** – das Gegenstück zu `abmeldeVorlage`. `null`, wenn es keiner ist. */

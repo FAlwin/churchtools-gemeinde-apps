@@ -58,6 +58,21 @@ export interface FormWert {
 export interface Anmeldung {
   forms: { form: FormWert[] }[];
   hasAcceptedPrivacyForSelf: true;
+  /**
+   * A9-1: das Feld „Link zur Anmeldung“ im Anmeldeformular von ChurchTools, `null` bei älteren Veranstaltungen ohne
+   * das Feld. Den Wert setzt erst, wer den Schlüssel der Person kennt (`mitLink`) – er entsteht je Person beim Senden.
+   */
+  linkFeld: string | null;
+}
+
+/** **Den Link zu „Deine Anmeldung“ zu einer Person dazu** (A9-1) – ohne das Feld bleibt die Person, wie sie ist. */
+export function mitLink(
+  a: Anmeldung,
+  form: { form: FormWert[] },
+  link: string,
+): { form: FormWert[] } {
+  if (!a.linkFeld) return form;
+  return { form: [...form.form, { id: a.linkFeld, type: 'custom', value: link }] };
 }
 
 /** Was die Teilnehmenden außer den Feldern gewählt haben (Preisbereich). */
@@ -361,5 +376,6 @@ export function anmeldungAufbauen(
     if (datenschutz) form.push({ id: String(datenschutz.id), type: 'privacy', value: 'true' });
     return { form };
   });
-  return { forms, hasAcceptedPrivacyForSelf: true };
+  const link = gruppenfeld(e.ctFelder.link);
+  return { forms, hasAcceptedPrivacyForSelf: true, linkFeld: link ? String(link.id) : null };
 }

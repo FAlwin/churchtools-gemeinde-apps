@@ -1,9 +1,11 @@
 /**
  * **Nachrücken und Absagen schreiben** (A7-3) – nach dem Plan aus `shared/anmeldung/bewegung.ts`. Gemessen 19.10.2026:
  * - Nachrücken: `PATCH {groupMemberStatus: 'active'}` – geht auch bei voller Gruppe (dann erhöhen wir die Plätze,
- *   Alwin: „dann ändert sich auch das Limit“). ChurchTools schickt „war erfolgreich“. **Kein Rückgängig** (zurück auf die
+ *   Alwin: „dann ändert sich auch das Limit“). ChurchTools schickt „war erfolgreich“ – mit eingerichteten
+ *   Abläufen (A9-1) stattdessen die Bestätigung mit Betrag. **Kein Rückgängig** (zurück auf die
  *   Warteliste löst die Mail „Du stehst auf der Warteliste“ aus).
- * - Absagen: `DELETE` – keine Mail. Rückgängig: `PUT` mit Rolle, Status, Warteplatz und allen Feldern – keine Mail.
+ * - Absagen: `DELETE` – keine Mail. Rückgängig: `PUT` mit Rolle, Status, Warteplatz und allen Feldern – keine Mail von
+ *   ChurchTools selbst; mit eingerichteten Abläufen kommt die Bestätigung noch einmal (A9-1, echt geprüft 24.10.2026).
  * Jede Person wird vor dem Schreiben frisch gelesen (nicht aus der Liste), jeder Schritt nachgelesen.
  */
 import { ctAnfrage, ctDaten } from '@ui/ct/verbindung';

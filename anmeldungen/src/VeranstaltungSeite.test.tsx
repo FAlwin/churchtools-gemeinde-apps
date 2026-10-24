@@ -11,6 +11,7 @@ import * as FF from './formularFelder';
 import * as NP from './nachpruefung';
 import * as MG from './mitglieder';
 import * as ZA from './zahlung';
+import * as AB from './ablaeufe';
 import * as TP from '@ui/teilen/sharePdf';
 import * as TF from '@ui/teilen/shareFile';
 import {
@@ -30,6 +31,7 @@ vi.mock('./einrichten', async (original) => {
     einstellungenVon: vi.fn(),
     anmeldungVon: vi.fn(),
     darfVeranstaltungEinrichten: vi.fn(),
+    darfAblaeufeEinrichten: vi.fn(),
     freigeben: vi.fn(),
     leitungsKandidaten: vi.fn(),
     meineId: vi.fn(),
@@ -54,6 +56,12 @@ vi.mock('./einrichten', async (original) => {
 });
 const m = vi.mocked(E);
 vi.mock('./gemeinde', () => ({ gemeindeVorgaben: vi.fn() }));
+vi.mock('./ablaeufe', async (original) => ({
+  ...(await original<typeof import('./ablaeufe')>()),
+  ablaeufeEinrichten: vi.fn(),
+  ablaeufeLesen: vi.fn(),
+}));
+const ab = vi.mocked(AB);
 const gm = vi.mocked(G);
 // „Neue Veranstaltung“ legt danach die Spalten an (A5) – hier nicht Gegenstand.
 // Freigeben zieht ältere Veranstaltungen nach (#597).
@@ -169,6 +177,15 @@ beforeEach(() => {
   gm.gemeindeVorgaben.mockResolvedValue({ statusId: 2, campusId: 0, departmentId: 1 });
   m.anmeldenVorbereiten.mockResolvedValue();
   m.anmeldeBedingungen.mockResolvedValue([]);
+  // A9-1: Bestätigungsmails – Recht da, eingerichtet.
+  m.darfAblaeufeEinrichten.mockResolvedValue(true);
+  ab.ablaeufeEinrichten.mockResolvedValue();
+  ab.ablaeufeLesen.mockResolvedValue({
+    platz: true,
+    warte: true,
+    standardMail: false,
+    absender: 'Alwin Friesen',
+  });
 });
 
 describe('Veranstaltung laden scheitert – gemeinsamer Fehlerkasten (ui/erweiterung)', () => {
@@ -246,12 +263,76 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     expect(m.anmeldenVorbereiten.mock.invocationCallOrder[0]).toBeLessThan(
       m.freigeben.mock.invocationCallOrder[0],
     );
+    // A9-1: Bestätigungsmails vor dem Freigeben einrichten – Absender ist, wer freigibt (Alwin, 1).
+    expect(ab.ablaeufeEinrichten).toHaveBeenCalledWith(91, 1);
+    expect(ab.ablaeufeEinrichten.mock.invocationCallOrder[0]).toBeGreaterThan(
+      m.anmeldenVorbereiten.mock.invocationCallOrder[0],
+    );
+    expect(ab.ablaeufeEinrichten.mock.invocationCallOrder[0]).toBeLessThan(
+      m.freigeben.mock.invocationCallOrder[0],
+    );
     // #597: vor dem Freigeben „Pflicht“ von den Spalten der Anmeldung nehmen.
     expect(ff.pflichtNachziehen).toHaveBeenCalledWith(91);
     expect(ff.pflichtNachziehen.mock.invocationCallOrder[0]).toBeLessThan(
       m.freigeben.mock.invocationCallOrder[0],
     );
     await waitFor(() => expect(m.kopfVon).toHaveBeenCalledTimes(2));
+  });
+
+  it('A9-1: ohne Recht „Routinen verwalten“ trotzdem freigegeben – ohne Mails, die Meldung sagt es', async () => {
+    stelle(true);
+    m.freigeben.mockResolvedValue();
+    m.darfAblaeufeEinrichten.mockResolvedValue(false);
+    ab.ablaeufeEinrichten.mockClear();
+    const gemeldet = vi.fn();
+    render(
+      <VeranstaltungSeite
+        id={91}
+        zeitzone={ZONE}
+        formularAdresse="https://anmeldung.beispiel.de/"
+        onZurueck={() => {}}
+        onGeaendert={gemeldet}
+      />,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    await screen.findByRole('button', { name: 'Alwin Friesen' });
+    fireEvent.click(screen.getByRole('button', { name: 'Jetzt freigeben' }));
+    await waitFor(() => expect(m.freigeben).toHaveBeenCalledWith(91));
+    expect(ab.ablaeufeEinrichten).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(gemeldet).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text: expect.stringMatching(/Routinen verwalten.*Standard-Mail/),
+        }),
+        false,
+      ),
+    );
+  });
+
+  it('A9-1: Karte „Mails“ – Entwurf, eingerichtet, noch nicht eingerichtet', async () => {
+    stelle(true, 2);
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Mails' });
+    expect(within(karte).getByText('wird beim Freigeben eingerichtet')).toBeTruthy();
+    expect(ab.ablaeufeLesen).not.toHaveBeenCalled();
+    cleanup();
+    stelle(true, 1);
+    zeigen();
+    const fertig = await screen.findByRole('region', { name: 'Mails' });
+    await waitFor(() => expect(within(fertig).getByText('✓ Mitteilung mit Platz')).toBeTruthy());
+    expect(within(fertig).getByText('Alwin Friesen')).toBeTruthy();
+    cleanup();
+    ab.ablaeufeLesen.mockResolvedValue({
+      platz: false,
+      warte: false,
+      standardMail: true,
+      absender: null,
+    });
+    stelle(true, 1);
+    zeigen();
+    const alt = await screen.findByRole('region', { name: 'Mails' });
+    await waitFor(() => expect(within(alt).getByText('noch nicht eingerichtet')).toBeTruthy());
+    expect(within(alt).getByText(/Standard-Mail – ohne Betrag/)).toBeTruthy();
   });
 
   it('nimmt ChurchTools danach noch nicht an, sagt das Fenster, was fehlt', async () => {

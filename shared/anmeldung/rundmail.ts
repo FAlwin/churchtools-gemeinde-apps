@@ -8,7 +8,7 @@
  * `[Nachname]` im Verwendungszweck (`bezahlung.ts`). Erst beim Senden werden sie zu den Platzhaltern von ChurchTools.
  */
 import { tagPunkt } from '../ct/datum';
-import { ibanText, verwendungszweck } from './bezahlung';
+import { bankZeilen } from './bezahlung';
 import { grussZeilen } from './bewegung';
 import type { OeffentlicheEinstellungen } from './formular';
 import type { ListenAnmeldung } from './liste';
@@ -96,6 +96,11 @@ export function mitCtPlatzhaltern(
 
 const zeichen: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
 
+/** Text so, dass HTML ihn wörtlich zeigt (`&`, `<`, `>`, `"` geschützt). */
+export function htmlSicher(text: string): string {
+  return text.replace(/[&<>"]/g, (z) => zeichen[z]);
+}
+
 /**
  * **Der Text als HTML** für ChurchTools (der Mail-Editor dort schreibt HTML): Absätze bei Leerzeilen, sonst Zeilenumbrüche.
  * Sonderzeichen werden geschützt – das Team schreibt Text, kein HTML.
@@ -105,13 +110,7 @@ export function textZuHtml(text: string): string {
     .replace(/\r\n?/g, '\n')
     .trim()
     .split(/\n{2,}/)
-    .map(
-      (absatz) =>
-        `<p>${absatz
-          .replace(/[&<>"]/g, (z) => zeichen[z])
-          .split('\n')
-          .join('<br>')}</p>`,
-    )
+    .map((absatz) => `<p>${htmlSicher(absatz).split('\n').join('<br>')}</p>`)
     .join('');
 }
 
@@ -132,13 +131,7 @@ export function rundmailVorlage(
   if (art === 'zahlung') {
     const b = e.bezahlung;
     const bank = b.iban
-      ? [
-          'Bitte überweist ihn an:',
-          `Kontoinhaber: ${b.kontoinhaber}`,
-          `IBAN: ${ibanText(b.iban)}`,
-          ...(b.bic ? [`BIC: ${b.bic}`] : []),
-          `Verwendungszweck: ${verwendungszweck(b.zweck, '[Nachname]')}`,
-        ]
+      ? ['Bitte überweist ihn an:', ...bankZeilen(b, '[Nachname]')]
       : ['Wie ihr bezahlt, sagen wir euch noch.'];
     return {
       betreff: `${veranstaltung}: Bitte noch überweisen`,

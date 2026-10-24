@@ -1,0 +1,150 @@
+// Eigene Blöcke im Protokoll-Editor (S4-2, Entwurf 7): Status-Kreis, Schildchen „Wer?“/„Bis“/„Datum“ und ihr Feld.
+@use '@ui/design/mixins' as m;
+
+.aufgabe {
+  align-items: center;
+}
+
+.vorne {
+  display: inline-flex;
+  margin: -3px 0 -3px -4px;
+}
+
+.erledigt {
+  color: var(--text2);
+  text-decoration: line-through;
+}
+
+.schilder {
+  display: inline-flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+
+// Beim Termin steht das Datum vor dem Text (wie in der Lese-Ansicht), nicht rechts.
+.vorneSchild {
+  margin-left: 0;
+}
+
+.rahmen {
+  position: relative;
+  display: inline-flex;
+}
+
+.schild {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 260px;
+  height: 24px;
+  padding: 0 8px;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text2);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    color: var(--text);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.warnung {
+  color: var(--red);
+}
+
+.feld {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 230px;
+  max-height: 320px;
+  padding: 10px 12px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface2);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 400;
+
+  input[type='date'],
+  input[type='text'] {
+    @include m.eingabefeld;
+  }
+}
+
+.feldTitel {
+  color: var(--text2);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.person {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+
+  input {
+    accent-color: var(--blue);
+  }
+}
+
+.extern {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--hair);
+
+  small {
+    color: var(--text2);
+  }
+}
+
+.leise {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--blue);
+  font: inherit;
+  cursor: pointer;
+}
+
+@media (max-width: 559px) {
+  .aufgabe {
+    flex-wrap: wrap;
+  }
+
+  .schilder {
+    width: 100%;
+    margin-left: 30px;
+  }
+
+  .feld {
+    right: auto;
+    left: 0;
+  }
+}

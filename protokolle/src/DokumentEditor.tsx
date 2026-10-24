@@ -1,5 +1,5 @@
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
-import type { PartialBlock } from '@blocknote/core';
+import { insertOrUpdateBlockForSlashMenu, type PartialBlock } from '@blocknote/core';
 import { filterSuggestionItems } from '@blocknote/core/extensions';
 import { SideMenuExtension } from '@blocknote/core/extensions';
 import { de } from '@blocknote/core/locales';
@@ -12,12 +12,14 @@ import {
   SuggestionMenuController,
   useCreateBlockNote,
   useExtensionState,
+  type DefaultReactSuggestionItem,
 } from '@blocknote/react';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
 import type { Block } from '@shared/protokolle/dokument';
-import { schema, type ProtokollEditor } from './editorSchema';
-import { Werkzeugleiste } from './Werkzeugleiste';
+import { Icon } from '@ui/icons/icons';
+import { aufgabenIdsSetzen, schema, type ProtokollEditor } from './editorSchema';
+import { EIGENE, Werkzeugleiste } from './Werkzeugleiste';
 import { istWordHtml, wordListenUmbauen } from './wordListen';
 import './DokumentEditor.scss';
 import styles from './ProtokollSchreiben.module.scss';
@@ -77,6 +79,17 @@ const MENUE = new Set(
   ).map((k) => TEXTE.slash_menu[k].title),
 );
 
+const EIGENE_TEXT = {
+  aufgabe: 'To-Do mit Wer und Bis – erscheint gleich bei den Zuständigen',
+  beschluss: 'Erscheint unter „Beschlüsse“',
+  termin: 'Mit Datum – erscheint unter „Termine“',
+} as const;
+const EIGENE_ALIASE = {
+  aufgabe: ['todo', 'to-do', 'aufgabe', 'aufgaben'],
+  beschluss: ['beschluss', 'entscheidung'],
+  termin: ['termin', 'datum'],
+} as const;
+
 /** Griff nur an Blöcken, die man verschieben soll – nicht an normalem Text. */
 function Griff() {
   const art = useExtensionState(SideMenuExtension, {
@@ -118,11 +131,14 @@ export function DokumentEditor({
   bearbeitbar,
   onAenderung,
   griff,
+  fremdeAufgabe = () => false,
 }: {
   start: readonly Block[];
   bearbeitbar: boolean;
   onAenderung: (dokument: Block[]) => void;
   griff: Ref<EditorGriff>;
+  /** Gehört diese To-Do-ID einer anderen Sitzung? (dann bekommt die Aufgabe eine neue, `aufgabenIdsVergeben`) */
+  fremdeAufgabe?: (id: string) => boolean;
 }) {
   const editor: ProtokollEditor = useCreateBlockNote(
     {
@@ -183,6 +199,9 @@ export function DokumentEditor({
           onChange={(e) => {
             if (stumm.current) return;
             const dok = e.document as Block[];
+            // Neue, kopierte oder fremde Aufgaben bekommen gleich eine eigene ID (S4-2). Das löst eine weitere Meldung
+            // aus; erst die zählt als Eingabe.
+            if (aufgabenIdsSetzen(e, fremdeAufgabe)) return;
             if (ersetzt.current !== null) {
               const gleich = JSON.stringify(dok) === ersetzt.current;
               ersetzt.current = null;
@@ -196,7 +215,19 @@ export function DokumentEditor({
             getItems={(q) =>
               Promise.resolve(
                 filterSuggestionItems(
-                  getDefaultReactSlashMenuItems(editor).filter((i) => MENUE.has(i.title)),
+                  [
+                    ...EIGENE.map(
+                      (x): DefaultReactSuggestionItem => ({
+                        title: x.titel,
+                        subtext: EIGENE_TEXT[x.art],
+                        aliases: [...EIGENE_ALIASE[x.art]],
+                        group: 'Protokoll',
+                        icon: <Icon name={x.icon} size={18} />,
+                        onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: x.art }),
+                      }),
+                    ),
+                    ...getDefaultReactSlashMenuItems(editor).filter((i) => MENUE.has(i.title)),
+                  ],
                   q,
                 ),
               )

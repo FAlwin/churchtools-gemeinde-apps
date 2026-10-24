@@ -269,6 +269,23 @@ function antwort(
         },
       },
     };
+  // Mitglieder für „Wer kümmert sich?“ (S4-2) – Form wie gemessen (Organigramm O2).
+  if (/^\/api\/groups\/\d+\/members$/.test(pfad))
+    return {
+      status: 200,
+      data: [
+        [1, 'Alwin Friesen'],
+        [7, 'Johann Becker'],
+        [19, 'Peter Wiens'],
+        [23, 'Daniel Schmidt'],
+      ].map(([personId, title]) => ({
+        personId,
+        person: { title },
+        groupTypeRoleId: 9,
+        groupMemberStatus: 'active',
+        memberEndDate: null,
+      })),
+    };
   if (pfad === '/api/group/roles')
     return {
       status: 200,

@@ -1,10 +1,10 @@
 # Protokolle – ChurchTools-Erweiterung
 
-> **Stand: S4-1 (24.10.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
+> **Stand: S4-2 (24.10.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
 > Sitzungen“ und „Deine Gruppen“; der Reiter **„Sitzungen“** zeigt je Gruppe Kommend und Protokolle zum Lesen; die
 > **Lupe** oben rechts sucht in allem (ohne Suchbegriff: alle Beschlüsse); Admins richten im Reiter **„Verwaltung“**
-> Gruppen ein und pflegen die Vorlagen. Die **Leitung schreibt** Protokolle im Entwurf direkt im Editor. Aufgaben,
-> Beschlüsse und Termine als eigene Blöcke, Sitzung anlegen, Freigabe und PDF folgen (Bauplan S4-2–S9 in
+> Gruppen ein und pflegen die Vorlagen. Die **Leitung schreibt** Protokolle im Entwurf direkt im Editor, mit
+> Aufgaben (= To-Dos), Beschlüssen und Terminen. Feste Punkte, Sitzung anlegen, Freigabe und PDF folgen (Bauplan S4-2–S9 in
 > `protokolle-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
 
 Die Protokolle sind für Gruppen wie den Leitungskreis: **Protokolle als Dokument** (wie Word, Loop oder Notion),
@@ -71,6 +71,13 @@ sieht „Johann schreibt gerade“, liest den gespeicherten Stand mit (alle 30 S
 Eine Sperre ohne Lebenszeichen verfällt nach zehn Minuten. Aus Word eingefügte Listen bleiben Listen. Am Handy lässt
 sich die Werkzeugleiste waagrecht wischen.
 
+**Aufgaben, Beschlüsse, Termine (S4-2):** über die Knöpfe der Werkzeugleiste, das „/“-Menü oder „[] “ + Leertaste
+(Aufgabe). Eine Aufgabe mit Text ist beim nächsten Speichern ein **To-Do** – die Zuständigen sehen es sofort unter
+„Meine offenen To-Dos“, auch solange das Protokoll Entwurf ist. An der Aufgabe: Status-Kreis (offen → in Arbeit →
+erledigt), „Wer?“ (Mitglieder der Gruppe, dazu ein externer Name ohne eigenen Zugang) und „Bis“. Das Protokoll führt:
+geänderter Text zieht ins To-Do mit; wird die Aufgabe gelöscht, wird das To-Do als gelöscht vermerkt (nie endgültig),
+„Rückgängig“ holt es mit allen Angaben zurück. Ein Termin steht nur im Protokoll (kein Eintrag im Kalender).
+
 **Suche (Lupe oben rechts):** sucht in Beschlüssen, To-Dos, Terminen und im Protokolltext aller eigenen Gruppen –
 auch im Tagesordnungspunkt und im Sitzungstitel; alle Wörter müssen vorkommen. Filter nach Art und Gruppe. Ohne
 Suchbegriff stehen dort **alle Beschlüsse**. Beschlüsse, Termine und Text kommen nur aus **freigegebenen**
@@ -99,6 +106,10 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit später sc
   nachher nachlesen), `schreibSteuerung.ts` (wann gespeichert wird), Editor `DokumentEditor.tsx` + `editorSchema.ts`
   (BlockNote 0.56, fest gepinnt – Updates bewusst, die Schnittstellen ändern sich in 0.x noch), Word-Listen
   `wordListen.ts`. Der Editor wird erst beim Schreiben nachgeladen (eigene JS-/CSS-Datei im ZIP).
+- To-Dos aus dem Protokoll: Regeln `aufgabenAbgleich` / `aufgabenIdsVergeben` (`shared/protokolle/aufgaben.ts`),
+  Schreiben in „Mitarbeit“ `protokolle/src/aufgabenSchreiben.ts`; der Abgleich läuft in `speichern` nach der Sperr-Prüfung
+  und vor dem ersten Schreiben am Protokoll. Die Blöcke `EditorBloecke.tsx` bekommen To-Dos und Mitglieder über
+  `aufgabenKontext.ts`.
 - Erweiterung: `protokolle/` (`npm run dev -w protokolle`, dann `http://localhost:5192/ccm/protokolle/?demo`;
   weitere Fälle `?demo=leer`, `?demo=ohne-modul`, `?demo=fehler`, `?demo=gesperrt`).
 - Release: Tag `protokolle-vX.Y.Z` (Workflow `protokolle-release.yml`, immer `make_latest: false`).

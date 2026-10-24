@@ -9,8 +9,12 @@ import {
   neueEntfernen,
   neueGruppe,
   planAus,
+  planBaum,
   planGruppen,
+  planUnterschied,
   planUntergruppen,
+  planZiele,
+  type PlanKnoten,
   umbauSchritte,
   umbenennen,
   wieHeute,
@@ -256,5 +260,63 @@ describe('planAus – gespeicherten Inhalt prüfen', () => {
     });
     expect(planAus('kein Plan')).toBeNull();
     expect(planAus(null)).toBeNull();
+  });
+});
+
+describe('Ansicht (O7-2)', () => {
+  const namen = (k: PlanKnoten[]): unknown[] =>
+    k.map((x) => (x.kinder.length ? [x.gruppe.name, namen(x.kinder)] : x.gruppe.name));
+
+  it('planBaum: Bereiche und Untergruppen nach Namen, neue Gruppen am Platz des Plans', () => {
+    const { a } = beispiel();
+    expect(namen(planBaum(planGruppen(HEUTE, a)))).toEqual([
+      ['Gemeinschaft', ['Bibelabend', 'Café Team', 'Hauskreise']],
+      ['Gottesdienst', [['Technik', ['Stream']]]],
+      'Sommerfest',
+    ]);
+  });
+
+  it('planBaum: ein Kreis (Plan gegen ChurchTools) verschwindet nicht – eine Gruppe daraus wird Bereich', () => {
+    // Plan: Gottesdienst unter Stream. Heute: Stream unter Technik unter Gottesdienst → Kreis aus drei Gruppen.
+    const a = einhaengen(HEUTE, KEINE_AENDERUNGEN, 10, 12);
+    const baum = planBaum(planGruppen(HEUTE, a));
+    const alle = (k: PlanKnoten[]): string[] =>
+      k.flatMap((x) => [x.gruppe.name, ...alle(x.kinder)]);
+    expect(alle(baum).sort()).toEqual(
+      ['Bibelarbeit', 'Café Team', 'Gottesdienst', 'Sommerfest', 'Stream', 'Technik'].sort(),
+    );
+    expect(alle(baum)).toHaveLength(6);
+  });
+
+  it('planUnterschied: Marken und „vorher …“; neue Gruppen nur „neu“', () => {
+    const { a, gem } = beispiel();
+    const name = (id: number) => HEUTE.gruppen.find((x) => x.id === id)?.name ?? '';
+    expect(planUnterschied(zeile(a, 37), name)).toEqual({
+      marken: ['umgehängt', 'umbenannt'],
+      vorher: 'vorher eigener Bereich · vorher „Bibelarbeit“',
+    });
+    expect(planUnterschied(zeile(a, 50), name)).toEqual({
+      marken: ['wird archiviert'],
+      vorher: null,
+    });
+    expect(planUnterschied(zeile(a, gem), name)).toEqual({ marken: ['neu'], vorher: null });
+    expect(planUnterschied(zeile(a, 7), name)).toEqual({ marken: [], vorher: null });
+    const b = einhaengen(HEUTE, KEINE_AENDERUNGEN, 12, null);
+    expect(planUnterschied(zeile(b, 12), name).vorher).toBe('vorher unter „Technik“');
+  });
+
+  it('planZiele: ohne sich selbst, Untergruppen, jetzige Obergruppe und Archiviertes; Weg von oben', () => {
+    const { a, gem } = beispiel();
+    const plan = planGruppen(HEUTE, a);
+    const ziele = planZiele(plan, 7);
+    expect(ziele.map((z) => z.pfad.join(' › '))).toEqual([
+      'Gemeinschaft',
+      'Gemeinschaft › Bibelabend',
+      'Gemeinschaft › Café Team',
+      'Gemeinschaft › Hauskreise',
+    ]);
+    // eine neue Gruppe: alles außer ihr selbst und ihrer Obergruppe
+    expect(planZiele(plan, 'n2').map((z) => z.gruppe.ref)).not.toContain(gem);
+    expect(planZiele(plan, 'n2').map((z) => z.gruppe.ref)).toContain(10);
   });
 });

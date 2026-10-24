@@ -25,16 +25,28 @@ import { Personen } from './Personen';
 import { PersonFenster } from './PersonFenster';
 import { Hinweise } from './Hinweise';
 import { Praesentation } from './Praesentation';
+import { NeueGliederung } from './NeueGliederung';
 import { leseAusgeblendet, merkeAusgeblendet } from './auswahl';
 
-type Ansicht = 'organigramm' | 'personen' | 'hinweise';
+type Ansicht = 'organigramm' | 'personen' | 'hinweise' | 'gliederung';
 const REITER: Reiter<Ansicht>[] = [
   { id: 'organigramm', label: 'Organigramm', icon: 'grid' },
   { id: 'personen', label: 'Personen', icon: 'people' },
   { id: 'hinweise', label: 'Hinweise', icon: 'info' },
 ];
-const ansichtAusAdresse = (hash: string): Ansicht =>
-  hash === '#personen' ? 'personen' : hash === '#hinweise' ? 'hinweise' : 'organigramm';
+// Der Plan „neue Gliederung“ (O7) – nur für Gruppen-Admins (Alwin, 24.10.2026).
+const REITER_ADMIN: Reiter<Ansicht>[] = [
+  ...REITER,
+  { id: 'gliederung', label: 'Neue Gliederung', icon: 'pencil' },
+];
+const ansichtAusAdresse = (hash: string, admin: boolean): Ansicht =>
+  hash === '#personen'
+    ? 'personen'
+    : hash === '#hinweise'
+      ? 'hinweise'
+      : hash === '#gliederung' && admin
+        ? 'gliederung'
+        : 'organigramm';
 
 /**
  * Das Organigramm in ChurchTools (Bauplan O2/O3): erst Gruppen und Baum (schnell), dann – nebeneinander – die
@@ -146,7 +158,9 @@ export function App() {
     [start],
   );
   const zeigtMehr = !!start && hatBereich(bereich);
-  const ansicht: Ansicht = zeigtMehr ? ansichtAusAdresse(hash) : 'organigramm';
+  const admin = !!start?.rechte.gruppenVerwalten;
+  const reiter = admin ? REITER_ADMIN : REITER;
+  const ansicht: Ansicht = zeigtMehr ? ansichtAusAdresse(hash, admin) : 'organigramm';
 
   // Lesbare Mitglieder und Anfragen – Grundlage für Personen, Hinweise und das Personenfenster.
   const lesbar = useMemo(() => {
@@ -202,7 +216,7 @@ export function App() {
     fertig && zeigtMehr && !handy ? (
       <Segment
         value={ansicht}
-        options={REITER.map((r) => ({ value: r.id, label: r.label }))}
+        options={reiter.map((r) => ({ value: r.id, label: r.label }))}
         onChange={wechseln}
         ariaLabel="Bereiche"
         verbunden
@@ -210,7 +224,7 @@ export function App() {
     ) : undefined;
   const unten =
     fertig && zeigtMehr && handy ? (
-      <ReiterLeiste reiter={REITER} aktiv={ansicht} onWechsel={wechseln} />
+      <ReiterLeiste reiter={reiter} aktiv={ansicht} onWechsel={wechseln} />
     ) : undefined;
 
   const offenerKnoten = offeneGruppe === null ? undefined : knoten.get(offeneGruppe);
@@ -267,6 +281,7 @@ export function App() {
           onEinsaetzeNachladen={einsaetzeLaden}
         />
       )}
+      {start && ansicht === 'gliederung' && <NeueGliederung start={start} />}
       {start && offenerKnoten && (
         <GruppenFenster
           key={offenerKnoten.gruppe.id}

@@ -1,0 +1,74 @@
+// Neue Gliederung (O7-2) – Baum und Knöpfe aus Organigramm.module.scss, hier nur das Eigene; Werte aus ui/design.
+
+.einleitung {
+  margin: 0;
+  color: var(--text2);
+  font-size: 14px;
+}
+
+.leiste {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.rechts {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.warnung {
+  border-color: color-mix(in srgb, var(--red) 55%, transparent);
+  color: var(--text);
+}
+
+.leerKarte {
+  padding: 18px 16px;
+
+  p {
+    margin: 0 0 8px;
+  }
+}
+
+// Wird archiviert: durchgestrichen wie im Entwurf
+.archiv {
+  color: var(--text3);
+  text-decoration: line-through;
+}
+
+.marken {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.marke {
+  padding: 2px 7px;
+  border-radius: var(--r-ctrl);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.mNeu {
+  background: color-mix(in srgb, var(--green) 18%, transparent);
+  color: var(--text);
+}
+
+.mUm {
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+}
+
+.mName {
+  background: var(--section);
+  color: var(--text2);
+}
+
+.mArch {
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+  color: var(--red);
+}

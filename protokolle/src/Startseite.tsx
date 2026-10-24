@@ -6,7 +6,13 @@ import { Icon } from '@ui/icons/icons';
 import { datumText, tagKurz } from '@shared/ct/datum';
 import { heuteImKalender, tagAusIso } from '@shared/ct/zeit';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
-import { istUeberfaellig, meineOffenen, offene, type Aufgabe } from '@shared/protokolle/aufgaben';
+import {
+  istUeberfaellig,
+  meineOffenen,
+  offene,
+  type Aufgabe,
+  statusText,
+} from '@shared/protokolle/aufgaben';
 import {
   meineAntwort,
   naechsteSitzungen,
@@ -150,7 +156,7 @@ export function Startseite({ modul, ich, gruppen, onSitzung, onGruppe }: Startse
                         <b>{a.text}</b>
                         <small>
                           {u.gruppe.name}
-                          {a.status === 'arbeit' ? ' · in Arbeit' : ''}
+                          {a.status === 'arbeit' ? ` · ${statusText(a.status)}` : ''}
                           {s ? ` · aus „${s.titel}“` : ''}
                         </small>
                       </span>

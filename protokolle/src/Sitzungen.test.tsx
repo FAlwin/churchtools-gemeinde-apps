@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { StrictMode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
@@ -140,6 +141,42 @@ describe('Reiter „Sitzungen“ (S3-2)', () => {
     render(<Sitzungen modul={24} gruppen={GRUPPEN} auswahl={{ gruppe: 7 }} />);
     expect(await screen.findByRole('region', { name: 'Kommend' })).toBeTruthy();
     expect(m.ladeSitzungen).toHaveBeenCalledWith(24, GRUPPEN[1], expect.any(String));
+  });
+
+  it('S3-4b: aus der Suche – Sitzung offen, zum Punkt gesprungen und hervorgehoben', async () => {
+    const springen = vi.fn();
+    Element.prototype.scrollIntoView = springen;
+    const punkt = BLOCKNOTE_DOKUMENT.find((b) => b.type === 'heading')!.id;
+    render(
+      <Sitzungen modul={24} gruppen={GRUPPEN} auswahl={{ gruppe: 11, sitzung: 'p:okt', punkt }} />,
+    );
+    const h = (await screen.findByText('Andacht & Gebet')).closest('h3')!;
+    expect(h.id).toBe(`punkt-${punkt}`);
+    expect(h.className).toMatch(/markiert/);
+    expect(springen).toHaveBeenCalledTimes(1);
+    expect(springen.mock.contexts[0]).toBe(h);
+    // Zurück zur Liste und wieder hinein: kein Sprung, keine Hervorhebung mehr.
+    fireEvent.click(screen.getByRole('button', { name: 'Sitzungen' }));
+    fireEvent.click(await screen.findByText(/freigegeben am 15\.10\.2026/));
+    expect((await screen.findByText('Andacht & Gebet')).closest('h3')!.className).not.toMatch(
+      /markiert/,
+    );
+    expect(springen).toHaveBeenCalledTimes(1);
+  });
+
+  it('S3-4b: im React-Prüfmodus (zweimal geladen) bleibt der Sprung erhalten', async () => {
+    Element.prototype.scrollIntoView = vi.fn();
+    const punkt = BLOCKNOTE_DOKUMENT.find((b) => b.type === 'heading')!.id;
+    render(
+      <StrictMode>
+        <Sitzungen modul={24} gruppen={GRUPPEN} auswahl={{ gruppe: 11, sitzung: 'p:okt', punkt }} />
+      </StrictMode>,
+    );
+    expect(m.ladeSitzungen.mock.calls.length).toBeGreaterThan(1);
+    const h = (await screen.findByText('Andacht & Gebet')).closest('h3')!;
+    await waitFor(() => expect(m.ladeSitzungen).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 0));
+    expect(h.className).toMatch(/markiert/);
   });
 
   it('keine Gruppe: ein Satz, kein Laden', () => {

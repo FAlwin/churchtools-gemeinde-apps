@@ -48,10 +48,15 @@ function SitzungZeile({ s, onOeffnen }: { s: Sitzung; onOeffnen: () => void }) {
   );
 }
 
-/** Von der Startseite gewählt (S3-3): diese Gruppe – und, wenn angegeben, gleich diese Sitzung öffnen. */
+/**
+ * Von der Startseite (S3-3) oder der Suche (S3-4b) gewählt: diese Gruppe – und, wenn angegeben, gleich diese Sitzung
+ * öffnen und zu diesem Tagesordnungspunkt springen.
+ */
 export interface SitzungsAuswahl {
   gruppe: number;
   sitzung?: string;
+  /** Block-ID des Tagesordnungspunkts. */
+  punkt?: string | null;
 }
 
 /**
@@ -75,20 +80,24 @@ export function Sitzungen({
   const [offen, setOffen] = useState<Sitzung | null>(null);
   // Die gewünschte Sitzung gilt nur für das erste Laden – danach bestimmt die Bedienung hier.
   const wunsch = useRef(auswahl?.sitzung);
+  const [zuPunkt, setZuPunkt] = useState<string | null>(auswahl?.punkt ?? null);
   const gruppe = gruppen.find((g) => g.id === gruppeId) ?? gruppen[0] ?? null;
 
   const laden = useCallback(() => {
     if (!gruppe) return;
     setZustand({ art: 'laedt' });
     setOffen(null);
+    // Das Ziel gilt für das Laden, das es vorfand: Läuft ein zweites Laden schon, bevor das erste fertig ist
+    // (React-Prüfmodus, „Erneut versuchen“), hat es dasselbe Ziel – und löscht den Sprung nicht.
+    const ziel = wunsch.current;
     Promise.all([ladeSitzungen(modul, gruppe, zeitzone), ladeAufgaben(modul, gruppe)]).then(
       ([daten, aufgaben]) => {
         setZustand({ art: 'fertig', daten, aufgaben });
-        const s = [...daten.kommend, ...daten.protokolle].find(
-          (x) => x.schluessel === wunsch.current,
-        );
+        if (ziel === undefined) return;
         wunsch.current = undefined;
+        const s = [...daten.kommend, ...daten.protokolle].find((x) => x.schluessel === ziel);
         if (s) setOffen(s);
+        else setZuPunkt(null);
       },
       (e: unknown) => setZustand({ art: 'fehler', fehler: fehlerMeldung(e) }),
     );
@@ -109,7 +118,11 @@ export function Sitzungen({
         teile={zustand.daten.teile}
         aufgaben={zustand.aufgaben}
         zeitzone={zeitzone}
-        onZurueck={() => setOffen(null)}
+        springeZu={zuPunkt}
+        onZurueck={() => {
+          setZuPunkt(null);
+          setOffen(null);
+        }}
       />
     );
 

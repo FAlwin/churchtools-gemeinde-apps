@@ -1,9 +1,10 @@
+import { useEffect } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { tagPunkt } from '@shared/ct/datum';
 import { ableiten } from '@shared/protokolle/dokument';
 import { dokumentDerSitzung, type ProtokollTeil } from '@shared/protokolle/speicher';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
-import type { Aufgabe } from '@shared/protokolle/aufgaben';
+import { statusText, type Aufgabe } from '@shared/protokolle/aufgaben';
 import { wannLang } from './anzeige';
 import { Marke } from './Marke';
 import { ProtokollAnsicht } from './ProtokollAnsicht';
@@ -12,7 +13,8 @@ import styles from './SitzungAnsicht.module.scss';
 /**
  * **Eine Sitzung ansehen** (Bauplan S3-2, Entwurf 7) – oben Titel und Stand, darunter das Protokoll als Dokument und
  * die Bereiche Beschlüsse · To-Dos · Termine aus derselben Ableitung (Bauplan 3.2). Nur lesen; Schreiben kommt mit
- * S4, „Protokoll beginnen“ mit S5.
+ * S4, „Protokoll beginnen“ mit S5. Kommt man aus der Suche (S3-4b), springt die Ansicht zum Tagesordnungspunkt des
+ * Treffers und hebt ihn kurz hervor.
  */
 export function SitzungAnsicht({
   sitzung,
@@ -20,6 +22,7 @@ export function SitzungAnsicht({
   teile,
   aufgaben,
   zeitzone,
+  springeZu = null,
   onZurueck,
 }: {
   sitzung: Sitzung;
@@ -27,6 +30,8 @@ export function SitzungAnsicht({
   teile: readonly ProtokollTeil[];
   aufgaben: readonly Aufgabe[];
   zeitzone: string;
+  /** Block-ID des Tagesordnungspunkts, zu dem gesprungen wird. */
+  springeZu?: string | null;
   onZurueck: () => void;
 }) {
   const kopf = sitzung.kopf;
@@ -37,6 +42,13 @@ export function SitzungAnsicht({
     return p ? `Punkt ${p.nummer} · ${p.titel}` : 'vor dem ersten Punkt';
   };
   const aufgabeVon = new Map(aufgaben.map((x) => [x.id, x]));
+
+  // Zum Punkt springen, sobald er da ist. Effekt-Rumpf mit { } – `scrollIntoView` liefert in neuen Browsern ein
+  // Promise, und ein zurückgegebenes Promise hielte React für die Aufräum-Funktion (Chrome 152, weiße Seite).
+  useEffect(() => {
+    if (!springeZu) return;
+    document.getElementById(`punkt-${springeZu}`)?.scrollIntoView?.({ block: 'start' });
+  }, [springeZu]);
 
   return (
     <div className={styles.seite}>
@@ -82,7 +94,7 @@ export function SitzungAnsicht({
       {dokument && a && (
         <>
           <section className={styles.karte} aria-label="Protokoll">
-            <ProtokollAnsicht dokument={dokument} aufgaben={aufgaben} />
+            <ProtokollAnsicht dokument={dokument} aufgaben={aufgaben} markiert={springeZu} />
           </section>
           <section className={styles.karte} aria-labelledby="beschluesse">
             <h3 id="beschluesse">
@@ -114,7 +126,7 @@ export function SitzungAnsicht({
                       <span>{x.text}</span>
                       <small>
                         {punktText(x.punkt)}
-                        {g ? ` · ${g.status === 'arbeit' ? 'in Arbeit' : g.status}` : ''}
+                        {g ? ` · ${statusText(g.status)}` : ''}
                         {g?.bis ? ` · bis ${tagPunkt(g.bis)}` : ''}
                       </small>
                     </li>

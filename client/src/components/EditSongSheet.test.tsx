@@ -415,3 +415,15 @@ describe('EditSongSheet – die Einführung (#396)', () => {
     expect(tourLaeuft()).toBe(false);
   });
 });
+
+/** Fenster wie ChurchTools (E6-O F3, #726): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
+const knopfFolgeF3 = () =>
+  screen.getAllByRole('button').map((b) => (b.getAttribute('aria-label') ?? b.textContent)?.trim());
+
+describe('EditSongSheet im ChurchTools-Aufbau', () => {
+  it('Speichern unten rechts neben Schließen (Alwin: immer sichtbar)', () => {
+    zeige();
+    expect(knopfFolgeF3()[0]).toBe('Fenster schließen');
+    expect(knopfFolgeF3().slice(-2)).toEqual(['Schließen', 'Speichern']);
+  });
+});

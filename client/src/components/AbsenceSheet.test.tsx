@@ -195,3 +195,16 @@ describe('AbsenceSheet – Löschen fragt bei fremden Einträgen nach', () => {
     expect(onDelete).toHaveBeenCalledWith(fremd);
   });
 });
+
+/** Fenster wie ChurchTools (E6-O F3, #726): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
+const knopfFolgeF3 = () =>
+  screen.getAllByRole('button').map((b) => (b.getAttribute('aria-label') ?? b.textContent)?.trim());
+
+describe('AbsenceSheet im ChurchTools-Aufbau', () => {
+  it('X oben, unten Abbrechen und Eintragen', () => {
+    zeige();
+    expect(screen.getByRole('dialog', { name: 'Zeitraum eintragen' })).toBeTruthy();
+    expect(knopfFolgeF3()[0]).toBe('Fenster schließen');
+    expect(knopfFolgeF3().slice(-2)).toEqual(['Abbrechen', 'Eintragen']);
+  });
+});

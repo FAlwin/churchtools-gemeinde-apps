@@ -32,7 +32,7 @@ export function SectionTransposeSheet({
   }
 
   return (
-    <Sheet title="Abschnitte transponieren" onClose={onClose} cancelLabel="Fertig">
+    <Sheet title="Abschnitte transponieren" onClose={onClose} cancelLabel="Fertig" knoepfe={null}>
       <div className={styles.hint}>
         Verschiebt einzelne Abschnitte zusätzlich zur Lied-Tonart (z. B. letzter Chorus +1).
       </div>

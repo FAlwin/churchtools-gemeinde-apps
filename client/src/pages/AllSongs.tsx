@@ -130,7 +130,7 @@ export function AllSongs({
       )}
 
       {sucheOffen && onOpenSong && (
-        <Sheet title="Neues Lied" onClose={() => setSucheOffen(false)}>
+        <Sheet title="Neues Lied" onClose={() => setSucheOffen(false)} knoepfe={null}>
           <SongPicker
             autoFocus
             oeffnen={(s) => {

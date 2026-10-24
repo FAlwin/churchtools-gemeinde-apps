@@ -65,7 +65,12 @@ export function AddToAgendaSheet({ song, services, onClose }: AddToAgendaSheetPr
   }
 
   return (
-    <Sheet title={title} onClose={onClose} cancelLabel={done ? 'Fertig' : 'Abbrechen'}>
+    <Sheet
+      title={title}
+      onClose={onClose}
+      cancelLabel={done ? 'Fertig' : 'Abbrechen'}
+      knoepfe={null}
+    >
       {done ? (
         <div className={styles.success}>
           <span className={styles.successIcon}>

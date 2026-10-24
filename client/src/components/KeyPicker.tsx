@@ -23,7 +23,7 @@ export function KeyPicker({
   onClose,
 }: KeyPickerProps) {
   return (
-    <Sheet title="Tonart wählen" onClose={onClose}>
+    <Sheet title="Tonart wählen" onClose={onClose} knoepfe={null}>
       <div className={styles.secLbl}>Dur</div>
       <div className={styles.grid}>
         {ALL_KEYS_MAJOR.map((k) => (

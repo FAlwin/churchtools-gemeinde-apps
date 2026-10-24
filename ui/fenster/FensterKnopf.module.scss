@@ -1,5 +1,10 @@
 // Knöpfe unten rechts im Fenster (E6-O F1, #716) – wie „Abbrechen“ / „Speichern“ in den ChurchTools-Fenstern.
 .knopf {
+  // inline-flex: Ein Symbol neben der Beschriftung („Herunterladen“, „Teilen“) steht mittig mit Abstand (F3, #726).
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   height: 38px;
   padding: 0 16px;
   border-radius: var(--r-ctrl);

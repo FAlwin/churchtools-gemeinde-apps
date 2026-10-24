@@ -88,6 +88,7 @@ export function ArrangementFilesSheet({
       title={arrangementName ? `Dateien – ${arrangementName}` : 'Dateien'}
       onClose={onClose}
       cancelLabel="Schließen"
+      knoepfe={null}
     >
       {laedt && !angehalten && <p className={styles.pickHint}>Dateien werden geladen …</p>}
 

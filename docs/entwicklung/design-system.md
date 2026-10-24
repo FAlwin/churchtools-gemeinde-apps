@@ -90,13 +90,20 @@ ChurchTools-Weboberfläche):
 - **Kopf:** Titel links, **X rechts** zum Schließen (für Screenreader „Fenster schließen“, damit es sich vom Knopf
   „Schließen“ unterscheidet). **Fußzeile:** Knöpfe **rechts unten**, „Abbrechen“ mit Rahmen und blauer Schrift,
   daneben der Hauptknopf – am Rechner keine Knöpfe über die ganze Breite. **Am Handy** (≤ 480 px) stehen sie
-  untereinander über die volle Breite, der Hauptknopf oben (`m.fensterKnopfZeile`, E6-O F2 #720).
+  untereinander über die volle Breite, der Hauptknopf oben (`m.fensterKnopfZeile`, E6-O F2 #720). Passen sie auch am
+  Rechner nicht nebeneinander (drei lange Knöpfe), stehen sie ebenso untereinander – die Zeile misst sich selbst
+  (`useKnopfZeile`, F3 #726).
 - **`Sheet` mit `knoepfe`** bekommt diesen Aufbau; Kopf und Fuß stehen, der Inhalt dazwischen scrollt (die _eine_
   Scrollfläche des Fensters). Ohne `knoepfe` bleibt der alte Aufbau, bis das Fenster umgezogen ist – App für App in
-  eigenen Scheiben. Der Hauptknopf zieht dabei aus dem Inhalt in `knoepfe` (statt `m.hauptKnopfBreit`). Fenster nur
+  eigenen Scheiben (Dienstplaner F2, Musik-App F3; Anmeldungen, Organigramm und Protokolle folgen). Der Test
+  `ui/fenster/fensterAufbau.test.ts` hält fest, welche Apps umgezogen sind – ein neues Fenster ohne `knoepfe` fällt
+  dort auf. Der Hauptknopf zieht dabei aus dem Inhalt in `knoepfe` (statt `m.hauptKnopfBreit`). Fenster nur
   zum Ansehen reichen `knoepfe={null}` – unten steht dann nur „Schließen“. Aktionen, die zum Inhalt gehören (in einer
   Liste, „Andere Person wählen“ am Entwurf), bleiben im Inhalt; ein Nebenweg wie „Neu vorschlagen“ steht als Link
-  (`m.textKnopf`) am Ergebnis, nicht unten.
+  (`m.textKnopf`) am Ergebnis, nicht unten. **Zwei gleichwertige Wege** (PDF: Herunterladen / Teilen; Zeitraum:
+  löschen / anpassen) stehen beide unten: zweiter Weg `hell` oder `gefahr`, Hauptweg zuletzt (Alwin, F3 #726).
+  Fenster mit Formular und weiteren Bereichen („Lied bearbeiten“, „Arrangement“) haben „Speichern“ unten; seltene,
+  folgenreiche Wege („Zum Standard machen“, „Löschen …“) bleiben getrennt im Inhalt.
 - **Während etwas läuft** (senden, speichern …) bekommt `Sheet` `beschaeftigt`: X, „Abbrechen“ und der Klick daneben
   sind gesperrt, wie im `ConfirmDialog`. Was gerade passiert, zeigt der Hauptknopf oder der Titel – nicht mehr ein
   Abbrechen-Knopf mit „Bitte warten …“.

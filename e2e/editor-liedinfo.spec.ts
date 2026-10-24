@@ -12,17 +12,18 @@ async function oeffnen(page: Page) {
 test.describe('breit (iPad)', () => {
   test.use({ viewport: { width: 1180, height: 820 } });
 
-  test('Kopfzeilen aus der Liedinfo sind im Text ausgeblendet, {key} bleibt – im ChordPro-Text alles sichtbar', async ({
+  test('Kopfzeilen samt {key} (L6) sind im Text ausgeblendet – im ChordPro-Text alles sichtbar', async ({
     page,
   }) => {
     await oeffnen(page);
     const text = page.locator('.cm-content');
     await expect(text).not.toContainText('{title');
     await expect(text).not.toContainText('{artist');
-    await expect(text).toContainText('{key: E}');
+    await expect(text).not.toContainText('{key');
     await page.getByRole('button', { name: 'ChordPro-Text' }).click();
     await expect(text).toContainText('{title: Treu}');
     await expect(text).toContainText('{artist: Tobias Gerster}');
+    await expect(text).toContainText('{key: E}');
   });
 
   test('„Vorschau | Liedinfo“: Hinweis am Feld, „übernehmen“ setzt den Wert aus dem Notenblatt', async ({

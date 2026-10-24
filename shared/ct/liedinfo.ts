@@ -112,3 +112,10 @@ export const LIEDINFO_ZEILE = new RegExp(
   `^${zeileKern(LIEDINFO_FELDER.map((f) => f.zeile))}$`,
   'i',
 );
+
+/**
+ * **Die Tonart-Zeile `{key: …}`** – keine Liedinfo (sie bleibt beim Speichern in der Datei: die notierte Tonart),
+ * aber der Editor blendet sie mit den Kopfzeilen aus (L6; Kopf und Akkord-Leiste nennen die Tonart schon).
+ * Dieselbe Grammatik wie `LIEDINFO_ZEILE`.
+ */
+export const TONART_ZEILE = new RegExp(`^${zeileKern(['key'])}$`, 'i');

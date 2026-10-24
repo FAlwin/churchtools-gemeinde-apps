@@ -40,7 +40,7 @@ vi.mock('@ui/fenster/useOverlayKeyboardInset', () => ({
 }));
 
 const { ChordEditor } = await import('./ChordEditor');
-const { flowSetzen } = await import('../utils/chordpro');
+const { flowSetzen, neuerTeilName } = await import('../utils/chordpro');
 
 function zeige(props: Partial<Parameters<typeof ChordEditor>[0]> = {}) {
   const onSave = vi.fn();
@@ -119,8 +119,9 @@ describe('ChordEditor – Tonart-Zeile (#398)', () => {
 describe('ChordEditor – Ablauf und Weiterschalt-Punkt', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  function format(name: string) {
-    fireEvent.click(screen.getByRole('button', { name: /Format/ }));
+  // Seit L6 (24.10.2026) Menü „Einfügen“ statt Format-Menü.
+  function einfuegen(name: string) {
+    fireEvent.click(screen.getByRole('button', { name: 'Einfügen' }));
     fireEvent.click(screen.getByRole('button', { name: new RegExp(name) }));
   }
 
@@ -192,16 +193,27 @@ describe('ChordEditor – Ablauf und Weiterschalt-Punkt', () => {
     expect(within(ablauf).queryByRole('button', { name: 'Wie im Text' })).toBeNull();
   });
 
-  it('das Format-Menü bietet keinen Ablauf mehr an – dafür ist die Karte da', () => {
+  it('das Menü „Einfügen“ bietet keinen Ablauf an – dafür ist die Karte da', () => {
     zeige({ mitVersionsname: false });
-    fireEvent.click(screen.getByRole('button', { name: /Format/ }));
-    expect(screen.queryByRole('button', { name: /Reihenfolge der Teile/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Einfügen' }));
+    expect(screen.queryByRole('button', { name: /Reihenfolge der Teile|Ablauf/ })).toBeNull();
   });
 
-  it('„Weiterschalt-Punkt" fügt ---- in einer eigenen Zeile ein', () => {
+  it('„Pedal-Halt“ fügt ---- in einer eigenen Zeile ein', () => {
     zeige({ mitVersionsname: false });
-    format('Weiterschalt-Punkt');
+    einfuegen('Pedal-Halt');
     expect(eingabe.insert).toHaveBeenCalledWith('----', { block: true });
+  });
+
+  it('ein neuer Teil kommt hinter die Cursor-Zeile, mit dem Namen aus `neuerTeilName` (L6)', () => {
+    const initialText = '{comment: Vers}\nA';
+    zeige({ initialText, mitVersionsname: false });
+    einfuegen('^Vers$');
+    expect(eingabe.insert).toHaveBeenCalledWith(
+      `{comment: ${neuerTeilName(initialText, 'Vers')}}\n`,
+      { block: true, amZeilenende: true },
+    );
+    expect(screen.queryByText('Neuer Teil')).toBeNull();
   });
 
   it('nennt Namen im Ablauf, zu denen es keinen Teil gibt – am Kärtchen', () => {
@@ -238,7 +250,11 @@ describe('ChordEditor – Akkorde einfügen', () => {
     zeige({ tonart: 'E', mitVersionsname: false });
     fireEvent.click(screen.getByRole('button', { name: 'Anderer Akkord' }));
     fireEvent.change(screen.getByPlaceholderText(/Em7/), { target: { value: 'gsus4' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Einfügen' }));
+    // Das Fenster hat seinen eigenen „Einfügen“ – nicht das Menü in der Leiste (L6, das klappt auf: aria-expanded).
+    const imFenster = screen
+      .getAllByRole('button', { name: 'Einfügen' })
+      .find((b) => !b.hasAttribute('aria-expanded'))!;
+    fireEvent.click(imFenster);
     expect(eingabe.insert).toHaveBeenCalledWith('[Gsus4]');
     expect(screen.queryByPlaceholderText(/Em7/)).toBeNull();
     expect(screen.getByText('Im Lied').parentElement!.textContent).toContain('Gsus4');

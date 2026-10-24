@@ -524,7 +524,7 @@ Text – mit Luft zwischen den Knöpfen, nichts gequetscht. Über der Tastatur i
    Die Ansicht bleibt, wie sie ist (nur der Liedtext löst die Schreibansicht aus).
 6. Mit angesteckter Hardware-Tastatur: keine Schreibansicht (es ist ja Platz).
 7. **Mehrmals hintereinander** (Tastatur zu, wieder in den Text tippen; auch nach Drehen des iPads und nach „Im
-   Lied“/„Format“): Die eine Zeile kommt **jedes Mal** – nicht nur manchmal.
+   Lied“/„Einfügen“): Die eine Zeile kommt **jedes Mal** – nicht nur manchmal.
 
 <details><summary>Technisches</summary>
 
@@ -576,5 +576,40 @@ Kopfzeilen sind aus dem Notenblatt verschwunden, `{key}` ist noch da.
   (Test-Instanz): Rechte, Arrangement-Tempo, Erweiterung.
 - **Historie:** Lied-Editor L4 (23.10.2026); Entscheidungen Alwin: bis zum Speichern bleibt alles wie heute,
   Hinweis am Feld, ein „Speichern“, SongSelect füllt leere Felder
+
+</details>
+
+### TF-EINST-20 · Lied-Editor: Menü „Einfügen“, Tonart- und Ende-Zeilen ausgeblendet
+
+**Das brauchst du:** Ein Lied mit `{start_of_verse}` … `{end_of_verse}` und `{key}`-Zeile (z. B. das „L4-Testlied“ der
+Test-Instanz), das Recht, Lieder zu bearbeiten; iPad quer und Handy.
+
+**Das muss passieren:** Statt „Format“ gibt es **Einfügen**: oben die Teile, darunter der Pedal-Halt, abgesetzt „Nur
+für andere Programme“. Titel, Autor, Tempo & Co. stehen nicht mehr darin – die gehören in die Liedinfo. Im Text sind
+weder `{key}` noch `{end_of_…}` zu sehen; im „ChordPro-Text“ stehen beide noch da.
+
+1. Version bearbeiten: Über dem ersten Teil steht keine `{key: …}`-Zeile, unter den Teilen kein `{end_of_verse}`.
+   **ChordPro-Text** → beide sind da.
+2. Cursor **mitten** in eine Zeile, **Einfügen → Refrain**: Ein Band „Refrain“ erscheint **unter** dieser Zeile (sie
+   wird nicht geteilt), der Cursor steht in der leeren Zeile darunter – lostippen.
+3. **Einfügen → Vers**: Das Band heißt „Vers 2“ (gibt es schon „Vers 1“ und „Vers 3“: „Vers 4“).
+4. **Einfügen → Pedal-Halt**: Linie „Pedal hält hier“ an der Cursorstelle.
+5. **Einfügen → Kapo**: `{capo: }` mit dem Cursor vor der Klammer; der Hinweis im Menü sagt, dass es in der App
+   nichts bewirkt.
+6. Mit offener Tastatur (Schreibansicht): **Einfügen** steht in der einen Zeile, das Menü lässt sich öffnen, ohne
+   dass die Tastatur zugeht.
+7. Speichern → Vorschau und Blatt zeigen die neuen Teile in der richtigen Reihenfolge.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `client/src/components/EinfuegenMenue.tsx`, `client/src/utils/einfuegen.ts`, `client/src/components/ChordEditor.tsx`, `client/src/components/ChordProInput.tsx`, `client/src/utils/chordpro.ts`, `shared/ct/liedinfo.ts`
+- **Automatisiert:** weitgehend – `chordpro.test.ts` (`neuerTeilName`, `ENDE_ZEILE` = Regel des Blatts),
+  `liedinfo.test.ts` (`TONART_ZEILE`, `{key}` bleibt beim Speichern), `EinfuegenMenue.test.tsx` (keine Kopfangabe im
+  Menü, gegen `LIEDINFO_FELDER` geprüft), `ChordEditor.test.tsx`, `e2e/editor-einfuegen.spec.ts` (hinter der Zeile,
+  Nummerieren, Pedal-Halt, Ende-Marken), `e2e/editor-liedinfo.spec.ts` (`{key}` ausgeblendet),
+  `e2e/editor-schreiben.spec.ts` (eine Zeile). **Von Hand bleibt** die Bedienung am echten iPad (Tastatur bleibt offen).
+- **Historie:** Lied-Editor L6 (24.10.2026); Entscheidungen Alwin: Variante B (ein Menü „Einfügen“), seltene
+  Angaben unter „Nur für andere Programme“, `{key}` und Ende-Marken ausblenden
 
 </details>

@@ -6,11 +6,13 @@ import { Spinner } from './Spinner';
 import { useOverlayKeyboardInset } from '@ui/fenster/useOverlayKeyboardInset';
 import styles from './ChordEditor.module.scss';
 import { shiftKey } from '../utils/transpose';
-import { akkordVerschieben, flowSetzen, parseMetadata } from '../utils/chordpro';
+import { akkordVerschieben, flowSetzen, neuerTeilName, parseMetadata } from '../utils/chordpro';
 import { AkkordMenue } from './AkkordMenue';
 import { AkkordLeiste } from './AkkordLeiste';
 import { AkkordFenster } from './AkkordFenster';
 import { AblaufKarte } from './AblaufKarte';
+import { EinfuegenMenue } from './EinfuegenMenue';
+import type { Einfuegen } from '../utils/einfuegen';
 import { getLiedansicht } from '../utils/devicePrefs';
 import { useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { useTastaturOffen } from '@ui/fenster/useTastaturOffen';
@@ -56,27 +58,6 @@ interface ChordEditorProps {
   liedinfo?: LiedinfoQuelle;
 }
 
-// Format-Bausteine (echte ChordPro-Direktiven, chordpro.org) mit deutscher Erklärung.
-// `value` = mit Doppelpunkt-Wert. Hinweis: comment, flow, title/artist/key/tempo/time und `----` wirken in
-// der App-Vorschau; die übrigen sind gültiges ChordPro und werden gespeichert (SongSelect/andere Tools).
-// `art` = Baustein mit eigener Einfüge-Regel statt „an der Cursorstelle" (#606).
-// Den Ablauf (`{flow}`) setzt seit L2 die Ablauf-Karte, nicht mehr dieses Menü.
-const FORMATS: { tag: string; label: string; value: boolean; art?: 'trenner' }[] = [
-  { tag: 'comment', label: 'Abschnitt / Überschrift', value: true },
-  { tag: '----', label: 'Weiterschalt-Punkt fürs Pedal', value: false, art: 'trenner' },
-  { tag: 'title', label: 'Titel des Lieds', value: true },
-  { tag: 'subtitle', label: 'Untertitel', value: true },
-  { tag: 'artist', label: 'Interpret / Künstler', value: true },
-  { tag: 'key', label: 'Tonart', value: true },
-  { tag: 'capo', label: 'Kapo (Bund)', value: true },
-  { tag: 'tempo', label: 'Tempo (BPM)', value: true },
-  { tag: 'time', label: 'Taktart', value: true },
-  { tag: 'ccli', label: 'CCLI-Nummer', value: true },
-  { tag: 'copyright', label: 'Copyright', value: true },
-  { tag: 'column_break', label: 'Neue Spalte beginnen', value: false },
-  { tag: 'new_page', label: 'Neuer Seitenumbruch', value: false },
-];
-
 /** Was am schmalen Bildschirm zu sehen ist – breit stehen Text und Vorschau nebeneinander. */
 type Bereich = 'text' | 'ablauf' | 'vorschau' | 'infos';
 
@@ -105,7 +86,7 @@ export function ChordEditor({
   const [name, setName] = useState(initialName);
   const [semitones, setSemitones] = useState(0);
   const [zuletzt, setZuletzt] = useState<string[]>([]); // nur in dieser Sitzung
-  const [openMenu, setOpenMenu] = useState<'format' | null>(null);
+  const [openMenu, setOpenMenu] = useState<'einfuegen' | null>(null);
   // „Anderer Akkord“ (neu) oder „Ändern“ eines angetippten Kärtchens (`ziel` = seine Stelle im Text).
   const [akkordFenster, setAkkordFenster] = useState<{ ziel?: AkkordAntippen } | null>(null);
   // Angetipptes Akkord-Kärtchen (L5-2): Menü ← → Ändern Entfernen.
@@ -249,14 +230,19 @@ export function ChordEditor({
     const a = flowSetzen(text, eintraege);
     if (a) editorRef.current?.aendern(a.from, a.to, a.insert);
   }
-  function pickFormat(f: (typeof FORMATS)[number]) {
+  /**
+   * Menü „Einfügen“ (L6): Ein neuer Teil kommt HINTER die Zeile des Cursors (nicht mitten hinein) und bringt eine
+   * leere Zeile mit, in der der Cursor steht; der Pedal-Halt und die übrigen Angaben wie bisher an den Cursor.
+   */
+  function einfuegen(e: Einfuegen) {
     setOpenMenu(null);
-    if (f.art === 'trenner') {
-      editorRef.current?.insert('----', { block: true });
-      return;
-    }
-    if (f.value) editorRef.current?.insert(`{${f.tag}: }`, { block: true, caretBack: 1 });
-    else editorRef.current?.insert(`{${f.tag}}`, { block: true });
+    const ed = editorRef.current;
+    if (!ed) return;
+    if (e.art === 'teil')
+      ed.insert(`{comment: ${neuerTeilName(text, e.name)}}\n`, { block: true, amZeilenende: true });
+    else if (e.art === 'pedal') ed.insert('----', { block: true });
+    else if (e.mitWert) ed.insert(`{${e.tag}: }`, { block: true, caretBack: 1 });
+    else ed.insert(`{${e.tag}}`, { block: true });
   }
 
   // Knöpfe rund um den Text nehmen ihm den Fokus nicht – sonst ginge am iPad die Tastatur zu (und die
@@ -373,31 +359,11 @@ export function ChordEditor({
               className={`${styles.toolbar}${schreiben ? ' ' + styles.schreiben : ''}`}
               ref={toolbarRef}
             >
-              <div className={styles.dd}>
-                <button
-                  className={styles.ddBtn}
-                  onMouseDown={ohneFokus}
-                  onClick={() => setOpenMenu((m) => (m === 'format' ? null : 'format'))}
-                  aria-expanded={openMenu === 'format'}
-                >
-                  Format ▾
-                </button>
-                {openMenu === 'format' && (
-                  <div className={`${styles.ddPanel} ${styles.ddPanelWide}`}>
-                    {FORMATS.map((f) => (
-                      <button
-                        key={f.tag}
-                        className={styles.ddFormat}
-                        onMouseDown={ohneFokus}
-                        onClick={() => pickFormat(f)}
-                      >
-                        <span className={styles.ddFormatLabel}>{f.label}</span>
-                        <code className={styles.ddFormatTag}>{f.tag}</code>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <EinfuegenMenue
+                offen={openMenu === 'einfuegen'}
+                umschalten={() => setOpenMenu((m) => (m === 'einfuegen' ? null : 'einfuegen'))}
+                waehlen={einfuegen}
+              />
               {schreiben && akkordLeiste}
 
               {!schreiben && (

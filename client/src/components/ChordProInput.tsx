@@ -20,6 +20,7 @@ import {
 import styles from './ChordProInput.module.scss';
 import {
   AKKORD_KLAMMER,
+  ENDE_ZEILE,
   abschnittsKopf,
   flowEintraege,
   flowName,
@@ -27,12 +28,18 @@ import {
   parseMetadata,
   teileImFlow,
 } from '../utils/chordpro';
-import { LIEDINFO_ZEILE } from '@shared/ct/liedinfo';
+import { LIEDINFO_ZEILE, TONART_ZEILE } from '@shared/ct/liedinfo';
 
 /** Imperative Schnittstelle für Toolbar-Aktionen (Einfügen / Rückgängig / Wiederholen). */
 export interface ChordProHandle {
-  /** Fügt Text an der Cursorposition ein. `block` = auf eigener Zeile; `caretBack` = Cursor n Zeichen vor das Ende. */
-  insert: (text: string, opts?: { block?: boolean; caretBack?: number }) => void;
+  /**
+   * Fügt Text an der Cursorposition ein. `block` = auf eigener Zeile; `caretBack` = Cursor n Zeichen vor das Ende;
+   * `amZeilenende` = hinter der Zeile, in der der Cursor steht, statt sie zu teilen (neuer Teil, L6).
+   */
+  insert: (
+    text: string,
+    opts?: { block?: boolean; caretBack?: number; amZeilenende?: boolean },
+  ) => void;
   /** Ersetzt `from`–`to` durch `insert` – wie eine Eingabe (Rückgängig), ohne den Cursor zu stehlen (L2: Ablauf-Kärtchen, L5-2: Akkord-Menü). */
   aendern: (from: number, to: number, insert: string) => void;
   undo: () => void;
@@ -136,9 +143,12 @@ const flowFeld = ausblendFeld(FLOW_ZEILE);
 /**
  * **Liedinfo-Kopfzeilen** (`{title}`, `{artist}` … – L4): Die Liedinfo zeigt sie, beim Speichern wandern sie nach
  * ChurchTools. Im Text stünden sie doppelt; im „ChordPro-Text“ bleiben sie sichtbar. Dieselbe Grammatik wie das
- * Entfernen (`LIEDINFO_ZEILE`).
+ * Entfernen (`LIEDINFO_ZEILE`). Seit L6 auch `{key}` (`TONART_ZEILE`) – sie bleibt in der Datei, Kopf und
+ * Akkord-Leiste nennen die Tonart aber schon (Alwin, 24.10.2026).
  */
-const kopfFeld = ausblendFeld(LIEDINFO_ZEILE);
+const kopfFeld = ausblendFeld(
+  new RegExp(`(?:${LIEDINFO_ZEILE.source})|(?:${TONART_ZEILE.source})`, 'i'),
+);
 const kopf = new Compartment();
 
 // ── Darstellung wie Entwurf B (Lied-Editor L3, 22.10.2026) ──
@@ -270,8 +280,14 @@ const darstellungFeld = StateField.define<DecorationSet>({
     EditorView.atomicRanges.of((v) => v.state.field(f)),
   ],
 });
-/** Umschaltbar: freundliche Darstellung oder der rohe ChordPro-Text („ChordPro-Text“-Schalter). */
+/**
+ * **Ende-Marken `{end_of_…}`** (L6): Das Band markiert den Anfang eines Teils, das Ende ergibt sich aus dem nächsten
+ * Band – im Text unsichtbar, im „ChordPro-Text“ sichtbar (Alwin, 24.10.2026). Dieselbe Regel wie das Blatt.
+ */
+const endeFeld = ausblendFeld(ENDE_ZEILE);
+/** Umschaltbar: freundliche Darstellung (samt ausgeblendeter Ende-Marken) oder der rohe ChordPro-Text. */
 const darstellung = new Compartment();
+const freundlich = [darstellungFeld, endeFeld];
 
 // Moderner, „un-typewriter"-Look: proportionale App-Schrift (ChordPro-Akkorde stehen inline in
 // [..], daher ist kein Monospace zum Ausrichten nötig), großzügige Zeilenhöhe, und Akkorde als
@@ -378,7 +394,7 @@ export const ChordProInput = forwardRef<ChordProHandle, ChordProInputProps>(func
           highlighter,
           // Vor der Darstellung: Sie liest beim Neuzeichnen, welches Kärtchen angetippt ist.
           aktivFeld,
-          darstellung.of(roh ? [] : darstellungFeld),
+          darstellung.of(roh ? [] : freundlich),
           flowFeld,
           kopf.of(kopfAusblenden && !roh ? kopfFeld : []),
           theme,
@@ -423,7 +439,7 @@ export const ChordProInput = forwardRef<ChordProHandle, ChordProInputProps>(func
   useEffect(() => {
     viewRef.current?.dispatch({
       effects: [
-        darstellung.reconfigure(roh ? [] : darstellungFeld),
+        darstellung.reconfigure(roh ? [] : freundlich),
         kopf.reconfigure(kopfAusblenden && !roh ? kopfFeld : []),
       ],
     });
@@ -433,7 +449,10 @@ export const ChordProInput = forwardRef<ChordProHandle, ChordProInputProps>(func
     insert(text, opts) {
       const view = viewRef.current;
       if (!view) return;
-      const sel = view.state.selection.main;
+      const auswahl = view.state.selection.main;
+      // Hinter die Zeile des Cursors: nichts ersetzen, nichts teilen.
+      const ende = opts?.amZeilenende ? view.state.doc.lineAt(auswahl.head).to : null;
+      const sel = ende == null ? auswahl : { from: ende, to: ende };
       let ins = text;
       if (opts?.block) {
         const before = sel.from > 0 ? view.state.doc.sliceString(sel.from - 1, sel.from) : '\n';

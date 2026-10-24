@@ -500,7 +500,12 @@ dem Text den Fokus (und damit die Tastatur) nicht nehmen. L4 = **Liedinfo** (Tit
 Arrangement) aus ChurchTools: Regeln `shared/ct/liedinfo.ts`, Formular `utils/liedinfoFormular.ts` auf den Formularen
 des Stammdaten-Blatts, Laden/Speichern `hooks/useLiedinfoQuelle`. Kopfzeilen verlassen die Datei erst, wenn
 ChurchTools den Wert NACH dem Speichern meldet (`liedinfoSpeichern`, `liedinfoBeimImport` beim SongSelect-Import);
-ungespeicherte Lieder behalten den Vorrang der Datei. `{key}` bleibt als notierte Tonart. Zieh-Einstellungen aller Listen: `ui/bedienung/useZiehSensoren`. Im
+ungespeicherte Lieder behalten den Vorrang der Datei. `{key}` bleibt als notierte Tonart (in der Datei; im Text seit L6
+ausgeblendet, `TONART_ZEILE`). L6 = Menü **„Einfügen“** (`EinfuegenMenue`, Variante B) statt Format-Menü: Teile (Name über
+`neuerTeilName`, „Vers“ nummeriert sich; eingefügt HINTER der Cursor-Zeile, `insert(…, { amZeilenende })`), Pedal-Halt,
+„Nur für andere Programme“ (Kapo, Spalte, Seite, Untertitel) – KEINE Kopfangaben, die gehören in die Liedinfo und
+würden im Text unsichtbar eingefügt. Ende-Marken `{end_of_…}` im Text ausgeblendet (`ENDE_ZEILE`, EINE Regel mit
+`parseChordPro`). Zieh-Einstellungen aller Listen: `ui/bedienung/useZiehSensoren`. Im
 Scroll-Modus kein Spalten-Schalter (`ohneSpalten`). Welche
 eigene Ebene gilt, entscheidet für Blättern UND Scrollen `pageKeys.eigenerSchluessel`.
 Leinwände nur in Bildschirmnähe (IntersectionObserver), sonst freigegeben. Die **Seite in der Bildmitte** ist

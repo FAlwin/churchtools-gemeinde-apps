@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import {
   BEZIEHUNG_TEXTE,
@@ -79,7 +80,14 @@ export function VorliebenFach({
     <Sheet
       title={`Vorlieben · ${person.name}`}
       onClose={() => !bereit?.laeuft && onClose(false)}
-      cancelLabel={bereit?.laeuft ? 'Bitte warten – wird gespeichert …' : 'Abbrechen'}
+      beschaeftigt={!!bereit?.laeuft}
+      knoepfe={
+        bereit ? (
+          <FensterKnopf disabled={bereit.laeuft || unveraendert} onClick={() => void speichern()}>
+            {bereit.laeuft ? 'Wird gespeichert …' : 'Speichern'}
+          </FensterKnopf>
+        ) : null
+      }
     >
       <p className={styles.unter}>für {gruppe.name} · wie der Stift in ChurchTools</p>
       {zustand.art === 'laedt' && <p className={styles.hinweis}>Vorlieben werden geladen …</p>}
@@ -155,16 +163,6 @@ export function VorliebenFach({
             </small>
           </label>
           {bereit.meldung && <div className={styles.kasten}>{bereit.meldung}</div>}
-          <div className={styles.knoepfe}>
-            <button
-              type="button"
-              className={styles.primaer}
-              disabled={bereit.laeuft || unveraendert}
-              onClick={() => void speichern()}
-            >
-              {bereit.laeuft ? 'Wird gespeichert …' : 'Speichern'}
-            </button>
-          </div>
           <p className={styles.hinweis}>Gespeichert wird sofort in ChurchTools – kein Entwurf.</p>
         </>
       )}

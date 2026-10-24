@@ -98,25 +98,6 @@
   line-height: 1.45;
 }
 
-.knoepfe {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 12px;
-}
-
-.primaer {
-  height: 40px;
-  padding: 0 16px;
-  border: 1px solid var(--blue);
-  border-radius: var(--r-ctrl);
-  background: var(--blue);
-  color: #fff;
-  font: inherit;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
 .zeichen {
   flex: none;
   display: grid;

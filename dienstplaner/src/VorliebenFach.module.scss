@@ -1,4 +1,5 @@
 // Vorlieben-Fenster (E5-3, Entwurf e5-entwurf.html Bild 4) – nur Tokens aus ui/design (hell und dunkel).
+@use '@ui/design/mixins' as m;
 
 .unter {
   margin: -4px 0 12px;
@@ -25,13 +26,10 @@
   }
 
   select {
+    @include m.eingabefeld;
     width: 100%;
     height: 38px;
     padding: 0 10px;
-    border: 1px solid var(--border);
-    border-radius: var(--r-ctrl);
-    background: var(--surface2);
-    color: var(--text);
     font: inherit;
     font-size: 14px;
   }
@@ -57,36 +55,7 @@
 }
 
 .link {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--blue);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.knoepfe {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.primaer {
-  height: 40px;
-  padding: 0 16px;
-  border: 1px solid var(--blue);
-  border-radius: var(--r-ctrl);
-  background: var(--blue);
-  color: #fff;
-  font: inherit;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-
-  &:disabled {
-    opacity: 0.45;
-    cursor: default;
-  }
+  @include m.textKnopf;
 }
 
 // Der Stift neben einem Namen (Zauberstab-Fenster, „Wer kann?“) – wie im Gesamtentwurf: eigener Kasten daneben.

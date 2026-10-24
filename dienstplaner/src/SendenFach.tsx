@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import { tagKurz } from '@shared/ct/datum';
 import { ortSchluessel, type Entwurf } from '@shared/dienstplan/entwuerfe';
@@ -134,12 +135,16 @@ export function SendenFach({
     <Sheet
       title={titel}
       onClose={() => phase !== 'laeuft' && onClose(neuLaden(ergebnisse.values()))}
-      cancelLabel={
-        phase === 'laeuft'
-          ? 'Bitte warten – wird gesendet …'
-          : phase === 'fertig'
-            ? 'Schließen'
-            : 'Abbrechen'
+      cancelLabel={phase === 'fertig' ? 'Schließen' : 'Abbrechen'}
+      beschaeftigt={phase === 'laeuft'}
+      knoepfe={
+        phase !== 'laeuft' && zuSenden.length > 0 ? (
+          <FensterKnopf onClick={() => void los()}>
+            {phase === 'liste'
+              ? `Jetzt senden (${zuSenden.length})`
+              : `Erneut senden (${zuSenden.length})`}
+          </FensterKnopf>
+        ) : null
       }
     >
       {phase === 'liste' && (
@@ -258,16 +263,6 @@ export function SendenFach({
           </b>{' '}
           (abwesend oder am selben Tag schon eingeteilt). Du kannst trotzdem senden – oder sie
           abwählen.
-        </div>
-      )}
-
-      {phase !== 'laeuft' && zuSenden.length > 0 && (
-        <div className={styles.knoepfe}>
-          <button type="button" className={styles.primaer} onClick={() => void los()}>
-            {phase === 'liste'
-              ? `Jetzt senden (${zuSenden.length})`
-              : `Erneut senden (${zuSenden.length})`}
-          </button>
         </div>
       )}
     </Sheet>

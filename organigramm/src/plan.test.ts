@@ -3,11 +3,10 @@ import { KAT, MODUL, speicher } from '@shared/dienstplan/entwuerfe.testutil';
 import { KEINE_AENDERUNGEN, neueGruppe, PLAN_ART } from '@shared/organigramm/plan';
 
 // Gegen den nachgebauten Speicher (wie gemessen); Modul und Kategorie sind gefunden bzw. fehlen.
-const h = vi.hoisted(() => ({ kategorie: null as number | null, port: null }));
+const h = vi.hoisted(() => ({ kategorie: null as number | null, port: null as object | null }));
 // Der Anschluss wird beim Laden des Moduls einmal geholt – er verweist hier auf den Speicher des jeweiligen Tests.
 vi.mock('@ui/ct/modulPort', () => ({
-  versionPortFuer: () =>
-    new Proxy({}, { get: (_ziel, k) => (h.port as Record<string | symbol, unknown>)[k] }),
+  versionPortFuer: () => new Proxy({}, { get: (_ziel, k) => Reflect.get(h.port ?? {}, k) }),
 }));
 vi.mock('@shared/ct/modulDaten', async (original) => ({
   ...(await original<typeof import('@shared/ct/modulDaten')>()),

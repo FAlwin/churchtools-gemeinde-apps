@@ -13,6 +13,7 @@ import {
   statusSetzen,
   type Aufgabe,
   meineOffenen,
+  statusText,
 } from './aufgaben';
 
 const basis = (text: string, extra: Partial<Parameters<typeof neueAufgabe>[0]> = {}): Aufgabe =>
@@ -167,6 +168,16 @@ describe('meineOffenen (S3-3)', () => {
       'arbeit',
       'offen-frueh',
       'offen-spaet',
+    ]);
+  });
+});
+
+describe('statusText (S3-4b)', () => {
+  it('„in Arbeit“ – die anderen heißen wie ihr Wert', () => {
+    expect((['offen', 'arbeit', 'erledigt'] as const).map(statusText)).toEqual([
+      'offen',
+      'in Arbeit',
+      'erledigt',
     ]);
   });
 });

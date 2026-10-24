@@ -1,0 +1,91 @@
+// Die Lupe im Kopf der Protokolle (S3-4b): rechts in der Zeile mit App-Name und Reitern. Aufgeklappt 280px breit;
+// passt das nicht mehr, bricht die Zeile um (die Kopfzeile ist `flex-wrap`), am Handy über die ganze Breite.
+
+.lupe,
+.leiste {
+  margin-left: auto;
+}
+
+.lupe {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  background: none;
+  color: var(--text2);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface3);
+    color: var(--text);
+  }
+}
+
+.leiste {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 280px;
+  height: 34px;
+  padding: 0 4px 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text2);
+  animation: aufklappen 0.2s ease-out;
+
+  > svg {
+    flex: none;
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    outline: 0;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+
+    // Das eigene ✕ des Browsers – wir haben schon eins.
+    &::-webkit-search-cancel-button {
+      display: none;
+    }
+  }
+
+  button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: var(--r-ctrl);
+    background: none;
+    color: var(--text2);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--surface3);
+    }
+  }
+
+  @media (max-width: 559px) {
+    flex-basis: 100%;
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+@keyframes aufklappen {
+  from {
+    width: 34px;
+    opacity: 0.4;
+  }
+}

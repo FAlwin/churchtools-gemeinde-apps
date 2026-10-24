@@ -1,0 +1,147 @@
+// Die Suche der Protokolle (S3-4b) – Filter als Knöpfe, darunter eine Karte mit Zeilen wie im Reiter „Sitzungen“.
+@use '@ui/design/mixins' as m;
+
+.seite {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 820px;
+}
+
+.filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  @include m.auswahlKnopf;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+
+  &[aria-pressed='true'] {
+    @include m.auswahlKnopfAn;
+  }
+}
+
+.karte {
+  @include m.card-list;
+  margin-top: 6px;
+}
+
+.kartenkopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--hair);
+
+  h2 {
+    font-size: 15px;
+    font-weight: 600;
+  }
+}
+
+.anzahl {
+  color: var(--text2);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.liste {
+  list-style: none;
+
+  li {
+    border-bottom: 1px solid var(--hair);
+
+    &:last-child {
+      border-bottom: 0;
+    }
+  }
+}
+
+.zeile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface3);
+  }
+
+  > svg {
+    flex: none;
+    color: var(--text3);
+  }
+}
+
+// Ein To-Do, dessen Protokoll nicht da ist: Zeile ohne Tipp.
+.still {
+  cursor: default;
+
+  &:hover {
+    background: none;
+  }
+}
+
+.ohneKachel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 50px;
+  color: var(--text3);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  b {
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+
+  small {
+    color: var(--text2);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+
+  mark {
+    border-radius: 2px;
+    background: var(--blue-soft);
+    color: inherit;
+  }
+}
+
+.unter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.innen,
+.fuss {
+  padding: 12px 14px;
+  color: var(--text2);
+  font-size: 14px;
+}
+
+.fuss {
+  border-top: 1px solid var(--hair);
+  font-size: 13.5px;
+}

@@ -77,6 +77,21 @@
   }
 }
 
+// Aus der Suche hierher gesprungen (S3-4b): kurz hellblau hinterlegt, dann wie immer. Mit Abstand nach oben, damit
+// der Punkt beim Springen nicht an der Kante klebt.
+.markiert {
+  scroll-margin-top: 16px;
+  border-radius: var(--r-ctrl);
+  animation: aufleuchten 2.4s ease-out;
+}
+
+@keyframes aufleuchten {
+  0%,
+  40% {
+    background: var(--blue-soft);
+  }
+}
+
 .nr {
   color: var(--text2);
 }

@@ -13,7 +13,8 @@ import { plusTage } from '@shared/ct/datum';
 import { mapLimit } from '@shared/ct/mapLimit';
 import { istEinstellung } from '@shared/protokolle/einrichten';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
-import { istAufgabe, type Aufgabe } from '@shared/protokolle/aufgaben';
+import type { Aufgabe } from '@shared/protokolle/aufgaben';
+import { aufgabenWerte } from './aufgabenSchreiben';
 import {
   istKopf,
   istTeil,
@@ -144,15 +145,15 @@ export async function ladeSitzungen(
   };
 }
 
-/** **Die Aufgaben einer Gruppe** (gelöschte nicht). Ohne Mitarbeit-Kategorie: keine. */
+/** **Die Aufgaben einer Gruppe** (gelöschte nicht). Ohne Mitarbeit-Kategorie: keine. Gelesen über `aufgabenWerte`. */
 export async function ladeAufgaben(
   modul: number,
   gruppe: Pick<ProtokollGruppe, 'mitarbeit'>,
 ): Promise<Aufgabe[]> {
   if (gruppe.mitarbeit === null) return [];
-  return (await werteLesen(modulPort, modul, gruppe.mitarbeit))
-    .map(wertInhalt)
-    .filter((x): x is Aufgabe => istAufgabe(x) && !x.geloescht);
+  return (await aufgabenWerte({ modul, kategorie: gruppe.mitarbeit }))
+    .map((x) => x.aufgabe)
+    .filter((a) => !a.geloescht);
 }
 
 export interface GruppenUebersicht {

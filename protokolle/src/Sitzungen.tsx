@@ -134,10 +134,11 @@ export function Sitzungen({
         <ProtokollSchreiben
           sitzung={offen}
           gruppe={gruppe.name}
+          gruppeId={gruppe.id}
           modul={modul}
           kategorie={gruppe.protokolle}
+          mitarbeit={gruppe.mitarbeit}
           ich={ich}
-          aufgaben={zustand.aufgaben}
           zeitzone={zeitzone}
           onZurueck={(geaendert) => {
             setOffen(null);

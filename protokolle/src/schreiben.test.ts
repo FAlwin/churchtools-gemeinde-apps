@@ -245,3 +245,35 @@ describe('Sperre nehmen, übernehmen, freigeben', () => {
     expect(kopfImSpeicher().sperre).toBeNull();
   });
 });
+
+describe('speichern mit Abgleich vorher (S4-2)', () => {
+  it('läuft nach der Prüfung und vor dem ersten Schreiben am Protokoll', async () => {
+    const alt = ablegen();
+    const reihenfolge: string[] = [];
+    const r = await speichern(ORT, ICH, alt, NEU, JETZT, () => {
+      reihenfolge.push(`vorher nach ${schreibAufrufe().length} Schreibaufrufen`);
+      return Promise.resolve();
+    });
+    expect(r.art).toBe('ok');
+    expect(reihenfolge).toEqual(['vorher nach 0 Schreibaufrufen']);
+  });
+
+  it('ohne Schreibrecht (fremde Sperre, anderer Stand) läuft er gar nicht', async () => {
+    const vorher = vi.fn(() => Promise.resolve());
+    const alt = ablegen({ sperre: sperreVon(JOHANN, JETZT) });
+    expect((await speichern(ORT, ICH, alt, NEU, JETZT, vorher)).art).toBe('gesperrt');
+    expect(await speichern(ORT, ICH, 'anders', NEU, JETZT, vorher)).toMatchObject({
+      art: 'gesperrt',
+    });
+    expect(vorher).not.toHaveBeenCalled();
+  });
+
+  it('scheitert er, wird geworfen und am Protokoll nichts geschrieben', async () => {
+    const alt = ablegen();
+    await expect(
+      speichern(ORT, ICH, alt, NEU, JETZT, () => Promise.reject(new Error('Mitarbeit weg'))),
+    ).rejects.toThrow('Mitarbeit weg');
+    expect(schreibAufrufe()).toEqual([]);
+    expect(kopfImSpeicher().stand).toBe(alt);
+  });
+});

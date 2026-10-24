@@ -3,10 +3,19 @@ import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { Icon } from '@ui/icons/icons';
-import { fremdeTypen, type Block } from '@shared/protokolle/dokument';
+import { ableiten, fremdeTypen, type Block } from '@shared/protokolle/dokument';
 import { sperreLage, type ProtokollKopf, type Schreiber } from '@shared/protokolle/speicher';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
-import type { Aufgabe } from '@shared/protokolle/aufgaben';
+import { aufgabenAbgleich, neueAufgabe, type Aufgabe } from '@shared/protokolle/aufgaben';
+import type { Person } from '@shared/organigramm/mitglieder';
+import { AufgabenKontext, type AufgabenKontextWert } from './aufgabenKontext';
+import {
+  aufgabeAendern,
+  aufgabenSchreiben,
+  aufgabenWerte,
+  type MitarbeitOrt,
+} from './aufgabenSchreiben';
+import { ladeGruppenMitglieder } from './mitglieder';
 import { uhrzeit, wannLang } from './anzeige';
 import { Bereiche } from './Bereiche';
 import { DokumentEditor, type EditorGriff } from './DokumentEditor';
@@ -42,24 +51,30 @@ type Laden =
  * Entschieden 24.10.2026 (Alwin): automatisch speichern; die Sperre entsteht mit der ersten Änderung (wer nur
  * reinschaut, blockiert niemanden); schreibt jemand anderes, liest man mit (alle `MITLESEN_MS`) und kann das Schreiben
  * mit Rückfrage übernehmen – auch von sich selbst in einem anderen Fenster.
+ *
+ * S4-2: Aufgaben im Text sind To-Dos in „Mitarbeit“. Beim Speichern gleicht `aufgabenAbgleich` sie ab (das Protokoll
+ * führt); Wer, Bis und Status ändern die Schildchen direkt am To-Do (`aufgabeAendern`).
  */
 export function ProtokollSchreiben({
   sitzung,
   gruppe,
+  gruppeId,
   modul,
   kategorie,
+  mitarbeit,
   ich,
-  aufgaben,
   zeitzone,
   onZurueck,
 }: {
   sitzung: Sitzung;
   gruppe: string;
+  gruppeId: number;
   modul: number;
   /** Kategorie „Protokolle“ der Gruppe. */
   kategorie: number;
+  /** Kategorie „Mitarbeit“ (To-Dos) – `null`, wenn die Gruppe unvollständig eingerichtet ist (dann keine To-Dos). */
+  mitarbeit: number | null;
   ich: Omit<Schreiber, 'fenster'>;
-  aufgaben: readonly Aufgabe[];
   zeitzone: string;
   /** `geaendert` = es wurde gespeichert; die Liste dahinter lädt dann neu. */
   onZurueck: (geaendert: boolean) => void;
@@ -81,11 +96,30 @@ export function ProtokollSchreiben({
   const steuerung = useRef<SchreibSteuerung | null>(null);
   const editor = useRef<EditorGriff | null>(null);
   const gespeichert = useRef(false);
+  const mOrt = useMemo<MitarbeitOrt | null>(
+    () => (mitarbeit === null ? null : { modul, kategorie: mitarbeit }),
+    [modul, mitarbeit],
+  );
+  // Alle To-Dos der Gruppe (auch gelöschte) – im Ref für die Rückrufe des Editors, im Zustand für die Anzeige.
+  const [todos, setTodosZustand] = useState<ReadonlyMap<string, Aufgabe>>(new Map());
+  const todosRef = useRef(todos);
+  const setTodos = useCallback((liste: readonly Aufgabe[] | ReadonlyMap<string, Aufgabe>) => {
+    const m = liste instanceof Map ? liste : new Map((liste as Aufgabe[]).map((a) => [a.id, a]));
+    todosRef.current = m;
+    setTodosZustand(m);
+  }, []);
+  const [mitglieder, setMitglieder] = useState<readonly Person[] | 'verborgen' | null>(null);
+  // Änderungen an To-Dos nacheinander – zwei schnelle Klicks dürfen sich nicht gegenseitig überschreiben.
+  const kette = useRef<Promise<unknown>>(Promise.resolve());
 
   const oeffnen = useCallback(() => {
     setLaden({ art: 'laedt' });
-    protokollLesen(ort).then(
-      ({ kopf, dokument }) => {
+    Promise.all([
+      protokollLesen(ort),
+      mOrt ? aufgabenWerte(mOrt).then((w) => w.map((x) => x.aufgabe)) : Promise.resolve([]),
+    ]).then(
+      ([{ kopf, dokument }, alle]) => {
+        setTodos(alle);
         if (!kopf || !dokument) {
           setLaden({
             art: 'lesen',
@@ -116,7 +150,29 @@ export function ProtokollSchreiben({
         const s = new SchreibSteuerung(
           {
             sperreNehmen: (stand) => sperreNehmen(ort, schreiber, stand),
-            speichern: (stand, d) => speichern(ort, schreiber, stand, d),
+            speichern: (stand, d) =>
+              speichern(
+                ort,
+                schreiber,
+                stand,
+                d,
+                new Date(),
+                mOrt
+                  ? async () =>
+                      setTodos(
+                        await aufgabenSchreiben(mOrt, (vorhanden) =>
+                          aufgabenAbgleich({
+                            eintraege: ableiten(d).aufgaben,
+                            vorhanden,
+                            gruppe: gruppeId,
+                            sitzung: ort.sitzung,
+                            von: schreiber.person,
+                            am: new Date().toISOString(),
+                          }),
+                        ),
+                      )
+                  : undefined,
+              ),
             dokument: () => editor.current?.dokument() ?? dokument,
             jetzt: () => new Date(),
           },
@@ -136,9 +192,62 @@ export function ProtokollSchreiben({
       },
       (e: unknown) => setLaden({ art: 'fehler', fehler: fehlerMeldung(e) }),
     );
-  }, [ort, schreiber]);
+  }, [ort, schreiber, mOrt, gruppeId, setTodos]);
 
   useEffect(oeffnen, [oeffnen]);
+
+  // Wer eine Aufgabe übernehmen kann – einmal je Editor; ein Fehler lässt die Liste leer („werden geladen“ bleibt nicht
+  // stehen: dann gibt es nur den externen Namen, und der Hinweis sagt es).
+  useEffect(() => {
+    let aktiv = true;
+    ladeGruppenMitglieder(gruppeId).then(
+      (m) => aktiv && setMitglieder(m),
+      () => aktiv && setMitglieder('verborgen'),
+    );
+    return () => {
+      aktiv = false;
+    };
+  }, [gruppeId]);
+
+  const todoAendern = useCallback(
+    (id: string, text: string, f: (a: Aufgabe) => Aufgabe) => {
+      if (!mOrt) return;
+      const anlegen = () =>
+        neueAufgabe({
+          id,
+          gruppe: gruppeId,
+          sitzung: ort.sitzung,
+          text,
+          von: schreiber.person,
+          am: new Date().toISOString(),
+        });
+      // Gleich zeigen, dann schreiben; das Ergebnis aus ChurchTools gilt.
+      const vorher = todosRef.current;
+      setTodos(new Map(vorher).set(id, f(vorher.get(id) ?? anlegen())));
+      kette.current = kette.current
+        .catch(() => undefined)
+        .then(() => aufgabeAendern(mOrt, id, f, anlegen))
+        .then(
+          (a) => setTodos(new Map(todosRef.current).set(id, a)),
+          (e: unknown) => {
+            setHinweis(`To-Do nicht gespeichert: ${fehlerMeldung(e).text}`);
+            void aufgabenWerte(mOrt).then(
+              (w) => setTodos(w.map((x) => x.aufgabe)),
+              () => undefined,
+            );
+          },
+        );
+    },
+    [mOrt, gruppeId, ort.sitzung, schreiber.person, setTodos],
+  );
+
+  const fremdeAufgabe = useCallback(
+    (id: string) => {
+      const a = todosRef.current.get(id);
+      return !!a && a.sitzung !== ort.sitzung;
+    },
+    [ort.sitzung],
+  );
 
   // Beim Verlassen der Seite (anderer Reiter, ChurchTools-Menü): noch speichern und die Sperre freigeben – ohne zu
   // warten. Klappt es nicht, verfällt die Sperre nach `SPERRE_MINUTEN`.
@@ -241,6 +350,8 @@ export function ProtokollSchreiben({
     oeffnen();
   };
 
+  const aufgaben = useMemo(() => [...todos.values()].filter((a) => !a.geloescht), [todos]);
+
   const kopfZeile = (
     <>
       <button
@@ -297,6 +408,16 @@ export function ProtokollSchreiben({
 
   const lage = z?.lage ?? 'frei';
   const bearbeitbar = lage === 'frei' || lage === 'schreibe';
+  const kontext: AufgabenKontextWert | null = mOrt
+    ? {
+        todos,
+        mitglieder,
+        bearbeitbar,
+        statusAenderbar: true,
+        ich: schreiber.person,
+        aendern: todoAendern,
+      }
+    : null;
   const sperre = z?.sperre ?? null;
   const ichSelbst = sperre?.von === schreiber.person;
 
@@ -360,17 +481,20 @@ export function ProtokollSchreiben({
         </p>
       )}
 
-      <DokumentEditor
-        key={laden.kopf.stand + laden.kopf.sitzung}
-        start={laden.dokument}
-        bearbeitbar={bearbeitbar}
-        griff={editor}
-        onAenderung={(d) => {
-          setDok(d);
-          setHinweis(null);
-          steuerung.current?.geaendert();
-        }}
-      />
+      <AufgabenKontext.Provider value={kontext}>
+        <DokumentEditor
+          key={laden.kopf.stand + laden.kopf.sitzung}
+          start={laden.dokument}
+          bearbeitbar={bearbeitbar}
+          griff={editor}
+          fremdeAufgabe={fremdeAufgabe}
+          onAenderung={(d) => {
+            setDok(d);
+            setHinweis(null);
+            steuerung.current?.geaendert();
+          }}
+        />
+      </AufgabenKontext.Provider>
 
       <Bereiche dokument={dok} aufgaben={aufgaben} />
 

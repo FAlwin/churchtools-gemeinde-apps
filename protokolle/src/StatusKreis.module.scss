@@ -1,0 +1,31 @@
+// Status-Kreis eines To-Dos (S4-2): offen grau, in Arbeit blau halb gefüllt, erledigt grün mit Haken.
+.kreis {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text3);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--surface3);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.arbeit {
+  color: var(--blue);
+}
+
+.erledigt {
+  color: var(--green);
+}

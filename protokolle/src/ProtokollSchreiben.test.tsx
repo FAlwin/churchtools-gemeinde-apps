@@ -5,6 +5,7 @@ import { BLOCKNOTE_DOKUMENT } from '@shared/protokolle/dokument.testdaten';
 import { sperreVon, type ProtokollKopf } from '@shared/protokolle/speicher';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
 import * as S from './schreiben';
+import * as A from './aufgabenSchreiben';
 import { ProtokollSchreiben } from './ProtokollSchreiben';
 
 /** Der Bildschirm „Protokoll schreiben“ (S4-1) – Schreiben bei ChurchTools und der Editor sind Attrappen. */
@@ -15,11 +16,63 @@ vi.mock('./schreiben', () => ({
   sperreFreigeben: vi.fn(() => Promise.resolve(true)),
   sperreNehmen: vi.fn(),
 }));
-vi.mock('./DokumentEditor', () => ({
-  DokumentEditor: ({ bearbeitbar }: { bearbeitbar: boolean }) => (
-    <div data-testid="editor">{bearbeitbar ? 'bearbeitbar' : 'nur lesen'}</div>
-  ),
+vi.mock('./aufgabenSchreiben', () => ({
+  aufgabenWerte: vi.fn(() => Promise.resolve([])),
+  aufgabenSchreiben: vi.fn(() => Promise.resolve([])),
+  aufgabeAendern: vi.fn(),
 }));
+vi.mock('./mitglieder', () => ({
+  ladeGruppenMitglieder: vi.fn(() => Promise.resolve([{ id: 7, name: 'Johann' }])),
+}));
+// Der Editor als Attrappe: zeigt, ob er bearbeitbar ist, meldet auf Knopfdruck eine Eingabe und reicht den Kontext
+// der Aufgaben durch (wie die Blöcke ihn sehen).
+vi.mock('./DokumentEditor', async () => {
+  const { useContext, useImperativeHandle } = await import('react');
+  const { AufgabenKontext } = await import('./aufgabenKontext');
+  return {
+    DokumentEditor: ({
+      bearbeitbar,
+      onAenderung,
+      griff,
+    }: {
+      bearbeitbar: boolean;
+      onAenderung: (d: unknown[]) => void;
+      griff: { current: unknown };
+    }) => {
+      const k = useContext(AufgabenKontext);
+      useImperativeHandle(griff, () => ({
+        dokument: () => MIT_AUFGABE,
+        ersetzen: () => undefined,
+      }));
+      return (
+        <div>
+          <span data-testid="editor">{bearbeitbar ? 'bearbeitbar' : 'nur lesen'}</span>
+          <button type="button" onClick={() => onAenderung(MIT_AUFGABE)}>
+            tippen
+          </button>
+          <button
+            type="button"
+            onClick={() => k?.aendern('t1', 'Beamer', (a) => ({ ...a, wer: [7] }))}
+          >
+            wer
+          </button>
+          <span data-testid="todos">{k ? [...k.todos.keys()].join(',') : 'kein Kontext'}</span>
+        </div>
+      );
+    },
+  };
+});
+
+const MIT_AUFGABE = [
+  { id: 'h', type: 'heading', props: { level: 1 }, content: 'Punkt', children: [] },
+  {
+    id: 'a',
+    type: 'aufgabe',
+    props: { aufgabe: 't1' },
+    content: [{ type: 'text', text: 'Beamer', styles: {} }],
+    children: [],
+  },
+];
 
 const lesen = vi.mocked(S.protokollLesen);
 const uebernehmen = vi.mocked(S.schreibenUebernehmen);
@@ -49,9 +102,10 @@ const zeige = (onZurueck = vi.fn()) => {
   const props = {
     sitzung: SITZUNG,
     gruppe: 'Leitungsteam',
+    gruppeId: 194,
     modul: 24,
     kategorie: 62,
-    aufgaben: [],
+    mitarbeit: 65,
     zeitzone: 'Europe/Berlin',
     onZurueck,
   };
@@ -120,5 +174,34 @@ describe('ProtokollSchreiben', () => {
     zeige();
     expect(await screen.findByRole('button', { name: /erneut/i })).toBeTruthy();
     expect(screen.queryByTestId('editor')).toBeNull();
+  });
+
+  it('Speichern gleicht vorher die To-Dos ab – geplant aus dem Text des Protokolls (S4-2)', async () => {
+    vi.mocked(S.sperreNehmen).mockResolvedValue({ art: 'ok', kopf: KOPF });
+    vi.mocked(S.speichern).mockImplementation(async (_o, _i, _s, _d, _j, vorher) => {
+      await vorher?.();
+      return { art: 'ok', kopf: { ...KOPF, stand: 'b' } };
+    });
+    zeige();
+    fireEvent.click(await screen.findByRole('button', { name: 'tippen' }));
+    await waitFor(() => expect(A.aufgabenSchreiben).toHaveBeenCalled());
+    expect(vi.mocked(A.aufgabenSchreiben).mock.calls[0][0]).toEqual({ modul: 24, kategorie: 65 });
+    const planen = vi.mocked(A.aufgabenSchreiben).mock.calls[0][1];
+    const plan = planen([]);
+    expect(plan.anlegen.map((a) => [a.id, a.text, a.gruppe, a.sitzung])).toEqual([
+      ['t1', 'Beamer', 194, 's1'],
+    ]);
+  });
+
+  it('Wer/Bis/Status gehen direkt ins To-Do (aufgabeAendern) und erscheinen sofort', async () => {
+    vi.mocked(A.aufgabeAendern).mockImplementation((_o, _id, f, anlegen) =>
+      Promise.resolve(f(anlegen())),
+    );
+    zeige();
+    fireEvent.click(await screen.findByRole('button', { name: 'wer' }));
+    expect(screen.getByTestId('todos').textContent).toBe('t1');
+    await waitFor(() => expect(A.aufgabeAendern).toHaveBeenCalledTimes(1));
+    const [ort, id] = vi.mocked(A.aufgabeAendern).mock.calls[0];
+    expect([ort, id]).toEqual([{ modul: 24, kategorie: 65 }, 't1']);
   });
 });

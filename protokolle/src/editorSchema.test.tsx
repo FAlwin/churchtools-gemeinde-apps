@@ -5,7 +5,7 @@ import { BlockNoteEditor, type PartialBlock } from '@blocknote/core';
 import { ableiten, fremdeTypen, type Block } from '@shared/protokolle/dokument';
 import { dokumentAusTeilen, teileBauen } from '@shared/protokolle/speicher';
 import { STANDARD_VORLAGEN, startDokument } from '@shared/protokolle/vorlagen';
-import { EDITOR_TYPEN, schema } from './editorSchema';
+import { aufgabenIdsSetzen, EDITOR_TYPEN, schema } from './editorSchema';
 import { ProtokollAnsicht } from './ProtokollAnsicht';
 
 /**
@@ -101,5 +101,34 @@ describe('Editor-Schema gegen Ableitung, Speicher und Ansicht', () => {
     });
     render(<ProtokollAnsicht dokument={e.document as Block[]} />);
     expect(screen.getByText('ganz wichtig').closest('mark')).not.toBeNull();
+  });
+
+  it('Aufgaben-IDs: gesetzt für neue und doppelte, Rückgängig nimmt sie NICHT wieder weg (S4-2)', () => {
+    const e = editorMit([
+      { id: 'p', type: 'paragraph', content: 'Text' },
+      { id: 'a1', type: 'aufgabe', props: { aufgabe: '' }, content: 'Beamer' },
+    ]);
+    e.mount(document.createElement('div'));
+    // Eine Eingabe, die im Verlauf landet – danach die IDs, dann Rückgängig.
+    e.updateBlock('p', { content: 'Text geändert' });
+    let n = 0;
+    expect(
+      aufgabenIdsSetzen(
+        e,
+        () => false,
+        () => `id${++n}`,
+      ),
+    ).toBe(true);
+    expect(e.getBlock('a1')?.props).toMatchObject({ aufgabe: 'id1' });
+    expect(
+      aufgabenIdsSetzen(
+        e,
+        () => false,
+        () => `id${++n}`,
+      ),
+    ).toBe(false);
+    expect(e.undo()).toBe(true);
+    expect(JSON.stringify(e.getBlock('p')?.content)).toContain('"Text"');
+    expect(e.getBlock('a1')?.props).toMatchObject({ aufgabe: 'id1' });
   });
 });

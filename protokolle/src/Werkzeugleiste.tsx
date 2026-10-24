@@ -37,6 +37,31 @@ function ausgewaehlt(editor: ProtokollEditor) {
   return editor.getSelection()?.blocks ?? [editor.getTextCursorPosition().block];
 }
 
+/** Aufgabe, Beschluss, Termin (S4-2) – Knöpfe in der Leiste, Einträge im „/“-Menü. */
+export const EIGENE = [
+  { art: 'aufgabe', titel: 'Aufgabe', icon: 'aufgabe' },
+  { art: 'beschluss', titel: 'Beschluss', icon: 'stempel' },
+  { art: 'termin', titel: 'Termin', icon: 'calendar' },
+] as const;
+
+type Eigene = (typeof EIGENE)[number]['art'];
+
+/**
+ * Die markierten Textblöcke zu Aufgabe, Beschluss oder Termin machen – der Text bleibt. Sind schon alle von dieser Art,
+ * werden sie wieder normaler Text (eine Aufgabe verschwindet damit aus den To-Dos; Rückgängig holt sie zurück).
+ */
+function eigeneArt(editor: ProtokollEditor, art: Eigene): void {
+  const bloecke = ausgewaehlt(editor).filter(
+    (b) => istTextart(artVon(b)) || EIGENE.some((e) => e.art === b.type),
+  );
+  const zurueck = bloecke.length > 0 && bloecke.every((b) => b.type === art);
+  for (const b of bloecke) {
+    if (zurueck) editor.updateBlock(b, { type: 'paragraph', props: {} });
+    else if (b.type !== art) editor.updateBlock(b, { type: art, props: {} });
+  }
+  editor.focus();
+}
+
 /** Die markierten Blöcke in diese Textart bringen – eigene Blöcke bleiben, was sie sind. */
 function artSetzen(editor: ProtokollEditor, art: Textart): void {
   for (const b of ausgewaehlt(editor)) {
@@ -101,6 +126,7 @@ export function Werkzeugleiste({ editor }: { editor: ProtokollEditor }) {
       return {
         art: artVon(bloecke[0]),
         mitText: bloecke.some((b) => b.content !== undefined),
+        typ: bloecke[0].type,
         fett: !!s.bold,
         kursiv: !!s.italic,
         unter: !!s.underline,
@@ -221,6 +247,18 @@ export function Werkzeugleiste({ editor }: { editor: ProtokollEditor }) {
             editor.focus();
           }}
         />
+      </div>
+      <div className={styles.gruppe}>
+        {EIGENE.map((e) => (
+          <SymbolKnopf
+            key={e.art}
+            titel={e.titel}
+            icon={e.icon}
+            aktiv={z.typ === e.art}
+            aus={!textart && z.typ !== e.art && !EIGENE.some((x) => x.art === z.typ)}
+            onKlick={() => eigeneArt(editor, e.art)}
+          />
+        ))}
       </div>
       <div className={styles.gruppe}>
         <SymbolKnopf

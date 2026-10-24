@@ -15,7 +15,7 @@ export interface VerlaufEintrag {
   /** ISO-Zeit. */
   am: string;
   von: number;
-  art: 'angelegt' | 'status' | 'notiz' | 'geloescht';
+  art: 'angelegt' | 'status' | 'notiz' | 'geloescht' | 'wiederhergestellt';
   status?: AufgabenStatus;
   text?: string;
 }
@@ -98,6 +98,12 @@ export function notizHinzufuegen(a: Aufgabe, text: string, von: number, am: stri
 export function alsGeloescht(a: Aufgabe, von: number, am: string): Aufgabe {
   if (a.geloescht) return a;
   return { ...a, geloescht: true, verlauf: [...a.verlauf, { am, von, art: 'geloescht' }] };
+}
+
+/** Wieder da (die Aufgabe steht wieder im Protokoll, etwa nach „Rückgängig“) – mit Verlaufseintrag. */
+export function alsWiederhergestellt(a: Aufgabe, von: number, am: string): Aufgabe {
+  if (!a.geloescht) return a;
+  return { ...a, geloescht: false, verlauf: [...a.verlauf, { am, von, art: 'wiederhergestellt' }] };
 }
 
 /** Überfällig: nicht erledigt und das Datum liegt vor heute (`heute` als `JJJJ-MM-TT`, Ortszeit des Aufrufers). */
@@ -189,4 +195,99 @@ export function istAufgabe(x: unknown): x is Aufgabe {
     (a.status === 'offen' || a.status === 'arbeit' || a.status === 'erledigt') &&
     Array.isArray(a.verlauf)
   );
+}
+
+/** Was der Abgleich braucht – ein Block des Protokolls (`AufgabenEintrag` aus `ableiten`). */
+interface Eintrag {
+  aufgabe: string | null;
+  text: string;
+}
+
+/** Ein Block, wie er im Dokument steht – nur, was die ID-Vergabe braucht. */
+interface IdBlock {
+  id: string;
+  type: string;
+  props?: Record<string, unknown>;
+  children?: IdBlock[];
+}
+
+/**
+ * **IDs für Aufgaben im Protokoll** (S4-2): Ein Aufgaben-Block ohne ID (neu, aus einer Vorlage) oder mit einer ID, die
+ * schon ein früherer Block trägt (kopiert und eingefügt) oder die zu einer anderen Sitzung gehört (aus einem anderen
+ * Protokoll eingefügt), bekommt eine neue – sonst teilten sich zwei Aufgaben ein To-Do. Ergebnis: welche Blöcke welche
+ * ID bekommen; leer, wenn alles passt.
+ */
+export function aufgabenIdsVergeben(
+  dokument: readonly IdBlock[],
+  fremd: (id: string) => boolean,
+  neueId: () => string,
+): { blockId: string; aufgabe: string }[] {
+  const gesehen = new Set<string>();
+  const neu: { blockId: string; aufgabe: string }[] = [];
+  const besuche = (b: IdBlock): void => {
+    if (b.type === 'aufgabe') {
+      const id = typeof b.props?.aufgabe === 'string' ? b.props.aufgabe : '';
+      if (!id || gesehen.has(id) || fremd(id)) neu.push({ blockId: b.id, aufgabe: neueId() });
+      else gesehen.add(id);
+    }
+    for (const k of b.children ?? []) besuche(k);
+  };
+  dokument.forEach(besuche);
+  return neu;
+}
+
+export interface AufgabenPlan {
+  /** Neue To-Do-Werte. */
+  anlegen: Aufgabe[];
+  /** Geänderte To-Dos (Text, gelöscht vermerkt, wiederhergestellt) – jeweils der neue Stand. */
+  aendern: Aufgabe[];
+}
+
+/**
+ * **Das Protokoll führt** (Alwin 24.10.2026, S4-2): Was muss in „Mitarbeit“ geschehen, damit die To-Dos dieser Sitzung zu
+ * den Aufgaben im Protokoll passen?
+ * - Aufgabe mit Text, aber noch kein To-Do → anlegen (Zuständige sehen es sofort);
+ * - Text im Protokoll geändert → Text im To-Do mit (Wer, Bis und Status bleiben – die gehören dem To-Do);
+ * - To-Do dieser Sitzung, dessen Aufgabe nicht mehr im Protokoll steht → als gelöscht vermerkt (nie hart gelöscht);
+ * - als gelöscht vermerkt, aber wieder im Protokoll (Rückgängig) → wiederhergestellt.
+ * To-Dos anderer Sitzungen bleiben unberührt. Nichts zu tun → leere Listen (dann wird nichts geschrieben).
+ */
+export function aufgabenAbgleich(q: {
+  eintraege: readonly Eintrag[];
+  vorhanden: readonly Aufgabe[];
+  gruppe: number;
+  sitzung: string;
+  von: number;
+  am: string;
+}): AufgabenPlan {
+  const plan: AufgabenPlan = { anlegen: [], aendern: [] };
+  const vorhanden = new Map(q.vorhanden.map((a) => [a.id, a]));
+  const imProtokoll = new Set<string>();
+  for (const e of q.eintraege) {
+    if (!e.aufgabe || imProtokoll.has(e.aufgabe)) continue;
+    imProtokoll.add(e.aufgabe);
+    const a = vorhanden.get(e.aufgabe);
+    const text = e.text.trim();
+    if (!a) {
+      plan.anlegen.push(
+        neueAufgabe({
+          id: e.aufgabe,
+          gruppe: q.gruppe,
+          sitzung: q.sitzung,
+          text,
+          von: q.von,
+          am: q.am,
+        }),
+      );
+      continue;
+    }
+    if (a.sitzung !== q.sitzung) continue; // gehört einer anderen Sitzung – IDs vergibt `aufgabenIdsVergeben` neu
+    let neu = alsWiederhergestellt(a, q.von, q.am);
+    if (neu.text !== text) neu = { ...neu, text };
+    if (neu !== a) plan.aendern.push(neu);
+  }
+  for (const a of q.vorhanden)
+    if (a.sitzung === q.sitzung && !a.geloescht && !imProtokoll.has(a.id))
+      plan.aendern.push(alsGeloescht(a, q.von, q.am));
+  return plan;
 }

@@ -142,6 +142,10 @@ export async function schreibenUebernehmen(
 /**
  * **Speichern** (S4-1, automatisch kurz nach der letzten Eingabe). `basisStand` = der Stand, den dieses Fenster zuletzt
  * geladen oder gespeichert hat. Ist das Dokument unverändert, wird nur das Lebenszeichen der Sperre erneuert.
+ *
+ * `vorher` (S4-2: die To-Dos in „Mitarbeit“ abgleichen) läuft erst, **nachdem** feststeht, dass dieses Fenster schreiben
+ * darf, und **bevor** am Protokoll etwas geschrieben wird: Ein Fenster ohne Sperre fasst die To-Dos nie an, und scheitert
+ * der Abgleich, bleibt das Protokoll, wie es war (das nächste Speichern rechnet ihn neu).
  */
 export async function speichern(
   ort: ProtokollOrt,
@@ -149,10 +153,12 @@ export async function speichern(
   basisStand: string,
   dokument: readonly Block[],
   jetzt = new Date(),
+  vorher?: () => Promise<void>,
 ): Promise<SchreibErgebnis> {
   const f = await frisch(ort);
   const nein = abweisung(f, ich, basisStand, jetzt);
   if (nein) return nein;
+  if (vorher) await vorher();
   const { stand, werte } = teileBauen(dokument, ort.sitzung);
 
   // 1. Neue Teile – außer, sie liegen schon vollständig da: unverändertes Dokument (dann erneuert das Speichern nur das

@@ -75,7 +75,12 @@ export type IconName =
   | 'trennlinie'
   | 'einruecken'
   | 'ausruecken'
-  | 'format-weg';
+  | 'format-weg'
+  | 'kreis'
+  | 'kreis-halb'
+  | 'kreis-haken'
+  | 'aufgabe'
+  | 'stempel';
 
 interface IconProps {
   name: IconName;
@@ -468,6 +473,42 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
       return (
         <svg {...p}>
           <path d="M5 5.5V4h12v1.5M11 4l-3 14M6 18h5M15 14l5 5M20 14l-5 5" />
+        </svg>
+      );
+    // Status eines To-Dos (offen · in Arbeit · erledigt) und Blöcke Aufgabe/Beschluss im Protokoll (S4-2, Entwurf 7).
+    case 'kreis':
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="8.5" />
+        </svg>
+      );
+    case 'kreis-halb':
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" fill="currentColor" />
+        </svg>
+      );
+    case 'kreis-haken':
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="m8.2 12.2 2.6 2.6 5-5.4" />
+        </svg>
+      );
+    case 'aufgabe':
+      return (
+        <svg {...p}>
+          <rect x="3.5" y="4.5" width="7" height="7" rx="1.5" />
+          <path d="m5.2 8 1.4 1.4 2.4-2.6M14 8h6.5M3.5 17h7M14 17h6.5" />
+        </svg>
+      );
+    case 'stempel':
+      return (
+        <svg {...p}>
+          <path d="M9 6.5a3 3 0 1 1 6 0c0 1.5-.8 2.3-.8 4.5h-4.4c0-2.2-.8-3-.8-4.5Z" />
+          <rect x="4.5" y="13.5" width="15" height="4" rx="1.2" />
+          <path d="M5.5 20.5h13" />
         </svg>
       );
     case 'heading':

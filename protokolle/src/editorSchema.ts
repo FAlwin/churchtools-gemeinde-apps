@@ -4,8 +4,10 @@ import {
   defaultBlockSpecs,
   type BlockNoteEditor,
 } from '@blocknote/core';
+import { createExtension } from '@blocknote/core';
 import { createReactBlockSpec } from '@blocknote/react';
 import { BLOCK } from '@shared/protokolle/dokument';
+import { aufgabenIdsVergeben } from '@shared/protokolle/aufgaben';
 import { AufgabeBlock, BeschlussBlock, TerminBlock, VerweisBlock } from './EditorBloecke';
 
 /**
@@ -15,14 +17,22 @@ import { AufgabeBlock, BeschlussBlock, TerminBlock, VerweisBlock } from './Edito
  * Bewusst **nicht** dabei: Bilder, Videos, Dateien, Code, Tabellen. Die Lese-Ansicht und das PDF zeigen sie nicht, und
  * was der Editor annimmt, aber keine Ansicht zeigt, wäre still verschwunden. (Tabellen aus Word kommen als Text an.)
  *
- * Die eigenen Blöcke halten in S4-1 nur ihre Daten fest (`props` wie in `@shared/protokolle/dokument`), damit ein
- * Protokoll mit Aufgaben, Beschlüssen, Terminen und festen Punkten beim Speichern nichts verliert. Bearbeiten mit Wer/Bis,
- * Datum und Liste der offenen To-Dos kommt in S4-2 und S4-3.
+ * Die eigenen Blöcke tragen ihre Daten in `props` wie in `@shared/protokolle/dokument`; Aufgabe und Termin werden seit
+ * S4-2 bedient (`EditorBloecke.tsx`), die festen Punkte (Verweis) in S4-3. **„[] “ + Leertaste macht eine Aufgabe**
+ * (Alwin 24.10.2026, wie Entwurf 7) – die Regel läuft vor der von BlockNotes Checkliste, die Checkliste gibt es weiter
+ * über Textart und „/“-Menü.
  */
+
+const aufgabeKuerzel = createExtension({
+  key: 'protokoll-aufgabe-kuerzel',
+  runsBefore: ['check-list-item-shortcuts'],
+  inputRules: [{ find: /^\s?\[\s*\]\s$/, replace: () => ({ type: BLOCK.aufgabe, props: {} }) }],
+});
 
 const aufgabeBlock = createReactBlockSpec(
   { type: BLOCK.aufgabe, propSchema: { aufgabe: { default: '' } }, content: 'inline' },
   { render: AufgabeBlock },
+  [aufgabeKuerzel],
 );
 
 const beschlussBlock = createReactBlockSpec(
@@ -67,3 +77,23 @@ export type ProtokollEditor = BlockNoteEditor<
 
 /** Die Blockarten, die der Editor kennt – für `fremdeTypen` (nichts öffnen, was er beim Speichern verlöre). */
 export const EDITOR_TYPEN: ReadonlySet<string> = new Set(Object.keys(schema.blockSpecs));
+
+/**
+ * **Aufgaben-IDs im Editor setzen** (S4-2, Regel `aufgabenIdsVergeben`): neue, kopierte oder aus einer anderen Sitzung
+ * eingefügte Aufgaben bekommen eine eigene ID – so gibt es das To-Do schon, wenn jemand gleich „Wer?“ wählt.
+ * **Nicht im Rückgängig-Verlauf** (beim Durchklicken 24.10.2026 gefunden): sonst nähme „Rückgängig“ die ID wieder weg,
+ * die Aufgabe bekäme eine neue, und ihr To-Do (mit Wer/Bis/Status) wäre als gelöscht vermerkt. `true`, wenn gesetzt wurde.
+ */
+export function aufgabenIdsSetzen(
+  editor: ProtokollEditor,
+  fremd: (id: string) => boolean,
+  neueId: () => string = () => crypto.randomUUID(),
+): boolean {
+  const ids = aufgabenIdsVergeben(editor.document, fremd, neueId);
+  if (!ids.length) return false;
+  editor.transact((tr) => {
+    tr.setMeta('addToHistory', false);
+    for (const x of ids) editor.updateBlock(x.blockId, { props: { aufgabe: x.aufgabe } });
+  });
+  return true;
+}

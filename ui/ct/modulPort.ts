@@ -11,6 +11,7 @@ import { modulSuchen, type ModulPort } from '@shared/ct/modulDaten';
 import { merkeVersprechen } from '@shared/ct/versprechenMerker';
 import { kuerzelAusBasis } from '../erweiterung/kuerzel';
 import type { EntwurfPort } from '@shared/dienstplan/entwuerfe';
+import type { VersionPort } from '@shared/ct/versionierterWert';
 import { ApiError } from './fehler';
 import { ctAnfrage, ctDaten, KeinSpeicherRecht } from './verbindung';
 
@@ -32,8 +33,11 @@ export function modulPortFuer(kuerzel: () => string | null): ModulPort {
   };
 }
 
-/** Dazu, was der Entwurfs-Speicher zusätzlich braucht. */
-export function entwurfPortFuer(kuerzel: () => string | null): EntwurfPort {
+/**
+ * Dazu, was ein Speicher mit Versionsnummer zusätzlich braucht (`@shared/ct/versionierterWert`, Organigramm O7) – und
+ * genauso der Entwurfs-Speicher des Dienstplaners (`entwurfPortFuer`, dieselbe Form).
+ */
+export function versionPortFuer(kuerzel: () => string | null): VersionPort & EntwurfPort {
   return {
     ...modulPortFuer(kuerzel),
     // Abgemeldet ist nur der echte 401. Ein fehlendes Recht (von ChurchTools ebenfalls als 401 gemeldet)
@@ -42,6 +46,9 @@ export function entwurfPortFuer(kuerzel: () => string | null): EntwurfPort {
     jetzt: () => new Date().toISOString(),
   };
 }
+
+/** Der Entwurfs-Speicher des Dienstplaners – derselbe Anschluss wie `versionPortFuer`. */
+export const entwurfPortFuer: (kuerzel: () => string | null) => EntwurfPort = versionPortFuer;
 
 /**
  * **Der Anschluss der Erweiterung, in der dieser Code gerade läuft** – Kürzel aus der eigenen Adresse

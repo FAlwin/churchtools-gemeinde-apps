@@ -107,4 +107,15 @@ eigene Rolle dort erlaubt; Gruppen-Admins dürfen alles. In der Test-Instanz dü
 
 ## Was die Erweiterung speichert
 
-Bis O3 nichts (gemerkt wird nur pro Gerät, welche Gruppentypen ausgeblendet sind). Ab O7 den Plan „neue Gliederung“ im Speicher der Erweiterung; alles andere liegt in ChurchTools.
+Pro Gerät wird nur gemerkt, welche Gruppentypen ausgeblendet sind. Ab O7 liegt der **Plan „neue Gliederung“** im
+Speicher der Erweiterung: als ein Eintrag in der Kategorie **„Plan „neue Gliederung““** (Kürzel `plan`), die die
+Erweiterung beim ersten Speichern anlegt. Darin stehen nur die Änderungen gegenüber heute (neue Gruppen, Umhängen,
+Umbenennen, Archivieren) und wer zuletzt gespeichert hat. Alles andere liegt in ChurchTools.
+
+> **Rechte der Kategorie** (wie beim Dienstplaner gemessen): Wer die Kategorie anlegt, bekommt sofort alle Rechte
+> darauf. Danach in ChurchTools den **anderen Gruppen-Admins** die Rechte auf die Kategorie „Plan“ geben: **Daten
+> sehen** und **Daten anlegen, ändern, löschen** – sonst niemandem.
+>
+> **Vorsicht:** ChurchTools nimmt dasselbe Kürzel zweimal an. Sieht ein Admin die Kategorie nur nicht, weil ihm das
+> Sehrecht fehlt, legt sein erstes Speichern eine zweite an. Deshalb zuerst die Rechte geben. Gibt es doch zwei, nimmt
+> die Erweiterung die mit der kleinsten Nummer.

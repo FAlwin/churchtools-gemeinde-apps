@@ -75,6 +75,16 @@ describe('AblaufAnlegenFenster', () => {
     expect(api.ablaufAnlegen).toHaveBeenCalledWith(148, 2, { art: 'vorlage', vorlageId: 28 });
   });
 
+  it('im ChurchTools-Aufbau (E6-O F1, #716): X oben, unten Abbrechen und dann Anlegen', async () => {
+    zeige();
+    await screen.findByRole('button', { name: /Sonntag/ });
+    const knoepfe = screen
+      .getAllByRole('button')
+      .map((b) => b.getAttribute('aria-label') ?? b.textContent);
+    expect(knoepfe[0]).toBe('Fenster schließen');
+    expect(knoepfe.slice(-2)).toEqual(['Abbrechen', 'Anlegen']);
+  });
+
   it('„Wie eine frühere": die jüngste frühere ist gewählt – Kopie davon', async () => {
     zeige();
     await screen.findByRole('button', { name: /Sonntag/ });

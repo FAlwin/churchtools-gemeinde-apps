@@ -119,6 +119,12 @@ vi.mock('./struktur', () => ({
   ladeAktivStatus: () => Promise.resolve(1),
 }));
 vi.mock('./ladeEinsaetze', () => ({ ladeEinsaetze: vi.fn() }));
+// Der Plan (O7) – hier nur, ob der Reiter da ist; die Bedienung prüft NeueGliederung.test.tsx.
+vi.mock('./plan', () => ({
+  ladePlan: () => Promise.resolve({ ok: true, daten: null }),
+  speicherePlan: vi.fn(),
+  verwerfePlan: vi.fn(),
+}));
 const laden = vi.mocked(ladeStart);
 const mitgliederLaden = vi.mocked(ladeMitglieder);
 const nachladen = vi.mocked(fehlendeNachladen);
@@ -367,6 +373,21 @@ describe('O3: offene Plätze, Personen, Hinweise', () => {
     await screen.findByText('Hallo Alwin');
     expect(screen.getByRole('button', { name: 'Personen' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Hinweise' })).toBeTruthy();
+  });
+
+  it('„Neue Gliederung“ (O7) nur für Gruppen-Admins – Leitung kommt auch über die Adresse nicht hin', async () => {
+    window.location.hash = '#gliederung';
+    const { unmount } = render(<App />);
+    expect(await screen.findByRole('button', { name: 'Plan anlegen' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Neue Gliederung' })).toBeTruthy();
+    unmount();
+
+    laden.mockResolvedValue(start({ rechte: rechte(), geleitet: [7] }));
+    render(<App />);
+    await screen.findByRole('button', { name: 'Personen' });
+    expect(screen.queryByRole('button', { name: 'Neue Gliederung' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Plan anlegen' })).toBeNull();
+    expect(screen.getByRole('region', { name: 'Gottesdienst' })).toBeTruthy();
   });
 
   it('wer nichts leitet und kein Admin ist: keine Reiter, auch nicht über die Adresse', async () => {

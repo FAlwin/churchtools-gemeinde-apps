@@ -102,15 +102,13 @@ export async function gruppeWiederLoeschen(z: StrukturZugriff, gruppeId: number)
 }
 
 /** Alle Gruppen unter `id` über die ganze Hierarchie (nicht nur die sichtbaren Zweige), jede einmal. */
-export function untergruppenVon(
-  eltern: ReadonlyMap<number, readonly number[]>,
-  id: number,
-): Set<number> {
-  const kinder = new Map<number, number[]>();
+export function untergruppenVon<K = number>(eltern: ReadonlyMap<K, readonly K[]>, id: K): Set<K> {
+  // Allgemein über den Schlüssel: der Plan (O7) hat neben ChurchTools-IDs auch eigene für neue Gruppen.
+  const kinder = new Map<K, K[]>();
   for (const [kind, liste] of eltern)
     for (const e of liste) kinder.set(e, [...(kinder.get(e) ?? []), kind]);
-  const s = new Set<number>();
-  const lauf = (x: number) => {
+  const s = new Set<K>();
+  const lauf = (x: K) => {
     for (const k of kinder.get(x) ?? []) {
       if (s.has(k) || k === id) continue;
       s.add(k);

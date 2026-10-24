@@ -275,3 +275,18 @@ describe('WerKann – Eintragen', () => {
     expect(screen.queryByRole('button', { name: /^Vorlieben von/ })).toBeNull();
   });
 });
+
+/** Fenster wie ChurchTools (E6-O F2, #720): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
+const knopfFolge = () =>
+  screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent);
+
+describe('WerKann im ChurchTools-Aufbau', () => {
+  it('nur auswählen: X oben, unten nur Schließen', async () => {
+    laden.mockResolvedValue([k(1, 'Anna')]);
+    render(<WerKann platz={PLATZ} onClose={() => {}} />);
+    await screen.findByRole('list', { name: 'Wer kann?' });
+    expect(screen.getByRole('dialog', { name: 'Ton · So 08.11.' })).toBeTruthy();
+    expect(knopfFolge()[0]).toBe('Fenster schließen');
+    expect(knopfFolge().at(-1)).toBe('Schließen');
+  });
+});

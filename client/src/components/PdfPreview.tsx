@@ -14,6 +14,11 @@ interface PdfPreviewProps {
   semitones: number;
   /** Scroll-Modus (#607): die Vorschau zeigt die lange Seite, wie sie im Liederheft erscheint. */
   rolle?: boolean;
+  /**
+   * Kopf aus der Liedinfo (L4) statt aus den Kopfzeilen der Datei – so zeigt die Vorschau das Blatt, wie es nach dem
+   * Speichern aussieht. Fehlt er, gilt wie bisher die Datei.
+   */
+  kopf?: { author: string; bpm: number | null; timeSig: string };
 }
 
 const MAX_PAGES = 8; // Sicherheitsdeckel – mehr Seiten hat kein Lied
@@ -22,7 +27,7 @@ const MAX_PAGES = 8; // Sicherheitsdeckel – mehr Seiten hat kein Lied
  *  Bühnen-/Druck-Ansicht und rendert ALLE Seiten untereinander (auf die Panel-Breite eingepasst,
  *  Retina-scharf). Entkoppelt (debounced), damit das Tippen flüssig bleibt; passt sich bei
  *  Größenänderung des Panels automatisch neu ein. */
-export function PdfPreview({ title, text, semitones, rolle = false }: PdfPreviewProps) {
+export function PdfPreview({ title, text, semitones, rolle = false, kopf }: PdfPreviewProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   // Erhöht sich bei Panel-Resize → Seiten neu einpassen (sonst bleibt eine beim ersten,
   // evtl. noch winzigen Layout gerenderte Mini-Vorschau stehen).
@@ -60,11 +65,11 @@ export function PdfPreview({ title, text, semitones, rolle = false }: PdfPreview
         // und Vorschau gemeinsam (#236). Vorher stand die Regel nur hier, weshalb die Vorschau
         // den `{title}` zeigte und das fertige Blatt nicht.
         title,
-        author: '',
+        author: kopf?.author ?? '',
         originalKey: meta.key || '',
         targetKey: meta.key || '',
-        bpm: meta.tempo ? Number(meta.tempo) || null : null,
-        timeSig: meta.time || '',
+        bpm: kopf ? kopf.bpm : meta.tempo ? Number(meta.tempo) || null : null,
+        timeSig: kopf ? kopf.timeSig : meta.time || '',
         chordpro: text,
         ccli: null,
       };
@@ -116,7 +121,9 @@ export function PdfPreview({ title, text, semitones, rolle = false }: PdfPreview
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [title, text, semitones, rolle, fitTick, logo]);
+    // Der Kopf als einzelne Werte: Das Objekt ist bei jedem Zeichnen neu und würde sonst jedes Mal neu rendern.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, text, semitones, rolle, fitTick, logo, kopf?.author, kopf?.bpm, kopf?.timeSig]);
 
   return <div ref={wrapRef} className={styles.wrap} />;
 }

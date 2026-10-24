@@ -161,7 +161,9 @@ describe('Notenblatt aus SongSelect holen', () => {
       tonality: 'D',
       arrangementID: '70',
     });
-    expect(await ct.geschrieben[1].datei?.text()).toBe('{title: Treu}\n{key: D}');
+    // Seit L4-4 (23.10.2026): Den Titel führt ChurchTools schon („Treu“) – die Kopfzeile verlässt das Notenblatt,
+    // {key} bleibt (notierte Tonart). Geschrieben wurde am Lied nichts (kein PUT in der Reihe oben).
+    expect(await ct.geschrieben[1].datei?.text()).toBe('{key: D}');
   });
 
   it('liefert CCLI nichts, wird auch nichts gelöscht', async () => {

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
@@ -229,12 +230,16 @@ export function ZauberstabFach({
     <Sheet
       title={titel}
       onClose={schliessen}
-      cancelLabel={
-        zustand.art === 'speichert'
-          ? 'Bitte warten – wird eingetragen …'
-          : zustand.art === 'fertig'
-            ? 'Schließen'
-            : 'Abbrechen'
+      cancelLabel={zustand.art === 'fertig' ? 'Schließen' : 'Abbrechen'}
+      beschaeftigt={zustand.art === 'speichert'}
+      knoepfe={
+        zustand.art === 'pruefen' ? (
+          <FensterKnopf disabled={wahlen.length === 0} onClick={() => void los()}>
+            {wahlen.length === 1
+              ? '1 als Entwurf übernehmen'
+              : `${wahlen.length} als Entwurf übernehmen`}
+          </FensterKnopf>
+        ) : null
       }
     >
       <p className={styles.unter}>{unter}</p>
@@ -272,7 +277,11 @@ export function ZauberstabFach({
             <p className={styles.zusammen}>
               <b>
                 {wahlen.length} {wahlen.length === 1 ? 'Vorschlag' : 'Vorschläge'}
-              </b>
+              </b>{' '}
+              {/* Ein Nebenweg, kein Abschluss – darum oben am Ergebnis statt unten bei den Knöpfen (Alwin, E6-O F2). */}
+              <button type="button" className={styles.neu} onClick={neuVorschlagen}>
+                Neu vorschlagen
+              </button>
               {ohnePassende > 0 && (
                 <span className={styles.warnung}>
                   {' '}
@@ -391,24 +400,6 @@ export function ZauberstabFach({
               })}
             </section>
           ))}
-
-          {zustand.art === 'pruefen' && (
-            <div className={styles.knoepfe}>
-              <button type="button" className={styles.zweit} onClick={neuVorschlagen}>
-                Neu vorschlagen
-              </button>
-              <button
-                type="button"
-                className={styles.primaer}
-                disabled={wahlen.length === 0}
-                onClick={() => void los()}
-              >
-                {wahlen.length === 1
-                  ? '1 als Entwurf übernehmen'
-                  : `${wahlen.length} als Entwurf übernehmen`}
-              </button>
-            </div>
-          )}
         </>
       )}
       {stiftFuer && vorlieben && (

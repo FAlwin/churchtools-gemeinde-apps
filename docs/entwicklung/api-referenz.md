@@ -231,6 +231,11 @@ Original (bzw. der ersten Version, falls kein Original existiert); welche Übers
 gerenderten Blatt steht, entscheidet zusätzlich der **angezeigte** Text – siehe `chartHead()` im
 Client, damit eine Version mit eigener Überschrift auch ihre eigene trägt.
 
+**Seit dem Lied-Editor L4 (23.10.2026)** wandern `{title}`, `{artist}`, `{ccli}`, `{copyright}`, `{tempo}`, `{time}`
+beim Speichern im Editor und beim SongSelect-Import nach ChurchTools und verlassen die Datei (`shared/ct/liedinfo.ts`)
+– danach gilt also ChurchTools. Die Regel oben bleibt für Lieder, die nie im neuen Editor gespeichert wurden.
+`{key}` bleibt immer in der Datei (notierte Tonart, #398).
+
 ## Anmerkungen / Einstellungen (pro Konto, in den Personen-Dateien in ChurchTools)
 
 Seit der Ablage in ChurchTools (09.10.2026) liest und schreibt der Server diese Endpunkte über

@@ -36,6 +36,11 @@ vi.mock('../hooks/useServices', () => ({
   useSongLibrary: () => bibliothek(),
   // Das Argument wird durchgereicht: Daran hängt die Zusicherung, dass ohne Treffer NICHTS abgefragt wird.
   useSongSelectSong: (songNumber: number | null) => details(songNumber),
+  // Liedinfo im Editor (L4) – hier ohne Daten: Der Editor zeigt dann keine Liedinfo.
+  useSongStammdaten: () => ({ data: undefined }),
+  useArrangements: () => ({ data: undefined }),
+  useLiedAendern: () => ({ mutateAsync: vi.fn() }),
+  useArrangementAendern: () => ({ mutateAsync: vi.fn() }),
 }));
 
 const anlegen = vi.fn();

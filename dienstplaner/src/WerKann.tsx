@@ -135,7 +135,12 @@ export function WerKann({
 
   const q = suche.trim().toLowerCase();
   return (
-    <Sheet title={`${platz.dienst} · ${platz.tag}`} onClose={onClose} cancelLabel="Schließen">
+    <Sheet
+      title={`${platz.dienst} · ${platz.tag}`}
+      onClose={onClose}
+      cancelLabel="Schließen"
+      knoepfe={null}
+    >
       <p className={styles.unter}>
         {platz.termin} um {platz.uhrzeit} Uhr · Platz {platz.nr} von {platz.von}
         {platz.bisher && <> · statt {platz.bisher.name}</>}

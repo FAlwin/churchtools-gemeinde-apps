@@ -195,7 +195,10 @@ describe('ZauberstabFach (E5-2)', () => {
     laden.mockResolvedValue([ANNA]);
     const { onClose } = zeige({ zeilen: [NEUN], uebernehmen: () => new Promise<never>(() => {}) });
     fireEvent.click(await screen.findByRole('button', { name: '1 als Entwurf übernehmen' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Bitte warten – wird eingetragen …' }));
+    // Gesperrt wie im ConfirmDialog (E6-O F2, #720): X und Abbrechen tun nichts, solange es läuft.
+    expect(screen.getByRole('button', { name: 'Abbrechen' })).toHaveProperty('disabled', true);
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(onClose).not.toHaveBeenCalled();
   });
 
@@ -263,5 +266,23 @@ describe('ZauberstabFach (E5-2)', () => {
     laden.mockResolvedValue([ANNA]);
     zeige({ zeilen: [NEUN], mitEntwurf: 2 });
     await screen.findByText(/2 Plätze mit Entwurf bleiben, wie sie sind/);
+  });
+});
+
+/** Fenster wie ChurchTools (E6-O F2, #720): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
+const knopfFolge = () =>
+  screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent);
+
+describe('ZauberstabFach im ChurchTools-Aufbau', () => {
+  it('X oben, unten Abbrechen und Übernehmen; „Neu vorschlagen“ steht oben am Ergebnis', async () => {
+    laden.mockResolvedValue([ANNA, BEN]);
+    zeige();
+    await screen.findByText('2 Vorschläge');
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(knopfFolge()[0]).toBe('Fenster schließen');
+    expect(knopfFolge().slice(-2)).toEqual(['Abbrechen', '2 als Entwurf übernehmen']);
+    expect(screen.getByText('2 Vorschläge').parentElement?.textContent).toContain(
+      'Neu vorschlagen',
+    );
   });
 });

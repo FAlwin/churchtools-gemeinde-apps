@@ -297,13 +297,29 @@
   border-radius: 0 0 var(--r-card) var(--r-card);
   overflow: hidden;
 }
-.previewPane {
+// Rechte Spalte: Vorschau oder Liedinfo (L4, Entwurf C), breit mit Umschalter darüber.
+.rechts {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   @media (min-width: 768px) {
     flex: 0 1 44%;
   }
+}
+.previewPane {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.infoPane {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .previewHead {

@@ -82,11 +82,27 @@ describe('AlteEntwuerfeFach (#582)', () => {
       .mockResolvedValue({ ok: false, grund: 'kein-recht' });
     const p = zeige(verwerfen);
     fireEvent.click(screen.getByRole('button', { name: 'Alle 3 verwerfen' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Bitte warten …' }));
+    // Gesperrt wie im ConfirmDialog (E6-O F2, #720): X und Abbrechen tun nichts, solange es läuft.
+    expect(screen.getByRole('button', { name: 'Abbrechen' })).toHaveProperty('disabled', true);
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(p.onClose).not.toHaveBeenCalled();
     await act(async () => fertig({ ok: false, grund: 'kein-recht' }));
     expect(await screen.findByText('0 von 3 verworfen')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
     expect(p.onClose).toHaveBeenCalledWith(false);
+  });
+});
+
+/** Fenster wie ChurchTools (E6-O F2, #720): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
+const knopfFolge = () =>
+  screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent);
+
+describe('AlteEntwuerfeFach im ChurchTools-Aufbau', () => {
+  it('X oben, unten Abbrechen und Verwerfen', () => {
+    zeige();
+    expect(screen.getByRole('dialog', { name: 'Alte Entwürfe' })).toBeTruthy();
+    expect(knopfFolge()[0]).toBe('Fenster schließen');
+    expect(knopfFolge().slice(-2)).toEqual(['Abbrechen', 'Alle 3 verwerfen']);
   });
 });

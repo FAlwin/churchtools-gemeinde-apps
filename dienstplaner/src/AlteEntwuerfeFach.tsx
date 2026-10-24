@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import { tagKurz } from '@shared/ct/datum';
 import type { Entwurf, EntwurfErgebnis } from '@shared/dienstplan/entwuerfe';
@@ -61,7 +62,19 @@ export function AlteEntwuerfeFach({
     <Sheet
       title={fertig ? `${verworfen} von ${zeilen.length} verworfen` : 'Alte Entwürfe'}
       onClose={() => !laeuft && onClose(verworfen > 0)}
-      cancelLabel={laeuft ? 'Bitte warten …' : fertig ? 'Schließen' : 'Abbrechen'}
+      cancelLabel={fertig ? 'Schließen' : 'Abbrechen'}
+      beschaeftigt={laeuft}
+      knoepfe={
+        fertig ? null : (
+          <FensterKnopf disabled={laeuft} onClick={() => void los()}>
+            {laeuft
+              ? 'Wird verworfen …'
+              : zeilen.length === 1
+                ? 'Verwerfen'
+                : `Alle ${zeilen.length} verwerfen`}
+          </FensterKnopf>
+        )
+      }
     >
       {!fertig && (
         <p className={styles.zusammen}>
@@ -92,22 +105,6 @@ export function AlteEntwuerfeFach({
           );
         })}
       </ul>
-      {!fertig && (
-        <div className={styles.knoepfe}>
-          <button
-            type="button"
-            className={styles.primaer}
-            disabled={laeuft}
-            onClick={() => void los()}
-          >
-            {laeuft
-              ? 'Wird verworfen …'
-              : zeilen.length === 1
-                ? 'Verwerfen'
-                : `Alle ${zeilen.length} verwerfen`}
-          </button>
-        </div>
-      )}
     </Sheet>
   );
 }

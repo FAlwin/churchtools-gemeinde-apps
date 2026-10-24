@@ -75,6 +75,8 @@ export function PlaetzeFach({
       title={titel}
       onClose={() => laeuft === null && onClose(geaendert)}
       cancelLabel="Schließen"
+      knoepfe={null}
+      beschaeftigt={laeuft !== null}
     >
       <p className={styles.unter}>{unter}</p>
       <ul className={eigen.liste} aria-label="Plätze je Dienst">

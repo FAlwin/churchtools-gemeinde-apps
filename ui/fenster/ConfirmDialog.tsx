@@ -15,7 +15,7 @@ interface ConfirmDialogProps {
   harmlos?: boolean;
   /**
    * Ein zweiter Weg neben der Bestätigung (E6-5b: „Nur für diesen Termin neu“). Er steht zwischen Abbrechen und
-   * Bestätigung; am Handy stehen die drei untereinander, die Bestätigung oben.
+   * Bestätigung. Am Handy stehen alle Knöpfe untereinander, die Bestätigung oben (`m.fensterKnopfZeile`).
    */
   zweit?: { label: string; onClick: () => void };
   /** Zwischen Text und Knöpfen – etwa die Termine, die es mittrifft. */
@@ -61,7 +61,7 @@ export function ConfirmDialog({
           {cancelLabel !== null && (
             <button
               className={styles.x}
-              aria-label="Schließen"
+              aria-label="Fenster schließen"
               onClick={onCancel}
               disabled={beschaeftigt}
             >
@@ -71,7 +71,7 @@ export function ConfirmDialog({
         </div>
         <div className={styles.msg}>{message}</div>
         {children}
-        <div className={`${styles.actions}${zweit ? ' ' + styles.stapel : ''}`}>
+        <div className={styles.actions}>
           {cancelLabel !== null && (
             <FensterKnopf art="zweit" onClick={onCancel} disabled={beschaeftigt}>
               {cancelLabel}

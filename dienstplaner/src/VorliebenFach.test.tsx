@@ -82,7 +82,24 @@ describe('VorliebenFach (E5-3)', () => {
     await screen.findByRole('combobox', { name: 'Wie oft höchstens?' });
     fireEvent.change(feld('Tageszeit'), { target: { value: '1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Bitte warten – wird gespeichert …' }));
+    // Gesperrt wie im ConfirmDialog (E6-O F2, #720): X und Abbrechen tun nichts, solange es läuft.
+    expect(screen.getByRole('button', { name: 'Abbrechen' })).toHaveProperty('disabled', true);
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+/** Fenster wie ChurchTools (E6-O F2, #720): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
+const knopfFolge = () =>
+  screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent);
+
+describe('VorliebenFach im ChurchTools-Aufbau', () => {
+  it('X oben, unten Abbrechen und Speichern', async () => {
+    zeige();
+    await screen.findByRole('combobox', { name: 'Wie oft höchstens?' });
+    expect(screen.getByRole('dialog', { name: 'Vorlieben · Ben Test' })).toBeTruthy();
+    expect(knopfFolge()[0]).toBe('Fenster schließen');
+    expect(knopfFolge().slice(-2)).toEqual(['Abbrechen', 'Speichern']);
   });
 });

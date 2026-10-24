@@ -87,15 +87,23 @@ ChurchTools). Ausnahme: der ChordPro-**Editor** nutzt bewusst Monospace (`'JetBr
 Entwurf `dienstplaner-planung/entwurf/fenster-entwurf.html`, abgenommen 23.10.2026 (Vorbild: Fenster der
 ChurchTools-Weboberfläche):
 
-- **Kopf:** Titel links, **X rechts** zum Schließen. **Fußzeile:** Knöpfe **rechts unten**, „Abbrechen“ mit Rahmen und
-  blauer Schrift, daneben der Hauptknopf – keine Knöpfe über die ganze Breite.
+- **Kopf:** Titel links, **X rechts** zum Schließen (für Screenreader „Fenster schließen“, damit es sich vom Knopf
+  „Schließen“ unterscheidet). **Fußzeile:** Knöpfe **rechts unten**, „Abbrechen“ mit Rahmen und blauer Schrift,
+  daneben der Hauptknopf – am Rechner keine Knöpfe über die ganze Breite. **Am Handy** (≤ 480 px) stehen sie
+  untereinander über die volle Breite, der Hauptknopf oben (`m.fensterKnopfZeile`, E6-O F2 #720).
 - **`Sheet` mit `knoepfe`** bekommt diesen Aufbau; Kopf und Fuß stehen, der Inhalt dazwischen scrollt (die _eine_
   Scrollfläche des Fensters). Ohne `knoepfe` bleibt der alte Aufbau, bis das Fenster umgezogen ist – App für App in
-  eigenen Scheiben. Der Hauptknopf zieht dabei aus dem Inhalt in `knoepfe` (statt `m.hauptKnopfBreit`).
+  eigenen Scheiben. Der Hauptknopf zieht dabei aus dem Inhalt in `knoepfe` (statt `m.hauptKnopfBreit`). Fenster nur
+  zum Ansehen reichen `knoepfe={null}` – unten steht dann nur „Schließen“. Aktionen, die zum Inhalt gehören (in einer
+  Liste, „Andere Person wählen“ am Entwurf), bleiben im Inhalt; ein Nebenweg wie „Neu vorschlagen“ steht als Link
+  (`m.textKnopf`) am Ergebnis, nicht unten.
+- **Während etwas läuft** (senden, speichern …) bekommt `Sheet` `beschaeftigt`: X, „Abbrechen“ und der Klick daneben
+  sind gesperrt, wie im `ConfirmDialog`. Was gerade passiert, zeigt der Hauptknopf oder der Titel – nicht mehr ein
+  Abbrechen-Knopf mit „Bitte warten …“.
 - **`FensterKnopf`** (`ui/fenster/FensterKnopf`) ist die EINE Bauart dieser Knöpfe: `haupt` (blau), `gefahr` (rot),
   `zweit` (Rahmen, „Abbrechen“), `hell` (hellblau, ein zweiter Weg). Fenster gestalten ihre Knöpfe nicht selbst.
 - **`ConfirmDialog`** ist schon umgezogen: Titel und Text linksbündig, X rechts (nicht, wenn es kein Abbrechen
-  gibt), Knöpfe rechts unten; drei Wege (E6-5b) nebeneinander, am Handy untereinander mit der Bestätigung oben.
+  gibt), Knöpfe rechts unten; drei Wege (E6-5b) nebeneinander.
 - **Felder:** fette Beschriftung über dem Feld, gerahmte Eingabe (`m.eingabefeld`), im Fokus blauer Rand **mit
   Schein**.
 

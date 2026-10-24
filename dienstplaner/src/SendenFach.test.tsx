@@ -197,7 +197,10 @@ describe('SendenFach (E4-4-2)', () => {
     expect(screen.getByLabelText('wartet')).toBeTruthy();
     act(() => melde(0, { art: 'gesendet' }));
     expect(screen.getByText('Wird gesendet … 1 von 2')).toBeTruthy();
-    fireEvent.click(knopf('Bitte warten – wird gesendet …'));
+    // Gesperrt wie im ConfirmDialog (E6-O F2, #720): X und Abbrechen tun nichts, solange es läuft.
+    expect(screen.getByRole('button', { name: 'Abbrechen' })).toHaveProperty('disabled', true);
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(onClose).not.toHaveBeenCalled();
     await act(async () => {
       melde(1, { art: 'gesendet' });
@@ -256,5 +259,20 @@ describe('SendenFach (E4-4-2)', () => {
     await screen.findByText('0 gesendet, 1 nicht');
     fireEvent.click(knopf('Schließen'));
     expect(a.onClose).toHaveBeenLastCalledWith(true);
+  });
+});
+
+/** Fenster wie ChurchTools (E6-O F2, #720): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
+const knopfFolge = () =>
+  screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent);
+
+describe('SendenFach im ChurchTools-Aufbau', () => {
+  it('X oben, unten Abbrechen und Jetzt senden', async () => {
+    zeige();
+    await screen.findByRole('button', { name: /^Jetzt senden/ });
+    expect(screen.getByRole('dialog', { name: 'Einteilungen senden' })).toBeTruthy();
+    expect(knopfFolge()[0]).toBe('Fenster schließen');
+    expect(knopfFolge().at(-2)).toBe('Abbrechen');
+    expect(knopfFolge().at(-1)).toMatch(/^Jetzt senden \(\d+\)$/);
   });
 });

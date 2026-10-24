@@ -1,11 +1,11 @@
 # Organigramm – ChurchTools-Erweiterung
 
-> **Stand: O7-2 (24.10.2026)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
+> **Stand: O7-3 (24.10.2026)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
 > offenen Plätzen; Gruppenfenster; Gruppentypen ausblendbar), die **Präsentation**, für Gruppen-Admins **Gruppen
-> umhängen und anlegen** und den Reiter **Neue Gliederung** (der Plan, noch ohne Umbau) und – für alle, die es in
-> ChurchTools dürfen – **Leitung und Mitglieder pflegen**. Für die **Leitung eines Bereichs** dazu die Reiter
-> **Personen** und **Hinweise**. Als Nächstes (Bauplan O7-3/O7-4, O8): Umbau-Liste mit „Ausführen“, Präsentation der
-> neuen Gliederung, dann der echte Umbau. Diese Anleitung wächst mit.
+> umhängen und anlegen** und den Reiter **Neue Gliederung** (Plan und Umbau) und – für alle, die es in ChurchTools
+> dürfen – **Leitung und Mitglieder pflegen**. Für die **Leitung eines Bereichs** dazu die Reiter **Personen** und
+> **Hinweise**. Als Nächstes (Bauplan O7-4, O8): Präsentation der neuen Gliederung, dann der echte Umbau. Diese
+> Anleitung wächst mit.
 
 Das Organigramm zeigt die Gemeinde als Baum – Bereiche, Gruppen, Personen – so, wie die Gruppen-Hierarchie in
 ChurchTools steht, und hilft, die Organisation darin weiterzubauen. **Alles liegt in ChurchTools** – es gibt keinen
@@ -109,7 +109,7 @@ eigene Rolle dort erlaubt; Gruppen-Admins dürfen alles. In der Test-Instanz dü
 ## Neue Gliederung (ab O7-2)
 
 Nur für **Gruppen-Admins**: Im Reiter **Neue Gliederung** entsteht der Plan, wie die Gemeinde künftig gegliedert ist.
-**ChurchTools ändert sich dabei nicht** – das geschieht erst im Umbau (kommt mit O7-3).
+**ChurchTools ändert sich dabei nicht** – das geschieht erst im **Umbau** (siehe unten).
 
 - **Plan anlegen** kopiert die heutige Gliederung. Es gibt **einen** Plan für alle Gruppen-Admins; oben steht, wer
   zuletzt gespeichert hat.
@@ -125,6 +125,24 @@ Nur für **Gruppen-Admins**: Im Reiter **Neue Gliederung** entsteht der Plan, wi
   eigene Änderung darauf an.
 - In ChurchTools inzwischen angelegte Gruppen erscheinen von selbst im Plan.
 - **Plan verwerfen** löscht den Plan für alle (nach einer Rückfrage). ChurchTools bleibt, wie es ist.
+
+### Umbau (ab O7-3)
+
+Oben neben dem Plan steht **Umbau · N offen**: die Schritte vom Plan nach ChurchTools, in dieser Reihenfolge
+**1 neue Gruppen anlegen · 2 umhängen · 3 umbenennen · 4 archivieren**, mit Fortschritt („3 von 7 erledigt“).
+
+- **Ausführen** ändert ChurchTools **sofort** und liest danach nach. Danach steht **Rückgängig** da (für den zuletzt
+  ausgeführten Schritt: neue Gruppe wieder löschen, alte Obergruppe, alter Name, alter Status).
+- **Alle offenen nacheinander ausführen** (nach einer Rückfrage) macht alles, was geht – auch Schritte, die erst
+  dadurch frei werden. Bei einem Fehler hält der Umbau an und sagt, nach wie vielen Schritten. Danach gibt es kein
+  Rückgängig.
+- Ein Schritt **wartet**, wenn er eine Gruppe braucht, die erst noch angelegt wird („wartet auf …“). **Archivieren
+  wartet**, solange in ChurchTools noch Gruppen darunter hängen – sonst stünden sie danach als eigene Bereiche da.
+- **Erledigt** ist ein Schritt, sobald ChurchTools so aussieht wie der Plan – auch wenn ihn jemand direkt in
+  ChurchTools gemacht hat. Gibt es eine neue Gruppe dort schon (gleicher Name, gleiche Obergruppe), steht „gibt es schon
+  in ChurchTools“ mit **Im Plan übernehmen**.
+- **Archivieren** setzt den Status „archiviert“ – nichts wird gelöscht, Mitglieder und Historie bleiben (gemessen
+  24.10.2026; keine Mail). Archivierte Gruppen zeigt ChurchTools nicht mehr im Baum.
 
 ## Was die Erweiterung speichert
 

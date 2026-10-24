@@ -30,6 +30,11 @@ export interface PlanAenderungen {
   eltern: Record<string, Ref | null>;
   namen: Record<string, string>;
   archiv: number[];
+  /**
+   * Vom Umbau angelegte Gruppen (ChurchTools-IDs, O7-3) – damit „angelegt“ als erledigter Schritt stehen bleibt, statt
+   * aus der Liste zu verschwinden. Fehlt in älteren Plänen.
+   */
+  angelegt?: number[];
 }
 
 export const KEINE_AENDERUNGEN: PlanAenderungen = { neu: [], eltern: {}, namen: {}, archiv: [] };
@@ -178,11 +183,12 @@ export function neueEntfernen(h: Heute, a: PlanAenderungen, id: string): PlanAen
   };
 }
 
-/** Nach dem Anlegen in ChurchTools: die eigene ID überall durch die echte ersetzen. */
+/** Nach dem Anlegen in ChurchTools: die eigene ID überall durch die echte ersetzen – und sie als angelegt merken. */
 export function angelegt(a: PlanAenderungen, id: string, ctId: number): PlanAenderungen {
   const ersetze = (r: Ref | null) => (r === id ? ctId : r);
   return {
     ...a,
+    angelegt: [...(a.angelegt ?? []).filter((x) => x !== ctId), ctId],
     neu: a.neu.filter((x) => x.id !== id).map((x) => ({ ...x, eltern: ersetze(x.eltern) })),
     eltern: Object.fromEntries(Object.entries(a.eltern).map(([k, e]) => [k, ersetze(e)])),
   };
@@ -196,28 +202,69 @@ export type Schritt =
       id: string;
       name: string;
       typId: number;
+      /** Obergruppe in ChurchTools-ID, sobald es sie gibt (auch eine schon gefundene neue); sonst die eigene ID. */
       eltern: Ref | null;
       erledigt: boolean;
       wartetAuf: string | null;
       gefunden: number | null;
+      /** Der Plan kennt die echte ID schon (vom Umbau angelegt) – sonst ist eine gefundene „im Plan zu übernehmen“. */
+      vermerkt: boolean;
     }
   | { art: 'um'; id: number; eltern: Ref | null; erledigt: boolean; wartetAuf: string | null }
   | { art: 'name'; id: number; name: string; erledigt: boolean; wartetAuf: null }
-  | { art: 'arch'; id: number; erledigt: boolean; wartetAuf: null };
+  | {
+      art: 'arch';
+      id: number;
+      erledigt: boolean;
+      wartetAuf: null;
+      /** Gruppen, die in ChurchTools noch darunter hängen – solange es welche gibt, wartet das Archivieren. */
+      untergruppen: number[];
+    };
 
 /**
- * Was zu tun ist, in der Reihenfolge, in der es geht. `archiviert` ist die Status-ID „archived“ aus den Stammdaten
- * (`null` = unbekannt → Archivieren gilt nie als erledigt).
+ * Was zu tun ist, in der Reihenfolge, in der es geht. `archiviert` sind die IDs der Gruppen, die in ChurchTools den
+ * Status „archiviert“ haben (`null` = unbekannt → Archivieren gilt nie als erledigt). Eigens geladen, weil ChurchTools
+ * archivierte Gruppen weder in der Gruppenliste noch in der Hierarchie liefert (Messung O7-3, 24.10.2026).
+ *
+ * Archivieren **wartet**, solange in ChurchTools noch Gruppen darunter hängen – sonst stünden sie danach als eigene
+ * Bereiche da (Alwin, 24.10.2026). Eine neue Gruppe, die es in ChurchTools schon gibt (`gefunden`), hält niemanden
+ * mehr auf: Wer auf sie wartet, bekommt ihre ChurchTools-ID.
  */
-export function umbauSchritte(h: Heute, a: PlanAenderungen, archiviert: number | null): Schritt[] {
-  const neuIds = new Set(a.neu.map((x) => x.id));
-  const wartet = (e: Ref | null) => (typeof e === 'string' && neuIds.has(e) ? e : null);
+export function umbauSchritte(
+  h: Heute,
+  a: PlanAenderungen,
+  archiviert: Pick<ReadonlySet<number>, 'has'> | null,
+): Schritt[] {
+  // Schon angelegt (z. B. direkt in ChurchTools, oder das Speichern danach ging schief)? Gleicher Name unter
+  // derselben Obergruppe – über die Reihenfolge, damit auch eine neue unter einer gefundenen neuen gefunden wird.
+  const gefunden = new Map<string, number>();
+  const aufgeloest = (e: Ref | null): Ref | null =>
+    typeof e === 'string' ? (gefunden.get(e) ?? e) : e;
+  // Eine eigene ID, die (noch) keine ChurchTools-ID hat, heißt immer: warten – nie mit ihr nach ChurchTools.
+  const wartet = (e: Ref | null) => {
+    const r = aufgeloest(e);
+    return typeof r === 'string' ? r : null;
+  };
   const s: Schritt[] = [];
+  // Vom Umbau angelegt: bleiben als erledigt stehen (solange es sie in ChurchTools gibt).
+  for (const ctId of a.angelegt ?? []) {
+    const g = h.gruppen.find((x) => x.id === ctId);
+    if (!g) continue;
+    s.push({
+      art: 'neu',
+      id: `angelegt-${ctId}`,
+      name: g.name,
+      typId: g.typId ?? 0,
+      eltern: heuteEltern(h, ctId),
+      erledigt: true,
+      wartetAuf: null,
+      gefunden: ctId,
+      vermerkt: true,
+    });
+  }
   for (const n of a.neu) {
-    // Schon angelegt (z. B. direkt in ChurchTools, oder das Speichern danach ging schief)? Gleicher Name unter
-    // derselben Obergruppe.
-    const oben = n.eltern;
-    const gefunden =
+    const oben = aufgeloest(n.eltern);
+    const da =
       typeof oben === 'string'
         ? null
         : (h.gruppen.find(
@@ -227,20 +274,23 @@ export function umbauSchritte(h: Heute, a: PlanAenderungen, archiviert: number |
                 ? (h.eltern.get(g.id) ?? []).length === 0
                 : (h.eltern.get(g.id) ?? []).includes(oben)),
           )?.id ?? null);
+    if (da !== null) gefunden.set(n.id, da);
     s.push({
       art: 'neu',
       id: n.id,
       name: n.name,
       typId: n.typId,
-      eltern: n.eltern,
-      erledigt: gefunden !== null,
-      wartetAuf: wartet(n.eltern),
-      gefunden,
+      eltern: oben,
+      erledigt: da !== null,
+      wartetAuf: da !== null ? null : wartet(n.eltern),
+      gefunden: da,
+      vermerkt: false,
     });
   }
-  for (const [k, e] of Object.entries(a.eltern)) {
+  for (const [k, roh] of Object.entries(a.eltern)) {
     const id = Number(k);
     if (!h.gruppen.some((g) => g.id === id)) continue;
+    const e = aufgeloest(roh);
     const jetzt = h.eltern.get(id) ?? [];
     const erledigt = e === null ? jetzt.length === 0 : jetzt.length === 1 && jetzt[0] === e;
     s.push({ art: 'um', id, eltern: e, erledigt, wartetAuf: erledigt ? null : wartet(e) });
@@ -250,16 +300,41 @@ export function umbauSchritte(h: Heute, a: PlanAenderungen, archiviert: number |
     if (g) s.push({ art: 'name', id: g.id, name, erledigt: g.name === name, wartetAuf: null });
   }
   for (const id of a.archiv) {
-    const g = h.gruppen.find((x) => x.id === id);
-    if (g)
-      s.push({
-        art: 'arch',
-        id,
-        erledigt: archiviert !== null && g.statusId === archiviert,
-        wartetAuf: null,
-      });
+    const schon = archiviert?.has(id) ?? false;
+    // Weder in ChurchTools zu sehen noch archiviert → gibt es nicht mehr; der Schritt fällt weg.
+    if (!schon && !h.gruppen.some((x) => x.id === id)) continue;
+    const untergruppen = schon
+      ? []
+      : h.gruppen.filter((x) => (h.eltern.get(x.id) ?? []).includes(id)).map((x) => x.id);
+    s.push({ art: 'arch', id, erledigt: schon, wartetAuf: null, untergruppen });
   }
   return s;
+}
+
+/** Kann der Schritt jetzt ausgeführt werden? (Nicht erledigt, wartet auf nichts, nichts hängt mehr darunter.) */
+export function ausfuehrbar(x: Schritt): boolean {
+  if (x.erledigt || x.wartetAuf !== null) return false;
+  return x.art !== 'arch' || x.untergruppen.length === 0;
+}
+
+/**
+ * „Rückgängig“ nach dem Anlegen (O7-3): die genaue Umkehrung von `angelegt` – die neue Gruppe steht wieder mit ihrer
+ * eigenen ID im Plan, alle Verweise auf die ChurchTools-ID zeigen wieder auf sie.
+ */
+export function nichtAngelegt(
+  a: PlanAenderungen,
+  gruppe: NeueGruppePlan,
+  ctId: number,
+): PlanAenderungen {
+  const zurueck = (r: Ref | null) => (r === ctId ? gruppe.id : r);
+  const { angelegt: schon, ...rest } = a;
+  const bleibt = (schon ?? []).filter((x) => x !== ctId);
+  return {
+    ...rest,
+    ...(bleibt.length ? { angelegt: bleibt } : {}),
+    neu: [...a.neu.map((x) => ({ ...x, eltern: zurueck(x.eltern) })), gruppe],
+    eltern: Object.fromEntries(Object.entries(a.eltern).map(([k, e]) => [k, zurueck(e)])),
+  };
 }
 
 /**
@@ -298,7 +373,10 @@ export function planAus(roh: unknown): PlanAenderungen | null {
   const archiv = Array.isArray(r.archiv)
     ? r.archiv.filter((x): x is number => typeof x === 'number' && Number.isInteger(x))
     : [];
-  return { neu, eltern, namen, archiv };
+  const angelegt = Array.isArray(r.angelegt)
+    ? r.angelegt.filter((x): x is number => typeof x === 'number' && Number.isInteger(x))
+    : [];
+  return { neu, eltern, namen, archiv, ...(angelegt.length ? { angelegt } : {}) };
 }
 
 /** Hat der Plan überhaupt Änderungen? */

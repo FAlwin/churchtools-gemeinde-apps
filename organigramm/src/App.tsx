@@ -281,7 +281,9 @@ export function App() {
           onEinsaetzeNachladen={einsaetzeLaden}
         />
       )}
-      {start && ansicht === 'gliederung' && <NeueGliederung start={start} />}
+      {start && ansicht === 'gliederung' && (
+        <NeueGliederung start={start} onStruktur={strukturNeu} />
+      )}
       {start && offenerKnoten && (
         <GruppenFenster
           key={offenerKnoten.gruppe.id}

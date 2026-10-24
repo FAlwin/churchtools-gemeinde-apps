@@ -72,3 +72,112 @@
   background: color-mix(in srgb, var(--red) 10%, transparent);
   color: var(--red);
 }
+
+// ── Umbau (O7-3) ──────────────────────────────────────────────────────────────
+
+.fortschritt {
+  flex: 0 1 220px;
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--r-ctrl);
+  background: var(--section);
+
+  > div {
+    height: 100%;
+    background: var(--green);
+  }
+}
+
+// Eine Gruppe von Schritten (neu / umhängen / …); Linie nur zwischen ihnen – ohne Selektor über die eigene Klasse
+// hinaus (der Paket-Check lässt nichts durch, was in ChurchTools global wirken würde).
+.umbauGruppe + .umbauGruppe {
+  border-top: 1px solid var(--border);
+}
+
+.gruppenkopf {
+  padding: 10px 16px 4px;
+  color: var(--text3);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.schritte {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 6px;
+}
+
+.schritt {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+}
+
+.nr {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--section);
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 24px;
+  text-align: center;
+}
+
+.schrittText {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+
+  small {
+    color: var(--text2);
+    font-size: 13px;
+  }
+}
+
+.erledigt {
+  .nr {
+    background: color-mix(in srgb, var(--green) 18%, transparent);
+    color: var(--text);
+  }
+
+  .schrittText {
+    color: var(--text3);
+  }
+}
+
+.gesperrt .schrittText {
+  color: var(--text2);
+}
+
+.ausfuehren {
+  padding: 4px 12px;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  background: var(--blue);
+  color: #fff; // wie der Hauptknopf der Fenster (FensterKnopf)
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}
+
+// „Alle offenen nacheinander ausführen“ – am Handy darf der Text umbrechen, statt über den Rand zu laufen.
+.alleKnopf {
+  height: auto;
+  min-height: 38px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  white-space: normal;
+}

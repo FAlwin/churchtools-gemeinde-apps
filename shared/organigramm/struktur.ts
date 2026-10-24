@@ -34,7 +34,8 @@ export interface NeueGruppe {
   name: string;
   typId: number;
   statusId: number;
-  elternId: number;
+  /** `null` = ein neuer Bereich ohne Obergruppe (Umbau O7-3). */
+  elternId: number | null;
 }
 
 /** Obergruppe ersetzen: erst `neu` setzen, dann `alt` lösen, nachlesen. Liefert die Obergruppen danach. */
@@ -85,14 +86,38 @@ export async function obergruppeLoesen(
   return ist;
 }
 
-/** Untergruppe anlegen und nachlesen: Gibt es sie, und hängt sie unter der Obergruppe? Liefert die neue ID. */
+/**
+ * Untergruppe (oder ohne Obergruppe: einen Bereich) anlegen und nachlesen: Gibt es sie, und hängt sie, wo sie soll?
+ * Liefert die neue ID.
+ */
 export async function untergruppeAnlegen(z: StrukturZugriff, d: NeueGruppe): Promise<number> {
   const id = await z.anlegen(d);
   if (!(await z.gibtEs(id))) throw z.nichtUebernommen('die neue Gruppe');
-  if (!(await z.obergruppen(id)).includes(d.elternId)) {
+  const oben = await z.obergruppen(id);
+  if (d.elternId === null ? oben.length > 0 : !oben.includes(d.elternId)) {
     throw z.nichtUebernommen('die Obergruppe der neuen Gruppe');
   }
   return id;
+}
+
+/**
+ * **Obergruppen genau so setzen** (Umbau O7-3: „Umhängen ersetzt alle heutigen Obergruppen“; auch für Rückgängig):
+ * erst die fehlenden setzen, dann die überzähligen lösen – wie beim Umhängen hängt die Gruppe dazwischen nie unter
+ * keiner. Nachgelesen muss es genau `ziel` sein. Liefert die Obergruppen von vorher.
+ */
+export async function obergruppenGenau(
+  z: StrukturZugriff,
+  gruppeId: number,
+  ziel: readonly number[],
+): Promise<number[]> {
+  const vorher = await z.obergruppen(gruppeId);
+  for (const e of ziel) if (!vorher.includes(e)) await z.setzen(gruppeId, e);
+  for (const e of vorher) if (!ziel.includes(e)) await z.loesen(gruppeId, e);
+  const ist = await z.obergruppen(gruppeId);
+  if (ist.length !== new Set(ziel).size || ziel.some((e) => !ist.includes(e))) {
+    throw z.nichtUebernommen(ziel.length ? 'die neue Obergruppe' : 'das Lösen von der Obergruppe');
+  }
+  return vorher;
 }
 
 /** „Rückgängig“ nach dem Anlegen: die neue (leere) Gruppe wieder löschen und nachlesen. */
@@ -177,6 +202,14 @@ export function nameFehler(name: string): string | null {
   if (!n) return 'Bitte einen Namen eingeben.';
   if (n.length > 255) return 'Der Name ist zu lang (höchstens 255 Zeichen).';
   return null;
+}
+
+/** Der Status „archiviert“ (`archived`, gemessen O7-3: 3) – über den internen Namen; `null`, wenn es ihn nicht gibt. */
+export function archivStatus(
+  statusse: readonly { id?: unknown; name?: unknown }[] | null | undefined,
+): number | null {
+  const s = (statusse ?? []).find((x) => x.name === 'archived');
+  return typeof s?.id === 'number' ? s.id : null;
 }
 
 /**

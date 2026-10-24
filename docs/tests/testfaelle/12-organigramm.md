@@ -150,3 +150,34 @@ ChurchTools selbst ändert sich nicht – keine Gruppe, kein Name, kein Status.
 - **Historie:** #719 (O7-1 Plan-Kern #721, O7-2 Reiter)
 
 </details>
+
+### TF-ORG-06 · Umbau ausführen – einzeln, alle, zurück
+
+**Das brauchst du:** In der Test-Instanz ein Konto mit „Gruppen verwalten“ und drei Übungsgruppen ohne echte
+Mitglieder (z. B. „Übung A“, „Übung B“ mit „Übung B1“ darunter). Nie in der Live-Instanz.
+
+**Das muss passieren:** Jeder Schritt steht danach genau so in ChurchTools; nichts wird gelöscht außer einer gerade
+angelegten, leeren Gruppe bei „Rückgängig“. Niemand bekommt eine Mail.
+
+1. **Neue Gliederung** → Plan: **＋ Neuer Bereich** „Übung Neu“, „Übung A“ dort einhängen, „Übung B“ umbenennen in
+   „Übung B2“, „Übung B“ und „Übung B1“ im Plan archivieren.
+2. **Umbau**: „Übung A umhängen“ wartet auf „Übung Neu“; „Übung B archivieren“ wartet, bis „Übung B1“ woanders hängt
+   (hier: archiviert ist – dann ist sie aus dem Baum).
+3. „Übung Neu“ **Ausführen**: In ChurchTools gibt es den Bereich. **Rückgängig**: Er ist wieder weg, im Plan wieder
+   „neu“. Nochmal **Ausführen**.
+4. **Alle offenen nacheinander ausführen** → **Ausführen**: Am Ende „… von … erledigt“, nichts offen. In ChurchTools:
+   „Übung A“ unter „Übung Neu“, „Übung B2“ heißt so, „Übung B1“ und „Übung B2“ haben den Status „archiviert“.
+5. ChurchTools-Protokoll und Postfach ansehen: keine Mail zu diesen Schritten.
+6. Aufräumen: Übungsgruppen in ChurchTools löschen, **Plan verwerfen**.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `organigramm/src/Umbau.tsx`, `organigramm/src/umbauTexte.ts`, `organigramm/src/struktur.ts`, `shared/organigramm/umbau.ts`, `shared/organigramm/plan.ts`, `shared/organigramm/struktur.ts`
+- **Automatisiert:** teilweise – `Umbau.test.tsx` (Bedienung gegen ein nachgebautes ChurchTools), `umbau.test.ts`,
+  `plan.test.ts`, `struktur.test.ts` (Browser-Zugriff); ob ChurchTools wirklich so antwortet und keine Mail schickt,
+  prüft nur dieser Fall
+- **Historie:** #719 (Messung O7-3 24.10.2026: `PATCH` Name/Status, archivierte Gruppen fehlen in Liste und Hierarchie,
+  Mitgliedschaften bleiben, keine Mail im Protokoll)
+
+</details>

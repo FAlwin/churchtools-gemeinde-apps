@@ -3,11 +3,13 @@ import type { OrgGruppe } from './gruppen';
 import {
   angelegt,
   archivieren,
+  ausfuehrbar,
   einhaengen,
   hatAenderungen,
   KEINE_AENDERUNGEN,
   neueEntfernen,
   neueGruppe,
+  nichtAngelegt,
   planAus,
   planBaum,
   planGruppen,
@@ -44,7 +46,8 @@ const HEUTE: Heute = {
     [12, [7]],
   ]),
 };
-const ARCHIVIERT = 3;
+/** In ChurchTools archiviert: keine (ChurchTools liefert archivierte Gruppen nur eigens – Messung O7-3). */
+const KEINE_ARCHIVIERT = new Set<number>();
 const zeile = (a: PlanAenderungen, ref: number | string) =>
   planGruppen(HEUTE, a).find((x) => x.ref === ref)!;
 
@@ -137,7 +140,7 @@ describe('Änderungen – „wie heute“ fällt wieder heraus', () => {
     expect(b.neu).toEqual([]);
     expect(zeile(b, 47).eltern).toBeNull();
     expect(zeile(b, 12).eltern).toBe(7);
-    expect(umbauSchritte(HEUTE, b, ARCHIVIERT).some((x) => x.art === 'um')).toBe(false);
+    expect(umbauSchritte(HEUTE, b, KEINE_ARCHIVIERT).some((x) => x.art === 'um')).toBe(false);
     expect(b.namen).toEqual({ '37': 'Bibelabend' });
   });
 
@@ -158,7 +161,7 @@ describe('Änderungen – „wie heute“ fällt wieder heraus', () => {
 describe('umbauSchritte', () => {
   it('Reihenfolge neu → umhängen → umbenennen → archivieren; Einhängen in Neues wartet', () => {
     const { a, gem } = beispiel();
-    const s = umbauSchritte(HEUTE, a, ARCHIVIERT);
+    const s = umbauSchritte(HEUTE, a, KEINE_ARCHIVIERT);
     expect(s.map((x) => x.art)).toEqual(['neu', 'neu', 'um', 'um', 'name', 'arch']);
     expect(s.map((x) => x.wartetAuf)).toEqual([null, gem, gem, gem, null, null]);
     expect(s.every((x) => !x.erledigt)).toBe(true);
@@ -167,23 +170,30 @@ describe('umbauSchritte', () => {
   it('erledigt, sobald ChurchTools so aussieht – auch wenn es jemand direkt dort gemacht hat', () => {
     const { a } = beispiel();
     const b = angelegt(a, 'n1', 500);
+    // Sommerfest (50) ist archiviert – ChurchTools liefert es dann nicht mehr in der Gruppenliste
     const danach: Heute = {
       gruppen: [
-        ...HEUTE.gruppen.map((x) =>
-          x.id === 37
-            ? { ...x, name: 'Bibelabend' }
-            : x.id === 50
-              ? { ...x, statusId: ARCHIVIERT }
-              : x,
-        ),
+        ...HEUTE.gruppen
+          .filter((x) => x.id !== 50)
+          .map((x) => (x.id === 37 ? { ...x, name: 'Bibelabend' } : x)),
         g(500, 'Gemeinschaft'),
       ],
       eltern: new Map([...HEUTE.eltern, [47, [500]], [37, [500]]]),
     };
-    const s = umbauSchritte(danach, b, ARCHIVIERT);
+    const s = umbauSchritte(danach, b, new Set([50]));
+    expect(s.find((x) => x.art === 'arch')).toMatchObject({ id: 50, erledigt: true });
     expect(s.filter((x) => x.art !== 'neu').every((x) => x.erledigt)).toBe(true);
-    // Hauskreise wartet nicht mehr (Gemeinschaft gibt es jetzt), ist aber noch offen
+    // Gemeinschaft hat der Umbau angelegt → bleibt als erledigt stehen (verschwindet nicht aus der Liste)
     expect(s[0]).toMatchObject({
+      art: 'neu',
+      name: 'Gemeinschaft',
+      erledigt: true,
+      vermerkt: true,
+      gefunden: 500,
+      eltern: null,
+    });
+    // Hauskreise wartet nicht mehr (Gemeinschaft gibt es jetzt), ist aber noch offen
+    expect(s[1]).toMatchObject({
       art: 'neu',
       name: 'Hauskreise',
       wartetAuf: null,
@@ -194,7 +204,7 @@ describe('umbauSchritte', () => {
   it('Umhängen ersetzt ALLE heutigen Obergruppen: zwei Obergruppen → noch nicht erledigt', () => {
     const a = einhaengen(HEUTE, KEINE_AENDERUNGEN, 12, 10);
     const zwei: Heute = { ...HEUTE, eltern: new Map([...HEUTE.eltern, [12, [7, 10]]]) };
-    expect(umbauSchritte(zwei, a, ARCHIVIERT)[0].erledigt).toBe(false);
+    expect(umbauSchritte(zwei, a, KEINE_ARCHIVIERT)[0].erledigt).toBe(false);
   });
 
   it('neue Gruppe schon da (gleicher Name, gleiche Obergruppe) → erledigt, mit gefundener ID', () => {
@@ -204,32 +214,100 @@ describe('umbauSchritte', () => {
       gruppen: [...HEUTE.gruppen, g(88, 'kamera')],
       eltern: new Map([...HEUTE.eltern, [88, [7]]]),
     };
-    expect(umbauSchritte(da, a, ARCHIVIERT)[0]).toMatchObject({ erledigt: true, gefunden: 88 });
+    expect(umbauSchritte(da, a, KEINE_ARCHIVIERT)[0]).toMatchObject({
+      erledigt: true,
+      gefunden: 88,
+    });
     // gleicher Name, aber woanders → nicht dieselbe
     const woanders: Heute = {
       ...HEUTE,
       gruppen: [...HEUTE.gruppen, g(88, 'Kamera')],
       eltern: new Map([...HEUTE.eltern, [88, [10]]]),
     };
-    expect(umbauSchritte(woanders, a, ARCHIVIERT)[0].erledigt).toBe(false);
+    expect(umbauSchritte(woanders, a, KEINE_ARCHIVIERT)[0].erledigt).toBe(false);
   });
 
-  it('Archivieren ohne bekannten Status „archiviert“ gilt nie als erledigt; Gruppen, die es nicht mehr gibt, fallen weg', () => {
+  it('Archivieren: erledigt nur, wenn ChurchTools die Gruppe als archiviert führt; unbekannt (null) → nie', () => {
     const a = archivieren(einhaengen(HEUTE, KEINE_AENDERUNGEN, 999, 10), 50, true);
-    const s = umbauSchritte(
-      { ...HEUTE, gruppen: HEUTE.gruppen.map((x) => (x.id === 50 ? { ...x, statusId: 3 } : x)) },
-      a,
-      null,
-    );
-    expect(s).toEqual([{ art: 'arch', id: 50, erledigt: false, wartetAuf: null }]);
-    // auch wenn ChurchTools für die Gruppe keinen Status nennt (null === null wäre sonst „erledigt“)
-    const ohneStatus: Heute = {
-      ...HEUTE,
-      gruppen: HEUTE.gruppen.map((x) => (x.id === 50 ? { ...x, statusId: null } : x)),
+    // 999 gibt es nicht → kein Umhängen-Schritt; Sommerfest noch aktiv → offen
+    expect(umbauSchritte(HEUTE, a, KEINE_ARCHIVIERT)).toEqual([
+      { art: 'arch', id: 50, erledigt: false, wartetAuf: null, untergruppen: [] },
+    ]);
+    const weg: Heute = { ...HEUTE, gruppen: HEUTE.gruppen.filter((x) => x.id !== 50) };
+    expect(umbauSchritte(weg, a, new Set([50]))[0].erledigt).toBe(true);
+    // archiviert-Liste unbekannt: die Gruppe ist aus der Liste verschwunden → gibt es nicht (mehr), kein Schritt
+    expect(umbauSchritte(weg, a, null)).toEqual([]);
+    expect(umbauSchritte(HEUTE, a, null)[0].erledigt).toBe(false);
+  });
+
+  it('Archivieren wartet, solange in ChurchTools noch Gruppen darunter hängen', () => {
+    // Technik archivieren – Stream hängt darunter
+    const a = archivieren(KEINE_AENDERUNGEN, 7, true);
+    const s = umbauSchritte(HEUTE, a, KEINE_ARCHIVIERT);
+    expect(s[0]).toMatchObject({ art: 'arch', untergruppen: [12] });
+    expect(ausfuehrbar(s[0])).toBe(false);
+    // Stream umgehängt (in ChurchTools schon erledigt) → frei
+    const umgehaengt: Heute = { ...HEUTE, eltern: new Map([[7, [10]]]) };
+    const t = umbauSchritte(umgehaengt, a, KEINE_ARCHIVIERT);
+    expect(t[0]).toMatchObject({ untergruppen: [] });
+    expect(ausfuehrbar(t[0])).toBe(true);
+  });
+
+  it('ein Verweis auf eine eigene ID, die es im Plan nicht (mehr) gibt, wartet – nie mit ihr nach ChurchTools', () => {
+    const a: PlanAenderungen = { ...KEINE_AENDERUNGEN, eltern: { '47': 'n9' } };
+    const [s] = umbauSchritte(HEUTE, a, KEINE_ARCHIVIERT);
+    expect(s).toMatchObject({ art: 'um', wartetAuf: 'n9' });
+    expect(ausfuehrbar(s)).toBe(false);
+  });
+
+  it('planAus übernimmt die vom Umbau angelegten Gruppen (nur ganze Zahlen)', () => {
+    expect(planAus({ ...KEINE_AENDERUNGEN, angelegt: [500, 'x', 1.5] })?.angelegt).toEqual([500]);
+    expect(planAus(KEINE_AENDERUNGEN)).not.toHaveProperty('angelegt');
+  });
+
+  it('ausfuehrbar: nicht erledigt und wartet auf nichts', () => {
+    const { a } = beispiel();
+    expect(umbauSchritte(HEUTE, a, KEINE_ARCHIVIERT).map(ausfuehrbar)).toEqual([
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+    ]);
+  });
+
+  it('eine neue Gruppe, die es schon gibt, hält niemanden auf – Wartende bekommen ihre ChurchTools-ID', () => {
+    const { a } = beispiel();
+    // Gemeinschaft hat jemand direkt in ChurchTools angelegt (als Bereich); der Plan kennt sie noch als n1
+    const da: Heute = { ...HEUTE, gruppen: [...HEUTE.gruppen, g(500, 'Gemeinschaft')] };
+    const s = umbauSchritte(da, a, KEINE_ARCHIVIERT);
+    expect(s[0]).toMatchObject({ art: 'neu', id: 'n1', erledigt: true, gefunden: 500 });
+    expect(s[1]).toMatchObject({ art: 'neu', name: 'Hauskreise', eltern: 500, wartetAuf: null });
+    expect(s.filter((x) => x.art === 'um')).toEqual([
+      { art: 'um', id: 37, eltern: 500, erledigt: false, wartetAuf: null },
+      { art: 'um', id: 47, eltern: 500, erledigt: false, wartetAuf: null },
+    ]);
+    // …und eine darunter, die es auch schon gibt, wird über die gefundene Obergruppe erkannt
+    const beide: Heute = {
+      gruppen: [...da.gruppen, g(501, 'Hauskreise')],
+      eltern: new Map([...HEUTE.eltern, [501, [500]]]),
     };
-    expect(
-      umbauSchritte(ohneStatus, archivieren(KEINE_AENDERUNGEN, 50, true), null)[0].erledigt,
-    ).toBe(false);
+    expect(umbauSchritte(beide, a, KEINE_ARCHIVIERT)[1]).toMatchObject({
+      erledigt: true,
+      gefunden: 501,
+    });
+  });
+
+  it('nichtAngelegt ist die genaue Umkehrung von angelegt', () => {
+    const { a, gem } = beispiel();
+    const n = a.neu.find((x) => x.id === gem)!;
+    const zurueck = nichtAngelegt(angelegt(a, gem, 500), n, 500);
+    const sortiert = (x: ReturnType<typeof planGruppen>) =>
+      x.slice().sort((p, q) => String(p.ref).localeCompare(String(q.ref)));
+    expect(sortiert(planGruppen(HEUTE, zurueck))).toEqual(sortiert(planGruppen(HEUTE, a)));
+    expect(zurueck.eltern).toEqual(a.eltern);
+    expect(zurueck.neu.slice().sort((x, y) => x.id.localeCompare(y.id))).toEqual(a.neu);
   });
 });
 

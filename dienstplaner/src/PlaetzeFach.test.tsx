@@ -64,6 +64,9 @@ describe('PlaetzeFach (E4-5-3)', () => {
     fireEvent.click(knopf('Licht: ein Platz mehr'));
     expect(knopf('Ton: ein Platz mehr')).toHaveProperty('disabled', true);
     expect(zahl('Licht')).toBe('…');
+    // Sichtbar gesperrt wie im ConfirmDialog (E6-O F2, #720), nicht nur wirkungslos.
+    expect(knopf('Schließen')).toHaveProperty('disabled', true);
+    expect(knopf('Fenster schließen')).toHaveProperty('disabled', true);
     fireEvent.click(knopf('Schließen'));
     expect(p.onClose).not.toHaveBeenCalled();
     await act(async () => fertig({ ok: true, anzahl: 2 }));
@@ -109,5 +112,18 @@ describe('anzahlFehlerText', () => {
     ] as const;
     const texte = gruende.map((grund) => anzahlFehlerText({ ok: false, grund, jetzt: 2 }));
     expect(new Set(texte).size).toBe(gruende.length);
+  });
+});
+
+/** Fenster wie ChurchTools (E6-O F2, #720): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
+const knopfFolge = () =>
+  screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent);
+
+describe('PlaetzeFach im ChurchTools-Aufbau', () => {
+  it('nur ansehen: X oben, unten nur Schließen', () => {
+    zeige();
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(knopfFolge()[0]).toBe('Fenster schließen');
+    expect(knopfFolge().at(-1)).toBe('Schließen');
   });
 });

@@ -307,3 +307,105 @@ export const hatAenderungen = (a: PlanAenderungen) =>
   Object.keys(a.eltern).length > 0 ||
   Object.keys(a.namen).length > 0 ||
   a.archiv.length > 0;
+
+// ── Für die Ansicht (O7-2) ───────────────────────────────────────────────────
+
+export interface PlanKnoten {
+  gruppe: PlanGruppe;
+  kinder: PlanKnoten[];
+}
+
+const nachName = (a: PlanGruppe, b: PlanGruppe) => a.name.localeCompare(b.name, 'de');
+
+/**
+ * Der Plan als Baum – Bereiche und Untergruppen nach Namen (wie im Entwurf). Eine Gruppe, die von keinem Bereich aus
+ * erreichbar ist, steckt in einem Kreis (der Plan hängt A unter B, inzwischen hängt in ChurchTools B unter A): Dann
+ * wird eine Gruppe des Kreises selbst zum Bereich – verschwinden darf nichts.
+ */
+export function planBaum(plan: readonly PlanGruppe[]): PlanKnoten[] {
+  const nach = new Map(plan.map((g) => [g.ref, g]));
+  const kinder = new Map<Ref, PlanGruppe[]>();
+  for (const g of plan) {
+    if (g.eltern !== null) kinder.set(g.eltern, [...(kinder.get(g.eltern) ?? []), g]);
+  }
+  const gesehen = new Set<Ref>();
+  const knoten = (g: PlanGruppe): PlanKnoten => {
+    gesehen.add(g.ref);
+    const unter = (kinder.get(g.ref) ?? []).filter((k) => !gesehen.has(k.ref)).sort(nachName);
+    return { gruppe: g, kinder: unter.map(knoten) };
+  };
+  const wurzeln = plan
+    .filter((g) => g.eltern === null)
+    .sort(nachName)
+    .map(knoten);
+  for (const g of [...plan].sort(nachName)) {
+    if (gesehen.has(g.ref)) continue;
+    // Nach oben laufen, bis sich der Weg schließt – diese Gruppe liegt im Kreis.
+    let x = g;
+    const weg = new Set<Ref>();
+    while (x.eltern !== null && !weg.has(x.ref)) {
+      weg.add(x.ref);
+      const oben = nach.get(x.eltern);
+      if (!oben) break;
+      x = oben;
+    }
+    wurzeln.push(knoten(x));
+  }
+  return wurzeln;
+}
+
+export type PlanMarke = 'neu' | 'umgehängt' | 'umbenannt' | 'wird archiviert';
+
+/** Was sich an einer Gruppe gegenüber heute ändert: Marken und „vorher …“ (Entwurf o7-plan-v1). */
+export function planUnterschied(
+  g: PlanGruppe,
+  nameVon: (id: number) => string,
+): { marken: PlanMarke[]; vorher: string | null } {
+  if (g.neu || !g.heute) return { marken: ['neu'], vorher: null };
+  const marken: PlanMarke[] = [];
+  const vorher: string[] = [];
+  if (g.archiv) marken.push('wird archiviert');
+  if (g.eltern !== g.heute.eltern) {
+    marken.push('umgehängt');
+    vorher.push(
+      g.heute.eltern === null
+        ? 'vorher eigener Bereich'
+        : `vorher unter „${nameVon(g.heute.eltern)}“`,
+    );
+  }
+  if (g.name !== g.heute.name) {
+    marken.push('umbenannt');
+    vorher.push(`vorher „${g.heute.name}“`);
+  }
+  return { marken, vorher: vorher.length ? vorher.join(' · ') : null };
+}
+
+/**
+ * Wohin eine Gruppe im Plan gehängt werden kann – wie `moeglicheObergruppen` für heute: jede Gruppe des Plans außer
+ * ihr selbst, ihren Untergruppen (Kreis), ihrer jetzigen Obergruppe und Gruppen, die archiviert werden. Sortiert nach
+ * dem Weg von oben.
+ */
+export function planZiele(
+  plan: readonly PlanGruppe[],
+  ref: Ref,
+): { gruppe: PlanGruppe; pfad: string[] }[] {
+  const nach = new Map(plan.map((g) => [g.ref, g]));
+  const raus = planUntergruppen(plan, ref);
+  raus.add(ref);
+  const oben = nach.get(ref)?.eltern ?? null;
+  if (oben !== null) raus.add(oben);
+  const pfad = (g: PlanGruppe) => {
+    const p: string[] = [];
+    const weg = new Set<Ref>();
+    for (let x: PlanGruppe | undefined = g; x && !weg.has(x.ref); ) {
+      weg.add(x.ref);
+      p.unshift(x.name);
+      x = x.eltern === null ? undefined : nach.get(x.eltern);
+    }
+    return p;
+  };
+  return plan
+    .filter((g) => !raus.has(g.ref) && !g.archiv)
+    .map((g) => ({ gruppe: g, pfad: pfad(g) }))
+    .sort((a, b) => a.pfad.join(' › ').localeCompare(b.pfad.join(' › '), 'de'));
+}

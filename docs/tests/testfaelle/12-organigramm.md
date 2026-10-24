@@ -118,3 +118,35 @@ Live-Instanz.
   Mail-Eintrag im Protokoll)
 
 </details>
+
+### TF-ORG-05 · Plan „neue Gliederung“ – zwei Admins gleichzeitig
+
+**Das brauchst du:** In der Test-Instanz zwei Konten mit dem Recht „Gruppen verwalten“, in zwei Browsern (oder einem
+privaten Fenster) angemeldet, und ein Konto, das eine Gruppe nur **leitet**. Nie in der Live-Instanz.
+
+**Das muss passieren:** Der Plan gilt für alle Gruppen-Admins; gleichzeitiges Speichern überschreibt nichts.
+ChurchTools selbst ändert sich nicht – keine Gruppe, kein Name, kein Status.
+
+1. Admin A: Reiter **Neue Gliederung** → **Plan anlegen**. Der Baum sieht aus wie heute. Danach gibt Alwin in
+   ChurchTools Admin B die Rechte auf die Kategorie „Plan“ (**Daten sehen**, **Daten anlegen, ändern, löschen**).
+2. Admin A: **＋ Neuer Bereich** „Übung Plan“, eine Gruppe dort **einhängen**, eine andere **umbenennen**, eine dritte
+   **im Plan archivieren**. Jede zeigt ihre Marke und „vorher …“.
+3. Admin B: Seite neu laden, Reiter **Neue Gliederung** – derselbe Plan, „Gespeichert von A“.
+4. Beide öffnen den Reiter. Erst A benennt eine Gruppe um, danach B (ohne neu zu laden) eine andere: Bei B steht
+   „A hat den Plan inzwischen geändert …“, A's Änderung ist zu sehen. **Nochmal auf dem neuen Stand** → beide
+   Änderungen sind im Plan.
+5. In ChurchTools nachsehen: Gruppen, Namen, Obergruppen und Status sind unverändert.
+6. Mit dem Konto, das nur eine Gruppe **leitet**: kein Reiter „Neue Gliederung“, auch nicht über `#gliederung` in der
+   Adresse.
+7. Admin A: **Plan verwerfen** → **Verwerfen**. Bei beiden (nach Neuladen) „Noch kein Plan“.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `organigramm/src/NeueGliederung.tsx`, `organigramm/src/PlanFenster.tsx`, `organigramm/src/plan.ts`, `shared/organigramm/plan.ts`, `shared/ct/versionierterWert.ts`
+- **Automatisiert:** teilweise – `NeueGliederung.test.tsx` (Bedienung, Konflikt, Fehler gegen den nachgebauten
+  Speicher), `plan.test.ts` (Regeln und Speicher), `versionierterWert.test.ts`, `App.test.tsx` (Reiter nur für Admins);
+  ob ChurchTools die Kategorie-Rechte so durchsetzt und zwei echte Sitzungen sich so verhalten, prüft nur dieser Fall
+- **Historie:** #719 (O7-1 Plan-Kern #721, O7-2 Reiter)
+
+</details>

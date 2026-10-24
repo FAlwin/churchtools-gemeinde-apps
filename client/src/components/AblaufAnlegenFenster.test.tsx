@@ -81,7 +81,7 @@ describe('AblaufAnlegenFenster', () => {
     const knoepfe = screen
       .getAllByRole('button')
       .map((b) => b.getAttribute('aria-label') ?? b.textContent);
-    expect(knoepfe[0]).toBe('Schließen');
+    expect(knoepfe[0]).toBe('Fenster schließen');
     expect(knoepfe.slice(-2)).toEqual(['Abbrechen', 'Anlegen']);
   });
 

@@ -165,3 +165,16 @@ describe('EntwurfFach (E4-3-3)', () => {
     expect(p.onClose).not.toHaveBeenCalled();
   });
 });
+
+/** Fenster wie ChurchTools (E6-O F2, #720): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
+const knopfFolge = () =>
+  screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent);
+
+describe('EntwurfFach im ChurchTools-Aufbau', () => {
+  it('nur ansehen: X oben, unten nur Schließen', () => {
+    zeige();
+    expect(screen.getByRole('dialog', { name: 'Ton · So 25.10.' })).toBeTruthy();
+    expect(knopfFolge()[0]).toBe('Fenster schließen');
+    expect(knopfFolge().at(-1)).toBe('Schließen');
+  });
+});

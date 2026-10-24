@@ -49,7 +49,16 @@ describe('LiedinfoKarte', () => {
   it('vorbelegt aus dem Notenblatt – mit Hinweis, woher der Wert kommt', () => {
     zeige();
     expect(screen.getByLabelText('Tempo')).toHaveProperty('value', '72');
-    expect(screen.getByText('Aus dem Notenblatt übernommen')).toBeTruthy();
+    expect(screen.getByText('Tempo: aus dem Notenblatt übernommen')).toBeTruthy();
+  });
+
+  it('Dreierzeile: Hinweise zu Tempo und Takt nennen ihr Feld (Test-Instanz 24.10.2026)', () => {
+    const quelle: LiedinfoQuelle = { lied: LIED, arrangement: { ...ARR, beat: '4/4' }, darf: true };
+    const { formular, vergleich } = liedinfoStart(quelle, `${DATEI}\n{time: 3/4}`);
+    render(<LiedinfoKarte formular={formular} vergleich={vergleich} darf aendern={vi.fn()} />);
+    expect(screen.getByText('Tempo: aus dem Notenblatt übernommen')).toBeTruthy();
+    expect(screen.getByText(/Takt im Notenblatt:/).textContent).toContain('3/4');
+    expect(screen.queryByText('Aus dem Notenblatt übernommen')).toBeNull();
   });
 
   it('gleicher Wert: kein Hinweis', () => {

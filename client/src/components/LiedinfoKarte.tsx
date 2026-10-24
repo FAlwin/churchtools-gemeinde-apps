@@ -26,17 +26,28 @@ export function LiedinfoKarte({ formular, vergleich, darf, aendern }: Props) {
   const id = useId();
   const v = (f: LiedinfoFeld) => vergleich.find((x) => x.feld === f);
 
-  /** Hinweis unter einem Feld – nur, wo die Datei etwas sagt, das (noch) nicht im Feld steht. */
-  function hinweis(f: LiedinfoFeld): ReactNode {
+  /**
+   * Hinweis unter einem Feld – nur, wo die Datei etwas sagt, das (noch) nicht im Feld steht. `feldname` für die
+   * Dreierzeile: Dort stehen die Hinweise unter der ganzen Zeile, ohne Namen wäre offen, zu welchem Feld sie
+   * gehören (Test-Instanz, 24.10.2026: zweimal „Aus dem Notenblatt übernommen“ untereinander).
+   */
+  function hinweis(f: LiedinfoFeld, feldname?: string): ReactNode {
     const x = v(f);
     if (!x || x.art === 'leer' || x.art === 'gleich') return null;
     const steht = liedinfoWert(formular, f).trim();
     if (x.art === 'vorbelegen' && steht === x.datei)
-      return <span className={styles.hinweis}>Aus dem Notenblatt übernommen</span>;
+      return (
+        <span className={styles.hinweis}>
+          {feldname
+            ? `${feldname}: aus dem Notenblatt übernommen`
+            : 'Aus dem Notenblatt übernommen'}
+        </span>
+      );
     if (steht === x.datei) return null;
     return (
       <span className={styles.hinweis}>
-        Im Notenblatt steht: <q className={styles.datei}>{x.datei}</q>
+        {feldname ? `${feldname} im Notenblatt:` : 'Im Notenblatt steht:'}{' '}
+        <q className={styles.datei}>{x.datei}</q>
         {darf && (
           <button
             type="button"
@@ -134,8 +145,8 @@ export function LiedinfoKarte({ formular, vergleich, darf, aendern }: Props) {
           />
         </div>
       </div>
-      {hinweis('tempo')}
-      {hinweis('beat')}
+      {hinweis('tempo', 'Tempo')}
+      {hinweis('beat', 'Takt')}
       <div className={feld.field}>
         <label className={feld.label} htmlFor={`${id}-6`}>
           CCLI-Nummer

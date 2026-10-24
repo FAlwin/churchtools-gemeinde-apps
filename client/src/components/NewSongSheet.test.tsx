@@ -488,3 +488,56 @@ describe('NewSongSheet – gibt es das Lied schon? (#395)', () => {
     expect(screen.getByText(/gibt es schon\. Anlegen geht trotzdem/)).toBeTruthy();
   });
 });
+
+/** Fenster wie ChurchTools (E6-O F3, #726): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
+const knopfFolgeF3 = () =>
+  screen.getAllByRole('button').map((b) => (b.getAttribute('aria-label') ?? b.textContent)?.trim());
+
+describe('NewSongSheet im ChurchTools-Aufbau', () => {
+  const ANGELEGT = {
+    songId: 77,
+    arrangementId: 770,
+    name: 'Wo ich auch stehe',
+    notenblatt: false,
+    notenblattQuelle: null,
+    hinweise: [],
+  };
+
+  it('Formular: unten Abbrechen und „Lied anlegen“', () => {
+    zeige();
+    expect(screen.getByRole('dialog', { name: 'Neues Lied' })).toBeTruthy();
+    expect(knopfFolgeF3()[0]).toBe('Fenster schließen');
+    expect(knopfFolgeF3().slice(-2)).toEqual(['Abbrechen', 'Lied anlegen']);
+  });
+
+  it('„Lied angelegt“: alle nächsten Schritte unten (Alwin) – ohne Weg zurück ist das Notenblatt der Hauptweg', () => {
+    hookErgebnis.mockReturnValue(ANGELEGT);
+    zeige();
+    expect(knopfFolgeF3().slice(-3)).toEqual([
+      'Fertig',
+      'Noch ein Lied anlegen',
+      'Notenblatt schreiben',
+    ]);
+  });
+
+  it('„Lied angelegt“ aus dem Eintrag: zuletzt „Zurück zum Eintrag“, davor das Notenblatt', () => {
+    hookErgebnis.mockReturnValue(ANGELEGT);
+    zeige({ onVerknuepfen: vi.fn() });
+    expect(knopfFolgeF3().slice(-3)).toEqual([
+      'Fertig',
+      'Notenblatt schreiben',
+      'Zurück zum Eintrag',
+    ]);
+  });
+
+  it('„Lied angelegt“ aus der Liederliste: zuletzt „Lied öffnen“', () => {
+    hookErgebnis.mockReturnValue(ANGELEGT);
+    zeige({ onOpenSong: vi.fn() });
+    expect(knopfFolgeF3().slice(-4)).toEqual([
+      'Fertig',
+      'Noch ein Lied anlegen',
+      'Notenblatt schreiben',
+      'Lied öffnen',
+    ]);
+  });
+});

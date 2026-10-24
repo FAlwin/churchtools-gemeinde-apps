@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { SITE_CONFIG_GRENZEN, type SiteConfig, type TerminArt } from '@shared/types/index';
-import { Spinner } from './Spinner';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
+import { Sheet } from '@ui/fenster/Sheet';
 import { Icon } from '@ui/icons/icons';
 import { useUpdateSiteConfig } from '../hooks/useSiteConfig';
 import { neueId } from '../utils/ids';
@@ -8,6 +9,7 @@ import { speicherFehler } from '../utils/speicherFehler';
 // Dieselben Stile wie der Links-Editor – bewusst geteilt, nicht kopiert: zwei Listen-Editoren im
 // selben Verwaltungsbereich sollen gleich aussehen, und eine Korrektur soll beide treffen.
 import styles from './LinksManager.module.scss';
+import allgemein from '../pages/Settings.module.scss';
 
 /**
  * Admin-Verwaltung der **Termin-Arten** für den Filter im Tab „Abwesenheiten" (#400).
@@ -25,6 +27,7 @@ function neueArt(): TerminArt {
   return { id: neueId('t'), name: '', suchwort: '' };
 }
 
+/** Admin-Fenster **„Termin-Arten“** – mit eigenem Fenster, „Speichern“ unten rechts (E6-O F3, #726). */
 export function TerminArtenManager({ site, onClose }: { site: SiteConfig; onClose: () => void }) {
   const [arten, setArten] = useState<TerminArt[]>(site.terminArten ?? []);
   const [err, setErr] = useState<string | null>(null);
@@ -53,49 +56,62 @@ export function TerminArtenManager({ site, onClose }: { site: SiteConfig; onClos
   }
 
   return (
-    <div className={styles.wrap}>
-      <div className={styles.list}>
-        {arten.map((a) => (
-          <div key={a.id} className={styles.card}>
-            <div className={styles.cardTop}>
+    <Sheet
+      title="Termin-Arten"
+      onClose={onClose}
+      knoepfe={
+        <FensterKnopf onClick={save} disabled={update.isPending}>
+          {update.isPending ? 'Wird gespeichert …' : 'Speichern'}
+        </FensterKnopf>
+      }
+    >
+      <p className={allgemein.sheetHint}>
+        Im Tab „Abwesenheiten" lassen sich Termine nach Art filtern – etwa nur Gottesdienste. Eine
+        Art hat einen <strong>Namen</strong> (der Knopf) und ein <strong>Suchwort</strong>: Kommt es
+        im Terminnamen vor, gehört der Termin dazu. Geprüft wird von oben nach unten, die erste
+        passende Art gewinnt; alles Übrige landet unter „Sonstige". Ohne Arten gibt es keinen
+        Filter.
+      </p>
+      <div className={styles.wrap}>
+        <div className={styles.list}>
+          {arten.map((a) => (
+            <div key={a.id} className={styles.card}>
+              <div className={styles.cardTop}>
+                <input
+                  className={styles.labelInput}
+                  value={a.name}
+                  maxLength={SITE_CONFIG_GRENZEN.terminArtName}
+                  placeholder="Name des Knopfs (z. B. Gottesdienst)"
+                  aria-label="Name"
+                  onChange={(e) => aendere({ ...a, name: e.target.value })}
+                />
+                <button
+                  className={styles.del}
+                  onClick={() => setArten((cur) => cur.filter((x) => x.id !== a.id))}
+                  aria-label="Termin-Art löschen"
+                >
+                  <Icon name="trash" size={18} />
+                </button>
+              </div>
               <input
-                className={styles.labelInput}
-                value={a.name}
-                maxLength={SITE_CONFIG_GRENZEN.terminArtName}
-                placeholder="Name des Knopfs (z. B. Gottesdienst)"
-                aria-label="Name"
-                onChange={(e) => aendere({ ...a, name: e.target.value })}
+                className={styles.urlInput}
+                value={a.suchwort}
+                maxLength={SITE_CONFIG_GRENZEN.terminArtSuchwort}
+                placeholder="Suchwort im Terminnamen (z. B. Gottesdienst)"
+                aria-label="Suchwort"
+                autoCapitalize="off"
+                onChange={(e) => aendere({ ...a, suchwort: e.target.value })}
               />
-              <button
-                className={styles.del}
-                onClick={() => setArten((cur) => cur.filter((x) => x.id !== a.id))}
-                aria-label="Termin-Art löschen"
-              >
-                <Icon name="trash" size={18} />
-              </button>
             </div>
-            <input
-              className={styles.urlInput}
-              value={a.suchwort}
-              maxLength={SITE_CONFIG_GRENZEN.terminArtSuchwort}
-              placeholder="Suchwort im Terminnamen (z. B. Gottesdienst)"
-              aria-label="Suchwort"
-              autoCapitalize="off"
-              onChange={(e) => aendere({ ...a, suchwort: e.target.value })}
-            />
-          </div>
-        ))}
+          ))}
+        </div>
+
+        <button className={styles.add} onClick={() => setArten((cur) => [...cur, neueArt()])}>
+          <Icon name="plus" size={18} /> Termin-Art hinzufügen
+        </button>
+
+        {err && <div className={styles.err}>{err}</div>}
       </div>
-
-      <button className={styles.add} onClick={() => setArten((cur) => [...cur, neueArt()])}>
-        <Icon name="plus" size={18} /> Termin-Art hinzufügen
-      </button>
-
-      {err && <div className={styles.err}>{err}</div>}
-
-      <button className={styles.save} onClick={save} disabled={update.isPending}>
-        {update.isPending ? <Spinner /> : 'Speichern'}
-      </button>
-    </div>
+    </Sheet>
   );
 }

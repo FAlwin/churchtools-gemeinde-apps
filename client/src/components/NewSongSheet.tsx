@@ -25,6 +25,7 @@
 import { useEffect, useState } from 'react';
 import type { SongLibraryEntry, SongSelectTreffer } from '@shared/types/index';
 import { LIED_GRENZEN } from '@shared/types/index';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import { LiedSchonVorhanden } from './LiedSchonVorhanden';
 import { Icon } from '@ui/icons/icons';
@@ -202,7 +203,51 @@ export function NewSongSheet({
       ? () => onVerknuepfen(ergebnis.arrangementId, ergebnis.name)
       : undefined;
     return (
-      <Sheet title="Lied angelegt" onClose={verknuepfen ?? onClose} cancelLabel="Fertig">
+      <Sheet
+        title="Lied angelegt"
+        onClose={verknuepfen ?? onClose}
+        cancelLabel="Fertig"
+        knoepfe={
+          /* Alle nächsten Schritte unten (Alwin, E6-O F3 #726): der Hauptweg – zurück zum Eintrag oder ins Lied –
+             steht rechts, ohne ihn das Notenblatt. Am Handy untereinander, der Hauptweg oben. */
+          <>
+            {!verknuepfen && (
+              <FensterKnopf
+                art="hell"
+                onClick={() => {
+                  neuesLied.zuruecksetzen();
+                  setFormular(LEERES_FORMULAR);
+                  // Muss mit zurück: Sonst legte die Abfrage zum alten Treffer das leere Formular wieder voll.
+                  setVorbelegung(null);
+                }}
+              >
+                Noch ein Lied anlegen
+              </FensterKnopf>
+            )}
+            {/* Für JEDES Lied: ohne Blatt das Gerüst, mit Blatt (aus SongSelect) den Text zum Anpassen. */}
+            <FensterKnopf
+              art={onOpenSong || verknuepfen ? 'hell' : 'haupt'}
+              disabled={editorLaedt}
+              onClick={() => void editorOeffnen()}
+            >
+              {editorLaedt
+                ? 'Notenblatt wird geladen …'
+                : ergebnis.notenblatt
+                  ? 'Notenblatt bearbeiten'
+                  : 'Notenblatt schreiben'}
+            </FensterKnopf>
+            {onOpenSong && (
+              <FensterKnopf
+                art={verknuepfen ? 'hell' : 'haupt'}
+                onClick={() => onOpenSong(ergebnis.songId, ergebnis.arrangementId)}
+              >
+                Lied öffnen
+              </FensterKnopf>
+            )}
+            {verknuepfen && <FensterKnopf onClick={verknuepfen}>Zurück zum Eintrag</FensterKnopf>}
+          </>
+        }
+      >
         <div className={styles.success}>
           <span className={styles.successIcon}>
             <Icon name="check" size={26} stroke={2.6} />
@@ -232,47 +277,6 @@ export function NewSongSheet({
           <div className={styles.err}>{neuesLied.notenblattFehler}</div>
         )}
 
-        <div className={styles.actions}>
-          {verknuepfen && (
-            <button className={styles.primaryWide} onClick={verknuepfen}>
-              Zurück zum Eintrag
-            </button>
-          )}
-          {onOpenSong && (
-            <button
-              className={styles.primaryWide}
-              onClick={() => onOpenSong(ergebnis.songId, ergebnis.arrangementId)}
-            >
-              Lied öffnen
-            </button>
-          )}
-          {/* Für JEDES Lied: ohne Blatt das Gerüst, mit Blatt (aus SongSelect) den Text zum Anpassen. */}
-          <button
-            className={onOpenSong || verknuepfen ? styles.secondaryWide : styles.primaryWide}
-            disabled={editorLaedt}
-            onClick={() => void editorOeffnen()}
-          >
-            {editorLaedt
-              ? 'Notenblatt wird geladen …'
-              : ergebnis.notenblatt
-                ? 'Notenblatt bearbeiten'
-                : 'Notenblatt schreiben'}
-          </button>
-          {!verknuepfen && (
-            <button
-              className={onOpenSong ? styles.secondaryWide : styles.primaryWide}
-              onClick={() => {
-                neuesLied.zuruecksetzen();
-                setFormular(LEERES_FORMULAR);
-                // Muss mit zurück: Sonst legte die Abfrage zum alten Treffer das leere Formular wieder voll.
-                setVorbelegung(null);
-              }}
-            >
-              Noch ein Lied anlegen
-            </button>
-          )}
-        </div>
-
         {/* Als Überlagerung über dem Blatt – dieselbe Komponente wie im Lied, ohne Versionsname:
             geschrieben wird das ORIGINAL. */}
         {editor && (
@@ -298,7 +302,37 @@ export function NewSongSheet({
   /* -------------------------------------------------------------------- Formular */
 
   return (
-    <Sheet title="Neues Lied" onClose={onClose}>
+    <Sheet
+      title="Neues Lied"
+      onClose={onClose}
+      knoepfe={
+        // „Lied anlegen“ nur, wo das Formular steht – nicht beim Laden, Fehler oder ohne Kategorie (F3, #726).
+        !kategorien.isError && !kategorien.isLoading && kategorieListe.length > 0 ? (
+          <FensterKnopf
+            disabled={!bereit || neuesLied.laeuft}
+            onClick={() => {
+              // `formularBereit` stellt sicher, dass eine Kategorie gewählt ist – deshalb hier kein
+              // `?? 0`: Das wäre stillschweigend „Aktive Songs" gewesen.
+              if (formular.categoryId === null) return;
+              // Trägt ein Lied die Nummer schon, wird gefragt statt angelegt (#395). Der Server lehnte
+              // sonst mit 409 ab – eine Sackgasse, aus der nur Abbrechen führte.
+              const schon = vorhandenesLied(formular.ccli, bibliothek.data ?? []);
+              if (schon) {
+                setDoppel(schon);
+                return;
+              }
+              void neuesLied.anlegen(formular, formular.categoryId, treffer);
+            }}
+          >
+            {neuesLied.laeuft
+              ? 'Wird angelegt …'
+              : neuesLied.ungewiss
+                ? 'Trotzdem erneut anlegen'
+                : 'Lied anlegen'}
+          </FensterKnopf>
+        ) : null
+      }
+    >
       {neuesLied.fehler && <div className={styles.err}>{neuesLied.fehler}</div>}
 
       {kategorien.isError ? (
@@ -352,30 +386,6 @@ export function NewSongSheet({
               />
             </div>
           </SongFields>
-
-          <button
-            className={styles.primaryWide}
-            disabled={!bereit || neuesLied.laeuft}
-            onClick={() => {
-              // `formularBereit` stellt sicher, dass eine Kategorie gewählt ist – deshalb hier kein
-              // `?? 0`: Das wäre stillschweigend „Aktive Songs" gewesen.
-              if (formular.categoryId === null) return;
-              // Trägt ein Lied die Nummer schon, wird gefragt statt angelegt (#395). Der Server lehnte
-              // sonst mit 409 ab – eine Sackgasse, aus der nur Abbrechen führte.
-              const schon = vorhandenesLied(formular.ccli, bibliothek.data ?? []);
-              if (schon) {
-                setDoppel(schon);
-                return;
-              }
-              void neuesLied.anlegen(formular, formular.categoryId, treffer);
-            }}
-          >
-            {neuesLied.laeuft
-              ? 'Wird angelegt …'
-              : neuesLied.ungewiss
-                ? 'Trotzdem erneut anlegen'
-                : 'Lied anlegen'}
-          </button>
         </div>
       )}
 

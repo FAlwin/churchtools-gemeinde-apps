@@ -112,24 +112,3 @@
   margin-top: 10px;
   text-align: center;
 }
-
-.save {
-  height: 48px;
-  width: 100%;
-  margin-top: 14px;
-  border-radius: var(--r-ctrl);
-  border: none;
-  background: var(--blue);
-  color: #fff;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--ui);
-
-  &:disabled {
-    opacity: 0.6;
-  }
-}

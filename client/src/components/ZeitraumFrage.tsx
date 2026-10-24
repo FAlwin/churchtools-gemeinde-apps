@@ -1,4 +1,5 @@
 import type { Absence } from '@shared/types/index';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import { tagKurz, zeitraumKurz } from '../utils/absenceDatum';
 import styles from '../pages/Availability.module.scss';
@@ -43,7 +44,18 @@ export function ZeitraumFrage({
   const ganzerTag = weitereTermine.length > 0;
   const wort = ganzerTag ? 'Eintrag' : 'Zeitraum';
   return (
-    <Sheet title={ganzerTag ? 'Gilt für den ganzen Tag' : 'Teil eines Zeitraums'} onClose={onClose}>
+    <Sheet
+      title={ganzerTag ? 'Gilt für den ganzen Tag' : 'Teil eines Zeitraums'}
+      onClose={onClose}
+      knoepfe={
+        <>
+          <FensterKnopf art="gefahr" onClick={onLoeschen}>
+            {wort} löschen
+          </FensterKnopf>
+          <FensterKnopf onClick={onAnpassen}>{wort} anpassen</FensterKnopf>
+        </>
+      }
+    >
       <p className={styles.frageText}>
         <b>{tagKurz(tag)}</b> gehört zu{' '}
         <b>
@@ -63,12 +75,6 @@ export function ZeitraumFrage({
           </>
         )}
       </p>
-      <button className={styles.loeschenWide} onClick={onLoeschen}>
-        {wort} löschen
-      </button>
-      <button className={`${styles.primaryWide} ${styles.abstandOben}`} onClick={onAnpassen}>
-        {wort} anpassen
-      </button>
     </Sheet>
   );
 }

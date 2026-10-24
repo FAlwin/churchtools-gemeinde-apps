@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { jsPDF } from 'jspdf';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import { SchalterZeile } from './SchalterZeile';
 import { Spinner } from './Spinner';
@@ -9,7 +10,6 @@ import { downloadPdf, sharePdf } from '@ui/teilen/sharePdf';
 import { Icon } from '@ui/icons/icons';
 import { PdfSeitenVorschau } from './PdfSeitenVorschau';
 import styles from '../pages/Settings.module.scss';
-import eigene from './TeilenFenster.module.scss';
 
 /** Was das Bauen liefert: das PDF und ein Hinweis auf Lieder, die nicht wie gezeigt dabei sind. */
 export interface GebautesPdf {
@@ -82,7 +82,41 @@ export function TeilenFenster({ titel, dateiname, bauen, onClose }: TeilenFenste
   }
 
   return (
-    <Sheet title={titel} onClose={onClose}>
+    <Sheet
+      title={titel}
+      onClose={onClose}
+      knoepfe={
+        <>
+          <FensterKnopf
+            art="hell"
+            disabled={stand.art !== 'fertig'}
+            onClick={() => {
+              if (stand.art !== 'fertig') return;
+              downloadPdf(stand.pdf.doc, dateiname);
+              setGeladen(true);
+            }}
+          >
+            <Icon name="download" size={18} /> Herunterladen
+          </FensterKnopf>
+          <FensterKnopf
+            disabled={stand.art !== 'fertig'}
+            onClick={() => {
+              if (stand.art !== 'fertig') return;
+              void sharePdf(stand.pdf.doc, dateiname);
+              onClose();
+            }}
+          >
+            {stand.art === 'baut' ? (
+              <Spinner />
+            ) : (
+              <>
+                <Icon name="share" size={18} /> Teilen
+              </>
+            )}
+          </FensterKnopf>
+        </>
+      }
+    >
       <div className={styles.cardList}>
         <SchalterZeile
           label="Meine Anmerkungen"
@@ -105,38 +139,6 @@ export function TeilenFenster({ titel, dateiname, bauen, onClose }: TeilenFenste
                 .join('. ')}
       </p>
       {stand.art === 'fertig' && <PdfSeitenVorschau doc={stand.pdf.doc} />}
-      <div className={eigene.knoepfe}>
-        <button
-          type="button"
-          className={eigene.zweit}
-          disabled={stand.art !== 'fertig'}
-          onClick={() => {
-            if (stand.art !== 'fertig') return;
-            downloadPdf(stand.pdf.doc, dateiname);
-            setGeladen(true);
-          }}
-        >
-          <Icon name="download" size={18} /> Herunterladen
-        </button>
-        <button
-          type="button"
-          className={eigene.erst}
-          disabled={stand.art !== 'fertig'}
-          onClick={() => {
-            if (stand.art !== 'fertig') return;
-            void sharePdf(stand.pdf.doc, dateiname);
-            onClose();
-          }}
-        >
-          {stand.art === 'baut' ? (
-            <Spinner />
-          ) : (
-            <>
-              <Icon name="share" size={18} /> Teilen
-            </>
-          )}
-        </button>
-      </div>
     </Sheet>
   );
 }

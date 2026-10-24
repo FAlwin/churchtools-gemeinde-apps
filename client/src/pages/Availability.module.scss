@@ -297,25 +297,6 @@
   gap: 10px;
 }
 
-.primaryWide {
-  width: 100%;
-  padding: 12px;
-  border: none;
-  border-radius: calc(var(--r-ctrl) + 2px);
-  background: var(--blue);
-  color: #fff;
-  font-family: var(--ui);
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  &:disabled {
-    opacity: 0.5;
-  }
-}
-.abstandOben {
-  margin-top: 10px;
-}
-
 .fehler {
   font-family: var(--ui);
   font-size: 13px;

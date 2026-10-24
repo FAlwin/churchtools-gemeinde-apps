@@ -274,6 +274,8 @@ describe('Nachrücken und Absagen (A7-3)', () => {
     );
     expect(screen.getByText('Lena Beispiel nachrücken lassen?')).toBeTruthy();
     expect(screen.getByText('Neue Zahlung für Lena').nextSibling?.textContent).toBe('6,00 €');
+    // Ohne eingerichtete Mails: wie gemessen nur „war erfolgreich“.
+    expect(screen.getByText(/nur „Deine Anmeldung war erfolgreich“/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Nachrücken lassen' }));
     await waitFor(() => expect(z.onGespeichert).toHaveBeenCalled());
     expect(bm.nachrueckenLassen).toHaveBeenCalledWith(
@@ -341,6 +343,23 @@ describe('Nachrücken und Absagen (A7-3)', () => {
         '„Rückgängig“ trägt Lena wieder ein – ChurchTools schickt dabei die Bestätigung noch einmal.',
       ),
     ).toBeTruthy();
+    // Nach dem Rückgängigmachen ist der Satz erledigt und verschwindet (echte Prüfung 24.10.2026).
+    fireEvent.click(within(screen.getByRole('status')).getByRole('button', { name: 'Rückgängig' }));
+    await waitFor(() =>
+      expect(screen.queryByText(/schickt dabei die Bestätigung noch einmal/)).toBeNull(),
+    );
+  });
+
+  it('Nachrücken mit Bestätigungsmails (A9-1): die Rückfrage nennt die Bestätigung mit Betrag', () => {
+    zeigen(fertig(), 10, false, true, true);
+    oeffnen();
+    fireEvent.click(
+      within(karte('Lena Beispiel, 7')).getByRole('button', { name: 'Nachrücken lassen' }),
+    );
+    expect(
+      screen.getByText(/ChurchTools schickt Lena die Bestätigung mit Betrag und Bankdaten\./),
+    ).toBeTruthy();
+    expect(screen.queryByText(/war erfolgreich/)).toBeNull();
   });
 
   it('ohne Recht keine Knöpfe zum Nachrücken oder Absagen', () => {
@@ -386,6 +405,8 @@ describe('Anmeldung von Hand (A7-4a)', () => {
     fireEvent.click(screen.getByRole('button', { name: /Paul Probe/ }));
 
     expect(screen.getByText('Paul Probe anmelden')).toBeTruthy();
+    // Ohne eingerichtete Mails (A9-1): ChurchTools schickt nichts.
+    expect(screen.getByText(/keine Mail – danach gibt es „Mail schreiben“/)).toBeTruthy();
     // Name aus ChurchTools – gesperrt; Unterschrift gibt es nur als Schalter.
     expect(feld('af-personen.0.pname-vor').disabled).toBe(true);
     expect(screen.getByRole('button', { name: 'Unterschrift liegt auf Papier vor' })).toBeTruthy();
@@ -420,6 +441,18 @@ describe('Anmeldung von Hand (A7-4a)', () => {
     expect(plan.felder[x.ctFelder.kontakt]).toBe('Petra Probe');
     expect(plan.felder[x.ctFelder.sign]).toMatch(/^✓ auf Papier – vermerkt von Alwin Friesen, /);
     expect(plan.felder[plan.nrFeld!]).toMatch(/^[2-9A-Z]{6}$/);
+  });
+
+  it('mit Bestätigungsmails (A9-1): Von Hand nennt die Bestätigung statt „keine Mail“', async () => {
+    zeigen(fertig(), 10, false, true, true);
+    fireEvent.click(screen.getByRole('button', { name: '＋ Von Hand' }));
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), {
+      target: { value: 'Probe' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Suchen' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Paul Probe/ }));
+    expect(screen.getByText(/schickt die Bestätigung an die E-Mail-Adresse/)).toBeTruthy();
+    expect(screen.queryByText(/keine Mail/)).toBeNull();
   });
 
   it('neue Person: gleicher Name → „dieselbe Person?“; trotzdem neu → Hinweis, dass sie in ChurchTools bleibt', async () => {
@@ -577,6 +610,22 @@ describe('Zurückholen (A7-4c)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Suchen' }));
     fireEvent.click(await screen.findByRole('button', { name: /Lena Beispiel.*zurückholen/ }));
     expect(screen.getByText('Lena Beispiel zurückholen?')).toBeTruthy();
+    expect(await screen.findByText(/keine Mail – danach gibt es „Mail schreiben“/)).toBeTruthy();
+  });
+
+  it('mit Bestätigungsmails (A9-1): Zurückholen nennt die Bestätigung statt „keine Mail“', async () => {
+    hm.personenSuchen.mockResolvedValue([
+      { personId: 11, vor: 'Lena', nach: 'Beispiel', geburtstag: '2019-02-02', email: null },
+    ]);
+    zeigen(mitAbsage(), 10, false, true, true);
+    fireEvent.click(screen.getByRole('button', { name: '＋ Von Hand' }));
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), {
+      target: { value: 'Lena' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Suchen' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Lena Beispiel.*zurückholen/ }));
+    expect(await screen.findByText(/schickt die Bestätigung an die E-Mail-Adresse/)).toBeTruthy();
+    expect(screen.queryByText(/keine Mail/)).toBeNull();
   });
 
   it('ohne Recht zum Ändern: Zeile nur zum Ansehen', () => {

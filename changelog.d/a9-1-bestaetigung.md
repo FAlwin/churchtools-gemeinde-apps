@@ -13,7 +13,10 @@
   Entwurf „wird beim Freigeben eingerichtet“.
 - Fehlt das Recht „Routinen verwalten“, wird trotzdem freigegeben; die Meldung sagt, dass ChurchTools seine
   Standard-Mail schickt. Eine eigene Routine aus ChurchTools an derselben Stelle fasst die Erweiterung nicht an.
-- „Rückgängig“ nach dem Absagen sagt jetzt, dass ChurchTools beim Wiedereintragen die Bestätigung noch einmal schickt.
+- „Rückgängig“ nach dem Absagen sagt jetzt, dass ChurchTools beim Wiedereintragen die Bestätigung noch einmal schickt;
+  nach dem Rückgängigmachen verschwindet der Satz.
+- Die Fenster „Nachrücken“, „Von Hand“ und „Zurückholen“ sagen, was ChurchTools schickt – mit eingerichteten Mails die
+  Bestätigung, sonst wie bisher (`mailHinweis`, eine Stelle). Gefunden bei der echten Prüfung in der Test-Instanz.
 
 ### Intern (Anmeldungen, A9-1)
 

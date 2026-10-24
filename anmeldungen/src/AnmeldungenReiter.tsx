@@ -107,6 +107,8 @@ export interface FensterMeldung {
   mail: Mail | null;
   /** Ein Satz unter der Zeile (A7-4: „Die neu angelegte Person bleibt in ChurchTools“). */
   hinweis?: string;
+  /** Der Satz gilt nur, solange „Rückgängig“ noch aussteht (A9-1: „… schickt dabei die Bestätigung noch einmal“). */
+  hinweisBisRueckgaengig?: boolean;
 }
 
 /** Plätze und Warteliste – für Nachrücken und Absagen. */
@@ -196,6 +198,7 @@ function AnmeldungAnsehen({
     <NachrueckenFrage
       plan={nachPlan}
       vor={person(nachPlan.personId)!.vor}
+      mitBestaetigung={mitBestaetigung}
       arbeitet={arbeitet}
       fehler={fehler}
       onAbbrechen={() => setModus(null)}
@@ -238,6 +241,7 @@ function AnmeldungAnsehen({
               ...(mitBestaetigung
                 ? {
                     hinweis: `„Rückgängig“ trägt ${p.vor} wieder ein – ChurchTools schickt dabei die Bestätigung noch einmal.`,
+                    hinweisBisRueckgaengig: true,
                   }
                 : {}),
               mail: mailFuer(
@@ -822,6 +826,7 @@ export function AnmeldungenReiter({
 
       {vonHand && (
         <VonHandFenster
+          mitBestaetigung={mitBestaetigung}
           id={id}
           e={e}
           veranstaltung={veranstaltung}
@@ -876,6 +881,7 @@ export function AnmeldungenReiter({
 
       {zurueck && (
         <ZurueckFenster
+          mitBestaetigung={mitBestaetigung}
           id={id}
           e={e}
           veranstaltung={veranstaltung}
@@ -914,7 +920,11 @@ export function AnmeldungenReiter({
             setStartModus(null);
             onGespeichert();
           }}
-          onRueckgaengig={onGespeichert}
+          onRueckgaengig={() => {
+            // Nach dem Rückgängigmachen ist „… schickt dabei noch einmal“ erledigt (echte Prüfung 24.10.2026).
+            setMeldung((m) => (m?.hinweisBisRueckgaengig ? { ...m, hinweis: undefined } : m));
+            onGespeichert();
+          }}
           mitBestaetigung={mitBestaetigung}
           onZurueckholen={
             darf && ausgewaehlt

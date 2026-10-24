@@ -11,7 +11,7 @@
  *
  * Umhängen setzt im Plan EINE Obergruppe (wie die Erweiterung sie zeigt); der Schritt ersetzt alle heutigen.
  */
-import type { OrgGruppe } from './gruppen';
+import type { Knoten, OrgGruppe } from './gruppen';
 import { untergruppenVon } from './struktur';
 
 /** Eine Gruppe im Plan: ChurchTools-ID oder eigene ID einer neuen Gruppe (`n1` …). */
@@ -489,4 +489,39 @@ export function planZiele(
     .filter((g) => !raus.has(g.ref) && !g.archiv)
     .map((g) => ({ gruppe: g, pfad: pfad(g) }))
     .sort((a, b) => a.pfad.join(' › ').localeCompare(b.pfad.join(' › '), 'de'));
+}
+
+/**
+ * **Der Plan als Baum der Präsentation** (O7-4, „Neue Gliederung | Heute“ wie im Entwurf vom 19.10.2026): dieselben
+ * Knoten wie heute, damit die Präsentation nichts nachbaut. Bestehende Gruppen behalten ihre ID (also ihre Mitglieder
+ * und Farbe) und tragen den Namen aus dem Plan; **neue Gruppen** bekommen eine eigene negative ID (`neueIds` – der
+ * Aufrufer gibt ihnen eine leere Mitgliederliste, sonst hießen sie „nicht sichtbar“). Gruppen, die archiviert werden,
+ * fehlen; ihre Untergruppen rücken eine Ebene hoch.
+ */
+export function planAlsBaum(
+  knoten: readonly PlanKnoten[],
+  heute: readonly OrgGruppe[],
+): { baum: Knoten[]; neueIds: number[] } {
+  const nach = new Map(heute.map((g) => [g.id, g]));
+  const neueIds: number[] = [];
+  const wandeln = (k: PlanKnoten): Knoten[] => {
+    const g = k.gruppe;
+    // Die Gruppe vor ihren Kindern – so folgen die eigenen IDs neuer Gruppen der Reihenfolge im Baum.
+    let gruppe: OrgGruppe | null = null;
+    if (!g.archiv) {
+      if (typeof g.ref === 'number') {
+        const da = nach.get(g.ref);
+        gruppe = da
+          ? { ...da, name: g.name }
+          : { id: g.ref, name: g.name, typId: g.typId, statusId: null, farbe: null };
+      } else {
+        const id = -(neueIds.length + 1);
+        neueIds.push(id);
+        gruppe = { id, name: g.name, typId: g.typId, statusId: null, farbe: null };
+      }
+    }
+    const kinder = k.kinder.flatMap(wandeln);
+    return gruppe ? [{ gruppe, kinder }] : kinder;
+  };
+  return { baum: knoten.flatMap(wandeln), neueIds };
 }

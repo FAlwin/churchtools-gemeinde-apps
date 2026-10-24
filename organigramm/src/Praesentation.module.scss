@@ -22,6 +22,9 @@
 .kopf {
   flex: none;
   display: flex;
+  // Mit dem Umschalter „Neue Gliederung | Heute“ (O7-4) passt die Leiste am Handy nicht in eine Zeile –
+  // umbrechen statt „Schließen“ über den Rand zu schieben.
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   padding: 10px clamp(16px, 2vw, 24px);

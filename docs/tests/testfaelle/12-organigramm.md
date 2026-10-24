@@ -138,16 +138,19 @@ ChurchTools selbst ändert sich nicht – keine Gruppe, kein Name, kein Status.
 5. In ChurchTools nachsehen: Gruppen, Namen, Obergruppen und Status sind unverändert.
 6. Mit dem Konto, das nur eine Gruppe **leitet**: kein Reiter „Neue Gliederung“, auch nicht über `#gliederung` in der
    Adresse.
-7. Admin A: **Plan verwerfen** → **Verwerfen**. Bei beiden (nach Neuladen) „Noch kein Plan“.
+7. Admin A: Reiter **Organigramm** → **Präsentieren**: Sie beginnt mit „Neue Gliederung · …“ – „Übung Plan“ ist ein
+   Bereich, die umbenannte Gruppe trägt den neuen Namen, die archivierte fehlt. Oben **Heute**: der Stand aus
+   ChurchTools, zurück auf der Übersicht. Mit dem Konto, das nur **leitet**: kein Umschalter, nur „Heute“.
+8. Admin A: **Plan verwerfen** → **Verwerfen**. Bei beiden (nach Neuladen) „Noch kein Plan“.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `organigramm/src/NeueGliederung.tsx`, `organigramm/src/PlanFenster.tsx`, `organigramm/src/plan.ts`, `shared/organigramm/plan.ts`, `shared/ct/versionierterWert.ts`
+- **Betrifft:** `organigramm/src/NeueGliederung.tsx`, `organigramm/src/PlanFenster.tsx`, `organigramm/src/plan.ts`, `shared/organigramm/plan.ts`, `shared/ct/versionierterWert.ts`, `organigramm/src/Praesentation.tsx`
 - **Automatisiert:** teilweise – `NeueGliederung.test.tsx` (Bedienung, Konflikt, Fehler gegen den nachgebauten
-  Speicher), `plan.test.ts` (Regeln und Speicher), `versionierterWert.test.ts`, `App.test.tsx` (Reiter nur für Admins);
+  Speicher), `plan.test.ts` (Regeln und Speicher), `versionierterWert.test.ts`, `App.test.tsx` (Reiter nur für Admins; „O7-4“ Präsentation Neue Gliederung | Heute);
   ob ChurchTools die Kategorie-Rechte so durchsetzt und zwei echte Sitzungen sich so verhalten, prüft nur dieser Fall
-- **Historie:** #719 (O7-1 Plan-Kern #721, O7-2 Reiter)
+- **Historie:** #719 (O7-1 Plan-Kern #721, O7-2 Reiter #722, O7-4 Präsentation)
 
 </details>
 

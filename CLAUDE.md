@@ -496,8 +496,11 @@ UND Fokus im Text): Ablauf, Fassung, Umschalter weg, `AkkordLeiste kompakt` in d
 Ausklappmenü, darin „Anderer Akkord“ – sonst wird die Zeile zu eng), endet erst mit Tastatur-zu. Tastaturhöhe EINMAL in `ui/fenster/useTastaturOffen.ts` (`tastaturHoehe`,
 gemessen gegen die beim Tippen eingefrorene `--app-h` – iOS verkleinert manchmal das Fenster; auch für
 `useOverlayKeyboardInset` und `useKeyboardInsets`); Knöpfe um den Text mit `onMouseDown`-`preventDefault`, damit sie
-dem Text den Fokus (und damit die Tastatur) nicht nehmen. Liedinfo kommt in L4 nur aus ChurchTools;
-`{key}` bleibt als notierte Tonart. Zieh-Einstellungen aller Listen: `ui/bedienung/useZiehSensoren`. Im
+dem Text den Fokus (und damit die Tastatur) nicht nehmen. L4 = **Liedinfo** (Titel, Autor, CCLI, Copyright am Lied; Tempo, Takt am
+Arrangement) aus ChurchTools: Regeln `shared/ct/liedinfo.ts`, Formular `utils/liedinfoFormular.ts` auf den Formularen
+des Stammdaten-Blatts, Laden/Speichern `hooks/useLiedinfoQuelle`. Kopfzeilen verlassen die Datei erst, wenn
+ChurchTools den Wert NACH dem Speichern meldet (`liedinfoSpeichern`, `liedinfoBeimImport` beim SongSelect-Import);
+ungespeicherte Lieder behalten den Vorrang der Datei. `{key}` bleibt als notierte Tonart. Zieh-Einstellungen aller Listen: `ui/bedienung/useZiehSensoren`. Im
 Scroll-Modus kein Spalten-Schalter (`ohneSpalten`). Welche
 eigene Ebene gilt, entscheidet für Blättern UND Scrollen `pageKeys.eigenerSchluessel`.
 Leinwände nur in Bildschirmnähe (IntersectionObserver), sonst freigegeben. Die **Seite in der Bildmitte** ist

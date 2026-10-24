@@ -18,6 +18,8 @@ import type {
 import type { AjaxMeldungen, AltPort } from './altSchnittstelle';
 import { notenblattSchreiben, type CtNotenSchreiber } from './notenblaetter';
 import { arrangementAus } from './schreibKern';
+import type { CtVerwalter } from './liedVerwaltung';
+import { liedinfoBeimImport } from './liedinfoImport';
 
 /** Der Anschluss an ChurchTools – derselbe wie für jeden Aufruf der alten Schnittstelle. */
 export type SongSelectPort = AltPort;
@@ -213,7 +215,7 @@ export async function songSelectChordPro(
  * statt eine zu raten – ein Blatt in einer zufälligen Tonart merkt man erst beim Spielen.
  */
 export async function notenblattAusSongSelect(
-  s: CtNotenSchreiber,
+  s: CtNotenSchreiber & CtVerwalter,
   p: SongSelectPort,
   songId: number,
   arrangementId: number,
@@ -236,5 +238,7 @@ export async function notenblattAusSongSelect(
     title: song.name,
     tonality,
   });
-  return notenblattSchreiben(s, songId, arrangementId, text);
+  // L4-4: Kopfzeilen aus SongSelect in leere ChurchTools-Felder, danach verlassen sie das Notenblatt.
+  const fertig = await liedinfoBeimImport(s, songId, arrangementId, text);
+  return notenblattSchreiben(s, songId, arrangementId, fertig);
 }

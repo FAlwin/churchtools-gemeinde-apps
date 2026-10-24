@@ -15,6 +15,16 @@ import { getLiedansicht } from '../utils/devicePrefs';
 import { useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { useTastaturOffen } from '@ui/fenster/useTastaturOffen';
 import { Segment } from '@ui/bedienung/Segment';
+import { liedinfoZeilenEntfernen } from '@shared/ct/liedinfo';
+import type { LiedinfoVergleich } from '@shared/ct/liedinfo';
+import { LiedinfoKarte } from './LiedinfoKarte';
+import {
+  liedinfoAusFormular,
+  liedinfoSpeichern,
+  liedinfoStart,
+  type LiedinfoFormular,
+  type LiedinfoQuelle,
+} from '../utils/liedinfoFormular';
 
 interface ChordEditorProps {
   songTitle: string;
@@ -39,6 +49,11 @@ interface ChordEditorProps {
    */
   tonart?: string;
   kapo?: number;
+  /**
+   * **Liedinfo aus ChurchTools** (L4): Lied-Stammdaten und Arrangement. Lädt die aufrufende Seite; solange sie fehlt,
+   * gibt es keinen Bereich „Liedinfo“ und die Kopfzeilen bleiben im Text sichtbar.
+   */
+  liedinfo?: LiedinfoQuelle;
 }
 
 // Format-Bausteine (echte ChordPro-Direktiven, chordpro.org) mit deutscher Erklärung.
@@ -63,7 +78,7 @@ const FORMATS: { tag: string; label: string; value: boolean; art?: 'trenner' }[]
 ];
 
 /** Was am schmalen Bildschirm zu sehen ist – breit stehen Text und Vorschau nebeneinander. */
-type Bereich = 'text' | 'ablauf' | 'vorschau';
+type Bereich = 'text' | 'ablauf' | 'vorschau' | 'infos';
 
 /** Vollbild-Editor für eine ChordPro-Version: CodeMirror mit Syntax-Farben, Akkord-Leiste (L5),
  *  Format-Menü, Rückgängig/Wiederholen und eine „wie gedruckt"-PDF-Vorschau mit Transponieren.
@@ -84,6 +99,7 @@ export function ChordEditor({
   mitVersionsname = true,
   tonart,
   kapo = 0,
+  liedinfo,
 }: ChordEditorProps) {
   const [text, setText] = useState(initialText);
   const [name, setName] = useState(initialName);
@@ -132,7 +148,56 @@ export function ChordEditor({
   // Breit stehen Text und Vorschau nebeneinander; schmal zeigt der Umschalter eines von beiden.
   const showEditor = wide || bereich === 'text';
   const showAblauf = wide || bereich === 'ablauf';
-  const showPreview = wide || bereich === 'vorschau';
+  // Breit: rechts umschaltbar „Vorschau | Liedinfo“ (Entwurf C); schmal: eigener Reiter „Infos“.
+  const [rechts, setRechts] = useState<'vorschau' | 'liedinfo'>('vorschau');
+  const [li, setLi] = useState<{
+    formular: LiedinfoFormular;
+    vergleich: LiedinfoVergleich[];
+  } | null>(null);
+  // Sobald die Stammdaten da sind: Formular aus ChurchTools, leere Felder aus der Datei vorbelegt. Verglichen wird
+  // mit dem Text beim Öffnen – was danach getippt wird, ist keine „Datei“ mehr.
+  useEffect(() => {
+    if (liedinfo && !li) setLi(liedinfoStart(liedinfo, initialText));
+  }, [liedinfo, li, initialText]);
+  const [liLaeuft, setLiLaeuft] = useState(false);
+  const [liFehler, setLiFehler] = useState<string | null>(null);
+  /**
+   * Speichern (L4-3): erst die Liedinfo nach ChurchTools, dann – mit dem Stand, den ChurchTools meldet – die
+   * Kopfzeilen aus dem Text, dann der Text. Scheitert die Liedinfo, wird gar nichts gespeichert (`liedinfoSpeichern`).
+   */
+  async function speichern(): Promise<void> {
+    setLiFehler(null);
+    let fertig = text;
+    if (li && liedinfo) {
+      setLiLaeuft(true);
+      try {
+        fertig = await liedinfoSpeichern(li.formular, liedinfo, text);
+      } catch (e) {
+        setLiFehler(
+          `Die Liedinfo wurde nicht gespeichert – das Notenblatt auch nicht: ${
+            e instanceof Error ? e.message : 'unbekannter Fehler'
+          }`,
+        );
+        return;
+      } finally {
+        setLiLaeuft(false);
+      }
+    }
+    onSave(fertig, name.trim());
+  }
+  const zeigeInfo = !!li && (wide ? rechts === 'liedinfo' : bereich === 'infos');
+  const showPreview = wide ? !zeigeInfo : bereich === 'vorschau';
+  // Die Vorschau zeigt das Blatt, wie es NACH dem Speichern aussieht: Kopf aus der Liedinfo, deren Zeilen nicht mehr
+  // in der Datei – dieselbe Regel wie beim Speichern (`liedinfoZeilenEntfernen`).
+  const nachher = li && liedinfo?.darf ? liedinfoAusFormular(li.formular) : null;
+  const vorschauText = nachher ? liedinfoZeilenEntfernen(text, nachher) : text;
+  const vorschauKopf = li
+    ? {
+        author: li.formular.lied.author.trim(),
+        bpm: Number(li.formular.arrangement.tempo) || null,
+        timeSig: li.formular.arrangement.beat.trim(),
+      }
+    : undefined;
 
   // iOS-Tastatur: Der Overlay bleibt VOLLBILD (fixed, inset 0) – so schimmert hinter der
   // halbtransparenten Tastatur nichts von der dahinterliegenden Ansicht durch. Statt den Overlay
@@ -247,14 +312,14 @@ export function ChordEditor({
         )}
         <button
           className={styles.save}
-          onClick={() => onSave(text, name.trim())}
-          disabled={saving || !canSave}
+          onClick={() => void speichern()}
+          disabled={saving || liLaeuft || !canSave}
         >
-          {saving ? <Spinner /> : 'Speichern'}
+          {saving || liLaeuft ? <Spinner /> : 'Speichern'}
         </button>
       </header>
 
-      {error && <div className={styles.error}>{error}</div>}
+      {(liFehler ?? error) && <div className={styles.error}>{liFehler ?? error}</div>}
 
       {!wide && !schreiben && (
         <Segment
@@ -266,6 +331,7 @@ export function ChordEditor({
           options={[
             { value: 'text', label: 'Text' },
             { value: 'ablauf', label: 'Ablauf' },
+            ...(li ? [{ value: 'infos' as const, label: 'Infos' }] : []),
             { value: 'vorschau', label: 'Vorschau' },
           ]}
         />
@@ -379,6 +445,7 @@ export function ChordEditor({
                 onChange={setText}
                 onAkkord={setMenue}
                 onFokus={setTextFokus}
+                kopfAusblenden={!!li && !!liedinfo?.darf}
                 onHistory={(u, r) => {
                   setCanUndo(u);
                   setCanRedo(r);
@@ -388,37 +455,69 @@ export function ChordEditor({
           </section>
         </div>
 
-        {showPreview && (
-          <section aria-label="Vorschau" className={`${styles.karte} ${styles.previewPane}`}>
-            <div className={styles.previewHead}>
-              <span className={styles.paneLbl}>Vorschau</span>
-              <div className={styles.transpose}>
-                <span className={styles.tLbl}>Transponieren</span>
-                <button
-                  className={styles.tBtn}
-                  onClick={() => setSemitones((s) => Math.max(-11, s - 1))}
-                  aria-label="Tiefer transponieren"
-                >
-                  −
-                </button>
-                <button
-                  className={styles.tVal}
-                  onClick={() => setSemitones(0)}
-                  title="Zurücksetzen"
-                >
-                  {transposeLabel}
-                </button>
-                <button
-                  className={styles.tBtn}
-                  onClick={() => setSemitones((s) => Math.min(11, s + 1))}
-                  aria-label="Höher transponieren"
-                >
-                  +
-                </button>
+        {(showPreview || zeigeInfo) && (
+          <div className={styles.rechts}>
+            {wide && li && (
+              <Segment
+                verbunden
+                ariaLabel="Rechte Spalte"
+                value={rechts}
+                onChange={setRechts}
+                options={[
+                  { value: 'vorschau', label: 'Vorschau' },
+                  { value: 'liedinfo', label: 'Liedinfo' },
+                ]}
+              />
+            )}
+            {showPreview && (
+              <section aria-label="Vorschau" className={`${styles.karte} ${styles.previewPane}`}>
+                <div className={styles.previewHead}>
+                  <span className={styles.paneLbl}>Vorschau</span>
+                  <div className={styles.transpose}>
+                    <span className={styles.tLbl}>Transponieren</span>
+                    <button
+                      className={styles.tBtn}
+                      onClick={() => setSemitones((s) => Math.max(-11, s - 1))}
+                      aria-label="Tiefer transponieren"
+                    >
+                      −
+                    </button>
+                    <button
+                      className={styles.tVal}
+                      onClick={() => setSemitones(0)}
+                      title="Zurücksetzen"
+                    >
+                      {transposeLabel}
+                    </button>
+                    <button
+                      className={styles.tBtn}
+                      onClick={() => setSemitones((s) => Math.min(11, s + 1))}
+                      aria-label="Höher transponieren"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                <PdfPreview
+                  title={li ? li.formular.lied.name.trim() || songTitle : songTitle}
+                  text={vorschauText}
+                  semitones={semitones}
+                  rolle={rolle}
+                  kopf={vorschauKopf}
+                />
+              </section>
+            )}
+            {zeigeInfo && li && liedinfo && (
+              <div className={styles.infoPane}>
+                <LiedinfoKarte
+                  formular={li.formular}
+                  vergleich={li.vergleich}
+                  darf={liedinfo.darf}
+                  aendern={(formular) => setLi({ ...li, formular })}
+                />
               </div>
-            </div>
-            <PdfPreview title={songTitle} text={text} semitones={semitones} rolle={rolle} />
-          </section>
+            )}
+          </div>
         )}
       </div>
       {menue && (

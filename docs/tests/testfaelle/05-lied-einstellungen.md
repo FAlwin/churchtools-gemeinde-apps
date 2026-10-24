@@ -542,3 +542,39 @@ Text – mit Luft zwischen den Knöpfen, nichts gequetscht. Über der Tastatur i
   Tastatur-zu halten
 
 </details>
+
+### TF-EINST-19 · Lied-Editor: Liedinfo aus ChurchTools – speichern und umräumen
+
+**Das brauchst du:** Die **Test-Instanz** (hier wird gespeichert – nicht Staging, das hängt am echten ChurchTools),
+das Recht, Lieder zu bearbeiten, und ein Testlied, dessen Notenblatt oben `{title}`, `{artist}`, `{tempo}` trägt –
+z. B. frisch aus SongSelect geholt.
+
+**Das muss passieren:** Die Liedinfo zeigt die Werte aus ChurchTools. Wo das Notenblatt etwas anderes sagt, steht es
+am Feld mit „übernehmen“. Nach dem Speichern stehen die Werte in ChurchTools (Stammdaten-Blatt, Arrangement), die
+Kopfzeilen sind aus dem Notenblatt verschwunden, `{key}` ist noch da.
+
+1. Lied öffnen → Version bearbeiten. Im Text stehen **keine** `{title}`/`{artist}`-Zeilen; „ChordPro-Text“ zeigt sie.
+2. Rechts **Liedinfo**: Titel, Autor, Tonart, Tempo, Takt, CCLI, Copyright. Bei einem abweichenden Autor:
+   „Im Notenblatt steht: …“ → **übernehmen**.
+3. Tempo ändern → **Vorschau**: Der Kopf zeigt das neue Tempo.
+4. **Speichern**. Danach: Lied-Menü → **Stammdaten …** zeigt den neuen Autor; das Arrangement das neue Tempo.
+   „ChordPro-Text“ im Editor: keine `{title}`/`{artist}`/`{tempo}`-Zeilen mehr, `{key}` steht noch da.
+5. **Ohne Recht** (Person ohne Lied-Bearbeiten): Liedinfo nur zum Ansehen, Kopfzeilen im Text sichtbar; Speichern
+   lässt sie im Notenblatt.
+6. **Neues Lied mit SongSelect-Notenblatt**: Danach hat das Lied in ChurchTools Tempo und Takt (wenn vorher leer),
+   im Notenblatt fehlen die Kopfzeilen bis auf `{key}`.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/ct/liedinfo.ts`, `shared/ct/liedinfoImport.ts`, `shared/ct/songselect.ts`, `client/src/utils/liedinfoFormular.ts`, `client/src/hooks/useLiedinfoQuelle.ts`, `client/src/components/LiedinfoKarte.tsx`, `client/src/components/ChordEditor.tsx`, `client/src/components/ChordProInput.tsx`
+- **Automatisiert:** weitgehend – `liedinfo.test.ts` (Felder, zwei `{artist}`, Vergleich, Entfernen nur mit Wert,
+  Grammatik = Ausblenden), `liedinfoFormular.test.ts` (Start, Vorbelegen, Änderung, Speichern: Erfolg, Feld trotz
+  Speichern leer, Fehler, ohne Recht, nichts geändert), `LiedinfoKarte.test.tsx`, `ChordEditor.test.tsx` (Fehler →
+  kein Speichern), `liedinfoImport.test.ts` (füllen, nie überschreiben, frisch nachlesen, Ablehnung),
+  `ctSongSelect.test.ts`, `e2e/editor-liedinfo.spec.ts`. **Von Hand bleibt** der Weg gegen das echte ChurchTools
+  (Test-Instanz): Rechte, Arrangement-Tempo, Erweiterung.
+- **Historie:** Lied-Editor L4 (23.10.2026); Entscheidungen Alwin: bis zum Speichern bleibt alles wie heute,
+  Hinweis am Feld, ein „Speichern“, SongSelect füllt leere Felder
+
+</details>

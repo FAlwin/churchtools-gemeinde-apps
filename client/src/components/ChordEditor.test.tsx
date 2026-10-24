@@ -309,3 +309,56 @@ describe('ChordEditor – Aufbau (L1)', () => {
     ).toBeNull();
   });
 });
+
+/** Speichern mit Liedinfo (L4-3): scheitert ChurchTools, wird GAR NICHTS gespeichert. */
+describe('ChordEditor – Speichern mit Liedinfo', () => {
+  const quelle = {
+    lied: { songId: 1, name: 'Treu', author: null, ccli: null, copyright: null, categoryId: 1 },
+    arrangement: {
+      id: 1,
+      name: 'Standard',
+      isDefault: true,
+      key: 'E',
+      tempo: null,
+      beat: null,
+      duration: null,
+      description: null,
+      source: null,
+      sourceReference: null,
+      dateien: 1,
+    },
+    darf: true,
+  };
+  const TEXT = '{title: Treu}\n{artist: Gerster}\n[D]Zeile';
+
+  it('ChurchTools antwortet nicht: kein onSave, Meldung, Text unverändert im Editor', async () => {
+    const speichern = vi.fn(() => Promise.reject(new Error('Zeitüberschreitung')));
+    const { onSave, speichern: knopf } = zeige({
+      initialText: TEXT,
+      mitVersionsname: false,
+      liedinfo: { ...quelle, speichern },
+    });
+    fireEvent.click(knopf());
+    expect(
+      await screen.findByText(/Die Liedinfo wurde nicht gespeichert.*Zeitüberschreitung/),
+    ).toBeTruthy();
+    expect(speichern).toHaveBeenCalledWith({ lied: { author: 'Gerster' }, arrangement: null });
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('ChurchTools übernimmt: onSave bekommt den Text ohne die Zeilen, die ChurchTools jetzt hat', async () => {
+    const speichern = vi.fn(() =>
+      Promise.resolve({
+        lied: { ...quelle.lied, author: 'Gerster' },
+        arrangement: quelle.arrangement,
+      }),
+    );
+    const { onSave, speichern: knopf } = zeige({
+      initialText: TEXT,
+      mitVersionsname: false,
+      liedinfo: { ...quelle, speichern },
+    });
+    fireEvent.click(knopf());
+    await vi.waitFor(() => expect(onSave).toHaveBeenCalledWith('[D]Zeile', ''));
+  });
+});

@@ -201,7 +201,8 @@ gewählten Teil; die gewählte Ansicht bleibt nach dem Neuladen.
 4. **Anfangen bei** → ein Bereich: Karten und Liste zeigen nur ihn. Zurück auf **Ganze Gemeinde**.
 5. Eine Gruppe mit Untergruppen anklicken → **Im Organigramm hier anfangen**: Das Fenster schließt, die Gruppe ist oben
    und offen, sie steht in „Anfangen bei“. Bei einer Gruppe ohne Untergruppen fehlt der Knopf.
-6. Den Gruppentyp der Spitze im Typ-Filter ausblenden: wieder die ganze Gemeinde, keine Fehlermeldung.
+6. Den Gruppentyp der Spitze im Typ-Filter ausblenden: wieder die ganze Gemeinde, keine Fehlermeldung. Wieder
+   einblenden – auch per Doppelklick auf den Typ: Es bleibt bei der ganzen Gemeinde.
 
 <details><summary>Technisches</summary>
 

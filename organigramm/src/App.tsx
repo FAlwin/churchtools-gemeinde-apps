@@ -192,10 +192,10 @@ export function App() {
     [start, ausgeblendet],
   );
   // Eine Spitze, die es nicht mehr gibt (Typ-Filter, Änderung in ChurchTools), wird vergessen – sonst spränge die
-  // Ansicht zurück, sobald die Gruppe wieder auftaucht. Bis dahin fällt `sichtbarerBaum` selbst auf die Gemeinde zurück.
-  useEffect(() => {
-    if (spitze !== null && !knotenAmPfad(sichtBaum, spitze)) setSpitze(null);
-  }, [spitze, sichtBaum]);
+  // Ansicht zurück, sobald die Gruppe wieder auftaucht. Das geschieht noch beim Zeichnen, nicht in einem Effekt danach:
+  // Ein zweiter Klick (Doppelklick auf den Typ-Filter) kam sonst vor dem Effekt, und die Spitze blieb (Test-Instanz
+  // 26.10.2026). React zeichnet dann gleich noch einmal, ohne das Bild mit der ungültigen Spitze zu zeigen.
+  if (spitze !== null && !knotenAmPfad(sichtBaum, spitze)) setSpitze(null);
   const offen = useMemo(() => offenWahl ?? anfangsOffen(sichtBaum), [offenWahl, sichtBaum]);
   const sicht = useMemo(
     () => sichtbarerBaum(sichtBaum, start?.gemeinde ?? 'Gemeinde', spitze, offen),

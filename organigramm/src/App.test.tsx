@@ -2,7 +2,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
-import { baumAus, elternAus, type OrgGruppe } from '@shared/organigramm/gruppen';
+import { baumAus, elternAus, type Knoten, type OrgGruppe } from '@shared/organigramm/gruppen';
+import { knotenAmPfad } from '@shared/organigramm/ansichten';
 import { rollenAus } from '@shared/organigramm/mitglieder';
 import type { OrgRechte } from '@shared/organigramm/rechte';
 import { diensteAus } from '@shared/ct/dienste';
@@ -120,6 +121,18 @@ vi.mock('./struktur', () => ({
   ladeAktivStatus: () => Promise.resolve(1),
 }));
 vi.mock('./ladeEinsaetze', () => ({ ladeEinsaetze: vi.fn() }));
+// Was der Baum-Reiter bei jedem Zeichnen bekommt (O7b-2) – der echte Reiter, nur mitgeschrieben.
+const baumReiter = vi.hoisted((): { spitze: string | null; baum: readonly Knoten[] }[] => []);
+vi.mock('./Organigramm', async (original) => {
+  const { createElement } = await import('react');
+  const echt = await original<typeof import('./Organigramm')>();
+  return {
+    Organigramm: (p: Parameters<typeof echt.Organigramm>[0]) => {
+      baumReiter.push({ spitze: p.spitze, baum: p.baum });
+      return createElement(echt.Organigramm, p);
+    },
+  };
+});
 // Der Plan (O7) – hier nur, ob der Reiter da ist; die Bedienung prüft NeueGliederung.test.tsx.
 vi.mock('./plan', () => ({
   ladePlan: vi.fn(() => Promise.resolve({ ok: true, daten: null })),
@@ -1101,5 +1114,20 @@ describe('O7b-2: Ansichten, Liste, „Anfangen bei“', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Verteiler/ }));
     expect(anfangenBei().value).toBe('');
     expect(bereiche()).toEqual(['Gottesdienst', 'Café', 'Infos']);
+  });
+
+  it('der Baum-Reiter bekommt nie eine Spitze, die es im Baum nicht gibt – auch nicht für ein Bild (Test-Instanz 26.10.2026)', async () => {
+    // Im Browser kann ein zweiter Klick (Doppelklick auf den Typ) kommen, bevor ein Effekt nach dem Zeichnen läuft –
+    // deshalb muss die verschwundene Spitze schon beim Zeichnen vergessen sein, nicht erst danach.
+    render(<App />);
+    await screen.findByRole('region', { name: 'Infos' });
+    fireEvent.change(anfangenBei(), { target: { value: '34' } });
+    baumReiter.length = 0;
+    fireEvent.click(screen.getByRole('button', { name: /^Verteiler/ }));
+    expect(baumReiter.length).toBeGreaterThan(0);
+    for (const r of baumReiter)
+      expect(r.spitze === null || knotenAmPfad(r.baum, r.spitze) !== null, String(r.spitze)).toBe(
+        true,
+      );
   });
 });

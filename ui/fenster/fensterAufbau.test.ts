@@ -6,13 +6,10 @@ import { dateien, ORDNER, WURZEL } from '../design/quelltexte.testutil';
 /**
  * **Jedes Fenster im ChurchTools-Aufbau** (E6-O, Entwurf `fenster-entwurf.html`, abgenommen 23.10.2026): Ein `Sheet`
  * bekommt den Kopf mit X und die Knöpfe rechts unten nur, wenn es `knoepfe` reicht (auch `null` für Fenster nur zum
- * Ansehen). Umgezogen wird App für App (F1 #716, F2 #720, F3 #726, F4 Anmeldungen). Dieser Test hält fest, was schon umgezogen ist –
- * ein neues Fenster im alten Aufbau fällt sofort auf.
- *
- * `NOCH_NICHT_UMGEZOGEN` schrumpft mit F5. Steht eine App darin, die gar kein altes Fenster mehr hat, schlägt der
- * zweite Test an: dann gehört sie aus der Liste.
+ * Ansehen). Umgezogen wurde App für App (F1 #716, F2 #720, F3 #726, F4 #734, F5 #741); seit F5
+ * gilt es für ALLE Apps – auch für jede neue (die Ordner kommen aus den Workspaces). Ein Fenster im alten Aufbau fällt
+ * sofort auf.
  */
-const NOCH_NICHT_UMGEZOGEN = new Set(['organigramm/src', 'protokolle/src']);
 
 /** Die öffnenden `<Sheet …>`-Tags einer Datei – bis zur schließenden `>` außerhalb von `{…}`. */
 function sheetTags(quelltext: string): { zeile: number; tag: string }[] {
@@ -54,19 +51,21 @@ function alteFenster(): Map<string, string[]> {
 }
 
 describe('Fenster im ChurchTools-Aufbau (E6-O)', () => {
-  it('umgezogene Apps haben kein Fenster ohne `knoepfe` mehr', () => {
-    const funde = [...alteFenster()]
-      .filter(([ordner]) => !NOCH_NICHT_UMGEZOGEN.has(ordner))
-      .flatMap(([, stellen]) => stellen);
-    expect(funde).toEqual([]);
+  it('keine App hat ein Fenster ohne `knoepfe`', () => {
+    expect([...alteFenster().values()].flat()).toEqual([]);
   });
 
-  it('die Liste der noch nicht umgezogenen Apps ist ehrlich – jede hat noch alte Fenster', () => {
-    const alt = alteFenster();
-    for (const ordner of NOCH_NICHT_UMGEZOGEN) {
-      expect(ORDNER).toContain(ordner);
-      expect(alt.get(ordner)?.length ?? 0).toBeGreaterThan(0);
-    }
+  it('prüft alle Apps und `ui/` (sonst wäre der Test oben billig grün)', () => {
+    expect(ORDNER).toEqual(
+      expect.arrayContaining([
+        'client/src',
+        'dienstplaner/src',
+        'anmeldungen/src',
+        'organigramm/src',
+        'protokolle/src',
+        'ui',
+      ]),
+    );
   });
 
   it('findet ein Fenster ohne `knoepfe`, auch mehrzeilig und mit `>` in einem Ausdruck', () => {

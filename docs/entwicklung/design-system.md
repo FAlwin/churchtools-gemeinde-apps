@@ -96,10 +96,9 @@ ChurchTools-Weboberfläche):
   Rechner nicht nebeneinander (drei lange Knöpfe), stehen sie ebenso untereinander – die Zeile misst sich selbst
   (`useKnopfZeile`, F3 #726).
 - **`Sheet` mit `knoepfe`** bekommt diesen Aufbau; Kopf und Fuß stehen, der Inhalt dazwischen scrollt (die _eine_
-  Scrollfläche des Fensters). Ohne `knoepfe` bleibt der alte Aufbau, bis das Fenster umgezogen ist – App für App in
-  eigenen Scheiben (Dienstplaner F2, Musik-App F3, Anmeldungen F4; Organigramm und Protokolle folgen). Der Test
-  `ui/fenster/fensterAufbau.test.ts` hält fest, welche Apps umgezogen sind – ein neues Fenster ohne `knoepfe` fällt
-  dort auf. Der Hauptknopf zieht dabei aus dem Inhalt in `knoepfe` (statt `m.hauptKnopfBreit`). Fenster nur
+  Scrollfläche des Fensters). Umgezogen wurde App für App (Dienstplaner F2, Musik-App F3, Anmeldungen F4,
+  Organigramm und Protokolle F5); seit F5 hat **jedes** Fenster `knoepfe`. Der Test `ui/fenster/fensterAufbau.test.ts`
+  prüft alle Apps – ein neues Fenster ohne `knoepfe` fällt dort auf. Der Hauptknopf zieht dabei aus dem Inhalt in `knoepfe` (statt `m.hauptKnopfBreit`). Fenster nur
   zum Ansehen oder Wählen reichen `knoepfe={null}` – unten steht dann nur der Knopf aus `cancelLabel` („Abbrechen“,
   zum Ansehen „Schließen“). Aktionen, die zum Inhalt gehören (in einer
   Liste, „Andere Person wählen“ am Entwurf), bleiben im Inhalt; ein Nebenweg wie „Neu vorschlagen“ steht als Link
@@ -110,7 +109,12 @@ ChurchTools-Weboberfläche):
 - **Mehrstufige Fenster** (Assistent, Rückfrage im Fenster, Vorschau) haben unten nur **„Zurück“ und den
   Hauptknopf** – `cancelLabel={null}` und „Zurück“ als `zweit`; ganz zu geht es über das X (Alwin, F4 #734). Ersetzt
   eine Rückfrage den Inhalt eines Fensters („Absagen?“ im Fenster einer Anmeldung), heißt ihr Weg zurück „Abbrechen“
-  und führt zur Ansicht davor, nicht aus dem Fenster. Öffnet ein Knopf etwas (`mailto:`), ist er ein `FensterLink`.
+  und führt zur Ansicht davor, nicht aus dem Fenster. Ein Schritt **ersetzt** den Inhalt, statt unter ihm zu hängen –
+  sonst stünde „Austragen“ unten sichtbar, während die Frage weggescrollt ist (Alwin, F5: Gruppenfenster im
+  Organigramm). Hängt der Hauptknopf am Zustand des Schritts (gewählte Rolle), hält das Fenster diesen Zustand; ein
+  Formular im Schritt schickt der Fußknopf mit `type="submit" form={id}` ab. Öffnet ein Knopf etwas (`mailto:`), ist er
+  ein `FensterLink`. Textknöpfe im Fließtext („Erneut versuchen“, „Wie heute“) nutzen `m.textKnopf`, keine eigene
+  Kopie.
 - **Während etwas läuft** (senden, speichern …) bekommt `Sheet` `beschaeftigt`: X, „Abbrechen“ und der Klick daneben
   sind gesperrt, wie im `ConfirmDialog`. Was gerade passiert, zeigt der Hauptknopf oder der Titel – nicht mehr ein
   Abbrechen-Knopf mit „Bitte warten …“.

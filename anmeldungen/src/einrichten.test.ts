@@ -286,6 +286,7 @@ function ct() {
           else if (k === 'name') g.name = String(v);
           else if (k === 'groupStatusId') g.status = Number(v);
           else if (k === 'visibility' && schlucken.has('SICHTBAR')) continue;
+          else if (k === 'emailVerificationMode' && schlucken.has('MODUS')) continue;
           // Gemessen 14.10.2026: verschachtelt still ignoriert, flach gespeichert (unter `newMember`).
           else if (k === 'newMember') continue;
           else if (/^newPerson(Status|Campus|Department)Id$/.test(k)) {
@@ -426,6 +427,34 @@ describe('kopiereVeranstaltung', () => {
     expect(k.termin).toBeNull();
     expect(k.ctFelder.bezahlt).toBe(e.ctFelder.bezahlt + 1000);
     expect(gruppen.get(kopie)!.status).toBe(2);
+  });
+
+  it('Vorlage auf Modus „all“ (ältere Veranstaltung) → die Kopie steht trotzdem auf „existing“', async () => {
+    // Echte Prüfung A9-1 (24.10.2026): Die Kopie von Gruppe 60 erbte „all“, das Formular scheiterte schon am Schlüssel.
+    const quelle = await legeVeranstaltungAn({
+      name: 'Alt',
+      teamId: 7,
+      artId: 5,
+      vorlage: 'einfach',
+    });
+    gruppen.get(quelle)!.settings.emailVerificationMode = 'all';
+    const kopie = await kopiereVeranstaltung(quelle, 'Neu');
+    expect(gruppen.get(kopie)!.settings.emailVerificationMode).toBe('existing');
+    // Die Vorlage selbst bleibt, wie sie ist.
+    expect(gruppen.get(quelle)!.settings.emailVerificationMode).toBe('all');
+  });
+
+  it('übernimmt ChurchTools den Modus nicht → Fehler statt einer Kopie, an der niemand sich anmelden kann', async () => {
+    const quelle = await legeVeranstaltungAn({
+      name: 'Alt',
+      teamId: 7,
+      artId: 5,
+      vorlage: 'einfach',
+    });
+    // Vorlage auf „all“ – sonst stimmte der Modus der Kopie auch ohne Speichern, und der Test bewiese nichts.
+    gruppen.get(quelle)!.settings.emailVerificationMode = 'all';
+    schlucken.add('MODUS');
+    await expect(kopiereVeranstaltung(quelle, 'Neu')).rejects.toThrow(/ohne Bestätigungsmail/);
   });
 });
 
@@ -1276,6 +1305,13 @@ describe('Anmelden vorbereiten (A6-2, #548)', () => {
         gruppen.get(id)!.felder.filter((f) => f.name === name),
         name,
       ).toHaveLength(1);
+  });
+
+  it('Freigeben repariert den Modus älterer Veranstaltungen und Kopien („all“ → „existing“)', async () => {
+    const id = await alteVeranstaltung();
+    gruppen.get(id)!.settings.emailVerificationMode = 'all';
+    await anmeldenVorbereiten(id, [1], V);
+    expect(gruppen.get(id)!.settings.emailVerificationMode).toBe('existing');
   });
 
   it('übernimmt ChurchTools die Vorgaben nicht → Fehler statt „freigegeben“', async () => {

@@ -423,6 +423,22 @@ export async function systemfelderNachziehen(id: number): Promise<OeffentlicheEi
 }
 
 /**
+ * **Anmelden ohne Bestätigungsmail für Unbekannte** (A0, Modus `existing`): Unbekannte Adressen melden sich ohne Mail an,
+ * bekannte bestätigen einmal. Der Modus gehört zur Gruppe – eine Kopie übernimmt den der Vorlage (`duplicate`), und
+ * ältere Veranstaltungen stehen auf `all`. Dann scheitert schon `POST /publicgroups/{id}/token` mit „PersonId or eMail
+ * must be present. Not both.“ (echte Prüfung A9-1, 24.10.2026, Kopie von Gruppe 60). Darum beim Anlegen, Kopieren und
+ * Freigeben – die eine Stelle dafür, jedes Mal nachgelesen.
+ */
+async function ohneBestaetigungsmail(id: number): Promise<void> {
+  await ctAnfrage(`/groups/${id}`, {
+    method: 'PATCH',
+    body: json({ emailVerificationMode: 'existing' }),
+  });
+  if ((await gruppe(id)).settings?.emailVerificationMode !== 'existing')
+    throw new NichtUebernommen('die Anmeldung ohne Bestätigungsmail');
+}
+
+/**
  * **Neue Veranstaltung** – als Entwurf (Status 2, für Gäste unsichtbar, A0 #7) vom Typ „Anmeldung“ unter dem
  * Team. Reihenfolge mit Absicht: Zuerst stehen die Einstellungen in der Beschreibung – dann ist die
  * Veranstaltung schon in der Liste zu sehen, auch wenn ein späterer Schritt scheitert, statt als
@@ -445,11 +461,7 @@ export async function legeVeranstaltungAn(a: {
   const zweck = `${a.name.slice(0, ZWECK_MAX - NACHNAME.length - 1)} ${NACHNAME}`;
   const e = { ...vorlage, bezahlung: { ...vorlage.bezahlung, zweck } };
   await einstellungenSchreiben(id, e);
-  // Unbekannte melden sich ohne Bestätigungsmail an, bekannte Adressen bestätigen einmal (A0, Modus existing).
-  await ctAnfrage(`/groups/${id}`, {
-    method: 'PATCH',
-    body: json({ emailVerificationMode: 'existing' }),
-  });
+  await ohneBestaetigungsmail(id);
   await einstellungenSchreiben(id, { ...e, ctFelder: await systemfelderAnlegen(id) });
   return id;
 }
@@ -482,6 +494,8 @@ export async function kopiereVeranstaltung(quelleId: number, name: string): Prom
   });
   const id = kopie?.data?.id;
   if (typeof id !== 'number') throw new NichtUebernommen('die Kopie');
+  // Die Kopie übernimmt den Modus der Vorlage – bei alten Vorlagen `all`, dann nimmt das Formular nichts an.
+  await ohneBestaetigungsmail(id);
   const [alt, neu] = await Promise.all([gruppenfelder(quelleId), gruppenfelder(id)]);
   await einstellungenSchreiben(id, {
     ...quelle,
@@ -790,6 +804,8 @@ export async function anmeldenVorbereiten(
   if (leitung.length === 0)
     throw new ApiError(422, 'Bitte mindestens eine Person als Leitung wählen.');
   await systemfelderNachziehen(id);
+  // Sicherheitsnetz für Kopien und alte Veranstaltungen, die vor dieser Regel entstanden sind.
+  await ohneBestaetigungsmail(id);
 
   const g = await gruppe(id);
   const rolle = await leiterRolle(Number(g.information?.groupTypeId));

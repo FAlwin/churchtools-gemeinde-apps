@@ -3,7 +3,7 @@ import { Icon, type IconName } from '@ui/icons/icons';
 import { tagPunkt } from '@shared/ct/datum';
 import { textAus } from '@shared/protokolle/dokument';
 import { istUeberfaellig, statusSetzen } from '@shared/protokolle/aufgaben';
-import { VERWEIS_TEXT } from './anzeige';
+import { FesterPunkt } from './FesterPunkt';
 import { AufgabenKontext } from './aufgabenKontext';
 import { StatusKreis } from './StatusKreis';
 // Dieselben Marken wie in der Lese-Ansicht – Aufgabe, Beschluss und Termin sehen beim Schreiben aus wie beim Lesen.
@@ -17,6 +17,7 @@ import styles from './EditorBloecke.module.scss';
  * - **Aufgabe:** Status-Kreis vorne, rechts die Schildchen „Wer?“ (Mitglieder mit Häkchen + externer Name) und „Bis“.
  *   Geändert wird das To-Do in „Mitarbeit“ (über `AufgabenKontext`), nicht das Protokoll (Alwin 24.10.2026).
  * - **Termin:** Datum-Schildchen; das Datum steht im Block selbst (`props.datum`), nur im Protokoll.
+ * - **Fester Punkt** (S4-3a): `FesterPunkt` – „Offene To-Dos“ bzw. „Letztes Protokoll“.
  */
 
 interface Inhalt {
@@ -259,6 +260,30 @@ export function TerminBlock({
   );
 }
 
-export function VerweisBlock({ block }: { block: { props: { art: string } } }) {
-  return <p className={ansicht.verweis}>{VERWEIS_TEXT[block.props.art] ?? 'Fester Punkt'}</p>;
+/**
+ * Fester Punkt (S4-3a) – derselbe Baustein wie in der Lese-Ansicht; abhaken darf man hier.
+ *
+ * Ein Klick in den Kasten **tut im Text nichts** (beim Durchklicken 26.10.2026 gefunden): Der Editor markierte sonst den
+ * ganzen Block, und der nächste Tastendruck ersetzte den festen Punkt. Nur weiterreichen half nicht – dann setzte der
+ * Browser den Cursor in den Kasten, und Tippen löschte ihn und zog zwei Tagesordnungspunkte zusammen. Deshalb weder
+ * Cursor noch Markierung (`preventDefault`) und kein Editor (`stopPropagation`, am Element selbst: der Editor hört an
+ * seiner Fläche, bevor React das Ereignis sieht). Die Knöpfe im Kasten reagieren auf `click` und bleiben bedienbar.
+ */
+export function VerweisBlock({ block }: { block: { props: { art: string; fest: string } } }) {
+  const kasten = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = kasten.current;
+    if (!el) return;
+    const halt = (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    el.addEventListener('mousedown', halt);
+    return () => el.removeEventListener('mousedown', halt);
+  }, []);
+  return (
+    <div ref={kasten} className={styles.festerPunkt} contentEditable={false}>
+      <FesterPunkt art={block.props.art} fest={block.props.fest} abhaken />
+    </div>
+  );
 }

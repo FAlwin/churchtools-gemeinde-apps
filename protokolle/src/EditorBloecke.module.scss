@@ -28,6 +28,11 @@
   margin-left: 0;
 }
 
+// Fester Punkt (S4-3a): über die ganze Breite wie in der Lese-Ansicht.
+.festerPunkt {
+  width: 100%;
+}
+
 .rahmen {
   position: relative;
   display: inline-flex;

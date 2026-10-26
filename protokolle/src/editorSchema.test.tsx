@@ -2,10 +2,11 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BlockNoteEditor, type PartialBlock } from '@blocknote/core';
-import { ableiten, fremdeTypen, type Block } from '@shared/protokolle/dokument';
+import { ableiten, fremdeTypen, textAus, type Block } from '@shared/protokolle/dokument';
 import { dokumentAusTeilen, teileBauen } from '@shared/protokolle/speicher';
 import { STANDARD_VORLAGEN, startDokument } from '@shared/protokolle/vorlagen';
 import { aufgabenIdsSetzen, EDITOR_TYPEN, schema } from './editorSchema';
+import { festenPunktEinfuegen } from './festenPunktEinfuegen';
 import { ProtokollAnsicht } from './ProtokollAnsicht';
 
 /**
@@ -130,5 +131,41 @@ describe('Editor-Schema gegen Ableitung, Speicher und Ansicht', () => {
     expect(e.undo()).toBe(true);
     expect(JSON.stringify(e.getBlock('p')?.content)).toContain('"Text"');
     expect(e.getBlock('a1')?.props).toMatchObject({ aufgabe: 'id1' });
+  });
+
+  it('fester Punkt: Tagesordnungspunkt + Punkt + leere Zeile – auf oberster Ebene, eine leere Zeile wird ersetzt (S4-3a)', () => {
+    const e = editorMit([
+      {
+        id: 'l1',
+        type: 'bulletListItem',
+        content: 'Haupt',
+        children: [{ id: 'l2', type: 'bulletListItem', content: 'Unter' }],
+      },
+      { id: 'x', type: 'paragraph' },
+    ]);
+    e.mount(document.createElement('div'));
+    e.setTextCursorPosition('l2', 'end');
+    festenPunktEinfuegen(e, 'offene-aufgaben');
+    const art = () =>
+      (e.document as Block[]).map((b) => [b.type, textAus(b.content), b.props?.art ?? null]);
+    expect(art()).toEqual([
+      ['bulletListItem', 'Haupt', null],
+      ['heading', 'Offene To-Dos', null],
+      ['verweis', '', 'offene-aufgaben'],
+      ['paragraph', '', null],
+      ['paragraph', '', null],
+    ]);
+    expect(ableiten(e.document as Block[]).punkte.map((p) => p.titel)).toEqual(['Offene To-Dos']);
+    // Die Zeile darunter ist leer und hat den Cursor – dort der nächste: ersetzt sie.
+    festenPunktEinfuegen(e, 'letztes-protokoll');
+    expect(art()).toEqual([
+      ['bulletListItem', 'Haupt', null],
+      ['heading', 'Offene To-Dos', null],
+      ['verweis', '', 'offene-aufgaben'],
+      ['heading', 'Protokoll der letzten Sitzung', null],
+      ['verweis', '', 'letztes-protokoll'],
+      ['paragraph', '', null],
+      ['paragraph', '', null],
+    ]);
   });
 });

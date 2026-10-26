@@ -99,12 +99,21 @@ export const STANDARD_VORLAGEN: readonly Vorlage[] = [
   },
 ];
 
+/**
+ * Ein fester Punkt ohne das, was eine frühere Sitzung bei ihrer Freigabe festhielt (`props.fest`, S4-3a) – in einer
+ * neuen Sitzung zeigt er wieder live.
+ */
+function ohneFest(props: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(props).filter(([k]) => k !== 'fest'));
+}
+
 /** Das Dokument einer neuen Sitzung aus einer Vorlage – jeder Block mit neuer ID, feste Aufgaben noch ungespeichert. */
 export function startDokument(vorlage: Vorlage, neueId: () => string): Block[] {
   const kopie = mitNeuenIds(vorlage.bloecke, neueId);
   const leeren = (b: Block): Block => ({
     ...b,
     ...(b.type === BLOCK.aufgabe ? { props: { ...b.props, aufgabe: '' } } : {}),
+    ...(b.type === BLOCK.verweis && b.props ? { props: ohneFest(b.props) } : {}),
     children: (b.children ?? []).map(leeren),
   });
   return kopie.map(leeren);
@@ -123,7 +132,7 @@ export function wieLetztesMal(letztes: readonly Block[], neueId: () => string): 
     .map((b) => ({
       id: b.id,
       type: b.type,
-      ...(b.props ? { props: { ...b.props } } : {}),
+      ...(b.props ? { props: ohneFest(b.props) } : {}),
       ...(b.type === 'heading' ? { content: text(textAus(b.content)) } : {}),
       children: [],
     }));

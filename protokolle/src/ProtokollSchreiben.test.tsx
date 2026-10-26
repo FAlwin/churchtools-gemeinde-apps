@@ -6,6 +6,7 @@ import { sperreVon, type ProtokollKopf } from '@shared/protokolle/speicher';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
 import * as S from './schreiben';
 import * as A from './aufgabenSchreiben';
+import { neueAufgabe } from '@shared/protokolle/aufgaben';
 import { ProtokollSchreiben } from './ProtokollSchreiben';
 
 /** Der Bildschirm „Protokoll schreiben“ (S4-1) – Schreiben bei ChurchTools und der Editor sind Attrappen. */
@@ -106,6 +107,8 @@ const zeige = (onZurueck = vi.fn()) => {
     modul: 24,
     kategorie: 62,
     mitarbeit: 65,
+    protokolle: [],
+    teile: [],
     zeitzone: 'Europe/Berlin',
     onZurueck,
   };
@@ -203,5 +206,52 @@ describe('ProtokollSchreiben', () => {
     await waitFor(() => expect(A.aufgabeAendern).toHaveBeenCalledTimes(1));
     const [ort, id] = vi.mocked(A.aufgabeAendern).mock.calls[0];
     expect([ort, id]).toEqual([{ modul: 24, kategorie: 65 }, 't1']);
+  });
+
+  it('„Lesen“ zeigt die Lese-Ansicht mit den festen Punkten – der Editor bleibt ausgeblendet bestehen (S4-3a)', async () => {
+    vi.mocked(A.aufgabenWerte).mockResolvedValueOnce([
+      {
+        wert: 1,
+        aufgabe: neueAufgabe({
+          id: 'frueher',
+          gruppe: 194,
+          sitzung: 'alt',
+          text: 'Beamer von früher',
+          von: 1,
+          am: '2026-10-01T10:00:00Z',
+        }),
+      },
+    ]);
+    lesen.mockResolvedValue({
+      kopf: KOPF,
+      dokument: [
+        ...DOK,
+        { id: 'v', type: 'verweis', props: { art: 'offene-aufgaben' }, children: [] },
+      ],
+    });
+    zeige();
+    await screen.findByText('bearbeitbar');
+    fireEvent.click(screen.getByRole('button', { name: 'Lesen' }));
+    expect(screen.getByText('Beamer von früher')).toBeTruthy();
+    expect(screen.getByTestId('editor').closest('[hidden]')).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Schreiben' }));
+    expect(screen.getByTestId('editor').closest('[hidden]')).toBeNull();
+    expect(screen.queryByText('Beamer von früher')).toBeNull();
+  });
+
+  it('„Lesen“ nach dem Tippen speichert sofort – nicht erst nach der Pause', async () => {
+    vi.mocked(S.sperreNehmen).mockResolvedValue({ art: 'ok', kopf: KOPF });
+    vi.mocked(S.speichern).mockClear();
+    vi.mocked(S.speichern).mockResolvedValue({ art: 'ok', kopf: { ...KOPF, stand: 'b' } });
+    zeige();
+    // Die erste Eingabe nimmt die Sperre und speichert gleich; die zweite wartet die Pause (3 s) ab …
+    fireEvent.click(await screen.findByRole('button', { name: 'tippen' }));
+    await waitFor(() => expect(S.speichern).toHaveBeenCalledTimes(1));
+    await screen.findByText(/gespeichert/);
+    fireEvent.click(screen.getByRole('button', { name: 'tippen' }));
+    expect(screen.getByText('Änderungen …')).toBeTruthy();
+    // … „Lesen“ wartet nicht: gespeichert, bevor die Pause um wäre.
+    fireEvent.click(screen.getByRole('button', { name: 'Lesen' }));
+    await waitFor(() => expect(S.speichern).toHaveBeenCalledTimes(2), { timeout: 1000 });
   });
 });

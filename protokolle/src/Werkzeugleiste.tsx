@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
 import { useEditorState } from '@blocknote/react';
 import { Icon, type IconName } from '@ui/icons/icons';
+import { FESTE_PUNKTE } from './anzeige';
 import type { ProtokollEditor } from './editorSchema';
+import { FESTE, festenPunktEinfuegen } from './festenPunktEinfuegen';
 import styles from './Werkzeugleiste.module.scss';
 
 /**
@@ -257,6 +259,16 @@ export function Werkzeugleiste({ editor }: { editor: ProtokollEditor }) {
             aktiv={z.typ === e.art}
             aus={!textart && z.typ !== e.art && !EIGENE.some((x) => x.art === z.typ)}
             onKlick={() => eigeneArt(editor, e.art)}
+          />
+        ))}
+      </div>
+      <div className={styles.gruppe}>
+        {FESTE.map((f) => (
+          <SymbolKnopf
+            key={f.art}
+            titel={FESTE_PUNKTE[f.art].titel}
+            icon={f.icon}
+            onKlick={() => festenPunktEinfuegen(editor, f.art)}
           />
         ))}
       </div>

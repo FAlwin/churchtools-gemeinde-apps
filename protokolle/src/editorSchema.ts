@@ -18,7 +18,7 @@ import { AufgabeBlock, BeschlussBlock, TerminBlock, VerweisBlock } from './Edito
  * was der Editor annimmt, aber keine Ansicht zeigt, wäre still verschwunden. (Tabellen aus Word kommen als Text an.)
  *
  * Die eigenen Blöcke tragen ihre Daten in `props` wie in `@shared/protokolle/dokument`; Aufgabe und Termin werden seit
- * S4-2 bedient (`EditorBloecke.tsx`), die festen Punkte (Verweis) in S4-3. **„[] “ + Leertaste macht eine Aufgabe**
+ * S4-2 bedient (`EditorBloecke.tsx`), die festen Punkte (Verweis) seit S4-3a. **„[] “ + Leertaste macht eine Aufgabe**
  * (Alwin 24.10.2026, wie Entwurf 7) – die Regel läuft vor der von BlockNotes Checkliste, die Checkliste gibt es weiter
  * über Textart und „/“-Menü.
  */
@@ -46,7 +46,12 @@ const terminBlock = createReactBlockSpec(
 );
 
 const verweisBlock = createReactBlockSpec(
-  { type: BLOCK.verweis, propSchema: { art: { default: 'offene-aufgaben' } }, content: 'none' },
+  {
+    type: BLOCK.verweis,
+    // `fest`: was der Punkt bei der Freigabe zeigte (JSON, `festePunkteFesthalten`) – leer = live (S4-3a).
+    propSchema: { art: { default: 'offene-aufgaben' }, fest: { default: '' } },
+    content: 'none',
+  },
   { render: VerweisBlock },
 );
 

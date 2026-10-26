@@ -34,6 +34,7 @@ import { useSetlistLiveSync, useMarkSeenAfterShown } from './hooks/useSetlistLiv
 import { Screen } from './components/Screen';
 import { CenterMessage } from './components/CenterMessage';
 import { TabBar, type TabId } from './components/TabBar';
+import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { Toast } from './components/Toast';
 import { useToast } from './hooks/useToast';
 import { Coachmarks } from './components/Coachmarks';
@@ -170,6 +171,8 @@ export default function App() {
   // geladen sind (dann existieren die hervorzuhebenden Elemente). „Einführung nochmal ansehen"
   // im Mehr-Tab setzt zurück und startet sie erneut.
   const [tourActive, setTourActive] = useState(false);
+  // Reiter am iPad/Rechner oben (wie ChurchTools „Events“), am Handy unten (Scheibe S, 26.10.2026).
+  const handy = useMedienAbfrage(HANDY_BREITE);
 
   const {
     restored,
@@ -554,8 +557,25 @@ export default function App() {
   if (canUseAvailability) tabs.push('verfuegbarkeit');
   tabs.push('mehr');
 
+  const reiter = (
+    <TabBar
+      oben={!handy}
+      active={tab}
+      tabs={tabs}
+      dimmed={online ? [] : ['lieder']}
+      onChange={(t) => {
+        if (!online && t === 'lieder') {
+          showToast('Liedersammlung ist offline nicht verfügbar.');
+          return;
+        }
+        setTab(t);
+      }}
+    />
+  );
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {!handy && reiter}
       <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
         {tab === 'termine' && canViewAgendas && (
           <Agenda
@@ -635,18 +655,7 @@ export default function App() {
           />
         )}
       </div>
-      <TabBar
-        active={tab}
-        tabs={tabs}
-        dimmed={online ? [] : ['lieder']}
-        onChange={(t) => {
-          if (!online && t === 'lieder') {
-            showToast('Liedersammlung ist offline nicht verfügbar.');
-            return;
-          }
-          setTab(t);
-        }}
-      />
+      {handy && reiter}
       <Toast message={toast} />
       {tab === 'termine' && tourActive && (
         <Coachmarks

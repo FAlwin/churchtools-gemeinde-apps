@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { AgendaItem, AgendaServiceOption, Service, SetlistSong } from '@shared/types/index';
 import { SeitenGeruest } from '../components/SeitenGeruest';
-import { RundKnopf } from '@ui/bedienung/KnopfReihe';
+import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { CenterMessage } from '../components/CenterMessage';
 import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { AgendaFullView } from '../components/AgendaFullView';
@@ -201,9 +201,8 @@ export function Setlist({
   }
 
   /**
-   * Die runden Knöpfe rechts (`KnopfReihe`, 02.10.2026). Titel und Datum stehen groß im Inhalt.
-   * Bis dahin saßen die Knöpfe in einer weißen Leiste im Unschärfe-Band von iOS 26/27 – dort waren
-   * auch Symbole weich, nicht nur Text (Screenshot Alwin, 02.10.2026). Jetzt schweben sie darunter.
+   * Die Knöpfe im Seitenkopf (`KopfKnopf`, Scheibe S, 26.10.2026): mit Rahmen und Beschriftung wie in ChurchTools,
+   * „Bearbeiten“ blau als Hauptaktion; am Handy nur das Symbol. Vorher runde Knöpfe (`RundKnopf`, 02.10.2026).
    */
   // Auch bei einem LEEREN Ablauf (13.10.2026): Sonst gab es keinen Stift, und ein in der App leer
   // angelegter Ablauf ließ sich nicht füllen. Das Teilen braucht Lieder und fragt selbst (`teilbar`).
@@ -211,45 +210,46 @@ export function Setlist({
     !isLoading && !isError ? (
       <>
         {teilbar.length > 0 && !editMode && (
-          <RundKnopf
+          <KopfKnopf
             onClick={teilenOeffnen}
+            label="Teilen"
             title="Alle Lieder als PDF teilen"
             dataTour="setlist-share"
-          >
-            <Icon name="share" size={20} stroke={2.2} />
-          </RundKnopf>
+            symbol={<Icon name="share" size={18} stroke={2.2} />}
+          />
         )}
         {canEdit && editMode && !abgeschlossen && (
-          <RundKnopf
+          <KopfKnopf
             onClick={() => setAbschliessenFrage(true)}
+            label="Abschließen"
             title="Ablauf abschließen"
             dataTour="edit-lock"
-          >
-            <Icon name="lock" size={19} stroke={2.2} />
-          </RundKnopf>
+            symbol={<Icon name="lock" size={18} stroke={2.2} />}
+          />
         )}
         {/* Öffnen ohne Rückfrage – es zerstört nichts. */}
         {canEdit && editMode && abgeschlossen && (
-          <RundKnopf
+          <KopfKnopf
             onClick={() => !abschluss.isPending && abschlussSetzen(false)}
+            label="Öffnen"
             title="Ablauf öffnen"
             dataTour="edit-lock"
             aktiv
-          >
-            <Icon name="lock-open" size={19} stroke={2.2} />
-          </RundKnopf>
+            symbol={<Icon name="lock-open" size={18} stroke={2.2} />}
+          />
         )}
         {canEdit && (
-          <RundKnopf
+          <KopfKnopf
             onClick={() => {
               bearbeiten.fehlerLoeschen();
               setEditMode((v) => !v);
             }}
+            label={editMode ? 'Fertig' : 'Bearbeiten'}
             title={editMode ? 'Fertig' : 'Ablauf bearbeiten'}
+            haupt
             dataTour="setlist-edit"
-          >
-            <Icon name={editMode ? 'check' : 'pencil'} size={20} stroke={2.2} />
-          </RundKnopf>
+            symbol={<Icon name={editMode ? 'check' : 'pencil'} size={18} stroke={2.2} />}
+          />
         )}
       </>
     ) : undefined;

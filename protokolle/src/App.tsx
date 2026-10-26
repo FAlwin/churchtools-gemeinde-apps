@@ -3,7 +3,7 @@ import { ErweiterungsSeite, type SeitenZustand } from '@ui/erweiterung/Erweiteru
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { ReiterLeiste } from '@ui/bedienung/ReiterLeiste';
 import { Segment } from '@ui/bedienung/Segment';
-import { useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
+import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { adresseFuer, reiterAusAdresse } from '@ui/bedienung/reiterAdresse';
 import { ladeStart, type Start } from './start';
 import { Startseite } from './Startseite';
@@ -29,7 +29,7 @@ export function App() {
     offen: false,
     begriff: '',
   });
-  const handy = useMedienAbfrage('(max-width: 759px)');
+  const handy = useMedienAbfrage(HANDY_BREITE);
 
   const laden = useCallback(() => {
     setZustand({ art: 'laedt' });

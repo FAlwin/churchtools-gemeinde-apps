@@ -43,6 +43,21 @@ Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Gemessen an der Test-Insta
 | Leitung einer Gruppe            | Reiter Personen und Hinweise für diese Gruppe **samt Untergruppen** (O3)                    | Rolle mit Leitung                             |
 | Gruppen-Admin                   | alle Personen und Hinweise (O3); umhängen und anlegen (O5); alles an Mitgliedern (O6)       | „Gruppen verwalten“ / „Gruppen bearbeiten“    |
 
+## Ansichten (ab O7b)
+
+Über dem Baum wählt man, **wie** er aussieht:
+
+- **Karten** – wie bisher: je Bereich eine Karte, darin die Gruppen mit Personen, Leitung und Diensten.
+- **Liste** – die Gemeinde als Gliederung mit Linien, nur die Namen. Jede Gruppe mit Untergruppen klappt mit dem
+  Pfeil auf und zu; anfangs sind die Gemeinde und die Bereiche offen, darunter steht „3 Untergruppen“. **Alle
+  aufklappen** / **Alle zuklappen** wirken nur unter der Spitze. Gut am Handy.
+- **Anfangen bei:** die ganze Gemeinde oder ein Bereich – dann zeigen Karten und Liste nur ihn. Im Gruppenfenster jeder
+  Gruppe mit Untergruppen steht **„Im Organigramm hier anfangen“**; die Gruppe steht dann zusätzlich in der Auswahl.
+  Blendet der Typ-Filter die Spitze aus, gilt wieder die ganze Gemeinde.
+- Die gewählte Ansicht **merkt sich das Gerät** (wie den Typ-Filter). Ohne Wahl: am Handy die Liste, sonst die
+  Karten. Von oben, von links und Mindmap kommen mit O7b-3 dazu.
+- Eine Gruppe mit zwei Obergruppen steht wie in ChurchTools unter beiden und klappt an jeder Stelle für sich.
+
 ## Präsentation (ab O4)
 
 Über dem Baum steht **„Präsentieren“** – für alle, die die Erweiterung sehen. Die Präsentation legt sich über

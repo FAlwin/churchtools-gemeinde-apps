@@ -50,6 +50,11 @@ interface Props {
   onGruppe: (id: number) => void;
   onNachladen: () => void;
   onSchliessen: () => void;
+  /**
+   * „Im Organigramm hier anfangen“ (O7b-2): diese Gruppe als Spitze des Baums. Fehlt, wenn es nichts darunter gibt
+   * oder die Gruppe im Baum gerade nicht zu sehen ist (Typ ausgeblendet).
+   */
+  onHierAnfangen?: () => void;
   /** Gruppen und Hierarchie neu laden (nach einer Änderung) – `false`, wenn das gerade nicht ging. */
   onStruktur: () => Promise<boolean>;
   /** Die Mitglieder DIESER Gruppe neu laden (nach einer Änderung an ihnen, O6) – `false`, wenn das gerade nicht ging. */
@@ -85,6 +90,7 @@ export function GruppenFenster({
   onGruppe,
   onNachladen,
   onSchliessen,
+  onHierAnfangen,
   onStruktur,
   onMitgliederNeu,
 }: Props) {
@@ -446,6 +452,11 @@ export function GruppenFenster({
               onClick={() => beginnen({ art: 'anlegen' })}
             >
               ＋ Untergruppe anlegen
+            </button>
+          )}
+          {onHierAnfangen && (
+            <button type="button" className={styles.dazu} onClick={onHierAnfangen}>
+              Im Organigramm hier anfangen
             </button>
           )}
         </section>

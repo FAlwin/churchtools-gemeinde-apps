@@ -3,16 +3,23 @@ import { GruppenKachel } from '@ui/bedienung/GruppenKachel';
 import { PersonBild } from '@ui/bedienung/PersonBild';
 import { Icon } from '@ui/icons/icons';
 import { gruppenFarbe } from '@shared/organigramm/farbe';
-import { baumOhneTypen, type Knoten } from '@shared/organigramm/gruppen';
+import type { Knoten } from '@shared/organigramm/gruppen';
+import { knotenAmPfad, type SichtKnoten } from '@shared/organigramm/ansichten';
+import { Segment } from '@ui/bedienung/Segment';
 import { rollenRang } from '@shared/organigramm/mitglieder';
 import { gruppenLeitung, teilbaumPersonen, type Mitglied } from '@shared/organigramm/personen';
-import { bereicheSortiert } from '@shared/organigramm/praesentation';
 import { offenVonGruppe, type Einsaetze } from '@shared/organigramm/einsaetze';
 import type { MitgliederDaten, MitgliederStand } from './ladeMitglieder';
 import type { Start } from './start';
+import type { BaumAnsicht } from './auswahl';
+import { Liste } from './Liste';
 import styles from './Organigramm.module.scss';
 
 const anzahl = (n: number, eins: string, mehr: string) => `${n} ${n === 1 ? eins : mehr}`;
+const ANSICHTEN: { value: BaumAnsicht; label: string }[] = [
+  { value: 'karten', label: 'Karten' },
+  { value: 'liste', label: 'Liste' },
+];
 
 interface Props {
   start: Start;
@@ -24,6 +31,19 @@ interface Props {
   lesbar: ReadonlyMap<number, readonly Mitglied[]>;
   /** Ausgeblendete Gruppentypen – liegen in `App`, weil die Präsentation dieselben ausblendet (O4). */
   ausgeblendet: ReadonlySet<number>;
+  /** Der Baum ohne ausgeblendete Typen, große Bereiche zuerst – EINE Rechnung in `App` für Karten, Liste und Fenster. */
+  baum: readonly Knoten[];
+  /** Ansicht, Spitze und was aufgeklappt ist (O7b-2) – liegt in `App`, weil das Gruppenfenster „Hier anfangen“ kann. */
+  ansicht: BaumAnsicht;
+  onAnsicht: (a: BaumAnsicht) => void;
+  /** Pfad der Spitze – `null` = ganze Gemeinde. Eine verschwundene Spitze setzt `App` zurück. */
+  spitze: string | null;
+  onSpitze: (pfad: string | null) => void;
+  /** Was die Liste zeigt (ab der Spitze, auf- und zugeklappt). */
+  sicht: SichtKnoten;
+  onUmklappen: (schluessel: string) => void;
+  onAlleAuf: () => void;
+  onAlleZu: () => void;
   onTypUmschalten: (typ: number) => void;
   onNachladen: () => void;
   onGruppe: (id: number) => void;
@@ -42,6 +62,15 @@ export function Organigramm({
   einsaetze,
   lesbar,
   ausgeblendet,
+  baum,
+  ansicht,
+  onAnsicht,
+  spitze,
+  onSpitze,
+  sicht,
+  onUmklappen,
+  onAlleAuf,
+  onAlleZu,
   onTypUmschalten,
   onNachladen,
   onGruppe,
@@ -49,11 +78,9 @@ export function Organigramm({
 }: Props) {
   const rang = useMemo(() => rollenRang(start.rollen), [start.rollen]);
   const name = (id: number) => mitglieder?.personen.get(id)?.name ?? '';
-  // Große Bereiche zuerst – dieselbe Reihenfolge wie in der Präsentation.
-  const baum = useMemo(
-    () => bereicheSortiert(baumOhneTypen(start.baum, ausgeblendet)),
-    [start.baum, ausgeblendet],
-  );
+  // Karten ab der Spitze: ein Bereich (oder eine Gruppe) allein – sonst alle Bereiche wie bisher.
+  const spitzenKnoten = spitze === null ? null : knotenAmPfad(baum, spitze);
+  const karten = spitzenKnoten ? [spitzenKnoten] : baum;
 
   // Gruppentypen, die es gibt – mit Zahl, für den Filter.
   const typen = useMemo(() => {
@@ -116,16 +143,54 @@ export function Organigramm({
   return (
     <div className={styles.seite}>
       <div className={styles.oben}>
-        <button
-          type="button"
-          className={styles.praesentieren}
-          disabled={!mitglieder}
-          title={mitglieder ? undefined : 'Mitglieder werden geladen …'}
-          onClick={onPraesentieren}
-        >
-          <Icon name="play" size={16} />
-          Präsentieren
-        </button>
+        <Segment
+          value={ansicht}
+          options={ANSICHTEN}
+          onChange={onAnsicht}
+          ariaLabel="Ansicht"
+          verbunden
+        />
+        <label className={styles.anfangen}>
+          Anfangen bei
+          <select
+            className={styles.feld}
+            value={spitze ?? ''}
+            onChange={(e) => onSpitze(e.target.value || null)}
+          >
+            <option value="">Ganze Gemeinde</option>
+            {baum.map((b) => (
+              <option key={b.gruppe.id} value={String(b.gruppe.id)}>
+                {b.gruppe.name}
+              </option>
+            ))}
+            {/* „Hier anfangen“ an einer tieferen Gruppe: sie steht zusätzlich in der Auswahl. */}
+            {spitzenKnoten && spitze?.includes('/') && (
+              <option value={spitze}>{spitzenKnoten.gruppe.name}</option>
+            )}
+          </select>
+        </label>
+        <span className={styles.rechts}>
+          {ansicht === 'liste' && (
+            <>
+              <button type="button" className={styles.knopf} onClick={onAlleAuf}>
+                Alle aufklappen
+              </button>
+              <button type="button" className={styles.knopf} onClick={onAlleZu}>
+                Alle zuklappen
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            className={styles.praesentieren}
+            disabled={!mitglieder}
+            title={mitglieder ? undefined : 'Mitglieder werden geladen …'}
+            onClick={onPraesentieren}
+          >
+            <Icon name="play" size={16} />
+            Präsentieren
+          </button>
+        </span>
       </div>
       {typen.length > 1 && (
         <div className={styles.filter} role="group" aria-label="Gruppentypen">
@@ -155,57 +220,68 @@ export function Organigramm({
 
       {baum.length === 0 && <p className={styles.leer}>Hier ist keine Gruppe zu sehen.</p>}
 
-      <div className={styles.bereiche}>
-        {baum.map((b) => {
-          const l = leitung(b.gruppe.id);
-          const personen = mitglieder ? teilbaumPersonen(b, lesbar, name, rang).length : null;
-          return (
-            <section key={b.gruppe.id} className={styles.karte} aria-label={b.gruppe.name}>
-              <button type="button" className={styles.kopf} onClick={() => onGruppe(b.gruppe.id)}>
-                <GruppenKachel
-                  name={b.gruppe.name}
-                  farbe={gruppenFarbe(b.gruppe, start.typFarben)}
-                  groesse={40}
-                />
-                <span className={styles.text}>
-                  <b className={styles.bereichName}>{b.gruppe.name}</b>
-                  <span className={styles.meta}>
-                    {[
-                      b.kinder.length ? anzahl(b.kinder.length, 'Gruppe', 'Gruppen') : null,
-                      personen === null
-                        ? null
-                        : personen
-                          ? anzahl(personen, 'Person', 'Personen')
+      {ansicht === 'liste' && baum.length > 0 && (
+        <Liste sicht={sicht} onUmklappen={onUmklappen} onGruppe={onGruppe} />
+      )}
+
+      {ansicht === 'karten' && (
+        <div className={styles.bereiche}>
+          {karten.map((b) => {
+            const l = leitung(b.gruppe.id);
+            const personen = mitglieder ? teilbaumPersonen(b, lesbar, name, rang).length : null;
+            return (
+              <section key={b.gruppe.id} className={styles.karte} aria-label={b.gruppe.name}>
+                <button type="button" className={styles.kopf} onClick={() => onGruppe(b.gruppe.id)}>
+                  <GruppenKachel
+                    name={b.gruppe.name}
+                    farbe={gruppenFarbe(b.gruppe, start.typFarben)}
+                    groesse={40}
+                  />
+                  <span className={styles.text}>
+                    <b className={styles.bereichName}>{b.gruppe.name}</b>
+                    <span className={styles.meta}>
+                      {[
+                        b.kinder.length ? anzahl(b.kinder.length, 'Gruppe', 'Gruppen') : null,
+                        personen === null
+                          ? null
+                          : personen
+                            ? anzahl(personen, 'Person', 'Personen')
+                            : null,
+                        l.length ? 'Leitung: ' + l.map((m) => name(m.personId)).join(', ') : null,
+                        // Der Bereich selbst nicht lesbar oder gerade nicht ladbar → hier sagen, nicht nur oben.
+                        stand(b.gruppe.id)?.art === 'verborgen' ||
+                        stand(b.gruppe.id)?.art === 'fehler'
+                          ? meta(b)
                           : null,
-                      l.length ? 'Leitung: ' + l.map((m) => name(m.personId)).join(', ') : null,
-                      // Der Bereich selbst nicht lesbar oder gerade nicht ladbar → hier sagen, nicht nur oben.
-                      stand(b.gruppe.id)?.art === 'verborgen' ||
-                      stand(b.gruppe.id)?.art === 'fehler'
-                        ? meta(b)
-                        : null,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ') || meta(b)}
+                      ]
+                        .filter(Boolean)
+                        .join(' · ') || meta(b)}
+                    </span>
                   </span>
-                </span>
-                <span className={styles.bilder}>
-                  {l.map((m) => {
-                    const p = mitglieder?.personen.get(m.personId);
-                    return p ? (
-                      <PersonBild key={p.id} name={p.name} bild={p.bild} initialen={p.initialen} />
-                    ) : null;
-                  })}
-                </span>
-              </button>
-              {b.kinder.length > 0 ? (
-                <ul className={styles.zeilen}>{b.kinder.map((k) => zeile(k, 1))}</ul>
-              ) : (
-                <p className={styles.keine}>Keine Untergruppen.</p>
-              )}
-            </section>
-          );
-        })}
-      </div>
+                  <span className={styles.bilder}>
+                    {l.map((m) => {
+                      const p = mitglieder?.personen.get(m.personId);
+                      return p ? (
+                        <PersonBild
+                          key={p.id}
+                          name={p.name}
+                          bild={p.bild}
+                          initialen={p.initialen}
+                        />
+                      ) : null;
+                    })}
+                  </span>
+                </button>
+                {b.kinder.length > 0 ? (
+                  <ul className={styles.zeilen}>{b.kinder.map((k) => zeile(k, 1))}</ul>
+                ) : (
+                  <p className={styles.keine}>Keine Untergruppen.</p>
+                )}
+              </section>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

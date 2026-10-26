@@ -985,3 +985,121 @@ describe('O6: Leitung und Mitglieder', () => {
     expect(cm.m.get(3)?.ende).toBeNull();
   });
 });
+
+describe('O7b-2: Ansichten, Liste, „Anfangen bei“', () => {
+  const ansicht = (name: string) =>
+    within(screen.getByRole('group', { name: 'Ansicht' })).getByRole('button', { name });
+  const anfangenBei = () => screen.getByLabelText<HTMLSelectElement>('Anfangen bei');
+  const bereiche = () => screen.queryAllByRole('region').map((r) => r.getAttribute('aria-label'));
+
+  it('Liste: Gemeinde oben, Bereiche offen, darunter zu – Wahl im Gerät gemerkt', async () => {
+    render(<App />);
+    await screen.findByRole('region', { name: 'Gottesdienst' });
+    fireEvent.click(ansicht('Liste'));
+    expect(bereiche()).toEqual([]);
+    expect(screen.getByText('ECG')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Technik aufklappen' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Stream' })).toBeNull();
+    expect(localStorage.getItem('organigramm-ansicht')).toBe('"liste"');
+    // Klick auf eine Gruppe öffnet wie in den Karten das Gruppenfenster.
+    fireEvent.click(screen.getByRole('button', { name: 'Technik' }));
+    expect(screen.getByRole('region', { name: 'Leiter' })).toBeTruthy();
+  });
+
+  it('auf- und zuklappen, „Alle aufklappen“ und „Alle zuklappen“ (nur in der Liste)', async () => {
+    localStorage.setItem('organigramm-ansicht', '"liste"');
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Technik aufklappen' }));
+    expect(screen.getByRole('button', { name: 'Stream' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Alle zuklappen' }));
+    // Die Gemeinde bleibt offen, alles darunter ist zu.
+    expect(screen.queryByRole('button', { name: 'Technik' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Gottesdienst aufklappen' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Alle aufklappen' }));
+    expect(screen.getByRole('button', { name: 'Stream' })).toBeTruthy();
+    fireEvent.click(ansicht('Karten'));
+    expect(screen.queryByRole('button', { name: 'Alle aufklappen' })).toBeNull();
+  });
+
+  it('am Handy ohne Wahl die Liste; eine gewählte Ansicht gilt auch dort', async () => {
+    vi.stubGlobal('matchMedia', (q: string) => ({
+      matches: q.includes('max-width'),
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    try {
+      render(<App />);
+      expect(await screen.findByRole('button', { name: 'Technik aufklappen' })).toBeTruthy();
+      expect(bereiche()).toEqual([]);
+      cleanup();
+      localStorage.setItem('organigramm-ansicht', '"karten"');
+      render(<App />);
+      expect(await screen.findByRole('region', { name: 'Gottesdienst' })).toBeTruthy();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('„Anfangen bei“ einem Bereich: Karten und Liste zeigen nur ihn', async () => {
+    render(<App />);
+    await screen.findByRole('region', { name: 'Gottesdienst' });
+    expect([...anfangenBei().options].map((o) => o.text)).toEqual([
+      'Ganze Gemeinde',
+      'Gottesdienst',
+      'Café',
+      'Infos',
+    ]);
+    fireEvent.change(anfangenBei(), { target: { value: '10' } });
+    expect(bereiche()).toEqual(['Gottesdienst']);
+    fireEvent.click(ansicht('Liste'));
+    expect(screen.queryByText('ECG')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Gottesdienst zuklappen' })).toBeTruthy();
+    fireEvent.change(anfangenBei(), { target: { value: '' } });
+    expect(screen.getByText('ECG')).toBeTruthy();
+  });
+
+  it('„Im Organigramm hier anfangen“ im Gruppenfenster: Gruppe wird Spitze, offen, steht in der Auswahl', async () => {
+    render(<App />);
+    await screen.findByText('3 Personen · Leitung: Alwin Friesen, Dora Dorn');
+    fireEvent.click(zeile('Technik'));
+    fireEvent.click(screen.getByRole('button', { name: 'Im Organigramm hier anfangen' }));
+    expect(screen.queryByRole('region', { name: 'Leiter' })).toBeNull();
+    expect(bereiche()).toEqual(['Technik']);
+    expect(anfangenBei().value).toBe('10/7');
+    expect(anfangenBei().selectedOptions[0].text).toBe('Technik');
+    fireEvent.click(ansicht('Liste'));
+    // Technik war zu – als Spitze steht sie offen da.
+    expect(screen.getByRole('button', { name: 'Stream' })).toBeTruthy();
+  });
+
+  it('„Hier anfangen“ nur bei Gruppen mit Untergruppen', async () => {
+    render(<App />);
+    await screen.findByText('3 Personen · Leitung: Alwin Friesen, Dora Dorn');
+    fireEvent.click(zeile('Stream'));
+    expect(screen.queryByRole('button', { name: 'Im Organigramm hier anfangen' })).toBeNull();
+  });
+
+  it('„Hier anfangen“ aus dem Reiter Personen wechselt zurück ins Organigramm', async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Personen' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Carl Clau/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Technik/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Im Organigramm hier anfangen' }));
+    expect(window.location.hash).toBe('');
+    expect(await screen.findByRole('region', { name: 'Technik' })).toBeTruthy();
+  });
+
+  it('Spitze per Typ-Filter ausgeblendet → wieder die ganze Gemeinde, ohne Fehler', async () => {
+    render(<App />);
+    await screen.findByRole('region', { name: 'Infos' });
+    fireEvent.change(anfangenBei(), { target: { value: '34' } });
+    expect(bereiche()).toEqual(['Infos']);
+    fireEvent.click(screen.getByRole('button', { name: /^Verteiler/ }));
+    expect(anfangenBei().value).toBe('');
+    expect(bereiche()).toEqual(['Gottesdienst', 'Café']);
+    // Wieder eingeblendet: Es bleibt bei der ganzen Gemeinde – die Ansicht springt nicht zurück.
+    fireEvent.click(screen.getByRole('button', { name: /^Verteiler/ }));
+    expect(anfangenBei().value).toBe('');
+    expect(bereiche()).toEqual(['Gottesdienst', 'Café', 'Infos']);
+  });
+});

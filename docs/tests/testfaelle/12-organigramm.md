@@ -184,3 +184,31 @@ angelegten, leeren Gruppe bei „Rückgängig“. Niemand bekommt eine Mail.
   Mitgliedschaften bleiben, keine Mail im Protokoll)
 
 </details>
+
+### TF-ORG-07 · Ansichten: Liste, „Anfangen bei“, „Hier anfangen“
+
+**Das brauchst du:** Die Test-Instanz mit der Erweiterung, ein Konto, das den Baum sieht; Laptop und Handy.
+
+**Das muss passieren:** Karten und Liste zeigen dieselben Gruppen wie ChurchTools; „Anfangen bei“ zeigt nur den
+gewählten Teil; die gewählte Ansicht bleibt nach dem Neuladen.
+
+1. **Organigramm** → **Liste**: oben der Name der Gemeinde, darunter die Bereiche offen, tiefere Gruppen zu („2
+   Untergruppen“). Gruppen und Namen mit ChurchTools vergleichen.
+2. Eine Gruppe mit dem Pfeil aufklappen, **Alle zuklappen**, **Alle aufklappen** – nur unter der Spitze ändert sich
+   etwas.
+3. Seite neu laden: Die Liste ist wieder da. Am Handy (ohne vorher etwas gewählt zu haben) beginnt die Erweiterung mit
+   der Liste.
+4. **Anfangen bei** → ein Bereich: Karten und Liste zeigen nur ihn. Zurück auf **Ganze Gemeinde**.
+5. Eine Gruppe mit Untergruppen anklicken → **Im Organigramm hier anfangen**: Das Fenster schließt, die Gruppe ist oben
+   und offen, sie steht in „Anfangen bei“. Bei einer Gruppe ohne Untergruppen fehlt der Knopf.
+6. Den Gruppentyp der Spitze im Typ-Filter ausblenden: wieder die ganze Gemeinde, keine Fehlermeldung.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `organigramm/src/Organigramm.tsx`, `organigramm/src/Liste.tsx`, `organigramm/src/App.tsx`, `organigramm/src/auswahl.ts`, `organigramm/src/GruppenFenster.tsx`, `shared/organigramm/ansichten.ts`
+- **Automatisiert:** größtenteils – `App.test.tsx` (O7b-2), `Liste.test.tsx`, `auswahl.test.ts`, `ansichten.test.ts`;
+  ob die Gruppen mit dem echten ChurchTools übereinstimmen und wie es am Handy aussieht, prüft nur dieser Fall
+- **Historie:** #736 (Entwurf `o7b-ansichten-v1.html` abgenommen 26.10.2026; Startansicht am Handy Liste)
+
+</details>

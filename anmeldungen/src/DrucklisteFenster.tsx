@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { jsPDF } from 'jspdf';
 import { Sheet } from '@ui/fenster/Sheet';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Segment } from '@ui/bedienung/Segment';
 import { listenPdf } from '@ui/teilen/listenPdf';
 import { downloadPdf, sharePdf } from '@ui/teilen/sharePdf';
@@ -20,7 +21,6 @@ import { aendereEinstellungen } from './einrichten';
 import { fehlerMeldung } from './zustand';
 import s from './Startseite.module.scss';
 import a from './AnmeldungenReiter.module.scss';
-import f from './Formular.module.scss';
 import d from './DrucklisteFenster.module.scss';
 
 const stempel = new Intl.DateTimeFormat('de-DE', {
@@ -139,7 +139,36 @@ export function DrucklisteFenster({
   );
 
   return (
-    <Sheet title="Druckliste" onClose={onClose}>
+    <Sheet
+      title="Druckliste"
+      onClose={onClose}
+      knoepfe={
+        <>
+          <FensterKnopf
+            art="hell"
+            disabled={!pdf}
+            onClick={() => {
+              if (!pdf) return;
+              downloadPdf(pdf, datei);
+              setGeladen(true);
+              merken();
+            }}
+          >
+            Herunterladen
+          </FensterKnopf>
+          <FensterKnopf
+            disabled={!pdf}
+            onClick={() => {
+              if (!pdf) return;
+              void sharePdf(pdf, datei);
+              merken();
+            }}
+          >
+            {pdf ? 'Teilen …' : 'PDF wird erstellt …'}
+          </FensterKnopf>
+        </>
+      }
+    >
       <p className={a.unterTitel}>{veranstaltung} · aus ChurchTools, Stand jetzt</p>
       <section className={a.teil}>
         <h3>Liste</h3>
@@ -256,34 +285,11 @@ export function DrucklisteFenster({
           {fehler ?? merkFehler}
         </p>
       )}
-      <div className={a.knoepfe}>
-        {geladen && <span className={a.leise}>Heruntergeladen</span>}
-        <button
-          type="button"
-          className={a.linkKnopf}
-          disabled={!pdf}
-          onClick={() => {
-            if (!pdf) return;
-            downloadPdf(pdf, datei);
-            setGeladen(true);
-            merken();
-          }}
-        >
-          Herunterladen
-        </button>
-        <button
-          type="button"
-          className={f.knopf}
-          disabled={!pdf}
-          onClick={() => {
-            if (!pdf) return;
-            void sharePdf(pdf, datei);
-            merken();
-          }}
-        >
-          {pdf ? 'Teilen …' : 'PDF wird erstellt …'}
-        </button>
-      </div>
+      {geladen && (
+        <p className={a.leise} role="status">
+          Heruntergeladen
+        </p>
+      )}
     </Sheet>
   );
 }

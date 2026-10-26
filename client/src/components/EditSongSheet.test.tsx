@@ -7,6 +7,7 @@ import type {
   SongCategory,
   SongLibraryEntry,
 } from '@shared/types/index';
+import { knopfFolge } from '@ui/fenster/fenster.testutil';
 
 /**
  * „Stammdaten ändern" (#322, Schritt 11) – geprüft werden die **Entscheidungen**:
@@ -416,14 +417,10 @@ describe('EditSongSheet – die Einführung (#396)', () => {
   });
 });
 
-/** Fenster wie ChurchTools (E6-O F3, #726): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
-const knopfFolgeF3 = () =>
-  screen.getAllByRole('button').map((b) => (b.getAttribute('aria-label') ?? b.textContent)?.trim());
-
 describe('EditSongSheet im ChurchTools-Aufbau', () => {
   it('Speichern unten rechts neben Schließen (Alwin: immer sichtbar)', () => {
     zeige();
-    expect(knopfFolgeF3()[0]).toBe('Fenster schließen');
-    expect(knopfFolgeF3().slice(-2)).toEqual(['Schließen', 'Speichern']);
+    expect(knopfFolge()[0]).toBe('Fenster schließen');
+    expect(knopfFolge().slice(-2)).toEqual(['Schließen', 'Speichern']);
   });
 });

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { Sheet } from '@ui/fenster/Sheet';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import type { MeineGruppe } from '@shared/ct/gruppen';
 import { STATUS, setzeStatus, umbenennen, verschieben } from './einrichten';
 import { Fehler } from './Bearbeiten';
@@ -60,7 +61,24 @@ export function VerwaltenFenster({
   if (ansicht === 'name') {
     const sauber = neuerName.trim();
     return (
-      <Sheet title="Umbenennen" onClose={onClose}>
+      <Sheet
+        title="Umbenennen"
+        onClose={onClose}
+        beschaeftigt={arbeitet}
+        knoepfe={
+          <FensterKnopf
+            disabled={!sauber || sauber === name || arbeitet}
+            onClick={() =>
+              tun(() => umbenennen(id, sauber), {
+                text: `Umbenannt in „${sauber}“.`,
+                rueckgaengig: () => umbenennen(id, name),
+              })
+            }
+          >
+            {arbeitet ? 'Wird gespeichert …' : 'Umbenennen'}
+          </FensterKnopf>
+        }
+      >
         <label className={f.feld}>
           <span>Name der Veranstaltung</span>
           <input
@@ -75,53 +93,65 @@ export function VerwaltenFenster({
           Titel – bei Bedarf dort anpassen.
         </p>
         <Fehler text={fehler} />
-        <button
-          type="button"
-          className={f.knopf}
-          disabled={!sauber || sauber === name || arbeitet}
-          onClick={() =>
-            tun(() => umbenennen(id, sauber), {
-              text: `Umbenannt in „${sauber}“.`,
-              rueckgaengig: () => umbenennen(id, name),
-            })
-          }
-        >
-          {arbeitet ? 'Wird gespeichert …' : 'Umbenennen'}
-        </button>
       </Sheet>
     );
   }
 
   if (ansicht === 'zurueck') {
     return (
-      <Sheet title="Freigabe zurücknehmen?" onClose={onClose}>
+      <Sheet
+        title="Freigabe zurücknehmen?"
+        onClose={onClose}
+        beschaeftigt={arbeitet}
+        knoepfe={
+          <FensterKnopf
+            disabled={arbeitet}
+            onClick={() =>
+              tun(() => setzeStatus(id, STATUS.entwurf), {
+                text: 'Freigabe zurückgenommen – Gäste können sich nicht mehr anmelden.',
+                rueckgaengig: () => setzeStatus(id, STATUS.freigegeben),
+              })
+            }
+          >
+            {arbeitet ? 'Wird gespeichert …' : 'Freigabe zurücknehmen'}
+          </FensterKnopf>
+        }
+      >
         <p className={f.hinweis}>
           Die Veranstaltung wird wieder zum Entwurf: Gäste sehen sie nicht mehr und können sich
           nicht mehr anmelden.{angemeldet}
         </p>
         <Fehler text={fehler} />
-        <button
-          type="button"
-          className={f.knopf}
-          disabled={arbeitet}
-          onClick={() =>
-            tun(() => setzeStatus(id, STATUS.entwurf), {
-              text: 'Freigabe zurückgenommen – Gäste können sich nicht mehr anmelden.',
-              rueckgaengig: () => setzeStatus(id, STATUS.freigegeben),
-            })
-          }
-        >
-          {arbeitet ? 'Wird gespeichert …' : 'Freigabe zurücknehmen'}
-        </button>
       </Sheet>
     );
   }
 
   if (ansicht === 'verschieben') {
     const zielName = ziele.find((t) => t.id === ziel)?.name ?? '';
+    const moeglich = ziele.length > 0 && team;
     return (
-      <Sheet title="In ein anderes Team" onClose={onClose}>
-        {ziele.length === 0 || !team ? (
+      <Sheet
+        title="In ein anderes Team"
+        onClose={onClose}
+        beschaeftigt={arbeitet}
+        cancelLabel={moeglich ? 'Abbrechen' : 'Schließen'}
+        knoepfe={
+          moeglich ? (
+            <FensterKnopf
+              disabled={arbeitet}
+              onClick={() =>
+                tun(() => verschieben(id, team.id, ziel), {
+                  text: `„${name}“ gehört jetzt zu „${zielName}“.`,
+                  rueckgaengig: () => verschieben(id, ziel, team.id),
+                })
+              }
+            >
+              {arbeitet ? 'Wird verschoben …' : `Zu „${zielName}“ verschieben`}
+            </FensterKnopf>
+          ) : null
+        }
+      >
+        {!moeglich ? (
           <p className={f.hinweis}>Es gibt kein anderes Team, in das du verschieben kannst.</p>
         ) : (
           <>
@@ -144,19 +174,6 @@ export function VerwaltenFenster({
               (außer über ChurchTools-Rechte von oben).{angemeldet}
             </p>
             <Fehler text={fehler} />
-            <button
-              type="button"
-              className={f.knopf}
-              disabled={arbeitet}
-              onClick={() =>
-                tun(() => verschieben(id, team.id, ziel), {
-                  text: `„${name}“ gehört jetzt zu „${zielName}“.`,
-                  rueckgaengig: () => verschieben(id, ziel, team.id),
-                })
-              }
-            >
-              {arbeitet ? 'Wird verschoben …' : `Zu „${zielName}“ verschieben`}
-            </button>
           </>
         )}
       </Sheet>
@@ -165,36 +182,41 @@ export function VerwaltenFenster({
 
   if (ansicht === 'archiv') {
     return (
-      <Sheet title="Löschen?" onClose={onClose}>
+      <Sheet
+        title="Löschen?"
+        onClose={onClose}
+        beschaeftigt={arbeitet}
+        knoepfe={
+          <FensterKnopf
+            art="gefahr"
+            disabled={arbeitet}
+            onClick={() =>
+              tun(
+                () => setzeStatus(id, STATUS.archiviert),
+                {
+                  text: `„${name}“ ist im Archiv.`,
+                  rueckgaengig: () => setzeStatus(id, statusId),
+                },
+                true,
+              )
+            }
+          >
+            {arbeitet ? 'Wird archiviert …' : 'Ins Archiv verschieben'}
+          </FensterKnopf>
+        }
+      >
         <p className={f.hinweis}>
           Die Veranstaltung kommt ins <b>Archiv</b>: Sie verschwindet aus der Übersicht, Gäste
           können sich nicht mehr anmelden.{angemeldet} Wiederherstellen kannst du sie jederzeit
           unter „Archiv“ auf der Startseite.
         </p>
         <Fehler text={fehler} />
-        <button
-          type="button"
-          className={f.entfernen}
-          disabled={arbeitet}
-          onClick={() =>
-            tun(
-              () => setzeStatus(id, STATUS.archiviert),
-              {
-                text: `„${name}“ ist im Archiv.`,
-                rueckgaengig: () => setzeStatus(id, statusId),
-              },
-              true,
-            )
-          }
-        >
-          {arbeitet ? 'Wird archiviert …' : 'Ins Archiv verschieben'}
-        </button>
       </Sheet>
     );
   }
 
   return (
-    <Sheet title="Veranstaltung verwalten" onClose={onClose}>
+    <Sheet title="Veranstaltung verwalten" onClose={onClose} knoepfe={null}>
       <div className={f.optionen} style={{ marginBottom: 14 }}>
         <Aktion titel="Umbenennen" text={`Jetzt: „${name}“`} onClick={() => setAnsicht('name')} />
         {statusId === STATUS.freigegeben && (

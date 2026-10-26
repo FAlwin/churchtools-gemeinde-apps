@@ -6,6 +6,7 @@ import type { RohKandidat } from '@shared/dienstplan/werKann';
 import { WerKann, type FreierPlatz } from './WerKann';
 import { ladeWerKann, vergissWerKann } from './ladeWerKann';
 import { STANDARD } from '@shared/dienstplan/vorlieben';
+import { knopfFolge } from '@ui/fenster/fenster.testutil';
 
 vi.mock('./ladeWerKann', () => ({ ladeWerKann: vi.fn(), vergissWerKann: vi.fn() }));
 const laden = vi.mocked(ladeWerKann);
@@ -275,10 +276,6 @@ describe('WerKann – Eintragen', () => {
     expect(screen.queryByRole('button', { name: /^Vorlieben von/ })).toBeNull();
   });
 });
-
-/** Fenster wie ChurchTools (E6-O F2, #720): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
-const knopfFolge = () =>
-  screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent);
 
 describe('WerKann im ChurchTools-Aufbau', () => {
   it('nur auswählen: X oben, unten nur Schließen', async () => {

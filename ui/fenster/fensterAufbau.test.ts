@@ -6,13 +6,13 @@ import { dateien, ORDNER, WURZEL } from '../design/quelltexte.testutil';
 /**
  * **Jedes Fenster im ChurchTools-Aufbau** (E6-O, Entwurf `fenster-entwurf.html`, abgenommen 23.10.2026): Ein `Sheet`
  * bekommt den Kopf mit X und die Knöpfe rechts unten nur, wenn es `knoepfe` reicht (auch `null` für Fenster nur zum
- * Ansehen). Umgezogen wird App für App (F1 #716, F2 #720, F3 #726). Dieser Test hält fest, was schon umgezogen ist –
+ * Ansehen). Umgezogen wird App für App (F1 #716, F2 #720, F3 #726, F4 Anmeldungen). Dieser Test hält fest, was schon umgezogen ist –
  * ein neues Fenster im alten Aufbau fällt sofort auf.
  *
- * `NOCH_NICHT_UMGEZOGEN` schrumpft mit F4/F5. Steht eine App darin, die gar kein altes Fenster mehr hat, schlägt der
+ * `NOCH_NICHT_UMGEZOGEN` schrumpft mit F5. Steht eine App darin, die gar kein altes Fenster mehr hat, schlägt der
  * zweite Test an: dann gehört sie aus der Liste.
  */
-const NOCH_NICHT_UMGEZOGEN = new Set(['anmeldungen/src', 'organigramm/src', 'protokolle/src']);
+const NOCH_NICHT_UMGEZOGEN = new Set(['organigramm/src', 'protokolle/src']);
 
 /** Die öffnenden `<Sheet …>`-Tags einer Datei – bis zur schließenden `>` außerhalb von `{…}`. */
 function sheetTags(quelltext: string): { zeile: number; tag: string }[] {

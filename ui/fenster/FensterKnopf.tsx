@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from 'react';
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from 'react';
 import styles from './FensterKnopf.module.scss';
 
 /**
@@ -24,5 +24,19 @@ export function FensterKnopf({ art = 'haupt', className, type = 'button', ...res
       className={`${styles.knopf} ${styles[art]}${className ? ' ' + className : ''}`}
       {...rest}
     />
+  );
+}
+
+/**
+ * **Derselbe Knopf als Link** – wo er etwas öffnet, statt etwas zu tun: „Im Mailprogramm öffnen“ (`mailto:`, E6-O F4).
+ * Ein echter Link bleibt einer (Adresse sichtbar, mit Rechtsklick kopierbar), sieht aber aus wie die Knöpfe daneben.
+ */
+export function FensterLink({
+  art = 'haupt',
+  className,
+  ...rest
+}: AnchorHTMLAttributes<HTMLAnchorElement> & { art?: FensterKnopfArt }) {
+  return (
+    <a className={`${styles.knopf} ${styles[art]}${className ? ' ' + className : ''}`} {...rest} />
   );
 }

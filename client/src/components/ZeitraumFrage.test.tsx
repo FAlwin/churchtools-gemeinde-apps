@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { Absence } from '@shared/types/index';
 import { ZeitraumFrage } from './ZeitraumFrage';
+import { knopfFolge } from '@ui/fenster/fenster.testutil';
 
 const URLAUB: Absence = {
   id: 1,
@@ -15,9 +16,6 @@ const URLAUB: Absence = {
   reasonId: 3,
   vonApp: false,
 };
-const knopfFolge = () =>
-  screen.getAllByRole('button').map((b) => (b.getAttribute('aria-label') ?? b.textContent)?.trim());
-
 /** Fenster wie ChurchTools (E6-O F3, #726): Löschen (rot) und Anpassen (blau) unten rechts (Alwin). */
 describe('ZeitraumFrage im ChurchTools-Aufbau', () => {
   it('unten: Abbrechen · Zeitraum löschen · Zeitraum anpassen', () => {

@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import {
   vorgabenText,
   vorgabenVollstaendig,
@@ -120,6 +121,10 @@ export function FreigebenFenster({
       <Sheet
         title="Freigegeben – aber noch nicht offen"
         onClose={() => onFreigegeben('Freigegeben.')}
+        cancelLabel={null}
+        knoepfe={
+          <FensterKnopf onClick={() => onFreigegeben('Freigegeben.')}>Verstanden</FensterKnopf>
+        }
       >
         <p className={f.hinweis}>ChurchTools nimmt noch keine Anmeldungen an:</p>
         <ul className={f.liste}>
@@ -127,15 +132,24 @@ export function FreigebenFenster({
             <li key={x}>{x}</li>
           ))}
         </ul>
-        <button type="button" className={f.knopf} onClick={() => onFreigegeben('Freigegeben.')}>
-          Verstanden
-        </button>
       </Sheet>
     );
 
   const vorgabenOk = vorgabenVollstaendig(vorgaben);
   return (
-    <Sheet title="Freigeben?" onClose={onClose}>
+    <Sheet
+      title="Freigeben?"
+      onClose={onClose}
+      beschaeftigt={arbeitet}
+      knoepfe={
+        <FensterKnopf
+          disabled={arbeitet || !vorgabenOk || gewaehlt.size === 0 || !formularAdresse}
+          onClick={() => void los()}
+        >
+          {arbeitet ? 'Wird freigegeben …' : 'Jetzt freigeben'}
+        </FensterKnopf>
+      }
+    >
       {hinweis}
       <div className={f.feld}>
         <span>Leitung (Ansprechpartner, sieht die Anmeldungen in ChurchTools)</span>
@@ -180,14 +194,6 @@ export function FreigebenFenster({
           {fehler}
         </p>
       )}
-      <button
-        type="button"
-        className={f.knopf}
-        disabled={arbeitet || !vorgabenOk || gewaehlt.size === 0 || !formularAdresse}
-        onClick={() => void los()}
-      >
-        {arbeitet ? 'Wird freigegeben …' : 'Jetzt freigeben'}
-      </button>
     </Sheet>
   );
 }

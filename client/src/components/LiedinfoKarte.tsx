@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { ARRANGEMENT_GRENZEN, LIED_GRENZEN } from '@shared/types/index';
 import type { LiedinfoFeld, LiedinfoVergleich } from '@shared/ct/liedinfo';
 import {
@@ -15,6 +15,11 @@ interface Props {
   vergleich: LiedinfoVergleich[];
   darf: boolean;
   aendern: (f: LiedinfoFormular) => void;
+  /**
+   * Dieses Feld in den Fokus nehmen (Menü „Einfügen“ → Kopfangabe, L6). `n` zählt hoch, damit derselbe Wunsch ein
+   * zweites Mal wirkt.
+   */
+  fokus?: { feld: string; n: number } | null;
 }
 
 /**
@@ -22,8 +27,13 @@ interface Props {
  * nach ChurchTools (gespeichert mit „Speichern“ oben). Stand in der Datei etwas anderes, steht es als Hinweis am Feld
  * mit „übernehmen“; war das Feld in ChurchTools leer, ist es aus der Datei vorbelegt (Alwin, 23.10.2026).
  */
-export function LiedinfoKarte({ formular, vergleich, darf, aendern }: Props) {
+export function LiedinfoKarte({ formular, vergleich, darf, aendern, fokus }: Props) {
   const id = useId();
+  const karteRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!fokus) return;
+    karteRef.current?.querySelector<HTMLInputElement>(`[data-feld="${fokus.feld}"]`)?.focus();
+  }, [fokus]);
   const v = (f: LiedinfoFeld) => vergleich.find((x) => x.feld === f);
 
   /**
@@ -67,7 +77,7 @@ export function LiedinfoKarte({ formular, vergleich, darf, aendern }: Props) {
     aendern({ ...formular, arrangement: { ...formular.arrangement, [k]: w } });
 
   return (
-    <section aria-label="Liedinfo" className={styles.karte}>
+    <section ref={karteRef} aria-label="Liedinfo" className={styles.karte}>
       {!darf && (
         <p className={styles.nurLesen}>
           Nur ansehen – ändern kann, wer in ChurchTools Lieder bearbeiten darf.
@@ -83,6 +93,7 @@ export function LiedinfoKarte({ formular, vergleich, darf, aendern }: Props) {
           value={formular.lied.name}
           maxLength={LIED_GRENZEN.name.max}
           readOnly={!darf}
+          data-feld="name"
           onChange={(e) => lied('name', e.target.value)}
         />
         {hinweis('name')}
@@ -97,6 +108,7 @@ export function LiedinfoKarte({ formular, vergleich, darf, aendern }: Props) {
           value={formular.lied.author}
           maxLength={LIED_GRENZEN.author}
           readOnly={!darf}
+          data-feld="author"
           onChange={(e) => lied('author', e.target.value)}
         />
         {hinweis('author')}
@@ -113,6 +125,7 @@ export function LiedinfoKarte({ formular, vergleich, darf, aendern }: Props) {
             value={formular.arrangement.key}
             maxLength={ARRANGEMENT_GRENZEN.key}
             readOnly={!darf}
+            data-feld="key"
             onChange={(e) => arr('key', e.target.value)}
           />
         </div>
@@ -127,6 +140,7 @@ export function LiedinfoKarte({ formular, vergleich, darf, aendern }: Props) {
             placeholder="BPM"
             value={formular.arrangement.tempo}
             readOnly={!darf}
+            data-feld="tempo"
             onChange={(e) => arr('tempo', e.target.value.replace(/[^0-9]/g, ''))}
           />
         </div>
@@ -141,6 +155,7 @@ export function LiedinfoKarte({ formular, vergleich, darf, aendern }: Props) {
             value={formular.arrangement.beat}
             maxLength={ARRANGEMENT_GRENZEN.beat}
             readOnly={!darf}
+            data-feld="beat"
             onChange={(e) => arr('beat', e.target.value)}
           />
         </div>
@@ -159,6 +174,7 @@ export function LiedinfoKarte({ formular, vergleich, darf, aendern }: Props) {
           value={formular.lied.ccli}
           maxLength={LIED_GRENZEN.ccli}
           readOnly={!darf}
+          data-feld="ccli"
           onChange={(e) => lied('ccli', e.target.value)}
         />
         {hinweis('ccli')}
@@ -173,6 +189,7 @@ export function LiedinfoKarte({ formular, vergleich, darf, aendern }: Props) {
           value={formular.lied.copyright}
           maxLength={LIED_GRENZEN.copyright}
           readOnly={!darf}
+          data-feld="copyright"
           onChange={(e) => lied('copyright', e.target.value)}
         />
         {hinweis('copyright')}

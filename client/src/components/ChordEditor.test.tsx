@@ -205,6 +205,12 @@ describe('ChordEditor – Ablauf und Weiterschalt-Punkt', () => {
     expect(eingabe.insert).toHaveBeenCalledWith('----', { block: true });
   });
 
+  it('Kopfangabe ohne Liedinfo: wie früher als Angabe an den Cursor, Cursor vor die Klammer (26.10.2026)', () => {
+    zeige({ mitVersionsname: false });
+    einfuegen('Tempo \\(BPM\\)');
+    expect(eingabe.insert).toHaveBeenCalledWith('{tempo: }', { block: true, caretBack: 1 });
+  });
+
   it('ein neuer Teil kommt hinter die Cursor-Zeile, mit dem Namen aus `neuerTeilName` (L6)', () => {
     const initialText = '{comment: Vers}\nA';
     zeige({ initialText, mitVersionsname: false });

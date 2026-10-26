@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { Sheet } from '@ui/fenster/Sheet';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import {
   STATUS,
@@ -142,7 +143,32 @@ export function ArchivSeite({
       )}
 
       {loeschen && (
-        <Sheet title="Endgültig löschen?" onClose={() => setLoeschen(null)}>
+        <Sheet
+          title="Endgültig löschen?"
+          onClose={() => setLoeschen(null)}
+          beschaeftigt={arbeitet}
+          knoepfe={
+            <FensterKnopf
+              art="gefahr"
+              disabled={bestaetigung.trim() !== loeschen.name.trim() || arbeitet}
+              onClick={() =>
+                speichern(
+                  () => loeschenEndgueltig(loeschen.id),
+                  () => {
+                    onGeaendert({
+                      text: `„${loeschen.name}“ wurde endgültig gelöscht.`,
+                      rueckgaengig: null,
+                    });
+                    setLoeschen(null);
+                    laden();
+                  },
+                )
+              }
+            >
+              {arbeitet ? 'Wird gelöscht …' : 'Endgültig löschen'}
+            </FensterKnopf>
+          }
+        >
           <p className={f.fehler}>
             „{loeschen.name}“ wird mit <b>allen Anmeldungen</b> aus ChurchTools gelöscht. Das lässt
             sich nicht rückgängig machen.
@@ -157,26 +183,6 @@ export function ArchivSeite({
             />
           </label>
           <Fehler text={loeschFehler} />
-          <button
-            type="button"
-            className={f.entfernen}
-            disabled={bestaetigung.trim() !== loeschen.name.trim() || arbeitet}
-            onClick={() =>
-              speichern(
-                () => loeschenEndgueltig(loeschen.id),
-                () => {
-                  onGeaendert({
-                    text: `„${loeschen.name}“ wurde endgültig gelöscht.`,
-                    rueckgaengig: null,
-                  });
-                  setLoeschen(null);
-                  laden();
-                },
-              )
-            }
-          >
-            {arbeitet ? 'Wird gelöscht …' : 'Endgültig löschen'}
-          </button>
         </Sheet>
       )}
     </div>

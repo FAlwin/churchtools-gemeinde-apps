@@ -1,5 +1,12 @@
 import { useMemo, useRef, useState } from 'react';
-import { absagePlan, bescheidMail, nachrueckPlan, type Mail } from '@shared/anmeldung/bewegung';
+import {
+  absagePlan,
+  bescheidMail,
+  nachrueckPlan,
+  type AbsagePlan,
+  type Mail,
+  type NachrueckPlan,
+} from '@shared/anmeldung/bewegung';
 import { Icon } from '@ui/icons/icons';
 import { ctBasis } from '@ui/ct/basis';
 import { Sheet } from '@ui/fenster/Sheet';
@@ -22,7 +29,14 @@ import type { GeladenerStand } from './mitglieder';
 import { tagPunkt as lang } from '@shared/ct/datum';
 import { anzahlText } from './anzeige';
 import { AnmeldungZahlung } from './AnmeldungZahlung';
-import { AbsagenFrage, MailAnsicht, NachrueckenFrage } from './AnmeldungAktion';
+import {
+  AbsagenFrage,
+  FrageKnoepfe,
+  MailAnsicht,
+  MailKnoepfe,
+  NachrueckenFrage,
+  type Kopiert,
+} from './AnmeldungAktion';
 import { absagenLassen, nachrueckenLassen } from './bewegung';
 import { VonHandFenster, type VonHandFertig } from './VonHandFenster';
 import { ZurueckFenster } from './ZurueckFenster';
@@ -164,6 +178,7 @@ function AnmeldungAnsehen({
   mitBestaetigung?: boolean;
 }) {
   const [modus, setModus] = useState<FensterModus>(start);
+  const [kopiert, setKopiert] = useState<Kopiert>(null);
   const { arbeitet, fehler, speichern } = useSpeichern(() => {});
   const einmal = antwortZeilen(e.formular.anmeldung, x.einmal, e.ctFelder);
   const kontakt = e.ctFelder.kontakt === undefined ? undefined : x.einmal[e.ctFelder.kontakt];
@@ -194,27 +209,59 @@ function AnmeldungAnsehen({
         ? 'Mail schreiben'
         : x.wer;
 
+  const nachJa = (plan: NachrueckPlan) => {
+    const p = person(plan.personId)!;
+    void speichern(
+      () => nachrueckenLassen(id, e, plan),
+      () => {
+        setModus(null);
+        onGemeldet({
+          aenderung: { text: `${plan.name} ist nachgerückt.`, rueckgaengig: null },
+          mail: mailFuer('nachgerueckt', p, plan.zahlung?.betragCent ?? 0, 0),
+        });
+      },
+    );
+  };
+  const abJa = (plan: AbsagePlan) => {
+    const p = person(plan.personId)!;
+    let zurueck: () => Promise<void> = async () => {};
+    void speichern(
+      async () => {
+        zurueck = await absagenLassen(id, e, plan);
+      },
+      () => {
+        setModus(null);
+        onGemeldet({
+          aenderung: { text: `${plan.name} ist abgesagt.`, rueckgaengig: () => zurueck() },
+          // A9-1 (Alwin, 24.10.2026): Rückgängig trägt neu ein – die Routine schickt die Bestätigung noch einmal.
+          ...(mitBestaetigung
+            ? {
+                hinweis: `„Rückgängig“ trägt ${p.vor} wieder ein – ChurchTools schickt dabei die Bestätigung noch einmal.`,
+                hinweisBisRueckgaengig: true,
+              }
+            : {}),
+          mail: mailFuer(
+            'abgesagt',
+            p,
+            0,
+            plan.haupt?.rueckzahlungCent ?? plan.rueckzahlungOhneRestCent,
+          ),
+        });
+      },
+    );
+  };
+  const zurAnmeldung = () => {
+    setKopiert(null);
+    setModus(null);
+  };
+
+  // Eine Rückfrage oder die Mail ersetzt den Inhalt – mit ihren Knöpfen unten (E6-O F4); sonst nur „Schließen“.
   const inhalt = nachPlan ? (
     <NachrueckenFrage
       plan={nachPlan}
       vor={person(nachPlan.personId)!.vor}
       mitBestaetigung={mitBestaetigung}
-      arbeitet={arbeitet}
       fehler={fehler}
-      onAbbrechen={() => setModus(null)}
-      onJa={() => {
-        const p = person(nachPlan.personId)!;
-        void speichern(
-          () => nachrueckenLassen(id, e, nachPlan),
-          () => {
-            setModus(null);
-            onGemeldet({
-              aenderung: { text: `${nachPlan.name} ist nachgerückt.`, rueckgaengig: null },
-              mail: mailFuer('nachgerueckt', p, nachPlan.zahlung?.betragCent ?? 0, 0),
-            });
-          },
-        );
-      }}
     />
   ) : abPlan ? (
     <AbsagenFrage
@@ -223,44 +270,38 @@ function AnmeldungAnsehen({
       uebergabeAn={abPlan.uebergabeAn === null ? null : (person(abPlan.uebergabeAn)?.vor ?? null)}
       belegt={lage.belegt}
       max={lage.max}
-      arbeitet={arbeitet}
       fehler={fehler}
-      onAbbrechen={() => setModus(null)}
-      onJa={() => {
-        const p = person(abPlan.personId)!;
-        let zurueck: () => Promise<void> = async () => {};
-        void speichern(
-          async () => {
-            zurueck = await absagenLassen(id, e, abPlan);
-          },
-          () => {
-            setModus(null);
-            onGemeldet({
-              aenderung: { text: `${abPlan.name} ist abgesagt.`, rueckgaengig: () => zurueck() },
-              // A9-1 (Alwin, 24.10.2026): Rückgängig trägt neu ein – die Routine schickt die Bestätigung noch einmal.
-              ...(mitBestaetigung
-                ? {
-                    hinweis: `„Rückgängig“ trägt ${p.vor} wieder ein – ChurchTools schickt dabei die Bestätigung noch einmal.`,
-                    hinweisBisRueckgaengig: true,
-                  }
-                : {}),
-              mail: mailFuer(
-                'abgesagt',
-                p,
-                0,
-                abPlan.haupt?.rueckzahlungCent ?? abPlan.rueckzahlungOhneRestCent,
-              ),
-            });
-          },
-        );
-      }}
     />
   ) : modus?.art === 'mail' ? (
-    <MailAnsicht mail={modus.mail} onZurueck={() => setModus(null)} />
+    <MailAnsicht mail={modus.mail} kopiert={kopiert} />
+  ) : null;
+  const knoepfe = nachPlan ? (
+    <FrageKnoepfe
+      arbeitet={arbeitet}
+      ja={nachPlan.neuesMax !== null ? 'Plätze erhöhen und nachrücken' : 'Nachrücken lassen'}
+      onJa={() => nachJa(nachPlan)}
+      onAbbrechen={zurAnmeldung}
+    />
+  ) : abPlan ? (
+    <FrageKnoepfe
+      arbeitet={arbeitet}
+      ja="Ja, absagen"
+      gefahr
+      onJa={() => abJa(abPlan)}
+      onAbbrechen={zurAnmeldung}
+    />
+  ) : modus?.art === 'mail' ? (
+    <MailKnoepfe mail={modus.mail} onZurueck={zurAnmeldung} onKopiert={setKopiert} />
   ) : null;
 
   return (
-    <Sheet title={titel} onClose={onClose} cancelLabel="Schließen">
+    <Sheet
+      title={titel}
+      onClose={onClose}
+      beschaeftigt={arbeitet}
+      cancelLabel={inhalt ? null : 'Schließen'}
+      knoepfe={knoepfe}
+    >
       {inhalt ?? (
         <>
           <p className={a.unterTitel}>

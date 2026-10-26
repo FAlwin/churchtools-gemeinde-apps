@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { DEFAULT_SITE_CONFIG, SITE_CONFIG_GRENZEN, type SiteConfig } from '@shared/types/index';
+import { knopfFolge } from '@ui/fenster/fenster.testutil';
 
 /**
  * Der Admin-Editor der Termin-Arten (#400) – gegen die echte Komponente, nur die Speicher-Mutation als
@@ -91,15 +92,11 @@ describe('TerminArtenManager', () => {
   });
 });
 
-/** Fenster wie ChurchTools (E6-O F3, #726): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
-const knopfFolgeF3 = () =>
-  screen.getAllByRole('button').map((b) => (b.getAttribute('aria-label') ?? b.textContent)?.trim());
-
 describe('TerminArtenManager im ChurchTools-Aufbau', () => {
   it('eigenes Fenster „Termin-Arten“, unten Abbrechen und Speichern', () => {
     zeige();
     expect(screen.getByRole('dialog', { name: 'Termin-Arten' })).toBeTruthy();
-    expect(knopfFolgeF3()[0]).toBe('Fenster schließen');
-    expect(knopfFolgeF3().slice(-2)).toEqual(['Abbrechen', 'Speichern']);
+    expect(knopfFolge()[0]).toBe('Fenster schließen');
+    expect(knopfFolge().slice(-2)).toEqual(['Abbrechen', 'Speichern']);
   });
 });

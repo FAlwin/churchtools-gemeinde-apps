@@ -2,6 +2,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import type { ArrangementAnsicht, SongSource } from '@shared/types/index';
+import { knopfFolge } from '@ui/fenster/fenster.testutil';
 
 /**
  * Das Arrangement-Fenster – **gegen die echte Komponente** (#396).
@@ -141,15 +142,11 @@ describe('ArrangementSheet – Standard und Löschen', () => {
   });
 });
 
-/** Fenster wie ChurchTools (E6-O F3, #726): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
-const knopfFolgeF3 = () =>
-  screen.getAllByRole('button').map((b) => (b.getAttribute('aria-label') ?? b.textContent)?.trim());
-
 describe('ArrangementSheet im ChurchTools-Aufbau', () => {
   it('Speichern unten rechts; „Zum Standard machen“ und „Löschen …“ bleiben im Inhalt davor', () => {
     zeige({ onStandard: vi.fn(), onLoeschen: vi.fn() });
-    expect(knopfFolgeF3()[0]).toBe('Fenster schließen');
-    expect(knopfFolgeF3().slice(-4)).toEqual([
+    expect(knopfFolge()[0]).toBe('Fenster schließen');
+    expect(knopfFolge().slice(-4)).toEqual([
       'Zum Standard machen',
       'Arrangement löschen …',
       'Abbrechen',

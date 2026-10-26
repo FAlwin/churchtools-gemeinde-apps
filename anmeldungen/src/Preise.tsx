@@ -1,5 +1,6 @@
 import { useId, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Segment } from '@ui/bedienung/Segment';
 import { Icon } from '@ui/icons/icons';
 import type { OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
@@ -187,20 +188,19 @@ function AnmeldungenHinweis({ anzahl }: { anzahl: number | null }) {
   );
 }
 
-/** Speichern und, wo es den Baustein schon gibt, „Baustein entfernen“ – mit den Prüf-Meldungen darüber. */
-function Knoepfe({
-  neu,
+/**
+ * Unten im Inhalt: die Prüf-Meldungen und, wo es den Baustein schon gibt, „Baustein entfernen“ – getrennt vom
+ * Speichern in der Fußzeile (wie „Löschen …“ in den Fenstern der Musik-App, E6-O F3 #726).
+ */
+function MeldungenUndEntfernen({
   fehler,
   speicherFehler,
   arbeitet,
-  onSpeichern,
   onEntfernen,
 }: {
-  neu: PreisRegeln | null;
   fehler: string[];
   speicherFehler: string | null;
   arbeitet: boolean;
-  onSpeichern: () => void;
   onEntfernen?: () => void;
 }) {
   return (
@@ -211,20 +211,31 @@ function Knoepfe({
         </p>
       ))}
       <Fehler text={speicherFehler} />
-      <button
-        type="button"
-        className={f.knopf}
-        disabled={!neu || fehler.length > 0 || arbeitet}
-        onClick={onSpeichern}
-      >
-        {arbeitet ? 'Wird gespeichert …' : 'Speichern'}
-      </button>
       {onEntfernen && (
         <button type="button" className={f.entfernen} disabled={arbeitet} onClick={onEntfernen}>
           Baustein entfernen
         </button>
       )}
     </>
+  );
+}
+
+/** „Speichern“ unten rechts in jedem Preis-Fenster. */
+function SpeichernKnopf({
+  neu,
+  fehler,
+  arbeitet,
+  onSpeichern,
+}: {
+  neu: PreisRegeln | null;
+  fehler: string[];
+  arbeitet: boolean;
+  onSpeichern: () => void;
+}) {
+  return (
+    <FensterKnopf disabled={!neu || fehler.length > 0 || arbeitet} onClick={onSpeichern}>
+      {arbeitet ? 'Wird gespeichert …' : 'Speichern'}
+    </FensterKnopf>
   );
 }
 
@@ -393,7 +404,12 @@ function GrundpreisFenster(props: FensterProps) {
   const sp = usePreisSpeichern(props, lesbar ? (p) => ({ ...p, grundpreis: grund }) : null);
 
   return (
-    <Sheet title="Grundpreis" onClose={props.onClose}>
+    <Sheet
+      title="Grundpreis"
+      onClose={props.onClose}
+      beschaeftigt={sp.arbeitet}
+      knoepfe={<SpeichernKnopf {...sp} />}
+    >
       <AnmeldungenHinweis anzahl={props.anmeldungen} />
       <div className={f.feld}>
         <span>Art</span>
@@ -504,7 +520,7 @@ function GrundpreisFenster(props: FensterProps) {
           </p>
         </>
       )}
-      <Knoepfe {...sp} />
+      <MeldungenUndEntfernen {...sp} />
     </Sheet>
   );
 }
@@ -539,7 +555,12 @@ function AlterFenster(props: FensterProps) {
   const sp = usePreisSpeichern(props, lesbar ? (p) => ({ ...p, alter }) : null);
 
   return (
-    <Sheet title="Preis nach Alter" onClose={props.onClose}>
+    <Sheet
+      title="Preis nach Alter"
+      onClose={props.onClose}
+      beschaeftigt={sp.arbeitet}
+      knoepfe={<SpeichernKnopf {...sp} />}
+    >
       <AnmeldungenHinweis anzahl={props.anmeldungen} />
       <p className={f.hinweis}>
         Gezählt wird das Alter am ersten Tag der Veranstaltung. Wer in keine Altersgruppe fällt,
@@ -618,7 +639,7 @@ function AlterFenster(props: FensterProps) {
       >
         + Altersgruppe
       </button>
-      <Knoepfe
+      <MeldungenUndEntfernen
         {...sp}
         onEntfernen={
           props.preis.alter.length ? () => sp.entfernen((p) => ({ ...p, alter: [] })) : undefined
@@ -661,7 +682,12 @@ function AnpassungFenster(props: FensterProps & { index: number | null }) {
   );
   const titel = a.art === 'rabatt' ? 'Rabatt' : 'Zuschlag';
   return (
-    <Sheet title={titel} onClose={props.onClose}>
+    <Sheet
+      title={titel}
+      onClose={props.onClose}
+      beschaeftigt={sp.arbeitet}
+      knoepfe={<SpeichernKnopf {...sp} />}
+    >
       <AnmeldungenHinweis anzahl={props.anmeldungen} />
       <div className={f.feld}>
         <Segment
@@ -745,7 +771,7 @@ function AnpassungFenster(props: FensterProps & { index: number | null }) {
         </div>
       </div>
       <GeltungWahl wert={a.gilt} onChange={(gilt) => setA({ ...a, gilt })} />
-      <Knoepfe
+      <MeldungenUndEntfernen
         {...sp}
         onEntfernen={
           props.index === null
@@ -784,7 +810,12 @@ function ExtraFenster(props: FensterProps & { index: number | null }) {
         }),
   );
   return (
-    <Sheet title="Extra zum Ankreuzen" onClose={props.onClose}>
+    <Sheet
+      title="Extra zum Ankreuzen"
+      onClose={props.onClose}
+      beschaeftigt={sp.arbeitet}
+      knoepfe={<SpeichernKnopf {...sp} />}
+    >
       <AnmeldungenHinweis anzahl={props.anmeldungen} />
       <p className={f.hinweis}>Die Teilnehmenden kreuzen es im Formular selbst an.</p>
       <label className={f.feld}>
@@ -799,7 +830,7 @@ function ExtraFenster(props: FensterProps & { index: number | null }) {
       </label>
       <EuroFeld label="Preis in Euro" wert={preis} onChange={setPreis} />
       <GeltungWahl wert={gilt} onChange={setGilt} />
-      <Knoepfe
+      <MeldungenUndEntfernen
         {...sp}
         onEntfernen={
           props.index === null
@@ -826,7 +857,7 @@ function NeuerBaustein({
 }) {
   const hatAlter = preis.alter.length > 0;
   return (
-    <Sheet title="Baustein hinzufügen" onClose={onClose}>
+    <Sheet title="Baustein hinzufügen" onClose={onClose} knoepfe={null}>
       <div className={f.optionen} style={{ marginBottom: 14 }}>
         <button
           type="button"

@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { STANDARD, type Vorliebe } from '@shared/dienstplan/vorlieben';
 import type { EntwurfAnschluss } from './ladeEntwuerfe';
 import { VorliebenFach } from './VorliebenFach';
+import { knopfFolge } from '@ui/fenster/fenster.testutil';
 
 afterEach(cleanup);
 
@@ -89,10 +90,6 @@ describe('VorliebenFach (E5-3)', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 });
-
-/** Fenster wie ChurchTools (E6-O F2, #720): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
-const knopfFolge = () =>
-  screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent);
 
 describe('VorliebenFach im ChurchTools-Aufbau', () => {
   it('X oben, unten Abbrechen und Speichern', async () => {

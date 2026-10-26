@@ -8,6 +8,7 @@ import type {
   SongSelectTreffer,
   UserCapabilities,
 } from '@shared/types/index';
+import { knopfFolge } from '@ui/fenster/fenster.testutil';
 
 /**
  * Das Blatt „Neues Lied" (#322, Schritt 10b; umgebaut in #378) – geprüft werden die **Entscheidungen**,
@@ -489,10 +490,6 @@ describe('NewSongSheet – gibt es das Lied schon? (#395)', () => {
   });
 });
 
-/** Fenster wie ChurchTools (E6-O F3, #726): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
-const knopfFolgeF3 = () =>
-  screen.getAllByRole('button').map((b) => (b.getAttribute('aria-label') ?? b.textContent)?.trim());
-
 describe('NewSongSheet im ChurchTools-Aufbau', () => {
   const ANGELEGT = {
     songId: 77,
@@ -506,14 +503,14 @@ describe('NewSongSheet im ChurchTools-Aufbau', () => {
   it('Formular: unten Abbrechen und „Lied anlegen“', () => {
     zeige();
     expect(screen.getByRole('dialog', { name: 'Neues Lied' })).toBeTruthy();
-    expect(knopfFolgeF3()[0]).toBe('Fenster schließen');
-    expect(knopfFolgeF3().slice(-2)).toEqual(['Abbrechen', 'Lied anlegen']);
+    expect(knopfFolge()[0]).toBe('Fenster schließen');
+    expect(knopfFolge().slice(-2)).toEqual(['Abbrechen', 'Lied anlegen']);
   });
 
   it('„Lied angelegt“: alle nächsten Schritte unten (Alwin) – ohne Weg zurück ist das Notenblatt der Hauptweg', () => {
     hookErgebnis.mockReturnValue(ANGELEGT);
     zeige();
-    expect(knopfFolgeF3().slice(-3)).toEqual([
+    expect(knopfFolge().slice(-3)).toEqual([
       'Fertig',
       'Noch ein Lied anlegen',
       'Notenblatt schreiben',
@@ -523,7 +520,7 @@ describe('NewSongSheet im ChurchTools-Aufbau', () => {
   it('„Lied angelegt“ aus dem Eintrag: zuletzt „Zurück zum Eintrag“, davor das Notenblatt', () => {
     hookErgebnis.mockReturnValue(ANGELEGT);
     zeige({ onVerknuepfen: vi.fn() });
-    expect(knopfFolgeF3().slice(-3)).toEqual([
+    expect(knopfFolge().slice(-3)).toEqual([
       'Fertig',
       'Notenblatt schreiben',
       'Zurück zum Eintrag',
@@ -533,7 +530,7 @@ describe('NewSongSheet im ChurchTools-Aufbau', () => {
   it('„Lied angelegt“ aus der Liederliste: zuletzt „Lied öffnen“', () => {
     hookErgebnis.mockReturnValue(ANGELEGT);
     zeige({ onOpenSong: vi.fn() });
-    expect(knopfFolgeF3().slice(-4)).toEqual([
+    expect(knopfFolge().slice(-4)).toEqual([
       'Fertig',
       'Noch ein Lied anlegen',
       'Notenblatt schreiben',

@@ -12,6 +12,7 @@ import * as NP from './nachpruefung';
 import * as MG from './mitglieder';
 import * as ZA from './zahlung';
 import * as AB from './ablaeufe';
+import { OHNE_EIGENEN_TEXT } from '@shared/anmeldung/ablaeufe';
 import * as TP from '@ui/teilen/sharePdf';
 import * as TF from '@ui/teilen/shareFile';
 import {
@@ -60,6 +61,7 @@ vi.mock('./ablaeufe', async (original) => ({
   ...(await original<typeof import('./ablaeufe')>()),
   ablaeufeEinrichten: vi.fn(),
   ablaeufeLesen: vi.fn(),
+  ablaeufeAbgleichen: vi.fn(),
 }));
 const ab = vi.mocked(AB);
 const gm = vi.mocked(G);
@@ -185,7 +187,11 @@ beforeEach(() => {
     warte: true,
     standardMail: false,
     absender: 'Alwin Friesen',
+    absenderId: 1,
+    eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT },
   });
+  // A9-2a: Wer einrichten darf, gleicht ab – hier liefert der Abgleich, was ChurchTools hat.
+  ab.ablaeufeAbgleichen.mockImplementation((id: number) => ab.ablaeufeLesen(id));
 });
 
 describe('Veranstaltung laden scheitert – gemeinsamer Fehlerkasten (ui/erweiterung)', () => {
@@ -327,12 +333,33 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
       warte: false,
       standardMail: true,
       absender: null,
+      absenderId: null,
+      eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT },
     });
     stelle(true, 1);
     zeigen();
     const alt = await screen.findByRole('region', { name: 'Mails' });
     await waitFor(() => expect(within(alt).getByText('noch nicht eingerichtet')).toBeTruthy());
     expect(within(alt).getByText(/Standard-Mail – ohne Betrag/)).toBeTruthy();
+    // Noch nicht eingerichtet: nichts zu bearbeiten (das richtet erst A9-5 ein).
+    expect(within(alt).queryByRole('button', { name: 'Bearbeiten' })).toBeNull();
+  });
+
+  it('A9-2a: mit Recht wird abgeglichen, ohne nur gelesen; „Bearbeiten“ öffnet das Fenster „Mails“', async () => {
+    stelle(false, 1);
+    zeigen();
+    const nurLesen = await screen.findByRole('region', { name: 'Mails' });
+    await waitFor(() => expect(within(nurLesen).getByText('✓ Mitteilung mit Platz')).toBeTruthy());
+    expect(ab.ablaeufeAbgleichen).not.toHaveBeenCalled();
+    expect(within(nurLesen).queryByRole('button', { name: 'Bearbeiten' })).toBeNull();
+    cleanup();
+    stelle(true, 1);
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Mails' });
+    await waitFor(() => expect(ab.ablaeufeAbgleichen).toHaveBeenCalledWith(91));
+    fireEvent.click(await within(karte).findByRole('button', { name: 'Bearbeiten' }));
+    expect(await screen.findByRole('dialog', { name: 'Mails' })).toBeTruthy();
+    expect(screen.getByRole('textbox', { name: 'Betreff' })).toBeTruthy();
   });
 
   it('nimmt ChurchTools danach noch nicht an, sagt das Fenster, was fehlt', async () => {

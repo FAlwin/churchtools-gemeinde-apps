@@ -4,15 +4,26 @@ import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
 import * as E from './einrichten';
 import * as R from './rundmail';
 import { SYSTEMFELDER } from '@shared/anmeldung/formular';
+import { OHNE_EIGENEN_TEXT } from '@shared/anmeldung/ablaeufe';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
-import { ablaeufeEinrichten, ablaeufeLesen, absenderAus } from './ablaeufe';
+import {
+  ablaeufeAbgleichen,
+  ablaeufeEinrichten,
+  ablaeufeLesen,
+  absenderAus,
+  vorschauPerson,
+} from './ablaeufe';
 
 /**
  * Abläufe schreiben (A9-1) gegen nachgestellte Routinen – so, wie am 24.10.2026 gemessen: `POST /routines` hängt die
  * Routine über `domainContext` an die Gruppe, `PATCH` nimmt die ganze Schrittliste, Schritte ohne Nummer werden neu
  * angelegt. Danach wird nachgelesen; `schlucken` lässt ChurchTools „200“ sagen und nichts speichern.
  */
-vi.mock('@ui/ct/verbindung', () => ({ ctAnfrage: vi.fn(), ctDaten: vi.fn() }));
+vi.mock('@ui/ct/verbindung', () => ({
+  ctAnfrage: vi.fn(),
+  ctDaten: vi.fn(),
+  ctAlleSeiten: vi.fn(),
+}));
 vi.mock('./einrichten', async (original) => ({
   ...(await original<typeof import('./einrichten')>()),
   systemfelderNachziehen: vi.fn(),
@@ -39,6 +50,9 @@ interface Routine {
   steps: Schritt[];
   rolle: number;
   status: string;
+  /** Gruppe der Routine – fehlt = 165. */
+  gruppe?: number;
+  description?: string | null;
 }
 
 const PLATZHALTER = new Map<string, string>([
@@ -50,27 +64,36 @@ let routinen: Map<number, Routine>;
 let naechste: number;
 let standardMail: boolean;
 let schlucken: boolean;
+/** ChurchTools übernimmt die Schritte, ignoriert aber die Beschreibung. */
+let beschreibungSchlucken: boolean;
 let aufrufe: string[];
+/** Was jeder PATCH an eine Routine geschickt hat. */
+let routinenPatches: Record<string, unknown>[];
 
 beforeEach(() => {
   routinen = new Map();
   naechste = 12;
   standardMail = true;
   schlucken = false;
+  beschreibungSchlucken = false;
   aufrufe = [];
+  routinenPatches = [];
   ei.systemfelderNachziehen.mockResolvedValue(neueEinstellungen('kinder'));
   ei.teilnehmerRolle.mockResolvedValue(32);
   ru.platzhalterLaden.mockResolvedValue(PLATZHALTER);
   ct.ctDaten.mockImplementation(async (pfad: string) => {
     if (pfad === '/groups/165')
       return { name: 'Kinderfreizeit', settings: { sendDefaultSignUpMail: standardMail } };
-    if (pfad === '/groups/165/members/routines')
-      return [...routinen.values()].map((r) => ({
-        id: r.id,
-        groupTypeRoleId: r.rolle,
-        groupMemberStatus: r.status,
-        routine: structuredClone(r),
-      }));
+    const g = /^\/groups\/(\d+)\/members\/routines$/.exec(pfad);
+    if (g)
+      return [...routinen.values()]
+        .filter((r) => (r.gruppe ?? 165) === Number(g[1]))
+        .map((r) => ({
+          id: r.id,
+          groupTypeRoleId: r.rolle,
+          groupMemberStatus: r.status,
+          routine: structuredClone(r),
+        }));
     const m = /^\/routines\/(\d+)$/.exec(pfad);
     if (m) return structuredClone(routinen.get(Number(m[1])));
     throw new Error(`unerwartet: ${pfad}`);
@@ -88,6 +111,8 @@ beforeEach(() => {
         steps: [],
         rolle: c.groupTypeRoleId,
         status: c.groupMemberStatus,
+        gruppe: (body.domainContext as { groupId: number }).groupId,
+        description: null,
       };
       routinen.set(r.id, r);
       return { data: { id: r.id } };
@@ -96,8 +121,13 @@ beforeEach(() => {
     if (methode === 'PATCH' && m) {
       // Nur die Routine wird verschluckt – so prüft der Test das Nachlesen der Routine, nicht das der Standard-Mail.
       if (schlucken) return null;
+      routinenPatches.push(body);
       const r = routinen.get(Number(m[1]))!;
-      r.isEnabled = !!body.isEnabled;
+      // Gemessen 26.10.2026: ohne `description` im PATCH bleibt sie stehen.
+      if ('description' in body && !beschreibungSchlucken)
+        r.description = body.description as string | null;
+      if ('isEnabled' in body) r.isEnabled = !!body.isEnabled;
+      if (!('steps' in body)) return null;
       r.steps = (body.steps as Partial<Schritt>[]).map((s) => ({
         ...(s as Schritt),
         id: s.id ?? 100 + naechste++,
@@ -191,6 +221,8 @@ describe('ablaeufeLesen', () => {
       warte: false,
       standardMail: true,
       absender: null,
+      absenderId: null,
+      eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT },
     });
   });
   it('nach dem Einrichten: beide an, Standard-Mail aus, Absender aus ChurchTools', async () => {
@@ -202,6 +234,8 @@ describe('ablaeufeLesen', () => {
       warte: true,
       standardMail: false,
       absender: 'Anna Leitung',
+      absenderId: 7,
+      eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT },
     });
   });
   it('abgeschaltet (z. B. beim Archivieren) oder fremd: zählt nicht als eingerichtet', async () => {
@@ -222,5 +256,129 @@ describe('absenderAus (A9-1)', () => {
   });
   it('ohne Leitung: Fehler mit Satz statt Absturz', () => {
     expect(() => absenderAus(new Set(), 7)).toThrow('mindestens eine Person');
+  });
+});
+
+describe('Eigener Text (A9-2a)', () => {
+  const eigen = {
+    betreff: 'Du bist dabei!',
+    absatz: 'Bitte Schlafsack mitbringen.',
+    gruss: 'Anna',
+  };
+  const platzRoutine = () => [...routinen.values()].find((r) => r.status === 'active')!;
+  const warteRoutine = () => [...routinen.values()].find((r) => r.status === 'waiting')!;
+
+  it('gespeichert in der Beschreibung der Routine, in der Mail eingesetzt, nachgelesen', async () => {
+    await ablaeufeEinrichten(165, 7, { platz: eigen });
+    expect(JSON.parse(platzRoutine().description!)).toEqual({ v: 1, ...eigen });
+    expect(platzRoutine().steps[0].actionData.subject).toBe('Du bist dabei!');
+    expect(String(platzRoutine().steps[0].actionData.body)).toContain(
+      '<p>Bitte Schlafsack mitbringen.</p>',
+    );
+    // Die Warteliste bekam nichts Eigenes – und keine Beschreibung.
+    expect(warteRoutine().description).toBeNull();
+    expect((await ablaeufeLesen(165)).eigen.platz).toEqual(eigen);
+  });
+
+  it('neu schreiben ohne neuen Text (Termin geändert …): Beschreibung bleibt, Mail behält den eigenen Text', async () => {
+    await ablaeufeEinrichten(165, 7, { platz: eigen });
+    routinenPatches = [];
+    await ablaeufeEinrichten(165, 9);
+    expect(routinenPatches.every((b) => !('description' in b))).toBe(true);
+    expect(JSON.parse(platzRoutine().description!)).toEqual({ v: 1, ...eigen });
+    expect(String(platzRoutine().steps[0].actionData.body)).toContain(
+      'Bitte Schlafsack mitbringen.',
+    );
+  });
+
+  it('Kopie („Wie eine frühere Veranstaltung“): neue Routinen bekommen den eigenen Text der Vorlage', async () => {
+    routinen.set(5, {
+      id: 5,
+      name: 'Anmeldungen: Platz',
+      isEnabled: true,
+      steps: [],
+      rolle: 32,
+      status: 'active',
+      gruppe: 90,
+      description: JSON.stringify({ v: 1, ...eigen }),
+    });
+    ei.systemfelderNachziehen.mockResolvedValue({ ...neueEinstellungen('kinder'), kopieVon: 90 });
+    await ablaeufeEinrichten(165, 7);
+    const neu = [...routinen.values()].find((r) => r.gruppe === 165 && r.status === 'active')!;
+    expect(JSON.parse(neu.description!)).toEqual({ v: 1, ...eigen });
+    expect(neu.steps[0].actionData.subject).toBe('Du bist dabei!');
+    // Die Vorlage selbst bleibt unberührt.
+    expect(routinen.get(5)!.steps).toEqual([]);
+  });
+
+  it('zu lang → 422, bevor etwas geschrieben wird', async () => {
+    const f = await ablaeufeEinrichten(165, 7, {
+      platz: { ...eigen, absatz: 'x'.repeat(1000) },
+    }).catch((x: unknown) => x);
+    expect(f).toMatchObject({ status: 422 });
+    expect(aufrufe).toEqual([]);
+  });
+
+  it('ChurchTools speichert die Beschreibung nicht → Fehler statt „gespeichert“', async () => {
+    await ablaeufeEinrichten(165, 7);
+    // Schritte (Betreff, Text) kommen an, nur die Beschreibung nicht – das muss das Nachlesen der Beschreibung finden.
+    beschreibungSchlucken = true;
+    await expect(ablaeufeEinrichten(165, 7, { platz: eigen })).rejects.toBeInstanceOf(
+      NichtUebernommen,
+    );
+  });
+});
+
+describe('ablaeufeAbgleichen (A9-2a)', () => {
+  it('passt alles: nichts geschrieben', async () => {
+    await ablaeufeEinrichten(165, 7);
+    aufrufe = [];
+    await ablaeufeAbgleichen(165);
+    expect(aufrufe).toEqual([]);
+  });
+
+  it('Einstellungen geändert (Kontakt): neu geschrieben – mit Absender und eigenem Text von dort', async () => {
+    await ablaeufeEinrichten(165, 9, {
+      warte: { betreff: '', absatz: 'Wir melden uns.', gruss: '' },
+    });
+    const e = { ...neueEinstellungen('kinder'), kontakt: 'neu@x.de' };
+    ei.systemfelderNachziehen.mockResolvedValue(e);
+    // Wie gemessen: Den Absender liefert ChurchTools als Nummer im Schritt.
+    const stand = await ablaeufeAbgleichen(165);
+    const body = (s: string) =>
+      String([...routinen.values()].find((r) => r.status === s)!.steps[0].actionData.body);
+    expect(body('active')).toContain('neu@x.de');
+    expect(body('waiting')).toContain('Wir melden uns.');
+    expect([...routinen.values()].every((r) => r.steps[0].actionData.senderId === 9)).toBe(true);
+    expect(stand.platz && stand.warte).toBe(true);
+  });
+
+  it('abgeschaltet (archiviert) oder nicht eingerichtet: nichts geschrieben', async () => {
+    expect((await ablaeufeAbgleichen(165)).platz).toBe(false);
+    await ablaeufeEinrichten(165, 7);
+    // Die Warteliste abgeschaltet (z. B. in ChurchTools von Hand) – der Absender aus „Platz“ ist noch da, der Abgleich
+    // darf sie trotzdem nicht wieder einschalten.
+    [...routinen.values()].find((r) => r.status === 'waiting')!.isEnabled = false;
+    ei.systemfelderNachziehen.mockResolvedValue({
+      ...neueEinstellungen('kinder'),
+      kontakt: 'neu@x.de',
+    });
+    aufrufe = [];
+    await ablaeufeAbgleichen(165);
+    expect(aufrufe).toEqual([]);
+  });
+});
+
+describe('vorschauPerson (A9-2a)', () => {
+  it('erste Person mit passendem Status – sonst der Absender (dann ohne Betrag, Nr., Link)', async () => {
+    ct.ctAlleSeiten.mockResolvedValue([
+      { personId: 1, groupTypeRoleId: 35, groupMemberStatus: 'active' },
+      { personId: 40, groupTypeRoleId: 32, groupMemberStatus: 'waiting' },
+      { personId: 41, groupTypeRoleId: 32, groupMemberStatus: 'active' },
+    ]);
+    expect(await vorschauPerson(165, 'platz', 7)).toEqual({ personId: 41, echt: true });
+    expect(await vorschauPerson(165, 'warte', 7)).toEqual({ personId: 40, echt: true });
+    ct.ctAlleSeiten.mockResolvedValue([]);
+    expect(await vorschauPerson(165, 'platz', 7)).toEqual({ personId: 7, echt: false });
   });
 });

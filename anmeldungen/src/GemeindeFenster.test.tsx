@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import * as E from './einrichten';
 import * as G from './gemeinde';
 import { GemeindeFenster } from './GemeindeFenster';
+import { knopfFolge } from '@ui/fenster/fenster.testutil';
 
 vi.mock('./einrichten', async (original) => ({
   ...(await original<typeof import('./einrichten')>()),
@@ -122,5 +123,15 @@ describe('Einstellungen der Gemeinde (A6-2)', () => {
         expect.objectContaining({ zahlarten: ['Kartenzahlung'] }),
       ),
     );
+  });
+});
+
+/** Fenster wie ChurchTools (E6-O F4): X oben rechts, „Speichern“ unten rechts. */
+describe('Einstellungen der Gemeinde im ChurchTools-Aufbau', () => {
+  it('unten „Abbrechen · Speichern“', async () => {
+    render(<GemeindeFenster onClose={() => {}} onGespeichert={() => {}} />);
+    await screen.findByLabelText('Status');
+    expect(knopfFolge()[0]).toBe('Fenster schließen');
+    expect(knopfFolge().slice(-2)).toEqual(['Abbrechen', 'Speichern']);
   });
 });

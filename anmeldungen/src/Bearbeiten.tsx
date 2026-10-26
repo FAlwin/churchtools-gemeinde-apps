@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { useLinkKopieren } from './useLinkKopieren';
 import { Segment } from '@ui/bedienung/Segment';
 import { ctBasis } from '@ui/ct/basis';
@@ -177,7 +178,38 @@ export function TerminFenster({
     endeNachBeginn;
 
   return (
-    <Sheet title="Termin" onClose={onClose}>
+    <Sheet
+      title="Termin"
+      onClose={onClose}
+      beschaeftigt={arbeitet}
+      knoepfe={
+        // „Aus dem Kalender“: Ein Tipp auf den Termin übernimmt ihn – unten steht dann nur „Abbrechen“.
+        art === 'neu' && kalenderId !== null ? (
+          <FensterKnopf
+            disabled={!neuBereit || arbeitet}
+            onClick={() =>
+              speichern(async () => {
+                const termin = await legeTerminAn({
+                  kalenderId: kalenderId,
+                  titel: neu.titel.trim(),
+                  beginn: `${neu.tag}T${neu.von}`,
+                  ende: `${neu.bisTag || neu.tag}T${neu.bis}`,
+                  ort: neu.ort.trim(),
+                  link: formularAdresse ? anmeldeLink(formularAdresse, ctBasis(), id) : null,
+                  zeitzone,
+                });
+                await aendereEinstellungen(id, (e) => ({
+                  ...e,
+                  termin: terminAusCt(termin, zeitzone, kalenderId),
+                }));
+              })
+            }
+          >
+            {arbeitet ? 'Wird angelegt …' : 'Termin anlegen und übernehmen'}
+          </FensterKnopf>
+        ) : null
+      }
+    >
       <div className={f.feld}>
         <Segment
           ariaLabel="Termin"
@@ -321,30 +353,6 @@ export function TerminFenster({
           </label>
           {!endeNachBeginn && <p className={f.hinweis}>Das Ende muss nach dem Beginn liegen.</p>}
           <Fehler text={fehler} />
-          <button
-            type="button"
-            className={f.knopf}
-            disabled={!neuBereit || arbeitet}
-            onClick={() =>
-              speichern(async () => {
-                const termin = await legeTerminAn({
-                  kalenderId: kalenderId,
-                  titel: neu.titel.trim(),
-                  beginn: `${neu.tag}T${neu.von}`,
-                  ende: `${neu.bisTag || neu.tag}T${neu.bis}`,
-                  ort: neu.ort.trim(),
-                  link: formularAdresse ? anmeldeLink(formularAdresse, ctBasis(), id) : null,
-                  zeitzone,
-                });
-                await aendereEinstellungen(id, (e) => ({
-                  ...e,
-                  termin: terminAusCt(termin, zeitzone, kalenderId),
-                }));
-              })
-            }
-          >
-            {arbeitet ? 'Wird angelegt …' : 'Termin anlegen und übernehmen'}
-          </button>
         </>
       )}
       {art === 'vorhanden' && <Fehler text={fehler} />}
@@ -393,7 +401,33 @@ export function AnmeldungFenster({
     mailOk;
 
   return (
-    <Sheet title="Anmeldung" onClose={onClose}>
+    <Sheet
+      title="Anmeldung"
+      onClose={onClose}
+      beschaeftigt={arbeitet}
+      knoepfe={
+        <FensterKnopf
+          disabled={!gueltig || arbeitet}
+          onClick={() =>
+            speichern(async () => {
+              await speichereAnmeldung(id, {
+                maxPlaetze: maxZahl,
+                warteliste,
+                ab: ab ? utcAus(`${ab}T00:00`, zeitzone) : null,
+                bis: bis ? utcAus(`${bis}T23:59`, zeitzone) : null,
+              });
+              await aendereEinstellungen(id, (e) => ({
+                ...e,
+                plaetze: { zeigen, knappUnter: Number(knapp) },
+                kontakt: mail.trim(),
+              }));
+            })
+          }
+        >
+          {arbeitet ? 'Wird gespeichert …' : 'Speichern'}
+        </FensterKnopf>
+      }
+    >
       <div className={f.zeile}>
         <label className={f.feld}>
           <span>Anmeldung ab</span>
@@ -479,28 +513,6 @@ export function AnmeldungFenster({
         <p className={f.fehler}>Bitte eine gültige E-Mail-Adresse eintragen.</p>
       )}
       <Fehler text={fehler} />
-      <button
-        type="button"
-        className={f.knopf}
-        disabled={!gueltig || arbeitet}
-        onClick={() =>
-          speichern(async () => {
-            await speichereAnmeldung(id, {
-              maxPlaetze: maxZahl,
-              warteliste,
-              ab: ab ? utcAus(`${ab}T00:00`, zeitzone) : null,
-              bis: bis ? utcAus(`${bis}T23:59`, zeitzone) : null,
-            });
-            await aendereEinstellungen(id, (e) => ({
-              ...e,
-              plaetze: { zeigen, knappUnter: Number(knapp) },
-              kontakt: mail.trim(),
-            }));
-          })
-        }
-      >
-        {arbeitet ? 'Wird gespeichert …' : 'Speichern'}
-      </button>
     </Sheet>
   );
 }
@@ -532,7 +544,19 @@ export function WerFenster({
   const [geburt, setGeburt] = useState(geburtsdatum);
   const { arbeitet, fehler, speichern } = useSpeichern(onGespeichert);
   return (
-    <Sheet title="Wer meldet sich an?" onClose={onClose}>
+    <Sheet
+      title="Wer meldet sich an?"
+      onClose={onClose}
+      beschaeftigt={arbeitet}
+      knoepfe={
+        <FensterKnopf
+          disabled={arbeitet}
+          onClick={() => speichern(() => aendereEinstellungen(id, (e) => mitWer(e, wahl, geburt)))}
+        >
+          {arbeitet ? 'Wird gespeichert …' : 'Speichern'}
+        </FensterKnopf>
+      }
+    >
       <div className={f.optionen} style={{ marginBottom: 14 }}>
         {(Object.keys(WER_TEXT) as OeffentlicheEinstellungen['wer'][]).map((k) => (
           <button
@@ -561,14 +585,6 @@ export function WerFenster({
       </div>
       {wozu && !geburt && <p className={f.fehler}>{geburtsdatumNoetigText(wozu)}</p>}
       <Fehler text={fehler} />
-      <button
-        type="button"
-        className={f.knopf}
-        disabled={arbeitet}
-        onClick={() => speichern(() => aendereEinstellungen(id, (e) => mitWer(e, wahl, geburt)))}
-      >
-        {arbeitet ? 'Wird gespeichert …' : 'Speichern'}
-      </button>
     </Sheet>
   );
 }
@@ -622,7 +638,19 @@ export function BezahlungFenster({
   ];
 
   return (
-    <Sheet title="Bezahlung" onClose={onClose}>
+    <Sheet
+      title="Bezahlung"
+      onClose={onClose}
+      beschaeftigt={arbeitet}
+      knoepfe={
+        <FensterKnopf
+          disabled={probleme.length > 0 || arbeitet}
+          onClick={() => speichern(() => speichereBezahlung(id, neu))}
+        >
+          {arbeitet ? 'Wird gespeichert …' : 'Speichern'}
+        </FensterKnopf>
+      }
+    >
       <p className={f.hinweis}>
         Die Bankverbindung steht im Anmeldeformular und in der Bestätigung – sie ist öffentlich
         lesbar. Bitte nur das Konto der Gemeinde eintragen.
@@ -723,14 +751,6 @@ export function BezahlungFenster({
           </p>
         ))}
       <Fehler text={fehler} />
-      <button
-        type="button"
-        className={f.knopf}
-        disabled={probleme.length > 0 || arbeitet}
-        onClick={() => speichern(() => speichereBezahlung(id, neu))}
-      >
-        {arbeitet ? 'Wird gespeichert …' : 'Speichern'}
-      </button>
     </Sheet>
   );
 }
@@ -751,7 +771,21 @@ export function LoeschfristFenster({
   const gueltig = Number.isInteger(zahl) && zahl >= 1 && zahl <= 36;
   const { arbeitet, fehler, speichern } = useSpeichern(onGespeichert);
   return (
-    <Sheet title="Daten löschen" onClose={onClose}>
+    <Sheet
+      title="Daten löschen"
+      onClose={onClose}
+      beschaeftigt={arbeitet}
+      knoepfe={
+        <FensterKnopf
+          disabled={!gueltig || arbeitet}
+          onClick={() =>
+            speichern(() => aendereEinstellungen(id, (e) => ({ ...e, loeschfristMonate: zahl })))
+          }
+        >
+          {arbeitet ? 'Wird gespeichert …' : 'Speichern'}
+        </FensterKnopf>
+      }
+    >
       <label className={f.feld}>
         <span>Monate nach dem Ende (1–36)</span>
         <input
@@ -766,16 +800,6 @@ export function LoeschfristFenster({
         Das Löschen selbst richtet ein späterer Schritt als ChurchTools-Routine ein.
       </p>
       <Fehler text={fehler} />
-      <button
-        type="button"
-        className={f.knopf}
-        disabled={!gueltig || arbeitet}
-        onClick={() =>
-          speichern(() => aendereEinstellungen(id, (e) => ({ ...e, loeschfristMonate: zahl })))
-        }
-      >
-        {arbeitet ? 'Wird gespeichert …' : 'Speichern'}
-      </button>
     </Sheet>
   );
 }

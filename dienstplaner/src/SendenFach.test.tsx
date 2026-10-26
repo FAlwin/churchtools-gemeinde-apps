@@ -5,6 +5,7 @@ import { ortSchluessel, type Entwurf } from '@shared/dienstplan/entwuerfe';
 import type { SendeEintrag, SendeErgebnis } from '@shared/dienstplan/senden';
 import { SendenFach, type SendeZeile } from './SendenFach';
 import type { SendeHinweis } from './sendeHinweise';
+import { knopfFolge } from '@ui/fenster/fenster.testutil';
 
 const ALWIN = { personId: 1, name: 'Alwin' };
 const SPIKE = { personId: 19, name: 'Spike' };
@@ -261,10 +262,6 @@ describe('SendenFach (E4-4-2)', () => {
     expect(a.onClose).toHaveBeenLastCalledWith(true);
   });
 });
-
-/** Fenster wie ChurchTools (E6-O F2, #720): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
-const knopfFolge = () =>
-  screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent);
 
 describe('SendenFach im ChurchTools-Aufbau', () => {
   it('X oben, unten Abbrechen und Jetzt senden', async () => {

@@ -4,6 +4,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import type { Absence } from '@shared/types/index';
 import { AbsenceSheet } from './AbsenceSheet';
 import { schnellwahlZeitraum } from '../utils/schnellwahl';
+import { knopfFolge } from '@ui/fenster/fenster.testutil';
 
 /**
  * Das eine Fenster für Eintragen UND Ändern (#177, 05.09.2026). Geprüft wird, was Alwin an den
@@ -196,15 +197,11 @@ describe('AbsenceSheet – Löschen fragt bei fremden Einträgen nach', () => {
   });
 });
 
-/** Fenster wie ChurchTools (E6-O F3, #726): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
-const knopfFolgeF3 = () =>
-  screen.getAllByRole('button').map((b) => (b.getAttribute('aria-label') ?? b.textContent)?.trim());
-
 describe('AbsenceSheet im ChurchTools-Aufbau', () => {
   it('X oben, unten Abbrechen und Eintragen', () => {
     zeige();
     expect(screen.getByRole('dialog', { name: 'Zeitraum eintragen' })).toBeTruthy();
-    expect(knopfFolgeF3()[0]).toBe('Fenster schließen');
-    expect(knopfFolgeF3().slice(-2)).toEqual(['Abbrechen', 'Eintragen']);
+    expect(knopfFolge()[0]).toBe('Fenster schließen');
+    expect(knopfFolge().slice(-2)).toEqual(['Abbrechen', 'Eintragen']);
   });
 });

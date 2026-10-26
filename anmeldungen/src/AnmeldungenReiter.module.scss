@@ -348,43 +348,7 @@
   font-weight: 700;
 }
 
-// ── Nachrücken, Absagen, Mail (A7-3) ────────────────────────────────────────────────────────────
-
-.knoepfe {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 12px;
-
-  > a,
-  > button:last-child {
-    width: auto;
-    height: 42px;
-    padding: 0 16px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-  }
-}
-
-.gefahrKnopf {
-  border: 1px solid color-mix(in srgb, var(--red) 45%, var(--border));
-  border-radius: var(--r-card);
-  background: var(--surface2);
-  color: var(--red);
-  font-family: inherit;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-
-  &:disabled {
-    opacity: 0.55;
-    cursor: default;
-  }
-}
+// ── Nachrücken, Absagen, Mail (A7-3) – ihre Knöpfe stehen unten im Fenster (E6-O F4) ─────────────
 
 .hinweisBlau,
 .hinweisRot {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Segment } from '@ui/bedienung/Segment';
 import { Schalter } from '@ui/bedienung/Schalter';
 import type { OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
@@ -146,7 +147,19 @@ export function RundmailFenster({
 
   if (schritt === 'vorschau' && vorschau)
     return (
-      <Sheet title="Vorschau" onClose={onClose}>
+      <Sheet
+        title="Vorschau"
+        onClose={onClose}
+        cancelLabel={null}
+        knoepfe={
+          <>
+            <FensterKnopf art="zweit" onClick={() => setSchritt('schreiben')}>
+              Zurück
+            </FensterKnopf>
+            <FensterKnopf onClick={() => setSchritt('frage')}>Senden …</FensterKnopf>
+          </>
+        }
+      >
         <p className={a.unterTitel}>
           So kommt die Mail bei <b>{an[nr]?.wer}</b> an · {nr + 1} von {an.length}{' '}
           <button
@@ -181,14 +194,6 @@ export function RundmailFenster({
           />
         </div>
         {fehlerZeile}
-        <div className={a.knoepfe}>
-          <button type="button" className={a.linkKnopf} onClick={() => setSchritt('schreiben')}>
-            Zurück
-          </button>
-          <button type="button" className={f.knopf} onClick={() => setSchritt('frage')}>
-            Senden …
-          </button>
-        </div>
       </Sheet>
     );
 
@@ -197,6 +202,24 @@ export function RundmailFenster({
       <Sheet
         title={`${an.length} ${an.length === 1 ? 'Mail' : 'Mails'} jetzt senden?`}
         onClose={onClose}
+        beschaeftigt={arbeitet}
+        cancelLabel={null}
+        knoepfe={
+          <>
+            <FensterKnopf art="zweit" disabled={arbeitet} onClick={() => setSchritt('schreiben')}>
+              Zurück
+            </FensterKnopf>
+            <FensterKnopf
+              // Unklar, ob verschickt: nicht noch einmal – das gäbe doppelte Mails.
+              disabled={arbeitet || unklar}
+              onClick={() => void senden()}
+            >
+              {arbeitet
+                ? 'Wird gesendet …'
+                : `Ja, ${an.length} ${an.length === 1 ? 'Mail' : 'Mails'} senden`}
+            </FensterKnopf>
+          </>
+        }
       >
         <p className={a.hinweisRot}>
           Verschickte Mails lassen sich nicht zurückholen. ChurchTools schickt jeder Familie ihre
@@ -218,27 +241,6 @@ export function RundmailFenster({
         )}
         {kopie && <p className={a.leise}>Dazu eine Kopie an dich.</p>}
         {fehlerZeile}
-        <div className={a.knoepfe}>
-          <button
-            type="button"
-            className={a.linkKnopf}
-            disabled={arbeitet}
-            onClick={() => setSchritt('schreiben')}
-          >
-            Zurück
-          </button>
-          <button
-            type="button"
-            className={f.knopf}
-            // Unklar, ob verschickt: nicht noch einmal – das gäbe doppelte Mails.
-            disabled={arbeitet || unklar}
-            onClick={() => void senden()}
-          >
-            {arbeitet
-              ? 'Wird gesendet …'
-              : `Ja, ${an.length} ${an.length === 1 ? 'Mail' : 'Mails'} senden`}
-          </button>
-        </div>
       </Sheet>
     );
 
@@ -246,7 +248,7 @@ export function RundmailFenster({
   const adressen = new Set(an.map((x) => x.email.toLowerCase())).size;
   if (schritt === 'fertig' && ergebnis)
     return (
-      <Sheet title="Rundmail verschickt" onClose={onClose} cancelLabel="Schließen">
+      <Sheet title="Rundmail verschickt" onClose={onClose} cancelLabel="Schließen" knoepfe={null}>
         <p className={a.hinweisBlau}>
           {ergebnis.bestaetigt === null
             ? `${an.length} ${an.length === 1 ? 'Mail' : 'Mails'} an ChurchTools übergeben. Das Protokoll von ChurchTools kann ich mit deinen Rechten nicht lesen – nachgeprüft ist es deshalb nicht.`
@@ -272,7 +274,25 @@ export function RundmailFenster({
     );
 
   return (
-    <Sheet title="Rundmail" onClose={onClose}>
+    <Sheet
+      title="Rundmail"
+      onClose={onClose}
+      beschaeftigt={arbeitet}
+      knoepfe={
+        <>
+          <FensterKnopf
+            art="hell"
+            disabled={!bereit || arbeitet}
+            onClick={() => void zeigeVorschau(0)}
+          >
+            {arbeitet ? 'Einen Moment …' : 'Vorschau'}
+          </FensterKnopf>
+          <FensterKnopf disabled={!bereit || arbeitet} onClick={() => setSchritt('frage')}>
+            Senden …
+          </FensterKnopf>
+        </>
+      }
+    >
       <p className={a.unterTitel}>
         {veranstaltung} · ChurchTools verschickt, Antworten gehen an dich
       </p>
@@ -376,24 +396,6 @@ export function RundmailFenster({
       </section>
       {!ct && !fehler && <p className={a.leise}>Platzhalter werden geladen …</p>}
       {fehlerZeile}
-      <div className={a.knoepfe}>
-        <button
-          type="button"
-          className={a.linkKnopf}
-          disabled={!bereit || arbeitet}
-          onClick={() => void zeigeVorschau(0)}
-        >
-          {arbeitet ? 'Einen Moment …' : 'Vorschau'}
-        </button>
-        <button
-          type="button"
-          className={f.knopf}
-          disabled={!bereit || arbeitet}
-          onClick={() => setSchritt('frage')}
-        >
-          Senden …
-        </button>
-      </div>
     </Sheet>
   );
 }

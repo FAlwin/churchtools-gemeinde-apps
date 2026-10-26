@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import type { MeineGruppe } from '@shared/ct/gruppen';
 import { VORLAGEN, type Vorlage } from '@shared/anmeldung/vorlagen';
 import { kopiereVeranstaltung, legeVeranstaltungAn, veranstaltungenVon } from './einrichten';
@@ -70,7 +71,16 @@ export function NeueVeranstaltung({
   }
 
   return (
-    <Sheet title="Neue Veranstaltung" onClose={onClose}>
+    <Sheet
+      title="Neue Veranstaltung"
+      onClose={onClose}
+      beschaeftigt={arbeitet}
+      knoepfe={
+        <FensterKnopf disabled={!bereit || arbeitet} onClick={anlegen}>
+          {arbeitet ? 'Wird angelegt …' : 'Anlegen'}
+        </FensterKnopf>
+      }
+    >
       <p className={f.hinweis}>
         Sie wird als Entwurf angelegt – Gäste sehen sie erst, wenn sie freigegeben ist.
       </p>
@@ -151,9 +161,6 @@ export function NeueVeranstaltung({
           {fehler}
         </p>
       )}
-      <button type="button" className={f.knopf} disabled={!bereit || arbeitet} onClick={anlegen}>
-        {arbeitet ? 'Wird angelegt …' : 'Anlegen'}
-      </button>
     </Sheet>
   );
 }

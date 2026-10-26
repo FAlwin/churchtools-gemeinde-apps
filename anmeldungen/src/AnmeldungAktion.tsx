@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import type { AbsagePlan, Mail, NachrueckPlan } from '@shared/anmeldung/bewegung';
+import { FensterKnopf, FensterLink } from '@ui/fenster/FensterKnopf';
 import { mailtoLink } from '@shared/anmeldung/bewegung';
 import { euroText } from '@shared/anmeldung/preis';
 import f from './Formular.module.scss';
@@ -8,10 +8,12 @@ import { mailHinweis } from './anzeige';
 
 /**
  * **Rückfragen und Mail im Fenster einer Anmeldung** (A7-3, Entwurf `a7-3-nachruecken-v1`) – sie ersetzen den Inhalt
- * des Fensters, bis man bestätigt oder abbricht (kein Fenster im Fenster).
+ * des Fensters, bis man bestätigt oder abbricht (kein Fenster im Fenster). Ihre Knöpfe stehen unten rechts im Fenster
+ * (E6-O F4): „Abbrechen“ bzw. „Zurück“ führt zurück zur Anmeldung, ganz zu geht es über das X (Alwin, 26.10.2026).
  */
 
-function Knoepfe({
+/** Die Knöpfe einer Rückfrage: „Abbrechen“ (zurück zur Anmeldung) und „Ja, …“. */
+export function FrageKnoepfe({
   arbeitet,
   ja,
   gefahr,
@@ -25,19 +27,14 @@ function Knoepfe({
   onAbbrechen: () => void;
 }) {
   return (
-    <div className={a.knoepfe}>
-      <button type="button" className={a.linkKnopf} disabled={arbeitet} onClick={onAbbrechen}>
+    <>
+      <FensterKnopf art="zweit" disabled={arbeitet} onClick={onAbbrechen}>
         Abbrechen
-      </button>
-      <button
-        type="button"
-        className={gefahr ? a.gefahrKnopf : f.knopf}
-        disabled={arbeitet}
-        onClick={onJa}
-      >
+      </FensterKnopf>
+      <FensterKnopf art={gefahr ? 'gefahr' : 'haupt'} disabled={arbeitet} onClick={onJa}>
         {arbeitet ? 'Einen Moment …' : ja}
-      </button>
-    </div>
+      </FensterKnopf>
+    </>
   );
 }
 
@@ -47,18 +44,12 @@ const platzText = (belegt: number, max: number | null) =>
 export function NachrueckenFrage({
   plan,
   vor,
-  arbeitet,
   fehler,
-  onJa,
-  onAbbrechen,
   mitBestaetigung = false,
 }: {
   plan: NachrueckPlan;
   vor: string;
-  arbeitet: boolean;
   fehler: string | null;
-  onJa: () => void;
-  onAbbrechen: () => void;
   /** Bestätigungsmails eingerichtet (A9-1) – dann schickt ChurchTools die Bestätigung mit Betrag. */
   mitBestaetigung?: boolean;
 }) {
@@ -114,12 +105,6 @@ export function NachrueckenFrage({
           {fehler}
         </p>
       )}
-      <Knoepfe
-        arbeitet={arbeitet}
-        ja={plan.neuesMax !== null ? 'Plätze erhöhen und nachrücken' : 'Nachrücken lassen'}
-        onJa={onJa}
-        onAbbrechen={onAbbrechen}
-      />
     </section>
   );
 }
@@ -130,10 +115,7 @@ export function AbsagenFrage({
   uebergabeAn,
   belegt,
   max,
-  arbeitet,
   fehler,
-  onJa,
-  onAbbrechen,
 }: {
   plan: AbsagePlan;
   vor: string;
@@ -141,10 +123,7 @@ export function AbsagenFrage({
   uebergabeAn: string | null;
   belegt: number;
   max: number | null;
-  arbeitet: boolean;
   fehler: string | null;
-  onJa: () => void;
-  onAbbrechen: () => void;
 }) {
   const h = plan.haupt;
   return (
@@ -188,19 +167,14 @@ export function AbsagenFrage({
           {fehler}
         </p>
       )}
-      <Knoepfe arbeitet={arbeitet} ja="Ja, absagen" gefahr onJa={onJa} onAbbrechen={onAbbrechen} />
     </section>
   );
 }
 
-/** **Die fertige Mail** – öffnet das Mailprogramm (`mailto:`) oder kopiert den Text. */
-export function MailAnsicht({ mail, onZurueck }: { mail: Mail; onZurueck: () => void }) {
-  const [kopiert, setKopiert] = useState<'ja' | 'nein' | null>(null);
-  const kopieren = () =>
-    navigator.clipboard.writeText(`${mail.betreff}\n\n${mail.text}`).then(
-      () => setKopiert('ja'),
-      () => setKopiert('nein'),
-    );
+export type Kopiert = 'ja' | 'nein' | null;
+
+/** **Die fertige Mail** – unten öffnet sie das Mailprogramm (`mailto:`) oder kopiert den Text (`MailKnoepfe`). */
+export function MailAnsicht({ mail, kopiert }: { mail: Mail; kopiert: Kopiert }) {
   return (
     <section className={a.teil}>
       <div className={a.mail}>
@@ -220,19 +194,34 @@ export function MailAnsicht({ mail, onZurueck }: { mail: Mail; onZurueck: () => 
       {kopiert === 'nein' && (
         <p className={f.fehler}>Kopieren ging nicht – bitte den Text oben markieren.</p>
       )}
-      <div className={a.knoepfe}>
-        <button type="button" className={a.linkKnopf} onClick={onZurueck}>
-          Zurück
-        </button>
-        <button type="button" className={a.linkKnopf} onClick={() => void kopieren()}>
-          Text kopieren
-        </button>
-        {mail.an && (
-          <a className={f.knopf} href={mailtoLink(mail)}>
-            Im Mailprogramm öffnen
-          </a>
-        )}
-      </div>
     </section>
+  );
+}
+
+/** Unten in der Mail-Ansicht: zurück zur Anmeldung, Text kopieren, im Mailprogramm öffnen (nur mit Adresse). */
+export function MailKnoepfe({
+  mail,
+  onZurueck,
+  onKopiert,
+}: {
+  mail: Mail;
+  onZurueck: () => void;
+  onKopiert: (k: Exclude<Kopiert, null>) => void;
+}) {
+  const kopieren = () =>
+    navigator.clipboard.writeText(`${mail.betreff}\n\n${mail.text}`).then(
+      () => onKopiert('ja'),
+      () => onKopiert('nein'),
+    );
+  return (
+    <>
+      <FensterKnopf art="zweit" onClick={onZurueck}>
+        Zurück
+      </FensterKnopf>
+      <FensterKnopf art={mail.an ? 'hell' : 'haupt'} onClick={() => void kopieren()}>
+        Text kopieren
+      </FensterKnopf>
+      {mail.an && <FensterLink href={mailtoLink(mail)}>Im Mailprogramm öffnen</FensterLink>}
+    </>
   );
 }

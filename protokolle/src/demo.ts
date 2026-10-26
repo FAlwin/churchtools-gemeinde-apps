@@ -164,6 +164,43 @@ const DEMO_AUFGABE = statusSetzen(
   '2026-10-22T08:00:00Z',
 );
 
+/** To-Dos aus der Oktober-Sitzung – eins offen, eins überfällig, eins erledigt: für „Offene To-Dos“ im Entwurf (S4-3a). */
+const FRUEHERE_AUFGABEN = [
+  neueAufgabe({
+    id: 'demo-o1',
+    gruppe: 11,
+    sitzung: 'demo-okt',
+    text: 'Angebote für den Beamer einholen',
+    wer: [7],
+    bis: '2026-10-20',
+    von: 1,
+    am: '2026-10-14T19:00:00Z',
+  }),
+  neueAufgabe({
+    id: 'demo-o2',
+    gruppe: 11,
+    sitzung: 'demo-okt',
+    text: 'Schlüssel beim Hausmeister abholen',
+    extern: 'Hausmeister Müller',
+    von: 1,
+    am: '2026-10-14T19:00:00Z',
+  }),
+  statusSetzen(
+    neueAufgabe({
+      id: 'demo-o3',
+      gruppe: 11,
+      sitzung: 'demo-okt',
+      text: 'Raum für die Klausur buchen',
+      wer: [1],
+      von: 1,
+      am: '2026-10-14T19:00:00Z',
+    }),
+    'erledigt',
+    1,
+    '2026-10-18T09:00:00Z',
+  ),
+];
+
 const MODUL = 20;
 /** Schlüssel der Rechte wie gemessen (Modul 24, S2-1); die Nummern sind nur für die Demo. */
 const RECHTE = ['view', 'view custom category', 'create custom category', 'edit custom category'];
@@ -206,7 +243,14 @@ function speicherAnlegen(fall: string): Speicher {
         ? []
         : [
             [60, protokollWerte(60, 600, fall)],
-            [61, [{ id: 700, dataCategoryId: 61, value: JSON.stringify(DEMO_AUFGABE) }]],
+            [
+              61,
+              [DEMO_AUFGABE, ...FRUEHERE_AUFGABEN].map((x, i) => ({
+                id: 700 + i,
+                dataCategoryId: 61,
+                value: JSON.stringify(x),
+              })),
+            ],
             [
               5,
               STANDARD_VORLAGEN.map((v, i) => ({

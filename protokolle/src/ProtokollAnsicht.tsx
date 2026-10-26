@@ -3,7 +3,7 @@ import { Icon } from '@ui/icons/icons';
 import { tagPunkt } from '@shared/ct/datum';
 import { ableiten, BLOCK, textAus, type Block } from '@shared/protokolle/dokument';
 import { statusText, type Aufgabe } from '@shared/protokolle/aufgaben';
-import { VERWEIS_TEXT } from './anzeige';
+import { FesterPunkt } from './FesterPunkt';
 import styles from './ProtokollAnsicht.module.scss';
 
 /**
@@ -200,9 +200,8 @@ function EinBlock({ b, k }: { b: Block; k: Kontext }) {
       // Trennlinie aus der Werkzeugleiste (S4-1) – ohne Text, bis dahin fiel sie hier still weg.
       return <hr className={styles.linie} />;
     case BLOCK.verweis:
-      return (
-        <p className={styles.verweis}>{VERWEIS_TEXT[String(b.props?.art)] ?? 'Fester Punkt'}</p>
-      );
+      // Fester Punkt (S4-3a) – in der Lese-Ansicht nur Anzeige (Alwin 26.10.2026).
+      return <FesterPunkt art={b.props?.art} fest={b.props?.fest} abhaken={false} />;
     default: {
       // Absatz – und jeder unbekannte Block: sein Text bleibt sichtbar. Leere Absätze sind nur Abstand.
       if (!textAus(b.content) && !kinder) return null;

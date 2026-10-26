@@ -1,12 +1,24 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { Icon } from '@ui/icons/icons';
+import { Segment } from '@ui/bedienung/Segment';
 import { ableiten, fremdeTypen, type Block } from '@shared/protokolle/dokument';
-import { sperreLage, type ProtokollKopf, type Schreiber } from '@shared/protokolle/speicher';
+import {
+  sperreLage,
+  type ProtokollKopf,
+  type ProtokollTeil,
+  type Schreiber,
+} from '@shared/protokolle/speicher';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
-import { aufgabenAbgleich, neueAufgabe, type Aufgabe } from '@shared/protokolle/aufgaben';
+import {
+  aufgabenAbgleich,
+  neueAufgabe,
+  statusSetzen,
+  type Aufgabe,
+  type AufgabenStatus,
+} from '@shared/protokolle/aufgaben';
 import type { Person } from '@shared/organigramm/mitglieder';
 import { AufgabenKontext, type AufgabenKontextWert } from './aufgabenKontext';
 import {
@@ -20,6 +32,7 @@ import { uhrzeit, wannLang } from './anzeige';
 import { Bereiche } from './Bereiche';
 import { DokumentEditor, type EditorGriff } from './DokumentEditor';
 import { EDITOR_TYPEN } from './editorSchema';
+import { FestePunkteRahmen } from './FestePunkteRahmen';
 import { Marke } from './Marke';
 import { ProtokollAnsicht } from './ProtokollAnsicht';
 import {
@@ -54,6 +67,9 @@ type Laden =
  *
  * S4-2: Aufgaben im Text sind To-Dos in „Mitarbeit“. Beim Speichern gleicht `aufgabenAbgleich` sie ab (das Protokoll
  * führt); Wer, Bis und Status ändern die Schildchen direkt am To-Do (`aufgabeAendern`).
+ *
+ * S4-3a: feste Punkte („Offene To-Dos“, „Letztes Protokoll“) über `FestePunkteRahmen`; der Umschalter **„Lesen“**
+ * zeigt dasselbe Protokoll als Lese-Ansicht (Alwin 26.10.2026) – ohne Sperre, der Editor bleibt dahinter bestehen.
  */
 export function ProtokollSchreiben({
   sitzung,
@@ -62,6 +78,8 @@ export function ProtokollSchreiben({
   modul,
   kategorie,
   mitarbeit,
+  protokolle,
+  teile,
   ich,
   zeitzone,
   onZurueck,
@@ -74,6 +92,9 @@ export function ProtokollSchreiben({
   kategorie: number;
   /** Kategorie „Mitarbeit“ (To-Dos) – `null`, wenn die Gruppe unvollständig eingerichtet ist (dann keine To-Dos). */
   mitarbeit: number | null;
+  /** Die freigegebenen Protokolle der Gruppe und alle Teile – für „Letztes Protokoll“ (S4-3a). */
+  protokolle: readonly Sitzung[];
+  teile: readonly ProtokollTeil[];
   ich: Omit<Schreiber, 'fenster'>;
   zeitzone: string;
   /** `geaendert` = es wurde gespeichert; die Liste dahinter lädt dann neu. */
@@ -93,6 +114,7 @@ export function ProtokollSchreiben({
   const [frage, setFrage] = useState<'uebernehmen' | 'verlassen' | null>(null);
   const [beschaeftigt, setBeschaeftigt] = useState(false);
   const [hinweis, setHinweis] = useState<string | null>(null);
+  const [lesen, setLesen] = useState(false);
   const steuerung = useRef<SchreibSteuerung | null>(null);
   const editor = useRef<EditorGriff | null>(null);
   const gespeichert = useRef(false);
@@ -249,6 +271,22 @@ export function ProtokollSchreiben({
     [ort.sitzung],
   );
 
+  // Feste Punkte (S4-3a): Abhaken in „Offene To-Dos“ ändert das To-Do wie der Kreis an der Aufgabe.
+  const statusFest = useCallback(
+    (a: Aufgabe, neu: AufgabenStatus) =>
+      todoAendern(a.id, a.text, (x) =>
+        statusSetzen(x, neu, schreiber.person, new Date().toISOString()),
+      ),
+    [todoAendern, schreiber.person],
+  );
+  const nameVon = useCallback(
+    (p: number) =>
+      mitglieder && mitglieder !== 'verborgen'
+        ? (mitglieder.find((m) => m.id === p)?.name ?? null)
+        : null,
+    [mitglieder],
+  );
+
   // Beim Verlassen der Seite (anderer Reiter, ChurchTools-Menü): noch speichern und die Sperre freigeben – ohne zu
   // warten. Klappt es nicht, verfällt die Sperre nach `SPERRE_MINUTEN`.
   useEffect(
@@ -352,6 +390,22 @@ export function ProtokollSchreiben({
 
   const aufgaben = useMemo(() => [...todos.values()].filter((a) => !a.geloescht), [todos]);
 
+  // Feste Punkte (S4-3a) – derselbe Rahmen für Editor, Lese-Ansicht und „nur lesen“.
+  const rahmen = (inhalt: ReactNode) => (
+    <FestePunkteRahmen
+      sitzung={sitzung}
+      gruppe={gruppeId}
+      protokolle={protokolle}
+      teile={teile}
+      aufgaben={aufgaben}
+      zeitzone={zeitzone}
+      name={nameVon}
+      status={mOrt ? statusFest : undefined}
+    >
+      {inhalt}
+    </FestePunkteRahmen>
+  );
+
   const kopfZeile = (
     <>
       <button
@@ -395,14 +449,15 @@ export function ProtokollSchreiben({
       <div className={ansicht.seite}>
         {kopfZeile}
         <p className={ansicht.hinweis}>{laden.grund}</p>
-        {laden.dokument && (
-          <>
-            <section className={ansicht.karte} aria-label="Protokoll">
-              <ProtokollAnsicht dokument={laden.dokument} aufgaben={aufgaben} />
-            </section>
-            <Bereiche dokument={laden.dokument} aufgaben={aufgaben} />
-          </>
-        )}
+        {laden.dokument &&
+          rahmen(
+            <>
+              <section className={ansicht.karte} aria-label="Protokoll">
+                <ProtokollAnsicht dokument={laden.dokument} aufgaben={aufgaben} />
+              </section>
+              <Bereiche dokument={laden.dokument} aufgaben={aufgaben} />
+            </>,
+          )}
       </div>
     );
 
@@ -424,6 +479,22 @@ export function ProtokollSchreiben({
   return (
     <div className={ansicht.seite}>
       {kopfZeile}
+      <Segment
+        className={styles.umschalter}
+        value={lesen ? 'lesen' : 'schreiben'}
+        options={[
+          { value: 'schreiben', label: 'Schreiben' },
+          { value: 'lesen', label: 'Lesen' },
+        ]}
+        onChange={(v) => {
+          setLesen(v === 'lesen');
+          // Erst speichern, dann lesen – die Lese-Ansicht zeigt den Stand, den auch alle anderen sehen.
+          const s = steuerung.current;
+          if (v === 'lesen' && s?.zustand.lage === 'schreibe') void s.jetzt();
+        }}
+        ariaLabel="Ansicht"
+        verbunden
+      />
 
       {lage === 'gesperrt' && sperre && (
         <div className={styles.hinweis} role="status">
@@ -481,22 +552,33 @@ export function ProtokollSchreiben({
         </p>
       )}
 
-      <AufgabenKontext.Provider value={kontext}>
-        <DokumentEditor
-          key={laden.kopf.stand + laden.kopf.sitzung}
-          start={laden.dokument}
-          bearbeitbar={bearbeitbar}
-          griff={editor}
-          fremdeAufgabe={fremdeAufgabe}
-          onAenderung={(d) => {
-            setDok(d);
-            setHinweis(null);
-            steuerung.current?.geaendert();
-          }}
-        />
-      </AufgabenKontext.Provider>
-
-      <Bereiche dokument={dok} aufgaben={aufgaben} />
+      {rahmen(
+        <>
+          {/* Beim Lesen bleibt der Editor bestehen (nur ausgeblendet) – sonst ginge, was noch nicht gespeichert ist, verloren. */}
+          <div hidden={lesen}>
+            <AufgabenKontext.Provider value={kontext}>
+              <DokumentEditor
+                key={laden.kopf.stand + laden.kopf.sitzung}
+                start={laden.dokument}
+                bearbeitbar={bearbeitbar}
+                griff={editor}
+                fremdeAufgabe={fremdeAufgabe}
+                onAenderung={(d) => {
+                  setDok(d);
+                  setHinweis(null);
+                  steuerung.current?.geaendert();
+                }}
+              />
+            </AufgabenKontext.Provider>
+          </div>
+          {lesen && (
+            <section className={ansicht.karte} aria-label="Protokoll">
+              <ProtokollAnsicht dokument={dok} aufgaben={aufgaben} />
+            </section>
+          )}
+          <Bereiche dokument={dok} aufgaben={aufgaben} />
+        </>,
+      )}
 
       {frage === 'uebernehmen' && sperre && (
         <ConfirmDialog

@@ -138,6 +138,8 @@ export function Sitzungen({
           modul={modul}
           kategorie={gruppe.protokolle}
           mitarbeit={gruppe.mitarbeit}
+          protokolle={zustand.daten.protokolle}
+          teile={zustand.daten.teile}
           ich={ich}
           zeitzone={zeitzone}
           onZurueck={(geaendert) => {
@@ -153,6 +155,8 @@ export function Sitzungen({
       <SitzungAnsicht
         sitzung={offen}
         gruppe={gruppe.name}
+        gruppeId={gruppe.id}
+        protokolle={zustand.daten.protokolle}
         teile={zustand.daten.teile}
         aufgaben={zustand.aufgaben}
         zeitzone={zeitzone}

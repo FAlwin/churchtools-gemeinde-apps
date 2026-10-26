@@ -19,6 +19,8 @@ import '@blocknote/mantine/style.css';
 import type { Block } from '@shared/protokolle/dokument';
 import { Icon } from '@ui/icons/icons';
 import { aufgabenIdsSetzen, schema, type ProtokollEditor } from './editorSchema';
+import { FESTE_PUNKTE } from './anzeige';
+import { FESTE, festenPunktEinfuegen } from './festenPunktEinfuegen';
 import { EIGENE, Werkzeugleiste } from './Werkzeugleiste';
 import { istWordHtml, wordListenUmbauen } from './wordListen';
 import './DokumentEditor.scss';
@@ -83,6 +85,10 @@ const EIGENE_TEXT = {
   aufgabe: 'To-Do mit Wer und Bis – erscheint gleich bei den Zuständigen',
   beschluss: 'Erscheint unter „Beschlüsse“',
   termin: 'Mit Datum – erscheint unter „Termine“',
+} as const;
+const FESTE_ALIASE = {
+  'offene-aufgaben': ['offen', 'todos', 'to-dos', 'fest'],
+  'letztes-protokoll': ['letztes', 'protokoll', 'fest'],
 } as const;
 const EIGENE_ALIASE = {
   aufgabe: ['todo', 'to-do', 'aufgabe', 'aufgaben'],
@@ -224,6 +230,16 @@ export function DokumentEditor({
                         group: 'Protokoll',
                         icon: <Icon name={x.icon} size={18} />,
                         onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: x.art }),
+                      }),
+                    ),
+                    ...FESTE.map(
+                      (f): DefaultReactSuggestionItem => ({
+                        title: FESTE_PUNKTE[f.art].titel,
+                        subtext: FESTE_PUNKTE[f.art].hinweis,
+                        aliases: [...FESTE_ALIASE[f.art]],
+                        group: 'Feste Punkte',
+                        icon: <Icon name={f.icon} size={18} />,
+                        onItemClick: () => festenPunktEinfuegen(editor, f.art),
                       }),
                     ),
                     ...getDefaultReactSlashMenuItems(editor).filter((i) => MENUE.has(i.title)),

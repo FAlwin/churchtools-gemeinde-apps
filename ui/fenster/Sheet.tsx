@@ -22,6 +22,8 @@ interface SheetProps {
    * daneben – wie `ConfirmDialog`. Was gerade passiert, zeigt der Hauptknopf oder der Titel (E6-O F2, #720).
    */
   beschaeftigt?: boolean;
+  /** Nur mit `knoepfe`: breiter (bis 760 px) – für Fenster, in denen man etwas liest, etwa ein Protokoll (S4-3a). */
+  breit?: boolean;
 }
 
 /**
@@ -36,6 +38,7 @@ export function Sheet({
   cancelLabel = 'Abbrechen',
   knoepfe,
   beschaeftigt = false,
+  breit = false,
 }: SheetProps) {
   // Hält den Dialog über der iOS-Tastatur frei und verhindert, dass die Seite verrutscht (#207).
   const overlayRef = useOverlayKeyboardInset();
@@ -47,7 +50,7 @@ export function Sheet({
     return (
       <div ref={overlayRef} className={styles.overlay} onClick={beschaeftigt ? undefined : onClose}>
         <div
-          className={`${styles.sheet} ${styles.ct}`}
+          className={`${styles.sheet} ${styles.ct}${breit ? ` ${styles.breit}` : ''}`}
           role="dialog"
           aria-modal="true"
           aria-labelledby={titelId}

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { SongLibraryEntry } from '@shared/types/index';
 import { LiedSchonVorhanden } from './LiedSchonVorhanden';
+import { knopfFolge } from '@ui/fenster/fenster.testutil';
 
 const LIED: SongLibraryEntry = {
   songId: 5,
@@ -12,9 +13,6 @@ const LIED: SongLibraryEntry = {
   key: 'E',
   arrangementId: 50,
 };
-const knopfFolge = () =>
-  screen.getAllByRole('button').map((b) => (b.getAttribute('aria-label') ?? b.textContent)?.trim());
-
 /** Fenster wie ChurchTools (E6-O F3, #726): zwei Wege unten rechts, der Hauptweg zuletzt (Alwin). */
 describe('LiedSchonVorhanden im ChurchTools-Aufbau', () => {
   it('unten: Zurück zum Formular · Trotzdem neu anlegen · Vorhandenes verwenden', () => {

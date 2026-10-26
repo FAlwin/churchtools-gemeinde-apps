@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import type { OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import { bescheidMail, zurueckPlan } from '@shared/anmeldung/bewegung';
 import type { Absage, CtGruppenfeld, ListenAnmeldung } from '@shared/anmeldung/liste';
@@ -104,7 +105,16 @@ export function ZurueckFenster({
 
   const kostet = kannEtwasKosten(e.preis);
   return (
-    <Sheet title={`${b.name} zurückholen?`} onClose={onClose}>
+    <Sheet
+      title={`${b.name} zurückholen?`}
+      onClose={onClose}
+      beschaeftigt={arbeitet}
+      knoepfe={
+        <FensterKnopf disabled={arbeitet || !plan} onClick={() => void zurueckholen()}>
+          {arbeitet ? 'Einen Moment …' : 'Zurückholen'}
+        </FensterKnopf>
+      }
+    >
       <p className={a.unterTitel}>
         hat am {tagPunkt(b.am)} {b.selbst ? 'selbst abgesagt' : 'abgesagt (vom Team entfernt)'}
         {nr ? ` · Anmelde-Nr. ${nr}` : ''}
@@ -169,17 +179,6 @@ export function ZurueckFenster({
           {fehler}
         </p>
       )}
-      {/* „Abbrechen“ hat das Fenster selbst (unten). */}
-      <div className={a.knoepfe}>
-        <button
-          type="button"
-          className={f.knopf}
-          disabled={arbeitet || !plan}
-          onClick={() => void zurueckholen()}
-        >
-          {arbeitet ? 'Einen Moment …' : 'Zurückholen'}
-        </button>
-      </div>
     </Sheet>
   );
 }

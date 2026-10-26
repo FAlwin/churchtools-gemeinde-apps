@@ -2,6 +2,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { DEFAULT_SITE_CONFIG } from '@shared/types/index';
+import { knopfFolge } from '@ui/fenster/fenster.testutil';
 
 /** Nur die Speicher-Mutation als Attrappe – geprüft wird das Fenster selbst (E6-O F3, #726). */
 vi.mock('../hooks/useSiteConfig', () => ({
@@ -9,9 +10,6 @@ vi.mock('../hooks/useSiteConfig', () => ({
 }));
 
 const { LinksManager } = await import('./LinksManager');
-
-const knopfFolge = () =>
-  screen.getAllByRole('button').map((b) => (b.getAttribute('aria-label') ?? b.textContent)?.trim());
 
 describe('LinksManager im ChurchTools-Aufbau', () => {
   it('eigenes Fenster „Links verwalten“, unten Abbrechen und Speichern', () => {

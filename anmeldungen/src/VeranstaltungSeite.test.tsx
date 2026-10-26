@@ -20,6 +20,7 @@ import {
 } from '@shared/anmeldung/liste.testdaten';
 import { VeranstaltungSeite } from './VeranstaltungSeite';
 import { NeueVeranstaltung } from './NeueVeranstaltung';
+import { fensterKnoepfe, knopfFolge } from '@ui/fenster/fenster.testutil';
 
 vi.mock('./einrichten', async (original) => {
   const echt = await original<typeof import('./einrichten')>();
@@ -885,6 +886,13 @@ describe('QR-Code und Aushang (A8-4)', () => {
     const LINK = 'https://anmeldung.beispiel.de/#ct.test/91';
     expect(screen.getByRole('img', { name: `QR-Code zu ${LINK}` })).toBeTruthy();
     const aushang = await screen.findByRole('button', { name: 'Aushang als PDF' });
+    // Fenster wie ChurchTools (E6-O F4): beide Wege unten rechts, der Aushang als Hauptknopf zuletzt.
+    expect(fensterKnoepfe()[0]).toBe('Fenster schließen');
+    expect(fensterKnoepfe().slice(-3)).toEqual([
+      'Abbrechen',
+      'QR-Code als Bild',
+      'Aushang als PDF',
+    ]);
     fireEvent.click(screen.getByRole('button', { name: 'QR-Code als Bild' }));
     expect(tf.shareOrDownload.mock.calls[0][1]).toBe('Gemeindeessen – QR-Code.png');
     fireEvent.click(aushang);
@@ -899,5 +907,77 @@ describe('QR-Code und Aushang (A8-4)', () => {
       '(Anmeldung bis Mi, 11.11.2026)',
     ])
       expect(roh).toContain(t);
+  });
+});
+
+/** Fenster wie ChurchTools (E6-O F4): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
+describe('Fenster der Veranstaltung im ChurchTools-Aufbau', () => {
+  const oeffne = async (karte: string) => {
+    zeigen();
+    const k = await screen.findByRole('region', { name: karte });
+    fireEvent.click(within(k).getByRole('button', { name: 'Bearbeiten' }));
+  };
+
+  it('Anmeldung, Wer meldet sich an?, Bezahlung, Datenschutz: unten „Abbrechen · Speichern“', async () => {
+    for (const karte of ['Anmeldung', 'Wer meldet sich an?', 'Bezahlung', 'Datenschutz']) {
+      stelle(true);
+      await oeffne(karte);
+      expect(fensterKnoepfe()[0]).toBe('Fenster schließen');
+      expect(fensterKnoepfe().slice(-2)).toEqual(['Abbrechen', 'Speichern']);
+      cleanup();
+    }
+  });
+
+  it('Termin: „Aus dem Kalender“ wählt per Tipp – unten nur „Abbrechen“; „Neu anlegen“ mit Hauptknopf', async () => {
+    stelle(true);
+    await oeffne('Termin');
+    // Erst wenn der Kalender geladen ist, gäbe es überhaupt einen Hauptknopf – davor prüfen hieße nichts prüfen.
+    await screen.findByRole('textbox', { name: 'Link zur Anmeldung' });
+    expect(fensterKnoepfe().at(-1)).toBe('Abbrechen');
+    fireEvent.click(await screen.findByRole('button', { name: 'Neu anlegen' }));
+    expect(fensterKnoepfe().slice(-2)).toEqual(['Abbrechen', 'Termin anlegen und übernehmen']);
+  });
+
+  it('Freigeben: „Abbrechen · Jetzt freigeben“; danach „noch nicht offen“ nur „Verstanden“', async () => {
+    stelle(true);
+    m.freigeben.mockResolvedValue();
+    m.anmeldeBedingungen.mockResolvedValue(['Der Anmeldezeitraum hat noch nicht begonnen.']);
+    zeigen();
+    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    await screen.findByRole('button', { name: 'Alwin Friesen' });
+    expect(fensterKnoepfe().slice(-2)).toEqual(['Abbrechen', 'Jetzt freigeben']);
+    fireEvent.click(screen.getByRole('button', { name: 'Jetzt freigeben' }));
+    await screen.findByText('Freigegeben – aber noch nicht offen');
+    expect(fensterKnoepfe()).toEqual(['Fenster schließen', 'Verstanden']);
+  });
+
+  it('Freigeben: während es läuft, sind X und „Abbrechen“ gesperrt', async () => {
+    stelle(true);
+    m.freigeben.mockReturnValue(new Promise(() => {}));
+    zeigen();
+    fireEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    await screen.findByRole('button', { name: 'Alwin Friesen' });
+    fireEvent.click(screen.getByRole('button', { name: 'Jetzt freigeben' }));
+    await screen.findByRole('button', { name: 'Wird freigegeben …' });
+    expect(screen.getByRole('button', { name: 'Fenster schließen' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    expect(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Abbrechen' }),
+    ).toHaveProperty('disabled', true);
+  });
+
+  it('Neue Veranstaltung: unten „Abbrechen · Anlegen“', () => {
+    render(
+      <NeueVeranstaltung
+        teams={[{ id: 7, name: 'Technik', leitung: false }]}
+        artId={5}
+        onFertig={() => {}}
+        onClose={() => {}}
+      />,
+    );
+    expect(knopfFolge()[0]).toBe('Fenster schließen');
+    expect(knopfFolge().slice(-2)).toEqual(['Abbrechen', 'Anlegen']);
   });
 });

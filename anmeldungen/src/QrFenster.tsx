@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { jsPDF } from 'jspdf';
 import { Sheet } from '@ui/fenster/Sheet';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { qrGroesse, qrMuster, qrPfad, qrPng } from '@ui/teilen/qr';
 import { sharePdf } from '@ui/teilen/sharePdf';
 import { shareOrDownload } from '@ui/teilen/shareFile';
@@ -8,7 +9,6 @@ import { druckDateiname } from '@shared/anmeldung/druckliste';
 import { aushangPdf, type AushangDaten } from './aushang';
 import { fehlerMeldung } from './zustand';
 import a from './AnmeldungenReiter.module.scss';
-import f from './Formular.module.scss';
 import q from './QrFenster.module.scss';
 
 /**
@@ -42,7 +42,29 @@ export function QrFenster({ daten, onClose }: { daten: AushangDaten; onClose: ()
 
   const seite = qrGroesse(muster);
   return (
-    <Sheet title="QR-Code" onClose={onClose}>
+    <Sheet
+      title="QR-Code"
+      onClose={onClose}
+      knoepfe={
+        <>
+          <FensterKnopf
+            art="hell"
+            disabled={!bild}
+            onClick={() =>
+              bild && void shareOrDownload(bild, `${druckDateiname(daten.titel, 'QR-Code')}.png`)
+            }
+          >
+            QR-Code als Bild
+          </FensterKnopf>
+          <FensterKnopf
+            disabled={!pdf}
+            onClick={() => pdf && void sharePdf(pdf, druckDateiname(daten.titel, 'Aushang'))}
+          >
+            {pdf ? 'Aushang als PDF' : 'Wird erstellt …'}
+          </FensterKnopf>
+        </>
+      }
+    >
       <p className={a.unterTitel}>{daten.titel} · führt zum Anmeldelink</p>
       <div className={q.rahmen}>
         <svg
@@ -67,26 +89,6 @@ export function QrFenster({ daten, onClose }: { daten: AushangDaten; onClose: ()
           {fehler}
         </p>
       )}
-      <div className={a.knoepfe}>
-        <button
-          type="button"
-          className={a.linkKnopf}
-          disabled={!bild}
-          onClick={() =>
-            bild && void shareOrDownload(bild, `${druckDateiname(daten.titel, 'QR-Code')}.png`)
-          }
-        >
-          QR-Code als Bild
-        </button>
-        <button
-          type="button"
-          className={f.knopf}
-          disabled={!pdf}
-          onClick={() => pdf && void sharePdf(pdf, druckDateiname(daten.titel, 'Aushang'))}
-        >
-          {pdf ? 'Aushang als PDF' : 'Wird erstellt …'}
-        </button>
-      </div>
     </Sheet>
   );
 }

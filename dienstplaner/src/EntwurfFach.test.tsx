@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { Entwurf } from '@shared/dienstplan/entwuerfe';
 import { EntwurfFach } from './EntwurfFach';
 import type { FreierPlatz } from './WerKann';
+import { knopfFolge } from '@ui/fenster/fenster.testutil';
 
 const PLATZ: FreierPlatz = {
   eventId: 148,
@@ -165,10 +166,6 @@ describe('EntwurfFach (E4-3-3)', () => {
     expect(p.onClose).not.toHaveBeenCalled();
   });
 });
-
-/** Fenster wie ChurchTools (E6-O F2, #720): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
-const knopfFolge = () =>
-  screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent);
 
 describe('EntwurfFach im ChurchTools-Aufbau', () => {
   it('nur ansehen: X oben, unten nur Schließen', () => {

@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
 import * as E from './einrichten';
 import { VerwaltenFenster } from './Verwalten';
 import { ArchivSeite } from './ArchivSeite';
 import { RueckgaengigLeiste, type Aenderung } from './Rueckgaengig';
+import { fensterKnoepfe } from '@ui/fenster/fenster.testutil';
 
 vi.mock('./einrichten', async (original) => {
   const echt = await original<typeof import('./einrichten')>();
@@ -234,5 +235,75 @@ describe('Leiste „Rückgängig“', () => {
       />,
     );
     expect(screen.queryByRole('button', { name: 'Rückgängig' })).toBeNull();
+  });
+});
+
+/** Fenster wie ChurchTools (E6-O F4): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
+describe('Verwalten und Archiv im ChurchTools-Aufbau', () => {
+  it('Auswahl: nur zum Wählen – unten nur „Abbrechen“', () => {
+    verwalten({ admin: true });
+    expect(fensterKnoepfe()[0]).toBe('Fenster schließen');
+    expect(fensterKnoepfe().at(-1)).toBe('Abbrechen');
+  });
+
+  it('Umbenennen, Freigabe zurücknehmen, Löschen: der Hauptknopf unten rechts', () => {
+    for (const [wahl, haupt] of [
+      [/^Umbenennen/, 'Umbenennen'],
+      [/^Freigabe zurücknehmen/, 'Freigabe zurücknehmen'],
+      [/^Löschen/, 'Ins Archiv verschieben'],
+    ] as const) {
+      verwalten({ statusId: E.STATUS.freigegeben });
+      fireEvent.click(screen.getByRole('button', { name: wahl }));
+      expect(fensterKnoepfe()[0]).toBe('Fenster schließen');
+      expect(fensterKnoepfe().slice(-2)).toEqual(['Abbrechen', haupt]);
+      cleanup();
+    }
+  });
+
+  it('Verschieben: mit Ziel „Abbrechen · Zu … verschieben“; ohne anderes Team nur „Schließen“', () => {
+    verwalten({ admin: true });
+    fireEvent.click(screen.getByRole('button', { name: /^In ein anderes Team/ }));
+    expect(fensterKnoepfe().slice(-2)).toEqual(['Abbrechen', 'Zu „Technik“ verschieben']);
+    cleanup();
+    render(
+      <VerwaltenFenster
+        id={91}
+        name="Gemeindeessen"
+        statusId={1}
+        team={{ id: 9, name: 'Lobpreisteam' }}
+        teams={[TEAMS[1]]}
+        admin
+        anmeldungen={0}
+        onClose={() => {}}
+        onGeaendert={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^In ein anderes Team/ }));
+    expect(fensterKnoepfe().slice(1)).toEqual(['Schließen']);
+  });
+
+  it('während des Speicherns: X und „Abbrechen“ gesperrt', () => {
+    m.umbenennen.mockReturnValue(new Promise(() => {}));
+    verwalten();
+    fireEvent.click(screen.getByRole('button', { name: /^Umbenennen/ }));
+    fireEvent.change(screen.getByLabelText('Name der Veranstaltung'), {
+      target: { value: 'Herbstessen' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Umbenennen' }));
+    expect(screen.getByRole('button', { name: 'Fenster schließen' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    expect(screen.getByRole('button', { name: 'Abbrechen' })).toHaveProperty('disabled', true);
+  });
+
+  it('Archiv: „Endgültig löschen“ rot unten rechts im Fenster', async () => {
+    m.archivListe.mockResolvedValue([
+      { id: 40, name: 'Lobpreisabend', team: 'Lobpreisteam', tag: '2026-11-02' },
+    ]);
+    m.istGruppenAdmin.mockResolvedValue(true);
+    render(<ArchivSeite artId={5} onZurueck={() => {}} onGeaendert={() => {}} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Endgültig löschen' }));
+    expect(fensterKnoepfe()).toEqual(['Fenster schließen', 'Abbrechen', 'Endgültig löschen']);
   });
 });

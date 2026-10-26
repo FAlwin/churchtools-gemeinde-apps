@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { EntwurfErgebnis } from '@shared/dienstplan/entwuerfe';
 import { BelegtFach } from './BelegtFach';
 import type { Eintragen, FreierPlatz } from './WerKann';
+import { knopfFolge } from '@ui/fenster/fenster.testutil';
 
 const PLATZ: FreierPlatz & { bisher: NonNullable<FreierPlatz['bisher']> } = {
   eventId: 142,
@@ -94,10 +95,6 @@ describe('BelegtFach (E4-5-2)', () => {
     expect(screen.queryByRole('button', { name: 'Andere Person wählen' })).toBeNull();
   });
 });
-
-/** Fenster wie ChurchTools (E6-O F2, #720): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
-const knopfFolge = () =>
-  screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent);
 
 describe('BelegtFach im ChurchTools-Aufbau', () => {
   it('nur ansehen: X oben, unten nur Schließen', () => {

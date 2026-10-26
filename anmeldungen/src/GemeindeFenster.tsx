@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { formularAdresseAus } from '@shared/anmeldung/oeffentlich';
 import { ZAHLART_MAX, zahlartenSauber } from '@shared/anmeldung/zahlung';
 import {
@@ -119,7 +120,19 @@ export function GemeindeFenster({
   }
 
   return (
-    <Sheet title="Einstellungen der Gemeinde" onClose={onClose}>
+    <Sheet
+      title="Einstellungen der Gemeinde"
+      onClose={onClose}
+      beschaeftigt={arbeitet}
+      knoepfe={
+        <FensterKnopf
+          disabled={arbeitet || !vorgabenVollstaendig(wahl) || !gueltig || zahlarten.length === 0}
+          onClick={() => void speichern()}
+        >
+          {arbeitet ? 'Wird gespeichert …' : 'Speichern'}
+        </FensterKnopf>
+      }
+    >
       <label className={f.feld}>
         <span>Adresse des Anmeldeformulars</span>
         <input
@@ -230,14 +243,6 @@ export function GemeindeFenster({
           {fehler}
         </p>
       )}
-      <button
-        type="button"
-        className={f.knopf}
-        disabled={arbeitet || !vorgabenVollstaendig(wahl) || !gueltig || zahlarten.length === 0}
-        onClick={() => void speichern()}
-      >
-        {arbeitet ? 'Wird gespeichert …' : 'Speichern'}
-      </button>
     </Sheet>
   );
 }

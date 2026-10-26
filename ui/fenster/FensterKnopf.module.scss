@@ -13,6 +13,7 @@
   font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
+  text-decoration: none; // auch als Link (`FensterLink`)
   cursor: pointer;
   transition:
     background 0.12s,

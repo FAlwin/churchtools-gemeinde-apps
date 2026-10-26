@@ -4,6 +4,7 @@
  */
 import { datumText, kachel } from '@shared/ct/datum';
 import { ortszeitAus } from '@shared/ct/zeit';
+import type { VerweisArt } from '@shared/protokolle/dokument';
 
 /** „Mi, 14.10.2026 · 19:00 Uhr“ in der Zeitzone der Gemeinde. */
 export function wannLang(beginn: string, zeitzone: string): string {
@@ -21,7 +22,22 @@ export function kachelVon(beginn: string, zeitzone: string): { tag: string; mona
   return kachel(ortszeitAus(beginn, zeitzone).slice(0, 10));
 }
 
-/** Was ein fester Punkt sagt, solange er (noch) nichts anzeigt – Lese-Ansicht und Editor. */
+/**
+ * **Die festen Punkte** – Titel des Tagesordnungspunkts und was er tut. Die eine Stelle für Vorlagen-Fenster,
+ * Werkzeugleiste und „/“-Menü (S2-3, S4-3a).
+ */
+export const FESTE_PUNKTE: Record<VerweisArt, { titel: string; hinweis: string }> = {
+  'offene-aufgaben': {
+    titel: 'Offene To-Dos',
+    hinweis: 'Füllt sich selbst mit den offenen To-Dos der Gruppe.',
+  },
+  'letztes-protokoll': {
+    titel: 'Protokoll der letzten Sitzung',
+    hinweis: 'Zeigt das letzte Protokoll der Gruppe.',
+  },
+};
+
+/** Was ein fester Punkt sagt, wenn er nichts anzeigen kann (ohne Sitzung dahinter) – Lese-Ansicht und Editor. */
 export const VERWEIS_TEXT: Record<string, string> = {
   'offene-aufgaben': 'Hier stehen die offenen To-Dos der Gruppe.',
   'letztes-protokoll': 'Hier steht das Protokoll der letzten Sitzung.',

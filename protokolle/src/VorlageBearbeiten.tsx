@@ -9,6 +9,7 @@ import {
   type VerweisArt,
   type VorlagenFormular,
 } from '@shared/protokolle/vorlagen';
+import { FESTE_PUNKTE } from './anzeige';
 import { vorlageLoeschen, vorlageSpeichern, type GespeicherteVorlage } from './vorlagen';
 import styles from './VorlageBearbeiten.module.scss';
 
@@ -17,20 +18,9 @@ const NEUE_VORLAGE: VorlagenFormular = {
   name: '',
   punkte: [
     { titel: 'Gebet', text: '', verweis: null },
-    { titel: 'Offene To-Dos', text: '', verweis: 'offene-aufgaben' },
+    { titel: FESTE_PUNKTE['offene-aufgaben'].titel, text: '', verweis: 'offene-aufgaben' },
   ],
   aufgaben: [],
-};
-
-const VERWEIS: Record<VerweisArt, { titel: string; hinweis: string }> = {
-  'offene-aufgaben': {
-    titel: 'Offene To-Dos',
-    hinweis: 'Füllt sich selbst mit den offenen To-Dos der Gruppe.',
-  },
-  'letztes-protokoll': {
-    titel: 'Protokoll der letzten Sitzung',
-    hinweis: 'Zeigt das letzte Protokoll der Gruppe.',
-  },
 };
 
 /**
@@ -144,7 +134,7 @@ export function VorlageBearbeiten({
                 </button>
               </div>
               {p.verweis ? (
-                <small className={styles.klein}>{VERWEIS[p.verweis].hinweis}</small>
+                <small className={styles.klein}>{FESTE_PUNKTE[p.verweis].hinweis}</small>
               ) : (
                 <textarea
                   className={styles.text}
@@ -171,7 +161,7 @@ export function VorlageBearbeiten({
             <Icon name="plus" size={15} />
             Punkt
           </button>
-          {(Object.keys(VERWEIS) as VerweisArt[]).map((art) => (
+          {(Object.keys(FESTE_PUNKTE) as VerweisArt[]).map((art) => (
             <button
               key={art}
               type="button"
@@ -180,12 +170,12 @@ export function VorlageBearbeiten({
               onClick={() =>
                 setF({
                   ...f,
-                  punkte: [...f.punkte, { titel: VERWEIS[art].titel, text: '', verweis: art }],
+                  punkte: [...f.punkte, { titel: FESTE_PUNKTE[art].titel, text: '', verweis: art }],
                 })
               }
             >
               <Icon name="plus" size={15} />
-              {VERWEIS[art].titel}
+              {FESTE_PUNKTE[art].titel}
             </button>
           ))}
         </div>

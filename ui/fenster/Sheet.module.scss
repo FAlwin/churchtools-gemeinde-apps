@@ -64,6 +64,10 @@
   overflow: hidden;
 }
 
+.breit {
+  width: min(760px, 100%);
+}
+
 .kopf {
   display: flex;
   align-items: center;

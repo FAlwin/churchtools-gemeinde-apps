@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { ROUTINEN, ablaufMails, routinenSchritte } from './ablaeufe';
+import {
+  BESCHREIBUNG_MAX,
+  OHNE_EIGENEN_TEXT,
+  ROUTINEN,
+  ablaufMails,
+  eigenerTextAlsBeschreibung,
+  eigenerTextAus,
+  eigenerTextFehler,
+  routinenSchritte,
+  standardBetreff,
+} from './ablaeufe';
 import { bankZeilen } from './bezahlung';
 import { SYSTEMFELDER } from './formular';
 import { einstellungen } from './senden.testdaten';
@@ -62,7 +72,9 @@ describe('ablaufMails – Bestätigung (Platz)', () => {
     const e = mitKonto();
     const { html } = ablaufMails(e, 'Kinderfreizeit', CT).platz;
     const block = html.slice(html.indexOf(`{{#if ${bedingung('Betrag')}}}`));
-    expect(block).toContain(`Betrag: ${platz('Betrag')}<br>${platz('Aufschlüsselung')}`);
+    // Nur der Betrag (Alwin, 26.10.2026): Die Aufschlüsselung käme einzeilig an.
+    expect(block).toContain(`<p>Betrag: ${platz('Betrag')}</p>`);
+    expect(html).not.toContain(platz('Aufschlüsselung'));
     expect(block).toContain('Bitte überweise ihn innerhalb von 14 Tagen an:');
     // Gegen den Erzeuger: dieselben Zeilen wie in den übrigen Mails, `[Nachname]` = Nachname der Person.
     for (const z of bankZeilen(e.bezahlung, '{{person.lastName}}')) expect(block).toContain(z);
@@ -149,5 +161,64 @@ describe('routinenSchritte', () => {
   it('zwei Routinen: Platz (aktiv) und Warteliste (wartend), eindeutige Namen', () => {
     expect(ROUTINEN.map((r) => r.status)).toEqual(['active', 'waiting']);
     expect(new Set(ROUTINEN.map((r) => r.name)).size).toBe(2);
+  });
+});
+
+describe('Eigener Text (A9-2a)', () => {
+  const eigen = {
+    betreff: 'Freizeit: Du bist dabei!',
+    absatz: 'Bitte mitbringen:\nSchlafsack, Bibel\n\nAbfahrt 16 Uhr.',
+    gruss: 'Liebe Grüße\nAnna',
+  };
+
+  it('Beschreibung: hin und zurück gleich; leer → keine Beschreibung', () => {
+    const b = eigenerTextAlsBeschreibung(eigen)!;
+    expect(eigenerTextAus(b)).toEqual(eigen);
+    expect(eigenerTextAlsBeschreibung({ betreff: ' ', absatz: '', gruss: '\n' })).toBeNull();
+    // ChurchTools schneidet Leerzeichen am Ende ab (gemessen) – das JSON endet auf „}“, nichts geht verloren.
+    expect(b.endsWith('}')).toBe(true);
+  });
+
+  it('fremde oder kaputte Beschreibung (z. B. von Hand in ChurchTools) zählt als kein eigener Text', () => {
+    expect(eigenerTextAus('Bitte nicht ändern')).toEqual(OHNE_EIGENEN_TEXT);
+    expect(eigenerTextAus('{"v":2,"absatz":"x"}')).toEqual(OHNE_EIGENEN_TEXT);
+    expect(eigenerTextAus(null)).toEqual(OHNE_EIGENEN_TEXT);
+  });
+
+  it('Grenze: was ChurchTools speichern muss, höchstens 1.000 Zeichen – gezählt nach dem Verpacken', () => {
+    expect(eigenerTextFehler(eigen)).toBeNull();
+    // Zeilenumbrüche und Anführungszeichen zählen verpackt doppelt.
+    const lang = { ...eigen, absatz: '"\n'.repeat(330) };
+    expect(eigenerTextAlsBeschreibung(lang)!.length).toBeGreaterThan(BESCHREIBUNG_MAX);
+    expect(eigenerTextFehler(lang)).toMatch(/zu lang \(\d+ Zeichen zu viel\)/);
+    expect(eigenerTextFehler({ ...eigen, betreff: 'x'.repeat(201) })).toMatch(/Betreff/);
+  });
+
+  it('in der Mail: eigener Betreff, Absätze nach dem festen Teil und vor dem Link, eigener Gruß nach „Bei Fragen“', () => {
+    const e = mitKonto();
+    e.kontakt = 'anna@x.de';
+    const m = ablaufMails(e, 'Freizeit', CT, { platz: eigen, warte: OHNE_EIGENEN_TEXT });
+    expect(m.platz.betreff).toBe('Freizeit: Du bist dabei!');
+    expect(m.platz.html).toContain(
+      '<p>Bitte mitbringen:<br>Schlafsack, Bibel</p><p>Abfahrt 16 Uhr.</p>',
+    );
+    const i = (s: string) => m.platz.html.indexOf(s);
+    expect(i('Bitte überweise')).toBeLessThan(i('Bitte mitbringen'));
+    expect(i('Bitte mitbringen')).toBeLessThan(i('Deine Anmeldung ansehen'));
+    expect(m.platz.html).toContain('<p>Bei Fragen: anna@x.de<br>Liebe Grüße<br>Anna</p>');
+    // Die Warteliste bleibt beim Standard.
+    expect(m.warte.betreff).toBe(standardBetreff('warte', 'Freizeit'));
+    expect(m.warte.html).toContain('Viele Grüße</p>');
+    expect(m.warte.html).not.toContain('Bitte mitbringen');
+  });
+
+  it('eigener Text bleibt Text: <Zeichen>, [Klammern] und {{…}} werden nicht zu HTML oder Platzhaltern', () => {
+    const m = ablaufMails(mitKonto(), 'X', CT, {
+      platz: { betreff: 'Hallo {{person.firstName}}', absatz: '<b>[Betrag]</b> {{x}}', gruss: '' },
+      warte: OHNE_EIGENEN_TEXT,
+    });
+    expect(m.unbekannt).toEqual([]);
+    expect(m.platz.betreff).toBe('Hallo { {person.firstName}}');
+    expect(m.platz.html).toContain('<p>&lt;b&gt;[Betrag]&lt;/b&gt; &#123;&#123;x}}</p>');
   });
 });

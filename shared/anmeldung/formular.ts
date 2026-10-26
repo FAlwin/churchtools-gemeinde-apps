@@ -543,6 +543,12 @@ export interface OeffentlicheEinstellungen {
   preiseGeaendert: string | null;
   /** Die gemerkte Wahl der Teilnehmerliste (A8-1) – Spalten und Sortierung; fehlt = Standard (`druckliste.ts`). */
   druck?: { spalten: string[]; sortierung: 'nachname' | 'alter' | 'anmeldung' };
+  /**
+   * **Kopiert von** (A9-2a): die Veranstaltung, aus der diese mit „Wie eine frühere Veranstaltung“ entstand. Beim
+   * Freigeben übernimmt die Erweiterung von dort den eigenen Mailtext (er steht in deren Routinen, die nicht mitkopiert
+   * werden). Fehlt = neu angelegt.
+   */
+  kopieVon?: number;
 }
 
 const geltung = z.enum(['person', 'anmeldung']);
@@ -722,6 +728,7 @@ const einstellungenSchema = z.object({
       sortierung: z.enum(['nachname', 'alter', 'anmeldung']),
     })
     .optional(),
+  kopieVon: z.number().int().positive().optional(),
 });
 
 // ── Speicherformat v2 (A5): unsichtbar, gepackt, mit Sicherung ──────────────────────────────────

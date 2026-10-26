@@ -425,6 +425,9 @@ describe('kopiereVeranstaltung', () => {
     const kopie = await kopiereVeranstaltung(quelle, 'Essen 2027');
     const k = einstellungenLesen(gruppen.get(kopie)!.note)!;
     expect(k.termin).toBeNull();
+    // A9-2a: Die Kopie merkt sich die Vorlage – deren eigener Mailtext steht in Routinen, die nicht mitkopiert werden.
+    expect(k.kopieVon).toBe(quelle);
+    expect(e.kopieVon).toBeUndefined();
     expect(k.ctFelder.bezahlt).toBe(e.ctFelder.bezahlt + 1000);
     expect(gruppen.get(kopie)!.status).toBe(2);
   });

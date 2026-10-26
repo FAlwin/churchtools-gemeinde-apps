@@ -32,7 +32,8 @@ import { VerwaltenFenster } from './Verwalten';
 import { FreigebenFenster } from './FreigebenFenster';
 import { AnmeldeLinkKarte } from './AnmeldeLink';
 import { NachpruefungKarte, type NachpruefungStand } from './NachpruefungKarte';
-import { ablaeufeLesen, type AblaufStand } from './ablaeufe';
+import { ablaeufeAbgleichen, ablaeufeLesen, type AblaufStand } from './ablaeufe';
+import { MailsFenster } from './MailsFenster';
 import { nachpruefungAus } from './nachpruefung';
 import { ladeMitglieder } from './mitglieder';
 import { AnmeldungenReiter, type MitgliederZustand } from './AnmeldungenReiter';
@@ -84,6 +85,7 @@ type Fenster =
   | 'loeschfrist'
   | 'freigeben'
   | 'verwalten'
+  | 'mails'
   | { preis: PreisFenster }
   | null;
 
@@ -121,15 +123,17 @@ function Zeile({ titel, children }: { titel: string; children: React.ReactNode }
 }
 
 /**
- * **Karte „Mails“** (A9-1, Entwurf `a9-ablaeufe-v1`) – was ChurchTools nach dem Anmelden verschickt. In A9-1 nur zum
- * Ansehen; eingerichtet wird beim Freigeben, bearbeitet ab A9-2.
+ * **Karte „Mails“** (A9-1, Entwurf `a9-ablaeufe-v1`) – was ChurchTools nach dem Anmelden verschickt. Eingerichtet wird
+ * beim Freigeben; „Bearbeiten“ (A9-2a) öffnet das Fenster „Mails“, sobald beide Abläufe da sind.
  */
 function MailsKarte({
   stand,
   kostet,
+  onBearbeiten,
 }: {
   stand: AblaufStand | 'entwurf' | 'fehler' | null;
   kostet: boolean;
+  onBearbeiten?: () => void;
 }) {
   if (stand === 'entwurf')
     return (
@@ -159,14 +163,22 @@ function MailsKarte({
       </Karte>
     );
   const fehlt = <span className={v.fehlt}>nicht eingerichtet</span>;
+  const eigen = (['platz', 'warte'] as const).filter(
+    (x) => stand.eigen[x].betreff || stand.eigen[x].absatz || stand.eigen[x].gruss,
+  );
   return (
-    <Karte titel="Mails">
+    <Karte titel="Mails" onBearbeiten={stand.platz && stand.warte ? onBearbeiten : undefined}>
       <Zeile titel="Nach dem Anmelden">
         {stand.platz ? `✓ Bestätigung${kostet ? ' mit Betrag, Bankdaten' : ''} und Link` : fehlt}
       </Zeile>
       <Zeile titel="Warteliste">{stand.warte ? '✓ Mitteilung mit Platz' : fehlt}</Zeile>
       <Zeile titel="Nachrücken">{stand.platz ? '✓ Bestätigung wie oben' : fehlt}</Zeile>
       {stand.absender && <Zeile titel="Absender">{stand.absender}</Zeile>}
+      <Zeile titel="Eigener Text">
+        {eigen.length === 0
+          ? 'keiner'
+          : eigen.map((x) => (x === 'platz' ? 'Bestätigung' : 'Warteliste')).join(', ')}
+      </Zeile>
     </Karte>
   );
 }
@@ -252,8 +264,16 @@ export function VeranstaltungSeite({
           belegungNachziehen(id).catch((x: unknown) =>
             console.warn('Belegung der Auswahl nicht nachgezogen', x),
           );
+        // A9-2a: Wer einrichten darf, gleicht die Mails mit den Einstellungen ab (Termin, Bezahlung … geändert). Fehlt
+        // das Recht für Routinen, bleibt es beim Lesen.
         if (kopf.statusId !== 2)
-          ablaeufeLesen(id).then(setAblauf, (x: unknown) => {
+          (darf
+            ? ablaeufeAbgleichen(id).catch((x: unknown) => {
+                console.warn('Mails nicht abgeglichen', x);
+                return ablaeufeLesen(id);
+              })
+            : ablaeufeLesen(id)
+          ).then(setAblauf, (x: unknown) => {
             console.warn('Stand der Mails nicht gelesen', x);
             setAblauf('fehler');
           });
@@ -516,7 +536,11 @@ export function VeranstaltungSeite({
                 )}
               </Zeile>
             </Karte>
-            <MailsKarte stand={entwurf ? 'entwurf' : ablauf} kostet={kostet} />
+            <MailsKarte
+              stand={entwurf ? 'entwurf' : ablauf}
+              kostet={kostet}
+              onBearbeiten={bearbeiten('mails')}
+            />
             <Karte titel="Datenschutz" onBearbeiten={bearbeiten('loeschfrist')}>
               <Zeile titel="Daten löschen">{e.loeschfristMonate} Monate nach dem Ende</Zeile>
             </Karte>
@@ -606,6 +630,21 @@ export function VeranstaltungSeite({
           monate={e.loeschfristMonate}
           onClose={() => setFenster(null)}
           onGespeichert={gespeichert('Löschfrist gespeichert.')}
+        />
+      )}
+      {fenster === 'mails' && ablauf !== null && ablauf !== 'fehler' && (
+        <MailsFenster
+          id={id}
+          veranstaltung={daten.name}
+          e={e}
+          stand={ablauf}
+          onClose={() => setFenster(null)}
+          // Kein „Rückgängig“ über die Einstellungen – der Text steht in den Routinen, nicht in den Einstellungen.
+          onGespeichert={(text) => {
+            setFenster(null);
+            onGeaendert({ text, rueckgaengig: null }, false);
+            laden();
+          }}
         />
       )}
       {fenster === 'freigeben' && (

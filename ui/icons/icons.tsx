@@ -81,7 +81,8 @@ export type IconName =
   | 'kreis-halb'
   | 'kreis-haken'
   | 'aufgabe'
-  | 'stempel';
+  | 'stempel'
+  | 'todo-liste';
 
 interface IconProps {
   name: IconName;
@@ -510,6 +511,13 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
         <svg {...p}>
           <rect x="3.5" y="4.5" width="7" height="7" rx="1.5" />
           <path d="m5.2 8 1.4 1.4 2.4-2.6M14 8h6.5M3.5 17h7M14 17h6.5" />
+        </svg>
+      );
+    // Fester Punkt „Offene To-Dos“ (Protokolle S4-3a): Liste mit Haken.
+    case 'todo-liste':
+      return (
+        <svg {...p}>
+          <path d="m3.5 6.5 1.6 1.6 2.6-2.8M3.5 16.5l1.6 1.6 2.6-2.8M11 7h9.5M11 17h9.5M11 12h6" />
         </svg>
       );
     case 'stempel':

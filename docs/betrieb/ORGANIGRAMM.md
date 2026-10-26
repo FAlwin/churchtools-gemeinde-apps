@@ -4,7 +4,8 @@
 > offenen Plätzen; Gruppenfenster; Gruppentypen ausblendbar), die **Präsentation** (für Gruppen-Admins auch die
 > **neue Gliederung**), für Gruppen-Admins **Gruppen umhängen und anlegen** und den Reiter **Neue Gliederung** (Plan
 > und Umbau) und – für alle, die es in ChurchTools dürfen – **Leitung und Mitglieder pflegen**. Für die **Leitung eines
-> Bereichs** dazu die Reiter **Personen** und **Hinweise**. Als Nächstes (Bauplan O8): der echte Umbau der
+> Bereichs** dazu die Reiter **Personen** und **Hinweise**. Als Nächstes (Bauplan O7b): weitere Ansichten –
+> von oben, von links, Mindmap und Liste, auch in der Präsentation und zum Drucken; danach (O8) der echte Umbau der
 > Gemeindestruktur. Diese Anleitung wächst mit.
 
 Das Organigramm zeigt die Gemeinde als Baum – Bereiche, Gruppen, Personen – so, wie die Gruppen-Hierarchie in

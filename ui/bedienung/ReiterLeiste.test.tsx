@@ -28,4 +28,20 @@ describe('ReiterLeiste', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Zwei' }));
     expect(onWechsel).toHaveBeenCalledWith('b');
   });
+
+  it('oben (Musik-App am iPad, Scheibe S): Textreiter ohne Symbole, gleiche Bedienung', () => {
+    const onWechsel = vi.fn();
+    const { container } = render(
+      <ReiterLeiste reiter={REITER} aktiv="a" onWechsel={onWechsel} oben />,
+    );
+    expect(container.querySelector('svg')).toBeNull();
+    expect(container.querySelector('nav')?.className).toMatch(/oben/);
+    fireEvent.click(screen.getByRole('button', { name: 'Zwei' }));
+    expect(onWechsel).toHaveBeenCalledWith('b');
+  });
+
+  it('unten zeigt jeder Reiter sein Symbol', () => {
+    const { container } = render(<ReiterLeiste reiter={REITER} aktiv="a" onWechsel={vi.fn()} />);
+    expect(container.querySelectorAll('svg')).toHaveLength(REITER.length);
+  });
 });

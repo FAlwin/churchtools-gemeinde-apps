@@ -1,9 +1,7 @@
 import type { ReactNode } from 'react';
-import { KnopfReihe } from '@ui/bedienung/KnopfReihe';
 import { Screen, Scroll } from './Screen';
-import { GrosseUeberschrift } from './GrosseUeberschrift';
+import { SeitenKopf } from './SeitenKopf';
 import { VollbildKnopf } from './VollbildKnopf';
-import { funktionen } from '../services/funktionen';
 
 interface SeitenGeruestProps {
   /** Die große Überschrift am Anfang des Inhalts. */
@@ -12,9 +10,9 @@ interface SeitenGeruestProps {
   unterzeile?: string;
   /** Zurück links in der Knopfreihe. Ohne sie (und ohne `aktionen`) gibt es keine Knopfreihe. */
   zurueck?: () => void;
-  /** Wohin „zurück" führt („Termine") – für Screenreader; sichtbar ist nur der runde Pfeil. */
+  /** Wohin „zurück" führt („Termine") – steht auf dem Knopf („← Termine"). */
   zurueckLabel?: string;
-  /** Runde Knöpfe rechts (`RundKnopf`: Teilen, Bearbeiten …). */
+  /** Knöpfe rechts im Seitenkopf (`KopfKnopf`: Teilen, Bearbeiten …). */
   aktionen?: ReactNode;
   /**
    * „Runterziehen zum Aktualisieren".
@@ -44,10 +42,9 @@ interface SeitenGeruestProps {
  * auf die Daten, bei den Terminen blitzte es nur auf. Das ist die Fehlerklasse „dieselbe Regel an
  * mehreren Stellen" – deshalb gibt es sie jetzt nur noch **einmal**, hier.
  *
- * Aufbau (bewusst für iOS 26/27, siehe `client/index.html`): Der Titel steht **groß im Inhalt** und
- * scrollt mit weg, oben gibt es keine farbige Fläche. Gibt es etwas anzutippen (Zurück, Teilen …),
- * schweben runde Knöpfe direkt unter dem Unschärfe-Band (`KnopfReihe`, 02.10.2026) und bleiben beim
- * Scrollen stehen; die Überschrift rückt um ihre Höhe nach unten.
+ * Aufbau (bewusst für iOS 26/27, siehe `client/index.html`): Der Kopf (`SeitenKopf`) steht **im Inhalt** und
+ * scrollt mit weg – Titel, Zurück und Knöpfe im ChurchTools-Stil (Scheibe S, 26.10.2026). Bis dahin schwebten runde
+ * Knöpfe über dem Inhalt (`KnopfReihe`); Alwin: „sieht eher wie eine iOS-App aus“.
  */
 export function SeitenGeruest({
   titel,
@@ -59,22 +56,14 @@ export function SeitenGeruest({
   children,
   ueberlagerung,
 }: SeitenGeruestProps) {
-  // Der Vollbild-Knopf (nur Erweiterung) steht auf JEDER Seite ganz rechts – an einer Stelle, damit
-  // man ihn zum Ein- und Ausschalten immer am selben Ort findet (Entwurf mit Alwin, 08.10.2026).
-  const mitKnoepfen = Boolean(zurueck || aktionen || funktionen.vollbildKnopf);
+  // Der Vollbild-Knopf (nur Erweiterung) steht auf JEDER Seite ganz rechts im Kopf – an einer Stelle, damit man ihn
+  // zum Ein- und Ausschalten immer am selben Ort findet (Entwurf mit Alwin, 08.10.2026).
   return (
     <Screen>
       <Scroll onRefresh={onNeuLaden}>
-        {/* Nur EIGENE Knöpfe schieben die Überschrift nach unten. Der Vollbild-Knopf allein schwebt
-            rechts neben ihr – sonst stünde jede Seite eine Knopfreihe tiefer (Alwin, 09.10.2026). */}
-        <GrosseUeberschrift unterzeile={unterzeile} unterKnoepfen={Boolean(zurueck || aktionen)}>
-          {titel}
-        </GrosseUeberschrift>
-        {children}
-      </Scroll>
-      {/* Nach dem Scroll-Bereich, damit die Knöpfe über dem durchlaufenden Inhalt liegen. */}
-      {mitKnoepfen && (
-        <KnopfReihe
+        <SeitenKopf
+          titel={titel}
+          unterzeile={unterzeile}
           zurueck={zurueck}
           zurueckLabel={zurueckLabel}
           aktionen={
@@ -84,7 +73,8 @@ export function SeitenGeruest({
             </>
           }
         />
-      )}
+        {children}
+      </Scroll>
       {ueberlagerung}
     </Screen>
   );

@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 
 /**
+ * **Handy-Breite** – ab hier stehen die Reiter unten statt oben und Kopfknöpfe nur als Symbol. EINE Grenze für alle
+ * Apps (vorher stand `'(max-width: 759px)'` dreimal von Hand: Dienstplaner, Organigramm, Protokolle).
+ */
+export const HANDY_BREITE = '(max-width: 759px)';
+
+/**
  * **Trifft eine CSS-Medienabfrage gerade zu?** – laufend nachgeführt (`matchMedia` + `change`).
  *
  * Eine Stelle für alle Apps (Dienstplaner E3: Reiter oben oder unten). Vorher stand dasselbe Muster von

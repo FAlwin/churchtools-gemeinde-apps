@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { type Service, type SongLibraryEntry } from '@shared/types/index';
 import { SeitenGeruest } from '../components/SeitenGeruest';
 import { CenterMessage } from '../components/CenterMessage';
+import { ZeilenKnopf } from '@ui/bedienung/ZeilenKnopf';
 import { Icon } from '@ui/icons/icons';
 import { NoteTile } from '../components/NoteTile';
 import { AddToAgendaSheet } from '../components/AddToAgendaSheet';
@@ -268,27 +269,25 @@ export function AllSongs({
                     <Icon name="chev-right" size={18} stroke={2.2} className={styles.chev} />
                   </button>
                   {canAddToAgenda && (
-                    <button
-                      className={styles.addBtn}
+                    <ZeilenKnopf
                       onClick={() => setAddSong(s)}
-                      aria-label={`„${s.name}" zu einem Ablauf hinzufügen`}
+                      label={`„${s.name}" zu einem Ablauf hinzufügen`}
                       title="Zu Ablauf hinzufügen"
                     >
-                      <Icon name="plus" size={20} stroke={2.4} />
-                    </button>
+                      <Icon name="plus" size={18} stroke={2.4} />
+                    </ZeilenKnopf>
                   )}
                   {/* Stammdaten ändern (#322, Schritt 11) – hier in der Liste, weil man den
                         fehlenden Autor beim Durchsehen bemerkt, nicht erst im geöffneten Blatt.
                         Dasselbe Recht wie das Anlegen. */}
                   {canCreateSong && (
-                    <button
-                      className={styles.addBtn}
+                    <ZeilenKnopf
                       onClick={() => setEditSong(s)}
-                      aria-label={`Stammdaten von „${s.name}" ändern`}
+                      label={`Stammdaten von „${s.name}" ändern`}
                       title="Stammdaten ändern"
                     >
-                      <Icon name="pencil" size={18} stroke={2.2} />
-                    </button>
+                      <Icon name="pencil" size={17} stroke={2.2} />
+                    </ZeilenKnopf>
                   )}
                 </div>
               );

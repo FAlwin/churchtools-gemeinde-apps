@@ -121,6 +121,7 @@ export function Setlist({
         void qc.invalidateQueries({ queryKey: schluessel.agenda(service.id) });
     },
     neuAufsetzen: () => setNeuAufsetzenOffen(true),
+    plusImKopf: true,
   });
   const { fehlerZeigen } = bearbeiten;
 
@@ -218,6 +219,8 @@ export function Setlist({
             symbol={<Icon name="share" size={18} stroke={2.2} />}
           />
         )}
+        {/* Grünes „+ Eintrag hinzufügen“ am iPad/Rechner (S2) – am Handy schwebt das Plus. */}
+        {canEdit && editMode && bearbeiten.kopfKnopf}
         {canEdit && editMode && !abgeschlossen && (
           <KopfKnopf
             onClick={() => setAbschliessenFrage(true)}

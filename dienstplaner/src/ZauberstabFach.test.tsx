@@ -7,6 +7,7 @@ import type { EntwurfErgebnis } from '@shared/dienstplan/entwuerfe';
 import { ZauberstabFach, type Wahl, type ZauberZeile } from './ZauberstabFach';
 import { ladeWerKann, vergissWerKann } from './ladeWerKann';
 import { STANDARD } from '@shared/dienstplan/vorlieben';
+import { knopfFolge } from '@ui/fenster/fenster.testutil';
 
 vi.mock('./ladeWerKann', () => ({ ladeWerKann: vi.fn(), vergissWerKann: vi.fn() }));
 const laden = vi.mocked(ladeWerKann);
@@ -268,10 +269,6 @@ describe('ZauberstabFach (E5-2)', () => {
     await screen.findByText(/2 Plätze mit Entwurf bleiben, wie sie sind/);
   });
 });
-
-/** Fenster wie ChurchTools (E6-O F2, #720): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
-const knopfFolge = () =>
-  screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent);
 
 describe('ZauberstabFach im ChurchTools-Aufbau', () => {
   it('X oben, unten Abbrechen und Übernehmen; „Neu vorschlagen“ steht oben am Ergebnis', async () => {

@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { jsPDF } from 'jspdf';
 import type { GebautesPdf } from './TeilenFenster';
+import { knopfFolge } from '@ui/fenster/fenster.testutil';
 
 vi.mock('@ui/teilen/sharePdf', () => ({
   sharePdf: vi.fn(() => Promise.resolve()),
@@ -159,16 +160,12 @@ describe('Vorschau im Teilen-Fenster (08.10.2026)', () => {
   });
 });
 
-/** Fenster wie ChurchTools (E6-O F3, #726): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
-const knopfFolgeF3 = () =>
-  screen.getAllByRole('button').map((b) => (b.getAttribute('aria-label') ?? b.textContent)?.trim());
-
 describe('TeilenFenster im ChurchTools-Aufbau', () => {
   it('unten Abbrechen · Herunterladen · Teilen (Alwin: zwei Wege unten)', async () => {
     const { auftraege } = offen();
     await act(async () => auftraege[0].fertig(pdf(2)));
     expect(screen.getByRole('dialog', { name: 'Ablauf teilen' })).toBeTruthy();
-    expect(knopfFolgeF3()[0]).toBe('Fenster schließen');
-    expect(knopfFolgeF3().slice(-3)).toEqual(['Abbrechen', 'Herunterladen', 'Teilen']);
+    expect(knopfFolge()[0]).toBe('Fenster schließen');
+    expect(knopfFolge().slice(-3)).toEqual(['Abbrechen', 'Herunterladen', 'Teilen']);
   });
 });

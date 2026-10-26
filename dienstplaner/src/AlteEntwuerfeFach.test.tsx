@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { Entwurf, EntwurfErgebnis } from '@shared/dienstplan/entwuerfe';
 import { AlteEntwuerfeFach, type AlterEntwurf } from './AlteEntwuerfeFach';
+import { knopfFolge } from '@ui/fenster/fenster.testutil';
 
 const entwurf = (eventId: number, x: Partial<Entwurf> = {}): Entwurf => ({
   ort: { eventId, serviceId: 6, index: null },
@@ -93,10 +94,6 @@ describe('AlteEntwuerfeFach (#582)', () => {
     expect(p.onClose).toHaveBeenCalledWith(false);
   });
 });
-
-/** Fenster wie ChurchTools (E6-O F2, #720): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
-const knopfFolge = () =>
-  screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent);
 
 describe('AlteEntwuerfeFach im ChurchTools-Aufbau', () => {
   it('X oben, unten Abbrechen und Verwerfen', () => {

@@ -14,7 +14,8 @@ interface SheetProps {
   /**
    * Die Knöpfe für die Fußzeile (`FensterKnopf`), rechts neben „Abbrechen“. Wer sie reicht, bekommt den Aufbau der
    * ChurchTools-Fenster (E6-O F1, #716): Kopf mit Titel und X, unten rechts die Knöpfe. Ohne bleibt der alte Aufbau –
-   * so ziehen die Fenster App für App um. Ein Fenster nur zum Ansehen reicht `null` – dann steht unten nur „Schließen“.
+   * so ziehen die Fenster App für App um. Ein Fenster nur zum Ansehen oder Wählen reicht `null` – dann steht unten nur
+   * der Knopf aus `cancelLabel` („Abbrechen“; zum Ansehen „Schließen“, im Baukasten „Fertig“).
    */
   knoepfe?: ReactNode;
   /**

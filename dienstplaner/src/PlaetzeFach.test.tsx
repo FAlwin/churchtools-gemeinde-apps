@@ -4,6 +4,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { AnzahlErgebnis } from '@shared/dienstplan/anzahl';
 import { PlaetzeFach, type PlaetzeZeile } from './PlaetzeFach';
 import { anzahlFehlerText } from './plaetzeTexte';
+import { knopfFolge } from '@ui/fenster/fenster.testutil';
 
 const LICHT: PlaetzeZeile = { serviceId: 7, name: 'Licht', anzahl: 1, belegt: 0, entwuerfe: 0 };
 const TON: PlaetzeZeile = { serviceId: 6, name: 'Ton', anzahl: 1, belegt: 1, entwuerfe: 0 };
@@ -114,10 +115,6 @@ describe('anzahlFehlerText', () => {
     expect(new Set(texte).size).toBe(gruende.length);
   });
 });
-
-/** Fenster wie ChurchTools (E6-O F2, #720): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
-const knopfFolge = () =>
-  screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent);
 
 describe('PlaetzeFach im ChurchTools-Aufbau', () => {
   it('nur ansehen: X oben, unten nur Schließen', () => {

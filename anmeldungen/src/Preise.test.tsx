@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { berechnePreis, euroText, type PreisRegeln } from '@shared/anmeldung/preis';
+import { knopfFolge } from '@ui/fenster/fenster.testutil';
 import * as E from './einrichten';
 import { PreisFensterZeigen, PreiseKarte, ProbeRechnen, type PreisFenster } from './Preise';
 
@@ -306,5 +307,35 @@ describe('Probe rechnen (A4)', () => {
     render(<ProbeRechnen preis={freizeit()} wer="einzeln" geburtsdatum heute="2026-10-13" />);
     expect(screen.getAllByLabelText(/Alter Person/)).toHaveLength(1);
     expect(screen.queryByRole('button', { name: '+ Person' })).toBeNull();
+  });
+});
+
+/** Fenster wie ChurchTools (E6-O F4): X oben rechts, „Speichern“ unten rechts, „Baustein entfernen“ im Inhalt. */
+describe('Preis-Fenster im ChurchTools-Aufbau', () => {
+  it('jedes Preis-Fenster: unten „Abbrechen · Speichern“', () => {
+    for (const w of [
+      { art: 'grund' },
+      { art: 'alter' },
+      { art: 'anpassung', index: 0 },
+      { art: 'extra', index: 0 },
+    ] as PreisFenster[]) {
+      fenster(w);
+      expect(knopfFolge()[0]).toBe('Fenster schließen');
+      expect(knopfFolge().slice(-2)).toEqual(['Abbrechen', 'Speichern']);
+      cleanup();
+    }
+  });
+
+  it('„Baustein entfernen“ bleibt im Inhalt, getrennt vom Speichern (wie „Löschen …“ in der Musik-App)', () => {
+    fenster({ art: 'extra', index: 0 });
+    const folge = knopfFolge();
+    expect(folge.indexOf('Baustein entfernen')).toBe(folge.length - 3);
+  });
+
+  it('Baustein hinzufügen: nur zum Wählen – unten nur „Abbrechen“', () => {
+    fenster({ art: 'neu' });
+    expect(knopfFolge()[0]).toBe('Fenster schließen');
+    expect(knopfFolge().at(-1)).toBe('Abbrechen');
+    expect(knopfFolge().at(-2)).toMatch(/^Extra zum Ankreuzen/);
   });
 });

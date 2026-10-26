@@ -1,5 +1,6 @@
 import { useMemo, useState, type CSSProperties } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { ApiError } from '@ui/ct/fehler';
 import { Schalter } from '@ui/bedienung/Schalter';
 import { Segment } from '@ui/bedienung/Segment';
@@ -344,7 +345,11 @@ export function VonHandFenster({
   // ── 1 Suchen ──
   if (schritt === 'suchen')
     return (
-      <Sheet title={dazu ? 'Person zur Anmeldung dazu' : 'Anmeldung von Hand'} onClose={onClose}>
+      <Sheet
+        title={dazu ? 'Person zur Anmeldung dazu' : 'Anmeldung von Hand'}
+        onClose={onClose}
+        knoepfe={null}
+      >
         <p className={a.unterTitel}>
           {dazu ? `Anmeldung von ${dazu.wer} · Nr. ${nr}. ` : ''}Wen meldest du an? Erst in
           ChurchTools suchen.
@@ -428,7 +433,22 @@ export function VonHandFenster({
   // ── 1c Neu anlegen ──
   if (schritt === 'neu')
     return (
-      <Sheet title="Neue Person anlegen" onClose={onClose}>
+      <Sheet
+        title="Neue Person anlegen"
+        onClose={onClose}
+        beschaeftigt={arbeitet}
+        cancelLabel={null}
+        knoepfe={
+          <>
+            <FensterKnopf art="zweit" disabled={arbeitet} onClick={() => setSchritt('suchen')}>
+              Zurück
+            </FensterKnopf>
+            <FensterKnopf disabled={arbeitet} onClick={neuWeiter}>
+              {arbeitet ? 'Einen Moment …' : 'Weiter'}
+            </FensterKnopf>
+          </>
+        }
+      >
         <p className={a.unterTitel}>Anmeldung von Hand · wird in ChurchTools angelegt</p>
         <div className={f.zeile}>
           <label className={f.feld}>
@@ -485,26 +505,28 @@ export function VonHandFenster({
           </small>
         </div>
         {fehlerZeile}
-        <div className={a.knoepfe}>
-          <button
-            type="button"
-            className={a.linkKnopf}
-            disabled={arbeitet}
-            onClick={() => setSchritt('suchen')}
-          >
-            Zurück
-          </button>
-          <button type="button" className={f.knopf} disabled={arbeitet} onClick={neuWeiter}>
-            {arbeitet ? 'Einen Moment …' : 'Weiter'}
-          </button>
-        </div>
       </Sheet>
     );
 
   // ── 1b Gibt es schon ──
   if (schritt === 'doppelt')
     return (
-      <Sheet title="Neue Person anlegen" onClose={onClose}>
+      <Sheet
+        title="Neue Person anlegen"
+        onClose={onClose}
+        cancelLabel={null}
+        knoepfe={
+          <>
+            <FensterKnopf art="zweit" onClick={() => setSchritt('neu')}>
+              Zurück
+            </FensterKnopf>
+            {/* Der sichere Weg ist „Diese nehmen“ – „trotzdem“ legt ein Doppel an, deshalb nur hellblau. */}
+            <FensterKnopf art="hell" onClick={() => waehlen({ art: 'neu', neu, trotzdem: true })}>
+              Trotzdem neu anlegen
+            </FensterKnopf>
+          </>
+        }
+      >
         <p className={a.hinweisBlau}>
           <b>In ChurchTools gibt es schon {ganz(neu)}.</b> Ist es dieselbe Person? Dann bitte sie
           nehmen – sonst entsteht ein Doppel.
@@ -537,19 +559,6 @@ export function VonHandFenster({
             </li>
           ))}
         </ul>
-        <div className={a.knoepfe}>
-          <button type="button" className={a.linkKnopf} onClick={() => setSchritt('neu')}>
-            Zurück
-          </button>
-          <button
-            type="button"
-            // Der sichere Weg ist „Diese nehmen“ – „trotzdem“ legt ein Doppel an, deshalb nicht hervorgehoben.
-            className={a.linkKnopf}
-            onClick={() => waehlen({ art: 'neu', neu, trotzdem: true })}
-          >
-            Trotzdem neu anlegen
-          </button>
-        </div>
       </Sheet>
     );
 
@@ -560,7 +569,26 @@ export function VonHandFenster({
     x.typ === 'name' || (x.id === 'birth' && (wahl?.art === 'neu' || !!person?.geburtstag));
   const g = e.preis.grundpreis;
   return (
-    <Sheet title={`${person ? ganz(person) : ''} anmelden`} onClose={onClose}>
+    <Sheet
+      title={`${person ? ganz(person) : ''} anmelden`}
+      onClose={onClose}
+      beschaeftigt={arbeitet}
+      cancelLabel={null}
+      knoepfe={
+        <>
+          <FensterKnopf
+            art="zweit"
+            disabled={arbeitet}
+            onClick={() => setSchritt(wahl?.art === 'neu' ? 'neu' : 'suchen')}
+          >
+            Zurück
+          </FensterKnopf>
+          <FensterKnopf disabled={arbeitet} onClick={anmelden}>
+            {arbeitet ? 'Einen Moment …' : 'Anmelden'}
+          </FensterKnopf>
+        </>
+      }
+    >
       <p className={a.unterTitel}>
         {wahl?.art === 'neu' ? 'Neue Person · ' : ''}
         {dazu ? `zur Anmeldung von ${dazu.wer} · ` : ''}Anmelde-Nr. {nr}
@@ -701,19 +729,6 @@ export function VonHandFenster({
       </PlatzWahl>
 
       {fehlerZeile}
-      <div className={a.knoepfe}>
-        <button
-          type="button"
-          className={a.linkKnopf}
-          disabled={arbeitet}
-          onClick={() => setSchritt(wahl?.art === 'neu' ? 'neu' : 'suchen')}
-        >
-          Zurück
-        </button>
-        <button type="button" className={f.knopf} disabled={arbeitet} onClick={anmelden}>
-          {arbeitet ? 'Einen Moment …' : 'Anmelden'}
-        </button>
-      </div>
     </Sheet>
   );
 }

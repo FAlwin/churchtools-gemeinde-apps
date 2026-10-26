@@ -49,7 +49,7 @@ export function PersonFenster({
   const jeDienst = [...(e?.jeDienst ?? new Map<number, number>())].sort((a, b) => b[1] - a[1]);
 
   return (
-    <Sheet title={name} onClose={onSchliessen} cancelLabel="Schließen">
+    <Sheet title={name} onClose={onSchliessen} cancelLabel="Schließen" knoepfe={null}>
       <div className={styles.kopf}>
         {p && <PersonBild name={p.name} bild={p.bild} initialen={p.initialen} groesse={40} />}
         <p className={styles.meta}>

@@ -5,6 +5,7 @@ import { NichtUebernommen } from '@ui/ct/fehler';
 import { STANDARD_VORLAGEN } from '@shared/protokolle/vorlagen';
 import * as V from './vorlagen';
 import { VorlagenKarte } from './VorlagenKarte';
+import { fensterKnoepfe } from '@ui/fenster/fenster.testutil';
 
 vi.mock('./vorlagen', async (orig) => ({
   ...(await orig<typeof import('./vorlagen')>()),
@@ -52,6 +53,9 @@ describe('Karte „Vorlagen“ (S2-3)', () => {
 describe('Fenster „Vorlage“', () => {
   it('neu: beginnt mit „Gebet“ und „Offene To-Dos“; ohne Namen wird nichts gespeichert', async () => {
     await oeffnen('Neue Vorlage');
+    // Fenster wie ChurchTools (E6-O F5): „Speichern“ unten rechts.
+    expect(fensterKnoepfe()[0]).toBe('Fenster schließen');
+    expect(fensterKnoepfe().slice(-2)).toEqual(['Abbrechen', 'Speichern']);
     expect(feld('Punkt 1').value).toBe('Gebet');
     expect(feld('Punkt 2').value).toBe('Offene To-Dos');
     expect(screen.getByText(/Füllt sich selbst mit den offenen To-Dos/)).toBeTruthy();
@@ -79,6 +83,15 @@ describe('Fenster „Vorlage“', () => {
     await waitFor(() => expect(hinweis).toHaveBeenCalledWith('Vorlage gespeichert'));
   });
 
+  it('während des Speicherns: X und „Abbrechen“ gesperrt (E6-O F5)', async () => {
+    m.vorlageSpeichern.mockReturnValue(new Promise(() => {}));
+    await oeffnen('Klausur');
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    expect(await screen.findByRole('button', { name: 'Wird gespeichert …' })).toBeTruthy();
+    for (const name of ['Fenster schließen', 'Abbrechen'])
+      expect(screen.getByRole('button', { name })).toHaveProperty('disabled', true);
+  });
+
   it('Speichern scheitert: Fenster bleibt offen und sagt warum', async () => {
     m.vorlageSpeichern.mockRejectedValue(new NichtUebernommen('die Vorlage'));
     await oeffnen('Klausur');
@@ -90,6 +103,8 @@ describe('Fenster „Vorlage“', () => {
 
   it('löschen fragt erst; „Abbrechen“ löscht nichts, „Löschen“ schon', async () => {
     await oeffnen('Klausur');
+    // „Vorlage löschen“ bleibt im Inhalt, getrennt vom Speichern unten (wie „Löschen …“ in der Musik-App).
+    expect(fensterKnoepfe().slice(-3)).toEqual(['Vorlage löschen', 'Abbrechen', 'Speichern']);
     fireEvent.click(screen.getByRole('button', { name: 'Vorlage löschen' }));
     expect(screen.getByText('Vorlage löschen?')).toBeTruthy();
     fireEvent.click(screen.getAllByRole('button', { name: 'Abbrechen' })[0]);

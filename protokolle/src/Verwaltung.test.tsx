@@ -5,6 +5,7 @@ import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
 import type { GruppenEinstellung } from '@shared/protokolle/einrichten';
 import * as E from './einrichten';
 import { Verwaltung } from './Verwaltung';
+import { fensterKnoepfe } from '@ui/fenster/fenster.testutil';
 
 vi.mock('./einrichten', async (orig) => ({
   ...(await orig<typeof import('./einrichten')>()),
@@ -80,6 +81,9 @@ describe('Fenster „Gruppe einrichten“', () => {
     render(<Verwaltung modul={24} />);
     await oeffnen('Technik');
     expect(screen.getByText('Gruppe einrichten: Technik')).toBeTruthy();
+    // Fenster wie ChurchTools (E6-O F5): „Einrichten“ unten rechts.
+    expect(fensterKnoepfe()[0]).toBe('Fenster schließen');
+    expect(fensterKnoepfe().slice(-2)).toEqual(['Abbrechen', 'Einrichten']);
     expect(auswahl('Leiter', 'Leitung').checked).toBe(true);
     expect(auswahl('Teilnehmer', 'Lesen + eigene To-Dos').checked).toBe(true);
     fireEvent.click(auswahl('Teilnehmer', 'Kein Zugriff'));

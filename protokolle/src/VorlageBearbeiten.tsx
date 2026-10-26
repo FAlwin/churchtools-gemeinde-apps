@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { Icon } from '@ui/icons/icons';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
@@ -74,7 +75,13 @@ export function VorlageBearbeiten({
   return (
     <Sheet
       title={vorlage ? 'Vorlage' : 'Neue Vorlage'}
-      onClose={laeuft ? () => undefined : onClose}
+      onClose={onClose}
+      beschaeftigt={laeuft}
+      knoepfe={
+        <FensterKnopf disabled={laeuft} onClick={speichern}>
+          {laeuft ? 'Wird gespeichert …' : 'Speichern'}
+        </FensterKnopf>
+      }
     >
       <p className={styles.unter}>Gilt für alle Gruppen.</p>
 
@@ -227,9 +234,6 @@ export function VorlageBearbeiten({
         </p>
       )}
 
-      <button type="button" className={styles.primaer} disabled={laeuft} onClick={speichern}>
-        {laeuft ? 'Wird gespeichert …' : 'Speichern'}
-      </button>
       {vorlage && (
         <button
           type="button"

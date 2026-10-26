@@ -10,7 +10,7 @@
  * Gezählt wird nur, was man sehen darf: Gruppen, deren Mitglieder ChurchTools nicht zeigt, fehlen in
  * `mitglieder` und tragen `sichtbar: false`. `vollstaendig` heißt: die Gruppe UND ihr ganzer Teilbaum sind lesbar –
  * nur dann darf die Oberfläche bei null Personen „gesucht“ sagen, sonst „nicht sichtbar“.
- * Nur „Heute“ (Alwin, 22.10.2026): „Neue Gliederung“ kommt mit dem Plan in O7.
+ * „Neue Gliederung“ (O7-4): derselbe Aufbau aus dem Plan – `planAlsBaum` liefert die Knoten, hier wird nichts nachgebaut.
  */
 import { nachfahren, type Knoten } from './gruppen';
 import { rollenRang, type Mitglied, type Rolle } from './mitglieder';

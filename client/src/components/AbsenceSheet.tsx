@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Absence, AbsenceReason, NeueAbsence } from '@shared/types/index';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import { anzahlTage } from '../utils/wochen';
 import { SCHNELLWAHL, schnellwahlZeitraum, type SchnellwahlId } from '../utils/schnellwahl';
@@ -85,6 +86,27 @@ export function AbsenceSheet({
       }
       onClose={onClose}
       cancelLabel={nurLesen ? 'Schließen' : 'Abbrechen'}
+      knoepfe={
+        nurLesen ? null : (
+          <FensterKnopf
+            disabled={ungueltig || laeuft}
+            onClick={() =>
+              onSubmit({
+                startDate: von,
+                endDate: bis,
+                comment: kommentar.trim() || undefined,
+                reasonId: grund ?? undefined,
+              })
+            }
+          >
+            {laeuft
+              ? 'Wird gespeichert …'
+              : entwurf.art === 'neu'
+                ? `Eintragen${tage > 1 ? ` (${tage} Tage)` : ''}`
+                : 'Speichern'}
+          </FensterKnopf>
+        )
+      }
     >
       {/* Schnellauswahl nur beim Eintragen: Ein bestehender Eintrag hat schon seinen Zeitraum. */}
       {entwurf.art === 'neu' && (
@@ -170,27 +192,6 @@ export function AbsenceSheet({
 
       {nurLesen && (
         <p className={styles.frageText}>Liegt in der Vergangenheit – nur zum Ansehen.</p>
-      )}
-
-      {!nurLesen && (
-        <button
-          className={styles.primaryWide}
-          disabled={ungueltig || laeuft}
-          onClick={() =>
-            onSubmit({
-              startDate: von,
-              endDate: bis,
-              comment: kommentar.trim() || undefined,
-              reasonId: grund ?? undefined,
-            })
-          }
-        >
-          {laeuft
-            ? 'Wird gespeichert …'
-            : entwurf.art === 'neu'
-              ? `Eintragen${tage > 1 ? ` (${tage} Tage)` : ''}`
-              : 'Speichern'}
-        </button>
       )}
 
       {entwurf.art === 'aendern' &&

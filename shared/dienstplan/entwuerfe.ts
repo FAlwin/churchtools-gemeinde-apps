@@ -31,6 +31,7 @@ import {
   type Wert,
 } from '../ct/modulDaten';
 import { gleicherStand, type Belegung, type PlatzOrt } from './einteilen';
+import type { ModulRechte } from '../ct/modulRechte';
 
 const ART = 'dienstplaner-entwurf';
 const FASSUNG = 1;
@@ -128,29 +129,8 @@ export type SchubladenStand =
   | 'nur-lesen'
   | 'bereit';
 
-/** Die Rechte des Moduls aus `/permissions/global` → `<kürzel>` (IDs je Recht). */
-export interface ModulRechte {
-  anlegen: boolean;
-  sehen: number[];
-  aendern: number[];
-}
-
-const ids = (x: unknown): number[] =>
-  Array.isArray(x) ? x.filter((v): v is number => typeof v === 'number') : [];
-
-/** Aus dem Rohwert von ChurchTools; fehlt er, darf man nichts. */
-export function modulRechteAus(roh: unknown): ModulRechte {
-  const r = (roh && typeof roh === 'object' ? roh : {}) as Record<string, unknown>;
-  const schreiben = ['create custom data', 'edit custom data', 'delete custom data'].map((k) =>
-    ids(r[k]),
-  );
-  return {
-    anlegen: r['create custom category'] === true,
-    sehen: ids(r['view custom data']),
-    // Ändern heißt hier: anlegen, ändern UND löschen – ein Entwurf braucht alle drei.
-    aendern: schreiben[0].filter((id) => schreiben[1].includes(id) && schreiben[2].includes(id)),
-  };
-}
+// Die Rechte eines Moduls lesen – seit S4-1 der Protokolle gemeinsam in `shared/ct/modulRechte.ts`.
+export { modulRechteAus, type ModulRechte } from '../ct/modulRechte';
 
 export function schubladenStand(rechte: ModulRechte, kategorie: number | null): SchubladenStand {
   if (kategorie === null) return rechte.anlegen ? 'einrichtbar' : 'fehlt';

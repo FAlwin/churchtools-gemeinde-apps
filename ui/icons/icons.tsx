@@ -68,7 +68,19 @@ export type IconName =
   | 'user-slash'
   | 'regler'
   | 'zauberstab'
-  | 'zahnrad';
+  | 'zahnrad'
+  | 'liste'
+  | 'nummern'
+  | 'zitat'
+  | 'trennlinie'
+  | 'einruecken'
+  | 'ausruecken'
+  | 'format-weg'
+  | 'kreis'
+  | 'kreis-halb'
+  | 'kreis-haken'
+  | 'aufgabe'
+  | 'stempel';
 
 interface IconProps {
   name: IconName;
@@ -410,6 +422,93 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
       return (
         <svg {...p}>
           <path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" />
+        </svg>
+      );
+    // Werkzeugleiste des Protokoll-Editors (Protokolle S4-1, Entwurf 7).
+    case 'liste':
+      return (
+        <svg {...p}>
+          <path d="M9 6h11M9 12h11M9 18h11" />
+          <circle cx="4.5" cy="6" r="1" fill="currentColor" />
+          <circle cx="4.5" cy="12" r="1" fill="currentColor" />
+          <circle cx="4.5" cy="18" r="1" fill="currentColor" />
+        </svg>
+      );
+    case 'nummern':
+      return (
+        <svg {...p}>
+          <path d="M10 6h10M10 12h10M10 18h10" />
+          <path
+            d="M4 4.5h1.5V9M4 9h3M4 14.5c.4-.6 1-1 1.7-1 .9 0 1.5.6 1.5 1.3 0 1.2-3.2 2.4-3.2 4.2h3.3"
+            strokeWidth="1.6"
+          />
+        </svg>
+      );
+    case 'zitat':
+      return (
+        <svg {...p}>
+          <path d="M4 5v14M9 7h11M9 12h11M9 17h7" />
+        </svg>
+      );
+    case 'trennlinie':
+      return (
+        <svg {...p}>
+          <path d="M7 6h10M7 18h10" strokeOpacity="0.45" />
+          <path d="M3 12h18" />
+        </svg>
+      );
+    case 'einruecken':
+      return (
+        <svg {...p}>
+          <path d="M11 6h9M11 12h9M11 18h9M4 9l3 3-3 3" />
+        </svg>
+      );
+    case 'ausruecken':
+      return (
+        <svg {...p}>
+          <path d="M11 6h9M11 12h9M11 18h9M7 9l-3 3 3 3" />
+        </svg>
+      );
+    case 'format-weg':
+      return (
+        <svg {...p}>
+          <path d="M5 5.5V4h12v1.5M11 4l-3 14M6 18h5M15 14l5 5M20 14l-5 5" />
+        </svg>
+      );
+    // Status eines To-Dos (offen · in Arbeit · erledigt) und Blöcke Aufgabe/Beschluss im Protokoll (S4-2, Entwurf 7).
+    case 'kreis':
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="8.5" />
+        </svg>
+      );
+    case 'kreis-halb':
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" fill="currentColor" />
+        </svg>
+      );
+    case 'kreis-haken':
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="m8.2 12.2 2.6 2.6 5-5.4" />
+        </svg>
+      );
+    case 'aufgabe':
+      return (
+        <svg {...p}>
+          <rect x="3.5" y="4.5" width="7" height="7" rx="1.5" />
+          <path d="m5.2 8 1.4 1.4 2.4-2.6M14 8h6.5M3.5 17h7M14 17h6.5" />
+        </svg>
+      );
+    case 'stempel':
+      return (
+        <svg {...p}>
+          <path d="M9 6.5a3 3 0 1 1 6 0c0 1.5-.8 2.3-.8 4.5h-4.4c0-2.2-.8-3-.8-4.5Z" />
+          <rect x="4.5" y="13.5" width="15" height="4" rx="1.2" />
+          <path d="M5.5 20.5h13" />
         </svg>
       );
     case 'heading':

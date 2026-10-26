@@ -27,6 +27,7 @@
   --blue: #155dfc; // `--color-accent-bright` (blue-600) – Knöpfe, Links, aktive Reiter
   --blue-ink: #155dfc;
   --blue-soft: rgba(21, 93, 252, 0.1); // Blau-Flächen (sanfte Hervorhebung)
+  --markiert: rgba(250, 204, 21, 0.45); // Textmarker im Protokoll (Editor, Lese-Ansicht, PDF)
   --blue-tile: #dbeafe; // `--color-accent-b-pale` (blue-100) – Datumskachel, gewählter Eintrag
   --blue-tile-text: #162456; // `--color-accent-primary` (blue-950)
   // Rot und Grün tragen bei uns auch TEXT (offene Dienste, „zugesagt“). ChurchTools' `--color-error-bright`
@@ -105,6 +106,7 @@ html[data-theme='dark'] {
   --blue: #2b7fff;
   --blue-ink: #669cff;
   --blue-soft: rgba(43, 127, 255, 0.18);
+  --markiert: rgba(250, 204, 21, 0.3);
   --blue-tile: #1c398e; // `--color-accent-b-pale` (blue-900)
   --blue-tile-text: #dbeafe; // `--color-accent-primary` (blue-100)
   --red: #ff6467; // red-400

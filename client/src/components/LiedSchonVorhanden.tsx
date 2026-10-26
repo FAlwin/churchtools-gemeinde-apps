@@ -1,4 +1,5 @@
 import type { SongLibraryEntry } from '@shared/types/index';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import styles from './NewSongSheet.module.scss';
 
@@ -40,27 +41,29 @@ export function LiedSchonVorhanden({
   // Abbrechen-Knopf – zwei gleich beschriftete Knöpfe übereinander sagten nicht, welcher was tut
   // (gefunden beim Schreiben der Tests, 20.09.2026).
   return (
-    <Sheet title="Dieses Lied gibt es schon" cancelLabel="Zurück zum Formular" onClose={onClose}>
+    <Sheet
+      title="Dieses Lied gibt es schon"
+      cancelLabel="Zurück zum Formular"
+      onClose={onClose}
+      knoepfe={
+        <>
+          <FensterKnopf art={onVerwenden ? 'hell' : 'haupt'} onClick={onTrotzdem}>
+            Trotzdem neu anlegen
+          </FensterKnopf>
+          {onVerwenden && (
+            <FensterKnopf onClick={() => onVerwenden(vorhanden)}>
+              „{vorhanden.name}" verwenden
+            </FensterKnopf>
+          )}
+        </>
+      }
+    >
       <div className={styles.hint}>
         <b>„{vorhanden.name}"</b>
         {vorhanden.author ? ` von ${vorhanden.author}` : ''} trägt schon die CCLI-Nummer{' '}
         {vorhanden.ccli}
         {vorhanden.key ? ` (Tonart ${vorhanden.key})` : ''}. Eine Nummer kann in ChurchTools nur
         einmal vergeben sein.
-      </div>
-
-      <div className={styles.actions}>
-        {onVerwenden && (
-          <button className={styles.primaryWide} onClick={() => onVerwenden(vorhanden)}>
-            „{vorhanden.name}" verwenden
-          </button>
-        )}
-        <button
-          className={onVerwenden ? styles.secondaryWide : styles.primaryWide}
-          onClick={onTrotzdem}
-        >
-          Trotzdem neu anlegen
-        </button>
       </div>
 
       <div className={styles.hint}>

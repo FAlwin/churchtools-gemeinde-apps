@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { GruppenKachel } from '@ui/bedienung/GruppenKachel';
 import { PersonBild } from '@ui/bedienung/PersonBild';
 import { Icon } from '@ui/icons/icons';
+import { Segment } from '@ui/bedienung/Segment';
 import { BEREICH_ATTRIBUT } from '@ui/erweiterung/cssBereich';
 import { gruppenFarbe } from '@shared/organigramm/farbe';
 import { istLeitung, type Mitglied } from '@shared/organigramm/mitglieder';
@@ -21,10 +22,14 @@ const personenText = (n: number, vollstaendig: boolean) =>
       ? 'Mitarbeitende gesucht'
       : 'Mitglieder nicht sichtbar';
 
+export type Stand = 'neu' | 'heute';
+
 interface Props {
   start: Start;
   daten: Daten;
   mitglieder: MitgliederDaten;
+  /** „Neue Gliederung | Heute“ (O7-4) – nur für Gruppen-Admins mit einem Plan; sonst fehlt der Umschalter. */
+  stand?: { wert: Stand; onWechsel: (s: Stand) => void };
   onSchliessen: () => void;
 }
 
@@ -34,9 +39,10 @@ interface Props {
  * wo es das gibt (Laptop am Beamer) – am iPad gibt es den Knopf nicht.
  *
  * Bedienung: Weiter/Zurück, Pfeiltasten, Bild auf/ab, Leertaste · Pos1 = Übersicht · Esc = zurück zur Übersicht,
- * dort schließen · F = Vollbild. Nur „Heute“ – „Neue Gliederung“ kommt mit dem Plan in O7.
+ * dort schließen · F = Vollbild. Für Gruppen-Admins mit einem Plan oben „Neue Gliederung | Heute“ (O7-4, wie im Entwurf
+ * vom 19.10.2026); der Wechsel führt zurück zur Übersicht.
  */
-export function Praesentation({ start, daten, mitglieder, onSchliessen }: Props) {
+export function Praesentation({ start, daten, mitglieder, stand, onSchliessen }: Props) {
   const [seite, setSeite] = useState(-1); // -1 = Übersicht
   const wurzel = useRef<HTMLDivElement>(null);
   const buehne = useRef<HTMLDivElement>(null);
@@ -135,6 +141,7 @@ export function Praesentation({ start, daten, mitglieder, onSchliessen }: Props)
         <div>
           <h1>Unsere Bereiche</h1>
           <div className={styles.meta}>
+            {stand && (stand.wert === 'neu' ? 'Neue Gliederung · ' : 'Heute · ')}
             {anzahl(zahl, 'Bereich', 'Bereiche')} · {anzahl(daten.gruppen, 'Gruppe', 'Gruppen')} ·{' '}
             {anzahl(daten.personen, 'Person', 'Personen')}
           </div>
@@ -269,6 +276,20 @@ export function Praesentation({ start, daten, mitglieder, onSchliessen }: Props)
     >
       <div className={styles.kopf}>
         <span className={styles.gemeinde}>{start.gemeinde}</span>
+        {stand && (
+          <Segment
+            value={stand.wert}
+            options={[
+              { value: 'neu', label: 'Neue Gliederung' },
+              { value: 'heute', label: 'Heute' },
+            ]}
+            onChange={(w) => {
+              setSeite(-1);
+              stand.onWechsel(w);
+            }}
+            ariaLabel="Stand"
+          />
+        )}
         {kannVollbild && (
           <button type="button" className={styles.knopf} onClick={vollbildUmschalten}>
             <Icon name={vollbild ? 'vollbild-aus' : 'vollbild'} size={16} />

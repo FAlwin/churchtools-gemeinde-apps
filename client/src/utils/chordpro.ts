@@ -52,6 +52,31 @@ export function abschnittsKopf(zeile: string): { type: string; label: string } |
   return null;
 }
 
+/**
+ * **Ende eines Teils** im Standard-Dialekt: `{end_of_verse}` allein in der Zeile. EINE Regel für das Blatt
+ * (`parseChordPro`) und den Editor, der sie ausblendet (L6 – das Band markiert den Anfang, das Ende ergibt sich).
+ */
+export const ENDE_ZEILE = /^\s*\{end_of_\w+\}\s*$/i;
+
+/**
+ * **Name für einen neuen Teil** aus dem Menü „Einfügen“ (L6): „Vers“ nummeriert sich immer („Vers 2“, wenn es
+ * schon einen Vers gibt – auch „Strophe 1“ oder „Verse 1“ zählt), die übrigen nur, wenn es den Namen schon gibt
+ * („Refrain 2“). Gezählt wird nach der höchsten vorhandenen Nummer, damit nach „Vers 1, Vers 3“ kein zweiter
+ * „Vers 3“ entsteht. Die Köpfe liest dieselbe Regel wie das Blatt (`abschnittsKopf`).
+ */
+export function neuerTeilName(text: string, basis: string): string {
+  const vers = /^vers$/i.test(basis);
+  const name = vers ? '(?:vers|verse|strophe)' : basis.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const muster = new RegExp(`^${name}(?:\\s+(\\d+))?$`, 'i');
+  let hoechste = 0;
+  for (const zeile of text.split('\n')) {
+    const treffer = abschnittsKopf(zeile)?.label.trim().match(muster);
+    if (treffer) hoechste = Math.max(hoechste, treffer[1] ? Number(treffer[1]) : 1);
+  }
+  if (vers) return `${basis} ${hoechste + 1}`;
+  return hoechste ? `${basis} ${hoechste + 1}` : basis;
+}
+
 /** Zerlegt den rohen ChordPro-Text in Abschnitte. */
 export function parseChordPro(text: string): ChordProSection[] {
   const lines = text.split('\n');
@@ -70,7 +95,7 @@ export function parseChordPro(text: string): ChordProSection[] {
     }
 
     // Standard: {end_of_verse}
-    if (/^\{end_of_\w+\}$/i.test(ln)) {
+    if (ENDE_ZEILE.test(ln)) {
       current = null;
       continue;
     }

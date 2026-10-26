@@ -138,15 +138,49 @@ ChurchTools selbst ändert sich nicht – keine Gruppe, kein Name, kein Status.
 5. In ChurchTools nachsehen: Gruppen, Namen, Obergruppen und Status sind unverändert.
 6. Mit dem Konto, das nur eine Gruppe **leitet**: kein Reiter „Neue Gliederung“, auch nicht über `#gliederung` in der
    Adresse.
-7. Admin A: **Plan verwerfen** → **Verwerfen**. Bei beiden (nach Neuladen) „Noch kein Plan“.
+7. Admin A: Reiter **Organigramm** → **Präsentieren**: Sie beginnt mit „Neue Gliederung · …“ – „Übung Plan“ ist ein
+   Bereich, die umbenannte Gruppe trägt den neuen Namen, die archivierte fehlt. Oben **Heute**: der Stand aus
+   ChurchTools, zurück auf der Übersicht. Mit dem Konto, das nur **leitet**: kein Umschalter, nur „Heute“.
+8. Admin A: **Plan verwerfen** → **Verwerfen**. Bei beiden (nach Neuladen) „Noch kein Plan“.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `organigramm/src/NeueGliederung.tsx`, `organigramm/src/PlanFenster.tsx`, `organigramm/src/plan.ts`, `shared/organigramm/plan.ts`, `shared/ct/versionierterWert.ts`
+- **Betrifft:** `organigramm/src/NeueGliederung.tsx`, `organigramm/src/PlanFenster.tsx`, `organigramm/src/plan.ts`, `shared/organigramm/plan.ts`, `shared/ct/versionierterWert.ts`, `organigramm/src/Praesentation.tsx`
 - **Automatisiert:** teilweise – `NeueGliederung.test.tsx` (Bedienung, Konflikt, Fehler gegen den nachgebauten
-  Speicher), `plan.test.ts` (Regeln und Speicher), `versionierterWert.test.ts`, `App.test.tsx` (Reiter nur für Admins);
+  Speicher), `plan.test.ts` (Regeln und Speicher), `versionierterWert.test.ts`, `App.test.tsx` (Reiter nur für Admins; „O7-4“ Präsentation Neue Gliederung | Heute);
   ob ChurchTools die Kategorie-Rechte so durchsetzt und zwei echte Sitzungen sich so verhalten, prüft nur dieser Fall
-- **Historie:** #719 (O7-1 Plan-Kern #721, O7-2 Reiter)
+- **Historie:** #719 (O7-1 Plan-Kern #721, O7-2 Reiter #722, O7-4 Präsentation)
+
+</details>
+
+### TF-ORG-06 · Umbau ausführen – einzeln, alle, zurück
+
+**Das brauchst du:** In der Test-Instanz ein Konto mit „Gruppen verwalten“ und drei Übungsgruppen ohne echte
+Mitglieder (z. B. „Übung A“, „Übung B“ mit „Übung B1“ darunter). Nie in der Live-Instanz.
+
+**Das muss passieren:** Jeder Schritt steht danach genau so in ChurchTools; nichts wird gelöscht außer einer gerade
+angelegten, leeren Gruppe bei „Rückgängig“. Niemand bekommt eine Mail.
+
+1. **Neue Gliederung** → Plan: **＋ Neuer Bereich** „Übung Neu“, „Übung A“ dort einhängen, „Übung B“ umbenennen in
+   „Übung B2“, „Übung B“ und „Übung B1“ im Plan archivieren.
+2. **Umbau**: „Übung A umhängen“ wartet auf „Übung Neu“; „Übung B archivieren“ wartet, bis „Übung B1“ woanders hängt
+   (hier: archiviert ist – dann ist sie aus dem Baum).
+3. „Übung Neu“ **Ausführen**: In ChurchTools gibt es den Bereich. **Rückgängig**: Er ist wieder weg, im Plan wieder
+   „neu“. Nochmal **Ausführen**.
+4. **Alle offenen nacheinander ausführen** → **Ausführen**: Am Ende „… von … erledigt“, nichts offen. In ChurchTools:
+   „Übung A“ unter „Übung Neu“, „Übung B2“ heißt so, „Übung B1“ und „Übung B2“ haben den Status „archiviert“.
+5. ChurchTools-Protokoll und Postfach ansehen: keine Mail zu diesen Schritten.
+6. Aufräumen: Übungsgruppen in ChurchTools löschen, **Plan verwerfen**.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `organigramm/src/Umbau.tsx`, `organigramm/src/umbauTexte.ts`, `organigramm/src/struktur.ts`, `shared/organigramm/umbau.ts`, `shared/organigramm/plan.ts`, `shared/organigramm/struktur.ts`
+- **Automatisiert:** teilweise – `Umbau.test.tsx` (Bedienung gegen ein nachgebautes ChurchTools), `umbau.test.ts`,
+  `plan.test.ts`, `struktur.test.ts` (Browser-Zugriff); ob ChurchTools wirklich so antwortet und keine Mail schickt,
+  prüft nur dieser Fall
+- **Historie:** #719 (Messung O7-3 24.10.2026: `PATCH` Name/Status, archivierte Gruppen fehlen in Liste und Hierarchie,
+  Mitgliedschaften bleiben, keine Mail im Protokoll)
 
 </details>

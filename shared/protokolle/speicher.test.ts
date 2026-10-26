@@ -10,8 +10,12 @@ import {
   kuerzelLesen,
   kuerzelMitarbeit,
   kuerzelProtokolle,
+  schreibLage,
+  sitzungAusWerten,
   sperreLage,
+  sperreVon,
   teileBauen,
+  type ProtokollKopf,
   type ProtokollTeil,
 } from './speicher';
 
@@ -100,6 +104,15 @@ describe('teileBauen / dokumentAusTeilen', () => {
     );
   });
 
+  it('zählt einen doppelt liegenden Teil desselben Stands einmal (S4-1: Aufräumen gescheitert, gleicher Text erneut gespeichert)', () => {
+    const { stand, werte } = teileBauen(langesProtokoll(), 's6');
+    const alle = teile(werte);
+    expect(dokumentAusTeilen({ sitzung: 's6', stand }, [...alle, ...alle])).toEqual(
+      dokumentAusTeilen({ sitzung: 's6', stand }, alle),
+    );
+    expect(dokumentAusTeilen({ sitzung: 's6', stand }, [...alle, alle[0]])).not.toBeNull();
+  });
+
   it('meldet kaputte Daten als null statt zu werfen', () => {
     const { stand, werte } = teileBauen(BLOCKNOTE_DOKUMENT, 's5');
     const kaputt = teile(werte).map((t) => ({ ...t, daten: t.daten.slice(0, -5) }));
@@ -128,20 +141,101 @@ describe('dokumentDerSitzung (S3-4)', () => {
 
 describe('sperreLage', () => {
   const jetzt = new Date('2026-10-22T19:30:00Z');
+  const ich = { person: 1, fenster: 'f1' };
+  const sperre = (von: number, seit: string, fenster = 'f1') => ({
+    von,
+    name: 'X',
+    seit,
+    fenster,
+  });
   it('unterscheidet frei, meine und fremd', () => {
-    expect(sperreLage(null, 1, jetzt)).toBe('frei');
-    expect(sperreLage({ von: 1, name: 'Alwin', seit: '2026-10-22T19:25:00Z' }, 1, jetzt)).toBe(
-      'meine',
-    );
-    expect(sperreLage({ von: 2, name: 'Johann', seit: '2026-10-22T19:25:00Z' }, 1, jetzt)).toBe(
+    expect(sperreLage(null, ich, jetzt)).toBe('frei');
+    expect(sperreLage(sperre(1, '2026-10-22T19:25:00Z'), ich, jetzt)).toBe('meine');
+    expect(sperreLage(sperre(2, '2026-10-22T19:25:00Z'), ich, jetzt)).toBe('fremd');
+  });
+  it('ich selbst in einem anderen Fenster (oder ohne Fenster-Kennung) zählt als fremd (S4-1)', () => {
+    expect(sperreLage(sperre(1, '2026-10-22T19:25:00Z', 'f2'), ich, jetzt)).toBe('fremd');
+    expect(sperreLage({ von: 1, name: 'X', seit: '2026-10-22T19:25:00Z' }, ich, jetzt)).toBe(
       'fremd',
     );
   });
   it('lässt eine verlassene oder kaputte Sperre verfallen', () => {
-    expect(sperreLage({ von: 2, name: 'Johann', seit: '2026-10-22T19:19:59Z' }, 1, jetzt)).toBe(
-      'frei',
-    );
-    expect(sperreLage({ von: 2, name: 'Johann', seit: 'unsinn' }, 1, jetzt)).toBe('frei');
+    expect(sperreLage(sperre(2, '2026-10-22T19:19:59Z'), ich, jetzt)).toBe('frei');
+    expect(sperreLage(sperre(2, '2026-10-22T19:20:00Z'), ich, jetzt)).toBe('fremd');
+    expect(sperreLage(sperre(2, 'unsinn'), ich, jetzt)).toBe('frei');
+  });
+  it('sperreVon erzeugt eine Sperre, die für dasselbe Fenster „meine“ ist', () => {
+    const s = sperreVon({ person: 1, name: 'Alwin', fenster: 'f1' }, jetzt);
+    expect(s).toEqual({ von: 1, name: 'Alwin', seit: '2026-10-22T19:30:00.000Z', fenster: 'f1' });
+    expect(sperreLage(s, ich, jetzt)).toBe('meine');
+  });
+});
+
+describe('schreibLage (S4-1)', () => {
+  const jetzt = new Date('2026-10-22T19:30:00Z');
+  const ich = { person: 1, fenster: 'f1' };
+  const kopf: ProtokollKopf = {
+    art: 'protokoll',
+    fassung: 1,
+    sitzung: 's1',
+    titel: 'T',
+    status: 'entwurf',
+    beginn: '2026-10-22T17:00:00Z',
+    termin: null,
+    treffen: null,
+    freigabe: null,
+    sperre: null,
+    stand: 'a',
+  };
+  it('ok bei freiem oder eigenem Entwurf auf demselben Stand', () => {
+    expect(schreibLage(kopf, ich, 'a', jetzt)).toBe('ok');
+    expect(
+      schreibLage({ ...kopf, sperre: sperreVon({ ...ich, name: 'A' }, jetzt) }, ich, 'a', jetzt),
+    ).toBe('ok');
+  });
+  it('weg, fest, gesperrt, verändert', () => {
+    expect(schreibLage(null, ich, 'a', jetzt)).toBe('weg');
+    expect(schreibLage({ ...kopf, status: 'frei' }, ich, 'a', jetzt)).toBe('fest');
+    expect(schreibLage({ ...kopf, status: 'geplant' }, ich, 'a', jetzt)).toBe('fest');
+    const fremd = sperreVon({ person: 2, name: 'J', fenster: 'g' }, jetzt);
+    expect(schreibLage({ ...kopf, sperre: fremd }, ich, 'a', jetzt)).toBe('gesperrt');
+    expect(schreibLage(kopf, ich, 'b', jetzt)).toBe('veraendert');
+  });
+  it('fremde Sperre geht vor verändertem Stand – sonst lüde das Fenster neu, statt „schreibt gerade“ zu zeigen', () => {
+    const fremd = sperreVon({ person: 2, name: 'J', fenster: 'g' }, jetzt);
+    expect(schreibLage({ ...kopf, sperre: fremd }, ich, 'b', jetzt)).toBe('gesperrt');
+  });
+});
+
+describe('sitzungAusWerten (S4-1)', () => {
+  it('findet Kopf (kleinste ID) und Teile der Sitzung, übergeht Fremdes und Kaputtes', () => {
+    const { stand, werte } = teileBauen(BLOCKNOTE_DOKUMENT, 's1');
+    const kopf = {
+      art: 'protokoll',
+      fassung: 1,
+      sitzung: 's1',
+      titel: 'T',
+      status: 'entwurf',
+      beginn: '2026-10-22T17:00:00Z',
+      termin: null,
+      treffen: null,
+      freigabe: null,
+      sperre: null,
+      stand,
+    };
+    const liste = [
+      { id: 9, value: JSON.stringify({ ...kopf, titel: 'zweiter' }) },
+      { id: 3, value: JSON.stringify(kopf) },
+      { id: 4, value: werte[0] },
+      { id: 5, value: 'kaputt{' },
+      { id: 6, value: JSON.stringify({ ...kopf, sitzung: 's2' }) },
+      ...teileBauen(BLOCKNOTE_DOKUMENT, 's2').werte.map((value, i) => ({ id: 20 + i, value })),
+    ];
+    const s = sitzungAusWerten(liste, 's1');
+    expect(s.kopf?.id).toBe(3);
+    expect(s.kopf?.inhalt.titel).toBe('T');
+    expect(s.teile.map((t) => t.id)).toEqual([4]);
+    expect(sitzungAusWerten(liste, 'fehlt').kopf).toBeNull();
   });
 });
 

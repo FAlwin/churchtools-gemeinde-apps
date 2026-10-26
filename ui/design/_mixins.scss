@@ -210,6 +210,7 @@
  * **Die Knopfzeile unten im Fenster** (`Sheet`, `ConfirmDialog`): am Rechner nebeneinander rechts unten, am Handy
  * untereinander über die volle Breite, der Hauptknopf oben (Alwin, 24.10.2026, E6-O F2 #720 – lange Hauptknöpfe wie
  * „3 als Entwurf übernehmen“ passten nicht neben „Abbrechen“). Die Knöpfe stehen im Markup als Abbrechen … Hauptknopf.
+ * Passen sie auch am Rechner nicht nebeneinander, stehen sie ebenso untereinander (`useKnopfZeile`, F3 #726).
  */
 @mixin fensterKnopfZeile {
   display: flex;
@@ -218,11 +219,34 @@
   gap: 8px;
 
   @media (max-width: 480px) {
-    flex-direction: column-reverse;
+    @include fensterKnoepfeUntereinander;
+  }
+
+  // Passen die Knöpfe nicht nebeneinander (`useKnopfZeile`, F3 #726) – auch am Rechner untereinander.
+  &[data-stapel] {
+    @include fensterKnoepfeUntereinander;
+  }
+
+  // Zum Messen kurz nebeneinander ohne Umbruch – schlägt Handy-Regel und Stapel, sonst misst die Zeile sich selbst.
+  // Linksbündig: Rechtsbündig liefe die Überbreite nach LINKS über, und die zählt `scrollWidth` nicht (im Browser
+  // gefunden, jsdom kennt kein Layout).
+  &[data-messen] {
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
 
     > * {
-      width: 100%;
+      width: auto !important;
+      flex-shrink: 0 !important;
     }
+  }
+}
+
+@mixin fensterKnoepfeUntereinander {
+  flex-direction: column-reverse;
+
+  > * {
+    width: 100%;
   }
 }
 

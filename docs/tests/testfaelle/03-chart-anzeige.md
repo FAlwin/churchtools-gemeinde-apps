@@ -559,7 +559,7 @@ Text selbst sieht man keine `{flow: …}`-Zeile. `----` erscheint nirgends.
 5. Ein Lied, in dessen Ablauf ein Name steht, den es nicht gibt (z. B. `Refrain`) → dieses Kärtchen ist
    rot umrandet und sagt „fehlt im Text“.
 6. **Handy:** Umschalter **Ablauf** → eine Liste mit Griff und großem ×, darunter „Teil hinzufügen“.
-7. **Format → Weiterschalt-Punkt fürs Pedal** mitten in einem Vers → in der Vorschau unsichtbar.
+7. **Einfügen → Pedal-Halt** mitten in einem Vers → im Text die Linie „Pedal hält hier“, in der Vorschau unsichtbar.
 8. Speichern, Lied im Ablauf öffnen → das Blatt zeigt dieselbe Reihenfolge; „Als PDF teilen“ ebenso.
 
 <details><summary>Technisches</summary>

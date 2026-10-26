@@ -128,6 +128,8 @@ export function App() {
           }
           modul={start.modul}
           gruppen={start.gruppen}
+          ich={{ person: start.id, name: start.vorname }}
+          schreibbar={start.schreibbar}
           auswahl={auswahl}
         />
       )}

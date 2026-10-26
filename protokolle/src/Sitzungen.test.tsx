@@ -17,6 +17,7 @@ vi.mock('./lesen', async (orig) => ({
 }));
 const m = vi.mocked(L);
 
+const ICH = { person: 1, name: 'Alwin' };
 const GRUPPEN: ProtokollGruppe[] = [
   { id: 11, name: 'Leitungsteam', lage: 'eingerichtet', protokolle: 60, mitarbeit: 61 },
   { id: 7, name: 'Jugendleitung', lage: 'eingerichtet', protokolle: 70, mitarbeit: 71 },
@@ -69,7 +70,7 @@ beforeEach(() => {
 
 describe('Reiter „Sitzungen“ (S3-2)', () => {
   it('zeigt Kommend und Protokolle der ersten Gruppe', async () => {
-    render(<Sitzungen modul={24} gruppen={GRUPPEN} />);
+    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
     const kommend = await screen.findByRole('region', { name: 'Kommend' });
     expect(within(kommend).getByText('Klausur')).toBeTruthy();
     const protokolle = screen.getByRole('region', { name: 'Protokolle' });
@@ -78,7 +79,7 @@ describe('Reiter „Sitzungen“ (S3-2)', () => {
   });
 
   it('Gruppe wechseln lädt deren Sitzungen', async () => {
-    render(<Sitzungen modul={24} gruppen={GRUPPEN} />);
+    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
     await screen.findByText('Klausur');
     fireEvent.click(screen.getByRole('button', { name: 'Jugendleitung' }));
     await waitFor(() =>
@@ -88,21 +89,21 @@ describe('Reiter „Sitzungen“ (S3-2)', () => {
 
   it('Hinweise: kein Kalender gewählt, Gruppentreffen nicht freigegeben', async () => {
     m.ladeSitzungen.mockResolvedValue({ ...DATEN, kalender: null, treffenNichtFreigegeben: true });
-    render(<Sitzungen modul={24} gruppen={GRUPPEN} />);
+    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
     expect(await screen.findByText(/noch kein Kalender gewählt/)).toBeTruthy();
     expect(screen.getByText(/Gruppentreffen dieser Gruppe sind für dich/)).toBeTruthy();
   });
 
   it('vorübergehender Fehler: „Erneut versuchen“ – keine leere Liste', async () => {
     m.ladeSitzungen.mockRejectedValueOnce(new ApiError(503, 'weg'));
-    render(<Sitzungen modul={24} gruppen={GRUPPEN} />);
+    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
     fireEvent.click(await screen.findByRole('button', { name: 'Erneut versuchen' }));
     expect(await screen.findByText('Klausur')).toBeTruthy();
     expect(screen.queryByText('Keine kommenden Sitzungen.')).toBeNull();
   });
 
   it('Protokoll öffnen: das Dokument aus den Teilen, Bereiche, zurück zur Liste', async () => {
-    render(<Sitzungen modul={24} gruppen={GRUPPEN} />);
+    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
     fireEvent.click(await screen.findByText(/freigegeben am 15\.10\.2026/));
     expect(await screen.findByText('Andacht & Gebet')).toBeTruthy();
     expect(screen.getByRole('region', { name: /To-Dos/ })).toBeTruthy();
@@ -111,21 +112,28 @@ describe('Reiter „Sitzungen“ (S3-2)', () => {
   });
 
   it('Sitzung ohne Protokoll: sagt das', async () => {
-    render(<Sitzungen modul={24} gruppen={GRUPPEN} />);
+    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
     fireEvent.click(await screen.findByText('Klausur'));
     expect(await screen.findByText(/gibt es noch kein Protokoll/)).toBeTruthy();
   });
 
   it('Teile fehlen (gerade gespeichert): Hinweis statt halbem Dokument', async () => {
     m.ladeSitzungen.mockResolvedValue({ ...DATEN, teile: DATEN.teile.slice(0, 0) });
-    render(<Sitzungen modul={24} gruppen={GRUPPEN} />);
+    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
     fireEvent.click(await screen.findByText(/freigegeben am 15\.10\.2026/));
     expect(await screen.findByText(/nicht vollständig lesbar/)).toBeTruthy();
     expect(screen.queryByText('Andacht & Gebet')).toBeNull();
   });
 
   it('S3-3: Auswahl von der Startseite – diese Gruppe, die Sitzung gleich offen', async () => {
-    render(<Sitzungen modul={24} gruppen={GRUPPEN} auswahl={{ gruppe: 7, sitzung: 'p:okt' }} />);
+    render(
+      <Sitzungen
+        ich={ICH}
+        modul={24}
+        gruppen={GRUPPEN}
+        auswahl={{ gruppe: 7, sitzung: 'p:okt' }}
+      />,
+    );
     expect(await screen.findByText('Andacht & Gebet')).toBeTruthy();
     expect(m.ladeSitzungen).toHaveBeenCalledWith(24, GRUPPEN[1], expect.any(String));
     // „Zurück“ führt zur Liste dieser Gruppe – die Auswahl öffnet die Sitzung nicht noch einmal.
@@ -138,7 +146,7 @@ describe('Reiter „Sitzungen“ (S3-2)', () => {
   });
 
   it('S3-3: nur die Gruppe gewählt – die Liste, nichts geöffnet', async () => {
-    render(<Sitzungen modul={24} gruppen={GRUPPEN} auswahl={{ gruppe: 7 }} />);
+    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} auswahl={{ gruppe: 7 }} />);
     expect(await screen.findByRole('region', { name: 'Kommend' })).toBeTruthy();
     expect(m.ladeSitzungen).toHaveBeenCalledWith(24, GRUPPEN[1], expect.any(String));
   });
@@ -148,7 +156,12 @@ describe('Reiter „Sitzungen“ (S3-2)', () => {
     Element.prototype.scrollIntoView = springen;
     const punkt = BLOCKNOTE_DOKUMENT.find((b) => b.type === 'heading')!.id;
     render(
-      <Sitzungen modul={24} gruppen={GRUPPEN} auswahl={{ gruppe: 11, sitzung: 'p:okt', punkt }} />,
+      <Sitzungen
+        ich={ICH}
+        modul={24}
+        gruppen={GRUPPEN}
+        auswahl={{ gruppe: 11, sitzung: 'p:okt', punkt }}
+      />,
     );
     const h = (await screen.findByText('Andacht & Gebet')).closest('h3')!;
     expect(h.id).toBe(`punkt-${punkt}`);
@@ -169,7 +182,12 @@ describe('Reiter „Sitzungen“ (S3-2)', () => {
     const punkt = BLOCKNOTE_DOKUMENT.find((b) => b.type === 'heading')!.id;
     render(
       <StrictMode>
-        <Sitzungen modul={24} gruppen={GRUPPEN} auswahl={{ gruppe: 11, sitzung: 'p:okt', punkt }} />
+        <Sitzungen
+          ich={ICH}
+          modul={24}
+          gruppen={GRUPPEN}
+          auswahl={{ gruppe: 11, sitzung: 'p:okt', punkt }}
+        />
       </StrictMode>,
     );
     expect(m.ladeSitzungen.mock.calls.length).toBeGreaterThan(1);
@@ -180,7 +198,7 @@ describe('Reiter „Sitzungen“ (S3-2)', () => {
   });
 
   it('keine Gruppe: ein Satz, kein Laden', () => {
-    render(<Sitzungen modul={24} gruppen={[]} />);
+    render(<Sitzungen ich={ICH} modul={24} gruppen={[]} />);
     expect(screen.getByText(/keiner Gruppe/)).toBeTruthy();
     expect(m.ladeSitzungen).not.toHaveBeenCalled();
   });

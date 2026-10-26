@@ -15,6 +15,7 @@ import {
   type MitgliederDaten,
 } from './ladeMitglieder';
 import { ladeEinsaetze } from './ladeEinsaetze';
+import { ladePlan } from './plan';
 import { ladeGruppenRechte } from './mitgliedschaft';
 import { personenSuchen } from '@ui/ct/personen';
 import { heuteImKalender } from '@shared/ct/zeit';
@@ -121,7 +122,7 @@ vi.mock('./struktur', () => ({
 vi.mock('./ladeEinsaetze', () => ({ ladeEinsaetze: vi.fn() }));
 // Der Plan (O7) – hier nur, ob der Reiter da ist; die Bedienung prüft NeueGliederung.test.tsx.
 vi.mock('./plan', () => ({
-  ladePlan: () => Promise.resolve({ ok: true, daten: null }),
+  ladePlan: vi.fn(() => Promise.resolve({ ok: true, daten: null })),
   speicherePlan: vi.fn(),
   verwerfePlan: vi.fn(),
 }));
@@ -495,7 +496,8 @@ describe('O4: Präsentation', () => {
     const knopf = await screen.findByRole('button', { name: /Präsentieren/ });
     await vi.waitFor(() => expect((knopf as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(knopf);
-    return screen.getByRole('dialog', { name: 'Präsentation' });
+    // Für Gruppen-Admins liest „Präsentieren“ erst den Plan (O7-4) – die Präsentation kommt danach.
+    return screen.findByRole('dialog', { name: 'Präsentation' });
   };
   const wo = (d: HTMLElement) => d.querySelector('[aria-live]')?.textContent;
 
@@ -578,7 +580,7 @@ describe('O4: Präsentation', () => {
     const knopf = screen.getByRole('button', { name: /Präsentieren/ });
     await vi.waitFor(() => expect((knopf as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(knopf);
-    const d = screen.getByRole('dialog', { name: 'Präsentation' });
+    const d = await screen.findByRole('dialog', { name: 'Präsentation' });
     expect(within(d).getByText('2 Bereiche · 1 Gruppe · 4 Personen')).toBeTruthy();
     expect(within(d).queryByRole('heading', { name: 'Infos' })).toBeNull();
   });
@@ -593,7 +595,7 @@ describe('O4: Präsentation', () => {
     HTMLElement.prototype.requestFullscreen = anfordern;
     try {
       fireEvent.click(screen.getByRole('button', { name: /Präsentieren/ }));
-      const d = screen.getByRole('dialog', { name: 'Präsentation' });
+      const d = await screen.findByRole('dialog', { name: 'Präsentation' });
       fireEvent.click(within(d).getByRole('button', { name: 'Vollbild' }));
       expect(anfordern).toHaveBeenCalledTimes(1);
       fireEvent.keyDown(window, { key: 'f' });
@@ -602,6 +604,75 @@ describe('O4: Präsentation', () => {
       Reflect.deleteProperty(document, 'fullscreenEnabled');
       Reflect.deleteProperty(HTMLElement.prototype, 'requestFullscreen');
     }
+  });
+});
+
+describe('O7-4: Präsentation „Neue Gliederung | Heute“', () => {
+  // Plan: Bereich „Gemeinschaft“ neu mit Café darin, Technik heißt „Medien“, „Jugend“ neu und noch leer
+  const PLAN = {
+    neu: [
+      { id: 'n1', name: 'Gemeinschaft', typId: 2, eltern: null },
+      { id: 'n2', name: 'Jugend', typId: 2, eltern: null },
+    ],
+    eltern: { '47': 'n1' },
+    namen: { '7': 'Medien' },
+    archiv: [],
+  };
+  const mitPlan = () =>
+    vi.mocked(ladePlan).mockResolvedValueOnce({
+      ok: true,
+      daten: { version: 1, zeit: 'z', von: { personId: 1, name: 'Alwin' }, inhalt: PLAN },
+    });
+  const oeffnen = async () => {
+    render(<App />);
+    const knopf = await screen.findByRole('button', { name: /Präsentieren/ });
+    await vi.waitFor(() => expect((knopf as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(knopf);
+    return screen.findByRole('dialog', { name: 'Präsentation' });
+  };
+
+  it('Gruppen-Admin mit Plan: beginnt mit „Neue Gliederung“ – neue Gruppen, neue Namen; „Heute“ zeigt ChurchTools', async () => {
+    mitPlan();
+    const d = await oeffnen();
+    expect(within(d).getByText(/^Neue Gliederung · 4 Bereiche/)).toBeTruthy();
+    expect(within(d).getByRole('heading', { name: 'Gemeinschaft' })).toBeTruthy();
+    // eine neue, leere Gruppe ist „gesucht“ – nicht „nicht sichtbar“
+    const jugend = within(d).getByRole('heading', { name: 'Jugend' }).closest('button')!;
+    expect(within(jugend).getByText('Mitarbeitende gesucht')).toBeTruthy();
+    expect(within(d).getAllByText('Medien').length).toBeGreaterThan(0);
+    expect(within(d).queryByText('Technik')).toBeNull();
+
+    // eine Seite weiter, dann umschalten → zurück zur Übersicht, Stand von heute
+    fireEvent.keyDown(window, { key: 'ArrowRight' });
+    fireEvent.click(within(d).getByRole('button', { name: 'Heute' }));
+    expect(within(d).getByText(/^Heute · 3 Bereiche/)).toBeTruthy();
+    expect(within(d).queryByRole('heading', { name: 'Gemeinschaft' })).toBeNull();
+    expect(within(d).getAllByText('Technik').length).toBeGreaterThan(0);
+    expect(d.querySelector('[aria-live]')?.textContent).toBe('Übersicht');
+  });
+
+  it('ohne Plan, ohne Admin-Recht oder wenn der Plan gerade nicht lesbar ist: nur „Heute“, ohne Umschalter', async () => {
+    const plan = vi.mocked(ladePlan);
+    let d = await oeffnen(); // kein Plan
+    expect(within(d).queryByRole('button', { name: 'Neue Gliederung' })).toBeNull();
+    cleanup();
+
+    plan.mockClear();
+    laden.mockResolvedValue(start({ rechte: rechte() }));
+    mitPlan();
+    d = await oeffnen();
+    expect(within(d).queryByRole('button', { name: 'Neue Gliederung' })).toBeNull();
+    expect(within(d).getByText(/^3 Bereiche/)).toBeTruthy();
+    expect(plan).not.toHaveBeenCalled();
+    plan.mockReset();
+    plan.mockImplementation(() => Promise.resolve({ ok: true, daten: null }));
+    cleanup();
+
+    laden.mockResolvedValue(start());
+    plan.mockRejectedValueOnce(new Error('Netz weg'));
+    d = await oeffnen();
+    expect(within(d).queryByRole('button', { name: 'Neue Gliederung' })).toBeNull();
+    expect(within(d).getByText(/^3 Bereiche/)).toBeTruthy();
   });
 });
 

@@ -6,7 +6,10 @@ import { ctDaten } from '@ui/ct/verbindung';
 import { ladeStart } from './start';
 
 vi.mock('@ui/ct/ich', () => ({ ladeIch: vi.fn() }));
-vi.mock('@ui/ct/modulPort', () => ({ modulId: vi.fn(), modulPort: {} }));
+vi.mock('@ui/ct/modulPort', () => ({
+  modulId: vi.fn(),
+  modulPort: { kuerzel: () => 'protokolle' },
+}));
 vi.mock('@shared/ct/modulDaten', () => ({ kategorienLesen: vi.fn() }));
 vi.mock('@ui/ct/verbindung', () => ({ ctDaten: vi.fn() }));
 
@@ -52,6 +55,26 @@ describe('ladeStart', () => {
     daten.mockResolvedValue({ churchcore: { 'administer persons': true } });
     expect((await ladeStart()).darfVerwalten).toBe(true);
     expect(daten).toHaveBeenCalledWith('/permissions/global');
+  });
+
+  it('schreibbar (S4-1): nur Kategorien mit anlegen, ändern UND löschen – unter dem Kürzel der Erweiterung', async () => {
+    daten.mockResolvedValue({
+      churchcore: {},
+      protokolle: {
+        'view custom data': [60, 61, 70],
+        'create custom data': [60, 61, 70],
+        'edit custom data': [60, 61],
+        'delete custom data': [60],
+      },
+      andereerweiterung: {
+        'create custom data': [99],
+        'edit custom data': [99],
+        'delete custom data': [99],
+      },
+    });
+    expect((await ladeStart()).schreibbar).toEqual([60]);
+    daten.mockResolvedValue({ churchcore: {} });
+    expect((await ladeStart()).schreibbar).toEqual([]);
   });
 
   it('wirft, wenn die Kategorien nicht lesbar sind – keine leere Liste', async () => {

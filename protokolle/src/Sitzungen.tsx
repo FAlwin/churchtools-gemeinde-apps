@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
@@ -14,6 +14,12 @@ import { kachelVon, uhrzeit } from './anzeige';
 import { Marke } from './Marke';
 import { SitzungAnsicht } from './SitzungAnsicht';
 import styles from './Sitzungen.module.scss';
+
+// Der Editor (BlockNote, gut 1 MB) wird erst geladen, wenn die Leitung ein Protokoll schreibt (S4-1) – wer nur liest,
+// lädt ihn nie.
+const ProtokollSchreiben = lazy(() =>
+  import('./ProtokollSchreiben').then((m) => ({ default: m.ProtokollSchreiben })),
+);
 
 type Zustand =
   | { art: 'laedt' }
@@ -61,16 +67,23 @@ export interface SitzungsAuswahl {
 
 /**
  * **Reiter „Sitzungen“** (Bauplan S3-2, Entwurf 7): je Gruppe „Kommend“ (Termine mit Besprechungsanfrage,
- * Gruppentreffen, begonnene Protokolle) und „Protokolle“ (freigegeben). Ein Tipp öffnet die Sitzung zum Lesen.
+ * Gruppentreffen, begonnene Protokolle) und „Protokolle“ (freigegeben). Ein Tipp öffnet die Sitzung zum Lesen – einen
+ * Entwurf, wenn man schreiben darf (die Leitung), im Editor (S4-1).
  * Bei mehreren Gruppen wählt man sie oben.
  */
 export function Sitzungen({
   modul,
   gruppen,
+  ich,
+  schreibbar = [],
   auswahl = null,
 }: {
   modul: number;
   gruppen: ProtokollGruppe[];
+  /** Wer angemeldet ist – für die Schreibsperre („Alwin schreibt gerade“). */
+  ich: { person: number; name: string };
+  /** Kategorien, in denen man schreiben darf (`Start.schreibbar`) – dort öffnet ein Entwurf im Editor (S4-1). */
+  schreibbar?: readonly number[];
   auswahl?: SitzungsAuswahl | null;
 }) {
   const [gruppeId, setGruppeId] = useState<number | null>(
@@ -108,6 +121,31 @@ export function Sitzungen({
   if (!gruppe)
     return (
       <p className={styles.ruhig}>Du bist in keiner Gruppe, die hier Protokolle führen kann.</p>
+    );
+
+  if (
+    offen?.kopf?.status === 'entwurf' &&
+    zustand.art === 'fertig' &&
+    gruppe.protokolle !== null &&
+    schreibbar.includes(gruppe.protokolle)
+  )
+    return (
+      <Suspense fallback={<p className={styles.ruhig}>Editor wird geladen …</p>}>
+        <ProtokollSchreiben
+          sitzung={offen}
+          gruppe={gruppe.name}
+          gruppeId={gruppe.id}
+          modul={modul}
+          kategorie={gruppe.protokolle}
+          mitarbeit={gruppe.mitarbeit}
+          ich={ich}
+          zeitzone={zeitzone}
+          onZurueck={(geaendert) => {
+            setOffen(null);
+            if (geaendert) laden();
+          }}
+        />
+      </Suspense>
     );
 
   if (offen && zustand.art === 'fertig')

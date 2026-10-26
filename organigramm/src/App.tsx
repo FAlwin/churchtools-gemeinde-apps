@@ -24,7 +24,9 @@ import { GruppenFenster } from './GruppenFenster';
 import { Personen } from './Personen';
 import { PersonFenster } from './PersonFenster';
 import { Hinweise } from './Hinweise';
-import { Praesentation } from './Praesentation';
+import { Praesentation, type Stand } from './Praesentation';
+import { ladePlan } from './plan';
+import { planAlsBaum, planBaum, planGruppen, type PlanAenderungen } from '@shared/organigramm/plan';
 import { NeueGliederung } from './NeueGliederung';
 import { leseAusgeblendet, merkeAusgeblendet } from './auswahl';
 
@@ -53,7 +55,8 @@ const ansichtAusAdresse = (hash: string, admin: boolean): Ansicht =>
  * Mitglieder aller Gruppen (gedrosselt) und die Termine mit den Einsätzen. Der Baum steht schon, während beides lädt.
  * Personen und Hinweise gibt es nur für den eigenen Bereich (`sichtbereich`); wer nichts leitet und kein Admin ist,
  * sieht nur das Organigramm – ohne Reiter. Die Präsentation (O4) gibt es für alle; sie blendet dieselben
- * Gruppentypen aus wie der Baum (Alwin, 22.10.2026) – deshalb liegt diese Wahl hier und nicht im Baum.
+ * Gruppentypen aus wie der Baum (Alwin, 22.10.2026) – deshalb liegt diese Wahl hier und nicht im Baum. Gruppen-Admins
+ * mit einem Plan präsentieren auch die „Neue Gliederung“ (O7-4).
  */
 export function App() {
   const [zustand, setZustand] = useState<SeitenZustand>({ art: 'laedt' });
@@ -64,6 +67,9 @@ export function App() {
   const [offenePerson, setOffenePerson] = useState<number | null>(null);
   const [ausgeblendet, setAusgeblendet] = useState(leseAusgeblendet);
   const [praesentiert, setPraesentiert] = useState(false);
+  // Präsentation „Neue Gliederung | Heute“ (O7-4): der Plan, frisch beim Öffnen gelesen – nur für Gruppen-Admins.
+  const [praesPlan, setPraesPlan] = useState<PlanAenderungen | null>(null);
+  const [praesStand, setPraesStand] = useState<Stand>('heute');
   const [hash, setHash] = useState(() => window.location.hash);
   const handy = useMedienAbfrage('(max-width: 759px)');
 
@@ -174,18 +180,53 @@ export function App() {
     return { mitglieder: m, angefragt: a };
   }, [mitglieder]);
   const personen = useMemo(() => personenImBereich(lesbar.mitglieder, bereich), [lesbar, bereich]);
-  const praesentation = useMemo(
-    () =>
-      praesentiert && start && mitglieder
-        ? praesentationAus(
-            baumOhneTypen(start.baum, ausgeblendet),
-            lesbar.mitglieder,
-            start.rollen,
-            (id) => mitglieder.personen.get(id)?.name ?? '',
-          )
-        : null,
-    [praesentiert, start, mitglieder, lesbar, ausgeblendet],
-  );
+  const praesentation = useMemo(() => {
+    if (!praesentiert || !start || !mitglieder) return null;
+    let baum = start.baum;
+    let personen: ReadonlyMap<number, readonly Mitglied[]> = lesbar.mitglieder;
+    if (praesStand === 'neu' && praesPlan) {
+      const plan = planAlsBaum(
+        planBaum(planGruppen({ gruppen: start.gruppen, eltern: start.eltern }, praesPlan)),
+        start.gruppen,
+      );
+      baum = plan.baum;
+      // Neue Gruppen haben (noch) niemanden – sichtbar leer, nicht „nicht sichtbar“.
+      personen = new Map<number, readonly Mitglied[]>([
+        ...lesbar.mitglieder,
+        ...plan.neueIds.map((id): [number, readonly Mitglied[]] => [id, []]),
+      ]);
+    }
+    return praesentationAus(
+      baumOhneTypen(baum, ausgeblendet),
+      personen,
+      start.rollen,
+      (id) => mitglieder.personen.get(id)?.name ?? '',
+    );
+  }, [praesentiert, start, mitglieder, lesbar, ausgeblendet, praesStand, praesPlan]);
+
+  const praesentieren = () => {
+    if (!start?.rechte.gruppenVerwalten) {
+      setPraesPlan(null);
+      setPraesStand('heute');
+      setPraesentiert(true);
+      return;
+    }
+    // Gibt es einen Plan, beginnt die Präsentation mit ihm (Entwurf 19.10.2026). Ist er gerade nicht lesbar, eben mit
+    // „Heute“ – die Präsentation darf daran nicht scheitern.
+    ladePlan().then(
+      (r) => {
+        const plan = r.ok ? (r.daten?.inhalt ?? null) : null;
+        setPraesPlan(plan);
+        setPraesStand(plan ? 'neu' : 'heute');
+        setPraesentiert(true);
+      },
+      () => {
+        setPraesPlan(null);
+        setPraesStand('heute');
+        setPraesentiert(true);
+      },
+    );
+  };
   const typUmschalten = (typ: number) => {
     const neu = new Set(ausgeblendet);
     if (neu.has(typ)) neu.delete(typ);
@@ -257,7 +298,7 @@ export function App() {
           onTypUmschalten={typUmschalten}
           onNachladen={nachladen}
           onGruppe={gruppeOeffnen}
-          onPraesentieren={() => setPraesentiert(true)}
+          onPraesentieren={praesentieren}
         />
       )}
       {start && ansicht === 'personen' && (
@@ -281,7 +322,9 @@ export function App() {
           onEinsaetzeNachladen={einsaetzeLaden}
         />
       )}
-      {start && ansicht === 'gliederung' && <NeueGliederung start={start} />}
+      {start && ansicht === 'gliederung' && (
+        <NeueGliederung start={start} onStruktur={strukturNeu} />
+      )}
       {start && offenerKnoten && (
         <GruppenFenster
           key={offenerKnoten.gruppe.id}
@@ -310,6 +353,7 @@ export function App() {
           start={start}
           daten={praesentation}
           mitglieder={mitglieder}
+          stand={praesPlan ? { wert: praesStand, onWechsel: setPraesStand } : undefined}
           onSchliessen={() => setPraesentiert(false)}
         />
       )}

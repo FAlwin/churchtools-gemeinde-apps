@@ -166,6 +166,21 @@ export function istDokument(x: unknown): x is Block[] {
   return Array.isArray(x) && x.every(istBlock);
 }
 
+/**
+ * **Blockarten, die ein Editor nicht kennt** (S4-1) – auch in Unterpunkten, sortiert, ohne Doppel. Ein Editor verwirft
+ * beim Laden, was er nicht kennt, und beim nächsten Speichern wäre es weg. Steht hier etwas, wird das Protokoll nur
+ * gelesen (etwa wenn eine neuere Fassung der Erweiterung schon Blöcke kennt, die diese noch nicht hat).
+ */
+export function fremdeTypen(dokument: readonly Block[], bekannt: ReadonlySet<string>): string[] {
+  const fremd = new Set<string>();
+  const besuche = (b: Block): void => {
+    if (!bekannt.has(b.type)) fremd.add(b.type);
+    for (const k of b.children ?? []) besuche(k);
+  };
+  dokument.forEach(besuche);
+  return [...fremd].sort();
+}
+
 /** Eine tiefe Kopie mit neuen IDs – für Vorlagen und „wie letztes Mal“. */
 export function mitNeuenIds(bloecke: readonly Block[], neueId: () => string): Block[] {
   return bloecke.map((b) => ({

@@ -16,6 +16,12 @@ const h = vi.hoisted(() => ({ kategorie: null as number | null, port: null as ob
 vi.mock('@ui/ct/modulPort', () => ({
   versionPortFuer: () => new Proxy({}, { get: (_ziel, k) => Reflect.get(h.port ?? {}, k) }),
 }));
+// Der Umbau (O7-3) prüft Umbau.test.tsx; hier nur, dass er nichts lädt, was es nicht gibt.
+vi.mock('./struktur', () => ({
+  ladeUmbauStatus: () =>
+    Promise.resolve({ aktiv: 1, archiviert: 3, archivierteGruppen: new Map() }),
+  umbauZugriff: {},
+}));
 vi.mock('@shared/ct/modulDaten', async (original) => ({
   ...(await original<typeof import('@shared/ct/modulDaten')>()),
   modulSuchen: () => Promise.resolve(MODUL),
@@ -80,7 +86,7 @@ const zeile = (name: string) => screen.getByRole('button', { name: new RegExp(`^
 const fenster = () => within(screen.getByRole('dialog'));
 
 async function mitPlan() {
-  render(<NeueGliederung start={START} />);
+  render(<NeueGliederung start={START} onStruktur={() => Promise.resolve(true)} />);
   fireEvent.click(await screen.findByRole('button', { name: 'Plan anlegen' }));
   await screen.findByText(/Gespeichert von Alwin/);
 }
@@ -267,7 +273,7 @@ describe('Reiter „Neue Gliederung“ (O7-2)', () => {
   it('Laden scheitert vorübergehend → „Erneut versuchen“ lädt den Plan', async () => {
     h.kategorie = KAT;
     sp.s.lesenWirft = new Fehler(503);
-    render(<NeueGliederung start={START} />);
+    render(<NeueGliederung start={START} onStruktur={() => Promise.resolve(true)} />);
     await screen.findByText(/ChurchTools antwortet gerade nicht/);
     sp.s.lesenWirft = null;
     fireEvent.click(screen.getByRole('button', { name: 'Erneut versuchen' }));

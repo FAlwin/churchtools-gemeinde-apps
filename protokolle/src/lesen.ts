@@ -7,16 +7,18 @@
  * Person die Gruppentreffen nicht sehen (403, je nach Gruppentyp), fehlen nur die Treffen, und das wird gemeldet
  * (`treffenNichtFreigegeben`) statt einer stillen Lücke.
  */
-import { werteLesen, type Wert } from '@shared/ct/modulDaten';
+import { werteLesen } from '@shared/ct/modulDaten';
 import { tagAusIso } from '@shared/ct/zeit';
 import { plusTage } from '@shared/ct/datum';
 import { mapLimit } from '@shared/ct/mapLimit';
 import { istEinstellung } from '@shared/protokolle/einrichten';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
-import { istAufgabe, type Aufgabe } from '@shared/protokolle/aufgaben';
+import type { Aufgabe } from '@shared/protokolle/aufgaben';
+import { aufgabenWerte } from './aufgabenSchreiben';
 import {
   istKopf,
   istTeil,
+  wertInhalt,
   type ProtokollKopf,
   type ProtokollTeil,
 } from '@shared/protokolle/speicher';
@@ -46,14 +48,6 @@ export interface GruppenSitzungen {
   /** ChurchTools zeigt dieser Person die Gruppentreffen nicht (403) – „Kommend“ ist dann nur der Kalender. */
   treffenNichtFreigegeben: boolean;
 }
-
-const json = (w: Wert): unknown => {
-  try {
-    return JSON.parse(w.value);
-  } catch {
-    return null;
-  }
-};
 
 interface TerminRoh {
   base?: { id: number; title: string; calendar?: { id: number } };
@@ -130,7 +124,7 @@ export async function ladeSitzungen(
   let kalender: number | null = null;
   if (gruppe.protokolle !== null) {
     for (const w of await werteLesen(modulPort, modul, gruppe.protokolle)) {
-      const x = json(w);
+      const x = wertInhalt(w);
       if (istKopf(x)) koepfe.push(x);
       else if (istTeil(x)) teile.push(x);
       else if (istEinstellung(x) && x.gruppe === gruppe.id) kalender = x.kalender;
@@ -151,15 +145,15 @@ export async function ladeSitzungen(
   };
 }
 
-/** **Die Aufgaben einer Gruppe** (gelöschte nicht). Ohne Mitarbeit-Kategorie: keine. */
+/** **Die Aufgaben einer Gruppe** (gelöschte nicht). Ohne Mitarbeit-Kategorie: keine. Gelesen über `aufgabenWerte`. */
 export async function ladeAufgaben(
   modul: number,
   gruppe: Pick<ProtokollGruppe, 'mitarbeit'>,
 ): Promise<Aufgabe[]> {
   if (gruppe.mitarbeit === null) return [];
-  return (await werteLesen(modulPort, modul, gruppe.mitarbeit))
-    .map(json)
-    .filter((x): x is Aufgabe => istAufgabe(x) && !x.geloescht);
+  return (await aufgabenWerte({ modul, kategorie: gruppe.mitarbeit }))
+    .map((x) => x.aufgabe)
+    .filter((a) => !a.geloescht);
 }
 
 export interface GruppenUebersicht {

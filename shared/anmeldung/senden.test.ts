@@ -6,6 +6,7 @@ import {
   aufschluesselungText,
   betragAus,
   buchungAus,
+  mitLink,
   neueAnmeldeNr,
   ctWert,
   type CtFormular,
@@ -270,5 +271,29 @@ describe('A6-5a (#612): Anmelde-Nr. und Betrag nur für Personen mit Platz', () 
 
   it('neueAnmeldeNr: sechs Zeichen ohne verwechselbare (0, O, 1, I, L)', () => {
     for (let i = 0; i < 200; i++) expect(neueAnmeldeNr()).toMatch(/^[2-9A-HJKMNP-Z]{6}$/);
+  });
+});
+
+describe('Link zu „Deine Anmeldung“ (A9-1)', () => {
+  const MIT_LINK: CtFormular = {
+    ...CT,
+    form: [...CT.form, { id: 630, type: 'custom', name: 'Link zur Anmeldung' }],
+  };
+  it('mit dem Feld: kommt nur über mitLink dazu – je Person mit ihrem eigenen Link', () => {
+    const e = einstellungen();
+    e.ctFelder = { ...e.ctFelder, link: 630 };
+    const a = anmeldungAufbauen(e, antworten(), { option: 0, extras: [] }, HEUTE, MIT_LINK);
+    expect(a.linkFeld).toBe('630');
+    // Ohne Schlüssel noch kein Link – den kennt erst, wer die Person absendet.
+    expect(a.forms.some((f) => wert(f.form, 630) !== undefined)).toBe(false);
+    const [erste, zweite] = a.forms.map((f, i) => mitLink(a, f, `L${i}`));
+    expect([wert(erste.form, 630), wert(zweite.form, 630)]).toEqual(['L0', 'L1']);
+    // Die übrigen Werte bleiben unverändert.
+    expect(erste.form.slice(0, -1)).toEqual(a.forms[0].form);
+  });
+  it('ältere Veranstaltung ohne das Feld: kein Link, kein Fehler', () => {
+    const a = anmeldungAufbauen(einstellungen(), antworten(), { option: 0, extras: [] }, HEUTE, CT);
+    expect(a.linkFeld).toBeNull();
+    expect(mitLink(a, a.forms[0], 'L')).toBe(a.forms[0]);
   });
 });

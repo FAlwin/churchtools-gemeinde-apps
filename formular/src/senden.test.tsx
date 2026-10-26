@@ -11,7 +11,7 @@ import { App } from './App';
  */
 function einstellungen() {
   const e = neueEinstellungen('einfach');
-  e.ctFelder = { kontakt: 580, tel: 603, note: 606, allergy: 609 };
+  e.ctFelder = { kontakt: 580, tel: 603, note: 606, allergy: 609, link: 612 };
   return e;
 }
 const GRUPPE = {
@@ -32,6 +32,7 @@ const FORM = {
     { id: 603, type: 'custom', name: 'Telefon' },
     { id: 606, type: 'custom', name: 'Bemerkungen' },
     { id: 609, type: 'custom', name: 'Allergien' },
+    { id: 612, type: 'custom', name: 'Link zur Anmeldung' },
     { id: -2, type: 'privacy', name: 'privacy' },
   ],
   addChildForm: [{ id: 16, type: 'person', name: 'birthday' }],
@@ -131,6 +132,8 @@ describe('Echt anmelden (A6-2)', () => {
       'Maria Beispiel',
       '0151 111',
     ]);
+    // A9-1: der fertige Link zu „Deine Anmeldung“ mit dem Schlüssel dieser Anmeldung – für die Bestätigungsmail.
+    expect(w('612')).toBe(`${window.location.origin}/#test.church.tools/66/abmelden/T1`);
     // Nach einer echten Anmeldung kein „Zurück“ (sonst zweite Anmeldung).
     expect(screen.queryByRole('button', { name: 'Zurück zum Formular' })).toBeNull();
   });
@@ -254,6 +257,13 @@ describe('Mehrere Personen (#602) – jede einzeln, Plätze beim Hinzufügen', (
       (a) => a.body as { token: string; forms: { form: { id: string }[] }[] },
     );
     expect(b.map((x) => x.token)).toEqual(['T1', 'T2']);
+    // A9-1: Jede Person bekommt den Link mit IHREM Schlüssel – „Deine Anmeldung“ zeigt sonst die falsche Person.
+    const link = (i: number) =>
+      (b[i].forms[0].form as { id: string; value?: string }[]).find((x) => x.id === '612')?.value;
+    expect([link(0), link(1)]).toEqual([
+      `${window.location.origin}/#test.church.tools/66/abmelden/T1`,
+      `${window.location.origin}/#test.church.tools/66/abmelden/T2`,
+    ]);
     const hat = (i: number, id: string) => b[i].forms[0].form.some((x) => x.id === id);
     expect([hat(0, '580'), hat(1, '580'), hat(0, '603'), hat(1, '603')]).toEqual([
       true,

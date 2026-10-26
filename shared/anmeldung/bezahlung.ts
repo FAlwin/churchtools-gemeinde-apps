@@ -73,6 +73,21 @@ export function ibanText(text: string): string {
   return ibanNormal(text).replace(/(.{4})(?=.)/g, '$1 ');
 }
 
+/**
+ * **Die Bankdaten als Zeilen** – Kontoinhaber, IBAN, BIC (wenn da) und Verwendungszweck. Die eine Stelle für alle Mails:
+ * Bescheid nach dem Nachrücken (`bescheidMail`), Rundmail „Zahlungserinnerung“ und Bestätigung (A9). `nachname`: echter
+ * Name oder ein Platzhalter, den erst der Versand füllt. Ohne IBAN leer.
+ */
+export function bankZeilen(b: Bezahlung, nachname: string): string[] {
+  if (!b.iban) return [];
+  return [
+    `Kontoinhaber: ${b.kontoinhaber}`,
+    `IBAN: ${ibanText(b.iban)}`,
+    ...(b.bic ? [`BIC: ${b.bic}`] : []),
+    `Verwendungszweck: ${verwendungszweck(b.zweck, nachname)}`,
+  ];
+}
+
 /** Der Verwendungszweck einer Anmeldung: `[Nachname]` ersetzt. */
 export function verwendungszweck(zweck: string, nachname: string): string {
   return zweck.split(NACHNAME).join(nachname.trim()).trim();

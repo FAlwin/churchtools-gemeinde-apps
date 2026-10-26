@@ -6,9 +6,11 @@ import {
   type NeuePersonVorgaben,
   type Stammdaten,
 } from '@shared/anmeldung/vorbereiten';
+import { ablaeufeEinrichten, absenderAus } from './ablaeufe';
 import {
   anmeldeBedingungen,
   anmeldenVorbereiten,
+  darfAblaeufeEinrichten,
   freigeben,
   leitungsKandidaten,
   meineId,
@@ -25,6 +27,10 @@ import f from './Formular.module.scss';
  * (gemessen 14.10.2026): eine **Leitung** – Alwin: „beim Freigeben auswählen“ – und die **Vorgaben für neue
  * Personen** (einmal je Gemeinde, `gemeinde.ts`). Danach fragt es ChurchTools wie ein Gast, ob Anmeldungen
  * angenommen werden, und sagt sonst, was fehlt.
+ *
+ * A9-1: Dabei richtet es die **Bestätigungsmails** ein (Routinen „Platz“ und „Warteliste“, Standard-Mail aus). Absender
+ * ist, wer freigibt – wenn er zur Leitung gehört, sonst die erste gewählte Leitung. Fehlt das Recht „Routinen
+ * verwalten“, wird trotzdem freigegeben; ChurchTools schickt dann seine Standard-Mail, und die Meldung sagt das.
  */
 export function FreigebenFenster({
   id,
@@ -43,6 +49,7 @@ export function FreigebenFenster({
 }) {
   const [kandidaten, setKandidaten] = useState<LeitungsKandidat[] | null>(null);
   const [gewaehlt, setGewaehlt] = useState<Set<number>>(new Set());
+  const [ich, setIch] = useState<number | null>(null);
   const [daten, setDaten] = useState<Stammdaten | null>(null);
   const [vorgaben, setVorgaben] = useState<Partial<NeuePersonVorgaben> | null>(null);
   const [arbeitet, setArbeitet] = useState(false);
@@ -60,6 +67,7 @@ export function FreigebenFenster({
       ([k, ich, [s, v]]) => {
         if (!aktuell) return;
         setKandidaten(k);
+        setIch(ich);
         // Wer schon Leitung ist, bleibt gewählt; sonst die Person, die gerade freigibt.
         const schon = k.filter((x) => x.leitung).map((x) => x.personId);
         setGewaehlt(new Set(schon.length ? schon : [ich]));
@@ -87,11 +95,17 @@ export function FreigebenFenster({
     setFehler(null);
     try {
       await anmeldenVorbereiten(id, [...gewaehlt], vorgaben);
+      const mails = await darfAblaeufeEinrichten(id);
+      if (mails) await ablaeufeEinrichten(id, absenderAus(gewaehlt, ich));
       await pflichtNachziehen(id);
       await freigeben(id);
       const offen = await anmeldeBedingungen(id);
       if (offen.length === 0) {
-        onFreigegeben('Freigegeben – Gäste können sich anmelden, sobald der Zeitraum läuft.');
+        onFreigegeben(
+          mails
+            ? 'Freigegeben – Gäste können sich anmelden, sobald der Zeitraum läuft.'
+            : 'Freigegeben. Die Bestätigungsmails konnte die Erweiterung nicht einrichten (dir fehlt in ChurchTools das Recht „Routinen verwalten“) – ChurchTools schickt seine Standard-Mail ohne Betrag.',
+        );
         return;
       }
       setFehlt(offen);
@@ -150,6 +164,11 @@ export function FreigebenFenster({
             : 'Für neue Personen ist noch nicht festgelegt, welchen Status, Standort und Bereich sie bekommen. Das legt ein Gruppen-Admin einmal für die Gemeinde fest (Startseite → Einstellungen).'}
         </p>
       )}
+      <p className={f.hinweis}>
+        Nach dem Anmelden schickt ChurchTools jeder Person eine Bestätigung – mit Betrag, Bankdaten
+        und dem Link zu „Deine Anmeldung“, auf der Warteliste mit ihrem Platz. Absender ist die
+        Leitung.
+      </p>
       {!formularAdresse && (
         <p className={f.fehler}>
           Es gibt noch keine Adresse für das Anmeldeformular – ohne sie kann sich niemand anmelden.

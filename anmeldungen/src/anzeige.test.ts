@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Veranstaltung } from '@shared/anmeldung/uebersicht';
 import {
+  mailHinweis,
   alterText,
   anpassungText,
   anzahlText,
@@ -129,5 +130,22 @@ describe('Preis-Texte der Karte (A4)', () => {
         gilt: 'anmeldung',
       }),
     ).toBe('+20 % pro Anmeldung');
+  });
+});
+
+describe('mailHinweis (A9-1)', () => {
+  it('mit eingerichteten Abläufen: Bestätigung von ChurchTools – Nachrücken mit Betrag, Eintragen ohne Link', () => {
+    expect(mailHinweis('nachruecken', true, 'Mia')).toBe(
+      'ChurchTools schickt Mia die Bestätigung mit Betrag und Bankdaten.',
+    );
+    expect(mailHinweis('eintragen', true, 'Mia')).toMatch(
+      /Bestätigung .* ohne Link zu „Deine Anmeldung“/,
+    );
+  });
+  it('ohne Abläufe: wie gemessen (19.10.2026) – Nachrücken nur „war erfolgreich“, Eintragen keine Mail', () => {
+    expect(mailHinweis('nachruecken', false, 'Mia')).toMatch(
+      /nur „Deine Anmeldung war erfolgreich“ – ohne Betrag/,
+    );
+    expect(mailHinweis('eintragen', false, 'Mia')).toMatch(/keine Mail/);
   });
 });

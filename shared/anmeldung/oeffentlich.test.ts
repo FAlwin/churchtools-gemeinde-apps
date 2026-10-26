@@ -8,6 +8,7 @@ import {
   formularAdresseAus,
   abmeldeDatenAus,
   abmeldeOrtAusLink,
+  abmeldeLink,
   abmeldeVorlage,
   freiePlaetzeAus,
   platzPlan,
@@ -158,6 +159,21 @@ describe('„Deine Anmeldung“ (A6-4) – Link aus der Mail', () => {
     );
     expect(abmeldeOrtAusLink('#test.church.tools/165')).toBeNull();
     expect(ortAusLink('#test.church.tools/165/abmelden/ltmB5wFTNw2N8Izw1bJ3')).toBeNull();
+  });
+
+  it('abmeldeLink (A9-1): derselbe Link wie die Vorlage nach dem Ersetzen durch ChurchTools – und lesbar', () => {
+    const basis = 'https://anmeldung.beispiel.de/#alt';
+    const fertig = abmeldeLink(basis, 'test-ecg-donrath.church.tools', 216, 'hifoIewJ8IuNiYlBIHAc');
+    expect(fertig).toBe(
+      abmeldeVorlage(basis, 'test-ecg-donrath.church.tools')
+        .replace('$groupId', '216')
+        .replace('$token', 'hifoIewJ8IuNiYlBIHAc'),
+    );
+    expect(abmeldeOrtAusLink(new URL(fertig).hash)).toEqual({
+      instanz: 'test-ecg-donrath.church.tools',
+      gruppeId: 216,
+      token: 'hifoIewJ8IuNiYlBIHAc',
+    });
   });
 
   it('kaputte Links → null (falscher Token, kein Rechnername, Gruppe 0)', () => {

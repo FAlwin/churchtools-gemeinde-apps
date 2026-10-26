@@ -4,6 +4,7 @@ import { mailtoLink } from '@shared/anmeldung/bewegung';
 import { euroText } from '@shared/anmeldung/preis';
 import f from './Formular.module.scss';
 import a from './AnmeldungenReiter.module.scss';
+import { mailHinweis } from './anzeige';
 
 /**
  * **Rückfragen und Mail im Fenster einer Anmeldung** (A7-3, Entwurf `a7-3-nachruecken-v1`) – sie ersetzen den Inhalt
@@ -44,10 +45,13 @@ export function NachrueckenFrage({
   plan,
   vor,
   fehler,
+  mitBestaetigung = false,
 }: {
   plan: NachrueckPlan;
   vor: string;
   fehler: string | null;
+  /** Bestätigungsmails eingerichtet (A9-1) – dann schickt ChurchTools die Bestätigung mit Betrag. */
+  mitBestaetigung?: boolean;
 }) {
   const max = plan.neuesMax ?? plan.max;
   return (
@@ -92,9 +96,9 @@ export function NachrueckenFrage({
         </p>
       )}
       <p className={a.leise}>
-        ChurchTools schickt nur „Deine Anmeldung war erfolgreich“ – ohne Betrag. Danach gibt es hier
-        „Mail schreiben“. Nachrücken lässt sich <b>nicht rückgängig</b> machen (ChurchTools würde
-        sonst „Du stehst auf der Warteliste“ schicken).
+        {mailHinweis('nachruecken', mitBestaetigung, vor)} Nachrücken lässt sich{' '}
+        <b>nicht rückgängig</b> machen (ChurchTools würde sonst „Du stehst auf der Warteliste“
+        schicken).
       </p>
       {fehler && (
         <p className={f.fehler} role="alert">

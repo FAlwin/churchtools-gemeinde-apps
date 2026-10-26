@@ -51,6 +51,7 @@ import type { Aenderung } from './Rueckgaengig';
 import f from './Formular.module.scss';
 import a from './AnmeldungenReiter.module.scss';
 import k from './Baukasten.module.scss';
+import { mailHinweis } from './anzeige';
 
 /**
  * **Anmeldung von Hand** (A7-4a, Entwurf `a7-4-von-hand-v1`) – erst in ChurchTools suchen, sonst neu anlegen; dann die
@@ -109,6 +110,7 @@ export function VonHandFenster({
   onZurueckholen,
   onClose,
   onFertig,
+  mitBestaetigung = false,
 }: {
   id: number;
   e: OeffentlicheEinstellungen;
@@ -130,6 +132,8 @@ export function VonHandFenster({
   onZurueckholen?: (personId: number) => void;
   onClose: () => void;
   onFertig: (x: VonHandFertig) => void;
+  /** Bestätigungsmails eingerichtet (A9-1). */
+  mitBestaetigung?: boolean;
 }) {
   const [schritt, setSchritt] = useState<Schritt>('suchen');
   const [suche, setSuche] = useState('');
@@ -719,8 +723,8 @@ export function VonHandFenster({
           </p>
         )}
         <p className={a.leise}>
-          Wie im Formular: Wer wartet, zahlt erst beim Nachrücken. ChurchTools schickt beim Anmelden
-          von Hand keine Mail – danach gibt es „Mail schreiben“.
+          Wie im Formular: Wer wartet, zahlt erst beim Nachrücken.{' '}
+          {mailHinweis('eintragen', mitBestaetigung, vor)}
         </p>
       </PlatzWahl>
 

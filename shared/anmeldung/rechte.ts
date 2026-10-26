@@ -37,3 +37,13 @@ export function darfEinrichten(rechte: Rechte, global: Rechte): boolean {
   if (verwaltetGruppen(global)) return true;
   return rechte?.['+edit group infos'] === true && rechte?.['+edit group basic settings'] === true;
 }
+
+/**
+ * **Darf man die Abläufe (Routinen) einrichten?** (A9-1) – Recht „Routinen verwalten“ (`+admin routines`) in der
+ * Veranstaltung, oder Gruppen-Admin. Gemessen 24.10.2026: Die Leitung der Anmeldegruppe selbst hat es nicht (`POST
+ * /routines` → 403), die Leitung des Teams laut Messung A2 schon. Ohne das Recht bleibt die Standard-Mail von ChurchTools.
+ */
+export function darfAblaeufe(rechte: Rechte, global: Rechte): boolean {
+  if (verwaltetGruppen(global)) return true;
+  return rechte?.['+admin routines'] === true;
+}

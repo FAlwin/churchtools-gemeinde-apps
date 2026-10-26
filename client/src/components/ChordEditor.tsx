@@ -131,6 +131,8 @@ export function ChordEditor({
   const showAblauf = wide || bereich === 'ablauf';
   // Breit: rechts umschaltbar „Vorschau | Liedinfo“ (Entwurf C); schmal: eigener Reiter „Infos“.
   const [rechts, setRechts] = useState<'vorschau' | 'liedinfo'>('vorschau');
+  // Welches Feld der Liedinfo das Menü „Einfügen“ zuletzt angefordert hat (L6).
+  const [liFokus, setLiFokus] = useState<{ feld: string; n: number } | null>(null);
   const [li, setLi] = useState<{
     formular: LiedinfoFormular;
     vergleich: LiedinfoVergleich[];
@@ -232,15 +234,23 @@ export function ChordEditor({
   }
   /**
    * Menü „Einfügen“ (L6): Ein neuer Teil kommt HINTER die Zeile des Cursors (nicht mitten hinein) und bringt eine
-   * leere Zeile mit, in der der Cursor steht; der Pedal-Halt und die übrigen Angaben wie bisher an den Cursor.
+   * leere Zeile mit, in der der Cursor steht; der Pedal-Halt und die übrigen Angaben wie bisher an den Cursor. Eine
+   * Kopfangabe öffnet die Liedinfo bei ihrem Feld – ohne Liedinfo kommt sie wie früher als Angabe in den Text.
    */
   function einfuegen(e: Einfuegen) {
     setOpenMenu(null);
+    if (e.art === 'liedinfo' && li) {
+      if (wide) setRechts('liedinfo');
+      else setBereich('infos');
+      setLiFokus((f) => ({ feld: e.feld, n: (f?.n ?? 0) + 1 }));
+      return;
+    }
     const ed = editorRef.current;
     if (!ed) return;
     if (e.art === 'teil')
       ed.insert(`{comment: ${neuerTeilName(text, e.name)}}\n`, { block: true, amZeilenende: true });
     else if (e.art === 'pedal') ed.insert('----', { block: true });
+    else if (e.art === 'liedinfo') ed.insert(`{${e.tag}: }`, { block: true, caretBack: 1 });
     else if (e.mitWert) ed.insert(`{${e.tag}: }`, { block: true, caretBack: 1 });
     else ed.insert(`{${e.tag}}`, { block: true });
   }
@@ -363,6 +373,7 @@ export function ChordEditor({
                 offen={openMenu === 'einfuegen'}
                 umschalten={() => setOpenMenu((m) => (m === 'einfuegen' ? null : 'einfuegen'))}
                 waehlen={einfuegen}
+                mitLiedinfo={!!li}
               />
               {schreiben && akkordLeiste}
 
@@ -480,6 +491,7 @@ export function ChordEditor({
                   vergleich={li.vergleich}
                   darf={liedinfo.darf}
                   aendern={(formular) => setLi({ ...li, formular })}
+                  fokus={liFokus}
                 />
               </div>
             )}

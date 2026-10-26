@@ -32,6 +32,7 @@ import { VerwaltenFenster } from './Verwalten';
 import { FreigebenFenster } from './FreigebenFenster';
 import { AnmeldeLinkKarte } from './AnmeldeLink';
 import { NachpruefungKarte, type NachpruefungStand } from './NachpruefungKarte';
+import { ablaeufeLesen, type AblaufStand } from './ablaeufe';
 import { nachpruefungAus } from './nachpruefung';
 import { ladeMitglieder } from './mitglieder';
 import { AnmeldungenReiter, type MitgliederZustand } from './AnmeldungenReiter';
@@ -119,6 +120,57 @@ function Zeile({ titel, children }: { titel: string; children: React.ReactNode }
   );
 }
 
+/**
+ * **Karte „Mails“** (A9-1, Entwurf `a9-ablaeufe-v1`) – was ChurchTools nach dem Anmelden verschickt. In A9-1 nur zum
+ * Ansehen; eingerichtet wird beim Freigeben, bearbeitet ab A9-2.
+ */
+function MailsKarte({
+  stand,
+  kostet,
+}: {
+  stand: AblaufStand | 'entwurf' | 'fehler' | null;
+  kostet: boolean;
+}) {
+  if (stand === 'entwurf')
+    return (
+      <Karte titel="Mails">
+        <Zeile titel="Nach dem Anmelden">wird beim Freigeben eingerichtet</Zeile>
+      </Karte>
+    );
+  if (stand === null || stand === 'fehler')
+    return (
+      <Karte titel="Mails">
+        <Zeile titel="Stand">
+          {stand === null ? 'Wird geladen …' : 'Ließ sich gerade nicht lesen.'}
+        </Zeile>
+      </Karte>
+    );
+  if (!stand.platz && !stand.warte)
+    return (
+      <Karte titel="Mails">
+        <Zeile titel="Nach dem Anmelden">
+          <span className={v.fehlt}>noch nicht eingerichtet</span>
+          <small className={v.klein}>
+            {stand.standardMail
+              ? 'ChurchTools schickt seine Standard-Mail – ohne Betrag und Bankdaten.'
+              : 'ChurchTools schickt keine Mail.'}
+          </small>
+        </Zeile>
+      </Karte>
+    );
+  const fehlt = <span className={v.fehlt}>nicht eingerichtet</span>;
+  return (
+    <Karte titel="Mails">
+      <Zeile titel="Nach dem Anmelden">
+        {stand.platz ? `✓ Bestätigung${kostet ? ' mit Betrag, Bankdaten' : ''} und Link` : fehlt}
+      </Zeile>
+      <Zeile titel="Warteliste">{stand.warte ? '✓ Mitteilung mit Platz' : fehlt}</Zeile>
+      <Zeile titel="Nachrücken">{stand.platz ? '✓ Bestätigung wie oben' : fehlt}</Zeile>
+      {stand.absender && <Zeile titel="Absender">{stand.absender}</Zeile>}
+    </Karte>
+  );
+}
+
 export function VeranstaltungSeite({
   id,
   reiter = 'veranstaltung',
@@ -158,6 +210,8 @@ export function VeranstaltungSeite({
   const ladeLauf = useRef(0);
   // Wo die Nachprüfung zuletzt stand – beim „Neu prüfen“ bleibt sie dort, statt nach unten und zurück zu springen.
   const [pruefWarOben, setPruefWarOben] = useState(false);
+  // A9-1: Stand der Bestätigungsmails – nebenher geladen, die Seite wartet nicht darauf. `null` = lädt noch.
+  const [ablauf, setAblauf] = useState<AblaufStand | 'fehler' | null>(null);
 
   const mitgliederLaden = useCallback(
     (einstellungen: OeffentlicheEinstellungen, maxPlaetze: number | null) => {
@@ -198,6 +252,11 @@ export function VeranstaltungSeite({
           belegungNachziehen(id).catch((x: unknown) =>
             console.warn('Belegung der Auswahl nicht nachgezogen', x),
           );
+        if (kopf.statusId !== 2)
+          ablaeufeLesen(id).then(setAblauf, (x: unknown) => {
+            console.warn('Stand der Mails nicht gelesen', x);
+            setAblauf('fehler');
+          });
         // A6-5c: In einem Entwurf hat sich noch niemand angemeldet.
         if (kopf.statusId !== 2) mitgliederLaden(einstellungen, anmeldung.maxPlaetze);
         else setMitglieder(null);
@@ -375,6 +434,7 @@ export function VeranstaltungSeite({
           // „Zahlart“ an – ohne seine Nummer aus den Einstellungen fehlte die Zahlart in der Anzeige (echter Test 19.10.2026).
           // „Rückgängig“ steht im Fenster, nicht in der Leiste unten (Alwin, 19.10.2026).
           onGespeichert={laden}
+          mitBestaetigung={ablauf !== null && ablauf !== 'fehler' && ablauf.platz}
         />
       )}
 
@@ -456,6 +516,7 @@ export function VeranstaltungSeite({
                 )}
               </Zeile>
             </Karte>
+            <MailsKarte stand={entwurf ? 'entwurf' : ablauf} kostet={kostet} />
             <Karte titel="Datenschutz" onBearbeiten={bearbeiten('loeschfrist')}>
               <Zeile titel="Daten löschen">{e.loeschfristMonate} Monate nach dem Ende</Zeile>
             </Karte>

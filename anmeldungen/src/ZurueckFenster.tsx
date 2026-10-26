@@ -14,11 +14,13 @@ import type { VonHandFertig } from './VonHandFenster';
 import { fehlerMeldung } from './zustand';
 import f from './Formular.module.scss';
 import a from './AnmeldungenReiter.module.scss';
+import { mailHinweis } from './anzeige';
 
 /**
  * **Eine Abgesagte zurückholen** (A7-4c, Entwurf `a7-4-von-hand-v1`) – mit allen Antworten von damals, Platz nach der
- * Regel des Formulars (`PlatzWahl`), Zahlung nach `zurueckPlan`. ChurchTools schickt dabei keine Mail (gemessen
- * 19.10.2026: Wieder-Aufnehmen per `PUT`); danach „Mail schreiben“ und „Rückgängig“ im Fenster der Anmeldung.
+ * Regel des Formulars (`PlatzWahl`), Zahlung nach `zurueckPlan`. ChurchTools selbst schickt dabei keine Mail (gemessen
+ * 19.10.2026: Wieder-Aufnehmen per `PUT`), mit eingerichteten Abläufen die Bestätigung (A9-1, `mailHinweis`); danach
+ * „Mail schreiben“ und „Rückgängig“ im Fenster der Anmeldung.
  */
 export function ZurueckFenster({
   id,
@@ -30,6 +32,7 @@ export function ZurueckFenster({
   liste,
   onClose,
   onFertig,
+  mitBestaetigung = false,
 }: {
   id: number;
   e: OeffentlicheEinstellungen;
@@ -40,6 +43,8 @@ export function ZurueckFenster({
   liste: ListenAnmeldung[];
   onClose: () => void;
   onFertig: (x: VonHandFertig) => void;
+  /** Bestätigungsmails eingerichtet (A9-1). */
+  mitBestaetigung?: boolean;
 }) {
   const [felder, setFelder] = useState<ReadonlyMap<number, CtGruppenfeld> | null>(null);
   const [trotzdem, setTrotzdem] = useState(false);
@@ -171,7 +176,7 @@ export function ZurueckFenster({
           {x
             ? `Wie bei „Person dazu“: ${vor} bekommt eine eigene Zahlung – um so viel wird die Anmeldung teurer.`
             : 'Wie eine neue Anmeldung: der Betrag nach den Regeln, offen.'}{' '}
-          ChurchTools schickt dabei keine Mail – danach gibt es „Mail schreiben“.
+          {mailHinweis('eintragen', mitBestaetigung, vor)}
         </p>
       </PlatzWahl>
       {fehler && (

@@ -125,3 +125,23 @@ export function anpassungText(a: Anpassung): string {
   const wann = a.bedingung === 'immer' ? '' : `, ${bedingungText(a)}`;
   return `${a.art === 'rabatt' ? '−' : '+'}${hoehe} ${JE[a.gilt]}${wann}`;
 }
+
+/**
+ * **Was ChurchTools nach dem Eintragen durchs Team schickt** (A9-1) – eine Stelle für Nachrücken, Von Hand und Zurückholen.
+ * `mitBestaetigung`: Die Abläufe sind eingerichtet (Karte „Mails“) – dann trifft die Routine jeden, der auf „aktiv“ oder
+ * „wartend“ kommt (gemessen 24.10.2026). Sonst schickt ChurchTools beim Nachrücken nur „war erfolgreich“, beim Eintragen
+ * von Hand nichts.
+ */
+export function mailHinweis(
+  art: 'nachruecken' | 'eintragen',
+  mitBestaetigung: boolean,
+  vor: string,
+): string {
+  if (art === 'nachruecken')
+    return mitBestaetigung
+      ? `ChurchTools schickt ${vor} die Bestätigung mit Betrag und Bankdaten.`
+      : 'ChurchTools schickt nur „Deine Anmeldung war erfolgreich“ – ohne Betrag. Danach gibt es hier „Mail schreiben“.';
+  return mitBestaetigung
+    ? 'ChurchTools schickt die Bestätigung an die E-Mail-Adresse (auf der Warteliste die Mitteilung mit dem Platz) – ohne Link zu „Deine Anmeldung“.'
+    : 'ChurchTools schickt dabei keine Mail – danach gibt es „Mail schreiben“.';
+}

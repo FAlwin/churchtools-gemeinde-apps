@@ -6,7 +6,8 @@
  *   Datenschutz („außerhalb ChurchTools“, von der Person selbst oder einem Elternteil). Gleicher Name → 400 mit
  *   `args.duplicatePersonId`, nichts angelegt; `force=true` legt trotzdem an – nur auf ausdrücklichen Wunsch.
  * - Eintragen: `PUT /groups/{id}/members/{personId}` mit Rolle, Status, Warteplatz und Feldern.
- * - Keiner der Schritte schickt eine Mail. Jeder Schritt wird nachgelesen.
+ * - ChurchTools selbst schickt dabei keine Mail; sind die Abläufe eingerichtet (A9-1), schickt die Routine die
+ *   Bestätigung bzw. die Wartelisten-Mitteilung. Jeder Schritt wird nachgelesen.
  */
 import { ctAnfrage, ctDaten } from '@ui/ct/verbindung';
 import { ApiError } from '@ui/ct/fehler';

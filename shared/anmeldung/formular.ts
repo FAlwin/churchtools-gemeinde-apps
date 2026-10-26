@@ -424,6 +424,9 @@ export const SYSTEMFELDER = [
   // A7-2: Ältere Veranstaltungen bekommen das Feld beim ersten „bezahlt“ (`zahlungSpeichern`). Ans Ende: Die Reihenfolge
   // bestimmt die Plätze der Sicherung (`sicherungSchreiben`).
   { id: 'zahlart', name: 'Zahlart', fieldTypeCode: 'text', beimAnmelden: false },
+  // A9-1: der Link zu „Deine Anmeldung“ – das Formular schreibt ihn beim Anmelden, die Bestätigungsmail setzt ihn ein
+  // (die Routine-Mail kennt keinen Platzhalter für den Abmelde-Schlüssel, gemessen 24.10.2026). Ans Ende: Sicherung.
+  { id: 'link', name: 'Link zur Anmeldung', fieldTypeCode: 'text', beimAnmelden: true },
 ] as const;
 
 // ── Öffentliche Einstellungen in der Gruppen-Beschreibung ──────────────────────────────────────

@@ -1,5 +1,6 @@
 import {
   abmeldeDatenAus,
+  abmeldeLink,
   abmeldeVorlage,
   apiBasis,
   platzPlan,
@@ -19,6 +20,7 @@ import { optionRest } from '@shared/anmeldung/kontingent';
 import {
   PasstNicht,
   anmeldungAufbauen,
+  mitLink,
   personenNamen,
   type Abgeschickt,
   type CtFormular,
@@ -175,7 +177,14 @@ export async function abschicken(
         // A6-4: „Austreten“ in der Mail von ChurchTools führt auf „Deine Anmeldung“ (gemessen 16.10.2026).
         body: JSON.stringify({
           token,
-          forms: [anmeldung.forms[i]],
+          // A9-1: der Link zu „Deine Anmeldung“ mit dem Schlüssel dieser Person – für die Bestätigungsmail.
+          forms: [
+            mitLink(
+              anmeldung,
+              anmeldung.forms[i],
+              abmeldeLink(formularBasis, ort.instanz, ort.gruppeId, token),
+            ),
+          ],
           hasAcceptedPrivacyForSelf: anmeldung.hasAcceptedPrivacyForSelf,
           signOutUrlTemplate: abmeldeVorlage(formularBasis, ort.instanz),
         }),

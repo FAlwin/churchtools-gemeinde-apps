@@ -1,11 +1,11 @@
 # Protokolle – ChurchTools-Erweiterung
 
-> **Stand: S4-2 (24.10.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
+> **Stand: S4-3a (26.10.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
 > Sitzungen“ und „Deine Gruppen“; der Reiter **„Sitzungen“** zeigt je Gruppe Kommend und Protokolle zum Lesen; die
 > **Lupe** oben rechts sucht in allem (ohne Suchbegriff: alle Beschlüsse); Admins richten im Reiter **„Verwaltung“**
 > Gruppen ein und pflegen die Vorlagen. Die **Leitung schreibt** Protokolle im Entwurf direkt im Editor, mit
-> Aufgaben (= To-Dos), Beschlüssen und Terminen. Feste Punkte, Sitzung anlegen, Freigabe und PDF folgen (Bauplan S4-2–S9 in
-> `protokolle-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
+> Aufgaben (= To-Dos), Beschlüssen, Terminen und festen Punkten. Abschnitt ziehen, Sitzung anlegen, Freigabe und PDF
+> folgen (Bauplan S4-3b–S9 in `protokolle-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
 
 Die Protokolle sind für Gruppen wie den Leitungskreis: **Protokolle als Dokument** (wie Word, Loop oder Notion),
 daraus gesammelt Beschlüsse, To-Dos und Termine. **Alles liegt in ChurchTools** – es gibt keinen eigenen Server,
@@ -69,7 +69,8 @@ dabei im Editor). Mit der ersten Änderung entsteht eine **Schreibsperre**: Wer 
 sieht „Johann schreibt gerade“, liest den gespeicherten Stand mit (alle 30 Sekunden) und kann mit Rückfrage
 **„Schreiben übernehmen“**. Das gilt auch für dieselbe Person in einem zweiten Fenster oder auf einem zweiten Gerät.
 Eine Sperre ohne Lebenszeichen verfällt nach zehn Minuten. Aus Word eingefügte Listen bleiben Listen. Am Handy lässt
-sich die Werkzeugleiste waagrecht wischen.
+sich die Werkzeugleiste waagrecht wischen, am Rechner bricht sie um. Der Umschalter **„Schreiben | Lesen“** zeigt
+dasselbe Protokoll als Lese-Ansicht – ohne Sperre; was noch nicht gespeichert war, wird beim Umschalten gespeichert.
 
 **Aufgaben, Beschlüsse, Termine (S4-2):** über die Knöpfe der Werkzeugleiste, das „/“-Menü oder „[] “ + Leertaste
 (Aufgabe). Eine Aufgabe mit Text ist beim nächsten Speichern ein **To-Do** – die Zuständigen sehen es sofort unter
@@ -77,6 +78,13 @@ sich die Werkzeugleiste waagrecht wischen.
 erledigt), „Wer?“ (Mitglieder der Gruppe, dazu ein externer Name ohne eigenen Zugang) und „Bis“. Das Protokoll führt:
 geänderter Text zieht ins To-Do mit; wird die Aufgabe gelöscht, wird das To-Do als gelöscht vermerkt (nie endgültig),
 „Rückgängig“ holt es mit allen Angaben zurück. Ein Termin steht nur im Protokoll (kein Eintrag im Kalender).
+
+**Feste Punkte (S4-3a):** „Offene To-Dos“ zeigt die offenen To-Dos der Gruppe aus früheren Sitzungen (überfällige
+zuerst) mit Status-Kreis, Wer und Bis; darunter eingeklappt „Seit der Sitzung am … erledigt“. Im Editor hakt man sie
+am Kreis ab, in der Lese-Ansicht ist es nur Anzeige. „Protokoll der letzten Sitzung“ zeigt das letzte **freigegebene**
+Protokoll der Gruppe vor dieser Sitzung; „Öffnen“ zeigt es im Fenster. Beide füllen sich **bis zur Freigabe live**;
+bei der Freigabe (S6) merkt sich das Protokoll, was sie zeigten. Einfügen über die Werkzeugleiste oder das „/“-Menü
+(Gruppe „Feste Punkte“) – als Tagesordnungspunkt mit Titel, den man umbenennen kann.
 
 **Suche (Lupe oben rechts):** sucht in Beschlüssen, To-Dos, Terminen und im Protokolltext aller eigenen Gruppen –
 auch im Tagesordnungspunkt und im Sitzungstitel; alle Wörter müssen vorkommen. Filter nach Art und Gruppe. Ohne
@@ -110,6 +118,10 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit später sc
   Schreiben in „Mitarbeit“ `protokolle/src/aufgabenSchreiben.ts`; der Abgleich läuft in `speichern` nach der Sperr-Prüfung
   und vor dem ersten Schreiben am Protokoll. Die Blöcke `EditorBloecke.tsx` bekommen To-Dos und Mitglieder über
   `aufgabenKontext.ts`.
+- Feste Punkte: Regel `shared/protokolle/festePunkte.ts` (`letztesProtokoll`, `offeneVonFrueher`,
+  `festePunkteFesthalten` – die Freigabe in S6 muss es aufrufen, sonst bleiben die Punkte live), Baustein
+  `FesterPunkt.tsx` für Editor und Lese-Ansicht, Kontext + Fenster `FestePunkteRahmen.tsx`. Festgehalten wird in
+  `props.fest` des Verweis-Blocks; „wie letztes Mal“ und Vorlagen nehmen es nicht mit.
 - Erweiterung: `protokolle/` (`npm run dev -w protokolle`, dann `http://localhost:5192/ccm/protokolle/?demo`;
   weitere Fälle `?demo=leer`, `?demo=ohne-modul`, `?demo=fehler`, `?demo=gesperrt`).
 - Release: Tag `protokolle-vX.Y.Z` (Workflow `protokolle-release.yml`, immer `make_latest: false`).

@@ -8,6 +8,7 @@ import { wannLang } from './anzeige';
 import { Marke } from './Marke';
 import { ProtokollAnsicht } from './ProtokollAnsicht';
 import { Bereiche } from './Bereiche';
+import { FestePunkteRahmen } from './FestePunkteRahmen';
 import styles from './SitzungAnsicht.module.scss';
 
 /**
@@ -19,6 +20,8 @@ import styles from './SitzungAnsicht.module.scss';
 export function SitzungAnsicht({
   sitzung,
   gruppe,
+  gruppeId,
+  protokolle,
   teile,
   aufgaben,
   zeitzone,
@@ -27,6 +30,9 @@ export function SitzungAnsicht({
 }: {
   sitzung: Sitzung;
   gruppe: string;
+  gruppeId: number;
+  /** Die freigegebenen Protokolle der Gruppe – für den festen Punkt „Letztes Protokoll“ (S4-3a). */
+  protokolle: readonly Sitzung[];
   teile: readonly ProtokollTeil[];
   aufgaben: readonly Aufgabe[];
   zeitzone: string;
@@ -86,12 +92,19 @@ export function SitzungAnsicht({
       )}
 
       {dokument && (
-        <>
+        <FestePunkteRahmen
+          sitzung={sitzung}
+          gruppe={gruppeId}
+          protokolle={protokolle}
+          teile={teile}
+          aufgaben={aufgaben}
+          zeitzone={zeitzone}
+        >
           <section className={styles.karte} aria-label="Protokoll">
             <ProtokollAnsicht dokument={dokument} aufgaben={aufgaben} markiert={springeZu} />
           </section>
           <Bereiche dokument={dokument} aufgaben={aufgaben} />
-        </>
+        </FestePunkteRahmen>
       )}
     </div>
   );

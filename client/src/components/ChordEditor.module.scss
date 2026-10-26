@@ -191,6 +191,19 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+// „Eigener Name …“ (L6): Feld und Knopf in einer Zeile; 16px, damit iOS beim Fokussieren nicht hineinzoomt.
+.ddEigen {
+  display: flex;
+  gap: 8px;
+  padding: 4px 10px 6px;
+}
+.ddEigenFeld {
+  @include m.eingabefeld;
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  font-size: 16px;
+}
 .ddTrenner {
   height: 1px;
   margin: 6px 4px;

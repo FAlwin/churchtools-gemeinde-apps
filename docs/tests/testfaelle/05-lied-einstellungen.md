@@ -584,9 +584,10 @@ Kopfzeilen sind aus dem Notenblatt verschwunden, `{key}` ist noch da.
 **Das brauchst du:** Ein Lied mit `{start_of_verse}` … `{end_of_verse}` und `{key}`-Zeile (z. B. das „L4-Testlied“ der
 Test-Instanz), das Recht, Lieder zu bearbeiten; iPad quer und Handy.
 
-**Das muss passieren:** Statt „Format“ gibt es **Einfügen**: oben die Teile, darunter der Pedal-Halt, abgesetzt „Nur
-für andere Programme“. Titel, Autor, Tempo & Co. stehen nicht mehr darin – die gehören in die Liedinfo. Im Text sind
-weder `{key}` noch `{end_of_…}` zu sehen; im „ChordPro-Text“ stehen beide noch da.
+**Das muss passieren:** Statt „Format“ gibt es **Einfügen**: oben die Teile (auch mit eigenem Namen), darunter der
+Pedal-Halt, der Abschnitt **Liedinfo** (Titel, Interpret, Tonart, Tempo, Takt, CCLI, Copyright – alles, was das alte
+Format-Menü hatte) und abgesetzt „Nur für andere Programme“. Im Text sind weder `{key}` noch `{end_of_…}` zu sehen; im
+„ChordPro-Text“ stehen beide noch da.
 
 1. Version bearbeiten: Über dem ersten Teil steht keine `{key: …}`-Zeile, unter den Teilen kein `{end_of_verse}`.
    **ChordPro-Text** → beide sind da.
@@ -599,15 +600,18 @@ weder `{key}` noch `{end_of_…}` zu sehen; im „ChordPro-Text“ stehen beide 
 6. Mit offener Tastatur (Schreibansicht): **Einfügen** steht in der einen Zeile, das Menü lässt sich öffnen, ohne
    dass die Tastatur zugeht.
 7. Speichern → Vorschau und Blatt zeigen die neuen Teile in der richtigen Reihenfolge.
+8. **Einfügen → Eigener Name …** → „Tag“ eintippen → **Hinzufügen**: Band „Tag“ unter der Cursor-Zeile.
+9. **Einfügen → Tempo (BPM)**: Rechts öffnet sich die **Liedinfo**, im Feld Tempo blinkt der Cursor (Handy: Reiter
+   „Infos“). Beim Original-Notenblatt (ohne Liedinfo) kommt stattdessen `{tempo: }` in den Text.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
 - **Betrifft:** `client/src/components/EinfuegenMenue.tsx`, `client/src/utils/einfuegen.ts`, `client/src/components/ChordEditor.tsx`, `client/src/components/ChordProInput.tsx`, `client/src/utils/chordpro.ts`, `shared/ct/liedinfo.ts`
 - **Automatisiert:** weitgehend – `chordpro.test.ts` (`neuerTeilName`, `ENDE_ZEILE` = Regel des Blatts),
-  `liedinfo.test.ts` (`TONART_ZEILE`, `{key}` bleibt beim Speichern), `EinfuegenMenue.test.tsx` (keine Kopfangabe im
-  Menü, gegen `LIEDINFO_FELDER` geprüft), `ChordEditor.test.tsx`, `e2e/editor-einfuegen.spec.ts` (hinter der Zeile,
-  Nummerieren, Pedal-Halt, Ende-Marken), `e2e/editor-liedinfo.spec.ts` (`{key}` ausgeblendet),
+  `liedinfo.test.ts` (`TONART_ZEILE`, `{key}` bleibt beim Speichern), `EinfuegenMenue.test.tsx` (alle Kopfangaben da,
+  gegen `LIEDINFO_FELDER` geprüft; eigener Name), `ChordEditor.test.tsx`, `e2e/editor-einfuegen.spec.ts` (hinter der Zeile,
+  Nummerieren, Pedal-Halt, Ende-Marken, Kapo, eigener Name, Kopfangabe mit/ohne Liedinfo, Handy), `e2e/editor-liedinfo.spec.ts` (`{key}` ausgeblendet),
   `e2e/editor-schreiben.spec.ts` (eine Zeile). **Von Hand bleibt** die Bedienung am echten iPad (Tastatur bleibt offen).
 - **Historie:** Lied-Editor L6 (24.10.2026); Entscheidungen Alwin: Variante B (ein Menü „Einfügen“), seltene
   Angaben unter „Nur für andere Programme“, `{key}` und Ende-Marken ausblenden

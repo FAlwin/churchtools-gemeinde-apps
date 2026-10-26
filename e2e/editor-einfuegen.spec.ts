@@ -47,14 +47,11 @@ test('neuer Teil kommt HINTER die Zeile des Cursors, der Cursor in die leere Zei
   );
 });
 
-test('„Vers“ nummeriert sich selbst; das Menü bietet keine Kopfangaben mehr an', async ({
-  page,
-}) => {
+test('„Vers“ nummeriert sich selbst', async ({ page }) => {
   await oeffnen(page);
   await mittenInDieZeile(page);
   await menue(page).click();
   await expect(page.getByText('Nur für andere Programme')).toBeVisible();
-  await expect(page.getByRole('button', { name: /Titel|Tempo|Tonart|CCLI/ })).toHaveCount(0);
   await page.getByRole('button', { name: 'Vers', exact: true }).click();
   await expect(page.locator('.cm-cp-band')).toHaveText(['Vers', 'Vers 2', 'Chorus']);
 });
@@ -106,4 +103,61 @@ test('Ende-Marken sind im Text unsichtbar, im ChordPro-Text sichtbar – gespeic
       '\n{end_of_verse}' +
       DEMO_EDITOR_TEXT.slice(ERSTE_ZEILE_ENDE),
   );
+});
+
+test('Eigener Name: „Tag“ wird ein Band unter der Cursor-Zeile (26.10.2026)', async ({ page }) => {
+  await oeffnen(page);
+  await mittenInDieZeile(page);
+  await menue(page).click();
+  await page.getByRole('button', { name: /Eigener Name/ }).click();
+  await page.getByLabel('Name des Teils').fill('Tag');
+  await page.getByRole('button', { name: 'Hinzufügen' }).click();
+  await expect(page.locator('.cm-cp-band')).toHaveText(['Vers', 'Tag', 'Chorus']);
+});
+
+test('Kopfangabe ohne Liedinfo kommt wie früher als Angabe in den Text', async ({ page }) => {
+  await oeffnen(page);
+  await mittenInDieZeile(page);
+  await menue(page).click();
+  await page.getByRole('button', { name: /Tempo \(BPM\)/ }).click();
+  await page.keyboard.type('96');
+  await page.getByRole('button', { name: 'Speichern' }).click();
+  const pos = DEMO_EDITOR_TEXT.indexOf('[E]bleibst');
+  expect(await gespeichert(page)).toBe(
+    DEMO_EDITOR_TEXT.slice(0, pos) + '\n{tempo: 96}\n' + DEMO_EDITOR_TEXT.slice(pos),
+  );
+});
+
+test.describe('mit Liedinfo', () => {
+  async function oeffnenMitLiedinfo(page: Page) {
+    await page.goto('/?demo=editor&liedinfo');
+    await expect(page.locator('.cm-cp-akkord').first()).toBeVisible({ timeout: 30_000 });
+  }
+
+  test('Kopfangabe öffnet rechts die Liedinfo, das Feld hat den Fokus', async ({ page }) => {
+    await oeffnenMitLiedinfo(page);
+    await menue(page).click();
+    await page.getByRole('button', { name: /CCLI-Nummer/ }).click();
+    const info = page.getByRole('region', { name: 'Liedinfo' });
+    await expect(info).toBeVisible();
+    await expect(info.getByLabel('CCLI-Nummer')).toBeFocused();
+    // Der Umschalter zeigt „Liedinfo“ als gewählt – nicht weiter „Vorschau“.
+    await expect(
+      page.getByRole('group', { name: 'Rechte Spalte' }).getByRole('button', { name: 'Liedinfo' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.cm-content')).not.toContainText('{ccli');
+  });
+
+  test.describe('Handy', () => {
+    test.use({ viewport: { width: 390, height: 844 } });
+    test('Kopfangabe wechselt zum Reiter „Infos“, das Feld hat den Fokus', async ({ page }) => {
+      await oeffnenMitLiedinfo(page);
+      await menue(page).click();
+      await page.getByRole('button', { name: /Taktart/ }).click();
+      const info = page.getByRole('region', { name: 'Liedinfo' });
+      await expect(info).toBeVisible();
+      await expect(page.getByRole('region', { name: 'Text' })).toBeHidden();
+      await expect(info.getByLabel('Takt')).toBeFocused();
+    });
+  });
 });

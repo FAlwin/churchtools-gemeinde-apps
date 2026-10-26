@@ -503,8 +503,10 @@ ChurchTools den Wert NACH dem Speichern meldet (`liedinfoSpeichern`, `liedinfoBe
 ungespeicherte Lieder behalten den Vorrang der Datei. `{key}` bleibt als notierte Tonart (in der Datei; im Text seit L6
 ausgeblendet, `TONART_ZEILE`). L6 = Menü **„Einfügen“** (`EinfuegenMenue`, Variante B) statt Format-Menü: Teile (Name über
 `neuerTeilName`, „Vers“ nummeriert sich; eingefügt HINTER der Cursor-Zeile, `insert(…, { amZeilenende })`), Pedal-Halt,
-„Nur für andere Programme“ (Kapo, Spalte, Seite, Untertitel) – KEINE Kopfangaben, die gehören in die Liedinfo und
-würden im Text unsichtbar eingefügt. Ende-Marken `{end_of_…}` im Text ausgeblendet (`ENDE_ZEILE`, EINE Regel mit
+„Eigener Name …“ (Feld im Menü), Abschnitt **„Liedinfo“** mit allen Kopfangaben des alten Format-Menüs (`KOPFANGABEN`,
+aus `LIEDINFO_FELDER` + Tonart): mit Liedinfo öffnet ein Tipp dort das Feld (`LiedinfoKarte fokus`, `data-feld`), ohne
+kommt `{tag: }` in den Text – nie unsichtbar in den Text, denn dort würde sie ausgeblendet. „Nur für andere Programme“
+(Kapo, Spalte, Seite, Untertitel). Ende-Marken `{end_of_…}` im Text ausgeblendet (`ENDE_ZEILE`, EINE Regel mit
 `parseChordPro`). Zieh-Einstellungen aller Listen: `ui/bedienung/useZiehSensoren`. Im
 Scroll-Modus kein Spalten-Schalter (`ohneSpalten`). Welche
 eigene Ebene gilt, entscheidet für Blättern UND Scrollen `pageKeys.eigenerSchluessel`.

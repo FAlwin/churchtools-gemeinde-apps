@@ -8,8 +8,9 @@ import styles from './GruppenFenster.module.scss';
 
 /**
  * **Die Schritte im Gruppenfenster, die die Struktur ändern** (Bauplan O5): Ziel wählen, bestätigen, Untergruppe
- * anlegen. Sie stehen IM Fenster statt in einem zweiten darüber (Fenster sind Modale, nie gestapelt); „Zurück“ führt
- * zur Ansicht der Gruppe.
+ * anlegen. Sie stehen IM Fenster statt in einem zweiten darüber (Fenster sind Modale, nie gestapelt) und ersetzen
+ * dessen Inhalt; ihre Knöpfe („Zurück“ zur Ansicht der Gruppe, der Hauptknopf) setzt das Gruppenfenster unten in die
+ * Fußzeile (E6-O F5).
  */
 
 export function ZielWaehlen({
@@ -17,13 +18,11 @@ export function ZielWaehlen({
   gruppe,
   titel,
   onWahl,
-  onZurueck,
 }: {
   start: Start;
   gruppe: OrgGruppe;
   titel: string;
   onWahl: (ziel: OrgGruppe) => void;
-  onZurueck: () => void;
 }) {
   const [suche, setSuche] = useState('');
   const ziele = useMemo(
@@ -59,11 +58,6 @@ export function ZielWaehlen({
         ))}
       </ul>
       {treffer.length === 0 && <p className={styles.leise}>Keine passende Gruppe.</p>}
-      <div className={styles.knoepfe}>
-        <button type="button" className={styles.zweit} onClick={onZurueck}>
-          Zurück
-        </button>
-      </div>
     </section>
   );
 }
@@ -71,50 +65,33 @@ export function ZielWaehlen({
 export function Bestaetigen({
   frage,
   folgen,
-  knopf,
-  arbeitet,
-  onJa,
-  onZurueck,
 }: {
   frage: string;
   /** Was sich an den Rechten ändert – Rechte wirken in ChurchTools nach unten (O0 §5). */
   folgen: string;
-  knopf: string;
-  arbeitet: boolean;
-  onJa: () => void;
-  onZurueck: () => void;
 }) {
   return (
     <section className={styles.schritt} aria-label="Bestätigen">
       <p className={styles.frage}>{frage}</p>
       <p className={styles.leise}>{folgen}</p>
-      <div className={styles.knoepfe}>
-        <button type="button" className={styles.zweit} onClick={onZurueck} disabled={arbeitet}>
-          Zurück
-        </button>
-        <button type="button" className={styles.primaer} onClick={onJa} disabled={arbeitet}>
-          {arbeitet ? 'Wird gespeichert …' : knopf}
-        </button>
-      </div>
     </section>
   );
 }
 
 export function Anlegen({
+  formular,
   start,
   obergruppe,
   typen,
-  arbeitet,
   onAnlegen,
-  onZurueck,
 }: {
+  /** Die `id` des Formulars – „Anlegen“ unten in der Fußzeile schickt es ab (`form=`). */
+  formular: string;
   start: Start;
   obergruppe: OrgGruppe;
   /** Die Gruppentypen, in denen man anlegen darf. */
   typen: number[];
-  arbeitet: boolean;
   onAnlegen: (name: string, typId: number) => void;
-  onZurueck: () => void;
 }) {
   const [name, setName] = useState('');
   // Vorbelegt mit dem Typ der Obergruppe (Alwin, 23.10.2026) – wenn man in dem anlegen darf.
@@ -128,7 +105,15 @@ export function Anlegen({
     if (!fehler) onAnlegen(name.trim(), typ);
   };
   return (
-    <section className={styles.schritt} aria-label="Untergruppe anlegen">
+    <form
+      id={formular}
+      className={styles.schritt}
+      aria-label="Untergruppe anlegen"
+      onSubmit={(e) => {
+        e.preventDefault();
+        absenden();
+      }}
+    >
       <h3>Neue Untergruppe in „{obergruppe.name}“</h3>
       <label className={styles.beschriftung}>
         Name
@@ -137,7 +122,6 @@ export function Anlegen({
           value={name}
           maxLength={255}
           onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && absenden()}
           autoFocus
         />
       </label>
@@ -159,14 +143,6 @@ export function Anlegen({
       <p className={styles.leise}>
         Status „aktiv“. Leitung und Mitglieder trägst du danach in ChurchTools ein.
       </p>
-      <div className={styles.knoepfe}>
-        <button type="button" className={styles.zweit} onClick={onZurueck} disabled={arbeitet}>
-          Zurück
-        </button>
-        <button type="button" className={styles.primaer} onClick={absenden} disabled={arbeitet}>
-          {arbeitet ? 'Wird angelegt …' : 'Anlegen'}
-        </button>
-      </div>
-    </section>
+    </form>
   );
 }

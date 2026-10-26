@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { RueckgaengigImFenster } from '@ui/fenster/Rueckgaengig';
 import type { Aenderung } from '@ui/fenster/aenderung';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
+import type { Gefunden } from '@ui/ct/personen';
 import { GruppenKachel } from '@ui/bedienung/GruppenKachel';
 import { PersonBild } from '@ui/bedienung/PersonBild';
 import { ctBasis } from '@ui/ct/basis';
@@ -31,7 +33,7 @@ import {
   untergruppeAnlegen,
   weiterSichtbarUeber,
 } from '@shared/organigramm/struktur';
-import { rollenRang } from '@shared/organigramm/mitglieder';
+import { rollenFuerTyp, rollenRang, standardRolle } from '@shared/organigramm/mitglieder';
 import { gruppenPersonen } from '@shared/organigramm/personen';
 import type { MitgliederDaten } from './ladeMitglieder';
 import type { Start } from './start';
@@ -65,8 +67,8 @@ type Modus =
   | { art: 'dazu'; neu: OrgGruppe }
   | { art: 'loesen'; alt: OrgGruppe }
   | { art: 'anlegen' }
-  | { art: 'aufnehmen' }
-  | { art: 'rolle'; personId: number }
+  | { art: 'aufnehmen'; gewaehlt: Gefunden | null; rolleId: number | null }
+  | { art: 'rolle'; personId: number; rolleId: number | null }
   | { art: 'austragen'; personId: number };
 
 /**
@@ -94,6 +96,7 @@ export function GruppenFenster({
   const [arbeitet, setArbeitet] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
   const [aenderung, setAenderung] = useState<Aenderung | null>(null);
+  const anlegenFormular = useId();
   const darf = darfStruktur(start.rechte, g);
   // ALLE Obergruppen aus der Hierarchie (auch unsichtbare) – EINE Quelle für „erste?“, „letzte?“ und „weiter sichtbar?“.
   const alleEltern = start.eltern.get(g.id) ?? [];
@@ -237,9 +240,236 @@ export function GruppenFenster({
     ? [...start.dienste.values()].filter((d) => d.gruppenIds.includes(g.id))
     : [];
   const typ = g.typId !== null ? start.typNamen.get(g.typId) : undefined;
+  const rollen = rollenFuerTyp(start.rollen, g.typId);
+
+  // Ein Schritt ersetzt den Inhalt des Fensters; seine Knöpfe stehen unten – „Zurück“ führt zur Gruppe, ganz zu nur
+  // über das X (Alwin, 26.10.2026, E6-O F5 – wie „Absagen?“ in den Anmeldungen).
+  const zurGruppe = () => setModus({ art: 'ansehen' });
+  const zurueckKnopf = (onClick: () => void = zurGruppe) => (
+    <FensterKnopf art="zweit" disabled={arbeitet} onClick={onClick}>
+      Zurück
+    </FensterKnopf>
+  );
+  const frage = (frage: string, folgen: string, knopf: string, onJa: () => void) => ({
+    inhalt: <Bestaetigen frage={frage} folgen={folgen} />,
+    knoepfe: (
+      <>
+        {zurueckKnopf()}
+        <FensterKnopf disabled={arbeitet} onClick={onJa}>
+          {arbeitet ? 'Wird gespeichert …' : knopf}
+        </FensterKnopf>
+      </>
+    ),
+  });
+  const schritt = ((): { inhalt: ReactNode; knoepfe: ReactNode } | null => {
+    switch (modus.art) {
+      case 'ansehen':
+        return null;
+      case 'aufnehmen': {
+        const { gewaehlt } = modus;
+        const rolle = rollen.find((r) => r.id === modus.rolleId);
+        return {
+          inhalt: (
+            <PersonAufnehmen
+              start={start}
+              gruppe={g}
+              dabei={new Set(liste.map((m) => m.personId))}
+              gewaehlt={gewaehlt}
+              rolleId={modus.rolleId}
+              onWahl={(p) => setModus({ ...modus, gewaehlt: p })}
+              onRolle={(id) => setModus({ ...modus, rolleId: id })}
+            />
+          ),
+          knoepfe: (
+            <>
+              {zurueckKnopf(gewaehlt ? () => setModus({ ...modus, gewaehlt: null }) : zurGruppe)}
+              {gewaehlt && (
+                <FensterKnopf
+                  disabled={arbeitet || !rolle}
+                  onClick={() =>
+                    rolle &&
+                    personAufnehmen(
+                      gewaehlt.personId,
+                      `${gewaehlt.vor} ${gewaehlt.nach}`.trim(),
+                      rolle.id,
+                    )
+                  }
+                >
+                  {arbeitet ? 'Wird gespeichert …' : 'Aufnehmen'}
+                </FensterKnopf>
+              )}
+            </>
+          ),
+        };
+      }
+      case 'rolle': {
+        const { personId, rolleId } = modus;
+        const jetzt = liste.find((m) => m.personId === personId)?.rolleId ?? null;
+        const rolle = rollen.find((r) => r.id === rolleId);
+        return {
+          inhalt: (
+            <RolleWaehlen
+              start={start}
+              gruppe={g}
+              name={personName(personId)}
+              jetzt={jetzt}
+              rolleId={rolleId}
+              onRolle={(id) => setModus({ ...modus, rolleId: id })}
+            />
+          ),
+          knoepfe: (
+            <>
+              {zurueckKnopf()}
+              <FensterKnopf
+                disabled={arbeitet || !rolle || rolleId === jetzt}
+                onClick={() => rolle && rolleSetzen(personId, jetzt, rolle.id)}
+              >
+                {arbeitet ? 'Wird gespeichert …' : 'Ändern'}
+              </FensterKnopf>
+            </>
+          ),
+        };
+      }
+      case 'austragen': {
+        const { personId } = modus;
+        return frage(
+          `„${personName(personId)}“ aus „${g.name}“ austragen?`,
+          'Die Mitgliedschaft endet heute; in ChurchTools bleibt sie in der Historie stehen. Über diese Gruppe sieht die Person danach nichts mehr.',
+          'Austragen',
+          () => austragen(personId),
+        );
+      }
+      case 'waehlen': {
+        const m = modus;
+        return {
+          inhalt: (
+            <ZielWaehlen
+              start={start}
+              gruppe={g}
+              titel={
+                m.zweck === 'aendern'
+                  ? `Statt „${m.alt.name}“ unter …`
+                  : ohneObergruppe
+                    ? `„${g.name}“ unter …`
+                    : `„${g.name}“ zusätzlich unter …`
+              }
+              onWahl={(neu) =>
+                setModus(
+                  m.zweck === 'aendern'
+                    ? { art: 'aendern', alt: m.alt, neu }
+                    : { art: 'dazu', neu },
+                )
+              }
+            />
+          ),
+          knoepfe: zurueckKnopf(),
+        };
+      }
+      case 'aendern': {
+        const { alt, neu } = modus;
+        return frage(
+          `„${g.name}“ unter „${neu.name}“ hängen statt unter „${alt.name}“?`,
+          `Rechte wirken in ChurchTools nach unten: Wer in „${neu.name}“ ist, sieht danach auch „${g.name}“ samt Untergruppen; ${
+            weiterSichtbarUeber(start.eltern, alt.id, [
+              neu.id,
+              ...alleEltern.filter((e) => e !== alt.id),
+            ])
+              ? `wer in „${alt.name}“ ist, sieht es weiterhin – „${neu.name}“ liegt darunter.`
+              : `wer es nur über „${alt.name}“ sah, sieht es nicht mehr.`
+          }`,
+          'Umhängen',
+          () =>
+            void ausfuehren(
+              () => obergruppeAendern(z, g.id, alt.id, neu.id),
+              `„${g.name}“ hängt jetzt unter „${neu.name}“.`,
+              () => obergruppeAendern(z, g.id, neu.id, alt.id),
+            ),
+        );
+      }
+      case 'dazu': {
+        const { neu } = modus;
+        return frage(
+          ohneObergruppe
+            ? `„${g.name}“ unter „${neu.name}“ hängen?`
+            : `„${g.name}“ zusätzlich unter „${neu.name}“ hängen?`,
+          `Rechte wirken in ChurchTools nach unten: Wer in „${neu.name}“ ist, sieht danach auch „${g.name}“ samt Untergruppen.`,
+          ohneObergruppe ? 'Einhängen' : 'Hinzufügen',
+          () =>
+            void ausfuehren(
+              () => obergruppeDazu(z, g.id, neu.id),
+              ohneObergruppe
+                ? `„${g.name}“ hängt jetzt unter „${neu.name}“.`
+                : `„${g.name}“ hängt jetzt auch unter „${neu.name}“.`,
+              () => obergruppeLoesen(z, g.id, neu.id),
+            ),
+        );
+      }
+      case 'loesen': {
+        const { alt } = modus;
+        return frage(
+          `„${g.name}“ von „${alt.name}“ lösen?`,
+          `${alleEltern.length === 1 ? `„${g.name}“ ist danach ein eigener Bereich. ` : ''}${
+            weiterSichtbarUeber(
+              start.eltern,
+              alt.id,
+              alleEltern.filter((e) => e !== alt.id),
+            )
+              ? `Wer in „${alt.name}“ ist, sieht „${g.name}“ weiterhin – über eine andere Obergruppe darunter.`
+              : `Wer „${g.name}“ nur über „${alt.name}“ sah, sieht es danach nicht mehr.`
+          }`,
+          'Lösen',
+          () =>
+            void ausfuehren(
+              () => obergruppeLoesen(z, g.id, alt.id),
+              `„${g.name}“ hängt nicht mehr unter „${alt.name}“.`,
+              () => obergruppeDazu(z, g.id, alt.id),
+            ),
+        );
+      }
+      case 'anlegen':
+        return {
+          inhalt: (
+            <Anlegen
+              formular={anlegenFormular}
+              start={start}
+              obergruppe={g}
+              typen={typen}
+              onAnlegen={(name, typId) => void anlegen(name, typId)}
+            />
+          ),
+          knoepfe: (
+            <>
+              {zurueckKnopf()}
+              <FensterKnopf type="submit" form={anlegenFormular} disabled={arbeitet}>
+                {arbeitet ? 'Wird angelegt …' : 'Anlegen'}
+              </FensterKnopf>
+            </>
+          ),
+        };
+    }
+  })();
+
+  if (schritt)
+    return (
+      <Sheet
+        title={g.name}
+        onClose={onSchliessen}
+        beschaeftigt={arbeitet}
+        cancelLabel={null}
+        knoepfe={schritt.knoepfe}
+      >
+        {schritt.inhalt}
+      </Sheet>
+    );
 
   return (
-    <Sheet title={g.name} onClose={onSchliessen} cancelLabel="Schließen">
+    <Sheet
+      title={g.name}
+      onClose={onSchliessen}
+      beschaeftigt={arbeitet}
+      cancelLabel="Schließen"
+      knoepfe={null}
+    >
       <div className={styles.kopf}>
         <GruppenKachel name={g.name} farbe={gruppenFarbe(g, start.typFarben)} groesse={40} />
         <p className={styles.meta}>
@@ -279,17 +509,23 @@ export function GruppenFenster({
                 <li key={id}>
                   {p && <PersonBild name={p.name} bild={p.bild} initialen={p.initialen} />}
                   <span className={styles.personName}>{name(id)}</span>
-                  {modus.art === 'ansehen' && pflege.rolleAendern && (
+                  {pflege.rolleAendern && (
                     <button
                       type="button"
                       className={styles.klein}
                       aria-label={`Rolle von ${name(id)}`}
-                      onClick={() => beginnen({ art: 'rolle', personId: id })}
+                      onClick={() =>
+                        beginnen({
+                          art: 'rolle',
+                          personId: id,
+                          rolleId: liste.find((m) => m.personId === id)?.rolleId ?? null,
+                        })
+                      }
                     >
                       Rolle
                     </button>
                   )}
-                  {modus.art === 'ansehen' && pflege.beenden && (
+                  {pflege.beenden && (
                     <button
                       type="button"
                       className={styles.klein}
@@ -306,11 +542,17 @@ export function GruppenFenster({
         </section>
       ))}
 
-      {modus.art === 'ansehen' && pflege.aufnehmen && (
+      {pflege.aufnehmen && (
         <button
           type="button"
           className={styles.dazu}
-          onClick={() => beginnen({ art: 'aufnehmen' })}
+          onClick={() =>
+            beginnen({
+              art: 'aufnehmen',
+              gewaehlt: null,
+              rolleId: standardRolle(start.rollen, g.typId)?.id ?? null,
+            })
+          }
         >
           ＋ Person aufnehmen
         </button>
@@ -321,46 +563,6 @@ export function GruppenFenster({
           hier erst nach dem Neuladen.
         </p>
       )}
-      {modus.art === 'aufnehmen' && (
-        <PersonAufnehmen
-          start={start}
-          gruppe={g}
-          dabei={new Set(liste.map((m) => m.personId))}
-          arbeitet={arbeitet}
-          onAufnehmen={(p, rolle) =>
-            personAufnehmen(p.personId, `${p.vor} ${p.nach}`.trim(), rolle.id)
-          }
-          onZurueck={() => setModus({ art: 'ansehen' })}
-        />
-      )}
-      {modus.art === 'rolle' && (
-        <RolleWaehlen
-          start={start}
-          gruppe={g}
-          name={personName(modus.personId)}
-          jetzt={liste.find((m) => m.personId === modus.personId)?.rolleId ?? null}
-          arbeitet={arbeitet}
-          onAendern={(rolle) =>
-            rolleSetzen(
-              modus.personId,
-              liste.find((m) => m.personId === modus.personId)?.rolleId ?? null,
-              rolle.id,
-            )
-          }
-          onZurueck={() => setModus({ art: 'ansehen' })}
-        />
-      )}
-      {modus.art === 'austragen' && (
-        <Bestaetigen
-          frage={`„${personName(modus.personId)}“ aus „${g.name}“ austragen?`}
-          folgen="Die Mitgliedschaft endet heute; in ChurchTools bleibt sie in der Historie stehen. Über diese Gruppe sieht die Person danach nichts mehr."
-          knopf="Austragen"
-          arbeitet={arbeitet}
-          onZurueck={() => setModus({ art: 'ansehen' })}
-          onJa={() => austragen(modus.personId)}
-        />
-      )}
-
       {aenderung && (
         <RueckgaengigImFenster
           key={aenderung.text}
@@ -374,7 +576,7 @@ export function GruppenFenster({
         </p>
       )}
 
-      {modus.art === 'ansehen' && (obergruppen.length > 0 || knoten.kinder.length > 0 || darf) && (
+      {(obergruppen.length > 0 || knoten.kinder.length > 0 || darf) && (
         <section className={styles.abschnitt}>
           {(obergruppen.length > 0 || darf) && <h3>Gehört zu</h3>}
           {obergruppen.length === 0 && darf && (
@@ -451,111 +653,7 @@ export function GruppenFenster({
         </section>
       )}
 
-      {modus.art === 'waehlen' && (
-        <ZielWaehlen
-          start={start}
-          gruppe={g}
-          titel={
-            modus.zweck === 'aendern'
-              ? `Statt „${modus.alt.name}“ unter …`
-              : ohneObergruppe
-                ? `„${g.name}“ unter …`
-                : `„${g.name}“ zusätzlich unter …`
-          }
-          onWahl={(neu) =>
-            setModus(
-              modus.zweck === 'aendern'
-                ? { art: 'aendern', alt: modus.alt, neu }
-                : { art: 'dazu', neu },
-            )
-          }
-          onZurueck={() => setModus({ art: 'ansehen' })}
-        />
-      )}
-      {modus.art === 'aendern' && (
-        <Bestaetigen
-          frage={`„${g.name}“ unter „${modus.neu.name}“ hängen statt unter „${modus.alt.name}“?`}
-          folgen={`Rechte wirken in ChurchTools nach unten: Wer in „${modus.neu.name}“ ist, sieht danach auch „${g.name}“ samt Untergruppen; ${
-            weiterSichtbarUeber(start.eltern, modus.alt.id, [
-              modus.neu.id,
-              ...alleEltern.filter((e) => e !== modus.alt.id),
-            ])
-              ? `wer in „${modus.alt.name}“ ist, sieht es weiterhin – „${modus.neu.name}“ liegt darunter.`
-              : `wer es nur über „${modus.alt.name}“ sah, sieht es nicht mehr.`
-          }`}
-          knopf="Umhängen"
-          arbeitet={arbeitet}
-          onZurueck={() => setModus({ art: 'ansehen' })}
-          onJa={() => {
-            const { alt, neu } = modus;
-            void ausfuehren(
-              () => obergruppeAendern(z, g.id, alt.id, neu.id),
-              `„${g.name}“ hängt jetzt unter „${neu.name}“.`,
-              () => obergruppeAendern(z, g.id, neu.id, alt.id),
-            );
-          }}
-        />
-      )}
-      {modus.art === 'dazu' && (
-        <Bestaetigen
-          frage={
-            ohneObergruppe
-              ? `„${g.name}“ unter „${modus.neu.name}“ hängen?`
-              : `„${g.name}“ zusätzlich unter „${modus.neu.name}“ hängen?`
-          }
-          folgen={`Rechte wirken in ChurchTools nach unten: Wer in „${modus.neu.name}“ ist, sieht danach auch „${g.name}“ samt Untergruppen.`}
-          knopf={ohneObergruppe ? 'Einhängen' : 'Hinzufügen'}
-          arbeitet={arbeitet}
-          onZurueck={() => setModus({ art: 'ansehen' })}
-          onJa={() => {
-            const { neu } = modus;
-            void ausfuehren(
-              () => obergruppeDazu(z, g.id, neu.id),
-              ohneObergruppe
-                ? `„${g.name}“ hängt jetzt unter „${neu.name}“.`
-                : `„${g.name}“ hängt jetzt auch unter „${neu.name}“.`,
-              () => obergruppeLoesen(z, g.id, neu.id),
-            );
-          }}
-        />
-      )}
-      {modus.art === 'loesen' && (
-        <Bestaetigen
-          frage={`„${g.name}“ von „${modus.alt.name}“ lösen?`}
-          folgen={`${alleEltern.length === 1 ? `„${g.name}“ ist danach ein eigener Bereich. ` : ''}${
-            weiterSichtbarUeber(
-              start.eltern,
-              modus.alt.id,
-              alleEltern.filter((e) => e !== modus.alt.id),
-            )
-              ? `Wer in „${modus.alt.name}“ ist, sieht „${g.name}“ weiterhin – über eine andere Obergruppe darunter.`
-              : `Wer „${g.name}“ nur über „${modus.alt.name}“ sah, sieht es danach nicht mehr.`
-          }`}
-          knopf="Lösen"
-          arbeitet={arbeitet}
-          onZurueck={() => setModus({ art: 'ansehen' })}
-          onJa={() => {
-            const { alt } = modus;
-            void ausfuehren(
-              () => obergruppeLoesen(z, g.id, alt.id),
-              `„${g.name}“ hängt nicht mehr unter „${alt.name}“.`,
-              () => obergruppeDazu(z, g.id, alt.id),
-            );
-          }}
-        />
-      )}
-      {modus.art === 'anlegen' && (
-        <Anlegen
-          start={start}
-          obergruppe={g}
-          typen={typen}
-          arbeitet={arbeitet}
-          onAnlegen={(name, typId) => void anlegen(name, typId)}
-          onZurueck={() => setModus({ art: 'ansehen' })}
-        />
-      )}
-
-      {modus.art === 'ansehen' && dienste.length > 0 && (
+      {dienste.length > 0 && (
         <section className={styles.abschnitt}>
           <h3>Dienste aus dieser Gruppe</h3>
           <p className={styles.dienste}>{dienste.map((d) => d.name).join(' · ')}</p>

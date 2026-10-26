@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Segment } from '@ui/bedienung/Segment';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { STUFEN, type PunkteVonMitgliedern, type Stufe } from '@shared/protokolle/einrichten';
@@ -94,7 +95,24 @@ export function GruppeEinrichten({
   const unvollstaendig = laden.art === 'fertig' && !laden.gespeichert && gruppe.eingerichtet;
   const titel = `${gespeichert ? 'Gruppe' : 'Gruppe einrichten'}: ${gruppe.name}`;
   return (
-    <Sheet title={titel} onClose={laeuft ? () => undefined : onClose}>
+    <Sheet
+      title={titel}
+      onClose={onClose}
+      beschaeftigt={laeuft}
+      knoepfe={
+        laden.art === 'fertig' && wahl ? (
+          <FensterKnopf disabled={laeuft} onClick={speichern}>
+            {laeuft
+              ? gespeichert
+                ? 'Wird gespeichert …'
+                : 'Wird eingerichtet …'
+              : gespeichert
+                ? 'Speichern'
+                : 'Einrichten'}
+          </FensterKnopf>
+        ) : null
+      }
+    >
       <p className={styles.unter}>Nur Admins dürfen das in ChurchTools – deshalb liegt es hier.</p>
       {laden.art === 'laedt' && <p className={styles.unter}>Wird geladen …</p>}
       {laden.art === 'fehler' && (
@@ -210,16 +228,6 @@ export function GruppeEinrichten({
               {fehler.text}
             </p>
           )}
-
-          <button type="button" className={styles.primaer} disabled={laeuft} onClick={speichern}>
-            {laeuft
-              ? gespeichert
-                ? 'Wird gespeichert …'
-                : 'Wird eingerichtet …'
-              : gespeichert
-                ? 'Speichern'
-                : 'Einrichten'}
-          </button>
         </>
       )}
     </Sheet>

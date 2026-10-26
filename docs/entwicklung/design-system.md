@@ -65,10 +65,12 @@ ChurchTools). Ausnahme: der ChordPro-**Editor** nutzt bewusst Monospace (`'JetBr
   `@use '@ui/design/mixins' as m;` → `@include m.card-list;`.
 - **Komponenten:** `Segment` (Auswahl 2–3 Optionen), `NoteTile` (Noten-Kachel),
   `Icon` (`ui/icons/icons.tsx`, Line-Icons – keine Emojis in der UI), **`SeitenGeruest`** (das
-  Gerüst JEDES Bildschirms: Überschrift, runde Knöpfe, Scrollen, Neuladen – seit 22.09.2026 der
-  Normalweg, `Screen`/`Scroll`/`GrosseUeberschrift`/`KnopfReihe` sind seine Bausteine; `RundKnopf`
-  für Aktionen in Detailansichten), `TabBar` (Reiter der Musik-App in der gemeinsamen
-  `ui/bedienung/ReiterLeiste`),
+  Gerüst JEDES Bildschirms: Seitenkopf, Scrollen, Neuladen – seit 22.09.2026 der
+  Normalweg, `Screen`/`Scroll`/`SeitenKopf` sind seine Bausteine; **`KopfKnopf`/`KopfZurueck`**
+  (`ui/bedienung`, Scheibe S 26.10.2026) für Aktionen und Zurück im Kopf – eckig mit Rahmen und
+  Beschriftung wie in ChurchTools, am Handy nur Symbol; `RundKnopf` nur noch im Liedblatt bis B1), `TabBar`
+  (Reiter der Musik-App in der gemeinsamen `ui/bedienung/ReiterLeiste` – am Handy unten, sonst `oben` als
+  Textreiter; Grenze `HANDY_BREITE` für alle Apps),
   `Sheet`, `ConfirmDialog`, **`SchwebePlus`** (das runde Plus unten rechts – Abwesenheiten und Ablauf),
   `SongFields` (die Stammdaten-Felder eines Liedes – von „Neues Lied" und
   „Stammdaten ändern" gemeinsam genutzt, damit es die fünf Felder nur einmal gibt).

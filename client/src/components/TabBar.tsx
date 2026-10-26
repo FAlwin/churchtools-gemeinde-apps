@@ -21,14 +21,16 @@ interface TabBarProps {
   /** Ausgegraute Tabs (z. B. Liedersammlung ohne Netz) – bleiben tippbar, der Aufrufer erklärt warum. */
   dimmed?: TabId[];
   onChange: (tab: TabId) => void;
+  /** Reiter oben als Text (iPad/Rechner) statt unten mit Symbolen (Handy) – Scheibe S. */
+  oben?: boolean;
 }
 
 /**
- * Untere Navigationsleiste der Musik-App: ihre Reiter in der gemeinsamen `ReiterLeiste` (ui/bedienung,
+ * Navigationsleiste der Musik-App (am Handy unten, sonst oben): ihre Reiter in der gemeinsamen `ReiterLeiste` (ui/bedienung,
  * auch im Dienstplaner). Tippt man den schon aktiven Reiter, geht es nach oben – wie in iOS-Apps. Der
  * Tipp auf die Statusleiste erreicht eine Web-App nicht (siehe `Screen.tsx`), dies ist der Ersatz dafür.
  */
-export function TabBar({ active, tabs, dimmed = [], onChange }: TabBarProps) {
+export function TabBar({ active, tabs, dimmed = [], onChange, oben }: TabBarProps) {
   return (
     <ReiterLeiste
       reiter={tabs.map((id) => ({ id, ...TAB_META[id] }))}
@@ -37,6 +39,7 @@ export function TabBar({ active, tabs, dimmed = [], onChange }: TabBarProps) {
       onWechsel={onChange}
       onErneut={scrolleZumAnfang}
       tour="tabbar"
+      oben={oben}
     />
   );
 }

@@ -24,11 +24,13 @@ des Bandes.
    („Abwesenheiten") und **Mehr** („Mehr").
 3. In jedem der vier: **hochschieben**. Die Überschrift wandert nach oben, läuft unter das Band und
    wird dabei weich – das ist der native Effekt von iOS, kein Fehler. Nichts bleibt oben kleben.
-4. Einen **Termin öffnen**: Oben gibt es **keine weiße Leiste** mehr. Direkt unter Uhr und Band
-   schweben **runde Knöpfe** – links der Pfeil zurück, rechts Teilen und Bearbeiten –, alle
-   **scharf**. Name und Datum des Gottesdienstes stehen groß darunter. Den Ablauf hochschieben: Die
-   Knöpfe bleiben stehen, der Inhalt läuft unter ihnen durch. Der Pfeil führt zurück zu den
-   Terminen (02.10.2026, Vorbild die iPhone-Einstellungen).
+4. Einen **Termin öffnen**: Der Kopf ist eine **weiße Karte** unter Uhr und Band – links **„← Termine“**, rechts
+   **Teilen** und (mit Recht) **Bearbeiten** in Blau, in der Erweiterung ganz rechts Vollbild; darunter Name und
+   Datum des Gottesdienstes. Am iPad stehen die Knöpfe mit Beschriftung, am Handy nur als Symbol (Zurück behält
+   „Termine“). Alles **scharf**; beim Hochschieben scrollt die Karte mit (wie in ChurchTools). Im Bearbeiten heißt
+   der blaue Knopf „Fertig“, daneben „Abschließen“ bzw. hellblau „Öffnen“ (Scheibe S, 26.10.2026).
+   4a. **Reiter:** Am iPad/Rechner stehen Termine · Lieder · Abwesenheiten · Mehr **oben** als Text, der gewählte blau
+   unterstrichen; am Handy unten mit Symbolen, der gewählte mit blauer Linie oben.
 5. **Ein Lied öffnen (Liedblatt):** Auch hier keine weiße Leiste. Unter dem Band: links der runde
    Pfeil zurück, daneben eine weiße **Kapsel mit dem Liedtitel** (darunter Tonart, Fassung, Tempo),
    rechts **ein** runder **Werkzeuge**-Knopf (drei Regler). Alles scharf, der Titel deutlich länger
@@ -61,9 +63,9 @@ des Bandes.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/SeitenGeruest.tsx`, `ui/bedienung/KnopfReihe.tsx`, `client/src/components/ChartHeader.tsx`, `client/src/components/WerkzeugMenu.tsx`, `client/src/utils/onboarding.ts`, `ui/bedienung/Segment.tsx`, `client/src/components/GrosseUeberschrift.tsx`, `client/src/components/Screen.tsx`, `client/src/components/Screen.module.scss`, `client/src/components/TabBar.tsx`, `client/index.html`, `ui/design/_variables.scss`
-- **Automatisiert:** teilweise – `client/src/components/SeitenGeruest.test.tsx` (Überschrift im Inhalt, runde Knöpfe nur mit Zurück/Aktionen und außerhalb des Scroll-Bereichs, Überlagerung ebenso), `client/src/components/ChartHeader.test.tsx` (Werkzeuge-Menü je Bedingung, Haken beim Zeichnen, Personen-Knopf beim Ansehen, kein Schließen nach einem Eintrag, Hochformat nach Breite samt Wechsel beim Größerziehen und Regel `werkzeugeEinzeln`), `e2e/chart-tempo.spec.ts` und `e2e/auth-flow.spec.ts` (Tempo und Anmerken über das Menü), `e2e/chart-querformat.spec.ts` (Querformat: Wahl per Kapsel ohne Vollbild, Werkzeug des anderen Lieds, Blatt = nur Vollbild), `client/src/components/Screen.zumAnfang.test.tsx` (aktiver Tab scrollt nach oben); von Hand bleibt, wie es unter dem echten Unschärfe-Band aussieht
-- **Historie:** Kopfzeilen-Umbau 21./22.09.2026; runde Knöpfe, Liedblatt mit einem Werkzeuge-Knopf und sichtbare Umschalter-Schiene 02.10.2026 (am selben Tag am Gerät widerlegt: eine deckende Statusleiste beseitigt das milchige Band nicht); Werkzeuge im Hochformat einzeln nach Fensterbreite 05.10.2026
+- **Betrifft:** `client/src/components/SeitenGeruest.tsx`, `client/src/components/SeitenKopf.tsx`, `ui/bedienung/KopfKnopf.tsx`, `ui/bedienung/ReiterLeiste.tsx`, `ui/bedienung/KnopfReihe.tsx`, `client/src/components/ChartHeader.tsx`, `client/src/components/WerkzeugMenu.tsx`, `client/src/utils/onboarding.ts`, `ui/bedienung/Segment.tsx`, `client/src/components/Screen.tsx`, `client/src/components/Screen.module.scss`, `client/src/components/TabBar.tsx`, `client/index.html`, `ui/design/_variables.scss`
+- **Automatisiert:** teilweise – `client/src/components/SeitenGeruest.test.tsx` (Überschrift im Inhalt, Kopfkarte nur mit Zurück, „← Ziel“ mit Text, Vollbild ganz rechts, Überlagerung neben dem Scroll-Bereich), `ui/bedienung/KopfKnopf.test.tsx`, `ui/bedienung/ReiterLeiste.test.tsx` (oben ohne Symbole), `client/src/components/ChartHeader.test.tsx` (Werkzeuge-Menü je Bedingung, Haken beim Zeichnen, Personen-Knopf beim Ansehen, kein Schließen nach einem Eintrag, Hochformat nach Breite samt Wechsel beim Größerziehen und Regel `werkzeugeEinzeln`), `e2e/chart-tempo.spec.ts` und `e2e/auth-flow.spec.ts` (Tempo und Anmerken über das Menü), `e2e/chart-querformat.spec.ts` (Querformat: Wahl per Kapsel ohne Vollbild, Werkzeug des anderen Lieds, Blatt = nur Vollbild), `client/src/components/Screen.zumAnfang.test.tsx` (aktiver Tab scrollt nach oben); von Hand bleibt, wie es unter dem echten Unschärfe-Band aussieht
+- **Historie:** Kopfzeilen-Umbau 21./22.09.2026; runde Knöpfe, Liedblatt mit einem Werkzeuge-Knopf und sichtbare Umschalter-Schiene 02.10.2026 (am selben Tag am Gerät widerlegt: eine deckende Statusleiste beseitigt das milchige Band nicht); Werkzeuge im Hochformat einzeln nach Fensterbreite 05.10.2026; Seitenkopf im ChurchTools-Look + Reiter oben am iPad (Scheibe S, 26.10.2026)
 
 </details>
 

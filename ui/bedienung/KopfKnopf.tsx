@@ -1,0 +1,71 @@
+import type { ReactNode } from 'react';
+import { Icon } from '../icons/icons';
+import styles from './KopfKnopf.module.scss';
+
+interface KopfKnopfProps {
+  onClick: () => void;
+  /** Sichtbare Beschriftung („Teilen“, „Bearbeiten“). Am Handy nur das Symbol (CSS) – der Name bleibt für Screenreader. */
+  label: string;
+  /** Ausführlicherer Name für Screenreader und Tooltip („Alle Lieder als PDF teilen“); sonst die Beschriftung. */
+  title?: string;
+  symbol: ReactNode;
+  /** Blau: die Hauptaktion der Seite („Bearbeiten“) – höchstens eine je Kopf. */
+  haupt?: boolean;
+  /** Hier gilt gerade etwas (Ablauf abgeschlossen, Vollbild an) – hellblau mit blauem Rand. */
+  aktiv?: boolean;
+  /** Immer nur das Symbol, auch am iPad (Vollbild – Entwurf S). */
+  nurSymbol?: boolean;
+  /** Ziel der geführten Einführung (`utils/onboarding.ts`). */
+  dataTour?: string;
+}
+
+/**
+ * **Ein Knopf im Seitenkopf** im ChurchTools-Stil (Scheibe S, 26.10.2026 – Alwin: die runden Knöpfe „sehen eher wie
+ * eine iOS-App aus“): eckig mit Rahmen, Symbol und Beschriftung wie „Zum Event gehen“ in ChurchTools. Löst
+ * `RundKnopf` in den Seiten ab.
+ */
+export function KopfKnopf({
+  onClick,
+  label,
+  title,
+  symbol,
+  haupt,
+  aktiv,
+  nurSymbol,
+  dataTour,
+}: KopfKnopfProps) {
+  return (
+    <button
+      type="button"
+      className={`${styles.knopf}${haupt ? ' ' + styles.haupt : aktiv ? ' ' + styles.aktiv : ''}${
+        nurSymbol ? ' ' + styles.nurSymbol : ''
+      }`}
+      onClick={onClick}
+      title={title ?? label}
+      aria-label={title ?? label}
+      aria-pressed={aktiv === undefined ? undefined : aktiv}
+      data-tour={dataTour}
+    >
+      {symbol}
+      {!nurSymbol && <span className={styles.text}>{label}</span>}
+    </button>
+  );
+}
+
+/**
+ * **„← Termine“** – zurück mit Ziel als Beschriftung, auch am Handy (dort ist er der einzige Weg zurück und das Ziel
+ * soll lesbar bleiben). Ohne Ziel heißt er „Zurück“.
+ */
+export function KopfZurueck({ onClick, ziel }: { onClick: () => void; ziel?: string }) {
+  return (
+    <button
+      type="button"
+      className={`${styles.knopf} ${styles.zurueck}`}
+      onClick={onClick}
+      aria-label={ziel ? `Zurück zu ${ziel}` : 'Zurück'}
+    >
+      <Icon name="pfeil-links" size={16} stroke={2.2} />
+      <span>{ziel ?? 'Zurück'}</span>
+    </button>
+  );
+}

@@ -1,0 +1,65 @@
+@use '../design/mixins' as m;
+
+// Knopf im Seitenkopf (Scheibe S, 26.10.2026) – der Hausstil für Aktionen (`aktionKnopf`) mit Symbol und Text.
+.knopf {
+  @include m.aktionKnopf;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-shrink: 0;
+  height: 38px;
+  min-width: 38px;
+  padding: 0 12px;
+  border-radius: var(--r-ctrl);
+  font-size: 14px;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+  }
+}
+
+// Immer nur das Symbol (Vollbild).
+.nurSymbol {
+  width: 38px;
+  padding: 0;
+}
+
+// Am Handy nur das Symbol – quadratisch, 40 px zum Tippen. Die Grenze ist `HANDY_BREITE` (useMedienAbfrage.ts);
+// CSS kann die Konstante nicht lesen. „← Termine“ behält seinen Text, er ist am Handy der einzige Weg zurück.
+@media (max-width: 759px) {
+  .knopf:not(.zurueck) {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+
+    .text {
+      display: none;
+    }
+  }
+  .zurueck {
+    height: 40px;
+  }
+}
+
+// Die Hauptaktion der Seite – blau wie der Hauptknopf in den Fenstern (`FensterKnopf`).
+.haupt {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    background: var(--blue);
+    opacity: 0.9;
+  }
+}
+
+// Hier gilt gerade etwas (abgeschlossen, Vollbild an).
+.aktiv {
+  border-color: var(--blue);
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+}

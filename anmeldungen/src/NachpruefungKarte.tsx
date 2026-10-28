@@ -1,3 +1,4 @@
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Icon } from '@ui/icons/icons';
 import { ctBasis } from '@ui/ct/basis';
 import { euroText } from '@shared/anmeldung/preis';
@@ -82,9 +83,9 @@ export function NachpruefungKarte({
 }) {
   const n = stand.art === 'fertig' ? stand.n : null;
   const neu = (
-    <button type="button" className={v.bearbeiten} onClick={onNeu} disabled={stand.art === 'laedt'}>
+    <FensterKnopf art="zweit" onClick={onNeu} disabled={stand.art === 'laedt'}>
       {stand.art === 'laedt' ? 'Prüft …' : 'Neu prüfen'}
-    </button>
+    </FensterKnopf>
   );
   const chip = !n ? null : n.hinweise > 0 ? (
     <span className={s.chip}>{n.hinweise === 1 ? '1 Hinweis' : `${n.hinweise} Hinweise`}</span>
@@ -129,7 +130,7 @@ export function NachpruefungKarte({
                   : `${n.plaetze.max - n.plaetze.belegt === 1 ? '1 Platz ist' : `${n.plaetze.max - n.plaetze.belegt} Plätze sind`} frei`}
                 , aber {n.plaetze.wartend === 1 ? '1 wartet' : `${n.plaetze.wartend} warten`}.
                 ChurchTools lässt niemanden von selbst nachrücken – neue Anmeldungen kommen hinten
-                an. Nachrücken lassen: im Reiter „Anmeldungen“.
+                an. Nachrücken lassen: im Bereich „Anmeldungen“.
               </p>
             )}
           </div>
@@ -175,7 +176,7 @@ export function NachpruefungKarte({
           )}
           <p className={v.pruefFuss}>
             Geändert wird hier nichts – Beträge, Nachrücken und Absagen gehen im Fenster einer
-            Anmeldung (Reiter „Anmeldungen“).
+            Anmeldung (Bereich „Anmeldungen“).
           </p>
         </>
       )}

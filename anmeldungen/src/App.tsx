@@ -1,3 +1,4 @@
+import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { useCallback, useEffect, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { tagAusIso } from '@shared/ct/zeit';
@@ -19,7 +20,6 @@ import {
   ErweiterungsSeite,
   type SeitenZustand,
 } from '@ui/erweiterung/ErweiterungsSeite';
-import s from './Startseite.module.scss';
 
 /**
  * Die Anmeldungen in ChurchTools: Wer angemeldet ist, seine Gruppen (#474, A1), deren Veranstaltungen
@@ -34,18 +34,21 @@ import s from './Startseite.module.scss';
  */
 type Ansicht =
   | { art: 'start' }
-  | { art: 'veranstaltung'; id: number; reiter: Reiter }
+  | { art: 'veranstaltung'; id: number; reiter?: Reiter }
   | { art: 'archiv' };
 
 function ansichtAusAdresse(): Ansicht {
-  // `#/v/91` = Reiter „Veranstaltung“, `#/v/91/formular` (A5), `#/v/91/anmeldungen` (A7). `…/gestaltung` war bis
-  // zum Umbau am 13.10.2026 ein eigener Reiter – alte Lesezeichen landen im Baukasten, der die Gestaltung enthält.
-  const m = /^#\/v\/(\d+)(?:\/(formular|gestaltung|anmeldungen))?$/.exec(window.location.hash);
+  // `#/v/91` = je nach Stand (U1: Entwurf → Vorbereiten, freigegeben → Anmeldungen), `#/v/91/vorbereiten`,
+  // `#/v/91/formular` (A5), `#/v/91/anmeldungen` (A7). `…/gestaltung` war bis zum Umbau am 13.10.2026 ein eigener
+  // Reiter – alte Lesezeichen landen im Baukasten, der die Gestaltung enthält.
+  const m = /^#\/v\/(\d+)(?:\/(vorbereiten|formular|gestaltung|anmeldungen))?$/.exec(
+    window.location.hash,
+  );
   if (m)
     return {
       art: 'veranstaltung',
       id: Number(m[1]),
-      reiter: m[2] === 'anmeldungen' ? 'anmeldungen' : m[2] ? 'formular' : 'veranstaltung',
+      reiter: m[2] === 'gestaltung' ? 'formular' : (m[2] as Reiter | undefined),
     };
   if (window.location.hash === '#/archiv') return { art: 'archiv' };
   return { art: 'start' };
@@ -135,8 +138,7 @@ export function App() {
           id={ansicht.id}
           reiter={ansicht.reiter}
           onReiter={(r) => {
-            window.location.hash =
-              r === 'veranstaltung' ? `#/v/${ansicht.id}` : `#/v/${ansicht.id}/${r}`;
+            window.location.hash = `#/v/${ansicht.id}/${r}`;
           }}
           gemeinde={fertig?.start.gemeinde ?? null}
           formularAdresse={fertig?.formular ?? null}
@@ -192,16 +194,19 @@ export function App() {
       kopfAktion={
         <>
           {fertig?.admin && (
-            <button type="button" className={s.neu} onClick={() => setEinstellungen(true)}>
-              <Icon name="zahnrad" size={16} />
-              Einstellungen
-            </button>
+            <KopfKnopf
+              label="Einstellungen"
+              symbol={<Icon name="zahnrad" size={16} />}
+              onClick={() => setEinstellungen(true)}
+            />
           )}
           {anlegeTeams.length > 0 && fertig?.formular && (
-            <button type="button" className={s.neu} onClick={() => setNeu(true)}>
-              <Icon name="plus" size={18} />
-              Neue Veranstaltung
-            </button>
+            <KopfKnopf
+              neu
+              label="Neue Veranstaltung"
+              symbol={<Icon name="plus" size={18} />}
+              onClick={() => setNeu(true)}
+            />
           )}
         </>
       }

@@ -223,14 +223,9 @@ export function GemeindeFenster({
               onChange={(e) => setNeueZahlart(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && neueZahlart.trim() && hinzufuegen()}
             />
-            <button
-              type="button"
-              className={f.hinzuKnopf}
-              disabled={!neueZahlart.trim()}
-              onClick={hinzufuegen}
-            >
+            <FensterKnopf art="zweit" disabled={!neueZahlart.trim()} onClick={hinzufuegen}>
               Hinzufügen
-            </button>
+            </FensterKnopf>
           </div>
           <small className={f.hinweis}>
             Stehen beim Abhaken von „bezahlt“ zur Wahl. Jede Veranstaltung kann einzelne abwählen

@@ -36,9 +36,12 @@ import { ablaeufeAbgleichen, ablaeufeLesen, type AblaufStand } from './ablaeufe'
 import { MailsFenster } from './MailsFenster';
 import { nachpruefungAus } from './nachpruefung';
 import { ladeMitglieder } from './mitglieder';
-import { AnmeldungenReiter, type MitgliederZustand } from './AnmeldungenReiter';
+import { AnmeldungenReiter, type ListenFilter, type MitgliederZustand } from './AnmeldungenReiter';
+import { Kennzahlen, SchrittLeiste } from './Einstieg';
+import { schritteBisZurFreigabe, type SchrittId } from './schritte';
 import { Baukasten } from './Baukasten';
-import { Segment } from '@ui/bedienung/Segment';
+import { ReiterLeiste } from '@ui/bedienung/ReiterLeiste';
+import { FensterKnopf, FensterLink } from '@ui/fenster/FensterKnopf';
 import type { Aenderung } from './Rueckgaengig';
 import { WER_TEXT, datumText, schlussVorLoeschenText } from './anzeige';
 import { fehlerMeldung, type Fehlermeldung } from './zustand';
@@ -56,10 +59,13 @@ import f from './Formular.module.scss';
  */
 
 /**
- * Die Reiter einer Veranstaltung (A5). „Gestaltung“ war bis zum Umbau am 13.10.2026 ein eigener Reiter – jetzt
- * steckt sie im Baukasten (Leiste „Design“). Seit A7-1 dazu die Liste der Anmeldungen.
+ * Was auf der Seite offen ist (U1, Alwin 28.10.2026: zwei Bereiche). „Vorbereiten“ = alles im Vorfeld; „Formular“ ist
+ * der Baukasten darin (eigene Ansicht, weil er die ganze Breite braucht); „Anmeldungen“ = was danach reinkommt. Ohne
+ * Angabe öffnet die Seite je nach Stand: Entwurf → Vorbereiten, freigegeben → Anmeldungen.
  */
-export type Reiter = 'veranstaltung' | 'formular' | 'anmeldungen';
+export type Reiter = 'vorbereiten' | 'formular' | 'anmeldungen';
+/** Die zwei Bereiche oben (U1) – Text mit blauer Unterstreichung wie die Reiter in ChurchTools. */
+type Bereich = 'vorbereiten' | 'anmeldungen';
 
 interface Daten {
   name: string;
@@ -92,10 +98,13 @@ type Fenster =
 function Karte({
   titel,
   onBearbeiten,
+  knopf = 'Bearbeiten',
   children,
 }: {
   titel: string;
   onBearbeiten?: () => void;
+  /** Beschriftung des Knopfs – „Ansehen“, wo auch ohne Recht etwas zu sehen ist (Formular, U1). */
+  knopf?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -103,9 +112,9 @@ function Karte({
       <div className={s.kopf}>
         <h2>{titel}</h2>
         {onBearbeiten && (
-          <button type="button" className={v.bearbeiten} onClick={onBearbeiten}>
-            Bearbeiten
-          </button>
+          <FensterKnopf art="zweit" onClick={onBearbeiten}>
+            {knopf}
+          </FensterKnopf>
         )}
       </div>
       <dl className={v.kv}>{children}</dl>
@@ -263,7 +272,7 @@ function MailsKarte({
 
 export function VeranstaltungSeite({
   id,
-  reiter = 'veranstaltung',
+  reiter,
   onReiter = () => {},
   gemeinde = null,
   formularAdresse = null,
@@ -274,6 +283,7 @@ export function VeranstaltungSeite({
   onGeaendert = () => {},
 }: {
   id: number;
+  /** Ohne Angabe je nach Stand (U1): Entwurf → Vorbereiten, freigegeben → Anmeldungen. */
   reiter?: Reiter;
   onReiter?: (r: Reiter) => void;
   /** Gemeindename für den Kopf des Formulars (Vorschau). */
@@ -302,6 +312,11 @@ export function VeranstaltungSeite({
   const [pruefWarOben, setPruefWarOben] = useState(false);
   // A9-1: Stand der Bestätigungsmails – nebenher geladen, die Seite wartet nicht darauf. `null` = lädt noch.
   const [ablauf, setAblauf] = useState<AblaufStand | 'fehler' | null>(null);
+  // U1: Eine Kennzahl-Kachel springt in eine Ansicht der Liste – `n` zählt hoch, damit derselbe Sprung neu beginnt.
+  const [sprung, setSprung] = useState<{ filter: ListenFilter; n: number }>({
+    filter: 'alle',
+    n: 0,
+  });
 
   const mitgliederLaden = useCallback(
     (einstellungen: OeffentlicheEinstellungen, maxPlaetze: number | null) => {
@@ -446,6 +461,19 @@ export function VeranstaltungSeite({
   // Die Zahlarten dieser Veranstaltung – für die Karte „Bezahlung“ und den Reiter „Anmeldungen“ (A7-2).
   const zahlartenHier = zahlartenFuer(zahlarten, b.ohneZahlarten ?? []);
 
+  // Welcher Bereich offen ist: aus der Adresse, sonst je nach Stand (U1).
+  const offen: Reiter = reiter ?? (entwurf ? 'vorbereiten' : 'anmeldungen');
+  const bereich: Bereich = offen === 'anmeldungen' ? 'anmeldungen' : 'vorbereiten';
+  const schritte = schritteBisZurFreigabe(e, a, zeitzone);
+  const schritt = (id: SchrittId) => {
+    if (id === 'formular') onReiter('formular');
+    else setFenster(id);
+  };
+  const zurListe = (filter: ListenFilter) => {
+    setSprung((x) => ({ filter, n: x.n + 1 }));
+    onReiter('anmeldungen');
+  };
+
   return (
     <div className={v.seite}>
       {zurueck}
@@ -458,19 +486,17 @@ export function VeranstaltungSeite({
         </div>
         <div className={v.aktionen}>
           {entwurf && darf && (
-            <button type="button" className={v.freigeben} onClick={() => setFenster('freigeben')}>
-              Freigeben
-            </button>
+            <FensterKnopf onClick={() => setFenster('freigeben')}>Freigeben</FensterKnopf>
           )}
           {darf && (
-            <button type="button" className={v.bearbeiten} onClick={() => setFenster('verwalten')}>
+            <FensterKnopf art="zweit" onClick={() => setFenster('verwalten')}>
               Verwalten
-            </button>
+            </FensterKnopf>
           )}
-          <a className={s.link} href={`${ctBasis()}/groups/${id}`}>
+          <FensterLink art="zweit" href={`${ctBasis()}/groups/${id}`}>
             In ChurchTools
             <Icon name="external" size={14} />
-          </a>
+          </FensterLink>
         </div>
       </header>
       {!darf && (
@@ -478,173 +504,210 @@ export function VeranstaltungSeite({
           Einrichten und freigeben kann die Leitung der Gruppe. Du kannst alles ansehen.
         </p>
       )}
-      {/* Erst freigegeben nimmt das Formular etwas an – vorher gibt es keinen Link (14.10.2026). */}
-      {!entwurf && formularAdresse && (
-        <AnmeldeLinkKarte
-          id={id}
-          link={anmeldeLink(formularAdresse, ctBasis(), id)}
-          titel={daten.name}
-          stand={daten}
-          aushang={{
-            gemeinde,
-            termin: terminZeile(e),
-            anmeldeschluss: a.bis ? tagAusIso(a.bis, zeitzone) : null,
-          }}
-          onEinrichten={darf ? () => setFenster('freigeben') : undefined}
+
+      {/* Einstieg (U1, Variante D): vor der Freigabe die Schritte, danach die Kennzahlen. */}
+      {entwurf ? (
+        <SchrittLeiste schritte={schritte} darf={darf} onSchritt={schritt} />
+      ) : (
+        <Kennzahlen
+          einstellungen={e}
+          zustand={mitglieder}
+          stichtag={t?.beginn.slice(0, 10) ?? heute}
+          maxPlaetze={a.maxPlaetze}
+          anmeldeschluss={a.bis}
+          heute={heute}
+          zeitzone={zeitzone}
+          onAnsicht={zurListe}
+          onAnmeldung={bearbeiten('anmeldung')}
         />
       )}
-      {/* Mit Hinweisen oben, sonst klein unten (Entwurf a6-5c). */}
+      {/* Mit Hinweisen oben, sonst klein unten bei den Anmeldungen (Entwurf a6-5c). */}
       {pruefOben && pruefKarte}
 
-      <Segment<Reiter>
-        className={v.reiter}
-        ariaLabel="Bereich"
-        value={reiter}
-        onChange={onReiter}
-        options={[
-          { value: 'veranstaltung', label: 'Veranstaltung' },
-          { value: 'formular', label: 'Formular' },
-          { value: 'anmeldungen', label: 'Anmeldungen' },
+      <ReiterLeiste<Bereich>
+        oben
+        aktiv={bereich}
+        onWechsel={(b) => onReiter(b)}
+        // Aus dem Formular zurück: Der Reiter „Vorbereiten“ ist dort schon an – ein Tipp führt zu den Karten.
+        onErneut={() => offen === 'formular' && onReiter('vorbereiten')}
+        reiter={[
+          { id: 'vorbereiten', label: 'Vorbereiten', icon: 'cog' },
+          { id: 'anmeldungen', label: 'Anmeldungen', icon: 'people' },
         ]}
       />
 
-      {reiter === 'formular' && (
-        <Baukasten
-          id={id}
-          name={daten.name}
-          gemeinde={gemeinde}
-          einstellungen={e}
-          bildUrl={daten.bildUrl}
-          darf={darf}
-          heute={heute}
-          onGespeichert={(text, umkehrbar) =>
-            umkehrbar
-              ? gespeichert(text)()
-              : (onGeaendert({ text, rueckgaengig: null }, false), laden())
-          }
-        />
+      {offen === 'formular' && (
+        <>
+          <button type="button" className={v.zurueck} onClick={() => onReiter('vorbereiten')}>
+            <Icon name="chev-left" size={18} />
+            Zurück
+          </button>
+          <Baukasten
+            id={id}
+            name={daten.name}
+            gemeinde={gemeinde}
+            einstellungen={e}
+            bildUrl={daten.bildUrl}
+            darf={darf}
+            heute={heute}
+            onGespeichert={(text, umkehrbar) =>
+              umkehrbar
+                ? gespeichert(text)()
+                : (onGeaendert({ text, rueckgaengig: null }, false), laden())
+            }
+          />
+        </>
       )}
 
-      {reiter === 'anmeldungen' && (
-        <AnmeldungenReiter
-          id={id}
-          veranstaltung={daten.name}
-          e={e}
-          maxPlaetze={a.maxPlaetze}
-          warteliste={a.warteliste}
-          anmeldeschluss={a.bis}
-          entwurf={entwurf}
-          zustand={mitglieder}
-          stichtag={t?.beginn.slice(0, 10) ?? heute}
-          heute={heute}
-          darf={darf}
-          zahlarten={zahlartenHier}
-          gemeinde={gemeinde}
-          onNeuLaden={neuLaden}
-          // Alles neu laden, nicht nur die Mitglieder: Das erste „bezahlt“ legt bei älteren Veranstaltungen das Feld
-          // „Zahlart“ an – ohne seine Nummer aus den Einstellungen fehlte die Zahlart in der Anzeige (echter Test 19.10.2026).
-          // „Rückgängig“ steht im Fenster, nicht in der Leiste unten (Alwin, 19.10.2026).
-          onGespeichert={laden}
-          mitBestaetigung={ablauf !== null && ablauf !== 'fehler' && ablauf.platz}
-        />
-      )}
-
-      {reiter === 'veranstaltung' && (
-        <div className={s.raster}>
-          <div className={s.spalte}>
-            <Karte titel="Termin" onBearbeiten={bearbeiten('termin')}>
-              {t ? (
-                <>
-                  <Zeile titel="Wann">
-                    {datumText(t.beginn.slice(0, 10))}, {t.beginn.slice(11)} Uhr
-                    {t.ende &&
-                      (t.ende.slice(0, 10) === t.beginn.slice(0, 10)
-                        ? ` bis ${t.ende.slice(11)} Uhr`
-                        : ` bis ${datumText(t.ende.slice(0, 10))}, ${t.ende.slice(11)} Uhr`)}
-                  </Zeile>
-                  <Zeile titel="Ort">{t.ort || '–'}</Zeile>
-                  <Zeile titel="Kalender">{t.terminId ? `Termin Nr. ${t.terminId}` : '–'}</Zeile>
-                </>
-              ) : (
-                <Zeile titel="Wann">noch kein Termin gewählt</Zeile>
-              )}
-            </Karte>
-            <Karte titel="Anmeldung" onBearbeiten={bearbeiten('anmeldung')}>
-              <Zeile titel="Zeitraum">
-                {a.ab ? `ab ${zeit(a.ab)}` : 'noch nicht geöffnet'}
-                {a.bis ? ` bis ${zeit(a.bis)}` : ''}
-              </Zeile>
-              <Zeile titel="Plätze">
-                {a.maxPlaetze ?? 'unbegrenzt'}
-                {a.maxPlaetze !== null &&
-                  (a.warteliste ? ' · danach Warteliste' : ' · ohne Warteliste')}
-              </Zeile>
-              <Zeile titel="Freie Plätze zeigen">
-                {e.plaetze.zeigen === 'immer'
-                  ? 'immer'
-                  : e.plaetze.zeigen === 'nie'
-                    ? 'nie'
-                    : `wenn weniger als ${e.plaetze.knappUnter} frei sind`}
-              </Zeile>
-              <Zeile titel="Kontakt">{e.kontakt || '–'}</Zeile>
-            </Karte>
-            <Karte titel="Wer meldet sich an?" onBearbeiten={bearbeiten('wer')}>
-              <Zeile titel="Anmeldung">{WER_TEXT[e.wer][0]}</Zeile>
-              <Zeile titel="Geburtsdatum">
-                {geburt ? 'wird abgefragt (Pflicht)' : 'wird nicht abgefragt'}
-              </Zeile>
-            </Karte>
-            <PreiseKarte
-              preis={e.preis}
-              geburtsdatum={geburt}
-              darf={darf}
-              onOeffnen={(w) => setFenster({ preis: w })}
-              onGeburtsdatum={() => setFenster('wer')}
+      {offen === 'vorbereiten' && (
+        <>
+          {/* Erst freigegeben nimmt das Formular etwas an – vorher gibt es keinen Link (14.10.2026). */}
+          {!entwurf && formularAdresse && (
+            <AnmeldeLinkKarte
+              id={id}
+              link={anmeldeLink(formularAdresse, ctBasis(), id)}
+              titel={daten.name}
+              stand={daten}
+              aushang={{
+                gemeinde,
+                termin: terminZeile(e),
+                anmeldeschluss: a.bis ? tagAusIso(a.bis, zeitzone) : null,
+              }}
+              onEinrichten={darf ? () => setFenster('freigeben') : undefined}
             />
-            <Karte titel="Bezahlung" onBearbeiten={bearbeiten('bezahlung')}>
-              <Zeile titel="Bankverbindung">
-                {b.iban ? (
+          )}
+          <div className={s.raster}>
+            <div className={s.spalte}>
+              <Karte titel="Termin" onBearbeiten={bearbeiten('termin')}>
+                {t ? (
                   <>
-                    {b.kontoinhaber}
-                    <br />
-                    {ibanText(b.iban)}
-                    {b.bic && ` · ${b.bic}`}
+                    <Zeile titel="Wann">
+                      {datumText(t.beginn.slice(0, 10))}, {t.beginn.slice(11)} Uhr
+                      {t.ende &&
+                        (t.ende.slice(0, 10) === t.beginn.slice(0, 10)
+                          ? ` bis ${t.ende.slice(11)} Uhr`
+                          : ` bis ${datumText(t.ende.slice(0, 10))}, ${t.ende.slice(11)} Uhr`)}
+                    </Zeile>
+                    <Zeile titel="Ort">{t.ort || '–'}</Zeile>
+                    <Zeile titel="Kalender">{t.terminId ? `Termin Nr. ${t.terminId}` : '–'}</Zeile>
                   </>
-                ) : kostet ? (
-                  <span className={v.fehlt}>fehlt noch</span>
                 ) : (
-                  'keine (kostenlos)'
+                  <Zeile titel="Wann">noch kein Termin gewählt</Zeile>
                 )}
-              </Zeile>
-              <Zeile titel="Zahlungsfrist">
-                {b.fristTage === 0 ? 'keine' : `${b.fristTage} Tage nach der Anmeldung`}
-              </Zeile>
-              <Zeile titel="Zahlarten">{zahlartenHier.join(', ')}</Zeile>
-              <Zeile titel="Verwendungszweck">
-                {b.zweck || '–'}
-                {b.zweck.includes('[') && (
-                  <small className={v.klein}>z. B. „{verwendungszweck(b.zweck, 'Müller')}“</small>
-                )}
-              </Zeile>
-            </Karte>
-            <MailsKarte
-              stand={entwurf ? 'entwurf' : ablauf}
-              kostet={kostet}
-              onBearbeiten={bearbeiten('mails')}
-            />
-            <DatenschutzKarte
-              monate={e.loeschfristMonate}
-              mitTermin={!!e.termin}
-              stand={entwurf ? 'entwurf' : ablauf}
-              heute={heute}
-              onBearbeiten={bearbeiten('loeschfrist')}
-            />
-            {!pruefOben && pruefKarte}
+              </Karte>
+              <Karte titel="Anmeldung" onBearbeiten={bearbeiten('anmeldung')}>
+                <Zeile titel="Zeitraum">
+                  {a.ab ? `ab ${zeit(a.ab)}` : 'noch nicht geöffnet'}
+                  {a.bis ? ` bis ${zeit(a.bis)}` : ''}
+                </Zeile>
+                <Zeile titel="Plätze">
+                  {a.maxPlaetze ?? 'unbegrenzt'}
+                  {a.maxPlaetze !== null &&
+                    (a.warteliste ? ' · danach Warteliste' : ' · ohne Warteliste')}
+                </Zeile>
+                <Zeile titel="Freie Plätze zeigen">
+                  {e.plaetze.zeigen === 'immer'
+                    ? 'immer'
+                    : e.plaetze.zeigen === 'nie'
+                      ? 'nie'
+                      : `wenn weniger als ${e.plaetze.knappUnter} frei sind`}
+                </Zeile>
+                <Zeile titel="Kontakt">{e.kontakt || '–'}</Zeile>
+              </Karte>
+              <Karte titel="Wer meldet sich an?" onBearbeiten={bearbeiten('wer')}>
+                <Zeile titel="Anmeldung">{WER_TEXT[e.wer][0]}</Zeile>
+                <Zeile titel="Geburtsdatum">
+                  {geburt ? 'wird abgefragt (Pflicht)' : 'wird nicht abgefragt'}
+                </Zeile>
+              </Karte>
+              <Karte
+                titel="Formular"
+                knopf={darf ? 'Bearbeiten' : 'Ansehen'}
+                onBearbeiten={() => onReiter('formular')}
+              >
+                <Zeile titel="Fragen">{schritte.find((x) => x.id === 'formular')?.text}</Zeile>
+                <Zeile titel="Gestaltung">im Baukasten unter „Design“</Zeile>
+              </Karte>
+              <PreiseKarte
+                preis={e.preis}
+                geburtsdatum={geburt}
+                darf={darf}
+                onOeffnen={(w) => setFenster({ preis: w })}
+                onGeburtsdatum={() => setFenster('wer')}
+              />
+              <Karte titel="Bezahlung" onBearbeiten={bearbeiten('bezahlung')}>
+                <Zeile titel="Bankverbindung">
+                  {b.iban ? (
+                    <>
+                      {b.kontoinhaber}
+                      <br />
+                      {ibanText(b.iban)}
+                      {b.bic && ` · ${b.bic}`}
+                    </>
+                  ) : kostet ? (
+                    <span className={v.fehlt}>fehlt noch</span>
+                  ) : (
+                    'keine (kostenlos)'
+                  )}
+                </Zeile>
+                <Zeile titel="Zahlungsfrist">
+                  {b.fristTage === 0 ? 'keine' : `${b.fristTage} Tage nach der Anmeldung`}
+                </Zeile>
+                <Zeile titel="Zahlarten">{zahlartenHier.join(', ')}</Zeile>
+                <Zeile titel="Verwendungszweck">
+                  {b.zweck || '–'}
+                  {b.zweck.includes('[') && (
+                    <small className={v.klein}>z. B. „{verwendungszweck(b.zweck, 'Müller')}“</small>
+                  )}
+                </Zeile>
+              </Karte>
+              <MailsKarte
+                stand={entwurf ? 'entwurf' : ablauf}
+                kostet={kostet}
+                onBearbeiten={bearbeiten('mails')}
+              />
+              <DatenschutzKarte
+                monate={e.loeschfristMonate}
+                mitTermin={!!e.termin}
+                stand={entwurf ? 'entwurf' : ablauf}
+                heute={heute}
+                onBearbeiten={bearbeiten('loeschfrist')}
+              />
+            </div>
+            <div className={`${s.spalte} ${v.klebt}`}>
+              <ProbeRechnen preis={e.preis} wer={e.wer} geburtsdatum={geburt} heute={heute} />
+            </div>
           </div>
-          <div className={`${s.spalte} ${v.klebt}`}>
-            <ProbeRechnen preis={e.preis} wer={e.wer} geburtsdatum={geburt} heute={heute} />
-          </div>
-        </div>
+        </>
+      )}
+
+      {offen === 'anmeldungen' && (
+        <>
+          <AnmeldungenReiter
+            key={sprung.n}
+            startFilter={sprung.filter}
+            id={id}
+            veranstaltung={daten.name}
+            e={e}
+            maxPlaetze={a.maxPlaetze}
+            warteliste={a.warteliste}
+            anmeldeschluss={a.bis}
+            entwurf={entwurf}
+            zustand={mitglieder}
+            stichtag={t?.beginn.slice(0, 10) ?? heute}
+            heute={heute}
+            darf={darf}
+            zahlarten={zahlartenHier}
+            gemeinde={gemeinde}
+            onNeuLaden={neuLaden}
+            // Alles neu laden, nicht nur die Mitglieder: Das erste „bezahlt“ legt bei älteren Veranstaltungen das Feld
+            // „Zahlart“ an – ohne seine Nummer aus den Einstellungen fehlte die Zahlart in der Anzeige (echter Test 19.10.2026).
+            // „Rückgängig“ steht im Fenster, nicht in der Leiste unten (Alwin, 19.10.2026).
+            onGespeichert={laden}
+            mitBestaetigung={ablauf !== null && ablauf !== 'fehler' && ablauf.platz}
+          />
+          {!pruefOben && pruefKarte}
+        </>
       )}
 
       {fenster === 'termin' && (

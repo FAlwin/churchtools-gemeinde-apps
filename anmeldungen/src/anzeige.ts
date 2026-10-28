@@ -36,9 +36,12 @@ export function schlussText(v: Veranstaltung, heute: string, zeitzone: string): 
   if (v.anmeldung !== 'offen' || !v.anmeldungBis) return null;
   // Der Tag über die eine Umrechnung UTC → Ortszeit (`shared/ct/zeit.ts`), nicht über einen eigenen Formatierer.
   const tag = tagAusIso(v.anmeldungBis, zeitzone);
-  const rest = tageBis(heute, tag);
-  const wann = rest === 0 ? 'heute' : rest === 1 ? 'morgen' : `noch ${rest} Tage`;
-  return `Anmeldeschluss ${Number(tag.slice(8, 10))}.${Number(tag.slice(5, 7))}. (${wann})`;
+  return `Anmeldeschluss ${Number(tag.slice(8, 10))}.${Number(tag.slice(5, 7))}. (${restText(tageBis(heute, tag))})`;
+}
+
+/** „heute“, „morgen“, „noch 3 Tage“ – wie lange etwas noch läuft (Anmeldeschluss auf Startseite und Kennzahlen). */
+export function restText(rest: number): string {
+  return rest === 0 ? 'heute' : rest === 1 ? 'morgen' : `noch ${rest} Tage`;
 }
 
 /** Ein Wort für „1 Veranstaltung“ / „3 Veranstaltungen“. */

@@ -1,3 +1,4 @@
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import s from './Startseite.module.scss';
 
 /**
@@ -34,9 +35,7 @@ export function ErstEinrichten({
             </li>
             <li>Hier unter „Einstellungen“ die Adresse eintragen.</li>
           </ol>
-          <button type="button" className={s.neu} onClick={onEinstellungen}>
-            Einstellungen öffnen
-          </button>
+          <FensterKnopf onClick={onEinstellungen}>Einstellungen öffnen</FensterKnopf>
         </div>
       ) : (
         <p className={s.einrichten}>

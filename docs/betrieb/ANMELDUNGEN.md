@@ -68,15 +68,27 @@ formular:hochladen` (optional `ANMELDUNG_FTP_ORDNER`; `ANMELDUNG_FTP_BENUTZER`, 
 
 **Spam-Schutz** (unsichtbar): ein verstecktes Feld, das nur Bots ausfüllen, und eine Mindest-Ausfüllzeit von 3
 Sekunden. Gäste merken davon nichts. Ein Captcha gibt es bewusst nicht – ohne eigenen Server ließe es sich nicht
-prüfen. Was trotzdem durchkommt, entfernt die Leitung in ChurchTools (sehen kann sie es im Reiter „Anmeldungen“).
+prüfen. Was trotzdem durchkommt, entfernt die Leitung in ChurchTools (sehen kann sie es im Bereich „Anmeldungen“).
 
 **Nachprüfung:** Auf der Seite einer freigegebenen Veranstaltung rechnet die Erweiterung nach, was Gäste geschickt haben
 (Beträge je Anmelde-Nr., Belegung je Auswahl, Plätze) und zeigt Hinweise – geändert wird nichts. Wichtig: Wartet
 jemand, rückt in ChurchTools niemand von selbst nach, auch wenn ihr Plätze dazugebt; neue Anmeldungen kommen dann
-hinten an. Nachrücken lassen geht im Reiter „Anmeldungen“ (siehe unten).
+hinten an. Nachrücken lassen geht im Bereich „Anmeldungen“ (siehe unten).
 
-**Reiter „Anmeldungen“:** eine Zeile je Anmeldung (über die Anmelde-Nr.) mit Personen, Alter,
-Warteplatz, Betrag und Zahlung; oben Plätze, Warteliste und offene Zahlungen, dazu der Hinweis, wenn Plätze frei sind
+**Aufbau einer Veranstaltung** (U1, 29.10.2026): zwei Bereiche – **„Vorbereiten“** (Termin, Anmeldung, „Wer meldet sich
+an?“, Formular, Preise, Bezahlung, Mails, Datenschutz, nach der Freigabe oben der Anmeldelink) und **„Anmeldungen“**
+(was danach reinkommt). Ohne Angabe in der Adresse öffnet ein Entwurf „Vorbereiten“, eine freigegebene Veranstaltung
+„Anmeldungen“ (`#/v/91/vorbereiten`, `…/formular`, `…/anmeldungen` öffnen gezielt). Darüber der **Einstieg**: vor der
+Freigabe eine Schrittleiste (Termin, Anmeldung, Formular, Bezahlung, Freigeben) mit einem Knopf für den nächsten
+Schritt; danach **Kennzahlen** – Plätze, Warteliste, Zahlung offen, Anmeldeschluss. Ein Klick auf eine Kachel öffnet
+die passende Ansicht der Liste. Hervorgehoben (blau) ist nur die Warteliste, wenn trotz freiem Platz jemand wartet –
+offene Zahlungen sind kurz nach der Anmeldung der Normalfall. Das Formular (Baukasten) öffnet „Bearbeiten“ an der
+Karte „Formular“; zurück geht es mit „‹ Zurück“ oder dem Reiter „Vorbereiten“. Knöpfe sind die gemeinsamen aus `ui/`
+(wie in den ChurchTools-Fenstern); eine Dauerprüfung (`ui/design/knoepfeAnmeldungen.test.ts`) meldet jede neue eigene
+Knopfart.
+
+**Bereich „Anmeldungen“:** eine Zeile je Anmeldung (über die Anmelde-Nr.) mit Personen, Alter,
+Warteplatz, Betrag und Zahlung; die Zahlen stehen oben in den Kennzahlen, dazu der Hinweis, wenn Plätze frei sind
 und jemand wartet. Filter: Alle, Zahlung offen, Warteliste, Abgesagt; Suche nach Namen. Ein Klick öffnet alle
 Antworten – was für die ganze Anmeldung gilt (Kontakt, Erziehungsberechtigte, Unterschrift als Bild), steht einmal
 oben. **Abgesagt** kommt aus dem Verlauf von ChurchTools: Er behält auch die Antworten der Abgesagten, deshalb gehen
@@ -96,7 +108,7 @@ Sind die Mails nicht eingerichtet, schickt ChurchTools beim Nachrücken nur „w
 lässt sich im Fenster rückgängig machen – dabei kommt die Bestätigung noch einmal, das Fenster sagt es –, Nachrücken
 nicht (sonst schickt ChurchTools „Du stehst auf der Warteliste“).
 
-**Anmeldung von Hand** (Telefon, Papier, auch nach dem Anmeldeschluss): Knopf „＋ Von Hand“ im Reiter „Anmeldungen“.
+**Anmeldung von Hand** (Telefon, Papier, auch nach dem Anmeldeschluss): Knopf „＋ Von Hand“ im Bereich „Anmeldungen“.
 Erst die Person in ChurchTools suchen; gibt es sie nicht, legt ihr sie neu an (mit Geburtsdatum, E-Mail und wer dem
 Datenschutz zugestimmt hat – die Person selbst oder ein Elternteil). Kennt ChurchTools den Namen schon, fragt die
 Erweiterung nach, ob es dieselbe Person ist. Dann dieselben Fragen wie im Formular; die E-Mail-Adresse ist hier
@@ -120,7 +132,7 @@ allein angemeldet, wird ihre Zahlung neu gerechnet und ist wieder offen. Hatte s
 darauf hin – dann bitte prüfen, ob schon zurückgezahlt wurde. Sind die Mails eingerichtet, bekommt sie die
 Bestätigung (beim Zurückholen auf die Warteliste die Mitteilung mit ihrem Platz); sonst gibt es danach „Mail schreiben“.
 
-**Rundmail:** „✉ Rundmail“ im Reiter „Anmeldungen“ schreibt an alle Anmeldungen, an die mit offener Zahlung oder an die
+**Rundmail:** „✉ Rundmail“ im Bereich „Anmeldungen“ schreibt an alle Anmeldungen, an die mit offener Zahlung oder an die
 mit Wartenden – je Anmeldung eine Mail an den Kontakt. ChurchTools verschickt sie mit deinem Namen als Absender;
 Antworten kommen bei dir an. Platzhalter wie `[Betrag]`, `[Anmelde-Nr.]` oder `[Angemeldet von]` füllt ChurchTools je
 Familie; die Vorschau zeigt, wie es bei jeder Familie aussieht. Vorlagen: Zahlungserinnerung (mit den Bankdaten aus
@@ -134,7 +146,7 @@ einem Update ändern – dann meldet das Fenster einen Fehler, und die Mail geht
 und Foyer: Gemeinde, Titel, Termin, groß der QR-Code, darunter der Link und der Anmeldeschluss. Der QR-Code ist immer
 schwarz auf weiß – umgekehrt lesen ihn viele Handys nicht.
 
-**Druckliste:** „⎙ Druckliste“ im Reiter „Anmeldungen“ macht aus der Liste ein PDF zum Teilen (Handy, iPad) oder
+**Druckliste:** „⎙ Druckliste“ im Bereich „Anmeldungen“ macht aus der Liste ein PDF zum Teilen (Handy, iPad) oder
 Herunterladen. Vorn stehen die Listen, die zum Formular passen; „＋ weitere“ öffnet die übrigen (ohne passende Frage
 bleibt die Spalte leer zum Ausfüllen von Hand):
 
@@ -148,7 +160,7 @@ bleibt die Spalte leer zum Ausfüllen von Hand):
   von / Uhrzeit“.
 - **Zahlungen** (wenn die Veranstaltung etwas kostet) – je Zahlung eine Zeile (die der Anmeldung und die eigenen von
   Nachgerückten, später Dazugekommenen und Zurückgeholten), bezahlt mit Tag und Zahlart oder „offen“, unten die Summen
-  wie oben im Reiter.
+  wie oben in den Kennzahlen.
   Gedruckt wird,
   wer einen Platz hat; „Auch Warteliste“ nimmt die Wartenden in einem eigenen Abschnitt dazu. Oben stehen Gemeinde,
   Veranstaltung und Liste, unten Stand und Seitenzahl – auf jeder Seite. Ab sechs Spalten wird quer gedruckt. Die Wahl
@@ -180,7 +192,7 @@ Standard-Mail von ChurchTools aus. **Bestätigung** – nach dem Anmelden und be
 und Bankdaten (nur in der Mail zur ersten Person einer Anmeldung, dort steht der Betrag; ohne Aufschlüsselung – die käme
 in einer Zeile an) und der Link zu „Deine Anmeldung“. **Warteliste** – mit dem Platz; bezahlt wird erst beim Nachrücken. Jede Person bekommt ihre eigene Mail an
 die Kontakt-Adresse (zwei Kinder = zwei Mails). Absender ist, wer freigibt (wenn Leitung), sonst die erste gewählte
-Leitung; Antworten gehen an diese Person. Die Karte „Mails“ im Reiter „Veranstaltung“ zeigt den Stand. Einrichten darf,
+Leitung; Antworten gehen an diese Person. Die Karte „Mails“ im Bereich „Vorbereiten“ zeigt den Stand. Einrichten darf,
 wer in ChurchTools das Recht „Routinen verwalten“ hat – fehlt es, wird trotzdem freigegeben, und ChurchTools schickt
 seine Standard-Mail (ohne Betrag). Ältere Veranstaltungen (vor A9 freigegeben) behalten die Standard-Mail, bis sie
 eingerichtet werden. In ChurchTools heißen die Abläufe „Anmeldungen: Platz“ und „Anmeldungen: Warteliste“ – bitte dort
@@ -336,7 +348,7 @@ mitarbeiten (z. B. über den Status oder global über die Gruppen).
 
 ## Formular und Gestaltung
 
-- **Reiter „Formular“** – der Baukasten. In der Mitte steht das Formular so, wie Gäste es sehen; rechts die
+- **Formular** – der Baukasten („Bearbeiten“ an der Karte „Formular“ im Bereich „Vorbereiten“). In der Mitte steht das Formular so, wie Gäste es sehen; rechts die
   Leiste mit **Bausteine** und **Design**.
   - **Hinzufügen:** einen Baustein an die richtige Stelle ins Formular ziehen oder antippen (er landet unter
     dem gewählten Feld). Empfohlene Bausteine (Geburtsdatum, Telefon, Anschrift …) gibt es je einmal; ist
@@ -352,14 +364,14 @@ mitarbeiten (z. B. über den Status oder global über die Gruppen).
   - **Woher kommt was?** Ein kleines ⓘ steht dort, wo etwas Pflicht ist oder aus einer Einstellung kommt
     (Name, E-Mail, Name jeder Person, Geburtsdatum, Datenschutz, „Wer nimmt teil?“, „Auswahl und Extras“);
     antippen zeigt den Grund. **„Wer meldet sich an?“** und „Geburtsdatum abfragen“ lassen sich oben in der
-    Leiste „Bausteine“ umstellen – dieselbe Einstellung wie im Reiter Veranstaltung.
+    Leiste „Bausteine“ umstellen – dieselbe Einstellung wie an der Karte im Bereich „Vorbereiten“.
   - **Erziehungsberechtigte und Unterschrift** (empfohlene Bausteine, in der Vorlage „Kinder-Event“ schon drin,
     je einmal je Anmeldung): Bei „Erziehungsberechtigte“ tragen Gäste Name und Telefon ein (eine zweite Person
     freiwillig) und setzen das Häkchen „erziehungsberechtigt und einverstanden“. Die **Unterschrift** zeichnen sie
     mit Finger oder Maus; **am Handy** öffnet ein Tipp die Fläche im Vollbild (quer gehalten wird sie groß). In
     ChurchTools stehen sie bei der ersten angemeldeten Person: „Erziehungsberechtigte“ lesbar, „Unterschrift“
     lesbar als „✓ Erna Muster, 15.10.2026“ und die Striche in der Spalte „Unterschrift (Daten)“ (die man in der
-    Liste ausblenden kann). Als Bild zu sehen ist die Unterschrift im Fenster einer Anmeldung (Reiter
+    Liste ausblenden kann). Als Bild zu sehen ist die Unterschrift im Fenster einer Anmeldung (Bereich
     „Anmeldungen“); auf der Druckliste steht sie lesbar („✓ Erna Muster, 15.10.2026“). Ein ChurchTools-Feld fasst höchstens 4.000 Zeichen (gemessen) – eine Unterschrift braucht meist
     einige hundert.
   - **Gespeichert wird von selbst**; oben steht, ob gerade gespeichert wird, und bei einem Fehler „Nochmal“.

@@ -46,7 +46,7 @@ test('Plus → Neuer Eintrag (Programmpunkt) → steht im Ablauf, Löschen räum
   await expect(page.getByRole('button', { name: 'Lied verknüpfen' })).toBeVisible();
   await page.getByPlaceholder('Titel', { exact: true }).fill('Abkündigungen (E2E)');
   await page.getByPlaceholder('z. B. 5').fill('7');
-  await page.getByRole('button', { name: 'Hinzufügen' }).click();
+  await page.getByRole('button', { name: 'Hinzufügen', exact: true }).click();
 
   const neu = page.locator('button', { hasText: 'Abkündigungen (E2E)' }).first();
   await expect(neu).toBeVisible();

@@ -231,3 +231,41 @@ describe('„Neu aufsetzen …“ in der Hinweiszeile (E6-5b)', () => {
     expect(await screen.findByText('gesperrt')).toBeTruthy();
   });
 });
+
+describe('Blättern im Punkt-Fenster (E6-O O3)', () => {
+  const drei = [zeile(1, 'Begrüßung'), zeile(2, 'Lobpreis'), zeile(3, 'Predigt')];
+
+  it('„Position“ zählt die Bearbeiten-Liste; ‹ › öffnet den Nachbarn, ohne neu einzublenden', () => {
+    render(<Harness aktionen={aktionen()} items={drei} />);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[1]);
+    expect(screen.getByRole('dialog', { name: 'Lobpreis' })).toBeTruthy();
+    expect(screen.getByText(/^Position 2 von 3/)).toBeTruthy();
+    // Beim ersten Öffnen blendet das Fenster ein …
+    expect(screen.getByRole('dialog').parentElement!.className).not.toMatch(/still/);
+    fireEvent.click(screen.getByRole('button', { name: 'Nächster Eintrag' }));
+    expect(screen.getByRole('dialog', { name: 'Predigt' })).toBeTruthy();
+    expect(screen.getByText(/^Position 3 von 3/)).toBeTruthy();
+    // … beim Blättern ersetzt es nur sein voriges.
+    expect(screen.getByRole('dialog').parentElement!.className).toMatch(/still/);
+    expect(screen.getByRole('button', { name: 'Nächster Eintrag' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Voriger Eintrag' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Voriger Eintrag' }));
+    expect(screen.getByRole('dialog', { name: 'Begrüßung' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Voriger Eintrag' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+  });
+
+  it('nach dem Schließen blendet das nächste Öffnen wieder ein', () => {
+    render(<Harness aktionen={aktionen()} items={drei} />);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Nächster Eintrag' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[2]);
+    expect(screen.getByRole('dialog').parentElement!.className).not.toMatch(/still/);
+  });
+});

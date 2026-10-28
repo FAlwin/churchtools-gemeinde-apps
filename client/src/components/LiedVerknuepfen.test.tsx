@@ -367,3 +367,25 @@ describe('ItemActionSheet – Neuer Eintrag', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 });
+
+describe('„Lied verknüpfen“ im ChurchTools-Aufbau (E6-O O3)', () => {
+  it('ein Fenster mit X; unten nur „Abbrechen“ – zurück ins Punkt-Fenster, ohne neu einzublenden', () => {
+    zeige();
+    verknuepfenOeffnen();
+    expect(screen.getByRole('dialog', { name: 'Lied verknüpfen' })).toBeTruthy();
+    const fuss = screen.getByRole('dialog').lastElementChild!;
+    expect([...fuss.querySelectorAll('button')].map((b) => b.textContent)).toEqual(['Abbrechen']);
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    expect(screen.getByRole('dialog', { name: 'Lied' })).toBeTruthy();
+    // Das Punkt-Fenster war nie weg – es kommt ohne Einblenden zurück.
+    expect(screen.getByRole('dialog').parentElement!.className).toMatch(/still/);
+  });
+
+  it('das X schließt ganz – nicht nur die Liedwahl', () => {
+    const onClose = vi.fn();
+    zeige({ onClose });
+    verknuepfenOeffnen();
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
+    expect(onClose).toHaveBeenCalled();
+  });
+});

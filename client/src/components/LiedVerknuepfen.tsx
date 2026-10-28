@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { SongSelectTreffer } from '@shared/types/index';
 import type { LiedWahlArgs } from '@ui/ablauf/PunktFenster';
-import { useOverlayKeyboardInset } from '@ui/fenster/useOverlayKeyboardInset';
+import { Sheet } from '@ui/fenster/Sheet';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import styles from '@ui/ablauf/PunktFenster.module.scss';
 import { SongPicker } from './SongPicker';
 import { NewSongSheet } from './NewSongSheet';
@@ -17,6 +18,7 @@ export function LiedVerknuepfen({
   onGewaehlt,
   onAbbrechen,
   onHintergrund,
+  onSchliessen,
   fehler,
   busy,
 }: LiedWahlArgs) {
@@ -24,8 +26,6 @@ export function LiedVerknuepfen({
   const [neuesLied, setNeuesLied] = useState<{ treffer?: SongSelectTreffer; name?: string } | null>(
     null,
   );
-  // Dialog über der iOS-Tastatur freihalten; verhindert auch die verrutschte Kopfleiste (#207).
-  const overlayRef = useOverlayKeyboardInset();
 
   // Unterdialog: ein neues Lied anlegen und mit DIESEM Punkt verknüpfen. Bewusst ohne `eventId`: Das
   // Lied darf nicht als neuer Punkt in den Ablauf, es gehört in den vorhandenen. Die Verknüpfung wird
@@ -45,31 +45,39 @@ export function LiedVerknuepfen({
     );
   }
 
+  // Ein Fenster im ChurchTools-Aufbau (E6-O O3) an der Stelle des Punkt-Fensters: „Abbrechen“ führt zurück ins
+  // Punkt-Fenster, das X schließt beides; der Tipp daneben schließt nur, wenn nichts vorgemerkt ist.
   return (
-    <div ref={overlayRef} className={styles.overlay} onClick={onHintergrund}>
-      <div className={styles.card} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.title}>Lied verknüpfen</div>
-        {fehler && <div className={styles.err}>{fehler}</div>}
-        <SongPicker
-          autoFocus
-          aktionLabel="Mit diesem Eintrag verknüpfen"
-          onPick={onGewaehlt}
-          neuesLied={
-            canEditSongs
-              ? { label: 'Neues Lied', onClick: (name) => setNeuesLied({ name }) }
-              : undefined
-          }
-          /* Ohne das Recht, Lieder zu bearbeiten, erscheint SongSelect gar nicht –
-             ein Treffer, aus dem nichts werden kann, wäre eine Sackgasse (#378). */
-          onSongSelectTreffer={canEditSongs ? (treffer) => setNeuesLied({ treffer }) : undefined}
-        />
-        {/* „Abbrechen", nicht „Zurück" (Entscheidung Alwin, 04.09.2026): Dieser Knopf verlässt die
-            Suche ganz. Zur Trefferliste zurück führt der Pfeil oben in der Vorschau – zwei Knöpfe
-            mit demselben Wort und verschiedenen Zielen hatten in die Irre geführt. */}
-        <button className={styles.backBtn} onClick={onAbbrechen} disabled={busy}>
+    <Sheet
+      title="Lied verknüpfen"
+      onClose={onSchliessen}
+      onHintergrund={onHintergrund}
+      mittel
+      einblenden={false}
+      cancelLabel={null}
+      knoepfe={
+        /* „Abbrechen", nicht „Zurück" (Entscheidung Alwin, 04.09.2026): Dieser Knopf verlässt die
+           Suche ganz. Zur Trefferliste zurück führt der Pfeil oben in der Vorschau – zwei Knöpfe
+           mit demselben Wort und verschiedenen Zielen hatten in die Irre geführt. */
+        <FensterKnopf art="zweit" onClick={onAbbrechen} disabled={busy}>
           Abbrechen
-        </button>
-      </div>
-    </div>
+        </FensterKnopf>
+      }
+    >
+      {fehler && <div className={styles.err}>{fehler}</div>}
+      <SongPicker
+        autoFocus
+        aktionLabel="Mit diesem Eintrag verknüpfen"
+        onPick={onGewaehlt}
+        neuesLied={
+          canEditSongs
+            ? { label: 'Neues Lied', onClick: (name) => setNeuesLied({ name }) }
+            : undefined
+        }
+        /* Ohne das Recht, Lieder zu bearbeiten, erscheint SongSelect gar nicht –
+             ein Treffer, aus dem nichts werden kann, wäre eine Sackgasse (#378). */
+        onSongSelectTreffer={canEditSongs ? (treffer) => setNeuesLied({ treffer }) : undefined}
+      />
+    </Sheet>
   );
 }

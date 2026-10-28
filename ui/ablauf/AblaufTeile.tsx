@@ -39,17 +39,20 @@ export function ItemTitle({
 export function LiedKarte({
   song,
   ohneTitel = false,
+  flach = false,
 }: {
   song: NonNullable<AblaufZeile['song']>;
   /** Der Liedname steht schon in der Titelzeile (Punkt heißt wie das Lied) – dann nicht doppelt. */
   ohneTitel?: boolean;
+  /** Ohne Rahmen – in einer Zeile der Feldliste im Punkt-Fenster (E6-O O3, wie im Entwurf B). */
+  flach?: boolean;
 }) {
   const meta = [song.originalKey, song.bpm ? `${song.bpm} bpm` : null, song.author]
     .filter((t): t is string => !!t && t.trim() !== '')
     .join(' · ');
   if (ohneTitel && !meta) return null;
   return (
-    <span className={styles.liedKarte}>
+    <span className={flach ? `${styles.liedKarte} ${styles.liedFlach}` : styles.liedKarte}>
       <span className={styles.liedNote} aria-hidden="true">
         <Icon name="music" size={13} />
       </span>

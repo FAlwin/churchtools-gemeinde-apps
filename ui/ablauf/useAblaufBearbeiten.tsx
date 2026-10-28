@@ -118,6 +118,8 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
   // „Neuer Eintrag" – derselbe Dialog wie Bearbeiten (05.10.2026).
   const [neuOffen, setNeuOffen] = useState(false);
   const [actionItem, setActionItem] = useState<T | null>(null);
+  // Mit ‹ › geblättert (E6-O O3): Das Punkt-Fenster ersetzt sein voriges, ohne neu einzublenden.
+  const [geblaettert, setGeblaettert] = useState(false);
   // „Rückgängig" für Löschen und Verschieben (Alwin, 12.10.2026) – Bearbeiten und Anlegen bewusst nicht.
   const rueckgaengig = useRueckgaengig();
   const { toast: sperrToast, showToast: zeigeSperrHinweis } = useToast();
@@ -282,9 +284,11 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
                 {i === beginnBeiBearbeiten && <BeginnLinie zeit={o.beginn} />}
                 <SortableRow
                   item={item}
-                  onOpenActions={(it) =>
-                    abgeschlossen ? zeigeSperrHinweis(o.sperrHinweis) : setActionItem(it)
-                  }
+                  onOpenActions={(it) => {
+                    if (abgeschlossen) return zeigeSperrHinweis(o.sperrHinweis);
+                    setGeblaettert(false);
+                    setActionItem(it);
+                  }}
                 />
               </Fragment>
             ))}
@@ -294,6 +298,22 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
       </DndContext>
     </>
   );
+
+  /** „Position 2 von 8“ und ‹ › im Punkt-Fenster (E6-O O3) – in der Reihenfolge der Bearbeiten-Liste. */
+  const position = (it: T) => {
+    const i = localItems.findIndex((x) => x.id === it.id);
+    if (i < 0) return undefined;
+    const geheZu = (j: number) => () => {
+      setGeblaettert(true);
+      setActionItem(localItems[j]);
+    };
+    return {
+      nr: i + 1,
+      von: localItems.length,
+      onVorher: i > 0 ? geheZu(i - 1) : undefined,
+      onNachher: i < localItems.length - 1 ? geheZu(i + 1) : undefined,
+    };
+  };
 
   const ueberlagerung = (
     <>
@@ -332,6 +352,8 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
 
       {actionItem && (
         <PunktFenster
+          position={position(actionItem)}
+          einblenden={!geblaettert}
           // Beim Wechsel eines anderen Punkts frischen Fenster-Zustand aufbauen.
           key={actionItem.id}
           item={actionItem}

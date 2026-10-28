@@ -13,9 +13,9 @@ import styles from './SitzungAnsicht.module.scss';
 
 /**
  * **Eine Sitzung ansehen** (Bauplan S3-2, Entwurf 7) – oben Titel und Stand, darunter das Protokoll als Dokument und
- * die Bereiche Beschlüsse · To-Dos · Termine aus derselben Ableitung (Bauplan 3.2). Nur lesen; Schreiben kommt mit
- * S4, „Protokoll beginnen“ mit S5. Kommt man aus der Suche (S3-4b), springt die Ansicht zum Tagesordnungspunkt des
- * Treffers und hebt ihn kurz hervor.
+ * die Bereiche Beschlüsse · To-Dos · Termine aus derselben Ableitung (Bauplan 3.2). Nur lesen; geschrieben wird im
+ * Editor (S4). Ohne Protokoll bietet sie der Leitung „Protokoll beginnen“ an (S5-1). Kommt man aus der Suche (S3-4b),
+ * springt die Ansicht zum Tagesordnungspunkt des Treffers und hebt ihn kurz hervor.
  */
 export function SitzungAnsicht({
   sitzung,
@@ -26,6 +26,7 @@ export function SitzungAnsicht({
   aufgaben,
   zeitzone,
   springeZu = null,
+  onBeginnen,
   onZurueck,
 }: {
   sitzung: Sitzung;
@@ -38,6 +39,8 @@ export function SitzungAnsicht({
   zeitzone: string;
   /** Block-ID des Tagesordnungspunkts, zu dem gesprungen wird. */
   springeZu?: string | null;
+  /** Nur für die Leitung (S5-1): Protokoll zu dieser Sitzung beginnen – fehlt, wenn man nicht schreiben darf. */
+  onBeginnen?: () => void;
   onZurueck: () => void;
 }) {
   const kopf = sitzung.kopf;
@@ -77,12 +80,20 @@ export function SitzungAnsicht({
 
       {!kopf && (
         <p className={styles.hinweis}>
-          Für diese Sitzung gibt es noch kein Protokoll. Die Leitung beginnt es, sobald die Sitzung
-          ansteht.
+          Für diese Sitzung gibt es noch kein Protokoll.
+          {onBeginnen ? '' : ' Die Leitung beginnt es, sobald die Sitzung ansteht.'}
         </p>
       )}
       {kopf?.status === 'geplant' && (
         <p className={styles.hinweis}>Das Protokoll ist geplant, aber noch nicht begonnen.</p>
+      )}
+      {onBeginnen && (!kopf || kopf.status === 'geplant') && (
+        <div>
+          <button type="button" className={styles.beginnen} onClick={onBeginnen}>
+            <Icon name="pencil" size={18} />
+            Protokoll beginnen
+          </button>
+        </div>
       )}
       {kopf && kopf.status !== 'geplant' && !dokument && (
         <p className={styles.fehler} role="alert">

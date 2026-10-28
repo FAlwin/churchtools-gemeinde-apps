@@ -25,7 +25,7 @@ des Bandes.
 3. In jedem der vier: **hochschieben**. Die Überschrift wandert nach oben, läuft unter das Band und
    wird dabei weich – das ist der native Effekt von iOS, kein Fehler. Nichts bleibt oben kleben.
 4. Einen **Termin öffnen**: Der Kopf ist eine **weiße Karte** unter Uhr und Band – links **„← Termine“**, rechts
-   **Teilen** und (mit Recht) **Bearbeiten** in Blau, in der Erweiterung ganz rechts Vollbild; darunter Name und
+   **Teilen** und (mit Recht) **Bearbeiten** – beide grau mit Rahmen (seit 28.10.2026; vorher war Bearbeiten blau gefüllt), in der Erweiterung ganz rechts Vollbild; darunter Name und
    Datum des Gottesdienstes. Am iPad stehen die Knöpfe mit Beschriftung, am Handy nur als Symbol (Zurück behält
    „Termine“). Alles **scharf**; beim Hochschieben scrollt die Karte mit (wie in ChurchTools). Im Bearbeiten heißt
    der blaue Knopf „Fertig“, daneben „Abschließen“ bzw. hellblau „Öffnen“ (Scheibe S, 26.10.2026).

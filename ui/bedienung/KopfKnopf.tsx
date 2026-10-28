@@ -9,7 +9,7 @@ interface KopfKnopfProps {
   /** Ausführlicherer Name für Screenreader und Tooltip („Alle Lieder als PDF teilen“); sonst die Beschriftung. */
   title?: string;
   symbol: ReactNode;
-  /** Blau: die Hauptaktion der Seite („Bearbeiten“) – höchstens eine je Kopf. */
+  /** Blau: die Hauptaktion der Seite („Fertig“ im Bearbeiten des Ablaufs) – höchstens eine je Kopf. */
   haupt?: boolean;
   /** Grün: etwas Neues anlegen – wie „+ Gruppe erstellen“ in ChurchTools (Scheibe S2). */
   neu?: boolean;

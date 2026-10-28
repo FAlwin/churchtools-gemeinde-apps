@@ -99,6 +99,13 @@ describe('ladeSitzungen (S3-1)', () => {
     expect(ct.terminAnfrage).toBe('2026-10-23..2027-04-21');
   });
 
+  it('ein Treffen am letzten Tag von „Kommend“ kommt mit (ChurchTools zählt end_date nicht mit, gemessen 28.10.)', async () => {
+    await einrichten(4);
+    ct.treffen.set(194, [{ id: 17, startDate: '2027-04-21T17:00:00Z' }]);
+    const s = await ladeSitzungen(MODUL, gruppe(), ZONE, new Date('2026-10-22T22:30:00Z'));
+    expect(s.kommend.map((x) => x.treffen)).toEqual([17]);
+  });
+
   it('Treffen nicht freigegeben (403): Kommend nur aus dem Kalender, und das wird gemeldet', async () => {
     await einrichten(4);
     ct.termine = [

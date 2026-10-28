@@ -25,6 +25,10 @@
 
 ### Intern
 
+- Gruppentreffen werden über **eine** Abfrage gelesen (`treffenLesen`): ChurchTools zählt `end_date` nicht mit (gemessen
+  28.10.2026). Beim ersten Prüfen in der Test-Instanz fand das Nachlesen nach dem Anlegen das Treffen deshalb nie;
+  „Kommend“ ließ den letzten Tag aus.
+
 - `@ui/ct/fehler`: neue Klasse `Unklar` – für Fälle, in denen ein zweiter Versuch Schaden anrichtet; `fehlerMeldung`
   zeigt ihre Meldung ohne „Erneut versuchen“.
 - Termine bringen ihr Ende mit (`Termin.ende`, `Sitzung.ende`) – für die Dauer der nächsten Sitzung.

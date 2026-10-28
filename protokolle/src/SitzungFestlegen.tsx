@@ -166,7 +166,9 @@ export function SitzungFestlegen({
   return (
     <Sheet
       title={art === 'neu' ? 'Neue Sitzung' : 'Nächste Sitzung festlegen'}
-      onClose={onClose}
+      // Festgelegt ist festgelegt: Danach schließt auch das X wie „Fertig“ (die Liste lädt neu), kein „Abbrechen“.
+      onClose={ende ? () => onFestgelegt(ende.sitzung) : onClose}
+      cancelLabel={ende ? null : undefined}
       beschaeftigt={laeuft}
       knoepfe={
         ende ? (

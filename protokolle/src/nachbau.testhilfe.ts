@@ -208,7 +208,14 @@ export function nachbauStarten(): Nachbau {
     if (tr) {
       if (s.treffenVerboten)
         return json(403, { message: 'Forbidden to see group', messageKey: 'error.forbidden.view' });
-      return json(200, { data: s.treffen.get(Number(tr[1])) ?? [] });
+      // Wie gemessen (28.10.2026): `end_date` zählt nicht mit.
+      const von = adresse.searchParams.get('start_date') ?? '';
+      const bis = adresse.searchParams.get('end_date') ?? '9999';
+      return json(200, {
+        data: (s.treffen.get(Number(tr[1])) ?? []).filter(
+          (t) => t.startDate.slice(0, 10) >= von && t.startDate.slice(0, 10) < bis,
+        ),
+      });
     }
     if (pfad === '/groups/194/roles')
       return json(200, {

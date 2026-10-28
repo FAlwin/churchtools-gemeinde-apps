@@ -182,6 +182,8 @@ describe('SitzungFestlegen', () => {
     ).toBeTruthy();
     expect(screen.getByText('Das Gruppentreffen wurde nicht angelegt.')).toBeTruthy();
     expect(onFestgelegt).not.toHaveBeenCalled();
+    // Festgelegt ist festgelegt: kein „Abbrechen“ mehr, das X schließt wie „Fertig“.
+    expect(screen.queryByRole('button', { name: 'Abbrechen' })).toBeNull();
     fireEvent.click(knopf('Fertig'));
     expect(onFestgelegt).toHaveBeenCalledWith('neu');
   });

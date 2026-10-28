@@ -12,6 +12,7 @@
  *    „Termin gelöscht“ (gemessen 28.10.2026, auch ohne Antwort), und ein zweiter Versuch lüde doppelt ein.
  */
 import { werteLesen, wertAnlegen } from '@shared/ct/modulDaten';
+import { plusTage } from '@shared/ct/datum';
 import { tagAusIso } from '@shared/ct/zeit';
 import { geplanterKopf } from '@shared/protokolle/planen';
 import { minute } from '@shared/protokolle/sitzungen';
@@ -19,6 +20,7 @@ import { sitzungAusWerten } from '@shared/protokolle/speicher';
 import { ApiError, NichtUebernommen, Unklar } from '@ui/ct/fehler';
 import { modulPort } from '@ui/ct/modulPort';
 import { ctAnfrage, ctDaten, KeinSpeicherRecht } from '@ui/ct/verbindung';
+import { treffenLesen } from './lesen';
 
 const json = (body: unknown) => JSON.stringify(body);
 
@@ -131,14 +133,13 @@ async function treffenAnlegen(
   } catch (e) {
     if (abgelehnt(e)) throw e;
   }
-  // Nachlesen – auch nach einer unklaren Antwort: vielleicht ist es doch da.
+  // Nachlesen – auch nach einer unklaren Antwort: vielleicht ist es doch da. Mit derselben Abfrage wie „Kommend“ (ein Tag
+  // Rand zu beiden Seiten, falls ChurchTools den Tag in UTC zählt); beim ersten Prüfen in der Test-Instanz fragte diese
+  // Stelle `start_date` = `end_date` und fand das angelegte Treffen nie.
   const tag = tagAusIso(beginn, zeitzone);
-  const liste =
-    (await ctDaten<{ id: number; startDate: string }[]>(
-      `/groups/${gruppe}/meetings?start_date=${tag}&end_date=${tag}`,
-    )) ?? [];
+  const liste = (await treffenLesen(gruppe, plusTage(tag, -1), plusTage(tag, 1))) ?? [];
   const da =
-    liste.find((t) => t.id === id) ?? liste.find((t) => minute(t.startDate) === minute(beginn));
+    liste.find((t) => t.id === id) ?? liste.find((t) => minute(t.beginn) === minute(beginn));
   if (!da) throw new NichtUebernommen('das Gruppentreffen');
   return da.id;
 }

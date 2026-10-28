@@ -110,24 +110,6 @@
     border-color: var(--blue);
   }
 }
-
-.knopf {
-  width: 100%;
-  height: 46px;
-  border: none;
-  border-radius: var(--r-card);
-  background: var(--blue);
-  color: #fff;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-
-  &:disabled {
-    opacity: 0.55;
-    cursor: default;
-  }
-}
-
 .fehler {
   margin-bottom: 12px;
   color: var(--red);
@@ -160,14 +142,6 @@
   word-break: break-all;
   resize: none;
 }
-
-.kopieren {
-  @include m.aktionKnopf;
-  height: 42px;
-  border-radius: var(--r-ctrl);
-  font-size: 15px;
-}
-
 // ── Preis-Fenster (A4) ────────────────────────────────────────────────────────────────────────────
 
 .optionKasten {
@@ -183,18 +157,6 @@
     margin-bottom: 6px;
   }
 }
-
-.klein {
-  @include m.aktionKnopf;
-  flex: none !important;
-  width: 42px;
-  height: 42px;
-  border-radius: var(--r-ctrl);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .textKnopf {
   align-self: flex-start;
   border: none;
@@ -206,26 +168,6 @@
   font-weight: 600;
   cursor: pointer;
 }
-
-.entfernen {
-  width: 100%;
-  height: 42px;
-  margin-top: 10px;
-  border: 1px solid color-mix(in srgb, var(--red) 40%, transparent);
-  border-radius: var(--r-card);
-  background: none;
-  color: var(--red);
-  font-family: inherit;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-
-  &:disabled {
-    opacity: 0.55;
-    cursor: default;
-  }
-}
-
 .gut {
   color: var(--green);
   font-size: 13px;
@@ -275,12 +217,4 @@
     flex: 1;
     min-width: 0;
   }
-}
-
-.hinzuKnopf {
-  @include m.aktionKnopf;
-  height: 42px;
-  padding: 0 14px;
-  border-radius: var(--r-ctrl);
-  font-size: 14px;
 }

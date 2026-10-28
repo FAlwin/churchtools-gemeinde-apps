@@ -76,9 +76,9 @@ function LinkKopieren({ link }: { link: string }) {
           aria-label="Link zur Anmeldung"
           onFocus={(e) => e.target.select()}
         />
-        <button type="button" className={f.kopieren} onClick={() => void kopieren()}>
+        <FensterKnopf art={stand === 'kopiert' ? 'hell' : 'zweit'} onClick={() => void kopieren()}>
           {stand === 'kopiert' ? 'Link kopiert' : 'Link kopieren'}
-        </button>
+        </FensterKnopf>
       </div>
       {stand === 'vonHand' && (
         <small className={f.hinweis}>

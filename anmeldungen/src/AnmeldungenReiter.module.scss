@@ -8,37 +8,6 @@
   min-width: 0;
 }
 
-.zahlen {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
-}
-
-.zahl {
-  @include m.card-list;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 10px 12px;
-
-  span {
-    color: var(--text2);
-    font-size: 12px;
-    font-weight: 600;
-  }
-
-  b {
-    color: var(--text);
-    font-size: 20px;
-    font-weight: 700;
-  }
-
-  small {
-    color: var(--text2);
-    font-size: 12px;
-  }
-}
-
 .suche {
   @include m.eingabefeld;
   flex: 1;

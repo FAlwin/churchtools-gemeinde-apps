@@ -98,9 +98,10 @@ const fertig = (
 ) => ({ art: 'fertig', stand: { ...stand(roh, verlauf), verlaufGekuerzt: false } }) as const;
 
 describe('Reiter Anmeldungen', () => {
-  it('Zahlen, Hinweis „frei, aber jemand wartet“, eine Zeile je Anmeldung', () => {
+  // Die Zahlen (Plätze, Warteliste, Zahlung offen) stehen seit U1 oben auf der Seite – getestet in `Einstieg.test.tsx`.
+  it('Hinweis „frei, aber jemand wartet“, eine Zeile je Anmeldung', () => {
     zeigen(fertig());
-    expect(screen.getByText('1 von 10')).toBeTruthy();
+    expect(screen.queryByText('1 von 10')).toBeNull();
     expect(screen.getByText(/9 Plätze frei – 1 wartet\./)).toBeTruthy();
     expect(screen.getByText(/Als Nächste wartet Lena Beispiel \(seit 17\.10\.\)/)).toBeTruthy();
     const zeile = screen.getByRole('button', { name: /Maria Beispiel/ });
@@ -120,7 +121,7 @@ describe('Reiter Anmeldungen', () => {
     cleanup();
     // Voll (1 von 1), eine wartet – ChurchTools hat recht, niemand kann nachrücken.
     zeigen(fertig(), 1);
-    expect(screen.getByText('kein Platz frei')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Maria Beispiel/ })).toBeTruthy();
     expect(screen.queryByText(/Als Nächste wartet/)).toBeNull();
   });
 

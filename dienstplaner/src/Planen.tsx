@@ -667,7 +667,7 @@ export function Planen({
       ) : handy ? (
         <HandyPlan sicht={sicht} amEnde={kannNachladen ? () => nachladen('passend') : undefined} />
       ) : (
-        <TabellenPlan sicht={sicht} breite={ansicht.breite} platz={platz} />
+        <TabellenPlan sicht={sicht} breite={ansicht.breite} />
       );
   }
 
@@ -1271,13 +1271,13 @@ function GruppenKnopf({
   );
 }
 
-function TabellenPlan({ sicht, breite, platz }: { sicht: Sicht; breite: Breite; platz: number }) {
+function TabellenPlan({ sicht, breite }: { sicht: Sicht; breite: Breite }) {
   const { plan, spalten, gruppen, zugeklappt, neben, onUmschalten } = sicht;
-  // Wenige Spalten füllen die Breite (wie im Entwurf), sonst gilt die gewählte Spaltenbreite.
-  const cw = Math.max(
-    SPALTENBREITE[breite],
-    platz > 0 ? Math.floor((platz - DIENST_SPALTE - 2) / Math.max(1, spalten.length)) : 0,
-  );
+  // S/M/L ist die Spaltenbreite selbst – fest, ohne Strecken (Alwin, 28.10.2026: „S/M kein Unterschied“). Vorher füllten
+  // die Spalten die Breite; dann sahen S und M fast gleich aus, und gar nicht verschieden, wenn alle Termine passten.
+  // Wie viele Termine ins Fenster passen, rechnet `passendeAnzahl` mit derselben Breite – übrig bleibt höchstens
+  // eine Spalte Platz.
+  const cw = SPALTENBREITE[breite];
   const zelleKlasse = (s: PlanSpalte) =>
     `${s.abgesagt ? ' ' + styles.abgesagtSpalte : ''}${neben(s) ? ' ' + styles.neben : ''}`;
   return (

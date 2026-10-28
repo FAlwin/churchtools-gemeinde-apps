@@ -25,3 +25,12 @@
   entfallen. `PlanenAnsicht.ablaufZu` neu.
 - Der Hinweis-Stil der Termin-Ansicht liegt als Mixin in `_terminTexte.scss` (`composes … from` geht über SCSS-Dateien
   nicht).
+
+### Geändert (Dienstplaner, Musik-App – Durchklicken Alwin, 28.10.2026)
+
+- **Zeitraum-Leiste gleich hoch:** Zeitraum-Knopf (vorher 40 px), ‹ ＋ ＋ › (32 px) und Filter (34 px) nehmen alle die
+  gemeinsame Knopfhöhe (38 px); der Zeitraum bleibt zweizeilig. Gilt mit Zeitraum- und Filter-Knopf auch für die
+  Abwesenheiten der Musik-App. Wächter `ui/bedienung/leistenKnoepfe.test.ts`.
+- **S/M/L ist die Spaltenbreite:** 124/176/256 px fest, nicht mehr auf die volle Breite gestreckt – vorher sahen S und M
+  fast gleich aus und gar nicht verschieden, wenn alle Termine passten. Wie viele Termine passen, ergibt sich aus der
+  Breite (S mehr, L weniger).

@@ -11,7 +11,9 @@
   align-items: flex-start;
   justify-content: center;
   min-width: 170px;
-  height: 40px;
+  // So hoch wie die Knöpfe daneben (‹ ＋ ＋ ›, Filter) – eine Zahl für alle (Alwin, 28.10.2026: vorher 40 px, „größer
+  // als andere – nicht schön“). Zweizeilig passt es knapp hinein.
+  height: var(--knopf-hoehe);
   padding: 0 12px;
   border: 1px solid var(--border);
   border-radius: var(--r-ctrl);

@@ -38,6 +38,7 @@ const STAND: AB.AblaufStand = {
     platz: { betreff: '', absatz: 'Bitte Schlafsack mitbringen.', gruss: '' },
     warte: OHNE_EIGENEN_TEXT,
   },
+  qr: false,
 };
 
 let gespeichert: ReturnType<typeof vi.fn<(text: string) => void>>;
@@ -69,6 +70,7 @@ beforeEach(() => {
     new Map([
       ...SYSTEMFELDER.map((f, i): [string, string] => [f.name, `{{{groupMemberField.f${i}}}}`]),
       ['Wartelistenplatz', '{{{groupMember.waitinglistPosition}}}'],
+      ['Check-in-Code (QR-Code)', '{{{groupMember.checkInCodeQr}}}'],
     ]),
   );
   ru.vorschauLaden.mockResolvedValue({ betreff: 'B', html: '<p>gerendert</p>' });
@@ -106,10 +108,47 @@ describe('MailsFenster', () => {
     fireEvent.change(wahl, { target: { value: '9' } });
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     await waitFor(() => expect(gespeichert).toHaveBeenCalledWith('Mails gespeichert.'));
-    expect(ab.ablaeufeEinrichten).toHaveBeenCalledWith(165, 9, {
-      platz: STAND.eigen.platz,
-      warte: { betreff: '', absatz: 'Wir melden uns.', gruss: '' },
-    });
+    expect(ab.ablaeufeEinrichten).toHaveBeenCalledWith(
+      165,
+      9,
+      {
+        platz: STAND.eigen.platz,
+        warte: { betreff: '', absatz: 'Wir melden uns.', gruss: '' },
+      },
+      false,
+    );
+  });
+
+  it('Check-in-Code (A9-2b): Schalter nur bei der Bestätigung, geht mit Speichern und Vorschau', async () => {
+    zeigen();
+    const schalter = screen.getByRole('button', { name: 'Check-in-Code (QR) mitschicken' });
+    expect(schalter.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(screen.getByRole('button', { name: 'Warteliste' }));
+    expect(screen.queryByRole('button', { name: 'Check-in-Code (QR) mitschicken' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Bestätigung' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Check-in-Code (QR) mitschicken' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Vorschau' }));
+    await waitFor(() => expect(ru.vorschauLaden).toHaveBeenCalled());
+    expect(ru.vorschauLaden.mock.calls[0][3]).toContain('groupMember.checkInCodeQr');
+    // Eingeschaltet, aber noch nicht gespeichert: ChurchTools hat noch keine Codes.
+    expect(await screen.findByText(/erst beim Speichern an/)).toBeTruthy();
+    const wahl = screen.getByRole('combobox', { name: 'Absender' });
+    await waitFor(() => expect(within(wahl).getAllByRole('option')).toHaveLength(2));
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(gespeichert).toHaveBeenCalled());
+    expect(ab.ablaeufeEinrichten.mock.calls[0][3]).toBe(true);
+  });
+
+  it('Check-in-Code schon an: Schalter an, Ausschalten geht als „aus“ an ablaeufeEinrichten', async () => {
+    zeigen({ ...STAND, qr: true });
+    const schalter = screen.getByRole('button', { name: 'Check-in-Code (QR) mitschicken' });
+    expect(schalter.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(schalter);
+    const wahl = screen.getByRole('combobox', { name: 'Absender' });
+    await waitFor(() => expect(within(wahl).getAllByRole('option')).toHaveLength(2));
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(gespeichert).toHaveBeenCalled());
+    expect(ab.ablaeufeEinrichten.mock.calls[0][3]).toBe(false);
   });
 
   it('zu lang: Hinweis statt Zähler, Speichern gesperrt', () => {

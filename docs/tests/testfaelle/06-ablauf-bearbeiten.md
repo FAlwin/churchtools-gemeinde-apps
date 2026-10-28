@@ -100,32 +100,36 @@ tippen auf den Titel darf **kein** Ziehen auslösen.
 
 ### TF-EDIT-05 · Punkt hinzufügen und löschen
 
-**Das muss passieren:** Das **runde blaue Plus** schwebt unten rechts über dem Ablauf (nur im
-Bearbeiten-Modus) und öffnet **dasselbe Fenster wie das Bearbeiten**, nur mit „Neuer Eintrag" und dem
-Umschalter **Programmpunkt · Überschrift** (vorgewählt: Programmpunkt). Ein Lied ist ein Programmpunkt
-mit **Lied verknüpfen** – nach der Wahl steht der Liedname als Titel drin, Dauer und Zuständige lassen
-sich gleich setzen; ein zweites Fenster danach gibt es nicht mehr. Die Rückfrage beim Löschen nennt den Punkt **genauso wie die Liste** – also
+**Das muss passieren:** Im Bearbeiten-Modus gibt es **„Eintrag hinzufügen“** – wie in ChurchTools: am
+**iPad/Rechner grün oben im Seitenkopf** (wie „+ Gruppe erstellen“), am **Handy als rundes blaues Plus** unten
+rechts. Es fragt zuerst **„Option wählen“** (am Rechner als kleines Menü, am Handy als Blatt von unten mit ✕):
+**Programmpunkt hinzufügen · Lied hinzufügen · Überschrift hinzufügen**. Danach öffnet **dasselbe Fenster wie das
+Bearbeiten**, nur mit „Neuer Eintrag“ und schon passend eingestellt. „Lied hinzufügen“ zeigt gleich die Liedsuche –
+nach der Wahl steht der Liedname als Titel drin, Dauer und Zuständige lassen sich gleich setzen; wer die Suche ohne
+Lied verlässt, hat nichts angelegt (alles zu). Die Rückfrage beim Löschen nennt den Punkt **genauso wie die Liste** – also
 „Lied – Du großer Gott", nicht nur den Liednamen. Nach dem Löschen steht unten kurz
 „„Titel" gelöscht · Rückgängig" (Näheres in TF-ABLAUF-10). Alles steht danach so in ChurchTools.
 
-1. Test-Termin öffnen, **Bearbeiten**. Das Plus erscheint unten rechts; es verdeckt den Stift des
-   letzten Punkts nicht.
-2. **Plus** tippen → das Fenster **„Neuer Eintrag"** ist offen, **Programmpunkt** ist gewählt. Titel
-   eintragen, **Dauer** auf 7 setzen, **Hinzufügen**.
-3. Erneut **Plus** → **Lied verknüpfen** → ein Lied wählen: Der Liedname steht als Titel drin.
-   **Dauer** auf 4 setzen, **Hinzufügen**.
-4. Erneut **Plus**, oben **Überschrift**: nur das Titelfeld. Titel eintragen, **Hinzufügen**.
-5. Alle drei stehen am Ende des Ablaufs.
-6. Einen **Lied**-Punkt antippen und **Eintrag löschen** wählen.
-7. Die Rückfrage lesen, dann bestätigen.
-8. Zusehen, wie die Zeile verschwindet.
+1. Test-Termin öffnen, **Bearbeiten**. Am Rechner steht oben grün **„+ Eintrag hinzufügen“**; am Handy erscheint
+   das Plus unten rechts und verdeckt den Stift des letzten Punkts nicht.
+2. **Eintrag hinzufügen** → **„Option wählen“** mit drei Möglichkeiten. Am Rechner: Das Menü ragt über die
+   Kopfkarte hinaus, nichts ist abgeschnitten; **Escape** schließt es. Am Handy: **✕** schließt das Blatt.
+3. **Programmpunkt hinzufügen** → **„Neuer Eintrag"**, **Programmpunkt** ist gewählt. Titel eintragen,
+   **Dauer** auf 7 setzen, **Hinzufügen**.
+4. **Lied hinzufügen** → gleich die Liedsuche. Einmal **ohne Lied zurück**: Es ist nichts offen. Noch einmal
+   **Lied hinzufügen**, ein Lied wählen: Der Liedname steht als Titel drin. **Dauer** auf 4, **Hinzufügen**.
+5. **Überschrift hinzufügen** → nur das Titelfeld. Titel eintragen, **Hinzufügen**.
+6. Alle drei stehen am Ende des Ablaufs.
+7. Einen **Lied**-Punkt antippen und **Eintrag löschen** wählen.
+8. Die Rückfrage lesen, dann bestätigen.
+9. Zusehen, wie die Zeile verschwindet.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/LiedVerknuepfen.tsx`, `ui/ablauf/PunktFenster.tsx`, `shared/ct/agendaItemChanges.ts`, `ui/bedienung/SchwebePlus.tsx`, `client/src/pages/Setlist.tsx`, `ui/fenster/ConfirmDialog.tsx`
-- **Automatisiert:** teilweise – `e2e/ablauf-hinzufuegen.spec.ts` (Plus nur im Bearbeiten-Modus, Text anlegen, steht in der Liste, Löschen), `client/src/components/LiedVerknuepfen.test.tsx`, `ui/ablauf/PunktFenster.test.tsx` (Neuer Eintrag: Suche sofort offen, Titel = Liedname, Überschrift nur Titel, Fehler bleibt im Fenster), `shared/ct/agendaItemChanges.test.ts` (`neuerAgendaPunkt`); von Hand bleibt das Schreiben nach ChurchTools
-- **Historie:** schwebendes Plus und einheitlicher Dialog 05.10.2026 (vorher eigenes „Hinzufügen"-Blatt mit drei Formularen)
+- **Betrifft:** `client/src/components/LiedVerknuepfen.tsx`, `ui/ablauf/PunktFenster.tsx`, `shared/ct/agendaItemChanges.ts`, `ui/bedienung/SchwebePlus.tsx`, `ui/bedienung/OptionWaehlen.tsx`, `ui/ablauf/useAblaufBearbeiten.tsx`, `client/src/components/SeitenKopf.module.scss`, `client/src/pages/Setlist.tsx`, `ui/fenster/ConfirmDialog.tsx`
+- **Automatisiert:** teilweise – `e2e/ablauf-hinzufuegen.spec.ts` (Plus nur im Bearbeiten-Modus, am Rechner Menü nicht abgeschnitten, Text anlegen, steht in der Liste, Löschen; am Handy Blatt → Überschrift), `ui/ablauf/useAblaufBearbeiten.test.tsx` („Option wählen“: Lied nur mit Liedwahl, Start als Überschrift/Lied, Abbrechen ohne Lied = zu, grün im Kopf nur breit, Escape, Sperr-Hinweis), `client/src/components/LiedVerknuepfen.test.tsx`, `ui/ablauf/PunktFenster.test.tsx` (Neuer Eintrag: Suche sofort offen, Titel = Liedname, Überschrift nur Titel, Fehler bleibt im Fenster), `shared/ct/agendaItemChanges.test.ts` (`neuerAgendaPunkt`); von Hand bleibt das Schreiben nach ChurchTools
+- **Historie:** schwebendes Plus und einheitlicher Dialog 05.10.2026 (vorher eigenes „Hinzufügen"-Blatt mit drei Formularen); „Option wählen“ und grüner Kopfknopf am Rechner 26.10.2026 (Scheibe S2)
 
 </details>
 

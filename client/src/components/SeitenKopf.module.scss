@@ -9,6 +9,8 @@
 // Detailansicht: weiße Karte wie „Events › Ablaufpläne“ in ChurchTools.
 .karte {
   @include m.card-list;
+  // Ein Menü unter einem Kopfknopf („+ Eintrag hinzufügen“, S2) ragt über die Karte hinaus – nicht abschneiden.
+  overflow: visible;
   display: flex;
   flex-direction: column;
   gap: 10px;

@@ -11,6 +11,11 @@ interface KopfKnopfProps {
   symbol: ReactNode;
   /** Blau: die Hauptaktion der Seite („Bearbeiten“) – höchstens eine je Kopf. */
   haupt?: boolean;
+  /** Grün: etwas Neues anlegen – wie „+ Gruppe erstellen“ in ChurchTools (Scheibe S2). */
+  neu?: boolean;
+  disabled?: boolean;
+  /** Öffnet der Knopf ein Menü? Dann `aria-expanded` mit dessen Zustand. */
+  menuOffen?: boolean;
   /** Hier gilt gerade etwas (Ablauf abgeschlossen, Vollbild an) – hellblau mit blauem Rand. */
   aktiv?: boolean;
   /** Immer nur das Symbol, auch am iPad (Vollbild – Entwurf S). */
@@ -30,6 +35,9 @@ export function KopfKnopf({
   title,
   symbol,
   haupt,
+  neu,
+  disabled,
+  menuOffen,
   aktiv,
   nurSymbol,
   dataTour,
@@ -37,13 +45,16 @@ export function KopfKnopf({
   return (
     <button
       type="button"
-      className={`${styles.knopf}${haupt ? ' ' + styles.haupt : aktiv ? ' ' + styles.aktiv : ''}${
-        nurSymbol ? ' ' + styles.nurSymbol : ''
-      }`}
+      className={`${styles.knopf}${
+        haupt ? ' ' + styles.haupt : neu ? ' ' + styles.neu : aktiv ? ' ' + styles.aktiv : ''
+      }${nurSymbol ? ' ' + styles.nurSymbol : ''}`}
       onClick={onClick}
       title={title ?? label}
       aria-label={title ?? label}
       aria-pressed={aktiv === undefined ? undefined : aktiv}
+      aria-haspopup={menuOffen === undefined ? undefined : 'menu'}
+      aria-expanded={menuOffen}
+      disabled={disabled}
       data-tour={dataTour}
     >
       {symbol}

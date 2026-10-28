@@ -96,20 +96,26 @@ html[data-theme='dark'] {
   // (`--blatt-kopf-unten`, Scheibe B1: die Karte ist je Größe verschieden hoch). Daran hängen Lied-Menü, Aussehen,
   // Tempo und der Hinweis „Ablauf geändert". Bis zum 02.10.2026 stand dafür an vier Stellen je eine eigene Zahl.
   --chart-kopf-unten: calc(var(--inhalt-pad-top) + 52px);
-  // Polster unter den Symbolen der unteren Reiterleiste (`ReiterLeiste`) – und damit der Abstand alles
-  // dessen, was über ihr schwebt (`UpdateBanner`). ~54px auf dem iPhone (Safe-Area 34px + 20px), 34px auf
-  // Geräten ohne Strich. Eine Quelle für beide (vorher stand die Formel zweimal da).
-  --reiter-polster: max(34px, calc(env(safe-area-inset-bottom) + 20px));
-  // Dasselbe für die Fußleiste des Liedblatts (Pfeile, „Nächstes Lied“): ~62px auf dem iPhone (Safe-Area 34px + 28px),
-  // 42px auf Geräten ohne Strich.
-  --blatt-fuss-polster: max(42px, calc(env(safe-area-inset-bottom) + 28px));
-  // Das schwebende Plus (`SchwebePlus`): Abstand zur Unterkante. Mindestens 40px – in der ChurchTools-App vom
-  // Home-Bildschirm meldet iOS keine Safe-Area, das Plus stand dort 16px über dem Rand in der Rundung, auf Höhe des
-  // Home-Strichs (Alwin, 28.10.2026: „zu weit in der Ecke unten“).
-  --plus-unten: max(40px, calc(env(safe-area-inset-bottom) + 16px));
-  // Was eine Liste unter dem letzten Eintrag frei hält, damit das Plus nicht auf dessen Stift liegt: Abstand + 54px
-  // Knopf + 8px Luft. Eine Quelle für alle Listen unter einem Plus.
-  --plus-platz: calc(var(--plus-unten) + 62px);
+  // **Platz für den Home-Strich – EINE Quelle für alles am unteren Rand** (Messung mit Alwin, 29.10.2026). Was iOS
+  // meldet (`env(safe-area-inset-bottom)`) stimmt nicht überall: In der ChurchTools-App vom Home-Bildschirm ist es 0,
+  // obwohl der Strich über dem Inhalt liegt. `syncAppHeight` (`ui/fenster/appHeight.ts`) misst und setzt
+  // `--home-strich`; bis dahin gilt die Meldung von iOS. `homeStrich.test.ts` hält fest, dass niemand daneben selbst
+  // `env(safe-area-inset-bottom)` liest.
+  --unten-strich: var(--home-strich, env(safe-area-inset-bottom, 0px));
+  // Polster unter den Symbolen der unteren Reiterleiste (`ReiterLeiste`) – und damit der Abstand alles dessen, was
+  // über ihr schwebt (`UpdateBanner`). Sichtbar ~20px auf dem iPhone, 34px auf Geräten ohne Strich: So sah die Leiste
+  // vor dem 29.10. aus, als die App noch 34 pt unter die Kante ragte (Alwin: „wie heute aussehen“).
+  --reiter-polster: max(20px, calc(34px - var(--unten-strich)));
+  // Dasselbe für die Fußleiste des Liedblatts (Pfeile, „Nächstes Lied“): 62px auf dem iPhone (Strich 34px + 28px),
+  // 42px auf Geräten ohne Strich. Sichtbar waren bis zum 29.10. nur ~28px – der Rest lag unter der Kante.
+  --blatt-fuss-polster: max(42px, calc(var(--unten-strich) + 28px));
+  // Das schwebende Plus (`SchwebePlus`) wie in der ChurchTools-App: 16px über dem, was darunter liegt – über einer
+  // Reiterleiste (dort setzt der Bereich darüber `--plus-boden: 0px`) oder über dem Home-Strich (Vorgabe hier).
+  // Bis zum 29.10. galt ein Wert für beides: über der Leiste stand das Plus zu hoch, im Ablauf zu tief (Alwin).
+  // Plus und Listen rechnen DIREKT mit `--plus-boden` (Plus: + 16px; Listen darunter: + 78px = 16px Abstand + 54px
+  // Knopf + 8px Luft) – eine Variable wie `--plus-unten: calc(var(--plus-boden) + 16px)` würde hier oben einmal
+  // ausgerechnet und erbte den Wert von `--plus-boden` NICHT mit, wenn ein Bereich darunter ihn umsetzt.
+  --plus-boden: var(--unten-strich);
 }
 
 /**
@@ -120,10 +126,12 @@ html[data-theme='dark'] {
  */
 .ct-extension,
 .ct-extension * {
-  --reiter-polster: calc(env(safe-area-inset-bottom, 0px) + 6px);
+  // Reiterleiste: im Browser schmal (6px); in der ChurchTools-App vom Home-Bildschirm über dem Strich (~20px, wie
+  // die Leiste der ChurchTools-App selbst).
+  --reiter-polster: max(6px, calc(var(--unten-strich) - 14px));
   // Fußleiste des Liedblatts: fehlte hier bis Scheibe B1 – 36 px Blatt verschenkt (Messung B0, 28.10.2026). Jedes
   // `…-polster` oben braucht hier sein Gegenstück; `polster.test.ts` hält das fest.
-  --blatt-fuss-polster: calc(env(safe-area-inset-bottom, 0px) + 6px);
+  --blatt-fuss-polster: calc(var(--unten-strich) + 6px);
   // Der Abstand unter das Unschärfe-Band (`@media (display-mode: standalone)` unten) gilt nur für UNSERE App. Die
   // ChurchTools-App vom Home-Bildschirm läuft auch „standalone“, hat aber oben eine feste Leiste und kein Band – dort
   // standen die Köpfe 36px unter der Leiste im Leeren (Alwin, 28.10.2026: „die Icons oben sind zu tief“).

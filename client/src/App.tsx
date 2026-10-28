@@ -1,4 +1,12 @@
-import { useEffect, useRef, useState, lazy, Suspense, type ComponentProps } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  lazy,
+  Suspense,
+  type ComponentProps,
+  type CSSProperties,
+} from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { setSessionExpiredHandler } from './services/api';
 import { setSpeicherVollMelder } from './utils/lokalSpeicher';
@@ -616,7 +624,15 @@ export default function App() {
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {!handy && reiter}
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+      <div
+        style={{
+          flex: 1,
+          position: 'relative',
+          overflow: 'hidden',
+          // Am Handy liegt die Reiterleiste darunter: Das Plus steht 16px über ihr, nicht über dem Home-Strich.
+          ...(handy ? ({ '--plus-boden': '0px' } as CSSProperties) : {}),
+        }}
+      >
         {tab === 'termine' && canViewAgendas && (
           <Agenda
             services={servicesQuery.data ?? []}

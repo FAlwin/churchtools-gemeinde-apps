@@ -282,7 +282,7 @@
 .leiste {
   position: fixed;
   left: 50%;
-  bottom: calc(16px + env(safe-area-inset-bottom));
+  bottom: calc(16px + var(--unten-strich));
   transform: translateX(-50%);
   z-index: 50;
   width: min(560px, calc(100% - 32px));
@@ -299,7 +299,7 @@
 
   // Über den schwebenden Knöpfen des Baukastens am Handy.
   @media (max-width: 899px) {
-    bottom: calc(72px + env(safe-area-inset-bottom));
+    bottom: calc(72px + var(--unten-strich));
   }
 
   > span {

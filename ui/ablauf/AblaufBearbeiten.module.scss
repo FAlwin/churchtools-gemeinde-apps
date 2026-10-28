@@ -1,10 +1,10 @@
 // Die Bearbeiten-Liste des Ablaufs (E6-2b-3, vorher in `client/src/pages/Setlist.module.scss`) – 1:1 verschoben,
 // damit Musik-App und Dienstplaner (E6-3) dieselbe Liste nutzen.
 
-// Bearbeiten-Liste. Unten Platz für das schwebende Plus (`--plus-platz`, `SchwebePlus`): Sonst
-// läge es über dem Stift des letzten Punkts. Bis zum 28.10.2026 stand hier eine eigene Zahl (76px).
+// Bearbeiten-Liste. Unten Platz für das schwebende Plus (`SchwebePlus`: `--plus-boden` + 16px Abstand + 54px Knopf
+// + 8px Luft): Sonst läge es über dem Stift des letzten Punkts. Bis zum 28.10.2026 stand hier eine eigene Zahl (76px).
 .list {
-  padding: 0 0 var(--plus-platz);
+  padding: 0 0 calc(var(--plus-boden) + 78px);
   display: flex;
   flex-direction: column;
   background: var(--surface2);

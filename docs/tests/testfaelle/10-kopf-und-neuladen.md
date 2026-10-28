@@ -26,8 +26,12 @@ des Bandes.
    Liste darunter.
    2a. **ChurchTools-App vom Home-Bildschirm** (iPhone, Erweiterung): Der Kopf jeder Seite beginnt **knapp** unter der
    blauen ChurchTools-Leiste, kein leerer Streifen dazwischen (vorher ~36 pt). Das runde **Plus** (Abwesenheiten,
-   Ablauf im Bearbeiten) steht deutlich über dem Home-Strich und nicht in der Geräte-Rundung; ganz nach unten
-   gescrollt liegt es nicht auf dem Stift des letzten Eintrags.
+   Ablauf im Bearbeiten) steht wie in der ChurchTools-App rechts 16 pt vom Rand und 16 pt über der Reiterleiste bzw. über
+   dem Home-Strich; ganz nach unten gescrollt liegt es nicht auf dem Stift des letzten Eintrags.
+   2b. **Unterer Rand in der installierten App und in der ChurchTools-App** (29.10.2026): Die Reiterleiste endet an der
+   Bildschirmkante (nichts ragt darunter), die Beschriftung steht wie vorher ~20 pt über der Kante. Im Lied stehen die
+   Pfeile der Fußleiste deutlich über dem Home-Strich (62 pt in der installierten App, ~40 pt in der ChurchTools-App).
+   Das Plus steht in **Abwesenheiten** und im **Ablauf** gleich weit über dem, was darunter liegt.
 3. In jedem der vier: **hochschieben**. Die Überschrift wandert nach oben, läuft unter das Band und
    wird dabei weich – das ist der native Effekt von iOS, kein Fehler. Nichts bleibt oben kleben.
 4. Einen **Termin öffnen**: Der Kopf ist eine **weiße Karte** unter Uhr und Band – links **„← Termine“**, rechts

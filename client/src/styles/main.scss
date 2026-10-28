@@ -24,13 +24,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-// iOS-PWA-Höhe – knifflig: `window.innerHeight` (von `syncAppHeight()` in main.tsx als `--app-h`
-// gesetzt) trackt zwar beide Ausrichtungen, schließt im Standalone-Modus aber die UNTERE
-// Safe-Area (Home-Strich-Zone) aus → die App bliebe ~34px zu kurz, darunter ein dunkler Streifen.
-// Deshalb die Safe-Area wieder dazurechnen: volle Bildschirmhöhe = innerHeight + safe-area-bottom.
-// (`100dvh`-Fallback, bis das Script einmal lief; außerhalb iOS ist safe-area-bottom = 0.)
+// iOS-PWA-Höhe – knifflig: `window.innerHeight` (von `syncAppHeight()` als `--app-h` gesetzt) trackt beide
+// Ausrichtungen. Im Juni 2026 schloss es im Standalone-Modus die UNTERE Safe-Area aus (darunter ein dunkler
+// Streifen) – deshalb kam sie hier immer dazu. Am 29.10.2026 gemessen (iOS 18.7): `innerHeight` ist schon die volle
+// Höhe, die App ragte 34 pt unter die Kante. Jetzt rechnet `syncAppHeight` den Zuschlag (`--app-zuschlag`) nur noch,
+// wenn er wirklich fehlt (`ui/fenster/appHeight.ts`). `100dvh`-Fallback, bis das Script einmal lief.
 html {
-  height: calc(var(--app-h, 100dvh) + env(safe-area-inset-bottom));
+  height: calc(var(--app-h, 100dvh) + var(--app-zuschlag, 0px));
 }
 
 #root {

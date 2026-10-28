@@ -1228,3 +1228,20 @@ describe('O7b-3: „Präsentieren“ im Seitenkopf', () => {
     expect(screen.queryByRole('button', { name: 'Präsentieren' })).toBeNull();
   });
 });
+
+describe('O7b-4: Drucken', () => {
+  it('„Drucken“ im Seitenkopf öffnet das Fenster mit Ansicht und Spitze des Reiters', async () => {
+    localStorage.setItem('organigramm-ansicht', '"links"');
+    render(<App />);
+    const knopf = await screen.findByRole('button', { name: 'Drucken oder als PDF speichern' });
+    expect(knopf.closest('header')).not.toBeNull();
+    fireEvent.change(screen.getByLabelText('Anfangen bei'), { target: { value: '10' } });
+    fireEvent.click(knopf);
+    const fenster = within(screen.getByRole('dialog', { name: 'Drucken / als PDF speichern' }));
+    expect(fenster.getByLabelText<HTMLSelectElement>('Ansicht').value).toBe('links');
+    expect(fenster.getByLabelText<HTMLSelectElement>('Ausschnitt').value).toBe('10');
+    expect(screen.getByRole('figure', { name: 'Vorschau' }).textContent).toContain(
+      'Organigramm · Gottesdienst',
+    );
+  });
+});

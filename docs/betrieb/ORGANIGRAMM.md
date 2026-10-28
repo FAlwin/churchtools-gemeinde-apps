@@ -65,6 +65,20 @@ Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Gemessen an der Test-Insta
   oben**. Präsentation und Drucken mit diesen Ansichten kommen mit O7b-4/-5.
 - Eine Gruppe mit zwei Obergruppen steht wie in ChurchTools unter beiden und klappt an jeder Stelle für sich.
 
+## Drucken / als PDF speichern (ab O7b-4)
+
+Im Reiter Organigramm oben rechts **„Drucken“** (am Handy nur das Symbol). Das Fenster übernimmt Ansicht, „Anfangen
+bei“ und was aufgeklappt ist, und zeigt eine **Vorschau** des Blattes:
+
+- **Ansicht:** von oben, von links, Mindmap oder Liste (Karten gibt es auf Papier nicht – dann von oben).
+- **Ausschnitt:** ganze Gemeinde, ein Bereich oder die Gruppe aus „Hier anfangen“.
+- **Papier:** A4 quer, A4 hoch oder A3 quer. Ein Diagramm wird auf **eine Seite** eingepasst; große Bäume lieber auf
+  A3 oder mit einem Bereich als Ausschnitt. Eine Liste läuft über mehrere Seiten.
+- **Alles aufgeklappt drucken** (vorgegeben) – sonst so, wie es im Reiter auf- und zugeklappt ist.
+- **Drucken** öffnet das Druckfenster des Browsers; dort **„Als PDF sichern“** für eine PDF-Datei. Gedruckt wird nur
+  das Organigramm mit Kopfzeile (Name, Stand-Datum), nicht die Leiste von ChurchTools – immer hell, auch wenn
+  ChurchTools dunkel eingestellt ist.
+
 ## Präsentation (ab O4)
 
 Im Reiter Organigramm steht oben rechts neben „Hallo …“ **„Präsentieren“** (am Handy nur das Symbol) – für alle, die

@@ -1,0 +1,61 @@
+// Drucken / PDF (O7b-4) – im Look der ChurchTools-Weboberfläche über die gemeinsamen Werte (ui/design), keine festen.
+
+.wahl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 10px;
+}
+
+@media (max-width: 480px) {
+  .wahl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.haken {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--text);
+  font-size: 14px;
+}
+
+// Das Blatt in klein – im Seitenverhältnis des gewählten Papiers.
+.vorschau {
+  width: 100%;
+  max-height: 52vh;
+  margin: 0 auto 10px;
+  padding: 3%;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  overflow: hidden;
+}
+
+// Genau das kommt aufs Papier (im Druck-Dokument ohne die Vorschau drumherum).
+.blatt {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.kopf {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: var(--text2);
+  font-size: 12px;
+
+  b {
+    color: var(--text);
+  }
+}
+
+.bild {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}

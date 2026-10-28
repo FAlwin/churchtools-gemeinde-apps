@@ -244,3 +244,32 @@ Blick bleibt beim Auf- und Zuklappen, wo er ist.
 - **Historie:** #736 (Entwurf `o7b-ansichten-v1.html` abgenommen 26.10.2026)
 
 </details>
+
+### TF-ORG-09 · Drucken / als PDF speichern (Mac Chrome, Mac Safari, iPad)
+
+**Das brauchst du:** Die Test-Instanz mit der Erweiterung; einen Mac mit Chrome und Safari und ein iPad.
+
+**Das muss passieren:** Auf jedem Gerät entsteht eine PDF mit **nur** dem Organigramm (Kopfzeile mit Name und Stand,
+dann das Diagramm bzw. die Liste) – ohne die blaue Leiste von ChurchTools, ohne Reiter und Knöpfe, in Lato, auf dem
+gewählten Papier.
+
+1. **Organigramm** → **Drucken**: Die Vorschau zeigt das Blatt im Seitenverhältnis des Papiers.
+2. Ansicht **Von oben**, Ausschnitt **Ganze Gemeinde**, **A4 quer** → **Drucken** → im Druckfenster „Als PDF sichern“.
+   PDF öffnen: nur das Organigramm, eine Seite, nichts abgeschnitten, Schrift wie in ChurchTools.
+3. Dasselbe mit **Mindmap** und **A3 quer**, dann **Liste** mit **A4 hoch** (Liste darf über mehrere Seiten gehen).
+4. ChurchTools auf **dunkel** stellen, noch einmal drucken: Das Blatt ist trotzdem hell.
+5. Alles an **Safari am Mac** und am **iPad** wiederholen (iPad: Teilen → Drucken → mit zwei Fingern aufziehen →
+   Teilen → In Dateien sichern). **Wichtig:** Druckt Safari die ganze ChurchTools-Seite statt des Organigramms, bitte
+   melden – dafür gibt es einen Ausweg (neuer Tab).
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `organigramm/src/drucken.ts`, `organigramm/src/DruckFenster.tsx`, `organigramm/src/DiagrammBild.tsx`, `organigramm/src/messung.ts`, `organigramm/src/Liste.tsx`, `organigramm/src/App.tsx`
+- **Automatisiert:** teilweise – `drucken.test.ts` (Schrift-Regeln, eigene Stile, Druck-Dokument, Rahmen und
+  Aufräumen), `DruckFenster.test.tsx` (Vorschau, Auswahl, was gedruckt würde), `App.test.tsx` (O7b-4); was der
+  Browser tatsächlich druckt, prüft nur dieser Fall
+- **Historie:** #736; Messung `messung-o7b-4-2026-10-28.md` (ChurchTools ohne Druckregeln, Lato nur `@media screen`,
+  Druck-Dokument im Rahmen in der Test-Instanz geprobt)
+
+</details>

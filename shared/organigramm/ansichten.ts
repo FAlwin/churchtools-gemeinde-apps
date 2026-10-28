@@ -60,6 +60,23 @@ export function pfadVon(baum: readonly Knoten[], id: number): string | null {
   return lauf(baum, GEMEINDE);
 }
 
+/**
+ * Was „Anfangen bei“ anbietet (O7b-2, auch „Ausschnitt“ beim Drucken O7b-4): die ganze Gemeinde, jeder Bereich – und
+ * die gewählte Spitze, wenn sie tiefer liegt („Im Organigramm hier anfangen“). Wert `''` = ganze Gemeinde.
+ */
+export function spitzenWahl(
+  baum: readonly Knoten[],
+  spitze: string | null,
+): { wert: string; name: string }[] {
+  const wahl = [
+    { wert: '', name: 'Ganze Gemeinde' },
+    ...baum.map((b) => ({ wert: String(b.gruppe.id), name: b.gruppe.name })),
+  ];
+  const tief = spitze?.includes('/') ? knotenAmPfad(baum, spitze) : null;
+  if (tief && spitze) wahl.push({ wert: spitze, name: tief.gruppe.name });
+  return wahl;
+}
+
 /** Wie es anfangs aussieht: die Gemeinde und die Bereiche offen, darunter zu. */
 export function anfangsOffen(baum: readonly Knoten[]): Set<string> {
   return new Set([GEMEINDE, ...baum.map((b) => String(b.gruppe.id))]);

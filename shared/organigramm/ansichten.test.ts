@@ -11,6 +11,7 @@ import {
   pfadVon,
   SCHALTER,
   sichtbarerBaum,
+  spitzenWahl,
   type Anordnung,
   type AnordnungsArt,
   type SichtKnoten,
@@ -115,6 +116,20 @@ describe('sichtbarerBaum', () => {
   it('die zugeklappte Gemeinde zeigt nur sich – mit der Zahl der Bereiche', () => {
     const s = sichtbarerBaum(BAUM, 'G', null, new Set());
     expect(s).toMatchObject({ offen: false, kinder: [], kinderZahl: 3 });
+  });
+});
+
+describe('spitzenWahl', () => {
+  it('ganze Gemeinde, jeder Bereich – eine tiefere Spitze zusätzlich, eine verschwundene nicht', () => {
+    expect(spitzenWahl(BAUM, null).map((w) => w.name)).toEqual([
+      'Ganze Gemeinde',
+      'Gottesdienst',
+      'Gemeinschaft',
+      'Jugend',
+    ]);
+    expect(spitzenWahl(BAUM, '10').map((w) => w.wert)).toEqual(['', '1', '10', '40']);
+    expect(spitzenWahl(BAUM, '1/2').at(-1)).toEqual({ wert: '1/2', name: 'Musik' });
+    expect(spitzenWahl(BAUM, '1/99')).toHaveLength(4);
   });
 });
 

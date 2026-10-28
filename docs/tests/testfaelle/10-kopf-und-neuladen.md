@@ -16,12 +16,18 @@ unter iOS 26 oder neuer. Im Safari-Tab und am Schreibtisch sieht man es nicht.
 beginnt mit seiner großen Überschrift, und die ist im Ruhezustand **scharf** – sie steht unterhalb
 des Bandes.
 
-1. App vom Home-Bildschirm starten. Tab **Termine**: Überschrift „Termine", darunter
-   „Kommende | Vergangene", darunter die Liste. Beide Knöpfe liegen auf einer **grauen Schiene**,
+1. App vom Home-Bildschirm starten. Tab **Termine**: **keine** Überschrift „Termine“ (das sagt der Reiter, seit
+   28.10.2026) – ganz oben „Kommende | Vergangene“, in der Erweiterung rechts daneben Vollbild, darunter die Liste. Beide Knöpfe liegen auf einer **grauen Schiene**,
    der nicht gewählte ist klar als Knopf erkennbar, nicht nur als Text (02.10.2026). Über der Überschrift ist nichts – der Inhalt läuft
    bis unter die Uhr.
-2. Dasselbe in **Lieder** („Lieder", darunter Suchfeld und Sortierung), **Abwesenheiten**
-   („Abwesenheiten") und **Mehr** („Mehr").
+2. **Lieder:** ganz oben das Suchfeld (Vollbild daneben), darunter die Sortierung – keine Überschrift. **Mehr:** ganz
+   oben die Gemeinde-Karte, Vollbild oben rechts daneben – keine Überschrift. **Abwesenheiten** (Reiter nur in der
+   eigenen App): ganz oben „Termine | Einträge“, am iPad rechts daneben grün „+ Zeitraum eintragen“ – keine Überschrift. Wähler, Suchfeld und Karte enden rechts bündig mit der
+   Liste darunter.
+   2a. **ChurchTools-App vom Home-Bildschirm** (iPhone, Erweiterung): Der Kopf jeder Seite beginnt **knapp** unter der
+   blauen ChurchTools-Leiste, kein leerer Streifen dazwischen (vorher ~36 pt). Das runde **Plus** (Abwesenheiten,
+   Ablauf im Bearbeiten) steht deutlich über dem Home-Strich und nicht in der Geräte-Rundung; ganz nach unten
+   gescrollt liegt es nicht auf dem Stift des letzten Eintrags.
 3. In jedem der vier: **hochschieben**. Die Überschrift wandert nach oben, läuft unter das Band und
    wird dabei weich – das ist der native Effekt von iOS, kein Fehler. Nichts bleibt oben kleben.
 4. Einen **Termin öffnen**: Der Kopf ist eine **weiße Karte** unter Uhr und Band – links **„← Termine“**, rechts

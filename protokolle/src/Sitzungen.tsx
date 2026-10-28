@@ -8,12 +8,15 @@ import { tagPunkt, datumText } from '@shared/ct/datum';
 import { ortszeitAus } from '@shared/ct/zeit';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
+import { naechsteNach } from '@shared/protokolle/planen';
 import type { Aufgabe } from '@shared/protokolle/aufgaben';
 import { ladeAufgaben, ladeSitzungen, type GruppenSitzungen } from './lesen';
 import { kachelVon, uhrzeit } from './anzeige';
 import { Marke } from './Marke';
 import { SitzungAnsicht } from './SitzungAnsicht';
 import { ProtokollBeginnen } from './ProtokollBeginnen';
+import { SitzungFestlegen } from './SitzungFestlegen';
+import { NaechsteSitzung } from './NaechsteSitzung';
 import styles from './Sitzungen.module.scss';
 
 // Der Editor (BlockNote, gut 1 MB) wird erst geladen, wenn die Leitung ein Protokoll schreibt (S4-1) – wer nur liest,
@@ -70,7 +73,8 @@ export interface SitzungsAuswahl {
  * **Reiter „Sitzungen“** (Bauplan S3-2, Entwurf 7): je Gruppe „Kommend“ (Termine mit Besprechungsanfrage,
  * Gruppentreffen, begonnene Protokolle) und „Protokolle“ (freigegeben). Ein Tipp öffnet die Sitzung zum Lesen – einen
  * Entwurf, wenn man schreiben darf (die Leitung), im Editor (S4-1). Ohne Protokoll kann die Leitung es dort beginnen
- * (S5-1); danach öffnet es sich gleich im Editor.
+ * (S5-1); danach öffnet es sich gleich im Editor. Die Leitung legt die nächste Sitzung fest – im Protokoll (Bereich
+ * Termine) oder außerordentlich über „Neue Sitzung“ (S5-2, dasselbe Fenster).
  * Bei mehreren Gruppen wählt man sie oben.
  */
 export function Sitzungen({
@@ -94,6 +98,11 @@ export function Sitzungen({
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
   const [offen, setOffen] = useState<Sitzung | null>(null);
   const [beginnt, setBeginnt] = useState<Sitzung | null>(null);
+  // „Nächste Sitzung festlegen“ (aus dieser Sitzung) oder „Neue Sitzung“ (S5-2).
+  const [festlegen, setFestlegen] = useState<{
+    art: 'naechste' | 'neu';
+    bis: Sitzung | null;
+  } | null>(null);
   // Die gewünschte Sitzung gilt nur für das erste Laden – danach bestimmt die Bedienung hier.
   const wunsch = useRef(auswahl?.sitzung);
   const [zuPunkt, setZuPunkt] = useState<string | null>(auswahl?.punkt ?? null);
@@ -121,8 +130,66 @@ export function Sitzungen({
 
   useEffect(laden, [laden]);
 
+  // Still nachladen, ohne „Wird geladen …“: Der Editor bleibt offen (er hängt am Zustand „fertig“), nur „Kommend“ und
+  // damit die nächste Sitzung sind danach frisch. Scheitert es, bleibt die alte Liste – das nächste Laden holt es nach.
+  const nachladen = useCallback(() => {
+    if (!gruppe) return;
+    Promise.all([ladeSitzungen(modul, gruppe, zeitzone), ladeAufgaben(modul, gruppe)]).then(
+      ([daten, aufgaben]) => setZustand({ art: 'fertig', daten, aufgaben }),
+      () => {},
+    );
+  }, [modul, gruppe]);
+
   const darfSchreibenIn = (g: ProtokollGruppe) =>
     g.protokolle !== null && schreibbar.includes(g.protokolle);
+
+  const alle =
+    zustand.art === 'fertig' ? [...zustand.daten.kommend, ...zustand.daten.protokolle] : [];
+  const darfFestlegen =
+    !!gruppe &&
+    darfSchreibenIn(gruppe) &&
+    zustand.art === 'fertig' &&
+    zustand.daten.kalender !== null;
+  const naechsteVon = (s: Sitzung) => (
+    <NaechsteSitzung
+      naechste={naechsteNach(s, alle)}
+      zeitzone={zeitzone}
+      onFestlegen={
+        darfFestlegen && s.kopf?.status !== 'frei'
+          ? () => setFestlegen({ art: 'naechste', bis: s })
+          : undefined
+      }
+    />
+  );
+  const festlegenFenster = (geoeffnetImEditor: boolean) =>
+    festlegen &&
+    gruppe &&
+    gruppe.protokolle !== null &&
+    zustand.art === 'fertig' &&
+    zustand.daten.kalender !== null && (
+      <SitzungFestlegen
+        art={festlegen.art}
+        gruppe={gruppe}
+        modul={modul}
+        kategorie={gruppe.protokolle}
+        kalender={zustand.daten.kalender}
+        sitzungen={alle}
+        bis={festlegen.bis}
+        ich={ich}
+        zeitzone={zeitzone}
+        onFestgelegt={(id) => {
+          setFestlegen(null);
+          if (geoeffnetImEditor) {
+            nachladen();
+            return;
+          }
+          // Aus der Liste oder der Ansicht: neu laden und die neue Sitzung öffnen.
+          if (id !== null) wunsch.current = `p:${id}`;
+          laden();
+        }}
+        onClose={() => setFestlegen(null)}
+      />
+    );
 
   if (!gruppe)
     return (
@@ -137,6 +204,7 @@ export function Sitzungen({
   )
     return (
       <Suspense fallback={<p className={styles.ruhig}>Editor wird geladen …</p>}>
+        {festlegenFenster(true)}
         <ProtokollSchreiben
           sitzung={offen}
           gruppe={gruppe.name}
@@ -148,6 +216,7 @@ export function Sitzungen({
           teile={zustand.daten.teile}
           ich={ich}
           zeitzone={zeitzone}
+          naechste={naechsteVon(offen)}
           onZurueck={(geaendert) => {
             setOffen(null);
             if (geaendert) laden();
@@ -170,6 +239,7 @@ export function Sitzungen({
           aufgaben={zustand.aufgaben}
           zeitzone={zeitzone}
           springeZu={zuPunkt}
+          naechste={naechsteVon(offen)}
           onBeginnen={darfSchreiben ? () => setBeginnt(offen) : undefined}
           onZurueck={() => {
             setZuPunkt(null);
@@ -196,6 +266,7 @@ export function Sitzungen({
             onClose={() => setBeginnt(null)}
           />
         )}
+        {festlegenFenster(false)}
       </>
     );
 
@@ -221,6 +292,16 @@ export function Sitzungen({
             <div className={styles.kartenkopf}>
               <h3 id="kommend">Kommend</h3>
               <span className={styles.anzahl}>{zustand.daten.kommend.length}</span>
+              {darfFestlegen && (
+                <button
+                  type="button"
+                  className={styles.neu}
+                  onClick={() => setFestlegen({ art: 'neu', bis: null })}
+                >
+                  <Icon name="plus" size={16} />
+                  Neue Sitzung
+                </button>
+              )}
             </div>
             {zustand.daten.kommend.length ? (
               <ul className={styles.liste}>
@@ -244,6 +325,7 @@ export function Sitzungen({
               </p>
             )}
           </section>
+          {festlegenFenster(false)}
           <section className={styles.karte} aria-labelledby="protokolle">
             <div className={styles.kartenkopf}>
               <h3 id="protokolle">Protokolle</h3>

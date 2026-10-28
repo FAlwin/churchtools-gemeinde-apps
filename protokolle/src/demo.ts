@@ -218,6 +218,15 @@ interface Speicher {
   werte: Map<number, { id: number; dataCategoryId: number; value: string }[]>;
   rechte: Map<number, Set<string>>;
   naechste: number;
+  /** In der Demo festgelegte Sitzungen (S5-2): Termine mit Anfragen und Gruppentreffen des Leitungsteams. */
+  termine: {
+    id: number;
+    title: string;
+    startDate: string;
+    endDate: string;
+    anfragen: { person: { domainIdentifier: string }; state: string }[];
+  }[];
+  treffen: { id: number; startDate: string; isCanceled: boolean }[];
 }
 
 function speicherAnlegen(fall: string): Speicher {
@@ -263,6 +272,8 @@ function speicherAnlegen(fall: string): Speicher {
     ),
     rechte: new Map(),
     naechste: 100,
+    termine: [],
+    treffen: [],
   };
 }
 
@@ -359,6 +370,10 @@ function antwort(
     return {
       status: 200,
       data: [
+        ...s.termine.map((t) => ({
+          base: { id: t.id, title: t.title, calendar: { id: 4 } },
+          calculated: { startDate: t.startDate, endDate: t.endDate },
+        })),
         {
           base: { id: 120, title: 'Gebetsabend', calendar: { id: 4 } },
           calculated: { startDate: heuteUm(19) },
@@ -373,12 +388,45 @@ function antwort(
         },
       ],
     };
+  // Nächste Sitzung festlegen (S5-2): wer anlegt, hat sofort zugesagt; die anderen sind offen (gemessen 28.10.2026).
+  if (pfad === '/api/calendars/4/appointments' && methode === 'POST') {
+    const id = s.naechste++;
+    s.termine.push({
+      id,
+      title: String(rumpf.title),
+      startDate: String(rumpf.startDate),
+      endDate: String(rumpf.endDate),
+      anfragen: ((rumpf.meetingrequests as { inviteeId: number }[] | undefined) ?? []).map((a) => ({
+        person: { domainIdentifier: String(a.inviteeId) },
+        state: a.inviteeId === 1 ? 'accepted' : 'pending',
+      })),
+    });
+    return { status: 201, data: { id } };
+  }
+  const termin = /^\/api\/calendars\/4\/appointments\/(\d+)$/.exec(pfad);
+  const neuerTermin = termin && s.termine.find((t) => t.id === Number(termin[1]));
+  if (neuerTermin) return { status: 200, data: { appointment: neuerTermin } };
   const anfragen = /^\/api\/calendars\/\d+\/appointments\/(\d+)\/meetingrequests$/.exec(pfad);
-  if (anfragen) return { status: 200, data: ANFRAGEN[anfragen[1]] ?? [] };
+  if (anfragen)
+    return {
+      status: 200,
+      data:
+        ANFRAGEN[anfragen[1]] ??
+        s.termine.find((t) => t.id === Number(anfragen[1]))?.anfragen ??
+        [],
+    };
   const treffen = /^\/api\/groups\/(\d+)\/meetings$/.exec(pfad);
+  if (treffen && treffen[1] === '11' && methode === 'POST') {
+    const id = s.naechste++;
+    s.treffen.push({ id, startDate: String(rumpf.startDate), isCanceled: false });
+    return { status: 201, data: { id } };
+  }
   if (treffen)
     return treffen[1] === '11'
-      ? { status: 200, data: [{ id: 15, startDate: '2027-03-17T17:00:00Z', isCanceled: false }] }
+      ? {
+          status: 200,
+          data: [{ id: 15, startDate: '2027-03-17T17:00:00Z', isCanceled: false }, ...s.treffen],
+        }
       : {
           status: 403,
           data: { message: 'Forbidden to see group', messageKey: 'error.forbidden.view' },

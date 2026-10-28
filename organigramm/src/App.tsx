@@ -6,7 +6,15 @@ import { Segment } from '@ui/bedienung/Segment';
 import { ReiterLeiste, type Reiter } from '@ui/bedienung/ReiterLeiste';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { baumOhneTypen, knotenNachId, type Knoten } from '@shared/organigramm/gruppen';
-import { praesentationAus } from '@shared/organigramm/praesentation';
+import { bereicheSortiert, praesentationAus } from '@shared/organigramm/praesentation';
+import {
+  alleAuf,
+  alleZu,
+  anfangsOffen,
+  knotenAmPfad,
+  pfadVon,
+  sichtbarerBaum,
+} from '@shared/organigramm/ansichten';
 import { hatBereich, personenImBereich, sichtbereich } from '@shared/organigramm/sichtbereich';
 import { hinweiseAus } from '@shared/organigramm/hinweise';
 import type { Mitglied } from '@shared/organigramm/mitglieder';
@@ -28,7 +36,13 @@ import { Praesentation, type Stand } from './Praesentation';
 import { ladePlan } from './plan';
 import { planAlsBaum, planBaum, planGruppen, type PlanAenderungen } from '@shared/organigramm/plan';
 import { NeueGliederung } from './NeueGliederung';
-import { leseAusgeblendet, merkeAusgeblendet } from './auswahl';
+import {
+  leseAnsicht,
+  leseAusgeblendet,
+  merkeAnsicht,
+  merkeAusgeblendet,
+  type BaumAnsicht,
+} from './auswahl';
 
 type Ansicht = 'organigramm' | 'personen' | 'hinweise' | 'gliederung';
 const REITER: Reiter<Ansicht>[] = [
@@ -72,6 +86,13 @@ export function App() {
   const [praesStand, setPraesStand] = useState<Stand>('heute');
   const [hash, setHash] = useState(() => window.location.hash);
   const handy = useMedienAbfrage(HANDY_BREITE);
+  // Ansichten des Baums (O7b-2): gewählt und im Gerät gemerkt – ohne Wahl am Handy die Liste (Alwin, 26.10.2026).
+  const [gewaehlt, setGewaehlt] = useState(leseAnsicht);
+  const baumAnsicht: BaumAnsicht = gewaehlt ?? (handy ? 'liste' : 'karten');
+  const [spitze, setSpitze] = useState<string | null>(null);
+  // `null`, solange niemand etwas auf- oder zugeklappt hat: dann gilt der Anfang (Gemeinde und Bereiche offen) – auch
+  // für Bereiche, die erst durch den Typ-Filter wieder auftauchen.
+  const [offenWahl, setOffenWahl] = useState<Set<string> | null>(null);
 
   const abgemeldetOderFehler = useCallback(
     (e: unknown) => setZustand({ art: 'fehler', fehler: fehlerMeldung(e) }),
@@ -164,6 +185,37 @@ export function App() {
     [start],
   );
   const zeigtMehr = !!start && hatBereich(bereich);
+  // Der Baum, wie Karten, Liste und „Hier anfangen“ ihn sehen: ohne ausgeblendete Typen, große Bereiche zuerst –
+  // dieselbe Reihenfolge wie in der Präsentation.
+  const sichtBaum = useMemo(
+    () => (start ? bereicheSortiert(baumOhneTypen(start.baum, ausgeblendet)) : []),
+    [start, ausgeblendet],
+  );
+  // Eine Spitze, die es nicht mehr gibt (Typ-Filter, Änderung in ChurchTools), wird vergessen – sonst spränge die
+  // Ansicht zurück, sobald die Gruppe wieder auftaucht. Das geschieht noch beim Zeichnen, nicht in einem Effekt danach:
+  // Ein zweiter Klick (Doppelklick auf den Typ-Filter) kam sonst vor dem Effekt, und die Spitze blieb (Test-Instanz
+  // 26.10.2026). React zeichnet dann gleich noch einmal, ohne das Bild mit der ungültigen Spitze zu zeigen.
+  if (spitze !== null && !knotenAmPfad(sichtBaum, spitze)) setSpitze(null);
+  const offen = useMemo(() => offenWahl ?? anfangsOffen(sichtBaum), [offenWahl, sichtBaum]);
+  const sicht = useMemo(
+    () => sichtbarerBaum(sichtBaum, start?.gemeinde ?? 'Gemeinde', spitze, offen),
+    [sichtBaum, start, spitze, offen],
+  );
+  const umklappen = (schluessel: string) => {
+    const neu = new Set(offen);
+    if (neu.has(schluessel)) neu.delete(schluessel);
+    else neu.add(schluessel);
+    setOffenWahl(neu);
+  };
+  // Eine neue Spitze steht offen da – sonst sähe man nach der Wahl nur ein Kästchen.
+  const spitzeSetzen = (pfad: string | null) => {
+    setSpitze(pfad);
+    if (pfad !== null && !offen.has(pfad)) setOffenWahl(new Set([...offen, pfad]));
+  };
+  const ansichtWaehlen = (a: BaumAnsicht) => {
+    merkeAnsicht(a);
+    setGewaehlt(a);
+  };
   const admin = !!start?.rechte.gruppenVerwalten;
   const reiter = admin ? REITER_ADMIN : REITER;
   const ansicht: Ansicht = zeigtMehr ? ansichtAusAdresse(hash, admin) : 'organigramm';
@@ -269,6 +321,16 @@ export function App() {
     ) : undefined;
 
   const offenerKnoten = offeneGruppe === null ? undefined : knoten.get(offeneGruppe);
+  // „Hier anfangen“ (O7b-2): nur für eine Gruppe mit Untergruppen, die im gefilterten Baum steht.
+  const offenerPfad = offeneGruppe === null ? null : pfadVon(sichtBaum, offeneGruppe);
+  const hierAnfangen =
+    offenerPfad !== null && (knotenAmPfad(sichtBaum, offenerPfad)?.kinder.length ?? 0) > 0
+      ? () => {
+          spitzeSetzen(offenerPfad);
+          setOffeneGruppe(null);
+          wechseln('organigramm');
+        }
+      : undefined;
   // Personen gibt es nur im eigenen Bereich – eine Person außerhalb öffnet kein Fenster.
   const offenePersonImBereich = offenePerson === null ? undefined : personen.get(offenePerson);
   const gruppeOeffnen = (id: number) => {
@@ -295,6 +357,15 @@ export function App() {
           einsaetze={einsaetze.art === 'fertig' ? einsaetze.einsaetze : null}
           lesbar={lesbar.mitglieder}
           ausgeblendet={ausgeblendet}
+          baum={sichtBaum}
+          ansicht={baumAnsicht}
+          onAnsicht={ansichtWaehlen}
+          spitze={spitze}
+          onSpitze={spitzeSetzen}
+          sicht={sicht}
+          onUmklappen={umklappen}
+          onAlleAuf={() => setOffenWahl(alleAuf(sichtBaum, spitze, offen))}
+          onAlleZu={() => setOffenWahl(alleZu(sichtBaum, spitze, offen))}
           onTypUmschalten={typUmschalten}
           onNachladen={nachladen}
           onGruppe={gruppeOeffnen}
@@ -334,6 +405,7 @@ export function App() {
           onGruppe={gruppeOeffnen}
           onNachladen={nachladen}
           onSchliessen={() => setOffeneGruppe(null)}
+          onHierAnfangen={hierAnfangen}
           onStruktur={strukturNeu}
           onMitgliederNeu={() => mitgliederNeu(offenerKnoten.gruppe.id)}
         />

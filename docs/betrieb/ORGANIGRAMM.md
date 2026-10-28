@@ -48,19 +48,27 @@ Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Gemessen an der Test-Insta
 Über dem Baum wählt man, **wie** er aussieht:
 
 - **Karten** – wie bisher: je Bereich eine Karte, darin die Gruppen mit Personen, Leitung und Diensten.
+- **Von oben** – das klassische Organigramm: die Gemeinde oben, die Bereiche nebeneinander, darunter die Gruppen
+  gestapelt. **Von links** – derselbe Baum zur Seite, jede Ebene eine Spalte. **Mindmap** – die Gemeinde in der Mitte,
+  die Bereiche nach rechts und links verteilt. In allen dreien steht im Kästchen nur der Name; ein Klick (oder Enter)
+  öffnet die Gruppe, das runde **+/−** klappt auf und zu (zugeklappt steht dort die Zahl der Untergruppen).
+  **Ziehen** verschiebt, **Mausrad** oder **zwei Finger** zoomen, dazu **−**, **+** und **Ganz zeigen**. Passt alles
+  lesbar hinein, ist anfangs alles zu sehen; sonst beginnt das Bild lesbar groß an der Spitze. Mit der Tastatur
+  (Tab) springt das Bild zum gewählten Kästchen.
 - **Liste** – die Gemeinde als Gliederung mit Linien, nur die Namen. Jede Gruppe mit Untergruppen klappt mit dem
-  Pfeil auf und zu; anfangs sind die Gemeinde und die Bereiche offen, darunter steht „3 Untergruppen“. **Alle
-  aufklappen** / **Alle zuklappen** wirken nur unter der Spitze. Gut am Handy.
-- **Anfangen bei:** die ganze Gemeinde oder ein Bereich – dann zeigen Karten und Liste nur ihn. Im Gruppenfenster jeder
+  Pfeil auf und zu; anfangs sind die Gemeinde und die Bereiche offen, darunter steht „3 Untergruppen“. Gut am Handy.
+- **Alle aufklappen** / **Alle zuklappen** (Liste und Diagramme) wirken nur unter der Spitze.
+- **Anfangen bei:** die ganze Gemeinde oder ein Bereich – dann zeigen alle Ansichten nur ihn. Im Gruppenfenster jeder
   Gruppe mit Untergruppen steht **„Im Organigramm hier anfangen“**; die Gruppe steht dann zusätzlich in der Auswahl.
   Blendet der Typ-Filter die Spitze aus, gilt wieder die ganze Gemeinde.
-- Die gewählte Ansicht **merkt sich das Gerät** (wie den Typ-Filter). Ohne Wahl: am Handy die Liste, sonst die
-  Karten. Von oben, von links und Mindmap kommen mit O7b-3 dazu.
+- Die gewählte Ansicht **merkt sich das Gerät** (wie den Typ-Filter). Ohne Wahl: am Handy die Liste, sonst **von
+  oben**. Präsentation und Drucken mit diesen Ansichten kommen mit O7b-4/-5.
 - Eine Gruppe mit zwei Obergruppen steht wie in ChurchTools unter beiden und klappt an jeder Stelle für sich.
 
 ## Präsentation (ab O4)
 
-Über dem Baum steht **„Präsentieren“** – für alle, die die Erweiterung sehen. Die Präsentation legt sich über
+Im Reiter Organigramm steht oben rechts neben „Hallo …“ **„Präsentieren“** (am Handy nur das Symbol) – für alle, die
+die Erweiterung sehen. Die Präsentation legt sich über
 ChurchTools:
 
 - **Übersicht:** die Bereiche als Kacheln mit Leitung, Gruppen und Zahl der Personen. Klick auf eine Kachel öffnet

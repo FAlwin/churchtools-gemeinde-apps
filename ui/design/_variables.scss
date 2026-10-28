@@ -73,6 +73,10 @@
   --r-tile: 6px; // Datumskacheln, Noten-Kacheln – `--radius-md`
   --r-ctrl: 4px; // Knöpfe, Segmente, Inputs, Pills – `--radius-sm`
   --r-dialog: 8px; // zentrierte Dialoge (Sheet, ConfirmDialog) – wie die Karten
+
+  // Höhe aller Knöpfe und Bedienelemente in einer Reihe – Kopf-, Zeilen- und Fensterknöpfe, Umschalter, Auswahlfelder
+  // (Alwin, 28.10.2026: „einheitlich an ChurchTools orientieren“; vorher 30–40 px nebeneinander im Organigramm).
+  --knopf-hoehe: 38px;
 }
 
 // ── Dunkel wie ChurchTools ───────────────────────────────────────────

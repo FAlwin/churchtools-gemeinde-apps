@@ -15,7 +15,8 @@
   gap: 6px;
   @include auswahlKnopf;
   font-size: 13px;
-  padding: 8px 11px;
+  min-height: var(--knopf-hoehe);
+  padding: 0 11px;
   border-radius: var(--r-ctrl);
 }
 
@@ -30,10 +31,12 @@
   opacity: 0.55;
 }
 
-// Verbunden (Dienstplaner, 14.10.2026): eine gemeinsame Schiene, die gewählte Option hell darauf.
+// Verbunden (Dienstplaner, 14.10.2026): eine gemeinsame Schiene, die gewählte Option hell darauf. So hoch wie alle
+// Knöpfe (28.10.2026); die Beschriftung bricht nicht um („Neue Gliederung“ stand in zwei Zeilen).
 .verbunden {
   display: inline-flex;
   gap: 0;
+  min-height: var(--knopf-hoehe);
   padding: 2px;
   border: 1px solid var(--border);
   border-radius: var(--r-ctrl);
@@ -43,7 +46,10 @@
     border: 0;
     background: transparent;
     border-radius: calc(var(--r-ctrl) - 2px);
-    padding: 7px 12px;
+    // So hoch wie die Schiene innen (2 px Abstand + 1 px Rand je Seite) – bricht sie um, wird jede Reihe gleich hoch.
+    min-height: calc(var(--knopf-hoehe) - 6px);
+    padding: 0 12px;
+    white-space: nowrap;
   }
 
   .on {

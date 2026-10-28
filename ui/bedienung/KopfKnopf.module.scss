@@ -8,8 +8,8 @@
   justify-content: center;
   gap: 6px;
   flex-shrink: 0;
-  height: 38px;
-  min-width: 38px;
+  height: var(--knopf-hoehe);
+  min-width: var(--knopf-hoehe);
   padding: 0 12px;
   border-radius: var(--r-ctrl);
   font-size: 14px;
@@ -24,7 +24,7 @@
 
 // Immer nur das Symbol (Vollbild).
 .nurSymbol {
-  width: 38px;
+  width: var(--knopf-hoehe);
   padding: 0;
 }
 

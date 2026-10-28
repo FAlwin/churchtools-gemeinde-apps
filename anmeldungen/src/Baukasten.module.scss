@@ -512,7 +512,7 @@
 }
 .suche {
   @include m.eingabefeld;
-  height: 38px;
+  height: var(--knopf-hoehe);
   padding: 0 12px;
   font-size: 14px;
   width: 100%;

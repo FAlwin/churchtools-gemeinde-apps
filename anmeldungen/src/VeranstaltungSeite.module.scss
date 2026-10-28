@@ -49,7 +49,7 @@
 }
 
 .freigeben {
-  height: 38px;
+  height: var(--knopf-hoehe);
   padding: 0 16px;
   border: none;
   border-radius: var(--r-ctrl);

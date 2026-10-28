@@ -213,3 +213,34 @@ gewählten Teil; die gewählte Ansicht bleibt nach dem Neuladen.
 - **Historie:** #736 (Entwurf `o7b-ansichten-v1.html` abgenommen 26.10.2026; Startansicht am Handy Liste)
 
 </details>
+
+### TF-ORG-08 · Diagramme: von oben, von links, Mindmap
+
+**Das brauchst du:** Die Test-Instanz mit der Erweiterung, ein Konto, das den Baum sieht; Laptop mit Maus und ein
+Handy oder Tablet zum Zoomen mit zwei Fingern.
+
+**Das muss passieren:** Die Diagramme zeigen dieselben Gruppen wie ChurchTools; Ziehen öffnet nie eine Gruppe; der
+Blick bleibt beim Auf- und Zuklappen, wo er ist.
+
+1. Im Gerät gemerkte Ansicht löschen (oder neues Browserfenster), **Organigramm** öffnen: Am Laptop kommt **Von oben**,
+   am Handy die **Liste**.
+2. **Von oben**, **Von links**, **Mindmap** nacheinander: Gruppen und Namen mit ChurchTools vergleichen (**Alle
+   aufklappen**).
+3. Ein **+** anklicken: Die Untergruppen erscheinen, der Blick bleibt stehen; **−** klappt wieder zu.
+4. Auf einem Kästchen beginnen zu ziehen: Das Bild wandert, es öffnet sich **kein** Fenster. Ein einfacher Klick auf
+   ein Kästchen öffnet das Gruppenfenster.
+5. Mausrad und **−** / **+** zoomen um die Mitte bzw. den Mauszeiger, **Ganz zeigen** passt alles ein. Am Handy mit
+   zwei Fingern zoomen und mit einem ziehen.
+6. Mit Tab durch die Kästchen: Ein Kästchen außerhalb des Bildes wird in die Mitte geschoben; Enter öffnet es.
+7. **Anfangen bei** einem Bereich: Das Diagramm fängt dort neu an.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `organigramm/src/Diagramm.tsx`, `organigramm/src/leinwand.ts`, `organigramm/src/textBreite.ts`, `organigramm/src/Organigramm.tsx`, `organigramm/src/App.tsx`, `organigramm/src/auswahl.ts`, `shared/organigramm/ansichten.ts`
+- **Automatisiert:** größtenteils – `Diagramm.test.tsx` (Klick, Tastatur, Ziehen, Zoomen, Blick), `leinwand.test.ts`,
+  `App.test.tsx` (O7b-3), `ansichten.test.ts`; wie es mit echter Schrift aussieht und ob zwei Finger zoomen, prüft nur
+  dieser Fall
+- **Historie:** #736 (Entwurf `o7b-ansichten-v1.html` abgenommen 26.10.2026)
+
+</details>

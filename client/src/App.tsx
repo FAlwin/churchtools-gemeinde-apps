@@ -54,6 +54,7 @@ import { funktionen } from './services/funktionen';
 import { useVollbildHinweis } from './hooks/useVollbildHinweis';
 import { KeineLiedRechte } from './services/churchtoolsApi';
 import { schluessel } from './hooks/abfrageSchluessel';
+import { terminZeile } from './utils/terminZeile';
 
 /**
  * Lade-Anzeige, während ein per Code-Splitting nachgeladener Seiten-Chunk eintrifft (#142).
@@ -522,6 +523,7 @@ export default function App() {
           <ChordChart
             songs={songs}
             startIndex={songIndex}
+            kopf={{ titel: `${service.name} – ${terminZeile(service)}`, zurueckZiel: 'Ablauf' }}
             onBack={() => setView({ type: 'setlist' })}
             onReload={() => agendaQuery.refetch()}
             canEditSong={canEditSongs}
@@ -545,6 +547,8 @@ export default function App() {
         <ChordChart
           songs={[songChart.data]}
           startIndex={0}
+          // Aus der Liederliste: der Liedname als Titel (Alwin, 28.10.2026).
+          kopf={{ titel: songChart.data.title, zurueckZiel: 'Lieder' }}
           onBack={() => setView(null)}
           onReload={() => songChart.refetch()}
           canEditSong={canEditSongs}

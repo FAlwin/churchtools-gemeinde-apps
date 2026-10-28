@@ -41,6 +41,40 @@ const ordnen = (q: { termine?: Termin[]; treffen?: Treffen[]; koepfe?: Protokoll
   });
 
 describe('sitzungenOrdnen (S3-1)', () => {
+  it('Serientermin (S5-1): das Protokoll hängt nur am Termin zu seinem Beginn, die anderen Wochen bleiben eigene', () => {
+    const { kommend } = ordnen({
+      termine: [termin(114, '2026-11-04T18:00:00Z'), termin(114, '2026-11-11T18:00:00Z')],
+      koepfe: [
+        kopf({
+          sitzung: 'p1',
+          status: 'entwurf',
+          beginn: '2026-11-04T18:00:00Z',
+          termin: { kalender: 4, id: 114 },
+        }),
+      ],
+    });
+    expect(kommend.map((s) => [s.beginn, s.kopf?.sitzung ?? null])).toEqual([
+      ['2026-11-04T18:00:00Z', 'p1'],
+      ['2026-11-11T18:00:00Z', null],
+    ]);
+  });
+
+  it('ein einzelner, später verschobener Termin bleibt bei seinem Protokoll', () => {
+    const { kommend } = ordnen({
+      termine: [termin(120, '2026-11-12T18:00:00Z')],
+      koepfe: [
+        kopf({
+          sitzung: 'p2',
+          status: 'entwurf',
+          beginn: '2026-11-11T18:00:00Z',
+          termin: { kalender: 4, id: 120 },
+        }),
+      ],
+    });
+    expect(kommend).toHaveLength(1);
+    expect(kommend[0].kopf?.sitzung).toBe('p2');
+  });
+
   it('Termin und Gruppentreffen zur selben Minute sind EINE Sitzung', () => {
     const { kommend } = ordnen({
       termine: [termin(114, '2027-03-17T17:00:00Z')],

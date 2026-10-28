@@ -116,7 +116,7 @@
 .auswahl {
   width: 100%;
   min-width: 0;
-  height: 38px;
+  height: var(--knopf-hoehe);
   padding: 0 10px;
   border: 1px solid var(--border);
   border-radius: var(--r-ctrl);

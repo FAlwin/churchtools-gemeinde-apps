@@ -85,7 +85,7 @@ describe('usePageNavigation – die drei Zonen', () => {
 
   /**
    * #421 (03.10.2026): Vorher wählte derselbe Tipp im Querformat zusätzlich die Hälfte – wer das
-   * andere Lied wollte, landete im Vollbild. Ausgewählt wird jetzt über die Titel-Kapseln.
+   * andere Lied wollte, landete im Vollbild. Ausgewählt wird über die Ablauf-Leiste (Scheibe B2).
    */
   it('schaltet im Querformat NUR die Leisten um – eine Hälfte wählt der Tipp nicht mehr', () => {
     const { result, args } = starte({ perView: 2 });

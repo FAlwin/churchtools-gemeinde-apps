@@ -152,8 +152,9 @@
 
 .feld {
   @include m.eingabefeld;
+  height: var(--knopf-hoehe);
   width: 100%;
-  padding: 8px 10px;
+  padding: 0 10px;
   font-size: 15px;
 }
 
@@ -194,7 +195,8 @@
 
 .zweit {
   @include m.aktionKnopf;
-  padding: 8px 14px;
+  height: var(--knopf-hoehe);
+  padding: 0 14px;
   border-radius: var(--r-ctrl);
   font-size: 14px;
 }

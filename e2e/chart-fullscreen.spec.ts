@@ -44,7 +44,8 @@ test('Vollbild: die Seite passt in beiden Zuständen in die Fläche', async ({ p
     await page.waitForTimeout(700); // Einpassen läuft über eine kurze Animation
   };
 
-  const kopfzeile = page.locator('[class*="hdr"]');
+  // Die Kopfkarte (Scheibe B1) – erkannt an ihrer Ablauf-Leiste.
+  const kopfzeile = page.getByRole('navigation', { name: 'Lieder im Ablauf' });
 
   // Ausgangslage: Leisten da, Seite passt.
   await expect(kopfzeile).toBeVisible();
@@ -134,13 +135,13 @@ test('Vollbild BEHÄLT den Zoom – es blendet nur die Leisten aus', async ({ pa
 
   // Ins Vollbild – was man sieht, muss BLEIBEN: gleiche Blattbreite, gleiche Stelle.
   await page.mouse.click(mx, my);
-  await expect(page.locator('[class*="hdr"]')).toHaveCount(0);
+  await expect(page.getByRole('navigation', { name: 'Lieder im Ablauf' })).toHaveCount(0);
   await page.waitForTimeout(700);
   gleich(await ansicht(), vorher);
 
   // Und zurück – ebenfalls unverändert.
   await page.mouse.click(mx, my);
-  await expect(page.locator('[class*="hdr"]')).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Lieder im Ablauf' })).toBeVisible();
   await page.waitForTimeout(700);
   gleich(await ansicht(), vorher);
 

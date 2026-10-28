@@ -7,11 +7,12 @@ import {
 } from '../client/src/utils/onboarding';
 
 /**
- * Querformat mit zwei Liedern nebeneinander (#421, Alwin am iPad, 03.10.2026).
+ * Querformat mit zwei Liedern nebeneinander (#421, Alwin am iPad, 03.10.2026; seit Scheibe B1+B2 über die
+ * Ablauf-Leiste der Kopfkarte, 28.10.2026).
  *
- * Vorher wählte ein Tipp aufs Blatt das andere Lied UND schaltete ins Vollbild – die Auswahl sah man
- * erst nach dem Zurückschalten. Jetzt hat jedes Lied seinen Titel und seine Werkzeuge über seiner
- * Hälfte; ein Tipp aufs Blatt schaltet nur noch das Vollbild.
+ * Beide sichtbaren Lieder sind in der Leiste hinterlegt, eines ist gewählt (unterstrichen). Ein Tipp auf das andere
+ * wählt es – ohne Vollbild; ein Tipp auf das gewählte öffnet sein Lied-Menü. Die Knöpfe wirken auf das gewählte. Ein
+ * Tipp aufs Blatt schaltet nur das Vollbild.
  *
  * Der Stub kennt nur ein Lied – der Test verdoppelt den Lied-Punkt in der Ablauf-Antwort, damit zwei
  * verschiedene Lieder nebeneinander stehen. Als E2E, weil es um echte Geometrie (zwei Hälften) und
@@ -19,7 +20,7 @@ import {
  */
 test.use({ viewport: { width: 1180, height: 820 } });
 
-test('Querformat: Lied über seinen Titel wählen, Werkzeuge je Lied, Blatt = nur Vollbild', async ({
+test('Querformat: zweites sichtbares Lied in der Leiste wählen, Lied-Menü am gewählten, Blatt = nur Vollbild', async ({
   page,
 }) => {
   await page.addInitScript(
@@ -51,36 +52,36 @@ test('Querformat: Lied über seinen Titel wählen, Werkzeuge je Lied, Blatt = nu
   await page.getByText('Gottesdienst (Stub)').click();
   await page.getByText('Testlied aus ChurchTools').first().click();
 
-  const aktiv = page.locator('[data-tour="chart-lied"]');
-  await expect(aktiv).toBeVisible({ timeout: 20_000 });
-  const kopf = page.locator('[class*="hdr"]');
+  const leiste = page.getByRole('navigation', { name: 'Lieder im Ablauf' });
+  await expect(leiste).toBeVisible({ timeout: 20_000 });
+  const lied = (i: number) => leiste.locator(`[data-lied="${i}"]`);
+  // Beide sichtbar (hinterlegt), das linke gewählt.
+  await expect(leiste.locator('[class*="liedSichtbar"]')).toHaveCount(2);
+  await expect(lied(0)).toHaveAttribute('aria-current', 'true');
 
-  /** Steht die aktive Kapsel links (0) oder rechts (1)? */
-  const aktiveSeite = async () => {
-    const box = (await aktiv.boundingBox())!;
-    return box.x + box.width / 2 < 590 ? 0 : 1;
-  };
-  expect(await aktiveSeite()).toBe(0);
+  // Tipp auf das andere sichtbare → gewählt, KEIN Vollbild, kein Menü.
+  await lied(1).click();
+  await expect(lied(1)).toHaveAttribute('aria-current', 'true');
+  await expect(lied(0)).not.toHaveAttribute('aria-current', 'true');
+  await expect(leiste).toBeVisible();
+  await expect(lied(1)).toHaveAttribute('aria-expanded', 'false');
 
-  // Tipp auf den blassen Titel → dieses Lied ist aktiv, KEIN Vollbild.
-  // Der Titel kommt (wie bei der aktiven Kapsel) aus dem ANGEZEIGTEN Blatt – im Stub teilen sich
-  // beide Lieder dasselbe ChordPro, deshalb über das Wortende gesucht.
-  await page.getByRole('button', { name: /auswählen$/ }).click();
-  await expect.poll(aktiveSeite).toBe(1);
-  await expect(kopf).toBeVisible();
-
-  // Werkzeug des anderen (jetzt linken) Lieds → wählt dieses Lied UND öffnet das Werkzeug.
-  await page.getByRole('button', { name: /^Aussehen – / }).click();
-  await expect.poll(aktiveSeite).toBe(0);
-  await expect(page.getByText('Schriftgröße')).toBeVisible();
+  // Tipp auf das gewählte → sein Lied-Menü, unter ihm.
+  await lied(1).click();
+  await expect(lied(1)).toHaveAttribute('aria-expanded', 'true');
   await page.keyboard.press('Escape');
+  await page.mouse.click(1100, 780); // Menü schließen (Tipp daneben)
+
+  // Aussehen wirkt auf das gewählte Lied und öffnet unter seinem Knopf.
+  await page.getByRole('button', { name: 'Aussehen', exact: true }).click();
+  await expect(page.getByText('Schriftgröße')).toBeVisible();
   await page.mouse.click(1100, 780); // Fenster schließen (Tipp daneben)
 
-  // Tipp aufs Blatt → nur Vollbild; das aktive Lied bleibt.
+  // Tipp aufs Blatt → nur Vollbild; das gewählte Lied bleibt.
   const flaeche = (await page.locator('[class*="chartArea"]').boundingBox())!;
   await page.mouse.click(flaeche.x + flaeche.width * 0.7, flaeche.y + flaeche.height / 2);
-  await expect(kopf).toHaveCount(0);
+  await expect(leiste).toHaveCount(0);
   await page.mouse.click(flaeche.x + flaeche.width * 0.7, flaeche.y + flaeche.height / 2);
-  await expect(kopf).toBeVisible();
-  expect(await aktiveSeite()).toBe(0);
+  await expect(leiste).toBeVisible();
+  await expect(lied(1)).toHaveAttribute('aria-current', 'true');
 });

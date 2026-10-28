@@ -314,17 +314,17 @@ Bildschirm die App. Der Zustand bleibt beim Wechsel zwischen Liste, Ablauf und L
 4. Zurück zur Liste → weiter ohne ChurchTools-Leiste. Knopf antippen → die Leiste ist wieder da.
 5. **Termine**, **Mehr**, ein Ablauf: Der Knopf steht jeweils ganz rechts oben (im Ablauf rechts neben
    Teilen/Bearbeiten).
-6. Am iPhone (oder schmalem Fenster): Im Liedblatt stecken die Werkzeuge im Menü, der Vollbild-Knopf
-   steht trotzdem sichtbar ganz rechts – nicht im Menü.
+6. Am iPhone (oder schmalem Fenster): Im Liedblatt steht der Vollbild-Knopf als Symbol rechts neben der
+   Lied-Leiste (Kopfkarte kompakt, Scheibe B1) – nicht zwischen den Werkzeug-Knöpfen.
 7. In der Server-App (Homescreen-App der Musik App) gibt es den Knopf nicht.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/hooks/useAppVollbild.ts`, `client/src/components/VollbildKnopf.tsx`, `client/src/components/SeitenGeruest.tsx`, `client/src/components/ChartHeader.tsx`, `client/src/styles/main.scss`
+- **Betrifft:** `client/src/hooks/useAppVollbild.ts`, `client/src/components/VollbildKnopf.tsx`, `client/src/components/SeitenGeruest.tsx`, `client/src/components/BlattKopf.tsx`, `client/src/styles/main.scss`
 - **Automatisiert:** teilweise – `useAppVollbild.test.tsx` (Attribut, ein Zustand, bleibt beim Wechsel),
-  `VollbildKnopf.test.tsx`, `SeitenGeruest.test.tsx` (jede Seite, ganz rechts), `ChartHeader.test.tsx`
-  (nie im Menü, zählt bei der Breite mit, einer im Querformat); ob die
+  `VollbildKnopf.test.tsx`, `SeitenGeruest.test.tsx` (jede Seite, ganz rechts), `BlattKopf.test.tsx`
+  (Knopf da/nicht da, Name wechselt, kompakt und flach als Symbol neben der Leiste); ob die
   ChurchTools-Leiste wirklich verdeckt wird, nur hier
 - **Historie:** Alwin 08.10.2026 – erster Versuch mit dem Browser-Vollbild verworfen (Safari-X,
   Hinweis, Flackern; in der Homescreen-App gar nicht verfügbar)

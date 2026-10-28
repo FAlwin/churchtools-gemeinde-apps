@@ -10,6 +10,7 @@ import {
   abschnittZiehenEndet,
   kannSchieben,
 } from './abschnittZiehen';
+import { einhaengen } from './editorTest.testutil';
 
 /** Abschnitte verschieben (S4-3b) – gegen den echten BlockNote-Editor mit unserem Schema. */
 
@@ -29,11 +30,8 @@ const DOK: Block[] = [
   { id: 'c1', type: 'paragraph', content: 'Ende' },
 ];
 
-const editorMit = () => {
-  const e = BlockNoteEditor.create({ schema, initialContent: DOK as Teil[] });
-  e.mount(document.createElement('div'));
-  return e;
-};
+const editorMit = () =>
+  einhaengen(BlockNoteEditor.create({ schema, initialContent: DOK as Teil[] }));
 const ids = (e: ProtokollEditor) => e.document.map((b) => b.id);
 
 /** Lage auf dem „Bildschirm“: jeder Block 10 Einheiten hoch, in Reihenfolge. */

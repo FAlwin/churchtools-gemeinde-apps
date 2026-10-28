@@ -38,6 +38,7 @@ import { Praesentation, type Stand } from './Praesentation';
 import { ladePlan } from './plan';
 import { planAlsBaum, planBaum, planGruppen, type PlanAenderungen } from '@shared/organigramm/plan';
 import { NeueGliederung } from './NeueGliederung';
+import { PdfFenster } from './PdfFenster';
 import {
   leseAnsicht,
   leseAusgeblendet,
@@ -96,6 +97,8 @@ export function App() {
   // `null`, solange niemand etwas auf- oder zugeklappt hat: dann gilt der Anfang (Gemeinde und Bereiche offen) – auch
   // für Bereiche, die erst durch den Typ-Filter wieder auftauchen.
   const [offenWahl, setOffenWahl] = useState<Set<string> | null>(null);
+  // Organigramm als PDF (O7b-4) – übernimmt Ansicht, Spitze und Aufgeklapptes vom Reiter.
+  const [pdfOffen, setPdfOffen] = useState(false);
 
   const abgemeldetOderFehler = useCallback(
     (e: unknown) => setZustand({ art: 'fehler', fehler: fehlerMeldung(e) }),
@@ -200,9 +203,11 @@ export function App() {
   // 26.10.2026). React zeichnet dann gleich noch einmal, ohne das Bild mit der ungültigen Spitze zu zeigen.
   if (spitze !== null && !knotenAmPfad(sichtBaum, spitze)) setSpitze(null);
   const offen = useMemo(() => offenWahl ?? anfangsOffen(sichtBaum), [offenWahl, sichtBaum]);
+  // Die Spitze der Diagramme ist die Gemeinde – ohne Namen aus ChurchTools heißt sie so.
+  const gemeindeName = start?.gemeinde ?? 'Gemeinde';
   const sicht = useMemo(
-    () => sichtbarerBaum(sichtBaum, start?.gemeinde ?? 'Gemeinde', spitze, offen),
-    [sichtBaum, start, spitze, offen],
+    () => sichtbarerBaum(sichtBaum, gemeindeName, spitze, offen),
+    [sichtBaum, gemeindeName, spitze, offen],
   );
   const umklappen = (schluessel: string) => {
     const neu = new Set(offen);
@@ -354,12 +359,20 @@ export function App() {
         // Rechts neben „Hallo …“ wie „+ Gruppe erstellen“ in ChurchTools (Alwin, 28.10.2026: Variante B). Bis die
         // Mitglieder geladen sind, gesperrt – ohne sie gibt es keine Präsentation.
         start && ansicht === 'organigramm' ? (
-          <KopfKnopf
-            label="Präsentieren"
-            symbol={<Icon name="play" size={16} />}
-            disabled={!mitglieder}
-            onClick={praesentieren}
-          />
+          <>
+            <KopfKnopf
+              label="PDF / Drucken"
+              title="Als PDF speichern oder drucken"
+              symbol={<Icon name="dokument" size={16} />}
+              onClick={() => setPdfOffen(true)}
+            />
+            <KopfKnopf
+              label="Präsentieren"
+              symbol={<Icon name="play" size={16} />}
+              disabled={!mitglieder}
+              onClick={praesentieren}
+            />
+          </>
         ) : undefined
       }
       unten={unten}
@@ -432,6 +445,16 @@ export function App() {
           einsaetze={einsaetze}
           onGruppe={gruppeOeffnen}
           onSchliessen={() => setOffenePerson(null)}
+        />
+      )}
+      {start && pdfOffen && (
+        <PdfFenster
+          baum={sichtBaum}
+          gemeinde={gemeindeName}
+          offen={offen}
+          spitze={spitze}
+          ansicht={baumAnsicht}
+          onSchliessen={() => setPdfOffen(false)}
         />
       )}
       {start && mitglieder && praesentation && (

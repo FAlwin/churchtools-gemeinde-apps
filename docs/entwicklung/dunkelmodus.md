@@ -33,7 +33,8 @@ dieses eine.
 
 1. **Farben:** `ui/design/_variables.scss`, Block `html[data-theme='dark']` – die Werte der Tabelle oben.
    Komponenten nutzen nur die Tokens (`--bg`, `--surface2` …). `color-scheme: dark` sorgt dafür, dass auch
-   Auswahllisten, Datumsfelder und Rollbalken dunkel werden.
+   Auswahllisten, Datumsfelder und Rollbalken dunkel werden. Was immer hell bleibt (Papier – die Vorschau der
+   Organigramm-PDF), bindet die hellen Werte über den Mixin `hell` aus `ui/design/_farben.scss` ein.
 2. **Wer hell oder dunkel wählt:**
    - **Erweiterungen „Anmeldungen“ und „Dienstplaner“:** ChurchTools. `ui/design/thema.ts` →
      `folgeChurchToolsThema()` setzt `data-theme` auf `<html>` passend zur Klasse an `<body>` und zieht mit,

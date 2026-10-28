@@ -60,6 +60,23 @@ export function pfadVon(baum: readonly Knoten[], id: number): string | null {
   return lauf(baum, GEMEINDE);
 }
 
+/**
+ * Was „Anfangen bei“ anbietet (O7b-2, auch „Ausschnitt“ beim Drucken O7b-4): die ganze Gemeinde, jeder Bereich – und
+ * die gewählte Spitze, wenn sie tiefer liegt („Im Organigramm hier anfangen“). Wert `''` = ganze Gemeinde.
+ */
+export function spitzenWahl(
+  baum: readonly Knoten[],
+  spitze: string | null,
+): { wert: string; name: string }[] {
+  const wahl = [
+    { wert: '', name: 'Ganze Gemeinde' },
+    ...baum.map((b) => ({ wert: String(b.gruppe.id), name: b.gruppe.name })),
+  ];
+  const tief = spitze?.includes('/') ? knotenAmPfad(baum, spitze) : null;
+  if (tief && spitze) wahl.push({ wert: spitze, name: tief.gruppe.name });
+  return wahl;
+}
+
 /** Wie es anfangs aussieht: die Gemeinde und die Bereiche offen, darunter zu. */
 export function anfangsOffen(baum: readonly Knoten[]): Set<string> {
   return new Set([GEMEINDE, ...baum.map((b) => String(b.gruppe.id))]);
@@ -407,6 +424,22 @@ export function anordnen(art: AnordnungsArt, spitze: SichtKnoten, breite: Breite
     y2 = Math.max(y2, k.y + HOEHE, (k.schalter?.y ?? -Infinity) + SCHALTER);
   }
   return { ...teil, rahmen: { x: x1, y: y1, breite: x2 - x1, hoehe: y2 - y1 } };
+}
+
+/**
+ * **Das Stück vom Kästchen bis zur ersten Linie**, wo am Bildschirm das +/− sitzt (O7b-4). Alle Linien beginnen einen
+ * Halbmesser neben dem Schalter (`SCHALTER`); auf Papier gibt es keinen Schalter, die Lücke wäre zu sehen. `null`, wenn
+ * die Gruppe zu ist oder keine Untergruppen hat – dann geht keine Linie ab.
+ */
+export function schalterStummel(lage: LageKnoten): Kante | null {
+  const s = lage.schalter;
+  if (!s || !lage.knoten.kinder.length) return null;
+  // Der Schalter sitzt auf dem Rand des Kästchens: unten (von oben), rechts oder links (zur Seite, Mindmap).
+  const ende =
+    s.y >= lage.y + HOEHE
+      ? { x: s.x, y: s.y + SCHALTER }
+      : { x: s.x + (s.x >= lage.x + lage.breite ? SCHALTER : -SCHALTER), y: s.y };
+  return { punkte: [s, ende], rund: false };
 }
 
 /** Eine Kante als SVG-Pfad (`d`). */

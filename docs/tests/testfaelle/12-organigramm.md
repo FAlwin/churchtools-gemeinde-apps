@@ -244,3 +244,38 @@ Blick bleibt beim Auf- und Zuklappen, wo er ist.
 - **Historie:** #736 (Entwurf `o7b-ansichten-v1.html` abgenommen 26.10.2026)
 
 </details>
+
+### TF-ORG-09 · Organigramm als PDF und drucken (Mac Chrome, Mac Safari, iPad)
+
+**Das brauchst du:** Die Test-Instanz mit der Erweiterung; einen Mac mit Chrome und Safari und ein iPad.
+
+**Das muss passieren:** Auf jedem Gerät entsteht dieselbe PDF: oben Logo, „Organigramm“, Gemeinde und Stand, unten
+Gemeinde und Seitenzahl, dazwischen das Diagramm bzw. die Liste – in Lato, auf dem gewählten Papier. Quer bleibt beim
+Drucken quer, am Rand stehen keine Adresse und kein Datum des Browsers.
+
+1. **Organigramm** → **PDF / Drucken**: Die Vorschau zeigt das Blatt; Papier „Passend“ nennt darunter A4 quer oder hoch
+   und die Schriftgröße.
+2. Ansicht **Von oben**, Ausschnitt **Ganze Gemeinde** → **PDF öffnen**: Die PDF öffnet sich in einem neuen Tab und
+   sieht aus wie die Vorschau (eine Seite, nichts abgeschnitten, Namen mittig in den Kästchen, Linien bis an die
+   Kästchen). Von dort **drucken**: Das Druckfenster zeigt das Blatt in seiner Lage (quer bleibt quer).
+3. Dasselbe mit **Mindmap** und **A3 quer**, dann **Liste** (läuft bei vielen Gruppen über mehrere Seiten – in der
+   Vorschau blättern). **Herunterladen** speichert `Organigramm-…-<Datum>.pdf`.
+4. **Logo der Gemeinde** abwählen: Das Logo verschwindet aus Vorschau und PDF.
+5. ChurchTools auf **dunkel** stellen: Vorschau und PDF bleiben hell.
+6. Alles an **Safari am Mac** und am **iPad** wiederholen (iPad: im neuen Tab „Teilen“ → „Drucken“ bzw. „In Dateien
+   sichern“).
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `organigramm/src/PdfFenster.tsx`, `organigramm/src/BlattSeite.tsx`, `organigramm/src/blatt.ts`, `organigramm/src/DiagrammBild.tsx`, `organigramm/src/App.tsx`, `ui/teilen/svgSeitenPdf.ts`, `ui/teilen/pdfSchrift.ts`, `ui/teilen/sharePdf.ts`, `ui/ct/logo.ts`, `ui/design/_farben.scss`, `shared/organigramm/ansichten.ts`
+- **Automatisiert:** teilweise – `PdfFenster.test.tsx` (Vorschau, Auswahl, Seiten in die PDF, Blättern, Logo,
+  Fehler/Neuversuch, veraltete PDF verworfen), `blatt.test.ts` (Papier, Maßstab, Seiten), `svgSeitenPdf.test.ts`
+  (Stile als Attribute, Grundlinie, Formate je Seite, Aufräumen), `pdfSchrift.test.ts`, `sharePdf.test.ts`,
+  `logo.test.ts`, `ansichten.test.ts` (Stummel), `App.test.tsx` (O7b-4); was der Browser zeichnet und druckt, prüft
+  nur dieser Fall
+- **Historie:** #736; Messung `messung-o7b-4-2026-10-28.md`. Erst über das Druckfenster des Browsers gebaut; Safari
+  druckte hoch statt quer und mit Adresse/Datum am Rand (Alwin, 28.10.2026) → eigene PDF, Entwurf
+  `o7b-4-pdf-v1.html` abgenommen 28.10.2026
+
+</details>

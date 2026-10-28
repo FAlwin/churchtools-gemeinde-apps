@@ -10,8 +10,6 @@ import {
 import {
   anordnen,
   HOEHE,
-  kantenPfad,
-  SCHALTER,
   type AnordnungsArt,
   type SichtKnoten,
 } from '@shared/organigramm/ansichten';
@@ -19,7 +17,8 @@ import { Icon } from '@ui/icons/icons';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { ZeilenKnopf } from '@ui/bedienung/ZeilenKnopf';
 import { anfang, ganz, verschieben, zoomen, type Blick, type Flaeche } from './leinwand';
-import { textBreite } from './textBreite';
+import { DiagrammBild } from './DiagrammBild';
+import { messung, useSchrift } from './messung';
 import styles from './Diagramm.module.scss';
 
 interface Props {
@@ -29,16 +28,8 @@ interface Props {
   onGruppe: (id: number) => void;
 }
 
-/** Im Kästchen nur der Name (Alwin, 26.10.2026) – mit diesem Rand links und rechts, zwischen diesen Breiten. */
-const INNEN = 28;
-const SCHMALST = 72;
-const BREITEST = 220;
-/** Die Spitze darf breiter sein – dort steht oft der lange Name der Gemeinde (Test-Instanz 28.10.2026: gekürzt). */
-const BREITEST_SPITZE = 320;
 /** Erst ab so viel Bewegung ist es Ziehen statt Klicken. */
 const ZIEHEN_AB = 4;
-
-const fett = (k: SichtKnoten) => k.ebene <= 1;
 
 /**
  * **Das Organigramm als Diagramm** (O7b-3, Entwurf `o7b-ansichten-v1.html`): von oben, von links oder als Mindmap –
@@ -49,34 +40,12 @@ const fett = (k: SichtKnoten) => k.ebene <= 1;
  */
 export function Diagramm({ art, sicht, onUmklappen, onGruppe }: Props) {
   const svg = useRef<SVGSVGElement>(null);
-  const [schrift, setSchrift] = useState({ name: 'Lato, sans-serif', stand: 0 });
+  const schrift = useSchrift(svg);
   const [blick, setBlick] = useState<Blick>({ s: 1, x: 0, y: 0 });
   const [zieht, setZieht] = useState(false);
 
-  // Die Schrift der Seite (`--ui`) – und neu messen, sobald sie geladen ist.
-  useEffect(() => {
-    const el = svg.current;
-    const ui = el ? getComputedStyle(el).getPropertyValue('--ui').trim() : '';
-    if (ui) setSchrift((s) => ({ ...s, name: ui }));
-    let weg = false;
-    if ('fonts' in document) {
-      void document.fonts.ready.then(() => {
-        if (!weg) setSchrift((s) => ({ ...s, stand: s.stand + 1 }));
-      });
-    }
-    return () => {
-      weg = true;
-    };
-  }, []);
-
-  const anordnung = useMemo(() => {
-    const breite = (k: SichtKnoten) =>
-      Math.min(
-        k.ebene === 0 ? BREITEST_SPITZE : BREITEST,
-        Math.max(SCHMALST, Math.ceil(textBreite(k.name, fett(k), schrift.name)) + INNEN),
-      );
-    return anordnen(art, sicht, breite);
-  }, [art, sicht, schrift]);
+  const { breite, kuerzen } = useMemo(() => messung(schrift), [schrift]);
+  const anordnung = useMemo(() => anordnen(art, sicht, breite), [art, sicht, breite]);
 
   const flaeche = (): Flaeche => {
     const r = svg.current?.getBoundingClientRect();
@@ -188,13 +157,6 @@ export function Diagramm({ art, sicht, onUmklappen, onGruppe }: Props) {
     e.preventDefault();
     tun();
   };
-  const kuerzen = (k: SichtKnoten, w: number) => {
-    const platz = w - INNEN + 4;
-    if (textBreite(k.name, fett(k), schrift.name) <= platz) return k.name;
-    let t = k.name;
-    while (t.length > 1 && textBreite(t + '…', fett(k), schrift.name) > platz) t = t.slice(0, -1);
-    return t + '…';
-  };
 
   return (
     <div className={styles.leinwand}>
@@ -209,64 +171,30 @@ export function Diagramm({ art, sicht, onUmklappen, onGruppe }: Props) {
         onPointerCancel={hoch}
       >
         <g transform={`translate(${blick.x} ${blick.y}) scale(${blick.s})`}>
-          {anordnung.kanten.map((k, i) => (
-            <path key={i} className={styles.kante} d={kantenPfad(k)} />
-          ))}
-          {anordnung.knoten.map(({ knoten: k, x, y, breite }) => {
-            const id = k.id;
-            const stil = k.ebene === 0 ? styles.spitze : fett(k) ? styles.fett : '';
-            const kaestchen = (
-              <>
-                <title>{k.name}</title>
-                <rect x={x} y={y} width={breite} height={HOEHE} rx={6} />
-                <text x={x + breite / 2} y={y + HOEHE / 2}>
-                  {kuerzen(k, breite)}
-                </text>
-              </>
-            );
-            // Die Gemeinde selbst ist keine Gruppe – sie öffnet nichts.
-            return id === null ? (
-              <g key={k.schluessel} className={`${styles.knoten} ${stil}`}>
-                {kaestchen}
-              </g>
-            ) : (
-              <g
-                key={k.schluessel}
-                className={`${styles.knoten} ${styles.klickbar} ${stil}`}
-                role="button"
-                tabIndex={0}
-                aria-label={k.name}
-                onClick={() => {
-                  if (!bewegt.current) onGruppe(id);
-                }}
-                onKeyDown={(e) => taste(e, () => onGruppe(id))}
-                onFocus={() => sichtbarMachen(x, y, breite)}
-              >
-                {kaestchen}
-              </g>
-            );
-          })}
-          {anordnung.knoten.map(({ knoten: k, schalter }) =>
-            schalter ? (
-              <g
-                key={'s' + k.schluessel}
-                className={styles.schalter}
-                role="button"
-                tabIndex={0}
-                aria-label={`${k.name} ${k.offen ? 'zuklappen' : 'aufklappen'}`}
-                aria-expanded={k.offen}
-                onClick={() => {
-                  if (!bewegt.current) onUmklappen(k.schluessel);
-                }}
-                onKeyDown={(e) => taste(e, () => onUmklappen(k.schluessel))}
-              >
-                <circle cx={schalter.x} cy={schalter.y} r={SCHALTER} />
-                <text x={schalter.x} y={schalter.y}>
-                  {k.offen ? '−' : k.kinderZahl}
-                </text>
-              </g>
-            ) : null,
-          )}
+          <DiagrammBild
+            anordnung={anordnung}
+            kuerzen={kuerzen}
+            knoten={({ knoten: k, x, y, breite: w }) => ({
+              role: 'button',
+              tabIndex: 0,
+              'aria-label': k.name,
+              onClick: () => {
+                if (!bewegt.current && k.id !== null) onGruppe(k.id);
+              },
+              onKeyDown: (e) => taste(e, () => k.id !== null && onGruppe(k.id)),
+              onFocus: () => sichtbarMachen(x, y, w),
+            })}
+            schalter={({ knoten: k }) => ({
+              role: 'button',
+              tabIndex: 0,
+              'aria-label': `${k.name} ${k.offen ? 'zuklappen' : 'aufklappen'}`,
+              'aria-expanded': k.offen,
+              onClick: () => {
+                if (!bewegt.current) onUmklappen(k.schluessel);
+              },
+              onKeyDown: (e) => taste(e, () => onUmklappen(k.schluessel)),
+            })}
+          />
         </g>
       </svg>
       <div className={styles.zoom}>

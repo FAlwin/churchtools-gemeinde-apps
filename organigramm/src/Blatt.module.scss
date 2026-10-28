@@ -1,0 +1,76 @@
+// Die Seite der Organigramm-PDF (O7b-4) – ein SVG in Millimetern: Längen hier sind Millimeter, Schriftgrößen stehen
+// als pt daneben. Farben über die gemeinsamen Werte; das Blatt ist Papier und bleibt deshalb auch im Dunkelmodus hell
+// (Mixin `hell` – dieselbe Quelle wie `:root`).
+@use '@ui/design/farben';
+
+.seite {
+  @include farben.hell;
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: 100%;
+  background: var(--surface2);
+  box-shadow: var(--shadow);
+
+  font-family: var(--ui);
+}
+
+// Die anderen Seiten der Liste – nicht zu sehen, aber im Dokument, damit sie in die PDF kommen.
+.verborgen {
+  display: none;
+}
+
+.grund {
+  fill: var(--surface2);
+}
+
+.titel {
+  fill: var(--text);
+  font-size: 5.644px; // 16 pt
+  font-weight: 700;
+}
+
+.unter {
+  font-size: 3.351px; // 9,5 pt
+  fill: var(--text2);
+}
+
+.stand {
+  font-size: 3.175px; // 9 pt
+  fill: var(--text2);
+}
+
+.fuss {
+  font-size: 2.646px; // 7,5 pt
+  fill: var(--text3);
+}
+
+.rechts {
+  text-anchor: end;
+}
+
+.linie {
+  stroke: var(--hair);
+  stroke-width: 0.35;
+}
+
+// Liste
+.listeLinie {
+  stroke: var(--hair);
+  stroke-width: 0.5;
+}
+
+.listeName {
+  fill: var(--text);
+  font-size: 3.528px; // 10 pt
+}
+
+.listeFett {
+  font-weight: 700;
+}
+
+.listeSpitze {
+  font-size: 4.233px; // 12 pt
+  font-weight: 700;
+}

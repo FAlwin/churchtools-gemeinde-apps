@@ -135,6 +135,9 @@ vi.mock('./struktur', () => ({
 vi.mock('./ladeEinsaetze', () => ({ ladeEinsaetze: vi.fn() }));
 // jsdom hat keine Zeichenfläche zum Messen – geschätzt wie im Browser ohne Canvas.
 vi.mock('./textBreite', () => ({ textBreite: (t: string) => t.length * 8 }));
+// Die PDF entsteht im Browser (svg2pdf) – hier zählt nur, dass das Fenster sie anstößt. Das Logo ist Beiwerk.
+vi.mock('@ui/teilen/svgSeitenPdf', () => ({ svgSeitenPdf: vi.fn(() => new Promise(() => {})) }));
+vi.mock('@ui/ct/logo', () => ({ ladeGemeindeLogo: vi.fn(() => Promise.resolve(null)) }));
 // Was der Baum-Reiter bei jedem Zeichnen bekommt (O7b-2) – der echte Reiter, nur mitgeschrieben.
 const baumReiter = vi.hoisted((): { spitze: string | null; baum: readonly Knoten[] }[] => []);
 vi.mock('./Organigramm', async (original) => {
@@ -1237,5 +1240,24 @@ describe('O7b-3: „Präsentieren“ im Seitenkopf', () => {
     expect(knopf.closest('header')!.textContent).toContain('Hallo Alwin');
     fireEvent.click(screen.getByRole('button', { name: 'Personen' }));
     expect(screen.queryByRole('button', { name: 'Präsentieren' })).toBeNull();
+  });
+});
+
+describe('O7b-4: Organigramm als PDF', () => {
+  it('„PDF / Drucken“ im Seitenkopf öffnet das Fenster mit Ansicht und Spitze des Reiters', async () => {
+    localStorage.setItem('organigramm-ansicht', '"links"');
+    render(<App />);
+    const knopf = await screen.findByRole('button', { name: 'Als PDF speichern oder drucken' });
+    expect(knopf.closest('header')).not.toBeNull();
+    fireEvent.change(screen.getByLabelText('Anfangen bei'), { target: { value: '10' } });
+    fireEvent.click(knopf);
+    const fenster = within(screen.getByRole('dialog', { name: 'Organigramm als PDF' }));
+    expect(fenster.getByLabelText<HTMLSelectElement>('Ansicht').value).toBe('links');
+    expect(fenster.getByLabelText<HTMLSelectElement>('Ausschnitt').value).toBe('10');
+    expect(
+      within(screen.getByRole('figure', { name: 'Vorschau' })).getByRole('img', {
+        name: /^Organigramm · .+ · Gottesdienst, Seite 1 von 1$/,
+      }),
+    ).toBeTruthy();
   });
 });

@@ -214,7 +214,7 @@ churchtools-gemeinde-apps/
     │                        # thema.ts (hell/dunkel wie ChurchTools, docs/entwicklung/dunkelmodus.md)
     ├── icons/               # icons.tsx (Line-Icons)
     ├── fenster/             # Sheet (Modal), useOverlayKeyboardInset, appHeight
-    ├── bedienung/           # Segment, Schalter, KopfKnopf (Seitenkopf, `neu` = grün), OptionWaehlen (S2), ZeilenKnopf (eckig in Listen), SchwebePlus, ReiterLeiste (unten/oben), useMedienAbfrage (HANDY_BREITE), DatumKachel
+    ├── bedienung/           # Segment, Schalter, KopfKnopf (Seitenkopf, `neu` = grün), OptionWaehlen (S2), ZeilenKnopf (eckig in Listen), FilterKnopf + ZeitraumKnopf + useAufklapp (aus dem Dienstplaner, auch Abwesenheiten), SchwebePlus, ReiterLeiste (unten/oben), useMedienAbfrage (HANDY_BREITE), DatumKachel
     ├── teilen/              # shareFile, sharePdf
     ├── anmeldeformular/     # Anmeldeformular, wie Gäste es sehen (A5): Baukasten + Vorschau in der Erweiterung, öffentlich ab A6
     ├── ct/                  # Verbindung einer Erweiterung zu ChurchTools: verbindung.ts, fehler.ts (ApiError), basis.ts,
@@ -1533,9 +1533,12 @@ Vollständige Endpunkt-Referenz: `docs/entwicklung/api-referenz.md`.
   `@shared/absences`, eigene Gründe der Gemeinde gehen unverändert durch.
   **Client seit 19.09.2026 (acht Entwurfsrunden, Vorbild die kleine Abwesenheits-App des Teams):** Tab
   heißt **„Abwesenheiten"** (Icon `user-slash`, Tab-ID bleibt `verfuegbarkeit`), Kopfleiste nur mit
-  Titel. `pages/Availability.tsx`: Schalter **Termine | Einträge**; `components/MonatsLeiste.tsx`
-  (laufender Monat + sechs voraus, „Heute", Raster mit zwölf Monaten, nur nach vorn) mit
-  `utils/monate.ts`; je Termin ein **Abhakfeld** – Häkchen sind nur **vorgemerkt** (blauer Ring), die
+  Titel. `pages/Availability.tsx`: Schalter **Termine | Einträge**; seit 28.10.2026 **Zeitraum-Knopf und
+  Filter-Knopf wie im Dienstplaner** (`ui/bedienung/ZeitraumKnopf`, `ui/bedienung/FilterKnopf`, Regel
+  `shared/ct/zeitraum.ts`; ab heute = vier Wochen, dieser/nächster Monat, eigener Zeitraum; nur nach vorn, ein Jahr
+  vorab geholt, ein eigener Zeitraum darüber hinaus holt nach; Filter mit Häkchen = ausgeblendete Arten,
+  `worship:abwesenheiten-ausgeblendet`, die alte Einzelwahl wird einmal umgerechnet). Vorher Monats-Kapseln
+  (`MonatsLeiste`, gelöscht). Je Termin ein **Abhakfeld** – Häkchen sind nur **vorgemerkt** (blauer Ring), die
   Speichern-Leiste schreibt alle auf einmal über `useSaveAbsenceChanges` (erst anlegen, dann löschen,
   nacheinander; **kein Bearbeiten-Modus**, Entscheidung Alwin + Frau: wie im alten Planner). Ein Termin in
   einem mehrtägigen Zeitraum fragt über `components/ZeitraumFrage.tsx` (löschen vormerken / anpassen). Das

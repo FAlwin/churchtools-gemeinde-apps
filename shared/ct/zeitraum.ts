@@ -1,11 +1,11 @@
 /**
- * **Welcher Zeitraum in der Matrix steht** (Alwin, 14.10.2026, Entwurf „Zeitraum wählen“): ab heute (wie
- * bisher, passend zur Fensterbreite), ein Monat oder ein eigener Zeitraum von–bis. Nur Regeln – geladen und
- * gezeigt wird in `dienstplaner/src/Planen.tsx`.
+ * **Welcher Zeitraum gezeigt wird** (Alwin, 14.10.2026, Entwurf „Zeitraum wählen“): ab heute, ein Monat oder ein
+ * eigener Zeitraum von–bis. Nur Regeln – geladen und gezeigt wird beim Aufrufer: Dienstplaner › Planen (Matrix) und
+ * seit 28.10.2026 die Abwesenheiten der Musik-App (vorher `shared/dienstplan/zeitraum.ts`).
  *
  * Tage als `YYYY-MM-DD`, Monate als `YYYY-MM` (Ortszeit der Gemeinde), gerechnet mit `shared/ct/datum.ts`.
  */
-import { letzterTag, monatPlus, monatTitel, plusTage, tageBis } from '../ct/datum';
+import { letzterTag, monatPlus, monatTitel, plusTage, tageBis } from './datum';
 
 export type Zeitraum =
   | { art: 'abHeute' }

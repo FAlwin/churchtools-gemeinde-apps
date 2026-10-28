@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import type { Absence, AbsenceEvent, NeueAbsence } from '@shared/types/index';
 import { SeitenGeruest } from '../components/SeitenGeruest';
 import { CenterMessage } from '../components/CenterMessage';
@@ -7,7 +7,15 @@ import { SchwebePlus } from '@ui/bedienung/SchwebePlus';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { Coachmarks } from '../components/Coachmarks';
-import { MonatsLeiste } from '../components/MonatsLeiste';
+import { ZeitraumKnopf } from '@ui/bedienung/ZeitraumKnopf';
+import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
+import {
+  AB_HEUTE,
+  spanneText,
+  zeitraumGrenzen,
+  zeitraumText,
+  type Zeitraum,
+} from '@shared/ct/zeitraum';
 import { AbsenceSheet, type Entwurf } from '../components/AbsenceSheet';
 import { ZeitraumFrage } from '../components/ZeitraumFrage';
 import {
@@ -27,11 +35,15 @@ import {
   zeitfensterKurz,
   zeitraumKurz,
 } from '../utils/absenceDatum';
-import { decktTermin, zeitfensterFuer } from '@shared/absences/index';
+import { MAX_VORAUS_TAGE, decktTermin, zeitfensterFuer } from '@shared/absences/index';
 import { heuteIso } from '../utils/heute';
 import { plusTage, tagImMonat } from '../utils/wochen';
-import { getAbwesenheitenFilter, setAbwesenheitenFilter } from '../utils/devicePrefs';
-import { filtereTermine, knoepfeAus, umschalten, wirksameAuswahl } from '../utils/terminFilter';
+import {
+  getAbwesenheitenAusgeblendet,
+  getAbwesenheitenFilter,
+  setAbwesenheitenAusgeblendet,
+} from '../utils/devicePrefs';
+import { ausgeblendetAusAlterWahl, filtereTermine, knoepfeAus } from '../utils/terminFilter';
 import { useSiteConfig } from '../hooks/useSiteConfig';
 import { letzterTag, monatLabel, monatNurKurz, monatPlus, monatVon } from '../utils/monate';
 import { ApiError } from '../services/api';
@@ -45,9 +57,10 @@ import { Segment } from '@ui/bedienung/Segment';
 import styles from './Availability.module.scss';
 
 // Nicht exportiert (Fast Refresh mag nur Komponenten als Export) – wer die Zahlen braucht, liest sie hier.
-/** Die Monatsleiste zeigt so viele Monate voraus; das Raster doppelt so viele. Termine werden bis dahin geholt. */
-const VORAUS_MONATE = 6;
+/** So viele Monate ab dem laufenden werden vorab geholt – „dieser“ und „nächster Monat“ brauchen nichts nachzuladen. */
 const RASTER_MONATE = 12;
+/** „Ab heute“ zeigt die nächsten vier Wochen (Entwurf A, 28.10.2026). */
+const AB_HEUTE_TAGE = 28;
 /** So weit reicht „Einträge → Früher" zurück. */
 const RUECKBLICK_TAGE = 365;
 
@@ -72,9 +85,10 @@ interface Kasten {
  * kleine Abwesenheits-App, die das Musikteam gern benutzt – „an diesem Sonntag kann ich nicht" soll
  * ein Häkchen sein, kein Fenster:
  *
- *  1. **Monatsleiste** (`MonatsLeiste`): laufender Monat und sechs voraus, „Heute" zurück, der Pfeil
- *     klappt ein Jahr auf. Nur nach vorn – Vergangenes steht unter „Einträge → Früher".
- *  2. **Terminliste des Monats** mit einem **Abhakfeld** je Termin. Die Kästchen sind immer aktiv,
+ *  1. **Zeitraum-Knopf** wie im Dienstplaner (`ZeitraumKnopf`, seit 28.10.2026 – vorher eine Monatsleiste mit
+ *     Kapseln): ab heute (vier Wochen), dieser oder nächster Monat, eigener Zeitraum. Daneben der **Filter-Knopf**
+ *     (`FilterKnopf`) mit Häkchen je Termin-Art. Nur nach vorn – Vergangenes steht unter „Einträge → Früher".
+ *  2. **Terminliste des Zeitraums**, nach Monaten überschrieben, mit einem **Abhakfeld** je Termin. Die Kästchen sind immer aktiv,
  *     aber ein Haken ist nur **vorgemerkt** (blauer Ring), bis man unten **Speichern** drückt – dann
  *     gehen alle Häkchen auf einmal nach ChurchTools (`useSaveAbsenceChanges`). Kein Bearbeiten-Modus:
  *     Alwins Frau wollte es wie im alten Planner – anfassen, dann speichern (19.09.2026).
@@ -90,8 +104,20 @@ interface Kasten {
 export function Availability({ online, onToast, heute = heuteIso() }: AvailabilityProps) {
   const laufend = monatVon(heute);
   const bisMonat = monatPlus(laufend, RASTER_MONATE - 1);
-  const absences = useMyAbsences(true, plusTage(heute, -RUECKBLICK_TAGE), letzterTag(bisMonat));
-  const events = useAbsenceEvents(true, letzterTag(bisMonat));
+  /** Gezeigter Zeitraum – beim Öffnen „ab heute“, nicht gemerkt (Vergangenes zählt hier nicht). */
+  const [zeitraum, setZeitraum] = useState<Zeitraum>(AB_HEUTE);
+  const grenzen = zeitraumGrenzen(zeitraum) ?? {
+    von: heute,
+    bis: plusTage(heute, AB_HEUTE_TAGE - 1),
+  };
+  // Höchstens so weit holt der Server Termine (ein Jahr, `MAX_VORAUS_TAGE`) – einen Tag Luft für die Zeitzone. Weiter
+  // lässt der Zeitraum-Knopf einen eigenen Zeitraum nicht reichen.
+  const spaetestens = plusTage(heute, MAX_VORAUS_TAGE - 1);
+  // Geholt werden die nächsten zwölf Monate; ein eigener Zeitraum darüber hinaus holt nach.
+  const vorab = letzterTag(bisMonat);
+  const ladenBis = grenzen.bis > vorab ? grenzen.bis : vorab;
+  const absences = useMyAbsences(true, plusTage(heute, -RUECKBLICK_TAGE), ladenBis);
+  const events = useAbsenceEvents(true, ladenBis);
   const gruende = useAbsenceReasons(true);
   const anlegen = useCreateAbsence();
   const aendern = useUpdateAbsence();
@@ -102,7 +128,6 @@ export function Availability({ online, onToast, heute = heuteIso() }: Availabili
   const site = useSiteConfig();
 
   const [seite, setSeite] = useState<Seite>('termine');
-  const [monat, setMonat] = useState(laufend);
   const [frueher, setFrueher] = useState(false);
   /**
    * Vorgemerkte Häkchen: **Termin-ID** → gewünschter Zustand (true = abwesend).
@@ -121,8 +146,11 @@ export function Availability({ online, onToast, heute = heuteIso() }: Availabili
     weitere: string[];
   } | null>(null);
   const [tour, setTour] = useState(false);
-  /** Gewählte Termin-Art (#400) – vom Gerät gelesen, dorthin geschrieben; leer = alle. */
-  const [filter, setFilter] = useState<string[]>(getAbwesenheitenFilter);
+  /**
+   * Ausgeblendete Termin-Arten (#400, seit 28.10.2026 mit Häkchen) – vom Gerät gelesen, dorthin geschrieben. `null`:
+   * noch nichts gemerkt, dann gilt die umgerechnete alte Wahl (siehe unten).
+   */
+  const [aus, setAus] = useState<string[] | null>(getAbwesenheitenAusgeblendet);
 
   useEffect(() => {
     if (!absences.isLoading && !events.isLoading && !isTourDone(TOUR_VERFUEGBARKEIT)) setTour(true);
@@ -137,35 +165,34 @@ export function Availability({ online, onToast, heute = heuteIso() }: Availabili
     .filter((a) => a.endDate < heute)
     .sort((a, b) => b.startDate.localeCompare(a.startDate));
   /**
-   * Der Termin-Filter (#400): Knöpfe gibt es nur, wenn es etwas zu wählen gibt – bei einer einzigen
-   * Art wäre eine Reihe mit einem Knopf eine Frage ohne Antwort. Die Auswahl wirkt auf die Liste
-   * UND auf die Zahl daneben; die vorgemerkten Häkchen hängen am Tag, nicht an der Liste, und
-   * überstehen jeden Filterwechsel. Die Regeln stehen in `terminFilter.ts`.
+   * Der Termin-Filter (#400): Den Knopf gibt es nur, wenn es etwas zu wählen gibt – bei einer einzigen
+   * Art wäre ein Menü mit einem Häkchen eine Frage ohne Antwort (`FilterKnopf` blendet sich dann selbst aus). Die
+   * Auswahl wirkt auf die Liste UND auf die Zahl am Zeitraum-Knopf; die vorgemerkten Häkchen „Abwesend“ hängen am
+   * Termin, nicht an der Liste, und überstehen jeden Filterwechsel. Die Regeln stehen in `terminFilter.ts`.
    */
   // Eigenes `useMemo`: `?? []` erzeugte bei fehlenden Arten in jedem Rendern ein NEUES Array, und
   // `knoepfe` darunter wurde dadurch jedes Mal neu berechnet (#406).
   const arten = useMemo(() => site.data.terminArten ?? [], [site.data.terminArten]);
   const knoepfe = useMemo(() => knoepfeAus(arten, alleEvents), [arten, alleEvents]);
-  const auswahl = wirksameAuswahl(filter, knoepfe);
-  const waehleArt = (id: string | null): void => {
-    const neu = id === null ? [] : umschalten(auswahl, id, knoepfe);
-    setFilter(neu);
-    setAbwesenheitenFilter(neu);
+  // Noch nichts gemerkt: die Wahl der alten Art („nur Gottesdienst“) einmal umrechnen – gespeichert wird erst beim
+  // ersten Häkchen, bis dahin gilt die Umrechnung bei jedem Öffnen gleich.
+  const ausgeblendet = aus ?? ausgeblendetAusAlterWahl(getAbwesenheitenFilter(), knoepfe);
+  const setzeAusgeblendet = (neu: string[]): void => {
+    setAus(neu);
+    setAbwesenheitenAusgeblendet(neu);
   };
-  const monatEvents = filtereTermine(
-    alleEvents.filter((e) => monatVon(e.date) === monat && e.date >= heute),
-    auswahl,
+  // Termine im Zeitraum – nur ab heute (Vergangenes steht unter „Einträge → Früher“), ohne ausgeblendete Arten.
+  const ab = grenzen.von > heute ? grenzen.von : heute;
+  const zeitraumEvents = filtereTermine(
+    alleEvents.filter((e) => e.date >= ab && e.date <= grenzen.bis),
+    ausgeblendet,
     arten,
   );
-
-  // Monate mit Einträgen – der rote Punkt im Raster. Ein Zeitraum kann mehrere Monate berühren.
-  const markiert = useMemo(() => {
-    const s = new Set<string>();
-    for (const a of anstehend) {
-      for (let m = monatVon(a.startDate); m <= monatVon(a.endDate); m = monatPlus(m, 1)) s.add(m);
-    }
-    return s;
-  }, [anstehend]);
+  const monatsGruppen = [...new Set(zeitraumEvents.map((e) => monatVon(e.date)))].map((m) => ({
+    monat: m,
+    events: zeitraumEvents.filter((e) => monatVon(e.date) === m),
+  }));
+  const terminText = (n: number) => `${n} ${n === 1 ? 'Termin' : 'Termine'}`;
 
   const anzahl = Object.keys(pending).length + loeschen.length;
 
@@ -406,53 +433,53 @@ export function Availability({ online, onToast, heute = heuteIso() }: Availabili
 
   const termineSeite = (
     <>
-      <MonatsLeiste
-        heute={heute}
-        monat={monat}
-        onMonat={setMonat}
-        markiert={markiert}
-        voraus={VORAUS_MONATE}
-        rasterMonate={RASTER_MONATE}
-      />
-      {knoepfe.length > 1 && (
-        <div
-          className={styles.chips}
-          data-tour="verf-filter"
-          role="group"
-          aria-label="Termin-Arten"
-        >
-          <button
-            className={`${styles.chip}${auswahl.length === 0 ? ' ' + styles.chipAn : ''}`}
-            aria-pressed={auswahl.length === 0}
-            onClick={() => waehleArt(null)}
-          >
-            Alle
-          </button>
-          {knoepfe.map((k) => (
-            <button
-              key={k.id}
-              className={`${styles.chip}${auswahl.includes(k.id) ? ' ' + styles.chipAn : ''}`}
-              aria-pressed={auswahl.includes(k.id)}
-              onClick={() => waehleArt(k.id)}
-            >
-              {k.name}
-            </button>
-          ))}
+      <div className={styles.werkzeug}>
+        {/* Zeitraum- und Filter-Knopf: dieselben Komponenten wie im Dienstplaner (28.10.2026). */}
+        <div data-tour="verf-zeitraum">
+          <ZeitraumKnopf
+            zeitraum={zeitraum}
+            zeile1={
+              zeitraum.art === 'abHeute'
+                ? spanneText(grenzen.von, grenzen.bis)
+                : zeitraumText(zeitraum)
+            }
+            zeile2={`${terminText(zeitraumEvents.length)}${zeitraum.art === 'abHeute' ? ' · ab heute' : ''}`}
+            heute={heute}
+            abHeuteZusatz="die nächsten 4 Wochen"
+            spaetestens={spaetestens}
+            onWahl={setZeitraum}
+          />
         </div>
-      )}
+        {knoepfe.length > 1 && (
+          <div data-tour="verf-filter">
+            <FilterKnopf
+              abschnitte={[
+                {
+                  titel: 'Veranstaltungen',
+                  optionen: knoepfe.map((k) => ({ wert: k.id, text: k.name })),
+                  aus: ausgeblendet,
+                  onAus: setzeAusgeblendet,
+                },
+              ]}
+            />
+          </div>
+        )}
+      </div>
       <section data-tour="verf-termine">
-        <div className={styles.sec}>
-          {monatLabel(monat)}
-          <span>
-            {monatEvents.length} {monatEvents.length === 1 ? 'Termin' : 'Termine'}
-          </span>
-        </div>
-        <div className={styles.liste}>
-          {monatEvents.length === 0 && (
-            <div className={styles.leer}>Kein Termin mehr in diesem Monat.</div>
-          )}
-          {monatEvents.map(terminZeile)}
-        </div>
+        {monatsGruppen.length === 0 && (
+          <div className={styles.liste}>
+            <div className={styles.leer}>Kein Termin in diesem Zeitraum.</div>
+          </div>
+        )}
+        {monatsGruppen.map((g) => (
+          <Fragment key={g.monat}>
+            <div className={styles.sec}>
+              {monatLabel(g.monat)}
+              <span>{terminText(g.events.length)}</span>
+            </div>
+            <div className={styles.liste}>{g.events.map(terminZeile)}</div>
+          </Fragment>
+        ))}
       </section>
       {/**
        * Der Halbsatz beantwortet die Frage, die Alwin am 05.09.2026 beim Durchklicken hatte: „Sind

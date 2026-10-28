@@ -9,6 +9,13 @@
  */
 export const ABSENCE_MARKER = '[Musikteam]';
 
+/**
+ * **Wie weit Termine höchstens vorausgeholt werden** – ein Jahr, wie bei den Abwesenheiten. Der Server lehnt mehr ab
+ * (`kommendeTermine`, 400); die App begrenzt deshalb den eigenen Zeitraum der Abwesenheiten darauf (28.10.2026 – vorher
+ * stand die Zahl nur im Server, und ein Zeitraum darüber hinaus hätte die Seite mit einem Ladefehler gebrochen).
+ */
+export const MAX_VORAUS_TAGE = 366;
+
 /** Kommentar für ChurchTools: Marker + optionaler Freitext (getrimmt). */
 export function mitMarker(freitext?: string | null): string {
   const t = (freitext ?? '').trim();

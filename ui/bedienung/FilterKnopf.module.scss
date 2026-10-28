@@ -1,5 +1,5 @@
 // Filter-Knopf mit Menü (Entwurf A, 14.10.2026) – dieselbe Knopf-Bauart wie die Umschalter (`auswahlKnopf`).
-@use '@ui/design/mixins' as m;
+@use '../design/mixins' as m;
 
 .rahmen {
   position: relative;

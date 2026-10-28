@@ -13,7 +13,13 @@
  * Kein Excel hier – der Sync ist ein eigener Dienst (`excel-sync/`), siehe Plan §12.
  */
 import type { Absence, AbsenceEvent, AbsenceReason, NeueAbsence } from '@shared/types/index';
-import { grundLesbar, istMarkerEintrag, markerFreitext, mitMarker } from '@shared/absences/index';
+import {
+  MAX_VORAUS_TAGE,
+  grundLesbar,
+  istMarkerEintrag,
+  markerFreitext,
+  mitMarker,
+} from '@shared/absences/index';
 import { ctId } from '../utils/ctId.js';
 import { config } from '../config.js';
 import { HttpError } from '../middleware/errorHandler.js';
@@ -257,17 +263,15 @@ async function eigenerEintrag(
   return ziel;
 }
 
-/** Wie weit die Termine höchstens vorausgeholt werden – ein Jahr, wie bei den Abwesenheiten. */
-export const MAX_VORAUS_TAGE = 366;
-/** Standard, wenn der Aufrufer kein `bis` nennt: ein halbes Jahr (die Leiste zeigt sechs Monate voraus). */
+/** Standard, wenn der Aufrufer kein `bis` nennt: ein halbes Jahr. */
 const STANDARD_VORAUS_TAGE = 183;
 
 /**
  * Kommende Termine von heute **bis zu einem Tag** (`YYYY-MM-DD`, einschließlich).
  *
  * Bis zum 19.09.2026 zählte der Aufrufer Wochen (`weeks=`, 1–26) – passend zum Wochenstreifen. Seit
- * dem Umbau auf Monate (#177, Entwurfsrunde 4–8) sagt die App, bis wann sie Termine braucht: Die
- * Monatsleiste zeigt sechs Monate voraus, das aufgeklappte Raster zwölf. Ein Tag statt einer Zahl,
+ * dem Umbau auf Monate (#177, Entwurfsrunde 4–8) sagt die App, bis wann sie Termine braucht: vorab ein Jahr, ein
+ * eigener Zeitraum darüber hinaus mehr (Zeitraum-Knopf, 28.10.2026). Ein Tag statt einer Zahl,
  * damit „bis Ende Februar" ohne Rechnerei über die Leitung geht.
  */
 export async function kommendeTermine(

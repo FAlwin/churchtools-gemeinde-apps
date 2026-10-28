@@ -395,7 +395,7 @@ steht im Scroll-Inhalt und scrollt mit weg. Grund: iOS 26/27 legt über die ober
 Unschärfe-Band (Liquid Glass), alles darin wird weich – **auch Symbole** (Screenshot Alwin,
 02.10.2026; die frühere Annahme „Symbole verträgt es" war falsch). **Seitenkopf im ChurchTools-Look (Scheibe S, 26.10.2026; Alwin: die runden Knöpfe wirkten „wie eine
 iOS-App“):** `SeitenKopf` steht IM Inhalt (unter dem Band, scrollt mit) – Detailansichten als weiße Karte mit
-„← Ziel“ (`KopfZurueck`) und eckigen Knöpfen mit Beschriftung (`KopfKnopf`, Hauptaktion blau, am Handy nur Symbol
+„← Ziel“ (`KopfZurueck`) und eckigen Knöpfen mit Beschriftung (`KopfKnopf`, Hauptaktion blau – im Ablauf nur „Fertig“, „Bearbeiten“ grau seit 28.10.2026 –, am Handy nur Symbol
 per CSS; `neu` grün wie „+ Gruppe erstellen“, S2), Übersichten mit Titel links und Knöpfen rechts. Die Kopfkarte
 schneidet nicht ab (`overflow: visible`), damit ein Menü unter einem Kopfknopf hinausragen kann. Knöpfe in
 Listenzeilen (Plus, Stift, „+ Anlegen“) sind seit S2 eckig mit Rahmen (`ZeilenKnopf`, `m.aktionKnopf`) statt rund.

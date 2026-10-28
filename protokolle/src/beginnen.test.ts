@@ -10,6 +10,7 @@ import {
   type ProtokollKopf,
 } from '@shared/protokolle/speicher';
 import { STANDARD_VORLAGEN } from '@shared/protokolle/vorlagen';
+import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { protokollBeginnen } from './beginnen';
 import { MODUL, nachbauEnde, nachbauStarten, werteVon, type Nachbau } from './nachbau.testhilfe';
 
@@ -143,7 +144,10 @@ describe('protokollBeginnen', () => {
 
   it('übernimmt ChurchTools den Kopf nicht: Fehler statt „begonnen“', async () => {
     ct.schluckeWert = (v) => v.includes('"art":"protokoll"') && !v.includes('protokoll-teil');
-    await expect(beginnen()).rejects.toThrow(/nicht übernommen/);
+    // So steht es im Fenster – nicht „ChurchTools antwortet gerade nicht“ (beim Bau von S5-2 gefunden).
+    expect(fehlerMeldung(await beginnen().catch((e: unknown) => e)).text).toMatch(
+      /neue Protokoll nicht übernommen/,
+    );
     expect(koepfe()).toEqual([]);
   });
 

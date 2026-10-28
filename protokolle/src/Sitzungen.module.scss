@@ -33,6 +33,7 @@
   border-bottom: 1px solid var(--hair);
 
   h3 {
+    flex: 1;
     font-size: 15px;
     font-weight: 600;
   }
@@ -42,6 +43,19 @@
   color: var(--text2);
   font-size: 14px;
   font-weight: 600;
+}
+
+// „Neue Sitzung“ (S5-2, außerordentlich) – nur für die Leitung, rechts neben der Anzahl.
+.neu {
+  @include m.aktionKnopf;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  margin-left: 12px;
+  padding: 0 12px;
+  border-radius: var(--r-ctrl);
+  font-size: 13.5px;
 }
 
 .liste {

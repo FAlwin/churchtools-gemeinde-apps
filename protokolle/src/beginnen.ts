@@ -19,6 +19,7 @@ import {
   teileBauen,
   wertInhalt,
 } from '@shared/protokolle/speicher';
+import { NichtUebernommen } from '@ui/ct/fehler';
 import { modulPort } from '@ui/ct/modulPort';
 import { aufgabenSchreiben, type MitarbeitOrt } from './aufgabenSchreiben';
 
@@ -67,7 +68,7 @@ export async function protokollBeginnen(q: {
       nach1.teile.map((t) => t.teil),
     )
   )
-    throw new Error('ChurchTools hat das Protokoll nicht vollständig übernommen.');
+    throw new NichtUebernommen('das Protokoll');
 
   // 3. Kopf anlegen (oder den geplanten umstellen) und nachlesen.
   if (nach1.kopf) {
@@ -91,7 +92,7 @@ export async function protokollBeginnen(q: {
   }
   const kopf = sitzungAusWerten(await lesen(), sitzung).kopf?.inhalt;
   if (!kopf || kopf.status !== 'entwurf' || kopf.stand !== stand)
-    throw new Error('ChurchTools hat das neue Protokoll nicht übernommen.');
+    throw new NichtUebernommen('das neue Protokoll');
 
   // 4. Die festen Aufgaben werden To-Dos – wie beim Speichern im Editor (das Protokoll führt).
   if (!q.mitarbeit) return { art: 'ok', sitzung, hinweis: null };

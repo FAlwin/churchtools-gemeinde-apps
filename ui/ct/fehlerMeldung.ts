@@ -10,7 +10,7 @@
  * - **sonst** (z. B. 403 kein Recht, 404) → die Meldung von ChurchTools bzw. der Verbindung
  *   (`verbindungEinrichten({ keinRecht })`), mit „Erneut versuchen“.
  */
-import { ApiError, NichtUebernommen } from './fehler';
+import { ApiError, NichtUebernommen, Unklar } from './fehler';
 import { istUeberlastet } from './verbindung';
 
 export interface Fehlermeldung {
@@ -22,6 +22,8 @@ export interface Fehlermeldung {
 export function fehlerMeldung(e: unknown): Fehlermeldung {
   // Vor dem 5xx-Zweig: ein 502, der aber sagt, WAS nicht übernommen wurde – nicht „antwortet gerade nicht“.
   if (e instanceof NichtUebernommen) return { text: e.message, nochmal: true };
+  // Ebenso vor dem 5xx-Zweig: Hier darf gerade NICHT „noch einmal versuchen“ stehen.
+  if (e instanceof Unklar) return { text: e.message, nochmal: false };
   if (e instanceof ApiError && e.status === 401) {
     return {
       text: 'Du bist bei ChurchTools nicht mehr angemeldet. Bitte lade die Seite neu und melde dich an.',

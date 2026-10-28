@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ApiError, NichtUebernommen } from './fehler';
+import { ApiError, NichtUebernommen, Unklar } from './fehler';
 import { ChurchToolsBremst } from './verbindung';
 import { fehlerMeldung } from './fehlerMeldung';
 
@@ -22,6 +22,13 @@ describe('fehlerMeldung', () => {
     expect(fehlerMeldung(new NichtUebernommen('die Rechte der Rollen'))).toEqual({
       text: 'ChurchTools hat die Rechte der Rollen nicht übernommen. Bitte noch einmal versuchen.',
       nochmal: true,
+    });
+  });
+
+  it('unklar (S5-2): die eigene Meldung, ohne „noch einmal versuchen“', () => {
+    expect(fehlerMeldung(new Unklar('Bitte im Kalender nachsehen.'))).toEqual({
+      text: 'Bitte im Kalender nachsehen.',
+      nochmal: false,
     });
   });
 

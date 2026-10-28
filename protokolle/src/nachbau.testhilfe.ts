@@ -3,6 +3,10 @@
  * sich, was gesetzt wurde, und verhält sich wie gemessen: `PUT` ergänzt Rechte, `DELETE` entzieht, Zeilen je
  * `dataId`, Kategorien mit `shorty`, Werte je Kategorie. `schlucken` lässt ChurchTools „204“ sagen und nichts
  * speichern (bei Werten: `PUT WERT`, `DELETE WERT`); `schluckeWert` dasselbe für neue Werte; `fehlerBei` antwortet jeder Anfrage dieser Art mit einem Fehler.
+ *
+ * Termine und Gruppentreffen anlegen (S5-2, gemessen 28.10.2026): Person 1 legt an und hat sofort zugesagt, die anderen
+ * sind offen. `terminFehler`/`treffenFehler` antworten mit einem Fehler – `angelegt` heißt: trotzdem angelegt (eine
+ * unklare Antwort). `ctVerbot` macht daraus ein ChurchTools-„verboten“ (mit `messageKey`).
  */
 import { vi } from 'vitest';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
@@ -37,6 +41,12 @@ export const TEILNEHMER = 2123;
 export const schl = (authId: number, dataId: number | null | undefined): string =>
   `${authId}:${dataId ?? '-'}`;
 
+export interface AnlegeFehler {
+  status: number;
+  angelegt: boolean;
+  ctVerbot?: boolean;
+}
+
 export interface Nachbau {
   rechte: Map<number, Set<string>>;
   kategorien: { id: number; shorty: string; name: string }[];
@@ -53,8 +63,15 @@ export interface Nachbau {
     id: number;
     titel: string;
     beginn: string;
+    ende?: string;
     anfragen: { person: number; state: string }[];
   }[];
+  terminFehler: AnlegeFehler | null;
+  /** `GET` eines einzelnen Termins scheitert (500). */
+  terminLesenFehler: boolean;
+  /** Diese Personen nimmt ChurchTools beim Anlegen nicht als eingeladen an. */
+  anfrageVerschluckt: Set<number>;
+  treffenFehler: AnlegeFehler | null;
   /** Gruppentreffen je Gruppe; `treffenVerboten` = ChurchTools antwortet 403 (Gruppentyp, S2-4). */
   treffen: Map<number, { id: number; startDate: string; isCanceled?: boolean }[]>;
   treffenVerboten: boolean;
@@ -85,6 +102,10 @@ export function nachbauStarten(): Nachbau {
     schluckeWert: null,
     fehlerBei: null,
     termine: [],
+    terminFehler: null,
+    terminLesenFehler: false,
+    anfrageVerschluckt: new Set(),
+    treffenFehler: null,
     treffen: new Map(),
     treffenVerboten: false,
     terminAnfrage: null,
@@ -125,9 +146,44 @@ export function nachbauStarten(): Nachbau {
           .filter((t) => kal.includes(t.kalender))
           .map((t) => ({
             base: { id: t.id, title: t.titel, calendar: { id: t.kalender } },
-            calculated: { startDate: t.beginn },
+            calculated: { startDate: t.beginn, ...(t.ende ? { endDate: t.ende } : {}) },
           })),
       });
+    }
+    const fehlerAntwort = (f: AnlegeFehler) =>
+      json(
+        f.status,
+        f.ctVerbot
+          ? { message: 'Forbidden', messageKey: 'error.forbidden.edit' }
+          : { message: 'weg' },
+      );
+    const neuT = /^\/calendars\/(\d+)\/appointments$/.exec(pfad);
+    if (neuT && m === 'POST') {
+      const id = s.naechste++;
+      const f = s.terminFehler;
+      if (!f || f.angelegt)
+        s.termine.push({
+          kalender: Number(neuT[1]),
+          id,
+          titel: String(body.title),
+          beginn: String(body.startDate),
+          ende: String(body.endDate),
+          anfragen: ((body.meetingrequests as { inviteeId: number }[] | undefined) ?? [])
+            .filter((a) => !s.anfrageVerschluckt.has(a.inviteeId))
+            .map((a) => ({
+              person: a.inviteeId,
+              state: a.inviteeId === 1 ? 'accepted' : 'pending',
+            })),
+        });
+      return f ? fehlerAntwort(f) : json(201, { data: { id } });
+    }
+    const einT = /^\/calendars\/(\d+)\/appointments\/(\d+)$/.exec(pfad);
+    if (einT && m === 'GET') {
+      if (s.terminLesenFehler) return json(500, { message: 'weg' });
+      const t = s.termine.find((x) => x.id === Number(einT[2]));
+      return t
+        ? json(200, { data: { appointment: { id: t.id, title: t.titel, startDate: t.beginn } } })
+        : json(404, { message: 'weg' });
     }
     const anfr = /^\/calendars\/(\d+)\/appointments\/(\d+)\/meetingrequests$/.exec(pfad);
     if (anfr) {
@@ -141,6 +197,14 @@ export function nachbauStarten(): Nachbau {
       });
     }
     const tr = /^\/groups\/(\d+)\/meetings$/.exec(pfad);
+    if (tr && m === 'POST') {
+      const f = s.treffenFehler;
+      const liste = s.treffen.get(Number(tr[1])) ?? [];
+      s.treffen.set(Number(tr[1]), liste);
+      const id = s.naechste++;
+      if (!f || f.angelegt) liste.push({ id, startDate: String(body.startDate) });
+      return f ? fehlerAntwort(f) : json(201, { data: { id } });
+    }
     if (tr) {
       if (s.treffenVerboten)
         return json(403, { message: 'Forbidden to see group', messageKey: 'error.forbidden.view' });

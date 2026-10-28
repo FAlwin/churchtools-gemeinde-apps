@@ -18,6 +18,7 @@
  * Ein **Tagesordnungspunkt** ist eine Überschrift der Stufe 1 auf oberster Ebene; alles bis zur nächsten
  * gehört zu ihm (auch in Unterpunkten).
  */
+import { vorabLesen, type Vorab } from './aufgaben';
 
 /** Ein Stück Text mit Auszeichnung (fett, kursiv …) – so, wie der Editor es liefert. */
 export interface TextStueck {
@@ -72,6 +73,8 @@ export type BeschlussEintrag = Eintrag;
 export interface AufgabenEintrag extends Eintrag {
   /** ID des To-Do-Werts in „Mitarbeit“; `null`, solange die Aufgabe noch nicht gespeichert ist. */
   aufgabe: string | null;
+  /** Wer/Bis, gewählt bevor es das To-Do gab (`props.vorab`, K1). */
+  vorab: Vorab | null;
 }
 
 export interface TerminEintrag extends Eintrag {
@@ -134,6 +137,7 @@ export function ableiten(dokument: readonly Block[]): Ableitung {
         text,
         punkt,
         aufgabe: typeof id === 'string' && id ? id : null,
+        vorab: vorabLesen(b.props?.vorab),
       });
     }
     if (b.type === BLOCK.termin && text)

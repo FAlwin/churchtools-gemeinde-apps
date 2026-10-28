@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { GruppenKachel } from '@ui/bedienung/GruppenKachel';
+import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { Icon } from '@ui/icons/icons';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { wannText } from '@shared/ct/zeit';
@@ -289,6 +290,7 @@ export function NeueGliederung({
               ]}
               onChange={setAnsicht}
               ariaLabel="Plan oder Umbau"
+              verbunden
             />
             <span className={baum.meta}>
               {arbeitet
@@ -296,25 +298,23 @@ export function NeueGliederung({
                 : `Gespeichert von ${stand.plan.von.name}, ${wannText(stand.plan.zeit, zeitzone())} · für alle Gruppen-Admins`}
             </span>
             <span className={styles.rechts}>
+              {/* Die Knöpfe des Seitenkopfs: so hoch wie der Umschalter daneben (vorher 31 px, und „Neuer Bereich“ hatte
+                  seit O7b-3 gar keinen Stil mehr – Test-Instanz 29.10.2026). Grün wie „+ Gruppe erstellen“ in CT. */}
               {ansicht === 'plan' && (
-                <button
-                  type="button"
-                  className={baum.praesentieren}
+                <KopfKnopf
+                  label="Neuer Bereich"
+                  symbol={<Icon name="plus" size={16} />}
+                  neu
                   disabled={arbeitet}
                   onClick={() => setNeuerBereich(true)}
-                >
-                  <Icon name="plus" size={16} />
-                  Neuer Bereich
-                </button>
+                />
               )}
-              <button
-                type="button"
-                className={baum.nochmal}
+              <KopfKnopf
+                label="Plan verwerfen"
+                symbol={<Icon name="trash" size={16} />}
                 disabled={arbeitet}
                 onClick={() => setVerwerfenFragen(true)}
-              >
-                Plan verwerfen
-              </button>
+              />
             </span>
           </div>
           {ansicht === 'plan' ? (

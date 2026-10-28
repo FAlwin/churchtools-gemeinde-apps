@@ -64,6 +64,47 @@ function zeigen(art: 'oben' | 'links' | 'mindmap' = 'oben', s = sicht()) {
   return { onGruppe, onUmklappen, ...r };
 }
 
+describe('Diagramm (O7b-5)', () => {
+  it('„klickbar“ wählt, welche Kästchen etwas öffnen – die anderen sind keine Knöpfe', () => {
+    render(
+      <Diagramm
+        art="oben"
+        sicht={sicht()}
+        onGruppe={vi.fn()}
+        onUmklappen={vi.fn()}
+        klickbar={(id) => id === 10}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Gottesdienst' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Café' })).toBeNull();
+  });
+
+  it('„Ganz zeigen“ misst den Streifen der Knöpfe und lässt ihn frei', () => {
+    const ganzeFlaeche = {
+      left: 0,
+      top: 0,
+      x: 0,
+      y: 0,
+      width: FLAECHE.breite,
+      height: FLAECHE.hoehe,
+      right: FLAECHE.breite,
+      bottom: FLAECHE.hoehe,
+      toJSON: () => ({}),
+    };
+    vi.mocked(Element.prototype.getBoundingClientRect).mockImplementation(function (this: Element) {
+      // Die Knopfleiste: unten in der Fläche, 50 px über dem Rand.
+      return this.querySelector?.('[aria-label="Vergrößern"]')
+        ? { ...ganzeFlaeche, top: 550, y: 550, height: 38, bottom: 588 }
+        : ganzeFlaeche;
+    });
+    zeigen();
+    fireEvent.click(screen.getByRole('button', { name: 'Ganz zeigen' }));
+    expect(blick()).toBe(
+      alsText(ganz(anordnen('oben', sicht(), breite).rahmen, { ...FLAECHE, unten: 50 })),
+    );
+  });
+});
+
 describe('Diagramm (O7b-3)', () => {
   it('jede sichtbare Gruppe ein Kästchen zum Klicken – die Gemeinde selbst nicht', () => {
     zeigen();

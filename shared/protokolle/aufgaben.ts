@@ -197,10 +197,45 @@ export function istAufgabe(x: unknown): x is Aufgabe {
   );
 }
 
+/**
+ * **Wer und Bis, bevor es das To-Do gibt** (K1, beim Durchklicken 28.10.2026: „Wer und Bis vor dem Inhalt bearbeiten“).
+ * Ein To-Do entsteht erst mit Text (sonst stünde ein leeres To-Do bei den Zuständigen, und das nächste Speichern
+ * vermerkte es als gelöscht). Bis dahin merkt sich der Aufgaben-Block die Wahl (`props.vorab`, JSON); beim Anlegen wird
+ * sie übernommen – beim Speichern (`aufgabenAbgleich`) wie beim ersten Tipp auf den Status-Kreis (`vorabAnwenden`).
+ */
+export interface Vorab {
+  wer: number[];
+  extern: string;
+  bis: string | null;
+}
+
+/** `props.vorab` lesen – leer oder kaputt → `null`. */
+export function vorabLesen(x: unknown): Vorab | null {
+  if (typeof x !== 'string' || !x) return null;
+  try {
+    const v = JSON.parse(x) as Partial<Vorab> | null;
+    if (!v || typeof v !== 'object') return null;
+    const wer = Array.isArray(v.wer) ? v.wer.filter((p): p is number => Number.isInteger(p)) : [];
+    const extern = typeof v.extern === 'string' ? v.extern : '';
+    const bis = typeof v.bis === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.bis) ? v.bis : null;
+    return wer.length || extern || bis ? { wer, extern, bis } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Die Vorab-Wahl in ein (neues) To-Do übernehmen – die eine Stelle dafür. */
+export function vorabAnwenden(a: Aufgabe, v: Vorab | null): Aufgabe {
+  if (!v) return a;
+  return { ...a, wer: [...new Set(v.wer)], extern: v.extern.trim(), bis: v.bis };
+}
+
 /** Was der Abgleich braucht – ein Block des Protokolls (`AufgabenEintrag` aus `ableiten`). */
 interface Eintrag {
   aufgabe: string | null;
   text: string;
+  /** Wer/Bis, gewählt bevor es das To-Do gab. */
+  vorab?: Vorab | null;
 }
 
 /** Ein Block, wie er im Dokument steht – nur, was die ID-Vergabe braucht. */
@@ -246,7 +281,7 @@ export interface AufgabenPlan {
 /**
  * **Das Protokoll führt** (Alwin 24.10.2026, S4-2): Was muss in „Mitarbeit“ geschehen, damit die To-Dos dieser Sitzung zu
  * den Aufgaben im Protokoll passen?
- * - Aufgabe mit Text, aber noch kein To-Do → anlegen (Zuständige sehen es sofort);
+ * - Aufgabe mit Text, aber noch kein To-Do → anlegen (Zuständige sehen es sofort), mit Wer/Bis von vorab (`Vorab`);
  * - Text im Protokoll geändert → Text im To-Do mit (Wer, Bis und Status bleiben – die gehören dem To-Do);
  * - To-Do dieser Sitzung, dessen Aufgabe nicht mehr im Protokoll steht → als gelöscht vermerkt (nie hart gelöscht);
  * - als gelöscht vermerkt, aber wieder im Protokoll (Rückgängig) → wiederhergestellt.
@@ -270,14 +305,17 @@ export function aufgabenAbgleich(q: {
     const text = e.text.trim();
     if (!a) {
       plan.anlegen.push(
-        neueAufgabe({
-          id: e.aufgabe,
-          gruppe: q.gruppe,
-          sitzung: q.sitzung,
-          text,
-          von: q.von,
-          am: q.am,
-        }),
+        vorabAnwenden(
+          neueAufgabe({
+            id: e.aufgabe,
+            gruppe: q.gruppe,
+            sitzung: q.sitzung,
+            text,
+            von: q.von,
+            am: q.am,
+          }),
+          e.vorab ?? null,
+        ),
       );
       continue;
     }

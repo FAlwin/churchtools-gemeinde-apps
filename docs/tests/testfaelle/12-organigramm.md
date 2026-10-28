@@ -229,8 +229,8 @@ Blick bleibt beim Auf- und Zuklappen, wo er ist.
 3. Ein **+** anklicken: Die Untergruppen erscheinen, der Blick bleibt stehen; **−** klappt wieder zu.
 4. Auf einem Kästchen beginnen zu ziehen: Das Bild wandert, es öffnet sich **kein** Fenster. Ein einfacher Klick auf
    ein Kästchen öffnet das Gruppenfenster.
-5. Mausrad und **−** / **+** zoomen um die Mitte bzw. den Mauszeiger, **Ganz zeigen** passt alles ein. Am Handy mit
-   zwei Fingern zoomen und mit einem ziehen.
+5. Mausrad und **−** / **+** zoomen um die Mitte bzw. den Mauszeiger, **Ganz zeigen** passt alles ein – kein Kästchen
+   liegt unter den Knöpfen unten rechts. Am Handy mit zwei Fingern zoomen und mit einem ziehen.
 6. Mit Tab durch die Kästchen: Ein Kästchen außerhalb des Bildes wird in die Mitte geschoben; Enter öffnet es.
 7. **Anfangen bei** einem Bereich: Das Diagramm fängt dort neu an.
 
@@ -277,5 +277,35 @@ Drucken quer, am Rand stehen keine Adresse und kein Datum des Browsers.
 - **Historie:** #736; Messung `messung-o7b-4-2026-10-28.md`. Erst über das Druckfenster des Browsers gebaut; Safari
   druckte hoch statt quer und mit Adresse/Datum am Rand (Alwin, 28.10.2026) → eigene PDF, Entwurf
   `o7b-4-pdf-v1.html` abgenommen 28.10.2026
+
+</details>
+
+### TF-ORG-10 · Präsentation: Kacheln, von oben, von links, Mindmap
+
+**Das brauchst du:** Die Test-Instanz mit der Erweiterung; Laptop (am besten am Beamer oder zweiten Bildschirm).
+
+**Das muss passieren:** Der Umschalter ändert nur, wie eine Seite aussieht – Weiter/Zurück führt in jeder Ansicht
+durch dieselben Seiten (Übersicht, dann die Bereiche).
+
+1. **Präsentieren**: Oben steht **Kacheln · Von oben · Von links · Mindmap**, gewählt ist **Kacheln** (oder die zuletzt
+   gewählte Ansicht).
+2. **Von oben**: Die Übersicht zeigt die ganze Gemeinde als Diagramm. Nur die Bereiche lassen sich anklicken; ein Klick
+   öffnet die Seite des Bereichs („1 von … · Name“ unten), dort ist sein Baum ganz aufgeklappt.
+3. **Weiter**/**Zurück** und die Pfeiltasten blättern durch die Bereiche – auch in **Von links** und **Mindmap**.
+4. Auf einer Bereichs-Seite **Kacheln** wählen: Dieselbe Seite zeigt die Gruppen als Spalten mit den Personen.
+5. Im Diagramm ein **+/−** mit Tab ansteuern und die **Leertaste** drücken: Es klappt nur, die Seite bleibt.
+6. **Ganz zeigen**: Nichts liegt unter den Knöpfen unten rechts. Mit Plan auch **Neue Gliederung | Heute** umschalten –
+   am iPad quer bleibt die Leiste oben einzeilig, alle Knöpfe gleich hoch.
+7. Präsentation schließen und wieder öffnen: Die zuletzt gewählte Ansicht ist wieder da.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `organigramm/src/Praesentation.tsx`, `organigramm/src/Diagramm.tsx`, `organigramm/src/DiagrammBild.tsx`, `organigramm/src/leinwand.ts`, `organigramm/src/auswahl.ts`
+- **Automatisiert:** größtenteils – `App.test.tsx` (O7b-5: Umschalter, nur Bereiche klickbar, ganz offen, Blättern,
+  gemerkte Ansicht, Leertaste), `Diagramm.test.tsx` (klickbar, Knopfstreifen gemessen), `leinwand.test.ts`
+  (Streifen frei), `auswahl.test.ts`; wie es am Beamer aussieht, prüft nur dieser Fall
+- **Historie:** #736; Variante „Seiten bleiben“ (Alwin, 28.10.2026, klickbares Muster); „Ganz zeigen“ verdeckte
+  vorher das unterste Kästchen (Alwin, 28.10.2026)
 
 </details>

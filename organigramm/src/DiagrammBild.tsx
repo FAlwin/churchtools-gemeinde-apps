@@ -16,8 +16,11 @@ type GruppenEigenschaften = SVGProps<SVGGElement>;
 interface Props {
   anordnung: Anordnung;
   kuerzen: (k: SichtKnoten, breite: number) => string;
-  /** Was ein Kästchen einer Gruppe zum Klicken braucht (Bildschirm). Fehlt es, ist das Bild nur zum Ansehen (PDF). */
-  knoten?: (lage: LageKnoten) => GruppenEigenschaften;
+  /**
+   * Was ein Kästchen einer Gruppe zum Klicken braucht (Bildschirm); `null` = dieses Kästchen nicht (Präsentation: nur die
+   * Bereiche). Fehlt es, ist das Bild nur zum Ansehen (PDF).
+   */
+  knoten?: (lage: LageKnoten) => GruppenEigenschaften | null;
   /** Die runden +/− – nur am Bildschirm; auf Papier gibt es nichts zu klappen. */
   schalter?: (lage: LageKnoten) => GruppenEigenschaften;
 }

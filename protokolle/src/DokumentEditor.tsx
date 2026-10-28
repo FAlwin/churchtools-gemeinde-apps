@@ -1,4 +1,12 @@
-import { useEffect, useImperativeHandle, useRef, useState, type ReactNode, type Ref } from 'react';
+import {
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type Ref,
+} from 'react';
 import { insertOrUpdateBlockForSlashMenu, type PartialBlock } from '@blocknote/core';
 import { filterSuggestionItems } from '@blocknote/core/extensions';
 import { SideMenuExtension } from '@blocknote/core/extensions';
@@ -24,12 +32,15 @@ import type { Block } from '@shared/protokolle/dokument';
 import { Icon } from '@ui/icons/icons';
 import {
   abschnittAblegen,
+  abschnittLinie,
   abschnittSchieben,
+  blockGrenze,
   abschnittZiehenBeginnt,
   abschnittZiehenEndet,
   kannSchieben,
 } from './abschnittZiehen';
 import { aufgabenIdsSetzen, schema, type ProtokollEditor } from './editorSchema';
+import { blockInhalt, griffVersatz } from './griffLage';
 import { FESTE_PUNKTE } from './anzeige';
 import { FESTE, festenPunktEinfuegen } from './festenPunktEinfuegen';
 import { EIGENE, Werkzeugleiste } from './Werkzeugleiste';
@@ -114,6 +125,13 @@ const EIGENE_ALIASE = {
  */
 const GRIFF_LAGE = { useFloatingOptions: { middleware: [] } };
 
+/** Lage der Blöcke unter `wurzel` auf dem Bildschirm – fürs Ablegen und für die Linie beim Ziehen. */
+const lageIn =
+  (wurzel: ParentNode) =>
+  (id: string): { top: number; bottom: number } | null =>
+    wurzel.querySelector(`.bn-block-outer[data-id="${CSS.escape(id)}"]`)?.getBoundingClientRect() ??
+    null;
+
 type GriffBlock = { block?: { id?: string; type?: string } } | undefined;
 
 /** „Nach oben“ / „Nach unten“ im Griff-Menü einer Überschrift (S4-3b) – fehlt, wenn es in die Richtung nicht geht. */
@@ -141,7 +159,8 @@ function SchiebenEintrag({
 
 /**
  * Griff nur an Blöcken, die man verschieben soll – nicht an normalem Text. An einer Überschrift zieht er den ganzen
- * Abschnitt (S4-3b, `abschnittZiehen.ts`), und das Menü kann ihn nach oben und unten schieben.
+ * Abschnitt (S4-3b, `abschnittZiehen.ts`), und das Menü kann ihn nach oben und unten schieben. Er steht auf Höhe der
+ * ersten Textzeile (`griffVersatz`, K1).
  */
 function Griff() {
   const editor = useBlockNoteEditor() as unknown as ProtokollEditor;
@@ -151,31 +170,39 @@ function Griff() {
   const id = useExtensionState(SideMenuExtension, {
     selector: (s: unknown) => (s as GriffBlock)?.block?.id,
   });
+  const rahmen = useRef<HTMLDivElement>(null);
+  const [versatz, setVersatz] = useState(0);
+  useLayoutEffect(() => {
+    const el = rahmen.current;
+    setVersatz(el && id ? griffVersatz(blockInhalt(document, id), el.offsetHeight) : 0);
+  }, [id, art]);
   if (!art || !id || art === 'paragraph') return null;
   const ueberschrift = art === 'heading';
   return (
-    <SideMenu>
-      <AddBlockButton />
-      <span onDragStartCapture={() => abschnittZiehenBeginnt(editor, id)}>
-        <DragHandleButton
-          dragHandleMenu={() => (
-            <DragHandleMenu>
-              {ueberschrift && (
-                <SchiebenEintrag id={id} richtung="hoch">
-                  Nach oben
-                </SchiebenEintrag>
-              )}
-              {ueberschrift && (
-                <SchiebenEintrag id={id} richtung="runter">
-                  Nach unten
-                </SchiebenEintrag>
-              )}
-              <RemoveBlockItem>Löschen</RemoveBlockItem>
-            </DragHandleMenu>
-          )}
-        />
-      </span>
-    </SideMenu>
+    <div ref={rahmen} style={{ transform: `translateY(${versatz}px)` }}>
+      <SideMenu>
+        <AddBlockButton />
+        <span onDragStartCapture={() => abschnittZiehenBeginnt(editor, id)}>
+          <DragHandleButton
+            dragHandleMenu={() => (
+              <DragHandleMenu>
+                {ueberschrift && (
+                  <SchiebenEintrag id={id} richtung="hoch">
+                    Nach oben
+                  </SchiebenEintrag>
+                )}
+                {ueberschrift && (
+                  <SchiebenEintrag id={id} richtung="runter">
+                    Nach unten
+                  </SchiebenEintrag>
+                )}
+                <RemoveBlockItem>Löschen</RemoveBlockItem>
+              </DragHandleMenu>
+            )}
+          />
+        </span>
+      </SideMenu>
+    </div>
   );
 }
 
@@ -217,6 +244,21 @@ export function DokumentEditor({
       schema,
       dictionary: TEXTE,
       initialContent: start.length ? (start as Teil[]) : undefined,
+      // Beim Ziehen eines Abschnitts steht die Linie dort, wo er landet (K1) – dieselbe Rechnung wie beim Ablegen.
+      dropCursor: {
+        hooks: {
+          computeDropPosition: ({ editor: e, event, view, defaultPosition }) => {
+            const l = abschnittLinie(e as ProtokollEditor, event.clientY, lageIn(view.dom));
+            if (l === 'frei') return defaultPosition;
+            if (l === 'keine') return null;
+            const pos =
+              'vor' in l
+                ? blockGrenze(view.state.doc, l.vor, 'vor')
+                : blockGrenze(view.state.doc, l.nach, 'nach');
+            return pos === null ? null : { pos, orientation: 'block-horizontal' };
+          },
+        },
+      },
       pasteHandler: ({ event, editor: e, defaultPasteHandler }) => {
         const html = event.clipboardData?.getData('text/html') ?? '';
         if (!istWordHtml(html)) return defaultPasteHandler();
@@ -236,10 +278,7 @@ export function DokumentEditor({
     const el = blatt.current;
     if (!el) return;
     const ablegen = (e: DragEvent) => {
-      const lage = (id: string) =>
-        el.querySelector(`.bn-block-outer[data-id="${CSS.escape(id)}"]`)?.getBoundingClientRect() ??
-        null;
-      if (!abschnittAblegen(editor, e.clientY, lage)) return;
+      if (!abschnittAblegen(editor, e.clientY, lageIn(el))) return;
       e.preventDefault();
       e.stopPropagation();
     };

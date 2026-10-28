@@ -908,7 +908,7 @@
     margin-top: 4px;
   }
   .vollbildKnopf {
-    height: 38px;
+    height: var(--knopf-hoehe);
   }
   .vollbildFlaeche .zeichen {
     width: min(100%, calc((100dvh - 96px) * 2));

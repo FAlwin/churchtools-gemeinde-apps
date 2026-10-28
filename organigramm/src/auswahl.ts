@@ -31,8 +31,8 @@ export function merkeAusgeblendet(typen: ReadonlySet<number>): void {
   merken(TYPEN, [...typen]);
 }
 
-/** Die Ansichten des Reiters Organigramm (O7b): Karten wie bisher und die Liste. */
-export const BAUM_ANSICHTEN = ['karten', 'liste'] as const;
+/** Die Ansichten des Reiters Organigramm (O7b): Karten wie bisher, die Liste und die drei Diagramme. */
+export const BAUM_ANSICHTEN = ['karten', 'liste', 'oben', 'links', 'mindmap'] as const;
 export type BaumAnsicht = (typeof BAUM_ANSICHTEN)[number];
 
 /** Die zuletzt gewählte Ansicht – `null`, wenn noch keine gewählt ist (dann entscheidet die Bildschirmbreite). */

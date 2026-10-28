@@ -6,6 +6,7 @@ import { gruppenFarbe } from '@shared/organigramm/farbe';
 import type { Knoten } from '@shared/organigramm/gruppen';
 import { knotenAmPfad, type SichtKnoten } from '@shared/organigramm/ansichten';
 import { Segment } from '@ui/bedienung/Segment';
+import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { rollenRang } from '@shared/organigramm/mitglieder';
 import { gruppenLeitung, teilbaumPersonen, type Mitglied } from '@shared/organigramm/personen';
 import { offenVonGruppe, type Einsaetze } from '@shared/organigramm/einsaetze';
@@ -13,12 +14,16 @@ import type { MitgliederDaten, MitgliederStand } from './ladeMitglieder';
 import type { Start } from './start';
 import type { BaumAnsicht } from './auswahl';
 import { Liste } from './Liste';
+import { Diagramm } from './Diagramm';
 import styles from './Organigramm.module.scss';
 
 const anzahl = (n: number, eins: string, mehr: string) => `${n} ${n === 1 ? eins : mehr}`;
 const ANSICHTEN: { value: BaumAnsicht; label: string }[] = [
   { value: 'karten', label: 'Karten' },
   { value: 'liste', label: 'Liste' },
+  { value: 'oben', label: 'Von oben' },
+  { value: 'links', label: 'Von links' },
+  { value: 'mindmap', label: 'Mindmap' },
 ];
 
 interface Props {
@@ -47,8 +52,6 @@ interface Props {
   onTypUmschalten: (typ: number) => void;
   onNachladen: () => void;
   onGruppe: (id: number) => void;
-  /** Präsentation öffnen – erst, wenn die Mitglieder geladen sind. */
-  onPraesentieren: () => void;
 }
 
 /**
@@ -74,7 +77,6 @@ export function Organigramm({
   onTypUmschalten,
   onNachladen,
   onGruppe,
-  onPraesentieren,
 }: Props) {
   const rang = useMemo(() => rollenRang(start.rollen), [start.rollen]);
   const name = (id: number) => mitglieder?.personen.get(id)?.name ?? '';
@@ -148,6 +150,7 @@ export function Organigramm({
           options={ANSICHTEN}
           onChange={onAnsicht}
           ariaLabel="Ansicht"
+          className={styles.ansicht}
           verbunden
         />
         <label className={styles.anfangen}>
@@ -169,28 +172,22 @@ export function Organigramm({
             )}
           </select>
         </label>
-        <span className={styles.rechts}>
-          {ansicht === 'liste' && (
-            <>
-              <button type="button" className={styles.knopf} onClick={onAlleAuf}>
-                Alle aufklappen
-              </button>
-              <button type="button" className={styles.knopf} onClick={onAlleZu}>
-                Alle zuklappen
-              </button>
-            </>
-          )}
-          <button
-            type="button"
-            className={styles.praesentieren}
-            disabled={!mitglieder}
-            title={mitglieder ? undefined : 'Mitglieder werden geladen …'}
-            onClick={onPraesentieren}
-          >
-            <Icon name="play" size={16} />
-            Präsentieren
-          </button>
-        </span>
+        {/* „Präsentieren“ steht im Seitenkopf (App) – hier hätte die Leiste bei 1280 px nicht mehr in eine Zeile gepasst
+            (Alwin, 28.10.2026: Variante B). */}
+        {ansicht !== 'karten' && (
+          <span className={styles.rechts}>
+            <KopfKnopf
+              label="Alle aufklappen"
+              symbol={<Icon name="chev-down" size={16} />}
+              onClick={onAlleAuf}
+            />
+            <KopfKnopf
+              label="Alle zuklappen"
+              symbol={<Icon name="chev-right" size={16} />}
+              onClick={onAlleZu}
+            />
+          </span>
+        )}
       </div>
       {typen.length > 1 && (
         <div className={styles.filter} role="group" aria-label="Gruppentypen">
@@ -222,6 +219,10 @@ export function Organigramm({
 
       {ansicht === 'liste' && baum.length > 0 && (
         <Liste sicht={sicht} onUmklappen={onUmklappen} onGruppe={onGruppe} />
+      )}
+
+      {(ansicht === 'oben' || ansicht === 'links' || ansicht === 'mindmap') && baum.length > 0 && (
+        <Diagramm art={ansicht} sicht={sicht} onUmklappen={onUmklappen} onGruppe={onGruppe} />
       )}
 
       {ansicht === 'karten' && (

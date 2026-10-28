@@ -171,6 +171,32 @@ describe('wie die ChurchTools-App (E6-O1)', () => {
     expect(screen.getAllByText('Halleluja')).toHaveLength(1);
   });
 
+  it('schmal (Matrix, E6-6a): Uhrzeit, Dauer und Titel samt Liedname – ohne Zuständige, Kreise, Notiz und Lied-Karte', () => {
+    const zeilen = [
+      z({
+        id: 9,
+        title: 'Musik',
+        note: 'mit Chor',
+        responsible: {
+          persons: [{ service: '[Musik]', person: { title: 'Lea Fromm', initials: 'LF' } }],
+        },
+      }),
+      z({ id: 10, title: 'Lied', type: 'song', song: { title: 'Treu', key: 'G' } as never }),
+    ];
+    const { container } = render(<AblaufListe zeilen={zeilen} schmal />);
+    expect(screen.getByText('Musik')).toBeTruthy();
+    expect(screen.getByText('Treu')).toBeTruthy();
+    expect(screen.queryByText('LF')).toBeNull();
+    expect(screen.queryByText(/Lea Fromm/)).toBeNull();
+    expect(screen.queryByText('mit Chor')).toBeNull();
+    expect(container.querySelectorAll('[class*="liedKarte"]')).toHaveLength(0);
+    // Gegenprobe ohne `schmal`: dieselben Zeilen zeigen alles.
+    cleanup();
+    render(<AblaufListe zeilen={zeilen} />);
+    expect(screen.getByText('LF')).toBeTruthy();
+    expect(screen.getByText('mit Chor')).toBeTruthy();
+  });
+
   it('„Beginn“ ist ein Balken mit der Uhrzeit rechts – weiter als Trenner erkennbar', () => {
     render(<AblaufListe zeilen={ZEILEN} beginn="10:00" />);
     const balken = screen.getByRole('separator', { name: 'Beginn 10:00' });

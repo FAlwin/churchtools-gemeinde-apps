@@ -4,12 +4,15 @@ import {
   reiterAusAdresse as ausAdresse,
 } from '@ui/bedienung/reiterAdresse';
 
-/** Die Bereiche des Dienstplaners (Entwurf v17): Start · Termine · Planen · Abwesenheiten. */
+/**
+ * Die Bereiche des Dienstplaners (Entwurf v17): Start · Dienste · Planen · Abwesenheiten. „Dienste“ hieß bis 28.10.2026
+ * „Termine“ (Alwin: passt besser); die Adresse bleibt `#/termine`, damit gemerkte Links weiter gehen.
+ */
 export type ReiterId = 'start' | 'termine' | 'planen' | 'abwesenheiten';
 
 export const ALLE_REITER: Reiter<ReiterId>[] = [
   { id: 'start', label: 'Start', icon: 'home' },
-  { id: 'termine', label: 'Termine', icon: 'calendar' },
+  { id: 'termine', label: 'Dienste', icon: 'calendar' },
   { id: 'planen', label: 'Planen', icon: 'grid' },
   { id: 'abwesenheiten', label: 'Abwesenheiten', icon: 'user-slash' },
 ];

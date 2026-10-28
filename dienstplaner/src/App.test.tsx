@@ -120,11 +120,11 @@ describe('Reiter des Dienstplaners (E3-1)', () => {
       within(bereiche)
         .getAllByRole('button')
         .map((b) => b.textContent),
-    ).toEqual(['Start', 'Termine', 'Planen', 'Abwesenheiten']);
+    ).toEqual(['Start', 'Dienste', 'Planen', 'Abwesenheiten']);
     expect(screen.getByText('Hallo Alwin')).toBeTruthy();
-    fireEvent.click(within(bereiche).getByRole('button', { name: 'Termine' }));
+    fireEvent.click(within(bereiche).getByRole('button', { name: 'Dienste' }));
     expect(window.location.hash).toBe('#/termine');
-    expect(await screen.findByRole('region', { name: 'Termine' })).toBeTruthy();
+    expect(await screen.findByRole('region', { name: 'Dienste' })).toBeTruthy();
     expect(screen.queryByText('Hallo Alwin')).toBeNull();
   });
 
@@ -162,7 +162,7 @@ describe('Termine im Reiter (E3-2)', () => {
     window.location.hash = '';
   });
 
-  it('Start und Termine teilen eine Liste: einmal geladen, beim Wechseln nicht neu; „Weitere“ +8 Wochen', async () => {
+  it('Start und Dienste teilen eine Liste: einmal geladen, beim Wechseln nicht neu; „Weitere“ +8 Wochen', async () => {
     breite(false);
     laden.mockResolvedValue(start([3]));
     termineLaden.mockResolvedValue(KEINE_TERMINE);
@@ -170,10 +170,10 @@ describe('Termine im Reiter (E3-2)', () => {
     const bereiche = await screen.findByRole('group', { name: 'Bereiche' });
     // Schon die Startseite braucht die Termine („Als Nächstes“, deine Dienste).
     await waitFor(() => expect(termineLaden).toHaveBeenCalledTimes(1));
-    fireEvent.click(within(bereiche).getByRole('button', { name: 'Termine' }));
+    fireEvent.click(within(bereiche).getByRole('button', { name: 'Dienste' }));
     await screen.findByRole('button', { name: 'Weitere Termine laden' });
     fireEvent.click(within(bereiche).getByRole('button', { name: 'Start' }));
-    fireEvent.click(within(bereiche).getByRole('button', { name: 'Termine' }));
+    fireEvent.click(within(bereiche).getByRole('button', { name: 'Dienste' }));
     await screen.findByRole('button', { name: 'Weitere Termine laden' });
     expect(termineLaden).toHaveBeenCalledTimes(1);
     expect(termineLaden.mock.calls[0][1]).toBe(8);
@@ -378,7 +378,7 @@ describe('Termin-Ansicht im Dienstplaner (E6-1b)', () => {
     });
   const MEIN = { meine: [{ dienst: 'Ton', zugesagt: true }] };
 
-  it('aus „Termine“: Zeile antippen → #/termin/<id>; „Termine“ bleibt hervorgehoben; ‹ › und zurück', async () => {
+  it('aus „Dienste“: Zeile antippen → #/termin/<id>; „Dienste“ bleibt hervorgehoben; ‹ › und zurück', async () => {
     breite(false);
     window.location.hash = '#/termine';
     laden.mockResolvedValue(s);
@@ -393,11 +393,11 @@ describe('Termin-Ansicht im Dienstplaner (E6-1b)', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Gebetsabend/ }));
     expect(window.location.hash).toBe('#/termin/8');
     expect(await screen.findByRole('heading', { name: 'Gebetsabend' })).toBeTruthy();
-    // Statt der Liste, nicht daneben.
-    expect(screen.queryByRole('region', { name: 'Termine' })).toBeNull();
+    // Statt der Liste, nicht daneben. (Über die Kennung – im Termin heißt die Karte der Dienste ebenfalls „Dienste“.)
+    expect(document.getElementById('termine-titel')).toBeNull();
     const bereiche = screen.getByRole('group', { name: 'Bereiche' });
     expect(
-      within(bereiche).getByRole('button', { name: 'Termine' }).getAttribute('aria-pressed'),
+      within(bereiche).getByRole('button', { name: 'Dienste' }).getAttribute('aria-pressed'),
     ).toBe('true');
 
     fireEvent.click(screen.getByRole('button', { name: 'Nächster Termin' }));
@@ -410,11 +410,11 @@ describe('Termin-Ansicht im Dienstplaner (E6-1b)', () => {
     expect(await screen.findByRole('heading', { name: 'Gebetsabend' })).toBeTruthy();
 
     const zurueck = screen
-      .getAllByRole('button', { name: 'Termine' })
+      .getAllByRole('button', { name: 'Dienste' })
       .find((b) => !bereiche.contains(b))!;
     fireEvent.click(zurueck);
     expect(window.location.hash).toBe('#/termine');
-    expect(await screen.findByRole('region', { name: 'Termine' })).toBeTruthy();
+    expect(await screen.findByRole('region', { name: 'Dienste' })).toBeTruthy();
   });
 
   it('direkt über die Adresse (Neuladen): Termin-Ansicht ohne Gruß, zurück zu „Start“', async () => {

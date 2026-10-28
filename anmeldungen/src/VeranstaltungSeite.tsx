@@ -173,6 +173,7 @@ function MailsKarte({
       </Zeile>
       <Zeile titel="Warteliste">{stand.warte ? '✓ Mitteilung mit Platz' : fehlt}</Zeile>
       <Zeile titel="Nachrücken">{stand.platz ? '✓ Bestätigung wie oben' : fehlt}</Zeile>
+      <Zeile titel="Check-in-Code">{stand.qr ? '✓ in der Bestätigung' : 'aus'}</Zeile>
       {stand.absender && <Zeile titel="Absender">{stand.absender}</Zeile>}
       <Zeile titel="Eigener Text">
         {eigen.length === 0

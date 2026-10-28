@@ -49,3 +49,16 @@
   background: var(--blue-soft);
   color: var(--blue-ink);
 }
+
+// Roter Text ganz links („Eintrag löschen“, E6-O O3 – `Sheet links`): `margin-right: auto` schiebt die übrigen Knöpfe nach
+// rechts. Stehen die Knöpfe untereinander (`column-reverse`), steht er als erster im Dokument unten.
+.loeschen {
+  margin-right: auto;
+  padding: 0 4px;
+  background: none;
+  color: var(--red);
+
+  &:hover:not(:disabled) {
+    text-decoration: underline;
+  }
+}

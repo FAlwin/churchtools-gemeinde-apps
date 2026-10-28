@@ -19,12 +19,30 @@ interface SheetProps {
    */
   knoepfe?: ReactNode;
   /**
+   * Nur mit `knoepfe`: ein Knopf ganz links in der Fußzeile, abgesetzt von „Abbrechen · …“ – „Eintrag löschen“ im
+   * Punkt-Fenster (E6-O O3, Entwurf B; `FensterKnopf art="loeschen"`). Steht auch im Dokument zuerst, damit Tastatur und
+   * Vorleser dieselbe Reihenfolge haben wie das Auge; stehen die Knöpfe untereinander, steht er unten.
+   */
+  links?: ReactNode;
+  /**
    * Nur mit `knoepfe`: Während etwas läuft (senden, speichern …), sperrt das Fenster X, „Abbrechen“ und den Klick
    * daneben – wie `ConfirmDialog`. Was gerade passiert, zeigt der Hauptknopf oder der Titel (E6-O F2, #720).
    */
   beschaeftigt?: boolean;
   /** Nur mit `knoepfe`: breiter (bis 760 px) – für Fenster, in denen man etwas liest, etwa ein Protokoll (S4-3a). */
   breit?: boolean;
+  /** Nur mit `knoepfe`: mittelbreit (bis 560 px) – für eine Feldliste „Beschriftung | Feld“ (Punkt-Fenster, E6-O O3). */
+  mittel?: boolean;
+  /**
+   * Was der Tipp neben das Fenster tut – ohne Angabe dasselbe wie X. Ein Fenster mit ungespeicherten Änderungen reicht
+   * hier etwas, das dann nicht schließt: Ein versehentlicher Tipp daneben soll nichts verwerfen (Punkt-Fenster).
+   */
+  onHintergrund?: () => void;
+  /**
+   * `false`: ohne Einblenden – wenn ein Fenster durch ein gleiches ersetzt wird (‹ › im Punkt-Fenster), soll es nicht
+   * flackern.
+   */
+  einblenden?: boolean;
 }
 
 /**
@@ -38,8 +56,12 @@ export function Sheet({
   children,
   cancelLabel = 'Abbrechen',
   knoepfe,
+  links,
   beschaeftigt = false,
   breit = false,
+  mittel = false,
+  onHintergrund = onClose,
+  einblenden = true,
 }: SheetProps) {
   // Hält den Dialog über der iOS-Tastatur frei und verhindert, dass die Seite verrutscht (#207).
   const overlayRef = useOverlayKeyboardInset();
@@ -49,9 +71,13 @@ export function Sheet({
   if (knoepfe !== undefined) {
     // Kopf und Fußzeile bleiben stehen, dazwischen scrollt der Inhalt – das ist die eine Scrollfläche des Fensters.
     return (
-      <div ref={overlayRef} className={styles.overlay} onClick={beschaeftigt ? undefined : onClose}>
+      <div
+        ref={overlayRef}
+        className={`${styles.overlay}${einblenden ? '' : ` ${styles.still}`}`}
+        onClick={beschaeftigt ? undefined : onHintergrund}
+      >
         <div
-          className={`${styles.sheet} ${styles.ct}${breit ? ` ${styles.breit}` : ''}`}
+          className={`${styles.sheet} ${styles.ct}${breit ? ` ${styles.breit}` : ''}${mittel ? ` ${styles.mittel}` : ''}`}
           role="dialog"
           aria-modal="true"
           aria-labelledby={titelId}
@@ -76,6 +102,7 @@ export function Sheet({
             className={styles.fuss}
             data-stapel={knopfZeile.stapel || undefined}
           >
+            {links}
             {cancelLabel !== null && (
               <FensterKnopf art="zweit" onClick={onClose} disabled={beschaeftigt}>
                 {cancelLabel}

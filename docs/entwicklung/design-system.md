@@ -111,6 +111,12 @@ ChurchTools-Weboberfläche):
   löschen / anpassen) stehen beide unten: zweiter Weg `hell` oder `gefahr`, Hauptweg zuletzt (Alwin, F3 #726).
   Fenster mit Formular und weiteren Bereichen („Lied bearbeiten“, „Arrangement“) haben „Speichern“ unten; seltene,
   folgenreiche Wege („Zum Standard machen“, „Löschen …“, „Baustein entfernen“) bleiben getrennt im Inhalt.
+- **Feldliste „Beschriftung | Feld“** (Punkt-Fenster, E6-O O3, Variante B): in einer umrandeten Fläche, eine feine
+  Linie je Zeile; alle Felder auf einmal bearbeitbar, unten einmal „Speichern“. Werte, die eine eigene Auswahl
+  brauchen (Lied, Zuständig), sind **Zeilen mit Pfeil**, die IM Fenster öffnen; leer steht „+ Hinzufügen“. Ja/Nein als
+  Schalter in der Zeile. Mit `mittel` (560 px); „Eintrag löschen“ als `links` mit `FensterKnopf art="loeschen"`. Hat
+  das Fenster ungespeicherte Änderungen, reicht es `onHintergrund`, damit ein Tipp daneben nichts verwirft;
+  ‹ › zum Nachbarn sind dann gesperrt (Alwin, 28.10.2026), und beim Blättern gilt `einblenden={false}`.
 - **Mehrstufige Fenster** (Assistent, Rückfrage im Fenster, Vorschau) haben unten nur **„Zurück“ und den
   Hauptknopf** – `cancelLabel={null}` und „Zurück“ als `zweit`; ganz zu geht es über das X (Alwin, F4 #734). Ersetzt
   eine Rückfrage den Inhalt eines Fensters („Absagen?“ im Fenster einer Anmeldung), heißt ihr Weg zurück „Abbrechen“

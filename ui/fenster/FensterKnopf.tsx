@@ -6,8 +6,10 @@ import styles from './FensterKnopf.module.scss';
  * - `gefahr`: rot, wenn etwas verloren geht („Löschen“, „Ersetzen“).
  * - `zweit`: mit Rahmen und blauer Schrift („Abbrechen“).
  * - `hell`: hellblau, ein zweiter Weg neben dem Hauptknopf („Nur für diesen Termin neu“).
+ * - `loeschen`: roter Text ganz links in der Fußzeile (`Sheet links`), abgesetzt von „Abbrechen · Speichern“ („Eintrag
+ *   löschen“, E6-O O3 – wie im Entwurf B). Am Handy und wenn die Knöpfe untereinander stehen, steht er unten.
  */
-export type FensterKnopfArt = 'haupt' | 'gefahr' | 'zweit' | 'hell';
+export type FensterKnopfArt = 'haupt' | 'gefahr' | 'zweit' | 'hell' | 'loeschen';
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   art?: FensterKnopfArt;

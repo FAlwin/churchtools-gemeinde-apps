@@ -58,11 +58,19 @@ interface Routine {
 const PLATZHALTER = new Map<string, string>([
   ...SYSTEMFELDER.map((f, i): [string, string] => [f.name, `{{{groupMemberField.f${i}}}}`]),
   ['Wartelistenplatz', '{{{groupMember.waitinglistPosition}}}'],
+  ['Check-in-Code (QR-Code)', '{{{groupMember.checkInCodeQr}}}'],
 ]);
 
 let routinen: Map<number, Routine>;
 let naechste: number;
 let standardMail: boolean;
+/** Check-in der Gruppe und ob ChurchTools dazu eine eigene Code-Mail schickt (Vorgabe: ja). */
+let checkin: boolean;
+let codeMail: boolean;
+/** Gemessen 26.10.2026: Check-in an, während die Code-Mail an ist → Mail an alle schon Angemeldeten. */
+let codeMailsAnBestehende: number;
+/** ChurchTools sagt 200 zum Check-in, übernimmt ihn aber nicht. */
+let checkinSchlucken: boolean;
 let schlucken: boolean;
 /** ChurchTools übernimmt die Schritte, ignoriert aber die Beschreibung. */
 let beschreibungSchlucken: boolean;
@@ -74,6 +82,10 @@ beforeEach(() => {
   routinen = new Map();
   naechste = 12;
   standardMail = true;
+  checkin = false;
+  codeMail = true;
+  codeMailsAnBestehende = 0;
+  checkinSchlucken = false;
   schlucken = false;
   beschreibungSchlucken = false;
   aufrufe = [];
@@ -83,7 +95,14 @@ beforeEach(() => {
   ru.platzhalterLaden.mockResolvedValue(PLATZHALTER);
   ct.ctDaten.mockImplementation(async (pfad: string) => {
     if (pfad === '/groups/165')
-      return { name: 'Kinderfreizeit', settings: { sendDefaultSignUpMail: standardMail } };
+      return {
+        name: 'Kinderfreizeit',
+        settings: {
+          sendDefaultSignUpMail: standardMail,
+          qrCodeCheckin: checkin,
+          qrCodeCheckinAutomaticEmail: codeMail,
+        },
+      };
     const g = /^\/groups\/(\d+)\/members\/routines$/.exec(pfad);
     if (g)
       return [...routinen.values()]
@@ -135,7 +154,15 @@ beforeEach(() => {
       return null;
     }
     if (methode === 'PATCH' && pfad === '/groups/165') {
-      standardMail = body.sendDefaultSignUpMail as boolean;
+      if ('sendDefaultSignUpMail' in body) standardMail = body.sendDefaultSignUpMail as boolean;
+      if ('qrCodeCheckinAutomaticEmail' in body)
+        codeMail = body.qrCodeCheckinAutomaticEmail as boolean;
+      if ('qrCodeCheckin' in body && !checkinSchlucken) {
+        const an = body.qrCodeCheckin as boolean;
+        // Ein Aufruf wirkt als Ganzes: Code-Mail schon aus → beim Einschalten keine Mails.
+        if (an && !checkin && codeMail) codeMailsAnBestehende++;
+        checkin = an;
+      }
       return null;
     }
     throw new Error(`unerwartet: ${methode} ${pfad}`);
@@ -223,6 +250,7 @@ describe('ablaeufeLesen', () => {
       absender: null,
       absenderId: null,
       eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT },
+      qr: false,
     });
   });
   it('nach dem Einrichten: beide an, Standard-Mail aus, Absender aus ChurchTools', async () => {
@@ -236,6 +264,7 @@ describe('ablaeufeLesen', () => {
       absender: 'Anna Leitung',
       absenderId: 7,
       eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT },
+      qr: false,
     });
   });
   it('abgeschaltet (z. B. beim Archivieren) oder fremd: zählt nicht als eingerichtet', async () => {
@@ -380,5 +409,66 @@ describe('vorschauPerson (A9-2a)', () => {
     expect(await vorschauPerson(165, 'warte', 7)).toEqual({ personId: 40, echt: true });
     ct.ctAlleSeiten.mockResolvedValue([]);
     expect(await vorschauPerson(165, 'platz', 7)).toEqual({ personId: 7, echt: false });
+  });
+});
+
+describe('Check-in-Code (A9-2b)', () => {
+  const body = (s: string) =>
+    String([...routinen.values()].find((r) => r.status === s)!.steps[0].actionData.body);
+
+  it('an: Check-in an und eigene Code-Mail aus in einem Aufruf – keine Mails an schon Angemeldete', async () => {
+    await ablaeufeEinrichten(165, 7, undefined, true);
+    expect([checkin, codeMail, codeMailsAnBestehende]).toEqual([true, false, 0]);
+    expect(body('active')).toContain('groupMember.checkInCodeQr');
+    expect(body('waiting')).not.toContain('groupMember.checkInCodeQr');
+    expect((await ablaeufeLesen(165)).qr).toBe(true);
+  });
+
+  it('aus: Check-in aus, der Code verschwindet aus der Bestätigung', async () => {
+    await ablaeufeEinrichten(165, 7, undefined, true);
+    await ablaeufeEinrichten(165, 7, undefined, false);
+    expect(checkin).toBe(false);
+    expect(body('active')).not.toContain('groupMember.checkInCodeQr');
+    expect((await ablaeufeLesen(165)).qr).toBe(false);
+  });
+
+  it('ohne Angabe (Freigeben, Abgleich): bleibt, wie es in ChurchTools steht – aus wird nicht angefasst', async () => {
+    await ablaeufeEinrichten(165, 7);
+    expect(checkin).toBe(false);
+    expect(codeMail).toBe(true);
+    expect(body('active')).not.toContain('groupMember.checkInCodeQr');
+  });
+
+  it('ChurchTools übernimmt den Check-in nicht → Fehler statt „gespeichert“', async () => {
+    checkinSchlucken = true;
+    await expect(ablaeufeEinrichten(165, 7, undefined, true)).rejects.toBeInstanceOf(
+      NichtUebernommen,
+    );
+  });
+
+  it('Abgleich: in ChurchTools eingeschaltet (Code-Mail an) → Code in die Bestätigung, Code-Mail aus', async () => {
+    await ablaeufeEinrichten(165, 7);
+    checkin = true; // jemand schaltet den Check-in in ChurchTools ein – dort ist die Code-Mail vorgegeben
+    const stand = await ablaeufeAbgleichen(165);
+    expect(stand.qr).toBe(true);
+    expect(codeMail).toBe(false);
+    expect(body('active')).toContain('groupMember.checkInCodeQr');
+    aufrufe = [];
+    await ablaeufeAbgleichen(165);
+    expect(aufrufe).toEqual([]);
+  });
+
+  it('Abgleich: Code steht schon in der Mail, aber in ChurchTools ist die Code-Mail wieder an → wieder aus', async () => {
+    await ablaeufeEinrichten(165, 7, undefined, true);
+    codeMail = true;
+    await ablaeufeAbgleichen(165);
+    expect(codeMail).toBe(false);
+  });
+
+  it('Abgleich: in ChurchTools ausgeschaltet → Code verschwindet aus der Bestätigung', async () => {
+    await ablaeufeEinrichten(165, 7, undefined, true);
+    checkin = false;
+    await ablaeufeAbgleichen(165);
+    expect(body('active')).not.toContain('groupMember.checkInCodeQr');
   });
 });

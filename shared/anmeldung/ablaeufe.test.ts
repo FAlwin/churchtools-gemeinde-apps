@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   BESCHREIBUNG_MAX,
   OHNE_EIGENEN_TEXT,
+  QR_CODE,
   ROUTINEN,
   ablaufMails,
   eigenerTextAlsBeschreibung,
@@ -33,6 +34,8 @@ const CT = new Map<string, string>([
     `{{{groupMemberField.${kuerzel(f.name)}}}}`,
   ]),
   ['Wartelistenplatz', '{{{groupMember.waitinglistPosition}}}'],
+  // Gemessen 28.10.2026: so heißt der Check-in-Code in `/placeholders/group/{id}`.
+  ['Check-in-Code (QR-Code)', '{{{groupMember.checkInCodeQr}}}'],
 ]);
 const platz = (name: string) => CT.get(name)!;
 const bedingung = (name: string) => platz(name).replace(/^\{+|\}+$/g, '');
@@ -220,5 +223,35 @@ describe('Eigener Text (A9-2a)', () => {
     expect(m.unbekannt).toEqual([]);
     expect(m.platz.betreff).toBe('Hallo { {person.firstName}}');
     expect(m.platz.html).toContain('<p>&lt;b&gt;[Betrag]&lt;/b&gt; &#123;&#123;x}}</p>');
+  });
+});
+
+describe('Check-in-Code (A9-2b)', () => {
+  const ohneText = { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT };
+
+  it('an: Code in der Bestätigung, nur wenn die Person einen hat; nach dem Betrag, vor dem Link', () => {
+    const m = ablaufMails(mitKonto(), 'Kinderfreizeit', CT, ohneText, true);
+    expect(m.unbekannt).toEqual([]);
+    expect(m.platz.html).toContain(
+      '{{#if groupMember.checkInCodeQr}}<p>Check-in-Code für {{person.firstName}} – bitte beim Ankommen zeigen:<br>{{{groupMember.checkInCodeQr}}}</p>{{/if}}',
+    );
+    const h = m.platz.html;
+    expect(h.indexOf('checkInCodeQr')).toBeGreaterThan(h.indexOf(bedingung('Betrag')));
+    expect(h.indexOf('checkInCodeQr')).toBeLessThan(h.indexOf(bedingung('Link zur Anmeldung')));
+    // Auf der Warteliste gibt es noch keinen Platz – also auch keinen Code.
+    expect(m.warte.html).not.toContain('checkInCodeQr');
+  });
+
+  it('aus (Standard): kein Code – die Mail wie bisher', () => {
+    const ohne = ablaufMails(mitKonto(), 'Kinderfreizeit', CT);
+    expect(ohne.platz.html).not.toContain('checkInCodeQr');
+    expect(ablaufMails(mitKonto(), 'Kinderfreizeit', CT, ohneText, false)).toEqual(ohne);
+  });
+
+  it('kennt ChurchTools den Platzhalter nicht: „unbekannt“ – nur, wenn der Code an ist', () => {
+    const ohne = new Map(CT);
+    ohne.delete(QR_CODE);
+    expect(ablaufMails(mitKonto(), 'K', ohne, ohneText, true).unbekannt).toEqual([QR_CODE]);
+    expect(ablaufMails(mitKonto(), 'K', ohne, ohneText, false).unbekannt).toEqual([]);
   });
 });

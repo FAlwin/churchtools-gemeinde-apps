@@ -68,6 +68,15 @@
   width: min(760px, 100%);
 }
 
+.mittel {
+  width: min(560px, 100%);
+}
+
+// Ein Fenster, das ein gleiches ersetzt (‹ › im Punkt-Fenster), blendet nicht noch einmal ein.
+.still {
+  animation: none;
+}
+
 .kopf {
   display: flex;
   align-items: center;

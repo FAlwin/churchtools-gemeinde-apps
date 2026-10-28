@@ -86,6 +86,13 @@ const tabelle = () => within(screen.getByRole('table'));
 const zeileVon = (dienst: string) => screen.getByRole('rowheader', { name: dienst }).closest('tr')!;
 
 describe('Planen – Tabelle (E3-4)', () => {
+  it('der Hilfetext nennt den Reiter mit den eigenen Diensten so, wie er heißt („Dienste“, 28.10.2026)', () => {
+    zeige();
+    expect(
+      screen.getByText(/deine eigenen Dienste findest du immer unter Start und Dienste\./),
+    ).toBeTruthy();
+  });
+
   it('Spalten: Name, Wochentag · Uhrzeit, Stand („1 frei“ / „abgesagt“)', () => {
     zeige();
     const koepfe = screen.getAllByRole('columnheader').slice(1);

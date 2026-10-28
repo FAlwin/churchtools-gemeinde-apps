@@ -61,7 +61,11 @@ import { AlteEntwuerfeFach, type AlterEntwurf } from './AlteEntwuerfeFach';
 import type { TerminStand } from './terminStand';
 import { SendenFach, type SendeZeile } from './SendenFach';
 import { grundText, type EntwuerfeDaten, type EntwurfAnschluss } from './ladeEntwuerfe';
+import { ALLE_REITER } from './reiter';
 import styles from './Planen.module.scss';
+
+/** Der Name des Reiters mit den eigenen Diensten – aus der Reiterliste, damit der Hilfetext eine Umbenennung mitmacht. */
+const DIENSTE_REITER = ALLE_REITER.find((r) => r.id === 'termine')?.label ?? 'Dienste';
 
 interface Props {
   zustand: TermineZustand;
@@ -74,7 +78,7 @@ interface Props {
   onMehr: () => void;
   /** Lassen sich „ab heute“ noch weitere Wochen nachladen? */
   mehrMoeglich: boolean;
-  /** Einen gewählten Zeitraum laden (Monat, von–bis) – nur für die Matrix, Start und Termine bleiben. */
+  /** Einen gewählten Zeitraum laden (Monat, von–bis) – nur für die Matrix, Start und Dienste (Reiter `termine`) bleiben. */
   ladeZeitraum: (von: string, bis: string) => Promise<TermineDaten>;
   /** Heute (`YYYY-MM-DD`, Ortszeit der Gemeinde). */
   heute: string;
@@ -912,14 +916,14 @@ export function Planen({
       <div ref={rahmen}>{inhalt}</div>
       <p className={styles.hinweis}>
         Welche Dienste du siehst, entscheidet ChurchTools. Hier stehen nur Dienstgruppen, die du
-        ganz sehen darfst – deine eigenen Dienste findest du immer unter Start und Termine. Planen
-        darfst du, wo du die Dienstgruppe bearbeiten darfst, die Gruppe eines Dienstes leitest oder
-        Admin des Termins bist. Einen freien Platz antippen zeigt, wer kann – dort trägst du
-        jemanden als Entwurf ein. Einen belegten Platz antippen: zurückziehen oder durch jemand
-        anderen ersetzen, ebenfalls als Entwurf. Der Regler in der Gruppenzeile ändert die Anzahl
-        der Plätze – sofort. Der Zauberstab schlägt für die freien Plätze Personen vor – nach der
-        Rangfolge von ChurchTools, ebenfalls als Entwurf. Der Stift neben einem Namen ändert dessen
-        Vorlieben – sofort in ChurchTools. Gesendet wird erst mit „Ansehen und senden“ – dann
+        ganz sehen darfst – deine eigenen Dienste findest du immer unter Start und {DIENSTE_REITER}.
+        Planen darfst du, wo du die Dienstgruppe bearbeiten darfst, die Gruppe eines Dienstes
+        leitest oder Admin des Termins bist. Einen freien Platz antippen zeigt, wer kann – dort
+        trägst du jemanden als Entwurf ein. Einen belegten Platz antippen: zurückziehen oder durch
+        jemand anderen ersetzen, ebenfalls als Entwurf. Der Regler in der Gruppenzeile ändert die
+        Anzahl der Plätze – sofort. Der Zauberstab schlägt für die freien Plätze Personen vor – nach
+        der Rangfolge von ChurchTools, ebenfalls als Entwurf. Der Stift neben einem Namen ändert
+        dessen Vorlieben – sofort in ChurchTools. Gesendet wird erst mit „Ansehen und senden“ – dann
         bekommen die Angefragten eine Mitteilung von ChurchTools.
       </p>
       {fach && entwuerfe && ew.art === 'fertig' && (

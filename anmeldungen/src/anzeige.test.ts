@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Veranstaltung } from '@shared/anmeldung/uebersicht';
 import {
+  mailAnbieten,
   mailHinweis,
   alterText,
   anpassungText,
@@ -147,5 +148,16 @@ describe('mailHinweis (A9-1)', () => {
       /nur „Deine Anmeldung war erfolgreich“ – ohne Betrag/,
     );
     expect(mailHinweis('eintragen', false, 'Mia')).toMatch(/keine Mail/);
+  });
+});
+
+describe('mailAnbieten (A9-2b)', () => {
+  it('mit Abläufen nur nach einer Absage – sonst immer', () => {
+    expect(mailAnbieten('nachruecken', true, 'm')).toBeNull();
+    expect(mailAnbieten('eintragen', true, 'm')).toBeNull();
+    expect(mailAnbieten('absage', true, 'm')).toBe('m');
+    expect(
+      ['nachruecken', 'eintragen', 'absage'].map((a) => mailAnbieten(a as 'absage', false, 'm')),
+    ).toEqual(['m', 'm', 'm']);
   });
 });

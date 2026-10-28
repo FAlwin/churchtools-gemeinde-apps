@@ -344,6 +344,24 @@ const agendaVergangen = {
         bpm: 72,
       },
     },
+    // Ein zweites Lied: Der Direktlink muss auch auf ein späteres Blatt springen – Lied 1 ist ohnehin der Anfang, ein
+    // Sprung dorthin beweist nichts (in der Test-Instanz öffnete Punkt 184 = Lied 2 das Lied 1, 28.10.2026).
+    {
+      id: 1203,
+      title: 'Lied',
+      type: 'song',
+      duration: 300,
+      position: 2,
+      startTimes: {},
+      song: {
+        songId: SONG.id,
+        arrangementId: 9002,
+        title: 'Lied',
+        arrangement: 'Unplugged',
+        key: 'D',
+        bpm: 96,
+      },
+    },
   ],
 };
 

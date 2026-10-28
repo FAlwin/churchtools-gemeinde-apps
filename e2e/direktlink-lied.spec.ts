@@ -99,6 +99,26 @@ test('Termin außerhalb der geladenen Wochen: der Tag im Link holt ihn nach (Tes
   expect(new URL(page.url()).hash).toBe('');
 });
 
+for (const [geraet, breite, hoehe] of [
+  ['Rechner', 1280, 800],
+  ['Handy', 390, 844],
+] as const) {
+  test(`Punkt mit dem ZWEITEN Lied (${geraet}): das Blatt steht auf Lied 2, nicht auf dem Anfang (Test-Instanz, 28.10.2026)`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: breite, height: hoehe });
+    await anmelden(page);
+    await page.evaluate(
+      (h) => window.history.replaceState(null, '', h),
+      `/#/termin/1512/punkt/1203?am=${tagVor(20)}`,
+    );
+    await page.reload();
+    // Lied 2 ist das letzte: Die Fußzeile sagt „Letztes Lied“; auf Lied 1 stünde dort „Nächstes Lied: …“.
+    await expect(page.getByText('Letztes Lied')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Nächstes Lied/)).toHaveCount(0);
+  });
+}
+
 test('derselbe Termin ohne Tag im Link: wie bisher die Übersicht – nichts hängt im Laden', async ({
   page,
 }) => {

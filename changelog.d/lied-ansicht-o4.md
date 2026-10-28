@@ -35,7 +35,8 @@
 - Musik-App: Der Direktlink wird in `useDirektLink` gelesen (vor der Terminabfrage, die ihn zum Nachladen braucht) und an
   `useAppNav` gereicht; neu `useTermineAm(tag)` (`from`=Tag, `to`=Folgetag – ChurchTools zählt `to` nicht mit,
   gemessen 28.10.2026).
-- E2E `e2e/direktlink-lied.spec.ts` (auch ein vergangener Termin, mit und ohne Tag). Der CT-Stub filtert `/api/events`
-  jetzt wie ChurchTools nach `from`/`to` und hat einen vergangenen Termin mit Lied. Die Tests laden erst neu, wenn der
+- E2E `e2e/direktlink-lied.spec.ts` (auch ein vergangener Termin, mit und ohne Tag, und der Sprung auf ein **späteres**
+  Lied am Rechner und am Handy – ein Sprung auf Lied 1 beweist nichts, dort steht das Blatt ohnehin). Der CT-Stub filtert
+  `/api/events` jetzt wie ChurchTools nach `from`/`to` und hat einen vergangenen Termin mit zwei Liedern. Die Tests laden erst neu, wenn der
   Anmeldestatus gespeichert ist: Der Abfrage-Speicher schreibt höchstens einmal je Sekunde, und `['me']` gilt 60 s als
   frisch – wer früher neu lädt, sieht wieder das Anmelden (parallel in jedem zweiten bis dritten Lauf).

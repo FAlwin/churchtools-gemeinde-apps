@@ -134,8 +134,14 @@ export function Diagramm({ art, sicht, onUmklappen, onGruppe }: Props) {
         Math.hypot(e.clientX - start.current.x, e.clientY - start.current.y) > ZIEHEN_AB
       ) {
         bewegt.current = true;
-        // Erst jetzt festhalten – sonst landete auch ein einfacher Klick auf der Fläche statt auf dem Kästchen.
-        e.currentTarget.setPointerCapture?.(e.pointerId);
+        // Erst jetzt festhalten – sonst landete auch ein einfacher Klick auf der Fläche statt auf dem Kästchen. Klappt das
+        // nicht (Zeiger schon losgelassen, ältere Browser), geht das Ziehen trotzdem weiter – nur ohne Festhalten
+        // (Test-Instanz 28.10.2026: ein Fehler hier brach das Ziehen ab).
+        try {
+          e.currentTarget.setPointerCapture?.(e.pointerId);
+        } catch {
+          // ohne Festhalten
+        }
         setZieht(true);
       }
       if (bewegt.current) {

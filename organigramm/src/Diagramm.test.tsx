@@ -111,6 +111,22 @@ describe('Diagramm (O7b-3)', () => {
     expect(blick()).toBe(alsText({ ...b, x: b.x + 30, y: b.y - 10 }));
   });
 
+  it('lässt sich der Zeiger nicht festhalten, wird trotzdem gezogen (Test-Instanz 28.10.2026)', () => {
+    const { onGruppe } = zeigen();
+    const flaeche = screen.getByRole('group', { name: 'Organigramm' });
+    (flaeche as unknown as { setPointerCapture: () => void }).setPointerCapture = () => {
+      throw new DOMException('Kein aktiver Zeiger', 'NotFoundError');
+    };
+    const vorher = blick();
+    const kaestchen = screen.getByRole('button', { name: 'Predigt' });
+    fireEvent.pointerDown(kaestchen, { pointerId: 1, clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(flaeche, { pointerId: 1, clientX: 130, clientY: 100 });
+    fireEvent.pointerUp(flaeche, { pointerId: 1, clientX: 130, clientY: 100 });
+    fireEvent.click(kaestchen);
+    expect(blick()).not.toBe(vorher);
+    expect(onGruppe).not.toHaveBeenCalled();
+  });
+
   it('ein Wackeln unter 4 px ist noch ein Klick', () => {
     const { onGruppe } = zeigen();
     const kaestchen = screen.getByRole('button', { name: 'Predigt' });

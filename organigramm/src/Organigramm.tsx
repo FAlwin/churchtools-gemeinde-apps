@@ -4,7 +4,7 @@ import { PersonBild } from '@ui/bedienung/PersonBild';
 import { Icon } from '@ui/icons/icons';
 import { gruppenFarbe } from '@shared/organigramm/farbe';
 import type { Knoten } from '@shared/organigramm/gruppen';
-import { knotenAmPfad, type SichtKnoten } from '@shared/organigramm/ansichten';
+import { knotenAmPfad, spitzenWahl, type SichtKnoten } from '@shared/organigramm/ansichten';
 import { Segment } from '@ui/bedienung/Segment';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { rollenRang } from '@shared/organigramm/mitglieder';
@@ -160,16 +160,11 @@ export function Organigramm({
             value={spitze ?? ''}
             onChange={(e) => onSpitze(e.target.value || null)}
           >
-            <option value="">Ganze Gemeinde</option>
-            {baum.map((b) => (
-              <option key={b.gruppe.id} value={String(b.gruppe.id)}>
-                {b.gruppe.name}
+            {spitzenWahl(baum, spitze).map((w) => (
+              <option key={w.wert} value={w.wert}>
+                {w.name}
               </option>
             ))}
-            {/* „Hier anfangen“ an einer tieferen Gruppe: sie steht zusätzlich in der Auswahl. */}
-            {spitzenKnoten && spitze?.includes('/') && (
-              <option value={spitze}>{spitzenKnoten.gruppe.name}</option>
-            )}
           </select>
         </label>
         {/* „Präsentieren“ steht im Seitenkopf (App) – hier hätte die Leiste bei 1280 px nicht mehr in eine Zeile gepasst

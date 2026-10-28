@@ -62,8 +62,32 @@ Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Gemessen an der Test-Insta
   Gruppe mit Untergruppen steht **„Im Organigramm hier anfangen“**; die Gruppe steht dann zusätzlich in der Auswahl.
   Blendet der Typ-Filter die Spitze aus, gilt wieder die ganze Gemeinde.
 - Die gewählte Ansicht **merkt sich das Gerät** (wie den Typ-Filter). Ohne Wahl: am Handy die Liste, sonst **von
-  oben**. Präsentation und Drucken mit diesen Ansichten kommen mit O7b-4/-5.
+  oben**. Als PDF gibt es die Ansichten seit O7b-4, in der Präsentation mit O7b-5.
 - Eine Gruppe mit zwei Obergruppen steht wie in ChurchTools unter beiden und klappt an jeder Stelle für sich.
+
+## Als PDF speichern und drucken (ab O7b-4)
+
+Im Reiter Organigramm oben rechts **„PDF / Drucken“** (am Handy nur das Symbol). Das Fenster übernimmt Ansicht,
+„Anfangen bei“ und was aufgeklappt ist, und zeigt das Blatt als **Vorschau** – genau diese Seiten werden zur PDF:
+
+- **Ansicht:** von oben, von links, Mindmap oder Liste (Karten gibt es auf Papier nicht – dann von oben).
+- **Ausschnitt:** ganze Gemeinde, ein Bereich oder die Gruppe aus „Hier anfangen“.
+- **Papier:** **Passend** (vorgegeben: das A4, quer oder hoch, auf dem das Diagramm am größten wird; eine Liste steht
+  hoch), A4 quer, A4 hoch, A3 quer oder A3 hoch. Ein Diagramm steht auf **einer Seite**, die Schrift wird höchstens
+  11 pt groß; unter 6 pt rät das Fenster zu A3, einem Ausschnitt oder „Alles aufgeklappt“ aus. Eine Liste läuft über
+  mehrere Seiten (in der Vorschau zum Blättern).
+- **Alles aufgeklappt** (vorgegeben) – sonst so, wie es im Reiter auf- und zugeklappt ist.
+- **Logo der Gemeinde** – das Logo aus ChurchTools (Einstellung „Logo“, dasselbe wie oben links in der Leiste) steht
+  oben links. Ohne Logo in ChurchTools gibt es die Wahl nicht.
+- Auf jeder Seite: oben „Organigramm“, Gemeinde (und Ausschnitt), Stand-Datum; unten Gemeinde und „Seite x von y“.
+  Schrift Lato wie in ChurchTools; immer hell, auch wenn ChurchTools dunkel eingestellt ist.
+- **PDF öffnen** zeigt die PDF in einem neuen Tab – von dort **drucken** (Querformat bleibt quer, ohne Adresse und
+  Datum des Browsers am Rand) oder sichern. Am iPad dort „Teilen“ → „Drucken“ oder „In Dateien sichern“. Sperrt der
+  Browser das neue Fenster, wird die PDF heruntergeladen. **Herunterladen** speichert sie direkt
+  (`Organigramm-<Ausschnitt>-<Datum>.pdf`).
+
+Warum eine eigene PDF statt des Druckfensters des Browsers: Safari hielt sich beim Drucken nicht an das Querformat und
+druckte Adresse und Datum an den Rand (Test 28.10.2026, `organigramm-planung/docs/messung-o7b-4-2026-10-28.md`).
 
 ## Präsentation (ab O4)
 

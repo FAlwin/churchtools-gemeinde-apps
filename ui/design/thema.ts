@@ -7,7 +7,7 @@
  * `prefers-color-scheme`.
  *
  * Diese Funktion setzt `data-theme` auf `<html>` passend zur Klasse – und zieht mit, wenn ChurchTools sie
- * ändert. Die Farben (die von ChurchTools) stehen in `_variables.scss`. Läuft die App außerhalb von ChurchTools (Entwickeln mit `?demo`), hat
+ * ändert. Die Farben (die von ChurchTools) stehen in `_farben.scss` (hell) und `_variables.scss` (dunkel). Läuft die App außerhalb von ChurchTools (Entwickeln mit `?demo`), hat
  * `<body>` keine der Klassen; dann gilt die Einstellung des Geräts.
  *
  * Die Musik-App hat ihren eigenen Schalter (`client/src/hooks/useSettings.ts`), dieselben Farben.

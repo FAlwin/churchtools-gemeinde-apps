@@ -10,7 +10,9 @@ import {
   knotenAmPfad,
   pfadVon,
   SCHALTER,
+  schalterStummel,
   sichtbarerBaum,
+  spitzenWahl,
   type Anordnung,
   type AnordnungsArt,
   type SichtKnoten,
@@ -118,6 +120,20 @@ describe('sichtbarerBaum', () => {
   });
 });
 
+describe('spitzenWahl', () => {
+  it('ganze Gemeinde, jeder Bereich – eine tiefere Spitze zusätzlich, eine verschwundene nicht', () => {
+    expect(spitzenWahl(BAUM, null).map((w) => w.name)).toEqual([
+      'Ganze Gemeinde',
+      'Gottesdienst',
+      'Gemeinschaft',
+      'Jugend',
+    ]);
+    expect(spitzenWahl(BAUM, '10').map((w) => w.wert)).toEqual(['', '1', '10', '40']);
+    expect(spitzenWahl(BAUM, '1/2').at(-1)).toEqual({ wert: '1/2', name: 'Musik' });
+    expect(spitzenWahl(BAUM, '1/99')).toHaveLength(4);
+  });
+});
+
 describe('alleAuf / alleZu', () => {
   it('alleAuf öffnet alles unter der Spitze, nicht daneben', () => {
     const neu = alleAuf(BAUM, '10', new Set(['1']));
@@ -209,6 +225,28 @@ describe('anordnen – für alle Arten', () => {
           if (k.schalter) expect(k.schalter.y + SCHALTER).toBeLessThanOrEqual(r.y + r.hoehe);
         }
       });
+
+      it('auf Papier (ohne +/−) keine Lücke: jede Kante beginnt am Kästchen oder am Ende eines Stummels (O7b-4)', () => {
+        const amRand = (p: { x: number; y: number }) =>
+          a.knoten.some(
+            (k) =>
+              ((p.x === k.x || p.x === k.x + k.breite) && p.y >= k.y && p.y <= k.y + HOEHE) ||
+              ((p.y === k.y || p.y === k.y + HOEHE) && p.x >= k.x && p.x <= k.x + k.breite),
+          );
+        const stummel = a.knoten.map(schalterStummel).filter((x) => x !== null);
+        expect(stummel.length).toBeGreaterThan(0);
+        for (const st of stummel) {
+          // Er beginnt auf dem Rand seines Kästchens und ist so lang wie der Halbmesser des Schalters.
+          expect(amRand(st.punkte[0])).toBe(true);
+          const [p, q] = st.punkte;
+          expect(Math.hypot(q.x - p.x, q.y - p.y)).toBe(SCHALTER);
+        }
+        const enden = stummel.map((st) => `${st.punkte[1].x}|${st.punkte[1].y}`);
+        for (const k of a.kanten) {
+          const p = k.punkte[0];
+          expect(enden.includes(`${p.x}|${p.y}`) || amRand(p), JSON.stringify(p)).toBe(true);
+        }
+      });
     });
   }
 });
@@ -290,6 +328,17 @@ describe('anordnen – je Art', () => {
     expect(anordnen('links', s0, breite).knoten[0].schalter).toEqual({ x: breite(s0), y: 0 });
     // Der Schalter ragt unten heraus – der Rahmen muss ihn mitnehmen, sonst schneidet „Ganz zeigen“ ihn ab.
     expect(oben.rahmen).toEqual({ x: 0, y: 0, breite: breite(s0), hoehe: HOEHE + SCHALTER });
+  });
+});
+
+describe('schalterStummel', () => {
+  it('zugeklappt oder ohne Untergruppen kein Stummel – dort geht keine Linie ab', () => {
+    const s = sichtbarerBaum(BAUM, 'G', null, new Set([GEMEINDE]));
+    const a = anordnen('oben', s, breite);
+    const gottesdienst = a.knoten.find((k) => k.knoten.name === 'Gottesdienst')!;
+    expect(gottesdienst.schalter).not.toBeNull();
+    expect(schalterStummel(gottesdienst)).toBeNull();
+    expect(schalterStummel(a.knoten.find((k) => k.knoten.ebene === 0)!)).not.toBeNull();
   });
 });
 

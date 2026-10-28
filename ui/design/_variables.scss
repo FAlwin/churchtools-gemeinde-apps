@@ -9,59 +9,15 @@
 // (19.09.2026: Look der ChurchTools-App). Die Werte sind die von ChurchTools selbst, gemessen in der
 // Test-Instanz mit `body.light` (22.10.2026): ChurchTools nutzt Tailwind 4 und benennt seine Farben
 // `--color-background-*`, `--color-foreground-*`, `--color-basic-*`, `--color-accent-*` … – die Namen
-// stehen unten jeweils dabei. Wer nachschärft, misst dort nach und ändert es HIER und nirgends sonst.
+// stehen unten jeweils dabei. Wer nachschärft, misst dort nach und ändert es HIER und nirgends sonst – die hellen
+// Farben in `_farben.scss`, alles andere in dieser Datei.
 
-// Farben (Light Mode)
+@use 'farben';
+
+// Farben (Light Mode) – die Werte stehen in `_farben.scss` (Mixin `hell`), damit Papier (Organigramm-PDF, O7b-4)
+// auch im Dunkelmodus hell bleibt, ohne die Werte ein zweites Mal hinzuschreiben.
 :root {
-  --bg: #f1f5f9; // Seite – `--color-background-primary` (slate-100)
-  --surface2: #ffffff; // Karten / Listen / Header – `--color-foreground-primary`
-  --surface3: #f1f5f9; // Sekundärflächen (Suchfeld, Kacheln, Segmente, Pills) – wie die Seite
-  --border: #e2e8f0; // Rand um Karten / Knöpfe / Inputs – `--color-basic-divider` (slate-200)
-  --hair: #e2e8f0; // Haarlinien-Trenner (1px) – ChurchTools trennt mit derselben Farbe wie der Rand
-  --section: #f8fafc; // Band hinter Gruppen-Überschriften – `--color-foreground-secondary` (slate-50)
-
-  --text: #0f172b; // `--color-basic-primary` (slate-900)
-  --text2: #45556c; // `--color-basic-secondary` (slate-600)
-  --text3: #90a1b9; // `--color-basic-tertiary` (slate-400)
-
-  --blue: #155dfc; // `--color-accent-bright` (blue-600) – Knöpfe, Links, aktive Reiter
-  --blue-ink: #155dfc;
-  --blue-soft: rgba(21, 93, 252, 0.1); // Blau-Flächen (sanfte Hervorhebung)
-  --markiert: rgba(250, 204, 21, 0.45); // Textmarker im Protokoll (Editor, Lese-Ansicht, PDF)
-  --blue-tile: #dbeafe; // `--color-accent-b-pale` (blue-100) – Datumskachel, gewählter Eintrag
-  --blue-tile-text: #162456; // `--color-accent-primary` (blue-950)
-  // Rot und Grün tragen bei uns auch TEXT (offene Dienste, „zugesagt“). ChurchTools' `--color-error-bright`
-  // (red-500) und `--color-success-bright` (green-500, Knopf „Gruppe erstellen“) sind dafür auf Weiß zu blass –
-  // deshalb je eine Stufe dunkler aus derselben Tailwind-Reihe (wie im Dunkel green-600).
-  --red: #e7000b; // red-600
-  --green: #00a63e; // green-600
-  --cp-dir: #0d7a6f; // ChordPro-Direktiven {…} im Editor (ChurchTools-passendes Teal)
-
-  --seg-on: #ffffff; // aktives Segment / Toggle-Hintergrund
-  // Schiene der Umschalter (Kommende/Vergangene …). Eigene Farbe seit dem 02.10.2026: Sie war
-  // `--surface3` und damit exakt die Seitenfarbe `--bg` – der nicht gewählte Knopf sah aus wie
-  // bloßer Text (Alwin: „muss deutlicher werden als nur ein Text").
-  --seg-track: #e2e8f0; // `--color-basic-divider` (slate-200)
-  // Graue Fläche um die weiße Notenseite (Liedblatt, PDF-Vorschau). Bis zum 02.10.2026 stand der
-  // Wert dreimal von Hand im CSS. Im Dunklen bewusst gleich: Die Seite selbst bleibt weiß.
-  --blatt-umgebung: #e6e8ec;
-  // Grund des Liedblatt-Bildschirms – dort sitzt der Kopf. Hell = die Fläche um die Seite, damit
-  // Kopf und Blattfläche ohne Kante ineinander übergehen (02.10.2026).
-  --chart-grund: var(--blatt-umgebung);
-  --track-off: #cad5e2; // Toggle-Schiene (aus) – `--color-basic-interactive` (slate-300)
-  --scrim: rgba(15, 23, 43, 0.5); // Overlay hinter Sheets/Dialogen (slate-900, halb)
-
-  // Header / Tab-Bar / Chart-Kopf und -Fuß. **Deckend und exakt die `theme-color` aus index.html.**
-  // Seit die App unter einer deckenden Statusleiste beginnt (22.09.2026, iOS 26/27), malt iOS den
-  // Streifen darüber selbst – in genau dieser Farbe. War die Leiste halbdurchsichtig, ergab sie
-  // #fdfefe statt #ffffff: zwei Stufen daneben, sichtbar als feiner Strich quer über den Schirm
-  // (Alwin, 22.09.2026). Die Unschärfe kam dazu, weil sie den Inhalt hinter der Leiste abtastet –
-  // beim Scrollen wanderte der Ton der Leiste, der iOS-Streifen blieb stehen.
-  // **Dies ist die eine Quelle der Farbe.** Die Grundfläche `html, body` (main.scss) nutzt dieselbe
-  // Variable, und die `theme-color` für iOS wird in `hooks/useSettings.ts` daraus GELESEN – hier
-  // ändern genügt also.
-  --nav-bg: #ffffff;
-  --shadow: 0 1px 1px rgba(30, 41, 59, 0.1); // Karten wie `c-card` in ChurchTools (slate-800, 10 %)
+  @include farben.hell;
   // Schrift wie ChurchTools (`--font-sans`). In ChurchTools ist Lato schon geladen; die Musik-App als PWA und
   // das öffentliche Formular bringen sie selbst mit (`ui/design/schrift.ts`), damit sie auch offline stimmt.
   --ui:

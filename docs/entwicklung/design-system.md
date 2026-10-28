@@ -14,7 +14,9 @@ Das Dunkel ist seit #565 das von ChurchTools (`dunkelmodus.md`).
 ## Farben – nur über Tokens
 
 Einzige Quelle: `ui/design/_variables.scss` (Light = `:root`, Dark = `html[data-theme='dark']` – die Farben von
-ChurchTools).
+ChurchTools). Die hellen Werte selbst stehen seit O7b-4 im Mixin `hell` in `ui/design/_farben.scss`: `:root` bindet
+ihn ein, und Papier (Organigramm-PDF, `organigramm/src/Blatt.module.scss`) ebenfalls – so bleibt ein Blatt auch im
+Dunkelmodus hell, ohne dass ein Wert zweimal dasteht.
 **Einzige Ausnahme: `--sat`** (Safe-Area oben) wird in JS gemessen – siehe Tabelle unten und die Regel
 am Ende dieses Dokuments.
 **Keine rohen Hex-/rgba-Werte in Komponenten** (Ausnahmen: reine Schatten, Overlays, `#fff` auf farbigen Flächen).

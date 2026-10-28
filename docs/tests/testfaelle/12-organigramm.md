@@ -245,31 +245,37 @@ Blick bleibt beim Auf- und Zuklappen, wo er ist.
 
 </details>
 
-### TF-ORG-09 · Drucken / als PDF speichern (Mac Chrome, Mac Safari, iPad)
+### TF-ORG-09 · Organigramm als PDF und drucken (Mac Chrome, Mac Safari, iPad)
 
 **Das brauchst du:** Die Test-Instanz mit der Erweiterung; einen Mac mit Chrome und Safari und ein iPad.
 
-**Das muss passieren:** Auf jedem Gerät entsteht eine PDF mit **nur** dem Organigramm (Kopfzeile mit Name und Stand,
-dann das Diagramm bzw. die Liste) – ohne die blaue Leiste von ChurchTools, ohne Reiter und Knöpfe, in Lato, auf dem
-gewählten Papier.
+**Das muss passieren:** Auf jedem Gerät entsteht dieselbe PDF: oben Logo, „Organigramm“, Gemeinde und Stand, unten
+Gemeinde und Seitenzahl, dazwischen das Diagramm bzw. die Liste – in Lato, auf dem gewählten Papier. Quer bleibt beim
+Drucken quer, am Rand stehen keine Adresse und kein Datum des Browsers.
 
-1. **Organigramm** → **Drucken**: Die Vorschau zeigt das Blatt im Seitenverhältnis des Papiers.
-2. Ansicht **Von oben**, Ausschnitt **Ganze Gemeinde**, **A4 quer** → **Drucken** → im Druckfenster „Als PDF sichern“.
-   PDF öffnen: nur das Organigramm, eine Seite, nichts abgeschnitten, Schrift wie in ChurchTools.
-3. Dasselbe mit **Mindmap** und **A3 quer**, dann **Liste** mit **A4 hoch** (Liste darf über mehrere Seiten gehen).
-4. ChurchTools auf **dunkel** stellen, noch einmal drucken: Das Blatt ist trotzdem hell.
-5. Alles an **Safari am Mac** und am **iPad** wiederholen (iPad: Teilen → Drucken → mit zwei Fingern aufziehen →
-   Teilen → In Dateien sichern). **Wichtig:** Druckt Safari die ganze ChurchTools-Seite statt des Organigramms, bitte
-   melden – dafür gibt es einen Ausweg (neuer Tab).
+1. **Organigramm** → **PDF / Drucken**: Die Vorschau zeigt das Blatt; Papier „Passend“ nennt darunter A4 quer oder hoch
+   und die Schriftgröße.
+2. Ansicht **Von oben**, Ausschnitt **Ganze Gemeinde** → **PDF öffnen**: Die PDF öffnet sich in einem neuen Tab und
+   sieht aus wie die Vorschau (eine Seite, nichts abgeschnitten, Namen mittig in den Kästchen, Linien bis an die
+   Kästchen). Von dort **drucken**: Das Druckfenster zeigt das Blatt in seiner Lage (quer bleibt quer).
+3. Dasselbe mit **Mindmap** und **A3 quer**, dann **Liste** (läuft bei vielen Gruppen über mehrere Seiten – in der
+   Vorschau blättern). **Herunterladen** speichert `Organigramm-…-<Datum>.pdf`.
+4. **Logo der Gemeinde** abwählen: Das Logo verschwindet aus Vorschau und PDF.
+5. ChurchTools auf **dunkel** stellen: Vorschau und PDF bleiben hell.
+6. Alles an **Safari am Mac** und am **iPad** wiederholen (iPad: im neuen Tab „Teilen“ → „Drucken“ bzw. „In Dateien
+   sichern“).
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `organigramm/src/drucken.ts`, `organigramm/src/DruckFenster.tsx`, `organigramm/src/DiagrammBild.tsx`, `organigramm/src/messung.ts`, `organigramm/src/Liste.tsx`, `organigramm/src/App.tsx`
-- **Automatisiert:** teilweise – `drucken.test.ts` (Schrift-Regeln, eigene Stile, Druck-Dokument, Rahmen und
-  Aufräumen), `DruckFenster.test.tsx` (Vorschau, Auswahl, was gedruckt würde), `App.test.tsx` (O7b-4); was der
-  Browser tatsächlich druckt, prüft nur dieser Fall
-- **Historie:** #736; Messung `messung-o7b-4-2026-10-28.md` (ChurchTools ohne Druckregeln, Lato nur `@media screen`,
-  Druck-Dokument im Rahmen in der Test-Instanz geprobt)
+- **Betrifft:** `organigramm/src/PdfFenster.tsx`, `organigramm/src/BlattSeite.tsx`, `organigramm/src/blatt.ts`, `organigramm/src/DiagrammBild.tsx`, `organigramm/src/App.tsx`, `ui/teilen/svgSeitenPdf.ts`, `ui/teilen/pdfSchrift.ts`, `ui/teilen/sharePdf.ts`, `ui/ct/logo.ts`, `ui/design/_farben.scss`, `shared/organigramm/ansichten.ts`
+- **Automatisiert:** teilweise – `PdfFenster.test.tsx` (Vorschau, Auswahl, Seiten in die PDF, Blättern, Logo,
+  Fehler/Neuversuch, veraltete PDF verworfen), `blatt.test.ts` (Papier, Maßstab, Seiten), `svgSeitenPdf.test.ts`
+  (Stile als Attribute, Grundlinie, Formate je Seite, Aufräumen), `pdfSchrift.test.ts`, `sharePdf.test.ts`,
+  `logo.test.ts`, `ansichten.test.ts` (Stummel), `App.test.tsx` (O7b-4); was der Browser zeichnet und druckt, prüft
+  nur dieser Fall
+- **Historie:** #736; Messung `messung-o7b-4-2026-10-28.md`. Erst über das Druckfenster des Browsers gebaut; Safari
+  druckte hoch statt quer und mit Adresse/Datum am Rand (Alwin, 28.10.2026) → eigene PDF, Entwurf
+  `o7b-4-pdf-v1.html` abgenommen 28.10.2026
 
 </details>

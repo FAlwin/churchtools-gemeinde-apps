@@ -1,0 +1,49 @@
+// Organigramm als PDF (O7b-4) – im Look der ChurchTools-Weboberfläche über die gemeinsamen Werte (ui/design), keine festen.
+
+.wahl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 10px;
+}
+
+@media (max-width: 560px) {
+  .wahl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.haken {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin-bottom: 10px;
+
+  label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text);
+    font-size: 14px;
+  }
+}
+
+// Das Blatt in klein – die Seite selbst (ein SVG im Seitenverhältnis des Papiers) passt sich ein.
+.vorschau {
+  display: grid;
+  place-items: center;
+  height: min(46vh, 420px);
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface3);
+}
+
+.blaettern {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 8px;
+  color: var(--text2);
+  font-size: 14px;
+}

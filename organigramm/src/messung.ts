@@ -1,5 +1,5 @@
 /**
- * **Wie breit ein Kästchen im Diagramm wird** (O7b) – EINE Messung für Bildschirm (O7b-3) und Druck (O7b-4), mit der
+ * **Wie breit ein Kästchen im Diagramm wird** (O7b) – EINE Messung für Bildschirm (O7b-3) und PDF (O7b-4), mit der
  * Schrift der Seite.
  */
 import { useEffect, useState, type RefObject } from 'react';
@@ -42,7 +42,7 @@ export function useSchrift(ref: RefObject<Element | null>): Schrift {
   return schrift;
 }
 
-/** Wie breit ein Kästchen wird und wie sein Name gekürzt wird – EINE Messung für Bildschirm und Druck. */
+/** Wie breit ein Kästchen wird und wie sein Name gekürzt wird – EINE Messung für Bildschirm und PDF. */
 export function messung(schrift: Schrift) {
   const breite = (k: SichtKnoten) =>
     Math.min(

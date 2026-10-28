@@ -5,9 +5,8 @@ import styles from './Liste.module.scss';
 
 interface Props {
   sicht: SichtKnoten;
-  /** Fehlen beide, ist die Liste nur zum Ansehen – so steht sie auf Papier (O7b-4): ohne Pfeile, ohne Knöpfe. */
-  onUmklappen?: (schluessel: string) => void;
-  onGruppe?: (id: number) => void;
+  onUmklappen: (schluessel: string) => void;
+  onGruppe: (id: number) => void;
 }
 
 const anzahl = (n: number) => `${n} ${n === 1 ? 'Untergruppe' : 'Untergruppen'}`;
@@ -25,7 +24,7 @@ export function Liste({ sicht, onUmklappen, onGruppe }: Props) {
     return (
       <li key={k.schluessel}>
         <div className={styles.zeile}>
-          {k.kinderZahl > 0 && onUmklappen ? (
+          {k.kinderZahl > 0 ? (
             <button
               type="button"
               className={styles.pfeil}
@@ -38,7 +37,7 @@ export function Liste({ sicht, onUmklappen, onGruppe }: Props) {
           ) : (
             <span className={styles.pfeilLeer} />
           )}
-          {id === null || !onGruppe ? (
+          {id === null ? (
             <span className={styles.name}>{name}</span>
           ) : (
             <button type="button" className={styles.name} onClick={() => onGruppe(id)}>

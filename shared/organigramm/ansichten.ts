@@ -426,6 +426,22 @@ export function anordnen(art: AnordnungsArt, spitze: SichtKnoten, breite: Breite
   return { ...teil, rahmen: { x: x1, y: y1, breite: x2 - x1, hoehe: y2 - y1 } };
 }
 
+/**
+ * **Das Stück vom Kästchen bis zur ersten Linie**, wo am Bildschirm das +/− sitzt (O7b-4). Alle Linien beginnen einen
+ * Halbmesser neben dem Schalter (`SCHALTER`); auf Papier gibt es keinen Schalter, die Lücke wäre zu sehen. `null`, wenn
+ * die Gruppe zu ist oder keine Untergruppen hat – dann geht keine Linie ab.
+ */
+export function schalterStummel(lage: LageKnoten): Kante | null {
+  const s = lage.schalter;
+  if (!s || !lage.knoten.kinder.length) return null;
+  // Der Schalter sitzt auf dem Rand des Kästchens: unten (von oben), rechts oder links (zur Seite, Mindmap).
+  const ende =
+    s.y >= lage.y + HOEHE
+      ? { x: s.x, y: s.y + SCHALTER }
+      : { x: s.x + (s.x >= lage.x + lage.breite ? SCHALTER : -SCHALTER), y: s.y };
+  return { punkte: [s, ende], rund: false };
+}
+
 /** Eine Kante als SVG-Pfad (`d`). */
 export function kantenPfad(k: Kante): string {
   const [a, ...rest] = k.punkte;

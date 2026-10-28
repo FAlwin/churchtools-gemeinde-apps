@@ -38,7 +38,7 @@ import { Praesentation, type Stand } from './Praesentation';
 import { ladePlan } from './plan';
 import { planAlsBaum, planBaum, planGruppen, type PlanAenderungen } from '@shared/organigramm/plan';
 import { NeueGliederung } from './NeueGliederung';
-import { DruckFenster } from './DruckFenster';
+import { PdfFenster } from './PdfFenster';
 import {
   leseAnsicht,
   leseAusgeblendet,
@@ -97,8 +97,8 @@ export function App() {
   // `null`, solange niemand etwas auf- oder zugeklappt hat: dann gilt der Anfang (Gemeinde und Bereiche offen) – auch
   // für Bereiche, die erst durch den Typ-Filter wieder auftauchen.
   const [offenWahl, setOffenWahl] = useState<Set<string> | null>(null);
-  // Drucken / PDF (O7b-4) – übernimmt Ansicht, Spitze und Aufgeklapptes vom Reiter.
-  const [druckOffen, setDruckOffen] = useState(false);
+  // Organigramm als PDF (O7b-4) – übernimmt Ansicht, Spitze und Aufgeklapptes vom Reiter.
+  const [pdfOffen, setPdfOffen] = useState(false);
 
   const abgemeldetOderFehler = useCallback(
     (e: unknown) => setZustand({ art: 'fehler', fehler: fehlerMeldung(e) }),
@@ -361,10 +361,10 @@ export function App() {
         start && ansicht === 'organigramm' ? (
           <>
             <KopfKnopf
-              label="Drucken"
-              title="Drucken oder als PDF speichern"
+              label="PDF / Drucken"
+              title="Als PDF speichern oder drucken"
               symbol={<Icon name="dokument" size={16} />}
-              onClick={() => setDruckOffen(true)}
+              onClick={() => setPdfOffen(true)}
             />
             <KopfKnopf
               label="Präsentieren"
@@ -447,14 +447,14 @@ export function App() {
           onSchliessen={() => setOffenePerson(null)}
         />
       )}
-      {start && druckOffen && (
-        <DruckFenster
+      {start && pdfOffen && (
+        <PdfFenster
           baum={sichtBaum}
           gemeinde={gemeindeName}
           offen={offen}
           spitze={spitze}
           ansicht={baumAnsicht}
-          onSchliessen={() => setDruckOffen(false)}
+          onSchliessen={() => setPdfOffen(false)}
         />
       )}
       {start && mitglieder && praesentation && (

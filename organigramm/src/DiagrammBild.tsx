@@ -3,6 +3,7 @@ import {
   HOEHE,
   kantenPfad,
   SCHALTER,
+  schalterStummel,
   type Anordnung,
   type LageKnoten,
   type SichtKnoten,
@@ -15,7 +16,7 @@ type GruppenEigenschaften = SVGProps<SVGGElement>;
 interface Props {
   anordnung: Anordnung;
   kuerzen: (k: SichtKnoten, breite: number) => string;
-  /** Was ein Kästchen einer Gruppe zum Klicken braucht (Bildschirm). Fehlt es, ist das Bild nur zum Ansehen (Druck). */
+  /** Was ein Kästchen einer Gruppe zum Klicken braucht (Bildschirm). Fehlt es, ist das Bild nur zum Ansehen (PDF). */
   knoten?: (lage: LageKnoten) => GruppenEigenschaften;
   /** Die runden +/− – nur am Bildschirm; auf Papier gibt es nichts zu klappen. */
   schalter?: (lage: LageKnoten) => GruppenEigenschaften;
@@ -23,7 +24,7 @@ interface Props {
 
 /**
  * **Das Bild eines Diagramms** (O7b): Linien, Kästchen und – am Bildschirm – die runden +/−. Gemeinsam für das Diagramm
- * im Reiter (O7b-3) und den Druck (O7b-4), damit Papier und Bildschirm gleich aussehen. Die Gemeinde selbst ist keine
+ * im Reiter (O7b-3) und die PDF (O7b-4), damit Papier und Bildschirm gleich aussehen. Die Gemeinde selbst ist keine
  * Gruppe und öffnet nichts.
  */
 export function DiagrammBild({ anordnung, kuerzen, knoten, schalter }: Props) {
@@ -32,6 +33,18 @@ export function DiagrammBild({ anordnung, kuerzen, knoten, schalter }: Props) {
       {anordnung.kanten.map((k, i) => (
         <path key={i} className={styles.kante} d={kantenPfad(k)} />
       ))}
+      {/* Auf Papier fehlt das +/− – dort führt die Linie bis ans Kästchen. */}
+      {!schalter &&
+        anordnung.knoten.map((lage) => {
+          const stummel = schalterStummel(lage);
+          return stummel ? (
+            <path
+              key={'l' + lage.knoten.schluessel}
+              className={styles.kante}
+              d={kantenPfad(stummel)}
+            />
+          ) : null;
+        })}
       {anordnung.knoten.map((lage) => {
         const { knoten: k, x, y, breite } = lage;
         const stil = k.ebene === 0 ? styles.spitze : fett(k) ? styles.fett : '';

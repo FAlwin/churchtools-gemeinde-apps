@@ -40,7 +40,7 @@ import { AnmeldungenReiter, type MitgliederZustand } from './AnmeldungenReiter';
 import { Baukasten } from './Baukasten';
 import { Segment } from '@ui/bedienung/Segment';
 import type { Aenderung } from './Rueckgaengig';
-import { WER_TEXT, datumText } from './anzeige';
+import { WER_TEXT, datumText, schlussVorLoeschenText } from './anzeige';
 import { fehlerMeldung, type Fehlermeldung } from './zustand';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import s from './Startseite.module.scss';
@@ -119,6 +119,83 @@ function Zeile({ titel, children }: { titel: string; children: React.ReactNode }
       <dt>{titel}</dt>
       <dd>{children}</dd>
     </>
+  );
+}
+
+/**
+ * **Karte „Datenschutz“** (A4, Löschdatum seit A9-3a): Frist und das Datum, an dem ChurchTools die Anmeldungen entfernt –
+ * so, wie es in den Routinen steht. Ein erreichtes Datum, das noch nicht geschrieben ist (`loeschenOffen`, E3), steht als
+ * Hinweis da; „Bearbeiten“ fragt dann, ob jetzt gelöscht wird. Mit dem Löschdatum schließt die Anmeldung spätestens am
+ * Tag davor – das steht mit da.
+ */
+function DatenschutzKarte({
+  monate,
+  mitTermin,
+  stand,
+  heute,
+  onBearbeiten,
+}: {
+  monate: number;
+  mitTermin: boolean;
+  stand: AblaufStand | 'entwurf' | 'fehler' | null;
+  heute: string;
+  onBearbeiten?: () => void;
+}) {
+  const am = (() => {
+    if (!mitTermin)
+      return (
+        <>
+          <span className={v.fehlt}>kein Löschdatum</span>
+          <small className={v.klein}>
+            Ohne Termin wird nicht gelöscht – erst einen Termin wählen.
+          </small>
+        </>
+      );
+    if (stand === 'entwurf') return 'wird beim Freigeben eingerichtet';
+    if (stand === null) return 'Wird geladen …';
+    if (stand === 'fehler') return 'Ließ sich gerade nicht lesen.';
+    if (stand.loeschenOffen)
+      return (
+        <>
+          <span className={v.fehlt}>{datumText(stand.loeschenOffen)} – schon erreicht</span>
+          <small className={v.klein}>
+            Noch nicht in ChurchTools eingetragen. „Bearbeiten“ fragt, ob jetzt gelöscht wird.
+          </small>
+        </>
+      );
+    if (stand.loeschDatum)
+      return (
+        <>
+          {datumText(stand.loeschDatum)}
+          <small className={v.klein}>
+            {stand.loeschDatum <= heute
+              ? 'ChurchTools hat die Anmeldungen entfernt, die Anmeldung ist geschlossen.'
+              : `Dann entfernt ChurchTools alle Anmeldungen. ${schlussVorLoeschenText(stand.loeschDatum)}`}
+          </small>
+        </>
+      );
+    if (!stand.platz || !stand.warte)
+      return (
+        <>
+          <span className={v.fehlt}>noch nicht eingerichtet</span>
+          <small className={v.klein}>Gelöscht wird erst, wenn die Mails eingerichtet sind.</small>
+        </>
+      );
+    return (
+      <>
+        <span className={v.fehlt}>noch nicht eingetragen</span>
+        <small className={v.klein}>
+          Trägt die Erweiterung ein, sobald jemand mit dem Recht für Routinen die Veranstaltung
+          öffnet.
+        </small>
+      </>
+    );
+  })();
+  return (
+    <Karte titel="Datenschutz" onBearbeiten={onBearbeiten}>
+      <Zeile titel="Daten löschen">{monate} Monate nach dem Ende</Zeile>
+      <Zeile titel="Am">{am}</Zeile>
+    </Karte>
   );
 }
 
@@ -274,10 +351,23 @@ export function VeranstaltungSeite({
                 return ablaeufeLesen(id);
               })
             : ablaeufeLesen(id)
-          ).then(setAblauf, (x: unknown) => {
-            console.warn('Stand der Mails nicht gelesen', x);
-            setAblauf('fehler');
-          });
+          ).then(
+            (stand) => {
+              setAblauf(stand);
+              // A9-3a: Der Abgleich kann den Anmeldeschluss vorgezogen haben – die Karte „Anmeldung“ zeigt ihn gleich. Er
+              // zieht ihn nur vor, leert ihn nie; ein leerer Stand ändert darum nichts.
+              const schluss = stand.anmeldeschluss;
+              setDaten((d) =>
+                d && schluss !== null && d.anmeldung.bis !== schluss
+                  ? { ...d, anmeldung: { ...d.anmeldung, bis: schluss } }
+                  : d,
+              );
+            },
+            (x: unknown) => {
+              console.warn('Stand der Mails nicht gelesen', x);
+              setAblauf('fehler');
+            },
+          );
         // A6-5c: In einem Entwurf hat sich noch niemand angemeldet.
         if (kopf.statusId !== 2) mitgliederLaden(einstellungen, anmeldung.maxPlaetze);
         else setMitglieder(null);
@@ -542,9 +632,13 @@ export function VeranstaltungSeite({
               kostet={kostet}
               onBearbeiten={bearbeiten('mails')}
             />
-            <Karte titel="Datenschutz" onBearbeiten={bearbeiten('loeschfrist')}>
-              <Zeile titel="Daten löschen">{e.loeschfristMonate} Monate nach dem Ende</Zeile>
-            </Karte>
+            <DatenschutzKarte
+              monate={e.loeschfristMonate}
+              mitTermin={!!e.termin}
+              stand={entwurf ? 'entwurf' : ablauf}
+              heute={heute}
+              onBearbeiten={bearbeiten('loeschfrist')}
+            />
             {!pruefOben && pruefKarte}
           </div>
           <div className={`${s.spalte} ${v.klebt}`}>
@@ -571,6 +665,7 @@ export function VeranstaltungSeite({
           plaetze={e.plaetze}
           kontakt={e.kontakt}
           zeitzone={zeitzone}
+          loeschDatum={ablauf !== null && ablauf !== 'fehler' ? ablauf.loeschDatum : null}
           onClose={() => setFenster(null)}
           onGespeichert={gespeichert('Anmeldung gespeichert.')}
         />
@@ -628,9 +723,26 @@ export function VeranstaltungSeite({
       {fenster === 'loeschfrist' && (
         <LoeschfristFenster
           id={id}
-          monate={e.loeschfristMonate}
+          e={e}
+          // Ins Datum schreibt nur, wer auch abgleichen darf – sonst nur die Frist (A9-3a). Im Entwurf liest die Seite die
+          // Abläufe nicht; dort richtet erst das Freigeben sie ein.
+          ablauf={daten.darf && ablauf !== null && ablauf !== 'fehler' ? ablauf : null}
+          anzahl={daten.anmeldungen}
+          heute={heute}
           onClose={() => setFenster(null)}
-          onGespeichert={gespeichert('Löschfrist gespeichert.')}
+          onGespeichert={(geloescht) => {
+            if (!geloescht) return gespeichert('Löschfrist gespeichert.')();
+            // Gelöschte Anmeldungen bringt kein „Rückgängig“ zurück.
+            setFenster(null);
+            onGeaendert(
+              {
+                text: 'Löschfrist gespeichert – die Anmeldungen sind entfernt.',
+                rueckgaengig: null,
+              },
+              false,
+            );
+            laden();
+          }}
         />
       )}
       {fenster === 'mails' && ablauf !== null && ablauf !== 'fehler' && (

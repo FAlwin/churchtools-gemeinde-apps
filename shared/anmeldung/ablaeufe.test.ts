@@ -5,9 +5,12 @@ import {
   QR_CODE,
   ROUTINEN,
   ablaufMails,
+  anmeldeschlussAm,
+  anmeldeschlussVorLoeschen,
   eigenerTextAlsBeschreibung,
   eigenerTextAus,
   eigenerTextFehler,
+  loeschDatum,
   routinenSchritte,
   standardBetreff,
 } from './ablaeufe';
@@ -253,5 +256,75 @@ describe('Check-in-Code (A9-2b)', () => {
     ohne.delete(QR_CODE);
     expect(ablaufMails(mitKonto(), 'K', ohne, ohneText, true).unbekannt).toEqual([QR_CODE]);
     expect(ablaufMails(mitKonto(), 'K', ohne, ohneText, false).unbekannt).toEqual([]);
+  });
+});
+
+describe('Löschen (A9-3a)', () => {
+  const termin = (beginn: string, ende: string | null) => ({ beginn, ende, ort: '', terminId: 1 });
+
+  it('Löschdatum = Ende des Termins + Frist in Monaten; ohne Ende der Beginn; ohne Termin keins', () => {
+    expect(
+      loeschDatum({ termin: termin('2026-11-13T18:00', '2026-11-15T13:00'), loeschfristMonate: 3 }),
+    ).toBe('2027-02-15');
+    expect(loeschDatum({ termin: termin('2026-11-14T09:30', null), loeschfristMonate: 1 })).toBe(
+      '2026-12-14',
+    );
+    expect(loeschDatum({ termin: null, loeschfristMonate: 3 })).toBeNull();
+  });
+
+  it('gibt es den Tag im Zielmonat nicht, gilt der letzte (Schaltjahr inklusive)', () => {
+    expect(loeschDatum({ termin: termin('2027-01-31T10:00', null), loeschfristMonate: 1 })).toBe(
+      '2027-02-28',
+    );
+    expect(loeschDatum({ termin: termin('2027-11-30T10:00', null), loeschfristMonate: 3 })).toBe(
+      '2028-02-29',
+    );
+    expect(loeschDatum({ termin: termin('2026-08-31T10:00', null), loeschfristMonate: 36 })).toBe(
+      '2029-08-31',
+    );
+  });
+
+  it('Schritte: Mail, warten bis zum Datum, entfernen als letzter; vorhandene Nummern bleiben', () => {
+    const mail = { betreff: 'B', html: '<p>x</p>' };
+    const s = routinenSchritte(mail, 7, [], '2027-02-15');
+    expect(s.map((x) => x.actionKey)).toEqual([
+      'send-member-email',
+      'special:wait',
+      'remove-member',
+    ]);
+    expect(s[1].actionData).toEqual({ untilDate: '2027-02-15' });
+    const vorher = [
+      { id: 51, actionKey: 'send-member-email' },
+      { id: 57, actionKey: 'special:wait' },
+      { id: 60, actionKey: 'remove-member' },
+    ];
+    expect(routinenSchritte(mail, 7, vorher, '2027-03-01').map((x) => x.id)).toEqual([51, 57, 60]);
+  });
+
+  it('ohne Datum nur die Mail; „Mail aus“ schaltet nur die Mail aus', () => {
+    const mail = { betreff: 'B', html: '<p>x</p>' };
+    expect(routinenSchritte(mail, 7, [], null).map((x) => x.actionKey)).toEqual([
+      'send-member-email',
+    ]);
+    const aus = routinenSchritte(mail, 7, [], '2027-02-15', false);
+    expect(aus.map((x) => x.isEnabled)).toEqual([false, true, true]);
+  });
+
+  it('Anmeldeschluss an einem Tag: 23:59 Ortszeit, auch über die Zeitumstellung', () => {
+    expect(anmeldeschlussAm('2027-02-14', 'Europe/Berlin')).toBe('2027-02-14T22:59:00Z');
+    expect(anmeldeschlussAm('2026-08-19', 'Europe/Berlin')).toBe('2026-08-19T21:59:00Z');
+  });
+
+  it('Anmeldeschluss vor dem Löschen: keiner oder später → Vortag 23:59; früher oder genau dann → nichts zu tun', () => {
+    const z = 'Europe/Berlin';
+    expect(anmeldeschlussVorLoeschen(null, '2027-02-15', z)).toBe('2027-02-14T22:59:00Z');
+    expect(anmeldeschlussVorLoeschen(undefined, '2027-02-15', z)).toBe('2027-02-14T22:59:00Z');
+    expect(anmeldeschlussVorLoeschen('2027-02-15T22:59:00Z', '2027-02-15', z)).toBe(
+      '2027-02-14T22:59:00Z',
+    );
+    expect(anmeldeschlussVorLoeschen('2027-02-14T22:59:00Z', '2027-02-15', z)).toBeNull();
+    // ChurchTools liefert den Zeitpunkt auch in anderer Schreibweise – verglichen wird der Zeitpunkt, nicht der Text.
+    expect(anmeldeschlussVorLoeschen('2027-02-14T23:59:00+01:00', '2027-02-15', z)).toBeNull();
+    expect(anmeldeschlussVorLoeschen('2026-11-10T22:59:00Z', '2027-02-15', z)).toBeNull();
   });
 });

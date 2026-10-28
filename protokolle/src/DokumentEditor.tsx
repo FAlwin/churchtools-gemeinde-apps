@@ -1,15 +1,19 @@
-import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
+import { useEffect, useImperativeHandle, useRef, useState, type ReactNode, type Ref } from 'react';
 import { insertOrUpdateBlockForSlashMenu, type PartialBlock } from '@blocknote/core';
 import { filterSuggestionItems } from '@blocknote/core/extensions';
 import { SideMenuExtension } from '@blocknote/core/extensions';
 import { de } from '@blocknote/core/locales';
 import {
+  AddBlockButton,
+  DragHandleButton,
   DragHandleMenu,
   getDefaultReactSlashMenuItems,
   RemoveBlockItem,
   SideMenu,
   SideMenuController,
   SuggestionMenuController,
+  useBlockNoteEditor,
+  useComponentsContext,
   useCreateBlockNote,
   useExtensionState,
   type DefaultReactSuggestionItem,
@@ -18,6 +22,13 @@ import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
 import type { Block } from '@shared/protokolle/dokument';
 import { Icon } from '@ui/icons/icons';
+import {
+  abschnittAblegen,
+  abschnittSchieben,
+  abschnittZiehenBeginnt,
+  abschnittZiehenEndet,
+  kannSchieben,
+} from './abschnittZiehen';
 import { aufgabenIdsSetzen, schema, type ProtokollEditor } from './editorSchema';
 import { FESTE_PUNKTE } from './anzeige';
 import { FESTE, festenPunktEinfuegen } from './festenPunktEinfuegen';
@@ -96,20 +107,75 @@ const EIGENE_ALIASE = {
   termin: ['termin', 'datum'],
 } as const;
 
-/** Griff nur an Blöcken, die man verschieben soll – nicht an normalem Text. */
-function Griff() {
-  const art = useExtensionState(SideMenuExtension, {
-    selector: (s: unknown) => (s as { block?: { type?: string } } | undefined)?.block?.type,
-  });
-  if (!art || art === 'paragraph') return null;
+/**
+ * Der Griff steht oben am Block – ohne BlockNotes Versatz für Überschriften (S4-3b, beim Durchklicken gefunden). BlockNote
+ * schiebt ihn bei Überschrift 1 um 39 px nach unten, passend zu seinen großen Überschriften; unsere sind kleiner (S4-1),
+ * und so stand der Griff neben dem nächsten Block: Wer „Punkt 2“ ziehen wollte, zog Punkt 1.
+ */
+const GRIFF_LAGE = { useFloatingOptions: { middleware: [] } };
+
+type GriffBlock = { block?: { id?: string; type?: string } } | undefined;
+
+/** „Nach oben“ / „Nach unten“ im Griff-Menü einer Überschrift (S4-3b) – fehlt, wenn es in die Richtung nicht geht. */
+function SchiebenEintrag({
+  id,
+  richtung,
+  children,
+}: {
+  id: string;
+  richtung: 'hoch' | 'runter';
+  children: ReactNode;
+}) {
+  const Components = useComponentsContext()!;
+  const editor = useBlockNoteEditor() as unknown as ProtokollEditor;
+  if (!kannSchieben(editor, id, richtung)) return null;
   return (
-    <SideMenu
-      dragHandleMenu={() => (
-        <DragHandleMenu>
-          <RemoveBlockItem>Löschen</RemoveBlockItem>
-        </DragHandleMenu>
-      )}
-    />
+    <Components.Generic.Menu.Item
+      className="bn-menu-item"
+      onClick={() => abschnittSchieben(editor, id, richtung)}
+    >
+      {children}
+    </Components.Generic.Menu.Item>
+  );
+}
+
+/**
+ * Griff nur an Blöcken, die man verschieben soll – nicht an normalem Text. An einer Überschrift zieht er den ganzen
+ * Abschnitt (S4-3b, `abschnittZiehen.ts`), und das Menü kann ihn nach oben und unten schieben.
+ */
+function Griff() {
+  const editor = useBlockNoteEditor() as unknown as ProtokollEditor;
+  const art = useExtensionState(SideMenuExtension, {
+    selector: (s: unknown) => (s as GriffBlock)?.block?.type,
+  });
+  const id = useExtensionState(SideMenuExtension, {
+    selector: (s: unknown) => (s as GriffBlock)?.block?.id,
+  });
+  if (!art || !id || art === 'paragraph') return null;
+  const ueberschrift = art === 'heading';
+  return (
+    <SideMenu>
+      <AddBlockButton />
+      <span onDragStartCapture={() => abschnittZiehenBeginnt(editor, id)}>
+        <DragHandleButton
+          dragHandleMenu={() => (
+            <DragHandleMenu>
+              {ueberschrift && (
+                <SchiebenEintrag id={id} richtung="hoch">
+                  Nach oben
+                </SchiebenEintrag>
+              )}
+              {ueberschrift && (
+                <SchiebenEintrag id={id} richtung="runter">
+                  Nach unten
+                </SchiebenEintrag>
+              )}
+              <RemoveBlockItem>Löschen</RemoveBlockItem>
+            </DragHandleMenu>
+          )}
+        />
+      </span>
+    </SideMenu>
   );
 }
 
@@ -163,6 +229,28 @@ export function DokumentEditor({
   const thema = useThema();
   // `ersetzen` ist keine Eingabe: Meldet der Editor die Änderung gleich (`stumm`) oder erst danach (`ersetzt` = der
   // Text dieses Stands), wird sie übergangen.
+  const blatt = useRef<HTMLDivElement>(null);
+  // Ein gezogener Abschnitt (S4-3b) wird beim Loslassen von uns gesetzt – an der nächsten Abschnittsgrenze. Das Blatt
+  // hört vor dem Editor (Einfangphase); was keine Überschrift ist, legt BlockNote wie bisher ab.
+  useEffect(() => {
+    const el = blatt.current;
+    if (!el) return;
+    const ablegen = (e: DragEvent) => {
+      const lage = (id: string) =>
+        el.querySelector(`.bn-block-outer[data-id="${CSS.escape(id)}"]`)?.getBoundingClientRect() ??
+        null;
+      if (!abschnittAblegen(editor, e.clientY, lage)) return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    const vorbei = () => abschnittZiehenEndet(editor);
+    el.addEventListener('drop', ablegen, true);
+    document.addEventListener('dragend', vorbei, true);
+    return () => {
+      el.removeEventListener('drop', ablegen, true);
+      document.removeEventListener('dragend', vorbei, true);
+    };
+  }, [editor]);
   const stumm = useRef(false);
   const ersetzt = useRef<string | null>(null);
 
@@ -193,7 +281,7 @@ export function DokumentEditor({
           <Werkzeugleiste editor={editor} />
         </div>
       )}
-      <div className={styles.blatt}>
+      <div className={styles.blatt} ref={blatt}>
         <BlockNoteView
           editor={editor}
           theme={thema}
@@ -249,7 +337,7 @@ export function DokumentEditor({
               )
             }
           />
-          {bearbeitbar && <SideMenuController sideMenu={Griff} />}
+          {bearbeitbar && <SideMenuController sideMenu={Griff} floatingUIOptions={GRIFF_LAGE} />}
         </BlockNoteView>
       </div>
     </>

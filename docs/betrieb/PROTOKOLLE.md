@@ -1,11 +1,11 @@
 # Protokolle – ChurchTools-Erweiterung
 
-> **Stand: S4-3a (26.10.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
+> **Stand: S4-3b (28.10.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
 > Sitzungen“ und „Deine Gruppen“; der Reiter **„Sitzungen“** zeigt je Gruppe Kommend und Protokolle zum Lesen; die
 > **Lupe** oben rechts sucht in allem (ohne Suchbegriff: alle Beschlüsse); Admins richten im Reiter **„Verwaltung“**
 > Gruppen ein und pflegen die Vorlagen. Die **Leitung schreibt** Protokolle im Entwurf direkt im Editor, mit
-> Aufgaben (= To-Dos), Beschlüssen, Terminen und festen Punkten. Abschnitt ziehen, Sitzung anlegen, Freigabe und PDF
-> folgen (Bauplan S4-3b–S9 in `protokolle-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
+> Aufgaben (= To-Dos), Beschlüssen, Terminen und festen Punkten. Sitzung anlegen, Freigabe und PDF folgen (Bauplan
+> S5–S9 in `protokolle-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
 
 Die Protokolle sind für Gruppen wie den Leitungskreis: **Protokolle als Dokument** (wie Word, Loop oder Notion),
 daraus gesammelt Beschlüsse, To-Dos und Termine. **Alles liegt in ChurchTools** – es gibt keinen eigenen Server,
@@ -86,6 +86,12 @@ Protokoll der Gruppe vor dieser Sitzung; „Öffnen“ zeigt es im Fenster. Beid
 bei der Freigabe (S6) merkt sich das Protokoll, was sie zeigten. Einfügen über die Werkzeugleiste oder das „/“-Menü
 (Gruppe „Feste Punkte“) – als Tagesordnungspunkt mit Titel, den man umbenennen kann.
 
+**Punkte verschieben (S4-3b):** Eine Überschrift zieht am Griff ihren ganzen Abschnitt mit – alles bis zur nächsten
+Überschrift gleicher oder höherer Stufe. Abgelegt wird nur an Abschnittsgrenzen: Lässt man mitten in einem anderen
+Punkt los, rückt der Abschnitt an die nächste Grenze. Das Griff-Menü einer Überschrift hat „Nach oben“ und „Nach
+unten“ (am Handy der Weg zum Umsortieren: auf die Überschrift tippen, dann auf den Griff). Andere Blöcke (Listen,
+Aufgaben …) zieht man einzeln wie bisher.
+
 **Suche (Lupe oben rechts):** sucht in Beschlüssen, To-Dos, Terminen und im Protokolltext aller eigenen Gruppen –
 auch im Tagesordnungspunkt und im Sitzungstitel; alle Wörter müssen vorkommen. Filter nach Art und Gruppe. Ohne
 Suchbegriff stehen dort **alle Beschlüsse**. Beschlüsse, Termine und Text kommen nur aus **freigegebenen**
@@ -122,6 +128,9 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit später sc
   `festePunkteFesthalten` – die Freigabe in S6 muss es aufrufen, sonst bleiben die Punkte live), Baustein
   `FesterPunkt.tsx` für Editor und Lese-Ansicht, Kontext + Fenster `FestePunkteRahmen.tsx`. Festgehalten wird in
   `props.fest` des Verweis-Blocks; „wie letztes Mal“ und Vorlagen nehmen es nicht mit.
+- Abschnitte: Regel `shared/protokolle/abschnitte.ts`, Anbindung `protokolle/src/abschnittZiehen.ts` (Loslassen hört
+  das Blatt in der Einfangphase vor BlockNote ab; „Nach oben/unten“ im Griff-Menü von `DokumentEditor.tsx`). Der Griff
+  sitzt ohne BlockNotes Überschriften-Versatz (`GRIFF_LAGE`).
 - Erweiterung: `protokolle/` (`npm run dev -w protokolle`, dann `http://localhost:5192/ccm/protokolle/?demo`;
   weitere Fälle `?demo=leer`, `?demo=ohne-modul`, `?demo=fehler`, `?demo=gesperrt`).
 - Release: Tag `protokolle-vX.Y.Z` (Workflow `protokolle-release.yml`, immer `make_latest: false`).

@@ -150,6 +150,9 @@ export function TerminAnsicht({
     },
     neuAufsetzen:
       zustand.art === 'fertig' ? () => anlegenOeffnen(zielVon(zustand.daten), true) : undefined,
+    // Am Rechner/iPad das grüne „+“ oben rechts im Ablauf-Kopf (wie „+ Termin“ im ChurchTools-Kalender), am Handy
+    // bleibt das schwebende Plus (Alwin, 28.10.2026 – wie die Musik-App seit S2).
+    plusImKopf: true,
   });
 
   // Fest je Termin – `NeuAufsetzen` liest damit beim Öffnen und bei „Weiter“.
@@ -321,6 +324,7 @@ export function TerminAnsicht({
         <div className={styles.kartenKopf}>
           <h3>Ablauf</h3>
           <span className={styles.kopfKnoepfe}>
+            {liste.kopfKnopf}
             {musikApp && !bearbeiten && (
               <a className={styles.leise} href={musikApp}>
                 <Icon name="music" size={16} /> Musik-App

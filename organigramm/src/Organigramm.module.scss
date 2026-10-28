@@ -9,7 +9,40 @@
 
 .oben {
   display: flex;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+// „Anfangen bei“ (O7b-2): ganze Gemeinde, ein Bereich oder die Gruppe aus „Hier anfangen“.
+.anfangen {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text2);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.feld {
+  @include m.eingabefeld;
+  padding: 6px 8px;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.rechts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.knopf {
+  @include m.aktionKnopf;
+  padding: 7px 12px;
+  border-radius: var(--r-ctrl);
+  font-size: 14px;
 }
 
 // Präsentation öffnen (O4) – ein Knopf, der etwas tut.

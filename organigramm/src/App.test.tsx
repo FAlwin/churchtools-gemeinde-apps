@@ -2,7 +2,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
-import { baumAus, elternAus, type OrgGruppe } from '@shared/organigramm/gruppen';
+import { baumAus, elternAus, type Knoten, type OrgGruppe } from '@shared/organigramm/gruppen';
+import { knotenAmPfad } from '@shared/organigramm/ansichten';
 import { rollenAus } from '@shared/organigramm/mitglieder';
 import type { OrgRechte } from '@shared/organigramm/rechte';
 import { diensteAus } from '@shared/ct/dienste';
@@ -121,6 +122,18 @@ vi.mock('./struktur', () => ({
   ladeAktivStatus: () => Promise.resolve(1),
 }));
 vi.mock('./ladeEinsaetze', () => ({ ladeEinsaetze: vi.fn() }));
+// Was der Baum-Reiter bei jedem Zeichnen bekommt (O7b-2) – der echte Reiter, nur mitgeschrieben.
+const baumReiter = vi.hoisted((): { spitze: string | null; baum: readonly Knoten[] }[] => []);
+vi.mock('./Organigramm', async (original) => {
+  const { createElement } = await import('react');
+  const echt = await original<typeof import('./Organigramm')>();
+  return {
+    Organigramm: (p: Parameters<typeof echt.Organigramm>[0]) => {
+      baumReiter.push({ spitze: p.spitze, baum: p.baum });
+      return createElement(echt.Organigramm, p);
+    },
+  };
+});
 // Der Plan (O7) – hier nur, ob der Reiter da ist; die Bedienung prüft NeueGliederung.test.tsx.
 vi.mock('./plan', () => ({
   ladePlan: vi.fn(() => Promise.resolve({ ok: true, daten: null })),
@@ -1025,5 +1038,138 @@ describe('O6: Leitung und Mitglieder', () => {
     fireEvent.click(knopf('Rückgängig'));
     await screen.findByText('Rückgängig gemacht.');
     expect(cm.m.get(3)?.ende).toBeNull();
+  });
+});
+
+describe('O7b-2: Ansichten, Liste, „Anfangen bei“', () => {
+  const ansicht = (name: string) =>
+    within(screen.getByRole('group', { name: 'Ansicht' })).getByRole('button', { name });
+  const anfangenBei = () => screen.getByLabelText<HTMLSelectElement>('Anfangen bei');
+  const bereiche = () => screen.queryAllByRole('region').map((r) => r.getAttribute('aria-label'));
+
+  it('Liste: Gemeinde oben, Bereiche offen, darunter zu – Wahl im Gerät gemerkt', async () => {
+    render(<App />);
+    await screen.findByRole('region', { name: 'Gottesdienst' });
+    fireEvent.click(ansicht('Liste'));
+    expect(bereiche()).toEqual([]);
+    expect(screen.getByText('ECG')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Technik aufklappen' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Stream' })).toBeNull();
+    expect(localStorage.getItem('organigramm-ansicht')).toBe('"liste"');
+    // Klick auf eine Gruppe öffnet wie in den Karten das Gruppenfenster.
+    fireEvent.click(screen.getByRole('button', { name: 'Technik' }));
+    expect(screen.getByRole('region', { name: 'Leiter' })).toBeTruthy();
+  });
+
+  it('auf- und zuklappen, „Alle aufklappen“ und „Alle zuklappen“ (nur in der Liste)', async () => {
+    localStorage.setItem('organigramm-ansicht', '"liste"');
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Technik aufklappen' }));
+    expect(screen.getByRole('button', { name: 'Stream' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Alle zuklappen' }));
+    // Die Gemeinde bleibt offen, alles darunter ist zu.
+    expect(screen.queryByRole('button', { name: 'Technik' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Gottesdienst aufklappen' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Alle aufklappen' }));
+    expect(screen.getByRole('button', { name: 'Stream' })).toBeTruthy();
+    fireEvent.click(ansicht('Karten'));
+    expect(screen.queryByRole('button', { name: 'Alle aufklappen' })).toBeNull();
+  });
+
+  it('am Handy ohne Wahl die Liste; eine gewählte Ansicht gilt auch dort', async () => {
+    vi.stubGlobal('matchMedia', (q: string) => ({
+      matches: q.includes('max-width'),
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    try {
+      render(<App />);
+      expect(await screen.findByRole('button', { name: 'Technik aufklappen' })).toBeTruthy();
+      expect(bereiche()).toEqual([]);
+      cleanup();
+      localStorage.setItem('organigramm-ansicht', '"karten"');
+      render(<App />);
+      expect(await screen.findByRole('region', { name: 'Gottesdienst' })).toBeTruthy();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('„Anfangen bei“ einem Bereich: Karten und Liste zeigen nur ihn', async () => {
+    render(<App />);
+    await screen.findByRole('region', { name: 'Gottesdienst' });
+    expect([...anfangenBei().options].map((o) => o.text)).toEqual([
+      'Ganze Gemeinde',
+      'Gottesdienst',
+      'Café',
+      'Infos',
+    ]);
+    fireEvent.change(anfangenBei(), { target: { value: '10' } });
+    expect(bereiche()).toEqual(['Gottesdienst']);
+    fireEvent.click(ansicht('Liste'));
+    expect(screen.queryByText('ECG')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Gottesdienst zuklappen' })).toBeTruthy();
+    fireEvent.change(anfangenBei(), { target: { value: '' } });
+    expect(screen.getByText('ECG')).toBeTruthy();
+  });
+
+  it('„Im Organigramm hier anfangen“ im Gruppenfenster: Gruppe wird Spitze, offen, steht in der Auswahl', async () => {
+    render(<App />);
+    await screen.findByText('3 Personen · Leitung: Alwin Friesen, Dora Dorn');
+    fireEvent.click(zeile('Technik'));
+    fireEvent.click(screen.getByRole('button', { name: 'Im Organigramm hier anfangen' }));
+    expect(screen.queryByRole('region', { name: 'Leiter' })).toBeNull();
+    expect(bereiche()).toEqual(['Technik']);
+    expect(anfangenBei().value).toBe('10/7');
+    expect(anfangenBei().selectedOptions[0].text).toBe('Technik');
+    fireEvent.click(ansicht('Liste'));
+    // Technik war zu – als Spitze steht sie offen da.
+    expect(screen.getByRole('button', { name: 'Stream' })).toBeTruthy();
+  });
+
+  it('„Hier anfangen“ nur bei Gruppen mit Untergruppen', async () => {
+    render(<App />);
+    await screen.findByText('3 Personen · Leitung: Alwin Friesen, Dora Dorn');
+    fireEvent.click(zeile('Stream'));
+    expect(screen.queryByRole('button', { name: 'Im Organigramm hier anfangen' })).toBeNull();
+  });
+
+  it('„Hier anfangen“ aus dem Reiter Personen wechselt zurück ins Organigramm', async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Personen' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Carl Clau/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Technik/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Im Organigramm hier anfangen' }));
+    expect(window.location.hash).toBe('');
+    expect(await screen.findByRole('region', { name: 'Technik' })).toBeTruthy();
+  });
+
+  it('Spitze per Typ-Filter ausgeblendet → wieder die ganze Gemeinde, ohne Fehler', async () => {
+    render(<App />);
+    await screen.findByRole('region', { name: 'Infos' });
+    fireEvent.change(anfangenBei(), { target: { value: '34' } });
+    expect(bereiche()).toEqual(['Infos']);
+    fireEvent.click(screen.getByRole('button', { name: /^Verteiler/ }));
+    expect(anfangenBei().value).toBe('');
+    expect(bereiche()).toEqual(['Gottesdienst', 'Café']);
+    // Wieder eingeblendet: Es bleibt bei der ganzen Gemeinde – die Ansicht springt nicht zurück.
+    fireEvent.click(screen.getByRole('button', { name: /^Verteiler/ }));
+    expect(anfangenBei().value).toBe('');
+    expect(bereiche()).toEqual(['Gottesdienst', 'Café', 'Infos']);
+  });
+
+  it('der Baum-Reiter bekommt nie eine Spitze, die es im Baum nicht gibt – auch nicht für ein Bild (Test-Instanz 26.10.2026)', async () => {
+    // Im Browser kann ein zweiter Klick (Doppelklick auf den Typ) kommen, bevor ein Effekt nach dem Zeichnen läuft –
+    // deshalb muss die verschwundene Spitze schon beim Zeichnen vergessen sein, nicht erst danach.
+    render(<App />);
+    await screen.findByRole('region', { name: 'Infos' });
+    fireEvent.change(anfangenBei(), { target: { value: '34' } });
+    baumReiter.length = 0;
+    fireEvent.click(screen.getByRole('button', { name: /^Verteiler/ }));
+    expect(baumReiter.length).toBeGreaterThan(0);
+    for (const r of baumReiter)
+      expect(r.spitze === null || knotenAmPfad(r.baum, r.spitze) !== null, String(r.spitze)).toBe(
+        true,
+      );
   });
 });

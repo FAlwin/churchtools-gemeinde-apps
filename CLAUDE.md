@@ -67,6 +67,13 @@
     dort ist der Suchbegriff bekannt. **Neue Ablaufpunkte (05.10.2026)** legt derselbe Dialog an wie das
     Bearbeiten (`PunktFenster modus="neu"` in `ui/ablauf`, Liedwahl `LiedVerknuepfen`, Umschalter Programmpunkt · Überschrift, Lied = Programmpunkt mit „Lied verknüpfen", Nutzlast
     `neuerAgendaPunkt`); geöffnet über das schwebende Plus (`SchwebePlus`, auch in den Abwesenheiten).
+    **Seit Scheibe S2 (26.10.2026) wie die ChurchTools-App:** Das Plus fragt erst **„Option wählen“**
+    (`ui/bedienung/OptionWaehlen.tsx`) – Programmpunkt · Lied (nur mit Liedwahl) · Überschrift; das Punkt-Fenster
+    startet entsprechend (`startArt`, `startLied`; „Lied hinzufügen“ ohne Wahl abgebrochen = alles zu). Am Handy als
+    Blatt von unten (`AuswahlBlatt`), am iPad/Rechner mit `plusImKopf` grün im Seitenkopf mit Menü
+    (`HinzufuegenMenue`, wie „+ Gruppe erstellen“ in CT; Hook liefert `kopfKnopf`). Der Dienstplaner behält das
+    schwebende Plus, bekommt aber dasselbe Blatt. Die Abwesenheiten öffnen „Zeitraum eintragen“ direkt – am
+    iPad/Rechner als grüner `KopfKnopf neu`, am Handy schwebend; beides nicht, solange etwas vorgemerkt ist.
     Das frühere `AddItemSheet` ist gelöscht.
 
   - die **Liedtext-Vorschau als Zwischenschritt beim Einfügen** (#379, nach Alwins Rückmeldung vom 14.08.2026 umgebaut): Ein Antippen
@@ -207,7 +214,7 @@ churchtools-gemeinde-apps/
     │                        # thema.ts (hell/dunkel wie ChurchTools, docs/entwicklung/dunkelmodus.md)
     ├── icons/               # icons.tsx (Line-Icons)
     ├── fenster/             # Sheet (Modal), useOverlayKeyboardInset, appHeight
-    ├── bedienung/           # Segment, Schalter, KopfKnopf (Seitenkopf), KnopfReihe (nur Liedblatt bis B1), ReiterLeiste (unten/oben), useMedienAbfrage (HANDY_BREITE), DatumKachel
+    ├── bedienung/           # Segment, Schalter, KopfKnopf (Seitenkopf, `neu` = grün), OptionWaehlen (S2), ZeilenKnopf (eckig in Listen), SchwebePlus, KnopfReihe (nur Liedblatt bis B1), ReiterLeiste (unten/oben), useMedienAbfrage (HANDY_BREITE), DatumKachel
     ├── teilen/              # shareFile, sharePdf
     ├── anmeldeformular/     # Anmeldeformular, wie Gäste es sehen (A5): Baukasten + Vorschau in der Erweiterung, öffentlich ab A6
     ├── ct/                  # Verbindung einer Erweiterung zu ChurchTools: verbindung.ts, fehler.ts (ApiError), basis.ts,
@@ -389,7 +396,10 @@ Unschärfe-Band (Liquid Glass), alles darin wird weich – **auch Symbole** (Scr
 02.10.2026; die frühere Annahme „Symbole verträgt es" war falsch). **Seitenkopf im ChurchTools-Look (Scheibe S, 26.10.2026; Alwin: die runden Knöpfe wirkten „wie eine
 iOS-App“):** `SeitenKopf` steht IM Inhalt (unter dem Band, scrollt mit) – Detailansichten als weiße Karte mit
 „← Ziel“ (`KopfZurueck`) und eckigen Knöpfen mit Beschriftung (`KopfKnopf`, Hauptaktion blau, am Handy nur Symbol
-per CSS), Übersichten mit Titel links und Knöpfen rechts. Reiter am iPad/Rechner **oben** als Textreiter
+per CSS; `neu` grün wie „+ Gruppe erstellen“, S2), Übersichten mit Titel links und Knöpfen rechts. Die Kopfkarte
+schneidet nicht ab (`overflow: visible`), damit ein Menü unter einem Kopfknopf hinausragen kann. Knöpfe in
+Listenzeilen (Plus, Stift, „+ Anlegen“) sind seit S2 eckig mit Rahmen (`ZeilenKnopf`, `m.aktionKnopf`) statt rund.
+Reiter am iPad/Rechner **oben** als Textreiter
 (`ReiterLeiste oben`), am Handy unten (`HANDY_BREITE`). Vom 02.10. bis 26.10. schwebten stattdessen runde Knöpfe
 (`KnopfReihe`) unter dem Band – die gibt es nur noch im Liedblatt, bis B1 (Bauplan `bauplan-blatt-ct-look.md`). **Am Gerät widerlegt (02.10.2026):** Eine deckende
 Statusleiste (`status-bar-style=default`) beseitigt das Band NICHT – nicht noch einmal versuchen. Die
@@ -1523,7 +1533,8 @@ Vollständige Endpunkt-Referenz: `docs/entwicklung/api-referenz.md`.
   Speichern-Leiste schreibt alle auf einmal über `useSaveAbsenceChanges` (erst anlegen, dann löschen,
   nacheinander; **kein Bearbeiten-Modus**, Entscheidung Alwin + Frau: wie im alten Planner). Ein Termin in
   einem mehrtägigen Zeitraum fragt über `components/ZeitraumFrage.tsx` (löschen vormerken / anpassen). Das
-  runde Plus öffnet `components/AbsenceSheet.tsx` („Zeitraum eintragen", Schnellwahl); „Einträge" zeigt
+  runde Plus (am iPad/Rechner seit S2 der grüne Kopfknopf) öffnet `components/AbsenceSheet.tsx` („Zeitraum
+  eintragen", Schnellwahl); „Einträge" zeigt
   Anstehend/Früher, Vergangenes mit `nurLesen`. Der Wochenstreifen (`WochenStreifen.tsx`, `wochenAb`) ist
   weg; `utils/wochen.ts` behält nur Tages-Helfer (UTC-Rechnen), während **„welcher Tag ist heute"**
   seit v2.25.1 in `utils/heute.ts` steht und **lokal** rechnet – UTC lieferte zwischen 0 und 2 Uhr den

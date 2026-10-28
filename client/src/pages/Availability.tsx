@@ -4,6 +4,8 @@ import { SeitenGeruest } from '../components/SeitenGeruest';
 import { CenterMessage } from '../components/CenterMessage';
 import { Icon } from '@ui/icons/icons';
 import { SchwebePlus } from '@ui/bedienung/SchwebePlus';
+import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { Coachmarks } from '../components/Coachmarks';
 import { MonatsLeiste } from '../components/MonatsLeiste';
 import { AbsenceSheet, type Entwurf } from '../components/AbsenceSheet';
@@ -95,6 +97,7 @@ export function Availability({ online, onToast, heute = heuteIso() }: Availabili
   const aendern = useUpdateAbsence();
   const loeschenEinzeln = useDeleteAbsence();
   const sichern = useSaveAbsenceChanges();
+  const handy = useMedienAbfrage(HANDY_BREITE);
   // Die Termin-Arten des Admins (#400) – die Konfiguration ist ohnehin geladen (Branding).
   const site = useSiteConfig();
 
@@ -525,6 +528,7 @@ export function Availability({ online, onToast, heute = heuteIso() }: Availabili
           </button>
         </div>
       ) : (
+        handy &&
         !laedt &&
         !fehler && (
           <SchwebePlus
@@ -581,7 +585,25 @@ export function Availability({ online, onToast, heute = heuteIso() }: Availabili
   );
 
   return (
-    <SeitenGeruest titel="Abwesenheiten" onNeuLaden={neuLaden} ueberlagerung={ueberlagerung}>
+    <SeitenGeruest
+      titel="Abwesenheiten"
+      onNeuLaden={neuLaden}
+      ueberlagerung={ueberlagerung}
+      aktionen={
+        // Am iPad/Rechner grün im Seitenkopf wie „+ Gruppe erstellen“ in ChurchTools (S2); am Handy das Plus.
+        // Solange etwas vorgemerkt ist, gibt es kein Plus – EIN Speichern-Weg (wie beim schwebenden).
+        !handy && !laedt && !fehler && anzahl === 0 ? (
+          <KopfKnopf
+            onClick={zeitraumOeffnen}
+            label="Zeitraum eintragen"
+            neu
+            disabled={!online}
+            dataTour="verf-plus"
+            symbol={<Icon name="plus" size={16} stroke={2.4} />}
+          />
+        ) : undefined
+      }
+    >
       {laedt ? (
         <CenterMessage loading text="Wird geladen…" />
       ) : fehler ? (

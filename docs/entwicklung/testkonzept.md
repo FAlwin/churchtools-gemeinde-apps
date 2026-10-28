@@ -201,7 +201,8 @@ Genau in diesem Bereich lagen die teuersten Fehler dieses Projekts – #186, #21
     und laufendem Monat, Monatswechsel und „Heute"; Häkchen sind **vorgemerkt**, erst „Speichern"
     schreibt alle, „Verwerfen" nimmt zurück, ein Fehler behält die Vormerkung; ein Termin in einem
     Zeitraum fragt nach (löschen / anpassen); Seite „Einträge" mit Anstehend/Früher und Ändern; Plus
-    öffnet „Zeitraum eintragen", offline sind Kästchen und Plus gesperrt; Termin-Filter #400: Knöpfe
+    öffnet „Zeitraum eintragen" – am iPad/Rechner grün im Kopf, am Handy schwebend, beides nicht bei Vorgemerktem
+    (S2) –, offline sind Kästchen und Plus gesperrt; Termin-Filter #400: Knöpfe
     nur bei mehr als einer Art, „Sonstige", genau eine Art oder alles, Wahl gemerkt, ungültige
     gemerkte Wahl = „Alle", ein vorgemerkter Haken übersteht den Filterwechsel). Beim Ändern prüft `services/absences.test` die Reihenfolge
     (ERST anlegen, DANN löschen – der Schutz gegen stillen Verlust), dass **Grund und fehlender

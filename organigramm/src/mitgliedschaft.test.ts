@@ -33,15 +33,25 @@ describe('mitgliedZugriff (O6) – wie an der Test-Instanz gemessen', () => {
     await expect(z.lesen(210, 66)).rejects.toMatchObject({ status: 503 });
   });
 
-  it('schreiben = PUT mit genau den Feldern; entfernen = DELETE', async () => {
+  it('anlegen = PUT mit only_add (überschreibt nie); aendern = PATCH mit genau den Feldern; entfernen = DELETE', async () => {
+    // Ändern per PUT ist veraltet und löscht Kommentar und Enddatum (gemessen 28.10.2026).
     anfrage.mockResolvedValue(null);
-    await z.schreiben(210, 66, { memberEndDate: '2026-10-23' });
+    await z.anlegen(210, 66, { groupTypeRoleId: 15, groupMemberStatus: 'active' });
     const [pfad, init] = anfrage.mock.calls[0];
     expect(pfad).toBe('/groups/210/members/66');
     expect(init?.method).toBe('PUT');
-    expect(JSON.parse(init?.body as string)).toEqual({ memberEndDate: '2026-10-23' });
+    expect(JSON.parse(init?.body as string)).toEqual({
+      groupTypeRoleId: 15,
+      groupMemberStatus: 'active',
+      only_add: true,
+    });
+    await z.aendern(210, 66, { memberEndDate: '2026-10-23' });
+    const [pfad2, init2] = anfrage.mock.calls[1];
+    expect(pfad2).toBe('/groups/210/members/66');
+    expect(init2?.method).toBe('PATCH');
+    expect(JSON.parse(init2?.body as string)).toEqual({ memberEndDate: '2026-10-23' });
     await z.entfernen(210, 66);
-    expect(anfrage.mock.calls[1][1]?.method).toBe('DELETE');
+    expect(anfrage.mock.calls[2][1]?.method).toBe('DELETE');
   });
 
   it('Rechte je Gruppe aus /permissions/internal/groups/{id}', async () => {

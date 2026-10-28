@@ -811,10 +811,19 @@ export async function anmeldenVorbereiten(
 
   const g = await gruppe(id);
   const rolle = await leiterRolle(Number(g.information?.groupTypeId));
+  // Wer schon dabei ist, wird geändert (PATCH), alle anderen angelegt (PUT mit `only_add`) – gemessen 28.10.2026:
+  // PATCH legt nichts an, und Ändern per PUT ist veraltet und löscht dabei Kommentar und Enddatum.
+  const dabei = new Set(
+    (await ctAlleSeiten<MitgliedRoh>(`/groups/${id}/members`)).map((m) => m.personId),
+  );
   for (const personId of leitung)
     await ctAnfrage(`/groups/${id}/members/${personId}`, {
-      method: 'PUT',
-      body: json({ groupTypeRoleId: rolle, groupMemberStatus: 'active' }),
+      method: dabei.has(personId) ? 'PATCH' : 'PUT',
+      body: json({
+        groupTypeRoleId: rolle,
+        groupMemberStatus: 'active',
+        ...(dabei.has(personId) ? {} : { only_add: true }),
+      }),
     });
   const mitglieder = await ctAlleSeiten<MitgliedRoh>(`/groups/${id}/members`);
   if (

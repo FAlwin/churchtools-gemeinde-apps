@@ -9,17 +9,32 @@ import {
   type Mitgliedschaft,
 } from './mitgliedschaft';
 
-/** Ein nachgebautes ChurchTools – wie gemessen (O6): PUT setzt nur die geschickten Felder, DELETE löscht. */
+/**
+ * Ein nachgebautes ChurchTools – wie gemessen (O6, 28.10.2026): Anlegen scheitert, wenn es die Mitgliedschaft schon
+ * gibt (403); Ändern setzt nur die geschickten Felder und scheitert ohne Mitgliedschaft (404); DELETE löscht.
+ */
 function nachbau(start: Record<number, Mitgliedschaft> = {}) {
   const m = new Map(Object.entries(start).map(([k, v]) => [Number(k), { ...v }]));
   const log: string[] = [];
   const panne = { ohneWirkung: false };
   const z: MitgliedZugriff = {
     lesen: (_g, p) => Promise.resolve(m.has(p) ? { ...m.get(p)! } : null),
-    schreiben: (_g, p, f) => {
-      log.push(`schreiben ${p} ${JSON.stringify(f)}`);
+    anlegen: (_g, p, f) => {
+      log.push(`anlegen ${p} ${JSON.stringify(f)}`);
+      if (m.has(p)) return Promise.reject(new Error('403 schon in der Gruppe'));
       if (panne.ohneWirkung) return Promise.resolve();
-      const alt = m.get(p) ?? { rolleId: null, status: null, ende: null };
+      m.set(p, {
+        rolleId: (f.groupTypeRoleId as number | undefined) ?? null,
+        status: (f.groupMemberStatus as string | undefined) ?? 'active',
+        ende: (f.memberEndDate as string | undefined) ?? null,
+      });
+      return Promise.resolve();
+    },
+    aendern: (_g, p, f) => {
+      log.push(`aendern ${p} ${JSON.stringify(f)}`);
+      const alt = m.get(p);
+      if (!alt) return Promise.reject(new Error('404 nicht in der Gruppe'));
+      if (panne.ohneWirkung) return Promise.resolve();
       m.set(p, {
         rolleId: 'groupTypeRoleId' in f ? (f.groupTypeRoleId as number | null) : alt.rolleId,
         status: 'groupMemberStatus' in f ? (f.groupMemberStatus as string | null) : alt.status,
@@ -43,16 +58,20 @@ const aktiv = (rolleId: number, ende: string | null = null): Mitgliedschaft => (
 });
 
 describe('aufnehmen (O6)', () => {
-  it('neue Person: Rolle, aktiv, ohne Ende – vorher war nichts', async () => {
+  it('neue Person: angelegt mit Rolle, aktiv, ohne Ende – vorher war nichts', async () => {
     const n = nachbau();
     expect(await aufnehmen(n.z, 210, 66, 15)).toBeNull();
     expect(n.m.get(66)).toEqual(aktiv(15));
+    expect(n.log).toEqual(['anlegen 66 {"groupTypeRoleId":15,"groupMemberStatus":"active"}']);
   });
 
-  it('wer früher dabei war (mit Enddatum), läuft danach wieder – das Ende wird geleert', async () => {
+  it('wer früher dabei war (mit Enddatum), wird geändert, nicht neu angelegt – das Ende wird geleert', async () => {
     const n = nachbau({ 66: aktiv(15, '2025-01-01') });
     expect(await aufnehmen(n.z, 210, 66, 16)).toEqual(aktiv(15, '2025-01-01'));
     expect(n.m.get(66)).toEqual(aktiv(16));
+    expect(n.log).toEqual([
+      'aendern 66 {"groupTypeRoleId":16,"groupMemberStatus":"active","memberEndDate":null}',
+    ]);
   });
 
   it('„aufgenommen“ gemeldet, aber nicht da → nicht übernommen', async () => {
@@ -73,6 +92,7 @@ describe('aufnehmen (O6)', () => {
     await aufnehmenZurueck(frueher.z, 210, 66, v2);
     expect(frueher.m.get(66)).toEqual(aktiv(15, '2025-01-01'));
     expect(frueher.log.some((l) => l.startsWith('entfernen'))).toBe(false);
+    expect(frueher.log.some((l) => l.startsWith('anlegen'))).toBe(false);
   });
 
   it('Rückgängig ohne Wirkung → nicht übernommen', async () => {
@@ -91,7 +111,7 @@ describe('rolleAendern / beenden', () => {
   it('Rolle: nur die Rolle wird geschickt, nachgelesen', async () => {
     const n = nachbau({ 66: aktiv(15) });
     await rolleAendern(n.z, 210, 66, 16);
-    expect(n.log).toEqual(['schreiben 66 {"groupTypeRoleId":16}']);
+    expect(n.log).toEqual(['aendern 66 {"groupTypeRoleId":16}']);
     expect(n.m.get(66)).toEqual(aktiv(16));
   });
 
@@ -108,6 +128,10 @@ describe('rolleAendern / beenden', () => {
     expect(n.log.some((l) => l.startsWith('entfernen'))).toBe(false);
     await beendenZurueck(n.z, 210, 66);
     expect(n.m.get(66)).toEqual(aktiv(16));
+    expect(n.log).toEqual([
+      'aendern 66 {"memberEndDate":"2026-10-23"}',
+      'aendern 66 {"memberEndDate":null}',
+    ]);
   });
 
   it('beenden / zurücknehmen ohne Wirkung → nicht übernommen', async () => {

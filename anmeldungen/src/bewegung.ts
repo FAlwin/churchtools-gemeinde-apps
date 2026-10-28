@@ -156,6 +156,8 @@ export async function absagenLassen(
           ? { waitinglistPosition: weg.waitinglistPosition }
           : {}),
         fields: felder,
+        // Neu anlegen, nie überschreiben – ist sie inzwischen wieder dabei, lehnt ChurchTools ab (403).
+        only_add: true,
       }),
     });
     const zurueck = await mitglied(id, plan.personId);

@@ -30,9 +30,16 @@ export const mitgliedZugriff: MitgliedZugriff = {
       throw e;
     }
   },
-  async schreiben(gruppeId, personId, felder) {
+  async anlegen(gruppeId, personId, felder) {
     await ctAnfrage(`/groups/${gruppeId}/members/${personId}`, {
       method: 'PUT',
+      body: JSON.stringify({ ...felder, only_add: true }),
+      verweigert: VERWEIGERT,
+    });
+  },
+  async aendern(gruppeId, personId, felder) {
+    await ctAnfrage(`/groups/${gruppeId}/members/${personId}`, {
+      method: 'PATCH',
       body: JSON.stringify(felder),
       verweigert: VERWEIGERT,
     });

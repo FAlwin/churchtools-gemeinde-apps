@@ -210,8 +210,12 @@ function struktur(
       if (x) liste.splice(liste.indexOf(x), 1);
       return json(null, 204);
     }
-    if (method === 'PUT') {
+    // Wie ChurchTools (gemessen 28.10.2026): PUT legt an (`only_add` → 403, wenn es sie schon gibt), PATCH ändert
+    // nur Bestehendes (sonst 404).
+    if (method === 'PUT' || method === 'PATCH') {
       const f = (body ?? {}) as Record<string, unknown>;
+      if (method === 'PUT' && x && f.only_add === true) return json({}, 403);
+      if (method === 'PATCH' && !x) return json({}, 404);
       const neu = x ?? { ...m(p, 15), groupMemberStatus: 'active' };
       if ('groupTypeRoleId' in f) neu.groupTypeRoleId = f.groupTypeRoleId as number;
       if ('groupMemberStatus' in f) neu.groupMemberStatus = f.groupMemberStatus as string;

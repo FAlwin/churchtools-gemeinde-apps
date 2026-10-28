@@ -17,6 +17,7 @@ import { getLiedansicht, setLiedansicht, type Liedansicht } from '../utils/devic
 import styles from './Settings.module.scss';
 import { funktionen } from '../services/funktionen';
 import { ServerVarianteHinweis } from '../components/ServerVarianteHinweis';
+import { MessKasten } from '../components/MessKasten';
 
 interface SettingsProps {
   site: SiteConfig;
@@ -247,6 +248,7 @@ export function Settings({
       <SupportBox />
 
       <VersionsFuss />
+      <MessKasten />
     </SeitenGeruest>
   );
 }

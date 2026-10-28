@@ -7,18 +7,12 @@ import type { AbsenceEvent, TerminArt } from '@shared/types/index';
  * bei der ECG liegen beide im selben Kalender, und eine eigene Kategorie kennt ChurchTools an
  * Terminen nicht (gemessen 20.09.2026). Entschieden: **Termin-Arten mit Suchwörtern**, vom Admin
  * gepflegt (`SiteConfig.terminArten`). Ein Termin gehört zur **ersten** Art, deren Suchwort in
- * seinem Namen vorkommt; alle übrigen fallen unter **„Sonstige"**. **Genau EINE Art oder alles**
- * (Alwin, 20.09.2026 spät: „entweder eins oder alles" – die Mehrfachauswahl vom Nachmittag ist
- * wieder raus), auf dem Gerät gemerkt.
+ * seinem Namen vorkommt; alle übrigen fallen unter **„Sonstige"**.
  *
- * Die Regel, die man leicht falsch macht: **Eine Auswahl, die auf keinen Knopf passt, gilt als
- * „alle".** Sonst zeigte der Tab eine leere Liste ohne einen aktiven Knopf, der erklärt, warum –
- * etwa nachdem der Admin eine Art gelöscht hat. Gemessen gegen die Knöpfe, die es gerade gibt,
- * nicht gegen den Monat: Ein Monat ohne Gebetsabend soll bei gewähltem „Gebetsabend" sehr wohl
- * leer sein.
- *
- * Die Auswahl bleibt eine Liste (mit höchstens einem Eintrag): So liest die App eine auf dem Gerät
- * gemerkte Mehrfachauswahl aus der Zwischenfassung noch und nimmt ihren ersten Eintrag.
+ * **Seit 28.10.2026 mit Häkchen wie im Dienstplaner** (`FilterKnopf`, Alwin: „exakt die gleiche Komponente …
+ * genauso funktionieren"): Gemerkt wird, was **ausgeblendet** ist – vorher galt „genau EINE Art oder alles"
+ * (20.09.2026). Eine ausgeblendete Art, zu der es keinen Knopf mehr gibt, blendet schlicht nichts aus. Eine
+ * gemerkte Wahl der alten Art rechnet `ausgeblendetAusAlterWahl` einmal um.
  */
 export const SONSTIGE_ID = 'sonstige';
 
@@ -51,32 +45,23 @@ export function knoepfeAus(arten: TerminArt[], events: AbsenceEvent[]): Knopf[] 
   return knoepfe;
 }
 
-/**
- * Die wirksame Auswahl: höchstens EINE ID, zu der es gerade einen Knopf gibt. Leer heißt „alle".
- * Eine gemerkte Liste mit mehreren Einträgen (Zwischenfassung) wird auf ihren ersten gültigen
- * gekürzt statt verworfen.
- */
-export function wirksameAuswahl(auswahl: string[], knoepfe: Knopf[]): string[] {
-  const vorhanden = new Set(knoepfe.map((k) => k.id));
-  return auswahl.filter((id) => vorhanden.has(id)).slice(0, 1);
-}
-
-/** Termine, die zur Auswahl passen. Ohne wirksame Auswahl alle. */
+/** Termine ohne die ausgeblendeten Arten. Nichts ausgeblendet: alle. */
 export function filtereTermine(
   events: AbsenceEvent[],
-  auswahl: string[],
+  ausgeblendet: string[],
   arten: TerminArt[],
 ): AbsenceEvent[] {
-  const aktiv = new Set(auswahl);
-  if (aktiv.size === 0) return events;
-  return events.filter((e) => aktiv.has(artVon(e, arten)));
+  if (ausgeblendet.length === 0) return events;
+  const aus = new Set(ausgeblendet);
+  return events.filter((e) => !aus.has(artVon(e, arten)));
 }
 
 /**
- * Einen Knopf wählen: Er ersetzt die bisherige Wahl. Ein Tipp auf den schon gewählten Knopf hebt
- * die Wahl auf – dann gilt „alle". Entweder eins oder alles (Alwin).
+ * **Die gemerkte Wahl der alten Art umrechnen** (bis 28.10.2026: „genau eine Art oder alles", gemerkt als Liste mit
+ * höchstens einer gewählten ID). Wer „nur Gottesdienst" gewählt hatte, sieht danach Gottesdienst angehakt und alle
+ * anderen Arten ausgeblendet – also dieselbe Liste wie vorher. Ohne gültige Wahl: nichts ausgeblendet.
  */
-export function umschalten(auswahl: string[], id: string, knoepfe: Knopf[]): string[] {
-  const neu = auswahl.includes(id) ? [] : [id];
-  return wirksameAuswahl(neu, knoepfe);
+export function ausgeblendetAusAlterWahl(alteWahl: string[], knoepfe: Knopf[]): string[] {
+  const gewaehlt = alteWahl.find((id) => knoepfe.some((k) => k.id === id));
+  return gewaehlt ? knoepfe.filter((k) => k.id !== gewaehlt).map((k) => k.id) : [];
 }

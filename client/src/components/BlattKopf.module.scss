@@ -1,0 +1,216 @@
+@use '@ui/design/mixins' as m;
+
+// ── Kopfkarte des Liedblatts (Scheibe B1+B2) ──
+// Beginnt wie die Seitenköpfe unter dem iOS-Unschärfe-Band (`--inhalt-pad-top`); die Höhe ergibt sich aus dem Inhalt
+// und wird gemessen (`BlattKopf`, `--blatt-kopf-unten`).
+.kopf {
+  flex-shrink: 0;
+  padding: var(--inhalt-pad-top) 16px 8px;
+}
+
+.kopfKompakt {
+  padding: var(--inhalt-pad-top) 8px 6px;
+}
+
+// Weiße Karte wie „Events › Ablaufpläne“ in ChurchTools.
+.karte {
+  @include m.card-list;
+  // Fenster unter den Knöpfen hängen außerhalb (absolut im Blatt) – hier wird nichts abgeschnitten.
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.kopfKompakt .karte {
+  padding: 8px;
+}
+
+.titelZeile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.titel {
+  flex: 1;
+  min-width: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Leiste und Knöpfe in EINER Zeile (breit); kompakt brechen die Knöpfe als Raster in die nächste.
+.zeile {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.knoepfe {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+// Handy: alle Knöpfe gleich breit in einer Reihe unter der Leiste (Spaltenzahl setzt `BlattKopf`).
+.raster {
+  display: grid;
+  gap: 6px;
+  flex: 1 1 100%;
+}
+
+.aa {
+  font-size: 15px;
+  line-height: 1;
+}
+
+// ── Ablauf-Leiste (Scheibe B2) ──
+.leiste {
+  // `position` macht sie zum Bezug für `offsetLeft` der Lieder (Mitscrollen).
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  // Innen so viel Luft wie der Rand ausblendet – sonst läge das erste und letzte Lied halb im Ausblenden.
+  padding: 0 14px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+// Der Rand blendet aus – man sieht, dass es weitergeht.
+.leisteRand {
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 14px,
+    #000 calc(100% - 14px),
+    transparent 100%
+  );
+}
+
+.trenner {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 20px;
+  margin: 0 2px;
+  background: var(--border);
+}
+
+.lied {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  // So hoch wie die Knöpfe daneben – eine Zahl für alle (`--knopf-hoehe`, 28.10.2026).
+  height: var(--knopf-hoehe);
+  padding: 0 10px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--r-ctrl) var(--r-ctrl) 0 0;
+  background: transparent;
+  font-family: var(--ui);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text2);
+  white-space: nowrap;
+  // Nie breiter als die Leiste; was nicht passt, kürzt der Titel (`.liedTitel`).
+  overflow: hidden;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  &:hover {
+    background: var(--blue-soft);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: -2px;
+  }
+}
+
+// Gerade zu sehen (Querformat: zwei) – grau hinterlegt.
+.liedSichtbar {
+  background: var(--surface3);
+}
+
+// Das gewählte – blau unterstrichen, darauf wirken Knöpfe und Lied-Menü. Es schrumpft NICHT (in einer scrollenden
+// Leiste schrumpften Lieder sonst zuerst auf ihre Nummer, statt dass die Leiste scrollt).
+.liedGewaehlt {
+  border-bottom-color: var(--blue);
+  color: var(--text);
+}
+
+// Lied-Menü oder eines seiner Fenster offen.
+.liedOffen {
+  background: var(--blue-soft);
+}
+
+.nummer {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text3);
+  font-variant-numeric: tabular-nums;
+}
+
+.liedTitel {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pfeil {
+  flex-shrink: 0;
+  color: var(--blue);
+}
+
+// Tonart · Fassung · Tempo neben dem gewählten Lied.
+.info {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+}
+
+.infoTeil {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.infoPunkt {
+  color: var(--text3);
+}
+
+.infoKey {
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.infoCapo {
+  font-weight: 800;
+  color: var(--blue);
+}
+
+.infoMetronom {
+  color: var(--text3);
+}

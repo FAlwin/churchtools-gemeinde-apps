@@ -51,6 +51,9 @@ export const TOUR_TERMINE = 'termine-v3';
 // chart-v9 (05.10.2026): Auch im Hochformat stehen die Werkzeuge einzeln oben, solange der Titel
 // genug Platz behält – erst im schmalen Fenster (iPhone, kleines Stage-Manager-Fenster) wandern sie
 // hinter den einen Knopf. Neuer Schritt am Ziel `chart-werkzeuge-einzeln`; v2.26.1 (produktiv) trägt v8.
+// Scheibe B1+B2 (28.10.2026): Kopfkarte mit Ablauf-Leiste und beschrifteten Knöpfen – „Lied-Optionen" zeigt auf die
+// Leiste, „Werkzeuge" auf die Knopfreihe (`chart-werkzeuge`), der Schritt am Werkzeuge-Knopf entfällt. Version
+// BEWUSST NICHT erhöht (Alwin, 28.10.2026): Nur neue Nutzer sehen die Einführung.
 export const TOUR_CHART = 'chart-v9';
 
 /**
@@ -97,6 +100,8 @@ export const TOUR_SETLIST_EDIT = 'setlist-edit-v6';
 // Schritte zeigen andere Elemente als v3.
 // v5 (20.09.2026, #400): neuer Schritt „Nur bestimmte Termine" für den Termin-Filter – er wird
 // übersprungen, wenn es höchstens eine Termin-Art gibt (dann gibt es die Knöpfe nicht).
+// 28.10.2026: Zeitraum- und Filter-Knopf wie im Dienstplaner statt Monats- und Filter-Kapseln – Ziele und Texte
+// neu, Version BEWUSST NICHT erhöht (wie beim Liedblatt, Alwin 28.10.2026): nur neue Nutzer sehen die Einführung.
 export const TOUR_VERFUEGBARKEIT = 'verfuegbarkeit-v5';
 
 /**
@@ -170,20 +175,13 @@ export const CHART_STEPS: CoachStep[] = [
   },
   {
     selector: '[data-tour="chart-lied"]',
-    title: 'Lied-Optionen',
-    body: 'Im Querformat steht über jedem der beiden Lieder ein eigener Titel mit seinen Werkzeugen – ein Tipp auf den blassen Titel oder eines seiner Werkzeuge wählt dieses Lied aus. Tippe auf den Titel, um die Tonart zu ändern, eine Version zu wählen oder zu transponieren. Bearbeitest du eine Version, arbeitet der Editor in der Tonart, die hier eingestellt ist – gespeichert wird, was du siehst. Unter „Dateien …" verwaltest du die Notenblätter des Arrangements, unter „Stammdaten …" Name, Kategorie, Autor und Copyright des Liedes. Autor, Tempo, Takt und CCLI-Nummer kannst du auch beim Bearbeiten unter „Liedinfo" ändern.',
+    title: 'Lieder im Ablauf',
+    body: 'Hier oben stehen alle Lieder des Ablaufs – wische seitwärts, um zu sehen, was kommt. Ein Tipp auf ein Lied springt hin; im Querformat wählst du so auch das zweite sichtbare Lied aus. Tippe auf das gewählte (blau unterstrichen), um die Tonart zu ändern, eine Version zu wählen oder zu transponieren. Bearbeitest du eine Version, arbeitet der Editor in der Tonart, die hier eingestellt ist – gespeichert wird, was du siehst. Unter „Dateien …" verwaltest du die Notenblätter des Arrangements, unter „Stammdaten …" Name, Kategorie, Autor und Copyright des Liedes. Autor, Tempo, Takt und CCLI-Nummer kannst du auch beim Bearbeiten unter „Liedinfo" ändern.',
   },
   {
     selector: '[data-tour="chart-werkzeuge"]',
     title: 'Werkzeuge',
-    body: 'Hinter diesem Knopf steckt alles Weitere: „Aussehen" für Schriftgröße und Spalten, „Tempo" mit Puls, Klick und Mittippen (gespeichert in ChurchTools wird es nur über den Knopf ganz unten im Tempo-Fenster), „Anmerken" zum Zeichnen und Schreiben auf der Seite und – wenn freigeschaltet – „Notizen von …" für die geteilten Anmerkungen deines Teams. Läuft der Puls, leuchtet der Knopf blau; beim Zeichnen wird er zum Haken, mit dem du fertig bist.',
-  },
-  {
-    // Dasselbe für die EINZELN stehenden Werkzeuge (breites Fenster, Querformat). Es gibt immer nur
-    // eines der beiden Ziele – die Einführung überspringt das fehlende.
-    selector: '[data-tour="chart-werkzeuge-einzeln"]',
-    title: 'Werkzeuge',
-    body: 'Hier oben stehen die Werkzeuge: „Aa" für Schriftgröße und Spalten, das Metronom für Tempo mit Puls, Klick und Mittippen (gespeichert in ChurchTools wird es nur über den Knopf ganz unten im Tempo-Fenster), der Stift zum Anmerken und – wenn freigeschaltet – „Notizen von …" für die geteilten Anmerkungen deines Teams. Wird das Fenster schmal, wandern sie hinter einen gemeinsamen Knopf.',
+    body: 'Die Knöpfe wirken auf das gewählte Lied: „Aussehen" für Schriftgröße und Spalten, „Tempo" mit Puls, Klick und Mittippen (gespeichert in ChurchTools wird es nur über den Knopf ganz unten im Tempo-Fenster), „Anmerken" zum Zeichnen und Schreiben auf der Seite und – wenn freigeschaltet – „Notizen von …" für die geteilten Anmerkungen deines Teams. Läuft der Puls, ist „Tempo" blau umrandet; beim Zeichnen heißt der Knopf „Anmerken beenden".',
   },
 ];
 
@@ -236,7 +234,7 @@ export const SETLIST_EDIT_STEPS: CoachStep[] = [
   {
     selector: '[data-tour="edit-add"]',
     title: 'Hinzufügen',
-    body: 'Mit dem Plus legst du einen neuen Eintrag an – im selben Fenster wie beim Bearbeiten: oben wählst du Programmpunkt oder Überschrift. Für ein Lied tippst du „Lied verknüpfen“: Titel, Autor oder CCLI-Nummer – eure Lieder stehen oben, SongSelect darunter. Das Auge zeigt den Liedtext, das Plus wählt aus. Dauer und Zuständige setzt du gleich mit.',
+    body: 'Hier legst du einen neuen Eintrag an: Wähle Programmpunkt, Lied oder Überschrift. Ein Lied suchst du nach Titel, Autor oder CCLI-Nummer – eure Lieder stehen oben, SongSelect darunter. Das Auge zeigt den Liedtext, das Plus wählt aus. Dauer und Zuständige setzt du im Fenster danach gleich mit.',
   },
   {
     selector: '[data-tour="edit-lock"]',
@@ -262,14 +260,14 @@ export const LIED_STAMMDATEN_STEPS: CoachStep[] = [
 /** Gruppe 5 – Verfügbarkeit: eigene Abwesenheiten (#177). */
 export const VERFUEGBARKEIT_STEPS: CoachStep[] = [
   {
-    selector: '[data-tour="verf-monate"]',
-    title: 'Monat wählen',
-    body: 'Oben stehen die kommenden Monate. Der Pfeil rechts klappt ein Jahr auf, „Heute" bringt dich zum laufenden Monat zurück.',
+    selector: '[data-tour="verf-zeitraum"]',
+    title: 'Zeitraum wählen',
+    body: 'Hier wählst du, welche Termine du siehst: ab heute die nächsten vier Wochen, diesen oder den nächsten Monat – oder einen eigenen Zeitraum von–bis.',
   },
   {
     selector: '[data-tour="verf-filter"]',
     title: 'Nur bestimmte Termine',
-    body: 'Tippe eine Termin-Art an, um nur deren Termine zu sehen – etwa nur Gottesdienste. Ein zweiter Tipp auf denselben Knopf oder auf „Alle" zeigt wieder alles. Die App merkt sich deine Wahl.',
+    body: 'Unter „Filter" hakst du ab, welche Termin-Arten du siehst – etwa nur Gottesdienste. Die Zahl am Knopf zeigt, wie viele Arten gerade ausgeblendet sind. Die App merkt sich deine Wahl.',
   },
   {
     selector: '[data-tour="verf-termine"]',

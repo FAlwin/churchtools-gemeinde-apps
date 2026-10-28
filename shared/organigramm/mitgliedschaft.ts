@@ -3,7 +3,10 @@
  * Aufrufer herein (`MitgliedZugriff`).
  *
  * Gemessen an der Test-Instanz (O6, 23.10.2026, `organigramm-planung/docs/messung-o6-2026-10-23.md`):
- * - Aufnehmen und Rolle ändern: `PUT /groups/{g}/members/{p}` – ein Teil der Felder genügt.
+ * - **Anlegen und Ändern sind zwei Aufrufe** (gemessen 28.10.2026, ChurchTools-Mail „veraltete APIs“):
+ *   `PUT /groups/{g}/members/{p}` mit `only_add: true` legt an (gibt es die Mitgliedschaft schon → 403, nichts
+ *   überschrieben); `PATCH` ändert nur die geschickten Felder und legt NICHT an (→ 404). Ändern per `PUT` ist veraltet
+ *   und löscht dabei Kommentar und Enddatum, wenn sie nicht mitgeschickt werden.
  * - **Austragen = Mitgliedschaft beenden** (`memberEndDate` = heute), nicht löschen: Die Historie bleibt, und es lässt
  *   sich mit `memberEndDate: null` rückgängig machen. `DELETE` löscht spurlos – nur für „Rückgängig“ direkt nach dem
  *   Aufnehmen einer Person, die vorher nie in der Gruppe war.
@@ -23,8 +26,10 @@ export interface Mitgliedschaft {
 export interface MitgliedZugriff {
   /** Die Mitgliedschaft frisch aus ChurchTools – `null`, wenn die Person nicht in der Gruppe ist. */
   lesen(gruppeId: number, personId: number): Promise<Mitgliedschaft | null>;
-  /** Felder der Mitgliedschaft setzen (legt sie an, wenn es sie nicht gibt). */
-  schreiben(gruppeId: number, personId: number, felder: Record<string, unknown>): Promise<void>;
+  /** Mitgliedschaft neu anlegen – scheitert, wenn es sie schon gibt. */
+  anlegen(gruppeId: number, personId: number, felder: Record<string, unknown>): Promise<void>;
+  /** Felder einer bestehenden Mitgliedschaft ändern – legt keine an; Ungeschicktes bleibt. */
+  aendern(gruppeId: number, personId: number, felder: Record<string, unknown>): Promise<void>;
   /** Mitgliedschaft löschen – nur für „Rückgängig“ nach dem Aufnehmen. */
   entfernen(gruppeId: number, personId: number): Promise<void>;
   nichtUebernommen(was: string): Error;
@@ -44,11 +49,14 @@ export async function aufnehmen(
   rolleId: number,
 ): Promise<Mitgliedschaft | null> {
   const vorher = await z.lesen(gruppeId, personId);
-  await z.schreiben(gruppeId, personId, {
-    groupTypeRoleId: rolleId,
-    groupMemberStatus: 'active',
-    memberEndDate: null,
-  });
+  if (vorher === null)
+    await z.anlegen(gruppeId, personId, { groupTypeRoleId: rolleId, groupMemberStatus: 'active' });
+  else
+    await z.aendern(gruppeId, personId, {
+      groupTypeRoleId: rolleId,
+      groupMemberStatus: 'active',
+      memberEndDate: null,
+    });
   const nachher = await z.lesen(gruppeId, personId);
   if (!laeuft(nachher) || nachher.rolleId !== rolleId) throw z.nichtUebernommen('die Aufnahme');
   return vorher;
@@ -66,7 +74,7 @@ export async function aufnehmenZurueck(
     if ((await z.lesen(gruppeId, personId)) !== null) throw z.nichtUebernommen('das Entfernen');
     return;
   }
-  await z.schreiben(gruppeId, personId, {
+  await z.aendern(gruppeId, personId, {
     groupTypeRoleId: vorher.rolleId,
     groupMemberStatus: vorher.status,
     memberEndDate: vorher.ende,
@@ -84,7 +92,7 @@ export async function rolleAendern(
   personId: number,
   rolleId: number,
 ): Promise<void> {
-  await z.schreiben(gruppeId, personId, { groupTypeRoleId: rolleId });
+  await z.aendern(gruppeId, personId, { groupTypeRoleId: rolleId });
   if ((await z.lesen(gruppeId, personId))?.rolleId !== rolleId) {
     throw z.nichtUebernommen('die neue Rolle');
   }
@@ -97,7 +105,7 @@ export async function beenden(
   personId: number,
   heute: string,
 ): Promise<void> {
-  await z.schreiben(gruppeId, personId, { memberEndDate: heute });
+  await z.aendern(gruppeId, personId, { memberEndDate: heute });
   if ((await z.lesen(gruppeId, personId))?.ende !== heute) {
     throw z.nichtUebernommen('das Ende der Mitgliedschaft');
   }
@@ -109,7 +117,7 @@ export async function beendenZurueck(
   gruppeId: number,
   personId: number,
 ): Promise<void> {
-  await z.schreiben(gruppeId, personId, { memberEndDate: null });
+  await z.aendern(gruppeId, personId, { memberEndDate: null });
   if (!laeuft(await z.lesen(gruppeId, personId))) {
     throw z.nichtUebernommen('das Zurücknehmen des Endes');
   }

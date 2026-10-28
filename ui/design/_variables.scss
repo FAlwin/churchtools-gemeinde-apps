@@ -92,19 +92,17 @@ html[data-theme='dark'] {
   // Bildschirme OHNE Leiste (große Überschrift im Inhalt): Abstand der Überschrift nach oben.
   // Im Safari-Tab reicht wenig (kein Band, keine Safe-Area).
   --inhalt-pad-top: 12px;
-  // Höhe der runden Knopfreihe (`KnopfReihe`) samt Luft zur Überschrift darunter – eine Quelle für
-  // die Reihe selbst und den Abstand der Überschrift (02.10.2026).
-  --knopfreihe-hoehe: 52px;
-  // Durchmesser der runden Knöpfe = Höhe der Titel-Kapsel im Liedblatt (eine Zahl für beide).
-  --rundknopf: 44px;
-  // Unterkante des Liedblatt-Kopfs (runde Knöpfe unter dem Band). Daran hängen die Fenster, die
-  // unter dem Kopf aufgehen (Aussehen, Tempo, Werkzeuge, Lied-Menü) und der Hinweis „Ablauf
-  // geändert". Bis zum 02.10.2026 stand dafür an vier Stellen je eine eigene Zahl (54, 58, 60 px).
-  --chart-kopf-unten: calc(var(--inhalt-pad-top) + var(--knopfreihe-hoehe));
+  // Unterkante des Liedblatt-Kopfs – nur noch die VORGABE, bis `BlattKopf` die Kopfkarte gemessen hat
+  // (`--blatt-kopf-unten`, Scheibe B1: die Karte ist je Größe verschieden hoch). Daran hängen Lied-Menü, Aussehen,
+  // Tempo und der Hinweis „Ablauf geändert". Bis zum 02.10.2026 stand dafür an vier Stellen je eine eigene Zahl.
+  --chart-kopf-unten: calc(var(--inhalt-pad-top) + 52px);
   // Polster unter den Symbolen der unteren Reiterleiste (`ReiterLeiste`) – und damit der Abstand alles
   // dessen, was über ihr schwebt (`UpdateBanner`). ~54px auf dem iPhone (Safe-Area 34px + 20px), 34px auf
   // Geräten ohne Strich. Eine Quelle für beide (vorher stand die Formel zweimal da).
   --reiter-polster: max(34px, calc(env(safe-area-inset-bottom) + 20px));
+  // Dasselbe für die Fußleiste des Liedblatts (Pfeile, „Nächstes Lied“): ~62px auf dem iPhone (Safe-Area 34px + 28px),
+  // 42px auf Geräten ohne Strich.
+  --blatt-fuss-polster: max(42px, calc(env(safe-area-inset-bottom) + 28px));
 }
 
 /**
@@ -116,6 +114,9 @@ html[data-theme='dark'] {
 .ct-extension,
 .ct-extension * {
   --reiter-polster: calc(env(safe-area-inset-bottom, 0px) + 6px);
+  // Fußleiste des Liedblatts: fehlte hier bis Scheibe B1 – 36 px Blatt verschenkt (Messung B0, 28.10.2026). Jedes
+  // `…-polster` oben braucht hier sein Gegenstück; `polster.test.ts` hält das fest.
+  --blatt-fuss-polster: calc(env(safe-area-inset-bottom, 0px) + 6px);
 }
 
 /**

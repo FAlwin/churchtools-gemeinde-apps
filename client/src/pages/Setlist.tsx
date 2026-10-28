@@ -34,6 +34,7 @@ import { ladeDokument } from '../services/fileDownload';
 import { loadSongPdfOpts } from '../utils/songPdfOpts';
 import { useAppLogo } from '../hooks/useAppLogo';
 import { schluessel } from '../hooks/abfrageSchluessel';
+import { terminZeile } from '../utils/terminZeile';
 
 /** Der Hinweis, wenn man einen abgeschlossenen Ablauf ändern will (Alwin, 13.10.2026). */
 const GESPERRT =
@@ -203,7 +204,7 @@ export function Setlist({
 
   /**
    * Die Knöpfe im Seitenkopf (`KopfKnopf`, Scheibe S, 26.10.2026): mit Rahmen und Beschriftung wie in ChurchTools,
-   * „Bearbeiten“ blau als Hauptaktion; am Handy nur das Symbol. Vorher runde Knöpfe (`RundKnopf`, 02.10.2026).
+   * im Bearbeiten „Fertig“ blau (vorher war „Bearbeiten“ selbst blau, 28.10.2026 geändert); am Handy nur das Symbol. Vorher runde Knöpfe (`RundKnopf`, 02.10.2026).
    */
   // Auch bei einem LEEREN Ablauf (13.10.2026): Sonst gab es keinen Stift, und ein in der App leer
   // angelegter Ablauf ließ sich nicht füllen. Das Teilen braucht Lieder und fragt selbst (`teilbar`).
@@ -249,7 +250,9 @@ export function Setlist({
             }}
             label={editMode ? 'Fertig' : 'Bearbeiten'}
             title={editMode ? 'Fertig' : 'Ablauf bearbeiten'}
-            haupt
+            // Blau nur „Fertig“ – der Schritt, der im Bearbeiten als Nächstes kommt. „Bearbeiten“ selbst war blau gefüllt
+            // „zu präsent“ (Alwin, 28.10.2026) und steht jetzt grau wie „Teilen“.
+            haupt={editMode}
             dataTour="setlist-edit"
             symbol={<Icon name={editMode ? 'check' : 'pencil'} size={18} stroke={2.2} />}
           />
@@ -312,7 +315,7 @@ export function Setlist({
   return (
     <SeitenGeruest
       titel={service.name}
-      unterzeile={`${service.weekday}, ${service.day}. ${service.month} · ${service.time}`}
+      unterzeile={terminZeile(service)}
       zurueck={onBack}
       zurueckLabel="Termine"
       aktionen={aktionen}

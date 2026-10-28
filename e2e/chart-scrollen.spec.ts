@@ -34,7 +34,9 @@ async function ruhig(page: Page): Promise<number> {
   return vorher;
 }
 
-const kopfTitel = (page: Page) => page.locator('[class*="hdr"]').first();
+/** Das gewählte Lied in der Ablauf-Leiste der Kopfkarte (Scheibe B2). */
+const kopfTitel = (page: Page) =>
+  page.getByRole('navigation', { name: 'Lieder im Ablauf' }).locator('[aria-current="true"]');
 
 /** Wo das Pedal anhält – die Ansicht schreibt es bei jedem Tritt an die Scroll-Fläche (#609). */
 async function halteStellen(page: Page): Promise<number[]> {
@@ -136,7 +138,7 @@ test('Scrollen: Rollen untereinander, Pedal, Tipp, Lied-Punkt', async ({ page })
 
   // Ein Tipp aufs Blatt blendet die Leisten aus – und wieder ein.
   await deck(page).click({ position: { x: 195, y: 200 } });
-  await expect(page.locator('[class*="hdr"]')).toHaveCount(0);
+  await expect(page.getByRole('navigation', { name: 'Lieder im Ablauf' })).toHaveCount(0);
   await deck(page).click({ position: { x: 195, y: 200 } });
   await expect(kopfTitel(page)).toBeVisible();
 
@@ -202,7 +204,7 @@ test.describe('langes Lied, niedriges Fenster', () => {
 test.describe('iPad quer', () => {
   test.use({ viewport: { width: 1180, height: 820 } });
 
-  test('eine Seite in voller Breite statt zwei nebeneinander – und nur eine Titel-Kapsel', async ({
+  test('eine Seite in voller Breite statt zwei nebeneinander – und nur ein Lied sichtbar', async ({
     page,
   }) => {
     await page.addInitScript((tour: string) => {
@@ -219,8 +221,10 @@ test.describe('iPad quer', () => {
       [...el.querySelectorAll('canvas')].map((c) => c.parentElement!.offsetWidth),
     );
     expect(new Set(breiten)).toEqual(new Set([1180]));
-    // Beim Blättern stünden hier zwei Lieder mit je eigener Kapsel (#421) – im Scroll-Modus nicht.
-    await expect(page.locator('[class*="kapselPaar"]')).toHaveCount(0);
+    // Beim Blättern wären hier zwei Lieder sichtbar (in der Leiste hinterlegt) – im Scroll-Modus eins.
+    await expect(
+      page.getByRole('navigation', { name: 'Lieder im Ablauf' }).locator('[class*="liedSichtbar"]'),
+    ).toHaveCount(1);
 
     // Ganz nach unten: Die Kopfzeile zeigt das letzte Lied (die Seite in der Mitte zählt).
     await deck(page).evaluate((el) => (el.scrollTop = el.scrollHeight));
@@ -276,8 +280,7 @@ test('Malen auf der Rolle: ein Strich landet auf der A4-Seite und bleibt sichtba
     })
     .toBeGreaterThanOrEqual(3);
 
-  await page.getByRole('button', { name: 'Werkzeuge' }).click();
-  await page.getByRole('menuitem', { name: 'Anmerken' }).click();
+  await page.getByRole('button', { name: 'Anmerken', exact: true }).click();
   const malen = page.getByTestId('rollen-malen');
   await expect(malen).toBeVisible();
   // Der Scroll-Modus bleibt – keine Einzelseite mehr.
@@ -364,8 +367,7 @@ test('Stift an auf der Rolle: eigene Texte im Lied bleiben – auf der A4-Seite 
     })
     .toBeGreaterThanOrEqual(3);
   await expect(deck(page).getByText('Bleib da')).toBeVisible();
-  await page.getByRole('button', { name: 'Werkzeuge' }).click();
-  await page.getByRole('menuitem', { name: 'Anmerken' }).click();
+  await page.getByRole('button', { name: 'Anmerken', exact: true }).click();
   await expect(page.getByTestId('rollen-malen')).toBeVisible({ timeout: 30_000 });
   await page.waitForTimeout(1_000); // Speichern der Rolle läuft verzögert
   expect(await page.evaluate((k) => localStorage.getItem(`${k}_text`), SEITE)).toBe(text);
@@ -386,8 +388,7 @@ test.describe('mit Touch', () => {
         timeout: 30_000,
       })
       .toBeGreaterThanOrEqual(3);
-    await page.getByRole('button', { name: 'Werkzeuge' }).click();
-    await page.getByRole('menuitem', { name: 'Anmerken' }).click();
+    await page.getByRole('button', { name: 'Anmerken', exact: true }).click();
     await page.getByRole('button', { name: 'Text', exact: true }).click();
 
     const malen = page.getByTestId('rollen-malen');

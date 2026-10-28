@@ -12,6 +12,7 @@ import {
 } from '@shared/types/index';
 import { sucheArt } from '../utils/liedFormular';
 import { heuteIso } from '../utils/heute';
+import { plusTage } from '@shared/ct/datum';
 import { ohneMarkierungen } from '../utils/ablaufAenderungen';
 import type { GeloeschterPunkt } from '@shared/ct/schreibKern';
 import type { AblaufStand } from '@shared/ct/ablaufNeu';
@@ -147,6 +148,21 @@ export function usePastServices(monthsBack: number, enabled: boolean) {
     enabled,
     staleTime: 1000 * 60 * 5,
     placeholderData: (prev) => prev, // beim „Mehr laden" alte Liste behalten (kein Flackern)
+  });
+}
+
+/**
+ * **Die Termine eines Tages** (E6-O O4) – für einen Direktlink aus dem Dienstplaner auf einen Termin außerhalb der
+ * geladenen Wochen (vergangen oder weiter als sechs Wochen voraus). `to` zählt bei ChurchTools nicht mit (am
+ * 28.10.2026 gemessen: `from=to=2026-10-18` ist leer), also bis zum Folgetag.
+ */
+export function useTermineAm(tag: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: schluessel.termineAm(tag),
+    queryFn: () =>
+      tag ? api.getServices({ from: tag, to: plusTage(tag, 1) }) : Promise.resolve([]),
+    enabled: enabled && tag !== null,
+    staleTime: 1000 * 60 * 5,
   });
 }
 

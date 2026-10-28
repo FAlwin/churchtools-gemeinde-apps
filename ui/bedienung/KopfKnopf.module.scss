@@ -69,6 +69,31 @@
   }
 }
 
+// Sein Fenster ist offen (Aussehen, Tempo) – hellblau ohne blauen Rand; den Rand trägt „hier gilt etwas“ (B1).
+.offen {
+  background: var(--blue-soft);
+}
+
+// Raster am Handy (Liedblatt, B1): Symbol über dem Kurzwort, füllt seine Zelle. Steht nach der Handy-Regel oben,
+// damit es sie schlägt (gleiches Gewicht, spätere Regel).
+.knopf.raster {
+  flex-direction: column;
+  gap: 3px;
+  width: auto;
+  min-width: 0;
+  height: 52px;
+  padding: 0 4px;
+  font-size: 12px;
+
+  .text {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.1;
+  }
+}
+
 // Hier gilt gerade etwas (abgeschlossen, Vollbild an).
 .aktiv {
   border-color: var(--blue);

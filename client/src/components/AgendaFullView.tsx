@@ -84,7 +84,7 @@ export function AgendaFullView({
     <AblaufListe
       zeilen={items}
       beginn={beginn}
-      onLied={onSelect}
+      onLied={(i) => onSelect(i)}
       schild={schild}
       kopf={sichtbar && <AblaufHinweis aenderungen={zusammenfassung} />}
     />

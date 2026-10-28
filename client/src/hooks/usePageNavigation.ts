@@ -73,7 +73,7 @@ export function usePageNavigation({
     // **Im Querformat wählt dieser Tipp KEINE Hälfte mehr** (#421, 03.10.2026). Bis dahin tat er
     // beides: Vollbild UND die angetippte Hälfte aktiv machen. Wer das andere Lied auswählen wollte,
     // landete dabei im Vollbild – die Kopfzeile verschwand, die Auswahl sah man erst nach dem
-    // Zurückschalten. Ausgewählt wird jetzt über die Titel-Kapsel über jeder Hälfte (`ChartHeader`).
+    // Zurückschalten. Ausgewählt wird über die Ablauf-Leiste der Kopfkarte (`BlattKopf`, Scheibe B2).
     onMiddleTap?.();
   }
 

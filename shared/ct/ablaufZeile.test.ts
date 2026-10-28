@@ -152,8 +152,16 @@ describe('ablaufZeileAus (E6-1a)', () => {
       isHeader: false,
       responsible: [{ label: 'Ella', open: false, kuerzel: 'E' }],
       responsibleText: '[Musik]',
-      // Tonart und Tempo für die Lied-Karte (E6-O1); den Autor liefert der Ablauf nicht.
-      song: { title: 'Way Maker', arrangementId: 2, originalKey: 'D', bpm: null },
+      // Tonart und Tempo für die Lied-Karte (E6-O1); den Autor liefert der Ablauf nicht. Lied und Arrangement für die
+      // Lied-Ansicht im Dienstplaner (E6-O O4).
+      song: {
+        title: 'Way Maker',
+        songId: 1,
+        arrangementId: 2,
+        arrangement: 'D',
+        originalKey: 'D',
+        bpm: null,
+      },
       time: '09:55',
       vorBeginn: true,
       durationMin: 5,

@@ -1,13 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  letzterTag,
-  monatKurz,
-  monatLabel,
-  monatNurKurz,
-  monatPlus,
-  monatVon,
-  monateAb,
-} from './monate';
+import { letzterTag, monatLabel, monatNurKurz, monatPlus, monatVon } from './monate';
 
 describe('monate – die Monatsansicht rechnet in Strings, nicht in Zeitzonen', () => {
   it('addiert über den Jahreswechsel und zurück', () => {
@@ -16,12 +8,10 @@ describe('monate – die Monatsansicht rechnet in Strings, nicht in Zeitzonen', 
     expect(monatPlus('2026-01', -1)).toBe('2025-12');
     expect(monatPlus('2026-01', -13)).toBe('2024-12');
   });
-  it('beschriftet lang und kurz', () => {
+  it('beschriftet lang', () => {
     expect(monatLabel('2026-10')).toBe('Oktober 2026');
-    expect(monatKurz('2027-03')).toBe('Mär 27');
   });
-  it('liefert n Monate ab dem laufenden, der erste ist der von heute', () => {
-    expect(monateAb('2026-11-19', 3)).toEqual(['2026-11', '2026-12', '2027-01']);
+  it('kennt den Monat eines Tages', () => {
     expect(monatVon('2026-11-19')).toBe('2026-11');
   });
   it('kennt den letzten Tag – auch im Schaltjahr', () => {
@@ -35,11 +25,10 @@ describe('Monatsnamen aus der gemeinsamen Quelle (14.10.2026) – Anzeige wie vo
   const LANG =
     'Januar Februar März April Mai Juni Juli August September Oktober November Dezember'.split(' ');
   const KURZ = 'Jan Feb Mär Apr Mai Jun Jul Aug Sep Okt Nov Dez'.split(' ');
-  it('monatLabel, monatKurz, monatNurKurz über alle zwölf Monate', () => {
+  it('monatLabel und monatNurKurz über alle zwölf Monate', () => {
     for (let m = 0; m < 12; m++) {
       const monat = `2027-${String(m + 1).padStart(2, '0')}`;
       expect(monatLabel(monat)).toBe(`${LANG[m]} 2027`);
-      expect(monatKurz(monat)).toBe(`${KURZ[m]} 27`);
       expect(monatNurKurz(monat)).toBe(KURZ[m]);
     }
   });

@@ -63,6 +63,26 @@ export interface Sitzung {
 /** Gleicher Beginn auf die Minute – so gehören Termin und Treffen derselben Sitzung zusammen. */
 const minute = (iso: string): string => new Date(iso).toISOString().slice(0, 16);
 
+/**
+ * **Gehört dieser Protokoll-Kopf zu der Sitzung?** – gleiches Gruppentreffen, oder gleicher Termin. Bei einem
+ * **Serientermin** (`serie`: dieselbe Termin-ID kommt mehrfach vor) zusätzlich zum selben Beginn – sonst hinge jede Woche
+ * der Serie am selben Protokoll (gefunden beim Bau von S5-1). Ein einzelner Termin bleibt auch verschoben bei seinem
+ * Protokoll. Die eine Stelle dafür: `sitzungenOrdnen` und „Protokoll beginnen“ (dort `serie` = sicherheitshalber ja).
+ */
+export function gehoertZu(
+  kopf: Pick<ProtokollKopf, 'termin' | 'treffen' | 'beginn'>,
+  s: { beginn: string; termin: { kalender: number; id: number } | null; treffen: number | null },
+  serie = true,
+): boolean {
+  if (s.treffen !== null && kopf.treffen === s.treffen) return true;
+  return (
+    s.termin !== null &&
+    kopf.termin?.kalender === s.termin.kalender &&
+    kopf.termin.id === s.termin.id &&
+    (!serie || minute(kopf.beginn) === minute(s.beginn))
+  );
+}
+
 export function sitzungenOrdnen(q: {
   termine: readonly Termin[];
   treffen: readonly Treffen[];
@@ -83,9 +103,12 @@ export function sitzungenOrdnen(q: {
   const zuKopf = (pruefen: (s: Sitzung) => boolean): Sitzung | undefined =>
     sitzungen.find((s) => s.kopf && pruefen(s));
 
+  const anzahl = (t: Termin) =>
+    q.termine.filter((x) => x.kalender === t.kalender && x.id === t.id).length;
   for (const t of q.termine) {
+    const termin = { beginn: t.beginn, termin: { kalender: t.kalender, id: t.id }, treffen: null };
     const da =
-      zuKopf((s) => s.termin?.kalender === t.kalender && s.termin.id === t.id) ??
+      zuKopf((s) => gehoertZu(s.kopf!, termin, anzahl(t) > 1)) ??
       sitzungen.find((s) => !s.termin && minute(s.beginn) === minute(t.beginn));
     if (da) {
       da.termin ??= { kalender: t.kalender, id: t.id };
@@ -105,7 +128,7 @@ export function sitzungenOrdnen(q: {
   }
   for (const t of q.treffen) {
     const da =
-      zuKopf((s) => s.treffen === t.id) ??
+      zuKopf((s) => gehoertZu(s.kopf!, { beginn: t.beginn, termin: null, treffen: t.id })) ??
       sitzungen.find((s) => s.treffen === null && minute(s.beginn) === minute(t.beginn));
     if (da) {
       da.treffen ??= t.id;

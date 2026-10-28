@@ -16,7 +16,7 @@ import {
 import type { Plan } from '@shared/dienstplan/plan';
 import { leseAuswahl, merkeAuswahl } from './auswahl';
 import { Plakette } from './Plakette';
-import { FilterKnopf } from './FilterKnopf';
+import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
 import styles from './Termine.module.scss';
 
 export type TermineZustand =

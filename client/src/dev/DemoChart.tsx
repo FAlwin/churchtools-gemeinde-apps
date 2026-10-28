@@ -89,6 +89,12 @@ const LANG: SetlistSong[] = [
 export function DemoChart() {
   const lang = new URLSearchParams(window.location.search).get('lied') === 'lang';
   return (
-    <ChordChart songs={lang ? LANG : SONGS} startIndex={0} onBack={() => undefined} canEditSong />
+    <ChordChart
+      songs={lang ? LANG : SONGS}
+      startIndex={0}
+      kopf={{ titel: 'Demo – Liedblatt', zurueckZiel: 'Ablauf' }}
+      onBack={() => undefined}
+      canEditSong
+    />
   );
 }

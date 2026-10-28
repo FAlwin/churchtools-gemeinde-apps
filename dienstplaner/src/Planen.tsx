@@ -43,13 +43,13 @@ import {
   zeitraumText,
   zeitraumVerschieben,
   type Zeitraum,
-} from '@shared/dienstplan/zeitraum';
+} from '@shared/ct/zeitraum';
 import type { TermineZustand } from './Termine';
 import type { TermineDaten } from './ladeTermine';
-import { ZeitraumKnopf } from './ZeitraumKnopf';
+import { ZeitraumKnopf } from '@ui/bedienung/ZeitraumKnopf';
 import { leseAnsicht, merkeAnsicht, type PlanenAnsicht } from './planenAnsicht';
 import { useBreite } from './useBreite';
-import { FilterKnopf } from './FilterKnopf';
+import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
 import { WerKann, type Eintragen, type FreierPlatz } from './WerKann';
 import { EntwurfFach } from './EntwurfFach';
 import { BelegtFach } from './BelegtFach';
@@ -479,7 +479,7 @@ export function Planen({
       zeile1={zeile1}
       zeile2={zeile2}
       heute={heute}
-      handy={handy}
+      abHeuteZusatz={handy ? 'die nächsten Termine' : 'passend zur Fensterbreite'}
       onWahl={waehleZeitraum}
     />
   );

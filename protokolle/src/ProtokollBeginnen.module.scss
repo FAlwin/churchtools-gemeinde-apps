@@ -1,0 +1,65 @@
+// Fenster „Protokoll beginnen“ (Bauplan S5-1, Entwurf 7) – Vorlage, „Wie letztes Mal“ oder leer.
+.unter {
+  margin: -6px 0 12px;
+  color: var(--text2);
+  font-size: 13.5px;
+}
+
+.liste {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wahl {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  b {
+    font-size: 14.5px;
+  }
+
+  small {
+    color: var(--text2);
+    font-size: 12.5px;
+    line-height: 1.35;
+  }
+
+  &:hover:not(:disabled) {
+    background: var(--surface3);
+  }
+
+  &[aria-pressed='true'] {
+    border-color: var(--blue);
+    background: var(--blue-soft);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.hinweis {
+  padding: 10px 12px;
+  border-radius: var(--r-ctrl);
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+.fehler {
+  margin-top: 14px;
+  color: var(--red);
+  font-size: 14px;
+  font-weight: 600;
+}

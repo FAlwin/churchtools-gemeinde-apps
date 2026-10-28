@@ -94,6 +94,16 @@ beforeEach(() => {
   api.setAblaufAbgeschlossen.mockReset().mockResolvedValue({ ok: true });
 });
 
+describe('Kopf-Knöpfe: blau nur „Fertig“ (Alwin, 28.10.2026)', () => {
+  it('„Bearbeiten“ ist grau wie „Teilen“ – im Bearbeiten ist „Fertig“ die blaue Hauptaktion', () => {
+    zeige(false);
+    const bearbeiten = screen.getByTitle('Ablauf bearbeiten');
+    expect(bearbeiten.className).not.toMatch(/haupt/);
+    fireEvent.click(bearbeiten);
+    expect(screen.getByTitle('Fertig').className).toMatch(/haupt/);
+  });
+});
+
 describe('Ablauf abgeschlossen', () => {
   it('in der Ansicht kein Hinweis und kein Schloss', () => {
     zeige(true);

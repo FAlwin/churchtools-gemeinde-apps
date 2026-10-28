@@ -45,6 +45,18 @@ export function terminAdminIds(ev: { adminIds?: unknown; eventAdminIds?: unknown
   return [...ids];
 }
 
+/**
+ * Was die Regel vom Termin braucht, aus der ChurchTools-Antwort – eine Stelle für die Termin-Ansicht und die Spalten der
+ * Matrix (E6-6a), die beide aus `/events` lesen.
+ */
+export function ablaufTerminVon(ev: {
+  calendar?: { domainIdentifier?: unknown };
+  adminIds?: unknown;
+  eventAdminIds?: unknown;
+}): AblaufTermin {
+  return { kalenderId: kalenderVon(ev), terminAdminIds: terminAdminIds(ev) };
+}
+
 /** Darf `ichId` den Ablauf dieses Termins bearbeiten? `ichId: null` (unbekannt) zählt nicht als Termin-Admin. */
 export function darfAblaufBearbeiten(
   rechte: AblaufRechte,

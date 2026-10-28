@@ -1,10 +1,10 @@
 // Die Bearbeiten-Liste des Ablaufs (E6-2b-3, vorher in `client/src/pages/Setlist.module.scss`) – 1:1 verschoben,
 // damit Musik-App und Dienstplaner (E6-3) dieselbe Liste nutzen.
 
-// Bearbeiten-Liste. Unten Platz für das schwebende Plus (54 px + 16 px Rand, `SchwebePlus`): Sonst
-// läge es über dem Stift des letzten Punkts.
+// Bearbeiten-Liste. Unten Platz für das schwebende Plus (`--plus-platz`, `SchwebePlus`): Sonst
+// läge es über dem Stift des letzten Punkts. Bis zum 28.10.2026 stand hier eine eigene Zahl (76px).
 .list {
-  padding: 0 0 76px;
+  padding: 0 0 var(--plus-platz);
   display: flex;
   flex-direction: column;
   background: var(--surface2);
@@ -50,4 +50,24 @@
   margin: -4px -6px;
   border-radius: var(--r-ctrl);
   cursor: pointer;
+}
+
+// „+ Punkt“ am Ende der schmalen Liste (Matrix, E6-6a) – statt des schwebenden Plus, das es je Seite nur einmal gibt.
+.plusAmEnde {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-top: 1px solid var(--hair);
+  background: var(--surface2);
+  color: var(--blue);
+  font: 700 12.5px var(--ui);
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--blue-soft);
+  }
 }

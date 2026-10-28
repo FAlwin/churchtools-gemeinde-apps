@@ -4,7 +4,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  margin: 18px 16px 0;
+  // Kein Außenabstand: Die Karte steht im `SeitenKopf` an der Stelle der Überschrift (28.10.2026).
   padding: 16px;
   background: var(--surface2);
   border-radius: var(--r-card);

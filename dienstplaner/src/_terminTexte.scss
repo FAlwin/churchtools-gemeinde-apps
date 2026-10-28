@@ -1,0 +1,9 @@
+// Gemeinsame Textbausteine der Termin-Ansicht und des Ablaufs (`TerminAblauf`, E6-6a) – eine Stelle für beide Module.
+// (`composes … from` geht über SCSS-Dateien nicht: PostCSS liest die andere Datei roh und scheitert an `//`.)
+
+@mixin hinweis {
+  margin: 0;
+  padding: 14px;
+  color: var(--text2);
+  font-size: 14px;
+}

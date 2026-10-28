@@ -397,7 +397,9 @@ Unschärfe-Band (Liquid Glass), alles darin wird weich – **auch Symbole** (Scr
 02.10.2026; die frühere Annahme „Symbole verträgt es" war falsch). **Seitenkopf im ChurchTools-Look (Scheibe S, 26.10.2026; Alwin: die runden Knöpfe wirkten „wie eine
 iOS-App“):** `SeitenKopf` steht IM Inhalt (unter dem Band, scrollt mit) – Detailansichten als weiße Karte mit
 „← Ziel“ (`KopfZurueck`) und eckigen Knöpfen mit Beschriftung (`KopfKnopf`, Hauptaktion blau – im Ablauf nur „Fertig“, „Bearbeiten“ grau seit 28.10.2026 –, am Handy nur Symbol
-per CSS; `neu` grün wie „+ Gruppe erstellen“, S2), Übersichten mit Titel links und Knöpfen rechts. Die Kopfkarte
+per CSS; `neu` grün wie „+ Gruppe erstellen“, S2), Übersichten mit Titel links und Knöpfen rechts – die Seiten hinter einem Reiter (Termine, Lieder, Abwesenheiten, Mehr) seit
+28.10.2026 OHNE sichtbare Überschrift: an ihrer Stelle der Wähler (`stattTitel`: Kommende/Vergangene, Suche, Termine/Einträge,
+Gemeinde-Karte), wie „Kalender“/„Beiträge“ in der ChurchTools-App; der Titel bleibt für Screenreader. Die Kopfkarte
 schneidet nicht ab (`overflow: visible`), damit ein Menü unter einem Kopfknopf hinausragen kann. Knöpfe in
 Listenzeilen (Plus, Stift, „+ Anlegen“) sind seit S2 eckig mit Rahmen (`ZeilenKnopf`, `m.aktionKnopf`) statt rund.
 Reiter am iPad/Rechner **oben** als Textreiter
@@ -405,7 +407,9 @@ Reiter am iPad/Rechner **oben** als Textreiter
 (`KnopfReihe`) unter dem Band – mit Scheibe B1 (28.10.2026) auch aus dem Liedblatt verschwunden und gelöscht. **Am Gerät widerlegt (02.10.2026):** Eine deckende
 Statusleiste (`status-bar-style=default`) beseitigt das Band NICHT – nicht noch einmal versuchen. Die
 Abstände kommen aus `--inhalt-pad-top` / `--bar-pad-top`
-(`ui/design/_variables.scss`), die App zeichnet hinter der Statusleiste (`black-translucent`,
+(`ui/design/_variables.scss`); der Abstand unter das Band gilt nur für unsere App – die ChurchTools-App vom
+Home-Bildschirm ist auch „standalone“, in den Erweiterungen setzt `.ct-extension` ihn zurück (`standalone.test.ts`,
+28.10.2026). Das schwebende Plus steht über `--plus-unten`, Listen darunter halten `--plus-platz` frei. Die App zeichnet hinter der Statusleiste (`black-translucent`,
 `client/index.html`). **Liedblatt-Kopf = Kopfkarte (`components/BlattKopf.tsx`, Scheibe B1+B2, 28.10.2026; Bauplan
 `bauplan-blatt-ct-look.md`, Messung `messung-b0-28.10.md`):** weiße Karte unter dem Band wie „Events › Ablaufpläne“.
 Drei Aufbauten nach gemessener Kopfbreite und Fensterhöhe (`kopfAufbau` in `utils/werkzeuge.ts`, nicht nach

@@ -103,17 +103,18 @@ export function Settings({
   return (
     <SeitenGeruest
       titel="Mehr"
+      // Die Gemeinde-Karte steht an der Stelle der Überschrift – „Mehr“ sagt schon der Reiter (28.10.2026).
+      stattTitel={
+        <div className={styles.profileCard}>
+          <img className={styles.profileLogo} src={logo} alt="" />
+          <div>
+            <div className={styles.profileName}>{site.orgName}</div>
+            {userName && <div className={styles.profileSub}>Angemeldet als {userName}</div>}
+          </div>
+        </div>
+      }
       ueberlagerung={<VerwaltungFenster site={site} isAdmin={isAdmin} v={verwaltung} />}
     >
-      {/* Profil */}
-      <div className={styles.profileCard}>
-        <img className={styles.profileLogo} src={logo} alt="" />
-        <div>
-          <div className={styles.profileName}>{site.orgName}</div>
-          {userName && <div className={styles.profileSub}>Angemeldet als {userName}</div>}
-        </div>
-      </div>
-
       {funktionen.installieren && <InstallierenHinweis />}
 
       {/* Darstellung */}

@@ -19,9 +19,12 @@ import zeile from './AblaufListe.module.scss';
 export function SortableRow<T extends AblaufZeile>({
   item,
   onOpenActions,
+  schmal = false,
 }: {
   item: T;
   onOpenActions: (item: T) => void;
+  /** Schmale Form für die Matrix (E6-6a) – derselbe Inhalt wie `AblaufListe schmal`. */
+  schmal?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
@@ -74,7 +77,7 @@ export function SortableRow<T extends AblaufZeile>({
     <div
       ref={setNodeRef}
       style={style}
-      className={`${zeile.flowRow}${item.song ? ' ' + zeile.songRow : ''}${weg}`}
+      className={`${zeile.flowRow}${item.song ? ' ' + zeile.songRow : ''}${weg}${schmal ? ' ' + styles.schmalZeile : ''}`}
     >
       <button
         className={styles.dragCol}
@@ -87,7 +90,7 @@ export function SortableRow<T extends AblaufZeile>({
       </button>
       <ZeitSpalte item={item} />
       <button className={styles.editBody} data-tour="edit-item" onClick={() => onOpenActions(item)}>
-        <ZeilenInhalt item={item} />
+        <ZeilenInhalt item={item} schmal={schmal} />
       </button>
       <button
         className={styles.rowEdit}

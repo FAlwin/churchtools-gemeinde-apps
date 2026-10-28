@@ -1,5 +1,6 @@
 // Termin-Ansicht (E6-1b, Entwurf e6-entwurf.html) – Tokens und Bausteine aus ui/design, Karten wie Startseite/Termine.
 @use '@ui/design/mixins' as m;
+@use './terminTexte' as t;
 
 .seite {
   display: flex;
@@ -114,15 +115,8 @@
   text-decoration: none;
 }
 
-.ablaufGrund {
-  background: var(--surface2);
-}
-
 .hinweis {
-  margin: 0;
-  padding: 14px;
-  color: var(--text2);
-  font-size: 14px;
+  @include t.hinweis;
 }
 
 .gruppe {
@@ -179,24 +173,4 @@
   display: inline-flex;
   align-items: center;
   gap: 12px;
-}
-
-// Termin ohne Ablauf (E6-5a): Hinweis und – mit Recht – „Ablauf anlegen“.
-.ohneAblauf {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding-right: 14px;
-}
-
-.anlegenKnopf {
-  @include m.aktionKnopf;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 34px;
-  padding: 0 12px;
-  border-radius: var(--r-ctrl);
-  font-size: 14px;
 }

@@ -15,6 +15,8 @@ export interface PlanenAnsicht {
   ausgeblendeteArten: string[];
   /** Ab heute, ein Monat oder ein eigener Zeitraum (Zeitraum-Knopf, 14.10.2026). */
   zeitraum: Zeitraum;
+  /** Die Gruppe „Ablauf“ zugeklappt (E6-6a, Alwin 28.10.2026: auf dem Gerät merken – lange Abläufe schieben die Dienste weit nach unten). */
+  ablaufZu: boolean;
 }
 
 const SCHLUESSEL = 'dienstplaner.planen.ansicht';
@@ -25,6 +27,7 @@ export const VORGABE_ANSICHT: PlanenAnsicht = {
   ausgeblendeteGruppen: [],
   ausgeblendeteArten: [],
   zeitraum: AB_HEUTE,
+  ablaufZu: false,
 };
 
 export function leseAnsicht(): PlanenAnsicht {
@@ -37,6 +40,7 @@ export function leseAnsicht(): PlanenAnsicht {
       ausgeblendeteGruppen: texte(a.ausgeblendeteGruppen),
       ausgeblendeteArten: texte(a.ausgeblendeteArten),
       zeitraum: zeitraumAus(a.zeitraum),
+      ablaufZu: a.ablaufZu === true,
     };
   });
 }

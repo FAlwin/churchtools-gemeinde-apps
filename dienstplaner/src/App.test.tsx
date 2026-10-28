@@ -388,7 +388,7 @@ describe('Termin-Ansicht im Dienstplaner (E6-1b)', () => {
       plan: plan(ROH),
     });
     vi.mocked(ladeTermin).mockImplementation((_s, id) =>
-      Promise.resolve({ zeilen: [], plan: plan(ROH.filter((r) => r.id === id)), ablaufTermin: {} }),
+      Promise.resolve({ zeilen: [], plan: plan(ROH.filter((r) => r.id === id)) }),
     );
     render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: /Gebetsabend/ }));
@@ -422,7 +422,7 @@ describe('Termin-Ansicht im Dienstplaner (E6-1b)', () => {
     breite(false);
     window.location.hash = '#/termin/7';
     laden.mockResolvedValue(s);
-    vi.mocked(ladeTermin).mockResolvedValue({ zeilen: [], plan: plan([ROH[0]]), ablaufTermin: {} });
+    vi.mocked(ladeTermin).mockResolvedValue({ zeilen: [], plan: plan([ROH[0]]) });
     render(<App />);
     expect(await screen.findByRole('heading', { name: 'Gottesdienst' })).toBeTruthy();
     expect(vi.mocked(ladeTermin).mock.calls[0][1]).toBe(7);

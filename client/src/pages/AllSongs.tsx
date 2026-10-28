@@ -174,10 +174,15 @@ export function AllSongs({
   );
 
   return (
-    <SeitenGeruest titel="Lieder" onNeuLaden={onRetry} ueberlagerung={ueberlagerung}>
+    <SeitenGeruest
+      titel="Lieder"
+      // Die Suche steht an der Stelle der Überschrift – „Lieder“ sagt schon der Reiter (28.10.2026). Dasselbe Suchfeld
+      // wie im Einfüge-Dialog – ohne SongSelect-Weg, deshalb tut Enter hier nichts.
+      stattTitel={<LiedSucheKopf eingabe={f.q} onEingabe={f.setQ} />}
+      onNeuLaden={onRetry}
+      ueberlagerung={ueberlagerung}
+    >
       <div className={styles.searchWrap}>
-        {/* Dasselbe Suchfeld wie im Einfüge-Dialog – ohne SongSelect-Weg, deshalb tut Enter hier nichts. */}
-        <LiedSucheKopf eingabe={f.q} onEingabe={f.setQ} />
         {showStats && <SongStatsBar {...f} />}
 
         {/**

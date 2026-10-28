@@ -113,3 +113,40 @@
     color: var(--text3);
   }
 }
+
+// ── Schmale Form für eine Matrix-Spalte (E6-6a, Entwurf `e6-6-entwurf-2.html`) ──
+// Dieselben Zeilen, nur enger: kleinere Uhrzeit, Titel höchstens zwei Zeilen, keine Zuständigen/Kürzel (`schmal` in
+// `AblaufListe`/`SortableRow`). Gilt für Ansicht und Bearbeiten-Liste – beide stecken in `.schmal`.
+.schmal {
+  .flowRow {
+    gap: 8px;
+    padding: 7px 8px;
+  }
+  .flowTime {
+    width: 38px;
+    font-size: 12.5px;
+  }
+  .zeitDauer {
+    font-size: 11px;
+  }
+  .sectionBand {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+}
+.schmalTitel {
+  font-size: 13px;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  // Lange Wörter mit Trennstrich statt mitten im Wort abgeschnitten (Silbentrennung nach der Seitensprache).
+  overflow-wrap: break-word;
+  hyphens: auto;
+
+  // Der Titel selbst steht sonst in 14,5 px (`flowTitle`).
+  > span {
+    font-size: inherit;
+  }
+}

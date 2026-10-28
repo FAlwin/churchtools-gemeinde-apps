@@ -34,8 +34,27 @@ export function ZeitSpalte({
   );
 }
 
-/** Titel, Zuständige, Notiz, Lied-Karte – was Ansicht und Bearbeiten-Liste in der Mitte einer Zeile zeigen. */
-export function ZeilenInhalt({ item, tag }: { item: AblaufZeile; tag?: ReactNode }) {
+/**
+ * Titel, Zuständige, Notiz, Lied-Karte – was Ansicht und Bearbeiten-Liste in der Mitte einer Zeile zeigen. **Schmal**
+ * (Matrix, E6-6a – Entwurf `e6-6-entwurf-2.html`): nur der Titel samt Liedname, höchstens zwei Zeilen; Zuständige, Notiz
+ * und Lied-Karte passen nicht in eine Matrix-Spalte.
+ */
+export function ZeilenInhalt({
+  item,
+  tag,
+  schmal = false,
+}: {
+  item: AblaufZeile;
+  tag?: ReactNode;
+  schmal?: boolean;
+}) {
+  if (schmal) {
+    return (
+      <div className={styles.schmalTitel}>
+        <ItemTitle item={item} />
+      </div>
+    );
+  }
   // Heißt der Punkt wie sein Lied (oder hat keinen eigenen Titel), steht der Liedname schon in der Titelzeile.
   const liedImTitel = !!item.song && itemTitleParts(item).songName === null;
   return (
@@ -58,6 +77,7 @@ export function AblaufListe({
   onLied,
   schild,
   kopf,
+  schmal = false,
 }: {
   zeilen: readonly AblaufZeile[];
   /** Uhrzeit des Veranstaltungsbeginns („10:00“) für den Balken nach dem Vorlauf (#423). */
@@ -71,6 +91,8 @@ export function AblaufListe({
   schild?: (id: number) => string | null;
   /** Steht als Erstes in der Liste (Musik-App: der Hinweis „Ablauf geändert“) – mit denselben Abständen. */
   kopf?: ReactNode;
+  /** Die schmale Form für eine Matrix-Spalte (E6-6a): nur Uhrzeit, Dauer und Titel – ohne Zuständige und Kürzel. */
+  schmal?: boolean;
 }) {
   const sichtbar = zeilen.filter((z) => !z.removed);
   // Der Balken „Beginn“ vor dem ersten Punkt nach dem Vorlauf (#423) – nur, wenn es Vorlauf gibt.
@@ -96,9 +118,9 @@ export function AblaufListe({
       <>
         <ZeitSpalte item={item} />
         <div className={styles.flowBody}>
-          <ZeilenInhalt item={item} tag={tag} />
+          <ZeilenInhalt item={item} tag={tag} schmal={schmal} />
         </div>
-        <Kuerzel entries={item.responsible} />
+        {!schmal && <Kuerzel entries={item.responsible} />}
       </>
     );
     if (item.song && onLied) {
@@ -126,7 +148,7 @@ export function AblaufListe({
   };
 
   return (
-    <div className={styles.flowList}>
+    <div className={`${styles.flowList}${schmal ? ` ${styles.schmal}` : ''}`}>
       {kopf}
       {sichtbar.map((item, i) => (
         <Fragment key={item.id}>

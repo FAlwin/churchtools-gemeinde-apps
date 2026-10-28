@@ -152,6 +152,8 @@ describe('planAus', () => {
         plaetze: 3,
         besetzt: 2,
         admin: false,
+        beginn: '2026-10-18T08:00:00Z',
+        ablaufTermin: { kalenderId: null, terminAdminIds: [] },
       },
       {
         id: 11,
@@ -162,6 +164,8 @@ describe('planAus', () => {
         plaetze: 2,
         besetzt: 1,
         admin: false,
+        beginn: '2026-10-25T09:00:00Z',
+        ablaufTermin: { kalenderId: null, terminAdminIds: [] },
       },
     ]);
   });
@@ -258,5 +262,22 @@ describe('planAus – nur Dienste, die ChurchTools ganz liefert', () => {
 
   it('der Kopf zählt dieselben Plätze wie die Zeilen', () => {
     expect(p.spalten[0]).toMatchObject({ plaetze: 2, besetzt: 1 });
+  });
+});
+
+describe('planAus – was der Ablauf je Spalte braucht (E6-6a)', () => {
+  it('Beginn wie von ChurchTools, Kalender und Admins mit derselben Regel wie die Termin-Ansicht (`ablaufTerminVon`)', () => {
+    const p = plan([
+      termin(10, '2026-10-18T08:00:00Z', [], {
+        calendar: { domainIdentifier: '2' },
+        adminIds: [7],
+        eventAdminIds: ['8'],
+      }),
+      termin(11, '2026-10-25T09:00:00Z', []),
+    ]);
+    expect(p.spalten.map((s) => [s.beginn, s.ablaufTermin])).toEqual([
+      ['2026-10-18T08:00:00Z', { kalenderId: 2, terminAdminIds: [7, 8] }],
+      ['2026-10-25T09:00:00Z', { kalenderId: null, terminAdminIds: [] }],
+    ]);
   });
 });

@@ -31,6 +31,8 @@ describe('Im Gerät merken (geraet.ts)', () => {
         unteransicht: 'personen',
         ausgeblendeteGruppen: [3, 'ohne'],
         zeitraum: { art: 'eigen', von: '2026-02-30', bis: '2026-03-10' },
+        // Nur `true` klappt den Ablauf zu (E6-6a) – Text zählt nicht.
+        ablaufZu: 'ja',
       }),
     );
     expect(leseAnsicht()).toEqual({
@@ -39,6 +41,7 @@ describe('Im Gerät merken (geraet.ts)', () => {
       ausgeblendeteGruppen: ['ohne'],
       ausgeblendeteArten: [],
       zeitraum: { art: 'abHeute' },
+      ablaufZu: false,
     });
   });
 

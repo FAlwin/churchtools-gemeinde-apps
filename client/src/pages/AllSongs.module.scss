@@ -1,9 +1,9 @@
 @use '@ui/design/mixins' as m;
 
 .searchWrap {
-  // Den Abstand zum Unschärfe-Band hält der `SeitenKopf` darüber; hier reicht der normale
-  // Innenabstand. (Kurz stand hier `--inhalt-pad-top` – als das Suchfeld noch das oberste Element war.)
-  padding: 4px 16px 2px;
+  // Über der Sortierung und der Anzahl steht der `SeitenKopf` mit dem Suchfeld (seit 28.10.2026 statt der
+  // Überschrift); sein Abstand nach unten reicht, deshalb oben nichts.
+  padding: 0 16px 2px;
   flex-shrink: 0;
 }
 

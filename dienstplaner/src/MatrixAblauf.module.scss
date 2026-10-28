@@ -1,0 +1,107 @@
+// Der Ablauf in der Matrix (E6-6a, Entwurf `e6-6-entwurf-2.html`) – Gruppenzeile und Zellen. Die Gruppenzeile selbst
+// nutzt die Klassen der Matrix (`Planen.module.scss`: gruppe, gruppenKnopf, gruppenZelle), damit sie aussieht wie jede
+// Dienstgruppe.
+
+// „8 Punkte“ / „kein Ablauf“ in der Gruppenzeile – grau wie ein Stand ohne offene Plätze.
+.anzahl {
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text2);
+  white-space: nowrap;
+}
+
+.ohne {
+  font-weight: 400;
+  color: var(--text3);
+}
+
+.handyAnzahl {
+  margin-left: auto;
+}
+
+// Stift wie der Zauberstab der Dienstgruppen – blau, ohne Rahmen.
+.stift {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  background: transparent;
+  color: var(--blue);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface2);
+  }
+}
+
+// „Fertig“ – blau gefüllt wie der Haken in der Termin-Ansicht, mit Wort, weil er für alle Termine gilt.
+.fertig {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  background: var(--blue);
+  color: #fff;
+  font: 700 12.5px var(--ui);
+  cursor: pointer;
+}
+
+.schloss {
+  display: inline-flex;
+  margin-right: 4px;
+  color: var(--text3);
+}
+
+// Die Zeile mit den Abläufen: Die Liste reicht bis an den Zellrand (keine Polsterung wie bei den Plätzen).
+.ablaufZeile {
+  th {
+    background: var(--surface2);
+  }
+}
+
+.zelle {
+  padding: 0 !important;
+  background: var(--surface2);
+}
+
+.leise {
+  margin: 0;
+  padding: 10px 8px;
+  color: var(--text3);
+  font-size: 12.5px;
+}
+
+.nochmal {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--blue);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.handyInhalt {
+  border-top: 1px solid var(--hair);
+}
+
+// Nur für Screenreader: Die Kopfzelle der Ablauf-Zeile bleibt sichtbar leer.
+.unsichtbar {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

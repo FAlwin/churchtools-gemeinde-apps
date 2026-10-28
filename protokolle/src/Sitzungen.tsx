@@ -13,6 +13,7 @@ import { ladeAufgaben, ladeSitzungen, type GruppenSitzungen } from './lesen';
 import { kachelVon, uhrzeit } from './anzeige';
 import { Marke } from './Marke';
 import { SitzungAnsicht } from './SitzungAnsicht';
+import { ProtokollBeginnen } from './ProtokollBeginnen';
 import styles from './Sitzungen.module.scss';
 
 // Der Editor (BlockNote, gut 1 MB) wird erst geladen, wenn die Leitung ein Protokoll schreibt (S4-1) – wer nur liest,
@@ -68,7 +69,8 @@ export interface SitzungsAuswahl {
 /**
  * **Reiter „Sitzungen“** (Bauplan S3-2, Entwurf 7): je Gruppe „Kommend“ (Termine mit Besprechungsanfrage,
  * Gruppentreffen, begonnene Protokolle) und „Protokolle“ (freigegeben). Ein Tipp öffnet die Sitzung zum Lesen – einen
- * Entwurf, wenn man schreiben darf (die Leitung), im Editor (S4-1).
+ * Entwurf, wenn man schreiben darf (die Leitung), im Editor (S4-1). Ohne Protokoll kann die Leitung es dort beginnen
+ * (S5-1); danach öffnet es sich gleich im Editor.
  * Bei mehreren Gruppen wählt man sie oben.
  */
 export function Sitzungen({
@@ -91,6 +93,7 @@ export function Sitzungen({
   );
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
   const [offen, setOffen] = useState<Sitzung | null>(null);
+  const [beginnt, setBeginnt] = useState<Sitzung | null>(null);
   // Die gewünschte Sitzung gilt nur für das erste Laden – danach bestimmt die Bedienung hier.
   const wunsch = useRef(auswahl?.sitzung);
   const [zuPunkt, setZuPunkt] = useState<string | null>(auswahl?.punkt ?? null);
@@ -118,6 +121,9 @@ export function Sitzungen({
 
   useEffect(laden, [laden]);
 
+  const darfSchreibenIn = (g: ProtokollGruppe) =>
+    g.protokolle !== null && schreibbar.includes(g.protokolle);
+
   if (!gruppe)
     return (
       <p className={styles.ruhig}>Du bist in keiner Gruppe, die hier Protokolle führen kann.</p>
@@ -127,7 +133,7 @@ export function Sitzungen({
     offen?.kopf?.status === 'entwurf' &&
     zustand.art === 'fertig' &&
     gruppe.protokolle !== null &&
-    schreibbar.includes(gruppe.protokolle)
+    darfSchreibenIn(gruppe)
   )
     return (
       <Suspense fallback={<p className={styles.ruhig}>Editor wird geladen …</p>}>
@@ -150,22 +156,47 @@ export function Sitzungen({
       </Suspense>
     );
 
+  const darfSchreiben = darfSchreibenIn(gruppe);
+
   if (offen && zustand.art === 'fertig')
     return (
-      <SitzungAnsicht
-        sitzung={offen}
-        gruppe={gruppe.name}
-        gruppeId={gruppe.id}
-        protokolle={zustand.daten.protokolle}
-        teile={zustand.daten.teile}
-        aufgaben={zustand.aufgaben}
-        zeitzone={zeitzone}
-        springeZu={zuPunkt}
-        onZurueck={() => {
-          setZuPunkt(null);
-          setOffen(null);
-        }}
-      />
+      <>
+        <SitzungAnsicht
+          sitzung={offen}
+          gruppe={gruppe.name}
+          gruppeId={gruppe.id}
+          protokolle={zustand.daten.protokolle}
+          teile={zustand.daten.teile}
+          aufgaben={zustand.aufgaben}
+          zeitzone={zeitzone}
+          springeZu={zuPunkt}
+          onBeginnen={darfSchreiben ? () => setBeginnt(offen) : undefined}
+          onZurueck={() => {
+            setZuPunkt(null);
+            setOffen(null);
+          }}
+        />
+        {beginnt && gruppe.protokolle !== null && (
+          <ProtokollBeginnen
+            sitzung={beginnt}
+            gruppeId={gruppe.id}
+            modul={modul}
+            kategorie={gruppe.protokolle}
+            mitarbeit={gruppe.mitarbeit}
+            protokolle={zustand.daten.protokolle}
+            teile={zustand.daten.teile}
+            ich={ich}
+            zeitzone={zeitzone}
+            onBegonnen={(id) => {
+              // Neu laden und gleich dieses Protokoll öffnen – als Entwurf im Editor (S4-1).
+              setBeginnt(null);
+              wunsch.current = `p:${id}`;
+              laden();
+            }}
+            onClose={() => setBeginnt(null)}
+          />
+        )}
+      </>
     );
 
   return (

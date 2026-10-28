@@ -91,3 +91,14 @@
   font-size: 14px;
   font-weight: 600;
 }
+
+// „Protokoll beginnen“ (S5-1) – der eine Hauptknopf der Seite, nicht über die ganze Breite.
+.beginnen {
+  @include m.hauptKnopfBreit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: auto;
+  padding: 0 18px;
+}

@@ -1,11 +1,12 @@
 # Protokolle – ChurchTools-Erweiterung
 
-> **Stand: S4-3b (28.10.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
+> **Stand: S5-1 (28.10.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
 > Sitzungen“ und „Deine Gruppen“; der Reiter **„Sitzungen“** zeigt je Gruppe Kommend und Protokolle zum Lesen; die
 > **Lupe** oben rechts sucht in allem (ohne Suchbegriff: alle Beschlüsse); Admins richten im Reiter **„Verwaltung“**
 > Gruppen ein und pflegen die Vorlagen. Die **Leitung schreibt** Protokolle im Entwurf direkt im Editor, mit
-> Aufgaben (= To-Dos), Beschlüssen, Terminen und festen Punkten. Sitzung anlegen, Freigabe und PDF folgen (Bauplan
-> S5–S9 in `protokolle-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
+> Aufgaben (= To-Dos), Beschlüssen, Terminen und festen Punkten und beginnen Protokolle zu Terminen und Treffen.
+> Nächste Sitzung festlegen, Anwesenheit, Vorschläge, Freigabe und PDF folgen (Bauplan S5-2–S9 in
+> `protokolle-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
 
 Die Protokolle sind für Gruppen wie den Leitungskreis: **Protokolle als Dokument** (wie Word, Loop oder Notion),
 daraus gesammelt Beschlüsse, To-Dos und Termine. **Alles liegt in ChurchTools** – es gibt keinen eigenen Server,
@@ -61,6 +62,12 @@ zugewiesenen, nicht erledigten aus allen Gruppen. „Nächste Sitzungen“ sind 
 „Sitzungen“ (Termine **mit Besprechungsanfrage**, Gruppentreffen, begonnene Protokolle), ab heute über alle Gruppen;
 dahinter steht die eigene Antwort auf die Anfrage – wer nicht eingeladen ist, sieht keine. Ein Tipp öffnet die
 Sitzung bzw. die Gruppe im Reiter „Sitzungen“.
+
+**Protokoll beginnen (Leitung, S5-1):** Eine Sitzung ohne Protokoll (Termin mit Besprechungsanfrage oder
+Gruppentreffen) zeigt „Protokoll beginnen“. Im Fenster: eine Vorlage, „Wie letztes Mal“ (Tagesordnung des letzten
+freigegebenen Protokolls) oder „Leer“. Danach öffnet sich der Editor; feste Aufgaben der Vorlage sind gleich To-Dos.
+Hat jemand anderes inzwischen begonnen, öffnet sich dessen Protokoll. Ein Protokoll gehört zu genau einem Termin – bei
+Serienterminen zu dem mit demselben Beginn.
 
 **Protokoll schreiben (Leitung, S4-1):** Ein Protokoll im Entwurf öffnet für alle, die in der Gruppe schreiben dürfen,
 direkt im Editor – Mitglieder sehen es weiter nur zum Lesen. Gespeichert wird **automatisch** drei Sekunden nach der
@@ -128,6 +135,8 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit später sc
   `festePunkteFesthalten` – die Freigabe in S6 muss es aufrufen, sonst bleiben die Punkte live), Baustein
   `FesterPunkt.tsx` für Editor und Lese-Ansicht, Kontext + Fenster `FestePunkteRahmen.tsx`. Festgehalten wird in
   `props.fest` des Verweis-Blocks; „wie letztes Mal“ und Vorlagen nehmen es nicht mit.
+- Beginnen: Regel `shared/protokolle/beginnen.ts`, Zuordnung Kopf ↔ Termin/Treffen `gehoertZu` in
+  `shared/protokolle/sitzungen.ts`, Schreiben `protokolle/src/beginnen.ts`, Fenster `ProtokollBeginnen.tsx`.
 - Abschnitte: Regel `shared/protokolle/abschnitte.ts`, Anbindung `protokolle/src/abschnittZiehen.ts` (Loslassen hört
   das Blatt in der Einfangphase vor BlockNote ab; „Nach oben/unten“ im Griff-Menü von `DokumentEditor.tsx`). Der Griff
   sitzt ohne BlockNotes Überschriften-Versatz (`GRIFF_LAGE`).

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
 import { startFuer } from './start.testutil';
+import { fensterKnoepfe } from '@ui/fenster/fenster.testutil';
 import { TerminAnsicht } from './TerminAnsicht';
 
 /**
@@ -110,8 +111,12 @@ describe('TerminAnsicht (E6-1b)', () => {
     const zeit = within(ablauf).getByText('10:05').parentElement!;
     expect(zeit.textContent).toBe('10:055 Min');
     expect(within(ablauf).getByText(/Beginn/)).toBeTruthy();
-    // Nur ansehen: Lieder sind keine Knöpfe.
-    expect(within(ablauf).queryAllByRole('button')).toHaveLength(0);
+    // Nur ansehen – bis auf die Lieder: Sie öffnen die Lied-Ansicht (E6-O O4, vorher keine Knöpfe).
+    expect(
+      within(ablauf)
+        .queryAllByRole('button')
+        .map((b) => b.textContent),
+    ).toEqual([expect.stringContaining('Du großer Gott')]);
     expect(
       spy.mock.calls.map((c) => new URL(String(c[0])).pathname + new URL(String(c[0])).search),
     ).toEqual(
@@ -759,5 +764,154 @@ describe('TerminAnsicht – Autor auf der Lied-Karte (E6-O1)', () => {
     zeige();
     expect(await screen.findByText('A · 75 bpm')).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+});
+
+describe('TerminAnsicht – Lied-Ansicht (E6-O O4)', () => {
+  const MIT_LIED = {
+    items: [
+      {
+        id: 3,
+        type: 'song',
+        title: 'Lied',
+        song: {
+          songId: 41,
+          arrangementId: 410,
+          title: 'Treu',
+          arrangement: 'Standard',
+          key: 'A',
+          bpm: 75,
+        },
+      },
+    ],
+  };
+  const LIED = {
+    id: 41,
+    name: 'Treu',
+    author: 'Uwe Peters',
+    copyright: 'Beispiel-Verlag',
+    ccli: '1234567',
+    arrangements: [
+      {
+        id: 410,
+        name: 'Standard',
+        key: 'A',
+        keyOfArrangement: 'A',
+        bpm: '75',
+        beat: null,
+        files: [
+          {
+            name: 'Treu.chordpro',
+            fileUrl: 'https://ct.test/?q=public/filedownload&id=901&filename=a',
+          },
+          {
+            name: 'Treu — Akustik (App).chordpro',
+            fileUrl: 'https://ct.test/?q=public/filedownload&id=902&filename=b',
+          },
+          { name: 'Treu.pdf', fileUrl: 'https://ct.test/?q=public/filedownload&id=903&filename=c' },
+        ],
+      },
+    ],
+  };
+  const darf = startFuer({ rechte: { ...startFuer().rechte, ablaufKalender: [2] } });
+  function ctLied(o: { lied?: () => Response; module?: unknown[] } = {}) {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = new URL(String(input));
+      if (url.pathname === '/api/songs')
+        return Promise.resolve(o.lied ? o.lied() : json(200, { data: [LIED] }));
+      if (url.pathname === '/api/custommodules')
+        return Promise.resolve(json(200, { data: o.module ?? [{ shorty: 'musik-app' }] }));
+      if (url.pathname.endsWith('/agenda')) return Promise.resolve(json(200, { data: MIT_LIED }));
+      if (url.pathname.startsWith('/api/events/'))
+        return Promise.resolve(
+          json(200, { data: { ...TERMIN, calendar: { domainIdentifier: '2' } } }),
+        );
+      return Promise.resolve(json(200, { data: [] }));
+    });
+  }
+  const liedAntippen = async () =>
+    fireEvent.click(await screen.findByRole('button', { name: /Uwe Peters/ }));
+
+  it('Lied-Karte antippen: Autor · Verlag · CCLI, Arrangement, Tonart · Tempo, Dateien – ohne App-Versionen', async () => {
+    ctLied();
+    zeige();
+    await liedAntippen();
+    const fenster = await screen.findByRole('dialog', { name: 'Treu' });
+    expect(within(fenster).getByText('Uwe Peters · Beispiel-Verlag · CCLI 1234567')).toBeTruthy();
+    expect(within(fenster).getByText('Standard')).toBeTruthy();
+    expect(within(fenster).getByText('A · 75 bpm')).toBeTruthy();
+    const dateien = within(within(fenster).getByRole('region', { name: 'Dateien' })).getAllByRole(
+      'link',
+    );
+    expect(dateien.map((a) => a.getAttribute('href'))).toEqual([
+      'https://ct.test/?q=public/filedownload&id=901&filename=a',
+      'https://ct.test/?q=public/filedownload&id=903&filename=c',
+    ]);
+    expect(dateien[0].textContent).toContain('Notenblatt (ChordPro)');
+    expect(dateien[0].getAttribute('target')).toBe('_blank');
+  });
+
+  it('„In der Musik-App öffnen“ führt direkt zum Lied dieses Punkts in diesem Termin – mit seinem Tag', async () => {
+    ctLied();
+    zeige();
+    await liedAntippen();
+    const link = await screen.findByRole('link', { name: 'In der Musik-App öffnen' });
+    expect(link.getAttribute('href')).toBe(
+      `${window.location.origin}/ccm/musik-app/#/termin/7/punkt/3?am=2026-10-18`,
+    );
+    expect(fensterKnoepfe().slice(-1)).toEqual(['Schließen']);
+  });
+
+  it('ohne Musik-App: Knopf ausgegraut, darunter wer sie installiert (Alwin, 28.10.2026)', async () => {
+    ctLied({ module: [] });
+    zeige();
+    await liedAntippen();
+    expect(
+      await screen.findByText(
+        /Die Musik-App ist hier nicht installiert – das macht ein ChurchTools-Admin\./,
+      ),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'In der Musik-App öffnen' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    expect(screen.queryByRole('link', { name: 'In der Musik-App öffnen' })).toBeNull();
+  });
+
+  it('Lied nicht ladbar: steht da, was der Ablauf weiß, mit Hinweis – kein Fehler auf der Seite', async () => {
+    ctLied({ lied: () => json(502, {}) });
+    zeige();
+    fireEvent.click(await screen.findByRole('button', { name: /A · 75 bpm/ }));
+    const fenster = await screen.findByRole('dialog', { name: 'Treu' });
+    expect(within(fenster).getByText('Standard')).toBeTruthy();
+    expect(within(fenster).getByText(/ließ sich gerade nicht laden/)).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('im Punkt-Fenster: Zeile „Lied“ öffnet die Ansicht an seiner Stelle; „Zurück“ behält die Eingaben', async () => {
+    ctLied();
+    zeige({ start: darf });
+    fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[0]);
+    fireEvent.change(screen.getByPlaceholderText('z. B. Lied'), { target: { value: 'Lobpreis' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Lied: Treu – ansehen' }));
+    expect(await screen.findByText('Uwe Peters · Beispiel-Verlag · CCLI 1234567')).toBeTruthy();
+    // An der Stelle des Punkt-Fensters, nicht darüber: unten „Zurück“ statt „Schließen“ – und ohne neues Einblenden.
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    expect(fensterKnoepfe().slice(1)).toEqual(['Zurück']);
+    expect(screen.getByRole('dialog').parentElement!.className).toMatch(/still/);
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+    expect(screen.getByPlaceholderText<HTMLInputElement>('z. B. Lied').value).toBe('Lobpreis');
+    // Auch der Rückweg ersetzt nur das Fenster, statt es neu einzublenden.
+    expect(screen.getByRole('dialog').parentElement!.className).toMatch(/still/);
+  });
+
+  it('von der Lied-Karte geöffnet: blendet ein wie jedes Fenster', async () => {
+    ctLied();
+    zeige();
+    await liedAntippen();
+    expect(
+      (await screen.findByRole('dialog', { name: 'Treu' })).parentElement!.className,
+    ).not.toMatch(/still/);
   });
 });

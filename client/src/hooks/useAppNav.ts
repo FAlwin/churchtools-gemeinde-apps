@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Service } from '@shared/types/index';
+import type { DirektLink } from '@shared/ct/musikAppLink';
 import type { TabId } from '../components/TabBar';
 import { type View, type PersistedNav, loadNav, saveNav, clearNav } from '../utils/navStorage';
 
@@ -9,6 +10,8 @@ interface UseAppNavArgs {
   /** Geladene Terminliste – nötig, um den gespeicherten Gottesdienst nach einem Kaltstart wiederzufinden. */
   services: Service[] | undefined;
   servicesLoading: boolean;
+  /** Ein Direktlink aus dem Dienstplaner (`useDirektLink`) – geht vor dem gemerkten Stand. */
+  direkt?: DirektLink | null;
 }
 
 interface AppNav {
@@ -24,6 +27,12 @@ interface AppNav {
   setSongIndex: (i: number) => void;
   libSel: { songId: number; arrangementId?: number } | null;
   setLibSel: (s: { songId: number; arrangementId?: number } | null) => void;
+  /**
+   * Kam die App über einen Direktlink (Dienstplaner, „In der Musik-App öffnen“, E6-O O4), der Ablaufpunkt, zu dessen
+   * Lied das Blatt springen soll – bis die App ihn gefunden hat (`zielErreicht`), sonst `null`.
+   */
+  zielPunkt: number | null;
+  zielErreicht: () => void;
 }
 
 /**
@@ -36,9 +45,22 @@ export function useAppNav({
   isAuthLoading,
   services,
   servicesLoading,
+  direkt = null,
 }: UseAppNavArgs): AppNav {
-  // Einmalig beim Mount den gespeicherten Stand lesen (oder null).
-  const [restored] = useState(loadNav);
+  // Einmalig beim Mount: ein Direktlink (Termin + Punkt) – sonst der gespeicherte Stand (oder null).
+  const [restored] = useState<PersistedNav | null>(() =>
+    direkt
+      ? {
+          tab: 'termine',
+          view: { type: 'chart', source: 'setlist' },
+          serviceId: direkt.terminId,
+          songIndex: 0,
+          libSel: null,
+          savedAt: Date.now(),
+        }
+      : loadNav(),
+  );
+  const [zielPunkt, setZielPunkt] = useState<number | null>(direkt?.punktId ?? null);
   const [tab, setTab] = useState<TabId>(() => restored?.tab ?? 'termine');
   const [view, setView] = useState<View>(() => restored?.view ?? null);
   const [service, setService] = useState<Service | null>(null);
@@ -77,7 +99,11 @@ export function useAppNav({
     if (!brauchtDienst || servicesLoading) return;
     const found = services?.find((s) => s.id === restored.serviceId);
     if (found) setService(found);
-    else setView(null);
+    else {
+      setView(null);
+      // Den Termin gibt es hier nicht (etwa außerhalb der geladenen Wochen) – dann auch kein Lied mehr suchen.
+      setZielPunkt(null);
+    }
   }, [restored, service, isAuthenticated, view, servicesLoading, services]);
 
   // Aktuellen Stand sichern (nur eingeloggt), damit ein iOS-PWA-Kaltstart unsichtbar bleibt.
@@ -98,5 +124,7 @@ export function useAppNav({
     setSongIndex,
     libSel,
     setLibSel,
+    zielPunkt,
+    zielErreicht: () => setZielPunkt(null),
   };
 }

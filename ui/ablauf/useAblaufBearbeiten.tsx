@@ -105,6 +105,11 @@ export interface AblaufBearbeitenOptionen<T extends AblaufZeile> {
    * „+ Gruppe erstellen“ in ChurchTools (Scheibe S2, Alwin 26.10.2026). Am Handy bleibt das Plus.
    */
   plusImKopf?: boolean;
+  /**
+   * Das Lied eines Punkts ansehen (Dienstplaner, E6-O O4) – geht ans Punkt-Fenster (`liedAnsehen`), das dafür an seiner
+   * Stelle zeigt, was der Aufrufer hier zurückgibt.
+   */
+  liedAnsehen?: (punkt: T, zurueck: () => void, schliessen: () => void) => ReactNode;
 }
 
 export function useAblaufBearbeiten<T extends AblaufZeile>(
@@ -410,6 +415,11 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
           onSetVorBeginn={(vorBeginn) => aktionen.setVorBeginn(actionItem.id, vorBeginn)}
           onSetWeggelassen={(weg) => aktionen.setWeggelassen(actionItem.id, weg)}
           onRequestDelete={() => setPendingDelete(actionItem)}
+          liedAnsehen={
+            o.liedAnsehen
+              ? (zurueck, schliessen) => o.liedAnsehen!(actionItem, zurueck, schliessen)
+              : undefined
+          }
           gruppenVerborgen={o.gruppenVerborgen}
         />
       )}

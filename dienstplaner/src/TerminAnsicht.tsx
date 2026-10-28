@@ -6,12 +6,12 @@ import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { AblaufListe } from '@ui/ablauf/AblaufListe';
 import { useAblaufBearbeiten, verlangtNeuLaden } from '@ui/ablauf/useAblaufBearbeiten';
 import { siehtAlleDienstgruppen } from '@shared/ct/dienstRechte';
-import { ablaufZeileAus } from '@shared/ct/ablaufZeile';
+import { ablaufZeileAus, type AblaufZeile } from '@shared/ct/ablaufZeile';
 import { datumText, kachel } from '@shared/ct/datum';
-import type { CtAgenda } from '@shared/ct/typen';
+import type { CtAgenda, CtSong } from '@shared/ct/typen';
 import { gruppenName } from '@shared/dienstplan/plan';
 import { ladeTermin, type TerminDaten } from './ladeTermine';
-import { ladeAblauf, ladeLiedAutoren, ladeMusikApp } from './ladeBeiwerk';
+import { autorVon, ladeAblauf, ladeLiedDaten, ladeMusikApp } from './ladeBeiwerk';
 import { ablaufAktionen } from './ablaufAktionen';
 import { ladeKopieVorschlaege, ladeVorlagen, WOCHEN_ZURUECK } from './ladeAnlegen';
 import { AblaufAnlegenFenster, type KopieVorschlag } from '@ui/ablauf/AblaufAnlegenFenster';
@@ -23,6 +23,7 @@ import { vorlagenFuer } from '@shared/ct/ablaufVorschlaege';
 import type { AblaufQuelle, AblaufVorlage } from '@shared/types/index';
 import { Plaetze } from './Planen';
 import { ablaufBearbeitbar, type Start } from './start';
+import { LiedAnsicht } from './LiedAnsicht';
 import styles from './TerminAnsicht.module.scss';
 
 type Zustand =
@@ -73,9 +74,13 @@ export function TerminAnsicht({
 }) {
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
   const [versuch, setVersuch] = useState(0);
-  const [musikApp, setMusikApp] = useState<string | null>(null);
+  // Adresse der Musik-App: `undefined` = noch unbekannt, `null` = nicht installiert (die Lied-Ansicht sagt es dann).
+  const [musikApp, setMusikApp] = useState<string | null | undefined>(undefined);
+  // Die Lied-Ansicht (E6-O O4): aus der Ablauf-Ansicht der angetippte Punkt.
+  const [liedOffen, setLiedOffen] = useState<AblaufZeile | null>(null);
   // Autoren für die Lied-Karte (E6-O1) – Beiwerk, je Ablauf eine Sammelabfrage; scheitert sie, fehlt nur der Autor.
-  const [autoren, setAutoren] = useState<Map<number, string>>(new Map());
+  // Die Lieder des Ablaufs aus ChurchTools: Autor für die Lied-Karte (E6-O1), alles Weitere für die Lied-Ansicht (O4).
+  const [lieder, setLieder] = useState<Map<number, CtSong>>(new Map());
   const [bearbeiten, setBearbeiten] = useState(false);
   // „Ablauf anlegen“ (E6-5a) und „Neu aufsetzen“ (E6-5b, `neu`): Fenster und was es braucht – erst beim Öffnen geladen.
   const [anlegen, setAnlegen] = useState<{
@@ -106,12 +111,12 @@ export function TerminAnsicht({
     () =>
       (ablauf?.items ?? []).map((i) => {
         const z = ablaufZeileAus(i, terminId, zeitzone);
-        const autor = i.song ? autoren.get(i.song.songId) : undefined;
+        const autor = i.song ? autorVon(lieder.get(i.song.songId)) : null;
         return z.song && autor ? { ...z, song: { ...z.song, author: autor } } : z;
       }),
-    [ablauf, terminId, zeitzone, autoren],
+    [ablauf, terminId, zeitzone, lieder],
   );
-  // Lieder des Ablaufs: Autoren einmal je Stand nachladen (der Ablauf selbst nennt sie nicht, gemessen E6-O0).
+  // Lieder des Ablaufs einmal je Stand nachladen (der Ablauf nennt weder Autor noch Dateien, gemessen E6-O0).
   const liedIds = useMemo(
     () => (ablauf?.items ?? []).flatMap((i) => (i.song ? [i.song.songId] : [])).join(','),
     [ablauf],
@@ -119,9 +124,9 @@ export function TerminAnsicht({
   useEffect(() => {
     let aktuell = true;
     const ids = liedIds ? liedIds.split(',').map(Number) : [];
-    ladeLiedAutoren(ids).then(
-      (a) => aktuell && setAutoren(a),
-      () => aktuell && setAutoren(new Map()),
+    ladeLiedDaten(ids).then(
+      (l) => aktuell && setLieder(l),
+      () => aktuell && setLieder(new Map()),
     );
     return () => {
       aktuell = false;
@@ -131,6 +136,20 @@ export function TerminAnsicht({
     () => [...start.dienste.values()].map((d) => ({ id: d.id, name: d.name })),
     [start.dienste],
   );
+
+  /** Die Lied-Ansicht zu einem Punkt (E6-O O4) – eine Stelle für die Ablauf-Ansicht und das Punkt-Fenster. */
+  const liedAnsicht = (p: AblaufZeile, schliessen: () => void, zurueck?: () => void) =>
+    p.song ? (
+      <LiedAnsicht
+        terminId={terminId}
+        tag={zustand.art === 'fertig' ? zustand.daten.plan.spalten[0]?.tag : undefined}
+        punkt={{ ...p, song: p.song }}
+        lied={p.song.songId !== undefined ? lieder.get(p.song.songId) : undefined}
+        musikApp={musikApp}
+        onClose={schliessen}
+        zurueck={zurueck}
+      />
+    ) : null;
 
   const liste = useAblaufBearbeiten({
     aktiv: bearbeiten,
@@ -153,6 +172,8 @@ export function TerminAnsicht({
     // Am Rechner/iPad das grüne „+“ oben rechts im Ablauf-Kopf (wie „+ Termin“ im ChurchTools-Kalender), am Handy
     // bleibt das schwebende Plus (Alwin, 28.10.2026 – wie die Musik-App seit S2).
     plusImKopf: true,
+    // Im Punkt-Fenster: die Zeile „Lied“ öffnet die Lied-Ansicht an seiner Stelle (Alwin, 28.10.2026: an beiden Stellen).
+    liedAnsehen: (p, zurueck, schliessen) => liedAnsicht(p, schliessen, zurueck),
   });
 
   // Fest je Termin – `NeuAufsetzen` liest damit beim Öffnen und bei „Weiter“.
@@ -368,7 +389,7 @@ export function TerminAnsicht({
         ) : (
           // Die Liste wie die ChurchTools-App (E6-O1): weiß mit feinen Linien, bis an den Rand der Karte.
           <div className={styles.ablaufGrund}>
-            <AblaufListe zeilen={zeilen} beginn={s.uhrzeit} />
+            <AblaufListe zeilen={zeilen} beginn={s.uhrzeit} onLied={(_, p) => setLiedOffen(p)} />
           </div>
         )}
       </section>
@@ -396,6 +417,7 @@ export function TerminAnsicht({
         )}
       </section>
       {liste.ueberlagerung}
+      {liedOffen && liedAnsicht(liedOffen, () => setLiedOffen(null))}
       {anlegen && !anlegen.neu && (
         <AblaufAnlegenFenster
           fuer={fuer}

@@ -69,7 +69,9 @@ ChurchTools). Ausnahme: der ChordPro-**Editor** nutzt bewusst Monospace (`'JetBr
   Normalweg, `Screen`/`Scroll`/`SeitenKopf` sind seine Bausteine; **`KopfKnopf`/`KopfZurueck`**
   (`ui/bedienung`, Scheibe S 26.10.2026) für Aktionen und Zurück im Kopf – eckig mit Rahmen und
   Beschriftung wie in ChurchTools, am Handy nur Symbol; `neu` = grün zum Anlegen wie „+ Gruppe erstellen“,
-  S2; `RundKnopf` nur noch im Liedblatt bis B1), **`ZeilenKnopf`** (S2: eckige Knöpfe mit Rahmen in Listenzeilen –
+  S2; `raster` = Symbol über Kurzwort im Liedblatt am Handy, `offen` = sein Fenster ist offen, B1; die runden
+  Knöpfe `RundKnopf`/`KnopfReihe` sind seit B1 gelöscht), **`BlattKopf`/`AblaufLeiste`** (Kopfkarte des Liedblatts,
+  B1+B2: breit/kompakt/flach nach `kopfAufbau`), **`ZeilenKnopf`** (S2: eckige Knöpfe mit Rahmen in Listenzeilen –
   Plus, Stift), **`AuswahlBlatt`/`HinzufuegenMenue`** (`ui/bedienung/OptionWaehlen`, S2: „Option wählen“ wie in der
   ChurchTools-App – am Handy Blatt von unten, am iPad/Rechner Menü unter dem grünen Knopf), `TabBar`
   (Reiter der Musik-App in der gemeinsamen `ui/bedienung/ReiterLeiste` – am Handy unten, sonst `oben` als

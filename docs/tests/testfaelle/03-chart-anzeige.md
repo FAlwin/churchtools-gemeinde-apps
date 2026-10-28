@@ -183,13 +183,12 @@ sichtbar, bis die neuen fertig sind. Die App darf nicht mehrere Sekunden stehen.
 **Das brauchst du:** Ein Lied, bei dem in ChurchTools ein **Tempo** hinterlegt ist, und ein
 Metronom (eine Handy-App genügt). Wenn möglich zusätzlich ein Lied **ohne** Tempo.
 
-**Das muss passieren:** Neben der Tempo-Angabe in der Kopfzeile pulst ein kleiner blauer Punkt –
+**Das muss passieren:** Neben der Tempo-Angabe beim gewählten Lied in der Lied-Leiste pulst ein kleiner blauer Punkt –
 genau im Takt des Lieds. Er ist **lautlos**. Die Kopfzeile darf dabei nicht wackeln oder umbrechen.
 
 1. Ein Lied mit Tempo öffnen. Vor der Zahl steht ein **Metronom-Symbol**, keine Note.
-2. Oben rechts **Werkzeuge → Tempo** → das Tempo-Menü geht auf. Unter **Sichtbarer Puls** auf
-   **An** – der Punkt beginnt zu pulsen, der Werkzeuge-Knopf (bzw. am iPad der Tempo-Knopf) färbt
-   sich blau.
+2. In der Kopfkarte **Tempo** → das Tempo-Menü geht unter dem Knopf auf. Unter **Sichtbarer Puls** auf
+   **An** – der Punkt beginnt zu pulsen, der Knopf „Tempo“ ist blau umrandet.
 3. Das Metronom auf dasselbe Tempo stellen und **eine halbe Minute mitlaufen lassen**. Punkt und
    Metronom müssen zusammenbleiben – nicht auseinanderdriften.
 4. **Die Eins ist markiert:** Jeder vierte Blitz (im Dreivierteltakt jeder dritte) zieht sich
@@ -197,15 +196,15 @@ genau im Takt des Lieds. Er ist **lautlos**. Die Kopfzeile darf dabei nicht wack
    der Takt anfängt.
 5. Zum nächsten Lied blättern: Der Puls übernimmt dessen Tempo.
 6. Zu einem Lied **ohne** Tempo blättern: Der Punkt ist weg, das Feld im Menü ist leer, **An** und
-   die Klick-Knöpfe sind ausgegraut. „Tempo" im Werkzeuge-Menü bleibt da – darüber trägt man ja
+   die Klick-Knöpfe sind ausgegraut. Der Knopf „Tempo" bleibt da – darüber trägt man ja
    gerade ein fehlendes Tempo nach. **Dort ein Tempo antippen, ohne zu speichern** → Zahl und Puls
-   erscheinen sofort in der Kopfzeile. (Vorher sah man bis zum Speichern gar nichts.)
+   erscheinen sofort beim gewählten Lied in der Leiste. (Vorher sah man bis zum Speichern gar nichts.)
 7. Das Liederheft verlassen und neu öffnen: Der Puls ist **aus**.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/BpmPulse.tsx`, `client/src/utils/bpmPulse.ts`, `client/src/components/ChartHeader.tsx`, `client/src/components/TempoMenu.tsx`, `ui/icons/icons.tsx`, `client/src/utils/activeSongView.ts`
+- **Betrifft:** `client/src/components/BpmPulse.tsx`, `client/src/utils/bpmPulse.ts`, `client/src/components/BlattKopf.tsx`, `client/src/components/TempoMenu.tsx`, `ui/icons/icons.tsx`, `client/src/utils/activeSongView.ts`
 - **Automatisiert:** teilweise – `client/src/utils/bpmPulse.test.ts` und
   `client/src/components/BpmPulse.test.tsx` (Taktrate mit selbst gesteuerten Frames, auch über 144
   Schläge hinweg), dazu `client/src/components/TempoMenu.test.tsx`. Von Hand bleibt der Abgleich
@@ -229,7 +228,7 @@ holt sie zurück. Die Ränder blättern weiter wie bisher.
 3. Am **linken** und **rechten** Rand tippen → es wird geblättert, die Leisten bleiben wie sie sind.
 4. Ins **Querformat** drehen (zwei verschiedene Lieder nebeneinander), in die rechte Bildhälfte
    (aber nicht an den Rand) tippen → **nur** die Leisten verschwinden; das aktive Lied wechselt
-   NICHT (#421). Ausgewählt wird über die Titel-Kapsel über der Hälfte (siehe TF-KOPF-01).
+   NICHT (#421). Ausgewählt wird über die Lied-Leiste der Kopfkarte (siehe TF-KOPF-01).
 5. Mit zwei Fingern hineinzoomen, dann in die Mitte tippen → **was man sieht, bleibt genau so**:
    dieselbe Stelle des Blatts in der Mitte, die Schrift gleich groß; nur die Leisten verschwinden
    (#420 – vorher verrutschte der Ausschnitt und das Blatt wurde größer). Nochmal tippen → Leisten
@@ -360,7 +359,7 @@ ChurchTools.
   `gezaehltesTempo`, `taktRaster`), `TempoMenu.test.tsx` (Beschriftung mit der gezählten Zahl,
   Strich bei Unmöglichem, Klick-Rate immer sichtbar, Rückrechnung beim Antippen, das Wort
   „Grundschläge" kommt nirgends vor), `chartSettings.test.ts` (Speichern je Version, Unsinn
-  verwerfen), `ChartHeader.test.tsx` (angezeigte vs. gepulste Zahl). **Von Hand bleibt die
+  verwerfen), `BlattKopf.test.tsx` (angezeigte vs. gepulste Zahl). **Von Hand bleibt die
   Verdrahtung im Liederheft** – dass `ChordChart` die gerechneten Werte wirklich an Puls und Klick
   weitergibt, prüft kein Test; Punkt 2 und 3 decken das ab. Dazu der Klang und der Abgleich gegen
   ein echtes Metronom.

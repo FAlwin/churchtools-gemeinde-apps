@@ -23,7 +23,6 @@ test('Tempo-Menü: der Rahmen bleibt in jedem Zustand gleich', async ({ page }) 
   await page.goto('/?demo=chart');
   await expect(page.locator('canvas').first()).toBeVisible({ timeout: 30_000 });
 
-  // Hochformat: hinter dem Werkzeuge-Knopf; Querformat: einzeln (#421).
   await oeffneWerkzeug(page, 'Tempo');
   const menu = page.locator('[class*="tempoMenu"]');
   await expect(menu).toBeVisible();
@@ -77,10 +76,13 @@ test('Tempo-Menü: die Kopfzeile zeigt das EINGESTELLTE Tempo', async ({ page })
   await page.goto('/?demo=chart');
   await expect(page.locator('canvas').first()).toBeVisible({ timeout: 30_000 });
 
-  const kopfInfo = page.locator('[class*="menuInfo"]').first();
+  const kopfInfo = page
+    .getByRole('navigation', { name: 'Lieder im Ablauf' })
+    .locator('[aria-current="true"]')
+    .locator('[class*="info"]')
+    .first();
   const vorher = (await kopfInfo.innerText()).trim();
 
-  // Hochformat: hinter dem Werkzeuge-Knopf; Querformat: einzeln (#421).
   await oeffneWerkzeug(page, 'Tempo');
   await page.locator('[class*="tempoMenu"]').getByRole('textbox').fill('137');
   await page.waitForTimeout(200);

@@ -34,6 +34,7 @@ import { ladeDokument } from '../services/fileDownload';
 import { loadSongPdfOpts } from '../utils/songPdfOpts';
 import { useAppLogo } from '../hooks/useAppLogo';
 import { schluessel } from '../hooks/abfrageSchluessel';
+import { terminZeile } from '../utils/terminZeile';
 
 /** Der Hinweis, wenn man einen abgeschlossenen Ablauf ändern will (Alwin, 13.10.2026). */
 const GESPERRT =
@@ -312,7 +313,7 @@ export function Setlist({
   return (
     <SeitenGeruest
       titel={service.name}
-      unterzeile={`${service.weekday}, ${service.day}. ${service.month} · ${service.time}`}
+      unterzeile={terminZeile(service)}
       zurueck={onBack}
       zurueckLabel="Termine"
       aktionen={aktionen}

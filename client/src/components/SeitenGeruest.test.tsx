@@ -84,6 +84,37 @@ describe('SeitenGeruest', () => {
     expect(karte!.contains(screen.getByRole('heading', { name: 'Ablauf' }))).toBe(true);
   });
 
+  /**
+   * **Seiten hinter einem Reiter ohne sichtbare Überschrift** (Alwin, 28.10.2026: „doppelt gemoppelt“): Der Wähler
+   * steht an ihrer Stelle, der Titel bleibt für Screenreader – und die Knöpfe stehen in derselben Zeile.
+   */
+  it('stattTitel: Wähler statt Überschrift, Titel nur für Screenreader, Knöpfe in derselben Zeile', () => {
+    const { container } = render(
+      <SeitenGeruest
+        titel="Termine"
+        stattTitel={<button>Kommende</button>}
+        aktionen={<button>Vollbild</button>}
+      >
+        Liste
+      </SeitenGeruest>,
+    );
+    const titel = screen.getByRole('heading', { name: 'Termine' });
+    expect(titel.className).toMatch(/nurVorlesen/);
+    const waehler = screen.getByRole('button', { name: 'Kommende' });
+    expect(scrollBereich(container).contains(waehler)).toBe(true);
+    const zeile = waehler.closest('[class*="zeile"]');
+    expect(zeile).not.toBeNull();
+    expect(zeile!.contains(screen.getByRole('button', { name: 'Vollbild' }))).toBe(true);
+    expect(zeile!.closest('[class*="karte"]')).toBeNull();
+  });
+
+  it('ohne stattTitel bleibt die Überschrift sichtbar', () => {
+    render(<SeitenGeruest titel="Abwesenheiten">Inhalt</SeitenGeruest>);
+    expect(screen.getByRole('heading', { name: 'Abwesenheiten' }).className).not.toMatch(
+      /nurVorlesen/,
+    );
+  });
+
   it('hängt die Überlagerung neben den Scroll-Bereich, nicht hinein', () => {
     const { container } = render(
       <SeitenGeruest titel="Abwesenheiten" ueberlagerung={<button>Zeitraum eintragen</button>}>

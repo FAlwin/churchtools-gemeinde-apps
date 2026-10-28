@@ -195,6 +195,7 @@ export function App() {
           ladeZeitraum={zeitraumLaden}
           heute={tagAusIso(new Date().toISOString(), zeitzone)}
           entwuerfe={entwuerfe}
+          ablauf={{ start, zeitzone }}
         />
       )}
       {terminId === null && aktiv === 'abwesenheiten' && <Demnaechst reiter={aktiv} />}

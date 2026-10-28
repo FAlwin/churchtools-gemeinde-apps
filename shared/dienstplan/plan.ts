@@ -11,6 +11,7 @@
  */
 import type { Dienst } from '../ct/dienste';
 import type { Dienstgruppe } from '../ct/dienstgruppen';
+import { ablaufTerminVon, type AblaufTermin } from '../ct/ablaufRecht';
 import { ortszeitAus } from '../ct/zeit';
 import { belegungAus, type Belegung } from './einteilen';
 import {
@@ -55,6 +56,10 @@ export interface PlanSpalte {
   besetzt: number;
   /** Admin dieses Termins – plant dann jeden Dienst darin. */
   admin: boolean;
+  /** Beginn wie von ChurchTools (`startDate`, ISO) – „Ablauf anlegen“ in der Matrix braucht ihn (E6-6a). */
+  beginn: string;
+  /** Kalender und Admins für die Bearbeiten-Regel des Ablaufs (`ablaufBearbeitbar`, E6-6a). */
+  ablaufTermin: AblaufTermin;
 }
 
 export interface PlanZeile {
@@ -157,6 +162,8 @@ export function planAus(
       plaetze: plaetze.length,
       besetzt: plaetze.filter((p) => !istFrei(p)).length,
       admin: istTerminAdmin(t, o.ichId),
+      beginn: t.startDate,
+      ablaufTermin: ablaufTerminVon(t),
     };
   });
 

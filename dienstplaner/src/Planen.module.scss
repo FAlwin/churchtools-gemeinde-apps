@@ -754,8 +754,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 32px;
-  min-width: 32px;
+  // Quadratisch und so hoch wie der Zeitraum-Knopf daneben (`--knopf-hoehe`, 28.10.2026 – vorher 32 px).
+  height: var(--knopf-hoehe);
+  min-width: var(--knopf-hoehe);
   padding: 0 7px;
   border-radius: var(--r-ctrl);
 

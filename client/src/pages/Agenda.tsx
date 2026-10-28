@@ -255,6 +255,24 @@ export function Agenda({
   return (
     <SeitenGeruest
       titel="Termine"
+      // Kommende/Vergangene steht an der Stelle der Überschrift – „Termine“ sagt schon der Reiter (28.10.2026).
+      stattTitel={
+        <Segment
+          value={tab}
+          options={[
+            { value: 'upcoming', label: 'Kommende' },
+            { value: 'past', label: 'Vergangene' },
+          ]}
+          dimmed={online ? [] : ['past']}
+          onChange={(v) => {
+            if (!online && v === 'past') {
+              showToast('Vergangene Gottesdienste sind offline nicht verfügbar.');
+              return;
+            }
+            setTab(v);
+          }}
+        />
+      }
       onNeuLaden={
         tab === 'upcoming'
           ? () => Promise.all([onRetry?.(), ohneQuery.isEnabled ? ohneQuery.refetch() : null])
@@ -280,22 +298,6 @@ export function Agenda({
         </>
       }
     >
-      <Segment
-        className={styles.segWrap}
-        value={tab}
-        options={[
-          { value: 'upcoming', label: 'Kommende' },
-          { value: 'past', label: 'Vergangene' },
-        ]}
-        dimmed={online ? [] : ['past']}
-        onChange={(v) => {
-          if (!online && v === 'past') {
-            showToast('Vergangene Gottesdienste sind offline nicht verfügbar.');
-            return;
-          }
-          setTab(v);
-        }}
-      />
       {tab === 'upcoming' ? (
         isLoading ? (
           <CenterMessage loading text="Gottesdienste werden geladen…" />

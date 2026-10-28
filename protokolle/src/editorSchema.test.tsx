@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BlockNoteEditor, type PartialBlock } from '@blocknote/core';
 import { ableiten, fremdeTypen, textAus, type Block } from '@shared/protokolle/dokument';
@@ -22,6 +22,23 @@ type Teil = PartialBlock<
 
 const editorMit = (dok: readonly Block[]) =>
   BlockNoteEditor.create({ schema, initialContent: dok as Teil[] });
+
+/**
+ * **Eingehängte Editoren nach jedem Test wieder aushängen.** ProseMirror stellt beim Aktualisieren einen Zeitgeber
+ * (20 ms, `DOMObserver.stop`); feuert er nach dem Abbau von jsdom an einem noch eingehängten Editor, fasst er
+ * `document` an – der Lauf scheitert mit „document is not defined“, obwohl alle Tests grün sind (CI 26.10.2026). Ein
+ * ausgehängter Editor ist zerstört, sein später Zeitgeber kehrt sofort um.
+ */
+const eingehaengt: ReturnType<typeof editorMit>[] = [];
+const einhaengen = (e: ReturnType<typeof editorMit>) => {
+  e.mount(document.createElement('div'));
+  eingehaengt.push(e);
+  return e;
+};
+const aushaengen = () => {
+  for (const e of eingehaengt.splice(0)) e.unmount();
+};
+afterEach(aushaengen);
 
 const PROTOKOLL: Block[] = [
   { id: 'p1', type: 'heading', props: { level: 1 }, content: 'Andacht' },
@@ -49,6 +66,20 @@ const PROTOKOLL: Block[] = [
 ];
 
 describe('Editor-Schema gegen Ableitung, Speicher und Ansicht', () => {
+  it('ausgehängt fasst ein später Zeitgeber des Editors `document` nicht mehr an (CI 26.10.2026)', () => {
+    const e = einhaengen(editorMit([{ id: 'p', type: 'paragraph', content: 'Text' }]));
+    // Was der Zeitgeber aufruft (`DOMObserver.flush`) – hier gleich, statt 20 ms auf ihn zu warten.
+    const beobachter = (e.prosemirrorView as unknown as { domObserver: { flush: () => void } })
+      .domObserver;
+    aushaengen();
+    vi.stubGlobal('document', undefined);
+    try {
+      expect(() => beobachter.flush()).not.toThrow();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('eigene Blöcke behalten ihre Daten – die Ableitung findet alles wieder', () => {
     const doc = editorMit(PROTOKOLL).document as Block[];
     expect(ableiten(doc)).toEqual(ableiten(PROTOKOLL));
@@ -109,7 +140,7 @@ describe('Editor-Schema gegen Ableitung, Speicher und Ansicht', () => {
       { id: 'p', type: 'paragraph', content: 'Text' },
       { id: 'a1', type: 'aufgabe', props: { aufgabe: '' }, content: 'Beamer' },
     ]);
-    e.mount(document.createElement('div'));
+    einhaengen(e);
     // Eine Eingabe, die im Verlauf landet – danach die IDs, dann Rückgängig.
     e.updateBlock('p', { content: 'Text geändert' });
     let n = 0;
@@ -143,7 +174,7 @@ describe('Editor-Schema gegen Ableitung, Speicher und Ansicht', () => {
       },
       { id: 'x', type: 'paragraph' },
     ]);
-    e.mount(document.createElement('div'));
+    einhaengen(e);
     e.setTextCursorPosition('l2', 'end');
     festenPunktEinfuegen(e, 'offene-aufgaben');
     const art = () =>

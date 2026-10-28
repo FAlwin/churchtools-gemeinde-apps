@@ -3,7 +3,7 @@ import { ErweiterungsSeite, type SeitenZustand } from '@ui/erweiterung/Erweiteru
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { ReiterLeiste } from '@ui/bedienung/ReiterLeiste';
 import { Segment } from '@ui/bedienung/Segment';
-import { useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
+import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { ladeStart, planbareDienstgruppen, type Start } from './start';
 import { Startseite } from './Startseite';
 import { Demnaechst } from './Demnaechst';
@@ -33,7 +33,7 @@ export function App() {
   const [zustand, setZustand] = useState<SeitenZustand>({ art: 'laedt' });
   const [start, setStart] = useState<Start | null>(null);
   const [hash, setHash] = useState(() => window.location.hash);
-  const handy = useMedienAbfrage('(max-width: 759px)');
+  const handy = useMedienAbfrage(HANDY_BREITE);
   // Termine erst laden, wenn jemand den Reiter öffnet; beim Wechseln bleiben sie erhalten.
   const [termine, setTermine] = useState<TermineZustand | null>(null);
   const [wochen, setWochen] = useState(WOCHEN_JE_SCHRITT);

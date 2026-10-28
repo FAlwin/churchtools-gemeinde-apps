@@ -4,7 +4,7 @@ import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { ApiError } from '@ui/ct/fehler';
 import { Segment } from '@ui/bedienung/Segment';
 import { ReiterLeiste, type Reiter } from '@ui/bedienung/ReiterLeiste';
-import { useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
+import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { baumOhneTypen, knotenNachId, type Knoten } from '@shared/organigramm/gruppen';
 import { bereicheSortiert, praesentationAus } from '@shared/organigramm/praesentation';
 import {
@@ -85,7 +85,7 @@ export function App() {
   const [praesPlan, setPraesPlan] = useState<PlanAenderungen | null>(null);
   const [praesStand, setPraesStand] = useState<Stand>('heute');
   const [hash, setHash] = useState(() => window.location.hash);
-  const handy = useMedienAbfrage('(max-width: 759px)');
+  const handy = useMedienAbfrage(HANDY_BREITE);
   // Ansichten des Baums (O7b-2): gewählt und im Gerät gemerkt – ohne Wahl am Handy die Liste (Alwin, 26.10.2026).
   const [gewaehlt, setGewaehlt] = useState(leseAnsicht);
   const baumAnsicht: BaumAnsicht = gewaehlt ?? (handy ? 'liste' : 'karten');

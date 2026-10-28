@@ -1,0 +1,49 @@
+@use '@ui/design/mixins' as m;
+
+// Seitenkopf (Scheibe S): Der Abstand oben hält ihn im Ruhezustand unter dem Unschärfe-Band von iOS; er ist Teil des
+// Inhalts und scrollt mit weg. Wert je Umgebung in `ui/design/_variables.scss`.
+.block {
+  padding: var(--inhalt-pad-top) 16px 12px;
+}
+
+// Detailansicht: weiße Karte wie „Events › Ablaufpläne“ in ChurchTools.
+.karte {
+  @include m.card-list;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.zeile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.titelBlock {
+  min-width: 0;
+}
+
+.titel {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--text);
+  text-wrap: balance;
+}
+
+.unterzeile {
+  margin-top: 2px;
+  font-size: 14px;
+  color: var(--text2);
+}

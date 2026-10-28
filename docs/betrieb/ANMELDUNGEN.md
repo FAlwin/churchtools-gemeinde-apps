@@ -175,14 +175,23 @@ Nachrücken (die Aufschlüsselung nennt ihn).
 
 **Mails** (A9): Beim Freigeben richtet die Erweiterung in ChurchTools zwei Abläufe (Routinen) ein und schaltet die
 Standard-Mail von ChurchTools aus. **Bestätigung** – nach dem Anmelden und beim Nachrücken: Termin, Anmelde-Nr., Betrag
-und Bankdaten (nur in der Mail zur ersten Person einer Anmeldung, dort steht der Betrag) und der Link zu „Deine
-Anmeldung“. **Warteliste** – mit dem Platz; bezahlt wird erst beim Nachrücken. Jede Person bekommt ihre eigene Mail an
+und Bankdaten (nur in der Mail zur ersten Person einer Anmeldung, dort steht der Betrag; ohne Aufschlüsselung – die käme
+in einer Zeile an) und der Link zu „Deine Anmeldung“. **Warteliste** – mit dem Platz; bezahlt wird erst beim Nachrücken. Jede Person bekommt ihre eigene Mail an
 die Kontakt-Adresse (zwei Kinder = zwei Mails). Absender ist, wer freigibt (wenn Leitung), sonst die erste gewählte
 Leitung; Antworten gehen an diese Person. Die Karte „Mails“ im Reiter „Veranstaltung“ zeigt den Stand. Einrichten darf,
 wer in ChurchTools das Recht „Routinen verwalten“ hat – fehlt es, wird trotzdem freigegeben, und ChurchTools schickt
 seine Standard-Mail (ohne Betrag). Ältere Veranstaltungen (vor A9 freigegeben) behalten die Standard-Mail, bis sie
 eingerichtet werden. In ChurchTools heißen die Abläufe „Anmeldungen: Platz“ und „Anmeldungen: Warteliste“ – bitte dort
 nicht von Hand ändern; eine eigene Routine an derselben Stelle lässt die Erweiterung stehen.
+
+**Mails bearbeiten** (A9-2a): „Bearbeiten“ an der Karte „Mails“ öffnet ein Fenster mit den Reitern **Bestätigung** und
+**Warteliste** – je Mail ein eigener Betreff, ein eigener Absatz (z. B. Mitbringliste) und ein eigener Gruß; dazu der
+**Absender** aus der Leitung der Veranstaltung. Termin, Betrag, Bankdaten, Link und Kontakt setzt die Erweiterung
+selbst ein. „Vorschau“ lässt ChurchTools die Mail mit dem Text im Fenster rechnen – für jemanden, der schon so
+angemeldet ist (sonst ohne Betrag, Nr. und Link). Der eigene Text steht in der **Beschreibung** der jeweiligen Routine
+in ChurchTools (höchstens 1.000 Zeichen, das Fenster zählt mit). Ändert ihr Termin, Bezahlung, Kontakt, Preise oder
+den Namen, schreibt die Erweiterung die Mails beim nächsten Öffnen der Veranstaltung neu – mit eurem Text und Absender.
+Eine Kopie („Wie eine frühere Veranstaltung“) übernimmt beim Freigeben den eigenen Text der Vorlage.
 
 **„Deine Anmeldung“:** Den Link dazu schreibt das Formular beim Anmelden in das Feld „Link zur Anmeldung“, die
 Bestätigung setzt ihn ein. Ohne eingerichtete Mails steht er als „Austreten“ in der Standard-Mail von ChurchTools.

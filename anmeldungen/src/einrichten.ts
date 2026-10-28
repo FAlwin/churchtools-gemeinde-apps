@@ -499,6 +499,8 @@ export async function kopiereVeranstaltung(quelleId: number, name: string): Prom
   const [alt, neu] = await Promise.all([gruppenfelder(quelleId), gruppenfelder(id)]);
   await einstellungenSchreiben(id, {
     ...quelle,
+    // A9-2a: Der eigene Mailtext steht in den Routinen der Vorlage – die kopiert ChurchTools nicht mit.
+    kopieVon: quelleId,
     termin: null,
     ctFelder: felderNeuZuordnen(quelle.ctFelder, alt, neu),
     bezahlung: {

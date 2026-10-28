@@ -22,7 +22,10 @@ interface RundKnopfProps {
   children: ReactNode;
 }
 
-/** Ein runder Knopf (Teilen, Bearbeiten, Werkzeuge …) – Setlist und Liedblatt teilen ihn. */
+/**
+ * Ein runder Knopf (Werkzeuge im Liedblatt, `ChartHeader`). Die Seiten nutzen seit Scheibe S (26.10.2026) `KopfKnopf`;
+ * das Liedblatt folgt mit B1 – dann fällt diese Datei weg.
+ */
 export function RundKnopf({
   onClick,
   title,
@@ -52,8 +55,7 @@ export function RundKnopf({
 }
 
 /**
- * Der runde Zurück-Knopf – dunkel wie in den iPhone-Einstellungen. Eine Stelle für Setlist
- * (`KnopfReihe`) und Liedblatt (`ChartHeader`); sichtbar ist nur der Pfeil, der Name nennt das Ziel.
+ * Der runde Zurück-Knopf des Liedblatts (`ChartHeader`, bis B1); sichtbar ist nur der Pfeil, der Name nennt das Ziel.
  */
 export function ZurueckKnopf({ onClick, ziel }: { onClick: () => void; ziel?: string }) {
   return (
@@ -65,34 +67,5 @@ export function ZurueckKnopf({ onClick, ziel }: { onClick: () => void; ziel?: st
     >
       <Icon name="chev-left" size={22} stroke={2.4} />
     </button>
-  );
-}
-
-interface KnopfReiheProps {
-  /** Zurück links. */
-  zurueck?: () => void;
-  /** Wohin „zurück" führt – nur für Screenreader, sichtbar ist nur der Pfeil. */
-  zurueckLabel?: string;
-  /** Runde Knöpfe rechts (`RundKnopf`). */
-  aktionen?: ReactNode;
-}
-
-/**
- * **Runde Knöpfe statt Kopfleiste** (02.10.2026, Alwin – Vorbild die iPhone-Einstellungen).
- *
- * Seit iOS 26/27 legt das System über die oberen ~95 pt ein Unschärfe-Band, das sich nicht
- * abschalten lässt; die weiße Leiste der Setlist lag darin und wirkte milchig, ihr Text weich. Am
- * 02.10. am Gerät belegt: Auch eine deckende Statusleiste (`default`) ändert daran nichts. Also steht
- * im Band gar nichts mehr – die Knöpfe schweben direkt darunter, bleiben beim Scrollen stehen und
- * kosten keinen eigenen Streifen. Ersetzt `NavBar`, die nur noch hier im Einsatz war.
- */
-export function KnopfReihe({ zurueck, zurueckLabel, aktionen }: KnopfReiheProps) {
-  return (
-    <div className={styles.reihe}>
-      <div className={styles.gruppe}>
-        {zurueck && <ZurueckKnopf onClick={zurueck} ziel={zurueckLabel} />}
-      </div>
-      <div className={styles.gruppe}>{aktionen}</div>
-    </div>
   );
 }

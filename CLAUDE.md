@@ -207,7 +207,7 @@ churchtools-gemeinde-apps/
     │                        # thema.ts (hell/dunkel wie ChurchTools, docs/entwicklung/dunkelmodus.md)
     ├── icons/               # icons.tsx (Line-Icons)
     ├── fenster/             # Sheet (Modal), useOverlayKeyboardInset, appHeight
-    ├── bedienung/           # Segment, Schalter, KnopfReihe, ReiterLeiste (untere Reiter), useMedienAbfrage, DatumKachel
+    ├── bedienung/           # Segment, Schalter, KopfKnopf (Seitenkopf), KnopfReihe (nur Liedblatt bis B1), ReiterLeiste (unten/oben), useMedienAbfrage (HANDY_BREITE), DatumKachel
     ├── teilen/              # shareFile, sharePdf
     ├── anmeldeformular/     # Anmeldeformular, wie Gäste es sehen (A5): Baukasten + Vorschau in der Erweiterung, öffentlich ab A6
     ├── ct/                  # Verbindung einer Erweiterung zu ChurchTools: verbindung.ts, fehler.ts (ApiError), basis.ts,
@@ -386,10 +386,12 @@ Abwesenheiten-Tab trägt die ID `verfuegbarkeit` und erscheint nur für Mitglied
 **Keine Kopfleiste mit Titel mehr (22.09.2026).** Die vier Tabs haben oben gar keine Leiste; ihr Titel
 steht im Scroll-Inhalt und scrollt mit weg. Grund: iOS 26/27 legt über die oberen ~95 pt ein
 Unschärfe-Band (Liquid Glass), alles darin wird weich – **auch Symbole** (Screenshot Alwin,
-02.10.2026; die frühere Annahme „Symbole verträgt es" war falsch). **Seit dem 02.10.2026 hat auch die
-Setlist keine Leiste mehr:** Zurück, Teilen und Bearbeiten sind runde Knöpfe (`KnopfReihe`), die
-direkt unter dem Band schweben und beim Scrollen stehen bleiben – Vorbild sind die iPhone-
-Einstellungen, Alwins Wahl „ohne kleinen Titel". **Am Gerät widerlegt (02.10.2026):** Eine deckende
+02.10.2026; die frühere Annahme „Symbole verträgt es" war falsch). **Seitenkopf im ChurchTools-Look (Scheibe S, 26.10.2026; Alwin: die runden Knöpfe wirkten „wie eine
+iOS-App“):** `SeitenKopf` steht IM Inhalt (unter dem Band, scrollt mit) – Detailansichten als weiße Karte mit
+„← Ziel“ (`KopfZurueck`) und eckigen Knöpfen mit Beschriftung (`KopfKnopf`, Hauptaktion blau, am Handy nur Symbol
+per CSS), Übersichten mit Titel links und Knöpfen rechts. Reiter am iPad/Rechner **oben** als Textreiter
+(`ReiterLeiste oben`), am Handy unten (`HANDY_BREITE`). Vom 02.10. bis 26.10. schwebten stattdessen runde Knöpfe
+(`KnopfReihe`) unter dem Band – die gibt es nur noch im Liedblatt, bis B1 (Bauplan `bauplan-blatt-ct-look.md`). **Am Gerät widerlegt (02.10.2026):** Eine deckende
 Statusleiste (`status-bar-style=default`) beseitigt das Band NICHT – nicht noch einmal versuchen. Die
 Abstände kommen aus `--inhalt-pad-top` / `--knopfreihe-hoehe` / `--bar-pad-top`
 (`ui/design/_variables.scss`), die App zeichnet hinter der Statusleiste (`black-translucent`,
@@ -430,7 +432,7 @@ durch. Unser Rumpf (`absenceBody`) behält die Tage, weil Doppel-Erkennung und A
 nur die Leitung ist anders.
 
 **Ein Gerüst für alle Bildschirme: `components/SeitenGeruest.tsx`.** Es setzt `Screen` + `Scroll` +
-`GrosseUeberschrift` + optionale `KnopfReihe` (runde Knöpfe für Zurück/Aktionen) zusammen; `Agenda`, `AllSongs`, `Availability`, `Settings`
+`SeitenKopf` (Titel, „← Ziel“, `KopfKnopf`-Aktionen, Vollbild ganz rechts) zusammen; `Agenda`, `AllSongs`, `Availability`, `Settings`
 und `Setlist` rendern nur noch Inhalt (`children`) und Schwebendes (`ueberlagerung` – Plus-Knopf,
 Speichern-Leiste, Fenster, Meldungen; steht NEBEN dem Scroll-Bereich, sonst scrollt es mit weg).
 Vorher setzte jede Seite dasselbe Muster selbst zusammen – und genau dort liefen sie auseinander

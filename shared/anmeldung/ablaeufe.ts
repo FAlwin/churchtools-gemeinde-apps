@@ -13,8 +13,10 @@
  *   der ersten Person – die Bankdaten darum nur, wenn das Feld „Betrag“ gefüllt ist.
  *
  * Text wird lesbar mit `[Platzhalter]` geschrieben wie bei der Rundmail (`mitCtPlatzhaltern`); was aus den Einstellungen
- * kommt (Name, Termin, Bankdaten, Kontakt), wird erst danach eingesetzt – eckige Klammern darin bleiben so Text.
+ * kommt (Name, Termin, Bankdaten, Kontakt) und was Veranstalter selbst schreiben (`EigenerText`, A9-2a), wird erst
+ * danach eingesetzt – eckige Klammern darin bleiben so Text.
  */
+import { z } from 'zod';
 import { bankZeilen } from './bezahlung';
 import { grussZeilen } from './bewegung';
 import { SYSTEMFELDER, type OeffentlicheEinstellungen } from './formular';
@@ -40,7 +42,69 @@ export interface AblaufMail {
 }
 
 /** Höchstlänge des Betreffs einer Routine-Mail (Schnittstelle: 200). */
-const BETREFF_MAX = 200;
+export const BETREFF_MAX = 200;
+
+/**
+ * **Was Veranstalter an einer Mail selbst schreiben** (A9-2a, Alwin 26.10.2026: fester Rahmen + eigener Absatz). Leer
+ * heißt: der Standard (`standardBetreff`, kein eigener Absatz, „Viele Grüße“). Steht als JSON in der **Beschreibung der
+ * Routine** – nicht öffentlich, höchstens 1.000 Zeichen, Leerzeichen am Ende schneidet ChurchTools ab (gemessen
+ * 26.10.2026); beim Neuschreiben der Schritte bleibt sie stehen.
+ */
+export interface EigenerText {
+  betreff: string;
+  absatz: string;
+  gruss: string;
+}
+
+export const OHNE_EIGENEN_TEXT: EigenerText = { betreff: '', absatz: '', gruss: '' };
+
+/** Höchstlänge der Beschreibung einer Routine (Schnittstelle, gemessen: 1.001 → 400). */
+export const BESCHREIBUNG_MAX = 1000;
+
+const EigenSchema = z.object({
+  v: z.literal(1),
+  betreff: z.string().default(''),
+  absatz: z.string().default(''),
+  gruss: z.string().default(''),
+});
+
+/** Der eigene Text aus der Beschreibung einer Routine. Was nicht von uns stammt (oder leer ist), gilt als „kein eigener“. */
+export function eigenerTextAus(beschreibung: string | null | undefined): EigenerText {
+  if (!beschreibung) return OHNE_EIGENEN_TEXT;
+  try {
+    const r = EigenSchema.safeParse(JSON.parse(beschreibung));
+    return r.success
+      ? { betreff: r.data.betreff, absatz: r.data.absatz, gruss: r.data.gruss }
+      : OHNE_EIGENEN_TEXT;
+  } catch {
+    return OHNE_EIGENEN_TEXT;
+  }
+}
+
+/** Der eigene Text als Beschreibung der Routine – `null`, wenn nichts Eigenes da ist. */
+export function eigenerTextAlsBeschreibung(t: EigenerText): string | null {
+  const x = { betreff: t.betreff.trim(), absatz: t.absatz.trim(), gruss: t.gruss.trim() };
+  if (!x.betreff && !x.absatz && !x.gruss) return null;
+  return JSON.stringify({ v: 1, ...x });
+}
+
+/** Was am eigenen Text nicht passt – `null`, wenn alles passt. Gezählt wird, was ChurchTools speichern muss. */
+export function eigenerTextFehler(t: EigenerText): string | null {
+  if (t.betreff.trim().length > BETREFF_MAX)
+    return `Der Betreff hat höchstens ${BETREFF_MAX} Zeichen.`;
+  const laenge = eigenerTextAlsBeschreibung(t)?.length ?? 0;
+  if (laenge > BESCHREIBUNG_MAX)
+    return `Eigener Absatz und Gruß sind zusammen zu lang (${laenge - BESCHREIBUNG_MAX} Zeichen zu viel).`;
+  return null;
+}
+
+/** Der Betreff, wenn Veranstalter keinen eigenen schreiben. */
+export function standardBetreff(art: RoutinenArt, veranstaltung: string): string {
+  return `${veranstaltung}: ${art === 'platz' ? 'Anmeldung bestätigt' : 'Warteliste'}`.slice(
+    0,
+    BETREFF_MAX,
+  );
+}
 
 /** Was aus den Einstellungen kommt: HTML-sicher und ohne `{{`, damit ChurchTools nichts davon als Platzhalter liest. */
 function wert(text: string): string {
@@ -56,6 +120,10 @@ export function ablaufMails(
   e: OeffentlicheEinstellungen,
   veranstaltung: string,
   ctPlatzhalter: ReadonlyMap<string, string>,
+  eigen: Readonly<Record<RoutinenArt, EigenerText>> = {
+    platz: OHNE_EIGENEN_TEXT,
+    warte: OHNE_EIGENEN_TEXT,
+  },
 ): { platz: AblaufMail; warte: AblaufMail; unbekannt: string[] } {
   const unbekannt = new Set<string>();
   /** Lesbaren Text mit `[…]` umwandeln; `§name§` wird danach durch `werte[name]` ersetzt. */
@@ -85,17 +153,35 @@ export function ablaufMails(
         `<p>Deine Anmeldung ansehen oder ${was}:<br><a href="[${feld('link')}]">[${feld('link')}]</a></p>`,
       ),
     );
-  const gruss = `<p>${grussZeilen(e)
-    .filter(Boolean)
-    .map((z) => wert(z))
-    .join('<br>')}</p>`;
+  /** Der eigene Absatz – Leerzeilen trennen Absätze, wie beim Schreiben einer Mail. */
+  const absatz = (t: EigenerText) =>
+    t.absatz
+      .replace(/\r\n?/g, '\n')
+      .trim()
+      .split(/\n{2,}/)
+      .filter(Boolean)
+      .map((a) => `<p>${wert(a.trim())}</p>`)
+      .join('');
+  /** „Bei Fragen …“ und der Gruß wie in den übrigen Mails (`grussZeilen`) – nur der Gruß selbst ist austauschbar. */
+  const gruss = (t: EigenerText) => {
+    const zeilen = grussZeilen(e).filter(Boolean);
+    if (t.gruss.trim()) zeilen[zeilen.length - 1] = t.gruss.trim();
+    return `<p>${zeilen.map((z) => wert(z)).join('<br>')}</p>`;
+  };
+  /** Der Betreff ist reiner Text – `{{` darin läse ChurchTools sonst als Platzhalter. */
+  const betreff = (art: RoutinenArt) =>
+    (eigen[art].betreff.trim() || standardBetreff(art, veranstaltung))
+      .replace(/\{\{/g, '{ {')
+      .slice(0, BETREFF_MAX);
 
   const b = e.bezahlung;
   const bank = bankZeilen(b, '§nachname§');
   const zahlen = kannEtwasKosten(e.preis)
     ? wenn(
         feld('betrag'),
-        html(`<p>Betrag: [${feld('betrag')}]<br>[${feld('aufschluesselung')}]</p>`) +
+        // Nur der Betrag: Die Aufschlüsselung käme einzeilig an (ChurchTools übernimmt keine Zeilenumbrüche aus dem
+        // Feld, echte Prüfung 24.10.2026), und ihr Format liest die Liste zeilenweise (Alwin, 26.10.2026).
+        html(`<p>Betrag: [${feld('betrag')}]</p>`) +
           (bank.length
             ? html(
                 `<p>Bitte überweise ihn${b.fristTage > 0 ? ` innerhalb von ${b.fristTage} Tagen` : ''} an:<br>§bank§</p>`,
@@ -107,7 +193,7 @@ export function ablaufMails(
     : '';
 
   const platz: AblaufMail = {
-    betreff: `${veranstaltung}: Anmeldung bestätigt`.slice(0, BETREFF_MAX),
+    betreff: betreff('platz'),
     html: [
       hallo,
       html(
@@ -117,12 +203,13 @@ export function ablaufMails(
         nr +
         '</p>',
       zahlen,
+      absatz(eigen.platz),
       link('absagen'),
-      gruss,
+      gruss(eigen.platz),
     ].join(''),
   };
   const warte: AblaufMail = {
-    betreff: `${veranstaltung}: Warteliste`.slice(0, BETREFF_MAX),
+    betreff: betreff('warte'),
     html: [
       hallo,
       html(
@@ -136,8 +223,9 @@ export function ablaufMails(
           ? '<p>Wird ein Platz frei, bekommt ihr eine Mail mit Betrag und Bankdaten – erst dann ist etwas zu bezahlen.</p>'
           : '<p>Wird ein Platz frei, bekommt ihr eine Mail.</p>',
       ),
+      absatz(eigen.warte),
       link('zurückziehen'),
-      gruss,
+      gruss(eigen.warte),
     ].join(''),
   };
   return { platz, warte, unbekannt: [...unbekannt] };

@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { SeitenGeruest } from './SeitenGeruest';
-import { RundKnopf } from '@ui/bedienung/KnopfReihe';
+import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 
 const schalter = vi.hoisted(() => ({ vollbildKnopf: false }));
 vi.mock('../services/funktionen', async (original) => ({
@@ -60,12 +60,11 @@ describe('SeitenGeruest', () => {
   });
 
   /**
-   * **Runde Knöpfe statt Leiste** (02.10.2026). Sie müssen NEBEN dem Scroll-Bereich liegen: Dort
-   * bleiben sie beim Scrollen stehen. Darin scrollten sie mit weg, und „Zurück" wäre nach unten
-   * gescrollt nicht mehr erreichbar. Der Zurück-Knopf zeigt nur einen Pfeil – sein Name muss das Ziel
-   * nennen, sonst hört ein Screenreader nur „Taste".
+   * **Seitenkopf im ChurchTools-Stil** (Scheibe S, 26.10.2026): Zurück und Aktionen stehen in einer Karte IM Inhalt
+   * (sie scrollen mit, wie in ChurchTools); „Zurück“ zeigt sein Ziel als Text („← Termine“) und heißt für
+   * Screenreader „Zurück zu Termine“. Vorher schwebten runde Knöpfe neben dem Scroll-Bereich.
    */
-  it('setzt Zurück und Aktionen als schwebende Knöpfe neben den Scroll-Bereich', () => {
+  it('setzt Zurück und Aktionen in eine Kopfkarte im Inhalt, Zurück mit Ziel als Text', () => {
     const { container } = render(
       <SeitenGeruest
         titel="Ablauf"
@@ -77,11 +76,12 @@ describe('SeitenGeruest', () => {
       </SeitenGeruest>,
     );
     const zurueck = screen.getByRole('button', { name: 'Zurück zu Termine' });
-    expect(zurueck.textContent).toBe('');
-    expect(scrollBereich(container).contains(zurueck)).toBe(false);
-    expect(scrollBereich(container).contains(screen.getByRole('button', { name: 'Teilen' }))).toBe(
-      false,
-    );
+    expect(zurueck.textContent).toBe('Termine');
+    expect(scrollBereich(container).contains(zurueck)).toBe(true);
+    const karte = zurueck.closest('[class*="karte"]');
+    expect(karte).not.toBeNull();
+    expect(karte!.contains(screen.getByRole('button', { name: 'Teilen' }))).toBe(true);
+    expect(karte!.contains(screen.getByRole('heading', { name: 'Ablauf' }))).toBe(true);
   });
 
   it('hängt die Überlagerung neben den Scroll-Bereich, nicht hinein', () => {
@@ -120,18 +120,20 @@ describe('SeitenGeruest – Vollbild-Knopf', () => {
     schalter.vollbildKnopf = false;
   });
 
-  // Alwin, 09.10.2026: „jetzt stehen die Überschriften extrem tief" – der Knopf allein rückt nichts.
-  it('der Vollbild-Knopf allein schiebt die Überschrift NICHT unter eine Knopfreihe', () => {
+  // Alwin, 09.10.2026: „jetzt stehen die Überschriften extrem tief" – der Knopf allein macht aus einer Übersicht
+  // keine Detailansicht: Titel und Vollbild in EINER Zeile, ohne Karte; erst Zurück bringt die Kopfkarte.
+  it('der Vollbild-Knopf allein macht keine Kopfkarte – Zurück schon', () => {
     schalter.vollbildKnopf = true;
     render(<SeitenGeruest titel="Termine">Inhalt</SeitenGeruest>);
-    const klasseOhne = screen.getByRole('heading', { name: 'Termine' }).parentElement?.className;
+    expect(screen.getByRole('heading', { name: 'Termine' }).closest('[class*="karte"]')).toBeNull();
     render(
       <SeitenGeruest titel="Ablauf" zurueck={vi.fn()}>
         Inhalt
       </SeitenGeruest>,
     );
-    const klasseMit = screen.getByRole('heading', { name: 'Ablauf' }).parentElement?.className;
-    expect(klasseOhne).not.toBe(klasseMit);
+    expect(
+      screen.getByRole('heading', { name: 'Ablauf' }).closest('[class*="karte"]'),
+    ).not.toBeNull();
     schalter.vollbildKnopf = false;
   });
 
@@ -141,11 +143,7 @@ describe('SeitenGeruest – Vollbild-Knopf', () => {
       <SeitenGeruest
         titel="Ablauf"
         zurueck={vi.fn()}
-        aktionen={
-          <RundKnopf onClick={vi.fn()} title="Teilen">
-            T
-          </RundKnopf>
-        }
+        aktionen={<KopfKnopf onClick={vi.fn()} label="Teilen" symbol={<b>T</b>} />}
       >
         Inhalt
       </SeitenGeruest>,

@@ -116,7 +116,8 @@
   align-items: center;
   gap: 6px;
   max-width: 100%;
-  height: 38px;
+  // So hoch wie die Knöpfe daneben – eine Zahl für alle (`--knopf-hoehe`, 28.10.2026).
+  height: var(--knopf-hoehe);
   padding: 0 10px;
   border: none;
   border-bottom: 2px solid transparent;

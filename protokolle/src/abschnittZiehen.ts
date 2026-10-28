@@ -115,30 +115,92 @@ export function abschnittZiehenEndet(editor: ProtokollEditor): void {
   if (id) markierungAufheben(editor, id);
 }
 
+/** Lage eines Blocks auf dem Bildschirm (zum Umrechnen der Mauszeiger-Höhe in eine Stelle). */
+type Rechteck = (id: string) => { top: number; bottom: number } | null;
+
 /**
- * **Loslassen** an der Höhe `y` (Bildschirm): `true`, wenn ein Abschnitt gezogen wurde – dann hat diese Funktion ihn
- * gesetzt (oder bewusst stehen lassen), und BlockNote darf nichts mehr tun. Die Stelle ergibt sich aus der Höhe: vor dem
- * ersten Geschwister, dessen Mitte unter `y` liegt. `rechteck` liefert die Lage eines Blocks auf dem Bildschirm.
+ * **Wohin der gezogene Abschnitt fiele**, wenn jetzt an der Höhe `y` losgelassen würde – die eine Rechnung für die Linie
+ * beim Ziehen (`abschnittLinie`) und das Ablegen (`abschnittAblegen`). Die Stelle ergibt sich aus der Höhe: vor dem
+ * ersten Geschwister, dessen Mitte unter `y` liegt, dann an die nächste Abschnittsgrenze gerückt (`ablegeStelle`).
+ * `null`: Es wird gerade kein Abschnitt gezogen.
  */
-export function abschnittAblegen(
+function abschnittZiel(
   editor: ProtokollEditor,
   y: number,
-  rechteck: (id: string) => { top: number; bottom: number } | null,
-): boolean {
+  rechteck: Rechteck,
+): { g: Block[]; start: number; stelle: number | null } | null {
   const id = ziehend.get(editor);
-  if (!id) return false;
-  ziehend.delete(editor);
-  markierungAufheben(editor, id);
+  if (!id) return null;
   const g = geschwister(editor, id);
   const start = g.findIndex((b) => b.id === id);
-  if (start < 0) return true;
+  if (start < 0) return { g, start, stelle: null };
   let ziel = 0;
   for (const b of g) {
     const r = rechteck(b.id);
     if (!r || (r.top + r.bottom) / 2 >= y) break;
     ziel++;
   }
-  const stelle = ablegeStelle(g, start, ziel);
-  if (stelle !== null) abschnittSetzen(editor, g, start, stelle);
+  return { g, start, stelle: ablegeStelle(g, start, ziel) };
+}
+
+/**
+ * **Die Linie beim Ziehen** (K1, beim Durchklicken 28.10.2026: „Punkt ziehen landet falsch“): BlockNote zeigte seine
+ * Linie zwischen zwei beliebigen Blöcken, abgelegt wurde aber an der nächsten Abschnittsgrenze. Jetzt steht die Linie
+ * genau dort, wo der Abschnitt landet:
+ * - `{ vor: id }` / `{ nach: id }` – vor diesem Block bzw. hinter dem letzten;
+ * - `'keine'` – hier bewegt sich nichts (auf dem Abschnitt selbst oder an seinen Rändern), also keine Linie;
+ * - `'frei'` – es wird kein Abschnitt gezogen: BlockNotes eigene Linie.
+ */
+export function abschnittLinie(
+  editor: ProtokollEditor,
+  y: number,
+  rechteck: Rechteck,
+): { vor: string } | { nach: string } | 'keine' | 'frei' {
+  const z = abschnittZiel(editor, y, rechteck);
+  if (!z) return 'frei';
+  if (z.stelle === null) return 'keine';
+  return z.stelle < z.g.length ? { vor: z.g[z.stelle].id } : { nach: z.g[z.g.length - 1].id };
+}
+
+/**
+ * **Loslassen** an der Höhe `y` (Bildschirm): `true`, wenn ein Abschnitt gezogen wurde – dann hat diese Funktion ihn
+ * gesetzt (oder bewusst stehen lassen), und BlockNote darf nichts mehr tun. Die Stelle ist dieselbe wie die der Linie
+ * (`abschnittZiel`). `rechteck` liefert die Lage eines Blocks auf dem Bildschirm.
+ */
+export function abschnittAblegen(editor: ProtokollEditor, y: number, rechteck: Rechteck): boolean {
+  const id = ziehend.get(editor);
+  if (!id) return false;
+  const z = abschnittZiel(editor, y, rechteck);
+  ziehend.delete(editor);
+  markierungAufheben(editor, id);
+  if (z && z.stelle !== null) abschnittSetzen(editor, z.g, z.start, z.stelle);
   return true;
+}
+
+/**
+ * Die Stelle im Dokument vor bzw. hinter dem Block `id` (ProseMirror-Zählung) – dort zeichnet BlockNote die Linie
+ * (`abschnittLinie` → `computeDropPosition`). `null`, wenn es den Block nicht gibt.
+ */
+export function blockGrenze(
+  doc: {
+    descendants: (
+      f: (
+        n: { type: { name: string }; attrs: Record<string, unknown>; nodeSize: number },
+        pos: number,
+      ) => boolean | void,
+    ) => void;
+  },
+  id: string,
+  seite: 'vor' | 'nach',
+): number | null {
+  let stelle: number | null = null;
+  doc.descendants((n, pos) => {
+    if (stelle !== null) return false;
+    if (n.type.name === 'blockContainer' && n.attrs.id === id) {
+      stelle = seite === 'vor' ? pos : pos + n.nodeSize;
+      return false;
+    }
+    return true;
+  });
+  return stelle;
 }

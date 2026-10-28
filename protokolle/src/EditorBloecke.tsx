@@ -2,7 +2,13 @@ import { useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Icon, type IconName } from '@ui/icons/icons';
 import { tagPunkt } from '@shared/ct/datum';
 import { textAus } from '@shared/protokolle/dokument';
-import { istUeberfaellig, statusSetzen } from '@shared/protokolle/aufgaben';
+import {
+  istUeberfaellig,
+  neueAufgabe,
+  statusSetzen,
+  vorabAnwenden,
+  vorabLesen,
+} from '@shared/protokolle/aufgaben';
 import { FesterPunkt } from './FesterPunkt';
 import { AufgabenKontext } from './aufgabenKontext';
 import { StatusKreis } from './StatusKreis';
@@ -87,24 +93,52 @@ function Schildchen({
 
 export function AufgabeBlock({
   block,
+  editor,
   contentRef,
-}: Inhalt & { block: { props: { aufgabe: string }; content: unknown } }) {
+}: Inhalt & {
+  block: { id: string; props: { aufgabe: string; vorab: string }; content: unknown };
+  editor: {
+    isEditable: boolean;
+    updateBlock: (b: string, u: { props: { vorab: string } }) => unknown;
+  };
+}) {
   const k = useContext(AufgabenKontext);
   const id = block.props.aufgabe;
   const a = id ? k?.todos.get(id) : undefined;
   const text = textAus(block.content);
+  const vorab = vorabLesen(block.props.vorab);
   const status = a?.status ?? 'offen';
-  // Erst wenn die Aufgabe Text und eine ID hat, gibt es ein To-Do dazu.
-  const bereit = !!k && !!id && !!text.trim();
+  // Wer und Bis gehen, sobald der Block eine ID hat (K1). Ein To-Do gibt es erst mit Text; bis dahin merkt sich der Block
+  // die Wahl (`vorab`), und das Anlegen übernimmt sie – beim Speichern wie hier beim ersten Tipp (`vorabAnwenden`).
+  const bereit = !!k && !!id;
+  const mitText = bereit && !!text.trim();
   const aendern = (f: Parameters<NonNullable<typeof k>['aendern']>[2]) => {
-    if (k && bereit) k.aendern(id, text, f);
+    if (!k || !bereit) return;
+    if (a || mitText) {
+      k.aendern(id, text, a ? f : (x) => f(vorabAnwenden(x, vorab)));
+      return;
+    }
+    const leer = neueAufgabe({ id, gruppe: 0, sitzung: null, text: '', von: 0, am: '' });
+    const neu = f(vorabAnwenden(leer, vorab));
+    editor.updateBlock(block.id, {
+      props: { vorab: JSON.stringify({ wer: neu.wer, extern: neu.extern, bis: neu.bis }) },
+    });
   };
+  // Gibt es das To-Do, ist die Wahl übernommen – aus dem Block nehmen, sonst übernähme eine Kopie sie noch einmal.
+  useEffect(() => {
+    if (a && block.props.vorab && editor.isEditable)
+      editor.updateBlock(block.id, { props: { vorab: '' } });
+  }, [a, block.props.vorab, block.id, editor]);
+  const sicht = a ?? vorab;
 
   const mitglieder = k?.mitglieder;
   // `Array.isArray` macht aus einer schreibgeschützten Liste `any[]` – deshalb so.
   const liste = mitglieder && mitglieder !== 'verborgen' ? mitglieder : null;
   const nameVon = (p: number) => liste?.find((m) => m.id === p)?.name ?? `Person ${p}`;
-  const wer = [...(a?.wer ?? []).map(nameVon), ...(a?.extern ? [`${a.extern} (extern)`] : [])];
+  const wer = [
+    ...(sicht?.wer ?? []).map(nameVon),
+    ...(sicht?.extern ? [`${sicht.extern} (extern)`] : []),
+  ];
   const ueber = !!a && istUeberfaellig(a, heute());
 
   return (
@@ -113,7 +147,7 @@ export function AufgabeBlock({
         <StatusKreis
           status={status}
           onWechsel={
-            bereit && k.statusAenderbar
+            mitText && k.statusAenderbar
               ? (neu) => aendern((x) => statusSetzen(x, neu, k.ich, new Date().toISOString()))
               : undefined
           }
@@ -138,7 +172,7 @@ export function AufgabeBlock({
                 <small>ChurchTools zeigt dir die Mitglieder dieser Gruppe nicht.</small>
               )}
               {liste?.map((m) => {
-                const an = !!a?.wer.includes(m.id);
+                const an = !!sicht?.wer.includes(m.id);
                 return (
                   <label key={m.id} className={styles.person}>
                     <input
@@ -159,11 +193,11 @@ export function AufgabeBlock({
                 <small>Außerhalb der Gruppe (nur Name)</small>
                 <input
                   type="text"
-                  defaultValue={a?.extern ?? ''}
+                  defaultValue={sicht?.extern ?? ''}
                   placeholder="z. B. Hausmeister Müller"
                   onBlur={(e) => {
                     const extern = e.currentTarget.value.trim();
-                    if (extern !== (a?.extern ?? '')) aendern((x) => ({ ...x, extern }));
+                    if (extern !== (sicht?.extern ?? '')) aendern((x) => ({ ...x, extern }));
                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') e.currentTarget.blur();
@@ -175,7 +209,7 @@ export function AufgabeBlock({
         </Schildchen>
         <Schildchen
           icon="calendar"
-          text={a?.bis ? `${ueber ? 'überfällig · ' : 'bis '}${tagPunkt(a.bis)}` : 'Bis'}
+          text={sicht?.bis ? `${ueber ? 'überfällig · ' : 'bis '}${tagPunkt(sicht.bis)}` : 'Bis'}
           titel="Bis wann?"
           aus={!bereit || !k.bearbeitbar}
           warnung={ueber}
@@ -185,13 +219,13 @@ export function AufgabeBlock({
               <b className={styles.feldTitel}>Bis wann?</b>
               <input
                 type="date"
-                defaultValue={a?.bis ?? ''}
+                defaultValue={sicht?.bis ?? ''}
                 onChange={(e) => {
                   const bis = e.currentTarget.value || null;
                   aendern((x) => ({ ...x, bis }));
                 }}
               />
-              {a?.bis && (
+              {sicht?.bis && (
                 <button
                   type="button"
                   className={styles.leise}

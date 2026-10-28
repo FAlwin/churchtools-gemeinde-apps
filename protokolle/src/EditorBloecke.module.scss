@@ -96,6 +96,13 @@
   }
 }
 
+// Steht das Schildchen vorne (Termin), öffnet das Feld nach rechts – nach links ragte es über den Rand des Blatts und
+// wurde abgeschnitten (beim Durchklicken 28.10.2026 gefunden, K1).
+.vorneSchild .feld {
+  right: auto;
+  left: 0;
+}
+
 .feldTitel {
   color: var(--text2);
   font-size: 11.5px;

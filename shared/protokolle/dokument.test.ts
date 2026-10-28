@@ -46,6 +46,7 @@ describe('ableiten – aus dem, was BlockNote liefert', () => {
         text: 'Beamer reparieren lassen',
         punkt: '24e72200-5688-4b9e-84ca-1b1dd7b25a4e',
         aufgabe: null,
+        vorab: null,
       },
     ]);
   });
@@ -122,7 +123,7 @@ describe('ableiten – Beschlüsse, Termine und Unterpunkte', () => {
 
   it('liest den Verweis auf den To-Do-Wert', () => {
     expect(a.aufgaben).toEqual([
-      { blockId: 'a1', text: 'Einladung schreiben', punkt: 'p2', aufgabe: 'mit-7' },
+      { blockId: 'a1', text: 'Einladung schreiben', punkt: 'p2', aufgabe: 'mit-7', vorab: null },
     ]);
   });
 });

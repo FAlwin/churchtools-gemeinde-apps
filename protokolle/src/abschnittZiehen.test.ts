@@ -5,9 +5,11 @@ import type { Block } from '@shared/protokolle/dokument';
 import { schema, type ProtokollEditor } from './editorSchema';
 import {
   abschnittAblegen,
+  abschnittLinie,
   abschnittSchieben,
   abschnittZiehenBeginnt,
   abschnittZiehenEndet,
+  blockGrenze,
   kannSchieben,
 } from './abschnittZiehen';
 import { einhaengen } from './editorTest.testutil';
@@ -102,5 +104,62 @@ describe('Ziehen und Loslassen', () => {
     expect(e.getSelection()).toBeUndefined();
     expect(abschnittAblegen(e, 69, lage(e))).toBe(false);
     expect(ids(e)).toEqual(DOK.map((b) => b.id));
+  });
+});
+
+describe('Linie beim Ziehen (K1: „Punkt ziehen landet falsch“)', () => {
+  it('kein Abschnitt gezogen: BlockNotes eigene Linie', () => {
+    const e = editorMit();
+    expect(abschnittLinie(e, 34, lage(e))).toBe('frei');
+    abschnittZiehenBeginnt(e, 'b1');
+    expect(abschnittLinie(e, 34, lage(e))).toBe('frei');
+  });
+
+  it('über dem eigenen Abschnitt oder an seinen Rändern: keine Linie (es bewegt sich nichts)', () => {
+    const e = editorMit();
+    abschnittZiehenBeginnt(e, 'B');
+    for (const y of [24, 34, 44, 50]) expect(abschnittLinie(e, y, lage(e))).toBe('keine');
+  });
+
+  it('an einer Grenze bzw. ganz am Ende', () => {
+    const e = editorMit();
+    abschnittZiehenBeginnt(e, 'C');
+    expect(abschnittLinie(e, 3, lage(e))).toEqual({ vor: 'A' });
+    expect(abschnittLinie(e, 34, lage(e))).toEqual({ vor: 'B' });
+    abschnittZiehenEndet(e);
+    abschnittZiehenBeginnt(e, 'A');
+    expect(abschnittLinie(e, 69, lage(e))).toEqual({ nach: 'c1' });
+  });
+
+  it('wo die Linie steht, landet der Abschnitt – für jede Höhe', () => {
+    for (const start of ['A', 'B', 'C']) {
+      for (let y = 0; y <= 70; y += 3) {
+        const e = editorMit();
+        abschnittZiehenBeginnt(e, start);
+        const linie = abschnittLinie(e, y, lage(e));
+        const teil = ids(e)
+          .slice(ids(e).indexOf(start))
+          .slice(0, start === 'B' ? 3 : 2);
+        abschnittAblegen(e, y, lage(e));
+        const nach = ids(e);
+        if (linie === 'keine') expect(nach, `${start} bei ${y}`).toEqual(DOK.map((b) => b.id));
+        else if (linie !== 'frei' && 'vor' in linie)
+          expect(nach[nach.indexOf(linie.vor) - 1], `${start} bei ${y}`).toBe(teil.at(-1));
+        else if (linie !== 'frei')
+          expect(nach.slice(-teil.length), `${start} bei ${y}`).toEqual(teil);
+      }
+    }
+  });
+});
+
+describe('blockGrenze (wo BlockNote die Linie zeichnet)', () => {
+  it('vor einem Block steht er direkt dahinter, hinter einem Block direkt davor – auch beim letzten', () => {
+    const e = editorMit();
+    const doc = e.prosemirrorState.doc;
+    for (const id of ['A', 'B', 'C', 'c1']) {
+      expect(doc.resolve(blockGrenze(doc, id, 'vor')!).nodeAfter?.attrs.id).toBe(id);
+      expect(doc.resolve(blockGrenze(doc, id, 'nach')!).nodeBefore?.attrs.id).toBe(id);
+    }
+    expect(blockGrenze(doc, 'gibt-es-nicht', 'vor')).toBeNull();
   });
 });

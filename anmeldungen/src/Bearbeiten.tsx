@@ -35,6 +35,8 @@ import {
   type Kalender,
 } from './einrichten';
 import { WER_TEXT, datumText, geburtsdatumNoetigText } from './anzeige';
+import { ablaeufeEinrichten, type AblaufStand } from './ablaeufe';
+import { loeschDatum } from '@shared/anmeldung/ablaeufe';
 import { fehlerMeldung } from './zustand';
 import { useSpeichern } from './useSpeichern';
 import f from './Formular.module.scss';
@@ -755,21 +757,86 @@ export function BezahlungFenster({
   );
 }
 
+/**
+ * **Fenster „Daten löschen“** (A4, Löschen seit A9-3a): Frist in Monaten nach dem Ende. Sind die Abläufe eingerichtet,
+ * schreibt das Speichern das neue Löschdatum gleich in die Routinen. Liegt es heute oder früher, entfernte ChurchTools
+ * dabei sofort alle Anmeldungen (gemessen) – darum erst die Rückfrage mit der Zahl. `abläufe`: der Stand aus der Karte
+ * „Mails“; ohne ihn (Entwurf, ohne Recht) wird nur die Frist gespeichert, das Datum zieht der Abgleich nach.
+ */
 export function LoeschfristFenster({
   id,
-  monate,
+  e,
+  ablauf,
+  anzahl,
+  heute,
   onClose,
   onGespeichert,
 }: {
   id: number;
-  monate: number;
+  e: OeffentlicheEinstellungen;
+  ablauf: AblaufStand | null;
+  /** Wie viele angemeldet sind (mit Platz und wartend) – für die Rückfrage. */
+  anzahl: number | null;
+  heute: string;
   onClose: () => void;
-  onGespeichert: () => void;
+  /** `geloescht`: ChurchTools hat dabei alle Anmeldungen entfernt – dann gibt es kein „Rückgängig“. */
+  onGespeichert: (geloescht: boolean) => void;
 }) {
-  const [wert, setWert] = useState(String(monate));
+  const [wert, setWert] = useState(String(e.loeschfristMonate));
+  const [frage, setFrage] = useState(false);
   const zahl = Number(wert);
   const gueltig = Number.isInteger(zahl) && zahl >= 1 && zahl <= 36;
-  const { arbeitet, fehler, speichern } = useSpeichern(onGespeichert);
+  const { arbeitet, fehler, speichern } = useSpeichern(() => {});
+  const datum = gueltig ? loeschDatum({ termin: e.termin, loeschfristMonate: zahl }) : null;
+  const absender = ablauf?.platz && ablauf.warte ? ablauf.absenderId : null;
+  const sofort =
+    absender !== null && datum !== null && datum <= heute && datum !== ablauf?.loeschDatum;
+
+  const sichern = () =>
+    speichern(
+      async () => {
+        await aendereEinstellungen(id, (x) => ({ ...x, loeschfristMonate: zahl }));
+        if (absender !== null)
+          await ablaeufeEinrichten(id, absender, undefined, undefined, {
+            loeschenBestaetigt: frage,
+            heute,
+          });
+      },
+      () => onGespeichert(sofort),
+    );
+
+  if (frage)
+    return (
+      <Sheet
+        title="Sofort löschen?"
+        onClose={onClose}
+        beschaeftigt={arbeitet}
+        cancelLabel={null}
+        knoepfe={
+          <>
+            <FensterKnopf art="zweit" disabled={arbeitet} onClick={() => setFrage(false)}>
+              Zurück
+            </FensterKnopf>
+            <FensterKnopf art="gefahr" disabled={arbeitet} onClick={sichern}>
+              {arbeitet
+                ? 'Wird gelöscht …'
+                : anzahl
+                  ? `Jetzt ${anzahl === 1 ? 'eine Anmeldung' : `${anzahl} Anmeldungen`} löschen`
+                  : 'Jetzt löschen'}
+            </FensterKnopf>
+          </>
+        }
+      >
+        <p>
+          Mit {zahl} {zahl === 1 ? 'Monat' : 'Monaten'} nach dem Ende liegt das Löschdatum (
+          {datumText(datum!)}) <b>nicht in der Zukunft</b>. Beim Speichern entfernt ChurchTools{' '}
+          <b>sofort {anzahl ? `alle ${anzahl} Anmeldungen` : 'alle Anmeldungen'}</b> mit allen
+          Antworten. Das lässt sich nicht rückgängig machen.
+        </p>
+        <Fehler text={fehler} />
+      </Sheet>
+    );
+
   return (
     <Sheet
       title="Daten löschen"
@@ -778,9 +845,7 @@ export function LoeschfristFenster({
       knoepfe={
         <FensterKnopf
           disabled={!gueltig || arbeitet}
-          onClick={() =>
-            speichern(() => aendereEinstellungen(id, (e) => ({ ...e, loeschfristMonate: zahl })))
-          }
+          onClick={() => (sofort ? setFrage(true) : sichern())}
         >
           {arbeitet ? 'Wird gespeichert …' : 'Speichern'}
         </FensterKnopf>
@@ -792,12 +857,15 @@ export function LoeschfristFenster({
           className={f.eingabe}
           inputMode="numeric"
           value={wert}
-          onChange={(e) => setWert(e.target.value.replace(/\D/g, ''))}
+          onChange={(ev) => setWert(ev.target.value.replace(/\D/g, ''))}
         />
       </label>
       <p className={f.hinweis}>
-        Danach werden die Anmeldungen mit allen Angaben (auch Allergien) aus ChurchTools entfernt.
-        Das Löschen selbst richtet ein späterer Schritt als ChurchTools-Routine ein.
+        {datum
+          ? `Am ${datumText(datum)} entfernt ChurchTools alle Anmeldungen mit allen Angaben (auch Allergien).`
+          : e.termin
+            ? 'Danach entfernt ChurchTools alle Anmeldungen mit allen Angaben (auch Allergien).'
+            : 'Ohne Termin gibt es kein Löschdatum – erst einen Termin wählen.'}
       </p>
       <Fehler text={fehler} />
     </Sheet>

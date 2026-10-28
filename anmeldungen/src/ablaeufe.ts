@@ -15,8 +15,15 @@
  *   an alle schon Angemeldeten und danach an jede neue Person. Darum immer beides zusammen: an + eigene Mail aus.
  *   Echte Prüfung 28.10.2026: Wird die Code-Mail bei laufendem Check-in eingeschaltet, geht sie sofort an alle – der
  *   Abgleich kann sie danach nur noch abstellen.
+ * - A9-3a (gemessen 28.10.2026): Löschen = „warten bis“ (`untilDate`, nur `JJJJ-MM-TT`) + „entfernen“. Ein Datum heute
+ *   oder früher läuft sofort durch – ChurchTools entfernt dann beim Speichern alle, die dort warten. Schon abgeschlossene
+ *   Läufe erreichen neue Schritte nicht; mit ausgeschalteter Mail und `restart: ['finished']` kommen sie ohne Mail ins
+ *   Warten. `reposition` auf den Warte-Schritt gilt als „schon gewartet“ und entfernt sofort – nie benutzen. Einen
+ *   Schritt, an dem Läufe warten, nimmt ChurchTools nur mit `finish` (oder `reposition`) weg, sonst 422.
  */
 import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
+import { heuteImKalender } from '@shared/ct/zeit';
+import { tagPunkt } from '@shared/ct/datum';
 import { ctAlleSeiten, ctAnfrage, ctDaten } from '@ui/ct/verbindung';
 import {
   OHNE_EIGENEN_TEXT,
@@ -25,7 +32,9 @@ import {
   eigenerTextAlsBeschreibung,
   eigenerTextAus,
   eigenerTextFehler,
+  loeschDatum,
   routinenSchritte,
+  type AblaufMail,
   type EigenerText,
   type RoutinenArt,
 } from '@shared/anmeldung/ablaeufe';
@@ -44,6 +53,7 @@ interface SchrittRoh {
     addSignOutUrl?: boolean;
     senderId?: number;
     sender?: { title?: string } | null;
+    untilDate?: string;
   } | null;
 }
 
@@ -99,10 +109,34 @@ export interface AblaufStand {
   eigen: Record<RoutinenArt, EigenerText>;
   /** Check-in-Code in der Bestätigung (A9-2b) – `qrCodeCheckin` der Gruppe. */
   qr: boolean;
+  /** Löschdatum, wie es in ChurchTools steht (A9-3a) – `null`: es wird nicht gelöscht. */
+  loeschDatum: string | null;
+  /**
+   * Nur vom Abgleich (A9-3a, E3): Das Löschdatum aus den Einstellungen liegt heute oder früher und steht so noch nicht in
+   * ChurchTools – geschrieben wird es erst nach der Rückfrage im Fenster „Datenschutz“.
+   */
+  loeschenOffen?: string;
+}
+
+/**
+ * **Das Löschdatum ist schon da** (A9-3a): Geschrieben entfernte ChurchTools sofort alle Anmeldungen – darum erst nach
+ * ausdrücklicher Rückfrage (`loeschenBestaetigt`).
+ */
+export class LoeschdatumVorbei extends Error {
+  constructor(readonly datum: string) {
+    super(
+      `Das Löschdatum (${tagPunkt(datum)}) ist schon erreicht – ChurchTools würde sofort alle Anmeldungen entfernen. Bitte unter „Datenschutz“ die Frist oder den Termin prüfen.`,
+    );
+    this.name = 'LoeschdatumVorbei';
+  }
 }
 
 const mailSchritt = (r: RoutineRoh | null | undefined) =>
   r?.steps?.find((s) => s.actionKey === 'send-member-email');
+
+/** Bis wann der Lösch-Schritt einer Routine wartet – `undefined`: Sie löscht nicht. */
+const wartetBis = (r: RoutineRoh | null | undefined) =>
+  r?.steps?.find((s) => s.actionKey === 'special:wait')?.actionData?.untilDate;
 
 /** Unsere Routine für einen Status – fremde (eigene Routinen aus ChurchTools) zählen nicht. */
 function unsereFuer(zuordnungen: ZuordnungRoh[], rolle: number, status: string): RoutineRoh | null {
@@ -136,6 +170,7 @@ export async function ablaeufeLesen(id: number): Promise<AblaufStand> {
       warte: eigenerTextAus(unsereFuer(zuordnungen, rolle, 'waiting')?.description),
     },
     qr: checkinAn(g),
+    loeschDatum: wartetBis(platz) ?? null,
   };
 }
 
@@ -170,12 +205,17 @@ async function textVonVorlage(
  * gehen an sie). `eigen`: neuer eigener Text je Mail – ohne bleibt der, der in ChurchTools steht (bei einer neuen
  * Routine: der der Vorlage, `kopieVon`). `qr` (A9-2b): Check-in-Code an oder aus – ohne bleibt, was in ChurchTools
  * eingestellt ist (eine Kopie übernimmt ihn von der Vorlage).
+ *
+ * Löschen (A9-3a): Das Datum kommt aus Termin und Frist (`loeschDatum`). Ein **neues** Datum heute oder früher wird nur
+ * mit `loeschenBestaetigt` geschrieben – sonst `LoeschdatumVorbei`, bevor irgendetwas geschrieben ist. Schon Angemeldete
+ * kommen ohne Mail ins Warten (`nachstarten`).
  */
 export async function ablaeufeEinrichten(
   id: number,
   absenderId: number,
   eigen?: Partial<Record<RoutinenArt, EigenerText>>,
   qr?: boolean,
+  { loeschenBestaetigt = false, heute = heuteImKalender() } = {},
 ): Promise<void> {
   for (const t of Object.values(eigen ?? {})) {
     const fehler = eigenerTextFehler(t);
@@ -207,6 +247,14 @@ export async function ablaeufeEinrichten(
       422,
       `Für die Bestätigungsmail fehlen in ChurchTools: ${mails.unbekannt.join(', ')}.`,
     );
+  const datum = loeschDatum(e);
+  if (
+    datum !== null &&
+    datum <= heute &&
+    !loeschenBestaetigt &&
+    ROUTINEN.some((r) => wartetBis(unsereFuer(zuordnungen, rolle, r.status)) !== datum)
+  )
+    throw new LoeschdatumVorbei(datum);
 
   for (const r of ROUTINEN) {
     const vorhanden = zuordnungen.find(
@@ -233,11 +281,15 @@ export async function ablaeufeEinrichten(
     }
     const mail = r.art === 'platz' ? mails.platz : mails.warte;
     const beschreibung = eigenerTextAlsBeschreibung(texte[r.art]);
+    const vorher = vorhanden?.routine?.steps ?? [];
+    // Ohne Löschdatum (Termin entfernt) fällt der Warte-Schritt weg – wer dort wartet, wird beendet, nicht entfernt.
+    const warteSchritt = vorher.find((s) => s.actionKey === 'special:wait')?.id;
     await ctAnfrage(`/routines/${routineId}`, {
       method: 'PATCH',
       body: json({
         isEnabled: true,
-        steps: routinenSchritte(mail, absenderId, vorhanden?.routine?.steps ?? []),
+        steps: routinenSchritte(mail, absenderId, vorher, datum),
+        ...(datum === null && warteSchritt !== undefined ? { finish: [warteSchritt] } : {}),
         ...(schreiben[r.art] ? { description: beschreibung } : {}),
       }),
     });
@@ -250,9 +302,12 @@ export async function ablaeufeEinrichten(
       s.actionData?.subject !== mail.betreff ||
       s.actionData?.addSignOutUrl !== false ||
       s.actionData?.senderId !== absenderId ||
-      (schreiben[r.art] && (nachher.description ?? null) !== beschreibung)
+      (schreiben[r.art] && (nachher.description ?? null) !== beschreibung) ||
+      (wartetBis(nachher) ?? null) !== datum ||
+      (datum !== null && nachher.steps?.at(-1)?.actionKey !== 'remove-member')
     )
       throw new NichtUebernommen('den Ablauf „' + r.name + '“');
+    if (datum !== null) await nachstarten(routineId, mail, absenderId, nachher.steps ?? [], datum);
   }
 
   // Check-in in einem Aufruf mit der eigenen Code-Mail aus – sonst bekämen beim Einschalten alle schon Angemeldeten eine
@@ -273,6 +328,40 @@ export async function ablaeufeEinrichten(
     throw new NichtUebernommen('den Check-in-Code');
 }
 
+/**
+ * **Schon Angemeldete ins Warten bringen** (A9-3a, E6): Wer sich vor dem Löschen angemeldet hat, dessen Lauf ist
+ * abgeschlossen – neue Schritte erreichen ihn nicht. Gemessener Weg (28.10.2026): Mail aus → `restart: ['finished']` →
+ * Mail wieder an; die Läufe gehen dabei ohne Mail bis zum Warten. Nur, wenn es solche Läufe gibt – solange die Mail aus
+ * ist, bekäme eine neue Anmeldung keine Bestätigung. Die Mail wird darum auch nach einem Fehler wieder eingeschaltet.
+ */
+async function nachstarten(
+  routineId: number,
+  mail: AblaufMail,
+  absenderId: number,
+  schritte: { id: number; actionKey: string }[],
+  datum: string,
+): Promise<void> {
+  const laeufe = await ctAlleSeiten<{ status?: string }>(`/routines/${routineId}/runs`);
+  if (!laeufe.some((l) => l.status === 'finished')) return;
+  const mitMail = (an: boolean) =>
+    ctAnfrage(`/routines/${routineId}`, {
+      method: 'PATCH',
+      body: json({ steps: routinenSchritte(mail, absenderId, schritte, datum, an) }),
+    });
+  await mitMail(false);
+  try {
+    await ctAnfrage(`/routines/${routineId}`, {
+      method: 'PATCH',
+      body: json({ restart: ['finished'] }),
+    });
+  } finally {
+    await mitMail(true);
+  }
+  const nachher = await ctDaten<RoutineRoh>(`/routines/${routineId}`);
+  if (!mailSchritt(nachher)?.isEnabled)
+    throw new NichtUebernommen('das Wiedereinschalten der Mail');
+}
+
 /** Absender der Bestätigungsmails: wer freigibt, wenn er zur gewählten Leitung gehört – sonst die erste gewählte. */
 export function absenderAus(gewaehlt: ReadonlySet<number>, ich: number | null): number {
   if (ich !== null && gewaehlt.has(ich)) return ich;
@@ -289,7 +378,10 @@ export function absenderAus(gewaehlt: ReadonlySet<number>, ich: number | null): 
  * dafür, statt eines Aufrufs nach jedem Speichern. Nur, wo beide Abläufe eingerichtet und an sind – ältere
  * Veranstaltungen richtet erst A9-5 ein, und abgeschaltete (archiviert) bleiben aus.
  */
-export async function ablaeufeAbgleichen(id: number): Promise<AblaufStand> {
+export async function ablaeufeAbgleichen(
+  id: number,
+  heute = heuteImKalender(),
+): Promise<AblaufStand> {
   const stand = await ablaeufeLesen(id);
   if (!stand.platz || !stand.warte || stand.absenderId === null) return stand;
   const [e, g, platzhalter, rolle, zuordnungen] = await Promise.all([
@@ -303,15 +395,25 @@ export async function ablaeufeAbgleichen(id: number): Promise<AblaufStand> {
   const mitQr = checkinAn(g);
   const soll = ablaufMails(e, g.name, platzhalter, stand.eigen, mitQr);
   if (soll.unbekannt.length) return stand;
+  const datum = loeschDatum(e);
   const passt =
     !(mitQr && qrMailAn(g)) &&
     ROUTINEN.every((r) => {
       const s = mailSchritt(unsereFuer(zuordnungen, rolle, r.status))?.actionData;
       const m = r.art === 'platz' ? soll.platz : soll.warte;
       return s?.subject === m.betreff && s?.body === m.html;
-    });
+    }) &&
+    // A9-3a: Termin oder Frist geändert → das Löschdatum zieht mit.
+    ROUTINEN.every((r) => (wartetBis(unsereFuer(zuordnungen, rolle, r.status)) ?? null) === datum);
   if (passt) return stand;
-  await ablaeufeEinrichten(id, stand.absenderId);
+  // E3 (Alwin, 28.10.2026): Ein neues Löschdatum heute oder früher schreibt der Abgleich nie still – ChurchTools entfernte
+  // sonst beim bloßen Öffnen alle Anmeldungen. Die Karte „Datenschutz“ zeigt es, gelöscht wird nach der Rückfrage.
+  try {
+    await ablaeufeEinrichten(id, stand.absenderId, undefined, undefined, { heute });
+  } catch (x) {
+    if (x instanceof LoeschdatumVorbei) return { ...stand, loeschenOffen: x.datum };
+    throw x;
+  }
   return ablaeufeLesen(id);
 }
 

@@ -7,6 +7,7 @@ import { SYSTEMFELDER } from '@shared/anmeldung/formular';
 import { OHNE_EIGENEN_TEXT } from '@shared/anmeldung/ablaeufe';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import {
+  LoeschdatumVorbei,
   ablaeufeAbgleichen,
   ablaeufeEinrichten,
   ablaeufeLesen,
@@ -78,6 +79,48 @@ let aufrufe: string[];
 /** Was jeder PATCH an eine Routine geschickt hat. */
 let routinenPatches: Record<string, unknown>[];
 
+/**
+ * Läufe einer Routine (A9-3a), wie am 28.10.2026 gemessen: Abgeschlossene erreichen neue Schritte nicht; `restart:
+ * ['finished']` läuft von vorn (ausgeschaltete Mail wird übersprungen); Warten bis heute oder früher läuft sofort durch,
+ * auch für schon Wartende, sobald das Datum gespeichert ist; einen Schritt mit Wartenden nimmt ChurchTools nur mit
+ * `finish` weg (sonst 422).
+ */
+interface Lauf {
+  routine: number;
+  person: string;
+  status: 'finished' | 'waiting';
+  schritt: number | null;
+}
+const HEUTE = '2026-10-28';
+let laeufe: Lauf[];
+let mailsAnLaeufe: string[];
+let entfernt: string[];
+let restartFehler: boolean;
+/** ChurchTools übernimmt die Mail, verliert aber Warten und Entfernen. */
+let warteSchlucken: boolean;
+/** ChurchTools behält beim Warten das alte Datum. */
+let datumSchlucken: boolean;
+
+function laufWeiter(r: Routine, l: Lauf, ab: number) {
+  for (const s of r.steps.slice(ab)) {
+    if (s.actionKey === 'send-member-email') {
+      if (s.isEnabled) mailsAnLaeufe.push(l.person);
+    } else if (s.actionKey === 'special:wait') {
+      if (String(s.actionData.untilDate) > HEUTE) {
+        l.status = 'waiting';
+        l.schritt = s.id;
+        return;
+      }
+    } else if (s.actionKey === 'remove-member') {
+      entfernt.push(l.person);
+      laeufe = laeufe.filter((x) => x !== l);
+      return;
+    }
+  }
+  l.status = 'finished';
+  l.schritt = null;
+}
+
 beforeEach(() => {
   routinen = new Map();
   naechste = 12;
@@ -90,6 +133,17 @@ beforeEach(() => {
   beschreibungSchlucken = false;
   aufrufe = [];
   routinenPatches = [];
+  laeufe = [];
+  mailsAnLaeufe = [];
+  entfernt = [];
+  restartFehler = false;
+  warteSchlucken = false;
+  datumSchlucken = false;
+  ct.ctAlleSeiten.mockImplementation(async (pfad: string) => {
+    const m = /^\/routines\/(\d+)\/runs$/.exec(pfad);
+    if (!m) throw new Error(`unerwartet: ${pfad}`);
+    return laeufe.filter((l) => l.routine === Number(m[1])).map((l) => ({ status: l.status }));
+  });
   ei.systemfelderNachziehen.mockResolvedValue(neueEinstellungen('kinder'));
   ei.teilnehmerRolle.mockResolvedValue(32);
   ru.platzhalterLaden.mockResolvedValue(PLATZHALTER);
@@ -146,11 +200,35 @@ beforeEach(() => {
       if ('description' in body && !beschreibungSchlucken)
         r.description = body.description as string | null;
       if ('isEnabled' in body) r.isEnabled = !!body.isEnabled;
+      if ('restart' in body) {
+        if (restartFehler) throw new ApiError(502, 'x');
+        for (const l of laeufe.filter((x) => x.routine === r.id && x.status === 'finished'))
+          laufWeiter(r, l, 0);
+      }
       if (!('steps' in body)) return null;
-      r.steps = (body.steps as Partial<Schritt>[]).map((s) => ({
+      let neu = (body.steps as Partial<Schritt>[]).map((s) => ({
         ...(s as Schritt),
         id: s.id ?? 100 + naechste++,
       }));
+      if (warteSchlucken) neu = neu.filter((s) => s.actionKey === 'send-member-email');
+      if (datumSchlucken)
+        neu = neu.map((s) => {
+          const alt = r.steps.find((x) => x.id === s.id);
+          return alt && s.actionKey === 'special:wait' ? { ...s, actionData: alt.actionData } : s;
+        });
+      const beenden = (body.finish as number[] | undefined) ?? [];
+      const wartend = laeufe.filter((l) => l.routine === r.id && l.status === 'waiting');
+      for (const l of wartend)
+        if (!neu.some((s) => s.id === l.schritt)) {
+          if (!beenden.includes(l.schritt!)) throw new ApiError(422, 'orphaned runs');
+          l.status = 'finished';
+          l.schritt = null;
+        }
+      r.steps = neu;
+      for (const l of laeufe.filter((x) => x.routine === r.id && x.status === 'waiting')) {
+        const i = neu.findIndex((s) => s.id === l.schritt);
+        if (String(neu[i].actionData.untilDate) <= HEUTE) laufWeiter(r, l, i + 1);
+      }
       return null;
     }
     if (methode === 'PATCH' && pfad === '/groups/165') {
@@ -251,6 +329,7 @@ describe('ablaeufeLesen', () => {
       absenderId: null,
       eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT },
       qr: false,
+      loeschDatum: null,
     });
   });
   it('nach dem Einrichten: beide an, Standard-Mail aus, Absender aus ChurchTools', async () => {
@@ -265,6 +344,7 @@ describe('ablaeufeLesen', () => {
       absenderId: 7,
       eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT },
       qr: false,
+      loeschDatum: null,
     });
   });
   it('abgeschaltet (z. B. beim Archivieren) oder fremd: zählt nicht als eingerichtet', async () => {
@@ -470,5 +550,180 @@ describe('Check-in-Code (A9-2b)', () => {
     checkin = false;
     await ablaeufeAbgleichen(165);
     expect(body('active')).not.toContain('groupMember.checkInCodeQr');
+  });
+});
+
+describe('Löschen (A9-3a)', () => {
+  /** Einstellungen mit Termin – Ende `ende`, Frist `monate`. */
+  const mitTermin = (ende: string, monate = 3) => {
+    const e = {
+      ...neueEinstellungen('kinder'),
+      termin: { beginn: `${ende}T10:00`, ende: `${ende}T18:00`, ort: '', terminId: 1 },
+      loeschfristMonate: monate,
+    };
+    ei.systemfelderNachziehen.mockResolvedValue(e);
+    return e;
+  };
+  const routine = (status: string) => [...routinen.values()].find((x) => x.status === status)!;
+  const schritte = (status: string) => routine(status).steps.map((s) => s.actionKey);
+  const optionen = { heute: HEUTE };
+
+  it('mit Termin: beide Routinen warten bis Ende + Frist und entfernen dann; Lesen zeigt das Datum', async () => {
+    mitTermin('2026-11-15');
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    for (const s of ['active', 'waiting']) {
+      expect(schritte(s)).toEqual(['send-member-email', 'special:wait', 'remove-member']);
+      expect(routine(s).steps[1].actionData.untilDate).toBe('2027-02-15');
+    }
+    expect((await ablaeufeLesen(165)).loeschDatum).toBe('2027-02-15');
+  });
+
+  it('schon Angemeldete (abgeschlossene Läufe) kommen ohne Mail ins Warten; die Mail ist danach wieder an', async () => {
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    laeufe = [
+      { routine: routine('active').id, person: 'Lena', status: 'finished', schritt: null },
+      { routine: routine('waiting').id, person: 'Paul', status: 'finished', schritt: null },
+    ];
+    mitTermin('2026-11-15');
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    expect(laeufe.map((l) => [l.person, l.status])).toEqual([
+      ['Lena', 'waiting'],
+      ['Paul', 'waiting'],
+    ]);
+    expect(mailsAnLaeufe).toEqual([]);
+    expect([routine('active'), routine('waiting')].every((r) => r.steps[0].isEnabled)).toBe(true);
+  });
+
+  it('ohne abgeschlossene Läufe wird nichts neu gestartet (die Mail bleibt durchgehend an)', async () => {
+    mitTermin('2026-11-15');
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    expect(routinenPatches.some((b) => 'restart' in b)).toBe(false);
+    expect(
+      routinenPatches.every(
+        (b) => !('steps' in b) || (b.steps as { isEnabled: boolean }[])[0].isEnabled,
+      ),
+    ).toBe(true);
+  });
+
+  it('scheitert der Neustart, wird die Mail trotzdem wieder eingeschaltet', async () => {
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    laeufe = [{ routine: routine('active').id, person: 'Lena', status: 'finished', schritt: null }];
+    mitTermin('2026-11-15');
+    restartFehler = true;
+    await expect(ablaeufeEinrichten(165, 7, undefined, undefined, optionen)).rejects.toMatchObject({
+      status: 502,
+    });
+    expect(routine('active').steps[0].isEnabled).toBe(true);
+  });
+
+  it('neues Datum heute oder früher: erst Rückfrage (nichts geschrieben), mit Bestätigung wird sofort entfernt', async () => {
+    mitTermin('2026-11-15');
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    laeufe = [
+      {
+        routine: routine('active').id,
+        person: 'Lena',
+        status: 'waiting',
+        schritt: routine('active').steps[1].id,
+      },
+    ];
+    mitTermin('2026-07-28'); // + 3 Monate = heute
+    routinenPatches = [];
+    const f = await ablaeufeEinrichten(165, 7, undefined, undefined, optionen).catch(
+      (x: unknown) => x,
+    );
+    expect(f).toBeInstanceOf(LoeschdatumVorbei);
+    expect((f as LoeschdatumVorbei).datum).toBe('2026-10-28');
+    expect(routinenPatches).toEqual([]);
+    expect(entfernt).toEqual([]);
+    await ablaeufeEinrichten(165, 7, undefined, undefined, {
+      ...optionen,
+      loeschenBestaetigt: true,
+    });
+    expect(entfernt).toEqual(['Lena']);
+  });
+
+  it('steht das erreichte Datum schon so in ChurchTools, fragt es nicht noch einmal', async () => {
+    mitTermin('2026-07-28');
+    await ablaeufeEinrichten(165, 7, undefined, undefined, {
+      ...optionen,
+      loeschenBestaetigt: true,
+    });
+    await expect(
+      ablaeufeEinrichten(165, 9, undefined, undefined, optionen),
+    ).resolves.toBeUndefined();
+  });
+
+  it('Termin entfernt: Warten und Entfernen fallen weg, Wartende werden beendet statt entfernt', async () => {
+    mitTermin('2026-11-15');
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    laeufe = [
+      {
+        routine: routine('active').id,
+        person: 'Lena',
+        status: 'waiting',
+        schritt: routine('active').steps[1].id,
+      },
+    ];
+    ei.systemfelderNachziehen.mockResolvedValue(neueEinstellungen('kinder'));
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    expect(schritte('active')).toEqual(['send-member-email']);
+    expect(laeufe.map((l) => l.status)).toEqual(['finished']);
+    expect(entfernt).toEqual([]);
+  });
+
+  it('ChurchTools übernimmt Warten und Entfernen nicht → Fehler statt „gespeichert“', async () => {
+    mitTermin('2026-11-15');
+    warteSchlucken = true;
+    await expect(ablaeufeEinrichten(165, 7, undefined, undefined, optionen)).rejects.toBeInstanceOf(
+      NichtUebernommen,
+    );
+  });
+
+  it('ChurchTools behält das alte Datum → Fehler statt „gespeichert“', async () => {
+    mitTermin('2026-11-15');
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    mitTermin('2026-11-15', 6);
+    datumSchlucken = true;
+    await expect(ablaeufeEinrichten(165, 7, undefined, undefined, optionen)).rejects.toBeInstanceOf(
+      NichtUebernommen,
+    );
+  });
+
+  it('Abgleich: nur die Frist geändert (die Mail bleibt gleich) → das Datum zieht trotzdem mit', async () => {
+    mitTermin('2026-11-15');
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    mitTermin('2026-11-15', 6);
+    const stand = await ablaeufeAbgleichen(165, HEUTE);
+    expect(stand.loeschDatum).toBe('2027-05-15');
+  });
+
+  it('Abgleich: Termin verschoben → das Datum zieht mit', async () => {
+    mitTermin('2026-11-15');
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    mitTermin('2026-12-05');
+    const stand = await ablaeufeAbgleichen(165, HEUTE);
+    expect(stand.loeschDatum).toBe('2027-03-05');
+    expect(routine('waiting').steps[1].actionData.untilDate).toBe('2027-03-05');
+  });
+
+  it('Abgleich: neues Datum heute oder früher → nichts geschrieben, nur der Hinweis (E3)', async () => {
+    mitTermin('2026-11-15');
+    await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+    laeufe = [
+      {
+        routine: routine('active').id,
+        person: 'Lena',
+        status: 'waiting',
+        schritt: routine('active').steps[1].id,
+      },
+    ];
+    mitTermin('2026-06-01');
+    routinenPatches = [];
+    const stand = await ablaeufeAbgleichen(165, HEUTE);
+    expect(stand.loeschenOffen).toBe('2026-09-01');
+    expect(stand.loeschDatum).toBe('2027-02-15');
+    expect(routinenPatches).toEqual([]);
+    expect(entfernt).toEqual([]);
   });
 });

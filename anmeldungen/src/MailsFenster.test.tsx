@@ -39,6 +39,7 @@ const STAND: AB.AblaufStand = {
     warte: OHNE_EIGENEN_TEXT,
   },
   qr: false,
+  loeschDatum: null,
 };
 
 let gespeichert: ReturnType<typeof vi.fn<(text: string) => void>>;

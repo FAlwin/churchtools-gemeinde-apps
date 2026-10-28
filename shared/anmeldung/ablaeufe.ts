@@ -23,6 +23,7 @@ import { SYSTEMFELDER, type OeffentlicheEinstellungen } from './formular';
 import { kannEtwasKosten } from './preis';
 import { htmlSicher, mitCtPlatzhaltern } from './rundmail';
 import { terminZeile } from './termin';
+import { letzterTag, monatPlus } from '../ct/datum';
 
 /** Name eines Systemfelds – so heißt es auch als Platzhalter bei ChurchTools (`/placeholders/group/{id}`). */
 const feld = (id: (typeof SYSTEMFELDER)[number]['id']) =>
@@ -248,29 +249,55 @@ export function ablaufMails(
 }
 
 /** Ein Schritt einer Routine, wie `PATCH /routines/{id}` ihn nimmt. */
-export interface RoutinenSchritt {
-  id?: number;
-  actionKey: 'send-member-email';
-  isEnabled: boolean;
-  actionData: { subject: string; body: string; addSignOutUrl: false; senderId: number };
+export type RoutinenSchritt =
+  | {
+      id?: number;
+      actionKey: 'send-member-email';
+      isEnabled: boolean;
+      actionData: { subject: string; body: string; addSignOutUrl: false; senderId: number };
+    }
+  | { id?: number; actionKey: 'special:wait'; isEnabled: true; actionData: { untilDate: string } }
+  | { id?: number; actionKey: 'remove-member'; isEnabled: true; actionData: Record<string, never> };
+
+/**
+ * **Das Löschdatum** (A9-3a): Ende des Termins (ohne Ende: der Beginn) plus die Frist in Monaten, als `JJJJ-MM-TT` –
+ * nur so nimmt ChurchTools es im Warte-Schritt (gemessen 28.10.2026). Gibt es den Tag im Zielmonat nicht (31.01. + 1),
+ * gilt der letzte. Ohne Termin: `null` – dann wird nicht gelöscht.
+ */
+export function loeschDatum(
+  e: Pick<OeffentlicheEinstellungen, 'termin' | 'loeschfristMonate'>,
+): string | null {
+  if (!e.termin) return null;
+  const tag = (e.termin.ende ?? e.termin.beginn).slice(0, 10);
+  const ziel = monatPlus(tag.slice(0, 7), e.loeschfristMonate);
+  const gleicherTag = `${ziel}-${tag.slice(8, 10)}`;
+  const letzter = letzterTag(ziel);
+  return gleicherTag < letzter ? gleicherTag : letzter;
 }
 
 /**
- * **Die Schritte einer Routine** – in A9-1 nur die Mail. `vorher`: die Schritte, die ChurchTools schon hat; ihre
- * Nummern werden mitgeschickt, damit laufende Abläufe an ihrer Stelle bleiben (gemessen: ohne Nummer legt ChurchTools
- * neue Schritte an). `addSignOutUrl: false` – der Link von ChurchTools führte an „Deine Anmeldung“ vorbei.
+ * **Die Schritte einer Routine** – die Mail (A9-1) und, mit Löschdatum, „warten bis“ + „entfernen“ (A9-3a; entfernen
+ * muss der letzte Schritt sein, Schnittstelle). `vorher`: die Schritte, die ChurchTools schon hat; ihre Nummern werden
+ * mitgeschickt, damit laufende Abläufe an ihrer Stelle bleiben (gemessen: ohne Nummer legt ChurchTools neue Schritte an).
+ * `addSignOutUrl: false` – der Link von ChurchTools führte an „Deine Anmeldung“ vorbei. `mailAn: false` schaltet nur die
+ * Mail aus – für das Nachstarten schon Angemeldeter (gemessen 28.10.2026).
  */
 export function routinenSchritte(
   mail: AblaufMail,
   absenderId: number,
   vorher: { id: number; actionKey: string }[] = [],
+  loeschen: string | null = null,
+  mailAn = true,
 ): RoutinenSchritt[] {
-  const id = vorher.find((s) => s.actionKey === 'send-member-email')?.id;
-  return [
+  const nr = (key: string) => {
+    const id = vorher.find((s) => s.actionKey === key)?.id;
+    return id ? { id } : {};
+  };
+  const schritte: RoutinenSchritt[] = [
     {
-      ...(id ? { id } : {}),
+      ...nr('send-member-email'),
       actionKey: 'send-member-email',
-      isEnabled: true,
+      isEnabled: mailAn,
       actionData: {
         subject: mail.betreff,
         body: mail.html,
@@ -279,4 +306,15 @@ export function routinenSchritte(
       },
     },
   ];
+  if (loeschen)
+    schritte.push(
+      {
+        ...nr('special:wait'),
+        actionKey: 'special:wait',
+        isEnabled: true,
+        actionData: { untilDate: loeschen },
+      },
+      { ...nr('remove-member'), actionKey: 'remove-member', isEnabled: true, actionData: {} },
+    );
+  return schritte;
 }

@@ -204,6 +204,17 @@ Schaltet jemand in ChurchTools bei laufendem Check-in die Mail mit dem Code ein,
 alle** Angemeldeten (echte Prüfung 28.10.2026) – die Erweiterung stellt sie erst beim nächsten Öffnen wieder ab. „Leitung
 benachrichtigen“ gibt es bewusst nicht: ChurchTools schickte dabei in keinem Versuch eine Mail (gemessen 26./28.10.2026).
 
+**Daten löschen** (A9-3a): Die Karte „Datenschutz“ zeigt die Frist („3 Monate nach dem Ende“, 1–36 Monate) und das
+Datum, an dem ChurchTools alle Anmeldungen entfernt – Ende des Termins (ohne Ende: der Beginn) plus Frist. Dafür hängt
+die Erweiterung an beide Abläufe „warten bis zum Löschdatum“ und „entfernen“. Wer sich schon vorher angemeldet hatte,
+kommt beim Einrichten ohne Mail mit ins Warten. Ohne Termin wird nicht gelöscht. Wird der Termin verschoben oder die
+Frist geändert, zieht das Datum mit – beim Speichern im Fenster „Daten löschen“ oder beim nächsten Öffnen der
+Veranstaltung. **Liegt das neue Datum heute oder früher, entfernt ChurchTools beim Speichern sofort alle Anmeldungen**
+(gemessen): Das Fenster fragt darum vorher („Jetzt 23 Anmeldungen löschen?“), und beim bloßen Öffnen schreibt die
+Erweiterung so ein Datum nie – die Karte zeigt dann „schon erreicht“. Entfernt wird die Mitgliedschaft; die Antworten
+bleiben im Verlauf von ChurchTools, bis die Gruppe gelöscht wird. Archivieren („Löschen“ unter „Verwalten“) schaltet die
+Abläufe ab – dann wird nicht mehr gelöscht.
+
 **„Deine Anmeldung“:** Den Link dazu schreibt das Formular beim Anmelden in das Feld „Link zur Anmeldung“, die
 Bestätigung setzt ihn ein. Ohne eingerichtete Mails steht er als „Austreten“ in der Standard-Mail von ChurchTools.
 Er führt auf eure Formular-Seite

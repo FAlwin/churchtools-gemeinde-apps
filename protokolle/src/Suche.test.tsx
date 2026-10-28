@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import type { Block } from '@shared/protokolle/dokument';
@@ -107,6 +107,14 @@ const liste = () =>
   within(screen.getByRole('region'))
     .queryAllByRole('listitem')
     .map((z) => z.textContent);
+/**
+ * Wartet, bis die Treffer geladen sind. Die Überschrift allein genügt nicht: Sie steht schon über „Wird geladen …“ –
+ * unter Last war die Liste danach noch leer (28.10.2026).
+ */
+async function geladen(kopf: string) {
+  await screen.findByRole('heading', { name: kopf });
+  await waitFor(() => expect(screen.queryByText('Wird geladen …')).toBeNull());
+}
 const gedrueckt = (gruppe: string) =>
   within(screen.getByRole('group', { name: gruppe }))
     .getAllByRole('button')
@@ -121,7 +129,7 @@ beforeEach(() => {
 describe('Suche (S3-4b)', () => {
   it('ohne Begriff: „Beschlüsse“ gewählt – alle Beschlüsse aller Gruppen, neueste zuerst', async () => {
     zeigen();
-    expect(await screen.findByRole('heading', { name: 'Alle Beschlüsse' })).toBeTruthy();
+    await geladen('Alle Beschlüsse');
     expect(gedrueckt('Art')).toEqual(['Beschlüsse']);
     expect(liste()).toEqual([
       '14OKTZweites Beamer-Angebot wird angenommen.BeschlussLeitungsteam · Leitungssitzung · 1. Technik',
@@ -133,7 +141,7 @@ describe('Suche (S3-4b)', () => {
 
   it('mit Begriff: „Alles“ gewählt, Fundstellen markiert – auch das To-Do ohne Protokoll', async () => {
     zeigen('beamer');
-    expect(await screen.findByRole('heading', { name: 'Treffer' })).toBeTruthy();
+    await geladen('Treffer');
     expect(gedrueckt('Art')).toEqual(['Alles']);
     expect(liste()).toEqual([
       '14OKTDer alte Beamer fällt aus.ProtokolltextLeitungsteam · Leitungssitzung · 1. Technik',
@@ -149,7 +157,7 @@ describe('Suche (S3-4b)', () => {
 
   it('eine gewählte Art gilt – auch wenn sich der Begriff ändert', async () => {
     const { rerender } = zeigen('beamer');
-    await screen.findByRole('heading', { name: 'Treffer' });
+    await geladen('Treffer');
     fireEvent.click(screen.getByRole('button', { name: 'Beschlüsse' }));
     expect(liste()).toHaveLength(1);
     rerender(<Suche modul={24} gruppen={GRUPPEN} begriff="" onTreffer={onTreffer} />);
@@ -160,7 +168,7 @@ describe('Suche (S3-4b)', () => {
 
   it('Filter nach Gruppe; bei nur einer Gruppe keine Gruppen-Knöpfe', async () => {
     zeigen();
-    await screen.findByRole('heading', { name: 'Alle Beschlüsse' });
+    await geladen('Alle Beschlüsse');
     fireEvent.click(screen.getByRole('button', { name: 'Jugendleitung' }));
     expect(liste()).toHaveLength(1);
     expect(gedrueckt('Gruppe')).toEqual(['Jugendleitung']);
@@ -168,13 +176,13 @@ describe('Suche (S3-4b)', () => {
 
   it('nur eine Gruppe: keine Gruppen-Knöpfe', async () => {
     zeigen('', [GRUPPEN[0]]);
-    await screen.findByRole('heading', { name: 'Alle Beschlüsse' });
+    await geladen('Alle Beschlüsse');
     expect(screen.queryByRole('group', { name: 'Gruppe' })).toBeNull();
   });
 
   it('Termin mit Datum vorn', async () => {
     zeigen();
-    await screen.findByRole('heading', { name: 'Alle Beschlüsse' });
+    await geladen('Alle Beschlüsse');
     fireEvent.click(screen.getByRole('button', { name: 'Termine' }));
     expect(liste()).toEqual([
       '14OKT15.01.2027 – Anmeldung öffnetTerminLeitungsteam · Leitungssitzung · 2. Freizeit',
@@ -190,7 +198,7 @@ describe('Suche (S3-4b)', () => {
 
   it('Protokolltext ohne Begriff: ein Satz statt einer Liste', async () => {
     zeigen();
-    await screen.findByRole('heading', { name: 'Alle Beschlüsse' });
+    await geladen('Alle Beschlüsse');
     fireEvent.click(screen.getByRole('button', { name: 'Protokolltext' }));
     expect(screen.getByText(/Gib oben einen Suchbegriff ein/)).toBeTruthy();
     expect(liste()).toEqual([]);
@@ -217,7 +225,7 @@ describe('Suche (S3-4b)', () => {
       },
     ]);
     zeigen('', [GRUPPEN[0]]);
-    await screen.findByRole('heading', { name: 'Alle Beschlüsse' });
+    await geladen('Alle Beschlüsse');
     expect(liste()).toHaveLength(HOECHSTENS);
     expect(
       screen.getByText(`Die ersten ${HOECHSTENS} von ${HOECHSTENS + 5}`, { exact: false }),

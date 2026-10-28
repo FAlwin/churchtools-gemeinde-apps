@@ -10,6 +10,9 @@
  * - Eine neue Routine erfasst nur, wer **danach** ankommt – schon Angemeldete bekommen beim Einrichten keine Mail.
  * - A9-2a (gemessen 26.10.2026): Die **Beschreibung** einer Routine (höchstens 1.000 Zeichen) hält den eigenen Mailtext;
  *   beim Neuschreiben der Schritte ohne `description` bleibt sie stehen.
+ * - A9-2b (gemessen 26.10.2026): `qrCodeCheckin` legt beim Einschalten für alle schon Angemeldeten einen Code an. Mit
+ *   `qrCodeCheckinAutomaticEmail: true` (Vorgabe von ChurchTools) schickt es dazu eine eigene Mail „Dein Check-in-Code“ –
+ *   an alle schon Angemeldeten und danach an jede neue Person. Darum immer beides zusammen: an + eigene Mail aus.
  */
 import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
 import { ctAlleSeiten, ctAnfrage, ctDaten } from '@ui/ct/verbindung';
@@ -41,6 +44,22 @@ interface SchrittRoh {
     sender?: { title?: string } | null;
   } | null;
 }
+
+/** Was die Erweiterung an den Einstellungen der Gruppe liest. */
+interface GruppeRoh {
+  name: string;
+  settings?: {
+    sendDefaultSignUpMail?: boolean;
+    qrCodeCheckin?: boolean;
+    qrCodeCheckinAutomaticEmail?: boolean;
+  };
+}
+
+/** Ist der Check-in der Gruppe an? Maßgeblich dafür, ob der Code in der Bestätigung steht (A9-2b). */
+const checkinAn = (g: GruppeRoh) => g.settings?.qrCodeCheckin === true;
+
+/** Schickt ChurchTools zum Check-in-Code eine eigene Mail? Nur `false` heißt nein (Vorgabe ist `true`). */
+const qrMailAn = (g: GruppeRoh) => g.settings?.qrCodeCheckinAutomaticEmail !== false;
 
 interface RoutineRoh {
   id: number;
@@ -76,6 +95,8 @@ export interface AblaufStand {
   absenderId: number | null;
   /** Der eigene Text je Mail (A9-2a) – aus der Beschreibung der Routine. */
   eigen: Record<RoutinenArt, EigenerText>;
+  /** Check-in-Code in der Bestätigung (A9-2b) – `qrCodeCheckin` der Gruppe. */
+  qr: boolean;
 }
 
 const mailSchritt = (r: RoutineRoh | null | undefined) =>
@@ -93,7 +114,7 @@ function unsereFuer(zuordnungen: ZuordnungRoh[], rolle: number, status: string):
 export async function ablaeufeLesen(id: number): Promise<AblaufStand> {
   const [zuordnungen, g, rolle] = await Promise.all([
     ctDaten<ZuordnungRoh[]>(`/groups/${id}/members/routines`),
-    ctDaten<{ settings?: { sendDefaultSignUpMail?: boolean } }>(`/groups/${id}`),
+    ctDaten<GruppeRoh>(`/groups/${id}`),
     teilnehmerRolle(id),
   ]);
   const an = (status: string) => {
@@ -112,6 +133,7 @@ export async function ablaeufeLesen(id: number): Promise<AblaufStand> {
       platz: eigenerTextAus(unsereFuer(zuordnungen, rolle, 'active')?.description),
       warte: eigenerTextAus(unsereFuer(zuordnungen, rolle, 'waiting')?.description),
     },
+    qr: checkinAn(g),
   };
 }
 
@@ -144,12 +166,14 @@ async function textVonVorlage(
  * Abgleich (A9-2a). Reihenfolge mit Absicht: erst die Routinen, dann die Standard-Mail aus. Scheitert etwas dazwischen,
  * bekommen Angemeldete höchstens zwei Mails, nie keine. `absenderId`: Person, die als Absender erscheint (Antworten
  * gehen an sie). `eigen`: neuer eigener Text je Mail – ohne bleibt der, der in ChurchTools steht (bei einer neuen
- * Routine: der der Vorlage, `kopieVon`).
+ * Routine: der der Vorlage, `kopieVon`). `qr` (A9-2b): Check-in-Code an oder aus – ohne bleibt, was in ChurchTools
+ * eingestellt ist (eine Kopie übernimmt ihn von der Vorlage).
  */
 export async function ablaeufeEinrichten(
   id: number,
   absenderId: number,
   eigen?: Partial<Record<RoutinenArt, EigenerText>>,
+  qr?: boolean,
 ): Promise<void> {
   for (const t of Object.values(eigen ?? {})) {
     const fehler = eigenerTextFehler(t);
@@ -158,7 +182,7 @@ export async function ablaeufeEinrichten(
   // Das Feld „Link zur Anmeldung“ muss es geben, bevor eine Mail es als Platzhalter nennt.
   const e = await systemfelderNachziehen(id);
   const [g, platzhalter, rolle, zuordnungen] = await Promise.all([
-    ctDaten<{ name: string }>(`/groups/${id}`),
+    ctDaten<GruppeRoh>(`/groups/${id}`),
     platzhalterLaden(id),
     teilnehmerRolle(id),
     ctDaten<ZuordnungRoh[]>(`/groups/${id}/members/routines`),
@@ -174,7 +198,8 @@ export async function ablaeufeEinrichten(
     schreiben[r.art] =
       neu !== undefined || (!da && eigenerTextAlsBeschreibung(vorlage[r.art]) !== null);
   }
-  const mails = ablaufMails(e, g.name, platzhalter, texte);
+  const mitQr = qr ?? checkinAn(g);
+  const mails = ablaufMails(e, g.name, platzhalter, texte, mitQr);
   if (mails.unbekannt.length)
     throw new ApiError(
       422,
@@ -228,15 +253,22 @@ export async function ablaeufeEinrichten(
       throw new NichtUebernommen('den Ablauf „' + r.name + '“');
   }
 
+  // Check-in in einem Aufruf mit der eigenen Code-Mail aus – sonst bekämen beim Einschalten alle schon Angemeldeten eine
+  // Mail (gemessen 26.10.2026). Steht er schon an (auch aus ChurchTools selbst), wird nur die Code-Mail abgeschaltet.
+  const check = mitQr
+    ? { qrCodeCheckin: true, qrCodeCheckinAutomaticEmail: false }
+    : checkinAn(g)
+      ? { qrCodeCheckin: false }
+      : {};
   await ctAnfrage(`/groups/${id}`, {
     method: 'PATCH',
-    body: json({ sendDefaultSignUpMail: false }),
+    body: json({ sendDefaultSignUpMail: false, ...check }),
   });
-  const nachher = await ctDaten<{ settings?: { sendDefaultSignUpMail?: boolean } }>(
-    `/groups/${id}`,
-  );
+  const nachher = await ctDaten<GruppeRoh>(`/groups/${id}`);
   if (nachher.settings?.sendDefaultSignUpMail !== false)
     throw new NichtUebernommen('das Abschalten der Standard-Mail von ChurchTools');
+  if (checkinAn(nachher) !== mitQr || (mitQr && qrMailAn(nachher)))
+    throw new NichtUebernommen('den Check-in-Code');
 }
 
 /** Absender der Bestätigungsmails: wer freigibt, wenn er zur gewählten Leitung gehört – sonst die erste gewählte. */
@@ -260,18 +292,22 @@ export async function ablaeufeAbgleichen(id: number): Promise<AblaufStand> {
   if (!stand.platz || !stand.warte || stand.absenderId === null) return stand;
   const [e, g, platzhalter, rolle, zuordnungen] = await Promise.all([
     systemfelderNachziehen(id),
-    ctDaten<{ name: string }>(`/groups/${id}`),
+    ctDaten<GruppeRoh>(`/groups/${id}`),
     platzhalterLaden(id),
     teilnehmerRolle(id),
     ctDaten<ZuordnungRoh[]>(`/groups/${id}/members/routines`),
   ]);
-  const soll = ablaufMails(e, g.name, platzhalter, stand.eigen);
+  // Maßgeblich ist der Check-in der Gruppe – auch, wenn ihn jemand in ChurchTools umgeschaltet hat (A9-2b).
+  const mitQr = checkinAn(g);
+  const soll = ablaufMails(e, g.name, platzhalter, stand.eigen, mitQr);
   if (soll.unbekannt.length) return stand;
-  const passt = ROUTINEN.every((r) => {
-    const s = mailSchritt(unsereFuer(zuordnungen, rolle, r.status))?.actionData;
-    const m = r.art === 'platz' ? soll.platz : soll.warte;
-    return s?.subject === m.betreff && s?.body === m.html;
-  });
+  const passt =
+    !(mitQr && qrMailAn(g)) &&
+    ROUTINEN.every((r) => {
+      const s = mailSchritt(unsereFuer(zuordnungen, rolle, r.status))?.actionData;
+      const m = r.art === 'platz' ? soll.platz : soll.warte;
+      return s?.subject === m.betreff && s?.body === m.html;
+    });
   if (passt) return stand;
   await ablaeufeEinrichten(id, stand.absenderId);
   return ablaeufeLesen(id);

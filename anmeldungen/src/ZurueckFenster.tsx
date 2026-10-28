@@ -20,7 +20,7 @@ import { mailHinweis } from './anzeige';
  * **Eine Abgesagte zurückholen** (A7-4c, Entwurf `a7-4-von-hand-v1`) – mit allen Antworten von damals, Platz nach der
  * Regel des Formulars (`PlatzWahl`), Zahlung nach `zurueckPlan`. ChurchTools selbst schickt dabei keine Mail (gemessen
  * 19.10.2026: Wieder-Aufnehmen per `PUT`), mit eingerichteten Abläufen die Bestätigung (A9-1, `mailHinweis`); danach
- * „Mail schreiben“ und „Rückgängig“ im Fenster der Anmeldung.
+ * „Rückgängig“ im Fenster der Anmeldung und – ohne Abläufe – „Mail schreiben“ (`mailAnbieten`).
  */
 export function ZurueckFenster({
   id,

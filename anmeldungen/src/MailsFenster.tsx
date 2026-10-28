@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
+import { Schalter } from '@ui/bedienung/Schalter';
 import { Segment } from '@ui/bedienung/Segment';
 import type { OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
 import {
@@ -18,10 +19,11 @@ import { platzhalterLaden, vorschauLaden } from './rundmail';
 import { fehlerMeldung } from './zustand';
 import f from './Formular.module.scss';
 import a from './AnmeldungenReiter.module.scss';
+import bk from './Baukasten.module.scss';
 
 /**
  * **Fenster „Mails“** (A9-2a, Entwurf `a9-ablaeufe-v1`, Alwin 26.10.2026) – Betreff, eigener Absatz und Gruß je Mail
- * (Bestätigung, Warteliste) und der Absender. Termin, Betrag, Bankdaten, Link und Kontakt setzt die Erweiterung selbst
+ * (Bestätigung, Warteliste), der Absender und der Check-in-Code in der Bestätigung (A9-2b). Termin, Betrag, Bankdaten, Link und Kontakt setzt die Erweiterung selbst
  * ein (`ablaufMails`) – so kann niemand den Link zu „Deine Anmeldung“ versehentlich löschen. Gespeichert wird in den
  * Routinen von ChurchTools (der eigene Text in deren Beschreibung), danach nachgelesen. Die Vorschau rechnet ChurchTools
  * – mit dem Text, der gerade im Fenster steht, auch vor dem Speichern.
@@ -44,6 +46,7 @@ export function MailsFenster({
   const [art, setArt] = useState<RoutinenArt>('platz');
   const [texte, setTexte] = useState<Record<RoutinenArt, EigenerText>>(stand.eigen);
   const [absender, setAbsender] = useState<number | null>(stand.absenderId);
+  const [qr, setQr] = useState(stand.qr);
   const [leitung, setLeitung] = useState<LeitungsKandidat[] | null>(null);
   const [vorschau, setVorschau] = useState<{
     betreff: string;
@@ -91,7 +94,7 @@ export function MailsFenster({
         platzhalterLaden(id),
         vorschauPerson(id, art, absender),
       ]);
-      const mails = ablaufMails(e, veranstaltung, platzhalter, texte);
+      const mails = ablaufMails(e, veranstaltung, platzhalter, texte, qr);
       const m = art === 'platz' ? mails.platz : mails.warte;
       const r = await vorschauLaden(id, person.personId, m.betreff, m.html);
       setVorschau({ ...r, echt: person.echt });
@@ -106,7 +109,7 @@ export function MailsFenster({
     setArbeitet(true);
     setFehler(null);
     try {
-      await ablaeufeEinrichten(id, absender, texte);
+      await ablaeufeEinrichten(id, absender, texte, qr);
       onGespeichert('Mails gespeichert.');
       return;
     } catch (x) {
@@ -182,6 +185,27 @@ export function MailsFenster({
           onChange={(ev) => aendern({ gruss: ev.target.value })}
         />
       </label>
+      {art === 'platz' && (
+        <>
+          <button
+            type="button"
+            className={bk.schalterZeile}
+            aria-pressed={qr}
+            onClick={() => {
+              setQr(!qr);
+              setVorschau(null);
+            }}
+          >
+            <Schalter an={qr} />
+            Check-in-Code (QR) mitschicken
+          </button>
+          <p className={a.leise}>
+            {qr
+              ? 'Jede Person bekommt ihren Code mit der Bestätigung – zum Einchecken in ChurchTools. Wer schon angemeldet ist, bekommt ihn nicht nachgeschickt.'
+              : 'Für Veranstaltungen mit Einlass oder Check-in. Schaltet den Check-in in ChurchTools mit ein.'}
+          </p>
+        </>
+      )}
       <p className={pruefung ? f.fehler : a.leise}>
         {pruefung ?? `${belegt} von ${BESCHREIBUNG_MAX} Zeichen für diese Mail belegt.`}
       </p>
@@ -213,6 +237,13 @@ export function MailsFenster({
               <>
                 <br />
                 Noch niemand so angemeldet – Betrag, Nr. und Link fehlen in der Vorschau.
+              </>
+            )}
+            {art === 'platz' && qr && !stand.qr && (
+              <>
+                <br />
+                Den Check-in-Code legt ChurchTools erst beim Speichern an – bis dahin fehlt er in
+                der Vorschau.
               </>
             )}
           </div>

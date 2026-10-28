@@ -89,8 +89,10 @@ ohne Betrag.
 **Nachrücken und Absagen:** Im Fenster einer Anmeldung hat jede wartende Person „Nachrücken lassen“, jede Person
 „Absagen“ – beides mit Rückfrage. Ist alles voll, erhöht das Nachrücken die Plätze. Wer nachrückt, bekommt eine eigene
 Zahlung (wie eine neue Anmeldung); beim Absagen wird die Zahlung der Anmeldung neu gerechnet und eine Rückzahlung
-notiert – die Aufschlüsselung bekommt die Zeile „Abgesagt am …“, auch wenn der Betrag gleich bleibt (wer wartet). Danach gibt es „Mail schreiben“ mit fertigem Text. Beim Nachrücken schickt ChurchTools die Bestätigung
-mit Betrag und Bankdaten (sind die Mails nicht eingerichtet: nur „war erfolgreich“), beim Absagen gar nichts. Absagen
+notiert – die Aufschlüsselung bekommt die Zeile „Abgesagt am …“, auch wenn der Betrag gleich bleibt (wer wartet). Beim Nachrücken schickt ChurchTools die Bestätigung
+mit Betrag und Bankdaten, beim Absagen gar nichts – nach dem Absagen gibt es darum „Mail schreiben“ mit fertigem Text.
+Sind die Mails nicht eingerichtet, schickt ChurchTools beim Nachrücken nur „war erfolgreich“; dann gibt es auch danach
+„Mail schreiben“. Absagen
 lässt sich im Fenster rückgängig machen – dabei kommt die Bestätigung noch einmal, das Fenster sagt es –, Nachrücken
 nicht (sonst schickt ChurchTools „Du stehst auf der Warteliste“).
 
@@ -102,8 +104,8 @@ freiwillig. Unterschreiben kann nur die Familie selbst – liegt die Unterschrif
 auf Papier vor“ ein, dann steht in ChurchTools „auf Papier – vermerkt von …“ mit eurem Namen und dem Tag. Platz wie im
 Formular: Wartet jemand oder ist alles voll, kommt die Person hinten auf die Warteliste – oder ihr gebt ihr trotzdem
 einen Platz (bei voller Gruppe werden dabei die Plätze erhöht). Sind die Mails eingerichtet, schickt ChurchTools die
-Bestätigung (mit E-Mail-Adresse; ohne Link zu „Deine Anmeldung“); danach gibt es „Mail schreiben“ und „Rückgängig“ (nimmt die Person wieder aus der Anmeldung – eine neu angelegte Person bleibt in
-ChurchTools). Neue Personen anlegen darf, wer in ChurchTools das Recht dazu hat; Status, Standort und Bereich kommen
+Bestätigung (mit E-Mail-Adresse; ohne Link zu „Deine Anmeldung“); sonst gibt es danach „Mail schreiben“. Danach steht
+„Rückgängig“ da (nimmt die Person wieder aus der Anmeldung – eine neu angelegte Person bleibt in ChurchTools). Neue Personen anlegen darf, wer in ChurchTools das Recht dazu hat; Status, Standort und Bereich kommen
 aus den Vorgaben beim Freigeben.
 
 **Person dazu:** Im Fenster einer Anmeldung (mit Anmelde-Nr.) holt „＋ Person dazu“ eine weitere Person in dieselbe
@@ -116,7 +118,7 @@ Anmeldung unter „Abgesagt“ oder über die Suche bei „＋ Von Hand“. Die 
 zurück. Gehört sie zu einer Anmeldung, die es noch gibt, bekommt sie eine eigene Zahlung (wie „Person dazu“); war sie
 allein angemeldet, wird ihre Zahlung neu gerechnet und ist wieder offen. Hatte sie schon bezahlt, weist das Fenster
 darauf hin – dann bitte prüfen, ob schon zurückgezahlt wurde. Sind die Mails eingerichtet, bekommt sie die
-Bestätigung (beim Zurückholen auf die Warteliste die Mitteilung mit ihrem Platz).
+Bestätigung (beim Zurückholen auf die Warteliste die Mitteilung mit ihrem Platz); sonst gibt es danach „Mail schreiben“.
 
 **Rundmail:** „✉ Rundmail“ im Reiter „Anmeldungen“ schreibt an alle Anmeldungen, an die mit offener Zahlung oder an die
 mit Wartenden – je Anmeldung eine Mail an den Kontakt. ChurchTools verschickt sie mit deinem Namen als Absender;
@@ -192,6 +194,13 @@ angemeldet ist (sonst ohne Betrag, Nr. und Link). Der eigene Text steht in der *
 in ChurchTools (höchstens 1.000 Zeichen, das Fenster zählt mit). Ändert ihr Termin, Bezahlung, Kontakt, Preise oder
 den Namen, schreibt die Erweiterung die Mails beim nächsten Öffnen der Veranstaltung neu – mit eurem Text und Absender.
 Eine Kopie („Wie eine frühere Veranstaltung“) übernimmt beim Freigeben den eigenen Text der Vorlage.
+
+**Check-in-Code** (A9-2b): Im Reiter **Bestätigung** schaltet „Check-in-Code (QR) mitschicken“ den Check-in der Gruppe
+in ChurchTools ein – und zugleich dessen eigene Mail „Dein Check-in-Code“ aus. Sonst bekäme jede Person zwei Mails, und
+beim Einschalten bekämen alle schon Angemeldeten eine. Jede Person bekommt ihren Code als Bild in der Bestätigung; wer
+schon angemeldet ist, hat dann auch einen, bekommt ihn aber nicht nachgeschickt. Standard ist aus. Wird der Check-in in
+ChurchTools selbst umgeschaltet, zieht die Erweiterung die Mail beim nächsten Öffnen der Veranstaltung nach. „Leitung
+benachrichtigen“ gibt es bewusst nicht: ChurchTools schickte dabei in keinem Versuch eine Mail (gemessen 26./28.10.2026).
 
 **„Deine Anmeldung“:** Den Link dazu schreibt das Formular beim Anmelden in das Feld „Link zur Anmeldung“, die
 Bestätigung setzt ihn ein. Ohne eingerichtete Mails steht er als „Austreten“ in der Standard-Mail von ChurchTools.

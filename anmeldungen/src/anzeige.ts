@@ -145,3 +145,15 @@ export function mailHinweis(
     ? 'ChurchTools schickt die Bestätigung an die E-Mail-Adresse (auf der Warteliste die Mitteilung mit dem Platz) – ohne Link zu „Deine Anmeldung“.'
     : 'ChurchTools schickt dabei keine Mail – danach gibt es „Mail schreiben“.';
 }
+
+/**
+ * **„Mail schreiben“ anbieten?** (A9-2b) – nach Nachrücken, Von Hand, Person dazu und Zurückholen nur ohne eingerichtete
+ * Abläufe; mit ihnen schickt ChurchTools die Bestätigung selbst. Nach einer Absage immer: Sie hat keinen Ablauf.
+ */
+export function mailAnbieten<T>(
+  art: 'nachruecken' | 'eintragen' | 'absage',
+  mitBestaetigung: boolean,
+  mail: T,
+): T | null {
+  return art === 'absage' || !mitBestaetigung ? mail : null;
+}

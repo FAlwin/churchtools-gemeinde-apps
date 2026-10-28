@@ -27,7 +27,7 @@ import {
 } from '@shared/anmeldung/liste';
 import type { GeladenerStand } from './mitglieder';
 import { tagPunkt as lang } from '@shared/ct/datum';
-import { anzahlText } from './anzeige';
+import { anzahlText, mailAnbieten } from './anzeige';
 import { AnmeldungZahlung } from './AnmeldungZahlung';
 import {
   AbsagenFrage,
@@ -217,7 +217,11 @@ function AnmeldungAnsehen({
         setModus(null);
         onGemeldet({
           aenderung: { text: `${plan.name} ist nachgerückt.`, rueckgaengig: null },
-          mail: mailFuer('nachgerueckt', p, plan.zahlung?.betragCent ?? 0, 0),
+          mail: mailAnbieten(
+            'nachruecken',
+            mitBestaetigung,
+            mailFuer('nachgerueckt', p, plan.zahlung?.betragCent ?? 0, 0),
+          ),
         });
       },
     );
@@ -240,11 +244,15 @@ function AnmeldungAnsehen({
                 hinweisBisRueckgaengig: true,
               }
             : {}),
-          mail: mailFuer(
-            'abgesagt',
-            p,
-            0,
-            plan.haupt?.rueckzahlungCent ?? plan.rueckzahlungOhneRestCent,
+          mail: mailAnbieten(
+            'absage',
+            mitBestaetigung,
+            mailFuer(
+              'abgesagt',
+              p,
+              0,
+              plan.haupt?.rueckzahlungCent ?? plan.rueckzahlungOhneRestCent,
+            ),
           ),
         });
       },
@@ -611,7 +619,11 @@ export function AnmeldungenReiter({
   const fertig = (x: VonHandFertig) => {
     setOffen(x.nr);
     setStartModus(null);
-    setMeldung({ aenderung: x.aenderung, mail: x.mail, hinweis: x.hinweis });
+    setMeldung({
+      aenderung: x.aenderung,
+      mail: mailAnbieten('eintragen', mitBestaetigung, x.mail),
+      hinweis: x.hinweis,
+    });
     onGespeichert();
   };
 

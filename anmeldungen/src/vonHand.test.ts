@@ -107,6 +107,10 @@ beforeEach(() => {
     if (method === 'DELETE') gruppe.delete(pid);
     if (method === 'PUT') {
       if (putFehler) throw putFehler;
+      // Wie gemessen (28.10.2026): nur anlegen, nie überschreiben.
+      if (body.only_add !== true)
+        throw new Error('PUT ohne only_add – Ändern per PUT ist veraltet');
+      if (gruppe.has(pid)) throw new ApiError(403, 'Die Person ist bereits in der Gruppe');
       gruppe.set(pid, {
         groupTypeRoleId: body.groupTypeRoleId as number,
         groupMemberStatus: andererStatus ?? (body.groupMemberStatus as string),

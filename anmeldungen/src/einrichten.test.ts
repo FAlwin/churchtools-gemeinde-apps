@@ -195,15 +195,22 @@ function ct() {
         ],
       });
     r = /^\/groups\/(\d+)\/members\/(\d+)$/.exec(pfad);
-    if (r && m === 'PUT') {
+    if (r && (m === 'PUT' || m === 'PATCH')) {
+      // Wie gemessen (28.10.2026): PUT legt nur an (`only_add` → 403, wenn schon dabei), PATCH ändert nur Bestehendes
+      // (sonst 404). Ändern per PUT ist veraltet – hier ein Fehler, damit kein Test es durchgehen lässt.
       const gid = Number(r[1]);
       const liste = mitglieder.get(gid);
       const alt = Array.isArray(liste) ? liste : [];
+      const da = alt.find((x) => x.personId === Number(r![2]));
+      if (m === 'PUT' && body.only_add !== true) return json(400, { message: 'PUT ohne only_add' });
+      if (m === 'PUT' && da) return json(403, { message: 'schon in der Gruppe' });
+      if (m === 'PATCH' && !da) return json(404, { message: 'nicht in der Gruppe' });
       const neu = {
+        ...da,
         personId: Number(r[2]),
         groupTypeRoleId: Number(body.groupTypeRoleId),
         groupMemberStatus: String(body.groupMemberStatus),
-        person: { domainAttributes: { firstName: `P${r[2]}`, lastName: 'Test' } },
+        person: da?.person ?? { domainAttributes: { firstName: `P${r[2]}`, lastName: 'Test' } },
       };
       if (!schlucken.has('LEITUNG'))
         mitglieder.set(gid, [...alt.filter((x) => x.personId !== neu.personId), neu]);
@@ -1338,6 +1345,30 @@ describe('Anmelden vorbereiten (A6-2, #548)', () => {
     const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
     schlucken.add('LEITUNG');
     await expect(anmeldenVorbereiten(id, [1], V)).rejects.toThrow(/Leitung/);
+  });
+
+  it('Leitung: wer schon dabei ist, wird geändert (PATCH), wer neu ist, angelegt (PUT only_add)', async () => {
+    const id = await legeVeranstaltungAn({ name: 'X', teamId: 7, artId: 5, vorlage: 'einfach' });
+    // Nr. 4 hat sich selbst angemeldet und soll nun auch leiten.
+    mitglieder.set(id, [
+      {
+        personId: 4,
+        groupTypeRoleId: 32,
+        groupMemberStatus: 'active',
+        person: { domainAttributes: { firstName: 'Bea', lastName: 'Team' } },
+      },
+    ]);
+    aufrufe.length = 0;
+    await anmeldenVorbereiten(id, [1, 4], V);
+    expect(aufrufe.filter((a) => /members\/\d+$/.test(a))).toEqual([
+      `PUT /groups/${id}/members/1`,
+      `PATCH /groups/${id}/members/4`,
+    ]);
+    const liste = mitglieder.get(id) as { personId: number; groupTypeRoleId: number }[];
+    expect(liste.map((x) => [x.personId, x.groupTypeRoleId]).sort()).toEqual([
+      [1, 35],
+      [4, 35],
+    ]);
   });
 
   it('ohne Leitung → abgelehnt, bevor etwas geschrieben wird', async () => {

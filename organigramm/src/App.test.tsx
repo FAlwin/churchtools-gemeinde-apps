@@ -46,9 +46,20 @@ const cm = vi.hoisted(() => {
     rechte,
     zugriff: {
       lesen: (_g: number, p: number) => Promise.resolve(m.has(p) ? { ...m.get(p)! } : null),
-      schreiben: (_g: number, p: number, f: Record<string, unknown>) => {
-        log.push(`schreiben ${p} ${JSON.stringify(f)}`);
-        const alt = m.get(p) ?? { rolleId: null, status: null, ende: null };
+      anlegen: (_g: number, p: number, f: Record<string, unknown>) => {
+        log.push(`anlegen ${p} ${JSON.stringify(f)}`);
+        if (m.has(p)) return Promise.reject(new Error('403 schon in der Gruppe'));
+        m.set(p, {
+          rolleId: f.groupTypeRoleId as number,
+          status: f.groupMemberStatus as string,
+          ende: null,
+        });
+        return Promise.resolve();
+      },
+      aendern: (_g: number, p: number, f: Record<string, unknown>) => {
+        log.push(`aendern ${p} ${JSON.stringify(f)}`);
+        const alt = m.get(p);
+        if (!alt) return Promise.reject(new Error('404 nicht in der Gruppe'));
         m.set(p, {
           rolleId: 'groupTypeRoleId' in f ? (f.groupTypeRoleId as number) : alt.rolleId,
           status: 'groupMemberStatus' in f ? (f.groupMemberStatus as string) : alt.status,
@@ -1014,7 +1025,7 @@ describe('O6: Leitung und Mitglieder', () => {
     expect(screen.getByText(/Als Leitung bekommt „Carl Clau“/)).toBeTruthy();
     fireEvent.click(knopf('Ändern'));
     expect(await screen.findByText('„Carl Clau“ ist jetzt Leiter.')).toBeTruthy();
-    expect(cm.log).toEqual(['schreiben 3 {"groupTypeRoleId":16}']);
+    expect(cm.log).toEqual(['aendern 3 {"groupTypeRoleId":16}']);
     fireEvent.click(knopf('Rückgängig'));
     await screen.findByText('Rückgängig gemacht.');
     expect(cm.m.get(3)?.rolleId).toBe(15);

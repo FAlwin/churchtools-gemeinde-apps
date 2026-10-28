@@ -52,7 +52,11 @@ beforeEach(() => {
     if (schlucken) return null;
     if (init?.method === 'DELETE') {
       if (!keinLoeschen) gruppe.delete(pid);
-    } else if (init?.method === 'PUT')
+    } else if (init?.method === 'PUT') {
+      // Wie gemessen (28.10.2026): nur anlegen, nie überschreiben; Ändern geht über PATCH.
+      if (body.only_add !== true)
+        throw new Error('PUT ohne only_add – Ändern per PUT ist veraltet');
+      if (gruppe.has(pid)) throw new ApiError(403, 'Die Person ist bereits in der Gruppe');
       gruppe.set(pid, {
         personId: pid,
         groupTypeRoleId: body.groupTypeRoleId as number,
@@ -65,8 +69,9 @@ beforeEach(() => {
           }),
         ),
       });
-    else {
-      const m = gruppe.get(pid)!;
+    } else {
+      const m = gruppe.get(pid);
+      if (!m) throw new ApiError(404, 'nicht in der Gruppe');
       if (body.groupMemberStatus && !keinStatus)
         m.groupMemberStatus = body.groupMemberStatus as string;
       for (const [id, w] of Object.entries((body.fields ?? {}) as Record<string, unknown>)) {

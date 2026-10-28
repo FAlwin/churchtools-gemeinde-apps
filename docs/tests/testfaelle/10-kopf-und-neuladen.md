@@ -25,7 +25,7 @@ des Bandes.
 3. In jedem der vier: **hochschieben**. Die Überschrift wandert nach oben, läuft unter das Band und
    wird dabei weich – das ist der native Effekt von iOS, kein Fehler. Nichts bleibt oben kleben.
 4. Einen **Termin öffnen**: Der Kopf ist eine **weiße Karte** unter Uhr und Band – links **„← Termine“**, rechts
-   **Teilen** und (mit Recht) **Bearbeiten** in Blau, in der Erweiterung ganz rechts Vollbild; darunter Name und
+   **Teilen** und (mit Recht) **Bearbeiten** – beide grau mit Rahmen (seit 28.10.2026; vorher war Bearbeiten blau gefüllt), in der Erweiterung ganz rechts Vollbild; darunter Name und
    Datum des Gottesdienstes. Am iPad stehen die Knöpfe mit Beschriftung, am Handy nur als Symbol (Zurück behält
    „Termine“). Alles **scharf**; beim Hochschieben scrollt die Karte mit (wie in ChurchTools). Im Bearbeiten heißt
    der blaue Knopf „Fertig“, daneben „Abschließen“ bzw. hellblau „Öffnen“ (Scheibe S, 26.10.2026).
@@ -35,28 +35,26 @@ des Bandes.
    eckige Knöpfe mit Rahmen (nicht rund); ebenso das Plus in der Liedsuche des Ablaufs und **„+ Anlegen“** bei einem
    Termin ohne Ablauf. Zum Anlegen steht am iPad/Rechner oben ein **grüner** Knopf mit Text (Ablauf im Bearbeiten,
    Abwesenheiten) – wie „+ Gruppe erstellen“ in ChurchTools.
-5. **Ein Lied öffnen (Liedblatt):** Auch hier keine weiße Leiste. Unter dem Band: links der runde
-   Pfeil zurück, daneben eine weiße **Kapsel mit dem Liedtitel** (darunter Tonart, Fassung, Tempo),
-   rechts **ein** runder **Werkzeuge**-Knopf (drei Regler). Alles scharf, der Titel deutlich länger
-   lesbar als vorher. Werkzeuge antippen → Menü mit **Aussehen, Tempo, Anmerken** (mit Team-Recht
-   zusätzlich „Notizen von …", reingezoomt zusätzlich „Zoom zurücksetzen"). Puls einschalten → der
-   Knopf ist blau. **Anmerken** → der Knopf wird zum blauen Haken, ein Tipp darauf beendet das
-   Zeichnen. Solange das Werkzeuge-Menü (oder Aussehen/Tempo) offen ist, ist der Knopf **hellblau**;
-   ebenso die Titel-Kapsel bei offenem Lied-Menü. Titel und Infos stehen in der Kapsel **mittig**.
-   Beim ersten Öffnen erscheint die Einführung neu, mit einem Schritt „Werkzeuge".
-   **iPad hochkant / breites Fenster (05.10.2026):** Statt des einen Knopfs stehen **Aa, Tempo,
-   Anmerken** (ggf. Notizen von …, Zoom) einzeln rechts neben der Kapsel; Aussehen und Tempo öffnen
-   unter ihrem Knopf. Am iPad im **Stage Manager** das Fenster schmal ziehen → die Knöpfe wandern hinter
-   den einen Werkzeuge-Knopf, sobald der Titel zu eng würde; wieder breit ziehen → sie stehen wieder
-   einzeln (ein offenes Werkzeuge-Menü schließt dabei).
-   **iPad quer, zwei Lieder nebeneinander (#421):** Über jeder Hälfte stehen Titel-Kapsel UND die
-   Werkzeuge (Aa, Tempo, Notizen von …, Anmerken) einzeln, mittig über dem Lied – auch auf einem
-   kleinen iPad und quer auf dem iPhone (dort wird der Titel gekürzt). Das aktive Lied trägt einen
-   blauen Ring, das andere ist blass. Tipp auf die blasse Kapsel → dieses Lied ist aktiv, **kein**
-   Vollbild. Tipp auf „Aa" des blassen Lieds → es wird aktiv UND „Aussehen" geht auf. Lied-Menü,
-   Aussehen und Tempo öffnen **unter ihrem Knopf**. Tipp aufs Blatt → nur Vollbild, das aktive Lied
-   bleibt. Der Bereich oben ist am iPad so schmal wie vor
-   v2.26.0.
+5. **Ein Lied öffnen (Liedblatt, Scheibe B1+B2):** Oben eine **weiße Kopfkarte** wie die Seitenköpfe.
+   **iPad quer und hochkant:** erste Zeile **„← Ablauf“**, der Termin („Gottesdienst – Sonntag, 01. Nov · 10:00“), in der
+   Erweiterung ganz rechts Vollbild. Darunter in **einer** Zeile links die **Lied-Leiste** (alle Lieder nummeriert,
+   mit Trennstrichen; die sichtbaren grau, das gewählte blau unterstrichen mit Tonart · Fassung · Tempo und Pfeil) und
+   rechts die Knöpfe **Aussehen, Tempo, Anmerken** (mit Recht „Notizen von …“, reingezoomt „Zoom zurücksetzen“).
+   **Handy hochkant:** keine Titelzeile – Zurück und Vollbild als Symbol links und rechts der Leiste, darunter die
+   Knöpfe als Raster mit Symbol und Kurzwort. **Handy quer:** alles in einer Zeile, Knöpfe nur als Symbol – das Blatt
+   bleibt so groß wie vorher.
+   - In die Leiste **wischen** → sie scrollt, das Blatt blättert NICHT. Ein Lied antippen, das nicht zu sehen ist → das
+     Blatt springt hin, das Lied ist gewählt. **Blättern** (Wischen, Pfeile, Pedal) → die Leiste scrollt mit, das
+     gewählte Lied bleibt zu sehen.
+   - **Querformat:** das zweite sichtbare Lied antippen → es ist gewählt, das Blatt bleibt stehen, kein Vollbild. Das
+     gewählte noch einmal antippen → das Lied-Menü (Tonart, Version, Dateien …) öffnet **unter ihm**.
+   - **Tempo** → das Fenster öffnet unter dem Knopf, der Knopf ist hellblau; Puls an → „Tempo“ blau umrandet.
+     **Anmerken** → der Knopf heißt „Anmerken beenden“ (Haken). **Notizen von …** → nur noch „Zurück zu den eigenen
+     Notizen“; das gewählte Lied öffnet dann kein Lied-Menü.
+   - Kein Fenster liegt über der Kopfkarte; der Hinweis „Ablauf geändert“ steht darunter.
+   - **Aus der Liederliste** ein Lied öffnen → „← Lieder“, der Liedname als Titel, in der Leiste nur dieses Lied
+     ohne Nummer.
+   - In der Erweiterung ist unter den Pfeilen unten kein großer leerer Streifen mehr.
 6. **Ganz nach oben:** In einer langen Liste (z. B. Mehr) weit nach unten scrollen, dann unten auf
    den **Tab tippen, in dem du schon bist** → die Ansicht springt an den Anfang. (Der Tipp auf die
    Uhrzeit oben tut in einer Web-App nichts – das kann iOS nicht weitergeben.)
@@ -67,9 +65,9 @@ des Bandes.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/components/SeitenGeruest.tsx`, `client/src/components/SeitenKopf.tsx`, `ui/bedienung/KopfKnopf.tsx`, `ui/bedienung/ZeilenKnopf.tsx`, `ui/bedienung/ReiterLeiste.tsx`, `ui/bedienung/KnopfReihe.tsx`, `client/src/components/ChartHeader.tsx`, `client/src/components/WerkzeugMenu.tsx`, `client/src/utils/onboarding.ts`, `ui/bedienung/Segment.tsx`, `client/src/components/Screen.tsx`, `client/src/components/Screen.module.scss`, `client/src/components/TabBar.tsx`, `client/index.html`, `ui/design/_variables.scss`
-- **Automatisiert:** teilweise – `client/src/components/SeitenGeruest.test.tsx` (Überschrift im Inhalt, Kopfkarte nur mit Zurück, „← Ziel“ mit Text, Vollbild ganz rechts, Überlagerung neben dem Scroll-Bereich), `ui/bedienung/KopfKnopf.test.tsx`, `ui/bedienung/ReiterLeiste.test.tsx` (oben ohne Symbole), `client/src/components/ChartHeader.test.tsx` (Werkzeuge-Menü je Bedingung, Haken beim Zeichnen, Personen-Knopf beim Ansehen, kein Schließen nach einem Eintrag, Hochformat nach Breite samt Wechsel beim Größerziehen und Regel `werkzeugeEinzeln`), `e2e/chart-tempo.spec.ts` und `e2e/auth-flow.spec.ts` (Tempo und Anmerken über das Menü), `e2e/chart-querformat.spec.ts` (Querformat: Wahl per Kapsel ohne Vollbild, Werkzeug des anderen Lieds, Blatt = nur Vollbild), `client/src/components/Screen.zumAnfang.test.tsx` (aktiver Tab scrollt nach oben); von Hand bleibt, wie es unter dem echten Unschärfe-Band aussieht
-- **Historie:** Kopfzeilen-Umbau 21./22.09.2026; runde Knöpfe, Liedblatt mit einem Werkzeuge-Knopf und sichtbare Umschalter-Schiene 02.10.2026 (am selben Tag am Gerät widerlegt: eine deckende Statusleiste beseitigt das milchige Band nicht); Werkzeuge im Hochformat einzeln nach Fensterbreite 05.10.2026; Seitenkopf im ChurchTools-Look + Reiter oben am iPad (Scheibe S, 26.10.2026)
+- **Betrifft:** `client/src/components/SeitenGeruest.tsx`, `client/src/components/SeitenKopf.tsx`, `ui/bedienung/KopfKnopf.tsx`, `ui/bedienung/ZeilenKnopf.tsx`, `ui/bedienung/ReiterLeiste.tsx`, `client/src/components/BlattKopf.tsx`, `client/src/components/AblaufLeiste.tsx`, `client/src/utils/werkzeuge.ts`, `client/src/utils/onboarding.ts`, `ui/bedienung/Segment.tsx`, `client/src/components/Screen.tsx`, `client/src/components/Screen.module.scss`, `client/src/components/TabBar.tsx`, `client/index.html`, `ui/design/_variables.scss`
+- **Automatisiert:** teilweise – `client/src/components/SeitenGeruest.test.tsx` (Überschrift im Inhalt, Kopfkarte nur mit Zurück, „← Ziel“ mit Text, Vollbild ganz rechts, Überlagerung neben dem Scroll-Bereich), `ui/bedienung/KopfKnopf.test.tsx`, `ui/bedienung/ReiterLeiste.test.tsx` (oben ohne Symbole), `client/src/components/BlattKopf.test.tsx` (Knöpfe je Zustand, Tempo-Angabe und Puls, breit/kompakt/flach, Leiste: Nummern, sichtbar/gewählt, Tipp, Mitscrollen, gemessene Unterkante), `e2e/blatt-leiste.spec.ts` (viele Lieder: Sprung, Mitscrollen beim Blättern, Wischen blättert nicht, Querformat wählen ohne Sprung, eine Zeile am iPad hochkant, Fenster unter der Karte, Einzellied ohne Nummer), `e2e/chart-tempo.spec.ts` und `e2e/auth-flow.spec.ts` (Tempo und Anmerken über das Menü), `e2e/chart-querformat.spec.ts` (Querformat: Wahl in der Leiste ohne Vollbild, Lied-Menü am gewählten, Blatt = nur Vollbild), `client/src/components/Screen.zumAnfang.test.tsx` (aktiver Tab scrollt nach oben); von Hand bleibt, wie es unter dem echten Unschärfe-Band aussieht
+- **Historie:** Kopfzeilen-Umbau 21./22.09.2026; runde Knöpfe, Liedblatt mit einem Werkzeuge-Knopf und sichtbare Umschalter-Schiene 02.10.2026 (am selben Tag am Gerät widerlegt: eine deckende Statusleiste beseitigt das milchige Band nicht); Werkzeuge im Hochformat einzeln nach Fensterbreite 05.10.2026; Seitenkopf im ChurchTools-Look + Reiter oben am iPad (Scheibe S, 26.10.2026); Liedblatt-Kopf als Kopfkarte mit Lied-Leiste und beschrifteten Knöpfen 28.10.2026 (Scheibe B1+B2)
 
 </details>
 

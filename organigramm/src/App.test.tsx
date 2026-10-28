@@ -46,9 +46,20 @@ const cm = vi.hoisted(() => {
     rechte,
     zugriff: {
       lesen: (_g: number, p: number) => Promise.resolve(m.has(p) ? { ...m.get(p)! } : null),
-      schreiben: (_g: number, p: number, f: Record<string, unknown>) => {
-        log.push(`schreiben ${p} ${JSON.stringify(f)}`);
-        const alt = m.get(p) ?? { rolleId: null, status: null, ende: null };
+      anlegen: (_g: number, p: number, f: Record<string, unknown>) => {
+        log.push(`anlegen ${p} ${JSON.stringify(f)}`);
+        if (m.has(p)) return Promise.reject(new Error('403 schon in der Gruppe'));
+        m.set(p, {
+          rolleId: f.groupTypeRoleId as number,
+          status: f.groupMemberStatus as string,
+          ende: null,
+        });
+        return Promise.resolve();
+      },
+      aendern: (_g: number, p: number, f: Record<string, unknown>) => {
+        log.push(`aendern ${p} ${JSON.stringify(f)}`);
+        const alt = m.get(p);
+        if (!alt) return Promise.reject(new Error('404 nicht in der Gruppe'));
         m.set(p, {
           rolleId: 'groupTypeRoleId' in f ? (f.groupTypeRoleId as number) : alt.rolleId,
           status: 'groupMemberStatus' in f ? (f.groupMemberStatus as string) : alt.status,
@@ -122,6 +133,8 @@ vi.mock('./struktur', () => ({
   ladeAktivStatus: () => Promise.resolve(1),
 }));
 vi.mock('./ladeEinsaetze', () => ({ ladeEinsaetze: vi.fn() }));
+// jsdom hat keine Zeichenfläche zum Messen – geschätzt wie im Browser ohne Canvas.
+vi.mock('./textBreite', () => ({ textBreite: (t: string) => t.length * 8 }));
 // Was der Baum-Reiter bei jedem Zeichnen bekommt (O7b-2) – der echte Reiter, nur mitgeschrieben.
 const baumReiter = vi.hoisted((): { spitze: string | null; baum: readonly Knoten[] }[] => []);
 vi.mock('./Organigramm', async (original) => {
@@ -276,6 +289,9 @@ beforeEach(() => {
   ct.log.length = 0;
   ct.panne.setzen = null;
   localStorage.clear();
+  // Die Tests bis O7b-2 sind für die Karten geschrieben – damals die Startansicht. Was ohne Wahl kommt, prüfen eigene
+  // Tests (O7b-2/O7b-3), die diese Wahl wieder entfernen.
+  localStorage.setItem('organigramm-ansicht', '"karten"');
   window.location.hash = '';
   laden.mockResolvedValue(start());
   mitgliederLaden.mockResolvedValue(MITGLIEDER);
@@ -1009,7 +1025,7 @@ describe('O6: Leitung und Mitglieder', () => {
     expect(screen.getByText(/Als Leitung bekommt „Carl Clau“/)).toBeTruthy();
     fireEvent.click(knopf('Ändern'));
     expect(await screen.findByText('„Carl Clau“ ist jetzt Leiter.')).toBeTruthy();
-    expect(cm.log).toEqual(['schreiben 3 {"groupTypeRoleId":16}']);
+    expect(cm.log).toEqual(['aendern 3 {"groupTypeRoleId":16}']);
     fireEvent.click(knopf('Rückgängig'));
     await screen.findByText('Rückgängig gemacht.');
     expect(cm.m.get(3)?.rolleId).toBe(15);
@@ -1077,6 +1093,7 @@ describe('O7b-2: Ansichten, Liste, „Anfangen bei“', () => {
   });
 
   it('am Handy ohne Wahl die Liste; eine gewählte Ansicht gilt auch dort', async () => {
+    localStorage.removeItem('organigramm-ansicht');
     vi.stubGlobal('matchMedia', (q: string) => ({
       matches: q.includes('max-width'),
       addEventListener: () => {},
@@ -1171,5 +1188,54 @@ describe('O7b-2: Ansichten, Liste, „Anfangen bei“', () => {
       expect(r.spitze === null || knotenAmPfad(r.baum, r.spitze) !== null, String(r.spitze)).toBe(
         true,
       );
+  });
+});
+
+describe('O7b-3: Diagramme', () => {
+  const ansicht = (name: string) =>
+    within(screen.getByRole('group', { name: 'Ansicht' })).getByRole('button', { name });
+  const diagramm = () => screen.getByRole('group', { name: 'Organigramm' });
+
+  it('am Laptop ohne Wahl: von oben – mit der Gemeinde an der Spitze', async () => {
+    localStorage.removeItem('organigramm-ansicht');
+    render(<App />);
+    expect((await screen.findByRole('group', { name: 'Organigramm' })).textContent).toContain(
+      'ECG',
+    );
+    expect(ansicht('Von oben').getAttribute('aria-pressed')).toBe('true');
+    expect(screen.queryByRole('region', { name: 'Gottesdienst' })).toBeNull();
+  });
+
+  it('Mindmap wählen: gemerkt; Klick auf ein Kästchen öffnet die Gruppe; „Alle aufklappen“ wirkt auch hier', async () => {
+    render(<App />);
+    await screen.findByRole('region', { name: 'Gottesdienst' });
+    fireEvent.click(ansicht('Mindmap'));
+    expect(localStorage.getItem('organigramm-ansicht')).toBe('"mindmap"');
+    expect(within(diagramm()).queryByRole('button', { name: 'Stream' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Alle aufklappen' }));
+    expect(within(diagramm()).getByRole('button', { name: 'Stream' })).toBeTruthy();
+    fireEvent.click(within(diagramm()).getByRole('button', { name: 'Technik' }));
+    expect(screen.getByRole('region', { name: 'Leiter' })).toBeTruthy();
+  });
+
+  it('„Anfangen bei“ gilt auch für die Diagramme', async () => {
+    render(<App />);
+    await screen.findByRole('region', { name: 'Gottesdienst' });
+    fireEvent.click(ansicht('Von links'));
+    fireEvent.change(screen.getByLabelText('Anfangen bei'), { target: { value: '10' } });
+    expect(diagramm().textContent).not.toContain('ECG');
+    expect(within(diagramm()).getByRole('button', { name: 'Technik' })).toBeTruthy();
+    expect(within(diagramm()).queryByRole('button', { name: 'Café' })).toBeNull();
+  });
+});
+
+describe('O7b-3: „Präsentieren“ im Seitenkopf', () => {
+  it('steht rechts neben „Hallo …“, nicht in der Leiste – und nur im Reiter Organigramm', async () => {
+    render(<App />);
+    const knopf = await screen.findByRole('button', { name: 'Präsentieren' });
+    expect(knopf.closest('header')).not.toBeNull();
+    expect(knopf.closest('header')!.textContent).toContain('Hallo Alwin');
+    fireEvent.click(screen.getByRole('button', { name: 'Personen' }));
+    expect(screen.queryByRole('button', { name: 'Präsentieren' })).toBeNull();
   });
 });

@@ -361,6 +361,15 @@ describe('„Option wählen“ nach dem Plus (Scheibe S2)', () => {
     expect(screen.getByPlaceholderText('Titel der Überschrift')).toBeTruthy();
   });
 
+  it('ein Tipp neben das Menü schließt es – im Menü nicht (gemeinsamer Baustein `useAufklapp`)', () => {
+    render(<Harness aktionen={aktionen()} plusImKopf />);
+    fireEvent.click(screen.getByRole('button', { name: 'Eintrag hinzufügen' }));
+    fireEvent.pointerDown(screen.getByRole('menu'));
+    expect(screen.getByRole('menu')).toBeTruthy();
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
   it('Escape schließt Blatt und Menü', () => {
     const { unmount } = render(<Harness aktionen={aktionen()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Eintrag hinzufügen' }));

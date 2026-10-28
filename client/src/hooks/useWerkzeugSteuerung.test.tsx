@@ -7,9 +7,8 @@ import { useWerkzeugSteuerung } from './useWerkzeugSteuerung';
  * Die Werkzeug-Knöpfe des Liedblatts (#465). Die Regel, um die es geht: Jeder Knopf setzt das
  * Fenster-Feld genau EINMAL – ein zweites Setzen machte das gerade geöffnete Fenster wieder zu.
  */
-function aufbau(songId = 1, viewing = false) {
+function aufbau(viewing = false) {
   const p = {
-    songId,
     setOverlay: vi.fn(),
     setDrawMode: vi.fn(),
     viewing,
@@ -40,22 +39,11 @@ describe('useWerkzeugSteuerung', () => {
   });
 
   it('Team-Notizen: beim Ansehen beenden, sonst die Liste öffnen', () => {
-    const ansehen = aufbau(1, true);
+    const ansehen = aufbau(true);
     renderHook(() => useWerkzeugSteuerung(ansehen)).result.current.onToggleTeamNotes();
     expect(ansehen.stopViewing).toHaveBeenCalled();
-    const nicht = aufbau(1, false);
+    const nicht = aufbau(false);
     renderHook(() => useWerkzeugSteuerung(nicht)).result.current.onToggleTeamNotes();
     expect(nicht.openSharers).toHaveBeenCalled();
-  });
-
-  it('Werkzeug des anderen Lieds öffnet erst NACH dem Liedwechsel – und Anmerken schaltet EIN', () => {
-    const p = aufbau(1);
-    const { result, rerender } = renderHook((props) => useWerkzeugSteuerung(props), {
-      initialProps: p,
-    });
-    act(() => result.current.nachLiedwechsel('anmerken'));
-    expect(p.setDrawMode).not.toHaveBeenCalled();
-    rerender({ ...p, songId: 2 });
-    expect(p.setDrawMode).toHaveBeenCalledWith(true);
   });
 });

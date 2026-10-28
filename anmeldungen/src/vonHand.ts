@@ -5,7 +5,9 @@
  * - Neu anlegen: `POST /persons` mit den Vorgaben der Veranstaltung (Status, Standort, Bereich) und der Zustimmung zum
  *   Datenschutz („außerhalb ChurchTools“, von der Person selbst oder einem Elternteil). Gleicher Name → 400 mit
  *   `args.duplicatePersonId`, nichts angelegt; `force=true` legt trotzdem an – nur auf ausdrücklichen Wunsch.
- * - Eintragen: `PUT /groups/{id}/members/{personId}` mit Rolle, Status, Warteplatz und Feldern.
+ * - Eintragen: `PUT /groups/{id}/members/{personId}` mit Rolle, Status, Warteplatz, Feldern und `only_add: true` –
+ *   ist die Person inzwischen doch dabei, lehnt ChurchTools ab (403), statt ihre Anmeldung zu überschreiben
+ *   (gemessen 28.10.2026; Ändern per `PUT` ist veraltet).
  * - ChurchTools selbst schickt dabei keine Mail; sind die Abläufe eingerichtet (A9-1), schickt die Routine die
  *   Bestätigung bzw. die Wartelisten-Mitteilung. Jeder Schritt wird nachgelesen.
  */
@@ -215,6 +217,7 @@ export async function vonHandAnmelden(
         groupMemberStatus: plan.platz.status,
         ...(wartet && plan.platz.warteplatz ? { waitinglistPosition: plan.platz.warteplatz } : {}),
         fields: plan.felder,
+        only_add: true,
       }),
     });
     const m = await mitgliedOderNichts(id, personId);

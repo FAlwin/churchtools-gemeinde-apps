@@ -4,8 +4,8 @@
   position: fixed;
   left: 12px;
   right: 12px;
-  // Unter dem Kopf des Liedblatts – dieselbe Variable wie seine Menüs (`--chart-kopf-unten`).
-  top: calc(var(--chart-kopf-unten) + 6px);
+  // Unter der Kopfkarte des Liedblatts – gemessen von `BlattKopf` (Bildschirm-Wert, weil `fixed`; Scheibe B1).
+  top: calc(var(--blatt-kopf-unten-fix, var(--chart-kopf-unten)) + 6px);
   z-index: 30;
   display: flex;
   align-items: center;

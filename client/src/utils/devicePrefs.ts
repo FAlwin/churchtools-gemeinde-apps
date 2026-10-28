@@ -21,6 +21,8 @@ const KEYS = {
   drawbarOffsetY: 'worship:drawbar-y',
   /** Gewählte Termin-Art im Tab „Abwesenheiten" (#400) – JSON-Liste mit höchstens einer ID, leer = alle. */
   abwesenheitenFilter: 'worship:abwesenheiten-filter',
+  /** Ausgeblendete Termin-Arten im Tab „Abwesenheiten" (seit 28.10.2026) – JSON-Liste, leer = alle zu sehen. */
+  abwesenheitenAusgeblendet: 'worship:abwesenheiten-ausgeblendet',
   /** Ein Abmelden konnte den Server nicht erreichen und muss beim nächsten Start nachgeholt werden (#403). */
   abmeldenAusstehend: 'worship:abmelden-ausstehend',
   /**
@@ -69,7 +71,8 @@ export function setDrawbarOffsetY(y: number): void {
 
 /**
  * Die im Tab „Abwesenheiten" gewählte Termin-Art (#400) – als Liste, weil eine Zwischenfassung
- * mehrere zuließ; gelesen wird höchstens die erste. Leer heißt „alle".
+ * mehrere zuließ; gelesen wird höchstens die erste. Leer heißt „alle". **Seit 28.10.2026 nur noch gelesen**, um sie
+ * einmal in ausgeblendete Arten umzurechnen (`getAbwesenheitenAusgeblendet`).
  *
  * Auf dem Gerät gemerkt, nicht im Konto (Entscheidung Alwin, 20.09.2026): Wer nur Gottesdienste
  * einträgt, stellt es einmal ein. Ein kaputter Wert ergibt „alle" – lieber zu viel zeigen als still
@@ -84,8 +87,24 @@ export function getAbwesenheitenFilter(): string[] {
   }
 }
 
-export function setAbwesenheitenFilter(ids: string[]): void {
-  write('abwesenheitenFilter', JSON.stringify(ids));
+/**
+ * **Ausgeblendete Termin-Arten** im Tab „Abwesenheiten" (seit 28.10.2026, Häkchen wie im Dienstplaner). `null`, solange
+ * nichts gemerkt ist – dann rechnet die Seite einmal die alte Wahl um (`getAbwesenheitenFilter`,
+ * `ausgeblendetAusAlterWahl`). Ein kaputter Wert ergibt „nichts ausgeblendet" – lieber zu viel zeigen.
+ */
+export function getAbwesenheitenAusgeblendet(): string[] | null {
+  const roh = read('abwesenheitenAusgeblendet');
+  if (roh === null) return null;
+  try {
+    const liste: unknown = JSON.parse(roh);
+    return Array.isArray(liste) ? liste.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+export function setAbwesenheitenAusgeblendet(ids: string[]): void {
+  write('abwesenheitenAusgeblendet', JSON.stringify(ids));
 }
 
 /**

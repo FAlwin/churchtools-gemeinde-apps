@@ -1,21 +1,23 @@
 import { useId, useState } from 'react';
-import { Icon } from '@ui/icons/icons';
+import { Icon } from '../icons/icons';
 import { monatName, monatPlus, plusTage } from '@shared/ct/datum';
-import { zeitraumGrenzen, zeitraumGueltig, type Zeitraum } from '@shared/dienstplan/zeitraum';
+import { spanneText, zeitraumGrenzen, zeitraumGueltig, type Zeitraum } from '@shared/ct/zeitraum';
 import { useAufklapp } from './useAufklapp';
 import styles from './ZeitraumKnopf.module.scss';
 
 /**
- * **Der Zeitraum-Knopf** der Matrix (Alwin, 14.10.2026, Entwurf „Zeitraum wählen“): zeigt, was gerade zu
+ * **Der Zeitraum-Knopf** (Alwin, 14.10.2026, Entwurf „Zeitraum wählen“; seit 28.10.2026 in `ui/` – Dienstplaner ›
+ * Planen und Abwesenheiten der Musik-App, eine Komponente): zeigt, was gerade zu
  * sehen ist, und öffnet ein Menü – ab heute (passend zur Fensterbreite), dieser Monat, nächster Monat oder
- * ein eigener Zeitraum von–bis. Was die Wahl bedeutet, regelt `shared/dienstplan/zeitraum.ts`.
+ * ein eigener Zeitraum von–bis. Was die Wahl bedeutet, regelt `shared/ct/zeitraum.ts`.
  */
 export function ZeitraumKnopf({
   zeitraum,
   zeile1,
   zeile2,
   heute,
-  handy = false,
+  abHeuteZusatz,
+  spaetestens,
   onWahl,
 }: {
   zeitraum: Zeitraum;
@@ -25,8 +27,16 @@ export function ZeitraumKnopf({
   zeile2: string;
   /** Heute (`YYYY-MM-DD`) – für „dieser“ und „nächster Monat“. */
   heute: string;
-  /** Am Handy steht immer ein Termin da – „passend zur Fensterbreite“ wäre dort falsch. */
-  handy?: boolean;
+  /**
+   * Was „Ab heute“ beim Aufrufer heißt – Matrix „passend zur Fensterbreite“ bzw. am Handy „die nächsten Termine“,
+   * Abwesenheiten „die nächsten 4 Wochen“. Vorher kannte der Knopf nur die Matrix (`handy`).
+   */
+  abHeuteZusatz: string;
+  /**
+   * Spätester erlaubter Tag eines eigenen Zeitraums (`YYYY-MM-DD`) – die Abwesenheiten holen Termine höchstens ein Jahr
+   * voraus (`MAX_VORAUS_TAGE`). Ohne Angabe gibt es keine Grenze (Matrix).
+   */
+  spaetestens?: string;
   onWahl: (z: Zeitraum) => void;
 }) {
   const { offen, setOffen, rahmen } = useAufklapp();
@@ -36,6 +46,7 @@ export function ZeitraumKnopf({
   const grenzen = zeitraumGrenzen(zeitraum) ?? { von: heute, bis: plusTage(heute, 27) };
   const [von, setVon] = useState(grenzen.von);
   const [bis, setBis] = useState(grenzen.bis);
+  const zuWeit = spaetestens !== undefined && bis > spaetestens;
 
   const waehle = (z: Zeitraum) => {
     onWahl(z);
@@ -74,11 +85,7 @@ export function ZeitraumKnopf({
       </button>
       {offen && (
         <div className={styles.menue} id={id} role="dialog" aria-label="Zeitraum wählen">
-          {option(
-            { art: 'abHeute' },
-            'Ab heute',
-            handy ? 'die nächsten Termine' : 'passend zur Fensterbreite',
-          )}
+          {option({ art: 'abHeute' }, 'Ab heute', abHeuteZusatz)}
           {option({ art: 'monat', monat: dieser }, 'Dieser Monat', monatName(`${dieser}-01`))}
           {option(
             { art: 'monat', monat: naechster },
@@ -99,13 +106,19 @@ export function ZeitraumKnopf({
                 type="date"
                 aria-label="bis"
                 value={bis}
+                max={spaetestens}
                 onChange={(e) => setBis(e.target.value)}
               />
             </div>
+            {zuWeit && spaetestens && (
+              <small className={styles.grenze}>
+                Höchstens bis {spanneText(spaetestens, spaetestens)}
+              </small>
+            )}
             <button
               type="button"
               className={styles.anzeigen}
-              disabled={!zeitraumGueltig(von, bis)}
+              disabled={!zeitraumGueltig(von, bis) || zuWeit}
               onClick={() => waehle({ art: 'eigen', von, bis })}
             >
               Anzeigen

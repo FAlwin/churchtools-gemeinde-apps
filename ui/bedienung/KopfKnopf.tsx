@@ -9,7 +9,7 @@ interface KopfKnopfProps {
   /** Ausführlicherer Name für Screenreader und Tooltip („Alle Lieder als PDF teilen“); sonst die Beschriftung. */
   title?: string;
   symbol: ReactNode;
-  /** Blau: die Hauptaktion der Seite („Bearbeiten“) – höchstens eine je Kopf. */
+  /** Blau: die Hauptaktion der Seite („Fertig“ im Bearbeiten des Ablaufs) – höchstens eine je Kopf. */
   haupt?: boolean;
   /** Grün: etwas Neues anlegen – wie „+ Gruppe erstellen“ in ChurchTools (Scheibe S2). */
   neu?: boolean;
@@ -18,8 +18,17 @@ interface KopfKnopfProps {
   menuOffen?: boolean;
   /** Hier gilt gerade etwas (Ablauf abgeschlossen, Vollbild an) – hellblau mit blauem Rand. */
   aktiv?: boolean;
+  /** Sein Fenster ist gerade offen (Aussehen, Tempo im Liedblatt) – hellblau, ohne blauen Rand (Scheibe B1). */
+  offen?: boolean;
   /** Immer nur das Symbol, auch am iPad (Vollbild – Entwurf S). */
   nurSymbol?: boolean;
+  /**
+   * Im Raster am Handy (Liedblatt, Scheibe B1): Symbol über einem Kurzwort, auch unter `HANDY_BREITE` mit Text – dort
+   * sind die Knöpfe sonst nur Symbole und im Liedblatt nicht zu unterscheiden.
+   */
+  raster?: boolean;
+  /** Kurzwort im Raster („Notizen“ statt „Notizen von …“); sonst die Beschriftung. */
+  kurz?: string;
   /** Ziel der geführten Einführung (`utils/onboarding.ts`). */
   dataTour?: string;
 }
@@ -39,15 +48,26 @@ export function KopfKnopf({
   disabled,
   menuOffen,
   aktiv,
+  offen,
   nurSymbol,
+  raster,
+  kurz,
   dataTour,
 }: KopfKnopfProps) {
   return (
     <button
       type="button"
       className={`${styles.knopf}${
-        haupt ? ' ' + styles.haupt : neu ? ' ' + styles.neu : aktiv ? ' ' + styles.aktiv : ''
-      }${nurSymbol ? ' ' + styles.nurSymbol : ''}`}
+        haupt
+          ? ' ' + styles.haupt
+          : neu
+            ? ' ' + styles.neu
+            : aktiv
+              ? ' ' + styles.aktiv
+              : offen
+                ? ' ' + styles.offen
+                : ''
+      }${nurSymbol ? ' ' + styles.nurSymbol : ''}${raster ? ' ' + styles.raster : ''}`}
       onClick={onClick}
       title={title ?? label}
       aria-label={title ?? label}
@@ -58,7 +78,7 @@ export function KopfKnopf({
       data-tour={dataTour}
     >
       {symbol}
-      {!nurSymbol && <span className={styles.text}>{label}</span>}
+      {!nurSymbol && <span className={styles.text}>{raster ? (kurz ?? label) : label}</span>}
     </button>
   );
 }

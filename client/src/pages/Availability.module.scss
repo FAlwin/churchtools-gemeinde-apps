@@ -21,6 +21,15 @@
   line-height: 17px;
 }
 
+// Zeitraum-Knopf links, Filter-Knopf rechts – wie die Werkzeugzeile in Dienstplaner › Planen (28.10.2026).
+.werkzeug {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
 // Gruppen-Überschrift: Monat links, Anzahl rechts.
 .sec {
   display: flex;

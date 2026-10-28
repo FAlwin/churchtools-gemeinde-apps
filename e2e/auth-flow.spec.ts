@@ -74,7 +74,6 @@ test.describe('Auth-Flow mit ChurchTools-Stub', () => {
       { timeout: 20_000 },
     );
 
-    // Hochformat: hinter dem Werkzeuge-Knopf; Querformat: einzeln (#421).
     await oeffneWerkzeug(page, 'Anmerken');
     const flaeche = seiten.first();
     const box = await flaeche.boundingBox();

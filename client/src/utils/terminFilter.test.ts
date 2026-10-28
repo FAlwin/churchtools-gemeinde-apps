@@ -3,18 +3,16 @@ import type { AbsenceEvent, TerminArt } from '@shared/types/index';
 import {
   SONSTIGE_ID,
   artVon,
+  ausgeblendetAusAlterWahl,
   filtereTermine,
   knoepfeAus,
-  umschalten,
-  wirksameAuswahl,
 } from './terminFilter';
 
 /**
  * Der Termin-Filter (#400) als reine Regeln – Termin-Arten mit Suchwörtern, „Sonstige" für den Rest.
  *
- * Die wichtigsten stehen unten: Eine Auswahl, auf die kein Knopf passt, gilt als „alle" (sonst eine
- * leere Liste ohne Grund), und es gibt **genau eine Art oder alles** – ein zweiter Knopf ersetzt den
- * ersten, ein Tipp auf den gewählten hebt ihn auf (Alwin, 20.09.2026 spät).
+ * Seit 28.10.2026 mit Häkchen wie im Dienstplaner: gemerkt wird, was AUSGEBLENDET ist; eine gemerkte Wahl der alten
+ * Art („genau eine Art oder alles") wird einmal umgerechnet.
  */
 const ev = (id: number, name: string): AbsenceEvent => ({
   id,
@@ -64,53 +62,47 @@ describe('knoepfeAus', () => {
   });
 });
 
-describe('wirksameAuswahl', () => {
-  const knoepfe = [
-    { id: 'gd', name: 'Gottesdienst' },
-    { id: 'ga', name: 'Gebetsabend' },
-  ];
-
-  it('lässt eine Wahl fallen, zu der es keinen Knopf gibt', () => {
-    expect(wirksameAuswahl(['99'], knoepfe)).toEqual([]);
-    expect(wirksameAuswahl(['gd', '99'], knoepfe)).toEqual(['gd']);
-  });
-
-  it('kürzt eine gemerkte Mehrfachauswahl (Zwischenfassung) auf den ersten gültigen Eintrag', () => {
-    expect(wirksameAuswahl(['gd', 'ga'], knoepfe)).toEqual(['gd']);
-    expect(wirksameAuswahl(['99', 'ga', 'gd'], knoepfe)).toEqual(['ga']);
-  });
-});
-
-describe('filtereTermine', () => {
+describe('filtereTermine – ausgeblendete Arten fallen weg', () => {
   const alle = [ev(1, 'Gottesdienst'), ev(2, 'Gebetsabend'), ev(3, 'Probe')];
 
-  it('ohne Auswahl bleibt alles', () => {
+  it('nichts ausgeblendet: alle', () => {
     expect(filtereTermine(alle, [], ARTEN)).toHaveLength(3);
   });
 
-  it('mit Auswahl nur die passenden – „Sonstige" ist eine eigene Wahl', () => {
-    expect(filtereTermine(alle, ['ga'], ARTEN).map((e) => e.id)).toEqual([2]);
-    expect(filtereTermine(alle, [SONSTIGE_ID], ARTEN).map((e) => e.id)).toEqual([3]);
+  it('eine Art ausgeblendet – „Sonstige" ist eine eigene Art', () => {
+    expect(filtereTermine(alle, ['ga'], ARTEN).map((e) => e.id)).toEqual([1, 3]);
+    expect(filtereTermine(alle, [SONSTIGE_ID], ARTEN).map((e) => e.id)).toEqual([1, 2]);
   });
 
-  it('die Filterung selbst könnte mehrere – die Auswahl gibt nur eine her (siehe umschalten)', () => {
-    expect(filtereTermine(alle, ['gd', SONSTIGE_ID], ARTEN).map((e) => e.id)).toEqual([1, 3]);
+  it('mehrere ausgeblendet (Häkchen) – nur der Rest bleibt', () => {
+    expect(filtereTermine(alle, ['gd', SONSTIGE_ID], ARTEN).map((e) => e.id)).toEqual([2]);
+  });
+
+  it('eine ausgeblendete Art, die es nicht mehr gibt, blendet nichts aus', () => {
+    expect(filtereTermine(alle, ['geloescht'], ARTEN)).toHaveLength(3);
   });
 });
 
-describe('umschalten', () => {
+describe('ausgeblendetAusAlterWahl – die gemerkte Wahl der alten Art umrechnen', () => {
   const knoepfe = [
     { id: 'gd', name: 'Gottesdienst' },
     { id: 'ga', name: 'Gebetsabend' },
     { id: SONSTIGE_ID, name: 'Sonstige' },
   ];
 
-  it('wählt genau einen – ein zweiter Knopf ERSETZT den ersten', () => {
-    expect(umschalten([], 'gd', knoepfe)).toEqual(['gd']);
-    expect(umschalten(['gd'], 'ga', knoepfe)).toEqual(['ga']);
+  it('„nur Gottesdienst" → alle anderen ausgeblendet (dieselbe Liste wie vorher)', () => {
+    expect(ausgeblendetAusAlterWahl(['gd'], knoepfe)).toEqual(['ga', SONSTIGE_ID]);
   });
 
-  it('ein Tipp auf den gewählten Knopf hebt die Wahl auf – dann gilt „alle"', () => {
-    expect(umschalten(['gd'], 'gd', knoepfe)).toEqual([]);
+  it('nichts gewählt („alle") → nichts ausgeblendet', () => {
+    expect(ausgeblendetAusAlterWahl([], knoepfe)).toEqual([]);
+  });
+
+  it('eine Wahl ohne Knopf (vom Admin gelöscht) → nichts ausgeblendet, statt einer leeren Liste', () => {
+    expect(ausgeblendetAusAlterWahl(['weg'], knoepfe)).toEqual([]);
+  });
+
+  it('eine Mehrfachauswahl aus der Zwischenfassung → ihr erster gültiger Eintrag zählt', () => {
+    expect(ausgeblendetAusAlterWahl(['weg', 'ga', 'gd'], knoepfe)).toEqual(['gd', SONSTIGE_ID]);
   });
 });

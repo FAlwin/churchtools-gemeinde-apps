@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { Icon } from '@ui/icons/icons';
+import { Icon } from '../icons/icons';
 import { useAufklapp } from './useAufklapp';
 import styles from './FilterKnopf.module.scss';
 
@@ -15,7 +15,7 @@ export interface FilterAbschnitt {
 
 /**
  * **Ein Knopf „Filter“ mit Menü** (Alwin, 14.10.2026, Entwurf A: „zu viele verschiedene Buttons“) – für
- * Termine-Liste und Matrix. Im Menü je Abschnitt eine Überschrift und Häkchen: angehakt heißt **wird
+ * Termine-Liste und Matrix des Dienstplaners und seit 28.10.2026 die Abwesenheiten der Musik-App (`ui/`, eine Komponente). Im Menü je Abschnitt eine Überschrift und Häkchen: angehakt heißt **wird
  * gezeigt**. Die Zahl am Knopf sagt, wie viel gerade ausgeblendet ist. Ersetzt die Filter-Pillen; was
  * gefiltert wird und wie es gemerkt wird, bleibt beim Aufrufer.
  */

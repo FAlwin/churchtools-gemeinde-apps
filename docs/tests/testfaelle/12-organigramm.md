@@ -294,7 +294,8 @@ durch dieselben Seiten (Übersicht, dann die Bereiche).
 3. **Weiter**/**Zurück** und die Pfeiltasten blättern durch die Bereiche – auch in **Von links** und **Mindmap**.
 4. Auf einer Bereichs-Seite **Kacheln** wählen: Dieselbe Seite zeigt die Gruppen als Spalten mit den Personen.
 5. Im Diagramm ein **+/−** mit Tab ansteuern und die **Leertaste** drücken: Es klappt nur, die Seite bleibt.
-6. **Ganz zeigen**: Nichts liegt unter den Knöpfen unten rechts. Mit Plan auch **Neue Gliederung | Heute** umschalten.
+6. **Ganz zeigen**: Nichts liegt unter den Knöpfen unten rechts. Mit Plan auch **Neue Gliederung | Heute** umschalten –
+   am iPad quer bleibt die Leiste oben einzeilig, alle Knöpfe gleich hoch.
 7. Präsentation schließen und wieder öffnen: Die zuletzt gewählte Ansicht ist wieder da.
 
 <details><summary>Technisches</summary>

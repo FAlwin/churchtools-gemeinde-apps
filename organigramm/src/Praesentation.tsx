@@ -353,6 +353,7 @@ export function Praesentation({ start, daten, mitglieder, stand, onSchliessen }:
               stand.onWechsel(w);
             }}
             ariaLabel="Stand"
+            verbunden
           />
         )}
         <Segment

@@ -289,6 +289,7 @@ export function NeueGliederung({
               ]}
               onChange={setAnsicht}
               ariaLabel="Plan oder Umbau"
+              verbunden
             />
             <span className={baum.meta}>
               {arbeitet

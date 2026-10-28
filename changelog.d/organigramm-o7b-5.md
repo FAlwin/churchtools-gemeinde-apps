@@ -11,6 +11,9 @@
 - **„Ganz zeigen“** lässt unten den Streifen der Knöpfe frei – vorher lagen − / + / „Ganz zeigen“ über dem untersten
   Kästchen (Reiter und Präsentation; gemeldet von Alwin 28.10.2026). Gilt auch für die Startansicht.
 - Die Leertaste auf einem +/− im Diagramm der Präsentation klappt nur und blättert nicht zusätzlich weiter.
+- „Neue Gliederung | Heute“ in der Präsentation steht auf einer Schiene wie die übrigen Umschalter: 38 px hoch,
+  einzeilig – am iPad quer (1024 px) war es zweizeilig und 41 px hoch. Ebenso „Plan | Umbau“ im Reiter „Neue Gliederung“.
+  Eine Dauerprüfung (`ui/design/umschalterVerbunden.test.ts`) hält fest, dass jeder Umschalter des Organigramms so gebaut ist.
 
 ### Intern (Organigramm)
 

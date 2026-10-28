@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { DEMO_EDITOR_TEXT } from '../client/src/dev/demoEditorText';
+import { anDenZeilenanfang } from './werkzeug';
 
 /**
  * **Schreibansicht bei offener Tastatur** (23.10.2026, Alwin am iPad: „das Bearbeitungsfenster ist bei aufgeklappter
@@ -45,8 +46,7 @@ async function inDenText(page: Page) {
   await page.goto('/?demo=editor');
   const zeile = page.locator('.cm-line', { hasText: 'jedem neuen Tag' });
   await expect(zeile).toBeVisible({ timeout: 30_000 });
-  const h = (await zeile.boundingBox())!.height;
-  await zeile.click({ position: { x: 1, y: h / 2 } });
+  await anDenZeilenanfang(page, 'jedem neuen Tag');
   for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight'); // „Du “
 }
 

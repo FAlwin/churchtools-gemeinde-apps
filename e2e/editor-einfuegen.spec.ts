@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { DEMO_EDITOR_TEXT } from '../client/src/dev/demoEditorText';
+import { anDenZeilenanfang } from './werkzeug';
 
 /**
  * **Lied-Editor L6: Menü „Einfügen“** (24.10.2026, Variante B) statt des Format-Menüs – und die Ende-Marken
@@ -19,9 +20,7 @@ async function oeffnen(page: Page) {
 
 /** Cursor mitten in die Zeile „Du [E]bleibst …“ (hinter „Du “). */
 async function mittenInDieZeile(page: Page) {
-  const zeile = page.locator('.cm-line', { hasText: 'bleibst an meiner Seite' });
-  const h = (await zeile.boundingBox())!.height;
-  await zeile.click({ position: { x: 1, y: h / 2 } });
+  await anDenZeilenanfang(page, 'bleibst an meiner Seite');
   for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight');
 }
 

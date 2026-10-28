@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { DEMO_EDITOR_TEXT } from '../client/src/dev/demoEditorText';
+import { anDenZeilenanfang } from './werkzeug';
 
 /**
  * **Lied-Editor L3: Text freundlicher** (22.10.2026, Entwurf B/C): Akkorde als Kärtchen, Teile als Band,
@@ -21,10 +22,7 @@ async function oeffnen(page: Page) {
 
 /** Cursor direkt vor das erste Akkord-Kärtchen der Zeile „Du [E]bleibst …“ setzen. */
 async function vorDasKaertchen(page: Page) {
-  // Ganz links in die Zeile klicken – mitten in der Zeile träfe man womöglich ein Kärtchen.
-  const zeile = page.locator('.cm-line', { hasText: 'bleibst an meiner Seite' });
-  const h = (await zeile.boundingBox())!.height;
-  await zeile.click({ position: { x: 1, y: h / 2 } });
+  await anDenZeilenanfang(page, 'bleibst an meiner Seite');
   for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight'); // „Du “
 }
 

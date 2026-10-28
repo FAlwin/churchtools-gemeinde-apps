@@ -149,6 +149,11 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit später sc
   `props.fest` des Verweis-Blocks; „wie letztes Mal“ und Vorlagen nehmen es nicht mit.
 - Beginnen: Regel `shared/protokolle/beginnen.ts`, Zuordnung Kopf ↔ Termin/Treffen `gehoertZu` in
   `shared/protokolle/sitzungen.ts`, Schreiben `protokolle/src/beginnen.ts`, Fenster `ProtokollBeginnen.tsx`.
+- Griff und Ziehen im Editor: Griff mittig zur ersten Textzeile (`protokolle/src/griffLage.ts`); beim Ziehen eines
+  Abschnitts zeichnet BlockNote die Linie dort, wo er landet (`abschnittLinie` über `dropCursor.hooks.computeDropPosition`,
+  dieselbe Rechnung `abschnittZiel` wie beim Ablegen).
+- Wer/Bis vor dem Text: `props.vorab` am Aufgaben-Block (JSON), übernommen beim Anlegen des To-Dos (`vorabAnwenden` in
+  `aufgabenAbgleich` und beim ersten Tipp); danach leert der Block es.
 - Nächste Sitzung festlegen: Regel `shared/protokolle/planen.ts` (`vorbelegung`, `zeitraum`, `geplanterKopf`,
   `naechsteNach`), Schreiben `protokolle/src/planen.ts` (Termin → nachlesen → Treffen → Kopf; nach dem Termin nur
   noch Hinweise, nie zurückrollen; unklare Antwort → im Kalender nachsehen, Fehlerklasse `Unklar`), Fenster

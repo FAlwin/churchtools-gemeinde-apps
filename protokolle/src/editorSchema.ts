@@ -30,7 +30,12 @@ const aufgabeKuerzel = createExtension({
 });
 
 const aufgabeBlock = createReactBlockSpec(
-  { type: BLOCK.aufgabe, propSchema: { aufgabe: { default: '' } }, content: 'inline' },
+  {
+    type: BLOCK.aufgabe,
+    // `vorab`: Wer/Bis, gewählt bevor es das To-Do gab (JSON, K1) – das Anlegen übernimmt sie.
+    propSchema: { aufgabe: { default: '' }, vorab: { default: '' } },
+    content: 'inline',
+  },
   { render: AufgabeBlock },
   [aufgabeKuerzel],
 );

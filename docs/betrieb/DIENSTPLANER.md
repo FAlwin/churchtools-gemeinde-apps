@@ -1,7 +1,7 @@
 # Dienstplaner – ChurchTools-Erweiterung
 
 > **Stand: E6-5b (23.10.2026)** – E3 mit drei Rollen geprüft (Test-Instanz) und lesend an der Live-Instanz; seit
-> E4-4 **teilt der Dienstplaner auch ein** (s. „Senden“). **Termin-Ansicht** (E6-1b): Zeile in „Termine“,
+> E4-4 **teilt der Dienstplaner auch ein** (s. „Senden“). **Termin-Ansicht** (E6-1b): Zeile in „Dienste“,
 > „Ablauf & Dienste“ auf der Startseite oder der Name im Spaltenkopf von „Planen“ → Ablauf wie in der Musik-App
 > (seit E6-O1 wie die ChurchTools-App: Liste mit feinen Linien, Dauer unter der Uhrzeit, Zuständige grau, Kürzel/Fotos rechts, Lied-Karte mit Autor) und die Dienste des Termins, ‹ › blättert; mit Ablauf-Recht **Stift** → bearbeiten wie in der Musik-App (E6-3a, ohne Liedwahl), auch **„An diesem Termin weglassen“** (Auge, E6-3b); ändert jemand gleichzeitig denselben Punkt, fragt das Fenster „Trotzdem speichern oder verwerfen?“ (E6-3c). Ohne Ablauf: **„Ablauf anlegen“** aus Vorlage, wie ein früherer Termin oder leer (E6-5a); mit Ablauf im Bearbeiten **„Neu aufsetzen …“** – dieselben drei Wege, dann eine klare Nachfrage, bei geteiltem Ablauf „Für alle“ oder „Nur für diesen Termin neu“ (E6-5b). **Planen**:
 > Termine als Spalten, Dienstgruppen und Dienste als Zeilen, in jeder Zelle die Plätze (Gruppen, in denen man nicht
@@ -10,8 +10,8 @@
 > Spaltenbreite, Filter nach Veranstaltung und Gruppe, „Wer wie oft?“; am Handy ein Termin auf einmal. **Start**: „Als
 > Nächstes“ (dein Dienst, Team, Lieder, Musik-App), deine offenen Anfragen, deine nächsten Dienste,
 > Abwesenheiten und für Planer die freien Plätze der nächsten 6 Wochen. Die Reiter
-> Start · Termine · Planen · Abwesenheiten stehen (am Computer oben, am Handy unten; „Planen“ nur für
-> Planer). **Termine**: Liste nach Monaten, „Meine | Alle“, Filter nach Veranstaltung (aus den
+> Start · Dienste · Planen · Abwesenheiten stehen (am Computer oben, am Handy unten; „Planen“ nur für
+> Planer). **Dienste** (bis 28.10.2026 „Termine“): Liste nach Monaten, „Meine | Alle“, Filter nach Veranstaltung (aus den
 > Terminnamen), die eigenen Dienste (zugesagt/angefragt), für Planer die freien Plätze ihrer
 > Dienstgruppen. Zauberstab und Abwesenheiten folgen (Bauplan E5–E9). Hell oder dunkel wie in ChurchTools gewählt (seit 15.10.2026). Diese Anleitung wächst mit.
 
@@ -95,7 +95,7 @@ Recht zeigt ChurchTools selbst „Keine ausreichende Berechtigung“.
 einer Dienstgruppe nur dann **vollständig**, wenn die Dienstgruppe „für alle sichtbar“ ist, man sie sehen
 oder bearbeiten darf oder eine Gruppe des Dienstes leitet. Sonst kommen nur die **eigenen** Einträge. Die
 Matrix und „Wer wie oft?“ zeigen deshalb nur vollständig gelieferte Dienste (`siehtDienstGanz`), denn eine
-halbe Zeile sähe aus wie „nicht vorgesehen“. Die eigenen Dienste stehen immer unter Start und Termine.
+halbe Zeile sähe aus wie „nicht vorgesehen“. Die eigenen Dienste stehen immer unter Start und Dienste.
 
 **Selbst prüfen:** In der Test-Instanz als Admin eine Person öffnen → Symbol „Benutzer simulieren“ (der
 Browser-Bereich der App unterdrückt die Rückfrage; dann `?q=simulate&id=<Person>&location=churchdb`

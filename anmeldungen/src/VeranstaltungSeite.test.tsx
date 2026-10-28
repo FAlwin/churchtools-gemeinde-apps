@@ -190,6 +190,7 @@ beforeEach(() => {
     absender: 'Alwin Friesen',
     absenderId: 1,
     eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT },
+    qr: false,
   });
   // A9-2a: Wer einrichten darf, gleicht ab – hier liefert der Abgleich, was ChurchTools hat.
   ab.ablaeufeAbgleichen.mockImplementation((id: number) => ab.ablaeufeLesen(id));
@@ -328,6 +329,8 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     const fertig = await screen.findByRole('region', { name: 'Mails' });
     await waitFor(() => expect(within(fertig).getByText('✓ Mitteilung mit Platz')).toBeTruthy());
     expect(within(fertig).getByText('Alwin Friesen')).toBeTruthy();
+    // A9-2b: der Check-in-Code steht in der Karte – aus, solange er in ChurchTools aus ist.
+    expect(within(fertig).getByText('Check-in-Code').nextSibling?.textContent).toBe('aus');
     cleanup();
     ab.ablaeufeLesen.mockResolvedValue({
       platz: false,
@@ -336,6 +339,7 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
       absender: null,
       absenderId: null,
       eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT },
+      qr: false,
     });
     stelle(true, 1);
     zeigen();

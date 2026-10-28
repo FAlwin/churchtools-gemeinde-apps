@@ -74,6 +74,14 @@
   background: var(--surface2);
   max-width: 100%;
 }
+
+// In der Feldliste des Punkt-Fensters (E6-O O3): ohne Rahmen – die Zeile ist schon der Rahmen.
+.liedFlach {
+  margin-top: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
 .liedNote {
   flex: none;
   width: 22px;

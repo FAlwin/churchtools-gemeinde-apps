@@ -56,7 +56,8 @@ import { mailHinweis } from './anzeige';
 /**
  * **Anmeldung von Hand** (A7-4a, Entwurf `a7-4-von-hand-v1`) – erst in ChurchTools suchen, sonst neu anlegen; dann die
  * Fragen des Formulars, Platz und Betrag. Die Felder sind dieselben wie im Formular (`FeldEingabe`), in den Farben der
- * Erweiterung. Danach öffnet sich die neue Anmeldung mit „Mail schreiben“ und „Rückgängig“.
+ * Erweiterung. Danach öffnet sich die neue Anmeldung mit „Rückgängig“ – und „Mail schreiben“, solange keine Abläufe
+ * eingerichtet sind (`mailAnbieten`).
  */
 
 /** Die Farben der Erweiterung für die Felder des Formulars – `FeldEingabe` liest diese Variablen (hell und dunkel). */

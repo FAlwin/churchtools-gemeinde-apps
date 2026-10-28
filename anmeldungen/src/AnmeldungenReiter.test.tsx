@@ -363,6 +363,10 @@ describe('Nachrücken und Absagen (A7-3)', () => {
         '„Rückgängig“ trägt Lena wieder ein – ChurchTools schickt dabei die Bestätigung noch einmal.',
       ),
     ).toBeTruthy();
+    // Eine Absage hat keinen Ablauf – „Mail schreiben“ bleibt (A9-2b).
+    expect(
+      within(screen.getByRole('status')).getByRole('button', { name: 'Mail schreiben' }),
+    ).toBeTruthy();
     // Nach dem Rückgängigmachen ist der Satz erledigt und verschwindet (echte Prüfung 24.10.2026).
     fireEvent.click(within(screen.getByRole('status')).getByRole('button', { name: 'Rückgängig' }));
     await waitFor(() =>
@@ -380,6 +384,19 @@ describe('Nachrücken und Absagen (A7-3)', () => {
       screen.getByText(/ChurchTools schickt Lena die Bestätigung mit Betrag und Bankdaten\./),
     ).toBeTruthy();
     expect(screen.queryByText(/war erfolgreich/)).toBeNull();
+  });
+
+  it('Nachrücken mit Bestätigungsmails (A9-2b): danach kein „Mail schreiben“ – die Bestätigung kommt von selbst', async () => {
+    const z = zeigen(fertig(), 10, false, true, true);
+    oeffnen();
+    fireEvent.click(
+      within(karte('Lena Beispiel, 7')).getByRole('button', { name: 'Nachrücken lassen' }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Nachrücken lassen' }));
+    await waitFor(() => expect(z.onGespeichert).toHaveBeenCalled());
+    const zeile = screen.getByRole('status');
+    expect(zeile.textContent).toMatch(/^Lena Beispiel ist nachgerückt\./);
+    expect(within(zeile).queryByRole('button', { name: 'Mail schreiben' })).toBeNull();
   });
 
   it('während des Absagens: X und „Abbrechen“ gesperrt (E6-O F4)', () => {
@@ -612,6 +629,25 @@ describe('Zurückholen (A7-4c)', () => {
     expect(plan.person).toEqual({ art: 'da', personId: 11, geburtstagNachtragen: null });
     expect([plan.felder[x.ctFelder.foto], plan.felder[plan.nrFeld!]]).toEqual(['114', 'AAAAAA']);
     expect(plan.felder[x.ctFelder.aufschluesselung]).toMatch(/^Zurückgeholt am /);
+  });
+
+  it.each([
+    [false, 'ohne Abläufe: danach „Mail schreiben“'],
+    [true, 'mit Bestätigungsmails (A9-2b): danach kein „Mail schreiben“'],
+  ])('Zurückholen %s – %s', async (mitBestaetigung) => {
+    const z = zeigen(mitAbsage(), 10, false, true, mitBestaetigung);
+    fireEvent.click(screen.getByRole('button', { name: /Abgesagt/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Lena Beispiel.*Zurückholen/ }));
+    await waitFor(() =>
+      expect(screen.getByText('Neue Zahlung für Lena').nextSibling?.textContent).toBe('6,00 €'),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Zurückholen' }));
+    await waitFor(() => expect(z.onGespeichert).toHaveBeenCalled());
+    const zeile = await screen.findByRole('status');
+    expect(zeile.textContent).toMatch(/Lena Beispiel ist zurück/);
+    expect(!!within(zeile).queryByRole('button', { name: 'Mail schreiben' })).toBe(
+      !mitBestaetigung,
+    );
   });
 
   it('eigene Zahlung einer Zurückgeholten: Titel „– zurückgeholt“, nicht „Anmeldung (…)“', () => {

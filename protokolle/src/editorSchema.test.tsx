@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BlockNoteEditor, type PartialBlock } from '@blocknote/core';
 import { ableiten, fremdeTypen, textAus, type Block } from '@shared/protokolle/dokument';
@@ -8,6 +8,7 @@ import { STANDARD_VORLAGEN, startDokument } from '@shared/protokolle/vorlagen';
 import { aufgabenIdsSetzen, EDITOR_TYPEN, schema } from './editorSchema';
 import { festenPunktEinfuegen } from './festenPunktEinfuegen';
 import { ProtokollAnsicht } from './ProtokollAnsicht';
+import { aushaengen, einhaengen } from './editorTest.testutil';
 
 /**
  * **Tests gegen den Erzeuger** (Bauplan S1/S4-1): Was der Editor aus einem Protokoll macht, muss die Ableitung,
@@ -22,23 +23,6 @@ type Teil = PartialBlock<
 
 const editorMit = (dok: readonly Block[]) =>
   BlockNoteEditor.create({ schema, initialContent: dok as Teil[] });
-
-/**
- * **Eingehängte Editoren nach jedem Test wieder aushängen.** ProseMirror stellt beim Aktualisieren einen Zeitgeber
- * (20 ms, `DOMObserver.stop`); feuert er nach dem Abbau von jsdom an einem noch eingehängten Editor, fasst er
- * `document` an – der Lauf scheitert mit „document is not defined“, obwohl alle Tests grün sind (CI 26.10.2026). Ein
- * ausgehängter Editor ist zerstört, sein später Zeitgeber kehrt sofort um.
- */
-const eingehaengt: ReturnType<typeof editorMit>[] = [];
-const einhaengen = (e: ReturnType<typeof editorMit>) => {
-  e.mount(document.createElement('div'));
-  eingehaengt.push(e);
-  return e;
-};
-const aushaengen = () => {
-  for (const e of eingehaengt.splice(0)) e.unmount();
-};
-afterEach(aushaengen);
 
 const PROTOKOLL: Block[] = [
   { id: 'p1', type: 'heading', props: { level: 1 }, content: 'Andacht' },
@@ -78,6 +62,19 @@ describe('Editor-Schema gegen Ableitung, Speicher und Ansicht', () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  // Das Aushängen nach jedem Test besorgt der Helfer selbst (`afterEach` in `editorTest.testutil.ts`) – die beiden
+  // Tests hier gehören zusammen: der erste hängt ein, der zweite sieht nach, ob das Aushängen von allein kam.
+  let ansichtVomVorigenTest: { isDestroyed: boolean } | undefined;
+  it('ein eingehängter Editor lebt während des Tests …', () => {
+    const e = einhaengen(editorMit([{ id: 'p', type: 'paragraph', content: 'Text' }]));
+    ansichtVomVorigenTest = e.prosemirrorView;
+    expect(ansichtVomVorigenTest.isDestroyed).toBe(false);
+  });
+
+  it('… und ist im nächsten von selbst ausgehängt, ohne eigenes afterEach', () => {
+    expect(ansichtVomVorigenTest?.isDestroyed).toBe(true);
   });
 
   it('eigene Blöcke behalten ihre Daten – die Ableitung findet alles wieder', () => {

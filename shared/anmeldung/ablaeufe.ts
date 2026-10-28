@@ -41,6 +41,12 @@ export interface AblaufMail {
   html: string;
 }
 
+/**
+ * Bezeichnung des Check-in-Codes in `/placeholders/group/{id}` (A9-2b, gemessen 26.10.2026): `{{{groupMember.checkInCodeQr}}}`
+ * wird zum QR-Bild, solange die Person einen Code hat – den legt ChurchTools beim Einschalten von `qrCodeCheckin` an.
+ */
+export const QR_CODE = 'Check-in-Code (QR-Code)';
+
 /** Höchstlänge des Betreffs einer Routine-Mail (Schnittstelle: 200). */
 export const BETREFF_MAX = 200;
 
@@ -114,7 +120,8 @@ function wert(text: string): string {
 /**
  * **Die Mails einer Veranstaltung** – Bestätigung (Platz) und Warteliste, als HTML mit den Platzhaltern von ChurchTools.
  * `ctPlatzhalter`: Bezeichnung → Platzhalter aus `/placeholders/group/{id}`. Fehlt dort ein Feld, steht es in
- * `unbekannt` – dann darf nichts geschrieben werden (die Mail zeigte sonst „[Betrag]“).
+ * `unbekannt` – dann darf nichts geschrieben werden (die Mail zeigte sonst „[Betrag]“). `qr` (A9-2b): Check-in-Code in
+ * der Bestätigung – maßgeblich ist `qrCodeCheckin` der Gruppe.
  */
 export function ablaufMails(
   e: OeffentlicheEinstellungen,
@@ -124,6 +131,7 @@ export function ablaufMails(
     platz: OHNE_EIGENEN_TEXT,
     warte: OHNE_EIGENEN_TEXT,
   },
+  qr = false,
 ): { platz: AblaufMail; warte: AblaufMail; unbekannt: string[] } {
   const unbekannt = new Set<string>();
   /** Lesbaren Text mit `[…]` umwandeln; `§name§` wird danach durch `werte[name]` ersetzt. */
@@ -191,6 +199,13 @@ export function ablaufMails(
             : '<p>Wie ihr bezahlt, sagen wir euch noch.</p>'),
       )
     : '';
+  // Ohne Code (z. B. vor dem Einschalten angemeldet) fällt der Absatz weg – gemessen 28.10.2026, `{{#if}}` greift.
+  const code = qr
+    ? wenn(
+        QR_CODE,
+        html(`<p>Check-in-Code für [Vorname] – bitte beim Ankommen zeigen:<br>[${QR_CODE}]</p>`),
+      )
+    : '';
 
   const platz: AblaufMail = {
     betreff: betreff('platz'),
@@ -203,6 +218,7 @@ export function ablaufMails(
         nr +
         '</p>',
       zahlen,
+      code,
       absatz(eigen.platz),
       link('absagen'),
       gruss(eigen.platz),

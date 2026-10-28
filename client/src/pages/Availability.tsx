@@ -614,6 +614,28 @@ export function Availability({ online, onToast, heute = heuteIso() }: Availabili
   return (
     <SeitenGeruest
       titel="Abwesenheiten"
+      // „Termine | Einträge“ steht an der Stelle der Überschrift – „Abwesenheiten“ sagt schon der Reiter (28.10.2026).
+      stattTitel={
+        <Segment
+          ariaLabel="Ansicht"
+          value={seite}
+          onChange={setSeite}
+          options={[
+            { value: 'termine', label: 'Termine' },
+            {
+              value: 'eintraege',
+              label: (
+                <>
+                  Einträge
+                  {anstehend.length > 0 && (
+                    <span className={styles.zaehler}>{anstehend.length}</span>
+                  )}
+                </>
+              ),
+            },
+          ]}
+        />
+      }
       onNeuLaden={neuLaden}
       ueberlagerung={ueberlagerung}
       aktionen={
@@ -636,28 +658,7 @@ export function Availability({ online, onToast, heute = heuteIso() }: Availabili
       ) : fehler ? (
         <CenterMessage icon="warnung" text="Konnte nicht geladen werden." onRetry={neuLaden} />
       ) : (
-        <div className={styles.wrap}>
-          <Segment
-            ariaLabel="Ansicht"
-            value={seite}
-            onChange={setSeite}
-            options={[
-              { value: 'termine', label: 'Termine' },
-              {
-                value: 'eintraege',
-                label: (
-                  <>
-                    Einträge
-                    {anstehend.length > 0 && (
-                      <span className={styles.zaehler}>{anstehend.length}</span>
-                    )}
-                  </>
-                ),
-              },
-            ]}
-          />
-          {seite === 'termine' ? termineSeite : eintraegeSeite}
-        </div>
+        <div className={styles.wrap}>{seite === 'termine' ? termineSeite : eintraegeSeite}</div>
       )}
     </SeitenGeruest>
   );

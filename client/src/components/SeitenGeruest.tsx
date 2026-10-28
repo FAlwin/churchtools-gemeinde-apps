@@ -4,8 +4,17 @@ import { SeitenKopf } from './SeitenKopf';
 import { VollbildKnopf } from './VollbildKnopf';
 
 interface SeitenGeruestProps {
-  /** Die große Überschrift am Anfang des Inhalts. */
+  /** Die große Überschrift am Anfang des Inhalts – mit `stattTitel` nur für Screenreader. */
   titel: string;
+  /**
+   * Was an der Stelle der großen Überschrift steht: der Haupt-Wähler der Seite (Kommende/Vergangene, die Suche …).
+   *
+   * Für die Seiten hinter einem Reiter (Termine, Lieder, Abwesenheiten, Mehr): Dort wiederholte die Überschrift nur den markierten
+   * Reiter (Alwin, 28.10.2026: „die Überschriften sind doppelt gemoppelt“). Die ChurchTools-App macht es bei
+   * „Kalender“ und „Beiträge“ ebenso – oben steht der Wähler, keine Überschrift. Die Knöpfe (Vollbild) stehen rechts
+   * daneben in derselben Zeile.
+   */
+  stattTitel?: ReactNode;
   /** Zweite Zeile darunter, z. B. Wochentag und Uhrzeit eines Ablaufs. */
   unterzeile?: string;
   /** Zurück links in der Knopfreihe. Ohne sie (und ohne `aktionen`) gibt es keine Knopfreihe. */
@@ -48,6 +57,7 @@ interface SeitenGeruestProps {
  */
 export function SeitenGeruest({
   titel,
+  stattTitel,
   unterzeile,
   zurueck,
   zurueckLabel,
@@ -63,6 +73,7 @@ export function SeitenGeruest({
       <Scroll onRefresh={onNeuLaden}>
         <SeitenKopf
           titel={titel}
+          stattTitel={stattTitel}
           unterzeile={unterzeile}
           zurueck={zurueck}
           zurueckLabel={zurueckLabel}

@@ -2,8 +2,10 @@
 // Runder Plus-Knopf wie in der ChurchTools-App – unten rechts über der Tab-Bar (Screen ist der Bezug).
 .plus {
   position: absolute;
-  right: 16px;
-  bottom: calc(env(safe-area-inset-bottom) + 16px);
+  // Weiter innen und höher als bis zum 28.10.2026 (16px/16px): Dort lag es in der Geräte-Rundung und auf dem
+  // Home-Strich. Der Abstand unten kommt aus `--plus-unten` – Listen halten mit `--plus-platz` Platz dafür frei.
+  right: 24px;
+  bottom: var(--plus-unten);
   width: 54px;
   height: 54px;
   border: none;

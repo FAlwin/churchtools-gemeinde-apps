@@ -3,8 +3,9 @@
 // Abwesenheiten (#177) – Aufbau nach Entwurfsrunde 8 (19.09.2026). Die Klassen ab „Formular im
 // Fenster" nutzen auch `components/AbsenceSheet.tsx` und `components/ZeitraumFrage.tsx`.
 
+// Unten Platz für das schwebende Plus (`--plus-platz`) – sonst läge es am Listenende auf dem letzten Termin.
 .wrap {
-  padding: 10px 16px 24px;
+  padding: 10px 16px var(--plus-platz);
   display: flex;
   flex-direction: column;
   gap: 12px;

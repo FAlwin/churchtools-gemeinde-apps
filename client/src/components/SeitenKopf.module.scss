@@ -30,6 +30,36 @@
   justify-content: flex-end;
   gap: 8px;
 }
+// Leer, wenn die Seite keine Knöpfe hat und kein Vollbild-Knopf erscheint (die eigene App): Dann kein Abstand – sonst
+// endete ein Wähler statt der Überschrift 8px vor dem rechten Rand (gesehen 28.10.2026).
+.knoepfe:empty {
+  display: none;
+}
+
+// Mit einem hohen Inhalt statt der Überschrift (Gemeinde-Karte unter „Mehr“) stehen die Knöpfe oben rechts, nicht
+// auf halber Höhe.
+.zeileOben {
+  align-items: flex-start;
+}
+
+// Der Wähler an der Stelle der Überschrift (`stattTitel`) füllt die Zeile; die Knöpfe stehen rechts daneben.
+.stattTitel {
+  flex: 1;
+  min-width: 0;
+}
+
+// Die Überschrift nur für Screenreader – sichtbar steht dort der Wähler.
+.nurVorlesen {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
 
 .titelBlock {
   min-width: 0;

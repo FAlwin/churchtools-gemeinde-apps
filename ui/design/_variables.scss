@@ -147,6 +147,13 @@ html[data-theme='dark'] {
   // Dasselbe für die Fußleiste des Liedblatts (Pfeile, „Nächstes Lied“): ~62px auf dem iPhone (Safe-Area 34px + 28px),
   // 42px auf Geräten ohne Strich.
   --blatt-fuss-polster: max(42px, calc(env(safe-area-inset-bottom) + 28px));
+  // Das schwebende Plus (`SchwebePlus`): Abstand zur Unterkante. Mindestens 40px – in der ChurchTools-App vom
+  // Home-Bildschirm meldet iOS keine Safe-Area, das Plus stand dort 16px über dem Rand in der Rundung, auf Höhe des
+  // Home-Strichs (Alwin, 28.10.2026: „zu weit in der Ecke unten“).
+  --plus-unten: max(40px, calc(env(safe-area-inset-bottom) + 16px));
+  // Was eine Liste unter dem letzten Eintrag frei hält, damit das Plus nicht auf dessen Stift liegt: Abstand + 54px
+  // Knopf + 8px Luft. Eine Quelle für alle Listen unter einem Plus.
+  --plus-platz: calc(var(--plus-unten) + 62px);
 }
 
 /**
@@ -161,6 +168,11 @@ html[data-theme='dark'] {
   // Fußleiste des Liedblatts: fehlte hier bis Scheibe B1 – 36 px Blatt verschenkt (Messung B0, 28.10.2026). Jedes
   // `…-polster` oben braucht hier sein Gegenstück; `polster.test.ts` hält das fest.
   --blatt-fuss-polster: calc(env(safe-area-inset-bottom, 0px) + 6px);
+  // Der Abstand unter das Unschärfe-Band (`@media (display-mode: standalone)` unten) gilt nur für UNSERE App. Die
+  // ChurchTools-App vom Home-Bildschirm läuft auch „standalone“, hat aber oben eine feste Leiste und kein Band – dort
+  // standen die Köpfe 36px unter der Leiste im Leeren (Alwin, 28.10.2026: „die Icons oben sind zu tief“).
+  // `standalone.test.ts` hält fest, dass jede Standalone-Regel hier ihr Gegenstück hat.
+  --inhalt-pad-top: 12px;
 }
 
 /**

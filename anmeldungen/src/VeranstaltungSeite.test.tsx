@@ -1185,6 +1185,20 @@ describe('Löschen (A9-3a)', () => {
     });
   });
 
+  it('Rückfrage bei einer einzigen Anmeldung: „die eine Anmeldung“, nicht „alle 1 Anmeldungen“', async () => {
+    stand({ loeschDatum: '2099-04-15' });
+    stelle(true, 1, termin('2020-01-15'));
+    m.anmeldungenZahl.mockResolvedValue(1);
+    zeigen();
+    const k = await karte();
+    await waitFor(() => expect(within(k).getByRole('button', { name: 'Bearbeiten' })).toBeTruthy());
+    fireEvent.click(within(k).getByRole('button', { name: 'Bearbeiten' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    expect(screen.getByText(/sofort die eine Anmeldung/)).toBeTruthy();
+    expect(screen.queryByText(/alle 1 Anmeldungen/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Jetzt eine Anmeldung löschen' })).toBeTruthy();
+  });
+
   it('Datum in der Zukunft: ohne Rückfrage gespeichert und in die Abläufe geschrieben, mit Rückgängig', async () => {
     stand({ loeschDatum: '2099-04-15' });
     stelle(true, 1, termin('2099-01-15'));

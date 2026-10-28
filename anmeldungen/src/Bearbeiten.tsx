@@ -846,8 +846,16 @@ export function LoeschfristFenster({
         <p>
           Mit {zahl} {zahl === 1 ? 'Monat' : 'Monaten'} nach dem Ende liegt das Löschdatum (
           {datumText(datum!)}) <b>nicht in der Zukunft</b>. Beim Speichern entfernt ChurchTools{' '}
-          <b>sofort {anzahl ? `alle ${anzahl} Anmeldungen` : 'alle Anmeldungen'}</b> mit allen
-          Antworten, und die Anmeldung wird geschlossen. Das lässt sich nicht rückgängig machen.
+          <b>
+            sofort{' '}
+            {anzahl === 1
+              ? 'die eine Anmeldung'
+              : anzahl
+                ? `alle ${anzahl} Anmeldungen`
+                : 'alle Anmeldungen'}
+          </b>{' '}
+          mit allen Antworten, und die Anmeldung wird geschlossen. Das lässt sich nicht rückgängig
+          machen.
         </p>
         <Fehler text={fehler} />
       </Sheet>

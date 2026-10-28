@@ -610,6 +610,77 @@ describe('O4: Präsentation', () => {
     expect(screen.queryByRole('dialog', { name: 'Präsentation' })).toBeNull();
   });
 
+  describe('O7b-5: Ansichten', () => {
+    const ansicht = (d: HTMLElement, n: string) =>
+      fireEvent.click(
+        within(within(d).getByRole('group', { name: 'Ansicht' })).getByRole('button', { name: n }),
+      );
+    const diagramm = (d: HTMLElement) => within(d).getByRole('group', { name: 'Organigramm' });
+
+    it('Kacheln vorgegeben; als Diagramm dieselbe Übersicht – nur die Bereiche öffnen ihre Seite, dort ist alles offen', async () => {
+      const d = await oeffnen();
+      const kacheln = within(within(d).getByRole('group', { name: 'Ansicht' })).getByRole(
+        'button',
+        {
+          name: 'Kacheln',
+        },
+      );
+      expect(kacheln.getAttribute('aria-pressed')).toBe('true');
+      ansicht(d, 'Von oben');
+      expect(wo(d)).toBe('Übersicht');
+      expect(within(d).getByRole('heading', { name: 'Unsere Bereiche' })).toBeTruthy();
+      const kaesten = within(diagramm(d))
+        .getAllByRole('button')
+        .map((b) => b.getAttribute('aria-label'))
+        .filter((n) => !/(auf|zu)klappen$/.test(n!));
+      expect(kaesten).toEqual(['Gottesdienst', 'Café', 'Infos']);
+      fireEvent.click(within(diagramm(d)).getByRole('button', { name: 'Gottesdienst' }));
+      expect(wo(d)).toBe('1 von 3 · Gottesdienst');
+      // Auf der Seite des Bereichs ist sein ganzer Baum offen – bis zur Untergruppe der Untergruppe.
+      expect(diagramm(d).textContent).toContain('Stream');
+      // Dort öffnet kein Kästchen etwas.
+      expect(within(diagramm(d)).queryByRole('button', { name: 'Technik' })).toBeNull();
+    });
+
+    it('Weiter/Zurück blättert auch im Diagramm; „Kacheln“ zeigt dieselbe Seite mit den Personen', async () => {
+      const d = await oeffnen();
+      ansicht(d, 'Mindmap');
+      fireEvent.click(within(d).getByRole('button', { name: 'Weiter ›' }));
+      fireEvent.click(within(d).getByRole('button', { name: 'Weiter ›' }));
+      expect(wo(d)).toBe('2 von 3 · Café');
+      expect(within(d).getByRole('heading', { level: 1, name: 'Café' })).toBeTruthy();
+      fireEvent.click(within(d).getByRole('button', { name: '‹ Zurück' }));
+      ansicht(d, 'Kacheln');
+      expect(wo(d)).toBe('1 von 3 · Gottesdienst');
+      expect(within(d).getByRole('region', { name: 'Technik' })).toBeTruthy();
+    });
+
+    it('die gewählte Ansicht merkt sich das Gerät', async () => {
+      const d = await oeffnen();
+      ansicht(d, 'Von links');
+      fireEvent.click(within(d).getByRole('button', { name: 'Schließen' }));
+      fireEvent.click(screen.getByRole('button', { name: /Präsentieren/ }));
+      const d2 = await screen.findByRole('dialog', { name: 'Präsentation' });
+      expect(
+        within(within(d2).getByRole('group', { name: 'Ansicht' }))
+          .getByRole('button', { name: 'Von links' })
+          .getAttribute('aria-pressed'),
+      ).toBe('true');
+      expect(diagramm(d2)).toBeTruthy();
+    });
+
+    it('Leertaste auf einem +/− klappt nur – sie blättert nicht weiter', async () => {
+      const d = await oeffnen();
+      ansicht(d, 'Von oben');
+      const schalter = within(diagramm(d)).getByRole('button', { name: 'Gottesdienst zuklappen' });
+      fireEvent.keyDown(schalter, { key: ' ' });
+      expect(wo(d)).toBe('Übersicht');
+      expect(
+        within(diagramm(d)).getByRole('button', { name: 'Gottesdienst aufklappen' }),
+      ).toBeTruthy();
+    });
+  });
+
   it('blendet dieselben Gruppentypen aus wie der Baum', async () => {
     render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: /^Verteiler/ }));

@@ -28,17 +28,15 @@ import {
   schriftPt,
   type PapierWahl,
 } from './blatt';
-import type { BaumAnsicht } from './auswahl';
+import { ANSICHT_NAMEN, type BaumAnsicht } from './auswahl';
 import fenster from './GruppenFenster.module.scss';
 import styles from './PdfFenster.module.scss';
 
 type PdfArt = AnordnungsArt | 'liste';
-const ARTEN: { wert: PdfArt; name: string }[] = [
-  { wert: 'oben', name: 'Von oben' },
-  { wert: 'links', name: 'Von links' },
-  { wert: 'mindmap', name: 'Mindmap' },
-  { wert: 'liste', name: 'Liste' },
-];
+const ARTEN = (['oben', 'links', 'mindmap', 'liste'] as const).map((a: PdfArt) => ({
+  wert: a,
+  name: ANSICHT_NAMEN[a],
+}));
 
 interface Props {
   /** Der Baum wie im Reiter (Typ-Filter, große Bereiche zuerst). */

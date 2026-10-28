@@ -77,3 +77,25 @@ describe('zoomen und verschieben', () => {
     expect(verschieben({ s: 2, x: 1, y: 1 }, 5, -3)).toEqual({ s: 2, x: 6, y: -2 });
   });
 });
+
+describe('Streifen der Knöpfe unten (O7b-5, Alwin 28.10.2026)', () => {
+  const r = { x: 0, y: 0, breite: 400, hoehe: 1104 };
+  const MIT = { ...F, unten: 50 };
+  const unterkante = (b: { s: number; y: number }) => b.y + (r.y + r.hoehe) * b.s;
+
+  it('„Ganz zeigen“ lässt den Streifen frei – ohne ihn lag das Unterste unter den Knöpfen', () => {
+    expect(unterkante(ganz(r, F))).toBeGreaterThan(600 - 50);
+    const b = ganz(r, MIT);
+    expect(unterkante(b)).toBeLessThanOrEqual(600 - 50 - 24 + 1e-9);
+    expect(b.y + r.y * b.s).toBeGreaterThanOrEqual(24 - 1e-9);
+  });
+
+  it('auch der Anfang: mittig in der Höhe ÜBER dem Streifen', () => {
+    const gross = {
+      rahmen: { x: -2000, y: -2000, breite: 4000, hoehe: 4000 },
+      anker: { x: 0, y: 0, fx: 0.5, fy: 0.5 },
+    };
+    expect(anfang(gross, MIT).y).toBeCloseTo(0.5 * 550);
+    expect(anfang(gross, F).y).toBeCloseTo(0.5 * 600);
+  });
+});

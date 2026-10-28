@@ -9,6 +9,12 @@
   overflow: hidden;
 }
 
+// In der Präsentation füllt das Diagramm die Bühne (O7b-5).
+.fuellt {
+  height: 100%;
+  min-height: 0;
+}
+
 .flaeche {
   display: block;
   width: 100%;

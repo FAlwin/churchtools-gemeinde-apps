@@ -12,19 +12,13 @@ import { gruppenLeitung, teilbaumPersonen, type Mitglied } from '@shared/organig
 import { offenVonGruppe, type Einsaetze } from '@shared/organigramm/einsaetze';
 import type { MitgliederDaten, MitgliederStand } from './ladeMitglieder';
 import type { Start } from './start';
-import type { BaumAnsicht } from './auswahl';
+import { ANSICHT_NAMEN, BAUM_ANSICHTEN, type BaumAnsicht } from './auswahl';
 import { Liste } from './Liste';
 import { Diagramm } from './Diagramm';
 import styles from './Organigramm.module.scss';
 
 const anzahl = (n: number, eins: string, mehr: string) => `${n} ${n === 1 ? eins : mehr}`;
-const ANSICHTEN: { value: BaumAnsicht; label: string }[] = [
-  { value: 'karten', label: 'Karten' },
-  { value: 'liste', label: 'Liste' },
-  { value: 'oben', label: 'Von oben' },
-  { value: 'links', label: 'Von links' },
-  { value: 'mindmap', label: 'Mindmap' },
-];
+const ANSICHTEN = BAUM_ANSICHTEN.map((a) => ({ value: a, label: ANSICHT_NAMEN[a] }));
 
 interface Props {
   start: Start;

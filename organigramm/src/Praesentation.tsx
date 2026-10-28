@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { GruppenKachel } from '@ui/bedienung/GruppenKachel';
 import { PersonBild } from '@ui/bedienung/PersonBild';
@@ -6,10 +6,19 @@ import { Icon } from '@ui/icons/icons';
 import { Segment } from '@ui/bedienung/Segment';
 import { BEREICH_ATTRIBUT } from '@ui/erweiterung/cssBereich';
 import { gruppenFarbe } from '@shared/organigramm/farbe';
+import { alleAuf, anfangsOffen, sichtbarerBaum } from '@shared/organigramm/ansichten';
 import { istLeitung, type Mitglied } from '@shared/organigramm/mitglieder';
 import type { PBereich, PSpalte, Praesentation as Daten } from '@shared/organigramm/praesentation';
 import type { MitgliederDaten } from './ladeMitglieder';
 import type { Start } from './start';
+import { Diagramm } from './Diagramm';
+import {
+  ANSICHT_NAMEN,
+  lesePraesAnsicht,
+  merkePraesAnsicht,
+  PRAES_ANSICHTEN,
+  type PraesAnsicht,
+} from './auswahl';
 import styles from './Praesentation.module.scss';
 
 const anzahl = (n: number, eins: string, mehr: string) => `${n} ${n === 1 ? eins : mehr}`;
@@ -41,9 +50,17 @@ interface Props {
  * Bedienung: Weiter/Zurück, Pfeiltasten, Bild auf/ab, Leertaste · Pos1 = Übersicht · Esc = zurück zur Übersicht,
  * dort schließen · F = Vollbild. Für Gruppen-Admins mit einem Plan oben „Neue Gliederung | Heute“ (O7-4, wie im Entwurf
  * vom 19.10.2026); der Wechsel führt zurück zur Übersicht.
+ *
+ * **Ansichten** (O7b-5, Alwin 28.10.2026: „Seiten bleiben“): Kacheln · Von oben · Von links · Mindmap. Die Seiten bleiben
+ * dieselben – Übersicht, dann Bereich für Bereich –, der Umschalter ändert nur, wie eine Seite aussieht: als Kacheln
+ * bzw. Personen in Spalten (O4) oder als Diagramm (die ganze Gemeinde, dann der Bereich). Im Diagramm der Übersicht
+ * öffnet ein Klick auf einen Bereich seine Seite; auf der Seite eines Bereichs ist sein Baum anfangs ganz offen.
  */
 export function Praesentation({ start, daten, mitglieder, stand, onSchliessen }: Props) {
   const [seite, setSeite] = useState(-1); // -1 = Übersicht
+  const [ansicht, setAnsicht] = useState<PraesAnsicht>(lesePraesAnsicht);
+  const baum = useMemo(() => daten.bereiche.map((b) => b.knoten), [daten]);
+  const [offen, setOffen] = useState<ReadonlySet<string>>(() => anfangsOffen(baum));
   const wurzel = useRef<HTMLDivElement>(null);
   const buehne = useRef<HTMLDivElement>(null);
   const kannVollbild = document.fullscreenEnabled === true;
@@ -52,8 +69,13 @@ export function Praesentation({ start, daten, mitglieder, stand, onSchliessen }:
   const bereich = seite >= 0 ? daten.bereiche[seite] : undefined;
 
   const gehe = useCallback(
-    (ziel: number) => setSeite(Math.max(-1, Math.min(zahl - 1, ziel))),
-    [zahl],
+    (ziel: number) => {
+      const z = Math.max(-1, Math.min(zahl - 1, ziel));
+      setSeite(z);
+      // Auf der Seite eines Bereichs ist sein ganzer Baum offen – zuklappen geht am +/−.
+      if (z >= 0) setOffen((o) => alleAuf(baum, String(baum[z].gruppe.id), o));
+    },
+    [zahl, baum],
   );
   const vollbildUmschalten = useCallback(() => {
     if (!kannVollbild) return;
@@ -81,7 +103,8 @@ export function Praesentation({ start, daten, mitglieder, stand, onSchliessen }:
 
   useEffect(() => {
     const taste = (ev: KeyboardEvent) => {
-      if (ev.altKey || ev.ctrlKey || ev.metaKey) return;
+      // Schon erledigt (Enter/Leertaste auf einem Kästchen oder +/− im Diagramm) – nicht zusätzlich blättern.
+      if (ev.defaultPrevented || ev.altKey || ev.ctrlKey || ev.metaKey) return;
       const k = ev.key;
       if (k === 'ArrowRight' || k === 'PageDown' || k === ' ') gehe(seite + 1);
       else if (k === 'ArrowLeft' || k === 'PageUp') gehe(seite - 1);
@@ -135,18 +158,22 @@ export function Praesentation({ start, daten, mitglieder, stand, onSchliessen }:
     </ul>
   );
 
-  const uebersicht = (
-    <>
-      <div className={styles.titel}>
-        <div>
-          <h1>Unsere Bereiche</h1>
-          <div className={styles.meta}>
-            {stand && (stand.wert === 'neu' ? 'Neue Gliederung · ' : 'Heute · ')}
-            {anzahl(zahl, 'Bereich', 'Bereiche')} · {anzahl(daten.gruppen, 'Gruppe', 'Gruppen')} ·{' '}
-            {anzahl(daten.personen, 'Person', 'Personen')}
-          </div>
+  const uebersichtTitel = (
+    <div className={styles.titel}>
+      <div>
+        <h1>Unsere Bereiche</h1>
+        <div className={styles.meta}>
+          {stand && (stand.wert === 'neu' ? 'Neue Gliederung · ' : 'Heute · ')}
+          {anzahl(zahl, 'Bereich', 'Bereiche')} · {anzahl(daten.gruppen, 'Gruppe', 'Gruppen')} ·{' '}
+          {anzahl(daten.personen, 'Person', 'Personen')}
         </div>
       </div>
+    </div>
+  );
+
+  const uebersicht = (
+    <>
+      {uebersichtTitel}
       <div className={styles.kacheln}>
         {daten.bereiche.map((b, i) => (
           <button
@@ -196,26 +223,30 @@ export function Praesentation({ start, daten, mitglieder, stand, onSchliessen }:
     </>
   );
 
+  const bereichTitel = (b: PBereich) => (
+    <div className={styles.titel}>
+      <GruppenKachel name={b.knoten.gruppe.name} farbe={farbe(b)} groesse={56} />
+      <div>
+        <h1>{b.knoten.gruppe.name}</h1>
+        <div className={styles.meta}>
+          {b.knoten.kinder.length
+            ? anzahl(b.knoten.kinder.length, 'Gruppe', 'Gruppen') + ' · '
+            : ''}
+          {personenText(b.personen, b.vollstaendig)}
+        </div>
+      </div>
+      {b.knoten.kinder.length > 0 && b.sichtbar && (
+        <div className={styles.leitungRechts}>
+          <span className={styles.label}>Leitung</span>
+          {leitung(b)}
+        </div>
+      )}
+    </div>
+  );
+
   const bereichSeite = (b: PBereich) => (
     <>
-      <div className={styles.titel}>
-        <GruppenKachel name={b.knoten.gruppe.name} farbe={farbe(b)} groesse={56} />
-        <div>
-          <h1>{b.knoten.gruppe.name}</h1>
-          <div className={styles.meta}>
-            {b.knoten.kinder.length
-              ? anzahl(b.knoten.kinder.length, 'Gruppe', 'Gruppen') + ' · '
-              : ''}
-            {personenText(b.personen, b.vollstaendig)}
-          </div>
-        </div>
-        {b.knoten.kinder.length > 0 && b.sichtbar && (
-          <div className={styles.leitungRechts}>
-            <span className={styles.label}>Leitung</span>
-            {leitung(b)}
-          </div>
-        )}
-      </div>
+      {bereichTitel(b)}
       <div className={styles.spalten}>
         {b.spalten.map((s) => (
           <section
@@ -264,6 +295,40 @@ export function Praesentation({ start, daten, mitglieder, stand, onSchliessen }:
     </>
   );
 
+  // Dieselbe Seite als Diagramm: die ganze Gemeinde oder der Bereich als Spitze.
+  const sicht = useMemo(
+    () =>
+      sichtbarerBaum(
+        baum,
+        start.gemeinde ?? 'Gemeinde',
+        bereich ? String(bereich.knoten.gruppe.id) : null,
+        offen,
+      ),
+    [baum, start.gemeinde, bereich, offen],
+  );
+  const umklappen = (schluessel: string) =>
+    setOffen((o) => {
+      const neu = new Set(o);
+      if (!neu.delete(schluessel)) neu.add(schluessel);
+      return neu;
+    });
+  const bereichNr = (id: number) => baum.findIndex((k) => k.gruppe.id === id);
+  const diagrammSeite = (art: Exclude<PraesAnsicht, 'kacheln'>) => (
+    <div className={styles.diagrammSeite}>
+      {bereich ? bereichTitel(bereich) : uebersichtTitel}
+      <div className={styles.diagramm}>
+        <Diagramm
+          art={art}
+          sicht={sicht}
+          onUmklappen={umklappen}
+          onGruppe={(id) => gehe(bereichNr(id))}
+          klickbar={(id) => !bereich && bereichNr(id) >= 0}
+          fuellen
+        />
+      </div>
+    </div>
+  );
+
   return createPortal(
     <div
       ref={wurzel}
@@ -288,8 +353,22 @@ export function Praesentation({ start, daten, mitglieder, stand, onSchliessen }:
               stand.onWechsel(w);
             }}
             ariaLabel="Stand"
+            verbunden
           />
         )}
+        <Segment
+          value={ansicht}
+          options={PRAES_ANSICHTEN.map((a) => ({
+            value: a,
+            label: a === 'kacheln' ? 'Kacheln' : ANSICHT_NAMEN[a],
+          }))}
+          onChange={(a) => {
+            setAnsicht(a);
+            merkePraesAnsicht(a);
+          }}
+          ariaLabel="Ansicht"
+          verbunden
+        />
         {kannVollbild && (
           <button type="button" className={styles.knopf} onClick={vollbildUmschalten}>
             <Icon name={vollbild ? 'vollbild-aus' : 'vollbild'} size={16} />
@@ -301,7 +380,11 @@ export function Praesentation({ start, daten, mitglieder, stand, onSchliessen }:
         </button>
       </div>
       <div ref={buehne} className={styles.buehne}>
-        {bereich ? bereichSeite(bereich) : uebersicht}
+        {ansicht !== 'kacheln'
+          ? diagrammSeite(ansicht)
+          : bereich
+            ? bereichSeite(bereich)
+            : uebersicht}
       </div>
       <div className={styles.unten}>
         <button

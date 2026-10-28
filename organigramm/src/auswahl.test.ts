@@ -1,6 +1,15 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { leseAnsicht, leseAusgeblendet, merkeAnsicht, merkeAusgeblendet } from './auswahl';
+import {
+  ANSICHT_NAMEN,
+  BAUM_ANSICHTEN,
+  leseAnsicht,
+  leseAusgeblendet,
+  lesePraesAnsicht,
+  merkeAnsicht,
+  merkeAusgeblendet,
+  merkePraesAnsicht,
+} from './auswahl';
 
 beforeEach(() => localStorage.clear());
 afterEach(() => vi.restoreAllMocks());
@@ -50,5 +59,19 @@ describe('Typen merken (O2) – über dieselbe Mechanik', () => {
     expect(leseAusgeblendet()).toEqual(new Set([1]));
     localStorage.setItem('organigramm-ausgeblendete-typen', '{"a":1}');
     expect(leseAusgeblendet()).toEqual(new Set());
+  });
+});
+
+describe('Ansicht der Präsentation merken (O7b-5)', () => {
+  it('ohne Wahl die Kacheln (wie vor O7b-5); gemerkt → zurück; Unbekanntes → Kacheln', () => {
+    expect(lesePraesAnsicht()).toBe('kacheln');
+    merkePraesAnsicht('mindmap');
+    expect(lesePraesAnsicht()).toBe('mindmap');
+    localStorage.setItem('organigramm-praesentation-ansicht', '"liste"');
+    expect(lesePraesAnsicht()).toBe('kacheln');
+  });
+
+  it('jede Ansicht hat einen Namen – eine Stelle für Reiter, PDF und Präsentation', () => {
+    for (const a of BAUM_ANSICHTEN) expect(ANSICHT_NAMEN[a]).toBeTruthy();
   });
 });

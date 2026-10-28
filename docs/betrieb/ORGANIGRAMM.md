@@ -52,8 +52,9 @@ Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Gemessen an der Test-Insta
   gestapelt. **Von links** – derselbe Baum zur Seite, jede Ebene eine Spalte. **Mindmap** – die Gemeinde in der Mitte,
   die Bereiche nach rechts und links verteilt. In allen dreien steht im Kästchen nur der Name; ein Klick (oder Enter)
   öffnet die Gruppe, das runde **+/−** klappt auf und zu (zugeklappt steht dort die Zahl der Untergruppen).
-  **Ziehen** verschiebt, **Mausrad** oder **zwei Finger** zoomen, dazu **−**, **+** und **Ganz zeigen**. Passt alles
-  lesbar hinein, ist anfangs alles zu sehen; sonst beginnt das Bild lesbar groß an der Spitze. Mit der Tastatur
+  **Ziehen** verschiebt, **Mausrad** oder **zwei Finger** zoomen, dazu **−**, **+** und **Ganz zeigen** (lässt unten den
+  Streifen der Knöpfe frei, seit O7b-5). Passt alles lesbar hinein, ist anfangs alles zu sehen; sonst beginnt das Bild
+  lesbar groß an der Spitze. Mit der Tastatur
   (Tab) springt das Bild zum gewählten Kästchen.
 - **Liste** – die Gemeinde als Gliederung mit Linien, nur die Namen. Jede Gruppe mit Untergruppen klappt mit dem
   Pfeil auf und zu; anfangs sind die Gemeinde und die Bereiche offen, darunter steht „3 Untergruppen“. Gut am Handy.
@@ -62,7 +63,7 @@ Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Gemessen an der Test-Insta
   Gruppe mit Untergruppen steht **„Im Organigramm hier anfangen“**; die Gruppe steht dann zusätzlich in der Auswahl.
   Blendet der Typ-Filter die Spitze aus, gilt wieder die ganze Gemeinde.
 - Die gewählte Ansicht **merkt sich das Gerät** (wie den Typ-Filter). Ohne Wahl: am Handy die Liste, sonst **von
-  oben**. Als PDF gibt es die Ansichten seit O7b-4, in der Präsentation mit O7b-5.
+  oben**. Als PDF gibt es die Ansichten seit O7b-4, in der Präsentation seit O7b-5.
 - Eine Gruppe mit zwei Obergruppen steht wie in ChurchTools unter beiden und klappt an jeder Stelle für sich.
 
 ## Als PDF speichern und drucken (ab O7b-4)
@@ -101,6 +102,11 @@ ChurchTools:
   lassen sich aufklappen.
 - **Weiter/Zurück** unten, oder mit der Tastatur: Pfeile, Bild auf/ab, Leertaste · **Pos1** = Übersicht · **Esc** =
   zurück zur Übersicht, dort schließen · **F** = Vollbild (am Laptop; am iPad gibt es den Knopf nicht).
+- **Ansichten** (ab O7b-5): oben **Kacheln · Von oben · Von links · Mindmap**. Die Seiten bleiben dieselben –
+  Übersicht, dann Bereich für Bereich –, der Umschalter ändert nur, wie eine Seite aussieht: **Kacheln** wie oben
+  beschrieben, die Diagramme zeigen auf der Übersicht die ganze Gemeinde und auf einer Bereichs-Seite den Bereich als
+  Baum (anfangs ganz aufgeklappt, mit **+/−** zuklappbar, ziehen und zoomen wie im Reiter). Im Diagramm der Übersicht
+  öffnet ein Klick auf einen Bereich seine Seite. Die gewählte Ansicht merkt sich das Gerät.
 - Es gilt dieselbe Auswahl der Gruppentypen wie im Baum (z. B. Verteiler ausgeblendet).
 - Wer nicht alle Mitglieder sehen darf, sieht dort „Mitglieder nicht sichtbar“ – „gesucht“ steht nur, wo wirklich
   niemand eingetragen ist.

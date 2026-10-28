@@ -57,6 +57,18 @@
   }
 }
 
+// Etwas Neues anlegen – grün wie „+ Gruppe erstellen“ in ChurchTools (Scheibe S2).
+.neu {
+  border-color: var(--green);
+  background: var(--green);
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    background: var(--green);
+    opacity: 0.9;
+  }
+}
+
 // Hier gilt gerade etwas (abgeschlossen, Vollbild an).
 .aktiv {
   border-color: var(--blue);

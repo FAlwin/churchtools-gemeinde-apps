@@ -73,6 +73,13 @@ interface Bearbeiten extends Gemeinsam {
  */
 interface Neu extends Gemeinsam {
   modus: 'neu';
+  /** Womit das Fenster anfängt – gewählt in „Option wählen“ (Scheibe S2). Ohne: Programmpunkt. */
+  startArt?: PunktArt;
+  /**
+   * „Lied hinzufügen“ (S2): gleich die Liedwahl zeigen. Wer sie ohne Lied verlässt, hat nichts angelegt – dann geht
+   * das ganze Fenster zu, nicht das leere Programmpunkt-Formular auf.
+   */
+  startLied?: boolean;
   /** Legt den Punkt an (am Ende des Ablaufs). Wirft bei Fehler. */
   onAdd: (punkt: NeuerAgendaPunkt) => Promise<void>;
 }
@@ -112,8 +119,11 @@ export function PunktFenster(props: PunktFensterProps) {
   const isSong = !!item.song;
   // Neu: Programmpunkt oder Überschrift (Alwin, 05.10.2026: erst das Fenster, nicht die Liedsuche).
   // Ein Lied ist ein Programmpunkt mit verknüpftem Lied – wie beim Bearbeiten über „Lied verknüpfen".
-  const [art, setArt] = useState<PunktArt>('programmpunkt');
-  const [songMode, setSongMode] = useState(false);
+  const [art, setArt] = useState<PunktArt>(
+    props.modus === 'neu' ? (props.startArt ?? 'programmpunkt') : 'programmpunkt',
+  );
+  const liedZuerst = props.modus === 'neu' && !!props.startLied && !!liedWahl;
+  const [songMode, setSongMode] = useState(liedZuerst);
   const [title, setTitle] = useState(item.title);
   const [responsible, setResponsible] = useState(item.responsibleText);
   const [note, setNote] = useState(item.note);
@@ -214,7 +224,8 @@ export function PunktFenster(props: PunktFensterProps) {
   if (songMode && liedWahl) {
     return liedWahl({
       onGewaehlt: liedGewaehlt,
-      onAbbrechen: () => setSongMode(false),
+      // „Lied hinzufügen“ ohne gewähltes Lied: nichts angelegt, also ganz zu (S2).
+      onAbbrechen: () => (liedZuerst && linkState.kind !== 'link' ? onClose() : setSongMode(false)),
       onHintergrund: onOverlayClick,
       fehler: err,
       busy,

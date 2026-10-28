@@ -18,9 +18,9 @@ const BAUM = [
   g(47, 'Café'),
 ];
 const sicht = (offen = anfangsOffen(BAUM)) => sichtbarerBaum(BAUM, 'ECG', null, offen);
-// So misst das Diagramm (gemockte Textbreite + Rand, zwischen 72 und 220).
-const breite = (k: { name: string }) =>
-  Math.min(220, Math.max(72, Math.ceil(k.name.length * 8) + 28));
+// So misst das Diagramm (gemockte Textbreite + Rand, zwischen 72 und 220 – die Spitze bis 320).
+const breite = (k: { name: string; ebene: number }) =>
+  Math.min(k.ebene === 0 ? 320 : 220, Math.max(72, Math.ceil(k.name.length * 8) + 28));
 const FLAECHE = { breite: 800, hoehe: 600 };
 
 const blick = () =>
@@ -172,6 +172,17 @@ describe('Diagramm (O7b-3)', () => {
     const cafe = a.knoten.find((k) => k.knoten.name === 'Café')!;
     const mitte = (cafe.x + cafe.breite / 2) * Number(m[3]) + Number(m[1]);
     expect(mitte).toBeCloseTo(FLAECHE.breite / 2);
+  });
+
+  it('der lange Name der Gemeinde an der Spitze bleibt ganz – als Gruppe darunter würde er gekürzt (Test-Instanz 28.10.2026)', () => {
+    const name = 'Evangeliumschristen- Gemeinde e.V.';
+    const baum = [g(1, name)];
+    zeigen('oben', sichtbarerBaum(baum, name, null, anfangsOffen(baum)));
+    const texte = [
+      ...screen.getByRole('group', { name: 'Organigramm' }).querySelectorAll('text'),
+    ].map((t) => t.textContent);
+    expect(texte[0]).toBe(name);
+    expect(texte[1]).toMatch(/…$/);
   });
 
   it('lange Namen werden mit … gekürzt, der volle Name steht im Titel', () => {

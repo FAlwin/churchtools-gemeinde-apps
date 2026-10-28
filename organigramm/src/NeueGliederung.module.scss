@@ -176,7 +176,7 @@
 // „Alle offenen nacheinander ausführen“ – am Handy darf der Text umbrechen, statt über den Rand zu laufen.
 .alleKnopf {
   height: auto;
-  min-height: 38px;
+  min-height: var(--knopf-hoehe);
   padding-top: 8px;
   padding-bottom: 8px;
   white-space: normal;

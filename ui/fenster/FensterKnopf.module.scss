@@ -5,7 +5,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 38px;
+  height: var(--knopf-hoehe);
   padding: 0 16px;
   border-radius: var(--r-ctrl);
   border: 1px solid transparent;

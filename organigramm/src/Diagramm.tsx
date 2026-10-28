@@ -15,6 +15,9 @@ import {
   type AnordnungsArt,
   type SichtKnoten,
 } from '@shared/organigramm/ansichten';
+import { Icon } from '@ui/icons/icons';
+import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { ZeilenKnopf } from '@ui/bedienung/ZeilenKnopf';
 import { anfang, ganz, verschieben, zoomen, type Blick, type Flaeche } from './leinwand';
 import { textBreite } from './textBreite';
 import styles from './Diagramm.module.scss';
@@ -30,6 +33,8 @@ interface Props {
 const INNEN = 28;
 const SCHMALST = 72;
 const BREITEST = 220;
+/** Die Spitze darf breiter sein – dort steht oft der lange Name der Gemeinde (Test-Instanz 28.10.2026: gekürzt). */
+const BREITEST_SPITZE = 320;
 /** Erst ab so viel Bewegung ist es Ziehen statt Klicken. */
 const ZIEHEN_AB = 4;
 
@@ -67,7 +72,7 @@ export function Diagramm({ art, sicht, onUmklappen, onGruppe }: Props) {
   const anordnung = useMemo(() => {
     const breite = (k: SichtKnoten) =>
       Math.min(
-        BREITEST,
+        k.ebene === 0 ? BREITEST_SPITZE : BREITEST,
         Math.max(SCHMALST, Math.ceil(textBreite(k.name, fett(k), schrift.name)) + INNEN),
       );
     return anordnen(art, sicht, breite);
@@ -259,25 +264,17 @@ export function Diagramm({ art, sicht, onUmklappen, onGruppe }: Props) {
         </g>
       </svg>
       <div className={styles.zoom}>
-        <button
-          type="button"
-          className={styles.knopf}
-          aria-label="Verkleinern"
-          onClick={() => knopf('aus')}
-        >
-          −
-        </button>
-        <button
-          type="button"
-          className={styles.knopf}
-          aria-label="Vergrößern"
-          onClick={() => knopf('ein')}
-        >
-          +
-        </button>
-        <button type="button" className={styles.knopf} onClick={() => knopf('ganz')}>
-          Ganz zeigen
-        </button>
+        <ZeilenKnopf label="Verkleinern" onClick={() => knopf('aus')}>
+          <Icon name="minus" size={16} />
+        </ZeilenKnopf>
+        <ZeilenKnopf label="Vergrößern" onClick={() => knopf('ein')}>
+          <Icon name="plus" size={16} />
+        </ZeilenKnopf>
+        <KopfKnopf
+          label="Ganz zeigen"
+          symbol={<Icon name="zoom-reset" size={16} />}
+          onClick={() => knopf('ganz')}
+        />
       </div>
     </div>
   );

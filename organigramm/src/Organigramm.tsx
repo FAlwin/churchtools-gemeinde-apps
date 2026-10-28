@@ -6,6 +6,7 @@ import { gruppenFarbe } from '@shared/organigramm/farbe';
 import type { Knoten } from '@shared/organigramm/gruppen';
 import { knotenAmPfad, type SichtKnoten } from '@shared/organigramm/ansichten';
 import { Segment } from '@ui/bedienung/Segment';
+import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { rollenRang } from '@shared/organigramm/mitglieder';
 import { gruppenLeitung, teilbaumPersonen, type Mitglied } from '@shared/organigramm/personen';
 import { offenVonGruppe, type Einsaetze } from '@shared/organigramm/einsaetze';
@@ -177,24 +178,25 @@ export function Organigramm({
         <span className={styles.rechts}>
           {ansicht !== 'karten' && (
             <>
-              <button type="button" className={styles.knopf} onClick={onAlleAuf}>
-                Alle aufklappen
-              </button>
-              <button type="button" className={styles.knopf} onClick={onAlleZu}>
-                Alle zuklappen
-              </button>
+              <KopfKnopf
+                label="Alle aufklappen"
+                symbol={<Icon name="chev-down" size={16} />}
+                onClick={onAlleAuf}
+              />
+              <KopfKnopf
+                label="Alle zuklappen"
+                symbol={<Icon name="chev-right" size={16} />}
+                onClick={onAlleZu}
+              />
             </>
           )}
-          <button
-            type="button"
-            className={styles.praesentieren}
+          {/* Bis die Mitglieder geladen sind, gesperrt – ohne sie gibt es keine Präsentation. */}
+          <KopfKnopf
+            label="Präsentieren"
+            symbol={<Icon name="play" size={16} />}
             disabled={!mitglieder}
-            title={mitglieder ? undefined : 'Mitglieder werden geladen …'}
             onClick={onPraesentieren}
-          >
-            <Icon name="play" size={16} />
-            Präsentieren
-          </button>
+          />
         </span>
       </div>
       {typen.length > 1 && (

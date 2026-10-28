@@ -110,10 +110,3 @@
   display: flex;
   gap: 6px;
 }
-
-.knopf {
-  @include m.aktionKnopf;
-  padding: 6px 11px;
-  border-radius: var(--r-ctrl);
-  font-size: 14px;
-}

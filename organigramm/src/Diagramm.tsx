@@ -26,6 +26,10 @@ interface Props {
   sicht: SichtKnoten;
   onUmklappen: (schluessel: string) => void;
   onGruppe: (id: number) => void;
+  /** Welche Gruppen sich anklicken lassen – ohne Angabe alle (Reiter). Die Präsentation öffnet nur Bereiche (O7b-5). */
+  klickbar?: (id: number) => boolean;
+  /** Füllt die Höhe des Elternteils, statt selbst eine zu wählen (Präsentation). */
+  fuellen?: boolean;
 }
 
 /** Erst ab so viel Bewegung ist es Ziehen statt Klicken. */
@@ -38,8 +42,9 @@ const ZIEHEN_AB = 4;
  * Beim Wechsel von Ansicht oder Spitze fängt der Blick neu an (lesbar groß, `leinwand.ts`); Auf- und Zuklappen lässt
  * ihn, wo er ist.
  */
-export function Diagramm({ art, sicht, onUmklappen, onGruppe }: Props) {
+export function Diagramm({ art, sicht, onUmklappen, onGruppe, klickbar, fuellen }: Props) {
   const svg = useRef<SVGSVGElement>(null);
+  const knoepfe = useRef<HTMLDivElement>(null);
   const schrift = useSchrift(svg);
   const [blick, setBlick] = useState<Blick>({ s: 1, x: 0, y: 0 });
   const [zieht, setZieht] = useState(false);
@@ -49,7 +54,11 @@ export function Diagramm({ art, sicht, onUmklappen, onGruppe }: Props) {
 
   const flaeche = (): Flaeche => {
     const r = svg.current?.getBoundingClientRect();
-    return { breite: r?.width ?? 0, hoehe: r?.height ?? 0 };
+    const k = knoepfe.current?.getBoundingClientRect();
+    // Die Knöpfe liegen unten über dem Diagramm – gemessen, nicht geschätzt (ihre Höhe kommt aus `--knopf-hoehe`). Nur
+    // wenn die Leiste wirklich in der unteren Hälfte liegt; sonst (noch nicht gezeichnet) bleibt die Fläche ganz.
+    const unten = r && k && k.height && k.top > r.top + r.height / 2 ? r.bottom - k.top : 0;
+    return { breite: r?.width ?? 0, hoehe: r?.height ?? 0, unten };
   };
 
   // Neue Ansicht oder neue Spitze → der Blick fängt neu an; Auf- und Zuklappen lässt ihn stehen.
@@ -159,7 +168,7 @@ export function Diagramm({ art, sicht, onUmklappen, onGruppe }: Props) {
   };
 
   return (
-    <div className={styles.leinwand}>
+    <div className={fuellen ? `${styles.leinwand} ${styles.fuellt}` : styles.leinwand}>
       <svg
         ref={svg}
         className={`${styles.flaeche}${zieht ? ' ' + styles.zieht : ''}`}
@@ -174,16 +183,20 @@ export function Diagramm({ art, sicht, onUmklappen, onGruppe }: Props) {
           <DiagrammBild
             anordnung={anordnung}
             kuerzen={kuerzen}
-            knoten={({ knoten: k, x, y, breite: w }) => ({
-              role: 'button',
-              tabIndex: 0,
-              'aria-label': k.name,
-              onClick: () => {
-                if (!bewegt.current && k.id !== null) onGruppe(k.id);
-              },
-              onKeyDown: (e) => taste(e, () => k.id !== null && onGruppe(k.id)),
-              onFocus: () => sichtbarMachen(x, y, w),
-            })}
+            knoten={({ knoten: k, x, y, breite: w }) =>
+              k.id !== null && klickbar && !klickbar(k.id)
+                ? null
+                : {
+                    role: 'button',
+                    tabIndex: 0,
+                    'aria-label': k.name,
+                    onClick: () => {
+                      if (!bewegt.current && k.id !== null) onGruppe(k.id);
+                    },
+                    onKeyDown: (e) => taste(e, () => k.id !== null && onGruppe(k.id)),
+                    onFocus: () => sichtbarMachen(x, y, w),
+                  }
+            }
             schalter={({ knoten: k }) => ({
               role: 'button',
               tabIndex: 0,
@@ -197,7 +210,7 @@ export function Diagramm({ art, sicht, onUmklappen, onGruppe }: Props) {
           />
         </g>
       </svg>
-      <div className={styles.zoom}>
+      <div ref={knoepfe} className={styles.zoom}>
         <ZeilenKnopf label="Verkleinern" onClick={() => knopf('aus')}>
           <Icon name="minus" size={16} />
         </ZeilenKnopf>

@@ -1,10 +1,11 @@
 /**
  * **Was jede Person im Gerät gemerkt bekommt** (localStorage): welche Gruppentypen ausgeblendet sind (O2) und welche
- * Ansicht des Baums sie zuletzt gewählt hat (O7b). Ohne Speicher (privates Fenster, gesperrt) gilt die Vorgabe; Lesen
+ * Ansicht des Baums und der Präsentation sie zuletzt gewählt hat (O7b). Ohne Speicher (privates Fenster, gesperrt) gilt die Vorgabe; Lesen
  * und Schreiben scheitern nie nach außen.
  */
 const TYPEN = 'organigramm-ausgeblendete-typen';
 const ANSICHT = 'organigramm-ansicht';
+const PRAES_ANSICHT = 'organigramm-praesentation-ansicht';
 
 function lesen(schluessel: string): unknown {
   try {
@@ -43,4 +44,30 @@ export function leseAnsicht(): BaumAnsicht | null {
 
 export function merkeAnsicht(ansicht: BaumAnsicht): void {
   merken(ANSICHT, ansicht);
+}
+
+/** Wie die Ansichten heißen – EINE Stelle für Reiter, PDF und Präsentation (vorher je eine eigene Liste). */
+export const ANSICHT_NAMEN: Record<BaumAnsicht, string> = {
+  karten: 'Karten',
+  liste: 'Liste',
+  oben: 'Von oben',
+  links: 'Von links',
+  mindmap: 'Mindmap',
+};
+
+/**
+ * Die Ansichten der Präsentation (O7b-5): „Kacheln“ sind die Seiten aus O4 (Übersicht als Kacheln, Bereich mit den
+ * Personen in Spalten), dazu dieselben Seiten als Diagramm.
+ */
+export const PRAES_ANSICHTEN = ['kacheln', 'oben', 'links', 'mindmap'] as const;
+export type PraesAnsicht = (typeof PRAES_ANSICHTEN)[number];
+
+/** Die zuletzt gewählte Ansicht der Präsentation – ohne Wahl die Kacheln (wie vor O7b-5). */
+export function lesePraesAnsicht(): PraesAnsicht {
+  const roh = lesen(PRAES_ANSICHT);
+  return PRAES_ANSICHTEN.find((a) => a === roh) ?? 'kacheln';
+}
+
+export function merkePraesAnsicht(ansicht: PraesAnsicht): void {
+  merken(PRAES_ANSICHT, ansicht);
 }

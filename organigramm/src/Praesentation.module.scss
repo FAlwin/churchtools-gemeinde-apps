@@ -68,6 +68,19 @@
   padding: clamp(16px, 2.2vw, 32px);
 }
 
+// Eine Seite als Diagramm (O7b-5): Titel oben, darunter füllt das Diagramm die Bühne.
+.diagrammSeite {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.diagramm {
+  flex: 1;
+  min-height: 0;
+}
+
 .unten {
   flex: none;
   display: flex;

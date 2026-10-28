@@ -67,7 +67,8 @@ Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Gemessen an der Test-Insta
 
 ## Präsentation (ab O4)
 
-Über dem Baum steht **„Präsentieren“** – für alle, die die Erweiterung sehen. Die Präsentation legt sich über
+Im Reiter Organigramm steht oben rechts neben „Hallo …“ **„Präsentieren“** (am Handy nur das Symbol) – für alle, die
+die Erweiterung sehen. Die Präsentation legt sich über
 ChurchTools:
 
 - **Übersicht:** die Bereiche als Kacheln mit Leitung, Gruppen und Zahl der Personen. Klick auf eine Kachel öffnet

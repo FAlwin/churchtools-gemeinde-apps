@@ -14,7 +14,8 @@
   Fensterknöpfe, der Umschalter (`Segment`, bisher 40 px, jetzt auch im Dienstplaner und in den Protokollen 38 px) und
   die Auswahlfelder. Die Beschriftung im Umschalter bricht nicht mehr um („Neue Gliederung“ stand in zwei Zeilen);
   passt er nicht in die Breite, rutschen ganze Knöpfe in eine zweite, gleich hohe Reihe.
-- **Organigramm:** In der Leiste standen fünf Höhen nebeneinander (30–40 px) – jetzt alles 38 px. „Präsentieren“
-  und „Alle auf-/zuklappen“ sind Kopfknöpfe (am Handy nur das Symbol), die Zoomknöpfe Zeilen- bzw. Kopfknöpfe. Auch
-  das Suchfeld bei Personen, die Knöpfe der Präsentation und die Felder im Gruppenfenster haben diese Höhe. Der
-  lange Name der Gemeinde an der Spitze eines Diagramms wird nicht mehr gekürzt.
+- **Organigramm:** In der Leiste standen fünf Höhen nebeneinander (30–40 px) – jetzt alles 38 px. **„Präsentieren“
+  steht im Seitenkopf rechts neben „Hallo …“** (wie „+ Gruppe erstellen“ in ChurchTools), damit die Leiste auch bei
+  1280 px in eine Zeile passt; „Alle auf-/zuklappen“ sind Kopfknöpfe, die Zoomknöpfe Zeilen- bzw. Kopfknöpfe (am
+  Handy nur Symbole). Auch das Suchfeld bei Personen, die Knöpfe der Präsentation und die Felder im Gruppenfenster
+  haben diese Höhe. Der lange Name der Gemeinde an der Spitze eines Diagramms wird nicht mehr gekürzt.

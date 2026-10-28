@@ -1217,3 +1217,14 @@ describe('O7b-3: Diagramme', () => {
     expect(within(diagramm()).queryByRole('button', { name: 'Café' })).toBeNull();
   });
 });
+
+describe('O7b-3: „Präsentieren“ im Seitenkopf', () => {
+  it('steht rechts neben „Hallo …“, nicht in der Leiste – und nur im Reiter Organigramm', async () => {
+    render(<App />);
+    const knopf = await screen.findByRole('button', { name: 'Präsentieren' });
+    expect(knopf.closest('header')).not.toBeNull();
+    expect(knopf.closest('header')!.textContent).toContain('Hallo Alwin');
+    fireEvent.click(screen.getByRole('button', { name: 'Personen' }));
+    expect(screen.queryByRole('button', { name: 'Präsentieren' })).toBeNull();
+  });
+});

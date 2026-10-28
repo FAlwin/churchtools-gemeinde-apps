@@ -52,8 +52,6 @@ interface Props {
   onTypUmschalten: (typ: number) => void;
   onNachladen: () => void;
   onGruppe: (id: number) => void;
-  /** Präsentation öffnen – erst, wenn die Mitglieder geladen sind. */
-  onPraesentieren: () => void;
 }
 
 /**
@@ -79,7 +77,6 @@ export function Organigramm({
   onTypUmschalten,
   onNachladen,
   onGruppe,
-  onPraesentieren,
 }: Props) {
   const rang = useMemo(() => rollenRang(start.rollen), [start.rollen]);
   const name = (id: number) => mitglieder?.personen.get(id)?.name ?? '';
@@ -175,29 +172,22 @@ export function Organigramm({
             )}
           </select>
         </label>
-        <span className={styles.rechts}>
-          {ansicht !== 'karten' && (
-            <>
-              <KopfKnopf
-                label="Alle aufklappen"
-                symbol={<Icon name="chev-down" size={16} />}
-                onClick={onAlleAuf}
-              />
-              <KopfKnopf
-                label="Alle zuklappen"
-                symbol={<Icon name="chev-right" size={16} />}
-                onClick={onAlleZu}
-              />
-            </>
-          )}
-          {/* Bis die Mitglieder geladen sind, gesperrt – ohne sie gibt es keine Präsentation. */}
-          <KopfKnopf
-            label="Präsentieren"
-            symbol={<Icon name="play" size={16} />}
-            disabled={!mitglieder}
-            onClick={onPraesentieren}
-          />
-        </span>
+        {/* „Präsentieren“ steht im Seitenkopf (App) – hier hätte die Leiste bei 1280 px nicht mehr in eine Zeile gepasst
+            (Alwin, 28.10.2026: Variante B). */}
+        {ansicht !== 'karten' && (
+          <span className={styles.rechts}>
+            <KopfKnopf
+              label="Alle aufklappen"
+              symbol={<Icon name="chev-down" size={16} />}
+              onClick={onAlleAuf}
+            />
+            <KopfKnopf
+              label="Alle zuklappen"
+              symbol={<Icon name="chev-right" size={16} />}
+              onClick={onAlleZu}
+            />
+          </span>
+        )}
       </div>
       {typen.length > 1 && (
         <div className={styles.filter} role="group" aria-label="Gruppentypen">

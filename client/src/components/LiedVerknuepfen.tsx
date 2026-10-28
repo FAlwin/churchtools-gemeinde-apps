@@ -19,6 +19,7 @@ export function LiedVerknuepfen({
   onAbbrechen,
   onHintergrund,
   onSchliessen,
+  einblenden,
   fehler,
   busy,
 }: LiedWahlArgs) {
@@ -53,7 +54,7 @@ export function LiedVerknuepfen({
       onClose={onSchliessen}
       onHintergrund={onHintergrund}
       mittel
-      einblenden={false}
+      einblenden={einblenden}
       cancelLabel={null}
       knoepfe={
         /* „Abbrechen", nicht „Zurück" (Entscheidung Alwin, 04.09.2026): Dieser Knopf verlässt die

@@ -16,6 +16,7 @@
  * die Liedtext-Treffer, wo ein Tipp direkt ins Lied führt und es nichts einzufügen gibt.
  */
 import type { ReactNode } from 'react';
+import { ZeilenKnopf } from '@ui/bedienung/ZeilenKnopf';
 import { Icon } from '@ui/icons/icons';
 import styles from './LiedZeile.module.scss';
 
@@ -58,15 +59,14 @@ export function LiedZeile({
         />
       </button>
       {aktion && (
-        <button
-          className={styles.plus}
+        <ZeilenKnopf
           disabled={disabled}
           onClick={aktion.onClick}
-          aria-label={`„${titel}" ohne Vorschau hinzufügen`}
+          label={`„${titel}" ohne Vorschau hinzufügen`}
           title={aktion.label}
         >
-          <Icon name="plus" size={19} stroke={2.4} />
-        </button>
+          <Icon name="plus" size={18} stroke={2.4} />
+        </ZeilenKnopf>
       )}
     </div>
   );

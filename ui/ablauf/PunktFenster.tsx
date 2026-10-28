@@ -35,6 +35,8 @@ export interface LiedWahlArgs {
   busy: boolean;
   /** Das X: das ganze Punkt-Fenster schließen – wie überall verwirft das, was nicht gespeichert ist. */
   onSchliessen: () => void;
+  /** Blendet die Liedwahl ein? Nur, wenn das Fenster mit ihr anfängt – sonst ersetzt sie das Punkt-Fenster. */
+  einblenden: boolean;
 }
 
 interface Gemeinsam {
@@ -83,6 +85,13 @@ interface Bearbeiten extends Gemeinsam {
  */
 interface Neu extends Gemeinsam {
   modus: 'neu';
+  /** Womit das Fenster anfängt – gewählt in „Option wählen“ (Scheibe S2). Ohne: Programmpunkt. */
+  startArt?: PunktArt;
+  /**
+   * „Lied hinzufügen“ (S2): gleich die Liedwahl zeigen. Wer sie ohne Lied verlässt, hat nichts angelegt – dann geht
+   * das ganze Fenster zu, nicht das leere Programmpunkt-Formular auf.
+   */
+  startLied?: boolean;
   /** Legt den Punkt an (am Ende des Ablaufs). Wirft bei Fehler. */
   onAdd: (punkt: NeuerAgendaPunkt) => Promise<void>;
 }
@@ -124,9 +133,13 @@ export function PunktFenster(props: PunktFensterProps) {
   const isSong = !!item.song;
   // Neu: Programmpunkt oder Überschrift (Alwin, 05.10.2026: erst das Fenster, nicht die Liedsuche).
   // Ein Lied ist ein Programmpunkt mit verknüpftem Lied – wie beim Bearbeiten über „Lied verknüpfen".
-  const [art, setArt] = useState<PunktArt>('programmpunkt');
-  const [songMode, setSongMode] = useState(false);
-  // Nach der Liedwahl kommt das Fenster wieder – ohne neu einzublenden (es war ja nie weg).
+  const [art, setArt] = useState<PunktArt>(
+    props.modus === 'neu' ? (props.startArt ?? 'programmpunkt') : 'programmpunkt',
+  );
+  const liedZuerst = props.modus === 'neu' && !!props.startLied && !!liedWahl;
+  const [songMode, setSongMode] = useState(liedZuerst);
+  // Wer schon in der Liedwahl war, sieht das Fenster danach ohne neues Einblenden (es war ja nie weg); umgekehrt blendet
+  // die Liedwahl nur ein, wenn das Fenster mit ihr anfängt („Lied hinzufügen“, S2).
   const [warInLiedwahl, setWarInLiedwahl] = useState(false);
   // „Zuständig“ bearbeiten (O3, Alwin: Zeile mit Pfeil): der Entwurf, solange der Schritt offen ist – erst
   // „Übernehmen“ setzt ihn ins Fenster (und auch das ist erst mit „Speichern“ geschrieben).
@@ -190,6 +203,7 @@ export function PunktFenster(props: PunktFensterProps) {
     // Neu ohne eigenen Titel: Der Punkt heißt wie das Lied (wie früher im „Lied hinzufügen").
     if (neu && !title.trim()) setTitle(name);
     setErr(null);
+    setWarInLiedwahl(true);
     setSongMode(false);
   }
 
@@ -230,7 +244,14 @@ export function PunktFenster(props: PunktFensterProps) {
   if (songMode && liedWahl) {
     return liedWahl({
       onGewaehlt: liedGewaehlt,
-      onAbbrechen: () => setSongMode(false),
+      // „Lied hinzufügen“ ohne gewähltes Lied: nichts angelegt, also ganz zu (S2).
+      onAbbrechen: () => {
+        if (liedZuerst && linkState.kind !== 'link') return onClose();
+        setWarInLiedwahl(true);
+        setSongMode(false);
+      },
+      // Fängt das Fenster mit der Liedwahl an, blendet sie ein; sonst ersetzt sie das Punkt-Fenster (E6-O O3).
+      einblenden: liedZuerst && !warInLiedwahl,
       onHintergrund: onOverlayClick,
       onSchliessen: onClose,
       fehler: err,

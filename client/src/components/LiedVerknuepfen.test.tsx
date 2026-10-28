@@ -389,3 +389,23 @@ describe('„Lied verknüpfen“ im ChurchTools-Aufbau (E6-O O3)', () => {
     expect(onClose).toHaveBeenCalled();
   });
 });
+
+describe('„Lied hinzufügen“ fängt mit der Liedwahl an (S2 + E6-O O3)', () => {
+  it('dann blendet die Liedwahl ein – das Punkt-Fenster danach nicht noch einmal', () => {
+    render(
+      <ItemActionSheet
+        modus="neu"
+        startLied
+        onClose={vi.fn()}
+        onAdd={vi.fn().mockResolvedValue(undefined)}
+        services={[]}
+      />,
+    );
+    const liedwahl = screen.getByRole('dialog', { name: 'Lied verknüpfen' });
+    expect(liedwahl.parentElement!.className).not.toMatch(/still/);
+    fireEvent.click(screen.getByRole('button', { name: 'Treffer wählen' }));
+    expect(screen.getByRole('dialog', { name: 'Neuer Eintrag' }).parentElement!.className).toMatch(
+      /still/,
+    );
+  });
+});

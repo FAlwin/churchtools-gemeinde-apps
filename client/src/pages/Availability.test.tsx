@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { DEFAULT_SITE_CONFIG, type Absence, type AbsenceEvent } from '@shared/types/index';
 
@@ -326,11 +326,46 @@ describe('Abwesenheiten – Seite „Einträge"', () => {
   });
 });
 
+describe('Abwesenheiten – das Plus je Bildschirm (Scheibe S2)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const plus = () => screen.getByRole<HTMLButtonElement>('button', { name: 'Zeitraum eintragen' });
+
+  it('am iPad/Rechner grün mit Text im Seitenkopf – wie „+ Gruppe erstellen“ in ChurchTools', () => {
+    zeige();
+    expect(plus().textContent).toContain('Zeitraum eintragen');
+    fireEvent.click(plus());
+    expect(screen.getByRole('dialog', { name: 'Zeitraum eintragen' })).not.toBeNull();
+  });
+
+  it('am Handy schwebt das runde Plus ohne Text und öffnet das Fenster direkt', () => {
+    vi.stubGlobal('matchMedia', () => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    zeige();
+    expect(plus().textContent).toBe('');
+    fireEvent.click(plus());
+    expect(screen.getByRole('dialog', { name: 'Zeitraum eintragen' })).not.toBeNull();
+  });
+
+  it('am Handy gibt es kein Plus, solange etwas vorgemerkt ist', () => {
+    vi.stubGlobal('matchMedia', () => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    zeige();
+    fireEvent.click(kasten(/So, 04\.10\./));
+    expect(screen.queryByRole('button', { name: 'Zeitraum eintragen' })).toBeNull();
+  });
+});
+
 describe('Abwesenheiten – Plus und offline', () => {
   it('das Plus öffnet „Zeitraum eintragen" mit dem nächsten Termin als Start', () => {
     zeige();
     fireEvent.click(screen.getByRole('button', { name: 'Zeitraum eintragen' }));
-    expect(screen.getByText('Zeitraum eintragen')).not.toBeNull();
+    expect(screen.getByRole('dialog', { name: 'Zeitraum eintragen' })).not.toBeNull();
     expect(screen.getByLabelText<HTMLInputElement>('Von').value).toBe('2026-10-04');
     fireEvent.click(screen.getByRole('button', { name: '1 Woche' }));
     fireEvent.click(screen.getByRole('button', { name: 'Eintragen (7 Tage)' }));

@@ -97,12 +97,15 @@ der Tab vorher geöffnet, landet man nach dem Neuladen auf „Termine", nicht au
 
 **Das brauchst du:** Wie TF-VERF-01.
 
-**Das muss passieren:** Das Plus öffnet **„Zeitraum eintragen"** mit Schnellwahl; nach dem Eintragen
+**Das muss passieren:** Das Plus öffnet **„Zeitraum eintragen"** direkt mit Schnellwahl – am Handy das runde Plus
+unten rechts, am iPad/Rechner der grüne Knopf **„+ Zeitraum eintragen“** oben rechts (wie „+ Gruppe erstellen“ in
+ChurchTools); solange Häkchen vorgemerkt sind, gibt es beides nicht. Nach dem Eintragen
 steht der Zeitraum unter **Einträge → Anstehend** mit den Terminen, die er trifft. Ein Tipp auf die
 Zeile öffnet „Abwesenheit ändern"; nach dem Speichern steht in ChurchTools **genau ein** Eintrag mit
 den neuen Werten – der alte ist weg, der Marker `[Musikteam]` geblieben.
 
-1. Unten rechts auf das **Plus** → Fenster „Zeitraum eintragen", Von = nächster Termin. **„1 Woche"**
+1. Am Handy unten rechts auf das **Plus**, am Rechner oben auf **„+ Zeitraum eintragen“** → Fenster „Zeitraum
+   eintragen", Von = nächster Termin. **„1 Woche"**
    antippen: Von/Bis springen auf sieben Tage, der Knopf heißt „Eintragen (7 Tage)". **Eintragen** →
    Meldung „Eingetragen …". Gegenprobe: **„Wochenende"** trifft Samstag+Sonntag.
 2. Oben auf **Einträge**: Unter **Anstehend (n)** steht der Zeitraum, Unterzeile „trifft So, …" mit den

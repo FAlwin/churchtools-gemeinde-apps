@@ -2,7 +2,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ablaufZeileAus, punktStand, type AblaufZeile } from '@shared/ct/ablaufZeile';
+import type { ReactNode } from 'react';
 import { useAblaufBearbeiten, verlangtNeuLaden, type AblaufAktionen } from './useAblaufBearbeiten';
+import type { LiedWahlArgs } from './PunktFenster';
 
 /**
  * Die Bearbeiten-Liste als Baustein (E6-2b-3). Die Wege der Musik-App prüfen `Setlist.*.test.tsx` und die E2E-Tests;
@@ -25,16 +27,22 @@ function Harness({
   gruppenVerborgen,
   neuAufsetzen,
   abgeschlossen = false,
+  plusImKopf,
+  liedWahl,
 }: {
   aktionen: AblaufAktionen;
   items?: AblaufZeile[];
   gruppenVerborgen?: boolean;
   neuAufsetzen?: () => void;
   abgeschlossen?: boolean;
+  plusImKopf?: boolean;
+  liedWahl?: (args: LiedWahlArgs) => ReactNode;
 }) {
   const b = useAblaufBearbeiten({
     gruppenVerborgen,
     neuAufsetzen,
+    plusImKopf,
+    liedWahl,
     aktiv: true,
     bereit: true,
     items,
@@ -46,6 +54,7 @@ function Harness({
   });
   return (
     <>
+      <div data-testid="kopf">{b.kopfKnopf}</div>
       <div data-testid="liste">{b.liste}</div>
       {b.ueberlagerung}
     </>
@@ -267,5 +276,124 @@ describe('Blättern im Punkt-Fenster (E6-O O3)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
     fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[2]);
     expect(screen.getByRole('dialog').parentElement!.className).not.toMatch(/still/);
+  });
+});
+
+describe('„Option wählen“ nach dem Plus (Scheibe S2)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const handy = () =>
+    vi.stubGlobal('matchMedia', () => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+  /** Die Liedwahl als Attrappe: zeigt sich, kann abbrechen oder „Treu“ wählen. */
+  const liedWahl = ({ onGewaehlt, onAbbrechen }: LiedWahlArgs) => (
+    <div>
+      <span>Liedsuche</span>
+      <button onClick={onAbbrechen}>Liedsuche abbrechen</button>
+      <button onClick={() => onGewaehlt(5, 'Treu')}>Treu wählen</button>
+    </div>
+  );
+  const optionen = () => screen.getAllByRole('button').map((k) => k.textContent);
+
+  it('das schwebende Plus öffnet das Blatt „Option wählen“ – ohne Liedwahl nur Programmpunkt und Überschrift', () => {
+    render(<Harness aktionen={aktionen()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Eintrag hinzufügen' }));
+    const blatt = screen.getByRole('dialog', { name: 'Option wählen' });
+    expect(blatt.textContent).toContain('Programmpunkt hinzufügen');
+    expect(blatt.textContent).toContain('Überschrift hinzufügen');
+    expect(blatt.textContent).not.toContain('Lied hinzufügen');
+    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    expect(screen.queryByRole('dialog', { name: 'Option wählen' })).toBeNull();
+  });
+
+  it('„Überschrift hinzufügen“ öffnet das Fenster schon als Überschrift', () => {
+    render(<Harness aktionen={aktionen()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Eintrag hinzufügen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Überschrift hinzufügen' }));
+    expect(screen.queryByRole('dialog', { name: 'Option wählen' })).toBeNull();
+    expect(screen.getByPlaceholderText('Titel der Überschrift')).toBeTruthy();
+  });
+
+  it('„Programmpunkt hinzufügen“ öffnet das Fenster als Programmpunkt', () => {
+    render(<Harness aktionen={aktionen()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Eintrag hinzufügen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Programmpunkt hinzufügen' }));
+    expect(screen.getByText('Neuer Eintrag')).toBeTruthy();
+    expect(screen.queryByPlaceholderText('Titel der Überschrift')).toBeNull();
+  });
+
+  it('„Lied hinzufügen“ zeigt gleich die Liedwahl; gewählt → das Fenster mit dem Lied als Titel', () => {
+    render(<Harness aktionen={aktionen()} liedWahl={liedWahl} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Eintrag hinzufügen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Lied hinzufügen' }));
+    expect(screen.getByText('Liedsuche')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Treu wählen' }));
+    expect(screen.getByText('Neuer Eintrag')).toBeTruthy();
+    expect(screen.getByDisplayValue('Treu')).toBeTruthy();
+  });
+
+  it('„Lied hinzufügen“ abgebrochen: nichts angelegt – alles zu, kein leeres Programmpunkt-Fenster', () => {
+    render(<Harness aktionen={aktionen()} liedWahl={liedWahl} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Eintrag hinzufügen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Lied hinzufügen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Liedsuche abbrechen' }));
+    expect(screen.queryByText('Liedsuche')).toBeNull();
+    expect(screen.queryByText('Neuer Eintrag')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Eintrag hinzufügen' })).toBeTruthy();
+  });
+
+  it('`plusImKopf` am iPad/Rechner: grüner Knopf im Kopf mit Menü – kein schwebendes Plus', () => {
+    render(<Harness aktionen={aktionen()} plusImKopf liedWahl={liedWahl} />);
+    const knopf = screen.getByRole('button', { name: 'Eintrag hinzufügen' });
+    expect(screen.getByTestId('kopf').contains(knopf)).toBe(true);
+    expect(knopf.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(knopf);
+    expect(knopf.getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getAllByRole('menuitem').map((m) => m.textContent)).toEqual([
+      'Programmpunkt hinzufügen',
+      'Lied hinzufügen',
+      'Überschrift hinzufügen',
+    ]);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Überschrift hinzufügen' }));
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(screen.getByPlaceholderText('Titel der Überschrift')).toBeTruthy();
+  });
+
+  it('Escape schließt Blatt und Menü', () => {
+    const { unmount } = render(<Harness aktionen={aktionen()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Eintrag hinzufügen' }));
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'Option wählen' })).toBeNull();
+    unmount();
+
+    render(<Harness aktionen={aktionen()} plusImKopf />);
+    fireEvent.click(screen.getByRole('button', { name: 'Eintrag hinzufügen' }));
+    expect(screen.getByRole('menu')).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('`plusImKopf` am Handy: nichts im Kopf, das Plus schwebt', () => {
+    handy();
+    render(<Harness aktionen={aktionen()} plusImKopf />);
+    expect(screen.getByTestId('kopf').textContent).toBe('');
+    fireEvent.click(screen.getByRole('button', { name: 'Eintrag hinzufügen' }));
+    expect(screen.getByRole('dialog', { name: 'Option wählen' })).toBeTruthy();
+  });
+
+  it('abgeschlossen: Plus und grüner Knopf zeigen den Sperr-Hinweis statt der Auswahl', async () => {
+    const { unmount } = render(<Harness aktionen={aktionen()} abgeschlossen />);
+    fireEvent.click(screen.getByRole('button', { name: 'Eintrag hinzufügen' }));
+    expect(screen.queryByRole('dialog', { name: 'Option wählen' })).toBeNull();
+    expect(await screen.findByText('gesperrt')).toBeTruthy();
+    unmount();
+
+    render(<Harness aktionen={aktionen()} abgeschlossen plusImKopf />);
+    fireEvent.click(screen.getByRole('button', { name: 'Eintrag hinzufügen' }));
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(await screen.findByText('gesperrt')).toBeTruthy();
+    expect(optionen()).not.toContain('Programmpunkt hinzufügen');
   });
 });

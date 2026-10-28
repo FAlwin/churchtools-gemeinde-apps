@@ -68,10 +68,14 @@ ChurchTools). Ausnahme: der ChordPro-**Editor** nutzt bewusst Monospace (`'JetBr
   Gerüst JEDES Bildschirms: Seitenkopf, Scrollen, Neuladen – seit 22.09.2026 der
   Normalweg, `Screen`/`Scroll`/`SeitenKopf` sind seine Bausteine; **`KopfKnopf`/`KopfZurueck`**
   (`ui/bedienung`, Scheibe S 26.10.2026) für Aktionen und Zurück im Kopf – eckig mit Rahmen und
-  Beschriftung wie in ChurchTools, am Handy nur Symbol; `RundKnopf` nur noch im Liedblatt bis B1), `TabBar`
+  Beschriftung wie in ChurchTools, am Handy nur Symbol; `neu` = grün zum Anlegen wie „+ Gruppe erstellen“,
+  S2; `RundKnopf` nur noch im Liedblatt bis B1), **`ZeilenKnopf`** (S2: eckige Knöpfe mit Rahmen in Listenzeilen –
+  Plus, Stift), **`AuswahlBlatt`/`HinzufuegenMenue`** (`ui/bedienung/OptionWaehlen`, S2: „Option wählen“ wie in der
+  ChurchTools-App – am Handy Blatt von unten, am iPad/Rechner Menü unter dem grünen Knopf), `TabBar`
   (Reiter der Musik-App in der gemeinsamen `ui/bedienung/ReiterLeiste` – am Handy unten, sonst `oben` als
   Textreiter; Grenze `HANDY_BREITE` für alle Apps),
-  `Sheet`, `ConfirmDialog`, **`SchwebePlus`** (das runde Plus unten rechts – Abwesenheiten und Ablauf),
+  `Sheet`, `ConfirmDialog`, **`SchwebePlus`** (das runde Plus unten rechts – Abwesenheiten und Ablauf; seit S2
+  in der Musik-App nur am Handy),
   `SongFields` (die Stammdaten-Felder eines Liedes – von „Neues Lied" und
   „Stammdaten ändern" gemeinsam genutzt, damit es die fünf Felder nur einmal gibt).
 - **Lied suchen – ein Feld, eine Zeile, ein Angebot** (#378): `LiedSucheKopf` (nur das Suchfeld, Lupe

@@ -1,6 +1,7 @@
 /**
  * **Die Bearbeiten-Liste des Ablaufs** (Bauplan E6-2b-3; vorher fest in `client/src/pages/Setlist.tsx`): Ziehen am
- * Griff, Punkt antippen → Punkt-Fenster, „Eintrag hinzufügen" (schwebendes Plus), Löschen mit Rückfrage,
+ * Griff, Punkt antippen → Punkt-Fenster, „Eintrag hinzufügen" (schwebendes Plus, das „Option wählen“ öffnet – am
+ * iPad/Rechner auf Wunsch grün im Seitenkopf, Scheibe S2), Löschen mit Rückfrage,
  * „Rückgängig" für Löschen und Verschieben, Hinweis bei abgeschlossenem Ablauf. Musik-App und Dienstplaner (E6-3)
  * nutzen dieselbe Liste; die Musik-App steckt im Punkt-Fenster ihre Liedwahl ein.
  *
@@ -13,7 +14,7 @@ import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import type { AgendaServiceOption } from '@shared/types/index';
 import type { GeloeschterPunkt, PunktAenderung } from '@shared/ct/schreibKern';
-import type { NeuerAgendaPunkt } from '@shared/ct/agendaItemChanges';
+import type { NeuerAgendaPunkt, PunktArt } from '@shared/ct/agendaItemChanges';
 import {
   beginnStelle,
   itemLabel,
@@ -27,6 +28,8 @@ import { Toast } from '../fenster/Toast';
 import { useToast } from '../fenster/useToast';
 import { Icon } from '../icons/icons';
 import { SchwebePlus } from '../bedienung/SchwebePlus';
+import { AuswahlBlatt, HinzufuegenMenue, type Option } from '../bedienung/OptionWaehlen';
+import { HANDY_BREITE, useMedienAbfrage } from '../bedienung/useMedienAbfrage';
 import { useRueckgaengig } from '../bedienung/useRueckgaengig';
 import { useZiehSensoren } from '../bedienung/useZiehSensoren';
 import { innerScrollOnly, resetViewportAfterDrag } from '../bedienung/dndAutoScroll';
@@ -97,6 +100,11 @@ export interface AblaufBearbeitenOptionen<T extends AblaufZeile> {
    * Ablauf abgeschlossen, steht der Knopf allein da und zeigt den Sperr-Hinweis wie das Plus.
    */
   neuAufsetzen?: () => void;
+  /**
+   * Am iPad/Rechner statt des schwebenden Plus ein grünes „+ Eintrag hinzufügen“ im Seitenkopf (`kopfKnopf`) – wie
+   * „+ Gruppe erstellen“ in ChurchTools (Scheibe S2, Alwin 26.10.2026). Am Handy bleibt das Plus.
+   */
+  plusImKopf?: boolean;
 }
 
 export function useAblaufBearbeiten<T extends AblaufZeile>(
@@ -104,6 +112,8 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
 ): {
   liste: ReactNode;
   ueberlagerung: ReactNode;
+  /** Das grüne „+ Eintrag hinzufügen“ für den Seitenkopf – nur mit `plusImKopf` auf breiten Bildschirmen, sonst `null`. */
+  kopfKnopf: ReactNode;
   /** Eine Fehlermeldung in der Zeile über der Liste zeigen (und `beiFehler` auslösen). */
   fehlerZeigen: (e: unknown, sonst: string) => void;
   fehlerLoeschen: () => void;
@@ -115,8 +125,11 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
   const [localItems, setLocalItems] = useState<T[]>(serverStand);
   const [err, setErr] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<T | null>(null);
-  // „Neuer Eintrag" – derselbe Dialog wie Bearbeiten (05.10.2026).
-  const [neuOffen, setNeuOffen] = useState(false);
+  // „Neuer Eintrag" – derselbe Dialog wie Bearbeiten (05.10.2026); womit er anfängt, sagt „Option wählen“ (S2).
+  const [neuStart, setNeuStart] = useState<{ art: PunktArt; lied: boolean } | null>(null);
+  const [auswahlOffen, setAuswahlOffen] = useState(false);
+  const handy = useMedienAbfrage(HANDY_BREITE);
+  const imKopf = !!o.plusImKopf && !handy;
   const [actionItem, setActionItem] = useState<T | null>(null);
   // Mit ‹ › geblättert (E6-O O3): Das Punkt-Fenster ersetzt sein voriges, ohne neu einzublenden.
   const [geblaettert, setGeblaettert] = useState(false);
@@ -236,6 +249,30 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
     });
   }
 
+  /** „Option wählen“ (S2) – wie in der ChurchTools-App; „Lied hinzufügen“ nur, wo es eine Liedwahl gibt. */
+  function neuOeffnen(art: PunktArt, lied = false): void {
+    setAuswahlOffen(false);
+    setNeuStart({ art, lied });
+  }
+  const optionen: Option[] = [
+    { label: 'Programmpunkt hinzufügen', onClick: () => neuOeffnen('programmpunkt') },
+    ...(o.liedWahl
+      ? [{ label: 'Lied hinzufügen', onClick: () => neuOeffnen('programmpunkt', true) }]
+      : []),
+    { label: 'Überschrift hinzufügen', onClick: () => neuOeffnen('ueberschrift') },
+  ];
+  const gesperrt = abgeschlossen ? () => zeigeSperrHinweis(o.sperrHinweis) : undefined;
+
+  const kopfKnopf =
+    imKopf && aktiv && o.bereit ? (
+      <HinzufuegenMenue
+        label="Eintrag hinzufügen"
+        dataTour="edit-add"
+        optionen={optionen}
+        gesperrt={gesperrt}
+      />
+    ) : null;
+
   // Balken „Beginn" in der Bearbeiten-Liste – dieselbe Regel wie in der Ansicht (#423).
   const beginnBeiBearbeiten = beginnStelle(localItems);
 
@@ -328,21 +365,26 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
       )}
 
       {/* Das Plus schwebt im Bearbeiten-Modus über dem Ablauf (Alwin, 05.10.2026) – vorher stand
-          „Eintrag hinzufügen" am Listenende. Auch bei einem leeren Ablauf, der sonst nicht zu füllen war. */}
-      {aktiv && o.bereit && !neuOffen && (
+          „Eintrag hinzufügen" am Listenende. Auch bei einem leeren Ablauf, der sonst nicht zu füllen war.
+          Ein Tipp öffnet „Option wählen“ wie in der ChurchTools-App (S2); mit `plusImKopf` am iPad/Rechner im Kopf. */}
+      {aktiv && o.bereit && !imKopf && !neuStart && !auswahlOffen && (
         <SchwebePlus
           label="Eintrag hinzufügen"
           dataTour="edit-add"
-          onClick={() => (abgeschlossen ? zeigeSperrHinweis(o.sperrHinweis) : setNeuOffen(true))}
+          onClick={() => (gesperrt ? gesperrt() : setAuswahlOffen(true))}
         />
       )}
 
-      {neuOffen && (
+      {auswahlOffen && <AuswahlBlatt optionen={optionen} onClose={() => setAuswahlOffen(false)} />}
+
+      {neuStart && (
         <PunktFenster
           modus="neu"
+          startArt={neuStart.art}
+          startLied={neuStart.lied}
           services={o.dienste}
           liedWahl={o.liedWahl}
-          onClose={() => setNeuOffen(false)}
+          onClose={() => setNeuStart(null)}
           onAdd={(punkt) => {
             setErr(null);
             return aktionen.add(punkt); // wirft bei Fehler → das Fenster zeigt die Meldung, bleibt offen
@@ -382,5 +424,5 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
     </>
   );
 
-  return { liste, ueberlagerung, fehlerZeigen, fehlerLoeschen: () => setErr(null) };
+  return { liste, ueberlagerung, kopfKnopf, fehlerZeigen, fehlerLoeschen: () => setErr(null) };
 }

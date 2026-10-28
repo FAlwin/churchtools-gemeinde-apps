@@ -1,7 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@ui/ct/fehler';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
-import { ladeAblauf, ladeAbwesenheiten, ladeLieder, ladeMusikApp } from './ladeBeiwerk';
+import {
+  autorVon,
+  ladeAblauf,
+  ladeAbwesenheiten,
+  ladeLiedDaten,
+  ladeLieder,
+  ladeMusikApp,
+} from './ladeBeiwerk';
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -49,6 +56,34 @@ describe('ladeLieder', () => {
     vi.restoreAllMocks();
     ct(() => json(500, {}));
     await expect(ladeLieder(7)).rejects.toBeInstanceOf(ApiError);
+  });
+});
+
+describe('ladeLiedDaten / autorVon (Lied-Ansicht, E6-O O4)', () => {
+  it('ein Abruf für alle Lieder; fehlen die Arrangements, steht eine leere Liste da', async () => {
+    const abruf = ct(() =>
+      json(200, {
+        data: [
+          { id: 41, name: 'Treu', author: '  Uwe Peters ', arrangements: [{ id: 410 }] },
+          { id: 42, name: 'Halleluja' },
+        ],
+      }),
+    );
+    const lieder = await ladeLiedDaten([41, 42, 41]);
+    expect(abruf).toHaveBeenCalledTimes(1);
+    expect(String(abruf.mock.calls[0][0])).toContain('/songs?ids[]=41&ids[]=42');
+    expect(lieder.get(41)?.arrangements).toHaveLength(1);
+    expect(lieder.get(42)?.arrangements).toEqual([]);
+    expect(autorVon(lieder.get(41))).toBe('Uwe Peters');
+    expect(autorVon(lieder.get(42))).toBeNull();
+    expect(autorVon(undefined)).toBeNull();
+  });
+
+  it('ohne Lieder kein Abruf; ein leerer Autor zählt nicht', async () => {
+    const abruf = ct(() => json(200, { data: [] }));
+    expect((await ladeLiedDaten([])).size).toBe(0);
+    expect(abruf).not.toHaveBeenCalled();
+    expect(autorVon({ author: '   ' } as never)).toBeNull();
   });
 });
 

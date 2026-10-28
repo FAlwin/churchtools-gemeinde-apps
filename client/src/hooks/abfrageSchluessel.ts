@@ -30,6 +30,8 @@ export const schluessel = {
   kalender: () => ['kalender'] as const,
   termineVergangen: (monateZurueck: number) =>
     [...schluessel.termine(), 'past', monateZurueck] as const,
+  /** Die Termine eines Tages – für einen Direktlink auf einen Termin außerhalb der geladenen Wochen (E6-O O4). */
+  termineAm: (tag: string | null) => [...schluessel.termine(), 'am', tag] as const,
 
   /** Alle Abläufe – zum Erneuern, wenn sich ein Lied ändert, das in vielen stehen kann. */
   agendaAlle: () => ['agenda'] as const,

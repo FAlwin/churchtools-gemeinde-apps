@@ -62,8 +62,11 @@ export function AblaufListe({
   zeilen: readonly AblaufZeile[];
   /** Uhrzeit des Veranstaltungsbeginns („10:00“) für den Balken nach dem Vorlauf (#423). */
   beginn?: string;
-  /** Lied-Zeilen antippbar machen (Musik-App: zu den Charts) – mit der Nummer des Lieds im Ablauf. */
-  onLied?: (liedIndex: number) => void;
+  /**
+   * Lied-Zeilen antippbar machen – mit der Nummer des Lieds im Ablauf (Musik-App: zu den Charts) und dem Punkt selbst
+   * (Dienstplaner: Lied-Ansicht, E6-O O4).
+   */
+  onLied?: (liedIndex: number, punkt: AblaufZeile) => void;
   /** Ein Schildchen am Punkt („neu“, „geändert“) – Musik-App. */
   schild?: (id: number) => string | null;
   /** Steht als Erstes in der Liste (Musik-App: der Hinweis „Ablauf geändert“) – mit denselben Abständen. */
@@ -106,7 +109,7 @@ export function AblaufListe({
           key={item.id}
           className={`${styles.flowRow} ${styles.flowRowBtn} ${styles.songRow}${vl}`}
           data-tour={idx === 0 ? 'setlist-song' : undefined}
-          onClick={() => onLied(idx)}
+          onClick={() => onLied(idx, item)}
         >
           {inhalt}
         </button>

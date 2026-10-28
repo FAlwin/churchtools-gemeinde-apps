@@ -21,7 +21,11 @@ export type AblaufZeile = Omit<AgendaItem, 'song' | 'changed' | 'neu' | 'removed
    */
   song: {
     title: string;
+    /** Das Lied in ChurchTools – für die Lied-Ansicht im Dienstplaner (E6-O O4), die es dort nachschlägt. */
+    songId?: number;
     arrangementId?: number;
+    /** Name des Arrangements, wie der Ablauf ihn nennt („Standard“) – Lied-Ansicht (E6-O O4). */
+    arrangement?: string;
     originalKey?: string | null;
     bpm?: number | null;
     author?: string | null;
@@ -96,9 +100,11 @@ export function ablaufZeileAus(item: CtAgendaItem, eventId: number, zeitzone: st
     song: item.song
       ? {
           title: item.song.title,
+          ...(typeof item.song.songId === 'number' ? { songId: item.song.songId } : {}),
           ...(typeof item.song.arrangementId === 'number'
             ? { arrangementId: item.song.arrangementId }
             : {}),
+          ...(item.song.arrangement ? { arrangement: item.song.arrangement } : {}),
           originalKey: item.song.key ?? null,
           bpm: item.song.bpm ?? null,
         }

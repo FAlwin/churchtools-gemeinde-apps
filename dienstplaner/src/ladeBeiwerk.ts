@@ -5,7 +5,7 @@
  */
 import { ctBasis, ctDaten } from '@ui/ct/verbindung';
 import { ApiError } from '@ui/ct/fehler';
-import type { CtAbsence, CtAgenda } from '@shared/ct/typen';
+import type { CtAbsence, CtAgenda, CtSong } from '@shared/ct/typen';
 
 /**
  * Die Liedtitel aus dem Ablauf eines Termins, in Ablauf-Reihenfolge. `null` = der Termin hat keinen
@@ -62,21 +62,30 @@ export async function ladeMusikApp(): Promise<string | null> {
 }
 
 /**
- * Die Autoren der Lieder eines Ablaufs (E6-O1, für die Lied-Karte) – **eine** Abfrage für alle: `GET /songs?ids[]=…`
- * (gemessen E6-O0: liefert genau die gewünschten, ~135 ms). Der Ablauf selbst nennt den Autor nicht. Beiwerk: Ohne
- * Lieder gar keine Abfrage; was nicht als Liste kommt, wirft – die Karte steht dann ohne Autor da.
+ * Die Lieder eines Ablaufs – **eine** Abfrage für alle: `GET /songs?ids[]=…` (gemessen E6-O0: liefert genau die
+ * gewünschten, ~135 ms). Der Ablauf selbst nennt weder Autor (Lied-Karte, E6-O1) noch Verlag, CCLI und Dateien
+ * (Lied-Ansicht, E6-O O4) – dieselbe Antwort trägt beides, deshalb keine zweite Abfrage. Beiwerk: Ohne Lieder gar keine
+ * Abfrage; was nicht als Liste kommt, wirft – die Karte steht dann ohne Autor da, die Lied-Ansicht mit dem, was der
+ * Ablauf weiß.
  */
-export async function ladeLiedAutoren(songIds: readonly number[]): Promise<Map<number, string>> {
+export async function ladeLiedDaten(songIds: readonly number[]): Promise<Map<number, CtSong>> {
   const ids = [...new Set(songIds)];
   if (ids.length === 0) return new Map();
   const q = ids.map((id) => `ids[]=${id}`).join('&');
   const liste = await ctDaten<unknown>(`/songs?${q}`);
   if (!Array.isArray(liste)) throw new ApiError(502, 'Lieder kamen nicht als Liste.');
-  const autoren = new Map<number, string>();
-  for (const s of liste as { id?: unknown; author?: unknown }[]) {
-    if (typeof s.id === 'number' && typeof s.author === 'string' && s.author.trim()) {
-      autoren.set(s.id, s.author.trim());
+  const lieder = new Map<number, CtSong>();
+  for (const s of liste as Partial<CtSong>[]) {
+    if (typeof s.id === 'number') {
+      lieder.set(s.id, {
+        ...(s as CtSong),
+        arrangements: Array.isArray(s.arrangements) ? s.arrangements : [],
+      });
     }
   }
-  return autoren;
+  return lieder;
 }
+
+/** Der Autor eines geladenen Lieds – leer zählt als keiner (für die Lied-Karte, E6-O1). */
+export const autorVon = (lied: CtSong | undefined): string | null =>
+  typeof lied?.author === 'string' && lied.author.trim() ? lied.author.trim() : null;

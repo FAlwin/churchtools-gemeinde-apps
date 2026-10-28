@@ -1,0 +1,97 @@
+// Lied-Ansicht (E6-O O4, Entwurf e6-optik Abschnitt 6) – nur Tokens aus ui/design (hell und dunkel).
+@use '@ui/design/mixins' as m;
+
+// Autor · Verlag · CCLI in einer grauen Zeile.
+.meta {
+  margin: 0 0 12px;
+  padding: 9px 12px;
+  border-radius: var(--r-ctrl);
+  background: var(--surface3);
+  color: var(--text2);
+  font-size: 13.5px;
+}
+
+// Arrangement | Tonart · Tempo – zwei Zellen mit feiner Linie dazwischen.
+.paar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 0 -20px;
+  border-top: 1px solid var(--hair);
+  border-bottom: 1px solid var(--hair);
+
+  > div {
+    padding: 10px 20px;
+
+    & + div {
+      border-left: 1px solid var(--hair);
+    }
+  }
+
+  small {
+    display: block;
+    color: var(--text2);
+    font-size: 12.5px;
+  }
+
+  b {
+    color: var(--text);
+    font-size: 15px;
+  }
+}
+
+.dateien {
+  padding-top: 10px;
+
+  > small {
+    color: var(--text2);
+    font-size: 12.5px;
+  }
+
+  ul {
+    margin: 4px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+}
+
+.datei {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  color: var(--text);
+  text-decoration: none;
+
+  &:hover .dateiText {
+    color: var(--blue-ink);
+  }
+}
+
+.dateiText {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+
+  small {
+    display: block;
+    color: var(--text2);
+    font-size: 12px;
+  }
+}
+
+.pfeil {
+  flex: none;
+  color: var(--text2);
+}
+
+.leise {
+  margin: 10px 0 0;
+  color: var(--text2);
+  font-size: 13px;
+}
+
+.hinweis {
+  margin: 12px 0 0;
+  color: var(--text2);
+  font-size: 13px;
+}

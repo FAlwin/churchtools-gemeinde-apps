@@ -48,6 +48,12 @@ interface Gemeinsam {
    * Steckplatz zeigt das Fenster das Lied nur an (Dienstplaner, Alwin 17.10.2026: „Lieder nur anzeigen").
    */
   liedWahl?: (args: LiedWahlArgs) => ReactNode;
+  /**
+   * Das Lied ansehen (Dienstplaner, E6-O O4): Die Zeile „Lied“ bekommt einen Pfeil und zeigt, was hier eingesteckt
+   * wird, an der Stelle des Fensters – „Zurück“ (`zurueck`) kehrt mit allen ungespeicherten Eingaben zurück, das X
+   * (`schliessen`) schließt ganz. Nur ohne `liedWahl` – wer Lieder wählt, hat dort seinen Weg.
+   */
+  liedAnsehen?: (zurueck: () => void, schliessen: () => void) => ReactNode;
 }
 
 /** Einen vorhandenen Punkt bearbeiten (der Normalfall – `modus` darf fehlen). */
@@ -125,7 +131,7 @@ const LEERER_PUNKT: AblaufZeile = {
  * getrennt (links unten) und hat eine eigene Rückfrage.
  */
 export function PunktFenster(props: PunktFensterProps) {
-  const { onClose, services, liedWahl } = props;
+  const { onClose, services, liedWahl, liedAnsehen } = props;
   const neu = props.modus === 'neu';
   const item = props.modus === 'neu' ? LEERER_PUNKT : props.item;
   const vorBeginnStart = props.modus === 'neu' ? false : props.vorBeginn;
@@ -138,6 +144,8 @@ export function PunktFenster(props: PunktFensterProps) {
   );
   const liedZuerst = props.modus === 'neu' && !!props.startLied && !!liedWahl;
   const [songMode, setSongMode] = useState(liedZuerst);
+  // Die Lied-Ansicht (Dienstplaner) an der Stelle des Fensters – der Zustand hier bleibt dabei erhalten.
+  const [liedAnsicht, setLiedAnsicht] = useState(false);
   // Wer schon in der Liedwahl war, sieht das Fenster danach ohne neues Einblenden (es war ja nie weg); umgekehrt blendet
   // die Liedwahl nur ein, wenn das Fenster mit ihr anfängt („Lied hinzufügen“, S2).
   const [warInLiedwahl, setWarInLiedwahl] = useState(false);
@@ -258,6 +266,8 @@ export function PunktFenster(props: PunktFensterProps) {
       busy,
     });
   }
+
+  if (liedAnsicht && liedAnsehen) return liedAnsehen(() => setLiedAnsicht(false), onClose);
 
   const ueberschrift = neu ? art === 'ueberschrift' : item.isHeader;
   const titel = neu
@@ -471,6 +481,21 @@ export function PunktFenster(props: PunktFensterProps) {
                           <Icon name="plus" size={15} /> Hinzufügen
                         </span>
                       )}
+                      <Icon name="chev-right" size={18} className={styles.pfeil} />
+                    </button>
+                  ) : effSong && liedAnsehen ? (
+                    // Dienstplaner (E6-O O4): das Lied ansehen – an der Stelle dieses Fensters, „Zurück“ führt her.
+                    <button
+                      type="button"
+                      className={styles.zeilenKnopf}
+                      disabled={busy}
+                      aria-label={`Lied: ${effSong.title} – ansehen`}
+                      onClick={() => {
+                        setWarInLiedwahl(true);
+                        setLiedAnsicht(true);
+                      }}
+                    >
+                      <LiedKarte song={effSong} flach />
                       <Icon name="chev-right" size={18} className={styles.pfeil} />
                     </button>
                   ) : (

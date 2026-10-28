@@ -214,7 +214,7 @@ churchtools-gemeinde-apps/
     │                        # thema.ts (hell/dunkel wie ChurchTools, docs/entwicklung/dunkelmodus.md)
     ├── icons/               # icons.tsx (Line-Icons)
     ├── fenster/             # Sheet (Modal), useOverlayKeyboardInset, appHeight
-    ├── bedienung/           # Segment, Schalter, KopfKnopf (Seitenkopf, `neu` = grün), OptionWaehlen (S2), ZeilenKnopf (eckig in Listen), SchwebePlus, KnopfReihe (nur Liedblatt bis B1), ReiterLeiste (unten/oben), useMedienAbfrage (HANDY_BREITE), DatumKachel
+    ├── bedienung/           # Segment, Schalter, KopfKnopf (Seitenkopf, `neu` = grün), OptionWaehlen (S2), ZeilenKnopf (eckig in Listen), SchwebePlus, ReiterLeiste (unten/oben), useMedienAbfrage (HANDY_BREITE), DatumKachel
     ├── teilen/              # shareFile, sharePdf
     ├── anmeldeformular/     # Anmeldeformular, wie Gäste es sehen (A5): Baukasten + Vorschau in der Erweiterung, öffentlich ab A6
     ├── ct/                  # Verbindung einer Erweiterung zu ChurchTools: verbindung.ts, fehler.ts (ApiError), basis.ts,
@@ -401,24 +401,30 @@ schneidet nicht ab (`overflow: visible`), damit ein Menü unter einem Kopfknopf 
 Listenzeilen (Plus, Stift, „+ Anlegen“) sind seit S2 eckig mit Rahmen (`ZeilenKnopf`, `m.aktionKnopf`) statt rund.
 Reiter am iPad/Rechner **oben** als Textreiter
 (`ReiterLeiste oben`), am Handy unten (`HANDY_BREITE`). Vom 02.10. bis 26.10. schwebten stattdessen runde Knöpfe
-(`KnopfReihe`) unter dem Band – die gibt es nur noch im Liedblatt, bis B1 (Bauplan `bauplan-blatt-ct-look.md`). **Am Gerät widerlegt (02.10.2026):** Eine deckende
+(`KnopfReihe`) unter dem Band – mit Scheibe B1 (28.10.2026) auch aus dem Liedblatt verschwunden und gelöscht. **Am Gerät widerlegt (02.10.2026):** Eine deckende
 Statusleiste (`status-bar-style=default`) beseitigt das Band NICHT – nicht noch einmal versuchen. Die
-Abstände kommen aus `--inhalt-pad-top` / `--knopfreihe-hoehe` / `--bar-pad-top`
+Abstände kommen aus `--inhalt-pad-top` / `--bar-pad-top`
 (`ui/design/_variables.scss`), die App zeichnet hinter der Statusleiste (`black-translucent`,
-`client/index.html`). **Auch der Liedblatt-Kopf (`ChartHeader`) liegt seit dem 02.10.2026 unter dem
-Band:** runder Zurück-Pfeil, Titel als Kapsel, **ein** Werkzeuge-Knopf (`WerkzeugMenu`: Aussehen,
-Tempo, Zoom, Notizen von …, Anmerken – Alwins Wahl „ein Knopf für alles"). Der Knopf zeigt den Modus:
-blau bei Puls/Klick, Haken beim Zeichnen, Personen beim Ansehen fremder Notizen – sonst gäbe es aus
-beiden Modi keinen sichtbaren Ausweg. Menü-Einträge setzen das Overlay-Feld genau EINMAL (kein
-Schließen hinterher). Fenster unter dem Kopf hängen an `--chart-kopf-unten`. **Querformat (#421,
-03.10.2026):** je Lied Titel-Kapsel + EINZELNE Werkzeug-Knöpfe mittig über seiner Hälfte (kein
-gemeinsamer Werkzeuge-Knopf); welche Werkzeuge es gibt, regelt EINE Funktion für Menü und Knöpfe
-(`utils/werkzeuge.ts`); Lied-Menü, Aussehen und Tempo öffnen unter ihrem Knopf (`--liedmenue-x`,
-`--werkzeug-links`); Werkzeug des anderen Lieds = erst wählen, nach dem Wechsel öffnen. iPad-Kopf
-schmal wie vor v2.26.0 (kein Band dort). **Hochformat nach Breite (05.10.2026):** Behält die Titel-Kapsel
-neben Zurück und den einzelnen Werkzeug-Knöpfen mindestens `KAPSEL_MIN` (220 px), stehen die Werkzeuge
-auch im Hochformat einzeln (iPad hochkant, breites Fenster); sonst der eine Knopf (iPhone, kleines
-Stage-Manager-Fenster). Gemessen laufend per `ResizeObserver` am Kopf, Regel `werkzeugeEinzeln`. Routing in `App.tsx` über `tab` + `view` (rechteabhängig).
+`client/index.html`). **Liedblatt-Kopf = Kopfkarte (`components/BlattKopf.tsx`, Scheibe B1+B2, 28.10.2026; Bauplan
+`bauplan-blatt-ct-look.md`, Messung `messung-b0-28.10.md`):** weiße Karte unter dem Band wie „Events › Ablaufpläne“.
+Drei Aufbauten nach gemessener Kopfbreite und Fensterhöhe (`kopfAufbau` in `utils/werkzeuge.ts`, nicht nach
+Gerätenamen): **breit** (iPad quer UND hochkant) Titelzeile „← Ablauf · Termin · Vollbild“, darunter Ablauf-Leiste
+und beschriftete Knöpfe in EINER Zeile; **kompakt** (Handy hochkant) ohne Titelzeile, Zurück/Vollbild als Symbol
+neben der Leiste, Knöpfe im Raster mit Kurzwort (`KopfKnopf raster`); **flach** (Höhe < 500, Handy quer) alles in
+einer Zeile, Knöpfe nur Symbol – eine zweite Zeile ließe dort nur ~150 px Blatt. Titel und Zurück-Ziel gibt der
+Aufrufer (`kopf` von `App.tsx`: aus dem Ablauf Termin + `terminZeile`, aus der Liederliste der Liedname).
+**Ablauf-Leiste (`AblaufLeiste`):** alle Lieder nummeriert (Einzellied ohne Nummer), Titel über `chartHead` wie auf
+dem Blatt; sichtbare grau, gewähltes unterstrichen mit Tonart · Fassung · Tempo + Puls und Pfeil; ein Tipp tut, was
+`leistenTipp` sagt (gewähltes → Lied-Menü, beim Ansehen fremder Notizen nichts; anderes sichtbares → wählen ohne
+Sprung; sonst → `goToSong`); waagerecht scrollbar, scrollt beim Blättern mit (Effekt-Rumpf in `{ }`, Chrome 152).
+**Knöpfe** wirken auf das GEWÄHLTE Lied (die eigenen Knöpfe je Hälfte aus #421 sind weg), welche es gibt regelt
+`verfuegbareWerkzeuge`; Puls/Zeichnen/Ansehen = `aktiv`, offenes Fenster = `offen`; beim Zeichnen „Anmerken
+beenden“, beim Ansehen nur „Zurück zu den eigenen Notizen“. Jeder Knopf setzt das Overlay-Feld genau EINMAL.
+**Fenster darunter** (Lied-Menü, Aussehen, Tempo, Hinweis „Ablauf geändert“) hängen an der GEMESSENEN Unterkante
+(`--blatt-kopf-unten` im Blatt, `--blatt-kopf-unten-fix` für `fixed`; `--chart-kopf-unten` nur noch Vorgabe) und
+öffnen unter ihrem Knopf bzw. dem gewählten Lied (`--werkzeug-links`, `--liedmenue-x`). Die Fußleiste nutzt
+`--blatt-fuss-polster` (in der Erweiterung schmal wie `--reiter-polster`; `ui/design/polster.test.ts` verlangt für
+jedes `…-polster` das Gegenstück). Die Punkte unten bleiben bis B3. Routing in `App.tsx` über `tab` + `view` (rechteabhängig).
 
 **Abwesenheiten sind terminfein, nicht tagesfein (22.09.2026).** Ein Haken an einem Termin trägt in
 ChurchTools das **Zeitfenster dieses Termins** ein (`startTime`/`endTime`, ISO-Zeitpunkte) – nur so

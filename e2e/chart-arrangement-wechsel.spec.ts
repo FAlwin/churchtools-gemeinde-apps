@@ -33,7 +33,12 @@ test('das Arrangement lässt sich umschalten – lokal, mit neuem Notenblatt', a
   await page.getByText('Testlied aus ChurchTools').first().click();
   await expect(page.locator('canvas').first()).toBeVisible({ timeout: 30_000 });
 
-  const info = page.locator('[class*="menuInfo"]').first();
+  // Die Angabe neben dem gewählten Lied in der Leiste (Scheibe B2).
+  const info = page
+    .getByRole('navigation', { name: 'Lieder im Ablauf' })
+    .locator('[aria-current="true"]')
+    .locator('[class*="info"]')
+    .first();
 
   /**
    * Definierter Anfang – und der Grund dafür ist selbst ein Befund:
@@ -46,14 +51,20 @@ test('das Arrangement lässt sich umschalten – lokal, mit neuem Notenblatt', a
    * Deshalb hier zuerst ausdrücklich auf das Ablauf-Arrangement stellen. Am Ende steht dieselbe
    * Wahl wieder – der Lauf hinterlässt also keinen Zustand für den nächsten.
    */
-  await page.locator('[class*="menuBtn"]').first().click();
+  await page
+    .getByRole('navigation', { name: 'Lieder im Ablauf' })
+    .locator('[aria-current="true"]')
+    .click();
   await expect(page.getByText('Arrangement')).toBeVisible();
   await page.getByText('Standard', { exact: true }).click();
   await expect(info).toContainText('Standard', { timeout: 20_000 });
   await expect(info).toContainText('G');
 
   // ── Umschalten über das Lied-Menü ──────────────────────────────────────────
-  await page.locator('[class*="menuBtn"]').first().click();
+  await page
+    .getByRole('navigation', { name: 'Lieder im Ablauf' })
+    .locator('[aria-current="true"]')
+    .click();
   await page.getByText('Unplugged', { exact: true }).click();
 
   // Der Name wechselt – und mit ihm die Tonart, die am ANDEREN Arrangement hängt. Genau das belegt,
@@ -70,7 +81,10 @@ test('das Arrangement lässt sich umschalten – lokal, mit neuem Notenblatt', a
   await expect(info).toContainText('Unplugged', { timeout: 20_000 });
 
   // ── Zurück auf das Arrangement aus dem Ablauf = „keine eigene Wahl" ────────
-  await page.locator('[class*="menuBtn"]').first().click();
+  await page
+    .getByRole('navigation', { name: 'Lieder im Ablauf' })
+    .locator('[aria-current="true"]')
+    .click();
   await page.getByText('Standard', { exact: true }).click();
   await expect(info).toContainText('Standard', { timeout: 20_000 });
   // Nicht als Nummer gemerkt: Ändert das Team den Ablauf später, folgt die App wieder.

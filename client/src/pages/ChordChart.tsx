@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { SetlistSong } from '@shared/types/index';
 import { Screen } from '../components/Screen';
-import { ChartHeader, type AndereHaelfte } from '../components/ChartHeader';
-import type { WerkzeugId } from '../utils/werkzeuge';
+import { BlattKopf, type BlattKopfAngaben } from '../components/BlattKopf';
+import type { LeistenLied } from '../components/AblaufLeiste';
+import { leistenTipp } from '../utils/werkzeuge';
 import { ChartFooter } from '../components/ChartFooter';
 import { ChartOverlays } from '../components/ChartOverlays';
 import { useChartOverlay } from '../hooks/useChartOverlay';
@@ -82,6 +83,8 @@ const DRAW_COLORS = ['#bb2946', '#0062ac', '#1bb0a2', '#fb8f00'];
 interface ChordChartProps {
   songs: SetlistSong[];
   startIndex: number;
+  /** Titel und Zurück-Ziel der Kopfkarte – aus dem Ablauf der Termin, aus der Liederliste das Lied (Scheibe B1). */
+  kopf: BlattKopfAngaben;
   onBack: () => void;
   onReload?: () => void;
   /** Darf der Nutzer den ChordPro-Text bearbeiten? (blendet Editor-Funktionen aus) */
@@ -105,6 +108,7 @@ interface ChordChartProps {
 export function ChordChart({
   songs: songsAusAblauf,
   startIndex,
+  kopf,
   onBack,
   onReload,
   canEditSong = false,
@@ -161,16 +165,8 @@ export function ChordChart({
   });
 
   // Alle Fenster als EIN Zustand (#283) samt der abgeleiteten Werte – in `useChartOverlay`.
-  const {
-    overlay,
-    setOverlay,
-    toggleOverlay,
-    chartOverlay,
-    offenesWerkzeug,
-    werkzeugeOffen,
-    werkzeugFensterOffen,
-    liedFensterOffen,
-  } = useChartOverlay();
+  const { overlay, setOverlay, toggleOverlay, chartOverlay, offenesWerkzeug, liedFensterOffen } =
+    useChartOverlay();
 
   const { toast, showToast } = useToast();
   // ── Team-Notizen (#124, PCO-Modell): „Notizen von …" ansehen + übernehmen ──
@@ -405,10 +401,8 @@ export function ChordChart({
     headInfo,
   } = deriveActiveSongView(song, set);
 
-  // Was die Werkzeug-Knöpfe tun, samt „Werkzeug nach dem Liedwechsel öffnen" – in
-  // `useWerkzeugSteuerung`. Bewusst HIER aufgerufen: Sein Effekt muss nach „Ansehen gilt pro Lied" laufen.
+  // Was die Werkzeug-Knöpfe tun – in `useWerkzeugSteuerung`.
   const werkzeug = useWerkzeugSteuerung({
-    songId: song.id,
     setOverlay,
     setDrawMode,
     viewing: viewing !== null,
@@ -418,39 +412,45 @@ export function ChordChart({
   });
 
   /**
-   * Querformat mit zwei VERSCHIEDENEN Liedern nebeneinander → die zweite Titel-Kapsel (#421). Über
-   * dieselbe reine Ableitung wie beim aktiven Lied (`deriveActiveSongView`), damit Tonart, Fassung
-   * und Tempo der anderen Kapsel nicht nach eigener Regel entstehen. Gehören beide Hälften zum
-   * selben Lied, bleibt es bei einer Kapsel.
+   * **Die Lieder der Ablauf-Leiste** (Scheibe B2) – jedes mit DEMSELBEN Titel wie auf seinem Blatt: über `chartHead`
+   * aus dem angezeigten Text (auch einer Version), nicht über `song.title`. Bis zum 13.08.2026 gab es zwei Wege zur
+   * Überschrift, und bei einem Lied mit App-Version standen zwei verschiedene übereinander (Alwin, überzählige
+   * Klammer aus dem CCLI-Original). Die Leiste ist der dritte Ort – gleiche Regel.
    */
-  const andereHaelfte: AndereHaelfte | null = (() => {
-    if (!nebeneinander) return null;
-    for (const slot of [0, 1] as const) {
-      const o = owners[pageIdx + slot];
-      if (!o || o.songIdx === activeSongIdx) continue;
-      const anderes = songs[o.songIdx];
-      if (!anderes) continue;
-      const sicht = deriveActiveSongView(anderes, effSettings[anderes.id] ?? DEFAULT_SETTINGS);
-      return {
-        slot,
-        // Derselbe Weg zur Überschrift wie bei der aktiven Kapsel (`chartHead` aus dem ANGEZEIGTEN
-        // Text) – sonst stünden über den beiden Hälften unterschiedlich gewonnene Titel (13.08.2026).
+  const leistenLieder: LeistenLied[] = useMemo(
+    () =>
+      songs.map((s, idx) => ({
+        idx,
         titel: chartHead({
-          title: anderes.title,
-          author: anderes.author,
-          chordpro: sicht.displayedChordpro,
+          title: s.title,
+          author: s.author,
+          chordpro: deriveActiveSongView(s, effSettings[s.id] ?? DEFAULT_SETTINGS)
+            .displayedChordpro,
         }).title,
-        info: sicht.headInfo,
-        zeigtDokument: sicht.activeDoc !== null,
-        onWaehlen: () => setActivePage(pageIdx + slot),
-        onWerkzeug: (id: WerkzeugId) => {
-          werkzeug.nachLiedwechsel(id);
-          setActivePage(pageIdx + slot);
-        },
-      };
+      })),
+    [songs, effSettings],
+  );
+
+  /** Ein Tipp in der Leiste: gewähltes → Lied-Menü, anderes sichtbares → wählen, sonst → hinspringen (B2). */
+  const liedTipp = (idx: number) => {
+    const was = leistenTipp(idx, {
+      gewaehlt: activeSongIdx,
+      sichtbar: visibleSongIdx,
+      ansehen: viewing !== null,
+    });
+    if (was === 'nichts') return;
+    if (was === 'menue') {
+      toggleOverlay('menu');
+      return;
     }
-    return null;
-  })();
+    setOverlay(null);
+    if (was === 'waehlen') {
+      const slot = owners[pageIdx]?.songIdx === idx ? 0 : 1;
+      setActivePage(pageIdx + slot);
+    } else {
+      goToSong(idx);
+    }
+  };
 
   /**
    * Wie eine Anmerkungs-Ebene benannt wird – EINE Quelle für den Streifen oben UND die Auswahl
@@ -659,52 +659,35 @@ export function ChordChart({
     <Screen className={styles.chartScreen}>
       <>
         {!leistenAus && (
-          <ChartHeader
-            andereHaelfte={andereHaelfte}
-            querformat={landscape}
+          <BlattKopf
+            kopf={kopf}
+            lieder={leistenLieder}
+            // Nummern nur im Ablauf – ein einzelnes Lied aus der Liederliste steht ohne.
+            mitNummer={songs.length > 1}
+            sichtbar={visibleSongIdx}
+            gewaehlt={activeSongIdx}
+            onLiedTipp={liedTipp}
             offenesWerkzeug={offenesWerkzeug}
-            /**
-             * **Derselbe Titel wie auf dem Blatt** – über `chartHead`, nicht über `song.title`.
-             *
-             * Vorher gab es zwei Wege zur Überschrift: Das Blatt las sie aus dem **angezeigten** Text
-             * (also auch aus einer Version), die Kopfzeile nahm den Titel des **Originals**. Bei einem
-             * Lied mit App-Version standen damit zwei verschiedene Überschriften übereinander –
-             * gemeldet von Alwin am 13.08.2026, sichtbar an einer überzähligen Klammer, die im
-             * Original-ChordPro von CCLI steht (`{title: … (Grosser Gott)]}`) und in der
-             * App-Version nicht mehr. Der Kommentar an `chartHead` versprach schon, die eine Quelle zu
-             * sein; diese Stelle hielt sich nicht daran.
-             */
-            songTitle={
-              chartHead({ title: song.title, author: song.author, chordpro: displayedChordpro })
-                .title
-            }
             headInfo={headInfo}
             menuOpen={overlay === 'menu'}
+            liedFensterOffen={liedFensterOffen}
             viewing={viewing !== null}
             showsDocument={activeDoc !== null}
             canUseGlobalNotes={canUseGlobalNotes}
             drawMode={drawMode}
             // Im Scroll-Modus gibt es keinen Zoom; ein Stand aus der Mal-Ansicht darf nicht stehen bleiben.
-            // Im Scroll-Modus gibt es keinen Zoom.
             zoomed={streamZoomed && !scrollModus}
             bpmPulse={bpmPulse}
             pulsBpm={wirksamesTempo}
             klickBpm={klickTempo}
             taktStartMs={taktStart}
             schlaegeProTakt={schlaegeProTakt}
-            werkzeugeOffen={werkzeugeOffen}
-            werkzeugFensterOffen={werkzeugFensterOffen}
-            liedFensterOffen={liedFensterOffen}
             tempoAktiv={tempoAktiv}
             onBack={onBack}
-            onToggleMenu={() => toggleOverlay('menu')}
-            onToggleWerkzeuge={() => toggleOverlay('werkzeuge')}
-            onCloseWerkzeuge={() => setOverlay(null)}
             /*
-             * Aus dem Werkzeuge-Menü heraus: JEDER Eintrag setzt das Zustandsfeld genau einmal – auf
-             * das nächste Fenster oder auf `null`. Ein zusätzliches Schließen danach würde das gerade
-             * geöffnete Fenster sofort wieder zumachen (ein Feld für alle Overlays, Lehre vom
-             * 05.08.2026: Zusammengelegter Zustand macht die Reihenfolge der Setter bedeutsam).
+             * JEDER Knopf setzt das Zustandsfeld genau einmal – auf das nächste Fenster oder auf `null`. Ein
+             * zusätzliches Schließen danach würde das gerade geöffnete Fenster sofort wieder zumachen (ein Feld für
+             * alle Overlays, Lehre vom 05.08.2026: Zusammengelegter Zustand macht die Reihenfolge der Setter bedeutsam).
              */
             onAppearance={werkzeug.onAppearance}
             onTempo={werkzeug.onTempo}

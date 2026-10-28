@@ -214,6 +214,9 @@ Veranstaltung. **Liegt das neue Datum heute oder früher, entfernt ChurchTools b
 Erweiterung so ein Datum nie – die Karte zeigt dann „schon erreicht“. Entfernt wird die Mitgliedschaft; die Antworten
 bleiben im Verlauf von ChurchTools, bis die Gruppe gelöscht wird. Archivieren („Löschen“ unter „Verwalten“) schaltet die
 Abläufe ab – dann wird nicht mehr gelöscht.
+Mit dem Löschdatum schließt die Anmeldung spätestens am Tag davor (23:59 Uhr): Die Erweiterung zieht einen fehlenden oder
+späteren Anmeldeschluss vor, und im Fenster „Anmeldung“ lässt sich kein späterer speichern. Sonst bekäme, wer sich am
+Löschdatum noch anmeldet, die Bestätigung und wäre im selben Augenblick wieder entfernt (echte Prüfung 28.10.2026).
 
 **„Deine Anmeldung“:** Den Link dazu schreibt das Formular beim Anmelden in das Feld „Link zur Anmeldung“, die
 Bestätigung setzt ihn ein. Ohne eingerichtete Mails steht er als „Austreten“ in der Standard-Mail von ChurchTools.

@@ -5,6 +5,8 @@ import {
   QR_CODE,
   ROUTINEN,
   ablaufMails,
+  anmeldeschlussAm,
+  anmeldeschlussVorLoeschen,
   eigenerTextAlsBeschreibung,
   eigenerTextAus,
   eigenerTextFehler,
@@ -306,5 +308,23 @@ describe('Löschen (A9-3a)', () => {
     ]);
     const aus = routinenSchritte(mail, 7, [], '2027-02-15', false);
     expect(aus.map((x) => x.isEnabled)).toEqual([false, true, true]);
+  });
+
+  it('Anmeldeschluss an einem Tag: 23:59 Ortszeit, auch über die Zeitumstellung', () => {
+    expect(anmeldeschlussAm('2027-02-14', 'Europe/Berlin')).toBe('2027-02-14T22:59:00Z');
+    expect(anmeldeschlussAm('2026-08-19', 'Europe/Berlin')).toBe('2026-08-19T21:59:00Z');
+  });
+
+  it('Anmeldeschluss vor dem Löschen: keiner oder später → Vortag 23:59; früher oder genau dann → nichts zu tun', () => {
+    const z = 'Europe/Berlin';
+    expect(anmeldeschlussVorLoeschen(null, '2027-02-15', z)).toBe('2027-02-14T22:59:00Z');
+    expect(anmeldeschlussVorLoeschen(undefined, '2027-02-15', z)).toBe('2027-02-14T22:59:00Z');
+    expect(anmeldeschlussVorLoeschen('2027-02-15T22:59:00Z', '2027-02-15', z)).toBe(
+      '2027-02-14T22:59:00Z',
+    );
+    expect(anmeldeschlussVorLoeschen('2027-02-14T22:59:00Z', '2027-02-15', z)).toBeNull();
+    // ChurchTools liefert den Zeitpunkt auch in anderer Schreibweise – verglichen wird der Zeitpunkt, nicht der Text.
+    expect(anmeldeschlussVorLoeschen('2027-02-14T23:59:00+01:00', '2027-02-15', z)).toBeNull();
+    expect(anmeldeschlussVorLoeschen('2026-11-10T22:59:00Z', '2027-02-15', z)).toBeNull();
   });
 });

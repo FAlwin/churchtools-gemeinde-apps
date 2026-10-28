@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as V from '@ui/ct/verbindung';
 import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
 import * as E from './einrichten';
@@ -100,6 +100,15 @@ let restartFehler: boolean;
 let warteSchlucken: boolean;
 /** ChurchTools behält beim Warten das alte Datum. */
 let datumSchlucken: boolean;
+/** Anmeldeschluss der Gruppe (`signUpClosingDate`) – `null`: keiner. */
+let anmeldeschluss: string | null;
+/** ChurchTools sagt 200 zum Anmeldeschluss, übernimmt ihn aber nicht. */
+let schlussSchlucken: boolean;
+/**
+ * Löschdaten, die in eine Routine geschrieben wurden, während die Anmeldung an diesem Tag noch offen war – dann bekäme eine
+ * neue Anmeldung die Bestätigung und wäre sofort entfernt (gemessen 28.10.2026). Muss immer leer bleiben.
+ */
+let offenBeimLoeschen: string[];
 
 function laufWeiter(r: Routine, l: Lauf, ab: number) {
   for (const s of r.steps.slice(ab)) {
@@ -139,6 +148,9 @@ beforeEach(() => {
   restartFehler = false;
   warteSchlucken = false;
   datumSchlucken = false;
+  anmeldeschluss = null;
+  schlussSchlucken = false;
+  offenBeimLoeschen = [];
   ct.ctAlleSeiten.mockImplementation(async (pfad: string) => {
     const m = /^\/routines\/(\d+)\/runs$/.exec(pfad);
     if (!m) throw new Error(`unerwartet: ${pfad}`);
@@ -155,6 +167,7 @@ beforeEach(() => {
           sendDefaultSignUpMail: standardMail,
           qrCodeCheckin: checkin,
           qrCodeCheckinAutomaticEmail: codeMail,
+          signUpClosingDate: anmeldeschluss,
         },
       };
     const g = /^\/groups\/(\d+)\/members\/routines$/.exec(pfad);
@@ -210,6 +223,12 @@ beforeEach(() => {
         ...(s as Schritt),
         id: s.id ?? 100 + naechste++,
       }));
+      for (const w of neu.filter((s) => s.actionKey === 'special:wait')) {
+        const tag = String(w.actionData.untilDate);
+        // Offen ist die Anmeldung am Löschtag, wenn sie keinen Schluss hat oder er (in UTC) erst an diesem Tag liegt.
+        if (anmeldeschluss === null || anmeldeschluss.slice(0, 10) >= tag)
+          offenBeimLoeschen.push(tag);
+      }
       if (warteSchlucken) neu = neu.filter((s) => s.actionKey === 'send-member-email');
       if (datumSchlucken)
         neu = neu.map((s) => {
@@ -233,6 +252,8 @@ beforeEach(() => {
     }
     if (methode === 'PATCH' && pfad === '/groups/165') {
       if ('sendDefaultSignUpMail' in body) standardMail = body.sendDefaultSignUpMail as boolean;
+      if ('signUpClosingDate' in body && !schlussSchlucken)
+        anmeldeschluss = body.signUpClosingDate as string | null;
       if ('qrCodeCheckinAutomaticEmail' in body)
         codeMail = body.qrCodeCheckinAutomaticEmail as boolean;
       if ('qrCodeCheckin' in body && !checkinSchlucken) {
@@ -330,6 +351,7 @@ describe('ablaeufeLesen', () => {
       eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT },
       qr: false,
       loeschDatum: null,
+      anmeldeschluss: null,
     });
   });
   it('nach dem Einrichten: beide an, Standard-Mail aus, Absender aus ChurchTools', async () => {
@@ -345,6 +367,7 @@ describe('ablaeufeLesen', () => {
       eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT },
       qr: false,
       loeschDatum: null,
+      anmeldeschluss: null,
     });
   });
   it('abgeschaltet (z. B. beim Archivieren) oder fremd: zählt nicht als eingerichtet', async () => {
@@ -566,7 +589,10 @@ describe('Löschen (A9-3a)', () => {
   };
   const routine = (status: string) => [...routinen.values()].find((x) => x.status === status)!;
   const schritte = (status: string) => routine(status).steps.map((s) => s.actionKey);
-  const optionen = { heute: HEUTE };
+  const ZONE = 'Europe/Berlin';
+  const optionen = { heute: HEUTE, zeitzone: ZONE };
+  // Wächter für alle Fälle hier: Nie steht ein Löschdatum in einer Routine, während die Anmeldung an dem Tag noch offen ist.
+  afterEach(() => expect(offenBeimLoeschen).toEqual([]));
 
   it('mit Termin: beide Routinen warten bis Ende + Frist und entfernen dann; Lesen zeigt das Datum', async () => {
     mitTermin('2026-11-15');
@@ -636,11 +662,14 @@ describe('Löschen (A9-3a)', () => {
     expect((f as LoeschdatumVorbei).datum).toBe('2026-10-28');
     expect(routinenPatches).toEqual([]);
     expect(entfernt).toEqual([]);
+    expect(anmeldeschluss).toBe('2027-02-14T22:59:00Z');
     await ablaeufeEinrichten(165, 7, undefined, undefined, {
       ...optionen,
       loeschenBestaetigt: true,
     });
     expect(entfernt).toEqual(['Lena']);
+    // Die Anmeldung ist mit zu – wer jetzt käme, bekäme sonst „Du bist dabei!“ und wäre sofort wieder weg.
+    expect(anmeldeschluss).toBe('2026-10-27T22:59:00Z');
   });
 
   it('steht das erreichte Datum schon so in ChurchTools, fragt es nicht noch einmal', async () => {
@@ -694,7 +723,7 @@ describe('Löschen (A9-3a)', () => {
     mitTermin('2026-11-15');
     await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
     mitTermin('2026-11-15', 6);
-    const stand = await ablaeufeAbgleichen(165, HEUTE);
+    const stand = await ablaeufeAbgleichen(165, HEUTE, ZONE);
     expect(stand.loeschDatum).toBe('2027-05-15');
   });
 
@@ -702,7 +731,7 @@ describe('Löschen (A9-3a)', () => {
     mitTermin('2026-11-15');
     await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
     mitTermin('2026-12-05');
-    const stand = await ablaeufeAbgleichen(165, HEUTE);
+    const stand = await ablaeufeAbgleichen(165, HEUTE, ZONE);
     expect(stand.loeschDatum).toBe('2027-03-05');
     expect(routine('waiting').steps[1].actionData.untilDate).toBe('2027-03-05');
   });
@@ -720,10 +749,62 @@ describe('Löschen (A9-3a)', () => {
     ];
     mitTermin('2026-06-01');
     routinenPatches = [];
-    const stand = await ablaeufeAbgleichen(165, HEUTE);
+    const stand = await ablaeufeAbgleichen(165, HEUTE, ZONE);
     expect(stand.loeschenOffen).toBe('2026-09-01');
     expect(stand.loeschDatum).toBe('2027-02-15');
     expect(routinenPatches).toEqual([]);
     expect(entfernt).toEqual([]);
+  });
+
+  describe('Anmeldeschluss vor dem Löschdatum (Fund der echten Prüfung)', () => {
+    it('ohne Anmeldeschluss: schließt am Tag vor dem Löschdatum um 23:59 Ortszeit; Lesen zeigt ihn', async () => {
+      mitTermin('2026-11-15');
+      await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+      expect(anmeldeschluss).toBe('2027-02-14T22:59:00Z');
+      expect((await ablaeufeLesen(165)).anmeldeschluss).toBe('2027-02-14T22:59:00Z');
+    });
+
+    it('ein späterer Anmeldeschluss wird vorgezogen (Sommerzeit: 21:59 UTC), ein früherer bleibt unberührt', async () => {
+      mitTermin('2026-05-20'); // + 3 Monate = 20.08., Vortag in der Sommerzeit
+      anmeldeschluss = '2026-09-01T21:59:00Z';
+      await ablaeufeEinrichten(165, 7, undefined, undefined, {
+        ...optionen,
+        heute: '2026-05-01',
+      });
+      expect(anmeldeschluss).toBe('2026-08-19T21:59:00Z');
+      mitTermin('2026-11-15');
+      anmeldeschluss = '2026-11-10T22:59:00Z';
+      aufrufe = [];
+      await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+      expect(anmeldeschluss).toBe('2026-11-10T22:59:00Z');
+      // Genau ein PATCH an die Gruppe: Standard-Mail aus – der Anmeldeschluss wird nicht angefasst.
+      expect(aufrufe.filter((a) => a === 'PATCH /groups/165')).toHaveLength(1);
+    });
+
+    it('ohne Termin (kein Löschdatum) bleibt eine offene Anmeldung offen', async () => {
+      await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+      expect(anmeldeschluss).toBeNull();
+    });
+
+    it('ChurchTools übernimmt den Anmeldeschluss nicht → Fehler, bevor ein Löschdatum geschrieben ist', async () => {
+      mitTermin('2026-11-15');
+      schlussSchlucken = true;
+      await expect(
+        ablaeufeEinrichten(165, 7, undefined, undefined, optionen),
+      ).rejects.toBeInstanceOf(NichtUebernommen);
+      expect(routinenPatches).toEqual([]);
+    });
+
+    it('Abgleich: Anmeldung wieder geöffnet (Schluss leer oder zu spät) → der Abgleich zieht ihn wieder vor', async () => {
+      mitTermin('2026-11-15');
+      await ablaeufeEinrichten(165, 7, undefined, undefined, optionen);
+      anmeldeschluss = null;
+      const stand = await ablaeufeAbgleichen(165, HEUTE, ZONE);
+      expect(anmeldeschluss).toBe('2027-02-14T22:59:00Z');
+      expect(stand.anmeldeschluss).toBe('2027-02-14T22:59:00Z');
+      anmeldeschluss = '2027-02-15T22:59:00Z';
+      await ablaeufeAbgleichen(165, HEUTE, ZONE);
+      expect(anmeldeschluss).toBe('2027-02-14T22:59:00Z');
+    });
   });
 });

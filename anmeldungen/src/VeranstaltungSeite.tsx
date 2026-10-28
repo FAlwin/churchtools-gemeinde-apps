@@ -40,7 +40,7 @@ import { AnmeldungenReiter, type MitgliederZustand } from './AnmeldungenReiter';
 import { Baukasten } from './Baukasten';
 import { Segment } from '@ui/bedienung/Segment';
 import type { Aenderung } from './Rueckgaengig';
-import { WER_TEXT, datumText } from './anzeige';
+import { WER_TEXT, datumText, schlussVorLoeschenText } from './anzeige';
 import { fehlerMeldung, type Fehlermeldung } from './zustand';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import s from './Startseite.module.scss';
@@ -125,17 +125,20 @@ function Zeile({ titel, children }: { titel: string; children: React.ReactNode }
 /**
  * **Karte „Datenschutz“** (A4, Löschdatum seit A9-3a): Frist und das Datum, an dem ChurchTools die Anmeldungen entfernt –
  * so, wie es in den Routinen steht. Ein erreichtes Datum, das noch nicht geschrieben ist (`loeschenOffen`, E3), steht als
- * Hinweis da; „Bearbeiten“ fragt dann, ob jetzt gelöscht wird.
+ * Hinweis da; „Bearbeiten“ fragt dann, ob jetzt gelöscht wird. Mit dem Löschdatum schließt die Anmeldung spätestens am
+ * Tag davor – das steht mit da.
  */
 function DatenschutzKarte({
   monate,
   mitTermin,
   stand,
+  heute,
   onBearbeiten,
 }: {
   monate: number;
   mitTermin: boolean;
   stand: AblaufStand | 'entwurf' | 'fehler' | null;
+  heute: string;
   onBearbeiten?: () => void;
 }) {
   const am = (() => {
@@ -164,7 +167,11 @@ function DatenschutzKarte({
       return (
         <>
           {datumText(stand.loeschDatum)}
-          <small className={v.klein}>Dann entfernt ChurchTools alle Anmeldungen.</small>
+          <small className={v.klein}>
+            {stand.loeschDatum <= heute
+              ? 'ChurchTools hat die Anmeldungen entfernt, die Anmeldung ist geschlossen.'
+              : `Dann entfernt ChurchTools alle Anmeldungen. ${schlussVorLoeschenText(stand.loeschDatum)}`}
+          </small>
         </>
       );
     if (!stand.platz || !stand.warte)
@@ -344,10 +351,23 @@ export function VeranstaltungSeite({
                 return ablaeufeLesen(id);
               })
             : ablaeufeLesen(id)
-          ).then(setAblauf, (x: unknown) => {
-            console.warn('Stand der Mails nicht gelesen', x);
-            setAblauf('fehler');
-          });
+          ).then(
+            (stand) => {
+              setAblauf(stand);
+              // A9-3a: Der Abgleich kann den Anmeldeschluss vorgezogen haben – die Karte „Anmeldung“ zeigt ihn gleich. Er
+              // zieht ihn nur vor, leert ihn nie; ein leerer Stand ändert darum nichts.
+              const schluss = stand.anmeldeschluss;
+              setDaten((d) =>
+                d && schluss !== null && d.anmeldung.bis !== schluss
+                  ? { ...d, anmeldung: { ...d.anmeldung, bis: schluss } }
+                  : d,
+              );
+            },
+            (x: unknown) => {
+              console.warn('Stand der Mails nicht gelesen', x);
+              setAblauf('fehler');
+            },
+          );
         // A6-5c: In einem Entwurf hat sich noch niemand angemeldet.
         if (kopf.statusId !== 2) mitgliederLaden(einstellungen, anmeldung.maxPlaetze);
         else setMitglieder(null);
@@ -616,6 +636,7 @@ export function VeranstaltungSeite({
               monate={e.loeschfristMonate}
               mitTermin={!!e.termin}
               stand={entwurf ? 'entwurf' : ablauf}
+              heute={heute}
               onBearbeiten={bearbeiten('loeschfrist')}
             />
             {!pruefOben && pruefKarte}
@@ -644,6 +665,7 @@ export function VeranstaltungSeite({
           plaetze={e.plaetze}
           kontakt={e.kontakt}
           zeitzone={zeitzone}
+          loeschDatum={ablauf !== null && ablauf !== 'fehler' ? ablauf.loeschDatum : null}
           onClose={() => setFenster(null)}
           onGespeichert={gespeichert('Anmeldung gespeichert.')}
         />

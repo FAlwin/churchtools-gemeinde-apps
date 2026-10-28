@@ -23,7 +23,8 @@ import { SYSTEMFELDER, type OeffentlicheEinstellungen } from './formular';
 import { kannEtwasKosten } from './preis';
 import { htmlSicher, mitCtPlatzhaltern } from './rundmail';
 import { terminZeile } from './termin';
-import { letzterTag, monatPlus } from '../ct/datum';
+import { letzterTag, monatPlus, plusTage } from '../ct/datum';
+import { utcAus } from '../ct/zeit';
 
 /** Name eines Systemfelds – so heißt es auch als Platzhalter bei ChurchTools (`/placeholders/group/{id}`). */
 const feld = (id: (typeof SYSTEMFELDER)[number]['id']) =>
@@ -273,6 +274,31 @@ export function loeschDatum(
   const gleicherTag = `${ziel}-${tag.slice(8, 10)}`;
   const letzter = letzterTag(ziel);
   return gleicherTag < letzter ? gleicherTag : letzter;
+}
+
+/** **Anmeldeschluss an einem Tag** – bis 23:59 Uhr Ortszeit, als Zeitpunkt für ChurchTools. Die eine Stelle dafür. */
+export function anmeldeschlussAm(tag: string, zeitzone: string): string {
+  return utcAus(`${tag}T23:59`, zeitzone);
+}
+
+/** **Letzter Tag zum Anmelden** vor dem Löschen: der Tag vor dem Löschdatum. */
+export function letzterAnmeldetag(loeschDatum: string): string {
+  return plusTage(loeschDatum, -1);
+}
+
+/**
+ * **Anmeldeschluss, der zum Löschdatum passt** (A9-3a, Fund der echten Prüfung 28.10.2026): Wer sich ab dem Löschdatum
+ * anmeldet, bekäme die Bestätigung und wäre im selben Augenblick entfernt (gemessen). Darum schließt die Anmeldung
+ * spätestens am Tag davor. Liefert den Zeitpunkt, der geschrieben werden muss – `null`, wenn der Anmeldeschluss (`bis`,
+ * aus ChurchTools) schon früh genug liegt. Kein Anmeldeschluss gilt als zu spät.
+ */
+export function anmeldeschlussVorLoeschen(
+  bis: string | null | undefined,
+  loeschDatum: string,
+  zeitzone: string,
+): string | null {
+  const spaetestens = anmeldeschlussAm(letzterAnmeldetag(loeschDatum), zeitzone);
+  return bis && Date.parse(bis) <= Date.parse(spaetestens) ? null : spaetestens;
 }
 
 /**

@@ -34,9 +34,9 @@ import {
   type AnmeldeEinstellungen,
   type Kalender,
 } from './einrichten';
-import { WER_TEXT, datumText, geburtsdatumNoetigText } from './anzeige';
+import { WER_TEXT, datumText, geburtsdatumNoetigText, schlussVorLoeschenText } from './anzeige';
 import { ablaeufeEinrichten, type AblaufStand } from './ablaeufe';
-import { loeschDatum } from '@shared/anmeldung/ablaeufe';
+import { anmeldeschlussAm, letzterAnmeldetag, loeschDatum } from '@shared/anmeldung/ablaeufe';
 import { fehlerMeldung } from './zustand';
 import { useSpeichern } from './useSpeichern';
 import f from './Formular.module.scss';
@@ -371,6 +371,7 @@ export function AnmeldungFenster({
   plaetze,
   kontakt,
   zeitzone,
+  loeschDatum: geloeschtAm,
   onClose,
   onGespeichert,
 }: {
@@ -380,12 +381,19 @@ export function AnmeldungFenster({
   /** Kontakt für Rückfragen (A6-4) – steht auf „Deine Anmeldung“. */
   kontakt: string;
   zeitzone: string;
+  /**
+   * Löschdatum, wie es in ChurchTools steht (A9-3a) – dann schließt die Anmeldung spätestens am Tag davor; kein oder ein
+   * späterer Anmeldeschluss lässt sich nicht speichern.
+   */
+  loeschDatum: string | null;
   onClose: () => void;
   onGespeichert: () => void;
 }) {
   const tagVon = (iso: string | null) => (iso ? ortszeitAus(iso, zeitzone).slice(0, 10) : '');
   const [ab, setAb] = useState(tagVon(anmeldung.ab));
   const [bis, setBis] = useState(tagVon(anmeldung.bis));
+  const spaetestens = geloeschtAm ? letzterAnmeldetag(geloeschtAm) : null;
+  const bisPasst = spaetestens === null || (!!bis && bis <= spaetestens);
   const [max, setMax] = useState(anmeldung.maxPlaetze === null ? '' : String(anmeldung.maxPlaetze));
   const [warteliste, setWarteliste] = useState(anmeldung.warteliste);
   const [zeigen, setZeigen] = useState(plaetze.zeigen);
@@ -398,6 +406,7 @@ export function AnmeldungFenster({
   const gueltig =
     (maxZahl === null || (Number.isInteger(maxZahl) && maxZahl > 0)) &&
     (!ab || !bis || ab <= bis) &&
+    bisPasst &&
     Number.isInteger(Number(knapp)) &&
     Number(knapp) > 0 &&
     mailOk;
@@ -416,7 +425,7 @@ export function AnmeldungFenster({
                 maxPlaetze: maxZahl,
                 warteliste,
                 ab: ab ? utcAus(`${ab}T00:00`, zeitzone) : null,
-                bis: bis ? utcAus(`${bis}T23:59`, zeitzone) : null,
+                bis: bis ? anmeldeschlussAm(bis, zeitzone) : null,
               });
               await aendereEinstellungen(id, (e) => ({
                 ...e,
@@ -446,10 +455,17 @@ export function AnmeldungFenster({
             type="date"
             className={f.eingabe}
             value={bis}
+            max={spaetestens ?? undefined}
             onChange={(e) => setBis(e.target.value)}
           />
         </label>
       </div>
+      {geloeschtAm && (
+        <p className={bisPasst ? f.hinweis : f.fehler}>
+          Am {datumText(geloeschtAm)} entfernt ChurchTools alle Anmeldungen (Datenschutz).{' '}
+          {schlussVorLoeschenText(geloeschtAm)}
+        </p>
+      )}
       {!ab && <p className={f.hinweis}>Ohne Beginn nimmt ChurchTools keine Anmeldungen an.</p>}
       <label className={f.feld}>
         <span>Plätze (leer = unbegrenzt)</span>
@@ -831,7 +847,7 @@ export function LoeschfristFenster({
           Mit {zahl} {zahl === 1 ? 'Monat' : 'Monaten'} nach dem Ende liegt das Löschdatum (
           {datumText(datum!)}) <b>nicht in der Zukunft</b>. Beim Speichern entfernt ChurchTools{' '}
           <b>sofort {anzahl ? `alle ${anzahl} Anmeldungen` : 'alle Anmeldungen'}</b> mit allen
-          Antworten. Das lässt sich nicht rückgängig machen.
+          Antworten, und die Anmeldung wird geschlossen. Das lässt sich nicht rückgängig machen.
         </p>
         <Fehler text={fehler} />
       </Sheet>
@@ -862,7 +878,7 @@ export function LoeschfristFenster({
       </label>
       <p className={f.hinweis}>
         {datum
-          ? `Am ${datumText(datum)} entfernt ChurchTools alle Anmeldungen mit allen Angaben (auch Allergien).`
+          ? `Am ${datumText(datum)} entfernt ChurchTools alle Anmeldungen mit allen Angaben (auch Allergien). ${schlussVorLoeschenText(datum)}`
           : e.termin
             ? 'Danach entfernt ChurchTools alle Anmeldungen mit allen Angaben (auch Allergien).'
             : 'Ohne Termin gibt es kein Löschdatum – erst einen Termin wählen.'}

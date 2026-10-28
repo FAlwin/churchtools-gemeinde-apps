@@ -192,6 +192,7 @@ beforeEach(() => {
     eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT },
     qr: false,
     loeschDatum: null,
+    anmeldeschluss: null,
   });
   // A9-2a: Wer einrichten darf, gleicht ab – hier liefert der Abgleich, was ChurchTools hat.
   ab.ablaeufeAbgleichen.mockImplementation((id: number) => ab.ablaeufeLesen(id));
@@ -342,6 +343,7 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
       eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT },
       qr: false,
       loeschDatum: null,
+      anmeldeschluss: null,
     });
     stelle(true, 1);
     zeigen();
@@ -1111,6 +1113,7 @@ describe('Löschen (A9-3a)', () => {
       eigen: { platz: OHNE_EIGENEN_TEXT, warte: OHNE_EIGENEN_TEXT },
       qr: false,
       loeschDatum: null,
+      anmeldeschluss: null,
       ...x,
     });
   const karte = () => screen.findByRole('region', { name: 'Datenschutz' });
@@ -1120,7 +1123,9 @@ describe('Löschen (A9-3a)', () => {
     stelle(true, 1, termin('2099-01-15'));
     zeigen();
     await waitFor(async () =>
-      expect((await karte()).textContent).toMatch(/15\.04\.2099.*entfernt ChurchTools alle/),
+      expect((await karte()).textContent).toMatch(
+        /15\.04\.2099.*entfernt ChurchTools alle.*Anmeldeschluss ist darum spätestens .*14\.04\.2099\./,
+      ),
     );
     cleanup();
     stelle(true, 1);
@@ -1132,6 +1137,16 @@ describe('Löschen (A9-3a)', () => {
     zeigen();
     await waitFor(async () =>
       expect((await karte()).textContent).toMatch(/15\.04\.2020 – schon erreicht/),
+    );
+    cleanup();
+    // Schon eingetragen und erreicht (nach „Jetzt löschen“): nicht mehr „dann entfernt …“.
+    stand({ loeschDatum: '2020-04-15' });
+    stelle(true, 1, termin('2020-01-15'));
+    zeigen();
+    await waitFor(async () =>
+      expect((await karte()).textContent).toMatch(
+        /15\.04\.2020ChurchTools hat die Anmeldungen entfernt, die Anmeldung ist geschlossen\./,
+      ),
     );
   });
 
@@ -1147,11 +1162,14 @@ describe('Löschen (A9-3a)', () => {
     await waitFor(() => expect(within(k).getByRole('button', { name: 'Bearbeiten' })).toBeTruthy());
     fireEvent.click(within(k).getByRole('button', { name: 'Bearbeiten' }));
     expect(
-      screen.getByText(/^Am .* entfernt ChurchTools alle Anmeldungen mit allen Angaben/),
+      screen.getByText(
+        /^Am .* entfernt ChurchTools alle Anmeldungen mit allen Angaben.*Anmeldeschluss ist darum spätestens/,
+      ),
     ).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     expect(screen.getByText('Sofort löschen?')).toBeTruthy();
     expect(screen.getByText(/sofort alle 3 Anmeldungen/)).toBeTruthy();
+    expect(screen.getByText(/die Anmeldung wird geschlossen/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
     expect(m.aendereEinstellungen).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
@@ -1189,6 +1207,48 @@ describe('Löschen (A9-3a)', () => {
       heute: expect.any(String),
     });
     expect(geaendert.mock.calls[0][0].rueckgaengig).toBeTypeOf('function');
+  });
+
+  it('Abgleich zieht den Anmeldeschluss vor → die Karte „Anmeldung“ zeigt ihn gleich, ohne neu zu laden', async () => {
+    stand({ loeschDatum: '2099-04-15', anmeldeschluss: '2099-04-14T21:59:00Z' });
+    stelle(true, 1, termin('2099-01-15'));
+    m.anmeldungVon.mockResolvedValue({
+      maxPlaetze: null,
+      warteliste: false,
+      ab: '2099-01-01T00:00:00Z',
+      bis: null,
+    });
+    zeigen();
+    const k = await screen.findByRole('region', { name: 'Anmeldung' });
+    await waitFor(() => expect(k.textContent).toMatch(/bis .*14\.04\.2099/));
+    expect(m.anmeldungVon).toHaveBeenCalledTimes(1);
+  });
+
+  it('Fenster „Anmeldung“ mit Löschdatum: Schluss nur bis zum Vortag – leer oder später lässt sich nicht speichern', async () => {
+    stand({ loeschDatum: '2099-04-15', anmeldeschluss: '2099-04-14T21:59:00Z' });
+    stelle(true, 1, termin('2099-01-15'));
+    m.speichereAnmeldung.mockResolvedValue();
+    zeigen();
+    const k = await screen.findByRole('region', { name: 'Anmeldung' });
+    await waitFor(() => expect(k.textContent).toMatch(/14\.04\.2099/));
+    fireEvent.click(within(k).getByRole('button', { name: 'Bearbeiten' }));
+    const schluss = screen.getByLabelText('Anmeldeschluss');
+    expect(schluss.getAttribute('max')).toBe('2099-04-14');
+    expect(screen.getByText(/entfernt ChurchTools alle Anmeldungen \(Datenschutz\)/)).toBeTruthy();
+    const speichern = () => screen.getByRole('button', { name: 'Speichern' });
+    fireEvent.change(schluss, { target: { value: '' } });
+    expect(speichern()).toHaveProperty('disabled', true);
+    fireEvent.change(schluss, { target: { value: '2099-04-15' } });
+    expect(speichern()).toHaveProperty('disabled', true);
+    fireEvent.change(schluss, { target: { value: '2099-04-14' } });
+    expect(speichern()).toHaveProperty('disabled', false);
+    fireEvent.click(speichern());
+    await waitFor(() =>
+      expect(m.speichereAnmeldung).toHaveBeenCalledWith(
+        91,
+        expect.objectContaining({ bis: '2099-04-14T21:59:00Z' }),
+      ),
+    );
   });
 
   it('im Entwurf: nur die Frist – die Abläufe richtet erst das Freigeben ein', async () => {

@@ -11,3 +11,8 @@
   ohne Mail ins Warten (Mail kurz aus, `restart: ['finished']`, Mail wieder an – auch nach einem Fehler; E6).
 - Termin oder Frist geändert → der Abgleich zieht das Datum nach. Termin entfernt → Warten und Entfernen fallen weg,
   Wartende werden beendet (`finish`), nicht entfernt.
+- **Anmeldeschluss vor dem Löschdatum** – steht die Anmeldung am Löschdatum noch offen, bekäme eine neue Anmeldung „Du bist
+  dabei!“ und wäre im selben Augenblick entfernt (echte Prüfung 28.10.2026). Mit dem Löschdatum zieht die Erweiterung den
+  Anmeldeschluss darum auf den Tag davor (23:59 Uhr), wenn keiner oder ein späterer gesetzt ist – vor den Routinen
+  geschrieben und nachgelesen; der Abgleich zieht ihn wieder vor, falls jemand die Anmeldung erneut öffnet. Karte, Rückfrage
+  und die Fenster „Daten löschen“ und „Anmeldung“ sagen es; dort lässt sich kein späterer Schluss speichern.

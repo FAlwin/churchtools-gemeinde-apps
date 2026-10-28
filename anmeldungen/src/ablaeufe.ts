@@ -32,6 +32,7 @@ import {
   eigenerTextAlsBeschreibung,
   eigenerTextAus,
   eigenerTextFehler,
+  anmeldeschlussVorLoeschen,
   loeschDatum,
   routinenSchritte,
   type AblaufMail,
@@ -64,6 +65,7 @@ interface GruppeRoh {
     sendDefaultSignUpMail?: boolean;
     qrCodeCheckin?: boolean;
     qrCodeCheckinAutomaticEmail?: boolean;
+    signUpClosingDate?: string | null;
   };
 }
 
@@ -116,6 +118,8 @@ export interface AblaufStand {
    * ChurchTools – geschrieben wird es erst nach der Rückfrage im Fenster „Datenschutz“.
    */
   loeschenOffen?: string;
+  /** Anmeldeschluss, wie er in ChurchTools steht – das Löschen kann ihn vorziehen (`anmeldeschlussVorLoeschen`). */
+  anmeldeschluss: string | null;
 }
 
 /**
@@ -171,6 +175,7 @@ export async function ablaeufeLesen(id: number): Promise<AblaufStand> {
     },
     qr: checkinAn(g),
     loeschDatum: wartetBis(platz) ?? null,
+    anmeldeschluss: g.settings?.signUpClosingDate ?? null,
   };
 }
 
@@ -208,14 +213,19 @@ async function textVonVorlage(
  *
  * Löschen (A9-3a): Das Datum kommt aus Termin und Frist (`loeschDatum`). Ein **neues** Datum heute oder früher wird nur
  * mit `loeschenBestaetigt` geschrieben – sonst `LoeschdatumVorbei`, bevor irgendetwas geschrieben ist. Schon Angemeldete
- * kommen ohne Mail ins Warten (`nachstarten`).
+ * kommen ohne Mail ins Warten (`nachstarten`). Die Anmeldung schließt spätestens am Tag vor dem Löschdatum
+ * (`anmeldeschlussBegrenzen`) – geschrieben vor den Routinen, damit nie ein Löschdatum bei offener Anmeldung steht.
  */
 export async function ablaeufeEinrichten(
   id: number,
   absenderId: number,
   eigen?: Partial<Record<RoutinenArt, EigenerText>>,
   qr?: boolean,
-  { loeschenBestaetigt = false, heute = heuteImKalender() } = {},
+  {
+    loeschenBestaetigt = false,
+    heute = heuteImKalender(),
+    zeitzone = Intl.DateTimeFormat().resolvedOptions().timeZone,
+  } = {},
 ): Promise<void> {
   for (const t of Object.values(eigen ?? {})) {
     const fehler = eigenerTextFehler(t);
@@ -255,6 +265,7 @@ export async function ablaeufeEinrichten(
     ROUTINEN.some((r) => wartetBis(unsereFuer(zuordnungen, rolle, r.status)) !== datum)
   )
     throw new LoeschdatumVorbei(datum);
+  if (datum !== null) await anmeldeschlussBegrenzen(id, g, datum, zeitzone);
 
   for (const r of ROUTINEN) {
     const vorhanden = zuordnungen.find(
@@ -329,6 +340,29 @@ export async function ablaeufeEinrichten(
 }
 
 /**
+ * **Anmeldeschluss vor das Löschdatum** (A9-3a, Fund der echten Prüfung 28.10.2026): Steht die Anmeldung am Löschdatum
+ * noch offen, bekommt eine neue Anmeldung „Du bist dabei!“ und ist im selben Augenblick entfernt (gemessen). Kein oder
+ * ein späterer Anmeldeschluss wird darum auf den Tag davor gezogen; ein früherer bleibt. ChurchTools nimmt auch einen
+ * Schluss vor dem Beginn an (gemessen) – dann ist die Anmeldung eben zu.
+ */
+async function anmeldeschlussBegrenzen(
+  id: number,
+  g: GruppeRoh,
+  datum: string,
+  zeitzone: string,
+): Promise<void> {
+  const schluss = anmeldeschlussVorLoeschen(g.settings?.signUpClosingDate, datum, zeitzone);
+  if (schluss === null) return;
+  await ctAnfrage(`/groups/${id}`, {
+    method: 'PATCH',
+    body: json({ signUpClosingDate: schluss }),
+  });
+  const nachher = await ctDaten<GruppeRoh>(`/groups/${id}`);
+  if (anmeldeschlussVorLoeschen(nachher.settings?.signUpClosingDate, datum, zeitzone) !== null)
+    throw new NichtUebernommen('den Anmeldeschluss vor dem Löschdatum');
+}
+
+/**
  * **Schon Angemeldete ins Warten bringen** (A9-3a, E6): Wer sich vor dem Löschen angemeldet hat, dessen Lauf ist
  * abgeschlossen – neue Schritte erreichen ihn nicht. Gemessener Weg (28.10.2026): Mail aus → `restart: ['finished']` →
  * Mail wieder an; die Läufe gehen dabei ohne Mail bis zum Warten. Nur, wenn es solche Läufe gibt – solange die Mail aus
@@ -381,6 +415,7 @@ export function absenderAus(gewaehlt: ReadonlySet<number>, ich: number | null): 
 export async function ablaeufeAbgleichen(
   id: number,
   heute = heuteImKalender(),
+  zeitzone = Intl.DateTimeFormat().resolvedOptions().timeZone,
 ): Promise<AblaufStand> {
   const stand = await ablaeufeLesen(id);
   if (!stand.platz || !stand.warte || stand.absenderId === null) return stand;
@@ -404,12 +439,17 @@ export async function ablaeufeAbgleichen(
       return s?.subject === m.betreff && s?.body === m.html;
     }) &&
     // A9-3a: Termin oder Frist geändert → das Löschdatum zieht mit.
-    ROUTINEN.every((r) => (wartetBis(unsereFuer(zuordnungen, rolle, r.status)) ?? null) === datum);
+    ROUTINEN.every(
+      (r) => (wartetBis(unsereFuer(zuordnungen, rolle, r.status)) ?? null) === datum,
+    ) &&
+    // … und die Anmeldung schließt vorher – auch, wenn jemand den Anmeldeschluss später wieder geöffnet hat.
+    (datum === null ||
+      anmeldeschlussVorLoeschen(g.settings?.signUpClosingDate, datum, zeitzone) === null);
   if (passt) return stand;
   // E3 (Alwin, 28.10.2026): Ein neues Löschdatum heute oder früher schreibt der Abgleich nie still – ChurchTools entfernte
   // sonst beim bloßen Öffnen alle Anmeldungen. Die Karte „Datenschutz“ zeigt es, gelöscht wird nach der Rückfrage.
   try {
-    await ablaeufeEinrichten(id, stand.absenderId, undefined, undefined, { heute });
+    await ablaeufeEinrichten(id, stand.absenderId, undefined, undefined, { heute, zeitzone });
   } catch (x) {
     if (x instanceof LoeschdatumVorbei) return { ...stand, loeschenOffen: x.datum };
     throw x;

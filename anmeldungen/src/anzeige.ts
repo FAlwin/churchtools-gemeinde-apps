@@ -14,6 +14,7 @@ import {
   type Grundpreis,
 } from '@shared/anmeldung/preis';
 import { datumText, kachel, monatTitel, tageBis } from '@shared/ct/datum';
+import { letzterAnmeldetag } from '@shared/anmeldung/ablaeufe';
 import { tagAusIso } from '@shared/ct/zeit';
 
 // Tage anzeigen (Wochentag, Kachel, Monat, Tage bis) steht für alle Apps in `shared/ct/datum.ts`; hier nur
@@ -156,4 +157,12 @@ export function mailAnbieten<T>(
   mail: T,
 ): T | null {
   return art === 'absage' || !mitBestaetigung ? mail : null;
+}
+
+/**
+ * **Anmeldeschluss vor dem Löschen** (A9-3a): Die Anmeldung schließt spätestens am Tag vor dem Löschdatum – ein Wortlaut
+ * für die Karte „Datenschutz“, das Fenster „Daten löschen“ und das Fenster „Anmeldung“.
+ */
+export function schlussVorLoeschenText(loeschDatum: string): string {
+  return `Anmeldeschluss ist darum spätestens ${datumText(letzterAnmeldetag(loeschDatum))}.`;
 }

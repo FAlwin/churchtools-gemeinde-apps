@@ -15,7 +15,14 @@
   einzeilig – am iPad quer (1024 px) war es zweizeilig und 41 px hoch. Ebenso „Plan | Umbau“ im Reiter „Neue Gliederung“.
   Eine Dauerprüfung (`ui/design/umschalterVerbunden.test.ts`) hält fest, dass jeder Umschalter des Organigramms so gebaut ist.
 
+- Reiter „Neue Gliederung“: **„Neuer Bereich“** (grün wie „+ Gruppe erstellen“ in ChurchTools) und **„Plan verwerfen“**
+  sind wieder richtige Knöpfe, so hoch wie der Umschalter daneben. „Neuer Bereich“ zeigte seit O7b-3 auf eine
+  gestrichene Stilklasse und stand als bloßer Text da; „Plan verwerfen“ war 31 statt 38 px hoch.
+
 ### Intern (Organigramm)
+
+- Dauerprüfung `ui/design/stilKlassen.test.ts`: Jede benutzte Klasse einer `*.module.scss` muss es dort geben (für alle
+  Apps; einziger Fund war der oben).
 
 - Die Namen der Ansichten stehen an einer Stelle (`ANSICHT_NAMEN` in `auswahl.ts`) statt je einer Liste in Reiter
   und PDF-Fenster.

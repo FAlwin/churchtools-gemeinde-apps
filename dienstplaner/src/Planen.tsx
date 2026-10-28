@@ -62,6 +62,9 @@ import type { TerminStand } from './terminStand';
 import { SendenFach, type SendeZeile } from './SendenFach';
 import { grundText, type EntwuerfeDaten, type EntwurfAnschluss } from './ladeEntwuerfe';
 import { ALLE_REITER } from './reiter';
+import { AblaufZeilen, HandyAblauf } from './MatrixAblauf';
+import { useMatrixAblauf, type MatrixAblauf } from './useMatrixAblauf';
+import type { Start } from './start';
 import styles from './Planen.module.scss';
 
 /** Der Name des Reiters mit den eigenen Diensten – aus der Reiterliste, damit der Hilfetext eine Umbenennung mitmacht. */
@@ -86,6 +89,8 @@ interface Props {
   entwuerfe?: EntwurfAnschluss;
   /** Termin öffnen → Termin-Ansicht mit Ablauf und Diensten (E6-1b). */
   onTermin?: (id: number) => void;
+  /** Der Ablauf in der Matrix (E6-6a) – ohne steht die Matrix ohne die Gruppe „Ablauf“ da. */
+  ablauf?: { start: Start; zeitzone: string };
 }
 
 /** Ein Entwurf an einem Platz – und ob er veraltet ist (in ChurchTools steht inzwischen etwas anderes). */
@@ -133,6 +138,8 @@ interface Sicht {
   ichId: number | null;
   /** Termin öffnen → Termin-Ansicht (E6-1b). */
   onTermin?: (id: number) => void;
+  /** Der Ablauf oben in der Matrix (E6-6a); `null` ohne Anschluss. */
+  ablauf: MatrixAblauf | null;
 }
 
 /** Darf man an diesem Termin diesen Dienst planen – über Recht, Leitung oder als Admin des Termins? */
@@ -190,12 +197,16 @@ export function Planen({
   heute,
   entwuerfe,
   onTermin,
+  ablauf,
 }: Props) {
   const [ansicht, setAnsichtRoh] = useState<PlanenAnsicht>(leseAnsicht);
   const setAnsicht = (a: PlanenAnsicht) => {
     setAnsichtRoh(a);
     merkeAnsicht(a);
   };
+  const matrixAblauf = useMatrixAblauf(ablauf, ansicht.ablaufZu, (ablaufZu) =>
+    setAnsicht({ ...ansicht, ablaufZu }),
+  );
   const [fenster, setFenster] = useState<Fenster>({ start: 0, anzahl: null });
   const [zu, setZu] = useState<Set<string> | null>(null);
   const [frei, setFrei] = useState<FreierPlatz | null>(null);
@@ -644,6 +655,7 @@ export function Planen({
         }),
       ichId: entwuerfe?.ich.personId ?? null,
       onTermin,
+      ablauf: matrixAblauf,
     };
     inhalt =
       d.gefiltert.length === 0 || gruppen.length === 0 ? (
@@ -1328,6 +1340,15 @@ function TabellenPlan({ sicht, breite, platz }: { sicht: Sicht; breite: Breite; 
           </tr>
         </thead>
         <tbody>
+          {/* Der Ablauf steht oben, über den Dienstgruppen (Entwurf E6-6, Alwin 23.10. und 28.10.2026). */}
+          {sicht.ablauf && (
+            <AblaufZeilen
+              ma={sicht.ablauf}
+              plan={plan}
+              spalten={spalten}
+              zelleKlasse={zelleKlasse}
+            />
+          )}
           {gruppen.map((g) => {
             const k = schluessel(g);
             const offen = !zugeklappt.has(k);
@@ -1484,6 +1505,7 @@ function HandyPlan({ sicht, amEnde }: { sicht: Sicht; amEnde?: () => void }) {
             </button>
           )}
         </div>
+        {sicht.ablauf && <HandyAblauf ma={sicht.ablauf} s={s} />}
         {gruppen.map((g) => {
           const dienste = g.zeilen.filter((z) => z.zellen[i] !== null);
           if (dienste.length === 0) return null;

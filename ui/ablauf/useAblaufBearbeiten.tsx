@@ -37,6 +37,7 @@ import { SortableRow } from './AgendaSortableRow';
 import { BeginnLinie, VerborgeneGruppenHinweis } from './AblaufTeile';
 import { PunktFenster, type LiedWahlArgs } from './PunktFenster';
 import styles from './AblaufBearbeiten.module.scss';
+import zeile from './AblaufListe.module.scss';
 
 /**
  * Gebündelte Bearbeiten-Aktionen des Ablaufs – EIN Objekt statt einzelner Callback-Props durch alle Ebenen. Alle
@@ -110,6 +111,11 @@ export interface AblaufBearbeitenOptionen<T extends AblaufZeile> {
    * Stelle zeigt, was der Aufrufer hier zurückgibt.
    */
   liedAnsehen?: (punkt: T, zurueck: () => void, schliessen: () => void) => ReactNode;
+  /**
+   * Schmale Form für eine Matrix-Spalte (Dienstplaner, E6-6a): Zeilen wie `AblaufListe schmal`, keine Anleitungszeilen,
+   * und statt des schwebenden Plus ein „+ Punkt“ am Ende der Liste – in einer Matrix stehen mehrere Listen nebeneinander.
+   */
+  schmal?: boolean;
 }
 
 export function useAblaufBearbeiten<T extends AblaufZeile>(
@@ -134,7 +140,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
   const [neuStart, setNeuStart] = useState<{ art: PunktArt; lied: boolean } | null>(null);
   const [auswahlOffen, setAuswahlOffen] = useState(false);
   const handy = useMedienAbfrage(HANDY_BREITE);
-  const imKopf = !!o.plusImKopf && !handy;
+  const imKopf = !!o.plusImKopf && !handy && !o.schmal;
   const [actionItem, setActionItem] = useState<T | null>(null);
   // Mit ‹ › geblättert (E6-O O3): Das Punkt-Fenster ersetzt sein voriges, ohne neu einzublenden.
   const [geblaettert, setGeblaettert] = useState(false);
@@ -293,8 +299,10 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
   const liste = (
     <>
       {/* Abgeschlossen: keine Anleitung zum Sortieren – der Knopf oben rechts sagt genug (Alwin). */}
-      {!abgeschlossen && !o.neuAufsetzen && <div className={styles.editHint}>{anleitung}</div>}
-      {o.neuAufsetzen && (
+      {!abgeschlossen && !o.neuAufsetzen && !o.schmal && (
+        <div className={styles.editHint}>{anleitung}</div>
+      )}
+      {o.neuAufsetzen && !o.schmal && (
         <div className={`${styles.editHint} ${styles.hintZeile}`}>
           <span>{abgeschlossen ? null : anleitung}</span>
           <button
@@ -306,7 +314,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
           </button>
         </div>
       )}
-      {o.gruppenVerborgen && (
+      {o.gruppenVerborgen && !o.schmal && (
         <div className={styles.editHint}>
           <VerborgeneGruppenHinweis />
         </div>
@@ -320,11 +328,12 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
         autoScroll={innerScrollOnly}
       >
         <SortableContext items={localItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-          <div className={styles.list}>
+          <div className={o.schmal ? `${zeile.flowList} ${zeile.schmal}` : styles.list}>
             {localItems.map((item, i) => (
               <Fragment key={item.id}>
                 {i === beginnBeiBearbeiten && <BeginnLinie zeit={o.beginn} />}
                 <SortableRow
+                  schmal={o.schmal}
                   item={item}
                   onOpenActions={(it) => {
                     if (abgeschlossen) return zeigeSperrHinweis(o.sperrHinweis);
@@ -338,6 +347,15 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
           </div>
         </SortableContext>
       </DndContext>
+      {o.schmal && o.bereit && (
+        <button
+          type="button"
+          className={styles.plusAmEnde}
+          onClick={() => (gesperrt ? gesperrt() : setAuswahlOffen(true))}
+        >
+          <Icon name="plus" size={14} /> Punkt
+        </button>
+      )}
     </>
   );
 
@@ -372,7 +390,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
       {/* Das Plus schwebt im Bearbeiten-Modus über dem Ablauf (Alwin, 05.10.2026) – vorher stand
           „Eintrag hinzufügen" am Listenende. Auch bei einem leeren Ablauf, der sonst nicht zu füllen war.
           Ein Tipp öffnet „Option wählen“ wie in der ChurchTools-App (S2); mit `plusImKopf` am iPad/Rechner im Kopf. */}
-      {aktiv && o.bereit && !imKopf && !neuStart && !auswahlOffen && (
+      {aktiv && o.bereit && !imKopf && !o.schmal && !neuStart && !auswahlOffen && (
         <SchwebePlus
           label="Eintrag hinzufügen"
           dataTour="edit-add"

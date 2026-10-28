@@ -29,6 +29,7 @@ function Harness({
   abgeschlossen = false,
   plusImKopf,
   liedWahl,
+  schmal,
 }: {
   aktionen: AblaufAktionen;
   items?: AblaufZeile[];
@@ -37,12 +38,14 @@ function Harness({
   abgeschlossen?: boolean;
   plusImKopf?: boolean;
   liedWahl?: (args: LiedWahlArgs) => ReactNode;
+  schmal?: boolean;
 }) {
   const b = useAblaufBearbeiten({
     gruppenVerborgen,
     neuAufsetzen,
     plusImKopf,
     liedWahl,
+    schmal,
     aktiv: true,
     bereit: true,
     items,
@@ -70,6 +73,39 @@ const aktionen = (over: Partial<AblaufAktionen> = {}): AblaufAktionen => ({
   setWeggelassen: vi.fn(() => Promise.resolve()),
   add: vi.fn(() => Promise.resolve()),
   ...over,
+});
+
+describe('useAblaufBearbeiten – schmal (Matrix, E6-6a)', () => {
+  it('kein schwebendes Plus und keine Hinweiszeilen; „+ Punkt“ am Ende öffnet „Option wählen“', () => {
+    render(
+      <Harness aktionen={aktionen()} schmal gruppenVerborgen neuAufsetzen={() => {}} plusImKopf />,
+    );
+    const liste = screen.getByTestId('liste');
+    // Nebeneinander stehen mehrere Listen – ein schwebendes Plus je Liste stapelte sich in der Ecke.
+    expect(screen.queryByRole('button', { name: 'Eintrag hinzufügen' })).toBeNull();
+    expect(screen.getByTestId('kopf').textContent).toBe('');
+    expect(liste.textContent).not.toContain('zum Sortieren');
+    expect(liste.textContent).not.toContain('Neu aufsetzen');
+    expect(liste.textContent).not.toMatch(/Dienstgruppen/);
+    fireEvent.click(screen.getByRole('button', { name: /Punkt/ }));
+    expect(screen.getByRole('button', { name: 'Programmpunkt hinzufügen' })).toBeTruthy();
+  });
+
+  it('ohne „Neu aufsetzen“ (wie in der Matrix): auch dann keine Anleitung über der Liste', () => {
+    render(<Harness aktionen={aktionen()} schmal />);
+    expect(screen.getByTestId('liste').textContent).not.toContain('zum Sortieren');
+    cleanup();
+    // Gegenprobe ohne `schmal`: dort steht sie.
+    render(<Harness aktionen={aktionen()} />);
+    expect(screen.getByTestId('liste').textContent).toContain('zum Sortieren');
+  });
+
+  it('abgeschlossen: „+ Punkt“ zeigt den Sperr-Hinweis statt der Auswahl', () => {
+    render(<Harness aktionen={aktionen()} schmal abgeschlossen />);
+    fireEvent.click(screen.getByRole('button', { name: /Punkt/ }));
+    expect(screen.queryByRole('button', { name: 'Programmpunkt hinzufügen' })).toBeNull();
+    expect(screen.getByText('gesperrt')).toBeTruthy();
+  });
 });
 
 describe('useAblaufBearbeiten', () => {

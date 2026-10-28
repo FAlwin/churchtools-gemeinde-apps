@@ -1,0 +1,69 @@
+// Der Ablauf eines Termins (`TerminAblauf`) – in der Termin-Ansicht und in jeder Spalte der Matrix (E6-6a). Vorher in
+// `TerminAnsicht.module.scss`.
+@use '@ui/design/mixins' as m;
+@use './terminTexte' as t;
+
+.ablaufGrund {
+  background: var(--surface2);
+}
+
+// Derselbe Hinweis wie in der Termin-Ansicht – eine Stelle dafür (`_terminTexte.scss`).
+.hinweis {
+  @include t.hinweis;
+}
+
+// Termin ohne Ablauf (E6-5a): Hinweis und – mit Recht – „Ablauf anlegen“.
+.ohneAblauf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-right: 14px;
+}
+
+.anlegenKnopf {
+  @include m.aktionKnopf;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: var(--r-ctrl);
+  font-size: 14px;
+}
+
+// ── Schmale Form in der Matrix (E6-6a, Entwurf `e6-6-entwurf-2.html`) ──
+
+// „Ablauf anlegen“ in einer leeren Spalte: gestrichelt über die Spaltenbreite, erst nach dem Stift.
+.anlegenSchmal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: calc(100% - 16px);
+  height: 32px;
+  margin: 8px;
+  border: 1px dashed color-mix(in srgb, var(--blue) 55%, transparent);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--blue);
+  font: 700 12.5px var(--ui);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--blue-soft);
+  }
+}
+
+// Kein Ablauf und nichts anzulegen – derselbe Strich wie ein nicht vorgesehener Dienst.
+.keiner {
+  display: block;
+  padding: 10px 8px;
+  color: var(--text3);
+  text-align: center;
+}
+
+.leerSchmal {
+  padding: 10px 8px;
+  font-size: 12.5px;
+}

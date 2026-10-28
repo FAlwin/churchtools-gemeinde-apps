@@ -82,3 +82,17 @@
     cursor: grabbing;
   }
 }
+
+// Schmale Bearbeiten-Zeile in der Matrix (E6-6a): Griff, Abstände und Stift enger, damit dem Titel in einer
+// Matrix-Spalte (~180 px) Platz bleibt – sonst brach „Soundcheck“ mitten im Wort.
+.schmalZeile {
+  gap: 6px;
+
+  .dragCol {
+    width: 12px;
+  }
+
+  .rowEdit {
+    padding: 4px 2px;
+  }
+}

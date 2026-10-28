@@ -42,7 +42,7 @@ const ZEILEN = [
 ];
 
 describe('AblaufListe', () => {
-  it('Musik-App: Lieder antippbar mit ihrer Nummer im Ablauf', () => {
+  it('Lieder antippbar mit ihrer Nummer im Ablauf (Musik-App) und dem Punkt selbst (Dienstplaner, E6-O O4)', () => {
     const onLied = vi.fn();
     render(<AblaufListe zeilen={ZEILEN} beginn="10:00" onLied={onLied} />);
     const lieder = screen.getAllByRole('button');
@@ -51,7 +51,10 @@ describe('AblaufListe', () => {
       expect.stringContaining('Halleluja'),
     ]);
     fireEvent.click(lieder[1]);
-    expect(onLied).toHaveBeenCalledWith(1);
+    expect(onLied).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ song: expect.objectContaining({ title: 'Halleluja' }) }),
+    );
   });
 
   it('beide Apps gleich (E6-O1): die Dauer steht in der Zeitspalte unter der Uhrzeit; ohne onLied keine Knöpfe', () => {

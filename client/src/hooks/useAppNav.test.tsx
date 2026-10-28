@@ -84,3 +84,46 @@ describe('useAppNav – Wiederherstellung', () => {
     expect(result.current.view).toBeNull();
   });
 });
+
+describe('useAppNav – Direktlink aus dem Dienstplaner (E6-O O4)', () => {
+  const hashSetzen = (h: string) => window.history.replaceState(null, '', `/app/${h}`);
+
+  it('#/termin/5/punkt/9: Blatt im Ablauf dieses Termins, Ziel-Punkt 9 – vor dem gemerkten Stand', () => {
+    gespeichert.nav = {
+      tab: 'lieder',
+      view: { type: 'chart', source: 'lieder' },
+      serviceId: 77,
+      songIndex: 3,
+      libSel: { songId: 1 },
+      savedAt: Date.now(),
+    };
+    hashSetzen('#/termin/5/punkt/9');
+    const { result } = nav([DIENST]);
+    expect(result.current.view).toEqual({ type: 'chart', source: 'setlist' });
+    expect(result.current.service).toBe(DIENST);
+    expect(result.current.zielPunkt).toBe(9);
+    act(() => result.current.zielErreicht());
+    expect(result.current.zielPunkt).toBeNull();
+  });
+
+  it('der Direktlink verschwindet aus der Adresse – ein Neuladen springt nicht wieder hin', () => {
+    hashSetzen('#/termin/5/punkt/9');
+    nav([DIENST]);
+    expect(window.location.hash).toBe('');
+    expect(window.location.pathname).toBe('/app/');
+  });
+
+  it('Termin nicht in der Liste: zurück zur Übersicht, kein Ziel mehr', () => {
+    hashSetzen('#/termin/5/punkt/9');
+    const { result } = nav([]);
+    expect(result.current.view).toBeNull();
+    expect(result.current.zielPunkt).toBeNull();
+  });
+
+  it('ohne Direktlink: wie bisher der gemerkte Stand, kein Ziel', () => {
+    hashSetzen('');
+    const { result } = nav([DIENST]);
+    expect(result.current.view).toBeNull();
+    expect(result.current.zielPunkt).toBeNull();
+  });
+});

@@ -49,6 +49,7 @@ import {
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { ApiError } from './services/api';
 import { withChunkReload } from './utils/chunkReload';
+import { liedZumPunkt } from './utils/liedZumPunkt';
 import { funktionen } from './services/funktionen';
 import { useVollbildHinweis } from './hooks/useVollbildHinweis';
 import { KeineLiedRechte } from './services/churchtoolsApi';
@@ -186,11 +187,16 @@ export default function App() {
     setSongIndex,
     libSel,
     setLibSel,
+    zielPunkt,
+    zielErreicht,
   } = useAppNav({
     isAuthenticated: auth.isAuthenticated,
     isAuthLoading: auth.isLoading,
     services: servicesQuery.data,
-    servicesLoading: servicesQuery.isLoading,
+    // Solange die Rechte noch kommen, ist die Terminabfrage abgeschaltet – und „abgeschaltet“ heißt bei React Query nicht
+    // „lädt“. Ohne diesen Zusatz hielt die Wiederherstellung die leere Liste für fertig und gab den Termin auf
+    // (gefunden mit dem Direktlink, E6-O O4; dieselbe Lücke traf den Kaltstart).
+    servicesLoading: servicesQuery.isLoading || (auth.isAuthenticated && capsQuery.isPending),
   });
 
   /**
@@ -227,6 +233,16 @@ export default function App() {
   );
   const items = agendaQuery.data ?? [];
   const songs = items.flatMap((i) => (i.song ? [i.song] : []));
+
+  // Direktlink aus dem Dienstplaner (E6-O O4): Steht der Ablauf dieses Termins, zum Lied des Punkts springen – gezählt
+  // wie `songs` oben (`liedZumPunkt`). Hat der Punkt kein Lied (mehr), zeigt die App den Ablauf.
+  useEffect(() => {
+    if (zielPunkt === null || !service || !agendaQuery.data) return;
+    const i = liedZumPunkt(agendaQuery.data, zielPunkt);
+    if (i !== null) setSongIndex(i);
+    else setView({ type: 'setlist' });
+    zielErreicht();
+  }, [zielPunkt, service, agendaQuery.data, setSongIndex, setView, zielErreicht]);
 
   // Live-Abgleich des geöffneten Ablaufs + „gesehen"-Basislinie nach dem Anzeigen –
   // Details in hooks/useSetlistLiveSync.ts.
@@ -425,7 +441,9 @@ export default function App() {
   const restoringView =
     !!restored &&
     view !== null &&
-    ((view.type === 'setlist' && !service) ||
+    // Ein Direktlink wartet auf sein Lied – das Blatt erst zeigen, wenn klar ist, wo es anfängt.
+    (zielPunkt !== null ||
+      (view.type === 'setlist' && !service) ||
       (view.type === 'chart' &&
         view.source === 'setlist' &&
         (!service || (songs.length === 0 && agendaQuery.isLoading))));

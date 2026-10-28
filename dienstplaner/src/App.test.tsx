@@ -31,7 +31,8 @@ vi.mock('./ladeBeiwerk', () => ({
   ladeAbwesenheiten: vi.fn(() => Promise.resolve([])),
   ladeMusikApp: vi.fn(() => Promise.resolve(null)),
   ladeAblauf: vi.fn(() => Promise.resolve(null)),
-  ladeLiedAutoren: vi.fn(() => Promise.resolve(new Map())),
+  ladeLiedDaten: vi.fn(() => Promise.resolve(new Map())),
+  autorVon: () => null,
 }));
 const laden = vi.mocked(ladeStart);
 const termineLaden = vi.mocked(ladeTermine);

@@ -72,7 +72,7 @@ export function Termine({ zustand, planer, onNochmal, onMehr, onTermin }: Props)
     <div>
       <section className={styles.karte} aria-labelledby="termine-titel">
         <div className={styles.kopf}>
-          <h2 id="termine-titel">Termine</h2>
+          <h2 id="termine-titel">Dienste</h2>
           <Segment
             value={auswahl.nurMeine ? 'meine' : 'alle'}
             options={[

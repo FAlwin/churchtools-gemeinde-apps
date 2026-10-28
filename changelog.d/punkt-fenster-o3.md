@@ -12,6 +12,14 @@
   ChurchTools-Aufbau („Abbrechen“ führt zurück, das X schließt ganz). Leer steht „+ Hinzufügen“ da.
 - Ein Tipp neben das Fenster schließt weiterhin nur, wenn nichts geändert ist.
 
+### Geändert (Dienstplaner)
+
+- **Am Rechner und iPad steht das grüne „+“ oben rechts im Ablauf** (wie „+ Termin“ im ChurchTools-Kalender, mit Menü
+  „Programmpunkt · Überschrift hinzufügen“) statt des blauen Punkts unten rechts; am Handy bleibt der Punkt (Alwin,
+  28.10.2026 – wie die Musik-App seit S2).
+- **Der Reiter „Termine“ heißt jetzt „Dienste“** (Alwin) – oben in der Leiste, am Handy unten, als Überschrift der
+  Liste und im Zurück-Knopf eines Termins. Die Adresse bleibt `#/termine`, gemerkte Links gehen weiter.
+
 ### Intern (E6-O O3)
 
 - `Sheet` kann mehr: `links` (ein Knopf ganz links in der Fußzeile, auch im Dokument zuerst), `mittel` (560 px),

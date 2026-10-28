@@ -442,6 +442,44 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
     expect(screen.queryByText(/Du siehst nicht alle Dienstgruppen/)).toBeNull();
   });
+
+  describe('grünes „+“ oben im Ablauf (Alwin, 28.10.2026 – wie „+ Termin“ im ChurchTools-Kalender)', () => {
+    afterEach(() => vi.unstubAllGlobals());
+    const breite = (handy: boolean) =>
+      vi.stubGlobal('matchMedia', () => ({
+        matches: handy,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }));
+
+    it('am Rechner: im Kopf der Karte „Ablauf“, mit Menü – kein schwebendes Plus', async () => {
+      breite(false);
+      ctMitAblauf();
+      zeige({ start: darfKalender([2]) });
+      fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
+      const plus = screen.getAllByRole('button', { name: 'Eintrag hinzufügen' });
+      expect(plus).toHaveLength(1);
+      const kopf = screen.getByRole('heading', { name: 'Ablauf' }).parentElement!;
+      expect(kopf.contains(plus[0])).toBe(true);
+      fireEvent.click(plus[0]);
+      // Lieder verknüpft nur die Musik-App – im Dienstplaner gibt es kein „Lied hinzufügen“.
+      expect(screen.getAllByRole('menuitem').map((m) => m.textContent)).toEqual([
+        'Programmpunkt hinzufügen',
+        'Überschrift hinzufügen',
+      ]);
+    });
+
+    it('am Handy: das schwebende Plus wie bisher, nichts im Kopf', async () => {
+      breite(true);
+      ctMitAblauf();
+      zeige({ start: darfKalender([2]) });
+      fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
+      const plus = screen.getByRole('button', { name: 'Eintrag hinzufügen' });
+      const kopf = screen.getByRole('heading', { name: 'Ablauf' }).parentElement!;
+      expect(kopf.contains(plus)).toBe(false);
+      expect(plus.getAttribute('aria-expanded')).toBeNull();
+    });
+  });
 });
 
 /**

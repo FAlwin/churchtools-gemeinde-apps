@@ -307,7 +307,45 @@ const events = [
     calendar: { domainIdentifier: '1', title: 'Gottesdienst' },
     appointmentId: null,
   },
+  /**
+   * **Ein vergangener Termin mit Lied** (E6-O O4): außerhalb des Fensters der Musik-App (-7…+42 Tage). Ein Direktlink
+   * aus dem Dienstplaner muss ihn trotzdem öffnen – über den Tag im Link (`?am=`).
+   */
+  {
+    id: EVENT_ID + 12,
+    startDate: isoInDays(-20),
+    endDate: isoInDays(-20, 12),
+    name: 'Vergangener Gottesdienst (Stub)',
+    calendar: { domainIdentifier: '1', title: 'Gottesdienst' },
+    appointmentId: null,
+  },
 ];
+
+/** Der Ablauf des vergangenen Termins (E6-O O4) – nur gelesen. */
+const agendaVergangen = {
+  calendarId: 1,
+  eventStartPosition: 0,
+  isLocked: false,
+  items: [
+    { id: 1201, title: 'Ankommen', type: 'normal', duration: 300, position: 0, startTimes: {} },
+    {
+      id: 1202,
+      title: 'Lied',
+      type: 'song',
+      duration: 300,
+      position: 1,
+      startTimes: {},
+      song: {
+        songId: SONG.id,
+        arrangementId: 9001,
+        title: 'Lied',
+        arrangement: 'Standard',
+        key: 'G',
+        bpm: 72,
+      },
+    },
+  ],
+};
 
 /** Die Abläufe der beiden Rechte-Termine (#635) – nur gelesen. */
 const agendaRecht = (calendarId) => ({
@@ -487,6 +525,12 @@ function mitVorlauf() {
  * Datum RELATIV zu heute. Die App fragt Termine im Fenster -7d…+42d ab – ein festes Datum fiele je
  * nach Testzeitpunkt heraus und der Termin würde nie erscheinen (genau das ist beim Bauen passiert).
  */
+/** Der Tag eines Zeitpunkts in Ortszeit (`YYYY-MM-DD`) – so meint ChurchTools `from`/`to`. */
+function lokalerTag(iso) {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function isoInDays(days, stunde = 10) {
   const d = new Date();
   d.setDate(d.getDate() + days);
@@ -780,7 +824,17 @@ const server = createServer((req, res) => {
       ],
     });
   }
-  if (path === '/api/events') return json(res, { data: events });
+  if (path === '/api/events') {
+    // Wie ChurchTools: `from` zählt mit, `to` nicht (gemessen 28.10.2026 – `from=to=<Tag>` liefert nichts). Vorher
+    // kamen alle Termine, egal welcher Zeitraum – ein Termin außerhalb des Fensters ließ sich so nicht nachstellen.
+    const von = url.searchParams.get('from');
+    const bis = url.searchParams.get('to');
+    const tag = (e) => lokalerTag(e.startDate);
+    return json(res, {
+      data: events.filter((e) => (!von || tag(e) >= von) && (!bis || tag(e) < bis)),
+    });
+  }
+  if (path === `/api/events/${EVENT_ID + 12}/agenda`) return json(res, { data: agendaVergangen });
   // Ein einzelner Termin (E6-5b: Name des verbundenen Termins in der Nachfrage).
   const einTermin = path.match(/^\/api\/events\/(\d+)$/);
   if (einTermin && req.method === 'GET') {

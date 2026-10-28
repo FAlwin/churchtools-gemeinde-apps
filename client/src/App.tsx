@@ -13,9 +13,11 @@ import { useWakeLock } from './hooks/useWakeLock';
 import { useAuth } from './hooks/useAuth';
 import { useSiteConfig } from './hooks/useSiteConfig';
 import { useAppNav } from './hooks/useAppNav';
+import { useDirektLink } from './hooks/useDirektLink';
 import { useOfflineAutoSync } from './hooks/useOfflineAutoSync';
 import {
   useServices,
+  useTermineAm,
   useAgenda,
   useReorderAgenda,
   useDeleteAgendaItem,
@@ -161,6 +163,18 @@ export default function App() {
   // braucht – die Abfrage muss also vorher stehen.
   const [pollServices, setPollServices] = useState(true);
   const servicesQuery = useServices(auth.isAuthenticated && canViewAgendas, pollServices);
+  // Direktlink aus dem Dienstplaner (E6-O O4): Liegt sein Termin außerhalb der geladenen Wochen (vergangen, weit voraus),
+  // genau seinen Tag nachladen – sonst landete die App in der Übersicht (Test-Instanz, 28.10.2026).
+  const direkt = useDirektLink();
+  const direktNachladen =
+    !!direkt?.am &&
+    servicesQuery.data !== undefined &&
+    !servicesQuery.data.some((s) => s.id === direkt.terminId);
+  const direktTag = useTermineAm(direkt?.am ?? null, direktNachladen);
+  const termineFuerNav =
+    direktNachladen && direktTag.data
+      ? [...(servicesQuery.data ?? []), ...direktTag.data]
+      : servicesQuery.data;
   const bearbeitbareTermine = (servicesQuery.data ?? []).filter(darfAblauf);
   // Hält den nächsten Gottesdienst automatisch offline bereit (falls in den Einstellungen aktiv).
   useOfflineAutoSync(funktionen.offline ? servicesQuery.data : undefined);
@@ -193,11 +207,15 @@ export default function App() {
   } = useAppNav({
     isAuthenticated: auth.isAuthenticated,
     isAuthLoading: auth.isLoading,
-    services: servicesQuery.data,
+    services: termineFuerNav,
+    direkt,
     // Solange die Rechte noch kommen, ist die Terminabfrage abgeschaltet – und „abgeschaltet“ heißt bei React Query nicht
     // „lädt“. Ohne diesen Zusatz hielt die Wiederherstellung die leere Liste für fertig und gab den Termin auf
     // (gefunden mit dem Direktlink, E6-O O4; dieselbe Lücke traf den Kaltstart).
-    servicesLoading: servicesQuery.isLoading || (auth.isAuthenticated && capsQuery.isPending),
+    servicesLoading:
+      servicesQuery.isLoading ||
+      (auth.isAuthenticated && capsQuery.isPending) ||
+      (direktNachladen && direktTag.isPending),
   });
 
   /**

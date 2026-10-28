@@ -851,13 +851,13 @@ describe('TerminAnsicht – Lied-Ansicht (E6-O O4)', () => {
     expect(dateien[0].getAttribute('target')).toBe('_blank');
   });
 
-  it('„In der Musik-App öffnen“ führt direkt zum Lied dieses Punkts in diesem Termin', async () => {
+  it('„In der Musik-App öffnen“ führt direkt zum Lied dieses Punkts in diesem Termin – mit seinem Tag', async () => {
     ctLied();
     zeige();
     await liedAntippen();
     const link = await screen.findByRole('link', { name: 'In der Musik-App öffnen' });
     expect(link.getAttribute('href')).toBe(
-      `${window.location.origin}/ccm/musik-app/#/termin/7/punkt/3`,
+      `${window.location.origin}/ccm/musik-app/#/termin/7/punkt/3?am=2026-10-18`,
     );
     expect(fensterKnoepfe().slice(-1)).toEqual(['Schließen']);
   });

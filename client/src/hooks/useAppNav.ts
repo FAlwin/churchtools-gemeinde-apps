@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Service } from '@shared/types/index';
-import { direktLinkAus } from '@shared/ct/musikAppLink';
+import type { DirektLink } from '@shared/ct/musikAppLink';
 import type { TabId } from '../components/TabBar';
 import { type View, type PersistedNav, loadNav, saveNav, clearNav } from '../utils/navStorage';
 
@@ -10,6 +10,8 @@ interface UseAppNavArgs {
   /** Geladene Terminliste – nötig, um den gespeicherten Gottesdienst nach einem Kaltstart wiederzufinden. */
   services: Service[] | undefined;
   servicesLoading: boolean;
+  /** Ein Direktlink aus dem Dienstplaner (`useDirektLink`) – geht vor dem gemerkten Stand. */
+  direkt?: DirektLink | null;
 }
 
 interface AppNav {
@@ -34,15 +36,6 @@ interface AppNav {
 }
 
 /**
- * Ein Direktlink in der Adresse geht vor dem gemerkten Stand: Wer gezielt ein Lied öffnet, will dorthin. **Nur lesen**
- * – aus der Adresse nimmt ihn ein Effekt danach. React ruft Startwerte im StrictMode zweimal auf; als das Lesen ihn
- * gleich löschte, fand der zweite Aufruf nichts mehr, und der Direktlink ging verloren (gefunden im E2E, E6-O O4).
- */
-function direktLinkLesen() {
-  return typeof window === 'undefined' ? null : direktLinkAus(window.location.hash);
-}
-
-/**
  * Navigations-Zustand der App (Tab / Vollbild-Ansicht / gewählter Gottesdienst & Lied) inklusive
  * Persistenz gegen den iOS-PWA-Kaltstart: sichert den Stand laufend und stellt ihn beim Start wieder
  * her. Reine Zustands-/Speicherlogik – ohne sie wäre `App` mit drei Effekten und sechs States voll.
@@ -52,9 +45,9 @@ export function useAppNav({
   isAuthLoading,
   services,
   servicesLoading,
+  direkt = null,
 }: UseAppNavArgs): AppNav {
   // Einmalig beim Mount: ein Direktlink (Termin + Punkt) – sonst der gespeicherte Stand (oder null).
-  const [direkt] = useState(direktLinkLesen);
   const [restored] = useState<PersistedNav | null>(() =>
     direkt
       ? {
@@ -68,11 +61,6 @@ export function useAppNav({
       : loadNav(),
   );
   const [zielPunkt, setZielPunkt] = useState<number | null>(direkt?.punktId ?? null);
-  // Den Direktlink aus der Adresse nehmen – sonst spränge jedes Neuladen wieder zu diesem Lied.
-  useEffect(() => {
-    if (direkt)
-      window.history.replaceState(null, '', window.location.pathname + window.location.search);
-  }, [direkt]);
   const [tab, setTab] = useState<TabId>(() => restored?.tab ?? 'termine');
   const [view, setView] = useState<View>(() => restored?.view ?? null);
   const [service, setService] = useState<Service | null>(null);

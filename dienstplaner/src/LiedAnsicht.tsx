@@ -11,6 +11,8 @@ import styles from './LiedAnsicht.module.scss';
 
 interface Props {
   terminId: number;
+  /** Tag des Termins (`JJJJ-MM-TT`) – geht in den Direktlink, damit die Musik-App ihn auch außerhalb ihrer Wochen findet. */
+  tag?: string;
   /** Der Ablaufpunkt mit Lied – der Direktlink in die Musik-App zielt auf ihn. */
   punkt: AblaufZeile & { song: NonNullable<AblaufZeile['song']> };
   /** Das Lied aus ChurchTools (`ladeLiedDaten`) – fehlt es, steht da, was der Ablauf weiß. */
@@ -28,7 +30,7 @@ interface Props {
  * Dateien (antippbar, sie öffnen sich aus ChurchTools). Unten der Weg in die Musik-App, direkt zum Blatt dieses Lieds;
  * fehlt die Musik-App, steht der Knopf ausgegraut da, mit dem Hinweis, wer sie installiert.
  */
-export function LiedAnsicht({ terminId, punkt, lied, musikApp, onClose, zurueck }: Props) {
+export function LiedAnsicht({ terminId, tag, punkt, lied, musikApp, onClose, zurueck }: Props) {
   const song = punkt.song;
   const arr = lied?.arrangements.find((a) => a.id === song.arrangementId);
   const ansicht = arr ? arrangementAnsicht(arr) : null;
@@ -64,7 +66,7 @@ export function LiedAnsicht({ terminId, punkt, lied, musikApp, onClose, zurueck 
             </FensterKnopf>
           )}
           {musikApp ? (
-            <FensterLink href={musikAppDirektLink(musikApp, terminId, punkt.id)}>
+            <FensterLink href={musikAppDirektLink(musikApp, terminId, punkt.id, tag)}>
               In der Musik-App öffnen
             </FensterLink>
           ) : (

@@ -142,6 +142,7 @@ export function TerminAnsicht({
     p.song ? (
       <LiedAnsicht
         terminId={terminId}
+        tag={zustand.art === 'fertig' ? zustand.daten.plan.spalten[0]?.tag : undefined}
         punkt={{ ...p, song: p.song }}
         lied={p.song.songId !== undefined ? lieder.get(p.song.songId) : undefined}
         musikApp={musikApp}

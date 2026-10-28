@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { Service } from '@shared/types/index';
+import type { DirektLink } from '@shared/ct/musikAppLink';
 
 const gespeichert = vi.hoisted((): { nav: unknown } => ({ nav: null }));
 vi.mock('../utils/navStorage', () => ({
@@ -19,9 +20,15 @@ import { useAppNav } from './useAppNav';
  * Ansichtswechsel erneut – beim Öffnen eines Lieds aus der Liederliste setzte sie die Ansicht zurück.
  */
 const DIENST = { id: 5 } as Service;
-function nav(services: Service[]) {
+function nav(services: Service[], direkt: DirektLink | null = null) {
   return renderHook(() =>
-    useAppNav({ isAuthenticated: true, isAuthLoading: false, services, servicesLoading: false }),
+    useAppNav({
+      isAuthenticated: true,
+      isAuthLoading: false,
+      services,
+      servicesLoading: false,
+      direkt,
+    }),
   );
 }
 
@@ -86,9 +93,9 @@ describe('useAppNav – Wiederherstellung', () => {
 });
 
 describe('useAppNav – Direktlink aus dem Dienstplaner (E6-O O4)', () => {
-  const hashSetzen = (h: string) => window.history.replaceState(null, '', `/app/${h}`);
+  const ZIEL: DirektLink = { terminId: 5, punktId: 9 };
 
-  it('#/termin/5/punkt/9: Blatt im Ablauf dieses Termins, Ziel-Punkt 9 – vor dem gemerkten Stand', () => {
+  it('Termin 5, Punkt 9: Blatt im Ablauf dieses Termins, Ziel-Punkt 9 – vor dem gemerkten Stand', () => {
     gespeichert.nav = {
       tab: 'lieder',
       view: { type: 'chart', source: 'lieder' },
@@ -97,8 +104,7 @@ describe('useAppNav – Direktlink aus dem Dienstplaner (E6-O O4)', () => {
       libSel: { songId: 1 },
       savedAt: Date.now(),
     };
-    hashSetzen('#/termin/5/punkt/9');
-    const { result } = nav([DIENST]);
+    const { result } = nav([DIENST], ZIEL);
     expect(result.current.view).toEqual({ type: 'chart', source: 'setlist' });
     expect(result.current.service).toBe(DIENST);
     expect(result.current.zielPunkt).toBe(9);
@@ -106,22 +112,13 @@ describe('useAppNav – Direktlink aus dem Dienstplaner (E6-O O4)', () => {
     expect(result.current.zielPunkt).toBeNull();
   });
 
-  it('der Direktlink verschwindet aus der Adresse – ein Neuladen springt nicht wieder hin', () => {
-    hashSetzen('#/termin/5/punkt/9');
-    nav([DIENST]);
-    expect(window.location.hash).toBe('');
-    expect(window.location.pathname).toBe('/app/');
-  });
-
   it('Termin nicht in der Liste: zurück zur Übersicht, kein Ziel mehr', () => {
-    hashSetzen('#/termin/5/punkt/9');
-    const { result } = nav([]);
+    const { result } = nav([], ZIEL);
     expect(result.current.view).toBeNull();
     expect(result.current.zielPunkt).toBeNull();
   });
 
   it('ohne Direktlink: wie bisher der gemerkte Stand, kein Ziel', () => {
-    hashSetzen('');
     const { result } = nav([DIENST]);
     expect(result.current.view).toBeNull();
     expect(result.current.zielPunkt).toBeNull();

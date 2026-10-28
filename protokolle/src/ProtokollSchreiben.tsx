@@ -82,6 +82,7 @@ export function ProtokollSchreiben({
   teile,
   ich,
   zeitzone,
+  naechste,
   onZurueck,
 }: {
   sitzung: Sitzung;
@@ -97,6 +98,8 @@ export function ProtokollSchreiben({
   teile: readonly ProtokollTeil[];
   ich: Omit<Schreiber, 'fenster'>;
   zeitzone: string;
+  /** „Nächste Sitzung“ im Bereich Termine (S5-2) – festgelegt wird im Fenster der Liste dahinter. */
+  naechste?: ReactNode;
   /** `geaendert` = es wurde gespeichert; die Liste dahinter lädt dann neu. */
   onZurueck: (geaendert: boolean) => void;
 }) {
@@ -455,7 +458,7 @@ export function ProtokollSchreiben({
               <section className={ansicht.karte} aria-label="Protokoll">
                 <ProtokollAnsicht dokument={laden.dokument} aufgaben={aufgaben} />
               </section>
-              <Bereiche dokument={laden.dokument} aufgaben={aufgaben} />
+              <Bereiche dokument={laden.dokument} aufgaben={aufgaben} naechste={naechste} />
             </>,
           )}
       </div>
@@ -576,7 +579,7 @@ export function ProtokollSchreiben({
               <ProtokollAnsicht dokument={dok} aufgaben={aufgaben} />
             </section>
           )}
-          <Bereiche dokument={dok} aufgaben={aufgaben} />
+          <Bereiche dokument={dok} aufgaben={aufgaben} naechste={naechste} />
         </>,
       )}
 

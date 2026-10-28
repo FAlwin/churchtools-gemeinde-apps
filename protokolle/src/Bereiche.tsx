@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { tagPunkt } from '@shared/ct/datum';
 import { ableiten, type Block } from '@shared/protokolle/dokument';
 import { statusText, type Aufgabe } from '@shared/protokolle/aufgaben';
@@ -6,14 +7,18 @@ import styles from './SitzungAnsicht.module.scss';
 /**
  * **Die Bereiche unter dem Protokoll** – Beschlüsse · To-Dos · Termine, untereinander (entschieden 22.10.2026), alle aus
  * der EINEN Ableitung des Dokuments (Bauplan 3.2). Beim Lesen (S3-2) und beim Schreiben (S4-1, live während des
- * Tippens) dieselben – bis S4-1 standen sie nur in der Sitzungsansicht.
+ * Tippens) dieselben – bis S4-1 standen sie nur in der Sitzungsansicht. Oben in „Termine“ steht die nächste Sitzung
+ * (S5-2, `naechste`).
  */
 export function Bereiche({
   dokument,
   aufgaben,
+  naechste,
 }: {
   dokument: readonly Block[];
   aufgaben: readonly Aufgabe[];
+  /** „Nächste Sitzung“ (S5-2) oben im Bereich Termine. */
+  naechste?: ReactNode;
 }) {
   const a = ableiten(dokument);
   const punktText = (id: string | null): string => {
@@ -68,6 +73,7 @@ export function Bereiche({
         <h3 id="termine">
           Termine <span className={styles.anzahl}>{a.termine.length}</span>
         </h3>
+        {naechste}
         {a.termine.length ? (
           <ul className={styles.liste}>
             {a.termine.map((t) => (

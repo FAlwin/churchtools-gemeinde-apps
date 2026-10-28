@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { tagPunkt } from '@shared/ct/datum';
 import { dokumentDerSitzung, type ProtokollTeil } from '@shared/protokolle/speicher';
@@ -26,6 +26,7 @@ export function SitzungAnsicht({
   aufgaben,
   zeitzone,
   springeZu = null,
+  naechste,
   onBeginnen,
   onZurueck,
 }: {
@@ -39,6 +40,8 @@ export function SitzungAnsicht({
   zeitzone: string;
   /** Block-ID des Tagesordnungspunkts, zu dem gesprungen wird. */
   springeZu?: string | null;
+  /** „Nächste Sitzung“ im Bereich Termine (S5-2). */
+  naechste?: ReactNode;
   /** Nur für die Leitung (S5-1): Protokoll zu dieser Sitzung beginnen – fehlt, wenn man nicht schreiben darf. */
   onBeginnen?: () => void;
   onZurueck: () => void;
@@ -114,7 +117,7 @@ export function SitzungAnsicht({
           <section className={styles.karte} aria-label="Protokoll">
             <ProtokollAnsicht dokument={dokument} aufgaben={aufgaben} markiert={springeZu} />
           </section>
-          <Bereiche dokument={dokument} aufgaben={aufgaben} />
+          <Bereiche dokument={dokument} aufgaben={aufgaben} naechste={naechste} />
         </FestePunkteRahmen>
       )}
     </div>

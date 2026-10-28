@@ -39,6 +39,8 @@ export interface Termin {
   titel: string;
   /** Beginn, ISO (bei Serien der berechnete Beginn dieses Termins). */
   beginn: string;
+  /** Ende, ISO – für die Dauer der nächsten Sitzung (S5-2). */
+  ende?: string;
   /** Die Besprechungsanfragen – nur Termine mit mindestens einer kommen hier an. */
   anfragen: Anfrage[];
 }
@@ -52,6 +54,8 @@ export interface Sitzung {
   /** Stabil für die Liste: Kopf-ID, sonst Termin, sonst Treffen. */
   schluessel: string;
   beginn: string;
+  /** Ende aus dem Termin (ISO) – fehlt ohne Termin. */
+  ende?: string;
   titel: string;
   termin: { kalender: number; id: number } | null;
   treffen: number | null;
@@ -61,7 +65,7 @@ export interface Sitzung {
 }
 
 /** Gleicher Beginn auf die Minute – so gehören Termin und Treffen derselben Sitzung zusammen. */
-const minute = (iso: string): string => new Date(iso).toISOString().slice(0, 16);
+export const minute = (iso: string): string => new Date(iso).toISOString().slice(0, 16);
 
 /**
  * **Gehört dieser Protokoll-Kopf zu der Sitzung?** – gleiches Gruppentreffen, oder gleicher Termin. Bei einem
@@ -113,12 +117,14 @@ export function sitzungenOrdnen(q: {
     if (da) {
       da.termin ??= { kalender: t.kalender, id: t.id };
       if (!da.kopf) da.titel = t.titel;
+      if (t.ende) da.ende = t.ende;
       da.anfragen = t.anfragen;
       continue;
     }
     sitzungen.push({
       schluessel: `t:${t.kalender}:${t.id}:${t.beginn}`,
       beginn: t.beginn,
+      ...(t.ende ? { ende: t.ende } : {}),
       titel: t.titel,
       termin: { kalender: t.kalender, id: t.id },
       treffen: null,

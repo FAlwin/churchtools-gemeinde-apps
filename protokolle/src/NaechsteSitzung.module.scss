@@ -1,0 +1,57 @@
+// „Nächste Sitzung“ oben im Bereich Termine (Bauplan S5-2, Entwurf 7).
+@use '@ui/design/mixins' as m;
+
+.naechste {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+
+  h4 {
+    margin: 0;
+    color: var(--text2);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 0;
+    color: var(--text2);
+    font-size: 13.5px;
+    line-height: 1.4;
+  }
+}
+
+.zeile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  b {
+    font-size: 14.5px;
+  }
+
+  small {
+    color: var(--text2);
+    font-size: 12.5px;
+  }
+}
+
+.knopf {
+  @include m.hauptKnopfBreit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: auto;
+  padding: 0 18px;
+}

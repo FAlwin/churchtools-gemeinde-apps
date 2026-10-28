@@ -1,0 +1,176 @@
+// Fenster „Nächste Sitzung festlegen“ / „Neue Sitzung“ (Bauplan S5-2, Entwurf 7) – Felder wie in den Anmeldungen.
+@use '@ui/design/mixins' as m;
+
+.unter {
+  margin: -6px 0 12px;
+  color: var(--text2);
+  font-size: 13.5px;
+}
+
+.feld {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+
+  > span {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text2);
+  }
+}
+
+.eingabe {
+  @include m.eingabefeld;
+  @include m.datumsfeld;
+  height: 42px;
+  padding: 0 12px;
+  font-size: 15px;
+  width: 100%;
+}
+
+.zeile {
+  display: flex;
+  gap: 8px;
+
+  > * {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.personen {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+
+  li + li {
+    border-top: 1px solid var(--border);
+  }
+}
+
+.person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  color: var(--text);
+  font-size: 14.5px;
+  cursor: pointer;
+
+  span {
+    flex: 1;
+    min-width: 0;
+  }
+
+  small {
+    color: var(--text2);
+    font-size: 12.5px;
+  }
+}
+
+.haken {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--blue);
+}
+
+.passiert {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.titel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+}
+
+.punkt {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text2);
+
+  span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  b {
+    color: var(--text);
+    font-size: 14.5px;
+  }
+
+  small {
+    font-size: 12.5px;
+    line-height: 1.35;
+  }
+
+  > svg {
+    flex: none;
+  }
+}
+
+.mail {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: var(--r-ctrl);
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.4;
+
+  > svg {
+    flex: none;
+  }
+}
+
+.ende {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  p {
+    margin: 0;
+  }
+}
+
+.hinweis {
+  padding: 10px 12px;
+  border-radius: var(--r-ctrl);
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+.leise {
+  margin: 0;
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.fehler {
+  margin-top: 14px;
+  color: var(--red);
+  font-size: 14px;
+  font-weight: 600;
+}

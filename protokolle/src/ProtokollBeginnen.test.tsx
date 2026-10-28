@@ -5,6 +5,7 @@ import { ableiten, type Block } from '@shared/protokolle/dokument';
 import { teileBauen, type ProtokollKopf, type ProtokollTeil } from '@shared/protokolle/speicher';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
 import { STANDARD_VORLAGEN } from '@shared/protokolle/vorlagen';
+import { NichtUebernommen } from '@ui/ct/fehler';
 import * as B from './beginnen';
 import * as V from './vorlagen';
 import { ProtokollBeginnen } from './ProtokollBeginnen';
@@ -139,11 +140,13 @@ describe('ProtokollBeginnen', () => {
   });
 
   it('Fehler: Fenster bleibt offen und sagt warum', async () => {
-    beginnen.mockRejectedValue(new Error('ChurchTools hat das neue Protokoll nicht übernommen.'));
+    beginnen.mockRejectedValue(new NichtUebernommen('das neue Protokoll'));
     const onBegonnen = zeige();
     await screen.findByText('Leitungssitzung');
     fireEvent.click(screen.getByRole('button', { name: 'Beginnen' }));
-    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect((await screen.findByRole('alert')).textContent).toMatch(
+      /neue Protokoll nicht übernommen/,
+    );
     expect(onBegonnen).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Beginnen' })).toBeTruthy();
   });

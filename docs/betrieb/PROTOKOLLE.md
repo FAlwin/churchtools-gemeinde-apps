@@ -1,11 +1,11 @@
 # Protokolle – ChurchTools-Erweiterung
 
-> **Stand: S5-1 (28.10.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
+> **Stand: S5-2 (28.10.2026)** – Lesen und Schreiben. Die **Startseite** zeigt „Heute“, „Meine offenen To-Dos“, „Nächste
 > Sitzungen“ und „Deine Gruppen“; der Reiter **„Sitzungen“** zeigt je Gruppe Kommend und Protokolle zum Lesen; die
 > **Lupe** oben rechts sucht in allem (ohne Suchbegriff: alle Beschlüsse); Admins richten im Reiter **„Verwaltung“**
 > Gruppen ein und pflegen die Vorlagen. Die **Leitung schreibt** Protokolle im Entwurf direkt im Editor, mit
-> Aufgaben (= To-Dos), Beschlüssen, Terminen und festen Punkten und beginnen Protokolle zu Terminen und Treffen.
-> Nächste Sitzung festlegen, Anwesenheit, Vorschläge, Freigabe und PDF folgen (Bauplan S5-2–S9 in
+> Aufgaben (= To-Dos), Beschlüssen, Terminen und festen Punkten, beginnen Protokolle zu Terminen und Treffen und legen
+> die nächste Sitzung fest. Anwesenheit, Vorschläge, Freigabe und PDF folgen (Bauplan S5-3–S9 in
 > `protokolle-planung/docs/bauplan.md`). Diese Anleitung wächst mit.
 
 Die Protokolle sind für Gruppen wie den Leitungskreis: **Protokolle als Dokument** (wie Word, Loop oder Notion),
@@ -68,6 +68,18 @@ Gruppentreffen) zeigt „Protokoll beginnen“. Im Fenster: eine Vorlage, „Wie
 freigegebenen Protokolls) oder „Leer“. Danach öffnet sich der Editor; feste Aufgaben der Vorlage sind gleich To-Dos.
 Hat jemand anderes inzwischen begonnen, öffnet sich dessen Protokoll. Ein Protokoll gehört zu genau einem Termin – bei
 Serienterminen zu dem mit demselben Beginn.
+
+**Nächste Sitzung festlegen (Leitung, S5-2):** Oben im Bereich „Termine“ eines Protokolls steht die nächste Sitzung
+(mit Einladungen und Zusagen); ist keine festgelegt, hat die Leitung dort „Nächste Sitzung festlegen“. Außerordentlich
+geht dasselbe über **„Neue Sitzung“** im Reiter „Sitzungen“ – beides nur, wenn für die Gruppe ein Kalender gewählt
+ist. Das Fenster ist vorbelegt wie die letzte Sitzung (Titel, Uhrzeit, Dauer; Datum im Abstand der letzten beiden,
+sonst vier Wochen; bei „Neue Sitzung“ zählt nur, was schon stattgefunden hat). Eingeladen sind alle aktiven Mitglieder,
+abwählbar. **Die Einladungen gehen sofort per Mail raus**
+(ChurchTools-Besprechungsanfrage); wer festlegt und sich selbst einlädt, hat gleich zugesagt und bekommt keine Mail.
+Angelegt werden Termin, Gruppentreffen und eine **geplante Sitzung**, die beides verknüpft. Fehlt das Recht
+„Gruppentreffen pflegen“, steht der Termin trotzdem und das Fenster sagt es. **Nicht einfach wiederholen**, wenn das
+Fenster „bitte im Kalender nachsehen“ sagt – sonst kommen die Einladungen doppelt. Einen falsch angelegten Termin in
+ChurchTools löschen schickt allen Eingeladenen die Mail „Termin gelöscht“.
 
 **Protokoll schreiben (Leitung, S4-1):** Ein Protokoll im Entwurf öffnet für alle, die in der Gruppe schreiben dürfen,
 direkt im Editor – Mitglieder sehen es weiter nur zum Lesen. Gespeichert wird **automatisch** drei Sekunden nach der
@@ -137,6 +149,10 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit später sc
   `props.fest` des Verweis-Blocks; „wie letztes Mal“ und Vorlagen nehmen es nicht mit.
 - Beginnen: Regel `shared/protokolle/beginnen.ts`, Zuordnung Kopf ↔ Termin/Treffen `gehoertZu` in
   `shared/protokolle/sitzungen.ts`, Schreiben `protokolle/src/beginnen.ts`, Fenster `ProtokollBeginnen.tsx`.
+- Nächste Sitzung festlegen: Regel `shared/protokolle/planen.ts` (`vorbelegung`, `zeitraum`, `geplanterKopf`,
+  `naechsteNach`), Schreiben `protokolle/src/planen.ts` (Termin → nachlesen → Treffen → Kopf; nach dem Termin nur
+  noch Hinweise, nie zurückrollen; unklare Antwort → im Kalender nachsehen, Fehlerklasse `Unklar`), Fenster
+  `SitzungFestlegen.tsx`, Kasten `NaechsteSitzung.tsx`. Gemessen: `protokolle-planung/docs/messung-s5-2-2026-10-28.md`.
 - Abschnitte: Regel `shared/protokolle/abschnitte.ts`, Anbindung `protokolle/src/abschnittZiehen.ts` (Loslassen hört
   das Blatt in der Einfangphase vor BlockNote ab; „Nach oben/unten“ im Griff-Menü von `DokumentEditor.tsx`). Der Griff
   sitzt ohne BlockNotes Überschriften-Versatz (`GRIFF_LAGE`).

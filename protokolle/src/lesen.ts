@@ -52,7 +52,7 @@ export interface GruppenSitzungen {
 interface TerminRoh {
   base?: { id: number; title: string; calendar?: { id: number } };
   appointment?: { base?: { id: number; title: string; calendar?: { id: number } } };
-  calculated?: { startDate?: string };
+  calculated?: { startDate?: string; endDate?: string };
 }
 
 /** Kommende Termine im Kalender – nur die mit Besprechungsanfrage (Alwin, 23.10.2026), samt den Antworten. */
@@ -65,7 +65,9 @@ async function termineMitAnfrage(kalender: number, von: string, bis: string): Pr
   for (const r of roh) {
     const b = r.base ?? r.appointment?.base;
     const beginn = r.calculated?.startDate;
-    if (b && beginn) alle.push({ kalender, id: b.id, titel: b.title, beginn });
+    const ende = r.calculated?.endDate;
+    if (b && beginn)
+      alle.push({ kalender, id: b.id, titel: b.title, beginn, ...(ende ? { ende } : {}) });
   }
   // Je Termin einmal fragen (die Liste zeigt es nicht – gemessen); eine Serie hat dieselbe ID → einmal genügt.
   const anfragen = new Map<number, Anfrage[]>();
@@ -95,12 +97,20 @@ interface AnfrageRoh {
   state?: string;
 }
 
-/** Gruppentreffen ab heute; abgesagte zählen nicht. `null` = nicht freigegeben (403). */
-async function treffenLesen(gruppe: number, von: string, bis: string): Promise<Treffen[] | null> {
+/**
+ * Gruppentreffen von `von` bis einschließlich `bis` (`JJJJ-MM-TT`); abgesagte zählen nicht. `null` = nicht freigegeben
+ * (403). ChurchTools zählt `end_date` **nicht** mit (gemessen 28.10.2026: `start_date` = `end_date` liefert nichts) –
+ * deshalb wird ein Tag weiter gefragt. Die eine Stelle dafür: „Kommend“ und das Nachlesen in S5-2 (`planen.ts`).
+ */
+export async function treffenLesen(
+  gruppe: number,
+  von: string,
+  bis: string,
+): Promise<Treffen[] | null> {
   try {
     const roh =
       (await ctDaten<{ id: number; startDate: string; isCanceled?: boolean }[]>(
-        `/groups/${gruppe}/meetings?start_date=${von}&end_date=${bis}`,
+        `/groups/${gruppe}/meetings?start_date=${von}&end_date=${plusTage(bis, 1)}`,
       )) ?? [];
     return roh.filter((t) => !t.isCanceled).map((t) => ({ id: t.id, beginn: t.startDate }));
   } catch (e) {

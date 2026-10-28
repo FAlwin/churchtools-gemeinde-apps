@@ -29,3 +29,16 @@ export class NichtUebernommen extends ApiError {
     this.name = 'NichtUebernommen';
   }
 }
+
+/**
+ * **Unklar, ob ChurchTools es angelegt hat – nicht einfach wiederholen.** Wo ein zweiter Versuch Schaden anrichtet
+ * (Protokolle S5-2: jeder Eingeladene bekäme die Einladung doppelt), sagt die Meldung, wo man nachsieht. Ohne eigene
+ * Klasse machte `fehlerMeldung` daraus „antwortet gerade nicht – versuch es gleich noch einmal“ (beim Bau von S5-2
+ * gefunden) – genau der falsche Rat.
+ */
+export class Unklar extends ApiError {
+  constructor(message: string) {
+    super(502, message);
+    this.name = 'Unklar';
+  }
+}

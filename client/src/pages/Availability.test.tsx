@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
 import { DEFAULT_SITE_CONFIG, type Absence, type AbsenceEvent } from '@shared/types/index';
 
 /**
@@ -8,7 +8,7 @@ import { DEFAULT_SITE_CONFIG, type Absence, type AbsenceEvent } from '@shared/ty
  *  - ein Haken ist nur VORGEMERKT, erst „Speichern" schreibt – alle auf einmal (Alwin + Frau),
  *  - ein zweiter Tipp nimmt den Haken zurück, „Verwerfen" alles,
  *  - ein Termin in einem Zeitraum fragt nach (löschen vormerken oder anpassen), statt still zu löschen,
- *  - die Monatsleiste zeigt nur den gewählten Monat, „Heute" führt zurück,
+ *  - der Zeitraum-Knopf (wie im Dienstplaner) wählt, was zu sehen ist – ab heute vier Wochen, ein Monat, eigener,
  *  - „Einträge" listet Anstehendes und Früheres, Vergangenes nur zum Ansehen,
  *  - offline sind die Kästchen und das Plus gesperrt.
  */
@@ -19,8 +19,8 @@ const aendern = vi.fn();
 const loeschen = vi.fn();
 const sichern = vi.fn();
 vi.mock('../hooks/useAvailability', () => ({
-  useMyAbsences: () => absences(),
-  useAbsenceEvents: () => events(),
+  useMyAbsences: (...a: unknown[]) => absences(...a),
+  useAbsenceEvents: (...a: unknown[]) => events(...a),
   useAbsenceReasons: () => ({ data: GRUENDE }),
   useCreateAbsence: () => ({ mutate: anlegen, isPending: false }),
   useUpdateAbsence: () => ({ mutate: aendern, isPending: false }),
@@ -150,19 +150,81 @@ describe('Abwesenheiten – Kopf und Monat', () => {
     expect(screen.queryByText('01.11.')).toBeNull(); // November gehört nicht in den Oktober
   });
 
-  it('ein anderer Monat zeigt seine Termine, „Heute" führt zurück', () => {
+  it('„Ab heute“ zeigt die nächsten vier Wochen – der Knopf nennt die Spanne', () => {
     zeige();
-    fireEvent.click(screen.getByRole('button', { name: 'Nov 26' }));
-    expect(screen.getByText('November 2026')).not.toBeNull();
-    expect(screen.getByText('1 Termin')).not.toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Heute' }));
-    expect(screen.getByText('Oktober 2026')).not.toBeNull();
+    expect(
+      screen.getByRole('button', {
+        name: /^Zeitraum: 01\.10\. – 28\.10\.2026, 3 Termine · ab heute/,
+      }),
+    ).not.toBeNull();
+    expect(screen.queryByRole('button', { name: /01\.11\./ })).toBeNull();
   });
 
-  it('ein Monat ohne Termine sagt das', () => {
+  it('Zeitraum-Knopf: „Nächster Monat“ zeigt November, „Dieser Monat“ wieder Oktober', () => {
     zeige();
-    fireEvent.click(screen.getByRole('button', { name: 'Dez 26' }));
-    expect(screen.getByText('Kein Termin mehr in diesem Monat.')).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^Zeitraum:/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Nächster Monat/ }));
+    // Der Knopf nennt den Monat, darunter steht er als Überschrift.
+    expect(
+      screen.getByRole('button', { name: /^Zeitraum: November 2026, 1 Termin$/ }),
+    ).not.toBeNull();
+    expect(screen.getAllByText('November 2026')).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: /^Zeitraum:/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Dieser Monat/ }));
+    expect(
+      screen.getByRole('button', { name: /^Zeitraum: Oktober 2026, 3 Termine$/ }),
+    ).not.toBeNull();
+    expect(screen.queryByText('November 2026')).toBeNull();
+  });
+
+  it('ein eigener Zeitraum über mehrere Monate – je Monat eine Überschrift', () => {
+    zeige();
+    fireEvent.click(screen.getByRole('button', { name: /^Zeitraum:/ }));
+    fireEvent.change(screen.getByLabelText('von'), { target: { value: '2026-10-10' } });
+    fireEvent.change(screen.getByLabelText('bis'), { target: { value: '2026-11-30' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Anzeigen' }));
+    expect(screen.getByText('Oktober 2026')).not.toBeNull();
+    expect(screen.getByText('November 2026')).not.toBeNull();
+    expect(screen.queryByRole('button', { name: /04\.10\./ })).toBeNull();
+  });
+
+  it('Vergangenes steht nicht unter „Termine“ – auch nicht in „Dieser Monat“', () => {
+    zeige(true, '2026-10-12');
+    fireEvent.click(screen.getByRole('button', { name: /^Zeitraum:/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Dieser Monat/ }));
+    expect(screen.queryByRole('button', { name: /04\.10\./ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /11\.10\./ })).toBeNull();
+    expect(kasten(/16\.10\./)).not.toBeNull();
+  });
+
+  it('ein Zeitraum ohne Termine sagt das', () => {
+    zeige();
+    fireEvent.click(screen.getByRole('button', { name: /^Zeitraum:/ }));
+    fireEvent.change(screen.getByLabelText('von'), { target: { value: '2026-12-01' } });
+    fireEvent.change(screen.getByLabelText('bis'), { target: { value: '2026-12-31' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Anzeigen' }));
+    expect(screen.getByText('Kein Termin in diesem Zeitraum.')).not.toBeNull();
+  });
+
+  it('geholt werden zwölf Monate – ein eigener Zeitraum darüber hinaus holt bis zur Jahresgrenze nach', () => {
+    zeige();
+    expect(events).toHaveBeenLastCalledWith(true, '2027-09-30');
+    fireEvent.click(screen.getByRole('button', { name: /^Zeitraum:/ }));
+    fireEvent.change(screen.getByLabelText('von'), { target: { value: '2027-09-20' } });
+    fireEvent.change(screen.getByLabelText('bis'), { target: { value: '2027-10-01' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Anzeigen' }));
+    expect(events).toHaveBeenLastCalledWith(true, '2027-10-01');
+    expect(absences).toHaveBeenLastCalledWith(true, '2025-10-01', '2027-10-01');
+  });
+
+  it('mehr als ein Jahr voraus lässt der Knopf nicht zu – der Server lehnte es mit einem Ladefehler ab', () => {
+    zeige();
+    fireEvent.click(screen.getByRole('button', { name: /^Zeitraum:/ }));
+    fireEvent.change(screen.getByLabelText('von'), { target: { value: '2027-12-01' } });
+    fireEvent.change(screen.getByLabelText('bis'), { target: { value: '2028-01-31' } });
+    expect(screen.getByText('Höchstens bis 01.10.2027')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Anzeigen' })).toHaveProperty('disabled', true);
+    expect(events).not.toHaveBeenCalledWith(true, '2028-01-31');
   });
 });
 
@@ -396,23 +458,28 @@ describe('Abwesenheiten – Plus und offline', () => {
  * Die Knöpfe gibt es nur, wenn es etwas zu wählen gibt; die Zahl „n Termine" folgt dem Filter; und
  * vorgemerkte Häkchen überstehen ihn – sie hängen am Tag, nicht an der Liste.
  */
-describe('Abwesenheiten – Termin-Filter (#400)', () => {
-  const knopf = (name: string) => screen.getByRole<HTMLButtonElement>('button', { name });
+describe('Abwesenheiten – Termin-Filter (#400, seit 28.10.2026 mit Häkchen wie im Dienstplaner)', () => {
+  const filter = () => screen.getByRole<HTMLButtonElement>('button', { name: /^Filter/ });
+  const haken = (name: string) => screen.getByRole<HTMLInputElement>('checkbox', { name });
+  const oeffne = () => fireEvent.click(filter());
 
-  it('zeigt je Art einen Knopf und „Alle" – aktiv ist „Alle"', () => {
+  it('ein Knopf „Filter“ mit einem Häkchen je Art – anfangs alle angehakt', () => {
     zeige();
-    expect(knopf('Alle').getAttribute('aria-pressed')).toBe('true');
-    expect(knopf('Gottesdienst').getAttribute('aria-pressed')).toBe('false');
-    expect(knopf('Jugend').getAttribute('aria-pressed')).toBe('false');
+    expect(filter().getAttribute('aria-label')).toBe('Filter');
+    oeffne();
+    expect(haken('Gottesdienst').checked).toBe(true);
+    expect(haken('Jugend').checked).toBe(true);
   });
 
-  it('zeigt KEINE Knöpfe, wenn keine Termin-Arten gepflegt sind', () => {
+  it('KEIN Filter, wenn keine Termin-Arten gepflegt sind', () => {
     siteConfig.mockReturnValue({ data: { ...DEFAULT_SITE_CONFIG, terminArten: [] } });
     zeige();
-    expect(screen.queryByRole('group', { name: 'Termin-Arten' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Filter/ })).toBeNull();
+    // Auch kein leeres Ziel für die Einführung – sonst zeigte ihr Schritt „Nur bestimmte Termine“ ins Leere.
+    expect(document.querySelector('[data-tour="verf-filter"]')).toBeNull();
   });
 
-  it('zeigt KEINE Knöpfe, wenn alle Termine in dieselbe Art fallen', () => {
+  it('KEIN Filter, wenn alle Termine in dieselbe Art fallen', () => {
     siteConfig.mockReturnValue({ data: { ...DEFAULT_SITE_CONFIG, terminArten: [ARTEN[0]] } });
     events.mockReturnValue({
       data: EVENTS.filter((e) => e.name === 'Gottesdienst'),
@@ -421,75 +488,85 @@ describe('Abwesenheiten – Termin-Filter (#400)', () => {
       refetch: vi.fn(),
     });
     zeige();
-    expect(screen.queryByRole('group', { name: 'Termin-Arten' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Filter/ })).toBeNull();
   });
 
-  it('ein Termin, der zu keiner Art passt, steht unter „Sonstige"', () => {
+  it('ein Termin, der zu keiner Art passt, steht unter „Sonstige“', () => {
     siteConfig.mockReturnValue({ data: { ...DEFAULT_SITE_CONFIG, terminArten: [ARTEN[0]] } });
     zeige();
-    fireEvent.click(knopf('Sonstige'));
+    oeffne();
+    fireEvent.click(haken('Gottesdienst'));
     expect(screen.getByText('1 Termin')).not.toBeNull();
     expect(kasten(/16\.10\./)).not.toBeNull();
+    expect(haken('Sonstige').checked).toBe(true);
   });
 
-  it('filtert Liste und Zahl auf die gewählte Art', () => {
+  it('ein Häkchen weg blendet die Art aus – Liste und Zahl; der Knopf nennt, wie viel ausgeblendet ist', () => {
     zeige();
-    fireEvent.click(knopf('Jugend'));
+    oeffne();
+    fireEvent.click(haken('Gottesdienst'));
     expect(screen.getByText('1 Termin')).not.toBeNull();
-    // Über die Abhak-Knöpfe geprüft, wie die übrigen Tests: Ihr Name trägt das Datum.
     expect(screen.queryByRole('button', { name: /04\.10\./ })).toBeNull();
     expect(kasten(/16\.10\./)).not.toBeNull();
-    expect(knopf('Alle').getAttribute('aria-pressed')).toBe('false');
+    expect(filter().getAttribute('aria-label')).toBe('Filter, 1 ausgeblendet');
   });
 
-  it('ein zweiter Knopf ERSETZT den ersten – entweder eins oder alles', () => {
+  it('mehrere ausblenden geht – anders als vorher („eins oder alles“)', () => {
     zeige();
-    fireEvent.click(knopf('Jugend'));
-    fireEvent.click(knopf('Gottesdienst'));
-    expect(knopf('Gottesdienst').getAttribute('aria-pressed')).toBe('true');
-    expect(knopf('Jugend').getAttribute('aria-pressed')).toBe('false');
+    oeffne();
+    fireEvent.click(haken('Gottesdienst'));
+    fireEvent.click(haken('Jugend'));
+    expect(screen.getByText('Kein Termin in diesem Zeitraum.')).not.toBeNull();
+    expect(filter().getAttribute('aria-label')).toBe('Filter, 2 ausgeblendet');
+  });
+
+  it('das Häkchen wieder setzen zeigt die Art wieder', () => {
+    zeige();
+    oeffne();
+    fireEvent.click(haken('Jugend'));
+    expect(screen.getByText('2 Termine')).not.toBeNull();
+    fireEvent.click(haken('Jugend'));
+    expect(screen.getByText('3 Termine')).not.toBeNull();
+  });
+
+  it('merkt sich die ausgeblendeten Arten auf dem Gerät', () => {
+    zeige();
+    oeffne();
+    fireEvent.click(haken('Jugend'));
+    expect(localStorage.getItem('worship:abwesenheiten-ausgeblendet')).toBe('["jugend"]');
+    cleanup();
+    zeige();
     expect(screen.getByText('2 Termine')).not.toBeNull();
   });
 
-  it('ein Tipp auf den gewählten Knopf hebt die Wahl auf', () => {
+  it('die gemerkte Wahl der alten Art wird umgerechnet: „nur Jugend“ → Gottesdienst ausgeblendet', () => {
+    localStorage.setItem('worship:abwesenheiten-filter', JSON.stringify(['jugend']));
     zeige();
-    fireEvent.click(knopf('Jugend'));
-    fireEvent.click(knopf('Jugend'));
-    expect(knopf('Alle').getAttribute('aria-pressed')).toBe('true');
-    expect(screen.getByText('3 Termine')).not.toBeNull();
-  });
-
-  it('„Alle" hebt eine Auswahl auf', () => {
-    zeige();
-    fireEvent.click(knopf('Jugend'));
     expect(screen.getByText('1 Termin')).not.toBeNull();
-    fireEvent.click(knopf('Alle'));
-    expect(screen.getByText('3 Termine')).not.toBeNull();
+    expect(filter().getAttribute('aria-label')).toBe('Filter, 1 ausgeblendet');
   });
 
-  it('merkt sich die Wahl auf dem Gerät', () => {
-    zeige();
-    fireEvent.click(knopf('Jugend'));
-    // Zweites Öffnen: dieselbe Auswahl ohne erneutes Tippen.
-    render(<Availability online onToast={vi.fn()} heute={HEUTE} />);
-    const alle = screen.getAllByRole('button', { name: 'Jugend' });
-    expect(alle[alle.length - 1].getAttribute('aria-pressed')).toBe('true');
-  });
-
-  it('eine gemerkte Wahl, die es nicht mehr gibt, gilt als „Alle" – keine leere Liste ohne Grund', () => {
+  it('eine alte Wahl, die es nicht mehr gibt, blendet nichts aus – keine leere Liste ohne Grund', () => {
     localStorage.setItem('worship:abwesenheiten-filter', JSON.stringify(['99']));
     zeige();
     expect(screen.getByText('3 Termine')).not.toBeNull();
-    expect(knopf('Alle').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('ist schon etwas Neues gemerkt, zählt die alte Wahl nicht mehr', () => {
+    localStorage.setItem('worship:abwesenheiten-filter', JSON.stringify(['jugend']));
+    localStorage.setItem('worship:abwesenheiten-ausgeblendet', '[]');
+    zeige();
+    expect(screen.getByText('3 Termine')).not.toBeNull();
   });
 
   it('ein vorgemerkter Haken übersteht den Filterwechsel', () => {
     zeige();
     fireEvent.click(kasten(/04\.10\./));
     expect(leiste()).not.toBeNull();
-    fireEvent.click(knopf('Jugend')); // der 04.10. ist jetzt ausgeblendet
+    oeffne();
+    fireEvent.click(haken('Gottesdienst')); // der 04.10. ist jetzt ausgeblendet
     expect(leiste()).not.toBeNull(); // die Vormerkung bleibt
-    fireEvent.click(knopf('Alle'));
+    fireEvent.click(haken('Gottesdienst'));
     expect(kasten(/04\.10\./).getAttribute('aria-pressed')).toBe('true');
   });
 });

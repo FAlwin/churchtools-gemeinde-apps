@@ -26,7 +26,7 @@ export const MONATE = [
 ] as const;
 
 /**
- * Kurzform für Monatsleiste, Raster und Terminkarten: „Jan“, „Mär“, „Okt“ – bei allen zwölf Monaten genau
+ * Kurzform für Datumskacheln und Terminkarten: „Jan“, „Mär“, „Okt“ – bei allen zwölf Monaten genau
  * die ersten drei Buchstaben, deshalb abgeleitet statt einer zweiten Liste.
  */
 export const MONATE_KURZ: readonly string[] = MONATE.map((m) => m.slice(0, 3));

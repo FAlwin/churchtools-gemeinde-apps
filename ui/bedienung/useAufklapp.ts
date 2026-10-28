@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 
 /**
  * **Ein Menü unter einem Knopf** – auf, zu, schließen bei Tipp daneben oder Escape. Eine Stelle für
- * Filter- und Zeitraum-Knopf (14.10.2026), damit die Mechanik nicht zweimal entsteht. `rahmen` kommt an das
+ * Filter- und Zeitraum-Knopf (14.10.2026) und „+ … hinzufügen“ (`OptionWaehlen`, S2 – baute die Mechanik zunächst
+ * ein zweites Mal), damit sie nicht mehrfach entsteht. `rahmen` kommt an das
  * Element, das Knopf und Menü umschließt – ein Tipp darin schließt nicht.
  */
 export function useAufklapp() {

@@ -1,6 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
+import { Icon } from '../icons/icons';
+import { KopfKnopf } from './KopfKnopf';
+import { useAufklapp } from './useAufklapp';
+import styles from './OptionWaehlen.module.scss';
 
-/** Escape schließt – Blatt wie Menü (am Rechner mit Tastatur der gewohnte Weg hinaus). */
+/**
+ * Escape schließt das Blatt (am Rechner mit Tastatur der gewohnte Weg hinaus). Das Menü am Rechner nutzt dafür
+ * `useAufklapp` wie Filter- und Zeitraum-Knopf.
+ */
 function useEscape(aktiv: boolean, schliessen: () => void): void {
   const aktuell = useRef(schliessen);
   aktuell.current = schliessen;
@@ -13,9 +20,6 @@ function useEscape(aktiv: boolean, schliessen: () => void): void {
     return () => document.removeEventListener('keydown', taste);
   }, [aktiv]);
 }
-import { Icon } from '../icons/icons';
-import { KopfKnopf } from './KopfKnopf';
-import styles from './OptionWaehlen.module.scss';
 
 /** Eine Möglichkeit in „Option wählen“ („Programmpunkt hinzufügen“). */
 export interface Option {
@@ -81,19 +85,10 @@ export function HinzufuegenMenue({
   gesperrt?: () => void;
   dataTour?: string;
 }) {
-  const [offen, setOffen] = useState(false);
-  const huelle = useRef<HTMLSpanElement>(null);
-  useEscape(offen, () => setOffen(false));
-  useEffect(() => {
-    if (!offen) return;
-    const weg = (e: PointerEvent) => {
-      if (huelle.current && !huelle.current.contains(e.target as Node)) setOffen(false);
-    };
-    document.addEventListener('pointerdown', weg);
-    return () => document.removeEventListener('pointerdown', weg);
-  }, [offen]);
+  // Auf, zu, Tipp daneben, Escape – derselbe Baustein wie Filter- und Zeitraum-Knopf.
+  const { offen, setOffen, rahmen } = useAufklapp();
   return (
-    <span className={styles.huelle} ref={huelle}>
+    <div className={styles.huelle} ref={rahmen}>
       <KopfKnopf
         onClick={() => (gesperrt ? gesperrt() : setOffen((o) => !o))}
         label={label}
@@ -120,6 +115,6 @@ export function HinzufuegenMenue({
           ))}
         </div>
       )}
-    </span>
+    </div>
   );
 }

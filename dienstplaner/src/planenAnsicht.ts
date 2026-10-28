@@ -1,5 +1,5 @@
 import type { Breite } from '@shared/dienstplan/fenster';
-import { AB_HEUTE, zeitraumAus, type Zeitraum } from '@shared/dienstplan/zeitraum';
+import { AB_HEUTE, zeitraumAus, type Zeitraum } from '@shared/ct/zeitraum';
 import { leseImGeraet, merkeImGeraet, texte } from './geraet';
 
 /**

@@ -311,7 +311,7 @@ describe('kommendeTermine – von heute bis zu einem Tag (Monatsansicht, 19.09.2
     await a.kommendeTermine(COOKIE, '2027-02-28', HEUTE);
     expect(getEvents).toHaveBeenCalledWith(COOKIE, '2026-10-01', '2027-02-28');
   });
-  it('ohne Angabe ein halbes Jahr – so weit reicht die Monatsleiste', async () => {
+  it('ohne Angabe ein halbes Jahr (die App sagt sonst immer, bis wann)', async () => {
     vi.mocked(getEvents).mockResolvedValue([]);
     await a.kommendeTermine(COOKIE, undefined, HEUTE);
     expect(getEvents).toHaveBeenCalledWith(COOKIE, '2026-10-01', '2027-04-02');

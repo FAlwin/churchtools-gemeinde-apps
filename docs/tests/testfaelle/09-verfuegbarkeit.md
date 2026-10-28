@@ -2,8 +2,8 @@
 
 Der Tab „Abwesenheiten" (#177) schreibt **echte Abwesenheiten in ChurchTools**. Alle Fälle deshalb auf
 **musik-test** mit einem Konto durchspielen, dessen Einträge man hinterher in ChurchTools nachsehen
-und aufräumen darf. Aufbau seit dem 19.09.2026 (Entwurfsrunde 8): Monatsleiste, ein Abhakfeld je
-Termin, **Speichern-Leiste** – nichts wird ohne „Speichern" geschrieben.
+und aufräumen darf. Aufbau seit dem 19.09.2026 (Entwurfsrunde 8): Zeitraum (seit 28.10.2026 der Zeitraum-Knopf
+wie im Dienstplaner, vorher eine Monatsleiste), ein Abhakfeld je Termin, **Speichern-Leiste** – nichts wird ohne „Speichern" geschrieben.
 
 ### TF-VERF-01 · Bei Terminen abhaken, speichern, zurücknehmen
 
@@ -16,8 +16,9 @@ eine Abwesenheit mit dessen **Uhrzeit** und dem Kommentar `[Musikteam]` an, alle
 (seit 22.09.2026; vorher ganztägig je Tag). Ein zweiter Tipp nimmt einen Haken zurück.
 
 1. Anmelden, unten auf **Abwesenheiten**. Beim ersten Öffnen erscheint die Einführung (vier Blasen, drei ohne Termin-Arten) –
-   schließen. Oben der Schalter **Termine | Einträge**, darunter die Monatsleiste mit **Heute**
-   (ausgegraut), dem laufenden Monat und sechs Monaten voraus, rechts der runde Pfeil.
+   schließen. Oben der Schalter **Termine | Einträge**, darunter links der **Zeitraum-Knopf** (z. B.
+   „28.10. – 24.11.2026 · 6 Termine · ab heute“) und rechts – wenn es mehrere Termin-Arten gibt – der Knopf
+   **Filter**. Beide sehen aus wie im Dienstplaner.
 2. Beim nächsten Gottesdienst das Kästchen **Abwesend** antippen: Haken rot, blauer Ring, die
    Datumskachel wird rot. Unten erscheint die Leiste **„Verwerfen · 1 Änderung vorgemerkt ·
    Speichern"**, das Plus ist weg. **In ChurchTools steht noch nichts.**
@@ -30,12 +31,12 @@ eine Abwesenheit mit dessen **Uhrzeit** und dem Kommentar `[Musikteam]` an, alle
 6. Zurück in der App: den Haken wegnehmen → Leiste, **Speichern** → in ChurchTools ist der Eintrag weg.
 7. **Zwei auf einmal:** zwei Termine abhaken, einmal Speichern → Meldung „2 Änderungen gespeichert",
    in ChurchTools zwei Einträge. Dann beide wieder weg, Speichern.
-8. **Unter „Termine" fehlt Vergangenes:** Der laufende Monat zeigt nur Termine ab heute.
+8. **Unter „Termine" fehlt Vergangenes:** Auch „Dieser Monat“ zeigt nur Termine ab heute.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `client/src/pages/Availability.tsx`, `client/src/components/MonatsLeiste.tsx`, `client/src/hooks/useAvailability.ts`, `server/src/services/absences.ts`, `server/src/controllers/absencesController.ts`, `shared/absences/index.ts`
+- **Betrifft:** `client/src/pages/Availability.tsx`, `ui/bedienung/ZeitraumKnopf.tsx`, `client/src/hooks/useAvailability.ts`, `server/src/services/absences.ts`, `server/src/controllers/absencesController.ts`, `shared/absences/index.ts`
 - **Automatisiert:** teilweise – `client/src/pages/Availability.test.tsx` (vorgemerkt statt geschrieben, zweiter Tipp, Verwerfen, kein Plus während der Vormerkung, Fehler behält die Vormerkung), `client/src/hooks/useAvailability.test.tsx` (erst anlegen, dann löschen, nacheinander; nach Fehlschlag neu holen), `server/src/services/absences.test.ts`; von Hand bleibt, dass ChurchTools die Einträge wirklich anlegt und der Grund stimmt (`CHURCHTOOLS_ABSENCE_REASON_ID`)
 - **Historie:** #177 (Runde 8, 19.09.2026)
 
@@ -128,30 +129,32 @@ den neuen Werten – der alte ist weg, der Marker `[Musikteam]` geblieben.
 
 </details>
 
-### TF-VERF-05 · Monate wählen, Früheres ansehen
+### TF-VERF-05 · Zeitraum wählen, Früheres ansehen
 
 **Das brauchst du:** Wie TF-VERF-01, dazu eine Abwesenheit in der Vergangenheit (in ChurchTools ein
 Datum vor heute eintragen – das lässt die App nicht zu).
 
-**Das muss passieren:** Die Monatsleiste zeigt nur nach vorn; der Pfeil klappt zwölf Monate auf;
-**Heute** führt zurück. Vergangenes steht unter **Einträge → Früher**, nur zum Ansehen.
+**Das muss passieren:** Der **Zeitraum-Knopf** ist derselbe wie in Dienstplaner › Planen (seit 28.10.2026, vorher
+Monats-Kapseln). Gezeigt wird nur nach vorn; beim Öffnen „ab heute“ (die nächsten vier Wochen). Vergangenes steht
+unter **Einträge → Früher**, nur zum Ansehen.
 
-1. In der Leiste **Dez 26** antippen: Überschrift „Dezember 2026", die Termine dieses Monats. **Heute**
-   ist jetzt aktiv → Tipp → zurück zum laufenden Monat, Heute ausgegraut. Die Leiste lässt sich nach
-   rechts wischen (rechte Kante läuft aus), sechs Monate voraus.
-2. Auf den runden **Pfeil** rechts: Raster mit zwölf Monaten ab heute, Jahreszahl darüber; Monate mit
-   Einträgen tragen einen roten Punkt. Einen Monat weit hinten wählen → Raster zu, Monat gewählt, er
-   steht als Pill in der Leiste. Pfeil erneut → Raster wieder zu.
-3. **Einträge → Früher (n):** Der vergangene Eintrag steht dort, blass. Antippen → Fenster
+1. Der Knopf zeigt die Spanne der nächsten vier Wochen und darunter „n Termine · ab heute“. Antippen → Menü: **Ab
+   heute** (die nächsten 4 Wochen), **Dieser Monat**, **Nächster Monat**, darunter **Eigener Zeitraum** von–bis mit
+   „Anzeigen“. Tipp daneben oder Escape schließt es.
+2. **Nächster Monat** → Knopf „November 2026“, darunter die Überschrift „November 2026“ und seine Termine.
+3. **Eigener Zeitraum** über zwei Monate → je Monat eine Überschrift mit eigener Zahl. Ein Zeitraum ohne Termine sagt
+   „Kein Termin in diesem Zeitraum.“ Ein Zeitraum weit über ein Jahr hinaus lädt kurz nach und zeigt dann seine
+   Termine.
+4. **Einträge → Früher (n):** Der vergangene Eintrag steht dort, blass. Antippen → Fenster
    „Vergangene Abwesenheit", Felder gesperrt, kein Speichern, kein Löschen, Knopf „Schließen".
-4. **Anstehend** zeigt ihn nicht; unter „Termine" gibt es keinen vergangenen Monat.
+5. **Anstehend** zeigt ihn nicht; unter „Termine" gibt es nichts aus der Vergangenheit.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/MonatsLeiste.tsx`, `client/src/utils/monate.ts`, `client/src/pages/Availability.tsx`, `client/src/components/AbsenceSheet.tsx`, `server/src/services/absences.ts`
-- **Automatisiert:** teilweise – `client/src/components/MonatsLeiste.test.tsx`, `client/src/utils/monate.test.ts`, `client/src/pages/Availability.test.tsx` (Monat wechseln, Heute, Früher nur lesbar), `server/src/services/absences.test.ts` (Fenster bis zu einem Tag, höchstens ein Jahr); von Hand bleibt das Wischen der Leiste am Gerät
-- **Historie:** #177 (Runde 8, 19.09.2026)
+- **Betrifft:** `ui/bedienung/ZeitraumKnopf.tsx`, `shared/ct/zeitraum.ts`, `client/src/utils/monate.ts`, `client/src/pages/Availability.tsx`, `client/src/components/AbsenceSheet.tsx`, `server/src/services/absences.ts`
+- **Automatisiert:** teilweise – `ui/bedienung/ZeitraumKnopf.test.tsx`, `shared/ct/zeitraum.test.ts`, `client/src/utils/monate.test.ts`, `client/src/pages/Availability.test.tsx` (ab heute vier Wochen, nächster/dieser Monat, eigener Zeitraum über zwei Monate, leerer Zeitraum, Nachladen über ein Jahr hinaus, Früher nur lesbar), `server/src/services/absences.test.ts` (Fenster bis zu einem Tag, höchstens ein Jahr); von Hand bleibt die Bedienung am Gerät
+- **Historie:** #177 (Runde 8, 19.09.2026); Zeitraum-Knopf statt Monatsleiste 28.10.2026 (Entwurf A, Alwin)
 
 </details>
 
@@ -160,34 +163,36 @@ Datum vor heute eintragen – das lässt die App nicht zu).
 **Das brauchst du:** Ein Admin-Konto und ein Konto mit dem Tab „Abwesenheiten". Einen Monat, in dem
 Termine mit verschiedenen Namen liegen (z. B. „Gottesdienst", „Gebetsabend", „Probe").
 
-**Das muss passieren:** Der Admin legt die Arten fest, die Knöpfe heißen wie die Arten, Liste und
-Zahl folgen der Auswahl (genau eine Art oder alles), und beim nächsten Öffnen steht der Filter
-noch so.
+**Das muss passieren:** Der Admin legt die Arten fest, im **Filter**-Menü (derselbe Knopf wie im Dienstplaner,
+seit 28.10.2026) steht je Art ein Häkchen, Liste und Zahl folgen den Häkchen, und beim nächsten Öffnen steht der
+Filter noch so.
 
 1. **Als Admin:** Mehr → Verwaltung → **„Abwesenheiten: Termin-Arten"**. Zwei Arten anlegen:
    Name „Gottesdienst", Suchwort „Gottesdienst"; Name „Gebetsabend", Suchwort „Gebet". Speichern.
    Die Reihe zeigt „2 Arten".
-2. Tab „Abwesenheiten" → „Termine". Unter der Monatsleiste stehen **„Alle"**, „Gottesdienst",
-   „Gebetsabend" und – falls es Termine mit anderem Namen gibt – **„Sonstige"**. „Alle" ist blau.
-3. **„Gottesdienst"** antippen: Nur Gottesdienste (auch „Gottesdienst mit Abendmahl") bleiben, die
-   Zahl passt, „Alle" ist nicht mehr blau.
-4. **„Gebetsabend"** antippen: Jetzt nur Gebetsabende – der Knopf **ersetzt** „Gottesdienst".
-   „Gebetsabend" erneut antippen: Die Anzeige springt auf **„Alle"**.
-5. Einen Monat ohne Gebetsabend wählen, „Gebetsabend" antippen: „Kein Termin mehr in diesem
-   Monat" – der Filter ist sichtbar aktiv.
-6. **Häkchen bleibt:** Einen Gottesdienst abhaken (Leiste „Speichern" erscheint), dann auf
-   „Gebetsabend" filtern: Die Leiste bleibt. Zurück auf „Alle": Der Haken steht noch.
-7. **Merken:** „Gebetsabend" wählen, App schließen und neu öffnen → der Filter steht noch.
-8. **Ohne Arten:** Der Admin löscht alle Arten und speichert. Im Tab gibt es die Knöpfe **nicht**.
+2. Tab „Abwesenheiten" → „Termine". Rechts steht der Knopf **„Filter“**. Antippen → Menü „Veranstaltungen“ mit
+   Häkchen bei „Gottesdienst“, „Gebetsabend“ und – falls es Termine mit anderem Namen gibt – **„Sonstige“**; alle
+   angehakt.
+3. **„Gebetsabend“** abhaken: Gebetsabende verschwinden, die Zahl am Zeitraum-Knopf passt, der Filter-Knopf ist blau
+   getönt und trägt eine **1**.
+4. Zusätzlich **„Sonstige“** abhaken: Nur noch Gottesdienste (auch „Gottesdienst mit Abendmahl“), der Knopf trägt
+   **2**. Beide wieder anhaken → alles ist zu sehen, keine Zahl.
+5. Alle abhaken → „Kein Termin in diesem Zeitraum.“ – der Filter ist sichtbar aktiv.
+6. **Häkchen bleibt:** Einen Gottesdienst als abwesend abhaken (Leiste „Speichern" erscheint), dann „Gottesdienst“
+   im Filter abhaken: Die Leiste bleibt. Wieder anhaken: Der Haken „Abwesend“ steht noch.
+7. **Merken:** „Gebetsabend“ abhaken, App schließen und neu öffnen → der Filter steht noch so.
+   **Alte Wahl:** Wer vor dem 28.10.2026 „nur Gottesdienst“ gewählt hatte, sieht beim ersten Öffnen Gottesdienst
+   angehakt und alle anderen Arten abgehakt.
+8. **Ohne Arten:** Der Admin löscht alle Arten und speichert. Im Tab gibt es den Filter-Knopf **nicht**.
 9. **Halbe Zeile:** Im Admin-Fenster eine Art nur mit Namen anlegen und speichern → Meldung, nichts
    gespeichert.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/pages/Availability.tsx`, `client/src/utils/terminFilter.ts`, `client/src/components/TerminArtenManager.tsx`, `client/src/pages/Settings.tsx`, `client/src/components/VerwaltungFenster.tsx`, `client/src/components/VerwaltungZeilen.tsx`, `client/src/hooks/useVerwaltung.ts`, `client/src/utils/devicePrefs.ts`, `server/src/services/siteConfig.ts`
-- **Automatisiert:** überwiegend – `client/src/utils/terminFilter.test.ts` (Suchwort, Reihenfolge, Sonstige, eins-oder-alles, verwaiste Wahl), `client/src/pages/Availability.test.tsx` (Knöpfe, Zahl, eins-oder-alles, Sonstige, Merken, Häkchen übersteht den Wechsel, keine Knöpfe ohne Arten), `client/src/components/TerminArtenManager.test.tsx` (trimmen, halbe Zeile, löschen), `server/src/services/siteConfig.test.ts` (Schema, Rundlauf, doppelte IDs); von Hand bleibt der Weg über den echten Admin-Bereich
-- **Historie:** #400 (20.09.2026), Wunsch Alwin; erster Bau nach Kalender verworfen (bei der ECG ein Kalender für alles)
+- **Betrifft:** `client/src/pages/Availability.tsx`, `client/src/utils/terminFilter.ts`, `ui/bedienung/FilterKnopf.tsx`, `client/src/components/TerminArtenManager.tsx`, `client/src/pages/Settings.tsx`, `client/src/components/VerwaltungFenster.tsx`, `client/src/components/VerwaltungZeilen.tsx`, `client/src/hooks/useVerwaltung.ts`, `client/src/utils/devicePrefs.ts`, `server/src/services/siteConfig.ts`
+- **Automatisiert:** überwiegend – `client/src/utils/terminFilter.test.ts` (Suchwort, Reihenfolge, Sonstige, Ausblenden, Umrechnen der alten Wahl), `ui/bedienung/FilterKnopf.test.tsx`, `client/src/pages/Availability.test.tsx` (Häkchen, Zahl am Knopf, mehrere ausblenden, Sonstige, Merken, alte Wahl umgerechnet, Häkchen übersteht den Wechsel, kein Filter ohne Arten), `client/src/components/TerminArtenManager.test.tsx` (trimmen, halbe Zeile, löschen), `server/src/services/siteConfig.test.ts` (Schema, Rundlauf, doppelte IDs); von Hand bleibt der Weg über den echten Admin-Bereich
+- **Historie:** #400 (20.09.2026), Wunsch Alwin; erster Bau nach Kalender verworfen (bei der ECG ein Kalender für alles); Filter-Knopf mit Häkchen wie im Dienstplaner statt Kapseln „eins oder alles“ 28.10.2026
 
 </details>
 

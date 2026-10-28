@@ -100,6 +100,8 @@ export const TOUR_SETLIST_EDIT = 'setlist-edit-v6';
 // Schritte zeigen andere Elemente als v3.
 // v5 (20.09.2026, #400): neuer Schritt „Nur bestimmte Termine" für den Termin-Filter – er wird
 // übersprungen, wenn es höchstens eine Termin-Art gibt (dann gibt es die Knöpfe nicht).
+// 28.10.2026: Zeitraum- und Filter-Knopf wie im Dienstplaner statt Monats- und Filter-Kapseln – Ziele und Texte
+// neu, Version BEWUSST NICHT erhöht (wie beim Liedblatt, Alwin 28.10.2026): nur neue Nutzer sehen die Einführung.
 export const TOUR_VERFUEGBARKEIT = 'verfuegbarkeit-v5';
 
 /**
@@ -258,14 +260,14 @@ export const LIED_STAMMDATEN_STEPS: CoachStep[] = [
 /** Gruppe 5 – Verfügbarkeit: eigene Abwesenheiten (#177). */
 export const VERFUEGBARKEIT_STEPS: CoachStep[] = [
   {
-    selector: '[data-tour="verf-monate"]',
-    title: 'Monat wählen',
-    body: 'Oben stehen die kommenden Monate. Der Pfeil rechts klappt ein Jahr auf, „Heute" bringt dich zum laufenden Monat zurück.',
+    selector: '[data-tour="verf-zeitraum"]',
+    title: 'Zeitraum wählen',
+    body: 'Hier wählst du, welche Termine du siehst: ab heute die nächsten vier Wochen, diesen oder den nächsten Monat – oder einen eigenen Zeitraum von–bis.',
   },
   {
     selector: '[data-tour="verf-filter"]',
     title: 'Nur bestimmte Termine',
-    body: 'Tippe eine Termin-Art an, um nur deren Termine zu sehen – etwa nur Gottesdienste. Ein zweiter Tipp auf denselben Knopf oder auf „Alle" zeigt wieder alles. Die App merkt sich deine Wahl.',
+    body: 'Unter „Filter" hakst du ab, welche Termin-Arten du siehst – etwa nur Gottesdienste. Die Zahl am Knopf zeigt, wie viele Arten gerade ausgeblendet sind. Die App merkt sich deine Wahl.',
   },
   {
     selector: '[data-tour="verf-termine"]',

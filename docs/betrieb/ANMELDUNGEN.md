@@ -199,7 +199,9 @@ Eine Kopie („Wie eine frühere Veranstaltung“) übernimmt beim Freigeben den
 in ChurchTools ein – und zugleich dessen eigene Mail „Dein Check-in-Code“ aus. Sonst bekäme jede Person zwei Mails, und
 beim Einschalten bekämen alle schon Angemeldeten eine. Jede Person bekommt ihren Code als Bild in der Bestätigung; wer
 schon angemeldet ist, hat dann auch einen, bekommt ihn aber nicht nachgeschickt. Standard ist aus. Wird der Check-in in
-ChurchTools selbst umgeschaltet, zieht die Erweiterung die Mail beim nächsten Öffnen der Veranstaltung nach. „Leitung
+ChurchTools selbst umgeschaltet, zieht die Erweiterung die Mail beim nächsten Öffnen der Veranstaltung nach. Achtung:
+Schaltet jemand in ChurchTools bei laufendem Check-in die Mail mit dem Code ein, schickt ChurchTools sie **sofort an
+alle** Angemeldeten (echte Prüfung 28.10.2026) – die Erweiterung stellt sie erst beim nächsten Öffnen wieder ab. „Leitung
 benachrichtigen“ gibt es bewusst nicht: ChurchTools schickte dabei in keinem Versuch eine Mail (gemessen 26./28.10.2026).
 
 **„Deine Anmeldung“:** Den Link dazu schreibt das Formular beim Anmelden in das Feld „Link zur Anmeldung“, die

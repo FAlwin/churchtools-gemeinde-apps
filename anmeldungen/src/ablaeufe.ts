@@ -13,6 +13,8 @@
  * - A9-2b (gemessen 26.10.2026): `qrCodeCheckin` legt beim Einschalten für alle schon Angemeldeten einen Code an. Mit
  *   `qrCodeCheckinAutomaticEmail: true` (Vorgabe von ChurchTools) schickt es dazu eine eigene Mail „Dein Check-in-Code“ –
  *   an alle schon Angemeldeten und danach an jede neue Person. Darum immer beides zusammen: an + eigene Mail aus.
+ *   Echte Prüfung 28.10.2026: Wird die Code-Mail bei laufendem Check-in eingeschaltet, geht sie sofort an alle – der
+ *   Abgleich kann sie danach nur noch abstellen.
  */
 import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
 import { ctAlleSeiten, ctAnfrage, ctDaten } from '@ui/ct/verbindung';

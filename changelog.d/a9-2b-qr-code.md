@@ -5,7 +5,8 @@
   eigene Mail „Dein Check-in-Code“ aus – gemessen 26.10.2026: sonst zwei Mails je Person und beim Einschalten eine an
   alle schon Angemeldeten. Der Code kommt als Bild in die Bestätigung, nur wenn die Person einen hat (`{{#if}}`,
   gemessen 28.10.2026). Nachgelesen wird danach. Die Karte „Mails“ zeigt den Stand; schaltet jemand den Check-in in
-  ChurchTools um, zieht der Abgleich beim Öffnen die Mail nach und stellt die Code-Mail wieder ab.
+  ChurchTools um, zieht der Abgleich beim Öffnen die Mail nach und stellt die Code-Mail wieder ab. (Wer sie in
+  ChurchTools bei laufendem Check-in einschaltet, verschickt sie dort sofort an alle – echte Prüfung 28.10.2026.)
 
 ### Geändert (Anmeldungen, A9-2b)
 

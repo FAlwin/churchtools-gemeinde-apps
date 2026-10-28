@@ -185,6 +185,9 @@ export function MailsFenster({
           onChange={(ev) => aendern({ gruss: ev.target.value })}
         />
       </label>
+      <p className={pruefung ? f.fehler : a.leise}>
+        {pruefung ?? `${belegt} von ${BESCHREIBUNG_MAX} Zeichen für diese Mail belegt.`}
+      </p>
       {art === 'platz' && (
         <>
           <button
@@ -206,9 +209,6 @@ export function MailsFenster({
           </p>
         </>
       )}
-      <p className={pruefung ? f.fehler : a.leise}>
-        {pruefung ?? `${belegt} von ${BESCHREIBUNG_MAX} Zeichen für diese Mail belegt.`}
-      </p>
       <label className={f.feld}>
         <span>Absender</span>
         <select

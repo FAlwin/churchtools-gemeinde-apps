@@ -13,12 +13,16 @@ import type { MitgliederDaten, MitgliederStand } from './ladeMitglieder';
 import type { Start } from './start';
 import type { BaumAnsicht } from './auswahl';
 import { Liste } from './Liste';
+import { Diagramm } from './Diagramm';
 import styles from './Organigramm.module.scss';
 
 const anzahl = (n: number, eins: string, mehr: string) => `${n} ${n === 1 ? eins : mehr}`;
 const ANSICHTEN: { value: BaumAnsicht; label: string }[] = [
   { value: 'karten', label: 'Karten' },
   { value: 'liste', label: 'Liste' },
+  { value: 'oben', label: 'Von oben' },
+  { value: 'links', label: 'Von links' },
+  { value: 'mindmap', label: 'Mindmap' },
 ];
 
 interface Props {
@@ -148,6 +152,7 @@ export function Organigramm({
           options={ANSICHTEN}
           onChange={onAnsicht}
           ariaLabel="Ansicht"
+          className={styles.ansicht}
           verbunden
         />
         <label className={styles.anfangen}>
@@ -170,7 +175,7 @@ export function Organigramm({
           </select>
         </label>
         <span className={styles.rechts}>
-          {ansicht === 'liste' && (
+          {ansicht !== 'karten' && (
             <>
               <button type="button" className={styles.knopf} onClick={onAlleAuf}>
                 Alle aufklappen
@@ -222,6 +227,10 @@ export function Organigramm({
 
       {ansicht === 'liste' && baum.length > 0 && (
         <Liste sicht={sicht} onUmklappen={onUmklappen} onGruppe={onGruppe} />
+      )}
+
+      {(ansicht === 'oben' || ansicht === 'links' || ansicht === 'mindmap') && baum.length > 0 && (
+        <Diagramm art={ansicht} sicht={sicht} onUmklappen={onUmklappen} onGruppe={onGruppe} />
       )}
 
       {ansicht === 'karten' && (

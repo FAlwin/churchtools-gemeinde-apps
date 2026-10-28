@@ -86,9 +86,10 @@ export function App() {
   const [praesStand, setPraesStand] = useState<Stand>('heute');
   const [hash, setHash] = useState(() => window.location.hash);
   const handy = useMedienAbfrage(HANDY_BREITE);
-  // Ansichten des Baums (O7b-2): gewählt und im Gerät gemerkt – ohne Wahl am Handy die Liste (Alwin, 26.10.2026).
+  // Ansichten des Baums (O7b): gewählt und im Gerät gemerkt – ohne Wahl am Handy die Liste, sonst von oben (Alwin,
+  // 26.10.2026).
   const [gewaehlt, setGewaehlt] = useState(leseAnsicht);
-  const baumAnsicht: BaumAnsicht = gewaehlt ?? (handy ? 'liste' : 'karten');
+  const baumAnsicht: BaumAnsicht = gewaehlt ?? (handy ? 'liste' : 'oben');
   const [spitze, setSpitze] = useState<string | null>(null);
   // `null`, solange niemand etwas auf- oder zugeklappt hat: dann gilt der Anfang (Gemeinde und Bereiche offen) – auch
   // für Bereiche, die erst durch den Typ-Filter wieder auftauchen.

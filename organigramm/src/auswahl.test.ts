@@ -14,6 +14,13 @@ describe('Ansicht merken (O7b-2)', () => {
     expect(leseAnsicht()).toBe('karten');
   });
 
+  it('auch die Diagramme (O7b-3) kommen gemerkt zurück', () => {
+    for (const a of ['oben', 'links', 'mindmap'] as const) {
+      merkeAnsicht(a);
+      expect(leseAnsicht()).toBe(a);
+    }
+  });
+
   it('Unbekanntes oder Kaputtes im Speicher → null, nicht kaputt', () => {
     localStorage.setItem('organigramm-ansicht', '"ringe"');
     expect(leseAnsicht()).toBeNull();

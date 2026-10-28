@@ -187,3 +187,14 @@ export function vorlaufNachUmsortieren<T extends { vorBeginn?: boolean }>(
     return (item.vorBeginn ?? false) === vorBeginn ? item : { ...item, vorBeginn };
   });
 }
+
+/** „10:00“ + 4 Min → „10:04“ (über Mitternacht weiter bei 00:…). `null`, wenn die Uhrzeit keine ist. */
+export function zeitPlus(zeit: string, minuten: number): string | null {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(zeit);
+  if (!m) return null;
+  const gesamt = (Number(m[1]) * 60 + Number(m[2]) + minuten) % (24 * 60);
+  return `${String(Math.floor(gesamt / 60)).padStart(2, '0')}:${String(gesamt % 60).padStart(2, '0')}`;
+}
+
+/** „[Musik], Peter“ → „Musik, Peter“ – in der Feldliste stehen Dienste ohne Klammern (wie die ChurchTools-App). */
+export const zustaendigText = (text: string) => text.replace(/\[([^\]]+)\]/g, '$1').trim();

@@ -88,7 +88,7 @@ export function App() {
     },
     [zeitzone],
   );
-  // Ein gewählter Zeitraum der Matrix (Monat, von–bis) – eigene Abfrage, Start und Termine bleiben.
+  // Ein gewählter Zeitraum der Matrix (Monat, von–bis) – eigene Abfrage, Start und Dienste (Reiter `termine`) bleiben.
   const zeitraumLaden = useCallback(
     (von: string, bis: string) =>
       start ? ladeZeitraum(start, von, bis, zeitzone) : Promise.reject(new Error('kein Start')),

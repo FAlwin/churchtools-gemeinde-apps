@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { ABLAUFPUNKT_GRENZEN, type AgendaServiceOption } from '@shared/types/index';
-import type { AblaufZeile } from '@shared/ct/ablaufZeile';
+import { zeitPlus, zustaendigText, type AblaufZeile } from '@shared/ct/ablaufZeile';
 import type { PunktAenderung } from '@shared/ct/schreibKern';
 import {
   pendingAgendaFields,
@@ -12,10 +12,11 @@ import {
 } from '@shared/ct/agendaItemChanges';
 import { ResponsibleField } from './ResponsibleField';
 import { Icon } from '../icons/icons';
-import { useOverlayKeyboardInset } from '../fenster/useOverlayKeyboardInset';
+import { Sheet } from '../fenster/Sheet';
+import { FensterKnopf } from '../fenster/FensterKnopf';
 import { Schalter } from '../bedienung/Schalter';
 import { Segment } from '../bedienung/Segment';
-import { VerborgeneGruppenHinweis } from './AblaufTeile';
+import { LiedKarte, ResponsibleLine, VerborgeneGruppenHinweis } from './AblaufTeile';
 import styles from './PunktFenster.module.scss';
 
 /**
@@ -32,6 +33,10 @@ export interface LiedWahlArgs {
   /** Fehler des letzten Speicherns (steht auch im Lied-Modus). */
   fehler: string | null;
   busy: boolean;
+  /** Das X: das ganze Punkt-Fenster schließen – wie überall verwirft das, was nicht gespeichert ist. */
+  onSchliessen: () => void;
+  /** Blendet die Liedwahl ein? Nur, wenn das Fenster mit ihr anfängt – sonst ersetzt sie das Punkt-Fenster. */
+  einblenden: boolean;
 }
 
 interface Gemeinsam {
@@ -64,6 +69,13 @@ interface Bearbeiten extends Gemeinsam {
   onRequestDelete: () => void;
   /** Sieht der Bearbeitende nicht alle Dienstgruppen (#676)? Dann steht der Hinweis über den Knöpfen. */
   gruppenVerborgen?: boolean;
+  /**
+   * „Position 2 von 8“ und ‹ › zum vorigen/nächsten Punkt (E6-O O3). Fehlt `onVorher`/`onNachher`, ist der Pfeil
+   * gesperrt (erster/letzter Punkt). Solange etwas ungespeichert ist, sind beide gesperrt (Alwin, 28.10.2026).
+   */
+  position?: { nr: number; von: number; onVorher?: () => void; onNachher?: () => void };
+  /** `false` beim Blättern mit ‹ ›: Das Fenster ersetzt sein voriges und blendet nicht noch einmal ein. */
+  einblenden?: boolean;
 }
 
 /**
@@ -103,12 +115,14 @@ const LEERER_PUNKT: AblaufZeile = {
 
 /**
  * **Das Punkt-Fenster** (seit E6-2b-2 in `ui/ablauf`, vorher `client/src/components/ItemActionSheet.tsx`; die
- * Musik-App steckt dort ihre Liedwahl ein). „Eintrag bearbeiten"-Dialog: ein zentriertes Modal mit allen Einstellungen auf einen Blick
- * (Titel, Lied, Dauer, Zuständig, Vor Gottesdienstbeginn, Löschen) – angelehnt an den
- * „Position bearbeiten"-Dialog in ChurchTools. NICHTS wird sofort geschrieben: auch Lied
- * verknüpfen/aufheben und der Vorlauf-Schalter werden nur vorgemerkt. Erst „Speichern" schreibt
- * alle Änderungen gesammelt nach ChurchTools; „Abbrechen" verwirft sie. (Löschen ist bewusst
- * separat und hat eine eigene Rückfrage.)
+ * Musik-App steckt dort ihre Liedwahl ein). **Seit E6-O O3 (Variante B des Fenster-Entwurfs, Alwin 23.10.2026):** ein
+ * Fenster im ChurchTools-Aufbau (`Sheet`) mit einer **Feldliste „Beschriftung | Feld“** in einer umrandeten Fläche –
+ * alle Felder auf einmal bearbeitbar, unten EINMAL „Speichern“; oben „Position 2 von 8 · 10:00 – 10:04“ mit ‹ ›.
+ * „Lied“ und „Zuständig“ sind Zeilen mit Pfeil: Die Liedwahl (nur Musik-App) und „Zuständig“ öffnen sich IM Fenster.
+ *
+ * NICHTS wird sofort geschrieben: auch Lied verknüpfen/aufheben und die Schalter werden nur vorgemerkt. Erst
+ * „Speichern" schreibt alle Änderungen gesammelt nach ChurchTools; „Abbrechen" verwirft sie. Löschen ist bewusst
+ * getrennt (links unten) und hat eine eigene Rückfrage.
  */
 export function PunktFenster(props: PunktFensterProps) {
   const { onClose, services, liedWahl } = props;
@@ -124,6 +138,12 @@ export function PunktFenster(props: PunktFensterProps) {
   );
   const liedZuerst = props.modus === 'neu' && !!props.startLied && !!liedWahl;
   const [songMode, setSongMode] = useState(liedZuerst);
+  // Wer schon in der Liedwahl war, sieht das Fenster danach ohne neues Einblenden (es war ja nie weg); umgekehrt blendet
+  // die Liedwahl nur ein, wenn das Fenster mit ihr anfängt („Lied hinzufügen“, S2).
+  const [warInLiedwahl, setWarInLiedwahl] = useState(false);
+  // „Zuständig“ bearbeiten (O3, Alwin: Zeile mit Pfeil): der Entwurf, solange der Schritt offen ist – erst
+  // „Übernehmen“ setzt ihn ins Fenster (und auch das ist erst mit „Speichern“ geschrieben).
+  const [zustEntwurf, setZustEntwurf] = useState<string | null>(null);
   const [title, setTitle] = useState(item.title);
   const [responsible, setResponsible] = useState(item.responsibleText);
   const [note, setNote] = useState(item.note);
@@ -140,10 +160,9 @@ export function PunktFenster(props: PunktFensterProps) {
   const [err, setErr] = useState<string | null>(null);
   // Derselbe Punkt wurde inzwischen woanders geändert (412, E6-3c): fragen statt still überschreiben.
   const [konflikt, setKonflikt] = useState<string | null>(null);
-  // Dialog über der iOS-Tastatur freihalten; verhindert auch die verrutschte Kopfleiste (#207).
-  const overlayRef = useOverlayKeyboardInset();
 
-  // Das Lied, das der Punkt nach dem Speichern hätte (steuert Titel-/Lied-Anzeige).
+  // Das Lied, das der Punkt nach dem Speichern hätte (steuert Titel-/Lied-Anzeige). Ein neu gewähltes Lied kennt nur
+  // seinen Namen – Tonart, Tempo und Autor stehen erst nach dem Speichern im Ablauf.
   const effSong =
     linkState.kind === 'link'
       ? { title: linkState.name }
@@ -184,6 +203,7 @@ export function PunktFenster(props: PunktFensterProps) {
     // Neu ohne eigenen Titel: Der Punkt heißt wie das Lied (wie früher im „Lied hinzufügen").
     if (neu && !title.trim()) setTitle(name);
     setErr(null);
+    setWarInLiedwahl(true);
     setSongMode(false);
   }
 
@@ -215,7 +235,7 @@ export function PunktFenster(props: PunktFensterProps) {
 
   // Klick auf den Hintergrund: nur schließen, wenn nichts vorgemerkt ist – sonst würde ein
   // versehentlicher Tipp daneben alle ungespeicherten Änderungen verwerfen. Mit Änderungen
-  // führt der Weg raus bewusst über „Abbrechen" (verwerfen) oder „Speichern".
+  // führt der Weg raus bewusst über „Abbrechen" (verwerfen), das X oder „Speichern".
   function onOverlayClick() {
     if (!dirty) onClose();
   }
@@ -225,36 +245,170 @@ export function PunktFenster(props: PunktFensterProps) {
     return liedWahl({
       onGewaehlt: liedGewaehlt,
       // „Lied hinzufügen“ ohne gewähltes Lied: nichts angelegt, also ganz zu (S2).
-      onAbbrechen: () => (liedZuerst && linkState.kind !== 'link' ? onClose() : setSongMode(false)),
+      onAbbrechen: () => {
+        if (liedZuerst && linkState.kind !== 'link') return onClose();
+        setWarInLiedwahl(true);
+        setSongMode(false);
+      },
+      // Fängt das Fenster mit der Liedwahl an, blendet sie ein; sonst ersetzt sie das Punkt-Fenster (E6-O O3).
+      einblenden: liedZuerst && !warInLiedwahl,
       onHintergrund: onOverlayClick,
+      onSchliessen: onClose,
       fehler: err,
       busy,
     });
   }
 
-  return (
-    <div ref={overlayRef} className={styles.overlay} onClick={onOverlayClick}>
-      <div className={styles.card} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.title}>{neu ? 'Neuer Eintrag' : 'Eintrag bearbeiten'}</div>
-        {err && <div className={styles.err}>{err}</div>}
-        {neu && (
-          <Segment
-            ariaLabel="Art des Eintrags"
-            className={styles.art}
-            value={art}
-            onChange={setArt}
-            options={[
-              { value: 'programmpunkt', label: 'Programmpunkt' },
-              { value: 'ueberschrift', label: 'Überschrift' },
-            ]}
-          />
-        )}
+  const ueberschrift = neu ? art === 'ueberschrift' : item.isHeader;
+  const titel = neu
+    ? 'Neuer Eintrag'
+    : item.title.trim() || (item.isHeader ? 'Überschrift' : 'Eintrag');
+  const einblenden = !warInLiedwahl && (props.modus === 'neu' || props.einblenden !== false);
 
-        <div className={styles.fields}>
-          <div className={styles.field}>
-            <span className={styles.label}>Titel</span>
+  // ── Schritt „Zuständig“: ersetzt den Inhalt; unten „Zurück · Übernehmen“, ganz zu über das X ──
+  if (zustEntwurf !== null)
+    return (
+      <Sheet
+        title={titel}
+        onClose={onClose}
+        onHintergrund={onOverlayClick}
+        einblenden={einblenden}
+        mittel
+        cancelLabel={null}
+        knoepfe={
+          <>
+            <FensterKnopf art="zweit" onClick={() => setZustEntwurf(null)}>
+              Zurück
+            </FensterKnopf>
+            <FensterKnopf
+              onClick={() => {
+                setResponsible(zustEntwurf);
+                setZustEntwurf(null);
+              }}
+            >
+              Übernehmen
+            </FensterKnopf>
+          </>
+        }
+      >
+        <section className={styles.schritt} aria-label="Zuständig">
+          <h3>Zuständig</h3>
+          <ResponsibleField
+            value={zustEntwurf}
+            onChange={setZustEntwurf}
+            services={services}
+            autoFocus
+          />
+        </section>
+      </Sheet>
+    );
+
+  const pos = props.modus === 'neu' ? undefined : props.position;
+  const zeitVon = neu ? null : item.time;
+  const zeitBis = zeitVon && item.durationMin ? zeitPlus(zeitVon, item.durationMin) : null;
+  const zeitText = neu
+    ? null
+    : item.weggelassen
+      ? 'an diesem Termin weggelassen'
+      : zeitVon
+        ? zeitBis
+          ? `${zeitVon} – ${zeitBis}`
+          : zeitVon
+        : null;
+  const zustAnzeige = zustaendigText(responsible);
+  // Die Personen kommen aus ChurchTools zum gespeicherten Stand – nach einer Änderung erst wieder nach dem Speichern.
+  const zustUnveraendert = responsible === item.responsibleText;
+
+  return (
+    <Sheet
+      title={titel}
+      onClose={onClose}
+      onHintergrund={onOverlayClick}
+      einblenden={einblenden}
+      mittel
+      beschaeftigt={busy}
+      cancelLabel={konflikt ? 'Verwerfen' : 'Abbrechen'}
+      links={
+        props.modus !== 'neu' && (
+          <FensterKnopf
+            art="loeschen"
+            disabled={busy}
+            onClick={() => {
+              onClose();
+              props.onRequestDelete();
+            }}
+          >
+            Eintrag löschen
+          </FensterKnopf>
+        )
+      }
+      knoepfe={
+        <>
+          {neu ? (
+            <FensterKnopf onClick={() => void saveAll()} disabled={busy || !neuerPunkt}>
+              {busy ? 'Füge hinzu…' : 'Hinzufügen'}
+            </FensterKnopf>
+          ) : (
+            <FensterKnopf
+              onClick={() => void saveAll(konflikt !== null)}
+              disabled={busy || !durationValid || !dirty}
+            >
+              {busy ? 'Speichere…' : konflikt ? 'Trotzdem speichern' : 'Speichern'}
+            </FensterKnopf>
+          )}
+        </>
+      }
+    >
+      {pos && (
+        <div className={styles.position}>
+          <span className={styles.positionText}>
+            Position {pos.nr} von {pos.von}
+            {zeitText && ` · ${zeitText}`}
+          </span>
+          <span className={styles.blaettern}>
+            <button
+              type="button"
+              aria-label="Voriger Eintrag"
+              disabled={dirty || busy || !pos.onVorher}
+              onClick={pos.onVorher}
+            >
+              <Icon name="chev-left" size={18} />
+            </button>
+            <button
+              type="button"
+              aria-label="Nächster Eintrag"
+              disabled={dirty || busy || !pos.onNachher}
+              onClick={pos.onNachher}
+            >
+              <Icon name="chev-right" size={18} />
+            </button>
+          </span>
+        </div>
+      )}
+      {pos && dirty && (pos.onVorher || pos.onNachher) && (
+        <p className={styles.blaetternHinweis}>Zum Blättern erst speichern oder abbrechen.</p>
+      )}
+
+      {err && <div className={styles.err}>{err}</div>}
+      {neu && (
+        <Segment
+          ariaLabel="Art des Eintrags"
+          className={styles.art}
+          value={art}
+          onChange={setArt}
+          options={[
+            { value: 'programmpunkt', label: 'Programmpunkt' },
+            { value: 'ueberschrift', label: 'Überschrift' },
+          ]}
+        />
+      )}
+
+      <div className={styles.liste}>
+        <label className={styles.zeile}>
+          <span className={styles.lab}>Titel</span>
+          <span className={styles.wert}>
             {/* Auch bei Liedern änderbar (#200): ChurchTools führt Titel und Lied getrennt und
-                zeigt beides. Der Liedname steht darunter im Feld „Lied". */}
+                zeigt beides. Der Liedname steht darunter in der Zeile „Lied". */}
             <input
               className={styles.input}
               value={title}
@@ -268,74 +422,123 @@ export function PunktFenster(props: PunktFensterProps) {
                     : 'Titel'
               }
             />
-          </div>
+          </span>
+        </label>
 
-          {/* Überschriften haben nur einen Titel – keine weiteren Felder. */}
-          {!(neu ? art === 'ueberschrift' : item.isHeader) && (
-            <>
-              {/* Dasselbe Liedfeld beim Anlegen wie beim Bearbeiten. Ohne Liedwahl (Dienstplaner) nur, wenn es
-                  ein Lied gibt – ein leeres Feld, das man nicht bedienen kann, wäre nur Lärm. */}
-              {(effSong || liedWahl) && (
-                <div className={styles.field}>
-                  <span className={styles.label}>Lied</span>
-                  {effSong ? (
-                    <>
-                      {/* Liedname sichtbar halten – er kommt aus ChurchTools und ist hier nicht änderbar. */}
-                      <div className={styles.readonly}>{effSong.title}</div>
-                      {liedWahl && (
-                        <button className={styles.linkRow} disabled={busy} onClick={clearLink}>
-                          <Icon name="link" size={17} className={styles.linkIcon} />
-                          Verknüpfung aufheben
-                        </button>
-                      )}
-                    </>
-                  ) : (
-                    // Ohne Lied steht das Feld nur mit Liedwahl da (Bedingung oben) – hier also immer wählbar.
+        {/* Überschriften haben nur einen Titel – keine weiteren Felder. */}
+        {!ueberschrift && (
+          <>
+            <label className={styles.zeile}>
+              <span className={styles.lab}>Dauer</span>
+              <span className={`${styles.wert} ${styles.dauer}`}>
+                <input
+                  className={`${styles.input} ${styles.kurz}`}
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  aria-label="Dauer in Minuten"
+                  value={duration}
+                  onChange={(e) => setDuration(e.target.value)}
+                  placeholder="z. B. 5"
+                />
+                <span className={styles.einheit}>Min</span>
+              </span>
+            </label>
+
+            {/* Dasselbe Liedfeld beim Anlegen wie beim Bearbeiten. Ohne Liedwahl (Dienstplaner) nur, wenn es
+                ein Lied gibt – eine leere Zeile, die man nicht bedienen kann, wäre nur Lärm. */}
+            {(effSong || liedWahl) && (
+              <div className={styles.zeile}>
+                <span className={styles.lab}>Lied</span>
+                <span className={styles.wert}>
+                  {liedWahl ? (
                     <button
-                      className={styles.linkRow}
+                      type="button"
+                      className={styles.zeilenKnopf}
                       disabled={busy}
-                      onClick={() => setSongMode(true)}
+                      aria-label={
+                        effSong ? `Lied: ${effSong.title} – anderes wählen` : 'Lied verknüpfen'
+                      }
+                      onClick={() => {
+                        setWarInLiedwahl(true);
+                        setSongMode(true);
+                      }}
                     >
-                      <Icon name="music" size={17} className={styles.linkIcon} />
-                      Lied verknüpfen
+                      {effSong ? (
+                        <LiedKarte song={effSong} flach />
+                      ) : (
+                        <span className={styles.dazu}>
+                          <Icon name="plus" size={15} /> Hinzufügen
+                        </span>
+                      )}
+                      <Icon name="chev-right" size={18} className={styles.pfeil} />
+                    </button>
+                  ) : (
+                    effSong && <LiedKarte song={effSong} flach />
+                  )}
+                  {liedWahl && effSong && (
+                    <button
+                      type="button"
+                      className={styles.textKnopf}
+                      disabled={busy}
+                      onClick={clearLink}
+                    >
+                      Verknüpfung aufheben
                     </button>
                   )}
                   {/* Beim Anlegen ist ohnehin alles erst mit „Hinzufügen" geschrieben – der Hinweis gilt
                       dem Bearbeiten, wo der Rest des Punkts schon in ChurchTools steht. */}
                   {!neu && linkState.kind !== 'keep' && (
-                    <span className={styles.pendingHint}>
+                    <small className={styles.vorgemerkt}>
                       {linkState.kind === 'unlink'
                         ? 'Wird beim Speichern entfernt.'
                         : 'Wird beim Speichern verknüpft.'}
-                    </span>
+                    </small>
                   )}
-                </div>
-              )}
-
-              <div className={styles.field}>
-                <span className={styles.label}>Dauer (Minuten)</span>
-                <input
-                  className={styles.input}
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  value={duration}
-                  onChange={(e) => setDuration(e.target.value)}
-                  placeholder="z. B. 5"
-                />
+                </span>
               </div>
+            )}
 
-              <div className={styles.field}>
-                <span className={styles.label}>Zuständig</span>
-                <ResponsibleField
-                  value={responsible}
-                  onChange={setResponsible}
-                  services={services}
-                />
-              </div>
+            <div className={styles.zeile}>
+              <span className={styles.lab}>Zuständig</span>
+              <span className={styles.wert}>
+                <button
+                  type="button"
+                  className={styles.zeilenKnopf}
+                  disabled={busy}
+                  aria-label={
+                    zustAnzeige ? `Zuständig: ${zustAnzeige} – ändern` : 'Zuständig hinzufügen'
+                  }
+                  onClick={() => setZustEntwurf(responsible)}
+                >
+                  <span className={styles.zustText}>
+                    {zustAnzeige ? (
+                      <>
+                        <span>{zustAnzeige}</span>
+                        {zustUnveraendert ? (
+                          <ResponsibleLine entries={item.responsible} />
+                        ) : (
+                          !neu && (
+                            <small className={styles.vorgemerkt}>
+                              Wird beim Speichern übernommen.
+                            </small>
+                          )
+                        )}
+                      </>
+                    ) : (
+                      <span className={styles.dazu}>
+                        <Icon name="plus" size={15} /> Hinzufügen
+                      </span>
+                    )}
+                  </span>
+                  <Icon name="chev-right" size={18} className={styles.pfeil} />
+                </button>
+              </span>
+            </div>
 
-              <div className={styles.field}>
-                <span className={styles.label}>Bemerkung</span>
+            <label className={styles.zeile}>
+              <span className={styles.lab}>Bemerkung</span>
+              <span className={styles.wert}>
                 <textarea
                   className={styles.textarea}
                   value={note}
@@ -344,97 +547,61 @@ export function PunktFenster(props: PunktFensterProps) {
                   placeholder="Optionale Notiz…"
                   onChange={(e) => setNote(e.target.value)}
                 />
-              </div>
-            </>
-          )}
-
-          {/* Für ALLE Punkte, auch Überschriften (#423): Ein Block „Vorbereitung" kann ebenso vor dem
-              Beginn liegen. ChurchTools kennt nur eine Grenze, deshalb nennt der Hinweis den Block.
-              Nicht beim Anlegen: Neue Punkte kommen ans Ende – dort hieße „an", ALLES sei Vorlauf. */}
-          {!neu && (
-            <button
-              type="button"
-              className={styles.toggleRow}
-              onClick={() => setVorBeginn((v) => !v)}
-              aria-pressed={vorBeginn}
-            >
-              <span className={styles.toggleText}>
-                <span className={styles.label}>Vor Gottesdienstbeginn</span>
-                <span className={styles.toggleHint}>
-                  {vorBeginn
-                    ? 'Dieser und alle Punkte darüber laufen vor dem Beginn.'
-                    : 'Gehört zum Gottesdienst – wie alle Punkte darunter.'}
-                </span>
               </span>
-              <Schalter an={vorBeginn} />
-            </button>
-          )}
-
-          {/* Auge wie in ChurchTools (E6-3b, #652): bleibt im Ablauf, nur an diesem Termin ohne Zeit. */}
-          {!neu && (
-            <button
-              type="button"
-              className={styles.toggleRow}
-              onClick={() => setWeggelassen((w) => !w)}
-              aria-pressed={weggelassen}
-            >
-              <span className={styles.toggleText}>
-                <span className={styles.label}>An diesem Termin weglassen</span>
-                <span className={styles.toggleHint}>
-                  {weggelassen
-                    ? 'Bleibt im Ablauf, hat hier aber keine Uhrzeit und zählt nicht mit.'
-                    : 'Wird an diesem Termin gezeigt und mitgerechnet.'}
-                </span>
-              </span>
-              <Schalter an={weggelassen} />
-            </button>
-          )}
-        </div>
-
-        {props.modus !== 'neu' && props.gruppenVerborgen && <VerborgeneGruppenHinweis />}
-
-        {konflikt && (
-          <div className={styles.err} role="alert">
-            {konflikt} Trotzdem speichern oder verwerfen?
-          </div>
+            </label>
+          </>
         )}
 
-        <div className={styles.actions}>
-          <button className={styles.cancelBtn} onClick={onClose} disabled={busy}>
-            {konflikt ? 'Verwerfen' : 'Abbrechen'}
-          </button>
-          {neu ? (
-            <button
-              className={styles.saveBtn}
-              onClick={() => void saveAll()}
-              disabled={busy || !neuerPunkt}
-            >
-              {busy ? 'Füge hinzu…' : 'Hinzufügen'}
-            </button>
-          ) : (
-            <button
-              className={styles.saveBtn}
-              onClick={() => void saveAll(konflikt !== null)}
-              disabled={busy || !durationValid || !dirty}
-            >
-              {busy ? 'Speichere…' : konflikt ? 'Trotzdem speichern' : 'Speichern'}
-            </button>
-          )}
-        </div>
-
-        {props.modus !== 'neu' && (
+        {/* Für ALLE Punkte, auch Überschriften (#423): Ein Block „Vorbereitung" kann ebenso vor dem
+            Beginn liegen. ChurchTools kennt nur eine Grenze, deshalb nennt der Hinweis den Block.
+            Nicht beim Anlegen: Neue Punkte kommen ans Ende – dort hieße „an", ALLES sei Vorlauf. */}
+        {!neu && (
           <button
-            className={styles.deleteBtn}
-            onClick={() => {
-              onClose();
-              props.onRequestDelete();
-            }}
+            type="button"
+            className={`${styles.zeile} ${styles.schalterZeile}`}
+            onClick={() => setVorBeginn((v) => !v)}
+            aria-pressed={vorBeginn}
           >
-            <Icon name="trash" size={16} />
-            Eintrag löschen
+            <span className={styles.lab}>
+              Vor Gottesdienstbeginn
+              <small>
+                {vorBeginn
+                  ? 'Dieser und alle Punkte darüber laufen vor dem Beginn.'
+                  : 'Gehört zum Gottesdienst – wie alle Punkte darunter.'}
+              </small>
+            </span>
+            <Schalter an={vorBeginn} />
+          </button>
+        )}
+
+        {/* Auge wie in ChurchTools (E6-3b, #652): bleibt im Ablauf, nur an diesem Termin ohne Zeit. */}
+        {!neu && (
+          <button
+            type="button"
+            className={`${styles.zeile} ${styles.schalterZeile}`}
+            onClick={() => setWeggelassen((w) => !w)}
+            aria-pressed={weggelassen}
+          >
+            <span className={styles.lab}>
+              An diesem Termin weglassen
+              <small>
+                {weggelassen
+                  ? 'Bleibt im Ablauf, hat hier aber keine Uhrzeit und zählt nicht mit.'
+                  : 'Wird an diesem Termin gezeigt und mitgerechnet.'}
+              </small>
+            </span>
+            <Schalter an={weggelassen} />
           </button>
         )}
       </div>
-    </div>
+
+      {props.modus !== 'neu' && props.gruppenVerborgen && <VerborgeneGruppenHinweis />}
+
+      {konflikt && (
+        <div className={styles.err} role="alert">
+          {konflikt} Trotzdem speichern oder verwerfen?
+        </div>
+      )}
+    </Sheet>
   );
 }

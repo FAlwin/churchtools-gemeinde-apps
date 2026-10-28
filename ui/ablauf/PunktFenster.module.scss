@@ -1,39 +1,6 @@
 @use '@ui/design/mixins' as m;
-// Zentriertes „Punkt bearbeiten"-Modal (wie der ChurchTools-Dialog), kein Drawer.
-.overlay {
-  // `fixed` (nicht `absolute`): sonst scrollt der Dialog mit dem Dokument mit, wenn iOS beim
-  // Fokussieren eines Feldes die Seite hochschiebt (#207).
-  position: fixed;
-  inset: 0;
-  z-index: 110;
-  background: var(--scrim);
-  backdrop-filter: blur(2px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  // Tastatur aussparen (--kb kommt aus useOverlayKeyboardInset) → Trefferliste bleibt erreichbar.
-  padding-bottom: calc(16px + var(--kb, 0px));
-  animation: fadeIn 0.12s ease both;
-}
-
-.card {
-  background: var(--surface2);
-  border-radius: var(--r-dialog);
-  padding: 20px;
-  width: min(380px, 100%);
-  max-height: 88%;
-  overflow-y: auto;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
-}
-
-.title {
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--text);
-  margin-bottom: 14px;
-  font-family: var(--ui);
-}
+// Das Punkt-Fenster im ChurchTools-Aufbau (E6-O O3, Variante B des Fenster-Entwurfs vom 23.10.2026): Kopf und Fuß kommen
+// vom gemeinsamen `Sheet`; hier nur „Position … ‹ ›“ und die Feldliste „Beschriftung | Feld“ in einer umrandeten Fläche.
 
 .err {
   margin: 0 0 12px;
@@ -46,209 +13,216 @@
   font-weight: 600;
 }
 
-.fields {
+// ── „Position 2 von 8 · 10:00 – 10:04“ und ‹ › ──
+.position {
   display: flex;
-  flex-direction: column;
-  gap: 14px;
+  align-items: center;
+  gap: 10px;
+  margin: -2px 0 10px;
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.label {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--text2);
-}
-
-.input {
-  @include m.eingabefeld;
-  width: 100%;
+.positionText {
+  flex: 1;
   min-width: 0;
-  padding: 11px 13px;
-  font-size: 16px;
+  color: var(--text2);
+  font-size: 13px;
 }
 
-.readonly {
-  padding: 11px 13px;
-  border-radius: var(--r-ctrl);
-  background: var(--surface3);
+.blaettern {
+  display: flex;
+  gap: 6px;
+
+  button {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-ctrl);
+    background: var(--surface2);
+    color: var(--text);
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--surface3);
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+  }
+}
+
+.blaetternHinweis {
+  margin: -4px 0 10px;
+  color: var(--text2);
+  font-size: 12.5px;
+}
+
+// „Neuer Eintrag": Umschalter Programmpunkt · Überschrift über der Feldliste.
+.art {
+  margin-bottom: 12px;
+}
+
+// ── Die Feldliste: eine umrandete Fläche, eine feine Linie je Zeile ──
+.liste {
+  border: 1px solid var(--border);
+  border-radius: var(--r-dialog);
+  overflow: hidden;
+}
+
+.zeile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 9px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--hair);
+  background: none;
   color: var(--text);
-  font-size: 15px;
-  font-weight: 600;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+
+  &:last-child {
+    border-bottom: 0;
+  }
 }
 
+.lab {
+  flex: none;
+  width: 150px;
+  font-weight: 600;
+
+  // Ein Satz unter der Beschriftung (Vorlauf, Auge) – was der Schalter gerade bedeutet.
+  small {
+    display: block;
+    margin-top: 2px;
+    color: var(--text2);
+    font-size: 12.5px;
+    font-weight: 400;
+    line-height: 1.35;
+  }
+}
+
+.wert {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.input,
 .textarea {
   @include m.eingabefeld;
   width: 100%;
   min-width: 0;
-  padding: 11px 13px;
-  font-size: 16px;
+  padding: 9px 11px;
+  font-size: 15px;
+}
+
+.textarea {
   resize: vertical;
 }
 
-// „Lied verknüpfen / aufheben" + „Zurück" als dezente Zeile.
-.linkRow {
+.dauer {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.kurz {
+  width: 100px;
+}
+
+.einheit {
+  color: var(--text2);
+}
+
+// Eine Zeile mit Pfeil (Lied, Zuständig): ganz antippbar, öffnet die Wahl IM Fenster.
+.zeilenKnopf {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 11px 13px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-ctrl);
-  background: var(--surface2);
-  color: var(--blue-ink);
-  font-family: var(--ui);
-  font-size: 14.5px;
-  font-weight: 600;
-  cursor: pointer;
-
-  &:active {
-    background: var(--surface3);
-  }
-  &:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
-}
-.linkIcon {
-  color: var(--blue-ink);
-  flex-shrink: 0;
-}
-// Hinweis, dass eine vorgemerkte Verknüpfungs-Änderung erst beim Speichern greift.
-.pendingHint {
-  margin-top: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text3);
-}
-
-// „Zurück" aus der Lied-Auswahl: klarer, abgesetzter Sekundär-Button (nicht als Listenzeile
-// verkleidet) – hebt sich deutlich von der darüberliegenden Liederliste ab.
-.backBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  height: 46px;
-  margin-top: 14px;
-  border: none;
-  border-radius: var(--r-ctrl);
-  background: var(--surface3);
+  padding: 2px 0;
+  border: 0;
+  background: none;
   color: var(--text);
-  font-family: var(--ui);
-  font-size: 14px;
-  font-weight: 700;
+  font: inherit;
+  text-align: left;
   cursor: pointer;
 
-  &:active {
-    opacity: 0.85;
-  }
   &:disabled {
-    opacity: 0.5;
     cursor: default;
+    opacity: 0.6;
   }
 }
 
-// Uhrzeit-ausblenden als Schalter-Zeile.
-// „Neuer Eintrag": Umschalter Programmpunkt · Überschrift unter dem Titel, mit Luft zum ersten Feld.
-.art {
-  margin: 2px 0 14px;
+.pfeil {
+  flex: none;
+  margin-left: auto;
+  color: var(--text2);
 }
 
-// Text des Schalters: Beschriftung + Hinweis darunter (#423 – der Vorlauf gilt für einen Block).
-.toggleText {
+.zustText {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  text-align: left;
+  min-width: 0;
 }
-.toggleHint {
-  font-size: 12.5px;
-  color: var(--text2);
-}
-.toggleRow {
-  display: flex;
+
+// Leer = „+ Hinzufügen“ (wie die Feldlisten in ChurchTools).
+.dazu {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  width: 100%;
-  padding: 4px 0;
-  background: none;
-  border: none;
-  cursor: pointer;
-
-  .label {
-    color: var(--text);
-    font-size: 15px;
-  }
-}
-.actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 18px;
-}
-.cancelBtn {
-  flex: 1;
-  // Mindesthöhe statt fester Höhe (E6-3c): „Trotzdem speichern“ bricht auf schmalen Handys (unter ~360 px) um –
-  // mit fester Höhe war die zweite Zeile abgeschnitten. Einzeilig bleibt der Knopf 46 px hoch.
-  min-height: 46px;
-  padding: 4px 8px;
-  line-height: 1.2;
-  border-radius: var(--r-ctrl);
-  border: none;
-  background: var(--surface3);
-  color: var(--text2);
-  font-family: var(--ui);
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
-}
-.saveBtn {
-  flex: 1;
-  // Mindesthöhe statt fester Höhe (E6-3c): „Trotzdem speichern“ bricht auf schmalen Handys (unter ~360 px) um –
-  // mit fester Höhe war die zweite Zeile abgeschnitten. Einzeilig bleibt der Knopf 46 px hoch.
-  min-height: 46px;
-  padding: 4px 8px;
-  line-height: 1.2;
-  border-radius: var(--r-ctrl);
-  border: none;
-  background: var(--blue);
-  color: #fff;
-  font-family: var(--ui);
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
-}
-
-// Löschen dezent unten, klar abgesetzt.
-.deleteBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  width: 100%;
-  margin-top: 12px;
-  padding: 10px;
-  border: none;
-  background: none;
-  color: var(--red);
-  font-family: var(--ui);
-  font-size: 14px;
+  gap: 4px;
+  color: var(--blue-ink);
   font-weight: 600;
+}
+
+.textKnopf {
+  @include m.textKnopf;
+  font-size: 13px;
+}
+
+// Hinweis, dass eine vorgemerkte Änderung erst beim Speichern greift.
+.vorgemerkt {
+  color: var(--text2);
+  font-size: 12.5px;
+}
+
+// Ja/Nein als Schalter in der Zeile – die ganze Zeile schaltet.
+.schalterZeile {
+  justify-content: space-between;
   cursor: pointer;
+
+  .lab {
+    flex: 1;
+    width: auto;
+  }
+}
+
+// Ein Schritt im Fenster (Zuständig): ersetzt die Feldliste.
+.schritt h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+// Schmal (Handy): Beschriftung weiter links daneben, nur schmaler – wie im Entwurf (Handy, 104 px).
+@media (max-width: 480px) {
+  .zeile {
+    gap: 10px;
+    padding: 9px 12px;
+  }
+
+  .lab {
+    width: 104px;
+  }
 }

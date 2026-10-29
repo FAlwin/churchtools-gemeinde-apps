@@ -338,18 +338,35 @@ export async function punktLoeschen(
     fehler: 'Ablaufpunkt löschen fehlgeschlagen',
     okBei404: true, // schon weg ist auch weg
   });
-  if (!it) return null;
+  if (!it || !agenda) return null;
   // Die Beginn-Grenze zieht ChurchTools NICHT mit (gemessen 12.10.2026): Fehlt ein Vorlauf-Punkt, rutschte
   // sonst der erste Punkt des Gottesdienstes in den Vorlauf – samt verschobener Uhrzeiten.
-  const grenze = agenda?.eventStartPosition ?? 0;
+  const grenze = agenda.eventStartPosition ?? 0;
   if ((it.position ?? stelle) < grenze) {
     await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda`, {
       method: 'PUT',
-      json: { calendarId: agenda?.calendarId, eventStartPosition: grenze - 1 },
+      json: { calendarId: agenda.calendarId, eventStartPosition: grenze - 1 },
       verweigert: ABLAUF_VERWEIGERT,
       fehler: 'Gottesdienstbeginn nach dem Löschen nachziehen fehlgeschlagen',
     });
   }
+  return merkzettelAus(agenda, eventId, itemId);
+}
+
+/**
+ * Der **Merkzettel** eines Punkts, wie er im (frisch gelesenen) Ablauf steht – `null`, wenn er dort fehlt. Eine Stelle
+ * für „Rückgängig“ nach dem Löschen (`punktLoeschen`) und das Übertragen in einen anderen Termin (E6-6b,
+ * `punktUebertragen`); gemessen E6-6-0: Lied, Notiz, Dauer, Zuständig und Gruppen-Infos kommen damit mit.
+ */
+export function merkzettelAus(
+  agenda: CtAgenda,
+  eventId: number,
+  itemId: number,
+): GeloeschterPunkt | null {
+  const { items } = agenda;
+  const stelle = items.findIndex((i) => i.id === itemId);
+  if (stelle < 0) return null;
+  const it = items[stelle];
   // Derselbe Payload wie beim Ändern – sonst fehlte hier ein Feld, das dort schon gelernt ist.
   const p = agendaItemWritePayload(it);
   return {
@@ -380,13 +397,14 @@ function text(v: unknown, sonst = ''): string {
  * Drei Schritte, jeder mit den vorhandenen Regeln: anlegen, per `ablaufUmsortieren` an die Stelle
  * schieben, den Vorlauf richten (Grenze mitziehen bzw. `vorBeginnSetzen`). Ob der neue Punkt **wirklich** da ist, wird am
  * frisch gelesenen Ablauf geprüft, nicht an der Antwort des Anlegens (Lehre vom 11.08.2026). Ist der
- * Vorgänger inzwischen auch weg, landet der Punkt am Ende.
+ * Vorgänger inzwischen auch weg, landet der Punkt am Ende. Liefert die ID des neuen Punkts (für „Rückgängig“ nach dem
+ * Übertragen, E6-6b).
  */
 export async function punktWiederherstellen(
   s: CtSchreiber,
   eventId: number,
   g: GeloeschterPunkt,
-): Promise<void> {
+): Promise<number> {
   const f = g.felder;
   const body: Record<string, unknown> =
     f.type === 'header'
@@ -435,6 +453,7 @@ export async function punktWiederherstellen(
     await vorBeginnSetzen(s, eventId, neuId, g.vorBeginn);
   }
   if (g.weggelassen) await weglassenSetzen(s, eventId, neuId, true);
+  return neuId;
 }
 
 /**

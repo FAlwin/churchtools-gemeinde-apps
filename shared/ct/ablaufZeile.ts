@@ -194,6 +194,24 @@ export function vorlaufNachUmsortieren<T extends { vorBeginn?: boolean }>(
   });
 }
 
+/**
+ * **Wann der Ablauf endet** („10:44“) – Uhrzeit des letzten Punkts mit Uhrzeit plus seine Dauer. ChurchTools zeigt
+ * diese Zeit selbst nicht an; gerechnet wird nur aus seinen Zeiten (Matrix, Balken „Ende“; Alwin 29.10.2026,
+ * Entwurf `e6-6-trennung.html` C). Weggelassene Punkte haben keine Uhrzeit (`ablaufUhrzeit`) und zählen so von selbst
+ * nicht; „entfernt“-Platzhalter der Musik-App zählen ebenfalls nicht.
+ * `null`, wenn kein Punkt eine Uhrzeit hat.
+ */
+export function ablaufEnde(
+  zeilen: readonly Pick<AblaufZeile, 'time' | 'durationMin' | 'removed'>[],
+): string | null {
+  for (let i = zeilen.length - 1; i >= 0; i--) {
+    const z = zeilen[i];
+    if (z.removed || !z.time) continue;
+    return zeitPlus(z.time, z.durationMin ?? 0);
+  }
+  return null;
+}
+
 /** „10:00“ + 4 Min → „10:04“ (über Mitternacht weiter bei 00:…). `null`, wenn die Uhrzeit keine ist. */
 export function zeitPlus(zeit: string, minuten: number): string | null {
   const m = /^(\d{1,2}):(\d{2})$/.exec(zeit);

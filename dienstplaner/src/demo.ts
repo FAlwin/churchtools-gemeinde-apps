@@ -92,7 +92,12 @@ const TERMINE = [
     endDate: zeit(39, '11:00'),
     eventServices: [platz(6, 19, 'Spike', true), platz(7, 1, 'Alwin', true), platz(9, null, null)],
   },
-];
+].map((t) => ({
+  ...t,
+  // Wie ChurchTools: Jeder Termin nennt seinen Kalender – ohne ihn scheiterte „Ablauf anlegen“ in der Matrix-Demo
+  // („Kalender unbekannt“, gefunden beim Durchklicken von E6-6b).
+  calendar: { title: 'Gottesdienste', domainIdentifier: '1' },
+}));
 // Wie ChurchTools: Hat ein Dienst mehrere Plätze, sind sie durchgezählt (1, 2, …), sonst `null`.
 function durchzaehlen(t: (typeof TERMINE)[number]) {
   for (const p of t.eventServices) {
@@ -304,9 +309,24 @@ function termineVonBis(von: string | null, bis: string | null) {
   );
 }
 
+type DemoPunkt = { id: number; duration?: number; ausgeblendet?: boolean } & Record<
+  string,
+  unknown
+>;
+
 /**
- * **Der Ablauf des ersten Termins** (101) – zum Ansehen und, seit E6-3a, zum Bearbeiten. Die anderen Termine haben
- * keinen („Noch kein Ablauf“, ChurchTools: 404). Wie gemessen (E6-0): `startTimes` je Termin, Dauer in Sekunden,
+ * **Der Ablauf des dritten Termins** (103, Gottesdienst eine Woche später) – seit E6-6b, damit sich in der Matrix ein
+ * Punkt in einen anderen Termin ziehen lässt. Punkt-IDs eigene als in 101 (in ChurchTools sind sie überall eindeutig).
+ */
+const ABLAUF_103: DemoPunkt[] = [
+  { id: 21, type: 'normal', title: 'Gebet', duration: 600 },
+  { id: 22, type: 'song', title: 'Way Maker', duration: 300, song: { title: 'Way Maker' } },
+  { id: 23, type: 'normal', title: 'Segen', duration: 300 },
+];
+
+/**
+ * **Der Ablauf des ersten Termins** (101) – zum Ansehen und, seit E6-3a, zum Bearbeiten; seit E6-6b auch 103
+ * (`ABLAUF_103`). Die anderen Termine haben keinen („Noch kein Ablauf“, ChurchTools: 404). Wie gemessen (E6-0): `startTimes` je Termin, Dauer in Sekunden,
  * `isBeforeEvent` für den Vorlauf, Zuständige aufgelöst; der Termin beginnt um 08:00 UTC. Die Uhrzeiten rechnet die
  * Demo wie ChurchTools aus Reihenfolge, Dauer und Beginn-Grenze; ein ausgeblendeter Punkt („Abkündigungen“) hat
  * keine Zeit und zählt nicht mit (E6-3-0). Geändert wird nur im Speicher.
@@ -314,9 +334,15 @@ function termineVonBis(von: string | null, bis: string | null) {
  * „Neu aufsetzen“ (E6-5b): Vorlage und leer wie gemessen – neue Punkt-IDs, gleicher Ablauf. Mit `?demo=geteilt` teilt
  * sich 101 den Ablauf mit 102 (eine Spalte `startTimes` je Termin), damit die Nachfrage mit zwei Wegen zu sehen ist.
  */
-function ablaufDemo(fall: string) {
-  type Punkt = { id: number; duration?: number; ausgeblendet?: boolean } & Record<string, unknown>;
-  let punkte: Punkt[] = [
+function ablaufDemo(
+  fall: string,
+  termin = 101,
+  tage = 4,
+  anfang?: DemoPunkt[],
+  naechsteIdAnfang = 50,
+) {
+  type Punkt = DemoPunkt;
+  let punkte: Punkt[] = anfang ?? [
     {
       id: 5,
       type: 'normal',
@@ -348,11 +374,11 @@ function ablaufDemo(fall: string) {
     { id: 6, type: 'normal', title: 'Abkündigungen', duration: 300, ausgeblendet: true },
   ];
   let beginnPos = 1;
-  let naechsteId = 50;
-  const PFAD = '/api/events/101/agenda';
+  let naechsteId = naechsteIdAnfang;
+  const PFAD = `/api/events/${termin}/agenda`;
 
   function lesen(): unknown {
-    const beginn = Date.parse(zeit(4, '08:00'));
+    const beginn = Date.parse(zeit(tage, '08:00'));
     const zeiten = new Map<number, string | null>();
     // Vorlauf rückwärts vom Beginn, danach vorwärts.
     let t = beginn;
@@ -378,9 +404,9 @@ function ablaufDemo(fall: string) {
         position: i,
         isBeforeEvent: i < beginnPos,
         startTimes:
-          fall === 'geteilt'
+          fall === 'geteilt' && termin === 101
             ? { '101': zeiten.get(p.id) ?? null, '102': zeiten.get(p.id) ?? null }
-            : { '101': zeiten.get(p.id) ?? null },
+            : { [String(termin)]: zeiten.get(p.id) ?? null },
       })),
     };
   }
@@ -613,7 +639,7 @@ export function demoStarten(fall: string): void {
   document.body.style.cssText = 'margin: 0; height: 100vh;';
   const antworten = daten(fall);
   const speicher = speicherDemo(fall);
-  const ablauf = ablaufDemo(fall);
+  const ablaeufe = [ablaufDemo(fall), ablaufDemo(fall, 103, 11, ABLAUF_103, 80)];
   const mitDienstplanerRechten = (roh: unknown) => {
     const r = roh as { data: Record<string, unknown> };
     return { data: { ...r.data, dienstplaner: speicher.rechte() } };
@@ -626,7 +652,10 @@ export function demoStarten(fall: string): void {
     const rumpf = typeof init?.body === 'string' ? (JSON.parse(init.body) as unknown) : undefined;
     const s =
       speicher.anfrage(methode, url.pathname, rumpf) ??
-      ablauf.anfrage(methode, url.pathname, rumpf, url.searchParams);
+      ablaeufe.reduce<ReturnType<(typeof ablaeufe)[number]['anfrage']>>(
+        (r, a) => r ?? a.anfrage(methode, url.pathname, rumpf, url.searchParams),
+        null,
+      );
     if (s) {
       return Promise.resolve(
         new Response(s.status === 204 ? null : JSON.stringify({ data: s.data ?? null }), {

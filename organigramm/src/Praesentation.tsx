@@ -8,14 +8,17 @@ import { BEREICH_ATTRIBUT } from '@ui/erweiterung/cssBereich';
 import { gruppenFarbe } from '@shared/organigramm/farbe';
 import { alleAuf, anfangsOffen, sichtbarerBaum } from '@shared/organigramm/ansichten';
 import { istLeitung, type Mitglied } from '@shared/organigramm/mitglieder';
+import type { PersonenWahl } from '@shared/organigramm/personen';
 import type { PBereich, PSpalte, Praesentation as Daten } from '@shared/organigramm/praesentation';
 import type { MitgliederDaten } from './ladeMitglieder';
 import type { Start } from './start';
 import { Diagramm } from './Diagramm';
+import { personenInhalt } from './kastenPersonen';
 import {
   ANSICHT_NAMEN,
   lesePraesAnsicht,
   merkePraesAnsicht,
+  PERSONEN_WAHL,
   PRAES_ANSICHTEN,
   type PraesAnsicht,
 } from './auswahl';
@@ -39,6 +42,8 @@ interface Props {
   mitglieder: MitgliederDaten;
   /** „Neue Gliederung | Heute“ (O7-4) – nur für Gruppen-Admins mit einem Plan; sonst fehlt der Umschalter. */
   stand?: { wert: Stand; onWechsel: (s: Stand) => void };
+  /** Personen in den Diagrammen (O7b-6b) – dieselbe gemerkte Wahl wie im Reiter. */
+  personen: { wahl: PersonenWahl; onWahl: (w: PersonenWahl) => void };
   onSchliessen: () => void;
 }
 
@@ -55,8 +60,11 @@ interface Props {
  * dieselben – Übersicht, dann Bereich für Bereich –, der Umschalter ändert nur, wie eine Seite aussieht: als Kacheln
  * bzw. Personen in Spalten (O4) oder als Diagramm (die ganze Gemeinde, dann der Bereich). Im Diagramm der Übersicht
  * öffnet ein Klick auf einen Bereich seine Seite; auf der Seite eines Bereichs ist sein Baum anfangs ganz offen.
+ *
+ * **Personen** (O7b-6b): In den Diagrammen oben „Personen: Aus · Rollen · Alle“ wie im Reiter – dieselbe Wahl, im Gerät
+ * gemerkt. Neue Gruppen der „Neuen Gliederung“ haben noch niemanden und zeigen nur den Namen.
  */
-export function Praesentation({ start, daten, mitglieder, stand, onSchliessen }: Props) {
+export function Praesentation({ start, daten, mitglieder, stand, personen, onSchliessen }: Props) {
   const [seite, setSeite] = useState(-1); // -1 = Übersicht
   const [ansicht, setAnsicht] = useState<PraesAnsicht>(lesePraesAnsicht);
   const baum = useMemo(() => daten.bereiche.map((b) => b.knoten), [daten]);
@@ -313,6 +321,10 @@ export function Praesentation({ start, daten, mitglieder, stand, onSchliessen }:
       return neu;
     });
   const bereichNr = (id: number) => baum.findIndex((k) => k.gruppe.id === id);
+  const inhalt = useMemo(
+    () => personenInhalt(mitglieder, start.rollen, personen.wahl),
+    [mitglieder, start.rollen, personen.wahl],
+  );
   const diagrammSeite = (art: Exclude<PraesAnsicht, 'kacheln'>) => (
     <div className={styles.diagrammSeite}>
       {bereich ? bereichTitel(bereich) : uebersichtTitel}
@@ -324,6 +336,7 @@ export function Praesentation({ start, daten, mitglieder, stand, onSchliessen }:
           onGruppe={(id) => gehe(bereichNr(id))}
           klickbar={(id) => !bereich && bereichNr(id) >= 0}
           fuellen
+          personen={{ wahl: personen.wahl, inhalt }}
         />
       </div>
     </div>
@@ -369,6 +382,18 @@ export function Praesentation({ start, daten, mitglieder, stand, onSchliessen }:
           ariaLabel="Ansicht"
           verbunden
         />
+        {ansicht !== 'kacheln' && (
+          <span className={styles.personen}>
+            Personen
+            <Segment
+              value={personen.wahl}
+              options={PERSONEN_WAHL}
+              onChange={personen.onWahl}
+              ariaLabel="Personen"
+              verbunden
+            />
+          </span>
+        )}
         {kannVollbild && (
           <button type="button" className={styles.knopf} onClick={vollbildUmschalten}>
             <Icon name={vollbild ? 'vollbild-aus' : 'vollbild'} size={16} />

@@ -7,6 +7,9 @@
  * nicht an das Querformat und druckt Adresse und Datum an den Rand – deshalb jetzt eine echte PDF-Datei.
  */
 import type { Anordnung, SichtKnoten } from '@shared/organigramm/ansichten';
+import { rollenZahl } from '@shared/organigramm/personen';
+import type { KastenInhalt } from './kastenPersonen';
+import { kuerzenAuf, nachKommasUmbrechen } from './umbruch';
 
 export interface Papier {
   id: 'a4-quer' | 'a4-hoch' | 'a3-quer' | 'a3-hoch';
@@ -95,24 +98,129 @@ export function papierFuer(wahl: PapierWahl, rahmen: Anordnung['rahmen'] | null)
 /** Höhe einer Zeile und Einrückung je Ebene (mm). */
 export const ZEILE = 6.6;
 export const EINRUECKEN = 7;
+/** Personen unter einer Gruppe (O7b-6b): engere Zeilen, kleinere Schrift (mm). */
+export const PERSON_ZEILE = 4.4;
+export const ROLLE_GROESSE = 2.469; // 7 pt
+export const PERSON_GROESSE = 2.999; // 8,5 pt
+/** Zwischen Rolle und Namen (mm). */
+const ROLLE_ABSTAND = 1.5;
 
-export interface ListenZeile {
-  knoten: SichtKnoten;
-  /** 0 = die Spitze. */
-  tiefe: number;
+export type ListenZeile =
+  | {
+      art: 'gruppe';
+      knoten: SichtKnoten;
+      /** 0 = die Spitze. */
+      tiefe: number;
+    }
+  | {
+      art: 'person';
+      schluessel: string;
+      /** Die Ebene der Gruppe, zu der die Zeile gehört. */
+      tiefe: number;
+      /** Wie viele senkrechte Linien links durchlaufen – die der Gruppe selbst, wenn darunter Untergruppen folgen. */
+      linien: number;
+      /** Die Rolle steht nur in der ersten Zeile; die Namen beginnen in allen Zeilen bei `ab`. */
+      rolle: string | null;
+      ab: number;
+      text: string;
+      kursiv: boolean;
+    };
+
+/** Breite eines Textes in mm – gemessen beim Aufrufer mit der Schrift der Seite. */
+export type ListenMass = (text: string, fett: boolean, groesse: number) => number;
+
+/** Personen stehen etwas eingerückt unter dem Namen – rechts von dessen Linie, aber vor den Untergruppen (mm). */
+const PERSONEN_EINZUG = 3.5;
+
+/** Wo der Name einer Gruppe steht – rechts neben der Linie seiner Ebene (die Spitze ganz links). */
+export const namenX = (f: { x: number }, tiefe: number) =>
+  f.x + tiefe * EINRUECKEN + (tiefe ? 1.5 : 0);
+
+/** Wo eine Personen-Zeile beginnt: unter dem Namen der Gruppe, halb so weit eingerückt wie eine Untergruppe. */
+export const personenX = (f: { x: number }, tiefe: number) => namenX(f, tiefe) + PERSONEN_EINZUG;
+
+const zeilenHoehe = (z: ListenZeile) => (z.art === 'gruppe' ? ZEILE : PERSON_ZEILE);
+
+/** Die Personen einer Gruppe als Zeilen der Liste – Rollen, Umbruch und Kürzen wie im Kästchen des Diagramms. */
+function personenZeilen(
+  k: SichtKnoten,
+  tiefe: number,
+  i: KastenInhalt,
+  platz: number,
+  mass: ListenMass,
+): ListenZeile[] {
+  const basis = {
+    art: 'person' as const,
+    tiefe,
+    linien: tiefe + (k.kinder.length ? 1 : 0),
+  };
+  const person = (t: string) => mass(t, false, PERSON_GROESSE);
+  if (i.art === 'hinweis')
+    return [
+      {
+        ...basis,
+        schluessel: `${k.schluessel}:0`,
+        rolle: null,
+        ab: 0,
+        text: kuerzenAuf(i.text, platz, person),
+        kursiv: true,
+      },
+    ];
+  const out: ListenZeile[] = [];
+  for (const g of i.gruppen) {
+    const rolle = g.rolle.toLocaleUpperCase('de');
+    const ab = mass(rolle, true, ROLLE_GROESSE) + ROLLE_ABSTAND;
+    const texte = g.nurZahl
+      ? [kuerzenAuf(rollenZahl(g), platz - ab, person)]
+      : nachKommasUmbrechen(g.namen, platz - ab, person);
+    texte.forEach((text, n) =>
+      out.push({
+        ...basis,
+        schluessel: `${k.schluessel}:${out.length}`,
+        rolle: n === 0 ? rolle : null,
+        ab,
+        text,
+        kursiv: g.nurZahl,
+      }),
+    );
+  }
+  return out;
 }
 
-/** Die Liste in Leserichtung, auf Seiten verteilt – so viele Zeilen, wie zwischen Kopf und Fuß passen. */
-export function listenSeiten(sicht: SichtKnoten, p: Papier): ListenZeile[][] {
+/**
+ * Die Liste in Leserichtung, auf Seiten verteilt – so viele Zeilen, wie zwischen Kopf und Fuß passen. Mit `leute`
+ * (O7b-6b) stehen unter jeder Gruppe ihre Personen; der Name einer Gruppe bleibt dabei nie allein unten auf einer Seite
+ * stehen, während ihre Personen auf der nächsten beginnen.
+ */
+export function listenSeiten(
+  sicht: SichtKnoten,
+  p: Papier,
+  leute?: { inhalt: (id: number) => KastenInhalt | null; mass: ListenMass },
+): ListenZeile[][] {
+  const f = flaeche(p);
   const zeilen: ListenZeile[] = [];
   const lauf = (k: SichtKnoten, tiefe: number) => {
-    zeilen.push({ knoten: k, tiefe });
+    zeilen.push({ art: 'gruppe', knoten: k, tiefe });
+    const i = k.id === null || !leute ? null : leute.inhalt(k.id);
+    if (i && leute)
+      zeilen.push(...personenZeilen(k, tiefe, i, f.x + f.breite - personenX(f, tiefe), leute.mass));
     k.kinder.forEach((c) => lauf(c, tiefe + 1));
   };
   lauf(sicht, 0);
-  const proSeite = Math.max(1, Math.floor(flaeche(p).hoehe / ZEILE));
-  const seiten: ListenZeile[][] = [];
-  for (let i = 0; i < zeilen.length; i += proSeite) seiten.push(zeilen.slice(i, i + proSeite));
+  const seiten: ListenZeile[][] = [[]];
+  let belegt = 0;
+  zeilen.forEach((z, n) => {
+    const folgt = zeilen[n + 1];
+    // Eine Gruppe nimmt ihre erste Personen-Zeile mit auf die Seite.
+    const braucht =
+      zeilenHoehe(z) + (z.art === 'gruppe' && folgt?.art === 'person' ? PERSON_ZEILE : 0);
+    if (belegt > 0 && belegt + braucht > f.hoehe + 1e-9) {
+      seiten.push([]);
+      belegt = 0;
+    }
+    seiten[seiten.length - 1].push(z);
+    belegt += zeilenHoehe(z);
+  });
   return seiten;
 }
 

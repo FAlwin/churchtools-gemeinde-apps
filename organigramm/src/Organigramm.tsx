@@ -18,7 +18,7 @@ import { offenVonGruppe, type Einsaetze } from '@shared/organigramm/einsaetze';
 import type { MitgliederDaten, MitgliederStand } from './ladeMitglieder';
 import type { Start } from './start';
 import { ANSICHT_NAMEN, BAUM_ANSICHTEN, PERSONEN_WAHL, type BaumAnsicht } from './auswahl';
-import { kastenInhalt } from './kastenPersonen';
+import { personenInhalt } from './kastenPersonen';
 import { Liste } from './Liste';
 import { Diagramm } from './Diagramm';
 import styles from './Organigramm.module.scss';
@@ -87,13 +87,7 @@ export function Organigramm({
   // Was unter dem Namen steht – EINE Regel für Diagramm und Liste. Neu nur, wenn sich Wahl oder Mitglieder ändern: Das
   // Diagramm misst dann alle Kästchen neu.
   const inhalt = useMemo(
-    () => (id: number) =>
-      kastenInhalt(
-        mitglieder?.je.get(id),
-        personen,
-        start.rollen,
-        (p) => mitglieder?.personen.get(p)?.name ?? '',
-      ),
+    () => personenInhalt(mitglieder, start.rollen, personen),
     [mitglieder, personen, start.rollen],
   );
   const name = (id: number) => mitglieder?.personen.get(id)?.name ?? '';

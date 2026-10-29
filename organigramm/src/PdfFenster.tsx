@@ -8,6 +8,8 @@ import { svgSeitenPdf } from '@ui/teilen/svgSeitenPdf';
 import { downloadPdf, oeffnePdf } from '@ui/teilen/sharePdf';
 import { ladeGemeindeLogo } from '@ui/ct/logo';
 import type { Knoten } from '@shared/organigramm/gruppen';
+import type { Rolle } from '@shared/organigramm/mitglieder';
+import type { PersonenWahl } from '@shared/organigramm/personen';
 import {
   anordnen,
   knotenAmPfad,
@@ -18,6 +20,9 @@ import {
 import { DiagrammBild } from './DiagrammBild';
 import { BlattSeite, ListenInhalt, type BlattKopf } from './BlattSeite';
 import { messung, useSchrift } from './messung';
+import { pdfPersonenWahl, personenInhalt } from './kastenPersonen';
+import type { MitgliederDaten } from './ladeMitglieder';
+import { textBreite } from './textBreite';
 import {
   einpassen,
   KLEINSTE_PT,
@@ -48,6 +53,15 @@ interface Props {
   spitze: string | null;
   /** Ansicht des Reiters; Karten gibt es auf Papier nicht, dann von oben. */
   ansicht: BaumAnsicht;
+  /**
+   * Personen (O7b-6b): das Häkchen ist an, wenn der Reiter Personen zeigt, und zeigt dessen Stufe – bei „Aus“ im Reiter
+   * die Rollen (Alwin, 29.10.2026).
+   */
+  personen: {
+    wahl: PersonenWahl;
+    mitglieder: MitgliederDaten | null;
+    rollen: ReadonlyMap<number, Rolle>;
+  };
   onSchliessen: () => void;
   /** Für Tests: das Datum auf dem Blatt. */
   heute?: Date;
@@ -62,7 +76,16 @@ interface Props {
  * Die PDF entsteht, sobald sich etwas ändert, nicht erst beim Antippen: Safari öffnet ein neues Fenster nur direkt im
  * Klick (wie die Druckliste der Anmeldungen und das Teilen-Fenster der Musik-App).
  */
-export function PdfFenster({ baum, gemeinde, offen, spitze, ansicht, onSchliessen, heute }: Props) {
+export function PdfFenster({
+  baum,
+  gemeinde,
+  offen,
+  spitze,
+  ansicht,
+  personen,
+  onSchliessen,
+  heute,
+}: Props) {
   const [art, setArt] = useState<PdfArt>(ansicht === 'karten' ? 'oben' : ansicht);
   const [ausschnitt, setAusschnitt] = useState<string | null>(
     spitze !== null && knotenAmPfad(baum, spitze) ? spitze : null,
@@ -71,6 +94,7 @@ export function PdfFenster({ baum, gemeinde, offen, spitze, ansicht, onSchliesse
   const [alles, setAlles] = useState(true);
   const [logo, setLogo] = useState<string | null>(null);
   const [mitLogo, setMitLogo] = useState(true);
+  const [mitPersonen, setMitPersonen] = useState(personen.wahl !== 'aus');
   const [blatt, setBlatt] = useState(0);
   const [pdf, setPdf] = useState<jsPDF | null>(null);
   const [fehler, setFehler] = useState(false);
@@ -79,7 +103,15 @@ export function PdfFenster({ baum, gemeinde, offen, spitze, ansicht, onSchliesse
 
   const messRef = useRef<HTMLDivElement>(null);
   const schrift = useSchrift(messRef);
-  const { breite, kuerzen } = useMemo(() => messung(schrift), [schrift]);
+  const { mitglieder, rollen, wahl } = personen;
+  const inhalt = useMemo(
+    () => (mitPersonen ? personenInhalt(mitglieder, rollen, pdfPersonenWahl(wahl)) : undefined),
+    [mitPersonen, mitglieder, rollen, wahl],
+  );
+  const { breite, hoehe, kasten, kuerzen } = useMemo(
+    () => messung(schrift, inhalt),
+    [schrift, inhalt],
+  );
   const seitenRef = useRef<(SVGSVGElement | null)[]>([]);
 
   // Das Logo ist Beiwerk: Lädt es nicht, steht das Blatt ohne da.
@@ -99,14 +131,24 @@ export function PdfFenster({ baum, gemeinde, offen, spitze, ansicht, onSchliesse
     [baum, gemeinde, ausschnitt, offen, alles],
   );
   const anordnung = useMemo(
-    () => (art === 'liste' ? null : anordnen(art, sicht, breite)),
-    [art, sicht, breite],
+    () => (art === 'liste' ? null : anordnen(art, sicht, breite, hoehe)),
+    [art, sicht, breite, hoehe],
   );
   const papier = papierFuer(papierWahl, anordnung?.rahmen ?? null);
   const lage = anordnung ? einpassen(anordnung.rahmen, papier) : null;
   const listen = useMemo(
-    () => (anordnung ? null : listenSeiten(sicht, papier)),
-    [anordnung, sicht, papier],
+    () =>
+      anordnung
+        ? null
+        : listenSeiten(
+            sicht,
+            papier,
+            inhalt && {
+              inhalt,
+              mass: (t, f, groesse) => textBreite(t, f, schrift.name, groesse),
+            },
+          ),
+    [anordnung, sicht, papier, inhalt, schrift.name],
   );
   const seitenZahl = listen ? listen.length : 1;
   const gezeigt = Math.min(blatt, seitenZahl - 1);
@@ -221,6 +263,14 @@ export function PdfFenster({ baum, gemeinde, offen, spitze, ansicht, onSchliesse
           <input type="checkbox" checked={alles} onChange={(e) => setAlles(e.target.checked)} />
           Alles aufgeklappt
         </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={mitPersonen}
+            onChange={(e) => setMitPersonen(e.target.checked)}
+          />
+          Personen
+        </label>
         {logo && (
           <label>
             <input
@@ -248,7 +298,11 @@ export function PdfFenster({ baum, gemeinde, offen, spitze, ansicht, onSchliesse
           >
             {anordnung && lage ? (
               <g transform={`translate(${lage.x} ${lage.y}) scale(${lage.massstab})`}>
-                <DiagrammBild anordnung={anordnung} kuerzen={kuerzen} />
+                <DiagrammBild
+                  anordnung={anordnung}
+                  kuerzen={kuerzen}
+                  zeilen={(k) => kasten(k).zeilen}
+                />
               </g>
             ) : (
               <ListenInhalt papier={papier} zeilen={listen?.[i] ?? []} />

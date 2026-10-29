@@ -8,6 +8,7 @@ import { HOEHE, SCHALTER, type SichtKnoten } from '@shared/organigramm/ansichten
 import { rollenZahl } from '@shared/organigramm/personen';
 import type { KastenInhalt } from './kastenPersonen';
 import { textBreite } from './textBreite';
+import { kuerzenAuf, nachKommasUmbrechen } from './umbruch';
 
 /** Nur der Name (Alwin, 26.10.2026) – mit diesem Rand links und rechts, zwischen diesen Breiten. */
 const INNEN = 28;
@@ -84,27 +85,10 @@ export function useSchrift(ref: RefObject<Element | null>): Schrift {
  */
 export function messung(schrift: Schrift, inhalt?: (id: number) => KastenInhalt | null) {
   const mass = (text: string, f: boolean, pt = 14) => textBreite(text, f, schrift.name, pt);
-  /** So viel passt in eine Zeile – sonst mit „…“ gekürzt. */
-  const passend = (text: string, f: boolean, pt: number, platz: number) => {
-    if (mass(text, f, pt) <= platz) return text;
-    let t = text;
-    while (t.length > 1 && mass(t + '…', f, pt) > platz) t = t.slice(0, -1);
-    return t + '…';
-  };
-  /** Namen nach Kommas umbrechen – ein Name wird nie geteilt, nur ein zu langer gekürzt. */
-  const umbrechen = (namen: readonly string[], platz: number) => {
-    const zeilen: string[] = [];
-    let akt = '';
-    for (const n of namen) {
-      const probe = akt ? `${akt}, ${n}` : n;
-      if (akt && mass(probe + ',', false, PERSON_PT) > platz) {
-        zeilen.push(akt + ',');
-        akt = n;
-      } else akt = probe;
-    }
-    if (akt) zeilen.push(akt);
-    return zeilen.map((z) => passend(z, false, PERSON_PT, platz));
-  };
+  const passend = (text: string, f: boolean, pt: number, platz: number) =>
+    kuerzenAuf(text, platz, (t) => mass(t, f, pt));
+  const umbrechen = (namen: readonly string[], platz: number) =>
+    nachKommasUmbrechen(namen, platz, (t) => mass(t, false, PERSON_PT));
 
   const cache = new WeakMap<SichtKnoten, Kasten>();
   const kasten = (k: SichtKnoten): Kasten => {
@@ -154,7 +138,7 @@ export function messung(schrift: Schrift, inhalt?: (id: number) => KastenInhalt 
         for (const t of b.art === 'person' ? umbrechen(b.texte, platz) : b.texte) {
           zeilen.push({
             art: b.art,
-            text: passend(t, false, PERSON_PT, platz),
+            text: b.art === 'person' ? t : passend(t, false, PERSON_PT, platz),
             y: y + PERSON_ZEILE / 2,
           });
           y += PERSON_ZEILE;

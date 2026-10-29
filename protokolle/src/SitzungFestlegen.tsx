@@ -15,17 +15,9 @@ import {
 import type { Sitzung } from '@shared/protokolle/sitzungen';
 import { ladeGruppenMitglieder } from './mitglieder';
 import { sitzungFestlegen } from './planen';
+import { Einladeliste, Planungsfelder } from './Planungsfelder';
 import felder from './Fensterfelder.module.scss';
 import styles from './SitzungFestlegen.module.scss';
-
-/** Auswahl der Dauer (Minuten); eine abweichende Dauer der letzten Sitzung kommt dazu. */
-const DAUERN = [30, 45, 60, 90, 120, 150, 180, 240];
-const dauerText = (min: number) =>
-  min % 60 === 0
-    ? `${min / 60} Stunde${min === 60 ? '' : 'n'}`
-    : min > 60
-      ? `${Math.floor(min / 60)}:${String(min % 60).padStart(2, '0')} Stunden`
-      : `${min} Minuten`;
 
 type Mitglieder = { art: 'laedt' } | { art: 'fertig'; liste: Person[] } | { art: 'verborgen' };
 
@@ -115,7 +107,6 @@ export function SitzungFestlegen({
     () => !problem && schonBelegt(sitzungen, zeitraum(p, zeitzone).beginn),
     [problem, sitzungen, p, zeitzone],
   );
-  const dauern = DAUERN.includes(p.dauer) ? DAUERN : [...DAUERN, p.dauer].sort((a, b) => a - b);
   const bereit = mitglieder.art !== 'laedt' && !problem && !belegt && !laeuft;
 
   const festlegen = () => {
@@ -155,15 +146,6 @@ export function SitzungFestlegen({
     );
   };
 
-  const umschalten = (id: number) =>
-    setEingeladen((alt) => {
-      const neu = new Set(alt);
-      if (neu.has(id)) neu.delete(id);
-      else neu.add(id);
-      return neu;
-    });
-  const setze = <K extends keyof Planung>(k: K, v: Planung[K]) => setP((a) => ({ ...a, [k]: v }));
-
   return (
     <Sheet
       title={art === 'neu' ? 'Neue Sitzung' : 'Nächste Sitzung festlegen'}
@@ -196,53 +178,7 @@ export function SitzungFestlegen({
         </div>
       ) : (
         <>
-          <label className={felder.feld}>
-            <span>Titel</span>
-            <input
-              className={felder.eingabe}
-              value={p.titel}
-              disabled={laeuft}
-              onChange={(e) => setze('titel', e.target.value)}
-            />
-          </label>
-          <div className={felder.zeile}>
-            <label className={felder.feld}>
-              <span>Datum</span>
-              <input
-                type="date"
-                className={felder.eingabe}
-                value={p.tag}
-                min={heute}
-                disabled={laeuft}
-                onChange={(e) => setze('tag', e.target.value)}
-              />
-            </label>
-            <label className={felder.feld}>
-              <span>Uhrzeit</span>
-              <input
-                type="time"
-                className={felder.eingabe}
-                value={p.uhrzeit}
-                disabled={laeuft}
-                onChange={(e) => setze('uhrzeit', e.target.value)}
-              />
-            </label>
-          </div>
-          <label className={felder.feld}>
-            <span>Dauer</span>
-            <select
-              className={felder.eingabe}
-              value={p.dauer}
-              disabled={laeuft}
-              onChange={(e) => setze('dauer', Number(e.target.value))}
-            >
-              {dauern.map((d) => (
-                <option key={d} value={d}>
-                  {dauerText(d)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Planungsfelder p={p} onChange={setP} gesperrt={laeuft} fruehestens={heute} />
 
           <div className={felder.feld}>
             <span>
@@ -259,23 +195,13 @@ export function SitzungFestlegen({
               </p>
             )}
             {mitglieder.art === 'fertig' && (
-              <ul className={styles.personen} aria-label="Einladen">
-                {liste.map((x) => (
-                  <li key={x.id}>
-                    <label className={styles.person}>
-                      <input
-                        type="checkbox"
-                        className={felder.haken}
-                        checked={eingeladen.has(x.id)}
-                        disabled={laeuft}
-                        onChange={() => umschalten(x.id)}
-                      />
-                      <span>{x.name}</span>
-                      {x.id === ich.person && <small>du – sagst gleich zu</small>}
-                    </label>
-                  </li>
-                ))}
-              </ul>
+              <Einladeliste
+                liste={liste}
+                gewaehlt={eingeladen}
+                onChange={setEingeladen}
+                gesperrt={laeuft}
+                ich={ich.person}
+              />
             )}
           </div>
 

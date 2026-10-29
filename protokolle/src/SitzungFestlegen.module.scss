@@ -1,39 +1,5 @@
 // Fenster „Nächste Sitzung festlegen“ / „Neue Sitzung“ (Bauplan S5-2, Entwurf 7) – Felder in `Fensterfelder.module.scss`.
 
-.personen {
-  display: flex;
-  flex-direction: column;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border: 1px solid var(--border);
-  border-radius: var(--r-ctrl);
-
-  li + li {
-    border-top: 1px solid var(--border);
-  }
-}
-
-.person {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 12px;
-  color: var(--text);
-  font-size: 14.5px;
-  cursor: pointer;
-
-  span {
-    flex: 1;
-    min-width: 0;
-  }
-
-  small {
-    color: var(--text2);
-    font-size: 12.5px;
-  }
-}
-
 .passiert {
   display: flex;
   flex-direction: column;

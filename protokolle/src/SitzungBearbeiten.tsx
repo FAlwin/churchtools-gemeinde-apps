@@ -6,15 +6,20 @@ import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import type { Person } from '@shared/organigramm/mitglieder';
 import {
   aenderungVon,
+  ersterDerSerie,
   istLeer,
+  mailsSerie,
   mailsVon,
   planungVon,
+  serienWeg,
   terminSperre,
+  type SerienAbsage,
+  type Umfang,
 } from '@shared/protokolle/bearbeiten';
 import { planungFehler, schonBelegt, zeitraum, type Planung } from '@shared/protokolle/planen';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
 import { ladeGruppenMitglieder } from './mitglieder';
-import { ANMELDUNG, SERIE, sitzungAbsagen, sitzungAendern, terminStand } from './bearbeiten';
+import { ANMELDUNG, sitzungAbsagen, sitzungAendern, terminStand } from './bearbeiten';
 import { wannLang } from './anzeige';
 import { Einladeliste, Planungsfelder } from './Planungsfelder';
 import felder from './Fensterfelder.module.scss';
@@ -27,13 +32,21 @@ type Laden<T> =
 
 const personen = (n: number) => `${n} ${n === 1 ? 'Person' : 'Personen'}`;
 
+/** Bei einer Serie: ist das der erste Termin, und wie viele kommen noch (für „ganze Serie löschen“)? */
+interface Serie {
+  erster: boolean;
+  kommende: number;
+}
+
 /**
  * **Fenster „Sitzung bearbeiten“** (Bauplan K2b, entschieden 29.10.2026) – für die Leitung: Titel, Datum, Uhrzeit, Dauer
  * und wer eingeladen ist; dazu „Sitzung absagen“. Termin, Gruppentreffen und Protokoll ziehen mit. Das Fenster sagt vor
  * dem Speichern, wer welche Mail bekommt (gemessen 29.10.2026):
  * - Zeit geändert: **„Alle neu einladen“** (vorgewählt) – eine Mail „Termin geändert“, Zusagen zurück; abgewählt still.
  * - Titel ändern: still. Einladen: „Neue Besprechungsanfrage“. Ausladen und Absagen: „Termin gelöscht“.
- * Serientermine (K2b-2) und Termine mit Anmeldung ändert es noch nicht – es sagt das.
+ * Bei einer **Serie** (K2b-2) gelten Einladungen für die ganze Serie; Titel oder Zeit fragt „Nur diese Sitzung“ / „Ab
+ * dieser Sitzung“ (geteilt → alle bekommen „Neue Besprechungsanfrage“), Absagen bietet nur diese / Serie ab hier beenden /
+ * ganze Serie löschen. Termine mit Anmeldung ändert es nicht – es sagt das.
  */
 export function SitzungBearbeiten({
   gruppe,
@@ -64,10 +77,13 @@ export function SitzungBearbeiten({
 }) {
   const termin = sitzung.termin;
   // Mit Termin gilt, was ChurchTools jetzt hat (Zeit, Eingeladene) – nicht die Liste (`terminStand`).
-  const [stand, setStand] = useState<Laden<{ sperre: string | null; sitzung: Sitzung }>>(
-    termin ? { art: 'laedt' } : { art: 'fertig', wert: { sperre: null, sitzung } },
-  );
+  const [stand, setStand] = useState<
+    Laden<{ sperre: string | null; sitzung: Sitzung; serie: Serie | null }>
+  >(termin ? { art: 'laedt' } : { art: 'fertig', wert: { sperre: null, sitzung, serie: null } });
   const aktuell = stand.art === 'fertig' ? stand.wert.sitzung : sitzung;
+  const serie = stand.art === 'fertig' ? stand.wert.serie : null;
+  const [umfang, setUmfang] = useState<Umfang>('diese');
+  const [absageArt, setAbsageArt] = useState<SerienAbsage>('diese');
   const [p, setP] = useState<Planung>(() => planungVon(sitzung, zeitzone));
   const vorher = useMemo(() => aktuell.anfragen.map((a) => a.person), [aktuell]);
   const [eingeladen, setEingeladen] = useState<ReadonlySet<number>>(() => new Set(vorher));
@@ -85,21 +101,44 @@ export function SitzungBearbeiten({
     if (!termin) return;
     let aktiv = true;
     terminStand(termin).then(
-      ({ roh, eingeladen: da }) => {
+      ({ roh, eingeladen: da, termine }) => {
         if (!aktiv) return;
         const s = terminSperre(roh);
+        const start = typeof roh.startDate === 'string' ? roh.startDate : null;
+        const schluss = typeof roh.endDate === 'string' ? roh.endDate : null;
+        // Bei einer Serie ist der gelesene Beginn der des ersten Termins – diese Sitzung behält ihren, die Dauer gilt.
+        const zeit =
+          s === 'serie'
+            ? start && schluss
+              ? {
+                  ende: new Date(
+                    Date.parse(sitzung.beginn) + Date.parse(schluss) - Date.parse(start),
+                  ).toISOString(),
+                }
+              : {}
+            : { ...(start ? { beginn: start } : {}), ...(schluss ? { ende: schluss } : {}) };
         const frisch: Sitzung = {
           ...sitzung,
-          ...(typeof roh.startDate === 'string' ? { beginn: roh.startDate } : {}),
-          ...(typeof roh.endDate === 'string' ? { ende: roh.endDate } : {}),
+          ...zeit,
           anfragen: da.map((person) => ({
             person,
             antwort: sitzung.anfragen.find((x) => x.person === person)?.antwort ?? 'offen',
           })),
         };
+        const heute = (jetzt ?? new Date()).getTime();
         setStand({
           art: 'fertig',
-          wert: { sperre: s === 'serie' ? SERIE : s ? ANMELDUNG : null, sitzung: frisch },
+          wert: {
+            sperre: s === 'anmeldung' ? ANMELDUNG : null,
+            sitzung: frisch,
+            serie:
+              s === 'serie'
+                ? {
+                    erster: ersterDerSerie(roh, sitzung.beginn, zeitzone),
+                    kommende: termine.filter((x) => Date.parse(x) >= heute).length,
+                  }
+                : null,
+          },
         });
         setP(planungVon(frisch, zeitzone));
         setEingeladen(new Set(da));
@@ -113,7 +152,7 @@ export function SitzungBearbeiten({
     return () => {
       aktiv = false;
     };
-  }, [termin, gruppe.id, sitzung, zeitzone]);
+  }, [termin, gruppe.id, sitzung, zeitzone, jetzt]);
 
   const liste =
     mitglieder.art === 'fertig' && mitglieder.wert !== 'verborgen' ? mitglieder.wert : [];
@@ -149,10 +188,16 @@ export function SitzungBearbeiten({
       sitzungen.filter((s) => s.schluessel !== sitzung.schluessel),
       z.beginn,
     );
-  const fragen = !!termin && !!a?.zeit && vorher.some((x) => x !== ich.person);
-  const mails = a
-    ? mailsVon(a, { nachher, neuEinladen: fragen && neuEinladen, ich: ich.person })
-    : { geaendert: 0, eingeladen: 0, ausgeladen: 0 };
+  const weg = serie && a ? serienWeg(a, umfang, serie.erster) : null;
+  const geteilt = weg === 'teilen-diese' || weg === 'teilen-ab';
+  // „Alle neu einladen“ nur, wo der Termin selbst verschoben wird – ein geteilter wird ohnehin neu eingeladen.
+  const fragen = !!termin && !!a?.zeit && !geteilt && vorher.some((x) => x !== ich.person);
+  const mailFrage = { nachher, neuEinladen: fragen && neuEinladen, ich: ich.person };
+  const mails = !a
+    ? { geaendert: 0, eingeladen: 0, ausgeladen: 0 }
+    : serie
+      ? mailsSerie(a, weg, mailFrage)
+      : mailsVon(a, mailFrage);
   const anzahlMails = mails.geaendert + mails.eingeladen + mails.ausgeladen;
   const gesperrt = stand.art === 'fertig' && stand.wert.sperre !== null;
   const bereit =
@@ -177,6 +222,9 @@ export function SitzungBearbeiten({
       neu: { titel: p.titel, beginn: z.beginn, ende: z.ende },
       nachher,
       neuEinladen: fragen && neuEinladen,
+      zeitzone,
+      umfang,
+      sitzungen,
     }).then(
       (r) => {
         setLaeuft(false);
@@ -194,7 +242,16 @@ export function SitzungBearbeiten({
   const absagenJetzt = () => {
     setLaeuft(true);
     setFehler(null);
-    sitzungAbsagen({ modul, kategorie, gruppe: gruppe.id, sitzung: aktuell }).then(
+    sitzungAbsagen({
+      modul,
+      kategorie,
+      gruppe: gruppe.id,
+      sitzung: aktuell,
+      zeitzone,
+      sitzungen,
+      ...(serie ? { art: absageArt } : {}),
+      ...(jetzt ? { jetzt } : {}),
+    }).then(
       (r) => {
         setLaeuft(false);
         if (r.hinweise.length)
@@ -235,6 +292,31 @@ export function SitzungBearbeiten({
 
   if (absagen) {
     const andere = vorher.filter((x) => x !== ich.person).length;
+    const art: SerienAbsage | null = serie ? absageArt : null;
+    const mailt = art === null || art === 'serie';
+    const wege: { art: SerienAbsage; titel: string; text: string }[] = serie
+      ? [
+          {
+            art: 'diese',
+            titel: 'Nur diese Sitzung',
+            text: 'Fällt aus der Serie heraus, die anderen Termine bleiben. Ohne Mail.',
+          },
+          ...(serie.erster
+            ? []
+            : [
+                {
+                  art: 'ab' as const,
+                  titel: 'Serie ab hier beenden',
+                  text: 'Diese und alle späteren Termine fallen weg, die früheren bleiben. Ohne Mail.',
+                },
+              ]),
+          {
+            art: 'serie',
+            titel: 'Ganze Serie löschen',
+            text: `Alle Termine verschwinden aus dem Kalender – auch die vergangenen${serie.kommende ? ` (noch ${serie.kommende} kommende)` : ''}.`,
+          },
+        ]
+      : [];
     return (
       <Sheet
         title="Sitzung absagen"
@@ -255,16 +337,65 @@ export function SitzungBearbeiten({
         <p className={felder.unter}>
           {sitzung.titel} · {wannLang(sitzung.beginn, zeitzone)}
         </p>
+        {serie && (
+          <div className={felder.feld} role="radiogroup" aria-label="Was wird abgesagt?">
+            <span>Diese Sitzung gehört zu einer Terminserie</span>
+            {wege.map((w) => (
+              <label key={w.art} className={felder.schalter}>
+                <input
+                  type="radio"
+                  name="absage"
+                  checked={absageArt === w.art}
+                  disabled={laeuft}
+                  onChange={() => setAbsageArt(w.art)}
+                />
+                <span>
+                  {w.titel}
+                  <small>{w.text}</small>
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
         <div className={styles.passiert}>
           <span className={styles.titel}>Das passiert in ChurchTools</span>
           <div className={styles.punkt}>
             <Icon name="calendar" size={18} />
             <span>
-              <b>Der Termin wird gelöscht</b>
-              <small>Er verschwindet aus dem Kalender der Gruppe.</small>
+              <b>
+                {art === null
+                  ? 'Der Termin wird gelöscht'
+                  : art === 'diese'
+                    ? 'Der Termin fällt aus der Serie'
+                    : art === 'ab'
+                      ? 'Die Serie endet vor diesem Termin'
+                      : 'Die ganze Serie wird gelöscht'}
+              </b>
+              <small>
+                {art === null
+                  ? 'Er verschwindet aus dem Kalender der Gruppe.'
+                  : art === 'serie'
+                    ? 'Auch vergangene Termine verschwinden aus dem Kalender.'
+                    : art === 'ab'
+                      ? 'Die früheren Termine bleiben im Kalender.'
+                      : 'Die anderen Termine bleiben im Kalender.'}
+              </small>
             </span>
           </div>
-          {sitzung.treffen !== null && (
+          {art !== null && art !== 'diese' && (
+            <div className={styles.punkt}>
+              <Icon name="dokument" size={18} />
+              <span>
+                <b>{art === 'ab' ? 'Auch die späteren Sitzungen' : 'Alle Sitzungen der Serie'}</b>
+                <small>
+                  Geplante verschwinden, begonnene Protokolle bleiben als Entwurf, freigegebene
+                  bleiben unberührt. Gruppentreffen {art === 'ab' ? 'ab hier' : 'kommender Termine'}{' '}
+                  werden gelöscht.
+                </small>
+              </span>
+            </div>
+          )}
+          {sitzung.treffen !== null && (art === null || art === 'diese') && (
             <div className={styles.punkt}>
               <Icon name="people" size={18} />
               <span>
@@ -273,7 +404,7 @@ export function SitzungBearbeiten({
               </span>
             </div>
           )}
-          {sitzung.kopf && (
+          {sitzung.kopf && (art === null || art === 'diese') && (
             <div className={styles.punkt}>
               <Icon name="dokument" size={18} />
               <span>
@@ -291,11 +422,12 @@ export function SitzungBearbeiten({
             </div>
           )}
         </div>
-        {andere > 0 && (
+        {andere > 0 && mailt && (
           <p className={styles.mail} role="note">
             <Icon name="warnung" size={18} />
             <span>
-              ChurchTools schickt <b>sofort</b> die Mail „Termin gelöscht“ an {personen(andere)}.
+              ChurchTools schickt <b>sofort</b> die Mail „
+              {art === 'serie' ? 'Terminserie gelöscht' : 'Termin gelöscht'}“ an {personen(andere)}.
             </span>
           </p>
         )}
@@ -340,6 +472,38 @@ export function SitzungBearbeiten({
         <>
           <Planungsfelder p={p} onChange={setP} gesperrt={laeuft} mitDauer={!!termin} />
 
+          {serie && a && (a.titel || a.zeit) && (
+            <div className={felder.feld} role="radiogroup" aria-label="Gilt für">
+              <span>Gilt für</span>
+              {(
+                [
+                  ['diese', 'Nur diese Sitzung', 'Sie wird aus der Serie gelöst.'],
+                  [
+                    'ab',
+                    'Ab dieser Sitzung',
+                    serie.erster
+                      ? 'Das ist der erste Termin – die ganze Serie ändert sich.'
+                      : 'Die Serie wird hier geteilt, die Termine davor bleiben.',
+                  ],
+                ] as const
+              ).map(([wert, titel, text]) => (
+                <label key={wert} className={felder.schalter}>
+                  <input
+                    type="radio"
+                    name="umfang"
+                    checked={umfang === wert}
+                    disabled={laeuft}
+                    onChange={() => setUmfang(wert)}
+                  />
+                  <span>
+                    {titel}
+                    <small>{text}</small>
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+
           {termin && (
             <div className={felder.feld}>
               <span>
@@ -378,6 +542,7 @@ export function SitzungBearbeiten({
                   }
                 />
               )}
+              {serie && <p className={felder.leise}>Einladungen gelten für die ganze Serie.</p>}
               {weitere.length > 0 && (
                 <p className={felder.leise}>
                   Außerdem eingeladen: {personen(weitere.length)}, die keine Mitglieder der Gruppe
@@ -411,6 +576,8 @@ export function SitzungBearbeiten({
             <p className={styles.mail} role="note">
               <Icon name="warnung" size={18} />
               <span>
+                {geteilt &&
+                  'Der neue Termin hat noch keine Einladungen – alle werden neu eingeladen. '}
                 ChurchTools schickt <b>sofort</b>
                 {[
                   mails.geaendert ? ` „Termin geändert“ an ${personen(mails.geaendert)}` : '',

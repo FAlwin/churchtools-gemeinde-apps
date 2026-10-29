@@ -17,6 +17,7 @@ import { protokollBeginnen } from './beginnen';
 import { ladeSitzungen, type GruppenSitzungen } from './lesen';
 import { treffenAnlegen } from './planen';
 import { useAnfangWahl } from './AnfangWahl';
+import { Planungsfelder } from './Planungsfelder';
 import felder from './Fensterfelder.module.scss';
 
 type Daten =
@@ -170,9 +171,6 @@ export function ProtokollNeu({
     }
   };
 
-  const setze = <K extends keyof Planung>(k: K, v: Planung[K]) =>
-    setP((x) => (x ? { ...x, [k]: v } : x));
-
   return (
     <Sheet
       title="Neues Protokoll"
@@ -226,37 +224,7 @@ export function ProtokollNeu({
           )}
           {p && (
             <>
-              <label className={felder.feld}>
-                <span>Titel</span>
-                <input
-                  className={felder.eingabe}
-                  value={p.titel}
-                  disabled={laeuft}
-                  onChange={(e) => setze('titel', e.target.value)}
-                />
-              </label>
-              <div className={felder.zeile}>
-                <label className={felder.feld}>
-                  <span>Datum</span>
-                  <input
-                    type="date"
-                    className={felder.eingabe}
-                    value={p.tag}
-                    disabled={laeuft}
-                    onChange={(e) => setze('tag', e.target.value)}
-                  />
-                </label>
-                <label className={felder.feld}>
-                  <span>Uhrzeit</span>
-                  <input
-                    type="time"
-                    className={felder.eingabe}
-                    value={p.uhrzeit}
-                    disabled={laeuft}
-                    onChange={(e) => setze('uhrzeit', e.target.value)}
-                  />
-                </label>
-              </div>
+              <Planungsfelder p={p} onChange={setP} gesperrt={laeuft} mitDauer={false} />
               <div className={felder.feld}>
                 <span>Womit beginnen?</span>
                 {auswahl(laeuft)}

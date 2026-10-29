@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
+import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { tagPunkt } from '@shared/ct/datum';
 import { dokumentDerSitzung, type ProtokollTeil } from '@shared/protokolle/speicher';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
@@ -14,7 +15,7 @@ import styles from './SitzungAnsicht.module.scss';
 /**
  * **Eine Sitzung ansehen** (Bauplan S3-2, Entwurf 7) – oben Titel und Stand, darunter das Protokoll als Dokument und
  * die Bereiche Beschlüsse · To-Dos · Termine aus derselben Ableitung (Bauplan 3.2). Nur lesen; geschrieben wird im
- * Editor (S4). Ohne Protokoll bietet sie der Leitung „Protokoll beginnen“ an (S5-1). Kommt man aus der Suche (S3-4b),
+ * Editor (S4). Ohne Protokoll bietet sie der Leitung „Protokoll beginnen“ an (S5-1), dazu „Bearbeiten“ (K2b). Kommt man aus der Suche (S3-4b),
  * springt die Ansicht zum Tagesordnungspunkt des Treffers und hebt ihn kurz hervor.
  */
 export function SitzungAnsicht({
@@ -28,6 +29,7 @@ export function SitzungAnsicht({
   springeZu = null,
   naechste,
   onBeginnen,
+  onBearbeiten,
   onZurueck,
 }: {
   sitzung: Sitzung;
@@ -44,6 +46,8 @@ export function SitzungAnsicht({
   naechste?: ReactNode;
   /** Nur für die Leitung (S5-1): Protokoll zu dieser Sitzung beginnen – fehlt, wenn man nicht schreiben darf. */
   onBeginnen?: () => void;
+  /** Nur für die Leitung (K2b): Titel, Zeit, Eingeladene ändern oder absagen – fehlt bei freigegebenen Protokollen. */
+  onBearbeiten?: () => void;
   onZurueck: () => void;
 }) {
   const kopf = sitzung.kopf;
@@ -79,6 +83,16 @@ export function SitzungAnsicht({
             </Marke>
           )}
         </div>
+        {onBearbeiten && (
+          <div className={styles.aktionen}>
+            <KopfKnopf
+              label="Bearbeiten"
+              title="Sitzung bearbeiten (Zeit, Titel, Eingeladene, absagen)"
+              symbol={<Icon name="pencil" size={16} />}
+              onClick={onBearbeiten}
+            />
+          </div>
+        )}
       </header>
 
       {!kopf && (

@@ -109,6 +109,8 @@ export interface AblaufBearbeitenOptionen<T extends AblaufZeile> {
    * „+ Gruppe erstellen“ in ChurchTools (Scheibe S2, Alwin 26.10.2026). Am Handy bleibt das Plus.
    */
   plusImKopf?: boolean;
+  /** Wofür das Plus ist, wenn es nur als Symbol steht (`schmal`): „Eintrag hinzufügen – Gottesdienst, So, 01.11.“. */
+  plusName?: string;
   /**
    * Das Lied eines Punkts ansehen (Dienstplaner, E6-O O4) – geht ans Punkt-Fenster (`liedAnsehen`), das dafür an seiner
    * Stelle zeigt, was der Aufrufer hier zurückgibt.
@@ -116,7 +118,9 @@ export interface AblaufBearbeitenOptionen<T extends AblaufZeile> {
   liedAnsehen?: (punkt: T, zurueck: () => void, schliessen: () => void) => ReactNode;
   /**
    * Schmale Form für eine Matrix-Spalte (Dienstplaner, E6-6a): Zeilen wie `AblaufListe schmal`, keine Anleitungszeilen,
-   * und statt des schwebenden Plus ein „+ Punkt“ am Ende der Liste – in einer Matrix stehen mehrere Listen nebeneinander.
+   * kein schwebendes Plus – in einer Matrix stehen mehrere Listen nebeneinander. Mit `plusImKopf` ist `kopfKnopf` dann
+   * nur das grüne Plus; die Matrix stellt es neben „N Punkte“ (E6-6c, Alwin 29.10.2026 – vorher „+ Punkt“ unter der
+   * Liste, das auch am Rechner das Blatt von unten öffnete).
    */
   schmal?: boolean;
   /**
@@ -148,7 +152,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
   const [neuStart, setNeuStart] = useState<{ art: PunktArt; lied: boolean } | null>(null);
   const [auswahlOffen, setAuswahlOffen] = useState(false);
   const handy = useMedienAbfrage(HANDY_BREITE);
-  const imKopf = !!o.plusImKopf && !handy && !o.schmal;
+  const imKopf = !!o.plusImKopf && !handy;
   const [actionItem, setActionItem] = useState<T | null>(null);
   // Mit ‹ › geblättert (E6-O O3): Das Punkt-Fenster ersetzt sein voriges, ohne neu einzublenden.
   const [geblaettert, setGeblaettert] = useState(false);
@@ -312,9 +316,11 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
     imKopf && aktiv && o.bereit ? (
       <HinzufuegenMenue
         label="Eintrag hinzufügen"
+        title={o.schmal ? o.plusName : undefined}
         dataTour="edit-add"
         optionen={optionen}
         gesperrt={gesperrt}
+        nurSymbol={o.schmal}
       />
     ) : null;
 
@@ -416,15 +422,6 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
         >
           {sortierbar}
         </DndContext>
-      )}
-      {o.schmal && o.bereit && (
-        <button
-          type="button"
-          className={styles.plusAmEnde}
-          onClick={() => (gesperrt ? gesperrt() : setAuswahlOffen(true))}
-        >
-          <Icon name="plus" size={14} /> Punkt
-        </button>
       )}
     </>
   );

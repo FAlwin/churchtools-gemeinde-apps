@@ -1,0 +1,137 @@
+// Tabelle des Bereichs „Anmeldungen“ (U2-1, Entwurf u2-tabelle-v1) – Tokens aus ui/design, keine eigenen Farben.
+// Nur Klassen: Regeln auf nackte Elemente (`td`, `th` …) würden ChurchTools verändern (`scripts/globaleCss.mjs`).
+
+// Kopf oben und Summe unten bleiben stehen – das geht nur in einem Rahmen, der selbst scrollt.
+.rahmen {
+  overflow: auto;
+  max-height: min(70vh, 720px);
+  overscroll-behavior: contain;
+}
+
+.tabelle {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: max-content;
+  min-width: 100%;
+  font-size: 13.5px;
+}
+
+.kopf,
+.zelle,
+.summe {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--hair);
+  background: var(--surface2);
+  text-align: left;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.kopf {
+  vertical-align: bottom;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--section);
+  color: var(--text2);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.sortKnopf {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text);
+  }
+}
+
+// Höchstens zwei Zeilen – die Spalte wird so breit wie ihr Inhalt, nicht wie die ganze Frage (echte Prüfung U2-1:
+// 3.279 px bei den Fragen des Prüfstands). Die Breite hängt am Text, weil Tabellenzellen `max-width` übergehen.
+.titel {
+  display: -webkit-box;
+  max-width: 180px;
+  overflow: hidden;
+  white-space: normal;
+  text-align: inherit;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.pfeil {
+  color: var(--blue-ink);
+  font-size: 10px;
+}
+
+.zahl {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+
+  .sortKnopf {
+    flex-direction: row-reverse;
+  }
+}
+
+// Die erste Spalte (Name) bleibt links stehen.
+.fest {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  box-shadow: inset -1px 0 0 var(--border);
+}
+
+.kopf.fest,
+.summe.fest {
+  z-index: 3;
+}
+
+.zeile {
+  cursor: pointer;
+
+  &:hover .zelle {
+    background: color-mix(in srgb, var(--blue) 5%, var(--surface2));
+  }
+}
+
+.oeffnen {
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+  }
+}
+
+.summe {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: var(--section);
+  border-top: 2px solid var(--border);
+  border-bottom: none;
+  font-weight: 800;
+}
+
+.klein {
+  display: block;
+  color: var(--text2);
+  font-size: 11.5px;
+  font-weight: 400;
+}

@@ -430,6 +430,8 @@ export function demoStarten(fall: string): void {
       }
       return antwort({ data: x.felder.map((f) => ({ type: 'group', field: f })) });
     }
+    // Verlauf (Anmeldetag, Absagen, A7): in der Demo leer – ohne ihn brach der Bereich „Anmeldungen“ mit 404 ab.
+    if (/^\/groups\/\d+\/members\/history$/.test(pfad)) return antwort({ data: [] });
     r = /^\/groups\/(\d+)\/members$/.exec(pfad);
     if (r) {
       return antwort(

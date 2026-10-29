@@ -221,28 +221,11 @@
   animation: spin 0.7s linear infinite;
 }
 
-// ── Mode-Menü (Dropdown unter dem Titel) ──
+// ── Menüs unter den Werkzeug-Knöpfen (Aussehen, Tempo): Klick daneben, Gruppen-Überschrift ──
 .scrim {
   position: absolute;
   inset: 0;
   z-index: 98;
-}
-
-.modeMenu {
-  position: absolute;
-  // Direkt unter der Kopfkarte (gemessen, siehe `.appMenu`).
-  top: calc(var(--blatt-kopf-unten, var(--chart-kopf-unten)) + 6px);
-  // Unter dem gewählten Lied der Leiste (`BlattKopf` misst es). Am Rand begrenzt (halbe Menübreite + Luft).
-  left: clamp(120px, var(--liedmenue-x, 50%), calc(100% - 120px));
-  transform: translateX(-50%);
-  z-index: 99;
-  background: var(--surface2);
-  border-radius: var(--r-dialog);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-  border: 1px solid var(--border);
-  padding: 6px;
-  min-width: 212px;
-  animation: fadeIn 0.14s ease both;
 }
 
 .menuLbl {
@@ -252,54 +235,6 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
   padding: 6px 12px 4px;
-}
-
-.mmItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-  padding: 11px 14px;
-  border: none;
-  background: transparent;
-  border-radius: var(--r-ctrl);
-  cursor: pointer;
-  font-family: var(--ui);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-  text-align: left;
-  transition: background 0.1s;
-
-  &:hover {
-    background: var(--surface3);
-  }
-  &.on {
-    color: var(--blue);
-  }
-}
-
-.mmCheck {
-  color: var(--blue);
-  font-weight: 700;
-  font-size: 15px;
-}
-
-.mmValue {
-  font-size: 12px;
-  color: var(--text3);
-}
-
-.mmDanger {
-  color: #dd0000;
-  font-weight: 600;
-}
-
-.mmValueActive {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--blue-ink);
 }
 
 // ── Chart-Bereich: fester Viewport zwischen Header und Footer ──
@@ -438,12 +373,6 @@
   color: var(--text3);
   line-height: 0;
 }
-// Symbol vor einem Dokument im Lied-Menü (PDF/Bild).
-.mmDocIcon {
-  vertical-align: -2px;
-  color: var(--text2);
-}
-
 .docRow {
   display: flex;
   align-items: center;
@@ -854,13 +783,6 @@
 .importBtn:disabled {
   opacity: 0.45;
   cursor: default;
-}
-
-// Stift-Marker im Lied-Menü: diese Version/Darstellung hat eigene Anmerkungen.
-.mmNote {
-  color: var(--text3);
-  margin-left: 6px;
-  vertical-align: -1px;
 }
 
 // Wähler „Notizen von …": Stufe 2 (Ebenen) + Zurück.

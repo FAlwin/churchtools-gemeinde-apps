@@ -176,7 +176,7 @@ export const CHART_STEPS: CoachStep[] = [
   {
     selector: '[data-tour="chart-lied"]',
     title: 'Lieder im Ablauf',
-    body: 'Hier oben stehen alle Lieder des Ablaufs – wische seitwärts, um zu sehen, was kommt. Ein Tipp auf ein Lied springt hin; im Querformat wählst du so auch das zweite sichtbare Lied aus. Tippe auf das gewählte (blau unterstrichen), um die Tonart zu ändern, eine Version zu wählen oder zu transponieren. Bearbeitest du eine Version, arbeitet der Editor in der Tonart, die hier eingestellt ist – gespeichert wird, was du siehst. Unter „Dateien …" verwaltest du die Notenblätter des Arrangements, unter „Stammdaten …" Name, Kategorie, Autor und Copyright des Liedes. Autor, Tempo, Takt und CCLI-Nummer kannst du auch beim Bearbeiten unter „Liedinfo" ändern.',
+    body: 'Hier oben stehen alle Lieder des Ablaufs – wische seitwärts, um zu sehen, was kommt. Ein Tipp auf ein Lied springt hin; im Querformat wählst du so auch das zweite sichtbare Lied aus. Tippe auf das gewählte (blau unterstrichen), um die Tonart zu ändern, eine Version zu wählen oder zu transponieren. Bearbeitest du eine Version, arbeitet der Editor in der Tonart, die hier eingestellt ist – gespeichert wird, was du siehst. Unter „Lied" verwaltest du mit „Dateien …" die Notenblätter des Arrangements und mit „Stammdaten …" Name, Kategorie, Autor und Copyright des Liedes. Autor, Tempo, Takt und CCLI-Nummer kannst du auch beim Bearbeiten unter „Liedinfo" ändern.',
   },
   {
     selector: '[data-tour="chart-werkzeuge"]',

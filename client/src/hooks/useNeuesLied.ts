@@ -126,7 +126,7 @@ export function useNeuesLied({ canUseCcli }: Args) {
           hinweise.push(
             `Das Notenblatt konnte nicht aus SongSelect geholt werden: ${
               e instanceof Error ? e.message : 'unbekannter Fehler'
-            } Über „Dateien …" im Lied-Menü lässt es sich nachholen.`,
+            } Im Lied-Menü unter „Lied" → „Dateien …" lässt es sich nachholen.`,
           );
         }
       }

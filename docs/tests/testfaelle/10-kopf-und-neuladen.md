@@ -59,7 +59,7 @@ des Bandes.
      Blatt springt hin, das Lied ist gewählt. **Blättern** (Wischen, Pfeile, Pedal) → die Leiste scrollt mit, das
      gewählte Lied bleibt zu sehen.
    - **Querformat:** das zweite sichtbare Lied antippen → es ist gewählt, das Blatt bleibt stehen, kein Vollbild. Das
-     gewählte noch einmal antippen → das Lied-Menü (Tonart, Version, Dateien …) öffnet **unter ihm**.
+     gewählte noch einmal antippen → das Lied-Menü öffnet als Fenster **in der Mitte** (TF-EINST-21).
    - **Tempo** → das Fenster öffnet unter dem Knopf, der Knopf ist hellblau; Puls an → „Tempo“ blau umrandet.
      **Anmerken** → der Knopf heißt „Anmerken beenden“ (Haken). **Notizen von …** → nur noch „Zurück zu den eigenen
      Notizen“; das gewählte Lied öffnet dann kein Lied-Menü.

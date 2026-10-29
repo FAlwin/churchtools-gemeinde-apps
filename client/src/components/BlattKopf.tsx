@@ -292,9 +292,8 @@ export function BlattKopf({
   );
 
   /**
-   * **Fenster öffnen unter IHREM Knopf** – Aussehen und Tempo unter dem Werkzeug, das Lied-Menü unter dem gewählten
-   * Lied der Leiste. Die Mitte wird gemessen und als Variable gesetzt (`.appMenu`, `.modeMenu`); am Rand begrenzt
-   * das CSS. Gesucht wird über den Namen des Knopfs – derselbe, den Screenreader vorlesen.
+   * **Aussehen und Tempo öffnen unter IHREM Knopf.** Die Mitte wird gemessen und als Variable gesetzt (`.appMenu`); am
+   * Rand begrenzt das CSS. Das Lied-Menü ist seit 29.10.2026 ein Fenster in der Mitte und braucht keine Messung mehr. Gesucht wird über den Namen des Knopfs – derselbe, den Screenreader vorlesen.
    */
   useLayoutEffect(() => {
     const wurzel = document.documentElement.style;
@@ -315,13 +314,6 @@ export function BlattKopf({
     wurzel.setProperty('--werkzeug-rechts', 'auto');
     wurzel.setProperty('--werkzeug-verschub', '-50% 0');
   }, [offenesWerkzeug, aufbau]);
-  useLayoutEffect(() => {
-    if (!liedFensterOffen) return;
-    const r = kopfRef.current
-      ?.querySelector<HTMLElement>('[aria-current="true"]')
-      ?.getBoundingClientRect();
-    if (r) document.documentElement.style.setProperty('--liedmenue-x', `${r.left + r.width / 2}px`);
-  }, [liedFensterOffen, gewaehlt, aufbau]);
 
   const vollbild = onVollbild ? <VollbildKopfKnopf an={vollbildAn} onClick={onVollbild} /> : null;
   const leiste = (

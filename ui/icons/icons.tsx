@@ -58,6 +58,8 @@ export type IconName =
   | 'vollbild'
   | 'vollbild-aus'
   | 'download'
+  | 'drucker'
+  | 'brief'
   | 'undo'
   | 'redo'
   | 'refresh'
@@ -621,6 +623,22 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
           <path d="m7 21-4.3-4.3a1.7 1.7 0 0 1 0-2.4l9.3-9.3a1.7 1.7 0 0 1 2.4 0l5.6 5.6a1.7 1.7 0 0 1 0 2.4L13 21Z" />
           <path d="M22 21H7" />
           <path d="m5 11 9 9" />
+        </svg>
+      );
+    // Drucker und Brief: Druckliste und Rundmail (U2-1) – vorher die Zeichen ⎙ und ✉, am Handy kaum zu erkennen.
+    case 'drucker':
+      return (
+        <svg {...p}>
+          <path d="M7 9V3h10v6" />
+          <rect x="3" y="9" width="18" height="8" rx="2" />
+          <path d="M7 14h10v7H7z" />
+        </svg>
+      );
+    case 'brief':
+      return (
+        <svg {...p}>
+          <rect x="3" y="5" width="18" height="14" rx="2" />
+          <path d="m3 7 9 6 9-6" />
         </svg>
       );
     case 'download':

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { neueEinstellungen } from './vorlagen';
-import { nachpruefen, pruefMitgliederAus, type PruefMitglied } from './nachpruefung';
+import {
+  nachpruefen,
+  pruefMitgliederAus,
+  wartenTrotzPlatz,
+  type PruefMitglied,
+} from './nachpruefung';
 import {
   dazu,
   e as eListe,
@@ -190,15 +195,13 @@ describe('Beträge', () => {
 });
 
 describe('Plätze und Auswahl', () => {
-  it('Plätze frei, aber jemand wartet → Hinweis; voll mit Wartenden → kein Hinweis', () => {
+  it('Platz frei, aber jemand wartet: kein Hinweis der Nachprüfung (steht seit U2-1 in Kachel und Warteliste)', () => {
     const e = kinder15();
-    expect(nachpruefen(e, [], { belegt: 9, wartend: 2, max: 10 }).plaetze.wartenTrotzPlatz).toBe(
-      true,
-    );
-    expect(nachpruefen(e, [], { belegt: 10, wartend: 2, max: 10 }).plaetze.wartenTrotzPlatz).toBe(
-      false,
-    );
-    expect(nachpruefen(e, [], { belegt: 3, wartend: 1, max: null }).hinweise).toBe(1);
+    expect(wartenTrotzPlatz({ belegt: 9, wartend: 2, max: 10 })).toBe(true);
+    expect(wartenTrotzPlatz({ belegt: 10, wartend: 2, max: 10 })).toBe(false);
+    expect(wartenTrotzPlatz({ belegt: 3, wartend: 1, max: null })).toBe(true);
+    expect(nachpruefen(e, [], { belegt: 9, wartend: 2, max: 10 }).hinweise).toBe(0);
+    expect(nachpruefen(e, [], { belegt: 3, wartend: 1, max: null }).hinweise).toBe(0);
   });
 
   it('Belegung je Auswahl: ausgebucht, überbucht (zählt als Hinweis), unbegrenzt', () => {

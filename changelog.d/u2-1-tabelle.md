@@ -10,8 +10,12 @@
 - **Reiter statt Filter-Chips**, mit der Zahl ihrer Zeilen; die Warteliste zeigt Anmeldungen mit Spalte „Warteplatz“,
   „Abgesagt“ eine Tabelle der Absagen (mit „Zurückholen“, wer ändern darf). `ReiterLeiste` kann dafür eine Anzahl
   hinter dem Text und einen eigenen Namen für Vorleser.
-- **Leiste im ChurchTools-Stil** – eckige Suche (Name oder Nr.) in Knopfhöhe; am Handy zeigen Druckliste und Rundmail
-  nur ihr Zeichen, damit „＋ Von Hand“ nicht mehr umbricht (Fund U1).
+- **Leiste im ChurchTools-Stil** – eckige Suche (Name oder Nr.) in Knopfhöhe; Druckliste und Rundmail mit
+  Linien-Symbol (neu in `ui/icons`: `drucker`, `brief`), am Handy nur das Symbol, damit „＋ Von Hand“ nicht mehr
+  umbricht (Fund U1). ⎙ und ✉ stehen jetzt auf der Liste der Behelfszeichen.
+- **Nach der echten Prüfung:** Spaltenüberschriften höchstens zwei Zeilen (die ganze Frage beim Darüberfahren) – der
+  Prüfstand war 3.279 px breit; die Reiterleiste oben lässt sich wischen, wenn sie nicht passt (am Handy war
+  „Abgesagt“ abgeschnitten).
 - **„Platz frei – jemand wartet“ nur noch zweimal** – in der Kachel „Warteliste“ und im Reiter „Warteliste“ (mit
   „… nachrücken lassen“). Über der Liste und in der Nachprüfung fällt er weg; die Nachprüfung zählt ihn nicht mehr als
   Hinweis.

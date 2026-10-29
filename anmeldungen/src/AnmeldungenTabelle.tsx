@@ -55,6 +55,9 @@ export function AnmeldungenTabelle<Z>({
                   key={s.schluessel}
                   scope="col"
                   className={`${t.kopf} ${klasse(s, i)}`}
+                  // Fragen sind oft lang (Prüfstand: „An welchen Tagen bist du da? (nur bei …)“) – höchstens zwei
+                  // Zeilen, ganz beim Darüberfahren.
+                  title={s.titel}
                   aria-sort={an ? (sortierung.absteigend ? 'descending' : 'ascending') : undefined}
                 >
                   {onSortieren ? (
@@ -63,7 +66,7 @@ export function AnmeldungenTabelle<Z>({
                       className={t.sortKnopf}
                       onClick={() => onSortieren(weiter(s.schluessel))}
                     >
-                      {s.titel}
+                      <span className={t.titel}>{s.titel}</span>
                       {an && (
                         <span className={t.pfeil} aria-hidden>
                           {sortierung.absteigend ? '▼' : '▲'}
@@ -71,7 +74,7 @@ export function AnmeldungenTabelle<Z>({
                       )}
                     </button>
                   ) : (
-                    s.titel
+                    <span className={t.titel}>{s.titel}</span>
                   )}
                 </th>
               );

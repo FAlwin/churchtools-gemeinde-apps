@@ -143,7 +143,7 @@ allein angemeldet, wird ihre Zahlung neu gerechnet und ist wieder offen. Hatte s
 darauf hin – dann bitte prüfen, ob schon zurückgezahlt wurde. Sind die Mails eingerichtet, bekommt sie die
 Bestätigung (beim Zurückholen auf die Warteliste die Mitteilung mit ihrem Platz); sonst gibt es danach „Mail schreiben“.
 
-**Rundmail:** „✉ Rundmail“ im Bereich „Anmeldungen“ schreibt an alle Anmeldungen, an die mit offener Zahlung oder an die
+**Rundmail:** „Rundmail“ im Bereich „Anmeldungen“ schreibt an alle Anmeldungen, an die mit offener Zahlung oder an die
 mit Wartenden – je Anmeldung eine Mail an den Kontakt. ChurchTools verschickt sie mit deinem Namen als Absender;
 Antworten kommen bei dir an. Platzhalter wie `[Betrag]`, `[Anmelde-Nr.]` oder `[Angemeldet von]` füllt ChurchTools je
 Familie; die Vorschau zeigt, wie es bei jeder Familie aussieht. Vorlagen: Zahlungserinnerung (mit den Bankdaten aus
@@ -157,7 +157,7 @@ einem Update ändern – dann meldet das Fenster einen Fehler, und die Mail geht
 und Foyer: Gemeinde, Titel, Termin, groß der QR-Code, darunter der Link und der Anmeldeschluss. Der QR-Code ist immer
 schwarz auf weiß – umgekehrt lesen ihn viele Handys nicht.
 
-**Druckliste:** „⎙ Druckliste“ im Bereich „Anmeldungen“ macht aus der Liste ein PDF zum Teilen (Handy, iPad) oder
+**Druckliste:** „Druckliste“ im Bereich „Anmeldungen“ macht aus der Liste ein PDF zum Teilen (Handy, iPad) oder
 Herunterladen. Vorn stehen die Listen, die zum Formular passen; „＋ weitere“ öffnet die übrigen (ohne passende Frage
 bleibt die Spalte leer zum Ausfüllen von Hand):
 

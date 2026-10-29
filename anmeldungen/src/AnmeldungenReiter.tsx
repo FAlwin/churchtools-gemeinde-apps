@@ -804,12 +804,14 @@ export function AnmeldungenReiter({
           <span className={a.rechts}>
             {liste.length > 0 && (
               <FensterKnopf art="zweit" aria-label="Druckliste" onClick={() => setDruck(true)}>
-                ⎙<span className={a.breit}> Druckliste</span>
+                <Icon name="drucker" size={18} />
+                <span className={a.breit}>Druckliste</span>
               </FensterKnopf>
             )}
             {darf && liste.length > 0 && (
               <FensterKnopf art="zweit" aria-label="Rundmail" onClick={() => setRundmail(true)}>
-                ✉<span className={a.breit}> Rundmail</span>
+                <Icon name="brief" size={18} />
+                <span className={a.breit}>Rundmail</span>
               </FensterKnopf>
             )}
             {darf && (

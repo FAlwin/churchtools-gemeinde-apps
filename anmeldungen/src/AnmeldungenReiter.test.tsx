@@ -204,6 +204,12 @@ describe('Tabelle (U2-1)', () => {
     expect(kopf.slice(0, 3)).toEqual(['Name', 'Nr.', 'Personen']);
     expect(kopf).toContain('Telefon');
     expect(kopf.slice(-3)).toEqual(['Betrag', 'Bezahlt', 'Angemeldet am']);
+    // Lange Fragen sind auf zwei Zeilen gekürzt – ganz stehen sie beim Darüberfahren (echte Prüfung U2-1).
+    for (const k of screen.getAllByRole('columnheader'))
+      expect(k.getAttribute('title')).toBe(k.textContent);
+    // Druckliste und Rundmail mit Linien-Symbol statt Zeichen (am Handy nur das Symbol).
+    for (const name of ['Druckliste', 'Rundmail'])
+      expect(screen.getByRole('button', { name }).querySelector('svg')).toBeTruthy();
     const summe = screen.getAllByRole('row').at(-1)!.textContent;
     expect(summe).toMatch(/^2 Anmeldungen/);
     expect(summe).toMatch(/3 Personen\+ 1 auf der Warteliste/);

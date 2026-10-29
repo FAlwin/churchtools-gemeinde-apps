@@ -28,6 +28,7 @@
 }
 
 .kopf {
+  vertical-align: bottom;
   position: sticky;
   top: 0;
   z-index: 2;
@@ -46,11 +47,25 @@
   border: none;
   color: inherit;
   font: inherit;
+  text-align: inherit;
   cursor: pointer;
 
   &:hover {
     color: var(--text);
   }
+}
+
+// Höchstens zwei Zeilen – die Spalte wird so breit wie ihr Inhalt, nicht wie die ganze Frage (echte Prüfung U2-1:
+// 3.279 px bei den Fragen des Prüfstands). Die Breite hängt am Text, weil Tabellenzellen `max-width` übergehen.
+.titel {
+  display: -webkit-box;
+  max-width: 180px;
+  overflow: hidden;
+  white-space: normal;
+  text-align: inherit;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .pfeil {

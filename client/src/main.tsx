@@ -12,6 +12,7 @@ import { syncAppHeight } from '@ui/fenster/appHeight';
 import { istExtension } from './services/modus';
 import { latoMitbringen } from '@ui/design/schrift';
 import './styles/main.scss';
+import { MessKasten } from './components/MessKasten';
 
 // Früh registrieren: das `beforeinstallprompt`-Event feuert einmalig kurz nach dem Laden.
 initPwaInstall();
@@ -114,3 +115,10 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     </ErrorBoundary>
   </React.StrictMode>,
 );
+
+// NUR STAGING (Zweig messung/fenster-weg, wird nie gemergt): Messkasten in eigenem Root, außerhalb der App.
+{
+  const messKastenWurzel = document.createElement('div');
+  document.body.appendChild(messKastenWurzel);
+  ReactDOM.createRoot(messKastenWurzel).render(<MessKasten />);
+}

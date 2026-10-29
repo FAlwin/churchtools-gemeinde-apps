@@ -3,9 +3,7 @@ import type { Absence, AbsenceEvent, NeueAbsence } from '@shared/types/index';
 import { SeitenGeruest } from '../components/SeitenGeruest';
 import { CenterMessage } from '../components/CenterMessage';
 import { Icon } from '@ui/icons/icons';
-import { SchwebePlus } from '@ui/bedienung/SchwebePlus';
-import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
-import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
+import { useNeuAnlegen } from '@ui/bedienung/NeuAnlegen';
 import { Coachmarks } from '../components/Coachmarks';
 import { ZeitraumKnopf } from '@ui/bedienung/ZeitraumKnopf';
 import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
@@ -123,7 +121,6 @@ export function Availability({ online, onToast, heute = heuteIso() }: Availabili
   const aendern = useUpdateAbsence();
   const loeschenEinzeln = useDeleteAbsence();
   const sichern = useSaveAbsenceChanges();
-  const handy = useMedienAbfrage(HANDY_BREITE);
   // Die Termin-Arten des Admins (#400) – die Konfiguration ist ohnehin geladen (Branding).
   const site = useSiteConfig();
 
@@ -536,6 +533,16 @@ export function Availability({ online, onToast, heute = heuteIso() }: Availabili
    * dazu die Fenster und die Einführung. Es scrollt nicht mit, deshalb steht es neben dem Inhalt
    * und nicht darin.
    */
+  // Am iPad/Rechner grün im Seitenkopf, am Handy das Plus (`useNeuAnlegen`). Solange etwas vorgemerkt ist, gibt es
+  // keins – EIN Speichern-Weg.
+  const neu = useNeuAnlegen({
+    label: 'Zeitraum eintragen',
+    onClick: zeitraumOeffnen,
+    sichtbar: !laedt && !fehler && anzahl === 0,
+    disabled: !online,
+    dataTour: 'verf-plus',
+  });
+
   const ueberlagerung = (
     <>
       {anzahl > 0 ? (
@@ -555,16 +562,7 @@ export function Availability({ online, onToast, heute = heuteIso() }: Availabili
           </button>
         </div>
       ) : (
-        handy &&
-        !laedt &&
-        !fehler && (
-          <SchwebePlus
-            label="Zeitraum eintragen"
-            dataTour="verf-plus"
-            disabled={!online}
-            onClick={zeitraumOeffnen}
-          />
-        )
+        neu.schwebend
       )}
 
       {entwurf && (
@@ -638,20 +636,7 @@ export function Availability({ online, onToast, heute = heuteIso() }: Availabili
       }
       onNeuLaden={neuLaden}
       ueberlagerung={ueberlagerung}
-      aktionen={
-        // Am iPad/Rechner grün im Seitenkopf wie „+ Gruppe erstellen“ in ChurchTools (S2); am Handy das Plus.
-        // Solange etwas vorgemerkt ist, gibt es kein Plus – EIN Speichern-Weg (wie beim schwebenden).
-        !handy && !laedt && !fehler && anzahl === 0 ? (
-          <KopfKnopf
-            onClick={zeitraumOeffnen}
-            label="Zeitraum eintragen"
-            neu
-            disabled={!online}
-            dataTour="verf-plus"
-            symbol={<Icon name="plus" size={16} stroke={2.4} />}
-          />
-        ) : undefined
-      }
+      aktionen={neu.kopf}
     >
       {laedt ? (
         <CenterMessage loading text="Wird geladen…" />

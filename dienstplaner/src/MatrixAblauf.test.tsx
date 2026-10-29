@@ -91,9 +91,11 @@ const ABLAUF_10 = [
 
 /**
  * ChurchTools zum Nachspielen: Abläufe je Termin (10 und 11 haben einen, 12 und 13 nicht), Schreiben an Termin 10.
- * `ablauf11` ersetzt die Antwort für Termin 11 (Fehler).
+ * `ablauf11` ersetzt die Antwort für Termin 11 (Fehler); `gesperrt10` schließt den Ablauf von Termin 10 ab.
  */
-function ct(o: { ablauf11?: () => Response; erstesNeuLesenHalten?: boolean } = {}) {
+function ct(
+  o: { ablauf11?: () => Response; erstesNeuLesenHalten?: boolean; gesperrt10?: boolean } = {},
+) {
   let items = ABLAUF_10.map((i, n) => ({ ...i, position: n }));
   const schreiben: string[] = [];
   const gelesen: string[] = [];
@@ -117,7 +119,9 @@ function ct(o: { ablauf11?: () => Response; erstesNeuLesenHalten?: boolean } = {
     if (agenda) {
       gelesen.push(agenda[1]);
       if (agenda[1] === '10') {
-        const antwort = json(200, { data: { calendarId: 2, isLocked: false, items } });
+        const antwort = json(200, {
+          data: { calendarId: 2, isLocked: o.gesperrt10 === true, items },
+        });
         if (o.erstesNeuLesenHalten && schreiben.length === 1 && !gehalten) {
           return new Promise<Response>((r) => {
             gehalten = () => r(antwort);
@@ -238,7 +242,7 @@ describe('Matrix – Ablauf (E6-6a)', () => {
     expect(within(fenster).getByText(/Carl Boberg/)).toBeTruthy();
   });
 
-  it('EIN Stift öffnet alle Termine, die man bearbeiten darf; die übrigen tragen ein Schloss; „Fertig“ schließt', async () => {
+  it('EIN „Ablauf bearbeiten“ öffnet alle Termine, die man bearbeiten darf; die übrigen tragen ein Schloss; „Fertig“ schließt', async () => {
     ct();
     zeige();
     await waitFor(() => expect(within(ablaufZelle(0)).getByText('Soundcheck')).toBeTruthy());
@@ -249,9 +253,21 @@ describe('Matrix – Ablauf (E6-6a)', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Ablauf bearbeiten – alle gezeigten Termine' }),
     );
-    // Termin 10 (Kalender 2): Griffe und „+ Punkt“.
+    // Termin 10 (Kalender 2): Griffe, und das grüne Plus steht oben neben „3 Punkte“ – nicht mehr als „+ Punkt“ unter
+    // dem Ablauf (E6-6c).
     expect(within(ablaufZelle(0)).getAllByRole('button', { name: 'Verschieben' })).toHaveLength(3);
-    expect(within(ablaufZelle(0)).getByRole('button', { name: /Punkt/ })).toBeTruthy();
+    expect(within(ablaufZelle(0)).queryByRole('button', { name: /Punkt/ })).toBeNull();
+    expect(
+      within(gruppenZeile()[0]).getByRole('button', {
+        name: 'Eintrag hinzufügen – Gottesdienst, So, 18.10.',
+      }),
+    ).toBeTruthy();
+    // Wo man nur ansieht oder kein Ablauf ist, gibt es kein Plus.
+    for (const n of [1, 2, 3]) {
+      expect(
+        within(gruppenZeile()[n]).queryByRole('button', { name: /Eintrag hinzufügen/ }),
+      ).toBeNull();
+    }
     // Termin 11 (Kalender 5) und 12 (abgesagt): nur ansehen, mit Schloss in der Gruppenzeile.
     expect(within(ablaufZelle(1)).queryAllByRole('button', { name: 'Verschieben' })).toHaveLength(
       0,
@@ -267,7 +283,51 @@ describe('Matrix – Ablauf (E6-6a)', () => {
     expect(screen.queryAllByRole('button', { name: 'Verschieben' })).toHaveLength(0);
   });
 
-  it('ohne Recht an allen gezeigten Terminen: kein Stift', async () => {
+  it('„Ablauf bearbeiten“ steht mit Wort oben in der Leiste (E6-6c), nicht in der Tabelle; im Bearbeiten „Fertig“', async () => {
+    ct();
+    zeige();
+    await waitFor(() => expect(within(ablaufZelle(0)).getByText('Soundcheck')).toBeTruthy());
+    const knopf = screen.getByRole('button', {
+      name: 'Ablauf bearbeiten – alle gezeigten Termine',
+    });
+    expect(knopf.textContent).toBe('Ablauf bearbeiten');
+    expect(knopf.closest('table')).toBeNull();
+    fireEvent.click(knopf);
+    expect(screen.getByRole('button', { name: 'Fertig' }).textContent).toBe('Fertig');
+  });
+
+  it('das Plus neben „N Punkte“ klappt das kleine Menü auf – kein Blatt von unten – und öffnet das Punkt-Fenster', async () => {
+    ct();
+    zeige();
+    await waitFor(() => expect(within(ablaufZelle(0)).getByText('Soundcheck')).toBeTruthy());
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Ablauf bearbeiten – alle gezeigten Termine' }),
+    );
+    const plus = within(gruppenZeile()[0]).getByRole('button', {
+      name: 'Eintrag hinzufügen – Gottesdienst, So, 18.10.',
+    });
+    fireEvent.click(plus);
+    // Das Menü steht beim Plus, in der Gruppenzeile.
+    const menue = within(gruppenZeile()[0]).getByRole('menu', { name: 'Option wählen' });
+    expect(screen.queryByRole('dialog', { name: 'Option wählen' })).toBeNull();
+    fireEvent.click(within(menue).getByRole('menuitem', { name: 'Programmpunkt hinzufügen' }));
+    expect(await screen.findByRole('dialog', { name: 'Neuer Eintrag' })).toBeTruthy();
+  });
+
+  it('abgeschlossener Ablauf: im Bearbeiten das Schloss statt des Plus', async () => {
+    ct({ gesperrt10: true });
+    zeige();
+    await waitFor(() => expect(within(ablaufZelle(0)).getByText('Soundcheck')).toBeTruthy());
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Ablauf bearbeiten – alle gezeigten Termine' }),
+    );
+    expect(within(gruppenZeile()[0]).getByLabelText('Abgeschlossen – nur ansehen')).toBeTruthy();
+    expect(
+      within(gruppenZeile()[0]).queryByRole('button', { name: /Eintrag hinzufügen/ }),
+    ).toBeNull();
+  });
+
+  it('ohne Recht an allen gezeigten Terminen: kein „Ablauf bearbeiten“', async () => {
     ct();
     zeige({ start: startFuer() });
     await waitFor(() => expect(gruppenZeile()[0].textContent).toBe('3 Punkte'));

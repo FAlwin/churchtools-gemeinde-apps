@@ -405,9 +405,10 @@ Listenzeilen (Plus, Stift, „+ Anlegen“) sind seit S2 eckig mit Rahmen (`Zeil
 Reiter am iPad/Rechner **oben** als Textreiter
 (`ReiterLeiste oben`), am Handy unten (`HANDY_BREITE`). Vom 02.10. bis 26.10. schwebten stattdessen runde Knöpfe
 (`KnopfReihe`) unter dem Band – mit Scheibe B1 (28.10.2026) auch aus dem Liedblatt verschwunden und gelöscht. **Am Gerät widerlegt (02.10.2026):** Eine deckende
-Statusleiste (`status-bar-style=default`) beseitigt das Band NICHT – nicht noch einmal versuchen. Die
-Abstände kommen aus `--inhalt-pad-top` / `--bar-pad-top`
-(`ui/design/_variables.scss`); der Abstand unter das Band gilt nur für unsere App – die ChurchTools-App vom
+Statusleiste (`status-bar-style=default`) beseitigt das Band NICHT – nicht noch einmal versuchen. Der
+Abstand oben kommt für JEDEN Kopf aus `--inhalt-pad-top` (`ui/design/_variables.scss`; seit 29.10.2026 auch der
+Lied-Editor, der als letzter mit `--bar-pad-top` im Band stand – niemand rechnet selbst aus der Safe-Area oben,
+`obenBand.test.ts`); der Abstand unter das Band gilt nur für unsere App – die ChurchTools-App vom
 Home-Bildschirm ist auch „standalone“, in den Erweiterungen setzt `.ct-extension` ihn zurück (`standalone.test.ts`,
 28.10.2026). Alles am unteren Rand rechnet mit `--unten-strich` (Home-Strich, gemessen in `ui/fenster/appHeight.ts`, 29.10.2026 – nie selbst `env(safe-area-inset-bottom)`, `homeStrich.test.ts`); das schwebende Plus steht 16px über `--plus-boden` (Reiterleiste oder Home-Strich), Listen darunter halten `--plus-boden` + 78px frei. Die App zeichnet hinter der Statusleiste (`black-translucent`,
 `client/index.html`). **Liedblatt-Kopf = Kopfkarte (`components/BlattKopf.tsx`, Scheibe B1+B2, 28.10.2026; Bauplan

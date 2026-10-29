@@ -6,7 +6,7 @@
  */
 import type { Rolle } from '@shared/organigramm/mitglieder';
 import { kastenRollen, type PersonenWahl, type RollenGruppe } from '@shared/organigramm/personen';
-import type { MitgliederStand } from './ladeMitglieder';
+import type { MitgliederDaten, MitgliederStand } from './ladeMitglieder';
 
 export type KastenInhalt =
   | { art: 'rollen'; gruppen: RollenGruppe[] }
@@ -24,3 +24,22 @@ export function kastenInhalt(
   const gruppen = kastenRollen(stand.mitglieder, rollen, name, wahl);
   return gruppen.length ? { art: 'rollen', gruppen } : null;
 }
+
+/**
+ * Was unter dem Namen JEDER Gruppe steht – EINE Stelle für Reiter, Präsentation und PDF (O7b-6b). Neu rechnen, wenn sich
+ * Mitglieder, Rollen oder Wahl ändern (die Kästchen werden dann neu gemessen).
+ */
+export function personenInhalt(
+  mitglieder: MitgliederDaten | null,
+  rollen: ReadonlyMap<number, Rolle>,
+  wahl: PersonenWahl,
+): (id: number) => KastenInhalt | null {
+  const name = (p: number) => mitglieder?.personen.get(p)?.name ?? '';
+  return (id) => kastenInhalt(mitglieder?.je.get(id), wahl, rollen, name);
+}
+
+/**
+ * Das Häkchen „Personen“ im PDF (Alwin, 29.10.2026): zeigt die Stufe aus dem Reiter – steht der auf „Aus“, die Rollen.
+ */
+export const pdfPersonenWahl = (reiter: PersonenWahl): Exclude<PersonenWahl, 'aus'> =>
+  reiter === 'aus' ? 'rollen' : reiter;

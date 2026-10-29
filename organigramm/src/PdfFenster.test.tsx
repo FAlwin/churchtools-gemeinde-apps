@@ -7,6 +7,8 @@ import type { Knoten } from '@shared/organigramm/gruppen';
 import { svgSeitenPdf } from '@ui/teilen/svgSeitenPdf';
 import { downloadPdf, oeffnePdf } from '@ui/teilen/sharePdf';
 import { ladeGemeindeLogo } from '@ui/ct/logo';
+import { rollenAus } from '@shared/organigramm/mitglieder';
+import type { MitgliederDaten } from './ladeMitglieder';
 import { PdfFenster } from './PdfFenster';
 
 // jsdom hat keine Zeichenfläche zum Messen – geschätzt wie im Browser ohne Canvas.
@@ -35,6 +37,38 @@ const VIEL = [
   ),
 ];
 
+// Rollen eines Dienstes wie gemessen (Test-Instanz 29.10.2026): Mitarbeiter ist die Standardrolle.
+const ROLLEN = rollenAus([
+  { id: 15, name: 'Mitarbeiter', isLeader: false, sortKey: 0, groupTypeId: 2, isDefault: true },
+  { id: 16, name: 'Leiter', isLeader: true, sortKey: 1, groupTypeId: 2 },
+]);
+const MITGLIEDER: MitgliederDaten = {
+  je: new Map([
+    [
+      7,
+      {
+        art: 'sichtbar',
+        mitglieder: [
+          { personId: 1, rolleId: 16 },
+          { personId: 2, rolleId: 15 },
+          { personId: 3, rolleId: 15 },
+        ],
+        angefragt: [],
+      },
+    ],
+    [12, { art: 'verborgen' }],
+  ]),
+  personen: new Map(
+    (
+      [
+        [1, 'Alwin Friesen'],
+        [2, 'Bea Berg'],
+        [3, 'Carl Clau'],
+      ] as const
+    ).map(([id, name]) => [id, { id, name, bild: null, initialen: name[0] }]),
+  ),
+};
+
 const PDF = { name: 'pdf' } as unknown as jsPDF;
 const HEUTE = new Date(2026, 9, 28);
 
@@ -58,6 +92,7 @@ async function zeigen(extra: Partial<Parameters<typeof PdfFenster>[0]> = {}) {
       offen={anfangsOffen(BAUM)}
       spitze={null}
       ansicht="karten"
+      personen={{ wahl: 'aus', mitglieder: MITGLIEDER, rollen: ROLLEN }}
       onSchliessen={onSchliessen}
       heute={HEUTE}
       {...extra}
@@ -206,6 +241,63 @@ describe('Organigramm als PDF (O7b-4)', () => {
     expect(bauen.mock.calls.length).toBe(vorher + 1);
     expect(screen.queryByRole('alert')).toBeNull();
     expect(knopf('PDF öffnen').disabled).toBe(false);
+  });
+
+  it('Personen (O7b-6b): Häkchen an, wenn der Reiter Personen zeigt – mit dessen Stufe, in Diagramm und Liste', async () => {
+    await zeigen({ personen: { wahl: 'alle', mitglieder: MITGLIEDER, rollen: ROLLEN } });
+    expect(screen.getByLabelText<HTMLInputElement>('Personen').checked).toBe(true);
+    expect(vorschau().textContent).toContain('LEITER');
+    expect(vorschau().textContent).toContain('Bea Berg');
+    expect(vorschau().textContent).toContain('Mitglieder nicht sichtbar');
+    // Die Kästchen werden höher – und genau diese Seiten gehen in die PDF.
+    const technik = [...vorschau().querySelectorAll('g')].find(
+      (x) => x.querySelector('title')?.textContent === 'Technik',
+    );
+    expect(Number(technik?.querySelector('rect')?.getAttribute('height'))).toBeGreaterThan(36);
+    await act(async () => {});
+    expect(letzteSeiten()[0].svg.textContent).toContain('Bea Berg');
+    fireEvent.change(auswahl('Ansicht'), { target: { value: 'liste' } });
+    expect(vorschau().textContent).toContain('MITARBEITER');
+    expect(vorschau().textContent).toContain('Carl Clau');
+    fireEvent.click(screen.getByLabelText('Personen'));
+    expect(vorschau().textContent).not.toContain('Bea Berg');
+    expect(vorschau().textContent).not.toContain('LEITER');
+  });
+
+  it('steht der Reiter auf „Aus“, ist das Häkchen aus – angehakt zeigt es die Rollen, die Standardrolle als Zahl', async () => {
+    await zeigen();
+    expect(screen.getByLabelText<HTMLInputElement>('Personen').checked).toBe(false);
+    expect(vorschau().textContent).not.toContain('LEITER');
+    fireEvent.click(screen.getByLabelText('Personen'));
+    expect(vorschau().textContent).toContain('Alwin Friesen');
+    expect(vorschau().textContent).toContain('2 Mitarbeiter');
+    expect(vorschau().textContent).not.toContain('Bea Berg');
+  });
+
+  it('mit Personen erst, wenn die Mitglieder geladen sind – vorher keine PDF ohne Personen zum Herunterladen', async () => {
+    const { rerender, onSchliessen } = await zeigen({
+      ansicht: 'liste',
+      personen: { wahl: 'alle', mitglieder: null, rollen: ROLLEN },
+    });
+    expect(bauen).not.toHaveBeenCalled();
+    expect(knopf('Herunterladen').disabled).toBe(true);
+    expect(screen.getByRole('status').textContent).toContain('Mitglieder werden noch geladen');
+    rerender(
+      <PdfFenster
+        baum={BAUM}
+        gemeinde="ECG"
+        offen={anfangsOffen(BAUM)}
+        spitze={null}
+        ansicht="liste"
+        personen={{ wahl: 'alle', mitglieder: MITGLIEDER, rollen: ROLLEN }}
+        onSchliessen={onSchliessen}
+        heute={HEUTE}
+      />,
+    );
+    await act(async () => {});
+    expect(bauen).toHaveBeenCalled();
+    expect(letzteSeiten()[0].svg.textContent).toContain('Bea Berg');
+    expect(knopf('Herunterladen').disabled).toBe(false);
   });
 
   it('eine tiefere Spitze aus dem Reiter steht als Ausschnitt bereit', async () => {

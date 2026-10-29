@@ -15,9 +15,15 @@ import {
   PAPIERE,
   papierFuer,
   pdfDateiname,
+  namenX,
+  PERSON_ZEILE,
+  personenX,
   schriftPt,
   ZEILE,
+  EINRUECKEN,
+  type ListenZeile,
 } from './blatt';
+import type { KastenInhalt } from './kastenPersonen';
 
 const g = (id: number, name: string, kinder: Knoten[] = []): Knoten => ({
   gruppe: { id, name, typId: 2, statusId: 1, farbe: null },
@@ -91,7 +97,7 @@ describe('Liste auf Seiten', () => {
     const proSeite = Math.floor(flaeche(p).hoehe / ZEILE);
     expect(seiten.length).toBe(Math.ceil(31 / proSeite));
     expect(seiten.slice(0, -1).every((z) => z.length === proSeite)).toBe(true);
-    const namen = seiten.flat().map((z) => z.knoten.name);
+    const namen = seiten.flat().map((z) => (z.art === 'gruppe' ? z.knoten.name : z.text));
     expect(namen).toEqual([
       'Beispielgemeinde',
       'Gottesdienst',
@@ -125,5 +131,110 @@ describe('pdfDateiname', () => {
       'Organigramm-Café-Bistro-2026-10-28.pdf',
     );
     expect(pdfDateiname(' / ', new Date(2026, 9, 28))).toBe('Organigramm-Gemeinde-2026-10-28.pdf');
+  });
+});
+
+describe('Liste mit Personen (O7b-6b)', () => {
+  /** In mm: jedes Zeichen 1,5 mm breit (fett 1,6) – reicht, um Umbruch und Lage zu prüfen. */
+  const mass = (t: string, fett: boolean) => t.length * (fett ? 1.6 : 1.5);
+  const TEAM: KastenInhalt = {
+    art: 'rollen',
+    gruppen: [
+      { rolle: 'Leiter', namen: ['Alwin Friesen'], nurZahl: false },
+      { rolle: 'Mitarbeiter', namen: ['Bea Berg', 'Carl Clau'], nurZahl: true },
+    ],
+  };
+  const text = (z: ListenZeile) =>
+    z.art === 'gruppe' ? z.knoten.name : `${z.rolle ?? ''}|${z.text}`;
+
+  it('unter jeder Gruppe ihre Rollen – die Rolle nur in der ersten Zeile, die Standardrolle als Zahl', () => {
+    const s = alles([g(1, 'Gottesdienst', [g(2, 'Technik')])]);
+    const seiten = listenSeiten(s, papier('a4-hoch'), {
+      inhalt: (id) =>
+        id === 2 ? TEAM : id === 1 ? { art: 'hinweis', text: 'Mitglieder nicht sichtbar' } : null,
+      mass,
+    });
+    expect(seiten).toHaveLength(1);
+    expect(seiten[0].map(text)).toEqual([
+      'Beispielgemeinde',
+      'Gottesdienst',
+      '|Mitglieder nicht sichtbar',
+      'Technik',
+      'LEITER|Alwin Friesen',
+      'MITARBEITER|2 Mitarbeiter',
+    ]);
+    const hinweis = seiten[0][2];
+    expect(hinweis).toMatchObject({ art: 'person', kursiv: true, linien: 2 });
+    // Unter Technik (ohne Untergruppen) läuft nur die Linie der Ebenen darüber weiter.
+    expect(seiten[0][4]).toMatchObject({ art: 'person', tiefe: 2, linien: 2 });
+  });
+
+  it('viele Namen brechen nach Kommas um – die Folgezeilen ohne Rolle, an derselben Stelle', () => {
+    const namen = Array.from({ length: 30 }, (_, i) => `Person Nummer ${i + 1}`);
+    const s = alles([g(1, 'Gottesdienst')]);
+    const [seite] = listenSeiten(s, papier('a4-hoch'), {
+      inhalt: () => ({ art: 'rollen', gruppen: [{ rolle: 'Teilnehmer', namen, nurZahl: false }] }),
+      mass,
+    });
+    const leute = seite.filter((z) => z.art === 'person');
+    expect(leute.length).toBeGreaterThan(3);
+    expect(leute.map((z) => z.rolle)).toEqual(['TEILNEHMER', ...leute.slice(1).map(() => null)]);
+    expect(new Set(leute.map((z) => z.ab)).size).toBe(1);
+    expect(
+      leute
+        .map((z) => z.text)
+        .join(' ')
+        .split(', '),
+    ).toHaveLength(30);
+    const f = flaeche(papier('a4-hoch'));
+    for (const z of leute)
+      expect(personenX(f, 1) + z.ab + mass(z.text, false)).toBeLessThanOrEqual(f.x + f.breite);
+  });
+
+  it('Personen stehen unter dem Namen, aber vor den Untergruppen', () => {
+    const f = flaeche(papier('a4-hoch'));
+    for (const t of [0, 1, 3]) {
+      expect(personenX(f, t)).toBeGreaterThan(namenX(f, t));
+      expect(personenX(f, t)).toBeLessThan(namenX(f, t + 1));
+      // Rechts von der Linie der eigenen Ebene (sie liegt 2 mm hinter dem Einzug).
+      expect(personenX(f, t)).toBeGreaterThan(f.x + t * EINRUECKEN + 2);
+    }
+  });
+
+  it('der Name einer Gruppe bleibt nie allein unten auf der Seite – er wandert mit seiner ersten Personen-Zeile', () => {
+    const p = papier('a4-hoch');
+    const hoehe = flaeche(p).hoehe;
+    // Vorne leere Gruppen (je eine Zeile) und Gruppen mit einem Hinweis (Zeile + Personen-Zeile), so gewählt, dass für
+    // „Team“ noch Platz bleibt, aber nicht für „Team“ samt erster Person.
+    const lage = (() => {
+      for (let mitHinweis = 0; mitHinweis < 6; mitHinweis++)
+        for (let leer = 0; leer < 40; leer++) {
+          const rest = hoehe - (2 + leer) * ZEILE - mitHinweis * (ZEILE + PERSON_ZEILE);
+          if (rest >= ZEILE && rest < ZEILE + PERSON_ZEILE) return { leer, mitHinweis };
+        }
+      return null;
+    })();
+    expect(lage).not.toBeNull();
+    const { leer, mitHinweis } = lage!;
+    const baum = [
+      g(1, 'Bereich', [
+        ...Array.from({ length: leer }, (_, i) => g(10 + i, `Leer ${i}`)),
+        ...Array.from({ length: mitHinweis }, (_, i) => g(60 + i, `Verborgen ${i}`)),
+        g(99, 'Team'),
+      ]),
+    ];
+    const seiten = listenSeiten(alles(baum), p, {
+      inhalt: (id) =>
+        id === 99 ? TEAM : id >= 60 && id < 70 ? { art: 'hinweis', text: 'nicht sichtbar' } : null,
+      mass,
+    });
+    expect(seiten[0].map(text)).not.toContain('Team');
+    expect(seiten[1].map(text).slice(0, 2)).toEqual(['Team', 'LEITER|Alwin Friesen']);
+  });
+
+  it('ohne Personen genau wie bisher', () => {
+    const s = alles(HOCH);
+    const p = papier('a4-hoch');
+    expect(listenSeiten(s, p, { inhalt: () => null, mass })).toEqual(listenSeiten(s, p));
   });
 });

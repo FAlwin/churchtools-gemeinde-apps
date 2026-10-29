@@ -4,7 +4,12 @@ import {
   flaeche,
   FUSS,
   KOPF,
+  namenX,
   RAND,
+  PERSON_GROESSE,
+  PERSON_ZEILE,
+  personenX,
+  ROLLE_GROESSE,
   ZEILE,
   type ListenZeile,
   type Papier,
@@ -103,24 +108,49 @@ export function ListenInhalt({
   zeilen: readonly ListenZeile[];
 }) {
   const f = flaeche(papier);
+  let y = f.y;
   return (
     <>
-      {zeilen.map(({ knoten: k, tiefe }, j) => {
-        const y = f.y + j * ZEILE;
+      {zeilen.map((z) => {
+        const oben = y;
+        const hoehe = z.art === 'gruppe' ? ZEILE : PERSON_ZEILE;
+        y += hoehe;
+        const linien = z.art === 'gruppe' ? z.tiefe : z.linien;
+        const striche = Array.from({ length: linien }, (_, l) => {
+          const x = f.x + l * EINRUECKEN + 2;
+          return (
+            <line key={l} className={styles.listeLinie} x1={x} y1={oben} x2={x} y2={oben + hoehe} />
+          );
+        });
+        if (z.art === 'person') {
+          const x = personenX(f, z.tiefe);
+          return (
+            <g key={z.schluessel}>
+              {striche}
+              {z.rolle && (
+                <text className={styles.listeRolle} fontSize={ROLLE_GROESSE} x={x} y={oben + 3.1}>
+                  {z.rolle}
+                </text>
+              )}
+              <text
+                className={
+                  z.kursiv ? `${styles.listePerson} ${styles.listeKursiv}` : styles.listePerson
+                }
+                fontSize={PERSON_GROESSE}
+                x={x + z.ab}
+                y={oben + 3.1}
+              >
+                {z.text}
+              </text>
+            </g>
+          );
+        }
+        const k = z.knoten;
         const stil = k.ebene === 0 ? styles.listeSpitze : fett(k) ? styles.listeFett : '';
         return (
           <g key={k.schluessel}>
-            {Array.from({ length: tiefe }, (_, l) => {
-              const x = f.x + l * EINRUECKEN + 2;
-              return (
-                <line key={l} className={styles.listeLinie} x1={x} y1={y} x2={x} y2={y + ZEILE} />
-              );
-            })}
-            <text
-              className={`${styles.listeName} ${stil}`}
-              x={f.x + tiefe * EINRUECKEN + (tiefe ? 1.5 : 0)}
-              y={y + 4.6}
-            >
+            {striche}
+            <text className={`${styles.listeName} ${stil}`} x={namenX(f, z.tiefe)} y={oben + 4.6}>
               {k.name}
             </text>
           </g>

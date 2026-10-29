@@ -74,3 +74,19 @@
   font-size: 4.233px; // 12 pt
   font-weight: 700;
 }
+
+// Personen unter einer Gruppe (O7b-6b) – wie im Kästchen: Rolle klein, fett und grau, die Namen etwas kleiner als der
+// Gruppenname. Die Größen setzt `BlattSeite.tsx` aus `blatt.ts` (ROLLE_GROESSE, PERSON_GROESSE) – dort wird damit
+// auch umgebrochen.
+.listeRolle {
+  fill: var(--text3);
+  font-weight: 700;
+}
+
+.listePerson {
+  fill: var(--text2);
+}
+
+.listeKursiv {
+  font-style: italic;
+}

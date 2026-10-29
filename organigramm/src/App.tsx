@@ -465,6 +465,7 @@ export function App() {
           offen={offen}
           spitze={spitze}
           ansicht={baumAnsicht}
+          personen={{ wahl: personenWahl, mitglieder, rollen: start.rollen }}
           onSchliessen={() => setPdfOffen(false)}
         />
       )}
@@ -474,6 +475,7 @@ export function App() {
           daten={praesentation}
           mitglieder={mitglieder}
           stand={praesPlan ? { wert: praesStand, onWechsel: setPraesStand } : undefined}
+          personen={{ wahl: personenWahl, onWahl: personenWaehlen }}
           onSchliessen={() => setPraesentiert(false)}
         />
       )}

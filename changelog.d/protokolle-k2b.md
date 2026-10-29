@@ -10,6 +10,8 @@
 - **Sitzung absagen**: Termin und Gruppentreffen werden gelöscht (Mail „Termin gelöscht“ an die Eingeladenen); ein nur
   geplantes Protokoll verschwindet, ein begonnenes bleibt als Entwurf ohne Termin.
 - Serientermine und Termine mit Anmeldung ändert das Fenster noch nicht – es sagt das (Serien folgen mit K2b-2).
+- Das Fenster liest Zeit, Dauer und Eingeladene beim Öffnen frisch vom Termin – auch für Sitzungen mehr als 180 Tage
+  voraus (die Liste liest nur so weit) und wenn inzwischen jemand zugesagt hat.
 
 ### Intern
 

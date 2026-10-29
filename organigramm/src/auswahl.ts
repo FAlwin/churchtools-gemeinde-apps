@@ -1,11 +1,14 @@
 /**
- * **Was jede Person im Gerät gemerkt bekommt** (localStorage): welche Gruppentypen ausgeblendet sind (O2) und welche
- * Ansicht des Baums und der Präsentation sie zuletzt gewählt hat (O7b). Ohne Speicher (privates Fenster, gesperrt) gilt die Vorgabe; Lesen
- * und Schreiben scheitern nie nach außen.
+ * **Was jede Person im Gerät gemerkt bekommt** (localStorage): welche Gruppentypen ausgeblendet sind (O2), welche
+ * Ansicht des Baums und der Präsentation sie zuletzt gewählt hat (O7b) und ob Diagramm und Liste Personen zeigen
+ * (O7b-6). Ohne Speicher (privates Fenster, gesperrt) gilt die Vorgabe; Lesen und Schreiben scheitern nie nach außen.
  */
+import type { PersonenWahl } from '@shared/organigramm/personen';
+
 const TYPEN = 'organigramm-ausgeblendete-typen';
 const ANSICHT = 'organigramm-ansicht';
 const PRAES_ANSICHT = 'organigramm-praesentation-ansicht';
+const PERSONEN = 'organigramm-personen';
 
 function lesen(schluessel: string): unknown {
   try {
@@ -70,4 +73,21 @@ export function lesePraesAnsicht(): PraesAnsicht {
 
 export function merkePraesAnsicht(ansicht: PraesAnsicht): void {
   merken(PRAES_ANSICHT, ansicht);
+}
+
+/** „Personen: Aus · Rollen · Alle“ (O7b-6) – in dieser Reihenfolge, mit diesen Namen. */
+export const PERSONEN_WAHL: { value: PersonenWahl; label: string }[] = [
+  { value: 'aus', label: 'Aus' },
+  { value: 'rollen', label: 'Rollen' },
+  { value: 'alle', label: 'Alle' },
+];
+
+/** Ob Diagramm und Liste Personen zeigen – ohne Wahl „Aus“ (Alwin, 29.10.2026). */
+export function lesePersonen(): PersonenWahl {
+  const roh = lesen(PERSONEN);
+  return PERSONEN_WAHL.find((w) => w.value === roh)?.value ?? 'aus';
+}
+
+export function merkePersonen(wahl: PersonenWahl): void {
+  merken(PERSONEN, wahl);
 }

@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { baumAus, elternAus, type OrgGruppe } from './gruppen';
 import { rollenAus, rollenRang, type Mitglied } from './mitglieder';
-import { gruppenLeitung, gruppenPersonen, teilbaumPersonen } from './personen';
+import {
+  gruppenLeitung,
+  gruppenPersonen,
+  kastenRollen,
+  rollenZahl,
+  teilbaumPersonen,
+} from './personen';
 
 const g = (id: number, name: string): OrgGruppe => ({
   id,
@@ -86,5 +92,130 @@ describe('gruppenLeitung', () => {
     expect(
       gruppenLeitung([m(2, 15), m(3, 99), { personId: 4, rolleId: null }], ROLLEN, name, RANG),
     ).toEqual([]);
+  });
+});
+
+describe('kastenRollen – die Personen einer Gruppe nach Rollen (O7b-6)', () => {
+  // Rollen eines Dienstes wie gemessen (Test-Instanz 29.10.2026, `GET /group/roles`, Typ 2): Mitarbeiter ist die
+  // Standardrolle mit sortKey 0, Coach ist versteckt.
+  const DIENST = rollenAus([
+    {
+      id: 15,
+      name: 'Mitarbeiter',
+      nameTranslated: 'Mitarbeiter',
+      isLeader: false,
+      sortKey: 0,
+      groupTypeId: 2,
+      isDefault: true,
+    },
+    {
+      id: 16,
+      name: 'Leiter',
+      nameTranslated: 'Leiter',
+      isLeader: true,
+      sortKey: 1,
+      groupTypeId: 2,
+    },
+    {
+      id: 17,
+      name: 'Co-Leiter',
+      nameTranslated: 'Co-Leiter',
+      isLeader: true,
+      sortKey: 2,
+      groupTypeId: 2,
+    },
+    {
+      id: 18,
+      name: 'Coach',
+      nameTranslated: 'Coach',
+      isLeader: false,
+      sortKey: 3,
+      groupTypeId: 2,
+      isHidden: true,
+    },
+    {
+      id: 19,
+      name: 'Organisator',
+      nameTranslated: 'Organisator',
+      isLeader: false,
+      sortKey: 4,
+      groupTypeId: 2,
+    },
+    {
+      id: 32,
+      name: 'participant',
+      nameTranslated: 'Teilnehmer',
+      isLeader: false,
+      sortKey: 10,
+      groupTypeId: 5,
+      isDefault: true,
+    },
+    {
+      id: 35,
+      name: 'leader',
+      nameTranslated: 'Leiter',
+      isLeader: true,
+      sortKey: 20,
+      groupTypeId: 5,
+    },
+  ]);
+  const N: Record<number, string> = {
+    1: 'Alwin',
+    2: 'Bea',
+    3: 'Carl',
+    4: 'Dora',
+    5: 'Emil',
+    6: 'Finn',
+    7: 'Gina',
+  };
+  const nm = (id: number) => N[id];
+  const TEAM = [m(7, 15), m(3, 19), m(1, 17), m(5, 15), m(2, 16), m(6, 18), m(4, 15)];
+
+  it('Leitung zuerst, dann wie ChurchTools sortiert, die Standardrolle zuletzt – niemand fehlt, auch versteckte Rollen nicht', () => {
+    const r = kastenRollen(TEAM, DIENST, nm, 'alle');
+    expect(r.map((g) => g.rolle)).toEqual([
+      'Leiter',
+      'Co-Leiter',
+      'Coach',
+      'Organisator',
+      'Mitarbeiter',
+    ]);
+    expect(r.flatMap((g) => g.namen).sort()).toEqual(Object.values(N).sort());
+    expect(r.at(-1)).toEqual({
+      rolle: 'Mitarbeiter',
+      namen: ['Dora', 'Emil', 'Gina'],
+      nurZahl: false,
+    });
+  });
+
+  it('„Rollen“: die Standardrolle nur als Zahl, alle anderen mit Namen', () => {
+    const r = kastenRollen(TEAM, DIENST, nm, 'rollen');
+    expect(r.filter((g) => g.nurZahl).map(rollenZahl)).toEqual(['3 Mitarbeiter']);
+    expect(r.find((g) => g.rolle === 'Leiter')).toEqual({
+      rolle: 'Leiter',
+      namen: ['Bea'],
+      nurZahl: false,
+    });
+  });
+
+  it('„Aus“: nichts', () => {
+    expect(kastenRollen(TEAM, DIENST, nm, 'aus')).toEqual([]);
+  });
+
+  it('Rollennamen so, wie ChurchTools sie zeigt (übersetzt), auch beim Typ mit englischen Namen', () => {
+    const r = kastenRollen([m(1, 32), m(2, 35)], DIENST, nm, 'rollen');
+    expect(r.map((g) => [g.rolle, g.nurZahl])).toEqual([
+      ['Leiter', false],
+      ['Teilnehmer', true],
+    ]);
+  });
+
+  it('eine Rolle, die ChurchTools nicht liefert, steht ganz hinten – die Person fehlt nicht', () => {
+    const r = kastenRollen([m(1, 999), m(2, 15), m(3, 16)], DIENST, nm, 'alle');
+    expect(r.map((g) => [g.rolle, g.namen])).toEqual([
+      ['Leiter', ['Carl']],
+      ['Mitarbeiter', ['Bea']],
+      ['Mitglied', ['Alwin']],
+    ]);
   });
 });

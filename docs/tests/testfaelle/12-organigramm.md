@@ -309,3 +309,36 @@ durch dieselben Seiten (Übersicht, dann die Bereiche).
   vorher das unterste Kästchen (Alwin, 28.10.2026)
 
 </details>
+
+### TF-ORG-11 · Personen im Diagramm und in der Liste
+
+**Das brauchst du:** Die Test-Instanz mit der Erweiterung; Laptop. Eine Gruppe mit Leiter, Co-Leiter und mehreren
+Mitarbeitern (z. B. ein Dienst-Team) und – wenn möglich – eine Gruppe, deren Mitglieder man nicht sehen darf.
+
+**Das muss passieren:** Unter dem Namen stehen die Rollen und Personen genau so, wie ChurchTools sie für die Gruppe
+führt – niemand fehlt, nichts ist dazu erfunden.
+
+1. Reiter Organigramm, Ansicht **Von oben**: Rechts neben den Gruppentypen steht **Personen: Aus · Rollen · Alle**,
+   gewählt ist **Aus** (oder die zuletzt gewählte). In **Karten** gibt es den Umschalter nicht.
+2. **Rollen**: In den Kästchen steht unter dem Namen klein **LEITER**, **CO-LEITER** … mit den Namen; die Standardrolle
+   (Mitarbeiter bzw. Teilnehmer) steht zuletzt als Zahl („6 Mitarbeiter“). Mit der Gruppe in ChurchTools vergleichen:
+   gleiche Rollen, gleiche Personen.
+3. **Alle**: Statt der Zahl stehen die Namen. Lange Namenslisten brechen nach einem Komma um, kein Name ist geteilt.
+4. Kein Kästchen liegt über einem anderen, das runde **+/−** verdeckt keine Zeile; **Ganz zeigen** zeigt alles.
+5. Dasselbe in **Von links**, **Mindmap** und **Liste** (dort eingerückt unter dem Gruppennamen).
+6. Eine Gruppe ohne Leserecht zeigt „Mitglieder nicht sichtbar“.
+7. Seite neu laden: Die Wahl ist wieder da. Bei 1280 px Breite bleibt die Leiste oben einzeilig.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/organigramm/personen.ts`, `shared/organigramm/ansichten.ts`, `organigramm/src/kastenPersonen.ts`, `organigramm/src/messung.ts`, `organigramm/src/DiagrammBild.tsx`, `organigramm/src/Diagramm.tsx`, `organigramm/src/Liste.tsx`, `organigramm/src/Organigramm.tsx`, `organigramm/src/auswahl.ts`
+- **Automatisiert:** größtenteils – `personen.test.ts` (Reihenfolge der Rollen mit den gemessenen Rollen, Zahl,
+  versteckte und unbekannte Rolle), `ansichten.test.ts` (alle drei Anordnungen mit unterschiedlich hohen Kästchen: keine
+  Überlappung, Linien an der Namenszeile), `messung.test.ts` (Zeilen, Umbruch, Platz für +/−), `kastenPersonen.test.ts`
+  (Sichtregel), `Diagramm.test.tsx` (Blick fängt bei anderer Wahl neu an), `App.test.tsx` (O7b-6), `auswahl.test.ts`;
+  ob es mit echten Namen gut aussieht, prüft nur dieser Fall
+- **Historie:** #736; Wunsch Alwin 28.10.2026 („ChurchTools abbilden … nichts weglassen oder hinzufügen“), Entwurf
+  `o7b-6-7-v1.html`, entschieden 29.10.2026
+
+</details>

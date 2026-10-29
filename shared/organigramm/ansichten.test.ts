@@ -15,6 +15,7 @@ import {
   spitzenWahl,
   type Anordnung,
   type AnordnungsArt,
+  type Hoehe,
   type SichtKnoten,
 } from './ansichten';
 import type { Knoten } from './gruppen';
@@ -156,8 +157,11 @@ describe('alleAuf / alleZu', () => {
 
 // ── Anordnung ──
 
-const ueberlappen = (a: { x: number; y: number; breite: number }, b: typeof a) =>
-  a.x < b.x + b.breite && b.x < a.x + a.breite && a.y < b.y + HOEHE && b.y < a.y + HOEHE;
+const ueberlappen = (a: { x: number; y: number; breite: number; hoehe: number }, b: typeof a) =>
+  a.x < b.x + b.breite && b.x < a.x + a.breite && a.y < b.y + b.hoehe && b.y < a.y + a.hoehe;
+
+/** Kästchen mit Personen darunter (O7b-6): unterschiedlich hoch, bis gut dreimal so hoch wie nur mit dem Namen. */
+const hoch: Hoehe = (k) => (k.id === null ? HOEHE : HOEHE + ((k.id * 37) % 5) * 22);
 
 /** Jede Kante endet an einem eigenen Kästchen (links, rechts oder oben in der Mitte) – und jedes außer der Spitze hat eine. */
 function andocken(a: Anordnung) {
@@ -178,76 +182,83 @@ const offenTief = new Set([...anfangsOffen(BAUM), '1/2', '1/5', '10/11']);
 const ARTEN: AnordnungsArt[] = ['oben', 'links', 'mindmap'];
 
 describe('anordnen – für alle Arten', () => {
+  const varianten: [string, Hoehe | undefined][] = [
+    ['nur Namen', undefined],
+    ['mit Personen (O7b-6)', hoch],
+  ];
   for (const art of ARTEN) {
-    describe(art, () => {
-      const s = sichtbarerBaum(BAUM, 'Beispielgemeinde', null, offenTief);
-      const a = anordnen(art, s, breite);
+    for (const [wie, hoehe] of varianten)
+      describe(`${art}, ${wie}`, () => {
+        const s = sichtbarerBaum(BAUM, 'Beispielgemeinde', null, offenTief);
+        const a = anordnen(art, s, breite, hoehe);
 
-      it('jedes sichtbare Kästchen genau einmal, in der gemessenen Breite', () => {
-        expect(a.knoten.map((k) => k.knoten.schluessel).sort()).toEqual(
-          alle(s)
-            .map((k) => k.schluessel)
-            .sort(),
-        );
-        for (const k of a.knoten) expect(k.breite).toBe(breite(k.knoten));
-      });
-
-      it('keine zwei Kästchen liegen übereinander', () => {
-        for (let i = 0; i < a.knoten.length; i++)
-          for (let j = i + 1; j < a.knoten.length; j++)
-            expect(
-              ueberlappen(a.knoten[i], a.knoten[j]),
-              `${a.knoten[i].knoten.name} / ${a.knoten[j].knoten.name}`,
-            ).toBe(false);
-      });
-
-      it('jede Untergruppe hängt an genau einer Kante, die an ihrem Kästchen endet', () => {
-        const enden = andocken(a);
-        expect(enden.sort()).toEqual(
-          alle(s)
-            .slice(1)
-            .map((k) => k.schluessel)
-            .sort(),
-        );
-      });
-
-      it('Schalter (+/−) genau an Gruppen mit Untergruppen; der Rahmen umfasst Kästchen und Schalter', () => {
-        for (const k of a.knoten) {
-          const soll = k.knoten.kinderZahl > 0 && !(art === 'mindmap' && k.knoten.ebene === 0);
-          expect(k.schalter !== null, k.knoten.name).toBe(soll);
-        }
-        const r = a.rahmen;
-        for (const k of a.knoten) {
-          expect(k.x).toBeGreaterThanOrEqual(r.x);
-          expect(k.x + k.breite).toBeLessThanOrEqual(r.x + r.breite);
-          expect(k.y).toBeGreaterThanOrEqual(r.y);
-          expect(k.y + HOEHE).toBeLessThanOrEqual(r.y + r.hoehe);
-          if (k.schalter) expect(k.schalter.y + SCHALTER).toBeLessThanOrEqual(r.y + r.hoehe);
-        }
-      });
-
-      it('auf Papier (ohne +/−) keine Lücke: jede Kante beginnt am Kästchen oder am Ende eines Stummels (O7b-4)', () => {
-        const amRand = (p: { x: number; y: number }) =>
-          a.knoten.some(
-            (k) =>
-              ((p.x === k.x || p.x === k.x + k.breite) && p.y >= k.y && p.y <= k.y + HOEHE) ||
-              ((p.y === k.y || p.y === k.y + HOEHE) && p.x >= k.x && p.x <= k.x + k.breite),
+        it('jedes sichtbare Kästchen genau einmal, in der gemessenen Breite und Höhe', () => {
+          expect(a.knoten.map((k) => k.knoten.schluessel).sort()).toEqual(
+            alle(s)
+              .map((k) => k.schluessel)
+              .sort(),
           );
-        const stummel = a.knoten.map(schalterStummel).filter((x) => x !== null);
-        expect(stummel.length).toBeGreaterThan(0);
-        for (const st of stummel) {
-          // Er beginnt auf dem Rand seines Kästchens und ist so lang wie der Halbmesser des Schalters.
-          expect(amRand(st.punkte[0])).toBe(true);
-          const [p, q] = st.punkte;
-          expect(Math.hypot(q.x - p.x, q.y - p.y)).toBe(SCHALTER);
-        }
-        const enden = stummel.map((st) => `${st.punkte[1].x}|${st.punkte[1].y}`);
-        for (const k of a.kanten) {
-          const p = k.punkte[0];
-          expect(enden.includes(`${p.x}|${p.y}`) || amRand(p), JSON.stringify(p)).toBe(true);
-        }
+          for (const k of a.knoten) expect(k.breite).toBe(breite(k.knoten));
+          for (const k of a.knoten) expect(k.hoehe).toBe((hoehe ?? (() => HOEHE))(k.knoten));
+          if (hoehe) expect(new Set(a.knoten.map((k) => k.hoehe)).size).toBeGreaterThan(2);
+        });
+
+        it('keine zwei Kästchen liegen übereinander', () => {
+          for (let i = 0; i < a.knoten.length; i++)
+            for (let j = i + 1; j < a.knoten.length; j++)
+              expect(
+                ueberlappen(a.knoten[i], a.knoten[j]),
+                `${a.knoten[i].knoten.name} / ${a.knoten[j].knoten.name}`,
+              ).toBe(false);
+        });
+
+        it('jede Untergruppe hängt an genau einer Kante, die an ihrem Kästchen endet', () => {
+          const enden = andocken(a);
+          expect(enden.sort()).toEqual(
+            alle(s)
+              .slice(1)
+              .map((k) => k.schluessel)
+              .sort(),
+          );
+        });
+
+        it('Schalter (+/−) genau an Gruppen mit Untergruppen; der Rahmen umfasst Kästchen und Schalter', () => {
+          for (const k of a.knoten) {
+            const soll = k.knoten.kinderZahl > 0 && !(art === 'mindmap' && k.knoten.ebene === 0);
+            expect(k.schalter !== null, k.knoten.name).toBe(soll);
+          }
+          const r = a.rahmen;
+          for (const k of a.knoten) {
+            expect(k.x).toBeGreaterThanOrEqual(r.x);
+            expect(k.x + k.breite).toBeLessThanOrEqual(r.x + r.breite);
+            expect(k.y).toBeGreaterThanOrEqual(r.y);
+            expect(k.y + k.hoehe).toBeLessThanOrEqual(r.y + r.hoehe);
+            if (k.schalter) expect(k.schalter.y + SCHALTER).toBeLessThanOrEqual(r.y + r.hoehe);
+          }
+        });
+
+        it('auf Papier (ohne +/−) keine Lücke: jede Kante beginnt am Kästchen oder am Ende eines Stummels (O7b-4)', () => {
+          const amRand = (p: { x: number; y: number }) =>
+            a.knoten.some(
+              (k) =>
+                ((p.x === k.x || p.x === k.x + k.breite) && p.y >= k.y && p.y <= k.y + k.hoehe) ||
+                ((p.y === k.y || p.y === k.y + k.hoehe) && p.x >= k.x && p.x <= k.x + k.breite),
+            );
+          const stummel = a.knoten.map(schalterStummel).filter((x) => x !== null);
+          expect(stummel.length).toBeGreaterThan(0);
+          for (const st of stummel) {
+            // Er beginnt auf dem Rand seines Kästchens und ist so lang wie der Halbmesser des Schalters.
+            expect(amRand(st.punkte[0])).toBe(true);
+            const [p, q] = st.punkte;
+            expect(Math.hypot(q.x - p.x, q.y - p.y)).toBe(SCHALTER);
+          }
+          const enden = stummel.map((st) => `${st.punkte[1].x}|${st.punkte[1].y}`);
+          for (const k of a.kanten) {
+            const p = k.punkte[0];
+            expect(enden.includes(`${p.x}|${p.y}`) || amRand(p), JSON.stringify(p)).toBe(true);
+          }
+        });
       });
-    });
   }
 });
 
@@ -328,6 +339,52 @@ describe('anordnen – je Art', () => {
     expect(anordnen('links', s0, breite).knoten[0].schalter).toEqual({ x: breite(s0), y: 0 });
     // Der Schalter ragt unten heraus – der Rahmen muss ihn mitnehmen, sonst schneidet „Ganz zeigen“ ihn ab.
     expect(oben.rahmen).toEqual({ x: 0, y: 0, breite: breite(s0), hoehe: HOEHE + SCHALTER });
+  });
+});
+
+describe('anordnen – hohe Kästchen (O7b-6)', () => {
+  const s = sichtbarerBaum(BAUM, 'Beispielgemeinde', null, offenTief);
+  const lage = (a: Anordnung, name: string) => a.knoten.find((k) => k.knoten.name === name)!;
+  const nur =
+    (namen: Record<string, number>): Hoehe =>
+    (k) =>
+      namen[k.name] ?? HOEHE;
+
+  it('von oben: Untergruppen erst unter dem hohen Kästchen, der Schalter auf seinem unteren Rand', () => {
+    const a = anordnen('oben', s, breite, nur({ Musik: 200 }));
+    const musik = lage(a, 'Musik');
+    expect(musik.hoehe).toBe(200);
+    expect(lage(a, 'Band').y).toBeGreaterThan(musik.y + 200);
+    expect(musik.schalter).toEqual({ x: musik.x + 14, y: musik.y + 200 });
+    // Die Linie zur Untergruppe trifft deren Zeile mit dem Namen.
+    const band = lage(a, 'Band');
+    expect(
+      a.kanten.some((k) => {
+        const p = k.punkte[k.punkte.length - 1];
+        return p.x === band.x && p.y === band.y + HOEHE / 2;
+      }),
+    ).toBe(true);
+  });
+
+  it('von oben: eine hohe Spitze schiebt die Reihe der Bereiche nach unten', () => {
+    const tief = sichtbarerBaum(BAUM, 'G', '1', new Set(['1']));
+    const a = anordnen('oben', tief, breite, nur({ Gottesdienst: 150 }));
+    expect(lage(a, 'Musik').y).toBe(150 + 56);
+    expect(lage(a, 'Gottesdienst').schalter?.y).toBe(150);
+  });
+
+  it('von links: ein hohes Kästchen schiebt die nächste Zeile weiter, die Obergruppe bleibt mittig vor den Namen', () => {
+    const a = anordnen('links', s, breite, nur({ Band: 200 }));
+    const band = lage(a, 'Band');
+    expect(lage(a, 'Chor').y).toBe(band.y + 200 + 10);
+    const mitte = (n: string) => lage(a, n).y + HOEHE / 2;
+    expect(mitte('Musik')).toBe((mitte('Band') + mitte('Jugendband')) / 2);
+  });
+
+  it('von links: eine hohe Obergruppe ragt nicht in die nächste Gruppe ihrer Spalte', () => {
+    const a = anordnen('links', s, breite, nur({ Predigt: 40, Technik: 300 }));
+    const technik = lage(a, 'Technik');
+    expect(lage(a, 'Predigt').y).toBeGreaterThanOrEqual(technik.y + 300);
   });
 });
 

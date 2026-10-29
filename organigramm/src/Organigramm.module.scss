@@ -47,10 +47,22 @@
   margin-left: auto;
 }
 
+// Typen links, „Personen“ rechts (O7b-6); am Handy rutscht „Personen“ unter die Typen.
+.wasZeigen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
 .filter {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.personen {
+  margin-left: auto;
 }
 
 .typ {

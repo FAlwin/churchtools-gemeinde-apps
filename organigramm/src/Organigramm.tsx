@@ -8,11 +8,17 @@ import { knotenAmPfad, spitzenWahl, type SichtKnoten } from '@shared/organigramm
 import { Segment } from '@ui/bedienung/Segment';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { rollenRang } from '@shared/organigramm/mitglieder';
-import { gruppenLeitung, teilbaumPersonen, type Mitglied } from '@shared/organigramm/personen';
+import {
+  gruppenLeitung,
+  teilbaumPersonen,
+  type Mitglied,
+  type PersonenWahl,
+} from '@shared/organigramm/personen';
 import { offenVonGruppe, type Einsaetze } from '@shared/organigramm/einsaetze';
 import type { MitgliederDaten, MitgliederStand } from './ladeMitglieder';
 import type { Start } from './start';
-import { ANSICHT_NAMEN, BAUM_ANSICHTEN, type BaumAnsicht } from './auswahl';
+import { ANSICHT_NAMEN, BAUM_ANSICHTEN, PERSONEN_WAHL, type BaumAnsicht } from './auswahl';
+import { kastenInhalt } from './kastenPersonen';
 import { Liste } from './Liste';
 import { Diagramm } from './Diagramm';
 import styles from './Organigramm.module.scss';
@@ -35,6 +41,9 @@ interface Props {
   /** Ansicht, Spitze und was aufgeklappt ist (O7b-2) – liegt in `App`, weil das Gruppenfenster „Hier anfangen“ kann. */
   ansicht: BaumAnsicht;
   onAnsicht: (a: BaumAnsicht) => void;
+  /** Personen in Diagramm und Liste (O7b-6) – je Gerät gemerkt, liegt in `App`. */
+  personen: PersonenWahl;
+  onPersonen: (w: PersonenWahl) => void;
   /** Pfad der Spitze – `null` = ganze Gemeinde. Eine verschwundene Spitze setzt `App` zurück. */
   spitze: string | null;
   onSpitze: (pfad: string | null) => void;
@@ -62,6 +71,8 @@ export function Organigramm({
   baum,
   ansicht,
   onAnsicht,
+  personen,
+  onPersonen,
   spitze,
   onSpitze,
   sicht,
@@ -73,6 +84,18 @@ export function Organigramm({
   onGruppe,
 }: Props) {
   const rang = useMemo(() => rollenRang(start.rollen), [start.rollen]);
+  // Was unter dem Namen steht – EINE Regel für Diagramm und Liste. Neu nur, wenn sich Wahl oder Mitglieder ändern: Das
+  // Diagramm misst dann alle Kästchen neu.
+  const inhalt = useMemo(
+    () => (id: number) =>
+      kastenInhalt(
+        mitglieder?.je.get(id),
+        personen,
+        start.rollen,
+        (p) => mitglieder?.personen.get(p)?.name ?? '',
+      ),
+    [mitglieder, personen, start.rollen],
+  );
   const name = (id: number) => mitglieder?.personen.get(id)?.name ?? '';
   // Karten ab der Spitze: ein Bereich (oder eine Gruppe) allein – sonst alle Bereiche wie bisher.
   const spitzenKnoten = spitze === null ? null : knotenAmPfad(baum, spitze);
@@ -178,19 +201,37 @@ export function Organigramm({
           </span>
         )}
       </div>
-      {typen.length > 1 && (
-        <div className={styles.filter} role="group" aria-label="Gruppentypen">
-          {typen.map(([typ, n]) => (
-            <button
-              key={typ}
-              type="button"
-              className={styles.typ}
-              aria-pressed={!ausgeblendet.has(typ)}
-              onClick={() => onTypUmschalten(typ)}
-            >
-              {start.typNamen.get(typ) ?? `Typ ${typ}`} <span className={styles.zahl}>{n}</span>
-            </button>
-          ))}
+      {/* Was zu sehen ist: Gruppentypen (je Gerät) und – in Diagramm und Liste – die Personen (O7b-6). In der Leiste oben
+          hätte „Personen“ die Zeile bei 1280 px gesprengt. */}
+      {(typen.length > 1 || ansicht !== 'karten') && (
+        <div className={styles.wasZeigen}>
+          {typen.length > 1 && (
+            <div className={styles.filter} role="group" aria-label="Gruppentypen">
+              {typen.map(([typ, n]) => (
+                <button
+                  key={typ}
+                  type="button"
+                  className={styles.typ}
+                  aria-pressed={!ausgeblendet.has(typ)}
+                  onClick={() => onTypUmschalten(typ)}
+                >
+                  {start.typNamen.get(typ) ?? `Typ ${typ}`} <span className={styles.zahl}>{n}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {ansicht !== 'karten' && (
+            <span className={`${styles.anfangen} ${styles.personen}`}>
+              Personen
+              <Segment
+                value={personen}
+                options={PERSONEN_WAHL}
+                onChange={onPersonen}
+                ariaLabel="Personen"
+                verbunden
+              />
+            </span>
+          )}
         </div>
       )}
 
@@ -207,11 +248,17 @@ export function Organigramm({
       {baum.length === 0 && <p className={styles.leer}>Hier ist keine Gruppe zu sehen.</p>}
 
       {ansicht === 'liste' && baum.length > 0 && (
-        <Liste sicht={sicht} onUmklappen={onUmklappen} onGruppe={onGruppe} />
+        <Liste sicht={sicht} onUmklappen={onUmklappen} onGruppe={onGruppe} inhalt={inhalt} />
       )}
 
       {(ansicht === 'oben' || ansicht === 'links' || ansicht === 'mindmap') && baum.length > 0 && (
-        <Diagramm art={ansicht} sicht={sicht} onUmklappen={onUmklappen} onGruppe={onGruppe} />
+        <Diagramm
+          art={ansicht}
+          sicht={sicht}
+          onUmklappen={onUmklappen}
+          onGruppe={onGruppe}
+          personen={{ wahl: personen, inhalt }}
+        />
       )}
 
       {ansicht === 'karten' && (

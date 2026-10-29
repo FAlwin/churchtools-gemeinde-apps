@@ -2,7 +2,7 @@ import { useMemo, type ReactNode } from 'react';
 import { GruppenKachel } from '@ui/bedienung/GruppenKachel';
 import { PersonBild } from '@ui/bedienung/PersonBild';
 import { Icon } from '@ui/icons/icons';
-import { gruppenFarbe } from '@shared/organigramm/farbe';
+import { gruppenFarbe, sichtFarbe } from '@shared/organigramm/farbe';
 import type { Knoten } from '@shared/organigramm/gruppen';
 import { knotenAmPfad, spitzenWahl, type SichtKnoten } from '@shared/organigramm/ansichten';
 import { Segment } from '@ui/bedienung/Segment';
@@ -18,7 +18,7 @@ import { offenVonGruppe, type Einsaetze } from '@shared/organigramm/einsaetze';
 import type { MitgliederDaten, MitgliederStand } from './ladeMitglieder';
 import type { Start } from './start';
 import { ANSICHT_NAMEN, BAUM_ANSICHTEN, PERSONEN_WAHL, type BaumAnsicht } from './auswahl';
-import { kastenInhalt } from './kastenPersonen';
+import { personenInhalt } from './kastenPersonen';
 import { Liste } from './Liste';
 import { Diagramm } from './Diagramm';
 import styles from './Organigramm.module.scss';
@@ -84,16 +84,11 @@ export function Organigramm({
   onGruppe,
 }: Props) {
   const rang = useMemo(() => rollenRang(start.rollen), [start.rollen]);
+  const farbe = useMemo(() => sichtFarbe(start.typFarben), [start.typFarben]);
   // Was unter dem Namen steht – EINE Regel für Diagramm und Liste. Neu nur, wenn sich Wahl oder Mitglieder ändern: Das
   // Diagramm misst dann alle Kästchen neu.
   const inhalt = useMemo(
-    () => (id: number) =>
-      kastenInhalt(
-        mitglieder?.je.get(id),
-        personen,
-        start.rollen,
-        (p) => mitglieder?.personen.get(p)?.name ?? '',
-      ),
+    () => personenInhalt(mitglieder, start.rollen, personen),
     [mitglieder, personen, start.rollen],
   );
   const name = (id: number) => mitglieder?.personen.get(id)?.name ?? '';
@@ -248,7 +243,13 @@ export function Organigramm({
       {baum.length === 0 && <p className={styles.leer}>Hier ist keine Gruppe zu sehen.</p>}
 
       {ansicht === 'liste' && baum.length > 0 && (
-        <Liste sicht={sicht} onUmklappen={onUmklappen} onGruppe={onGruppe} inhalt={inhalt} />
+        <Liste
+          sicht={sicht}
+          onUmklappen={onUmklappen}
+          onGruppe={onGruppe}
+          farbe={farbe}
+          inhalt={inhalt}
+        />
       )}
 
       {(ansicht === 'oben' || ansicht === 'links' || ansicht === 'mindmap') && baum.length > 0 && (
@@ -257,6 +258,7 @@ export function Organigramm({
           sicht={sicht}
           onUmklappen={onUmklappen}
           onGruppe={onGruppe}
+          farbe={farbe}
           personen={{ wahl: personen, inhalt }}
         />
       )}

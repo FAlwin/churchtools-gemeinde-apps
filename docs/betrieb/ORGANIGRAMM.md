@@ -1,13 +1,12 @@
 # Organigramm – ChurchTools-Erweiterung
 
-> **Stand: O7b-6a (29.10.2026)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
+> **Stand: O7b-8 (29.10.2026)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
 > offenen Plätzen; Gruppenfenster; Gruppentypen ausblendbar), die **Präsentation** (für Gruppen-Admins auch die
 > **neue Gliederung**), für Gruppen-Admins **Gruppen umhängen und anlegen** und den Reiter **Neue Gliederung** (Plan
 > und Umbau) und – für alle, die es in ChurchTools dürfen – **Leitung und Mitglieder pflegen**. Für die **Leitung eines
 > Bereichs** dazu die Reiter **Personen** und **Hinweise**. Seit O7b weitere Ansichten – von oben, von links, Mindmap
-> und Liste, auch in der Präsentation und als PDF, auf Wunsch mit den Personen. Als Nächstes: Personen auch in
-> Präsentation und PDF (O7b-6b), sichtbare Gruppen zentral einstellen (O7b-7), danach (O8) der echte Umbau der
-> Gemeindestruktur. Diese Anleitung wächst mit.
+> und Liste, auch in der Präsentation und als PDF, überall auf Wunsch mit den Personen. Als Nächstes: sichtbare Gruppen
+> zentral einstellen (O7b-7), danach (O8) der echte Umbau der Gemeindestruktur. Diese Anleitung wächst mit.
 
 Das Organigramm zeigt die Gemeinde als Baum – Bereiche, Gruppen, Personen – so, wie die Gruppen-Hierarchie in
 ChurchTools steht, und hilft, die Organisation darin weiterzubauen. **Alles liegt in ChurchTools** – es gibt keinen
@@ -51,13 +50,17 @@ Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Gemessen an der Test-Insta
 - **Karten** – wie bisher: je Bereich eine Karte, darin die Gruppen mit Personen, Leitung und Diensten.
 - **Von oben** – das klassische Organigramm: die Gemeinde oben, die Bereiche nebeneinander, darunter die Gruppen
   gestapelt. **Von links** – derselbe Baum zur Seite, jede Ebene eine Spalte. **Mindmap** – die Gemeinde in der Mitte,
-  die Bereiche nach rechts und links verteilt. Im Kästchen steht der Name – auf Wunsch darunter die Personen (siehe
+  die Bereiche nach rechts und links verteilt. Im Kästchen steht vor dem Namen die **Kachel** der Gruppe – ihr
+  Anfangsbuchstabe auf ihrer Farbe, wie in der Gruppenliste von ChurchTools (ab O7b-8; die eigene Farbe der Gruppe,
+  sonst die ihres Gruppentyps – Gruppen ohne eigene Farbe sind daher oft gleich gefärbt). Die Gemeinde an der Spitze
+  ist keine Gruppe und hat keine Kachel. Darunter auf Wunsch die Personen (siehe
   **Personen** unten); ein Klick (oder Enter) öffnet die Gruppe, das runde **+/−** klappt auf und zu (zugeklappt steht dort die Zahl der Untergruppen).
   **Ziehen** verschiebt, **Mausrad** oder **zwei Finger** zoomen, dazu **−**, **+** und **Ganz zeigen** (lässt unten den
   Streifen der Knöpfe frei, seit O7b-5). Passt alles lesbar hinein, ist anfangs alles zu sehen; sonst beginnt das Bild
   lesbar groß an der Spitze. Mit der Tastatur
   (Tab) springt das Bild zum gewählten Kästchen.
-- **Liste** – die Gemeinde als Gliederung mit Linien, die Namen der Gruppen (auf Wunsch mit den Personen). Jede Gruppe
+- **Liste** – die Gemeinde als Gliederung mit Linien, die Namen der Gruppen mit ihrer Kachel (auf Wunsch mit den
+  Personen). Jede Gruppe
   mit Untergruppen klappt mit dem Pfeil auf und zu; anfangs sind die Gemeinde und die Bereiche offen, darunter steht
   „3 Untergruppen“. Gut am Handy.
 - **Personen: Aus · Rollen · Alle** (Diagramme und Liste, seit O7b-6; rechts neben den Gruppentypen) – was unter dem
@@ -67,8 +70,8 @@ Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Gemessen an der Test-Insta
   und nur als Zahl („6 Mitarbeiter“). **Alle**: auch die Standardrolle mit Namen. Nichts wird weggelassen oder dazu
   erfunden – auch eine in ChurchTools versteckte Rolle steht da. Wo ChurchTools einem die Mitglieder nicht zeigt, steht
   „Mitglieder nicht sichtbar“; eine Gruppe ohne eigene Mitglieder (oft eine Obergruppe) zeigt nur den Namen. Die
-  Kästchen werden dann größer, der Blick fängt neu an. Die Wahl merkt sich das Gerät. In Präsentation und PDF folgt das
-  mit O7b-6b.
+  Kästchen werden dann größer, der Blick fängt neu an. Die Wahl merkt sich das Gerät; sie gilt auch für die Diagramme
+  der Präsentation (dort oben derselbe Umschalter) und gibt im PDF vor, ob das Häkchen **Personen** gesetzt ist.
 - **Alle aufklappen** / **Alle zuklappen** (Liste und Diagramme) wirken nur unter der Spitze.
 - **Anfangen bei:** die ganze Gemeinde oder ein Bereich – dann zeigen alle Ansichten nur ihn. Im Gruppenfenster jeder
   Gruppe mit Untergruppen steht **„Im Organigramm hier anfangen“**; die Gruppe steht dann zusätzlich in der Auswahl.
@@ -89,6 +92,10 @@ Im Reiter Organigramm oben rechts **„PDF / Drucken“** (am Handy nur das Symb
   11 pt groß; unter 6 pt rät das Fenster zu A3, einem Ausschnitt oder „Alles aufgeklappt“ aus. Eine Liste läuft über
   mehrere Seiten (in der Vorschau zum Blättern).
 - **Alles aufgeklappt** (vorgegeben) – sonst so, wie es im Reiter auf- und zugeklappt ist.
+- **Personen** (ab O7b-6b) – unter jeder Gruppe ihre Rollen und Personen wie im Reiter, im Diagramm und in der Liste
+  (dort etwas eingerückt unter dem Namen, vor den Untergruppen). Angehakt ist es, wenn der Reiter Personen zeigt; es
+  zeigt dann dieselbe Stufe – steht der Reiter auf „Aus“, die **Rollen** (Standardrolle als Zahl). Kursiv gibt es auf
+  Papier nicht (eingebettet ist nur Lato normal und fett); der Text ist derselbe.
 - **Logo der Gemeinde** – das Logo aus ChurchTools (Einstellung „Logo“, dasselbe wie oben links in der Leiste) steht
   oben links. Ohne Logo in ChurchTools gibt es die Wahl nicht.
 - Auf jeder Seite: oben „Organigramm“, Gemeinde (und Ausschnitt), Stand-Datum; unten Gemeinde und „Seite x von y“.
@@ -117,7 +124,9 @@ ChurchTools:
   Übersicht, dann Bereich für Bereich –, der Umschalter ändert nur, wie eine Seite aussieht: **Kacheln** wie oben
   beschrieben, die Diagramme zeigen auf der Übersicht die ganze Gemeinde und auf einer Bereichs-Seite den Bereich als
   Baum (anfangs ganz aufgeklappt, mit **+/−** zuklappbar, ziehen und zoomen wie im Reiter). Im Diagramm der Übersicht
-  öffnet ein Klick auf einen Bereich seine Seite. Die gewählte Ansicht merkt sich das Gerät.
+  öffnet ein Klick auf einen Bereich seine Seite. Die gewählte Ansicht merkt sich das Gerät. In den Diagrammen steht oben
+  zusätzlich **Personen: Aus · Rollen · Alle** (ab O7b-6b) – dieselbe Wahl wie im Reiter, hier geändert gilt sie auch
+  dort. Neue Gruppen der neuen Gliederung haben noch niemanden und zeigen nur den Namen.
 - Es gilt dieselbe Auswahl der Gruppentypen wie im Baum (z. B. Verteiler ausgeblendet).
 - Wer nicht alle Mitglieder sehen darf, sieht dort „Mitglieder nicht sichtbar“ – „gesucht“ steht nur, wo wirklich
   niemand eingetragen ist.

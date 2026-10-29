@@ -342,3 +342,65 @@ führt – niemand fehlt, nichts ist dazu erfunden.
   `o7b-6-7-v1.html`, entschieden 29.10.2026
 
 </details>
+
+### TF-ORG-12 · Personen in Präsentation und PDF
+
+**Das brauchst du:** Die Test-Instanz mit der Erweiterung; Laptop (am besten am Beamer) und – für das PDF – Mac mit
+Safari oder Chrome. Eine Gruppe mit Leiter und mehreren Mitarbeitern.
+
+**Das muss passieren:** Präsentation und PDF zeigen die Personen genau wie der Reiter – und das PDF bleibt sauber.
+
+1. Im Reiter **Personen: Rollen** wählen, dann **Präsentieren** und **Von oben**: Oben steht **Personen: Aus · Rollen ·
+   Alle**, gewählt ist **Rollen**; die Kästchen zeigen die Rollen. In **Kacheln** gibt es den Umschalter nicht.
+2. In der Präsentation **Alle** wählen, einen Bereich öffnen: Auch die Untergruppen zeigen ihre Personen. Präsentation
+   schließen – im Reiter steht jetzt ebenfalls **Alle**.
+3. Am iPad quer (oder 1024 px Fensterbreite ohne Vollbild-Knopf) bleibt die Kopfleiste einzeilig, auch mit **Neue
+   Gliederung | Heute**.
+4. **PDF / Drucken**: Das Häkchen **Personen** ist gesetzt; die Vorschau zeigt die Personen wie im Reiter. Häkchen weg →
+   nur die Namen der Gruppen.
+5. Im Reiter **Aus** wählen und das PDF-Fenster neu öffnen: Häkchen aus. Anhaken → die Rollen, Mitarbeiter als Zahl.
+6. Ansicht **Liste**: Unter jeder Gruppe ihre Rollen, etwas eingerückt, vor den Untergruppen. Bei mehreren Seiten steht
+   kein Gruppenname allein unten auf einer Seite.
+7. **PDF öffnen** und drucken (Mac Safari, Chrome, iPad): Namen gut lesbar, nichts abgeschnitten, nichts überlappt.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `organigramm/src/Praesentation.tsx`, `organigramm/src/PdfFenster.tsx`, `organigramm/src/blatt.ts`, `organigramm/src/BlattSeite.tsx`, `organigramm/src/kastenPersonen.ts`, `organigramm/src/umbruch.ts`, `organigramm/src/messung.ts`
+- **Automatisiert:** größtenteils – `App.test.tsx` (O7b-6b: Umschalter nur in Diagrammen, gemeinsame Wahl),
+  `PdfFenster.test.tsx` (Häkchen nach Reiter, Stufe, Diagramm und Liste), `blatt.test.ts` (Personen-Zeilen, Umbruch,
+  Einzug, kein Name allein am Seitenende), `umbruch.test.ts`, `kastenPersonen.test.ts`; wie es gedruckt aussieht und
+  die Kopfleiste am echten iPad prüft nur dieser Fall
+- **Historie:** #736; entschieden 29.10.2026 (Häkchen im PDF zeigt die Stufe des Reiters, Präsentation mit eigenem
+  Umschalter und gemeinsamer Wahl)
+
+</details>
+
+### TF-ORG-13 · Farbe: Kachel in Diagrammen, Liste und PDF
+
+**Das brauchst du:** Die Test-Instanz mit der Erweiterung; Laptop. Gruppen mit eigener Farbe und ohne (dann gilt die
+Farbe des Gruppentyps).
+
+**Das muss passieren:** Vor jedem Gruppennamen steht die Kachel, wie ChurchTools sie in der Gruppenliste zeigt –
+gleicher Buchstabe, gleiche Farbe.
+
+1. Reiter Organigramm, **Von oben**, **Von links**, **Mindmap** und **Liste**: Vor jedem Namen die Kachel; die Gemeinde
+   an der Spitze hat keine. Mit der Gruppenübersicht von ChurchTools vergleichen (Gruppen → Übersicht): gleiche Farben.
+2. In der Mindmap links und „von oben“ ohne Personen: Das runde **+/−** berührt keine Kachel.
+3. **Personen: Rollen** – in der Liste beginnen die Personen genau unter dem Namen, nicht unter der Kachel.
+4. **Präsentieren**, eine Diagramm-Ansicht: dieselben Kacheln.
+5. **PDF / Drucken** (Diagramm und Liste), **PDF öffnen**: Kacheln farbig und abgerundet; Buchstabe, Name und Kachel auf
+   einer Höhe – auch die Rollen- und Personen-Zeilen sitzen wie am Bildschirm.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `organigramm/src/DiagrammBild.tsx`, `organigramm/src/messung.ts`, `organigramm/src/Liste.tsx`, `organigramm/src/BlattSeite.tsx`, `organigramm/src/blatt.ts`, `shared/organigramm/farbe.ts`, `shared/organigramm/ansichten.ts`, `ui/teilen/svgSeitenPdf.ts`
+- **Automatisiert:** größtenteils – `Diagramm.test.tsx` (Kachel, Farbe, Name dahinter; kein +/− auf einer Kachel in
+  allen Ansichten, mit und ohne Personen), `Liste.test.tsx`, `PdfFenster.test.tsx`, `messung.test.ts`, `farbe.test.ts`,
+  `ansichten.test.ts`, `svgSeitenPdf.test.ts` (Rundung, Messung am groß gezeichneten Blatt); wie es gedruckt aussieht,
+  prüft nur dieser Fall
+- **Historie:** #736; Wunsch Alwin 29.10.2026 („bunter … an den Gruppenansichten orientieren“), Entwurf
+  `o7b-8-farbe-v1.html`, Variante A „Kachel“ gewählt
+
+</details>

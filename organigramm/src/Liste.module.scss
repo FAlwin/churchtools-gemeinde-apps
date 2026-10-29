@@ -77,12 +77,14 @@ button.name {
   white-space: nowrap;
 }
 
-// Personen nach Rollen unter dem Namen (O7b-6) – eingerückt wie der Name, Rollen klein und grau wie im Diagramm.
+// Personen nach Rollen unter dem Namen (O7b-6) – eingerückt wie der Name, Rollen klein und grau wie im Diagramm. Der
+// Einzug: Rand 10 + Pfeil 28 + Abstand 4 + Kachel (O7b-8; `--liste-kachel` setzt `Liste.tsx`) + Abstand 4 +
+// Innenabstand des Namens 4.
 .leute {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 0 14px 8px 46px;
+  padding: 0 14px 8px calc(50px + var(--liste-kachel));
   color: var(--text2);
   font-size: 13px;
 }

@@ -610,6 +610,49 @@ describe('O4: Präsentation', () => {
     expect(screen.queryByRole('dialog', { name: 'Präsentation' })).toBeNull();
   });
 
+  describe('O7b-6b: Personen in den Diagrammen', () => {
+    const umschalter = (d: HTMLElement) => within(d).queryByRole('group', { name: 'Personen' });
+    const waehle = (d: HTMLElement, gruppe: string, n: string) =>
+      fireEvent.click(
+        within(within(d).getByRole('group', { name: gruppe })).getByRole('button', { name: n }),
+      );
+
+    it('nur in den Diagrammen; dieselbe gemerkte Wahl wie im Reiter – hier geändert, dort auch', async () => {
+      const d = await oeffnen();
+      expect(umschalter(d)).toBeNull();
+      waehle(d, 'Ansicht', 'Von oben');
+      expect(
+        within(umschalter(d)!).getByRole('button', { name: 'Aus' }).getAttribute('aria-pressed'),
+      ).toBe('true');
+      const kasten = () =>
+        within(within(d).getByRole('group', { name: 'Organigramm' })).getByRole('button', {
+          name: 'Gottesdienst',
+        });
+      expect(kasten().textContent).not.toContain('Alwin Friesen');
+      waehle(d, 'Personen', 'Rollen');
+      expect(kasten().textContent).toContain('LEITER');
+      expect(kasten().textContent).toContain('Alwin Friesen');
+      expect(kasten().textContent).toContain('1 Mitarbeiter');
+      expect(localStorage.getItem('organigramm-personen')).toBe('"rollen"');
+      // Auf der Seite eines Bereichs auch in den Untergruppen; ohne Leserecht ehrlich gesagt.
+      fireEvent.click(kasten());
+      expect(within(d).getByRole('group', { name: 'Organigramm' }).textContent).toContain(
+        'Mitglieder nicht sichtbar',
+      );
+      fireEvent.click(within(d).getByRole('button', { name: 'Schließen' }));
+      fireEvent.click(
+        within(screen.getByRole('group', { name: 'Ansicht' })).getByRole('button', {
+          name: 'Liste',
+        }),
+      );
+      expect(
+        within(screen.getByRole('group', { name: 'Personen' }))
+          .getByRole('button', { name: 'Rollen' })
+          .getAttribute('aria-pressed'),
+      ).toBe('true');
+    });
+  });
+
   describe('O7b-5: Ansichten', () => {
     const ansicht = (d: HTMLElement, n: string) =>
       fireEvent.click(

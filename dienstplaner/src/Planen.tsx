@@ -62,7 +62,7 @@ import type { TerminStand } from './terminStand';
 import { SendenFach, type SendeZeile } from './SendenFach';
 import { grundText, type EntwuerfeDaten, type EntwurfAnschluss } from './ladeEntwuerfe';
 import { ALLE_REITER } from './reiter';
-import { AblaufZeilen, HandyAblauf } from './MatrixAblauf';
+import { AblaufBearbeitenKnopf, AblaufZeilen, HandyAblauf } from './MatrixAblauf';
 import { useMatrixAblauf, type MatrixAblauf } from './useMatrixAblauf';
 import type { Start } from './start';
 import styles from './Planen.module.scss';
@@ -522,6 +522,10 @@ export function Planen({
       />
       {!handy && leiste}
       <div className={styles.rechts}>
+        {/* „Ablauf bearbeiten“ hier statt neben „Ablauf“ – dort passte er nicht in die Dienst-Spalte (E6-6c). */}
+        {!handy && ansicht.unteransicht === 'matrix' && matrixAblauf && plan && (
+          <AblaufBearbeitenKnopf ma={matrixAblauf} plan={plan} spalten={imFenster} />
+        )}
         {!handy && ansicht.unteransicht === 'matrix' && (
           <Segment<Breite>
             value={ansicht.breite}

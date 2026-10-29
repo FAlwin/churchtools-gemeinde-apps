@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { anfangsOffen, sichtbarerBaum } from '@shared/organigramm/ansichten';
 import type { Knoten } from '@shared/organigramm/gruppen';
+import { sichtFarbe } from '@shared/organigramm/farbe';
 import { Liste } from './Liste';
 
 const g = (id: number, name: string, kinder: Knoten[] = []): Knoten => ({
@@ -16,6 +17,9 @@ const BAUM = [
 
 afterEach(cleanup);
 
+/** Typfarben wie in der Test-Instanz: Dienste lime. */
+const FARBE = sichtFarbe(new Map([[2, 'lime']]));
+
 function zeigen(offen = anfangsOffen(BAUM)) {
   const onUmklappen = vi.fn();
   const onGruppe = vi.fn();
@@ -24,6 +28,7 @@ function zeigen(offen = anfangsOffen(BAUM)) {
       sicht={sichtbarerBaum(BAUM, 'ECG', null, offen)}
       onUmklappen={onUmklappen}
       onGruppe={onGruppe}
+      farbe={FARBE}
     />,
   );
   return { onUmklappen, onGruppe };
@@ -32,9 +37,28 @@ function zeigen(offen = anfangsOffen(BAUM)) {
 describe('Liste (O7b-2)', () => {
   it('Gemeinde oben, Bereiche offen, darunter zu – mit Zahl der Untergruppen', () => {
     zeigen();
-    const namen = screen.getAllByRole('listitem').map((li) => li.firstElementChild?.textContent);
+    // Was man liest – ohne den Buchstaben der Kachel, der für Screenreader verborgen ist.
+    const lesbar = (el: Element | null) => {
+      const kopie = el?.cloneNode(true) as Element | undefined;
+      kopie?.querySelectorAll('[aria-hidden="true"]').forEach((x) => x.remove());
+      return kopie?.textContent;
+    };
+    const namen = screen.getAllByRole('listitem').map((li) => lesbar(li.firstElementChild));
     expect(namen).toEqual(['ECG', 'Gottesdienst', 'Technik2 Untergruppen', 'Predigt', 'Café']);
     expect(screen.queryByText('Stream')).toBeNull();
+  });
+
+  it('vor jeder Gruppe ihre Kachel in der Gruppenfarbe (O7b-8) – nicht bei der Gemeinde', () => {
+    zeigen();
+    const [gemeinde, ...gruppen] = screen.getAllByRole('listitem');
+    expect(gemeinde.firstElementChild?.querySelector('[aria-hidden="true"]')).toBeNull();
+    for (const li of gruppen) {
+      const kachel = li.firstElementChild!.querySelector<HTMLElement>('[aria-hidden="true"]')!;
+      expect(kachel.style.background).toBe('rgb(124, 207, 0)');
+      expect(kachel.textContent).toBe(
+        li.querySelector('button:not([aria-expanded])')!.textContent[0],
+      );
+    }
   });
 
   it('Pfeil klappt über den Schlüssel (Pfad) auf und zu; nur an Gruppen mit Untergruppen', () => {
@@ -64,6 +88,7 @@ describe('Liste (O7b-2)', () => {
         sicht={sichtbarerBaum([g(1, 'A', [g(2, 'B')])], 'ECG', null, new Set(['gemeinde']))}
         onUmklappen={vi.fn()}
         onGruppe={vi.fn()}
+        farbe={FARBE}
       />,
     );
     expect(screen.getByText('1 Untergruppe')).toBeTruthy();

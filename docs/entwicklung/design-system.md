@@ -171,8 +171,10 @@ ihn senken (im Querformat gibt es oben oft keine Safe Area). Der `20px`-Boden f�
 Safari-Tab-Fall ab (`env()` ist dort immer `0`), `env()` bleibt Fallback, solange `--sat` noch nicht
 gemessen wurde → keine Regression auf Geräten ohne Safe Area.
 
-Betroffene Module: `ui/design/_variables.scss` (`--bar-pad-top`), `components/AblaufChangedBanner.module.scss`,
-`components/ChordEditor.module.scss`, `pages/ChordChart.module.scss` (Header + beide Dropdowns).
+Gerechnet wird damit nur noch in `ui/design/_variables.scss`: `--sat` steckt in `--inhalt-pad-top` (installierte App
+am iPhone: Safe-Area + 36px, unter dem Unschärfe-Band) und `--bar-pad-top` (nur noch Grundlage des iPad-Werts). Jeder
+Kopf beginnt mit `--inhalt-pad-top`; seit 29.10.2026 auch der Lied-Editor (`components/ChordEditor.module.scss`), und
+das Tempo-Menü rechnet seine Höhe mit der gemessenen Kopf-Unterkante statt mit einem Nachbau (`obenBand.test.ts`).
 
 ## Dialoge über der Tastatur (Safe Area unten) – verbindlich
 

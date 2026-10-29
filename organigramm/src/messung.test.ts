@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { HOEHE, SCHALTER, type SichtKnoten } from '@shared/organigramm/ansichten';
-import { messung } from './messung';
+import { KACHEL, KACHEL_LINKS, messung, NAME_NACH_KACHEL } from './messung';
 import type { KastenInhalt } from './kastenPersonen';
 
 /** In jsdom gibt es keine Zeichenfläche – `textBreite` schätzt; das reicht, um die Regeln zu prüfen. */
@@ -10,6 +10,8 @@ const k = (id: number | null, name: string, ebene = 2): SichtKnoten => ({
   schluessel: String(id),
   id,
   name,
+  farbe: null,
+  typId: 2,
   ebene,
   kinderZahl: 0,
   offen: false,
@@ -94,5 +96,23 @@ describe('messung – Kästchen mit Personen (O7b-6)', () => {
   it('die Gemeinde ist keine Gruppe – nie Personen darunter', () => {
     const { kasten } = messung(SCHRIFT, () => ROLLEN);
     expect(kasten(k(null, 'ECG', 0)).zeilen).toEqual([]);
+  });
+});
+
+describe('messung – die Kachel vor dem Namen (O7b-8)', () => {
+  it('eine Gruppe wird breiter, damit der Name ganz bleibt; die Gemeinde nicht', () => {
+    const { breite, kuerzen } = messung(SCHRIFT);
+    const gruppe = k(7, 'Technik');
+    // Dieselbe Ebene (gleich fett) – nur ohne Gruppe.
+    const gemeinde = k(null, 'Technik');
+    expect(breite(gruppe) - breite(gemeinde)).toBe(NAME_NACH_KACHEL - 14);
+    expect(kuerzen(gruppe, breite(gruppe))).toBe('Technik');
+  });
+  it('die Kachel beginnt hinter dem runden +/−, das in der Mindmap links auf dem Rand sitzt', () => {
+    expect(KACHEL_LINKS).toBeGreaterThanOrEqual(SCHALTER);
+  });
+  it('bei „von oben“ ragt das +/− unten nicht in die Kachel (Kästchen ohne Personen)', () => {
+    // Die Kachel ist mittig in der Zeile des Namens; das +/− sitzt unten auf dem Rand.
+    expect((HOEHE + KACHEL) / 2).toBeLessThanOrEqual(HOEHE - SCHALTER);
   });
 });

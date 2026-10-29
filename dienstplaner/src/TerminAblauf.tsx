@@ -7,7 +7,7 @@ import { NeuAufsetzen } from '@ui/ablauf/NeuAufsetzen';
 import { browserAblaufLeser, browserSchreiber } from '@ui/ct/schreiber';
 import { siehtAlleDienstgruppen } from '@shared/ct/dienstRechte';
 import { ablaufZeileAus, type AblaufZeile } from '@shared/ct/ablaufZeile';
-import { datumText } from '@shared/ct/datum';
+import { datumText, tagKurz } from '@shared/ct/datum';
 import type { AblaufTermin } from '@shared/ct/ablaufRecht';
 import { ablaufAnlegen } from '@shared/ct/ablaufAnlegen';
 import { ablaufBestandLesen, ablaufNeuAufsetzen, type AblaufStand } from '@shared/ct/ablaufNeu';
@@ -41,7 +41,10 @@ export interface AblaufFuerTermin {
 export interface AblaufTeile {
   /** Ansicht, Bearbeiten-Liste oder „kein Ablauf“ (mit „Ablauf anlegen“, wo man darf). */
   inhalt: ReactNode;
-  /** Das grüne „+ Eintrag hinzufügen“ für den Kopf (nur Termin-Ansicht am Rechner). */
+  /**
+   * Das grüne „+ Eintrag hinzufügen“ am Rechner: in der Termin-Ansicht im Kopf, in der Matrix als Plus neben „N Punkte“
+   * (E6-6c).
+   */
   kopfKnopf: ReactNode;
   /** Fenster und Hinweise – schweben über der Seite. */
   ueberlagerung: ReactNode;
@@ -190,8 +193,10 @@ export function TerminAblauf({
     // (Entwurf E6-6 Bild 2).
     neuAufsetzen: mitNeuAufsetzen ? () => anlegenOeffnen(true) : undefined,
     // Am Rechner/iPad das grüne „+“ oben rechts im Ablauf-Kopf (wie „+ Termin“ im ChurchTools-Kalender), am Handy
-    // bleibt das schwebende Plus (Alwin, 28.10.2026 – wie die Musik-App seit S2). In der Matrix „+ Punkt“ je Spalte.
+    // bleibt das schwebende Plus (Alwin, 28.10.2026 – wie die Musik-App seit S2). In der Matrix nur das Plus, neben
+    // „N Punkte“ in der Gruppenzeile (E6-6c, Alwin 29.10.2026).
     plusImKopf: true,
+    plusName: `Eintrag hinzufügen – ${termin.name}, ${tagKurz(termin.tag)}`,
     schmal,
     // In der Matrix zieht jede Spalte im gemeinsamen Zieh-Bereich – auch in einen anderen Termin (E6-6b).
     ziehen: schmal ? { spalte: terminId, neuLaden: ablaufNeuLaden } : undefined,

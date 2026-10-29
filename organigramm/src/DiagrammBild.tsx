@@ -8,7 +8,14 @@ import {
   type LageKnoten,
   type SichtKnoten,
 } from '@shared/organigramm/ansichten';
-import { fett, ZEILEN_EINZUG, type KastenZeile } from './messung';
+import {
+  fett,
+  KACHEL,
+  KACHEL_LINKS,
+  NAME_NACH_KACHEL,
+  ZEILEN_EINZUG,
+  type KastenZeile,
+} from './messung';
 import styles from './Diagramm.module.scss';
 
 type GruppenEigenschaften = SVGProps<SVGGElement>;
@@ -16,6 +23,8 @@ type GruppenEigenschaften = SVGProps<SVGGElement>;
 interface Props {
   anordnung: Anordnung;
   kuerzen: (k: SichtKnoten, breite: number) => string;
+  /** Farbe der Kachel vor dem Namen (O7b-8) – `null` = keine Kachel (die Gemeinde). */
+  farbe: (k: SichtKnoten) => string | null;
   /** Was unter dem Namen steht (O7b-6) – ohne Angabe nur der Name. */
   zeilen?: (k: SichtKnoten) => KastenZeile[];
   /**
@@ -39,7 +48,7 @@ const ZEILEN_STIL: Record<KastenZeile['art'], string> = {
  * im Reiter (O7b-3) und die PDF (O7b-4), damit Papier und Bildschirm gleich aussehen. Die Gemeinde selbst ist keine
  * Gruppe und öffnet nichts.
  */
-export function DiagrammBild({ anordnung, kuerzen, zeilen, knoten, schalter }: Props) {
+export function DiagrammBild({ anordnung, kuerzen, farbe, zeilen, knoten, schalter }: Props) {
   return (
     <>
       {anordnung.kanten.map((k, i) => (
@@ -62,6 +71,7 @@ export function DiagrammBild({ anordnung, kuerzen, zeilen, knoten, schalter }: P
         const stil = k.ebene === 0 ? styles.spitze : fett(k) ? styles.fett : '';
         const klick = k.id === null || !knoten ? null : knoten(lage);
         const darunter = zeilen?.(k) ?? [];
+        const kachel = farbe(k);
         return (
           <g
             key={k.schluessel}
@@ -70,7 +80,32 @@ export function DiagrammBild({ anordnung, kuerzen, zeilen, knoten, schalter }: P
           >
             <title>{k.name}</title>
             <rect x={x} y={y} width={breite} height={hoehe} rx={6} />
-            <text x={x + breite / 2} y={y + HOEHE / 2}>
+            {kachel !== null && (
+              <>
+                <rect
+                  className={styles.kachel}
+                  x={x + KACHEL_LINKS}
+                  y={y + (HOEHE - KACHEL) / 2}
+                  width={KACHEL}
+                  height={KACHEL}
+                  // Als Stil, nicht als Attribut: Die Regeln für das Kästchen (Füllung, blauer Rand beim Darüberfahren)
+                  // gelten für jedes `rect` und schlügen ein Attribut.
+                  style={{ fill: kachel, stroke: 'none' }}
+                />
+                <text
+                  className={styles.buchstabe}
+                  x={x + KACHEL_LINKS + KACHEL / 2}
+                  y={y + HOEHE / 2}
+                >
+                  {k.name.trim().charAt(0).toUpperCase() || '?'}
+                </text>
+              </>
+            )}
+            <text
+              className={kachel !== null ? styles.nameNachKachel : undefined}
+              x={kachel !== null ? x + NAME_NACH_KACHEL : x + breite / 2}
+              y={y + HOEHE / 2}
+            >
               {kuerzen(k, breite)}
             </text>
             {darunter.length > 0 && (

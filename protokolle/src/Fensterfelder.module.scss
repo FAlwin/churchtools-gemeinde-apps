@@ -1,0 +1,97 @@
+// Felder in den Fenstern der Protokolle (S5-2, K2a) – eine Stelle für „Nächste Sitzung festlegen“ und „Neues Protokoll“.
+@use '@ui/design/mixins' as m;
+
+.unter {
+  margin: -6px 0 12px;
+  color: var(--text2);
+  font-size: 13.5px;
+}
+
+.feld {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+
+  > span {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text2);
+  }
+}
+
+.eingabe {
+  @include m.eingabefeld;
+  @include m.datumsfeld;
+  height: 42px;
+  padding: 0 12px;
+  font-size: 15px;
+  width: 100%;
+}
+
+.zeile {
+  display: flex;
+  gap: 8px;
+
+  > * {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.haken {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--blue);
+}
+
+.hinweis {
+  padding: 10px 12px;
+  border-radius: var(--r-ctrl);
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+.leise {
+  margin: 0;
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.fehler {
+  margin-top: 14px;
+  color: var(--red);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+// Ein Häkchen mit Erklärung darunter („Gruppentreffen anlegen“, K2a).
+.schalter {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+  color: var(--text);
+  font-size: 14.5px;
+  cursor: pointer;
+
+  > span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  small {
+    color: var(--text2);
+    font-size: 12.5px;
+  }
+
+  > input {
+    margin-top: 2px;
+  }
+}

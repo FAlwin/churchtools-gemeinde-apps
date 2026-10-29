@@ -17,6 +17,8 @@ import { SitzungAnsicht } from './SitzungAnsicht';
 import { ProtokollBeginnen } from './ProtokollBeginnen';
 import { SitzungFestlegen } from './SitzungFestlegen';
 import { NaechsteSitzung } from './NaechsteSitzung';
+import { ProtokollNeu } from './ProtokollNeu';
+import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import styles from './Sitzungen.module.scss';
 
 // Der Editor (BlockNote, gut 1 MB) wird erst geladen, wenn die Leitung ein Protokoll schreibt (S4-1) – wer nur liest,
@@ -99,6 +101,8 @@ export function Sitzungen({
   const [offen, setOffen] = useState<Sitzung | null>(null);
   const [beginnt, setBeginnt] = useState<Sitzung | null>(null);
   // „Nächste Sitzung festlegen“ (aus dieser Sitzung) oder „Neue Sitzung“ (S5-2).
+  // „Neues Protokoll“ ohne Termin (K2a).
+  const [neu, setNeu] = useState(false);
   const [festlegen, setFestlegen] = useState<{
     art: 'naechste' | 'neu';
     bis: Sitzung | null;
@@ -292,15 +296,26 @@ export function Sitzungen({
             <div className={styles.kartenkopf}>
               <h3 id="kommend">Kommend</h3>
               <span className={styles.anzahl}>{zustand.daten.kommend.length}</span>
-              {darfFestlegen && (
-                <button
-                  type="button"
-                  className={styles.neu}
-                  onClick={() => setFestlegen({ art: 'neu', bis: null })}
-                >
-                  <Icon name="plus" size={16} />
-                  Neue Sitzung
-                </button>
+              {/* „Neue Sitzung“ braucht dazu einen Kalender – wer sie darf, darf also immer auch schreiben. */}
+              {darfSchreiben && (
+                <span className={styles.aktionen}>
+                  <KopfKnopf
+                    neu
+                    label="Neues Protokoll"
+                    title="Neues Protokoll ohne Termin"
+                    symbol={<Icon name="plus" size={16} />}
+                    onClick={() => setNeu(true)}
+                  />
+                  {darfFestlegen && (
+                    <KopfKnopf
+                      neu
+                      label="Neue Sitzung"
+                      title="Neue Sitzung mit Termin und Einladung"
+                      symbol={<Icon name="calendar" size={16} />}
+                      onClick={() => setFestlegen({ art: 'neu', bis: null })}
+                    />
+                  )}
+                </span>
               )}
             </div>
             {zustand.daten.kommend.length ? (
@@ -326,6 +341,23 @@ export function Sitzungen({
             )}
           </section>
           {festlegenFenster(false)}
+          {neu && (
+            <ProtokollNeu
+              modul={modul}
+              gruppen={gruppen.filter(darfSchreibenIn)}
+              start={gruppe.id}
+              ich={ich}
+              zeitzone={zeitzone}
+              onAngelegt={(g, id) => {
+                // Die neue Sitzung gleich im Editor öffnen – auch, wenn im Fenster eine andere Gruppe gewählt wurde.
+                setNeu(false);
+                wunsch.current = `p:${id}`;
+                if (g === gruppe.id) laden();
+                else setGruppeId(g);
+              }}
+              onClose={() => setNeu(false)}
+            />
+          )}
           <section className={styles.karte} aria-labelledby="protokolle">
             <div className={styles.kartenkopf}>
               <h3 id="protokolle">Protokolle</h3>

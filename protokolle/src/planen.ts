@@ -116,8 +116,11 @@ async function terminAnlegen(q: {
   return id;
 }
 
-/** 2. Gruppentreffen anlegen und nachlesen (gleiche Minute). Wirft bei jedem Fehler – der Aufrufer macht einen Hinweis daraus. */
-async function treffenAnlegen(
+/**
+ * 2. Gruppentreffen anlegen und nachlesen (gleiche Minute). Wirft bei jedem Fehler – hier macht der Aufrufer einen
+ * Hinweis daraus; „Neues Protokoll“ (K2a) legt damit das Treffen für die Anwesenheit an.
+ */
+export async function treffenAnlegen(
   gruppe: number,
   beginn: string,
   ende: string,

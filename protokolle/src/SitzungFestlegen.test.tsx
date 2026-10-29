@@ -18,6 +18,23 @@ vi.mock('./planen', async (orig) => ({
   sitzungFestlegen: vi.fn(),
 }));
 vi.mock('./mitglieder', () => ({ ladeGruppenMitglieder: vi.fn() }));
+// „Neues Protokoll“ (K2a) als Attrappe – geprüft wird hier nur der Einstieg im Reiter.
+vi.mock('./ProtokollNeu', () => ({
+  ProtokollNeu: ({
+    start,
+    onAngelegt,
+  }: {
+    start: number;
+    onAngelegt: (g: number, id: string) => void;
+  }) => (
+    <div role="dialog" aria-label="Neues Protokoll">
+      <span>Gruppe {start}</span>
+      <button type="button" onClick={() => onAngelegt(start, 'neu')}>
+        anlegen
+      </button>
+    </div>
+  ),
+}));
 vi.mock('./lesen', async (orig) => ({
   ...(await orig<typeof import('./lesen')>()),
   ladeSitzungen: vi.fn(),
@@ -266,18 +283,39 @@ describe('Einstiege (S5-2)', () => {
 
   it('„Neue Sitzung“ nur für die Leitung und nur mit Kalender', async () => {
     const { unmount } = liste();
-    expect(await screen.findByRole('button', { name: 'Neue Sitzung' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /^Neue Sitzung/ })).toBeTruthy();
     unmount();
     liste([]);
     await screen.findByText('Keine kommenden Sitzungen.');
-    expect(screen.queryByRole('button', { name: 'Neue Sitzung' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Neue Sitzung/ })).toBeNull();
+  });
+
+  it('„Neues Protokoll“ für die Leitung auch ohne Kalender; angelegt öffnet es die neue Sitzung (K2a)', async () => {
+    vi.mocked(L.ladeSitzungen).mockResolvedValue(daten([], null));
+    liste();
+    fireEvent.click(await screen.findByRole('button', { name: /^Neues Protokoll/ }));
+    expect(screen.getByText('Gruppe 11')).toBeTruthy();
+    const neu = sitzung(
+      kopf({ sitzung: 'neu', status: 'geplant', beginn: '2026-11-11T18:30:00Z', freigabe: null }),
+    );
+    vi.mocked(L.ladeSitzungen).mockResolvedValue(daten([neu], null));
+    fireEvent.click(screen.getByRole('button', { name: 'anlegen' }));
+    expect(
+      await screen.findByText('Das Protokoll ist geplant, aber noch nicht begonnen.'),
+    ).toBeTruthy();
+  });
+
+  it('Mitglieder sehen weder „Neues Protokoll“ noch „Neue Sitzung“', async () => {
+    liste([]);
+    await screen.findByText('Keine kommenden Sitzungen.');
+    expect(screen.queryByRole('button', { name: /^Neues Protokoll/ })).toBeNull();
   });
 
   it('ohne Kalender kein „Neue Sitzung“', async () => {
     vi.mocked(L.ladeSitzungen).mockResolvedValue(daten([], null));
     liste();
     await screen.findByText(/noch kein Kalender gewählt/);
-    expect(screen.queryByRole('button', { name: 'Neue Sitzung' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Neue Sitzung/ })).toBeNull();
   });
 
   it('„Neue Sitzung“ festgelegt: Liste lädt neu und öffnet die neue Sitzung', async () => {
@@ -292,7 +330,7 @@ describe('Einstiege (S5-2)', () => {
       hinweise: [],
     });
     liste();
-    fireEvent.click(await screen.findByRole('button', { name: 'Neue Sitzung' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Neue Sitzung/ }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Leitungsteam · außerordentlich')).toBeTruthy();
     await within(dialog).findByRole('list', { name: 'Einladen' });

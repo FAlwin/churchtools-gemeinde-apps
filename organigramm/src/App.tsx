@@ -39,6 +39,10 @@ import { Praesentation, type Stand } from './Praesentation';
 import { ladePlan } from './plan';
 import { planAlsBaum, planBaum, planGruppen, type PlanAenderungen } from '@shared/organigramm/plan';
 import { NeueGliederung } from './NeueGliederung';
+import { ladeSichtbarkeit } from './sichtbarkeitSpeicher';
+import { EinstellungenFenster } from './EinstellungenFenster';
+import { ALLES_SICHTBAR, type Sichtbarkeit } from '@shared/organigramm/sichtbarkeit';
+import type { Versioniert } from '@shared/ct/versionierterWert';
 import { PdfFenster } from './PdfFenster';
 import {
   leseAnsicht,
@@ -70,13 +74,20 @@ const ansichtAusAdresse = (hash: string, admin: boolean): Ansicht =>
         ? 'gliederung'
         : 'organigramm';
 
+/** Was für alle ausgeblendet ist – bis es geladen ist, und wenn es sich gerade nicht lesen lässt. */
+type ZentralStand =
+  | { art: 'laedt' }
+  | { art: 'da'; stand: Versioniert<Sichtbarkeit> | null }
+  | { art: 'fehler' };
+
 /**
  * Das Organigramm in ChurchTools (Bauplan O2/O3): erst Gruppen und Baum (schnell), dann – nebeneinander – die
  * Mitglieder aller Gruppen (gedrosselt) und die Termine mit den Einsätzen. Der Baum steht schon, während beides lädt.
  * Personen und Hinweise gibt es nur für den eigenen Bereich (`sichtbereich`); wer nichts leitet und kein Admin ist,
  * sieht nur das Organigramm – ohne Reiter. Die Präsentation (O4) gibt es für alle; sie blendet dieselben
  * Gruppentypen aus wie der Baum (Alwin, 22.10.2026) – deshalb liegt diese Wahl hier und nicht im Baum. Gruppen-Admins
- * mit einem Plan präsentieren auch die „Neue Gliederung“ (O7-4).
+ * mit einem Plan präsentieren auch die „Neue Gliederung“ (O7-4). Was Gruppen-Admins für alle ausgeblendet haben (O7b-7),
+ * kommt zusammen mit dem Start – der Baum erscheint erst, wenn auch das feststeht.
  */
 export function App() {
   const [zustand, setZustand] = useState<SeitenZustand>({ art: 'laedt' });
@@ -86,6 +97,9 @@ export function App() {
   const [offeneGruppe, setOffeneGruppe] = useState<number | null>(null);
   const [offenePerson, setOffenePerson] = useState<number | null>(null);
   const [ausgeblendet, setAusgeblendet] = useState(leseAusgeblendet);
+  // Was das Organigramm für alle zeigt (O7b-7) – von Gruppen-Admins eingestellt, im Speicher der Erweiterung.
+  const [zentral, setZentral] = useState<ZentralStand>({ art: 'laedt' });
+  const [einstellungenOffen, setEinstellungenOffen] = useState(false);
   const [praesentiert, setPraesentiert] = useState(false);
   // Präsentation „Neue Gliederung | Heute“ (O7-4): der Plan, frisch beim Öffnen gelesen – nur für Gruppen-Admins.
   const [praesPlan, setPraesPlan] = useState<PlanAenderungen | null>(null);
@@ -122,16 +136,36 @@ export function App() {
     );
   }, [abgemeldetOderFehler]);
 
+  const zentralLaden = useCallback(
+    () =>
+      ladeSichtbarkeit()
+        .catch(() => ({ ok: false as const, grund: 'voruebergehend' as const }))
+        .then((r) =>
+          setZentral(
+            r.ok
+              ? { art: 'da', stand: r.daten }
+              : // Ohne Leserecht gilt für diese Person nichts davon – kein Hinweis, der bei allen ohne Recht leuchtet.
+                r.grund === 'kein-recht'
+                ? { art: 'da', stand: null }
+                : { art: 'fehler' },
+          ),
+        ),
+    [],
+  );
+
   const laden = useCallback(() => {
     setZustand({ art: 'laedt' });
-    ladeStart().then((s) => {
+    // Beides zugleich – und erst zeigen, wenn auch feststeht, was für alle ausgeblendet ist: sonst blitzten diese
+    // Gruppen kurz auf. Lässt es sich gerade nicht lesen, gilt „alles sichtbar“ mit Hinweis (vorübergehend ist nicht
+    // „nichts ausgeblendet“ – es wird nichts gespeichert, und „Erneut versuchen“ holt es nach).
+    Promise.all([ladeStart(), zentralLaden()]).then(([s]) => {
       setStart(s);
       setZustand({ art: 'fertig', vorname: s.vorname, gemeinde: s.gemeinde });
       setMitglieder(null);
       ladeMitglieder(s.gruppen.map((g) => g.id)).then(setMitglieder, abgemeldetOderFehler);
       einsaetzeLaden();
     }, abgemeldetOderFehler);
-  }, [abgemeldetOderFehler, einsaetzeLaden]);
+  }, [abgemeldetOderFehler, einsaetzeLaden, zentralLaden]);
 
   useEffect(laden, [laden]);
 
@@ -198,9 +232,17 @@ export function App() {
   const zeigtMehr = !!start && hatBereich(bereich);
   // Der Baum, wie Karten, Liste und „Hier anfangen“ ihn sehen: ohne ausgeblendete Typen, große Bereiche zuerst –
   // dieselbe Reihenfolge wie in der Präsentation.
+  const fuerAlle =
+    zentral.art === 'da' ? (zentral.stand?.inhalt ?? ALLES_SICHTBAR) : ALLES_SICHTBAR;
+  // Ausgeblendet ist, was das Gerät ausblendet, und was für alle ausgeblendet ist (O7b-7).
+  const typenAus = useMemo(
+    () => new Set([...ausgeblendet, ...fuerAlle.typen]),
+    [ausgeblendet, fuerAlle],
+  );
+  const gruppenAus = useMemo(() => new Set(fuerAlle.gruppen), [fuerAlle]);
   const sichtBaum = useMemo(
-    () => (start ? bereicheSortiert(baumOhneTypen(start.baum, ausgeblendet)) : []),
-    [start, ausgeblendet],
+    () => (start ? bereicheSortiert(baumOhneTypen(start.baum, typenAus, gruppenAus)) : []),
+    [start, typenAus, gruppenAus],
   );
   // Eine Spitze, die es nicht mehr gibt (Typ-Filter, Änderung in ChurchTools), wird vergessen – sonst spränge die
   // Ansicht zurück, sobald die Gruppe wieder auftaucht. Das geschieht noch beim Zeichnen, nicht in einem Effekt danach:
@@ -266,12 +308,12 @@ export function App() {
       ]);
     }
     return praesentationAus(
-      baumOhneTypen(baum, ausgeblendet),
+      baumOhneTypen(baum, typenAus, gruppenAus),
       personen,
       start.rollen,
       (id) => mitglieder.personen.get(id)?.name ?? '',
     );
-  }, [praesentiert, start, mitglieder, lesbar, ausgeblendet, praesStand, praesPlan]);
+  }, [praesentiert, start, mitglieder, lesbar, typenAus, gruppenAus, praesStand, praesPlan]);
 
   const praesentieren = () => {
     if (!start?.rechte.gruppenVerwalten) {
@@ -369,6 +411,14 @@ export function App() {
         // Mitglieder geladen sind, gesperrt – ohne sie gibt es keine Präsentation.
         start && ansicht === 'organigramm' ? (
           <>
+            {start.rechte.gruppenVerwalten && (
+              <KopfKnopf
+                label="Einstellungen"
+                title="Was das Organigramm für alle zeigt"
+                symbol={<Icon name="zahnrad" size={16} />}
+                onClick={() => setEinstellungenOffen(true)}
+              />
+            )}
             <KopfKnopf
               label="PDF / Drucken"
               title="Als PDF speichern oder drucken"
@@ -394,6 +444,9 @@ export function App() {
           einsaetze={einsaetze.art === 'fertig' ? einsaetze.einsaetze : null}
           lesbar={lesbar.mitglieder}
           ausgeblendet={ausgeblendet}
+          fuerAlle={fuerAlle}
+          fuerAlleFehler={zentral.art === 'fehler'}
+          onFuerAlleNochmal={() => void zentralLaden()}
           baum={sichtBaum}
           ansicht={baumAnsicht}
           onAnsicht={ansichtWaehlen}
@@ -456,6 +509,14 @@ export function App() {
           einsaetze={einsaetze}
           onGruppe={gruppeOeffnen}
           onSchliessen={() => setOffenePerson(null)}
+        />
+      )}
+      {start && einstellungenOffen && (
+        <EinstellungenFenster
+          start={start}
+          stand={zentral.art === 'da' ? zentral.stand : null}
+          onStand={(stand) => setZentral({ art: 'da', stand })}
+          onSchliessen={() => setEinstellungenOffen(false)}
         />
       )}
       {start && pdfOffen && (

@@ -1,12 +1,12 @@
 # Organigramm – ChurchTools-Erweiterung
 
-> **Stand: O7b-8 (29.10.2026)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
+> **Stand: O7b-7 (29.10.2026)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
 > offenen Plätzen; Gruppenfenster; Gruppentypen ausblendbar), die **Präsentation** (für Gruppen-Admins auch die
 > **neue Gliederung**), für Gruppen-Admins **Gruppen umhängen und anlegen** und den Reiter **Neue Gliederung** (Plan
 > und Umbau) und – für alle, die es in ChurchTools dürfen – **Leitung und Mitglieder pflegen**. Für die **Leitung eines
 > Bereichs** dazu die Reiter **Personen** und **Hinweise**. Seit O7b weitere Ansichten – von oben, von links, Mindmap
-> und Liste, auch in der Präsentation und als PDF, überall auf Wunsch mit den Personen. Als Nächstes: sichtbare Gruppen
-> zentral einstellen (O7b-7), danach (O8) der echte Umbau der Gemeindestruktur. Diese Anleitung wächst mit.
+> und Liste, auch in der Präsentation und als PDF, überall auf Wunsch mit den Personen; Gruppen-Admins stellen ein, was
+> das Organigramm für alle zeigt (O7b-7). Als Nächstes (O8) der echte Umbau der Gemeindestruktur. Diese Anleitung wächst mit.
 
 Das Organigramm zeigt die Gemeinde als Baum – Bereiche, Gruppen, Personen – so, wie die Gruppen-Hierarchie in
 ChurchTools steht, und hilft, die Organisation darin weiterzubauen. **Alles liegt in ChurchTools** – es gibt keinen
@@ -42,6 +42,7 @@ Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Gemessen an der Test-Insta
 | Leitung einer Gruppe            | Personen aufnehmen, Rollen ändern (O6) – **nicht** austragen, umhängen oder Gruppen anlegen | Rolle mit Leitung                             |
 | Leitung einer Gruppe            | Reiter Personen und Hinweise für diese Gruppe **samt Untergruppen** (O3)                    | Rolle mit Leitung                             |
 | Gruppen-Admin                   | alle Personen und Hinweise (O3); umhängen und anlegen (O5); alles an Mitgliedern (O6)       | „Gruppen verwalten“ / „Gruppen bearbeiten“    |
+| Gruppen-Admin                   | „Einstellungen“: was das Organigramm für alle zeigt (O7b-7)                                 | „Gruppen verwalten“ + Rechte der Kategorie    |
 
 ## Ansichten (ab O7b)
 
@@ -79,6 +80,24 @@ Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Gemessen an der Test-Insta
 - Die gewählte Ansicht **merkt sich das Gerät** (wie den Typ-Filter). Ohne Wahl: am Handy die Liste, sonst **von
   oben**. Als PDF gibt es die Ansichten seit O7b-4, in der Präsentation seit O7b-5.
 - Eine Gruppe mit zwei Obergruppen steht wie in ChurchTools unter beiden und klappt an jeder Stelle für sich.
+
+## Was das Organigramm für alle zeigt (ab O7b-7)
+
+Gruppen-Admins sehen oben rechts **„Einstellungen“**. Das Fenster **„Was das Organigramm zeigt“** blendet für **alle**
+aus, die das Organigramm öffnen – im Reiter, in der Präsentation und in der PDF:
+
+- **Gruppentypen** (z. B. Merkmale oder Verteiler) – ein ausgeblendeter Typ verschwindet samt allem, was darunter hängt.
+- **Einzelne Gruppen** (mit Suche) – eine ausgeblendete Gruppe nimmt ihre Untergruppen mit; die stehen im Fenster dann
+  ausgegraut da („mit der Obergruppe“ bzw. „Typ ausgeblendet“).
+- Über dem Baum steht dann für alle „Für alle ausgeblendet: … – eingestellt von Gruppen-Admins“. Die Typ-Schildchen
+  bleiben zusätzlich – damit blendet jede Person für sich weitere Typen aus; für alle ausgeblendete Typen haben kein
+  Schildchen.
+- Ausgeblendet heißt nur: hier nicht zu sehen. In ChurchTools bleibt alles, wie es ist. Die Reiter **Personen**,
+  **Hinweise** und **Neue Gliederung** zeigen weiter alle Gruppen – dort wird mit der ganzen Struktur gearbeitet.
+- Hat inzwischen ein anderer Admin gespeichert, wird nichts überschrieben: Das Fenster zeigt dann dessen Stand.
+- Lässt sich die Einstellung gerade nicht lesen (Netz, ChurchTools antwortet nicht), ist alles zu sehen, mit Hinweis
+  und **Erneut versuchen**. Fehlt einer Person das Leserecht auf die Kategorie, sieht sie ebenfalls alles – ohne
+  Hinweis (siehe unten).
 
 ## Als PDF speichern und drucken (ab O7b-4)
 
@@ -223,7 +242,7 @@ Oben neben dem Plan steht **Umbau · N offen**: die Schritte vom Plan nach Churc
 
 ## Was die Erweiterung speichert
 
-Pro Gerät wird nur gemerkt, welche Gruppentypen ausgeblendet sind. Ab O7 liegt der **Plan „neue Gliederung“** im
+Pro Gerät wird gemerkt, welche Gruppentypen ausgeblendet sind und welche Ansichten gewählt sind. Ab O7 liegt der **Plan „neue Gliederung“** im
 Speicher der Erweiterung: als ein Eintrag in der Kategorie **„Plan „neue Gliederung““** (Kürzel `plan`), die die
 Erweiterung beim ersten Speichern anlegt. Darin stehen nur die Änderungen gegenüber heute (neue Gruppen, Umhängen,
 Umbenennen, Archivieren) und wer zuletzt gespeichert hat. Alles andere liegt in ChurchTools.
@@ -235,3 +254,11 @@ Umbenennen, Archivieren) und wer zuletzt gespeichert hat. Alles andere liegt in 
 > **Vorsicht:** ChurchTools nimmt dasselbe Kürzel zweimal an. Sieht ein Admin die Kategorie nur nicht, weil ihm das
 > Sehrecht fehlt, legt sein erstes Speichern eine zweite an. Deshalb zuerst die Rechte geben. Gibt es doch zwei, nimmt
 > die Erweiterung die mit der kleinsten Nummer.
+
+Ab O7b-7 liegt dort auch **„Was das Organigramm zeigt“**: ein Eintrag in der Kategorie **„Was das Organigramm zeigt“**
+(Kürzel `sichtbar`), angelegt beim ersten Speichern unter „Einstellungen“. Darin stehen nur die IDs der für alle
+ausgeblendeten Gruppentypen und Gruppen, dazu wer zuletzt gespeichert hat.
+
+> **Rechte dieser Kategorie – anders als beim Plan:** **Daten sehen** brauchen **alle**, die das Organigramm öffnen
+> (sonst sehen sie alles, auch was ausgeblendet sein soll); **Daten anlegen, ändern, löschen** nur die Gruppen-Admins.
+> Dieselbe Vorsicht wie oben: den anderen Admins das Sehrecht geben, bevor sie zum ersten Mal speichern.

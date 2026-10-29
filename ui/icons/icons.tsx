@@ -33,6 +33,8 @@ export type IconName =
   | 'check'
   | 'pencil'
   | 'columns'
+  | 'spalten-schmal'
+  | 'spalten-breit'
   | 'people'
   | 'clock'
   | 'pin'
@@ -357,6 +359,21 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
       return (
         <svg {...p}>
           <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+          <path d="M12 4.5v15" />
+        </svg>
+      );
+    // Spaltenbreite der Matrix (Entwurf `e6-6-breiten-plus.html`): vier schmale bzw. zwei breite Spalten im Rahmen.
+    case 'spalten-schmal':
+      return (
+        <svg {...p}>
+          <rect x="3" y="4.5" width="18" height="15" rx="2" />
+          <path d="M7.5 4.5v15M12 4.5v15M16.5 4.5v15" />
+        </svg>
+      );
+    case 'spalten-breit':
+      return (
+        <svg {...p}>
+          <rect x="3" y="4.5" width="18" height="15" rx="2" />
           <path d="M12 4.5v15" />
         </svg>
       );

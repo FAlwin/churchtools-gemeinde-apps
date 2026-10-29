@@ -129,15 +129,19 @@ export type ListenZeile =
 /** Breite eines Textes in mm – gemessen beim Aufrufer mit der Schrift der Seite. */
 export type ListenMass = (text: string, fett: boolean, groesse: number) => number;
 
-/** Personen stehen etwas eingerückt unter dem Namen – rechts von dessen Linie, aber vor den Untergruppen (mm). */
-const PERSONEN_EINZUG = 3.5;
+/** Die Kachel vor dem Namen einer Gruppe (O7b-8), in mm – und wie weit der Name danach beginnt. */
+export const KACHEL_MM = 3.4;
+export const KACHEL_PLATZ_MM = KACHEL_MM + 1.2;
 
-/** Wo der Name einer Gruppe steht – rechts neben der Linie seiner Ebene (die Spitze ganz links). */
+/** Wo eine Zeile der Liste beginnt – rechts neben der Linie ihrer Ebene (die Spitze ganz links); dort steht die Kachel. */
 export const namenX = (f: { x: number }, tiefe: number) =>
   f.x + tiefe * EINRUECKEN + (tiefe ? 1.5 : 0);
 
-/** Wo eine Personen-Zeile beginnt: unter dem Namen der Gruppe, halb so weit eingerückt wie eine Untergruppe. */
-export const personenX = (f: { x: number }, tiefe: number) => namenX(f, tiefe) + PERSONEN_EINZUG;
+/**
+ * Wo eine Personen-Zeile beginnt: genau unter dem Namen der Gruppe (hinter ihrer Kachel) – rechts von der Linie, aber
+ * vor den Untergruppen.
+ */
+export const personenX = (f: { x: number }, tiefe: number) => namenX(f, tiefe) + KACHEL_PLATZ_MM;
 
 const zeilenHoehe = (z: ListenZeile) => (z.art === 'gruppe' ? ZEILE : PERSON_ZEILE);
 

@@ -55,6 +55,15 @@ describe('Pfade', () => {
 });
 
 describe('sichtbarerBaum', () => {
+  it('trägt Farbe und Typ jeder Gruppe – für die Kachel (O7b-8); die Gemeinde hat keine', () => {
+    const baum = [
+      { gruppe: { id: 3, name: 'Chor', typId: 5, statusId: 1, farbe: 'pink' }, kinder: [] },
+    ];
+    const s = sichtbarerBaum(baum, 'G', null, anfangsOffen(baum));
+    expect([s.farbe, s.typId]).toEqual([null, null]);
+    expect(s.kinder[0]).toMatchObject({ id: 3, farbe: 'pink', typId: 5 });
+  });
+
   it('anfangs: die Gemeinde oben, die Bereiche offen, darunter zu – mit Zahl der versteckten Untergruppen', () => {
     const s = sichtbarerBaum(BAUM, 'Beispielgemeinde', null, anfangsOffen(BAUM));
     expect(s).toMatchObject({

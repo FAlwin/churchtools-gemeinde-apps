@@ -24,6 +24,9 @@ export interface SichtKnoten {
   /** `null` = die Gemeinde selbst. */
   id: number | null;
   name: string;
+  /** Eigene Farbe der Gruppe (ChurchTools-Name) und ihr Typ – daraus die Farbe der Kachel (O7b-8). `null` bei der Gemeinde. */
+  farbe: string | null;
+  typId: number | null;
   /** 0 = Spitze, 1 = die Ebene darunter (beide werden fett gezeigt). */
   ebene: number;
   /** Alle Untergruppen, auch zugeklappte – für das „+3“ am Schalter. */
@@ -100,6 +103,8 @@ export function sichtbarerBaum(
       schluessel: pfad,
       id: k.gruppe.id,
       name: k.gruppe.name,
+      farbe: k.gruppe.farbe,
+      typId: k.gruppe.typId,
       ebene,
       kinderZahl: k.kinder.length,
       offen: auf,
@@ -113,6 +118,8 @@ export function sichtbarerBaum(
     schluessel: GEMEINDE,
     id: null,
     name: gemeinde,
+    farbe: null,
+    typId: null,
     ebene: 0,
     kinderZahl: baum.length,
     offen: auf,

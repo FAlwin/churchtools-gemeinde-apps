@@ -30,6 +30,7 @@ function Harness({
   plusImKopf,
   liedWahl,
   schmal,
+  plusName,
 }: {
   aktionen: AblaufAktionen;
   items?: AblaufZeile[];
@@ -39,8 +40,10 @@ function Harness({
   plusImKopf?: boolean;
   liedWahl?: (args: LiedWahlArgs) => ReactNode;
   schmal?: boolean;
+  plusName?: string;
 }) {
   const b = useAblaufBearbeiten({
+    plusName,
     gruppenVerborgen,
     neuAufsetzen,
     plusImKopf,
@@ -76,19 +79,36 @@ const aktionen = (over: Partial<AblaufAktionen> = {}): AblaufAktionen => ({
 });
 
 describe('useAblaufBearbeiten – schmal (Matrix, E6-6a)', () => {
-  it('kein schwebendes Plus und keine Hinweiszeilen; „+ Punkt“ am Ende öffnet „Option wählen“', () => {
+  it('kein schwebendes Plus und keine Hinweiszeilen; das Plus steht nur als Symbol im Kopf und klappt das kleine Menü auf (E6-6c)', () => {
     render(
-      <Harness aktionen={aktionen()} schmal gruppenVerborgen neuAufsetzen={() => {}} plusImKopf />,
+      <Harness
+        aktionen={aktionen()}
+        schmal
+        gruppenVerborgen
+        neuAufsetzen={() => {}}
+        plusImKopf
+        plusName="Eintrag hinzufügen – Gottesdienst, So, 01.11."
+      />,
     );
     const liste = screen.getByTestId('liste');
-    // Nebeneinander stehen mehrere Listen – ein schwebendes Plus je Liste stapelte sich in der Ecke.
-    expect(screen.queryByRole('button', { name: 'Eintrag hinzufügen' })).toBeNull();
-    expect(screen.getByTestId('kopf').textContent).toBe('');
     expect(liste.textContent).not.toContain('zum Sortieren');
     expect(liste.textContent).not.toContain('Neu aufsetzen');
     expect(liste.textContent).not.toMatch(/Dienstgruppen/);
-    fireEvent.click(screen.getByRole('button', { name: /Punkt/ }));
-    expect(screen.getByRole('button', { name: 'Programmpunkt hinzufügen' })).toBeTruthy();
+    // Vorher „+ Punkt“ unter der Liste – das öffnete auch am Rechner das Blatt von unten (Alwin, 29.10.2026).
+    expect(liste.textContent).not.toContain('Punkt');
+    // Nebeneinander stehen mehrere Listen: Das Plus trägt den Termin im Namen, sichtbar ist nur das Symbol.
+    const kopf = screen.getByTestId('kopf');
+    expect(kopf.textContent).toBe('');
+    const plus = screen.getByRole('button', {
+      name: 'Eintrag hinzufügen – Gottesdienst, So, 01.11.',
+    });
+    // Klein wie Zauberstab und Regler – in voller Knopfhöhe füllte es die Zeile (Alwin, 29.10.2026).
+    expect(plus.className).toMatch(/klein/);
+    fireEvent.click(plus);
+    expect(screen.getByRole('menu', { name: 'Option wählen' })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: 'Programmpunkt hinzufügen' })).toBeTruthy();
+    // Kein Blatt von unten (das ist ein Dialog „Option wählen“).
+    expect(screen.queryByRole('dialog', { name: 'Option wählen' })).toBeNull();
   });
 
   it('ohne „Neu aufsetzen“ (wie in der Matrix): auch dann keine Anleitung über der Liste', () => {
@@ -115,10 +135,10 @@ describe('useAblaufBearbeiten – schmal (Matrix, E6-6a)', () => {
     expect(screen.queryByRole('separator', { name: /^Ende/ })).toBeNull();
   });
 
-  it('abgeschlossen: „+ Punkt“ zeigt den Sperr-Hinweis statt der Auswahl', () => {
-    render(<Harness aktionen={aktionen()} schmal abgeschlossen />);
-    fireEvent.click(screen.getByRole('button', { name: /Punkt/ }));
-    expect(screen.queryByRole('button', { name: 'Programmpunkt hinzufügen' })).toBeNull();
+  it('abgeschlossen: das Plus zeigt den Sperr-Hinweis statt der Auswahl', () => {
+    render(<Harness aktionen={aktionen()} schmal abgeschlossen plusImKopf plusName="Plus" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Plus' }));
+    expect(screen.queryByRole('menuitem', { name: 'Programmpunkt hinzufügen' })).toBeNull();
     expect(screen.getByText('gesperrt')).toBeTruthy();
   });
 });

@@ -34,6 +34,14 @@ describe('KopfKnopf', () => {
     expect(offen.getAttribute('aria-pressed')).toBe('true');
   });
 
+  it('klein (Plus in der Matrix-Zeile): nur das Symbol, eigene Größe, Name bleibt', () => {
+    render(<KopfKnopf onClick={vi.fn()} label="Eintrag hinzufügen" neu klein symbol={<b>+</b>} />);
+    const knopf = screen.getByRole('button', { name: 'Eintrag hinzufügen' });
+    expect(knopf.textContent).toBe('+');
+    expect(knopf.className).toMatch(/klein/);
+    expect(knopf.className).toMatch(/neu/);
+  });
+
   it('nur Symbol (Vollbild): keine sichtbare Beschriftung, Name bleibt', () => {
     render(<KopfKnopf onClick={vi.fn()} label="Vollbild" nurSymbol symbol={<b>V</b>} />);
     expect(screen.getByRole('button', { name: 'Vollbild' }).textContent).toBe('V');

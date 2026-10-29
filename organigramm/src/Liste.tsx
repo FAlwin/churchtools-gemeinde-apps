@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { SichtKnoten } from '@shared/organigramm/ansichten';
 import { rollenZahl } from '@shared/organigramm/personen';
 import { Icon } from '@ui/icons/icons';
+import { GruppenKachel } from '@ui/bedienung/GruppenKachel';
 import type { KastenInhalt } from './kastenPersonen';
 import styles from './Liste.module.scss';
 
@@ -9,9 +10,14 @@ interface Props {
   sicht: SichtKnoten;
   onUmklappen: (schluessel: string) => void;
   onGruppe: (id: number) => void;
+  /** Farbe der Kachel vor dem Namen (O7b-8) – dieselbe wie im Diagramm; `null` = keine (die Gemeinde). */
+  farbe: (k: SichtKnoten) => string | null;
   /** Personen unter dem Namen (O7b-6) – dieselbe Regel wie in den Kästchen des Diagramms. */
   inhalt?: (id: number) => KastenInhalt | null;
 }
+
+/** Größe der Kachel vor dem Namen – auch für den Einzug der Personen (`--liste-kachel` im Stil). */
+const KACHEL = 22;
 
 const anzahl = (n: number) => `${n} ${n === 1 ? 'Untergruppe' : 'Untergruppen'}`;
 
@@ -21,12 +27,13 @@ const anzahl = (n: number) => `${n} ${n === 1 ? 'Untergruppe' : 'Untergruppen'}`
  * Gruppenfenster; die Gemeinde selbst ist keine Gruppe und öffnet nichts. Unter dem Namen auf Wunsch die Personen nach
  * Rollen (O7b-6), wie im Kästchen des Diagramms.
  */
-export function Liste({ sicht, onUmklappen, onGruppe, inhalt }: Props) {
+export function Liste({ sicht, onUmklappen, onGruppe, farbe, inhalt }: Props) {
   const zeile = (k: SichtKnoten): ReactNode => {
     const fett = k.ebene <= 1;
     const id = k.id;
     const name = <span className={fett ? styles.fett : undefined}>{k.name}</span>;
     const leute = id === null || !inhalt ? null : inhalt(id);
+    const kachel = farbe(k);
     return (
       <li key={k.schluessel}>
         <div className={styles.zeile}>
@@ -43,6 +50,7 @@ export function Liste({ sicht, onUmklappen, onGruppe, inhalt }: Props) {
           ) : (
             <span className={styles.pfeilLeer} />
           )}
+          {kachel !== null && <GruppenKachel name={k.name} farbe={kachel} groesse={KACHEL} />}
           {id === null ? (
             <span className={styles.name}>{name}</span>
           ) : (
@@ -72,5 +80,9 @@ export function Liste({ sicht, onUmklappen, onGruppe, inhalt }: Props) {
       </li>
     );
   };
-  return <ul className={styles.liste}>{zeile(sicht)}</ul>;
+  return (
+    <ul className={styles.liste} style={{ '--liste-kachel': `${KACHEL}px` } as CSSProperties}>
+      {zeile(sicht)}
+    </ul>
+  );
 }

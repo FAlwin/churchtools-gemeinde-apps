@@ -37,8 +37,10 @@
 .zeile {
   cursor: pointer;
 
-  &:hover {
-    background: color-mix(in srgb, var(--blue) 5%, var(--surface2));
+  @media (hover: hover) {
+    &:hover {
+      background: color-mix(in srgb, var(--blue) 5%, var(--surface2));
+    }
   }
 }
 

@@ -28,8 +28,10 @@
     line-height: 1.35;
   }
 
-  &:hover:not(:disabled) {
-    background: var(--surface3);
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      background: var(--surface3);
+    }
   }
 
   &[aria-pressed='true'] {

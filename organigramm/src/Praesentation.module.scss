@@ -57,8 +57,10 @@
   border-color: var(--blue);
   color: #fff;
 
-  &:hover:not(:disabled) {
-    background: var(--blue);
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      background: var(--blue);
+    }
   }
 }
 
@@ -163,8 +165,10 @@
   text-align: left;
   cursor: pointer;
 
-  &:hover {
-    background: var(--section);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--section);
+    }
   }
 
   h2 {

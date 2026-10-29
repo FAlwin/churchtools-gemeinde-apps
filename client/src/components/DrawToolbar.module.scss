@@ -232,8 +232,10 @@
     border-color: var(--blue);
     color: #fff;
   }
-  &:hover:not(.on):not(:disabled) {
-    background: var(--surface3);
+  @media (hover: hover) {
+    &:hover:not(.on):not(:disabled) {
+      background: var(--surface3);
+    }
   }
   &:disabled {
     opacity: 0.35;
@@ -255,8 +257,10 @@
   transition: all 0.1s;
   flex-shrink: 0;
 
-  &:hover {
-    background: rgba(178, 34, 71, 0.08);
+  @media (hover: hover) {
+    &:hover {
+      background: rgba(178, 34, 71, 0.08);
+    }
   }
 }
 

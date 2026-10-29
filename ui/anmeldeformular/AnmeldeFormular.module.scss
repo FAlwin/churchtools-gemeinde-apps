@@ -960,8 +960,10 @@
   cursor: pointer;
   flex-shrink: 0;
 }
-.pv .absagenKnopf:hover {
-  background: color-mix(in srgb, var(--p-err) 8%, var(--p-card));
+@media (hover: hover) {
+  .pv .absagenKnopf:hover {
+    background: color-mix(in srgb, var(--p-err) 8%, var(--p-card));
+  }
 }
 .pv .absagenKnopf:focus-visible {
   outline: 2px solid var(--p-text);

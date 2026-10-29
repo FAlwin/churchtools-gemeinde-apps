@@ -72,8 +72,10 @@
   color: var(--text2);
   cursor: pointer;
 
-  &:hover:not(:disabled) {
-    color: var(--text);
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      color: var(--text);
+    }
   }
 
   &:disabled {

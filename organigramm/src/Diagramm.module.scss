@@ -101,9 +101,14 @@
   cursor: pointer;
   outline: none;
 
-  &:hover rect,
   &:focus-visible rect {
     stroke: var(--blue);
+  }
+
+  @media (hover: hover) {
+    &:hover rect {
+      stroke: var(--blue);
+    }
   }
 
   &:focus-visible rect {
@@ -130,9 +135,14 @@
     text-anchor: middle;
   }
 
-  &:hover circle,
   &:focus-visible circle {
     stroke: var(--blue);
+  }
+
+  @media (hover: hover) {
+    &:hover circle {
+      stroke: var(--blue);
+    }
   }
 
   &:focus-visible circle {

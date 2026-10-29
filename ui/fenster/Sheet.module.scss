@@ -49,8 +49,10 @@
   font-family: var(--ui);
   transition: background 0.12s;
 
-  &:hover {
-    background: var(--border);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--border);
+    }
   }
 }
 

@@ -51,9 +51,11 @@
   background: var(--blue);
   color: #fff;
 
-  &:hover:not(:disabled) {
-    background: var(--blue);
-    opacity: 0.9;
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      background: var(--blue);
+      opacity: 0.9;
+    }
   }
 }
 
@@ -63,9 +65,11 @@
   background: var(--green);
   color: #fff;
 
-  &:hover:not(:disabled) {
-    background: var(--green);
-    opacity: 0.9;
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      background: var(--green);
+      opacity: 0.9;
+    }
   }
 }
 

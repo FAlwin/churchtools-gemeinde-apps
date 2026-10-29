@@ -272,8 +272,10 @@
   text-align: left;
   transition: background 0.1s;
 
-  &:hover {
-    background: var(--surface3);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--surface3);
+    }
   }
   &.on {
     color: var(--blue);

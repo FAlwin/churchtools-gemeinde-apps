@@ -81,8 +81,10 @@
   color: var(--text2);
   cursor: pointer;
 
-  &:hover:not(:disabled) {
-    background: var(--surface3);
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      background: var(--surface3);
+    }
   }
 
   &:disabled {

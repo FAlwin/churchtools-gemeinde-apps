@@ -237,8 +237,10 @@
   font-weight: 600;
   text-decoration: none;
 
-  &:hover {
-    text-decoration: underline;
+  @media (hover: hover) {
+    &:hover {
+      text-decoration: underline;
+    }
   }
 }
 
@@ -294,9 +296,11 @@
   text-align: left;
   cursor: pointer;
 
-  &:hover {
-    color: var(--blue-ink);
-    text-decoration: underline;
+  @media (hover: hover) {
+    &:hover {
+      color: var(--blue-ink);
+      text-decoration: underline;
+    }
   }
 }
 // „Erst einrichten“ (A6-2): Was zu tun ist, solange die Formular-Seite fehlt.

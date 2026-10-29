@@ -67,7 +67,9 @@
   text-align: left;
   cursor: pointer;
 
-  &:hover {
-    background: var(--blue-soft);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--blue-soft);
+    }
   }
 }

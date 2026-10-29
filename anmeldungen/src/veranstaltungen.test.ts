@@ -26,7 +26,7 @@ function json(status: number, body: unknown): Response {
   });
 }
 
-function beschreibung(beginn: string | null, bezahlt?: number): string {
+function beschreibung(beginn: string | null, bezahlt?: number, betrag?: number): string {
   const e: OeffentlicheEinstellungen = {
     ...neueEinstellungen('einfach'),
     termin: beginn ? { beginn, ende: null, ort: 'Saal', terminId: null } : null,
@@ -34,7 +34,8 @@ function beschreibung(beginn: string | null, bezahlt?: number): string {
       ...neueEinstellungen('einfach').preis,
       grundpreis: { art: 'fest', betragCent: 1200, gilt: 'person', auswahlName: '', optionen: [] },
     },
-    ctFelder: bezahlt ? { bezahlt } : {},
+    // Offen ist seit dem Fund der U1-Prüfung nur, was einen Betrag hat – wie in der Liste.
+    ctFelder: { ...(bezahlt ? { bezahlt } : {}), ...(betrag ? { betrag } : {}) },
   };
   return einstellungenAlsText(e);
 }
@@ -45,10 +46,18 @@ const kind = (id: number, title: string, note: string, groupStatusId = 1, groupT
   domainAttributes: { note, groupStatusId, groupTypeId },
 });
 
+let naechstePerson = 100;
 const mitglied = (status: string, bezahlt?: string, rolle = 32) => ({
+  personId: naechstePerson++,
   groupMemberStatus: status,
   groupTypeRoleId: rolle,
-  fields: bezahlt === undefined ? [] : [{ id: 73, name: 'Bezahlt', value: bezahlt }],
+  fields:
+    bezahlt === undefined
+      ? []
+      : [
+          { id: 73, name: 'Bezahlt', value: bezahlt },
+          { id: 74, name: 'Betrag', value: '12,00 €' },
+        ],
 });
 
 type Antworten = Record<string, (init?: RequestInit) => Response>;
@@ -87,7 +96,7 @@ function standard(): Antworten {
         data: [
           kind(40, 'Lobpreisabend', beschreibung('2026-11-01T19:00')),
           kind(43, 'Workshop', beschreibung('2026-12-05T10:00'), 2),
-          kind(46, 'Freizeit', beschreibung('2026-11-20T18:00', 73)),
+          kind(46, 'Freizeit', beschreibung('2026-11-20T18:00', 73, 74)),
           kind(99, 'Bandprobe', 'Wir proben donnerstags.', 1, 2),
         ],
       }),

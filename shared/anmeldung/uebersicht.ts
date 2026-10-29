@@ -16,6 +16,7 @@ import {
   type OeffentlicheEinstellungen,
   type TerminAngabe,
 } from './formular';
+import { anmeldungenAus, listenZahlen, mitgliederstandAus, type MitgliedRoh } from './liste';
 import { preisKurz } from './preis';
 
 /** Was ChurchTools über die Untergruppe liefert (`GET /groups/{id}/children`, gemessen 12.10.2026). */
@@ -45,7 +46,10 @@ export interface VeranstaltungDetails {
 export interface Belegung {
   aktiv: number;
   wartend: number;
-  /** `null`, wenn es kein Feld „bezahlt“ gibt – dann gibt es auch nichts zu zahlen. */
+  /**
+   * Anmeldungen mit offener Zahlung – gezählt wie in der Liste und den Kennzahlen (`listenZahlen`). `null`, wenn es kein
+   * Feld „bezahlt“ gibt – dann gibt es auch nichts zu zahlen.
+   */
   unbezahlt: number | null;
 }
 
@@ -134,32 +138,33 @@ export function anmeldestand(
 }
 
 /**
- * Mitglieder zählen. `bezahltFeldId` aus `ctFelder.bezahlt` der Einstellungen. **Ohne Leitung** (#623, gemessen
- * 17.10.2026: ChurchTools zählt nur Teilnehmer – die Leitung belegt keinen Platz): `leitung` sind die Rollen-IDs.
+ * Mitglieder zählen. **Ohne Leitung** (#623, gemessen 17.10.2026: ChurchTools zählt nur Teilnehmer – die Leitung belegt
+ * keinen Platz): `leitung` sind die Rollen-IDs.
+ *
+ * **Offene Zahlungen mit derselben Regel wie Liste und Kennzahlen** (Fund der echten Prüfung von U1, 29.10.2026): Bis
+ * dahin zählte die Startseite jede aktive Person ohne Haken „bezahlt“ – auch ohne Betrag –, die Liste dagegen
+ * Anmeldungen mit offenem Betrag; beim TEST Lobpreisabend stand „5 Zahlungen offen“ neben „0,00 €“. Jetzt geht es
+ * durch dieselbe Kette (`mitgliederstandAus` → `anmeldungenAus` → `listenZahlen`), aus den Mitgliedern, die hier ohnehin
+ * geladen sind – ohne Feldbeschreibungen (Betrag und Haken liest `lesbar` auch so) und ohne Verlauf (eine Abfrage je
+ * Veranstaltung mehr wäre es). Folge: Hat die erste Person einer Anmeldung abgesagt, steht deren Zahlung nur im Verlauf
+ * und fehlt hier; die Liste zählt sie. `stichtag` braucht die Kette nur fürs Alter.
  */
 export function belegungAus(
-  mitglieder: {
-    groupMemberStatus?: string;
-    groupTypeRoleId?: number;
-    fields?: { id?: unknown; value?: unknown }[];
-  }[],
-  bezahltFeldId: number | undefined,
+  mitglieder: MitgliedRoh[],
+  e: OeffentlicheEinstellungen | undefined,
   leitung: ReadonlySet<number>,
+  stichtag = '',
 ): Belegung {
   let aktiv = 0;
   let wartend = 0;
-  let unbezahlt = 0;
   for (const m of mitglieder) {
     if (m.groupTypeRoleId !== undefined && leitung.has(m.groupTypeRoleId)) continue;
     if (m.groupMemberStatus === 'waiting') wartend++;
-    if (m.groupMemberStatus !== 'active') continue;
-    aktiv++;
-    if (bezahltFeldId === undefined) continue;
-    const wert = (m.fields ?? []).find((f) => Number(f.id) === bezahltFeldId)?.value;
-    // ChurchTools liefert ein angekreuztes Feld als '1', ein nicht angekreuztes als '0' (gemessen 12.10.2026).
-    if (!(wert === '1' || wert === 1 || wert === true)) unbezahlt++;
+    if (m.groupMemberStatus === 'active') aktiv++;
   }
-  return { aktiv, wartend, unbezahlt: bezahltFeldId === undefined ? null : unbezahlt };
+  if (!e || e.ctFelder.bezahlt === undefined) return { aktiv, wartend, unbezahlt: null };
+  const stand = mitgliederstandAus(mitglieder, [], new Map(), leitung, new Map());
+  return { aktiv, wartend, unbezahlt: listenZahlen(e, anmeldungenAus(e, stand, stichtag)).offen };
 }
 
 /**

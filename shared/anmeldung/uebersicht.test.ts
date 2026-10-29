@@ -19,6 +19,8 @@ import {
   type VeranstaltungDetails,
   type VeranstaltungRoh,
 } from './uebersicht';
+import { anmeldungenAus, listenZahlen } from './liste';
+import { STICHTAG, e as eListe, mitglieder, stand as standListe } from './liste.testdaten';
 import { neueEinstellungen } from './vorlagen';
 
 /**
@@ -125,34 +127,70 @@ describe('anmeldestand – die Zweige einzeln', () => {
 });
 
 describe('belegungAus', () => {
-  const m = (status: string, bezahlt: unknown = null) => ({
+  const m = (status: string, rolle?: number) => ({
     groupMemberStatus: status,
-    fields: [{ id: 67, name: 'bezahlt', value: bezahlt }],
+    groupTypeRoleId: rolle,
   });
-  it('zählt aktive und wartende; unbezahlt nur unter den aktiven', () => {
+  const offenLaut = (roh: ReturnType<typeof mitglieder>) =>
+    listenZahlen(eListe(), anmeldungenAus(eListe(), standListe(roh), STICHTAG)).offen;
+
+  it('zählt aktive und wartende, ohne Leitung (#623); ohne Einstellungen keine Zahlungen (null)', () => {
     expect(
       belegungAus(
-        // '0' = nicht angekreuzt, so liefert ChurchTools es (gemessen 12.10.2026)
-        [
-          m('active', '1'),
-          m('active'),
-          m('active', ''),
-          m('active', '0'),
-          m('waiting'),
-          m('requested'),
-          { ...m('active'), groupTypeRoleId: 35 }, // Leitung (#623)
-        ],
-        67,
+        [m('active'), m('active'), m('waiting'), m('requested'), m('active', 35)],
+        undefined,
         new Set([35]),
       ),
-    ).toEqual({ aktiv: 4, wartend: 1, unbezahlt: 3 });
+    ).toEqual({ aktiv: 2, wartend: 1, unbezahlt: null });
   });
-  it('ohne Feld „bezahlt“ gibt es nichts zu zahlen (null, nicht 0)', () => {
-    expect(belegungAus([m('active')], undefined, new Set())).toEqual({
-      aktiv: 1,
-      wartend: 0,
-      unbezahlt: null,
+
+  it('offene Zahlungen: dieselbe Zahl wie Liste und Kennzahlen – gegen die Daten, aus denen die Liste rechnet', () => {
+    const faelle = {
+      familieOffen: mitglieder('AAAAAA', [true, true], 10),
+      bezahlt: mitglieder('AAAAAA', [true, true], 10, { bezahlt: true }),
+      alleWarten: mitglieder('AAAAAA', [false, false], 10),
+      zweiAnmeldungen: [
+        ...mitglieder('AAAAAA', [true, false], 10),
+        ...mitglieder('BBBBBB', [true, true], 20),
+      ],
+    };
+    // Der Vergleich muss auch etwas zählen – sonst wäre er bei 0 = 0 wertlos.
+    expect(offenLaut(faelle.familieOffen)).toBe(1);
+    expect(offenLaut(faelle.zweiAnmeldungen)).toBe(2);
+    for (const [fall, roh] of Object.entries(faelle))
+      expect([fall, belegungAus(roh, eListe(), new Set(), STICHTAG).unbezahlt]).toEqual([
+        fall,
+        offenLaut(roh),
+      ]);
+  });
+
+  it('ohne Betrag (z. B. von Hand ohne Betrag) ist nichts offen – vorher zählte jede Person ohne Haken', () => {
+    const betrag = eListe().ctFelder.betrag;
+    const ohne = mitglieder('AAAAAA', [true, true], 10).map((x) => ({
+      ...x,
+      fields: x.fields?.filter((f) => Number(f.id) !== betrag),
+    }));
+    expect(belegungAus(ohne, eListe(), new Set(), STICHTAG)).toMatchObject({
+      aktiv: 2,
+      unbezahlt: 0,
     });
+  });
+
+  it('eine Anmeldung der Leitung zählt nicht mit (#623) – auch nicht, wenn dort ein Betrag offen steht', () => {
+    const leitung = mitglieder('AAAAAA', [true], 10).map((x) => ({ ...x, groupTypeRoleId: 35 }));
+    const roh = [...leitung, ...mitglieder('BBBBBB', [true], 20)];
+    expect(belegungAus(roh, eListe(), new Set([35]), STICHTAG)).toMatchObject({
+      aktiv: 1,
+      unbezahlt: 1,
+    });
+  });
+
+  it('ohne Feld „bezahlt“ gibt es nichts zu zahlen (null, nicht 0)', () => {
+    const e = eListe();
+    const { bezahlt, ...ohneBezahlt } = e.ctFelder;
+    expect(bezahlt).toBeDefined();
+    e.ctFelder = ohneBezahlt;
+    expect(belegungAus(mitglieder('AAAAAA', [true], 10), e, new Set()).unbezahlt).toBeNull();
   });
 });
 

@@ -43,6 +43,11 @@ interface SheetProps {
    * flackern.
    */
   einblenden?: boolean;
+  /**
+   * Nur mit `knoepfe`: „‹“ links neben dem Titel – zurück zur vorigen Seite desselben Fensters (Unterseiten im
+   * Lied-Menü, 29.10.2026). Ohne Angabe kein Pfeil.
+   */
+  zurueck?: () => void;
 }
 
 /**
@@ -62,6 +67,7 @@ export function Sheet({
   mittel = false,
   onHintergrund = onClose,
   einblenden = true,
+  zurueck,
 }: SheetProps) {
   // Hält den Dialog über der iOS-Tastatur frei und verhindert, dass die Seite verrutscht (#207).
   const overlayRef = useOverlayKeyboardInset();
@@ -84,6 +90,16 @@ export function Sheet({
           onClick={(e) => e.stopPropagation()}
         >
           <div className={styles.kopf}>
+            {zurueck && (
+              <button
+                className={styles.zurueck}
+                aria-label="Zurück"
+                onClick={zurueck}
+                disabled={beschaeftigt}
+              >
+                <Icon name="chev-left" size={20} />
+              </button>
+            )}
             <div id={titelId} className={styles.kopfTitel}>
               {title}
             </div>

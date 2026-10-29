@@ -428,9 +428,11 @@ Sprung; sonst → `goToSong`); waagerecht scrollbar, scrollt beim Blättern mit 
 **Knöpfe** wirken auf das GEWÄHLTE Lied (die eigenen Knöpfe je Hälfte aus #421 sind weg), welche es gibt regelt
 `verfuegbareWerkzeuge`; Puls/Zeichnen/Ansehen = `aktiv`, offenes Fenster = `offen`; beim Zeichnen „Anmerken
 beenden“, beim Ansehen nur „Zurück zu den eigenen Notizen“. Jeder Knopf setzt das Overlay-Feld genau EINMAL.
-**Fenster darunter** (Lied-Menü, Aussehen, Tempo, Hinweis „Ablauf geändert“) hängen an der GEMESSENEN Unterkante
+**Fenster darunter** (Aussehen, Tempo, Hinweis „Ablauf geändert“) hängen an der GEMESSENEN Unterkante
 (`--blatt-kopf-unten` im Blatt, `--blatt-kopf-unten-fix` für `fixed`; `--chart-kopf-unten` nur noch Vorgabe) und
-öffnen unter ihrem Knopf bzw. dem gewählten Lied (`--werkzeug-links`, `--liedmenue-x`). Die Fußleiste nutzt
+öffnen unter ihrem Knopf (`--werkzeug-links`). Das **Lied-Menü** ist seit 29.10.2026 ein Fenster in der Mitte (`Sheet`)
+mit Übersicht – Tonart, Anzeige, Version, Bearbeiten („Im Editor öffnen“ direkt), Teilen – und Unterseiten mit „‹“ (`Sheet zurueck`); eine Unterseite mit nur
+einem Punkt entfällt (`SongMenu.tsx`). Die Fußleiste nutzt
 `--blatt-fuss-polster` (in der Erweiterung schmal wie `--reiter-polster`; `ui/design/polster.test.ts` verlangt für
 jedes `…-polster` das Gegenstück). Die Punkte unten bleiben bis B3. Routing in `App.tsx` über `tab` + `view` (rechteabhängig).
 

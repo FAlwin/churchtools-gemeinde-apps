@@ -13,7 +13,7 @@ import { SitzungBearbeiten } from './SitzungBearbeiten';
 import { Sitzungen } from './Sitzungen';
 import { NaechsteSitzung } from './NaechsteSitzung';
 
-/** Fenster „Sitzung bearbeiten“ (K2b-1) – Schreiben und Lesen sind Attrappen; was sie tun, prüft `bearbeiten.test.ts`. */
+/** Fenster „Sitzung bearbeiten“ (K2b-1, Serien K2b-2) – Schreiben und Lesen sind Attrappen; was sie tun, prüft `bearbeiten.test.ts`. */
 vi.mock('./bearbeiten', async (orig) => ({
   ...(await orig<typeof import('./bearbeiten')>()),
   sitzungAendern: vi.fn(),
@@ -78,6 +78,7 @@ beforeEach(() => {
   vi.mocked(B.terminStand).mockResolvedValue({
     roh: { repeatId: 0, signup: null, startDate: BEGINN, endDate: '2027-05-26T19:30:00Z' },
     eingeladen: [1, 19],
+    termine: [],
   });
   vi.mocked(M.ladeGruppenMitglieder).mockResolvedValue([
     { id: 1, name: 'Alwin Friesen', bild: null, initialen: 'AF' },
@@ -171,6 +172,7 @@ describe('SitzungBearbeiten', () => {
     vi.mocked(B.terminStand).mockResolvedValue({
       roh: { repeatId: 0, startDate: BEGINN, endDate: '2027-05-26T21:00:00Z' },
       eingeladen: [1, 19],
+      termine: [],
     });
     zeige({ ...SITZUNG, anfragen: [], ende: undefined });
     await waitFor(() =>
@@ -195,6 +197,7 @@ describe('SitzungBearbeiten', () => {
     vi.mocked(B.terminStand).mockResolvedValue({
       roh: { repeatId: 0, startDate: BEGINN, endDate: '2027-05-26T19:30:00Z' },
       eingeladen: [1, 19, 99],
+      termine: [],
     });
     zeige();
     await waitFor(() => expect(screen.getByText(/Außerdem eingeladen: 1 Person/)).toBeTruthy());
@@ -221,10 +224,14 @@ describe('SitzungBearbeiten', () => {
     expect((speichern() as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('Serie: sagt es, keine Felder, kein Absagen', async () => {
-    vi.mocked(B.terminStand).mockResolvedValue({ roh: { repeatId: 7 }, eingeladen: [1, 19] });
+  it('Anmeldung am Termin: sagt es, keine Felder, kein Absagen', async () => {
+    vi.mocked(B.terminStand).mockResolvedValue({
+      roh: { repeatId: 0, signup: { groups: [] } },
+      eingeladen: [1, 19],
+      termine: [],
+    });
     zeige();
-    expect(await screen.findByText(B.SERIE)).toBeTruthy();
+    expect(await screen.findByText(B.ANMELDUNG)).toBeTruthy();
     expect(screen.queryByLabelText('Titel')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Sitzung absagen' })).toBeNull();
   });
@@ -261,6 +268,88 @@ describe('SitzungBearbeiten', () => {
     await bereit();
     fireEvent.click(screen.getByRole('button', { name: 'Sitzung absagen' }));
     expect(screen.getByText('Das Protokoll bleibt')).toBeTruthy();
+  });
+
+  describe('Serie (K2b-2)', () => {
+    // Serie ab Mi 05.05.2027 19:30, wöchentlich; die Sitzung im Fenster ist die vom 26.05.
+    const serie = (start = '2027-05-05') =>
+      vi.mocked(B.terminStand).mockResolvedValue({
+        roh: {
+          repeatId: 7,
+          signup: null,
+          startDate: `${start}T17:30:00Z`,
+          endDate: `${start}T19:00:00Z`,
+        },
+        eingeladen: [1, 19],
+        termine: ['2027-05-05T17:30:00Z', '2027-05-26T17:30:00Z', '2027-06-02T17:30:00Z'],
+      });
+
+    it('Zeit dieser Sitzung (nicht die des ersten Termins), Dauer der Serie; Einladungen gelten für alle', async () => {
+      serie();
+      zeige();
+      await waitFor(() => expect(screen.getByText(/gelten für die ganze Serie/)).toBeTruthy());
+      expect(screen.getByLabelText<HTMLInputElement>('Datum').value).toBe('2027-05-26');
+      expect(screen.getByLabelText<HTMLSelectElement>('Dauer').value).toBe('90');
+      expect(screen.queryByRole('radiogroup', { name: 'Gilt für' })).toBeNull();
+    });
+
+    it('Titel und Zeit ändern: fragt „Nur diese“ / „Ab dieser“ – geteilt lädt alle neu ein, ohne „Alle neu einladen“', async () => {
+      serie();
+      const onFertig = zeige();
+      await bereit();
+      fireEvent.change(screen.getByLabelText('Titel'), { target: { value: 'Klausur' } });
+      fireEvent.change(screen.getByLabelText('Uhrzeit'), { target: { value: '19:00' } });
+      expect(
+        screen.getByRole<HTMLInputElement>('radio', { name: /Nur diese Sitzung/ }).checked,
+      ).toBe(true);
+      expect(screen.queryByRole('checkbox', { name: /Alle neu einladen/ })).toBeNull();
+      expect(screen.getByRole('note').textContent).toMatch(
+        /keine Einladungen.*„Neue Besprechungsanfrage“ an 1 Person/,
+      );
+      fireEvent.click(screen.getByRole('radio', { name: /Ab dieser Sitzung/ }));
+      expect(screen.getByText(/Termine davor bleiben/)).toBeTruthy();
+      await waitFor(() => expect((speichern() as HTMLButtonElement).disabled).toBe(false));
+      fireEvent.click(speichern());
+      await waitFor(() => expect(onFertig).toHaveBeenCalled());
+      expect(aendern.mock.calls[0][0]).toMatchObject({ umfang: 'ab', zeitzone: ZONE });
+    });
+
+    it('„Ab dieser“ am ersten Termin: die ganze Serie – dort gibt es „Alle neu einladen“', async () => {
+      serie('2027-05-26');
+      zeige();
+      await bereit();
+      fireEvent.change(screen.getByLabelText('Uhrzeit'), { target: { value: '19:00' } });
+      fireEvent.click(screen.getByRole('radio', { name: /Ab dieser Sitzung/ }));
+      expect(screen.getByText(/ganze Serie ändert sich/)).toBeTruthy();
+      expect(screen.getByRole('checkbox', { name: /Alle neu einladen/ })).toBeTruthy();
+      expect(screen.getByRole('note').textContent).toMatch(/„Termin geändert“ an 1 Person/);
+    });
+
+    it('absagen: drei Wege, „nur diese“ vorgewählt und still; „ganze Serie“ sagt die Mail und die kommenden Termine', async () => {
+      serie();
+      const onFertig = zeige();
+      await bereit();
+      fireEvent.click(screen.getByRole('button', { name: 'Sitzung absagen' }));
+      expect(
+        screen.getByRole<HTMLInputElement>('radio', { name: /Nur diese Sitzung/ }).checked,
+      ).toBe(true);
+      expect(screen.getByRole('radio', { name: /Serie ab hier beenden/ })).toBeTruthy();
+      expect(screen.queryByRole('note')).toBeNull();
+      fireEvent.click(screen.getByRole('radio', { name: /Ganze Serie löschen/ }));
+      expect(screen.getByText(/noch 3 kommende/)).toBeTruthy();
+      expect(screen.getByRole('note').textContent).toMatch(/„Terminserie gelöscht“ an 1 Person/);
+      fireEvent.click(screen.getByRole('button', { name: 'Sitzung absagen' }));
+      await waitFor(() => expect(onFertig).toHaveBeenCalled());
+      expect(absagen.mock.calls[0][0]).toMatchObject({ art: 'serie', zeitzone: ZONE });
+    });
+
+    it('absagen am ersten Termin: kein „ab hier beenden“ (hieße ganze Serie)', async () => {
+      serie('2027-05-26');
+      zeige();
+      await bereit();
+      fireEvent.click(screen.getByRole('button', { name: 'Sitzung absagen' }));
+      expect(screen.queryByRole('radio', { name: /Serie ab hier beenden/ })).toBeNull();
+    });
   });
 
   it('Protokoll ohne Termin: kein Laden des Termins, keine Einladungen, kein Absagen', async () => {

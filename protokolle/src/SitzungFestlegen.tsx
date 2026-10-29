@@ -15,6 +15,7 @@ import {
 import type { Sitzung } from '@shared/protokolle/sitzungen';
 import { ladeGruppenMitglieder } from './mitglieder';
 import { sitzungFestlegen } from './planen';
+import felder from './Fensterfelder.module.scss';
 import styles from './SitzungFestlegen.module.scss';
 
 /** Auswahl der Dauer (Minuten); eine abweichende Dauer der letzten Sitzung kommt dazu. */
@@ -180,7 +181,7 @@ export function SitzungFestlegen({
         )
       }
     >
-      <p className={styles.unter}>
+      <p className={felder.unter}>
         {gruppe.name}
         {art === 'neu' ? ' · außerordentlich' : ''}
       </p>
@@ -188,49 +189,49 @@ export function SitzungFestlegen({
         <div className={styles.ende} role="status">
           <p>Die Sitzung ist festgelegt.</p>
           {ende.texte.map((t) => (
-            <p key={t} className={styles.hinweis}>
+            <p key={t} className={felder.hinweis}>
               {t}
             </p>
           ))}
         </div>
       ) : (
         <>
-          <label className={styles.feld}>
+          <label className={felder.feld}>
             <span>Titel</span>
             <input
-              className={styles.eingabe}
+              className={felder.eingabe}
               value={p.titel}
               disabled={laeuft}
               onChange={(e) => setze('titel', e.target.value)}
             />
           </label>
-          <div className={styles.zeile}>
-            <label className={styles.feld}>
+          <div className={felder.zeile}>
+            <label className={felder.feld}>
               <span>Datum</span>
               <input
                 type="date"
-                className={styles.eingabe}
+                className={felder.eingabe}
                 value={p.tag}
                 min={heute}
                 disabled={laeuft}
                 onChange={(e) => setze('tag', e.target.value)}
               />
             </label>
-            <label className={styles.feld}>
+            <label className={felder.feld}>
               <span>Uhrzeit</span>
               <input
                 type="time"
-                className={styles.eingabe}
+                className={felder.eingabe}
                 value={p.uhrzeit}
                 disabled={laeuft}
                 onChange={(e) => setze('uhrzeit', e.target.value)}
               />
             </label>
           </div>
-          <label className={styles.feld}>
+          <label className={felder.feld}>
             <span>Dauer</span>
             <select
-              className={styles.eingabe}
+              className={felder.eingabe}
               value={p.dauer}
               disabled={laeuft}
               onChange={(e) => setze('dauer', Number(e.target.value))}
@@ -243,16 +244,16 @@ export function SitzungFestlegen({
             </select>
           </label>
 
-          <div className={styles.feld}>
+          <div className={felder.feld}>
             <span>
               Einladen
               {mitglieder.art === 'fertig' ? ` · ${eingeladen.size} von ${liste.length}` : ''}
             </span>
             {mitglieder.art === 'laedt' && !fehler && (
-              <p className={styles.leise}>Mitglieder werden geladen …</p>
+              <p className={felder.leise}>Mitglieder werden geladen …</p>
             )}
             {mitglieder.art === 'verborgen' && (
-              <p className={styles.leise}>
+              <p className={felder.leise}>
                 Die Mitglieder dieser Gruppe sind für dich in ChurchTools nicht sichtbar – der
                 Termin wird ohne Einladung angelegt.
               </p>
@@ -264,7 +265,7 @@ export function SitzungFestlegen({
                     <label className={styles.person}>
                       <input
                         type="checkbox"
-                        className={styles.haken}
+                        className={felder.haken}
                         checked={eingeladen.has(x.id)}
                         disabled={laeuft}
                         onChange={() => umschalten(x.id)}
@@ -308,16 +309,16 @@ export function SitzungFestlegen({
               </span>
             </p>
           )}
-          {problem && <p className={styles.leise}>{problem}</p>}
+          {problem && <p className={felder.leise}>{problem}</p>}
           {belegt && (
-            <p className={styles.fehler} role="alert">
+            <p className={felder.fehler} role="alert">
               Zu dieser Zeit gibt es schon eine Sitzung dieser Gruppe.
             </p>
           )}
         </>
       )}
       {fehler && (
-        <p className={styles.fehler} role="alert">
+        <p className={felder.fehler} role="alert">
           {fehler.text}
         </p>
       )}

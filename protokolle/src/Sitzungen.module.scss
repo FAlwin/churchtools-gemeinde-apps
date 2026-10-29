@@ -45,17 +45,14 @@
   font-weight: 600;
 }
 
-// „Neue Sitzung“ (S5-2, außerordentlich) – nur für die Leitung, rechts neben der Anzahl.
-.neu {
-  @include m.aktionKnopf;
+// „Neues Protokoll“ (K2a) und „Neue Sitzung“ (S5-2) – nur für die Leitung, rechts neben der Anzahl; die Knöpfe sind die
+// gemeinsamen `KopfKnopf` (seit 28.10.2026 nur gemeinsame Knopf-Bausteine).
+.aktionen {
   display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 32px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
   margin-left: 12px;
-  padding: 0 12px;
-  border-radius: var(--r-ctrl);
-  font-size: 13.5px;
 }
 
 .liste {

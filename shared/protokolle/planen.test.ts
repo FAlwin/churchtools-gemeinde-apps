@@ -127,6 +127,15 @@ describe('zeitraum und planungFehler', () => {
     expect(planungFehler(p, ZONE, jetzt)).toBeNull();
   });
 
+  it('ohne Termin (K2a) darf es auch schon vorbei sein', () => {
+    const vorbei = { ...p, tag: '2026-10-21' };
+    expect(planungFehler(vorbei, ZONE, jetzt)).toMatch(/Zukunft/);
+    expect(planungFehler(vorbei, ZONE, jetzt, { zukunft: false })).toBeNull();
+    expect(planungFehler({ ...vorbei, titel: '' }, ZONE, jetzt, { zukunft: false })).toMatch(
+      /Titel/,
+    );
+  });
+
   it.each([
     [{ titel: '  ' }, /Titel/],
     [{ tag: '' }, /Datum und Uhrzeit/],

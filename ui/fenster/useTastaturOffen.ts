@@ -22,7 +22,7 @@ export const TASTATUR_AB_PX = 150;
  * wäre die Tastatur dann 0). Dieselbe Lehre steht in `useKeyboardInsets`; hier fehlte sie zuerst (Alwin am iPad,
  * 23.10.2026: „manchmal funktioniert's mit der einen Zeile, manchmal nicht“).
  */
-function grundHoehe(): number {
+export function grundHoehe(): number {
   const app = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--app-h'));
   return Math.max(window.innerHeight, Number.isFinite(app) ? app : 0);
 }

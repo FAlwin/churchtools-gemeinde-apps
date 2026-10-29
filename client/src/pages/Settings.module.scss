@@ -95,7 +95,7 @@
   text-align: center;
   color: var(--text3);
   font-size: 12px;
-  margin: 22px 0 max(22px, env(safe-area-inset-bottom));
+  margin: 22px 0 max(22px, var(--unten-strich));
 }
 
 .offlineStat {

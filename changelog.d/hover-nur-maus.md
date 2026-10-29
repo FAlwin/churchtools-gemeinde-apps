@@ -9,3 +9,5 @@
 ### Intern (alle Apps)
 
 - Wächter `ui/design/hoverNurMaus.test.ts`: Jede `:hover`-Regel muss in `@media (hover: hover)` stehen.
+- Hover- und Home-Strich-Wächter (`homeStrich.test.ts`) holen ihre Ordner jetzt aus `quelltexte.testutil.ts` statt aus
+  einer eigenen Liste – der fehlte die App `formular`, eine neue App wäre ebenso ungeprüft geblieben.

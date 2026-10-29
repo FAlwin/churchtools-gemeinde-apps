@@ -25,6 +25,8 @@
 
   > .flaeche {
     position: relative;
+    // Unter der Fläche liegt die Reiterleiste: Das Plus steht 16px über ihr, nicht über dem Home-Strich.
+    --plus-boden: 0px;
     flex: 1;
     min-height: 0;
   }

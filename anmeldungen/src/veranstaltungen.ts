@@ -150,13 +150,12 @@ export async function ladeUebersicht(
   );
   const leitung = anstehend.length ? await leitungsRollen() : new Set<number>();
   await mapLimit(anstehend, PARALLEL, async ({ r, e: einstellungen }) => {
-    const bezahlt = einstellungen.ctFelder.bezahlt;
     try {
       const mitglieder = await ctAlleSeiten<Parameters<typeof belegungAus>[0][number]>(
         `/groups/${r.id}/members`,
         200,
       );
-      belegung.set(r.id, belegungAus(mitglieder, bezahlt, leitung));
+      belegung.set(r.id, belegungAus(mitglieder, einstellungen, leitung, heute));
     } catch (e) {
       // Kein Recht ist dauerhaft und betrifft nur diese Zeile; alles andere kann vorübergehend sein → werfen.
       if (e instanceof ApiError && e.status === 403) belegung.set(r.id, null);

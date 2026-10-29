@@ -1,11 +1,12 @@
 # Organigramm – ChurchTools-Erweiterung
 
-> **Stand: O7 (24.10.2026)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
+> **Stand: O7b-6a (29.10.2026)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
 > offenen Plätzen; Gruppenfenster; Gruppentypen ausblendbar), die **Präsentation** (für Gruppen-Admins auch die
 > **neue Gliederung**), für Gruppen-Admins **Gruppen umhängen und anlegen** und den Reiter **Neue Gliederung** (Plan
 > und Umbau) und – für alle, die es in ChurchTools dürfen – **Leitung und Mitglieder pflegen**. Für die **Leitung eines
-> Bereichs** dazu die Reiter **Personen** und **Hinweise**. Als Nächstes (Bauplan O7b): weitere Ansichten –
-> von oben, von links, Mindmap und Liste, auch in der Präsentation und zum Drucken; danach (O8) der echte Umbau der
+> Bereichs** dazu die Reiter **Personen** und **Hinweise**. Seit O7b weitere Ansichten – von oben, von links, Mindmap
+> und Liste, auch in der Präsentation und als PDF, auf Wunsch mit den Personen. Als Nächstes: Personen auch in
+> Präsentation und PDF (O7b-6b), sichtbare Gruppen zentral einstellen (O7b-7), danach (O8) der echte Umbau der
 > Gemeindestruktur. Diese Anleitung wächst mit.
 
 Das Organigramm zeigt die Gemeinde als Baum – Bereiche, Gruppen, Personen – so, wie die Gruppen-Hierarchie in
@@ -50,14 +51,24 @@ Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Gemessen an der Test-Insta
 - **Karten** – wie bisher: je Bereich eine Karte, darin die Gruppen mit Personen, Leitung und Diensten.
 - **Von oben** – das klassische Organigramm: die Gemeinde oben, die Bereiche nebeneinander, darunter die Gruppen
   gestapelt. **Von links** – derselbe Baum zur Seite, jede Ebene eine Spalte. **Mindmap** – die Gemeinde in der Mitte,
-  die Bereiche nach rechts und links verteilt. In allen dreien steht im Kästchen nur der Name; ein Klick (oder Enter)
-  öffnet die Gruppe, das runde **+/−** klappt auf und zu (zugeklappt steht dort die Zahl der Untergruppen).
+  die Bereiche nach rechts und links verteilt. Im Kästchen steht der Name – auf Wunsch darunter die Personen (siehe
+  **Personen** unten); ein Klick (oder Enter) öffnet die Gruppe, das runde **+/−** klappt auf und zu (zugeklappt steht dort die Zahl der Untergruppen).
   **Ziehen** verschiebt, **Mausrad** oder **zwei Finger** zoomen, dazu **−**, **+** und **Ganz zeigen** (lässt unten den
   Streifen der Knöpfe frei, seit O7b-5). Passt alles lesbar hinein, ist anfangs alles zu sehen; sonst beginnt das Bild
   lesbar groß an der Spitze. Mit der Tastatur
   (Tab) springt das Bild zum gewählten Kästchen.
-- **Liste** – die Gemeinde als Gliederung mit Linien, nur die Namen. Jede Gruppe mit Untergruppen klappt mit dem
-  Pfeil auf und zu; anfangs sind die Gemeinde und die Bereiche offen, darunter steht „3 Untergruppen“. Gut am Handy.
+- **Liste** – die Gemeinde als Gliederung mit Linien, die Namen der Gruppen (auf Wunsch mit den Personen). Jede Gruppe
+  mit Untergruppen klappt mit dem Pfeil auf und zu; anfangs sind die Gemeinde und die Bereiche offen, darunter steht
+  „3 Untergruppen“. Gut am Handy.
+- **Personen: Aus · Rollen · Alle** (Diagramme und Liste, seit O7b-6; rechts neben den Gruppentypen) – was unter dem
+  Namen einer Gruppe steht. **Aus** (vorgegeben): nur der Name. **Rollen**: die Rollen der Gruppe genau wie in
+  ChurchTools, darunter die Namen – die Leitung zuerst (Leiter, Co-Leiter), dann die übrigen Rollen in der Reihenfolge
+  von ChurchTools (z. B. Coach, Organisator), die Standardrolle des Gruppentyps (Mitarbeiter bzw. Teilnehmer) zuletzt
+  und nur als Zahl („6 Mitarbeiter“). **Alle**: auch die Standardrolle mit Namen. Nichts wird weggelassen oder dazu
+  erfunden – auch eine in ChurchTools versteckte Rolle steht da. Wo ChurchTools einem die Mitglieder nicht zeigt, steht
+  „Mitglieder nicht sichtbar“; eine Gruppe ohne eigene Mitglieder (oft eine Obergruppe) zeigt nur den Namen. Die
+  Kästchen werden dann größer, der Blick fängt neu an. Die Wahl merkt sich das Gerät. In Präsentation und PDF folgt das
+  mit O7b-6b.
 - **Alle aufklappen** / **Alle zuklappen** (Liste und Diagramme) wirken nur unter der Spitze.
 - **Anfangen bei:** die ganze Gemeinde oder ein Bereich – dann zeigen alle Ansichten nur ihn. Im Gruppenfenster jeder
   Gruppe mit Untergruppen steht **„Im Organigramm hier anfangen“**; die Gruppe steht dann zusätzlich in der Auswahl.

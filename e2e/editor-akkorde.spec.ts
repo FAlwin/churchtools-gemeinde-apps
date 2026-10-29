@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { DEMO_EDITOR_TEXT } from '../client/src/dev/demoEditorText';
+import { cursorInZeile } from './werkzeug';
 
 /**
  * **Lied-Editor L5: Akkorde einfügen** (22.10.2026, Entwurf Variante A; Alwin: „Akkorde einfügen ist noch nicht so
@@ -19,12 +20,7 @@ const mit = (einfuegen: string) =>
 
 async function cursorVorBist(page: Page) {
   await page.goto('/?demo=editor');
-  const zeile = page.locator('.cm-line', { hasText: 'jedem neuen Tag' });
-  await expect(zeile).toBeVisible({ timeout: 30_000 });
-  // Ganz links in die Zeile klicken – mitten in der Zeile träfe man womöglich ein Kärtchen.
-  const h = (await zeile.boundingBox())!.height;
-  await zeile.click({ position: { x: 1, y: h / 2 } });
-  for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight'); // „Du “
+  await cursorInZeile(page, 'jedem neuen Tag', 3); // „Du “
 }
 const leiste = (page: Page) => page.getByRole('group', { name: 'Akkorde' });
 

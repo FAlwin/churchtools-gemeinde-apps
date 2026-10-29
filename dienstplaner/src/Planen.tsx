@@ -1340,14 +1340,29 @@ function TabellenPlan({ sicht, breite }: { sicht: Sicht; breite: Breite }) {
           </tr>
         </thead>
         <tbody>
-          {/* Der Ablauf steht oben, über den Dienstgruppen (Entwurf E6-6, Alwin 23.10. und 28.10.2026). */}
+          {/* Der Ablauf steht oben, über den Dienstgruppen (Entwurf E6-6, Alwin 23.10. und 28.10.2026). Darunter ein
+              Streifen in der Seitenfarbe und die Überschrift „Dienste“ – sonst sah man nicht, wo der Ablauf endet
+              (Alwin, 29.10.2026, Entwurf `e6-6-trennung.html` C; dazu „Ende“ in jeder Spalte). */}
           {sicht.ablauf && (
-            <AblaufZeilen
-              ma={sicht.ablauf}
-              plan={plan}
-              spalten={spalten}
-              zelleKlasse={zelleKlasse}
-            />
+            <>
+              <AblaufZeilen
+                ma={sicht.ablauf}
+                plan={plan}
+                spalten={spalten}
+                zelleKlasse={zelleKlasse}
+              />
+              <tr className={styles.abschnittAbstand} aria-hidden="true">
+                <td colSpan={spalten.length + 1} />
+              </tr>
+              <tr className={styles.abschnittKopf}>
+                <th className={styles.svc} scope="row">
+                  Dienste
+                </th>
+                {spalten.map((i) => (
+                  <td key={plan.spalten[i].id} />
+                ))}
+              </tr>
+            </>
           )}
           {gruppen.map((g) => {
             const k = schluessel(g);

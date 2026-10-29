@@ -252,12 +252,12 @@ export function deleteAgendaItem(
 }
 
 /** Legt einen eben gelöschten Punkt an seiner alten Stelle wieder an („Rückgängig", 12.10.2026). */
-export function restoreAgendaItem(
+export async function restoreAgendaItem(
   cookie: string,
   eventId: number,
   punkt: GeloeschterPunkt,
 ): Promise<void> {
-  return punktWiederherstellen(schreiberFuer(cookie), eventId, punkt);
+  await punktWiederherstellen(schreiberFuer(cookie), eventId, punkt);
 }
 
 export function setAgendaItemVorBeginn(

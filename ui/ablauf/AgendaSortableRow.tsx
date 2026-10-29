@@ -20,14 +20,20 @@ export function SortableRow<T extends AblaufZeile>({
   item,
   onOpenActions,
   schmal = false,
+  ziehId,
+  daten,
 }: {
   item: T;
   onOpenActions: (item: T) => void;
   /** Schmale Form für die Matrix (E6-6a) – derselbe Inhalt wie `AblaufListe schmal`. */
   schmal?: boolean;
+  /** Im Zieh-Bereich der Matrix (E6-6b): eigene Zieh-ID (Spalte + Punkt) und was der Bereich über den Punkt wissen muss. */
+  ziehId?: string;
+  daten?: Record<string, unknown>;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: item.id,
+    id: ziehId ?? item.id,
+    data: daten,
   });
   const style = {
     transform: CSS.Transform.toString(transform),

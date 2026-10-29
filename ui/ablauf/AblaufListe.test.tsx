@@ -203,3 +203,23 @@ describe('wie die ChurchTools-App (E6-O1)', () => {
     expect(balken.textContent).toBe('Beginn10:00');
   });
 });
+
+describe('Balken „Ende“ (Matrix, 29.10.2026)', () => {
+  const punkt = (id: number, title: string, start: string, duration: number) =>
+    ablaufZeileAus({ id, title, type: 'normal', start, duration }, 7, 'Europe/Berlin');
+  const ZEILEN = [
+    punkt(1, 'Predigt', '2026-11-01T09:09:00Z', 1800),
+    punkt(2, 'Segen', '2026-11-01T09:39:00Z', 300),
+  ];
+
+  it('mit `mitEnde` unter dem letzten Punkt die Uhrzeit, zu der er aufhört', () => {
+    render(<AblaufListe zeilen={ZEILEN} schmal mitEnde />);
+    const ende = screen.getByRole('separator', { name: 'Ende 10:44' });
+    expect(ende.previousElementSibling?.textContent).toContain('Segen');
+  });
+
+  it('ohne `mitEnde` keiner – Termin-Ansicht und Musik-App bleiben, wie sie sind', () => {
+    render(<AblaufListe zeilen={ZEILEN} schmal />);
+    expect(screen.queryByRole('separator', { name: /^Ende/ })).toBeNull();
+  });
+});

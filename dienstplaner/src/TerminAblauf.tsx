@@ -15,7 +15,7 @@ import { vorlagenFuer } from '@shared/ct/ablaufVorschlaege';
 import type { CtAgenda, CtSong } from '@shared/ct/typen';
 import type { AblaufQuelle, AblaufVorlage } from '@shared/types/index';
 import { autorVon, ladeAblauf, ladeLiedDaten } from './ladeBeiwerk';
-import { ablaufAktionen } from './ablaufAktionen';
+import { ablaufAktionen, GESPERRT } from './ablaufAktionen';
 import { ladeKopieVorschlaege, ladeVorlagen, WOCHEN_ZURUECK } from './ladeAnlegen';
 import { ablaufBearbeitbar, type Start } from './start';
 import { LiedAnsicht } from './LiedAnsicht';
@@ -23,10 +23,6 @@ import styles from './TerminAblauf.module.scss';
 
 const NEU_LADEN_FEHLT =
   'Gespeichert. Der Ablauf ließ sich danach nicht neu laden – zum Aktualisieren den Termin neu öffnen.';
-
-/** Hinweis, wenn man einen abgeschlossenen Ablauf ändern will – öffnen kann man ihn hier (noch) nicht. */
-const GESPERRT =
-  'Dieser Ablauf ist in ChurchTools abgeschlossen. Zum Ändern erst in ChurchTools oder in der Musik-App öffnen.';
 
 /** Was der Ablauf über seinen Termin wissen muss – aus der Termin-Ansicht oder einer Spalte der Matrix. */
 export interface AblaufFuerTermin {
@@ -197,6 +193,8 @@ export function TerminAblauf({
     // bleibt das schwebende Plus (Alwin, 28.10.2026 – wie die Musik-App seit S2). In der Matrix „+ Punkt“ je Spalte.
     plusImKopf: true,
     schmal,
+    // In der Matrix zieht jede Spalte im gemeinsamen Zieh-Bereich – auch in einen anderen Termin (E6-6b).
+    ziehen: schmal ? { spalte: terminId, neuLaden: ablaufNeuLaden } : undefined,
     // Im Punkt-Fenster: die Zeile „Lied“ öffnet die Lied-Ansicht an seiner Stelle (Alwin, 28.10.2026: an beiden Stellen).
     liedAnsehen: (p, zurueck, schliessen) => liedAnsicht(p, schliessen, zurueck),
   });
@@ -330,6 +328,8 @@ export function TerminAblauf({
           beginn={termin.uhrzeit}
           onLied={(_, p) => setLiedOffen(p)}
           schmal={schmal}
+          // Matrix: wo der Ablauf aufhört (Alwin, 29.10.2026, Entwurf `e6-6-trennung.html` C).
+          mitEnde={schmal}
         />
       </div>
     );

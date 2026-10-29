@@ -205,10 +205,17 @@ export function nachbauStarten(): Nachbau {
         data: s.termine
           .filter((t) => kal.includes(t.kalender))
           .flatMap((t) =>
-            vorkommen(t).map((v) => ({
-              base: { id: t.id, title: t.titel, calendar: { id: t.kalender } },
-              calculated: { startDate: v.beginn, ...(v.ende ? { endDate: v.ende } : {}) },
-            })),
+            // Wie ChurchTools nur im gefragten Zeitraum (`from` bis `to`) – die Liste sieht nicht weiter.
+            vorkommen(t)
+              .filter(
+                (v) =>
+                  tagVon(v.beginn) >= (adresse.searchParams.get('from') ?? '') &&
+                  tagVon(v.beginn) <= (adresse.searchParams.get('to') ?? '9999'),
+              )
+              .map((v) => ({
+                base: { id: t.id, title: t.titel, calendar: { id: t.kalender } },
+                calculated: { startDate: v.beginn, ...(v.ende ? { endDate: v.ende } : {}) },
+              })),
           ),
       });
     }

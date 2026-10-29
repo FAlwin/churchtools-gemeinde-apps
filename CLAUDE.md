@@ -411,7 +411,9 @@ Abstände kommen aus `--inhalt-pad-top` / `--bar-pad-top`
 Home-Bildschirm ist auch „standalone“, in den Erweiterungen setzt `.ct-extension` ihn zurück (`standalone.test.ts`,
 28.10.2026). Alles am unteren Rand rechnet mit `--unten-strich` (Home-Strich, gemessen in `ui/fenster/appHeight.ts`, 29.10.2026 – nie selbst `env(safe-area-inset-bottom)`, `homeStrich.test.ts`); das schwebende Plus steht 16px über `--plus-boden` (Reiterleiste oder Home-Strich), Listen darunter halten `--plus-boden` + 78px frei. Die App zeichnet hinter der Statusleiste (`black-translucent`,
 `client/index.html`). **Liedblatt-Kopf = Kopfkarte (`components/BlattKopf.tsx`, Scheibe B1+B2, 28.10.2026; Bauplan
-`bauplan-blatt-ct-look.md`, Messung `messung-b0-28.10.md`):** weiße Karte unter dem Band wie „Events › Ablaufpläne“.
+`bauplan-blatt-ct-look.md`, Messung `messung-b0-28.10.md`):** seit 29.10.2026 keine schwebende Karte mehr, sondern eine
+Fläche in Kartenfarbe bis an den oberen Rand (Alwin: Karte „verloren, zu klein“); Inhalt unter dem Band; am Handy
+hochkant größer (Zeile 44px über `--knopf-hoehe`, Raster 60px).
 Drei Aufbauten nach gemessener Kopfbreite und Fensterhöhe (`kopfAufbau` in `utils/werkzeuge.ts`, nicht nach
 Gerätenamen): **breit** (iPad quer UND hochkant) Titelzeile „← Ablauf · Termin · Vollbild“, darunter Ablauf-Leiste
 und beschriftete Knöpfe in EINER Zeile; **kompakt** (Handy hochkant) ohne Titelzeile, Zurück/Vollbild als Symbol

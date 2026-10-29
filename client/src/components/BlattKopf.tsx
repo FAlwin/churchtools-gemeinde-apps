@@ -23,21 +23,23 @@ export interface BlattKopfAngaben {
   zurueckZiel: string;
 }
 
-function werkzeugSymbol(id: WerkzeugId, zeichnen: boolean): ReactNode {
+/** `gross`: am Handy hochkant (Raster) größere Symbole – Entwurf B, 29.10.2026. */
+function werkzeugSymbol(id: WerkzeugId, zeichnen: boolean, gross: boolean): ReactNode {
+  const s = gross ? 21 : 17;
   switch (id) {
     case 'aussehen':
       return <b className={styles.aa}>Aa</b>;
     case 'tempo':
-      return <Icon name="metronome" size={17} stroke={1.9} />;
+      return <Icon name="metronome" size={s} stroke={1.9} />;
     case 'zoom':
-      return <Icon name="zoom-reset" size={17} stroke={2} />;
+      return <Icon name="zoom-reset" size={s} stroke={2} />;
     case 'team':
-      return <Icon name="people" size={17} stroke={2} />;
+      return <Icon name="people" size={s} stroke={2} />;
     case 'anmerken':
       return zeichnen ? (
-        <Icon name="check" size={17} stroke={2.6} />
+        <Icon name="check" size={s} stroke={2.6} />
       ) : (
-        <Icon name="pencil" size={17} stroke={2.2} />
+        <Icon name="pencil" size={s} stroke={2.2} />
       );
   }
 }
@@ -276,7 +278,7 @@ export function BlattKopf({
             kurz={kurz}
             raster={kompakt}
             nurSymbol={flach}
-            symbol={werkzeugSymbol(id, drawMode)}
+            symbol={werkzeugSymbol(id, drawMode, kompakt)}
             aktiv={
               (id === 'tempo' && tempoAktiv) ||
               (id === 'team' && viewing) ||
@@ -337,7 +339,7 @@ export function BlattKopf({
 
   return (
     <div
-      className={`${styles.kopf}${ohneTitelzeile ? ' ' + styles.kopfKompakt : ''}`}
+      className={`${styles.kopf}${ohneTitelzeile ? ' ' + styles.kopfKompakt : ''}${flach ? ' ' + styles.kopfFlach : ''}`}
       ref={kopfRef}
     >
       <div className={styles.karte}>
@@ -354,7 +356,7 @@ export function BlattKopf({
               onClick={onBack}
               label={`Zurück zu ${kopf.zurueckZiel}`}
               nurSymbol
-              symbol={<Icon name="pfeil-links" size={17} stroke={2.2} />}
+              symbol={<Icon name="pfeil-links" size={kompakt ? 20 : 17} stroke={2.2} />}
             />
           )}
           {leiste}

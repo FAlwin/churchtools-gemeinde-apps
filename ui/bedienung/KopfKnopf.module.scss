@@ -81,9 +81,10 @@
   gap: 3px;
   width: auto;
   min-width: 0;
-  height: 52px;
+  // 60px/13px seit 29.10.2026 (Liedblatt am Handy größer, Entwurf B; vorher 52px/12px) – nur das Liedblatt nutzt das Raster.
+  height: 60px;
   padding: 0 4px;
-  font-size: 12px;
+  font-size: 13px;
 
   .text {
     display: block;

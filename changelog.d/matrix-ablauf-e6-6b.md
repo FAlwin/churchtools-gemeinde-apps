@@ -13,6 +13,14 @@
 - Ein im alten Termin weggelassener Punkt steht im neuen sichtbar – „weggelassen“ gilt je Termin (gemessen E6-6-0).
 - Am Handy bleibt das Ziehen innerhalb des Termins (der Handy-Plan zeigt nur einen).
 
+### Geändert (Dienstplaner – Durchklicken Alwin, 29.10.2026)
+
+- **Deutlichere Trennung zwischen Ablauf und Diensten** in der Matrix (Entwurf `e6-6-trennung.html`, Variante C): Unter
+  jedem Ablauf steht ein grauer Balken **„Ende“** mit der Uhrzeit, zu der der letzte Punkt aufhört (Beginn + Dauer aus
+  ChurchTools; ChurchTools zeigt diese Zeit selbst nicht an) – auch im Bearbeiten, damit nichts springt. Darunter teilt
+  ein Streifen in der Seitenfarbe die Tabelle, darüber leise **„Dienste“**. Vorher folgte auf den letzten Punkt sofort
+  „Programm“, und man sah nicht, wo der Ablauf endet (Alwin). Termin-Ansicht und Musik-App bleiben, wie sie sind.
+
 ### Intern (E6-6b)
 
 - Neu `shared/ct/punktUebertragen.ts`: verschieben/kopieren über den Schreibkern – Merkzettel wie beim Löschen

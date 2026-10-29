@@ -328,6 +328,8 @@ export function TerminAblauf({
           beginn={termin.uhrzeit}
           onLied={(_, p) => setLiedOffen(p)}
           schmal={schmal}
+          // Matrix: wo der Ablauf aufhört (Alwin, 29.10.2026, Entwurf `e6-6-trennung.html` C).
+          mitEnde={schmal}
         />
       </div>
     );

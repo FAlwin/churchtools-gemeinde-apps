@@ -100,6 +100,21 @@ describe('useAblaufBearbeiten – schmal (Matrix, E6-6a)', () => {
     expect(screen.getByTestId('liste').textContent).toContain('zum Sortieren');
   });
 
+  it('„Ende“ wie in der Ansicht – sonst spränge die Spalte beim Umschalten; ohne `schmal` keins', () => {
+    const mitZeit = [
+      ablaufZeileAus(
+        { id: 1, title: 'Segen', type: 'normal', start: '2026-11-01T09:39:00Z', duration: 300 },
+        7,
+        'Europe/Berlin',
+      ),
+    ];
+    render(<Harness aktionen={aktionen()} items={mitZeit} schmal />);
+    expect(screen.getByRole('separator', { name: 'Ende 10:44' })).toBeTruthy();
+    cleanup();
+    render(<Harness aktionen={aktionen()} items={mitZeit} />);
+    expect(screen.queryByRole('separator', { name: /^Ende/ })).toBeNull();
+  });
+
   it('abgeschlossen: „+ Punkt“ zeigt den Sperr-Hinweis statt der Auswahl', () => {
     render(<Harness aktionen={aktionen()} schmal abgeschlossen />);
     fireEvent.click(screen.getByRole('button', { name: /Punkt/ }));

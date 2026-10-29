@@ -16,6 +16,7 @@ import type { AgendaServiceOption } from '@shared/types/index';
 import type { GeloeschterPunkt, PunktAenderung } from '@shared/ct/schreibKern';
 import type { NeuerAgendaPunkt, PunktArt } from '@shared/ct/agendaItemChanges';
 import {
+  ablaufEnde,
   beginnStelle,
   itemLabel,
   punktStand,
@@ -34,7 +35,7 @@ import { useRueckgaengig } from '../bedienung/useRueckgaengig';
 import { useZiehSensoren } from '../bedienung/useZiehSensoren';
 import { innerScrollOnly, resetViewportAfterDrag } from '../bedienung/dndAutoScroll';
 import { SortableRow } from './AgendaSortableRow';
-import { BeginnLinie, VerborgeneGruppenHinweis } from './AblaufTeile';
+import { BeginnLinie, EndeLinie, VerborgeneGruppenHinweis } from './AblaufTeile';
 import { PunktFenster, type LiedWahlArgs } from './PunktFenster';
 import { AblageStelle } from './AblaufZiehBereich';
 import { punktDaten, useZiehBereich, ziehId, type ZiehSpalte } from './ablaufZiehen';
@@ -319,6 +320,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
 
   // Balken „Beginn" in der Bearbeiten-Liste – dieselbe Regel wie in der Ansicht (#423).
   const beginnBeiBearbeiten = beginnStelle(localItems);
+  const ende = o.schmal ? ablaufEnde(localItems) : null;
 
   const anleitung = o.speichertGerade ? (
     'Speichere…'
@@ -372,6 +374,8 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
         ) : (
           platz?.index === localItems.length && <AblageStelle />
         )}
+        {/* „Ende“ wie in der Ansicht (Matrix) – sonst spränge die Spalte beim Umschalten. */}
+        {o.schmal && ende && <EndeLinie zeit={ende} />}
       </div>
     </SortableContext>
   );

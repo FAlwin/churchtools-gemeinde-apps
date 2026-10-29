@@ -160,6 +160,31 @@
   background: var(--section);
 }
 
+// Zwischen Ablauf und Dienstgruppen (Alwin, 29.10.2026, Entwurf `e6-6-trennung.html` C): ein Streifen in der Seitenfarbe
+// teilt die Tabelle in zwei Abschnitte, darunter leise „Dienste“. Mit `.plan` davor, damit es die Tabellenregeln schlägt.
+.plan .abschnittAbstand td {
+  height: 14px;
+  background: var(--bg);
+  border-right: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.plan .abschnittKopf th,
+.plan .abschnittKopf td {
+  height: 30px;
+  background: var(--section);
+  vertical-align: middle;
+}
+
+.plan .abschnittKopf th {
+  padding: 0 12px;
+  color: var(--text2);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .gruppenKnopf {
   display: flex;
   align-items: center;

@@ -294,3 +294,47 @@ describe('Matrix: Verschieben / Kopieren (E6-6b)', () => {
     expect(screen.queryByRole('button', { name: 'Rückgängig' })).toBeNull();
   });
 });
+
+describe('Matrix: Trennung zwischen Ablauf und Diensten (Alwin, 29.10.2026, Entwurf C)', () => {
+  it('„Ende“ unter jedem Ablauf; darunter Streifen und „Dienste“, dann die erste Dienstgruppe', async () => {
+    ct();
+    render(
+      <Planen
+        zustand={{ art: 'fertig', zeilen: [], plan: PLAN, wochen: 8 }}
+        handy={false}
+        onNochmal={() => {}}
+        onMehr={() => {}}
+        mehrMoeglich={false}
+        ladeZeitraum={() => new Promise<never>(() => {})}
+        heute="2026-10-14"
+        ablauf={{ start: START, zeitzone: 'Europe/Berlin' }}
+      />,
+    );
+    // Letzter Punkt um 10:00 (Berlin) mit 5 Min – bei den beiden Terminen mit diesem Ablauf.
+    await waitFor(() =>
+      expect(screen.getAllByRole('separator', { name: 'Ende 10:05' }).length).toBeGreaterThan(0),
+    );
+    const dienste = screen.getByRole('rowheader', { name: 'Dienste' }).closest('tr')!;
+    const ablaufZeile = screen
+      .getByRole('button', { name: /^Ablauf$/ })
+      .closest('tr')!.nextElementSibling!;
+    expect(dienste.previousElementSibling?.previousElementSibling).toBe(ablaufZeile);
+    expect(dienste.previousElementSibling?.getAttribute('aria-hidden')).toBe('true');
+    expect(dienste.nextElementSibling?.textContent).toMatch(/^Programm|^Weitere|^Technik|^Musik/);
+  });
+
+  it('ohne Ablauf (Matrix ohne Anschluss) auch keine Überschrift „Dienste“', () => {
+    render(
+      <Planen
+        zustand={{ art: 'fertig', zeilen: [], plan: PLAN, wochen: 8 }}
+        handy={false}
+        onNochmal={() => {}}
+        onMehr={() => {}}
+        mehrMoeglich={false}
+        ladeZeitraum={() => new Promise<never>(() => {})}
+        heute="2026-10-14"
+      />,
+    );
+    expect(screen.queryByRole('rowheader', { name: 'Dienste' })).toBeNull();
+  });
+});

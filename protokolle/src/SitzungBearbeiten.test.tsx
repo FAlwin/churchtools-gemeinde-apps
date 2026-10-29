@@ -335,6 +335,8 @@ describe('SitzungBearbeiten', () => {
       ).toBe(true);
       expect(screen.getByRole('radio', { name: /Serie ab hier beenden/ })).toBeTruthy();
       expect(screen.queryByRole('note')).toBeNull();
+      // Gefunden in der Test-Instanz 29.10.2026: ohne Treffen und Protokoll stand „Das passiert …“ leer da.
+      expect(screen.getByText('Der Termin fällt aus der Serie')).toBeTruthy();
       fireEvent.click(screen.getByRole('radio', { name: /Ganze Serie löschen/ }));
       expect(screen.getByText(/noch 3 kommende/)).toBeTruthy();
       expect(screen.getByRole('note').textContent).toMatch(/„Terminserie gelöscht“ an 1 Person/);

@@ -375,7 +375,8 @@ describe('Serien', () => {
       umfang: 'ab',
     });
     expect(r.hinweise).toEqual([]);
-    expect(serie().felder?.repeatUntil).toBe('2027-07-13');
+    // Nur der 07.07. bleibt – ChurchTools macht daraus einen Einzeltermin (gemessen).
+    expect(serie()).toMatchObject({ repeatId: 0, beginn: W('07-07') });
     expect(neuer()).toMatchObject({ repeatId: 7, beginn: VERSCHOBEN.beginn, titel: 'Klausur' });
     expect(neuer()?.felder?.repeatUntil).toBe('2027-08-25');
     expect(ct.mails).toEqual([{ person: 19, art: 'neu' }]);
@@ -497,7 +498,8 @@ describe('Serien', () => {
 
   it('absagen „ab hier“: Serie endet am Vortag, keine Mail; spätere Sitzungen gehen, frühere bleiben', async () => {
     expect((await absagenSerie('ab')).hinweise).toEqual([]);
-    expect(serie().felder?.repeatUntil).toBe('2027-07-13');
+    // Nur der 07.07. bleibt – ChurchTools macht daraus einen Einzeltermin (gemessen).
+    expect(serie()).toMatchObject({ repeatId: 0, beginn: W('07-07') });
     expect(ct.mails).toEqual([]);
     expect(kopf('s2')).toBeUndefined();
     expect(kopf('s3')).toEqual({ ...S3, termin: null, treffen: null });
@@ -527,6 +529,26 @@ describe('Serien', () => {
       }),
     ).rejects.toThrow('erste Termin der Serie');
     expect(serie().felder?.repeatUntil).toBe('2027-08-25');
+  });
+
+  it('absagen „ab hier“, nur ein Termin bleibt übrig: ChurchTools macht einen Einzeltermin – trotzdem übernommen', async () => {
+    // Gefunden in der Test-Instanz 29.10.2026 („nicht übernommen“, und ein zweiter Versuch hätte den Rest gelöscht).
+    serie().felder!.repeatUntil = '2027-07-14';
+    expect((await absagenSerie('ab')).hinweise).toEqual([]);
+    expect(serie()).toMatchObject({ repeatId: 0, beginn: W('07-07') });
+    expect(kopf('s2')).toBeUndefined();
+    expect(ct.mails).toEqual([]);
+    // Zweiter Versuch (alte Liste): löscht den übrig gebliebenen Termin nicht.
+    expect((await absagenSerie('ab')).hinweise).toEqual([]);
+    expect(ct.termine.some((t) => t.id === 90)).toBe(true);
+    expect(ct.mails).toEqual([]);
+  });
+
+  it('absagen „nur diese“, die Serie ist inzwischen genau dieser Einzeltermin: abgewiesen statt gelöscht', async () => {
+    Object.assign(serie(), { beginn: W('07-14'), ende: W('07-14', '19:30'), repeatId: 0 });
+    await expect(absagenSerie('diese')).rejects.toThrow('inzwischen geändert');
+    expect(ct.termine.some((t) => t.id === 90)).toBe(true);
+    expect(ct.mails).toEqual([]);
   });
 
   it('absagen „nur diese“, zweiter Versuch (Tag schon ausgenommen): nichts doppelt, Rest wird nachgeholt', async () => {

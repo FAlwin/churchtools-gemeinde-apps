@@ -55,6 +55,8 @@ export const SCHON_GETEILT =
   'Diese Sitzung gehört nicht mehr zur Terminserie – die Liste ist nicht mehr aktuell. Bitte das Fenster schließen und neu öffnen.';
 const SERIE_WAEHLEN =
   'Bei einer Terminserie bitte wählen: nur diese Sitzung, die Serie ab hier oder die ganze Serie.';
+const SERIE_GEAENDERT =
+  'Die Terminserie hat sich inzwischen geändert – bitte das Fenster schließen und neu öffnen.';
 const ERSTER_AB =
   'Das ist der erste Termin der Serie – „ab hier beenden“ hieße die ganze Serie löschen. Bitte das wählen.';
 
@@ -283,8 +285,9 @@ async function teilen(
   neu: { titel: string; beginn: string; ende: string },
   umfang: Umfang,
   tag: string,
+  zeitzone: string,
 ): Promise<TerminRef> {
-  if (!nochInSerie(t, tag)) throw new ApiError(409, SCHON_GETEILT);
+  if (!nochInSerie(t, tag, zeitzone)) throw new ApiError(409, SCHON_GETEILT);
   let id: number | null = null;
   try {
     const r = await ctAnfrage<{ data?: { id?: unknown } }>(terminPfad(termin), {
@@ -369,10 +372,10 @@ export async function sitzungAendern(q: {
       weg = serienWeg(a, q.umfang ?? 'diese', ersterDerSerie(t, s.beginn, q.zeitzone));
     if (weg === 'teilen-diese' || weg === 'teilen-ab') {
       const tag = serienTag(s.beginn, q.zeitzone);
-      ziel = await teilen(termin, t, neu, weg === 'teilen-diese' ? 'diese' : 'ab', tag);
+      ziel = await teilen(termin, t, neu, weg === 'teilen-diese' ? 'diese' : 'ab', tag, q.zeitzone);
       // Hat die Serie den Tag abgegeben? Sonst stünde die Sitzung doppelt im Kalender.
       try {
-        if (nochInSerie(await terminLaden(termin), tag))
+        if (nochInSerie(await terminLaden(termin), tag, q.zeitzone))
           hinweise.push(
             'Die Serie hat den Termin an diesem Tag noch – bitte in ChurchTools aus der Serie entfernen.',
           );
@@ -500,7 +503,12 @@ export async function sitzungAbsagen(q: {
     pruefeSperre(t);
     if (serie && !q.art) throw new ApiError(409, SERIE_WAEHLEN);
     const pfad = terminPfad(termin);
-    if (!serie || q.art === 'serie') {
+    // „Nur diese“ / „ab hier“ löscht nie: Ist aus der Serie inzwischen ein Einzeltermin geworden (nur einer blieb übrig),
+    // ist ein anderer Tag schon erledigt – und derselbe Tag ein Fall fürs neue Öffnen (dort mit Mail angesagt).
+    const stillAbsagen = q.art === 'diese' || q.art === 'ab';
+    if (stillAbsagen && !serie) {
+      if (nochInSerie(t, tag, q.zeitzone)) throw new ApiError(409, SERIE_GEAENDERT);
+    } else if (!stillAbsagen) {
       try {
         await ctAnfrage(pfad, { method: 'DELETE', verweigert: VERWEIGERT_TERMIN });
       } catch (e) {
@@ -515,7 +523,7 @@ export async function sitzungAbsagen(q: {
         else throw e;
       }
       if (noch) throw new NichtUebernommen('die Absage');
-    } else if (nochInSerie(t, tag)) {
+    } else if (nochInSerie(t, tag, q.zeitzone)) {
       if (q.art === 'ab' && ersterDerSerie(t, s.beginn, q.zeitzone))
         throw new ApiError(409, ERSTER_AB);
       try {
@@ -527,7 +535,8 @@ export async function sitzungAbsagen(q: {
       } catch (e) {
         if (abgelehnt(e)) throw e;
       }
-      if (nochInSerie(await terminLaden(termin), tag)) throw new NichtUebernommen('die Absage');
+      if (nochInSerie(await terminLaden(termin), tag, q.zeitzone))
+        throw new NichtUebernommen('die Absage');
     }
   }
 

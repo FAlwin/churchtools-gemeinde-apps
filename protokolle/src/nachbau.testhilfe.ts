@@ -16,7 +16,8 @@
  * Serien (K2b-2, gemessen 29.10.2026): wöchentlich (`repeatId` 7) bis `repeatUntil`, ohne `exceptions` – die Termine
  * stehen einzeln in der Liste und als `calculatedDates` am Termin. Teilen (`POST …/appointments/{id}` mit `splitDate`):
  * `splitUntilEnd: false` setzt die Ausnahme, `true` endet die Serie am Vortag (am ersten Termin: 422); der neue Termin
- * hat keine Einladungen – außer mit `meetingrequests`, dann mailt ChurchTools „geändert“ (irreführend, gemessen). Löschen einer Serie mailt „Terminserie gelöscht“. `teilenFehler` wie `terminFehler`.
+ * hat keine Einladungen – außer mit `meetingrequests`, dann mailt ChurchTools „geändert“ (irreführend, gemessen). Löschen einer Serie mailt „Terminserie gelöscht“. Bleibt nur ein Termin übrig, wird
+ * daraus ein Einzeltermin. `teilenFehler` wie `terminFehler`.
  */
 import { vi } from 'vitest';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
@@ -166,6 +167,15 @@ export function nachbauStarten(): Nachbau {
       }
       return liste;
     };
+    // Bleibt von einer Serie nur ein Termin, wird sie ein Einzeltermin (gemessen 29.10.2026, `repeatId` 0).
+    const normalisieren = (t: Nachbau['termine'][number]) => {
+      const v = vorkommen(t);
+      if (!t.repeatId || v.length !== 1) return;
+      t.repeatId = 0;
+      t.beginn = v[0].beginn;
+      if (v[0].ende) t.ende = v[0].ende;
+      t.felder = { ...t.felder, repeatUntil: null, repeatFrequency: null, exceptions: [] };
+    };
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
     const adresse = new URL(url);
     const pfad = adresse.pathname.replace(/^\/api/, '');
@@ -302,6 +312,8 @@ export function nachbauStarten(): Nachbau {
           felder: rest,
           repeatId: typeof repeatId === 'number' ? repeatId : 0,
         });
+        normalisieren(t);
+        normalisieren(s.termine[s.termine.length - 1]);
       }
       return f ? fehlerAntwort(f) : json(200, { data: { id } });
     }
@@ -328,6 +340,7 @@ export function nachbauStarten(): Nachbau {
       // Wie gemessen: Was im `PUT` fehlt, ist danach leer.
       t.felder = rest;
       delete t.felder.isInternal;
+      normalisieren(t);
       if (Array.isArray(meetingrequests)) {
         const soll = (meetingrequests as { inviteeId: number }[]).map((x) => x.inviteeId);
         for (const a of andere(t.anfragen.filter((x) => !soll.includes(x.person))))

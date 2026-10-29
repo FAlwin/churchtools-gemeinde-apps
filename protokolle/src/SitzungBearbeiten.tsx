@@ -359,15 +359,29 @@ export function SitzungBearbeiten({
         )}
         <div className={styles.passiert}>
           <span className={styles.titel}>Das passiert in ChurchTools</span>
-          {art === null && (
-            <div className={styles.punkt}>
-              <Icon name="calendar" size={18} />
-              <span>
-                <b>Der Termin wird gelöscht</b>
-                <small>Er verschwindet aus dem Kalender der Gruppe.</small>
-              </span>
-            </div>
-          )}
+          <div className={styles.punkt}>
+            <Icon name="calendar" size={18} />
+            <span>
+              <b>
+                {art === null
+                  ? 'Der Termin wird gelöscht'
+                  : art === 'diese'
+                    ? 'Der Termin fällt aus der Serie'
+                    : art === 'ab'
+                      ? 'Die Serie endet vor diesem Termin'
+                      : 'Die ganze Serie wird gelöscht'}
+              </b>
+              <small>
+                {art === null
+                  ? 'Er verschwindet aus dem Kalender der Gruppe.'
+                  : art === 'serie'
+                    ? 'Auch vergangene Termine verschwinden aus dem Kalender.'
+                    : art === 'ab'
+                      ? 'Die früheren Termine bleiben im Kalender.'
+                      : 'Die anderen Termine bleiben im Kalender.'}
+              </small>
+            </span>
+          </div>
           {art !== null && art !== 'diese' && (
             <div className={styles.punkt}>
               <Icon name="dokument" size={18} />

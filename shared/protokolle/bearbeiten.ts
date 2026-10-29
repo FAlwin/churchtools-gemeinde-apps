@@ -190,8 +190,15 @@ const daten = (x: unknown): { date: string }[] =>
       )
     : [];
 
-/** **Gehört der Tag noch zur Serie?** Vor dem Teilen geprüft – ein zweiter Versuch legte sonst einen zweiten Termin an. */
-export function nochInSerie(t: TerminRoh, tag: string): boolean {
+/**
+ * **Hat der Termin diesen Tag noch?** Vor dem Teilen und Absagen geprüft – ein zweiter Versuch legte sonst einen zweiten
+ * Termin an. Bleibt von einer Serie nur ein Termin übrig, macht ChurchTools daraus selbst einen **Einzeltermin**
+ * (`repeatId` 0, `repeatUntil` leer – gemessen 29.10.2026; beim Prüfen in der Test-Instanz gefunden: „Serie ab hier
+ * beenden“ galt deshalb als „nicht übernommen“). Dann zählt nur sein eigener Tag.
+ */
+export function nochInSerie(t: TerminRoh, tag: string, zeitzone: string): boolean {
+  if (typeof t.repeatId !== 'number' || t.repeatId === 0)
+    return typeof t.startDate === 'string' && serienTag(t.startDate, zeitzone) === tag;
   if (daten(t.exceptions).some((d) => d.date === tag)) return false;
   return typeof t.repeatUntil !== 'string' || t.repeatUntil.slice(0, 10) >= tag;
 }

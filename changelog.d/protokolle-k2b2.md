@@ -14,4 +14,7 @@
 - Geteilt wird ohne Einladungsliste und danach einzeln eingeladen – mit Liste mailt ChurchTools „Wöchentlicher Termin
   … bis <altes Ende> wurde geändert“, auch für einen einzelnen herausgelösten Termin.
 - Ein zweiter Versuch legt keinen zweiten Termin an: Gehört der Tag nicht mehr zur Serie, sagt das Fenster es.
+- Bleibt von einer Serie nur ein Termin übrig, macht ChurchTools daraus einen Einzeltermin. Die Erweiterung erkennt das
+  (beim Prüfen in der Test-Instanz gefunden: „Serie ab hier beenden“ galt sonst als „nicht übernommen“, und ein zweiter
+  Versuch hätte den übrigen Termin gelöscht). „Nur diese“ / „ab hier“ löschen nie.
 - `docs/betrieb/PROTOKOLLE.md` beschreibt jetzt „Sitzung bearbeiten“ (K2b-1 und K2b-2).

@@ -174,10 +174,18 @@ describe('Serien (K2b-2)', () => {
   });
 
   it('nochInSerie: Ausnahme oder Ende davor = schon geteilt', () => {
-    expect(nochInSerie(serie, '2027-07-14')).toBe(true);
-    expect(nochInSerie(serie, '2027-07-21')).toBe(false);
-    expect(nochInSerie({ ...serie, repeatUntil: '2027-07-13' }, '2027-07-14')).toBe(false);
-    expect(nochInSerie({ ...serie, repeatUntil: null }, '2027-09-01')).toBe(true);
+    expect(nochInSerie(serie, '2027-07-14', ZONE)).toBe(true);
+    expect(nochInSerie(serie, '2027-07-21', ZONE)).toBe(false);
+    expect(nochInSerie({ ...serie, repeatUntil: '2027-07-13' }, '2027-07-14', ZONE)).toBe(false);
+    expect(nochInSerie({ ...serie, repeatUntil: null }, '2027-09-01', ZONE)).toBe(true);
+  });
+
+  it('nochInSerie: zum Einzeltermin geworden (nur einer blieb übrig) – nur sein eigener Tag zählt', () => {
+    // Gefunden in der Test-Instanz 29.10.2026: „ab hier beenden“ ließ einen Termin übrig, ChurchTools machte die Serie
+    // zum Einzeltermin ohne `repeatUntil` – die Absage galt als „nicht übernommen“.
+    const einzeln = { ...serie, repeatId: 0, repeatUntil: null, exceptions: [] };
+    expect(nochInSerie(einzeln, '2027-07-14', ZONE)).toBe(false);
+    expect(nochInSerie(einzeln, '2027-07-07', ZONE)).toBe(true);
   });
 
   it('„nur diese“: Einzeltermin, Felder wie gelesen, ohne Einladungsliste', () => {

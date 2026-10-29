@@ -2,7 +2,7 @@
   position: fixed;
   left: 50%;
   // Über der Tab-Leiste schweben (Leiste ~56px + Safe-Area).
-  bottom: calc(72px + env(safe-area-inset-bottom));
+  bottom: calc(72px + var(--unten-strich));
   transform: translateX(-50%);
   z-index: 200;
   max-width: min(92vw, 420px);

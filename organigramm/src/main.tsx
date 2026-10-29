@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { verbindungEinrichten } from '@ui/ct/verbindung';
 import { folgeChurchToolsThema } from '@ui/design/thema';
+import { untenNachfuehren } from '@ui/fenster/appHeight';
 import { App } from './App';
 import './main.scss';
 
@@ -10,6 +11,9 @@ import './main.scss';
  * legt die App in den Bereich unter der ChurchTools-Leiste (`ui/design/_grundregeln.scss`).
  */
 document.documentElement.classList.add('ct-extension');
+// Platz für den Home-Strich messen (`--home-strich`): In der ChurchTools-App vom Home-Bildschirm meldet iOS ihn nicht
+// (29.10.2026) – sonst läge die Reiterleiste am Handy unter dem Strich.
+untenNachfuehren();
 // Hell oder dunkel wie ChurchTools – wie Anmeldungen und Dienstplaner.
 folgeChurchToolsThema();
 

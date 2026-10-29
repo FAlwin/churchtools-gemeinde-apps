@@ -22,7 +22,7 @@ export interface PlanenAnsicht {
 const SCHLUESSEL = 'dienstplaner.planen.ansicht';
 
 export const VORGABE_ANSICHT: PlanenAnsicht = {
-  breite: 'm',
+  breite: 'schmal',
   unteransicht: 'matrix',
   ausgeblendeteGruppen: [],
   ausgeblendeteArten: [],
@@ -35,7 +35,8 @@ export function leseAnsicht(): PlanenAnsicht {
     if (!roh || typeof roh !== 'object') return VORGABE_ANSICHT;
     const a = roh as Record<string, unknown>;
     return {
-      breite: a.breite === 's' || a.breite === 'l' ? a.breite : 'm',
+      // Bis 29.10.2026 S/M/L: S und M werden „schmal“, L wird „breit“.
+      breite: a.breite === 'breit' || a.breite === 'l' ? 'breit' : 'schmal',
       unteransicht: a.unteransicht === 'personen' ? 'personen' : 'matrix',
       ausgeblendeteGruppen: texte(a.ausgeblendeteGruppen),
       ausgeblendeteArten: texte(a.ausgeblendeteArten),

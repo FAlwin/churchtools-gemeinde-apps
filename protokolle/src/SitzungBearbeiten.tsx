@@ -14,7 +14,7 @@ import {
 import { planungFehler, schonBelegt, zeitraum, type Planung } from '@shared/protokolle/planen';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
 import { ladeGruppenMitglieder } from './mitglieder';
-import { ANMELDUNG, SERIE, sitzungAbsagen, sitzungAendern, terminLaden } from './bearbeiten';
+import { ANMELDUNG, SERIE, sitzungAbsagen, sitzungAendern, terminStand } from './bearbeiten';
 import { wannLang } from './anzeige';
 import { Einladeliste, Planungsfelder } from './Planungsfelder';
 import felder from './Fensterfelder.module.scss';
@@ -63,13 +63,15 @@ export function SitzungBearbeiten({
   onClose: () => void;
 }) {
   const termin = sitzung.termin;
+  // Mit Termin gilt, was ChurchTools jetzt hat (Zeit, Eingeladene) – nicht die Liste (`terminStand`).
+  const [stand, setStand] = useState<Laden<{ sperre: string | null; sitzung: Sitzung }>>(
+    termin ? { art: 'laedt' } : { art: 'fertig', wert: { sperre: null, sitzung } },
+  );
+  const aktuell = stand.art === 'fertig' ? stand.wert.sitzung : sitzung;
   const [p, setP] = useState<Planung>(() => planungVon(sitzung, zeitzone));
-  const vorher = useMemo(() => sitzung.anfragen.map((a) => a.person), [sitzung]);
+  const vorher = useMemo(() => aktuell.anfragen.map((a) => a.person), [aktuell]);
   const [eingeladen, setEingeladen] = useState<ReadonlySet<number>>(() => new Set(vorher));
   const [neuEinladen, setNeuEinladen] = useState(true);
-  const [sperre, setSperre] = useState<Laden<string | null>>(
-    termin ? { art: 'laedt' } : { art: 'fertig', wert: null },
-  );
   const [mitglieder, setMitglieder] = useState<Laden<Person[] | 'verborgen'>>(
     termin ? { art: 'laedt' } : { art: 'fertig', wert: [] },
   );
@@ -82,12 +84,27 @@ export function SitzungBearbeiten({
   useEffect(() => {
     if (!termin) return;
     let aktiv = true;
-    terminLaden(termin).then(
-      (t) => {
-        const s = terminSperre(t);
-        if (aktiv) setSperre({ art: 'fertig', wert: s === 'serie' ? SERIE : s ? ANMELDUNG : null });
+    terminStand(termin).then(
+      ({ roh, eingeladen: da }) => {
+        if (!aktiv) return;
+        const s = terminSperre(roh);
+        const frisch: Sitzung = {
+          ...sitzung,
+          ...(typeof roh.startDate === 'string' ? { beginn: roh.startDate } : {}),
+          ...(typeof roh.endDate === 'string' ? { ende: roh.endDate } : {}),
+          anfragen: da.map((person) => ({
+            person,
+            antwort: sitzung.anfragen.find((x) => x.person === person)?.antwort ?? 'offen',
+          })),
+        };
+        setStand({
+          art: 'fertig',
+          wert: { sperre: s === 'serie' ? SERIE : s ? ANMELDUNG : null, sitzung: frisch },
+        });
+        setP(planungVon(frisch, zeitzone));
+        setEingeladen(new Set(da));
       },
-      (e: unknown) => aktiv && setSperre({ art: 'fehler', fehler: fehlerMeldung(e) }),
+      (e: unknown) => aktiv && setStand({ art: 'fehler', fehler: fehlerMeldung(e) }),
     );
     ladeGruppenMitglieder(gruppe.id).then(
       (r) => aktiv && setMitglieder({ art: 'fertig', wert: r }),
@@ -96,7 +113,7 @@ export function SitzungBearbeiten({
     return () => {
       aktiv = false;
     };
-  }, [termin, gruppe.id]);
+  }, [termin, gruppe.id, sitzung, zeitzone]);
 
   const liste =
     mitglieder.art === 'fertig' && mitglieder.wert !== 'verborgen' ? mitglieder.wert : [];
@@ -111,9 +128,9 @@ export function SitzungBearbeiten({
   const a = z
     ? aenderungVon({
         alt: {
-          titel: sitzung.titel,
-          beginn: sitzung.beginn,
-          ...(sitzung.ende ? { ende: sitzung.ende } : {}),
+          titel: aktuell.titel,
+          beginn: aktuell.beginn,
+          ...(aktuell.ende ? { ende: aktuell.ende } : {}),
         },
         neu: { titel: p.titel, beginn: z.beginn, ende: z.ende },
         vorher,
@@ -137,14 +154,14 @@ export function SitzungBearbeiten({
     ? mailsVon(a, { nachher, neuEinladen: fragen && neuEinladen, ich: ich.person })
     : { geaendert: 0, eingeladen: 0, ausgeladen: 0 };
   const anzahlMails = mails.geaendert + mails.eingeladen + mails.ausgeladen;
-  const gesperrt = sperre.art === 'fertig' && sperre.wert !== null;
+  const gesperrt = stand.art === 'fertig' && stand.wert.sperre !== null;
   const bereit =
     !!a &&
     !istLeer(a) &&
     !zukunft &&
     !belegt &&
     !laeuft &&
-    sperre.art === 'fertig' &&
+    stand.art === 'fertig' &&
     !gesperrt &&
     mitglieder.art !== 'laedt';
 
@@ -156,7 +173,7 @@ export function SitzungBearbeiten({
       modul,
       kategorie,
       gruppe: gruppe.id,
-      sitzung,
+      sitzung: aktuell,
       neu: { titel: p.titel, beginn: z.beginn, ende: z.ende },
       nachher,
       neuEinladen: fragen && neuEinladen,
@@ -177,7 +194,7 @@ export function SitzungBearbeiten({
   const absagenJetzt = () => {
     setLaeuft(true);
     setFehler(null);
-    sitzungAbsagen({ modul, kategorie, gruppe: gruppe.id, sitzung }).then(
+    sitzungAbsagen({ modul, kategorie, gruppe: gruppe.id, sitzung: aktuell }).then(
       (r) => {
         setLaeuft(false);
         if (r.hinweise.length)
@@ -293,7 +310,7 @@ export function SitzungBearbeiten({
       onClose={onClose}
       beschaeftigt={laeuft}
       links={
-        termin && !gesperrt && sperre.art === 'fertig' ? (
+        termin && !gesperrt && stand.art === 'fertig' ? (
           <FensterKnopf art="loeschen" disabled={laeuft} onClick={() => setAbsagen(true)}>
             Sitzung absagen
           </FensterKnopf>
@@ -310,14 +327,16 @@ export function SitzungBearbeiten({
       }
     >
       <p className={felder.unter}>{gruppe.name}</p>
-      {sperre.art === 'laedt' && <p className={felder.leise}>Termin wird geladen …</p>}
-      {sperre.art === 'fehler' && (
+      {stand.art === 'laedt' && <p className={felder.leise}>Termin wird geladen …</p>}
+      {stand.art === 'fehler' && (
         <p className={felder.fehler} role="alert">
-          {sperre.fehler.text}
+          {stand.fehler.text}
         </p>
       )}
-      {gesperrt && <p className={felder.hinweis}>{sperre.wert}</p>}
-      {sperre.art === 'fertig' && !gesperrt && (
+      {stand.art === 'fertig' && stand.wert.sperre && (
+        <p className={felder.hinweis}>{stand.wert.sperre}</p>
+      )}
+      {stand.art === 'fertig' && !gesperrt && (
         <>
           <Planungsfelder p={p} onChange={setP} gesperrt={laeuft} mitDauer={!!termin} />
 

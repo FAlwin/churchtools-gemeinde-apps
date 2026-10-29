@@ -18,7 +18,7 @@ vi.mock('./bearbeiten', async (orig) => ({
   ...(await orig<typeof import('./bearbeiten')>()),
   sitzungAendern: vi.fn(),
   sitzungAbsagen: vi.fn(),
-  terminLaden: vi.fn(),
+  terminStand: vi.fn(),
 }));
 vi.mock('./mitglieder', () => ({ ladeGruppenMitglieder: vi.fn() }));
 vi.mock('./lesen', async (orig) => ({
@@ -75,7 +75,10 @@ const bereit = () => waitFor(() => expect(screen.getByLabelText('Titel')).toBeTr
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(B.terminLaden).mockResolvedValue({ repeatId: 0, signup: null });
+  vi.mocked(B.terminStand).mockResolvedValue({
+    roh: { repeatId: 0, signup: null, startDate: BEGINN, endDate: '2027-05-26T19:30:00Z' },
+    eingeladen: [1, 19],
+  });
   vi.mocked(M.ladeGruppenMitglieder).mockResolvedValue([
     { id: 1, name: 'Alwin Friesen', bild: null, initialen: 'AF' },
     { id: 19, name: 'Spike Musiker', bild: null, initialen: 'SM' },
@@ -163,8 +166,37 @@ describe('SitzungBearbeiten', () => {
     expect(aendern.mock.calls[0][0].nachher).toEqual([1, 7]);
   });
 
+  it('Zeit und Eingeladene aus dem Termin, nicht aus der Liste (dort fehlen sie nach 180 Tagen)', async () => {
+    // Beim Prüfen in der Test-Instanz 29.10.2026: Sitzung im Mai 2027 kam ohne Eingeladene und ohne Ende ins Fenster.
+    vi.mocked(B.terminStand).mockResolvedValue({
+      roh: { repeatId: 0, startDate: BEGINN, endDate: '2027-05-26T21:00:00Z' },
+      eingeladen: [1, 19],
+    });
+    zeige({ ...SITZUNG, anfragen: [], ende: undefined });
+    await waitFor(() =>
+      expect(screen.getByRole<HTMLInputElement>('checkbox', { name: /Spike/ }).checked).toBe(true),
+    );
+    expect(screen.getByLabelText<HTMLSelectElement>('Dauer').value).toBe('210');
+    fireEvent.change(screen.getByLabelText('Uhrzeit'), { target: { value: '19:00' } });
+    expect(screen.getByRole('checkbox', { name: /Alle neu einladen/ })).toBeTruthy();
+    fireEvent.click(speichern());
+    await waitFor(() => expect(aendern).toHaveBeenCalled());
+    expect(aendern.mock.calls[0][0].sitzung).toMatchObject({
+      ende: '2027-05-26T21:00:00Z',
+      anfragen: [
+        { person: 1, antwort: 'offen' },
+        { person: 19, antwort: 'offen' },
+      ],
+    });
+    expect(aendern.mock.calls[0][0].nachher).toEqual([1, 19]);
+  });
+
   it('Eingeladene, die keine Mitglieder sind, bleiben eingeladen', async () => {
-    zeige({ ...SITZUNG, anfragen: [...SITZUNG.anfragen, { person: 99, antwort: 'offen' }] });
+    vi.mocked(B.terminStand).mockResolvedValue({
+      roh: { repeatId: 0, startDate: BEGINN, endDate: '2027-05-26T19:30:00Z' },
+      eingeladen: [1, 19, 99],
+    });
+    zeige();
     await waitFor(() => expect(screen.getByText(/Außerdem eingeladen: 1 Person/)).toBeTruthy());
     fireEvent.change(screen.getByLabelText('Titel'), { target: { value: 'Klausur' } });
     fireEvent.click(speichern());
@@ -190,7 +222,7 @@ describe('SitzungBearbeiten', () => {
   });
 
   it('Serie: sagt es, keine Felder, kein Absagen', async () => {
-    vi.mocked(B.terminLaden).mockResolvedValue({ repeatId: 7 });
+    vi.mocked(B.terminStand).mockResolvedValue({ roh: { repeatId: 7 }, eingeladen: [1, 19] });
     zeige();
     expect(await screen.findByText(B.SERIE)).toBeTruthy();
     expect(screen.queryByLabelText('Titel')).toBeNull();
@@ -218,7 +250,10 @@ describe('SitzungBearbeiten', () => {
     expect(absagen).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Sitzung absagen' }));
     await waitFor(() => expect(onFertig).toHaveBeenCalled());
-    expect(absagen.mock.calls[0][0].sitzung).toBe(SITZUNG);
+    expect(absagen.mock.calls[0][0].sitzung).toMatchObject({
+      schluessel: 'p:s1',
+      anfragen: SITZUNG.anfragen,
+    });
   });
 
   it('absagen eines begonnenen Protokolls: es bleibt', async () => {
@@ -231,7 +266,7 @@ describe('SitzungBearbeiten', () => {
   it('Protokoll ohne Termin: kein Laden des Termins, keine Einladungen, kein Absagen', async () => {
     zeige({ ...SITZUNG, termin: null, anfragen: [] });
     await bereit();
-    expect(B.terminLaden).not.toHaveBeenCalled();
+    expect(B.terminStand).not.toHaveBeenCalled();
     expect(screen.queryByLabelText('Dauer')).toBeNull();
     expect(screen.queryByRole('list', { name: 'Einladen' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Sitzung absagen' })).toBeNull();

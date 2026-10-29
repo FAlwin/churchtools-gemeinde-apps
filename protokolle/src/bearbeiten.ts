@@ -42,12 +42,6 @@ export async function terminLaden(termin: { kalender: number; id: number }): Pro
   return d.appointment;
 }
 
-/** Serie oder Anmeldung → eine Meldung, die sagt, warum nicht (`ApiError` 409: kein „Erneut versuchen“-Fall). */
-function pruefeSperre(t: TerminRoh): void {
-  const sperre = terminSperre(t);
-  if (sperre) throw new ApiError(409, sperre === 'serie' ? SERIE : ANMELDUNG);
-}
-
 interface AnfrageRoh {
   id?: number;
   person?: { domainIdentifier?: string };
@@ -60,6 +54,25 @@ const anfragenLesen = async (t: { kalender: number; id: number }) =>
       `/calendars/${t.kalender}/appointments/${t.id}/meetingrequests`,
     )) ?? []
   ).map((a) => ({ id: a.id, person: Number(a.person?.domainIdentifier ?? a.inviteeId) }));
+
+/**
+ * **Der Termin, wie er jetzt ist** – mit Beginn, Ende und den Eingeladenen. Die Liste der Sitzungen taugt dafür nicht:
+ * Sie liest Termine nur 180 Tage voraus (`KOMMEND_TAGE`) und ist so alt wie das letzte Laden (beim Prüfen in der
+ * Test-Instanz 29.10.2026 gefunden: eine Sitzung im Mai 2027 kam ohne Eingeladene ins Fenster).
+ */
+export async function terminStand(termin: {
+  kalender: number;
+  id: number;
+}): Promise<{ roh: TerminRoh; eingeladen: number[] }> {
+  const [roh, anfragen] = await Promise.all([terminLaden(termin), anfragenLesen(termin)]);
+  return { roh, eingeladen: anfragen.map((a) => a.person) };
+}
+
+/** Serie oder Anmeldung → eine Meldung, die sagt, warum nicht (`ApiError` 409: kein „Erneut versuchen“-Fall). */
+function pruefeSperre(t: TerminRoh): void {
+  const sperre = terminSperre(t);
+  if (sperre) throw new ApiError(409, sperre === 'serie' ? SERIE : ANMELDUNG);
+}
 
 /** Den Kopf frisch lesen, ändern, nachlesen. `null` = es gibt ihn nicht (mehr). */
 async function kopfSchreiben(

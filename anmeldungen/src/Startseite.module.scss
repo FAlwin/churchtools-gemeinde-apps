@@ -299,33 +299,6 @@
     text-decoration: underline;
   }
 }
-
-.oeffnen {
-  flex: none;
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--blue-ink);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.neu {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: var(--knopf-hoehe);
-  padding: 0 14px;
-  border: none;
-  border-radius: var(--r-ctrl);
-  background: var(--blue);
-  color: #fff;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
 // „Erst einrichten“ (A6-2): Was zu tun ist, solange die Formular-Seite fehlt.
 .einrichten {
   padding: 0 16px 16px;

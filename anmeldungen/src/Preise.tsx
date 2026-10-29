@@ -1,3 +1,4 @@
+import { ZeilenKnopf } from '@ui/bedienung/ZeilenKnopf';
 import { useId, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
@@ -114,9 +115,9 @@ export function PreiseKarte({
         <div className={v.warnung} role="alert">
           <p>{ohneGeburtsdatumText(wozu)}</p>
           {darf && (
-            <button type="button" className={v.bearbeiten} onClick={onGeburtsdatum}>
+            <FensterKnopf art="zweit" onClick={onGeburtsdatum}>
               Geburtsdatum abfragen
-            </button>
+            </FensterKnopf>
           )}
         </div>
       )}
@@ -156,9 +157,9 @@ export function PreiseKarte({
       </ul>
       {darf && (
         <div className={v.kartenFuss}>
-          <button type="button" className={v.bearbeiten} onClick={() => onOeffnen({ art: 'neu' })}>
+          <FensterKnopf art="zweit" onClick={() => onOeffnen({ art: 'neu' })}>
             + Baustein hinzufügen
-          </button>
+          </FensterKnopf>
         </div>
       )}
     </section>
@@ -212,9 +213,9 @@ function MeldungenUndEntfernen({
       ))}
       <Fehler text={speicherFehler} />
       {onEntfernen && (
-        <button type="button" className={f.entfernen} disabled={arbeitet} onClick={onEntfernen}>
+        <FensterKnopf art="loeschen" disabled={arbeitet} onClick={onEntfernen}>
           Baustein entfernen
-        </button>
+        </FensterKnopf>
       )}
     </>
   );
@@ -455,14 +456,12 @@ function GrundpreisFenster(props: FensterProps) {
                       onChange={(e) => setOption(i, { name: e.target.value })}
                     />
                     {optionen.length > 1 && (
-                      <button
-                        type="button"
-                        className={f.klein}
-                        aria-label={`Option ${i + 1} entfernen`}
+                      <ZeilenKnopf
+                        label={`Option ${i + 1} entfernen`}
                         onClick={() => setOptionen(optionen.filter((_, j) => j !== i))}
                       >
                         <Icon name="x" size={16} />
-                      </button>
+                      </ZeilenKnopf>
                     )}
                   </div>
                   <div className={f.zeile}>
@@ -499,9 +498,8 @@ function GrundpreisFenster(props: FensterProps) {
                 </li>
               ))}
             </ul>
-            <button
-              type="button"
-              className={v.bearbeiten}
+            <FensterKnopf
+              art="zweit"
               onClick={() =>
                 setOptionen([
                   ...optionen,
@@ -510,7 +508,7 @@ function GrundpreisFenster(props: FensterProps) {
               }
             >
               + Option
-            </button>
+            </FensterKnopf>
           </div>
           <p className={f.hinweis}>
             „Wie oft buchbar“: z. B. 6 bei sechs Zweibettzimmern – jede Anmeldung mit dieser Option
@@ -631,14 +629,13 @@ function AlterFenster(props: FensterProps) {
           </li>
         ))}
       </ul>
-      <button
-        type="button"
-        className={v.bearbeiten}
+      <FensterKnopf
+        art="zweit"
         style={{ marginBottom: 14 }}
         onClick={() => setRegeln([...regeln, { von: '', bis: '', art: 'prozent', wert: '50' }])}
       >
         + Altersgruppe
-      </button>
+      </FensterKnopf>
       <MeldungenUndEntfernen
         {...sp}
         onEntfernen={
@@ -976,25 +973,19 @@ export function ProbeRechnen({
                   />
                   J.
                   {alter.length > 1 && (
-                    <button
-                      type="button"
-                      className={f.klein}
-                      aria-label={`Person ${i + 1} entfernen`}
+                    <ZeilenKnopf
+                      label={`Person ${i + 1} entfernen`}
                       onClick={() => setAlter(alter.filter((_, j) => j !== i))}
                     >
                       <Icon name="x" size={14} />
-                    </button>
+                    </ZeilenKnopf>
                   )}
                 </span>
               ))}
               {mehrere && (
-                <button
-                  type="button"
-                  className={v.bearbeiten}
-                  onClick={() => setAlter([...alter, '10'])}
-                >
+                <FensterKnopf art="zweit" onClick={() => setAlter([...alter, '10'])}>
                   + Person
-                </button>
+                </FensterKnopf>
               )}
             </div>
           ) : (
@@ -1002,21 +993,16 @@ export function ProbeRechnen({
               <span>{alter.length === 1 ? '1 Person' : `${alter.length} Personen`}</span>
               {mehrere && (
                 <>
-                  <button
-                    type="button"
-                    className={v.bearbeiten}
+                  <FensterKnopf
+                    art="zweit"
                     disabled={alter.length <= 1}
                     onClick={() => setAlter(alter.slice(0, -1))}
                   >
                     −
-                  </button>
-                  <button
-                    type="button"
-                    className={v.bearbeiten}
-                    onClick={() => setAlter([...alter, ''])}
-                  >
+                  </FensterKnopf>
+                  <FensterKnopf art="zweit" onClick={() => setAlter([...alter, ''])}>
                     +
-                  </button>
+                  </FensterKnopf>
                 </>
               )}
             </div>

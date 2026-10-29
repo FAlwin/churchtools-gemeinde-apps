@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import {
   absagePlan,
   bescheidMail,
@@ -55,7 +56,8 @@ export type MitgliederZustand =
   | { art: 'verboten' }
   | { art: 'fertig'; stand: GeladenerStand };
 
-type Filter = 'alle' | 'offen' | 'warte' | 'abgesagt';
+/** Was die Liste zeigt – auch das Ziel der Kennzahl-Kacheln oben auf der Seite (U1). */
+export type ListenFilter = 'alle' | 'offen' | 'warte' | 'abgesagt';
 
 /** `TT.MM.` */
 const kurz = (tag: string | null) => (tag ? `${tag.slice(8, 10)}.${tag.slice(5, 7)}.` : '');
@@ -331,13 +333,12 @@ function AnmeldungAnsehen({
                 onRueckgaengig={onRueckgaengig}
                 zusatz={
                   meldung.mail && (
-                    <button
-                      type="button"
-                      className={a.nachKnopf}
+                    <FensterKnopf
+                      art="zweit"
                       onClick={() => setModus({ art: 'mail', mail: meldung.mail! })}
                     >
                       Mail schreiben
-                    </button>
+                    </FensterKnopf>
                   )
                 }
               />
@@ -381,13 +382,12 @@ function AnmeldungAnsehen({
                 />
                 <div className={a.personAktionen}>
                   {darf && p.status === 'wartet' && (
-                    <button
-                      type="button"
-                      className={a.nachKnopf}
+                    <FensterKnopf
+                      art="hell"
                       onClick={() => setModus({ art: 'nach', personId: p.personId })}
                     >
                       Nachrücken lassen
-                    </button>
+                    </FensterKnopf>
                   )}
                   <a className={s.link} href={personLink(p.personId)}>
                     In ChurchTools
@@ -501,6 +501,7 @@ export function AnmeldungenReiter({
   onNeuLaden,
   onGespeichert,
   mitBestaetigung = false,
+  startFilter = 'alle',
 }: {
   id: number;
   /** Name der Veranstaltung – für die Mail an die Familie (A7-3). */
@@ -527,8 +528,10 @@ export function AnmeldungenReiter({
   onGespeichert: () => void;
   /** Bestätigungsmails eingerichtet (A9-1). */
   mitBestaetigung?: boolean;
+  /** Womit die Liste beginnt – die Kennzahl-Kacheln oben auf der Seite springen so in die passende Ansicht (U1). */
+  startFilter?: ListenFilter;
 }) {
-  const [filter, setFilter] = useState<Filter>('alle');
+  const [filter, setFilter] = useState<ListenFilter>(startFilter);
   const [suche, setSuche] = useState('');
   const [offen, setOffen] = useState<string | null>(null);
   // Die letzte Änderung im offenen Fenster – mit dem Fenster weg.
@@ -579,9 +582,9 @@ export function AnmeldungenReiter({
     return (
       <div className={v.warnung}>
         {zustand.text}{' '}
-        <button type="button" className={v.bearbeiten} onClick={onNeuLaden}>
+        <FensterKnopf art="zweit" onClick={onNeuLaden}>
           Nochmal
-        </button>
+        </FensterKnopf>
       </div>
     );
 
@@ -627,7 +630,7 @@ export function AnmeldungenReiter({
     onGespeichert();
   };
 
-  const filterKnopf = (f: Filter, text: string, n: number) => (
+  const filterKnopf = (f: ListenFilter, text: string, n: number) => (
     <button
       type="button"
       className={s.filterChip}
@@ -641,33 +644,7 @@ export function AnmeldungenReiter({
 
   return (
     <div className={a.reiter}>
-      <div className={a.zahlen}>
-        <div className={a.zahl}>
-          <span>Plätze</span>
-          <b>{maxPlaetze === null ? z.belegt : `${z.belegt} von ${maxPlaetze}`}</b>
-          <small>{anzahlText(z.anmeldungen, 'Anmeldung', 'Anmeldungen')}</small>
-        </div>
-        <div className={a.zahl}>
-          <span>Warteliste</span>
-          <b className={z.wartend ? v.pruefInfo : undefined}>{z.wartend}</b>
-          <small>
-            {frei === null
-              ? 'unbegrenzt'
-              : frei > 0
-                ? `${anzahlText(frei, 'Platz', 'Plätze')} frei`
-                : 'kein Platz frei'}
-          </small>
-        </div>
-        {z.kostet && (
-          <div className={a.zahl}>
-            <span>Zahlung offen</span>
-            <b>{euroText(z.offenCent)}</b>
-            <small>
-              {anzahlText(z.offen, 'Anmeldung', 'Anmeldungen')} · {euroText(z.eingegangenCent)} da
-            </small>
-          </div>
-        )}
-      </div>
+      {/* Plätze, Warteliste und Zahlung offen stehen seit U1 oben auf der Seite (Kennzahlen, `Einstieg.tsx`). */}
 
       {wartenTrotzPlatz(plaetze) && wartende[0] && (
         <p className={v.pruefHinweis}>
@@ -681,9 +658,8 @@ export function AnmeldungenReiter({
           {darf && (
             <>
               {' '}
-              <button
-                type="button"
-                className={a.nachKnopf}
+              <FensterKnopf
+                art="hell"
                 onClick={() =>
                   oeffnen(wartende[0].x.schluessel, {
                     art: 'nach',
@@ -692,7 +668,7 @@ export function AnmeldungenReiter({
                 }
               >
                 {wartende[0].p.vor} nachrücken lassen
-              </button>
+              </FensterKnopf>
             </>
           )}
         </p>
@@ -713,23 +689,17 @@ export function AnmeldungenReiter({
             onChange={(ev) => setSuche(ev.target.value)}
           />
           {liste.length > 0 && (
-            <button type="button" className={a.nachKnopf} onClick={() => setDruck(true)}>
+            <FensterKnopf art="zweit" onClick={() => setDruck(true)}>
               ⎙ Druckliste
-            </button>
+            </FensterKnopf>
           )}
           {darf && liste.length > 0 && (
-            <button type="button" className={a.nachKnopf} onClick={() => setRundmail(true)}>
+            <FensterKnopf art="zweit" onClick={() => setRundmail(true)}>
               ✉ Rundmail
-            </button>
+            </FensterKnopf>
           )}
           {darf && (
-            <button
-              type="button"
-              className={a.nachKnopf}
-              onClick={() => setVonHand({ dazu: null })}
-            >
-              ＋ Von Hand
-            </button>
+            <FensterKnopf onClick={() => setVonHand({ dazu: null })}>＋ Von Hand</FensterKnopf>
           )}
         </div>
 

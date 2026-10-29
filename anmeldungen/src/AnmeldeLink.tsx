@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { FensterKnopf, FensterLink } from '@ui/fenster/FensterKnopf';
 import { Icon } from '@ui/icons/icons';
 import { ZEITRAUM_ZU } from '@shared/anmeldung/vorbereiten';
 import { anmeldeBedingungen } from './einrichten';
@@ -81,10 +82,10 @@ export function AnmeldeLinkKarte({
             ))}
           </ul>
           {onEinrichten ? (
-            <button type="button" className={l.knopf} onClick={onEinrichten}>
+            <FensterKnopf onClick={onEinrichten}>
               <Icon name="zahnrad" size={14} />
               Jetzt einrichten
-            </button>
+            </FensterKnopf>
           ) : (
             <p>Einrichten kann die Leitung der Gruppe.</p>
           )}
@@ -146,28 +147,27 @@ function LinkZeile({
           onFocus={(e) => e.target.select()}
         />
         <div className={l.knoepfe}>
-          <button
-            type="button"
-            className={stand === 'kopiert' ? `${l.knopf} ${l.ok}` : l.knopf}
+          <FensterKnopf
+            art={stand === 'kopiert' ? 'hell' : 'zweit'}
             onClick={() => void kopieren()}
           >
             <Icon name={stand === 'kopiert' ? 'check' : 'link'} size={15} />
             {stand === 'kopiert' ? 'Kopiert' : 'Kopieren'}
-          </button>
-          <a className={l.knopf} href={link} target="_blank" rel="noopener noreferrer">
+          </FensterKnopf>
+          <FensterLink art="zweit" href={link} target="_blank" rel="noopener noreferrer">
             <Icon name="external" size={15} />
             Öffnen
-          </a>
+          </FensterLink>
           {teilenGeht && (
-            <button type="button" className={l.knopf} onClick={teilen}>
+            <FensterKnopf art="zweit" onClick={teilen}>
               <Icon name="share" size={15} />
               Teilen
-            </button>
+            </FensterKnopf>
           )}
-          <button type="button" className={l.knopf} onClick={() => setQr(true)}>
+          <FensterKnopf art="zweit" onClick={() => setQr(true)}>
             <Icon name="grid" size={15} />
             QR-Code
-          </button>
+          </FensterKnopf>
         </div>
       </div>
       {qr && <QrFenster daten={daten} onClose={() => setQr(false)} />}

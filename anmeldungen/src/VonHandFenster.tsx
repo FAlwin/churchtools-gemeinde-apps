@@ -330,7 +330,7 @@ export function VonHandFenster({
         if (x instanceof PasstNicht)
           throw new ApiError(
             422,
-            `Die Veranstaltung passt nicht zum Formular: ${x.was}. Bitte im Reiter „Formular“ prüfen.`,
+            `Die Veranstaltung passt nicht zum Formular: ${x.was}. Bitte unter „Vorbereiten“ das Formular prüfen.`,
           );
         throw x;
       }
@@ -371,9 +371,9 @@ export function VonHandFenster({
             value={suche}
             onChange={(ev) => setSuche(ev.target.value)}
           />
-          <button type="submit" className={f.knopf} disabled={arbeitet || suche.trim().length < 2}>
+          <FensterKnopf type="submit" disabled={arbeitet || suche.trim().length < 2}>
             {arbeitet ? 'Sucht …' : 'Suchen'}
-          </button>
+          </FensterKnopf>
         </form>
         {fehlerZeile}
         {treffer && (

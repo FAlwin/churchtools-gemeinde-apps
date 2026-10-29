@@ -47,26 +47,6 @@
   align-items: center;
   gap: 14px;
 }
-
-.freigeben {
-  height: var(--knopf-hoehe);
-  padding: 0 16px;
-  border: none;
-  border-radius: var(--r-ctrl);
-  background: var(--blue);
-  color: #fff;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.bearbeiten {
-  @include m.aktionKnopf;
-  padding: 5px 12px;
-  border-radius: 999px;
-  font-size: 13px;
-}
-
 .kv {
   display: grid;
   grid-template-columns: minmax(110px, max-content) 1fr;
@@ -335,19 +315,6 @@
   justify-content: flex-end;
   gap: 8px;
 }
-
-.endgueltig {
-  padding: 5px 12px;
-  border: 1px solid color-mix(in srgb, var(--red) 40%, transparent);
-  border-radius: 999px;
-  background: none;
-  color: var(--red);
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
 // Reiter Veranstaltung · Formular · Gestaltung (A5)
 .reiter {
   align-self: flex-start;

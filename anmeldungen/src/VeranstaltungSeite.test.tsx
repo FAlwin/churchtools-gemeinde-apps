@@ -20,7 +20,7 @@ import {
   mitglieder as mitgliederListe,
   stand as standListe,
 } from '@shared/anmeldung/liste.testdaten';
-import { VeranstaltungSeite } from './VeranstaltungSeite';
+import { VeranstaltungSeite, type Reiter } from './VeranstaltungSeite';
 import { NeueVeranstaltung } from './NeueVeranstaltung';
 import { fensterKnoepfe, knopfFolge } from '@ui/fenster/fenster.testutil';
 
@@ -152,10 +152,18 @@ function stelle(
   m.istGruppenAdmin.mockResolvedValue(false);
 }
 
-function zeigen(formularAdresse: string | null = 'https://anmeldung.beispiel.de/') {
+/**
+ * Die Karten stehen seit U1 im Bereich „Vorbereiten“ – die meisten Tests öffnen ihn darum ausdrücklich. `undefined`
+ * = wie ohne Angabe in der Adresse (je nach Stand).
+ */
+function zeigen(
+  formularAdresse: string | null = 'https://anmeldung.beispiel.de/',
+  reiter: Reiter | undefined = 'vorbereiten',
+) {
   render(
     <VeranstaltungSeite
       id={91}
+      reiter={reiter}
       zeitzone={ZONE}
       formularAdresse={formularAdresse}
       onZurueck={() => {}}
@@ -298,6 +306,7 @@ describe('Veranstaltung einrichten (A3, #486)', () => {
     render(
       <VeranstaltungSeite
         id={91}
+        reiter="vorbereiten"
         zeitzone={ZONE}
         formularAdresse="https://anmeldung.beispiel.de/"
         onZurueck={() => {}}
@@ -817,7 +826,13 @@ describe('Rückgängig nach dem Speichern (A4-Nachtrag)', () => {
     m.aendereEinstellungen.mockResolvedValue(neueEinstellungen('einfach'));
     const geaendert = vi.fn();
     render(
-      <VeranstaltungSeite id={91} zeitzone={ZONE} onZurueck={() => {}} onGeaendert={geaendert} />,
+      <VeranstaltungSeite
+        id={91}
+        reiter="vorbereiten"
+        zeitzone={ZONE}
+        onZurueck={() => {}}
+        onGeaendert={geaendert}
+      />,
     );
     const karte = await screen.findByRole('region', { name: 'Datenschutz' });
     fireEvent.click(within(karte).getByRole('button', { name: 'Bearbeiten' }));
@@ -897,14 +912,18 @@ describe('Nachprüfung (A6-5c, #623)', () => {
     expect(screen.queryByRole('region', { name: 'Nachprüfung' })).toBeNull();
   });
 
-  it('alles stimmt → klein unten, „Alles stimmt ✓“', async () => {
+  it('alles stimmt → klein unten bei den Anmeldungen (U1), „Alles stimmt ✓“; unter „Vorbereiten“ nicht', async () => {
     stelle(true, 1);
     mg.ladeMitglieder.mockResolvedValue(STAND);
     np.nachpruefungAus.mockReturnValue(PRUEF_OK);
-    zeigen();
+    zeigen(undefined, 'anmeldungen');
     expect(await screen.findByText('Alles stimmt ✓')).toBeTruthy();
     expect(screen.getByText('Alle 3 Beträge stimmen.')).toBeTruthy();
-    expect(karten().indexOf('Nachprüfung')).toBeGreaterThan(karten().indexOf('Anmeldung'));
+    expect(karten().indexOf('Nachprüfung')).toBeGreaterThan(karten().indexOf('Anmeldungen'));
+    cleanup();
+    zeigen();
+    await screen.findByRole('region', { name: 'Anmeldung' });
+    expect(screen.queryByRole('region', { name: 'Nachprüfung' })).toBeNull();
   });
 
   it('mit Hinweisen → oben unter dem Anmeldelink, mit Grund und Beträgen', async () => {
@@ -951,7 +970,7 @@ describe('Nachprüfung (A6-5c, #623)', () => {
     stelle(true, 1);
     np.nachpruefungAus.mockReturnValue(PRUEF_OK);
     mg.ladeMitglieder.mockRejectedValueOnce(new Error('502')).mockResolvedValueOnce(STAND);
-    zeigen();
+    zeigen(undefined, 'anmeldungen');
     expect(await screen.findByText(/Ließ sich gerade nicht prüfen/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Neu prüfen' }));
     expect(await screen.findByText('Alles stimmt ✓')).toBeTruthy();
@@ -1156,7 +1175,13 @@ describe('Löschen (A9-3a)', () => {
     m.anmeldungenZahl.mockResolvedValue(3);
     const geaendert = vi.fn();
     render(
-      <VeranstaltungSeite id={91} zeitzone={ZONE} onZurueck={() => {}} onGeaendert={geaendert} />,
+      <VeranstaltungSeite
+        id={91}
+        reiter="vorbereiten"
+        zeitzone={ZONE}
+        onZurueck={() => {}}
+        onGeaendert={geaendert}
+      />,
     );
     const k = await karte();
     await waitFor(() => expect(within(k).getByRole('button', { name: 'Bearbeiten' })).toBeTruthy());
@@ -1204,7 +1229,13 @@ describe('Löschen (A9-3a)', () => {
     stelle(true, 1, termin('2099-01-15'));
     const geaendert = vi.fn();
     render(
-      <VeranstaltungSeite id={91} zeitzone={ZONE} onZurueck={() => {}} onGeaendert={geaendert} />,
+      <VeranstaltungSeite
+        id={91}
+        reiter="vorbereiten"
+        zeitzone={ZONE}
+        onZurueck={() => {}}
+        onGeaendert={geaendert}
+      />,
     );
     const k = await karte();
     await waitFor(() => expect(within(k).getByRole('button', { name: 'Bearbeiten' })).toBeTruthy());
@@ -1275,5 +1306,92 @@ describe('Löschen (A9-3a)', () => {
     await waitFor(() => expect(m.aendereEinstellungen).toHaveBeenCalled());
     expect(screen.queryByText('Sofort löschen?')).toBeNull();
     expect(ab.ablaeufeEinrichten).not.toHaveBeenCalled();
+  });
+});
+
+describe('Seitengerüst (U1): zwei Bereiche, Einstieg je nach Stand', () => {
+  const seite = (reiter?: Reiter) => {
+    const onReiter = vi.fn();
+    render(
+      <VeranstaltungSeite
+        id={91}
+        reiter={reiter}
+        onReiter={onReiter}
+        zeitzone={ZONE}
+        formularAdresse="https://anmeldung.beispiel.de/"
+        onZurueck={() => {}}
+      />,
+    );
+    return onReiter;
+  };
+  const bereich = (name: string) =>
+    within(screen.getByRole('navigation', { name: 'Bereiche' })).getByRole('button', { name });
+
+  it('Entwurf ohne Angabe → „Vorbereiten“ mit der Schrittleiste; „Anmeldungen“ führt in die Liste', async () => {
+    stelle(true, 2);
+    const onReiter = seite();
+    expect(await screen.findByRole('region', { name: 'Termin' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Nächster Schritt' })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Kennzahlen' })).toBeNull();
+    expect(bereich('Vorbereiten').getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(bereich('Anmeldungen'));
+    expect(onReiter).toHaveBeenCalledWith('anmeldungen');
+  });
+
+  it('freigegeben ohne Angabe → „Anmeldungen“ mit den Kennzahlen, ohne Schrittleiste', async () => {
+    stelle(true, 1, eListe());
+    mg.ladeMitglieder.mockResolvedValue({
+      ...standListe(mitgliederListe('AAAAAA', [true, false], 10)),
+      verlaufGekuerzt: false,
+    });
+    np.nachpruefungAus.mockReturnValue(PRUEF_OK);
+    seite();
+    expect(await screen.findByRole('region', { name: 'Kennzahlen' })).toBeTruthy();
+    expect(bereich('Anmeldungen').getAttribute('aria-pressed')).toBe('true');
+    expect(screen.queryByRole('region', { name: 'Termin' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Nächster Schritt' })).toBeNull();
+  });
+
+  it('Kachel „Warteliste“ → Bereich „Anmeldungen“, die Liste beginnt mit der Warteliste', async () => {
+    stelle(true, 1, eListe());
+    mg.ladeMitglieder.mockResolvedValue({
+      ...standListe(mitgliederListe('AAAAAA', [true, false], 10)),
+      verlaufGekuerzt: false,
+    });
+    np.nachpruefungAus.mockReturnValue(PRUEF_OK);
+    const onReiter = seite('anmeldungen');
+    const kz = await screen.findByRole('region', { name: 'Kennzahlen' });
+    await waitFor(() => expect(within(kz).getByText('1 Anmeldung')).toBeTruthy());
+    const chip = () =>
+      within(screen.getByRole('region', { name: 'Anmeldungen' })).getByRole('button', {
+        name: /^Warteliste/,
+      });
+    expect(chip().getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(within(kz).getByText('Warteliste'));
+    expect(onReiter).toHaveBeenCalledWith('anmeldungen');
+    expect(chip().getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('Karte „Formular“ öffnet den Baukasten; „‹ Zurück“ und der Reiter „Vorbereiten“ führen zurück', async () => {
+    stelle(true, 2);
+    const onReiter = seite('vorbereiten');
+    const karte = await screen.findByRole('region', { name: 'Formular' });
+    fireEvent.click(within(karte).getByRole('button', { name: 'Bearbeiten' }));
+    expect(onReiter).toHaveBeenCalledWith('formular');
+    cleanup();
+    const zurueck = seite('formular');
+    fireEvent.click(await screen.findByRole('button', { name: 'Zurück' }));
+    expect(zurueck).toHaveBeenCalledWith('vorbereiten');
+    expect(bereich('Vorbereiten').getAttribute('aria-pressed')).toBe('true');
+    zurueck.mockClear();
+    fireEvent.click(bereich('Vorbereiten'));
+    expect(zurueck).toHaveBeenCalledWith('vorbereiten');
+  });
+
+  it('Schrittleiste: der Knopf des nächsten Schritts öffnet sein Fenster', async () => {
+    stelle(true, 2, { termin: null });
+    seite();
+    fireEvent.click(await screen.findByRole('button', { name: 'Termin wählen' }));
+    expect(await screen.findByRole('dialog', { name: 'Termin' })).toBeTruthy();
   });
 });

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { euroText } from '@shared/anmeldung/preis';
 import { tagPunkt } from '@shared/ct/datum';
 import type { Zahlung } from '@shared/anmeldung/liste';
@@ -121,9 +122,7 @@ export function AnmeldungZahlung({
                       onChange={(e) => setAm(e.target.value)}
                     />
                   </label>
-                  <button
-                    type="button"
-                    className={f.knopf}
+                  <FensterKnopf
                     disabled={arbeitet || !am || !art}
                     onClick={() =>
                       speichern(
@@ -137,7 +136,7 @@ export function AnmeldungZahlung({
                     }
                   >
                     {arbeitet ? 'Wird gespeichert …' : 'Als bezahlt markieren'}
-                  </button>
+                  </FensterKnopf>
                 </div>
                 {/* Eine eigene Zahlung (nachgerückt, dazu angemeldet) gilt nur für ihre Person (Durchklicken 22.10.2026). */}
                 <p className={a.leise}>
@@ -161,9 +160,7 @@ export function AnmeldungZahlung({
                   onChange={(e) => setBetragText(e.target.value)}
                 />
               </label>
-              <button
-                type="button"
-                className={f.knopf}
+              <FensterKnopf
                 disabled={arbeitet || neuerBetrag === null || neuerBetrag === zahlung.betragCent}
                 onClick={() =>
                   neuerBetrag !== null &&
@@ -185,7 +182,7 @@ export function AnmeldungZahlung({
                 }
               >
                 Speichern
-              </button>
+              </FensterKnopf>
             </div>
           ) : (
             <button type="button" className={a.linkKnopf} onClick={() => setBetragOffen(true)}>

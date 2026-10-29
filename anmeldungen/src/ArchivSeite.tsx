@@ -114,24 +114,19 @@ export function ArchivSeite({
                       </small>
                     </span>
                     <span className={v.archivKnoepfe}>
-                      <button
-                        type="button"
-                        className={v.bearbeiten}
-                        onClick={() => void wiederherstellen(x)}
-                      >
+                      <FensterKnopf art="zweit" onClick={() => void wiederherstellen(x)}>
                         Wiederherstellen
-                      </button>
+                      </FensterKnopf>
                       {admin && (
-                        <button
-                          type="button"
-                          className={v.endgueltig}
+                        <FensterKnopf
+                          art="loeschen"
                           onClick={() => {
                             setBestaetigung('');
                             setLoeschen(x);
                           }}
                         >
                           Endgültig löschen
-                        </button>
+                        </FensterKnopf>
                       )}
                     </span>
                   </div>

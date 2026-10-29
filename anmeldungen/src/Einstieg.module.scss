@@ -1,0 +1,143 @@
+// Einstieg einer Veranstaltung (U1, Entwurf ux-umbau-v1, Variante D) – Tokens aus ui/design, keine eigenen Farben.
+@use '@ui/design/mixins' as m;
+
+.karte {
+  @include m.card-list;
+}
+
+// Vor der Freigabe: die Schritte nebeneinander, am Handy untereinander.
+.schritte {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border-right: 1px solid var(--hair);
+
+    &:last-child {
+      border-right: none;
+    }
+  }
+
+  b {
+    display: block;
+    color: var(--text);
+    font-size: 13.5px;
+  }
+
+  small {
+    display: block;
+    color: var(--text2);
+    font-size: 12px;
+  }
+
+  @media (max-width: 700px) {
+    flex-direction: column;
+
+    li {
+      border-right: none;
+      border-bottom: 1px solid var(--hair);
+    }
+  }
+}
+
+.punkt {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface3);
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.fertig .punkt {
+  border-color: var(--green);
+  background: var(--green);
+  color: #fff;
+}
+
+.jetzt .punkt {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: #fff;
+}
+
+.naechst {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--hair);
+  background: var(--section);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+// Nach der Freigabe: Kennzahlen (vorher oben im Reiter „Anmeldungen“, A7-1).
+.kacheln {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.kachel {
+  @include m.card-list;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  font: inherit;
+  text-align: left;
+
+  span {
+    color: var(--text2);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  b {
+    color: var(--text);
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  small {
+    min-height: 1.4em;
+    color: var(--text2);
+    font-size: 12px;
+  }
+}
+
+button.kachel {
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--blue);
+  }
+}
+
+// Braucht Aufmerksamkeit – wie die Hinweise der Seite (blau), nicht orange (ChurchTools-Farben, kein eigenes Orange).
+.hervor {
+  border-color: var(--blue);
+  background: var(--blue-soft);
+
+  small {
+    color: var(--blue-ink);
+    font-weight: 600;
+  }
+}

@@ -1,3 +1,4 @@
+import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { useState } from 'react';
 import { Segment } from '@ui/bedienung/Segment';
 import { Icon } from '@ui/icons/icons';
@@ -123,9 +124,9 @@ function HinweisZeile({
         <small>{text.zeile}</small>
       </div>
       {h.art === 'freigabe' ? (
-        <button type="button" className={styles.oeffnen} onClick={() => onOeffnen(v.id)}>
+        <FensterKnopf art="zweit" onClick={() => onOeffnen(v.id)}>
           Ansehen
-        </button>
+        </FensterKnopf>
       ) : (
         // Nachrücken und Zahlungen gehen bis zur Anmeldungsliste (A7) in ChurchTools.
         <ZurGruppe id={v.id} name={v.name} />

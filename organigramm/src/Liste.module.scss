@@ -76,3 +76,30 @@ button.name {
   font-size: 13px;
   white-space: nowrap;
 }
+
+// Personen nach Rollen unter dem Namen (O7b-6) – eingerückt wie der Name, Rollen klein und grau wie im Diagramm.
+.leute {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 14px 8px 46px;
+  color: var(--text2);
+  font-size: 13px;
+}
+
+.rollenName {
+  margin-right: 6px;
+  color: var(--text3);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.rolle i,
+.hinweis {
+  font-style: italic;
+}
+
+.hinweis {
+  color: var(--text3);
+}

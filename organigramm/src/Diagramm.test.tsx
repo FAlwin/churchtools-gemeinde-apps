@@ -3,8 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { anfangsOffen, anordnen, sichtbarerBaum } from '@shared/organigramm/ansichten';
 import type { Knoten } from '@shared/organigramm/gruppen';
+import type { PersonenWahl } from '@shared/organigramm/personen';
 import { anfang, ganz } from './leinwand';
 import { Diagramm } from './Diagramm';
+import type { KastenInhalt } from './kastenPersonen';
+import { messung } from './messung';
 
 // jsdom hat keine Zeichenfläche zum Messen – geschätzt wie im Browser ohne Canvas.
 vi.mock('./textBreite', () => ({ textBreite: (t: string) => t.length * 8 }));
@@ -211,6 +214,34 @@ describe('Diagramm (O7b-3)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Vergrößern' }));
     rerender(<Diagramm art="mindmap" sicht={ab} onGruppe={onGruppe} onUmklappen={onUmklappen} />);
     expect(blick()).toBe(alsText(anfang(anordnen('mindmap', ab, breite), FLAECHE)));
+  });
+
+  it('eine andere Personen-Wahl fängt neu an (die Kästchen ändern ihre Größe); nachgeladene Mitglieder allein nicht (O7b-6)', () => {
+    const inhalt = (): KastenInhalt => ({
+      art: 'rollen',
+      gruppen: [{ rolle: 'Leiter', namen: ['Alwin Friesen', 'Bea Berg'], nurZahl: false }],
+    });
+    const { rerender, onGruppe, onUmklappen } = zeigen();
+    const mit = (wahl: PersonenWahl, i: () => KastenInhalt) => (
+      <Diagramm
+        art="oben"
+        sicht={sicht()}
+        onGruppe={onGruppe}
+        onUmklappen={onUmklappen}
+        personen={{ wahl, inhalt: i }}
+      />
+    );
+    rerender(mit('rollen', inhalt));
+    const m = messung({ name: 'Lato, sans-serif', stand: 0 }, inhalt);
+    expect(blick()).toBe(alsText(anfang(anordnen('oben', sicht(), m.breite, m.hoehe), FLAECHE)));
+    fireEvent.click(screen.getByRole('button', { name: 'Vergrößern' }));
+    const gezoomt = blick();
+    // Neue Mitglieder (ein neuer `inhalt`) messen die Kästchen neu, lassen den Blick aber stehen.
+    rerender(mit('rollen', () => inhalt()));
+    expect(blick()).toBe(gezoomt);
+    rerender(mit('alle', inhalt));
+    expect(blick()).not.toBe(gezoomt);
+    expect(blick()).toBe(alsText(anfang(anordnen('oben', sicht(), m.breite, m.hoehe), FLAECHE)));
   });
 
   it('mit der Tastatur zu einem Kästchen außerhalb des Blicks → dorthin geschoben', () => {

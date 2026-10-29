@@ -1303,6 +1303,63 @@ describe('O7b-3: Diagramme', () => {
   });
 });
 
+describe('O7b-6: Personen in Diagramm und Liste', () => {
+  const ansicht = (name: string) =>
+    within(screen.getByRole('group', { name: 'Ansicht' })).getByRole('button', { name });
+  const personen = (name: string) =>
+    within(screen.getByRole('group', { name: 'Personen' })).getByRole('button', { name });
+  const listenZeile = (name: string) =>
+    screen.getByRole('button', { name }).closest('li')?.textContent ?? '';
+
+  it('ohne Wahl „Aus“; „Rollen“ zeigt die Rollen wie ChurchTools, Leitung zuerst, die Standardrolle als Zahl – gemerkt', async () => {
+    localStorage.setItem('organigramm-ansicht', '"liste"');
+    render(<App />);
+    await screen.findByRole('button', { name: 'Technik aufklappen' });
+    expect(personen('Aus').getAttribute('aria-pressed')).toBe('true');
+    expect(listenZeile('Technik')).not.toContain('Alwin Friesen');
+    fireEvent.click(personen('Rollen'));
+    expect(localStorage.getItem('organigramm-personen')).toBe('"rollen"');
+    const technik = listenZeile('Technik');
+    const stellen = [
+      'Leiter Alwin Friesen',
+      'Co-Leiter Dora Dorn',
+      'Mitarbeiter 1 Mitarbeiter',
+    ].map((t) => technik.indexOf(t));
+    expect(stellen.every((i) => i >= 0)).toBe(true);
+    expect(stellen).toEqual([...stellen].sort((a, b) => a - b));
+    expect(technik).not.toContain('Carl Clau');
+  });
+
+  it('„Alle“ mit Namen; wo ChurchTools die Mitglieder nicht zeigt, steht es ehrlich da', async () => {
+    localStorage.setItem('organigramm-ansicht', '"liste"');
+    localStorage.setItem('organigramm-personen', '"alle"');
+    render(<App />);
+    await screen.findByRole('button', { name: 'Technik aufklappen' });
+    expect(personen('Alle').getAttribute('aria-pressed')).toBe('true');
+    expect(listenZeile('Technik')).toContain('Mitarbeiter Carl Clau');
+    expect(listenZeile('Café')).toContain('Mitglieder gerade nicht ladbar');
+    fireEvent.click(screen.getByRole('button', { name: 'Alle aufklappen' }));
+    expect(listenZeile('Stream')).toContain('Mitglieder nicht sichtbar');
+  });
+
+  it('im Diagramm: die Kästchen werden höher und zeigen die Rollen; in den Karten gibt es den Umschalter nicht', async () => {
+    render(<App />);
+    await screen.findByRole('region', { name: 'Gottesdienst' });
+    expect(screen.queryByRole('group', { name: 'Personen' })).toBeNull();
+    fireEvent.click(ansicht('Von oben'));
+    const kasten = () =>
+      within(screen.getByRole('group', { name: 'Organigramm' })).getByRole('button', {
+        name: 'Gottesdienst',
+      });
+    expect(kasten().querySelector('rect')?.getAttribute('height')).toBe('36');
+    fireEvent.click(personen('Rollen'));
+    expect(Number(kasten().querySelector('rect')?.getAttribute('height'))).toBeGreaterThan(36);
+    expect(kasten().textContent).toContain('LEITER');
+    expect(kasten().textContent).toContain('Alwin Friesen');
+    expect(kasten().textContent).toContain('1 Mitarbeiter');
+  });
+});
+
 describe('O7b-3: „Präsentieren“ im Seitenkopf', () => {
   it('steht rechts neben „Hallo …“, nicht in der Leiste – und nur im Reiter Organigramm', async () => {
     render(<App />);

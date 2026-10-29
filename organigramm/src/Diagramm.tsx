@@ -7,18 +7,15 @@ import {
   type KeyboardEvent,
   type PointerEvent,
 } from 'react';
-import {
-  anordnen,
-  HOEHE,
-  type AnordnungsArt,
-  type SichtKnoten,
-} from '@shared/organigramm/ansichten';
+import { anordnen, type AnordnungsArt, type SichtKnoten } from '@shared/organigramm/ansichten';
+import type { PersonenWahl } from '@shared/organigramm/personen';
 import { Icon } from '@ui/icons/icons';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { ZeilenKnopf } from '@ui/bedienung/ZeilenKnopf';
 import { anfang, ganz, verschieben, zoomen, type Blick, type Flaeche } from './leinwand';
 import { DiagrammBild } from './DiagrammBild';
 import { messung, useSchrift } from './messung';
+import type { KastenInhalt } from './kastenPersonen';
 import styles from './Diagramm.module.scss';
 
 interface Props {
@@ -30,6 +27,8 @@ interface Props {
   klickbar?: (id: number) => boolean;
   /** Füllt die Höhe des Elternteils, statt selbst eine zu wählen (Präsentation). */
   fuellen?: boolean;
+  /** Personen unter dem Namen (O7b-6) – ohne Angabe nur der Name. */
+  personen?: { wahl: PersonenWahl; inhalt: (id: number) => KastenInhalt | null };
 }
 
 /** Erst ab so viel Bewegung ist es Ziehen statt Klicken. */
@@ -42,15 +41,27 @@ const ZIEHEN_AB = 4;
  * Beim Wechsel von Ansicht oder Spitze fängt der Blick neu an (lesbar groß, `leinwand.ts`); Auf- und Zuklappen lässt
  * ihn, wo er ist.
  */
-export function Diagramm({ art, sicht, onUmklappen, onGruppe, klickbar, fuellen }: Props) {
+export function Diagramm({
+  art,
+  sicht,
+  onUmklappen,
+  onGruppe,
+  klickbar,
+  fuellen,
+  personen,
+}: Props) {
   const svg = useRef<SVGSVGElement>(null);
   const knoepfe = useRef<HTMLDivElement>(null);
   const schrift = useSchrift(svg);
   const [blick, setBlick] = useState<Blick>({ s: 1, x: 0, y: 0 });
   const [zieht, setZieht] = useState(false);
 
-  const { breite, kuerzen } = useMemo(() => messung(schrift), [schrift]);
-  const anordnung = useMemo(() => anordnen(art, sicht, breite), [art, sicht, breite]);
+  const inhalt = personen?.inhalt;
+  const { breite, hoehe, kasten, kuerzen } = useMemo(
+    () => messung(schrift, inhalt),
+    [schrift, inhalt],
+  );
+  const anordnung = useMemo(() => anordnen(art, sicht, breite, hoehe), [art, sicht, breite, hoehe]);
 
   const flaeche = (): Flaeche => {
     const r = svg.current?.getBoundingClientRect();
@@ -61,8 +72,9 @@ export function Diagramm({ art, sicht, onUmklappen, onGruppe, klickbar, fuellen 
     return { breite: r?.width ?? 0, hoehe: r?.height ?? 0, unten };
   };
 
-  // Neue Ansicht oder neue Spitze → der Blick fängt neu an; Auf- und Zuklappen lässt ihn stehen.
-  const wofuer = `${art}|${sicht.schluessel}`;
+  // Neue Ansicht, neue Spitze oder andere Personen-Wahl (die Kästchen werden viel größer oder kleiner) → der Blick
+  // fängt neu an; Auf- und Zuklappen lässt ihn stehen.
+  const wofuer = `${art}|${sicht.schluessel}|${personen?.wahl ?? 'aus'}`;
   const [eingepasst, setEingepasst] = useState<string | null>(null);
   useLayoutEffect(() => {
     if (eingepasst === wofuer) return;
@@ -149,16 +161,16 @@ export function Diagramm({ art, sicht, onUmklappen, onGruppe, klickbar, fuellen 
   };
 
   // Mit der Tastatur zu einem Kästchen außerhalb des Blicks → dorthin schieben.
-  const sichtbarMachen = (x: number, y: number, w: number) => {
+  const sichtbarMachen = (x: number, y: number, w: number, h: number) => {
     const f = flaeche();
     if (!f.breite) return;
     setBlick((b) => {
       const links = x * b.s + b.x;
       const oben = y * b.s + b.y;
       const drin =
-        links >= 0 && oben >= 0 && links + w * b.s <= f.breite && oben + HOEHE * b.s <= f.hoehe;
+        links >= 0 && oben >= 0 && links + w * b.s <= f.breite && oben + h * b.s <= f.hoehe;
       if (drin) return b;
-      return { ...b, x: f.breite / 2 - (x + w / 2) * b.s, y: f.hoehe / 2 - (y + HOEHE / 2) * b.s };
+      return { ...b, x: f.breite / 2 - (x + w / 2) * b.s, y: f.hoehe / 2 - (y + h / 2) * b.s };
     });
   };
   const taste = (e: KeyboardEvent, tun: () => void) => {
@@ -183,7 +195,8 @@ export function Diagramm({ art, sicht, onUmklappen, onGruppe, klickbar, fuellen 
           <DiagrammBild
             anordnung={anordnung}
             kuerzen={kuerzen}
-            knoten={({ knoten: k, x, y, breite: w }) =>
+            zeilen={(k) => kasten(k).zeilen}
+            knoten={({ knoten: k, x, y, breite: w, hoehe: h }) =>
               k.id !== null && klickbar && !klickbar(k.id)
                 ? null
                 : {
@@ -194,7 +207,7 @@ export function Diagramm({ art, sicht, onUmklappen, onGruppe, klickbar, fuellen 
                       if (!bewegt.current && k.id !== null) onGruppe(k.id);
                     },
                     onKeyDown: (e) => taste(e, () => k.id !== null && onGruppe(k.id)),
-                    onFocus: () => sichtbarMachen(x, y, w),
+                    onFocus: () => sichtbarMachen(x, y, w, h),
                   }
             }
             schalter={({ knoten: k }) => ({

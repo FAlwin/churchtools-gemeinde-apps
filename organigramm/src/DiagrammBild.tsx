@@ -8,7 +8,7 @@ import {
   type LageKnoten,
   type SichtKnoten,
 } from '@shared/organigramm/ansichten';
-import { fett } from './messung';
+import { fett, ZEILEN_EINZUG, type KastenZeile } from './messung';
 import styles from './Diagramm.module.scss';
 
 type GruppenEigenschaften = SVGProps<SVGGElement>;
@@ -16,6 +16,8 @@ type GruppenEigenschaften = SVGProps<SVGGElement>;
 interface Props {
   anordnung: Anordnung;
   kuerzen: (k: SichtKnoten, breite: number) => string;
+  /** Was unter dem Namen steht (O7b-6) – ohne Angabe nur der Name. */
+  zeilen?: (k: SichtKnoten) => KastenZeile[];
   /**
    * Was ein Kästchen einer Gruppe zum Klicken braucht (Bildschirm); `null` = dieses Kästchen nicht (Präsentation: nur die
    * Bereiche). Fehlt es, ist das Bild nur zum Ansehen (PDF).
@@ -25,12 +27,19 @@ interface Props {
   schalter?: (lage: LageKnoten) => GruppenEigenschaften;
 }
 
+const ZEILEN_STIL: Record<KastenZeile['art'], string> = {
+  rolle: styles.rolle,
+  person: styles.person,
+  zahl: styles.zahl,
+  hinweis: styles.hinweis,
+};
+
 /**
  * **Das Bild eines Diagramms** (O7b): Linien, Kästchen und – am Bildschirm – die runden +/−. Gemeinsam für das Diagramm
  * im Reiter (O7b-3) und die PDF (O7b-4), damit Papier und Bildschirm gleich aussehen. Die Gemeinde selbst ist keine
  * Gruppe und öffnet nichts.
  */
-export function DiagrammBild({ anordnung, kuerzen, knoten, schalter }: Props) {
+export function DiagrammBild({ anordnung, kuerzen, zeilen, knoten, schalter }: Props) {
   return (
     <>
       {anordnung.kanten.map((k, i) => (
@@ -49,9 +58,10 @@ export function DiagrammBild({ anordnung, kuerzen, knoten, schalter }: Props) {
           ) : null;
         })}
       {anordnung.knoten.map((lage) => {
-        const { knoten: k, x, y, breite } = lage;
+        const { knoten: k, x, y, breite, hoehe } = lage;
         const stil = k.ebene === 0 ? styles.spitze : fett(k) ? styles.fett : '';
         const klick = k.id === null || !knoten ? null : knoten(lage);
+        const darunter = zeilen?.(k) ?? [];
         return (
           <g
             key={k.schluessel}
@@ -59,10 +69,24 @@ export function DiagrammBild({ anordnung, kuerzen, knoten, schalter }: Props) {
             {...klick}
           >
             <title>{k.name}</title>
-            <rect x={x} y={y} width={breite} height={HOEHE} rx={6} />
+            <rect x={x} y={y} width={breite} height={hoehe} rx={6} />
             <text x={x + breite / 2} y={y + HOEHE / 2}>
               {kuerzen(k, breite)}
             </text>
+            {darunter.length > 0 && (
+              <line
+                className={styles.trenn}
+                x1={x + 8}
+                x2={x + breite - 8}
+                y1={y + HOEHE}
+                y2={y + HOEHE}
+              />
+            )}
+            {darunter.map((z, i) => (
+              <text key={i} className={ZEILEN_STIL[z.art]} x={x + ZEILEN_EINZUG} y={y + z.y}>
+                {z.text}
+              </text>
+            ))}
           </g>
         );
       })}

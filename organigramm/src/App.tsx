@@ -20,6 +20,7 @@ import {
 import { hatBereich, personenImBereich, sichtbereich } from '@shared/organigramm/sichtbereich';
 import { hinweiseAus } from '@shared/organigramm/hinweise';
 import type { Mitglied } from '@shared/organigramm/mitglieder';
+import type { PersonenWahl } from '@shared/organigramm/personen';
 import { ladeStart, type Start } from './start';
 import {
   fehlendeNachladen,
@@ -42,8 +43,10 @@ import { PdfFenster } from './PdfFenster';
 import {
   leseAnsicht,
   leseAusgeblendet,
+  lesePersonen,
   merkeAnsicht,
   merkeAusgeblendet,
+  merkePersonen,
   type BaumAnsicht,
 } from './auswahl';
 
@@ -92,6 +95,8 @@ export function App() {
   // Ansichten des Baums (O7b): gewählt und im Gerät gemerkt – ohne Wahl am Handy die Liste, sonst von oben (Alwin,
   // 26.10.2026).
   const [gewaehlt, setGewaehlt] = useState(leseAnsicht);
+  // Personen in Diagramm und Liste (O7b-6): ohne Wahl „Aus“, je Gerät gemerkt.
+  const [personenWahl, setPersonenWahl] = useState(lesePersonen);
   const baumAnsicht: BaumAnsicht = gewaehlt ?? (handy ? 'liste' : 'oben');
   const [spitze, setSpitze] = useState<string | null>(null);
   // `null`, solange niemand etwas auf- oder zugeklappt hat: dann gilt der Anfang (Gemeinde und Bereiche offen) – auch
@@ -223,6 +228,10 @@ export function App() {
   const ansichtWaehlen = (a: BaumAnsicht) => {
     merkeAnsicht(a);
     setGewaehlt(a);
+  };
+  const personenWaehlen = (w: PersonenWahl) => {
+    merkePersonen(w);
+    setPersonenWahl(w);
   };
   const admin = !!start?.rechte.gruppenVerwalten;
   const reiter = admin ? REITER_ADMIN : REITER;
@@ -388,6 +397,8 @@ export function App() {
           baum={sichtBaum}
           ansicht={baumAnsicht}
           onAnsicht={ansichtWaehlen}
+          personen={personenWahl}
+          onPersonen={personenWaehlen}
           spitze={spitze}
           onSpitze={spitzeSetzen}
           sicht={sicht}

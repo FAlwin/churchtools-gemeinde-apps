@@ -7,13 +7,14 @@
  *   der Gemeinde stehen die Bereiche (die obersten Gruppen) in der Reihenfolge, die der Aufrufer liefert.
  * - **Schlüssel ist der Pfad** der Gruppen-IDs von oben (`10/7/12`): Eine Gruppe mit zwei Obergruppen steht wie im Baum
  *   unter beiden, und jede Stelle klappt für sich auf und zu. Die Gemeinde hat den Schlüssel `GEMEINDE`.
- * - **Im Kästchen nur der Name.** Wie breit er ist, misst der Aufrufer (`breite`) – so bleibt die Rechnung ohne Browser
- *   prüfbar.
+ * - **Im Kästchen der Name, darunter auf Wunsch die Personen** (O7b-6). Wie breit und hoch ein Kästchen wird, misst der
+ *   Aufrufer (`breite`, `hoehe`) – so bleibt die Rechnung ohne Browser prüfbar. Die Linien treffen immer die Zeile mit
+ *   dem Namen (`HOEHE`), auch bei hohen Kästchen.
  */
 import type { Knoten } from './gruppen';
 
 export const GEMEINDE = 'gemeinde';
-/** Höhe eines Kästchens. */
+/** Höhe eines Kästchens mit nur dem Namen – und der Zeile mit dem Namen in einem höheren (O7b-6). */
 export const HOEHE = 36;
 /** Halbmesser des runden +/− am Kästchen. */
 export const SCHALTER = 9;
@@ -171,6 +172,8 @@ export interface LageKnoten {
   x: number;
   y: number;
   breite: number;
+  /** Mindestens `HOEHE`; höher, wenn unter dem Namen Personen stehen (O7b-6). */
+  hoehe: number;
   /** Mitte des +/−, wenn die Gruppe Untergruppen hat (auch zugeklappt). */
   schalter: Punkt | null;
 }
@@ -195,6 +198,9 @@ export interface Anordnung {
 
 export type AnordnungsArt = 'oben' | 'links' | 'mindmap';
 export type Breite = (k: SichtKnoten) => number;
+export type Hoehe = (k: SichtKnoten) => number;
+/** Ohne Personen sind alle Kästchen gleich hoch. */
+const NUR_NAME: Hoehe = () => HOEHE;
 
 const blaetter = (k: SichtKnoten): number =>
   k.kinder.length ? k.kinder.reduce((a, c) => a + blaetter(c), 0) : 1;
@@ -213,11 +219,12 @@ const MINDMAP_ABSTAND = 70;
  * **Von oben:** die Spitze oben, die Ebene darunter nebeneinander, alles Weitere darunter gestapelt und eingerückt –
  * wie ein klassisches Organigramm, das dadurch schmal genug für Beamer und Papier bleibt.
  */
-function vonOben(spitze: SichtKnoten, breite: Breite): Omit<Anordnung, 'rahmen'> {
+function vonOben(spitze: SichtKnoten, breite: Breite, hoehe: Hoehe): Omit<Anordnung, 'rahmen'> {
   const knoten: LageKnoten[] = [];
   const kanten: Kante[] = [];
   const stapel = (k: SichtKnoten, x: number, y: number, trocken: boolean) => {
     const w = breite(k);
+    const h = hoehe(k);
     const linie = x + STAPEL_LINIE;
     if (!trocken)
       knoten.push({
@@ -225,9 +232,10 @@ function vonOben(spitze: SichtKnoten, breite: Breite): Omit<Anordnung, 'rahmen'>
         x,
         y,
         breite: w,
-        schalter: k.kinderZahl ? { x: linie, y: y + HOEHE } : null,
+        hoehe: h,
+        schalter: k.kinderZahl ? { x: linie, y: y + h } : null,
       });
-    let cy = y + HOEHE + 16;
+    let cy = y + h + 16;
     let rechts = x + w;
     for (const c of k.kinder) {
       const r = stapel(c, x + STAPEL_EINZUG, cy, trocken);
@@ -235,7 +243,7 @@ function vonOben(spitze: SichtKnoten, breite: Breite): Omit<Anordnung, 'rahmen'>
       if (!trocken)
         kanten.push({
           punkte: [
-            { x: linie, y: y + HOEHE + SCHALTER },
+            { x: linie, y: y + h + SCHALTER },
             { x: linie, y: mitte },
             { x: x + STAPEL_EINZUG, y: mitte },
           ],
@@ -244,33 +252,35 @@ function vonOben(spitze: SichtKnoten, breite: Breite): Omit<Anordnung, 'rahmen'>
       cy = r.unten + STAPEL_ABSTAND;
       rechts = Math.max(rechts, r.rechts);
     }
-    return { unten: k.kinder.length ? cy - STAPEL_ABSTAND : y + HOEHE, rechts };
+    return { unten: k.kinder.length ? cy - STAPEL_ABSTAND : y + h, rechts };
   };
   const w0 = breite(spitze);
+  const h0 = hoehe(spitze);
   if (!spitze.kinder.length) {
     stapel(spitze, 0, 0, false);
     // Allein: ohne Untergruppen, der Schalter sitzt unten in der Mitte wie bei jeder Spitze.
-    knoten[0].schalter = spitze.kinderZahl ? { x: w0 / 2, y: HOEHE } : null;
+    knoten[0].schalter = spitze.kinderZahl ? { x: w0 / 2, y: h0 } : null;
     return { knoten, kanten, anker: { x: w0 / 2, y: 0, fx: 0.5, fy: 0 } };
   }
   const spalten = spitze.kinder.map((c) => stapel(c, 0, 0, true).rechts);
   const gesamt = spalten.reduce((a, b) => a + b, 0) + SPALTEN_LUECKE * (spalten.length - 1);
   const mitte = gesamt / 2;
-  const unten = HOEHE + 56;
-  const bus = HOEHE + BUS;
+  const unten = h0 + 56;
+  const bus = h0 + BUS;
   knoten.push({
     knoten: spitze,
     x: mitte - w0 / 2,
     y: 0,
     breite: w0,
-    schalter: { x: mitte, y: HOEHE },
+    hoehe: h0,
+    schalter: { x: mitte, y: h0 },
   });
   let x = 0;
   spitze.kinder.forEach((c, i) => {
     const m = x + breite(c) / 2;
     kanten.push({
       punkte: [
-        { x: mitte, y: HOEHE + SCHALTER },
+        { x: mitte, y: h0 + SCHALTER },
         { x: mitte, y: bus },
         { x: m, y: bus },
         { x: m, y: unten },
@@ -285,7 +295,8 @@ function vonOben(spitze: SichtKnoten, breite: Breite): Omit<Anordnung, 'rahmen'>
 
 /**
  * Ein Baum zur Seite (`richtung` 1 = nach rechts, −1 = nach links), senkrecht um 0 gemittelt: jede Ebene eine Spalte
- * ab `x0`, jedes Blatt eine Zeile, die Obergruppe mittig vor ihren Untergruppen. Liefert die obersten Kästchen.
+ * ab `x0`, jedes Blatt eine Zeile, die Obergruppe mittig vor ihren Untergruppen. Hohe Kästchen (O7b-6) schieben alles
+ * darunter weiter: Eine Zeile beginnt erst unter dem tiefsten Kästchen davor. Liefert die obersten Kästchen.
  */
 function zurSeite(
   wurzeln: readonly SichtKnoten[],
@@ -293,6 +304,7 @@ function zurSeite(
   x0: number,
   rund: boolean,
   breite: Breite,
+  hoehe: Hoehe,
   knoten: LageKnoten[],
   kanten: Kante[],
 ): LageKnoten[] {
@@ -304,11 +316,14 @@ function zurSeite(
   wurzeln.forEach((k) => messen(k, 0));
   const xs = [0];
   for (let d = 1; d < spalten.length; d++) xs[d] = xs[d - 1] + spalten[d - 1] + EBENEN_LUECKE;
-  const zeilen = wurzeln.reduce((a, k) => a + blaetter(k), 0);
-  const dy = -((zeilen - 1) * ZEILE) / 2;
-  let z = 0;
+  // Erst ab 0 nach unten setzen, am Ende um 0 mitteln – dazu sammeln, bevor es zu den anderen Kästchen kommt.
+  const eigene: LageKnoten[] = [];
+  const linien: Kante[] = [];
+  const luecke = ZEILE - HOEHE;
+  let frei = 0;
   const setzen = (k: SichtKnoten, d: number): LageKnoten => {
     const w = breite(k);
+    const h = hoehe(k);
     const x = richtung > 0 ? x0 + xs[d] : x0 - xs[d] - w;
     const aussen = richtung > 0 ? x + w : x;
     let mitte: number;
@@ -319,7 +334,7 @@ function zurSeite(
       for (const c of cs) {
         const innen = richtung > 0 ? c.x : c.x + c.breite;
         const cm = c.y + HOEHE / 2;
-        kanten.push(
+        linien.push(
           rund
             ? {
                 punkte: [
@@ -339,28 +354,37 @@ function zurSeite(
               },
         );
       }
-    } else {
-      mitte = z * ZEILE + dy;
-      z++;
-    }
+    } else mitte = frei + HOEHE / 2;
+    const y = mitte - HOEHE / 2;
+    frei = Math.max(frei, y + h + luecke);
     const lage: LageKnoten = {
       knoten: k,
       x,
-      y: mitte - HOEHE / 2,
+      y,
       breite: w,
+      hoehe: h,
       schalter: k.kinderZahl ? { x: aussen, y: mitte } : null,
     };
-    knoten.push(lage);
+    eigene.push(lage);
     return lage;
   };
-  return wurzeln.map((k) => setzen(k, 0));
+  const oben = wurzeln.map((k) => setzen(k, 0));
+  const dy = -(frei - luecke) / 2;
+  const runter = (p: Punkt) => ({ x: p.x, y: p.y + dy });
+  for (const l of eigene) {
+    l.y += dy;
+    if (l.schalter) l.schalter = runter(l.schalter);
+    knoten.push(l);
+  }
+  for (const l of linien) kanten.push({ ...l, punkte: l.punkte.map(runter) });
+  return oben;
 }
 
 /** **Von links:** die Spitze links, jede Ebene eine Spalte weiter rechts. */
-function vonLinks(spitze: SichtKnoten, breite: Breite): Omit<Anordnung, 'rahmen'> {
+function vonLinks(spitze: SichtKnoten, breite: Breite, hoehe: Hoehe): Omit<Anordnung, 'rahmen'> {
   const knoten: LageKnoten[] = [];
   const kanten: Kante[] = [];
-  const [oben] = zurSeite([spitze], 1, 0, false, breite, knoten, kanten);
+  const [oben] = zurSeite([spitze], 1, 0, false, breite, hoehe, knoten, kanten);
   // Die Spitze steht mittig vor ihren Untergruppen – nicht unbedingt auf 0 (die Zeilen sind um 0 gemittelt).
   return { knoten, kanten, anker: { x: 0, y: oben.y + HOEHE / 2, fx: 0, fy: 0.5 } };
 }
@@ -369,14 +393,21 @@ function vonLinks(spitze: SichtKnoten, breite: Breite): Omit<Anordnung, 'rahmen'
  * **Mindmap:** die Spitze in der Mitte, die Ebene darunter halb nach rechts, halb nach links – geteilt nach Zeilen, damit
  * beide Seiten etwa gleich hoch werden (rechts zuerst, in der gelieferten Reihenfolge).
  */
-function mindmap(spitze: SichtKnoten, breite: Breite): Omit<Anordnung, 'rahmen'> {
+function mindmap(spitze: SichtKnoten, breite: Breite, hoehe: Hoehe): Omit<Anordnung, 'rahmen'> {
   const knoten: LageKnoten[] = [];
   const kanten: Kante[] = [];
   const w0 = breite(spitze);
   // Die offene Mitte hat keinen Schalter (Zuklappen ließe nur ein Kästchen übrig); eine zugeklappte schon, sonst
   // ginge sie nie wieder auf.
   const schalter = !spitze.offen && spitze.kinderZahl ? { x: w0 / 2, y: 0 } : null;
-  knoten.push({ knoten: spitze, x: -w0 / 2, y: -HOEHE / 2, breite: w0, schalter });
+  knoten.push({
+    knoten: spitze,
+    x: -w0 / 2,
+    y: -HOEHE / 2,
+    breite: w0,
+    hoehe: hoehe(spitze),
+    schalter,
+  });
   const gesamt = blaetter(spitze);
   const rechts: SichtKnoten[] = [];
   const links: SichtKnoten[] = [];
@@ -386,7 +417,7 @@ function mindmap(spitze: SichtKnoten, breite: Breite): Omit<Anordnung, 'rahmen'>
     summe += blaetter(c);
   }
   const ab = w0 / 2 + MINDMAP_ABSTAND;
-  for (const t of zurSeite(rechts, 1, ab, true, breite, knoten, kanten))
+  for (const t of zurSeite(rechts, 1, ab, true, breite, hoehe, knoten, kanten))
     kanten.push({
       punkte: [
         { x: w0 / 2, y: 0 },
@@ -394,7 +425,7 @@ function mindmap(spitze: SichtKnoten, breite: Breite): Omit<Anordnung, 'rahmen'>
       ],
       rund: true,
     });
-  for (const t of zurSeite(links, -1, -ab, true, breite, knoten, kanten))
+  for (const t of zurSeite(links, -1, -ab, true, breite, hoehe, knoten, kanten))
     kanten.push({
       punkte: [
         { x: -w0 / 2, y: 0 },
@@ -405,14 +436,19 @@ function mindmap(spitze: SichtKnoten, breite: Breite): Omit<Anordnung, 'rahmen'>
   return { knoten, kanten, anker: { x: 0, y: 0, fx: 0.5, fy: 0.5 } };
 }
 
-/** Die Kästchen einer Ansicht anordnen. */
-export function anordnen(art: AnordnungsArt, spitze: SichtKnoten, breite: Breite): Anordnung {
+/** Die Kästchen einer Ansicht anordnen – ohne `hoehe` alle mit nur dem Namen. */
+export function anordnen(
+  art: AnordnungsArt,
+  spitze: SichtKnoten,
+  breite: Breite,
+  hoehe: Hoehe = NUR_NAME,
+): Anordnung {
   const teil =
     art === 'oben'
-      ? vonOben(spitze, breite)
+      ? vonOben(spitze, breite, hoehe)
       : art === 'links'
-        ? vonLinks(spitze, breite)
-        : mindmap(spitze, breite);
+        ? vonLinks(spitze, breite, hoehe)
+        : mindmap(spitze, breite, hoehe);
   let x1 = Infinity;
   let y1 = Infinity;
   let x2 = -Infinity;
@@ -421,7 +457,7 @@ export function anordnen(art: AnordnungsArt, spitze: SichtKnoten, breite: Breite
     x1 = Math.min(x1, k.x, (k.schalter?.x ?? Infinity) - SCHALTER);
     x2 = Math.max(x2, k.x + k.breite, (k.schalter?.x ?? -Infinity) + SCHALTER);
     y1 = Math.min(y1, k.y);
-    y2 = Math.max(y2, k.y + HOEHE, (k.schalter?.y ?? -Infinity) + SCHALTER);
+    y2 = Math.max(y2, k.y + k.hoehe, (k.schalter?.y ?? -Infinity) + SCHALTER);
   }
   return { ...teil, rahmen: { x: x1, y: y1, breite: x2 - x1, hoehe: y2 - y1 } };
 }
@@ -436,7 +472,7 @@ export function schalterStummel(lage: LageKnoten): Kante | null {
   if (!s || !lage.knoten.kinder.length) return null;
   // Der Schalter sitzt auf dem Rand des Kästchens: unten (von oben), rechts oder links (zur Seite, Mindmap).
   const ende =
-    s.y >= lage.y + HOEHE
+    s.y >= lage.y + lage.hoehe
       ? { x: s.x, y: s.y + SCHALTER }
       : { x: s.x + (s.x >= lage.x + lage.breite ? SCHALTER : -SCHALTER), y: s.y };
   return { punkte: [s, ende], rund: false };

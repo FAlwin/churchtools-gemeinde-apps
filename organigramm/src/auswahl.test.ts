@@ -5,9 +5,11 @@ import {
   BAUM_ANSICHTEN,
   leseAnsicht,
   leseAusgeblendet,
+  lesePersonen,
   lesePraesAnsicht,
   merkeAnsicht,
   merkeAusgeblendet,
+  merkePersonen,
   merkePraesAnsicht,
 } from './auswahl';
 
@@ -73,5 +75,17 @@ describe('Ansicht der Präsentation merken (O7b-5)', () => {
 
   it('jede Ansicht hat einen Namen – eine Stelle für Reiter, PDF und Präsentation', () => {
     for (const a of BAUM_ANSICHTEN) expect(ANSICHT_NAMEN[a]).toBeTruthy();
+  });
+});
+
+describe('Personen in Diagramm und Liste merken (O7b-6)', () => {
+  it('ohne Wahl „Aus“ (Alwin, 29.10.2026); gemerkt → zurück; Unbekanntes → „Aus“', () => {
+    expect(lesePersonen()).toBe('aus');
+    merkePersonen('alle');
+    expect(lesePersonen()).toBe('alle');
+    merkePersonen('rollen');
+    expect(lesePersonen()).toBe('rollen');
+    localStorage.setItem('organigramm-personen', '"jeder"');
+    expect(lesePersonen()).toBe('aus');
   });
 });

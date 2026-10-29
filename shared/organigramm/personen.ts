@@ -59,3 +59,59 @@ export function gruppenLeitung(
 ): Mitglied[] {
   return gruppenPersonen(mitglieder, name, rang).filter((m) => istLeitung(rollen, m.rolleId));
 }
+
+/** Was ein Kästchen im Diagramm und eine Zeile der Liste an Personen zeigen (O7b-6): nichts, die Rollen oder alle. */
+export type PersonenWahl = 'aus' | 'rollen' | 'alle';
+
+/** Eine Rolle einer Gruppe mit ihren Personen – `nurZahl`: nur „6 Mitarbeiter“ statt der Namen. */
+export interface RollenGruppe {
+  rolle: string;
+  namen: string[];
+  nurZahl: boolean;
+}
+
+/**
+ * **Die Personen EINER Gruppe nach Rollen** (O7b-6, Alwin 28.10.2026: „einfach ChurchTools abbilden … nichts weglassen
+ * oder hinzufügen“): die Rollen mit ihren Namen aus ChurchTools, **Leitung zuerst** (`isLeader`), dann wie ChurchTools
+ * sortiert (`sortKey`), die **Standardrolle** (`isDefault`, Mitarbeiter/Teilnehmer) zuletzt – bei „Rollen“ nur als Zahl.
+ * Innerhalb einer Rolle alphabetisch. Auch eine in ChurchTools versteckte Rolle (`isHidden`, in der Test-Instanz
+ * „Coach“) steht da – sie wird nur nicht mehr vergeben, die Personen sind trotzdem in der Gruppe. Eine Rolle, die
+ * ChurchTools nicht (mehr) liefert, steht ganz hinten unter dem Namen, den `rollenAus` für Rollen ohne Namen nimmt.
+ */
+export function kastenRollen(
+  mitglieder: readonly Mitglied[],
+  rollen: ReadonlyMap<number, Rolle>,
+  name: Name,
+  wahl: PersonenWahl,
+): RollenGruppe[] {
+  if (wahl === 'aus') return [];
+  const rang = (id: number | null) => {
+    const r = id === null ? undefined : rollen.get(id);
+    if (!r) return [3, 0] as const;
+    return [r.leitung ? 0 : r.standard ? 2 : 1, r.sortKey] as const;
+  };
+  const je = new Map<number | null, number[]>();
+  for (const m of mitglieder) {
+    const id = m.rolleId !== null && rollen.has(m.rolleId) ? m.rolleId : null;
+    je.set(id, [...(je.get(id) ?? []), m.personId]);
+  }
+  return [...je]
+    .sort(([a], [b]) => {
+      const [ga, sa] = rang(a);
+      const [gb, sb] = rang(b);
+      return ga - gb || sa - sb || (a ?? 0) - (b ?? 0);
+    })
+    .map(([id, personen]) => {
+      const r = id === null ? undefined : rollen.get(id);
+      return {
+        rolle: r?.name ?? 'Mitglied',
+        namen: personen
+          .sort((a, b) => name(a).localeCompare(name(b), 'de') || a - b)
+          .map((p) => name(p)),
+        nurZahl: wahl === 'rollen' && r?.standard === true,
+      };
+    });
+}
+
+/** „6 Mitarbeiter“ – die Standardrolle bei „Rollen“ (O7b-6). Der Rollenname steht, wie ChurchTools ihn liefert. */
+export const rollenZahl = (g: RollenGruppe): string => `${g.namen.length} ${g.rolle}`;

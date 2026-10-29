@@ -5,7 +5,7 @@
  */
 let flaeche: CanvasRenderingContext2D | null | undefined;
 
-export function textBreite(text: string, fett: boolean, schrift: string): number {
+export function textBreite(text: string, fett: boolean, schrift: string, groesse = 14): number {
   if (flaeche === undefined) {
     try {
       flaeche = document.createElement('canvas').getContext('2d');
@@ -13,7 +13,7 @@ export function textBreite(text: string, fett: boolean, schrift: string): number
       flaeche = null;
     }
   }
-  if (!flaeche) return text.length * (fett ? 8.2 : 7.6);
-  flaeche.font = `${fett ? 700 : 400} 14px ${schrift}`;
+  if (!flaeche) return text.length * (fett ? 8.2 : 7.6) * (groesse / 14);
+  flaeche.font = `${fett ? 700 : 400} ${groesse}px ${schrift}`;
   return flaeche.measureText(text).width;
 }

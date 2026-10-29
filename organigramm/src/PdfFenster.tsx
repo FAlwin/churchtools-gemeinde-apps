@@ -104,6 +104,7 @@ export function PdfFenster({
   const messRef = useRef<HTMLDivElement>(null);
   const schrift = useSchrift(messRef);
   const { mitglieder, rollen, wahl } = personen;
+  const wartet = mitPersonen && mitglieder === null;
   const inhalt = useMemo(
     () => (mitPersonen ? personenInhalt(mitglieder, rollen, pdfPersonenWahl(wahl)) : undefined),
     [mitPersonen, mitglieder, rollen, wahl],
@@ -171,6 +172,9 @@ export function PdfFenster({
     let aktuell = true;
     setPdf(null);
     setFehler(false);
+    // Mit Personen erst, wenn die Mitglieder da sind – sonst gab es kurz eine PDF ohne Personen zum Herunterladen
+    // (Test-Instanz 29.10.2026: „PDF / Drucken“ gleich nach dem Öffnen der Seite).
+    if (wartet) return;
     const seiten = seitenRef.current
       .slice(0, seitenZahl)
       .filter((s): s is SVGSVGElement => s !== null)
@@ -182,7 +186,7 @@ export function PdfFenster({
     return () => {
       aktuell = false;
     };
-  }, [anordnung, listen, papier, kopf, kuerzen, sicht.name, stand, seitenZahl, versuch]);
+  }, [anordnung, listen, papier, kopf, kuerzen, sicht.name, stand, seitenZahl, versuch, wartet]);
 
   const pt = lage ? schriftPt(lage.massstab) : null;
   const hinweis = listen
@@ -332,6 +336,11 @@ export function PdfFenster({
       {hinweis && (
         <p className={pt !== null && pt < KLEINSTE_PT ? fenster.fehler : fenster.leise}>
           {hinweis}
+        </p>
+      )}
+      {wartet && (
+        <p className={fenster.leise} role="status">
+          Die Mitglieder werden noch geladen – die PDF kommt gleich.
         </p>
       )}
       <p className={fenster.leise}>Zum Drucken die PDF öffnen und dort drucken.</p>

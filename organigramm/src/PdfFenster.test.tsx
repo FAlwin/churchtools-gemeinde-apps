@@ -274,6 +274,32 @@ describe('Organigramm als PDF (O7b-4)', () => {
     expect(vorschau().textContent).not.toContain('Bea Berg');
   });
 
+  it('mit Personen erst, wenn die Mitglieder geladen sind – vorher keine PDF ohne Personen zum Herunterladen', async () => {
+    const { rerender, onSchliessen } = await zeigen({
+      ansicht: 'liste',
+      personen: { wahl: 'alle', mitglieder: null, rollen: ROLLEN },
+    });
+    expect(bauen).not.toHaveBeenCalled();
+    expect(knopf('Herunterladen').disabled).toBe(true);
+    expect(screen.getByRole('status').textContent).toContain('Mitglieder werden noch geladen');
+    rerender(
+      <PdfFenster
+        baum={BAUM}
+        gemeinde="ECG"
+        offen={anfangsOffen(BAUM)}
+        spitze={null}
+        ansicht="liste"
+        personen={{ wahl: 'alle', mitglieder: MITGLIEDER, rollen: ROLLEN }}
+        onSchliessen={onSchliessen}
+        heute={HEUTE}
+      />,
+    );
+    await act(async () => {});
+    expect(bauen).toHaveBeenCalled();
+    expect(letzteSeiten()[0].svg.textContent).toContain('Bea Berg');
+    expect(knopf('Herunterladen').disabled).toBe(false);
+  });
+
   it('eine tiefere Spitze aus dem Reiter steht als Ausschnitt bereit', async () => {
     await zeigen({ spitze: '10/7', ansicht: 'links' });
     expect(auswahl('Ausschnitt').value).toBe('10/7');

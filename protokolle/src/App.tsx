@@ -117,6 +117,7 @@ export function App() {
           modul={start.modul}
           ich={start.id}
           gruppen={start.gruppen}
+          schreibbar={start.schreibbar}
           onSitzung={(gruppe, sitzung) => zuSitzungen({ gruppe, sitzung })}
           onGruppe={(gruppe) => zuSitzungen({ gruppe })}
         />

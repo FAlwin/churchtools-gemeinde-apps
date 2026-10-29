@@ -1,6 +1,6 @@
 ### Geändert (Musik-App, Liedblatt im ChurchTools-Look – Scheiben B1 und B2)
 
-- **Neuer Kopf im Liedblatt:** eine weiße Kopfkarte wie die Ablaufpläne in ChurchTools statt der runden Knöpfe und
+- **Neuer Kopf im Liedblatt:** ein Kopf im Look der Ablaufpläne in ChurchTools statt der runden Knöpfe und
   Titel-Kapseln. Am iPad steht oben „← Ablauf“ mit dem Termin, darunter in einer Zeile die **Lied-Leiste** und die
   beschrifteten Knöpfe **Aussehen, Tempo, Anmerken** (mit Recht „Notizen von …“). Am Handy ist die Karte kompakt:
   Zurück und Vollbild als Symbol neben der Leiste, die Knöpfe mit Kurzwort darunter; am Handy quer steht alles in

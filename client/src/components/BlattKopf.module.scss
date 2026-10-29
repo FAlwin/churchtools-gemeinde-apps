@@ -1,30 +1,38 @@
-@use '@ui/design/mixins' as m;
-
-// ── Kopfkarte des Liedblatts (Scheibe B1+B2) ──
-// Beginnt wie die Seitenköpfe unter dem iOS-Unschärfe-Band (`--inhalt-pad-top`); die Höhe ergibt sich aus dem Inhalt
-// und wird gemessen (`BlattKopf`, `--blatt-kopf-unten`).
+// ── Kopf des Liedblatts (Scheibe B1+B2; seit 29.10.2026 „Leiste bis oben“) ──
+// Bis zum 29.10. eine Karte mit Rand im dunklen Band – Alwin: „irgendwie so verloren, scheinbar etwas zu klein“. Jetzt
+// trägt der Kopf selbst die Kartenfarbe und reicht bis an den oberen Rand (in der installierten App unter die Uhr, in
+// der Erweiterung bis an die ChurchTools-Leiste); der Inhalt beginnt weiter unter dem Unschärfe-Band
+// (`--inhalt-pad-top`) und bleibt scharf. Die Höhe ergibt sich aus dem Inhalt und wird gemessen (`--blatt-kopf-unten`).
 .kopf {
   flex-shrink: 0;
-  padding: var(--inhalt-pad-top) 16px 8px;
+  padding: var(--inhalt-pad-top) 16px 10px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
 }
 
+// Handy hochkant: größer als bis zum 29.10. (Entwurf B) – die Zeile mit Zurück, Leiste und Vollbild 44px statt 38px
+// (über die gemeinsame Knopfhöhe, damit alle Knöpfe der Zeile gleich bleiben), das Raster 60px (`KopfKnopf raster`).
 .kopfKompakt {
-  padding: var(--inhalt-pad-top) 8px 6px;
+  --knopf-hoehe: 44px;
+  padding: var(--inhalt-pad-top) 10px 10px;
 }
 
-// Weiße Karte wie „Events › Ablaufpläne“ in ChurchTools.
+// Handy quer: wie bisher schmal – dort zählt jeder Pixel Blatt.
+.kopfFlach {
+  --knopf-hoehe: 38px;
+  padding-bottom: 6px;
+}
+
 .karte {
-  @include m.card-list;
   // Fenster unter den Knöpfen hängen außerhalb (absolut im Blatt) – hier wird nichts abgeschnitten.
   overflow: visible;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px 12px;
 }
 
 .kopfKompakt .karte {
-  padding: 8px;
+  gap: 10px;
 }
 
 .titelZeile {
@@ -69,6 +77,10 @@
 .aa {
   font-size: 15px;
   line-height: 1;
+}
+
+.kopfKompakt:not(.kopfFlach) .aa {
+  font-size: 18px;
 }
 
 // ── Ablauf-Leiste (Scheibe B2) ──
@@ -139,6 +151,17 @@
   &:focus-visible {
     outline: 2px solid var(--blue);
     outline-offset: -2px;
+  }
+}
+
+// Handy hochkant: Titel größer (Entwurf B, 29.10.2026).
+.kopfKompakt:not(.kopfFlach) {
+  .lied {
+    font-size: 16px;
+  }
+  .nummer,
+  .info {
+    font-size: 13px;
   }
 }
 

@@ -4,12 +4,14 @@
  * **Ein Fenster in der Mitte** wie alle ChurchTools-Fenster (Alwin am iPhone, 29.10.2026: „nicht so schön, dass es an
  * verschiedenen Positionen runterklappt … besser sortiert, vielleicht mit Untermenüs“). Vorher klappte es unter dem
  * gewählten Lied der Leiste auf und wanderte mit ihm. Entschieden: Variante 1 (Fenster) mit der Aufteilung aus
- * Variante 2 – die Übersicht hat vier Gruppen, Häufiges direkt, Seltenes auf einer Unterseite mit „‹“ zurück:
+ * Variante 2 – Häufiges direkt in der Übersicht, Seltenes auf einer Unterseite mit „‹“ zurück:
  *
  * - **Tonart:** Transponieren · „Kapo · Abschnitte ›“
  * - **Anzeige:** Akkorde & Text · „Nur Text · PDF ›“ (die hochgeladenen Dokumente)
  * - **Version:** die gewählte Fassung › (Arrangements, Versionen, neue Version, löschen)
- * - **Lied:** „Teilen, Bearbeiten … ›“ (PDF teilen, Bearbeiten, Dateien, Stammdaten)
+ * - **Bearbeiten:** „Im Editor öffnen“ direkt · „Dateien · Stammdaten ›“ – nur mit Bearbeitungsrecht. Zuerst stand
+ *   der Editor unter „Lied › Teilen, Bearbeiten …“; Alwin fand ihn dort nicht (29.10.2026, am iPhone).
+ * - **Teilen:** „Als PDF teilen“
  *
  * Eine Unterseite, auf der nur EIN Punkt stünde, entfällt – der Punkt steht dann direkt in der Übersicht.
  *
@@ -64,7 +66,7 @@ interface SongMenuProps {
   onSelectVersion: (versionKey: string) => void;
 }
 
-type Seite = 'start' | 'tonart' | 'anzeige' | 'version' | 'lied';
+type Seite = 'start' | 'tonart' | 'anzeige' | 'version' | 'pflege';
 
 /** Eine Zeile im Fenster: links der Name, rechts Wert, Haken, Symbol oder „›“ zur Unterseite. */
 function Zeile({
@@ -179,6 +181,26 @@ export function SongMenu({
       {hasOwnNotes(song.id, set.versionKey, true, song.arrangementId) && (
         <Icon name="pencil" size={12} className={styles.notiz} />
       )}
+    </Zeile>
+  );
+  /* Dateien des Arrangements (#321) – auch bei einem Dokument (`showsChords` fehlt hier bewusst): Wer ein PDF ansieht,
+     will genau dort ein neues hochladen können. */
+  const dateien = (
+    <Zeile
+      onClick={pick(onOpenFiles)}
+      rechts={<Icon name="anhang" size={16} className={styles.symbol} />}
+    >
+      Dateien …
+    </Zeile>
+  );
+  /* Stammdaten (#322, Schritt 11) – neben den Dateien, weil beides das LIED pflegt und nicht die Anzeige. Wer hier
+     merkt, dass der Autor fehlt, soll ihn hier ergänzen können. */
+  const stammdaten = (
+    <Zeile
+      onClick={pick(onEditSong)}
+      rechts={<Icon name="info" size={16} className={styles.symbol} />}
+    >
+      Stammdaten …
     </Zeile>
   );
   const teilen = (
@@ -300,35 +322,11 @@ export function SongMenu({
     );
   }
 
-  if (seite === 'lied') {
+  if (seite === 'pflege') {
     return (
-      <Fenster titel="Lied" zurueck={() => setSeite('start')} onClose={onClose}>
-        {mitTeilen && teilen}
-        {mitBearbeiten && (
-          <Zeile
-            onClick={pick(onEditCurrent)}
-            rechts={<Icon name="pencil" size={16} className={styles.symbol} />}
-          >
-            {isOriginal ? 'Bearbeiten (neue Version)' : `„${currentVersion.name}" bearbeiten`}
-          </Zeile>
-        )}
-        {/* Dateien des Arrangements (#321) – neben dem Bearbeiten, weil beides das Lied PFLEGT.
-            Anders als „Bearbeiten" auch bei einem Dokument sichtbar (`showsChords` fehlt hier
-            bewusst): Wer ein PDF ansieht, will genau dort ein neues hochladen können. */}
-        <Zeile
-          onClick={pick(onOpenFiles)}
-          rechts={<Icon name="anhang" size={16} className={styles.symbol} />}
-        >
-          Dateien …
-        </Zeile>
-        {/* Stammdaten (#322, Schritt 11) – direkt unter den Dateien, weil beides das LIED pflegt und
-            nicht die Anzeige. Wer hier merkt, dass der Autor fehlt, soll ihn hier ergänzen können. */}
-        <Zeile
-          onClick={pick(onEditSong)}
-          rechts={<Icon name="info" size={16} className={styles.symbol} />}
-        >
-          Stammdaten …
-        </Zeile>
+      <Fenster titel="Dateien & Stammdaten" zurueck={() => setSeite('start')} onClose={onClose}>
+        {dateien}
+        {stammdaten}
       </Fenster>
     );
   }
@@ -406,17 +404,31 @@ export function SongMenu({
         </Gruppe>
       )}
 
-      {(canEditSong || mitTeilen) && (
-        <Gruppe titel="Lied">
-          {canEditSong ? (
-            <Zeile weiter onClick={() => setSeite('lied')}>
-              {mitTeilen ? 'Teilen, Bearbeiten …' : 'Bearbeiten …'}
-            </Zeile>
+      {canEditSong && (
+        <Gruppe titel="Bearbeiten">
+          {mitBearbeiten ? (
+            <>
+              <Zeile
+                onClick={pick(onEditCurrent)}
+                rechts={<Wert>{isOriginal ? 'als neue Version' : currentVersion.name}</Wert>}
+              >
+                Im Editor öffnen
+              </Zeile>
+              <Zeile weiter onClick={() => setSeite('pflege')}>
+                Dateien · Stammdaten
+              </Zeile>
+            </>
           ) : (
-            teilen
+            // Beim Dokument gibt es keinen Editor – dann stehen die beiden direkt da statt auf einer Unterseite.
+            <>
+              {dateien}
+              {stammdaten}
+            </>
           )}
         </Gruppe>
       )}
+
+      {mitTeilen && <Gruppe titel="Teilen">{teilen}</Gruppe>}
     </Fenster>
   );
 }

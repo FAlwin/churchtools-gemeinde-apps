@@ -430,7 +430,7 @@ beenden“, beim Ansehen nur „Zurück zu den eigenen Notizen“. Jeder Knopf s
 **Fenster darunter** (Aussehen, Tempo, Hinweis „Ablauf geändert“) hängen an der GEMESSENEN Unterkante
 (`--blatt-kopf-unten` im Blatt, `--blatt-kopf-unten-fix` für `fixed`; `--chart-kopf-unten` nur noch Vorgabe) und
 öffnen unter ihrem Knopf (`--werkzeug-links`). Das **Lied-Menü** ist seit 29.10.2026 ein Fenster in der Mitte (`Sheet`)
-mit Übersicht – Tonart, Anzeige, Version, Lied – und Unterseiten mit „‹“ (`Sheet zurueck`); eine Unterseite mit nur
+mit Übersicht – Tonart, Anzeige, Version, Bearbeiten („Im Editor öffnen“ direkt), Teilen – und Unterseiten mit „‹“ (`Sheet zurueck`); eine Unterseite mit nur
 einem Punkt entfällt (`SongMenu.tsx`). Die Fußleiste nutzt
 `--blatt-fuss-polster` (in der Erweiterung schmal wie `--reiter-polster`; `ui/design/polster.test.ts` verlangt für
 jedes `…-polster` das Gegenstück). Die Punkte unten bleiben bis B3. Routing in `App.tsx` über `tab` + `view` (rechteabhängig).

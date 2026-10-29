@@ -94,9 +94,9 @@ function gruppen(): string[] {
  * **Fenster mit Übersicht und Unterseiten** (Alwin am iPhone, 29.10.2026; Variante 1 mit der Aufteilung aus Variante 2).
  */
 describe('SongMenu – Übersicht und Unterseiten', () => {
-  it('die Übersicht hat vier Gruppen: Tonart, Anzeige, Version, Lied', () => {
+  it('die Übersicht: Tonart, Anzeige, Version, Bearbeiten, Teilen', () => {
     setup();
-    expect(gruppen()).toEqual(['Tonart', 'Anzeige', 'Version', 'Lied']);
+    expect(gruppen()).toEqual(['Tonart', 'Anzeige', 'Version', 'Bearbeiten', 'Teilen']);
     // Häufiges direkt, Seltenes eine Ebene tiefer.
     expect(screen.getByText('Transponieren')).toBeTruthy();
     expect(screen.getByText('Akkorde & Text')).toBeTruthy();
@@ -105,13 +105,33 @@ describe('SongMenu – Übersicht und Unterseiten', () => {
     expect(screen.getByRole('dialog').textContent).toContain('Testlied');
   });
 
+  /**
+   * Der Editor steht direkt in der Übersicht (Alwin am iPhone, 29.10.2026: unter „Lied › Teilen, Bearbeiten …“ fand er
+   * ihn nicht). Rechts steht, was dabei entsteht: beim Original eine neue Version, sonst die gewählte.
+   */
+  it('„Im Editor öffnen“ steht direkt unter „Bearbeiten“, öffnet den Editor und schließt', () => {
+    const h = setup();
+    const bearbeiten = within(screen.getByRole('region', { name: 'Bearbeiten' }));
+    expect(bearbeiten.getByText('als neue Version')).toBeTruthy();
+    fireEvent.click(bearbeiten.getByText('Im Editor öffnen'));
+    expect(h.onEditCurrent).toHaveBeenCalledTimes(1);
+    expect(h.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('bei einer benannten Version steht ihr Name neben „Im Editor öffnen“', () => {
+    setup({ set: { versionKey: 'akustik' } });
+    const bearbeiten = within(screen.getByRole('region', { name: 'Bearbeiten' }));
+    expect(bearbeiten.getByText('Akustik')).toBeTruthy();
+    expect(bearbeiten.queryByText('als neue Version')).toBeNull();
+  });
+
   it('in eine Unterseite und mit „‹“ zurück – beides schließt nicht', () => {
     const h = setup();
     unterseite('Tonart');
     expect(screen.getByText('Abschnitte transponieren')).toBeTruthy();
     expect(screen.getByRole('dialog').textContent).toContain('Kapo & Abschnitte');
     fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
-    expect(gruppen()).toEqual(['Tonart', 'Anzeige', 'Version', 'Lied']);
+    expect(gruppen()).toEqual(['Tonart', 'Anzeige', 'Version', 'Bearbeiten', 'Teilen']);
     expect(h.onClose).not.toHaveBeenCalled();
   });
 
@@ -120,10 +140,12 @@ describe('SongMenu – Übersicht und Unterseiten', () => {
     expect(screen.queryByRole('button', { name: 'Zurück' })).toBeNull();
   });
 
-  it('eine Unterseite mit nur einem Punkt entfällt – ohne Recht steht „Als PDF teilen“ direkt da', () => {
+  it('ohne Recht: keine Gruppe „Bearbeiten“, „Als PDF teilen“ bleibt', () => {
     setup({ canEdit: false });
-    const lied = within(screen.getByRole('region', { name: 'Lied' }));
-    expect(lied.getByText('Als PDF teilen')).toBeTruthy();
+    expect(gruppen()).toEqual(['Tonart', 'Anzeige', 'Version', 'Teilen']);
+    expect(
+      within(screen.getByRole('region', { name: 'Teilen' })).getByText('Als PDF teilen'),
+    ).toBeTruthy();
   });
 
   it('mit Dokumenten: „Nur Text · PDF ›“, das gezeigte Dokument steht als Wert daneben', () => {
@@ -141,7 +163,6 @@ describe('SongMenu – jede Auswahl schließt das Menü', () => {
   const WO: Record<string, string> = {
     Kapo: 'Tonart',
     'Abschnitte transponieren': 'Tonart',
-    'Als PDF teilen': 'Lied',
     'Neue Version…': 'Version',
   };
   const cases: [string, keyof ReturnType<typeof setup>][] = [
@@ -202,23 +223,26 @@ describe('SongMenu – was zum angezeigten Inhalt passt', () => {
     expect(screen.getByText('Kapo')).toBeTruthy();
     expect(screen.queryByText('Kapo · Abschnitte')).toBeNull();
     // Keine Versionen – die Gruppe entfällt.
-    expect(gruppen()).toEqual(['Tonart', 'Anzeige', 'Lied']);
+    expect(gruppen()).toEqual(['Tonart', 'Anzeige', 'Bearbeiten', 'Teilen']);
     // Die Anzeige-Umschalter bleiben – sonst käme man vom Dokument nicht mehr weg.
     expect(screen.getByText('Akkorde & Text')).toBeTruthy();
     unterseite('Anzeige');
     expect(screen.getByText('Noten.pdf', { exact: false })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
-    unterseite('Lied');
     // Seit 07.10.2026: Geteilt wird, was das Lied zeigt – auch sein Dokument (Gemeinde ohne ChordPro).
     expect(screen.getByText('Als PDF teilen')).toBeTruthy();
-    expect(screen.queryByText('Bearbeiten (neue Version)')).toBeNull();
+    // Kein Editor beim Dokument – Dateien und Stammdaten stehen dann direkt da, ohne Unterseite.
+    const bearbeiten = within(screen.getByRole('region', { name: 'Bearbeiten' }));
+    expect(bearbeiten.queryByText('Im Editor öffnen')).toBeNull();
+    expect(bearbeiten.getByText('Dateien …')).toBeTruthy();
+    expect(bearbeiten.getByText('Stammdaten …')).toBeTruthy();
     expect(screen.queryByText('Abschnitte transponieren')).toBeNull();
     expect(screen.queryByText('Akustik')).toBeNull();
   });
 
   it('ohne Bearbeitungsrecht fehlen Bearbeiten, Neue Version und Löschen', () => {
     setup({ canEdit: false, set: { versionKey: 'akustik' } });
-    expect(screen.queryByText('Bearbeiten (neue Version)')).toBeNull();
+    expect(screen.queryByText('Im Editor öffnen')).toBeNull();
     unterseite('Version');
     expect(screen.queryByText('Neue Version…')).toBeNull();
     expect(screen.queryByText('„Akustik" löschen')).toBeNull();
@@ -302,15 +326,17 @@ describe('SongMenu – Arrangement umschalten (#320)', () => {
 describe('SongMenu – Dateien (#321)', () => {
   it('zeigt „Dateien …" für Berechtigte und meldet den Klick', () => {
     const h = setup({ canEdit: true });
-    unterseite('Lied');
+    unterseite('Bearbeiten');
+    expect(screen.getByRole('dialog').textContent).toContain('Dateien & Stammdaten');
     screen.getByText('Dateien …').click();
     expect(h.onOpenFiles).toHaveBeenCalledTimes(1);
   });
 
   it('zeigt es NICHT ohne Berechtigung', () => {
     setup({ canEdit: false });
-    // Ohne Recht gibt es die Unterseite „Lied“ gar nicht – „Als PDF teilen“ steht direkt da.
-    expect(screen.queryByText('Teilen, Bearbeiten …')).toBeNull();
+    // Ohne Recht gibt es die Gruppe „Bearbeiten“ gar nicht.
+    expect(screen.queryByRole('region', { name: 'Bearbeiten' })).toBeNull();
+    expect(screen.queryByText('Dateien · Stammdaten')).toBeNull();
     expect(screen.queryByText('Dateien …')).toBeNull();
   });
 
@@ -318,8 +344,7 @@ describe('SongMenu – Dateien (#321)', () => {
     // `viewSource` ist dann eine Datei-ID statt 'chords'. „Bearbeiten" verschwindet hier zu Recht –
     // „Dateien" muss bleiben, sonst käme man beim PDF nicht an die Dateiverwaltung.
     setup({ canEdit: true, set: { viewSource: 4711 } });
-    unterseite('Lied');
     expect(screen.getByText('Dateien …')).toBeTruthy();
-    expect(screen.queryByText('Bearbeiten (neue Version)')).toBeNull();
+    expect(screen.queryByText('Im Editor öffnen')).toBeNull();
   });
 });

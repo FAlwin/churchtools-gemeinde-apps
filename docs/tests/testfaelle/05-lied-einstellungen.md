@@ -2,8 +2,8 @@
 
 Zwei Menüs, die hier immer wieder vorkommen:
 
-- **Lied-Menü** – oben das **gewählte Lied** noch einmal antippen. Ein Fenster in der Mitte mit vier Gruppen
-  (Tonart, Anzeige, Version, Lied); Seltenes liegt eine Ebene tiefer („›“, zurück mit „‹“).
+- **Lied-Menü** – oben das **gewählte Lied** noch einmal antippen. Ein Fenster in der Mitte mit den Gruppen
+  Tonart, Anzeige, Version, Bearbeiten und Teilen; Seltenes liegt eine Ebene tiefer („›“, zurück mit „‹“).
 - **Darstellung** – oben rechts **Werkzeuge → Aussehen**. Darin: Schriftgröße und Spalten.
 
 ### TF-EINST-01 · Tonart und Kapo ändern
@@ -214,7 +214,7 @@ Sammel-Pause ein).
 mindestens einer Datei. **Am besten auf einem Testlied** – hier wird wirklich in ChurchTools
 geschrieben.
 
-**Das muss passieren:** Im Lied-Menü unter **Lied ›** steht **„Dateien …"**. Dahinter liegt alles, was am Arrangement
+**Das muss passieren:** Im Lied-Menü unter **Bearbeiten → Dateien · Stammdaten ›** steht **„Dateien …"**. Dahinter liegt alles, was am Arrangement
 hängt – auch Dateien, die die App sonst nirgends zeigt (z. B. eine MP3).
 
 1. **Liste:** Oben steht die sprechende Bezeichnung („Notenblatt (ChordPro)", „Version „Akustik""),
@@ -558,7 +558,7 @@ Kopfzeilen sind aus dem Notenblatt verschwunden, `{key}` ist noch da.
 2. Rechts **Liedinfo**: Titel, Autor, Tonart, Tempo, Takt, CCLI, Copyright. Bei einem abweichenden Autor:
    „Im Notenblatt steht: …“ → **übernehmen**.
 3. Tempo ändern → **Vorschau**: Der Kopf zeigt das neue Tempo.
-4. **Speichern**. Danach: Lied-Menü → Lied › **Stammdaten …** zeigt den neuen Autor; das Arrangement das neue Tempo.
+4. **Speichern**. Danach: Lied-Menü → Bearbeiten → Dateien · Stammdaten › **Stammdaten …** zeigt den neuen Autor; das Arrangement das neue Tempo.
    „ChordPro-Text“ im Editor: keine `{title}`/`{artist}`/`{tempo}`-Zeilen mehr, `{key}` steht noch da.
 5. **Ohne Recht** (Person ohne Lied-Bearbeiten): Liedinfo nur zum Ansehen, Kopfzeilen im Text sichtbar; Speichern
    lässt sie im Notenblatt.
@@ -625,28 +625,33 @@ Format-Menü hatte) und abgesetzt „Nur für andere Programme“. Im Text sind 
 zu bearbeiten; Handy hochkant und iPad. Ein zweites Konto ohne dieses Recht.
 
 **Das muss passieren:** Das gewählte Lied in der Leiste noch einmal antippen → ein Fenster **in der Mitte**, egal
-welches Lied gewählt ist (vorher klappte es unter dem Lied auf und wanderte mit). Oben der Liedtitel, darunter vier
-Gruppen: **Tonart** (Transponieren · „Kapo · Abschnitte ›“), **Anzeige** (Akkorde & Text · „Nur Text · PDF ›“),
-**Version** (die gewählte Fassung ›), **Lied** („Teilen, Bearbeiten … ›“).
+welches Lied gewählt ist (vorher klappte es unter dem Lied auf und wanderte mit). Oben der Liedtitel, darunter die
+Gruppen **Tonart** (Transponieren · „Kapo · Abschnitte ›“), **Anzeige** (Akkorde & Text · „Nur Text · PDF ›“),
+**Version** (die gewählte Fassung ›), **Bearbeiten** („Im Editor öffnen“ · „Dateien · Stammdaten ›“) und **Teilen**
+(„Als PDF teilen“).
 
 1. „Kapo · Abschnitte ›“ → Unterseite mit „‹“ vor dem Titel; **‹** führt zurück, das Fenster bleibt offen.
 2. **Transponieren** → das Fenster schließt, die Tonart-Auswahl öffnet (ebenfalls in der Mitte).
 3. Unter **Version ›** ein anderes Arrangement bzw. eine andere Version wählen → das Blatt wechselt, das Fenster ist
    zu; beim nächsten Öffnen steht die Wahl in der Übersicht.
 4. „Nur Text · PDF ›“ → das PDF wählen → das PDF wird gezeigt; in der Übersicht steht sein Name rechts.
-5. Beim PDF: Unter **Tonart** steht nur **Kapo** (direkt, ohne Unterseite), die Gruppe **Version** fehlt.
-6. **Ohne** Bearbeitungsrecht: Unter **Lied** steht direkt „Als PDF teilen“ – keine Unterseite.
-7. Daneben tippen, X und „Schließen“ schließen, ohne etwas zu ändern.
+5. Beim PDF: Unter **Tonart** steht nur **Kapo** (direkt, ohne Unterseite), die Gruppe **Version** fehlt, unter
+   **Bearbeiten** stehen „Dateien …“ und „Stammdaten …“ direkt (kein Editor).
+6. **Im Editor öffnen** → der Editor öffnet; rechts daneben stand beim Original „als neue Version“, bei einer
+   benannten Version ihr Name.
+7. **Ohne** Bearbeitungsrecht: keine Gruppe **Bearbeiten**, „Als PDF teilen“ bleibt.
+8. Daneben tippen, X und „Schließen“ schließen, ohne etwas zu ändern.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
 - **Betrifft:** `client/src/components/SongMenu.tsx`, `client/src/components/SongMenu.module.scss`, `ui/fenster/Sheet.tsx`, `client/src/components/ChartOverlays.tsx`
-- **Automatisiert:** weitgehend – `SongMenu.test.tsx` (vier Gruppen, Unterseite hin und zurück ohne Schließen,
-  Unterseite mit einem Punkt entfällt, Dokument-Wert, jede Auswahl schließt, Arrangement/Version/Dateien auf ihren
+- **Automatisiert:** weitgehend – `SongMenu.test.tsx` (Gruppen der Übersicht, „Im Editor öffnen“ samt Wert,
+  Unterseite hin und zurück ohne Schließen, Unterseite mit einem Punkt entfällt, Dokument-Wert, jede Auswahl schließt, Arrangement/Version/Dateien auf ihren
   Unterseiten), `SongMenu.order.test.tsx` (erst schließen, dann handeln), `ui/fenster/Sheet.test.tsx` („‹“),
   `e2e/chart-arrangement-wechsel.spec.ts` (Arrangement über Version ›). **Von Hand bleibt** der Blick am echten Gerät.
 - **Historie:** Alwin am iPhone 29.10.2026 („an verschiedenen Positionen runterklappt … Untermenüs“); entschieden
-  Variante 1 (Fenster) mit der Aufteilung aus Variante 2
+  Variante 1 (Fenster) mit der Aufteilung aus Variante 2; Gruppe „Bearbeiten“ nach dem ersten Blick am iPhone (Editor
+  unter „Lied ›“ nicht gefunden), das Wort „Version“ bleibt
 
 </details>

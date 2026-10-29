@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useEffect } from 'react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { geplanterKopf } from '@shared/protokolle/planen';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
@@ -25,6 +26,32 @@ vi.mock('./lesen', async (orig) => ({
   ...(await orig<typeof import('./lesen')>()),
   ladeSitzungen: vi.fn(),
   ladeAufgaben: vi.fn(() => Promise.resolve([])),
+}));
+
+// Der Editor als Attrappe (wie im Festlegen-Test): zählt, wie oft er geöffnet wird, zeigt Titel und „Bearbeiten“.
+const editorGeoeffnet = vi.fn();
+vi.mock('./ProtokollSchreiben', () => ({
+  ProtokollSchreiben: ({
+    sitzung,
+    onBearbeiten,
+  }: {
+    sitzung: { titel: string };
+    onBearbeiten?: () => void;
+  }) => {
+    useEffect(() => {
+      editorGeoeffnet();
+    }, []);
+    return (
+      <div data-testid="editor">
+        <h2>{sitzung.titel}</h2>
+        {onBearbeiten && (
+          <button type="button" aria-label="Sitzung bearbeiten" onClick={onBearbeiten}>
+            Bearbeiten
+          </button>
+        )}
+      </div>
+    );
+  },
 }));
 
 afterEach(cleanup);
@@ -418,6 +445,58 @@ describe('Einstiege (Sitzungsansicht, Kasten „Nächste Sitzung“)', () => {
     fireEvent.click(await screen.findByText('Leitungssitzung', { selector: 'b' }));
     await screen.findByText(/Das Protokoll ist geplant/);
     expect(screen.queryByRole('button', { name: /Sitzung bearbeiten/ })).toBeNull();
+  });
+
+  const ENTWURF: Sitzung = {
+    ...SITZUNG,
+    schluessel: 'p:s1',
+    kopf: { ...SITZUNG.kopf!, status: 'entwurf' },
+  };
+  const zeigeEditor = (schreibbar: number[]) => {
+    vi.mocked(L.ladeSitzungen).mockResolvedValue({
+      kommend: [ENTWURF],
+      protokolle: [],
+      teile: [],
+      kalender: 4,
+      treffenNichtFreigegeben: false,
+    });
+    render(
+      <Sitzungen
+        modul={24}
+        gruppen={[GRUPPE]}
+        ich={{ person: 1, name: 'Alwin' }}
+        schreibbar={schreibbar}
+        auswahl={{ gruppe: 194, sitzung: 'p:s1' }}
+      />,
+    );
+  };
+
+  it('Entwurf im Editor: „Bearbeiten“ für die eigene Sitzung; danach zeigt der Editor den neuen Titel, ohne neu zu öffnen', async () => {
+    editorGeoeffnet.mockClear();
+    zeigeEditor([62]);
+    const editor = await screen.findByTestId('editor');
+    fireEvent.click(within(editor).getByRole('button', { name: /Sitzung bearbeiten/ }));
+    const dialog = await screen.findByRole('dialog');
+    await waitFor(() => expect(within(dialog).getByLabelText('Titel')).toBeTruthy());
+    fireEvent.change(within(dialog).getByLabelText('Titel'), { target: { value: 'Klausur' } });
+    vi.mocked(L.ladeSitzungen).mockResolvedValue({
+      kommend: [{ ...ENTWURF, titel: 'Klausur', kopf: { ...ENTWURF.kopf!, titel: 'Klausur' } }],
+      protokolle: [],
+      teile: [],
+      kalender: 4,
+      treffenNichtFreigegeben: false,
+    });
+    await waitFor(() =>
+      expect(
+        within(dialog).getByRole<HTMLButtonElement>('button', { name: /^Speichern/ }).disabled,
+      ).toBe(false),
+    );
+    fireEvent.click(within(dialog).getByRole('button', { name: /^Speichern/ }));
+    await waitFor(() =>
+      expect(within(screen.getByTestId('editor')).getByRole('heading').textContent).toBe('Klausur'),
+    );
+    expect(aendern.mock.calls[0][0].sitzung.schluessel).toBe('p:s1');
+    expect(editorGeoeffnet).toHaveBeenCalledTimes(1);
   });
 
   it('freigegebenes Protokoll: kein „Bearbeiten“ und kein „Ändern“ an der nächsten Sitzung', async () => {

@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { DEMO_EDITOR_TEXT } from '../client/src/dev/demoEditorText';
+import { cursorInZeile } from './werkzeug';
 
 /**
  * **Schreibansicht bei offener Tastatur** (23.10.2026, Alwin am iPad: „das Bearbeitungsfenster ist bei aufgeklappter
@@ -43,11 +44,7 @@ const gespeichert = (page: Page) =>
 
 async function inDenText(page: Page) {
   await page.goto('/?demo=editor');
-  const zeile = page.locator('.cm-line', { hasText: 'jedem neuen Tag' });
-  await expect(zeile).toBeVisible({ timeout: 30_000 });
-  const h = (await zeile.boundingBox())!.height;
-  await zeile.click({ position: { x: 1, y: h / 2 } });
-  for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight'); // „Du “
+  await cursorInZeile(page, 'jedem neuen Tag', 3); // „Du “
 }
 
 test('Tastatur offen + Cursor im Text: Ablauf und Fassung weg, eine Zeile, der Text bekommt den Platz', async ({
@@ -165,6 +162,32 @@ test('Tastatur für ein anderes Feld (Fassung): keine Schreibansicht', async ({ 
 
 test.describe('Handy', () => {
   test.use({ viewport: { width: 390, height: 844 } });
+
+  /**
+   * **Cursor setzen, während die Schrift noch lädt** (29.10.2026). Mit der Ersatzschrift bricht die Zeile am Handy um
+   * (62 px), mit Lato nicht (31 px). Die Editor-Tests maßen die Höhe zu früh und klickten auf ihre halbe Höhe – kam die
+   * Schrift dazwischen, lag dort die nächste Zeile. Unter Last wackelte so „Schreibansicht am Handy“, auch auf main.
+   * Hier wird die Schrift gezielt zurückgehalten und erst nach dem Laden der Seite freigegeben.
+   */
+  test('Cursor setzen, während die Schrift noch lädt: er landet trotzdem hinter „Du “', async ({
+    page,
+  }) => {
+    let freigeben = () => {};
+    const gehalten = new Promise<void>((ok) => (freigeben = ok));
+    await page.route(/\.(woff2?|ttf)(\?|$)/, async (r) => {
+      await gehalten;
+      await r.continue();
+    });
+    await page.goto('/?demo=editor');
+    const zeile = page.locator('.cm-line', { hasText: 'jedem neuen Tag' });
+    await expect(zeile).toBeVisible({ timeout: 30_000 });
+    // Mit der Ersatzschrift ist die Zeile wirklich umgebrochen – sonst bewiese der Test nichts.
+    expect((await zeile.boundingBox())!.height).toBeGreaterThan(50);
+    setTimeout(freigeben, 400);
+    await cursorInZeile(page, 'jedem neuen Tag', 3);
+    await page.keyboard.type('X');
+    await expect(page.locator('.cm-line', { hasText: 'Du Xbist' })).toBeVisible();
+  });
 
   test('Schreibansicht am Handy: eine Zeile, die Akkorde werden gewischt statt umzubrechen', async ({
     page,

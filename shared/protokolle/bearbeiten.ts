@@ -103,6 +103,26 @@ export type TerminRoh = Partial<Record<(typeof TERMIN_FELDER)[number], unknown>>
 };
 
 /**
+ * **Beginn und Ende einer Sitzung aus dem gelesenen Termin.** Bei einer Serie ist der gelesene Beginn der des ersten
+ * Termins – dann bleibt der Beginn dieser Sitzung, die Dauer kommt vom Termin. Die eine Stelle dafür: Fenster „Sitzung
+ * bearbeiten“ und Sitzungen hinter dem Lesefenster der Liste (`lesen.ts`).
+ */
+export function zeitAusTermin(t: TerminRoh, beginn: string): { beginn: string; ende?: string } {
+  const start = typeof t.startDate === 'string' ? t.startDate : null;
+  const schluss = typeof t.endDate === 'string' ? t.endDate : null;
+  if (typeof t.repeatId === 'number' && t.repeatId !== 0)
+    return start && schluss
+      ? {
+          beginn,
+          ende: new Date(Date.parse(beginn) + Date.parse(schluss) - Date.parse(start))
+            .toISOString()
+            .replace('.000Z', 'Z'),
+        }
+      : { beginn };
+  return { beginn: start ?? beginn, ...(schluss ? { ende: schluss } : {}) };
+}
+
+/**
  * **Was am Termin besonders ist:** eine Anmeldung (die bleibt in ChurchTools – das Fenster ändert den Termin nicht) oder
  * eine Serie (K2b-2: das Fenster fragt „nur diese“ / „ab dieser“). Anmeldung geht vor.
  */

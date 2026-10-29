@@ -404,3 +404,34 @@ gleicher Buchstabe, gleiche Farbe.
   `o7b-8-farbe-v1.html`, Variante A „Kachel“ gewählt
 
 </details>
+
+### TF-ORG-14 · Was das Organigramm für alle zeigt
+
+**Das brauchst du:** Die Test-Instanz mit der Erweiterung; ein Konto mit „Gruppen verwalten“ und eins ohne (oder zwei
+Browser). Die Rechte der Kategorie „Was das Organigramm zeigt“ sind gesetzt (sehen: alle; ändern: Gruppen-Admins).
+
+**Das muss passieren:** Was ein Admin ausblendet, ist für alle weg – im Reiter, in der Präsentation, in der PDF – und in
+ChurchTools ändert sich nichts.
+
+1. Als Admin **Einstellungen**: Gruppentypen mit Zahl, darunter alle Gruppen als Baum mit Suche.
+2. Einen Typ abwählen (z. B. Merkmal) und eine Gruppe mit Untergruppen: deren Untergruppen werden grau („mit der
+   Obergruppe“). Unten steht „1 Gruppentyp und 1 Gruppe ausgeblendet“. **Speichern**.
+3. Reiter Organigramm: Typ und Gruppe samt Untergruppen sind weg, oben steht „Für alle ausgeblendet: …“; der Typ hat
+   kein Schildchen mehr. Ebenso in **Präsentieren** und in **PDF / Drucken**.
+4. Als Person ohne Admin-Recht (anderer Browser): dasselbe, ohne „Einstellungen“.
+5. Zwei Admins gleichzeitig: Beide öffnen Einstellungen, A speichert, dann B – B bekommt „… hat das inzwischen
+   geändert – nichts überschrieben“ und sieht den Stand von A.
+6. Alles wieder einblenden und speichern: Der Hinweis verschwindet.
+7. In ChurchTools nachsehen: Gruppen und Typen sind unverändert.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `organigramm/src/EinstellungenFenster.tsx`, `organigramm/src/sichtbarkeitSpeicher.ts`, `organigramm/src/speicher.ts`, `organigramm/src/App.tsx`, `organigramm/src/Organigramm.tsx`, `shared/organigramm/sichtbarkeit.ts`, `shared/organigramm/gruppen.ts`
+- **Automatisiert:** größtenteils – `App.test.tsx` (O7b-7: Karten, Präsentation, PDF; ohne Leserecht; vorübergehend
+  mit „Erneut versuchen“; kein Aufblitzen; nur Admins; Speichern mit Version; Konflikt), `sichtbarkeitSpeicher.test.ts`
+  (gegen den nachgebauten Speicher), `sichtbarkeit.test.ts`, `gruppen.test.ts`; die Rechte der Kategorie und zwei echte
+  Konten prüft nur dieser Fall
+- **Historie:** #736; Wunsch Alwin 28.10.2026, Entwurf `o7b-6-7-v1.html`, entschieden 29.10.2026
+
+</details>

@@ -44,6 +44,7 @@ import { ApiError, NichtUebernommen, Unklar } from '@ui/ct/fehler';
 import { modulPort } from '@ui/ct/modulPort';
 import { ctAnfrage, ctDaten, KeinSpeicherRecht } from '@ui/ct/verbindung';
 import { abgelehnt } from './planen';
+import { anfragenLesen, terminDaten, terminLaden, terminPfad, type TerminRef } from './termin';
 
 const json = (body: unknown) => JSON.stringify(body);
 const VERWEIGERT_TERMIN = 'Du darfst in diesem Kalender keine Termine ändern.';
@@ -60,43 +61,7 @@ const SERIE_GEAENDERT =
 const ERSTER_AB =
   'Das ist der erste Termin der Serie – „ab hier beenden“ hieße die ganze Serie löschen. Bitte das wählen.';
 
-type TerminRef = { kalender: number; id: number };
 type Ort = { modul: number; kategorie: number };
-
-const terminPfad = (t: TerminRef) => `/calendars/${t.kalender}/appointments/${t.id}`;
-
-/** Der Termin samt den berechneten Terminen einer Serie (`calculatedDates`, Beginn je Termin). */
-async function terminDaten(termin: TerminRef): Promise<{ roh: TerminRoh; termine: string[] }> {
-  const d = await ctDaten<{ appointment?: TerminRoh; calculatedDates?: unknown }>(
-    terminPfad(termin),
-  );
-  if (!d?.appointment) throw new NichtUebernommen('den Termin');
-  const c = d.calculatedDates;
-  const termine =
-    c && typeof c === 'object'
-      ? Object.values(c as Record<string, { startDate?: unknown } | null>)
-          .map((x) => x?.startDate)
-          .filter((x): x is string => typeof x === 'string')
-      : [];
-  return { roh: d.appointment, termine };
-}
-
-/** Der Termin, wie ChurchTools ihn hat – für den Rumpf des `PUT` und um Serien zu erkennen. */
-export async function terminLaden(termin: TerminRef): Promise<TerminRoh> {
-  return (await terminDaten(termin)).roh;
-}
-
-interface AnfrageRoh {
-  id?: number;
-  person?: { domainIdentifier?: string };
-  inviteeId?: number;
-}
-
-const anfragenLesen = async (t: TerminRef) =>
-  ((await ctDaten<AnfrageRoh[]>(`${terminPfad(t)}/meetingrequests`)) ?? []).map((a) => ({
-    id: a.id,
-    person: Number(a.person?.domainIdentifier ?? a.inviteeId),
-  }));
 
 /**
  * **Der Termin, wie er jetzt ist** – mit den Eingeladenen und (bei einer Serie) allen Terminen. Die Liste der Sitzungen

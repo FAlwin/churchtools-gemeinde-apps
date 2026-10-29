@@ -147,6 +147,14 @@ describe('baumOhneTypen', () => {
     expect(namen(baumOhneTypen(baum, new Set([9])))).toEqual(['Leitung']);
   });
 
+  it('einzelne Gruppen (für alle, O7b-7) – samt Untergruppen, zusammen mit Typen', () => {
+    expect(namen(baumOhneTypen(baum, new Set(), new Set([2])))).toEqual([
+      'Ankündigungen',
+      'Leitung',
+    ]);
+    expect(namen(baumOhneTypen(baum, new Set([9]), new Set([1])))).toEqual([]);
+  });
+
   it('ohne Auswahl bleibt alles', () => {
     expect(namen(baumOhneTypen(baum, new Set()))).toEqual(namen(baum));
   });

@@ -85,8 +85,8 @@ Angelegt werden Termin, Gruppentreffen und eine **geplante Sitzung**, die beides
 Fenster „bitte im Kalender nachsehen“ sagt – sonst kommen die Einladungen doppelt. Einen falsch angelegten Termin in
 ChurchTools löschen schickt allen Eingeladenen die Mail „Termin gelöscht“.
 
-**Sitzung bearbeiten und absagen (Leitung, K2b):** „Bearbeiten“ in der Sitzungsansicht bzw. „Ändern“ im Kasten
-„Nächste Sitzung“ öffnet ein Fenster mit Titel, Datum, Uhrzeit, Dauer und den Eingeladenen (frisch vom Termin
+**Sitzung bearbeiten und absagen (Leitung, K2b):** „Bearbeiten“ in der Sitzungsansicht und im Kopf des Editors bzw.
+„Ändern“ im Kasten „Nächste Sitzung“ öffnet ein Fenster mit Titel, Datum, Uhrzeit, Dauer und den Eingeladenen (frisch vom Termin
 gelesen). Termin, Gruppentreffen und Protokoll ziehen mit. **Vor dem Speichern sagt das Fenster, wer welche Mail
 bekommt:** neue Zeit mit „Alle neu einladen“ (vorgewählt) – „Termin geändert“, die Zusagen gehen zurück; abgewählt
 still. Nur der Titel: still. Einladen: „Neue Besprechungsanfrage“, ausladen: „Termin gelöscht“. „Sitzung absagen“
@@ -182,7 +182,8 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit später sc
   `serienWeg`, `teilRumpf`, `ausnahmeRumpf`, `endeRumpf`, `verschoben`), Schreiben `protokolle/src/bearbeiten.ts`
   (Termin → Einladungen → Treffen → Köpfe; geteilt wird ohne Einladungsliste, dann einzeln eingeladen; ein schon
   herausgelöster Tag wird abgewiesen statt doppelt angelegt), Fenster `SitzungBearbeiten.tsx`, Felder
-  `Planungsfelder.tsx`. Gemessen: `protokolle-planung/docs/messung-k2b-2026-10-29.md`, `messung-k2b2-2026-10-29.md`.
+  `Planungsfelder.tsx`. Termin und Besprechungsanfragen liest `protokolle/src/termin.ts` (auch Liste und Festlegen);
+  Protokolle mit Termin hinter den 180 Tagen der Liste liest `lesen.ts` gezielt nach (`termineJenseits`). Gemessen: `protokolle-planung/docs/messung-k2b-2026-10-29.md`, `messung-k2b2-2026-10-29.md`.
 - Abschnitte: Regel `shared/protokolle/abschnitte.ts`, Anbindung `protokolle/src/abschnittZiehen.ts` (Loslassen hört
   das Blatt in der Einfangphase vor BlockNote ab; „Nach oben/unten“ im Griff-Menü von `DokumentEditor.tsx`). Der Griff
   sitzt ohne BlockNotes Überschriften-Versatz (`GRIFF_LAGE`).

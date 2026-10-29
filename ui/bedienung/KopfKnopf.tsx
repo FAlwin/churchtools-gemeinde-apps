@@ -23,6 +23,11 @@ interface KopfKnopfProps {
   /** Immer nur das Symbol, auch am iPad (Vollbild – Entwurf S). */
   nurSymbol?: boolean;
   /**
+   * Klein in einer Tabellenzeile: nur das Symbol, 26 px – so groß wie Zauberstab und Regler der Matrix (das grüne Plus
+   * neben „N Punkte“; Alwin 29.10.2026: in voller Knopfhöhe „zu groß und nicht schön“).
+   */
+  klein?: boolean;
+  /**
    * Im Raster am Handy (Liedblatt, Scheibe B1): Symbol über einem Kurzwort, auch unter `HANDY_BREITE` mit Text – dort
    * sind die Knöpfe sonst nur Symbole und im Liedblatt nicht zu unterscheiden.
    */
@@ -50,6 +55,7 @@ export function KopfKnopf({
   aktiv,
   offen,
   nurSymbol,
+  klein,
   raster,
   kurz,
   dataTour,
@@ -67,7 +73,7 @@ export function KopfKnopf({
               : offen
                 ? ' ' + styles.offen
                 : ''
-      }${nurSymbol ? ' ' + styles.nurSymbol : ''}${raster ? ' ' + styles.raster : ''}`}
+      }${nurSymbol ? ' ' + styles.nurSymbol : ''}${klein ? ' ' + styles.klein : ''}${raster ? ' ' + styles.raster : ''}`}
       onClick={onClick}
       title={title ?? label}
       aria-label={title ?? label}
@@ -78,7 +84,9 @@ export function KopfKnopf({
       data-tour={dataTour}
     >
       {symbol}
-      {!nurSymbol && <span className={styles.text}>{raster ? (kurz ?? label) : label}</span>}
+      {!nurSymbol && !klein && (
+        <span className={styles.text}>{raster ? (kurz ?? label) : label}</span>
+      )}
     </button>
   );
 }

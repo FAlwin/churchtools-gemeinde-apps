@@ -3,13 +3,13 @@ import { passendeAnzahl, schritt, sichtbar } from './fenster';
 
 describe('passendeAnzahl', () => {
   it('so viele Spalten, wie neben die Dienst-Spalte passen; mindestens eine', () => {
-    expect(passendeAnzahl(1100, 'm', 20)).toBe(5); // (1100 − 180) / 176
-    expect(passendeAnzahl(1100, 's', 20)).toBe(7);
-    expect(passendeAnzahl(300, 'l', 20)).toBe(1);
+    expect(passendeAnzahl(1100, 'schmal', 20)).toBe(5); // (1100 − 180) / 176
+    expect(passendeAnzahl(1100, 'breit', 20)).toBe(3); // (1100 − 180) / 256
+    expect(passendeAnzahl(300, 'breit', 20)).toBe(1);
   });
 
   it('Breite unbekannt (0) → alle', () => {
-    expect(passendeAnzahl(0, 'm', 8)).toBe(8);
+    expect(passendeAnzahl(0, 'schmal', 8)).toBe(8);
   });
 });
 

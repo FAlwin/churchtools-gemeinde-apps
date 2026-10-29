@@ -142,7 +142,17 @@ export function Sitzungen({
   const nachladen = useCallback(() => {
     if (!gruppe) return;
     Promise.all([ladeSitzungen(modul, gruppe, zeitzone), ladeAufgaben(modul, gruppe)]).then(
-      ([daten, aufgaben]) => setZustand({ art: 'fertig', daten, aufgaben }),
+      ([daten, aufgaben]) => {
+        setZustand({ art: 'fertig', daten, aufgaben });
+        // Die offene Sitzung frisch aus der Liste – nach „Bearbeiten“ im Editor stimmen Titel und Zeit im Kopf. Der
+        // Editor hängt nur an der Sitzungs-ID, ein neues Objekt lädt ihn nicht neu.
+        setOffen(
+          (o) =>
+            o &&
+            ([...daten.kommend, ...daten.protokolle].find((s) => s.schluessel === o.schluessel) ??
+              o),
+        );
+      },
       () => {},
     );
   }, [modul, gruppe]);
@@ -263,6 +273,7 @@ export function Sitzungen({
           ich={ich}
           zeitzone={zeitzone}
           naechste={naechsteVon(offen)}
+          onBearbeiten={darfBearbeiten(offen) ? () => setBearbeiten(offen) : undefined}
           onZurueck={(geaendert) => {
             setOffen(null);
             if (geaendert) laden();

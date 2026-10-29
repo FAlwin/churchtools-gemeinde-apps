@@ -149,6 +149,127 @@ describe('ladeSitzungen (S3-1)', () => {
     ]);
   });
 
+  describe('Protokolle hinter dem Lesefenster (180 Tage)', () => {
+    // Bemerkt beim Prüfen von K2b 29.10.2026: Eine geplante Sitzung im Mai 2027 kam ohne Einladungen in den Kasten
+    // „Nächste Sitzung“ und auf die Startseite – die Liste fragt den Kalender nur bis 21.04.2027.
+    const SPAET = '2027-05-26T17:30:00Z';
+    beforeEach(async () => {
+      await einrichten(4);
+    });
+
+    it('geplant mit Termin: Termin und Einladungen werden gezielt nachgelesen', async () => {
+      ct.termine = [
+        {
+          kalender: 4,
+          id: 181,
+          titel: 'Klausur',
+          beginn: SPAET,
+          ende: '2027-05-26T19:30:00Z',
+          anfragen: [
+            { person: 1, state: 'accepted' },
+            { person: 19, state: 'pending' },
+          ],
+        },
+      ];
+      protokollAblegen({
+        sitzung: 'mai',
+        status: 'geplant',
+        beginn: SPAET,
+        termin: { kalender: 4, id: 181 },
+      });
+      const s = await ladeSitzungen(MODUL, gruppe(), ZONE, JETZT);
+      expect(s.kommend).toHaveLength(1);
+      expect(s.kommend[0]).toMatchObject({
+        schluessel: 'p:mai',
+        ende: '2027-05-26T19:30:00Z',
+        anfragen: [
+          { person: 1, antwort: 'zugesagt' },
+          { person: 19, antwort: 'offen' },
+        ],
+      });
+    });
+
+    it('Serie: der Termin dieser Sitzung (Beginn des Kopfs, Dauer der Serie), einmal gelesen', async () => {
+      ct.termine = [
+        {
+          kalender: 4,
+          id: 90,
+          titel: 'Leitungssitzung',
+          beginn: '2026-11-04T18:30:00Z',
+          ende: '2026-11-04T20:00:00Z',
+          repeatId: 7,
+          felder: { repeatUntil: '2027-12-31' },
+          anfragen: [{ person: 19, state: 'accepted' }],
+        },
+      ];
+      for (const [sitzung, beginn] of [
+        ['a', '2027-05-26T17:30:00Z'],
+        ['b', '2027-06-02T17:30:00Z'],
+      ])
+        protokollAblegen({ sitzung, status: 'entwurf', beginn, termin: { kalender: 4, id: 90 } });
+      const s = await ladeSitzungen(MODUL, gruppe(), ZONE, JETZT);
+      const spaet = s.kommend.filter((x) => x.kopf);
+      expect(spaet.map((x) => [x.kopf?.sitzung, x.ende, x.anfragen.length])).toEqual([
+        ['a', '2027-05-26T19:00:00Z', 1],
+        ['b', '2027-06-02T19:00:00Z', 1],
+      ]);
+      expect(ct.aufrufe.filter((a) => a === 'GET /calendars/4/appointments/90')).toHaveLength(1);
+    });
+
+    it('Termin in ChurchTools ins Fenster verschoben, Protokoll noch auf der alten Zeit: nicht doppelt', async () => {
+      ct.termine = [
+        {
+          kalender: 4,
+          id: 114,
+          titel: 'Leitungssitzung',
+          beginn: '2027-03-17T17:00:00Z',
+          anfragen: [{ person: 1, state: 'accepted' }],
+        },
+      ];
+      protokollAblegen({
+        sitzung: 'alt',
+        status: 'entwurf',
+        beginn: SPAET,
+        termin: { kalender: 4, id: 114 },
+      });
+      const s = await ladeSitzungen(MODUL, gruppe(), ZONE, JETZT);
+      expect(s.kommend.map((x) => [x.schluessel, x.anfragen.length])).toEqual([['p:alt', 1]]);
+    });
+
+    it('Termin inzwischen gelöscht (404): die Sitzung bleibt, ohne Einladungen', async () => {
+      protokollAblegen({
+        sitzung: 'mai',
+        status: 'geplant',
+        beginn: SPAET,
+        termin: { kalender: 4, id: 999 },
+      });
+      const s = await ladeSitzungen(MODUL, gruppe(), ZONE, JETZT);
+      expect(s.kommend.map((x) => [x.schluessel, x.anfragen])).toEqual([['p:mai', []]]);
+    });
+
+    it('freigegebene und Protokolle im Fenster: kein zusätzlicher Aufruf', async () => {
+      ct.termine = [
+        {
+          kalender: 4,
+          id: 114,
+          titel: 'Leitungssitzung',
+          beginn: '2027-03-17T17:00:00Z',
+          anfragen: [{ person: 1, state: 'accepted' }],
+        },
+      ];
+      protokollAblegen({ sitzung: 'frei', beginn: SPAET, termin: { kalender: 4, id: 181 } });
+      protokollAblegen({
+        sitzung: 'maerz',
+        status: 'entwurf',
+        beginn: '2027-03-17T17:00:00Z',
+        termin: { kalender: 4, id: 114 },
+      });
+      const s = await ladeSitzungen(MODUL, gruppe(), ZONE, JETZT);
+      expect(s.kommend.find((x) => x.schluessel === 'p:maerz')?.anfragen).toHaveLength(1);
+      expect(ct.aufrufe.some((a) => /^GET \/calendars\/4\/appointments\/\d+$/.test(a))).toBe(false);
+    });
+  });
+
   it('ohne Kalender in der Einstellung: kein Kalender-Aufruf, nur Treffen', async () => {
     await einrichten(null);
     ct.treffen.set(194, [{ id: 15, startDate: '2027-03-17T17:00:00Z' }]);

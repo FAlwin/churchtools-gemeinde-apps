@@ -99,7 +99,7 @@ vi.mock('@ui/teilen/qr', async (original) => ({
   qrPng: vi.fn(() => Promise.resolve(new Blob(['png'], { type: 'image/png' }))),
 }));
 const PRUEF_OK = {
-  plaetze: { belegt: 9, wartend: 0, max: 10, wartenTrotzPlatz: false },
+  plaetze: { belegt: 9, wartend: 0, max: 10 },
   auswahl: null,
   betraege: [],
   geprueft: 3,
@@ -107,7 +107,7 @@ const PRUEF_OK = {
 };
 const PRUEF_HINWEISE = {
   ...PRUEF_OK,
-  plaetze: { belegt: 9, wartend: 2, max: 10, wartenTrotzPlatz: true },
+  plaetze: { belegt: 9, wartend: 2, max: 10 },
   betraege: [
     {
       grund: 'abweichend' as const,
@@ -936,7 +936,8 @@ describe('Nachprüfung (A6-5c, #623)', () => {
     const nummer = screen.getByText(/Keine Auswahl gespeichert/).closest('li')!;
     expect(nummer.textContent).toMatch(/gemeldet 15,00 €$/);
     expect(karten().indexOf('Nachprüfung')).toBeLessThan(karten().indexOf('Anmeldung'));
-    expect(screen.getByText(/1 Platz ist frei, aber 2 warten/)).toBeTruthy();
+    // „Platz frei – jemand wartet“ steht seit U2-1 in der Kachel und im Reiter Warteliste, nicht in der Nachprüfung.
+    expect(screen.queryByText(/Platz ist frei, aber/)).toBeNull();
     expect(screen.getByText('Betrag weicht von den Regeln ab – bitte prüfen')).toBeTruthy();
     expect(screen.getByText(/gemeldet nichts|gemeldet 0,00 €/)).toBeTruthy();
   });

@@ -4,6 +4,7 @@ import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { Icon } from '@ui/icons/icons';
 import { Segment } from '@ui/bedienung/Segment';
+import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { ableiten, fremdeTypen, type Block } from '@shared/protokolle/dokument';
 import {
   sperreLage,
@@ -83,6 +84,7 @@ export function ProtokollSchreiben({
   ich,
   zeitzone,
   naechste,
+  onBearbeiten,
   onZurueck,
 }: {
   sitzung: Sitzung;
@@ -100,6 +102,8 @@ export function ProtokollSchreiben({
   zeitzone: string;
   /** „Nächste Sitzung“ im Bereich Termine (S5-2) – festgelegt wird im Fenster der Liste dahinter. */
   naechste?: ReactNode;
+  /** „Bearbeiten“ im Kopf – die Sitzung dieses Protokolls (Zeit, Titel, Eingeladene, absagen; K2b), nur für die Leitung. */
+  onBearbeiten?: () => void;
   /** `geaendert` = es wurde gespeichert; die Liste dahinter lädt dann neu. */
   onZurueck: (geaendert: boolean) => void;
 }) {
@@ -429,6 +433,16 @@ export function ProtokollSchreiben({
           <Marke art="leise">Entwurf – noch nicht freigegeben</Marke>
           {z && <SpeicherStand z={z} zeitzone={zeitzone} />}
         </div>
+        {onBearbeiten && (
+          <div className={ansicht.aktionen}>
+            <KopfKnopf
+              label="Bearbeiten"
+              title="Sitzung bearbeiten (Zeit, Titel, Eingeladene, absagen)"
+              symbol={<Icon name="pencil" size={16} />}
+              onClick={onBearbeiten}
+            />
+          </div>
+        )}
       </header>
     </>
   );

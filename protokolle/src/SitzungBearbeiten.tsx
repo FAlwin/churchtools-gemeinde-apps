@@ -13,6 +13,7 @@ import {
   planungVon,
   serienWeg,
   terminSperre,
+  zeitAusTermin,
   type SerienAbsage,
   type Umfang,
 } from '@shared/protokolle/bearbeiten';
@@ -104,22 +105,10 @@ export function SitzungBearbeiten({
       ({ roh, eingeladen: da, termine }) => {
         if (!aktiv) return;
         const s = terminSperre(roh);
-        const start = typeof roh.startDate === 'string' ? roh.startDate : null;
-        const schluss = typeof roh.endDate === 'string' ? roh.endDate : null;
-        // Bei einer Serie ist der gelesene Beginn der des ersten Termins – diese Sitzung behält ihren, die Dauer gilt.
-        const zeit =
-          s === 'serie'
-            ? start && schluss
-              ? {
-                  ende: new Date(
-                    Date.parse(sitzung.beginn) + Date.parse(schluss) - Date.parse(start),
-                  ).toISOString(),
-                }
-              : {}
-            : { ...(start ? { beginn: start } : {}), ...(schluss ? { ende: schluss } : {}) };
         const frisch: Sitzung = {
           ...sitzung,
-          ...zeit,
+          // Bei einer Serie behält diese Sitzung ihren Beginn, die Dauer kommt vom Termin.
+          ...zeitAusTermin(roh, sitzung.beginn),
           anfragen: da.map((person) => ({
             person,
             antwort: sitzung.anfragen.find((x) => x.person === person)?.antwort ?? 'offen',

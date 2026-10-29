@@ -45,7 +45,9 @@ des Bandes.
    eckige Knöpfe mit Rahmen (nicht rund); ebenso das Plus in der Liedsuche des Ablaufs und **„+ Anlegen“** bei einem
    Termin ohne Ablauf. Zum Anlegen steht am iPad/Rechner oben ein **grüner** Knopf mit Text (Ablauf im Bearbeiten,
    Abwesenheiten) – wie „+ Gruppe erstellen“ in ChurchTools.
-5. **Ein Lied öffnen (Liedblatt, Scheibe B1+B2):** Oben eine **weiße Kopfkarte** wie die Seitenköpfe.
+5. **Ein Lied öffnen (Liedblatt, Scheibe B1+B2):** Oben eine **Fläche in Kartenfarbe bis an den oberen Rand** (unter die
+   Uhr bzw. bis an die ChurchTools-Leiste, keine schwebende Karte mit Rand – seit 29.10.2026); Inhalt scharf unter dem Band.
+   Am Handy hochkant sind Liedtitel und Knöpfe größer als am iPad.
    **iPad quer und hochkant:** erste Zeile **„← Ablauf“**, der Termin („Gottesdienst – Sonntag, 01. Nov · 10:00“), in der
    Erweiterung ganz rechts Vollbild. Darunter in **einer** Zeile links die **Lied-Leiste** (alle Lieder nummeriert,
    mit Trennstrichen; die sichtbaren grau, das gewählte blau unterstrichen mit Tonart · Fassung · Tempo und Pfeil) und

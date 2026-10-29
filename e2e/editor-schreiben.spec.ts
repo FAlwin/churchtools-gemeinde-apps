@@ -106,17 +106,25 @@ test('Kärtchen am unteren Rand: das Menü klappt nach oben, nicht unter die Tas
   // Das unterste Kärtchen, das noch über der Tastatur steht.
   const kaertchen = page.locator('.cm-cp-akkord');
   let unten = -1;
+  let kaertchenUnten = 0;
   let ziel = 0;
   for (let i = 0; i < (await kaertchen.count()); i++) {
     const b = await kaertchen.nth(i).boundingBox();
     if (b && b.y + b.height < sichtbarBis && b.y > unten) {
       unten = b.y;
+      kaertchenUnten = b.y + b.height;
       ziel = i;
     }
   }
-  expect(sichtbarBis - unten).toBeLessThan(80); // es steht wirklich unten
   await kaertchen.nth(ziel).click();
   const m = (await page.getByRole('group', { name: /^Akkord / }).boundingBox())!;
+  // Es steht wirklich unten: Unter dem Kärtchen ist weniger Platz, als das Menü samt Abstand braucht – sonst bewiese der
+  // Rest nichts. Den Abstand misst der Test über dem Kärtchen (derselbe wie darunter, `ABSTAND` in `AkkordMenue.tsx`).
+  // Bis zum 29.10.2026 stand hier eine feste Grenze von 80 px; ein 8 px schmalerer Editor-Kopf verschob die Zeilen und
+  // riss sie, ohne dass sich am Verhalten etwas geändert hätte.
+  const abstand = unten - (m.y + m.height);
+  expect(abstand).toBeGreaterThan(0);
+  expect(kaertchenUnten + abstand + m.height).toBeGreaterThan(sichtbarBis);
   expect(m.y + m.height).toBeLessThanOrEqual(sichtbarBis);
   expect(m.y + m.height).toBeLessThanOrEqual(unten + 2); // über dem Kärtchen
 });

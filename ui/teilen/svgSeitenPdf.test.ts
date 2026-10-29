@@ -63,6 +63,30 @@ describe('stileEinbetten', () => {
   });
 });
 
+describe('stileEinbetten – Rundungen aus dem Stil (O7b-8)', () => {
+  it('eine Rundung per Stil (`rx: var(--r-tile)`) wird Attribut; „auto“ (keine Angabe) nicht – damit käme svg2pdf nicht zurecht', () => {
+    const svg = seite(
+      '<rect class="kachel" width="18" height="18"/><rect class="kasten" width="10" height="5"/>',
+    );
+    // jsdom rechnet `rx` nicht aus – so liefert es der Browser.
+    const echt = window.getComputedStyle.bind(window);
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((el) => {
+      const stil = echt(el);
+      const rund = el.getAttribute('class') === 'kachel' ? '6px' : 'auto';
+      return new Proxy(stil, {
+        get: (z, k) =>
+          k === 'getPropertyValue'
+            ? (n: string) => (n === 'rx' || n === 'ry' ? rund : z.getPropertyValue(n))
+            : (Reflect.get(z, k) as unknown),
+      });
+    });
+    const [kachel, kasten] = stileEinbetten(svg, 'LatoPdf').querySelectorAll('rect');
+    expect([kachel.getAttribute('rx'), kachel.getAttribute('ry')]).toEqual(['6', '6']);
+    expect(kasten.hasAttribute('rx')).toBe(false);
+    vi.restoreAllMocks();
+  });
+});
+
 describe('grundlinienFestlegen', () => {
   it('mittig gesetzte Namen bekommen die Grundlinie, die der Browser misst (Rahmen mit und ohne Angabe)', () => {
     const svg = seite('<text x="5" y="50" dominant-baseline="central">Gottesdienst</text>');
@@ -79,6 +103,23 @@ describe('grundlinienFestlegen', () => {
     expect(t.getAttribute('y')).toBe('55.5');
     expect(t.hasAttribute('dominant-baseline')).toBe(false);
     expect(t.hasAttribute('alignment-baseline')).toBe(false);
+  });
+
+  it('gemessen wird am groß gezeichneten Blatt – klein gerundet der Browser den Versatz auf 0 (O7b-8, 29.10.2026)', () => {
+    const svg = seite('<text x="5" y="50" dominant-baseline="central">Gottesdienst</text>');
+    const t = svg.querySelector('text')!;
+    const breiten: string[] = [];
+    Object.assign(t, {
+      getBBox: () => {
+        breiten.push(svg.style.width);
+        return { x: 5, y: t.hasAttribute('dominant-baseline') ? 41.5 : 36, width: 80, height: 17 };
+      },
+    });
+    svg.style.width = '12px';
+    grundlinienFestlegen(svg);
+    expect(breiten).toEqual(['8000px', '8000px']);
+    // Danach wie vorher – die Lage in der PDF hängt an der viewBox.
+    expect(svg.style.width).toBe('12px');
   });
 
   it('ohne Messung (hier: keine Zeichenfläche) bleibt es bei `alignment-baseline`', () => {

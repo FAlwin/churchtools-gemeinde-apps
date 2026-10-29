@@ -12,6 +12,24 @@ import { kuerzenAuf, nachKommasUmbrechen } from './umbruch';
 
 /** Nur der Name (Alwin, 26.10.2026) – mit diesem Rand links und rechts, zwischen diesen Breiten. */
 const INNEN = 28;
+/**
+ * Die Kachel vor dem Namen (O7b-8, Variante „Kachel“, Alwin 29.10.2026): Anfangsbuchstabe auf der Gruppenfarbe wie in
+ * der Gruppenliste von ChurchTools. Sie beginnt erst hinter dem runden +/−, das in der Mindmap links auf dem Rand sitzt
+ * (Demo 29.10.2026: ragte 1 px in die Kachel); der Name folgt `KACHEL_RAND` dahinter. Das Kästchen wird um so viel
+ * breiter, wie der Name weiter rechts beginnt – der Platz für den Namen bleibt. Die Gemeinde (Spitze ohne Gruppe) hat
+ * keine Kachel.
+ *
+ * 18 px groß: Bei „von oben“ sitzt das +/− unten auf dem Rand des Kästchens (36 hoch, Halbmesser 9) – eine größere
+ * Kachel (22, Entwurf) ragte 2 px hinein (Demo 29.10.2026). ChurchTools selbst zeigt Kacheln von 16 bis 28 px.
+ */
+export const KACHEL = 18;
+export const KACHEL_LINKS = SCHALTER + 2;
+const KACHEL_RAND = 8;
+export const mitKachel = (k: SichtKnoten) => k.id !== null;
+/** Wo der Name beginnt, wenn eine Kachel davor steht (vom linken Rand des Kästchens). */
+export const NAME_NACH_KACHEL = KACHEL_LINKS + KACHEL + KACHEL_RAND;
+/** Ohne Kachel beginnt der Name `INNEN / 2` vom Rand – so viel weiter rechts beginnt er mit Kachel. */
+const KACHEL_PLATZ = NAME_NACH_KACHEL - INNEN / 2;
 const SCHMALST = 72;
 const BREITEST = 220;
 /** Die Spitze darf breiter sein – dort steht oft der lange Name der Gemeinde (Test-Instanz 28.10.2026: gekürzt). */
@@ -94,12 +112,13 @@ export function messung(schrift: Schrift, inhalt?: (id: number) => KastenInhalt 
   const kasten = (k: SichtKnoten): Kasten => {
     const fertig = cache.get(k);
     if (fertig) return fertig;
-    const nurName = Math.max(SCHMALST, Math.ceil(mass(k.name, fett(k))) + INNEN);
+    const kachel = mitKachel(k) ? KACHEL_PLATZ : 0;
+    const nurName = Math.max(SCHMALST, Math.ceil(mass(k.name, fett(k))) + INNEN + kachel);
     const i = k.id === null || !inhalt ? null : inhalt(k.id);
     let ergebnis: Kasten;
     if (!i) {
       ergebnis = {
-        breite: Math.min(k.ebene === 0 ? BREITEST_SPITZE : BREITEST, nurName),
+        breite: Math.min(k.ebene === 0 ? BREITEST_SPITZE : BREITEST + kachel, nurName),
         hoehe: HOEHE,
         zeilen: [],
       };
@@ -120,7 +139,7 @@ export function messung(schrift: Schrift, inhalt?: (id: number) => KastenInhalt 
         ]),
       );
       const breite = Math.min(
-        k.ebene === 0 ? BREITEST_SPITZE : BREITEST_PERSONEN,
+        k.ebene === 0 ? BREITEST_SPITZE : BREITEST_PERSONEN + kachel,
         Math.max(SCHMALST_PERSONEN, nurName, Math.ceil(inhaltBreite) + INNEN),
       );
       const platz = breite - INNEN;
@@ -153,6 +172,7 @@ export function messung(schrift: Schrift, inhalt?: (id: number) => KastenInhalt 
 
   const breite = (k: SichtKnoten) => kasten(k).breite;
   const hoehe = (k: SichtKnoten) => kasten(k).hoehe;
-  const kuerzen = (k: SichtKnoten, w: number) => passend(k.name, fett(k), 14, w - INNEN + 4);
+  const kuerzen = (k: SichtKnoten, w: number) =>
+    passend(k.name, fett(k), 14, w - INNEN + 4 - (mitKachel(k) ? KACHEL_PLATZ : 0));
   return { breite, hoehe, kasten, kuerzen };
 }

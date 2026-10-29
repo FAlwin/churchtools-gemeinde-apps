@@ -3,6 +3,8 @@ import {
   EINRUECKEN,
   flaeche,
   FUSS,
+  KACHEL_MM,
+  KACHEL_PLATZ_MM,
   KOPF,
   namenX,
   RAND,
@@ -14,6 +16,7 @@ import {
   type ListenZeile,
   type Papier,
 } from './blatt';
+import type { SichtKnoten } from '@shared/organigramm/ansichten';
 import { fett } from './messung';
 import styles from './Blatt.module.scss';
 
@@ -103,9 +106,12 @@ export function BlattSeite({ papier, kopf, nr, von, verborgen, svgRef, children 
 export function ListenInhalt({
   papier,
   zeilen,
+  farbe,
 }: {
   papier: Papier;
   zeilen: readonly ListenZeile[];
+  /** Farbe der Kachel vor dem Namen (O7b-8) – wie im Diagramm; `null` = keine (die Gemeinde). */
+  farbe: (k: SichtKnoten) => string | null;
 }) {
   const f = flaeche(papier);
   let y = f.y;
@@ -147,10 +153,31 @@ export function ListenInhalt({
         }
         const k = z.knoten;
         const stil = k.ebene === 0 ? styles.listeSpitze : fett(k) ? styles.listeFett : '';
+        const kachel = farbe(k);
+        const x = namenX(f, z.tiefe);
         return (
           <g key={k.schluessel}>
             {striche}
-            <text className={`${styles.listeName} ${stil}`} x={namenX(f, z.tiefe)} y={oben + 4.6}>
+            {kachel !== null && (
+              <>
+                <rect
+                  className={styles.listeKachel}
+                  x={x}
+                  y={oben + 1.6}
+                  width={KACHEL_MM}
+                  height={KACHEL_MM}
+                  style={{ fill: kachel }}
+                />
+                <text className={styles.listeBuchstabe} x={x + KACHEL_MM / 2} y={oben + 4.1}>
+                  {k.name.trim().charAt(0).toUpperCase() || '?'}
+                </text>
+              </>
+            )}
+            <text
+              className={`${styles.listeName} ${stil}`}
+              x={kachel !== null ? x + KACHEL_PLATZ_MM : x}
+              y={oben + 4.6}
+            >
               {k.name}
             </text>
           </g>

@@ -7,6 +7,7 @@ import type { Knoten } from '@shared/organigramm/gruppen';
 import { svgSeitenPdf } from '@ui/teilen/svgSeitenPdf';
 import { downloadPdf, oeffnePdf } from '@ui/teilen/sharePdf';
 import { ladeGemeindeLogo } from '@ui/ct/logo';
+import { TAILWIND_500 } from '@shared/organigramm/farbe';
 import { rollenAus } from '@shared/organigramm/mitglieder';
 import type { MitgliederDaten } from './ladeMitglieder';
 import { PdfFenster } from './PdfFenster';
@@ -69,6 +70,9 @@ const MITGLIEDER: MitgliederDaten = {
   ),
 };
 
+/** Typfarben wie in der Test-Instanz: Dienste lime. */
+const TYPFARBEN = new Map([[2, 'lime']]);
+
 const PDF = { name: 'pdf' } as unknown as jsPDF;
 const HEUTE = new Date(2026, 9, 28);
 
@@ -92,6 +96,7 @@ async function zeigen(extra: Partial<Parameters<typeof PdfFenster>[0]> = {}) {
       offen={anfangsOffen(BAUM)}
       spitze={null}
       ansicht="karten"
+      typFarben={TYPFARBEN}
       personen={{ wahl: 'aus', mitglieder: MITGLIEDER, rollen: ROLLEN }}
       onSchliessen={onSchliessen}
       heute={HEUTE}
@@ -289,6 +294,7 @@ describe('Organigramm als PDF (O7b-4)', () => {
         offen={anfangsOffen(BAUM)}
         spitze={null}
         ansicht="liste"
+        typFarben={TYPFARBEN}
         personen={{ wahl: 'alle', mitglieder: MITGLIEDER, rollen: ROLLEN }}
         onSchliessen={onSchliessen}
         heute={HEUTE}
@@ -298,6 +304,20 @@ describe('Organigramm als PDF (O7b-4)', () => {
     expect(bauen).toHaveBeenCalled();
     expect(letzteSeiten()[0].svg.textContent).toContain('Bea Berg');
     expect(knopf('Herunterladen').disabled).toBe(false);
+  });
+
+  it('die Kachel in der Gruppenfarbe steht auch auf dem Blatt – im Diagramm und in der Liste (O7b-8)', async () => {
+    await zeigen();
+    const kacheln = () =>
+      [...vorschau().querySelectorAll<SVGRectElement>('rect')].filter((r) => r.style.fill);
+    expect(kacheln().length).toBe(6); // alle sechs Gruppen, nicht die Gemeinde
+    expect(kacheln()[0].style.fill).toBe(TAILWIND_500.lime);
+    fireEvent.change(auswahl('Ansicht'), { target: { value: 'liste' } });
+    expect(kacheln().length).toBe(6);
+    await act(async () => {});
+    expect(
+      [...letzteSeiten()[0].svg.querySelectorAll('rect')].filter((r) => r.style.fill),
+    ).toHaveLength(6);
   });
 
   it('eine tiefere Spitze aus dem Reiter steht als Ausschnitt bereit', async () => {

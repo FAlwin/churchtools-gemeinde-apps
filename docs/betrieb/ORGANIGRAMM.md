@@ -1,6 +1,6 @@
 # Organigramm – ChurchTools-Erweiterung
 
-> **Stand: O7b-6b (29.10.2026)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
+> **Stand: O7b-8 (29.10.2026)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
 > offenen Plätzen; Gruppenfenster; Gruppentypen ausblendbar), die **Präsentation** (für Gruppen-Admins auch die
 > **neue Gliederung**), für Gruppen-Admins **Gruppen umhängen und anlegen** und den Reiter **Neue Gliederung** (Plan
 > und Umbau) und – für alle, die es in ChurchTools dürfen – **Leitung und Mitglieder pflegen**. Für die **Leitung eines
@@ -50,13 +50,17 @@ Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Gemessen an der Test-Insta
 - **Karten** – wie bisher: je Bereich eine Karte, darin die Gruppen mit Personen, Leitung und Diensten.
 - **Von oben** – das klassische Organigramm: die Gemeinde oben, die Bereiche nebeneinander, darunter die Gruppen
   gestapelt. **Von links** – derselbe Baum zur Seite, jede Ebene eine Spalte. **Mindmap** – die Gemeinde in der Mitte,
-  die Bereiche nach rechts und links verteilt. Im Kästchen steht der Name – auf Wunsch darunter die Personen (siehe
+  die Bereiche nach rechts und links verteilt. Im Kästchen steht vor dem Namen die **Kachel** der Gruppe – ihr
+  Anfangsbuchstabe auf ihrer Farbe, wie in der Gruppenliste von ChurchTools (ab O7b-8; die eigene Farbe der Gruppe,
+  sonst die ihres Gruppentyps – Gruppen ohne eigene Farbe sind daher oft gleich gefärbt). Die Gemeinde an der Spitze
+  ist keine Gruppe und hat keine Kachel. Darunter auf Wunsch die Personen (siehe
   **Personen** unten); ein Klick (oder Enter) öffnet die Gruppe, das runde **+/−** klappt auf und zu (zugeklappt steht dort die Zahl der Untergruppen).
   **Ziehen** verschiebt, **Mausrad** oder **zwei Finger** zoomen, dazu **−**, **+** und **Ganz zeigen** (lässt unten den
   Streifen der Knöpfe frei, seit O7b-5). Passt alles lesbar hinein, ist anfangs alles zu sehen; sonst beginnt das Bild
   lesbar groß an der Spitze. Mit der Tastatur
   (Tab) springt das Bild zum gewählten Kästchen.
-- **Liste** – die Gemeinde als Gliederung mit Linien, die Namen der Gruppen (auf Wunsch mit den Personen). Jede Gruppe
+- **Liste** – die Gemeinde als Gliederung mit Linien, die Namen der Gruppen mit ihrer Kachel (auf Wunsch mit den
+  Personen). Jede Gruppe
   mit Untergruppen klappt mit dem Pfeil auf und zu; anfangs sind die Gemeinde und die Bereiche offen, darunter steht
   „3 Untergruppen“. Gut am Handy.
 - **Personen: Aus · Rollen · Alle** (Diagramme und Liste, seit O7b-6; rechts neben den Gruppentypen) – was unter dem

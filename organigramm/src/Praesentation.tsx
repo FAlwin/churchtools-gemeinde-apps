@@ -5,7 +5,7 @@ import { PersonBild } from '@ui/bedienung/PersonBild';
 import { Icon } from '@ui/icons/icons';
 import { Segment } from '@ui/bedienung/Segment';
 import { BEREICH_ATTRIBUT } from '@ui/erweiterung/cssBereich';
-import { gruppenFarbe } from '@shared/organigramm/farbe';
+import { gruppenFarbe, sichtFarbe } from '@shared/organigramm/farbe';
 import { alleAuf, anfangsOffen, sichtbarerBaum } from '@shared/organigramm/ansichten';
 import { istLeitung, type Mitglied } from '@shared/organigramm/mitglieder';
 import type { PersonenWahl } from '@shared/organigramm/personen';
@@ -321,6 +321,7 @@ export function Praesentation({ start, daten, mitglieder, stand, personen, onSch
       return neu;
     });
   const bereichNr = (id: number) => baum.findIndex((k) => k.gruppe.id === id);
+  const kachelFarbe = useMemo(() => sichtFarbe(start.typFarben), [start.typFarben]);
   const inhalt = useMemo(
     () => personenInhalt(mitglieder, start.rollen, personen.wahl),
     [mitglieder, start.rollen, personen.wahl],
@@ -336,6 +337,7 @@ export function Praesentation({ start, daten, mitglieder, stand, personen, onSch
           onGruppe={(id) => gehe(bereichNr(id))}
           klickbar={(id) => !bereich && bereichNr(id) >= 0}
           fuellen
+          farbe={kachelFarbe}
           personen={{ wahl: personen.wahl, inhalt }}
         />
       </div>

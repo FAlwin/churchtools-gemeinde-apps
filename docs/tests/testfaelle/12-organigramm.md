@@ -375,3 +375,32 @@ Safari oder Chrome. Eine Gruppe mit Leiter und mehreren Mitarbeitern.
   Umschalter und gemeinsamer Wahl)
 
 </details>
+
+### TF-ORG-13 · Farbe: Kachel in Diagrammen, Liste und PDF
+
+**Das brauchst du:** Die Test-Instanz mit der Erweiterung; Laptop. Gruppen mit eigener Farbe und ohne (dann gilt die
+Farbe des Gruppentyps).
+
+**Das muss passieren:** Vor jedem Gruppennamen steht die Kachel, wie ChurchTools sie in der Gruppenliste zeigt –
+gleicher Buchstabe, gleiche Farbe.
+
+1. Reiter Organigramm, **Von oben**, **Von links**, **Mindmap** und **Liste**: Vor jedem Namen die Kachel; die Gemeinde
+   an der Spitze hat keine. Mit der Gruppenübersicht von ChurchTools vergleichen (Gruppen → Übersicht): gleiche Farben.
+2. In der Mindmap links und „von oben“ ohne Personen: Das runde **+/−** berührt keine Kachel.
+3. **Personen: Rollen** – in der Liste beginnen die Personen genau unter dem Namen, nicht unter der Kachel.
+4. **Präsentieren**, eine Diagramm-Ansicht: dieselben Kacheln.
+5. **PDF / Drucken** (Diagramm und Liste), **PDF öffnen**: Kacheln farbig und abgerundet; Buchstabe, Name und Kachel auf
+   einer Höhe – auch die Rollen- und Personen-Zeilen sitzen wie am Bildschirm.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `organigramm/src/DiagrammBild.tsx`, `organigramm/src/messung.ts`, `organigramm/src/Liste.tsx`, `organigramm/src/BlattSeite.tsx`, `organigramm/src/blatt.ts`, `shared/organigramm/farbe.ts`, `shared/organigramm/ansichten.ts`, `ui/teilen/svgSeitenPdf.ts`
+- **Automatisiert:** größtenteils – `Diagramm.test.tsx` (Kachel, Farbe, Name dahinter; kein +/− auf einer Kachel in
+  allen Ansichten, mit und ohne Personen), `Liste.test.tsx`, `PdfFenster.test.tsx`, `messung.test.ts`, `farbe.test.ts`,
+  `ansichten.test.ts`, `svgSeitenPdf.test.ts` (Rundung, Messung am groß gezeichneten Blatt); wie es gedruckt aussieht,
+  prüft nur dieser Fall
+- **Historie:** #736; Wunsch Alwin 29.10.2026 („bunter … an den Gruppenansichten orientieren“), Entwurf
+  `o7b-8-farbe-v1.html`, Variante A „Kachel“ gewählt
+
+</details>

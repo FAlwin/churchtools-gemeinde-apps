@@ -465,6 +465,7 @@ export function App() {
           offen={offen}
           spitze={spitze}
           ansicht={baumAnsicht}
+          typFarben={start.typFarben}
           personen={{ wahl: personenWahl, mitglieder, rollen: start.rollen }}
           onSchliessen={() => setPdfOffen(false)}
         />

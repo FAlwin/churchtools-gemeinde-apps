@@ -79,13 +79,21 @@ export function zeitraum(p: Planung, zeitzone: string): { beginn: string; ende: 
   return { beginn, ende };
 }
 
-/** **Was am Fenster noch fehlt** – `null`, wenn festgelegt werden kann. */
-export function planungFehler(p: Planung, zeitzone: string, jetzt: Date): string | null {
+/**
+ * **Was am Fenster noch fehlt** – `null`, wenn festgelegt werden kann. Eine Sitzung mit Einladung muss in der Zukunft
+ * liegen; ein Protokoll ohne Termin (K2a, `zukunft: false`) darf auch jetzt oder nachträglich entstehen.
+ */
+export function planungFehler(
+  p: Planung,
+  zeitzone: string,
+  jetzt: Date,
+  { zukunft = true }: { zukunft?: boolean } = {},
+): string | null {
   if (!p.titel.trim()) return 'Bitte einen Titel angeben.';
   if (!/^\d{4}-\d{2}-\d{2}$/.test(p.tag) || !/^\d{2}:\d{2}$/.test(p.uhrzeit))
     return 'Bitte Datum und Uhrzeit angeben.';
   if (!(p.dauer > 0)) return 'Bitte eine Dauer wählen.';
-  if (Date.parse(zeitraum(p, zeitzone).beginn) <= jetzt.getTime())
+  if (zukunft && Date.parse(zeitraum(p, zeitzone).beginn) <= jetzt.getTime())
     return 'Die Sitzung muss in der Zukunft liegen.';
   return null;
 }

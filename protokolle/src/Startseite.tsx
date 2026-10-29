@@ -22,6 +22,8 @@ import {
 import { ladeUebersicht, type GruppenUebersicht } from './lesen';
 import { kachelVon, uhrzeit } from './anzeige';
 import { Marke } from './Marke';
+import { ProtokollNeu } from './ProtokollNeu';
+import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import styles from './Startseite.module.scss';
 
 const LAGE: Record<ProtokollGruppe['lage'], { text: string; art: 'gut' | 'problem' }> = {
@@ -48,6 +50,8 @@ export interface StartseiteProps {
   /** Personen-ID – für „meine“ To-Dos und „du hast zugesagt“. */
   ich: number;
   gruppen: ProtokollGruppe[];
+  /** Kategorien, in denen man schreiben darf (`Start.schreibbar`) – dort geht „Neues Protokoll“ (K2a). */
+  schreibbar?: readonly number[];
   /** Eine Sitzung im Reiter „Sitzungen“ öffnen. */
   onSitzung: (gruppe: number, sitzung: string) => void;
   /** Den Reiter „Sitzungen“ mit dieser Gruppe öffnen. */
@@ -75,8 +79,19 @@ function herkunft(a: Aufgabe, u: GruppenUebersicht): Sitzung | null {
  * „Meine offenen To-Dos“, rechts „Nächste Sitzungen“ und „Deine Gruppen“ (nur Gruppen mit Zugriff, S2-4). Was über
  * die Gruppen hinweg gelesen wird, lädt nach dem Gruß; scheitert es, gibt es „Erneut versuchen“ statt leerer Listen.
  */
-export function Startseite({ modul, ich, gruppen, onSitzung, onGruppe }: StartseiteProps) {
+export function Startseite({
+  modul,
+  ich,
+  gruppen,
+  schreibbar = [],
+  onSitzung,
+  onGruppe,
+}: StartseiteProps) {
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
+  const [neu, setNeu] = useState(false);
+  const schreibGruppen = gruppen.filter(
+    (g) => g.protokolle !== null && schreibbar.includes(g.protokolle),
+  );
   const heute = heuteImKalender();
 
   const laden = useCallback(() => {
@@ -195,6 +210,15 @@ export function Startseite({ modul, ich, gruppen, onSitzung, onGruppe }: Startse
         <section className={styles.karte} aria-labelledby="naechste">
           <div className={styles.kopf}>
             <h2 id="naechste">Nächste Sitzungen</h2>
+            {schreibGruppen.length > 0 && (
+              <KopfKnopf
+                neu
+                label="Neues Protokoll"
+                title="Neues Protokoll ohne Termin"
+                symbol={<Icon name="plus" size={16} />}
+                onClick={() => setNeu(true)}
+              />
+            )}
           </div>
           {ladeTeil}
           {zustand.art === 'fertig' &&
@@ -271,6 +295,19 @@ export function Startseite({ modul, ich, gruppen, onSitzung, onGruppe }: Startse
           </p>
         </section>
       </div>
+      {neu && (
+        <ProtokollNeu
+          modul={modul}
+          gruppen={schreibGruppen}
+          ich={{ person: ich }}
+          zeitzone={zeitzone}
+          onAngelegt={(g, id) => {
+            setNeu(false);
+            onSitzung(g, `p:${id}`);
+          }}
+          onClose={() => setNeu(false)}
+        />
+      )}
     </div>
   );
 }

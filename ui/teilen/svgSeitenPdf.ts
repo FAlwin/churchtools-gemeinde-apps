@@ -51,6 +51,13 @@ export function stileEinbetten(svg: SVGSVGElement, schrift: string): SVGSVGEleme
     }
     const gewicht = Number(stil.getPropertyValue('font-weight'));
     if (gewicht) z.setAttribute('font-weight', gewicht >= 600 ? 'bold' : 'normal');
+    // Rundungen, die per Stil aus ui/design kommen (`rx: var(--r-tile)`, Kachel im Organigramm O7b-8). Nur echte Längen:
+    // Ohne Angabe liefert der Browser „auto“, damit käme svg2pdf nicht zurecht.
+    if (q.tagName.toLowerCase() === 'rect')
+      for (const e of ['rx', 'ry'] as const) {
+        const wert = stil.getPropertyValue(e);
+        if (/^[\d.]+px$/.test(wert)) z.setAttribute(e, ohnePx(wert));
+      }
     const grundlinie = stil.getPropertyValue('dominant-baseline');
     if (grundlinie && grundlinie !== 'auto') z.setAttribute('dominant-baseline', grundlinie);
     z.setAttribute('font-family', schrift);
@@ -67,8 +74,25 @@ export function stileEinbetten(svg: SVGSVGElement, schrift: string): SVGSVGEleme
  * 28.10.2026). Den Versatz kennt der Browser: Der Rahmen des Textes einmal mit, einmal ohne die Angabe (die Lage des
  * ersten Zeichens zeigt ihn nicht – gemessen in Chromium, 50 statt 55,5 bei 14er-Schrift). Die Kopie muss dazu
  * eingehängt sein. Ohne Messung (kein Zeichen, Testumgebung) bleibt es bei `alignment-baseline`.
+ *
+ * Gemessen wird an einer **groß gezeichneten** Kopie (`MESS_BREITE`): Im 1 px kleinen Ablagefach wurde das Blatt auf
+ * etwa 1 px verkleinert, der Browser liefert Rahmen dann nur auf ganze Bildpunkte gerundet – der Versatz kam als 0
+ * heraus, und alle mittig gesetzten Texte im Diagramm saßen in der PDF zu hoch (aufgefallen neben der Kachel, O7b-8,
+ * 29.10.2026; seit O7b-4). Die Lage in der PDF hängt an der `viewBox`, nicht an dieser Breite.
  */
+const MESS_BREITE = '8000px';
+
 export function grundlinienFestlegen(kopie: SVGSVGElement): void {
+  const vorher = kopie.style.width;
+  kopie.style.width = MESS_BREITE;
+  try {
+    textGrundlinien(kopie);
+  } finally {
+    kopie.style.width = vorher;
+  }
+}
+
+function textGrundlinien(kopie: SVGSVGElement): void {
   for (const t of Array.from(kopie.querySelectorAll('text'))) {
     const grundlinie = t.getAttribute('dominant-baseline');
     if (!grundlinie) continue;

@@ -364,15 +364,18 @@ describe('Planen – Filter, Breite, abgesetzt (E3-5)', () => {
     expect(screen.getByText(/Nichts eingeblendet – über „Filter“/)).toBeTruthy();
   });
 
-  it('Spaltenbreite S/M/L wird gemerkt', () => {
+  it('Spaltenbreite schmal/breit als Symbole – mit Namen, gemerkt (29.10.2026)', () => {
     zeige2();
-    fireEvent.click(
-      within(screen.getByRole('group', { name: 'Spaltenbreite' })).getByRole('button', {
-        name: 'L',
-      }),
-    );
+    const gruppe = within(screen.getByRole('group', { name: 'Spaltenbreite' }));
+    // Nur zwei, und S/M/L stehen nicht mehr da.
+    expect(gruppe.getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual([
+      'Schmale Spalten',
+      'Breite Spalten',
+    ]);
+    expect(gruppe.getByRole('button', { name: 'Schmale Spalten' }).textContent).toBe('');
+    fireEvent.click(gruppe.getByRole('button', { name: 'Breite Spalten' }));
     expect(JSON.parse(localStorage.getItem('dienstplaner.planen.ansicht')!)).toMatchObject({
-      breite: 'l',
+      breite: 'breit',
     });
   });
 });

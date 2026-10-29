@@ -28,7 +28,9 @@ const ERLAUBT: Record<string, string> = {
   'k.pflicht': 'Pflicht/freiwillig umschalten',
   'a.pille': 'Empfänger-Pille in der Rundmail',
   // Klickbare Zeilen und Überschriften – die ganze Fläche öffnet etwas.
-  'a.zeile': 'Zeile einer Anmeldung',
+  't.oeffnen':
+    'Name in einer Zeile der Tabelle – öffnet die Anmeldung wie ein Klick in die Zeile (U2-1)',
+  't.sortKnopf': 'Spaltenüberschrift der Tabelle – sortiert (U2-1)',
   'v.baustein': 'Preis-Baustein in der Liste',
   'k.gruppenKopf': 'Auf- und zuklappbare Gruppe im Baukasten',
   'styles.titelKnopf': 'Titel einer Veranstaltung auf der Startseite',

@@ -131,16 +131,18 @@ export function nachfahren(knoten: Knoten): number[] {
 }
 
 /**
- * Der Baum ohne ausgeblendete Gruppentypen (z. B. Verteiler) – mitsamt allem, was darunter hängt. Welche Typen das
- * sind, wählt jede Person selbst; der Code kennt keinen Typ beim Namen (andere Gemeinden nennen ihre Typen anders).
+ * Der Baum ohne ausgeblendete Gruppentypen (z. B. Verteiler) und ohne ausgeblendete Gruppen – jeweils mitsamt allem,
+ * was darunter hängt. Welche Typen das sind, wählt jede Person selbst (je Gerät) und für alle die Gruppen-Admins
+ * (O7b-7); der Code kennt keinen Typ beim Namen (andere Gemeinden nennen ihre Typen anders).
  */
 export function baumOhneTypen(
   baum: readonly Knoten[],
   ausgeblendet: ReadonlySet<number>,
+  gruppen: ReadonlySet<number> = new Set(),
 ): Knoten[] {
-  if (ausgeblendet.size === 0) return [...baum];
+  if (ausgeblendet.size === 0 && gruppen.size === 0) return [...baum];
   const lauf = (k: Knoten): Knoten[] =>
-    k.gruppe.typId !== null && ausgeblendet.has(k.gruppe.typId)
+    (k.gruppe.typId !== null && ausgeblendet.has(k.gruppe.typId)) || gruppen.has(k.gruppe.id)
       ? []
       : [{ gruppe: k.gruppe, kinder: k.kinder.flatMap(lauf) }];
   return baum.flatMap(lauf);

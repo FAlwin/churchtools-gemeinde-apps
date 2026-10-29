@@ -5,6 +5,8 @@ export interface Reiter<T extends string> {
   id: T;
   label: string;
   icon: IconName;
+  /** Eine Anzahl hinter dem Text, leiser gesetzt (Bereich „Anmeldungen“: „Warteliste 2“, U2-1). */
+  zahl?: number;
 }
 
 interface Props<T extends string> {
@@ -22,6 +24,8 @@ interface Props<T extends string> {
    * ChurchTools („Events“: Dienstplan · Abwesenheiten …), ohne Symbole. Am Handy bleibt die Leiste unten.
    */
   oben?: boolean;
+  /** Name für Vorleser – ohne „Bereiche“. Zweite Leiste auf einer Seite (Reiter in einer Karte) braucht einen eigenen. */
+  name?: string;
 }
 
 /**
@@ -36,9 +40,10 @@ export function ReiterLeiste<T extends string>({
   onErneut,
   tour,
   oben = false,
+  name = 'Bereiche',
 }: Props<T>) {
   return (
-    <nav className={oben ? styles.oben : styles.tabbar} data-tour={tour} aria-label="Bereiche">
+    <nav className={oben ? styles.oben : styles.tabbar} data-tour={tour} aria-label={name}>
       {reiter.map((r) => {
         const an = aktiv === r.id;
         const aus = gedimmt.includes(r.id);
@@ -51,7 +56,10 @@ export function ReiterLeiste<T extends string>({
             onClick={() => (an ? onErneut?.() : onWechsel(r.id))}
           >
             {!oben && <Icon name={r.icon} size={24} stroke={1.9} />}
-            <span>{r.label}</span>
+            <span>
+              {r.label}
+              {r.zahl !== undefined && <span className={styles.zahl}> {r.zahl}</span>}
+            </span>
           </button>
         );
       })}

@@ -3,12 +3,20 @@ import {
   EINRUECKEN,
   flaeche,
   FUSS,
+  KACHEL_MM,
+  KACHEL_PLATZ_MM,
   KOPF,
+  namenX,
   RAND,
+  PERSON_GROESSE,
+  PERSON_ZEILE,
+  personenX,
+  ROLLE_GROESSE,
   ZEILE,
   type ListenZeile,
   type Papier,
 } from './blatt';
+import type { SichtKnoten } from '@shared/organigramm/ansichten';
 import { fett } from './messung';
 import styles from './Blatt.module.scss';
 
@@ -98,28 +106,77 @@ export function BlattSeite({ papier, kopf, nr, von, verborgen, svgRef, children 
 export function ListenInhalt({
   papier,
   zeilen,
+  farbe,
 }: {
   papier: Papier;
   zeilen: readonly ListenZeile[];
+  /** Farbe der Kachel vor dem Namen (O7b-8) – wie im Diagramm; `null` = keine (die Gemeinde). */
+  farbe: (k: SichtKnoten) => string | null;
 }) {
   const f = flaeche(papier);
+  let y = f.y;
   return (
     <>
-      {zeilen.map(({ knoten: k, tiefe }, j) => {
-        const y = f.y + j * ZEILE;
+      {zeilen.map((z) => {
+        const oben = y;
+        const hoehe = z.art === 'gruppe' ? ZEILE : PERSON_ZEILE;
+        y += hoehe;
+        const linien = z.art === 'gruppe' ? z.tiefe : z.linien;
+        const striche = Array.from({ length: linien }, (_, l) => {
+          const x = f.x + l * EINRUECKEN + 2;
+          return (
+            <line key={l} className={styles.listeLinie} x1={x} y1={oben} x2={x} y2={oben + hoehe} />
+          );
+        });
+        if (z.art === 'person') {
+          const x = personenX(f, z.tiefe);
+          return (
+            <g key={z.schluessel}>
+              {striche}
+              {z.rolle && (
+                <text className={styles.listeRolle} fontSize={ROLLE_GROESSE} x={x} y={oben + 3.1}>
+                  {z.rolle}
+                </text>
+              )}
+              <text
+                className={
+                  z.kursiv ? `${styles.listePerson} ${styles.listeKursiv}` : styles.listePerson
+                }
+                fontSize={PERSON_GROESSE}
+                x={x + z.ab}
+                y={oben + 3.1}
+              >
+                {z.text}
+              </text>
+            </g>
+          );
+        }
+        const k = z.knoten;
         const stil = k.ebene === 0 ? styles.listeSpitze : fett(k) ? styles.listeFett : '';
+        const kachel = farbe(k);
+        const x = namenX(f, z.tiefe);
         return (
           <g key={k.schluessel}>
-            {Array.from({ length: tiefe }, (_, l) => {
-              const x = f.x + l * EINRUECKEN + 2;
-              return (
-                <line key={l} className={styles.listeLinie} x1={x} y1={y} x2={x} y2={y + ZEILE} />
-              );
-            })}
+            {striche}
+            {kachel !== null && (
+              <>
+                <rect
+                  className={styles.listeKachel}
+                  x={x}
+                  y={oben + 1.6}
+                  width={KACHEL_MM}
+                  height={KACHEL_MM}
+                  style={{ fill: kachel }}
+                />
+                <text className={styles.listeBuchstabe} x={x + KACHEL_MM / 2} y={oben + 4.1}>
+                  {k.name.trim().charAt(0).toUpperCase() || '?'}
+                </text>
+              </>
+            )}
             <text
               className={`${styles.listeName} ${stil}`}
-              x={f.x + tiefe * EINRUECKEN + (tiefe ? 1.5 : 0)}
-              y={y + 4.6}
+              x={kachel !== null ? x + KACHEL_PLATZ_MM : x}
+              y={oben + 4.6}
             >
               {k.name}
             </text>

@@ -52,26 +52,6 @@
   cursor: pointer;
 }
 
-// „+ Punkt“ am Ende der schmalen Liste (Matrix, E6-6a) – statt des schwebenden Plus, das es je Seite nur einmal gibt.
-.plusAmEnde {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  width: 100%;
-  padding: 7px 8px;
-  border: 0;
-  border-top: 1px solid var(--hair);
-  background: var(--surface2);
-  color: var(--blue);
-  font: 700 12.5px var(--ui);
-  text-align: left;
-  cursor: pointer;
-
-  &:hover {
-    background: var(--blue-soft);
-  }
-}
-
 // Ziehen zwischen Terminen in der Matrix (E6-6b, Entwurf `e6-6-entwurf-2.html` Bild 3): die gestrichelte Stelle in der
 // Ziel-Spalte und der gezogene Punkt über allen Spalten.
 .ablageStelle {

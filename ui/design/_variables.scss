@@ -87,7 +87,8 @@ html[data-theme='dark'] {
 
 // ── Abstand oben: Leisten und Inhalt ohne Leiste ────────────────────
 :root {
-  // Leisten (Kopfzeile, Chart-Kopf): mindestens 20px, sonst die Safe-Area. Eine Stelle für beide.
+  // Safe-Area oben, mindestens 20px – nur noch Grundlage für den iPad-Wert von `--inhalt-pad-top` unten. Kein Kopf liest
+  // ihn selbst (seit 29.10.2026, zuletzt der Lied-Editor; `obenBand.test.ts`).
   --bar-pad-top: max(20px, var(--sat, env(safe-area-inset-top, 0px)));
   // Bildschirme OHNE Leiste (große Überschrift im Inhalt): Abstand der Überschrift nach oben.
   // Im Safari-Tab reicht wenig (kein Band, keine Safe-Area).
@@ -148,8 +149,8 @@ html[data-theme='dark'] {
  * Die Überschrift beginnt unterhalb, Safe-Area (~59) + 36 → Text ab ~100 pt. Beim Scrollen läuft der
  * Inhalt unter Uhr und Band durch und wird dort weich – native Optik, kein Fehler.
  *
- * Leisten (`--bar-pad-top`) folgen der Grundregel oben: Safe-Area, mindestens 20px. Ihr Titel liegt
- * damit im Band und ist weich wie in v2.25.1 – bis der jeweilige Bildschirm umgebaut ist.
+ * Seit dem 29.10.2026 beginnt jeder Kopf hier – auch der Lied-Editor, der als letzter noch direkt unter der Uhr im
+ * Band stand (`--bar-pad-top`, weich wie in v2.25.1).
  *
  * `display-mode: standalone` + `-webkit-touch-callout` grenzen es auf die iOS-App ein.
  */

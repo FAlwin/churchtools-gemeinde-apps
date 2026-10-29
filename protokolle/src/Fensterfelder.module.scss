@@ -1,4 +1,5 @@
-// Felder in den Fenstern der Protokolle (S5-2, K2a) – eine Stelle für „Nächste Sitzung festlegen“ und „Neues Protokoll“.
+// Felder in den Fenstern der Protokolle (S5-2, K2a, K2b) – eine Stelle für „Nächste Sitzung festlegen“, „Neues Protokoll“
+// und „Sitzung bearbeiten“.
 @use '@ui/design/mixins' as m;
 
 .unter {
@@ -93,5 +94,40 @@
 
   > input {
     margin-top: 2px;
+  }
+}
+
+// Wer eingeladen ist (`Einladeliste`).
+.personen {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+
+  li + li {
+    border-top: 1px solid var(--border);
+  }
+}
+
+.person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  color: var(--text);
+  font-size: 14.5px;
+  cursor: pointer;
+
+  span {
+    flex: 1;
+    min-width: 0;
+  }
+
+  small {
+    color: var(--text2);
+    font-size: 12.5px;
   }
 }

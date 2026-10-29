@@ -27,6 +27,8 @@ interface Props {
   klickbar?: (id: number) => boolean;
   /** Füllt die Höhe des Elternteils, statt selbst eine zu wählen (Präsentation). */
   fuellen?: boolean;
+  /** Farbe der Kachel vor dem Namen (O7b-8) – `sichtFarbe` mit den Typfarben der Gemeinde. */
+  farbe: (k: SichtKnoten) => string | null;
   /** Personen unter dem Namen (O7b-6) – ohne Angabe nur der Name. */
   personen?: { wahl: PersonenWahl; inhalt: (id: number) => KastenInhalt | null };
 }
@@ -48,6 +50,7 @@ export function Diagramm({
   onGruppe,
   klickbar,
   fuellen,
+  farbe,
   personen,
 }: Props) {
   const svg = useRef<SVGSVGElement>(null);
@@ -195,6 +198,7 @@ export function Diagramm({
           <DiagrammBild
             anordnung={anordnung}
             kuerzen={kuerzen}
+            farbe={farbe}
             zeilen={(k) => kasten(k).zeilen}
             knoten={({ knoten: k, x, y, breite: w, hoehe: h }) =>
               k.id !== null && klickbar && !klickbar(k.id)

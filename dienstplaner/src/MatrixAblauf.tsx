@@ -1,5 +1,7 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon } from '@ui/icons/icons';
+import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { BodyPortal } from '@ui/fenster/BodyPortal';
 import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { Toast } from '@ui/fenster/Toast';
@@ -27,9 +29,12 @@ import styles from './MatrixAblauf.module.scss';
 /**
  * **Der Ablauf in der Matrix** (Bauplan E6-6a, Entwurf `e6-6-entwurf-2.html`, abgenommen 28.10.2026): die Gruppe
  * „Ablauf“ **oben**, über den Dienstgruppen, mit „N Punkte“ je Termin; darunter je Spalte der Ablauf in der schmalen
- * Form (`TerminAblauf schmal` – dieselbe Stelle wie die Termin-Ansicht). **Ein Stift** links in der Gruppenzeile öffnet
- * alle Termine, die man bearbeiten darf (Variante A); zugeklappt merkt sich das Gerät (`PlanenAnsicht.ablaufZu`).
- * Am Handy steht der Ablauf des gewählten Termins wie in der Termin-Ansicht.
+ * Form (`TerminAblauf schmal` – dieselbe Stelle wie die Termin-Ansicht). **Ein „Ablauf bearbeiten“** oben in der Leiste
+ * (`AblaufBearbeitenKnopf`) öffnet alle Termine, die man bearbeiten darf (Variante A); zugeklappt merkt sich das Gerät
+ * (`PlanenAnsicht.ablaufZu`). Im Bearbeiten steht neben „N Punkte“ je Termin das grüne Plus mit seinem kleinen Menü
+ * (E6-6c, Entwurf `e6-6-neuer-punkt.html` A, Alwin 29.10.2026 – vorher ein Stift links in der Gruppenzeile und
+ * „+ Punkt“ unter dem Ablauf, das auch am Rechner das Blatt von unten öffnete). Am Handy steht der Ablauf des gewählten
+ * Termins wie in der Termin-Ansicht.
  *
  * **Ziehen zwischen Terminen** (E6-6b, Entwurf Bild 3): alle Spalten in EINEM Zieh-Bereich (`AblaufZiehBereich`);
  * losgelassen in einem anderen Termin fragt die Matrix „Verschieben / Kopieren“ und überträgt über den Kern
@@ -50,11 +55,21 @@ function anzahlText(z: AblaufZustand | undefined): string {
 const darfBearbeiten = (ma: MatrixAblauf, s: PlanSpalte) =>
   !s.abgesagt && ablaufBearbeitbar(ma.start, s.ablaufTermin);
 
-/** Stift (bearbeiten) bzw. „Fertig“ – wie in der Termin-Ansicht, hier für alle gezeigten Termine. */
+/** Bearbeiten an bzw. aus – eine Stelle für den Knopf in der Leiste und den Stift am Handy. */
+function umschalten(ma: MatrixAblauf): void {
+  if (ma.bearbeiten) {
+    ma.setBearbeiten(false);
+    return;
+  }
+  ma.setBearbeiten(true);
+  ma.setZu(false); // zugeklappt sähe man nicht, was sich öffnet
+}
+
+/** Am Handy: Stift (bearbeiten) bzw. „Fertig“ – wie in der Termin-Ansicht. */
 function StiftKnopf({ ma, fuer }: { ma: MatrixAblauf; fuer: string }) {
   if (ma.bearbeiten) {
     return (
-      <button type="button" className={styles.fertig} onClick={() => ma.setBearbeiten(false)}>
+      <button type="button" className={styles.fertig} onClick={() => umschalten(ma)}>
         <Icon name="check" size={14} /> Fertig
       </button>
     );
@@ -65,18 +80,55 @@ function StiftKnopf({ ma, fuer }: { ma: MatrixAblauf; fuer: string }) {
       className={styles.stift}
       aria-label={`Ablauf bearbeiten – ${fuer}`}
       title={`Ablauf bearbeiten – ${fuer}`}
-      onClick={() => {
-        ma.setBearbeiten(true);
-        ma.setZu(false); // zugeklappt sähe man nicht, was sich öffnet
-      }}
+      onClick={() => umschalten(ma)}
     >
       <Icon name="pencil" size={15} />
     </button>
   );
 }
 
-/** Der Ablauf eines Termins in seiner Zelle: wird geladen, Fehler mit „Erneut versuchen“ oder der Ablauf selbst. */
-function AblaufZelle({ ma, s, schmal }: { ma: MatrixAblauf; s: PlanSpalte; schmal: boolean }) {
+/**
+ * Am Rechner: **„Ablauf bearbeiten“ oben in der Leiste** neben Spaltenbreite und Filter, mit Wort wie in der Musik-App – grau,
+ * blau erst „Fertig“ (E6-6c; der Stift allein war zu unscheinbar, Alwin 29.10.2026). Neben „Ablauf“ in der Gruppenzeile
+ * passte der Knopf nicht: Die erste Spalte ist 178 px breit (Alwin: lieber in die Leiste als die Spalte breiter). Gilt
+ * für alle gezeigten Termine; nur, wo man mindestens einen davon bearbeiten darf.
+ */
+export function AblaufBearbeitenKnopf({
+  ma,
+  plan,
+  spalten,
+}: {
+  ma: MatrixAblauf;
+  plan: Plan;
+  spalten: number[];
+}) {
+  if (!spalten.some((i) => darfBearbeiten(ma, plan.spalten[i]))) return null;
+  return (
+    <KopfKnopf
+      onClick={() => umschalten(ma)}
+      label={ma.bearbeiten ? 'Fertig' : 'Ablauf bearbeiten'}
+      title={ma.bearbeiten ? 'Fertig' : 'Ablauf bearbeiten – alle gezeigten Termine'}
+      haupt={ma.bearbeiten}
+      symbol={<Icon name={ma.bearbeiten ? 'check' : 'pencil'} size={16} stroke={2.2} />}
+    />
+  );
+}
+
+/**
+ * Der Ablauf eines Termins in seiner Zelle: wird geladen, Fehler mit „Erneut versuchen“ oder der Ablauf selbst. Das
+ * grüne Plus der Liste (`kopfKnopf`) steht nicht in der Zelle, sondern an `plusOrt` in der Gruppenzeile darüber (E6-6c).
+ */
+function AblaufZelle({
+  ma,
+  s,
+  schmal,
+  plusOrt,
+}: {
+  ma: MatrixAblauf;
+  s: PlanSpalte;
+  schmal: boolean;
+  plusOrt?: HTMLElement;
+}) {
   const z = ma.zustand(s.id);
   if (!z || z.art === 'laedt') return <p className={styles.leise}>Ablauf wird geladen …</p>;
   if (z.art === 'fehler') {
@@ -109,6 +161,7 @@ function AblaufZelle({ ma, s, schmal }: { ma: MatrixAblauf; s: PlanSpalte; schma
         <>
           {teile.inhalt}
           {teile.ueberlagerung}
+          {plusOrt && teile.kopfKnopf && createPortal(teile.kopfKnopf, plusOrt)}
         </>
       )}
     </TerminAblauf>
@@ -221,7 +274,7 @@ function UebertragenFrage({
 }
 
 /**
- * Die zwei Zeilen „Ablauf“ oben in der Tabelle: die Gruppenzeile (aufklappen, Stift, „N Punkte“ je Termin, Schloss
+ * Die zwei Zeilen „Ablauf“ oben in der Tabelle: die Gruppenzeile (aufklappen, „N Punkte“ und Plus je Termin, Schloss
  * beim Bearbeiten) und darunter die Abläufe. `zelleKlasse` wie die Dienst-Zellen (abgesagt, andere Veranstaltung).
  */
 export function AblaufZeilen({
@@ -241,9 +294,27 @@ export function AblaufZeilen({
   useEffect(() => {
     laden(schluessel ? schluessel.split(',').map(Number) : []);
   }, [laden, schluessel]);
-  const darfIrgendwo = spalten.some((i) => darfBearbeiten(ma, plan.spalten[i]));
   const [frage, setFrage] = useState<Frage | null>(null);
   const { toast: hinweis, showToast: zeigeHinweis } = useToast();
+  // Wo das grüne Plus jedes Termins steht (E6-6c): eine Stelle in der Gruppenzeile, gefüllt von der Liste darunter.
+  // Je Termin eine feste Ref-Funktion – eine neue je Darstellung riefe React jedes Mal mit `null` und neu auf.
+  const [plusOrte, setPlusOrte] = useState<ReadonlyMap<number, HTMLElement>>(new Map());
+  const plusRefs = useRef(new Map<number, (el: HTMLElement | null) => void>());
+  const plusOrtRef = useCallback((id: number) => {
+    let ref = plusRefs.current.get(id);
+    if (!ref) {
+      ref = (el) =>
+        setPlusOrte((alt) => {
+          if ((alt.get(id) ?? null) === el) return alt;
+          const neu = new Map(alt);
+          if (el) neu.set(id, el);
+          else neu.delete(id);
+          return neu;
+        });
+      plusRefs.current.set(id, ref);
+    }
+    return ref;
+  }, []);
 
   /**
    * Verschieben oder kopieren über den Kern; danach beide Spalten neu lesen – auch nach einem Fehler (dann stimmt der
@@ -292,7 +363,6 @@ export function AblaufZeilen({
               </span>
               Ablauf
             </button>
-            {darfIrgendwo && <StiftKnopf ma={ma} fuer="alle gezeigten Termine" />}
           </div>
         </th>
         {spalten.map((i) => {
@@ -315,6 +385,11 @@ export function AblaufZeilen({
                   >
                     <Icon name="lock" size={14} />
                   </span>
+                )}
+                {/* Abgeschlossen: das Schloss statt des Plus – es sagt schon, warum hier nichts dazukommt. Ohne Recht
+                    liefert die Liste gar kein Plus. */}
+                {ma.bearbeiten && !gesperrt && (
+                  <span className={styles.plusOrt} ref={plusOrtRef(s.id)} />
                 )}
               </div>
             </td>
@@ -349,7 +424,7 @@ export function AblaufZeilen({
                   an={ma.bearbeiten && darfBearbeiten(ma, s)}
                   className={`${styles.zelle}${zelleKlasse(s)}`}
                 >
-                  <AblaufZelle ma={ma} s={s} schmal />
+                  <AblaufZelle ma={ma} s={s} schmal plusOrt={plusOrte.get(s.id)} />
                 </AblageZelle>
               );
             })}

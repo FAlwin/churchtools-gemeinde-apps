@@ -16,6 +16,7 @@ import { Marke } from './Marke';
 import { SitzungAnsicht } from './SitzungAnsicht';
 import { ProtokollBeginnen } from './ProtokollBeginnen';
 import { SitzungFestlegen } from './SitzungFestlegen';
+import { SitzungBearbeiten } from './SitzungBearbeiten';
 import { NaechsteSitzung } from './NaechsteSitzung';
 import { ProtokollNeu } from './ProtokollNeu';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
@@ -76,7 +77,7 @@ export interface SitzungsAuswahl {
  * Gruppentreffen, begonnene Protokolle) und „Protokolle“ (freigegeben). Ein Tipp öffnet die Sitzung zum Lesen – einen
  * Entwurf, wenn man schreiben darf (die Leitung), im Editor (S4-1). Ohne Protokoll kann die Leitung es dort beginnen
  * (S5-1); danach öffnet es sich gleich im Editor. Die Leitung legt die nächste Sitzung fest – im Protokoll (Bereich
- * Termine) oder außerordentlich über „Neue Sitzung“ (S5-2, dasselbe Fenster).
+ * Termine) oder außerordentlich über „Neue Sitzung“ (S5-2, dasselbe Fenster) – und ändert oder sagt sie ab (K2b).
  * Bei mehreren Gruppen wählt man sie oben.
  */
 export function Sitzungen({
@@ -107,6 +108,8 @@ export function Sitzungen({
     art: 'naechste' | 'neu';
     bis: Sitzung | null;
   } | null>(null);
+  // „Sitzung bearbeiten“ (K2b) – aus der Ansicht oder dem Kasten „Nächste Sitzung“.
+  const [bearbeiten, setBearbeiten] = useState<Sitzung | null>(null);
   // Die gewünschte Sitzung gilt nur für das erste Laden – danach bestimmt die Bedienung hier.
   const wunsch = useRef(auswahl?.sitzung);
   const [zuPunkt, setZuPunkt] = useState<string | null>(auswahl?.punkt ?? null);
@@ -139,7 +142,17 @@ export function Sitzungen({
   const nachladen = useCallback(() => {
     if (!gruppe) return;
     Promise.all([ladeSitzungen(modul, gruppe, zeitzone), ladeAufgaben(modul, gruppe)]).then(
-      ([daten, aufgaben]) => setZustand({ art: 'fertig', daten, aufgaben }),
+      ([daten, aufgaben]) => {
+        setZustand({ art: 'fertig', daten, aufgaben });
+        // Die offene Sitzung frisch aus der Liste – nach „Bearbeiten“ im Editor stimmen Titel und Zeit im Kopf. Der
+        // Editor hängt nur an der Sitzungs-ID, ein neues Objekt lädt ihn nicht neu.
+        setOffen(
+          (o) =>
+            o &&
+            ([...daten.kommend, ...daten.protokolle].find((s) => s.schluessel === o.schluessel) ??
+              o),
+        );
+      },
       () => {},
     );
   }, [modul, gruppe]);
@@ -154,17 +167,55 @@ export function Sitzungen({
     darfSchreibenIn(gruppe) &&
     zustand.art === 'fertig' &&
     zustand.daten.kalender !== null;
-  const naechsteVon = (s: Sitzung) => (
-    <NaechsteSitzung
-      naechste={naechsteNach(s, alle)}
-      zeitzone={zeitzone}
-      onFestlegen={
-        darfFestlegen && s.kopf?.status !== 'frei'
-          ? () => setFestlegen({ art: 'naechste', bis: s })
-          : undefined
-      }
-    />
-  );
+  // Bearbeiten darf die Leitung, was nicht freigegeben ist und einen Termin oder ein Protokoll hat (K2b).
+  const darfBearbeiten = (s: Sitzung) =>
+    !!gruppe &&
+    darfSchreibenIn(gruppe) &&
+    s.kopf?.status !== 'frei' &&
+    (s.termin !== null || s.kopf !== null);
+  const naechsteVon = (s: Sitzung) => {
+    const n = naechsteNach(s, alle);
+    return (
+      <NaechsteSitzung
+        naechste={n}
+        zeitzone={zeitzone}
+        onFestlegen={
+          darfFestlegen && s.kopf?.status !== 'frei'
+            ? () => setFestlegen({ art: 'naechste', bis: s })
+            : undefined
+        }
+        onAendern={
+          n && darfBearbeiten(n) && s.kopf?.status !== 'frei' ? () => setBearbeiten(n) : undefined
+        }
+      />
+    );
+  };
+  const bearbeitenFenster = (geoeffnetImEditor: boolean) =>
+    bearbeiten &&
+    gruppe &&
+    gruppe.protokolle !== null &&
+    zustand.art === 'fertig' && (
+      <SitzungBearbeiten
+        gruppe={gruppe}
+        modul={modul}
+        kategorie={gruppe.protokolle}
+        sitzung={bearbeiten}
+        sitzungen={alle}
+        ich={ich}
+        zeitzone={zeitzone}
+        onFertig={() => {
+          setBearbeiten(null);
+          if (geoeffnetImEditor) {
+            nachladen();
+            return;
+          }
+          // Neu laden und die offene Sitzung wieder öffnen – nach einer Absage ist sie weg, dann die Liste.
+          if (offen) wunsch.current = offen.schluessel;
+          laden();
+        }}
+        onClose={() => setBearbeiten(null)}
+      />
+    );
   const festlegenFenster = (geoeffnetImEditor: boolean) =>
     festlegen &&
     gruppe &&
@@ -209,6 +260,7 @@ export function Sitzungen({
     return (
       <Suspense fallback={<p className={styles.ruhig}>Editor wird geladen …</p>}>
         {festlegenFenster(true)}
+        {bearbeitenFenster(true)}
         <ProtokollSchreiben
           sitzung={offen}
           gruppe={gruppe.name}
@@ -221,6 +273,7 @@ export function Sitzungen({
           ich={ich}
           zeitzone={zeitzone}
           naechste={naechsteVon(offen)}
+          onBearbeiten={darfBearbeiten(offen) ? () => setBearbeiten(offen) : undefined}
           onZurueck={(geaendert) => {
             setOffen(null);
             if (geaendert) laden();
@@ -245,6 +298,7 @@ export function Sitzungen({
           springeZu={zuPunkt}
           naechste={naechsteVon(offen)}
           onBeginnen={darfSchreiben ? () => setBeginnt(offen) : undefined}
+          onBearbeiten={darfBearbeiten(offen) ? () => setBearbeiten(offen) : undefined}
           onZurueck={() => {
             setZuPunkt(null);
             setOffen(null);
@@ -271,6 +325,7 @@ export function Sitzungen({
           />
         )}
         {festlegenFenster(false)}
+        {bearbeitenFenster(false)}
       </>
     );
 

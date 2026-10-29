@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { DEMO_EDITOR_TEXT } from '../client/src/dev/demoEditorText';
+import { cursorInZeile } from './werkzeug';
 
 /**
  * **Schreibansicht bei offener Tastatur** (23.10.2026, Alwin am iPad: „das Bearbeitungsfenster ist bei aufgeklappter
@@ -43,11 +44,7 @@ const gespeichert = (page: Page) =>
 
 async function inDenText(page: Page) {
   await page.goto('/?demo=editor');
-  const zeile = page.locator('.cm-line', { hasText: 'jedem neuen Tag' });
-  await expect(zeile).toBeVisible({ timeout: 30_000 });
-  const h = (await zeile.boundingBox())!.height;
-  await zeile.click({ position: { x: 1, y: h / 2 } });
-  for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight'); // „Du “
+  await cursorInZeile(page, 'jedem neuen Tag', 3); // „Du “
 }
 
 test('Tastatur offen + Cursor im Text: Ablauf und Fassung weg, eine Zeile, der Text bekommt den Platz', async ({
@@ -106,17 +103,25 @@ test('Kärtchen am unteren Rand: das Menü klappt nach oben, nicht unter die Tas
   // Das unterste Kärtchen, das noch über der Tastatur steht.
   const kaertchen = page.locator('.cm-cp-akkord');
   let unten = -1;
+  let kaertchenUnten = 0;
   let ziel = 0;
   for (let i = 0; i < (await kaertchen.count()); i++) {
     const b = await kaertchen.nth(i).boundingBox();
     if (b && b.y + b.height < sichtbarBis && b.y > unten) {
       unten = b.y;
+      kaertchenUnten = b.y + b.height;
       ziel = i;
     }
   }
-  expect(sichtbarBis - unten).toBeLessThan(80); // es steht wirklich unten
   await kaertchen.nth(ziel).click();
   const m = (await page.getByRole('group', { name: /^Akkord / }).boundingBox())!;
+  // Es steht wirklich unten: Unter dem Kärtchen ist weniger Platz, als das Menü samt Abstand braucht – sonst bewiese der
+  // Rest nichts. Den Abstand misst der Test über dem Kärtchen (derselbe wie darunter, `ABSTAND` in `AkkordMenue.tsx`).
+  // Bis zum 29.10.2026 stand hier eine feste Grenze von 80 px; ein 8 px schmalerer Editor-Kopf verschob die Zeilen und
+  // riss sie, ohne dass sich am Verhalten etwas geändert hätte.
+  const abstand = unten - (m.y + m.height);
+  expect(abstand).toBeGreaterThan(0);
+  expect(kaertchenUnten + abstand + m.height).toBeGreaterThan(sichtbarBis);
   expect(m.y + m.height).toBeLessThanOrEqual(sichtbarBis);
   expect(m.y + m.height).toBeLessThanOrEqual(unten + 2); // über dem Kärtchen
 });
@@ -157,6 +162,32 @@ test('Tastatur für ein anderes Feld (Fassung): keine Schreibansicht', async ({ 
 
 test.describe('Handy', () => {
   test.use({ viewport: { width: 390, height: 844 } });
+
+  /**
+   * **Cursor setzen, während die Schrift noch lädt** (29.10.2026). Mit der Ersatzschrift bricht die Zeile am Handy um
+   * (62 px), mit Lato nicht (31 px). Die Editor-Tests maßen die Höhe zu früh und klickten auf ihre halbe Höhe – kam die
+   * Schrift dazwischen, lag dort die nächste Zeile. Unter Last wackelte so „Schreibansicht am Handy“, auch auf main.
+   * Hier wird die Schrift gezielt zurückgehalten und erst nach dem Laden der Seite freigegeben.
+   */
+  test('Cursor setzen, während die Schrift noch lädt: er landet trotzdem hinter „Du “', async ({
+    page,
+  }) => {
+    let freigeben = () => {};
+    const gehalten = new Promise<void>((ok) => (freigeben = ok));
+    await page.route(/\.(woff2?|ttf)(\?|$)/, async (r) => {
+      await gehalten;
+      await r.continue();
+    });
+    await page.goto('/?demo=editor');
+    const zeile = page.locator('.cm-line', { hasText: 'jedem neuen Tag' });
+    await expect(zeile).toBeVisible({ timeout: 30_000 });
+    // Mit der Ersatzschrift ist die Zeile wirklich umgebrochen – sonst bewiese der Test nichts.
+    expect((await zeile.boundingBox())!.height).toBeGreaterThan(50);
+    setTimeout(freigeben, 400);
+    await cursorInZeile(page, 'jedem neuen Tag', 3);
+    await page.keyboard.type('X');
+    await expect(page.locator('.cm-line', { hasText: 'Du Xbist' })).toBeVisible();
+  });
 
   test('Schreibansicht am Handy: eine Zeile, die Akkorde werden gewischt statt umzubrechen', async ({
     page,

@@ -2,7 +2,7 @@ import { useMemo, type ReactNode } from 'react';
 import { GruppenKachel } from '@ui/bedienung/GruppenKachel';
 import { PersonBild } from '@ui/bedienung/PersonBild';
 import { Icon } from '@ui/icons/icons';
-import { gruppenFarbe } from '@shared/organigramm/farbe';
+import { gruppenFarbe, sichtFarbe } from '@shared/organigramm/farbe';
 import type { Knoten } from '@shared/organigramm/gruppen';
 import { knotenAmPfad, spitzenWahl, type SichtKnoten } from '@shared/organigramm/ansichten';
 import { Segment } from '@ui/bedienung/Segment';
@@ -15,10 +15,11 @@ import {
   type PersonenWahl,
 } from '@shared/organigramm/personen';
 import { offenVonGruppe, type Einsaetze } from '@shared/organigramm/einsaetze';
+import type { Sichtbarkeit } from '@shared/organigramm/sichtbarkeit';
 import type { MitgliederDaten, MitgliederStand } from './ladeMitglieder';
 import type { Start } from './start';
 import { ANSICHT_NAMEN, BAUM_ANSICHTEN, PERSONEN_WAHL, type BaumAnsicht } from './auswahl';
-import { kastenInhalt } from './kastenPersonen';
+import { personenInhalt } from './kastenPersonen';
 import { Liste } from './Liste';
 import { Diagramm } from './Diagramm';
 import styles from './Organigramm.module.scss';
@@ -36,6 +37,11 @@ interface Props {
   lesbar: ReadonlyMap<number, readonly Mitglied[]>;
   /** Ausgeblendete Gruppentypen – liegen in `App`, weil die Präsentation dieselben ausblendet (O4). */
   ausgeblendet: ReadonlySet<number>;
+  /** Was Gruppen-Admins für alle ausgeblendet haben (O7b-7) – diese Typen haben kein Schildchen. */
+  fuerAlle: Sichtbarkeit;
+  /** Ließ sich gerade nicht lesen – dann ist alles zu sehen, mit Hinweis. */
+  fuerAlleFehler: boolean;
+  onFuerAlleNochmal: () => void;
   /** Der Baum ohne ausgeblendete Typen, große Bereiche zuerst – EINE Rechnung in `App` für Karten, Liste und Fenster. */
   baum: readonly Knoten[];
   /** Ansicht, Spitze und was aufgeklappt ist (O7b-2) – liegt in `App`, weil das Gruppenfenster „Hier anfangen“ kann. */
@@ -68,6 +74,9 @@ export function Organigramm({
   einsaetze,
   lesbar,
   ausgeblendet,
+  fuerAlle,
+  fuerAlleFehler,
+  onFuerAlleNochmal,
   baum,
   ansicht,
   onAnsicht,
@@ -84,16 +93,11 @@ export function Organigramm({
   onGruppe,
 }: Props) {
   const rang = useMemo(() => rollenRang(start.rollen), [start.rollen]);
+  const farbe = useMemo(() => sichtFarbe(start.typFarben), [start.typFarben]);
   // Was unter dem Namen steht – EINE Regel für Diagramm und Liste. Neu nur, wenn sich Wahl oder Mitglieder ändern: Das
   // Diagramm misst dann alle Kästchen neu.
   const inhalt = useMemo(
-    () => (id: number) =>
-      kastenInhalt(
-        mitglieder?.je.get(id),
-        personen,
-        start.rollen,
-        (p) => mitglieder?.personen.get(p)?.name ?? '',
-      ),
+    () => personenInhalt(mitglieder, start.rollen, personen),
     [mitglieder, personen, start.rollen],
   );
   const name = (id: number) => mitglieder?.personen.get(id)?.name ?? '';
@@ -101,13 +105,24 @@ export function Organigramm({
   const spitzenKnoten = spitze === null ? null : knotenAmPfad(baum, spitze);
   const karten = spitzenKnoten ? [spitzenKnoten] : baum;
 
-  // Gruppentypen, die es gibt – mit Zahl, für den Filter.
+  // Gruppentypen, die es gibt – mit Zahl, für den Filter. Was für alle ausgeblendet ist, hat kein Schildchen (O7b-7).
   const typen = useMemo(() => {
     const zahl = new Map<number, number>();
     for (const g of start.gruppen)
-      if (g.typId !== null) zahl.set(g.typId, (zahl.get(g.typId) ?? 0) + 1);
+      if (g.typId !== null && !fuerAlle.typen.includes(g.typId))
+        zahl.set(g.typId, (zahl.get(g.typId) ?? 0) + 1);
     return [...zahl].sort((a, b) => b[1] - a[1]);
-  }, [start.gruppen]);
+  }, [start.gruppen, fuerAlle.typen]);
+  const fuerAlleText = [
+    fuerAlle.typen.length
+      ? `${anzahl(fuerAlle.typen.length, 'Gruppentyp', 'Gruppentypen')} (${fuerAlle.typen
+          .map((t) => start.typNamen.get(t) ?? `Typ ${t}`)
+          .join(', ')})`
+      : '',
+    fuerAlle.gruppen.length ? anzahl(fuerAlle.gruppen.length, 'Gruppe', 'Gruppen') : '',
+  ]
+    .filter(Boolean)
+    .join(' und ');
 
   const stand = (id: number): MitgliederStand | undefined => mitglieder?.je.get(id);
   const sichtbare = (id: number): readonly Mitglied[] => lesbar.get(id) ?? [];
@@ -235,6 +250,21 @@ export function Organigramm({
         </div>
       )}
 
+      {fuerAlleText && (
+        <div className={styles.band} role="note">
+          Für alle ausgeblendet: {fuerAlleText} – eingestellt von Gruppen-Admins
+          {start.rechte.gruppenVerwalten ? ' über „Einstellungen“' : ''}.
+        </div>
+      )}
+      {fuerAlleFehler && (
+        <div className={styles.hinweis} role="status">
+          Was das Organigramm für alle zeigt, ließ sich gerade nicht laden – zu sehen ist alles.
+          <button type="button" className={styles.nochmal} onClick={onFuerAlleNochmal}>
+            Erneut versuchen
+          </button>
+        </div>
+      )}
+
       {fehlerZahl > 0 && (
         <div className={styles.hinweis} role="status">
           Bei {anzahl(fehlerZahl, 'Gruppe', 'Gruppen')} ließen sich die Mitglieder gerade nicht
@@ -248,7 +278,13 @@ export function Organigramm({
       {baum.length === 0 && <p className={styles.leer}>Hier ist keine Gruppe zu sehen.</p>}
 
       {ansicht === 'liste' && baum.length > 0 && (
-        <Liste sicht={sicht} onUmklappen={onUmklappen} onGruppe={onGruppe} inhalt={inhalt} />
+        <Liste
+          sicht={sicht}
+          onUmklappen={onUmklappen}
+          onGruppe={onGruppe}
+          farbe={farbe}
+          inhalt={inhalt}
+        />
       )}
 
       {(ansicht === 'oben' || ansicht === 'links' || ansicht === 'mindmap') && baum.length > 0 && (
@@ -257,6 +293,7 @@ export function Organigramm({
           sicht={sicht}
           onUmklappen={onUmklappen}
           onGruppe={onGruppe}
+          farbe={farbe}
           personen={{ wahl: personen, inhalt }}
         />
       )}

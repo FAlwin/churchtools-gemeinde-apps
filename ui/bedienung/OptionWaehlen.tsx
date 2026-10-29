@@ -72,22 +72,22 @@ export function AuswahlBlatt({
 /**
  * **„+ … hinzufügen“ im Seitenkopf** (iPad/Rechner): grüner Knopf wie „+ Gruppe erstellen“ in ChurchTools, der die
  * Möglichkeiten als kleines Menü darunter aufklappt. `gesperrt` statt Menü, wenn nichts hinzugefügt werden darf (z. B.
- * abgeschlossener Ablauf – dann der Hinweis des Aufrufers). `nurSymbol` für enge Stellen (Gruppenzeile der Matrix,
- * E6-6c) – dann sagt `title`, wofür das Plus ist.
+ * abgeschlossener Ablauf – dann der Hinweis des Aufrufers). `klein` für die Gruppenzeile der Matrix (E6-6c): nur das
+ * Symbol, 26 px – dann sagt `title`, wofür das Plus ist.
  */
 export function HinzufuegenMenue({
   label,
   title,
   optionen,
   gesperrt,
-  nurSymbol,
+  klein,
   dataTour,
 }: {
   label: string;
   title?: string;
   optionen: Option[];
   gesperrt?: () => void;
-  nurSymbol?: boolean;
+  klein?: boolean;
   dataTour?: string;
 }) {
   // Auf, zu, Tipp daneben, Escape – derselbe Baustein wie Filter- und Zeitraum-Knopf.
@@ -99,7 +99,7 @@ export function HinzufuegenMenue({
         label={label}
         title={title}
         neu
-        nurSymbol={nurSymbol}
+        klein={klein}
         menuOffen={gesperrt ? undefined : offen}
         dataTour={dataTour}
         symbol={<Icon name="plus" size={16} stroke={2.4} />}

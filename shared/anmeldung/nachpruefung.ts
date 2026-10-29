@@ -68,7 +68,7 @@ export interface AuswahlBelegung {
 }
 
 export interface Nachpruefung {
-  plaetze: PlatzZahlen & { wartenTrotzPlatz: boolean };
+  plaetze: PlatzZahlen;
   /** `null`, wenn es keinen Grundpreis „nach Auswahl“ gibt. */
   auswahl: { name: string; optionen: AuswahlBelegung[] } | null;
   betraege: Betragsbefund[];
@@ -129,9 +129,6 @@ export function nachpruefen(
   mitglieder: PruefMitglied[],
   plaetze: PlatzZahlen,
 ): Nachpruefung {
-  // Plätze: frei, aber jemand wartet → niemand rückt von selbst nach (gemessen 17.10.2026, #619).
-  const warten = wartenTrotzPlatz(plaetze);
-
   // Belegung je Auswahl – dieselbe Zählung, die das Formular sperren lässt.
   const g = e.preis.grundpreis;
   let auswahl: Nachpruefung['auswahl'] = null;
@@ -237,12 +234,13 @@ export function nachpruefen(
     }
   }
 
+  // „Platz frei – jemand wartet“ zählt seit U2-1 nicht mehr: Er steht in der Kachel und im Reiter Warteliste, wo man
+  // auch nachrücken lässt (Alwin, 29.10.2026) – die Nachprüfung wiederholt ihn nicht.
   const hinweise =
-    (warten ? 1 : 0) +
     (auswahl?.optionen.filter((o) => o.zustand === 'ueberbucht').length ?? 0) +
     betraege.filter((b) => b.grund !== 'preise').length;
   return {
-    plaetze: { ...plaetze, wartenTrotzPlatz: warten },
+    plaetze,
     auswahl,
     betraege,
     geprueft,

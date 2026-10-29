@@ -92,6 +92,8 @@ function zeigen(
   );
   return Object.assign(onNeuLaden, { onGespeichert });
 }
+/** Die Zeile der Tabelle zu einem Namen (U2-1: der Name ist der Knopf, die Zeile drumherum). */
+const zeile = (name: string) => screen.getByRole('button', { name }).closest('tr')!;
 const fertig = (
   roh = mitglieder('AAAAAA', [true, false], 10),
   verlauf = [dazu(10, '2026-10-17')],
@@ -99,29 +101,34 @@ const fertig = (
 
 describe('Reiter Anmeldungen', () => {
   // Die Zahlen (Plätze, Warteliste, Zahlung offen) stehen seit U1 oben auf der Seite – getestet in `Einstieg.test.tsx`.
-  it('Hinweis „frei, aber jemand wartet“, eine Zeile je Anmeldung', () => {
+  it('eine Zeile je Anmeldung; „frei, aber jemand wartet“ steht nur im Reiter Warteliste (U2-1)', () => {
     zeigen(fertig());
     expect(screen.queryByText('1 von 10')).toBeNull();
+    expect(zeile('Maria Beispiel').textContent).toMatch(
+      /Maria Beispiel.*AAAAAA.*Jonas 9.*Lena 7.*Warteliste 1.*6,00 €.*offen/s,
+    );
+    // Unter „Alle“ kein Hinweis mehr – er stand vorher dreimal (Kachel, Nachprüfung, über der Liste).
+    expect(screen.queryByText(/Als Nächste wartet/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^Warteliste/ }));
     expect(screen.getByText(/9 Plätze frei – 1 wartet\./)).toBeTruthy();
     expect(screen.getByText(/Als Nächste wartet Lena Beispiel \(seit 17\.10\.\)/)).toBeTruthy();
-    const zeile = screen.getByRole('button', { name: /Maria Beispiel/ });
-    expect(zeile.textContent).toMatch(/AAAAAA.*Jonas 9.*Lena 7.*Warteliste 1.*6,00 €.*offen/);
   });
 
   it('alle warten (das Formular schreibt „0,00 €“) → „Betrag beim Nachrücken“ statt „0,00 €“', () => {
     zeigen(fertig(mitglieder('AAAAAA', [false, false], 10)));
-    const zeile = screen.getByRole('button', { name: /Maria Beispiel/ });
-    expect(zeile.textContent).toMatch(/Betrag beim Nachrücken/);
-    expect(zeile.textContent).not.toMatch(/0,00 €/);
+    expect(zeile('Maria Beispiel').textContent).toMatch(/beim Nachrücken/);
+    expect(zeile('Maria Beispiel').textContent).not.toMatch(/0,00 €/);
   });
 
   it('kein Hinweis, wenn niemand wartet oder alles voll ist', () => {
     zeigen(fertig(mitglieder('AAAAAA', [true, true], 10)));
+    fireEvent.click(screen.getByRole('button', { name: /^Warteliste/ }));
     expect(screen.queryByText(/warten?\./)).toBeNull();
     cleanup();
     // Voll (1 von 1), eine wartet – ChurchTools hat recht, niemand kann nachrücken.
     zeigen(fertig(), 1);
-    expect(screen.getByRole('button', { name: /Maria Beispiel/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /^Warteliste/ }));
+    expect(zeile('Maria Beispiel')).toBeTruthy();
     expect(screen.queryByText(/Als Nächste wartet/)).toBeNull();
   });
 
@@ -130,7 +137,10 @@ describe('Reiter Anmeldungen', () => {
     fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));
     expect(screen.getByText('Für die ganze Anmeldung · gilt für Jonas, Lena')).toBeTruthy();
     expect(screen.getByRole('img', { name: 'Unterschrift' })).toBeTruthy();
-    expect(screen.getByText('✓ Maria Beispiel, 17.10.2026')).toBeTruthy();
+    // Die Unterschrift steht auch als Spalte in der Tabelle – hier die im Fenster.
+    expect(
+      within(screen.getByRole('dialog')).getByText('✓ Maria Beispiel, 17.10.2026'),
+    ).toBeTruthy();
     expect(screen.getByText('Jonas Beispiel, 9')).toBeTruthy();
     expect(screen.getByText('Nüsse')).toBeTruthy();
     expect(screen.getAllByText('Warteliste 1').length).toBeGreaterThan(0);
@@ -146,9 +156,11 @@ describe('Reiter Anmeldungen', () => {
     const [jonas, lena] = mitglieder('AAAAAA', [true, false], 10);
     zeigen(fertig([lena], [absage(jonas, '2026-10-18', 10)]));
     fireEvent.click(screen.getByRole('button', { name: /^Warteliste/ }));
-    expect(screen.getByRole('button', { name: /1 · Lena Beispiel/ })).toBeTruthy();
+    // Eine Zeile je Anmeldung, mit dem Warteplatz als Spalte.
+    expect(screen.getByRole('columnheader', { name: 'Warteplatz' })).toBeTruthy();
+    expect(zeile('Maria Beispiel').textContent).toMatch(/Lena 7.*Warteliste 1/);
     fireEvent.click(screen.getByRole('button', { name: /^Abgesagt/ }));
-    const ab = screen.getByText('Jonas Beispiel').closest('li')!;
+    const ab = zeile('Jonas Beispiel');
     expect(within(ab).getByText(/am 18\.10\. selbst abgesagt/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /^Alle/ }));
     fireEvent.change(screen.getByRole('searchbox', { name: 'Name suchen' }), {
@@ -167,6 +179,76 @@ describe('Reiter Anmeldungen', () => {
     const neu = zeigen({ art: 'fehler', text: 'ChurchTools antwortet gerade nicht.' });
     fireEvent.click(screen.getByRole('button', { name: 'Nochmal' }));
     expect(neu).toHaveBeenCalled();
+  });
+});
+
+describe('Tabelle (U2-1)', () => {
+  const zwei = () =>
+    fertig(
+      [...mitglieder('AAAAAA', [true, true], 10), ...mitglieder('BBBBBB', [true, false], 20)],
+      [dazu(10, '2026-10-17'), dazu(20, '2026-10-18')],
+    );
+  const nummern = () =>
+    screen
+      .getAllByRole('row')
+      .map((r) => /[A-Z]{6}/.exec(r.textContent ?? '')?.[0])
+      .filter(Boolean);
+
+  it('Reiter mit der Zahl ihrer Zeilen; Spalten mit den Fragen der Anmeldung; Summenzeile', () => {
+    zeigen(zwei());
+    expect(screen.getByRole('button', { name: 'Alle 2' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Zahlung offen 2' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Warteliste 1' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Abgesagt 0' })).toBeTruthy();
+    const kopf = screen.getAllByRole('columnheader').map((k) => k.textContent);
+    expect(kopf.slice(0, 3)).toEqual(['Name', 'Nr.', 'Personen']);
+    expect(kopf).toContain('Telefon');
+    expect(kopf.slice(-3)).toEqual(['Betrag', 'Bezahlt', 'Angemeldet am']);
+    const summe = screen.getAllByRole('row').at(-1)!.textContent;
+    expect(summe).toMatch(/^2 Anmeldungen/);
+    expect(summe).toMatch(/3 Personen\+ 1 auf der Warteliste/);
+    expect(summe).toMatch(/2 ausgefüllt/);
+    expect(summe).toMatch(/18,00 €18,00 € offen · 0,00 € eingegangen/);
+  });
+
+  it('Spaltenkopf sortiert: auf, ab, wieder nach Anmeldetag; ein anderer Reiter beginnt ohne Wahl', () => {
+    zeigen(zwei());
+    expect(nummern()).toEqual(['AAAAAA', 'BBBBBB']);
+    const personen = () => screen.getByRole('columnheader', { name: /Personen/ });
+    fireEvent.click(within(personen()).getByRole('button'));
+    expect(personen().getAttribute('aria-sort')).toBe('ascending');
+    expect(nummern()).toEqual(['BBBBBB', 'AAAAAA']);
+    fireEvent.click(within(personen()).getByRole('button'));
+    expect(personen().getAttribute('aria-sort')).toBe('descending');
+    expect(nummern()).toEqual(['AAAAAA', 'BBBBBB']);
+    fireEvent.click(within(personen()).getByRole('button'));
+    expect(personen().getAttribute('aria-sort')).toBeNull();
+    fireEvent.click(within(personen()).getByRole('button'));
+    fireEvent.click(screen.getByRole('button', { name: /^Zahlung offen/ }));
+    expect(personen().getAttribute('aria-sort')).toBeNull();
+  });
+
+  it('ein Klick in die Zeile (nicht nur auf den Namen) öffnet die Anmeldung', () => {
+    zeigen(fertig());
+    fireEvent.click(within(zeile('Maria Beispiel')).getByText('AAAAAA'));
+    expect(screen.getByText('Für die ganze Anmeldung · gilt für Jonas, Lena')).toBeTruthy();
+  });
+
+  it('Abgesagt: „Zurückholen“ nur mit Recht; die Suche findet auch Absagen', () => {
+    const [jonas, lena] = mitglieder('AAAAAA', [true, false], 10);
+    zeigen(fertig([lena], [absage(jonas, '2026-10-18', 10)]));
+    fireEvent.click(screen.getByRole('button', { name: /^Abgesagt/ }));
+    expect(zeile('Jonas Beispiel').textContent).toMatch(/Zurückholen$/);
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Name suchen' }), {
+      target: { value: 'lena' },
+    });
+    expect(screen.getByText('Niemand mit „lena“ gefunden.')).toBeTruthy();
+    cleanup();
+    zeigen(fertig([lena], [absage(jonas, '2026-10-18', 10)]), 10, false, false);
+    fireEvent.click(screen.getByRole('button', { name: /^Abgesagt/ }));
+    expect(screen.getByText('Jonas Beispiel').closest('tr')!.textContent).not.toMatch(
+      /Zurückholen/,
+    );
   });
 });
 
@@ -203,9 +285,7 @@ describe('Zahlung im Fenster (A7-2)', () => {
 
   it('bezahlt → Anzeige mit Zahlart, „Zurücksetzen“; in der Liste „✓ Bar“', async () => {
     const z = zeigen(fertig(mitglieder('AAAAAA', [true, true], 10, { bezahlt: true })));
-    expect(screen.getByRole('button', { name: /Maria Beispiel/ }).textContent).toMatch(
-      /✓ Bar 18\.10\./,
-    );
+    expect(zeile('Maria Beispiel').textContent).toMatch(/✓ Bar 18\.10\./);
     oeffnen();
     expect(screen.getByText('✓ bezahlt am 18.10.2026 · Bar')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Zurücksetzen' }));
@@ -318,6 +398,7 @@ describe('Nachrücken und Absagen (A7-3)', () => {
 
   it('der Knopf im Hinweis oben öffnet gleich die Rückfrage; voll → Plätze erhöhen', () => {
     zeigen(fertig());
+    fireEvent.click(screen.getByRole('button', { name: /^Warteliste/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Lena nachrücken lassen' }));
     expect(screen.getByText('Lena Beispiel nachrücken lassen?')).toBeTruthy();
     cleanup();
@@ -467,7 +548,9 @@ describe('Anmeldung von Hand (A7-4a)', () => {
     expect(screen.getByText('Warteliste 2')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Trotzdem einen Platz geben/ }));
     expect(screen.getByText('einen Platz')).toBeTruthy();
-    expect(screen.getByText('Betrag').nextSibling?.textContent).toBe('6,00 €');
+    expect(within(screen.getByRole('dialog')).getByText('Betrag').nextSibling?.textContent).toBe(
+      '6,00 €',
+    );
 
     fireEvent.click(screen.getByRole('button', { name: 'Anmelden' }));
     expect(screen.getByText('Bitte die markierten Felder ausfüllen.')).toBeTruthy();
@@ -614,7 +697,7 @@ describe('Zurückholen (A7-4c)', () => {
   it('Filter „Abgesagt“: Zeile anklicken → Rückfrage mit Platz und eigener Zahlung → zurück mit den alten Antworten', async () => {
     const z = zeigen(mitAbsage());
     fireEvent.click(screen.getByRole('button', { name: /Abgesagt/ }));
-    fireEvent.click(screen.getByRole('button', { name: /Lena Beispiel.*Zurückholen/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Lena Beispiel' }));
     expect(screen.getByText('Lena Beispiel zurückholen?')).toBeTruthy();
     // Solange die Felder laden, steht nicht kurz der Satz für „allein“ da.
     expect(screen.queryByText(/Kontakt, Unterschrift, Fragen/)).toBeNull();
@@ -638,7 +721,7 @@ describe('Zurückholen (A7-4c)', () => {
   ])('Zurückholen %s – %s', async (mitBestaetigung) => {
     const z = zeigen(mitAbsage(), 10, false, true, mitBestaetigung);
     fireEvent.click(screen.getByRole('button', { name: /Abgesagt/ }));
-    fireEvent.click(screen.getByRole('button', { name: /Lena Beispiel.*Zurückholen/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Lena Beispiel' }));
     await waitFor(() =>
       expect(screen.getByText('Neue Zahlung für Lena').nextSibling?.textContent).toBe('6,00 €'),
     );
@@ -783,7 +866,7 @@ describe('Rundmail (A7-5)', () => {
   it('Zahlungserinnerung an „Zahlung offen“: je Anmeldung eine Mail, Platzhalter für ChurchTools, Rückfrage, verschickt', async () => {
     zeigen(fertig());
     fireEvent.click(screen.getByRole('button', { name: /Zahlung offen/ }));
-    fireEvent.click(screen.getByRole('button', { name: '✉ Rundmail' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Rundmail' }));
     // Aus dem Filter „Zahlung offen“ → gleich mit der Zahlungserinnerung.
     expect(screen.getByLabelText<HTMLInputElement>('Betreff').value).toBe(
       'Kinderfreizeit: Bitte noch überweisen',
@@ -813,7 +896,7 @@ describe('Rundmail (A7-5)', () => {
 
   it('unbekannter Platzhalter → Hinweis, Senden gesperrt; eigener Text wird nicht still durch eine Vorlage ersetzt', async () => {
     zeigen(fertig());
-    fireEvent.click(screen.getByRole('button', { name: '✉ Rundmail' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Rundmail' }));
     await waitFor(() => expect(rm.platzhalterLaden).toHaveBeenCalled());
     fireEvent.change(screen.getByLabelText('Betreff'), { target: { value: 'Hallo' } });
     fireEvent.change(screen.getByLabelText('Text'), { target: { value: 'Größe: [Schuhgröße]' } });
@@ -834,7 +917,7 @@ describe('Rundmail (A7-5)', () => {
     rm.vorschauLaden.mockResolvedValue({ betreff: 'Kinderfreizeit', html: '<p>Hallo</p>' });
     zeigen(fertig());
     fireEvent.click(screen.getByRole('button', { name: /Zahlung offen/ }));
-    fireEvent.click(screen.getByRole('button', { name: '✉ Rundmail' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Rundmail' }));
     const vorschau = screen.getByRole<HTMLButtonElement>('button', { name: 'Vorschau' });
     await waitFor(() => expect(vorschau.disabled).toBe(false));
     fireEvent.click(vorschau);
@@ -850,7 +933,7 @@ describe('Rundmail (A7-5)', () => {
       Object.assign(new R.UnklarObVerschickt(), { message: 'unklar – bitte erst nachsehen' }),
     );
     zeigen(fertig());
-    fireEvent.click(screen.getByRole('button', { name: '✉ Rundmail' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Rundmail' }));
     fireEvent.click(screen.getByRole('button', { name: 'Zahlungserinnerung' }));
     const senden = screen.getByRole<HTMLButtonElement>('button', { name: 'Senden …' });
     await waitFor(() => expect(senden.disabled).toBe(false));
@@ -875,7 +958,7 @@ describe('Druckliste (A8-1)', () => {
       ).toBe(false),
     );
   const oeffnen = async () => {
-    fireEvent.click(screen.getByRole('button', { name: '⎙ Druckliste' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Druckliste' }));
     await pdfFertig();
   };
 
@@ -932,8 +1015,10 @@ describe('Druckliste (A8-1)', () => {
     expect(
       within(screen.getByLabelText('Vorschau')).getByText('Abgeholt von / Uhrzeit'),
     ).toBeTruthy();
-    // Spalten gibt es nur bei den Teilnehmern.
-    expect(screen.queryByRole('button', { name: 'Telefon' })).toBeNull();
+    // Spalten gibt es nur bei den Teilnehmern (im Fenster – die Tabelle dahinter hat ihre eigene Spalte „Telefon“).
+    expect(
+      within(screen.getByRole('dialog')).queryByRole('button', { name: 'Telefon' }),
+    ).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: '＋ weitere' }));
     fireEvent.click(screen.getByRole('button', { name: 'Zimmer' }));
     expect(screen.getByText(/Im Preis gibt es keine Auswahl/)).toBeTruthy();

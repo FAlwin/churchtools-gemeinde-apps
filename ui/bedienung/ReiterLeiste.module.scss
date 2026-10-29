@@ -85,4 +85,10 @@
       font-weight: 800;
     }
   }
+
+  // Anzahl hinter dem Text – leiser, auch am gewählten Reiter (U2-1).
+  .tab .zahl {
+    color: var(--text3);
+    font-weight: 400;
+  }
 }

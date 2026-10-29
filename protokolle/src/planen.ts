@@ -26,9 +26,10 @@ const json = (body: unknown) => JSON.stringify(body);
 
 /**
  * ChurchTools hat ausdrücklich abgelehnt – dann ist nichts angelegt: fehlendes Recht (`KeinSpeicherRecht`) oder ein
- * anderes 4xx. Ein 403 ohne ChurchTools-Rumpf (Proxy) und eine Zeitgrenze sind dagegen unklar (`fehlerAus`).
+ * anderes 4xx. Ein 403 ohne ChurchTools-Rumpf (Proxy) und eine Zeitgrenze sind dagegen unklar (`fehlerAus`). Die eine
+ * Stelle dafür – auch für „Sitzung bearbeiten“ (K2b, `bearbeiten.ts`).
  */
-const abgelehnt = (e: unknown): boolean =>
+export const abgelehnt = (e: unknown): boolean =>
   e instanceof KeinSpeicherRecht ||
   (e instanceof ApiError &&
     e.status >= 400 &&

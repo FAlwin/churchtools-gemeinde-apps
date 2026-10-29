@@ -9,7 +9,7 @@
  * die **Überlagerung** (Fenster, Plus, Hinweise) schwebt darüber. Den Fehlertext teilt die Liste mit der Seite
  * (`fehlerZeigen`) – auch ein Fehler beim Abschließen steht in derselben Zeile.
  */
-import { Fragment, useEffect, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import type { AgendaServiceOption } from '@shared/types/index';
@@ -36,6 +36,8 @@ import { innerScrollOnly, resetViewportAfterDrag } from '../bedienung/dndAutoScr
 import { SortableRow } from './AgendaSortableRow';
 import { BeginnLinie, VerborgeneGruppenHinweis } from './AblaufTeile';
 import { PunktFenster, type LiedWahlArgs } from './PunktFenster';
+import { AblageStelle } from './AblaufZiehBereich';
+import { punktDaten, useZiehBereich, ziehId, type ZiehSpalte } from './ablaufZiehen';
 import styles from './AblaufBearbeiten.module.scss';
 import zeile from './AblaufListe.module.scss';
 
@@ -116,6 +118,11 @@ export interface AblaufBearbeitenOptionen<T extends AblaufZeile> {
    * und statt des schwebenden Plus ein „+ Punkt“ am Ende der Liste – in einer Matrix stehen mehrere Listen nebeneinander.
    */
   schmal?: boolean;
+  /**
+   * Im gemeinsamen Zieh-Bereich der Matrix (E6-6b, `AblaufZiehBereich`): Diese Liste ist die Spalte `spalte` und zieht
+   * mit den anderen zusammen – Punkte lassen sich in eine andere Spalte ziehen. Ohne Bereich ohne Wirkung.
+   */
+  ziehen?: { spalte: number; neuLaden: () => void };
 }
 
 export function useAblaufBearbeiten<T extends AblaufZeile>(
@@ -165,18 +172,26 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
   }, [aktiv, rueckgaengigVerwerfen]);
 
   const sensors = useZiehSensoren();
+  // Im Zieh-Bereich der Matrix zieht die Liste mit den anderen Spalten zusammen (E6-6b).
+  const bereich = useZiehBereich();
+  const spalte = bereich ? o.ziehen?.spalte : undefined;
 
   function handleDragEnd(e: DragEndEvent) {
     resetViewportAfterDrag(); // #56: weggerutschte Kopfleiste zurückholen (auch ohne Umsortierung)
     const { active, over } = e;
     if (!over || active.id === over.id) return;
+    umsortieren(Number(active.id), Number(over.id));
+  }
+
+  /** Punkt `aktivId` an die Stelle von `ueberId` – mit und ohne Zieh-Bereich dieselbe Regel. */
+  function umsortieren(aktivId: number, ueberId: number) {
     // Abgeschlossen: nicht speichern – der Punkt springt zurück, der Hinweis sagt warum.
     if (abgeschlossen) {
       zeigeSperrHinweis(o.sperrHinweis);
       return;
     }
-    const oldIndex = localItems.findIndex((i) => i.id === active.id);
-    const newIndex = localItems.findIndex((i) => i.id === over.id);
+    const oldIndex = localItems.findIndex((i) => i.id === aktivId);
+    const newIndex = localItems.findIndex((i) => i.id === ueberId);
     if (oldIndex < 0 || newIndex < 0) return;
     // Die Beginn-Grenze bleibt an ihrem Platz, wie ChurchTools sie nach dem Speichern rechnet (#423).
     const vorher = localItems;
@@ -199,6 +214,24 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
         fehlerZeigen(e, 'Reihenfolge konnte nicht gespeichert werden.');
       });
   }
+
+  // Beim Zieh-Bereich angemeldet – er liest bei jedem Ziehen den aktuellen Stand der Spalte.
+  const spalteJetzt = useRef<ZiehSpalte | null>(null);
+  useEffect(() => {
+    spalteJetzt.current = {
+      items: localItems,
+      umsortieren,
+      anbieten: rueckgaengig.anbieten,
+      verwerfen: rueckgaengig.verwerfen,
+      neuLaden: () => o.ziehen?.neuLaden(),
+    };
+  });
+  const anmelden = bereich?.anmelden;
+  useEffect(() => {
+    if (spalte === undefined || !anmelden) return;
+    return anmelden(spalte, () => spalteJetzt.current!);
+  }, [anmelden, spalte]);
+  const platz = bereich?.platz?.spalte === spalte ? bereich?.platz : null;
 
   /**
    * Schreibt Feld-Änderungen (ein Request) und spiegelt die einfachen Felder optimistisch lokal – auch damit ein gleich
@@ -296,6 +329,53 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
     </>
   );
 
+  // Die gestrichelte Stelle aus einer anderen Spalte (E6-6b): vor dem Punkt `platz.index` – am Beginn-Balken vor ihm,
+  // wenn der Punkt in den Vorlauf kommt, sonst dahinter.
+  const stelleVor = (i: number, vorLinie: boolean) =>
+    platz?.index === i && platz.vorBeginn === vorLinie ? <AblageStelle /> : null;
+  const sortierbar = (
+    <SortableContext
+      items={localItems.map((i) => (spalte !== undefined ? ziehId(spalte, i.id) : i.id))}
+      strategy={verticalListSortingStrategy}
+    >
+      <div className={o.schmal ? `${zeile.flowList} ${zeile.schmal}` : styles.list}>
+        {localItems.map((item, i) => (
+          <Fragment key={item.id}>
+            {i === beginnBeiBearbeiten && (
+              <>
+                {stelleVor(i, true)}
+                <BeginnLinie zeit={o.beginn} />
+                {stelleVor(i, false)}
+              </>
+            )}
+            {i !== beginnBeiBearbeiten && platz?.index === i && <AblageStelle />}
+            <SortableRow
+              schmal={o.schmal}
+              item={item}
+              {...(spalte !== undefined
+                ? { ziehId: ziehId(spalte, item.id), daten: punktDaten(spalte, item.id) }
+                : {})}
+              onOpenActions={(it) => {
+                if (abgeschlossen) return zeigeSperrHinweis(o.sperrHinweis);
+                setGeblaettert(false);
+                setActionItem(it);
+              }}
+            />
+          </Fragment>
+        ))}
+        {beginnBeiBearbeiten === localItems.length ? (
+          <>
+            {stelleVor(localItems.length, true)}
+            <BeginnLinie zeit={o.beginn} />
+            {stelleVor(localItems.length, false)}
+          </>
+        ) : (
+          platz?.index === localItems.length && <AblageStelle />
+        )}
+      </div>
+    </SortableContext>
+  );
+
   const liste = (
     <>
       {/* Abgeschlossen: keine Anleitung zum Sortieren – der Knopf oben rechts sagt genug (Alwin). */}
@@ -320,33 +400,19 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
         </div>
       )}
       {err && <div className={styles.editError}>{err}</div>}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-        onDragCancel={resetViewportAfterDrag}
-        autoScroll={innerScrollOnly}
-      >
-        <SortableContext items={localItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-          <div className={o.schmal ? `${zeile.flowList} ${zeile.schmal}` : styles.list}>
-            {localItems.map((item, i) => (
-              <Fragment key={item.id}>
-                {i === beginnBeiBearbeiten && <BeginnLinie zeit={o.beginn} />}
-                <SortableRow
-                  schmal={o.schmal}
-                  item={item}
-                  onOpenActions={(it) => {
-                    if (abgeschlossen) return zeigeSperrHinweis(o.sperrHinweis);
-                    setGeblaettert(false);
-                    setActionItem(it);
-                  }}
-                />
-              </Fragment>
-            ))}
-            {beginnBeiBearbeiten === localItems.length && <BeginnLinie zeit={o.beginn} />}
-          </div>
-        </SortableContext>
-      </DndContext>
+      {spalte !== undefined ? (
+        sortierbar
+      ) : (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+          onDragCancel={resetViewportAfterDrag}
+          autoScroll={innerScrollOnly}
+        >
+          {sortierbar}
+        </DndContext>
+      )}
       {o.schmal && o.bereit && (
         <button
           type="button"

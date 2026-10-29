@@ -21,41 +21,52 @@ export interface UntenMessung {
   langeSeite: number;
   /** `env(safe-area-inset-bottom)`, wie iOS ihn meldet. */
   safeAreaUnten: number;
+  /** `100lvh` – die große Fensterhöhe. In unserer installierten App bei beiden Messungen 874 = Bildschirm. */
+  grosseHoehe: number;
 }
 
 /**
  * **Die Regel für den unteren Rand** (Messung mit Alwin, 29.10.2026, iPhone 402×874, iOS 18.7).
  *
- * - `zuschlag`: Um wie viel `html` höher als `innerHeight` sein muss. Bis zum 29.10. galt immer „+ Safe-Area“ (main.scss,
- *   19.06.2026: `innerHeight` schloss im Standalone-Modus den Home-Strich aus). Gemessen war `innerHeight` aber schon
- *   874 = Bildschirmhöhe – die App ragte 34 pt unter die Kante, Plus, Fußleiste und Reiterleiste saßen zu tief. Jetzt
- *   nur noch, wenn `innerHeight + Safe-Area` wirklich die Bildschirmhöhe ergibt.
+ * - `hoehe`: Wie hoch `html` sein muss. **`innerHeight` taugt dafür nicht** – in unserer installierten App meldete iOS
+ *   einmal 874 (= Bildschirm) und nach einem Neustart 812 (Bildschirm ohne Statusleiste), bei sonst gleicher Lage.
+ *   Bis zum 29.10. galt immer `innerHeight` + Safe-Area (19.06.2026: `innerHeight` schloss den Home-Strich aus) – die App
+ *   ragte damit mal 34 pt unter die Kante, mal endete sie 28 pt darüber. Verlässlich war in beiden Fällen die große
+ *   Fensterhöhe (`100lvh` = 874); sie gilt, wo sie zur aktuellen Ausrichtung passt (beim Drehen könnte sie kurz den
+ *   alten Wert halten). Der Fall vom Juni (`innerHeight` + Safe-Area = Bildschirm) bleibt abgedeckt.
  * - `homeStrich`: Wie viel Platz der Home-Strich unten braucht. Normalerweise die Safe-Area. In der ChurchTools-App
  *   vom Home-Bildschirm meldet iOS 0 (gemessen: `innerHeight` 812 + Statusleiste 62 = 874), obwohl der Strich über
  *   dem Inhalt liegt – dort 34 pt hochkant, 21 pt quer (die iOS-Werte).
  */
-export function untenWerte(m: UntenMessung): { zuschlag: number; homeStrich: number } {
-  const fehltUnten = Math.abs(m.innerHeight + m.safeAreaUnten - m.bildschirmHoehe) <= 2;
-  const zuschlag = m.standalone && m.safeAreaUnten > 0 && fehltUnten ? m.safeAreaUnten : 0;
-  if (m.safeAreaUnten > 0) return { zuschlag, homeStrich: m.safeAreaUnten };
+export function untenWerte(m: UntenMessung): { hoehe: number; homeStrich: number } {
+  let hoehe = m.innerHeight;
+  if (m.standalone) {
+    if (m.grosseHoehe > hoehe && m.grosseHoehe <= m.bildschirmHoehe + 2) hoehe = m.grosseHoehe;
+    const plusSafeArea = m.innerHeight + m.safeAreaUnten;
+    if (m.safeAreaUnten > 0 && Math.abs(plusSafeArea - m.bildschirmHoehe) <= 2)
+      hoehe = Math.max(hoehe, plusSafeArea);
+  }
+  if (m.safeAreaUnten > 0) return { hoehe, homeStrich: m.safeAreaUnten };
   // Reicht die Seite bis zur Unterkante? Oben fehlt dann höchstens die Statusleiste (≤ 70 pt, quer gar nichts).
   const bisUnten = m.bildschirmHoehe - m.innerHeight <= 70;
   const mitStrich = m.iphone && m.langeSeite >= 812;
   return {
-    zuschlag,
+    hoehe,
     homeStrich: m.standalone && mitStrich && bisUnten ? (m.hochkant ? 34 : 21) : 0,
   };
 }
 
 let probe: HTMLDivElement | null = null;
-function safeAreaUnten(): number {
+/** Ein unsichtbares Element: oben gepolstert um die Safe-Area unten, so hoch wie `100lvh`. */
+function probeMessen(): { safeAreaUnten: number; grosseHoehe: number } {
   if (!probe) {
     probe = document.createElement('div');
     probe.style.cssText =
-      'position:fixed;top:0;left:0;width:0;height:0;visibility:hidden;pointer-events:none;padding-top:env(safe-area-inset-bottom,0px);';
+      'position:fixed;top:0;left:0;width:0;height:100lvh;box-sizing:content-box;visibility:hidden;pointer-events:none;padding-top:env(safe-area-inset-bottom,0px);';
     document.body.appendChild(probe);
   }
-  return parseFloat(getComputedStyle(probe).paddingTop) || 0;
+  const cs = getComputedStyle(probe);
+  return { safeAreaUnten: parseFloat(cs.paddingTop) || 0, grosseHoehe: parseFloat(cs.height) || 0 };
 }
 
 /** `matchMedia` fehlt in alten Browsern und in der Testumgebung – dann gilt „nein“, statt dass der Start abbricht. */
@@ -76,7 +87,7 @@ function messen(): UntenMessung {
     innerHeight: window.innerHeight,
     bildschirmHoehe: hochkant ? lang : kurz,
     langeSeite: lang,
-    safeAreaUnten: safeAreaUnten(),
+    ...probeMessen(),
   };
 }
 
@@ -88,9 +99,11 @@ export function syncAppHeight(): void {
   const ae = document.activeElement as HTMLElement | null;
   if (ae && (ae.isContentEditable || ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) return;
   const s = document.documentElement.style;
+  // `--app-h` bleibt `innerHeight`: Gegen sie messen die Tastatur-Hilfen (`useTastaturOffen`, `useKeyboardInsets`) –
+  // im Maß von `visualViewport`. Die volle Höhe für `html` steht getrennt in `--app-voll`.
   s.setProperty('--app-h', `${window.innerHeight}px`);
-  const { zuschlag, homeStrich } = untenWerte(messen());
-  s.setProperty('--app-zuschlag', `${zuschlag}px`);
+  const { hoehe, homeStrich } = untenWerte(messen());
+  s.setProperty('--app-voll', `${hoehe}px`);
   s.setProperty('--home-strich', `${homeStrich}px`);
 }
 

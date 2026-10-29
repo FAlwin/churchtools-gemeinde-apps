@@ -1,6 +1,6 @@
 import { useEffect, type MutableRefObject } from 'react';
 import { lokalSchreiben } from '../utils/lokalSpeicher';
-import { tastaturHoehe } from '@ui/fenster/useTastaturOffen';
+import { grundHoehe, tastaturHoehe } from '@ui/fenster/useTastaturOffen';
 
 // Gelernte Höhe der iOS-Bildschirmtastatur (px). Damit heben wir den Chart-Bereich schon BEIM
 // Fokussieren an – ist der Cursor beim Öffnen der Tastatur bereits sichtbar, verschiebt iOS die
@@ -65,7 +65,9 @@ export function useKeyboardInsets({
       resetRevealScrolls(el);
       // Tastaturhöhe gegen die EINGEFRORENE App-Höhe messen (main.tsx pausiert --app-h beim
       // Tippen) → funktioniert egal, ob iOS die Tastatur überlagert oder das Fenster verkleinert.
-      const kb = Math.round(tastaturHoehe(vv, document.documentElement.clientHeight));
+      // `grundHoehe` statt der Höhe von `html`: Die ist seit dem 29.10.2026 die volle Bildschirmhöhe und kann 62 px über
+      // `visualViewport` liegen (installierte App, `innerHeight` 812) – das wäre eine Tastatur, die es nicht gibt.
+      const kb = Math.round(tastaturHoehe(vv, grundHoehe()));
       if (kb <= 60) {
         // Tastatur (wieder) zu: Vorab-Hub nur zurücknehmen, wenn sie zwischendurch offen war –
         // sonst würde der initiale Aufruf den Hub aus focusEditor sofort löschen.
@@ -100,10 +102,7 @@ export function useKeyboardInsets({
     const root = rootRef.current;
     if (!el || !root || lastKbHeight <= 0) return;
     root.style.transform = '';
-    const overlap =
-      el.getBoundingClientRect().bottom +
-      12 -
-      (document.documentElement.clientHeight - lastKbHeight);
+    const overlap = el.getBoundingClientRect().bottom + 12 - (grundHoehe() - lastKbHeight);
     if (overlap > 0) root.style.transform = `translateY(${-Math.ceil(overlap)}px)`;
   }
 

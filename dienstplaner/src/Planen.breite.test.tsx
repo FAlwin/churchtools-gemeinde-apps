@@ -8,7 +8,7 @@ import { startFuer } from './start.testutil';
 import { Planen } from './Planen';
 
 /**
- * **S/M/L ist die Spaltenbreite – fest, ohne Strecken** (Alwin, 28.10.2026: „S/M kein Unterschied“; „Die Ansicht ist
+ * **Schmal/breit ist die Spaltenbreite – fest, ohne Strecken** (seit 29.10.2026 zwei Breiten statt S/M/L) (Alwin, 28.10.2026: „S/M kein Unterschied“; „Die Ansicht ist
  * einfach nach eigenen Vorlieben“). Vorher wurden die Spalten auf die volle Breite gezogen: S und M sahen fast gleich
  * aus und gar nicht verschieden, wenn alle Termine passten. Hier mit einer echten Breite (1100 px) – ohne sie zeigt die
  * Matrix alle Termine, und das Strecken griff in den übrigen Tests nie.
@@ -33,7 +33,7 @@ const PLAN = planAus(ROH, {
   ganzSichtbar: () => true,
 });
 
-function zeige(breite: 's' | 'm' | 'l') {
+function zeige(breite: 'schmal' | 'breit') {
   localStorage.setItem('dienstplaner.planen.ansicht', JSON.stringify({ breite }));
   render(
     <Planen
@@ -52,10 +52,13 @@ function zeige(breite: 's' | 'm' | 'l') {
 beforeEach(() => localStorage.clear());
 afterEach(cleanup);
 
-describe('Matrix: S/M/L mit fester Spaltenbreite (28.10.2026)', () => {
-  it.each(['s', 'm', 'l'] as const)('%s: Spalten so breit wie gewählt, nicht gestreckt', (b) => {
-    const tabelle = zeige(b);
-    expect(tabelle.style.getPropertyValue('--cw')).toBe(`${SPALTENBREITE[b]}px`);
-    expect(tabelle.style.width).toBe(`${DIENST_SPALTE + 2 * SPALTENBREITE[b]}px`);
-  });
+describe('Matrix: schmal/breit mit fester Spaltenbreite (28./29.10.2026)', () => {
+  it.each(['schmal', 'breit'] as const)(
+    '%s: Spalten so breit wie gewählt, nicht gestreckt',
+    (b) => {
+      const tabelle = zeige(b);
+      expect(tabelle.style.getPropertyValue('--cw')).toBe(`${SPALTENBREITE[b]}px`);
+      expect(tabelle.style.width).toBe(`${DIENST_SPALTE + 2 * SPALTENBREITE[b]}px`);
+    },
+  );
 });

@@ -88,7 +88,7 @@ function StiftKnopf({ ma, fuer }: { ma: MatrixAblauf; fuer: string }) {
 }
 
 /**
- * Am Rechner: **„Ablauf bearbeiten“ oben in der Leiste** neben S/M/L und Filter, mit Wort wie in der Musik-App – grau,
+ * Am Rechner: **„Ablauf bearbeiten“ oben in der Leiste** neben Spaltenbreite und Filter, mit Wort wie in der Musik-App – grau,
  * blau erst „Fertig“ (E6-6c; der Stift allein war zu unscheinbar, Alwin 29.10.2026). Neben „Ablauf“ in der Gruppenzeile
  * passte der Knopf nicht: Die erste Spalte ist 178 px breit (Alwin: lieber in die Leiste als die Spalte breiter). Gilt
  * für alle gezeigten Termine; nur, wo man mindestens einen davon bearbeiten darf.

@@ -2,7 +2,7 @@ import { useMemo, type ReactNode } from 'react';
 import { GruppenKachel } from '@ui/bedienung/GruppenKachel';
 import { PersonBild } from '@ui/bedienung/PersonBild';
 import { Icon } from '@ui/icons/icons';
-import { gruppenFarbe } from '@shared/organigramm/farbe';
+import { gruppenFarbe, sichtFarbe } from '@shared/organigramm/farbe';
 import type { Knoten } from '@shared/organigramm/gruppen';
 import { knotenAmPfad, spitzenWahl, type SichtKnoten } from '@shared/organigramm/ansichten';
 import { Segment } from '@ui/bedienung/Segment';
@@ -84,6 +84,7 @@ export function Organigramm({
   onGruppe,
 }: Props) {
   const rang = useMemo(() => rollenRang(start.rollen), [start.rollen]);
+  const farbe = useMemo(() => sichtFarbe(start.typFarben), [start.typFarben]);
   // Was unter dem Namen steht – EINE Regel für Diagramm und Liste. Neu nur, wenn sich Wahl oder Mitglieder ändern: Das
   // Diagramm misst dann alle Kästchen neu.
   const inhalt = useMemo(
@@ -242,7 +243,13 @@ export function Organigramm({
       {baum.length === 0 && <p className={styles.leer}>Hier ist keine Gruppe zu sehen.</p>}
 
       {ansicht === 'liste' && baum.length > 0 && (
-        <Liste sicht={sicht} onUmklappen={onUmklappen} onGruppe={onGruppe} inhalt={inhalt} />
+        <Liste
+          sicht={sicht}
+          onUmklappen={onUmklappen}
+          onGruppe={onGruppe}
+          farbe={farbe}
+          inhalt={inhalt}
+        />
       )}
 
       {(ansicht === 'oben' || ansicht === 'links' || ansicht === 'mindmap') && baum.length > 0 && (
@@ -251,6 +258,7 @@ export function Organigramm({
           sicht={sicht}
           onUmklappen={onUmklappen}
           onGruppe={onGruppe}
+          farbe={farbe}
           personen={{ wahl: personen, inhalt }}
         />
       )}

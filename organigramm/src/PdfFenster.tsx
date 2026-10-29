@@ -8,6 +8,7 @@ import { svgSeitenPdf } from '@ui/teilen/svgSeitenPdf';
 import { downloadPdf, oeffnePdf } from '@ui/teilen/sharePdf';
 import { ladeGemeindeLogo } from '@ui/ct/logo';
 import type { Knoten } from '@shared/organigramm/gruppen';
+import { sichtFarbe } from '@shared/organigramm/farbe';
 import type { Rolle } from '@shared/organigramm/mitglieder';
 import type { PersonenWahl } from '@shared/organigramm/personen';
 import {
@@ -53,6 +54,8 @@ interface Props {
   spitze: string | null;
   /** Ansicht des Reiters; Karten gibt es auf Papier nicht, dann von oben. */
   ansicht: BaumAnsicht;
+  /** Typfarben der Gemeinde – für die Kachel vor jedem Namen (O7b-8). */
+  typFarben: ReadonlyMap<number, string | null>;
   /**
    * Personen (O7b-6b): das Häkchen ist an, wenn der Reiter Personen zeigt, und zeigt dessen Stufe – bei „Aus“ im Reiter
    * die Rollen (Alwin, 29.10.2026).
@@ -82,6 +85,7 @@ export function PdfFenster({
   offen,
   spitze,
   ansicht,
+  typFarben,
   personen,
   onSchliessen,
   heute,
@@ -104,6 +108,7 @@ export function PdfFenster({
   const messRef = useRef<HTMLDivElement>(null);
   const schrift = useSchrift(messRef);
   const { mitglieder, rollen, wahl } = personen;
+  const farbe = useMemo(() => sichtFarbe(typFarben), [typFarben]);
   const wartet = mitPersonen && mitglieder === null;
   const inhalt = useMemo(
     () => (mitPersonen ? personenInhalt(mitglieder, rollen, pdfPersonenWahl(wahl)) : undefined),
@@ -305,11 +310,12 @@ export function PdfFenster({
                 <DiagrammBild
                   anordnung={anordnung}
                   kuerzen={kuerzen}
+                  farbe={farbe}
                   zeilen={(k) => kasten(k).zeilen}
                 />
               </g>
             ) : (
-              <ListenInhalt papier={papier} zeilen={listen?.[i] ?? []} />
+              <ListenInhalt papier={papier} zeilen={listen?.[i] ?? []} farbe={farbe} />
             )}
           </BlattSeite>
         ))}

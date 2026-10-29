@@ -63,3 +63,13 @@ export function typFarbenAus(
   }
   return m;
 }
+
+/**
+ * Die Farbe der Kachel eines Kästchens im Diagramm und einer Zeile der Liste (O7b-8, Variante „Kachel“, Alwin
+ * 29.10.2026) – dieselbe Regel wie für Karten und Gruppenfenster. Die Gemeinde ist keine Gruppe: keine Kachel.
+ */
+export function sichtFarbe(
+  typFarben: ReadonlyMap<number, string | null>,
+): (k: { id: number | null; farbe: string | null; typId: number | null }) => string | null {
+  return (k) => (k.id === null ? null : gruppenFarbe(k, typFarben));
+}

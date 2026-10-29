@@ -3,11 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { anfangsOffen, anordnen, sichtbarerBaum } from '@shared/organigramm/ansichten';
 import type { Knoten } from '@shared/organigramm/gruppen';
+import { sichtFarbe, TAILWIND_500 } from '@shared/organigramm/farbe';
 import type { PersonenWahl } from '@shared/organigramm/personen';
 import { anfang, ganz } from './leinwand';
 import { Diagramm } from './Diagramm';
 import type { KastenInhalt } from './kastenPersonen';
-import { messung } from './messung';
+import { messung, NAME_NACH_KACHEL } from './messung';
 
 // jsdom hat keine Zeichenfläche zum Messen – geschätzt wie im Browser ohne Canvas.
 vi.mock('./textBreite', () => ({ textBreite: (t: string) => t.length * 8 }));
@@ -21,9 +22,10 @@ const BAUM = [
   g(47, 'Café'),
 ];
 const sicht = (offen = anfangsOffen(BAUM)) => sichtbarerBaum(BAUM, 'ECG', null, offen);
-// So misst das Diagramm (gemockte Textbreite + Rand, zwischen 72 und 220 – die Spitze bis 320).
-const breite = (k: { name: string; ebene: number }) =>
-  Math.min(k.ebene === 0 ? 320 : 220, Math.max(72, Math.ceil(k.name.length * 8) + 28));
+// So misst das Diagramm – der Erzeuger selbst (mit der gemockten Textbreite), keine nachgebaute Formel.
+const { breite } = messung({ name: 'Lato, sans-serif', stand: 0 });
+/** Typfarben wie in der Test-Instanz: Dienste lime. */
+const FARBE = sichtFarbe(new Map([[2, 'lime']]));
 const FLAECHE = { breite: 800, hoehe: 600 };
 
 const blick = () =>
@@ -63,7 +65,9 @@ afterEach(() => {
 function zeigen(art: 'oben' | 'links' | 'mindmap' = 'oben', s = sicht()) {
   const onGruppe = vi.fn();
   const onUmklappen = vi.fn();
-  const r = render(<Diagramm art={art} sicht={s} onGruppe={onGruppe} onUmklappen={onUmklappen} />);
+  const r = render(
+    <Diagramm art={art} sicht={s} onGruppe={onGruppe} onUmklappen={onUmklappen} farbe={FARBE} />,
+  );
   return { onGruppe, onUmklappen, ...r };
 }
 
@@ -75,6 +79,7 @@ describe('Diagramm (O7b-5)', () => {
         sicht={sicht()}
         onGruppe={vi.fn()}
         onUmklappen={vi.fn()}
+        farbe={FARBE}
         klickbar={(id) => id === 10}
       />,
     );
@@ -205,14 +210,38 @@ describe('Diagramm (O7b-3)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Vergrößern' }));
     const gezoomt = blick();
     const auf = sicht(new Set([...anfangsOffen(BAUM), '10/7']));
-    rerender(<Diagramm art="oben" sicht={auf} onGruppe={onGruppe} onUmklappen={onUmklappen} />);
+    rerender(
+      <Diagramm
+        art="oben"
+        sicht={auf}
+        onGruppe={onGruppe}
+        onUmklappen={onUmklappen}
+        farbe={FARBE}
+      />,
+    );
     expect(screen.getByRole('button', { name: 'Stream' })).toBeTruthy();
     expect(blick()).toBe(gezoomt);
-    rerender(<Diagramm art="mindmap" sicht={auf} onGruppe={onGruppe} onUmklappen={onUmklappen} />);
+    rerender(
+      <Diagramm
+        art="mindmap"
+        sicht={auf}
+        onGruppe={onGruppe}
+        onUmklappen={onUmklappen}
+        farbe={FARBE}
+      />,
+    );
     expect(blick()).toBe(alsText(anfang(anordnen('mindmap', auf, breite), FLAECHE)));
     const ab = sichtbarerBaum(BAUM, 'ECG', '10', new Set(['10']));
     fireEvent.click(screen.getByRole('button', { name: 'Vergrößern' }));
-    rerender(<Diagramm art="mindmap" sicht={ab} onGruppe={onGruppe} onUmklappen={onUmklappen} />);
+    rerender(
+      <Diagramm
+        art="mindmap"
+        sicht={ab}
+        onGruppe={onGruppe}
+        onUmklappen={onUmklappen}
+        farbe={FARBE}
+      />,
+    );
     expect(blick()).toBe(alsText(anfang(anordnen('mindmap', ab, breite), FLAECHE)));
   });
 
@@ -228,6 +257,7 @@ describe('Diagramm (O7b-3)', () => {
         sicht={sicht()}
         onGruppe={onGruppe}
         onUmklappen={onUmklappen}
+        farbe={FARBE}
         personen={{ wahl, inhalt: i }}
       />
     );
@@ -270,7 +300,82 @@ describe('Diagramm (O7b-3)', () => {
       ...screen.getByRole('group', { name: 'Organigramm' }).querySelectorAll('text'),
     ].map((t) => t.textContent);
     expect(texte[0]).toBe(name);
-    expect(texte[1]).toMatch(/…$/);
+    // Die Gruppe darunter: erst der Buchstabe ihrer Kachel (O7b-8), dann der gekürzte Name.
+    expect(texte[1]).toBe('E');
+    expect(texte[2]).toMatch(/…$/);
+  });
+
+  it('vor jedem Namen die Kachel in der Gruppenfarbe (O7b-8) – nicht bei der Gemeinde; der Name steht dahinter', () => {
+    zeigen('oben', sicht(new Set([...anfangsOffen(BAUM), '10/7'])));
+    const diagramm = screen.getByRole('group', { name: 'Organigramm' });
+    const kaesten = [...diagramm.querySelectorAll('g')].filter((g) =>
+      g.querySelector(':scope > title'),
+    );
+    for (const k of kaesten) {
+      const name = k.querySelector('title')!.textContent;
+      const [kasten, kachel] = k.querySelectorAll('rect');
+      if (name === 'ECG') {
+        expect(kachel).toBeUndefined();
+        continue;
+      }
+      expect(kachel.style.fill, name).toBe(TAILWIND_500.lime); // die Typfarbe der Dienste
+      const [buchstabe, text] = k.querySelectorAll('text');
+      expect(buchstabe.textContent).toBe(name[0]);
+      // Der Name beginnt hinter der Kachel (links ausgerichtet), nicht mehr in der Mitte des Kästchens.
+      expect(Number(text.getAttribute('x'))).toBe(
+        Number(kasten.getAttribute('x')) + NAME_NACH_KACHEL,
+      );
+      expect(Number(text.getAttribute('x'))).toBeGreaterThan(
+        Number(kachel.getAttribute('x')) + Number(kachel.getAttribute('width')),
+      );
+      expect(Number(kachel.getAttribute('x'))).toBeGreaterThan(Number(kasten.getAttribute('x')));
+    }
+  });
+
+  it('kein +/− liegt auf einer Kachel – in allen drei Ansichten, mit und ohne Personen (Demo 29.10.2026: 1 bzw. 2 px)', () => {
+    const inhalt = (): KastenInhalt => ({
+      art: 'rollen',
+      gruppen: [{ rolle: 'Leiter', namen: ['Alwin Friesen'], nurZahl: false }],
+    });
+    const auf = sicht(new Set([...anfangsOffen(BAUM), '10/7']));
+    for (const art of ['oben', 'links', 'mindmap'] as const)
+      for (const personen of [undefined, { wahl: 'rollen' as const, inhalt }]) {
+        const { unmount } = render(
+          <Diagramm
+            art={art}
+            sicht={auf}
+            onGruppe={vi.fn()}
+            onUmklappen={vi.fn()}
+            farbe={FARBE}
+            personen={personen}
+          />,
+        );
+        const svg = screen.getByRole('group', { name: 'Organigramm' });
+        const kreise = [...svg.querySelectorAll('circle')].map((c) => ({
+          x: Number(c.getAttribute('cx')),
+          y: Number(c.getAttribute('cy')),
+          r: Number(c.getAttribute('r')),
+        }));
+        const kacheln = [...svg.querySelectorAll('rect')]
+          .filter((r) => r.style.fill)
+          .map((r) => ({
+            x: Number(r.getAttribute('x')),
+            y: Number(r.getAttribute('y')),
+            w: Number(r.getAttribute('width')),
+          }));
+        expect(kacheln.length).toBeGreaterThan(3);
+        for (const k of kacheln)
+          for (const c of kreise) {
+            // Abstand vom Mittelpunkt des +/− zum nächsten Punkt der Kachel – mindestens der Halbmesser.
+            const nx = Math.max(k.x, Math.min(c.x, k.x + k.w));
+            const ny = Math.max(k.y, Math.min(c.y, k.y + k.w));
+            expect(
+              Math.hypot(nx - c.x, ny - c.y),
+              `${art} ${personen ? 'mit' : 'ohne'}`,
+            ).toBeGreaterThanOrEqual(c.r);
+          }
+        unmount();
+      }
   });
 
   it('lange Namen werden mit … gekürzt, der volle Name steht im Titel', () => {
@@ -279,7 +384,8 @@ describe('Diagramm (O7b-3)', () => {
     const k = screen.getByRole('button', {
       name: 'Ein ausgesprochen langer Gruppenname, der nicht passt',
     });
-    expect(k.querySelector('text')!.textContent).toMatch(/…$/);
+    // Der erste Text ist der Buchstabe der Kachel (O7b-8), dann der Name.
+    expect(k.querySelectorAll('text')[1].textContent).toMatch(/…$/);
     expect(k.querySelector('title')!.textContent).toBe(
       'Ein ausgesprochen langer Gruppenname, der nicht passt',
     );

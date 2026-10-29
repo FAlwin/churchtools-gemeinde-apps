@@ -214,7 +214,7 @@ churchtools-gemeinde-apps/
     │                        # thema.ts (hell/dunkel wie ChurchTools, docs/entwicklung/dunkelmodus.md)
     ├── icons/               # icons.tsx (Line-Icons)
     ├── fenster/             # Sheet (Modal), useOverlayKeyboardInset, appHeight
-    ├── bedienung/           # Segment, Schalter, KopfKnopf (Seitenkopf, `neu` = grün), OptionWaehlen (S2), ZeilenKnopf (eckig in Listen), FilterKnopf + ZeitraumKnopf + useAufklapp (aus dem Dienstplaner, auch Abwesenheiten), SchwebePlus, ReiterLeiste (unten/oben), useMedienAbfrage (HANDY_BREITE), DatumKachel
+    ├── bedienung/           # Segment, Schalter, KopfKnopf (Seitenkopf, `neu` = grün), OptionWaehlen (S2), ZeilenKnopf (eckig in Listen), useNeuAnlegen (Anlegen: groß grüner KopfKnopf, Handy SchwebePlus – Abwesenheiten, Lieder), FilterKnopf + ZeitraumKnopf + useAufklapp (aus dem Dienstplaner, auch Abwesenheiten), SchwebePlus, ReiterLeiste (unten/oben), useMedienAbfrage (HANDY_BREITE), DatumKachel
     ├── teilen/              # shareFile, sharePdf (+ oeffnePdf), listenPdf, qr; svgSeitenPdf (SVG-Seiten → PDF), pdfSchrift (Lato für PDFs, `schrift/` unverändert + OFL)
     ├── anmeldeformular/     # Anmeldeformular, wie Gäste es sehen (A5): Baukasten + Vorschau in der Erweiterung, öffentlich ab A6
     ├── ct/                  # Verbindung einer Erweiterung zu ChurchTools: verbindung.ts, fehler.ts (ApiError), basis.ts,

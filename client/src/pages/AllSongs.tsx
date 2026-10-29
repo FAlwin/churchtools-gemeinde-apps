@@ -2,6 +2,7 @@ import type { SongSelectTreffer } from '@shared/types/index';
 import { useState } from 'react';
 import { type Service, type SongLibraryEntry } from '@shared/types/index';
 import { SeitenGeruest } from '../components/SeitenGeruest';
+import { useNeuAnlegen } from '@ui/bedienung/NeuAnlegen';
 import { CenterMessage } from '../components/CenterMessage';
 import { ZeilenKnopf } from '@ui/bedienung/ZeilenKnopf';
 import { Icon } from '@ui/icons/icons';
@@ -109,9 +110,18 @@ export function AllSongs({
     />
   ) : null;
 
+  // „Neues Lied“ wie jedes Anlegen (Alwin, 29.10.2026: „so wie sonst auch bei allem“): am iPad/Rechner grün im Kopf, am
+  // Handy das runde Plus. Vorher ein blauer Text-Link über der Liste.
+  const neu = useNeuAnlegen({
+    label: 'Neues Lied',
+    onClick: () => setSucheOffen(true),
+    sichtbar: kannAnlegen,
+  });
+
   /** Fenster und Meldungen schweben über dem Inhalt – sie scrollen nicht mit. */
   const ueberlagerung = (
     <>
+      {neu.schwebend}
       {addSong && (
         <AddToAgendaSheet song={addSong} services={services} onClose={() => setAddSong(null)} />
       )}
@@ -181,34 +191,22 @@ export function AllSongs({
       stattTitel={<LiedSucheKopf eingabe={f.q} onEingabe={f.setQ} />}
       onNeuLaden={onRetry}
       ueberlagerung={ueberlagerung}
+      aktionen={neu.kopf}
     >
       <div className={styles.searchWrap}>
         {showStats && <SongStatsBar {...f} />}
 
         {/**
-         * Listenkopf: **Anzahl links, „Neues Lied" rechts – auf einer Höhe** (Wunsch Alwin,
-         * 13.08.2026).
-         *
-         * Die Zeile stand bis zum 22.09.2026 **über** dem Scroll-Bereich, damit sie beim Blättern
-         * sichtbar bleibt. Seit die Kopfleiste weg ist, liegt sie mit Überschrift und Suchfeld IM
-         * Scroll-Bereich: Ein festes Element ganz oben läge im Unschärfe-Band von iOS und wäre weich
-         * (siehe `client/index.html`). Der wichtigere Teil der alten Begründung gilt weiter – **hat
-         * die Suche keinen Treffer, gibt es nichts zu scrollen**, und die Zeile mit „Neues Lied"
-         * steht genau dann da, wenn ein Lied fehlt.
-         *
-         * Die Anzahl zeigt die gefilterte Bibliotheksliste – die Liedtext-Treffer zählen sich selbst.
+         * Listenkopf: die Anzahl. „Neues Lied“ stand hier bis zum 29.10.2026 rechts daneben (Wunsch Alwin, 13.08.2026);
+         * seitdem steht es wie jedes Anlegen im Kopf bzw. als Plus (`useNeuAnlegen`) – auch dann, wenn die Suche nichts
+         * findet und ein Lied fehlt. Die Anzahl zeigt die gefilterte Bibliotheksliste – die Liedtext-Treffer zählen
+         * sich selbst.
          */}
-        {(f.list.length > 0 || kannAnlegen) && (
+        {f.list.length > 0 && (
           <div className={styles.listHdr}>
             <span className={styles.listCount}>
-              {f.list.length > 0 && !isLoading && !isError ? liedAnzahl(f.list.length) : ''}
+              {!isLoading && !isError ? liedAnzahl(f.list.length) : ''}
             </span>
-            {kannAnlegen && (
-              <button className={styles.newSongBtn} onClick={() => setSucheOffen(true)}>
-                <Icon name="plus" size={16} stroke={2.4} />
-                Neues Lied
-              </button>
-            )}
           </div>
         )}
       </div>
@@ -306,6 +304,8 @@ export function AllSongs({
           )}
         </div>
       )}
+      {/* Am Handy schwebt das Plus unten rechts – Platz, damit es am Ende nicht auf „+“ und Stift des letzten Lieds liegt. */}
+      {neu.schwebend && <div className={styles.platzFuerPlus} aria-hidden />}
     </SeitenGeruest>
   );
 }

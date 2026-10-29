@@ -149,7 +149,8 @@ gleich das **Notenblatt** – die App zeigt danach Akkorde, ohne dass man etwas 
    **Lied öffnen**: Das Blatt muss Akkorde **und die Änderung** zeigen. In ChurchTools liegt weiter genau
    **eine** `<Titel>.chordpro` – ersetzt, nicht danebengelegt.
 6. In ChurchTools nachsehen: Kategorie, Autor, CCLI, Copyright, Arrangement, Notenblatt.
-7. Jetzt der Weg für **eigene** Lieder: unten auf **Lieder**, im Listenkopf rechts auf **„Neues Lied"**.
+7. Jetzt der Weg für **eigene** Lieder: unten auf **Lieder**, dann am iPad/Rechner oben rechts der grüne Knopf
+   **„+ Neues Lied"**, am Handy das runde **Plus** unten rechts (seit 29.10.2026).
    Es öffnet sich **dieselbe Suche** wie im Ablauf (04.09.2026). Einen Titel tippen, den es bei euch
    gibt: Ein Tipp auf die Zeile **öffnet das Blatt** – kein Plus, keine Vorschau (nichts anzulegen).
    Einen Titel tippen, den es nirgends gibt, dann oben rechts **„Selbst eintippen"**: Das leere Formular
@@ -205,10 +206,10 @@ und **„Bei SongSelect nach … suchen"**. Findet die Bibliothek **nichts**, su
    **Speichern** (TF-EDIT-07). Die Liedtexte gibt es hier auch.
 7. Unten auf **Lieder** (Liederheft): dasselbe Suchfeld, dieselbe Sortierleiste, **kein SongSelect**.
    Unter einer leeren oder gefüllten Liste steht „Auch in den Liedtexten nach … suchen". Bei **einem**
-   Lied muss im Listenkopf **„1 Lied"** stehen, nicht „1 Lieder". Erst **„Neues Lied"** im Listenkopf
-   öffnet die Suche **mit** SongSelect (siehe TF-LIB-03, Schritt 7).
+   Lied muss im Listenkopf **„1 Lied"** stehen, nicht „1 Lieder". Erst **„Neues Lied"** (grüner Knopf bzw.
+   Plus) öffnet die Suche **mit** SongSelect (siehe TF-LIB-03, Schritt 7).
 8. Mit einem Konto **ohne** das Recht, Lieder zu bearbeiten: **SongSelect** fehlt überall, „Neues Lied"
-   ebenso. **Liedtexte** bleibt – Suchen darf jeder.
+   ebenso (weder grüner Knopf noch Plus). **Liedtexte** bleibt – Suchen darf jeder.
 
 <details><summary>Technisches</summary>
 

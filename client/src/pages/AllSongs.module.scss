@@ -38,8 +38,10 @@
   padding-bottom: 0;
 }
 
-.newSongBtn {
-  @include m.neues-lied-aktion;
+// Platz unter der Liste für das schwebende Plus (`--plus-boden` + 78px, siehe `SchwebePlus`) – wie in den Abwesenheiten.
+.platzFuerPlus {
+  height: calc(var(--plus-boden) + 78px);
+  flex-shrink: 0;
 }
 
 .group {

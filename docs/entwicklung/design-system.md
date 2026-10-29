@@ -81,8 +81,8 @@ ChurchTools). Ausnahme: der ChordPro-**Editor** nutzt bewusst Monospace (`'JetBr
   ChurchTools-App – am Handy Blatt von unten, am iPad/Rechner Menü unter dem grünen Knopf), `TabBar`
   (Reiter der Musik-App in der gemeinsamen `ui/bedienung/ReiterLeiste` – am Handy unten, sonst `oben` als
   Textreiter; Grenze `HANDY_BREITE` für alle Apps),
-  `Sheet`, `ConfirmDialog`, **`SchwebePlus`** (das runde Plus unten rechts – Abwesenheiten und Ablauf; seit S2
-  in der Musik-App nur am Handy),
+  `Sheet`, `ConfirmDialog`, **`SchwebePlus`** (das runde Plus unten rechts – Abwesenheiten, Lieder und Ablauf; seit S2
+  in der Musik-App nur am Handy; „etwas anlegen“ groß grün / Handy Plus baut **`useNeuAnlegen`** für alle Seiten),
   `SongFields` (die Stammdaten-Felder eines Liedes – von „Neues Lied" und
   „Stammdaten ändern" gemeinsam genutzt, damit es die fünf Felder nur einmal gibt).
 - **Lied suchen – ein Feld, eine Zeile, ein Angebot** (#378): `LiedSucheKopf` (nur das Suchfeld, Lupe

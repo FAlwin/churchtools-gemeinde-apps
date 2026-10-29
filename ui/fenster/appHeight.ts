@@ -89,7 +89,13 @@ export function syncAppHeight(): void {
   if (ae && (ae.isContentEditable || ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) return;
   const s = document.documentElement.style;
   s.setProperty('--app-h', `${window.innerHeight}px`);
-  const { zuschlag, homeStrich } = untenWerte(messen());
+  const m = messen();
+  const { zuschlag, homeStrich } = untenWerte(m);
+  // NUR Messzweig: Verlauf für den Messkasten.
+  const w = window as unknown as { __hoehen?: string[] };
+  (w.__hoehen ??= []).push(
+    `${Math.round(performance.now())} ms: inner ${m.innerHeight}, SA ${m.safeAreaUnten}, +${zuschlag}, Strich ${homeStrich}`,
+  );
   s.setProperty('--app-zuschlag', `${zuschlag}px`);
   s.setProperty('--home-strich', `${homeStrich}px`);
 }

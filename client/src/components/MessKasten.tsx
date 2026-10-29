@@ -29,6 +29,14 @@ function messen(): [string, string][] {
     ['screen.height × width', `${screen.height} × ${screen.width}`],
     ['visualViewport.height', r(window.visualViewport?.height)],
     ['--app-h', getComputedStyle(document.documentElement).getPropertyValue('--app-h') || '–'],
+    [
+      '--app-zuschlag',
+      getComputedStyle(document.documentElement).getPropertyValue('--app-zuschlag') || '–',
+    ],
+    [
+      '--home-strich',
+      getComputedStyle(document.documentElement).getPropertyValue('--home-strich') || '–',
+    ],
     ['html Höhe', r(html.height)],
     ['#root unten', r(root?.bottom)],
     ['Reiterleiste oben / unten', `${r(nav?.top)} / ${r(nav?.bottom)}`],
@@ -68,6 +76,10 @@ export function MessKasten() {
             <span>{k}</span>
             <b>{v}</b>
           </div>
+        ))}
+        <div style={{ marginTop: 6, fontWeight: 700 }}>Verlauf seit Start</div>
+        {((window as unknown as { __hoehen?: string[] }).__hoehen ?? []).slice(-14).map((z, i) => (
+          <div key={i}>{z}</div>
         ))}
         <button type="button" style={{ marginTop: 8 }} onClick={() => setWerte(messen())}>
           Neu messen

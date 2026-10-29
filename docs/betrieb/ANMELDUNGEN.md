@@ -82,7 +82,10 @@ an?“, Formular, Preise, Bezahlung, Mails, Datenschutz, nach der Freigabe oben 
 Freigabe eine Schrittleiste (Termin, Anmeldung, Formular, Bezahlung, Freigeben) mit einem Knopf für den nächsten
 Schritt; danach **Kennzahlen** – Plätze, Warteliste, Zahlung offen, Anmeldeschluss. Ein Klick auf eine Kachel öffnet
 die passende Ansicht der Liste. Hervorgehoben (blau) ist nur die Warteliste, wenn trotz freiem Platz jemand wartet –
-offene Zahlungen sind kurz nach der Anmeldung der Normalfall. Das Formular (Baukasten) öffnet „Bearbeiten“ an der
+offene Zahlungen sind kurz nach der Anmeldung der Normalfall. **„Zahlung offen“ heißt überall dasselbe** (Startseite,
+Kachel, Filter, Rundmail, Druckliste): eine Anmeldung mit Betrag über 0, ohne Haken „bezahlt“, mit Platz. Eine Anmeldung
+von Hand ohne Betrag ist also nicht offen. Einzige Lücke der Startseite: Hat die erste Person einer Anmeldung abgesagt,
+steht deren Zahlung nur im Verlauf – die Startseite lädt ihn nicht und zählt sie nicht, die Liste schon. Das Formular (Baukasten) öffnet „Bearbeiten“ an der
 Karte „Formular“; zurück geht es mit „‹ Zurück“ oder dem Reiter „Vorbereiten“. Knöpfe sind die gemeinsamen aus `ui/`
 (wie in den ChurchTools-Fenstern); eine Dauerprüfung (`ui/design/knoepfeAnmeldungen.test.ts`) meldet jede neue eigene
 Knopfart.

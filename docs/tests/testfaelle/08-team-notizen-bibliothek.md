@@ -229,7 +229,7 @@ TF-LIB-03 – **nicht ein echtes Gemeindelied.** Dieser Test schreibt und lösch
 stehen unverändert daneben.** Das ist der eigentliche Prüfpunkt: ChurchTools ersetzt beim Speichern
 den ganzen Datensatz, und die App muss den Rest bewahren.
 
-1. Ein Lied öffnen, das gewählte Lied oben antippen, **Lied › „Stammdaten …"** wählen. Prüfen: Alle Felder sind mit dem
+1. Ein Lied öffnen, das gewählte Lied oben antippen, **Bearbeiten → Dateien · Stammdaten › „Stammdaten …"** wählen. Prüfen: Alle Felder sind mit dem
    gefüllt, was in ChurchTools steht.
 2. **Speichern muss gesperrt sein**, solange nichts geändert ist.
 3. Nur den **Namen** ändern und speichern. Danach in ChurchTools nachsehen: Der Name ist neu –

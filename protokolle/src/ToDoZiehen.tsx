@@ -29,7 +29,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { BodyPortal } from '@ui/fenster/BodyPortal';
 import { innerScrollOnly, resetViewportAfterDrag } from '@ui/bedienung/dndAutoScroll';
 import { useZiehSensorenLangDruecken } from '@ui/bedienung/useZiehSensoren';
-import { loslassen, type Daten } from './toDoZiehenRegel';
+import { loslassen, ziehId, type Daten } from './toDoZiehenRegel';
 import styles from './ToDos.module.scss';
 
 const datenVon = (x: { data: { current?: unknown } } | null): Daten | null =>
@@ -89,7 +89,7 @@ export function ToDoZiehBereich({
     setGezogen(null);
     setZiel(null);
   };
-  const beiStart = (e: DragStartEvent) => setGezogen(String(e.active.id));
+  const beiStart = (e: DragStartEvent) => setGezogen(datenVon(e.active)?.karte ?? null);
   const beiUeber = (e: DragOverEvent) => {
     const o = datenVon(e.over);
     const a = datenVon(e.active);
@@ -98,10 +98,8 @@ export function ToDoZiehBereich({
   const beiEnde = (e: DragEndEvent) => {
     ende();
     const r = loslassen({
-      karte: String(e.active.id),
       von: datenVon(e.active),
       ueber: datenVon(e.over),
-      ueberId: e.over ? String(e.over.id) : null,
       zwischen,
       manuell,
       spalten,
@@ -160,7 +158,7 @@ export function ZiehSpalte({
     >
       <SortableContext
         id={schluessel}
-        items={[...karten]}
+        items={karten.map((k) => ziehId(schluessel, k))}
         strategy={manuell ? verticalListSortingStrategy : stillstehen}
       >
         {children}
@@ -183,8 +181,8 @@ export function ZiehKarte({
 }) {
   const { manuell, zwischen } = useContext(Lage);
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({
-    id: schluessel,
-    data: { art: 'karte', spalte } satisfies Daten,
+    id: ziehId(spalte, schluessel),
+    data: { art: 'karte', spalte, karte: schluessel } satisfies Daten,
     disabled: !darf || (!manuell && !zwischen),
   });
   return (

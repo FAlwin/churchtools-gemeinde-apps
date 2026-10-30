@@ -16,8 +16,10 @@
     opacity: 0.6;
   }
 
-  &:hover:not(:disabled) > span {
-    filter: brightness(0.96);
+  @media (hover: hover) {
+    &:hover:not(:disabled) > span {
+      filter: brightness(0.96);
+    }
   }
 }
 

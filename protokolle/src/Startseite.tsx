@@ -56,6 +56,8 @@ export interface StartseiteProps {
   onSitzung: (gruppe: number, sitzung: string) => void;
   /** Den Reiter „Sitzungen“ mit dieser Gruppe öffnen. */
   onGruppe: (gruppe: number) => void;
+  /** Den Reiter „To-Dos“ öffnen (S7-1) – „Alle anzeigen“ an „Meine offenen To-Dos“. */
+  onAlleToDos?: () => void;
 }
 
 /** „2 von 5 zugesagt“ – gezählt über die Besprechungsanfragen des Termins; ohne Anfragen nichts. */
@@ -86,6 +88,7 @@ export function Startseite({
   schreibbar = [],
   onSitzung,
   onGruppe,
+  onAlleToDos,
 }: StartseiteProps) {
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
   const [neu, setNeu] = useState(false);
@@ -156,6 +159,14 @@ export function Startseite({
           <div className={styles.kopf}>
             <h2 id="meine-todos">Meine offenen To-Dos</h2>
             {zustand.art === 'fertig' && <span className={styles.anzahl}>{meine.length}</span>}
+            {onAlleToDos && (
+              <KopfKnopf
+                label="Alle anzeigen"
+                title="Alle To-Dos im Reiter „To-Dos“"
+                symbol={<Icon name="todo-liste" size={16} />}
+                onClick={onAlleToDos}
+              />
+            )}
           </div>
           {ladeTeil}
           {zustand.art === 'fertig' &&

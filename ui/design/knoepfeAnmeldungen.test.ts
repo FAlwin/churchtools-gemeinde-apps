@@ -31,6 +31,7 @@ const ERLAUBT: Record<string, string> = {
   't.oeffnen':
     'Name in einer Zeile der Tabelle – öffnet die Anmeldung wie ein Klick in die Zeile (U2-1)',
   't.sortKnopf': 'Spaltenüberschrift der Tabelle – sortiert (U2-1)',
+  't.nadelKnopf': 'Stecknadel am Zeilenanfang – heftet die Zeile an und ab (U2-4, Schalter)',
   'v.baustein': 'Preis-Baustein in der Liste',
   'k.gruppenKopf': 'Auf- und zuklappbare Gruppe im Baukasten',
   'styles.titelKnopf': 'Titel einer Veranstaltung auf der Startseite',

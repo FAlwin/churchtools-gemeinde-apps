@@ -112,7 +112,11 @@ ausgeblendet, ebenso das Geburtsdatum); ihre Summe zählt jede Anmeldung einmal.
 wie die Wahl der Druckliste in den Einstellungen der Veranstaltung – gespeichert wird nur, was von der Vorgabe abweicht,
 und nur von dem, der die Veranstaltung bearbeiten darf (alle anderen können umstellen, bis die Seite neu lädt).
 Gelöschte Fragen fallen aus der Wahl, neue stehen hinten; „Wie zu Beginn“ holt die Vorgabe zurück. Eine Kopie der
-Veranstaltung übernimmt die Wahl. Ein Klick in eine Zeile öffnet alle
+Veranstaltung übernimmt die Wahl. **Zeilen anheften** (U2-4): Die Nadel am Zeilenanfang heftet eine Anmeldung oder
+Person oben an – sie bleibt beim Sortieren oben und steht nur in den Reitern, in die sie ohnehin gehört. Das merkt sich
+nur dieses Gerät (je Veranstaltung, im Speicher des Browsers); im privaten Fenster gilt es bis zum Neuladen. Mit Maus
+erscheint die Nadel beim Darüberfahren, am Handy steht sie immer da und bleibt mit der ersten Spalte links stehen. Ein
+Klick in eine Zeile öffnet alle
 Antworten – was für die ganze Anmeldung gilt (Kontakt, Erziehungsberechtigte, Unterschrift als Bild), steht einmal
 oben. **Abgesagt** kommt aus dem Verlauf von ChurchTools: Er behält auch die Antworten der Abgesagten, deshalb gehen
 Betrag oder Unterschrift nicht verloren, wenn die erste Person einer Anmeldung absagt. Sehen kann die Liste, wer in

@@ -31,8 +31,7 @@ interface Props {
 /**
  * **Was das Organigramm zeigt** (Bauplan O7b-7, Entwurf `o7b-6-7-v1.html`, entschieden 29.10.2026) – nur für
  * Gruppen-Admins: Gruppentypen und einzelne Gruppen für **alle** ausblenden, im Reiter, in der Präsentation und in der
- * PDF. Eine ausgeblendete Gruppe nimmt ihre Untergruppen mit (die stehen dann ausgegraut da). Die Typ-Schildchen über
- * dem Baum bleiben zusätzlich – sie gelten nur im eigenen Gerät. Hat inzwischen ein anderer gespeichert, wird nichts
+ * PDF. Eine ausgeblendete Gruppe nimmt ihre Untergruppen mit (die stehen dann ausgegraut da). Hat inzwischen ein anderer gespeichert, wird nichts
  * überschrieben: Das Fenster zeigt dann dessen Stand.
  */
 export function EinstellungenFenster({ start, stand, onStand, onSchliessen }: Props) {
@@ -44,7 +43,7 @@ export function EinstellungenFenster({ start, stand, onStand, onSchliessen }: Pr
   const [arbeitet, setArbeitet] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
-  // Gruppentypen, die es gibt – mit Zahl, die größten zuerst (wie die Schildchen über dem Baum).
+  // Gruppentypen, die es gibt – mit Zahl, die größten zuerst.
   const typZahlen = useMemo(() => {
     const zahl = new Map<number, number>();
     for (const g of start.gruppen)
@@ -163,8 +162,7 @@ export function EinstellungenFenster({ start, stand, onStand, onSchliessen }: Pr
       <div className={fenster.abschnitt}>
         <h3>Gruppentypen</h3>
         <p className={fenster.leise}>
-          Ein ausgeblendeter Typ verschwindet samt allem, was darunter hängt. Zusätzlich kann jede
-          Person für sich weitere Typen über die Schildchen ausblenden.
+          Ein ausgeblendeter Typ verschwindet samt allem, was darunter hängt.
         </p>
         <div className={styles.typen}>
           {typZahlen.map(([typ, zahl]) => (

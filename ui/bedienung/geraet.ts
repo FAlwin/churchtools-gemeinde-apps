@@ -1,7 +1,11 @@
 /**
- * **Im Gerät merken** – für Ansichtswahl, die nicht über Geräte hinweg gelten muss (Bauplan §3.3: Ansicht
- * und Filter „nur im Gerät“). Jeder Zugriff ist abgesichert: Im privaten Modus oder bei gesperrtem
+ * **Im Gerät merken** – für Ansichtswahl, die nicht über Geräte hinweg gelten muss (Dienstplaner, Bauplan §3.3:
+ * Ansicht und Filter „nur im Gerät“; seit 30.10.2026 hier in `ui/` für alle Apps, auch die To-Dos der Protokolle). Jeder Zugriff ist abgesichert: Im privaten Modus oder bei gesperrtem
  * Speicher fehlt `localStorage` – dann gilt die Vorgabe, und Merken entfällt still.
+ *
+ * Der eine Baustein der Erweiterungen: Auch das Organigramm (Ansichten, Personen) und die Anmeldungen (angeheftete
+ * Zeilen, U2-4) merken hier – das Organigramm hatte bis 30.10.2026 eine eigene Kopie. Die Musik-App hat ihren eigenen
+ * (`client/src/utils/lokalSpeicher.ts`) – er meldet zusätzlich einen vollen Speicher.
  */
 
 /** Liest `schluessel` und prüft ihn mit `aus`; alles Unlesbare → `vorgabe`. */

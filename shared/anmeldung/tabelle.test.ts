@@ -15,6 +15,8 @@ import {
   mitSpaltenWahl,
   mehrfachAntworten,
   passtZurSuche,
+  obenZuerst,
+  personSchluessel,
   personZeilen,
   personZellText,
   personenSortiert,
@@ -511,5 +513,32 @@ describe('Spalten wählen (U2-3)', () => {
         (y) => y.p.geburtstag,
       ),
     ).toEqual(['2017-05-20', '2019-01-15']);
+  });
+});
+
+describe('Zeilen anheften (U2-4)', () => {
+  it('angeheftete zuerst, untereinander und darunter in der Reihenfolge, in der sie sonst stünden', () => {
+    expect(obenZuerst([1, 2, 3, 4, 5], (n) => n === 4 || n === 2)).toEqual([2, 4, 1, 3, 5]);
+    expect(obenZuerst([3, 1, 2], () => false)).toEqual([3, 1, 2]);
+  });
+
+  it('nach dem Sortieren angeheftet: bleibt oben, die Sortierung gilt darunter weiter', () => {
+    const x = e();
+    const l = liste(x);
+    const ab = sortiert(x, l, { schluessel: 'nr', absteigend: true });
+    expect(ab.map((y) => y.nr)).toEqual(['CCCCCC', 'BBBBBB', 'AAAAAA']);
+    expect(obenZuerst(ab, (y) => y.nr === 'AAAAAA').map((y) => y.nr)).toEqual([
+      'AAAAAA',
+      'CCCCCC',
+      'BBBBBB',
+    ]);
+  });
+
+  it('eine Zeile je Person hat einen eigenen Schlüssel – auch bei gleichem Namen in zwei Anmeldungen', () => {
+    const z = personZeilen(liste());
+    const k = z.map(personSchluessel);
+    expect(new Set(k).size).toBe(z.length);
+    // „Jonas Beispiel“ steht in AAAAAA und BBBBBB – die Schlüssel unterscheiden sich.
+    expect(z.filter((y) => y.p.vor === 'Jonas').map(personSchluessel)).toHaveLength(3);
   });
 });

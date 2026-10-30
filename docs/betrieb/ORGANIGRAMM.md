@@ -1,7 +1,7 @@
 # Organigramm – ChurchTools-Erweiterung
 
 > **Stand: O7b-7 (29.10.2026)** – der ganze Baum (Bereiche als Karten, Gruppen mit Personen, Leitung, Diensten und
-> offenen Plätzen; Gruppenfenster; Gruppentypen ausblendbar), die **Präsentation** (für Gruppen-Admins auch die
+> offenen Plätzen; Gruppenfenster), die **Präsentation** (für Gruppen-Admins auch die
 > **neue Gliederung**), für Gruppen-Admins **Gruppen umhängen und anlegen** und den Reiter **Neue Gliederung** (Plan
 > und Umbau) und – für alle, die es in ChurchTools dürfen – **Leitung und Mitglieder pflegen**. Für die **Leitung eines
 > Bereichs** dazu die Reiter **Personen** und **Hinweise**. Seit O7b weitere Ansichten – von oben, von links, Mindmap
@@ -64,7 +64,7 @@ Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Gemessen an der Test-Insta
   Personen). Jede Gruppe
   mit Untergruppen klappt mit dem Pfeil auf und zu; anfangs sind die Gemeinde und die Bereiche offen, darunter steht
   „3 Untergruppen“. Gut am Handy.
-- **Personen: Aus · Rollen · Alle** (Diagramme und Liste, seit O7b-6; rechts neben den Gruppentypen) – was unter dem
+- **Personen: Aus · Rollen · Alle** (Diagramme und Liste, seit O7b-6; rechts über dem Baum) – was unter dem
   Namen einer Gruppe steht. **Aus** (vorgegeben): nur der Name. **Rollen**: die Rollen der Gruppe genau wie in
   ChurchTools, darunter die Namen – die Leitung zuerst (Leiter, Co-Leiter), dann die übrigen Rollen in der Reihenfolge
   von ChurchTools (z. B. Coach, Organisator), die Standardrolle des Gruppentyps (Mitarbeiter bzw. Teilnehmer) zuletzt
@@ -76,8 +76,8 @@ Sitzung. **Ein eigenes Rechte-System gibt es nicht.** Gemessen an der Test-Insta
 - **Alle aufklappen** / **Alle zuklappen** (Liste und Diagramme) wirken nur unter der Spitze.
 - **Anfangen bei:** die ganze Gemeinde oder ein Bereich – dann zeigen alle Ansichten nur ihn. Im Gruppenfenster jeder
   Gruppe mit Untergruppen steht **„Im Organigramm hier anfangen“**; die Gruppe steht dann zusätzlich in der Auswahl.
-  Blendet der Typ-Filter die Spitze aus, gilt wieder die ganze Gemeinde.
-- Die gewählte Ansicht **merkt sich das Gerät** (wie den Typ-Filter). Ohne Wahl: am Handy die Liste, sonst **von
+  Ist die Spitze für alle ausgeblendet, gilt wieder die ganze Gemeinde.
+- Die gewählte Ansicht **merkt sich das Gerät**. Ohne Wahl: am Handy die Liste, sonst **von
   oben**. Als PDF gibt es die Ansichten seit O7b-4, in der Präsentation seit O7b-5.
 - Eine Gruppe mit zwei Obergruppen steht wie in ChurchTools unter beiden und klappt an jeder Stelle für sich.
 
@@ -89,9 +89,9 @@ aus, die das Organigramm öffnen – im Reiter, in der Präsentation und in der 
 - **Gruppentypen** (z. B. Merkmale oder Verteiler) – ein ausgeblendeter Typ verschwindet samt allem, was darunter hängt.
 - **Einzelne Gruppen** (mit Suche) – eine ausgeblendete Gruppe nimmt ihre Untergruppen mit; die stehen im Fenster dann
   ausgegraut da („mit der Obergruppe“ bzw. „Typ ausgeblendet“).
-- Über dem Baum steht dann für alle „Für alle ausgeblendet: … – eingestellt von Gruppen-Admins“. Die Typ-Schildchen
-  bleiben zusätzlich – damit blendet jede Person für sich weitere Typen aus; für alle ausgeblendete Typen haben kein
-  Schildchen.
+- Über dem Baum steht dann für alle „Für alle ausgeblendet: … – eingestellt von Gruppen-Admins“.
+- Eigene Typ-Schildchen je Gerät gibt es seit 30.10.2026 nicht mehr: Ein abgewählter Typ ging samt allem darunter –
+  und weil oben meist Dienstbereiche stehen, war nach einem Klick fast alles weg. Ausblenden geht nur noch hier.
 - Ausgeblendet heißt nur: hier nicht zu sehen. In ChurchTools bleibt alles, wie es ist. Die Reiter **Personen**,
   **Hinweise** und **Neue Gliederung** zeigen weiter alle Gruppen – dort wird mit der ganzen Struktur gearbeitet.
 - Hat inzwischen ein anderer Admin gespeichert, wird nichts überschrieben: Das Fenster zeigt dann dessen Stand.
@@ -146,7 +146,7 @@ ChurchTools:
   öffnet ein Klick auf einen Bereich seine Seite. Die gewählte Ansicht merkt sich das Gerät. In den Diagrammen steht oben
   zusätzlich **Personen: Aus · Rollen · Alle** (ab O7b-6b) – dieselbe Wahl wie im Reiter, hier geändert gilt sie auch
   dort. Neue Gruppen der neuen Gliederung haben noch niemanden und zeigen nur den Namen.
-- Es gilt dieselbe Auswahl der Gruppentypen wie im Baum (z. B. Verteiler ausgeblendet).
+- Es gilt dasselbe wie im Baum: Was Gruppen-Admins für alle ausgeblendet haben, fehlt auch hier.
 - Wer nicht alle Mitglieder sehen darf, sieht dort „Mitglieder nicht sichtbar“ – „gesucht“ steht nur, wo wirklich
   niemand eingetragen ist.
 - **Neue Gliederung | Heute** (ab O7-4, nur Gruppen-Admins mit einem Plan): Oben in der Präsentation umschalten. Sie
@@ -242,7 +242,7 @@ Oben neben dem Plan steht **Umbau · N offen**: die Schritte vom Plan nach Churc
 
 ## Was die Erweiterung speichert
 
-Pro Gerät wird gemerkt, welche Gruppentypen ausgeblendet sind und welche Ansichten gewählt sind. Ab O7 liegt der **Plan „neue Gliederung“** im
+Pro Gerät wird gemerkt, welche Ansichten gewählt sind und ob Personen gezeigt werden. Ab O7 liegt der **Plan „neue Gliederung“** im
 Speicher der Erweiterung: als ein Eintrag in der Kategorie **„Plan „neue Gliederung““** (Kürzel `plan`), die die
 Erweiterung beim ersten Speichern anlegt. Darin stehen nur die Änderungen gegenüber heute (neue Gruppen, Umhängen,
 Umbenennen, Archivieren) und wer zuletzt gespeichert hat. Alles andere liegt in ChurchTools.

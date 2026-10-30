@@ -47,7 +47,7 @@
   margin-left: auto;
 }
 
-// Typen links, „Personen“ rechts (O7b-6); am Handy rutscht „Personen“ unter die Typen.
+// „Personen“ rechts (O7b-6), wie früher neben den Typ-Schildchen.
 .wasZeigen {
   display: flex;
   flex-wrap: wrap;
@@ -55,32 +55,8 @@
   gap: 10px;
 }
 
-.filter {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
 .personen {
   margin-left: auto;
-}
-
-.typ {
-  @include m.auswahlKnopf;
-  height: var(--knopf-hoehe);
-  border-radius: var(--r-ctrl);
-  padding: 0 10px;
-  font-size: 13px;
-
-  &[aria-pressed='true'] {
-    @include m.auswahlKnopfAn;
-  }
-}
-
-.zahl {
-  color: var(--text3);
-  font-weight: 400;
-  margin-left: 2px;
 }
 
 // „Für alle ausgeblendet: …“ (O7b-7) – ruhig, als Information, wie die blassblauen Hinweise in ChurchTools.

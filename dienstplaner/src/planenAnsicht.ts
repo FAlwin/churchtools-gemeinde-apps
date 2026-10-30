@@ -1,6 +1,6 @@
 import type { Breite } from '@shared/dienstplan/fenster';
 import { AB_HEUTE, zeitraumAus, type Zeitraum } from '@shared/ct/zeitraum';
-import { leseImGeraet, merkeImGeraet, texte } from './geraet';
+import { leseImGeraet, merkeImGeraet, texte } from '@ui/bedienung/geraet';
 
 /**
  * **Wie die Matrix aussieht** (Bauplan E3-5): Spaltenbreite, Unteransicht und Filter – im Gerät gemerkt

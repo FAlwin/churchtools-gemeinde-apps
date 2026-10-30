@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, type ReactNode } from 'react';
+import { Icon } from '@ui/icons/icons';
 import type { Sortierung, Summe, TabellenSpalte } from '@shared/anmeldung/tabelle';
 import t from './AnmeldungenTabelle.module.scss';
 
@@ -8,7 +9,8 @@ import t from './AnmeldungenTabelle.module.scss';
  * Spalte). Was in den Zellen steht, liefert der Aufrufer; Spalten, Summen und Sortierung rechnet
  * `@shared/anmeldung/tabelle`.
  *
- * Die erste Zelle einer Zeile ist ein Knopf (Tastatur, Vorleser); ein Klick irgendwo in der Zeile tut dasselbe.
+ * Die erste Zelle einer Zeile ist ein Knopf (Tastatur, Vorleser); ein Klick irgendwo in der Zeile tut dasselbe. Mit
+ * `anheften` (U2-4) steht davor eine schmale Spalte mit der Stecknadel – sie bleibt immer links stehen, auch am Handy.
  */
 export function AnmeldungenTabelle<Z>({
   name,
@@ -20,6 +22,7 @@ export function AnmeldungenTabelle<Z>({
   sortierung,
   onSortieren,
   onZeile,
+  anheften,
 }: {
   /** Beschriftung für Vorleser („Anmeldungen“, „Absagen“). */
   name: string;
@@ -34,6 +37,11 @@ export function AnmeldungenTabelle<Z>({
   onSortieren?: (s: Sortierung) => void;
   /** Ohne: Zeilen nur zum Ansehen. */
   onZeile?: (z: Z) => void;
+  /**
+   * Zeilen anheften (U2-4): `an` – angeheftet (der Aufrufer stellt sie nach oben, `obenZuerst`). Ohne: keine Nadel
+   * (Absagen).
+   */
+  anheften?: { an: (z: Z) => boolean; umschalten: (z: Z) => void };
 }) {
   // Aufsteigend → absteigend → wie die Liste (ohne Wahl).
   const weiter = (k: string): Sortierung =>
@@ -54,16 +62,22 @@ export function AnmeldungenTabelle<Z>({
     ]
       .filter(Boolean)
       .join(' ');
+  // Die Nadel-Spalte zählt zu den stehenden Zellen vorn – gemessen wird in Zellen der Zeile, nicht in Spalten.
+  const nadel = anheften ? 1 : 0;
+  const festeZellen = festeVorn + nadel;
+  const nadelKlasse = `${t.nadelSpalte} ${t.fest}${festeVorn === 0 ? ` ${t.festEnde}` : ''}`;
+  // Die letzte angeheftete Zeile trägt die Trennlinie zu den übrigen.
+  const letzteOben = anheften ? zeilen.filter(anheften.an).length - 1 : -1;
 
   // Wo eine angeheftete Spalte stehen bleibt, hängt an der Breite der Spalten links davon – gemessen, nicht geschätzt.
   const tabelle = useRef<HTMLTableElement>(null);
   useLayoutEffect(() => {
     const tab = tabelle.current;
-    if (!tab || festeVorn < 2) return;
+    if (!tab || festeZellen < 2) return;
     const messen = () => {
       const koepfe = Array.from(tab.rows[0]?.cells ?? []);
       let links = 0;
-      for (let i = 0; i < festeVorn; i++) {
+      for (let i = 0; i < festeZellen; i++) {
         for (const zeile of Array.from(tab.rows)) {
           const zelle = zeile.cells[i];
           if (zelle) zelle.style.left = `${links}px`;
@@ -83,6 +97,14 @@ export function AnmeldungenTabelle<Z>({
       <table ref={tabelle} className={t.tabelle} aria-label={name}>
         <thead>
           <tr>
+            {anheften && (
+              <th
+                scope="col"
+                className={`${t.kopf} ${nadelKlasse}`}
+                aria-label="Angeheftet"
+                title="Zeile oben anheften"
+              />
+            )}
             {spalten.map((s, i) => {
               const an = sortierung?.schluessel === s.schluessel;
               return (
@@ -117,12 +139,44 @@ export function AnmeldungenTabelle<Z>({
           </tr>
         </thead>
         <tbody>
-          {zeilen.map((z) => (
+          {zeilen.map((z, nr) => (
             <tr
               key={schluessel(z)}
-              className={onZeile ? t.zeile : undefined}
+              className={
+                [
+                  onZeile ? t.zeile : '',
+                  anheften?.an(z) ? t.oben : '',
+                  nr === letzteOben ? t.trenn : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ') || undefined
+              }
               onClick={onZeile ? () => onZeile(z) : undefined}
             >
+              {anheften && (
+                <td className={`${t.zelle} ${nadelKlasse}`}>
+                  <button
+                    type="button"
+                    className={t.nadelKnopf}
+                    aria-pressed={anheften.an(z)}
+                    // Ohne Namen: Die Nadel steht in der Zeile, und der Name gehört dem Knopf daneben, der sie öffnet.
+                    aria-label={
+                      anheften.an(z) ? 'Zeile nicht mehr anheften' : 'Zeile oben anheften'
+                    }
+                    title={
+                      anheften.an(z)
+                        ? 'Nicht mehr anheften'
+                        : 'Zeile oben anheften (nur auf diesem Gerät)'
+                    }
+                    onClick={(ev) => {
+                      ev.stopPropagation();
+                      anheften.umschalten(z);
+                    }}
+                  >
+                    <Icon name="nadel" size={15} />
+                  </button>
+                </td>
+              )}
               {spalten.map((s, i) => (
                 <td key={s.schluessel} className={`${t.zelle} ${klasse(s, i)}`}>
                   {i === 0 && onZeile ? (
@@ -146,6 +200,7 @@ export function AnmeldungenTabelle<Z>({
         </tbody>
         <tfoot>
           <tr>
+            {anheften && <td className={`${t.summe} ${nadelKlasse}`} />}
             {spalten.map((s, i) => {
               const w = summe(s.schluessel);
               return (

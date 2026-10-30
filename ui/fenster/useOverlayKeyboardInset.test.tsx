@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, cleanup } from '@testing-library/react';
-import { useOverlayKeyboardInset } from './useOverlayKeyboardInset';
+import { FENSTER_PLATZ_PX, useOverlayKeyboardInset } from './useOverlayKeyboardInset';
 
 /**
  * Mechanik der Tastatur-Aussparung (#207). Der eigentliche Effekt ist iOS-spezifisch, aber die
@@ -30,8 +30,18 @@ function stubViewport(height: number, offsetTop = 0): FakeVv {
   return vv;
 }
 
+// Eine Tastatur gibt es nur, wenn in einem Feld geschrieben wird (`tastaturHoehe`, 30.10.2026) – die Tests unten
+// rechnen mit einem; wer ohne prüft, nimmt ihm den Fokus.
+let schreibfeld: HTMLInputElement;
+beforeEach(() => {
+  schreibfeld = document.createElement('input');
+  document.body.append(schreibfeld);
+  schreibfeld.focus();
+});
+
 afterEach(() => {
   cleanup(); // sonst stapeln sich die gerenderten Overlays über die Tests hinweg
+  schreibfeld.remove();
   Object.defineProperty(window, 'visualViewport', { value: undefined, configurable: true });
   vi.restoreAllMocks();
 });
@@ -78,6 +88,24 @@ describe('useOverlayKeyboardInset', () => {
     scrollTo.mockClear();
     unmount();
     expect(scrollTo).toHaveBeenCalledWith(0, 0);
+  });
+
+  it('ohne Feld, in dem geschrieben wird, spart es nichts aus – auch wenn iOS die Tastatur noch meldet', () => {
+    // Alwin am iPad (30.10.2026): „Einstellungen“ gab nur den dunklen Schleier, das Fenster hatte 0 px.
+    window.innerHeight = 800;
+    stubViewport(60);
+    schreibfeld.blur();
+    const { getByTestId } = render(<Overlay />);
+    expect(getByTestId('overlay').style.getPropertyValue('--kb')).toBe('0px');
+  });
+
+  it('Sicherheitsnetz: das Fenster behält immer seinen Platz, auch bei einer zu großen Meldung', () => {
+    window.innerHeight = 800;
+    stubViewport(60); // gemeldet: 740 px Tastatur – mit Feld im Fokus
+    const { getByTestId } = render(<Overlay />);
+    expect(getByTestId('overlay').style.getPropertyValue('--kb')).toBe(
+      `${800 - FENSTER_PLATZ_PX}px`,
+    );
   });
 
   it('ohne visualViewport passiert nichts (kein Absturz, kein --kb)', () => {

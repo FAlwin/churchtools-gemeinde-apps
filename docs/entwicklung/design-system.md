@@ -188,4 +188,6 @@ padding-bottom: calc(16px + var(--kb, 0px));
 
 `--kb` liefert der Hook `ui/fenster/useOverlayKeyboardInset` (Messung am `visualViewport`); er holt zusätzlich den
 von iOS hinterlassenen Dokument-Scroll zurück. Ohne beides liegen Trefferlisten und Knöpfe unter der
-Tastatur, und die Kopfleiste bleibt nach dem Schließen verrutscht (#207).
+Tastatur, und die Kopfleiste bleibt nach dem Schließen verrutscht (#207). Ohne Feld, in dem geschrieben wird, ist
+`--kb` immer 0 – iOS meldet die Tastatur manchmal noch, wenn sie längst zu ist, und das Fenster behielt dann 0 px
+(nur der Schleier, 30.10.2026). Ein Overlay behält außerdem immer `FENSTER_PLATZ_PX` (160 px).

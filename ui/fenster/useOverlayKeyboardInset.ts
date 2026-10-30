@@ -3,6 +3,13 @@ import { syncAppHeight } from './appHeight';
 import { tastaturHoehe } from './useTastaturOffen';
 
 /**
+ * So viel Höhe bleibt dem Overlay über der Tastatur mindestens (samt 2 × 16 px Rand) – genug für Kopf und Knöpfe eines
+ * Fensters. Eine echte Tastatur lässt hochkant deutlich mehr übrig; am Handy quer reicht das Fenster dann eher etwas
+ * unter die Tastatur, als zu verschwinden.
+ */
+export const FENSTER_PLATZ_PX = 160;
+
+/**
  * Hält einen Vollbild-Overlay über der iOS-Tastatur frei (#207).
  *
  * Zwei Dinge passieren auf iOS, sobald ein Eingabefeld fokussiert wird:
@@ -33,7 +40,9 @@ export function useOverlayKeyboardInset(): (el: HTMLElement | null) => void {
     const vv = window.visualViewport;
     if (!vv || !el) return;
     const apply = () => {
-      const kb = tastaturHoehe(vv);
+      // Sicherheitsnetz: Was auch immer gemeldet wird, das Fenster behält `FENSTER_PLATZ_PX` – nie wieder nur den
+      // Schleier (30.10.2026; die Ursache, eine gemeldete Tastatur ohne Eingabefeld, fängt `tastaturHoehe`).
+      const kb = Math.min(tastaturHoehe(vv), Math.max(0, window.innerHeight - FENSTER_PLATZ_PX));
       el.style.setProperty('--kb', `${kb}px`);
       if (window.scrollY !== 0 || vv.offsetTop !== 0) window.scrollTo(0, 0);
     };

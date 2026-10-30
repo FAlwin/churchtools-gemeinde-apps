@@ -21,6 +21,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -50,6 +52,18 @@ jobs:
           npm run build -w formular
           (cd formular/dist && zip -qr "../../anmeldungen/releases/anmeldungen-formular-${VERSION}.zip" .)
 
+      # Release-Beschreibung nur mit den Einträgen DIESER App (30.10.2026, Alwin: „sollen auch nur die Features
+      # dieser einen App oder Erweiterung da erscheinen“). Vorher hängte GitHub jeden PR seit dem letzten Tag an.
+      # Braucht die Tags und den Verlauf – deshalb `fetch-depth: 0` oben. Scheitert es, scheitert der Release laut.
+      - name: Release-Beschreibung aus dem CHANGELOG
+        id: notizen
+        run: |
+          {
+            echo 'text<<NOTIZEN_ENDE'
+            node scripts/release-notizen.mjs --app anmeldungen --tag "$GITHUB_REF_NAME"
+            echo 'NOTIZEN_ENDE'
+          } >> "$GITHUB_OUTPUT"
+
       - name: GitHub Release veröffentlichen
         uses: softprops/action-gh-release@v2
         with:
@@ -70,6 +84,8 @@ jobs:
             Herkunft eintragen und in der Erweiterung unter „Einstellungen“ angeben. Ohne das ist die Erweiterung
             nicht nutzbar. Beim Aktualisieren den Inhalt ersetzen.
             Anleitung: https://github.com/FAlwin/churchtools-gemeinde-apps/blob/main/docs/betrieb/ANMELDUNGEN.md
+
+            ${{ steps.notizen.outputs.text }}
           files: |
             anmeldungen/releases/anmeldungen-${{ env.VERSION }}.zip
             anmeldungen/releases/anmeldungen-formular-${{ env.VERSION }}.zip

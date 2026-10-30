@@ -118,6 +118,8 @@ jobs:
       # Server sie dort herunterladen kann. Das Kürzel ist fest `musik-app` (der Pfad /ccm/<Kürzel>/
       # steckt im Build) – die Anleitung (docs/betrieb/ERWEITERUNG.md) nennt genau dieses Kürzel.
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -130,14 +132,25 @@ jobs:
           VITE_KEY: musik-app
           VITE_APP_VERSION: ${{ github.ref_name }}
 
+      # Release-Beschreibung nur mit den Einträgen DIESER App (30.10.2026, Alwin: „sollen auch nur die Features
+      # dieser einen App oder Erweiterung da erscheinen“). Vorher hängte GitHub jeden PR seit dem letzten Tag an.
+      # Braucht die Tags und den Verlauf – deshalb `fetch-depth: 0` oben. Scheitert es, scheitert der Release laut.
+      - name: Release-Beschreibung aus dem CHANGELOG
+        id: notizen
+        run: |
+          {
+            echo 'text<<NOTIZEN_ENDE'
+            node scripts/release-notizen.mjs --app musik-app --tag "$GITHUB_REF_NAME"
+            echo 'NOTIZEN_ENDE'
+          } >> "$GITHUB_OUTPUT"
+
       # GitHub Release zum Tag anlegen/aktualisieren – Datenquelle für den In-App-Update-Hinweis
-      # (Endpoint /api/update-check liest das neueste Release). Notes werden automatisch erzeugt.
+      # (Endpoint /api/update-check liest das neueste Release).
       - name: GitHub Release veröffentlichen
         uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
-          # Fester Text ÜBER den automatischen Änderungsnotizen: Wer von der Release-Seite kommt, sieht
-          # sonst nur die ZIP und nicht, was ins ChurchTools-Formular gehört (Alwin, 07.10.2026).
+          # Fester Text ÜBER den Änderungen: Wer von der Release-Seite kommt, sieht sonst nur die ZIP und nicht,
+          # was ins ChurchTools-Formular gehört (Alwin, 07.10.2026).
           body: |
             ### ChurchTools-Erweiterung (ohne eigenen Server)
 
@@ -149,6 +162,8 @@ jobs:
             **Welche ChurchTools-Rechte eure Musiker und Admins brauchen:** [Rechte einrichten](https://github.com/FAlwin/churchtools-gemeinde-apps/blob/main/docs/betrieb/ERWEITERUNG.md#rechte-einrichten)
 
             **Mit eigenem Server (Docker):** Update wie gewohnt, siehe [UPDATE.md](https://github.com/FAlwin/churchtools-gemeinde-apps/blob/main/UPDATE.md).
+
+            ${{ steps.notizen.outputs.text }}
           files: client/releases/musik-app-${{ github.ref_name }}.zip
           fail_on_unmatched_files: true
           # Tags mit Suffix (z. B. v2.2.0-rc1) als Vorabversion markieren, damit

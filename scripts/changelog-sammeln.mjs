@@ -25,6 +25,7 @@ import {
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ueberschriftFehler } from './release-notizen.mjs';
 
 const WURZEL = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const EINTRAG_DIR = path.join(WURZEL, 'changelog.d');
@@ -39,6 +40,11 @@ export function eintragFehler(name, text) {
     fehler.push(`${name}: muss mit einer Überschrift „### Neu (…)“ o. Ä. beginnen`);
   if (/^#{1,2} /m.test(t))
     fehler.push(`${name}: keine Überschriften mit # oder ## – die setzt der Release`);
+  // Die App in der Klammer entscheidet, in welcher Release-Beschreibung der Eintrag steht (30.10.2026).
+  for (const kopf of t.match(/^###\s.*$/gm) ?? []) {
+    const f = ueberschriftFehler(kopf.trim());
+    if (f) fehler.push(`${name}: ${f}`);
+  }
   return fehler;
 }
 

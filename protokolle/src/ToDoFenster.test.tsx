@@ -6,6 +6,7 @@ import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import type { Person } from '@shared/organigramm/mitglieder';
 import type { ToDoEintrag } from '@shared/protokolle/uebersicht';
 import * as W from './todoSchreiben';
+import * as N from './nachziehen';
 import { ToDoFenster, type Herkunft } from './ToDoFenster';
 
 /** Fenster „To-Do“ (S7-2a) – der Schreibweg ist eine Attrappe; was er tut, prüft `todoSchreiben.test.ts`. */
@@ -15,6 +16,7 @@ vi.mock('./todoSchreiben', () => ({
   toDoLoeschen: vi.fn(),
   toDoVerschieben: vi.fn(),
 }));
+vi.mock('./nachziehen', () => ({ imEntwurfNachziehen: vi.fn() }));
 afterEach(cleanup);
 
 const LT: ProtokollGruppe = {
@@ -90,6 +92,7 @@ beforeEach(() => {
   vi.mocked(W.toDoAnlegen).mockResolvedValue(BEAMER);
   vi.mocked(W.toDoLoeschen).mockResolvedValue();
   vi.mocked(W.toDoVerschieben).mockResolvedValue({ hinweis: null });
+  vi.mocked(N.imEntwurfNachziehen).mockResolvedValue({ art: 'ok', hinweis: null });
 });
 
 describe('ToDoFenster', () => {
@@ -123,22 +126,101 @@ describe('ToDoFenster', () => {
     });
   });
 
-  it('aus einem Protokoll-Entwurf: Text, Gruppe und Löschen gesperrt, mit Hinweis', () => {
-    zeige({ herkunft: { ...FREI, entwurf: true } });
-    expect(screen.getByText(/Steht im Protokoll-Entwurf „Leitungssitzung“/)).toBeTruthy();
-    expect(screen.getByLabelText<HTMLTextAreaElement>('Was ist zu tun?').disabled).toBe(true);
-    expect(screen.getByLabelText<HTMLSelectElement>('Gruppe').disabled).toBe(true);
-    expect(screen.queryByRole('button', { name: 'Löschen' })).toBeNull();
-  });
+  describe('aus einem Protokoll-Entwurf (S7-2b: dort nachziehen)', () => {
+    const ENTWURF: Herkunft = { ...FREI, entwurf: true };
+    const nachziehen = () => vi.mocked(N.imEntwurfNachziehen).mock.calls[0][0];
 
-  it('ohne Sitzung kein Schalter „Auf Karte anzeigen“ dort; Sitzung nicht geladen: „Aus einer älteren Sitzung.“', () => {
-    zeige({ eintrag: { aufgabe: { ...BEAMER, sitzung: null }, gruppe: LT }, herkunft: null });
-    expect(screen.getByText('Ohne Sitzung angelegt.')).toBeTruthy();
-    expect(screen.getAllByRole('button', { name: /Auf Karte anzeigen/ })).toHaveLength(1);
-    cleanup();
-    zeige({ herkunft: null });
-    expect(screen.getByText('Aus einer älteren Sitzung.')).toBeTruthy();
-    expect(screen.getAllByRole('button', { name: /Auf Karte anzeigen/ })).toHaveLength(2);
+    it('Text: erst im Entwurf (Protokoll der Gruppe, Sitzung des To-Dos) – das To-Do selbst nicht noch einmal', async () => {
+      const { onFertig } = zeige({ herkunft: ENTWURF });
+      expect(screen.getByText(/Text, Gruppe und Löschen werden dort mit geändert/)).toBeTruthy();
+      fireEvent.change(screen.getByLabelText('Was ist zu tun?'), {
+        target: { value: 'Beamer leihen' },
+      });
+      fireEvent.click(knopf('Speichern'));
+      await waitFor(() => expect(onFertig).toHaveBeenCalledWith(null));
+      expect(nachziehen()).toMatchObject({
+        ort: { modul: 24, kategorie: 60, sitzung: 's1' },
+        mitarbeit: { modul: 24, kategorie: 61 },
+        gruppe: 11,
+        aufgabe: 'b',
+        n: { art: 'text', text: 'Beamer leihen' },
+        ich: { person: 1, name: 'Alwin' },
+      });
+      expect(nachziehen().ich.fenster).toEqual(expect.any(String));
+      expect(W.toDoAendern).not.toHaveBeenCalled();
+    });
+
+    it('Text und Bis: danach nur der Rest ins To-Do (ohne Text)', async () => {
+      const { onFertig } = zeige({ herkunft: ENTWURF });
+      fireEvent.change(screen.getByLabelText('Was ist zu tun?'), {
+        target: { value: 'Beamer leihen' },
+      });
+      fireEvent.change(screen.getByLabelText('Bis'), { target: { value: '2026-11-20' } });
+      fireEvent.click(knopf('Speichern'));
+      await waitFor(() => expect(onFertig).toHaveBeenCalled());
+      expect(vi.mocked(W.toDoAendern).mock.calls[0][2]).toEqual({ bis: '2026-11-20' });
+    });
+
+    it('jemand schreibt gerade: nichts gespeichert, Meldung mit Namen, Fenster bleibt offen', async () => {
+      vi.mocked(N.imEntwurfNachziehen).mockResolvedValue({
+        art: 'gesperrt',
+        sperre: { von: 7, name: 'Johann', seit: '2026-10-30T10:00:00Z', fenster: 'j1' },
+      });
+      const { onFertig } = zeige({ herkunft: ENTWURF });
+      fireEvent.change(screen.getByLabelText('Was ist zu tun?'), {
+        target: { value: 'Beamer leihen' },
+      });
+      fireEvent.change(screen.getByLabelText('Bis'), { target: { value: '2026-11-20' } });
+      fireEvent.click(knopf('Speichern'));
+      expect((await screen.findByRole('alert')).textContent).toMatch(
+        /Johann schreibt gerade am Protokoll „Leitungssitzung“.*Gespeichert wurde nichts/,
+      );
+      expect(onFertig).not.toHaveBeenCalled();
+      expect(W.toDoAendern).not.toHaveBeenCalled();
+    });
+
+    it('inzwischen kein Entwurf mehr: wie bisher nur das To-Do (mit Text)', async () => {
+      vi.mocked(N.imEntwurfNachziehen).mockResolvedValue({ art: 'kein-entwurf' });
+      const { onFertig } = zeige({ herkunft: ENTWURF });
+      fireEvent.change(screen.getByLabelText('Was ist zu tun?'), {
+        target: { value: 'Beamer leihen' },
+      });
+      fireEvent.click(knopf('Speichern'));
+      await waitFor(() => expect(onFertig).toHaveBeenCalled());
+      expect(vi.mocked(W.toDoAendern).mock.calls[0][2]).toEqual({ text: 'Beamer leihen' });
+    });
+
+    it('Löschen: Rückfrage nennt den Entwurf, dann „raus“; ist es keiner mehr, nur das To-Do', async () => {
+      vi.mocked(N.imEntwurfNachziehen).mockResolvedValue({ art: 'kein-entwurf' });
+      const { onFertig } = zeige({ herkunft: ENTWURF });
+      fireEvent.click(knopf('Löschen'));
+      expect(screen.getByText(/aus dem Protokoll-Entwurf „Leitungssitzung“/)).toBeTruthy();
+      fireEvent.click(screen.getAllByRole('button', { name: 'Löschen' }).at(-1)!);
+      await waitFor(() => expect(onFertig).toHaveBeenCalled());
+      expect(nachziehen().n).toEqual({ art: 'raus' });
+      expect(W.toDoLoeschen).toHaveBeenCalledTimes(1);
+    });
+
+    it('Gruppe: „abgegeben“ – das Anlegen in der neuen Gruppe läuft als `zuvor` (unter der Sperre)', async () => {
+      const { onFertig } = zeige({ herkunft: ENTWURF });
+      fireEvent.change(screen.getByLabelText('Gruppe'), { target: { value: '194' } });
+      fireEvent.click(knopf('Speichern'));
+      await waitFor(() => expect(onFertig).toHaveBeenCalled());
+      expect(nachziehen().n).toEqual({ art: 'abgegeben', text: 'Beamer', gruppe: 'Jugend' });
+      expect(W.toDoVerschieben).not.toHaveBeenCalled(); // die Attrappe ruft `zuvor` nicht auf …
+      await nachziehen().zuvor!(); // … das tut der echte Weg unter der Sperre
+      expect(W.toDoVerschieben).toHaveBeenCalledTimes(1);
+    });
+
+    it('nicht im Entwurf: das Protokoll wird nicht angefasst', async () => {
+      const { onFertig } = zeige();
+      fireEvent.change(screen.getByLabelText('Was ist zu tun?'), {
+        target: { value: 'Beamer leihen' },
+      });
+      fireEvent.click(knopf('Speichern'));
+      await waitFor(() => expect(onFertig).toHaveBeenCalled());
+      expect(N.imEntwurfNachziehen).not.toHaveBeenCalled();
+    });
   });
 
   it('„im Protokoll zeigen“ springt in die Sitzung', () => {

@@ -29,6 +29,7 @@ import {
 import type { AnnotationText, GespeicherterZoom, PageAnnotation } from '@shared/types/index';
 import { jsonOderNull, lokalSchreiben } from '../utils/lokalSpeicher';
 import { ohneTextSuffix, textSchluessel } from '../utils/annotationKeys';
+import { versionKopien } from '../utils/versionMigration';
 
 // Namensräume und Grammatik aus @shared/keys – EINZIGE Quelle für Client und Server (#250).
 const DRAW = ANNO_DRAW_NS;
@@ -349,4 +350,44 @@ export async function migrateLocalAnnotations(): Promise<void> {
     }
   }
   if (!retryLater) lokalSchreiben(MIGRATED_FLAG, '1');
+}
+
+// ── Umbenannte Version: Anmerkungen mitnehmen ─────────────────
+/**
+ * **Die eigenen Anmerkungen einer Version auf ihren neuen Schlüssel mitnehmen** (30.10.2026).
+ *
+ * Ein neuer Versionsname ist ein neuer Schlüssel (`versionAendern` in `shared/ct/notenblaetter.ts`). Die Anmerkungen
+ * lagen danach unter dem alten und waren unsichtbar – auf jedem Gerät. Die Einstellungen nimmt seit #812
+ * `einstellungenMitnehmen` mit; hier dasselbe für Striche, Texte und Zoom.
+ *
+ * Welche Schlüssel dazugehören, entscheidet `versionKopien` – dieselbe Regel wie beim Schlüssel-Umzug vom 07.10.2026
+ * (kopieren, nicht umbenennen; was unter dem neuen Schlüssel schon steht, gewinnt). Nur der EIGENE Namensraum geht
+ * mit; die Team-Ansicht spiegelt fremde Notizen und holt sie selbst neu. Auf das Konto geht es über `pushField` –
+ * denselben Weg wie jeder Strich, also mit Warteschlange, Merker über den Neustart und Wiederholen.
+ *
+ * Gibt die Zahl der Seiten zurück, die mitgenommen wurden.
+ */
+export function anmerkungenMitnehmen(songId: number, alt: string, neu: string): number {
+  if (alt === neu) return 0;
+  const vorhanden: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k) vorhanden.push(k);
+  }
+  const eigene = versionKopien(vorhanden, songId, alt, neu).filter(
+    ({ von }) => von.startsWith(DRAW) || von.startsWith(ZOOM),
+  );
+  const seiten = new Set<string>();
+  for (const { von, nach } of eigene) {
+    const wert = localStorage.getItem(von);
+    if (wert !== null && lokalSchreiben(nach, wert)) seiten.add(serverKeyOf(nach));
+  }
+  for (const key of seiten) {
+    const body = annotationFromStorage(key);
+    if (!body) continue;
+    for (const [feld, wert] of Object.entries(body)) {
+      pushField(DRAW + key, feld as keyof PageAnnotation, wert);
+    }
+  }
+  return seiten.size;
 }

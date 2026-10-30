@@ -25,6 +25,11 @@ vi.mock('../services/churchtoolsApi', () => ({
 
 // Die Einstellungen gehen sonst ans Konto (Netz) – hier zählt nur, was im Gerät steht.
 vi.mock('../services/userSettings', () => ({ pushSetting: vi.fn() }));
+// Die Anmerkungen selbst prüft `annotations.umbenennen.test.ts`; hier nur, WANN der Editor sie mitnimmt.
+const anmerkungenMitnehmen = vi.fn();
+vi.mock('../services/annotations', () => ({
+  anmerkungenMitnehmen: (...a: unknown[]) => anmerkungenMitnehmen(...a),
+}));
 
 const { ApiError } = await import('../services/api');
 const { useChartEditor } = await import('./useChartEditor');
@@ -291,5 +296,30 @@ describe('useChartEditor – Aussehen nach dem Speichern', () => {
     expect(args.selectVersion).toHaveBeenCalledWith(12, 'unplugged');
     expect(localStorage.getItem('worship_key_12_unplugged')).toBe('D');
     expect(localStorage.getItem('worship_cols_12_unplugged')).toBe('2');
+  });
+});
+
+describe('useChartEditor – Anmerkungen beim Umbenennen (30.10.2026)', () => {
+  it('umbenannt (neuer Schlüssel): die Anmerkungen gehen mit – vor dem Wählen der Version', async () => {
+    updateVersion.mockResolvedValue({ key: 'unplugged' });
+    const reihenfolge: string[] = [];
+    anmerkungenMitnehmen.mockImplementation(() => reihenfolge.push('anmerkungen'));
+    const { result } = starte({
+      isOriginal: false,
+      versionKey: 'akustik',
+      currentVersionName: 'Akustik',
+      selectVersion: vi.fn(() => reihenfolge.push('wählen')),
+    });
+    act(() => result.current.openEditCurrent());
+    await act(() => result.current.handleEditorSave('[D]Text', 'Unplugged'));
+    expect(anmerkungenMitnehmen).toHaveBeenCalledWith(12, 'akustik', 'unplugged');
+    expect(reihenfolge).toEqual(['anmerkungen', 'wählen']);
+  });
+
+  it('neue Version aus dem Original: keine Anmerkungen – ihr Text ist ein anderer', async () => {
+    const { result } = starte();
+    act(() => result.current.openEditCurrent());
+    await act(() => result.current.handleEditorSave('[C]Neu', 'Neu'));
+    expect(anmerkungenMitnehmen).not.toHaveBeenCalled();
   });
 });

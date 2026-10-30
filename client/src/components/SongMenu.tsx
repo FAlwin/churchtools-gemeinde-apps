@@ -7,9 +7,12 @@
  * Variante 2 – Häufiges direkt in der Übersicht, Seltenes auf einer Unterseite mit „‹“ zurück:
  *
  * - **Tonart:** Transponieren · „Kapo · Abschnitte ›“
- * - **Anzeige:** Akkorde & Text · „Nur Text · PDF ›“ (die hochgeladenen Dokumente)
+ * - **Anzeige:** Akkorde & Text · Nur Text · „Datei ›“ (die hochgeladenen Dokumente, PDF oder Bild). Bis zum 30.10.2026
+ *   standen Nur Text und die Dokumente zusammen unter „Nur Text · PDF ›“ – Alwin: „irreführend, dass man unter Nur Text
+ *   eine PDF wählt“ (Entwurf „Auswahl, Anzeige & Dateien“, abgenommen).
  * - **Version:** die gewählte Fassung › (Arrangements, Versionen, neue Version, löschen)
- * - **Bearbeiten:** „Im Editor öffnen“ direkt · „Dateien · Stammdaten ›“ – nur mit Bearbeitungsrecht. Zuerst stand
+ * - **Bearbeiten:** „Im Editor öffnen“ · „Dateien verwalten“ · „Stammdaten …“, alle direkt (seit 30.10.2026; vorher lagen
+ *   Dateien und Stammdaten auf einer Unterseite) – nur mit Bearbeitungsrecht. Zuerst stand
  *   der Editor unter „Lied › Teilen, Bearbeiten …“; Alwin fand ihn dort nicht (29.10.2026, am iPhone).
  * - **Teilen:** „Als PDF teilen“
  *
@@ -72,7 +75,7 @@ interface SongMenuProps {
   onSelectVersion: (versionKey: string) => void;
 }
 
-type Seite = 'start' | 'tonart' | 'anzeige' | 'version' | 'pflege';
+type Seite = 'start' | 'tonart' | 'datei' | 'version';
 
 /** Eine Zeile im Fenster: links der Name, rechts Wert, Haken, Symbol oder „›“ zur Unterseite. */
 function Zeile({
@@ -197,7 +200,7 @@ export function SongMenu({
       onClick={pick(onOpenFiles)}
       rechts={<Icon name="anhang" size={16} className={styles.symbol} />}
     >
-      Dateien …
+      Dateien verwalten
     </Zeile>
   );
   /* Stammdaten (#322, Schritt 11) – neben den Dateien, weil beides das LIED pflegt und nicht die Anzeige. Wer hier
@@ -233,10 +236,9 @@ export function SongMenu({
     );
   }
 
-  if (seite === 'anzeige') {
+  if (seite === 'datei') {
     return (
-      <Fenster titel="Anzeige" zurueck={() => setSeite('start')} onClose={onClose}>
-        {nurText}
+      <Fenster titel="Datei anzeigen" zurueck={() => setSeite('start')} onClose={onClose}>
         {dokumente.map((d) => (
           <Zeile
             key={d.fileId}
@@ -251,6 +253,12 @@ export function SongMenu({
             {d.name}
           </Zeile>
         ))}
+        {canEditSong && (
+          <p className={styles.hinweis}>
+            Hier nur wählen, was angezeigt wird. Umbenennen, hinzufügen und löschen unter
+            „Bearbeiten › Dateien verwalten“.
+          </p>
+        )}
       </Fenster>
     );
   }
@@ -329,15 +337,6 @@ export function SongMenu({
     );
   }
 
-  if (seite === 'pflege') {
-    return (
-      <Fenster titel="Dateien & Stammdaten" zurueck={() => setSeite('start')} onClose={onClose}>
-        {dateien}
-        {stammdaten}
-      </Fenster>
-    );
-  }
-
   // ── Übersicht ──
   const anzeigeDok = dokumente.find((d) => d.fileId === set.viewSource);
   const versionName = mitArrangements
@@ -390,22 +389,31 @@ export function SongMenu({
             <Icon name="pencil" size={12} className={styles.notiz} />
           )}
         </Zeile>
-        {dokumente.length > 0 ? (
+        {nurText}
+        {/* Genau eine Datei: direkt wählbar – eine Unterseite mit einem Punkt entfällt (Kopfkommentar). */}
+        {dokumente.length === 1 && (
+          <Zeile
+            an={set.viewSource === dokumente[0].fileId}
+            onClick={pick(() => onChange({ viewSource: dokumente[0].fileId }))}
+            rechts={<Wert>{dokumente[0].name}</Wert>}
+          >
+            Datei
+          </Zeile>
+        )}
+        {dokumente.length > 1 && (
           <Zeile
             weiter
-            onClick={() => setSeite('anzeige')}
+            onClick={() => setSeite('datei')}
             rechts={
               anzeigeDok ? (
                 <Wert aktiv>{anzeigeDok.name}</Wert>
-              ) : showsChords && set.lyricsOnly ? (
-                <Wert aktiv>Nur Text</Wert>
-              ) : undefined
+              ) : (
+                <Wert>{dokumente.length} Dateien</Wert>
+              )
             }
           >
-            {dokumente.every((d) => d.type === 'pdf') ? 'Nur Text · PDF' : 'Nur Text · Dateien'}
+            Datei
           </Zeile>
-        ) : (
-          nurText
         )}
       </Gruppe>
 
@@ -419,25 +427,17 @@ export function SongMenu({
 
       {canEditSong && (
         <Gruppe titel="Bearbeiten">
-          {mitBearbeiten ? (
-            <>
-              <Zeile
-                onClick={pick(onEditCurrent)}
-                rechts={<Wert>{isOriginal ? 'als neue Version' : currentVersion.name}</Wert>}
-              >
-                Im Editor öffnen
-              </Zeile>
-              <Zeile weiter onClick={() => setSeite('pflege')}>
-                Dateien · Stammdaten
-              </Zeile>
-            </>
-          ) : (
-            // Beim Dokument gibt es keinen Editor – dann stehen die beiden direkt da statt auf einer Unterseite.
-            <>
-              {dateien}
-              {stammdaten}
-            </>
+          {/* Beim Dokument gibt es keinen Editor – dann stehen nur Dateien und Stammdaten da. */}
+          {mitBearbeiten && (
+            <Zeile
+              onClick={pick(onEditCurrent)}
+              rechts={<Wert>{isOriginal ? 'als neue Version' : currentVersion.name}</Wert>}
+            >
+              Im Editor öffnen
+            </Zeile>
           )}
+          {dateien}
+          {stammdaten}
         </Gruppe>
       )}
 

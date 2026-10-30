@@ -141,19 +141,21 @@ Seite kurz aufblitzen und die Textgröße darf im Moment des Umblätterns nicht 
 
 ### TF-CHART-07 · Die Fußzeile springt nicht
 
-**Das muss passieren:** Punkte-Anzeige und der Text „Nächstes Lied: …" wechseln ruhig mit. Sie
-dürfen nicht kurz etwas Falsches anzeigen.
+**Das muss passieren:** Unten stehen „‹ Zurück“ (Rahmen), in der Mitte „Nächstes Lied: …“ und „Weiter ›“ (blau) –
+seit Scheibe B3 (30.10.2026) ohne Punktreihe; am Handy nur die Pfeile und „Nächstes: …“. Der Text wechselt ruhig mit
+und zeigt nie kurz etwas Falsches. Beim letzten Lied steht „Letztes Lied“, „Weiter“ ist gesperrt.
 
 1. Ein Lied öffnen.
-2. Durch drei bis vier Lieder durchblättern.
-3. Dabei unten auf die Punkte und den Text schauen.
+2. Mit **Weiter** durch drei bis vier Lieder blättern, dabei unten auf den Text schauen.
+3. Bis zum letzten Lied: „Letztes Lied“, Weiter ausgegraut. **Zurück** geht wieder.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/pages/ChordChart.tsx`, `client/src/hooks/useChartNavigation.ts`
-- **Automatisiert:** nein
-- **Historie:** #21
+- **Betrifft:** `client/src/pages/ChordChart.tsx`, `client/src/hooks/useChartNavigation.ts`, `client/src/components/ChartFooter.tsx`
+- **Automatisiert:** teilweise – `e2e/blatt-fussleiste.spec.ts` (Wörter auf den Knöpfen, keine Punkte, über die
+  Liedgrenzen bis „Letztes Lied“, Handy nur Pfeile + „Nächstes: …“). Von Hand bleibt, ob der Text ruhig wechselt.
+- **Historie:** #21; Scheibe B3 30.10.2026
 
 </details>
 
@@ -502,13 +504,13 @@ Einstellung gilt nur auf diesem Gerät.
 
 1. **Mehr → Während des Spielens → Liedansicht: Scrollen** wählen.
 2. Einen Gottesdienst öffnen, ein Lied antippen. Mit dem Finger nach unten wischen: Die Kopfzeile zeigt
-   immer das Lied in der Bildmitte, die Punkte unten folgen.
+   immer das Lied in der Bildmitte, die Ablauf-Leiste oben folgt.
 3. Das Pedal treten (oder ↓ / Leertaste auf einer Tastatur): Der nächste Teil steht oben, die Linie blitzt kurz
    auf. Am oberen Rand schaut nichts von der Zeile davor (oder vom Liedkopf über dem ersten Teil) herein. Ein Lied mit `----` im Text: Das Pedal hält auch dort. Am Emporen-Monitor (oder einem kleinen Fenster)
    ein Teil, der nicht ganz passt: erst ⅔ weiter, keine Zeile fehlt. Rückwärts mit dem anderen Pedal (↑ /
    Umschalt+Leertaste) an den Anfang des Teils.
 4. Einmal aufs Blatt tippen → Leisten weg; nochmal → Leisten da.
-5. Einen Lied-Punkt unten antippen → dieses Lied steht oben.
+5. Ein anderes Lied in der Ablauf-Leiste oben antippen → dieses Lied steht oben (seit B3 statt der Punkte unten).
 6. Ein Lied, das beim Blättern zwei Seiten hat: Beim Scrollen läuft es ohne Lücke durch. Was man beim
    Blättern auf Seite 1 UND Seite 2 gemalt oder geschrieben hat, steht beim Scrollen am selben Teil (#614).
    Etwas in die leere Lücke am Ende von Seite 1 malen → beim Scrollen am Ende des Teils davor. Im
@@ -527,7 +529,7 @@ Einstellung gilt nur auf diesem Gerät.
 - **Betrifft:** `client/src/components/ScrollDeck.tsx`, `client/src/components/RollenMalen.tsx`, `client/src/utils/rolleSpeichern.ts`, `client/src/hooks/useTextEingabe.ts`, `client/src/utils/rollenAbbildung.ts`, `client/src/pages/ChordChart.tsx`, `client/src/utils/pedalTasten.ts`, `client/src/utils/pedalSchritt.ts`, `client/src/hooks/useChartNavigation.ts`, `client/src/components/PageDeck.tsx`, `client/src/utils/devicePrefs.ts`, `client/src/pages/Settings.tsx`
 - **Automatisiert:** weitgehend – `e2e/chart-scrollen.spec.ts` (Seiten nahtlos und voll breit, Pedal Teil für
   Teil samt ⅔ bei langen Teilen und Halt am `----`,
-  Kopfzeile folgt der Mitte, Tipp, Lied-Punkt, Fußpfeil, Malen einzeln und zurück an dieselbe Stelle, quer
+  Kopfzeile folgt der Mitte, Tipp, Lied in der Leiste, Fußpfeil, Malen einzeln und zurück an dieselbe Stelle, quer
   eine Seite, je Lied eine Rolle), `chordPdf.test.ts` (Rolle), `pedalTasten.test.ts`, `pedalSchritt.test.ts`, `ScrollDeck.test.tsx`,
   `useChartNavigation.test.ts`. Von Hand bleiben
   ein echtes Pedal, das Wischen mit dem Finger und das Drehen

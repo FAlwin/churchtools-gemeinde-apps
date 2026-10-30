@@ -258,6 +258,78 @@ describe('Tabelle (U2-1)', () => {
   });
 });
 
+describe('Je Person (U2-2)', () => {
+  const jePerson = () => fireEvent.click(screen.getByRole('button', { name: 'Je Person' }));
+  const personen = () =>
+    within(screen.getByRole('table', { name: 'Personen' }))
+      .getAllByRole('row')
+      .slice(1, -1)
+      .map((r) => r.textContent);
+
+  it('Umschalter: eine Zeile je Person, Reiter zählen Personen, Summe zählt Personen mit Platz', () => {
+    zeigen(fertig());
+    expect(screen.getByRole('button', { name: 'Je Anmeldung' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    jePerson();
+    expect(screen.queryByRole('table', { name: 'Anmeldungen' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Alle 2' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Warteliste 1' })).toBeTruthy();
+    const kopf = screen.getAllByRole('columnheader').map((k) => k.textContent);
+    expect(kopf.slice(0, 4)).toEqual(['Vorname', 'Nachname', 'Status', 'Alter']);
+    expect(kopf.slice(-2)).toEqual(['Betrag der Anmeldung', 'Bezahlt']);
+    expect(personen()).toEqual([
+      expect.stringMatching(/^JonasBeispielPlatz9.*AAAAAA.*6,00 €offen$/),
+      expect.stringMatching(/^LenaBeispielWarteliste 17.*AAAAAA.*6,00 €offen$/),
+    ]);
+    const summe = screen.getAllByRole('row').at(-1)!.textContent;
+    expect(summe).toMatch(/^1 Person\+ 1 auf der Warteliste/);
+    // Der Betrag steht bei beiden Personen – gezählt wird er einmal.
+    expect(summe).toMatch(/6,00 €6,00 € offen · 0,00 € eingegangen/);
+  });
+
+  it('Klick auf eine Person öffnet ihre Anmeldung; Warteliste je Person nach Warteplatz', () => {
+    zeigen(fertig());
+    jePerson();
+    fireEvent.click(screen.getByRole('button', { name: 'Lena' }));
+    expect(screen.getByText('Für die ganze Anmeldung · gilt für Jonas, Lena')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Warteliste/ }));
+    expect(screen.getByRole('columnheader', { name: 'Warteplatz' })).toBeTruthy();
+    expect(personen()).toEqual([expect.stringMatching(/^LenaBeispiel1Warteliste 1/)]);
+  });
+
+  it('Umschalten setzt die Sortierung zurück; bei „Abgesagt“ kein Umschalter (Absagen sind je Person)', () => {
+    zeigen(fertig());
+    jePerson();
+    const alter = () => screen.getByRole('columnheader', { name: /Alter/ });
+    fireEvent.click(within(alter()).getByRole('button'));
+    expect(personen()[0]).toMatch(/^Lena/);
+    fireEvent.click(screen.getByRole('button', { name: 'Je Anmeldung' }));
+    jePerson();
+    expect(alter().getAttribute('aria-sort')).toBeNull();
+    expect(personen()[0]).toMatch(/^Jonas/);
+    fireEvent.click(screen.getByRole('button', { name: /^Abgesagt/ }));
+    expect(screen.queryByRole('button', { name: 'Je Person' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^Alle/ }));
+    // Die Wahl bleibt beim Reiterwechsel.
+    expect(screen.getByRole('table', { name: 'Personen' })).toBeTruthy();
+  });
+
+  it('Suche je Person: nach dem Namen der Person oder der Anmeldung', () => {
+    zeigen(fertig());
+    jePerson();
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Name suchen' }), {
+      target: { value: 'lena' },
+    });
+    expect(personen()).toEqual([expect.stringMatching(/^Lena/)]);
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Name suchen' }), {
+      target: { value: 'maria' },
+    });
+    expect(personen()).toHaveLength(2);
+  });
+});
+
 describe('Zahlung im Fenster (A7-2)', () => {
   const oeffnen = () => fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));
 

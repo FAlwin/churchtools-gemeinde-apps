@@ -143,7 +143,8 @@ export function altersText(r: Altersregel): string {
   return `${r.von}–${r.bis} Jahre`;
 }
 
-function altersregel(regeln: Altersregel[], alter: number | null): Altersregel | undefined {
+/** Welche Altersstufe für ein Alter gilt – die eine Stelle für Preis und Summenzeile der Tabelle (U2-2). */
+export function altersregel(regeln: Altersregel[], alter: number | null): Altersregel | undefined {
   if (alter === null) return undefined;
   return regeln.find((r) => alter >= r.von && (r.bis === null || alter <= r.bis));
 }

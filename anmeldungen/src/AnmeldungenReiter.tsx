@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { ReiterLeiste, type Reiter } from '@ui/bedienung/ReiterLeiste';
+import { Segment } from '@ui/bedienung/Segment';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import {
   absagePlan,
@@ -30,6 +31,12 @@ import {
 import type { GeladenerStand } from './mitglieder';
 import {
   anmeldungsSpalten,
+  personZeilen,
+  personZellText,
+  personenSortiert,
+  personenSpalten,
+  personSumme,
+  type PersonZeile,
   passtZurSuche,
   sortiert,
   summe,
@@ -546,6 +553,8 @@ export function AnmeldungenReiter({
   const [filter, setFilter] = useState<ListenFilter>(startFilter);
   const [suche, setSuche] = useState('');
   const [sortierung, setSortierung] = useState<Sortierung>(null);
+  // Eine Zeile je Anmeldung oder je Person (U2-2) – gilt in allen Reitern außer „Abgesagt“ (Absagen sind je Person).
+  const [jePerson, setJePerson] = useState(false);
   const [offen, setOffen] = useState<string | null>(null);
   // Die letzte Änderung im offenen Fenster – mit dem Fenster weg.
   const [meldung, setMeldung] = useState<FensterMeldung | null>(null);
@@ -623,6 +632,23 @@ export function AnmeldungenReiter({
           sortierung,
           filter === 'warte',
         );
+  // Dieselben Reiter je Person: Zahlung offen = die Personen einer Anmeldung mit offener Zahlung.
+  const personenImReiter = {
+    alle: personZeilen(liste),
+    offen: personZeilen(imReiter.offen),
+    warte: personZeilen(liste).filter((y) => y.p.status === 'wartet'),
+  };
+  const personenGezeigt =
+    filter === 'abgesagt' || !jePerson
+      ? []
+      : personenSortiert(
+          e,
+          personenImReiter[filter].filter((y) =>
+            passtZurSuche({ wer: y.x.wer, nr: y.x.nr, personen: [y.p] }, suche),
+          ),
+          sortierung,
+          filter === 'warte',
+        );
   const absageZeilen = absagen.filter((b) =>
     passtZurSuche({ wer: b.name, nr: null, personen: [] }, suche),
   );
@@ -659,19 +685,26 @@ export function AnmeldungenReiter({
     setFilter(f);
     setSortierung(null);
   };
+  const zahlen = jePerson
+    ? {
+        alle: personenImReiter.alle.length,
+        offen: personenImReiter.offen.length,
+        warte: personenImReiter.warte.length,
+      }
+    : { alle: liste.length, offen: imReiter.offen.length, warte: imReiter.warte.length };
   const reiter: Reiter<ListenFilter>[] = [
-    { id: 'alle', label: 'Alle', icon: 'people', zahl: liste.length },
+    { id: 'alle', label: 'Alle', icon: 'people', zahl: zahlen.alle },
     ...(z.kostet
       ? [
           {
             id: 'offen' as const,
             label: 'Zahlung offen',
             icon: 'check' as const,
-            zahl: imReiter.offen.length,
+            zahl: zahlen.offen,
           },
         ]
       : []),
-    { id: 'warte', label: 'Warteliste', icon: 'clock', zahl: imReiter.warte.length },
+    { id: 'warte', label: 'Warteliste', icon: 'clock', zahl: zahlen.warte },
     { id: 'abgesagt', label: 'Abgesagt', icon: 'user-slash', zahl: absagen.length },
   ];
   const strich = <span className={a.strich}>–</span>;
@@ -716,6 +749,32 @@ export function AnmeldungenReiter({
         return <ZahlungPille x={x} kostet={z.kostet} />;
     }
     const text = zellText(e, k, x);
+    return text ? (
+      <span className={a.kurzText} title={text}>
+        {text}
+      </span>
+    ) : (
+      strich
+    );
+  };
+
+  /** Je Person (U2-2): Status als Pille wie in der Spalte „Personen“, Nr., Betrag und Bezahlt der Anmeldung wie dort. */
+  const personZelle = (k: string, y: PersonZeile): ReactNode => {
+    switch (k) {
+      case 'status':
+        return y.p.status === 'wartet' ? (
+          <span className={`${a.pille} ${a.pilleWarte}`}>
+            Warteliste{y.p.warteplatz ? ` ${y.p.warteplatz}` : ''}
+          </span>
+        ) : (
+          'Platz'
+        );
+      case 'nr':
+      case 'betrag':
+      case 'bezahlt':
+        return zelle(k, y.x);
+    }
+    const text = personZellText(e, k, y);
     return text ? (
       <span className={a.kurzText} title={text}>
         {text}
@@ -801,6 +860,21 @@ export function AnmeldungenReiter({
               onChange={(ev) => setSuche(ev.target.value)}
             />
           </label>
+          {filter !== 'abgesagt' && (
+            <Segment
+              verbunden
+              ariaLabel="Zeilen"
+              value={jePerson ? 'person' : 'anmeldung'}
+              options={[
+                { value: 'anmeldung', label: 'Je Anmeldung' },
+                { value: 'person', label: 'Je Person' },
+              ]}
+              onChange={(w) => {
+                setJePerson(w === 'person');
+                setSortierung(null);
+              }}
+            />
+          )}
           <span className={a.rechts}>
             {liste.length > 0 && (
               <FensterKnopf art="zweit" aria-label="Druckliste" onClick={() => setDruck(true)}>
@@ -837,7 +911,7 @@ export function AnmeldungenReiter({
               onZeile={darf ? (b) => setZurueck({ b, von: null }) : undefined}
             />
           )
-        ) : zeilen.length === 0 ? (
+        ) : (jePerson ? personenGezeigt.length : zeilen.length) === 0 ? (
           leer(
             filter === 'offen'
               ? 'Alle haben bezahlt.'
@@ -845,6 +919,18 @@ export function AnmeldungenReiter({
                 ? 'Niemand auf der Warteliste.'
                 : 'Noch keine Anmeldungen.',
           )
+        ) : jePerson ? (
+          <AnmeldungenTabelle
+            name="Personen"
+            spalten={personenSpalten(e, { kostet: z.kostet, warteliste: filter === 'warte' })}
+            zeilen={personenGezeigt}
+            schluessel={(y) => `${y.x.schluessel}-${y.p.personId}`}
+            zelle={personZelle}
+            summe={(k) => personSumme(e, k, personenGezeigt)}
+            sortierung={sortierung}
+            onSortieren={setSortierung}
+            onZeile={(y) => oeffnen(y.x.schluessel)}
+          />
         ) : (
           <AnmeldungenTabelle
             name="Anmeldungen"
@@ -860,9 +946,10 @@ export function AnmeldungenReiter({
         )}
 
         <p className={v.pruefFuss}>
-          Eine Zeile je Anmeldung, ohne Wahl nach Anmeldetag – ein Tipp auf die Überschrift einer
-          Spalte sortiert. Die Summen zählen Anmeldungen mit Platz. Ältere Anmeldungen ohne Nr.
-          stehen je Person einzeln; die Leitung steht nicht in der Liste.
+          {jePerson
+            ? 'Eine Zeile je Person, ohne Wahl nach Anmeldetag – ein Tipp auf die Überschrift einer Spalte sortiert. Die Summen zählen Personen mit Platz; Betrag und Bezahlt gehören der Anmeldung und zählen sie einmal.'
+            : 'Eine Zeile je Anmeldung, ohne Wahl nach Anmeldetag – ein Tipp auf die Überschrift einer Spalte sortiert. Die Summen zählen Anmeldungen mit Platz. Ältere Anmeldungen ohne Nr. stehen je Person einzeln.'}{' '}
+          Die Leitung steht nicht in der Liste.
           {stand!.verlaufGekuerzt &&
             ' Der Verlauf in ChurchTools ist sehr lang – die ältesten Absagen fehlen hier.'}{' '}
           <button type="button" className={a.linkKnopf} onClick={onNeuLaden}>

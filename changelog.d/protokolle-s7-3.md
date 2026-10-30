@@ -16,6 +16,9 @@
 - Ebenfalls in der Test-Instanz gefunden: Der Spiegel der Einstellungen im Gerät galt je Browser, nicht je Person – an
   einem geteilten Gerät bekam die zweite Person die Einstellungen der ersten (und in ihre Datei). Jetzt je Person.
 
+- Am iPhone gefunden: Das Bild unter dem Finger war breiter als die Karte, der Inhalt brach anders um. Jetzt genau so
+  groß wie die gezogene Karte.
+
 ### Intern
 
 - `shared/ct/personenAblage.ts` verallgemeinert (Präfix/Dateiname als Parameter, `holeDaten`, `mischeEin`) statt einer

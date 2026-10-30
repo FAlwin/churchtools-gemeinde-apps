@@ -4,14 +4,14 @@
  * (O7b-6). Ohne Speicher (privates Fenster, gesperrt) gilt die Vorgabe; Lesen und Schreiben scheitern nie nach außen.
  */
 import type { PersonenWahl } from '@shared/organigramm/personen';
-import { leseImGeraet, merkeImGeraet } from '@ui/speicher/imGeraet';
+import { leseImGeraet, merkeImGeraet } from '@ui/bedienung/geraet';
 
 const TYPEN = 'organigramm-ausgeblendete-typen';
 const ANSICHT = 'organigramm-ansicht';
 const PRAES_ANSICHT = 'organigramm-praesentation-ansicht';
 const PERSONEN = 'organigramm-personen';
 
-// Der gemeinsame Baustein (`@ui/speicher/imGeraet`) – vorher stand dieselbe Mechanik hier und im Dienstplaner.
+// Der gemeinsame Baustein (`@ui/bedienung/geraet`) – vorher stand dieselbe Mechanik hier und im Dienstplaner.
 const lesen = (schluessel: string): unknown =>
   leseImGeraet<unknown>(schluessel, null, (roh) => roh);
 const merken = merkeImGeraet;

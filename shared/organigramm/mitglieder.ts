@@ -113,7 +113,8 @@ export interface RohMitglied {
   memberEndDate?: unknown;
 }
 
-function initialenAus(name: string): string {
+/** „Alwin Friesen“ → „AF“ – die eine Stelle dafür (Mitgliederliste, To-Do-Übersicht der Protokolle). */
+export function initialenAus(name: string): string {
   return name
     .split(/\s+/)
     .filter(Boolean)

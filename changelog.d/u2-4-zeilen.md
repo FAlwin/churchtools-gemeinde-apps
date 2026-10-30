@@ -8,8 +8,7 @@
 
 ### Intern (U2-4)
 
-- **Ein Gerätespeicher für die Erweiterungen:** `ui/speicher/imGeraet.ts` (`leseImGeraet`, `merkeImGeraet`, `texte`) –
-  vorher stand dieselbe Mechanik in `dienstplaner/src/geraet.ts` und privat in `organigramm/src/auswahl.ts`. Dienstplaner
-  und Organigramm nutzen jetzt den Baustein; die Musik-App behält `lokalSpeicher.ts` (meldet zusätzlich einen vollen
-  Speicher).
+- **Ein Gerätespeicher für die Erweiterungen:** Das Organigramm hatte eine eigene Kopie von „Im Gerät merken“ – es nutzt
+  jetzt wie Dienstplaner und Protokolle `ui/bedienung/geraet.ts`, die Anmeldungen ebenso. Test des Bausteins selbst in
+  `ui/bedienung/geraet.test.ts`. Die Musik-App behält `lokalSpeicher.ts` (meldet zusätzlich einen vollen Speicher).
 - `personSchluessel` (`tabelle.ts`): ein Schlüssel je Personenzeile für Zeile und Nadel.

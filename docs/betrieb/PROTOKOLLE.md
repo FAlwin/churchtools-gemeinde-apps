@@ -62,6 +62,15 @@ zugewiesenen, nicht erledigten aus allen Gruppen. „Nächste Sitzungen“ sind 
 „Sitzungen“ (Termine **mit Besprechungsanfrage**, Gruppentreffen, begonnene Protokolle), ab heute über alle Gruppen;
 dahinter steht die eigene Antwort auf die Anfrage – wer nicht eingeladen ist, sieht keine. Ein Tipp öffnet die
 Sitzung bzw. die Gruppe im Reiter „Sitzungen“.
+„Alle anzeigen“ an „Meine offenen To-Dos“ öffnet den Reiter „To-Dos“.
+
+**Reiter „To-Dos“ (S7-1):** alle To-Dos der eigenen Gruppen in einer Liste – **nach Status** (Überfällig · In Arbeit ·
+Offen · Erledigt) oder **nach Person** (ich zuerst, dann nach Namen; „Außerhalb der Gruppe“, „Noch niemand
+zuständig“), im Gerät gemerkt. Die **Leitung** sieht alle To-Dos ihrer Gruppen, **Mitglieder** ihre eigenen und die,
+für die noch niemand zuständig ist. Die **Status-Marke** („◐ In Arbeit“) schaltet mit einem Tipp weiter – ohne ins
+Protokoll zu springen, auch wenn es schon freigegeben ist. Der Filter blendet Gruppen und „Zuständig: Ich / Andere /
+Noch niemand“ aus; Erledigte älter als 30 Tage zeigt der Schalter „Ältere erledigte zeigen“ am Ende der Liste. Ein
+Tipp auf den Text öffnet das Protokoll, aus dem das To-Do stammt.
 
 **Protokoll beginnen (Leitung, S5-1):** Eine Sitzung ohne Protokoll (Termin mit Besprechungsanfrage oder
 Gruppentreffen) zeigt „Protokoll beginnen“. Im Fenster: eine Vorlage, „Wie letztes Mal“ (Tagesordnung des letzten
@@ -177,6 +186,9 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit später sc
   `naechsteNach`), Schreiben `protokolle/src/planen.ts` (Termin → nachlesen → Treffen → Kopf; nach dem Termin nur
   noch Hinweise, nie zurückrollen; unklare Antwort → im Kalender nachsehen, Fehlerklasse `Unklar`), Fenster
   `SitzungFestlegen.tsx`, Kasten `NaechsteSitzung.tsx`. Gemessen: `protokolle-planung/docs/messung-s5-2-2026-10-28.md`.
+- To-Do-Übersicht (S7): Regel `shared/protokolle/uebersicht.ts` (`sichtbarFuer`, `einteilen`, `langeErledigt`), Seite
+  `protokolle/src/ToDos.tsx`, Marke `StatusMarke.tsx`; geschrieben wird über `aufgabeAendern`. Einteilung und Filter
+  merkt `ui/bedienung/geraet.ts` im Gerät (vorher nur im Dienstplaner).
 - Sitzung bearbeiten (K2b): Regel `shared/protokolle/bearbeiten.ts` (`aenderungVon`, `mailsVon`/`mailsSerie`,
   `terminRumpf` – ein Termin-`PUT` leert, was fehlt, darum geht der gelesene Termin vollständig zurück; Serien:
   `serienWeg`, `teilRumpf`, `ausnahmeRumpf`, `endeRumpf`, `verschoben`), Schreiben `protokolle/src/bearbeiten.ts`

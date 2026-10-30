@@ -1,4 +1,4 @@
-import { leseImGeraet, merkeImGeraet, texte } from '@ui/speicher/imGeraet';
+import { leseImGeraet, merkeImGeraet, texte } from '@ui/bedienung/geraet';
 
 /**
  * **Angeheftete Zeilen** (U2-4) – nur auf diesem Gerät, je Veranstaltung (Entscheidung 4, 29.10.2026: Zeilen anheften

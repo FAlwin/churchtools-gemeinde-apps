@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { leseImGeraet, merkeImGeraet, texte } from './imGeraet';
+import { leseImGeraet, merkeImGeraet, texte } from './geraet';
 
 /**
- * Der gemeinsame Gerätespeicher der Erweiterungen (U2-4: vorher je eine Kopie in Dienstplaner und Organigramm). Die
- * Leser der Apps sind dort getestet (`dienstplaner/src/imGeraet.test.ts`, Organigramm über `auswahl.ts`).
+ * Der gemeinsame Gerätespeicher der Erweiterungen (Dienstplaner, To-Dos der Protokolle, Organigramm, Anmeldungen). Die
+ * Leser der Apps sind dort getestet (`dienstplaner/src/geraet.test.ts`, Organigramm über `auswahl.ts`).
  */
 afterEach(() => {
   vi.restoreAllMocks();

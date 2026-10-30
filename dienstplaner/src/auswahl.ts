@@ -1,8 +1,8 @@
 import type { Auswahl } from '@shared/dienstplan/termine';
-import { leseImGeraet, merkeImGeraet, texte } from './geraet';
+import { leseImGeraet, merkeImGeraet, texte } from '@ui/speicher/imGeraet';
 
 /**
- * **Die Wahl in der Termine-Liste merken** (Meine | Alle, ausgeblendete Arten) – im Gerät (`geraet.ts`).
+ * **Die Wahl in der Termine-Liste merken** (Meine | Alle, ausgeblendete Arten) – im Gerät (`@ui/speicher/imGeraet`).
  * Vorgabe „Meine“ (Bauplan: „Vorgabe Meine“).
  */
 const SCHLUESSEL = 'dienstplaner.termine.auswahl';

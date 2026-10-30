@@ -92,6 +92,9 @@ function zeigen(
   );
   return Object.assign(onNeuLaden, { onGespeichert });
 }
+/** Die Spaltenköpfe ohne die schmale Nadel-Spalte vorn (U2-4). */
+const spaltenKoepfe = () =>
+  screen.getAllByRole('columnheader').filter((k) => k.getAttribute('aria-label') !== 'Angeheftet');
 /** Die Zeile der Tabelle zu einem Namen (U2-1: der Name ist der Knopf, die Zeile drumherum). */
 const zeile = (name: string) => screen.getByRole('button', { name }).closest('tr')!;
 const fertig = (
@@ -200,13 +203,12 @@ describe('Tabelle (U2-1)', () => {
     expect(screen.getByRole('button', { name: 'Zahlung offen 2' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Warteliste 1' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Abgesagt 0' })).toBeTruthy();
-    const kopf = screen.getAllByRole('columnheader').map((k) => k.textContent);
+    const kopf = spaltenKoepfe().map((k) => k.textContent);
     expect(kopf.slice(0, 3)).toEqual(['Name', 'Nr.', 'Personen']);
     expect(kopf).toContain('Telefon');
     expect(kopf.slice(-3)).toEqual(['Betrag', 'Bezahlt', 'Angemeldet am']);
     // Lange Fragen sind auf zwei Zeilen gekürzt – ganz stehen sie beim Darüberfahren (echte Prüfung U2-1).
-    for (const k of screen.getAllByRole('columnheader'))
-      expect(k.getAttribute('title')).toBe(k.textContent);
+    for (const k of spaltenKoepfe()) expect(k.getAttribute('title')).toBe(k.textContent);
     // Druckliste und Rundmail mit Linien-Symbol statt Zeichen (am Handy nur das Symbol).
     for (const name of ['Druckliste', 'Rundmail'])
       expect(screen.getByRole('button', { name }).querySelector('svg')).toBeTruthy();
@@ -275,7 +277,7 @@ describe('Je Person (U2-2)', () => {
     expect(screen.queryByRole('table', { name: 'Anmeldungen' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Alle 2' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Warteliste 1' })).toBeTruthy();
-    const kopf = screen.getAllByRole('columnheader').map((k) => k.textContent);
+    const kopf = spaltenKoepfe().map((k) => k.textContent);
     expect(kopf.slice(0, 4)).toEqual(['Vorname', 'Nachname', 'Status', 'Alter']);
     expect(kopf.slice(-2)).toEqual(['Betrag der Anmeldung', 'Bezahlt']);
     expect(personen()).toEqual([
@@ -1112,7 +1114,7 @@ describe('Spalten wählen (U2-3)', () => {
     em.aendereEinstellungen.mockReset();
     em.aendereEinstellungen.mockResolvedValue(e());
   });
-  const kopf = () => screen.getAllByRole('columnheader').map((k) => k.textContent);
+  const kopf = () => spaltenKoepfe().map((k) => k.textContent);
   const fenster = () => screen.getByRole('dialog');
   const spalten = () => fireEvent.click(screen.getByRole('button', { name: 'Spalten' }));
   const haken = (name: string) =>
@@ -1250,5 +1252,112 @@ describe('Spalten wählen (U2-3)', () => {
     expect(screen.getByRole('button', { name: 'Spalten' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /^Abgesagt/ }));
     expect(screen.queryByRole('button', { name: 'Spalten' })).toBeNull();
+  });
+});
+
+describe('Zeilen anheften (U2-4)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+  /** Drei Anmeldungen: AAAAAA bezahlt, BBBBBB offen, CCCCCC wartet (alle „Maria Beispiel“ – die Nr. unterscheidet). */
+  const drei = () =>
+    fertig(
+      [
+        ...mitglieder('AAAAAA', [true, true], 10, { bezahlt: true }),
+        ...mitglieder('BBBBBB', [true, false], 20),
+        ...mitglieder('CCCCCC', [false, false], 30),
+      ],
+      [dazu(10, '2026-10-17'), dazu(20, '2026-10-18'), dazu(30, '2026-10-19')],
+    );
+  const tabelle = () => screen.getByRole('table', { name: /Anmeldungen|Personen/ });
+  const reihe = () =>
+    within(tabelle())
+      .getAllByRole('row')
+      .slice(1, -1)
+      .map((r) => /([A-Z]{6})/.exec(r.textContent ?? '')?.[1]);
+  const nadeln = () =>
+    within(tabelle()).getAllByRole('button', { name: /oben anheften|nicht mehr anheften/ });
+  const gemerkt = () =>
+    JSON.parse(localStorage.getItem('anmeldungen.zeilen-oben.165') ?? '[]') as string[];
+
+  it('Nadel heftet eine Zeile oben an, gemerkt auf diesem Gerät – nach dem Neuladen noch oben', () => {
+    zeigen(drei());
+    expect(reihe()).toEqual(['AAAAAA', 'BBBBBB', 'CCCCCC']);
+    expect(screen.getByRole('columnheader', { name: 'Angeheftet' })).toBeTruthy();
+    fireEvent.click(nadeln()[2]);
+    expect(reihe()).toEqual(['CCCCCC', 'AAAAAA', 'BBBBBB']);
+    const an = nadeln()[0];
+    expect(an.getAttribute('aria-pressed')).toBe('true');
+    expect(an.getAttribute('aria-label')).toBe('Zeile nicht mehr anheften');
+    expect(an.closest('tr')!.className).toMatch(/oben/);
+    expect(an.closest('tr')!.className).toMatch(/trenn/);
+    expect(gemerkt()).toHaveLength(1);
+    // Die Nadel öffnet nicht das Fenster der Anmeldung.
+    expect(screen.queryByRole('dialog')).toBeNull();
+    cleanup();
+    zeigen(drei());
+    expect(reihe()).toEqual(['CCCCCC', 'AAAAAA', 'BBBBBB']);
+    fireEvent.click(nadeln()[0]);
+    expect(reihe()).toEqual(['AAAAAA', 'BBBBBB', 'CCCCCC']);
+    expect(gemerkt()).toEqual([]);
+  });
+
+  it('bleibt beim Sortieren oben; die Sortierung gilt darunter', () => {
+    zeigen(drei());
+    fireEvent.click(nadeln()[0]); // AAAAAA
+    const nr = () =>
+      within(screen.getByRole('columnheader', { name: /^Nr\./ })).getByRole('button');
+    fireEvent.click(nr());
+    fireEvent.click(nr()); // absteigend
+    expect(reihe()).toEqual(['AAAAAA', 'CCCCCC', 'BBBBBB']);
+  });
+
+  it('folgt dem Reiter: nur dort oben, wo die Zeile ohnehin steht', () => {
+    zeigen(drei());
+    fireEvent.click(screen.getByRole('button', { name: /^Warteliste/ }));
+    // Ohne Nadel nach dem Warteplatz (beide 1 → wie die Liste).
+    expect(reihe()).toEqual(['BBBBBB', 'CCCCCC']);
+    fireEvent.click(screen.getByRole('button', { name: /^Alle/ }));
+    fireEvent.click(nadeln()[2]); // CCCCCC – alle warten, nichts zu zahlen
+    fireEvent.click(screen.getByRole('button', { name: /^Zahlung offen/ }));
+    expect(reihe()).toEqual(['BBBBBB']);
+    expect(within(tabelle()).getAllByRole('row')[1].className).not.toMatch(/oben/);
+    fireEvent.click(screen.getByRole('button', { name: /^Warteliste/ }));
+    expect(reihe()).toEqual(['CCCCCC', 'BBBBBB']);
+  });
+
+  it('je Person eigene Nadeln; bei „Abgesagt“ keine', () => {
+    zeigen(drei());
+    fireEvent.click(nadeln()[1]); // Anmeldung BBBBBB
+    fireEvent.click(screen.getByRole('button', { name: 'Je Person' }));
+    expect(nadeln().every((n) => n.getAttribute('aria-pressed') === 'false')).toBe(true);
+    const letzte = nadeln().at(-1)!;
+    const wer = letzte.closest('tr')!.textContent;
+    fireEvent.click(letzte);
+    expect(nadeln()[0].getAttribute('aria-pressed')).toBe('true');
+    expect(nadeln()[0].closest('tr')!.textContent).toBe(wer);
+    expect(reihe()[0]).toBe('CCCCCC');
+    fireEvent.click(screen.getByRole('button', { name: /^Abgesagt/ }));
+    expect(screen.queryByRole('columnheader', { name: 'Angeheftet' })).toBeNull();
+  });
+
+  it('was es nicht mehr gibt, fällt beim nächsten Anheften aus dem Speicher; ohne Speicher geht es trotzdem', () => {
+    localStorage.setItem('anmeldungen.zeilen-oben.165', JSON.stringify(['längst-abgesagt']));
+    zeigen(drei());
+    fireEvent.click(nadeln()[0]);
+    expect(gemerkt()).toHaveLength(1);
+    expect(gemerkt()).not.toContain('längst-abgesagt');
+    cleanup();
+    localStorage.clear();
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('gesperrt');
+    });
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('gesperrt');
+    });
+    zeigen(drei());
+    fireEvent.click(nadeln()[2]);
+    expect(reihe()[0]).toBe('CCCCCC');
   });
 });

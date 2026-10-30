@@ -4,27 +4,17 @@
  * (O7b-6). Ohne Speicher (privates Fenster, gesperrt) gilt die Vorgabe; Lesen und Schreiben scheitern nie nach außen.
  */
 import type { PersonenWahl } from '@shared/organigramm/personen';
+import { leseImGeraet, merkeImGeraet } from '@ui/speicher/imGeraet';
 
 const TYPEN = 'organigramm-ausgeblendete-typen';
 const ANSICHT = 'organigramm-ansicht';
 const PRAES_ANSICHT = 'organigramm-praesentation-ansicht';
 const PERSONEN = 'organigramm-personen';
 
-function lesen(schluessel: string): unknown {
-  try {
-    return JSON.parse(localStorage.getItem(schluessel) ?? 'null') as unknown;
-  } catch {
-    return null;
-  }
-}
-
-function merken(schluessel: string, wert: unknown): void {
-  try {
-    localStorage.setItem(schluessel, JSON.stringify(wert));
-  } catch {
-    // Ohne Speicher bleibt die Wahl bis zum Neuladen – mehr nicht.
-  }
-}
+// Der gemeinsame Baustein (`@ui/speicher/imGeraet`) – vorher stand dieselbe Mechanik hier und im Dienstplaner.
+const lesen = (schluessel: string): unknown =>
+  leseImGeraet<unknown>(schluessel, null, (roh) => roh);
+const merken = merkeImGeraet;
 
 export function leseAusgeblendet(): Set<number> {
   const roh = lesen(TYPEN);

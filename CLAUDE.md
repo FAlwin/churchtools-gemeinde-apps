@@ -280,6 +280,9 @@ churchtools-gemeinde-apps/
   Tastaturhöhe am `visualViewport` und holt den von iOS hinterlassenen Dokument-Scroll zurück; ohne
   ihn liegen Trefferlisten/Knöpfe unter der Tastatur und die Kopfleiste bleibt verrutscht. Gilt für
   `Sheet` (alle Dialoge), das Punkt-Fenster (`ui/ablauf/PunktFenster`, mit `LiedVerknuepfen`) und den `ChordEditor`.
+  **Eine Tastatur gibt es nur, solange in einem Feld geschrieben wird** (`schreibtGerade`, 30.10.2026): iOS meldet
+  den `visualViewport` manchmal noch klein, wenn sie längst zu ist – dann zeigte jedes neue Fenster nur den Schleier
+  (0 px hoch). Zusätzlich behält ein Overlay immer `FENSTER_PLATZ_PX`.
 - **Ein 401 heißt „Sitzung abgelaufen" und führt zum Login** (#186, #210, #211): Der globale Fänger
   sitzt in **`services/api.ts`** (`setSessionExpiredHandler`, registriert in `App.tsx`) – bewusst in
   `apiFetch` und nicht mehr am QueryClient, denn `services/annotations.ts` und
@@ -530,7 +533,8 @@ sonst in eine leere zweite Bildschirmzeile um (Chromium nicht, deshalb prüft de
 CodeMirror-Markierung um ein ersetztes Kärtchen wird nicht gezeichnet; `AkkordWidget.ignoreEvent` lässt
 `mousedown` durch; Klammer-Grammatik der Kärtchen EINMAL in `AKKORD_KLAMMER`). L5-3 = **Schreibansicht** (`schreiben` = Tastatur offen
 UND Fokus im Text): Ablauf, Fassung, Umschalter weg, `AkkordLeiste kompakt` in der Werkzeugleiste („Im Lied“ als
-Ausklappmenü, darin „Anderer Akkord“ – sonst wird die Zeile zu eng), endet erst mit Tastatur-zu. Tastaturhöhe EINMAL in `ui/fenster/useTastaturOffen.ts` (`tastaturHoehe`,
+Ausklappmenü, darin „Anderer Akkord“ – sonst wird die Zeile zu eng), endet erst mit Tastatur-zu. Tastaturhöhe EINMAL in `ui/fenster/useTastaturOffen.ts` (`tastaturHoehe`, 0 ohne
+Schreibfeld im Fokus – `schreibtGerade`, auch für `syncAppHeight` –,
 gemessen gegen die beim Tippen eingefrorene `--app-h` – iOS verkleinert manchmal das Fenster; auch für
 `useOverlayKeyboardInset` und `useKeyboardInsets`); Knöpfe um den Text mit `onMouseDown`-`preventDefault`, damit sie
 dem Text den Fokus (und damit die Tastatur) nicht nehmen. L4 = **Liedinfo** (Titel, Autor, CCLI, Copyright am Lied; Tempo, Takt am

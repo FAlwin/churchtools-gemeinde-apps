@@ -47,6 +47,14 @@ describe('Polster für den Home-Strich (Messung B0)', () => {
     expect(ftr).not.toContain('safe-area-inset-bottom');
   });
 
+  it('die Reiterleiste liegt in der ChurchTools-App ganz über dem Home-Strich', () => {
+    // Bis zum 30.10.2026 `--unten-strich` − 14px: Die Beschriftungen lagen im Strich, die runden Ecken schnitten die
+    // äußeren an (Alwin am iPhone, Organigramm).
+    const start = QUELLE.search(/^\.ct-extension,\n\.ct-extension \* \{/m);
+    const block = QUELLE.slice(start, QUELLE.indexOf('\n}', start));
+    expect(block).toMatch(/^\s*--reiter-polster: max\(6px, var\(--unten-strich\)\);/m);
+  });
+
   it('die Erkennung greift (Gegenprobe gegen einen Block ohne Gegenstück)', () => {
     const quelle =
       ':root {\n  --a-polster: 1px;\n  --b-polster: 2px;\n}\n.ct-extension,\n.ct-extension * {\n  --a-polster: 0;\n}\n';

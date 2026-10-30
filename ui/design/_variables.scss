@@ -133,9 +133,10 @@ html[data-theme='dark'] {
  */
 .ct-extension,
 .ct-extension * {
-  // Reiterleiste: im Browser schmal (6px); in der ChurchTools-App vom Home-Bildschirm über dem Strich (~20px, wie
-  // die Leiste der ChurchTools-App selbst).
-  --reiter-polster: max(6px, calc(var(--unten-strich) - 14px));
+  // Reiterleiste: im Browser schmal (6px); in der ChurchTools-App vom Home-Bildschirm ganz über dem Strich (34px). Mit
+  // nur 20px (bis 30.10.2026) lagen die Beschriftungen ~10px im Strich-Bereich, und die runden Ecken schnitten die
+  // äußeren an (Alwin am iPhone: „Organigramm“, „Neue Gliederung“).
+  --reiter-polster: max(6px, var(--unten-strich));
   // Fußleiste des Liedblatts: fehlte hier bis Scheibe B1 – 36 px Blatt verschenkt (Messung B0, 28.10.2026). Jedes
   // `…-polster` oben braucht hier sein Gegenstück; `polster.test.ts` hält das fest.
   --blatt-fuss-polster: calc(var(--unten-strich) + 6px);

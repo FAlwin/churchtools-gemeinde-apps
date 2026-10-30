@@ -14,7 +14,7 @@ import { Icon } from '@ui/icons/icons';
 import { ctBasis } from '@ui/ct/basis';
 import { Sheet } from '@ui/fenster/Sheet';
 import { UnterschriftBild } from '@ui/anmeldeformular/Bausteine';
-import type { OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
+import type { OeffentlicheEinstellungen, TabellenWahl } from '@shared/anmeldung/formular';
 import { euroText } from '@shared/anmeldung/preis';
 import { zahlungTitel } from '@shared/anmeldung/zahlung';
 import { unterschriftLesen } from '@shared/anmeldung/unterschrift';
@@ -30,21 +30,27 @@ import {
 } from '@shared/anmeldung/liste';
 import type { GeladenerStand } from './mitglieder';
 import {
-  anmeldungsSpalten,
+  gezeigteSpalten,
+  mitSpaltenWahl,
   personZeilen,
   personZellText,
   personenSortiert,
-  personenSpalten,
   personSumme,
   type PersonZeile,
   passtZurSuche,
   sortiert,
+  spaltenWahl,
   summe,
+  wahlGeaendert,
   zellText,
   type Sortierung,
+  type TabellenModus,
   type TabellenSpalte,
 } from '@shared/anmeldung/tabelle';
 import { AnmeldungenTabelle } from './AnmeldungenTabelle';
+import { SpaltenFenster } from './SpaltenFenster';
+import { aendereEinstellungen } from './einrichten';
+import { fehlerMeldung } from './zustand';
 import { tagPunkt as lang } from '@shared/ct/datum';
 import { anzahlText, mailAnbieten } from './anzeige';
 import { AnmeldungZahlung } from './AnmeldungZahlung';
@@ -555,6 +561,11 @@ export function AnmeldungenReiter({
   const [sortierung, setSortierung] = useState<Sortierung>(null);
   // Eine Zeile je Anmeldung oder je Person (U2-2) – gilt in allen Reitern außer „Abgesagt“ (Absagen sind je Person).
   const [jePerson, setJePerson] = useState(false);
+  // Die Spaltenwahl (U2-3) kommt aus den Einstellungen; hier steht nur, was man eben übernommen hat – damit die Tabelle
+  // sofort umspringt und es auch ohne Recht zum Speichern bis zum Neuladen gilt.
+  const [eigeneWahl, setEigeneWahl] = useState<Partial<Record<TabellenModus, TabellenWahl>>>({});
+  const [spaltenOffen, setSpaltenOffen] = useState(false);
+  const [spaltenFehler, setSpaltenFehler] = useState<string | null>(null);
   const [offen, setOffen] = useState<string | null>(null);
   // Die letzte Änderung im offenen Fenster – mit dem Fenster weg.
   const [meldung, setMeldung] = useState<FensterMeldung | null>(null);
@@ -679,6 +690,24 @@ export function AnmeldungenReiter({
       hinweis: x.hinweis,
     });
     onGespeichert();
+  };
+
+  const modus: TabellenModus = jePerson ? 'person' : 'anmeldung';
+  const wahl = eigeneWahl[modus] ?? spaltenWahl(e, modus);
+  const spalten = gezeigteSpalten(e, modus, wahl, { warteliste: filter === 'warte' });
+  /** Übernehmen: gilt sofort; gemerkt fürs Team, wenn man darf und sich etwas geändert hat (wie die Druckliste). */
+  const spaltenUebernehmen = (w: TabellenWahl) => {
+    setSpaltenOffen(false);
+    setEigeneWahl((alt) => ({ ...alt, [modus]: w }));
+    // Die Sortierung nach einer ausgeblendeten Spalte wäre unsichtbar.
+    if (sortierung && w.aus.includes(sortierung.schluessel)) setSortierung(null);
+    if (!darf || !wahlGeaendert(e, modus, w)) return;
+    setSpaltenFehler(null);
+    aendereEinstellungen(id, (x) => mitSpaltenWahl(x, modus, w)).then(onGespeichert, (x: unknown) =>
+      setSpaltenFehler(
+        `Die Spalten sind nur hier umgestellt, nicht für das Team gemerkt: ${fehlerMeldung(x).text}`,
+      ),
+    );
   };
 
   const wechseln = (f: ListenFilter) => {
@@ -876,6 +905,12 @@ export function AnmeldungenReiter({
             />
           )}
           <span className={a.rechts}>
+            {filter !== 'abgesagt' && liste.length > 0 && (
+              <FensterKnopf art="zweit" aria-label="Spalten" onClick={() => setSpaltenOffen(true)}>
+                <Icon name="columns" size={18} />
+                <span className={a.breit}>Spalten</span>
+              </FensterKnopf>
+            )}
             {liste.length > 0 && (
               <FensterKnopf art="zweit" aria-label="Druckliste" onClick={() => setDruck(true)}>
                 <Icon name="drucker" size={18} />
@@ -893,6 +928,12 @@ export function AnmeldungenReiter({
             )}
           </span>
         </div>
+
+        {spaltenFehler && (
+          <p className={a.hinweisRot} role="alert">
+            {spaltenFehler}
+          </p>
+        )}
 
         {filter === 'abgesagt' ? (
           absageZeilen.length === 0 ? (
@@ -922,7 +963,7 @@ export function AnmeldungenReiter({
         ) : jePerson ? (
           <AnmeldungenTabelle
             name="Personen"
-            spalten={personenSpalten(e, { kostet: z.kostet, warteliste: filter === 'warte' })}
+            spalten={spalten}
             zeilen={personenGezeigt}
             schluessel={(y) => `${y.x.schluessel}-${y.p.personId}`}
             zelle={personZelle}
@@ -934,7 +975,7 @@ export function AnmeldungenReiter({
         ) : (
           <AnmeldungenTabelle
             name="Anmeldungen"
-            spalten={anmeldungsSpalten(e, { kostet: z.kostet, warteliste: filter === 'warte' })}
+            spalten={spalten}
             zeilen={zeilen}
             schluessel={(x) => x.schluessel}
             zelle={zelle}
@@ -997,6 +1038,17 @@ export function AnmeldungenReiter({
           // Wie der Filter der Liste – „Zahlung offen“ beginnt mit der Zahlungserinnerung.
           startFilter={filter === 'offen' ? 'offen' : filter === 'warte' ? 'warte' : 'alle'}
           onClose={() => setRundmail(false)}
+        />
+      )}
+
+      {spaltenOffen && (
+        <SpaltenFenster
+          e={e}
+          modus={modus}
+          wahl={wahl}
+          darf={darf}
+          onUebernehmen={spaltenUebernehmen}
+          onClose={() => setSpaltenOffen(false)}
         />
       )}
 

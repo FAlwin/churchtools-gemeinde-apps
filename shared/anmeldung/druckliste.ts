@@ -76,11 +76,19 @@ export function teilnehmerSpalten(e: OeffentlicheEinstellungen): DruckSpalte[] {
   ];
 }
 
-/** Die gemerkte Wahl, bereinigt: Spalten, die es nicht mehr gibt (Frage gelöscht), fallen weg. */
+/**
+ * **Gemerkte Spalten bereinigen** – was es nicht mehr gibt (Frage gelöscht, Geburtsdatum nicht mehr gefragt), fällt
+ * weg. Die eine Regel für Druckliste und Tabelle (U2-3).
+ */
+export function nurVorhandene(spalten: string[], katalog: { schluessel: string }[]): string[] {
+  const da = new Set(katalog.map((s) => s.schluessel));
+  return spalten.filter((s) => da.has(s));
+}
+
+/** Die gemerkte Wahl, bereinigt (`nurVorhandene`). */
 export function druckWahlFuer(e: OeffentlicheEinstellungen): DruckWahl {
   const w = e.druck ?? DRUCK_STANDARD;
-  const da = new Set(teilnehmerSpalten(e).map((s) => s.schluessel));
-  return { spalten: w.spalten.filter((s) => da.has(s)), sortierung: w.sortierung };
+  return { spalten: nurVorhandene(w.spalten, teilnehmerSpalten(e)), sortierung: w.sortierung };
 }
 
 const nameVon = (p: ListenPerson) => (p.nach ? `${p.nach}, ${p.vor}` : p.vor);

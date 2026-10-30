@@ -1,22 +1,36 @@
 import { describe, expect, it } from 'vitest';
 import { anmeldungenAus, antwortText, listenZahlen, mitgliederstandAus } from './liste';
 import { FELDER, PERSONEN, STICHTAG, e, mitglieder } from './liste.testdaten';
-import { fragen, teilnehmerSpalten, teilnehmerZelle } from './druckliste';
-import type { Feld } from './formular';
+import { druckWahlFuer, fragen, teilnehmerSpalten, teilnehmerZelle } from './druckliste';
+import {
+  einstellungenEntpacken,
+  einstellungenPacken,
+  type Feld,
+  type OeffentlicheEinstellungen,
+} from './formular';
 import { euroText } from './preis';
 import {
-  anmeldungsSpalten,
   frageSumme,
+  gezeigteSpalten,
+  mitSpaltenWahl,
   mehrfachAntworten,
   passtZurSuche,
   personZeilen,
   personZellText,
   personenSortiert,
-  personenSpalten,
   personSumme,
   sortiert,
+  spalteAnheften,
+  spaltenGruppen,
+  spaltenKatalog,
+  spaltenWahl,
+  spalteVerschieben,
+  spalteZeigen,
   summe,
+  vorgabeWahl,
+  wahlGeaendert,
   zellText,
+  type TabellenModus,
 } from './tabelle';
 
 /**
@@ -40,6 +54,22 @@ const liste = (x = e()) => {
   return anmeldungenAus(x, mitgliederstandAus(roh, [], FELDER, new Set([35]), personen), STICHTAG);
 };
 
+/** Was die Tabelle ohne Wahl zeigt (Vorgabe, U2-3). */
+const vorgabeSpalten = (x: OeffentlicheEinstellungen, modus: TabellenModus, warteliste = false) =>
+  gezeigteSpalten(x, modus, spaltenWahl(x, modus), { warteliste });
+
+/** Dieselbe Veranstaltung, kostenlos – ohne Betrag und Bezahlt (`kannEtwasKosten`). */
+const kostenlos = (x = e()): OeffentlicheEinstellungen => ({
+  ...x,
+  preis: {
+    ...x.preis,
+    grundpreis: { ...x.preis.grundpreis, art: 'fest', betragCent: 0, optionen: [] },
+    alter: [],
+    anpassungen: [],
+    extras: [],
+  },
+});
+
 const feld = (typ: Feld['typ'], antworten: string[] = [], verborgen?: string[]): Feld => ({
   id: 'f1',
   art: 'eigen',
@@ -54,7 +84,7 @@ const feld = (typ: Feld['typ'], antworten: string[] = [], verborgen?: string[]):
 describe('Spalten je Anmeldung', () => {
   it('Name, Nr., Personen, die Fragen der Anmeldung (wie die Druckliste), Betrag, Bezahlt, Angemeldet am', () => {
     const x = e();
-    const titel = anmeldungsSpalten(x, { kostet: true, warteliste: false }).map((s) => s.titel);
+    const titel = vorgabeSpalten(x, 'anmeldung').map((s) => s.titel);
     const fragenDerAnmeldung = fragen(x)
       .filter((f) => x.formular.anmeldung.includes(f))
       .map((f) => f.frage);
@@ -73,11 +103,12 @@ describe('Spalten je Anmeldung', () => {
     for (const f of jePerson) expect(titel).not.toContain(f.frage);
   });
 
-  it('kostet nichts → ohne Betrag und Bezahlt; Warteliste → Warteplatz nach der Nr.', () => {
-    const k = anmeldungsSpalten(e(), { kostet: false, warteliste: true }).map((s) => s.schluessel);
+  it('kostet nichts → ohne Betrag und Bezahlt; Warteliste → Warteplatz gleich hinter dem angehefteten Namen', () => {
+    expect(listenZahlen(kostenlos(), []).kostet).toBe(false);
+    const k = vorgabeSpalten(kostenlos(), 'anmeldung', true).map((s) => s.schluessel);
     expect(k).not.toContain('betrag');
     expect(k).not.toContain('bezahlt');
-    expect(k.slice(0, 4)).toEqual(['name', 'nr', 'warteplatz', 'personen']);
+    expect(k.slice(0, 4)).toEqual(['name', 'warteplatz', 'nr', 'personen']);
   });
 
   it('Zelle einer Frage = die Antwort, wie das Fenster sie zeigt (`antwortText` aus den Werten der Anmeldung)', () => {
@@ -180,7 +211,7 @@ describe('Je Person (U2-2)', () => {
     const titel = (k: string) => katalog.find((s) => s.schluessel === k)!.titel;
     const personFragen = fragen(x).filter((f) => x.formular.person.includes(f));
     expect(personFragen.length).toBeGreaterThan(0);
-    expect(personenSpalten(x, { kostet: true, warteliste: false }).map((s) => s.titel)).toEqual([
+    expect(vorgabeSpalten(x, 'person').map((s) => s.titel)).toEqual([
       'Vorname',
       'Nachname',
       'Status',
@@ -191,8 +222,8 @@ describe('Je Person (U2-2)', () => {
       'Betrag der Anmeldung',
       'Bezahlt',
     ]);
-    // Fragen der Anmeldung stehen in dieser Ansicht erst mit der Spaltenwahl (U2-3).
-    const k = personenSpalten(x, { kostet: false, warteliste: true }).map((s) => s.schluessel);
+    // Fragen der Anmeldung sind in dieser Ansicht ohne Wahl ausgeblendet (U2-3: wählbar).
+    const k = vorgabeSpalten(kostenlos(x), 'person', true).map((s) => s.schluessel);
     expect(k.slice(0, 4)).toEqual(['vor', 'nach', 'warteplatz', 'status']);
     expect(k).not.toContain('betrag');
     for (const f of fragen(x).filter((y) => x.formular.anmeldung.includes(y)))
@@ -281,5 +312,204 @@ describe('Je Person (U2-2)', () => {
       'Lena AAAAAA',
       'Jonas BBBBBB',
     ]);
+  });
+});
+
+describe('Spalten wählen (U2-3)', () => {
+  const anmFragen = (x: OeffentlicheEinstellungen) =>
+    fragen(x)
+      .filter((f) => x.formular.anmeldung.includes(f))
+      .map((f) => `frage:${f.id}`);
+  const persFragen = (x: OeffentlicheEinstellungen) =>
+    fragen(x)
+      .filter((f) => x.formular.person.includes(f))
+      .map((f) => `frage:${f.id}`);
+  const schluessel = (x: OeffentlicheEinstellungen, modus: TabellenModus) =>
+    vorgabeSpalten(x, modus).map((s) => s.schluessel);
+
+  it('Vorgabe: alles in der Reihenfolge des Katalogs; je Person ohne Geburtsdatum und ohne die Fragen der Anmeldung', () => {
+    const x = e();
+    expect(vorgabeWahl(x, 'anmeldung')).toEqual({
+      reihe: spaltenKatalog(x, 'anmeldung').map((s) => s.schluessel),
+      aus: [],
+      fest: ['name'],
+    });
+    const p = vorgabeWahl(x, 'person');
+    expect(p.reihe).toEqual(spaltenKatalog(x, 'person').map((s) => s.schluessel));
+    expect(p.aus).toEqual(['geburtstag', ...anmFragen(x)]);
+    expect(p.fest).toEqual(['vor', 'nach']);
+    // Angeheftet heißt: vorn und `fest`.
+    expect(
+      vorgabeSpalten(x, 'person')
+        .filter((s) => s.fest)
+        .map((s) => s.schluessel),
+    ).toEqual(['vor', 'nach']);
+  });
+
+  it('der Katalog je Person nimmt die Druckliste (`teilnehmerSpalten`) ganz auf, dazu Name, Status und Geld', () => {
+    const x = e();
+    const k = spaltenKatalog(x, 'person');
+    for (const d of teilnehmerSpalten(x))
+      expect(k.find((s) => s.schluessel === d.schluessel)?.titel).toBe(d.titel);
+    expect(k.map((s) => s.schluessel)).toEqual(
+      expect.arrayContaining(['vor', 'nach', 'status', 'betrag', 'bezahlt', ...anmFragen(x)]),
+    );
+    // Kostenlos: kein Geld – in beiden Ansichten dieselbe Bedingung wie die Kacheln.
+    for (const m of ['anmeldung', 'person'] as const)
+      expect(spaltenKatalog(kostenlos(x), m).map((s) => s.schluessel)).not.toContain('betrag');
+  });
+
+  it('ausblenden, anheften (mehrere, in der Reihenfolge des Anheftens), verschieben → so zeigt es die Tabelle', () => {
+    const x = e();
+    let w = vorgabeWahl(x, 'anmeldung');
+    w = spalteZeigen(w, 'am');
+    w = spalteAnheften(w, 'nr');
+    w = spalteVerschieben(w, 'nr', -1); // vor den Namen
+    w = spalteVerschieben(w, 'betrag', -1);
+    const k = gezeigteSpalten(x, 'anmeldung', w, { warteliste: true }).map((s) => s.schluessel);
+    expect(k.slice(0, 3)).toEqual(['nr', 'name', 'warteplatz']);
+    expect(k).not.toContain('am');
+    const ohneFest = k.slice(3);
+    expect(ohneFest.indexOf('betrag')).toBeLessThan(ohneFest.indexOf(anmFragen(x).at(-1)!));
+    expect(spaltenGruppen(w).aus).toEqual(['am']);
+  });
+
+  it('eine angeheftete Spalte ausblenden lässt sie los; eine ausgeblendete anheften zeigt sie; die letzte bleibt', () => {
+    const x = e();
+    let w = spalteZeigen(vorgabeWahl(x, 'person'), 'vor');
+    expect(w.fest).toEqual(['nach']);
+    expect(w.aus).toContain('vor');
+    w = spalteAnheften(w, 'geburtstag');
+    expect(w.aus).not.toContain('geburtstag');
+    expect(w.fest).toEqual(['nach', 'geburtstag']);
+    // Alles bis auf eine Spalte weg – die letzte bleibt stehen.
+    let nur = vorgabeWahl(x, 'anmeldung');
+    for (const k of nur.reihe) nur = spalteZeigen(nur, k);
+    expect(spaltenGruppen(nur).fest.length + spaltenGruppen(nur).sichtbar.length).toBe(1);
+  });
+
+  it('verschieben bleibt in der eigenen Gruppe; am Rand und ausgeblendet passiert nichts', () => {
+    const x = e();
+    const w = spalteZeigen(vorgabeWahl(x, 'anmeldung'), 'am');
+    expect(spalteVerschieben(w, 'name', -1)).toBe(w);
+    expect(spalteVerschieben(w, 'name', 1)).toBe(w); // einzige angeheftete
+    expect(spalteVerschieben(w, 'am', -1)).toBe(w); // ausgeblendet
+    const erste = spaltenGruppen(w).sichtbar[0];
+    expect(spalteVerschieben(w, erste, -1)).toBe(w);
+  });
+
+  it('gemerkt wird nur die Abweichung; zurück zur Vorgabe fällt die Ansicht weg; die andere bleibt', () => {
+    const x = e();
+    expect(mitSpaltenWahl(x, 'anmeldung', vorgabeWahl(x, 'anmeldung')).tabelle).toBeUndefined();
+    const w = spalteZeigen(vorgabeWahl(x, 'anmeldung'), 'am');
+    const p = spalteAnheften(vorgabeWahl(x, 'person'), 'status');
+    let y = mitSpaltenWahl(mitSpaltenWahl(x, 'anmeldung', w), 'person', p);
+    expect(y.tabelle).toEqual({ anmeldung: w, person: p });
+    expect(spaltenWahl(y, 'anmeldung')).toEqual(w);
+    expect(wahlGeaendert(y, 'anmeldung', w)).toBe(false);
+    expect(wahlGeaendert(x, 'anmeldung', w)).toBe(true);
+    y = mitSpaltenWahl(y, 'anmeldung', vorgabeWahl(y, 'anmeldung'));
+    expect(y.tabelle).toEqual({ person: p });
+    y = mitSpaltenWahl(y, 'person', vorgabeWahl(y, 'person'));
+    expect('tabelle' in y).toBe(false);
+  });
+
+  it('übersteht Packen und Entpacken (das Schema kennt das Feld) und bleibt klein', () => {
+    // Der Termin der Testdaten ist für das Speicherformat unvollständig – für die Spalten egal.
+    const x: OeffentlicheEinstellungen = { ...e(), termin: null };
+    let w = vorgabeWahl(x, 'person');
+    for (const k of [...w.reihe].reverse()) w = spalteAnheften(w, k);
+    const v = {
+      ...vorgabeWahl(x, 'anmeldung'),
+      reihe: [...vorgabeWahl(x, 'anmeldung').reihe].reverse(),
+    };
+    const y = mitSpaltenWahl(mitSpaltenWahl(x, 'person', w), 'anmeldung', v);
+    const zurueck = einstellungenEntpacken(einstellungenPacken(y))!;
+    expect(zurueck.tabelle).toEqual(y.tabelle);
+    expect(spaltenWahl(zurueck, 'person')).toEqual(w);
+    // Beide Ansichten, alles umgestellt: gepackt wenige hundert Zeichen (Bauplan: Platz in der Beschreibung).
+    expect(einstellungenPacken(y).length - einstellungenPacken(x).length).toBeLessThan(400);
+  });
+
+  it('bereinigt wie die Druckliste: eine gelöschte Frage fällt aus Wahl und Druckliste; neue Fragen nach der Vorgabe', () => {
+    const x = e();
+    const [weg] = persFragen(x);
+    const nurAnm = anmFragen(x)[0];
+    let w = spalteAnheften(vorgabeWahl(x, 'person'), weg);
+    w = spalteZeigen(w, nurAnm);
+    const y: OeffentlicheEinstellungen = {
+      ...mitSpaltenWahl(x, 'person', w),
+      druck: { spalten: ['alter', weg], sortierung: 'nachname' },
+    };
+    const ohne = (z: OeffentlicheEinstellungen): OeffentlicheEinstellungen => ({
+      ...z,
+      formular: {
+        ...z.formular,
+        person: z.formular.person.filter((f) => `frage:${f.id}` !== weg),
+      },
+    });
+    const g = spaltenWahl(ohne(y), 'person');
+    for (const liste of [g.reihe, g.aus, g.fest]) expect(liste).not.toContain(weg);
+    expect(druckWahlFuer(ohne(y)).spalten).toEqual(['alter']);
+    expect(g.aus).not.toContain(nurAnm);
+
+    // Neue Fragen nach dem Speichern: hinten; je Person eine der Person sichtbar, eine der Anmeldung ausgeblendet.
+    const neuP: Feld = { ...feld('text'), id: 'neuP', frage: 'Schuhgröße' };
+    const neuA: Feld = { ...feld('text'), id: 'neuA', frage: 'Bemerkung' };
+    const mehr = {
+      ...y,
+      formular: {
+        anmeldung: [...y.formular.anmeldung, neuA],
+        person: [...y.formular.person, neuP],
+      },
+    };
+    const ctFelder = { ...mehr.ctFelder, neuP: 901, neuA: 902 };
+    const n = spaltenWahl({ ...mehr, ctFelder }, 'person');
+    expect(n.reihe.slice(-2).sort()).toEqual(['frage:neuA', 'frage:neuP']);
+    expect(n.aus).toContain('frage:neuA');
+    expect(n.aus).not.toContain('frage:neuP');
+  });
+
+  it('alles ausgeblendet (die gezeigten Fragen gelöscht) → Vorgabe statt leerer Tabelle', () => {
+    const x = e();
+    const [nurDie] = anmFragen(x);
+    const w = {
+      reihe: [nurDie],
+      aus: vorgabeWahl(x, 'anmeldung').reihe.filter((k) => k !== nurDie),
+      fest: [],
+    };
+    const y = mitSpaltenWahl(x, 'anmeldung', w);
+    expect(schluessel(y, 'anmeldung')).toEqual([nurDie]);
+    const ohne = {
+      ...y,
+      formular: {
+        ...y.formular,
+        anmeldung: y.formular.anmeldung.filter((f) => `frage:${f.id}` !== nurDie),
+      },
+    };
+    expect(spaltenWahl(ohne, 'anmeldung')).toEqual(vorgabeWahl(ohne, 'anmeldung'));
+  });
+
+  it('je Person: Fragen der Anmeldung zählen einmal je Anmeldung; Geburtsdatum sortiert nach dem Datum', () => {
+    const x = e();
+    const l = liste(x);
+    const z = personZeilen(l);
+    for (const k of anmFragen(x)) {
+      const je = summe(x, k, l);
+      const p = personSumme(x, k, z);
+      expect(p?.text).toBe(je?.text);
+      if (je && !je.klein) expect(p?.klein).toBe('einmal je Anmeldung');
+      for (const y of z) expect(personZellText(x, k, y)).toBe(zellText(x, k, y.x));
+    }
+    // Als Text („15.01.2019“ vor „20.05.2017“) stünde die Jüngere vorn – sortiert wird nach dem Datum.
+    const geburt = [
+      { ...z[0], p: { ...z[0].p, geburtstag: '2019-01-15' } },
+      { ...z[1], p: { ...z[1].p, geburtstag: '2017-05-20' } },
+    ];
+    expect(
+      personenSortiert(x, geburt, { schluessel: 'geburtstag', absteigend: false }).map(
+        (y) => y.p.geburtstag,
+      ),
+    ).toEqual(['2017-05-20', '2019-01-15']);
   });
 });

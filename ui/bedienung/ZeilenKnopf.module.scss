@@ -18,3 +18,13 @@
     outline-offset: 2px;
   }
 }
+
+// An (Stecknadel gesetzt): blau, das Symbol gefüllt.
+.an {
+  border-color: var(--blue);
+  color: var(--blue-ink);
+
+  svg {
+    fill: currentColor;
+  }
+}

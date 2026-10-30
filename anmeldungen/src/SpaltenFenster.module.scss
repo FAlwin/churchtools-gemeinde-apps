@@ -1,0 +1,42 @@
+// Fenster „Spalten“ (U2-3, Entwurf u2-tabelle-v1) – Tokens aus ui/design, keine eigenen Farben.
+
+.zeile {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--hair);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.wahl {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: var(--knopf-hoehe);
+  font-size: 14px;
+  cursor: pointer;
+
+  input {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--blue);
+  }
+
+  span {
+    overflow-wrap: anywhere;
+  }
+}
+
+// Die Stelle unter den angehefteten Spalten – in dieser Reihenfolge stehen sie links.
+.nummer {
+  color: var(--blue-ink);
+  font-size: 12px;
+  font-weight: 700;
+}

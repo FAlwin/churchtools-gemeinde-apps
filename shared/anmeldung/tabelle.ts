@@ -7,16 +7,17 @@
  * Beträge aus `listenZahlen` – dieselbe Zählung wie Kacheln, Startseite und Rundmail.
  */
 import { tagPunkt } from '../ct/datum';
-import type { Feld, OeffentlicheEinstellungen } from './formular';
+import type { Feld, OeffentlicheEinstellungen, TabellenWahl } from './formular';
 import {
   frageAntwort,
   frageSchluessel,
   fragen,
+  nurVorhandene,
   teilnehmerSpalten,
   teilnehmerZelle,
 } from './druckliste';
 import { listenZahlen, type ListenAnmeldung, type ListenPerson } from './liste';
-import { altersregel, euroText } from './preis';
+import { altersregel, euroText, kannEtwasKosten } from './preis';
 
 export interface TabellenSpalte {
   schluessel: string;
@@ -33,32 +34,25 @@ export interface Summe {
 
 export type Sortierung = { schluessel: string; absteigend: boolean } | null;
 
-/** Die Fragen, die einmal je Anmeldung gestellt werden – Personenfragen kommen mit „je Person“ (U2-2). */
+/** Die Fragen, die einmal je Anmeldung gestellt werden – Personenfragen gibt es nur „je Person“ (U2-2). */
 function anmeldungsFragen(e: OeffentlicheEinstellungen): Feld[] {
   return fragen(e).filter((f) => e.formular.anmeldung.includes(f));
 }
 
+/** Die Fragen je Person – Allergien, Fotos … */
+function personenFragen(e: OeffentlicheEinstellungen): Feld[] {
+  return fragen(e).filter((f) => e.formular.person.includes(f));
+}
+
 const ZAHL_TYPEN = new Set<Feld['typ']>(['number']);
 
-/**
- * **Die Spalten je Anmeldung** – noch ohne Wahl (die kommt mit U2-3): Name, Nr., auf der Warteliste der Warteplatz,
- * Personen, jede Frage der Anmeldung, Betrag und Bezahlt (nur wenn etwas kosten kann), Angemeldet am.
- */
-export function anmeldungsSpalten(
-  e: OeffentlicheEinstellungen,
-  { kostet, warteliste }: { kostet: boolean; warteliste: boolean },
-): TabellenSpalte[] {
-  const s = (schluessel: string, titel: string, zahl = false) => ({ schluessel, titel, zahl });
-  return [
-    s('name', 'Name'),
-    s('nr', 'Nr.'),
-    ...(warteliste ? [s('warteplatz', 'Warteplatz', true)] : []),
-    s('personen', 'Personen'),
-    ...anmeldungsFragen(e).map((f) => s(frageSchluessel(f), f.frage, ZAHL_TYPEN.has(f.typ))),
-    ...(kostet ? [s('betrag', 'Betrag', true), s('bezahlt', 'Bezahlt')] : []),
-    s('am', 'Angemeldet am'),
-  ];
-}
+const spalte = (schluessel: string, titel: string, zahl = false): TabellenSpalte => ({
+  schluessel,
+  titel,
+  zahl,
+});
+/** Eine Frage als Spalte – Zahlenfragen rechtsbündig. */
+const frageSpalte = (f: Feld) => spalte(frageSchluessel(f), f.frage, ZAHL_TYPEN.has(f.typ));
 
 const mitPlatz = (x: ListenAnmeldung) => x.personen.filter((p) => p.status === 'aktiv');
 const ersterWarteplatz = (x: ListenAnmeldung) =>
@@ -282,40 +276,10 @@ export function personZeilen(liste: ListenAnmeldung[]): PersonZeile[] {
 }
 
 const personenFrage = (e: OeffentlicheEinstellungen, schluessel: string) =>
-  fragen(e).find((f) => e.formular.person.includes(f) && frageSchluessel(f) === schluessel);
-
-/**
- * **Die Spalten je Person** – noch ohne Wahl (U2-3): Vor- und Nachname, auf der Warteliste der Warteplatz, Status,
- * dann aus dem Katalog der Druckliste (`teilnehmerSpalten`) Alter und jede Frage der Person, „Angemeldet von“ und die
- * Anmelde-Nr.; Betrag und Bezahlt sind die der Anmeldung (einen Preis je Person kennt ChurchTools nicht, Bauplan U2-2).
- * Fragen der Anmeldung stehen in dieser Ansicht erst zur Wahl (U2-3).
- */
-export function personenSpalten(
-  e: OeffentlicheEinstellungen,
-  { kostet, warteliste }: { kostet: boolean; warteliste: boolean },
-): TabellenSpalte[] {
-  const s = (schluessel: string, titel: string, zahl = false) => ({ schluessel, titel, zahl });
-  const katalog = teilnehmerSpalten(e);
-  const aus = (pruefe: (k: string) => boolean) =>
-    katalog
-      .filter((k) => pruefe(k.schluessel))
-      .map((k) =>
-        s(
-          k.schluessel,
-          k.titel,
-          k.schluessel === 'alter' || ZAHL_TYPEN.has(personenFrage(e, k.schluessel)?.typ ?? 'text'),
-        ),
-      );
-  return [
-    s('vor', 'Vorname'),
-    s('nach', 'Nachname'),
-    ...(warteliste ? [s('warteplatz', 'Warteplatz', true)] : []),
-    s('status', 'Status'),
-    ...aus((k) => k === 'alter' || !!personenFrage(e, k)),
-    ...aus((k) => k === 'kontakt' || k === 'nr'),
-    ...(kostet ? [s('betrag', 'Betrag der Anmeldung', true), s('bezahlt', 'Bezahlt')] : []),
-  ];
-}
+  personenFragen(e).find((f) => frageSchluessel(f) === schluessel);
+/** Irgendeine Frage – je Person stehen auch die Fragen der Anmeldung zur Wahl (U2-3). */
+const jedeFrage = (e: OeffentlicheEinstellungen, schluessel: string) =>
+  fragen(e).find((f) => frageSchluessel(f) === schluessel);
 
 /** Was in der Zelle steht – Status und Bezahlt zeichnet die Erweiterung selbst. */
 export function personZellText(
@@ -346,6 +310,8 @@ function personSortWert(
   switch (schluessel) {
     case 'alter':
       return z.p.alter;
+    case 'geburtstag':
+      return z.p.geburtstag;
     case 'warteplatz':
       return z.p.status === 'wartet' ? (z.p.warteplatz ?? null) : null;
     case 'status':
@@ -354,7 +320,7 @@ function personSortWert(
     case 'bezahlt':
       return sortWert(e, schluessel, z.x);
   }
-  const f = personenFrage(e, schluessel);
+  const f = jedeFrage(e, schluessel);
   if (f && ZAHL_TYPEN.has(f.typ)) return zahlAus(frageAntwort(e, f, z.x, z.p));
   const t = personZellText(e, schluessel, z);
   return t === '' ? null : t;
@@ -399,7 +365,8 @@ function altersSumme(e: OeffentlicheEinstellungen, zeilen: PersonZeile[]): Summe
 
 /**
  * **Die Summenzeile je Person** – wie je Anmeldung, aber gezählt wird, wer einen Platz hat (nur im Reiter Warteliste
- * die Wartenden). Betrag und Bezahlt zählen jede Anmeldung **einmal**, egal wie viele Personen sie hat.
+ * die Wartenden). Betrag, Bezahlt und die Fragen der Anmeldung (U2-3) zählen jede Anmeldung **einmal**, egal wie viele
+ * Personen sie hat.
  */
 export function personSumme(
   e: OeffentlicheEinstellungen,
@@ -423,10 +390,202 @@ export function personSumme(
       return summe(e, schluessel, anmeldungenVon(zeilen));
   }
   const f = personenFrage(e, schluessel);
-  if (!f) return null;
+  if (!f) {
+    // Eine Frage der Anmeldung: dieselbe Summe wie je Anmeldung – sonst zählte „Mitfahrt: Ja“ jedes Kind mit.
+    const je = jedeFrage(e, schluessel) ? summe(e, schluessel, anmeldungenVon(zeilen)) : null;
+    return je && !je.klein ? { ...je, klein: 'einmal je Anmeldung' } : je;
+  }
   return frageSumme(
     f,
     zaehlen.map((z) => frageAntwort(e, f, z.x, z.p)),
     'Personen',
   );
+}
+
+// ── Spalten wählen (U2-3) ─────────────────────────────────────────────────────────────────────
+
+export type TabellenModus = 'anmeldung' | 'person';
+
+/** Eine Spalte, wie die Tabelle sie zeigt – `fest` = angeheftet, bleibt beim seitlichen Scrollen links stehen. */
+export interface GezeigteSpalte extends TabellenSpalte {
+  fest: boolean;
+}
+
+/**
+ * **Welche Spalten es gibt.** Je Anmeldung: Name, Nr., Personen, jede Frage der Anmeldung, Betrag und Bezahlt (nur
+ * wenn etwas kosten kann), Angemeldet am. Je Person: Vor- und Nachname, Status, aus dem Katalog der Druckliste
+ * (`teilnehmerSpalten`) Alter, Geburtsdatum, jede Frage der Person, „Angemeldet von“ und Nr., dann die Fragen der
+ * Anmeldung und Betrag/Bezahlt der Anmeldung (einen Preis je Person kennt ChurchTools nicht, Bauplan U2-2). Den
+ * Warteplatz gibt es nicht zur Wahl – im Reiter Warteliste steht er von selbst.
+ */
+export function spaltenKatalog(
+  e: OeffentlicheEinstellungen,
+  modus: TabellenModus,
+): TabellenSpalte[] {
+  // Dieselbe Bedingung wie die Kacheln und der Reiter „Zahlung offen“ (`listenZahlen`).
+  const geld = kannEtwasKosten(e.preis)
+    ? [
+        spalte('betrag', modus === 'person' ? 'Betrag der Anmeldung' : 'Betrag', true),
+        spalte('bezahlt', 'Bezahlt'),
+      ]
+    : [];
+  if (modus === 'anmeldung')
+    return [
+      spalte('name', 'Name'),
+      spalte('nr', 'Nr.'),
+      spalte('personen', 'Personen'),
+      ...anmeldungsFragen(e).map(frageSpalte),
+      ...geld,
+      spalte('am', 'Angemeldet am'),
+    ];
+  const druck = teilnehmerSpalten(e);
+  const ausDruck = (k: string) =>
+    druck.filter((s) => s.schluessel === k).map((s) => spalte(k, s.titel, k === 'alter'));
+  return [
+    spalte('vor', 'Vorname'),
+    spalte('nach', 'Nachname'),
+    spalte('status', 'Status'),
+    ...ausDruck('alter'),
+    ...ausDruck('geburtstag'),
+    ...personenFragen(e).map(frageSpalte),
+    ...ausDruck('kontakt'),
+    ...ausDruck('nr'),
+    ...anmeldungsFragen(e).map(frageSpalte),
+    ...geld,
+  ];
+}
+
+/** Ohne Wahl angeheftet (Entwurf `u2-tabelle-v1`): der Name, je Person Vor- und Nachname. */
+const VORGABE_FEST: Record<TabellenModus, string[]> = {
+  anmeldung: ['name'],
+  person: ['vor', 'nach'],
+};
+
+/**
+ * **Die Vorgabe** – alle Spalten in der Reihenfolge des Katalogs. Je Person ausgeblendet: das Geburtsdatum (das Alter
+ * steht da) und die Fragen der Anmeldung (sie stehen bei jeder Person ihrer Anmeldung gleich).
+ */
+export function vorgabeWahl(e: OeffentlicheEinstellungen, modus: TabellenModus): TabellenWahl {
+  const reihe = spaltenKatalog(e, modus).map((s) => s.schluessel);
+  const aus =
+    modus === 'person'
+      ? new Set(['geburtstag', ...anmeldungsFragen(e).map(frageSchluessel)])
+      : new Set<string>();
+  return {
+    reihe,
+    aus: reihe.filter((k) => aus.has(k)),
+    fest: VORGABE_FEST[modus].filter((k) => reihe.includes(k)),
+  };
+}
+
+/**
+ * **Die gemerkte Wahl** (gilt fürs ganze Team), bereinigt wie die Druckliste (`nurVorhandene`: gelöschte Fragen fallen
+ * weg). Spalten, die es beim Speichern noch nicht gab (neue Frage), stehen hinten und folgen der Vorgabe. Bleibt keine
+ * Spalte sichtbar, gilt die Vorgabe – eine leere Tabelle hilft niemandem.
+ */
+export function spaltenWahl(e: OeffentlicheEinstellungen, modus: TabellenModus): TabellenWahl {
+  const vorgabe = vorgabeWahl(e, modus);
+  const w = e.tabelle?.[modus];
+  if (!w) return vorgabe;
+  const katalog = spaltenKatalog(e, modus);
+  const reihe = nurVorhandene(w.reihe, katalog);
+  const neu = vorgabe.reihe.filter((k) => !reihe.includes(k));
+  const aus = [...nurVorhandene(w.aus, katalog), ...neu.filter((k) => vorgabe.aus.includes(k))];
+  const fest = nurVorhandene(w.fest, katalog).filter((k) => !aus.includes(k));
+  const alle = [...reihe, ...neu];
+  return alle.some((k) => !aus.includes(k)) ? { reihe: alle, aus, fest } : vorgabe;
+}
+
+/**
+ * **Die Spalten der Tabelle** – erst die angehefteten in der Reihenfolge des Anheftens, im Reiter Warteliste dann der
+ * Warteplatz, dahinter die sichtbaren in ihrer Reihenfolge.
+ */
+export function gezeigteSpalten(
+  e: OeffentlicheEinstellungen,
+  modus: TabellenModus,
+  w: TabellenWahl,
+  { warteliste }: { warteliste: boolean },
+): GezeigteSpalte[] {
+  const katalog = new Map(spaltenKatalog(e, modus).map((s) => [s.schluessel, s]));
+  const nimm = (k: string, fest: boolean) => {
+    const s = katalog.get(k);
+    return s ? [{ ...s, fest }] : [];
+  };
+  return [
+    ...w.fest.flatMap((k) => nimm(k, true)),
+    ...(warteliste ? [{ ...spalte('warteplatz', 'Warteplatz', true), fest: false }] : []),
+    ...w.reihe
+      .filter((k) => !w.fest.includes(k) && !w.aus.includes(k))
+      .flatMap((k) => nimm(k, false)),
+  ];
+}
+
+/** Die Spalten im Fenster „Spalten“, in drei Gruppen wie im Entwurf. */
+export function spaltenGruppen(w: TabellenWahl): {
+  fest: string[];
+  sichtbar: string[];
+  aus: string[];
+} {
+  return {
+    fest: w.fest,
+    sichtbar: w.reihe.filter((k) => !w.fest.includes(k) && !w.aus.includes(k)),
+    aus: w.reihe.filter((k) => w.aus.includes(k)),
+  };
+}
+
+/** **Ein- oder ausblenden** – eine angeheftete Spalte wird dabei losgelassen; die letzte sichtbare bleibt. */
+export function spalteZeigen(w: TabellenWahl, k: string): TabellenWahl {
+  if (w.aus.includes(k)) return { ...w, aus: w.aus.filter((x) => x !== k) };
+  if (w.reihe.filter((x) => !w.aus.includes(x)).length <= 1) return w;
+  return { ...w, aus: [...w.aus, k], fest: w.fest.filter((x) => x !== k) };
+}
+
+/** **Anheften oder loslassen** – angeheftet wird hinter die schon angehefteten; eine ausgeblendete Spalte erscheint. */
+export function spalteAnheften(w: TabellenWahl, k: string): TabellenWahl {
+  return w.fest.includes(k)
+    ? { ...w, fest: w.fest.filter((x) => x !== k) }
+    : { ...w, fest: [...w.fest, k], aus: w.aus.filter((x) => x !== k) };
+}
+
+/** **Eine Stelle nach oben (−1) oder unten (+1)** – innerhalb der Angehefteten bzw. der übrigen sichtbaren Spalten. */
+export function spalteVerschieben(w: TabellenWahl, k: string, um: -1 | 1): TabellenWahl {
+  const tausche = (liste: string[], a: string, b: string) =>
+    liste.map((x) => (x === a ? b : x === b ? a : x));
+  const gruppe = w.fest.includes(k) ? w.fest : spaltenGruppen(w).sichtbar;
+  const nachbar = gruppe[gruppe.indexOf(k) + um];
+  if (!gruppe.includes(k) || nachbar === undefined) return w;
+  return w.fest.includes(k)
+    ? { ...w, fest: tausche(w.fest, k, nachbar) }
+    : { ...w, reihe: tausche(w.reihe, k, nachbar) };
+}
+
+const gleicheWahl = (u: TabellenWahl, w: TabellenWahl) =>
+  u.reihe.join('|') === w.reihe.join('|') &&
+  u.fest.join('|') === w.fest.join('|') &&
+  [...u.aus].sort().join('|') === [...w.aus].sort().join('|');
+
+/**
+ * **Die Wahl merken** – in den Einstellungen der Veranstaltung wie die Druckliste (`druck`). Gemerkt wird nur, was von
+ * der Vorgabe abweicht; gleicht die Wahl ihr wieder, fällt die Ansicht weg (und ohne Ansichten das ganze Feld).
+ */
+export function mitSpaltenWahl(
+  e: OeffentlicheEinstellungen,
+  modus: TabellenModus,
+  w: TabellenWahl,
+): OeffentlicheEinstellungen {
+  const tabelle = { ...e.tabelle };
+  if (gleicheWahl(w, vorgabeWahl(e, modus))) delete tabelle[modus];
+  else tabelle[modus] = w;
+  const neu: OeffentlicheEinstellungen = { ...e, tabelle };
+  if (!tabelle.anmeldung && !tabelle.person) delete neu.tabelle;
+  return neu;
+}
+
+/** Hat sich gegenüber der gemerkten Wahl etwas geändert? (Speichern nur dann.) */
+export function wahlGeaendert(
+  e: OeffentlicheEinstellungen,
+  modus: TabellenModus,
+  w: TabellenWahl,
+): boolean {
+  return !gleicheWahl(w, spaltenWahl(e, modus));
 }

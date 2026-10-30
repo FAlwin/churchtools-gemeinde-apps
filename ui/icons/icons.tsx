@@ -60,6 +60,8 @@ export type IconName =
   | 'download'
   | 'drucker'
   | 'brief'
+  | 'nadel'
+  | 'chev-up'
   | 'undo'
   | 'redo'
   | 'refresh'
@@ -243,6 +245,12 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
       return (
         <svg {...p}>
           <path d="M5 9l7 7 7-7" />
+        </svg>
+      );
+    case 'chev-up':
+      return (
+        <svg {...p}>
+          <path d="M5 15l7-7 7 7" />
         </svg>
       );
     case 'search':
@@ -639,6 +647,14 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
         <svg {...p}>
           <rect x="3" y="5" width="18" height="14" rx="2" />
           <path d="m3 7 9 6 9-6" />
+        </svg>
+      );
+    // Stecknadel: Spalte anheften (U2-3, Entwurf `u2-tabelle-v1`) – „pin“ ist der Ortsmarker.
+    case 'nadel':
+      return (
+        <svg {...p}>
+          <path d="M9 4h6l-1 5 4 4H6l4-4z" />
+          <path d="M12 13v7" />
         </svg>
       );
     case 'download':

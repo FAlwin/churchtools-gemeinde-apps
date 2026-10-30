@@ -1,11 +1,12 @@
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import type { Sortierung, Summe, TabellenSpalte } from '@shared/anmeldung/tabelle';
 import t from './AnmeldungenTabelle.module.scss';
 
 /**
  * **Die Tabelle des Bereichs „Anmeldungen“** (U2-1, Entwurf `u2-tabelle-v1`) – Kopf oben und Summe unten bleiben beim
- * Scrollen stehen, die erste Spalte (Name) links. Was in den Zellen steht, liefert der Aufrufer; Spalten, Summen und
- * Sortierung rechnet `@shared/anmeldung/tabelle`.
+ * Scrollen stehen, die angehefteten Spalten links (U2-3: mehrere, am Handy nur die erste; ohne Angabe die erste
+ * Spalte). Was in den Zellen steht, liefert der Aufrufer; Spalten, Summen und Sortierung rechnet
+ * `@shared/anmeldung/tabelle`.
  *
  * Die erste Zelle einer Zeile ist ein Knopf (Tastatur, Vorleser); ein Klick irgendwo in der Zeile tut dasselbe.
  */
@@ -22,7 +23,8 @@ export function AnmeldungenTabelle<Z>({
 }: {
   /** Beschriftung für Vorleser („Anmeldungen“, „Absagen“). */
   name: string;
-  spalten: TabellenSpalte[];
+  /** `fest`: angeheftet – angeheftete Spalten stehen vorn (`gezeigteSpalten`). */
+  spalten: (TabellenSpalte & { fest?: boolean })[];
   zeilen: Z[];
   schluessel: (z: Z) => string;
   zelle: (spalte: string, z: Z) => ReactNode;
@@ -40,12 +42,45 @@ export function AnmeldungenTabelle<Z>({
       : !sortierung.absteigend
         ? { schluessel: k, absteigend: true }
         : null;
+  // Angeheftet sind die vorderen Spalten mit `fest` – ohne Angabe nur die erste (Absagen).
+  const istFest = spalten.map((s, i) => s.fest ?? i === 0);
+  const festeVorn = istFest.indexOf(false) === -1 ? spalten.length : istFest.indexOf(false);
   const klasse = (s: TabellenSpalte, i: number) =>
-    [s.zahl ? t.zahl : '', i === 0 ? t.fest : ''].filter(Boolean).join(' ');
+    [
+      s.zahl ? t.zahl : '',
+      i < festeVorn ? t.fest : '',
+      i === 0 && festeVorn > 0 ? t.ersteFest : '',
+      i === festeVorn - 1 ? t.festEnde : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
+
+  // Wo eine angeheftete Spalte stehen bleibt, hängt an der Breite der Spalten links davon – gemessen, nicht geschätzt.
+  const tabelle = useRef<HTMLTableElement>(null);
+  useLayoutEffect(() => {
+    const tab = tabelle.current;
+    if (!tab || festeVorn < 2) return;
+    const messen = () => {
+      const koepfe = Array.from(tab.rows[0]?.cells ?? []);
+      let links = 0;
+      for (let i = 0; i < festeVorn; i++) {
+        for (const zeile of Array.from(tab.rows)) {
+          const zelle = zeile.cells[i];
+          if (zelle) zelle.style.left = `${links}px`;
+        }
+        links += koepfe[i]?.getBoundingClientRect().width ?? 0;
+      }
+    };
+    messen();
+    if (typeof ResizeObserver === 'undefined') return;
+    const beobachter = new ResizeObserver(messen);
+    beobachter.observe(tab);
+    return () => beobachter.disconnect();
+  });
 
   return (
     <div className={t.rahmen}>
-      <table className={t.tabelle} aria-label={name}>
+      <table ref={tabelle} className={t.tabelle} aria-label={name}>
         <thead>
           <tr>
             {spalten.map((s, i) => {

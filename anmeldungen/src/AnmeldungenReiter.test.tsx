@@ -1106,3 +1106,149 @@ describe('Druckliste (A8-1)', () => {
     expect(tm.downloadPdf.mock.calls.at(-1)![1]).toBe('Kinderfreizeit – Zimmer');
   });
 });
+
+describe('Spalten wählen (U2-3)', () => {
+  beforeEach(() => {
+    em.aendereEinstellungen.mockReset();
+    em.aendereEinstellungen.mockResolvedValue(e());
+  });
+  const kopf = () => screen.getAllByRole('columnheader').map((k) => k.textContent);
+  const fenster = () => screen.getByRole('dialog');
+  const spalten = () => fireEvent.click(screen.getByRole('button', { name: 'Spalten' }));
+  const haken = (name: string) =>
+    fireEvent.click(within(fenster()).getByRole('checkbox', { name }));
+  const uebernehmen = () =>
+    fireEvent.click(within(fenster()).getByRole('button', { name: 'Übernehmen' }));
+  /** Was gespeichert würde – die Änderung, angewandt auf die frisch gelesenen Einstellungen. */
+  const gespeichert = () => em.aendereEinstellungen.mock.calls[0][1](e()).tabelle;
+
+  it('ausblenden → die Tabelle zeigt es sofort, gemerkt fürs Team (nur die Abweichung)', async () => {
+    const r = zeigen(fertig());
+    expect(kopf()).toContain('Angemeldet am');
+    spalten();
+    expect(screen.getByRole('dialog', { name: 'Spalten – je Anmeldung' })).toBeTruthy();
+    expect(within(fenster()).getByText('Gilt für alle im Team.', { exact: false })).toBeTruthy();
+    haken('Angemeldet am');
+    // Erst „Übernehmen“ ändert etwas.
+    expect(kopf()).toContain('Angemeldet am');
+    uebernehmen();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(kopf()).not.toContain('Angemeldet am');
+    await waitFor(() => expect(r.onGespeichert).toHaveBeenCalled());
+    expect(em.aendereEinstellungen.mock.calls[0][0]).toBe(165);
+    expect(gespeichert()?.anmeldung?.aus).toEqual(['am']);
+    expect(gespeichert()?.person).toBeUndefined();
+  });
+
+  it('anheften: mehrere, vorn in der Reihenfolge des Anheftens; nur die erste bleibt am Handy stehen (Klasse)', () => {
+    zeigen(fertig());
+    spalten();
+    fireEvent.click(within(fenster()).getByRole('button', { name: '„Telefon“ anheften' }));
+    expect(within(fenster()).getByRole('region', { name: 'Angeheftet' }).textContent).toMatch(
+      /Name1\..*Telefon2\./s,
+    );
+    expect(
+      within(fenster())
+        .getByRole('button', { name: '„Telefon“ nicht mehr anheften' })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
+    uebernehmen();
+    expect(kopf().slice(0, 3)).toEqual(['Name', 'Telefon', 'Nr.']);
+    const name = screen.getByRole('columnheader', { name: 'Name' });
+    const tel = screen.getByRole('columnheader', { name: 'Telefon' });
+    expect(name.className).toMatch(/ersteFest/);
+    expect(name.className).not.toMatch(/festEnde/);
+    expect(tel.className).toMatch(/fest/);
+    expect(tel.className).toMatch(/festEnde/);
+    expect(tel.className).not.toMatch(/ersteFest/);
+    expect(screen.getByRole('columnheader', { name: 'Nr.' }).className).not.toMatch(/fest/);
+  });
+
+  it('verschieben mit den Pfeilen; angeheftet ist das Häkchen gesperrt; die letzte Spalte bleibt', () => {
+    zeigen(fertig());
+    spalten();
+    expect(within(fenster()).getByRole('checkbox', { name: 'Name' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    expect(within(fenster()).getByRole('button', { name: '„Nr.“ nach oben' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    fireEvent.click(within(fenster()).getByRole('button', { name: '„Nr.“ nach unten' }));
+    uebernehmen();
+    expect(kopf().slice(0, 3)).toEqual(['Name', 'Personen', 'Nr.']);
+    spalten();
+    // „Wie zu Beginn“ holt die Vorgabe zurück – gleicht sie der gemerkten Wahl nicht, wird sie gemerkt.
+    fireEvent.click(within(fenster()).getByRole('button', { name: 'Wie zu Beginn' }));
+    uebernehmen();
+    expect(kopf().slice(0, 3)).toEqual(['Name', 'Nr.', 'Personen']);
+  });
+
+  it('je Person eigene Wahl: die Fragen der Anmeldung stehen unter „Ausgeblendet“ und lassen sich zeigen', async () => {
+    zeigen(fertig());
+    fireEvent.click(screen.getByRole('button', { name: 'Je Person' }));
+    expect(kopf()).not.toContain('Telefon');
+    spalten();
+    expect(screen.getByRole('dialog', { name: 'Spalten – je Person' })).toBeTruthy();
+    expect(
+      within(within(fenster()).getByRole('region', { name: 'Ausgeblendet' })).getByRole(
+        'checkbox',
+        { name: 'Telefon' },
+      ),
+    ).toBeTruthy();
+    haken('Telefon');
+    uebernehmen();
+    expect(kopf()).toContain('Telefon');
+    await waitFor(() => expect(em.aendereEinstellungen).toHaveBeenCalled());
+    expect(gespeichert()?.person?.aus).not.toContain('frage:tel');
+    expect(gespeichert()?.anmeldung).toBeUndefined();
+    // Die Ansicht je Anmeldung bleibt, wie sie war.
+    fireEvent.click(screen.getByRole('button', { name: 'Je Anmeldung' }));
+    expect(kopf()).toContain('Angemeldet am');
+  });
+
+  it('ohne Recht: gilt nur hier, nichts wird gespeichert; unverändert übernehmen speichert auch nichts', () => {
+    zeigen(fertig(), 10, false, false);
+    spalten();
+    expect(within(fenster()).getByText(/gilt nur hier, bis die Seite neu lädt/)).toBeTruthy();
+    haken('Angemeldet am');
+    uebernehmen();
+    expect(kopf()).not.toContain('Angemeldet am');
+    expect(em.aendereEinstellungen).not.toHaveBeenCalled();
+    cleanup();
+    zeigen(fertig());
+    spalten();
+    uebernehmen();
+    expect(em.aendereEinstellungen).not.toHaveBeenCalled();
+  });
+
+  it('Sortierung nach einer ausgeblendeten Spalte fällt weg; Fehler beim Speichern wird genannt', async () => {
+    em.aendereEinstellungen.mockRejectedValue(new Error('kaputt'));
+    zeigen(fertig());
+    fireEvent.click(
+      within(screen.getByRole('columnheader', { name: 'Angemeldet am' })).getByRole('button'),
+    );
+    spalten();
+    haken('Angemeldet am');
+    uebernehmen();
+    expect((await screen.findByRole('alert')).textContent).toMatch(
+      /Die Spalten sind nur hier umgestellt, nicht für das Team gemerkt/,
+    );
+    expect(kopf()).not.toContain('Angemeldet am');
+    // Wieder eingeblendet: nicht mehr sortiert – die Liste stand nach einer Spalte, die man nicht sah.
+    spalten();
+    haken('Angemeldet am');
+    uebernehmen();
+    expect(
+      screen.getByRole('columnheader', { name: 'Angemeldet am' }).getAttribute('aria-sort'),
+    ).toBeNull();
+  });
+
+  it('bei „Abgesagt“ kein Knopf „Spalten“ (feste Spalten)', () => {
+    zeigen(fertig());
+    expect(screen.getByRole('button', { name: 'Spalten' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /^Abgesagt/ }));
+    expect(screen.queryByRole('button', { name: 'Spalten' })).toBeNull();
+  });
+});

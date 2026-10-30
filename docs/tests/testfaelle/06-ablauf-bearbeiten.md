@@ -374,7 +374,7 @@ Punkt-Fenster ändern, ohne andere Gruppen anzufassen.
 
 <details><summary>Technisches</summary>
 
-- **Priorität:** mittel
+- **Priorität:** normal
 - **Betrifft:** `shared/ct/ablaufZeile.ts`, `shared/ct/agendaItemChanges.ts`, `shared/ct/schreibKern.ts`, `shared/ct/dienstRechte.ts`, `ui/ablauf/InfoSpalten.tsx`, `ui/ablauf/infoSpaltenWahl.ts`, `ui/ablauf/AblaufListe.tsx`, `ui/ablauf/PunktFenster.tsx`, `client/src/pages/Setlist.tsx`, `client/src/services/ctLesen.ts`, `server/src/services/ctCapabilities.ts`, `server/src/controllers/setlistController.ts`, `dienstplaner/src/TerminAblauf.tsx`
 - **Automatisiert:** ja – `shared/ct/gruppenInfos.test.ts` (Schreiben je Gruppe gegen eine Attrappe wie gemessen), `ui/ablauf/InfoSpalten.test.tsx`, `dienstplaner/src/TerminAnsicht.test.tsx`, `client/src/pages/Setlist.abschluss.test.tsx`, `shared/ct/dienstRechte.test.ts`, `server/src/services/churchtools.capabilities.test.ts`, `client/src/services/ctTeilen.test.ts`, `server/src/controllers/setlistController.gesehen.test.ts`; von Hand bleibt der Blick gegen echtes ChurchTools
 - **Historie:** E6-4 (30.10.2026, gemessen E6-4-0, Entwurf `e6-infos-spalten.html` abgenommen)

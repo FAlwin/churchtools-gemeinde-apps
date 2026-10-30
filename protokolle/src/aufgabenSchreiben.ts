@@ -7,9 +7,15 @@
  * Gelöscht wird nie hart – auch nicht hier (S0: wer in „Mitarbeit“ ändern darf, dürfte jeden Wert löschen).
  */
 import { werteLesen, wertAendern, wertAnlegen } from '@shared/ct/modulDaten';
-import { istAufgabe, type Aufgabe, type AufgabenPlan } from '@shared/protokolle/aufgaben';
-import { wertInhalt } from '@shared/protokolle/speicher';
+import { istAufgabe, mitNamen, type Aufgabe, type AufgabenPlan } from '@shared/protokolle/aufgaben';
+import { wertInhalt, type Schreiber } from '@shared/protokolle/speicher';
 import { modulPort } from '@ui/ct/modulPort';
+
+/**
+ * Wer schreibt – beide Schreibtore stempeln den eigenen Vornamen an die eigenen Verlaufseinträge (`mitNamen`), damit
+ * Mitglieder ohne Einsicht in die Mitgliederliste sehen, wer es war.
+ */
+export type Schreibend = Pick<Schreiber, 'person' | 'name'>;
 
 /** Wo die To-Dos einer Gruppe liegen. */
 export interface MitarbeitOrt {
@@ -51,9 +57,14 @@ const gleich = (a: Aufgabe | undefined, b: Aufgabe): boolean =>
 export async function aufgabenSchreiben(
   ort: MitarbeitOrt,
   planen: (vorhanden: Aufgabe[]) => AufgabenPlan,
+  ich: Schreibend,
 ): Promise<Aufgabe[]> {
   const vorher = await aufgabenWerte(ort);
-  const plan = planen(vorher.map((x) => x.aufgabe));
+  const roh = planen(vorher.map((x) => x.aufgabe));
+  const plan = {
+    anlegen: roh.anlegen.map((a) => mitNamen(a, ich)),
+    aendern: roh.aendern.map((a) => mitNamen(a, ich)),
+  };
   if (!plan.anlegen.length && !plan.aendern.length) return vorher.map((x) => x.aufgabe);
   const wertVon = new Map(vorher.map((x) => [x.aufgabe.id, x.wert]));
   for (const a of plan.anlegen)
@@ -84,9 +95,10 @@ export async function aufgabeAendern(
   id: string,
   aendern: (a: Aufgabe) => Aufgabe,
   anlegen: () => Aufgabe,
+  ich: Schreibend,
 ): Promise<Aufgabe> {
   const da = (await aufgabenWerte(ort)).find((x) => x.aufgabe.id === id);
-  const neu = aendern(da?.aufgabe ?? anlegen());
+  const neu = mitNamen(aendern(da?.aufgabe ?? anlegen()), ich);
   if (da)
     await wertAendern(
       modulPort,

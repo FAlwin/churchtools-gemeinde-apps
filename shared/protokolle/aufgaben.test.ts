@@ -16,6 +16,14 @@ import {
   statusText,
   aufgabenAbgleich,
   aufgabenIdsVergeben,
+  bearbeiten,
+  letzteNotiz,
+  verschieben,
+  mitNamen,
+  nameAusListe,
+  nameImVerlauf,
+  nameFuer,
+  weitereZustaendige,
 } from './aufgaben';
 import { ableiten, type Block } from './dokument';
 import { STANDARD_VORLAGEN, startDokument } from './vorlagen';
@@ -330,5 +338,133 @@ describe('aufgabenIdsVergeben (S4-2)', () => {
     const vergeben = aufgabenIdsVergeben(start, () => false, neueId);
     const anzahl = JSON.stringify(start).split('"type":"aufgabe"').length - 1;
     expect(vergeben).toHaveLength(anzahl);
+  });
+});
+
+describe('S7-2: bearbeiten, verschieben, letzteNotiz', () => {
+  const AM = '2026-10-30T10:00:00Z';
+  const basis = neueAufgabe({
+    id: 'b',
+    gruppe: 11,
+    sitzung: 's1',
+    text: 'Beamer',
+    von: 1,
+    am: AM,
+    wer: [1],
+    bis: '2026-11-01',
+  });
+
+  it('nur angefasste Felder – ein inzwischen gesetzter Status bleibt, wenn das Fenster ihn nicht ändert', () => {
+    const frisch = statusSetzen(basis, 'arbeit', 19, AM);
+    const n = bearbeiten(frisch, { bis: '2026-11-20' }, 1, AM);
+    expect(n).toMatchObject({ status: 'arbeit', bis: '2026-11-20', text: 'Beamer', wer: [1] });
+  });
+
+  it('Text getrimmt (leer bleibt der alte), Wer ohne Doppelte, Bis leer = keins, Extern getrimmt', () => {
+    const n = bearbeiten(
+      basis,
+      { text: '  ', wer: [19, 19, 1], bis: '', extern: ' Becker ' },
+      1,
+      AM,
+    );
+    expect(n).toMatchObject({ text: 'Beamer', wer: [19, 1], bis: null, extern: 'Becker' });
+    expect(bearbeiten(basis, { text: ' Neu ' }, 1, AM).text).toBe('Neu');
+  });
+
+  it('Status und Notiz in den Verlauf; Karte wird ergänzt, nicht ersetzt', () => {
+    const n = bearbeiten(
+      { ...basis, karte: { notiz: true } },
+      { status: 'erledigt', notiz: ' fertig ', karte: { sitzung: true } },
+      19,
+      AM,
+    );
+    expect(n.verlauf.slice(1)).toEqual([
+      { am: AM, von: 19, art: 'status', status: 'erledigt' },
+      { am: AM, von: 19, art: 'notiz', text: 'fertig' },
+    ]);
+    expect(n.karte).toEqual({ notiz: true, sitzung: true });
+    expect(letzteNotiz(n)?.text).toBe('fertig');
+    expect(letzteNotiz(basis)).toBeNull();
+  });
+
+  it('verschieben: neu in der anderen Gruppe (neue ID, ohne Sitzung, Verlauf zieht mit), altes als gelöscht vermerkt', () => {
+    const { neu, alt } = verschieben(basis, {
+      gruppe: 194,
+      neueId: 'n',
+      von: 'Leitungsteam',
+      nach: 'Jugend',
+      wer: [19],
+      ich: 1,
+      am: AM,
+    });
+    expect(neu).toMatchObject({
+      id: 'n',
+      gruppe: 194,
+      sitzung: null,
+      wer: [19],
+      geloescht: false,
+      text: 'Beamer',
+    });
+    expect(neu.verlauf.at(-1)).toMatchObject({
+      art: 'notiz',
+      text: 'Aus „Leitungsteam“ hierher verschoben.',
+    });
+    expect(alt).toMatchObject({ id: 'b', gruppe: 11, geloescht: true });
+    expect(alt.verlauf.slice(-2).map((v) => v.art)).toEqual(['notiz', 'geloescht']);
+  });
+});
+
+describe('Name im Verlauf (S7-2a: Mitglieder sahen „Person 1“)', () => {
+  const AM2 = '2026-10-30T10:00:00Z';
+  const t = statusSetzen(
+    neueAufgabe({ id: 'n', gruppe: 11, sitzung: null, text: 'x', von: 1, am: AM2 }),
+    'arbeit',
+    19,
+    AM2,
+  );
+  it('mitNamen: nur eigene Einträge, nur der Vorname, schon gestempelte bleiben', () => {
+    const n = mitNamen(t, { person: 1, name: 'Alwin Friesen' });
+    expect(n.verlauf.map((v) => v.name)).toEqual(['Alwin', undefined]);
+    // Ein schon gestempelter eigener Eintrag behält seinen Namen, ein ungestempelter daneben bekommt ihn.
+    const zweimal = mitNamen(
+      { ...n, verlauf: [{ ...n.verlauf[0], name: 'Al' }, { ...t.verlauf[0] }] },
+      { person: 1, name: 'Alwin' },
+    );
+    expect(zweimal.verlauf.map((v) => v.name)).toEqual(['Al', 'Alwin']);
+  });
+  it('mitNamen: nichts zu tun oder kein Name → dasselbe Objekt', () => {
+    expect(mitNamen(t, { person: 7, name: 'Johann' })).toBe(t);
+    expect(mitNamen(t, { person: 1, name: '  ' })).toBe(t);
+  });
+  it('nameImVerlauf: der jüngste gestempelte Name, sonst null', () => {
+    const v = {
+      verlauf: [
+        { am: AM2, von: 23, name: 'Hans', art: 'angelegt' as const },
+        { am: AM2, von: 23, art: 'status' as const },
+        { am: AM2, von: 23, name: 'Johann', art: 'notiz' as const },
+      ],
+    };
+    expect(nameImVerlauf(v, 23)).toBe('Johann');
+    expect(nameImVerlauf(v, 1)).toBeNull();
+  });
+  it('nameFuer: erst die Mitgliederliste (Vorname), dann der Verlauf', () => {
+    const v = { verlauf: [{ am: AM2, von: 23, name: 'Hansi', art: 'notiz' as const }] };
+    expect(nameFuer(v, 23, new Map([[23, 'Johann Becker']]))).toBe('Johann');
+    expect(nameFuer(v, 23, new Map())).toBe('Hansi');
+    expect(nameFuer(v, 5, new Map())).toBeNull();
+  });
+  it('weitereZustaendige: bekannte mit Namen, der Rest gezählt', () => {
+    const v = { verlauf: [{ am: AM2, von: 23, name: 'Johann', art: 'notiz' as const }] };
+    expect(weitereZustaendige(v, [23])).toEqual(['Johann']);
+    expect(weitereZustaendige(v, [23, 5])).toEqual(['Johann', 'eine weitere Person']);
+    expect(weitereZustaendige(v, [5, 6])).toEqual(['2 weitere']);
+    expect(weitereZustaendige(v, [])).toEqual([]);
+  });
+  it('nameAusListe: erst die Liste; verborgen oder nicht geladen → nur ich selbst', () => {
+    const ich = { person: 1, name: 'Alwin' };
+    expect(nameAusListe([{ id: 7, name: 'Johann Becker' }], ich)(7)).toBe('Johann Becker');
+    expect(nameAusListe('verborgen', ich)(1)).toBe('Alwin');
+    expect(nameAusListe(null, ich)(1)).toBe('Alwin');
+    expect(nameAusListe('verborgen', ich)(7)).toBeNull();
   });
 });

@@ -40,6 +40,14 @@ export function sichtbarFuer(a: Aufgabe, q: { ich: number; leitung: boolean }): 
 
 export type Zustaendig = 'ich' | 'andere' | 'niemand';
 
+/**
+ * **Was statt der Sitzung dasteht**, wenn sie nicht in der geladenen Übersicht ist: ohne Sitzung angelegt – oder aus einer
+ * älteren, die die Übersicht nicht mehr lädt (vorher stand auch dann „Ohne Sitzung angelegt.“). Karte und Fenster gleich.
+ */
+export function ohneHerkunft(a: Pick<Aufgabe, 'sitzung'>): string {
+  return a.sitzung === null ? 'Ohne Sitzung angelegt.' : 'Aus einer älteren Sitzung.';
+}
+
 /** Für den Filter „Zuständig“: ich (auch zusammen mit anderen), nur andere (auch Externe), noch niemand. */
 export function zustaendigFuer(a: Aufgabe, ich: number): Zustaendig {
   if (a.wer.includes(ich)) return 'ich';

@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { BLOCKNOTE_DOKUMENT } from '@shared/protokolle/dokument.testdaten';
 import { sperreVon, type ProtokollKopf } from '@shared/protokolle/speicher';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
+import * as M from './mitglieder';
 import * as S from './schreiben';
 import * as A from './aufgabenSchreiben';
 import { neueAufgabe } from '@shared/protokolle/aufgaben';
@@ -249,6 +250,35 @@ describe('ProtokollSchreiben', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Schreiben' }));
     expect(screen.getByTestId('editor').closest('[hidden]')).toBeNull();
     expect(screen.queryByText('Beamer von früher')).toBeNull();
+  });
+
+  it('Mitgliederliste verborgen: im festen Punkt steht bei eigenen To-Dos trotzdem der eigene Name (S7-2a)', async () => {
+    vi.mocked(M.ladeGruppenMitglieder).mockResolvedValueOnce('verborgen');
+    vi.mocked(A.aufgabenWerte).mockResolvedValueOnce([
+      {
+        wert: 1,
+        aufgabe: neueAufgabe({
+          id: 'frueher',
+          gruppe: 194,
+          sitzung: 'alt',
+          text: 'Beamer von früher',
+          wer: [1],
+          von: 7,
+          am: '2026-10-01T10:00:00Z',
+        }),
+      },
+    ]);
+    lesen.mockResolvedValue({
+      kopf: KOPF,
+      dokument: [
+        ...DOK,
+        { id: 'v', type: 'verweis', props: { art: 'offene-aufgaben' }, children: [] },
+      ],
+    });
+    zeige();
+    await screen.findByText('bearbeitbar');
+    fireEvent.click(screen.getByRole('button', { name: 'Lesen' }));
+    expect(screen.getByText('Beamer von früher').closest('li')!.textContent).toMatch(/Alwin/);
   });
 
   it('„Lesen“ nach dem Tippen speichert sofort – nicht erst nach der Pause', async () => {

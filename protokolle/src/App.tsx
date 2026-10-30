@@ -116,7 +116,7 @@ export function App() {
       {start && !suche.offen && aktiv === 'start' && (
         <Startseite
           modul={start.modul}
-          ich={start.id}
+          ich={{ person: start.id, name: start.vorname }}
           gruppen={start.gruppen}
           schreibbar={start.schreibbar}
           onSitzung={(gruppe, sitzung) => zuSitzungen({ gruppe, sitzung })}

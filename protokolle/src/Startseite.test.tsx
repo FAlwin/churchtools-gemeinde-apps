@@ -147,7 +147,13 @@ const onSitzung = vi.fn();
 const onGruppe = vi.fn();
 const zeigen = (gruppen = GRUPPEN) =>
   render(
-    <Startseite modul={24} ich={ICH} gruppen={gruppen} onSitzung={onSitzung} onGruppe={onGruppe} />,
+    <Startseite
+      modul={24}
+      ich={{ person: ICH, name: 'Alwin' }}
+      gruppen={gruppen}
+      onSitzung={onSitzung}
+      onGruppe={onGruppe}
+    />,
   );
 const zeilen = (name: string) =>
   within(screen.getByRole('region', { name }))

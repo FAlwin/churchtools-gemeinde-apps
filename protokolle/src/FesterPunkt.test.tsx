@@ -95,6 +95,29 @@ describe('Fester Punkt „Offene To-Dos“', () => {
     expect(screen.queryByText('Hier entstanden')).toBeNull();
   });
 
+  it('Mitgliederliste verborgen: Zuständige mit dem Namen aus dem Verlauf (S7-2a)', () => {
+    // Die Liste kennt niemanden (`name` liefert null) – der Verlauf kennt Person 1 als „Alwin“.
+    const mitName: Aufgabe = {
+      ...AUFGABEN[0],
+      wer: [1],
+      verlauf: AUFGABEN[0].verlauf.map((v) => ({ ...v, name: 'Alwin' })),
+    };
+    render(
+      <FestePunkteRahmen
+        sitzung={HEUTE}
+        gruppe={194}
+        protokolle={[SEPT, ALT]}
+        teile={TEILE}
+        aufgaben={[mitName]}
+        zeitzone="Europe/Berlin"
+        name={() => null}
+      >
+        <ProtokollAnsicht dokument={DOK} aufgaben={[mitName]} />
+      </FestePunkteRahmen>,
+    );
+    expect(screen.getByText(/Alwin, Hausmeister Müller \(extern\)/)).toBeTruthy();
+  });
+
   it('„seit der Sitzung am … erledigt“ ist eingeklappt und klappt auf', () => {
     zeige();
     const knopf = screen.getByRole('button', {

@@ -2,7 +2,7 @@ import { useContext, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { tagPunkt } from '@shared/ct/datum';
 import { tagAusIso } from '@shared/ct/zeit';
-import { istUeberfaellig, type Aufgabe } from '@shared/protokolle/aufgaben';
+import { istUeberfaellig, nameImVerlauf, type Aufgabe } from '@shared/protokolle/aufgaben';
 import {
   festeAufgabenAus,
   festesProtokollAus,
@@ -95,7 +95,10 @@ function OffeneToDos({
 
 function Zeile({ a, w, abhaken }: { a: Aufgabe; w: FestePunkteWert; abhaken: boolean }) {
   const wer = [
-    ...(w.name ? a.wer.map((p) => w.name?.(p) ?? null).filter((n): n is string => !!n) : []),
+    // Kennt die Liste jemanden nicht (Mitglieder sehen sie oft nicht), dann der Name aus dem Verlauf (S7-2a).
+    ...(w.name
+      ? a.wer.map((p) => w.name?.(p) ?? nameImVerlauf(a, p)).filter((n): n is string => !!n)
+      : []),
     ...(a.extern ? [`${a.extern} (extern)`] : []),
   ];
   const ueber = istUeberfaellig(a, w.heute);

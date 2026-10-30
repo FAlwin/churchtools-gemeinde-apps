@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
-import { ApiError } from '@ui/ct/fehler';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { FilterKnopf, type FilterAbschnitt } from '@ui/bedienung/FilterKnopf';
+import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { Icon } from '@ui/icons/icons';
 import { PersonBild } from '@ui/bedienung/PersonBild';
 import { Schalter } from '@ui/bedienung/Schalter';
 import { Segment } from '@ui/bedienung/Segment';
@@ -13,23 +14,28 @@ import { initialenAus, type Person } from '@shared/organigramm/mitglieder';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import {
   istUeberfaellig,
-  statusSetzen,
+  letzteNotiz,
+  nameFuer,
+  nameImVerlauf,
+  weitereZustaendige,
   type Aufgabe,
   type AufgabenStatus,
 } from '@shared/protokolle/aufgaben';
 import {
   einteilen,
   langeErledigt,
+  ohneHerkunft,
   sichtbarFuer,
   zustaendigFuer,
   type Einteilung,
   type ToDoEintrag,
 } from '@shared/protokolle/uebersicht';
-import { aufgabeAendern } from './aufgabenSchreiben';
 import { ladeUebersicht, type GruppenUebersicht } from './lesen';
 import { ladeGruppenMitglieder } from './mitglieder';
 import { Marke } from './Marke';
 import { StatusMarke } from './StatusMarke';
+import { ToDoFenster, type Herkunft } from './ToDoFenster';
+import { toDoAendern } from './todoSchreiben';
 import styles from './ToDos.module.scss';
 
 type Zustand =
@@ -54,17 +60,22 @@ const AUS_VORGABE: Aus = { gruppen: [], zustaendig: [] };
 
 const gross = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
-/** Wer zuständig ist: Bilder und Vornamen; Externe als Name; wen man nicht kennt (Mitglieder verborgen), als Zahl. */
+/**
+ * Wer zuständig ist: Bilder und Vornamen; Externe als Name; wen man nicht kennt (Mitglieder verborgen), mit dem Namen aus
+ * dem Verlauf oder als Zahl (`weitereZustaendige`).
+ */
 function Wer({ a, personen }: { a: Aufgabe; personen: ReadonlyMap<number, Person> }) {
   const bekannt = a.wer.flatMap((p) => {
     const x = personen.get(p);
     return x ? [x] : [];
   });
-  const fremd = a.wer.length - bekannt.length;
   const namen = [
     ...bekannt.map((p) => p.name.split(' ')[0]),
     ...(a.extern.trim() ? [a.extern.trim()] : []),
-    ...(fremd ? [`${fremd === 1 ? 'eine weitere Person' : `${fremd} weitere`}`] : []),
+    ...weitereZustaendige(
+      a,
+      a.wer.filter((p) => !personen.has(p)),
+    ),
   ];
   if (!namen.length) return <span className={styles.niemand}>noch niemand zuständig</span>;
   return (
@@ -109,7 +120,11 @@ export function ToDos({
   onSitzung: (gruppe: number, sitzung: string) => void;
 }) {
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
-  const [personen, setPersonen] = useState<ReadonlyMap<number, Person>>(new Map());
+  const [mitglieder, setMitglieder] = useState<ReadonlyMap<number, Person[] | 'verborgen'>>(
+    new Map(),
+  );
+  // Fenster „To-Do“: `eintrag` null = „Neues To-Do“.
+  const [fenster, setFenster] = useState<{ eintrag: ToDoEintrag | null } | null>(null);
   const [nach, setNach] = useState<Einteilung>(() =>
     leseImGeraet<Einteilung>(MERK_NACH, 'status', (x) => (x === 'person' ? 'person' : 'status')),
   );
@@ -124,22 +139,32 @@ export function ToDos({
   const [hinweis, setHinweis] = useState<string | null>(null);
   const heute = heuteImKalender();
 
-  const laden = useCallback(() => {
-    if (!gruppen.length) return setZustand({ art: 'fertig', uebersicht: [] });
-    setZustand({ art: 'laedt' });
-    ladeUebersicht(modul, gruppen, zeitzone).then(
-      (uebersicht) => setZustand({ art: 'fertig', uebersicht }),
-      (e: unknown) => setZustand({ art: 'fehler', fehler: fehlerMeldung(e) }),
-    );
-    // Namen und Bilder der Zuständigen – fehlen sie (Mitglieder verborgen, Netz), zeigt die Liste nur Zahlen.
-    void Promise.allSettled(gruppen.map((g) => ladeGruppenMitglieder(g.id))).then((alle) => {
-      const je = new Map<number, Person>();
-      for (const r of alle)
-        if (r.status === 'fulfilled' && r.value !== 'verborgen')
-          for (const p of r.value) je.set(p.id, p);
-      setPersonen(je);
-    });
-  }, [modul, gruppen]);
+  // `still`: nach dem Speichern im Fenster ohne „Wird geladen …“ – die Liste bleibt stehen, bis das Neue da ist.
+  const holen = useCallback(
+    (still: boolean) => {
+      if (!gruppen.length) return setZustand({ art: 'fertig', uebersicht: [] });
+      if (!still) setZustand({ art: 'laedt' });
+      ladeUebersicht(modul, gruppen, zeitzone).then(
+        (uebersicht) => setZustand({ art: 'fertig', uebersicht }),
+        (e: unknown) =>
+          still
+            ? setHinweis(fehlerMeldung(e).text)
+            : setZustand({ art: 'fehler', fehler: fehlerMeldung(e) }),
+      );
+      // Namen und Bilder der Zuständigen – fehlen sie (Mitglieder verborgen, Netz), zeigt die Liste nur Zahlen.
+      void Promise.allSettled(gruppen.map((g) => ladeGruppenMitglieder(g.id))).then((alle) =>
+        setMitglieder(
+          new Map(
+            alle.flatMap((r, i) =>
+              r.status === 'fulfilled' ? [[gruppen[i].id, r.value] as const] : [],
+            ),
+          ),
+        ),
+      );
+    },
+    [modul, gruppen],
+  );
+  const laden = useCallback(() => holen(false), [holen]);
 
   useEffect(laden, [laden]);
 
@@ -154,6 +179,9 @@ export function ToDos({
   };
 
   const ue = zustand.art === 'fertig' ? zustand.uebersicht : [];
+  const personen = new Map<number, Person>();
+  for (const l of mitglieder.values())
+    if (l !== 'verborgen') for (const p of l) personen.set(p.id, p);
   // Mitglieder dürfen die Mitgliederliste oft nicht sehen (`verborgen`) – sich selbst kennt man trotzdem (beim Prüfen in
   // der Test-Instanz 30.10.2026 gefunden: bei Spikes eigenen To-Dos stand „eine weitere Person“).
   const bekannte: ReadonlyMap<number, Person> = personen.has(ich.person)
@@ -180,6 +208,12 @@ export function ToDos({
   const alteErledigte = gefiltert.filter((e) => langeErledigt(e.aufgabe, heute)).length;
   const gezeigt = aeltere ? gefiltert : gefiltert.filter((e) => !langeErledigt(e.aufgabe, heute));
   const namen = new Map([...bekannte].map(([id, p]) => [id, p.name]));
+  // Wen die Liste nicht kennt, kennt vielleicht der Verlauf („nach Person“ zeigte sonst „Person 1“).
+  for (const e of sichtbar)
+    for (const p of e.aufgabe.wer) {
+      const n = namen.has(p) ? null : nameImVerlauf(e.aufgabe, p);
+      if (n) namen.set(p, n);
+    }
   const bereiche = einteilen(gezeigt, { nach, heute, ich: ich.person, namen });
   const mehrereGruppen = new Set(gezeigt.map((e) => e.gruppe.id)).size > 1;
   const irgendwoLeitung = gruppen.some(leitungIn);
@@ -209,15 +243,7 @@ export function ToDos({
     const id = e.aufgabe.id;
     setHinweis(null);
     setLaeuft((s) => new Set(s).add(id));
-    aufgabeAendern(
-      { modul, kategorie: u.gruppe.mitarbeit },
-      id,
-      (a) => statusSetzen(a, neu, ich.person, new Date().toISOString()),
-      () => {
-        // 409 statt einfachem Fehler: `fehlerMeldung` zeigt den Text, statt „ChurchTools antwortet gerade nicht“.
-        throw new ApiError(409, 'Dieses To-Do gibt es nicht mehr – bitte neu laden.');
-      },
-    )
+    toDoAendern({ modul, kategorie: u.gruppe.mitarbeit }, id, { status: neu }, ich)
       .then(
         (gespeichert) =>
           setZustand((z) =>
@@ -243,33 +269,40 @@ export function ToDos({
       );
   };
 
+  /** Aus welcher Sitzung – und ob ihr Protokoll noch ein Entwurf ist (dort führt das Protokoll). */
+  const herkunftVon = (e: ToDoEintrag): Herkunft | null => {
+    const u = ue.find((x) => x.gruppe.id === e.gruppe.id);
+    const s =
+      u &&
+      e.aufgabe.sitzung !== null &&
+      [...u.sitzungen.kommend, ...u.sitzungen.protokolle].find(
+        (x) => x.kopf?.sitzung === e.aufgabe.sitzung,
+      );
+    return s
+      ? { titel: s.titel, schluessel: s.schluessel, entwurf: s.kopf?.status === 'entwurf' }
+      : null;
+  };
+  const mitMitarbeit = gruppen.filter((g) => g.mitarbeit !== null);
+
   const zeile = (e: ToDoEintrag) => {
     const a = e.aufgabe;
     const u = ue.find((x) => x.gruppe.id === e.gruppe.id);
-    const herkunft =
-      u &&
-      a.sitzung !== null &&
-      [...u.sitzungen.kommend, ...u.sitzungen.protokolle].find(
-        (s) => s.kopf?.sitzung === a.sitzung,
-      );
+    const herkunft = herkunftVon(e);
+    const notiz = a.karte?.notiz ? letzteNotiz(a) : null;
     const ueber = istUeberfaellig(a, heute);
     const text = (
       <span className={a.status === 'erledigt' ? styles.erledigt : undefined}>{a.text}</span>
     );
     return (
       <li key={`${e.gruppe.id}:${a.id}`} className={styles.zeile}>
-        {herkunft ? (
-          <button
-            type="button"
-            className={styles.text}
-            title={`Im Protokoll „${herkunft.titel}“ zeigen`}
-            onClick={() => onSitzung(e.gruppe.id, herkunft.schluessel)}
-          >
-            {text}
-          </button>
-        ) : (
-          <span className={styles.text}>{text}</span>
-        )}
+        <button
+          type="button"
+          className={styles.text}
+          title="To-Do öffnen"
+          onClick={() => setFenster({ eintrag: e })}
+        >
+          {text}
+        </button>
         <span className={styles.meta}>
           <StatusMarke
             status={a.status}
@@ -287,6 +320,40 @@ export function ToDos({
           )}
           {mehrereGruppen && <Marke art="leise">{e.gruppe.name}</Marke>}
         </span>
+        {a.karte?.notiz && (
+          <span className={styles.abschnitt}>
+            <b>Notizen</b>
+            {notiz ? (
+              <span>
+                {notiz.text}{' '}
+                <span className={styles.leise}>
+                  –{' '}
+                  {notiz.von === ich.person
+                    ? ich.name
+                    : (nameFuer(a, notiz.von, namen) ?? 'jemand')}
+                </span>
+              </span>
+            ) : (
+              <span>Noch keine Notiz.</span>
+            )}
+          </span>
+        )}
+        {a.karte?.sitzung && a.sitzung !== null && (
+          <span className={styles.abschnitt}>
+            <b>Aus welcher Sitzung</b>
+            {herkunft ? (
+              <button
+                type="button"
+                className={styles.link}
+                onClick={() => onSitzung(e.gruppe.id, herkunft.schluessel)}
+              >
+                {herkunft.titel} – im Protokoll zeigen
+              </button>
+            ) : (
+              <span>{ohneHerkunft(a)}</span>
+            )}
+          </span>
+        )}
       </li>
     );
   };
@@ -307,8 +374,38 @@ export function ToDos({
             verbunden
           />
           <FilterKnopf abschnitte={filter} />
+          {mitMitarbeit.length > 0 && (
+            <KopfKnopf
+              neu
+              label="Neues To-Do"
+              title="Neues To-Do – auch ohne Protokoll"
+              symbol={<Icon name="plus" size={16} />}
+              onClick={() => setFenster({ eintrag: null })}
+            />
+          )}
         </span>
       </div>
+      {fenster && (
+        <ToDoFenster
+          ich={ich}
+          modul={modul}
+          gruppen={mitMitarbeit}
+          mitglieder={mitglieder}
+          eintrag={fenster.eintrag}
+          herkunft={fenster.eintrag ? herkunftVon(fenster.eintrag) : null}
+          leitungIn={leitungIn}
+          onSitzung={(g, s) => {
+            setFenster(null);
+            onSitzung(g, s);
+          }}
+          onFertig={(h) => {
+            setFenster(null);
+            setHinweis(h);
+            holen(true);
+          }}
+          onClose={() => setFenster(null)}
+        />
+      )}
       {!irgendwoLeitung && gruppen.length > 0 && (
         <p className={styles.ruhig}>
           Du siehst deine eigenen To-Dos und die, für die noch niemand zuständig ist.

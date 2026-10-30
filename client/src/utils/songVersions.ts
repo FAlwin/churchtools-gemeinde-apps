@@ -142,3 +142,42 @@ export function setLsVersion(
   lokalSchreiben(k, value); // wirft nie – sonst entfiele das Hochladen (#457)
   pushSetting(k, value);
 }
+
+/**
+ * Was eine Version von der mitbekommt, aus der sie entstand (Alwin, 30.10.2026: „Wenn ich etwas einstelle zb im Editor
+ * … soll bitte genau die Ansicht, mit dem gleichen Aussehen von vorher erscheinen“). Die Einstellungen gelten je
+ * Version; eine im Editor neu gespeicherte Version stand deshalb in Schrift 20, einer Spalte, mit Akkorden da.
+ *
+ *  - **neu** (aus dem Original oder einer anderen Version angelegt): das Aussehen und die Spielhilfen – Schrift, Spalten,
+ *    Nur Text, Kapo, Zählweise. Die Tonart regelt `uebernimmTonart` selbst (der Text steht schon in ihr); die
+ *    Abschnitts-Transponierung nicht, denn die Abschnitte der neuen Version können andere sein.
+ *  - **umbenannt** (dieselbe Version unter neuem Namen, also neuem Schlüssel): alles, auch Tonart und Abschnitte.
+ */
+const MITNEHMEN = {
+  neu: ['fs', 'cols', 'lyrics', 'capo', 'zaehl'],
+  umbenannt: ['fs', 'cols', 'lyrics', 'capo', 'zaehl', 'key', 'secshift'],
+} as const;
+
+/**
+ * Überträgt die Einstellungen der Version `von` auf `nach` – nur was an `von` gesetzt ist und an `nach` noch nicht
+ * (nichts überschreiben, wie bei den Umzügen in `versionMigration`). Geschrieben über `setLsVersion`, damit sie auch
+ * auf die anderen Geräte gehen. Gibt die Zahl der übertragenen Werte zurück.
+ *
+ * **Muss vor `selectVersion` laufen** – die liest die Einstellungen der neuen Version sofort.
+ */
+export function einstellungenMitnehmen(
+  songId: number,
+  von: string,
+  nach: string,
+  art: keyof typeof MITNEHMEN,
+): number {
+  if (von === nach) return 0;
+  let anzahl = 0;
+  for (const base of MITNEHMEN[art]) {
+    const wert = lsVersion(base, songId, von);
+    if (wert === null || lsVersion(base, songId, nach) !== null) continue;
+    setLsVersion(base, songId, nach, wert);
+    anzahl++;
+  }
+  return anzahl;
+}

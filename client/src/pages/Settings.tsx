@@ -14,6 +14,7 @@ import { useVerwaltung } from '../hooks/useVerwaltung';
 import { useSharing } from '../hooks/useSharing';
 import { isOfflineAutoEnabled, setOfflineAutoEnabled } from '../services/offlineAuto';
 import { getLiedansicht, setLiedansicht, type Liedansicht } from '../utils/devicePrefs';
+import { liedStart, setLiedStart, type LiedStart } from '../utils/standardAnsicht';
 import styles from './Settings.module.scss';
 import { funktionen } from '../services/funktionen';
 import { ServerVarianteHinweis } from '../components/ServerVarianteHinweis';
@@ -46,6 +47,11 @@ interface SettingsProps {
 const LIEDANSICHT_OPTIONS: { value: Liedansicht; label: string }[] = [
   { value: 'blaettern', label: 'Blättern' },
   { value: 'scrollen', label: 'Scrollen' },
+];
+
+const LIEDSTART_OPTIONS: { value: LiedStart; label: string }[] = [
+  { value: 'akkorde', label: 'Akkorde & Text' },
+  { value: 'text', label: 'Nur Text' },
 ];
 
 const THEME_OPTIONS: { value: ThemePref; label: string; icon: 'sun' | 'moon' | 'cog' }[] = [
@@ -81,6 +87,11 @@ export function Settings({
   const verwaltung = useVerwaltung(site, isAdmin);
   const [autoOffline, setAutoOffline] = useState(isOfflineAutoEnabled());
   const [liedansicht, setLiedansichtState] = useState(getLiedansicht);
+  const [start, setStartState] = useState(liedStart);
+  function waehleStart(s: LiedStart) {
+    setStartState(s);
+    setLiedStart(s);
+  }
   function waehleLiedansicht(a: Liedansicht) {
     setLiedansichtState(a);
     setLiedansicht(a);
@@ -151,6 +162,21 @@ export function Settings({
           </div>
           <p className={styles.installHint}>
             „Scrollen" zeigt die Lieder untereinander. Gilt nur für dieses Gerät.
+          </p>
+          {/* 30.10.2026: für Sängerinnen und Sänger – persönlich, auf allen Geräten (Konto-Einstellung). */}
+          <div className={`${styles.setRow} ${styles.setRowUmbruch}`}>
+            <span className={styles.setLabel}>Lieder öffnen mit</span>
+            <Segment
+              className={styles.themeSeg}
+              value={start}
+              ariaLabel="Lieder öffnen mit"
+              options={LIEDSTART_OPTIONS}
+              onChange={waehleStart}
+            />
+          </div>
+          <p className={styles.installHint}>
+            Gilt auf allen deinen Geräten. Was du an einem Lied selbst wählst, bleibt für dieses
+            Lied.
           </p>
         </div>
       </div>

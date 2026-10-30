@@ -7,7 +7,7 @@ import { apiFetch, ApiError } from './api';
 import { istExtension, KeinSpeicherRecht } from './ctRuntime';
 import { holeEinstellungen, schreibeEinstellungen } from './personenAblage';
 import { getReachable } from './reachability';
-import { SETTINGS_KEY_RE, songIdOfSettingsKey } from '@shared/keys/index';
+import { KONTO_ID, SETTINGS_KEY_RE, songIdOfSettingsKey } from '@shared/keys/index';
 import { verwaisteEntfernen } from './verwaisteEintraege';
 import { createPendingKeys } from './pendingKeys';
 import { onAppHidden } from './appHidden';
@@ -63,8 +63,11 @@ export function resetSync(): void {
 }
 
 /** Server → localStorage: vorhandene Einstellungen dieser Lieder spiegeln (setzt nur vorhandene Werte). */
-export async function pullSettings(songIds: number[]): Promise<void> {
-  if (disabled || songIds.length === 0) return;
+export async function pullSettings(liedIds: number[]): Promise<void> {
+  if (disabled || liedIds.length === 0) return;
+  // Die Konto-Einstellungen („Lieder öffnen mit“) stehen unter der Pseudo-ID 0 und kommen immer mit – auch beim
+  // Aufräumen unten, sonst bliebe eine auf einem anderen Gerät zurückgesetzte Wahl hier ewig stehen.
+  const songIds = liedIds.includes(KONTO_ID) ? liedIds : [...liedIds, KONTO_ID];
   try {
     const data = await weg.holen(songIds);
     // Drei Gründe, einen Schlüssel NICHT zu überschreiben (#275):

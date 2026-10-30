@@ -23,6 +23,9 @@ vi.mock('../services/churchtoolsApi', () => ({
   deleteVersion: (...a: unknown[]) => deleteVersion(...a),
 }));
 
+// Die Einstellungen gehen sonst ans Konto (Netz) – hier zählt nur, was im Gerät steht.
+vi.mock('../services/userSettings', () => ({ pushSetting: vi.fn() }));
+
 const { ApiError } = await import('../services/api');
 const { useChartEditor } = await import('./useChartEditor');
 
@@ -247,5 +250,46 @@ describe('useChartEditor – Löschen', () => {
     expect(result.current.editorError).toBe('Keine Berechtigung.');
     expect(result.current.editorSaving).toBe(false);
     expect(args.selectVersion).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * **Das Aussehen geht mit** (Alwin, 30.10.2026: nach dem Speichern im Editor „wieder zurück in die Ursprungsansicht“).
+ * Gemessen wird, was `selectVersion` vorfindet – genau dann liest die Ansicht die Einstellungen der neuen Version.
+ */
+describe('useChartEditor – Aussehen nach dem Speichern', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('neue Version aus dem Original: Schrift und Nur Text stehen schon da, wenn sie gewählt wird', async () => {
+    localStorage.setItem('worship_fs_12_original', '28');
+    localStorage.setItem('worship_lyrics_12_original', '1');
+    let gesehen: (string | null)[] = [];
+    const { result } = starte({
+      selectVersion: vi.fn(() => {
+        gesehen = [
+          localStorage.getItem('worship_fs_12_neu'),
+          localStorage.getItem('worship_lyrics_12_neu'),
+        ];
+      }),
+    });
+    act(() => result.current.openEditCurrent());
+    await act(() => result.current.handleEditorSave('[C]Neu', 'Neu'));
+    expect(gesehen).toEqual(['28', '1']);
+  });
+
+  it('umbenannte Version (neuer Schlüssel): auch die Tonart geht mit', async () => {
+    localStorage.setItem('worship_key_12_akustik', 'D');
+    localStorage.setItem('worship_cols_12_akustik', '2');
+    updateVersion.mockResolvedValue({ key: 'unplugged' });
+    const { result, args } = starte({
+      isOriginal: false,
+      versionKey: 'akustik',
+      currentVersionName: 'Akustik',
+    });
+    act(() => result.current.openEditCurrent());
+    await act(() => result.current.handleEditorSave('[D]Text', 'Unplugged'));
+    expect(args.selectVersion).toHaveBeenCalledWith(12, 'unplugged');
+    expect(localStorage.getItem('worship_key_12_unplugged')).toBe('D');
+    expect(localStorage.getItem('worship_cols_12_unplugged')).toBe('2');
   });
 });

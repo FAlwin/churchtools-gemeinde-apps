@@ -8,9 +8,28 @@
  *  - **Gemeinde-Einstellung** `SiteConfig.standardAnsicht`: „PDF zuerst" für alle Lieder mit Dokument.
  *
  * Eine eigene Wahl am Lied (Menü → Akkorde/Dokument) geht immer vor – das regelt `loadSettings`.
+ *
+ * **Dazu die persönliche Wahl „Lieder öffnen mit: Nur Text“** (Alwin, 30.10.2026: „Für Sänger würde es Sinn machen,
+ * dass man voreinstellen kann, dass immer Nur Text als erstes gewählt ist“). Sie gilt für das ganze Konto und damit auf
+ * jedem Gerät (`worship_start_0`, siehe `KONTO_ID`) und geht der Gemeinde-Einstellung „PDF zuerst“ vor: Eine Sängerin,
+ * die Nur Text gewählt hat, soll nicht doch die Noten sehen. Ein Lied ohne Text zeigt weiter sein Dokument.
  */
 import type { SetlistSong, StandardAnsicht } from '@shared/types/index';
+import { KONTO_ID } from '@shared/keys/index';
 import { getGemeindeAnsicht, setGemeindeAnsicht } from './devicePrefs';
+import { lsSong, setLsSong } from './songVersions';
+
+/** Womit ein Lied öffnet, an dem man selbst noch nichts gewählt hat – persönlich, für das ganze Konto. */
+export type LiedStart = 'akkorde' | 'text';
+
+export function liedStart(): LiedStart {
+  return lsSong('start', KONTO_ID) === 'text' ? 'text' : 'akkorde';
+}
+
+/** „Akkorde & Text“ ist die Vorgabe und wird nicht gespeichert – so bleibt ein Konto ohne Wahl ohne Eintrag. */
+export function setLiedStart(start: LiedStart): void {
+  setLsSong('start', KONTO_ID, start === 'text' ? 'text' : null);
+}
 
 /**
  * Die Ansicht der Gemeinde, wie sie das Gerät zuletzt geladen hat (`devicePrefs`).
@@ -40,10 +59,16 @@ export function standardDokument(song: SetlistSong): number | null {
  * wo der Fehler angezeigt wird. Vorübergehend ist nicht ungültig: Ein Aussetzer darf die Ansicht nicht
  * still umstellen.
  */
-export function standardQuelle(song: SetlistSong, ansicht: StandardAnsicht): 'chords' | number {
+export function standardQuelle(
+  song: SetlistSong,
+  ansicht: StandardAnsicht,
+  start: LiedStart = 'akkorde',
+): 'chords' | number {
   const doc = standardDokument(song);
   if (doc === null) return 'chords';
-  if (ansicht === 'dokument') return doc;
   const ohneChordpro = !song.chordpro && !song.chordproFailed && song.versions.length === 0;
-  return ohneChordpro ? doc : 'chords';
+  if (ohneChordpro) return doc;
+  // Persönlich „Nur Text“ schlägt die Gemeinde-Einstellung „PDF zuerst“: Text gibt es ja.
+  if (start === 'text') return 'chords';
+  return ansicht === 'dokument' ? doc : 'chords';
 }

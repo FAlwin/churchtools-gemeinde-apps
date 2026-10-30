@@ -113,7 +113,18 @@ export const SETTINGS_BASES = [
   'view',
   'zaehl',
   'arr',
+  'start',
 ] as const;
+
+/**
+ * **Die „Lied-ID“ der Einstellungen, die für das ganze Konto gelten** (30.10.2026, „Lieder öffnen mit: Nur Text“).
+ *
+ * Der Konto-Abgleich kennt nur Einstellungen je Lied (`worship_<art>_<Lied>_…`) und holt sie je Lied ab. Statt eines
+ * zweiten Wegs mit eigenen Härtungen steht eine Konto-Einstellung unter dieser Pseudo-ID: `worship_start_0`. Kein
+ * Lied in ChurchTools hat die ID 0. Wer abholt, fragt sie immer mit (`pullSettings`, der Server ergänzt sie in
+ * `GET /api/settings`); was man mit anderen teilt (Team-Notizen), fragt nur echte Lieder ab und nimmt sie nie mit.
+ */
+export const KONTO_ID = 0;
 
 /**
  * Gültige Einstellungs-Schlüssel (Konto-Sync).

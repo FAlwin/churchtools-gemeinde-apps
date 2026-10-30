@@ -4,7 +4,13 @@ import type { SetlistSong, SongDocument } from '@shared/types/index';
 import { loadSettings } from './chartSettings';
 import { clearDeviceData } from './clearDeviceData';
 import { setLsSong } from './songVersions';
-import { gemeindeAnsicht, merkeGemeindeAnsicht, standardQuelle } from './standardAnsicht';
+import {
+  gemeindeAnsicht,
+  liedStart,
+  merkeGemeindeAnsicht,
+  setLiedStart,
+  standardQuelle,
+} from './standardAnsicht';
 
 /**
  * Was ein Lied beim ersten Öffnen zeigt (07.10.2026, Anfrage einer Gemeinde ohne ChordPro-Dateien).
@@ -108,5 +114,46 @@ describe('Gemerkte Ansicht der Gemeinde', () => {
     merkeGemeindeAnsicht('dokument');
     await clearDeviceData();
     expect(gemeindeAnsicht()).toBe('dokument');
+  });
+});
+
+/**
+ * **„Lieder öffnen mit: Nur Text“** (Alwin, 30.10.2026, für Sängerinnen und Sänger). Persönlich, für das ganze Konto
+ * (`worship_start_0`), und stärker als die Gemeinde-Einstellung „PDF zuerst“ – Text gibt es ja.
+ */
+describe('Lieder öffnen mit (persönlich)', () => {
+  it('ohne Wahl: Akkorde & Text, und es steht nichts im Speicher', () => {
+    expect(liedStart()).toBe('akkorde');
+    setLiedStart('akkorde');
+    expect(localStorage.getItem('worship_start_0')).toBeNull();
+  });
+
+  it('„Nur Text“ steht unter dem Konto-Schlüssel – den gleicht der Konto-Abgleich ab', () => {
+    setLiedStart('text');
+    expect(localStorage.getItem('worship_start_0')).toBe('text');
+    expect(liedStart()).toBe('text');
+  });
+
+  it('„Nur Text“ schlägt „PDF zuerst“ der Gemeinde', () => {
+    expect(standardQuelle(song(), 'dokument', 'text')).toBe('chords');
+    expect(standardQuelle(song(), 'dokument')).toBe(PDF.fileId);
+  });
+
+  it('ein Lied ohne Text zeigt trotzdem sein Dokument', () => {
+    expect(standardQuelle(ohneChordpro(), 'akkorde', 'text')).toBe(PDF.fileId);
+  });
+
+  it('loadSettings: „Nur Text“, solange an der Version nichts gewählt ist – ein ausdrückliches „Akkorde & Text“ bleibt', () => {
+    setLiedStart('text');
+    expect(loadSettings(song()).lyricsOnly).toBe(true);
+    expect(loadSettings(song({ documents: [] })).viewSource).toBe('chords');
+    localStorage.setItem('worship_lyrics_5_original', '0');
+    expect(loadSettings(song()).lyricsOnly).toBe(false);
+  });
+
+  it('loadSettings: ohne persönliche Wahl bleibt alles wie bisher', () => {
+    expect(loadSettings(song()).lyricsOnly).toBe(false);
+    merkeGemeindeAnsicht('dokument');
+    expect(loadSettings(song()).viewSource).toBe(PDF.fileId);
   });
 });

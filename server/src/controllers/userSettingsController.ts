@@ -4,11 +4,16 @@ import { getUserId } from '../services/ctAuth.js';
 import { einstellungenHolen, einstellungenSchreiben } from '../services/kontoAblage.js';
 import { ctCookie } from '../utils/ctCookie.js';
 import { songIdsFromQuery } from '../utils/songIdsQuery.js';
+import { KONTO_ID } from '@shared/keys/index';
 
-/** GET /api/settings?songs=1,2,3 – kontobezogene Lied-Einstellungen zu diesen Liedern. */
+/**
+ * GET /api/settings?songs=1,2,3 – kontobezogene Lied-Einstellungen zu diesen Liedern, **dazu immer die des ganzen
+ * Kontos** (Pseudo-ID `KONTO_ID`, „Lieder öffnen mit“). `songIdsFromQuery` lässt die 0 bewusst nicht durch – sie ist
+ * keine Lied-ID –, deshalb ergänzt sie der Server hier selbst.
+ */
 export async function getSettings(req: Request, res: Response): Promise<void> {
   const userId = await getUserId(ctCookie(req));
-  const songs = songIdsFromQuery(req.query.songs);
+  const songs = [...songIdsFromQuery(req.query.songs), KONTO_ID];
   res.json(await einstellungenHolen(ctCookie(req), userId, songs));
 }
 

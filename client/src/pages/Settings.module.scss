@@ -63,6 +63,17 @@
     background: var(--surface3);
   }
 }
+// Zeile, deren Umschalter am Handy nicht neben die Beschriftung passt („Lieder öffnen mit“, 30.10.2026): Dann rutscht
+// der Umschalter in eine eigene Zeile, statt dass Beschriftung und Knöpfe in sich umbrechen.
+.setRowUmbruch {
+  flex-wrap: wrap;
+  row-gap: 10px;
+
+  .themeSeg button {
+    white-space: nowrap;
+  }
+}
+
 .setLabel {
   font-size: 15px;
   font-weight: 500;

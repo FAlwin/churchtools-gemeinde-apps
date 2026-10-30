@@ -8,7 +8,7 @@ import {
   fromLocalStorage,
   type SettingSource,
 } from './songVersions';
-import { gemeindeAnsicht, standardQuelle } from './standardAnsicht';
+import { gemeindeAnsicht, liedStart, standardQuelle } from './standardAnsicht';
 
 /** Einstellungen pro Lied (Tonart, Kapo, Abschnitts-Transponierung, Schrift, Spalten, Anzeige). */
 export interface SongSettings {
@@ -106,14 +106,18 @@ function buildSettings(
   src: SettingSource,
   songId: number,
   versionKey: string,
+  /** „Nur Text“, wenn an dieser Version nichts gewählt ist – die eigene Wahl „Lieder öffnen mit“ (30.10.2026). */
+  nurTextVorgabe = false,
 ): Omit<SongSettings, 'viewSource' | 'lyricsOnly' | 'arrangementId'> & { lyricsOnly: boolean } {
   const get = (base: string): string | null => readVersioned(src, base, songId, versionKey);
+  const lyrics = get('lyrics');
   return {
     key: get('key') || null,
     capo: intOr(get('capo'), DEFAULT_SETTINGS.capo),
     cols: intOr(get('cols'), DEFAULT_SETTINGS.cols) === 2 ? 2 : 1,
     fontSize: intOr(get('fs'), DEFAULT_SETTINGS.fontSize),
-    lyricsOnly: get('lyrics') === '1',
+    // Ein ausdrückliches „Akkorde & Text“ steht als '0' da und schlägt die Vorgabe.
+    lyricsOnly: lyrics === null ? nurTextVorgabe : lyrics === '1',
     secShift: parseSecShift(get('secshift')),
     // 0 gibt es nicht – ein unbekannter oder kaputter Wert heißt „aus der Taktart ableiten".
     zaehlweise: ZAEHLWEISEN.includes(intOr(get('zaehl'), 0) as 1 | 2 | 3)
@@ -131,6 +135,7 @@ export function loadSettings(
   // viewSource (Dokument vs. Akkorde) gilt pro Lied, nicht pro Version. Eine eigene Wahl geht vor –
   // auch ein ausdrückliches „Akkorde": Seit es einen Standard „Dokument" gibt (07.10.2026), hieße
   // „nicht als Dokument-ID lesbar" sonst „nichts gewählt", und die Wahl wäre stillschweigend weg.
+  const start = liedStart();
   const savedView = lsSong('view', song.id);
   const savedId = savedView ? Number(savedView) : NaN;
   const viewSource =
@@ -138,7 +143,7 @@ export function loadSettings(
       ? 'chords'
       : savedView && !Number.isNaN(savedId) && song.documents.some((d) => d.fileId === savedId)
         ? savedId
-        : standardQuelle(song, gemeindeAnsicht());
+        : standardQuelle(song, gemeindeAnsicht(), start);
   /**
    * Gewähltes Arrangement – pro Lied, wie `viewSource`, und **nur wenn es das Lied noch hat**.
    *
@@ -152,7 +157,11 @@ export function loadSettings(
   const arrId = savedArr ? Number(savedArr) : NaN;
   const arrangementId =
     Number.isInteger(arrId) && arrId > 0 && song.arrangementCount > 1 ? arrId : null;
-  return { ...buildSettings(fromLocalStorage, song.id, versionKey), viewSource, arrangementId };
+  return {
+    ...buildSettings(fromLocalStorage, song.id, versionKey, start === 'text'),
+    viewSource,
+    arrangementId,
+  };
 }
 
 /** secShift-Rohwert (JSON) sicher parsen; ignoriert Ungültiges/0-Werte. */

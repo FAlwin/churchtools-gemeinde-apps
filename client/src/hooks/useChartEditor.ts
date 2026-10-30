@@ -3,6 +3,7 @@ import type { SetlistSong } from '@shared/types/index';
 import { createVersion, updateVersion, deleteVersion } from '../services/churchtoolsApi';
 import { ApiError } from '../services/api';
 import { getSemitoneOffset, mitTonart, transposeChordpro } from '../utils/transpose';
+import { einstellungenMitnehmen } from '../utils/songVersions';
 
 interface UseChartEditorArgs {
   /** Aktuell angezeigtes Lied. */
@@ -102,11 +103,14 @@ export function useChartEditor({
     setEditorSaving(true);
     setEditorError(null);
     try {
-      const v =
-        editor.mode === 'edit' && !isOriginal
-          ? await updateVersion(song.id, song.arrangementId, versionKey, { text, name })
-          : await createVersion(song.id, song.arrangementId, name, text);
+      const bearbeitet = editor.mode === 'edit' && !isOriginal;
+      const v = bearbeitet
+        ? await updateVersion(song.id, song.arrangementId, versionKey, { text, name })
+        : await createVersion(song.id, song.arrangementId, name, text);
       setShowEditor(false);
+      // Das Aussehen geht mit (30.10.2026) – bei einer neuen Version und beim Umbenennen, das einen neuen Schlüssel
+      // ergibt. Vor `selectVersion`, denn die liest die Einstellungen der Version sofort.
+      einstellungenMitnehmen(song.id, versionKey, v.key, bearbeitet ? 'umbenannt' : 'neu');
       selectVersion(song.id, v.key);
       // Eine NEUE Version, geschrieben in der gewählten Tonart: Die Wahl geht mit, sonst zeigte die
       // frische Version die Zieltonart aus ChurchTools – und damit nicht das, was eben getippt wurde.

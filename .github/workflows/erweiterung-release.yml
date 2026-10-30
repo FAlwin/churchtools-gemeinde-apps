@@ -41,6 +41,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -61,6 +63,18 @@ jobs:
           VITE_KEY: ${{ inputs.kuerzel }}
           VITE_APP_VERSION: ${{ env.VERSION }}
 
+      # Release-Beschreibung nur mit den Einträgen DIESER App (30.10.2026, Alwin: „sollen auch nur die Features
+      # dieser einen App oder Erweiterung da erscheinen“). Vorher hängte GitHub jeden PR seit dem letzten Tag an.
+      # Braucht die Tags und den Verlauf – deshalb `fetch-depth: 0` oben. Scheitert es, scheitert der Release laut.
+      - name: Release-Beschreibung aus dem CHANGELOG
+        id: notizen
+        run: |
+          {
+            echo 'text<<NOTIZEN_ENDE'
+            node scripts/release-notizen.mjs --app ${{ inputs.kuerzel }} --tag "$GITHUB_REF_NAME"
+            echo 'NOTIZEN_ENDE'
+          } >> "$GITHUB_OUTPUT"
+
       - name: GitHub Release veröffentlichen
         uses: softprops/action-gh-release@v2
         with:
@@ -76,5 +90,7 @@ jobs:
             (genau so – sonst lädt sie nicht), Name frei. Zum Aktualisieren beim Eintrag auf den Stift und die
             neue ZIP hochladen.
             Anleitung: https://github.com/FAlwin/churchtools-gemeinde-apps/blob/main/${{ inputs.anleitung }}
+
+            ${{ steps.notizen.outputs.text }}
           files: ${{ inputs.workspace }}/releases/${{ inputs.kuerzel }}-${{ env.VERSION }}.zip
           fail_on_unmatched_files: true

@@ -801,6 +801,12 @@ den Skill `/festhalten`, der genau das automatisiert.
    siehe `changelog.d/README.md`). `npm run changelog -- --version X.Y.Z` setzt sie unter `## [X.Y.Z] – Datum`
    in `CHANGELOG.md` (neueste zuerst, dazu was noch direkt unter `[Unreleased]` stand) und löscht die Dateien;
    danach lesen und gegen den Code prüfen. Versionierung nach SemVer.
+   **Die Release-Beschreibung auf GitHub baut `scripts/release-notizen.mjs` je App** (seit 30.10.2026, Alwin: nur
+   die Features dieser App, nicht alle): was seit dem vorigen Tag derselben App in `CHANGELOG.md` + `changelog.d/`
+   dazukam und in der Klammer der Überschrift die App oder „alle Apps“ nennt; „Intern“ nie. Alle drei
+   Release-Workflows rufen es auf (`release.yml`, `erweiterung-release.yml`, `anmeldungen-release.yml`) –
+   `generate_release_notes` (jeder PR aller Apps) ist aus. Vorschau:
+   `node scripts/release-notizen.mjs --app musik-app --tag vX.Y.Z` (Tag muss lokal existieren).
 6. **Taggen:** `git tag vX.Y.Z && git push origin vX.Y.Z` → CI baut `:latest` + `:X.Y` + `:X`
    (Major-Tag, damit Gemeinden sicher auf `:2` bleiben können). Prod-Deploy bewusst, nicht nebenbei.
    **Die Anmeldungen haben einen eigenen Weg:** Tag `anmeldung-vX.Y.Z` (ab v0.1.0) →

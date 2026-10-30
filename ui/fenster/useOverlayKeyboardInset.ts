@@ -41,8 +41,11 @@ export function useOverlayKeyboardInset(): (el: HTMLElement | null) => void {
     if (!vv || !el) return;
     const apply = () => {
       // Sicherheitsnetz: Was auch immer gemeldet wird, das Fenster behält `FENSTER_PLATZ_PX` – nie wieder nur den
-      // Schleier (30.10.2026; die Ursache, eine gemeldete Tastatur ohne Eingabefeld, fängt `tastaturHoehe`).
-      const kb = Math.min(tastaturHoehe(vv), Math.max(0, window.innerHeight - FENSTER_PLATZ_PX));
+      // Schleier (30.10.2026; die Ursache, eine gemeldete Tastatur ohne Eingabefeld, fängt `tastaturHoehe`). Gerechnet
+      // mit der Höhe des Overlays, nicht des Browserfensters: In ChurchTools liegt es unter dessen Leiste und ist
+      // ~60 px kürzer (in der Test-Instanz gemessen: mit `innerHeight` blieben dem Fenster 63 statt 112 px).
+      const hoehe = el.clientHeight || window.innerHeight;
+      const kb = Math.min(tastaturHoehe(vv), Math.max(0, hoehe - FENSTER_PLATZ_PX));
       el.style.setProperty('--kb', `${kb}px`);
       if (window.scrollY !== 0 || vv.offsetTop !== 0) window.scrollTo(0, 0);
     };

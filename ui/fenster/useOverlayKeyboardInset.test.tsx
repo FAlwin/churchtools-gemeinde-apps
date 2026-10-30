@@ -108,6 +108,16 @@ describe('useOverlayKeyboardInset', () => {
     );
   });
 
+  it('Sicherheitsnetz rechnet mit der Höhe des Overlays – in ChurchTools ist es kürzer als das Fenster', () => {
+    window.innerHeight = 800;
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(680); // unter der ChurchTools-Leiste
+    stubViewport(60);
+    const { getByTestId } = render(<Overlay />);
+    expect(getByTestId('overlay').style.getPropertyValue('--kb')).toBe(
+      `${680 - FENSTER_PLATZ_PX}px`,
+    );
+  });
+
   it('ohne visualViewport passiert nichts (kein Absturz, kein --kb)', () => {
     const { getByTestId } = render(<Overlay />);
     expect(getByTestId('overlay').style.getPropertyValue('--kb')).toBe('');

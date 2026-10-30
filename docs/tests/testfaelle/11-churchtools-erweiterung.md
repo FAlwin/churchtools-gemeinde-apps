@@ -335,3 +335,34 @@ Bildschirm die App. Der Zustand bleibt beim Wechsel zwischen Liste, Ablauf und L
   Hinweis, Flackern; in der Homescreen-App gar nicht verfügbar)
 
 </details>
+
+### TF-EXT-12 · Am iPhone/iPad: Fenster erscheinen, untere Leisten über dem Home-Strich
+
+**Das brauchst du:** ChurchTools als Homescreen-App auf einem iPhone mit Home-Strich (ab iPhone X) und, wenn zur Hand,
+auf einem iPad. Organigramm und Musik-App in der Test-Instanz, ein Konto mit „Gruppen verwalten“.
+
+**Das muss passieren:** Ein Fenster erscheint immer ganz – nie nur der dunkle Schleier –, auch nachdem vorher
+geschrieben wurde oder die App im Hintergrund lag. Untere Leisten liegen über dem Home-Strich, nichts wird von den
+runden Ecken angeschnitten.
+
+1. Organigramm, Reiter unten: „Organigramm“, „Personen“, „Hinweise“, „Neue Gliederung“ stehen ganz über dem Strich,
+   die äußeren Beschriftungen sind vollständig zu sehen.
+2. **Präsentieren**: „Zurück“, „Übersicht“ und „Weiter“ stehen über dem Strich, die Knöpfe sind ganz zu sehen.
+3. In **Einstellungen** etwas in die Suche tippen, Tastatur schließen, Fenster schließen. Die App kurz in den
+   Hintergrund legen und zurückholen. **Einstellungen** erneut öffnen → das Fenster ist ganz zu sehen.
+4. In der Suche tippen: Das Fenster rückt über die Tastatur, Kopf und Knöpfe bleiben sichtbar.
+5. Musik-App: ein Lied im Editor bearbeiten, Editor schließen, dann das Lied-Menü öffnen → das Fenster ist da.
+6. Im Browser am Rechner: Reiterleiste und Präsentation sehen aus wie vorher (kein zusätzlicher Rand unten).
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `ui/fenster/useTastaturOffen.ts`, `ui/fenster/useOverlayKeyboardInset.ts`, `ui/fenster/appHeight.ts`, `ui/design/_variables.scss`, `organigramm/src/Praesentation.module.scss`
+- **Automatisiert:** teilweise – `useTastaturOffen.test.tsx` (keine Tastatur ohne Schreibfeld, Häkchen zählt nicht,
+  `syncAppHeight` mit derselben Regel), `useOverlayKeyboardInset.test.tsx` (kein Platz ohne Schreibfeld,
+  Sicherheitsnetz), `polster.test.ts` (Reiterleiste ganz über dem Strich), `homeStrich.test.ts` (jede Vollbild-Ansicht
+  der Erweiterungen mit Abstand zum Strich); ob iOS die Tastatur falsch meldet und wie es am Gerät aussieht, nur hier
+- **Historie:** Alwin 29.10.2026 (iPhone, Lied-Menü nach dem Editor nur Unschärfe) und 30.10.2026 (iPad,
+  „Einstellungen“ im Organigramm; iPhone, Reiterleiste und Präsentation zu tief)
+
+</details>

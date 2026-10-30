@@ -7,6 +7,8 @@
  * synthetisches `resize`-Event würde nebenbei alle Resize-Handler der App auslösen.
  */
 
+import { schreibtGerade } from './useTastaturOffen';
+
 /** Was beim Messen gebraucht wird – als eigener Typ, damit die Regel ohne Gerät prüfbar ist. */
 export interface UntenMessung {
   /** Läuft die Seite als App vom Home-Bildschirm (unsere PWA oder die ChurchTools-App)? */
@@ -96,8 +98,7 @@ export function syncAppHeight(): void {
   // GANZE App nach oben („alles verschiebt sich"). Das Freihalten des Cursors übernehmen die
   // Tastatur-Ausweich-Logiken in PageDeck/ChordEditor; nach dem Blur kommt ein Resize und
   // die Höhe wird wieder normal nachgeführt.
-  const ae = document.activeElement as HTMLElement | null;
-  if (ae && (ae.isContentEditable || ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) return;
+  if (schreibtGerade()) return;
   const s = document.documentElement.style;
   // `--app-h` bleibt `innerHeight`: Gegen sie messen die Tastatur-Hilfen (`useTastaturOffen`, `useKeyboardInsets`) –
   // im Maß von `visualViewport`. Die volle Höhe für `html` steht getrennt in `--app-voll`.

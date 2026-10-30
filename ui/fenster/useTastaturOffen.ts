@@ -1,11 +1,41 @@
 import { useEffect, useState } from 'react';
 
+/** Eingabefelder, die KEINE Bildschirmtastatur öffnen – ein angetipptes Häkchen hat zwar den Fokus, tippt aber nicht. */
+const OHNE_TASTATUR = new Set([
+  'button',
+  'checkbox',
+  'color',
+  'file',
+  'hidden',
+  'image',
+  'radio',
+  'range',
+  'reset',
+  'submit',
+]);
+
+/**
+ * **Nimmt gerade ein Feld Text an?** Nur dann kann iOS eine Bildschirmtastatur zeigen. EINE Regel für die
+ * Tastaturhöhe unten und für `syncAppHeight` (`appHeight.ts`), das beim Tippen die App-Höhe anhält.
+ */
+export function schreibtGerade(el: Element | null = document.activeElement): boolean {
+  if (!(el instanceof HTMLElement)) return false;
+  if (el.isContentEditable || el.tagName === 'TEXTAREA') return true;
+  return el instanceof HTMLInputElement && !OHNE_TASTATUR.has(el.type);
+}
+
 /**
  * **Wie hoch die Bildschirmtastatur gerade ist** (iOS: der `visualViewport` schrumpft, `innerHeight` nicht). EINE
  * Formel für die Aussparung der Fenster (`useOverlayKeyboardInset`, #207) und die Frage „schreibt gerade jemand?“
  * im Lied-Editor (`useTastaturOffen`).
+ *
+ * **Ohne Feld, in dem geschrieben wird, ist keine Tastatur offen** – egal, was der `visualViewport` meldet. iOS hält
+ * dessen Höhe manchmal noch klein, wenn die Tastatur längst zu ist (nach dem Lied-Editor, nach einer Weile im
+ * Hintergrund). Dann sparte jedes neue Fenster eine Tastatur aus, die es nicht gab, und behielt selbst 0 px: nur der
+ * dunkle Schleier, kein Fenster, erst ein Neustart half (Alwin am iPhone 29.10. und am iPad 30.10.2026).
  */
 export function tastaturHoehe(vv: VisualViewport, innenHoehe = window.innerHeight): number {
+  if (!schreibtGerade()) return 0;
   return Math.max(0, innenHoehe - vv.height - vv.offsetTop);
 }
 

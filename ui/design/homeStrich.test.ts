@@ -34,6 +34,20 @@ describe('Home-Strich', () => {
     expect(dateien('ui', /\.(scss|css|tsx?)$/).length).toBeGreaterThan(50);
   });
 
+  it('jede Vollbild-Ansicht der Erweiterungen hält unten Abstand zum Strich', () => {
+    // Die Präsentation des Organigramms hatte ihn nicht: „Zurück“ und „Weiter“ lagen am iPhone im Strich und in den
+    // runden Ecken (Alwin, 30.10.2026) – die Vollbild-Ansicht des Dienstplaners hatte ihn längst.
+    const erweiterungen = ORDNER.filter((o) => !/^(client|server|shared|formular)\/|^ui$/.test(o));
+    const vollbild = erweiterungen
+      .flatMap((o) => dateien(o, /\.scss$/))
+      .map((p) => [relative(WURZEL, p), readFileSync(p, 'utf8')] as const)
+      .filter(([, q]) => /position: fixed;\s*inset: 0;/.test(q));
+    expect(vollbild.map(([p]) => p)).toContain('organigramm/src/Praesentation.module.scss');
+    expect(vollbild.filter(([, q]) => !q.includes('var(--unten-strich)')).map(([p]) => p)).toEqual(
+      [],
+    );
+  });
+
   it('das Plus steht über --plus-boden, nicht mit eigener Zahl', () => {
     const plus = readFileSync(join(WURZEL, 'ui/bedienung/SchwebePlus.module.scss'), 'utf8');
     expect(plus).toContain('bottom: calc(var(--plus-boden) + 16px)');

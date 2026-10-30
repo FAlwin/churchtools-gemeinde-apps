@@ -99,6 +99,9 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px clamp(16px, 2vw, 24px);
+  // Über dem Home-Strich wie die Vollbild-Ansicht des Dienstplaners (`AblaufAnzeige`) – bis zum 30.10.2026 lagen
+  // „Zurück“ und „Weiter“ am iPhone im Strich und in den runden Ecken.
+  padding-bottom: max(10px, var(--unten-strich));
   background: var(--surface2);
   border-top: 1px solid var(--border);
 }

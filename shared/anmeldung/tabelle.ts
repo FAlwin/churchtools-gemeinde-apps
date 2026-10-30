@@ -270,6 +270,9 @@ export interface PersonZeile {
   p: ListenPerson;
 }
 
+/** Der Schlüssel einer Zeile je Person – für die Zeile selbst und fürs Anheften (U2-4) dieselbe Stelle. */
+export const personSchluessel = ({ x, p }: PersonZeile) => `${x.schluessel}-${p.personId}`;
+
 /** Jede Person jeder Anmeldung – in der Reihenfolge der Liste, die erste Person zuerst. */
 export function personZeilen(liste: ListenAnmeldung[]): PersonZeile[] {
   return liste.flatMap((x) => x.personen.map((p) => ({ x, p })));
@@ -588,4 +591,15 @@ export function wahlGeaendert(
   w: TabellenWahl,
 ): boolean {
   return !gleicheWahl(w, spaltenWahl(e, modus));
+}
+
+// ── Zeilen anheften (U2-4) ────────────────────────────────────────────────────────────────────
+
+/**
+ * **Angeheftete Zeilen zuerst** (Entscheidung 4, 29.10.2026) – untereinander und darunter in der Reihenfolge, in der sie
+ * sonst stünden; so bleibt die Sortierung auch unter den angehefteten. Was nicht im Reiter steht, steht auch nicht oben
+ * – die Nadel folgt dem Reiter.
+ */
+export function obenZuerst<Z>(zeilen: Z[], oben: (z: Z) => boolean): Z[] {
+  return [...zeilen.filter(oben), ...zeilen.filter((z) => !oben(z))];
 }

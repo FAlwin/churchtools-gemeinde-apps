@@ -8,7 +8,7 @@ afterEach(() => {
   localStorage.clear();
 });
 
-describe('Im Gerät merken (geraet.ts)', () => {
+describe('Im Gerät merken (@ui/bedienung/geraet)', () => {
   it('Speicher wirft (privater Modus) → Vorgabe beim Lesen, Merken stört nicht', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('gesperrt');

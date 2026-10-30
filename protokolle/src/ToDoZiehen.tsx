@@ -21,7 +21,6 @@ import {
 } from '@dnd-kit/core';
 import {
   SortableContext,
-  arrayMove,
   useSortable,
   verticalListSortingStrategy,
   type SortingStrategy,
@@ -30,12 +29,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { BodyPortal } from '@ui/fenster/BodyPortal';
 import { innerScrollOnly, resetViewportAfterDrag } from '@ui/bedienung/dndAutoScroll';
 import { useZiehSensorenLangDruecken } from '@ui/bedienung/useZiehSensoren';
+import { loslassen, type Daten } from './toDoZiehenRegel';
 import styles from './ToDos.module.scss';
-
-export interface Daten {
-  art: 'karte' | 'spalte';
-  spalte: string;
-}
 
 const datenVon = (x: { data: { current?: unknown } } | null): Daten | null =>
   (x?.data.current as Daten | undefined) ?? null;
@@ -62,33 +57,6 @@ const erkennen: CollisionDetection = (args) => {
   }
   return closestCenter(args);
 };
-
-/** Was beim Loslassen geschieht – rein, damit es ohne Zieh-Simulation prüfbar ist. */
-export type Loslassen =
-  | { art: 'ablegen'; karte: string; von: string; nach: string }
-  | { art: 'umordnen'; spalte: string; karte: string; vor: string | null }
-  | null;
-
-export function loslassen(q: {
-  karte: string;
-  von: Daten | null;
-  ueber: Daten | null;
-  /** Die ID dessen, worüber losgelassen wurde (Karte oder `spalte:…`). */
-  ueberId: string | null;
-  zwischen: boolean;
-  manuell: boolean;
-  spalten: ReadonlyMap<string, readonly string[]>;
-}): Loslassen {
-  const { karte, von, ueber, ueberId } = q;
-  if (!von || !ueber || ueberId === null) return null;
-  if (ueber.spalte !== von.spalte)
-    return q.zwischen ? { art: 'ablegen', karte, von: von.spalte, nach: ueber.spalte } : null;
-  if (!q.manuell || ueber.art !== 'karte' || ueberId === karte) return null;
-  const reihe = [...(q.spalten.get(von.spalte) ?? [])];
-  if (!reihe.includes(karte) || !reihe.includes(ueberId)) return null;
-  const neu = arrayMove(reihe, reihe.indexOf(karte), reihe.indexOf(ueberId));
-  return { art: 'umordnen', spalte: von.spalte, karte, vor: neu[neu.indexOf(karte) + 1] ?? null };
-}
 
 export function ToDoZiehBereich({
   zwischen,

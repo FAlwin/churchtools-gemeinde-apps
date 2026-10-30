@@ -14,8 +14,7 @@ describe('useZiehSensorenLangDruecken', () => {
   it('Maus: 6 px; Finger: ~0,4 s liegen lassen mit 8 px Spiel; Tastatur', () => {
     renderHook(() => useZiehSensorenLangDruecken());
     const aufrufe = vi.mocked(useSensor).mock.calls;
-    const mit = (s: unknown) =>
-      aufrufe.find(([x]) => x === s)?.[1] as Record<string, unknown> | undefined;
+    const mit = (s: unknown) => aufrufe.find(([x]) => x === s)?.[1];
     expect(mit(MouseSensor)).toEqual({ activationConstraint: { distance: 6 } });
     expect(mit(TouchSensor)).toEqual({ activationConstraint: { delay: 400, tolerance: 8 } });
     expect(LANG_DRUECKEN_MS).toBe(400);

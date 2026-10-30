@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loslassen } from './ToDoZiehen';
+import { loslassen } from './toDoZiehenRegel';
 
 /** S7-3: Was beim Loslassen einer Karte geschieht. */
 const spalten = new Map([

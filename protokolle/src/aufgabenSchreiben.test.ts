@@ -14,6 +14,11 @@ const ablegen = (...a: Aufgabe[]) => {
   for (const x of a) werteVon(ct, KAT).push({ id: ct.naechste++, value: JSON.stringify(x) });
 };
 const schreibAufrufe = () => ct.aufrufe.filter((x) => !x.startsWith('GET'));
+const ICH = { person: 1, name: 'Alwin Friesen' };
+const schreiben = (planen: Parameters<typeof aufgabenSchreiben>[1]) =>
+  aufgabenSchreiben(ORT, planen, ICH);
+const aendern = (id: string, f: (a: Aufgabe) => Aufgabe, anlegen: () => Aufgabe) =>
+  aufgabeAendern(ORT, id, f, anlegen, ICH);
 
 beforeEach(() => {
   ct = nachbauStarten();
@@ -41,7 +46,7 @@ describe('aufgabenWerte', () => {
 describe('aufgabenSchreiben', () => {
   it('legt an, ändert, liest nach und liefert den frischen Stand', async () => {
     ablegen(todo('t1'));
-    const r = await aufgabenSchreiben(ORT, () => ({
+    const r = await schreiben(() => ({
       anlegen: [todo('t2')],
       aendern: [{ ...todo('t1'), text: 'neu' }],
     }));
@@ -53,7 +58,7 @@ describe('aufgabenSchreiben', () => {
 
   it('plant auf dem frisch gelesenen Stand – ein inzwischen gesetzter Status bleibt', async () => {
     ablegen(statusSetzen(todo('t1'), 'erledigt', 19, AM));
-    const r = await aufgabenSchreiben(ORT, (vorhanden) => ({
+    const r = await schreiben((vorhanden) => ({
       anlegen: [],
       aendern: vorhanden.map((a) => ({ ...a, text: 'neu' })),
     }));
@@ -62,43 +67,42 @@ describe('aufgabenSchreiben', () => {
 
   it('nichts zu tun → nur lesen, nichts schreiben', async () => {
     ablegen(todo('t1'));
-    await aufgabenSchreiben(ORT, () => ({ anlegen: [], aendern: [] }));
+    await schreiben(() => ({ anlegen: [], aendern: [] }));
     expect(schreibAufrufe()).toEqual([]);
   });
 
   it('legt ein To-Do nicht doppelt an, das schon da ist (abgebrochenes Speichern davor)', async () => {
     ablegen(todo('t1'));
-    await aufgabenSchreiben(ORT, () => ({ anlegen: [todo('t1')], aendern: [] }));
+    await schreiben(() => ({ anlegen: [todo('t1')], aendern: [] }));
     expect(schreibAufrufe()).toEqual([]);
   });
 
   it('ChurchTools sagt 201, legt aber nichts an → Fehler', async () => {
     ct.schluckeWert = () => true;
-    await expect(
-      aufgabenSchreiben(ORT, () => ({ anlegen: [todo('t1')], aendern: [] })),
-    ).rejects.toThrow(/nicht übernommen/);
+    await expect(schreiben(() => ({ anlegen: [todo('t1')], aendern: [] }))).rejects.toThrow(
+      /nicht übernommen/,
+    );
   });
 
   it('ChurchTools sagt 200, ändert aber nichts → Fehler', async () => {
     ablegen(todo('t1'));
     ct.schlucken.add('PUT WERT');
     await expect(
-      aufgabenSchreiben(ORT, () => ({ anlegen: [], aendern: [{ ...todo('t1'), text: 'x' }] })),
+      schreiben(() => ({ anlegen: [], aendern: [{ ...todo('t1'), text: 'x' }] })),
     ).rejects.toThrow(/nicht übernommen/);
   });
 
   it('ein zu änderndes To-Do ist verschwunden → Fehler statt still neu anlegen', async () => {
-    await expect(
-      aufgabenSchreiben(ORT, () => ({ anlegen: [], aendern: [todo('t1')] })),
-    ).rejects.toThrow(/verschwunden/);
+    await expect(schreiben(() => ({ anlegen: [], aendern: [todo('t1')] }))).rejects.toThrow(
+      /verschwunden/,
+    );
   });
 });
 
 describe('aufgabeAendern', () => {
   it('ändert auf dem frisch gelesenen Stand (Status von jemand anderem bleibt erhalten)', async () => {
     ablegen(statusSetzen(todo('t1'), 'arbeit', 19, AM));
-    const r = await aufgabeAendern(
-      ORT,
+    const r = await aendern(
       't1',
       (a) => ({ ...a, bis: '2026-11-01' }),
       () => todo('x'),
@@ -109,8 +113,7 @@ describe('aufgabeAendern', () => {
   });
 
   it('gibt es das To-Do noch nicht, entsteht es', async () => {
-    const r = await aufgabeAendern(
-      ORT,
+    const r = await aendern(
       't1',
       (a) => ({ ...a, wer: [7] }),
       () => todo('t1', 'neu'),
@@ -123,12 +126,37 @@ describe('aufgabeAendern', () => {
     ablegen(todo('t1'));
     ct.schlucken.add('PUT WERT');
     await expect(
-      aufgabeAendern(
-        ORT,
+      aendern(
         't1',
         (a) => ({ ...a, wer: [7] }),
         () => todo('x'),
       ),
     ).rejects.toThrow();
+  });
+});
+
+describe('Name im Verlauf (S7-2a: Mitglieder sahen „Person 1“)', () => {
+  const namen = (a: Aufgabe) => a.verlauf.map((v) => [v.von, v.name]);
+  it('aufgabeAendern stempelt den eigenen Vornamen an die eigenen Einträge – fremde bleiben ohne', async () => {
+    ablegen(statusSetzen(todo('t1'), 'arbeit', 19, AM));
+    const r = await aendern(
+      't1',
+      (a) => statusSetzen(a, 'erledigt', 1, AM),
+      () => todo('x'),
+    );
+    expect(namen(r)).toEqual([
+      [1, 'Alwin'],
+      [19, undefined],
+      [1, 'Alwin'],
+    ]);
+    expect((await aufgabenWerte(ORT))[0].aufgabe).toEqual(r);
+  });
+  it('aufgabenSchreiben (Protokoll speichern) stempelt Angelegtes und Geändertes', async () => {
+    ablegen(todo('t1'));
+    const r = await schreiben(() => ({
+      anlegen: [todo('t2')],
+      aendern: [{ ...todo('t1'), text: 'neu' }],
+    }));
+    expect(r.map(namen)).toEqual([[[1, 'Alwin']], [[1, 'Alwin']]]);
   });
 });

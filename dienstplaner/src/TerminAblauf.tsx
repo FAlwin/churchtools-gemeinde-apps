@@ -4,8 +4,10 @@ import { AblaufListe } from '@ui/ablauf/AblaufListe';
 import { useAblaufBearbeiten, verlangtNeuLaden } from '@ui/ablauf/useAblaufBearbeiten';
 import { AblaufAnlegenFenster, type KopieVorschlag } from '@ui/ablauf/AblaufAnlegenFenster';
 import { NeuAufsetzen } from '@ui/ablauf/NeuAufsetzen';
+import { InfoSpaltenKnopf } from '@ui/ablauf/InfoSpalten';
+import { useInfoSpalten } from '@ui/ablauf/infoSpaltenWahl';
 import { browserAblaufLeser, browserSchreiber } from '@ui/ct/schreiber';
-import { siehtAlleDienstgruppen } from '@shared/ct/dienstRechte';
+import { infoGruppen, siehtAlleDienstgruppen } from '@shared/ct/dienstRechte';
 import { ablaufZeileAus, type AblaufZeile } from '@shared/ct/ablaufZeile';
 import { datumText, tagKurz } from '@shared/ct/datum';
 import type { AblaufTermin } from '@shared/ct/ablaufRecht';
@@ -52,6 +54,11 @@ export interface AblaufTeile {
   darf: boolean;
   /** Die Fehlerzeile über der Bearbeiten-Liste leeren (beim Umschalten des Stifts). */
   fehlerLoeschen: () => void;
+  /**
+   * Der Knopf „Spalten“ (Infos je Dienstgruppe, E6-4) für den Kopf – nur in der Termin-Ansicht, nicht beim Bearbeiten
+   * und nicht in der Matrix (dort keine Infos, Entwurf Bild 4 A).
+   */
+  spaltenKnopf: ReactNode;
 }
 
 /**
@@ -152,6 +159,12 @@ export function TerminAblauf({
     () => [...start.dienste.values()].map((d) => ({ id: d.id, name: d.name })),
     [start.dienste],
   );
+  // Infos je Dienstgruppe (E6-4): nur die Gruppen, die man sieht – dieselbe Regel, nach der ChurchTools filtert.
+  const gruppen = useMemo(
+    () => infoGruppen(start.rechte, start.dienstgruppen),
+    [start.rechte, start.dienstgruppen],
+  );
+  const spalten = useInfoSpalten('dienstplaner.ablauf.infoSpalten', gruppen);
 
   /** Die Lied-Ansicht zu einem Punkt (E6-O O4) – eine Stelle für die Ablauf-Ansicht und das Punkt-Fenster. */
   const liedAnsicht = (p: AblaufZeile, schliessen: () => void, zurueck?: () => void) =>
@@ -184,6 +197,7 @@ export function TerminAblauf({
     aktionen: ablaufAktionen(terminId, () => ablaufNeuLaden()),
     dienste,
     gruppenVerborgen: !siehtAlleDienstgruppen(start.rechte, start.dienstgruppen),
+    infoGruppen: gruppen,
     // Ablauf inzwischen anders (404/409/412/423, Regel `verlangtNeuLaden`): frisch lesen, damit Liste und Hinweis
     // stimmen. Einen Knopf „neu laden“ gibt es hier nicht.
     beiFehler: (e) => {
@@ -335,6 +349,7 @@ export function TerminAblauf({
           schmal={schmal}
           // Matrix: wo der Ablauf aufhört (Alwin, 29.10.2026, Entwurf `e6-6-trennung.html` C).
           mitEnde={schmal}
+          infoSpalten={spalten.gewaehlt}
         />
       </div>
     );
@@ -374,5 +389,14 @@ export function TerminAblauf({
     ueberlagerung,
     darf,
     fehlerLoeschen: liste.fehlerLoeschen,
+    spaltenKnopf:
+      !schmal && !aktiv && ablauf !== null && zeilen.length > 0 ? (
+        <InfoSpaltenKnopf
+          gruppen={gruppen}
+          zeilen={zeilen}
+          ids={spalten.ids}
+          onIds={spalten.setIds}
+        />
+      ) : null,
   });
 }

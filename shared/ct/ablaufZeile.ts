@@ -10,6 +10,7 @@
 import type { AgendaItem } from '../types/index';
 import type { CtAgendaItem } from './typen';
 import { isHeaderType, responsibleEntries } from './agendaFormat';
+import { dienstgruppenNotizen } from './agendaPayload';
 import { ortszeitAus } from './zeit';
 
 /** Was eine Zeile zeigt – `AgendaItem` der Musik-App passt hinein (das Lied dort trägt mehr). */
@@ -73,10 +74,12 @@ export interface PunktStand {
   note: string;
   /** Das Lied: sein Arrangement (ohne eins der Name), `null` ohne Lied. */
   lied: number | string | null;
+  /** Die Infos je Dienstgruppe (E6-4): Gruppe → Text. Verglichen wird nur, was man ändert. */
+  infos?: Record<number, string>;
 }
 
 export function punktStand(
-  z: Pick<AblaufZeile, 'title' | 'responsibleText' | 'durationMin' | 'note' | 'song'>,
+  z: Pick<AblaufZeile, 'title' | 'responsibleText' | 'durationMin' | 'note' | 'song' | 'infos'>,
 ): PunktStand {
   return {
     title: z.title,
@@ -84,12 +87,18 @@ export function punktStand(
     durationMin: z.durationMin,
     note: z.note,
     lied: z.song ? (z.song.arrangementId ?? z.song.title) : null,
+    infos: Object.fromEntries((z.infos ?? []).map((i) => [i.gruppeId, i.text])),
   };
 }
 
 /** Ein ChurchTools-Punkt als Zeile – ohne Lied-Auflösung. */
 export function ablaufZeileAus(item: CtAgendaItem, eventId: number, zeitzone: string): AblaufZeile {
   const sekunden = item.duration ?? 0;
+  // Infos je Dienstgruppe (E6-4) – dieselbe Auswahl wie beim Mitschreiben (`dienstgruppenNotizen`): nur mit Text.
+  const infos = dienstgruppenNotizen(item).map((n) => ({
+    gruppeId: n.serviceGroupId,
+    text: n.note,
+  }));
   return {
     id: item.id,
     title: item.title,
@@ -114,6 +123,7 @@ export function ablaufZeileAus(item: CtAgendaItem, eventId: number, zeitzone: st
     durationMin: sekunden > 0 ? Math.round(sekunden / 60) : null,
     note: item.note ?? '',
     weggelassen: istWeggelassen(item, eventId),
+    ...(infos.length > 0 ? { infos } : {}),
   };
 }
 

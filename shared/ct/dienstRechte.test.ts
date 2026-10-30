@@ -4,7 +4,7 @@ import {
   darfDienstPlanen,
   dienstRechteAus,
   siehtAlleDienstgruppen,
-  siehtAlleDienstgruppenAus,
+  dienstgruppenSichtAus,
   siehtDienstGanz,
   siehtDienstgruppe,
 } from './dienstRechte';
@@ -195,10 +195,18 @@ describe('siehtDienstgruppe / siehtAlleDienstgruppen (#676)', () => {
   it('aus den Rohantworten – Dienstgruppen nicht als Liste → unbekannt (`undefined`), kein Wurf', () => {
     const roh = (id: number, viewAll: boolean) => ({ id, name: `G${id}`, viewAll });
     const gruppen = [roh(1, true), roh(3, false), roh(4, false)];
-    expect(siehtAlleDienstgruppenAus(ALWIN, gruppen)).toBe(true);
-    expect(siehtAlleDienstgruppenAus(SPIKE, gruppen)).toBe(false);
-    expect(siehtAlleDienstgruppenAus(SPIKE, [roh(1, true)])).toBe(true);
-    expect(siehtAlleDienstgruppenAus(ALWIN, null)).toBeUndefined();
-    expect(siehtAlleDienstgruppenAus(ALWIN, { data: [] })).toBeUndefined();
+    expect(dienstgruppenSichtAus(ALWIN, gruppen)?.siehtAlle).toBe(true);
+    expect(dienstgruppenSichtAus(SPIKE, gruppen)?.siehtAlle).toBe(false);
+    expect(dienstgruppenSichtAus(SPIKE, [roh(1, true)])?.siehtAlle).toBe(true);
+    expect(dienstgruppenSichtAus(ALWIN, null)).toBeUndefined();
+    expect(dienstgruppenSichtAus(ALWIN, { data: [] })).toBeUndefined();
+  });
+
+  it('Infos je Gruppe (E6-4): nur die Gruppen, die man sieht – wie ChurchTools die Infos filtert', () => {
+    const roh = (id: number, viewAll: boolean) => ({ id, name: `G${id}`, viewAll });
+    const gruppen = [roh(1, true), roh(3, false), roh(4, false)];
+    // Spike sieht hier keine Dienstgruppe selbst – nur die „für alle sichtbare“.
+    expect(dienstgruppenSichtAus(SPIKE, gruppen)?.infoGruppen).toEqual([{ id: 1, name: 'G1' }]);
+    expect(dienstgruppenSichtAus(ALWIN, gruppen)?.infoGruppen.map((g) => g.id)).toEqual([1, 3, 4]);
   });
 });

@@ -227,6 +227,11 @@ export interface PunktAenderung {
   /** Neue Dauer in Minuten (UI-Einheit) – wird in ChurchTools-Sekunden umgerechnet. */
   durationMin?: number;
   note?: string;
+  /**
+   * Infos je Dienstgruppe, die sich ändern (E6-4): Gruppe → neuer Text, leer = Info löschen. Nur die genannten Gruppen
+   * werden geschrieben – je Gruppe einzeln (`…/servicegroups/{gruppe}`, gemessen E6-4-0), die übrigen bleiben.
+   */
+  infos?: Record<number, string>;
 }
 
 /**
@@ -248,14 +253,61 @@ export async function punktAendern(
   const { items } = await s.agenda(eventId);
   const it = items.find((i) => i.id === itemId);
   if (!it) throw s.fehler(404, 'Ablaufpunkt nicht gefunden.');
+  const { infos, ...felder } = fields;
   if (gesehen) {
     // Die Zeitzone spielt für die verglichenen Felder keine Rolle (die Uhrzeit wird nicht verglichen).
     const frisch = punktStand(ablaufZeileAus(it, eventId, 'UTC'));
-    if (geschriebeneFelder(fields).some((f) => frisch[f] !== gesehen[f])) {
+    const infoGeaendert = Object.keys(infos ?? {}).some(
+      (g) => (frisch.infos?.[Number(g)] ?? '') !== (gesehen.infos?.[Number(g)] ?? ''),
+    );
+    if (infoGeaendert || geschriebeneFelder(felder).some((f) => frisch[f] !== gesehen[f])) {
       throw s.fehler(412, PUNKT_GEAENDERT);
     }
   }
 
+  // Nur die Infos geändert: den Punkt selbst nicht anfassen.
+  if (Object.keys(felder).length > 0) await punktSchreiben(s, eventId, it, felder);
+  for (const [gruppe, text] of Object.entries(infos ?? {})) {
+    await gruppenInfoSchreiben(s, eventId, itemId, Number(gruppe), text);
+  }
+}
+
+/**
+ * **Eine Info je Dienstgruppe schreiben** (E6-4, gemessen E6-4-0): `PUT …/servicegroups/{gruppe}` `{note}` legt an und
+ * ändert, `DELETE` löscht (auch ohne vorhandene Info 204). Leer oder nur Leerzeichen → löschen (ChurchTools nähme es mit
+ * 400 nicht an). Recht = Ablauf-Regel; abgeschlossen → 423 wie beim Punkt.
+ */
+async function gruppenInfoSchreiben(
+  s: CtSchreiber,
+  eventId: number,
+  itemId: number,
+  gruppe: number,
+  text: string,
+): Promise<void> {
+  const pfad = `/events/${eventId}/agenda/items/${itemId}/servicegroups/${gruppe}`;
+  const note = text.trim();
+  await ablaufSchreibe(
+    s,
+    eventId,
+    pfad,
+    note
+      ? {
+          method: 'PUT',
+          json: { note },
+          verweigert: ABLAUF_VERWEIGERT,
+          fehler: 'Info speichern fehlgeschlagen',
+        }
+      : { method: 'DELETE', verweigert: ABLAUF_VERWEIGERT, fehler: 'Info löschen fehlgeschlagen' },
+  );
+}
+
+/** Den Punkt selbst schreiben (alles außer den Infos je Dienstgruppe). */
+async function punktSchreiben(
+  s: CtSchreiber,
+  eventId: number,
+  it: CtAgendaItem,
+  fields: Omit<PunktAenderung, 'infos'>,
+): Promise<void> {
   const body = agendaItemWritePayload(it, {
     // Beim Aufheben der Lied-Verknüpfung den Titel leeren (der Liedtitel soll nicht als Text
     // zurückbleiben) – es sei denn, im selben Auftrag kommt ein neuer Titel mit (Kombi-Speichern
@@ -267,7 +319,7 @@ export async function punktAendern(
     responsible: fields.responsible,
     durationSec: fields.durationMin !== undefined ? fields.durationMin * 60 : undefined,
   });
-  await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda/items/${itemId}`, {
+  await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda/items/${it.id}`, {
     method: 'PUT',
     json: body,
     verweigert: ABLAUF_VERWEIGERT,
@@ -276,7 +328,7 @@ export async function punktAendern(
 }
 
 /** Welche Felder des Punkt-Stands eine Änderung schreibt – nur die werden auf Konflikt geprüft (E6-3c). */
-function geschriebeneFelder(f: PunktAenderung): (keyof PunktStand)[] {
+function geschriebeneFelder(f: Omit<PunktAenderung, 'infos'>): (keyof PunktStand)[] {
   const felder: (keyof PunktStand)[] = [];
   if (f.title !== undefined) felder.push('title');
   if (f.responsible !== undefined) felder.push('responsibleText');

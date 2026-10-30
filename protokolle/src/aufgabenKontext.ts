@@ -16,7 +16,8 @@ export interface AufgabenKontextWert {
   bearbeitbar: boolean;
   /** Den Status ändern darf, wer To-Dos ändern darf – auch während jemand anderes schreibt. */
   statusAenderbar: boolean;
-  ich: number;
+  /** Ich – mit Vornamen: Mitglieder sehen die Mitgliederliste oft nicht, sich selbst kennen sie trotzdem. */
+  ich: { person: number; name: string };
   /** Ein To-Do ändern; gibt es das To-Do noch nicht, entsteht es mit diesem Text. */
   aendern: (id: string, text: string, f: (a: Aufgabe) => Aufgabe) => void;
 }

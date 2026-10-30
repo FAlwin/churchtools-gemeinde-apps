@@ -196,6 +196,10 @@ const punktStandSchema = z.object({
   durationMin: z.number().int().min(0).nullable(),
   note: z.string().max(10000),
   lied: z.union([z.number().int(), z.string().max(4000)]).nullable(),
+  // Infos je Dienstgruppe (E6-4): Gruppe → Text.
+  infos: z
+    .record(z.string().regex(/^\d+$/), z.string().max(ABLAUFPUNKT_GRENZEN.gruppenInfo))
+    .optional(),
 });
 
 /** PATCH /api/services/:eventId/agenda/order – neue Reihenfolge der Ablaufpunkte speichern. */
@@ -225,6 +229,10 @@ export const updateItemSchema = z
     durationMin: z.coerce.number().int().min(0).max(600).optional(),
     // note: Bemerkung/Beschreibung des Punkts (frei, kann leeren String haben = löschen).
     note: z.string().max(ABLAUFPUNKT_GRENZEN.bemerkung).optional(),
+    // Infos je Dienstgruppe (E6-4): Gruppe → neuer Text, leer = löschen. Ohne diese Zeile striche zod sie still weg.
+    infos: z
+      .record(z.string().regex(/^\d+$/), z.string().max(ABLAUFPUNKT_GRENZEN.gruppenInfo))
+      .optional(),
   })
   .refine(
     (d) =>
@@ -233,8 +241,12 @@ export const updateItemSchema = z
       d.unlink === true ||
       d.responsible !== undefined ||
       d.durationMin !== undefined ||
-      d.note !== undefined,
-    { message: 'Titel, arrangementId, unlink, responsible, durationMin oder note erforderlich.' },
+      d.note !== undefined ||
+      (d.infos !== undefined && Object.keys(d.infos).length > 0),
+    {
+      message:
+        'Titel, arrangementId, unlink, responsible, durationMin, note oder infos erforderlich.',
+    },
   );
 
 export const createItemSchema = z

@@ -24,7 +24,12 @@ const MITGLIEDER = [
   { id: 19, name: 'Spike Musiker', bild: null, initialen: 'SM' },
 ];
 
-function zeige(q: { text: string; vorab?: string; todo?: Aufgabe }) {
+function zeige(q: {
+  text: string;
+  vorab?: string;
+  todo?: Aufgabe;
+  mitglieder?: AufgabenKontextWert['mitglieder'];
+}) {
   const props = { aufgabe: 't1', vorab: q.vorab ?? '' };
   const editor = {
     isEditable: true,
@@ -34,10 +39,10 @@ function zeige(q: { text: string; vorab?: string; todo?: Aufgabe }) {
   };
   const k: AufgabenKontextWert = {
     todos: new Map(q.todo ? [[q.todo.id, q.todo]] : []),
-    mitglieder: MITGLIEDER,
+    mitglieder: q.mitglieder ?? MITGLIEDER,
     bearbeitbar: true,
     statusAenderbar: true,
-    ich: 1,
+    ich: { person: 1, name: 'Alwin' },
     aendern: vi.fn(),
   };
   render(
@@ -189,5 +194,24 @@ describe('vorabLesen', () => {
     ],
   ])('%s → %o', (x, erwartet) => {
     expect(vorabLesen(x)).toEqual(erwartet);
+  });
+});
+
+describe('Mitgliederliste verborgen (S7-2a: Mitglieder sahen „Person 1“)', () => {
+  it('ich selbst mit Namen, andere aus dem Verlauf, wer nie schrieb als Zahl', () => {
+    zeige({
+      text: 'Beamer',
+      mitglieder: 'verborgen',
+      todo: todo({
+        wer: [1, 7, 23],
+        verlauf: [
+          { am: 'x', von: 1, art: 'angelegt' },
+          { am: 'x', von: 7, name: 'Johann', art: 'notiz', text: 'Angebot da' },
+        ],
+      }),
+    });
+    expect(screen.getByRole('button', { name: 'Wer kümmert sich?' }).textContent).toMatch(
+      /Alwin.*Johann.*Person 23/,
+    );
   });
 });

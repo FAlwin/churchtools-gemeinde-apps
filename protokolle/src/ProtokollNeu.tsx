@@ -56,7 +56,7 @@ export function ProtokollNeu({
   gruppen: readonly ProtokollGruppe[];
   /** Vorgewählte Gruppe (Reiter „Sitzungen“). */
   start?: number | null;
-  ich: { person: number };
+  ich: { person: number; name: string };
   zeitzone: string;
   /** Für Tests; sonst die Uhr. */
   jetzt?: Date;
@@ -148,7 +148,7 @@ export function ProtokollNeu({
           kopf: null,
         },
         dokument: anfangsDokument(a, () => crypto.randomUUID()),
-        von: ich.person,
+        von: ich,
       });
       setLaeuft(false);
       if (r.art === 'schon')

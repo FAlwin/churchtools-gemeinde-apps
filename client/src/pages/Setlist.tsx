@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import type { AgendaItem, AgendaServiceOption, Service, SetlistSong } from '@shared/types/index';
+import type {
+  AgendaItem,
+  AgendaServiceOption,
+  InfoGruppe,
+  Service,
+  SetlistSong,
+} from '@shared/types/index';
+import { InfoSpaltenKnopf } from '@ui/ablauf/InfoSpalten';
+import { useInfoSpalten } from '@ui/ablauf/infoSpaltenWahl';
 import { SeitenGeruest } from '../components/SeitenGeruest';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { CenterMessage } from '../components/CenterMessage';
@@ -59,6 +67,8 @@ interface SetlistProps {
   canEdit?: boolean;
   /** Sieht der Nutzer nicht alle Dienstgruppen (#676)? Dann warnt die Bearbeiten-Liste vor verlorenen Gruppen-Infos. */
   gruppenVerborgen?: boolean;
+  /** Die Dienstgruppen, deren Infos man sieht (E6-4) – Knopf „Spalten“ und Felder im Punkt-Fenster. */
+  infoGruppen?: readonly InfoGruppe[];
   /** Steht die Ablauf-Ansicht gerade? (für das Gesehen-Merken, siehe `AgendaFullView.onSichtbar`) */
   onAblaufSichtbar?: (sichtbar: boolean) => void;
 }
@@ -76,9 +86,12 @@ export function Setlist({
   services,
   canEdit = false,
   gruppenVerborgen = false,
+  infoGruppen,
   onAblaufSichtbar,
 }: SetlistProps) {
   const [editMode, setEditMode] = useState(false);
+  // Infos je Dienstgruppe als Spalten (E6-4) – dieselbe Wahl wie im Dienstplaner, aber je App gemerkt.
+  const spalten = useInfoSpalten('musikapp.ablauf.infoSpalten', infoGruppen);
   // Geführte Einführung (#Onboarding, Gruppen 3+4): Ablauf-Ansicht beim ersten Öffnen, Bearbeiten-
   // Modus beim ersten Wechsel dorthin. Startet erst, wenn die Ziel-Elemente gerendert sind.
   const [setlistTour, setSetlistTour] = useState(false);
@@ -110,6 +123,7 @@ export function Setlist({
     sperrHinweis: GESPERRT,
     speichertGerade: isReordering,
     gruppenVerborgen,
+    infoGruppen,
     aktionen: actions,
     dienste: services,
     liedWahl: (args) => <LiedVerknuepfen {...args} />,
@@ -211,6 +225,14 @@ export function Setlist({
   const aktionen =
     !isLoading && !isError ? (
       <>
+        {!editMode && items.length > 0 && (
+          <InfoSpaltenKnopf
+            gruppen={infoGruppen}
+            zeilen={items}
+            ids={spalten.ids}
+            onIds={spalten.setIds}
+          />
+        )}
         {teilbar.length > 0 && !editMode && (
           <KopfKnopf
             onClick={teilenOeffnen}
@@ -341,6 +363,7 @@ export function Setlist({
           beginn={service.time}
           onSelect={onSelect}
           onSichtbar={onAblaufSichtbar}
+          infoSpalten={spalten.gewaehlt}
         />
       )}
     </SeitenGeruest>

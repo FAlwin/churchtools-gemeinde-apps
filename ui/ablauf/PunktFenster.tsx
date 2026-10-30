@@ -1,5 +1,9 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { ABLAUFPUNKT_GRENZEN, type AgendaServiceOption } from '@shared/types/index';
+import {
+  ABLAUFPUNKT_GRENZEN,
+  type AgendaServiceOption,
+  type InfoGruppe,
+} from '@shared/types/index';
 import { zeitPlus, zustaendigText, type AblaufZeile } from '@shared/ct/ablaufZeile';
 import type { PunktAenderung } from '@shared/ct/schreibKern';
 import {
@@ -75,6 +79,11 @@ interface Bearbeiten extends Gemeinsam {
   onRequestDelete: () => void;
   /** Sieht der Bearbeitende nicht alle Dienstgruppen (#676)? Dann steht der Hinweis über den Knöpfen. */
   gruppenVerborgen?: boolean;
+  /**
+   * Die Dienstgruppen, deren Infos man sieht (E6-4, Entwurf `e6-infos-spalten.html` Bild 3): je Gruppe ein Feld unter
+   * „Bemerkung“. Ohne: keine Felder. Nicht bei Überschriften – ChurchTools führt dort keine Infos (gemessen E6-4-0).
+   */
+  infoGruppen?: readonly InfoGruppe[];
   /**
    * „Position 2 von 8“ und ‹ › zum vorigen/nächsten Punkt (E6-O O3). Fehlt `onVorher`/`onNachher`, ist der Pfeil
    * gesperrt (erster/letzter Punkt). Solange etwas ungespeichert ist, sind beide gesperrt (Alwin, 28.10.2026).
@@ -155,6 +164,14 @@ export function PunktFenster(props: PunktFensterProps) {
   const [title, setTitle] = useState(item.title);
   const [responsible, setResponsible] = useState(item.responsibleText);
   const [note, setNote] = useState(item.note);
+  // Infos je Dienstgruppe (E6-4) – nur beim Bearbeiten (`infoGruppen` gibt es für „Neu“ gar nicht: Ein neuer Punkt
+  // wird ohne Infos angelegt). Überschriften zeigen die Felder nicht (sie stehen im Block der Programmpunkt-Felder).
+  const infoFelder = props.modus !== 'neu' ? (props.infoGruppen ?? []) : [];
+  const [infos, setInfos] = useState<Record<number, string>>(() =>
+    Object.fromEntries(
+      infoFelder.map((g) => [g.id, item.infos?.find((i) => i.gruppeId === g.id)?.text ?? '']),
+    ),
+  );
   const [duration, setDuration] = useState(
     item.durationMin != null ? String(item.durationMin) : '',
   );
@@ -188,8 +205,8 @@ export function PunktFenster(props: PunktFensterProps) {
   // damit läuft sie einmal je Änderung statt bei jedem Render und ist geprüft.
   const durationValid = isDurationValid(duration);
   const pending = useMemo(
-    () => pendingAgendaFields(item, { title, duration, responsible, note, link: linkState }),
-    [item, title, duration, responsible, note, linkState],
+    () => pendingAgendaFields(item, { title, duration, responsible, note, link: linkState, infos }),
+    [item, title, duration, responsible, note, linkState, infos],
   );
 
   const neuerPunkt = useMemo(
@@ -574,6 +591,30 @@ export function PunktFenster(props: PunktFensterProps) {
                 />
               </span>
             </label>
+
+            {infoFelder.length > 0 && (
+              <>
+                <div className={styles.abschnitt}>Infos je Gruppe</div>
+                {infoFelder.map((g) => (
+                  <label key={g.id} className={styles.zeile}>
+                    <span className={styles.lab}>{g.name}</span>
+                    <span className={styles.wert}>
+                      <textarea
+                        className={styles.textarea}
+                        value={infos[g.id] ?? ''}
+                        maxLength={ABLAUFPUNKT_GRENZEN.gruppenInfo}
+                        rows={1}
+                        aria-label={`Info für ${g.name}`}
+                        onChange={(e) => {
+                          const text = e.target.value;
+                          setInfos((alt) => ({ ...alt, [g.id]: text }));
+                        }}
+                      />
+                    </span>
+                  </label>
+                ))}
+              </>
+            )}
           </>
         )}
 

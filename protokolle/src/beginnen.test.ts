@@ -70,7 +70,7 @@ const beginnen = (sitzung: Parameters<typeof protokollBeginnen>[0]['sitzung'] = 
     gruppe: 194,
     sitzung,
     dokument: DOK,
-    von: 1,
+    von: { person: 1, name: 'Alwin' },
     neueId: () => 'neu',
     jetzt: new Date('2026-11-11T18:05:00Z'),
   });

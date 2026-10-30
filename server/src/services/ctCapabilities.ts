@@ -23,7 +23,7 @@ import { ctGet } from './ctHttp.js';
 import { capsMemo } from './ctSessionMemos.js';
 import { getSiteConfig } from './siteConfig.js';
 import { rechteAus } from '@shared/ct/rechte';
-import { siehtAlleDienstgruppenAus } from '@shared/ct/dienstRechte';
+import { dienstgruppenSichtAus } from '@shared/ct/dienstRechte';
 import {
   aktiveMitgliedschaften,
   computeAvailabilityAllowed,
@@ -137,7 +137,7 @@ export async function getCapabilities(
     ...base,
     canUseGlobalNotes,
     canUseAvailability,
-    siehtAlleDienstgruppen: await siehtAlleGruppen(cookie, data),
+    ...(await gruppenSicht(cookie, data)),
   };
   // Gültige Rechte merken → überbrückt künftige Aussetzer. Best effort, blockiert die Antwort nicht.
   if (userId != null) void rememberCapabilities(userId, full);
@@ -145,21 +145,23 @@ export async function getCapabilities(
 }
 
 /**
- * Sieht das Konto alle Dienstgruppen (Hinweis beim Bearbeiten, Regel in `@shared/ct/dienstRechte`)? Scheitert das Lesen
- * der Dienstgruppen, bleibt es unbekannt – die Rechte als Ganzes scheitern daran nicht.
+ * Sieht das Konto alle Dienstgruppen (Hinweis beim Bearbeiten), und welche Infos je Gruppe sieht es (E6-4; Regel in
+ * `@shared/ct/dienstRechte`)? Scheitert das Lesen der Dienstgruppen, bleibt beides unbekannt – die Rechte als Ganzes
+ * scheitern daran nicht.
  */
-async function siehtAlleGruppen(
+async function gruppenSicht(
   cookie: string,
   rechteRoh: Record<string, Record<string, unknown>>,
-): Promise<boolean | undefined> {
+): Promise<Pick<UserCapabilities, 'siehtAlleDienstgruppen' | 'infoGruppen'>> {
   try {
-    return siehtAlleDienstgruppenAus(rechteRoh, await ctGet<unknown>(cookie, '/api/servicegroups'));
-  } catch (err) {
-    console.warn(
-      '[capabilities] Dienstgruppen nicht lesbar – Hinweis zu Gruppen-Infos bleibt aus:',
-      err,
+    const sicht = dienstgruppenSichtAus(
+      rechteRoh,
+      await ctGet<unknown>(cookie, '/api/servicegroups'),
     );
-    return undefined;
+    return sicht ? { siehtAlleDienstgruppen: sicht.siehtAlle, infoGruppen: sicht.infoGruppen } : {};
+  } catch (err) {
+    console.warn('[capabilities] Dienstgruppen nicht lesbar – Gruppen-Infos bleiben aus:', err);
+    return {};
   }
 }
 

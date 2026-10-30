@@ -65,7 +65,7 @@ const zeige = (protokolle: Sitzung[] = [ALT], onBegonnen = vi.fn()) => {
       mitarbeit={65}
       protokolle={protokolle}
       teile={TEILE}
-      ich={{ person: 1 }}
+      ich={{ person: 1, name: 'Alwin' }}
       zeitzone="Europe/Berlin"
       onBegonnen={onBegonnen}
       onClose={vi.fn()}
@@ -115,7 +115,7 @@ describe('ProtokollBeginnen', () => {
       kategorie: 62,
       mitarbeit: { modul: 24, kategorie: 65 },
       gruppe: 194,
-      von: 1,
+      von: { person: 1, name: 'Alwin' },
     });
   });
 

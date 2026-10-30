@@ -201,8 +201,9 @@ gewählten Teil; die gewählte Ansicht bleibt nach dem Neuladen.
 4. **Anfangen bei** → ein Bereich: Karten und Liste zeigen nur ihn. Zurück auf **Ganze Gemeinde**.
 5. Eine Gruppe mit Untergruppen anklicken → **Im Organigramm hier anfangen**: Das Fenster schließt, die Gruppe ist oben
    und offen, sie steht in „Anfangen bei“. Bei einer Gruppe ohne Untergruppen fehlt der Knopf.
-6. Den Gruppentyp der Spitze im Typ-Filter ausblenden: wieder die ganze Gemeinde, keine Fehlermeldung. Wieder
-   einblenden – auch per Doppelklick auf den Typ: Es bleibt bei der ganzen Gemeinde.
+6. Als Gruppen-Admin über **Einstellungen** den Gruppentyp der Spitze für alle ausblenden und speichern (nur in der
+   Test-Instanz): wieder die ganze Gemeinde, keine Fehlermeldung. Wieder einblenden und speichern: Es bleibt bei der
+   ganzen Gemeinde.
 
 <details><summary>Technisches</summary>
 
@@ -416,8 +417,8 @@ ChurchTools ändert sich nichts.
 1. Als Admin **Einstellungen**: Gruppentypen mit Zahl, darunter alle Gruppen als Baum mit Suche.
 2. Einen Typ abwählen (z. B. Merkmal) und eine Gruppe mit Untergruppen: deren Untergruppen werden grau („mit der
    Obergruppe“). Unten steht „1 Gruppentyp und 1 Gruppe ausgeblendet“. **Speichern**.
-3. Reiter Organigramm: Typ und Gruppe samt Untergruppen sind weg, oben steht „Für alle ausgeblendet: …“; der Typ hat
-   kein Schildchen mehr. Ebenso in **Präsentieren** und in **PDF / Drucken**.
+3. Reiter Organigramm: Typ und Gruppe samt Untergruppen sind weg, oben steht „Für alle ausgeblendet: …“. Ebenso in
+   **Präsentieren** und in **PDF / Drucken**.
 4. Als Person ohne Admin-Recht (anderer Browser): dasselbe, ohne „Einstellungen“.
 5. Zwei Admins gleichzeitig: Beide öffnen Einstellungen, A speichert, dann B – B bekommt „… hat das inzwischen
    geändert – nichts überschrieben“ und sieht den Stand von A.

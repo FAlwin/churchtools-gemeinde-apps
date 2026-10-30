@@ -87,8 +87,10 @@
 button.text {
   cursor: pointer;
 
-  &:hover {
-    color: var(--blue-ink);
+  @media (hover: hover) {
+    &:hover {
+      color: var(--blue-ink);
+    }
   }
 }
 
@@ -169,7 +171,9 @@ button.text {
   text-align: left;
   cursor: pointer;
 
-  &:hover {
-    background: var(--surface3);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--surface3);
+    }
   }
 }

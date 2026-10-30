@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
+import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { datumText, kachel } from '@shared/ct/datum';
+import { musikAppDirektLink } from '@shared/ct/musikAppLink';
 import type { CtAgenda } from '@shared/ct/typen';
 import { gruppenName } from '@shared/dienstplan/plan';
 import { ladeTermin, type TerminDaten } from './ladeTermine';
@@ -171,25 +173,29 @@ export function TerminAnsicht({
               <h3>Ablauf</h3>
               <span className={styles.kopfKnoepfe}>
                 {teile.kopfKnopf}
+                {/* Öffnet den Ablauf DIESES Termins, nicht nur die App (E6-Abschluss, Alwin 30.10.2026). */}
                 {musikApp && !bearbeiten && (
-                  <a className={styles.leise} href={musikApp}>
+                  <a
+                    className={styles.leise}
+                    href={musikAppDirektLink(musikApp, s.id, null, s.tag)}
+                  >
                     <Icon name="music" size={16} /> Musik-App
                   </a>
                 )}
                 {/* Auch bei einem leeren Ablauf – sonst ließe er sich nicht füllen (wie in der Musik-App). */}
+                {/* „Bearbeiten“ mit Wort wie in der Musik-App und der Matrix – grau, blau erst „Fertig“ (E6-Abschluss,
+                    Alwin 30.10.2026: vorher ein runder Stift ohne Wort, leicht zu übersehen). */}
                 {teile.darf && ablauf !== null && (
-                  <button
-                    type="button"
-                    className={styles.rund}
-                    aria-label={bearbeiten ? 'Fertig' : 'Ablauf bearbeiten'}
-                    title={bearbeiten ? 'Fertig' : 'Ablauf bearbeiten'}
+                  <KopfKnopf
                     onClick={() => {
                       teile.fehlerLoeschen();
                       setBearbeiten((b) => !b);
                     }}
-                  >
-                    <Icon name={bearbeiten ? 'check' : 'pencil'} size={16} />
-                  </button>
+                    label={bearbeiten ? 'Fertig' : 'Bearbeiten'}
+                    title={bearbeiten ? 'Fertig' : 'Ablauf bearbeiten'}
+                    haupt={bearbeiten}
+                    symbol={<Icon name={bearbeiten ? 'check' : 'pencil'} size={16} stroke={2.2} />}
+                  />
                 )}
               </span>
             </div>

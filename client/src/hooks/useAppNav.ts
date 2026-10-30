@@ -47,12 +47,16 @@ export function useAppNav({
   servicesLoading,
   direkt = null,
 }: UseAppNavArgs): AppNav {
-  // Einmalig beim Mount: ein Direktlink (Termin + Punkt) – sonst der gespeicherte Stand (oder null).
+  // Einmalig beim Mount: ein Direktlink (Termin + Punkt: das Lied; nur Termin: sein Ablauf) – sonst der gespeicherte
+  // Stand (oder null).
   const [restored] = useState<PersistedNav | null>(() =>
     direkt
       ? {
           tab: 'termine',
-          view: { type: 'chart', source: 'setlist' },
+          view:
+            direkt.punktId === undefined
+              ? { type: 'setlist' }
+              : { type: 'chart', source: 'setlist' },
           serviceId: direkt.terminId,
           songIndex: 0,
           libSel: null,

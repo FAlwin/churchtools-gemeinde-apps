@@ -76,8 +76,10 @@ niemand – dann ist es ein To-Do der Gruppe – oder jemand außerhalb der Grup
 „Löschen“ (nur vermerkt, mit Rückfrage). Je Abschnitt „Notizen“ und „Aus welcher Sitzung“ ein Schalter **„Auf Karte
 anzeigen“** – für alle gespeichert. **„Neues To-Do“** legt eins ohne Protokoll an (Leitung und Mitglieder). Eine andere
 Gruppe wählen **verschiebt** das To-Do: neu in der anderen Gruppe, das alte wird als gelöscht vermerkt; die Verbindung
-zur Sitzung entfällt. Steht ein To-Do noch in einem **Protokoll-Entwurf**, sind Text, Gruppe und Löschen dort zu
-ändern (das Protokoll führt). Wer als Mitglied sich selbst nicht einträgt, sieht das To-Do danach nicht mehr – das
+zur Sitzung entfällt. Steht ein To-Do noch in einem **Protokoll-Entwurf** (dort führt das Protokoll), werden Text,
+Gruppe und Löschen im Entwurf **nachgezogen** (S7-2b): Text ändert sich mit, Löschen nimmt die Aufgabe heraus, eine
+andere Gruppe macht daraus einen Absatz „… – an „Jugend“ abgegeben“. Dafür nimmt das Fenster kurz die Schreibsperre
+des Protokolls; schreibt dort gerade jemand, wird nichts gespeichert und das Fenster nennt den Namen. Wer als Mitglied sich selbst nicht einträgt, sieht das To-Do danach nicht mehr – das
 Fenster sagt es vorher. Gespeichert wird nur, was im Fenster geändert wurde. **Namen für Mitglieder:** Mitglieder dürfen die
 Mitgliederliste oft nicht lesen. Deshalb speichert jeder, der ein To-Do schreibt, seinen Vornamen an seinen
 Verlaufseinträgen mit (`name`). Angezeigt wird erst die Mitgliederliste, dann man selbst, dann dieser Name; wer nie
@@ -200,7 +202,10 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit später sc
 - To-Do-Übersicht (S7): Regel `shared/protokolle/uebersicht.ts` (`sichtbarFuer`, `einteilen`, `langeErledigt`), Seite
   `protokolle/src/ToDos.tsx`, Marke `StatusMarke.tsx`, Fenster `ToDoFenster.tsx`; Regeln `bearbeiten`, `verschieben`, `letzteNotiz` in
   `shared/protokolle/aufgaben.ts`; geschrieben wird über `protokolle/src/todoSchreiben.ts` (`aufgabeAendern`; beide Schreibtore stempeln den eigenen Vornamen per `mitNamen`; neue IDs
-  entstehen beim Öffnen des Fensters – ein zweiter Versuch legt nichts doppelt an). Einteilung und Filter
+  entstehen beim Öffnen des Fensters – ein zweiter Versuch legt nichts doppelt an). Nachziehen im Entwurf (S7-2b):
+  Regel `shared/protokolle/nachziehen.ts` (`aufgabeNachziehen`), Ablauf `protokolle/src/nachziehen.ts`
+  (`imEntwurfNachziehen`: Sperre nehmen → Dokument ändern → `speichern` mit dem normalen Abgleich → Sperre freigeben).
+  Einteilung und Filter
   merkt `ui/bedienung/geraet.ts` im Gerät (vorher nur im Dienstplaner).
 - Sitzung bearbeiten (K2b): Regel `shared/protokolle/bearbeiten.ts` (`aenderungVon`, `mailsVon`/`mailsSerie`,
   `terminRumpf` – ein Termin-`PUT` leert, was fehlt, darum geht der gelesene Termin vollständig zurück; Serien:

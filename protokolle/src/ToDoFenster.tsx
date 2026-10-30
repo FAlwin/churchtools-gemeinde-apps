@@ -5,11 +5,14 @@ import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Icon } from '@ui/icons/icons';
 import { Schalter } from '@ui/bedienung/Schalter';
 import { Segment } from '@ui/bedienung/Segment';
+import { ApiError } from '@ui/ct/fehler';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { tagAusIso } from '@shared/ct/zeit';
 import { tagKurz } from '@shared/ct/datum';
 import { initialenAus, type Person } from '@shared/organigramm/mitglieder';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
+import type { Nachziehen } from '@shared/protokolle/nachziehen';
+import type { Sperre } from '@shared/protokolle/speicher';
 import {
   nameFuer,
   statusText,
@@ -20,6 +23,7 @@ import {
 } from '@shared/protokolle/aufgaben';
 import { ohneHerkunft, type ToDoEintrag } from '@shared/protokolle/uebersicht';
 import { Einladeliste } from './Planungsfelder';
+import { imEntwurfNachziehen } from './nachziehen';
 import { toDoAendern, toDoAnlegen, toDoLoeschen, toDoVerschieben } from './todoSchreiben';
 import felder from './Fensterfelder.module.scss';
 import styles from './ToDoFenster.module.scss';
@@ -66,8 +70,9 @@ function SchalterKnopf({
  * **Fenster „To-Do“ / „Neues To-Do“** (Bauplan S7-2a, Entwurf `s7-todos-v2.html`): Text, Gruppe, Bis, Status, Zuständige
  * (auch niemand, auch jemand außerhalb der Gruppe), Notiz, Verlauf, Löschen (nur vermerkt) – und je Abschnitt „Auf Karte
  * anzeigen“ (für alle gespeichert). Steht das To-Do noch in einem **Protokoll-Entwurf**, führt dort das Protokoll: Text,
- * Gruppe und Löschen sind dann hier gesperrt (Nachziehen im Protokoll kommt mit S7-2b). Wer als Mitglied sich selbst
- * nicht einträgt, sieht das To-Do danach nicht mehr – das Fenster sagt es vorher (Alwin, Frage 3).
+ * Gruppe und Löschen werden im Entwurf **nachgezogen** (S7-2b, `imEntwurfNachziehen`) – schreibt dort gerade jemand,
+ * wird nichts gespeichert. Wer als Mitglied sich selbst nicht einträgt, sieht das To-Do danach nicht mehr – das Fenster
+ * sagt es vorher (Alwin, Frage 3).
  */
 export function ToDoFenster({
   ich,
@@ -98,6 +103,8 @@ export function ToDoFenster({
 }) {
   const a = eintrag?.aufgabe ?? null;
   const [neueId] = useState(() => crypto.randomUUID());
+  // Eigene Fenster-Kennung für die Schreibsperre des Protokolls (S7-2b) – wie ein Editor-Fenster.
+  const [schreiber] = useState(() => ({ ...ich, fenster: crypto.randomUUID() }));
   const [text, setText] = useState(a?.text ?? '');
   const [gruppeId, setGruppeId] = useState(eintrag?.gruppe.id ?? gruppen[0]?.id ?? 0);
   const [bis, setBis] = useState(a?.bis ?? '');
@@ -134,7 +141,7 @@ export function ToDoFenster({
   const aenderung = (): ToDoAenderung => {
     if (!a) return {};
     const x: ToDoAenderung = {};
-    if (!imEntwurf && text.trim() !== a.text) x.text = text;
+    if (text.trim() !== a.text) x.text = text;
     if (!gleicheMenge(wer, a.wer)) x.wer = [...wer];
     if (extern.trim() !== a.extern) x.extern = extern;
     if ((bis || null) !== a.bis) x.bis = bis || null;
@@ -162,6 +169,43 @@ export function ToDoFenster({
     );
   };
 
+  /**
+   * **Im Protokoll-Entwurf nachziehen** (S7-2b), dann `danach` – oder, steht es nicht (mehr) im Entwurf, nur `sonst`
+   * (der Weg aus S7-2a). Schreibt jemand am Protokoll, wird nichts gespeichert: Meldung mit Namen.
+   */
+  const mitEntwurf = (
+    n: Nachziehen,
+    sonst: () => Promise<string | null>,
+    q: { zuvor?: () => Promise<string | null>; danach?: () => Promise<string | null> } = {},
+  ): Promise<string | null> => {
+    const her = gruppen.find((g) => g.id === eintrag?.gruppe.id);
+    if (
+      !imEntwurf ||
+      !a ||
+      a.sitzung === null ||
+      !her ||
+      her.protokolle === null ||
+      her.mitarbeit === null
+    )
+      return sonst();
+    return imEntwurfNachziehen({
+      ort: { modul, kategorie: her.protokolle, sitzung: a.sitzung },
+      mitarbeit: { modul, kategorie: her.mitarbeit },
+      gruppe: her.id,
+      aufgabe: a.id,
+      n,
+      ich: schreiber,
+      zuvor: q.zuvor,
+    }).then(async (r) => {
+      if (r.art === 'kein-entwurf') return sonst();
+      if (r.art === 'gesperrt') throw new ApiError(409, gesperrtText(r.sperre));
+      const nachher = q.danach ? await q.danach() : null;
+      return r.hinweis ?? nachher;
+    });
+  };
+  const gesperrtText = (s: Sperre) =>
+    `${s.von === ich.person ? 'Du schreibst in einem anderen Fenster' : `${s.name} schreibt gerade`} am Protokoll „${herkunft?.titel ?? ''}“ – Text, Gruppe und Löschen gehen danach. Gespeichert wurde nichts.`;
+
   const speichern = () => {
     if (!bereit || !gruppe || gruppe.mitarbeit === null) return;
     const ort = { modul, kategorie: gruppe.mitarbeit };
@@ -186,7 +230,7 @@ export function ToDoFenster({
     const alt = gruppen.find((g) => g.id === eintrag?.gruppe.id);
     if (verschoben && alt && alt.mitarbeit !== null) {
       const { wer: _wer, ...x } = aenderung();
-      return ausfuehren(() =>
+      const verschieben = () =>
         toDoVerschieben({
           von: { ort: { modul, kategorie: alt.mitarbeit! }, name: alt.name },
           nach: { ort, gruppe: gruppe.id, name: gruppe.name },
@@ -195,24 +239,44 @@ export function ToDoFenster({
           x,
           wer: [...wer],
           ich,
-        }).then((r) => r.hinweis),
+        }).then((r) => r.hinweis);
+      // Im Entwurf: erst in der neuen Gruppe anlegen (unter der Sperre), dann wird die Aufgabe ein Absatz mit Hinweis.
+      return ausfuehren(() =>
+        mitEntwurf({ art: 'abgegeben', text, gruppe: gruppe.name }, verschieben, {
+          zuvor: verschieben,
+        }),
       );
     }
-    ausfuehren(() => toDoAendern(ort, a.id, aenderung(), ich).then(() => null));
+    const x = aenderung();
+    const aendern = () => toDoAendern(ort, a.id, x, ich).then(() => null);
+    // Text im Entwurf: erst das Protokoll (der Abgleich zieht den Text ins To-Do), dann der Rest – falls es einen gibt.
+    if (x.text !== undefined) {
+      const { text: _text, ...rest } = x;
+      const danach = Object.keys(rest).length
+        ? () => toDoAendern(ort, a.id, rest, ich).then(() => null)
+        : undefined;
+      return ausfuehren(() => mitEntwurf({ art: 'text', text }, aendern, { danach }));
+    }
+    ausfuehren(aendern);
   };
 
   const loeschen = () => {
     if (!a || !gruppe || gruppe.mitarbeit === null) return;
     const ort = { modul, kategorie: gruppe.mitarbeit };
     setLoeschenFragen(false);
-    ausfuehren(() => toDoLoeschen(ort, a.id, ich).then(() => null));
+    const nurToDo = () => toDoLoeschen(ort, a.id, ich).then(() => null);
+    ausfuehren(() => mitEntwurf({ art: 'raus' }, nurToDo));
   };
 
   if (loeschenFragen)
     return (
       <ConfirmDialog
         title="To-Do löschen?"
-        message={`„${a?.text ?? ''}“ verschwindet aus der Übersicht. Im Verlauf bleibt vermerkt, wer es gelöscht hat.`}
+        message={
+          imEntwurf
+            ? `„${a?.text ?? ''}“ verschwindet aus der Übersicht und aus dem Protokoll-Entwurf „${herkunft?.titel ?? ''}“. Im Verlauf bleibt vermerkt, wer es gelöscht hat.`
+            : `„${a?.text ?? ''}“ verschwindet aus der Übersicht. Im Verlauf bleibt vermerkt, wer es gelöscht hat.`
+        }
         confirmLabel="Löschen"
         onConfirm={loeschen}
         onCancel={() => setLoeschenFragen(false)}
@@ -226,7 +290,7 @@ export function ToDoFenster({
       onClose={onClose}
       beschaeftigt={laeuft}
       links={
-        a && !imEntwurf ? (
+        a ? (
           <FensterKnopf art="loeschen" disabled={laeuft} onClick={() => setLoeschenFragen(true)}>
             Löschen
           </FensterKnopf>
@@ -240,8 +304,8 @@ export function ToDoFenster({
     >
       {imEntwurf && herkunft && (
         <p className={felder.hinweis}>
-          Steht im Protokoll-Entwurf „{herkunft.titel}“ – Text und Löschen ändern sich dort, die
-          Gruppe bleibt.
+          Steht im Protokoll-Entwurf „{herkunft.titel}“ – Text, Gruppe und Löschen werden dort mit
+          geändert.
         </p>
       )}
       <label className={felder.feld}>
@@ -250,7 +314,7 @@ export function ToDoFenster({
           className={`${felder.eingabe} ${styles.text}`}
           value={text}
           rows={2}
-          disabled={laeuft || imEntwurf}
+          disabled={laeuft}
           onChange={(e) => setText(e.target.value)}
         />
       </label>
@@ -260,7 +324,7 @@ export function ToDoFenster({
           <select
             className={felder.eingabe}
             value={gruppeId}
-            disabled={laeuft || imEntwurf || gruppen.length < 2}
+            disabled={laeuft || gruppen.length < 2}
             onChange={(e) => {
               const g = Number(e.target.value);
               setGruppeId(g);

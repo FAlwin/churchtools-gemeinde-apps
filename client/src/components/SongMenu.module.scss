@@ -7,6 +7,18 @@
   margin: 0 -12px;
 }
 
+// „Zuletzt gesungen“ ganz oben – eine Auskunft, nicht antippbar (30.10.2026).
+.zuletzt {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 2px 12px 10px;
+  font-family: var(--ui);
+  font-size: 14px;
+  color: var(--text2);
+  font-variant-numeric: tabular-nums;
+}
+
 .gruppe + .gruppe {
   margin-top: 10px;
 }

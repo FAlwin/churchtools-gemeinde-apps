@@ -148,7 +148,7 @@ describe('filterSongs', () => {
  * Lied gespielt."), obwohl wir es nur nicht wissen. Fehlende Zahlen sind nicht die Zahl 0.
  */
 describe('statLabel – fehlende Zahlen sind nicht die Zahl 0 (#300)', () => {
-  const stat = { count: 3, last: '2026-07-05' };
+  const stat = { count: 3, last: '2026-07-05', zuletzt: '2026-10-12' };
 
   it('Fehler ergibt einen Gedankenstrich, NICHT eine Null', () => {
     expect(statLabel('count', undefined, 'error')).toBe('–');
@@ -161,11 +161,33 @@ describe('statLabel – fehlende Zahlen sind nicht die Zahl 0 (#300)', () => {
     expect(statLabel('count', undefined, 'loading')).toBe('Statistik lädt…');
   });
 
-  it('im Normalfall wie bisher', () => {
-    expect(statLabel('count', stat, 'ok')).toBe('3× gespielt');
-    expect(statLabel('recent', stat, 'ok')).toBe('zuletzt: 05.07.2026');
+  it('im Normalfall: zuletzt gesungen, bei „Häufigkeit“ mit Anzahl', () => {
+    expect(statLabel('count', stat, 'ok')).toBe('3× · zuletzt 12.10.2026');
+    expect(statLabel('recent', stat, 'ok')).toBe('zuletzt 12.10.2026');
     // Eine ECHTE Null bleibt eine Null – die Abgrenzung zum Fehlerfall.
-    expect(statLabel('count', { count: 0, last: null }, 'ok')).toBe('0× gespielt');
+    expect(statLabel('count', { count: 0, last: null, zuletzt: null }, 'ok')).toBe(
+      '0× · noch nie gesungen',
+    );
+  });
+});
+
+/**
+ * **Zuletzt gesungen in jeder Sortierung, über alle Termine** (Alwin beim Planen, 30.10.2026: „Irgendwie fehlt mir die
+ * Anzeige, wann das Lied das letzte Mal gesungen wurde“). Vorher stand die Zeile nur bei „Häufigkeit“/„Zuletzt“, und
+ * das Datum hing am eingestellten Zeitraum.
+ */
+describe('zuletzt gesungen (30.10.2026)', () => {
+  it('auch bei A–Z steht das Datum – aus der Statistik, nicht aus einer Zahl von Hand', () => {
+    const r = filterSongs(SONGS, USAGE, opts({ sort: 'name' }));
+    expect(statLabel('name', r.stats.get(2), 'ok')).toBe('zuletzt 01.07.2026');
+    expect(statLabel('name', r.stats.get(3), 'ok')).toBe('noch nie gesungen');
+  });
+
+  it('das Datum zählt über ALLE Termine, nicht nur über den Zeitraum', () => {
+    // Zeitraum bis Ende Mai: Im Zeitraum war „Berg“ zuletzt am 01.05., gesungen wurde es aber zuletzt am 01.07.
+    const r = filterSongs(SONGS, USAGE, opts({ sort: 'recent', to: '2026-05-31' }));
+    expect(r.stats.get(2)?.last).toBe('2026-05-01');
+    expect(statLabel('recent', r.stats.get(2), 'ok')).toBe('zuletzt 01.07.2026');
   });
 });
 

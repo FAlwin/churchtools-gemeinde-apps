@@ -67,7 +67,7 @@ import { EditSongSheet } from '../components/EditSongSheet';
 import { useArrangementDateien } from '../hooks/useArrangementDateien';
 import { loeschFrage } from '../utils/dateiVerwaltung';
 import { useSetlistPages } from '../hooks/useSetlistPages';
-import { useSongArrangements } from '../hooks/useServices';
+import { useCapabilities, useSongArrangements, useSongUsage } from '../hooks/useServices';
 import { useLiedinfoQuelle } from '../hooks/useLiedinfoQuelle';
 import type { DrawTool } from '../types/index';
 import { beschreibeEbene, type NamenQuelle } from '../utils/annotationLevelLabel';
@@ -315,6 +315,11 @@ export function ChordChart({
    * (`arrangementCount`), die Namen holt erst der Bedarf.
    */
   const arrangements = useSongArrangements(song.arrangementCount > 1 ? song.id : null);
+  // „Zuletzt gesungen“ oben im Lied-Menü (Alwin, 30.10.2026) – dieselbe Statistik und dasselbe Recht wie in den
+  // Liederlisten. `undefined` = nicht verfügbar (kein Recht, lädt, Fehler) → keine Zeile; `null` = noch nie gesungen.
+  const rechte = useCapabilities(true);
+  const nutzung = useSongUsage(rechte.data?.canViewSongStatistics ?? false);
+  const zuletztGesungen = nutzung.data ? (nutzung.data[song.id]?.dates[0] ?? null) : undefined;
 
   /**
    * Welches Arrangement steht im ABLAUF? Die Wahl darauf wird als „keine eigene Wahl" gespeichert –
@@ -764,6 +769,7 @@ export function ChordChart({
           isOriginal={isOriginal}
           hasVersions={hasVersions}
           canEditSong={canEditSong}
+          zuletztGesungen={zuletztGesungen}
           onSetting={(patch) => updateSetting(song.id, patch)}
           onSelectVersion={(versionKey) => selectVersion(song.id, versionKey)}
           onSharePdf={() => setTeilenOffen(true)}

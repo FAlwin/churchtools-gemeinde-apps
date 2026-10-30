@@ -30,18 +30,6 @@
 // Die Zeilen selbst (Lied-Knopf + Plus) liegen seit dem 04.09.2026 in `LiedZeile.module.scss` – eine
 // Optik für Bibliothek, SongSelect und Liedtexte. Hier bleiben nur die Zusätze rechts.
 
-// Statistik-Pille (Häufigkeit bzw. Zuletzt) – wie in der Bibliothek.
-.stat {
-  align-self: flex-start;
-  margin-top: 2px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--blue-ink);
-  background: var(--blue-soft);
-  border-radius: var(--r-ctrl);
-  padding: 2px 8px;
-  font-variant-numeric: tabular-nums;
-}
 .keyPill {
   @include m.key-pill;
 }

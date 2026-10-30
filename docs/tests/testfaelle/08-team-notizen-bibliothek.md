@@ -49,8 +49,9 @@ kein leerer Eintrag.
 ### TF-LIB-01 · Lieder suchen und filtern
 
 **Das muss passieren:** Die Suche findet auch bei einem Wortteil. Der Filter macht die Liste kürzer.
-Beim Lied stehen das letzte Spieldatum und wie oft es gespielt wurde – **künftige** Termine zählen
-dabei nicht mit.
+Beim Lied steht grau **„zuletzt TT.MM.JJJJ“** bzw. **„noch nie gesungen“** – seit 30.10.2026 in jeder
+Sortierung, auch bei A–Z; bei „Häufigkeit“ mit der Anzahl davor („3× · zuletzt …“). Das Datum zählt über alle
+Termine, nicht nur über den Zeitraum; **künftige** Termine zählen nicht mit.
 
 1. Unten auf **Lieder** tippen – über der Liste steht nur das Suchfeld (das ist der Anfang).
 2. Oben einen Teil eines Liedtitels eintippen (drei, vier Buchstaben). Prüfen: Lieder, die das Wort im
@@ -63,8 +64,9 @@ dabei nicht mit.
 
 - **Priorität:** normal
 - **Betrifft:** `client/src/pages/AllSongs.tsx`, `client/src/utils/songFilter.ts`, `client/src/components/SongStatsBar.tsx`, `server/src/services/setlistBuilder.ts`
-- **Automatisiert:** teilweise – `client/src/utils/songFilter.test.ts`, `server/src/services/songUsage.test.ts`
-- **Historie:** #157, #158
+- **Automatisiert:** teilweise – `client/src/utils/songFilter.test.ts` (auch: Datum bei A–Z, über alle Termine),
+  `server/src/services/songUsage.test.ts`, `e2e/lied-statistik.spec.ts` („zuletzt …“ ohne Umschalten)
+- **Historie:** #157, #158; „zuletzt gesungen“ in jeder Zeile 30.10.2026 (Alwin beim Planen)
 
 </details>
 

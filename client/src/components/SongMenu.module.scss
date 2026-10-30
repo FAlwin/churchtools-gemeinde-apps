@@ -118,6 +118,15 @@
   vertical-align: -1px;
 }
 
+// Erklärung unter der Datei-Auswahl (30.10.2026): wo umbenannt und gelöscht wird.
+.hinweis {
+  margin: 10px 12px 0;
+  font-family: var(--ui);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text3);
+}
+
 .dokSymbol {
   color: var(--text3);
   vertical-align: -2px;

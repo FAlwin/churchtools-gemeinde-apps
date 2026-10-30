@@ -214,7 +214,7 @@ Sammel-Pause ein).
 mindestens einer Datei. **Am besten auf einem Testlied** – hier wird wirklich in ChurchTools
 geschrieben.
 
-**Das muss passieren:** Im Lied-Menü unter **Bearbeiten → Dateien · Stammdaten ›** steht **„Dateien …"**. Dahinter liegt alles, was am Arrangement
+**Das muss passieren:** Im Lied-Menü unter **Bearbeiten** steht direkt **„Dateien verwalten"**. Dahinter liegt alles, was am Arrangement
 hängt – auch Dateien, die die App sonst nirgends zeigt (z. B. eine MP3).
 
 1. **Liste:** Oben steht die sprechende Bezeichnung („Notenblatt (ChordPro)", „Version „Akustik""),
@@ -223,7 +223,7 @@ hängt – auch Dateien, die die App sonst nirgends zeigt (z. B. eine MP3).
 2. **Herunterladen:** Eine Zeile antippen → auf dem iPad öffnet sich das Teilen-Menü, am Rechner
    wird geladen. Die Datei ist vollständig und lässt sich öffnen.
 3. **Hochladen:** „Datei hinzufügen …", ein PDF wählen → es erscheint in der Liste **und** im
-   Lied-Menü unter „Anzeige“ → „Nur Text · PDF ›“ als weiteres Dokument.
+   Lied-Menü unter „Anzeige“ → „Datei ›“ als weitere Datei (bei nur einer Datei steht sie direkt neben „Datei“).
 4. **Gleicher Name:** Dieselbe Datei nochmal wählen → Warnung, dass ChurchTools **nicht ersetzt**
    und sie danach zweimal daliegt. Abbrechen → nichts passiert.
 5. **Zu groß:** Eine Datei über 50 MB wählen → Meldung **bevor** etwas übertragen wird.

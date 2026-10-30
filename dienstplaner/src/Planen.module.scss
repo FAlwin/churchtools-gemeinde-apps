@@ -124,8 +124,10 @@
   color: var(--blue);
   cursor: pointer;
 
-  &:hover {
-    text-decoration: underline;
+  @media (hover: hover) {
+    &:hover {
+      text-decoration: underline;
+    }
   }
 }
 
@@ -268,8 +270,10 @@
   color: var(--blue);
   cursor: pointer;
 
-  &:hover {
-    background: var(--surface2);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--surface2);
+    }
   }
 }
 
@@ -286,9 +290,11 @@
   color: var(--text2);
   cursor: pointer;
 
-  &:hover {
-    background: var(--surface2);
-    color: var(--text);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
   }
 
   &:focus-visible {
@@ -453,8 +459,10 @@
   text-align: left;
   cursor: pointer;
 
-  &:hover {
-    border-color: var(--blue);
+  @media (hover: hover) {
+    &:hover {
+      border-color: var(--blue);
+    }
   }
 
   &:focus-visible {
@@ -470,8 +478,10 @@
   text-align: left;
   cursor: pointer;
 
-  &:hover {
-    border-style: solid;
+  @media (hover: hover) {
+    &:hover {
+      border-style: solid;
+    }
   }
 
   &:focus-visible {
@@ -502,8 +512,10 @@
 .veraltetKnopf {
   cursor: pointer;
 
-  &:hover {
-    color: var(--text);
+  @media (hover: hover) {
+    &:hover {
+      color: var(--text);
+    }
   }
 }
 
@@ -730,8 +742,10 @@
   font-weight: 700;
   cursor: pointer;
 
-  &:hover {
-    background: color-mix(in srgb, var(--red) 16%, var(--surface2));
+  @media (hover: hover) {
+    &:hover {
+      background: color-mix(in srgb, var(--red) 16%, var(--surface2));
+    }
   }
 
   &:focus-visible {

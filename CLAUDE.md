@@ -410,7 +410,7 @@ Abstand oben kommt für JEDEN Kopf aus `--inhalt-pad-top` (`ui/design/_variables
 Lied-Editor, der als letzter mit `--bar-pad-top` im Band stand – niemand rechnet selbst aus der Safe-Area oben,
 `obenBand.test.ts`); der Abstand unter das Band gilt nur für unsere App – die ChurchTools-App vom
 Home-Bildschirm ist auch „standalone“, in den Erweiterungen setzt `.ct-extension` ihn zurück (`standalone.test.ts`,
-28.10.2026). Alles am unteren Rand rechnet mit `--unten-strich` (Home-Strich, gemessen in `ui/fenster/appHeight.ts`, 29.10.2026 – nie selbst `env(safe-area-inset-bottom)`, `homeStrich.test.ts`); das schwebende Plus steht 16px über `--plus-boden` (Reiterleiste oder Home-Strich), Listen darunter halten `--plus-boden` + 78px frei. Die App zeichnet hinter der Statusleiste (`black-translucent`,
+28.10.2026). Alles am unteren Rand rechnet mit `--unten-strich` (Home-Strich, gemessen in `ui/fenster/appHeight.ts`, 29.10.2026 – nie selbst `env(safe-area-inset-bottom)`, `homeStrich.test.ts`); Hover-Farben nur mit Maus: jede `:hover`-Regel steht in `@media (hover: hover)` – am Handy bliebe sie sonst auf dem zuletzt angetippten Element hängen (29.10.2026, `hoverNurMaus.test.ts`); das schwebende Plus steht 16px über `--plus-boden` (Reiterleiste oder Home-Strich), Listen darunter halten `--plus-boden` + 78px frei. Die App zeichnet hinter der Statusleiste (`black-translucent`,
 `client/index.html`). **Liedblatt-Kopf = Kopfkarte (`components/BlattKopf.tsx`, Scheibe B1+B2, 28.10.2026; Bauplan
 `bauplan-blatt-ct-look.md`, Messung `messung-b0-28.10.md`):** seit 29.10.2026 keine schwebende Karte mehr, sondern eine
 Fläche in Kartenfarbe bis an den oberen Rand (Alwin: Karte „verloren, zu klein“); Inhalt unter dem Band; am Handy

@@ -27,8 +27,10 @@
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  &:hover:not(:disabled) {
-    background: var(--surface3);
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      background: var(--surface3);
+    }
   }
   &:disabled {
     opacity: 0.35;

@@ -50,8 +50,10 @@
   text-align: inherit;
   cursor: pointer;
 
-  &:hover {
-    color: var(--text);
+  @media (hover: hover) {
+    &:hover {
+      color: var(--text);
+    }
   }
 }
 
@@ -112,8 +114,10 @@
 .zeile {
   cursor: pointer;
 
-  &:hover .zelle {
-    background: color-mix(in srgb, var(--blue) 5%, var(--surface2));
+  @media (hover: hover) {
+    &:hover .zelle {
+      background: color-mix(in srgb, var(--blue) 5%, var(--surface2));
+    }
   }
 }
 

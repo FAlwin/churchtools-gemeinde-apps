@@ -113,8 +113,10 @@
   align-items: center;
   justify-content: center;
 
-  &:hover {
-    filter: brightness(1.06);
+  @media (hover: hover) {
+    &:hover {
+      filter: brightness(1.06);
+    }
   }
   &:active {
     transform: scale(0.98);
@@ -153,8 +155,10 @@
     background 0.15s,
     transform 0.1s;
 
-  &:hover {
-    background: var(--blue-soft);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--blue-soft);
+    }
   }
   &:active {
     transform: scale(0.98);

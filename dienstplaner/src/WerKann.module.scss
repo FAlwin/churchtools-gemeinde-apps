@@ -92,8 +92,10 @@
   text-align: left;
   cursor: pointer;
 
-  &:hover:not(:disabled) {
-    border-color: var(--blue);
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      border-color: var(--blue);
+    }
   }
 
   &:focus-visible {

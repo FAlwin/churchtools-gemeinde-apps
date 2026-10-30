@@ -116,8 +116,10 @@
   font-weight: 600;
   cursor: pointer;
 
-  &:hover {
-    background: var(--blue-soft);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--blue-soft);
+    }
   }
 }
 
@@ -181,8 +183,10 @@
   text-align: left;
   cursor: pointer;
 
-  &:hover {
-    background: var(--section);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--section);
+    }
   }
 }
 

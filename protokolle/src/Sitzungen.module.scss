@@ -80,8 +80,10 @@
   text-align: left;
   cursor: pointer;
 
-  &:hover {
-    background: var(--surface3);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--surface3);
+    }
   }
 
   > svg {

@@ -40,8 +40,10 @@
   background: var(--surface2);
   color: var(--blue-ink);
 
-  &:hover:not(:disabled) {
-    background: var(--blue-soft);
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      background: var(--blue-soft);
+    }
   }
 }
 
@@ -58,7 +60,9 @@
   background: none;
   color: var(--red);
 
-  &:hover:not(:disabled) {
-    text-decoration: underline;
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      text-decoration: underline;
+    }
   }
 }

@@ -38,9 +38,11 @@
   align-items: center;
   justify-content: center;
 
-  &:hover {
-    background: var(--surface3);
-    border-color: var(--blue);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--surface3);
+      border-color: var(--blue);
+    }
   }
   &.active {
     background: var(--blue);

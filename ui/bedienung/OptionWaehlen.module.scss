@@ -69,8 +69,10 @@
   &:last-child {
     border-bottom: none;
   }
-  &:hover {
-    background: var(--blue-soft);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--blue-soft);
+    }
   }
 }
 

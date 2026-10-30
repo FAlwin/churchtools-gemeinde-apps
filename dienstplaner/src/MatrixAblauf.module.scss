@@ -42,8 +42,10 @@
   color: var(--blue);
   cursor: pointer;
 
-  &:hover {
-    background: var(--surface2);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--surface2);
+    }
   }
 }
 

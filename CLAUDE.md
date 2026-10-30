@@ -414,7 +414,8 @@ Home-Bildschirm ist auch „standalone“, in den Erweiterungen setzt `.ct-exten
 `client/index.html`). **Liedblatt-Kopf = Kopfkarte (`components/BlattKopf.tsx`, Scheibe B1+B2, 28.10.2026; Bauplan
 `bauplan-blatt-ct-look.md`, Messung `messung-b0-28.10.md`):** seit 29.10.2026 keine schwebende Karte mehr, sondern eine
 Fläche in Kartenfarbe bis an den oberen Rand (Alwin: Karte „verloren, zu klein“); Inhalt unter dem Band; am Handy
-hochkant größer (Zeile 44px über `--knopf-hoehe`, Raster 60px).
+hochkant größer (Zeile 44px über `--knopf-hoehe`, Raster 60px). **Bauplan B0–B5 abgeschlossen am 30.10.2026**
+(B3 Fußleiste #799, B4 Scroll-Modus #802, B5 Einführung).
 Drei Aufbauten nach gemessener Kopfbreite und Fensterhöhe (`kopfAufbau` in `utils/werkzeuge.ts`, nicht nach
 Gerätenamen): **breit** (iPad quer UND hochkant) Titelzeile „← Ablauf · Termin · Vollbild“, darunter Ablauf-Leiste
 und beschriftete Knöpfe in EINER Zeile; **kompakt** (Handy hochkant) ohne Titelzeile, Zurück/Vollbild als Symbol
@@ -679,6 +680,8 @@ Neue Nutzer bekommen beim ersten Mal eine geführte Einführung mit Hinweisblase
    neuer Bereich), MUSS die Einführung dazu passen – Schritt ergänzen/anpassen in `utils/onboarding.ts`
    und ggf. ein `data-tour`-Attribut am neuen Element setzen. Betrifft es einen bestehenden Bereich,
    fügt man den Schritt in die passende Gruppe (`TERMINE_STEPS` / `CHART_STEPS`) ein.
+   **Fehlt das Ziel eines Schritts, überspringt `Coachmarks` ihn stillschweigend** – für das Liedblatt klickt
+   `e2e/blatt-einfuehrung.spec.ts` die Tour deshalb in allen Größen durch (Scheibe B5, 30.10.2026).
 2. **Damit es beim ersten Öffnen nach dem Update erscheint:** die betroffene Tour-**Version** erhöhen
    (`TOUR_TERMINE = 'termine-v1'` → `'termine-v2'` bzw. `TOUR_CHART`). Der Merker in localStorage
    passt dann nicht mehr → die (aktualisierte) Einführung erscheint bei allen automatisch beim ersten

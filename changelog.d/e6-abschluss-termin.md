@@ -6,6 +6,11 @@
 - **„Musik-App“ öffnet den Ablauf dieses Termins.** Der Knopf über dem Ablauf öffnete bisher nur die Musik-App selbst;
   jetzt springt sie direkt in den Ablauf genau dieses Termins (auch außerhalb ihrer üblichen Wochen).
 
+- **Der Zeitraum-Knopf springt nicht mehr** (Alwin, 30.10.2026): Er hat jetzt eine feste Breite. Vorher wuchs er mit
+  seinem Text – wechselte „5 Termine · passend zur Fensterbreite“ zu „6 Termine“, wurde er 39 px schmaler, und ＋ ›
+  daneben rutschten beim mehrmaligen Klicken unter dem Finger weg. Gilt auch für die Abwesenheiten der Musik-App
+  (derselbe Knopf). Am Handy bleibt er über die volle Breite.
+
 ### Geändert (Musik-App)
 
 - Die Musik-App versteht den Direktlink jetzt auch **ohne Punkt** (`#/termin/<ID>`): Dann öffnet sie den Ablauf des

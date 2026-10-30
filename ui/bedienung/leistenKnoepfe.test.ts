@@ -38,6 +38,15 @@ describe('Zeitraum-Leiste: alle Knöpfe gleich hoch (28.10.2026)', () => {
     );
   });
 
+  it('der Zeitraum-Knopf hat eine FESTE Breite – sonst springen ＋ › beim Klicken (Alwin, 30.10.2026)', () => {
+    const rumpf = regel(
+      readFileSync(join(WURZEL, 'ui/bedienung/ZeitraumKnopf.module.scss'), 'utf8'),
+      'knopf',
+    );
+    expect(/(?:^|[\s;])width\s*:\s*\d+px\s*;/.test(rumpf)).toBe(true);
+    expect(/min-width/.test(rumpf)).toBe(false);
+  });
+
   it('die Prüfung selbst greift (Gegenprobe gegen die Erkennung)', () => {
     const fest =
       '.knopf {\n  min-height: 2px;\n  height: 40px;\n  &:hover {\n    height: 1px;\n  }\n}\n';

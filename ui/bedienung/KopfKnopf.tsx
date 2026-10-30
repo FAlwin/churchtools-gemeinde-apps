@@ -36,6 +36,8 @@ interface KopfKnopfProps {
   kurz?: string;
   /** Ziel der geführten Einführung (`utils/onboarding.ts`). */
   dataTour?: string;
+  /** Das Symbol hinter der Beschriftung („Weiter ›“ in der Fußleiste des Liedblatts, Scheibe B3). */
+  symbolHinten?: boolean;
 }
 
 /**
@@ -59,6 +61,7 @@ export function KopfKnopf({
   raster,
   kurz,
   dataTour,
+  symbolHinten,
 }: KopfKnopfProps) {
   return (
     <button
@@ -83,10 +86,11 @@ export function KopfKnopf({
       disabled={disabled}
       data-tour={dataTour}
     >
-      {symbol}
+      {!symbolHinten && symbol}
       {!nurSymbol && !klein && (
         <span className={styles.text}>{raster ? (kurz ?? label) : label}</span>
       )}
+      {symbolHinten && symbol}
     </button>
   );
 }

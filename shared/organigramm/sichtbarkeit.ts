@@ -1,8 +1,8 @@
 /**
  * **Was das Organigramm zeigt – für alle** (Bauplan O7b-7, Entwurf `o7b-6-7-v1.html`, entschieden 29.10.2026):
  * Gruppen-Admins blenden Gruppentypen und einzelne Gruppen für alle aus, im Reiter, in der Präsentation und in der PDF.
- * Eine ausgeblendete Gruppe (oder ein Typ) nimmt alles mit, was darunter hängt – wie der Typ-Filter je Gerät, der
- * zusätzlich bleibt. In ChurchTools selbst ändert sich nichts.
+ * Eine ausgeblendete Gruppe (oder ein Typ) nimmt alles mit, was darunter hängt. Seit 30.10.2026 der einzige Weg – die
+ * Typ-Schildchen je Gerät sind weg. In ChurchTools selbst ändert sich nichts.
  *
  * Gespeichert wird nur, WAS ausgeblendet ist (IDs); Gruppen und Typen, die es nicht mehr gibt, stören nicht.
  */

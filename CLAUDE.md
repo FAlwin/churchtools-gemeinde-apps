@@ -434,7 +434,9 @@ beenden“, beim Ansehen nur „Zurück zu den eigenen Notizen“. Jeder Knopf s
 mit Übersicht – Tonart, Anzeige, Version, Bearbeiten („Im Editor öffnen“ direkt), Teilen – und Unterseiten mit „‹“ (`Sheet zurueck`); eine Unterseite mit nur
 einem Punkt entfällt (`SongMenu.tsx`). Die Fußleiste nutzt
 `--blatt-fuss-polster` (in der Erweiterung schmal wie `--reiter-polster`; `ui/design/polster.test.ts` verlangt für
-jedes `…-polster` das Gegenstück). Die Punkte unten bleiben bis B3. Routing in `App.tsx` über `tab` + `view` (rechteabhängig).
+jedes `…-polster` das Gegenstück). Seit B3 (30.10.2026) ist die Fußleiste „‹ Zurück“ · „Nächstes
+Lied: …“ · „Weiter ›“ aus `KopfKnopf` (`symbolHinten`), am Handy nur Pfeile + „Nächstes: …“; die Punktreihe ist weg
+(Springen über die Ablauf-Leiste), die Seitenangabe bleibt als Schild auf dem Blatt (`PageDeck`). Routing in `App.tsx` über `tab` + `view` (rechteabhängig).
 
 **Abwesenheiten sind terminfein, nicht tagesfein (22.09.2026).** Ein Haken an einem Termin trägt in
 ChurchTools das **Zeitfenster dieses Termins** ein (`startTime`/`endTime`, ISO-Zeitpunkte) – nur so
@@ -545,7 +547,7 @@ kommt `{tag: }` in den Text – nie unsichtbar in den Text, denn dort würde sie
 Scroll-Modus kein Spalten-Schalter (`ohneSpalten`). Welche
 eigene Ebene gilt, entscheidet für Blättern UND Scrollen `pageKeys.eigenerSchluessel`.
 Leinwände nur in Bildschirmnähe (IntersectionObserver), sonst freigegeben. Die **Seite in der Bildmitte** ist
-die aktive (Kopfzeile, Lied-Punkte). **Malen (#608):** direkt auf der Seite in der Bildmitte
+die aktive (Kopfzeile, Ablauf-Leiste). **Malen (#608):** direkt auf der Seite in der Bildmitte
 (`components/RollenMalen.tsx`) – derselbe Kern wie beim Blättern (`usePageDraw`, `usePointerStrokes`,
 `PageTextLayer`, `PageDrawToolbar`, Text-Bedienung in `hooks/useTextEingabe.ts`, aus `PageDeck` herausgelöst).
 Bei der Rolle wird in einem nur lokalen **Entwurf** gemalt (Kerne der A4-Seiten in Rollen-Koordinaten,

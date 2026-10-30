@@ -22,7 +22,5 @@
 - Ein Schreibweg für To-Dos aus der Übersicht (`protokolle/src/todoSchreiben.ts`) – auch die Status-Marke nutzt ihn.
 - Verschieben legt erst an (nachgelesen), dann wird das alte vermerkt; scheitert das Zweite, steht es doppelt statt
   nirgends, mit Hinweis.
-- Hover-Farben der To-Do-Übersicht (Status-Marke, Karten, Links) nur mit Maus – S7-1 kam nach dem Wächter aus #776 auf
-  `main` und hatte drei ungeschützte Regeln; der Wächter `ui/design/hoverNurMaus.test.ts` war dort deshalb rot.
 - Ein Ort für den Namen im Verlauf: `mitNamen` in den beiden Schreibtoren (`aufgabenSchreiben`, `aufgabeAendern`),
   angezeigt über `nameFuer`/`nameAusListe`/`weitereZustaendige` – Karte, Fenster, Editor und fester Punkt gleich.

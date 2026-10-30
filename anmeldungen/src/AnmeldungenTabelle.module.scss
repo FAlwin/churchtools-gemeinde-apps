@@ -95,9 +95,10 @@
   box-shadow: inset -1px 0 0 var(--border);
 }
 
-// Am Handy bleibt nur die erste angeheftete Spalte stehen (Entscheidung 4, 29.10.2026) – sonst bliebe kaum Platz.
+// Am Handy bleibt nur die erste angeheftete Spalte stehen (Entscheidung 4, 29.10.2026) – sonst bliebe kaum Platz. Die
+// schmale Nadel-Spalte davor bleibt auch (U2-4).
 @media (max-width: 560px) {
-  .fest:not(.ersteFest) {
+  .fest:not(.ersteFest, .nadelSpalte) {
     position: static;
   }
 
@@ -152,4 +153,62 @@
   color: var(--text2);
   font-size: 11.5px;
   font-weight: 400;
+}
+
+// ── Zeilen anheften (U2-4, Entwurf u2-tabelle-v1) ──────────────────────────────────────────────
+
+// Die schmale Spalte mit der Nadel – vor allen anderen, bleibt immer links stehen.
+.nadelSpalte {
+  width: 34px;
+  min-width: 34px;
+  max-width: 34px;
+  padding: 0 0 0 8px;
+}
+
+.nadelKnopf {
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  background: none;
+  border: none;
+  border-radius: var(--r-ctrl);
+  color: var(--text3);
+  cursor: pointer;
+
+  &[aria-pressed='true'] {
+    color: var(--blue-ink);
+
+    svg {
+      fill: currentColor;
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 1px;
+  }
+}
+
+// Mit Maus erscheint die Nadel erst beim Darüberfahren (wie im Entwurf); am Handy steht sie immer da (#776: kein Hover
+// auf Touch-Geräten). Eine gesetzte Nadel ist immer zu sehen.
+@media (hover: hover) {
+  .nadelKnopf[aria-pressed='false']:not(:focus-visible) {
+    opacity: 0;
+  }
+
+  .zeile:hover .nadelKnopf,
+  .nadelKnopf:hover {
+    opacity: 1;
+    background: var(--blue-soft);
+    color: var(--blue-ink);
+  }
+}
+
+// Angeheftete Zeilen: leicht getönt, die letzte mit einer Linie zu den übrigen.
+.oben .zelle {
+  background: color-mix(in srgb, var(--blue) 4%, var(--surface2));
+}
+
+.trenn .zelle {
+  border-bottom: 2px solid var(--border);
 }

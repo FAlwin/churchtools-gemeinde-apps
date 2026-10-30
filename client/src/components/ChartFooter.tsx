@@ -1,78 +1,63 @@
 import { Icon } from '@ui/icons/icons';
+import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import styles from '../pages/ChordChart.module.scss';
 
 /**
- * Die Fußzeile der Lied-Anzeige (#314 – vorher inline in `pages/ChordChart.tsx`).
+ * Die Fußleiste der Lied-Anzeige (#314 – vorher inline in `pages/ChordChart.tsx`).
  *
- * Blättern links/rechts, in der Mitte ein Punkt je Lied des Ablaufs und der Ausblick aufs nächste.
- *
- * Die Punkte markieren die gerade SICHTBAREN Lieder – im Querformat können das zwei sein, weil dort
- * zwei Seiten nebeneinander stehen und die Liedgrenze mitten durchs Bild laufen kann.
+ * **Scheibe B3 (30.10.2026, Entwurf Variante B):** „‹ Zurück“ mit Rahmen, in der Mitte „Nächstes Lied: …“, rechts
+ * „Weiter ›“ in Blau – dieselben Knöpfe wie im Kopf (`KopfKnopf`), am Handy nur die Pfeile. Die Punktreihe ist weg:
+ * Springen zu einem Lied übernimmt die Ablauf-Leiste im Kopf (B2). Die Seitenangabe bleibt als Schild auf dem Blatt
+ * (`PageDeck`, Alwin: „Schild bleibt wie heute“).
  */
 interface ChartFooterProps {
-  /** Ein Punkt je Lied; ab zwei Liedern wird die Reihe überhaupt gezeigt. */
+  /** Wie viele Lieder der Ablauf hat – ab zwei steht beim letzten „Letztes Lied“. */
   songCount: number;
-  /** Indizes der aktuell sichtbaren Lieder. */
-  visibleSongIdx: Set<number>;
   /** Titel des nächsten Lieds – `null` beim letzten. */
   nextSongTitle: string | null;
   atStart: boolean;
   atEnd: boolean;
   onPrev: () => void;
   onNext: () => void;
-  onGoToSong: (index: number) => void;
 }
 
 export function ChartFooter({
   songCount,
-  visibleSongIdx,
   nextSongTitle,
   atStart,
   atEnd,
   onPrev,
   onNext,
-  onGoToSong,
 }: ChartFooterProps) {
   return (
     <div className={styles.ftr}>
-      <button
-        className={styles.navBtn}
+      <KopfKnopf
+        label="Zurück"
+        title="Zurück / vorige Seite"
+        symbol={<Icon name="chev-left" size={18} stroke={2.2} />}
         onClick={onPrev}
         disabled={atStart}
-        aria-label="Zurück / vorige Seite"
-      >
-        <Icon name="chev-left" size={22} stroke={2.4} />
-      </button>
-      <div className={styles.ftrCenter}>
-        {songCount > 1 && (
-          <div className={styles.dots}>
-            {Array.from({ length: songCount }, (_, i) => (
-              <div
-                key={i}
-                className={`${styles.dot}${visibleSongIdx.has(i) ? ' ' + styles.on : ''}`}
-                onClick={() => onGoToSong(i)}
-              />
-            ))}
-          </div>
-        )}
+      />
+      <div className={styles.ftrInfo}>
         {nextSongTitle ? (
-          <div className={styles.ftrInfo}>
-            <span className={styles.ftrNext}>Nächstes Lied: {nextSongTitle}</span>
-          </div>
+          <span className={styles.ftrNext}>
+            <span className={styles.ftrNextWort}>Nächstes Lied: </span>
+            <span className={styles.ftrNextKurz}>Nächstes: </span>
+            <strong>{nextSongTitle}</strong>
+          </span>
         ) : songCount > 1 ? (
-          <div className={styles.ftrInfo}>
-            <span className={styles.ftrSong}>Letztes Lied</span>
-          </div>
+          <span className={styles.ftrNext}>Letztes Lied</span>
         ) : null}
       </div>
-      <button
-        className={styles.navBtn}
+      <KopfKnopf
+        label="Weiter"
+        title="Weiter / nächste Seite"
+        symbol={<Icon name="chev-right" size={18} stroke={2.2} />}
+        symbolHinten
+        haupt
         onClick={onNext}
         disabled={atEnd}
-        aria-label="Weiter / nächste Seite"
-      >
-        <Icon name="chev-right" size={22} stroke={2.4} />
-      </button>
+      />
     </div>
   );
 }

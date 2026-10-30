@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { KopfKnopf, KopfZurueck } from './KopfKnopf';
 
 /** Seitenkopf im ChurchTools-Stil (Scheibe S, 26.10.2026): Knöpfe mit Rahmen, Symbol und Beschriftung. */
@@ -45,6 +45,14 @@ describe('KopfKnopf', () => {
   it('nur Symbol (Vollbild): keine sichtbare Beschriftung, Name bleibt', () => {
     render(<KopfKnopf onClick={vi.fn()} label="Vollbild" nurSymbol symbol={<b>V</b>} />);
     expect(screen.getByRole('button', { name: 'Vollbild' }).textContent).toBe('V');
+  });
+
+  it('`symbolHinten`: erst das Wort, dann das Symbol („Weiter ›“, Fußleiste B3)', () => {
+    render(<KopfKnopf onClick={vi.fn()} label="Weiter" symbolHinten symbol={<b>›</b>} />);
+    expect(screen.getByRole('button', { name: 'Weiter' }).textContent).toBe('Weiter›');
+    cleanup();
+    render(<KopfKnopf onClick={vi.fn()} label="Zurück" symbol={<b>‹</b>} />);
+    expect(screen.getByRole('button', { name: 'Zurück' }).textContent).toBe('‹Zurück');
   });
 });
 

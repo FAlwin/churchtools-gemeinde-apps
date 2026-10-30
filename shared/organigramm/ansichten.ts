@@ -38,7 +38,7 @@ export interface SichtKnoten {
 
 const pfadKind = (pfad: string, id: number) => (pfad === GEMEINDE ? String(id) : `${pfad}/${id}`);
 
-/** Die Gruppe an einem Pfad – `null`, wenn es ihn (nach Typ-Filter oder Änderung in ChurchTools) nicht mehr gibt. */
+/** Die Gruppe an einem Pfad – `null`, wenn es ihn (für alle ausgeblendet oder in ChurchTools geändert) nicht mehr gibt. */
 export function knotenAmPfad(baum: readonly Knoten[], pfad: string): Knoten | null {
   let ebene: readonly Knoten[] = baum;
   let gefunden: Knoten | null = null;

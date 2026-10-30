@@ -32,6 +32,8 @@ import type { GeladenerStand } from './mitglieder';
 import {
   gezeigteSpalten,
   mitSpaltenWahl,
+  obenZuerst,
+  personSchluessel,
   personZeilen,
   personZellText,
   personenSortiert,
@@ -49,6 +51,7 @@ import {
 } from '@shared/anmeldung/tabelle';
 import { AnmeldungenTabelle } from './AnmeldungenTabelle';
 import { SpaltenFenster } from './SpaltenFenster';
+import { leseZeilenOben, zeileUmschalten } from './zeilenOben';
 import { aendereEinstellungen } from './einrichten';
 import { fehlerMeldung } from './zustand';
 import { tagPunkt as lang } from '@shared/ct/datum';
@@ -566,6 +569,8 @@ export function AnmeldungenReiter({
   const [eigeneWahl, setEigeneWahl] = useState<Partial<Record<TabellenModus, TabellenWahl>>>({});
   const [spaltenOffen, setSpaltenOffen] = useState(false);
   const [spaltenFehler, setSpaltenFehler] = useState<string | null>(null);
+  // Angeheftete Zeilen (U2-4) – nur auf diesem Gerät.
+  const [oben, setOben] = useState(() => leseZeilenOben(id));
   const [offen, setOffen] = useState<string | null>(null);
   // Die letzte Änderung im offenen Fenster – mit dem Fenster weg.
   const [meldung, setMeldung] = useState<FensterMeldung | null>(null);
@@ -637,11 +642,14 @@ export function AnmeldungenReiter({
   const zeilen =
     filter === 'abgesagt'
       ? []
-      : sortiert(
-          e,
-          imReiter[filter].filter((x) => passtZurSuche(x, suche)),
-          sortierung,
-          filter === 'warte',
+      : obenZuerst(
+          sortiert(
+            e,
+            imReiter[filter].filter((x) => passtZurSuche(x, suche)),
+            sortierung,
+            filter === 'warte',
+          ),
+          (x) => oben.has(x.schluessel),
         );
   // Dieselben Reiter je Person: Zahlung offen = die Personen einer Anmeldung mit offener Zahlung.
   const personenImReiter = {
@@ -652,14 +660,27 @@ export function AnmeldungenReiter({
   const personenGezeigt =
     filter === 'abgesagt' || !jePerson
       ? []
-      : personenSortiert(
-          e,
-          personenImReiter[filter].filter((y) =>
-            passtZurSuche({ wer: y.x.wer, nr: y.x.nr, personen: [y.p] }, suche),
+      : obenZuerst(
+          personenSortiert(
+            e,
+            personenImReiter[filter].filter((y) =>
+              passtZurSuche({ wer: y.x.wer, nr: y.x.nr, personen: [y.p] }, suche),
+            ),
+            sortierung,
+            filter === 'warte',
           ),
-          sortierung,
-          filter === 'warte',
+          (y) => oben.has(personSchluessel(y)),
         );
+  /** Eine Zeile an- oder abheften – was es nicht mehr gibt, fällt dabei aus dem Gerätespeicher. */
+  const anheftenUm = (k: string) =>
+    setOben(
+      zeileUmschalten(
+        id,
+        oben,
+        k,
+        new Set([...liste.map((x) => x.schluessel), ...personZeilen(liste).map(personSchluessel)]),
+      ),
+    );
   const absageZeilen = absagen.filter((b) =>
     passtZurSuche({ wer: b.name, nr: null, personen: [] }, suche),
   );
@@ -965,12 +986,16 @@ export function AnmeldungenReiter({
             name="Personen"
             spalten={spalten}
             zeilen={personenGezeigt}
-            schluessel={(y) => `${y.x.schluessel}-${y.p.personId}`}
+            schluessel={personSchluessel}
             zelle={personZelle}
             summe={(k) => personSumme(e, k, personenGezeigt)}
             sortierung={sortierung}
             onSortieren={setSortierung}
             onZeile={(y) => oeffnen(y.x.schluessel)}
+            anheften={{
+              an: (y) => oben.has(personSchluessel(y)),
+              umschalten: (y) => anheftenUm(personSchluessel(y)),
+            }}
           />
         ) : (
           <AnmeldungenTabelle
@@ -983,6 +1008,10 @@ export function AnmeldungenReiter({
             sortierung={sortierung}
             onSortieren={setSortierung}
             onZeile={(x) => oeffnen(x.schluessel)}
+            anheften={{
+              an: (x) => oben.has(x.schluessel),
+              umschalten: (x) => anheftenUm(x.schluessel),
+            }}
           />
         )}
 
@@ -990,7 +1019,8 @@ export function AnmeldungenReiter({
           {jePerson
             ? 'Eine Zeile je Person, ohne Wahl nach Anmeldetag – ein Tipp auf die Überschrift einer Spalte sortiert. Die Summen zählen Personen mit Platz; Betrag und Bezahlt gehören der Anmeldung und zählen sie einmal.'
             : 'Eine Zeile je Anmeldung, ohne Wahl nach Anmeldetag – ein Tipp auf die Überschrift einer Spalte sortiert. Die Summen zählen Anmeldungen mit Platz. Ältere Anmeldungen ohne Nr. stehen je Person einzeln.'}{' '}
-          Die Leitung steht nicht in der Liste.
+          Die Nadel am Zeilenanfang heftet eine Zeile oben an – nur auf diesem Gerät. Die Leitung
+          steht nicht in der Liste.
           {stand!.verlaufGekuerzt &&
             ' Der Verlauf in ChurchTools ist sehr lang – die ältesten Absagen fehlen hier.'}{' '}
           <button type="button" className={a.linkKnopf} onClick={onNeuLaden}>

@@ -65,6 +65,4 @@
 }
 .an {
   @include m.auswahlKnopfAn;
-  border-color: var(--blue);
-  color: var(--blue-ink);
 }

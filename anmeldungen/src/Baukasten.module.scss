@@ -680,7 +680,6 @@
 
   &[aria-pressed='true'] {
     @include m.auswahlKnopfAn;
-    border-color: var(--blue);
     box-shadow: 0 0 0 2px var(--blue);
   }
 }
@@ -988,7 +987,6 @@
 
   &[aria-pressed='true'] {
     @include m.auswahlKnopfAn;
-    border-color: var(--blue);
     box-shadow: 0 0 0 2px var(--blue);
   }
 }
@@ -1021,7 +1019,6 @@
 
   &[aria-pressed='true'] {
     @include m.auswahlKnopfAn;
-    border-color: var(--blue);
     box-shadow: 0 0 0 2px var(--blue);
   }
 }

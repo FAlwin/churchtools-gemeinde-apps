@@ -255,8 +255,6 @@
 }
 .rohAn {
   @include m.auswahlKnopfAn;
-  border-color: var(--blue);
-  color: var(--blue-ink);
 }
 
 // Rückgängig/Wiederholen rechts in der Werkzeugleiste der Text-Karte.

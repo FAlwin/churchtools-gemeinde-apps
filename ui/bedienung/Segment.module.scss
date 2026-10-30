@@ -43,7 +43,8 @@
   background: var(--seg-track);
 
   .btn {
-    border: 0;
+    // Durchsichtiger Rand statt keinem: Die Auswahl zeichnet ihren blauen Rand über `border-color` (auswahlKnopfAn).
+    border: 1px solid transparent;
     background: transparent;
     border-radius: calc(var(--r-ctrl) - 2px);
     // So hoch wie die Schiene innen (2 px Abstand + 1 px Rand je Seite) – bricht sie um, wird jede Reihe gleich hoch.

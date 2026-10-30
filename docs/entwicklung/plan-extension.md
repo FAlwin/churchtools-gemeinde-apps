@@ -195,7 +195,8 @@ Neu entstehen dabei:
 - `client/src/services/ctRuntime.ts` – Modus-Erkennung + konfigurierter CT-Client (**die einzige
   Stelle, die `import.meta.env.MODE` liest**). Seit #474 liegt der CT-Client selbst in
   `ui/ct/verbindung.ts` (für alle Erweiterungen), `ctRuntime.ts` stellt ihn ein; `MODE` liest `modus.ts`.
-- `client/src/services/personenAblage.ts` – der Speicher in den Personen-Dateien (§2b).
+- `client/src/services/personenAblage.ts` – der Speicher in den Personen-Dateien (§2b). Der Browser-Anschluss (`ablagePort`) liegt seit 30.10.2026 in
+  `ui/ct/ablagePort.ts` – die Protokolle benutzen ihn für die Einstellungen der To-Do-Übersicht mit.
 - `client/src/services/ctLesen.ts` – der Setlist-Aufbau im Browser, mit `shared/ct/setlistKern.ts`
   (im Plan noch als `ctSetlist.ts` vorgesehen).
 

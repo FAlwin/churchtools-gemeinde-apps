@@ -251,8 +251,9 @@ export function verschieben(
     am: string;
   },
 ): { neu: Aufgabe; alt: Aufgabe } {
+  // Wer in der neuen Gruppe nicht Mitglied ist, fällt weg – auch das kommt in den Verlauf (eine Regel, S7-3).
   const neu = notizHinzufuegen(
-    { ...a, id: q.neueId, gruppe: q.gruppe, sitzung: null, wer: [...new Set(q.wer)] },
+    zustaendigSetzen({ ...a, id: q.neueId, gruppe: q.gruppe, sitzung: null }, q.wer, q.ich, q.am),
     `Aus „${q.von}“ hierher verschoben.`,
     q.ich,
     q.am,

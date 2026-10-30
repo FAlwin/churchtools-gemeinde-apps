@@ -220,7 +220,12 @@ describe('Board (S7-3)', () => {
   it('Liste: „Alphabetisch“ gilt auch dort', async () => {
     merke({ sortierung: 'alpha' });
     vi.mocked(L.ladeUebersicht).mockResolvedValue(
-      uebersicht([ZEBRA, a('apfel', { wer: [1] }), BEAMER]),
+      // Fälligkeiten gegen das Alphabet: nach Dringlichkeit stünde Zebra oben – nur die Sortierung macht „apfel“ zuerst.
+      uebersicht([
+        { ...ZEBRA, bis: '2026-11-01' },
+        a('apfel', { wer: [1], bis: '2026-12-01' }),
+        BEAMER,
+      ]),
     );
     zeige();
     await screen.findByText('Zebra');

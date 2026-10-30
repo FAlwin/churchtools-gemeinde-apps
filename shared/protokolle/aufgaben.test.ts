@@ -502,4 +502,21 @@ describe('Verlauf „Zuständig“ (S7-3: überall in den Verlauf)', () => {
     });
     expect(bearbeiten(t, { bis: '2026-12-01' }, 1, AM3).verlauf).toEqual(t.verlauf);
   });
+  it('verschieben: fällt dabei jemand weg, steht auch das im Verlauf des neuen To-Dos', () => {
+    const { neu } = verschieben(t, {
+      gruppe: 194,
+      neueId: 'v',
+      von: 'LT',
+      nach: 'Jugend',
+      wer: [19],
+      ich: 1,
+      am: AM3,
+    });
+    expect(neu.wer).toEqual([19]);
+    expect(neu.verlauf.at(-2)).toMatchObject({
+      art: 'zustaendig',
+      vorher: [19, 23],
+      nachher: [19],
+    });
+  });
 });

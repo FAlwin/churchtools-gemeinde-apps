@@ -111,7 +111,9 @@ describe('useToDoEinstellungen', () => {
     d.fn.mockClear();
     act(() => result.current[1]({ ansicht: 'board' }));
     Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
-    act(() => document.dispatchEvent(new Event('visibilitychange')));
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
     await fertig();
     expect(d.fn).toHaveBeenCalledTimes(1);
     Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });

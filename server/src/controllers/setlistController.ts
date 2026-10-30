@@ -189,6 +189,12 @@ export const orderSchema = z.object({
   gesehen: z.array(z.coerce.number().int().positive()).optional(),
 });
 
+/** Infos je Dienstgruppe (E6-4): Gruppe → Text – eine Fassung für Gesehen, Ändern und Anlegen. */
+const infosSchema = z.record(
+  z.string().regex(/^\d+$/),
+  z.string().max(ABLAUFPUNKT_GRENZEN.gruppenInfo),
+);
+
 /** Was das Punkt-Fenster beim Öffnen gesehen hat (`PunktStand`, E6-3c) – Grenzen großzügig, es kommt aus ChurchTools. */
 const punktStandSchema = z.object({
   title: z.string().max(4000),
@@ -197,9 +203,7 @@ const punktStandSchema = z.object({
   note: z.string().max(10000),
   lied: z.union([z.number().int(), z.string().max(4000)]).nullable(),
   // Infos je Dienstgruppe (E6-4): Gruppe → Text.
-  infos: z
-    .record(z.string().regex(/^\d+$/), z.string().max(ABLAUFPUNKT_GRENZEN.gruppenInfo))
-    .optional(),
+  infos: infosSchema.optional(),
 });
 
 /** PATCH /api/services/:eventId/agenda/order – neue Reihenfolge der Ablaufpunkte speichern. */
@@ -230,9 +234,7 @@ export const updateItemSchema = z
     // note: Bemerkung/Beschreibung des Punkts (frei, kann leeren String haben = löschen).
     note: z.string().max(ABLAUFPUNKT_GRENZEN.bemerkung).optional(),
     // Infos je Dienstgruppe (E6-4): Gruppe → neuer Text, leer = löschen. Ohne diese Zeile striche zod sie still weg.
-    infos: z
-      .record(z.string().regex(/^\d+$/), z.string().max(ABLAUFPUNKT_GRENZEN.gruppenInfo))
-      .optional(),
+    infos: infosSchema.optional(),
   })
   .refine(
     (d) =>
@@ -257,6 +259,11 @@ export const createItemSchema = z
     responsible: z.string().trim().max(ABLAUFPUNKT_GRENZEN.zustaendig).optional(),
     note: z.string().max(ABLAUFPUNKT_GRENZEN.bemerkung).optional(),
     durationMin: z.coerce.number().int().min(0).optional(),
+    // Infos je Gruppe, Stelle und Schalter gleich beim Anlegen (Alwin, 30.10.2026) – Regel in `punktAnlegen`.
+    infos: infosSchema.optional(),
+    nachId: z.number().int().positive().nullable().optional(),
+    vorBeginn: z.boolean().optional(),
+    weggelassen: z.boolean().optional(),
   })
   .refine((d) => d.type !== 'song' || d.arrangementId !== undefined, {
     message: 'Für ein Lied ist arrangementId erforderlich.',

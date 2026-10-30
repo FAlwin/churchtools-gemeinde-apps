@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { agendaItemWritePayload, beginnPositionFuer } from './agendaPayload.js';
+import { agendaItemWritePayload, vorlaufUmschalten } from './agendaPayload.js';
 import type { CtAgendaItem } from './ctTypes.js';
 
 /**
@@ -122,34 +122,58 @@ describe('agendaItemWritePayload – position und Standardwerte', () => {
 });
 
 /**
- * #423: Der Vorlauf ist in ChurchTools eine Grenze (`eventStartPosition`), kein Feld je Punkt. Der
- * Schalter im Dialog gilt deshalb für einen Block – diese Tests halten fest, für welchen.
- * Gemessen 05.10.2026: Punkte mit `position` < Grenze sind Vorlauf.
+ * #423: Der Vorlauf ist in ChurchTools eine Grenze (`eventStartPosition`), kein Feld je Punkt. Seit 30.10.2026 (Alwin)
+ * wechselt beim Umschalten nur DIESER Punkt die Seite: Er rückt an die Grenze, die Grenze um eins. Gemessen 05.10.2026:
+ * Punkte mit `position` < Grenze sind Vorlauf.
  */
-describe('beginnPositionFuer – wohin die Beginn-Grenze wandert', () => {
-  it('an: die Grenze rückt direkt UNTER den Punkt – er und alle darüber sind Vorlauf', () => {
-    expect(beginnPositionFuer({ position: 2 }, 0, true)).toBe(3);
+describe('vorlaufUmschalten – nur der eine Punkt wechselt die Seite', () => {
+  const ablauf = (n: number) => Array.from({ length: n }, (_, k) => ({ id: k + 1, position: k }));
+
+  it('an: der Punkt rückt direkt über „Beginn“, alle anderen bleiben auf ihrer Seite', () => {
+    // Vorlauf: 1. Punkt 4 einschalten → 1, 4 Vorlauf; 2, 3, 5 bleiben Gottesdienst.
+    expect(vorlaufUmschalten(ablauf(5), 1, 4, true)).toEqual({
+      reihenfolge: [1, 4, 2, 3, 5],
+      grenze: 2,
+    });
   });
 
-  it('an bei schon vorhandenem Vorlauf: die Grenze rückt weiter nach unten', () => {
-    // Grenze 1 (nur Punkt 0 Vorlauf), Punkt 3 einschalten → 1, 2 und 3 werden mit Vorlauf.
-    expect(beginnPositionFuer({ position: 3 }, 1, true)).toBe(4);
+  it('aus: der Punkt rückt direkt unter „Beginn“, die übrigen Vorlauf-Punkte bleiben Vorlauf', () => {
+    // Vorlauf: 1, 2, 3. Punkt 1 ausschalten → 2, 3 Vorlauf, 1 erster Punkt des Gottesdienstes.
+    expect(vorlaufUmschalten(ablauf(5), 3, 1, false)).toEqual({
+      reihenfolge: [2, 3, 1, 4, 5],
+      grenze: 2,
+    });
   });
 
-  it('aus: die Grenze rückt direkt ÜBER den Punkt – er und alle darunter gehören zum Gottesdienst', () => {
-    expect(beginnPositionFuer({ position: 1 }, 3, false)).toBe(1);
+  it('an ohne Vorlauf: der Punkt wird der einzige Vorlauf-Punkt, ganz oben', () => {
+    expect(vorlaufUmschalten(ablauf(4), 0, 3, true)).toEqual({
+      reihenfolge: [3, 1, 2, 4],
+      grenze: 1,
+    });
   });
 
-  it('aus am obersten Punkt: kein Vorlauf mehr', () => {
-    expect(beginnPositionFuer({ position: 0 }, 2, false)).toBe(0);
+  it('aus, wenn alles Vorlauf ist: der Punkt wird der einzige Punkt des Gottesdienstes, ganz unten', () => {
+    expect(vorlaufUmschalten(ablauf(4), 4, 2, false)).toEqual({
+      reihenfolge: [1, 3, 4, 2],
+      grenze: 3,
+    });
   });
 
-  it('steht schon so: nichts zu schreiben (null)', () => {
-    expect(beginnPositionFuer({ position: 1 }, 2, true)).toBeNull(); // schon Vorlauf
-    expect(beginnPositionFuer({ position: 2 }, 2, false)).toBeNull(); // erster nach der Grenze
+  it('steht der Punkt schon an der Grenze, rückt nur sie (kein Umsortieren)', () => {
+    expect(vorlaufUmschalten(ablauf(5), 1, 2, true)).toEqual({ reihenfolge: null, grenze: 2 });
+    expect(vorlaufUmschalten(ablauf(5), 3, 3, false)).toEqual({ reihenfolge: null, grenze: 2 });
   });
 
-  it('ohne position zählt der Punkt als oberster (Position 0)', () => {
-    expect(beginnPositionFuer({}, 0, true)).toBe(1);
+  it('steht schon so oder fehlt: nichts zu schreiben (null)', () => {
+    expect(vorlaufUmschalten(ablauf(5), 2, 1, true)).toBeNull(); // schon Vorlauf
+    expect(vorlaufUmschalten(ablauf(5), 2, 3, false)).toBeNull(); // erster nach der Grenze
+    expect(vorlaufUmschalten(ablauf(5), 2, 99, true)).toBeNull();
+  });
+
+  it('ohne position zählt der Listenplatz', () => {
+    expect(vorlaufUmschalten([{ id: 7 }, { id: 8 }], 0, 8, true)).toEqual({
+      reihenfolge: [8, 7],
+      grenze: 1,
+    });
   });
 });

@@ -15,7 +15,7 @@
  *  - **Gelesen wird frisch, nie aus einem Cache** – geschrieben wird auf diesem Stand.
  *  - **Kein Schreibvorgang wird automatisch wiederholt.** Nicht alle sind idempotent.
  */
-import { agendaItemWritePayload, beginnPositionFuer, dienstgruppenNotizen } from './agendaPayload';
+import { agendaItemWritePayload, dienstgruppenNotizen, vorlaufUmschalten } from './agendaPayload';
 import { arrangementWritePayload, type ArrangementOverrides } from './arrangementPayload';
 import { ablaufZeileAus, istWeggelassen, punktStand, type PunktStand } from './ablaufZeile';
 import type { CtAblaufVorlage, CtAgenda, CtAgendaItem, CtArrangement, CtSong } from './typen';
@@ -183,6 +183,17 @@ export interface NeuerPunkt {
   note?: string;
   /** Dauer in Minuten (UI-Einheit) – wird in ChurchTools-Sekunden umgerechnet. */
   durationMin?: number;
+  /** Infos je Dienstgruppe (E6-4): Gruppe → Text. Leere fehlen. */
+  infos?: Record<number, string>;
+  /**
+   * **Wohin** (Alwin, 30.10.2026 – wie „… dahinter einfügen“ in ChurchTools): hinter diesen Punkt, `null` = ganz nach
+   * vorne. Fehlt es, kommt der Punkt ans Ende – wie bisher.
+   */
+  nachId?: number | null;
+  /** Vor dem Gottesdienstbeginn? Fehlt es, entscheidet die Stelle: mitten im Vorlauf Vorlauf, sonst Gottesdienst. */
+  vorBeginn?: boolean;
+  /** An diesem Termin gleich weglassen (Auge, E6-3b)? */
+  weggelassen?: boolean;
 }
 
 /** Der Titel eines neuen Punkts, wenn keiner mitkommt. */
@@ -206,11 +217,86 @@ export async function punktAnlegen(
   if (data.note) body.note = data.note;
   // CT erwartet die Dauer in Sekunden (Feld `duration`), die UI arbeitet in Minuten.
   if (data.durationMin !== undefined) body.duration = data.durationMin * 60;
-  await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda/items`, {
+  // Infos je Gruppe nimmt das Anlegen gleich mit – wie beim Zurückholen (gemessen E6-6-0).
+  const notizen = Object.entries(data.infos ?? {})
+    .filter(([, note]) => note.trim() !== '')
+    .map(([gruppe, note]) => ({ serviceGroupId: Number(gruppe), note }));
+  if (notizen.length > 0) body.serviceGroupNotes = notizen;
+  const antwort = await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda/items`, {
     method: 'POST',
     json: body,
     verweigert: ABLAUF_VERWEIGERT,
     fehler: 'Ablaufpunkt anlegen fehlgeschlagen',
+  });
+  // Nur ans Ende, ohne Schalter: fertig – wie bisher ohne weiteren Abruf.
+  if (data.nachId === undefined && data.vorBeginn === undefined && !data.weggelassen) return;
+  const neu = await angelegtePruefen(s, eventId, antwort, 'Der Punkt wurde nicht angelegt.');
+  await anDieStelle(s, eventId, neu.agenda, neu.id, data.nachId, data.vorBeginn);
+  if (data.weggelassen) await weglassenSetzen(s, eventId, neu.id, true);
+}
+
+/**
+ * Ob der eben angelegte Punkt **wirklich** im Ablauf steht – geprüft am frisch gelesenen Ablauf, nicht an der Antwort
+ * des Anlegens (Lehre vom 11.08.2026: ein Erfolgssignal ist kein Beleg). Liefert seine ID und den gelesenen Ablauf.
+ */
+async function angelegtePruefen(
+  s: CtSchreiber,
+  eventId: number,
+  antwort: unknown,
+  meldung: string,
+): Promise<{ id: number; agenda: CtAgenda }> {
+  const id = neueId(antwort);
+  const agenda = await s.agenda(eventId);
+  if (id === null || !agenda.items.some((i) => i.id === id)) {
+    throw s.fehler(502, `${meldung} Bitte den Ablauf neu laden.`);
+  }
+  return { id, agenda };
+}
+
+/**
+ * Schiebt einen eben (hinten) angelegten Punkt an seine Stelle und richtet seinen Vorlauf – **eine** Regel für
+ * „… dahinter einfügen“ (Alwin, 30.10.2026) und das Zurückholen nach dem Löschen (`punktWiederherstellen`).
+ *
+ * - `nachId`: hinter diesen Punkt, `null` = ganz vorne, `undefined` = ans Ende. Ist der Punkt inzwischen weg, kommt er
+ *   ebenfalls ans Ende.
+ * - `vorBeginn`: Passt die Stelle nicht zur Seite (etwa „vor Beginn“, aber mitten im Gottesdienst), gilt die Regel des
+ *   Schalters: Der Punkt kommt direkt über bzw. unter „Beginn“ (`vorlaufUmschalten`). Fehlt es, entscheidet die Stelle:
+ *   mitten im Vorlauf Vorlauf, sonst Gottesdienst.
+ *
+ * Die Grenze ist eine Platznummer (#700, gemessen E6-6-0): Ein Vorlauf-Punkt an oder vor ihr schöbe den letzten
+ * Vorlauf-Punkt hinaus, sie rückt deshalb um eins mit. Alle anderen Punkte bleiben auf ihrer Seite – auch der letzte
+ * Vorlauf-Punkt, wenn der neue mitten in den Vorlauf soll, aber zum Gottesdienst gehört (der Test fand das 30.10.2026).
+ */
+async function anDieStelle(
+  s: CtSchreiber,
+  eventId: number,
+  angelegt: CtAgenda,
+  neuId: number,
+  nachId: number | null | undefined,
+  vorBeginn: boolean | undefined,
+): Promise<void> {
+  const { items } = angelegt;
+  const grenze = angelegt.eventStartPosition ?? 0;
+  const andere = items.filter((i) => i.id !== neuId);
+  // Wie viele Punkte vor dem Beginn laufen (ohne den neuen – angelegt wird hinten, die Grenze bleibt dabei).
+  const vorlauf = andere.filter((it, k) => (it.position ?? k) < grenze).length;
+  const rest = andere.map((i) => i.id);
+  const nach = nachId == null ? -1 : rest.indexOf(nachId);
+  const gewuenscht =
+    nachId === undefined ? rest.length : nachId === null ? 0 : nach >= 0 ? nach + 1 : rest.length;
+  const vor = vorBeginn ?? gewuenscht < vorlauf;
+  // Auf der falschen Seite der Grenze? Dann direkt an sie – über „Beginn“ als Vorlauf, darunter als Gottesdienst.
+  const ziel = vor ? Math.min(gewuenscht, vorlauf) : Math.max(gewuenscht, vorlauf);
+  const reihenfolge = [...rest.slice(0, ziel), neuId, ...rest.slice(ziel)];
+  if (reihenfolge.some((id, k) => items[k]?.id !== id)) {
+    await ablaufUmsortieren(s, eventId, reihenfolge);
+  }
+  if (!vor) return;
+  await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda`, {
+    method: 'PUT',
+    json: { calendarId: angelegt.calendarId, eventStartPosition: vorlauf + 1 },
+    verweigert: ABLAUF_VERWEIGERT,
+    fehler: 'Gottesdienstbeginn nachziehen fehlgeschlagen',
   });
 }
 
@@ -446,8 +532,8 @@ function text(v: unknown, sonst = ''): string {
 /**
  * Legt einen gelöschten Punkt wieder an – an seiner alten Stelle und im alten Vorlauf-Zustand.
  *
- * Drei Schritte, jeder mit den vorhandenen Regeln: anlegen, per `ablaufUmsortieren` an die Stelle
- * schieben, den Vorlauf richten (Grenze mitziehen bzw. `vorBeginnSetzen`). Ob der neue Punkt **wirklich** da ist, wird am
+ * Drei Schritte, jeder mit den vorhandenen Regeln: anlegen, an die Stelle schieben und den Vorlauf richten
+ * (`anDieStelle` – dieselbe Regel wie „… dahinter einfügen“). Ob der neue Punkt **wirklich** da ist, wird am
  * frisch gelesenen Ablauf geprüft, nicht an der Antwort des Anlegens (Lehre vom 11.08.2026). Ist der
  * Vorgänger inzwischen auch weg, landet der Punkt am Ende. Liefert die ID des neuen Punkts (für „Rückgängig“ nach dem
  * Übertragen, E6-6b).
@@ -476,34 +562,14 @@ export async function punktWiederherstellen(
     verweigert: ABLAUF_VERWEIGERT,
     fehler: 'Ablaufpunkt wiederherstellen fehlgeschlagen',
   });
-  const neuId = neueId(antwort);
-  const angelegt = await s.agenda(eventId);
-  const { items } = angelegt;
-  if (neuId === null || !items.some((i) => i.id === neuId)) {
-    throw s.fehler(502, 'Der Punkt wurde nicht wieder angelegt. Bitte den Ablauf neu laden.');
-  }
-
-  const rest = items.map((i) => i.id).filter((id) => id !== neuId);
-  const nach = g.nachId === null ? -1 : rest.indexOf(g.nachId);
-  const ziel = g.nachId === null ? 0 : nach >= 0 ? nach + 1 : rest.length;
-  const reihenfolge = [...rest.slice(0, ziel), neuId, ...rest.slice(ziel)];
-  if (reihenfolge.some((id, k) => items[k]?.id !== id)) {
-    await ablaufUmsortieren(s, eventId, reihenfolge);
-  }
-  // Die Grenze ist eine Platznummer (#700, gemessen E6-6-0): Ein Vorlauf-Punkt an oder vor ihr schöbe die übrigen
-  // Vorlauf-Punkte hinaus – sie rückt deshalb um eins mit. (Angelegt wird hinten, das ließ sie unberührt.) Sonst gilt
-  // die Regel von `vorBeginnSetzen`.
-  const grenze = angelegt.eventStartPosition ?? 0;
-  if (g.vorBeginn && ziel <= grenze) {
-    await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda`, {
-      method: 'PUT',
-      json: { calendarId: angelegt.calendarId, eventStartPosition: grenze + 1 },
-      verweigert: ABLAUF_VERWEIGERT,
-      fehler: 'Gottesdienstbeginn nach dem Zurückholen nachziehen fehlgeschlagen',
-    });
-  } else {
-    await vorBeginnSetzen(s, eventId, neuId, g.vorBeginn);
-  }
+  const { id: neuId, agenda } = await angelegtePruefen(
+    s,
+    eventId,
+    antwort,
+    'Der Punkt wurde nicht wieder angelegt.',
+  );
+  // An die alte Stelle, im alten Vorlauf-Zustand – dieselbe Regel wie „… dahinter einfügen“.
+  await anDieStelle(s, eventId, agenda, neuId, g.nachId, g.vorBeginn);
   if (g.weggelassen) await weglassenSetzen(s, eventId, neuId, true);
   return neuId;
 }
@@ -548,11 +614,12 @@ function neueId(antwort: unknown): number | null {
 }
 
 /**
- * Legt fest, ob ein Ablaufpunkt VOR dem Beginn der Veranstaltung läuft (Vorlauf, #423).
+ * Legt fest, ob ein Ablaufpunkt VOR dem Beginn der Veranstaltung läuft (Vorlauf, #423) – **nur dieser Punkt wechselt
+ * die Seite** und rückt direkt über bzw. unter „Beginn“ (Alwin, 30.10.2026; Regel in `vorlaufUmschalten`).
  *
- * Geschrieben wird **nur die Grenze** (`eventStartPosition`), ohne `items`: Gemessen an der
- * Test-Instanz (05.10.2026) bleiben die Punkte dabei unberührt – IDs, Liedverknüpfungen, Dauern.
- * Die Liste mitzuschicken hieße, jeden Punkt neu zu schreiben, nur um eine Zahl zu ändern.
+ * Erst wird umsortiert (wie beim Ziehen, `ablaufUmsortieren`), dann **nur die Grenze** (`eventStartPosition`)
+ * geschrieben, ohne `items`: Gemessen an der Test-Instanz (05.10.2026) bleiben die Punkte dabei unberührt – IDs,
+ * Liedverknüpfungen, Dauern. Steht der Punkt schon an der Grenze, entfällt das Umsortieren.
  *
  * Gerechnet wird auf dem **frisch gelesenen** Ablauf, nie auf dem Stand des Geräts: Hat jemand
  * zwischendurch umsortiert, gehört die Grenze an die neue Stelle des Punkts.
@@ -564,14 +631,14 @@ export async function vorBeginnSetzen(
   vorBeginn: boolean,
 ): Promise<void> {
   const agenda = await s.agenda(eventId);
-  const item = agenda.items.find((i) => i.id === itemId);
-  if (!item) throw s.fehler(409, ABLAUF_GEAENDERT);
-  const neu = beginnPositionFuer(item, agenda.eventStartPosition ?? 0, vorBeginn);
+  if (!agenda.items.some((i) => i.id === itemId)) throw s.fehler(409, ABLAUF_GEAENDERT);
+  const neu = vorlaufUmschalten(agenda.items, agenda.eventStartPosition ?? 0, itemId, vorBeginn);
   if (neu === null) return; // steht schon so – nichts zu schreiben
 
+  if (neu.reihenfolge) await ablaufUmsortieren(s, eventId, neu.reihenfolge);
   await ablaufSchreibe(s, eventId, `/events/${eventId}/agenda`, {
     method: 'PUT',
-    json: { calendarId: agenda.calendarId, eventStartPosition: neu },
+    json: { calendarId: agenda.calendarId, eventStartPosition: neu.grenze },
     verweigert: ABLAUF_VERWEIGERT,
     fehler: 'Gottesdienstbeginn speichern fehlgeschlagen',
   });

@@ -46,10 +46,8 @@ import type { Versioniert } from '@shared/ct/versionierterWert';
 import { PdfFenster } from './PdfFenster';
 import {
   leseAnsicht,
-  leseAusgeblendet,
   lesePersonen,
   merkeAnsicht,
-  merkeAusgeblendet,
   merkePersonen,
   type BaumAnsicht,
 } from './auswahl';
@@ -96,7 +94,6 @@ export function App() {
   const [einsaetze, setEinsaetze] = useState<EinsaetzeStand>({ art: 'laedt' });
   const [offeneGruppe, setOffeneGruppe] = useState<number | null>(null);
   const [offenePerson, setOffenePerson] = useState<number | null>(null);
-  const [ausgeblendet, setAusgeblendet] = useState(leseAusgeblendet);
   // Was das Organigramm für alle zeigt (O7b-7) – von Gruppen-Admins eingestellt, im Speicher der Erweiterung.
   const [zentral, setZentral] = useState<ZentralStand>({ art: 'laedt' });
   const [einstellungenOffen, setEinstellungenOffen] = useState(false);
@@ -114,7 +111,7 @@ export function App() {
   const baumAnsicht: BaumAnsicht = gewaehlt ?? (handy ? 'liste' : 'oben');
   const [spitze, setSpitze] = useState<string | null>(null);
   // `null`, solange niemand etwas auf- oder zugeklappt hat: dann gilt der Anfang (Gemeinde und Bereiche offen) – auch
-  // für Bereiche, die erst durch den Typ-Filter wieder auftauchen.
+  // für Bereiche, die erst wieder auftauchen, wenn Gruppen-Admins sie einblenden.
   const [offenWahl, setOffenWahl] = useState<Set<string> | null>(null);
   // Organigramm als PDF (O7b-4) – übernimmt Ansicht, Spitze und Aufgeklapptes vom Reiter.
   const [pdfOffen, setPdfOffen] = useState(false);
@@ -234,20 +231,18 @@ export function App() {
   // dieselbe Reihenfolge wie in der Präsentation.
   const fuerAlle =
     zentral.art === 'da' ? (zentral.stand?.inhalt ?? ALLES_SICHTBAR) : ALLES_SICHTBAR;
-  // Ausgeblendet ist, was das Gerät ausblendet, und was für alle ausgeblendet ist (O7b-7).
-  const typenAus = useMemo(
-    () => new Set([...ausgeblendet, ...fuerAlle.typen]),
-    [ausgeblendet, fuerAlle],
-  );
+  // Ausgeblendet ist, was Gruppen-Admins für alle ausgeblendet haben (O7b-7). Eigene Typ-Schildchen je Gerät gibt es
+  // nicht mehr (30.10.2026): Ein Typ ging samt allem darunter – oben stehen meist Dienstbereiche, dann war alles weg.
+  const typenAus = useMemo(() => new Set(fuerAlle.typen), [fuerAlle]);
   const gruppenAus = useMemo(() => new Set(fuerAlle.gruppen), [fuerAlle]);
   const sichtBaum = useMemo(
     () => (start ? bereicheSortiert(baumOhneTypen(start.baum, typenAus, gruppenAus)) : []),
     [start, typenAus, gruppenAus],
   );
-  // Eine Spitze, die es nicht mehr gibt (Typ-Filter, Änderung in ChurchTools), wird vergessen – sonst spränge die
-  // Ansicht zurück, sobald die Gruppe wieder auftaucht. Das geschieht noch beim Zeichnen, nicht in einem Effekt danach:
-  // Ein zweiter Klick (Doppelklick auf den Typ-Filter) kam sonst vor dem Effekt, und die Spitze blieb (Test-Instanz
-  // 26.10.2026). React zeichnet dann gleich noch einmal, ohne das Bild mit der ungültigen Spitze zu zeigen.
+  // Eine Spitze, die es nicht mehr gibt (für alle ausgeblendet, Änderung in ChurchTools), wird vergessen – sonst spränge
+  // die Ansicht zurück, sobald die Gruppe wieder auftaucht. Das geschieht noch beim Zeichnen, nicht in einem Effekt
+  // danach: Ein zweiter Klick (damals Doppelklick auf ein Typ-Schildchen) kam sonst vor dem Effekt, und die Spitze blieb
+  // (Test-Instanz 26.10.2026). React zeichnet dann gleich noch einmal, ohne das Bild mit der ungültigen Spitze zu zeigen.
   if (spitze !== null && !knotenAmPfad(sichtBaum, spitze)) setSpitze(null);
   const offen = useMemo(() => offenWahl ?? anfangsOffen(sichtBaum), [offenWahl, sichtBaum]);
   // Die Spitze der Diagramme ist die Gemeinde – ohne Namen aus ChurchTools heißt sie so.
@@ -337,13 +332,6 @@ export function App() {
         setPraesentiert(true);
       },
     );
-  };
-  const typUmschalten = (typ: number) => {
-    const neu = new Set(ausgeblendet);
-    if (neu.has(typ)) neu.delete(typ);
-    else neu.add(typ);
-    merkeAusgeblendet(neu);
-    setAusgeblendet(neu);
   };
   const hinweise = useMemo(
     () =>
@@ -443,7 +431,6 @@ export function App() {
           mitglieder={mitglieder}
           einsaetze={einsaetze.art === 'fertig' ? einsaetze.einsaetze : null}
           lesbar={lesbar.mitglieder}
-          ausgeblendet={ausgeblendet}
           fuerAlle={fuerAlle}
           fuerAlleFehler={zentral.art === 'fehler'}
           onFuerAlleNochmal={() => void zentralLaden()}
@@ -458,7 +445,6 @@ export function App() {
           onUmklappen={umklappen}
           onAlleAuf={() => setOffenWahl(alleAuf(sichtBaum, spitze, offen))}
           onAlleZu={() => setOffenWahl(alleZu(sichtBaum, spitze, offen))}
-          onTypUmschalten={typUmschalten}
           onNachladen={nachladen}
           onGruppe={gruppeOeffnen}
         />

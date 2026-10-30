@@ -36,6 +36,11 @@ jobs:
       - name: CHANGELOG-Einträge
         run: npm run changelog -- --pruefen
 
+      # Die manuellen Testfälle (docs/tests/testfaelle, #234): Priorität gültig, jedes „Betrifft“ gibt es noch. Fehlte hier
+      # bis zum 30.10.2026 – TF-EDIT-14 mit Priorität „mittel“ kam so unbemerkt auf main (lokal rot, CI grün).
+      - name: Testfälle
+        run: npm run testplan -- --pruefen
+
       - name: Build
         run: npm run build
 

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { AuthStatus } from '@shared/types/index';
 import * as api from '../services/churchtoolsApi';
@@ -6,6 +7,7 @@ import { resetSync as resetSettingsSync } from '../services/userSettings';
 import { clearDeviceData } from '../utils/clearDeviceData';
 import { ApiError } from '../services/api';
 import { getAbmeldenAusstehend, setAbmeldenAusstehend } from '../utils/devicePrefs';
+import { personGeprueft, personNeuPruefen } from '../utils/personenWechsel';
 import { schluessel } from './abfrageSchluessel';
 
 /** Anmeldestatus + Login/Logout. Nutzt das /api/auth/me-Cookie des Backends. */
@@ -41,6 +43,7 @@ export function useAuth() {
     onSuccess: (status) => {
       // Eine neue Anmeldung ersetzt das alte Cookie – ein noch ausstehendes Abmelden ist damit erledigt.
       setAbmeldenAusstehend(false);
+      personNeuPruefen();
       qc.setQueryData(schluessel.ich(), status);
       // Server-Sync wieder einschalten (#211): Nach einem automatischen Abmelden steht in beiden
       // Sync-Diensten `disabled = true`; ohne Reset speichern Anmerkungen und Lied-Einstellungen
@@ -83,6 +86,13 @@ export function useAuth() {
       await clearDeviceData();
     },
   });
+
+  // Gleich beim Start klären, ob das Gerät noch zur angemeldeten Person gehört – nicht erst beim ersten Lied: Sonst
+  // stünden bis dahin die zwischengespeicherten Abläufe der vorigen Person da (`personenWechsel.ts`).
+  const angemeldetAls = meQuery.data?.authenticated ? meQuery.data.user?.id : undefined;
+  useEffect(() => {
+    if (angemeldetAls) void personGeprueft();
+  }, [angemeldetAls]);
 
   return {
     isLoading: meQuery.isLoading,

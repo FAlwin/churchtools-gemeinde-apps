@@ -135,7 +135,6 @@ export function TerminAnsicht({
   const k = kachel(s.tag);
   // Nur Dienste, die es an diesem Termin gibt: `planAus` lässt die übrigen schon weg (ein Termin = eine Spalte).
   const gruppen = plan.gruppen;
-  const ende = zustand.daten.zeilen[0]?.endeUhrzeit ?? null;
   const { ablauf } = zustand;
 
   return (
@@ -160,7 +159,7 @@ export function TerminAnsicht({
                 <h2>{s.name}</h2>
                 <p>
                   {datumText(s.tag)} · {s.uhrzeit} Uhr
-                  {ende && ` · Ende ca. ${ende} Uhr`}
+                  {teile.ende && ` · Ende ${teile.ende} Uhr`}
                   {s.abgesagt && <b className={styles.abgesagt}> · abgesagt</b>}
                 </p>
               </div>
@@ -173,6 +172,7 @@ export function TerminAnsicht({
               <h3>Ablauf</h3>
               <span className={styles.kopfKnoepfe}>
                 {teile.kopfKnopf}
+                {teile.zeigenKnopf}
                 {teile.spaltenKnopf}
                 {/* Öffnet den Ablauf DIESES Termins, nicht nur die App (E6-Abschluss, Alwin 30.10.2026). */}
                 {musikApp && !bearbeiten && (

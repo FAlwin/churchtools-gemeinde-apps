@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useVollbild } from '@ui/bedienung/useVollbild';
 import { GruppenKachel } from '@ui/bedienung/GruppenKachel';
 import { PersonBild } from '@ui/bedienung/PersonBild';
 import { Icon } from '@ui/icons/icons';
@@ -71,8 +72,13 @@ export function Praesentation({ start, daten, mitglieder, stand, personen, onSch
   const [offen, setOffen] = useState<ReadonlySet<string>>(() => anfangsOffen(baum));
   const wurzel = useRef<HTMLDivElement>(null);
   const buehne = useRef<HTMLDivElement>(null);
-  const kannVollbild = document.fullscreenEnabled === true;
-  const [vollbild, setVollbild] = useState(false);
+  // Vollbild des Browsers – der gemeinsame Baustein (seit E6b-1 auch für die Ablauf-Anzeige des Dienstplaners).
+  const {
+    kann: kannVollbild,
+    an: vollbild,
+    umschalten: vollbildUmschalten,
+    beenden: vollbildBeenden,
+  } = useVollbild(wurzel);
   const zahl = daten.bereiche.length;
   const bereich = seite >= 0 ? daten.bereiche[seite] : undefined;
 
@@ -85,24 +91,13 @@ export function Praesentation({ start, daten, mitglieder, stand, personen, onSch
     },
     [zahl, baum],
   );
-  const vollbildUmschalten = useCallback(() => {
-    if (!kannVollbild) return;
-    const aus = document.fullscreenElement
-      ? document.exitFullscreen()
-      : wurzel.current?.requestFullscreen();
-    // Ein abgelehntes Vollbild (z. B. ohne Klick ausgelöst) ändert nichts – die Präsentation läuft weiter.
-    aus?.catch(() => undefined);
-  }, [kannVollbild]);
   const schliessen = useCallback(() => {
-    if (document.fullscreenElement) document.exitFullscreen().catch(() => undefined);
+    vollbildBeenden();
     onSchliessen();
-  }, [onSchliessen]);
+  }, [vollbildBeenden, onSchliessen]);
 
   useEffect(() => {
     wurzel.current?.focus();
-    const folgen = () => setVollbild(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', folgen);
-    return () => document.removeEventListener('fullscreenchange', folgen);
   }, []);
 
   useEffect(() => {

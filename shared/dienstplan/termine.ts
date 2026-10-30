@@ -59,8 +59,6 @@ export interface TerminZeile {
   tag: string;
   /** `HH:mm` in Ortszeit der Gemeinde. */
   uhrzeit: string;
-  /** Ende `HH:mm` in Ortszeit; `null`, wenn ChurchTools kein späteres Ende nennt. */
-  endeUhrzeit: string | null;
   abgesagt: boolean;
   meine: MeinDienst[];
   /** Plätze in Dienstgruppen, die man plant (0 für Nicht-Planer oder ohne solche Dienste). */
@@ -134,7 +132,6 @@ export function termineAus(
         ende,
         tag: lokal.slice(0, 10),
         uhrzeit: lokal.slice(11, 16),
-        endeUhrzeit: ende === t.startDate ? null : ortszeitAus(ende, o.zeitzone).slice(11, 16),
         abgesagt: t.isCanceled === true,
         meine,
         geplant,

@@ -73,6 +73,10 @@ describe('Startseite (E3-3)', () => {
     );
     expect(await held().findByText('Lieder: Halleluja · Treu')).toBeTruthy();
     expect(lieder).toHaveBeenCalledWith(1);
+    // Nur Tag und Beginn, kein Ende (Alwin, 30.10.2026).
+    expect(held().getByRole('heading', { name: /./ }).nextElementSibling!.textContent).toMatch(
+      /^\S+, \d\d\.\d\d\. · \d\d:\d\d Uhr$/,
+    );
   });
 
   it('kein Ablauf → „Noch kein Ablauf.“; Ablauf nicht lesbar → gar nichts (nicht „kein Ablauf“)', async () => {

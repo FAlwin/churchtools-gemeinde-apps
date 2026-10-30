@@ -171,12 +171,12 @@ export const CHART_STEPS: CoachStep[] = [
   {
     selector: '[data-tour="chart-blaettern"]',
     title: 'Blättern & Zoomen',
-    body: 'Wische seitwärts, um zwischen den Seiten zu blättern. Mit zwei Fingern zoomst du rein und wieder heraus. Ein Tipp in die Mitte blendet die Leisten aus – dann hat das Blatt die ganze Fläche.',
+    body: 'Wische seitwärts – oder tippe unten auf „Weiter" und „Zurück" –, um zwischen den Seiten zu blättern. Mit zwei Fingern zoomst du rein und wieder heraus. Ein Tipp in die Mitte blendet die Leisten aus – dann hat das Blatt die ganze Fläche.',
   },
   {
     selector: '[data-tour="chart-lied"]',
     title: 'Lieder im Ablauf',
-    body: 'Hier oben stehen alle Lieder des Ablaufs – wische seitwärts, um zu sehen, was kommt. Ein Tipp auf ein Lied springt hin; im Querformat wählst du so auch das zweite sichtbare Lied aus. Tippe auf das gewählte (blau unterstrichen), um die Tonart zu ändern, eine Version zu wählen oder zu transponieren. Bearbeitest du eine Version, arbeitet der Editor in der Tonart, die hier eingestellt ist – gespeichert wird, was du siehst. Unter „Bearbeiten" öffnest du den Editor und verwaltest mit „Dateien …" die Notenblätter des Arrangements und mit „Stammdaten …" Name, Kategorie, Autor und Copyright des Liedes. Autor, Tempo, Takt und CCLI-Nummer kannst du auch beim Bearbeiten unter „Liedinfo" ändern.',
+    body: 'Hier oben stehen alle Lieder des Ablaufs – wische seitwärts, um zu sehen, was kommt. Ein Tipp auf ein Lied springt hin; im Querformat wählst du so auch das zweite sichtbare Lied aus. Ein Tipp auf das gewählte (blau unterstrichen) öffnet sein Fenster: Tonart und Kapo, Akkorde oder nur Text, die Version – und unter „Bearbeiten" den Editor, die Dateien und die Stammdaten des Liedes. Wer die Lied-Statistik sehen darf, sieht dort oben, wann das Lied zuletzt gesungen wurde. Bearbeitest du eine Version, arbeitet der Editor in der Tonart, die hier eingestellt ist – gespeichert wird, was du siehst.',
   },
   {
     selector: '[data-tour="chart-werkzeuge"]',

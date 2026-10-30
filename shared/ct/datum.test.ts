@@ -9,6 +9,7 @@ import {
   monatName,
   monatTitel,
   tagKurz,
+  tagLang,
   tageBis,
 } from './datum';
 
@@ -65,5 +66,12 @@ describe('tagMonatKurz (E6-5a)', () => {
   it('wie die Termine der Musik-App: Tag zweistellig, Monat kurz', () => {
     expect(tagMonatKurz('2026-11-08')).toBe('08. Nov');
     expect(tagMonatKurz('2026-03-21')).toBe('21. Mär');
+  });
+});
+
+describe('tagLang (Ablauf-Anzeige E6b-1)', () => {
+  it('Wochentag und Monat ausgeschrieben, Tag ohne führende Null', () => {
+    expect(tagLang('2026-11-01')).toBe('Sonntag, 1. November');
+    expect(tagLang('2026-10-30')).toBe('Freitag, 30. Oktober');
   });
 });

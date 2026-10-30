@@ -74,7 +74,6 @@ describe('ladeTermine', () => {
         ende: '2026-10-18T10:00:00Z',
         tag: '2026-10-18',
         uhrzeit: '10:00',
-        endeUhrzeit: '12:00',
         abgesagt: false,
         meine: [{ dienst: 'Ton', zugesagt: true }],
         geplant: 2,
@@ -143,7 +142,6 @@ describe('ladeTermin (Termin-Ansicht, E6-1b)', () => {
     expect(d.plan.spalten.map((s) => [s.id, s.uhrzeit])).toEqual([[7, '10:00']]);
     const ton = d.plan.gruppen.flatMap((g) => g.zeilen).find((z) => z.dienst.name === 'Ton')!;
     expect(ton.zellen[0]!.map((p) => p.name)).toEqual(['Alwin']);
-    expect(d.zeilen.map((z) => z.endeUhrzeit)).toEqual(['12:00']);
   });
 
   it('ohne Plätze-Liste → Fehler 502 (sonst stünde „keine Dienste“ da); 404 kommt durch', async () => {

@@ -40,4 +40,14 @@ describe('CHANGELOG-Einträge als Dateien (22.10.2026)', () => {
     expect(eintragFehler('x.md', '- ohne Überschrift')[0]).toContain('Überschrift');
     expect(eintragFehler('x.md', '### Neu\n\n## [2.0.0]')[0]).toContain('##');
   });
+
+  it('verlangt die App in jeder gezeigten Überschrift – auch in der zweiten (30.10.2026)', () => {
+    expect(eintragFehler('x.md', '### Neu (Musik-App)\n\n- a\n\n### Intern\n\n- b\n')).toEqual([]);
+    const fehler = eintragFehler(
+      'x.md',
+      '### Neu (Musik-App)\n\n- a\n\n### Behoben (S7-3)\n\n- b\n',
+    );
+    expect(fehler).toHaveLength(1);
+    expect(fehler[0]).toContain('fehlt die App');
+  });
 });

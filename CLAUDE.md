@@ -414,7 +414,8 @@ Home-Bildschirm ist auch „standalone“, in den Erweiterungen setzt `.ct-exten
 `client/index.html`). **Liedblatt-Kopf = Kopfkarte (`components/BlattKopf.tsx`, Scheibe B1+B2, 28.10.2026; Bauplan
 `bauplan-blatt-ct-look.md`, Messung `messung-b0-28.10.md`):** seit 29.10.2026 keine schwebende Karte mehr, sondern eine
 Fläche in Kartenfarbe bis an den oberen Rand (Alwin: Karte „verloren, zu klein“); Inhalt unter dem Band; am Handy
-hochkant größer (Zeile 44px über `--knopf-hoehe`, Raster 60px).
+hochkant größer (Zeile 44px über `--knopf-hoehe`, Raster 60px). **Bauplan B0–B5 abgeschlossen am 30.10.2026**
+(B3 Fußleiste #799, B4 Scroll-Modus #802, B5 Einführung).
 Drei Aufbauten nach gemessener Kopfbreite und Fensterhöhe (`kopfAufbau` in `utils/werkzeuge.ts`, nicht nach
 Gerätenamen): **breit** (iPad quer UND hochkant) Titelzeile „← Ablauf · Termin · Vollbild“, darunter Ablauf-Leiste
 und beschriftete Knöpfe in EINER Zeile; **kompakt** (Handy hochkant) ohne Titelzeile, Zurück/Vollbild als Symbol
@@ -679,6 +680,8 @@ Neue Nutzer bekommen beim ersten Mal eine geführte Einführung mit Hinweisblase
    neuer Bereich), MUSS die Einführung dazu passen – Schritt ergänzen/anpassen in `utils/onboarding.ts`
    und ggf. ein `data-tour`-Attribut am neuen Element setzen. Betrifft es einen bestehenden Bereich,
    fügt man den Schritt in die passende Gruppe (`TERMINE_STEPS` / `CHART_STEPS`) ein.
+   **Fehlt das Ziel eines Schritts, überspringt `Coachmarks` ihn stillschweigend** – für das Liedblatt klickt
+   `e2e/blatt-einfuehrung.spec.ts` die Tour deshalb in allen Größen durch (Scheibe B5, 30.10.2026).
 2. **Damit es beim ersten Öffnen nach dem Update erscheint:** die betroffene Tour-**Version** erhöhen
    (`TOUR_TERMINE = 'termine-v1'` → `'termine-v2'` bzw. `TOUR_CHART`). Der Merker in localStorage
    passt dann nicht mehr → die (aktualisierte) Einführung erscheint bei allen automatisch beim ersten
@@ -798,6 +801,12 @@ den Skill `/festhalten`, der genau das automatisiert.
    siehe `changelog.d/README.md`). `npm run changelog -- --version X.Y.Z` setzt sie unter `## [X.Y.Z] – Datum`
    in `CHANGELOG.md` (neueste zuerst, dazu was noch direkt unter `[Unreleased]` stand) und löscht die Dateien;
    danach lesen und gegen den Code prüfen. Versionierung nach SemVer.
+   **Die Release-Beschreibung auf GitHub baut `scripts/release-notizen.mjs` je App** (seit 30.10.2026, Alwin: nur
+   die Features dieser App, nicht alle): was seit dem vorigen Tag derselben App in `CHANGELOG.md` + `changelog.d/`
+   dazukam und in der Klammer der Überschrift die App oder „alle Apps“ nennt; „Intern“ nie. Alle drei
+   Release-Workflows rufen es auf (`release.yml`, `erweiterung-release.yml`, `anmeldungen-release.yml`) –
+   `generate_release_notes` (jeder PR aller Apps) ist aus. Vorschau:
+   `node scripts/release-notizen.mjs --app musik-app --tag vX.Y.Z` (Tag muss lokal existieren).
 6. **Taggen:** `git tag vX.Y.Z && git push origin vX.Y.Z` → CI baut `:latest` + `:X.Y` + `:X`
    (Major-Tag, damit Gemeinden sicher auf `:2` bleiben können). Prod-Deploy bewusst, nicht nebenbei.
    **Die Anmeldungen haben einen eigenen Weg:** Tag `anmeldung-vX.Y.Z` (ab v0.1.0) →
@@ -844,6 +853,13 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **v2.38.0 (30.10.2026) = Lied-Editor + ChurchTools-Look.** Lied-Editor L1–L6 und „Nur Text“ (#790); Seitenköpfe
+  S/S2, Liedblatt B0–B5 (Kopf mit Lied-Leiste, Fußleiste #799, Scroll-Modus #802, Einführung #805), Lied-Menü als
+  Fenster (#779), „zuletzt gesungen“ (#792), Abwesenheiten wie Dienstplaner (#760); iPhone: unterer Rand gemessen
+  (#769), Editor-Kopf unter dem Band (#786), Hover nur mit Maus (#776); CI prüft auch die Testfälle (#803).
+  Einführung: Texte nachgezogen, nicht neu gezeigt (`chart-v9`, Alwin 28.10.). Abnahme in der Test-Instanz am
+  30.10.2026 (ZIP 30.10c). Dazu aus dem anderen Teil des Repos Dienstplaner E6, Anmeldungen A8–A9/U1–U2, Protokolle
+  S2–S7/K1–K2, Organigramm O2–O7b.
 - **v2.37.0 (22.10.2026) = Rückmeldung des Musik-Bereichsleiters + Dev-Stammtisch-Fragen.** Flow-Zeile
   `{flow:}` (#606), Scroll-Modus mit einer langen Seite je Lied (#607) und gemeinsamen Anmerkungen (#614), Malen
   darauf (#608), Lasso (#615), Notizen unter dem Liedende (#626), Pedal Teil für Teil mit `----` (#609),

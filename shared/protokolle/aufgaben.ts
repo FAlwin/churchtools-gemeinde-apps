@@ -37,6 +37,11 @@ export interface Aufgabe {
   status: AufgabenStatus;
   verlauf: VerlaufEintrag[];
   geloescht: boolean;
+  /**
+   * Was die Karte in der To-Do-Übersicht zusätzlich zeigt (S7-2, Alwin 30.10.2026: „Auf Karte anzeigen“, für alle
+   * gespeichert): die letzte Notiz und aus welcher Sitzung. Fehlt bei älteren To-Dos – dann nichts davon.
+   */
+  karte?: { notiz?: boolean; sitzung?: boolean };
 }
 
 const FOLGE: Record<AufgabenStatus, AufgabenStatus> = {
@@ -104,6 +109,73 @@ export function alsGeloescht(a: Aufgabe, von: number, am: string): Aufgabe {
 export function alsWiederhergestellt(a: Aufgabe, von: number, am: string): Aufgabe {
   if (!a.geloescht) return a;
   return { ...a, geloescht: false, verlauf: [...a.verlauf, { am, von, art: 'wiederhergestellt' }] };
+}
+
+/** **Die letzte Notiz** aus dem Verlauf – für die Karte („Auf Karte anzeigen“). */
+export function letzteNotiz(a: Aufgabe): VerlaufEintrag | null {
+  for (let i = a.verlauf.length - 1; i >= 0; i--)
+    if (a.verlauf[i].art === 'notiz') return a.verlauf[i];
+  return null;
+}
+
+/** Was das Fenster „To-Do“ ändert – nur, was der Nutzer angefasst hat (`undefined` = bleibt, wie es frisch gelesen ist). */
+export interface ToDoAenderung {
+  text?: string;
+  wer?: number[];
+  extern?: string;
+  bis?: string | null;
+  status?: AufgabenStatus;
+  /** Neue Notiz (leer = keine). */
+  notiz?: string;
+  karte?: { notiz?: boolean; sitzung?: boolean };
+}
+
+/**
+ * **Ein To-Do bearbeiten** (Fenster „To-Do“, S7-2) – auf den **frisch gelesenen** Stand angewendet, und nur die Felder,
+ * die im Fenster geändert wurden: Hat inzwischen jemand anderes etwas anderes geändert (etwa abgehakt), bleibt das. Status
+ * und Notiz kommen in den Verlauf; Text, Wer, Bis wie am Aufgaben-Block ohne Eintrag.
+ */
+export function bearbeiten(a: Aufgabe, x: ToDoAenderung, von: number, am: string): Aufgabe {
+  let n: Aufgabe = { ...a };
+  if (x.text !== undefined && x.text.trim()) n.text = x.text.trim();
+  if (x.wer !== undefined) n.wer = [...new Set(x.wer)];
+  if (x.extern !== undefined) n.extern = x.extern.trim();
+  if (x.bis !== undefined) n.bis = x.bis || null;
+  if (x.karte !== undefined) n.karte = { ...a.karte, ...x.karte };
+  if (x.status !== undefined) n = statusSetzen(n, x.status, von, am);
+  if (x.notiz) n = notizHinzufuegen(n, x.notiz, von, am);
+  return n;
+}
+
+/**
+ * **In eine andere Gruppe verschieben** (S7-2, Alwin 30.10.2026: „auch später änderbar“): Ein To-Do liegt in der
+ * „Mitarbeit“ seiner Gruppe – umziehen heißt, in der neuen Gruppe **neu anlegen** (neue ID, ohne Sitzung, der Verlauf
+ * zieht mit) und das alte **als gelöscht vermerken**. Beide tragen eine Notiz, wohin bzw. woher.
+ */
+export function verschieben(
+  a: Aufgabe,
+  q: {
+    gruppe: number;
+    neueId: string;
+    von: string;
+    nach: string;
+    wer: number[];
+    ich: number;
+    am: string;
+  },
+): { neu: Aufgabe; alt: Aufgabe } {
+  const neu = notizHinzufuegen(
+    { ...a, id: q.neueId, gruppe: q.gruppe, sitzung: null, wer: [...new Set(q.wer)] },
+    `Aus „${q.von}“ hierher verschoben.`,
+    q.ich,
+    q.am,
+  );
+  const alt = alsGeloescht(
+    notizHinzufuegen(a, `Nach „${q.nach}“ verschoben.`, q.ich, q.am),
+    q.ich,
+    q.am,
+  );
+  return { neu, alt };
 }
 
 /** Überfällig: nicht erledigt und das Datum liegt vor heute (`heute` als `JJJJ-MM-TT`, Ortszeit des Aufrufers). */

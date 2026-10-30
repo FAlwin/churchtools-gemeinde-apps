@@ -225,11 +225,54 @@ describe('ToDos', () => {
     expect((await screen.findByRole('alert')).textContent).toMatch(/gibt es nicht mehr/);
   });
 
-  it('Text mit bekannter Sitzung öffnet das Protokoll; ohne Sitzung kein Knopf', async () => {
-    const onSitzung = zeige();
+  it('Text antippen öffnet das Fenster „To-Do“; „Neues To-Do“ öffnet es leer', async () => {
+    zeige();
     fireEvent.click(await screen.findByRole('button', { name: 'Beamer-Angebote einholen' }));
+    expect(screen.getByRole('dialog', { name: 'To-Do' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    fireEvent.click(screen.getByRole('button', { name: /Neues To-Do/ }));
+    expect(screen.getByRole('dialog', { name: 'Neues To-Do' })).toBeTruthy();
+  });
+
+  it('nach dem Speichern im Fenster lädt die Liste neu (ohne „Wird geladen …“)', async () => {
+    vi.mocked(S.aufgabeAendern).mockImplementation((_o, _id, aendern) =>
+      Promise.resolve(aendern(MEINS)),
+    );
+    zeige();
+    fireEvent.click(await screen.findByRole('button', { name: 'Beamer-Angebote einholen' }));
+    fireEvent.change(screen.getByLabelText('Bis'), { target: { value: '2026-12-01' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(L.ladeUebersicht).toHaveBeenCalledTimes(2));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByText('Wird geladen …')).toBeNull();
+  });
+
+  it('„Auf Karte anzeigen“: letzte Notiz und Sitzung auf der Karte, die Sitzung führt ins Protokoll', async () => {
+    const mitKarte = {
+      ...MEINS,
+      karte: { notiz: true, sitzung: true },
+      verlauf: [
+        ...MEINS.verlauf,
+        { am: tageZurueck(1), von: 1, art: 'notiz' as const, text: 'Zwei Angebote da' },
+      ],
+    };
+    vi.mocked(L.ladeUebersicht).mockResolvedValue(uebersicht([mitKarte]));
+    const onSitzung = zeige();
+    await screen.findByText('Beamer-Angebote einholen');
+    const zeile = screen.getByText('Beamer-Angebote einholen').closest('li')!;
+    expect(zeile.textContent).toMatch(/Notizen.*Zwei Angebote da/);
+    fireEvent.click(
+      within(zeile).getByRole('button', { name: /Leitungssitzung – im Protokoll zeigen/ }),
+    );
     expect(onSitzung).toHaveBeenCalledWith(11, 'p:s1');
-    expect(screen.queryByRole('button', { name: 'Raum prüfen' })).toBeNull();
+  });
+
+  it('ohne „Auf Karte anzeigen“: keine Notiz und keine Sitzung auf der Karte', async () => {
+    zeige();
+    await screen.findByText('Beamer-Angebote einholen');
+    expect(screen.getByText('Beamer-Angebote einholen').closest('li')!.textContent).not.toMatch(
+      /Notizen|Aus welcher Sitzung/,
+    );
   });
 
   it('Wer: Namen aus den Mitgliedern, sonst „eine weitere Person“, ohne Zuständige ein Hinweis', async () => {

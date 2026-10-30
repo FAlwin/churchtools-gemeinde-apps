@@ -1,0 +1,80 @@
+// Fenster „To-Do“ (Bauplan S7-2a) – Felder aus `Fensterfelder.module.scss`, hier nur, was das Fenster zusätzlich hat.
+
+.text {
+  height: auto;
+  min-height: 64px;
+  padding-block: 8px;
+  resize: vertical;
+}
+
+// Abschnittskopf mit „Auf Karte anzeigen“ rechts.
+.kopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.schalterKnopf {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text2);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.link {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--blue-ink);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.verlauf {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: none;
+  font-size: 13.5px;
+  font-weight: 400;
+
+  li {
+    display: flex;
+    gap: 8px;
+    color: var(--text2);
+  }
+
+  time {
+    flex: none;
+    color: var(--text3);
+  }
+
+  b {
+    color: var(--text);
+    font-weight: 600;
+  }
+}

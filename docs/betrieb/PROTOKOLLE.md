@@ -69,8 +69,16 @@ Offen · Erledigt) oder **nach Person** (ich zuerst, dann nach Namen; „Außerh
 zuständig“), im Gerät gemerkt. Die **Leitung** sieht alle To-Dos ihrer Gruppen, **Mitglieder** ihre eigenen und die,
 für die noch niemand zuständig ist. Die **Status-Marke** („◐ In Arbeit“) schaltet mit einem Tipp weiter – ohne ins
 Protokoll zu springen, auch wenn es schon freigegeben ist. Der Filter blendet Gruppen und „Zuständig: Ich / Andere /
-Noch niemand“ aus; Erledigte älter als 30 Tage zeigt der Schalter „Ältere erledigte zeigen“ am Ende der Liste. Ein
-Tipp auf den Text öffnet das Protokoll, aus dem das To-Do stammt.
+Noch niemand“ aus; Erledigte älter als 30 Tage zeigt der Schalter „Ältere erledigte zeigen“ am Ende der Liste.
+
+**Fenster „To-Do“ (S7-2a):** Ein Tipp auf den Text öffnet das To-Do: Text, Gruppe, Bis, Status, Zuständige (auch
+niemand – dann ist es ein To-Do der Gruppe – oder jemand außerhalb der Gruppe, nur als Name), neue Notiz, Verlauf und
+„Löschen“ (nur vermerkt, mit Rückfrage). Je Abschnitt „Notizen“ und „Aus welcher Sitzung“ ein Schalter **„Auf Karte
+anzeigen“** – für alle gespeichert. **„Neues To-Do“** legt eins ohne Protokoll an (Leitung und Mitglieder). Eine andere
+Gruppe wählen **verschiebt** das To-Do: neu in der anderen Gruppe, das alte wird als gelöscht vermerkt; die Verbindung
+zur Sitzung entfällt. Steht ein To-Do noch in einem **Protokoll-Entwurf**, sind Text, Gruppe und Löschen dort zu
+ändern (das Protokoll führt). Wer als Mitglied sich selbst nicht einträgt, sieht das To-Do danach nicht mehr – das
+Fenster sagt es vorher. Gespeichert wird nur, was im Fenster geändert wurde.
 
 **Protokoll beginnen (Leitung, S5-1):** Eine Sitzung ohne Protokoll (Termin mit Besprechungsanfrage oder
 Gruppentreffen) zeigt „Protokoll beginnen“. Im Fenster: eine Vorlage, „Wie letztes Mal“ (Tagesordnung des letzten
@@ -187,7 +195,9 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit später sc
   noch Hinweise, nie zurückrollen; unklare Antwort → im Kalender nachsehen, Fehlerklasse `Unklar`), Fenster
   `SitzungFestlegen.tsx`, Kasten `NaechsteSitzung.tsx`. Gemessen: `protokolle-planung/docs/messung-s5-2-2026-10-28.md`.
 - To-Do-Übersicht (S7): Regel `shared/protokolle/uebersicht.ts` (`sichtbarFuer`, `einteilen`, `langeErledigt`), Seite
-  `protokolle/src/ToDos.tsx`, Marke `StatusMarke.tsx`; geschrieben wird über `aufgabeAendern`. Einteilung und Filter
+  `protokolle/src/ToDos.tsx`, Marke `StatusMarke.tsx`, Fenster `ToDoFenster.tsx`; Regeln `bearbeiten`, `verschieben`, `letzteNotiz` in
+  `shared/protokolle/aufgaben.ts`; geschrieben wird über `protokolle/src/todoSchreiben.ts` (`aufgabeAendern`; neue IDs
+  entstehen beim Öffnen des Fensters – ein zweiter Versuch legt nichts doppelt an). Einteilung und Filter
   merkt `ui/bedienung/geraet.ts` im Gerät (vorher nur im Dienstplaner).
 - Sitzung bearbeiten (K2b): Regel `shared/protokolle/bearbeiten.ts` (`aenderungVon`, `mailsVon`/`mailsSerie`,
   `terminRumpf` – ein Termin-`PUT` leert, was fehlt, darum geht der gelesene Termin vollständig zurück; Serien:

@@ -16,6 +16,9 @@ import {
   statusText,
   aufgabenAbgleich,
   aufgabenIdsVergeben,
+  bearbeiten,
+  letzteNotiz,
+  verschieben,
 } from './aufgaben';
 import { ableiten, type Block } from './dokument';
 import { STANDARD_VORLAGEN, startDokument } from './vorlagen';
@@ -330,5 +333,78 @@ describe('aufgabenIdsVergeben (S4-2)', () => {
     const vergeben = aufgabenIdsVergeben(start, () => false, neueId);
     const anzahl = JSON.stringify(start).split('"type":"aufgabe"').length - 1;
     expect(vergeben).toHaveLength(anzahl);
+  });
+});
+
+describe('S7-2: bearbeiten, verschieben, letzteNotiz', () => {
+  const AM = '2026-10-30T10:00:00Z';
+  const basis = neueAufgabe({
+    id: 'b',
+    gruppe: 11,
+    sitzung: 's1',
+    text: 'Beamer',
+    von: 1,
+    am: AM,
+    wer: [1],
+    bis: '2026-11-01',
+  });
+
+  it('nur angefasste Felder – ein inzwischen gesetzter Status bleibt, wenn das Fenster ihn nicht ändert', () => {
+    const frisch = statusSetzen(basis, 'arbeit', 19, AM);
+    const n = bearbeiten(frisch, { bis: '2026-11-20' }, 1, AM);
+    expect(n).toMatchObject({ status: 'arbeit', bis: '2026-11-20', text: 'Beamer', wer: [1] });
+  });
+
+  it('Text getrimmt (leer bleibt der alte), Wer ohne Doppelte, Bis leer = keins, Extern getrimmt', () => {
+    const n = bearbeiten(
+      basis,
+      { text: '  ', wer: [19, 19, 1], bis: '', extern: ' Becker ' },
+      1,
+      AM,
+    );
+    expect(n).toMatchObject({ text: 'Beamer', wer: [19, 1], bis: null, extern: 'Becker' });
+    expect(bearbeiten(basis, { text: ' Neu ' }, 1, AM).text).toBe('Neu');
+  });
+
+  it('Status und Notiz in den Verlauf; Karte wird ergänzt, nicht ersetzt', () => {
+    const n = bearbeiten(
+      { ...basis, karte: { notiz: true } },
+      { status: 'erledigt', notiz: ' fertig ', karte: { sitzung: true } },
+      19,
+      AM,
+    );
+    expect(n.verlauf.slice(1)).toEqual([
+      { am: AM, von: 19, art: 'status', status: 'erledigt' },
+      { am: AM, von: 19, art: 'notiz', text: 'fertig' },
+    ]);
+    expect(n.karte).toEqual({ notiz: true, sitzung: true });
+    expect(letzteNotiz(n)?.text).toBe('fertig');
+    expect(letzteNotiz(basis)).toBeNull();
+  });
+
+  it('verschieben: neu in der anderen Gruppe (neue ID, ohne Sitzung, Verlauf zieht mit), altes als gelöscht vermerkt', () => {
+    const { neu, alt } = verschieben(basis, {
+      gruppe: 194,
+      neueId: 'n',
+      von: 'Leitungsteam',
+      nach: 'Jugend',
+      wer: [19],
+      ich: 1,
+      am: AM,
+    });
+    expect(neu).toMatchObject({
+      id: 'n',
+      gruppe: 194,
+      sitzung: null,
+      wer: [19],
+      geloescht: false,
+      text: 'Beamer',
+    });
+    expect(neu.verlauf.at(-1)).toMatchObject({
+      art: 'notiz',
+      text: 'Aus „Leitungsteam“ hierher verschoben.',
+    });
+    expect(alt).toMatchObject({ id: 'b', gruppe: 11, geloescht: true });
+    expect(alt.verlauf.slice(-2).map((v) => v.art)).toEqual(['notiz', 'geloescht']);
   });
 });

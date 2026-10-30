@@ -10,6 +10,7 @@ import {
   statusSetzen,
   vorabAnwenden,
   vorabLesen,
+  zustaendigSetzen,
 } from '@shared/protokolle/aufgaben';
 import { FesterPunkt } from './FesterPunkt';
 import { AufgabenKontext } from './aufgabenKontext';
@@ -184,10 +185,14 @@ export function AufgabeBlock({
                       type="checkbox"
                       checked={an}
                       onChange={() =>
-                        aendern((x) => ({
-                          ...x,
-                          wer: an ? x.wer.filter((p) => p !== m.id) : [...x.wer, m.id],
-                        }))
+                        aendern((x) =>
+                          zustaendigSetzen(
+                            x,
+                            an ? x.wer.filter((p) => p !== m.id) : [...x.wer, m.id],
+                            k?.ich.person ?? 0, // ohne Kontext schreibt `aendern` ohnehin nichts
+                            new Date().toISOString(),
+                          ),
+                        )
                       }
                     />
                     {m.name}

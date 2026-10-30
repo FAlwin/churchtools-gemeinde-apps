@@ -20,6 +20,7 @@ import {
   letzteNotiz,
   verschieben,
   mitNamen,
+  zustaendigSetzen,
   nameAusListe,
   nameImVerlauf,
   nameFuer,
@@ -466,5 +467,39 @@ describe('Name im Verlauf (S7-2a: Mitglieder sahen „Person 1“)', () => {
     expect(nameAusListe('verborgen', ich)(1)).toBe('Alwin');
     expect(nameAusListe(null, ich)(1)).toBe('Alwin');
     expect(nameAusListe('verborgen', ich)(7)).toBeNull();
+  });
+});
+
+describe('Verlauf „Zuständig“ (S7-3: überall in den Verlauf)', () => {
+  const AM3 = '2026-10-31T10:00:00Z';
+  const t = neueAufgabe({
+    id: 'z',
+    gruppe: 11,
+    sitzung: null,
+    text: 'x',
+    wer: [19, 23],
+    von: 1,
+    am: AM3,
+  });
+  it('zustaendigSetzen: neuer Stand und Eintrag mit vorher/nachher', () => {
+    const n = zustaendigSetzen(t, [23, 7, 7], 1, AM3);
+    expect(n.wer).toEqual([23, 7]);
+    expect(n.verlauf.at(-1)).toEqual({
+      am: AM3,
+      von: 1,
+      art: 'zustaendig',
+      vorher: [19, 23],
+      nachher: [23, 7],
+    });
+  });
+  it('zustaendigSetzen: dieselben Personen (andere Reihenfolge) → unverändert, kein Eintrag', () => {
+    expect(zustaendigSetzen(t, [23, 19], 1, AM3)).toBe(t);
+  });
+  it('bearbeiten: Wer geändert → Eintrag; ohne Wer → keiner', () => {
+    expect(bearbeiten(t, { wer: [] }, 1, AM3).verlauf.at(-1)).toMatchObject({
+      art: 'zustaendig',
+      nachher: [],
+    });
+    expect(bearbeiten(t, { bis: '2026-12-01' }, 1, AM3).verlauf).toEqual(t.verlauf);
   });
 });

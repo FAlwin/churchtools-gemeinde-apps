@@ -223,6 +223,20 @@ describe('ToDoFenster', () => {
     });
   });
 
+  it('Verlauf: Zuständig-Wechsel mit Namen; Unbekanntes aus neueren Fassungen als „geändert“ (S7-3)', () => {
+    const mitWechsel = {
+      ...BEAMER,
+      verlauf: [
+        ...BEAMER.verlauf,
+        { am: AM, von: 1, art: 'zustaendig' as const, vorher: [23], nachher: [] },
+        { am: AM, von: 23, art: 'etwasNeues' as unknown as 'notiz' },
+      ],
+    };
+    zeige({ eintrag: { aufgabe: mitWechsel, gruppe: LT } });
+    expect(screen.getByText(/Zuständig: Johann → niemand/)).toBeTruthy();
+    expect(screen.getByText('geändert')).toBeTruthy();
+  });
+
   it('„im Protokoll zeigen“ springt in die Sitzung', () => {
     const { onSitzung } = zeige();
     fireEvent.click(knopf(/im Protokoll zeigen/));

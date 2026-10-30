@@ -40,12 +40,19 @@ export interface Herkunft {
   entwurf: boolean;
 }
 
-function verlaufText(v: VerlaufEintrag): string {
+function verlaufText(v: VerlaufEintrag, name: (p: number) => string): string {
   if (v.art === 'angelegt') return 'angelegt';
   if (v.art === 'status') return `Status: ${statusText(v.status ?? 'offen')}`;
   if (v.art === 'notiz') return `Notiz: ${v.text ?? ''}`;
   if (v.art === 'geloescht') return 'gelöscht';
-  return 'wiederhergestellt';
+  if (v.art === 'wiederhergestellt') return 'wiederhergestellt';
+  if (v.art === 'zustaendig') {
+    const wer = (l: readonly number[] | undefined) =>
+      l?.length ? l.map(name).join(', ') : 'niemand';
+    return `Zuständig: ${wer(v.vorher)} → ${wer(v.nachher)}`;
+  }
+  // Eine neuere Fassung kennt vielleicht Einträge, die diese noch nicht kennt.
+  return 'geändert';
 }
 
 /** Ein Knopf mit Schalter – der Schalter ist nur Anzeige (`ui` Schalter), bedient wird der Knopf. */
@@ -458,7 +465,8 @@ export function ToDoFenster({
               <li key={i}>
                 <time>{tagKurz(tagAusIso(v.am, zeitzone))}</time>
                 <span>
-                  <b>{v.von === ich.person ? ich.name : name(v.von)}</b> {verlaufText(v)}
+                  <b>{v.von === ich.person ? ich.name : name(v.von)}</b>{' '}
+                  {verlaufText(v, (p) => (p === ich.person ? ich.name : name(p)))}
                 </span>
               </li>
             ))}

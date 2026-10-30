@@ -4,12 +4,14 @@ import {
   type AgendaServiceOption,
   type InfoGruppe,
 } from '@shared/types/index';
-import { zeitPlus, zustaendigText, type AblaufZeile } from '@shared/ct/ablaufZeile';
+import { itemLabel, zeitPlus, zustaendigText, type AblaufZeile } from '@shared/ct/ablaufZeile';
 import type { PunktAenderung } from '@shared/ct/schreibKern';
 import {
   pendingAgendaFields,
   isDurationValid,
   neuerAgendaPunkt,
+  vorlaufAnDerStelle,
+  type EinfuegeStelle,
   type LinkState,
   type NeuerAgendaPunkt,
   type PunktArt,
@@ -58,6 +60,12 @@ interface Gemeinsam {
    * (`schliessen`) schließt ganz. Nur ohne `liedWahl` – wer Lieder wählt, hat dort seinen Weg.
    */
   liedAnsehen?: (zurueck: () => void, schliessen: () => void) => ReactNode;
+  /**
+   * Die Dienstgruppen, deren Infos man sieht (E6-4, Entwurf `e6-infos-spalten.html` Bild 3): je Gruppe ein Feld unter
+   * „Bemerkung“ – beim Anlegen unter „Weitere Einstellungen“. Ohne: keine Felder. Nicht bei Überschriften – ChurchTools
+   * führt dort keine Infos (gemessen E6-4-0).
+   */
+  infoGruppen?: readonly InfoGruppe[];
 }
 
 /** Einen vorhandenen Punkt bearbeiten (der Normalfall – `modus` darf fehlen). */
@@ -71,7 +79,7 @@ interface Bearbeiten extends Gemeinsam {
   onUpdate: (fields: PunktAenderung, trotzdem: boolean) => Promise<void>;
   /** Läuft der Punkt vor dem Beginn der Veranstaltung (Vorlauf, #423)? */
   vorBeginn: boolean;
-  /** Schreibt den Vorlauf nach ChurchTools (gilt für den ganzen Block, siehe Schalter). Wirft bei Fehler. */
+  /** Schreibt den Vorlauf nach ChurchTools (nur dieser Punkt rückt an „Beginn“, siehe Schalter). Wirft bei Fehler. */
   onSetVorBeginn: (vorBeginn: boolean) => Promise<void>;
   /** Schreibt das Auge („an diesem Termin weglassen“, E6-3b) – der Stand kommt aus `item.weggelassen`. Wirft bei Fehler. */
   onSetWeggelassen: (weggelassen: boolean) => Promise<void>;
@@ -80,10 +88,10 @@ interface Bearbeiten extends Gemeinsam {
   /** Sieht der Bearbeitende nicht alle Dienstgruppen (#676)? Dann steht der Hinweis über den Knöpfen. */
   gruppenVerborgen?: boolean;
   /**
-   * Die Dienstgruppen, deren Infos man sieht (E6-4, Entwurf `e6-infos-spalten.html` Bild 3): je Gruppe ein Feld unter
-   * „Bemerkung“. Ohne: keine Felder. Nicht bei Überschriften – ChurchTools führt dort keine Infos (gemessen E6-4-0).
+   * „Darunter einfügen“ links unten (Alwin, 30.10.2026, Entwurf `einfuegen-entwurf.html` B): einen neuen Punkt direkt
+   * hinter diesem anlegen. Ohne: kein Knopf. Solange etwas ungespeichert ist, gesperrt – wie das Blättern.
    */
-  infoGruppen?: readonly InfoGruppe[];
+  onDarunter?: () => void;
   /**
    * „Position 2 von 8“ und ‹ › zum vorigen/nächsten Punkt (E6-O O3). Fehlt `onVorher`/`onNachher`, ist der Pfeil
    * gesperrt (erster/letzter Punkt). Solange etwas ungespeichert ist, sind beide gesperrt (Alwin, 28.10.2026).
@@ -107,8 +115,20 @@ interface Neu extends Gemeinsam {
    * das ganze Fenster zu, nicht das leere Programmpunkt-Formular auf.
    */
   startLied?: boolean;
-  /** Legt den Punkt an (am Ende des Ablaufs). Wirft bei Fehler. */
+  /** Legt den Punkt an – an der Stelle aus „Einfügen nach“ (`nachId`), sonst am Ende. Wirft bei Fehler. */
   onAdd: (punkt: NeuerAgendaPunkt) => Promise<void>;
+  /**
+   * Der Ablauf, wie die Liste ihn zeigt – für die Zeile **„Einfügen nach“** (Alwin, 30.10.2026, Entwurf
+   * `einfuegen-entwurf.html` A). Ohne (oder leer): keine Zeile, der Punkt kommt ans Ende.
+   */
+  ablauf?: readonly AblaufZeile[];
+  /** Wo „Einfügen nach“ anfängt (Plus an einer Zeile, „Darunter einfügen“). Ohne: am Ende. */
+  startNach?: EinfuegeStelle;
+  /**
+   * Womit „Vor Gottesdienstbeginn“ anfängt, wenn nicht die Stelle es sagt (`vorlaufAnDerStelle`): „… davor einfügen“
+   * übernimmt die Seite des Punkts, VOR den er kommt.
+   */
+  startVorBeginn?: boolean;
 }
 
 export type PunktFensterProps = Bearbeiten | Neu;
@@ -143,7 +163,23 @@ export function PunktFenster(props: PunktFensterProps) {
   const { onClose, services, liedWahl, liedAnsehen } = props;
   const neu = props.modus === 'neu';
   const item = props.modus === 'neu' ? LEERER_PUNKT : props.item;
-  const vorBeginnStart = props.modus === 'neu' ? false : props.vorBeginn;
+  const ablauf = props.modus === 'neu' ? (props.ablauf ?? []) : [];
+  // „Einfügen nach“ (nur beim Anlegen): hinter welchen Punkt der neue kommt – `undefined` = ans Ende.
+  const [nach, setNach] = useState<EinfuegeStelle>(
+    props.modus === 'neu' ? props.startNach : undefined,
+  );
+  const [stelleWahl, setStelleWahl] = useState(false);
+  // „Weitere Einstellungen“ beim Anlegen: zu, bis man sie aufklappt (Alwin, 30.10.2026).
+  const [weitere, setWeitere] = useState(false);
+  // Beim Anlegen sagt die Stelle, ob der Punkt vor dem Beginn läuft – der Schalter startet damit.
+  const vorBeginnStart =
+    props.modus === 'neu'
+      ? (props.startVorBeginn ?? vorlaufAnDerStelle(ablauf, props.startNach))
+      : props.vorBeginn;
+  const vorBeginnDerStelle =
+    props.modus === 'neu' && nach === props.startNach
+      ? vorBeginnStart
+      : vorlaufAnDerStelle(ablauf, nach);
   const weggelassenStart = item.weggelassen ?? false;
   const isSong = !!item.song;
   // Neu: Programmpunkt oder Überschrift (Alwin, 05.10.2026: erst das Fenster, nicht die Liedsuche).
@@ -164,9 +200,9 @@ export function PunktFenster(props: PunktFensterProps) {
   const [title, setTitle] = useState(item.title);
   const [responsible, setResponsible] = useState(item.responsibleText);
   const [note, setNote] = useState(item.note);
-  // Infos je Dienstgruppe (E6-4) – nur beim Bearbeiten (`infoGruppen` gibt es für „Neu“ gar nicht: Ein neuer Punkt
-  // wird ohne Infos angelegt). Überschriften zeigen die Felder nicht (sie stehen im Block der Programmpunkt-Felder).
-  const infoFelder = props.modus !== 'neu' ? (props.infoGruppen ?? []) : [];
+  // Infos je Dienstgruppe (E6-4) – beim Anlegen unter „Weitere Einstellungen“ (Alwin, 30.10.2026). Überschriften zeigen
+  // die Felder nicht (sie stehen im Block der Programmpunkt-Felder).
+  const infoFelder = props.infoGruppen ?? [];
   const [infos, setInfos] = useState<Record<number, string>>(() =>
     Object.fromEntries(
       infoFelder.map((g) => [g.id, item.infos?.find((i) => i.gruppeId === g.id)?.text ?? '']),
@@ -217,10 +253,36 @@ export function PunktFenster(props: PunktFensterProps) {
 
   const dirty = neu
     ? !!(title.trim() || duration.trim() || responsible.trim() || note.trim()) ||
-      linkState.kind === 'link'
+      linkState.kind === 'link' ||
+      Object.values(infos).some((t) => t.trim() !== '') ||
+      weggelassen
     : Object.keys(pending).length > 0 ||
       vorBeginn !== vorBeginnStart ||
       weggelassen !== weggelassenStart;
+
+  /**
+   * Was beim Anlegen außer den Feldern mitgeht: Stelle, Vorlauf, Auge und die Infos je Gruppe (Alwin, 30.10.2026).
+   * Am Ende ohne Schalter geht nichts davon mit – dann legt ChurchTools an wie bisher.
+   */
+  function mitStelleUndSchaltern(punkt: NeuerAgendaPunkt): NeuerAgendaPunkt {
+    const gefuellt = Object.entries(infos).filter(([, t]) => t.trim() !== '');
+    return {
+      ...punkt,
+      ...(punkt.type !== 'header' && gefuellt.length > 0
+        ? { infos: Object.fromEntries(gefuellt) }
+        : {}),
+      ...(nach !== undefined ? { nachId: nach } : {}),
+      ...(nach !== undefined || vorBeginn ? { vorBeginn } : {}),
+      ...(weggelassen ? { weggelassen: true } : {}),
+    };
+  }
+
+  /** „Einfügen nach“ gewählt – der Vorlauf-Schalter folgt der neuen Stelle. */
+  function stelleGewaehlt(stelle: EinfuegeStelle): void {
+    setNach(stelle);
+    setVorBeginn(vorlaufAnDerStelle(ablauf, stelle));
+    setStelleWahl(false);
+  }
 
   /** Ein Lied wurde gewählt (Suche, „Neues Lied" oder „gibt es schon") – vorgemerkt, nicht geschrieben. */
   function liedGewaehlt(arrangementId: number, name: string) {
@@ -238,7 +300,7 @@ export function PunktFenster(props: PunktFensterProps) {
     setKonflikt(null);
     try {
       if (props.modus === 'neu') {
-        if (neuerPunkt) await props.onAdd(neuerPunkt);
+        if (neuerPunkt) await props.onAdd(mitStelleUndSchaltern(neuerPunkt));
         onClose();
         return;
       }
@@ -292,6 +354,59 @@ export function PunktFenster(props: PunktFensterProps) {
     : item.title.trim() || (item.isHeader ? 'Überschrift' : 'Eintrag');
   const einblenden = !warInLiedwahl && (props.modus === 'neu' || props.einblenden !== false);
 
+  // ── Schritt „Einfügen nach“ (Entwurf `einfuegen-entwurf.html` A): alle Punkte zur Wahl, ein Tipp übernimmt ──
+  if (stelleWahl)
+    return (
+      <Sheet
+        title={titel}
+        onClose={onClose}
+        onHintergrund={onOverlayClick}
+        einblenden={einblenden}
+        mittel
+        cancelLabel={null}
+        knoepfe={
+          <FensterKnopf art="zweit" onClick={() => setStelleWahl(false)}>
+            Zurück
+          </FensterKnopf>
+        }
+      >
+        <section className={styles.schritt} aria-label="Einfügen nach">
+          <h3>Einfügen nach</h3>
+          <div className={styles.stellen} role="radiogroup" aria-label="Einfügen nach">
+            {[
+              { stelle: null, text: 'Am Anfang', zeit: null, band: false },
+              ...ablauf.map((z) => ({
+                stelle: z.id,
+                text: itemLabel(z),
+                // Überschriften ohne Uhrzeit – wie in der Liste.
+                zeit: z.isHeader ? null : z.time,
+                band: z.isHeader,
+              })),
+              { stelle: undefined, text: 'Am Ende', zeit: null, band: false },
+            ].map((o) => (
+              <button
+                key={String(o.stelle)}
+                type="button"
+                role="radio"
+                aria-checked={nach === o.stelle}
+                className={`${styles.stelle}${o.band ? ` ${styles.stelleBand}` : ''}`}
+                onClick={() => stelleGewaehlt(o.stelle)}
+              >
+                <span className={styles.stelleZeit}>{o.zeit ?? ''}</span>
+                <span
+                  className={
+                    o.stelle === null || o.stelle === undefined ? styles.stelleRand : undefined
+                  }
+                >
+                  {o.text}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      </Sheet>
+    );
+
   // ── Schritt „Zuständig“: ersetzt den Inhalt; unten „Zurück · Übernehmen“, ganz zu über das X ──
   if (zustEntwurf !== null)
     return (
@@ -342,6 +457,81 @@ export function PunktFenster(props: PunktFensterProps) {
           ? `${zeitVon} – ${zeitBis}`
           : zeitVon
         : null;
+  const stelleZeile = typeof nach === 'number' ? ablauf.find((z) => z.id === nach) : undefined;
+  const stelleText = nach === null ? 'Am Anfang' : stelleZeile ? itemLabel(stelleZeile) : 'Am Ende';
+
+  const infosBlock = infoFelder.length > 0 && (
+    <>
+      <div className={styles.abschnitt}>Infos je Gruppe</div>
+      {infoFelder.map((g) => (
+        <label key={g.id} className={styles.zeile}>
+          <span className={styles.lab}>{g.name}</span>
+          <span className={styles.wert}>
+            <textarea
+              className={styles.textarea}
+              value={infos[g.id] ?? ''}
+              maxLength={ABLAUFPUNKT_GRENZEN.gruppenInfo}
+              rows={1}
+              aria-label={`Info für ${g.name}`}
+              onChange={(e) => {
+                const text = e.target.value;
+                setInfos((alt) => ({ ...alt, [g.id]: text }));
+              }}
+            />
+          </span>
+        </label>
+      ))}
+    </>
+  );
+
+  // Für ALLE Punkte, auch Überschriften (#423): Ein Block „Vorbereitung" kann ebenso vor dem Beginn liegen. Seit
+  // 30.10.2026 (Alwin) wechselt nur DIESER Punkt die Seite und rückt direkt über bzw. unter „Beginn“
+  // (`vorlaufUmschalten`) – der Hinweis sagt, was beim Speichern passiert. Beim Anlegen startet der Schalter mit der
+  // Seite der gewählten Stelle; weicht er davon ab, rückt der Punkt an „Beginn“.
+  const vorlaufBleibt = vorBeginn === (neu ? vorBeginnDerStelle : vorBeginnStart);
+  const vorlaufSchalter = (
+    <button
+      type="button"
+      className={`${styles.zeile} ${styles.schalterZeile}`}
+      onClick={() => setVorBeginn((v) => !v)}
+      aria-pressed={vorBeginn}
+    >
+      <span className={styles.lab}>
+        Vor Gottesdienstbeginn
+        <small>
+          {vorlaufBleibt
+            ? vorBeginn
+              ? 'Läuft vor dem Beginn.'
+              : 'Gehört zum Gottesdienst.'
+            : vorBeginn
+              ? `${neu ? 'Kommt' : 'Rückt beim Speichern'} direkt über „Beginn“ – nur dieser Punkt.`
+              : `${neu ? 'Kommt' : 'Rückt beim Speichern'} direkt unter „Beginn“ – nur dieser Punkt.`}
+        </small>
+      </span>
+      <Schalter an={vorBeginn} />
+    </button>
+  );
+
+  // Auge wie in ChurchTools (E6-3b, #652): bleibt im Ablauf, nur an diesem Termin ohne Zeit.
+  const augeSchalter = (
+    <button
+      type="button"
+      className={`${styles.zeile} ${styles.schalterZeile}`}
+      onClick={() => setWeggelassen((w) => !w)}
+      aria-pressed={weggelassen}
+    >
+      <span className={styles.lab}>
+        An diesem Termin weglassen
+        <small>
+          {weggelassen
+            ? 'Bleibt im Ablauf, hat hier aber keine Uhrzeit und zählt nicht mit.'
+            : 'Wird an diesem Termin gezeigt und mitgerechnet.'}
+        </small>
+      </span>
+      <Schalter an={weggelassen} />
+    </button>
+  );
+
   const zustAnzeige = zustaendigText(responsible);
   // Die Personen kommen aus ChurchTools zum gespeicherten Stand – nach einer Änderung erst wieder nach dem Speichern.
   const zustUnveraendert = responsible === item.responsibleText;
@@ -357,16 +547,29 @@ export function PunktFenster(props: PunktFensterProps) {
       cancelLabel={konflikt ? 'Verwerfen' : 'Abbrechen'}
       links={
         props.modus !== 'neu' && (
-          <FensterKnopf
-            art="loeschen"
-            disabled={busy}
-            onClick={() => {
-              onClose();
-              props.onRequestDelete();
-            }}
-          >
-            Eintrag löschen
-          </FensterKnopf>
+          <>
+            {/* Vor „Eintrag löschen“: Dessen `margin-right: auto` schiebt dann beide nach links (B, Alwin 30.10.2026). */}
+            {props.onDarunter && (
+              <FensterKnopf
+                art="link"
+                disabled={busy || dirty}
+                title={dirty ? 'Erst speichern oder abbrechen.' : undefined}
+                onClick={props.onDarunter}
+              >
+                <Icon name="plus" size={15} stroke={2.4} /> Darunter einfügen
+              </FensterKnopf>
+            )}
+            <FensterKnopf
+              art="loeschen"
+              disabled={busy}
+              onClick={() => {
+                onClose();
+                props.onRequestDelete();
+              }}
+            >
+              Eintrag löschen
+            </FensterKnopf>
+          </>
         )
       }
       knoepfe={
@@ -592,72 +795,54 @@ export function PunktFenster(props: PunktFensterProps) {
               </span>
             </label>
 
-            {infoFelder.length > 0 && (
-              <>
-                <div className={styles.abschnitt}>Infos je Gruppe</div>
-                {infoFelder.map((g) => (
-                  <label key={g.id} className={styles.zeile}>
-                    <span className={styles.lab}>{g.name}</span>
-                    <span className={styles.wert}>
-                      <textarea
-                        className={styles.textarea}
-                        value={infos[g.id] ?? ''}
-                        maxLength={ABLAUFPUNKT_GRENZEN.gruppenInfo}
-                        rows={1}
-                        aria-label={`Info für ${g.name}`}
-                        onChange={(e) => {
-                          const text = e.target.value;
-                          setInfos((alt) => ({ ...alt, [g.id]: text }));
-                        }}
-                      />
-                    </span>
-                  </label>
-                ))}
-              </>
-            )}
+            {/* Beim Anlegen unter „Weitere Einstellungen“ (unten). */}
+            {!neu && infosBlock}
           </>
         )}
 
-        {/* Für ALLE Punkte, auch Überschriften (#423): Ein Block „Vorbereitung" kann ebenso vor dem
-            Beginn liegen. ChurchTools kennt nur eine Grenze, deshalb nennt der Hinweis den Block.
-            Nicht beim Anlegen: Neue Punkte kommen ans Ende – dort hieße „an", ALLES sei Vorlauf. */}
-        {!neu && (
-          <button
-            type="button"
-            className={`${styles.zeile} ${styles.schalterZeile}`}
-            onClick={() => setVorBeginn((v) => !v)}
-            aria-pressed={vorBeginn}
-          >
-            <span className={styles.lab}>
-              Vor Gottesdienstbeginn
-              <small>
-                {vorBeginn
-                  ? 'Dieser und alle Punkte darüber laufen vor dem Beginn.'
-                  : 'Gehört zum Gottesdienst – wie alle Punkte darunter.'}
-              </small>
-            </span>
-            <Schalter an={vorBeginn} />
-          </button>
-        )}
-
-        {/* Auge wie in ChurchTools (E6-3b, #652): bleibt im Ablauf, nur an diesem Termin ohne Zeit. */}
-        {!neu && (
-          <button
-            type="button"
-            className={`${styles.zeile} ${styles.schalterZeile}`}
-            onClick={() => setWeggelassen((w) => !w)}
-            aria-pressed={weggelassen}
-          >
-            <span className={styles.lab}>
-              An diesem Termin weglassen
-              <small>
-                {weggelassen
-                  ? 'Bleibt im Ablauf, hat hier aber keine Uhrzeit und zählt nicht mit.'
-                  : 'Wird an diesem Termin gezeigt und mitgerechnet.'}
-              </small>
-            </span>
-            <Schalter an={weggelassen} />
-          </button>
+        {neu ? (
+          <>
+            {ablauf.length > 0 && (
+              <div className={styles.zeile}>
+                <span className={styles.lab}>Einfügen nach</span>
+                <span className={styles.wert}>
+                  <button
+                    type="button"
+                    className={styles.zeilenKnopf}
+                    disabled={busy}
+                    aria-label={`Einfügen nach: ${stelleText} – ändern`}
+                    onClick={() => setStelleWahl(true)}
+                  >
+                    <span className={styles.zustText}>
+                      <span>{stelleText}</span>
+                    </span>
+                    <Icon name="chev-right" size={18} className={styles.pfeil} />
+                  </button>
+                </span>
+              </div>
+            )}
+            <button
+              type="button"
+              className={styles.weitere}
+              aria-expanded={weitere}
+              onClick={() => setWeitere((w) => !w)}
+            >
+              Weitere Einstellungen
+              <Icon name={weitere ? 'chev-up' : 'chev-down'} size={18} />
+            </button>
+            {weitere && (
+              <>
+                {!ueberschrift && infosBlock}
+                {vorlaufSchalter}
+                {augeSchalter}
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            {vorlaufSchalter}
+            {augeSchalter}
+          </>
         )}
       </div>
 

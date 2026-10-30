@@ -93,5 +93,11 @@
   .option {
     padding: 12px 14px;
     font-size: 15px;
+    white-space: nowrap;
   }
+}
+
+// Linie vor „… davor einfügen“ (Plus an einer Ablauf-Zeile, Alwin 30.10.2026) – wie das Menü in ChurchTools.
+.trenner {
+  border-top: 6px solid var(--surface3);
 }

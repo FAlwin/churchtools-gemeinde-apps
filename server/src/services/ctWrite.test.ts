@@ -498,7 +498,7 @@ describe('createAbsence – was an ChurchTools geht', () => {
  * ohne `items`. Gemessen an der Test-Instanz (05.10.2026): So bleiben alle Punkte unberührt. Ginge
  * die Liste mit, würde jeder Punkt neu geschrieben, nur um eine Zahl zu ändern.
  */
-describe('setAgendaItemVorBeginn – nur die Grenze, auf frischem Stand', () => {
+describe('setAgendaItemVorBeginn – nur dieser Punkt wechselt, auf frischem Stand', () => {
   /** Ablauf mit drei Punkten, Grenze 1 (Punkt 10 ist Vorlauf). Merkt sich, was geschrieben wurde. */
   function mockAblauf(eventStartPosition = 1) {
     const geschrieben: { url: string; rumpf: Record<string, unknown> }[] = [];
@@ -528,7 +528,7 @@ describe('setAgendaItemVorBeginn – nur die Grenze, auf frischem Stand', () => 
     return geschrieben;
   }
 
-  it('schreibt nur calendarId + eventStartPosition, ohne items', async () => {
+  it('steht der Punkt direkt unter der Grenze: nur calendarId + eventStartPosition, ohne items', async () => {
     const g = mockAblauf();
     await setAgendaItemVorBeginn(COOKIE, 9, 11, true);
     expect(g).toHaveLength(1);
@@ -536,10 +536,24 @@ describe('setAgendaItemVorBeginn – nur die Grenze, auf frischem Stand', () => 
     expect(g[0].rumpf).toEqual({ calendarId: 2, eventStartPosition: 2 });
   });
 
-  it('rechnet mit der Position aus dem frischen Ablauf', async () => {
+  /** Die Reihenfolge eines Umsortier-Rumpfs (`items`). */
+  const reihe = (rumpf: Record<string, unknown>) =>
+    (rumpf.items as { id: number }[] | undefined)?.map((i) => i.id);
+
+  it('an: der Punkt rückt direkt über „Beginn“ – erst umsortieren, dann die Grenze (Alwin 30.10.2026)', async () => {
+    const g = mockAblauf(1); // nur 10 Vorlauf
+    await setAgendaItemVorBeginn(COOKIE, 9, 12, true);
+    expect(g).toHaveLength(2);
+    expect(reihe(g[0].rumpf)).toEqual([10, 12, 11]); // 11 bleibt Gottesdienst
+    expect(g[1].rumpf).toEqual({ calendarId: 2, eventStartPosition: 2 });
+  });
+
+  it('aus: der Punkt rückt direkt unter „Beginn“, die anderen bleiben Vorlauf', async () => {
     const g = mockAblauf(3); // alle drei Vorlauf
     await setAgendaItemVorBeginn(COOKIE, 9, 11, false);
-    expect(g[0].rumpf).toEqual({ calendarId: 2, eventStartPosition: 1 });
+    expect(g).toHaveLength(2);
+    expect(reihe(g[0].rumpf)).toEqual([10, 12, 11]);
+    expect(g[1].rumpf).toEqual({ calendarId: 2, eventStartPosition: 2 });
   });
 
   it('steht der Punkt schon so, wird nichts geschrieben', async () => {

@@ -3,8 +3,10 @@ import { ablaufZeileAus, punktStand } from '@shared/ct/ablaufZeile';
 import {
   ablaufUmsortieren,
   punktAendern,
+  punktAnlegen,
   punktLoeschen,
   punktWiederherstellen,
+  vorBeginnSetzen,
   weglassenSetzen,
   type CtSchreiber,
   type GeloeschterPunkt,
@@ -416,5 +418,128 @@ describe('Nicht still überschreiben (E6-3c, #659)', () => {
     expect(ct.ids()).toEqual([2, 1, 3]);
     await ablaufUmsortieren(ct.s, 1, [3, 2, 1]);
     expect(ct.ids()).toEqual([3, 2, 1]);
+  });
+});
+
+/**
+ * **Einfügen an einer Stelle** und **„Vor Gottesdienstbeginn“ nur für diesen Punkt** (Alwin, 30.10.2026, Entwurf
+ * `einfuegen-entwurf.html`). Geprüft am kleinen ChurchTools oben: Der Stern (*) heißt Vorlauf.
+ */
+describe('Einfügen an einer Stelle (Alwin 30.10.2026)', () => {
+  const vier = () =>
+    fakeCt(
+      [{ title: 'Soundcheck' }, { title: 'Begrüßung' }, { title: 'Lied' }, { title: 'Predigt' }],
+      2,
+    );
+
+  it('ohne Stelle und Schalter: ans Ende, ein Schreibvorgang und kein Nachlesen – wie bisher', async () => {
+    const ct = vier();
+    const lesen = vi.spyOn(ct.s, 'agenda');
+    await punktAnlegen(ct.s, 1, { type: 'text', title: 'Segen' });
+    expect(ct.titelVorlauf()).toEqual(['Soundcheck*', 'Begrüßung*', 'Lied', 'Predigt', 'Segen']);
+    expect(ct.schreibe).toHaveBeenCalledTimes(1);
+    expect(lesen).not.toHaveBeenCalled();
+  });
+
+  it('hinter einen Punkt des Gottesdienstes, mit den Infos je Gruppe', async () => {
+    const ct = vier();
+    await punktAnlegen(ct.s, 1, {
+      type: 'text',
+      title: 'Ansage',
+      nachId: 3,
+      vorBeginn: false,
+      infos: { 3: 'Mikro 2', 4: '  ' },
+    });
+    expect(ct.titelVorlauf()).toEqual(['Soundcheck*', 'Begrüßung*', 'Lied', 'Ansage', 'Predigt']);
+    expect(ct.item(ct.ids()[3])?.serviceGroupNotes).toEqual([
+      { serviceGroupId: 3, note: 'Mikro 2' },
+    ]);
+  });
+
+  it('ganz nach vorne (nachId null) in den Vorlauf: die übrigen Vorlauf-Punkte bleiben Vorlauf', async () => {
+    const ct = vier();
+    await punktAnlegen(ct.s, 1, { type: 'text', title: 'Aufbau', nachId: null, vorBeginn: true });
+    expect(ct.titelVorlauf()).toEqual(['Aufbau*', 'Soundcheck*', 'Begrüßung*', 'Lied', 'Predigt']);
+  });
+
+  it('hinter den letzten Vorlauf-Punkt, als Vorlauf: die Grenze rückt mit', async () => {
+    const ct = vier();
+    await punktAnlegen(ct.s, 1, { type: 'text', title: 'Gebet', nachId: 2, vorBeginn: true });
+    expect(ct.titelVorlauf()).toEqual(['Soundcheck*', 'Begrüßung*', 'Gebet*', 'Lied', 'Predigt']);
+  });
+
+  it('hinter den letzten Vorlauf-Punkt, aber zum Gottesdienst: erster Punkt nach „Beginn“', async () => {
+    const ct = vier();
+    await punktAnlegen(ct.s, 1, { type: 'text', title: 'Gebet', nachId: 2, vorBeginn: false });
+    expect(ct.titelVorlauf()).toEqual(['Soundcheck*', 'Begrüßung*', 'Gebet', 'Lied', 'Predigt']);
+  });
+
+  it('am Ende, aber „vor Beginn“: rückt direkt über „Beginn“ – nicht alles darüber wird Vorlauf', async () => {
+    const ct = vier();
+    await punktAnlegen(ct.s, 1, { type: 'text', title: 'Kaffee', vorBeginn: true });
+    expect(ct.titelVorlauf()).toEqual(['Soundcheck*', 'Begrüßung*', 'Kaffee*', 'Lied', 'Predigt']);
+  });
+
+  it('mitten in den Vorlauf, aber zum Gottesdienst: rückt direkt unter „Beginn“', async () => {
+    const ct = vier();
+    await punktAnlegen(ct.s, 1, { type: 'text', title: 'Gebet', nachId: 1, vorBeginn: false });
+    expect(ct.titelVorlauf()).toEqual(['Soundcheck*', 'Begrüßung*', 'Gebet', 'Lied', 'Predigt']);
+  });
+
+  it('eine Überschrift an eine Stelle, gleich weggelassen', async () => {
+    const ct = vier();
+    await punktAnlegen(ct.s, 1, {
+      type: 'header',
+      title: 'Wort',
+      nachId: 3,
+      vorBeginn: false,
+      weggelassen: true,
+    });
+    expect(ct.titelVorlauf()).toEqual(['Soundcheck*', 'Begrüßung*', 'Lied', 'Wort', 'Predigt']);
+    expect(ct.weggelassen()).toEqual(['Wort']);
+  });
+
+  it('meldet ChurchTools Erfolg, ohne dass der Punkt da ist: Fehler statt still nichts (Lehre 11.08.2026)', async () => {
+    const ct = vier();
+    ct.anlegenLuegt();
+    await expect(
+      punktAnlegen(ct.s, 1, { type: 'text', title: 'X', nachId: 1, vorBeginn: true }),
+    ).rejects.toMatchObject({ status: 502 });
+  });
+});
+
+describe('„Vor Gottesdienstbeginn“ – nur dieser Punkt wechselt die Seite (Alwin 30.10.2026)', () => {
+  const fuenf = () =>
+    fakeCt(
+      [
+        { title: 'Aufbau' },
+        { title: 'Soundcheck' },
+        { title: 'Begrüßung' },
+        { title: 'Lied' },
+        { title: 'Predigt' },
+      ],
+      2,
+    );
+
+  it('an: rückt direkt über „Beginn“, die Punkte darüber und darunter bleiben, wo sie sind', async () => {
+    const ct = fuenf();
+    await vorBeginnSetzen(ct.s, 1, 5, true);
+    expect(ct.titelVorlauf()).toEqual(['Aufbau*', 'Soundcheck*', 'Predigt*', 'Begrüßung', 'Lied']);
+  });
+
+  it('aus: rückt direkt unter „Beginn“, der übrige Vorlauf bleibt Vorlauf', async () => {
+    const ct = fuenf();
+    await vorBeginnSetzen(ct.s, 1, 1, false);
+    expect(ct.titelVorlauf()).toEqual(['Soundcheck*', 'Aufbau', 'Begrüßung', 'Lied', 'Predigt']);
+  });
+
+  it('eine Überschrift springt allein – ihre Punkte bleiben stehen (Alwin 30.10.2026)', async () => {
+    const ct = fakeCt([
+      { title: 'Ankommen', type: 'header' },
+      { title: 'Begrüßung' },
+      { title: 'Lied' },
+    ]);
+    await vorBeginnSetzen(ct.s, 1, 1, true);
+    expect(ct.titelVorlauf()).toEqual(['Ankommen*', 'Begrüßung', 'Lied']);
   });
 });

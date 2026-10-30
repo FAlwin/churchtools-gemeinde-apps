@@ -477,3 +477,137 @@ describe('„Option wählen“ nach dem Plus (Scheibe S2)', () => {
     expect(optionen()).not.toContain('Programmpunkt hinzufügen');
   });
 });
+
+/**
+ * **Einfügen an einer Stelle** (Alwin, 30.10.2026, Entwurf `einfuegen-entwurf.html`): am PC Plus und roter Papierkorb
+ * an der Zeile (wie ChurchTools), überall „Darunter einfügen“ im Punkt-Fenster. Was beim Anlegen mitgeht, prüft
+ * `PunktFenster.test.tsx`; hier, dass die Stelle ankommt.
+ */
+describe('Einfügen an einer Stelle (30.10.2026)', () => {
+  const DREI: AblaufZeile[] = [
+    { ...zeile(1, 'Soundcheck'), vorBeginn: true },
+    zeile(2, 'Begrüßung'),
+    zeile(3, 'Predigt'),
+  ];
+  const zeigen = (a = aktionen(), abgeschlossen = false) =>
+    render(<Harness aktionen={a} items={DREI} abgeschlossen={abgeschlossen} />);
+  const titel = (t: string) =>
+    fireEvent.change(screen.getByPlaceholderText(/^Titel/), { target: { value: t } });
+
+  it('Plus an der Zeile: „… dahinter einfügen“ legt hinter diesem Punkt an', async () => {
+    const a = aktionen();
+    zeigen(a);
+    fireEvent.click(screen.getByRole('button', { name: 'Bei „Begrüßung“ einfügen' }));
+    expect(screen.getAllByRole('menuitem').map((m) => m.textContent)).toEqual([
+      'Programmpunkt dahinter einfügen',
+      'Überschrift dahinter einfügen',
+      'Programmpunkt davor einfügen',
+      'Überschrift davor einfügen',
+    ]);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Programmpunkt dahinter einfügen' }));
+    expect(screen.getByRole('button', { name: /Einfügen nach: Begrüßung/ })).toBeTruthy();
+    titel('Gebet');
+    fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
+    await waitFor(() =>
+      expect(a.add).toHaveBeenCalledWith({
+        type: 'text',
+        title: 'Gebet',
+        nachId: 2,
+        vorBeginn: false,
+      }),
+    );
+  });
+
+  it('„… davor einfügen“: hinter den Vorgänger, mit der Seite des Punkts, vor den er kommt', async () => {
+    const a = aktionen();
+    zeigen(a);
+    // Vor „Begrüßung“ (erster Punkt des Gottesdienstes): hinter „Soundcheck“ (Vorlauf) – und trotzdem Gottesdienst.
+    fireEvent.click(screen.getByRole('button', { name: 'Bei „Begrüßung“ einfügen' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Programmpunkt davor einfügen' }));
+    titel('Gebet');
+    fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
+    await waitFor(() =>
+      expect(a.add).toHaveBeenCalledWith(expect.objectContaining({ nachId: 1, vorBeginn: false })),
+    );
+  });
+
+  it('vor den ersten Punkt: ganz nach vorne (nachId null)', async () => {
+    const a = aktionen();
+    zeigen(a);
+    fireEvent.click(screen.getByRole('button', { name: 'Bei „Soundcheck“ einfügen' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Überschrift davor einfügen' }));
+    titel('Ankommen');
+    fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
+    await waitFor(() =>
+      expect(a.add).toHaveBeenCalledWith({
+        type: 'header',
+        title: 'Ankommen',
+        nachId: null,
+        vorBeginn: true,
+      }),
+    );
+  });
+
+  it('das Menü hängt an `body` – keine Karte schneidet es ab; ein Tipp darin schließt es nicht vorher', async () => {
+    const a = aktionen();
+    zeigen(a);
+    fireEvent.click(screen.getByRole('button', { name: 'Bei „Predigt“ einfügen' }));
+    const menue = screen.getByRole('menu', { name: 'Option wählen' });
+    expect(screen.getByTestId('liste').contains(menue)).toBe(false);
+    // Wie ein echter Tipp: erst pointerdown (schließt alles außerhalb), dann click.
+    const punkt = screen.getByRole('menuitem', { name: 'Programmpunkt dahinter einfügen' });
+    fireEvent.pointerDown(punkt);
+    fireEvent.click(punkt);
+    expect(screen.getByRole('button', { name: /Einfügen nach: Predigt/ })).toBeTruthy();
+  });
+
+  it('ein Tipp daneben und Scrollen schließen das Menü', () => {
+    zeigen();
+    const plus = screen.getByRole('button', { name: 'Bei „Predigt“ einfügen' });
+    fireEvent.click(plus);
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole('menu')).toBeNull();
+    fireEvent.click(plus);
+    fireEvent.scroll(window);
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('roter Papierkorb an der Zeile: dieselbe Rückfrage wie „Eintrag löschen“', async () => {
+    const a = aktionen();
+    zeigen(a);
+    fireEvent.click(screen.getByRole('button', { name: '„Predigt“ löschen' }));
+    expect(screen.getByText('Eintrag löschen?')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+    await waitFor(() => expect(a.remove).toHaveBeenCalledWith(3));
+  });
+
+  it('abgeschlossen: Plus und Papierkorb zeigen den Sperr-Hinweis', async () => {
+    const a = aktionen();
+    zeigen(a, true);
+    fireEvent.click(screen.getByRole('button', { name: '„Predigt“ löschen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Bei „Predigt“ einfügen' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Programmpunkt dahinter einfügen' }));
+    expect(await screen.findAllByText('gesperrt')).toBeTruthy();
+    expect(screen.queryByText('Eintrag löschen?')).toBeNull();
+    expect(screen.queryByPlaceholderText(/^Titel/)).toBeNull();
+  });
+
+  it('„Darunter einfügen“ im Punkt-Fenster: „Option wählen“ für diese Stelle, dann das Fenster dort', async () => {
+    const a = aktionen();
+    zeigen(a);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: /Darunter einfügen/ }));
+    expect(screen.getByRole('dialog', { name: 'Nach „Soundcheck“ einfügen' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Programmpunkt hinzufügen' }));
+    titel('Kaffee');
+    fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
+    await waitFor(() =>
+      expect(a.add).toHaveBeenCalledWith({
+        type: 'text',
+        title: 'Kaffee',
+        nachId: 1,
+        vorBeginn: true,
+      }),
+    );
+  });
+});

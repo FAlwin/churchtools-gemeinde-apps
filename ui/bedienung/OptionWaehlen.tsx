@@ -25,6 +25,40 @@ function useEscape(aktiv: boolean, schliessen: () => void): void {
 export interface Option {
   label: string;
   onClick: () => void;
+  /** Eine Linie davor – trennt „… dahinter“ von „… davor einfügen“ wie in ChurchTools (Alwin, 30.10.2026). */
+  trenner?: boolean;
+}
+
+/**
+ * **Die Möglichkeiten als kleines Menü unter einem Knopf** – eine Stelle für „+ … hinzufügen“ im Seitenkopf und das
+ * Plus an einer Ablauf-Zeile (`SortableRow`, Alwin 30.10.2026). Das Aufklappen selbst (`useAufklapp`) bleibt beim
+ * Aufrufer, der den Rahmen um Knopf und Menü legt.
+ */
+export function MenueListe({
+  optionen,
+  schliessen,
+}: {
+  optionen: Option[];
+  schliessen: () => void;
+}) {
+  return (
+    <div className={styles.menue} role="menu" aria-label="Option wählen">
+      {optionen.map((o) => (
+        <button
+          key={o.label}
+          type="button"
+          role="menuitem"
+          className={`${styles.option}${o.trenner ? ` ${styles.trenner}` : ''}`}
+          onClick={() => {
+            schliessen();
+            o.onClick();
+          }}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 /**
@@ -59,7 +93,12 @@ export function AuswahlBlatt({
         </div>
         <div className={styles.liste}>
           {optionen.map((o) => (
-            <button key={o.label} type="button" className={styles.option} onClick={o.onClick}>
+            <button
+              key={o.label}
+              type="button"
+              className={`${styles.option}${o.trenner ? ` ${styles.trenner}` : ''}`}
+              onClick={o.onClick}
+            >
               {o.label}
             </button>
           ))}
@@ -104,24 +143,7 @@ export function HinzufuegenMenue({
         dataTour={dataTour}
         symbol={<Icon name="plus" size={16} stroke={2.4} />}
       />
-      {offen && (
-        <div className={styles.menue} role="menu" aria-label="Option wählen">
-          {optionen.map((o) => (
-            <button
-              key={o.label}
-              type="button"
-              role="menuitem"
-              className={styles.option}
-              onClick={() => {
-                setOffen(false);
-                o.onClick();
-              }}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {offen && <MenueListe optionen={optionen} schliessen={() => setOffen(false)} />}
     </div>
   );
 }

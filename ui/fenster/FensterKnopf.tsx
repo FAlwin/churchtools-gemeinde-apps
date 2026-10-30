@@ -8,8 +8,9 @@ import styles from './FensterKnopf.module.scss';
  * - `hell`: hellblau, ein zweiter Weg neben dem Hauptknopf („Nur für diesen Termin neu“).
  * - `loeschen`: roter Text ganz links in der Fußzeile (`Sheet links`), abgesetzt von „Abbrechen · Speichern“ („Eintrag
  *   löschen“, E6-O O3 – wie im Entwurf B). Am Handy und wenn die Knöpfe untereinander stehen, steht er unten.
+ * - `link`: blauer Text ohne Fläche, vor „Eintrag löschen“ ganz links („Darunter einfügen“, Alwin 30.10.2026).
  */
-export type FensterKnopfArt = 'haupt' | 'gefahr' | 'zweit' | 'hell' | 'loeschen';
+export type FensterKnopfArt = 'haupt' | 'gefahr' | 'zweit' | 'hell' | 'loeschen' | 'link';
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   art?: FensterKnopfArt;

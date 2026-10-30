@@ -125,3 +125,24 @@ export function neuerAgendaPunkt(art: PunktArt, draft: AgendaItemDraft): NeuerAg
   if (draft.note.trim()) punkt.note = draft.note.trim();
   return punkt;
 }
+
+/**
+ * **Wohin ein neuer Punkt kommt** (Alwin, 30.10.2026 – „… dahinter einfügen“ wie in ChurchTools): hinter diesen Punkt,
+ * `null` = ganz vorne, `undefined` = ans Ende (wie bisher).
+ */
+export type EinfuegeStelle = number | null | undefined;
+
+/**
+ * Läuft ein neuer Punkt an dieser Stelle vor dem Beginn? Er übernimmt die Seite des Punkts, hinter den er kommt – ganz
+ * vorne die des ersten Punkts. Am Ende gehört er zum Gottesdienst, wie bisher jeder neue Punkt. („… davor einfügen“
+ * fragt den Punkt, vor den er kommt, und gibt das Ergebnis selbst vor.) Der Schalter im Fenster startet damit; schaltet
+ * man ihn um, rückt der Punkt direkt über bzw. unter „Beginn“ (`anDieStelle` im Schreib-Kern).
+ */
+export function vorlaufAnDerStelle(
+  ablauf: readonly Pick<AblaufZeile, 'id' | 'vorBeginn'>[],
+  nach: EinfuegeStelle,
+): boolean {
+  if (nach === undefined) return false;
+  if (nach === null) return ablauf[0]?.vorBeginn ?? false;
+  return ablauf.find((z) => z.id === nach)?.vorBeginn ?? false;
+}

@@ -142,13 +142,14 @@ test('Scrollen: Rollen untereinander, Pedal, Tipp, Lied-Punkt', async ({ page })
   await deck(page).click({ position: { x: 195, y: 200 } });
   await expect(kopfTitel(page)).toBeVisible();
 
-  // Ein Lied-Punkt unten holt das Lied an den Anfang des Bildschirms; der Pfeil unten scrollt wie das Pedal.
-  const punkte = page.locator('[class*="dots"] > div');
-  // Erst ein anderes Lied (nach dem Zurück-Tritt steht womöglich wieder das erste in der Mitte – ein Tipp
-  // auf den Punkt des Lieds, das gerade gilt, springt nicht), dann zurück zum ersten.
-  await punkte.nth(2).click();
+  // Ein Lied in der Ablauf-Leiste oben holt das Lied an den Anfang des Bildschirms (seit Scheibe B3 statt der
+  // Punktreihe unten); der Pfeil unten scrollt wie das Pedal.
+  const lied = (i: number) =>
+    page.getByRole('navigation', { name: 'Lieder im Ablauf' }).locator(`[data-lied="${i}"]`);
+  // Erst ein anderes Lied (ein Tipp auf das gewählte öffnet sein Lied-Menü statt zu springen), dann zurück zum ersten.
+  await lied(2).click();
   await expect(kopfTitel(page)).toContainText('Treu');
-  await punkte.nth(0).click();
+  await lied(0).click();
   expect(await ruhig(page)).toBe(0);
   await expect(kopfTitel(page)).toContainText('Großer Gott');
   await page.getByRole('button', { name: 'Weiter / nächste Seite' }).click();

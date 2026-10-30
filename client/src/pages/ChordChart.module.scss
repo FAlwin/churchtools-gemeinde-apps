@@ -501,11 +501,11 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
-// ── Footer (ChurchTools-Stil: hell / blur) ──
+// ── Fußleiste (Scheibe B3): Zurück · Nächstes Lied · Weiter ──
 .ftr {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   padding: 6px 14px;
   // Abstand der Pfeile über dem Home-Strich – in der Erweiterung schmal (`ui/design/_variables.scss`).
   padding-bottom: var(--blatt-fuss-polster);
@@ -514,109 +514,38 @@
   flex-shrink: 0;
 }
 
-.navBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
-  border-radius: var(--r-ctrl);
-  border: none;
-  background: var(--surface3);
-  color: var(--blue-ink);
-  font-size: 20px;
-  cursor: pointer;
-  transition: background 0.12s;
-  flex-shrink: 0;
-
-  &:disabled {
-    opacity: 0.35;
-    cursor: default;
-    color: var(--text3);
-  }
-  @media (hover: hover) {
-    &:not(:disabled):hover {
-      background: var(--border);
-    }
-  }
-}
-
-.ftrCenter {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  // Oben-bündig statt zentriert: so sitzen die Punkte immer auf gleicher Höhe und der Text
-  // beginnt immer an derselben Stelle – egal ob der Titel 1- oder 2-zeilig ist (Issue #21).
-  justify-content: flex-start;
-  gap: 5px;
-  // Feste Mindesthöhe (Platz für Punkte + bis zu 2 Titelzeilen), damit der Footer NICHT springt,
-  // wenn der nächste Lied-Titel mal 1- und mal 2-zeilig ist.
-  min-height: 50px;
-}
-
-.dots {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--border);
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &.on {
-    width: 18px;
-    border-radius: 3px;
-    background: var(--blue);
-  }
-
-  // Zwei benachbarte aktive Punkte (Querformat: beide sichtbaren Lieder) zu EINEM durchgehenden
-  // Balken verschmelzen – die 5px-Lücke schließen und die berührenden Ecken begradigen.
-  &.on + &.on {
-    margin-left: -5px;
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-  }
-  &.on:has(+ &.on) {
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-  }
-}
-
 .ftrInfo {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 1px;
+  flex: 1;
+  min-width: 0;
   text-align: center;
-  // Konstant 2 Titelzeilen hoch reservieren (.ftrNext: 14px × line-height 1.25 × 2 ≈ 35px),
-  // damit der Block bei 1- vs. 2-zeiligem Titel gleich groß bleibt und nichts springt (Issue #21).
-  min-height: 35px;
 }
 
-.ftrSong {
-  font-size: 11px;
-  color: var(--text2);
-  font-weight: 600;
-}
-
+// „Nächstes Lied: Titel“ – eine Zeile, zu lang wird gekürzt (Entwurf B3). Am Handy „Nächstes: …“.
 .ftrNext {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1.25;
-  // Höchstens 2 Zeilen, sonst Auslassungspunkte – verhindert, dass ein sehr langer Titel den
-  // Footer auf 3 Zeilen aufbläht (zusammen mit der Mindesthöhe bleibt die Leiste stabil).
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  display: block;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--ui);
+  font-size: 14px;
+  color: var(--text2);
+
+  strong {
+    font-weight: 700;
+    color: var(--text);
+  }
+}
+.ftrNextKurz {
+  display: none;
+}
+// Die Grenze ist `HANDY_BREITE` (useMedienAbfrage.ts) – dieselbe, ab der `KopfKnopf` nur das Symbol zeigt.
+@media (max-width: 759px) {
+  .ftrNextWort {
+    display: none;
+  }
+  .ftrNextKurz {
+    display: inline;
+  }
 }
 
 // „Notizen von …" (Team-Notizen): Banner unter dem Header + Personen-Wähler + Import.

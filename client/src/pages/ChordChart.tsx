@@ -882,7 +882,6 @@ export function ChordChart({
         {!leistenAus && (
           <ChartFooter
             songCount={songs.length}
-            visibleSongIdx={visibleSongIdx}
             nextSongTitle={nextSong?.title ?? null}
             // Im Scroll-Modus tun die Pfeile dasselbe wie das Pedal (ein Schritt). Ob oben/unten
             // Schluss ist, weiß nur die Scroll-Fläche – am Rand tut ein Schritt einfach nichts.
@@ -890,7 +889,6 @@ export function ChordChart({
             atEnd={scrollModus ? false : atEnd}
             onPrev={scrollModus ? () => schrittRef.current?.(-1) : prev}
             onNext={scrollModus ? () => schrittRef.current?.(1) : next}
-            onGoToSong={goToSong}
           />
         )}
 

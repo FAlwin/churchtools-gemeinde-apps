@@ -7,6 +7,1746 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+## [2.38.0] – 2026-10-30
+
+**Überblick.** Musik-App: der **Lied-Editor** L1–L6 (Akkorde als Kärtchen, Ablauf, Liedinfo aus ChurchTools, Akkord-Leiste,
+„Einfügen“, „Nur Text“); **Seiten und Liedblatt im ChurchTools-Look** (Seitenköpfe, Kopf mit Lied-Leiste, Fußleiste
+„Zurück · Nächstes Lied · Weiter“, Lied-Menü als Fenster in der Mitte); **„zuletzt gesungen“** in den Liedlisten und im
+Lied-Menü; Abwesenheiten wie im Dienstplaner; am iPhone gemessener unterer Rand, Plus wie in ChurchTools, Editor-Kopf
+unter dem Band, keine hängenden Hover-Farben. Alle Apps: Fenster im Aufbau von ChurchTools (F1–F5). Aus dem anderen
+Teil des Repos (eigene Erweiterungen): Dienstplaner E6 (Ablauf in der Planen-Matrix, Infos je Dienstgruppe),
+Anmeldungen A8–A9 und U1–U2, Protokolle S2–S7 und K1–K2, Organigramm O2–O7b.
+
+### Geändert (Musik-App)
+
+- **Einführung im Liedblatt nachgezogen (Scheibe B5).** Schritt 1 nennt jetzt auch „Weiter“ und „Zurück“ unten,
+  Schritt 2 das neue Fenster des Lieds (Tonart und Kapo, Akkorde oder nur Text, Version, „Bearbeiten“, zuletzt
+  gesungen). Die Einführung bleibt bei Version `chart-v9` – nur neue Nutzer sehen sie automatisch (Alwin, 28.10.2026).
+
+### Intern (Musik-App)
+
+- `e2e/blatt-einfuehrung.spec.ts` klickt die Einführung im Liedblatt in allen Größen und im Scroll-Modus durch: Fehlt
+  das Ziel eines Schritts, überspringt sie ihn sonst stillschweigend.
+
+### Neu (Protokolle, S7-2b)
+
+- **To-Dos aus einem Protokoll-Entwurf im Fenster ändern** (Alwin 30.10.2026): Text, Löschen und Gruppe gehen jetzt
+  auch dort – der Entwurf wird nachgezogen. Text ändert sich mit, Löschen nimmt die Aufgabe heraus, eine andere Gruppe
+  macht daraus einen Absatz „… – an „Jugend“ abgegeben“ (das To-Do lebt dort weiter).
+- Schreibt gerade jemand am Protokoll, wird nichts gespeichert; das Fenster sagt, wer.
+
+### Intern
+
+- Kein eigener Schreibweg: Sperre nehmen, Dokument per reiner Regel (`shared/protokolle/nachziehen.ts`) ändern, normal
+  speichern mit dem Abgleich des Editors, Sperre freigeben – auch nach einem Fehler.
+
+### Intern (alle Apps)
+
+- **Die CI prüft jetzt auch die manuellen Testfälle** (`npm run testplan -- --pruefen`). Der Schritt fehlte: TF-EDIT-14
+  kam mit der ungültigen Priorität „mittel“ auf main – lokal rot, in der CI grün. Priorität auf „normal“ gesetzt.
+
+### Behoben (Musik-App)
+
+- **Scroll-Modus: Ganz unten ist das letzte Lied gewählt** (Scheibe B4, 30.10.2026). Gewählt wird das Lied in der
+  Bildmitte; ein kurzes letztes Lied (kürzer als eine halbe Bildschirmhöhe) erreichte die Mitte nie – ganz unten
+  zeigten Kopf und Ablauf-Leiste das vorletzte Lied. Jetzt gilt am Rand das erste bzw. letzte Lied
+  (`seiteInDerMitte`).
+
+### Intern (Musik-App)
+
+- B4 durchgesehen: Ablauf-Leiste folgt im Scroll-Modus und scrollt mit (neuer E2E-Test), Tipp in die Mitte, Pedal,
+  Dunkelmodus und Logo unverändert.
+
+### Neu (Protokolle, S7-2a)
+
+- **Fenster „To-Do“** (Alwin 30.10.2026): Ein Tipp auf ein To-Do im Reiter „To-Dos“ öffnet es – Text, Gruppe, Bis,
+  Status, Zuständige (auch niemand oder jemand außerhalb der Gruppe), neue Notiz, Verlauf und Löschen (nur vermerkt).
+  Gespeichert wird nur, was geändert wurde – hat inzwischen jemand anderes abgehakt, bleibt das.
+- **„Auf Karte anzeigen“**: je ein Schalter bei „Notizen“ und „Aus welcher Sitzung“ – dann zeigt die Karte die letzte
+  Notiz bzw. die Sitzung (mit Sprung ins Protokoll). Für alle gespeichert.
+- **„Neues To-Do“** ohne Protokoll, für Leitung und Mitglieder; ohne Zuständige ist es ein To-Do der Gruppe.
+- **Gruppe wechseln** verschiebt das To-Do (neu in der anderen Gruppe, das alte als gelöscht vermerkt).
+- To-Dos aus einem **Protokoll-Entwurf**: Text, Gruppe und Löschen ändern sich dort (das Nachziehen aus dem Fenster
+  folgt mit S7-2b).
+
+- **Namen statt „Person 1“** (Test-Instanz 30.10.2026): Mitglieder sehen die Mitgliederliste oft nicht und sahen
+  deshalb im Fenster, auf der Karte, im Editor und bei „Nach Person“ nur Nummern. Jetzt speichert, wer schreibt, seinen
+  Vornamen am Verlauf mit; man selbst ist immer bekannt. Wer nie schrieb: „eine weitere Person“ bzw. „jemand“.
+
+- „Auf Karte anzeigen“ bei „Aus welcher Sitzung“ nur noch, wenn das To-Do aus einer Sitzung stammt. Ist die Sitzung
+  älter als die geladene Übersicht, steht „Aus einer älteren Sitzung.“ statt fälschlich „Ohne Sitzung angelegt.“.
+
+### Intern
+
+- Ein Schreibweg für To-Dos aus der Übersicht (`protokolle/src/todoSchreiben.ts`) – auch die Status-Marke nutzt ihn.
+- Verschieben legt erst an (nachgelesen), dann wird das alte vermerkt; scheitert das Zweite, steht es doppelt statt
+  nirgends, mit Hinweis.
+- Ein Ort für den Namen im Verlauf: `mitNamen` in den beiden Schreibtoren (`aufgabenSchreiben`, `aufgabeAendern`),
+  angezeigt über `nameFuer`/`nameAusListe`/`weitereZustaendige` – Karte, Fenster, Editor und fester Punkt gleich.
+
+### Neu (Dienstplaner und Musik-App, E6-4 – Alwin, 30.10.2026)
+
+- **Infos je Dienstgruppe** („Technik: Mikro 1“, „Musik: Intro leise“) – in ChurchTools gab es sie schon, die Apps
+  zeigten sie nicht. Entwurf `e6-infos-spalten.html`, abgenommen 30.10.2026.
+  - **Ansehen am Rechner:** Neben „Bearbeiten“ steht der Knopf **„Spalten“**. Er listet die Dienstgruppen, deren Infos
+    man in ChurchTools sieht, mit der Zahl der Punkte, an denen schon etwas steht. Angehakt = eigene Spalte rechts im
+    Ablauf, wie im Ablaufplan von ChurchTools. Die Wahl merkt sich das Gerät; ohne Haken bleibt alles wie bisher.
+  - **Am Handy:** Die angehakten Gruppen stehen als Zeile „Technik: …“ unter dem Punkt.
+  - **Bearbeiten im Punkt-Fenster:** Unter „Bemerkung“ der Abschnitt „Infos je Gruppe“ mit einem Feld je sichtbarer
+    Gruppe; leer lassen = keine Info. Gespeichert wird je Gruppe einzeln – die Infos anderer Gruppen bleiben
+    unangetastet. Hat jemand dieselbe Info inzwischen geändert, fragt das Fenster wie bei den übrigen Feldern.
+  - **In der Matrix keine Infos** (dort ist kein Platz für Spalten je Gruppe).
+- **Bekannt:** Bearbeitet jemand einen Punkt in der Ablauf-Ansicht von ChurchTools selbst, löscht ChurchTools alle
+  Infos dieses Punkts (gemessen 22.10.2026, gemeldet als Entwurf `docs/churchtools-meldung-gruppen-infos.md`).
+
+### Intern (E6-4)
+
+- `ablaufZeileAus` liefert `infos` (aus `serviceGroupNotes`, dieselbe Auswahl wie beim Mitschreiben); `punktStand`
+  vergleicht sie beim Speichern je geänderter Gruppe.
+- Schreibkern: `PunktAenderung.infos` (Gruppe → Text, leer = löschen) schreibt je Gruppe über
+  `PUT/DELETE …/items/{id}/servicegroups/{gruppe}` (gemessen E6-4-0); nur Infos geändert → der Punkt selbst wird nicht
+  geschrieben. Das Server-Schema der Musik-App lässt `infos` durch.
+- Welche Gruppen man sieht, steht an EINER Stelle (`infoGruppen`, `dienstgruppenSichtAus` in `shared/ct/dienstRechte.ts`)
+  – für den Dienstplaner und für die Rechte der Musik-App (Server und Erweiterung, neues Feld `infoGruppen`).
+- Neu `ui/ablauf/InfoSpalten.tsx` (Knopf) und `infoSpaltenWahl.ts` (Wahl, gemerkt über den gemeinsamen Gerätespeicher
+  `ui/bedienung/geraet.ts`, dort neu `zahlen` neben `texte`); `AblaufListe` mit
+  `infoSpalten`. Demo: Infos an drei Punkten, Schreiben je Gruppe wie gemessen.
+
+### Geändert (Musik-App)
+
+- **Liedblatt-Fußleiste im ChurchTools-Look (Scheibe B3).** Unten stehen jetzt „‹ Zurück“ mit Rahmen, in der Mitte
+  „Nächstes Lied: …“ und „Weiter ›“ in Blau – dieselben Knöpfe wie im Kopf. Am Handy nur die beiden Pfeile und
+  „Nächstes: …“. Die Punktreihe ist weg: Zu einem Lied springt man über die Ablauf-Leiste oben. Die Seitenangabe bei
+  mehrseitigen Liedern bleibt als Schild auf dem Blatt (Alwin, 30.10.2026).
+
+### Intern (alle Apps)
+
+- `KopfKnopf` kann `symbolHinten` (Symbol hinter dem Wort, „Weiter ›“).
+
+### Neu (Anmeldungen, U2-4 – Zeilen anheften)
+
+- **Stecknadel am Zeilenanfang** im Bereich „Anmeldungen“ (je Anmeldung und je Person): heftet eine Zeile oben an. Sie
+  bleibt beim Sortieren oben (darunter gilt die Sortierung weiter) und steht nur in den Reitern, in die sie ohnehin
+  gehört. Gemerkt nur auf diesem Gerät, je Veranstaltung; was es nicht mehr gibt, fällt beim nächsten Anheften aus dem
+  Speicher. Mit Maus erscheint die Nadel beim Darüberfahren, am Handy steht sie immer da; die Nadel-Spalte bleibt links
+  stehen, auch am Handy. Bei „Abgesagt“ gibt es keine Nadel.
+
+### Intern (U2-4)
+
+- **Ein Gerätespeicher für die Erweiterungen:** Das Organigramm hatte eine eigene Kopie von „Im Gerät merken“ – es nutzt
+  jetzt wie Dienstplaner und Protokolle `ui/bedienung/geraet.ts`, die Anmeldungen ebenso. Test des Bausteins selbst in
+  `ui/bedienung/geraet.test.ts`. Die Musik-App behält `lokalSpeicher.ts` (meldet zusätzlich einen vollen Speicher).
+- `personSchluessel` (`tabelle.ts`): ein Schlüssel je Personenzeile für Zeile und Nadel.
+
+### Behoben (Protokolle)
+
+- **To-Dos: Hover-Farben nur mit Maus** – drei `:hover`-Regeln aus S7-1 (#795) standen nicht in `@media (hover: hover)`
+  (Status-Marke, Aufgabentext, „Ältere erledigte zeigen“). Am Handy wäre die Farbe nach dem Antippen hängen geblieben; der
+  Wächter `ui/design/hoverNurMaus.test.ts` (#776) hatte main deshalb rot gemeldet.
+
+### Geändert (Organigramm)
+
+- **Keine Typ-Schildchen mehr über dem Baum** (Dienstbereich, Kleingruppe, Verteiler …). Ein abgewählter Typ ging
+  samt allem darunter – seit dem Umbau stehen oben nur Dienstbereiche, also war nach einem Klick alles weg. Was nicht
+  zu sehen sein soll, blenden Gruppen-Admins über „Einstellungen“ für alle aus (O7b-7). Ein früher im Gerät
+  ausgeblendeter Typ ist wieder zu sehen; der alte Merk-Eintrag wird nicht mehr gelesen.
+
+### Neu (Protokolle, S7-1)
+
+- **Reiter „To-Dos“** (Alwin 30.10.2026, Entwurf `s7-todos-v2.html`): alle To-Dos der eigenen Gruppen in einer Liste,
+  **nach Status oder nach Person** eingeteilt (im Gerät gemerkt). Die Leitung sieht alle To-Dos ihrer Gruppen,
+  Mitglieder ihre eigenen und die, für die noch niemand zuständig ist. Der Status steht als **Marke mit Zeichen und
+  Wort** („◐ In Arbeit“) und schaltet mit einem Tipp weiter – abhaken, ohne ins Protokoll zu springen, auch bei schon
+  freigegebenen Protokollen. Filter für Gruppen und Zuständige; Erledigte älter als 30 Tage per Schalter. Ein Tipp auf
+  den Text öffnet das Protokoll, aus dem das To-Do stammt.
+- **Startseite:** „Alle anzeigen“ an „Meine offenen To-Dos“ öffnet den Reiter.
+
+### Intern
+
+- „Im Gerät merken“ (`leseImGeraet`/`merkeImGeraet`) liegt jetzt in `ui/bedienung/geraet.ts` statt nur im Dienstplaner.
+- Ältere Erledigte sind bewusst **kein** Filter: Sonst stünde am Filter-Knopf ab Werk eine „1“.
+- Mitglieder sehen die Mitgliederliste oft nicht – bei ihren eigenen To-Dos steht trotzdem ihr Name (beim Prüfen in der
+  Test-Instanz gefunden: dort stand „eine weitere Person“).
+
+### Behoben (alle Apps)
+
+- **Am Handy bleibt nach dem Antippen keine Farbe mehr hängen** (Alwin am iPhone, 29.10.2026). Touch-Geräte halten den
+  Maus-Zustand auf dem zuletzt angetippten Element fest – in der Liedleiste blieb so das vorher angetippte Lied
+  hellblau und sah aus wie gewählt. Hover-Farben gelten jetzt nur noch mit Maus (`@media (hover: hover)`): 71 Regeln
+  in 42 Dateien aller Apps (Musik-App, gemeinsame Knöpfe und Fenster, Dienstplaner, Organigramm, Protokolle,
+  Anmeldungen, Anmeldeformular).
+
+### Intern (alle Apps)
+
+- Wächter `ui/design/hoverNurMaus.test.ts`: Jede `:hover`-Regel muss in `@media (hover: hover)` stehen.
+- Hover- und Home-Strich-Wächter (`homeStrich.test.ts`) holen ihre Ordner jetzt aus `quelltexte.testutil.ts` statt aus
+  einer eigenen Liste – der fehlte die App `formular`, eine neue App wäre ebenso ungeprüft geblieben.
+
+### Neu (Anmeldungen, U2-3 – Spalten wählen)
+
+- **Fenster „Spalten“** im Bereich „Anmeldungen“, je Ansicht (je Anmeldung, je Person): Häkchen zeigt eine Spalte,
+  Pfeile ordnen, die **Stecknadel** heftet sie links an – mehrere möglich, in der Reihenfolge des Anheftens; am Handy
+  bleibt nur die erste stehen. „Wie zu Beginn“ holt die Vorgabe zurück. Je Person stehen auch die Fragen der Anmeldung
+  zur Wahl; ihre Summe zählt jede Anmeldung einmal.
+- Die Wahl gilt **fürs ganze Team**: neues, freiwilliges Feld `tabelle` in den Einstellungen der Veranstaltung, wie die
+  Druckliste (`druck`) – nur, was von der Vorgabe abweicht, und nur von dem, der die Veranstaltung bearbeiten darf.
+  Gelöschte Fragen fallen weg (`nurVorhandene`, dieselbe Bereinigung wie die Druckliste), neue stehen hinten. Die Kopie
+  einer Veranstaltung übernimmt die Wahl.
+- Ohne Wahl angeheftet: der Name, je Person Vor- und Nachname (Entwurf). Der Warteplatz steht im Reiter Warteliste
+  gleich hinter den angehefteten Spalten.
+
+### Intern (U2-3)
+
+- `ZeilenKnopf` kann an und aus sein (`an` → `aria-pressed`, blau); neue Symbole `nadel` und `chev-up`.
+- Die Spalten der Tabelle kommen aus `spaltenKatalog`/`gezeigteSpalten` (`tabelle.ts`) statt aus festen Listen;
+  Geburtsdatum sortiert nach dem Datum.
+
+### Geändert (Dienstplaner, E6-Abschluss – Alwin, 30.10.2026)
+
+- **Termin-Ansicht: „Bearbeiten“ mit Wort.** Über dem Ablauf steht statt des runden Stifts ein grauer Knopf
+  **„Bearbeiten“**, im Bearbeiten das blaue **„Fertig“** – wie in der Musik-App und in der Matrix. Der Stift allein war
+  leicht zu übersehen.
+- **„Musik-App“ öffnet den Ablauf dieses Termins.** Der Knopf über dem Ablauf öffnete bisher nur die Musik-App selbst;
+  jetzt springt sie direkt in den Ablauf genau dieses Termins (auch außerhalb ihrer üblichen Wochen).
+
+- **Der Zeitraum-Knopf springt nicht mehr** (Alwin, 30.10.2026): Er hat jetzt eine feste Breite. Vorher wuchs er mit
+  seinem Text – wechselte „5 Termine · passend zur Fensterbreite“ zu „6 Termine“, wurde er 39 px schmaler, und ＋ ›
+  daneben rutschten beim mehrmaligen Klicken unter dem Finger weg. Gilt auch für die Abwesenheiten der Musik-App
+  (derselbe Knopf). Am Handy bleibt er über die volle Breite.
+
+### Geändert (Musik-App)
+
+- Die Musik-App versteht den Direktlink jetzt auch **ohne Punkt** (`#/termin/<ID>`): Dann öffnet sie den Ablauf des
+  Termins statt eines Lieds. Gebraucht vom Knopf „Musik-App“ im Dienstplaner.
+
+### Intern
+
+- `shared/ct/musikAppLink.ts`: `punktId` ist optional (`musikAppDirektLink(app, termin, null, tag)`); eine Stelle für
+  beide Apps wie bisher. `useAppNav` öffnet ohne Punkt die Ablauf-Ansicht.
+
+### Neu (Anmeldungen, U2-2 – je Person)
+
+- **Umschalter „Je Anmeldung / Je Person“** im Bereich „Anmeldungen“ – je Person eine Zeile mit Vor- und Nachname,
+  Status (Platz oder Warteplatz), Alter, jeder Frage der Person, „Angemeldet von“, Anmelde-Nr. und Betrag/Bezahlt der
+  Anmeldung. Die Spalten kommen aus dem Katalog der Druckliste (`teilnehmerSpalten`, Zellen über `teilnehmerZelle`).
+  Die Reiter zählen dann Personen; ein Klick öffnet die Anmeldung der Person. Bei „Abgesagt“ gibt es keinen Umschalter
+  (Absagen sind je Person).
+- **Summen je Person** – Personen mit Platz (+ Warteliste), Fragen der Person nach ihrer Art, Alter in den Altersstufen
+  der Preise (`altersregel`, dieselbe Regel wie die Rechnung). Betrag und Bezahlt zählen jede Anmeldung **einmal**, auch
+  wenn sie bei jeder Person steht.
+- Sortieren je Person und je Anmeldung über dieselbe Regel (`ordnen` in `tabelle.ts`).
+
+### Neu (Musik-App)
+
+- **Wann ein Lied zuletzt gesungen wurde, steht jetzt immer da** (Alwin beim Planen, 30.10.2026: „Irgendwie fehlt mir
+  die Anzeige, wann das Lied das letzte Mal gesungen wurde“). In der Liederliste und in der Lied-Auswahl beim
+  Hinzufügen steht unter jedem Lied grau „zuletzt 12.10.2026“ bzw. „noch nie gesungen“ – in jeder Sortierung, auch
+  bei A–Z; bei „Häufigkeit“ mit der Anzahl davor. Oben im Lied-Menü steht „Zuletzt gesungen“. Das Datum zählt über
+  alle Termine, nicht nur über den eingestellten Zeitraum. Wie bisher nur mit dem ChurchTools-Recht für die
+  Lied-Statistik.
+
+### Geändert (Musik-App)
+
+- Die Statistik in den Liedzeilen ist keine blaue Kapsel mehr (in der Lied-Auswahl stand sie rechts neben der
+  Tonart), sondern eine graue Zeile unter Titel und Autor – an beiden Stellen gleich (`liedNotiz`).
+
+### Neu (Musik-App)
+
+- **Lied-Editor: „Nur Text“** (Alwin, 29.10.2026). Vorn in der Werkzeugleiste steht der Umschalter „Akkorde & Text |
+  Nur Text“ – dieselben Wörter wie unter „Anzeige“ im Lied-Menü. Bei „Nur Text“ sind die Akkord-Kärtchen und die
+  Akkord-Leiste weg; man bearbeitet nur Text und Zeilenumbrüche. Die Akkorde bleiben im Lied: Eine einzelne
+  Rücktaste neben einem unsichtbaren Akkord löscht den Buchstaben, nicht den Akkord. Wer ein Wort samt Akkord
+  markiert und löscht, löscht den Akkord mit (so entschieden). Leerzeichen und Akkorde am Zeilenende – SongSelect
+  richtet Akkorde mit Leerzeichen aus – sind ganz unsichtbar; am iPhone brachen sie sonst in eine leere zweite Zeile
+  um (Alwin, 30.10.2026: „Warum ist da jetzt so ein Abstand?“).
+
+### Geändert (Musik-App)
+
+- Die Knöpfe im Editor (Abbrechen, Speichern, Löschen, Einfügen, ChordPro-Text, Rückgängig) sind so hoch wie überall
+  (`--knopf-hoehe`); vorher standen 34er- und 36er-Knöpfe in einer Reihe.
+
+### Behoben (Protokolle)
+
+- **Griff im Editor auf einer Höhe mit dem „+“** (Alwin 29.10.2026: „sitzt zu hoch“): Der Griff (⠿) neben Absätzen und
+  Tagesordnungspunkten stand 2 px über dem „+“ und damit über der Zeilenmitte – er steckte in einem Inline-Element und
+  stand auf dessen Grundlinie. In Safari und Chrome nachgemessen; jetzt sitzen beide auf der Mitte der ersten Zeile.
+
+### Geändert (Musik-App)
+
+- **Lied-Menü als Fenster in der Mitte, mit Unterseiten** (Alwin am iPhone, 29.10.2026). Vorher klappte es unter dem
+  gewählten Lied der Leiste auf und stand je nach Lied an einer anderen Stelle. Jetzt öffnet es wie alle
+  ChurchTools-Fenster in der Mitte. Die Übersicht hat die Gruppen **Tonart** (Transponieren · Kapo · Abschnitte ›),
+  **Anzeige** (Akkorde & Text · Nur Text · PDF ›), **Version** (die gewählte Fassung ›), **Bearbeiten** („Im Editor
+  öffnen“ direkt, rechts „als neue Version“ oder der Name der Version · Dateien · Stammdaten ›) und **Teilen** („Als
+  PDF teilen“). Seltenes liegt eine Ebene tiefer, „‹“ führt zurück. Eine Unterseite mit nur einem Punkt entfällt; der
+  Punkt steht dann direkt in der Übersicht (etwa „Kapo“, wenn ein PDF gezeigt wird).
+
+### Intern (alle Apps)
+
+- `Sheet` kann `zurueck`: „‹“ vor dem Titel für Unterseiten eines Fensters.
+- Die Messung der Lied-Mitte (`--liedmenue-x`) und die Stile des alten Aufklappmenüs sind entfernt.
+
+### Behoben (Musik-App)
+
+- **Lied-Editor: Der Kopf steht unter dem Band, nicht mehr unter der Uhr** (Alwin am iPhone, 29.10.2026: „das
+  Fenster ist zu hoch“). In der installierten App lagen Abbrechen, Titel und Speichern direkt unter der Uhr im
+  Unschärfe-Band von iOS und wirkten weich. Jetzt beginnt der Kopf wie jeder andere unter dem Band. Er war der letzte
+  mit der alten Regel; ein Messkasten am Gerät zeigte, dass sonst nichts verschoben war.
+
+### Intern (Musik-App)
+
+- Das Tempo-Menü rechnet seine größte Höhe mit der gemessenen Unterkante des Kopfs statt mit einem Nachbau der alten
+  Regel (Safe-Area oder 20px + 78px).
+- Wächter `ui/design/obenBand.test.ts`: Niemand außer `_variables.scss` (und der Messung in `main.tsx`) rechnet selbst
+  aus der Safe-Area oben.
+
+### Neu (Organigramm, O7b-7, #736)
+
+- **Was das Organigramm für alle zeigt:** Gruppen-Admins blenden unter **„Einstellungen“** Gruppentypen und einzelne
+  Gruppen für alle aus – im Reiter, in der Präsentation und in der PDF; eine ausgeblendete Gruppe nimmt ihre
+  Untergruppen mit (Entwurf `o7b-6-7-v1.html`, entschieden 29.10.2026). Über dem Baum steht dann „Für alle
+  ausgeblendet: …“; die Typ-Schildchen je Gerät bleiben zusätzlich. Gespeichert im Speicher der Erweiterung (Kategorie
+  „Was das Organigramm zeigt“, Kürzel `sichtbar`) mit Version und Konfliktschutz; Lesen müssen es alle dürfen, ändern
+  nur Gruppen-Admins (Rechte der Kategorie). In ChurchTools ändert sich nichts.
+
+### Intern (Organigramm)
+
+- Anschluss, Modulsuche und das Lesen eines Dokuments aus einer Kategorie stehen jetzt an einer Stelle
+  (`organigramm/src/speicher.ts`) für Plan und Einstellung; die Fehlertexte beim Speichern ebenso (`planFehlerText`).
+- `baumOhneTypen` blendet auch einzelne Gruppen aus – EIN Filter für Schildchen und Einstellung.
+
+### Neu (Protokolle, K2b-Folgepunkte)
+
+- **„Bearbeiten“ auch im Editor** (Alwin 29.10.2026): Ein Protokoll im Entwurf hat oben denselben Knopf wie die
+  Sitzungsansicht – Zeit, Titel, Eingeladene der eigenen Sitzung ändern oder sie absagen. Danach zeigt der Kopf des
+  Editors gleich den neuen Stand; der Text im Editor bleibt, wie er ist.
+
+### Behoben
+
+- Sitzungen mehr als 180 Tage voraus kamen ohne Einladungen und Zusagen in den Kasten „Nächste Sitzung“ und auf die
+  Startseite – die Liste fragt den Kalender nur so weit. Für geplante und begonnene Protokolle mit Termin dahinter liest
+  sie Termin und Einladungen jetzt gezielt nach (bemerkt beim Prüfen von K2b).
+
+### Intern
+
+- Termin und Besprechungsanfragen werden an einer Stelle gelesen (`protokolle/src/termin.ts`) – vorher las die Liste,
+  das Festlegen und das Bearbeiten sie je selbst. Die Zeit einer Sitzung aus dem Termin (bei Serien: Beginn der Sitzung,
+  Dauer vom Termin) ist `zeitAusTermin`. Der Test-Nachbau beachtet jetzt den gefragten Zeitraum des Kalenders.
+
+### Intern (Musik-App)
+
+- **Wackelnder E2E „Schreibansicht am Handy“ stabil.** Die Editor-Tests setzten den Cursor per Klick auf die halbe
+  Höhe einer Zeile, gemessen, bevor die Schrift Lato geladen war. Mit der Ersatzschrift bricht die Zeile am Handy um
+  (62 statt 31 px); kam die Schrift zwischen Messen und Klicken, lag am Klickpunkt die nächste Zeile, und Playwright
+  versuchte es bis zum Timeout – unter Last gelegentlich, auch auf main. Die Klick-Folge stand viermal kopiert in den
+  Editor-Tests; jetzt einmal als `cursorInZeile` in `e2e/werkzeug.ts`: erst auf die Schrift warten, dann in die erste
+  Bildschirmzeile klicken. Neuer Test hält die Schrift gezielt zurück (alter Klick-Weg: rot, neuer: grün).
+
+### Geändert (Anmeldungen, U2-1 – Tabelle)
+
+- **Die Liste ist eine Tabelle** (Entwurf `u2-tabelle-v1`, abgenommen 29.10.2026) – eine Zeile je Anmeldung mit Name,
+  Nr., Personen, jeder Frage der Anmeldung als Spalte, Betrag, Bezahlt und Anmeldetag. Kopf und Summenzeile bleiben beim
+  Scrollen stehen, der Name links. Ein Tipp auf eine Überschrift sortiert (auf, ab, zurück zum Anmeldetag). Die
+  Summenzeile zählt Anmeldungen, Personen mit Platz, Beträge (gesamt, offen, eingegangen – wie die Kacheln) und jede Frage
+  nach ihrer Art (Zahl: Summe, Ja/Nein: Anzahl Ja, Auswahl: je Antwort, Text: ausgefüllt). Die Fragen kommen aus
+  demselben Katalog wie die Spalten der Druckliste (`fragen`, `frageAntwort` in `druckliste.ts`), gerechnet wird in
+  `shared/anmeldung/tabelle.ts`.
+- **Reiter statt Filter-Chips**, mit der Zahl ihrer Zeilen; die Warteliste zeigt Anmeldungen mit Spalte „Warteplatz“,
+  „Abgesagt“ eine Tabelle der Absagen (mit „Zurückholen“, wer ändern darf). `ReiterLeiste` kann dafür eine Anzahl
+  hinter dem Text und einen eigenen Namen für Vorleser.
+- **Leiste im ChurchTools-Stil** – eckige Suche (Name oder Nr.) in Knopfhöhe; Druckliste und Rundmail mit
+  Linien-Symbol (neu in `ui/icons`: `drucker`, `brief`), am Handy nur das Symbol, damit „＋ Von Hand“ nicht mehr
+  umbricht (Fund U1). ⎙ und ✉ stehen jetzt auf der Liste der Behelfszeichen.
+- **Nach der echten Prüfung:** Spaltenüberschriften höchstens zwei Zeilen (die ganze Frage beim Darüberfahren) – der
+  Prüfstand war 3.279 px breit; die Reiterleiste oben lässt sich wischen, wenn sie nicht passt (am Handy war
+  „Abgesagt“ abgeschnitten).
+- **„Platz frei – jemand wartet“ nur noch zweimal** – in der Kachel „Warteliste“ und im Reiter „Warteliste“ (mit
+  „… nachrücken lassen“). Über der Liste und in der Nachprüfung fällt er weg; die Nachprüfung zählt ihn nicht mehr als
+  Hinweis.
+
+### Geändert (Dienstplaner – Durchklicken Alwin, 29.10.2026)
+
+- **Nur noch zwei Spaltenbreiten, als Symbole:** Statt „S | M | L“ stehen oben zwei Symbole – **schmal** (vier Spalten
+  im Rahmen, 176 px wie bisher M) und **breit** (zwei Spalten, 256 px wie bisher L). Beim Zeigen steht der Name dabei.
+  S fällt weg: Dort waren die Titel im Ablauf abgeschnitten. Ein gemerktes S oder M wird „schmal“, L wird „breit“.
+  Entwurf `e6-6-breiten-plus.html`.
+- **Das grüne Plus in der Zeile „Ablauf“ ist kleiner:** 26 px statt voller Knopfhöhe – so groß wie Zauberstab und Regler
+  der Dienstgruppen. Vorher füllte es die Zeile ganz aus („zu groß und nicht schön“).
+
+### Intern (Spaltenbreite/Plus)
+
+- `SPALTENBREITE` heißt jetzt `{ schmal, breit }`; `leseAnsicht` übernimmt gemerkte S/M/L-Werte.
+- `Segment`: Optionen können einen `name` tragen (Screenreader und Tooltip) – für Optionen, die nur ein Symbol zeigen.
+- `KopfKnopf` kann `klein` (nur Symbol, 26 px); `HinzufuegenMenue` reicht es durch (statt `nurSymbol`).
+- Neue Symbole `spalten-schmal` und `spalten-breit`.
+
+### Neu (Organigramm, O7b-8, #736)
+
+- **Farbe in Diagrammen und Liste:** Vor jedem Gruppennamen steht die Kachel der Gruppe – Anfangsbuchstabe auf ihrer
+  Farbe, wie in der Gruppenliste von ChurchTools (Wunsch Alwin 29.10.2026: „bunter … an den Gruppenansichten
+  orientieren“; Entwurf `o7b-8-farbe-v1.html`, Variante „Kachel“). Gilt für Von oben, Von links, Mindmap, Liste, die
+  Diagramme der Präsentation und die PDF. Die Farbe kommt wie bei den Karten aus der Gruppe, sonst aus ihrem Typ.
+
+### Behoben (Organigramm)
+
+- In der PDF saßen alle mittig gesetzten Texte im Diagramm (Namen, Rollen, Personen) zu hoch: Das Blatt wurde zum
+  Messen der Grundlinie auf etwa 1 px verkleinert, der Browser rundete den Versatz dabei auf 0 (seit O7b-4; aufgefallen
+  neben der Kachel). Gemessen wird jetzt am groß gezeichneten Blatt.
+
+### Intern
+
+- Die PDF übernimmt Rundungen, die per Stil kommen (`rx: var(--r-tile)`), damit die Kachel auch auf Papier rund ist
+  und die Rundung nur an einer Stelle steht.
+
+### Neu (Protokolle, K2b-2)
+
+- **Serientermine bearbeiten und absagen** (Alwin 29.10.2026): Bei einer Sitzung aus einer Terminserie gelten
+  Einladungen für die ganze Serie. Titel oder Zeit fragt **„Nur diese Sitzung“** (wird aus der Serie gelöst) oder
+  **„Ab dieser Sitzung“** (die Serie wird hier geteilt, frühere Termine bleiben; spätere Protokolle und Gruppentreffen
+  ziehen mit; am ersten Termin ändert sich die ganze Serie). Der neue Termin bekommt alle Eingeladenen neu – das Fenster
+  sagt die Mails „Neue Besprechungsanfrage“ vorher an (gemessen 29.10.2026, `messung-k2b2-2026-10-29.md`).
+- **Absagen bei Serien:** „Nur diese Sitzung“ und „Serie ab hier beenden“ ohne Mail, „Ganze Serie löschen“ mit Mail
+  „Terminserie gelöscht“ und der Zahl der kommenden Termine. Gruppentreffen vergangener Termine bleiben.
+- Das Fenster zeigt bei einer Serie die Zeit **dieser** Sitzung, nicht die des ersten Termins.
+
+### Intern
+
+- Geteilt wird ohne Einladungsliste und danach einzeln eingeladen – mit Liste mailt ChurchTools „Wöchentlicher Termin
+  … bis <altes Ende> wurde geändert“, auch für einen einzelnen herausgelösten Termin.
+- Ein zweiter Versuch legt keinen zweiten Termin an: Gehört der Tag nicht mehr zur Serie, sagt das Fenster es.
+- Bleibt von einer Serie nur ein Termin übrig, macht ChurchTools daraus einen Einzeltermin. Die Erweiterung erkennt das
+  (beim Prüfen in der Test-Instanz gefunden: „Serie ab hier beenden“ galt sonst als „nicht übernommen“, und ein zweiter
+  Versuch hätte den übrigen Termin gelöscht). „Nur diese“ / „ab hier“ löschen nie.
+- `docs/betrieb/PROTOKOLLE.md` beschreibt jetzt „Sitzung bearbeiten“ (K2b-1 und K2b-2).
+
+### Neu (Protokolle, K2b-1)
+
+- **Sitzung bearbeiten** (Alwin 29.10.2026): Die Leitung ändert eine Sitzung über „Bearbeiten“ in der Sitzungsansicht
+  oder „Ändern“ im Kasten „Nächste Sitzung“ – Titel, Datum, Uhrzeit, Dauer und wer eingeladen ist. Termin,
+  Gruppentreffen und Protokoll ziehen mit. Das Fenster sagt vor dem Speichern, wer welche Mail bekommt (gemessen
+  29.10.2026, `messung-k2b-2026-10-29.md`):
+  - neue Zeit: **„Alle neu einladen“** (vorgewählt) – ChurchTools schickt „Termin geändert“ und setzt die Zusagen
+    zurück; abgewählt wird still verschoben, die Zusagen bleiben;
+  - nur der Titel: still; einladen: „Neue Besprechungsanfrage“; ausladen: „Termin gelöscht“ an die Person.
+- **Sitzung absagen**: Termin und Gruppentreffen werden gelöscht (Mail „Termin gelöscht“ an die Eingeladenen); ein nur
+  geplantes Protokoll verschwindet, ein begonnenes bleibt als Entwurf ohne Termin.
+- Serientermine und Termine mit Anmeldung ändert das Fenster noch nicht – es sagt das (Serien folgen mit K2b-2).
+- Das Fenster liest Zeit, Dauer und Eingeladene beim Öffnen frisch vom Termin – auch für Sitzungen mehr als 180 Tage
+  voraus (die Liste liest nur so weit) und wenn inzwischen jemand zugesagt hat.
+
+### Intern
+
+- Ein Termin-`PUT` leert, was fehlt (Beschreibung, Ort, Link; beim Gruppentreffen der Kommentar) – der gelesene Termin
+  geht unverändert zurück, nur Titel und Zeit sind neu (Rundreise gemessen).
+- Titel/Datum/Uhrzeit/Dauer und die Einladeliste als ein Baustein `Planungsfelder` für „Neue Sitzung“, „Neues
+  Protokoll“ und „Sitzung bearbeiten“; `abgelehnt` aus `planen.ts` gemeinsam genutzt.
+
+### Geändert (Dienstplaner, E6-6c – Durchklicken Alwin, 29.10.2026)
+
+- **Neuer Punkt in der Matrix ohne Blatt von unten:** Im Bearbeiten steht je Termin ein grünes **„+“** neben „N Punkte“
+  in der Gruppenzeile „Ablauf“. Es klappt direkt darunter ein kleines Menü auf („Programmpunkt hinzufügen“, „Überschrift
+  hinzufügen“) – wie „+ Eintrag hinzufügen“ in der Musik-App. Vorher stand „+ Punkt“ unter jedem Ablauf und öffnete auch
+  am Rechner das Blatt „Option wählen“ über die ganze Breite unten am Bildschirm. Der neue Punkt landet wie in
+  ChurchTools am Ende. Bei einem abgeschlossenen Ablauf steht statt des Plus das Schloss. Entwurf
+  `e6-6-neuer-punkt.html` Variante A.
+- **„Ablauf bearbeiten“ mit Wort, oben in der Leiste:** Statt des kleinen Stifts links neben „Ablauf“ steht oben neben
+  S/M/L und Filter ein grauer Knopf **„Ablauf bearbeiten“** wie in der Musik-App; im Bearbeiten wird er zum blauen
+  „Fertig“. Neben „Ablauf“ passte ein Knopf mit Wort nicht in die erste Spalte (178 px) – Alwin wollte lieber die Leiste
+  als eine breitere Spalte. Er gilt weiter für alle gezeigten Termine, so bleibt das Ziehen zwischen Terminen. Am Handy
+  bleibt alles, wie es ist.
+
+### Intern (E6-6c)
+
+- `useAblaufBearbeiten`: Mit `plusImKopf` liefert auch die schmale Form (`schmal`) ihren `kopfKnopf` – nur als Symbol,
+  mit `plusName` als Namen („Eintrag hinzufügen – Gottesdienst, So, 01.11.“). Die Matrix stellt ihn per Portal an seinen
+  Platz in der Gruppenzeile; Optionen, Sperr-Hinweis und Punkt-Fenster bleiben an EINER Stelle in der Liste. Das „+ Punkt“
+  am Listenende ist entfernt (in der Matrix ist die schmale Form nie am Handy).
+- `HinzufuegenMenue` kann `nurSymbol` und `title`. Den Leisten-Knopf liefert `AblaufBearbeitenKnopf` aus
+  `MatrixAblauf.tsx` – dort steht auch die Regel, wer bearbeiten darf.
+
+### Neu (Organigramm, O7b-6b, #736)
+
+- **Personen in der Präsentation:** In den Diagrammen (Von oben, Von links, Mindmap) oben **Personen: Aus · Rollen ·
+  Alle** – dieselbe gemerkte Wahl wie im Reiter, hier geändert gilt sie auch dort. Neue Gruppen der neuen Gliederung
+  zeigen nur den Namen.
+- **Personen im PDF:** Häkchen **Personen** im PDF-Fenster (Alwin, 29.10.2026). Angehakt, wenn der Reiter Personen
+  zeigt, und mit dessen Stufe – steht der Reiter auf „Aus“, die Rollen. Im Diagramm wie am Bildschirm; in der Liste
+  stehen die Rollen etwas eingerückt unter dem Gruppennamen, und kein Gruppenname bleibt allein unten auf einer Seite.
+
+### Behoben (Organigramm)
+
+- Personen-Zeilen brachen eine Zeile zu früh um, wenn der letzte Name gerade noch passte: Gemessen wurde ein Komma, das
+  nach dem letzten Namen gar nicht steht.
+
+### Intern (Organigramm)
+
+- Umbruch und Kürzen der Namen an einer Stelle (`umbruch.ts`) für Kästchen und PDF-Liste; „was unter dem Namen steht“
+  an einer Stelle (`personenInhalt`) für Reiter, Präsentation und PDF; wo ein Name in der PDF-Liste steht (`namenX`)
+  ebenso.
+
+### Neu (Dienstplaner, E6-6b)
+
+- **Punkte zwischen Terminen ziehen:** In der Planen-Matrix lässt sich im Bearbeiten (Stift in der Gruppe „Ablauf“) ein
+  Punkt am Griff in einen anderen Termin ziehen. Eine gestrichelte Stelle „hier ablegen“ zeigt, wo er landet – am
+  Beginn-Balken davor (dann läuft er im Vorlauf) oder dahinter. Beim Loslassen fragt die Matrix „„Begrüßung“
+  verschieben? Vom So, 01.11. zum So, 08.11. – nach „Way Maker““ mit **Abbrechen / Kopieren / Verschieben**. Entwurf
+  `e6-6-entwurf-2.html` Bild 3, abgenommen von Alwin am 28.10.2026.
+- **Rückgängig** wie beim Löschen (Alwin, 29.10.2026): Verschieben legt den Punkt im alten Termin an der alten Stelle
+  wieder an (samt Vorlauf und „weggelassen“) und löscht ihn im neuen; Kopieren löscht die Kopie.
+- **Wohin nicht:** in Termine **ohne Ablauf** (Alwin, 29.10.2026: erst „+ Ablauf anlegen“, dann hineinziehen), in
+  abgeschlossene Abläufe, aus abgeschlossenen heraus und zwischen zwei Terminen, die sich **einen** Ablauf teilen. Dort
+  erscheint keine Stelle; beim Loslassen sagt ein Hinweis, warum.
+- Ein im alten Termin weggelassener Punkt steht im neuen sichtbar – „weggelassen“ gilt je Termin (gemessen E6-6-0).
+- Am Handy bleibt das Ziehen innerhalb des Termins (der Handy-Plan zeigt nur einen).
+
+### Geändert (Dienstplaner – Durchklicken Alwin, 29.10.2026)
+
+- **Deutlichere Trennung zwischen Ablauf und Diensten** in der Matrix (Entwurf `e6-6-trennung.html`, Variante C): Unter
+  jedem Ablauf steht ein grauer Balken **„Ende“** mit der Uhrzeit, zu der der letzte Punkt aufhört (Beginn + Dauer aus
+  ChurchTools; ChurchTools zeigt diese Zeit selbst nicht an) – auch im Bearbeiten, damit nichts springt. Darunter teilt
+  ein Streifen in der Seitenfarbe die Tabelle, darüber leise **„Dienste“**. Vorher folgte auf den letzten Punkt sofort
+  „Programm“, und man sah nicht, wo der Ablauf endet (Alwin). Termin-Ansicht und Musik-App bleiben, wie sie sind.
+
+### Intern (E6-6b)
+
+- Neu `shared/ct/punktUebertragen.ts`: verschieben/kopieren über den Schreibkern – Merkzettel wie beim Löschen
+  (`merkzettelAus`, jetzt eine Stelle für `punktLoeschen` und das Übertragen) → im Ziel anlegen und nachlesen
+  (`punktWiederherstellen`, liefert jetzt die neue ID) → **erst dann** im alten Termin löschen. Abgeschlossen und
+  geteilt werden vor dem ersten Schreiben geprüft; scheitert nur das Löschen, sagt die Meldung, dass der Punkt doppelt
+  steht. „Rückgängig“ in derselben Reihenfolge (erst zurückholen, dann im Ziel löschen). Geteilt erkennt
+  `teilenAblauf` (Ablauf-ID oder `verbundeneTermine`, dieselbe Regel wie „Neu aufsetzen“).
+- Neu `ui/ablauf/AblaufZiehBereich.tsx` + `ablaufZiehen.ts`: EIN Zieh-Bereich für alle Spalten der Matrix; jede
+  Bearbeiten-Liste meldet sich mit `useAblaufBearbeiten({ ziehen })` an (Zieh-IDs Spalte + Punkt, sonst wären sie bei
+  geteiltem Ablauf doppelt). Wo der Punkt landet, rechnet `platzIn`. Ohne Bereich (Musik-App, Termin-Ansicht, Handy)
+  zieht jede Liste wie bisher für sich.
+- Neu `ui/fenster/BodyPortal.tsx`: an `body` hängen **mit** dem Bereichs-Attribut – ohne es fehlten dort in der
+  Erweiterung die Farben (das Zieh-Bild war beim Durchklicken durchsichtig). Frage und Zieh-Bild stehen so außerhalb der
+  Tabelle; den versteckten Screenreader-Text von dnd-kit hängt der Bereich ebenfalls an `body` (sonst ein `div` in
+  `tbody`).
+- Der Sperr-Hinweis des Dienstplaners (`GESPERRT`) steht jetzt in `ablaufAktionen.ts` – eine Stelle für die
+  Bearbeiten-Liste und das Ziehen.
+- Demo (`?demo`): Termin 103 hat einen Ablauf (zum Ziehen zwischen zwei Terminen), alle Termine nennen ihren Kalender
+  wie in ChurchTools (vorher scheiterte „Ablauf anlegen“ in der Matrix-Demo mit „Kalender unbekannt“).
+
+### Geändert (Musik-App, Liedblatt)
+
+- **Kopf im Lied bis an den oberen Rand:** Statt einer kleinen Karte, die im dunklen Rand schwebte, reicht die Fläche
+  jetzt bis an den oberen Bildschirmrand (in der installierten App unter die Uhr, in ChurchTools bis an die Leiste).
+  Am Handy sind Liedtitel und Knöpfe größer; quer bleibt der Kopf schmal, damit das Blatt Platz hat.
+
+### Neu (Organigramm, O7b-6a, #736)
+
+- **Personen im Diagramm und in der Liste:** rechts neben den Gruppentypen **Personen: Aus · Rollen · Alle**. Unter dem
+  Namen einer Gruppe stehen ihre Rollen genau wie in ChurchTools mit den Personen – Leitung zuerst, dann wie ChurchTools
+  sortiert, die Standardrolle (Mitarbeiter/Teilnehmer) zuletzt, bei „Rollen“ als Zahl („6 Mitarbeiter“), bei „Alle“ mit
+  Namen (Wunsch Alwin 28.10.2026: „nichts weglassen oder hinzufügen“; Entwurf `o7b-6-7-v1.html`, entschieden
+  29.10.2026). Ohne Leserecht steht „Mitglieder nicht sichtbar“ wie in der Präsentation. Vorgabe „Aus“, die Wahl merkt
+  sich das Gerät. Präsentation und PDF folgen in O7b-6b.
+- Die drei Diagramme ordnen dafür **Kästchen unterschiedlicher Höhe** an: von oben beginnt das Gestapelte unter dem
+  hohen Kästchen, zur Seite (von links, Mindmap) schiebt ein hohes Kästchen die nächste Zeile weiter. Die Linien treffen
+  immer die Zeile mit dem Namen.
+
+### Geändert (Musik-App, Lieder)
+
+- **„Neues Lied“ wie jedes Anlegen:** Am iPad und Rechner steht oben rechts der grüne Knopf **„+ Neues Lied“**, am Handy
+  das runde **Plus** unten rechts – wie „Zeitraum eintragen“ bei den Abwesenheiten und „Eintrag hinzufügen“ im
+  Ablauf. Der blaue Text-Link über der Liste ist weg. Beides baut jetzt ein gemeinsamer Baustein.
+
+### Behoben (Anmeldungen)
+
+- **„Zahlung offen“ auf der Startseite zählt wie Liste und Kennzahlen** – bisher zählte die Startseite jede aktive
+  Person ohne Haken „bezahlt“, auch ohne Betrag; Liste und Kacheln zählen Anmeldungen mit offenem Betrag. Beim TEST
+  Lobpreisabend stand so „5 Zahlungen offen“ neben „0,00 €“ (Fund der echten Prüfung von U1, 29.10.2026). `belegungAus`
+  geht jetzt durch dieselbe Kette wie die Liste (`mitgliederstandAus` → `anmeldungenAus` → `listenZahlen`), aus den
+  Mitgliedern, die die Startseite ohnehin lädt – keine Abfrage mehr. Getestet gegen die Daten, aus denen die Liste
+  rechnet. Bekannte Lücke: Hat die erste Person einer Anmeldung abgesagt, fehlt deren Zahlung auf der Startseite (sie
+  steht nur im Verlauf).
+
+### Behoben (alle Apps, iPhone)
+
+- **Unten saß alles mal zu tief, mal zu hoch:** In der installierten App meldet iOS die Fensterhöhe je nach Start
+  verschieden (gemessen am Gerät, iOS 18.7: mal mit, mal ohne die Höhe der Statusleiste). Die App ragte dadurch mal
+  34 pt unter die Bildschirmkante, mal blieb unten ein leerer Streifen. Jetzt richtet sie sich nach der Größe des
+  Bildschirms selbst. Die Reiterleiste sieht aus wie vorher, die **Fußleiste im Lied** (Pfeile, „Nächstes Lied“)
+  steht wieder deutlich über dem Home-Strich.
+- **ChurchTools-App vom Home-Bildschirm:** iOS meldet dort keinen Home-Strich, obwohl er über dem Inhalt liegt. Die
+  Apps messen das jetzt selbst – Reiterleiste, Fußleiste, Plus und Meldungen unten halten Abstand zum Strich.
+- **Das runde Plus steht überall gleich:** wie in der ChurchTools-App 16 pt vom rechten Rand und 16 pt über der
+  Reiterleiste bzw. über dem Home-Strich – vorher in den Abwesenheiten zu hoch, im Ablauf zu tief.
+
+### Neu (Protokolle, K2a)
+
+- **Neues Protokoll ohne Termin** (Alwin 29.10.2026): Knopf „Neues Protokoll“ auf der Startseite (bei „Nächste
+  Sitzungen“) und im Reiter „Sitzungen“ – für alle, die in einer Gruppe schreiben dürfen. Im Fenster wählt man die
+  Gruppe (nur die, in denen man schreiben darf), Titel, Datum und Uhrzeit (vorbelegt wie „Neue Sitzung“; auch
+  nachträglich möglich) und Vorlage / „Wie letztes Mal“ / leer. Auf Wunsch wird ein **Gruppentreffen** für die
+  Anwesenheit mit angelegt. Kein Kalendertermin, keine Mail; danach öffnet sich das Protokoll gleich im Editor.
+
+### Geändert (Protokolle)
+
+- „Neue Sitzung“ und „Neues Protokoll“ im Reiter „Sitzungen“ sind die gemeinsamen grünen Knöpfe der Apps (`KopfKnopf`,
+  wie „+ Gruppe erstellen“ in ChurchTools) statt eines eigenen kleineren Knopfs.
+
+### Behoben (Protokolle)
+
+- „Wie letztes Mal“ war nicht vorbelegt, wenn die Vorlagen schneller geladen waren als die Protokolle der Gruppe – dann
+  stand die erste Vorlage fest. Die Vorbelegung folgt jetzt dem aktuellen Stand (eine Wahl für „Protokoll beginnen“
+  und „Neues Protokoll“, `useAnfangWahl`).
+
+### Intern
+
+- Felder der Protokoll-Fenster an einer Stelle (`Fensterfelder.module.scss`); `planungFehler` kennt `zukunft: false`.
+
+### Geändert (Anmeldungen, U1 – Seitengerüst)
+
+- **Zwei Bereiche statt drei Reiter** – „Vorbereiten“ (Termin, Anmeldung, „Wer meldet sich an?“, Formular, Preise,
+  Bezahlung, Mails, Datenschutz, nach der Freigabe der Anmeldelink) und „Anmeldungen“. Ohne Angabe in der Adresse öffnet
+  ein Entwurf „Vorbereiten“, eine freigegebene Veranstaltung „Anmeldungen“ (Alwin, 28.10.2026, Entwurf `ux-umbau-v1`).
+  Der Baukasten öffnet sich über die Karte „Formular“; „‹ Zurück“ oder der Reiter „Vorbereiten“ führen zurück.
+- **Einstieg je nach Stand** (Variante D) – vor der Freigabe eine Schrittleiste mit dem nächsten Schritt und einem
+  Knopf dafür (Termin, Anmeldebeginn, Bankverbindung, Freigeben); danach Kennzahlen (Plätze, Warteliste, Zahlung offen,
+  Anmeldeschluss), ein Klick öffnet die passende Ansicht der Liste. Hervorgehoben nur die Warteliste, wenn trotz freiem
+  Platz jemand wartet. Die Zahlen standen vorher oben im Reiter „Anmeldungen“ – gezählt wird weiter mit `listenZahlen`.
+- **Einheitliche Knöpfe** – die eigenen Knopfarten der Erweiterung sind durch die gemeinsamen aus `ui/` ersetzt
+  (`FensterKnopf`/`FensterLink`, `KopfKnopf`, `ZeilenKnopf`); eine Dauerprüfung (`ui/design/knoepfeAnmeldungen.test.ts`)
+  meldet jede neue eigene Knopfart. Die Nachprüfung ohne Hinweise steht jetzt unten bei den Anmeldungen.
+
+### Neu (Organigramm, O7b-5, #736)
+
+- **Präsentation mit Ansichten:** oben **Kacheln · Von oben · Von links · Mindmap**. Die Seiten bleiben dieselben
+  (Übersicht, dann Bereich für Bereich – Alwin: „Seiten bleiben“), der Umschalter ändert nur die Darstellung: Kacheln
+  und Personen-Spalten wie bisher, oder die Seite als Diagramm – auf der Übersicht die ganze Gemeinde, auf einer
+  Bereichs-Seite der Bereich, anfangs ganz aufgeklappt. Im Diagramm der Übersicht öffnet ein Klick auf einen Bereich
+  seine Seite. Die gewählte Ansicht merkt sich das Gerät.
+
+### Behoben (Organigramm)
+
+- **„Ganz zeigen“** lässt unten den Streifen der Knöpfe frei – vorher lagen − / + / „Ganz zeigen“ über dem untersten
+  Kästchen (Reiter und Präsentation; gemeldet von Alwin 28.10.2026). Gilt auch für die Startansicht.
+- Die Leertaste auf einem +/− im Diagramm der Präsentation klappt nur und blättert nicht zusätzlich weiter.
+- „Neue Gliederung | Heute“ in der Präsentation steht auf einer Schiene wie die übrigen Umschalter: 38 px hoch,
+  einzeilig – am iPad quer (1024 px) war es zweizeilig und 41 px hoch. Ebenso „Plan | Umbau“ im Reiter „Neue Gliederung“.
+  Eine Dauerprüfung (`ui/design/umschalterVerbunden.test.ts`) hält fest, dass jeder Umschalter des Organigramms so gebaut ist.
+
+- Reiter „Neue Gliederung“: **„Neuer Bereich“** (grün wie „+ Gruppe erstellen“ in ChurchTools) und **„Plan verwerfen“**
+  sind wieder richtige Knöpfe, so hoch wie der Umschalter daneben. „Neuer Bereich“ zeigte seit O7b-3 auf eine
+  gestrichene Stilklasse und stand als bloßer Text da; „Plan verwerfen“ war 31 statt 38 px hoch.
+
+### Intern (Organigramm)
+
+- Dauerprüfung `ui/design/stilKlassen.test.ts`: Jede benutzte Klasse einer `*.module.scss` muss es dort geben (für alle
+  Apps; einziger Fund war der oben).
+
+- Die Namen der Ansichten stehen an einer Stelle (`ANSICHT_NAMEN` in `auswahl.ts`) statt je einer Liste in Reiter
+  und PDF-Fenster.
+
+### Behoben (Protokolle, K1 – beim Durchklicken 28.10.2026 gefunden)
+
+- **Datum am Termin:** Das Feld zum Wählen öffnete nach links und wurde am Rand des Blatts abgeschnitten – jetzt öffnet
+  es nach rechts unter dem Datum.
+- **Griff sitzt auf der Zeile:** Der Griff zum Ziehen stand an der Oberkante des Blocks, je nach Art 6 bis 9 px über der
+  ersten Textzeile, und sah aus wie der der Zeile darüber. Jetzt steht er mittig neben der ersten Zeile – bei
+  Tagesordnungspunkten, To-Dos, Beschlüssen, Terminen und festen Punkten.
+- **Ziehen landet, wo die Linie steht:** Beim Ziehen eines Tagesordnungspunkts zeigte der Editor seine Linie zwischen
+  zwei beliebigen Zeilen, abgelegt wurde aber an der nächsten Abschnittsgrenze. Jetzt steht die Linie genau dort, wo
+  der Punkt landet; über dem eigenen Abschnitt erscheint keine (dort bewegt sich nichts).
+
+### Geändert (Protokolle)
+
+- **Wer und Bis vor dem Text:** An einem neuen To-Do lassen sich „Wer?“ und „Bis“ wählen, bevor Text dasteht. Die Wahl
+  wird am Block gemerkt und übernommen, sobald das To-Do mit dem ersten Text entsteht – es gibt kein leeres To-Do bei
+  den Zuständigen. Den Status gibt es weiter erst mit Text.
+
+### Neu (Dienstplaner, E6-6a)
+
+- **Der Ablauf in der Planen-Matrix:** Oben, über den Dienstgruppen, steht die Gruppe „Ablauf“ – je Termin „N Punkte“
+  bzw. „kein Ablauf“, darunter der Ablauf in einer schmalen Form (Uhrzeit, Dauer, Titel; Lieder mit blauem Streifen,
+  Überschriften und „Beginn“ als graue Balken – ohne Zuständige und Kürzel, dafür ist die Spalte zu schmal). Ein Lied
+  antippen öffnet die Lied-Ansicht. Entwurf `e6-6-entwurf-2.html`, abgenommen von Alwin am 28.10.2026.
+- **Ein Stift für alle gezeigten Termine** (Variante A): links in der Gruppenzeile, wo bei den Dienstgruppen der
+  Zauberstab für alle Termine sitzt. Danach Griffe zum Ziehen innerhalb eines Termins, Zeile antippen öffnet das
+  Punkt-Fenster, „+ Punkt“ am Ende, „+ Ablauf anlegen“ bei Terminen ohne Ablauf. Abgesagte Termine und solche, die man
+  nicht bearbeiten darf, tragen ein Schloss. „Neu aufsetzen …“ bleibt in der Termin-Ansicht.
+- **Zugeklappt merkt sich das Gerät** – lange Abläufe schieben die Dienste sonst weit nach unten (Alwin).
+- **Am Handy** steht der Ablauf des gewählten Termins wie in der Termin-Ansicht (mit Zuständigen und Lied-Karte).
+
+### Intern (E6-6a)
+
+- Neu `dienstplaner/src/TerminAblauf.tsx`: der Ablauf eines Termins (Lieder nachladen, Ansicht, Bearbeiten-Liste,
+  Lied-Ansicht, „Ablauf anlegen“/„Neu aufsetzen“, Neu-Lesen nach dem Speichern) – vorher fest in der Termin-Ansicht,
+  jetzt dieselbe Stelle für die Termin-Ansicht und jede Spalte der Matrix. Matrix-Teil in `MatrixAblauf.tsx` und
+  `useMatrixAblauf.ts` (lädt nur die gezeigten Termine, je Termin eine Abfrage; ein Ladefehler bleibt nicht hängen,
+  „Erneut versuchen“).
+- `ui/ablauf`: `AblaufListe`, `SortableRow` und `useAblaufBearbeiten` kennen `schmal` (ohne Zuständige/Kürzel/Notiz/
+  Lied-Karte, Titel höchstens zwei Zeilen mit Silbentrennung; statt des schwebenden Plus „+ Punkt“ am Ende der Liste).
+- Kalender und Admins eines Termins (Bearbeiten-Regel des Ablaufs) stehen an der Matrix-Spalte (`PlanSpalte.ablaufTermin`,
+  dazu `beginn`), gelesen über `ablaufTerminVon` – vorher nur für den Einzeltermin; `TerminDaten.ablaufTermin` ist
+  entfallen. `PlanenAnsicht.ablaufZu` neu.
+- Der Hinweis-Stil der Termin-Ansicht liegt als Mixin in `_terminTexte.scss` (`composes … from` geht über SCSS-Dateien
+  nicht).
+
+### Geändert (Dienstplaner, Musik-App – Durchklicken Alwin, 28.10.2026)
+
+- **Zeitraum-Leiste gleich hoch:** Zeitraum-Knopf (vorher 40 px), ‹ ＋ ＋ › (32 px) und Filter (34 px) nehmen alle die
+  gemeinsame Knopfhöhe (38 px); der Zeitraum bleibt zweizeilig. Gilt mit Zeitraum- und Filter-Knopf auch für die
+  Abwesenheiten der Musik-App. Wächter `ui/bedienung/leistenKnoepfe.test.ts`.
+- **S/M/L ist die Spaltenbreite:** 124/176/256 px fest, nicht mehr auf die volle Breite gestreckt – vorher sahen S und M
+  fast gleich aus und gar nicht verschieden, wenn alle Termine passten. Wie viele Termine passen, ergibt sich aus der
+  Breite (S mehr, L weniger).
+
+### Geändert (Musik-App, Seitenköpfe)
+
+- **Keine doppelten Überschriften mehr:** Termine, Lieder, Abwesenheiten und Mehr zeigen oben nicht mehr groß ihren
+  Namen – den sagt schon der markierte Reiter. An seiner Stelle steht jetzt, was man dort zuerst braucht: bei Termine
+  „Kommende | Vergangene“, bei Lieder das Suchfeld, bei Abwesenheiten „Termine | Einträge“, bei Mehr die Gemeinde-Karte;
+  Vollbild bzw. „+ Zeitraum eintragen“ rechts daneben. So macht es auch die ChurchTools-App bei „Kalender“ und
+  „Beiträge“. Die Liste beginnt dadurch rund 50 px weiter oben. Seiten mit Zurück (Ablauf, Liedblatt) behalten ihren
+  Titel.
+
+### Behoben (alle Erweiterungen, iPhone)
+
+- **Köpfe in der ChurchTools-App nicht mehr zu tief:** Wer ChurchTools vom Home-Bildschirm öffnet, sah über jedem
+  Seitenkopf rund 36 pt leeren Platz. Den Abstand braucht nur unsere eigene installierte App (unter dem milchigen
+  iOS-Band); in den Erweiterungen beginnt der Kopf jetzt 12 pt unter der ChurchTools-Leiste.
+- **Das runde Plus sitzt nicht mehr in der Ecke:** Es steht jetzt 24 px vom rechten Rand und mindestens 40 px über der
+  Unterkante – vorher lag es in der Geräte-Rundung auf Höhe des Home-Strichs. Listen darunter halten passend mehr Platz
+  frei, damit das Plus nicht auf dem letzten Eintrag liegt.
+
+### Neu (Protokolle, S5-2)
+
+- **Nächste Sitzung festlegen** (Alwin 28.10.2026, Entwurf 7): Im Protokoll steht oben im Bereich „Termine“ die nächste
+  Sitzung – mit Einladungen und Zusagen; ist noch keine festgelegt, hat die Leitung dort den Knopf **„Nächste Sitzung
+  festlegen“**. Das Fenster ist vorbelegt **wie die letzte Sitzung** (Titel, Uhrzeit, Dauer; Datum im Abstand der
+  letzten beiden Sitzungen, sonst vier Wochen, frühestens morgen). Eingeladen sind **alle aktiven Mitglieder**, einzeln
+  abwählbar; das Fenster sagt vorher, dass die Einladung **sofort** per Mail rausgeht (wer festlegt und sich einlädt,
+  hat gleich zugesagt und bekommt keine). Angelegt werden der **Kalendertermin mit Besprechungsanfrage**, das
+  **Gruppentreffen** und die **geplante Sitzung**, die beides verknüpft – „Protokoll beginnen“ macht daraus später den
+  Entwurf.
+- **Neue Sitzung** (außerordentlich): derselbe Ablauf über den Knopf „Neue Sitzung“ im Reiter „Sitzungen“ – nur für die
+  Leitung und nur, wenn die Gruppe einen Kalender hat; vorbelegt wie die letzte Sitzung, die schon stattgefunden hat
+  (nicht nach einer schon geplanten). Danach öffnet sich die neue Sitzung.
+- **Nie doppelt einladen:** Ist unklar, ob ChurchTools den Termin angelegt hat (keine Antwort, Zeitüberschreitung),
+  sieht die Erweiterung im Kalender nach und macht mit dem gefundenen Termin weiter; findet sie keinen, sagt sie „bitte
+  im Kalender nachsehen“ statt „noch einmal versuchen“. Scheitern danach Gruppentreffen oder Verknüpfung, bleibt der
+  Termin stehen und das Fenster sagt, was fehlt – zurückgerollt wird nie (einen Termin zu löschen schickt allen
+  Eingeladenen „Termin gelöscht“, gemessen 28.10.2026).
+
+### Behoben (Protokolle)
+
+- „Protokoll beginnen“ (S5-1): Übernahm ChurchTools das neue Protokoll nicht, stand im Fenster „ChurchTools antwortet
+  gerade nicht“ statt der eigentlichen Meldung – jetzt „ChurchTools hat das neue Protokoll nicht übernommen“. Beim Bau
+  von S5-2 gefunden.
+
+### Intern
+
+- Gruppentreffen werden über **eine** Abfrage gelesen (`treffenLesen`): ChurchTools zählt `end_date` nicht mit (gemessen
+  28.10.2026). Beim ersten Prüfen in der Test-Instanz fand das Nachlesen nach dem Anlegen das Treffen deshalb nie;
+  „Kommend“ ließ den letzten Tag aus.
+
+- `@ui/ct/fehler`: neue Klasse `Unklar` – für Fälle, in denen ein zweiter Versuch Schaden anrichtet; `fehlerMeldung`
+  zeigt ihre Meldung ohne „Erneut versuchen“.
+- Termine bringen ihr Ende mit (`Termin.ende`, `Sitzung.ende`) – für die Dauer der nächsten Sitzung.
+
+### Neu (Organigramm, O7b-4, #736)
+
+- **Organigramm als PDF:** Knopf „PDF / Drucken“ im Seitenkopf (neben „Präsentieren“). Das Fenster übernimmt Ansicht,
+  „Anfangen bei“ und was aufgeklappt ist, mit **Vorschau**: Ansicht (von oben, von links, Mindmap, Liste),
+  Ausschnitt, Papier („Passend“ – das A4, auf dem das Diagramm am größten wird –, A4 quer/hoch, A3 quer/hoch),
+  „Alles aufgeklappt“ und „Logo der Gemeinde“. Ein Diagramm steht auf einer Seite (Schrift höchstens 11 pt, unter 6 pt
+  ein Hinweis), eine Liste läuft über mehrere Seiten.
+- Das Blatt (Entwurf `o7b-4-pdf-v1.html`): oben Logo aus ChurchTools, „Organigramm“, Gemeinde und Stand, unten Gemeinde
+  und Seitenzahl; Lato wie in ChurchTools, immer hell. **PDF öffnen** zeigt die PDF in einem neuen Tab – von dort
+  drucken; **Herunterladen** speichert sie. Eine eigene PDF statt des Druckfensters des Browsers, weil Safari dort das
+  Querformat nicht hielt und Adresse und Datum an den Rand druckte (Test 28.10.2026).
+
+### Intern
+
+- `ui/teilen/svgSeitenPdf.ts`: Seiten, die als SVG am Bildschirm stehen, werden zur PDF (svg2pdf.js, jede Seite in
+  ihrem Format) – die ausgerechneten Stile wandern als Attribute mit, die Grundlinie mittig gesetzter Texte misst der
+  Browser. `ui/teilen/pdfSchrift.ts`: Lato (unverändert, OFL) für PDFs, auch im Dokument unter eigenem Namen
+  `LatoPdf`. `oeffnePdf` in `ui/teilen/sharePdf.ts`. `ui/ct/logo.ts`: Logo der Gemeinde (`/api/config` →
+  `site_logo`).
+- Die hellen Farben stehen jetzt im Mixin `hell` (`ui/design/_farben.scss`); `:root` bindet ihn ein (gebautes CSS
+  unverändert), ebenso das Blatt – so bleibt Papier im Dunkelmodus hell, ohne zweite Werte.
+- Organigramm: `DiagrammBild.tsx` zeichnet Bildschirm und PDF gleich (auf Papier mit dem Linienstück, wo sonst das +/−
+  sitzt – `schalterStummel` im Ansichten-Kern), `messung.ts` misst an einer Stelle, `spitzenWahl` liefert die Auswahl
+  für „Anfangen bei“ und „Ausschnitt“. Neue Abhängigkeiten im Organigramm: `jspdf` (wie Musik-App/Anmeldungen),
+  `svg2pdf.js` – beide erst beim Öffnen des PDF-Fensters geladen.
+
+### Neu (Anmeldungen, A9-3a)
+
+- **Daten löschen nach Datum** – beide Abläufe in ChurchTools bekommen „warten bis zum Löschdatum“ und „entfernen“
+  (Löschdatum = Ende des Termins, sonst Beginn, plus Frist in Monaten; `loeschDatum`). Die Karte „Datenschutz“ zeigt das
+  Datum, wie es in ChurchTools steht; ohne Termin „kein Löschdatum“.
+- **Rückfrage vor dem sofortigen Löschen** – liegt das neue Datum heute oder früher, entfernt ChurchTools beim Speichern
+  alle Anmeldungen (gemessen 28.10.2026). Das Fenster „Daten löschen“ fragt darum mit der Zahl („Jetzt 3 Anmeldungen
+  löschen“, ohne „Rückgängig“); der Abgleich beim Öffnen schreibt so ein Datum nie und zeigt stattdessen „schon
+  erreicht“ (Alwin, 28.10.2026, E3).
+- **Schon Angemeldete werden mit gelöscht** – ihr Ablauf war abgeschlossen; die Erweiterung bringt sie beim Einrichten
+  ohne Mail ins Warten (Mail kurz aus, `restart: ['finished']`, Mail wieder an – auch nach einem Fehler; E6).
+- Termin oder Frist geändert → der Abgleich zieht das Datum nach. Termin entfernt → Warten und Entfernen fallen weg,
+  Wartende werden beendet (`finish`), nicht entfernt.
+- **Anmeldeschluss vor dem Löschdatum** – steht die Anmeldung am Löschdatum noch offen, bekäme eine neue Anmeldung „Du bist
+  dabei!“ und wäre im selben Augenblick entfernt (echte Prüfung 28.10.2026). Mit dem Löschdatum zieht die Erweiterung den
+  Anmeldeschluss darum auf den Tag davor (23:59 Uhr), wenn keiner oder ein späterer gesetzt ist – vor den Routinen
+  geschrieben und nachgelesen; der Abgleich zieht ihn wieder vor, falls jemand die Anmeldung erneut öffnet. Karte, Rückfrage
+  und die Fenster „Daten löschen“ und „Anmeldung“ sagen es; dort lässt sich kein späterer Schluss speichern.
+
+### Neu (Dienstplaner, E6-O O4)
+
+- **Lied-Ansicht:** Ein Lied im Ablauf antippen öffnet ein Fenster wie die Song-Seite der ChurchTools-App – Autor ·
+  Verlag · CCLI, Arrangement, Tonart · Tempo und die **Dateien** des Arrangements (antippbar, sie öffnen sich aus
+  ChurchTools; die Versionen, die die Musik-App selbst ablegt, stehen nicht darin). Auch im Bearbeiten: Im Punkt-Fenster
+  hat die Zeile „Lied“ jetzt einen Pfeil und zeigt die Ansicht an seiner Stelle; „Zurück“ kehrt mit allen ungespeicherten
+  Eingaben zurück (Alwin, 28.10.2026: an beiden Stellen).
+- **„In der Musik-App öffnen“ führt direkt zum Blatt dieses Lieds** im Ablauf dieses Termins. Ist die Musik-App in der
+  Gemeinde nicht installiert, steht der Knopf ausgegraut da – mit dem Hinweis, dass ein ChurchTools-Admin sie installiert
+  (Alwin).
+
+### Neu (Musik-App, E6-O O4)
+
+- **Direktlink** `…/ccm/<musik-app>/#/termin/<Termin>/punkt/<Ablaufpunkt>?am=<Tag>`: öffnet das Blatt des Lieds dieses
+  Punkts (Punkt ohne Lied: den Ablauf) und nimmt den Link danach aus der Adresse, damit ein Neuladen nicht wieder
+  hinspringt. **Auch für Termine außerhalb der geladenen Wochen** (vergangen oder weiter als sechs Wochen voraus): Den
+  Tag holt die App dann eigens nach. In der Test-Instanz landete ein Termin von vor zehn Tagen sonst in der Übersicht.
+
+### Behoben (Musik-App)
+
+- **Wiederherstellung nach dem Start wartet auf die Rechte:** Solange sie unterwegs waren, galt die Terminliste schon als
+  „fertig“, und die App gab den gemerkten Termin auf und landete in der Übersicht (gefunden mit dem Direktlink, in den
+  E2E-Läufen ohne den Fix 1 von 3 grün).
+
+### Intern (E6-O O4)
+
+- Neu `shared/ct/musikAppLink.ts` (Direktlink bauen und lesen – eine Regel für beide Apps) und
+  `client/src/utils/liedZumPunkt.ts` (welches Blatt gehört zu einem Punkt – dieselbe Zählung wie die Blätter).
+- Ein Direktlink wird beim Start nur **gelesen**, aus der Adresse genommen erst danach in einem Effekt: React ruft
+  Startwerte im StrictMode zweimal auf, und das frühere Löschen ließ den zweiten Aufruf leer ausgehen.
+- Symbol, Art und Anzeige einer Datei (`DATEI_SYMBOL`, `DATEI_ART`, `dateiZeilen`, `dateiGroesse`) liegen jetzt in
+  `ui/lied/` – die Lied-Ansicht nutzt dieselben wie die Dateiverwaltung der Musik-App.
+- Dienstplaner: `ladeLiedAutoren` → `ladeLiedDaten` (dieselbe eine Abfrage, behält jetzt das ganze Lied); die Ablaufzeile
+  trägt `songId` und den Namen des Arrangements; `AblaufListe.onLied` meldet auch den Punkt; `PunktFenster.liedAnsehen`.
+- Musik-App: Der Direktlink wird in `useDirektLink` gelesen (vor der Terminabfrage, die ihn zum Nachladen braucht) und an
+  `useAppNav` gereicht; neu `useTermineAm(tag)` (`from`=Tag, `to`=Folgetag – ChurchTools zählt `to` nicht mit,
+  gemessen 28.10.2026).
+- E2E `e2e/direktlink-lied.spec.ts` (auch ein vergangener Termin, mit und ohne Tag, und der Sprung auf ein **späteres**
+  Lied am Rechner und am Handy – ein Sprung auf Lied 1 beweist nichts, dort steht das Blatt ohnehin). Der CT-Stub filtert
+  `/api/events` jetzt wie ChurchTools nach `from`/`to` und hat einen vergangenen Termin mit zwei Liedern. Die Tests laden erst neu, wenn der
+  Anmeldestatus gespeichert ist: Der Abfrage-Speicher schreibt höchstens einmal je Sekunde, und `['me']` gilt 60 s als
+  frisch – wer früher neu lädt, sieht wieder das Anmelden (parallel in jedem zweiten bis dritten Lauf).
+
+### Geändert (Musik-App, Ablauf)
+
+- **„Bearbeiten“ ist nicht mehr blau:** Der Knopf steht jetzt grau mit Rahmen wie „Teilen“ – er wirkte zu aufdringlich.
+  Blau ist erst **„Fertig“**, solange man den Ablauf bearbeitet.
+
+### Geändert (Musik-App, Abwesenheiten wie im Dienstplaner)
+
+- **Zeitraum statt Monats-Kapseln:** Oben steht jetzt derselbe Zeitraum-Knopf wie in Dienstplaner › Planen – ab heute
+  (die nächsten vier Wochen), dieser Monat, nächster Monat oder ein eigener Zeitraum von–bis, höchstens ein Jahr
+  voraus. Die Termine stehen nach Monaten überschrieben darunter.
+- **Filter mit Häkchen:** Statt der Kapseln „Alle · Gottesdienst · …“ gibt es den Knopf „Filter“ wie im Dienstplaner.
+  Je Termin-Art ein Häkchen; man kann jetzt auch mehrere Arten ausblenden. Die Zahl am Knopf zeigt, wie viele gerade
+  ausgeblendet sind. Eine bisher gemerkte Wahl („nur Gottesdienst“) wird übernommen.
+
+### Intern
+
+- `ZeitraumKnopf`, `FilterKnopf` und `useAufklapp` liegen jetzt in `ui/bedienung` (vorher im Dienstplaner), die
+  Zeitraum-Regel in `shared/ct/zeitraum.ts`; das „+ … hinzufügen“-Menü aus S2 nutzt denselben Aufklapp-Baustein statt
+  einer eigenen Kopie. Die Jahresgrenze für Termine (`MAX_VORAUS_TAGE`) steht in `shared/absences` für Server und App.
+
+### Behoben (Organigramm, Anmeldungen)
+
+- **Mitgliedschaften: Anlegen und Ändern sind jetzt zwei Aufrufe** – ChurchTools meldete per Mail „Nutzung veralteter
+  APIs“ (`PUT /groups/{id}/members/{personId}` → `PATCH`). Gemessen 28.10.2026 in der Test-Instanz: `PATCH` legt
+  **keine** Mitgliedschaft an (404), `PUT` mit `only_add: true` legt an und lehnt ab, wenn es sie schon gibt (403).
+  Veraltet ist nur das **Ändern** per `PUT` – und das löschte dabei still **Kommentar und Enddatum**, wenn sie nicht
+  mitgeschickt wurden.
+  - Organigramm: „Rolle ändern“, „Austragen“ und deren „Rückgängig“ per `PATCH`; „Aufnehmen“ legt neu an (`PUT` mit
+    `only_add`) oder ändert, wer früher schon dabei war. Bisher verlor eine Mitgliedschaft beim Rolle-Ändern ihren
+    Kommentar und ein gesetztes Enddatum.
+  - Anmeldungen: „Von Hand anmelden“ und „Rückgängig“ nach einer Absage legen nur noch an (`only_add`) – ist die
+    Person inzwischen doch dabei, wird ihre Anmeldung nicht überschrieben. „Leitung“ beim Freigeben: wer schon in der
+    Gruppe ist, wird per `PATCH` zur Leitung, alle anderen werden angelegt.
+
+### Intern (Organigramm, Anmeldungen)
+
+- `MitgliedZugriff.schreiben` aufgeteilt in `anlegen` und `aendern`. Die Test-Nachbauten (Regeln, App, Anmeldungen) und
+  die Organigramm-Demo verhalten sich wie ChurchTools: `PUT` ohne `only_add` ist ein Fehler, `PATCH` ohne
+  Mitgliedschaft 404. Gegenprobe: jeder der sieben Teile einzeln zurückgenommen – es fallen 1 bis 8 Tests.
+
+### Geändert (Musik-App, Liedblatt im ChurchTools-Look – Scheiben B1 und B2)
+
+- **Neuer Kopf im Liedblatt:** ein Kopf im Look der Ablaufpläne in ChurchTools statt der runden Knöpfe und
+  Titel-Kapseln. Am iPad steht oben „← Ablauf“ mit dem Termin, darunter in einer Zeile die **Lied-Leiste** und die
+  beschrifteten Knöpfe **Aussehen, Tempo, Anmerken** (mit Recht „Notizen von …“). Am Handy ist die Karte kompakt:
+  Zurück und Vollbild als Symbol neben der Leiste, die Knöpfe mit Kurzwort darunter; am Handy quer steht alles in
+  einer Zeile.
+- **Lied-Leiste:** alle Lieder des Ablaufs nebeneinander, nummeriert. Die sichtbaren sind grau hinterlegt, das
+  gewählte ist blau unterstrichen und zeigt Tonart, Fassung und Tempo. Ein Tipp springt zu einem Lied; im Querformat
+  wählt er das zweite sichtbare Lied, ohne dass das Blatt springt; ein Tipp auf das gewählte öffnet sein Lied-Menü.
+  Die Leiste lässt sich seitwärts wischen und scrollt beim Blättern mit.
+- Die Knöpfe wirken auf das gewählte Lied – im Querformat gibt es keine eigenen Knöpfe je Hälfte mehr. Beim Zeichnen
+  heißt der Knopf „Anmerken beenden“, beim Ansehen fremder Notizen steht nur „Zurück zu den eigenen Notizen“.
+- Aus der Liederliste: „← Lieder“, der Liedname als Titel, in der Leiste nur dieses Lied.
+- In der ChurchTools-Erweiterung ist unter der Fußleiste kein großer leerer Streifen mehr – das Blatt wird dadurch
+  etwas größer.
+- Die Einführung im Liedblatt zeigt auf die neue Leiste und die Knöpfe (wer sie schon kennt, sieht sie nicht neu).
+- Ablauf bearbeiten: Der Einführungs-Schritt zum Plus beschreibt jetzt „Option wählen“ (Programmpunkt, Lied,
+  Überschrift) statt des alten Umschalters im Fenster.
+
+### Neu (Protokolle, S5-1)
+
+- **Protokoll beginnen** (Alwin 28.10.2026, Entwurf 7): Hat eine Sitzung (Termin mit Besprechungsanfrage oder
+  Gruppentreffen) noch kein Protokoll, bietet die Sitzungsansicht der Leitung „Protokoll beginnen“ an. Im Fenster wählt
+  man eine **Vorlage**, **„Wie letztes Mal“** (Tagesordnung des letzten freigegebenen Protokolls, ohne dessen Notizen)
+  oder **„Leer“** – vorbelegt ist „Wie letztes Mal“, sonst die erste Vorlage. Danach öffnet sich das Protokoll gleich
+  im Editor; die festen Aufgaben der Vorlage sind sofort To-Dos.
+- Hat inzwischen jemand anderes dasselbe Protokoll begonnen, sagt das Fenster das und öffnet dessen Protokoll – es
+  entsteht kein zweites.
+
+### Behoben (Protokolle)
+
+- **Serientermine:** Ein Protokoll hing an allen Terminen einer Serie (sie haben in ChurchTools dieselbe ID) – jetzt
+  nur am Termin zu seinem Beginn; ein einzelner, verschobener Termin bleibt bei seinem Protokoll. Beim Bau von S5-1
+  gefunden, bevor es auftreten konnte (bisher legte die Erweiterung keine Köpfe zu Terminen an).
+
+### Intern (Protokolle, S5-1)
+
+- Regel `shared/protokolle/beginnen.ts` (`anfangsDokument`, `neuerKopf`), Zuordnung `gehoertZu` in
+  `shared/protokolle/sitzungen.ts` (eine Stelle für `sitzungenOrdnen` und „beginnen“); Schreiben
+  `protokolle/src/beginnen.ts`: frisch lesen → Teile → nachlesen → Kopf → nachlesen → To-Dos (scheitern nur diese, steht
+  das Protokoll und das nächste Speichern holt sie nach). Ein geplanter Kopf wird umgestellt statt ein zweiter angelegt.
+
+### Neu (Organigramm, O7b-3, #736)
+
+- **Drei Diagramme** im Reiter Organigramm: **Von oben** (das klassische Organigramm), **Von links** und **Mindmap**.
+  Im Kästchen nur der Name; Klick oder Enter öffnet die Gruppe, das runde **+/−** klappt auf und zu (zugeklappt mit
+  der Zahl der Untergruppen). **Ziehen** verschiebt, **Mausrad** und **zwei Finger** zoomen, dazu − / + / **Ganz
+  zeigen**. Das Bild fängt lesbar groß an der Spitze an, wenn nicht alles lesbar passt; Auf- und Zuklappen lässt den
+  Blick stehen. Mit der Tastatur springt das Bild zum gewählten Kästchen.
+- **Startansicht** ohne Wahl: am Laptop **Von oben**, am Handy die Liste. **Alle auf-/zuklappen** und **Anfangen bei**
+  gelten auch für die Diagramme.
+
+### Geändert (alle Apps)
+
+- **Eine Höhe für alle Knöpfe und Bedienelemente einer Reihe** (`--knopf-hoehe`, 38 px): Kopf-, Zeilen- und
+  Fensterknöpfe, der Umschalter (`Segment`, bisher 40 px, jetzt auch im Dienstplaner und in den Protokollen 38 px) und
+  die Auswahlfelder. Die Beschriftung im Umschalter bricht nicht mehr um („Neue Gliederung“ stand in zwei Zeilen);
+  passt er nicht in die Breite, rutschen ganze Knöpfe in eine zweite, gleich hohe Reihe.
+- **Organigramm:** In der Leiste standen fünf Höhen nebeneinander (30–40 px) – jetzt alles 38 px. **„Präsentieren“
+  steht im Seitenkopf rechts neben „Hallo …“** (wie „+ Gruppe erstellen“ in ChurchTools), damit die Leiste auch bei
+  1280 px in eine Zeile passt; „Alle auf-/zuklappen“ sind Kopfknöpfe, die Zoomknöpfe Zeilen- bzw. Kopfknöpfe (am
+  Handy nur Symbole). Auch das Suchfeld bei Personen, die Knöpfe der Präsentation und die Felder im Gruppenfenster
+  haben diese Höhe. Der lange Name der Gemeinde an der Spitze eines Diagramms wird nicht mehr gekürzt.
+
+### Intern (Protokolle)
+
+- **Wackelnder Test, zweiter Anlauf:** `abschnittZiehen.test.ts` (S4-3b) hängte echte Editoren ein und nie wieder aus –
+  dieselbe Ursache wie bei `editorSchema.test.tsx` (26.10.2026); die CI scheiterte am 28.10.2026 wieder mit „document
+  is not defined“. Der Helfer zum Aushängen stand nur in der einen Testdatei. Jetzt liegt er an einer Stelle,
+  `protokolle/src/editorTest.testutil.ts`: `einhaengen(editor)` hängt den Editor ein und nach dem Test von selbst
+  wieder aus. Beide Testdateien nutzen ihn.
+- **Dauerprüfung** `ui/design/editorEinhaengen.test.ts`: Kein Test und keine Test-Hilfe in den Apps, `ui/` und
+  `shared/` darf `.mount(` selbst aufrufen, nur der Helfer. Ein neuer Test prüft außerdem, dass das Aushängen ohne
+  eigenes `afterEach` passiert.
+
+### Neu (Anmeldungen, A9-2b)
+
+- **Check-in-Code in der Bestätigung** – Schalter „Check-in-Code (QR) mitschicken“ im Fenster „Mails“ (Reiter
+  Bestätigung, Standard aus). Er schaltet den Check-in der Gruppe in ChurchTools ein und **in demselben Aufruf** dessen
+  eigene Mail „Dein Check-in-Code“ aus – gemessen 26.10.2026: sonst zwei Mails je Person und beim Einschalten eine an
+  alle schon Angemeldeten. Der Code kommt als Bild in die Bestätigung, nur wenn die Person einen hat (`{{#if}}`,
+  gemessen 28.10.2026). Nachgelesen wird danach. Die Karte „Mails“ zeigt den Stand; schaltet jemand den Check-in in
+  ChurchTools um, zieht der Abgleich beim Öffnen die Mail nach und stellt die Code-Mail wieder ab. (Wer sie in
+  ChurchTools bei laufendem Check-in einschaltet, verschickt sie dort sofort an alle – echte Prüfung 28.10.2026.)
+
+### Geändert (Anmeldungen, A9-2b)
+
+- **„Mail schreiben“ entfällt** nach Nachrücken, Von Hand, Person dazu und Zurückholen, wenn die Mails eingerichtet
+  sind – die Bestätigung kommt von selbst. Nach einer Absage bleibt es. Die Regel steht an einer Stelle
+  (`mailAnbieten`).
+- „Leitung benachrichtigen“ (geplant für A9-2b) ist **gestrichen**: `informLeader` schickte in keinem Versuch eine Mail,
+  auch nicht an eine zweite Leitung (gemessen 26./28.10.2026).
+
+### Geändert (Ablauf in Musik-App und Dienstplaner, E6-O O3, #747)
+
+- **Das Punkt-Fenster sieht aus wie ChurchTools** (Variante B des Fenster-Entwurfs, abgenommen 23.10.2026): Titel des
+  Punkts links, X rechts; darunter „Position 2 von 8 · 10:00 – 10:04“ mit **‹ ›** zum vorigen und nächsten Eintrag.
+  Die Felder stehen als **Liste „Beschriftung | Feld“** in einer umrandeten Fläche, alle gleichzeitig bearbeitbar;
+  unten links **„Eintrag löschen“** (rot), rechts „Abbrechen · Speichern“. Am Handy stehen die Knöpfe untereinander.
+- **‹ › blättern nur, wenn nichts ungespeichert ist** – sonst sind sie gesperrt, mit dem Hinweis „Zum Blättern erst
+  speichern oder abbrechen.“ (Alwin). Beim Blättern blendet das Fenster nicht neu ein.
+- **„Zuständig“ ist eine Zeile mit Pfeil** (Alwin): Sie zeigt die Dienste ohne Klammern und die eingeteilten Personen;
+  ein Tipp öffnet die Bearbeitung im Fenster („Zurück · Übernehmen“). Gespeichert wird weiter erst mit „Speichern“.
+- **„Lied“ ist eine Zeile mit Pfeil** (Musik-App): öffnet „Lied verknüpfen“ – jetzt ebenfalls ein Fenster im
+  ChurchTools-Aufbau („Abbrechen“ führt zurück, das X schließt ganz). Leer steht „+ Hinzufügen“ da.
+- Ein Tipp neben das Fenster schließt weiterhin nur, wenn nichts geändert ist.
+
+### Geändert (Dienstplaner)
+
+- **Am Rechner und iPad steht das grüne „+“ oben rechts im Ablauf** (wie „+ Termin“ im ChurchTools-Kalender, mit Menü
+  „Programmpunkt · Überschrift hinzufügen“) statt des blauen Punkts unten rechts; am Handy bleibt der Punkt (Alwin,
+  28.10.2026 – wie die Musik-App seit S2).
+- **Der Reiter „Termine“ heißt jetzt „Dienste“** (Alwin) – oben in der Leiste, am Handy unten, als Überschrift der
+  Liste und im Zurück-Knopf eines Termins. Die Adresse bleibt `#/termine`, gemerkte Links gehen weiter.
+
+### Intern (E6-O O3)
+
+- `Sheet` kann mehr: `links` (ein Knopf ganz links in der Fußzeile, auch im Dokument zuerst), `mittel` (560 px),
+  `onHintergrund` (eigener Weg für den Tipp daneben) und `einblenden={false}` (ohne Einblenden, wenn ein Fenster ein
+  gleiches ersetzt). Neue Knopf-Art `FensterKnopf art="loeschen"`.
+- Das Punkt-Fenster war ein eigenes Overlay und fiel deshalb nie unter `fensterAufbau.test.ts`; jetzt ist es ein
+  `Sheet`, ebenso die Liedwahl der Musik-App. `zeitPlus` und `zustaendigText` liegen in `shared/ct/ablaufZeile.ts`.
+- `LiedKarte` kennt `flach` (ohne Rahmen, für die Feldliste).
+
+### Intern (Protokolle)
+
+- **Wackelnder Test behoben:** Die Tests der Suche (`Suche.test.tsx`) warteten nur auf die Überschrift („Treffer“,
+  „Alle Beschlüsse“) und prüften dann sofort die Liste. Die Überschrift steht aber schon über „Wird geladen …“ – unter
+  der Last der Gesamtsuite war die Liste am 28.10.2026 noch leer. Jetzt warten sie, bis das Laden fertig ist.
+  Gegenprobe: Mit 50 ms Ladezeit fielen vorher 7 von 11 Tests, jetzt keiner. Für Nutzer kein Fehler – während des
+  Ladens steht unter der Überschrift „Wird geladen …“, keine leere Liste.
+
+### Neu (Protokolle, S4-3b)
+
+- **Ein Tagesordnungspunkt zieht seinen Abschnitt mit** (Alwin 28.10.2026, Entwurf 7): Wer eine Überschrift am Griff
+  zieht, verschiebt alles bis zur nächsten Überschrift gleicher oder höherer Stufe – Text, Aufgaben, Beschlüsse, Termine
+  und feste Punkte. Überschrift 2 und 3 nach derselben Regel.
+- **Abgelegt wird nur an Abschnittsgrenzen:** Lässt man mitten in einem anderen Punkt los, rückt der Abschnitt an die
+  nächste Grenze – ein anderer Punkt wird nie zerschnitten. Einmal „Rückgängig“ holt alles zurück.
+- **„Nach oben“ / „Nach unten“** im Griff-Menü einer Überschrift: springt um einen ganzen Abschnitt – auch der Weg am
+  Handy, wo Ziehen mit dem Finger meist nicht geht.
+
+### Behoben (Protokolle)
+
+- Der Griff an einer Überschrift stand eine halbe Zeile tiefer, neben dem nächsten Block – wer „Punkt 2“ greifen
+  wollte, zog Punkt 1 (seit S4-1: BlockNote verschiebt ihn passend zu seinen großen Überschriften, unsere sind kleiner).
+
+### Intern (Protokolle, S4-3b)
+
+- Regel `shared/protokolle/abschnitte.ts` (`abschnittEnde`, `ablegeStelle`, `nachbarStelle`, `abschnittVerschoben`);
+  Anbindung `protokolle/src/abschnittZiehen.ts`: Beim Ziehen markiert sie den Abschnitt (BlockNote zieht dann alle
+  markierten Blöcke im Bild), beim Loslassen setzt sie ihn selbst in einem Schritt. Die Markierung wird vorher
+  aufgehoben – beim Durchklicken gefunden: „Rückgängig“ holte sie sonst zurück, und ein danach gezogener einzelner Block
+  nahm die ganze Markierung mit. Blöcke ohne Überschrift legt BlockNote weiter frei ab.
+
+### Geändert (Musik-App, Knöpfe im ChurchTools-Look – Scheibe S2)
+
+- **„Eintrag hinzufügen“ wie in der ChurchTools-App:** Im Bearbeiten des Ablaufs fragt das Plus zuerst
+  **„Option wählen“** – Programmpunkt, Lied oder Überschrift. Am Handy schwebt weiter das runde blaue Plus und öffnet
+  ein Blatt von unten; am iPad und Rechner steht oben ein grüner Knopf **„+ Eintrag hinzufügen“** mit einem kleinen
+  Menü (wie „+ Gruppe erstellen“ in ChurchTools). „Lied hinzufügen“ öffnet gleich die Liedsuche; wer sie ohne Lied
+  verlässt, hat nichts angelegt. Escape schließt Menü und Blatt.
+- **Abwesenheiten:** Am iPad und Rechner steht „+ Zeitraum eintragen“ grün oben rechts, am Handy bleibt das Plus.
+- **Knöpfe in Listen eckig mit Rahmen** statt rund: Plus und Stift in der Liederliste, das Plus in der Liedsuche des
+  Ablaufs und „+ Anlegen“ bei Terminen ohne Ablauf.
+
+### Geändert (Dienstplaner)
+
+- Das Plus im Ablauf fragt ebenfalls erst **„Option wählen“** (Programmpunkt oder Überschrift).
+
+### Neu (Organigramm, O7b-2, #736)
+
+- **Ansicht wählen** über dem Baum: **Karten** wie bisher oder die neue **Liste** – die Gemeinde als Gliederung mit
+  Linien, nur Namen, jede Gruppe klappt auf und zu (anfangs Gemeinde und Bereiche offen), dazu **Alle auf-/zuklappen**.
+  Die Wahl merkt sich das Gerät; ohne Wahl startet das Handy mit der Liste.
+- **Anfangen bei** einem Bereich – Karten und Liste zeigen dann nur ihn. Im Gruppenfenster **„Im Organigramm hier
+  anfangen“** für jede Gruppe mit Untergruppen (auch aus den Reitern Personen und Hinweise). Blendet der Typ-Filter
+  die Spitze aus, gilt wieder die ganze Gemeinde.
+
+### Intern (Organigramm)
+
+- Der gefilterte, sortierte Baum wird einmal in `App` gerechnet und an Karten, Liste und „Hier anfangen“ gegeben.
+- `auswahl.ts`: Lesen und Merken im Gerät über eine gemeinsame Stelle (Typ-Filter und Ansicht).
+
+### Geändert (Organigramm und Protokolle, E6-O F5, #741)
+
+- **Die letzten Fenster im ChurchTools-Aufbau:** im Organigramm das Fenster einer Gruppe und einer Person, in den
+  Protokollen „Gruppe einrichten“ und „Vorlage“ – Titel links, **X rechts**, Knöpfe **rechts unten** (am Handy
+  untereinander, Hauptknopf oben). Damit haben alle Fenster aller Apps diesen Aufbau.
+- **Fenster einer Gruppe (Organigramm):** Austragen, Rolle ändern, Person aufnehmen, Obergruppe ändern/lösen/dazu und
+  Untergruppe anlegen **ersetzen jetzt den Inhalt**, statt unter der Mitgliederliste zu erscheinen (Alwin). Unten
+  stehen nur „Zurück“ und der Hauptknopf („Austragen“, „Ändern“, „Aufnehmen“, „Umhängen“ …); „Zurück“ führt zur
+  Gruppe, ganz zu geht es über das X. Während etwas gespeichert wird, sind X und „Zurück“ gesperrt.
+- **Vorlage (Protokolle):** „Speichern“ steht unten; „Vorlage löschen“ bleibt getrennt im Inhalt.
+- Textknöpfe im Organigramm („Erneut versuchen“, „Wie heute“) sehen aus wie im Dienstplaner: halbfett statt
+  unterstrichen, gesperrt blasser.
+
+### Intern (E6-O F5)
+
+- `ui/fenster/fensterAufbau.test.ts` prüft jetzt **alle** Apps – die Ausnahmeliste (`NOCH_NICHT_UMGEZOGEN`) ist weg,
+  dazu ein Test, dass wirklich alle Apps im Blick sind.
+- Die Schritt-Bausteine im Organigramm (`StrukturSchritte`, `MitgliedSchritte`) zeigen nur noch den Inhalt; Auswahl
+  (Person, Rolle) und Knöpfe hält `GruppenFenster`, „Anlegen“ schickt das Formular per `form=` ab.
+- Drei gleiche `.link`-Stile (Organigramm) nutzen `m.textKnopf`; entfernt: `.primaer` in „Gruppe einrichten“ und
+  „Vorlage“.
+
+### Intern (Protokolle)
+
+- **Wackelnder Test behoben:** `editorSchema.test.tsx` hängte zwei echte Editoren ein und nie wieder aus. Ein später
+  Zeitgeber von ProseMirror (20 ms) fasste dann nach dem Abbau von jsdom `document` an – die CI scheiterte mit
+  „document is not defined“, obwohl alle Tests grün waren (26.10.2026). Jetzt werden eingehängte Editoren nach jedem
+  Test ausgehängt (und damit zerstört); ein eigener Test prüft, dass ein ausgehängter Editor `document` nicht mehr
+  anfasst.
+
+### Geändert (Musik-App, Seitenköpfe im ChurchTools-Look)
+
+- **Seitenköpfe wie in ChurchTools** statt runder Knöpfe: Der Ablauf hat oben eine weiße Kopfkarte mit
+  „← Termine“, **Teilen**, **Abschließen** und **Bearbeiten** (am Handy nur als Symbol; blau ist erst **Fertig** im
+  Bearbeiten); Übersichten zeigen
+  ihren Titel links und Vollbild rechts. Der Kopf scrollt mit dem Inhalt.
+- **Reiter oben am iPad und Rechner:** Termine · Lieder · Abwesenheiten · Mehr stehen dort oben als Text, der gewählte
+  blau unterstrichen – wie die Reiter in ChurchTools „Events“. Am Handy bleibt die Leiste unten; der gewählte Reiter
+  hat jetzt eine blaue Linie oben (in allen Apps mit dieser Leiste).
+
+### Neu (Anmeldungen, A9-2a)
+
+- **Mails bearbeiten** – „Bearbeiten“ an der Karte „Mails“ öffnet das Fenster „Mails“ (im ChurchTools-Aufbau) mit den
+  Reitern **Bestätigung** und **Warteliste**: je Mail eigener Betreff, eigener Absatz und Gruß; der **Absender** ist
+  aus der Leitung der Veranstaltung wählbar. Termin, Betrag, Bankdaten, Link und Kontakt bleiben fest (Alwin,
+  24.10.2026: fester Rahmen + eigener Absatz). **Vorschau** über ChurchTools mit dem Text im Fenster – für eine echte
+  Anmeldung mit passendem Status, sonst für den Absender.
+- Der eigene Text steht in der **Beschreibung der Routine** (Alwin, 26.10.2026; gemessen: bis 1.000 Zeichen, bleibt beim
+  Neuschreiben der Schritte stehen) – nicht öffentlich. Das Fenster zählt mit und sperrt „Speichern“, wenn es zu lang ist.
+- **Die Mails bleiben aktuell:** Beim Öffnen einer Veranstaltung gleicht die Erweiterung die Mails mit den Einstellungen
+  ab und schreibt sie neu, wenn Termin, Bezahlung, Kontakt, Preise oder Name sich geändert haben (auch über
+  „Rückgängig“ oder in ChurchTools selbst) – mit Absender und eigenem Text von dort. Nur, wo beide Abläufe an sind.
+- **Kopien** merken sich ihre Vorlage (`kopieVon`) und übernehmen beim Freigeben deren eigenen Mailtext.
+
+### Geändert (Anmeldungen, A9-2a)
+
+- Die Bestätigung nennt nur noch den Betrag, nicht mehr die Aufschlüsselung – sie kam in einer Zeile an (echte Prüfung
+  A9-1, 24.10.2026; Alwin, 26.10.2026).
+
+### Neu (Organigramm, O7b-1, #736)
+
+- **Ansichten-Kern** (noch ohne Oberfläche, `shared/organigramm/ansichten.ts`): was von der Gemeinde zu sehen ist –
+  Spitze ist die Gemeinde (in ChurchTools keine Gruppe, nur ihr Name) oder eine Gruppe („Anfangen bei“), jede Gruppe
+  klappt auf und zu (anfangs Gemeinde und Bereiche offen), „Alle auf-/zuklappen“ nur unter der Spitze. Eine Gruppe mit
+  zwei Obergruppen steht unter beiden und klappt an jeder Stelle für sich.
+- **Drei Anordnungen** als reine Rechnung: **von oben** (Bereiche nebeneinander, darunter gestapelt), **von links**
+  und **Mindmap** (Bereiche nach Zeilen auf rechts und links verteilt) – Kästchen, Linien, Rahmen und wo der Blick
+  anfängt. Die Textbreite misst die Oberfläche; gezeichnet wird ab O7b-3.
+
+### Neu (Protokolle, S4-3a)
+
+- **Feste Punkte zeigen jetzt etwas** (Alwin 26.10.2026, Entwurf 7): **„Offene To-Dos“** listet die offenen To-Dos der
+  Gruppe aus früheren Sitzungen mit Status-Kreis, Wer und Bis (überfällige zuerst); darunter eingeklappt **„Seit der
+  Sitzung am … erledigt“**. Im Editor hakt man sie direkt am Kreis ab, in der Lese-Ansicht ist es nur Anzeige.
+  **„Protokoll der letzten Sitzung“** zeigt das letzte freigegebene Protokoll der Gruppe; **„Öffnen“** zeigt es in
+  einem Fenster, ohne den Editor zu verlassen.
+- Feste Punkte lassen sich nachträglich einfügen – über zwei Knöpfe in der Werkzeugleiste und im **„/“-Menü** (Gruppe
+  „Feste Punkte“): Tagesordnungspunkt mit Titel, darunter der Punkt und eine Zeile für Notizen.
+- **Umschalter „Schreiben | Lesen“** im Editor: zeigt dasselbe Protokoll als ruhige Lese-Ansicht, ohne Werkzeugleiste.
+  Lesen setzt keine Sperre; was noch nicht gespeichert war, wird beim Umschalten sofort gespeichert.
+- **Werkzeugleiste bricht am Rechner um** statt rechts abgeschnitten zu sein – Zitat, Trennlinie und die festen Punkte
+  waren mit der Maus nicht erreichbar (ohne sichtbaren Rollbalken). Am Handy bleibt sie wischbar.
+
+### Intern (Protokolle, S4-3a)
+
+- Regel `shared/protokolle/festePunkte.ts`: `letztesProtokoll`, `offeneVonFrueher` (nutzt `offene`/`erledigtSeit`) und
+  `festePunkteFesthalten` für die Freigabe (S6) – **bis zur Freigabe live, danach festgehalten** in `props.fest` des
+  Verweis-Blocks. „Wie letztes Mal“ und Vorlagen übernehmen nichts Festgehaltenes.
+- Ein Baustein `FesterPunkt` für Editor und Lese-Ansicht, `FestePunkteRahmen` (Kontext + Fenster). Titel der festen
+  Punkte an einer Stelle (`FESTE_PUNKTE`, auch fürs Vorlagen-Fenster).
+- Ein Klick in einen festen Punkt im Editor setzt weder Cursor noch Markierung (beim Durchklicken gefunden: Tippen
+  danach ersetzte den Punkt bzw. zog zwei Tagesordnungspunkte zusammen) – Test für beide Hälften.
+- `Sheet` kann `breit` (bis 760 px) für Fenster zum Lesen; neues Symbol `todo-liste`.
+
+### Geändert (Anmeldungen, E6-O F4)
+
+- **Alle Fenster der Anmeldungen im ChurchTools-Aufbau** (#734): Titel links, **X rechts**, Knöpfe **rechts unten**,
+  am Handy – und wenn sie nicht nebeneinander passen – untereinander mit dem Hauptknopf oben. Betroffen sind 33
+  Fenster: Neue Veranstaltung, Verwalten (Umbenennen, Freigabe zurücknehmen, anderes Team, Löschen), Archiv, Termin,
+  Anmeldung, Wer meldet sich an?, Bezahlung, Daten löschen, alle Preis-Fenster, Einstellungen der Gemeinde, Freigeben,
+  QR-Code, Druckliste, Rundmail, Anmeldung von Hand, Zurückholen und das Fenster einer Anmeldung.
+- **Mehrstufige Fenster haben unten nur „Zurück“ und den Hauptknopf**, ganz zu geht es über das X (Alwin): Anmeldung
+  von Hand, Rundmail-Vorschau und „… jetzt senden?“, im Fenster einer Anmeldung „Nachrücken?“, „Absagen?“ (dort
+  führt „Abbrechen“ zurück zur Anmeldung) und die fertige Mail.
+- **Zwei Wege unten nebeneinander:** QR-Code „als Bild“ / „Aushang als PDF“, Druckliste „Herunterladen“ / „Teilen …“,
+  Rundmail „Vorschau“ / „Senden …“, „Gibt es schon“ „Zurück“ / „Trotzdem neu anlegen“. „Baustein entfernen“ in den
+  Preis-Fenstern bleibt getrennt im Inhalt.
+- **Während etwas gespeichert, gesendet oder freigegeben wird**, sind X und „Abbrechen“ gesperrt.
+- „Heruntergeladen“ in der Druckliste steht jetzt über den Knöpfen statt zwischen ihnen.
+
+### Intern (E6-O F4)
+
+- `anmeldungen/src` ist aus der Ausnahmeliste von `ui/fenster/fensterAufbau.test.ts` heraus – übrig sind Organigramm
+  und Protokolle (F5).
+- Neu: `FensterLink` (`ui/fenster/FensterKnopf`) – derselbe Knopf als Link, für „Im Mailprogramm öffnen“ (`mailto:`).
+- Neuer Test-Helfer `ui/fenster/fenster.testutil.ts` (`knopfFolge`, `fensterKnoepfe`); er ersetzt 19 gleichlautende
+  Kopien in den Tests von Dienstplaner und Musik-App.
+- Entfernt: `.knoepfe` und `.gefahrKnopf` (Anmeldungen) – die Rückfragen reichen ihre Knöpfe als `FrageKnoepfe` bzw.
+  `MailKnoepfe` an das Fenster.
+
+### Behoben (Anmeldungen)
+
+- **Kopie einer älteren Veranstaltung nahm keine Anmeldungen an** – „Wie eine frühere Veranstaltung“ übernahm den
+  Bestätigungsmodus der Vorlage. Stand der auf „alle bestätigen“ (ältere Veranstaltungen), scheiterte das Formular schon
+  beim ersten Schritt mit „PersonId or eMail must be present“. Der Modus „Unbekannte ohne Bestätigungsmail“ wird jetzt
+  beim Anlegen, beim Kopieren und beim Freigeben gesetzt – eine Stelle (`ohneBestaetigungsmail`), jedes Mal
+  nachgelesen. Das Freigeben repariert damit auch Kopien, die schon so entstanden sind. Gefunden bei der echten Prüfung
+  von A9-1 (24.10.2026).
+
+### Neu (Anmeldungen, A9-1)
+
+- **Bestätigungsmails über ChurchTools** – beim Freigeben richtet die Erweiterung zwei Abläufe (Routinen) ein: „Platz“
+  schickt nach dem Anmelden und beim Nachrücken eine Bestätigung mit Termin, Anmelde-Nr., Betrag, Bankdaten und dem
+  Link zu „Deine Anmeldung“; „Warteliste“ nennt den Platz auf der Warteliste. Die Standard-Mail von ChurchTools geht
+  danach aus. Absender ist, wer freigibt (wenn Leitung), sonst die erste gewählte Leitung. Gemessen 24.10.2026
+  (`messung-a9-2026-10-24.md`), Entwurf `a9-ablaeufe-v1`.
+- Betrag und Bankdaten stehen nur in der Mail zur ersten Person einer Anmeldung (dort liegt der Betrag), die Anrede an
+  den Kontakt ebenso; Anmeldungen durchs Team bekommen die Bestätigung auch – ohne Link (Alwin, 24.10.2026).
+- Neues Systemfeld **„Link zur Anmeldung“**: Das Formular schreibt beim Anmelden den Link mit dem Schlüssel der Person
+  hinein (`abmeldeLink`) – die Routine-Mail kennt keinen Platzhalter für den Abmelde-Schlüssel.
+- Karte **„Mails“** im Reiter „Veranstaltung“ (nur ansehen): eingerichtet, noch nicht eingerichtet (Standard-Mail), im
+  Entwurf „wird beim Freigeben eingerichtet“.
+- Fehlt das Recht „Routinen verwalten“, wird trotzdem freigegeben; die Meldung sagt, dass ChurchTools seine
+  Standard-Mail schickt. Eine eigene Routine aus ChurchTools an derselben Stelle fasst die Erweiterung nicht an.
+- „Rückgängig“ nach dem Absagen sagt jetzt, dass ChurchTools beim Wiedereintragen die Bestätigung noch einmal schickt;
+  nach dem Rückgängigmachen verschwindet der Satz.
+- Die Fenster „Nachrücken“, „Von Hand“ und „Zurückholen“ sagen, was ChurchTools schickt – mit eingerichteten Mails die
+  Bestätigung, sonst wie bisher (`mailHinweis`, eine Stelle). Gefunden bei der echten Prüfung in der Test-Instanz.
+
+### Intern (Anmeldungen, A9-1)
+
+- `shared/anmeldung/ablaeufe.ts` baut die Mails (eine Stelle), `anmeldungen/src/ablaeufe.ts` schreibt und liest nach.
+- Bankdaten-Zeilen an einer Stelle (`bankZeilen`) – Bescheid nach dem Nachrücken, Rundmail und Bestätigung nutzen
+  dieselbe; `htmlSicher` aus der Rundmail für alle.
+
+### Neu (Protokolle, S4-2)
+
+- **Aufgaben im Protokoll sind To-Dos** (Alwin 24.10.2026): Eine Aufgabe mit Text wird beim Speichern sofort zum
+  To-Do in „Mitarbeit“ – die Zuständigen sehen sie gleich unter „Meine offenen To-Dos“, auch solange das Protokoll
+  Entwurf ist. **Das Protokoll führt:** Text ändern zieht ins To-Do mit; Aufgabe löschen vermerkt das To-Do als
+  gelöscht (nie hart, mit Verlauf), „Rückgängig“ holt es mit Wer/Bis/Status zurück.
+- An der Aufgabe wie in Entwurf 7: **Status-Kreis** vorne (offen → in Arbeit → erledigt), Schildchen **„Wer?“** (Häkchen
+  je Gruppenmitglied + externer Name, z. B. „Hausmeister Müller“) und **„Bis“** (Datum, überfällig rot). Geändert wird
+  direkt das To-Do, nicht das Protokoll.
+- **Beschluss** und **Termin** (mit Datum-Schildchen, nur im Protokoll) als eigene Blöcke; Aufgabe, Beschluss und
+  Termin haben Knöpfe in der Werkzeugleiste und Einträge im „/“-Menü. **„[] “ + Leertaste macht eine Aufgabe** (die
+  einfache Checkliste gibt es weiter über Textart und „/“-Menü).
+
+### Intern (Protokolle, S4-2)
+
+- Regeln `aufgabenAbgleich`, `aufgabenIdsVergeben`, `alsWiederhergestellt` in `shared/protokolle/aufgaben.ts`;
+  `protokolle/src/aufgabenSchreiben.ts` (frisch lesen, auf diesem Stand planen, schreiben, nachlesen) – auch
+  `ladeAufgaben` liest jetzt darüber. Der Abgleich läuft beim Speichern **nach** der Sperr-Prüfung und **vor** dem
+  ersten Schreiben am Protokoll: ein Fenster ohne Sperre fasst die To-Dos nie an.
+- Aufgaben-IDs werden außerhalb des Rückgängig-Verlaufs vergeben (sonst nahm „Rückgängig“ die ID weg und das To-Do
+  wäre als gelöscht vermerkt worden – beim Durchklicken gefunden, Test gegen den echten Editor).
+- `ladeGruppenMitglieder` (nur aktive Mitglieder; `mitgliederAus` liefert die Angefragten mit – Test).
+- Neue Symbole `kreis`, `kreis-halb`, `kreis-haken`, `aufgabe`, `stempel`; Baustein `StatusKreis`.
+
+### Neu (Protokolle, S4-1)
+
+- **Protokolle schreiben** (Bauplan S4-1, Entwurf 7). Öffnet die Leitung ein Protokoll im Entwurf, steht sie gleich im
+  Editor (BlockNote 0.56, fest gepinnt): Text, Tagesordnungspunkt (Überschrift 1, nummeriert) und Überschrift 2/3,
+  Aufzählung, Nummerierung, Checkliste, Zitat, Trennlinie, Einrücken beliebig tief (Tab/Umschalt+Tab), „/“-Menü,
+  Kürzel wie „- “, Griffe zum Verschieben (nicht an normalem Text). Feste **Werkzeugleiste** oben – am Handy waagrecht
+  wischbar – mit Rückgängig, Textart, fett/kursiv/unterstrichen/durchgestrichen, Markieren, Formatierung entfernen,
+  Listen, Ein-/Ausrücken, Zitat, Trennlinie. Die Bereiche Beschlüsse · To-Dos · Termine darunter folgen dem Text live.
+  Der Editor wird erst geladen, wenn jemand schreibt – wer nur liest, lädt ihn nie.
+- **Automatisch speichern** (Alwin 24.10.2026): drei Sekunden nach der letzten Eingabe, oben „gespeichert 19:42“;
+  scheitert es (Netz, ChurchTools), bleibt der Text im Editor, „nicht gespeichert – wird erneut versucht“, neuer Versuch
+  nach zehn Sekunden. Gespeichert wird als Kopf + gepackte Teile in der Reihenfolge „neue Teile → nachlesen → Kopf →
+  nachlesen → alte Teile löschen“; vor jedem Schritt wird frisch gelesen, nach jedem nachgelesen.
+- **Schreibsperre** („Johann schreibt gerade“): entsteht mit der ersten Änderung – wer nur reinschaut, blockiert
+  niemanden. Wer währenddessen öffnet, liest den gespeicherten Stand mit (alle 30 Sekunden) und kann das Schreiben mit
+  Rückfrage **übernehmen**; das andere Fenster hört beim nächsten Speichern auf und behält seinen ungespeicherten Rest
+  sichtbar. Dieselbe Person in zwei Fenstern oder auf zwei Geräten sperrt sich ebenso („Du schreibst gerade in einem
+  anderen Fenster“). Hat inzwischen jemand anderes gespeichert, überschreibt das Fenster nichts, sondern bietet „Aktuellen
+  Stand laden“ an. Verlassen mit Ungespeichertem fragt nach.
+- **Einfügen aus Word:** Aufzählungen und Nummerierungen aus Word kommen als echte, verschachtelte Listen an (vorher
+  Absätze mit „·“).
+- **Markieren** und **Trennlinie** erscheinen auch in der Lese-Ansicht (neuer Wert `--markiert`); ein Test hält fest,
+  dass die Lese-Ansicht jede Blockart zeigt, die der Editor kennt.
+
+### Intern (Protokolle, S4-1)
+
+- `protokolle/src/schreiben.ts` (Sperre nehmen, speichern, übernehmen, freigeben), `schreibSteuerung.ts` (Zeitregeln,
+  mit Fake-Timern getestet), Regeln `schreibLage`, `sitzungAusWerten`, `sperreVon`, `wertInhalt` in
+  `shared/protokolle/speicher.ts`; die Sperre trägt jetzt eine Fenster-Kennung. `dokumentAusTeilen` zählt einen doppelt
+  liegenden Teil desselben Stands nur einmal. `fremdeTypen`: Protokolle mit Blöcken, die der Editor nicht kennt, öffnen
+  nur zum Lesen, damit nichts verloren geht.
+- Die Bereiche (Beschlüsse · To-Dos · Termine) sind ein gemeinsamer Baustein `Bereiche.tsx` für Ansicht und Editor.
+- `modulRechteAus` liegt jetzt in `shared/ct/modulRechte.ts` (vorher im Dienstplaner) – die Protokolle lesen damit, wer
+  schreiben darf.
+- Pack-Prüfung der Erweiterungen herausgelöst nach `scripts/globaleCss.mjs` und getestet: Selektoren mit Klasse/ID gelten
+  wie in `cssBereich.ts` als unbedenklich, Kommas in `:is(…)` teilen nicht mehr (vorher ~260 Fehlalarme durch
+  BlockNote/Mantine).
+- Neue Linien-Symbole für die Werkzeugleiste (`liste`, `nummern`, `zitat`, `trennlinie`, `einruecken`, `ausruecken`,
+  `format-weg`).
+
+### Geändert (Musik-App, E6-O F3)
+
+- **Alle Fenster der Musik-App im ChurchTools-Aufbau** (#726): Titel links, **X rechts**, Knöpfe **rechts unten**, am
+  Handy untereinander mit dem Hauptknopf oben. Betroffen sind 24 Fenster: Kapo, Tonart, Akkord, Abschnitte
+  transponieren, Abwesenheit, Teil eines Zeitraums, PDF teilen, Notizen von …, Zum Ablauf hinzufügen, Dateien, Neues
+  Lied, Lied bearbeiten, Arrangement, „Lied gibt es schon“ und alle Fenster der Verwaltung.
+- **„Speichern“ steht unten** – auch bei „Lied bearbeiten“ und „Arrangement“, wo es vorher mitten im Fenster stand.
+  „Zum Standard machen“ und „Löschen …“ bleiben getrennt im Inhalt.
+- **Zwei Wege unten nebeneinander:** PDF „Herunterladen“ / „Teilen“, Zeitraum „löschen“ (rot) / „anpassen“, „Lied gibt
+  es schon“: „Trotzdem neu anlegen“ / „… verwenden“.
+- **Nach „Lied angelegt“** stehen alle nächsten Schritte unten: Fertig · Noch ein Lied · Notenblatt · Lied öffnen bzw.
+  Zurück zum Eintrag.
+- Speichern-Knöpfe zeigen „Wird gespeichert …“ statt eines Kreisels.
+
+### Geändert (alle Apps, E6-O F3)
+
+- **Passen die Knöpfe unten nicht nebeneinander, stehen sie untereinander** – auch am Rechner, der Hauptknopf oben
+  (Alwin). Vorher rutschte bei drei langen Knöpfen der Hauptknopf allein in eine zweite Zeile. Gilt für alle Fenster
+  und Bestätigungen, z. B. auch den Zauberstab im Dienstplaner bei vielen Vorschlägen.
+
+### Intern (E6-O F3)
+
+- „Links verwalten“, „Termin-Arten“ und „Termine ohne Ablauf“ zeichnen ihr Fenster selbst, damit „Speichern“ in die
+  Fußzeile kann.
+- Neuer Dauer-Test `ui/fenster/fensterAufbau.test.ts`: In umgezogenen Apps fällt jedes Fenster ohne `knoepfe` auf; die
+  Liste der noch nicht umgezogenen Apps (Anmeldungen, Organigramm, Protokolle) muss ehrlich bleiben.
+- `FensterKnopf` kann ein Symbol neben der Beschriftung zeigen. Neuer Hook `ui/fenster/useKnopfZeile` (misst die
+  Knopfzeile, `data-stapel`/`data-messen` im Mixin `fensterKnopfZeile`). Entfernt: `TeilenFenster.module.scss` und die
+  nachgebauten Hauptknöpfe (`.orgSave`, `.save`, `.primaryWide` u. a.).
+
+### Neu (Organigramm, O7-4, #719)
+
+- **Präsentation „Neue Gliederung | Heute“** für Gruppen-Admins mit einem Plan (wie im Entwurf vom 19.10.2026): Die
+  Präsentation beginnt mit der neuen Gliederung – neue Gruppen und neue Namen aus dem Plan, archivierte Gruppen fehlen
+  (ihre Untergruppen rücken hoch), neue Gruppen stehen als „Mitarbeitende gesucht“ da. Oben umschalten auf „Heute“;
+  der Wechsel führt zur Übersicht. Ohne Plan, ohne Admin-Recht oder wenn der Plan gerade nicht lesbar ist: nur „Heute“.
+- Die Kopfleiste der Präsentation bricht am Handy um, statt „Schließen“ über den Rand zu schieben.
+
+### Intern (Organigramm)
+
+- `planAlsBaum` (`shared/organigramm/plan.ts`): der Plan als dieselben Knoten wie heute – die Präsentation rechnet
+  nichts nach.
+
+### Neu (Organigramm, O7-3, #719)
+
+- **Umbau** im Reiter „Neue Gliederung“ (Umschalter „Plan | Umbau · N offen“): die Schritte vom Plan nach ChurchTools –
+  neue Gruppen anlegen, umhängen, umbenennen, archivieren – mit Fortschritt. **Ausführen** ändert ChurchTools sofort
+  und liest nach; danach **Rückgängig** für den letzten Schritt. **Alle offenen nacheinander ausführen** (nach
+  Rückfrage) liest vor jedem Schritt neu, macht auch, was erst dadurch frei wird, und hält beim ersten Fehler an.
+- **Archivieren wartet**, solange in ChurchTools noch Gruppen darunter hängen (Alwin, 24.10.2026). Archivieren setzt
+  den Status „archiviert“ – Mitglieder und Historie bleiben.
+- Erledigt ist, was ChurchTools schon so zeigt; eine neue Gruppe, die es dort schon gibt, lässt sich **im Plan
+  übernehmen**. Vom Umbau angelegte Gruppen bleiben als erledigt in der Liste – ebenso ein Umbenennen, wenn die Gruppe
+  danach archiviert wurde (gefunden in der Test-Instanz).
+
+### Intern (Organigramm)
+
+- Messung `organigramm-planung/docs/messung-o7-3-2026-10-24.md`: Umbenennen/Archivieren per `PATCH /groups/{id}`;
+  archivierte Gruppen fehlen in `GET /groups` und in der Hierarchie (eigens über `group_status_ids[]`), ChurchTools
+  nimmt auch einen leeren Namen an.
+- `shared/organigramm/umbau.ts` (Schritt ausführen/zurücknehmen), `obergruppenGenau` und `archivStatus` in
+  `struktur.ts`, Anlegen ohne Obergruppe; `umbauSchritte` mit archivierten Gruppen als eigener Liste; der Nachbau von
+  ChurchTools für Tests liegt jetzt an einer Stelle (`struktur.testutil.ts`); `ladeGruppenbaum` für Start und Umbau.
+
+### Geändert (Musik-App, Lied-Editor L6)
+
+- **„Einfügen“ statt „Format“** im Lied-Editor: Ein Menü mit den Teilen (Vers, Refrain, Pre-Chorus, Bridge, Intro,
+  Zwischenspiel, Outro, Ende), dem **Pedal-Halt** und – abgesetzt – „Nur für andere Programme“ (Kapo, neue Spalte,
+  neue Seite, Untertitel; mit dem Hinweis, dass sie in der App nichts bewirken). Ein neuer Teil kommt als Band
+  **unter** die Zeile, in der der Cursor steht, mit einer leeren Zeile zum Lostippen; „Vers“ nummeriert sich selbst
+  („Vers 2“), die übrigen nur, wenn es den Namen schon gibt. Titel, Interpret, Tonart, Tempo, Takt, CCLI und Copyright
+  stehen im Abschnitt **Liedinfo**: Ein Tipp öffnet die Liedinfo bei genau diesem Feld (die Werte stehen in
+  ChurchTools); wo es keine Liedinfo gibt, kommt die Angabe wie früher in den Text. Teile mit **eigenem Namen**
+  (z. B. Tag, Instrumental) über „Eigener Name …“.
+- **Ruhigerer Text:** Die Zeile `{key: …}` und die Ende-Marken `{end_of_verse}` & Co. sind im Editor ausgeblendet –
+  die Tonart nennen Kopf und Akkord-Leiste, das Band markiert den Anfang jedes Teils. Im „ChordPro-Text“ sind beide
+  zu sehen, gespeichert bleiben sie unverändert.
+
+### Behoben (Musik-App, Lied-Editor L6)
+
+- **Kapo und Untertitel einfügen:** Der Cursor stand hinter der Klammer statt davor – aus einer eingetippten „2“
+  wurde `{capo: }2`. Schon im alten Format-Menü so; gefunden beim Prüfen in der Test-Instanz.
+
+### Neu (Organigramm, O7-2, #719)
+
+- **Reiter „Neue Gliederung“** – nur für Gruppen-Admins (Entwurf `o7-plan-v1`): **Plan anlegen** kopiert die heutige
+  Gliederung; per Klick auf eine Gruppe im Plan umbenennen, woanders einhängen (Liste mit Suche, ohne Kreis), Untergruppe
+  anlegen, archivieren oder eine neue Gruppe wieder herausnehmen, **Wie heute** nimmt alles zurück; **＋ Neuer Bereich**.
+  Marken „neu“, „umgehängt“, „umbenannt“, „wird archiviert“ mit „vorher …“. ChurchTools selbst ändert sich nicht.
+- Jede Änderung wird sofort gespeichert. Speichert ein anderer Admin gleichzeitig, wird **nichts überschrieben**: Der
+  Hinweis nennt ihn, und **Nochmal auf dem neuen Stand** wendet die eigene Änderung auf seinen Stand an. Ebenso nach
+  einer Zeitüberschreitung; bei fehlendem Recht auf die Kategorie sagt der Hinweis, welches Recht fehlt.
+- **Plan verwerfen** (nach Rückfrage) löscht den Plan für alle.
+- Eine Gruppe, die im Plan und in ChurchTools gegenläufig gehängt ist (Kreis), verschwindet nicht aus dem Plan.
+
+### Intern (Organigramm)
+
+- `shared/organigramm/plan.ts`: `planBaum`, `planUnterschied`, `planZiele` für die Ansicht; Demo (`?demo`) mit Speicher
+  der Erweiterung, `?demo=konflikt` mit einem gleichzeitigen zweiten Admin.
+
+### Geändert (Dienstplaner, E6-O F2)
+
+- **Alle Fenster des Dienstplaners im ChurchTools-Aufbau** (#720): Titel links, **X rechts**, Knöpfe **rechts unten**.
+  „Einteilungen senden“, „Alte Entwürfe“, „Vorlieben“ und der Zauberstab haben ihren Hauptknopf jetzt unten rechts
+  neben „Abbrechen“. „Wer kann?“, belegter Platz, Entwurf und „Plätze“ haben unten nur „Schließen“.
+- **Während etwas läuft** (senden, verwerfen, speichern, eintragen, Plätze ändern) sind X und „Abbrechen“ sichtbar
+  gesperrt. Was gerade passiert, zeigt der Hauptknopf oder der Titel – kein „Bitte warten …“ mehr im Abbrechen-Knopf.
+- **Zauberstab:** „Neu vorschlagen“ steht als Link oben neben „N Vorschläge“, unten nur noch Abbrechen und Übernehmen.
+- **Vorlieben:** Die Auswahlfelder bekommen im Fokus den blauen Rand mit Schein wie alle Felder.
+
+### Geändert (alle Apps, E6-O F2)
+
+- **Am Handy stehen die Knöpfe unten in jedem Fenster untereinander**, über die volle Breite, der Hauptknopf oben – auch
+  in allen Bestätigungen. Am Rechner bleibt alles nebeneinander rechts unten.
+- Das X oben rechts heißt für Screenreader jetzt „Fenster schließen“, damit es sich vom Knopf „Schließen“ unterscheidet.
+
+### Intern (E6-O F2)
+
+- Neue Mixins `fensterX`, `fensterKnopfZeile` und `textKnopf` in `ui/design/_mixins.scss` statt je einer Kopie in
+  `Sheet`, `ConfirmDialog` und den Fenstern; die vier nachgebauten `.primaer`-Knöpfe der Dienstplaner-Fenster sind weg.
+- `Sheet` hat `beschaeftigt` (wie `ConfirmDialog`) und nimmt `knoepfe={null}` für Fenster nur zum Ansehen.
+
+### Neu (Organigramm, O7-1, #719)
+
+- **Plan-Kern für die „neue Gliederung“** (noch ohne Oberfläche): Der Plan speichert nur die **Änderungen gegenüber
+  heute** – neue Gruppen, Umhängen, Umbenennen, Archivieren. „Plan anlegen“ ist damit eine Kopie von heute, und später
+  direkt in ChurchTools angelegte Gruppen erscheinen von selbst im Plan (`shared/organigramm/plan.ts`).
+- **Umbau-Schritte** aus dem Unterschied zu heute, in der Reihenfolge neu anlegen → umhängen → umbenennen → archivieren;
+  „wartet auf …“, wenn etwas in eine noch nicht angelegte Gruppe soll; **erledigt**, sobald ChurchTools so aussieht wie
+  der Plan (auch wenn es jemand direkt dort gemacht hat; eine neue Gruppe gilt als angelegt bei gleichem Namen unter
+  derselben Obergruppe).
+- Gespeichert als **ein Wert in der Kategorie „Plan“** mit Versionsnummer: Hat ein anderer Admin inzwischen gespeichert,
+  wird nichts überschrieben (Konflikt); nach dem Schreiben wird nachgelesen. Gespeicherter Inhalt wird geprüft – kaputte
+  Teile fallen weg, statt die Seite zu brechen.
+
+### Intern (gemeinsam)
+
+- Neuer Baustein `shared/ct/versionierterWert.ts`: ein Dokument im Speicher der Erweiterung mit Version, Konflikt und
+  Nachlesen – nach dem Vorbild der Dienstplaner-Entwürfe. `ui/ct/modulPort.ts`: `versionPortFuer` (der Dienstplaner
+  nutzt denselben Anschluss weiter als `entwurfPortFuer`).
+- `untergruppenVon` (Organigramm) arbeitet mit beliebigen Schlüsseln – der Plan kennt neben ChurchTools-IDs eigene für
+  neue Gruppen.
+
+### Neu (Musik-App, Lied-Editor L4)
+
+- **Liedinfo im Editor:** rechts umschaltbar **Vorschau | Liedinfo** (am Handy Reiter **Infos**) mit Titel,
+  Interpret/Autor, Tonart, Tempo, Takt, CCLI-Nummer und Copyright – aus ChurchTools, gespeichert mit „Speichern“
+  oben. Steht im Notenblatt etwas anderes, zeigt das Feld „Im Notenblatt steht: …“ mit **übernehmen**; ist das Feld
+  in ChurchTools leer, wird es aus dem Notenblatt vorbelegt. Ohne Recht auf die Stammdaten nur zum Ansehen.
+- **Die Kopfzeilen `{title}`, `{artist}`, `{tempo}`, `{time}`, `{ccli}`, `{copyright}` wandern beim Speichern nach
+  ChurchTools** und verlassen das Notenblatt – aber erst, wenn ChurchTools den Wert nachweislich hat. Scheitert das
+  Speichern in ChurchTools, wird gar nichts gespeichert. `{key}` (notierte Tonart) bleibt. Lieder, die nie im
+  Editor gespeichert werden, bleiben wie sie sind. Im Text sind diese Zeilen ausgeblendet, im „ChordPro-Text“
+  sichtbar. Die Vorschau zeigt das Blatt, wie es nach dem Speichern aussieht.
+- **SongSelect-Import:** Leere ChurchTools-Felder werden aus dem importierten Notenblatt gefüllt (vorhandene nie
+  überschrieben), danach verlassen die Kopfzeilen das Notenblatt. Klappt das Füllen nicht, kommt das Notenblatt
+  trotzdem unverändert an.
+
+### Intern (Lied-Editor L4)
+
+- `shared/ct/liedinfo.ts` (Felder, Vergleich, `liedinfoZeilenEntfernen`, `LIEDINFO_ZEILE` – eine Grammatik für
+  Entfernen und Ausblenden, `tempoAusText`), `shared/ct/liedinfoImport.ts`, `client/src/utils/liedinfoFormular.ts`
+  (auf den Formularen des Stammdaten-Blatts), `useLiedinfoQuelle`. `metaWerte` liest alle Zeilen eines Felds
+  (SongSelect bringt zwei `{artist}`).
+
+### Geändert (alle Apps, E6-O F1)
+
+- **Fenster wie ChurchTools, erster Schritt** (#716, Entwurf `fenster-entwurf.html`, abgenommen 23.10.2026). Der
+  gemeinsame Fenster-Baustein kann jetzt den Aufbau der ChurchTools-Fenster: Titel links, **X rechts**, Knöpfe **rechts
+  unten** („Abbrechen“ mit Rahmen, daneben der blaue Hauptknopf). Die Fenster ziehen App für App um; als erstes
+  **„Ablauf anlegen“** (Musik-App und Dienstplaner).
+- **Alle Bestätigungen** (Löschen, Ersetzen, Teilen …) stehen schon im neuen Aufbau: Text linksbündig, X oben rechts,
+  Knöpfe rechts unten. Beim geteilten Ablauf stehen die drei Wege nebeneinander, am Handy untereinander.
+- **Eingabefelder** bekommen beim Antippen zum blauen Rand einen hellblauen Schein, in allen Apps.
+- Neuer Baustein `ui/fenster/FensterKnopf` – die eine Bauart der Knöpfe unten im Fenster.
+
+### Neu (Protokolle, S3-4b)
+
+- **Suche mit der Lupe** (Alwin, 23.10.2026): oben rechts im Kopf; ein Tipp klappt die Suchleiste neben den Reitern
+  aus, ist es zu schmal (Handy), bekommt sie eine eigene Zeile. ✕ oder Esc schließt sie wieder, ein Reiter auch.
+- **Eine Suche für alles:** Beschlüsse, To-Dos, Termine und Protokolltext aller Gruppen, filterbar nach Art und Gruppe;
+  die Fundstellen sind markiert. **Ohne Suchbegriff stehen dort alle Beschlüsse** – die Beschluss-Übersicht über alle
+  Sitzungen. Beschlüsse, Termine und Text kommen nur aus freigegebenen Protokollen, To-Dos aus allen.
+- **Ein Treffer öffnet seine Sitzung und springt zum Tagesordnungspunkt**, der kurz hervorgehoben wird.
+
+### Behoben (Protokolle)
+
+- Ein Sprung von der Startseite in eine Sitzung ging verloren, wenn die Sitzungen zweimal kurz hintereinander geladen
+  wurden (React-Prüfmodus, „Erneut versuchen“): Jedes Laden merkt sich sein Ziel jetzt selbst.
+
+### Intern (Protokolle)
+
+- `statusText()` in `shared/protokolle/aufgaben.ts` ist die eine Stelle für „in Arbeit“ – vorher stand der Text an
+  drei Stellen (Protokoll, Sitzung, Startseite) und wäre mit der Suche die vierte geworden.
+
+### Neu (Organigramm, O6, #709)
+
+- **Leitung und Mitglieder pflegen** im Gruppenfenster – für alle, die es in ChurchTools dürfen: global (Gruppen-Admin,
+  „Mitgliedschaften bearbeiten“ für die Gruppe oder ihren Typ) ODER mit der eigenen Rolle in der Gruppe
+  (`/permissions/internal/groups/{id}`). Gemessen: Leitungen dürfen aufnehmen und Rollen ändern, aber nicht austragen –
+  dann fehlt bei ihnen „Austragen“.
+- **＋ Person aufnehmen**: Suche wie bei den Anmeldungen (nur bestehende Personen), „schon dabei“ gesperrt, Rolle =
+  Standardrolle des Gruppentyps, wählbar.
+- An jeder Person **Rolle** (nur Rollen des Gruppentyps, ohne versteckte; bei einer Leitungsrolle ein Hinweis auf die
+  Rechte) und **Austragen** = Mitgliedschaft **beenden** (Enddatum heute), nicht löschen – die Historie in ChurchTools
+  bleibt (Alwin, 23.10.2026).
+- Nach jedem Schreiben wird nachgelesen; danach lädt nur diese Gruppe neu. **Rückgängig im Fenster**: Aufnehmen wird
+  gelöscht (war die Person nie dabei) bzw. der alte Stand zurückgesetzt, Rolle zurück, Enddatum wieder leer.
+- Rechte je Gruppe nicht ladbar → Knöpfe bleiben zu, ein Hinweis sagt es.
+
+### Intern (gemeinsam)
+
+- Personensuche (`personenSuchen`, `personenRoh`) aus den Anmeldungen nach `ui/ct/personen.ts` gezogen – EINE Suche für
+  alle Erweiterungen; die Anmeldungen leiten weiter, ihre Oberfläche bleibt gleich.
+- Rollen tragen jetzt Gruppentyp, Standard und versteckt (`rollenFuerTyp`, `standardRolle`).
+
+### Intern (Protokolle, S3-4a)
+
+- **Such-Kern für die globale Suche** (`shared/protokolle/suche.ts`, noch ohne Oberfläche): ein Index über
+  Beschlüsse, Termine und Protokolltext aus **freigegebenen** Protokollen und über die To-Dos **aller** Protokolle
+  (gelöschte nie), je mit Gruppe, Sitzung und Tagesordnungspunkt aus derselben Ableitung wie im Protokoll. Suchen
+  nach Art und Gruppe, alle Wörter müssen vorkommen (auch im Punkt und im Sitzungstitel); ohne Suchbegriff die
+  Beschlüsse. Dazu die Fundstellen zum Hervorheben.
+- `dokumentDerSitzung()` in `shared/protokolle/speicher.ts` ist die eine Stelle für „ein geplantes Protokoll hat noch
+  kein Dokument“ – vorher stand die Regel in der Ansicht, jetzt nutzen Ansicht und Suche dieselbe.
+
+### Geändert (Musik-App + Dienstplaner, E6-O1, #710)
+
+- **Der Ablauf sieht aus wie in der ChurchTools-App** (Entwurf `e6-optik-entwurf.html`, abgenommen 23.10.2026):
+  - Liste mit feinen Linien statt Karten.
+  - Uhrzeit fett, **Dauer klein darunter**; Titel fett, die Zuständigen grau darunter.
+  - Rechts **Fotos oder Kürzel**, ab drei Personen „+N“.
+  - Überschriften und **„Beginn“ als graue Balken**.
+  - Lieder mit blauem Streifen und einer **Lied-Karte** (Liedname, Tonart · Tempo · Autor). Heißt der Punkt wie sein
+    Lied, steht der Name nur einmal.
+- Das Bearbeiten zeigt dieselbe Zeile: Griff links, Uhrzeit und Dauer wie in der Ansicht, rechts nur der Stift.
+- Fotos und Kürzel kommen mit dem Ablauf, es gibt keine Abfrage je Person (gemessen E6-O0).
+- Den Autor holt der Dienstplaner mit **einer** Sammelabfrage je Ablauf. Die Musik-App hat ihn schon.
+
+### Behoben (Musik-App + Dienstplaner)
+
+- **Weggelassene Punkte** standen im Bearbeiten nicht blass da. Ein fester Wert der Zieh-Bibliothek überschrieb das
+  Blass-Machen, seit E6-3b.
+
+### Geändert (Musik-App, Lied-Editor L5)
+
+- **Mehr Platz beim Schreiben am iPad und Handy** (Alwin: „das Bearbeitungsfenster ist bei aufgeklappter Tastatur
+  deutlich zu klein“): Solange im Liedtext getippt wird und die Bildschirmtastatur offen ist, verschwinden Ablauf,
+  Fassung und „ChordPro-Text“; Format, die Akkorde der Tonart, **Im Lied** (als Ausklappmenü, darin auch „Anderer
+  Akkord“) und Rückgängig stehen in einer Zeile. Tastatur zu → alles wie vorher. Eine angesteckte Hardware-Tastatur
+  löst das nicht aus. Die Ansicht greift auch, wenn iOS das Fenster mit der Tastatur verkleinert, und springt nicht
+  zurück, wenn ein Knopf dem Text kurz den Fokus nimmt.
+
+### Behoben (Musik-App, Lied-Editor L5)
+
+- **Das Menü eines Akkord-Kärtchens lag unter der Tastatur**, wenn das Kärtchen weit unten stand – es klappt jetzt
+  über das Kärtchen.
+
+### Geändert (Musik-App, Lied-Editor L5)
+
+- **Akkord-Kärtchen antippen:** Ein Tipp auf einen Akkord im Text öffnet ein kleines Menü – **‹ ›** schieben ihn
+  Buchstabe für Buchstabe (über einen Nachbar-Akkord springt er ganz hinweg, nicht über den Zeilenrand),
+  **Ändern** öffnet das Akkord-Fenster mit diesem Akkord, **Entfernen** nimmt ihn heraus. Das Kärtchen ist dabei
+  umrahmt. Solange das Menü offen ist, ersetzt ein Akkord aus der Leiste (oder „Anderer Akkord“) das Kärtchen.
+
+### Geändert (Musik-App, Lied-Editor L5)
+
+- **Akkorde einfügen ohne Menü:** Unter der Werkzeugleiste stehen die Akkorde der Tonart (in E: E, F#m, G#m, A,
+  B, C#m) und unter **Im Lied** die übrigen, die das Lied schon benutzt – ein Tipp setzt den Akkord an die
+  Cursorstelle. **Gedrückt halten** zeigt Varianten desselben Grundtons (Em7, Esus4 …). **Anderer Akkord**
+  öffnet ein Fenster zum Eintippen (`em7`, `d/f#`, deutsches H) oder Zusammenstellen mit Vorschau; eingefügt
+  wird einmal, fertig. Das Menü „Akkord ▾“, das Art und Bass an den zuletzt gesetzten Akkord anhängte, ist weg.
+
+### Neu (Anmeldungen, A8-4)
+
+- **QR-Code und Aushang** – vierter Knopf „QR-Code“ in der Karte „Anmeldelink“ (Alwin, 23.10.2026): QR-Code zum Link,
+  „QR-Code als Bild“ (PNG zum Teilen) und „Aushang als PDF“ (A4: Gemeinde, Titel, Termin, QR-Code, Link,
+  Anmeldeschluss in Ortszeit). Gegenprobe: Der QR-Code auf dem gerenderten Aushang wird vom QR-Leser von macOS als
+  genau dieser Link gelesen.
+- Neuer Baustein `ui/teilen/qr.ts` (Muster über `qrcode-generator`, MIT, ohne weitere Abhängigkeiten; gezeichnet als
+  SVG, PNG und direkt ins PDF).
+- Die Terminzeile („Sa, 21.11.2026 · Gemeindehaus“) liegt jetzt in `shared/anmeldung/termin.ts` – Formular und Aushang
+  nutzen dieselbe; die eigene Datumsfunktion des Formulars (Kopie von `datumText`) ist weg.
+
+### Geändert (Musik-App, Lied-Editor L3)
+
+- **Der Text im Editor ohne Klammern:** Akkorde stehen als blaue Kärtchen im Text, jeder Teil beginnt mit einem
+  Band („VERS“, „CHORUS“ – mit „2× im Ablauf“, sobald es einen Ablauf gibt), der Weiterschalt-Punkt `----` ist
+  die Linie „Pedal hält hier“. Ein Kärtchen ist eins: Die Rücktaste löscht den ganzen Akkord, der Cursor springt
+  darüber. **ChordPro-Text** zeigt den rohen Text wie bisher. Gespeichert wird weiter derselbe Text, Zeichen für
+  Zeichen. Die Angaben oben (`{title}` …) bleiben sichtbar, bis die Liedinfo sie übernimmt.
+- **Ablauf-Karte am iPad eingeklappt** (Alwin: mit Tastatur blieb für den Text zu wenig Platz): eine Zeile mit
+  „Wie im Text“ oder der Marke **Eigener Ablauf** und der Reihenfolge; **Bearbeiten** klappt auf, **Fertig** zu.
+  Am Handy bleibt der eigene Reiter.
+
+### Behoben (Musik-App, Lied-Editor)
+
+- **Ablauf-Kärtchen verziehen sich beim Ziehen nicht mehr** – verschieden breite Kärtchen wurden auf die Größe
+  des Nachbarn gestreckt.
+
+### Neu (Protokolle, S3-3)
+
+- **Startseite** (Entwurf 7): links **„Heute“** – steht heute eine Sitzung an, mit Uhrzeit, „2 von 3 zugesagt“ und
+  „Sitzung öffnen“ – und **„Meine offenen To-Dos“** über alle Gruppen (mir zugewiesen, nicht erledigt; überfällig
+  zuerst und rot, dann in Arbeit, dann offen). Rechts **„Nächste Sitzungen“** über alle Gruppen, früheste zuerst, mit
+  der eigenen Antwort auf die Besprechungsanfrage („du hast zugesagt“, „noch nicht beantwortet“), und **„Deine
+  Gruppen“** mit der Zahl offener To-Dos. Am Handy eine Spalte.
+- **Von der Startseite in die Sitzung:** Ein Tipp auf eine Sitzung oder ein To-Do öffnet den Reiter „Sitzungen“ mit
+  der Gruppe und gleich der Sitzung; ein Tipp auf eine Gruppe öffnet ihre Liste. Wer danach über die Reiter wechselt,
+  landet wieder in der normalen Liste.
+- Scheitert das Laden der Übersicht vorübergehend, gibt es „Erneut versuchen“ – nicht „Nichts offen“.
+
+### Intern (Protokolle)
+
+- `offene()` in `shared/protokolle/aufgaben.ts` ist die eine Regel für „offen“ (nicht erledigt, nicht gelöscht);
+  „Meine offenen“ und der Zähler je Gruppe nutzen sie. Die Antworten der Besprechungsanfragen (`accepted`,
+  `declined`, `pending`, `tentative` laut OpenAPI der Instanz) liest der Lese-Kern jetzt mit (`ladeUebersicht`).
+
+### Neu (Anmeldungen, A8-3)
+
+- **Druckliste „Zahlungen“** (vorn, wenn die Veranstaltung etwas kostet): je Zahlung eine Zeile – die der Anmeldung und
+  die eigenen (nachgerückt, dazu angemeldet, zurückgeholt) –, Betrag, bezahlt mit Tag und Zahlart oder „offen“, wer nur
+  wartet „wartet“ (ohne Betrag leer, wie im Reiter). Unten: zusammen, da, offen – dieselbe Rechnung wie oben im Reiter.
+- Der Titel einer Zahlung („Anmeldung (Maria)“, „Lena – nachgerückt“) kommt jetzt für Fenster und Druckliste aus
+  `zahlungTitel` (`shared/anmeldung/zahlung.ts`) statt aus dem Reiter.
+
+### Neu (Organigramm, O5, #694)
+
+- **Gruppen umhängen und anlegen** im Gruppenfenster – für alle, die es in ChurchTools dürfen (Gruppen-Admin, oder
+  „Gruppe bearbeiten“ für die Gruppe bzw. ihren Typ; Anlegen nur in freigegebenen Typen). Leitungen dürfen das in
+  ChurchTools nicht und sehen keine Knöpfe.
+- Unter „Gehört zu“: **Ändern** (Obergruppe ersetzen), **Lösen** (bei der letzten wird die Gruppe ein eigener Bereich)
+  und **＋ Weitere Obergruppe**; das Ziel kommt aus einer Liste mit Suche und Pfad („Gottesdienst › Technik“). Die Gruppe
+  selbst, ihre Untergruppen (das wäre ein Kreis) und ihre jetzigen Obergruppen stehen nicht zur Wahl.
+- Vor jeder Änderung sagt das Fenster, was sich an den Rechten ändert (Rechte wirken in ChurchTools nach unten).
+- **＋ Untergruppe anlegen** mit Name und Gruppentyp (vorbelegt mit dem Typ der Obergruppe); Status „aktiv“ über den
+  internen Namen aus `/person/masterdata`, nicht über eine feste Zahl.
+- Umhängen schreibt erst die neue Obergruppe, dann löst es die alte – die Gruppe hängt nie unter keiner. „Bereits
+  gesetzt“ (400) zählt als erledigt. **Nach jedem Schreiben wird nachgelesen**; stimmt der Stand nicht, sagt das
+  Fenster genau das. Danach lädt der Baum neu (Mitglieder nur für neue Gruppen); lädt er gerade nicht, bleibt der
+  bisherige Stand stehen und das Fenster sagt es.
+- **Rückgängig im Fenster** für jede Änderung (auch: neue Gruppe wieder löschen).
+- Bei der Abnahme in der Test-Instanz (23.10.2026, leere Übungsgruppen) gefunden und behoben: Ohne Obergruppe heißt es
+  „unter …“ / „Einhängen“ statt „zusätzlich“ / „auch“; liegt die neue Obergruppe unter der alten (oder bleibt eine
+  darunter), sagt das Fenster „sieht es weiterhin“ statt „sieht es nicht mehr“ (`weiterSichtbarUeber`). „Eigener
+  Bereich“ zählt jetzt alle Obergruppen, auch die, die man nicht sehen darf.
+
+### Intern (gemeinsam)
+
+- „Rückgängig im Fenster“ (`RueckgaengigImFenster`) samt Ablauf (`useAenderungZurueck`) aus den Anmeldungen nach
+  `ui/fenster/` gezogen – EINE Umsetzung für alle Erweiterungen; die Leiste unten bleibt in den Anmeldungen.
+- `ladeMitglieder`: Nachladen bestimmter Gruppen an einer Stelle (`fehlendeNachladen`, neu `neueGruppenNachladen`).
+
+### Behoben (Dienstplaner)
+
+- **Weitere Termine laden, wenn es scheitert:** Im ersten Bild mit „Erneut versuchen“ stand der Knopf noch auf „wird
+  geladen …“ und gesperrt – in „Planen“ das ＋ samt „weitere Termine werden geladen …“, in „Termine“ „Weitere Termine
+  laden“. Ein Effekt räumte den Ladezustand erst ein Bild später weg. Jetzt ist er mit der Antwort (oder dem Fehler)
+  schon in diesem Bild vorbei. Gefunden, weil ein Test genau dieses eine Bild unter Last mal sah und mal nicht; die
+  Tests prüfen es jetzt in jedem Commit (React-`Profiler`) und sind damit nicht mehr vom Zufall abhängig.
+
+### Intern
+
+- **Staging baut nur noch auf Zuruf – auch `main`** (Alwin, 23.10.2026): Merges anderer Sitzungen nach `main`
+  hatten zweimal an einem Nachmittag den Stand überschrieben, den Alwin gerade am iPad prüfte. Bauen:
+  `gh workflow run staging.yml --ref <zweig>` (vor einem Release `--ref main`). Doku nachgezogen, darunter zwei
+  Stellen, die noch den Stand vor dem 22.10. beschrieben.
+
+### Neu (Anmeldungen, A8-2)
+
+- **Weitere Drucklisten: Küche & Allergien, Zimmer, Abholliste.** Vorn stehen die Listen, die zum Formular passen
+  (Küche bei „Allergien & Essen“, Zimmer bei einer Auswahl im Preis – benannt wie die Auswahl –, Abholliste bei
+  „Erziehungsberechtigte“); „＋ weitere“ öffnet die übrigen, mit Hinweis und leerer Spalte zum Ausfüllen von Hand.
+  Küche: Zahlen oben (Personen, Kinder unter 12 / unter 3), darunter nur, wer einen Hinweis hat. Zimmer: je Option die
+  Anmeldungen. Abholliste: je Kind die Erziehungsberechtigten mit Telefon und „Abgeholt von / Uhrzeit“.
+- Leere Liste (niemand mit Hinweis, alle auf der Warteliste): ein Satz statt einer leeren Tabelle (echter Test
+  23.10.2026).
+- Teilnehmer, Küche und Abholliste teilen sich eine Zeilen-Regel (Platz, Warteliste, Summe); `listenPdf` kann eine fette
+  Zeile über der Tabelle (`oben`, nur Seite 1).
+
+### Neu (Anmeldungen, A8-1)
+
+- **Druckliste: Teilnehmer als PDF** (Entwurf `a8-druckliste-v1`, abgenommen 23.10.2026). Knopf „⎙ Druckliste“ im
+  Reiter „Anmeldungen“: Spalten aus den Fragen des Formulars, Sortierung (Nachname, Alter, Anmeldung), Warteliste
+  zuschaltbar, Vorschau im Fenster, „Teilen …“ und „Herunterladen“. Kopf mit Gemeinde · Veranstaltung · Liste, Fuß mit
+  Stand und „Seite x von y“ auf jeder Seite; der Tabellenkopf wiederholt sich, ab sechs Spalten quer. Die Wahl der
+  Spalten merkt sich die Veranstaltung (neues, freiwilliges Feld `druck` in den Einstellungen).
+- Neuer Baustein `ui/teilen/listenPdf.ts` für Listen als PDF (jsPDF wird erst beim Öffnen geladen); die Antwort als Text
+  (`antwortText`) teilen sich jetzt das Fenster einer Anmeldung und die Druckliste.
+
+### Neu (Protokolle, S3-2)
+
+- **Reiter „Sitzungen“** (Entwurf 7): je Gruppe **Kommend** (Termine mit Besprechungsanfrage, Gruppentreffen,
+  begonnene Protokolle) und **Protokolle** (freigegeben, neueste zuerst), bei mehreren Gruppen oben umschaltbar.
+  Hinweise, wenn kein Kalender gewählt ist oder ChurchTools die Gruppentreffen nicht zeigt.
+- **Eine Sitzung ansehen:** das Protokoll als Dokument in einer **eigenen, schlanken Darstellung** (Alwin,
+  23.10.2026) – nummerierte Tagesordnungspunkte, Formatierung, verschachtelte Listen, Zitate, Links (nur Web- und
+  Mail-Adressen), Aufgaben mit Stand und Frist aus „Mitarbeit“, Beschlüsse, Termine; unbekannte Blöcke zeigen ihren
+  Text. Darunter die Bereiche **Beschlüsse · To-Dos · Termine** aus derselben Ableitung wie das Dokument. Ist ein
+  Protokoll gerade nicht vollständig lesbar, steht das da statt eines halben Dokuments.
+
+### Geändert (gemeinsam)
+
+- **Listen in ChurchTools mit Punkten und Nummern:** ChurchTools (Tailwind) nimmt `ul`/`ol` ihre Zeichen – im
+  Protokoll fehlten so die Aufzählungszeichen (nur in ChurchTools sichtbar, nicht in der Demo). Die Regel steht jetzt
+  einmal als `listenMitZeichen` in `ui/design/_mixins.scss`; die zwei Einzelstellen der Anmeldungen nutzen sie mit.
+  Die Hauptknöpfe der Protokolle-Fenster nutzen den vorhandenen `hauptKnopfBreit` statt einer eigenen Kopie.
+
+### Neu (Protokolle, S3-1)
+
+- **Lese-Kern ohne Oberfläche** (`protokolle/src/lesen.ts`, Regel `shared/protokolle/sitzungen.ts`): die Sitzungen
+  einer Gruppe aus Protokoll-Köpfen, Terminen im Kalender der Gruppe und Gruppentreffen – „Kommend“ (alles noch
+  nicht Freigegebene) und „Protokolle“ (freigegeben, neueste zuerst). **Nur Termine mit Besprechungsanfrage**
+  (Alwin, 23.10.2026); ChurchTools zeigt das nur je Termin (`…/meetingrequests`, gemessen – auch Mitglieder dürfen
+  es lesen). Termin und Treffen zur selben Minute sind eine Sitzung. Darf jemand die Gruppentreffen nicht sehen
+  (403, je nach Gruppentyp), fehlen nur die Treffen, und das wird gemeldet. Dazu die Aufgaben einer Gruppe (ohne
+  gelöschte) und Prüfer für Kopf und Teil (`istKopf`, `istTeil`). Gegen die Test-Instanz mit Test-Protokollen im
+  echten Speicherformat geprüft. Die Oberfläche folgt mit S3-2.
+
+### Geändert (Protokolle, S2-4)
+
+- **„Deine Gruppen“ zeigt nur noch Gruppen, deren Protokolle man sehen darf** (Alwin, 22.10.2026). Vorher sah ein
+  Mitglied ohne Zugriff seine eingerichtete Gruppe als „nicht eingerichtet“ – die Erweiterung kann die beiden Fälle
+  nicht unterscheiden. Darunter steht jetzt immer: „Fehlt eine Gruppe? Ein Admin richtet sie ein oder gibt dir
+  Zugriff.“ Den Stand aller Gruppen sehen Admins in der Verwaltung.
+- Prüfung mit drei Rollen in der Test-Instanz (Admin, Leitung, Mitglied per „Benutzer simulieren“, dazu „Kein
+  Zugriff“ und versteckte Gruppe), jeweils über die Schnittstelle gegengeprüft: Ein Mitglied ohne Recht liest das
+  Protokoll nicht (401), Herabstufen wirkt sofort, „versteckte Gruppe sehen“ kommt und geht mit dem Zugriff.
+  Anleitung `docs/betrieb/PROTOKOLLE.md` auf Stand S2 gebracht.
+
+### Behoben (Musik-App)
+
+- **Symbole im Lied-Menü und in Hinweisen** (Alwin am iPad: „Bearbeiten“-Symbol kaputt): Statt Behelfszeichen
+  und Emoji (🖉 ⤴ 📎 ⚠️ 📴 📅 🎵 …), die je Gerät anders oder gar nicht dargestellt werden, stehen überall die
+  Symbole aus `ui/icons` – Menü, Dateien-Liste, Links, Hinweis-Seiten, Ablauf-Liste, Fehlermeldungen am Blatt.
+
+### Intern
+
+- Neue Dauerprüfung `ui/design/keineBehelfszeichen.test.ts`: findet Behelfszeichen/Emoji im Oberflächen-Code.
+  Gemeinsamer Datei-Sammler `ui/design/quelltexte.testutil.ts` (auch von `festeWerte.test.ts` genutzt).
+
+### Neu (Organigramm, O4, #683)
+
+- **Präsentation** (z. B. Mitgliederversammlung), wie im Entwurf am 19.10.2026 abgenommen: Knopf „Präsentieren“
+  über dem Baum – für alle, im Rahmen ihrer ChurchTools-Rechte, sobald die Mitglieder geladen sind.
+- **Übersicht:** die Bereiche als Kacheln in derselben Reihenfolge wie der Baum (`bereicheSortiert`, eine Regel für
+  beide), mit Leitung samt Bild, Gruppen und Zahl der Personen.
+- **Bereich:** seine Gruppen als Spalten; jede Spalte listet jede Person ihres Teilbaums einmal (Leitung zuerst, mit
+  Rolle), die Untergruppen aufklappbar mit Pfad. Ein Bereich ohne Untergruppen ist selbst die Spalte.
+- **Ehrlich bei fehlenden Rechten:** „Mitarbeitende gesucht“ / „Leitung wird noch gesucht“ nur, wo man die Gruppe
+  samt Untergruppen sehen darf – sonst „Mitglieder nicht sichtbar“.
+- Liegt über der Leiste von ChurchTools; „Vollbild“ (Browser) nur, wo es das gibt (Laptop am Beamer, nicht iPad).
+  Tasten: Pfeile, Bild auf/ab, Leertaste, Pos1 = Übersicht, Esc = zurück/schließen, F = Vollbild.
+- Blendet dieselben Gruppentypen aus wie der Baum (Alwin, 22.10.2026) – die Wahl liegt dafür jetzt in `App`.
+- Nur „Heute“: „Neue Gliederung“ kommt mit dem Plan in O7.
+- Gemeinsam für Baum und Präsentation: `gruppenLeitung` (Leitung einer Gruppe) statt einer Zeile im Baum; der Baum
+  nimmt die lesbaren Mitglieder aus `App`, statt sie ein zweites Mal zusammenzustellen.
+
+### Intern (gemeinsam)
+
+- **Staging nur noch auf Zuruf:** Die Test-Instanz baut von selbst nur `main`; ein Zweig kommt mit
+  `gh workflow run staging.yml --ref <zweig>` drauf. Die Version nennt den Zweig (`staging-feat-…-<sha>`).
+  Vorher überschrieb jeder Push jeder Sitzung die eine Test-Instanz (Alwin: „da haben sich wieder andere
+  vorgedrängelt“).
+- **CHANGELOG-Einträge als Dateien je PR** in `changelog.d/`; der Release führt sie mit
+  `npm run changelog -- --version X.Y.Z` zusammen. Damit gibt es beim Mergen keine CHANGELOG-Konflikte mehr
+  zwischen gleichzeitigen PRs. Die CI prüft das Format (`npm run changelog -- --pruefen`).
+
 ### Behoben (Musik-App + Dienstplaner, #700)
 
 - **Rückgängig nach dem Löschen** eines Punkts **vor dem Gottesdienstbeginn**: Kam der erste oder ein mittlerer

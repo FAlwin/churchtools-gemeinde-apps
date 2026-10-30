@@ -182,7 +182,12 @@ function Griff() {
     <div ref={rahmen} style={{ transform: `translateY(${versatz}px)` }}>
       <SideMenu>
         <AddBlockButton />
-        <span onDragStartCapture={() => abschnittZiehenBeginnt(editor, id)}>
+        {/* `flex`, nicht inline: Ein Inline-`span` stellt den Knopf auf die Grundlinie – der Griff stand 2 px über dem „+“
+            (in Safari und Chrome gemessen 29.10.2026, Alwin: „sitzt zu hoch“). */}
+        <span
+          style={{ display: 'flex' }}
+          onDragStartCapture={() => abschnittZiehenBeginnt(editor, id)}
+        >
           <DragHandleButton
             dragHandleMenu={() => (
               <DragHandleMenu>

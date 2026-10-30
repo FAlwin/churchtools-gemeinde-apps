@@ -514,7 +514,13 @@ die Text-Karte bleibt gemountet). L2 = `AblaufKarte` (Kärtchen ↔ `{flow}` üb
 Editor, Rückgängig inklusive; die Flow-Zeile blendet `ChordProInput` aus; breit eingeklappt mit Kurzform und
 Marke „Eigener Ablauf“, Ziehen mit `CSS.Translate` – `Transform` streckt verschieden breite Kärtchen). L3 = Akkord-Kärtchen, Teil-Bänder
 (`abschnittsKopf` – EINE Regel mit `parseChordPro`) und Pedal-Linie als Ersetzungen mit `atomicRanges`, Schalter
-„ChordPro-Text“ (Compartment); am echten iPad vor dem Merge geprüft (TF-EINST-15). L5-1 = `AkkordLeiste` (Tonart über
+„ChordPro-Text“ (Compartment); am echten iPad vor dem Merge geprüft (TF-EINST-15). **„Nur Text“** (29.10.2026,
+`Segment` „Akkorde & Text | Nur Text“ vorn in der Werkzeugleiste, Name „Darstellung“): Akkorde als unsichtbare
+`atomicRanges` statt Kärtchen (`nurTextFeld`), Akkord-Leiste aus; eine einzelne Rücktaste/Entf neben einem
+unsichtbaren Akkord löscht den sichtbaren Buchstaben, nicht den Akkord (`nurTextLoeschen`, Transaktionsfilter);
+markiert samt Text gelöscht, geht der Akkord mit (TF-EINST-22). Der Schwanz aus Leerzeichen und Akkorden am
+Zeilenende (`SCHWANZ`) ist bei „Nur Text“ als Ganzes unsichtbar – WebKit brach die Ausricht-Leerzeichen von SongSelect
+sonst in eine leere zweite Bildschirmzeile um (Chromium nicht, deshalb prüft der Test den gezeichneten Text). L5-1 = `AkkordLeiste` (Tonart über
 `tonartAkkorde`, „Im Lied“ über `akkordeImText`, Gedrückthalten = Varianten) und `AkkordFenster` (Eintippen über
 `akkordLesen`; Akkord-Grammatik EINMAL in `akkordTeile`, auch fürs Transponieren). L5-2 = Tipp aufs Kärtchen →
 `AkkordMenue` (Schieben über `akkordVerschieben`, Rahmen über das Feld `aktivFeld` in `ChordProInput` – eine

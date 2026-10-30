@@ -88,7 +88,8 @@ export type IconName =
   | 'kreis-haken'
   | 'aufgabe'
   | 'stempel'
-  | 'todo-liste';
+  | 'todo-liste'
+  | 'sortieren';
 
 interface IconProps {
   name: IconName;
@@ -541,6 +542,13 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
         </svg>
       );
     // Fester Punkt „Offene To-Dos“ (Protokolle S4-3a): Liste mit Haken.
+    // Knopf „Sortieren“ der To-Do-Übersicht (Protokolle S7-3): Pfeil hoch, Pfeil runter.
+    case 'sortieren':
+      return (
+        <svg {...p}>
+          <path d="M7 4v16M3.5 7.5 7 4l3.5 3.5M17 20V4M13.5 16.5 17 20l3.5-3.5" />
+        </svg>
+      );
     case 'todo-liste':
       return (
         <svg {...p}>

@@ -218,3 +218,118 @@ button.text {
     }
   }
 }
+
+// ── Board (Bauplan S7-3, Entwurf v2) ──────────────────────────────────────────────────────────────────────────────
+// Das Board braucht die ganze Breite; Spalten nebeneinander, am Handy 82 % breit und seitlich zu blättern.
+.breit {
+  max-width: none;
+}
+
+.board {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(285px, 1fr);
+  gap: 12px;
+  align-items: start;
+  overflow-x: auto;
+  padding-bottom: 6px;
+
+  @media (max-width: 760px) {
+    grid-auto-columns: 82%;
+  }
+}
+
+.spalte {
+  display: flex;
+  flex-direction: column;
+  min-height: 120px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--section);
+}
+
+.spaltenKopf {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.kopf_arbeit {
+  color: var(--blue-ink);
+}
+
+.kopf_erledigt {
+  color: var(--green);
+}
+
+.spaltenFlaeche {
+  flex: 1;
+  min-height: 60px;
+  padding: 0 8px 8px;
+  border-radius: var(--r-card);
+}
+
+.karten {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 52px;
+  list-style: none;
+
+  .zeile {
+    border: 1px solid var(--border);
+    border-radius: var(--r-card);
+    background: var(--surface2);
+  }
+}
+
+// Hier ablegen: gestrichelt umrandet, leicht blau (wie im Entwurf).
+.ziel {
+  outline: 2px dashed var(--blue);
+  outline-offset: -3px;
+  background: var(--blue-soft);
+}
+
+.spaltenNeu {
+  @include m.auswahlKnopf;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: var(--knopf-hoehe);
+  margin: 0 8px 10px;
+  border-style: dashed;
+  border-radius: var(--r-ctrl);
+  color: var(--text2);
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.unterBoard {
+  @include m.card-list;
+}
+
+// Ziehen: Maus über die ganze Karte, Finger nach langem Drücken – dabei kein Markieren und kein Kontextmenü (iOS).
+.ziehbar {
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+}
+
+.gezogen {
+  opacity: 0.35;
+}
+
+// Das Bild unter dem Finger/Zeiger beim Ziehen.
+.ziehBild {
+  width: min(320px, 80vw);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+  cursor: grabbing;
+}

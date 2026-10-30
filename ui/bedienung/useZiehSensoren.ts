@@ -1,4 +1,11 @@
-import { KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import {
+  KeyboardSensor,
+  MouseSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 
 /**
@@ -12,6 +19,22 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 export function useZiehSensoren() {
   return useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+}
+
+/** Wie lange ein Finger liegen muss, bis das Ziehen beginnt (Board der Protokolle, S7-3). */
+export const LANG_DRUECKEN_MS = 400;
+
+/**
+ * **Ziehen ohne Griff** (Board der To-Dos, Alwin 30.10.2026: „lange drücken“): Mit der Maus wird die ganze Karte nach
+ * 6 px gezogen; mit dem **Finger erst nach ~0,4 s Liegenlassen** – wer vorher wischt, blättert (Toleranz 8 px). Getrennte
+ * Sensoren, weil ein Zeiger-Sensor Maus und Finger gleich behandeln würde. Tastatur wie oben.
+ */
+export function useZiehSensorenLangDruecken() {
+  return useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: LANG_DRUECKEN_MS, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 }

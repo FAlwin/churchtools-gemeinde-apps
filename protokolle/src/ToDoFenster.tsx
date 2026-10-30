@@ -87,6 +87,7 @@ export function ToDoFenster({
   gruppen,
   mitglieder,
   eintrag,
+  vorlage,
   herkunft,
   leitungIn,
   onSitzung,
@@ -101,6 +102,8 @@ export function ToDoFenster({
   mitglieder: ReadonlyMap<number, Person[] | 'verborgen'>;
   /** `null` = neues To-Do. */
   eintrag: ToDoEintrag | null;
+  /** Neues To-Do aus einer Board-Spalte (S7-3): Status bzw. Zuständige vorbelegt. */
+  vorlage?: { status?: AufgabenStatus; wer?: number[] };
   herkunft: Herkunft | null;
   leitungIn: (g: ProtokollGruppe) => boolean;
   onSitzung: (gruppe: number, schluessel: string) => void;
@@ -115,8 +118,10 @@ export function ToDoFenster({
   const [text, setText] = useState(a?.text ?? '');
   const [gruppeId, setGruppeId] = useState(eintrag?.gruppe.id ?? gruppen[0]?.id ?? 0);
   const [bis, setBis] = useState(a?.bis ?? '');
-  const [status, setStatus] = useState<AufgabenStatus>(a?.status ?? 'offen');
-  const [wer, setWer] = useState<ReadonlySet<number>>(() => new Set(a ? a.wer : []));
+  const [status, setStatus] = useState<AufgabenStatus>(a?.status ?? vorlage?.status ?? 'offen');
+  const [wer, setWer] = useState<ReadonlySet<number>>(
+    () => new Set(a ? a.wer : (vorlage?.wer ?? [])),
+  );
   const [extern, setExtern] = useState(a?.extern ?? '');
   const [notiz, setNotiz] = useState('');
   const [karteNotiz, setKarteNotiz] = useState(!!a?.karte?.notiz);

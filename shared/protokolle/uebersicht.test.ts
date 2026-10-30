@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { alsGeloescht, neueAufgabe, statusSetzen, type Aufgabe } from './aufgaben';
 import {
+  ablegen,
   einteilen,
+  eintragSchluessel,
   langeErledigt,
+  sortieren,
+  spalten,
+  umordnen,
+  type Spalte,
   sichtbarFuer,
   zustaendigFuer,
   type ToDoEintrag,
@@ -114,5 +120,106 @@ describe('einteilen', () => {
     const fremd = { aufgabe: aufgabe('z', { wer: [99] }), gruppe: { id: 194, name: 'Technik' } };
     const b = einteilen([fremd], { nach: 'person', heute: HEUTE, ich: 1, namen });
     expect(b[0]).toMatchObject({ titel: 'Person 99', eintraege: [fremd] });
+  });
+});
+
+describe('S7-3: Board', () => {
+  const namen = new Map([
+    [1, 'Alwin'],
+    [19, 'Spike'],
+    [23, 'Johann'],
+  ]);
+  const liste = [
+    aufgabe('o', { wer: [19] }),
+    aufgabe('u', { wer: [1], bis: '2026-10-01' }), // überfällig, offen
+    aufgabe('a', { wer: [1, 19], status: 'arbeit' }),
+    erledigt('e', '2026-10-29T10:00:00Z'),
+    aufgabe('x', { extern: 'Hausmeister' }),
+  ].map(ein);
+  const titel = (sp: Spalte[]) =>
+    sp.map((s) => [s.schluessel, s.eintraege.map((e) => e.aufgabe.id)]);
+
+  it('spalten nach Status: immer drei (auch leer), Überfällige in ihrer Status-Spalte, dringend zuerst', () => {
+    expect(titel(spalten(liste, { nach: 'status', heute: HEUTE, ich: 1, namen }))).toEqual([
+      ['offen', ['u', 'o', 'x']],
+      ['arbeit', ['a']],
+      ['erledigt', ['e']],
+    ]);
+    expect(
+      spalten([], { nach: 'status', heute: HEUTE, ich: 1, namen }).map((s) => s.eintraege),
+    ).toEqual([[], [], []]);
+  });
+
+  it('spalten nach Person: ich zuerst, Mitglieder auch ohne To-Do, „Außerhalb“ nimmt nichts an, „Noch niemand“ immer', () => {
+    const sp = spalten(liste, { nach: 'person', heute: HEUTE, ich: 1, namen, mitglieder: [23] });
+    expect(titel(sp)).toEqual([
+      ['p1', ['u', 'a']],
+      ['p23', []],
+      ['p19', ['a', 'o']],
+      ['extern', ['x']],
+      ['ohne', ['e']],
+    ]);
+    expect(sp[0].titel).toBe('Alwin (du)');
+    expect(sp.find((s) => s.schluessel === 'extern')!.nimmtAn).toBe(false);
+  });
+
+  it('ablegen: Status setzen; nach Person nur die gezogene tauschen; „Noch niemand“ nimmt sie weg', () => {
+    const sp = spalten(liste, { nach: 'person', heute: HEUTE, ich: 1, namen, mitglieder: [23] });
+    const s = (k: string) => sp.find((x) => x.schluessel === k)!;
+    const st = spalten(liste, { nach: 'status', heute: HEUTE, ich: 1, namen });
+    const a = liste[2].aufgabe; // wer [1, 19], in Arbeit
+    expect(ablegen(a, st[1], st[2])).toEqual({ status: 'erledigt' });
+    expect(ablegen(a, st[1], st[1])).toBeNull();
+    expect(ablegen(a, s('p1'), s('p23'))).toEqual({ wer: [19, 23] });
+    expect(ablegen(a, s('p1'), s('p19'))).toEqual({ wer: [19] }); // Spike war schon da – Alwin fällt weg
+    expect(ablegen(a, s('p19'), s('ohne'))).toEqual({ wer: [1] });
+    expect(ablegen(liste[3].aufgabe, s('ohne'), s('p23'))).toEqual({ wer: [23] });
+    expect(ablegen(a, s('p1'), s('extern'))).toBeNull();
+  });
+
+  it('sortieren: Dringlichkeit bleibt, Bis (Erledigte nach erledigt am), Alphabetisch, Manuell (Neue ans Ende)', () => {
+    const l = [
+      aufgabe('Zebra', { bis: '2026-11-20' }),
+      aufgabe('apfel'),
+      aufgabe('Birne', { bis: '2026-11-05' }),
+      erledigt('Erl-alt', '2026-10-01T10:00:00Z'),
+      erledigt('Erl-neu', '2026-10-20T10:00:00Z'),
+    ].map(ein);
+    const ids = (x: ToDoEintrag[]) => x.map((e) => e.aufgabe.id);
+    expect(ids(sortieren(l, { art: 'dringlichkeit' }))).toEqual(ids(l));
+    expect(ids(sortieren(l, { art: 'bis' }))).toEqual([
+      'Birne',
+      'Zebra',
+      'apfel',
+      'Erl-neu',
+      'Erl-alt',
+    ]);
+    expect(ids(sortieren(l, { art: 'alpha' }))).toEqual([
+      'apfel',
+      'Birne',
+      'Erl-alt',
+      'Erl-neu',
+      'Zebra',
+    ]);
+    expect(ids(sortieren(l, { art: 'manuell', reihenfolge: ['11:Birne', '11:Zebra'] }))).toEqual([
+      'Birne',
+      'Zebra',
+      'apfel',
+      'Erl-alt',
+      'Erl-neu',
+    ]);
+    expect(eintragSchluessel(l[0])).toBe('11:Zebra');
+  });
+
+  it('umordnen: in der Spalte verschieben, die übrige Reihenfolge bleibt, Neue werden aufgenommen', () => {
+    expect(umordnen(['x', 'a', 'b', 'y', 'c'], ['a', 'b', 'c'], 'c', 'a')).toEqual([
+      'x',
+      'c',
+      'a',
+      'b',
+      'y',
+    ]);
+    expect(umordnen(['a', 'b'], ['a', 'b', 'neu'], 'a', null)).toEqual(['b', 'neu', 'a']);
+    expect(umordnen([], ['a', 'b'], 'b', 'a')).toEqual(['b', 'a']);
   });
 });

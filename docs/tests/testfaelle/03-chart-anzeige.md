@@ -608,3 +608,29 @@ rückt oben etwas nach oben. Wieder an → überall wieder da.
 - **Historie:** Alwin, 19.10.2026
 
 </details>
+
+### TF-CHART-20 · Einführung im Liedblatt
+
+**Das brauchst du:** Ein Gerät, auf dem die Einführung noch nicht lief – oder unter **Mehr** die Einführung erneut
+starten; iPad und Handy, einmal mit **Liedansicht: Scrollen**.
+
+**Das muss passieren:** Beim ersten Öffnen eines Lieds erklärt die Einführung drei Dinge und zeigt dabei jeweils auf
+die richtige Stelle: **Blättern & Zoomen** (das Blatt; im Scroll-Modus **Scrollen**), **Lieder im Ablauf** (die Leiste
+oben) und **Werkzeuge** (die Knöpfe Aussehen, Tempo, Anmerken). „Schritt 1 von 3“ … „3 von 3“, keiner fehlt.
+
+1. Ein Lied öffnen → Schritt 1 zeigt aufs Blatt; der Text nennt Wischen, „Weiter“/„Zurück“ unten und den Tipp in die
+   Mitte.
+2. **Weiter** → Schritt 2 zeigt auf die Ablauf-Leiste; der Text nennt das Fenster des Lieds (Tonart und Kapo, Akkorde
+   oder nur Text, Version, „Bearbeiten“).
+3. **Weiter** → Schritt 3 zeigt auf die Knöpfe. **Fertig** → die Einführung ist weg und kommt nicht wieder.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `client/src/utils/onboarding.ts`, `client/src/components/Coachmarks.tsx`, `client/src/components/BlattKopf.tsx`, `client/src/components/AblaufLeiste.tsx`, `client/src/pages/ChordChart.tsx`
+- **Automatisiert:** weitgehend – `e2e/blatt-einfuehrung.spec.ts` (iPad quer, hochkant, Handy, Scroll-Modus: jeder
+  Schritt erscheint in seiner Reihenfolge; Titel aus `onboarding.ts`), `onboarding.chartSchritte.test.ts`. Von Hand
+  bleibt, ob die Hervorhebung am echten Gerät gut sitzt.
+- **Historie:** Scheibe B5 (30.10.2026); Tour bleibt `chart-v9` (Alwin, 28.10.2026: nur neue Nutzer)
+
+</details>

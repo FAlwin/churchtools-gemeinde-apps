@@ -35,14 +35,12 @@ interface Props {
   einsaetze: Einsaetze | null;
   /** Lesbare Mitglieder je Gruppe – dieselbe Grundlage wie Personen, Hinweise und Präsentation. */
   lesbar: ReadonlyMap<number, readonly Mitglied[]>;
-  /** Ausgeblendete Gruppentypen – liegen in `App`, weil die Präsentation dieselben ausblendet (O4). */
-  ausgeblendet: ReadonlySet<number>;
-  /** Was Gruppen-Admins für alle ausgeblendet haben (O7b-7) – diese Typen haben kein Schildchen. */
+  /** Was Gruppen-Admins für alle ausgeblendet haben (O7b-7). */
   fuerAlle: Sichtbarkeit;
   /** Ließ sich gerade nicht lesen – dann ist alles zu sehen, mit Hinweis. */
   fuerAlleFehler: boolean;
   onFuerAlleNochmal: () => void;
-  /** Der Baum ohne ausgeblendete Typen, große Bereiche zuerst – EINE Rechnung in `App` für Karten, Liste und Fenster. */
+  /** Der Baum ohne für alle Ausgeblendetes, große Bereiche zuerst – EINE Rechnung in `App` für Karten, Liste und Fenster. */
   baum: readonly Knoten[];
   /** Ansicht, Spitze und was aufgeklappt ist (O7b-2) – liegt in `App`, weil das Gruppenfenster „Hier anfangen“ kann. */
   ansicht: BaumAnsicht;
@@ -58,22 +56,20 @@ interface Props {
   onUmklappen: (schluessel: string) => void;
   onAlleAuf: () => void;
   onAlleZu: () => void;
-  onTypUmschalten: (typ: number) => void;
   onNachladen: () => void;
   onGruppe: (id: number) => void;
 }
 
 /**
  * **Das Organigramm** (Bauplan O2): je Bereich (oberste Gruppe) eine Karte, darin die Gruppen als Zeilen mit
- * Baumlinien – in der Farbe der Gruppe, mit Leitung, Zahl der Personen und den Diensten der Gruppe. Über dem Baum
- * lassen sich Gruppentypen ausblenden (z. B. Verteiler). Klick auf eine Gruppe → Gruppenfenster.
+ * Baumlinien – in der Farbe der Gruppe, mit Leitung, Zahl der Personen und den Diensten der Gruppe. Klick auf eine
+ * Gruppe → Gruppenfenster.
  */
 export function Organigramm({
   start,
   mitglieder,
   einsaetze,
   lesbar,
-  ausgeblendet,
   fuerAlle,
   fuerAlleFehler,
   onFuerAlleNochmal,
@@ -88,7 +84,6 @@ export function Organigramm({
   onUmklappen,
   onAlleAuf,
   onAlleZu,
-  onTypUmschalten,
   onNachladen,
   onGruppe,
 }: Props) {
@@ -105,14 +100,6 @@ export function Organigramm({
   const spitzenKnoten = spitze === null ? null : knotenAmPfad(baum, spitze);
   const karten = spitzenKnoten ? [spitzenKnoten] : baum;
 
-  // Gruppentypen, die es gibt – mit Zahl, für den Filter. Was für alle ausgeblendet ist, hat kein Schildchen (O7b-7).
-  const typen = useMemo(() => {
-    const zahl = new Map<number, number>();
-    for (const g of start.gruppen)
-      if (g.typId !== null && !fuerAlle.typen.includes(g.typId))
-        zahl.set(g.typId, (zahl.get(g.typId) ?? 0) + 1);
-    return [...zahl].sort((a, b) => b[1] - a[1]);
-  }, [start.gruppen, fuerAlle.typen]);
   const fuerAlleText = [
     fuerAlle.typen.length
       ? `${anzahl(fuerAlle.typen.length, 'Gruppentyp', 'Gruppentypen')} (${fuerAlle.typen
@@ -216,37 +203,20 @@ export function Organigramm({
           </span>
         )}
       </div>
-      {/* Was zu sehen ist: Gruppentypen (je Gerät) und – in Diagramm und Liste – die Personen (O7b-6). In der Leiste oben
-          hätte „Personen“ die Zeile bei 1280 px gesprengt. */}
-      {(typen.length > 1 || ansicht !== 'karten') && (
+      {/* In Diagramm und Liste: die Personen (O7b-6). In der Leiste oben hätte „Personen“ die Zeile bei 1280 px
+          gesprengt. */}
+      {ansicht !== 'karten' && (
         <div className={styles.wasZeigen}>
-          {typen.length > 1 && (
-            <div className={styles.filter} role="group" aria-label="Gruppentypen">
-              {typen.map(([typ, n]) => (
-                <button
-                  key={typ}
-                  type="button"
-                  className={styles.typ}
-                  aria-pressed={!ausgeblendet.has(typ)}
-                  onClick={() => onTypUmschalten(typ)}
-                >
-                  {start.typNamen.get(typ) ?? `Typ ${typ}`} <span className={styles.zahl}>{n}</span>
-                </button>
-              ))}
-            </div>
-          )}
-          {ansicht !== 'karten' && (
-            <span className={`${styles.anfangen} ${styles.personen}`}>
-              Personen
-              <Segment
-                value={personen}
-                options={PERSONEN_WAHL}
-                onChange={onPersonen}
-                ariaLabel="Personen"
-                verbunden
-              />
-            </span>
-          )}
+          <span className={`${styles.anfangen} ${styles.personen}`}>
+            Personen
+            <Segment
+              value={personen}
+              options={PERSONEN_WAHL}
+              onChange={onPersonen}
+              ariaLabel="Personen"
+              verbunden
+            />
+          </span>
         </div>
       )}
 

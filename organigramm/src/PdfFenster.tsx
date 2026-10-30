@@ -45,7 +45,7 @@ const ARTEN = (['oben', 'links', 'mindmap', 'liste'] as const).map((a: PdfArt) =
 }));
 
 interface Props {
-  /** Der Baum wie im Reiter (Typ-Filter, große Bereiche zuerst). */
+  /** Der Baum wie im Reiter (ohne für alle Ausgeblendetes, große Bereiche zuerst). */
   baum: readonly Knoten[];
   gemeinde: string;
   /** Was im Reiter aufgeklappt ist – gilt, wenn nicht „alles aufgeklappt“ gewählt ist. */

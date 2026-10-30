@@ -189,6 +189,33 @@ const ELTERN = elternAus([
   { groupId: 7, children: [12] },
 ]);
 
+/**
+ * Als Gruppen-Admin über „Einstellungen“ einen Typ für alle aus- oder wieder einblenden – seit die Typ-Schildchen weg
+ * sind (30.10.2026) der einzige Weg. Gespeichert wird wie in ChurchTools: Der neue Stand gilt sofort.
+ */
+async function typFuerAlleUmschalten(typ: RegExp) {
+  sichtbarkeitSpeichern.mockImplementation((inhalt) =>
+    Promise.resolve({
+      ok: true,
+      daten: {
+        version: 9,
+        zeit: '2026-10-30T10:00:00Z',
+        von: { personId: 1, name: 'Alwin' },
+        inhalt,
+      },
+    }),
+  );
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Was das Organigramm für alle zeigt' }),
+  );
+  const d = within(screen.getByRole('dialog', { name: 'Was das Organigramm zeigt' }));
+  fireEvent.click(d.getByRole('checkbox', { name: typ }));
+  fireEvent.click(d.getByRole('button', { name: 'Speichern' }));
+  await vi.waitFor(() =>
+    expect(screen.queryByRole('dialog', { name: 'Was das Organigramm zeigt' })).toBeNull(),
+  );
+}
+
 /** Rechte ohne alles – Tests setzen nur, was sie brauchen (EINE Stelle, wenn ein Recht dazukommt). */
 const rechte = (x: Partial<OrgRechte> = {}): OrgRechte => ({
   gruppenVerwalten: false,
@@ -355,12 +382,13 @@ describe('App des Organigramms (O2)', () => {
     expect(kopf.textContent).toContain('Mitglieder nicht sichtbar');
   });
 
-  it('Gruppentyp ausblenden – samt Merken im Gerät', async () => {
+  it('keine Typ-Schildchen mehr – ein früher im Gerät ausgeblendeter Typ ist wieder zu sehen (30.10.2026)', async () => {
+    // Bis 30.10.2026 merkte sich jedes Gerät ausgeblendete Typen. Ohne Schildchen ließen sie sich nicht mehr einblenden.
+    localStorage.setItem('organigramm-ausgeblendete-typen', '[9]');
     render(<App />);
     expect(await screen.findByRole('region', { name: 'Infos' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /^Verteiler/ }));
-    expect(screen.queryByRole('region', { name: 'Infos' })).toBeNull();
-    expect(localStorage.getItem('organigramm-ausgeblendete-typen')).toBe('[9]');
+    expect(screen.queryByRole('group', { name: 'Gruppentypen' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Verteiler/ })).toBeNull();
   });
 
   it('Gruppenfenster: Rollen in ChurchTools-Reihenfolge, Ober-/Untergruppen zum Weiterklicken, Link nach ChurchTools', async () => {
@@ -737,7 +765,7 @@ describe('O4: Präsentation', () => {
 
   it('blendet dieselben Gruppentypen aus wie der Baum', async () => {
     render(<App />);
-    fireEvent.click(await screen.findByRole('button', { name: /^Verteiler/ }));
+    await typFuerAlleUmschalten(/^Verteiler/);
     const knopf = screen.getByRole('button', { name: /Präsentieren/ });
     await vi.waitFor(() => expect((knopf as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(knopf);
@@ -1289,28 +1317,28 @@ describe('O7b-2: Ansichten, Liste, „Anfangen bei“', () => {
     expect(await screen.findByRole('region', { name: 'Technik' })).toBeTruthy();
   });
 
-  it('Spitze per Typ-Filter ausgeblendet → wieder die ganze Gemeinde, ohne Fehler', async () => {
+  it('Spitze für alle ausgeblendet → wieder die ganze Gemeinde, ohne Fehler', async () => {
     render(<App />);
     await screen.findByRole('region', { name: 'Infos' });
     fireEvent.change(anfangenBei(), { target: { value: '34' } });
     expect(bereiche()).toEqual(['Infos']);
-    fireEvent.click(screen.getByRole('button', { name: /^Verteiler/ }));
+    await typFuerAlleUmschalten(/^Verteiler/);
     expect(anfangenBei().value).toBe('');
     expect(bereiche()).toEqual(['Gottesdienst', 'Café']);
     // Wieder eingeblendet: Es bleibt bei der ganzen Gemeinde – die Ansicht springt nicht zurück.
-    fireEvent.click(screen.getByRole('button', { name: /^Verteiler/ }));
+    await typFuerAlleUmschalten(/^Verteiler/);
     expect(anfangenBei().value).toBe('');
     expect(bereiche()).toEqual(['Gottesdienst', 'Café', 'Infos']);
   });
 
   it('der Baum-Reiter bekommt nie eine Spitze, die es im Baum nicht gibt – auch nicht für ein Bild (Test-Instanz 26.10.2026)', async () => {
-    // Im Browser kann ein zweiter Klick (Doppelklick auf den Typ) kommen, bevor ein Effekt nach dem Zeichnen läuft –
-    // deshalb muss die verschwundene Spitze schon beim Zeichnen vergessen sein, nicht erst danach.
+    // Im Browser kann ein zweiter Klick kommen, bevor ein Effekt nach dem Zeichnen läuft – deshalb muss die
+    // verschwundene Spitze schon beim Zeichnen vergessen sein, nicht erst danach.
     render(<App />);
     await screen.findByRole('region', { name: 'Infos' });
     fireEvent.change(anfangenBei(), { target: { value: '34' } });
     baumReiter.length = 0;
-    fireEvent.click(screen.getByRole('button', { name: /^Verteiler/ }));
+    await typFuerAlleUmschalten(/^Verteiler/);
     expect(baumReiter.length).toBeGreaterThan(0);
     for (const r of baumReiter)
       expect(r.spitze === null || knotenAmPfad(r.baum, r.spitze) !== null, String(r.spitze)).toBe(
@@ -1424,7 +1452,7 @@ describe('O7b-7: Was das Organigramm für alle zeigt', () => {
   const fuerAlle = (inhalt: { typen: number[]; gruppen: number[] }) =>
     sichtbarkeitLaden.mockResolvedValue({ ok: true, daten: stand(inhalt) });
 
-  it('Typ und Gruppe samt Untergruppen für alle aus – in Karten, Präsentation und PDF; Hinweis; kein Schildchen für den Typ', async () => {
+  it('Typ und Gruppe samt Untergruppen für alle aus – in Karten und PDF; Hinweis', async () => {
     fuerAlle({ typen: [9], gruppen: [7] });
     render(<App />);
     const gd = await screen.findByRole('region', { name: 'Gottesdienst' });
@@ -1433,7 +1461,6 @@ describe('O7b-7: Was das Organigramm für alle zeigt', () => {
     expect(screen.getByRole('note').textContent).toBe(
       'Für alle ausgeblendet: 1 Gruppentyp (Verteiler) und 1 Gruppe – eingestellt von Gruppen-Admins über „Einstellungen“.',
     );
-    expect(screen.queryByRole('button', { name: /^Verteiler/ })).toBeNull();
     // PDF
     fireEvent.click(screen.getByRole('button', { name: 'Als PDF speichern oder drucken' }));
     const vorschau = screen.getByRole('figure', { name: 'Vorschau' });

@@ -131,6 +131,16 @@ describe('ToDoFenster', () => {
     expect(screen.queryByRole('button', { name: 'Löschen' })).toBeNull();
   });
 
+  it('ohne Sitzung kein Schalter „Auf Karte anzeigen“ dort; Sitzung nicht geladen: „Aus einer älteren Sitzung.“', () => {
+    zeige({ eintrag: { aufgabe: { ...BEAMER, sitzung: null }, gruppe: LT }, herkunft: null });
+    expect(screen.getByText('Ohne Sitzung angelegt.')).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: /Auf Karte anzeigen/ })).toHaveLength(1);
+    cleanup();
+    zeige({ herkunft: null });
+    expect(screen.getByText('Aus einer älteren Sitzung.')).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: /Auf Karte anzeigen/ })).toHaveLength(2);
+  });
+
   it('„im Protokoll zeigen“ springt in die Sitzung', () => {
     const { onSitzung } = zeige();
     fireEvent.click(knopf(/im Protokoll zeigen/));

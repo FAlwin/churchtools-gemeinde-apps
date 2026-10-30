@@ -24,6 +24,7 @@ import {
 import {
   einteilen,
   langeErledigt,
+  ohneHerkunft,
   sichtbarFuer,
   zustaendigFuer,
   type Einteilung,
@@ -337,7 +338,7 @@ export function ToDos({
             )}
           </span>
         )}
-        {a.karte?.sitzung && (
+        {a.karte?.sitzung && a.sitzung !== null && (
           <span className={styles.abschnitt}>
             <b>Aus welcher Sitzung</b>
             {herkunft ? (
@@ -349,7 +350,7 @@ export function ToDos({
                 {herkunft.titel} – im Protokoll zeigen
               </button>
             ) : (
-              <span>Ohne Sitzung angelegt.</span>
+              <span>{ohneHerkunft(a)}</span>
             )}
           </span>
         )}

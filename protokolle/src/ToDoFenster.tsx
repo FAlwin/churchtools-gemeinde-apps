@@ -18,7 +18,7 @@ import {
   type ToDoAenderung,
   type VerlaufEintrag,
 } from '@shared/protokolle/aufgaben';
-import type { ToDoEintrag } from '@shared/protokolle/uebersicht';
+import { ohneHerkunft, type ToDoEintrag } from '@shared/protokolle/uebersicht';
 import { Einladeliste } from './Planungsfelder';
 import { toDoAendern, toDoAnlegen, toDoLoeschen, toDoVerschieben } from './todoSchreiben';
 import felder from './Fensterfelder.module.scss';
@@ -366,9 +366,12 @@ export function ToDoFenster({
         <div className={felder.feld}>
           <span className={styles.kopf}>
             Aus welcher Sitzung
-            <SchalterKnopf an={karteSitzung} onClick={() => setKarteSitzung(!karteSitzung)}>
-              Auf Karte anzeigen
-            </SchalterKnopf>
+            {/* Ohne Sitzung zeigte die Karte nichts – der Schalter wäre wirkungslos (Test-Instanz 30.10.2026). */}
+            {a.sitzung !== null && (
+              <SchalterKnopf an={karteSitzung} onClick={() => setKarteSitzung(!karteSitzung)}>
+                Auf Karte anzeigen
+              </SchalterKnopf>
+            )}
           </span>
           {herkunft ? (
             <button
@@ -379,7 +382,7 @@ export function ToDoFenster({
               {herkunft.titel} – im Protokoll zeigen
             </button>
           ) : (
-            <p className={felder.leise}>Ohne Sitzung angelegt.</p>
+            <p className={felder.leise}>{ohneHerkunft(a)}</p>
           )}
         </div>
       )}

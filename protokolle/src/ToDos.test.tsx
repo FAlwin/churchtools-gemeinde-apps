@@ -267,6 +267,23 @@ describe('ToDos', () => {
     expect(onSitzung).toHaveBeenCalledWith(11, 'p:s1');
   });
 
+  it('Karte: Sitzung eingeschaltet, aber ohne Sitzung angelegt → kein Abschnitt; ältere Sitzung → so benannt', async () => {
+    vi.mocked(L.ladeUebersicht).mockResolvedValue(
+      uebersicht([
+        aufgabe('Ohne Sitzung', 11, { wer: [1], karte: { sitzung: true } }),
+        aufgabe('Alte Sitzung', 11, { wer: [1], sitzung: 'weg', karte: { sitzung: true } }),
+      ]),
+    );
+    zeige();
+    await screen.findByText('Ohne Sitzung');
+    expect(screen.getByText('Ohne Sitzung').closest('li')!.textContent).not.toMatch(
+      /Aus welcher Sitzung/,
+    );
+    expect(screen.getByText('Alte Sitzung').closest('li')!.textContent).toMatch(
+      /Aus welcher Sitzung.*Aus einer älteren Sitzung\./,
+    );
+  });
+
   it('ohne „Auf Karte anzeigen“: keine Notiz und keine Sitzung auf der Karte', async () => {
     zeige();
     await screen.findByText('Beamer-Angebote einholen');

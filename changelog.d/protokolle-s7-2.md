@@ -14,6 +14,9 @@
   deshalb im Fenster, auf der Karte, im Editor und bei „Nach Person“ nur Nummern. Jetzt speichert, wer schreibt, seinen
   Vornamen am Verlauf mit; man selbst ist immer bekannt. Wer nie schrieb: „eine weitere Person“ bzw. „jemand“.
 
+- „Auf Karte anzeigen“ bei „Aus welcher Sitzung“ nur noch, wenn das To-Do aus einer Sitzung stammt. Ist die Sitzung
+  älter als die geladene Übersicht, steht „Aus einer älteren Sitzung.“ statt fälschlich „Ohne Sitzung angelegt.“.
+
 ### Intern
 
 - Ein Schreibweg für To-Dos aus der Übersicht (`protokolle/src/todoSchreiben.ts`) – auch die Status-Marke nutzt ihn.

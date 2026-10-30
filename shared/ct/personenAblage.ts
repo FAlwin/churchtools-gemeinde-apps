@@ -86,8 +86,11 @@ export function bildName(key: string): string {
   return `${PRAEFIX}${key}.png`;
 }
 
-/** Die App-Dateien einer Person aus der Antwort von `/files/person/<id>` – älteste zuerst. */
-export function dateienAus(body: unknown): Datei[] {
+/**
+ * Die App-Dateien einer Person aus der Antwort von `/files/person/<id>` – älteste zuerst. `praefix`: wessen Dateien
+ * (Musik-App `musikapp_`, Protokolle `protokolle_`) – jede App sieht nur ihre eigenen.
+ */
+export function dateienAus(body: unknown, praefix = PRAEFIX): Datei[] {
   const daten = (body as { data?: unknown } | null)?.data;
   const roh = Array.isArray(daten) ? (daten as Record<string, unknown>[]) : [];
   return roh
@@ -96,7 +99,7 @@ export function dateienAus(body: unknown): Datei[] {
         typeof f.id === 'number' && typeof f.name === 'string' && typeof f.fileUrl === 'string',
     )
     .map((f) => ({ id: f.id as number, name: f.name as string, fileUrl: f.fileUrl as string }))
-    .filter((f) => f.name.startsWith(PRAEFIX))
+    .filter((f) => f.name.startsWith(praefix))
     .sort((a, b) => a.id - b.id);
 }
 
@@ -319,8 +322,17 @@ export function erstellePersonenAblage(
   opts: {
     /** Höchstens so viele Bilder im Speicher (die zuletzt gebrauchten). Ohne Angabe: alle. */
     maxBilder?: number;
+    /**
+     * Für eine andere App (Protokolle S7-3: Einstellungen der To-Do-Übersicht je Benutzer): eigenes Präfix und eigene
+     * Daten-Datei. Ohne Angabe die der Musik-App. Die App-eigenen Teile (Anmerkungen, Teilen …) benutzt sie dann nicht,
+     * nur `holeDaten`/`mischeEin` – mit denselben Härtungen (Ersetzen als Doppelschritt, Zusammenführen).
+     */
+    praefix?: string;
+    datenName?: string;
   } = {},
 ) {
+  const praefix = opts.praefix ?? PRAEFIX;
+  const datenName = opts.datenName ?? DATEN_NAME;
   /** Die Dateiliste der eigenen Person – einmal geladen, nach jedem Hochladen neu gelesen. */
   let liste: Datei[] | null = null;
   /** Inhalt geladener Dateien je Datei-ID: Eine Datei ändert sich nie, eine neue Fassung hat eine neue ID. */
@@ -339,7 +351,7 @@ export function erstellePersonenAblage(
   }
 
   async function listeVon(p: AblagePort, personId: number): Promise<Datei[]> {
-    return dateienAus(await p.lesen(`/files/person/${personId}`));
+    return dateienAus(await p.lesen(`/files/person/${personId}`), praefix);
   }
 
   async function aktualisiereListe(p: AblagePort): Promise<void> {
@@ -421,7 +433,7 @@ export function erstellePersonenAblage(
    */
   async function ladeDaten(p: AblagePort, l: Datei[]): Promise<DatenDatei> {
     let stand = leer();
-    for (const f of fassungen(DATEN_NAME, l)) {
+    for (const f of fassungen(datenName, l)) {
       let inhalt = datenInhalt.get(f.id);
       if (inhalt === undefined) {
         const text = new TextDecoder().decode(await p.datei(f.fileUrl));
@@ -459,7 +471,7 @@ export function erstellePersonenAblage(
     }
     await ersetze(
       p,
-      DATEN_NAME,
+      datenName,
       new TextEncoder().encode(JSON.stringify(stand)),
       'application/json',
     );
@@ -647,6 +659,35 @@ export function erstellePersonenAblage(
           teilt: teilenAus(daten)?.an === true,
           lieder: liederMitAnmerkungen(l, daten, null).sort((a, b) => a - b),
         };
+      });
+    },
+
+    /** **Allgemein** (Protokolle S7-3): der zusammengeführte Stand der Daten-Datei, frisch gelesen. */
+    holeDaten(p: AblagePort): Promise<DatenDatei> {
+      return nacheinander(async () => {
+        await aktualisiereListe(p);
+        return ladeDaten(p, liste ?? []);
+      });
+    },
+
+    /**
+     * **Allgemein** (Protokolle S7-3): einen Stand aus dem Gerät einbringen – Feld für Feld, die jüngere Änderung gewinnt
+     * (`mische`). Hochgeladen wird nur, wenn das Gerät etwas hat, das dort fehlt oder neuer ist. Liefert den
+     * zusammengeführten Stand – den übernimmt das Gerät.
+     */
+    mischeEin(p: AblagePort, lokal: DatenDatei): Promise<DatenDatei> {
+      return nacheinander(async () => {
+        await aktualisiereListe(p);
+        const dort = await ladeDaten(p, liste ?? []);
+        const stand = mische(dort, lokal);
+        if (JSON.stringify(stand) !== JSON.stringify(dort))
+          await ersetze(
+            p,
+            datenName,
+            new TextEncoder().encode(JSON.stringify(stand)),
+            'application/json',
+          );
+        return stand;
       });
     },
 

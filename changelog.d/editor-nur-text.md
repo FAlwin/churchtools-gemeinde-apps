@@ -4,7 +4,9 @@
   Nur Text“ – dieselben Wörter wie unter „Anzeige“ im Lied-Menü. Bei „Nur Text“ sind die Akkord-Kärtchen und die
   Akkord-Leiste weg; man bearbeitet nur Text und Zeilenumbrüche. Die Akkorde bleiben im Lied: Eine einzelne
   Rücktaste neben einem unsichtbaren Akkord löscht den Buchstaben, nicht den Akkord. Wer ein Wort samt Akkord
-  markiert und löscht, löscht den Akkord mit (so entschieden).
+  markiert und löscht, löscht den Akkord mit (so entschieden). Leerzeichen und Akkorde am Zeilenende – SongSelect
+  richtet Akkorde mit Leerzeichen aus – sind ganz unsichtbar; am iPhone brachen sie sonst in eine leere zweite Zeile
+  um (Alwin, 30.10.2026: „Warum ist da jetzt so ein Abstand?“).
 
 ### Geändert (Musik-App)
 

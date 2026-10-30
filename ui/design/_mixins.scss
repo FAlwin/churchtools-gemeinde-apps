@@ -182,11 +182,19 @@
   }
 }
 
-/** Der gewählte Knopf der Reihe – hell und leicht abgehoben, wie bisher im Umschalter. */
+/**
+ * **Der gewählte Knopf der Reihe – blau umrandet, zart blau hinterlegt, blaue Schrift** (Entwurf
+ * „Auswahl, Anzeige & Dateien“, Variante B, Alwin 30.10.2026). Vorher hell und leicht abgehoben (im Dunkeln zinc-500 auf
+ * zinc-700): Im Tempo-Fenster fand Alwin nicht, wo der sichtbare Puls an ist. Volles Blau (Variante A) bleibt dem Knopf,
+ * der etwas tut („66 in ChurchTools speichern“) – sonst konkurrieren Auswahl und Aktion.
+ *
+ * Gilt für ALLE Umschalter aller Apps – der Rand kommt über `border-color`, deshalb braucht jeder Nutzer einen Rand
+ * (auch der verbundene `Segment`: dort durchsichtig, solange nicht gewählt).
+ */
 @mixin auswahlKnopfAn {
-  background: var(--seg-on);
-  color: var(--text);
-  box-shadow: 0 1px 3px rgba(22, 33, 42, 0.12);
+  border-color: var(--blue);
+  background: var(--blue-soft);
+  color: var(--blue-ink);
 }
 
 /**

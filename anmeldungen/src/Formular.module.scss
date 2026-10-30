@@ -107,7 +107,6 @@
 
   &[aria-pressed='true'] {
     @include m.auswahlKnopfAn;
-    border-color: var(--blue);
   }
 }
 .fehler {

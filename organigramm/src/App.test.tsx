@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
 import { baumAus, elternAus, type Knoten, type OrgGruppe } from '@shared/organigramm/gruppen';
 import { knotenAmPfad } from '@shared/organigramm/ansichten';
@@ -17,6 +17,7 @@ import {
 } from './ladeMitglieder';
 import { ladeEinsaetze } from './ladeEinsaetze';
 import { ladePlan } from './plan';
+import { ladeSichtbarkeit, speichereSichtbarkeit } from './sichtbarkeitSpeicher';
 import { ladeGruppenRechte } from './mitgliedschaft';
 import { personenSuchen } from '@ui/ct/personen';
 import { fensterKnoepfe } from '@ui/fenster/fenster.testutil';
@@ -156,7 +157,14 @@ vi.mock('./plan', () => ({
   speicherePlan: vi.fn(),
   verwerfePlan: vi.fn(),
 }));
+// Was für alle ausgeblendet ist (O7b-7) – ohne Angabe nichts; die eigenen Tests stellen es ein.
+vi.mock('./sichtbarkeitSpeicher', () => ({
+  ladeSichtbarkeit: vi.fn(),
+  speichereSichtbarkeit: vi.fn(),
+}));
 const laden = vi.mocked(ladeStart);
+const sichtbarkeitLaden = vi.mocked(ladeSichtbarkeit);
+const sichtbarkeitSpeichern = vi.mocked(speichereSichtbarkeit);
 const mitgliederLaden = vi.mocked(ladeMitglieder);
 const nachladen = vi.mocked(fehlendeNachladen);
 const einsaetzeLaden = vi.mocked(ladeEinsaetze);
@@ -297,6 +305,9 @@ beforeEach(() => {
   localStorage.setItem('organigramm-ansicht', '"karten"');
   window.location.hash = '';
   laden.mockResolvedValue(start());
+  sichtbarkeitLaden.mockReset();
+  sichtbarkeitLaden.mockResolvedValue({ ok: true, daten: null });
+  sichtbarkeitSpeichern.mockReset();
   mitgliederLaden.mockResolvedValue(MITGLIEDER);
   einsaetzeLaden.mockResolvedValue(EINSAETZE);
 });
@@ -1400,6 +1411,141 @@ describe('O7b-6: Personen in Diagramm und Liste', () => {
     expect(kasten().textContent).toContain('LEITER');
     expect(kasten().textContent).toContain('Alwin Friesen');
     expect(kasten().textContent).toContain('1 Mitarbeiter');
+  });
+});
+
+describe('O7b-7: Was das Organigramm für alle zeigt', () => {
+  const stand = (inhalt: { typen: number[]; gruppen: number[] }, version = 3, name = 'Alwin') => ({
+    version,
+    zeit: '2026-10-29T10:00:00Z',
+    von: { personId: 1, name },
+    inhalt,
+  });
+  const fuerAlle = (inhalt: { typen: number[]; gruppen: number[] }) =>
+    sichtbarkeitLaden.mockResolvedValue({ ok: true, daten: stand(inhalt) });
+
+  it('Typ und Gruppe samt Untergruppen für alle aus – in Karten, Präsentation und PDF; Hinweis; kein Schildchen für den Typ', async () => {
+    fuerAlle({ typen: [9], gruppen: [7] });
+    render(<App />);
+    const gd = await screen.findByRole('region', { name: 'Gottesdienst' });
+    expect(screen.queryByRole('region', { name: 'Infos' })).toBeNull();
+    expect(gd.textContent).not.toContain('Technik');
+    expect(screen.getByRole('note').textContent).toBe(
+      'Für alle ausgeblendet: 1 Gruppentyp (Verteiler) und 1 Gruppe – eingestellt von Gruppen-Admins über „Einstellungen“.',
+    );
+    expect(screen.queryByRole('button', { name: /^Verteiler/ })).toBeNull();
+    // PDF
+    fireEvent.click(screen.getByRole('button', { name: 'Als PDF speichern oder drucken' }));
+    const vorschau = screen.getByRole('figure', { name: 'Vorschau' });
+    expect(vorschau.textContent).toContain('Gottesdienst');
+    expect(vorschau.textContent).not.toContain('Technik');
+    expect(vorschau.textContent).not.toContain('Infos');
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: 'Organigramm als PDF' })).getByRole('button', {
+        name: 'Abbrechen',
+      }),
+    );
+    // Präsentation
+    const knopf = screen.getByRole('button', { name: /Präsentieren/ });
+    await vi.waitFor(() => expect((knopf as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(knopf);
+    const praes = await screen.findByRole('dialog', { name: 'Präsentation' });
+    expect(praes.textContent).toContain('Gottesdienst');
+    expect(praes.textContent).not.toContain('Infos');
+    expect(praes.textContent).not.toContain('Technik');
+  });
+
+  it('der Baum kommt erst, wenn feststeht, was für alle aus ist – sonst blitzten diese Gruppen kurz auf', async () => {
+    let freigeben: (v: Awaited<ReturnType<typeof ladeSichtbarkeit>>) => void = () => {};
+    sichtbarkeitLaden.mockReturnValue(new Promise((r) => (freigeben = r)));
+    render(<App />);
+    await act(async () => {});
+    expect(screen.queryByRole('region', { name: 'Infos' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Gottesdienst' })).toBeNull();
+    freigeben({ ok: true, daten: stand({ typen: [9], gruppen: [] }) });
+    expect(await screen.findByRole('region', { name: 'Gottesdienst' })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Infos' })).toBeNull();
+  });
+
+  it('ohne Leserecht: alles zu sehen, kein Hinweis – das ist kein Fehler', async () => {
+    sichtbarkeitLaden.mockResolvedValue({ ok: false, grund: 'kein-recht' });
+    render(<App />);
+    expect(await screen.findByRole('region', { name: 'Infos' })).toBeTruthy();
+    expect(screen.queryByRole('note')).toBeNull();
+    expect(screen.queryByText(/ließ sich gerade nicht laden/)).toBeNull();
+  });
+
+  it('vorübergehend nicht lesbar: alles zu sehen, mit Hinweis – „Erneut versuchen“ holt es nach', async () => {
+    sichtbarkeitLaden.mockResolvedValueOnce({ ok: false, grund: 'voruebergehend' });
+    render(<App />);
+    expect(await screen.findByRole('region', { name: 'Infos' })).toBeTruthy();
+    const hinweis = screen.getByText(
+      /für alle zeigt, ließ sich gerade nicht laden – zu sehen ist alles/,
+    );
+    fuerAlle({ typen: [9], gruppen: [] });
+    fireEvent.click(within(hinweis).getByRole('button', { name: 'Erneut versuchen' }));
+    await vi.waitFor(() => expect(screen.queryByRole('region', { name: 'Infos' })).toBeNull());
+    expect(screen.queryByText(/ließ sich gerade nicht laden/)).toBeNull();
+  });
+
+  it('„Einstellungen“ gibt es nur für Gruppen-Admins', async () => {
+    laden.mockResolvedValue(start({ rechte: rechte() }));
+    render(<App />);
+    await screen.findByRole('region', { name: 'Gottesdienst' });
+    expect(screen.queryByRole('button', { name: 'Was das Organigramm für alle zeigt' })).toBeNull();
+  });
+
+  it('Fenster: abwählen, Untergruppen gehen mit; Speichern mit der gesehenen Version – danach gilt es sofort', async () => {
+    fuerAlle({ typen: [], gruppen: [] });
+    sichtbarkeitSpeichern.mockImplementation((inhalt) =>
+      Promise.resolve({ ok: true, daten: stand(inhalt, 4) }),
+    );
+    render(<App />);
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Was das Organigramm für alle zeigt' }),
+    );
+    const d = within(screen.getByRole('dialog', { name: 'Was das Organigramm zeigt' }));
+    fireEvent.click(d.getByRole('checkbox', { name: /^Verteiler/ }));
+    fireEvent.click(d.getByRole('checkbox', { name: /^Technik/ }));
+    const stream = d.getByRole<HTMLInputElement>('checkbox', { name: /^Stream/ });
+    expect(stream.disabled).toBe(true);
+    expect(stream.checked).toBe(false);
+    expect(stream.closest('label')?.textContent).toContain('mit der Obergruppe');
+    expect(d.getByRole<HTMLInputElement>('checkbox', { name: /^Infos/ }).disabled).toBe(true);
+    expect(d.getByText('1 Gruppentyp und 1 Gruppe ausgeblendet')).toBeTruthy();
+    fireEvent.click(d.getByRole('button', { name: 'Speichern' }));
+    await vi.waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Was das Organigramm zeigt' })).toBeNull(),
+    );
+    expect(sichtbarkeitSpeichern).toHaveBeenCalledWith(
+      { typen: [9], gruppen: [7] },
+      { personId: 1, name: 'Alwin' },
+      3,
+    );
+    expect(screen.queryByRole('region', { name: 'Infos' })).toBeNull();
+    expect(screen.getByRole('note').textContent).toContain('1 Gruppentyp (Verteiler) und 1 Gruppe');
+  });
+
+  it('ein anderer war schneller: nichts überschrieben – das Fenster zeigt den neuen Stand, der gilt auch dahinter', async () => {
+    fuerAlle({ typen: [], gruppen: [] });
+    sichtbarkeitSpeichern.mockResolvedValue({
+      ok: false,
+      grund: 'konflikt',
+      jetzt: stand({ typen: [], gruppen: [47] }, 4, 'Bea'),
+    });
+    render(<App />);
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Was das Organigramm für alle zeigt' }),
+    );
+    const d = within(screen.getByRole('dialog', { name: 'Was das Organigramm zeigt' }));
+    fireEvent.click(d.getByRole('checkbox', { name: /^Verteiler/ }));
+    fireEvent.click(d.getByRole('button', { name: 'Speichern' }));
+    expect((await d.findByRole('alert')).textContent).toContain(
+      'Bea hat das inzwischen geändert – nichts überschrieben',
+    );
+    expect(d.getByRole<HTMLInputElement>('checkbox', { name: /^Verteiler/ }).checked).toBe(true);
+    expect(d.getByRole<HTMLInputElement>('checkbox', { name: /^Café/ }).checked).toBe(false);
+    expect(screen.queryByRole('region', { name: 'Café' })).toBeNull();
   });
 });
 

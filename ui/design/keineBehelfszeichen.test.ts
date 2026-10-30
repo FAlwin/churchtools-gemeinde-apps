@@ -9,7 +9,8 @@ import { dateien, ORDNER, WURZEL } from './quelltexte.testutil';
  * Links-Fenster ⠿. Seit 08.10.2026 gilt: nur die Linien-Icons aus `ui/icons` (fehlt eins, dort ergänzen).
  * Kommentare zählen nicht (dort darf man die Zeichen nennen).
  */
-const BEHELF = /[⤴🖉✎⚙⋯⠿♪📎📄🖼🎵⚠📴📅📋🔒]|&#x270E;/u;
+// ⎙ und ✉ seit U2-1 (29.10.2026): am Handy winzig, in der echten Prüfung kaum zu erkennen.
+const BEHELF = /[⤴🖉✎⚙⋯⠿♪📎📄🖼🎵⚠📴📅📋🔒⎙✉]|&#x270E;/u;
 
 describe('Icons statt Behelfszeichen', () => {
   it('keine Behelfszeichen in der Oberfläche', () => {

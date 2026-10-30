@@ -36,13 +36,26 @@ describe('Im Gerät merken (geraet.ts)', () => {
       }),
     );
     expect(leseAnsicht()).toEqual({
-      breite: 'm',
+      breite: 'schmal',
       unteransicht: 'personen',
       ausgeblendeteGruppen: ['ohne'],
       ausgeblendeteArten: [],
       zeitraum: { art: 'abHeute' },
       ablaufZu: false,
     });
+  });
+
+  it('gemerktes S/M/L wird schmal/breit (29.10.2026): S und M schmal, L breit', () => {
+    for (const [alt, neu] of [
+      ['s', 'schmal'],
+      ['m', 'schmal'],
+      ['l', 'breit'],
+      ['schmal', 'schmal'],
+      ['breit', 'breit'],
+    ]) {
+      localStorage.setItem('dienstplaner.planen.ansicht', JSON.stringify({ breite: alt }));
+      expect(leseAnsicht().breite).toBe(neu);
+    }
   });
 
   it('ein gemerkter Monat bzw. eigener Zeitraum bleibt (Zeitraum-Knopf, 14.10.2026)', () => {

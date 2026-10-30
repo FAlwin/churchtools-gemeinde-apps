@@ -14,6 +14,7 @@ import {
   terminRumpf,
   terminSperre,
   verschoben,
+  zeitAusTermin,
 } from './bearbeiten';
 import { geplanterKopf } from './planen';
 
@@ -226,6 +227,20 @@ describe('Serien (K2b-2)', () => {
       exceptions: [...serie.exceptions, { date: '2027-07-14' }],
     });
     expect(endeRumpf(serie, '2027-08-04')).toEqual({ ...serie, repeatUntil: '2027-08-03' });
+  });
+
+  it('zeitAusTermin: Einzeltermin wie gelesen; Serie behält den Beginn der Sitzung, Dauer vom Termin', () => {
+    expect(zeitAusTermin({ ...serie, repeatId: 0 }, '2027-07-28T17:30:00Z')).toEqual({
+      beginn: serie.startDate,
+      ende: serie.endDate,
+    });
+    expect(zeitAusTermin(serie, '2027-07-28T17:30:00Z')).toEqual({
+      beginn: '2027-07-28T17:30:00Z',
+      ende: '2027-07-28T19:30:00Z',
+    });
+    expect(zeitAusTermin({ repeatId: 0 }, '2027-07-28T17:30:00Z')).toEqual({
+      beginn: '2027-07-28T17:30:00Z',
+    });
   });
 
   it('verschoben: gleiche Tagesverschiebung, neue Uhrzeit – auch über die Zeitumstellung', () => {

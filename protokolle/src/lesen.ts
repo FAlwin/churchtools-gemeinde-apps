@@ -22,16 +22,19 @@ import {
   type ProtokollKopf,
   type ProtokollTeil,
 } from '@shared/protokolle/speicher';
+import { zeitAusTermin } from '@shared/protokolle/bearbeiten';
 import {
-  antwortAus,
+  minute,
   sitzungenOrdnen,
   type Anfrage,
   type Sitzung,
   type Termin,
   type Treffen,
 } from '@shared/protokolle/sitzungen';
+import { ApiError } from '@ui/ct/fehler';
 import { modulPort } from '@ui/ct/modulPort';
 import { ctDaten, KeinSpeicherRecht } from '@ui/ct/verbindung';
+import { anfragenLesen, terminLaden } from './termin';
 
 /** Wie weit „Kommend“ in die Zukunft schaut. */
 export const KOMMEND_TAGE = 180;
@@ -72,16 +75,11 @@ async function termineMitAnfrage(kalender: number, von: string, bis: string): Pr
   // Je Termin einmal fragen (die Liste zeigt es nicht – gemessen); eine Serie hat dieselbe ID → einmal genügt.
   const anfragen = new Map<number, Anfrage[]>();
   await mapLimit([...new Set(alle.map((t) => t.id))], GLEICHZEITIG, async (id) => {
-    const liste =
-      (await ctDaten<AnfrageRoh[]>(`/calendars/${kalender}/appointments/${id}/meetingrequests`)) ??
-      [];
-    if (Array.isArray(liste) && liste.length)
+    const liste = await anfragenLesen({ kalender, id });
+    if (liste.length)
       anfragen.set(
         id,
-        liste.map((a) => ({
-          person: Number(a.person?.domainIdentifier ?? a.inviteeId),
-          antwort: antwortAus(a.state),
-        })),
+        liste.map(({ person, antwort }) => ({ person, antwort })),
       );
   });
   return alle.flatMap((t) => {
@@ -90,11 +88,58 @@ async function termineMitAnfrage(kalender: number, von: string, bis: string): Pr
   });
 }
 
-/** Eine Besprechungsanfrage, wie ChurchTools sie liefert (gemessen S3-3: `person.domainIdentifier`, `state`). */
-interface AnfrageRoh {
-  person?: { domainIdentifier?: string };
-  inviteeId?: number;
-  state?: string;
+/**
+ * **Termine hinter dem Lesefenster, an denen ein Protokoll hängt** (geplant oder begonnen) – sonst kämen solche
+ * Sitzungen ohne Einladungen und Zusagen (Kasten „Nächste Sitzung“, Startseite; bemerkt beim Prüfen von K2b in der
+ * Test-Instanz 29.10.2026). Je Termin einmal gelesen; ein gelöschter Termin (404) fällt weg, alles andere wird geworfen
+ * wie beim Kalender. Was schon im Fenster liegt (gleiche ID, gleiche Minute), kommt nicht doppelt.
+ */
+async function termineJenseits(
+  koepfe: readonly ProtokollKopf[],
+  bis: string,
+  zeitzone: string,
+  imFenster: readonly Termin[],
+): Promise<Termin[]> {
+  const hinten = koepfe.filter(
+    (k) => k.termin !== null && k.status !== 'frei' && tagAusIso(k.beginn, zeitzone) > bis,
+  );
+  const gelesen = new Map<
+    string,
+    { roh: Awaited<ReturnType<typeof terminLaden>>; anfragen: Anfrage[] } | null
+  >();
+  const schluessel = (t: { kalender: number; id: number }) => `${t.kalender}:${t.id}`;
+  await mapLimit(
+    [...new Map(hinten.map((k) => [schluessel(k.termin!), k.termin!])).values()],
+    GLEICHZEITIG,
+    async (t) => {
+      try {
+        const [roh, anfragen] = await Promise.all([terminLaden(t), anfragenLesen(t)]);
+        gelesen.set(schluessel(t), {
+          roh,
+          anfragen: anfragen.map(({ person, antwort }) => ({ person, antwort })),
+        });
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 404) gelesen.set(schluessel(t), null);
+        else throw e;
+      }
+    },
+  );
+  const da = new Set(imFenster.map((t) => `${t.kalender}:${t.id}:${minute(t.beginn)}`));
+  return hinten.flatMap((k) => {
+    const g = gelesen.get(schluessel(k.termin!));
+    if (!g?.anfragen.length) return [];
+    const zeit = zeitAusTermin(g.roh, k.beginn);
+    if (da.has(`${k.termin!.kalender}:${k.termin!.id}:${minute(zeit.beginn)}`)) return [];
+    return [
+      {
+        kalender: k.termin!.kalender,
+        id: k.termin!.id,
+        titel: typeof g.roh.title === 'string' ? g.roh.title : k.titel,
+        ...zeit,
+        anfragen: g.anfragen,
+      },
+    ];
+  });
 }
 
 /**
@@ -143,10 +188,11 @@ export async function ladeSitzungen(
   // „Heute“ in derselben Zeitzone wie die Sitzungen – sonst wäre kurz vor Mitternacht ein Tag verschoben.
   const heute = tagAusIso(jetzt.toISOString(), zeitzone);
   const bis = plusTage(heute, KOMMEND_TAGE);
-  const [termine, treffen] = await Promise.all([
+  const [imFenster, treffen] = await Promise.all([
     kalender === null ? Promise.resolve([]) : termineMitAnfrage(kalender, heute, bis),
     treffenLesen(gruppe.id, heute, bis),
   ]);
+  const termine = [...imFenster, ...(await termineJenseits(koepfe, bis, zeitzone, imFenster))];
   return {
     ...sitzungenOrdnen({ termine, treffen: treffen ?? [], koepfe, heute, zeitzone }),
     teile,

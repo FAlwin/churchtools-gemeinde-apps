@@ -73,7 +73,8 @@ prüfen. Was trotzdem durchkommt, entfernt die Leitung in ChurchTools (sehen kan
 **Nachprüfung:** Auf der Seite einer freigegebenen Veranstaltung rechnet die Erweiterung nach, was Gäste geschickt haben
 (Beträge je Anmelde-Nr., Belegung je Auswahl, Plätze) und zeigt Hinweise – geändert wird nichts. Wichtig: Wartet
 jemand, rückt in ChurchTools niemand von selbst nach, auch wenn ihr Plätze dazugebt; neue Anmeldungen kommen dann
-hinten an. Nachrücken lassen geht im Bereich „Anmeldungen“ (siehe unten).
+hinten an. Das zeigen seit U2-1 die blaue Kachel „Warteliste“ und der Reiter „Warteliste“ im Bereich „Anmeldungen“
+(dort mit „… nachrücken lassen“) – die Nachprüfung wiederholt es nicht mehr.
 
 **Aufbau einer Veranstaltung** (U1, 29.10.2026): zwei Bereiche – **„Vorbereiten“** (Termin, Anmeldung, „Wer meldet sich
 an?“, Formular, Preise, Bezahlung, Mails, Datenschutz, nach der Freigabe oben der Anmeldelink) und **„Anmeldungen“**
@@ -83,16 +84,23 @@ Freigabe eine Schrittleiste (Termin, Anmeldung, Formular, Bezahlung, Freigeben) 
 Schritt; danach **Kennzahlen** – Plätze, Warteliste, Zahlung offen, Anmeldeschluss. Ein Klick auf eine Kachel öffnet
 die passende Ansicht der Liste. Hervorgehoben (blau) ist nur die Warteliste, wenn trotz freiem Platz jemand wartet –
 offene Zahlungen sind kurz nach der Anmeldung der Normalfall. **„Zahlung offen“ heißt überall dasselbe** (Startseite,
-Kachel, Filter, Rundmail, Druckliste): eine Anmeldung mit Betrag über 0, ohne Haken „bezahlt“, mit Platz. Eine Anmeldung
+Kachel, Reiter, Rundmail, Druckliste): eine Anmeldung mit Betrag über 0, ohne Haken „bezahlt“, mit Platz. Eine Anmeldung
 von Hand ohne Betrag ist also nicht offen. Einzige Lücke der Startseite: Hat die erste Person einer Anmeldung abgesagt,
 steht deren Zahlung nur im Verlauf – die Startseite lädt ihn nicht und zählt sie nicht, die Liste schon. Das Formular (Baukasten) öffnet „Bearbeiten“ an der
 Karte „Formular“; zurück geht es mit „‹ Zurück“ oder dem Reiter „Vorbereiten“. Knöpfe sind die gemeinsamen aus `ui/`
 (wie in den ChurchTools-Fenstern); eine Dauerprüfung (`ui/design/knoepfeAnmeldungen.test.ts`) meldet jede neue eigene
 Knopfart.
 
-**Bereich „Anmeldungen“:** eine Zeile je Anmeldung (über die Anmelde-Nr.) mit Personen, Alter,
-Warteplatz, Betrag und Zahlung; die Zahlen stehen oben in den Kennzahlen, dazu der Hinweis, wenn Plätze frei sind
-und jemand wartet. Filter: Alle, Zahlung offen, Warteliste, Abgesagt; Suche nach Namen. Ein Klick öffnet alle
+**Bereich „Anmeldungen“** (Tabelle seit U2-1, 29.10.2026): eine Zeile je Anmeldung (über die Anmelde-Nr.) – Name, Nr.,
+Personen mit Alter und Warteplatz, jede Frage der Anmeldung als eigene Spalte, Betrag, Bezahlt, Angemeldet am. Die
+Fragen kommen aus demselben Katalog wie die Spalten der Druckliste. Reiter: Alle, Zahlung offen (wenn es etwas kostet),
+Warteliste (mit Spalte „Warteplatz“ und dem Hinweis, wenn Plätze frei sind und jemand wartet), Abgesagt; die Zahl am
+Reiter ist die Zahl seiner Zeilen. Suche nach Name oder Anmelde-Nr. Ein Tipp auf eine Spaltenüberschrift sortiert
+(auf, ab, wieder nach Anmeldetag). Die **Summenzeile** unten: Anmeldungen, Personen mit Platz (+ Warteliste), Betrag
+gesamt/offen/eingegangen (dieselbe Zählung wie die Kacheln), bei Fragen je Art – Zahl: Summe, Ja/Nein: Anzahl „Ja“,
+Auswahl: Anzahl je Antwort, Text: Anzahl ausgefüllt; Fragen zählen nur Anmeldungen mit Platz (im Reiter Warteliste die
+Wartenden). Kopf und Summe bleiben beim Scrollen stehen, der Name links. Lange Antworten sind gekürzt – ganz stehen sie
+beim Darüberfahren und im Fenster. Spalten wählen und anheften kommt mit U2-3. Ein Klick in eine Zeile öffnet alle
 Antworten – was für die ganze Anmeldung gilt (Kontakt, Erziehungsberechtigte, Unterschrift als Bild), steht einmal
 oben. **Abgesagt** kommt aus dem Verlauf von ChurchTools: Er behält auch die Antworten der Abgesagten, deshalb gehen
 Betrag oder Unterschrift nicht verloren, wenn die erste Person einer Anmeldung absagt. Sehen kann die Liste, wer in
@@ -128,14 +136,14 @@ Anmeldung – etwa ein Geschwisterkind, das am Telefon nachgemeldet wird. Gefrag
 Kontakt, Unterschrift und Auswahl gelten von der Anmeldung. Bekommt sie einen Platz, hat sie eine eigene Zahlung (wie
 beim Nachrücken): den Betrag, um den die Anmeldung teurer wird. Die bisherige Zahlung bleibt, wie sie ist.
 
-**Zurückholen:** Wer abgesagt hat, lässt sich zurückholen – im Filter „Abgesagt“ die Zeile anklicken, im Fenster einer
+**Zurückholen:** Wer abgesagt hat, lässt sich zurückholen – im Reiter „Abgesagt“ die Zeile anklicken, im Fenster einer
 Anmeldung unter „Abgesagt“ oder über die Suche bei „＋ Von Hand“. Die Person kommt mit allen Antworten von damals
 zurück. Gehört sie zu einer Anmeldung, die es noch gibt, bekommt sie eine eigene Zahlung (wie „Person dazu“); war sie
 allein angemeldet, wird ihre Zahlung neu gerechnet und ist wieder offen. Hatte sie schon bezahlt, weist das Fenster
 darauf hin – dann bitte prüfen, ob schon zurückgezahlt wurde. Sind die Mails eingerichtet, bekommt sie die
 Bestätigung (beim Zurückholen auf die Warteliste die Mitteilung mit ihrem Platz); sonst gibt es danach „Mail schreiben“.
 
-**Rundmail:** „✉ Rundmail“ im Bereich „Anmeldungen“ schreibt an alle Anmeldungen, an die mit offener Zahlung oder an die
+**Rundmail:** „Rundmail“ im Bereich „Anmeldungen“ schreibt an alle Anmeldungen, an die mit offener Zahlung oder an die
 mit Wartenden – je Anmeldung eine Mail an den Kontakt. ChurchTools verschickt sie mit deinem Namen als Absender;
 Antworten kommen bei dir an. Platzhalter wie `[Betrag]`, `[Anmelde-Nr.]` oder `[Angemeldet von]` füllt ChurchTools je
 Familie; die Vorschau zeigt, wie es bei jeder Familie aussieht. Vorlagen: Zahlungserinnerung (mit den Bankdaten aus
@@ -149,7 +157,7 @@ einem Update ändern – dann meldet das Fenster einen Fehler, und die Mail geht
 und Foyer: Gemeinde, Titel, Termin, groß der QR-Code, darunter der Link und der Anmeldeschluss. Der QR-Code ist immer
 schwarz auf weiß – umgekehrt lesen ihn viele Handys nicht.
 
-**Druckliste:** „⎙ Druckliste“ im Bereich „Anmeldungen“ macht aus der Liste ein PDF zum Teilen (Handy, iPad) oder
+**Druckliste:** „Druckliste“ im Bereich „Anmeldungen“ macht aus der Liste ein PDF zum Teilen (Handy, iPad) oder
 Herunterladen. Vorn stehen die Listen, die zum Formular passen; „＋ weitere“ öffnet die übrigen (ohne passende Frage
 bleibt die Spalte leer zum Ausfüllen von Hand):
 

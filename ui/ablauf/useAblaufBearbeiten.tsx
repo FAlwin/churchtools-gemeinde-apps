@@ -320,7 +320,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
         dataTour="edit-add"
         optionen={optionen}
         gesperrt={gesperrt}
-        nurSymbol={o.schmal}
+        klein={o.schmal}
       />
     ) : null;
 

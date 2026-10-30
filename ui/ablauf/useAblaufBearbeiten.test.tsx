@@ -99,9 +99,12 @@ describe('useAblaufBearbeiten – schmal (Matrix, E6-6a)', () => {
     // Nebeneinander stehen mehrere Listen: Das Plus trägt den Termin im Namen, sichtbar ist nur das Symbol.
     const kopf = screen.getByTestId('kopf');
     expect(kopf.textContent).toBe('');
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Eintrag hinzufügen – Gottesdienst, So, 01.11.' }),
-    );
+    const plus = screen.getByRole('button', {
+      name: 'Eintrag hinzufügen – Gottesdienst, So, 01.11.',
+    });
+    // Klein wie Zauberstab und Regler – in voller Knopfhöhe füllte es die Zeile (Alwin, 29.10.2026).
+    expect(plus.className).toMatch(/klein/);
+    fireEvent.click(plus);
     expect(screen.getByRole('menu', { name: 'Option wählen' })).toBeTruthy();
     expect(screen.getByRole('menuitem', { name: 'Programmpunkt hinzufügen' })).toBeTruthy();
     // Kein Blatt von unten (das ist ein Dialog „Option wählen“).

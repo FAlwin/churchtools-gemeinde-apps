@@ -83,6 +83,15 @@
   margin-left: 2px;
 }
 
+// „Für alle ausgeblendet: …“ (O7b-7) – ruhig, als Information, wie die blassblauen Hinweise in ChurchTools.
+.band {
+  padding: 8px 12px;
+  border-radius: var(--r-ctrl);
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 13px;
+}
+
 .hinweis {
   display: flex;
   flex-wrap: wrap;

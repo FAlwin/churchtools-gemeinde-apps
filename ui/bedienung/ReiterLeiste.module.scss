@@ -63,6 +63,10 @@
   border-bottom: 1px solid var(--hair);
   flex-shrink: 0;
   z-index: 20;
+  // Passen nicht alle Reiter in die Breite, lässt sich die Leiste wischen statt den letzten abzuschneiden
+  // (echte Prüfung U2-1, Handy: „Abgesagt“ war nur halb zu sehen).
+  overflow-x: auto;
+  scrollbar-width: none;
 
   .tab {
     flex: 0 0 auto;
@@ -84,5 +88,11 @@
     span {
       font-weight: 800;
     }
+  }
+
+  // Anzahl hinter dem Text – leiser, auch am gewählten Reiter (U2-1).
+  .tab .zahl {
+    color: var(--text3);
+    font-weight: 400;
   }
 }

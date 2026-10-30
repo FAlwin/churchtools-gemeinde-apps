@@ -1,0 +1,40 @@
+// „Was das Organigramm zeigt“ (O7b-7) – Werte aus ui/design, keine festen.
+
+.typen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+}
+
+.typen label,
+.baum label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.typen small,
+.baum small {
+  color: var(--text3);
+  font-size: 13px;
+}
+
+.baum {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+
+  ul {
+    list-style: none;
+    margin: 0;
+    padding-left: 22px;
+  }
+}
+
+// Ausgeblendet – auch was mit der Obergruppe oder dem Typ verschwindet.
+.aus > label {
+  color: var(--text3);
+}

@@ -670,15 +670,18 @@ trotzdem mit allen Akkorden.
 3. Ein Wort korrigieren (Buchstaben mit der **Rücktaste** löschen und neu tippen), über dem ein Akkord stand → der
    Akkord ist danach noch da.
 4. Ein ganzes Wort samt Akkord **markieren und löschen** → der Akkord ist mit weg (so entschieden).
-5. Speichern → im Blatt stehen Text und Akkorde wie erwartet.
-6. Am Handy: Umschalter, „Einfügen“ und „ChordPro-Text“ sind gleich hoch; „Akkorde & Text“ bricht nicht um.
+5. Ein Lied aus SongSelect (Akkorde mit vielen Leerzeichen ausgerichtet): Bei Nur Text stehen die Zeilen dicht
+   untereinander, **keine leeren Zwischenzeilen** (30.10.2026 am iPhone gefunden).
+6. Speichern → im Blatt stehen Text und Akkorde wie erwartet.
+7. Am Handy: Umschalter, „Einfügen“ und „ChordPro-Text“ sind gleich hoch; „Akkorde & Text“ bricht nicht um.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
 - **Betrifft:** `client/src/components/ChordEditor.tsx`, `client/src/components/ChordProInput.tsx`, `client/src/components/ChordEditor.module.scss`
 - **Automatisiert:** weitgehend – `e2e/editor-nur-text.spec.ts` (Ausblenden und zurück samt unverändertem Speichern,
-  Rücktaste und Entf neben einem unsichtbaren Akkord, markiertes Wort samt Akkord, Enter). **Von Hand bleibt** die
+  Rücktaste und Entf neben einem unsichtbaren Akkord, markiertes Wort samt Akkord, Enter, Leerzeichen-Schwanz am
+  Zeilenende unsichtbar und erhalten). **Von Hand bleibt** die
   Bildschirmtastatur am echten iPhone/iPad (Rücktaste dort über die Eingabe des Systems).
 - **Historie:** Alwin am iPhone 29.10.2026; Entwurf Variante B (Umschalter wie im Lied-Menü), Löschen: „Akkord geht
   mit“

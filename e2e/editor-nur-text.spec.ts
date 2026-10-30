@@ -92,3 +92,35 @@ test('Zeilenumbruch bei „Nur Text“: der Akkord bleibt am Wort', async ({ pag
     DEMO_EDITOR_TEXT.slice(0, ERST) + '\n' + DEMO_EDITOR_TEXT.slice(ERST),
   );
 });
+
+/**
+ * SongSelect richtet Akkorde mit Leerzeichen aus. Ohne Kärtchen blieben die Leerzeichen am Zeilenende stehen und brachen
+ * in eine leere zweite Bildschirmzeile um (Alwin am iPhone, 30.10.2026: „Warum ist da jetzt so ein Abstand?“). Bei „Nur
+ * Text“ ist der Schwanz aus Leerzeichen und Akkorden am Zeilenende deshalb ganz unsichtbar – und bleibt im Text.
+ */
+test('Leerzeichen vor dem letzten Akkord machen keine leere Zeile – und bleiben im Text', async ({
+  page,
+}) => {
+  const zeile = 'Ich [C]ruh im [D/C]Ver - trauen' + ' '.repeat(120) + '[D]';
+  await page.goto('/?demo=editor');
+  await expect(page.locator('.cm-cp-akkord').first()).toBeVisible({ timeout: 30_000 });
+  await page.getByRole('button', { name: 'ChordPro-Text' }).click();
+  await page.locator('.cm-content').click();
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.insertText(zeile);
+  await page.getByRole('button', { name: 'ChordPro-Text' }).click();
+  await page
+    .getByRole('group', { name: 'Darstellung' })
+    .getByRole('button', { name: 'Nur Text' })
+    .click();
+  // Erst messen, wenn „Nur Text“ gezeichnet ist – sonst misst man die Zeile noch mit Kärtchen.
+  await expect(page.locator('.cm-cp-akkord')).toHaveCount(0);
+  // Gemessen in WebKit (wie am iPhone), 402 px breit: ohne das Ausblenden 62 px hoch (zweite Bildschirmzeile leer), mit
+  // 31 px. Chromium bricht Leerzeichen am Ende gar nicht um – eine Höhenprüfung bliebe hier (CI) immer grün. Geprüft
+  // wird deshalb, was gezeichnet wird: Die Zeile endet mit dem Wort, nicht mit den Leerzeichen.
+  expect(await page.locator('.cm-line').first().textContent()).toBe('Ich ruh im Ver - trauen');
+  await page.locator('.cm-line').first().click();
+  await page.keyboard.press('End');
+  await page.keyboard.press('Backspace'); // löscht das „n“, nicht den unsichtbaren Schwanz
+  expect(await speichern(page)).toBe(zeile.replace('trauen', 'traue'));
+});

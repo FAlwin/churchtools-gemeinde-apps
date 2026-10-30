@@ -518,7 +518,9 @@ Marke „Eigener Ablauf“, Ziehen mit `CSS.Translate` – `Transform` streckt v
 `Segment` „Akkorde & Text | Nur Text“ vorn in der Werkzeugleiste, Name „Darstellung“): Akkorde als unsichtbare
 `atomicRanges` statt Kärtchen (`nurTextFeld`), Akkord-Leiste aus; eine einzelne Rücktaste/Entf neben einem
 unsichtbaren Akkord löscht den sichtbaren Buchstaben, nicht den Akkord (`nurTextLoeschen`, Transaktionsfilter);
-markiert samt Text gelöscht, geht der Akkord mit (TF-EINST-22). L5-1 = `AkkordLeiste` (Tonart über
+markiert samt Text gelöscht, geht der Akkord mit (TF-EINST-22). Der Schwanz aus Leerzeichen und Akkorden am
+Zeilenende (`SCHWANZ`) ist bei „Nur Text“ als Ganzes unsichtbar – WebKit brach die Ausricht-Leerzeichen von SongSelect
+sonst in eine leere zweite Bildschirmzeile um (Chromium nicht, deshalb prüft der Test den gezeichneten Text). L5-1 = `AkkordLeiste` (Tonart über
 `tonartAkkorde`, „Im Lied“ über `akkordeImText`, Gedrückthalten = Varianten) und `AkkordFenster` (Eintippen über
 `akkordLesen`; Akkord-Grammatik EINMAL in `akkordTeile`, auch fürs Transponieren). L5-2 = Tipp aufs Kärtchen →
 `AkkordMenue` (Schieben über `akkordVerschieben`, Rahmen über das Feld `aktivFeld` in `ChordProInput` – eine

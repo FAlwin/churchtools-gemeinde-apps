@@ -274,9 +274,14 @@ function darstellungDeko(state: EditorState): DecorationSet {
       b.add(line.from, line.to, Decoration.replace({ widget: new HaltWidget() }));
       continue;
     }
+    // „Nur Text“: Der Schwanz am Zeilenende aus Leerzeichen und Akkorden („be - [Em]mühn          [D]“) wird als
+    // Ganzes unsichtbar. Sonst blieben die Leerzeichen, mit denen SongSelect Akkorde ausrichtet, stehen und brachen
+    // in eine leere zweite Bildschirmzeile um (Alwin am iPhone, 30.10.2026: „Warum ist da jetzt so ein Abstand?“).
+    const schwanz = nurText ? SCHWANZ.exec(line.text) : null;
+    const schwanzAb = schwanz ? schwanz.index : line.length;
     const re = new RegExp(AKKORD_KLAMMER, 'g');
     let m: RegExpExecArray | null;
-    while ((m = re.exec(line.text)))
+    while ((m = re.exec(line.text)) && m.index < schwanzAb)
       b.add(
         line.from + m.index,
         line.from + m.index + m[0].length,
@@ -286,6 +291,8 @@ function darstellungDeko(state: EditorState): DecorationSet {
               widget: new AkkordWidget(m[1], aktiv?.von === line.from + m.index),
             }),
       );
+    if (schwanz && schwanz[0].length > 0)
+      b.add(line.from + schwanzAb, line.to, Decoration.replace({}));
   }
   return b.finish();
 }
@@ -305,9 +312,14 @@ const darstellungFeld = StateField.define<DecorationSet>({
  * Band – im Text unsichtbar, im „ChordPro-Text“ sichtbar (Alwin, 24.10.2026). Dieselbe Regel wie das Blatt.
  */
 const endeFeld = ausblendFeld(ENDE_ZEILE);
-/** Ein oder mehrere Akkorde direkt hintereinander, sonst nichts – was die Rücktaste bei „Nur Text“ NICHT löschen soll. */
-const NUR_AKKORDE = new RegExp(`^(?:${AKKORD_KLAMMER})+$`);
+/**
+ * Was die Rücktaste bei „Nur Text“ NICHT löschen soll: ein oder mehrere Akkorde, ggf. mit Leerzeichen dazwischen (der
+ * unsichtbare Schwanz am Zeilenende, `SCHWANZ`) – sonst nichts.
+ */
+const NUR_AKKORDE = new RegExp(`^[ \\t]*(?:${AKKORD_KLAMMER}[ \\t]*)+$`);
 const AKKORD_AM_ENDE = new RegExp(`${AKKORD_KLAMMER}$`);
+/** Leerzeichen und Akkorde am Zeilenende, mindestens ein Akkord – bei „Nur Text“ als Ganzes unsichtbar. */
+const SCHWANZ = new RegExp(`[ \\t]*(?:${AKKORD_KLAMMER}[ \\t]*)+$`);
 const AKKORD_AM_ANFANG = new RegExp(`^${AKKORD_KLAMMER}`);
 
 /**

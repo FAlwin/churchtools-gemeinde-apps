@@ -18,6 +18,8 @@ export interface AgendaItemDraft {
   responsible: string;
   note: string;
   link: LinkState;
+  /** Infos je Dienstgruppe, wie sie in den Feldern stehen (E6-4): Gruppe → Text. Fehlt = keine Felder. */
+  infos?: Record<number, string>;
 }
 
 /**
@@ -30,7 +32,7 @@ export interface AgendaItemDraft {
  */
 export function pendingAgendaFields(
   // Nur was der Vergleich braucht – die Musik-App gibt ihren `AgendaItem`, der Dienstplaner seine Zeile (E6-2b-1).
-  item: Pick<AblaufZeile, 'title' | 'durationMin' | 'responsibleText' | 'note'>,
+  item: Pick<AblaufZeile, 'title' | 'durationMin' | 'responsibleText' | 'note' | 'infos'>,
   draft: AgendaItemDraft,
 ): PunktAenderung {
   const fields: PunktAenderung = {};
@@ -47,6 +49,14 @@ export function pendingAgendaFields(
 
   if (draft.responsible !== item.responsibleText) fields.responsible = draft.responsible.trim();
   if (draft.note !== item.note) fields.note = draft.note.trim();
+
+  // Infos je Dienstgruppe (E6-4): nur Gruppen, deren Text sich (ohne Rand-Leerzeichen) ändert; leer = löschen.
+  const infos: Record<number, string> = {};
+  for (const [gruppe, text] of Object.entries(draft.infos ?? {})) {
+    const alt = item.infos?.find((i) => i.gruppeId === Number(gruppe))?.text ?? '';
+    if (text.trim() !== alt.trim()) infos[Number(gruppe)] = text.trim();
+  }
+  if (Object.keys(infos).length > 0) fields.infos = infos;
   return fields;
 }
 

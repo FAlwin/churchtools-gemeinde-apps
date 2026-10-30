@@ -352,6 +352,8 @@ function ablaufDemo(
         text: '[Ton]',
         persons: [{ service: '[Ton]', person: { title: 'Alwin Friesen' } }],
       },
+      // Infos je Dienstgruppe (E6-4) – zum Ansehen über „Spalten“ und Ändern im Punkt-Fenster.
+      serviceGroupNotes: [{ serviceGroupId: 3, note: 'Mikros 1–4, Monitor prüfen' }],
     },
     { id: 1, type: 'header', title: 'Ankommen' },
     {
@@ -362,7 +364,14 @@ function ablaufDemo(
       song: { title: 'Halleluja' },
       responsible: { text: '[Gesang]', persons: [{ service: '[Gesang]', person: null }] },
     },
-    { id: 3, type: 'song', title: 'Treu', duration: 300, song: { title: 'Treu' } },
+    {
+      id: 3,
+      type: 'song',
+      title: 'Treu',
+      duration: 300,
+      song: { title: 'Treu' },
+      serviceGroupNotes: [{ serviceGroupId: 4, note: 'Intro 2× leise, dann Band' }],
+    },
     {
       id: 4,
       type: 'normal',
@@ -370,6 +379,7 @@ function ablaufDemo(
       duration: 1800,
       note: 'Thema: Psalm 23',
       responsible: { text: 'Gastprediger' },
+      serviceGroupNotes: [{ serviceGroupId: 3, note: 'Headset, Folien auf Beamer' }],
     },
     { id: 6, type: 'normal', title: 'Abkündigungen', duration: 300, ausgeblendet: true },
   ];
@@ -456,6 +466,26 @@ function ablaufDemo(
         const neu: Punkt = { id: naechsteId++, type: typ, duration: 0, ...felder(r) };
         punkte = [...punkte, neu];
         return { status: 201, data: neu };
+      }
+      // Infos je Dienstgruppe (E6-4): wie gemessen – PUT legt an und ändert, DELETE löscht (auch ohne Info 204).
+      const info = /^\/items\/(\d+)\/servicegroups\/(\d+)$/.exec(pfad.slice(PFAD.length));
+      if (info && (methode === 'PUT' || methode === 'DELETE')) {
+        const id = Number(info[1]);
+        const gruppe = Number(info[2]);
+        if (!punkte.some((p) => p.id === id)) return { status: 404 };
+        punkte = punkte.map((p) => {
+          if (p.id !== id) return p;
+          const rest = ((p.serviceGroupNotes ?? []) as { serviceGroupId: number }[]).filter(
+            (n) => n.serviceGroupId !== gruppe,
+          );
+          const note = typeof r.note === 'string' ? r.note : '';
+          return {
+            ...p,
+            serviceGroupNotes:
+              methode === 'PUT' ? [...rest, { serviceGroupId: gruppe, note }] : rest,
+          };
+        });
+        return { status: 204 };
       }
       // Auge (E6-3b): wie gemessen 204, ein zweites Mal ist harmlos.
       const auge = /^\/items\/(\d+)\/(hide|unhide)$/.exec(pfad.slice(PFAD.length));

@@ -111,12 +111,13 @@ describe('TerminAnsicht (E6-1b)', () => {
     const zeit = within(ablauf).getByText('10:05').parentElement!;
     expect(zeit.textContent).toBe('10:055 Min');
     expect(within(ablauf).getByText(/Beginn/)).toBeTruthy();
-    // Nur ansehen – bis auf die Lieder: Sie öffnen die Lied-Ansicht (E6-O O4, vorher keine Knöpfe).
+    // Nur ansehen – bis auf die Lieder: Sie öffnen die Lied-Ansicht (E6-O O4, vorher keine Knöpfe). Im Kopf dazu
+    // „Spalten“ (Infos je Gruppe, E6-4).
     expect(
       within(ablauf)
         .queryAllByRole('button')
         .map((b) => b.textContent),
-    ).toEqual([expect.stringContaining('Du großer Gott')]);
+    ).toEqual(['Spalten', expect.stringContaining('Du großer Gott')]);
     expect(
       spy.mock.calls.map((c) => new URL(String(c[0])).pathname + new URL(String(c[0])).search),
     ).toEqual(
@@ -934,5 +935,93 @@ describe('TerminAnsicht – Lied-Ansicht (E6-O O4)', () => {
     expect(
       (await screen.findByRole('dialog', { name: 'Treu' })).parentElement!.className,
     ).not.toMatch(/still/);
+  });
+});
+
+describe('Infos je Dienstgruppe in der Termin-Ansicht (E6-4, Entwurf `e6-infos-spalten.html`)', () => {
+  // Sichtbar sind hier Technik und Musik (planbar), Programm nicht – so filtert ChurchTools auch die Infos.
+  const darf = startFuer({ rechte: { ...startFuer().rechte, ablaufKalender: [2] } });
+  function ctInfos() {
+    let notes = [{ serviceGroupId: 3, note: 'Mikro 1' }];
+    const schreiben: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      const url = new URL(String(input));
+      const methode = init?.method ?? 'GET';
+      if (url.pathname.endsWith('/csrftoken')) return Promise.resolve(json(200, { data: 'tok' }));
+      if (methode !== 'GET') {
+        schreiben.push(`${methode} ${url.pathname} ${String(init?.body ?? '')}`);
+        const g = /\/servicegroups\/(\d+)$/.exec(url.pathname);
+        if (g) {
+          const note = (JSON.parse(String(init?.body ?? '{}')) as { note?: string }).note;
+          notes = [
+            ...notes.filter((n) => n.serviceGroupId !== Number(g[1])),
+            ...(note ? [{ serviceGroupId: Number(g[1]), note }] : []),
+          ];
+        }
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
+      if (url.pathname.endsWith('/agenda'))
+        return Promise.resolve(
+          json(200, {
+            data: {
+              calendarId: 2,
+              items: [
+                {
+                  id: 1,
+                  type: 'normal',
+                  title: 'Begrüßung',
+                  start: '2026-10-18T08:00:00Z',
+                  duration: 300,
+                  serviceGroupNotes: notes,
+                },
+              ],
+            },
+          }),
+        );
+      if (url.pathname.startsWith('/api/events/'))
+        return Promise.resolve(
+          json(200, { data: { ...TERMIN, calendar: { domainIdentifier: '2' } } }),
+        );
+      return Promise.resolve(
+        json(200, { data: url.pathname.endsWith('/whoami') ? { id: 1 } : [] }),
+      );
+    });
+    return { schreiben };
+  }
+
+  it('„Spalten“ → Technik angehakt → eigene Spalte mit der Info; Programm (nicht sichtbar) wird nicht angeboten', async () => {
+    ctInfos();
+    zeige({ start: darf });
+    fireEvent.click(await screen.findByRole('button', { name: 'Infos je Gruppe zeigen' }));
+    const menue = screen.getByRole('dialog', { name: 'Infos je Gruppe zeigen' });
+    expect(
+      within(menue)
+        .getAllByRole('checkbox')
+        .map((c) => c.closest('label')!.textContent),
+    ).toEqual(['Technik1 Punkt', 'Musik–']);
+    fireEvent.click(within(menue).getByRole('checkbox', { name: /Technik/ }));
+    const ablauf = screen.getByRole('region', { name: 'Ablauf' });
+    expect(within(ablauf).getByText('Mikro 1')).toBeTruthy();
+    // Beim Bearbeiten kein „Spalten“ – dort gilt das Punkt-Fenster.
+    fireEvent.click(screen.getByRole('button', { name: 'Ablauf bearbeiten' }));
+    expect(screen.queryByRole('button', { name: 'Infos je Gruppe zeigen' })).toBeNull();
+  });
+
+  it('im Punkt-Fenster geändert: schreibt NUR diese Gruppe, der Punkt selbst bleibt', async () => {
+    const { schreiben } = ctInfos();
+    zeige({ start: darf });
+    fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[0]);
+    const feld = await screen.findByRole<HTMLTextAreaElement>('textbox', {
+      name: 'Info für Technik',
+    });
+    expect(feld.value).toBe('Mikro 1');
+    expect(screen.queryByRole('textbox', { name: 'Info für Programm' })).toBeNull();
+    fireEvent.change(feld, { target: { value: 'Mikro 2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(schreiben).toHaveLength(1));
+    expect(schreiben[0]).toBe(
+      'PUT /api/events/7/agenda/items/1/servicegroups/3 {"note":"Mikro 2"}',
+    );
   });
 });

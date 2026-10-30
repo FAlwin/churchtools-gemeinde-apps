@@ -4,7 +4,7 @@ import { schluessel } from '../hooks/abfrageSchluessel';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ApiError } from '../services/api';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { AgendaItem, Service } from '@shared/types/index';
+import type { AgendaItem, InfoGruppe, Service } from '@shared/types/index';
 import { ABLAUF_ABGESCHLOSSEN } from '@shared/ct/schreibKern';
 import { TOUR_SETLIST, TOUR_SETLIST_EDIT } from '../utils/onboarding';
 
@@ -57,6 +57,7 @@ function zeige(
   remove: () => Promise<unknown> = () => Promise.resolve(),
   items: AgendaItem[] = [ITEM],
   gruppenVerborgen = false,
+  infoGruppen?: InfoGruppe[],
 ) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const actions = {
@@ -81,6 +82,7 @@ function zeige(
         services={[]}
         canEdit
         gruppenVerborgen={gruppenVerborgen}
+        infoGruppen={infoGruppen}
       />
     </QueryClientProvider>,
   );
@@ -174,5 +176,33 @@ describe('Hinweis: nicht alle Dienstgruppen sichtbar (#676)', () => {
     zeige(false, undefined, [ITEM], true);
     fireEvent.click(screen.getByTitle('Ablauf bearbeiten'));
     expect(screen.getByText(/Du siehst nicht alle Dienstgruppen/)).toBeTruthy();
+  });
+});
+
+describe('Infos je Dienstgruppe in der Musik-App (E6-4, beide Apps)', () => {
+  const MIT_INFO = { ...ITEM, infos: [{ gruppeId: 3, text: 'Mikro 1' }] } as AgendaItem;
+  const TECHNIK = [{ id: 3, name: 'Technik' }];
+
+  it('„Spalten“ im Seitenkopf → Technik angehakt → die Info steht im Ablauf', () => {
+    zeige(false, undefined, [MIT_INFO], false, TECHNIK);
+    expect(screen.queryByText('Mikro 1')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Infos je Gruppe zeigen' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Technik/ }));
+    expect(screen.getByText('Mikro 1')).toBeTruthy();
+  });
+
+  it('im Punkt-Fenster ein Feld je sichtbarer Gruppe', async () => {
+    zeige(false, undefined, [MIT_INFO], false, TECHNIK);
+    fireEvent.click(screen.getByRole('button', { name: 'Ablauf bearbeiten' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Bearbeiten' })[0]);
+    const feld = await screen.findByRole<HTMLTextAreaElement>('textbox', {
+      name: 'Info für Technik',
+    });
+    expect(feld.value).toBe('Mikro 1');
+  });
+
+  it('ohne bekannte Gruppen (Rechte unbekannt): kein „Spalten“', () => {
+    zeige(false, undefined, [MIT_INFO]);
+    expect(screen.queryByRole('button', { name: 'Infos je Gruppe zeigen' })).toBeNull();
   });
 });

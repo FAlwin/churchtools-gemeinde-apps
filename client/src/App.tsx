@@ -537,6 +537,7 @@ export default function App() {
         canEdit={darfAblauf(frischerTermin)}
         // Unbekannt (`undefined`) heißt: kein Hinweis.
         gruppenVerborgen={caps?.siehtAlleDienstgruppen === false}
+        infoGruppen={caps?.infoGruppen}
         onAblaufSichtbar={setAblaufSichtbar}
       />
     );

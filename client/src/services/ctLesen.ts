@@ -9,7 +9,7 @@
  *
  * Aufgerufen wird es nur aus der Weiche in `churchtoolsApi.ts` und `fileDownload.ts`.
  */
-import { siehtAlleDienstgruppenAus } from '@shared/ct/dienstRechte';
+import { dienstgruppenSichtAus } from '@shared/ct/dienstRechte';
 import {
   fensterOhneAblauf,
   kalenderAus,
@@ -213,22 +213,23 @@ export async function meineRechte(): Promise<UserCapabilities> {
   return {
     ...rechte,
     canUseGlobalNotes: await darfTeamNotizen(),
-    siehtAlleDienstgruppen: await siehtAlleGruppen(roh),
+    ...(await gruppenSicht(roh)),
   };
 }
 
 /**
- * Sieht das Konto alle Dienstgruppen (Hinweis beim Bearbeiten)? Wie im Server; scheitert das Lesen, bleibt es
- * unbekannt.
+ * Sieht das Konto alle Dienstgruppen (Hinweis beim Bearbeiten), und welche Infos je Gruppe sieht es (E6-4)? Wie im
+ * Server; scheitert das Lesen, bleibt beides unbekannt.
  */
-async function siehtAlleGruppen(
+async function gruppenSicht(
   roh: Record<string, Record<string, unknown>>,
-): Promise<boolean | undefined> {
+): Promise<Pick<UserCapabilities, 'siehtAlleDienstgruppen' | 'infoGruppen'>> {
   try {
-    return siehtAlleDienstgruppenAus(roh, await ctDaten<unknown>('/servicegroups'));
+    const sicht = dienstgruppenSichtAus(roh, await ctDaten<unknown>('/servicegroups'));
+    return sicht ? { siehtAlleDienstgruppen: sicht.siehtAlle, infoGruppen: sicht.infoGruppen } : {};
   } catch (e) {
-    console.warn('[rechte] Dienstgruppen nicht lesbar – Hinweis zu Gruppen-Infos bleibt aus:', e);
-    return undefined;
+    console.warn('[rechte] Dienstgruppen nicht lesbar – Gruppen-Infos bleiben aus:', e);
+    return {};
   }
 }
 

@@ -94,6 +94,18 @@
   }
 }
 
+// Zwischenüberschrift „Infos je Gruppe“ (E6-4, Entwurf `e6-infos-spalten.html` Bild 3) – klein, grau, Großbuchstaben
+// wie die Abschnitte der Matrix („Dienste“).
+.abschnitt {
+  padding: 12px 14px 4px;
+  border-bottom: 1px solid var(--hair);
+  color: var(--text2);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .lab {
   flex: none;
   width: 150px;

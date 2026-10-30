@@ -91,6 +91,62 @@
   white-space: pre-wrap;
 }
 
+// ── Infos je Dienstgruppe (E6-4, Entwurf `e6-infos-spalten.html`) ──
+// Am Rechner je gewählter Gruppe eine Spalte rechts wie im ChurchTools-Ablaufplan, darüber ihr Name; am Handy eine Zeile
+// unter dem Punkt.
+.infoKopf {
+  display: flex;
+  align-items: center;
+  background: var(--section);
+  border-bottom: 1px solid var(--hair);
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 700;
+}
+.infoKopfPunkt {
+  flex: 1;
+  padding: 6px 14px;
+}
+.infoKopfZelle,
+.infoZelle {
+  flex: none;
+  width: 150px;
+  border-left: 1px solid var(--hair);
+  overflow-wrap: anywhere;
+}
+.infoKopfZelle {
+  padding: 6px 10px;
+}
+// Die Zellen einer Zeile (und die Köpfe) als ein Block ohne Abstand, rechts bündig – Kopf und Zeile fluchten.
+.infoZellen {
+  display: flex;
+  flex: none;
+  align-self: stretch;
+}
+.flowRow .infoZellen {
+  // Über die Innenabstände der Zeile hinweg bis an ihre Ränder: Die Linien laufen durch.
+  margin: -10px -14px -10px 0;
+}
+.infoZelle {
+  padding: 10px;
+  font-size: 12.5px;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+.infoLeer {
+  color: var(--text3);
+}
+.infoZeile {
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: var(--text);
+  white-space: pre-wrap;
+
+  b {
+    color: var(--text2);
+  }
+}
+
 // Schildchen „neu“/„geändert“ am Punkt (Musik-App, #161).
 .aenderungsTag {
   flex: none;

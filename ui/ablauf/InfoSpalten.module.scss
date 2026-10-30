@@ -1,0 +1,58 @@
+// Knopf „Spalten“ und sein Menü (E6-4, Entwurf `e6-infos-spalten.html` Bild 1) – Menü wie das des Filter-Knopfs.
+.rahmen {
+  position: relative;
+}
+
+.menue {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 270px;
+  max-width: calc(100vw - 32px);
+  padding: 8px 12px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+.titel {
+  display: block;
+  margin: 2px 0 4px;
+  font-size: 14px;
+}
+
+.zeile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  font-size: 14.5px;
+  color: var(--text);
+  cursor: pointer;
+
+  input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--blue);
+  }
+}
+
+.name {
+  flex: 1;
+}
+
+.zahl {
+  color: var(--text3);
+  font-size: 12px;
+}
+
+.fuss {
+  display: block;
+  margin-top: 6px;
+  color: var(--text2);
+  font-size: 12px;
+  line-height: 1.4;
+}

@@ -7,6 +7,8 @@
  */
 import { Fragment, type ReactNode } from 'react';
 import { ablaufEnde, beginnStelle, itemTitleParts, type AblaufZeile } from '@shared/ct/ablaufZeile';
+import type { InfoGruppe } from '@shared/types/index';
+import { HANDY_BREITE, useMedienAbfrage } from '../bedienung/useMedienAbfrage';
 import {
   BeginnLinie,
   EndeLinie,
@@ -44,10 +46,13 @@ export function ZeilenInhalt({
   item,
   tag,
   schmal = false,
+  infoZeilen = [],
 }: {
   item: AblaufZeile;
   tag?: ReactNode;
   schmal?: boolean;
+  /** Am Handy: die gewählten Gruppen als Zeile „Technik: …“ unter dem Punkt (E6-4, Entwurf Bild 2). */
+  infoZeilen?: readonly InfoGruppe[];
 }) {
   if (schmal) {
     return (
@@ -67,9 +72,22 @@ export function ZeilenInhalt({
       </div>
       <ResponsibleLine entries={item.responsible} />
       {item.note && <div className={styles.flowNote}>{item.note}</div>}
+      {infoZeilen.map((g) => {
+        const text = infoText(item, g.id);
+        return text ? (
+          <div key={g.id} className={styles.infoZeile}>
+            <b>{g.name}:</b> {text}
+          </div>
+        ) : null;
+      })}
       {item.song && <LiedKarte song={item.song} ohneTitel={liedImTitel} />}
     </>
   );
+}
+
+/** Die Info einer Gruppe an einem Punkt – leer, wenn es keine gibt. */
+function infoText(item: Pick<AblaufZeile, 'infos'>, gruppe: number): string {
+  return item.infos?.find((i) => i.gruppeId === gruppe)?.text ?? '';
 }
 
 export function AblaufListe({
@@ -80,6 +98,7 @@ export function AblaufListe({
   kopf,
   schmal = false,
   mitEnde = false,
+  infoSpalten = [],
 }: {
   zeilen: readonly AblaufZeile[];
   /** Uhrzeit des Veranstaltungsbeginns („10:00“) für den Balken nach dem Vorlauf (#423). */
@@ -97,7 +116,15 @@ export function AblaufListe({
   schmal?: boolean;
   /** Unter dem letzten Punkt den Balken „Ende“ mit der Uhrzeit (Matrix, 29.10.2026). */
   mitEnde?: boolean;
+  /**
+   * Die gewählten Dienstgruppen (Knopf „Spalten“, E6-4): am Rechner je eine Spalte rechts wie im ChurchTools-Ablaufplan,
+   * am Handy eine Zeile unter dem Punkt. Nicht in der schmalen Form (Matrix: keine Infos, Entwurf Bild 4 A).
+   */
+  infoSpalten?: readonly InfoGruppe[];
 }) {
+  const handy = useMedienAbfrage(HANDY_BREITE);
+  const infos = schmal ? [] : infoSpalten;
+  const alsSpalten = !handy && infos.length > 0;
   const sichtbar = zeilen.filter((z) => !z.removed);
   const ende = mitEnde ? ablaufEnde(sichtbar) : null;
   // Der Balken „Beginn“ vor dem ersten Punkt nach dem Vorlauf (#423) – nur, wenn es Vorlauf gibt.
@@ -123,9 +150,31 @@ export function AblaufListe({
       <>
         <ZeitSpalte item={item} />
         <div className={styles.flowBody}>
-          <ZeilenInhalt item={item} tag={tag} schmal={schmal} />
+          <ZeilenInhalt
+            item={item}
+            tag={tag}
+            schmal={schmal}
+            infoZeilen={alsSpalten ? [] : infos}
+          />
         </div>
         {!schmal && <Kuerzel entries={item.responsible} />}
+        {/* Die Zellen als EIN Block ohne Abstand – sonst schöbe der Abstand der Zeile (`gap`) jede weitere Zelle gegen
+            ihren Kopf (Alwin, 30.10.2026: bei drei Spalten verrutscht). */}
+        {alsSpalten && (
+          <div className={styles.infoZellen}>
+            {infos.map((g) => {
+              const text = infoText(item, g.id);
+              return (
+                <div
+                  key={g.id}
+                  className={`${styles.infoZelle}${text ? '' : ` ${styles.infoLeer}`}`}
+                >
+                  {text || '–'}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </>
     );
     if (item.song && onLied) {
@@ -155,6 +204,18 @@ export function AblaufListe({
   return (
     <div className={`${styles.flowList}${schmal ? ` ${styles.schmal}` : ''}`}>
       {kopf}
+      {alsSpalten && (
+        <div className={styles.infoKopf} aria-hidden="true">
+          <span className={styles.infoKopfPunkt}>Punkt</span>
+          <span className={styles.infoZellen}>
+            {infos.map((g) => (
+              <span key={g.id} className={styles.infoKopfZelle}>
+                {g.name}
+              </span>
+            ))}
+          </span>
+        </div>
+      )}
       {sichtbar.map((item, i) => (
         <Fragment key={item.id}>
           {i === stelle && <BeginnLinie zeit={beginn} />}

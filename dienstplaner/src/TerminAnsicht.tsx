@@ -173,6 +173,7 @@ export function TerminAnsicht({
               <h3>Ablauf</h3>
               <span className={styles.kopfKnoepfe}>
                 {teile.kopfKnopf}
+                {teile.spaltenKnopf}
                 {/* Öffnet den Ablauf DIESES Termins, nicht nur die App (E6-Abschluss, Alwin 30.10.2026). */}
                 {musikApp && !bearbeiten && (
                   <a

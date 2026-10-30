@@ -367,7 +367,13 @@ describe('meineRechte – sieht man alle Dienstgruppen? (#676, Weg der Erweiteru
         { id: 4, name: 'Musik', viewAll: false },
       ],
     });
-    expect((await meineRechte()).siehtAlleDienstgruppen).toBe(false);
+    const r = await meineRechte();
+    expect(r.siehtAlleDienstgruppen).toBe(false);
+    // Infos je Gruppe (E6-4): nur, was man sieht – Programm (für alle) und Technik.
+    expect(r.infoGruppen).toEqual([
+      { id: 1, name: 'Programm' },
+      { id: 3, name: 'Technik' },
+    ]);
   });
 
   it('Dienstgruppen nicht lesbar → unbekannt, die übrigen Rechte bleiben', async () => {
@@ -375,6 +381,7 @@ describe('meineRechte – sieht man alle Dienstgruppen? (#676, Weg der Erweiteru
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     const r = await meineRechte();
     expect(r.siehtAlleDienstgruppen).toBeUndefined();
+    expect(r.infoGruppen).toBeUndefined();
     expect(r.canViewSongs).toBe(true);
   });
 });

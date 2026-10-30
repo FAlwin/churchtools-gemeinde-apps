@@ -22,6 +22,20 @@ describe('Server-Schemas lassen `gesehen` durch', () => {
     }
   });
 
+  it('Infos je Dienstgruppe (E6-4): Änderung und Stand kommen an – auch NUR Infos; leere Änderung zählt nicht', () => {
+    const gesehen = punktStand(
+      ablaufZeileAus(
+        { id: 1, title: 'Begrüßung', serviceGroupNotes: [{ serviceGroupId: 3, note: 'Mikro 1' }] },
+        7,
+        'Europe/Berlin',
+      ),
+    );
+    const body = JSON.parse(JSON.stringify({ infos: { 3: 'Mikro 2', 4: '' }, gesehen })) as unknown;
+    expect(updateItemSchema.parse(body)).toEqual(body);
+    expect(() => updateItemSchema.parse({ infos: {} })).toThrow(/erforderlich/);
+    expect(() => updateItemSchema.parse({ infos: { x: 'a' } })).toThrow();
+  });
+
   it('Reihenfolge: `gesehen` kommt an; ohne bleibt es weg', () => {
     expect(orderSchema.parse({ order: [2, 1], gesehen: [1, 2] })).toEqual({
       order: [2, 1],

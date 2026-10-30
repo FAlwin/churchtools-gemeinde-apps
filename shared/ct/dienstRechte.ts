@@ -10,7 +10,8 @@
  * Gelesen wird über dieselben Regeln wie die Rechte der Musik-App (`rechte.ts`): leere Antwort =
  * Aussetzer (wirft), Listen über `idsAusRecht`.
  */
-import { dienstgruppenAus } from './dienstgruppen';
+import { dienstgruppenAus, type Dienstgruppe } from './dienstgruppen';
+import type { InfoGruppe } from '../types/index';
 import { idsAusRecht, rechteAntwortPruefen } from './rechte';
 
 export interface DienstRechte {
@@ -119,15 +120,31 @@ export function siehtAlleDienstgruppen(
 }
 
 /**
- * `siehtAlleDienstgruppen` aus den Rohantworten (`/permissions/global`, `/servicegroups`) – für die Rechte der
- * Musik-App (Server und Erweiterung, eine Stelle). `undefined`, wenn die Dienstgruppen nicht als Liste kamen: Dann ist
- * es unbekannt, und die Rechte scheitern daran nicht (vorübergehend ist nicht ungültig).
+ * **Die Dienstgruppen, deren Infos man sieht** (E6-4) – in der Reihenfolge der Gemeinde, nur Nummer und Name. Dieselbe
+ * Regel, nach der ChurchTools die Infos eines Punkts filtert (`siehtDienstgruppe`). Eine Stelle für Dienstplaner und
+ * Musik-App.
  */
-export function siehtAlleDienstgruppenAus(
+export function infoGruppen(
+  rechte: Pick<DienstRechte, 'sichtbareDienstgruppen' | 'planbareDienstgruppen'>,
+  gruppen: readonly Dienstgruppe[],
+): InfoGruppe[] {
+  return gruppen.filter((g) => siehtDienstgruppe(rechte, g)).map(({ id, name }) => ({ id, name }));
+}
+
+/**
+ * `siehtAlleDienstgruppen` und `infoGruppen` aus den Rohantworten (`/permissions/global`, `/servicegroups`) – für die
+ * Rechte der Musik-App (Server und Erweiterung, eine Stelle). `undefined`, wenn die Dienstgruppen nicht als Liste
+ * kamen: Dann ist es unbekannt, und die Rechte scheitern daran nicht (vorübergehend ist nicht ungültig).
+ */
+export function dienstgruppenSichtAus(
   rechteRoh: Record<string, Record<string, unknown>>,
   dienstgruppenRoh: unknown,
-): boolean | undefined {
+): { siehtAlle: boolean; infoGruppen: InfoGruppe[] } | undefined {
   if (!Array.isArray(dienstgruppenRoh)) return undefined;
   const rechte = dienstRechteAus(rechteRoh, (_status, meldung) => new Error(meldung));
-  return siehtAlleDienstgruppen(rechte, dienstgruppenAus(dienstgruppenRoh));
+  const gruppen = dienstgruppenAus(dienstgruppenRoh);
+  return {
+    siehtAlle: siehtAlleDienstgruppen(rechte, gruppen),
+    infoGruppen: infoGruppen(rechte, gruppen),
+  };
 }

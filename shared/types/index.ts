@@ -571,6 +571,18 @@ export interface Setlist {
   songs: SetlistSong[];
 }
 
+/** Eine Info je Dienstgruppe an einem Ablaufpunkt (`serviceGroupNotes` in ChurchTools, E6-4). */
+export interface GruppenInfo {
+  gruppeId: number;
+  text: string;
+}
+
+/** Eine Dienstgruppe, deren Infos man sieht – für Spalten und Felder (E6-4). */
+export interface InfoGruppe {
+  id: number;
+  name: string;
+}
+
 /** Ein einzelner Punkt im Ablaufplan – Lied, Überschrift oder sonstiger Eintrag. */
 export interface AgendaItem {
   /** ID des Agenda-Eintrags in ChurchTools */
@@ -597,6 +609,11 @@ export interface AgendaItem {
   durationMin: number | null;
   /** Notiz/Beschreibung des Punkts (frei, kann leer sein). */
   note: string;
+  /**
+   * Infos je Dienstgruppe (E6-4) – nur die, die ChurchTools dem Lesenden zeigt (gefiltert nach seinen Rechten, gemessen
+   * 22.10.2026). Fehlt, wenn der Punkt keine hat.
+   */
+  infos?: GruppenInfo[];
   /**
    * true, wenn der Punkt **an diesem Termin weggelassen** ist (Auge in ChurchTools, E6-3b): Er bleibt im Ablauf, hat
    * hier keine Uhrzeit und zählt nicht mit (gemessen E6-3-0). Gesetzt von `ablaufZeileAus`; fehlt = nicht weggelassen.
@@ -716,6 +733,11 @@ export interface UserCapabilities {
    * dann einen Hinweis. `undefined` = unbekannt (Dienstgruppen nicht lesbar, ältere Server): kein Hinweis.
    */
   siehtAlleDienstgruppen?: boolean;
+  /**
+   * Die Dienstgruppen, deren Infos man sieht – für „Spalten“ und die Felder im Punkt-Fenster (E6-4). Fehlt = unbekannt
+   * (Dienstgruppen nicht lesbar, ältere Server): dann keine Infos.
+   */
+  infoGruppen?: InfoGruppe[];
 }
 
 // ── Verfügbarkeit / Abwesenheiten (#177) ──────────────────────────────────

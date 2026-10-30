@@ -12,7 +12,7 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
-import type { AgendaServiceOption } from '@shared/types/index';
+import type { AgendaServiceOption, InfoGruppe } from '@shared/types/index';
 import type { GeloeschterPunkt, PunktAenderung } from '@shared/ct/schreibKern';
 import type { NeuerAgendaPunkt, PunktArt } from '@shared/ct/agendaItemChanges';
 import {
@@ -97,6 +97,8 @@ export interface AblaufBearbeitenOptionen<T extends AblaufZeile> {
    * Liste und im Punkt-Fenster.
    */
   gruppenVerborgen?: boolean;
+  /** Die Dienstgruppen, deren Infos man sieht – je eine Zeile im Punkt-Fenster (E6-4). */
+  infoGruppen?: readonly InfoGruppe[];
   /** Zusätzlich bei jedem Schreibfehler – z. B. bei 423 (inzwischen abgeschlossen) die Termine neu holen. */
   beiFehler?: (e: unknown) => void;
   /**
@@ -506,6 +508,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
               : undefined
           }
           gruppenVerborgen={o.gruppenVerborgen}
+          infoGruppen={o.infoGruppen}
         />
       )}
 

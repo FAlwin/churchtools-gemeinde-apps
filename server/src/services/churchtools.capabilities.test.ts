@@ -161,6 +161,11 @@ describe('getCapabilities – sieht man alle Dienstgruppen? (#676)', () => {
     stub(() => jsonRes(GRUPPEN));
     const caps = await ct.getCapabilities('ChurchTools_s=gruppen1', 42);
     expect(caps.siehtAlleDienstgruppen).toBe(false);
+    // Infos je Gruppe (E6-4): nur, was man sieht – Programm (für alle) und Technik.
+    expect(caps.infoGruppen).toEqual([
+      { id: 1, name: 'Programm' },
+      { id: 3, name: 'Technik' },
+    ]);
     expect(caps.canEditAgendas).toBe(true);
   });
 
@@ -169,6 +174,7 @@ describe('getCapabilities – sieht man alle Dienstgruppen? (#676)', () => {
     stub(() => jsonRes({ message: 'kaputt' }, 500));
     const caps = await ct.getCapabilities('ChurchTools_s=gruppen2', 42);
     expect(caps.siehtAlleDienstgruppen).toBeUndefined();
+    expect(caps.infoGruppen).toBeUndefined();
     expect(caps.canViewSongs).toBe(true);
   });
 });

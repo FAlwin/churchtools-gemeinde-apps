@@ -11,7 +11,7 @@
  * Partikel – das Abfotografieren dafür ließ die ChurchTools-Erweiterung hängen.
  */
 import { useEffect, useState } from 'react';
-import type { AgendaItem } from '@shared/types/index';
+import type { AgendaItem, InfoGruppe } from '@shared/types/index';
 import { itemLabel } from '@shared/ct/ablaufZeile';
 import { vanishedRows, type ShownRow } from '../utils/vanishedRows';
 import {
@@ -31,6 +31,7 @@ export function AgendaFullView({
   beginn,
   onSelect,
   onSichtbar,
+  infoSpalten,
 }: {
   items: AgendaItem[];
   eventId: number;
@@ -44,6 +45,8 @@ export function AgendaFullView({
    * bevor die Ansicht sie zeigen konnte (im Browser gefunden, 12.10.2026).
    */
   onSichtbar?: (sichtbar: boolean) => void;
+  /** Die gewählten Dienstgruppen (Knopf „Spalten“, E6-4) – Spalten bzw. am Handy Zeilen. */
+  infoSpalten?: readonly InfoGruppe[];
 }) {
   useEffect(() => {
     onSichtbar?.(true);
@@ -87,6 +90,7 @@ export function AgendaFullView({
       onLied={(i) => onSelect(i)}
       schild={schild}
       kopf={sichtbar && <AblaufHinweis aenderungen={zusammenfassung} />}
+      infoSpalten={infoSpalten}
     />
   );
 }

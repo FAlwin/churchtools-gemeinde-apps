@@ -3,7 +3,7 @@
  * Ansicht und Filter „nur im Gerät“; seit 30.10.2026 hier in `ui/` für alle Apps, auch die To-Dos der Protokolle). Jeder Zugriff ist abgesichert: Im privaten Modus oder bei gesperrtem
  * Speicher fehlt `localStorage` – dann gilt die Vorgabe, und Merken entfällt still.
  *
- * Der eine Baustein der Erweiterungen: Auch das Organigramm (Ansicht, Gruppentypen) und die Anmeldungen (angeheftete
+ * Der eine Baustein der Erweiterungen: Auch das Organigramm (Ansichten, Personen) und die Anmeldungen (angeheftete
  * Zeilen, U2-4) merken hier – das Organigramm hatte bis 30.10.2026 eine eigene Kopie. Die Musik-App hat ihren eigenen
  * (`client/src/utils/lokalSpeicher.ts`) – er meldet zusätzlich einen vollen Speicher.
  */

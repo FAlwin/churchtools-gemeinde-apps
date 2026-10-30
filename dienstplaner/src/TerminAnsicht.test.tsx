@@ -862,6 +862,27 @@ describe('TerminAnsicht – Lied-Ansicht (E6-O O4)', () => {
     expect(fensterKnoepfe().slice(-1)).toEqual(['Schließen']);
   });
 
+  it('„Musik-App“ über dem Ablauf öffnet den Ablauf DIESES Termins, nicht nur die App (30.10.2026)', async () => {
+    ctLied();
+    zeige();
+    const link = await screen.findByRole('link', { name: 'Musik-App' });
+    expect(link.getAttribute('href')).toBe(
+      `${window.location.origin}/ccm/musik-app/#/termin/7?am=2026-10-18`,
+    );
+  });
+
+  it('„Bearbeiten“ steht mit Wort da, grau; im Bearbeiten blau „Fertig“ (30.10.2026)', async () => {
+    ctLied();
+    zeige({ start: darf });
+    const knopf = await screen.findByRole('button', { name: 'Ablauf bearbeiten' });
+    expect(knopf.textContent).toBe('Bearbeiten');
+    expect(knopf.className).not.toMatch(/haupt/);
+    fireEvent.click(knopf);
+    const fertig = screen.getByRole('button', { name: 'Fertig' });
+    expect(fertig.textContent).toBe('Fertig');
+    expect(fertig.className).toMatch(/haupt/);
+  });
+
   it('ohne Musik-App: Knopf ausgegraut, darunter wer sie installiert (Alwin, 28.10.2026)', async () => {
     ctLied({ module: [] });
     zeige();

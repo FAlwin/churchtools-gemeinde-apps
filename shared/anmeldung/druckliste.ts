@@ -85,7 +85,8 @@ export function druckWahlFuer(e: OeffentlicheEinstellungen): DruckWahl {
 
 const nameVon = (p: ListenPerson) => (p.nach ? `${p.nach}, ${p.vor}` : p.vor);
 
-function zelle(
+/** Was in einer Spalte der Teilnehmerliste steht – auch die Zelle der Tabelle „je Person“ (U2-2). */
+export function teilnehmerZelle(
   e: OeffentlicheEinstellungen,
   s: string,
   x: ListenAnmeldung,
@@ -188,7 +189,7 @@ export function teilnehmerTabelle(
   };
   const { zeilen, summe } = personenZeilen(liste, mitWarteliste, reihe, (x, p) => [
     nameVon(p),
-    ...spalten.map((s) => zelle(e, s.schluessel, x, p)),
+    ...spalten.map((s) => teilnehmerZelle(e, s.schluessel, x, p)),
   ]);
   return { kopf: ['Name', ...spalten.map((s) => s.titel)], zeilen, summe };
 }

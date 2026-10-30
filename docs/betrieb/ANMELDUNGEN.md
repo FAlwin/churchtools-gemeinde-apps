@@ -100,7 +100,12 @@ Reiter ist die Zahl seiner Zeilen. Suche nach Name oder Anmelde-Nr. Ein Tipp auf
 gesamt/offen/eingegangen (dieselbe Zählung wie die Kacheln), bei Fragen je Art – Zahl: Summe, Ja/Nein: Anzahl „Ja“,
 Auswahl: Anzahl je Antwort, Text: Anzahl ausgefüllt; Fragen zählen nur Anmeldungen mit Platz (im Reiter Warteliste die
 Wartenden). Kopf und Summe bleiben beim Scrollen stehen, der Name links. Lange Antworten sind gekürzt – ganz stehen sie
-beim Darüberfahren und im Fenster. Spalten wählen und anheften kommt mit U2-3. Ein Klick in eine Zeile öffnet alle
+beim Darüberfahren und im Fenster. **„Je Person“** (U2-2) zeigt eine Zeile pro Person: Vor- und Nachname, Status,
+Alter, jede Frage der Person, „Angemeldet von“, Anmelde-Nr., dazu Betrag und Bezahlt der Anmeldung (einen Preis je
+Person kennt ChurchTools nicht). Die Spalten kommen aus demselben Katalog wie die Druckliste. Die Summen zählen Personen
+mit Platz; Betrag und Bezahlt zählen jede Anmeldung einmal; das Alter steht in den Altersstufen der Preise (ohne
+Altersstufen keine Summe). Die Wahl gilt in allen Reitern außer „Abgesagt“ – Absagen sind ohnehin je Person. Spalten
+wählen und anheften kommt mit U2-3. Ein Klick in eine Zeile öffnet alle
 Antworten – was für die ganze Anmeldung gilt (Kontakt, Erziehungsberechtigte, Unterschrift als Bild), steht einmal
 oben. **Abgesagt** kommt aus dem Verlauf von ChurchTools: Er behält auch die Antworten der Abgesagten, deshalb gehen
 Betrag oder Unterschrift nicht verloren, wenn die erste Person einer Anmeldung absagt. Sehen kann die Liste, wer in

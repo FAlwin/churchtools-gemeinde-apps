@@ -277,16 +277,21 @@ wenn kurz vorher ein Musiker die Statistik geladen hat.
 1. Mit dem ersten Konto: **Lieder** → Reiter **Häufigkeit** → ein Lied, das am letzten Sonntag dran war,
    steht mit passender Zahl da; unter **Zuletzt** mit dem richtigen Datum.
 2. Den Zeitraum oben enger stellen → die Zahlen werden kleiner.
-3. Beim Hinzufügen eines Lieds zum Ablauf: die Lied-Auswahl sortiert sich ebenso nach Häufigkeit.
-4. Mit dem zweiten Konto (in der Server-Variante direkt nach Schritt 1): **Lieder** zeigt nur die
-   Liste ohne „Häufigkeit/Zuletzt", kein Fehler, alle Lieder sind da. Ebenso in der Lied-Auswahl.
+3. Beim Hinzufügen eines Lieds zum Ablauf: die Lied-Auswahl sortiert sich ebenso nach Häufigkeit; unter jedem
+   Lied steht schon bei A–Z grau „zuletzt TT.MM.JJJJ“ (seit 30.10.2026).
+4. Ein Lied im Liedblatt öffnen, das gewählte Lied antippen: Oben im Lied-Menü steht **„Zuletzt gesungen“** mit
+   demselben Datum.
+5. Mit dem zweiten Konto (in der Server-Variante direkt nach Schritt 1): **Lieder** zeigt nur die
+   Liste ohne „Häufigkeit/Zuletzt" und ohne „zuletzt …“, kein Fehler, alle Lieder sind da. Ebenso in der
+   Lied-Auswahl; im Lied-Menü keine Zeile „Zuletzt gesungen“.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
 - **Betrifft:** `shared/ct/liedStatistik.ts`, `shared/ct/rechte.ts`, `client/src/services/ctLesen.ts`, `server/src/services/setlistBuilder.ts`, `server/src/controllers/liederController.ts`
 - **Automatisiert:** teilweise – `liedStatistik.test.ts` (Auswertung, Zeitzone, Zukunft), `songUsage.test.ts`
-  (Server: merken, bündeln, Drosselung, fehlendes Recht), `ctLesen.statistik.test.ts` (Weg des Browsers);
+  (Server: merken, bündeln, Drosselung, fehlendes Recht), `ctLesen.statistik.test.ts` (Weg des Browsers),
+  `SongPicker.test.tsx`/`SongMenu.test.tsx` („zuletzt …“ mit und ohne Recht), `e2e/lied-statistik.spec.ts` (Lied-Menü);
   ob die Zahlen zu ChurchTools passen, nur hier
 - **Historie:** Alwin 08.10.2026 (Vergleich mit echten Daten: 62 von 64 identisch)
 

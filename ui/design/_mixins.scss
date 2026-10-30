@@ -321,3 +321,16 @@
     list-style: decimal;
   }
 }
+
+/**
+ * **Grau unter dem Lied: wann es zuletzt gesungen wurde** (Alwin, 30.10.2026) – eine Optik für die Liederliste und
+ * die Lied-Auswahl beim Hinzufügen. Vorher stand dort je eine blaue Kapsel, an verschiedenen Stellen der Zeile.
+ */
+@mixin liedNotiz {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text3);
+  font-variant-numeric: tabular-nums;
+}

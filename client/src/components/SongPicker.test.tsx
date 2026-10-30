@@ -306,4 +306,29 @@ describe('SongPicker – Statistik nur mit dem eigenen Recht', () => {
     zeige();
     expect(usage).toHaveBeenCalledWith(true);
   });
+
+  /**
+   * **Zuletzt gesungen in jeder Zeile** (Alwin beim Planen, 30.10.2026) – auch bei A–Z, grau unter Titel und Autor.
+   * Vorher stand die Statistik nur bei „Häufigkeit“/„Zuletzt“, als blaue Kapsel rechts.
+   */
+  it('mit dem Recht steht „zuletzt …“ schon bei A–Z unter dem Lied', () => {
+    caps.mockReturnValue({ data: { canViewAgendas: false, canViewSongStatistics: true } });
+    usage.mockReturnValue({
+      data: { '3': { dates: ['2026-10-12', '2026-09-01'] } },
+      isLoading: false,
+      isError: false,
+    });
+    zeige();
+    expect(screen.getByText('zuletzt 12.10.2026')).toBeTruthy();
+  });
+
+  it('ohne das Recht keine Zeile', () => {
+    usage.mockReturnValue({
+      data: { '3': { dates: ['2026-10-12'] } },
+      isLoading: false,
+      isError: false,
+    });
+    zeige();
+    expect(screen.queryByText(/zuletzt/)).toBeNull();
+  });
 });

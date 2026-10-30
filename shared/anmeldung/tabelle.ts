@@ -8,9 +8,15 @@
  */
 import { tagPunkt } from '../ct/datum';
 import type { Feld, OeffentlicheEinstellungen } from './formular';
-import { frageAntwort, frageSchluessel, fragen } from './druckliste';
-import { listenZahlen, type ListenAnmeldung } from './liste';
-import { euroText } from './preis';
+import {
+  frageAntwort,
+  frageSchluessel,
+  fragen,
+  teilnehmerSpalten,
+  teilnehmerZelle,
+} from './druckliste';
+import { listenZahlen, type ListenAnmeldung, type ListenPerson } from './liste';
+import { altersregel, euroText } from './preis';
 
 export interface TabellenSpalte {
   schluessel: string;
@@ -141,9 +147,19 @@ export function sortiert(
   sortierung: Sortierung,
   warteliste = false,
 ): ListenAnmeldung[] {
+  return ordnen(liste, (k, x) => sortWert(e, k, x), sortierung, warteliste);
+}
+
+/** Die eine Sortier-Regel für beide Ansichten (je Anmeldung, je Person). */
+function ordnen<Z>(
+  liste: Z[],
+  wert: (schluessel: string, z: Z) => string | number | null,
+  sortierung: Sortierung,
+  warteliste: boolean,
+): Z[] {
   const s = sortierung ?? (warteliste ? { schluessel: 'warteplatz', absteigend: false } : null);
   if (!s) return liste;
-  const werte = new Map(liste.map((x) => [x, sortWert(e, s.schluessel, x)]));
+  const werte = new Map(liste.map((x) => [x, wert(s.schluessel, x)]));
   return [...liste].sort((u, w) => {
     const a = werte.get(u)!;
     const b = werte.get(w)!;
@@ -167,8 +183,12 @@ function zaehlbar(liste: ListenAnmeldung[]): ListenAnmeldung[] {
 
 const zahlText = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 2 });
 
-/** **Die Summe einer Frage** nach ihrer Art (Entscheidung 3, 29.10.2026). */
-export function frageSumme(f: Feld, antworten: (string | null)[]): Summe | null {
+/** **Die Summe einer Frage** nach ihrer Art (Entscheidung 3, 29.10.2026); `wer` zählt bei Auswahl je Antwort. */
+export function frageSumme(
+  f: Feld,
+  antworten: (string | null)[],
+  wer: 'Anmeldungen' | 'Personen' = 'Anmeldungen',
+): Summe | null {
   const da = antworten.filter((a): a is string => a !== null && a !== '');
   switch (f.typ) {
     case 'number':
@@ -188,7 +208,7 @@ export function frageSumme(f: Feld, antworten: (string | null)[]): Summe | null 
       const teile = reihe.filter((k) => je.get(k)).map((k) => `${k} ${je.get(k)}`);
       // Antworten, die es im Formular nicht (mehr) gibt, hinten – sie stehen ja in ChurchTools.
       for (const [k, n] of je) if (!reihe.includes(k)) teile.push(`${k} ${n}`);
-      return teile.length ? { text: teile.join(' · '), klein: 'Anmeldungen je Antwort' } : null;
+      return teile.length ? { text: teile.join(' · '), klein: `${wer} je Antwort` } : null;
     }
     default:
       return { text: `${da.length} ausgefüllt` };
@@ -245,5 +265,168 @@ export function passtZurSuche(
   if (!q) return true;
   return [x.wer, x.nr, ...x.personen.map((p) => `${p.vor} ${p.nach}`)].some((t) =>
     t?.toLowerCase().includes(q),
+  );
+}
+
+// ── Je Person (U2-2) ──────────────────────────────────────────────────────────────────────────
+
+/** Eine Zeile der Tabelle „je Person“: die Person und ihre Anmeldung (Betrag, Kontakt, Fragen der Anmeldung). */
+export interface PersonZeile {
+  x: ListenAnmeldung;
+  p: ListenPerson;
+}
+
+/** Jede Person jeder Anmeldung – in der Reihenfolge der Liste, die erste Person zuerst. */
+export function personZeilen(liste: ListenAnmeldung[]): PersonZeile[] {
+  return liste.flatMap((x) => x.personen.map((p) => ({ x, p })));
+}
+
+const personenFrage = (e: OeffentlicheEinstellungen, schluessel: string) =>
+  fragen(e).find((f) => e.formular.person.includes(f) && frageSchluessel(f) === schluessel);
+
+/**
+ * **Die Spalten je Person** – noch ohne Wahl (U2-3): Vor- und Nachname, auf der Warteliste der Warteplatz, Status,
+ * dann aus dem Katalog der Druckliste (`teilnehmerSpalten`) Alter und jede Frage der Person, „Angemeldet von“ und die
+ * Anmelde-Nr.; Betrag und Bezahlt sind die der Anmeldung (einen Preis je Person kennt ChurchTools nicht, Bauplan U2-2).
+ * Fragen der Anmeldung stehen in dieser Ansicht erst zur Wahl (U2-3).
+ */
+export function personenSpalten(
+  e: OeffentlicheEinstellungen,
+  { kostet, warteliste }: { kostet: boolean; warteliste: boolean },
+): TabellenSpalte[] {
+  const s = (schluessel: string, titel: string, zahl = false) => ({ schluessel, titel, zahl });
+  const katalog = teilnehmerSpalten(e);
+  const aus = (pruefe: (k: string) => boolean) =>
+    katalog
+      .filter((k) => pruefe(k.schluessel))
+      .map((k) =>
+        s(
+          k.schluessel,
+          k.titel,
+          k.schluessel === 'alter' || ZAHL_TYPEN.has(personenFrage(e, k.schluessel)?.typ ?? 'text'),
+        ),
+      );
+  return [
+    s('vor', 'Vorname'),
+    s('nach', 'Nachname'),
+    ...(warteliste ? [s('warteplatz', 'Warteplatz', true)] : []),
+    s('status', 'Status'),
+    ...aus((k) => k === 'alter' || !!personenFrage(e, k)),
+    ...aus((k) => k === 'kontakt' || k === 'nr'),
+    ...(kostet ? [s('betrag', 'Betrag der Anmeldung', true), s('bezahlt', 'Bezahlt')] : []),
+  ];
+}
+
+/** Was in der Zelle steht – Status und Bezahlt zeichnet die Erweiterung selbst. */
+export function personZellText(
+  e: OeffentlicheEinstellungen,
+  schluessel: string,
+  { x, p }: PersonZeile,
+): string {
+  switch (schluessel) {
+    case 'vor':
+      return p.vor;
+    case 'nach':
+      return p.nach;
+    case 'warteplatz':
+      return p.status === 'wartet' && p.warteplatz ? String(p.warteplatz) : '';
+    case 'status':
+      return p.status === 'wartet' ? 'Warteliste' : 'Platz';
+    case 'betrag':
+      return x.betragCent === null ? '' : euroText(x.betragCent);
+  }
+  return teilnehmerZelle(e, schluessel, x, p);
+}
+
+function personSortWert(
+  e: OeffentlicheEinstellungen,
+  schluessel: string,
+  z: PersonZeile,
+): string | number | null {
+  switch (schluessel) {
+    case 'alter':
+      return z.p.alter;
+    case 'warteplatz':
+      return z.p.status === 'wartet' ? (z.p.warteplatz ?? null) : null;
+    case 'status':
+      return z.p.status === 'wartet' ? 1 : 0;
+    case 'betrag':
+    case 'bezahlt':
+      return sortWert(e, schluessel, z.x);
+  }
+  const f = personenFrage(e, schluessel);
+  if (f && ZAHL_TYPEN.has(f.typ)) return zahlAus(frageAntwort(e, f, z.x, z.p));
+  const t = personZellText(e, schluessel, z);
+  return t === '' ? null : t;
+}
+
+/** **Sortieren je Person** – wie je Anmeldung (`ordnen`); ohne Wahl die Reihenfolge der Liste. */
+export function personenSortiert(
+  e: OeffentlicheEinstellungen,
+  zeilen: PersonZeile[],
+  sortierung: Sortierung,
+  warteliste = false,
+): PersonZeile[] {
+  return ordnen(zeilen, (k, z) => personSortWert(e, k, z), sortierung, warteliste);
+}
+
+/** Jede Anmeldung einmal – Beträge gehören der Anmeldung, nicht der Person. */
+const anmeldungenVon = (zeilen: PersonZeile[]) => [...new Set(zeilen.map((z) => z.x))];
+
+/**
+ * **Personen nach Alter** – in den Altersstufen der Preise (`altersregel`, dieselbe Regel wie die Rechnung); ohne
+ * Altersstufen keine Summe. Wer in keine Stufe fällt, steht unter „übrige“, ohne bekanntes Alter zählt niemand.
+ */
+function altersSumme(e: OeffentlicheEinstellungen, zeilen: PersonZeile[]): Summe | null {
+  const stufen = [...e.preis.alter].sort((u, w) => u.von - w.von);
+  if (stufen.length === 0) return null;
+  const je = new Map<string, number>();
+  const name = (r: { von: number; bis: number | null }) =>
+    r.bis === null ? `ab ${r.von}` : `${r.von}–${r.bis}`;
+  const hoechste = Math.max(...stufen.map((r) => (r.bis === null ? Infinity : r.bis)));
+  for (const { p } of zeilen) {
+    if (p.alter === null) continue;
+    const r = altersregel(stufen, p.alter);
+    const k = r ? name(r) : p.alter > hoechste ? `ab ${hoechste + 1}` : 'übrige';
+    je.set(k, (je.get(k) ?? 0) + 1);
+  }
+  const reihe = [...stufen.map(name), `ab ${hoechste + 1}`, 'übrige'];
+  const teile = reihe.filter((k) => je.get(k)).map((k) => `${k}: ${je.get(k)}`);
+  return teile.length
+    ? { text: teile.join(' · '), klein: 'Personen je Altersstufe der Preise' }
+    : null;
+}
+
+/**
+ * **Die Summenzeile je Person** – wie je Anmeldung, aber gezählt wird, wer einen Platz hat (nur im Reiter Warteliste
+ * die Wartenden). Betrag und Bezahlt zählen jede Anmeldung **einmal**, egal wie viele Personen sie hat.
+ */
+export function personSumme(
+  e: OeffentlicheEinstellungen,
+  schluessel: string,
+  zeilen: PersonZeile[],
+): Summe | null {
+  const mitPlatz = zeilen.filter((z) => z.p.status === 'aktiv');
+  const zaehlen = mitPlatz.length > 0 ? mitPlatz : zeilen;
+  switch (schluessel) {
+    case 'vor': {
+      const wartend = zeilen.length - mitPlatz.length;
+      return {
+        text: anzahl(zaehlen.length, 'Person', 'Personen'),
+        ...(mitPlatz.length > 0 && wartend ? { klein: `+ ${wartend} auf der Warteliste` } : {}),
+      };
+    }
+    case 'alter':
+      return altersSumme(e, zaehlen);
+    case 'betrag':
+    case 'bezahlt':
+      return summe(e, schluessel, anmeldungenVon(zeilen));
+  }
+  const f = personenFrage(e, schluessel);
+  if (!f) return null;
+  return frageSumme(
+    f,
+    zaehlen.map((z) => frageAntwort(e, f, z.x, z.p)),
+    'Personen',
   );
 }

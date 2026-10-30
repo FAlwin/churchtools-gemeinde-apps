@@ -14,7 +14,7 @@ import { useLatestRef } from '../hooks/useLatestRef';
 import { readPageTexts } from '../utils/annotationKeys';
 import { textObjStyle } from '../utils/textObjStyle';
 import type { PedalRichtung } from '../utils/pedalTasten';
-import type { ScrollPosition } from '../utils/scrollPosition';
+import { seiteInDerMitte, type ScrollPosition } from '../utils/scrollPosition';
 import { pedalZiel } from '../utils/pedalSchritt';
 import {
   pedalHalte,
@@ -152,15 +152,14 @@ export function ScrollDeck({
     const lesen = () => {
       rahmen = 0;
       const y = el.scrollTop;
-      const ymitte = y + el.clientHeight / 2;
+      const kanten = seitenRefs.current.map((_, i) => oben(i));
       let p = 0;
-      let m = 0;
-      for (let i = 0; i < seitenRefs.current.length; i++) {
-        const o = oben(i);
-        if (o <= y + 1) p = i;
-        if (o <= ymitte) m = i;
+      for (let i = 0; i < kanten.length; i++) {
+        if (kanten[i] <= y + 1) p = i;
         else break;
       }
+      // Gilt die Seite in der Bildmitte – am Rand die erste bzw. letzte (`seiteInDerMitte`, Scheibe B4).
+      const m = seiteInDerMitte(kanten, y, el.clientHeight, el.scrollHeight);
       positionRef.current = { seite: p, versatz: Math.max(0, y - oben(p)), mitte: m };
       if (m !== gemeldet.current) {
         gemeldet.current = m;

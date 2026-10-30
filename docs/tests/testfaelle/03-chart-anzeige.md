@@ -504,7 +504,8 @@ Einstellung gilt nur auf diesem Gerät.
 
 1. **Mehr → Während des Spielens → Liedansicht: Scrollen** wählen.
 2. Einen Gottesdienst öffnen, ein Lied antippen. Mit dem Finger nach unten wischen: Die Kopfzeile zeigt
-   immer das Lied in der Bildmitte, die Ablauf-Leiste oben folgt.
+   immer das Lied in der Bildmitte, die Ablauf-Leiste oben folgt und scrollt mit. Ganz nach unten wischen: das
+   **letzte** Lied ist gewählt, auch wenn es kurz ist; ganz nach oben: das erste (B4, 30.10.2026).
 3. Das Pedal treten (oder ↓ / Leertaste auf einer Tastatur): Der nächste Teil steht oben, die Linie blitzt kurz
    auf. Am oberen Rand schaut nichts von der Zeile davor (oder vom Liedkopf über dem ersten Teil) herein. Ein Lied mit `----` im Text: Das Pedal hält auch dort. Am Emporen-Monitor (oder einem kleinen Fenster)
    ein Teil, der nicht ganz passt: erst ⅔ weiter, keine Zeile fehlt. Rückwärts mit dem anderen Pedal (↑ /
@@ -529,7 +530,8 @@ Einstellung gilt nur auf diesem Gerät.
 - **Betrifft:** `client/src/components/ScrollDeck.tsx`, `client/src/components/RollenMalen.tsx`, `client/src/utils/rolleSpeichern.ts`, `client/src/hooks/useTextEingabe.ts`, `client/src/utils/rollenAbbildung.ts`, `client/src/pages/ChordChart.tsx`, `client/src/utils/pedalTasten.ts`, `client/src/utils/pedalSchritt.ts`, `client/src/hooks/useChartNavigation.ts`, `client/src/components/PageDeck.tsx`, `client/src/utils/devicePrefs.ts`, `client/src/pages/Settings.tsx`
 - **Automatisiert:** weitgehend – `e2e/chart-scrollen.spec.ts` (Seiten nahtlos und voll breit, Pedal Teil für
   Teil samt ⅔ bei langen Teilen und Halt am `----`,
-  Kopfzeile folgt der Mitte, Tipp, Lied in der Leiste, Fußpfeil, Malen einzeln und zurück an dieselbe Stelle, quer
+  Kopfzeile folgt der Mitte, Tipp, Lied in der Leiste, Fußpfeil, `blatt-leiste.spec.ts` (Leiste folgt und scrollt mit,
+  Ende = letztes Lied), `scrollPosition.test.ts` (Rand-Regel), Malen einzeln und zurück an dieselbe Stelle, quer
   eine Seite, je Lied eine Rolle), `chordPdf.test.ts` (Rolle), `pedalTasten.test.ts`, `pedalSchritt.test.ts`, `ScrollDeck.test.tsx`,
   `useChartNavigation.test.ts`. Von Hand bleiben
   ein echtes Pedal, das Wischen mit dem Finger und das Drehen

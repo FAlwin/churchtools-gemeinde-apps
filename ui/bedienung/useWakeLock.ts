@@ -7,6 +7,9 @@ import { useEffect } from 'react';
  * geht (Tab-Wechsel, App wegschalten). Damit „Display anlassen" zuverlässig wirkt,
  * wird die Sperre beim Zurückkehren (visibilitychange) erneut angefordert.
  * No-op, wenn die API fehlt.
+ *
+ * Seit E6b-1 (30.10.2026) hier in `ui/` – vorher nur in der Musik-App (`client/src/hooks`); die Ablauf-Anzeige des
+ * Dienstplaners braucht dasselbe.
  */
 export function useWakeLock(enabled: boolean): void {
   useEffect(() => {

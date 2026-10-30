@@ -18,7 +18,6 @@ export function zeile(
     ende: `${tag}T09:30:00Z`,
     tag,
     uhrzeit: '10:00',
-    endeUhrzeit: '11:30',
     abgesagt: false,
     meine: [],
     geplant: 0,

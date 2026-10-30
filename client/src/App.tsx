@@ -17,7 +17,7 @@ import { Agenda } from './pages/Agenda';
 import { ablaufRechteAus, darfAblaufBearbeiten } from '@shared/ct/ablaufRecht';
 import type { Service } from '@shared/types/index';
 import { useSettings } from './hooks/useSettings';
-import { useWakeLock } from './hooks/useWakeLock';
+import { useWakeLock } from '@ui/bedienung/useWakeLock';
 import { useAuth } from './hooks/useAuth';
 import { useSiteConfig } from './hooks/useSiteConfig';
 import { useAppNav } from './hooks/useAppNav';

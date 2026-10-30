@@ -193,7 +193,9 @@ function AlsNaechstes({
         <div>
           <h2 id="als-naechstes">{z.name}</h2>
           <p className={styles.leise}>
-            {tagKurz(z.tag)} · {z.uhrzeit} Uhr{z.endeUhrzeit && ` · Ende ca. ${z.endeUhrzeit} Uhr`}
+            {/* Nur Tag und Beginn – kein Ende (Alwin, 30.10.2026). Ende heißt überall „wann der letzte Punkt vorbei ist“; das
+                steht in der Termin-Ansicht, nicht hier. */}
+            {tagKurz(z.tag)} · {z.uhrzeit} Uhr
           </p>
         </div>
       </div>

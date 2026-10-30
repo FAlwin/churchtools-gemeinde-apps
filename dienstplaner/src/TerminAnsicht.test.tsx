@@ -100,7 +100,9 @@ describe('TerminAnsicht (E6-1b)', () => {
     zeige();
     expect(await screen.findByRole('heading', { name: 'Gottesdienst' })).toBeTruthy();
     const kopf = screen.getByRole('heading', { name: 'Gottesdienst' }).nextElementSibling!;
-    expect(kopf.textContent).toBe('So, 18.10.2026 · 10:00 Uhr · Ende ca. 12:00 Uhr');
+    // Ende = wann der letzte Punkt vorbei ist (Lied 10:05 + 5 Min), nicht das Ende des Termins (12:00) und ohne „ca.“
+    // (Alwin, 30.10.2026).
+    expect(kopf.textContent).toBe('So, 18.10.2026 · 10:00 Uhr · Ende 10:10 Uhr');
     const ablauf = screen.getByRole('region', { name: 'Ablauf' });
     expect(within(ablauf).getByText('Soundcheck')).toBeTruthy();
     expect(within(ablauf).getByText('30 Min')).toBeTruthy();
@@ -112,12 +114,12 @@ describe('TerminAnsicht (E6-1b)', () => {
     expect(zeit.textContent).toBe('10:055 Min');
     expect(within(ablauf).getByText(/Beginn/)).toBeTruthy();
     // Nur ansehen – bis auf die Lieder: Sie öffnen die Lied-Ansicht (E6-O O4, vorher keine Knöpfe). Im Kopf dazu
-    // „Spalten“ (Infos je Gruppe, E6-4).
+    // „Ablauf zeigen“ (E6b-1) und „Spalten“ (Infos je Gruppe, E6-4).
     expect(
       within(ablauf)
         .queryAllByRole('button')
         .map((b) => b.textContent),
-    ).toEqual(['Spalten', expect.stringContaining('Du großer Gott')]);
+    ).toEqual(['Ablauf zeigen', 'Spalten', expect.stringContaining('Du großer Gott')]);
     expect(
       spy.mock.calls.map((c) => new URL(String(c[0])).pathname + new URL(String(c[0])).search),
     ).toEqual(
@@ -143,6 +145,10 @@ describe('TerminAnsicht (E6-1b)', () => {
     zeige();
     expect(await screen.findByText('Noch kein Ablauf.')).toBeTruthy();
     expect(screen.getByText('Ton')).toBeTruthy();
+    // Ohne Ablauf kein Ende – auch nicht das des Termins aus ChurchTools.
+    expect(
+      screen.getByRole('heading', { name: 'Gottesdienst' }).nextElementSibling!.textContent,
+    ).toBe('So, 18.10.2026 · 10:00 Uhr');
     cleanup();
     vi.restoreAllMocks();
     ct({ ablauf: () => json(200, { data: { items: [] } }) });
@@ -940,6 +946,8 @@ describe('TerminAnsicht – Lied-Ansicht (E6-O O4)', () => {
 
 describe('Infos je Dienstgruppe in der Termin-Ansicht (E6-4, Entwurf `e6-infos-spalten.html`)', () => {
   // Sichtbar sind hier Technik und Musik (planbar), Programm nicht – so filtert ChurchTools auch die Infos.
+  // Die Spaltenwahl merkt sich das Gerät – je Test frisch, sonst hakte ein Test die Wahl des vorigen wieder ab.
+  beforeEach(() => localStorage.clear());
   const darf = startFuer({ rechte: { ...startFuer().rechte, ablaufKalender: [2] } });
   function ctInfos() {
     let notes = [{ serviceGroupId: 3, note: 'Mikro 1' }];
@@ -1023,5 +1031,20 @@ describe('Infos je Dienstgruppe in der Termin-Ansicht (E6-4, Entwurf `e6-infos-s
     expect(schreiben[0]).toBe(
       'PUT /api/events/7/agenda/items/1/servicegroups/3 {"note":"Mikro 2"}',
     );
+  });
+
+  it('„Ablauf zeigen“ (E6b-1): öffnet die Anzeige mit den gewählten Infos; nicht beim Bearbeiten; „Schließen“ führt zurück', async () => {
+    ctInfos();
+    zeige({ start: darf });
+    fireEvent.click(await screen.findByRole('button', { name: 'Infos je Gruppe zeigen' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Technik/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ablauf im Vollbild zeigen' }));
+    const anzeige = screen.getByRole('dialog', { name: /^Ablauf: / });
+    expect(within(anzeige).getByText('Begrüßung')).toBeTruthy();
+    expect(within(anzeige).getByText(/Mikro 1/).textContent).toBe('Technik: Mikro 1');
+    fireEvent.click(within(anzeige).getByRole('button', { name: 'Schließen' }));
+    expect(screen.queryByRole('dialog', { name: /^Ablauf: / })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Ablauf bearbeiten' }));
+    expect(screen.queryByRole('button', { name: 'Ablauf im Vollbild zeigen' })).toBeNull();
   });
 });

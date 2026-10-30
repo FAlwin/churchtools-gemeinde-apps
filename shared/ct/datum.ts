@@ -51,6 +51,22 @@ export function tagKurz(tag: string): string {
   return `${WOCHENTAG[datum(tag).getUTCDay()]}, ${tag.slice(8, 10)}.${tag.slice(5, 7)}.`;
 }
 
+const WOCHENTAG_LANG = [
+  'Sonntag',
+  'Montag',
+  'Dienstag',
+  'Mittwoch',
+  'Donnerstag',
+  'Freitag',
+  'Samstag',
+];
+
+/** „Sonntag, 1. November“ – ausgeschrieben unter der Uhr der Ablauf-Anzeige (E6b-1). */
+export function tagLang(tag: string): string {
+  const d = datum(tag);
+  return `${WOCHENTAG_LANG[d.getUTCDay()]}, ${d.getUTCDate()}. ${MONATE[d.getUTCMonth()]}`;
+}
+
 /** „08. Nov“ – wie die Termine der Musik-App (`mapEvent`: Tag zweistellig, Monat kurz). */
 export function tagMonatKurz(tag: string): string {
   return `${tag.slice(8, 10)}. ${MONATE_KURZ[Number(tag.slice(5, 7)) - 1]}`;

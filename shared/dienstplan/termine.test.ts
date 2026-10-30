@@ -67,7 +67,6 @@ describe('termineAus', () => {
       ende: '2026-10-18T08:00:00Z',
       tag: '2026-10-18',
       uhrzeit: '10:00',
-      endeUhrzeit: null,
       abgesagt: false,
       meine: [
         { dienst: 'Ton', zugesagt: true },
@@ -177,9 +176,11 @@ describe('Team, Ende und freie Plätze je Gruppe (Startseite, E3-3)', () => {
     expect(z.freiNachGruppe).toEqual({ 3: 2 });
   });
 
-  it('Ende in Ortszeit, wenn es nach dem Beginn liegt; sonst null', () => {
+  it('Ende so, wie ChurchTools es liefert (für Abwesenheiten); vor dem Beginn → der Beginn', () => {
     const roh = { ...termin(1, 'X', '2026-10-18T08:00:00Z'), endDate: '2026-10-18T09:30:00Z' };
-    expect(zeilen([roh])[0]).toMatchObject({ endeUhrzeit: '11:30', ende: '2026-10-18T09:30:00Z' });
+    expect(zeilen([roh])[0]).toMatchObject({ ende: '2026-10-18T09:30:00Z' });
+    const frueh = { ...termin(2, 'Y', '2026-10-18T08:00:00Z'), endDate: '2026-10-18T07:00:00Z' };
+    expect(zeilen([frueh])[0]).toMatchObject({ ende: '2026-10-18T08:00:00Z' });
   });
 });
 

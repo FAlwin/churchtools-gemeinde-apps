@@ -22,5 +22,6 @@
   geschrieben. Das Server-Schema der Musik-App lässt `infos` durch.
 - Welche Gruppen man sieht, steht an EINER Stelle (`infoGruppen`, `dienstgruppenSichtAus` in `shared/ct/dienstRechte.ts`)
   – für den Dienstplaner und für die Rechte der Musik-App (Server und Erweiterung, neues Feld `infoGruppen`).
-- Neu `ui/ablauf/InfoSpalten.tsx` (Knopf) und `infoSpaltenWahl.ts` (Wahl, im Gerät gemerkt); `AblaufListe` mit
+- Neu `ui/ablauf/InfoSpalten.tsx` (Knopf) und `infoSpaltenWahl.ts` (Wahl, gemerkt über den gemeinsamen Gerätespeicher
+  `ui/bedienung/geraet.ts`, dort neu `zahlen` neben `texte`); `AblaufListe` mit
   `infoSpalten`. Demo: Infos an drei Punkten, Schreiben je Gruppe wie gemessen.

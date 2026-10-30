@@ -26,3 +26,8 @@ export function merkeImGeraet(schluessel: string, wert: unknown): void {
 export function texte(roh: unknown): string[] {
   return Array.isArray(roh) ? roh.filter((x): x is string => typeof x === 'string') : [];
 }
+
+/** Nur die Zahlen aus einer Liste – wie `texte` (gemerkte Dienstgruppen der Spalten, E6-4). */
+export function zahlen(roh: unknown): number[] {
+  return Array.isArray(roh) ? roh.filter((x): x is number => typeof x === 'number') : [];
+}

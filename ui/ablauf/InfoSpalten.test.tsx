@@ -142,6 +142,15 @@ describe('Knopf „Spalten“ (Bild 1)', () => {
     unmount();
     const wieder = renderHook(() => useInfoSpalten('test.spalten', GRUPPEN));
     expect(wieder.result.current.ids).toEqual([1, 3, 99]);
+    // Von Hand verändert oder kaputt: nur die Zahlen zählen, Unlesbares → nichts gewählt.
+    localStorage.setItem('test.spalten', JSON.stringify(['Technik', 3, null]));
+    expect(renderHook(() => useInfoSpalten('test.spalten', GRUPPEN)).result.current.ids).toEqual([
+      3,
+    ]);
+    localStorage.setItem('test.spalten', '{kaputt');
+    expect(renderHook(() => useInfoSpalten('test.spalten', GRUPPEN)).result.current.ids).toEqual(
+      [],
+    );
   });
 });
 

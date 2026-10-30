@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { anmeldungenAus, antwortText, listenZahlen, mitgliederstandAus } from './liste';
 import { FELDER, PERSONEN, STICHTAG, e, mitglieder } from './liste.testdaten';
-import { fragen } from './druckliste';
+import { fragen, teilnehmerSpalten, teilnehmerZelle } from './druckliste';
 import type { Feld } from './formular';
 import { euroText } from './preis';
 import {
@@ -9,6 +9,11 @@ import {
   frageSumme,
   mehrfachAntworten,
   passtZurSuche,
+  personZeilen,
+  personZellText,
+  personenSortiert,
+  personenSpalten,
+  personSumme,
   sortiert,
   summe,
   zellText,
@@ -165,5 +170,116 @@ describe('Sortieren und Suchen', () => {
     expect(passtZurSuche(a, 'aaaa')).toBe(true);
     expect(passtZurSuche(a, 'lena')).toBe(true);
     expect(passtZurSuche(a, 'Paul')).toBe(false);
+  });
+});
+
+describe('Je Person (U2-2)', () => {
+  it('Spalten aus dem Katalog der Druckliste: Alter und Fragen der Person, „Angemeldet von“, Nr., Betrag der Anmeldung', () => {
+    const x = e();
+    const katalog = teilnehmerSpalten(x);
+    const titel = (k: string) => katalog.find((s) => s.schluessel === k)!.titel;
+    const personFragen = fragen(x).filter((f) => x.formular.person.includes(f));
+    expect(personFragen.length).toBeGreaterThan(0);
+    expect(personenSpalten(x, { kostet: true, warteliste: false }).map((s) => s.titel)).toEqual([
+      'Vorname',
+      'Nachname',
+      'Status',
+      titel('alter'),
+      ...personFragen.map((f) => f.frage),
+      titel('kontakt'),
+      titel('nr'),
+      'Betrag der Anmeldung',
+      'Bezahlt',
+    ]);
+    // Fragen der Anmeldung stehen in dieser Ansicht erst mit der Spaltenwahl (U2-3).
+    const k = personenSpalten(x, { kostet: false, warteliste: true }).map((s) => s.schluessel);
+    expect(k.slice(0, 4)).toEqual(['vor', 'nach', 'warteplatz', 'status']);
+    expect(k).not.toContain('betrag');
+    for (const f of fragen(x).filter((y) => x.formular.anmeldung.includes(y)))
+      expect(k).not.toContain(`frage:${f.id}`);
+  });
+
+  it('eine Zeile je Person; Zellen wie auf der Druckliste (`teilnehmerZelle`)', () => {
+    const x = e();
+    const l = liste(x);
+    const z = personZeilen(l);
+    expect(z).toHaveLength(6);
+    expect(z.map((y) => `${y.p.vor} ${y.x.nr}`).slice(0, 3)).toEqual([
+      'Jonas AAAAAA',
+      'Lena AAAAAA',
+      'Jonas BBBBBB',
+    ]);
+    for (const s of teilnehmerSpalten(x))
+      for (const y of z)
+        expect(personZellText(x, s.schluessel, y)).toBe(teilnehmerZelle(x, s.schluessel, y.x, y.p));
+    expect(personZellText(x, 'status', z[3])).toBe('Warteliste');
+    expect(personZellText(x, 'warteplatz', z[3])).toBe('1');
+    expect(personZellText(x, 'warteplatz', z[0])).toBe('');
+  });
+
+  it('Summen: Personen mit Platz, Fragen je Person, Betrag zählt jede Anmeldung einmal', () => {
+    const x = e();
+    const l = liste(x);
+    const z = personZeilen(l);
+    expect(personSumme(x, 'vor', z)).toEqual({
+      text: '3 Personen',
+      klein: '+ 3 auf der Warteliste',
+    });
+    // Allergie nur bei Jonas: zweimal mit Platz, einmal wartend (zählt nicht).
+    expect(personSumme(x, 'frage:allergy', z)?.text).toBe('2 ausgefüllt');
+    expect(personSumme(x, 'frage:foto', z)?.text).toBe('2× Ja');
+    // Je Person stünde der Betrag der Anmeldung zweimal da – gezählt wird er einmal, wie in den Kacheln.
+    expect(personSumme(x, 'betrag', z)).toEqual(summe(x, 'betrag', l));
+    expect(personSumme(x, 'bezahlt', z)?.text).toBe('1× bezahlt');
+    expect(personSumme(x, 'nach', z)).toBeNull();
+    // Reiter Warteliste: nur Wartende → die zählen.
+    expect(
+      personSumme(
+        x,
+        'vor',
+        z.filter((y) => y.p.status === 'wartet'),
+      ),
+    ).toEqual({
+      text: '3 Personen',
+    });
+  });
+
+  it('Alter in den Altersstufen der Preise – ohne Stufen keine Summe', () => {
+    const x = e();
+    const z = personZeilen(liste(x));
+    expect(personSumme(x, 'alter', z)).toBeNull();
+    x.preis = {
+      ...x.preis,
+      alter: [
+        { von: 8, bis: 12, art: 'prozent', wert: 70 },
+        { von: 0, bis: 3, art: 'frei', wert: 0 },
+      ],
+    };
+    // Mit Platz: Jonas 9, Lena 7, Jonas 9 → 8–12 zweimal, Lena 7 in keiner Stufe (zwischen 3 und 8).
+    expect(personSumme(x, 'alter', z)).toEqual({
+      text: '8–12: 2 · übrige: 1',
+      klein: 'Personen je Altersstufe der Preise',
+    });
+    x.preis = { ...x.preis, alter: [{ von: 0, bis: 8, art: 'frei', wert: 0 }] };
+    expect(personSumme(x, 'alter', z)?.text).toBe('0–8: 1 · ab 9: 2');
+  });
+
+  it('Sortieren wie je Anmeldung: Alter als Zahl, Warteliste nach Warteplatz, Leere hinten', () => {
+    const x = e();
+    const z = personZeilen(liste(x));
+    const name = (r: typeof z) => r.map((y) => `${y.p.vor} ${y.x.nr}`);
+    expect(personenSortiert(x, z, null)).toBe(z);
+    expect(
+      name(personenSortiert(x, z, { schluessel: 'alter', absteigend: false })).slice(0, 2),
+    ).toEqual(['Lena AAAAAA', 'Lena BBBBBB']);
+    expect(name(personenSortiert(x, z, { schluessel: 'status', absteigend: true })).at(-1)).toBe(
+      'Jonas BBBBBB',
+    );
+    // Warteliste ohne Wahl: Warteplatz 1 vorn, wer einen Platz hat, hinten.
+    expect(name(personenSortiert(x, z, null, true)).slice(-3)).toEqual([
+      'Jonas AAAAAA',
+      'Lena AAAAAA',
+      'Jonas BBBBBB',
+    ]);
   });
 });

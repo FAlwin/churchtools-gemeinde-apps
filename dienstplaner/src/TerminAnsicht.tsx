@@ -149,6 +149,7 @@ export function TerminAnsicht({
       bearbeiten={bearbeiten}
       onBearbeiten={setBearbeiten}
       musikApp={musikApp}
+      ende={ende}
     >
       {(teile) => (
         <div className={styles.seite}>
@@ -173,6 +174,7 @@ export function TerminAnsicht({
               <h3>Ablauf</h3>
               <span className={styles.kopfKnoepfe}>
                 {teile.kopfKnopf}
+                {teile.zeigenKnopf}
                 {teile.spaltenKnopf}
                 {/* Öffnet den Ablauf DIESES Termins, nicht nur die App (E6-Abschluss, Alwin 30.10.2026). */}
                 {musikApp && !bearbeiten && (

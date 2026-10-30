@@ -17,7 +17,10 @@
   overscroll-behavior: contain;
 }
 
-/** Mit etwas `unten` (Reiterleiste am Handy): Rollbereich darüber, die Leiste fest darunter. */
+/**
+ * Rollbereich in einer Fläche; mit etwas `unten` (Reiterleiste am Handy) steht die Leiste fest darunter. Immer derselbe
+ * Aufbau, damit ein Wechsel über die Handy-Grenze die Seite nicht neu aufbaut (E6b-1).
+ */
 .huelle {
   height: 100%;
   display: flex;
@@ -25,11 +28,14 @@
 
   > .flaeche {
     position: relative;
-    // Unter der Fläche liegt die Reiterleiste: Das Plus steht 16px über ihr, nicht über dem Home-Strich.
-    --plus-boden: 0px;
     flex: 1;
     min-height: 0;
   }
+}
+
+// Unter der Fläche liegt die Reiterleiste: Das Plus steht 16px über ihr, nicht über dem Home-Strich.
+.mitUnten > .flaeche {
+  --plus-boden: 0px;
 }
 
 .seite {

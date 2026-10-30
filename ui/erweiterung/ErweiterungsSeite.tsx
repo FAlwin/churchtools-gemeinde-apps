@@ -31,11 +31,14 @@ export function ErweiterungsRahmen({
       </main>
     </div>
   );
-  if (!unten) return rolle;
   // Die Fläche über der Leiste ist der Bezug für Schwebendes (`SchwebePlus`, E6-3a): Es steht dann über der Leiste
   // statt dahinter – und scrollt nicht mit, weil sein Bezug außerhalb des Rollbereichs liegt.
+  //
+  // **Immer derselbe Aufbau, mit und ohne Leiste** (E6b-1, 30.10.2026): Vorher gab es ohne `unten` nur den Rollbereich,
+  // mit `unten` zwei Hüllen mehr. Wechselte die Breite über die Handy-Grenze (Handy quer drehen), baute React deshalb die
+  // ganze Seite neu – offene Fenster, „Ablauf zeigen“ und Bearbeiten gingen zu. Jetzt unterscheidet nur eine Klasse.
   return (
-    <div className={styles.huelle}>
+    <div className={`${styles.huelle}${unten ? ` ${styles.mitUnten}` : ''}`}>
       <div className={styles.flaeche}>{rolle}</div>
       {unten}
     </div>

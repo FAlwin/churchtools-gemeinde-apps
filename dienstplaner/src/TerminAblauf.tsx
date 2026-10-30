@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
+import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { AblaufListe } from '@ui/ablauf/AblaufListe';
 import { useAblaufBearbeiten, verlangtNeuLaden } from '@ui/ablauf/useAblaufBearbeiten';
 import { AblaufAnlegenFenster, type KopieVorschlag } from '@ui/ablauf/AblaufAnlegenFenster';
@@ -21,6 +22,7 @@ import { ablaufAktionen, GESPERRT } from './ablaufAktionen';
 import { ladeKopieVorschlaege, ladeVorlagen, WOCHEN_ZURUECK } from './ladeAnlegen';
 import { ablaufBearbeitbar, type Start } from './start';
 import { LiedAnsicht } from './LiedAnsicht';
+import { AblaufAnzeige } from './AblaufAnzeige';
 import styles from './TerminAblauf.module.scss';
 
 const NEU_LADEN_FEHLT =
@@ -59,6 +61,11 @@ export interface AblaufTeile {
    * und nicht in der Matrix (dort keine Infos, Entwurf Bild 4 A).
    */
   spaltenKnopf: ReactNode;
+  /**
+   * „Ablauf zeigen“ (E6b-1): der Ablauf ruhig im Vollbild – nur in der Termin-Ansicht, nicht beim Bearbeiten und nicht
+   * in der Matrix. Die Live-Steuerung bekommt später einen eigenen Knopf.
+   */
+  zeigenKnopf: ReactNode;
 }
 
 /**
@@ -82,6 +89,7 @@ export function TerminAblauf({
   musikApp,
   schmal = false,
   mitNeuAufsetzen = true,
+  ende = null,
   children,
 }: {
   start: Start;
@@ -103,6 +111,8 @@ export function TerminAblauf({
    * Nachfrage (Entwurf E6-6 Bild 2). Die Matrix lässt es weg, auch am Handy.
    */
   mitNeuAufsetzen?: boolean;
+  /** „Ende ca.“ des Termins („11:30“) – für die Anzeige (E6b-1); fehlt in der Matrix. */
+  ende?: string | null;
   children: (teile: AblaufTeile) => ReactNode;
 }) {
   const terminId = termin.id;
@@ -110,6 +120,8 @@ export function TerminAblauf({
   const aktiv = bearbeiten && darf;
   // Die Lied-Ansicht (E6-O O4): aus der Ablauf-Ansicht der angetippte Punkt.
   const [liedOffen, setLiedOffen] = useState<AblaufZeile | null>(null);
+  // „Ablauf zeigen“ (E6b-1): die Anzeige im Vollbild.
+  const [zeigen, setZeigen] = useState(false);
   // Die Lieder des Ablaufs aus ChurchTools: Autor für die Lied-Karte (E6-O1), alles Weitere für die Lied-Ansicht (O4).
   const [lieder, setLieder] = useState<Map<number, CtSong>>(new Map());
   // „Ablauf anlegen“ (E6-5a) und „Neu aufsetzen“ (E6-5b, `neu`): Fenster und was es braucht – erst beim Öffnen geladen.
@@ -358,6 +370,18 @@ export function TerminAblauf({
     <>
       {liste.ueberlagerung}
       {liedOffen && liedAnsicht(liedOffen, () => setLiedOffen(null))}
+      {zeigen && (
+        <AblaufAnzeige
+          titel={termin.name}
+          tag={termin.tag}
+          beginn={termin.uhrzeit}
+          ende={ende}
+          zeilen={zeilen}
+          infoGruppen={spalten.gewaehlt}
+          zeitzone={zeitzone}
+          onSchliessen={() => setZeigen(false)}
+        />
+      )}
       {anlegen && !anlegen.neu && (
         <AblaufAnlegenFenster
           fuer={fuer}
@@ -383,20 +407,30 @@ export function TerminAblauf({
     </>
   );
 
+  // „Spalten“ und „Ablauf zeigen“ gehören zur Ansicht: nicht in der Matrix, nicht beim Bearbeiten, nicht ohne Punkte.
+  const ansichtKnoepfe = !schmal && !aktiv && ablauf !== null && zeilen.length > 0;
+
   return children({
     inhalt,
     kopfKnopf: liste.kopfKnopf,
     ueberlagerung,
     darf,
     fehlerLoeschen: liste.fehlerLoeschen,
-    spaltenKnopf:
-      !schmal && !aktiv && ablauf !== null && zeilen.length > 0 ? (
-        <InfoSpaltenKnopf
-          gruppen={gruppen}
-          zeilen={zeilen}
-          ids={spalten.ids}
-          onIds={spalten.setIds}
-        />
-      ) : null,
+    spaltenKnopf: ansichtKnoepfe ? (
+      <InfoSpaltenKnopf
+        gruppen={gruppen}
+        zeilen={zeilen}
+        ids={spalten.ids}
+        onIds={spalten.setIds}
+      />
+    ) : null,
+    zeigenKnopf: ansichtKnoepfe ? (
+      <KopfKnopf
+        onClick={() => setZeigen(true)}
+        label="Ablauf zeigen"
+        title="Ablauf im Vollbild zeigen"
+        symbol={<Icon name="vollbild" size={16} stroke={2.2} />}
+      />
+    ) : null,
   });
 }

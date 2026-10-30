@@ -287,3 +287,30 @@ als graue Balken, das Lied mit blauem Streifen und einer Lied-Karte (Liedname, T
 - **Historie:** #710 (23.10.2026, Entwurf `e6-optik-entwurf.html`, gemessen E6-O0)
 
 </details>
+
+### TF-ABLAUF-13 · „Ablauf zeigen“ im Vollbild
+
+**Das brauchst du:** Einen Test-Termin mit Ablauf (Vorlauf, Überschrift, ein Punkt mit Info für Technik), einen Rechner
+und ein Handy.
+
+**Das muss passieren:** Der Ablauf steht ruhig und groß da – Uhr, Titel, alle Punkte mit Zeit, Dauer, Zuständigen und
+den Infos der unter „Spalten“ gewählten Gruppen. Nichts lässt sich verstellen, der Bildschirm bleibt an.
+
+1. Dienstplaner → Termin öffnen → oben **„Ablauf zeigen“** → die Anzeige deckt alles ab: links die Uhr (läuft mit) und
+   der heutige Tag, rechts Titel und „Beginn … · Ende ca. …“; ein anderer Tag als heute steht vorne dabei.
+2. Ohne Haken unter „Spalten“: keine Infos. Mit **Technik** angehakt: „Technik: …“ unter dem Punkt.
+3. Weggelassene Punkte fehlen, „Beginn“ steht nach dem Vorlauf, Überschriften als Band.
+4. Fenster verkleinern → die Schrift wird kleiner, bis alles passt; ganz klein wird gescrollt statt weiter verkleinert.
+5. **Vollbild** (oder Taste F) → Vollbild; **Esc** beendet es. Noch einmal **Esc** oder **Schließen** → zurück im Termin.
+6. Am iPhone: kein „Vollbild“-Knopf, nur „Schließen“; Handy drehen → die Anzeige bleibt offen und passt sich an. Der
+   Bildschirm geht nicht aus.
+7. Dunkelmodus in ChurchTools: die Anzeige ist dunkel. **Bearbeiten**: der Knopf „Ablauf zeigen“ ist weg.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `dienstplaner/src/AblaufAnzeige.tsx`, `dienstplaner/src/TerminAblauf.tsx`, `dienstplaner/src/TerminAnsicht.tsx`, `ui/bedienung/useVollbild.ts`, `ui/bedienung/useWakeLock.ts`, `ui/erweiterung/ErweiterungsSeite.tsx`, `shared/ct/datum.ts`
+- **Automatisiert:** ja – `dienstplaner/src/AblaufAnzeige.test.tsx` (Inhalt, Infos, Einpassen, Vollbild, Esc, Bildschirm wach), `dienstplaner/src/TerminAnsicht.test.tsx` (Knopf, nicht beim Bearbeiten), `ui/erweiterung/ErweiterungsRahmen.test.tsx` (bleibt beim Drehen offen); von Hand bleibt der Blick auf echten Geräten
+- **Historie:** E6b-1 (30.10.2026, Entwurf `e6b-anzeige.html` abgenommen)
+
+</details>

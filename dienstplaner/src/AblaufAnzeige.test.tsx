@@ -57,7 +57,6 @@ function zeige(o: { infoGruppen?: { id: number; name: string }[]; tag?: string }
       titel="Gottesdienst"
       tag={o.tag ?? '2026-11-01'}
       beginn="10:00"
-      ende="11:30"
       zeilen={ZEILEN}
       infoGruppen={o.infoGruppen ?? [{ id: 3, name: 'Technik' }]}
       zeitzone="Europe/Berlin"
@@ -84,12 +83,12 @@ describe('Ablauf-Anzeige (E6b-1)', () => {
     expect(within(anzeige).getByText('09:47')).toBeTruthy();
     expect(within(anzeige).getByText('Sonntag, 1. November')).toBeTruthy();
     expect(within(anzeige).getByText('Gottesdienst')).toBeTruthy();
-    expect(within(anzeige).getByText('Beginn 10:00 · Ende ca. 11:30')).toBeTruthy();
+    expect(within(anzeige).getByText('Beginn 10:00 · Ende 10:34')).toBeTruthy();
   });
 
   it('ein anderer Tag als heute: sein Datum steht vorne dabei', () => {
     const { anzeige } = zeige({ tag: '2026-11-08' });
-    expect(within(anzeige).getByText('So, 08.11. · Beginn 10:00 · Ende ca. 11:30')).toBeTruthy();
+    expect(within(anzeige).getByText('So, 08.11. · Beginn 10:00 · Ende 10:34')).toBeTruthy();
   });
 
   it('Punkte mit Zeit, Dauer, Titel samt Lied und Zuständigen; Abschnitt als Band; „Beginn“ nach dem Vorlauf', () => {

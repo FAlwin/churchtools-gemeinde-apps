@@ -9,7 +9,7 @@ import { InfoSpaltenKnopf } from '@ui/ablauf/InfoSpalten';
 import { useInfoSpalten } from '@ui/ablauf/infoSpaltenWahl';
 import { browserAblaufLeser, browserSchreiber } from '@ui/ct/schreiber';
 import { infoGruppen, siehtAlleDienstgruppen } from '@shared/ct/dienstRechte';
-import { ablaufZeileAus, type AblaufZeile } from '@shared/ct/ablaufZeile';
+import { ablaufEnde, ablaufZeileAus, type AblaufZeile } from '@shared/ct/ablaufZeile';
 import { datumText, tagKurz } from '@shared/ct/datum';
 import type { AblaufTermin } from '@shared/ct/ablaufRecht';
 import { ablaufAnlegen } from '@shared/ct/ablaufAnlegen';
@@ -66,6 +66,12 @@ export interface AblaufTeile {
    * in der Matrix. Die Live-Steuerung bekommt später einen eigenen Knopf.
    */
   zeigenKnopf: ReactNode;
+  /**
+   * Wann der Ablauf endet („10:48“, `ablaufEnde`) – für den Kopf der Termin-Ansicht und die Anzeige. Kein „ca.“ und nicht
+   * das Ende des Termins aus ChurchTools: Das Ende ist, wann der letzte Punkt vorbei ist (Alwin, 30.10.2026). `null` ohne
+   * Ablauf oder ohne Punkt mit Uhrzeit – dann steht kein Ende da.
+   */
+  ende: string | null;
 }
 
 /**
@@ -89,7 +95,6 @@ export function TerminAblauf({
   musikApp,
   schmal = false,
   mitNeuAufsetzen = true,
-  ende = null,
   children,
 }: {
   start: Start;
@@ -111,8 +116,6 @@ export function TerminAblauf({
    * Nachfrage (Entwurf E6-6 Bild 2). Die Matrix lässt es weg, auch am Handy.
    */
   mitNeuAufsetzen?: boolean;
-  /** „Ende ca.“ des Termins („11:30“) – für die Anzeige (E6b-1); fehlt in der Matrix. */
-  ende?: string | null;
   children: (teile: AblaufTeile) => ReactNode;
 }) {
   const terminId = termin.id;
@@ -375,7 +378,6 @@ export function TerminAblauf({
           titel={termin.name}
           tag={termin.tag}
           beginn={termin.uhrzeit}
-          ende={ende}
           zeilen={zeilen}
           infoGruppen={spalten.gewaehlt}
           zeitzone={zeitzone}
@@ -407,6 +409,7 @@ export function TerminAblauf({
     </>
   );
 
+  const ende = ablauf !== null ? ablaufEnde(zeilen) : null;
   // „Spalten“ und „Ablauf zeigen“ gehören zur Ansicht: nicht in der Matrix, nicht beim Bearbeiten, nicht ohne Punkte.
   const ansichtKnoepfe = !schmal && !aktiv && ablauf !== null && zeilen.length > 0;
 
@@ -416,6 +419,7 @@ export function TerminAblauf({
     ueberlagerung,
     darf,
     fehlerLoeschen: liste.fehlerLoeschen,
+    ende,
     spaltenKnopf: ansichtKnoepfe ? (
       <InfoSpaltenKnopf
         gruppen={gruppen}

@@ -4,7 +4,7 @@ import { Icon } from '@ui/icons/icons';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { useVollbild } from '@ui/bedienung/useVollbild';
 import { useWakeLock } from '@ui/bedienung/useWakeLock';
-import { beginnStelle, itemTitleParts, type AblaufZeile } from '@shared/ct/ablaufZeile';
+import { ablaufEnde, beginnStelle, itemTitleParts, type AblaufZeile } from '@shared/ct/ablaufZeile';
 import { tagKurz, tagLang } from '@shared/ct/datum';
 import { ortszeitAus } from '@shared/ct/zeit';
 import type { InfoGruppe } from '@shared/types/index';
@@ -42,7 +42,6 @@ export function AblaufAnzeige({
   titel,
   tag,
   beginn,
-  ende,
   zeilen,
   infoGruppen,
   zeitzone,
@@ -53,8 +52,6 @@ export function AblaufAnzeige({
   tag: string;
   /** „10:00“. */
   beginn: string;
-  /** „11:30“ – fehlt, wenn ChurchTools kein Ende nennt. */
-  ende: string | null;
   zeilen: readonly AblaufZeile[];
   /** Die unter „Spalten“ gewählten Gruppen – ihre Infos stehen unter dem Punkt. */
   infoGruppen: readonly InfoGruppe[];
@@ -74,6 +71,8 @@ export function AblaufAnzeige({
   // Weggelassene Punkte finden an diesem Termin nicht statt; Platzhalter gehören nur in die Bearbeiten-Liste.
   const punkte = zeilen.filter((z) => !z.removed && !z.weggelassen);
   const stelle = beginnStelle(punkte);
+  // Ende = wann der letzte Punkt vorbei ist (wie der Balken „Ende“ der Matrix), ohne „ca.“ (Alwin, 30.10.2026).
+  const ende = ablaufEnde(punkte);
 
   function schliessen(): void {
     vollbild.beenden();
@@ -130,7 +129,7 @@ export function AblaufAnzeige({
   const kopfZeile = [
     tag !== jetzt.tag ? tagKurz(tag) : null,
     `Beginn ${beginn}`,
-    ende ? `Ende ca. ${ende}` : null,
+    ende ? `Ende ${ende}` : null,
   ]
     .filter(Boolean)
     .join(' · ');

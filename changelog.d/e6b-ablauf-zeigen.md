@@ -10,6 +10,13 @@
     **Schließen** (auch Esc); der Bildschirm bleibt an, solange die Anzeige offen ist.
   - Die Live-Steuerung bekommt später einen eigenen Knopf.
 
+### Geändert (Dienstplaner)
+
+- **„Ende“ heißt jetzt: wann der letzte Punkt des Ablaufs vorbei ist** – ohne „ca.“ (Alwin, 30.10.2026: „Ist ja klar,
+  dass es nur so endet, wenn alles nach Plan läuft“). Vorher stand „Ende ca.“ mit dem Ende des Termins aus ChurchTools,
+  das mit dem Ablauf nichts zu tun haben muss. Termin-Ansicht und „Ablauf zeigen“ rechnen wie der Balken „Ende“ der
+  Matrix (`ablaufEnde`); ohne Ablauf steht kein Ende da. Die Startseite zeigt bei „Als Nächstes“ nur Tag und Beginn.
+
 ### Behoben (alle Erweiterungen)
 
 - Wechselte die Breite über die Handy-Grenze (Handy quer drehen), baute die Seite sich neu auf – offene Fenster und

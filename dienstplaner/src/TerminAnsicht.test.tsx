@@ -100,7 +100,9 @@ describe('TerminAnsicht (E6-1b)', () => {
     zeige();
     expect(await screen.findByRole('heading', { name: 'Gottesdienst' })).toBeTruthy();
     const kopf = screen.getByRole('heading', { name: 'Gottesdienst' }).nextElementSibling!;
-    expect(kopf.textContent).toBe('So, 18.10.2026 · 10:00 Uhr · Ende ca. 12:00 Uhr');
+    // Ende = wann der letzte Punkt vorbei ist (Lied 10:05 + 5 Min), nicht das Ende des Termins (12:00) und ohne „ca.“
+    // (Alwin, 30.10.2026).
+    expect(kopf.textContent).toBe('So, 18.10.2026 · 10:00 Uhr · Ende 10:10 Uhr');
     const ablauf = screen.getByRole('region', { name: 'Ablauf' });
     expect(within(ablauf).getByText('Soundcheck')).toBeTruthy();
     expect(within(ablauf).getByText('30 Min')).toBeTruthy();
@@ -143,6 +145,10 @@ describe('TerminAnsicht (E6-1b)', () => {
     zeige();
     expect(await screen.findByText('Noch kein Ablauf.')).toBeTruthy();
     expect(screen.getByText('Ton')).toBeTruthy();
+    // Ohne Ablauf kein Ende – auch nicht das des Termins aus ChurchTools.
+    expect(
+      screen.getByRole('heading', { name: 'Gottesdienst' }).nextElementSibling!.textContent,
+    ).toBe('So, 18.10.2026 · 10:00 Uhr');
     cleanup();
     vi.restoreAllMocks();
     ct({ ablauf: () => json(200, { data: { items: [] } }) });

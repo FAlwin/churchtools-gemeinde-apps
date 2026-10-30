@@ -297,7 +297,8 @@ und ein Handy.
 den Infos der unter „Spalten“ gewählten Gruppen. Nichts lässt sich verstellen, der Bildschirm bleibt an.
 
 1. Dienstplaner → Termin öffnen → oben **„Ablauf zeigen“** → die Anzeige deckt alles ab: links die Uhr (läuft mit) und
-   der heutige Tag, rechts Titel und „Beginn … · Ende ca. …“; ein anderer Tag als heute steht vorne dabei.
+   der heutige Tag, rechts Titel und „Beginn … · Ende …“ (Ende = wann der letzte Punkt vorbei ist); ein anderer Tag als
+   heute steht vorne dabei.
 2. Ohne Haken unter „Spalten“: keine Infos. Mit **Technik** angehakt: „Technik: …“ unter dem Punkt.
 3. Weggelassene Punkte fehlen, „Beginn“ steht nach dem Vorlauf, Überschriften als Band.
 4. Fenster verkleinern → die Schrift wird kleiner, bis alles passt; ganz klein wird gescrollt statt weiter verkleinert.

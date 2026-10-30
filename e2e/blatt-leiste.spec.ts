@@ -107,6 +107,36 @@ test.describe('Handy', () => {
     }
   });
 
+  /**
+   * **Scheibe B4: Im Scroll-Modus folgt die Leiste der Scroll-Position** und scrollt mit, sodass das Lied in der
+   * Bildmitte sichtbar bleibt – wie beim Blättern (oben). Gewählt wird im Scroll-Modus das Lied in der Bildmitte
+   * (`ScrollDeck` meldet die aktive Seite).
+   */
+  test('Scroll-Modus: die Leiste folgt dem Scrollen und scrollt mit', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('worship:liedansicht', 'scrollen'));
+    const leiste = await oeffneLiedblatt(page);
+    const lied = (i: number) => leiste.locator(`[data-lied="${i}"]`);
+    const flaeche = page.getByTestId('scroll-deck');
+    await expect(flaeche).toBeVisible();
+    // Bis alle zehn Rollen stehen – vorher ist die Fläche zu kurz für das Ende.
+    await expect
+      .poll(() => flaeche.evaluate((el) => el.querySelectorAll('canvas').length), {
+        timeout: 30_000,
+      })
+      .toBeGreaterThanOrEqual(ANZAHL);
+    expect(await inDerLeiste(page, 9)).toBe(false);
+
+    await flaeche.evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
+    await expect(lied(9)).toHaveAttribute('aria-current', 'true');
+    await expect.poll(() => inDerLeiste(page, 9)).toBe(true);
+
+    // Zurück an den Anfang: Die Leiste scrollt wieder mit.
+    await flaeche.evaluate((el) => el.scrollTo({ top: 0 }));
+    await expect(lied(0)).toHaveAttribute('aria-current', 'true');
+    await expect.poll(() => inDerLeiste(page, 0)).toBe(true);
+    expect(await inDerLeiste(page, 9)).toBe(false);
+  });
+
   test('Wischen in der Leiste blättert NICHT um', async ({ page }) => {
     const leiste = await oeffneLiedblatt(page);
     await leiste.evaluate((el) => el.scrollTo({ left: el.scrollWidth }));

@@ -547,7 +547,8 @@ kommt `{tag: }` in den Text – nie unsichtbar in den Text, denn dort würde sie
 Scroll-Modus kein Spalten-Schalter (`ohneSpalten`). Welche
 eigene Ebene gilt, entscheidet für Blättern UND Scrollen `pageKeys.eigenerSchluessel`.
 Leinwände nur in Bildschirmnähe (IntersectionObserver), sonst freigegeben. Die **Seite in der Bildmitte** ist
-die aktive (Kopfzeile, Ablauf-Leiste). **Malen (#608):** direkt auf der Seite in der Bildmitte
+die aktive (Kopfzeile, Ablauf-Leiste) – ganz oben die erste, ganz unten die letzte (`seiteInDerMitte`, B4: ein kurzes
+letztes Lied erreichte die Mitte sonst nie). **Malen (#608):** direkt auf der Seite in der Bildmitte
 (`components/RollenMalen.tsx`) – derselbe Kern wie beim Blättern (`usePageDraw`, `usePointerStrokes`,
 `PageTextLayer`, `PageDrawToolbar`, Text-Bedienung in `hooks/useTextEingabe.ts`, aus `PageDeck` herausgelöst).
 Bei der Rolle wird in einem nur lokalen **Entwurf** gemalt (Kerne der A4-Seiten in Rollen-Koordinaten,

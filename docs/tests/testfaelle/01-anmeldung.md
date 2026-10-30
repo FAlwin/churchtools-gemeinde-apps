@@ -210,3 +210,26 @@ irgendwo liegt. Das andere Gerät bleibt angemeldet.
 - **Historie:** #460
 
 </details>
+
+### TF-AUTH-09 · Geteiltes Gerät: die nächste Person bekommt nichts von der vorigen
+
+**Das brauchst du:** Die Erweiterung in ChurchTools, ein Gerät, zwei Personen (z. B. Alwin und eine Testperson; in
+der Test-Instanz geht auch „Person simulieren“).
+
+**Das muss passieren:** Öffnet nach A jemand anderes die Musik-App im selben Browser, sieht B **nichts** von A
+(Tonart, Kapo, Striche, zwischengespeicherte Abläufe), und **nichts** von A landet auf Bs Konto – auch nicht, was A
+ohne Netz geändert und nicht mehr hochgeladen hat.
+
+1. Als A ein Lied öffnen, die Tonart ändern und einen Strich zeichnen.
+2. In ChurchTools abmelden und als B anmelden (oder B simulieren), die Musik-App öffnen.
+3. Dasselbe Lied: Bs Tonart, keine Striche von A.
+4. Zurück zu A: Tonart und Strich sind wieder da (vom Konto).
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `client/src/utils/personenWechsel.ts`, `client/src/hooks/useAuth.ts`, `client/src/hooks/useChartSync.ts`, `client/src/utils/clearDeviceData.ts`
+- **Automatisiert:** ja – `client/src/utils/personenWechsel.test.ts` (Warteschlangen mit den echten Erzeugern, A ohne Netz → nichts auf Bs Konto), `client/src/hooks/useAuth.test.tsx` (wann geprüft wird), `client/src/hooks/useChartSync.test.ts` (ohne geklärte Person nichts hochladen); von Hand bleibt der echte Wechsel in ChurchTools
+- **Historie:** 30.10.2026, gefunden über die Protokolle (S7-3)
+
+</details>

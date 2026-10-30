@@ -11,6 +11,9 @@ import { clearOfflineRegistry } from '../services/offline';
  * BLEIBT erhalten (bewusst, reine Geräte-Einstellungen ohne Personenbezug): `worship:*`-
  * Präferenzen (Einführung-gesehen, Offline-Automatik-Schalter; der Navigations-Stand
  * `worship:nav-v1` wird beim Logout separat von useAppNav geleert) und `musikapp:kbHeight`.
+ *
+ * Läuft auch, wenn ohne Abmelden die Person wechselt (Erweiterung am geteilten Gerät, `personenWechsel.ts`) – dort
+ * muss `worship:letzte-person` das Räumen überstehen, deshalb ebenfalls im Doppelpunkt-Bereich.
  */
 export async function clearDeviceData(): Promise<void> {
   // localStorage: alle Daten-Caches (Unterstrich-Präfix `worship_…` = Konto-Daten;

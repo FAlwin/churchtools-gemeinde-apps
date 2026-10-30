@@ -158,15 +158,23 @@ export function AblaufListe({
           />
         </div>
         {!schmal && <Kuerzel entries={item.responsible} />}
-        {alsSpalten &&
-          infos.map((g) => {
-            const text = infoText(item, g.id);
-            return (
-              <div key={g.id} className={`${styles.infoZelle}${text ? '' : ` ${styles.infoLeer}`}`}>
-                {text || '–'}
-              </div>
-            );
-          })}
+        {/* Die Zellen als EIN Block ohne Abstand – sonst schöbe der Abstand der Zeile (`gap`) jede weitere Zelle gegen
+            ihren Kopf (Alwin, 30.10.2026: bei drei Spalten verrutscht). */}
+        {alsSpalten && (
+          <div className={styles.infoZellen}>
+            {infos.map((g) => {
+              const text = infoText(item, g.id);
+              return (
+                <div
+                  key={g.id}
+                  className={`${styles.infoZelle}${text ? '' : ` ${styles.infoLeer}`}`}
+                >
+                  {text || '–'}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </>
     );
     if (item.song && onLied) {
@@ -199,11 +207,13 @@ export function AblaufListe({
       {alsSpalten && (
         <div className={styles.infoKopf} aria-hidden="true">
           <span className={styles.infoKopfPunkt}>Punkt</span>
-          {infos.map((g) => (
-            <span key={g.id} className={styles.infoKopfZelle}>
-              {g.name}
-            </span>
-          ))}
+          <span className={styles.infoZellen}>
+            {infos.map((g) => (
+              <span key={g.id} className={styles.infoKopfZelle}>
+                {g.name}
+              </span>
+            ))}
+          </span>
         </div>
       )}
       {sichtbar.map((item, i) => (

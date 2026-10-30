@@ -111,13 +111,23 @@
 .infoZelle {
   flex: none;
   width: 150px;
-  padding: 6px 10px;
   border-left: 1px solid var(--hair);
   overflow-wrap: anywhere;
 }
-.infoZelle {
+.infoKopfZelle {
+  padding: 6px 10px;
+}
+// Die Zellen einer Zeile (und die Köpfe) als ein Block ohne Abstand, rechts bündig – Kopf und Zeile fluchten.
+.infoZellen {
+  display: flex;
+  flex: none;
   align-self: stretch;
-  margin: -10px 0;
+}
+.flowRow .infoZellen {
+  // Über die Innenabstände der Zeile hinweg bis an ihre Ränder: Die Linien laufen durch.
+  margin: -10px -14px -10px 0;
+}
+.infoZelle {
   padding: 10px;
   font-size: 12.5px;
   color: var(--text);
@@ -135,10 +145,6 @@
   b {
     color: var(--text2);
   }
-}
-// Die letzte Spalte ohne Rand rechts – die Zeile hat rechts ihren Innenabstand.
-.flowRow .infoZelle:last-child {
-  margin-right: -14px;
 }
 
 // Schildchen „neu“/„geändert“ am Punkt (Musik-App, #161).

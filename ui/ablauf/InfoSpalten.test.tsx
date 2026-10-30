@@ -74,6 +74,17 @@ describe('Ablaufliste mit Infos (Bild 1 + 2)', () => {
     expect(within(predigt as HTMLElement).getAllByText('–')).toHaveLength(2);
   });
 
+  it('Köpfe und Zellen stehen je in EINEM Block – sonst schöbe der Abstand der Zeile die Zellen gegen ihre Köpfe (30.10.2026)', () => {
+    render(<AblaufListe zeilen={ZEILEN} infoSpalten={GRUPPEN} />);
+    const kopfBlock = screen.getByText('Programm').parentElement!;
+    expect(kopfBlock.className).toMatch(/infoZellen/);
+    expect(kopfBlock.children).toHaveLength(3);
+    const zeile = screen.getByText('Treu').closest('div[class*="flowRow"]')!;
+    const zellen = within(zeile as HTMLElement).getByText('Intro leise').parentElement!;
+    expect(zellen.className).toBe(kopfBlock.className);
+    expect(zellen.children).toHaveLength(3);
+  });
+
   it('am Handy: eine Zeile „Gruppe: Text“ unter dem Punkt, keine Spalten', () => {
     handy();
     render(<AblaufListe zeilen={ZEILEN} infoSpalten={[GRUPPEN[0]]} />);

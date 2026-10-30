@@ -112,6 +112,22 @@ describe('useAppNav – Direktlink aus dem Dienstplaner (E6-O O4)', () => {
     expect(result.current.zielPunkt).toBeNull();
   });
 
+  it('nur Termin 5 (ohne Punkt): sein Ablauf, kein Lied, kein Ziel (30.10.2026)', () => {
+    gespeichert.nav = {
+      tab: 'lieder',
+      view: { type: 'chart', source: 'lieder' },
+      serviceId: 77,
+      songIndex: 3,
+      libSel: { songId: 1 },
+      savedAt: Date.now(),
+    };
+    const { result } = nav([DIENST], { terminId: 5 });
+    expect(result.current.view).toEqual({ type: 'setlist' });
+    expect(result.current.tab).toBe('termine');
+    expect(result.current.service).toBe(DIENST);
+    expect(result.current.zielPunkt).toBeNull();
+  });
+
   it('Termin nicht in der Liste: zurück zur Übersicht, kein Ziel mehr', () => {
     const { result } = nav([], ZIEL);
     expect(result.current.view).toBeNull();

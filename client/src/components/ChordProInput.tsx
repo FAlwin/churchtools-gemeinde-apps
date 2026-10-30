@@ -241,9 +241,25 @@ const aktivFeld = StateField.define<{ von: number; bis: number } | null>({
   },
 });
 
+/**
+ * **„Nur Text“** (Alwin, 29.10.2026: „falls ich nur Text ändern möchte oder Zeilenumbrüche – da muss ich die Akkorde
+ * nicht sehen“). Die Akkorde bleiben im Text, werden aber unsichtbar statt als Kärtchen gezeichnet – der Cursor
+ * springt über sie hinweg wie über ein Kärtchen. Entschieden (Variante B): Wer ein Wort samt unsichtbarem Akkord
+ * markiert und löscht, löscht den Akkord mit; die einzelne Rücktaste dagegen löscht nur den Buchstaben (`nurTextLoeschen`).
+ */
+const nurTextSetzen = StateEffect.define<boolean>();
+const nurTextFeld = StateField.define<boolean>({
+  create: () => false,
+  update(wert, tr) {
+    for (const e of tr.effects) if (e.is(nurTextSetzen)) return e.value;
+    return wert;
+  },
+});
+
 function darstellungDeko(state: EditorState): DecorationSet {
   const b = new RangeSetBuilder<Decoration>();
   const aktiv = state.field(aktivFeld, false);
+  const nurText = state.field(nurTextFeld, false) ?? false;
   const zaehlung = ablaufZaehlung(state.doc.toString());
   for (let i = 1; i <= state.doc.lines; i++) {
     const line = state.doc.line(i);
@@ -264,9 +280,11 @@ function darstellungDeko(state: EditorState): DecorationSet {
       b.add(
         line.from + m.index,
         line.from + m.index + m[0].length,
-        Decoration.replace({
-          widget: new AkkordWidget(m[1], aktiv?.von === line.from + m.index),
-        }),
+        nurText
+          ? Decoration.replace({})
+          : Decoration.replace({
+              widget: new AkkordWidget(m[1], aktiv?.von === line.from + m.index),
+            }),
       );
   }
   return b.finish();
@@ -274,7 +292,9 @@ function darstellungDeko(state: EditorState): DecorationSet {
 const darstellungFeld = StateField.define<DecorationSet>({
   create: (st) => darstellungDeko(st),
   update: (deko, tr) =>
-    tr.docChanged || tr.effects.some((e) => e.is(aktivSetzen)) ? darstellungDeko(tr.state) : deko,
+    tr.docChanged || tr.effects.some((e) => e.is(aktivSetzen) || e.is(nurTextSetzen))
+      ? darstellungDeko(tr.state)
+      : deko,
   provide: (f) => [
     EditorView.decorations.from(f),
     EditorView.atomicRanges.of((v) => v.state.field(f)),
@@ -285,6 +305,51 @@ const darstellungFeld = StateField.define<DecorationSet>({
  * Band – im Text unsichtbar, im „ChordPro-Text“ sichtbar (Alwin, 24.10.2026). Dieselbe Regel wie das Blatt.
  */
 const endeFeld = ausblendFeld(ENDE_ZEILE);
+/** Ein oder mehrere Akkorde direkt hintereinander, sonst nichts – was die Rücktaste bei „Nur Text“ NICHT löschen soll. */
+const NUR_AKKORDE = new RegExp(`^(?:${AKKORD_KLAMMER})+$`);
+const AKKORD_AM_ENDE = new RegExp(`${AKKORD_KLAMMER}$`);
+const AKKORD_AM_ANFANG = new RegExp(`^${AKKORD_KLAMMER}`);
+
+/**
+ * **Rücktaste und Entf bei „Nur Text“:** Steht der Cursor neben einem unsichtbaren Akkord, löschte CodeMirror den
+ * ganzen Akkord (er ist ein `atomicRange`) – man drückte die Rücktaste, sah nichts passieren und hatte einen Akkord
+ * verloren. Löscht eine einzelne Taste NUR Akkorde, wird stattdessen das sichtbare Zeichen daneben gelöscht; die
+ * Akkorde bleiben, wo sie sind. Markiert und gelöscht (Text samt Akkord) bleibt es beim Löschen – der Akkord geht mit.
+ */
+const nurTextLoeschen = EditorState.transactionFilter.of((tr) => {
+  if (!tr.docChanged || !tr.startState.field(nurTextFeld, false)) return tr;
+  const rueck = tr.isUserEvent('delete.backward');
+  if (!rueck && !tr.isUserEvent('delete.forward')) return tr;
+  const doc = tr.startState.doc;
+  let nurAkkorde = true;
+  let von = -1;
+  let bis = -1;
+  tr.changes.iterChanges((a, b, _c, _d, eingefuegt) => {
+    if (eingefuegt.length > 0 || !NUR_AKKORDE.test(doc.sliceString(a, b))) nurAkkorde = false;
+    von = a;
+    bis = b;
+  });
+  if (!nurAkkorde || von < 0) return tr;
+  // Über weitere Akkorde direkt daneben hinweg bis zum nächsten sichtbaren Zeichen.
+  let pos = rueck ? von : bis;
+  for (;;) {
+    const zeile = doc.lineAt(pos);
+    const m = rueck
+      ? AKKORD_AM_ENDE.exec(doc.sliceString(zeile.from, pos))
+      : AKKORD_AM_ANFANG.exec(doc.sliceString(pos, zeile.to));
+    if (!m) break;
+    pos += rueck ? -m[0].length : m[0].length;
+  }
+  if (rueck ? pos === 0 : pos === doc.length) return [];
+  const ziel = rueck ? { from: pos - 1, to: pos } : { from: pos, to: pos + 1 };
+  return {
+    changes: ziel,
+    selection: { anchor: ziel.from },
+    userEvent: rueck ? 'delete.backward' : 'delete.forward',
+    scrollIntoView: true,
+  };
+});
+
 /** Umschaltbar: freundliche Darstellung (samt ausgeblendeter Ende-Marken) oder der rohe ChordPro-Text. */
 const darstellung = new Compartment();
 const freundlich = [darstellungFeld, endeFeld];
@@ -368,12 +433,23 @@ interface ChordProInputProps {
   onFokus?: (fokus: boolean) => void;
   /** Liedinfo-Kopfzeilen ausblenden – die Liedinfo zeigt sie (L4). Im rohen Text bleiben sie sichtbar. */
   kopfAusblenden?: boolean;
+  /** „Nur Text“: Akkorde unsichtbar statt als Kärtchen (29.10.2026). Im rohen Text ohne Wirkung. */
+  nurText?: boolean;
 }
 
 /** ChordPro-Eingabe auf Basis von CodeMirror: Syntax-Farben, echtes Rückgängig/Wiederholen,
  *  saubere Einfügung an der Cursorposition. */
 export const ChordProInput = forwardRef<ChordProHandle, ChordProInputProps>(function ChordProInput(
-  { initialText, onChange, onHistory, roh = false, onAkkord, onFokus, kopfAusblenden = false },
+  {
+    initialText,
+    onChange,
+    onHistory,
+    roh = false,
+    onAkkord,
+    onFokus,
+    kopfAusblenden = false,
+    nurText = false,
+  },
   ref,
 ) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -392,8 +468,10 @@ export const ChordProInput = forwardRef<ChordProHandle, ChordProInputProps>(func
           history(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           highlighter,
-          // Vor der Darstellung: Sie liest beim Neuzeichnen, welches Kärtchen angetippt ist.
+          // Vor der Darstellung: Sie liest beim Neuzeichnen, welches Kärtchen angetippt ist und ob „Nur Text“ gilt.
           aktivFeld,
+          nurTextFeld.init(() => nurText),
+          nurTextLoeschen,
           darstellung.of(roh ? [] : freundlich),
           flowFeld,
           kopf.of(kopfAusblenden && !roh ? kopfFeld : []),
@@ -444,6 +522,10 @@ export const ChordProInput = forwardRef<ChordProHandle, ChordProInputProps>(func
       ],
     });
   }, [roh, kopfAusblenden]);
+
+  useEffect(() => {
+    viewRef.current?.dispatch({ effects: nurTextSetzen.of(nurText) });
+  }, [nurText]);
 
   useImperativeHandle(ref, () => ({
     insert(text, opts) {

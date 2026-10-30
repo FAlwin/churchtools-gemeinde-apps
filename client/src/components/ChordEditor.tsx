@@ -103,6 +103,9 @@ export function ChordEditor({
   const [bereich, setBereich] = useState<Bereich>('text');
   // L3: Kärtchen und Bänder – oder der rohe ChordPro-Text für alle, die ihn direkt bearbeiten wollen.
   const [roh, setRoh] = useState(false);
+  // „Nur Text“ (29.10.2026, Entwurf Variante B): Akkorde unsichtbar, nur Text und Zeilen bearbeiten – dieselben zwei
+  // Wörter wie unter „Anzeige“ im Lied-Menü. Gilt für diese Bearbeitung; beim nächsten Öffnen wieder mit Akkorden.
+  const [nurText, setNurText] = useState(false);
   const wide = useMedienAbfrage('(min-width: 768px)', true);
   // **Schreibansicht** (23.10.2026, Alwin am iPad: „das Bearbeitungsfenster ist bei aufgeklappter Tastatur deutlich
   // zu klein“, Entwurf A): Solange im Text getippt wird, verschwinden Ablauf, Fassung und Umschalter, und Werkzeuge
@@ -369,13 +372,27 @@ export function ChordEditor({
               className={`${styles.toolbar}${schreiben ? ' ' + styles.schreiben : ''}`}
               ref={toolbarRef}
             >
+              {/* Wie im Entwurf B: der Umschalter vorn, dann Einfügen. */}
+              {!schreiben && !roh && (
+                <Segment
+                  verbunden
+                  ariaLabel="Darstellung"
+                  className={styles.nurText}
+                  value={nurText ? 'text' : 'akkorde'}
+                  onChange={(w) => setNurText(w === 'text')}
+                  options={[
+                    { value: 'akkorde', label: 'Akkorde & Text' },
+                    { value: 'text', label: 'Nur Text' },
+                  ]}
+                />
+              )}
               <EinfuegenMenue
                 offen={openMenu === 'einfuegen'}
                 umschalten={() => setOpenMenu((m) => (m === 'einfuegen' ? null : 'einfuegen'))}
                 waehlen={einfuegen}
                 mitLiedinfo={!!li}
               />
-              {schreiben && akkordLeiste}
+              {schreiben && !nurText && akkordLeiste}
 
               {!schreiben && (
                 <button
@@ -412,13 +429,14 @@ export function ChordEditor({
                 </button>
               </div>
             </div>
-            {!schreiben && akkordLeiste}
+            {!schreiben && !nurText && akkordLeiste}
 
             <div className={styles.editPane}>
               <ChordProInput
                 ref={editorRef}
                 initialText={initialText}
                 roh={roh}
+                nurText={nurText}
                 onChange={setText}
                 onAkkord={setMenue}
                 onFokus={setTextFokus}

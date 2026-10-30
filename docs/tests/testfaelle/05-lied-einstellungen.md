@@ -655,3 +655,32 @@ Gruppen **Tonart** (Transponieren · „Kapo · Abschnitte ›“), **Anzeige** 
   unter „Lied ›“ nicht gefunden), das Wort „Version“ bleibt
 
 </details>
+
+### TF-EINST-22 · Lied-Editor: „Nur Text“ – Text und Zeilen ohne Akkorde bearbeiten
+
+**Das brauchst du:** Ein Lied mit Akkorden, das Recht, Lieder zu bearbeiten; iPhone (installierte App) und iPad.
+
+**Das muss passieren:** In der Werkzeugleiste des Editors steht vorn der Umschalter **„Akkorde & Text | Nur Text“**.
+Bei **Nur Text** verschwinden die Akkord-Kärtchen und die Akkord-Leiste, die Teile bleiben als Band. Gespeichert wird
+trotzdem mit allen Akkorden.
+
+1. **Nur Text** → nur noch Text, keine Kärtchen. **Akkorde & Text** → alles wieder da.
+2. Bei Nur Text mitten in einer Zeile **Enter** → die Zeile bricht um; mit „Akkorde & Text“ nachsehen: Die Akkorde
+   stehen weiter über ihren Wörtern.
+3. Ein Wort korrigieren (Buchstaben mit der **Rücktaste** löschen und neu tippen), über dem ein Akkord stand → der
+   Akkord ist danach noch da.
+4. Ein ganzes Wort samt Akkord **markieren und löschen** → der Akkord ist mit weg (so entschieden).
+5. Speichern → im Blatt stehen Text und Akkorde wie erwartet.
+6. Am Handy: Umschalter, „Einfügen“ und „ChordPro-Text“ sind gleich hoch; „Akkorde & Text“ bricht nicht um.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `client/src/components/ChordEditor.tsx`, `client/src/components/ChordProInput.tsx`, `client/src/components/ChordEditor.module.scss`
+- **Automatisiert:** weitgehend – `e2e/editor-nur-text.spec.ts` (Ausblenden und zurück samt unverändertem Speichern,
+  Rücktaste und Entf neben einem unsichtbaren Akkord, markiertes Wort samt Akkord, Enter). **Von Hand bleibt** die
+  Bildschirmtastatur am echten iPhone/iPad (Rücktaste dort über die Eingabe des Systems).
+- **Historie:** Alwin am iPhone 29.10.2026; Entwurf Variante B (Umschalter wie im Lied-Menü), Löschen: „Akkord geht
+  mit“
+
+</details>

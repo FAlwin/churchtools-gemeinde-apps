@@ -91,6 +91,35 @@ describe('Sheet', () => {
     );
   });
 
+  it('`zurueck` (Unterseite, Lied-Menü 29.10.2026): „‹“ vor dem Titel führt zurück und schließt nicht', () => {
+    const onClose = vi.fn();
+    const zurueck = vi.fn();
+    render(
+      <Sheet
+        title="Lied"
+        onClose={onClose}
+        knoepfe={null}
+        cancelLabel="Schließen"
+        zurueck={zurueck}
+      >
+        <p>Inhalt</p>
+      </Sheet>,
+    );
+    expect(knopfTexte()).toEqual(['Zurück', 'Fenster schließen', 'Schließen']);
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+    expect(zurueck).toHaveBeenCalledOnce();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('ohne `zurueck` kein „‹“', () => {
+    render(
+      <Sheet title="Lied" onClose={vi.fn()} knoepfe={null}>
+        <p>Inhalt</p>
+      </Sheet>,
+    );
+    expect(screen.queryByRole('button', { name: 'Zurück' })).toBeNull();
+  });
+
   it('ohne Knöpfe: der alte Aufbau – kein X, Abbrechen unten', () => {
     render(
       <Sheet title="T" onClose={vi.fn()} cancelLabel="Fertig">

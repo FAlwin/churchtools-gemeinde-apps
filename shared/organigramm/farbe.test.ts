@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { farbWert, gruppenFarbe, TAILWIND_500, typFarbenAus } from './farbe';
+import { farbWert, gruppenFarbe, sichtFarbe, TAILWIND_500, typFarbenAus } from './farbe';
 
 const TYPEN = typFarbenAus([
   { id: 2, color: 'lime' },
@@ -40,5 +40,19 @@ describe('typFarbenAus / farbWert', () => {
     expect(farbWert('teal')).toBe('#00bba7');
     expect(farbWert('mauve')).toBeNull();
     expect(farbWert(null)).toBeNull();
+  });
+});
+
+describe('sichtFarbe – die Kachel im Diagramm und in der Liste (O7b-8)', () => {
+  const farbe = sichtFarbe(TYPEN);
+  it('dieselbe Regel wie für Karten: eigene Farbe, sonst Typ, sonst Schiefergrau', () => {
+    expect(farbe({ id: 7, farbe: 'pink', typId: 2 })).toBe(TAILWIND_500.pink);
+    expect(farbe({ id: 7, farbe: null, typId: 2 })).toBe(
+      gruppenFarbe({ farbe: null, typId: 2 }, TYPEN),
+    );
+    expect(farbe({ id: 7, farbe: null, typId: 9 })).toBe(TAILWIND_500.slate);
+  });
+  it('die Gemeinde ist keine Gruppe – keine Kachel', () => {
+    expect(farbe({ id: null, farbe: null, typId: null })).toBeNull();
   });
 });

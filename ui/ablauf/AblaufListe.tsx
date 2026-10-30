@@ -6,9 +6,10 @@
  * (→ Charts) und setzt Schildchen „neu/geändert“. Die Regeln einer Zeile stehen in `@shared/ct/ablaufZeile`.
  */
 import { Fragment, type ReactNode } from 'react';
-import { beginnStelle, itemTitleParts, type AblaufZeile } from '@shared/ct/ablaufZeile';
+import { ablaufEnde, beginnStelle, itemTitleParts, type AblaufZeile } from '@shared/ct/ablaufZeile';
 import {
   BeginnLinie,
+  EndeLinie,
   ItemTitle,
   Kuerzel,
   LiedKarte,
@@ -78,6 +79,7 @@ export function AblaufListe({
   schild,
   kopf,
   schmal = false,
+  mitEnde = false,
 }: {
   zeilen: readonly AblaufZeile[];
   /** Uhrzeit des Veranstaltungsbeginns („10:00“) für den Balken nach dem Vorlauf (#423). */
@@ -93,8 +95,11 @@ export function AblaufListe({
   kopf?: ReactNode;
   /** Die schmale Form für eine Matrix-Spalte (E6-6a): nur Uhrzeit, Dauer und Titel – ohne Zuständige und Kürzel. */
   schmal?: boolean;
+  /** Unter dem letzten Punkt den Balken „Ende“ mit der Uhrzeit (Matrix, 29.10.2026). */
+  mitEnde?: boolean;
 }) {
   const sichtbar = zeilen.filter((z) => !z.removed);
+  const ende = mitEnde ? ablaufEnde(sichtbar) : null;
   // Der Balken „Beginn“ vor dem ersten Punkt nach dem Vorlauf (#423) – nur, wenn es Vorlauf gibt.
   const stelle = beginnStelle(sichtbar);
   let liedIndex = -1;
@@ -157,6 +162,7 @@ export function AblaufListe({
         </Fragment>
       ))}
       {stelle === sichtbar.length && <BeginnLinie zeit={beginn} />}
+      {ende && <EndeLinie zeit={ende} />}
     </div>
   );
 }

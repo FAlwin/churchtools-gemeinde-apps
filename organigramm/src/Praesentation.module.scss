@@ -41,6 +41,16 @@
   white-space: nowrap;
 }
 
+// „Personen: Aus · Rollen · Alle“ (O7b-6b) – beschriftet wie im Reiter.
+.personen {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text2);
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .knopf {
   @include m.aktionKnopf;
   display: inline-flex;

@@ -156,3 +156,17 @@ export function BeginnLinie({ zeit }: { zeit?: string }) {
     </div>
   );
 }
+
+/**
+ * Der Balken **„Ende“** unter dem letzten Punkt (Matrix, Alwin 29.10.2026, Entwurf `e6-6-trennung.html` C): Dort sieht
+ * man, wo der Ablauf eines Termins aufhört – vorher folgte gleich die erste Dienstgruppe. Grau statt blau wie „Beginn“;
+ * die Zeit rechnet `ablaufEnde`.
+ */
+export function EndeLinie({ zeit }: { zeit: string }) {
+  return (
+    <div className={styles.endeLinie} role="separator" aria-label={`Ende ${zeit}`}>
+      <span className={styles.beginnText}>Ende</span>
+      <span className={styles.beginnZeit}>{zeit}</span>
+    </div>
+  );
+}

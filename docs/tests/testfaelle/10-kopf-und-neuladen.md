@@ -48,6 +48,8 @@ des Bandes.
 5. **Ein Lied öffnen (Liedblatt, Scheibe B1+B2):** Oben eine **Fläche in Kartenfarbe bis an den oberen Rand** (unter die
    Uhr bzw. bis an die ChurchTools-Leiste, keine schwebende Karte mit Rand – seit 29.10.2026); Inhalt scharf unter dem Band.
    Am Handy hochkant sind Liedtitel und Knöpfe größer als am iPad.
+   **Lied-Editor** (Lied-Menü → Bearbeiten → Im Editor öffnen): Abbrechen · Titel · Speichern stehen ebenfalls unter
+   dem Band, scharf – nicht direkt unter der Uhr (seit 29.10.2026).
    **iPad quer und hochkant:** erste Zeile **„← Ablauf“**, der Termin („Gottesdienst – Sonntag, 01. Nov · 10:00“), in der
    Erweiterung ganz rechts Vollbild. Darunter in **einer** Zeile links die **Lied-Leiste** (alle Lieder nummeriert,
    mit Trennstrichen; die sichtbaren grau, das gewählte blau unterstrichen mit Tonart · Fassung · Tempo und Pfeil) und
@@ -59,7 +61,7 @@ des Bandes.
      Blatt springt hin, das Lied ist gewählt. **Blättern** (Wischen, Pfeile, Pedal) → die Leiste scrollt mit, das
      gewählte Lied bleibt zu sehen.
    - **Querformat:** das zweite sichtbare Lied antippen → es ist gewählt, das Blatt bleibt stehen, kein Vollbild. Das
-     gewählte noch einmal antippen → das Lied-Menü (Tonart, Version, Dateien …) öffnet **unter ihm**.
+     gewählte noch einmal antippen → das Lied-Menü öffnet als Fenster **in der Mitte** (TF-EINST-21).
    - **Tempo** → das Fenster öffnet unter dem Knopf, der Knopf ist hellblau; Puls an → „Tempo“ blau umrandet.
      **Anmerken** → der Knopf heißt „Anmerken beenden“ (Haken). **Notizen von …** → nur noch „Zurück zu den eigenen
      Notizen“; das gewählte Lied öffnet dann kein Lied-Menü.

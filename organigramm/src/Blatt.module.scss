@@ -74,3 +74,32 @@
   font-size: 4.233px; // 12 pt
   font-weight: 700;
 }
+
+// Kachel vor dem Namen (O7b-8) – Anfangsbuchstabe weiß auf der Gruppenfarbe. Die Rundung im selben Verhältnis wie am
+// Bildschirm: `--r-tile` bei 22 px Kachel, hier 3,4 mm (KACHEL_MM) → mal 3,4 / 22. Die Farbe setzt `BlattSeite.tsx`.
+.listeKachel {
+  rx: calc(var(--r-tile) * 0.155);
+}
+
+.listeBuchstabe {
+  fill: #fff;
+  font-size: 2.2px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+// Personen unter einer Gruppe (O7b-6b) – wie im Kästchen: Rolle klein, fett und grau, die Namen etwas kleiner als der
+// Gruppenname. Die Größen setzt `BlattSeite.tsx` aus `blatt.ts` (ROLLE_GROESSE, PERSON_GROESSE) – dort wird damit
+// auch umgebrochen.
+.listeRolle {
+  fill: var(--text3);
+  font-weight: 700;
+}
+
+.listePerson {
+  fill: var(--text2);
+}
+
+.listeKursiv {
+  font-style: italic;
+}

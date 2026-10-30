@@ -5,6 +5,8 @@ interface SegmentOption<T extends string> {
   value: T;
   /** Beschriftung – darf einen Zähler enthalten (Abwesenheiten: „Einträge" + rote Zahl). */
   label: ReactNode;
+  /** Name für Screenreader und Tooltip – nötig, wenn die Beschriftung nur ein Symbol ist („Schmale Spalten“). */
+  name?: string;
 }
 
 interface SegmentProps<T extends string> {
@@ -56,6 +58,8 @@ export function Segment<T extends string>({
           aria-pressed={value === o.value}
           className={`${styles.btn}${value === o.value ? ' ' + styles.on : ''}${dimmed.includes(o.value) ? ' ' + styles.off : ''}`}
           onClick={() => onChange(o.value)}
+          aria-label={o.name}
+          title={o.name}
         >
           {o.label}
         </button>

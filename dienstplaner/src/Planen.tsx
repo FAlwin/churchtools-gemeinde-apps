@@ -62,7 +62,7 @@ import type { TerminStand } from './terminStand';
 import { SendenFach, type SendeZeile } from './SendenFach';
 import { grundText, type EntwuerfeDaten, type EntwurfAnschluss } from './ladeEntwuerfe';
 import { ALLE_REITER } from './reiter';
-import { AblaufZeilen, HandyAblauf } from './MatrixAblauf';
+import { AblaufBearbeitenKnopf, AblaufZeilen, HandyAblauf } from './MatrixAblauf';
 import { useMatrixAblauf, type MatrixAblauf } from './useMatrixAblauf';
 import type { Start } from './start';
 import styles from './Planen.module.scss';
@@ -522,13 +522,25 @@ export function Planen({
       />
       {!handy && leiste}
       <div className={styles.rechts}>
+        {/* „Ablauf bearbeiten“ hier statt neben „Ablauf“ – dort passte er nicht in die Dienst-Spalte (E6-6c). */}
+        {!handy && ansicht.unteransicht === 'matrix' && matrixAblauf && plan && (
+          <AblaufBearbeitenKnopf ma={matrixAblauf} plan={plan} spalten={imFenster} />
+        )}
         {!handy && ansicht.unteransicht === 'matrix' && (
           <Segment<Breite>
             value={ansicht.breite}
+            // Zwei Breiten als Symbole statt S/M/L (Alwin, 29.10.2026, Entwurf `e6-6-breiten-plus.html`).
             options={[
-              { value: 's', label: 'S' },
-              { value: 'm', label: 'M' },
-              { value: 'l', label: 'L' },
+              {
+                value: 'schmal',
+                label: <Icon name="spalten-schmal" size={18} />,
+                name: 'Schmale Spalten',
+              },
+              {
+                value: 'breit',
+                label: <Icon name="spalten-breit" size={18} />,
+                name: 'Breite Spalten',
+              },
             ]}
             onChange={(b) => setAnsicht({ ...ansicht, breite: b })}
             ariaLabel="Spaltenbreite"
@@ -1273,8 +1285,8 @@ function GruppenKnopf({
 
 function TabellenPlan({ sicht, breite }: { sicht: Sicht; breite: Breite }) {
   const { plan, spalten, gruppen, zugeklappt, neben, onUmschalten } = sicht;
-  // S/M/L ist die Spaltenbreite selbst – fest, ohne Strecken (Alwin, 28.10.2026: „S/M kein Unterschied“). Vorher füllten
-  // die Spalten die Breite; dann sahen S und M fast gleich aus, und gar nicht verschieden, wenn alle Termine passten.
+  // Schmal/breit ist die Spaltenbreite selbst – fest, ohne Strecken (Alwin, 28.10.2026: „S/M kein Unterschied“; seit
+  // 29.10.2026 nur noch zwei Breiten). Vorher füllten die Spalten die Breite; dann sahen S und M fast gleich aus.
   // Wie viele Termine ins Fenster passen, rechnet `passendeAnzahl` mit derselben Breite – übrig bleibt höchstens
   // eine Spalte Platz.
   const cw = SPALTENBREITE[breite];
@@ -1340,14 +1352,29 @@ function TabellenPlan({ sicht, breite }: { sicht: Sicht; breite: Breite }) {
           </tr>
         </thead>
         <tbody>
-          {/* Der Ablauf steht oben, über den Dienstgruppen (Entwurf E6-6, Alwin 23.10. und 28.10.2026). */}
+          {/* Der Ablauf steht oben, über den Dienstgruppen (Entwurf E6-6, Alwin 23.10. und 28.10.2026). Darunter ein
+              Streifen in der Seitenfarbe und die Überschrift „Dienste“ – sonst sah man nicht, wo der Ablauf endet
+              (Alwin, 29.10.2026, Entwurf `e6-6-trennung.html` C; dazu „Ende“ in jeder Spalte). */}
           {sicht.ablauf && (
-            <AblaufZeilen
-              ma={sicht.ablauf}
-              plan={plan}
-              spalten={spalten}
-              zelleKlasse={zelleKlasse}
-            />
+            <>
+              <AblaufZeilen
+                ma={sicht.ablauf}
+                plan={plan}
+                spalten={spalten}
+                zelleKlasse={zelleKlasse}
+              />
+              <tr className={styles.abschnittAbstand} aria-hidden="true">
+                <td colSpan={spalten.length + 1} />
+              </tr>
+              <tr className={styles.abschnittKopf}>
+                <th className={styles.svc} scope="row">
+                  Dienste
+                </th>
+                {spalten.map((i) => (
+                  <td key={plan.spalten[i].id} />
+                ))}
+              </tr>
+            </>
           )}
           {gruppen.map((g) => {
             const k = schluessel(g);

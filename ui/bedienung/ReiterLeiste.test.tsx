@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { ReiterLeiste } from './ReiterLeiste';
 
 const REITER = [
@@ -38,6 +38,28 @@ describe('ReiterLeiste', () => {
     expect(container.querySelector('nav')?.className).toMatch(/oben/);
     fireEvent.click(screen.getByRole('button', { name: 'Zwei' }));
     expect(onWechsel).toHaveBeenCalledWith('b');
+  });
+
+  it('Anzahl hinter dem Text (U2-1); eigener Name für eine zweite Leiste, sonst „Bereiche“', () => {
+    render(
+      <ReiterLeiste
+        reiter={[
+          { ...REITER[0], zahl: 3 },
+          { ...REITER[1], zahl: 0 },
+        ]}
+        aktiv="a"
+        onWechsel={vi.fn()}
+        oben
+        name="Ansichten"
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Eins 3' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Zwei 0' })).toBeTruthy();
+    expect(screen.getByRole('navigation', { name: 'Ansichten' })).toBeTruthy();
+    cleanup();
+    render(<ReiterLeiste reiter={REITER} aktiv="a" onWechsel={vi.fn()} oben />);
+    expect(screen.getByRole('navigation', { name: 'Bereiche' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Eins' })).toBeTruthy();
   });
 
   it('unten zeigt jeder Reiter sein Symbol', () => {

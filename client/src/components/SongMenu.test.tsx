@@ -1,10 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, within, fireEvent } from '@testing-library/react';
 import type { SetlistSong, SongArrangementOption } from '@shared/types/index';
 import { DEFAULT_SETTINGS, type SongSettings } from '../utils/chartSettings';
 import { SongMenu } from './SongMenu';
-import styles from '../pages/ChordChart.module.scss';
 
 /**
  * #198: Das Lied-Menü, ausgelagert aus `pages/ChordChart.tsx`.
@@ -41,6 +40,7 @@ function setup(
     set?: Partial<SongSettings>;
     canEdit?: boolean;
     arrangements?: SongArrangementOption[];
+    zuletzt?: string | null;
   } = {},
 ) {
   const handlers = {
@@ -71,6 +71,7 @@ function setup(
       isOriginal={set.versionKey === 'original'}
       hasVersions
       canEditSong={over.canEdit ?? true}
+      zuletztGesungen={over.zuletzt}
       {...handlers}
     />,
   );
@@ -79,7 +80,93 @@ function setup(
 
 afterEach(cleanup);
 
+/** In die Unterseite einer Gruppe der Übersicht („Tonart“, „Anzeige“, „Version“, „Lied“). */
+function unterseite(gruppe: string) {
+  const zeilen = within(screen.getByRole('region', { name: gruppe })).getAllByRole('button');
+  // `fireEvent`, nicht `.click()`: Der Seitenwechsel ist ein React-Zustand und muss vor der nächsten Abfrage stehen.
+  fireEvent.click(zeilen[zeilen.length - 1]);
+}
+
+/** Die Gruppen der Übersicht, in ihrer Reihenfolge. */
+function gruppen(): string[] {
+  return screen.getAllByRole('region').map((r) => r.getAttribute('aria-label') ?? '');
+}
+
+/**
+ * **Fenster mit Übersicht und Unterseiten** (Alwin am iPhone, 29.10.2026; Variante 1 mit der Aufteilung aus Variante 2).
+ */
+describe('SongMenu – Übersicht und Unterseiten', () => {
+  it('die Übersicht: Tonart, Anzeige, Version, Bearbeiten, Teilen', () => {
+    setup();
+    expect(gruppen()).toEqual(['Tonart', 'Anzeige', 'Version', 'Bearbeiten', 'Teilen']);
+    // Häufiges direkt, Seltenes eine Ebene tiefer.
+    expect(screen.getByText('Transponieren')).toBeTruthy();
+    expect(screen.getByText('Akkorde & Text')).toBeTruthy();
+    expect(screen.queryByText('Abschnitte transponieren')).toBeNull();
+    expect(screen.queryByText('Dateien …')).toBeNull();
+    expect(screen.getByRole('dialog').textContent).toContain('Testlied');
+  });
+
+  /**
+   * Der Editor steht direkt in der Übersicht (Alwin am iPhone, 29.10.2026: unter „Lied › Teilen, Bearbeiten …“ fand er
+   * ihn nicht). Rechts steht, was dabei entsteht: beim Original eine neue Version, sonst die gewählte.
+   */
+  it('„Im Editor öffnen“ steht direkt unter „Bearbeiten“, öffnet den Editor und schließt', () => {
+    const h = setup();
+    const bearbeiten = within(screen.getByRole('region', { name: 'Bearbeiten' }));
+    expect(bearbeiten.getByText('als neue Version')).toBeTruthy();
+    fireEvent.click(bearbeiten.getByText('Im Editor öffnen'));
+    expect(h.onEditCurrent).toHaveBeenCalledTimes(1);
+    expect(h.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('bei einer benannten Version steht ihr Name neben „Im Editor öffnen“', () => {
+    setup({ set: { versionKey: 'akustik' } });
+    const bearbeiten = within(screen.getByRole('region', { name: 'Bearbeiten' }));
+    expect(bearbeiten.getByText('Akustik')).toBeTruthy();
+    expect(bearbeiten.queryByText('als neue Version')).toBeNull();
+  });
+
+  it('in eine Unterseite und mit „‹“ zurück – beides schließt nicht', () => {
+    const h = setup();
+    unterseite('Tonart');
+    expect(screen.getByText('Abschnitte transponieren')).toBeTruthy();
+    expect(screen.getByRole('dialog').textContent).toContain('Kapo & Abschnitte');
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+    expect(gruppen()).toEqual(['Tonart', 'Anzeige', 'Version', 'Bearbeiten', 'Teilen']);
+    expect(h.onClose).not.toHaveBeenCalled();
+  });
+
+  it('die Übersicht hat kein „‹“', () => {
+    setup();
+    expect(screen.queryByRole('button', { name: 'Zurück' })).toBeNull();
+  });
+
+  it('ohne Recht: keine Gruppe „Bearbeiten“, „Als PDF teilen“ bleibt', () => {
+    setup({ canEdit: false });
+    expect(gruppen()).toEqual(['Tonart', 'Anzeige', 'Version', 'Teilen']);
+    expect(
+      within(screen.getByRole('region', { name: 'Teilen' })).getByText('Als PDF teilen'),
+    ).toBeTruthy();
+  });
+
+  it('mit Dokumenten: „Nur Text · PDF ›“, das gezeigte Dokument steht als Wert daneben', () => {
+    const withDoc = song({
+      documents: [{ fileId: 99, name: 'Noten.pdf', type: 'pdf' }] as never,
+    });
+    setup({ song: withDoc, set: { viewSource: 99 } });
+    expect(screen.getByText('Nur Text · PDF')).toBeTruthy();
+    expect(screen.getByText('Noten.pdf')).toBeTruthy();
+  });
+});
+
 describe('SongMenu – jede Auswahl schließt das Menü', () => {
+  /** Auf welcher Unterseite der Punkt steht (sonst in der Übersicht). */
+  const WO: Record<string, string> = {
+    Kapo: 'Tonart',
+    'Abschnitte transponieren': 'Tonart',
+    'Neue Version…': 'Version',
+  };
   const cases: [string, keyof ReturnType<typeof setup>][] = [
     ['Transponieren', 'onOpenKeyPicker'],
     ['Kapo', 'onOpenCapoPicker'],
@@ -91,6 +178,7 @@ describe('SongMenu – jede Auswahl schließt das Menü', () => {
   for (const [label, handler] of cases) {
     it(`„${label}" löst die Aktion aus UND schließt`, () => {
       const h = setup();
+      if (WO[label]) unterseite(WO[label]);
       screen.getByText(label).click();
       expect(h[handler]).toHaveBeenCalledTimes(1);
       expect(h.onClose).toHaveBeenCalledTimes(1);
@@ -99,6 +187,7 @@ describe('SongMenu – jede Auswahl schließt das Menü', () => {
 
   it('ein Versionswechsel meldet den Schlüssel und schließt', () => {
     const h = setup();
+    unterseite('Version');
     screen.getByText('Akustik').click();
     expect(h.onSelectVersion).toHaveBeenCalledWith('akustik');
     expect(h.onClose).toHaveBeenCalledTimes(1);
@@ -113,13 +202,13 @@ describe('SongMenu – jede Auswahl schließt das Menü', () => {
     expect(h.onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('der Klick daneben (Scrim) schließt, ohne etwas zu ändern', () => {
+  it('der Klick daneben schließt, ohne etwas zu ändern', () => {
     const h = setup();
-    // Gezielt über die Klasse – ein „erstes div"-Selektor wäre auch grün, wenn er das Menü selbst
+    // Gezielt die Fläche UM das Fenster – ein „erstes div"-Selektor wäre auch grün, wenn er das Fenster selbst
     // träfe, und würde damit nichts beweisen.
-    const scrim = document.querySelector(`.${styles.scrim}`);
-    expect(scrim).not.toBeNull();
-    (scrim as HTMLElement).click();
+    const daneben = screen.getByRole('dialog').parentElement;
+    expect(daneben).not.toBeNull();
+    (daneben as HTMLElement).click();
     expect(h.onClose).toHaveBeenCalledTimes(1);
     expect(h.onChange).not.toHaveBeenCalled();
     expect(h.onSelectVersion).not.toHaveBeenCalled();
@@ -132,36 +221,49 @@ describe('SongMenu – was zum angezeigten Inhalt passt', () => {
       documents: [{ fileId: 99, name: 'Noten.pdf', type: 'pdf' }] as never,
     });
     setup({ song: withDoc, set: { viewSource: 99 } });
-    expect(screen.queryByText('Abschnitte transponieren')).toBeNull();
-    // Seit 07.10.2026: Geteilt wird, was das Lied zeigt – auch sein Dokument (Gemeinde ohne ChordPro).
-    expect(screen.getByText('Als PDF teilen')).toBeTruthy();
-    expect(screen.queryByText('Bearbeiten (neue Version)')).toBeNull();
-    expect(screen.queryByText('Akustik')).toBeNull();
+    // Ohne Abschnitte ist „Kapo“ der einzige Punkt – er steht direkt in der Übersicht, keine Unterseite.
+    expect(screen.getByText('Kapo')).toBeTruthy();
+    expect(screen.queryByText('Kapo · Abschnitte')).toBeNull();
+    // Keine Versionen – die Gruppe entfällt.
+    expect(gruppen()).toEqual(['Tonart', 'Anzeige', 'Bearbeiten', 'Teilen']);
     // Die Anzeige-Umschalter bleiben – sonst käme man vom Dokument nicht mehr weg.
     expect(screen.getByText('Akkorde & Text')).toBeTruthy();
+    unterseite('Anzeige');
     expect(screen.getByText('Noten.pdf', { exact: false })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+    // Seit 07.10.2026: Geteilt wird, was das Lied zeigt – auch sein Dokument (Gemeinde ohne ChordPro).
+    expect(screen.getByText('Als PDF teilen')).toBeTruthy();
+    // Kein Editor beim Dokument – Dateien und Stammdaten stehen dann direkt da, ohne Unterseite.
+    const bearbeiten = within(screen.getByRole('region', { name: 'Bearbeiten' }));
+    expect(bearbeiten.queryByText('Im Editor öffnen')).toBeNull();
+    expect(bearbeiten.getByText('Dateien …')).toBeTruthy();
+    expect(bearbeiten.getByText('Stammdaten …')).toBeTruthy();
+    expect(screen.queryByText('Abschnitte transponieren')).toBeNull();
+    expect(screen.queryByText('Akustik')).toBeNull();
   });
 
   it('ohne Bearbeitungsrecht fehlen Bearbeiten, Neue Version und Löschen', () => {
     setup({ canEdit: false, set: { versionKey: 'akustik' } });
-    expect(screen.queryByText('Bearbeiten (neue Version)')).toBeNull();
+    expect(screen.queryByText('Im Editor öffnen')).toBeNull();
+    unterseite('Version');
     expect(screen.queryByText('Neue Version…')).toBeNull();
     expect(screen.queryByText('„Akustik" löschen')).toBeNull();
   });
 
   it('das Original lässt sich nicht löschen, eine Version schon', () => {
     setup({ set: { versionKey: 'original' } });
+    unterseite('Version');
     expect(screen.queryByText('„Original" löschen')).toBeNull();
     cleanup();
     setup({ set: { versionKey: 'akustik' } });
+    unterseite('Version');
     expect(screen.getByText('„Akustik" löschen')).toBeTruthy();
   });
 });
 
 /**
- * Die Komponente importiert `ChordChart.module.scss` jetzt aus einem ANDEREN Verzeichnis. Wäre der
- * Pfad falsch, gäbe es keinen Fehler – CSS-Module liefern still `undefined`, und das Menü stünde
- * ohne Layout mitten auf der Seite.
+ * Wäre der Pfad zum CSS-Modul falsch, gäbe es keinen Fehler – CSS-Module liefern still `undefined`, und das Menü
+ * stünde ohne Layout im Fenster (bis 29.10.2026 kam es aus `pages/ChordChart.module.scss`, jetzt `SongMenu.module.scss`).
  */
 describe('CSS-Modul erreichbar', () => {
   it('die Einträge bekommen echte Klassennamen, nicht „undefined"', () => {
@@ -183,6 +285,9 @@ describe('SongMenu – Arrangement umschalten (#320)', () => {
 
   it('zeigt die Auswahl bei mehreren Arrangements', () => {
     setup({ arrangements: arrs, song: song({ arrangementId: 1 }) });
+    // In der Übersicht steht die Wahl mit der Version: „Band · Original ›“.
+    expect(screen.getByText('Band · Original')).toBeTruthy();
+    unterseite('Version');
     expect(screen.getByText('Arrangement')).toBeTruthy();
     expect(screen.getByText('Band')).toBeTruthy();
     expect(screen.getByText('Unplugged')).toBeTruthy();
@@ -190,11 +295,14 @@ describe('SongMenu – Arrangement umschalten (#320)', () => {
 
   it('zeigt bei nur einem NICHTS – kein Bedienelement ohne Zweck', () => {
     setup({ arrangements: [arrs[0]], song: song({ arrangementId: 1 }) });
+    unterseite('Version');
     expect(screen.queryByText('Arrangement')).toBeNull();
+    expect(screen.queryByText('Band')).toBeNull();
   });
 
   it('merkt eine Abweichung als Nummer', () => {
     const props = setup({ arrangements: arrs, song: song({ arrangementId: 1 }) });
+    unterseite('Version');
     screen.getByText('Unplugged').click();
     expect(props.onChange).toHaveBeenCalledWith({ arrangementId: 2 });
   });
@@ -203,6 +311,7 @@ describe('SongMenu – Arrangement umschalten (#320)', () => {
     // Sonst hielte die App an einer Nummer fest, die einmal die richtige war: Ändert das Team den
     // Ablauf später, soll die App wieder folgen.
     const props = setup({ arrangements: arrs, song: song({ arrangementId: 2 }) });
+    unterseite('Version');
     screen.getByText('Band').click();
     expect(props.onChange).toHaveBeenCalledWith({ arrangementId: null });
   });
@@ -219,12 +328,17 @@ describe('SongMenu – Arrangement umschalten (#320)', () => {
 describe('SongMenu – Dateien (#321)', () => {
   it('zeigt „Dateien …" für Berechtigte und meldet den Klick', () => {
     const h = setup({ canEdit: true });
+    unterseite('Bearbeiten');
+    expect(screen.getByRole('dialog').textContent).toContain('Dateien & Stammdaten');
     screen.getByText('Dateien …').click();
     expect(h.onOpenFiles).toHaveBeenCalledTimes(1);
   });
 
   it('zeigt es NICHT ohne Berechtigung', () => {
     setup({ canEdit: false });
+    // Ohne Recht gibt es die Gruppe „Bearbeiten“ gar nicht.
+    expect(screen.queryByRole('region', { name: 'Bearbeiten' })).toBeNull();
+    expect(screen.queryByText('Dateien · Stammdaten')).toBeNull();
     expect(screen.queryByText('Dateien …')).toBeNull();
   });
 
@@ -233,6 +347,26 @@ describe('SongMenu – Dateien (#321)', () => {
     // „Dateien" muss bleiben, sonst käme man beim PDF nicht an die Dateiverwaltung.
     setup({ canEdit: true, set: { viewSource: 4711 } });
     expect(screen.getByText('Dateien …')).toBeTruthy();
-    expect(screen.queryByText('Bearbeiten (neue Version)')).toBeNull();
+    expect(screen.queryByText('Im Editor öffnen')).toBeNull();
+  });
+});
+
+/** **Zuletzt gesungen** oben im Lied-Menü (Alwin beim Planen, 30.10.2026). */
+describe('SongMenu – zuletzt gesungen', () => {
+  it('zeigt das Datum ganz oben, vor der Gruppe „Tonart“', () => {
+    setup({ zuletzt: '2026-10-12' });
+    const text = screen.getByRole('dialog').textContent ?? '';
+    expect(text).toContain('Zuletzt gesungen12.10.2026');
+    expect(text.indexOf('Zuletzt gesungen')).toBeLessThan(text.indexOf('Tonart'));
+  });
+
+  it('noch nie gesungen: „noch nie“', () => {
+    setup({ zuletzt: null });
+    expect(screen.getByRole('dialog').textContent).toContain('Zuletzt gesungennoch nie');
+  });
+
+  it('ohne Statistik (kein Recht, lädt, Fehler) keine Zeile – keine Behauptung', () => {
+    setup();
+    expect(screen.queryByText('Zuletzt gesungen')).toBeNull();
   });
 });

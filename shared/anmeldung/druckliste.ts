@@ -48,10 +48,14 @@ const FEST: DruckSpalte[] = [
   { schluessel: 'nr', titel: 'Anmelde-Nr.' },
 ];
 
-const frageSchluessel = (f: Feld) => `frage:${f.id}`;
+/** Der Schlüssel einer Frage als Spalte – gemeinsam für Druckliste und Tabelle (U2-1). */
+export const frageSchluessel = (f: Feld) => `frage:${f.id}`;
 
-/** Fragen mit eigener Spalte in ChurchTools, die das Formular auch stellt. */
-function fragen(e: OeffentlicheEinstellungen): Feld[] {
+/**
+ * Fragen mit eigener Spalte in ChurchTools, die das Formular auch stellt – der **eine** Spaltenkatalog der Fragen für
+ * Druckliste und Tabelle (U2-1).
+ */
+export function fragen(e: OeffentlicheEinstellungen): Feld[] {
   return [...e.formular.person, ...e.formular.anmeldung].filter(
     (f) => f.zustand !== 'aus' && !nurText(f.typ) && ctAblage(f).ort === 'gruppenfeld',
   );
@@ -93,9 +97,23 @@ function zelle(
   if (s === 'nr') return x.nr ?? '';
   const f = fragen(e).find((y) => frageSchluessel(y) === s);
   if (!f) return '';
-  // Was es einmal je Anmeldung gibt (Telefon, Erziehungsberechtigte …), steht bei jeder Person der Anmeldung.
-  const werte = e.formular.person.includes(f) ? p.werte : x.einmal;
-  return antwortText(f, werte, e.ctFelder) ?? '';
+  return frageAntwort(e, f, x, p) ?? '';
+}
+
+/**
+ * **Die Antwort auf eine Frage** – Fragen der Person aus ihren Werten, was es einmal je Anmeldung gibt (Telefon,
+ * Erziehungsberechtigte …) aus der Anmeldung; so steht es bei jeder Person der Anmeldung. Ohne Person (Tabelle je
+ * Anmeldung, U2-1) gibt es nur die Fragen der Anmeldung.
+ */
+export function frageAntwort(
+  e: OeffentlicheEinstellungen,
+  f: Feld,
+  x: ListenAnmeldung,
+  p: ListenPerson | null,
+): string | null {
+  const jePerson = e.formular.person.includes(f);
+  if (jePerson && !p) return null;
+  return antwortText(f, jePerson && p ? p.werte : x.einmal, e.ctFelder);
 }
 
 const deutsch = new Intl.Collator('de', { sensitivity: 'base' });

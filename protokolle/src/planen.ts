@@ -21,14 +21,16 @@ import { ApiError, NichtUebernommen, Unklar } from '@ui/ct/fehler';
 import { modulPort } from '@ui/ct/modulPort';
 import { ctAnfrage, ctDaten, KeinSpeicherRecht } from '@ui/ct/verbindung';
 import { treffenLesen } from './lesen';
+import { anfragenLesen, terminLaden } from './termin';
 
 const json = (body: unknown) => JSON.stringify(body);
 
 /**
  * ChurchTools hat ausdrücklich abgelehnt – dann ist nichts angelegt: fehlendes Recht (`KeinSpeicherRecht`) oder ein
- * anderes 4xx. Ein 403 ohne ChurchTools-Rumpf (Proxy) und eine Zeitgrenze sind dagegen unklar (`fehlerAus`).
+ * anderes 4xx. Ein 403 ohne ChurchTools-Rumpf (Proxy) und eine Zeitgrenze sind dagegen unklar (`fehlerAus`). Die eine
+ * Stelle dafür – auch für „Sitzung bearbeiten“ (K2b, `bearbeiten.ts`).
  */
-const abgelehnt = (e: unknown): boolean =>
+export const abgelehnt = (e: unknown): boolean =>
   e instanceof KeinSpeicherRecht ||
   (e instanceof ApiError &&
     e.status >= 400 &&
@@ -170,17 +172,10 @@ export async function sitzungFestlegen(q: {
   const termin = { kalender: q.kalender, id };
   let fehlend: number[];
   try {
-    const gelesen = await ctDaten<{ appointment?: { startDate?: string } }>(
-      `/calendars/${q.kalender}/appointments/${id}`,
-    );
-    const start = gelesen?.appointment?.startDate;
-    if (!start || minute(start) !== minute(q.beginn)) throw new Error('anders');
-    const anfragen = q.eingeladen.length
-      ? ((await ctDaten<{ person?: { domainIdentifier?: string }; inviteeId?: number }[]>(
-          `/calendars/${q.kalender}/appointments/${id}/meetingrequests`,
-        )) ?? [])
-      : [];
-    const da = new Set(anfragen.map((a) => Number(a.person?.domainIdentifier ?? a.inviteeId)));
+    const start = (await terminLaden(termin)).startDate;
+    if (typeof start !== 'string' || minute(start) !== minute(q.beginn)) throw new Error('anders');
+    const anfragen = q.eingeladen.length ? await anfragenLesen(termin) : [];
+    const da = new Set(anfragen.map((a) => a.person));
     fehlend = q.eingeladen.filter((p) => !da.has(p));
   } catch {
     throw new Unklar(NACHSEHEN);

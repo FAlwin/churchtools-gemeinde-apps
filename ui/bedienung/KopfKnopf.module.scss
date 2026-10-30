@@ -28,6 +28,14 @@
   padding: 0;
 }
 
+// Klein in einer Tabellenzeile (das grüne Plus der Matrix, 29.10.2026): so groß wie Zauberstab und Regler.
+.klein {
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+  padding: 0;
+}
+
 // Am Handy nur das Symbol – quadratisch, 40 px zum Tippen. Die Grenze ist `HANDY_BREITE` (useMedienAbfrage.ts);
 // CSS kann die Konstante nicht lesen. „← Termine“ behält seinen Text, er ist am Handy der einzige Weg zurück.
 @media (max-width: 759px) {

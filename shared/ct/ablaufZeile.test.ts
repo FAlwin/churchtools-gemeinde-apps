@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { CtAgendaItem } from './typen';
 import {
+  ablaufEnde,
   ablaufUhrzeit,
   ablaufZeileAus,
   beginnStelle,
@@ -206,5 +207,41 @@ describe('istWeggelassen (E6-3b) – das Auge an diesem Termin', () => {
 
   it('ohne `startTimes` (ältere Antwort) → nicht weggelassen', () => {
     expect(istWeggelassen(punkt(), 7)).toBe(false);
+  });
+});
+
+describe('ablaufEnde – Balken „Ende“ in der Matrix (29.10.2026)', () => {
+  const z = (
+    time: string | null,
+    durationMin: number | null,
+    mehr: { weggelassen?: boolean; removed?: boolean } = {},
+  ) => ({
+    time,
+    durationMin,
+    ...mehr,
+  });
+
+  it('Uhrzeit des letzten Punkts plus seine Dauer', () => {
+    expect(ablaufEnde([z('10:00', 4), z('10:04', 5), z('10:39', 5)])).toBe('10:44');
+  });
+
+  it('ohne Dauer: die Uhrzeit des letzten Punkts selbst', () => {
+    expect(ablaufEnde([z('10:00', 4), z('10:39', null)])).toBe('10:39');
+  });
+
+  it('weggelassene, entfernte und Punkte ohne Uhrzeit (Überschrift) zählen nicht', () => {
+    expect(
+      ablaufEnde([
+        z('10:09', 30),
+        z(null, 5, { weggelassen: true }),
+        z('10:50', 5, { removed: true }),
+        z(null, null),
+      ]),
+    ).toBe('10:39');
+  });
+
+  it('kein Punkt mit Uhrzeit (oder leer): keins', () => {
+    expect(ablaufEnde([z(null, null)])).toBeNull();
+    expect(ablaufEnde([])).toBeNull();
   });
 });

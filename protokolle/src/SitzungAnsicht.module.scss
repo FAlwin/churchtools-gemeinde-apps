@@ -43,6 +43,12 @@
   margin-top: 4px;
 }
 
+.aktionen {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 .karte {
   @include m.card-list;
   padding: 16px 18px;

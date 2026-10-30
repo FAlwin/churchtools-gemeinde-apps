@@ -99,6 +99,13 @@
   @include m.fensterX;
 }
 
+// „‹“ vor dem Titel (Unterseite) – derselbe Knopf wie das X, bündig zum linken Rand des Inhalts.
+.zurueck {
+  @include m.fensterX;
+  margin-left: -10px;
+  margin-right: -6px;
+}
+
 .inhalt {
   flex: 1;
   min-height: 0;

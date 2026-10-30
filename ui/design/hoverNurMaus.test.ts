@@ -8,7 +8,7 @@ import { dateien, ORDNER, WURZEL } from './quelltexte.testutil';
  *
  * Ein Touch-Gerät hält `:hover` auf dem zuletzt angetippten Element fest, bis woanders hingetippt wird. In der
  * Liedleiste blieb so das vorher angetippte Lied hellblau – es sah aus wie gewählt. Bis zum 29.10. war das an 12 Stellen
- * abgesichert (`@media (hover: hover)`), an 72 nicht. Jetzt steht jede `:hover`-Regel in so einem Block; diese
+ * abgesichert (`@media (hover: hover)`), an 71 nicht (Stand beim Merge, 30.10.). Jetzt steht jede `:hover`-Regel in so einem Block; diese
  * Prüfung hält das fest. Die Ordner kommen aus `quelltexte.testutil.ts` – eine neue App ist so von selbst dabei.
  */
 const STILE = /\.(scss|css)$/;

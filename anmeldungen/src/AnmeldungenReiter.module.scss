@@ -8,59 +8,90 @@
   min-width: 0;
 }
 
-.suche {
-  @include m.eingabefeld;
-  flex: 1;
-  min-width: 120px;
-  max-width: 220px;
-  height: 30px;
-  margin-left: auto;
-  padding: 0 12px;
-  border-radius: 999px;
-  font-size: 13px;
+// Leiste über der Tabelle (U2-1): Suche und Knöpfe in einer Höhe, eckig wie in ChurchTools.
+.leiste {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--hair);
 }
 
-.zeile,
-.zeileStill {
+.suche {
+  @include m.eingabefeld(true);
   display: flex;
   align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 11px 14px;
-  background: none;
-  border: none;
-  color: var(--text);
-  font: inherit;
-  text-align: left;
-}
+  gap: 8px;
+  flex: 1 1 200px;
+  max-width: 280px;
+  height: var(--knopf-hoehe);
+  padding: 0 10px;
+  color: var(--text3);
 
-.zeile {
-  cursor: pointer;
-
-  @media (hover: hover) {
-    &:hover {
-      background: color-mix(in srgb, var(--blue) 5%, var(--surface2));
-    }
+  input {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
   }
 }
 
-// Trennlinie zwischen den Einträgen – an der eigenen Klasse, nicht an `li` (der Paket-Wächter lässt keine Regeln
-// durch, die ChurchTools verändern würden).
-.eintrag + .eintrag {
-  box-shadow: inset 0 1px 0 var(--hair);
-}
-
-.links {
-  flex: 1;
-  min-width: 0;
+.rechts {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
 
-  b {
-    font-size: 15px;
-    font-weight: 700;
+// Am Handy nur das Zeichen (⎙, ✉) – sonst bricht „＋ Von Hand“ um (Fund U1).
+@media (max-width: 560px) {
+  .breit {
+    display: none;
   }
+
+  .suche {
+    max-width: none;
+    flex-basis: 100%;
+  }
+
+  .rechts {
+    margin-left: 0;
+  }
+}
+
+// „Platz frei – jemand wartet“ im Reiter Warteliste (U2-1).
+.warteHinweis {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--blue-soft);
+  border-bottom: 1px solid var(--hair);
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.strich {
+  color: var(--text3);
+}
+
+// Lange Antworten (Bemerkungen, Erziehungsberechtigte) gekürzt – ganz im Tooltip und im Fenster der Anmeldung.
+.kurzText {
+  display: inline-block;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
 }
 
 .personen {
@@ -80,24 +111,6 @@
     content: '·';
     margin: 0 6px;
     color: var(--text3);
-  }
-}
-
-.geld {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 3px;
-  font-size: 15px;
-  white-space: nowrap;
-
-  small {
-    color: var(--text2);
-    font-size: 13px;
-  }
-
-  @media (max-width: 520px) {
-    font-size: 14px;
   }
 }
 

@@ -20,6 +20,13 @@ import {
   weglassenSetzen,
 } from '@shared/ct/schreibKern';
 
+/**
+ * Hinweis, wenn man einen abgeschlossenen Ablauf ändern will – öffnen kann man ihn hier (noch) nicht. Eine Stelle für
+ * die Bearbeiten-Liste und das Ziehen zwischen Terminen (E6-6b).
+ */
+export const GESPERRT =
+  'Dieser Ablauf ist in ChurchTools abgeschlossen. Zum Ändern erst in ChurchTools oder in der Musik-App öffnen.';
+
 export function ablaufAktionen(eventId: number, geschrieben: () => void): AblaufAktionen {
   const s = browserSchreiber;
   async function danach<T>(schreiben: Promise<T>): Promise<T> {
@@ -30,7 +37,9 @@ export function ablaufAktionen(eventId: number, geschrieben: () => void): Ablauf
   return {
     reorder: (order, gesehen) => danach(ablaufUmsortieren(s, eventId, order, gesehen)),
     remove: (itemId) => danach(punktLoeschen(s, eventId, itemId)),
-    restore: (punkt) => danach(punktWiederherstellen(s, eventId, punkt)),
+    restore: async (punkt) => {
+      await danach(punktWiederherstellen(s, eventId, punkt));
+    },
     update: (itemId, fields, gesehen) => danach(punktAendern(s, eventId, itemId, fields, gesehen)),
     setVorBeginn: (itemId, vorBeginn) => danach(vorBeginnSetzen(s, eventId, itemId, vorBeginn)),
     setWeggelassen: (itemId, weg) => danach(weglassenSetzen(s, eventId, itemId, weg)),

@@ -4,8 +4,11 @@
  * „passend zur Fensterbreite“ (so viele, wie nebeneinander passen).
  */
 
-/** Spaltenbreiten S/M/L in Pixeln (Entwurf: 124/176/256). */
-export const SPALTENBREITE = { s: 124, m: 176, l: 256 } as const;
+/**
+ * Spaltenbreiten in Pixeln: schmal und breit (Alwin, 29.10.2026, Entwurf `e6-6-breiten-plus.html` – vorher S/M/L mit
+ * 124/176/256; S fiel weg, dort waren die Titel im Ablauf abgeschnitten).
+ */
+export const SPALTENBREITE = { schmal: 176, breit: 256 } as const;
 export type Breite = keyof typeof SPALTENBREITE;
 
 /** Breite der festen Spalte „Dienst“ links. */

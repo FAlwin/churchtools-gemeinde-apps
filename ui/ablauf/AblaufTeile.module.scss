@@ -55,6 +55,18 @@
   font-size: 13px;
   font-weight: 700;
 }
+.endeLinie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 8px;
+  background: var(--surface3);
+  border-top: 1px solid var(--hair);
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 700;
+}
 .beginnText {
   letter-spacing: 0.02em;
 }

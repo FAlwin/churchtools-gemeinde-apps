@@ -1,0 +1,124 @@
+// Lied-Menü als Fenster (29.10.2026): Gruppen mit Zeilen, Haarlinie zwischen den Zeilen.
+
+.liste {
+  display: flex;
+  flex-direction: column;
+  // Die Zeilen reichen bis an den Rand des Fensterinhalts, damit die Fläche beim Zeigen ganz hinterlegt ist.
+  margin: 0 -12px;
+}
+
+// „Zuletzt gesungen“ ganz oben – eine Auskunft, nicht antippbar (30.10.2026).
+.zuletzt {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 2px 12px 10px;
+  font-family: var(--ui);
+  font-size: 14px;
+  color: var(--text2);
+  font-variant-numeric: tabular-nums;
+}
+
+.gruppe + .gruppe {
+  margin-top: 10px;
+}
+
+.gruppenTitel {
+  padding: 4px 12px 2px;
+  font-family: var(--ui);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+
+.zeile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: var(--r-ctrl);
+  background: none;
+  font-family: var(--ui);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  & + & {
+    box-shadow: inset 0 1px 0 var(--hair);
+  }
+  &:active {
+    background: var(--surface3);
+  }
+  @media (hover: hover) {
+    &:hover {
+      background: var(--surface3);
+    }
+  }
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: -2px;
+  }
+}
+
+.an {
+  color: var(--blue);
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wert {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--text3);
+}
+
+.wertAktiv {
+  flex-shrink: 0;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--blue-ink);
+}
+
+.haken {
+  flex-shrink: 0;
+  color: var(--blue);
+}
+
+.weiter,
+.symbol {
+  flex-shrink: 0;
+  color: var(--text3);
+}
+
+.gefahr {
+  color: var(--red);
+}
+
+.notiz {
+  margin-left: 6px;
+  color: var(--text3);
+  vertical-align: -1px;
+}
+
+.dokSymbol {
+  color: var(--text3);
+  vertical-align: -2px;
+}

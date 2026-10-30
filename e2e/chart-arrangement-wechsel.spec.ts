@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import {
   TOUR_CHART,
   TOUR_SETLIST,
@@ -18,6 +18,18 @@ import {
  * dass wirklich ein anderes Blatt geladen wurde und nicht bloß der Name wechselte.
  */
 const TOUREN = [TOUR_TERMINE, TOUR_CHART, TOUR_SETLIST, TOUR_SETLIST_EDIT];
+
+/**
+ * Lied-Menü öffnen und in die Unterseite „Version“ – dort stehen seit 29.10.2026 die Arrangements (das Menü ist ein
+ * Fenster mit Übersicht und Unterseiten).
+ */
+async function liedMenueVersion(page: Page) {
+  await page
+    .getByRole('navigation', { name: 'Lieder im Ablauf' })
+    .locator('[aria-current="true"]')
+    .click();
+  await page.getByRole('region', { name: 'Version' }).getByRole('button').click();
+}
 
 test('das Arrangement lässt sich umschalten – lokal, mit neuem Notenblatt', async ({ page }) => {
   await page.addInitScript((touren: string[]) => {
@@ -51,20 +63,14 @@ test('das Arrangement lässt sich umschalten – lokal, mit neuem Notenblatt', a
    * Deshalb hier zuerst ausdrücklich auf das Ablauf-Arrangement stellen. Am Ende steht dieselbe
    * Wahl wieder – der Lauf hinterlässt also keinen Zustand für den nächsten.
    */
-  await page
-    .getByRole('navigation', { name: 'Lieder im Ablauf' })
-    .locator('[aria-current="true"]')
-    .click();
-  await expect(page.getByText('Arrangement')).toBeVisible();
+  await liedMenueVersion(page);
+  await expect(page.getByText('Arrangement', { exact: true })).toBeVisible();
   await page.getByText('Standard', { exact: true }).click();
   await expect(info).toContainText('Standard', { timeout: 20_000 });
   await expect(info).toContainText('G');
 
   // ── Umschalten über das Lied-Menü ──────────────────────────────────────────
-  await page
-    .getByRole('navigation', { name: 'Lieder im Ablauf' })
-    .locator('[aria-current="true"]')
-    .click();
+  await liedMenueVersion(page);
   await page.getByText('Unplugged', { exact: true }).click();
 
   // Der Name wechselt – und mit ihm die Tonart, die am ANDEREN Arrangement hängt. Genau das belegt,
@@ -81,10 +87,7 @@ test('das Arrangement lässt sich umschalten – lokal, mit neuem Notenblatt', a
   await expect(info).toContainText('Unplugged', { timeout: 20_000 });
 
   // ── Zurück auf das Arrangement aus dem Ablauf = „keine eigene Wahl" ────────
-  await page
-    .getByRole('navigation', { name: 'Lieder im Ablauf' })
-    .locator('[aria-current="true"]')
-    .click();
+  await liedMenueVersion(page);
   await page.getByText('Standard', { exact: true }).click();
   await expect(info).toContainText('Standard', { timeout: 20_000 });
   // Nicht als Nummer gemerkt: Ändert das Team den Ablauf später, folgt die App wieder.

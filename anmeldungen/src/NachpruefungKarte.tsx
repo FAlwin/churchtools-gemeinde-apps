@@ -123,16 +123,6 @@ export function NachpruefungKarte({
                     : `${n.plaetze.wartend} warten`}
               </dd>
             </dl>
-            {n.plaetze.wartenTrotzPlatz && (
-              <p className={v.pruefHinweis}>
-                {n.plaetze.max === null
-                  ? 'Es ist Platz frei'
-                  : `${n.plaetze.max - n.plaetze.belegt === 1 ? '1 Platz ist' : `${n.plaetze.max - n.plaetze.belegt} Plätze sind`} frei`}
-                , aber {n.plaetze.wartend === 1 ? '1 wartet' : `${n.plaetze.wartend} warten`}.
-                ChurchTools lässt niemanden von selbst nachrücken – neue Anmeldungen kommen hinten
-                an. Nachrücken lassen: im Bereich „Anmeldungen“.
-              </p>
-            )}
           </div>
           {n.auswahl && (
             <div className={v.pruefTeil}>

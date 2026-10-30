@@ -7,6 +7,17 @@
  * Termine und Gruppentreffen anlegen (S5-2, gemessen 28.10.2026): Person 1 legt an und hat sofort zugesagt, die anderen
  * sind offen. `terminFehler`/`treffenFehler` antworten mit einem Fehler – `angelegt` heißt: trotzdem angelegt (eine
  * unklare Antwort). `ctVerbot` macht daraus ein ChurchTools-„verboten“ (mit `messageKey`).
+ *
+ * Termine ändern und löschen (K2b, gemessen 29.10.2026): `PUT` ersetzt die Grundfelder (was fehlt, ist weg); **mit**
+ * `meetingrequests` gleicht er die Eingeladenen ab und setzt bei neuer Zeit die Zusagen zurück. Jede Mail landet in
+ * `mails` (Person 1 ändert und bekommt keine). `terminAendernFehler` antwortet dem `PUT`/`DELETE` mit einem Fehler –
+ * `angelegt` heißt: trotzdem ausgeführt.
+ *
+ * Serien (K2b-2, gemessen 29.10.2026): wöchentlich (`repeatId` 7) bis `repeatUntil`, ohne `exceptions` – die Termine
+ * stehen einzeln in der Liste und als `calculatedDates` am Termin. Teilen (`POST …/appointments/{id}` mit `splitDate`):
+ * `splitUntilEnd: false` setzt die Ausnahme, `true` endet die Serie am Vortag (am ersten Termin: 422); der neue Termin
+ * hat keine Einladungen – außer mit `meetingrequests`, dann mailt ChurchTools „geändert“ (irreführend, gemessen). Löschen einer Serie mailt „Terminserie gelöscht“. Bleibt nur ein Termin übrig, wird
+ * daraus ein Einzeltermin. `teilenFehler` wie `terminFehler`.
  */
 import { vi } from 'vitest';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
@@ -64,8 +75,15 @@ export interface Nachbau {
     titel: string;
     beginn: string;
     ende?: string;
-    anfragen: { person: number; state: string }[];
+    anfragen: { person: number; state: string; id?: number }[];
+    /** Weitere Grundfelder (Untertitel, Beschreibung, Ort …) und Wiederholung – wie gelesen. */
+    felder?: Record<string, unknown>;
+    repeatId?: number;
   }[];
+  /** Mails, die ChurchTools verschickt hätte (K2b). */
+  mails: { person: number; art: 'neu' | 'geaendert' | 'geloescht' | 'serie-geloescht' }[];
+  teilenFehler: AnlegeFehler | null;
+  terminAendernFehler: AnlegeFehler | null;
   terminFehler: AnlegeFehler | null;
   /** `GET` eines einzelnen Termins scheitert (500). */
   terminLesenFehler: boolean;
@@ -73,7 +91,16 @@ export interface Nachbau {
   anfrageVerschluckt: Set<number>;
   treffenFehler: AnlegeFehler | null;
   /** Gruppentreffen je Gruppe; `treffenVerboten` = ChurchTools antwortet 403 (Gruppentyp, S2-4). */
-  treffen: Map<number, { id: number; startDate: string; isCanceled?: boolean }[]>;
+  treffen: Map<
+    number,
+    {
+      id: number;
+      startDate: string;
+      isCanceled?: boolean;
+      isCompleted?: boolean;
+      comment?: string | null;
+    }[]
+  >;
   treffenVerboten: boolean;
   /** Zuletzt angefragter Zeitraum der Termine (`from`/`to`) – zum Prüfen. */
   terminAnfrage: string | null;
@@ -102,6 +129,9 @@ export function nachbauStarten(): Nachbau {
     schluckeWert: null,
     fehlerBei: null,
     termine: [],
+    mails: [],
+    teilenFehler: null,
+    terminAendernFehler: null,
     terminFehler: null,
     terminLesenFehler: false,
     anfrageVerschluckt: new Set(),
@@ -116,6 +146,36 @@ export function nachbauStarten(): Nachbau {
     location: { origin: 'https://ct.test' },
   });
   const antwort = (input: string | URL | Request, init: RequestInit | undefined): Response => {
+    const tagVon = (iso: string) => iso.slice(0, 10);
+    // Die Termine eines Eintrags – bei einer wöchentlichen Serie jede Woche bis `repeatUntil`, ohne Ausnahmen.
+    const vorkommen = (t: Nachbau['termine'][number]): { beginn: string; ende?: string }[] => {
+      if (!t.repeatId) return [{ beginn: t.beginn, ...(t.ende ? { ende: t.ende } : {}) }];
+      const bis = typeof t.felder?.repeatUntil === 'string' ? t.felder.repeatUntil : '9999-12-31';
+      const ohne = new Set(
+        ((t.felder?.exceptions as { date: string }[] | undefined) ?? []).map((e) => e.date),
+      );
+      const dauer = t.ende ? Date.parse(t.ende) - Date.parse(t.beginn) : 0;
+      const liste: { beginn: string; ende?: string }[] = [];
+      for (let ms = Date.parse(t.beginn), n = 0; n < 60; ms += 7 * 86_400_000, n++) {
+        const b = new Date(ms).toISOString().replace('.000Z', 'Z');
+        if (tagVon(b) > bis) break;
+        if (!ohne.has(tagVon(b)))
+          liste.push({
+            beginn: b,
+            ...(t.ende ? { ende: new Date(ms + dauer).toISOString().replace('.000Z', 'Z') } : {}),
+          });
+      }
+      return liste;
+    };
+    // Bleibt von einer Serie nur ein Termin, wird sie ein Einzeltermin (gemessen 29.10.2026, `repeatId` 0).
+    const normalisieren = (t: Nachbau['termine'][number]) => {
+      const v = vorkommen(t);
+      if (!t.repeatId || v.length !== 1) return;
+      t.repeatId = 0;
+      t.beginn = v[0].beginn;
+      if (v[0].ende) t.ende = v[0].ende;
+      t.felder = { ...t.felder, repeatUntil: null, repeatFrequency: null, exceptions: [] };
+    };
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
     const adresse = new URL(url);
     const pfad = adresse.pathname.replace(/^\/api/, '');
@@ -144,10 +204,19 @@ export function nachbauStarten(): Nachbau {
       return json(200, {
         data: s.termine
           .filter((t) => kal.includes(t.kalender))
-          .map((t) => ({
-            base: { id: t.id, title: t.titel, calendar: { id: t.kalender } },
-            calculated: { startDate: t.beginn, ...(t.ende ? { endDate: t.ende } : {}) },
-          })),
+          .flatMap((t) =>
+            // Wie ChurchTools nur im gefragten Zeitraum (`from` bis `to`) – die Liste sieht nicht weiter.
+            vorkommen(t)
+              .filter(
+                (v) =>
+                  tagVon(v.beginn) >= (adresse.searchParams.get('from') ?? '') &&
+                  tagVon(v.beginn) <= (adresse.searchParams.get('to') ?? '9999'),
+              )
+              .map((v) => ({
+                base: { id: t.id, title: t.titel, calendar: { id: t.kalender } },
+                calculated: { startDate: v.beginn, ...(v.ende ? { endDate: v.ende } : {}) },
+              })),
+          ),
       });
     }
     const fehlerAntwort = (f: AnlegeFehler) =>
@@ -182,15 +251,148 @@ export function nachbauStarten(): Nachbau {
       if (s.terminLesenFehler) return json(500, { message: 'weg' });
       const t = s.termine.find((x) => x.id === Number(einT[2]));
       return t
-        ? json(200, { data: { appointment: { id: t.id, title: t.titel, startDate: t.beginn } } })
+        ? json(200, {
+            data: {
+              appointment: {
+                id: t.id,
+                title: t.titel,
+                startDate: t.beginn,
+                ...(t.ende ? { endDate: t.ende } : {}),
+                isInternal: false,
+                repeatId: t.repeatId ?? 0,
+                signup: null,
+                ...t.felder,
+              },
+              calculatedDates: vorkommen(t).map((v) => ({
+                startDate: v.beginn,
+                ...(v.ende ? { endDate: v.ende } : {}),
+              })),
+            },
+          })
         : json(404, { message: 'weg' });
     }
+    if (einT && m === 'POST') {
+      // Teilen (K2b-2): der neue Termin aus dem Rumpf, die alte Serie verliert den Tag bzw. endet am Vortag.
+      const t = s.termine.find((x) => x.id === Number(einT[2]));
+      if (!t) return json(404, { message: 'weg' });
+      const tag = String(body.splitDate);
+      if (body.splitUntilEnd === true && tag <= tagVon(t.beginn))
+        return json(422, { message: 'Series cannot be split on or before start date.' });
+      const f = s.teilenFehler;
+      const id = s.naechste++;
+      if (!f || f.angelegt) {
+        t.felder ??= {};
+        if (body.splitUntilEnd === true)
+          t.felder.repeatUntil = new Date(Date.parse(tag) - 86_400_000).toISOString().slice(0, 10);
+        else
+          t.felder.exceptions = [
+            ...((t.felder.exceptions as { date: string }[] | undefined) ?? []),
+            { date: tag },
+          ];
+        const {
+          title,
+          startDate,
+          endDate,
+          repeatId,
+          splitDate: _d,
+          splitUntilEnd: _u,
+          meetingrequests,
+          isInternal: _i,
+          ...rest
+        } = body;
+        // Mit Liste lädt ChurchTools ein – und mailt über die ALTE Serie („Wöchentlicher Termin … geändert“, gemessen).
+        const liste = ((meetingrequests as { inviteeId: number }[] | undefined) ?? []).map(
+          (a) => a.inviteeId,
+        );
+        for (const p of liste) if (p !== 1) s.mails.push({ person: p, art: 'geaendert' });
+        s.termine.push({
+          kalender: t.kalender,
+          id,
+          titel: String(title),
+          beginn: String(startDate),
+          ende: String(endDate),
+          anfragen: liste.map((p) => ({
+            person: p,
+            state: p === 1 ? 'accepted' : 'pending',
+            id: s.naechste++,
+          })),
+          felder: rest,
+          repeatId: typeof repeatId === 'number' ? repeatId : 0,
+        });
+        normalisieren(t);
+        normalisieren(s.termine[s.termine.length - 1]);
+      }
+      return f ? fehlerAntwort(f) : json(200, { data: { id } });
+    }
+    if (einT && (m === 'PUT' || m === 'DELETE')) {
+      const t = s.termine.find((x) => x.id === Number(einT[2]));
+      if (!t) return json(404, { message: 'weg' });
+      const f = s.terminAendernFehler;
+      if (f && !f.angelegt) return fehlerAntwort(f);
+      const andere = <A extends { person: number }>(liste: A[]) =>
+        liste.filter((a) => a.person !== 1);
+      if (m === 'DELETE') {
+        s.termine.splice(s.termine.indexOf(t), 1);
+        for (const a of andere(t.anfragen))
+          s.mails.push({ person: a.person, art: t.repeatId ? 'serie-geloescht' : 'geloescht' });
+        return f ? fehlerAntwort(f) : json(204, null);
+      }
+      const zeitNeu = body.startDate !== t.beginn || body.endDate !== t.ende;
+      const titelNeu = body.title !== t.titel;
+      const { title, startDate, endDate, repeatId, meetingrequests, ...rest } = body;
+      t.titel = String(title);
+      t.beginn = String(startDate);
+      t.ende = String(endDate);
+      t.repeatId = typeof repeatId === 'number' ? repeatId : 0;
+      // Wie gemessen: Was im `PUT` fehlt, ist danach leer.
+      t.felder = rest;
+      delete t.felder.isInternal;
+      normalisieren(t);
+      if (Array.isArray(meetingrequests)) {
+        const soll = (meetingrequests as { inviteeId: number }[]).map((x) => x.inviteeId);
+        for (const a of andere(t.anfragen.filter((x) => !soll.includes(x.person))))
+          s.mails.push({ person: a.person, art: 'geloescht' });
+        t.anfragen = t.anfragen.filter((x) => soll.includes(x.person));
+        for (const a of andere(t.anfragen))
+          if (zeitNeu || titelNeu) {
+            s.mails.push({ person: a.person, art: 'geaendert' });
+            if (zeitNeu) a.state = 'pending';
+          }
+        for (const p of soll)
+          if (!t.anfragen.some((x) => x.person === p)) {
+            t.anfragen.push({
+              person: p,
+              state: p === 1 ? 'accepted' : 'pending',
+              id: s.naechste++,
+            });
+            if (p !== 1) s.mails.push({ person: p, art: 'neu' });
+          }
+      }
+      return f ? fehlerAntwort(f) : json(200, { data: {} });
+    }
+    const eineAnfr = /^\/calendars\/(\d+)\/appointments\/(\d+)\/meetingrequests\/(\d+)$/.exec(pfad);
+    if (eineAnfr && m === 'DELETE') {
+      const t = s.termine.find((x) => x.id === Number(eineAnfr[2]));
+      const i = (t?.anfragen ?? []).findIndex((x, n) => (x.id ?? n + 1) === Number(eineAnfr[3]));
+      if (!t || i < 0) return json(404, { message: 'weg' });
+      const [a] = t.anfragen.splice(i, 1);
+      if (a.person !== 1) s.mails.push({ person: a.person, art: 'geloescht' });
+      return json(204, null);
+    }
     const anfr = /^\/calendars\/(\d+)\/appointments\/(\d+)\/meetingrequests$/.exec(pfad);
+    if (anfr && m === 'POST') {
+      const t = s.termine.find((x) => x.id === Number(anfr[2]));
+      if (!t) return json(404, { message: 'weg' });
+      const p = Number(body.inviteeId);
+      t.anfragen.push({ person: p, state: p === 1 ? 'accepted' : 'pending', id: s.naechste++ });
+      if (p !== 1) s.mails.push({ person: p, art: 'neu' });
+      return json(201, { data: {} });
+    }
     if (anfr) {
       const t = s.termine.find((x) => x.id === Number(anfr[2]));
       return json(200, {
         data: (t?.anfragen ?? []).map((x, i) => ({
-          id: i + 1,
+          id: x.id ?? i + 1,
           person: { domainIdentifier: String(x.person) },
           state: x.state,
         })),
@@ -204,6 +406,27 @@ export function nachbauStarten(): Nachbau {
       const id = s.naechste++;
       if (!f || f.angelegt) liste.push({ id, startDate: String(body.startDate) });
       return f ? fehlerAntwort(f) : json(201, { data: { id } });
+    }
+    const einTr = /^\/groups\/(\d+)\/meetings\/(\d+)$/.exec(pfad);
+    if (einTr) {
+      if (s.treffenVerboten)
+        return json(403, { message: 'Forbidden', messageKey: 'error.forbidden.edit' });
+      const liste = s.treffen.get(Number(einTr[1])) ?? [];
+      const t = liste.find((x) => x.id === Number(einTr[2]));
+      if (!t) return json(404, { message: 'weg' });
+      if (m === 'GET') return json(200, { data: t });
+      if (m === 'DELETE') {
+        liste.splice(liste.indexOf(t), 1);
+        return json(204, null);
+      }
+      // Wie gemessen (16.10. + 29.10.2026): ohne `isCanceled`/`isCompleted` 400; ein fehlender Kommentar wird geleert.
+      if (typeof body.isCanceled !== 'boolean' || typeof body.isCompleted !== 'boolean')
+        return json(400, { message: 'validation' });
+      t.startDate = String(body.startDate);
+      t.isCanceled = body.isCanceled;
+      t.isCompleted = body.isCompleted;
+      t.comment = typeof body.comment === 'string' ? body.comment : null;
+      return json(200, { data: t });
     }
     if (tr) {
       if (s.treffenVerboten)

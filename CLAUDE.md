@@ -405,9 +405,10 @@ Listenzeilen (Plus, Stift, „+ Anlegen“) sind seit S2 eckig mit Rahmen (`Zeil
 Reiter am iPad/Rechner **oben** als Textreiter
 (`ReiterLeiste oben`), am Handy unten (`HANDY_BREITE`). Vom 02.10. bis 26.10. schwebten stattdessen runde Knöpfe
 (`KnopfReihe`) unter dem Band – mit Scheibe B1 (28.10.2026) auch aus dem Liedblatt verschwunden und gelöscht. **Am Gerät widerlegt (02.10.2026):** Eine deckende
-Statusleiste (`status-bar-style=default`) beseitigt das Band NICHT – nicht noch einmal versuchen. Die
-Abstände kommen aus `--inhalt-pad-top` / `--bar-pad-top`
-(`ui/design/_variables.scss`); der Abstand unter das Band gilt nur für unsere App – die ChurchTools-App vom
+Statusleiste (`status-bar-style=default`) beseitigt das Band NICHT – nicht noch einmal versuchen. Der
+Abstand oben kommt für JEDEN Kopf aus `--inhalt-pad-top` (`ui/design/_variables.scss`; seit 29.10.2026 auch der
+Lied-Editor, der als letzter mit `--bar-pad-top` im Band stand – niemand rechnet selbst aus der Safe-Area oben,
+`obenBand.test.ts`); der Abstand unter das Band gilt nur für unsere App – die ChurchTools-App vom
 Home-Bildschirm ist auch „standalone“, in den Erweiterungen setzt `.ct-extension` ihn zurück (`standalone.test.ts`,
 28.10.2026). Alles am unteren Rand rechnet mit `--unten-strich` (Home-Strich, gemessen in `ui/fenster/appHeight.ts`, 29.10.2026 – nie selbst `env(safe-area-inset-bottom)`, `homeStrich.test.ts`); Hover-Farben nur mit Maus: jede `:hover`-Regel steht in `@media (hover: hover)` – am Handy bliebe sie sonst auf dem zuletzt angetippten Element hängen (29.10.2026, `hoverNurMaus.test.ts`); das schwebende Plus steht 16px über `--plus-boden` (Reiterleiste oder Home-Strich), Listen darunter halten `--plus-boden` + 78px frei. Die App zeichnet hinter der Statusleiste (`black-translucent`,
 `client/index.html`). **Liedblatt-Kopf = Kopfkarte (`components/BlattKopf.tsx`, Scheibe B1+B2, 28.10.2026; Bauplan
@@ -427,9 +428,11 @@ Sprung; sonst → `goToSong`); waagerecht scrollbar, scrollt beim Blättern mit 
 **Knöpfe** wirken auf das GEWÄHLTE Lied (die eigenen Knöpfe je Hälfte aus #421 sind weg), welche es gibt regelt
 `verfuegbareWerkzeuge`; Puls/Zeichnen/Ansehen = `aktiv`, offenes Fenster = `offen`; beim Zeichnen „Anmerken
 beenden“, beim Ansehen nur „Zurück zu den eigenen Notizen“. Jeder Knopf setzt das Overlay-Feld genau EINMAL.
-**Fenster darunter** (Lied-Menü, Aussehen, Tempo, Hinweis „Ablauf geändert“) hängen an der GEMESSENEN Unterkante
+**Fenster darunter** (Aussehen, Tempo, Hinweis „Ablauf geändert“) hängen an der GEMESSENEN Unterkante
 (`--blatt-kopf-unten` im Blatt, `--blatt-kopf-unten-fix` für `fixed`; `--chart-kopf-unten` nur noch Vorgabe) und
-öffnen unter ihrem Knopf bzw. dem gewählten Lied (`--werkzeug-links`, `--liedmenue-x`). Die Fußleiste nutzt
+öffnen unter ihrem Knopf (`--werkzeug-links`). Das **Lied-Menü** ist seit 29.10.2026 ein Fenster in der Mitte (`Sheet`)
+mit Übersicht – Tonart, Anzeige, Version, Bearbeiten („Im Editor öffnen“ direkt), Teilen – und Unterseiten mit „‹“ (`Sheet zurueck`); eine Unterseite mit nur
+einem Punkt entfällt (`SongMenu.tsx`). Die Fußleiste nutzt
 `--blatt-fuss-polster` (in der Erweiterung schmal wie `--reiter-polster`; `ui/design/polster.test.ts` verlangt für
 jedes `…-polster` das Gegenstück). Die Punkte unten bleiben bis B3. Routing in `App.tsx` über `tab` + `view` (rechteabhängig).
 
@@ -511,7 +514,13 @@ die Text-Karte bleibt gemountet). L2 = `AblaufKarte` (Kärtchen ↔ `{flow}` üb
 Editor, Rückgängig inklusive; die Flow-Zeile blendet `ChordProInput` aus; breit eingeklappt mit Kurzform und
 Marke „Eigener Ablauf“, Ziehen mit `CSS.Translate` – `Transform` streckt verschieden breite Kärtchen). L3 = Akkord-Kärtchen, Teil-Bänder
 (`abschnittsKopf` – EINE Regel mit `parseChordPro`) und Pedal-Linie als Ersetzungen mit `atomicRanges`, Schalter
-„ChordPro-Text“ (Compartment); am echten iPad vor dem Merge geprüft (TF-EINST-15). L5-1 = `AkkordLeiste` (Tonart über
+„ChordPro-Text“ (Compartment); am echten iPad vor dem Merge geprüft (TF-EINST-15). **„Nur Text“** (29.10.2026,
+`Segment` „Akkorde & Text | Nur Text“ vorn in der Werkzeugleiste, Name „Darstellung“): Akkorde als unsichtbare
+`atomicRanges` statt Kärtchen (`nurTextFeld`), Akkord-Leiste aus; eine einzelne Rücktaste/Entf neben einem
+unsichtbaren Akkord löscht den sichtbaren Buchstaben, nicht den Akkord (`nurTextLoeschen`, Transaktionsfilter);
+markiert samt Text gelöscht, geht der Akkord mit (TF-EINST-22). Der Schwanz aus Leerzeichen und Akkorden am
+Zeilenende (`SCHWANZ`) ist bei „Nur Text“ als Ganzes unsichtbar – WebKit brach die Ausricht-Leerzeichen von SongSelect
+sonst in eine leere zweite Bildschirmzeile um (Chromium nicht, deshalb prüft der Test den gezeichneten Text). L5-1 = `AkkordLeiste` (Tonart über
 `tonartAkkorde`, „Im Lied“ über `akkordeImText`, Gedrückthalten = Varianten) und `AkkordFenster` (Eintippen über
 `akkordLesen`; Akkord-Grammatik EINMAL in `akkordTeile`, auch fürs Transponieren). L5-2 = Tipp aufs Kärtchen →
 `AkkordMenue` (Schieben über `akkordVerschieben`, Rahmen über das Feld `aktivFeld` in `ChordProInput` – eine
@@ -908,7 +917,9 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
   Person („Song-Statistik sehen") – **nur die Musiker sollen es haben** (Alwin). Deshalb prüft der
   Server es VOR seinem org-weiten Zwischenspeicher (`getSongUsageCtrl`, 403), und beide Varianten
   zeigen die Reiter nur mit `canViewSongStatistics`. Damit gibt es „Häufigkeit/Zuletzt" auch in
-  der Erweiterung; weggelassen bleibt nur die Suche im Liedtext.
+  der Erweiterung; weggelassen bleibt nur die Suche im Liedtext. Seit 30.10.2026 steht „zuletzt TT.MM.JJJJ“ in
+  jeder Liedzeile (Liederliste, Lied-Auswahl; `statLabel`, Optik `liedNotiz`) und oben im Lied-Menü – über alle
+  Termine, nicht nur über den Zeitraum.
 
 - **v2.31.0 (08.10.2026) = SongSelect in der Erweiterung (3b-5) + #444** (PRs #448, #449): Regeln in
   `shared/ct/songselect.ts`; innerer CCLI-Status wird geprüft; „keine Rechte für Lieder und Abläufe"

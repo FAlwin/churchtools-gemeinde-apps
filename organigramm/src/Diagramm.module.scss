@@ -54,6 +54,22 @@
   font-weight: 700;
 }
 
+// Die Kachel vor dem Namen (O7b-8) – wie die Gruppen-Kachel von ChurchTools: Anfangsbuchstabe weiß auf der Gruppenfarbe,
+// Rundung aus ui/design (`rx` als Stilangabe, damit es kein zweiter fester Wert ist).
+.knoten .kachel {
+  rx: var(--r-tile);
+}
+
+.knoten .buchstabe {
+  fill: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.knoten .nameNachKachel {
+  text-anchor: start;
+}
+
 // Unter dem Namen die Personen nach Rollen (O7b-6, Entwurf `o7b-6-7-v1.html`): links bündig, kleiner, ruhiger.
 .trenn {
   stroke: var(--hair);

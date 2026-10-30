@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { ReiterLeiste, type Reiter } from '@ui/bedienung/ReiterLeiste';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import {
   absagePlan,
@@ -27,6 +28,16 @@ import {
   type ListenPerson,
 } from '@shared/anmeldung/liste';
 import type { GeladenerStand } from './mitglieder';
+import {
+  anmeldungsSpalten,
+  passtZurSuche,
+  sortiert,
+  summe,
+  zellText,
+  type Sortierung,
+  type TabellenSpalte,
+} from '@shared/anmeldung/tabelle';
+import { AnmeldungenTabelle } from './AnmeldungenTabelle';
 import { tagPunkt as lang } from '@shared/ct/datum';
 import { anzahlText, mailAnbieten } from './anzeige';
 import { AnmeldungZahlung } from './AnmeldungZahlung';
@@ -481,8 +492,9 @@ const absageText = (b: Absage) =>
   `am ${kurz(b.am)} ${b.selbst ? 'selbst abgesagt (Link in der Mail)' : 'vom Team entfernt'}`;
 
 /**
- * **Reiter „Anmeldungen“** (A7-1, Entwurf `a7-anmeldungen-v2`) – eine Zeile je Anmeldung, Zahlen, Hinweis „frei, aber
- * jemand wartet“ (mit „Nachrücken lassen“, A7-3), Filter und Suche; Klick öffnet das Fenster der Anmeldung.
+ * **Bereich „Anmeldungen“** (A7-1, seit U2-1 als Tabelle, Entwurf `u2-tabelle-v1`) – Reiter Alle / Zahlung offen /
+ * Warteliste / Abgesagt, eine Zeile je Anmeldung, Suche, Sortieren, Summenzeile; im Reiter Warteliste der Hinweis
+ * „frei, aber jemand wartet“ (mit „Nachrücken lassen“, A7-3). Klick in eine Zeile öffnet das Fenster der Anmeldung.
  */
 export function AnmeldungenReiter({
   id,
@@ -533,6 +545,7 @@ export function AnmeldungenReiter({
 }) {
   const [filter, setFilter] = useState<ListenFilter>(startFilter);
   const [suche, setSuche] = useState('');
+  const [sortierung, setSortierung] = useState<Sortierung>(null);
   const [offen, setOffen] = useState<string | null>(null);
   // Die letzte Änderung im offenen Fenster – mit dem Fenster weg.
   const [meldung, setMeldung] = useState<FensterMeldung | null>(null);
@@ -595,12 +608,24 @@ export function AnmeldungenReiter({
     .sort((u, w) => (u.p.warteplatz ?? 999) - (w.p.warteplatz ?? 999));
   const absagen = [...stand!.absagen].sort((u, w) => w.am.localeCompare(u.am));
   const frei = maxPlaetze === null ? null : maxPlaetze - z.belegt;
-  const q = suche.trim().toLowerCase();
-  const passt = (...texte: (string | null)[]) =>
-    !q || texte.some((t) => t?.toLowerCase().includes(q));
-  const zuX = (x: ListenAnmeldung) => passt(x.wer, x.nr, ...x.personen.map(ganzerName));
+  // Je Reiter die Anmeldungen (U2-1) – die Anzahl am Reiter ist die Zahl der Zeilen.
+  const imReiter = {
+    alle: liste,
+    offen: liste.filter((x) => x.zahlungOffen),
+    warte: liste.filter((x) => x.personen.some((p) => p.status === 'wartet')),
+  };
   const zeilen =
-    filter === 'offen' ? liste.filter((x) => x.zahlungOffen && zuX(x)) : liste.filter(zuX);
+    filter === 'abgesagt'
+      ? []
+      : sortiert(
+          e,
+          imReiter[filter].filter((x) => passtZurSuche(x, suche)),
+          sortierung,
+          filter === 'warte',
+        );
+  const absageZeilen = absagen.filter((b) =>
+    passtZurSuche({ wer: b.name, nr: null, personen: [] }, suche),
+  );
   const ausgewaehlt = offen ? liste.find((x) => x.schluessel === offen) : undefined;
   if (ausgewaehlt) zuletztOffen.current = ausgewaehlt;
   // Weg aus der Liste (letzte Person abgesagt), aber eben geändert → das Fenster bleibt mit „Rückgängig“ stehen.
@@ -630,34 +655,126 @@ export function AnmeldungenReiter({
     onGespeichert();
   };
 
-  const filterKnopf = (f: ListenFilter, text: string, n: number) => (
-    <button
-      type="button"
-      className={s.filterChip}
-      aria-pressed={filter === f}
-      onClick={() => setFilter(f)}
-    >
-      {text}
-      <span className={s.zaehler}>{n}</span>
-    </button>
+  const wechseln = (f: ListenFilter) => {
+    setFilter(f);
+    setSortierung(null);
+  };
+  const reiter: Reiter<ListenFilter>[] = [
+    { id: 'alle', label: 'Alle', icon: 'people', zahl: liste.length },
+    ...(z.kostet
+      ? [
+          {
+            id: 'offen' as const,
+            label: 'Zahlung offen',
+            icon: 'check' as const,
+            zahl: imReiter.offen.length,
+          },
+        ]
+      : []),
+    { id: 'warte', label: 'Warteliste', icon: 'clock', zahl: imReiter.warte.length },
+    { id: 'abgesagt', label: 'Abgesagt', icon: 'user-slash', zahl: absagen.length },
+  ];
+  const strich = <span className={a.strich}>–</span>;
+
+  /** Was in einer Zelle steht – Personen, Nr., Betrag und Bezahlt wie bisher in der Liste, Fragen als Text. */
+  const zelle = (k: string, x: ListenAnmeldung): ReactNode => {
+    switch (k) {
+      case 'name':
+        return x.wer;
+      case 'nr':
+        return x.nr ? (
+          <span className={v.nr}>{x.nr}</span>
+        ) : (
+          <span className={s.chip}>ohne Nr.</span>
+        );
+      case 'personen':
+        return (
+          <span className={a.personen}>
+            {x.personen.map((p) => (
+              <span key={p.personId} className={a.p}>
+                {p.vor}
+                {p.alter !== null && ` ${p.alter}`}
+                {p.status === 'wartet' && (
+                  <span className={`${a.pille} ${a.pilleWarte}`}>
+                    Warteliste{p.warteplatz ? ` ${p.warteplatz}` : ''}
+                  </span>
+                )}
+              </span>
+            ))}
+          </span>
+        );
+      case 'betrag':
+        // Alle warten: Das Formular schreibt „0,00 €“ – gezahlt wird erst beim Nachrücken (22.10.2026).
+        return x.personen.every((p) => p.status === 'wartet') && !x.betragCent ? (
+          <small className={a.leise}>beim Nachrücken</small>
+        ) : x.betragCent !== null ? (
+          euroText(x.betragCent)
+        ) : (
+          strich
+        );
+      case 'bezahlt':
+        return <ZahlungPille x={x} kostet={z.kostet} />;
+    }
+    const text = zellText(e, k, x);
+    return text ? (
+      <span className={a.kurzText} title={text}>
+        {text}
+      </span>
+    ) : (
+      strich
+    );
+  };
+
+  const absageSpalten: TabellenSpalte[] = [
+    { schluessel: 'name', titel: 'Name', zahl: false },
+    ...(nrFeld !== undefined ? [{ schluessel: 'nr', titel: 'Nr.', zahl: false }] : []),
+    { schluessel: 'abgesagt', titel: 'Abgesagt', zahl: false },
+    { schluessel: 'gehoert', titel: 'Gehörte zu', zahl: false },
+    // Wer ändern darf, sieht wie bisher, was ein Klick tut.
+    ...(darf ? [{ schluessel: 'zurueck', titel: '', zahl: true }] : []),
+  ];
+  const absageZelle = (k: string, b: Absage): ReactNode => {
+    switch (k) {
+      case 'name':
+        return b.name;
+      case 'nr': {
+        const nr = nrFeld === undefined ? undefined : b.werte[nrFeld];
+        return nr ? <span className={v.nr}>{nr}</span> : strich;
+      }
+      case 'abgesagt':
+        return `${absageText(b)}${b.warVorher === 'wartet' ? ' · stand auf der Warteliste' : ''}`;
+      case 'zurueck':
+        return <small className={a.leise}>Zurückholen</small>;
+      default:
+        return gehoertZu(b)?.wer ?? strich;
+    }
+  };
+
+  const leer = (text: string) => (
+    <p className={a.leerZeile}>{suche.trim() ? `Niemand mit „${suche.trim()}“ gefunden.` : text}</p>
   );
 
   return (
     <div className={a.reiter}>
       {/* Plätze, Warteliste und Zahlung offen stehen seit U1 oben auf der Seite (Kennzahlen, `Einstieg.tsx`). */}
+      <section className={s.karte} aria-label="Anmeldungen">
+        <ReiterLeiste oben name="Ansichten" reiter={reiter} aktiv={filter} onWechsel={wechseln} />
 
-      {wartenTrotzPlatz(plaetze) && wartende[0] && (
-        <p className={v.pruefHinweis}>
-          <b>
-            {frei === null ? 'Es ist Platz frei' : `${anzahlText(frei, 'Platz', 'Plätze')} frei`} –{' '}
-            {z.wartend === 1 ? '1 wartet' : `${z.wartend} warten`}.
-          </b>{' '}
-          ChurchTools lässt niemanden von selbst nachrücken. Als Nächste wartet{' '}
-          {ganzerName(wartende[0].p)}
-          {wartende[0].x.angemeldetAm && ` (seit ${kurz(wartende[0].x.angemeldetAm)})`}.
-          {darf && (
-            <>
-              {' '}
+        {/* „Platz frei – jemand wartet“ steht seit U2-1 nur noch hier und in der Kachel (Alwin, 29.10.2026). */}
+        {filter === 'warte' && wartenTrotzPlatz(plaetze) && wartende[0] && (
+          <p className={a.warteHinweis}>
+            <span>
+              <b>
+                {frei === null
+                  ? 'Es ist Platz frei'
+                  : `${anzahlText(frei, 'Platz', 'Plätze')} frei`}{' '}
+                – {z.wartend === 1 ? '1 wartet' : `${z.wartend} warten`}.
+              </b>{' '}
+              ChurchTools lässt niemanden von selbst nachrücken. Als Nächste wartet{' '}
+              {ganzerName(wartende[0].p)}
+              {wartende[0].x.angemeldetAm && ` (seit ${kurz(wartende[0].x.angemeldetAm)})`}.
+            </span>
+            {darf && (
               <FensterKnopf
                 art="hell"
                 onClick={() =>
@@ -669,176 +786,83 @@ export function AnmeldungenReiter({
               >
                 {wartende[0].p.vor} nachrücken lassen
               </FensterKnopf>
-            </>
-          )}
-        </p>
-      )}
-
-      <section className={s.karte} aria-label="Anmeldungen">
-        <div className={s.filter}>
-          {filterKnopf('alle', 'Alle', liste.length)}
-          {z.kostet && filterKnopf('offen', 'Zahlung offen', z.offen)}
-          {filterKnopf('warte', 'Warteliste', z.wartend)}
-          {filterKnopf('abgesagt', 'Abgesagt', absagen.length)}
-          <input
-            type="search"
-            className={a.suche}
-            placeholder="Name suchen"
-            aria-label="Name suchen"
-            value={suche}
-            onChange={(ev) => setSuche(ev.target.value)}
-          />
-          {liste.length > 0 && (
-            <FensterKnopf art="zweit" onClick={() => setDruck(true)}>
-              ⎙ Druckliste
-            </FensterKnopf>
-          )}
-          {darf && liste.length > 0 && (
-            <FensterKnopf art="zweit" onClick={() => setRundmail(true)}>
-              ✉ Rundmail
-            </FensterKnopf>
-          )}
-          {darf && (
-            <FensterKnopf onClick={() => setVonHand({ dazu: null })}>＋ Von Hand</FensterKnopf>
-          )}
-        </div>
-
-        {(filter === 'alle' || filter === 'offen') && (
-          <ul className={s.liste}>
-            {zeilen.map((x) => (
-              <li key={x.schluessel} className={a.eintrag}>
-                <button type="button" className={a.zeile} onClick={() => oeffnen(x.schluessel)}>
-                  <span className={a.links}>
-                    <b>
-                      {x.wer}{' '}
-                      {x.nr ? (
-                        <span className={v.nr}>{x.nr}</span>
-                      ) : (
-                        <span className={s.chip}>ohne Nr.</span>
-                      )}
-                    </b>
-                    <span className={a.personen}>
-                      {x.personen.map((p) => (
-                        <span key={p.personId} className={a.p}>
-                          {p.vor}
-                          {p.alter !== null && ` ${p.alter}`}
-                          {p.status === 'wartet' && (
-                            <span className={`${a.pille} ${a.pilleWarte}`}>
-                              Warteliste{p.warteplatz ? ` ${p.warteplatz}` : ''}
-                            </span>
-                          )}
-                        </span>
-                      ))}
-                    </span>
-                  </span>
-                  <span className={a.geld}>
-                    {/* Alle warten: Das Formular schreibt „0,00 €“ – gezahlt wird erst beim Nachrücken (22.10.2026). */}
-                    {!z.kostet ? null : x.personen.every((p) => p.status === 'wartet') &&
-                      !x.betragCent ? (
-                      <small>Betrag beim Nachrücken</small>
-                    ) : x.betragCent !== null ? (
-                      <b>{euroText(x.betragCent)}</b>
-                    ) : null}
-                    <ZahlungPille x={x} kostet={z.kostet} />
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {filter === 'warte' && (
-          <ul className={s.liste}>
-            {wartende
-              .filter(({ p, x }) => passt(ganzerName(p), x.wer, x.nr))
-              .map(({ p, x }) => (
-                <li key={p.personId} className={a.eintrag}>
-                  <button type="button" className={a.zeile} onClick={() => oeffnen(x.schluessel)}>
-                    <span className={a.links}>
-                      <b>
-                        {p.warteplatz ? `${p.warteplatz} · ` : ''}
-                        {ganzerName(p)} {x.nr && <span className={v.nr}>{x.nr}</span>}
-                      </b>
-                      <small className={a.leise}>
-                        {x.angemeldetAm && `wartet seit ${kurz(x.angemeldetAm)} · `}
-                        angemeldet von {x.wer}
-                        {x.personen.some((o) => o.status === 'aktiv') &&
-                          ` (${x.personen
-                            .filter((o) => o.status === 'aktiv')
-                            .map((o) => o.vor)
-                            .join(', ')} hat einen Platz)`}
-                      </small>
-                    </span>
-                  </button>
-                </li>
-              ))}
-          </ul>
-        )}
-
-        {filter === 'abgesagt' && (
-          <ul className={s.liste}>
-            {absagen
-              .filter((b) => passt(b.name))
-              .map((b) => {
-                const x = gehoertZu(b);
-                const inhalt = (
-                  <span className={a.links}>
-                    <b>
-                      {b.name}{' '}
-                      {nrFeld !== undefined && b.werte[nrFeld] && (
-                        <span className={v.nr}>{b.werte[nrFeld]}</span>
-                      )}
-                    </b>
-                    <small className={a.leise}>
-                      {absageText(b)}
-                      {b.warVorher === 'wartet' && ' · stand auf der Warteliste'}
-                      {x && ` · gehörte zu ${x.wer}`}
-                    </small>
-                  </span>
-                );
-                // Wer ändern darf, holt mit einem Klick zurück (A7-4c).
-                return darf ? (
-                  <li key={b.personId} className={a.eintrag}>
-                    <button
-                      type="button"
-                      className={a.zeile}
-                      onClick={() => setZurueck({ b, von: null })}
-                    >
-                      {inhalt}
-                      <span className={a.geld}>
-                        <small>Zurückholen</small>
-                      </span>
-                    </button>
-                  </li>
-                ) : (
-                  <li key={b.personId} className={`${a.eintrag} ${a.zeileStill}`}>
-                    {inhalt}
-                  </li>
-                );
-              })}
-          </ul>
-        )}
-
-        {((filter === 'alle' && zeilen.length === 0) ||
-          (filter === 'offen' && zeilen.length === 0) ||
-          (filter === 'warte' && wartende.length === 0) ||
-          (filter === 'abgesagt' && absagen.length === 0)) && (
-          <p className={a.leerZeile}>
-            {q
-              ? `Niemand mit „${suche.trim()}“ gefunden.`
-              : filter === 'offen'
-                ? 'Alle haben bezahlt.'
-                : filter === 'warte'
-                  ? 'Niemand auf der Warteliste.'
-                  : filter === 'abgesagt'
-                    ? 'Niemand hat abgesagt.'
-                    : 'Noch keine Anmeldungen.'}
+            )}
           </p>
         )}
 
+        <div className={a.leiste}>
+          <label className={a.suche}>
+            <Icon name="search" size={16} />
+            <input
+              type="search"
+              placeholder="Name oder Nr. suchen"
+              aria-label="Name suchen"
+              value={suche}
+              onChange={(ev) => setSuche(ev.target.value)}
+            />
+          </label>
+          <span className={a.rechts}>
+            {liste.length > 0 && (
+              <FensterKnopf art="zweit" aria-label="Druckliste" onClick={() => setDruck(true)}>
+                <Icon name="drucker" size={18} />
+                <span className={a.breit}>Druckliste</span>
+              </FensterKnopf>
+            )}
+            {darf && liste.length > 0 && (
+              <FensterKnopf art="zweit" aria-label="Rundmail" onClick={() => setRundmail(true)}>
+                <Icon name="brief" size={18} />
+                <span className={a.breit}>Rundmail</span>
+              </FensterKnopf>
+            )}
+            {darf && (
+              <FensterKnopf onClick={() => setVonHand({ dazu: null })}>＋ Von Hand</FensterKnopf>
+            )}
+          </span>
+        </div>
+
+        {filter === 'abgesagt' ? (
+          absageZeilen.length === 0 ? (
+            leer('Niemand hat abgesagt.')
+          ) : (
+            <AnmeldungenTabelle
+              name="Absagen"
+              spalten={absageSpalten}
+              zeilen={absageZeilen}
+              schluessel={(b) => String(b.personId)}
+              zelle={absageZelle}
+              summe={(k) =>
+                k === 'name' ? { text: anzahlText(absageZeilen.length, 'Absage', 'Absagen') } : null
+              }
+              // Wer ändern darf, holt mit einem Klick zurück (A7-4c).
+              onZeile={darf ? (b) => setZurueck({ b, von: null }) : undefined}
+            />
+          )
+        ) : zeilen.length === 0 ? (
+          leer(
+            filter === 'offen'
+              ? 'Alle haben bezahlt.'
+              : filter === 'warte'
+                ? 'Niemand auf der Warteliste.'
+                : 'Noch keine Anmeldungen.',
+          )
+        ) : (
+          <AnmeldungenTabelle
+            name="Anmeldungen"
+            spalten={anmeldungsSpalten(e, { kostet: z.kostet, warteliste: filter === 'warte' })}
+            zeilen={zeilen}
+            schluessel={(x) => x.schluessel}
+            zelle={zelle}
+            summe={(k) => summe(e, k, zeilen)}
+            sortierung={sortierung}
+            onSortieren={setSortierung}
+            onZeile={(x) => oeffnen(x.schluessel)}
+          />
+        )}
+
         <p className={v.pruefFuss}>
-          Sortiert nach Anmeldetag. Eine Zeile je Anmeldung; ältere Anmeldungen ohne Nr. stehen je
-          Person einzeln. Die Leitung steht nicht in der Liste.
+          Eine Zeile je Anmeldung, ohne Wahl nach Anmeldetag – ein Tipp auf die Überschrift einer
+          Spalte sortiert. Die Summen zählen Anmeldungen mit Platz. Ältere Anmeldungen ohne Nr.
+          stehen je Person einzeln; die Leitung steht nicht in der Liste.
           {stand!.verlaufGekuerzt &&
             ' Der Verlauf in ChurchTools ist sehr lang – die ältesten Absagen fehlen hier.'}{' '}
           <button type="button" className={a.linkKnopf} onClick={onNeuLaden}>

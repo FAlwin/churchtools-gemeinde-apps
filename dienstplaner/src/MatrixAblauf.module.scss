@@ -23,7 +23,13 @@
   margin-left: auto;
 }
 
-// Stift wie der Zauberstab der Dienstgruppen – blau, ohne Rahmen.
+// Das grüne Plus je Termin in der Gruppenzeile (E6-6c) – die Liste darunter stellt es hierher.
+.plusOrt {
+  display: inline-flex;
+  margin-left: auto;
+}
+
+// Am Handy: Stift wie der Zauberstab der Dienstgruppen – blau, ohne Rahmen.
 .stift {
   flex: none;
   display: grid;
@@ -43,7 +49,7 @@
   }
 }
 
-// „Fertig“ – blau gefüllt wie der Haken in der Termin-Ansicht, mit Wort, weil er für alle Termine gilt.
+// Am Handy: „Fertig“ – blau gefüllt wie der Haken in der Termin-Ansicht. Am Rechner `KopfKnopf` (E6-6c).
 .fertig {
   flex: none;
   display: inline-flex;

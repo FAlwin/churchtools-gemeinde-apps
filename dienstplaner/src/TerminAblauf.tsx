@@ -7,7 +7,7 @@ import { NeuAufsetzen } from '@ui/ablauf/NeuAufsetzen';
 import { browserAblaufLeser, browserSchreiber } from '@ui/ct/schreiber';
 import { siehtAlleDienstgruppen } from '@shared/ct/dienstRechte';
 import { ablaufZeileAus, type AblaufZeile } from '@shared/ct/ablaufZeile';
-import { datumText } from '@shared/ct/datum';
+import { datumText, tagKurz } from '@shared/ct/datum';
 import type { AblaufTermin } from '@shared/ct/ablaufRecht';
 import { ablaufAnlegen } from '@shared/ct/ablaufAnlegen';
 import { ablaufBestandLesen, ablaufNeuAufsetzen, type AblaufStand } from '@shared/ct/ablaufNeu';
@@ -15,7 +15,7 @@ import { vorlagenFuer } from '@shared/ct/ablaufVorschlaege';
 import type { CtAgenda, CtSong } from '@shared/ct/typen';
 import type { AblaufQuelle, AblaufVorlage } from '@shared/types/index';
 import { autorVon, ladeAblauf, ladeLiedDaten } from './ladeBeiwerk';
-import { ablaufAktionen } from './ablaufAktionen';
+import { ablaufAktionen, GESPERRT } from './ablaufAktionen';
 import { ladeKopieVorschlaege, ladeVorlagen, WOCHEN_ZURUECK } from './ladeAnlegen';
 import { ablaufBearbeitbar, type Start } from './start';
 import { LiedAnsicht } from './LiedAnsicht';
@@ -23,10 +23,6 @@ import styles from './TerminAblauf.module.scss';
 
 const NEU_LADEN_FEHLT =
   'Gespeichert. Der Ablauf ließ sich danach nicht neu laden – zum Aktualisieren den Termin neu öffnen.';
-
-/** Hinweis, wenn man einen abgeschlossenen Ablauf ändern will – öffnen kann man ihn hier (noch) nicht. */
-const GESPERRT =
-  'Dieser Ablauf ist in ChurchTools abgeschlossen. Zum Ändern erst in ChurchTools oder in der Musik-App öffnen.';
 
 /** Was der Ablauf über seinen Termin wissen muss – aus der Termin-Ansicht oder einer Spalte der Matrix. */
 export interface AblaufFuerTermin {
@@ -45,7 +41,10 @@ export interface AblaufFuerTermin {
 export interface AblaufTeile {
   /** Ansicht, Bearbeiten-Liste oder „kein Ablauf“ (mit „Ablauf anlegen“, wo man darf). */
   inhalt: ReactNode;
-  /** Das grüne „+ Eintrag hinzufügen“ für den Kopf (nur Termin-Ansicht am Rechner). */
+  /**
+   * Das grüne „+ Eintrag hinzufügen“ am Rechner: in der Termin-Ansicht im Kopf, in der Matrix als Plus neben „N Punkte“
+   * (E6-6c).
+   */
   kopfKnopf: ReactNode;
   /** Fenster und Hinweise – schweben über der Seite. */
   ueberlagerung: ReactNode;
@@ -194,9 +193,13 @@ export function TerminAblauf({
     // (Entwurf E6-6 Bild 2).
     neuAufsetzen: mitNeuAufsetzen ? () => anlegenOeffnen(true) : undefined,
     // Am Rechner/iPad das grüne „+“ oben rechts im Ablauf-Kopf (wie „+ Termin“ im ChurchTools-Kalender), am Handy
-    // bleibt das schwebende Plus (Alwin, 28.10.2026 – wie die Musik-App seit S2). In der Matrix „+ Punkt“ je Spalte.
+    // bleibt das schwebende Plus (Alwin, 28.10.2026 – wie die Musik-App seit S2). In der Matrix nur das Plus, neben
+    // „N Punkte“ in der Gruppenzeile (E6-6c, Alwin 29.10.2026).
     plusImKopf: true,
+    plusName: `Eintrag hinzufügen – ${termin.name}, ${tagKurz(termin.tag)}`,
     schmal,
+    // In der Matrix zieht jede Spalte im gemeinsamen Zieh-Bereich – auch in einen anderen Termin (E6-6b).
+    ziehen: schmal ? { spalte: terminId, neuLaden: ablaufNeuLaden } : undefined,
     // Im Punkt-Fenster: die Zeile „Lied“ öffnet die Lied-Ansicht an seiner Stelle (Alwin, 28.10.2026: an beiden Stellen).
     liedAnsehen: (p, zurueck, schliessen) => liedAnsicht(p, schliessen, zurueck),
   });
@@ -330,6 +333,8 @@ export function TerminAblauf({
           beginn={termin.uhrzeit}
           onLied={(_, p) => setLiedOffen(p)}
           schmal={schmal}
+          // Matrix: wo der Ablauf aufhört (Alwin, 29.10.2026, Entwurf `e6-6-trennung.html` C).
+          mitEnde={schmal}
         />
       </div>
     );

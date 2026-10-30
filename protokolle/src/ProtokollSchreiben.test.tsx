@@ -99,8 +99,9 @@ const SITZUNG = {
   kopf: KOPF,
 } as unknown as Sitzung;
 
-const zeige = (onZurueck = vi.fn()) => {
+const zeige = (onZurueck = vi.fn(), onBearbeiten?: () => void) => {
   const props = {
+    onBearbeiten,
     sitzung: SITZUNG,
     gruppe: 'Leitungsteam',
     gruppeId: 194,
@@ -131,6 +132,17 @@ describe('ProtokollSchreiben', () => {
     neuZeichnen();
     await waitFor(() => expect(lesen).toHaveBeenCalledTimes(1));
     expect(lesen).toHaveBeenCalledWith({ modul: 24, kategorie: 62, sitzung: 's1' });
+  });
+
+  it('„Bearbeiten“ im Kopf nur, wenn gereicht (Leitung) – für die eigene Sitzung des Entwurfs', async () => {
+    const onBearbeiten = vi.fn();
+    const r = zeige(vi.fn(), onBearbeiten);
+    fireEvent.click(await screen.findByRole('button', { name: /Sitzung bearbeiten/ }));
+    expect(onBearbeiten).toHaveBeenCalled();
+    r.unmount();
+    zeige();
+    await screen.findByText(/Entwurf – noch nicht freigegeben/);
+    expect(screen.queryByRole('button', { name: /Sitzung bearbeiten/ })).toBeNull();
   });
 
   it('schreibt jemand anderes: Hinweis, nur lesen, Übernehmen mit Rückfrage', async () => {

@@ -62,8 +62,10 @@
   color: var(--text);
   text-decoration: none;
 
-  &:hover .dateiText {
-    color: var(--blue-ink);
+  @media (hover: hover) {
+    &:hover .dateiText {
+      color: var(--blue-ink);
+    }
   }
 }
 

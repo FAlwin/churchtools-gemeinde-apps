@@ -117,8 +117,10 @@
 
   cursor: pointer;
 
-  &:hover {
-    background: var(--surface3);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--surface3);
+    }
   }
 
   > svg {
@@ -131,8 +133,10 @@
 .still {
   cursor: default;
 
-  &:hover {
-    background: none;
+  @media (hover: hover) {
+    &:hover {
+      background: none;
+    }
   }
 }
 

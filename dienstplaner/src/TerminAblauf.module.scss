@@ -50,8 +50,10 @@
   font: 700 12.5px var(--ui);
   cursor: pointer;
 
-  &:hover {
-    background: var(--blue-soft);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--blue-soft);
+    }
   }
 }
 

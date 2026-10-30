@@ -84,8 +84,10 @@
   font-weight: 600;
   cursor: pointer;
 
-  &:hover {
-    color: var(--text);
+  @media (hover: hover) {
+    &:hover {
+      color: var(--text);
+    }
   }
 }
 
@@ -119,7 +121,9 @@
   font-weight: 600;
   cursor: pointer;
 
-  &:hover {
-    background: var(--blue-soft);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--blue-soft);
+    }
   }
 }

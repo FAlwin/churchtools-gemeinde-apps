@@ -168,12 +168,18 @@
     }
   }
 }
-.aktiv,
-.aktiv:hover {
+.aktiv {
   cursor: default;
   // Durchscheinend statt Kartenfarbe: Auf farbigen Karten (Vorlage „Bunt“) sah ein weißer Grund aus, als fiele das
   // Feld aus der Karte heraus (Durchklicken 13.10.2026).
   background: color-mix(in srgb, var(--blue, #155dfc) 18%, transparent);
+
+  // Bleibt beim Zeigen so – sonst gewänne die Hover-Farbe der Feld-Fläche oben.
+  @media (hover: hover) {
+    &:hover {
+      background: color-mix(in srgb, var(--blue, #155dfc) 18%, transparent);
+    }
+  }
 }
 .fest {
   cursor: default;
@@ -235,8 +241,10 @@
   margin-left: -4px;
   outline: none;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.12);
+  @media (hover: hover) {
+    &:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
   }
 
   &:focus {
@@ -258,9 +266,14 @@
 
   // Auf bunten Hintergründen (Konfetti, Foto) lesbar: leicht hinterlegt, solange leer oder in Arbeit.
   &:placeholder-shown,
-  &:hover,
   &:focus {
     background: color-mix(in srgb, var(--p-card, #fff) 88%, transparent);
+  }
+
+  @media (hover: hover) {
+    &:hover {
+      background: color-mix(in srgb, var(--p-card, #fff) 88%, transparent);
+    }
   }
 
   &:focus {
@@ -357,8 +370,10 @@
     padding: 5px 2px;
     outline: none;
 
-    &:hover {
-      border-bottom-color: var(--p-line, #dde5e6);
+    @media (hover: hover) {
+      &:hover {
+        border-bottom-color: var(--p-line, #dde5e6);
+      }
     }
 
     &:focus {
@@ -441,9 +456,11 @@
     place-items: center;
     cursor: pointer;
 
-    &:hover:not(:disabled) {
-      background: var(--p-fill, #eef3f3);
-      color: var(--p-text, #17242a);
+    @media (hover: hover) {
+      &:hover:not(:disabled) {
+        background: var(--p-fill, #eef3f3);
+        color: var(--p-text, #17242a);
+      }
     }
 
     &:disabled {
@@ -556,10 +573,15 @@
     color: var(--text2);
   }
 
-  &:hover,
   &:focus-visible {
     border-color: var(--blue);
     outline: none;
+  }
+
+  @media (hover: hover) {
+    &:hover {
+      border-color: var(--blue);
+    }
   }
 
   &[aria-disabled='true'] {
@@ -763,9 +785,11 @@
     box-shadow 0.12s,
     border-color 0.12s;
 
-  &:not([aria-disabled='true']):hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 14px rgba(21, 93, 252, 0.14);
+  @media (hover: hover) {
+    &:not([aria-disabled='true']):hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(21, 93, 252, 0.14);
+    }
   }
 
   &:not([aria-disabled='true']):active {
@@ -1068,10 +1092,16 @@
   vertical-align: middle;
   cursor: pointer;
 
-  &:hover,
   &[aria-expanded='true'] {
     color: var(--blue);
     background: rgba(21, 93, 252, 0.1);
+  }
+
+  @media (hover: hover) {
+    &:hover {
+      color: var(--blue);
+      background: rgba(21, 93, 252, 0.1);
+    }
   }
 }
 .hinweisKasten {

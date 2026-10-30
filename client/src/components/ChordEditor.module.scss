@@ -177,8 +177,10 @@
   background: none;
   cursor: pointer;
   text-align: left;
-  &:hover {
-    background: var(--surface3);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--surface3);
+    }
   }
 }
 // Menü „Einfügen“ (L6): Abschnitts-Überschrift, Teile zweispaltig, Trennlinie, Hinweis.

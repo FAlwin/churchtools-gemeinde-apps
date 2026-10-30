@@ -141,8 +141,10 @@
   text-align: left;
   cursor: pointer;
 
-  &:hover {
-    background: var(--section);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--section);
+    }
   }
 }
 
@@ -197,8 +199,10 @@
   text-align: left;
   cursor: pointer;
 
-  &:hover {
-    background: var(--section);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--section);
+    }
   }
 
   .zeilen .zeilen & {

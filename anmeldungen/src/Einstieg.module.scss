@@ -126,8 +126,10 @@
 button.kachel {
   cursor: pointer;
 
-  &:hover {
-    border-color: var(--blue);
+  @media (hover: hover) {
+    &:hover {
+      border-color: var(--blue);
+    }
   }
 }
 

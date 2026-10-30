@@ -45,10 +45,15 @@ export interface SongFilterOpts {
   showStats: boolean;
 }
 
-/** Häufigkeit + letztes Spieldatum eines Lieds im gewählten Zeitraum. */
+/** Häufigkeit + letztes Spieldatum eines Lieds im gewählten Zeitraum – und wann es überhaupt zuletzt gesungen wurde. */
 interface SongStat {
   count: number;
   last: string | null;
+  /**
+   * Zuletzt gesungen, **über alle Termine** (Alwin, 30.10.2026: steht jetzt in jeder Zeile). Nicht auf den Zeitraum
+   * beschränkt – sonst stünde bei einem Lied, das vor dem eingestellten Zeitraum gesungen wurde, „noch nie“.
+   */
+  zuletzt: string | null;
 }
 
 interface SongFilterResult {
@@ -72,8 +77,9 @@ export function filterSongs(
   const inRange = (d: string) => (!opts.from || d >= opts.from) && (!opts.to || d <= opts.to);
   const statOf = (s: SongLibraryEntry): SongStat => {
     // Termine kommen absteigend sortiert vom Server → das erste im Zeitraum ist das jüngste.
-    const dates = (usage?.[s.songId]?.dates ?? []).filter(inRange);
-    return { count: dates.length, last: dates[0] ?? null };
+    const alle = usage?.[s.songId]?.dates ?? [];
+    const dates = alle.filter(inRange);
+    return { count: dates.length, last: dates[0] ?? null, zuletzt: alle[0] ?? null };
   };
 
   const query = opts.query.trim().toLowerCase();
@@ -145,12 +151,21 @@ export function filterSongs(
   };
 }
 
+/** „zuletzt 12.10.2026“ oder „noch nie gesungen“ – die eine Formulierung für Listen und Lied-Menü (30.10.2026). */
+export function zuletztGesungen(iso: string | null): string {
+  return iso ? `zuletzt ${fmtPlayDate(iso)}` : 'noch nie gesungen';
+}
+
 /**
- * Der Statistik-Text neben einem Lied – EINE Stelle für beide Listen (#300).
+ * Der Statistik-Text unter einem Lied – EINE Stelle für beide Listen (#300).
  *
  * Stand vorher wortgleich in `AllSongs.tsx` und `SongPicker.tsx` und lautete `${st?.count ?? 0}×
  * gespielt`. Damit behauptete eine **fehlende** Statistik „0× gespielt" bzw. „zuletzt: noch nie" –
  * eine falsche Aussage über die Gemeinde-Historie. Fehlende Zahlen sind nicht die Zahl 0.
+ *
+ * **Seit 30.10.2026 in jeder Sortierung** (Alwin beim Planen: „Irgendwie fehlt mir die Anzeige, wann das Lied das
+ * letzte Mal gesungen wurde“) – vorher nur bei „Häufigkeit“ und „Zuletzt“. Immer steht das Datum über alle Termine,
+ * bei „Häufigkeit“ die Anzahl im Zeitraum davor.
  */
 export function statLabel(
   sort: SongSort,
@@ -159,6 +174,6 @@ export function statLabel(
 ): string {
   if (state === 'loading') return 'Statistik lädt…';
   if (state === 'error') return '–';
-  if (sort === 'recent') return `zuletzt: ${fmtPlayDate(st?.last ?? null)}`;
-  return `${st?.count ?? 0}× gespielt`;
+  const zuletzt = zuletztGesungen(st?.zuletzt ?? null);
+  return sort === 'count' ? `${st?.count ?? 0}× · ${zuletzt}` : zuletzt;
 }

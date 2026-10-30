@@ -40,6 +40,7 @@ function setup(
     set?: Partial<SongSettings>;
     canEdit?: boolean;
     arrangements?: SongArrangementOption[];
+    zuletzt?: string | null;
   } = {},
 ) {
   const handlers = {
@@ -70,6 +71,7 @@ function setup(
       isOriginal={set.versionKey === 'original'}
       hasVersions
       canEditSong={over.canEdit ?? true}
+      zuletztGesungen={over.zuletzt}
       {...handlers}
     />,
   );
@@ -346,5 +348,25 @@ describe('SongMenu – Dateien (#321)', () => {
     setup({ canEdit: true, set: { viewSource: 4711 } });
     expect(screen.getByText('Dateien …')).toBeTruthy();
     expect(screen.queryByText('Im Editor öffnen')).toBeNull();
+  });
+});
+
+/** **Zuletzt gesungen** oben im Lied-Menü (Alwin beim Planen, 30.10.2026). */
+describe('SongMenu – zuletzt gesungen', () => {
+  it('zeigt das Datum ganz oben, vor der Gruppe „Tonart“', () => {
+    setup({ zuletzt: '2026-10-12' });
+    const text = screen.getByRole('dialog').textContent ?? '';
+    expect(text).toContain('Zuletzt gesungen12.10.2026');
+    expect(text.indexOf('Zuletzt gesungen')).toBeLessThan(text.indexOf('Tonart'));
+  });
+
+  it('noch nie gesungen: „noch nie“', () => {
+    setup({ zuletzt: null });
+    expect(screen.getByRole('dialog').textContent).toContain('Zuletzt gesungennoch nie');
+  });
+
+  it('ohne Statistik (kein Recht, lädt, Fehler) keine Zeile – keine Behauptung', () => {
+    setup();
+    expect(screen.queryByText('Zuletzt gesungen')).toBeNull();
   });
 });

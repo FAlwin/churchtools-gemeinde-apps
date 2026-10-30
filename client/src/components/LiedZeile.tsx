@@ -24,7 +24,9 @@ interface LiedZeileProps {
   titel: string;
   /** Die erklärende Zeile darunter – je Quelle etwas anderes. `null` = keine. */
   unterzeile?: string | null;
-  /** Rechts vor den Knöpfen, z. B. die Tonart-Pille oder die Statistik. */
+  /** Grau unter der erklärenden Zeile: wann das Lied zuletzt gesungen wurde (30.10.2026). `null` = keine. */
+  notiz?: string | null;
+  /** Rechts vor den Knöpfen, z. B. die Tonart-Pille. */
   zusatz?: ReactNode;
   /** Der Tipp auf die Zeile (Vorschau bzw. Öffnen). */
   onZeile: () => void;
@@ -36,6 +38,7 @@ interface LiedZeileProps {
 export function LiedZeile({
   titel,
   unterzeile,
+  notiz,
   zusatz,
   onZeile,
   aktion,
@@ -47,6 +50,7 @@ export function LiedZeile({
         <span className={styles.text}>
           <span className={styles.titel}>{titel}</span>
           {unterzeile && <span className={styles.meta}>{unterzeile}</span>}
+          {notiz && <span className={styles.notiz}>{notiz}</span>}
         </span>
         {zusatz}
         {/* Das Symbol sagt, was der Tipp tut – für Vorlese-Hilfen ist der Text der Zeile aussagekräftiger. */}

@@ -917,7 +917,9 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
   Person („Song-Statistik sehen") – **nur die Musiker sollen es haben** (Alwin). Deshalb prüft der
   Server es VOR seinem org-weiten Zwischenspeicher (`getSongUsageCtrl`, 403), und beide Varianten
   zeigen die Reiter nur mit `canViewSongStatistics`. Damit gibt es „Häufigkeit/Zuletzt" auch in
-  der Erweiterung; weggelassen bleibt nur die Suche im Liedtext.
+  der Erweiterung; weggelassen bleibt nur die Suche im Liedtext. Seit 30.10.2026 steht „zuletzt TT.MM.JJJJ“ in
+  jeder Liedzeile (Liederliste, Lied-Auswahl; `statLabel`, Optik `liedNotiz`) und oben im Lied-Menü – über alle
+  Termine, nicht nur über den Zeitraum.
 
 - **v2.31.0 (08.10.2026) = SongSelect in der Erweiterung (3b-5) + #444** (PRs #448, #449): Regeln in
   `shared/ct/songselect.ts`; innerer CCLI-Status wird geprüft; „keine Rechte für Lieder und Abläufe"

@@ -226,20 +226,16 @@ export function SongPicker({
                 key={s.songId}
                 titel={s.name}
                 unterzeile={unter || null}
-                zusatz={
-                  <>
-                    {showStats && f.sort !== 'name' && (
-                      <span className={styles.stat}>
-                        {statLabel(
-                          f.sort,
-                          st,
-                          usage.isError ? 'error' : usage.isLoading ? 'loading' : 'ok',
-                        )}
-                      </span>
-                    )}
-                    {s.key && <span className={styles.keyPill}>{s.key}</span>}
-                  </>
+                notiz={
+                  showStats
+                    ? statLabel(
+                        f.sort,
+                        st,
+                        usage.isError ? 'error' : usage.isLoading ? 'loading' : 'ok',
+                      )
+                    : null
                 }
+                zusatz={s.key ? <span className={styles.keyPill}>{s.key}</span> : null}
                 onZeile={() => (oeffnen ? oeffnen(s) : setVorschau({ art: 'bibliothek', song: s }))}
                 aktion={
                   oeffnen || !onPick

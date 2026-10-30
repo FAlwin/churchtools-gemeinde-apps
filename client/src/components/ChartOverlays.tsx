@@ -38,6 +38,8 @@ interface ChartOverlaysProps {
   isOriginal: boolean;
   hasVersions: boolean;
   canEditSong: boolean;
+  /** Wann das Lied zuletzt gesungen wurde (ISO) – `null` noch nie, `undefined` unbekannt (30.10.2026). */
+  zuletztGesungen?: string | null;
   /** Eine Einstellung des aktiven Lieds ändern. */
   onSetting: (patch: Partial<SongSettings>) => void;
   onSelectVersion: (versionKey: string) => void;
@@ -67,6 +69,7 @@ export function ChartOverlays({
   isOriginal,
   hasVersions,
   canEditSong,
+  zuletztGesungen,
   onSetting,
   onSelectVersion,
   onSharePdf,
@@ -106,6 +109,7 @@ export function ChartOverlays({
         isOriginal={isOriginal}
         hasVersions={hasVersions}
         canEditSong={canEditSong}
+        zuletztGesungen={zuletztGesungen}
         onClose={schliessen}
         onOpenKeyPicker={() => onOverlay('key')}
         onOpenCapoPicker={() => onOverlay('capo')}

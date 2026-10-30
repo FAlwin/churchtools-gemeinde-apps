@@ -258,7 +258,7 @@ export function AllSongs({
                     <div className={styles.info}>
                       <div className={styles.name}>{s.name}</div>
                       {s.author && <div className={styles.sub}>{s.author}</div>}
-                      {showStats && f.sort !== 'name' && (
+                      {showStats && (
                         <span className={styles.stat}>
                           {statLabel(
                             f.sort,

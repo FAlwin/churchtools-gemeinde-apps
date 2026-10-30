@@ -26,6 +26,7 @@ import type { SongSettings } from '../utils/chartSettings';
 import { Icon } from '@ui/icons/icons';
 import { Sheet } from '@ui/fenster/Sheet';
 import { hasStoredNotesForLevel as hasOwnNotes } from '../utils/annotationKeys';
+import { fmtPlayDate } from '../utils/songFilter';
 import styles from './SongMenu.module.scss';
 
 /** Eine wählbare Fassung des Lieds (Original oder benannte Version). */
@@ -50,6 +51,11 @@ interface SongMenuProps {
   isOriginal: boolean;
   hasVersions: boolean;
   canEditSong: boolean;
+  /**
+   * Wann das Lied zuletzt gesungen wurde (ISO, Lied-Statistik aus ChurchTools) – graue Zeile ganz oben (Alwin,
+   * 30.10.2026). `null` = noch nie; `undefined` = unbekannt (kein Recht, lädt, Fehler) → keine Zeile.
+   */
+  zuletztGesungen?: string | null;
   onClose: () => void;
   onOpenKeyPicker: () => void;
   onOpenCapoPicker: () => void;
@@ -124,6 +130,7 @@ export function SongMenu({
   isOriginal,
   hasVersions,
   canEditSong,
+  zuletztGesungen,
   onClose,
   onOpenKeyPicker,
   onOpenCapoPicker,
@@ -350,6 +357,12 @@ export function SongMenu({
 
   return (
     <Fenster titel={song.title} onClose={onClose}>
+      {zuletztGesungen !== undefined && (
+        <div className={styles.zuletzt}>
+          <span>Zuletzt gesungen</span>
+          <span>{zuletztGesungen ? fmtPlayDate(zuletztGesungen) : 'noch nie'}</span>
+        </div>
+      )}
       <Gruppe titel="Tonart">
         <Zeile onClick={pick(onOpenKeyPicker)} rechts={<Wert aktiv>{curKey}</Wert>}>
           Transponieren

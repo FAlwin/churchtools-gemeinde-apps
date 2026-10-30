@@ -7,6 +7,7 @@ import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { adresseFuer, reiterAusAdresse } from '@ui/bedienung/reiterAdresse';
 import { ladeStart, type Start } from './start';
 import { Startseite } from './Startseite';
+import { ToDos } from './ToDos';
 import { Verwaltung } from './Verwaltung';
 import { Sitzungen, type SitzungsAuswahl } from './Sitzungen';
 import { SuchLeiste } from './SuchLeiste';
@@ -14,7 +15,7 @@ import { Suche } from './Suche';
 import { sichtbareReiter, type ReiterId } from './reiter';
 
 /**
- * Die Protokolle in ChurchTools (Bauplan S1/S2-2/S3-2): Start, Sitzungen und – nur für Admins – Verwaltung. Am
+ * Die Protokolle in ChurchTools (Bauplan S1/S2-2/S3-2/S7-1): Start, Sitzungen, To-Dos und – nur für Admins – Verwaltung. Am
  * Computer stehen die Reiter oben neben dem Namen, am Handy unten (wie im Dienstplaner).
  * Scheitert das Laden vorübergehend, gibt es „Erneut versuchen“ statt einer halben Seite. Ein Tipp auf der Startseite
  * (S3-3) öffnet den Reiter „Sitzungen“ mit der Gruppe – und, wenn gewählt, gleich der Sitzung. Die Lupe im Kopf
@@ -120,6 +121,16 @@ export function App() {
           schreibbar={start.schreibbar}
           onSitzung={(gruppe, sitzung) => zuSitzungen({ gruppe, sitzung })}
           onGruppe={(gruppe) => zuSitzungen({ gruppe })}
+          onAlleToDos={() => wechseln('todos')}
+        />
+      )}
+      {start && !suche.offen && aktiv === 'todos' && (
+        <ToDos
+          modul={start.modul}
+          ich={{ person: start.id, name: start.vorname }}
+          gruppen={start.gruppen}
+          schreibbar={start.schreibbar}
+          onSitzung={(gruppe, sitzung) => zuSitzungen({ gruppe, sitzung })}
         />
       )}
       {start && !suche.offen && aktiv === 'sitzungen' && (

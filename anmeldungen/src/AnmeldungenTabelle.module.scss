@@ -84,12 +84,26 @@
   }
 }
 
-// Die erste Spalte (Name) bleibt links stehen.
+// Angeheftete Spalten bleiben links stehen (U2-3: mehrere – wo genau, misst die Tabelle). Die Linie trägt die letzte.
 .fest {
   position: sticky;
   left: 0;
   z-index: 1;
+}
+
+.festEnde {
   box-shadow: inset -1px 0 0 var(--border);
+}
+
+// Am Handy bleibt nur die erste angeheftete Spalte stehen (Entscheidung 4, 29.10.2026) – sonst bliebe kaum Platz.
+@media (max-width: 560px) {
+  .fest:not(.ersteFest) {
+    position: static;
+  }
+
+  .ersteFest {
+    box-shadow: inset -1px 0 0 var(--border);
+  }
 }
 
 .kopf.fest,

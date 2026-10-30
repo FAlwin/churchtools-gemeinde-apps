@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
 import { ApiError } from '@ui/ct/fehler';
+import { mitSpaltenWahl, spalteZeigen, vorgabeWahl } from '@shared/anmeldung/tabelle';
 import {
   EINSTELLUNGEN_KENNUNG,
   SYSTEMFELDER,
@@ -424,14 +425,19 @@ describe('kopiereVeranstaltung', () => {
     });
     const g = gruppen.get(quelle)!;
     const e = einstellungenLesen(g.note)!;
+    // U2-3: Spaltenwahl der Tabelle – wie die Druckliste (`druck`) Teil der Einstellungen, also mitkopiert.
+    const spalten = spalteZeigen(vorgabeWahl(e, 'anmeldung'), 'am');
     await aendereEinstellungen(quelle, (x) => ({
-      ...x,
+      ...mitSpaltenWahl(x, 'anmeldung', spalten),
       termin: { beginn: '2026-11-15T12:00', ende: null, ort: 'Saal', terminId: 5 },
+      druck: { spalten: ['alter'], sortierung: 'alter' },
     }));
     expect(einstellungenLesen(g.note)?.termin).not.toBeNull();
     const kopie = await kopiereVeranstaltung(quelle, 'Essen 2027');
     const k = einstellungenLesen(gruppen.get(kopie)!.note)!;
     expect(k.termin).toBeNull();
+    expect(k.tabelle).toEqual({ anmeldung: spalten });
+    expect(k.druck).toEqual({ spalten: ['alter'], sortierung: 'alter' });
     // A9-2a: Die Kopie merkt sich die Vorlage – deren eigener Mailtext steht in Routinen, die nicht mitkopiert werden.
     expect(k.kopieVon).toBe(quelle);
     expect(e.kopieVon).toBeUndefined();

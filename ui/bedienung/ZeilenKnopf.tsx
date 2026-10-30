@@ -8,6 +8,8 @@ interface Props {
   /** Kurzer Tooltip („Zu Ablauf hinzufügen“); sonst der Name. */
   title?: string;
   disabled?: boolean;
+  /** Ein Knopf, der an- und ausgeht (Stecknadel, U2-3) – `aria-pressed` und blau, solange er an ist. */
+  an?: boolean;
   /** Das Symbol (`Icon`). */
   children: ReactNode;
 }
@@ -17,13 +19,14 @@ interface Props {
  * „…“-Knöpfe in der ChurchTools-App (Scheibe S2, Alwin 26.10.2026: Variante A). Vorher hellblau gefüllte Kreise, je
  * eine Kopie in Liederliste und Lied-Auswahl.
  */
-export function ZeilenKnopf({ onClick, label, title, disabled, children }: Props) {
+export function ZeilenKnopf({ onClick, label, title, disabled, an, children }: Props) {
   return (
     <button
       type="button"
-      className={styles.knopf}
+      className={an ? `${styles.knopf} ${styles.an}` : styles.knopf}
       onClick={onClick}
       disabled={disabled}
+      aria-pressed={an}
       aria-label={label}
       title={title ?? label}
     >

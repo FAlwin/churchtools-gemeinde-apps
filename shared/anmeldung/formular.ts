@@ -515,6 +515,17 @@ export interface TerminAngabe {
   kalenderId?: number | null;
 }
 
+/**
+ * **Die Spaltenwahl einer Tabellen-Ansicht** (U2-3): `reihe` = Reihenfolge aller Spalten beim Speichern, `aus` =
+ * ausgeblendet, `fest` = angeheftet in der Reihenfolge des Anheftens. Spalten, die später dazukommen (neue Frage),
+ * stehen hinten und folgen der Vorgabe.
+ */
+export interface TabellenWahl {
+  reihe: string[];
+  aus: string[];
+  fest: string[];
+}
+
 export interface OeffentlicheEinstellungen {
   /** `null`, solange ein Entwurf noch kein Datum hat. */
   termin: TerminAngabe | null;
@@ -543,6 +554,11 @@ export interface OeffentlicheEinstellungen {
   preiseGeaendert: string | null;
   /** Die gemerkte Wahl der Teilnehmerliste (A8-1) – Spalten und Sortierung; fehlt = Standard (`druckliste.ts`). */
   druck?: { spalten: string[]; sortierung: 'nachname' | 'alter' | 'anmeldung' };
+  /**
+   * **Die Spalten der Tabelle** (U2-3) – je Ansicht Reihenfolge, ausgeblendete und angeheftete Spalten; gilt fürs ganze
+   * Team. Fehlt eine Ansicht = Vorgabe (`tabelle.ts`). Nur Spaltenschlüssel, keine Personendaten.
+   */
+  tabelle?: { anmeldung?: TabellenWahl; person?: TabellenWahl };
   /**
    * **Kopiert von** (A9-2a): die Veranstaltung, aus der diese mit „Wie eine frühere Veranstaltung“ entstand. Beim
    * Freigeben übernimmt die Erweiterung von dort den eigenen Mailtext (er steht in deren Routinen, die nicht mitkopiert
@@ -637,6 +653,13 @@ const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 const hexOderNull = hex.nullable();
 const schrift = z.enum(['standard', 'rund', 'serif', 'klassisch', 'lesbar']);
 const zeitpunkt = z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+const spaltenSchluessel = z.array(z.string().max(60)).max(80);
+const tabellenWahlSchema = z.object({
+  reihe: spaltenSchluessel,
+  aus: spaltenSchluessel,
+  fest: spaltenSchluessel,
+});
+
 const einstellungenSchema = z.object({
   termin: z
     .object({
@@ -727,6 +750,10 @@ const einstellungenSchema = z.object({
       spalten: z.array(z.string().max(60)).max(40),
       sortierung: z.enum(['nachname', 'alter', 'anmeldung']),
     })
+    .optional(),
+  // Seit U2-3: nur Ansichten, deren Spalten von der Vorgabe abweichen (hält die Einstellungen kurz).
+  tabelle: z
+    .object({ anmeldung: tabellenWahlSchema.optional(), person: tabellenWahlSchema.optional() })
     .optional(),
   kopieVon: z.number().int().positive().optional(),
 });

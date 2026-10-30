@@ -4,11 +4,9 @@ import {
   ANSICHT_NAMEN,
   BAUM_ANSICHTEN,
   leseAnsicht,
-  leseAusgeblendet,
   lesePersonen,
   lesePraesAnsicht,
   merkeAnsicht,
-  merkeAusgeblendet,
   merkePersonen,
   merkePraesAnsicht,
 } from './auswahl';
@@ -48,19 +46,6 @@ describe('Ansicht merken (O7b-2)', () => {
     });
     expect(leseAnsicht()).toBeNull();
     expect(() => merkeAnsicht('liste')).not.toThrow();
-    expect(leseAusgeblendet()).toEqual(new Set());
-    expect(() => merkeAusgeblendet(new Set([9]))).not.toThrow();
-  });
-});
-
-describe('Typen merken (O2) – über dieselbe Mechanik', () => {
-  it('Zahlen zurück, alles andere fällt weg', () => {
-    merkeAusgeblendet(new Set([9, 4]));
-    expect(leseAusgeblendet()).toEqual(new Set([9, 4]));
-    localStorage.setItem('organigramm-ausgeblendete-typen', '[1, "2", 3.5, null]');
-    expect(leseAusgeblendet()).toEqual(new Set([1]));
-    localStorage.setItem('organigramm-ausgeblendete-typen', '{"a":1}');
-    expect(leseAusgeblendet()).toEqual(new Set());
   });
 });
 

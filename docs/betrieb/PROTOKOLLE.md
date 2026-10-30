@@ -66,10 +66,24 @@ Sitzung bzw. die Gruppe im Reiter „Sitzungen“.
 
 **Reiter „To-Dos“ (S7-1):** alle To-Dos der eigenen Gruppen in einer Liste – **nach Status** (Überfällig · In Arbeit ·
 Offen · Erledigt) oder **nach Person** (ich zuerst, dann nach Namen; „Außerhalb der Gruppe“, „Noch niemand
-zuständig“), im Gerät gemerkt. Die **Leitung** sieht alle To-Dos ihrer Gruppen, **Mitglieder** ihre eigenen und die,
+zuständig“). Die **Leitung** sieht alle To-Dos ihrer Gruppen, **Mitglieder** ihre eigenen und die,
 für die noch niemand zuständig ist. Die **Status-Marke** („◐ In Arbeit“) schaltet mit einem Tipp weiter – ohne ins
 Protokoll zu springen, auch wenn es schon freigegeben ist. Der Filter blendet Gruppen und „Zuständig: Ich / Andere /
 Noch niemand“ aus; Erledigte älter als 30 Tage zeigt der Schalter „Ältere erledigte zeigen“ am Ende der Liste.
+
+**Board und Sortieren (S7-3):** „Liste | Board“ oben. Das Board zeigt **nach Status** die Spalten Offen · In Arbeit ·
+Erledigt (Überfällige rot in ihrer Spalte), **nach Person** je Person (bei genau einer Gruppe im Filter auch deren
+Mitglieder ohne To-Do), „Außerhalb der Gruppe“ und „Noch niemand zuständig“; je Spalte „+ Neues To-Do“ mit
+vorbelegtem Status bzw. Zuständigen. **Ziehen:** mit der Maus die ganze Karte, mit dem Finger **lange drücken** (~0,4 s)
+– vorher blättert ein Wischen. Nach Status ändert Ziehen den Status, nach Person **tauscht es nur die gezogene Person**
+(„Außerhalb“ nimmt nichts an). Gibt ein Mitglied sein eigenes To-Do ab (danach sieht es es nicht mehr), fragt die Seite
+vorher. Jeder Wechsel der Zuständigen steht im **Verlauf** („Zuständig: Spike → Johann“) – im Board, im Fenster, im
+Editor und beim Verschieben in eine andere Gruppe. **Sortieren** (ein Knopf, gilt für alle Spalten und Abschnitte):
+Dringlichkeit (Vorgabe) · Bis-Datum (Erledigte nach „erledigt am“) · Alphabetisch · **Manuell** – dann ordnet man innerhalb
+einer Spalte per Ziehen (auch in der Liste); die Reihenfolge gilt nur für einen selbst, neue To-Dos kommen ans Ende.
+**Gemerkt je Benutzer, auf allen Geräten:** Ansicht, Einteilung, Filter, Sortierung und die eigene Reihenfolge liegen in
+`protokolle_einstellungen.json` am eigenen ChurchTools-Konto (andere können die Datei lesen – drin stehen nur Ansicht und
+To-Do-Kennungen). Im Gerät liegt **je Person** ein Spiegel für den sofortigen Start; ohne Netz bleibt alles dort und wird nachgeholt.
 
 **Fenster „To-Do“ (S7-2a):** Ein Tipp auf den Text öffnet das To-Do: Text, Gruppe, Bis, Status, Zuständige (auch
 niemand – dann ist es ein To-Do der Gruppe – oder jemand außerhalb der Gruppe, nur als Name), neue Notiz, Verlauf und
@@ -205,8 +219,11 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit später sc
   entstehen beim Öffnen des Fensters – ein zweiter Versuch legt nichts doppelt an). Nachziehen im Entwurf (S7-2b):
   Regel `shared/protokolle/nachziehen.ts` (`aufgabeNachziehen`), Ablauf `protokolle/src/nachziehen.ts`
   (`imEntwurfNachziehen`: Sperre nehmen → Dokument ändern → `speichern` mit dem normalen Abgleich → Sperre freigeben).
-  Einteilung und Filter
-  merkt `ui/bedienung/geraet.ts` im Gerät (vorher nur im Dienstplaner).
+  Board und Sortieren (S7-3): Regeln `spalten`, `ablegen`, `sortieren`, `umordnen` in `shared/protokolle/uebersicht.ts`,
+  Ziehen `protokolle/src/ToDoZiehen.tsx` (Regel `toDoZiehenRegel.ts`, Sensoren `useZiehSensorenLangDruecken` in
+  `ui/bedienung/useZiehSensoren.ts`), Verlauf „Zuständig“ `zustaendigSetzen` in `shared/protokolle/aufgaben.ts`.
+  Einstellungen je Benutzer: `protokolle/src/useToDoEinstellungen.ts` über `@shared/ct/personenAblage` (`mischeEin`,
+  eigenes Präfix `protokolle_`) und den Browser-Anschluss `ui/ct/ablagePort.ts` (mit der Musik-App geteilt).
 - Sitzung bearbeiten (K2b): Regel `shared/protokolle/bearbeiten.ts` (`aenderungVon`, `mailsVon`/`mailsSerie`,
   `terminRumpf` – ein Termin-`PUT` leert, was fehlt, darum geht der gelesene Termin vollständig zurück; Serien:
   `serienWeg`, `teilRumpf`, `ausnahmeRumpf`, `endeRumpf`, `verschoben`), Schreiben `protokolle/src/bearbeiten.ts`

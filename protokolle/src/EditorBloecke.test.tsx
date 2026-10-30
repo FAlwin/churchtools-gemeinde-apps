@@ -120,7 +120,15 @@ describe('Wer und Bis vor dem Text', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Wer kümmert sich?' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Johann Becker' }));
-    expect(vi.mocked(k.aendern).mock.calls[0][2](todo({ wer: [19] })).wer).toEqual([19, 7]);
+    const neu = vi.mocked(k.aendern).mock.calls[0][2](todo({ wer: [19] }));
+    expect(neu.wer).toEqual([19, 7]);
+    // S7-3: auch im Editor kommt der Wechsel in den Verlauf.
+    expect(neu.verlauf.at(-1)).toMatchObject({
+      art: 'zustaendig',
+      von: 1,
+      vorher: [19],
+      nachher: [19, 7],
+    });
   });
 });
 

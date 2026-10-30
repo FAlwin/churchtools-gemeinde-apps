@@ -40,12 +40,19 @@ export interface Herkunft {
   entwurf: boolean;
 }
 
-function verlaufText(v: VerlaufEintrag): string {
+function verlaufText(v: VerlaufEintrag, name: (p: number) => string): string {
   if (v.art === 'angelegt') return 'angelegt';
   if (v.art === 'status') return `Status: ${statusText(v.status ?? 'offen')}`;
   if (v.art === 'notiz') return `Notiz: ${v.text ?? ''}`;
   if (v.art === 'geloescht') return 'gelöscht';
-  return 'wiederhergestellt';
+  if (v.art === 'wiederhergestellt') return 'wiederhergestellt';
+  if (v.art === 'zustaendig') {
+    const wer = (l: readonly number[] | undefined) =>
+      l?.length ? l.map(name).join(', ') : 'niemand';
+    return `Zuständig: ${wer(v.vorher)} → ${wer(v.nachher)}`;
+  }
+  // Eine neuere Fassung kennt vielleicht Einträge, die diese noch nicht kennt.
+  return 'geändert';
 }
 
 /** Ein Knopf mit Schalter – der Schalter ist nur Anzeige (`ui` Schalter), bedient wird der Knopf. */
@@ -80,6 +87,7 @@ export function ToDoFenster({
   gruppen,
   mitglieder,
   eintrag,
+  vorlage,
   herkunft,
   leitungIn,
   onSitzung,
@@ -94,6 +102,8 @@ export function ToDoFenster({
   mitglieder: ReadonlyMap<number, Person[] | 'verborgen'>;
   /** `null` = neues To-Do. */
   eintrag: ToDoEintrag | null;
+  /** Neues To-Do aus einer Board-Spalte (S7-3): Status bzw. Zuständige vorbelegt. */
+  vorlage?: { status?: AufgabenStatus; wer?: number[] };
   herkunft: Herkunft | null;
   leitungIn: (g: ProtokollGruppe) => boolean;
   onSitzung: (gruppe: number, schluessel: string) => void;
@@ -108,8 +118,10 @@ export function ToDoFenster({
   const [text, setText] = useState(a?.text ?? '');
   const [gruppeId, setGruppeId] = useState(eintrag?.gruppe.id ?? gruppen[0]?.id ?? 0);
   const [bis, setBis] = useState(a?.bis ?? '');
-  const [status, setStatus] = useState<AufgabenStatus>(a?.status ?? 'offen');
-  const [wer, setWer] = useState<ReadonlySet<number>>(() => new Set(a ? a.wer : []));
+  const [status, setStatus] = useState<AufgabenStatus>(a?.status ?? vorlage?.status ?? 'offen');
+  const [wer, setWer] = useState<ReadonlySet<number>>(
+    () => new Set(a ? a.wer : (vorlage?.wer ?? [])),
+  );
   const [extern, setExtern] = useState(a?.extern ?? '');
   const [notiz, setNotiz] = useState('');
   const [karteNotiz, setKarteNotiz] = useState(!!a?.karte?.notiz);
@@ -458,7 +470,8 @@ export function ToDoFenster({
               <li key={i}>
                 <time>{tagKurz(tagAusIso(v.am, zeitzone))}</time>
                 <span>
-                  <b>{v.von === ich.person ? ich.name : name(v.von)}</b> {verlaufText(v)}
+                  <b>{v.von === ich.person ? ich.name : name(v.von)}</b>{' '}
+                  {verlaufText(v, (p) => (p === ich.person ? ich.name : name(p)))}
                 </span>
               </li>
             ))}

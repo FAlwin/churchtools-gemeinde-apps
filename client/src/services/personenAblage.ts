@@ -9,14 +9,8 @@
  * Die Härtungen gegen verlorene Änderungen (Warteschlange, Wiederholen, Nachholen nach Neustart)
  * liegen unverändert in `annotations.ts`/`userSettings.ts` – ausgetauscht ist dort nur der Transportweg.
  */
-import { ApiError } from './api';
-import { ctAnfrage, ctDatei, KeinSpeicherRecht } from './ctRuntime';
-import { angemeldeteId } from '@ui/ct/ich';
-import {
-  erstellePersonenAblage,
-  type AblagePort,
-  type GeteilteAblage,
-} from '@shared/ct/personenAblage';
+import { ablagePort, _ablageIchVergessen } from '@ui/ct/ablagePort';
+import { erstellePersonenAblage, type GeteilteAblage } from '@shared/ct/personenAblage';
 import type { AnnotationText, GesehenerStand, PageAnnotation } from '@shared/types/index';
 
 export {
@@ -27,34 +21,8 @@ export {
   type GeteilteAblage,
 } from '@shared/ct/personenAblage';
 
-let ich: number | null = null;
-
-/** Der Browser-Anschluss – auch für das Teilen (`ctTeilen.ts`). */
-export const ablagePort: AblagePort = {
-  async meineId() {
-    if (ich !== null) return ich;
-    const body = await ctAnfrage<{ data?: unknown }>('/whoami');
-    // Niemand angemeldet (#381) → 401, unlesbar → 503 (#491): Nur ein 401 schaltet den
-    // Anmerkungs-Abgleich ab, ein Aussetzer von ChurchTools nicht.
-    const id = angemeldeteId(body?.data);
-    ich = id;
-    return id;
-  },
-  lesen: (pfad) => ctAnfrage<unknown>(pfad),
-  datei: async (fileUrl) => new Uint8Array(await (await ctDatei(fileUrl)).arrayBuffer()),
-  async hochladen(personId, name, inhalt, typ) {
-    const form = new FormData();
-    // Kopie: `Blob` verlangt einen Puffer vom Typ ArrayBuffer (TypeScript 5.7).
-    form.append('files[]', new Blob([new Uint8Array(inhalt)], { type: typ }), name);
-    await ctAnfrage(`/files/person/${personId}`, { method: 'POST', body: form });
-  },
-  async loeschen(fileId) {
-    await ctAnfrage(`/files/${fileId}`, { method: 'DELETE' });
-  },
-  fehler: (status, meldung) => new ApiError(status, meldung),
-  istKeinRecht: (e) => e instanceof KeinSpeicherRecht,
-  istNichtGefunden: (e) => e instanceof ApiError && e.status === 404,
-};
+/** Der Browser-Anschluss – auch für das Teilen (`ctTeilen.ts`); seit S7-3 in `ui/ct`, damit die Protokolle ihn teilen. */
+export { ablagePort };
 
 /** Die eine Ablage dieses Geräts. */
 export const eigeneAblage = erstellePersonenAblage();
@@ -63,7 +31,7 @@ const port = ablagePort;
 
 /** Nur für Tests: alles vergessen. */
 export function _zuruecksetzen(): void {
-  ich = null;
+  _ablageIchVergessen();
   ablage.zuruecksetzen();
 }
 

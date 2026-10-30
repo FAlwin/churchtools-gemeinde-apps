@@ -20,9 +20,12 @@ export interface VerlaufEintrag {
    * ohne ihn stand für sie „Person 1“ (S7-2a, Test-Instanz 30.10.2026). Ältere Einträge haben ihn nicht.
    */
   name?: string;
-  art: 'angelegt' | 'status' | 'notiz' | 'geloescht' | 'wiederhergestellt';
+  art: 'angelegt' | 'status' | 'notiz' | 'geloescht' | 'wiederhergestellt' | 'zustaendig';
   status?: AufgabenStatus;
   text?: string;
+  /** Bei `zustaendig` (S7-3): wer vorher und nachher zuständig war. */
+  vorher?: number[];
+  nachher?: number[];
 }
 
 export interface Aufgabe {
@@ -194,14 +197,35 @@ export interface ToDoAenderung {
 }
 
 /**
+ * **Zuständige setzen – mit Eintrag im Verlauf** (S7-3, Alwin 30.10.2026: „Zuständig“ überall in den Verlauf – im
+ * Fenster, beim Ziehen im Board und im Editor). Ändert sich nichts (gleiche Personen, andere Reihenfolge), bleibt das
+ * To-Do, wie es ist.
+ */
+export function zustaendigSetzen(
+  a: Aufgabe,
+  wer: readonly number[],
+  von: number,
+  am: string,
+): Aufgabe {
+  const nachher = [...new Set(wer)];
+  const gleich = nachher.length === a.wer.length && nachher.every((p) => a.wer.includes(p));
+  if (gleich) return a;
+  return {
+    ...a,
+    wer: nachher,
+    verlauf: [...a.verlauf, { am, von, art: 'zustaendig', vorher: [...a.wer], nachher }],
+  };
+}
+
+/**
  * **Ein To-Do bearbeiten** (Fenster „To-Do“, S7-2) – auf den **frisch gelesenen** Stand angewendet, und nur die Felder,
- * die im Fenster geändert wurden: Hat inzwischen jemand anderes etwas anderes geändert (etwa abgehakt), bleibt das. Status
- * und Notiz kommen in den Verlauf; Text, Wer, Bis wie am Aufgaben-Block ohne Eintrag.
+ * die im Fenster geändert wurden: Hat inzwischen jemand anderes etwas anderes geändert (etwa abgehakt), bleibt das. Status,
+ * Notiz und Zuständige (S7-3) kommen in den Verlauf; Text und Bis wie am Aufgaben-Block ohne Eintrag.
  */
 export function bearbeiten(a: Aufgabe, x: ToDoAenderung, von: number, am: string): Aufgabe {
   let n: Aufgabe = { ...a };
   if (x.text !== undefined && x.text.trim()) n.text = x.text.trim();
-  if (x.wer !== undefined) n.wer = [...new Set(x.wer)];
+  if (x.wer !== undefined) n = zustaendigSetzen(n, x.wer, von, am);
   if (x.extern !== undefined) n.extern = x.extern.trim();
   if (x.bis !== undefined) n.bis = x.bis || null;
   if (x.karte !== undefined) n.karte = { ...a.karte, ...x.karte };
@@ -227,8 +251,9 @@ export function verschieben(
     am: string;
   },
 ): { neu: Aufgabe; alt: Aufgabe } {
+  // Wer in der neuen Gruppe nicht Mitglied ist, fällt weg – auch das kommt in den Verlauf (eine Regel, S7-3).
   const neu = notizHinzufuegen(
-    { ...a, id: q.neueId, gruppe: q.gruppe, sitzung: null, wer: [...new Set(q.wer)] },
+    zustaendigSetzen({ ...a, id: q.neueId, gruppe: q.gruppe, sitzung: null }, q.wer, q.ich, q.am),
     `Aus „${q.von}“ hierher verschoben.`,
     q.ich,
     q.am,

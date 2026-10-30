@@ -27,7 +27,10 @@ vi.mock('../services/userSettings', () => ({
   resumePendingSettings: vi.fn(() => Promise.resolve()),
 }));
 
+vi.mock('../utils/personenWechsel', () => ({ personGeprueft: vi.fn(() => Promise.resolve(true)) }));
+
 const anno = await import('../services/annotations');
+const person = await import('../utils/personenWechsel');
 const settings = await import('../services/userSettings');
 const { useChartSync, useResyncAfterEditor, ANNO_REFRESH_MS, CONTENT_REFRESH_MS } =
   await import('./useChartSync');
@@ -76,6 +79,22 @@ describe('useChartSync – Erst-Sync', () => {
     const pull = anno.pullAnnotations as ReturnType<typeof vi.fn>;
     expect(resume.mock.invocationCallOrder[0]).toBeLessThan(migrate.mock.invocationCallOrder[0]);
     expect(migrate.mock.invocationCallOrder[0]).toBeLessThan(pull.mock.invocationCallOrder[0]);
+  });
+
+  it('Person nicht feststellbar (30.10.2026): nichts hochladen – sonst landet am geteilten Gerät Fremdes auf dem Konto', async () => {
+    (person.personGeprueft as ReturnType<typeof vi.fn>).mockResolvedValueOnce(false);
+    renderHook(() => useChartSync(args()));
+    await erstSyncAbwarten();
+    for (const f of [
+      anno.resumePendingAnnotations,
+      settings.resumePendingSettings,
+      anno.migrateLocalAnnotations,
+      settings.migrateLocalSettings,
+    ])
+      expect(f).not.toHaveBeenCalled();
+    // Holen darf es: Es schreibt nur den Stand des angemeldeten Kontos ins Gerät.
+    expect(anno.pullAnnotations).toHaveBeenCalled();
+    expect(settings.pullSettings).toHaveBeenCalled();
   });
 
   it('übernimmt danach die Einstellungen und meldet ein Signal an die Anzeige', async () => {

@@ -17,6 +17,7 @@ import {
   pullSettings,
   resumePendingSettings,
 } from '../services/userSettings';
+import { personGeprueft } from '../utils/personenWechsel';
 
 /**
  * Alles, was die Chart-Ansicht im Hintergrund aktuell hält (#314).
@@ -97,8 +98,12 @@ export function useChartSync({
       // Reihenfolge ist wichtig: Erst die beim letzten Mal NICHT durchgegangenen Uploads nachholen
       // (#256 Anmerkungen, #275 Einstellungen) und bestehende lokale Daten einmalig hochladen – DANN
       // den Server-Stand holen. Andernfalls überschreibt der Pull genau das, was noch hochzuladen ist.
-      await Promise.all([resumePendingAnnotations(), resumePendingSettings()]);
-      await Promise.all([migrateLocalAnnotations(), migrateLocalSettings()]);
+      // Hochladen erst, wenn feststeht, dass das Gerät zur angemeldeten Person gehört (30.10.2026): Sonst landete,
+      // was die vorige Person am geteilten Gerät nicht mehr hochladen konnte, auf dem Konto der jetzigen.
+      if (await personGeprueft()) {
+        await Promise.all([resumePendingAnnotations(), resumePendingSettings()]);
+        await Promise.all([migrateLocalAnnotations(), migrateLocalSettings()]);
+      }
       await Promise.all([pullAnnotations(ids), pullSettings(ids)]);
       live.current.onAfterInitialPull?.();
       if (cancelled) return;

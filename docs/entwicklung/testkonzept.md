@@ -340,7 +340,7 @@ im Versatz),
 gehen vor, leerer Wert zählt nicht, eine Version bestimmt den Kopf ihres eigenen Blatts),
 `songFilter` (Sortierung/Zeitfilter Lieder), `chartSettings`, `color`, `canvas`,
 `chunkReload` (Reload-Schleifenschutz nach Deploy, inkl. `isChunkLoadError` #176),
-`clearDeviceData` (Abmelde-Aufräumen), `reachability`/`api.reachability`, `offline.registry`,
+`clearDeviceData` (Abmelde-Aufräumen), `personenWechsel` (Gerät räumen, wenn ohne Abmelden die Person wechselt), `reachability`/`api.reachability`, `offline.registry`,
 `navStorage`, `dndAutoScroll`, `annotations.keys`, `queryClient` sowie die Komponenten
 `Section`/`Segment`. Dazu `queryClient.session401` – der **globale 401-Fänger** (#186): ein 401 aus
 einer Query **oder** Mutation löst den Sitzung-abgelaufen-Pfad aus, ein 502 (offline) bewusst nicht.

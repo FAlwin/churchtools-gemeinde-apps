@@ -35,6 +35,8 @@ const KEYS = {
   teilenMitAnmerkungen: 'worship:teilen-anmerkungen',
   /** Liedansicht: blättern oder scrollen (#551) – je Gerät, am Handy will man es vielleicht anders als am iPad. */
   liedansicht: 'worship:liedansicht',
+  /** Für wen dieses Gerät zuletzt lief – erkennt den Personenwechsel ohne Abmelden (30.10.2026, `personenWechsel.ts`). */
+  letztePerson: 'worship:letzte-person',
 } as const;
 
 type PrefKey = keyof typeof KEYS;
@@ -119,6 +121,20 @@ export function setAbwesenheitenAusgeblendet(ids: string[]): void {
  */
 export function getAbmeldenAusstehend(): boolean {
   return read('abmeldenAusstehend') === '1';
+}
+
+/**
+ * **Für wen lief dieses Gerät zuletzt?** Wie `abmeldenAusstehend` ein Gerätezustand im `worship:`-Bereich, damit er
+ * das Aufräumen übersteht – er muss ja gerade dann noch wissen, wer vorher dran war. Kein Personenbezug außer der
+ * Nummer.
+ */
+export function getLetztePerson(): number | null {
+  const n = Number(read('letztePerson'));
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+export function setLetztePerson(id: number): void {
+  write('letztePerson', String(id));
 }
 
 export function setAbmeldenAusstehend(ausstehend: boolean): void {

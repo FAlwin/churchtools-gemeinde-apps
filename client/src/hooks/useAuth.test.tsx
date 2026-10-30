@@ -27,6 +27,7 @@ vi.mock('../utils/clearDeviceData', () => ({ clearDeviceData: () => aufraeumen()
 const api = await import('../services/churchtoolsApi');
 const { useAuth } = await import('./useAuth');
 const { getAbmeldenAusstehend, setAbmeldenAusstehend } = await import('../utils/devicePrefs');
+const { personNeuPruefen } = await import('../utils/personenWechsel');
 
 function wrapper({ children }: { children: ReactNode }) {
   // retry aus: sonst wartet der Test auf die Wiederholungen der Query.
@@ -37,6 +38,7 @@ function wrapper({ children }: { children: ReactNode }) {
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
+  personNeuPruefen(); // die Prüfung gilt je Seite – hier je Test
 });
 
 describe('useAuth.statusUnknown (#270)', () => {
@@ -176,5 +178,36 @@ describe('useAuth.logout – ohne Netz (#403)', () => {
 
     expect(getAbmeldenAusstehend()).toBe(false);
     await waitFor(() => expect(result.current.isAuthenticated).toBe(true));
+  });
+});
+
+/** Personenwechsel am geteilten Gerät (30.10.2026, `utils/personenWechsel.ts`) – hier: WANN geprüft wird. */
+describe('useAuth – Personenwechsel', () => {
+  const als = (id: number) => ({
+    authenticated: true,
+    user: { id, firstName: `P${id}`, lastName: 'Test' },
+  });
+
+  it('gleich beim Start: lief das Gerät zuletzt für jemand anderen, wird es geräumt', async () => {
+    localStorage.setItem('worship:letzte-person', '1');
+    vi.mocked(api.getMe).mockResolvedValue(als(19));
+    renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(aufraeumen).toHaveBeenCalledTimes(1));
+    expect(localStorage.getItem('worship:letzte-person')).toBe('19');
+  });
+
+  it('neue Anmeldung in derselben Seite (Server-App): die neue Person wird erneut geprüft', async () => {
+    vi.mocked(api.getMe).mockResolvedValue(als(1));
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(localStorage.getItem('worship:letzte-person')).toBe('1'));
+    expect(aufraeumen).not.toHaveBeenCalled();
+
+    vi.mocked(api.getMe).mockResolvedValue(als(19));
+    vi.mocked(api.login).mockResolvedValue(als(19));
+    await act(async () => {
+      await result.current.login('b@b.de', 'x');
+    });
+    await waitFor(() => expect(localStorage.getItem('worship:letzte-person')).toBe('19'));
+    expect(aufraeumen).toHaveBeenCalledTimes(1);
   });
 });

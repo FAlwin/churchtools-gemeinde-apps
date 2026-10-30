@@ -324,9 +324,11 @@ button.text {
   opacity: 0.35;
 }
 
-// Das Bild unter dem Finger/Zeiger beim Ziehen.
+// Das Bild unter dem Finger/Zeiger beim Ziehen – so groß wie die gezogene Karte: Die Hülle von `DragOverlay` hat schon
+// deren Breite und Höhe. Eine feste Breite (vorher 320 px) machte das Bild am iPhone breiter als die Spalte, und der
+// Inhalt brach anders um (Alwin 30.10.2026).
 .ziehBild {
-  width: min(320px, 80vw);
+  width: 100%;
   border: 1px solid var(--border);
   border-radius: var(--r-card);
   background: var(--surface2);

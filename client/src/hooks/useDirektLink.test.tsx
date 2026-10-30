@@ -23,6 +23,13 @@ describe('useDirektLink', () => {
     expect(result.current).toEqual({ terminId: 5, punktId: 9 });
   });
 
+  it('nur ein Termin (Knopf „Musik-App“ im Dienstplaner): ohne Punkt', () => {
+    hashSetzen('#/termin/151?am=2026-11-01');
+    const { result } = renderHook(() => useDirektLink());
+    expect(result.current).toEqual({ terminId: 151, am: '2026-11-01' });
+    expect(window.location.hash).toBe('');
+  });
+
   it('ohne Direktlink: null, die Adresse bleibt', () => {
     hashSetzen('#/termine');
     const { result } = renderHook(() => useDirektLink());

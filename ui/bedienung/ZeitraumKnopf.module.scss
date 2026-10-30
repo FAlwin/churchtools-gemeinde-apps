@@ -10,7 +10,11 @@
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  min-width: 170px;
+  // Feste Breite (Alwin, 30.10.2026): Mit der Mindestbreite wuchs der Knopf mit seinem Text – von „5 Termine · passend
+  // zur Fensterbreite“ zu „6 Termine“ schrumpfte er um 39 px, und ＋ › daneben rutschten beim mehrmaligen Klicken unter
+  // dem Finger weg. 244 px fassen den längsten gemessenen Text (238 px); Längeres wird mit „…“ gekürzt.
+  width: 244px;
+  max-width: 100%;
   // So hoch wie die Knöpfe daneben (‹ ＋ ＋ ›, Filter) – eine Zahl für alle (Alwin, 28.10.2026: vorher 40 px, „größer
   // als andere – nicht schön“). Zweizeilig passt es knapp hinein.
   height: var(--knopf-hoehe);
@@ -31,6 +35,9 @@
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
 
     svg {
       color: var(--text2);
@@ -38,9 +45,12 @@
   }
 
   small {
+    max-width: 100%;
+    overflow: hidden;
     font-size: 11.5px;
     color: var(--text2);
     white-space: nowrap;
+    text-overflow: ellipsis;
   }
 }
 

@@ -8,12 +8,16 @@
  * Zeitzone der Gemeinde) ist dabei, weil die Musik-App nur ein Fenster von einer Woche zurück bis sechs Wochen voraus
  * lädt – liegt der Termin außerhalb, holt sie genau diesen Tag nach (gefunden in der Test-Instanz, 28.10.2026: ein
  * Termin von vor zehn Tagen landete in der Übersicht). Ein Link ohne Tag bleibt gültig.
+ *
+ * **Ohne Punkt** (`#/termin/<Termin-ID>?am=…`, E6-Abschluss, Alwin 30.10.2026): der Ablauf dieses Termins – für den
+ * Knopf „Musik-App“ in der Termin-Ansicht, der vorher nur die App öffnete.
  */
-const MUSTER = /^#\/termin\/(\d+)\/punkt\/(\d+)(?:\?am=(\d{4}-\d{2}-\d{2}))?$/;
+const MUSTER = /^#\/termin\/(\d+)(?:\/punkt\/(\d+))?(?:\?am=(\d{4}-\d{2}-\d{2}))?$/;
 
 export interface DirektLink {
   terminId: number;
-  punktId: number;
+  /** Der Punkt, zu dessen Lied das Blatt springt – fehlt: der Ablauf des Termins. */
+  punktId?: number;
   /** Tag des Termins (`JJJJ-MM-TT`) – fehlt bei einem Link ohne `am`. */
   am?: string;
 }
@@ -21,15 +25,20 @@ export interface DirektLink {
 export function musikAppDirektLink(
   appAdresse: string,
   terminId: number,
-  punktId: number,
+  punktId: number | null,
   am?: string,
 ): string {
-  return `${appAdresse.replace(/#.*$/, '')}#/termin/${terminId}/punkt/${punktId}${am ? `?am=${am}` : ''}`;
+  const punkt = punktId === null ? '' : `/punkt/${punktId}`;
+  return `${appAdresse.replace(/#.*$/, '')}#/termin/${terminId}${punkt}${am ? `?am=${am}` : ''}`;
 }
 
 /** Termin, Punkt und Tag aus `location.hash` – `null`, wenn die Adresse kein Direktlink ist. */
 export function direktLinkAus(hash: string): DirektLink | null {
   const m = MUSTER.exec(hash);
   if (!m) return null;
-  return { terminId: Number(m[1]), punktId: Number(m[2]), ...(m[3] ? { am: m[3] } : {}) };
+  return {
+    terminId: Number(m[1]),
+    ...(m[2] ? { punktId: Number(m[2]) } : {}),
+    ...(m[3] ? { am: m[3] } : {}),
+  };
 }

@@ -70,7 +70,7 @@ object {
 .ct-extension #root[data-vollbild] {
   position: fixed;
   inset: 0;
-  z-index: 2500;
+  z-index: var(--ebene-vollflaeche);
 }
 
 button {

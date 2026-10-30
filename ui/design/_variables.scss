@@ -85,6 +85,15 @@ html[data-theme='dark'] {
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
+// ── Ebene über ChurchTools ───────────────────────────────────────────
+:root {
+  // Was die ganze Fläche deckt (Vollbild der Musik-App, Präsentation im Organigramm, „Ablauf zeigen“ im Dienstplaner),
+  // liegt über der Leiste von ChurchTools (dort z-index 1040, gemessen 30.10.2026) – aber UNTER der Einführung
+  // (`Coachmarks`, 3000). Bis zum 30.10. stand die Zahl an jeder Stelle selbst; „Ablauf zeigen“ lag mit 1000 darunter
+  // und die Leiste schnitt die Uhr ab.
+  --ebene-vollflaeche: 2500;
+}
+
 // ── Abstand oben: Leisten und Inhalt ohne Leiste ────────────────────
 :root {
   // Safe-Area oben, mindestens 20px – nur noch Grundlage für den iPad-Wert von `--inhalt-pad-top` unten. Kein Kopf liest

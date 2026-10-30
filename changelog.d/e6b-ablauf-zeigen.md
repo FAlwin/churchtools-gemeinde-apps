@@ -19,4 +19,7 @@
 
 - `useWakeLock` nach `ui/bedienung/` (Musik-App und Dienstplaner), neu `ui/bedienung/useVollbild.ts` – das Organigramm
   nutzt ihn für die Präsentation statt eigener Vollbild-Logik. `tagLang` in `shared/ct/datum.ts`.
+- Gemeinsamer Wert `--ebene-vollflaeche` (2500) für alles, was die ganze Fläche über der Leiste von ChurchTools deckt
+  (App-Vollbild, Präsentation, „Ablauf zeigen“) – vorher stand die Zahl an jeder Stelle selbst, und die Anzeige lag mit
+  1000 unter der Leiste (1040, in der Test-Instanz gefunden). Wächter `ui/design/ebeneVollflaeche.test.ts`.
 - Neuer Testfall TF-ABLAUF-13.

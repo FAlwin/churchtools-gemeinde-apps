@@ -12,3 +12,5 @@
 
 - „Im Gerät merken“ (`leseImGeraet`/`merkeImGeraet`) liegt jetzt in `ui/bedienung/geraet.ts` statt nur im Dienstplaner.
 - Ältere Erledigte sind bewusst **kein** Filter: Sonst stünde am Filter-Knopf ab Werk eine „1“.
+- Mitglieder sehen die Mitgliederliste oft nicht – bei ihren eigenen To-Dos steht trotzdem ihr Name (beim Prüfen in der
+  Test-Instanz gefunden: dort stand „eine weitere Person“).

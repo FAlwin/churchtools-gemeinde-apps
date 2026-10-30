@@ -245,6 +245,16 @@ describe('ToDos', () => {
     expect(texte().join(' | ')).toMatch(/Extern.*Hausmeister Müller/);
   });
 
+  it('Mitgliederliste verborgen: die eigenen To-Dos zeigen trotzdem den eigenen Namen', async () => {
+    // Gefunden in der Test-Instanz 30.10.2026: bei Spikes eigenen To-Dos stand „eine weitere Person“.
+    vi.mocked(M.ladeGruppenMitglieder).mockResolvedValue('verborgen');
+    zeige();
+    await screen.findByText('Beamer-Angebote einholen');
+    const zeile = screen.getByText('Beamer-Angebote einholen').closest('li')!;
+    expect(zeile.textContent).toMatch(/Alwin/);
+    expect(zeile.textContent).not.toMatch(/weitere/);
+  });
+
   it('nur Mitglied (nirgends Leitung): Hinweis, was man sieht; Filter ohne „Andere“', async () => {
     zeige([]);
     await screen.findByText(/deine eigenen To-Dos und die, für die noch niemand zuständig ist/);

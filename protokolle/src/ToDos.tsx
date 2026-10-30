@@ -9,7 +9,7 @@ import { Segment } from '@ui/bedienung/Segment';
 import { leseImGeraet, merkeImGeraet, texte } from '@ui/bedienung/geraet';
 import { tagKurz } from '@shared/ct/datum';
 import { heuteImKalender } from '@shared/ct/zeit';
-import type { Person } from '@shared/organigramm/mitglieder';
+import { initialenAus, type Person } from '@shared/organigramm/mitglieder';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import {
   istUeberfaellig,
@@ -154,6 +154,17 @@ export function ToDos({
   };
 
   const ue = zustand.art === 'fertig' ? zustand.uebersicht : [];
+  // Mitglieder dürfen die Mitgliederliste oft nicht sehen (`verborgen`) – sich selbst kennt man trotzdem (beim Prüfen in
+  // der Test-Instanz 30.10.2026 gefunden: bei Spikes eigenen To-Dos stand „eine weitere Person“).
+  const bekannte: ReadonlyMap<number, Person> = personen.has(ich.person)
+    ? personen
+    : new Map([
+        ...personen,
+        [
+          ich.person,
+          { id: ich.person, name: ich.name, bild: null, initialen: initialenAus(ich.name) },
+        ],
+      ]);
   const leitungIn = (g: ProtokollGruppe) =>
     g.protokolle !== null && schreibbar.includes(g.protokolle);
   const sichtbar: ToDoEintrag[] = ue.flatMap((u) =>
@@ -168,8 +179,7 @@ export function ToDos({
   );
   const alteErledigte = gefiltert.filter((e) => langeErledigt(e.aufgabe, heute)).length;
   const gezeigt = aeltere ? gefiltert : gefiltert.filter((e) => !langeErledigt(e.aufgabe, heute));
-  const namen = new Map([...personen].map(([id, p]) => [id, p.name]));
-  if (!namen.has(ich.person)) namen.set(ich.person, ich.name);
+  const namen = new Map([...bekannte].map(([id, p]) => [id, p.name]));
   const bereiche = einteilen(gezeigt, { nach, heute, ich: ich.person, namen });
   const mehrereGruppen = new Set(gezeigt.map((e) => e.gruppe.id)).size > 1;
   const irgendwoLeitung = gruppen.some(leitungIn);
@@ -268,7 +278,7 @@ export function ToDos({
               u && u.gruppe.mitarbeit !== null ? (neu) => statusAendern(e, neu) : undefined
             }
           />
-          <Wer a={a} personen={personen} />
+          <Wer a={a} personen={bekannte} />
           {a.bis && (
             <span className={ueber ? styles.ueberfaellig : styles.frist}>
               {ueber ? 'überfällig · ' : 'bis '}

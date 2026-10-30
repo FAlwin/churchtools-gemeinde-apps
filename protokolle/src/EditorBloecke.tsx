@@ -4,6 +4,8 @@ import { tagPunkt } from '@shared/ct/datum';
 import { textAus } from '@shared/protokolle/dokument';
 import {
   istUeberfaellig,
+  nameAusListe,
+  nameImVerlauf,
   neueAufgabe,
   statusSetzen,
   vorabAnwenden,
@@ -134,7 +136,9 @@ export function AufgabeBlock({
   const mitglieder = k?.mitglieder;
   // `Array.isArray` macht aus einer schreibgeschützten Liste `any[]` – deshalb so.
   const liste = mitglieder && mitglieder !== 'verborgen' ? mitglieder : null;
-  const nameVon = (p: number) => liste?.find((m) => m.id === p)?.name ?? `Person ${p}`;
+  // Mitglieder sehen die Liste oft nicht – dann ich selbst bzw. der Name aus dem Verlauf (S7-2a), erst danach die Zahl.
+  const ausListe = k ? nameAusListe(k.mitglieder, k.ich) : () => null;
+  const nameVon = (p: number) => ausListe(p) ?? (a && nameImVerlauf(a, p)) ?? `Person ${p}`;
   const wer = [
     ...(sicht?.wer ?? []).map(nameVon),
     ...(sicht?.extern ? [`${sicht.extern} (extern)`] : []),
@@ -148,7 +152,8 @@ export function AufgabeBlock({
           status={status}
           onWechsel={
             mitText && k.statusAenderbar
-              ? (neu) => aendern((x) => statusSetzen(x, neu, k.ich, new Date().toISOString()))
+              ? (neu) =>
+                  aendern((x) => statusSetzen(x, neu, k.ich.person, new Date().toISOString()))
               : undefined
           }
         />

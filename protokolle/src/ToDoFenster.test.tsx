@@ -105,7 +105,7 @@ describe('ToDoFenster', () => {
       { modul: 24, kategorie: 61 },
       'b',
       { bis: '2026-11-20' },
-      1,
+      { person: 1, name: 'Alwin' },
     ]);
   });
 
@@ -143,7 +143,10 @@ describe('ToDoFenster', () => {
     expect(W.toDoLoeschen).not.toHaveBeenCalled();
     fireEvent.click(screen.getAllByRole('button', { name: 'Löschen' }).at(-1)!);
     await waitFor(() => expect(onFertig).toHaveBeenCalled());
-    expect(W.toDoLoeschen).toHaveBeenCalledWith({ modul: 24, kategorie: 61 }, 'b', 1);
+    expect(W.toDoLoeschen).toHaveBeenCalledWith({ modul: 24, kategorie: 61 }, 'b', {
+      person: 1,
+      name: 'Alwin',
+    });
   });
 
   it('Gruppe wechseln: verschieben – Zuständige, die dort kein Mitglied sind, fallen weg', async () => {
@@ -183,6 +186,33 @@ describe('ToDoFenster', () => {
     expect(screen.getByRole('note').textContent).toMatch(/siehst du dieses To-Do nicht mehr/);
   });
 
+  const verborgen = (eintrag: ToDoEintrag) =>
+    render(
+      <ToDoFenster
+        ich={{ person: 1, name: 'Alwin' }}
+        modul={24}
+        gruppen={[LT]}
+        mitglieder={new Map([[11, 'verborgen']])}
+        eintrag={eintrag}
+        herkunft={null}
+        leitungIn={() => false}
+        onFertig={vi.fn()}
+        onSitzung={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+  it('Mitgliederliste verborgen, Name im Verlauf gestempelt: „Johann“ statt „Person 23“ (S7-2a, Test-Instanz)', () => {
+    const mitName = {
+      ...BEAMER,
+      verlauf: BEAMER.verlauf.map((v) => (v.von === 23 ? { ...v, name: 'Johann' } : v)),
+    };
+    verborgen({ aufgabe: mitName, gruppe: LT });
+    expect(screen.getByText(/Außerdem zuständig: Johann – das bleibt so/)).toBeTruthy();
+    expect(screen.getByText('Johann').closest('li')!.textContent).toMatch(/Status: in Arbeit/);
+    expect(screen.queryByText(/Person 23/)).toBeNull();
+  });
+
   it('Mitgliederliste verborgen: ich selbst bin wählbar, andere Zuständige bleiben und werden genannt', () => {
     render(
       <ToDoFenster
@@ -199,6 +229,11 @@ describe('ToDoFenster', () => {
       />,
     );
     expect(screen.getByRole('checkbox', { name: /Alwin/ })).toBeTruthy();
-    expect(screen.getByText(/Außerdem zuständig: Person 23 – das bleibt so/)).toBeTruthy();
+    expect(
+      screen.getByText(/Außerdem zuständig: eine weitere Person – das bleibt so/),
+    ).toBeTruthy();
+    // Schrieb er nie mit Namen, steht im Verlauf „jemand“ – nie eine Personennummer.
+    expect(screen.queryByText(/Person 23/)).toBeNull();
+    expect(screen.getByText('jemand')).toBeTruthy();
   });
 });

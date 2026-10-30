@@ -15,6 +15,11 @@ export interface VerlaufEintrag {
   /** ISO-Zeit. */
   am: string;
   von: number;
+  /**
+   * Vorname dessen, der schrieb – beim Schreiben gestempelt (`mitNamen`). Mitglieder sehen die Mitgliederliste oft nicht;
+   * ohne ihn stand für sie „Person 1“ (S7-2a, Test-Instanz 30.10.2026). Ältere Einträge haben ihn nicht.
+   */
+  name?: string;
   art: 'angelegt' | 'status' | 'notiz' | 'geloescht' | 'wiederhergestellt';
   status?: AufgabenStatus;
   text?: string;
@@ -116,6 +121,64 @@ export function letzteNotiz(a: Aufgabe): VerlaufEintrag | null {
   for (let i = a.verlauf.length - 1; i >= 0; i--)
     if (a.verlauf[i].art === 'notiz') return a.verlauf[i];
   return null;
+}
+
+/**
+ * **Den eigenen Namen an die eigenen Verlaufseinträge** – geschieht in den beiden Schreibtoren
+ * (`protokolle/src/aufgabenSchreiben.ts`), also für jeden Weg, auf dem ein To-Do geschrieben wird. Den eigenen Namen kennt
+ * jeder; fremde Einträge bleiben, wie sie sind.
+ */
+export function mitNamen(a: Aufgabe, ich: { person: number; name: string }): Aufgabe {
+  const name = ich.name.trim().split(' ')[0];
+  if (!name || !a.verlauf.some((v) => v.von === ich.person && !v.name)) return a;
+  return {
+    ...a,
+    verlauf: a.verlauf.map((v) => (v.von === ich.person && !v.name ? { ...v, name } : v)),
+  };
+}
+
+/** **Wie heißt `p`?** Laut Verlauf dieses To-Dos (der jüngste gestempelte Name) – `null`, wenn er dort nie schrieb. */
+export function nameImVerlauf(a: Pick<Aufgabe, 'verlauf'>, p: number): string | null {
+  for (let i = a.verlauf.length - 1; i >= 0; i--) {
+    const v = a.verlauf[i];
+    if (v.von === p && v.name) return v.name;
+  }
+  return null;
+}
+
+/**
+ * **Wer bei diesem To-Do schrieb oder zuständig ist** – erst die Mitgliederliste (`liste`, Vornamen), dann der im Verlauf
+ * gestempelte Name, sonst `null`. Eine Regel für Karte, Fenster und Editor.
+ */
+export function nameFuer(
+  a: Pick<Aufgabe, 'verlauf'>,
+  p: number,
+  liste: ReadonlyMap<number, string>,
+): string | null {
+  return liste.get(p)?.split(' ')[0] ?? nameImVerlauf(a, p);
+}
+
+/**
+ * **Der Name aus der Mitgliederliste** – ist sie verborgen (Mitglieder sehen sie oft nicht) oder noch nicht geladen,
+ * kennt man wenigstens sich selbst. Für Editor und feste Punkte; danach kommt `nameImVerlauf`.
+ */
+export function nameAusListe(
+  liste: readonly { id: number; name: string }[] | 'verborgen' | null,
+  ich: { person: number; name: string },
+): (p: number) => string | null {
+  return (p) =>
+    (liste && liste !== 'verborgen' ? liste.find((m) => m.id === p)?.name : undefined) ??
+    (p === ich.person ? ich.name : null);
+}
+
+/**
+ * **Zuständige, die man nicht kennt** (Mitgliederliste verborgen): mit Namen, wenn sie im Verlauf je schrieben, sonst
+ * gezählt – „eine weitere Person“, „2 weitere“. Karte und Fenster sagen es gleich.
+ */
+export function weitereZustaendige(a: Pick<Aufgabe, 'verlauf'>, ids: readonly number[]): string[] {
+  const namen = ids.flatMap((p) => nameImVerlauf(a, p) ?? []);
+  const rest = ids.length - namen.length;
+  return [...namen, ...(rest ? [rest === 1 ? 'eine weitere Person' : `${rest} weitere`] : [])];
 }
 
 /** Was das Fenster „To-Do“ ändert – nur, was der Nutzer angefasst hat (`undefined` = bleibt, wie es frisch gelesen ist). */

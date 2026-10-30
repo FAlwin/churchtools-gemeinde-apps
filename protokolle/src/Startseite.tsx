@@ -48,7 +48,7 @@ const zeitzone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 export interface StartseiteProps {
   modul: number;
   /** Personen-ID – für „meine“ To-Dos und „du hast zugesagt“. */
-  ich: number;
+  ich: { person: number; name: string };
   gruppen: ProtokollGruppe[];
   /** Kategorien, in denen man schreiben darf (`Start.schreibbar`) – dort geht „Neues Protokoll“ (K2a). */
   schreibbar?: readonly number[];
@@ -116,7 +116,9 @@ export function Startseite({
   );
   const jetzt = anstehend.find((n) => tagAusIso(n.sitzung.beginn, zeitzone) === heute) ?? null;
   const naechste = anstehend.filter((n) => n !== jetzt);
-  const meine = ue.flatMap((u) => meineOffenen(u.aufgaben, ich, heute).map((a) => ({ a, u })));
+  const meine = ue.flatMap((u) =>
+    meineOffenen(u.aufgaben, ich.person, heute).map((a) => ({ a, u })),
+  );
 
   const ladeTeil =
     zustand.art === 'laedt' ? (
@@ -236,7 +238,7 @@ export function Startseite({
             (naechste.length ? (
               <ul className={styles.liste}>
                 {naechste.map((n) => {
-                  const antwort = meineAntwort(n.sitzung, ich);
+                  const antwort = meineAntwort(n.sitzung, ich.person);
                   return (
                     <li key={`${n.gruppe.id}:${n.sitzung.schluessel}`}>
                       <button
@@ -310,7 +312,7 @@ export function Startseite({
         <ProtokollNeu
           modul={modul}
           gruppen={schreibGruppen}
-          ich={{ person: ich }}
+          ich={ich}
           zeitzone={zeitzone}
           onAngelegt={(g, id) => {
             setNeu(false);

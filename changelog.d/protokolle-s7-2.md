@@ -10,6 +10,10 @@
 - To-Dos aus einem **Protokoll-Entwurf**: Text, Gruppe und Löschen ändern sich dort (das Nachziehen aus dem Fenster
   folgt mit S7-2b).
 
+- **Namen statt „Person 1“** (Test-Instanz 30.10.2026): Mitglieder sehen die Mitgliederliste oft nicht und sahen
+  deshalb im Fenster, auf der Karte, im Editor und bei „Nach Person“ nur Nummern. Jetzt speichert, wer schreibt, seinen
+  Vornamen am Verlauf mit; man selbst ist immer bekannt. Wer nie schrieb: „eine weitere Person“ bzw. „jemand“.
+
 ### Intern
 
 - Ein Schreibweg für To-Dos aus der Übersicht (`protokolle/src/todoSchreiben.ts`) – auch die Status-Marke nutzt ihn.
@@ -17,3 +21,5 @@
   nirgends, mit Hinweis.
 - Hover-Farben der To-Do-Übersicht (Status-Marke, Karten, Links) nur mit Maus – S7-1 kam nach dem Wächter aus #776 auf
   `main` und hatte drei ungeschützte Regeln; der Wächter `ui/design/hoverNurMaus.test.ts` war dort deshalb rot.
+- Ein Ort für den Namen im Verlauf: `mitNamen` in den beiden Schreibtoren (`aufgabenSchreiben`, `aufgabeAendern`),
+  angezeigt über `nameFuer`/`nameAusListe`/`weitereZustaendige` – Karte, Fenster, Editor und fester Punkt gleich.

@@ -36,7 +36,7 @@ export function ProtokollBeginnen({
   mitarbeit: number | null;
   protokolle: readonly Sitzung[];
   teile: readonly ProtokollTeil[];
-  ich: { person: number };
+  ich: { person: number; name: string };
   zeitzone: string;
   /** Begonnen (oder schon da) – die Sitzung wird mit diesem Protokoll geöffnet. */
   onBegonnen: (sitzung: string) => void;
@@ -65,7 +65,7 @@ export function ProtokollBeginnen({
       gruppe: gruppeId,
       sitzung,
       dokument: anfangsDokument(a, () => crypto.randomUUID()),
-      von: ich.person,
+      von: ich,
     }).then(
       (r) => {
         setLaeuft(false);

@@ -298,6 +298,29 @@ describe('ToDos', () => {
     expect(zeile.textContent).not.toMatch(/weitere/);
   });
 
+  it('Mitgliederliste verborgen: Namen aus dem Verlauf – auf der Karte (Wer, Notiz) und nach Person (S7-2a)', async () => {
+    vi.mocked(M.ladeGruppenMitglieder).mockResolvedValue('verborgen');
+    const zuZweit = aufgabe('Zu zweit', 11, {
+      wer: [1, 23],
+      karte: { notiz: true },
+      verlauf: [
+        { am: tageZurueck(2), von: 1, art: 'angelegt' },
+        { am: tageZurueck(2), von: 23, name: 'Johann', art: 'status', status: 'arbeit' },
+        // Maria ist nicht zuständig – ihr Name kommt nur über den Notiz-Eintrag selbst.
+        { am: tageZurueck(1), von: 31, name: 'Maria', art: 'notiz', text: 'Angebot da' },
+      ],
+    });
+    vi.mocked(L.ladeUebersicht).mockResolvedValue(uebersicht([zuZweit]));
+    zeige();
+    await screen.findByText('Zu zweit');
+    const zeile = screen.getByText('Zu zweit').closest('li')!;
+    expect(zeile.textContent).toMatch(/Alwin, Johann/);
+    expect(zeile.textContent).toMatch(/Angebot da – Maria/);
+    fireEvent.click(screen.getByRole('button', { name: 'Nach Person' }));
+    expect(screen.getByRole('heading', { name: /^Johann/ })).toBeTruthy();
+    expect(screen.queryByText(/Person 23/)).toBeNull();
+  });
+
   it('nur Mitglied (nirgends Leitung): Hinweis, was man sieht; Filter ohne „Andere“', async () => {
     zeige([]);
     await screen.findByText(/deine eigenen To-Dos und die, für die noch niemand zuständig ist/);
@@ -325,7 +348,7 @@ describe('Startseite: „Alle anzeigen“', () => {
     render(
       <Startseite
         modul={24}
-        ich={1}
+        ich={{ person: 1, name: 'Alwin' }}
         gruppen={[LT]}
         onSitzung={vi.fn()}
         onGruppe={vi.fn()}

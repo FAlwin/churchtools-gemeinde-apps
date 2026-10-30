@@ -15,6 +15,9 @@ import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import {
   istUeberfaellig,
   letzteNotiz,
+  nameFuer,
+  nameImVerlauf,
+  weitereZustaendige,
   type Aufgabe,
   type AufgabenStatus,
 } from '@shared/protokolle/aufgaben';
@@ -56,17 +59,22 @@ const AUS_VORGABE: Aus = { gruppen: [], zustaendig: [] };
 
 const gross = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
-/** Wer zuständig ist: Bilder und Vornamen; Externe als Name; wen man nicht kennt (Mitglieder verborgen), als Zahl. */
+/**
+ * Wer zuständig ist: Bilder und Vornamen; Externe als Name; wen man nicht kennt (Mitglieder verborgen), mit dem Namen aus
+ * dem Verlauf oder als Zahl (`weitereZustaendige`).
+ */
 function Wer({ a, personen }: { a: Aufgabe; personen: ReadonlyMap<number, Person> }) {
   const bekannt = a.wer.flatMap((p) => {
     const x = personen.get(p);
     return x ? [x] : [];
   });
-  const fremd = a.wer.length - bekannt.length;
   const namen = [
     ...bekannt.map((p) => p.name.split(' ')[0]),
     ...(a.extern.trim() ? [a.extern.trim()] : []),
-    ...(fremd ? [`${fremd === 1 ? 'eine weitere Person' : `${fremd} weitere`}`] : []),
+    ...weitereZustaendige(
+      a,
+      a.wer.filter((p) => !personen.has(p)),
+    ),
   ];
   if (!namen.length) return <span className={styles.niemand}>noch niemand zuständig</span>;
   return (
@@ -199,6 +207,12 @@ export function ToDos({
   const alteErledigte = gefiltert.filter((e) => langeErledigt(e.aufgabe, heute)).length;
   const gezeigt = aeltere ? gefiltert : gefiltert.filter((e) => !langeErledigt(e.aufgabe, heute));
   const namen = new Map([...bekannte].map(([id, p]) => [id, p.name]));
+  // Wen die Liste nicht kennt, kennt vielleicht der Verlauf („nach Person“ zeigte sonst „Person 1“).
+  for (const e of sichtbar)
+    for (const p of e.aufgabe.wer) {
+      const n = namen.has(p) ? null : nameImVerlauf(e.aufgabe, p);
+      if (n) namen.set(p, n);
+    }
   const bereiche = einteilen(gezeigt, { nach, heute, ich: ich.person, namen });
   const mehrereGruppen = new Set(gezeigt.map((e) => e.gruppe.id)).size > 1;
   const irgendwoLeitung = gruppen.some(leitungIn);
@@ -228,7 +242,7 @@ export function ToDos({
     const id = e.aufgabe.id;
     setHinweis(null);
     setLaeuft((s) => new Set(s).add(id));
-    toDoAendern({ modul, kategorie: u.gruppe.mitarbeit }, id, { status: neu }, ich.person)
+    toDoAendern({ modul, kategorie: u.gruppe.mitarbeit }, id, { status: neu }, ich)
       .then(
         (gespeichert) =>
           setZustand((z) =>
@@ -315,7 +329,7 @@ export function ToDos({
                   –{' '}
                   {notiz.von === ich.person
                     ? ich.name
-                    : (bekannte.get(notiz.von)?.name.split(' ')[0] ?? `Person ${notiz.von}`)}
+                    : (nameFuer(a, notiz.von, namen) ?? 'jemand')}
                 </span>
               </span>
             ) : (

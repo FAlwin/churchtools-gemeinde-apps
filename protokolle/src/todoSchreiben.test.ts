@@ -10,6 +10,8 @@ const LT = 61; // „Mitarbeit“ Leitungsteam
 const JG = 65; // „Mitarbeit“ Jugend
 const ort = (kategorie: number) => ({ modul: MODUL, kategorie });
 const AM = '2026-10-30T10:00:00Z';
+const ALWIN = { person: 1, name: 'Alwin' };
+const SPIKE = { person: 19, name: 'Spike' };
 const ablegen = (kat: number, a: Aufgabe) =>
   werteVon(ct, kat).push({ id: ct.naechste++, value: JSON.stringify(a) });
 const lies = (kat: number): Aufgabe[] =>
@@ -35,14 +37,21 @@ afterEach(nachbauEnde);
 describe('toDoAendern', () => {
   it('nur angefasste Felder – was inzwischen jemand anderes geändert hat, bleibt', async () => {
     ablegen(LT, statusSetzen(BEAMER, 'erledigt', 19, AM)); // Spike hat inzwischen abgehakt
-    const n = await toDoAendern(ort(LT), 'b', { bis: '2026-11-20', notiz: 'Termin verschoben' }, 1);
+    const n = await toDoAendern(
+      ort(LT),
+      'b',
+      { bis: '2026-11-20', notiz: 'Termin verschoben' },
+      ALWIN,
+    );
     expect(n).toMatchObject({ status: 'erledigt', bis: '2026-11-20' });
     expect(lies(LT)[0]).toEqual(n);
     expect(n.verlauf.at(-1)).toMatchObject({ art: 'notiz', text: 'Termin verschoben', von: 1 });
   });
 
   it('To-Do inzwischen weg: genau das wird gesagt, nichts angelegt', async () => {
-    const e: unknown = await toDoAendern(ort(LT), 'b', { bis: null }, 1).catch((x: unknown) => x);
+    const e: unknown = await toDoAendern(ort(LT), 'b', { bis: null }, ALWIN).catch(
+      (x: unknown) => x,
+    );
     expect(fehlerMeldung(e).text).toMatch(/gibt es nicht mehr/);
     expect(lies(LT)).toEqual([]);
   });
@@ -61,7 +70,7 @@ describe('toDoAnlegen', () => {
     karte: { notiz: true },
   };
   it('ohne Sitzung, ohne Zuständige, mit Status, Notiz und Karte', async () => {
-    const n = await toDoAnlegen(ort(LT), q, 19);
+    const n = await toDoAnlegen(ort(LT), q, SPIKE);
     expect(n).toMatchObject({
       id: 'n1',
       sitzung: null,
@@ -74,8 +83,8 @@ describe('toDoAnlegen', () => {
     expect(lies(LT)).toHaveLength(1);
   });
   it('zweiter Versuch mit derselben ID (unklare Antwort): kein zweites To-Do', async () => {
-    await toDoAnlegen(ort(LT), q, 19);
-    await toDoAnlegen(ort(LT), q, 19);
+    await toDoAnlegen(ort(LT), q, SPIKE);
+    await toDoAnlegen(ort(LT), q, SPIKE);
     expect(lies(LT)).toHaveLength(1);
   });
 });
@@ -83,7 +92,7 @@ describe('toDoAnlegen', () => {
 describe('toDoLoeschen', () => {
   it('nur als gelöscht vermerkt – der Wert bleibt', async () => {
     ablegen(LT, BEAMER);
-    await toDoLoeschen(ort(LT), 'b', 1);
+    await toDoLoeschen(ort(LT), 'b', ALWIN);
     expect(lies(LT)[0]).toMatchObject({ id: 'b', geloescht: true });
     expect(ct.aufrufe.some((a) => a.startsWith('DELETE'))).toBe(false);
   });
@@ -98,7 +107,7 @@ describe('toDoVerschieben', () => {
       neueId: 'n2',
       x,
       wer: [19],
-      ich: 1,
+      ich: ALWIN,
     });
 
   it('neu in der anderen Gruppe (ohne Sitzung, Verlauf zieht mit), altes als gelöscht vermerkt', async () => {

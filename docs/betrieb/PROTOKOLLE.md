@@ -78,7 +78,10 @@ anzeigen“** – für alle gespeichert. **„Neues To-Do“** legt eins ohne Pr
 Gruppe wählen **verschiebt** das To-Do: neu in der anderen Gruppe, das alte wird als gelöscht vermerkt; die Verbindung
 zur Sitzung entfällt. Steht ein To-Do noch in einem **Protokoll-Entwurf**, sind Text, Gruppe und Löschen dort zu
 ändern (das Protokoll führt). Wer als Mitglied sich selbst nicht einträgt, sieht das To-Do danach nicht mehr – das
-Fenster sagt es vorher. Gespeichert wird nur, was im Fenster geändert wurde.
+Fenster sagt es vorher. Gespeichert wird nur, was im Fenster geändert wurde. **Namen für Mitglieder:** Mitglieder dürfen die
+Mitgliederliste oft nicht lesen. Deshalb speichert jeder, der ein To-Do schreibt, seinen Vornamen an seinen
+Verlaufseinträgen mit (`name`). Angezeigt wird erst die Mitgliederliste, dann man selbst, dann dieser Name; wer nie
+schrieb, erscheint als „eine weitere Person“, im Verlauf als „jemand“.
 
 **Protokoll beginnen (Leitung, S5-1):** Eine Sitzung ohne Protokoll (Termin mit Besprechungsanfrage oder
 Gruppentreffen) zeigt „Protokoll beginnen“. Im Fenster: eine Vorlage, „Wie letztes Mal“ (Tagesordnung des letzten
@@ -196,7 +199,7 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit später sc
   `SitzungFestlegen.tsx`, Kasten `NaechsteSitzung.tsx`. Gemessen: `protokolle-planung/docs/messung-s5-2-2026-10-28.md`.
 - To-Do-Übersicht (S7): Regel `shared/protokolle/uebersicht.ts` (`sichtbarFuer`, `einteilen`, `langeErledigt`), Seite
   `protokolle/src/ToDos.tsx`, Marke `StatusMarke.tsx`, Fenster `ToDoFenster.tsx`; Regeln `bearbeiten`, `verschieben`, `letzteNotiz` in
-  `shared/protokolle/aufgaben.ts`; geschrieben wird über `protokolle/src/todoSchreiben.ts` (`aufgabeAendern`; neue IDs
+  `shared/protokolle/aufgaben.ts`; geschrieben wird über `protokolle/src/todoSchreiben.ts` (`aufgabeAendern`; beide Schreibtore stempeln den eigenen Vornamen per `mitNamen`; neue IDs
   entstehen beim Öffnen des Fensters – ein zweiter Versuch legt nichts doppelt an). Einteilung und Filter
   merkt `ui/bedienung/geraet.ts` im Gerät (vorher nur im Dienstplaner).
 - Sitzung bearbeiten (K2b): Regel `shared/protokolle/bearbeiten.ts` (`aenderungVon`, `mailsVon`/`mailsSerie`,

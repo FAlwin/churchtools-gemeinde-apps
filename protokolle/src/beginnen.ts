@@ -21,7 +21,7 @@ import {
 } from '@shared/protokolle/speicher';
 import { NichtUebernommen } from '@ui/ct/fehler';
 import { modulPort } from '@ui/ct/modulPort';
-import { aufgabenSchreiben, type MitarbeitOrt } from './aufgabenSchreiben';
+import { aufgabenSchreiben, type MitarbeitOrt, type Schreibend } from './aufgabenSchreiben';
 
 const VERWEIGERT = 'Du darfst in dieser Gruppe keine Protokolle anlegen.';
 
@@ -39,7 +39,8 @@ export async function protokollBeginnen(q: {
   gruppe: number;
   sitzung: Pick<Sitzung, 'titel' | 'beginn' | 'termin' | 'treffen' | 'kopf'>;
   dokument: readonly Block[];
-  von: number;
+  /** Wer beginnt – Person und Vorname (der Name kommt an die To-Do-Verläufe, `mitNamen`). */
+  von: Schreibend;
   neueId?: () => string;
   jetzt?: Date;
 }): Promise<BeginnErgebnis> {
@@ -99,15 +100,18 @@ export async function protokollBeginnen(q: {
   const eintraege = ableiten(q.dokument).aufgaben;
   if (!eintraege.length) return { art: 'ok', sitzung, hinweis: null };
   try {
-    await aufgabenSchreiben(q.mitarbeit, (vorhanden) =>
-      aufgabenAbgleich({
-        eintraege,
-        vorhanden,
-        gruppe: q.gruppe,
-        sitzung,
-        von: q.von,
-        am: jetzt.toISOString(),
-      }),
+    await aufgabenSchreiben(
+      q.mitarbeit,
+      (vorhanden) =>
+        aufgabenAbgleich({
+          eintraege,
+          vorhanden,
+          gruppe: q.gruppe,
+          sitzung,
+          von: q.von.person,
+          am: jetzt.toISOString(),
+        }),
+      q.von,
     );
     return { art: 'ok', sitzung, hinweis: null };
   } catch {

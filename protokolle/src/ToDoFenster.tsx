@@ -11,7 +11,9 @@ import { tagKurz } from '@shared/ct/datum';
 import { initialenAus, type Person } from '@shared/organigramm/mitglieder';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import {
+  nameFuer,
   statusText,
+  weitereZustaendige,
   type AufgabenStatus,
   type ToDoAenderung,
   type VerlaufEintrag,
@@ -119,7 +121,8 @@ export function ToDoFenster({
   const kennt = new Set(bekannt.map((p) => p.id));
   // Zuständige, die das Fenster nicht als Mitglied kennt (Liste verborgen), bleiben zuständig.
   const weitere = [...wer].filter((p) => !kennt.has(p));
-  const name = (p: number) => bekannt.find((x) => x.id === p)?.name.split(' ')[0] ?? `Person ${p}`;
+  const listeNamen = new Map(bekannt.map((p) => [p.id, p.name]));
+  const name = (p: number) => nameFuer(a ?? { verlauf: [] }, p, listeNamen) ?? 'jemand';
   const verschoben = !!a && gruppeId !== eintrag?.gruppe.id;
 
   // Frage 3: Mitglieder sehen nur eigene und solche ohne Zuständigen.
@@ -177,7 +180,7 @@ export function ToDoFenster({
             notiz,
             karte: { notiz: karteNotiz, sitzung: karteSitzung },
           },
-          ich.person,
+          ich,
         ).then(() => null),
       );
     const alt = gruppen.find((g) => g.id === eintrag?.gruppe.id);
@@ -191,18 +194,18 @@ export function ToDoFenster({
           neueId,
           x,
           wer: [...wer],
-          ich: ich.person,
+          ich,
         }).then((r) => r.hinweis),
       );
     }
-    ausfuehren(() => toDoAendern(ort, a.id, aenderung(), ich.person).then(() => null));
+    ausfuehren(() => toDoAendern(ort, a.id, aenderung(), ich).then(() => null));
   };
 
   const loeschen = () => {
     if (!a || !gruppe || gruppe.mitarbeit === null) return;
     const ort = { modul, kategorie: gruppe.mitarbeit };
     setLoeschenFragen(false);
-    ausfuehren(() => toDoLoeschen(ort, a.id, ich.person).then(() => null));
+    ausfuehren(() => toDoLoeschen(ort, a.id, ich).then(() => null));
   };
 
   if (loeschenFragen)
@@ -322,7 +325,8 @@ export function ToDoFenster({
         />
         {weitere.length > 0 && (
           <p className={felder.leise}>
-            Außerdem zuständig: {weitere.map(name).join(', ')} – das bleibt so.
+            Außerdem zuständig: {weitereZustaendige(a ?? { verlauf: [] }, weitere).join(', ')} – das
+            bleibt so.
           </p>
         )}
         <input

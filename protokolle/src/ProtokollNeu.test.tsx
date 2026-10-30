@@ -81,7 +81,7 @@ const zeige = (gruppen = GRUPPEN.slice(0, 1)) => {
     <ProtokollNeu
       modul={24}
       gruppen={gruppen}
-      ich={{ person: 1 }}
+      ich={{ person: 1, name: 'Alwin' }}
       zeitzone={ZONE}
       jetzt={JETZT}
       onAngelegt={onAngelegt}
@@ -138,7 +138,7 @@ describe('ProtokollNeu', () => {
       kategorie: 60,
       mitarbeit: { modul: 24, kategorie: 61 },
       gruppe: 11,
-      von: 1,
+      von: { person: 1, name: 'Alwin' },
       sitzung: {
         titel: 'Leitungssitzung',
         beginn: '2026-11-11T18:30:00Z',
@@ -210,7 +210,7 @@ describe('Einstieg auf der Startseite', () => {
     render(
       <Startseite
         modul={24}
-        ich={1}
+        ich={{ person: 1, name: 'Alwin' }}
         gruppen={GRUPPEN}
         schreibbar={schreibbar}
         onSitzung={vi.fn()}

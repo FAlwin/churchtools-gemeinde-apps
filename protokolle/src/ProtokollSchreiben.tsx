@@ -15,6 +15,7 @@ import {
 import type { Sitzung } from '@shared/protokolle/sitzungen';
 import {
   aufgabenAbgleich,
+  nameAusListe,
   neueAufgabe,
   statusSetzen,
   type Aufgabe,
@@ -189,15 +190,18 @@ export function ProtokollSchreiben({
                 mOrt
                   ? async () =>
                       setTodos(
-                        await aufgabenSchreiben(mOrt, (vorhanden) =>
-                          aufgabenAbgleich({
-                            eintraege: ableiten(d).aufgaben,
-                            vorhanden,
-                            gruppe: gruppeId,
-                            sitzung: ort.sitzung,
-                            von: schreiber.person,
-                            am: new Date().toISOString(),
-                          }),
+                        await aufgabenSchreiben(
+                          mOrt,
+                          (vorhanden) =>
+                            aufgabenAbgleich({
+                              eintraege: ableiten(d).aufgaben,
+                              vorhanden,
+                              gruppe: gruppeId,
+                              sitzung: ort.sitzung,
+                              von: schreiber.person,
+                              am: new Date().toISOString(),
+                            }),
+                          schreiber,
                         ),
                       )
                   : undefined,
@@ -255,7 +259,7 @@ export function ProtokollSchreiben({
       setTodos(new Map(vorher).set(id, f(vorher.get(id) ?? anlegen())));
       kette.current = kette.current
         .catch(() => undefined)
-        .then(() => aufgabeAendern(mOrt, id, f, anlegen))
+        .then(() => aufgabeAendern(mOrt, id, f, anlegen, schreiber))
         .then(
           (a) => setTodos(new Map(todosRef.current).set(id, a)),
           (e: unknown) => {
@@ -267,7 +271,7 @@ export function ProtokollSchreiben({
           },
         );
     },
-    [mOrt, gruppeId, ort.sitzung, schreiber.person, setTodos],
+    [mOrt, gruppeId, ort.sitzung, schreiber, setTodos],
   );
 
   const fremdeAufgabe = useCallback(
@@ -286,13 +290,8 @@ export function ProtokollSchreiben({
       ),
     [todoAendern, schreiber.person],
   );
-  const nameVon = useCallback(
-    (p: number) =>
-      mitglieder && mitglieder !== 'verborgen'
-        ? (mitglieder.find((m) => m.id === p)?.name ?? null)
-        : null,
-    [mitglieder],
-  );
+  // Sich selbst kennt man auch, wenn die Mitgliederliste verborgen ist (S7-2a).
+  const nameVon = useMemo(() => nameAusListe(mitglieder, schreiber), [mitglieder, schreiber]);
 
   // Beim Verlassen der Seite (anderer Reiter, ChurchTools-Menü): noch speichern und die Sperre freigeben – ohne zu
   // warten. Klappt es nicht, verfällt die Sperre nach `SPERRE_MINUTEN`.
@@ -486,7 +485,7 @@ export function ProtokollSchreiben({
         mitglieder,
         bearbeitbar,
         statusAenderbar: true,
-        ich: schreiber.person,
+        ich: schreiber,
         aendern: todoAendern,
       }
     : null;

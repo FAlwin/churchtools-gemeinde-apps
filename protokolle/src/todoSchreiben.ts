@@ -16,7 +16,12 @@ import {
   type ToDoAenderung,
 } from '@shared/protokolle/aufgaben';
 import { ApiError } from '@ui/ct/fehler';
-import { aufgabeAendern, aufgabenWerte, type MitarbeitOrt } from './aufgabenSchreiben';
+import {
+  aufgabeAendern,
+  aufgabenWerte,
+  type MitarbeitOrt,
+  type Schreibend,
+} from './aufgabenSchreiben';
 
 const WEG = 'Dieses To-Do gibt es nicht mehr – bitte neu laden.';
 // 409 statt einfachem Fehler: `fehlerMeldung` zeigt den Text, statt „ChurchTools antwortet gerade nicht“.
@@ -30,9 +35,9 @@ export function toDoAendern(
   ort: MitarbeitOrt,
   id: string,
   x: ToDoAenderung,
-  ich: number,
+  ich: Schreibend,
 ): Promise<Aufgabe> {
-  return aufgabeAendern(ort, id, (a) => bearbeiten(a, x, ich, jetzt()), fehlt);
+  return aufgabeAendern(ort, id, (a) => bearbeiten(a, x, ich.person, jetzt()), fehlt, ich);
 }
 
 /** Neu anlegen (ohne Sitzung). Gibt es `neueId` schon (zweiter Versuch), bleibt es, wie es ist. */
@@ -49,7 +54,7 @@ export function toDoAnlegen(
     notiz: string;
     karte: { notiz?: boolean; sitzung?: boolean };
   },
-  ich: number,
+  ich: Schreibend,
 ): Promise<Aufgabe> {
   const am = jetzt();
   const neu = bearbeiten(
@@ -61,11 +66,11 @@ export function toDoAnlegen(
       wer: q.wer,
       extern: q.extern,
       bis: q.bis,
-      von: ich,
+      von: ich.person,
       am,
     }),
     { status: q.status, notiz: q.notiz, karte: q.karte },
-    ich,
+    ich.person,
     am,
   );
   return aufgabeAendern(
@@ -73,12 +78,13 @@ export function toDoAnlegen(
     q.neueId,
     (a) => a,
     () => neu,
+    ich,
   );
 }
 
 /** Als gelöscht vermerken – nie hart gelöscht (wer in „Mitarbeit“ schreibt, dürfte sonst jeden Wert löschen). */
-export async function toDoLoeschen(ort: MitarbeitOrt, id: string, ich: number): Promise<void> {
-  await aufgabeAendern(ort, id, (a) => alsGeloescht(a, ich, jetzt()), fehlt);
+export async function toDoLoeschen(ort: MitarbeitOrt, id: string, ich: Schreibend): Promise<void> {
+  await aufgabeAendern(ort, id, (a) => alsGeloescht(a, ich.person, jetzt()), fehlt, ich);
 }
 
 /**
@@ -93,7 +99,7 @@ export async function toDoVerschieben(q: {
   neueId: string;
   x: ToDoAenderung;
   wer: number[];
-  ich: number;
+  ich: Schreibend;
 }): Promise<{ hinweis: string | null }> {
   const am = jetzt();
   const wohin = {
@@ -102,16 +108,17 @@ export async function toDoVerschieben(q: {
     von: q.von.name,
     nach: q.nach.name,
     wer: q.wer,
-    ich: q.ich,
+    ich: q.ich.person,
     am,
   };
   const a = (await aufgabenWerte(q.von.ort)).find((w) => w.aufgabe.id === q.id)?.aufgabe ?? fehlt();
-  const { neu } = verschieben(bearbeiten(a, q.x, q.ich, am), wohin);
+  const { neu } = verschieben(bearbeiten(a, q.x, q.ich.person, am), wohin);
   await aufgabeAendern(
     q.nach.ort,
     q.neueId,
     (v) => v,
     () => neu,
+    q.ich,
   );
   try {
     await aufgabeAendern(
@@ -120,6 +127,7 @@ export async function toDoVerschieben(q: {
       // Auf den frisch gelesenen Stand – dieselbe Regel wie oben (`verschieben(…).alt`); schon gelöscht = zweiter Versuch.
       (f) => (f.geloescht ? f : verschieben(f, wohin).alt),
       fehlt,
+      q.ich,
     );
     return { hinweis: null };
   } catch {

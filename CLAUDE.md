@@ -847,6 +847,13 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **v2.38.0 (30.10.2026) = Lied-Editor + ChurchTools-Look.** Lied-Editor L1–L6 und „Nur Text“ (#790); Seitenköpfe
+  S/S2, Liedblatt B0–B5 (Kopf mit Lied-Leiste, Fußleiste #799, Scroll-Modus #802, Einführung #805), Lied-Menü als
+  Fenster (#779), „zuletzt gesungen“ (#792), Abwesenheiten wie Dienstplaner (#760); iPhone: unterer Rand gemessen
+  (#769), Editor-Kopf unter dem Band (#786), Hover nur mit Maus (#776); CI prüft auch die Testfälle (#803).
+  Einführung: Texte nachgezogen, nicht neu gezeigt (`chart-v9`, Alwin 28.10.). Abnahme in der Test-Instanz am
+  30.10.2026 (ZIP 30.10c). Dazu aus dem anderen Teil des Repos Dienstplaner E6, Anmeldungen A8–A9/U1–U2, Protokolle
+  S2–S7/K1–K2, Organigramm O2–O7b.
 - **v2.37.0 (22.10.2026) = Rückmeldung des Musik-Bereichsleiters + Dev-Stammtisch-Fragen.** Flow-Zeile
   `{flow:}` (#606), Scroll-Modus mit einer langen Seite je Lied (#607) und gemeinsamen Anmerkungen (#614), Malen
   darauf (#608), Lasso (#615), Notizen unter dem Liedende (#626), Pedal Teil für Teil mit `----` (#609),

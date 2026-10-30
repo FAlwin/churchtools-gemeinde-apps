@@ -99,13 +99,20 @@ Reiter ist die Zahl seiner Zeilen. Suche nach Name oder Anmelde-Nr. Ein Tipp auf
 (auf, ab, wieder nach Anmeldetag). Die **Summenzeile** unten: Anmeldungen, Personen mit Platz (+ Warteliste), Betrag
 gesamt/offen/eingegangen (dieselbe Zählung wie die Kacheln), bei Fragen je Art – Zahl: Summe, Ja/Nein: Anzahl „Ja“,
 Auswahl: Anzahl je Antwort, Text: Anzahl ausgefüllt; Fragen zählen nur Anmeldungen mit Platz (im Reiter Warteliste die
-Wartenden). Kopf und Summe bleiben beim Scrollen stehen, der Name links. Lange Antworten sind gekürzt – ganz stehen sie
+Wartenden). Kopf und Summe bleiben beim Scrollen stehen, die angehefteten Spalten links (ohne Wahl der Name). Lange Antworten sind gekürzt – ganz stehen sie
 beim Darüberfahren und im Fenster. **„Je Person“** (U2-2) zeigt eine Zeile pro Person: Vor- und Nachname, Status,
 Alter, jede Frage der Person, „Angemeldet von“, Anmelde-Nr., dazu Betrag und Bezahlt der Anmeldung (einen Preis je
 Person kennt ChurchTools nicht). Die Spalten kommen aus demselben Katalog wie die Druckliste. Die Summen zählen Personen
 mit Platz; Betrag und Bezahlt zählen jede Anmeldung einmal; das Alter steht in den Altersstufen der Preise (ohne
-Altersstufen keine Summe). Die Wahl gilt in allen Reitern außer „Abgesagt“ – Absagen sind ohnehin je Person. Spalten
-wählen und anheften kommt mit U2-3. Ein Klick in eine Zeile öffnet alle
+Altersstufen keine Summe). Die Wahl gilt in allen Reitern außer „Abgesagt“ – Absagen sind ohnehin je Person.
+**„Spalten“** (U2-3) wählt je Ansicht (je Anmeldung, je Person), welche Spalten in welcher Reihenfolge stehen: Häkchen
+zeigt eine Spalte, Pfeile ordnen, die Stecknadel heftet sie links an – mehrere sind möglich, in der Reihenfolge des
+Anheftens; am Handy bleibt nur die erste stehen. Je Person stehen auch die Fragen der Anmeldung zur Wahl (ohne Wahl
+ausgeblendet, ebenso das Geburtsdatum); ihre Summe zählt jede Anmeldung einmal. Die Wahl gilt fürs ganze Team und steht
+wie die Wahl der Druckliste in den Einstellungen der Veranstaltung – gespeichert wird nur, was von der Vorgabe abweicht,
+und nur von dem, der die Veranstaltung bearbeiten darf (alle anderen können umstellen, bis die Seite neu lädt).
+Gelöschte Fragen fallen aus der Wahl, neue stehen hinten; „Wie zu Beginn“ holt die Vorgabe zurück. Eine Kopie der
+Veranstaltung übernimmt die Wahl. Ein Klick in eine Zeile öffnet alle
 Antworten – was für die ganze Anmeldung gilt (Kontakt, Erziehungsberechtigte, Unterschrift als Bild), steht einmal
 oben. **Abgesagt** kommt aus dem Verlauf von ChurchTools: Er behält auch die Antworten der Abgesagten, deshalb gehen
 Betrag oder Unterschrift nicht verloren, wenn die erste Person einer Anmeldung absagt. Sehen kann die Liste, wer in

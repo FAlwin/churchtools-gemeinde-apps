@@ -145,7 +145,7 @@ export function ToDos({
     eintrag: ToDoEintrag | null;
     vorlage?: { status?: AufgabenStatus; wer?: number[] };
   } | null>(null);
-  const [einst, setzen] = useToDoEinstellungen();
+  const [einst, setzen] = useToDoEinstellungen(ich.person);
   const { ansicht, nach, aus, sortierung, reihenfolge } = einst;
   const [frage, setFrage] = useState<Frage | null>(null);
   const [aeltere, setAeltere] = useState(false);

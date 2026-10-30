@@ -4,7 +4,7 @@ import { act, renderHook } from '@testing-library/react';
 import type { DatenDatei } from '@shared/ct/personenAblage';
 import {
   ABGLEICH_NACH_MS,
-  MERK,
+  merkSchluessel,
   useToDoEinstellungen,
   type Abgleich,
 } from './useToDoEinstellungen';
@@ -18,7 +18,8 @@ const datei = (felder: Record<string, [unknown, number]>): DatenDatei => ({
   v: 1,
   felder: Object.fromEntries(Object.entries(felder).map(([k, [w, t]]) => [k, { w, t }])),
 });
-const imGeraet = () => JSON.parse(localStorage.getItem(MERK) ?? 'null') as DatenDatei | null;
+const imGeraet = () =>
+  JSON.parse(localStorage.getItem(merkSchluessel(1)) ?? 'null') as DatenDatei | null;
 /** Eine ChurchTools-Attrappe, die zusammenführt wie die echte (jüngere gewinnt) und sich den Stand merkt. */
 function dort(start: DatenDatei = datei({})) {
   let stand = start;
@@ -45,9 +46,9 @@ afterEach(() => vi.useRealTimers());
 
 describe('useToDoEinstellungen', () => {
   it('beim Öffnen: Gerät sofort, dann aus ChurchTools zusammengeführt (das iPad hat inzwischen „Board“ gewählt)', async () => {
-    localStorage.setItem(MERK, JSON.stringify(datei({ nach: ['person', 500] })));
+    localStorage.setItem(merkSchluessel(1), JSON.stringify(datei({ nach: ['person', 500] })));
     const d = dort(datei({ ansicht: ['board', 900] }));
-    const { result } = renderHook(() => useToDoEinstellungen({ jetzt, abgleich: d.fn }));
+    const { result } = renderHook(() => useToDoEinstellungen(1, { jetzt, abgleich: d.fn }));
     expect(result.current[0]).toMatchObject({ nach: 'person', ansicht: 'liste' });
     await fertig();
     expect(result.current[0]).toMatchObject({ nach: 'person', ansicht: 'board' });
@@ -57,7 +58,7 @@ describe('useToDoEinstellungen', () => {
 
   it('Änderung: sofort im Gerät, nach ChurchTools erst nach der Pause – viele Änderungen ein Abgleich', async () => {
     const d = dort();
-    const { result } = renderHook(() => useToDoEinstellungen({ jetzt, abgleich: d.fn }));
+    const { result } = renderHook(() => useToDoEinstellungen(1, { jetzt, abgleich: d.fn }));
     await fertig();
     d.fn.mockClear();
     act(() => result.current[1]({ sortierung: 'alpha' }));
@@ -74,7 +75,7 @@ describe('useToDoEinstellungen', () => {
   it('ChurchTools antwortet nicht: alles bleibt im Gerät; die nächste Änderung holt es nach', async () => {
     const d = dort();
     d.fn.mockRejectedValueOnce(new Error('504')).mockRejectedValueOnce(new Error('504'));
-    const { result } = renderHook(() => useToDoEinstellungen({ jetzt, abgleich: d.fn }));
+    const { result } = renderHook(() => useToDoEinstellungen(1, { jetzt, abgleich: d.fn }));
     await fertig();
     act(() => result.current[1]({ sortierung: 'bis' }));
     await act(() => vi.advanceTimersByTimeAsync(ABGLEICH_NACH_MS));
@@ -92,7 +93,7 @@ describe('useToDoEinstellungen', () => {
     d.fn.mockImplementationOnce(
       (lokal) => new Promise((ok) => (loslassen = () => ok(echt(lokal)))),
     );
-    const { result } = renderHook(() => useToDoEinstellungen({ jetzt, abgleich: d.fn }));
+    const { result } = renderHook(() => useToDoEinstellungen(1, { jetzt, abgleich: d.fn }));
     uhr = 2000;
     act(() => result.current[1]({ sortierung: 'manuell' }));
     await act(async () => {
@@ -106,7 +107,7 @@ describe('useToDoEinstellungen', () => {
 
   it('Seite weggelegt: Ausstehendes sofort, nicht erst nach der Pause', async () => {
     const d = dort();
-    const { result } = renderHook(() => useToDoEinstellungen({ jetzt, abgleich: d.fn }));
+    const { result } = renderHook(() => useToDoEinstellungen(1, { jetzt, abgleich: d.fn }));
     await fertig();
     d.fn.mockClear();
     act(() => result.current[1]({ ansicht: 'board' }));
@@ -126,10 +127,29 @@ describe('useToDoEinstellungen', () => {
       JSON.stringify({ gruppen: ['194'], zustaendig: [] }),
     );
     const d = dort(datei({ nach: ['status', 5] }));
-    const { result } = renderHook(() => useToDoEinstellungen({ jetzt, abgleich: d.fn }));
+    const { result } = renderHook(() => useToDoEinstellungen(1, { jetzt, abgleich: d.fn }));
     expect(result.current[0]).toMatchObject({ nach: 'person', aus: { gruppen: ['194'] } });
     await fertig();
     expect(result.current[0].nach).toBe('status');
     expect(result.current[0].aus.gruppen).toEqual(['194']);
+  });
+
+  it('je Person: Spike im selben Browser bekommt nicht Alwins Einstellungen (Fund 30.10., Simulation/geteiltes iPad)', async () => {
+    localStorage.setItem(merkSchluessel(1), JSON.stringify(datei({ ansicht: ['board', 500] })));
+    const spike = dort();
+    const { result } = renderHook(() => useToDoEinstellungen(19, { jetzt, abgleich: spike.fn }));
+    expect(result.current[0].ansicht).toBe('liste');
+    await fertig();
+    expect(spike.stand().felder).toEqual({});
+    expect(JSON.parse(localStorage.getItem(merkSchluessel(1))!).felder.ansicht.w).toBe('board');
+  });
+
+  it('die Übernahme aus S7-1 geschieht einmal und wird weggeräumt – die nächste Person erbt nichts', () => {
+    localStorage.setItem('protokolle.todos.nach', JSON.stringify('person'));
+    const d = dort();
+    renderHook(() => useToDoEinstellungen(1, { jetzt, abgleich: d.fn }));
+    expect(localStorage.getItem('protokolle.todos.nach')).toBeNull();
+    const { result } = renderHook(() => useToDoEinstellungen(19, { jetzt, abgleich: d.fn }));
+    expect(result.current[0].nach).toBe('status');
   });
 });

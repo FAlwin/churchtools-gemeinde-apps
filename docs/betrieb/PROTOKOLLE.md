@@ -83,7 +83,7 @@ Dringlichkeit (Vorgabe) · Bis-Datum (Erledigte nach „erledigt am“) · Alpha
 einer Spalte per Ziehen (auch in der Liste); die Reihenfolge gilt nur für einen selbst, neue To-Dos kommen ans Ende.
 **Gemerkt je Benutzer, auf allen Geräten:** Ansicht, Einteilung, Filter, Sortierung und die eigene Reihenfolge liegen in
 `protokolle_einstellungen.json` am eigenen ChurchTools-Konto (andere können die Datei lesen – drin stehen nur Ansicht und
-To-Do-Kennungen). Im Gerät liegt ein Spiegel für den sofortigen Start; ohne Netz bleibt alles dort und wird nachgeholt.
+To-Do-Kennungen). Im Gerät liegt **je Person** ein Spiegel für den sofortigen Start; ohne Netz bleibt alles dort und wird nachgeholt.
 
 **Fenster „To-Do“ (S7-2a):** Ein Tipp auf den Text öffnet das To-Do: Text, Gruppe, Bis, Status, Zuständige (auch
 niemand – dann ist es ein To-Do der Gruppe – oder jemand außerhalb der Gruppe, nur als Name), neue Notiz, Verlauf und

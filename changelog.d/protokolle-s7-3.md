@@ -13,6 +13,9 @@
 - Beim Prüfen in der Test-Instanz gefunden und behoben: Ein To-Do mit zwei Zuständigen steht nach Person in zwei
   Spalten; Umordnen in der einen trug die Person der anderen aus (gleiche Zieh-Kennung). Jetzt je Spalte eindeutig.
 
+- Ebenfalls in der Test-Instanz gefunden: Der Spiegel der Einstellungen im Gerät galt je Browser, nicht je Person – an
+  einem geteilten Gerät bekam die zweite Person die Einstellungen der ersten (und in ihre Datei). Jetzt je Person.
+
 ### Intern
 
 - `shared/ct/personenAblage.ts` verallgemeinert (Präfix/Dateiname als Parameter, `holeDaten`, `mischeEin`) statt einer

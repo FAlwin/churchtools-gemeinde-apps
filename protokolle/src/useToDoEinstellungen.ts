@@ -10,7 +10,11 @@
  * - **Vorübergehend ist nicht ungültig:** Scheitert der Abgleich (Netz, ChurchTools, fehlendes Recht), bleibt alles im
  *   Gerät und wird beim nächsten Anlass nachgeholt. Verworfen wird nie etwas.
  *
- * Übernimmt einmal, was S7-1 im Gerät gemerkt hat (Einteilung, Filter).
+ * - **Je Person:** Der Spiegel trägt die Person im Namen. Ein Spiegel nur je Browser gab im Test (30.10.2026, Simulation
+ *   im selben Browser – wie an einem geteilten iPad) Alwins Einstellungen an Spike weiter und schrieb sie in Spikes Datei.
+ *
+ * Übernimmt **einmal**, was S7-1 im Gerät gemerkt hat (Einteilung, Filter), und räumt es danach weg – sonst erbte die
+ * nächste Person an diesem Gerät es auch.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { leseImGeraet, merkeImGeraet } from '@ui/bedienung/geraet';
@@ -18,9 +22,20 @@ import { ablagePort } from '@ui/ct/ablagePort';
 import { erstellePersonenAblage, mische, type DatenDatei } from '@shared/ct/personenAblage';
 import { pruefen, VORGABE, type ToDoEinstellungen } from './todoEinstellungen';
 
-export const MERK = 'protokolle.todos.einstellungen';
+/** Der Spiegel im Gerät – je Person. */
+export const merkSchluessel = (person: number) => `protokolle.todos.einstellungen.${person}`;
 const ALT_NACH = 'protokolle.todos.nach';
 const ALT_AUS = 'protokolle.todos.aus';
+/** Ein Test-Bau vom 30.10.2026 merkte ohne Person – nicht mehr lesen, nur wegräumen. */
+const OHNE_PERSON = 'protokolle.todos.einstellungen';
+
+function wegraeumen(schluessel: string): void {
+  try {
+    localStorage.removeItem(schluessel);
+  } catch {
+    // Kein Speicher (privater Modus) – dann gibt es auch nichts wegzuräumen.
+  }
+}
 /** Wie lange nach der letzten Änderung gewartet wird, bevor sie nach ChurchTools geht (Ziehen erzeugt viele). */
 export const ABGLEICH_NACH_MS = 1500;
 
@@ -45,8 +60,8 @@ export function werteAus(s: DatenDatei): ToDoEinstellungen {
   return w;
 }
 
-function spiegelLesen(): DatenDatei {
-  const s = leseImGeraet<DatenDatei | null>(MERK, null, (x) => {
+function spiegelLesen(person: number): DatenDatei {
+  const s = leseImGeraet<DatenDatei | null>(merkSchluessel(person), null, (x) => {
     const o = x as Partial<DatenDatei> | null;
     return o?.v === 1 && o.felder && typeof o.felder === 'object' ? (o as DatenDatei) : null;
   });
@@ -57,25 +72,34 @@ function spiegelLesen(): DatenDatei {
   const aus = leseImGeraet<unknown>(ALT_AUS, null, (x) => x);
   if (nach !== null) felder.nach = { w: nach, t: 0 };
   if (aus !== null) felder.aus = { w: aus, t: 0 };
-  return { v: 1, felder };
+  for (const k of [ALT_NACH, ALT_AUS, OHNE_PERSON]) wegraeumen(k);
+  const neu: DatenDatei = { v: 1, felder };
+  merkeImGeraet(merkSchluessel(person), neu);
+  return neu;
 }
 
 const gleich = (a: DatenDatei, b: DatenDatei) => JSON.stringify(a) === JSON.stringify(b);
 
-export function useToDoEinstellungen(q: { jetzt?: () => number; abgleich?: Abgleich } = {}) {
+export function useToDoEinstellungen(
+  person: number,
+  q: { jetzt?: () => number; abgleich?: Abgleich } = {},
+) {
   const jetzt = q.jetzt ?? Date.now;
   const abgleich = q.abgleich ?? inChurchTools;
-  const [spiegel, setSpiegel] = useState<DatenDatei>(spiegelLesen);
+  const [spiegel, setSpiegel] = useState<DatenDatei>(() => spiegelLesen(person));
   const aktuell = useRef(spiegel);
   const laeuft = useRef(false);
   const nochmal = useRef(false);
   const uhr = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const uebernehmen = useCallback((neu: DatenDatei) => {
-    aktuell.current = neu;
-    merkeImGeraet(MERK, neu);
-    setSpiegel(neu);
-  }, []);
+  const uebernehmen = useCallback(
+    (neu: DatenDatei) => {
+      aktuell.current = neu;
+      merkeImGeraet(merkSchluessel(person), neu);
+      setSpiegel(neu);
+    },
+    [person],
+  );
 
   /** Einen Abgleich anstoßen – läuft schon einer, danach noch einmal (was inzwischen geändert wurde, fehlt ihm). */
   const abgleichen = useCallback(() => {

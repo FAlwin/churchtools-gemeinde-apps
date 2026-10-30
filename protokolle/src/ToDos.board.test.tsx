@@ -6,7 +6,7 @@ import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import * as L from './lesen';
 import * as M from './mitglieder';
 import * as S from './aufgabenSchreiben';
-import { MERK } from './useToDoEinstellungen';
+import { merkSchluessel } from './useToDoEinstellungen';
 import { ToDos } from './ToDos';
 
 /**
@@ -78,14 +78,14 @@ const uebersicht = (lt: Aufgabe[]): L.GruppenUebersicht[] =>
 /** Einstellungen vorab ins Gerät legen (wie zuletzt gemerkt). */
 const merke = (w: Record<string, unknown>) =>
   localStorage.setItem(
-    MERK,
+    merkSchluessel(1),
     JSON.stringify({
       v: 1,
       felder: Object.fromEntries(Object.entries(w).map(([k, x]) => [k, { w: x, t: 1 }])),
     }),
   );
 const gemerkt = () =>
-  JSON.parse(localStorage.getItem(MERK)!).felder as Record<string, { w: unknown }>;
+  JSON.parse(localStorage.getItem(merkSchluessel(1))!).felder as Record<string, { w: unknown }>;
 const zeige = (schreibbar = [60]) =>
   render(
     <ToDos

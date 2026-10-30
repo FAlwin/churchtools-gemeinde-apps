@@ -59,13 +59,15 @@
 }
 .abbrechen {
   @include m.aktionKnopf;
-  height: 36px;
+  // Alle Knöpfe einer Reihe gleich hoch (`--knopf-hoehe`, seit 28.10.2026 die Regel; der Editor zog am 29.10. nach,
+  // als der Umschalter „Akkorde & Text | Nur Text“ mit 38 px neben 34er- und 36er-Knöpfen stand).
+  height: var(--knopf-hoehe);
   padding: 0 14px;
   border-radius: var(--r-ctrl);
   font-size: 14px;
 }
 .save {
-  height: 36px;
+  height: var(--knopf-hoehe);
   padding: 0 16px;
   border: none;
   border-radius: var(--r-ctrl);
@@ -81,8 +83,8 @@
   }
 }
 .iconBtn {
-  width: 36px;
-  height: 36px;
+  width: var(--knopf-hoehe);
+  height: var(--knopf-hoehe);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -134,7 +136,7 @@
   align-items: center;
   gap: 4px;
   white-space: nowrap;
-  height: 34px;
+  height: var(--knopf-hoehe);
   padding: 0 12px;
   border: 1.5px solid var(--border);
   border-radius: var(--r-ctrl);
@@ -236,10 +238,14 @@
 }
 
 // L3: Schalter für den rohen ChordPro-Text (an = gedrückt, wie ein gewählter Umschalter).
+// „Akkorde & Text | Nur Text“ (29.10.2026) – vorn in der Werkzeugleiste, bricht nicht in sich um.
+.nurText {
+  flex-shrink: 0;
+}
 .rohKnopf {
   white-space: nowrap;
   @include m.aktionKnopf;
-  height: 34px;
+  height: var(--knopf-hoehe);
   padding: 0 12px;
   border-radius: var(--r-ctrl);
   font-size: 13px;

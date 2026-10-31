@@ -14,7 +14,7 @@ import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import type { AgendaServiceOption, InfoGruppe } from '@shared/types/index';
 import type { GeloeschterPunkt, PunktAenderung } from '@shared/ct/schreibKern';
-import type { NeuerAgendaPunkt, PunktArt } from '@shared/ct/agendaItemChanges';
+import type { EinfuegeStelle, NeuerAgendaPunkt, PunktArt } from '@shared/ct/agendaItemChanges';
 import {
   ablaufEnde,
   beginnStelle,
@@ -34,7 +34,7 @@ import { HANDY_BREITE, useMedienAbfrage } from '../bedienung/useMedienAbfrage';
 import { useRueckgaengig } from '../bedienung/useRueckgaengig';
 import { useZiehSensoren } from '../bedienung/useZiehSensoren';
 import { innerScrollOnly, resetViewportAfterDrag } from '../bedienung/dndAutoScroll';
-import { SortableRow } from './AgendaSortableRow';
+import { SortableRow, type ZeilenAktionen } from './AgendaSortableRow';
 import { BeginnLinie, EndeLinie, VerborgeneGruppenHinweis } from './AblaufTeile';
 import { PunktFenster, type LiedWahlArgs } from './PunktFenster';
 import { AblageStelle } from './AblaufZiehBereich';
@@ -55,11 +55,11 @@ export interface AblaufAktionen {
   restore: (punkt: GeloeschterPunkt) => Promise<void>;
   /** Schreibt geänderte Felder eines Punkts gesammelt (ein Request); `gesehen` wie beim Öffnen (E6-3c, sonst 412). */
   update: (itemId: number, fields: PunktAenderung, gesehen?: PunktStand) => Promise<void>;
-  /** Legt fest, ob der Punkt (samt allen darüber bzw. darunter) vor dem Beginn läuft (#423). */
+  /** Legt fest, ob der Punkt vor dem Beginn läuft – nur er rückt direkt über bzw. unter „Beginn“ (#423, 30.10.2026). */
   setVorBeginn: (itemId: number, vorBeginn: boolean) => Promise<void>;
   /** Lässt den Punkt an diesem Termin weg (Auge) oder zeigt ihn wieder (E6-3b, #652). */
   setWeggelassen: (itemId: number, weggelassen: boolean) => Promise<void>;
-  /** Legt einen neuen Punkt an. */
+  /** Legt einen neuen Punkt an – mit `nachId` an dieser Stelle, sonst am Ende. */
   add: (data: NeuerAgendaPunkt) => Promise<void>;
 }
 
@@ -71,6 +71,16 @@ export interface AblaufAktionen {
 export function verlangtNeuLaden(e: unknown): boolean {
   const status = (e as { status?: unknown } | null)?.status;
   return typeof status === 'number' && [404, 409, 412, 423].includes(status);
+}
+
+/**
+ * Wohin ein neuer Punkt kommt (Alwin, 30.10.2026): hinter `nach` (`null` = ganz vorne, fehlt = ans Ende); `vorBeginn`
+ * gibt den Vorlauf vor, wo nicht die Stelle ihn sagt („… davor einfügen“); `titel` steht über „Option wählen“.
+ */
+interface Wohin {
+  nach?: EinfuegeStelle;
+  vorBeginn?: boolean;
+  titel?: string;
 }
 
 export interface AblaufBearbeitenOptionen<T extends AblaufZeile> {
@@ -150,9 +160,11 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
   const [localItems, setLocalItems] = useState<T[]>(serverStand);
   const [err, setErr] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<T | null>(null);
-  // „Neuer Eintrag" – derselbe Dialog wie Bearbeiten (05.10.2026); womit er anfängt, sagt „Option wählen“ (S2).
-  const [neuStart, setNeuStart] = useState<{ art: PunktArt; lied: boolean } | null>(null);
-  const [auswahlOffen, setAuswahlOffen] = useState(false);
+  // „Neuer Eintrag" – derselbe Dialog wie Bearbeiten (05.10.2026); womit er anfängt, sagt „Option wählen“ (S2), wohin er
+  // kommt das Plus an einer Zeile oder „Darunter einfügen“ (Alwin, 30.10.2026).
+  const [neuStart, setNeuStart] = useState<(Wohin & { art: PunktArt; lied: boolean }) | null>(null);
+  // „Option wählen“ als Blatt – offen mit der Stelle, für die es gilt (`{}` = am Ende).
+  const [auswahl, setAuswahl] = useState<Wohin | null>(null);
   const handy = useMedienAbfrage(HANDY_BREITE);
   const imKopf = !!o.plusImKopf && !handy;
   const [actionItem, setActionItem] = useState<T | null>(null);
@@ -301,18 +313,42 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
   }
 
   /** „Option wählen“ (S2) – wie in der ChurchTools-App; „Lied hinzufügen“ nur, wo es eine Liedwahl gibt. */
-  function neuOeffnen(art: PunktArt, lied = false): void {
-    setAuswahlOffen(false);
-    setNeuStart({ art, lied });
+  function neuOeffnen(art: PunktArt, lied = false, wohin: Wohin = {}): void {
+    setAuswahl(null);
+    setNeuStart({ ...wohin, art, lied });
   }
-  const optionen: Option[] = [
-    { label: 'Programmpunkt hinzufügen', onClick: () => neuOeffnen('programmpunkt') },
+  /** Die Möglichkeiten für eine Stelle – „… hinzufügen“ (Plus) oder „… dahinter einfügen“ (Zeile). */
+  const optionenFuer = (wohin: Wohin, wie = 'hinzufügen', trenner = false): Option[] => [
+    {
+      label: `Programmpunkt ${wie}`,
+      onClick: () => neuOeffnen('programmpunkt', false, wohin),
+      trenner,
+    },
     ...(o.liedWahl
-      ? [{ label: 'Lied hinzufügen', onClick: () => neuOeffnen('programmpunkt', true) }]
+      ? [{ label: `Lied ${wie}`, onClick: () => neuOeffnen('programmpunkt', true, wohin) }]
       : []),
-    { label: 'Überschrift hinzufügen', onClick: () => neuOeffnen('ueberschrift') },
+    { label: `Überschrift ${wie}`, onClick: () => neuOeffnen('ueberschrift', false, wohin) },
   ];
+  const optionen = optionenFuer({});
   const gesperrt = abgeschlossen ? () => zeigeSperrHinweis(o.sperrHinweis) : undefined;
+
+  /**
+   * Plus und Papierkorb an einer Zeile (nur mit Maus, Alwin 30.10.2026 – wie in ChurchTools): „… dahinter einfügen“
+   * und „… davor einfügen“. Davor heißt: hinter seinem Vorgänger (ganz vorne: am Anfang), und der neue Punkt übernimmt
+   * die Seite des Punkts, vor den er kommt – sonst landete er vor dem ersten Punkt des Gottesdienstes im Vorlauf.
+   */
+  const zeilenAktionen = (item: T, i: number): ZeilenAktionen => {
+    const sperre = (f: () => void) => () => (gesperrt ? gesperrt() : f());
+    const mitSperre = (liste: Option[]) => liste.map((x) => ({ ...x, onClick: sperre(x.onClick) }));
+    const davor = { nach: i > 0 ? localItems[i - 1].id : null, vorBeginn: item.vorBeginn };
+    return {
+      einfuegen: mitSperre([
+        ...optionenFuer({ nach: item.id }, 'dahinter einfügen'),
+        ...optionenFuer(davor, 'davor einfügen', true),
+      ]),
+      loeschen: sperre(() => setPendingDelete(item)),
+    };
+  };
 
   const kopfKnopf =
     imKopf && aktiv && o.bereit ? (
@@ -362,6 +398,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
             <SortableRow
               schmal={o.schmal}
               item={item}
+              aktionen={zeilenAktionen(item, i)}
               {...(spalte !== undefined
                 ? { ziehId: ziehId(spalte, item.id), daten: punktDaten(spalte, item.id) }
                 : {})}
@@ -459,21 +496,31 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
       {/* Das Plus schwebt im Bearbeiten-Modus über dem Ablauf (Alwin, 05.10.2026) – vorher stand
           „Eintrag hinzufügen" am Listenende. Auch bei einem leeren Ablauf, der sonst nicht zu füllen war.
           Ein Tipp öffnet „Option wählen“ wie in der ChurchTools-App (S2); mit `plusImKopf` am iPad/Rechner im Kopf. */}
-      {aktiv && o.bereit && !imKopf && !o.schmal && !neuStart && !auswahlOffen && (
+      {aktiv && o.bereit && !imKopf && !o.schmal && !neuStart && !auswahl && (
         <SchwebePlus
           label="Eintrag hinzufügen"
           dataTour="edit-add"
-          onClick={() => (gesperrt ? gesperrt() : setAuswahlOffen(true))}
+          onClick={() => (gesperrt ? gesperrt() : setAuswahl({}))}
         />
       )}
 
-      {auswahlOffen && <AuswahlBlatt optionen={optionen} onClose={() => setAuswahlOffen(false)} />}
+      {auswahl && (
+        <AuswahlBlatt
+          titel={auswahl.titel}
+          optionen={optionenFuer(auswahl)}
+          onClose={() => setAuswahl(null)}
+        />
+      )}
 
       {neuStart && (
         <PunktFenster
           modus="neu"
           startArt={neuStart.art}
           startLied={neuStart.lied}
+          ablauf={localItems}
+          startNach={neuStart.nach}
+          startVorBeginn={neuStart.vorBeginn}
+          infoGruppen={o.infoGruppen}
           services={o.dienste}
           liedWahl={o.liedWahl}
           onClose={() => setNeuStart(null)}
@@ -502,6 +549,14 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
           onSetVorBeginn={(vorBeginn) => aktionen.setVorBeginn(actionItem.id, vorBeginn)}
           onSetWeggelassen={(weg) => aktionen.setWeggelassen(actionItem.id, weg)}
           onRequestDelete={() => setPendingDelete(actionItem)}
+          // „Darunter einfügen“ (Alwin, 30.10.2026, Entwurf B): erst wählen, was – dann das Fenster an dieser Stelle.
+          onDarunter={() => {
+            setActionItem(null);
+            setAuswahl({
+              nach: actionItem.id,
+              titel: `Nach „${itemLabel(actionItem)}“ einfügen`,
+            });
+          }}
           liedAnsehen={
             o.liedAnsehen
               ? (zurueck, schliessen) => o.liedAnsehen!(actionItem, zurueck, schliessen)

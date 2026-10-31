@@ -65,3 +65,33 @@ describe('Merkzettel für „Rückgängig“: dieselben Grenzen', () => {
     );
   });
 });
+
+/**
+ * Stelle, Schalter und Infos beim Anlegen (Alwin, 30.10.2026): zod striche unbekannte Felder still weg – dann landete
+ * der Punkt der Musik-App (Server-Weg) wieder am Ende, ohne dass es jemand merkt.
+ */
+describe('Anlegen an einer Stelle – die Felder kommen durch', () => {
+  it('nachId, vorBeginn, weggelassen und infos bleiben erhalten', () => {
+    expect(
+      createItemSchema.parse({
+        type: 'text',
+        title: 'Gebet',
+        nachId: 12,
+        vorBeginn: true,
+        weggelassen: true,
+        infos: { '3': 'Mikro 2' },
+      }),
+    ).toEqual({
+      type: 'text',
+      title: 'Gebet',
+      nachId: 12,
+      vorBeginn: true,
+      weggelassen: true,
+      infos: { '3': 'Mikro 2' },
+    });
+  });
+
+  it('nachId null heißt ganz vorne – und ist erlaubt', () => {
+    expect(createItemSchema.parse({ type: 'header', title: 'A', nachId: null }).nachId).toBeNull();
+  });
+});

@@ -299,3 +299,185 @@ describe('Punkt-Fenster im ChurchTools-Aufbau (Variante B)', () => {
     expect(zustaendigText('[Musik], Peter , [Technik]')).toBe('Musik, Peter , Technik');
   });
 });
+
+/**
+ * **Neuer Eintrag: „Einfügen nach“ und „Weitere Einstellungen“** (Alwin, 30.10.2026, Entwurf `einfuegen-entwurf.html`
+ * A): Infos je Gruppe, Vorlauf und Auge stehen zum Aufklappen bereit; die Stelle sagt, ob der Punkt vor dem Beginn
+ * läuft.
+ */
+describe('Neuer Eintrag – Einfügen nach, Weitere Einstellungen (30.10.2026)', () => {
+  const ablauf = [
+    zeile({ id: 1, title: 'Soundcheck' }),
+    zeile({ id: 2, title: 'Begrüßung' }),
+    zeile({ id: 3, title: 'Predigt' }),
+  ].map((z, k) => ({ ...z, vorBeginn: k < 2 }));
+
+  function neu(extra: Partial<Parameters<typeof PunktFenster>[0]> = {}) {
+    const onAdd = vi.fn().mockResolvedValue(undefined);
+    const onClose = vi.fn();
+    render(
+      <PunktFenster
+        modus="neu"
+        onAdd={onAdd}
+        onClose={onClose}
+        services={[]}
+        ablauf={ablauf}
+        infoGruppen={[{ id: 3, name: 'Technik' }]}
+        {...(extra as object)}
+      />,
+    );
+    fireEvent.change(screen.getByPlaceholderText(/^Titel/), { target: { value: 'Gebet' } });
+    return { onAdd, onClose };
+  }
+  const hinzufuegen = () => fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
+  const weitere = () =>
+    fireEvent.click(screen.getByRole('button', { name: /Weitere Einstellungen/ }));
+  const vorlauf = () => screen.getByRole('button', { name: /Vor Gottesdienstbeginn/ });
+
+  it('Infos und Schalter erst nach „Weitere Einstellungen“', () => {
+    neu();
+    expect(screen.queryByRole('button', { name: /Vor Gottesdienstbeginn/ })).toBeNull();
+    expect(screen.queryByLabelText('Info für Technik')).toBeNull();
+    weitere();
+    expect(
+      screen.getByRole('button', { name: /Weitere Einstellungen/ }).getAttribute('aria-expanded'),
+    ).toBe('true');
+    expect(screen.getByLabelText('Info für Technik')).toBeTruthy();
+    expect(vorlauf()).toBeTruthy();
+    expect(screen.getByRole('button', { name: /An diesem Termin weglassen/ })).toBeTruthy();
+  });
+
+  it('nichts angefasst: ans Ende, nur die Felder – wie bisher', async () => {
+    const { onAdd } = neu();
+    expect(screen.getByRole('button', { name: /Einfügen nach: Am Ende/ })).toBeTruthy();
+    hinzufuegen();
+    await waitFor(() => expect(onAdd).toHaveBeenCalledWith({ type: 'text', title: 'Gebet' }));
+  });
+
+  it('„Einfügen nach“ wählen: hinter einen Vorlauf-Punkt → Vorlauf, der Schalter zeigt es', async () => {
+    const { onAdd } = neu();
+    fireEvent.click(screen.getByRole('button', { name: /Einfügen nach: Am Ende/ }));
+    expect(screen.getByRole('radio', { name: /Am Ende/ }).getAttribute('aria-checked')).toBe(
+      'true',
+    );
+    fireEvent.click(screen.getByRole('radio', { name: /Begrüßung/ }));
+    expect(screen.getByRole('button', { name: /Einfügen nach: Begrüßung/ })).toBeTruthy();
+    weitere();
+    expect(vorlauf().getAttribute('aria-pressed')).toBe('true');
+    expect(vorlauf().textContent).toContain('Läuft vor dem Beginn.');
+    hinzufuegen();
+    await waitFor(() =>
+      expect(onAdd).toHaveBeenCalledWith({
+        type: 'text',
+        title: 'Gebet',
+        nachId: 2,
+        vorBeginn: true,
+      }),
+    );
+  });
+
+  it('„Am Anfang“ geht als nachId null', async () => {
+    const { onAdd } = neu();
+    fireEvent.click(screen.getByRole('button', { name: /Einfügen nach/ }));
+    fireEvent.click(screen.getByRole('radio', { name: /Am Anfang/ }));
+    hinzufuegen();
+    await waitFor(() =>
+      expect(onAdd).toHaveBeenCalledWith(
+        expect.objectContaining({ nachId: null, vorBeginn: true }),
+      ),
+    );
+  });
+
+  it('Schalter gegen die Stelle: der Hinweis sagt, dass der Punkt an „Beginn“ rückt', async () => {
+    const { onAdd } = neu();
+    weitere();
+    expect(vorlauf().textContent).toContain('Gehört zum Gottesdienst.');
+    fireEvent.click(vorlauf());
+    expect(vorlauf().textContent).toContain('Kommt direkt über „Beginn“ – nur dieser Punkt.');
+    hinzufuegen();
+    await waitFor(() =>
+      expect(onAdd).toHaveBeenCalledWith({ type: 'text', title: 'Gebet', vorBeginn: true }),
+    );
+  });
+
+  it('Infos je Gruppe und „weglassen“ gehen mit; leere Infos nicht', async () => {
+    const { onAdd } = neu();
+    weitere();
+    fireEvent.change(screen.getByLabelText('Info für Technik'), { target: { value: 'Mikro 2' } });
+    fireEvent.click(screen.getByRole('button', { name: /An diesem Termin weglassen/ }));
+    hinzufuegen();
+    await waitFor(() =>
+      expect(onAdd).toHaveBeenCalledWith({
+        type: 'text',
+        title: 'Gebet',
+        infos: { 3: 'Mikro 2' },
+        weggelassen: true,
+      }),
+    );
+  });
+
+  it('vorgegebene Stelle („… davor einfügen“): startet dort, mit dem vorgegebenen Vorlauf', async () => {
+    const { onAdd } = neu({ startNach: 2, startVorBeginn: false });
+    expect(screen.getByRole('button', { name: /Einfügen nach: Begrüßung/ })).toBeTruthy();
+    hinzufuegen();
+    await waitFor(() =>
+      expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ nachId: 2, vorBeginn: false })),
+    );
+  });
+
+  it('Überschrift: „Weitere Einstellungen“ ohne Infos – ChurchTools führt dort keine', () => {
+    neu({ startArt: 'ueberschrift' });
+    weitere();
+    expect(screen.queryByLabelText('Info für Technik')).toBeNull();
+    expect(vorlauf()).toBeTruthy();
+  });
+});
+
+describe('Vorlauf-Schalter beim Bearbeiten: nur dieser Punkt (Alwin 30.10.2026)', () => {
+  it('der Hinweis sagt, wohin der Punkt beim Speichern rückt', () => {
+    zeige(zeile({ title: 'Predigt' }));
+    const schalter = screen.getByRole('button', { name: /Vor Gottesdienstbeginn/ });
+    expect(schalter.textContent).toContain('Gehört zum Gottesdienst.');
+    fireEvent.click(schalter);
+    expect(schalter.textContent).toContain(
+      'Rückt beim Speichern direkt über „Beginn“ – nur dieser Punkt.',
+    );
+  });
+});
+
+describe('„Darunter einfügen“ im Punkt-Fenster (Alwin 30.10.2026, Entwurf B)', () => {
+  function mitDarunter() {
+    const onDarunter = vi.fn();
+    render(
+      <PunktFenster
+        item={zeile({ title: 'Begrüßung' })}
+        onClose={vi.fn()}
+        onUpdate={vi.fn().mockResolvedValue(undefined)}
+        vorBeginn={false}
+        onSetVorBeginn={vi.fn().mockResolvedValue(undefined)}
+        onSetWeggelassen={vi.fn().mockResolvedValue(undefined)}
+        services={[]}
+        onRequestDelete={vi.fn()}
+        onDarunter={onDarunter}
+      />,
+    );
+    return { onDarunter, knopf: () => screen.getByRole('button', { name: /Darunter einfügen/ }) };
+  }
+
+  it('steht links neben „Eintrag löschen“ und ruft onDarunter', () => {
+    const { onDarunter, knopf } = mitDarunter();
+    fireEvent.click(knopf());
+    expect(onDarunter).toHaveBeenCalled();
+  });
+
+  it('mit ungespeicherter Änderung gesperrt – wie das Blättern', () => {
+    const { knopf } = mitDarunter();
+    fireEvent.change(screen.getByPlaceholderText('z. B. 5'), { target: { value: '9' } });
+    expect((knopf() as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('ohne onDarunter kein Knopf', () => {
+    zeige(zeile({ title: 'Predigt' }));
+    expect(screen.queryByRole('button', { name: /Darunter einfügen/ })).toBeNull();
+  });
+});

@@ -96,3 +96,77 @@
     padding: 4px 2px;
   }
 }
+
+// Plus und roter Papierkorb beim Drüberfahren (Alwin, 30.10.2026 – wie in ChurchTools). Sie liegen ÜBER dem Zeilenende
+// links vom Stift, damit sich beim Drüberfahren nichts verschiebt. Nur mit Maus: Am Handy gäbe es kein Drüberfahren,
+// dort stehen sie gar nicht da.
+.mitKnoepfen {
+  position: relative;
+}
+
+.zeilenKnoepfe {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  // Auf Höhe der Titelzeile (wie in ChurchTools neben dem Titel) – mittig lägen sie bei Liedern auf der Liedkarte.
+  .zeilenKnoepfe {
+    position: absolute;
+    top: 6px;
+    right: 40px;
+    z-index: 2;
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: var(--r-ctrl);
+    background: var(--surface2);
+    visibility: hidden;
+  }
+
+  // Überschriften sind einzeilige Bänder: dort mittig.
+  .editBand .zeilenKnoepfe {
+    top: 50%;
+    background: transparent;
+    transform: translateY(-50%);
+  }
+
+  .mitKnoepfen:hover .zeilenKnoepfe,
+  .mitKnoepfen:focus-within .zeilenKnoepfe,
+  .zeilenKnoepfe.offen {
+    visibility: visible;
+  }
+
+  .zeilenPlus,
+  .zeilenLoeschen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: var(--r-ctrl);
+    background: none;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--surface3);
+    }
+  }
+
+  .zeilenPlus {
+    color: var(--blue);
+  }
+
+  .zeilenLoeschen {
+    color: var(--red);
+  }
+}
+
+// Das Menü des Plus – an `body`, fest unter dem Knopf (Stelle per `style`), damit keine Karte es abschneidet. Über dem
+// Inhalt der Seite, unter Fenstern und der Leiste von ChurchTools; `MenueListe` richtet sich am rechten Rand aus.
+.zeilenMenue {
+  position: fixed;
+  z-index: 50;
+  width: 0;
+  height: 0;
+}

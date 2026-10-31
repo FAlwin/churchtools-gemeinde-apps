@@ -204,8 +204,8 @@ bei 10:00, und dazwischen steht der graue Balken **„Beginn“** mit **10:00** 
 der App wie im ChurchTools-Kalender.
 
 1. Test-Termin öffnen → **Bearbeiten** → **Soundcheck** antippen.
-2. **Vor Gottesdienstbeginn** einschalten. Der Hinweis darunter lautet „Dieser und alle Punkte darüber
-   laufen vor dem Beginn." **Speichern**.
+2. **Vor Gottesdienstbeginn** einschalten. Der Hinweis darunter lautet „Rückt beim Speichern direkt über
+   „Beginn“ – nur dieser Punkt." **Speichern**.
 3. Der Balken „Beginn“ (10:00) steht unter dem Soundcheck. Mit **Fertig** zurück in die Ansicht: Dort
    steht sie an derselben Stelle, der Soundcheck zeigt 09:15 in grauer Schrift.
 4. In ChurchTools im Browser den Ablauf öffnen: Der Soundcheck steht vor dem Veranstaltungsbeginn, der
@@ -378,5 +378,42 @@ Punkt-Fenster ändern, ohne andere Gruppen anzufassen.
 - **Betrifft:** `shared/ct/ablaufZeile.ts`, `shared/ct/agendaItemChanges.ts`, `shared/ct/schreibKern.ts`, `shared/ct/dienstRechte.ts`, `ui/ablauf/InfoSpalten.tsx`, `ui/ablauf/infoSpaltenWahl.ts`, `ui/ablauf/AblaufListe.tsx`, `ui/ablauf/PunktFenster.tsx`, `client/src/pages/Setlist.tsx`, `client/src/services/ctLesen.ts`, `server/src/services/ctCapabilities.ts`, `server/src/controllers/setlistController.ts`, `dienstplaner/src/TerminAblauf.tsx`
 - **Automatisiert:** ja – `shared/ct/gruppenInfos.test.ts` (Schreiben je Gruppe gegen eine Attrappe wie gemessen), `ui/ablauf/InfoSpalten.test.tsx`, `dienstplaner/src/TerminAnsicht.test.tsx`, `client/src/pages/Setlist.abschluss.test.tsx`, `shared/ct/dienstRechte.test.ts`, `server/src/services/churchtools.capabilities.test.ts`, `client/src/services/ctTeilen.test.ts`, `server/src/controllers/setlistController.gesehen.test.ts`; von Hand bleibt der Blick gegen echtes ChurchTools
 - **Historie:** E6-4 (30.10.2026, gemessen E6-4-0, Entwurf `e6-infos-spalten.html` abgenommen)
+
+</details>
+
+### TF-EDIT-15 · Einen Punkt an einer bestimmten Stelle einfügen
+
+**Vorbereitung:** Ein **Probe-Termin ohne Dienste** (keine Mails) mit Ablauf: ein Vorlauf-Punkt (z. B. „Soundcheck“,
+**Vor Gottesdienstbeginn** an), darunter mindestens drei Punkte. Musik-App und Dienstplaner.
+
+**Das muss passieren:** Ein neuer Punkt landet dort, wo man ihn haben will – nicht mehr nur am Ende (Alwin,
+30.10.2026, Entwurf `einfuegen-entwurf.html`, A + B + PC). „Vor Gottesdienstbeginn“ verschiebt nur noch den einen Punkt.
+
+1. **Bearbeiten** → **Eintrag hinzufügen** → **Programmpunkt hinzufügen**. Unter „Bemerkung“ steht **„Einfügen nach:
+   Am Ende ›“**, darunter **„Weitere Einstellungen“** (zu). Aufklappen → Infos je Gruppe, **Vor Gottesdienstbeginn** und
+   **An diesem Termin weglassen**.
+2. **Einfügen nach** → die Liste aller Punkte; den zweiten Punkt wählen → die Zeile nennt ihn. Titel eintragen,
+   **Hinzufügen** → der Punkt steht direkt hinter dem gewählten, in der App und in ChurchTools.
+3. Noch einmal, diesmal **Einfügen nach: Soundcheck** → unter „Weitere Einstellungen“ ist **Vor Gottesdienstbeginn**
+   schon an. **Hinzufügen** → er steht über dem Balken „Beginn“, der Soundcheck bleibt Vorlauf, alle Punkte darunter
+   bleiben im Gottesdienst.
+4. Einen Punkt antippen → links unten **„Darunter einfügen“** → „Nach „…“ einfügen“ → **Programmpunkt hinzufügen** →
+   „Einfügen nach“ nennt den Punkt. Erst etwas am Punkt ändern: „Darunter einfügen“ ist gesperrt, bis gespeichert ist.
+5. **Am Rechner:** Maus über eine Zeile → neben dem Stift ein **Plus** und ein **roter Papierkorb**. Plus →
+   „Programmpunkt/Überschrift dahinter einfügen“, Linie, „… davor einfügen“ (Musik-App auch „Lied …“). **Davor** bei
+   dem ersten Punkt unter „Beginn“ → der neue Punkt steht unter „Beginn“, nicht im Vorlauf. Papierkorb → dieselbe
+   Rückfrage wie „Eintrag löschen“. Am Handy erscheinen Plus und Papierkorb nicht.
+6. Einen Punkt weit unten antippen → **Vor Gottesdienstbeginn** an → Hinweis „Rückt beim Speichern direkt über
+   „Beginn“ – nur dieser Punkt.“ → **Speichern** → nur er springt über den Balken; die Punkte dazwischen bleiben im
+   Gottesdienst. Wieder aus → er steht direkt unter „Beginn“, der übrige Vorlauf bleibt.
+7. Eine **Überschrift** auf Vorlauf schalten → nur die Überschrift springt, ihre Punkte bleiben stehen.
+8. Probe-Punkte wieder löschen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/ct/schreibKern.ts`, `shared/ct/agendaPayload.ts`, `shared/ct/agendaItemChanges.ts`, `ui/ablauf/PunktFenster.tsx`, `ui/ablauf/useAblaufBearbeiten.tsx`, `ui/ablauf/AgendaSortableRow.tsx`, `ui/bedienung/OptionWaehlen.tsx`, `ui/fenster/FensterKnopf.tsx`, `server/src/controllers/setlistController.ts`
+- **Automatisiert:** teilweise – `server/src/services/ablaufRueckgaengig.test.ts` (Einfügen an Stelle, Vorlauf beim Einfügen, Weglassen, Infos, Erfolg ohne Punkt = 502, Schalter nur für den einen Punkt, Überschrift allein), `server/src/services/agendaPayload.test.ts` (`vorlaufUmschalten`), `server/src/services/ctWrite.test.ts`, `server/src/controllers/setlistController.grenzen.test.ts` (Felder kommen durch), `ui/ablauf/PunktFenster.test.tsx` (Weitere Einstellungen, Einfügen nach, Hinweise, Darunter einfügen), `ui/ablauf/useAblaufBearbeiten.test.tsx` (Plus-Menü dahinter/davor, Papierkorb, Sperre, Darunter einfügen); von Hand bleiben das Drüberfahren am Rechner (nur CSS) und echtes ChurchTools
+- **Historie:** 30.10.2026 (Alwin: „nicht immer neuer Punkt, der dann am Ende eingefügt wird“; Vorlauf vorher als Block, #423)
 
 </details>

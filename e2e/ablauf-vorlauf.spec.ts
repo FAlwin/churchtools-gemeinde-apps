@@ -53,7 +53,7 @@ test('Vor Gottesdienstbeginn: Schalter setzt die Grenze, die Linie erscheint', a
   // Der alte, falsch beschriftete Schalter ist weg.
   await expect(page.getByText('Uhrzeit ausblenden')).toHaveCount(0);
   await schalter.click();
-  await page.getByRole('button', { name: 'Speichern' }).click();
+  await page.getByRole('button', { name: 'Speichern', exact: true }).click();
 
   // ChurchTools hat die Grenze unter der Begrüßung bekommen …
   await expect.poll(() => grenzeImStub(request)).toBe(1);
@@ -70,7 +70,7 @@ test('Vor Gottesdienstbeginn: Schalter setzt die Grenze, die Linie erscheint', a
   await page.locator('button', { hasText: 'Begrüßung' }).first().click();
   await expect(schalter).toHaveAttribute('aria-pressed', 'true');
   await schalter.click();
-  await page.getByRole('button', { name: 'Speichern' }).click();
+  await page.getByRole('button', { name: 'Speichern', exact: true }).click();
   await expect.poll(() => grenzeImStub(request)).toBe(0);
   await expect(linie).toHaveCount(0);
 });

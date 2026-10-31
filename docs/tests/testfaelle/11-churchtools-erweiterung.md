@@ -100,8 +100,8 @@ Arrangement, **Tonart und Dauer des Arrangements sind unverändert**.
 2. **Neuer Eintrag** → **Lied verknüpfen**: beim Lied das **Auge** antippen – der Liedtext erscheint
    (kein „gibt es noch nicht"). Dann das Lied übernehmen und den Eintrag anlegen.
 3. Einen Punkt antippen, die Notiz ändern, speichern.
-4. Einen Punkt antippen, **Vor Gottesdienstbeginn** einschalten, speichern – er und alle darüber
-   rutschen in den Vorlauf.
+4. Einen Punkt weiter unten antippen, **Vor Gottesdienstbeginn** einschalten, speichern – nur er rückt direkt über
+   „Beginn“, die Punkte dazwischen bleiben im Gottesdienst.
 5. Den neuen Punkt wieder löschen.
 6. Ein Lied öffnen, oben das **Metronom**, ein anderes Tempo einstellen, **… in ChurchTools speichern**.
 7. In ChurchTools den Ablauf und das Lied ansehen.

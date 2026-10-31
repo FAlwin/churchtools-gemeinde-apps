@@ -66,3 +66,17 @@
     }
   }
 }
+
+// Blauer Text neben „Eintrag löschen“ („Darunter einfügen“, Alwin 30.10.2026 – `Sheet links`): ein zweiter Weg, der
+// nichts löscht und nichts speichert, deshalb ohne Fläche.
+.link {
+  padding: 0 4px;
+  background: none;
+  color: var(--blue-ink);
+
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      text-decoration: underline;
+    }
+  }
+}

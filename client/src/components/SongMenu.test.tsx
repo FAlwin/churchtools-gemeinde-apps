@@ -103,7 +103,6 @@ describe('SongMenu – Übersicht und Unterseiten', () => {
     expect(screen.getByText('Transponieren')).toBeTruthy();
     expect(screen.getByText('Akkorde & Text')).toBeTruthy();
     expect(screen.queryByText('Abschnitte transponieren')).toBeNull();
-    expect(screen.queryByText('Dateien …')).toBeNull();
     expect(screen.getByRole('dialog').textContent).toContain('Testlied');
   });
 
@@ -149,14 +148,61 @@ describe('SongMenu – Übersicht und Unterseiten', () => {
       within(screen.getByRole('region', { name: 'Teilen' })).getByText('Als PDF teilen'),
     ).toBeTruthy();
   });
+});
 
-  it('mit Dokumenten: „Nur Text · PDF ›“, das gezeigte Dokument steht als Wert daneben', () => {
-    const withDoc = song({
-      documents: [{ fileId: 99, name: 'Noten.pdf', type: 'pdf' }] as never,
+/**
+ * **„Akkorde & Text · Nur Text · Datei“ – drei gleichrangige Zeilen** (Alwin, 30.10.2026: „irreführend, dass man unter
+ * Nur Text eine PDF wählt … Datei ist nicht immer pdf, manchmal auch jpg. Also einfach nur Datei“).
+ */
+describe('SongMenu – Anzeige', () => {
+  const PDF = { fileId: 99, name: 'Noten.pdf', type: 'pdf' };
+  const JPG = { fileId: 98, name: 'Akkorde Gitarre.jpg', type: 'image' };
+  const anzeige = () => within(screen.getByRole('region', { name: 'Anzeige' }));
+
+  it('ohne Dateien: nur Akkorde & Text und Nur Text', () => {
+    setup();
+    expect(
+      anzeige()
+        .getAllByRole('button')
+        .map((b) => b.textContent),
+    ).toEqual(['Akkorde & Text', 'Nur Text']);
+  });
+
+  it('„Nur Text“ steht immer direkt da – auch mit Dateien', () => {
+    setup({ song: song({ documents: [PDF, JPG] as never }) });
+    expect(anzeige().getByText('Nur Text')).toBeTruthy();
+    expect(screen.queryByText(/Nur Text ·/)).toBeNull();
+  });
+
+  it('eine Datei: direkt wählbar, ihr Name steht daneben', () => {
+    const h = setup({ song: song({ documents: [PDF] as never }) });
+    expect(anzeige().getByText('Noten.pdf')).toBeTruthy();
+    fireEvent.click(anzeige().getByText('Datei'));
+    expect(h.onChange).toHaveBeenCalledWith({ viewSource: 99 });
+    expect(h.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('mehrere Dateien (PDF und Bild): „Datei ›“ mit der Zahl, dahinter nur die Dateien', () => {
+    const h = setup({ song: song({ documents: [PDF, JPG] as never }) });
+    expect(anzeige().getByText('2 Dateien')).toBeTruthy();
+    unterseite('Anzeige');
+    expect(screen.getByRole('dialog').textContent).toContain('Datei anzeigen');
+    expect(screen.queryByText('Nur Text')).toBeNull();
+    expect(screen.getByText('Akkorde Gitarre.jpg', { exact: false })).toBeTruthy();
+    expect(screen.getByText(/Umbenennen, hinzufügen und löschen/)).toBeTruthy();
+    fireEvent.click(screen.getByText('Akkorde Gitarre.jpg', { exact: false }));
+    expect(h.onChange).toHaveBeenCalledWith({ viewSource: 98 });
+  });
+
+  it('die gezeigte Datei steht in Blau neben „Datei ›“; ohne Recht kein Hinweis aufs Verwalten', () => {
+    setup({
+      canEdit: false,
+      song: song({ documents: [PDF, JPG] as never }),
+      set: { viewSource: 98 },
     });
-    setup({ song: withDoc, set: { viewSource: 99 } });
-    expect(screen.getByText('Nur Text · PDF')).toBeTruthy();
-    expect(screen.getByText('Noten.pdf')).toBeTruthy();
+    expect(anzeige().getByText('Akkorde Gitarre.jpg')).toBeTruthy();
+    unterseite('Anzeige');
+    expect(screen.queryByText(/Umbenennen, hinzufügen und löschen/)).toBeNull();
   });
 });
 
@@ -228,15 +274,13 @@ describe('SongMenu – was zum angezeigten Inhalt passt', () => {
     expect(gruppen()).toEqual(['Tonart', 'Anzeige', 'Bearbeiten', 'Teilen']);
     // Die Anzeige-Umschalter bleiben – sonst käme man vom Dokument nicht mehr weg.
     expect(screen.getByText('Akkorde & Text')).toBeTruthy();
-    unterseite('Anzeige');
-    expect(screen.getByText('Noten.pdf', { exact: false })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+    expect(screen.getByText('Noten.pdf')).toBeTruthy();
     // Seit 07.10.2026: Geteilt wird, was das Lied zeigt – auch sein Dokument (Gemeinde ohne ChordPro).
     expect(screen.getByText('Als PDF teilen')).toBeTruthy();
-    // Kein Editor beim Dokument – Dateien und Stammdaten stehen dann direkt da, ohne Unterseite.
+    // Kein Editor beim Dokument – Dateien und Stammdaten stehen da wie immer.
     const bearbeiten = within(screen.getByRole('region', { name: 'Bearbeiten' }));
     expect(bearbeiten.queryByText('Im Editor öffnen')).toBeNull();
-    expect(bearbeiten.getByText('Dateien …')).toBeTruthy();
+    expect(bearbeiten.getByText('Dateien verwalten')).toBeTruthy();
     expect(bearbeiten.getByText('Stammdaten …')).toBeTruthy();
     expect(screen.queryByText('Abschnitte transponieren')).toBeNull();
     expect(screen.queryByText('Akustik')).toBeNull();
@@ -326,27 +370,31 @@ describe('SongMenu – Arrangement umschalten (#320)', () => {
  * bewusst nicht.
  */
 describe('SongMenu – Dateien (#321)', () => {
-  it('zeigt „Dateien …" für Berechtigte und meldet den Klick', () => {
+  it('„Dateien verwalten“ steht direkt unter „Bearbeiten“ (seit 30.10.2026 ohne Unterseite) und meldet den Klick', () => {
     const h = setup({ canEdit: true });
-    unterseite('Bearbeiten');
-    expect(screen.getByRole('dialog').textContent).toContain('Dateien & Stammdaten');
-    screen.getByText('Dateien …').click();
+    const bearbeiten = within(screen.getByRole('region', { name: 'Bearbeiten' }));
+    expect(bearbeiten.getAllByRole('button').map((b) => b.textContent)).toEqual([
+      'Im Editor öffnenals neue Version',
+      'Dateien verwalten',
+      'Stammdaten …',
+    ]);
+    bearbeiten.getByText('Dateien verwalten').click();
     expect(h.onOpenFiles).toHaveBeenCalledTimes(1);
+    expect(h.onClose).toHaveBeenCalledTimes(1);
   });
 
   it('zeigt es NICHT ohne Berechtigung', () => {
     setup({ canEdit: false });
     // Ohne Recht gibt es die Gruppe „Bearbeiten“ gar nicht.
     expect(screen.queryByRole('region', { name: 'Bearbeiten' })).toBeNull();
-    expect(screen.queryByText('Dateien · Stammdaten')).toBeNull();
-    expect(screen.queryByText('Dateien …')).toBeNull();
+    expect(screen.queryByText('Dateien verwalten')).toBeNull();
   });
 
   it('zeigt es auch, wenn gerade ein Dokument angesehen wird', () => {
     // `viewSource` ist dann eine Datei-ID statt 'chords'. „Bearbeiten" verschwindet hier zu Recht –
     // „Dateien" muss bleiben, sonst käme man beim PDF nicht an die Dateiverwaltung.
     setup({ canEdit: true, set: { viewSource: 4711 } });
-    expect(screen.getByText('Dateien …')).toBeTruthy();
+    expect(screen.getByText('Dateien verwalten')).toBeTruthy();
     expect(screen.queryByText('Im Editor öffnen')).toBeNull();
   });
 });

@@ -261,6 +261,17 @@ export function removeArrangementFile(
   return noten.dateiEntfernen(verwalterFuer(cookie), songId, fileId);
 }
 
+/** Eine Datei umbenennen (31.10.2026) – Regeln und Nachlesen in `@shared/ct/notenblaetter`. */
+export function renameArrangementFile(
+  cookie: string,
+  songId: number,
+  arrangementId: number,
+  fileId: number,
+  name: string,
+): Promise<ArrangementFileEntry[]> {
+  return noten.dateiUmbenennen(verwalterFuer(cookie), songId, arrangementId, fileId, name);
+}
+
 /**
  * Das Notenblatt eines Liedes aus CCLI SongSelect ins Arrangement holen (#322, Schritt 9).
  *

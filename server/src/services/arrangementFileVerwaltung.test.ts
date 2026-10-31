@@ -5,6 +5,7 @@ import {
   listArrangementFiles,
   originalNotenblattSchreiben,
   removeArrangementFile,
+  renameArrangementFile,
 } from './setlistBuilder.js';
 import { __resetSessionMemosForTests } from './ctSessionMemos.js';
 
@@ -194,6 +195,95 @@ describe('removeArrangementFile – die Zugehörigkeit ist die Sicherung', () =>
     const w = mockCt();
     await removeArrangementFile(COOKIE, 12, 1);
     expect(w[0].url).toContain('/api/files/1');
+  });
+});
+
+/**
+ * Umbenennen (31.10.2026). Gemessen an der Test-Instanz: `PATCH /files/<id> {name}` → 204, Name wirklich geändert.
+ *
+ * **Der Kern ist das Nachlesen:** Ein 204 allein beweist nichts (`PATCH /files/<id> {securityLevelId}` antwortete
+ * schon einmal 204 und änderte nichts). Deshalb spielt der Mock hier ChurchTools nach: Ein PATCH ändert den Namen im
+ * Lied – außer, er soll lügen.
+ */
+describe('renameArrangementFile – direkt umbenennen, dann nachlesen', () => {
+  function mockUmbenennen(opts: { luegt?: boolean; dazu?: ReturnType<typeof datei>[] } = {}) {
+    const lied = structuredClone(LIED);
+    lied.arrangements[0].files.push(...(opts.dazu ?? []));
+    const w: { method: string; url: string; body: unknown }[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => {
+      const u = String(url);
+      const method = init?.method ?? 'GET';
+      if (u.includes('/api/csrftoken')) return Promise.resolve(jsonRes('token'));
+      if (method === 'GET' && /\/api\/songs\/12$/.test(u)) return Promise.resolve(jsonRes(lied));
+      const body: unknown = init?.body ? JSON.parse(String(init.body)) : null;
+      w.push({ method, url: u, body });
+      const id = Number(/\/api\/files\/(\d+)$/.exec(u)?.[1]);
+      const f = lied.arrangements[0].files.find((x) => x.fileUrl.endsWith(`id=${id}`));
+      if (method === 'PATCH' && f && !opts.luegt) f.name = (body as { name: string }).name;
+      return Promise.resolve(new Response(null, { status: 204 }));
+    });
+    return w;
+  }
+
+  it('schickt PATCH /files/<id> mit dem neuen Namen – die Endung bleibt', async () => {
+    const w = mockUmbenennen();
+    const liste = await renameArrangementFile(COOKIE, 12, 500, 2, 'Leadsheet E');
+    expect(w).toEqual([
+      {
+        method: 'PATCH',
+        url: expect.stringContaining('/api/files/2') as string,
+        body: { name: 'Leadsheet E.pdf' },
+      },
+    ]);
+    expect(liste.find((d) => d.fileId === 2)?.name).toBe('Leadsheet E.pdf');
+  });
+
+  it('ein 204 ohne Wirkung ist ein Fehler, kein Erfolg', async () => {
+    mockUmbenennen({ luegt: true });
+    await expect(renameArrangementFile(COOKIE, 12, 500, 2, 'Leadsheet E')).rejects.toThrow(
+      /nicht übernommen/,
+    );
+  });
+
+  it('eine Version wird NICHT als Datei umbenannt – nichts geschrieben', async () => {
+    // Ihr Name steckt im Schlüssel von Tonart und Anmerkungen; sie geht über `versionAendern`.
+    const w = mockUmbenennen();
+    await expect(renameArrangementFile(COOKIE, 12, 500, 3, 'Neu')).rejects.toThrow(/Version/);
+    expect(w).toHaveLength(0);
+  });
+
+  it('ein Name, der wie eine Version aussieht, geht nicht – das Original bliebe sonst ohne Notenblatt', async () => {
+    const w = mockUmbenennen();
+    await expect(renameArrangementFile(COOKIE, 12, 500, 1, 'Treu — Live (App)')).rejects.toThrow(
+      /Versionen aus dem Editor/,
+    );
+    expect(w).toHaveLength(0);
+  });
+
+  it('ein gleicher Name daneben → 409, nichts geschrieben', async () => {
+    const w = mockUmbenennen({ dazu: [datei('Lead.pdf', 9)] });
+    await expect(renameArrangementFile(COOKIE, 12, 500, 2, 'Lead')).rejects.toThrow(
+      /schon eine Datei/,
+    );
+    expect(w).toHaveLength(0);
+  });
+
+  it('ein unveränderter Name schreibt nichts', async () => {
+    const w = mockUmbenennen();
+    await renameArrangementFile(COOKIE, 12, 500, 2, 'Treu - E');
+    expect(w).toHaveLength(0);
+  });
+
+  it('eine Datei aus einem anderen Arrangement → 404, nichts geschrieben', async () => {
+    // Umbenannt wird über das Arrangement: Ohne die Prüfung ließe sich über eine bekannte Nummer jede Datei treffen.
+    const w = mockUmbenennen();
+    await expect(renameArrangementFile(COOKIE, 12, 501, 2, 'X')).rejects.toThrow(
+      /Datei nicht gefunden/,
+    );
+    await expect(renameArrangementFile(COOKIE, 12, 500, 4711, 'X')).rejects.toThrow(
+      /Datei nicht gefunden/,
+    );
+    expect(w).toHaveLength(0);
   });
 });
 

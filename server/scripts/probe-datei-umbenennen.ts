@@ -53,7 +53,7 @@ interface Antwort {
 async function anfrage(
   method: string,
   pfad: string,
-  body?: BodyInit,
+  body?: RequestInit['body'],
   typ?: string,
 ): Promise<Antwort> {
   await new Promise((r) => setTimeout(r, PAUSE_MS));
@@ -156,7 +156,7 @@ async function umbenennenUndPruefen(
   INHALT: string,
 ): Promise<string | null> {
   // 2) Umbenennen – mehrere Wege, nach jedem nachlesen
-  const versuche: [string, string, () => BodyInit, string?][] = [
+  const versuche: [string, string, () => RequestInit['body'], string?][] = [
     [
       'PATCH',
       `/api/files/${id}`,

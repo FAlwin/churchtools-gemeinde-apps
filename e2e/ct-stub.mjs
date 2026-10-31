@@ -1182,6 +1182,23 @@ const server = createServer((req, res) => {
     return json(res, { data: [] });
   }
   if (path.startsWith('/api/files/') && req.method === 'DELETE') return json(res, { data: {} });
+  // Umbenennen (31.10.2026) – wie gemessen: `PATCH /files/<id> {name}` → 204, und der Name in der Liste ist danach ein
+  // anderer. Die App liest nach; ein Stub, der nur 204 sagte, ließe ihren Fehlerfall feuern.
+  const umbenennId = /^\/api\/files\/(\d+)$/.exec(path)?.[1];
+  if (umbenennId && req.method === 'PATCH') {
+    let body = '';
+    req.on('data', (chunk) => (body += chunk));
+    req.on('end', () => {
+      const rumpf = JSON.parse(body || '{}');
+      for (const a of SONG.arrangements) {
+        const f = a.files.find((x) => x.fileUrl.endsWith(`id=${umbenennId}`));
+        if (f && typeof rumpf.name === 'string') f.name = rumpf.name;
+      }
+      res.statusCode = 204;
+      res.end();
+    });
+    return;
+  }
   // Einzelnes Lied (getArrangement liest es vor dem Schreiben, das Stammdaten-Blatt zeigt es an). MIT
   // Kategorie – ohne sie zeigt das Stammdaten-Blatt nur den Hinweis statt des Formulars. Stand hier
   // zweimal (einmal ohne Kategorie, der Treffer davor schattete diesen ab) – die klassische Dopplung.

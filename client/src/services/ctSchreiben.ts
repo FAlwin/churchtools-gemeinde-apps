@@ -254,6 +254,16 @@ export async function dateiWeg(songId: number, fileId: number): Promise<void> {
   await noten.dateiEntfernen(schreiber, songId, fileId);
 }
 
+/** `PATCH /api/songs/:id/arrangements/:arrId/files/:fileId` – umbenennen, Endung bleibt (31.10.2026). */
+export function dateiName(
+  songId: number,
+  arrangementId: number,
+  fileId: number,
+  name: string,
+): Promise<ArrangementFileEntry[]> {
+  return noten.dateiUmbenennen(schreiber, songId, arrangementId, fileId, name);
+}
+
 /** `PUT /api/songs/:id/arrangements/:arrId/chordpro` – das Original-Notenblatt. */
 export function notenblatt(
   songId: number,

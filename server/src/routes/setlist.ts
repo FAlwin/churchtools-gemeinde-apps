@@ -40,6 +40,7 @@ import {
   getArrangementFiles,
   postArrangementFile,
   deleteArrangementFileCtrl,
+  patchArrangementFile,
 } from '../controllers/dateiController.js';
 import {
   getSongArrangementsCtrl,
@@ -155,6 +156,10 @@ router.post(
   asyncHandler(postArrangementFile),
 );
 router.delete('/songs/:songId/files/:fileId', asyncHandler(deleteArrangementFileCtrl));
+router.patch(
+  '/songs/:songId/arrangements/:arrangementId/files/:fileId',
+  asyncHandler(patchArrangementFile),
+);
 
 /**
  * CCLI SongSelect (#322) – nur lesend. Beide Aufrufe gehen über ChurchTools weiter zu CCLI und

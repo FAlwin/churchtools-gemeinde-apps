@@ -200,3 +200,50 @@ export function safeFileName(name: string): string {
     .replace(/[\r\n\t]+/g, ' ')
     .trim();
 }
+
+/**
+ * Ein Dateiname in **Name und Endung** geteilt – für „Datei umbenennen“ (31.10.2026, Alwin: „wäre gut, wenn man die
+ * hochgeladenen Dateien irgendwo direkt umbenennen könnte“). Die Endung bleibt beim Umbenennen fest: An ihr erkennt
+ * die App die Art (`fileKind`), und ein `Lead.pdf`, das zu `Lead.txt` wird, wäre danach kein Dokument mehr.
+ *
+ * Als Endung gilt der letzte Punkt mit bis zu zehn Zeichen ohne Leerzeichen dahinter; ohne Punkt gibt es keine.
+ */
+export function nameTeilen(name: string): { basis: string; endung: string } {
+  const m = /^(.+?)(\.[^.\s]{1,10})$/.exec(name);
+  return m ? { basis: m[1], endung: m[2] } : { basis: name, endung: '' };
+}
+
+/** Der längste Dateiname, den die App schreibt – dieselbe Grenze wie beim Hochladen (`postArrangementFile`). */
+const NAME_MAX = 255;
+
+/**
+ * Der neue Dateiname aus der Eingabe – oder der Grund, warum es ihn nicht gibt. **Eine Regel für Fenster, Server und
+ * Erweiterung**: Das Fenster sagt es vor dem Absenden, der Kern prüft es noch einmal, bevor er schreibt.
+ *
+ * - Die Endung der alten Datei bleibt; tippt man sie mit, wird sie nicht verdoppelt.
+ * - Leer ist kein Name.
+ * - **Ein Name, der wie eine Version aus dem Editor aussieht, geht nicht** („… (App).chordpro“): Die App hielte das
+ *   Notenblatt danach für eine Version – das Arrangement hätte dann kein Original mehr. Gefragt wird `isVersionFile`
+ *   selbst, damit es dieselbe Erkennung bleibt (auch die alten Muster wie „— bearbeitet“).
+ */
+export function neuerDateiname(
+  alt: string,
+  eingabe: string,
+): { name: string; fehler: null } | { name: null; fehler: string } {
+  const { endung } = nameTeilen(alt);
+  let basis = safeFileName(eingabe);
+  if (endung && basis.toLowerCase().endsWith(endung.toLowerCase())) {
+    basis = basis.slice(0, -endung.length).trim();
+  }
+  if (!basis) return { name: null, fehler: 'Bitte einen Namen angeben.' };
+  const name = basis + endung;
+  if (name.length > NAME_MAX) return { name: null, fehler: 'Der Name ist zu lang.' };
+  if (isVersionFile({ name, fileUrl: '' })) {
+    return {
+      name: null,
+      fehler:
+        'So heißen nur Versionen aus dem Editor (z. B. „… (App)“). Bitte einen anderen Namen wählen.',
+    };
+  }
+  return { name, fehler: null };
+}

@@ -63,6 +63,7 @@ import {
 } from '../hooks/useArrangementUeberschreibung';
 import { setArrangementTempo } from '../services/churchtoolsApi';
 import { ArrangementFilesSheet } from '../components/ArrangementFilesSheet';
+import { DateiUmbenennenFenster } from '../components/DateiUmbenennenFenster';
 import { EditSongSheet } from '../components/EditSongSheet';
 import { useArrangementDateien } from '../hooks/useArrangementDateien';
 import { loeschFrage } from '../utils/dateiVerwaltung';
@@ -341,6 +342,10 @@ export function ChordChart({
     aktiv: overlay === 'files',
     showToast,
     onReload,
+    // Die EIGENE Wahl (nicht `effSettings`): Beim Ansehen fremder Notizen zeigt das Blatt deren Version, umgestellt
+    // wird aber die eigene.
+    versionKey: settings[song.id]?.versionKey,
+    selectVersion,
   });
 
   /**
@@ -968,6 +973,7 @@ export function ChordChart({
             onDownload={(f) => void datei.herunterladen(f)}
             onUpload={datei.dateiGewaehlt}
             onDelete={datei.setLoeschDatei}
+            onRename={datei.setUmbenennDatei}
             onSongSelect={() => setSongSelectFrage(true)}
             onClose={() => setOverlay(null)}
           />
@@ -997,6 +1003,18 @@ export function ChordChart({
             confirmLabel="Löschen"
             onConfirm={() => void datei.loeschenBestaetigen()}
             onCancel={() => datei.setLoeschDatei(null)}
+          />
+        )}
+
+        {/* Umbenennen (31.10.2026): Datei direkt in ChurchTools, Version über die Version. Fehler stehen im Fenster,
+            das offen bleibt. */}
+        {datei.umbenennDatei && (
+          <DateiUmbenennenFenster
+            datei={datei.umbenennDatei}
+            benennt={datei.benennt}
+            fehler={datei.umbenennFehler}
+            onUmbenennen={(eingabe) => void datei.umbenennen(eingabe)}
+            onClose={() => datei.setUmbenennDatei(null)}
           />
         )}
 

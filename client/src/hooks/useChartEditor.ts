@@ -4,7 +4,7 @@ import { createVersion, updateVersion, deleteVersion } from '../services/churcht
 import { ApiError } from '../services/api';
 import { getSemitoneOffset, mitTonart, transposeChordpro } from '../utils/transpose';
 import { einstellungenMitnehmen } from '../utils/songVersions';
-import { anmerkungenMitnehmen } from '../services/annotations';
+import { umbenannteVersionMitnehmen } from '../services/versionUmbenannt';
 
 interface UseChartEditorArgs {
   /** Aktuell angezeigtes Lied. */
@@ -110,11 +110,11 @@ export function useChartEditor({
         : await createVersion(song.id, song.arrangementId, name, text);
       setShowEditor(false);
       // Das Aussehen geht mit (30.10.2026) – bei einer neuen Version und beim Umbenennen, das einen neuen Schlüssel
-      // ergibt. Vor `selectVersion`, denn die liest die Einstellungen der Version sofort.
-      einstellungenMitnehmen(song.id, versionKey, v.key, bearbeitet ? 'umbenannt' : 'neu');
-      // Umbenannt = dieselbe Version unter neuem Schlüssel: auch die eigenen Anmerkungen gehören zu ihr. Eine NEUE
-      // Version bekommt keine – ihr Text ist ein anderer, die Striche säßen an falschen Stellen.
-      if (bearbeitet) anmerkungenMitnehmen(song.id, versionKey, v.key);
+      // ergibt. Vor `selectVersion`, denn die liest die Einstellungen der Version sofort. Umbenannt = dieselbe Version
+      // unter neuem Schlüssel: auch die eigenen Anmerkungen gehören zu ihr (`versionUmbenannt`). Eine NEUE Version
+      // bekommt keine – ihr Text ist ein anderer, die Striche säßen an falschen Stellen.
+      if (bearbeitet) umbenannteVersionMitnehmen(song.id, versionKey, v.key);
+      else einstellungenMitnehmen(song.id, versionKey, v.key, 'neu');
       selectVersion(song.id, v.key);
       // Eine NEUE Version, geschrieben in der gewählten Tonart: Die Wahl geht mit, sonst zeigte die
       // frische Version die Zieltonart aus ChurchTools – und damit nicht das, was eben getippt wurde.

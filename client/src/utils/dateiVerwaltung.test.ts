@@ -1,7 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import type { ArrangementFileEntry } from '@shared/types/index';
 import { MAX_FILE_BYTES } from '@shared/dateien/index';
-import { DATEI_ART, DATEI_SYMBOL, loeschFolge, loeschFrage, pruefeUpload } from './dateiVerwaltung';
+import { nameTeilen, neuerDateiname, versionFileName } from '@shared/ct/arrangementFiles';
+import {
+  DATEI_ART,
+  DATEI_SYMBOL,
+  loeschFolge,
+  loeschFrage,
+  pruefeUpload,
+  umbenennPruefung,
+  umbenennVorlage,
+} from './dateiVerwaltung';
 
 /**
  * #321, Schritt 4.
@@ -112,5 +121,108 @@ describe('Texte je Art – vollständig, damit keine Art durchfällt', () => {
       expect(DATEI_SYMBOL[kind]).toBeTruthy();
       expect(DATEI_ART[kind]).toBeTruthy();
     }
+  });
+});
+
+/**
+ * Umbenennen (31.10.2026). Die Regel `neuerDateiname` gilt im Fenster UND im Kern vor dem Schreiben – hier wird sie
+ * selbst geprüft und über das, was das Fenster daraus macht.
+ */
+describe('neuerDateiname – die Endung bleibt, eine Version entsteht nicht', () => {
+  it('hängt die alte Endung an', () => {
+    expect(neuerDateiname('Treu - E.pdf', 'Leadsheet E')).toEqual({
+      name: 'Leadsheet E.pdf',
+      fehler: null,
+    });
+  });
+
+  it('tippt man die Endung mit, wird sie nicht verdoppelt – auch in anderer Schreibweise', () => {
+    expect(neuerDateiname('Bild.JPG', 'Akkorde.jpg').name).toBe('Akkorde.JPG');
+  });
+
+  it('eine andere Endung im Namen bleibt Teil des Namens', () => {
+    // Aus „Lead.txt“ als Eingabe für ein PDF wird „Lead.txt.pdf“ – ein PDF bleibt ein PDF.
+    expect(neuerDateiname('Lead.pdf', 'Lead.txt').name).toBe('Lead.txt.pdf');
+  });
+
+  it('leer oder nur verbotene Zeichen → Fehler', () => {
+    expect(neuerDateiname('a.pdf', '   ').fehler).toBe('Bitte einen Namen angeben.');
+    expect(neuerDateiname('a.pdf', '/:*').fehler).toBe('Bitte einen Namen angeben.');
+    expect(neuerDateiname('a.pdf', '.pdf').fehler).toBe('Bitte einen Namen angeben.');
+  });
+
+  it('verbotene Zeichen fallen weg – ein Pfad entsteht nicht', () => {
+    expect(neuerDateiname('a.pdf', '../geheim').name).toBe('..geheim.pdf');
+  });
+
+  it('beim Original-ChordPro ist ein Versions-Name gesperrt', () => {
+    // Gegen den Erzeuger: genau so heißt eine Version, wenn die App sie schreibt.
+    const versionsName = versionFileName('Treu', 'Live').replace(/\.chordpro$/, '');
+    expect(neuerDateiname('Treu.chordpro', versionsName).fehler).toMatch(
+      /Versionen aus dem Editor/,
+    );
+    expect(neuerDateiname('Treu.chordpro', 'Treu - bearbeitet').fehler).toMatch(/Versionen/);
+  });
+
+  it('„(App)“ vor einer anderen Endung ist harmlos', () => {
+    // Eine Version ist nur eine .chordpro-Datei; ein PDF bleibt ein PDF.
+    expect(neuerDateiname('Lead.pdf', 'Lead (App)').name).toBe('Lead (App).pdf');
+  });
+
+  it('zu lang → Fehler', () => {
+    expect(neuerDateiname('a.pdf', 'x'.repeat(260)).fehler).toBe('Der Name ist zu lang.');
+  });
+});
+
+describe('nameTeilen', () => {
+  it('teilt am letzten Punkt', () => {
+    expect(nameTeilen('Treu 1.2.pdf')).toEqual({ basis: 'Treu 1.2', endung: '.pdf' });
+  });
+  it('ohne Endung bleibt alles Name', () => {
+    expect(nameTeilen('Notizen')).toEqual({ basis: 'Notizen', endung: '' });
+    expect(nameTeilen('.hidden')).toEqual({ basis: '.hidden', endung: '' });
+    expect(nameTeilen('Vers 2. Teil')).toEqual({ basis: 'Vers 2. Teil', endung: '' });
+  });
+});
+
+describe('umbenennVorlage / umbenennPruefung – was das Fenster zeigt', () => {
+  const version = {
+    ...datei(versionFileName('Treu', 'Akustik'), 'chordpro-version'),
+    label: 'Version „Akustik“',
+  };
+
+  it('eine Datei: Name und feste Endung, kein Versionsschlüssel', () => {
+    expect(umbenennVorlage(datei('Treu - E.pdf', 'pdf'))).toEqual({
+      basis: 'Treu - E',
+      endung: '.pdf',
+      versionKey: null,
+    });
+  });
+
+  it('eine Version: nur ihr Name, ohne Endung – und ihr Schlüssel', () => {
+    expect(umbenennVorlage(version)).toEqual({
+      basis: 'Akustik',
+      endung: '',
+      versionKey: 'akustik',
+    });
+  });
+
+  it('unverändert = nichts zu tun, aber auch kein Fehler', () => {
+    expect(umbenennPruefung(datei('Treu - E.pdf', 'pdf'), 'Treu - E')).toEqual({
+      fehler: null,
+      gleich: true,
+    });
+    expect(umbenennPruefung(version, 'Akustik')).toEqual({ fehler: null, gleich: true });
+  });
+
+  it('eine Version prüft hier nur „nicht leer“ – den Rest sagt ChurchTools-seitig `versionAendern`', () => {
+    expect(umbenennPruefung(version, ' ').fehler).toBe('Bitte einen Namen angeben.');
+    expect(umbenennPruefung(version, 'Live')).toEqual({ fehler: null, gleich: false });
+  });
+
+  it('eine Datei nimmt die Regel des Kerns', () => {
+    expect(
+      umbenennPruefung(datei('Treu.chordpro', 'chordpro-original'), 'Treu — Live (App)').fehler,
+    ).toMatch(/Versionen aus dem Editor/);
   });
 });

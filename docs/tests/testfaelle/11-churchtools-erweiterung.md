@@ -133,7 +133,7 @@ Auswahl der Kategorie zeigt nur die, in denen du Lieder bearbeiten darfst. Kein 
    ohne **Quelle** → die App sagt, dass ChurchTools eine Liednummer nur zusammen mit einer Quelle speichert.
 5. **Notenblatt bearbeiten** (Original) → speichern. Dann **Neue Version…** anlegen, umbenennen,
    löschen. In ChurchTools liegt danach je Version genau eine Datei.
-6. **Dateien**: die PDF hochladen, herunterladen, löschen.
+6. **Dateien**: die PDF hochladen, herunterladen, **umbenennen** (Stift; die Endung bleibt), löschen.
 7. Das Lied löschen.
 
 <details><summary>Technisches</summary>
@@ -141,7 +141,7 @@ Auswahl der Kategorie zeigt nur die, in denen du Lieder bearbeiten darfst. Kein 
 - **Priorität:** hoch
 - **Betrifft:** `client/src/services/ctSchreiben.ts`, `ui/ct/schreiber.ts`, `client/src/services/ctLesen.ts`, `client/src/services/ctRuntime.ts`, `ui/ct/verbindung.ts`, `shared/ct/liedVerwaltung.ts`, `shared/ct/notenblaetter.ts`, `shared/ct/stammdaten.ts`, `shared/ct/altSchnittstelle.ts`
 - **Automatisiert:** teilweise – die Regeln über die Server-Tests (laufen durch den Kern),
-  `ctSchreiben.lieder.test.ts` für den Weg des Browsers (alte Schnittstelle, Upload, CSRF); ob
+  `ctSchreiben.lieder.test.ts` für den Weg des Browsers (alte Schnittstelle, Upload, Umbenennen, CSRF); ob
   ChurchTools Upload und alte Schnittstelle aus der Einbettung genauso annimmt, nur hier
 - **Historie:** #335 (3b-2)
 
@@ -224,7 +224,7 @@ Server-Variante – aus dem Browser, ohne eigenen Server. Ohne `use ccli` ist So
 2. Bei einem Treffer das **Auge** → der Liedtext erscheint mit dem Hinweis von CCLI darunter.
 3. Den Treffer **anlegen** → Titel, Autoren und Copyright sind ausgefüllt; nach dem Anlegen hat das Lied
    ein Notenblatt in der Tonart des Arrangements (in ChurchTools nachsehen: genau eine `.chordpro`).
-4. Bei einem Lied **mit** CCLI-Nummer, aber **ohne** Notenblatt: Lied öffnen → gewähltes Lied antippen → Bearbeiten → Dateien · Stammdaten › **Dateien …** →
+4. Bei einem Lied **mit** CCLI-Nummer, aber **ohne** Notenblatt: Lied öffnen → gewähltes Lied antippen → Bearbeiten → **Dateien verwalten** →
    **Notenblatt aus SongSelect holen …** → Rückfrage bestätigen → das Notenblatt erscheint (in ChurchTools genau eine
    `.chordpro`). Hat das Lied schon eines, wird der Knopf nicht angeboten.
 5. Mit einem Konto **ohne** `use ccli`: keine SongSelect-Treffer, kein Menüpunkt.

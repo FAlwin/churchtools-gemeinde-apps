@@ -6,9 +6,9 @@
  * nirgends anzeigte (`.docx`, `.mp3`). Die Art bestimmt nur das Symbol und den Zusatz; sie sortiert
  * nichts und schützt nichts.
  *
- * **Zwei Knöpfe je Zeile, und das ist Absicht:** Die Zeile selbst lädt herunter, der Papierkorb
- * rechts löscht. Ein Löschen als Wischgeste wäre auf einem Notenpult im Gottesdienst zu leicht
- * ausgelöst – dort wischt man zum Umblättern.
+ * **Eigene Knöpfe je Zeile, und das ist Absicht:** Die Zeile selbst lädt herunter, der Stift benennt um
+ * (31.10.2026), der Papierkorb rechts löscht. Ein Löschen als Wischgeste wäre auf einem Notenpult im
+ * Gottesdienst zu leicht ausgelöst – dort wischt man zum Umblättern.
  *
  * Die Texte je Art und die Prüfung vor dem Hochladen liegen in `utils/dateiVerwaltung`: Sie sind rein
  * und damit prüfbar, und der Wortlaut der Rückfrage ist bei einer flachen Liste die einzige Bremse.
@@ -48,6 +48,8 @@ interface ArrangementFilesSheetProps {
   onDownload: (file: ArrangementFileEntry) => void;
   onUpload: (datei: File) => void;
   onDelete: (file: ArrangementFileEntry) => void;
+  /** Umbenennen – öffnet das Fenster „Datei umbenennen“ (31.10.2026). */
+  onRename: (file: ArrangementFileEntry) => void;
   onSongSelect: () => void;
   onClose: () => void;
 }
@@ -63,6 +65,7 @@ export function ArrangementFilesSheet({
   onDownload,
   onUpload,
   onDelete,
+  onRename,
   onSongSelect,
   onClose,
 }: ArrangementFilesSheetProps) {
@@ -124,6 +127,14 @@ export function ArrangementFilesSheet({
                 <span className={styles.pickSub}>{dateiZeilen(f).unter}</span>
               </span>
               <Icon name="download" size={16} stroke={2} className={styles.pickChev} />
+            </button>
+            <button
+              className={styles.fileDel}
+              onClick={() => onRename(f)}
+              title={`„${f.name}" umbenennen`}
+              aria-label={`„${f.name}" umbenennen`}
+            >
+              <Icon name="pencil" size={16} stroke={2} />
             </button>
             <button
               className={styles.fileDel}

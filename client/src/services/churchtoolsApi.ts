@@ -583,6 +583,23 @@ export function deleteSongFile(songId: number, fileId: number): Promise<void> {
   return apiFetch<void>(liedDateiPfad(songId, fileId), { method: 'DELETE' });
 }
 
+/**
+ * Benennt eine Datei des Arrangements um (31.10.2026) und liefert die frische Liste. Die Endung bleibt; eine Version
+ * geht über `updateVersion`, nicht hierüber.
+ */
+export function renameArrangementFile(
+  songId: number,
+  arrangementId: number,
+  fileId: number,
+  name: string,
+): Promise<ArrangementFileEntry[]> {
+  if (istExtension) return extSchreiben.dateiName(songId, arrangementId, fileId, name);
+  return apiFetch<ArrangementFileEntry[]>(
+    `/api/songs/${songId}/arrangements/${arrangementId}/files/${fileId}`,
+    { method: 'PATCH', body: JSON.stringify({ name }) },
+  );
+}
+
 /** Löscht einen Ablaufpunkt; `wiederherstellen` ist der Merkzettel für „Rückgängig". */
 export function deleteAgendaItem(
   eventId: number,

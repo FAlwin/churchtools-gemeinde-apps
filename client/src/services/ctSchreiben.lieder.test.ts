@@ -8,7 +8,7 @@ import {
   KeinSpeicherRecht,
 } from './ctRuntime';
 import { _vergissStammdaten, bearbeitbareKategorien } from './ctLesen';
-import { arrangementNeu, arrangementWeg, dateiNeu, liedNeu } from './ctSchreiben';
+import { arrangementNeu, arrangementWeg, dateiName, dateiNeu, liedNeu } from './ctSchreiben';
 import { BASIS, FakeCt } from './ctFake.testutil';
 
 /**
@@ -166,6 +166,46 @@ describe('Datei hochladen', () => {
     const datei = new File(['x'], 'a.pdf', { type: 'application/pdf' });
     await expect(dateiNeu(7, 999, datei)).rejects.toMatchObject({ status: 404 });
     expect(ct.geschrieben.filter((g) => g.was.startsWith('POST /api/files/'))).toHaveLength(0);
+  });
+});
+
+describe('Datei umbenennen (31.10.2026)', () => {
+  /** Lied 7 mit einer PDF; ein PATCH ändert ihren Namen – wie ChurchTools, außer `luegt`. */
+  function liedMitPdf(luegt = false) {
+    let name = 'Treu - E.pdf';
+    const lied = () => ({
+      data: {
+        id: 7,
+        name: 'Treu',
+        category: { id: 1 },
+        arrangements: [
+          { ...ARR(70, true), files: [{ name, fileUrl: `${BASIS}/?q=public/filedownload&id=21` }] },
+        ],
+      },
+    });
+    ct.antworten['/api/songs/7'] = json(lied());
+    ct.schreibAntworten['PATCH /api/files/21'] = () => {
+      if (!luegt) {
+        name = (ct.geschrieben.at(-1)?.json as { name: string }).name;
+        ct.antworten['/api/songs/7'] = json(lied());
+      }
+      return new Response(null, { status: 204 });
+    };
+  }
+
+  it('PATCH /api/files/<id> mit dem neuen Namen, danach nachgelesen', async () => {
+    liedMitPdf();
+    const liste = await dateiName(7, 70, 21, 'Lead E');
+    const patch = ct.geschrieben.filter((g) => g.was.startsWith('PATCH'));
+    expect(patch.map((g) => [g.was, g.json])).toEqual([
+      ['PATCH /api/files/21', { name: 'Lead E.pdf' }],
+    ]);
+    expect(liste[0].name).toBe('Lead E.pdf');
+  });
+
+  it('ein 204 ohne Wirkung wird zum Fehler', async () => {
+    liedMitPdf(true);
+    await expect(dateiName(7, 70, 21, 'Lead E')).rejects.toMatchObject({ status: 502 });
   });
 });
 

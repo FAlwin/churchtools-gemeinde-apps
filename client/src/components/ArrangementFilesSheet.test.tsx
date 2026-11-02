@@ -39,6 +39,7 @@ function setup(over: Partial<Parameters<typeof ArrangementFilesSheet>[0]> = {}) 
     onDownload: vi.fn(),
     onUpload: vi.fn(),
     onDelete: vi.fn(),
+    onRename: vi.fn(),
     onSongSelect: vi.fn(),
     onClose: vi.fn(),
   };
@@ -172,6 +173,21 @@ describe('ArrangementFilesSheet – Hochladen und Löschen (#321, Schritt 4)', (
     // ist: Der Schutz liegt allein im Wortlaut der Rückfrage (siehe `loeschFrage`).
     setup();
     for (const d of DATEIEN) expect(screen.getByLabelText(`„${d.name}" löschen`)).toBeTruthy();
+  });
+
+  it('der Stift benennt um – und nur er (31.10.2026)', () => {
+    // Drei Ziele in einer Zeile: herunterladen, umbenennen, löschen. Jeder Knopf trifft nur seins.
+    const h = setup();
+    screen.getByLabelText('„Treu - E.pdf" umbenennen').click();
+    expect(h.onRename).toHaveBeenCalledWith(DATEIEN[2]);
+    expect(h.onDelete).not.toHaveBeenCalled();
+    expect(h.onDownload).not.toHaveBeenCalled();
+  });
+
+  it('jede Datei hat einen Stift – auch Versionen und das Original', () => {
+    // Versionen gehen dahinter einen anderen Weg (`useArrangementDateien`), aber angeboten wird es überall.
+    setup();
+    for (const d of DATEIEN) expect(screen.getByLabelText(`„${d.name}" umbenennen`)).toBeTruthy();
   });
 
   it('meldet eine ausgewählte Datei nach oben', () => {

@@ -229,21 +229,32 @@ hängt – auch Dateien, die die App sonst nirgends zeigt (z. B. eine MP3).
 5. **Zu groß:** Eine Datei über 50 MB wählen → Meldung **bevor** etwas übertragen wird.
 6. **Löschen:** Papierkorb rechts → die Rückfrage nennt die **Folge**. Beim Original-ChordPro muss
    dort stehen, dass die App danach keine Akkorde mehr zeigt. Abbrechen → nichts passiert.
-7. **Ohne Berechtigung** (Konto ohne „Lieder bearbeiten") erscheint „Dateien …" gar nicht.
-8. **Ohne Netz** (Flugmodus): Das Blatt sagt „Keine Verbindung zum Server", nicht endlos
-   „wird geladen".
+7. **Umbenennen (Datei):** Stift bei einem PDF → das Fenster zeigt den Namen im Feld und **„.pdf“ fest daneben**;
+   „Umbenennen“ bleibt grau, bis sich etwas ändert. Neuer Name → Meldung „Datei heißt jetzt „….pdf““, die Liste und
+   ChurchTools zeigen den neuen Namen. War das PDF im Lied-Menü gewählt, bleibt es gewählt, und Anmerkungen darauf
+   sind noch da. Der Name einer anderen Datei → Meldung im Fenster, nichts umbenannt.
+8. **Umbenennen (Version):** Stift bei einer Version → im Feld steht nur ihr Name („Akustik“). Neuer Name → im
+   Lied-Menü heißt die Version so; war sie gezeigt, bleibt sie gezeigt, mit derselben Tonart, Schrift und denselben
+   eigenen Anmerkungen. In ChurchTools liegt danach genau eine Datei dieser Version.
+9. **Original nicht zur Version machen:** Stift beim Original-ChordPro, Name „… — X (App)“ → das Fenster sagt, dass so
+   nur Versionen heißen; „Umbenennen“ bleibt grau.
+10. **Ohne Berechtigung** (Konto ohne „Lieder bearbeiten") erscheint „Dateien verwalten" gar nicht. Ein Konto, das
+    Lieder bearbeiten, aber nicht Admin ist, kann umbenennen (gemessen bisher nur als Admin).
+11. **Ohne Netz** (Flugmodus): Das Blatt sagt „Keine Verbindung zum Server", nicht endlos
+    „wird geladen".
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
 - **Warum:** schreibt in ChurchTools
-- **Betrifft:** `client/src/components/ArrangementFilesSheet.tsx`, `client/src/hooks/useArrangementDateien.ts`, `client/src/utils/dateiVerwaltung.ts`, `server/src/services/setlistBuilder.ts`, `server/src/services/arrangementFiles.ts`
-- **Automatisiert:** weitgehend – `ArrangementFilesSheet.test.tsx` (die drei leeren Fälle, beide
-  Knöpfe je Zeile), `dateiVerwaltung.test.ts` (Größe, Doppel, Wortlaut der Rückfrage),
-  `useArrangementDateien.test.tsx` (Meldung hängt nicht am Auffrischen),
-  `arrangementFileVerwaltung.test.ts` (Zugehörigkeit, Reihenfolge). Von Hand bleiben das
-  **Teilen-Menü auf dem iPad** (Punkt 2) und der Blick nach ChurchTools (Punkt 3).
-- **Historie:** #321
+- **Betrifft:** `client/src/components/ArrangementFilesSheet.tsx`, `client/src/components/DateiUmbenennenFenster.tsx`, `client/src/hooks/useArrangementDateien.ts`, `client/src/utils/dateiVerwaltung.ts`, `client/src/services/versionUmbenannt.ts`, `shared/ct/notenblaetter.ts`, `shared/ct/arrangementFiles.ts`, `server/src/services/setlistBuilder.ts`, `server/src/controllers/dateiController.ts`, `server/src/services/arrangementFiles.ts`
+- **Automatisiert:** weitgehend – `ArrangementFilesSheet.test.tsx` (die drei leeren Fälle, alle drei
+  Knöpfe je Zeile), `dateiVerwaltung.test.ts` (Größe, Doppel, Wortlaut der Rückfrage, Namensregel beim Umbenennen),
+  `useArrangementDateien.test.tsx` (Meldung hängt nicht am Auffrischen; Datei- und Versionsweg beim Umbenennen),
+  `DateiUmbenennenFenster.test.tsx`, `arrangementFileVerwaltung.test.ts` (Zugehörigkeit, Reihenfolge, Umbenennen mit
+  Nachlesen), `dateiController.umbenennen.test.ts`, `e2e/dateien-umbenennen.spec.ts` (Kette mit echtem Server). Von Hand bleiben das **Teilen-Menü auf dem iPad** (Punkt 2), der
+  Blick nach ChurchTools (Punkte 3, 7, 8) und das Recht eines Nicht-Admins (Punkt 10).
+- **Historie:** #321; Umbenennen 31.10.2026 (gemessen: `musik-planung/docs/messung-datei-umbenennen-31.10.md`)
 
 </details>
 
@@ -252,7 +263,7 @@ hängt – auch Dateien, die die App sonst nirgends zeigt (z. B. eine MP3).
 **Das brauchst du:** Ein Lied mit **CCLI-Nummer** in einem Arrangement **ohne** Notenblatt, und eine
 Gemeinde mit aktiver SongSelect-Integration. **Achtung: Der Abruf wird bei CCLI vermerkt.**
 
-**Das muss passieren:** In „Dateien …" steht **„Notenblatt aus SongSelect holen …"** – aber **nur**,
+**Das muss passieren:** In „Dateien verwalten" steht **„Notenblatt aus SongSelect holen …"** – aber **nur**,
 wenn noch keines da ist.
 
 1. **Arrangement ohne Notenblatt** → der Knopf ist da. Rückfrage lesen: Sie nennt Lied,
@@ -626,17 +637,18 @@ zu bearbeiten; Handy hochkant und iPad. Ein zweites Konto ohne dieses Recht.
 
 **Das muss passieren:** Das gewählte Lied in der Leiste noch einmal antippen → ein Fenster **in der Mitte**, egal
 welches Lied gewählt ist (vorher klappte es unter dem Lied auf und wanderte mit). Oben der Liedtitel, darunter die
-Gruppen **Tonart** (Transponieren · „Kapo · Abschnitte ›“), **Anzeige** (Akkorde & Text · „Nur Text · PDF ›“),
-**Version** (die gewählte Fassung ›), **Bearbeiten** („Im Editor öffnen“ · „Dateien · Stammdaten ›“) und **Teilen**
-(„Als PDF teilen“).
+Gruppen **Tonart** (Transponieren · „Kapo · Abschnitte ›“), **Anzeige** (Akkorde & Text · Nur Text · „Datei“),
+**Version** (die gewählte Fassung ›), **Bearbeiten** („Im Editor öffnen“ · „Dateien verwalten“ · „Stammdaten …“) und
+**Teilen** („Als PDF teilen“).
 
 1. „Kapo · Abschnitte ›“ → Unterseite mit „‹“ vor dem Titel; **‹** führt zurück, das Fenster bleibt offen.
 2. **Transponieren** → das Fenster schließt, die Tonart-Auswahl öffnet (ebenfalls in der Mitte).
 3. Unter **Version ›** ein anderes Arrangement bzw. eine andere Version wählen → das Blatt wechselt, das Fenster ist
    zu; beim nächsten Öffnen steht die Wahl in der Übersicht.
-4. „Nur Text · PDF ›“ → das PDF wählen → das PDF wird gezeigt; in der Übersicht steht sein Name rechts.
+4. „Datei“ → das PDF wählen (bei mehreren Dateien über „Datei ›“) → das PDF wird gezeigt; in der Übersicht steht sein
+   Name rechts in Blau.
 5. Beim PDF: Unter **Tonart** steht nur **Kapo** (direkt, ohne Unterseite), die Gruppe **Version** fehlt, unter
-   **Bearbeiten** stehen „Dateien …“ und „Stammdaten …“ direkt (kein Editor).
+   **Bearbeiten** stehen „Dateien verwalten“ und „Stammdaten …“ direkt (kein Editor).
 6. **Im Editor öffnen** → der Editor öffnet; rechts daneben stand beim Original „als neue Version“, bei einer
    benannten Version ihr Name.
 7. **Ohne** Bearbeitungsrecht: keine Gruppe **Bearbeiten**, „Als PDF teilen“ bleibt.

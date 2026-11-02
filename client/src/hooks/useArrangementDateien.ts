@@ -14,10 +14,13 @@ import {
   getArrangementFiles,
   getSongFileBlob,
   holeChordProAusSongSelect,
+  renameArrangementFile,
+  updateVersion,
   uploadArrangementFile,
 } from '../services/churchtoolsApi';
+import { umbenannteVersionMitnehmen } from '../services/versionUmbenannt';
 import { shareOrDownload } from '@ui/teilen/shareFile';
-import { pruefeUpload } from '../utils/dateiVerwaltung';
+import { pruefeUpload, umbenennVorlage } from '../utils/dateiVerwaltung';
 import { schluessel } from './abfrageSchluessel';
 
 interface Args {
@@ -28,9 +31,20 @@ interface Args {
   showToast: (text: string) => void;
   /** Das Lied neu holen, damit ein neues PDF auch im Menü unter „Anzeige" auftaucht. */
   onReload?: () => void;
+  /** Die gerade gezeigte Version – wird SIE umbenannt, zeigt das Blatt danach die Version unter neuem Namen. */
+  versionKey?: string;
+  selectVersion?: (songId: number, versionKey: string) => void;
 }
 
-export function useArrangementDateien({ songId, arrangementId, aktiv, showToast, onReload }: Args) {
+export function useArrangementDateien({
+  songId,
+  arrangementId,
+  aktiv,
+  showToast,
+  onReload,
+  versionKey,
+  selectVersion,
+}: Args) {
   const qc = useQueryClient();
   const [laedtHoch, setLaedtHoch] = useState(false);
   /** Datei, deren Löschung nachgefragt wird – `null` = keine Rückfrage offen. */
@@ -140,8 +154,58 @@ export function useArrangementDateien({ songId, arrangementId, aktiv, showToast,
     }
   };
 
+  /** Datei im Fenster „Umbenennen“ – `null` = Fenster zu. */
+  const [umbenennDatei, setUmbenennDateiRoh] = useState<ArrangementFileEntry | null>(null);
+  const [benennt, setBenennt] = useState(false);
+  /** Warum es nicht ging – steht IM Fenster, das offen bleibt: So kann man den Namen gleich verbessern. */
+  const [umbenennFehler, setUmbenennFehler] = useState<string | null>(null);
+  const setUmbenennDatei = (f: ArrangementFileEntry | null): void => {
+    setUmbenennFehler(null);
+    setUmbenennDateiRoh(f);
+  };
+
+  /**
+   * Umbenennen (31.10.2026) – **zwei Wege, je nach Art.**
+   *
+   * Eine Datei (PDF, Bild, Original-ChordPro) bekommt in ChurchTools direkt einen neuen Namen; ID und Inhalt bleiben,
+   * und mit der ID bleiben gewählte Anzeige und PDF-Anmerkungen. Eine **Version** dagegen geht über `updateVersion` wie
+   * beim Speichern im Editor: Ihr Name steckt im Schlüssel, und Aussehen und Anmerkungen ziehen mit um
+   * (`umbenannteVersionMitnehmen`). Ist es die gerade gezeigte, zeigt das Blatt sie danach unter dem neuen Schlüssel –
+   * sonst fiele es auf das Original zurück.
+   */
+  const umbenennen = async (eingabe: string): Promise<void> => {
+    const f = umbenennDatei;
+    if (!f) return;
+    setBenennt(true);
+    setUmbenennFehler(null);
+    try {
+      const alt = umbenennVorlage(f).versionKey;
+      if (alt !== null) {
+        const v = await updateVersion(songId, arrangementId, alt, { name: eingabe.trim() });
+        umbenannteVersionMitnehmen(songId, alt, v.key);
+        if (versionKey === alt) selectVersion?.(songId, v.key);
+        showToast(`Version heißt jetzt „${v.name}".`);
+      } else {
+        const liste = await renameArrangementFile(songId, arrangementId, f.fileId, eingabe);
+        const neu = liste.find((d) => d.fileId === f.fileId)?.name ?? eingabe;
+        showToast(`Datei heißt jetzt „${neu}".`);
+      }
+      setUmbenennDateiRoh(null);
+      auffrischen();
+    } catch (e) {
+      setUmbenennFehler(e instanceof Error ? e.message : 'Das Umbenennen ist fehlgeschlagen.');
+    } finally {
+      setBenennt(false);
+    }
+  };
+
   return {
     dateien,
+    umbenennDatei,
+    setUmbenennDatei,
+    benennt,
+    umbenennFehler,
+    umbenennen,
     laedtHoch,
     loeschDatei,
     setLoeschDatei,

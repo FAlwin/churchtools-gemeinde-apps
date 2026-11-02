@@ -16,6 +16,12 @@ import type { ArrangementFileEntry, ArrangementFileKind } from '@shared/types/in
 // dieselben Dateien (Lied-Ansicht) und soll sie nicht nachbauen.
 export { DATEI_ART, DATEI_SYMBOL, dateiZeilen } from '@ui/lied/dateiAnzeige';
 import { MAX_FILE_BYTES, MAX_FILE_TEXT } from '@shared/dateien/index';
+import {
+  nameTeilen,
+  neuerDateiname,
+  versionNameOf,
+  versionSlug,
+} from '@shared/ct/arrangementFiles';
 
 /**
  * Die Folge des Löschens, in einem Satz – oder `null`, wenn es keine über das Offensichtliche hinaus
@@ -78,4 +84,43 @@ export function pruefeUpload(
     };
   }
   return null;
+}
+
+/**
+ * Was im Fenster „Umbenennen“ steht (31.10.2026): der Name zum Ändern und die feste Endung daneben.
+ *
+ * **Bei einer Version aus dem Editor** steht nur ihr Name da („Akustik“), ohne Lied-Titel, „(App)“ und Endung: Den Rest
+ * setzt die App selbst zusammen (`versionFileName`), und genau so heißt die Version auch im Lied-Menü. `versionKey` ist
+ * ihr Schlüssel – unter ihm liegen Tonart, Aussehen und Anmerkungen, die beim Umbenennen mitgehen.
+ */
+export function umbenennVorlage(datei: ArrangementFileEntry): {
+  basis: string;
+  endung: string;
+  versionKey: string | null;
+} {
+  if (datei.kind === 'chordpro-version') {
+    const name = versionNameOf({ name: datei.name, fileUrl: '' }) ?? datei.name;
+    return { basis: name, endung: '', versionKey: versionSlug(name) };
+  }
+  return { ...nameTeilen(datei.name), versionKey: null };
+}
+
+/**
+ * Prüft die Eingabe im Fenster, BEVOR etwas durchs Netz geht – mit derselben Regel, die der Kern vor dem Schreiben
+ * anwendet (`neuerDateiname`). `fehler` = warum nicht; `gleich` = nichts geändert (der Knopf bleibt dann grau).
+ *
+ * Bei einer Version prüft hier nur „nicht leer“: Ihre Namensregeln (Klammern, gleiche Version schon da) setzt
+ * `versionAendern` durch, und die Meldung von dort steht dann im Fenster.
+ */
+export function umbenennPruefung(
+  datei: ArrangementFileEntry,
+  eingabe: string,
+): { fehler: string | null; gleich: boolean } {
+  const vorlage = umbenennVorlage(datei);
+  if (vorlage.versionKey !== null) {
+    const name = eingabe.trim();
+    return { fehler: name ? null : 'Bitte einen Namen angeben.', gleich: name === vorlage.basis };
+  }
+  const neu = neuerDateiname(datei.name, eingabe);
+  return { fehler: neu.fehler, gleich: neu.name === datei.name };
 }

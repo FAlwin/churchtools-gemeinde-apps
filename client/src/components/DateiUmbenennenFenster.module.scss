@@ -1,0 +1,32 @@
+// „Datei umbenennen“ – nur, was die geteilten Feld-Stile aus `SongFields.module.scss` nicht hergeben: die feste Endung
+// rechts am Feld, wie im Entwurf (Board 3). Feld und Endung teilen sich einen Rahmen, damit man sieht: Das gehört zum
+// Namen, lässt sich aber nicht ändern.
+
+.zeile {
+  display: flex;
+  align-items: stretch;
+}
+
+.mitEndung {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.endung {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-left: none;
+  border-radius: 0 var(--r-ctrl) var(--r-ctrl) 0;
+  background: var(--surface3);
+  color: var(--text2);
+  font-size: 15px;
+}
+
+.erklaerung {
+  margin: 12px 0 0;
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.45;
+}

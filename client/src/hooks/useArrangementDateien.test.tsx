@@ -21,11 +21,19 @@ const getArrangementFiles = vi.fn();
 const uploadArrangementFile = vi.fn();
 const deleteSongFile = vi.fn();
 const getSongFileBlob = vi.fn();
+const renameArrangementFile = vi.fn();
+const updateVersion = vi.fn();
 vi.mock('../services/churchtoolsApi', () => ({
+  renameArrangementFile: (...a: unknown[]) => renameArrangementFile(...a),
+  updateVersion: (...a: unknown[]) => updateVersion(...a),
   getArrangementFiles: (...a: unknown[]) => getArrangementFiles(...a),
   uploadArrangementFile: (...a: unknown[]) => uploadArrangementFile(...a),
   deleteSongFile: (...a: unknown[]) => deleteSongFile(...a),
   getSongFileBlob: (...a: unknown[]) => getSongFileBlob(...a),
+}));
+const umbenannteVersionMitnehmen = vi.fn();
+vi.mock('../services/versionUmbenannt', () => ({
+  umbenannteVersionMitnehmen: (...a: unknown[]) => umbenannteVersionMitnehmen(...a),
 }));
 const shareOrDownload = vi.fn();
 vi.mock('@ui/teilen/shareFile', () => ({
@@ -43,7 +51,7 @@ const PDF: ArrangementFileEntry = {
 };
 const LISTE: ArrangementFileEntry[] = [PDF];
 
-function starte(opts: { invalidateHaengt?: boolean } = {}) {
+function starte(opts: { invalidateHaengt?: boolean; versionKey?: string } = {}) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   if (opts.invalidateHaengt) {
     // Genau der gemessene Zustand: React Query hält das Nachladen an, das Versprechen wird nie erfüllt.
@@ -51,6 +59,7 @@ function starte(opts: { invalidateHaengt?: boolean } = {}) {
   }
   const showToast = vi.fn();
   const onReload = vi.fn();
+  const selectVersion = vi.fn();
   const view = renderHook(
     () =>
       useArrangementDateien({
@@ -59,12 +68,14 @@ function starte(opts: { invalidateHaengt?: boolean } = {}) {
         aktiv: true,
         showToast,
         onReload,
+        versionKey: opts.versionKey ?? 'original',
+        selectVersion,
       }),
     {
       wrapper: ({ children }) => <QueryClientProvider client={qc}>{children}</QueryClientProvider>,
     },
   );
-  return { ...view, showToast, onReload };
+  return { ...view, showToast, onReload, selectVersion };
 }
 
 beforeEach(() => {
@@ -169,5 +180,90 @@ describe('useArrangementDateien – Prüfung vor dem Hochladen', () => {
 
     await waitFor(() => expect(uploadArrangementFile).toHaveBeenCalledTimes(1));
     expect(result.current.uploadWarnung).toBeNull();
+  });
+});
+
+/**
+ * Umbenennen (31.10.2026): zwei Wege je nach Art – eine Datei direkt, eine Version über die Version.
+ */
+describe('useArrangementDateien – umbenennen', () => {
+  const VERSION: ArrangementFileEntry = {
+    fileId: 3,
+    name: 'Treu — Akustik (App).chordpro',
+    label: 'Version „Akustik"',
+    size: 900,
+    kind: 'chordpro-version',
+  };
+
+  it('eine Datei geht direkt an ChurchTools – Meldung mit dem neuen Namen, Fenster zu', async () => {
+    renameArrangementFile.mockResolvedValue([{ ...PDF, name: 'Lead E.pdf' }]);
+    const { result, showToast, onReload } = starte({ invalidateHaengt: true });
+    act(() => result.current.setUmbenennDatei(PDF));
+    await act(async () => {
+      await result.current.umbenennen('Lead E');
+    });
+    expect(renameArrangementFile).toHaveBeenCalledWith(12, 500, 2, 'Lead E');
+    expect(updateVersion).not.toHaveBeenCalled();
+    expect(showToast).toHaveBeenCalledWith('Datei heißt jetzt „Lead E.pdf".');
+    expect(result.current.umbenennDatei).toBeNull();
+    expect(onReload).toHaveBeenCalled();
+  });
+
+  it('eine Version geht über die Version – Aussehen und Anmerkungen ziehen mit', async () => {
+    updateVersion.mockResolvedValue({ key: 'live', name: 'Live', text: '', writtenKey: null });
+    const { result, selectVersion } = starte();
+    act(() => result.current.setUmbenennDatei(VERSION));
+    await act(async () => {
+      await result.current.umbenennen(' Live ');
+    });
+    expect(updateVersion).toHaveBeenCalledWith(12, 500, 'akustik', { name: 'Live' });
+    expect(renameArrangementFile).not.toHaveBeenCalled();
+    expect(umbenannteVersionMitnehmen).toHaveBeenCalledWith(12, 'akustik', 'live');
+    // Gezeigt war das Original – die Wahl bleibt, wie sie war.
+    expect(selectVersion).not.toHaveBeenCalled();
+  });
+
+  it('ist die umbenannte Version die gezeigte, zeigt das Blatt sie danach unter neuem Schlüssel', async () => {
+    // Sonst zeigte die Wahl auf einen Schlüssel, den es nicht mehr gibt – das Blatt fiele aufs Original zurück.
+    updateVersion.mockResolvedValue({ key: 'live', name: 'Live', text: '', writtenKey: null });
+    const { result, selectVersion } = starte({ versionKey: 'akustik' });
+    act(() => result.current.setUmbenennDatei(VERSION));
+    await act(async () => {
+      await result.current.umbenennen('Live');
+    });
+    expect(selectVersion).toHaveBeenCalledWith(12, 'live');
+    expect(umbenannteVersionMitnehmen.mock.invocationCallOrder[0]).toBeLessThan(
+      selectVersion.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('ein Fehler steht im Fenster, das offen bleibt – und nichts zieht um', async () => {
+    updateVersion.mockRejectedValue(new Error('Es gibt bereits eine Version „Live".'));
+    const { result, showToast, selectVersion } = starte({ versionKey: 'akustik' });
+    act(() => result.current.setUmbenennDatei(VERSION));
+    await act(async () => {
+      await result.current.umbenennen('Live');
+    });
+    expect(result.current.umbenennFehler).toBe('Es gibt bereits eine Version „Live".');
+    expect(result.current.umbenennDatei).toEqual(VERSION);
+    expect(result.current.benennt).toBe(false);
+    expect(umbenannteVersionMitnehmen).not.toHaveBeenCalled();
+    expect(selectVersion).not.toHaveBeenCalled();
+    expect(showToast).not.toHaveBeenCalled();
+  });
+
+  it('öffnet man das Fenster neu, ist der alte Fehler weg', async () => {
+    renameArrangementFile.mockRejectedValue(
+      new Error('Keine Berechtigung, Dateien in ChurchTools umzubenennen.'),
+    );
+    const { result } = starte();
+    act(() => result.current.setUmbenennDatei(PDF));
+    await act(async () => {
+      await result.current.umbenennen('X');
+    });
+    expect(result.current.umbenennFehler).toMatch(/Keine Berechtigung/);
+    act(() => result.current.setUmbenennDatei(null));
+    act(() => result.current.setUmbenennDatei(PDF));
+    expect(result.current.umbenennFehler).toBeNull();
   });
 });

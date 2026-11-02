@@ -9,6 +9,7 @@ import {
   listArrangementFiles,
   addArrangementFile,
   removeArrangementFile,
+  renameArrangementFile,
 } from '../services/setlistBuilder.js';
 import { fetchFileBytes } from '../services/ctFiles.js';
 import { HttpError } from '../middleware/errorHandler.js';
@@ -86,6 +87,18 @@ export async function deleteArrangementFileCtrl(req: Request, res: Response): Pr
   const fileId = idSchema.parse(req.params.fileId);
   await removeArrangementFile(ctCookie(req), songId, fileId);
   res.status(204).end();
+}
+
+/**
+ * PATCH /api/songs/:songId/arrangements/:arrangementId/files/:fileId – `{ name }`, liefert die frische Liste.
+ * Die Endung bleibt, eine Version geht nicht (Regeln in `dateiUmbenennen`).
+ */
+export async function patchArrangementFile(req: Request, res: Response): Promise<void> {
+  const songId = idSchema.parse(req.params.songId);
+  const arrangementId = idSchema.parse(req.params.arrangementId);
+  const fileId = idSchema.parse(req.params.fileId);
+  const { name } = z.object({ name: z.string().min(1).max(255) }).parse(req.body);
+  res.json(await renameArrangementFile(ctCookie(req), songId, arrangementId, fileId, name));
 }
 
 /**

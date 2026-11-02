@@ -15,6 +15,8 @@ import {
   dateiUrlFinden,
   fileIdFromUrl,
   isOriginalChordpro,
+  isVersionFile,
+  neuerDateiname,
   safeFileName,
   versionFileName,
   versionNameBisher,
@@ -229,6 +231,57 @@ export async function dateiEntfernen(
 ): Promise<void> {
   if (!dateiUrlFinden(await s.song(songId), fileId)) throw s.fehler(404, 'Datei nicht gefunden.');
   await dateiLoeschen(s, fileId);
+}
+
+/**
+ * Benennt eine Datei des Arrangements um und liefert die frische Liste (31.10.2026).
+ *
+ * **Gemessen an der Test-Instanz** (`musik-planung/docs/messung-datei-umbenennen-31.10.md`): `PATCH /files/<id>` mit
+ * `{ name }` → 204, und der Name ist danach wirklich ein anderer; ID, Adresse und Inhalt bleiben. `PUT` und das Feld
+ * `filename` wurden nicht gebraucht. Weil die ID bleibt, bleiben auch die gewählte Anzeige und die Anmerkungen auf
+ * einem PDF (beide hängen an der Datei-ID, nicht am Namen).
+ *
+ * - **Versionen nicht hier:** Ihr Name steckt im Dateinamen samt Lied-Titel und „(App)“, und an ihm hängen Schlüssel
+ *   für Tonart und Anmerkungen. Sie gehen über `versionAendern` – die Oberfläche nimmt dafür den Versions-Weg.
+ * - **Nachlesen statt glauben:** Ein 2xx allein beweist nichts – `PATCH /files/<id> {securityLevelId}` antwortete
+ *   schon einmal 204 und änderte nichts (`plan-extension.md`). Erst die neu gelesene Liste zählt.
+ * - Ein gleicher Name daneben wird abgelehnt: ChurchTools hätte nichts dagegen, aber zwei gleich benannte Dateien
+ *   sind in jeder Liste eine zu viel.
+ */
+export async function dateiUmbenennen(
+  s: CtSchreiber,
+  songId: number,
+  arrangementId: number,
+  fileId: number,
+  eingabe: string,
+): Promise<ArrangementFileEntry[]> {
+  const arr = arrangementAus(await s.song(songId), arrangementId, (st, m) => s.fehler(st, m));
+  const datei = arr.files.find((f) => fileIdFromUrl(f.fileUrl) === fileId);
+  if (!datei) throw s.fehler(404, 'Datei nicht gefunden.');
+  if (isVersionFile(datei)) {
+    throw s.fehler(400, 'Eine Version wird über die Version umbenannt, nicht als Datei.');
+  }
+  const neu = neuerDateiname(datei.name, eingabe);
+  if (neu.fehler !== null) throw s.fehler(400, neu.fehler);
+  if (neu.name === datei.name) return arrangementFileEntries(arr.files);
+  if (arr.files.some((f) => f !== datei && f.name === neu.name)) {
+    throw s.fehler(409, `Es gibt hier schon eine Datei „${neu.name}“.`);
+  }
+
+  await s.schreibe(`/files/${fileId}`, {
+    method: 'PATCH',
+    json: { name: neu.name },
+    verweigert: 'Keine Berechtigung, Dateien in ChurchTools umzubenennen.',
+    fehler: 'Umbenennen in ChurchTools fehlgeschlagen',
+  });
+  const danach = await dateienListen(s, songId, arrangementId);
+  if (danach.find((d) => d.fileId === fileId)?.name !== neu.name) {
+    throw s.fehler(
+      502,
+      'ChurchTools hat den neuen Namen nicht übernommen. Bitte erneut versuchen.',
+    );
+  }
+  return danach;
 }
 
 /**

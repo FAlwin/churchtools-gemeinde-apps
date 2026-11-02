@@ -540,8 +540,9 @@ export function antwortZeilen(
 }
 
 /**
- * **Eine Antwort als Text** – wie das Fenster sie zeigt und die Druckliste sie druckt (A8): Ankreuzen als „ja“, sonst der
- * lesbare Wert; `null`, wenn nichts beantwortet ist oder das Feld keine eigene Spalte in ChurchTools hat.
+ * **Eine Antwort als Text** – wie das Fenster sie zeigt, die Druckliste sie druckt (A8) und die Tabelle sie zeigt:
+ * Ankreuzen als „ja“, Mehrfachauswahl mit `MEHRFACH_TRENNER`, sonst der lesbare Wert; `null`, wenn nichts beantwortet
+ * ist oder das Feld keine eigene Spalte in ChurchTools hat.
  */
 export function antwortText(
   f: Feld,
@@ -552,5 +553,29 @@ export function antwortText(
   const id = ctFelder[f.id];
   const w = id === undefined ? undefined : werte[id];
   if (w === undefined) return null;
-  return f.typ === 'check' ? 'ja' : w;
+  if (f.typ === 'check') return 'ja';
+  if (f.typ !== 'multi') return w;
+  // Nur wenn jede Antwort erkannt ist – eine aus dem Formular entfernte Antwort verschwände sonst still.
+  const teile = mehrfachAntworten(f, w);
+  return teile.join(', ').length === w.length ? teile.join(MEHRFACH_TRENNER) : w;
+}
+
+/**
+ * Wie Fenster, Druckliste und Tabelle die Antworten einer Mehrfachauswahl trennen – ChurchTools trennt mit Komma, und
+ * Antworten wie „Fr, 14.05.“ enthalten selbst eins („Fr, 14.05., Sa, 15.05.“ las sich schwer, U2-1).
+ */
+export const MEHRFACH_TRENNER = ' · ';
+
+/**
+ * **Die gewählten Antworten einer Mehrfachauswahl** – aus dem Text in ChurchTools („Fr, Sa“, A0) oder aus `antwortText`
+ * („Fr · Sa“; davon zählt die Summenzeile). Gesucht wird jede bekannte Antwort als ganzes Stück, damit „Sa, So“ nicht
+ * in „Sa“ und „So“ zerfällt, wenn eine Antwort selbst ein Komma enthält.
+ */
+export function mehrfachAntworten(f: Feld, text: string | null): string[] {
+  if (!text) return [];
+  const trenner = text.includes(MEHRFACH_TRENNER) ? MEHRFACH_TRENNER : ', ';
+  const rein = `${trenner}${text}${trenner}`;
+  return [...f.antworten, ...(f.verborgen ?? [])].filter((a) =>
+    rein.includes(`${trenner}${a}${trenner}`),
+  );
 }

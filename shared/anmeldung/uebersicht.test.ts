@@ -269,6 +269,21 @@ describe('aufmerksamkeit', () => {
       { art: 'nachruecken', v: frei, frei: 2, wartend: 3 },
     ]);
   });
+  it('ohne Platzgrenze: wer wartet, kann nachrücken – dieselbe Regel wie Kachel und Warteliste', () => {
+    const offen = v(
+      roh(1, 'A', termin('2026-11-01T10:00')),
+      { aktiv: 40, wartend: 2, unbezahlt: null },
+      { ...OFFEN, maxPlaetze: null },
+    );
+    const leer = v(
+      roh(2, 'B', termin('2026-11-02T10:00')),
+      { aktiv: 40, wartend: 0, unbezahlt: null },
+      { ...OFFEN, maxPlaetze: null },
+    );
+    expect(aufmerksamkeit([offen, leer], [], LEITUNG)).toEqual([
+      { art: 'nachruecken', v: offen, frei: null, wartend: 2 },
+    ]);
+  });
   it('offene Zahlungen nur für die Leitung und nur, solange es ansteht', () => {
     const offen = v(roh(1, 'A', termin('2026-11-01T10:00')), {
       aktiv: 5,

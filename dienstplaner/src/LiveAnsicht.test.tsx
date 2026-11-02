@@ -382,3 +382,209 @@ describe('LiveAnsicht', () => {
     expect(onSchliessen).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('LiveAnsicht – steuern (L3)', () => {
+  /** ChurchTools nachgebaut: Lesen liefert den Stand, Schreiben übernimmt ihn (wie gemessen: Beginn neu nur bei neuer Stelle). */
+  function zeigeSteuern(
+    start: { stelle: number | null; seit: string | null; zusatz?: number },
+    o: {
+      steuern?: boolean;
+      schreibeFehler?: LiveGrund;
+      ablauf?: CtAgendaItem[] | 'fehler';
+    } = {},
+  ) {
+    let aktuell = { ...start };
+    const lesen = vi.fn(() =>
+      Promise.resolve({ ok: true, stand: stand(aktuell.stelle, aktuell.seit, aktuell) } as const),
+    );
+    const schreiben = vi.fn(
+      (_t: number, _a: number, ziel: { stelle: number; zusatzSek: number }) => {
+        if (o.schreibeFehler)
+          return Promise.resolve({ ok: false, grund: o.schreibeFehler } as const);
+        const seit =
+          ziel.stelle === aktuell.stelle ? aktuell.seit : new Date(Date.now()).toISOString();
+        aktuell = { stelle: ziel.stelle, seit, zusatz: ziel.zusatzSek };
+        return Promise.resolve({
+          ok: true,
+          stand: stand(aktuell.stelle, aktuell.seit, aktuell),
+        } as const);
+      },
+    );
+    const ablaufLesen = vi.fn(() =>
+      o.ablauf === 'fehler'
+        ? Promise.reject(new Error('Netz'))
+        : Promise.resolve({ id: 126, items: o.ablauf ?? ITEMS }),
+    );
+    const onAblauf = vi.fn();
+    render(
+      <LiveAnsicht
+        titel="Gottesdienst"
+        tag="2027-03-07"
+        beginn="10:00"
+        terminId={T}
+        agendaId={126}
+        items={ITEMS}
+        zeilen={ZEILEN}
+        infoGruppen={[]}
+        zeitzone="Europe/Berlin"
+        onSchliessen={() => {}}
+        steuern={o.steuern ?? true}
+        onAblauf={onAblauf}
+        lesen={lesen}
+        schreiben={schreiben}
+        ablaufLesen={ablaufLesen}
+      />,
+    );
+    return { lesen, schreiben, ablaufLesen, onAblauf };
+  }
+  const knopf = (name: string) => screen.getByRole('button', { name });
+  const klick = async (name: string) => {
+    fireEvent.click(knopf(name));
+    await fertig();
+  };
+  const knoepfe = () =>
+    within(screen.getByRole('group', { name: 'Live-Agenda steuern' }))
+      .getAllByRole('button')
+      .map((b) => b.getAttribute('aria-label'));
+
+  it('ohne Recht keine Knöpfe – nur folgen', async () => {
+    zeigeSteuern({ stelle: 3, seit: '2027-03-07T09:07:00Z' }, { steuern: false });
+    await fertig();
+    expect(screen.queryByRole('group', { name: 'Live-Agenda steuern' })).toBeNull();
+  });
+
+  it('nicht gestartet: nur „Starten“ – schaltet auf den ersten Punkt und zeigt ihn sofort', async () => {
+    const { schreiben } = zeigeSteuern({ stelle: null, seit: null });
+    await fertig();
+    expect(knoepfe()).toEqual(['Live-Agenda starten']);
+    await klick('Live-Agenda starten');
+    expect(schreiben).toHaveBeenCalledWith(T, 126, { stelle: 1, zusatzSek: 0 });
+    // Sofort, nicht erst bei der nächsten Abfrage.
+    expect(within(jetztBereich()).getByRole('heading').textContent).toBe('Begrüßung');
+    expect(within(jetztBereich()).getByText('Jetzt')).toBeTruthy();
+  });
+
+  it('läuft: Weiter überspringt Lieder ohne Dauer, Zurück den weggelassenen; ±1 Min als Gesamtwert', async () => {
+    const { schreiben } = zeigeSteuern({ stelle: 3, seit: '2027-03-07T09:07:00Z' });
+    await fertig();
+    expect(knoepfe()).toEqual([
+      'Zum vorigen Punkt',
+      'Zum nächsten Punkt',
+      'Eine Minute weniger',
+      'Eine Minute mehr',
+    ]);
+    await klick('Eine Minute mehr');
+    expect(schreiben).toHaveBeenLastCalledWith(T, 126, { stelle: 3, zusatzSek: 60 });
+    expect(restzeit()).toBe('30:00noch, von 31 Min');
+    await klick('Eine Minute weniger');
+    expect(schreiben).toHaveBeenLastCalledWith(T, 126, { stelle: 3, zusatzSek: 0 });
+    await klick('Zum nächsten Punkt');
+    expect(schreiben).toHaveBeenLastCalledWith(T, 126, { stelle: 5, zusatzSek: 0 });
+    expect(within(jetztBereich()).getByRole('heading').textContent).toBe('Ansagen');
+    await klick('Zum vorigen Punkt');
+    await klick('Zum vorigen Punkt');
+    expect(schreiben).toHaveBeenLastCalledWith(T, 126, { stelle: 1, zusatzSek: 0 });
+  });
+
+  it('am Ende: nur Zurück, Weiter gesperrt', async () => {
+    zeigeSteuern({ stelle: ENDE, seit: '2027-03-07T09:07:00Z' });
+    await fertig();
+    expect(knoepfe()).toEqual(['Zum vorigen Punkt', 'Zum nächsten Punkt']);
+    expect(knopf('Zum nächsten Punkt').hasAttribute('disabled')).toBe(true);
+    expect(knopf('Zum vorigen Punkt').hasAttribute('disabled')).toBe(false);
+  });
+
+  it('Ablauf geändert (Begrüßung gelöscht): erst die Stelle nachziehen, dann schalten – und den Ablauf weitergeben', async () => {
+    const ohneBegruessung = ITEMS.filter((i) => i.id !== 968);
+    const { schreiben, onAblauf } = zeigeSteuern(
+      { stelle: 3, seit: '2027-03-07T09:07:00Z' },
+      { ablauf: ohneBegruessung },
+    );
+    await fertig();
+    await klick('Eine Minute mehr');
+    // Die Predigt ist jetzt Stelle 2 – ohne Nachziehen stünde hier 3 (das Lied ohne Dauer).
+    expect(schreiben).toHaveBeenLastCalledWith(T, 126, { stelle: 2, zusatzSek: 60 });
+    expect(onAblauf).toHaveBeenCalledWith({ id: 126, items: ohneBegruessung });
+  });
+
+  it('unveränderter Ablauf wird nicht weitergegeben; scheitert das Lesen des Ablaufs, wird trotzdem geschaltet', async () => {
+    const a = zeigeSteuern({ stelle: 3, seit: '2027-03-07T09:07:00Z' });
+    await fertig();
+    await klick('Zum nächsten Punkt');
+    expect(a.onAblauf).not.toHaveBeenCalled();
+    cleanup();
+    const b = zeigeSteuern({ stelle: 3, seit: '2027-03-07T09:07:00Z' }, { ablauf: 'fehler' });
+    await fertig();
+    await klick('Zum nächsten Punkt');
+    expect(b.schreiben).toHaveBeenLastCalledWith(T, 126, { stelle: 5, zusatzSek: 0 });
+  });
+
+  it.each([
+    [
+      'nicht-angekommen',
+      'Nicht übernommen – vermutlich hat gerade jemand anderes geschaltet. Der aktuelle Stand wird geladen.',
+    ],
+    [
+      'voruebergehend',
+      'Nicht gespeichert – ChurchTools antwortet gerade nicht. Bitte noch einmal tippen.',
+    ],
+  ] as const)('Schalten scheitert (%s): Meldung, der Stand bleibt', async (grund, text) => {
+    zeigeSteuern({ stelle: 3, seit: '2027-03-07T09:07:00Z' }, { schreibeFehler: grund });
+    await fertig();
+    await klick('Zum nächsten Punkt');
+    expect(screen.getByRole('alert').textContent).toBe(text);
+    expect(within(jetztBereich()).getByRole('heading').textContent).toBe('Predigt');
+  });
+
+  it('während geschrieben wird, sind die Knöpfe gesperrt – zweimal tippen schaltet nur einmal', async () => {
+    const { schreiben } = zeigeSteuern({ stelle: 3, seit: '2027-03-07T09:07:00Z' });
+    await fertig();
+    fireEvent.click(knopf('Zum nächsten Punkt'));
+    fireEvent.click(knopf('Zum nächsten Punkt'));
+    await fertig();
+    expect(schreiben).toHaveBeenCalledTimes(1);
+  });
+
+  it('eine Abfrage, die vor dem Schalten losging, überschreibt den neuen Stand nicht', async () => {
+    let alteAntwort: (() => void) | null = null;
+    let erste = true;
+    const lesen = vi.fn(() => {
+      if (erste) {
+        erste = false;
+        return Promise.resolve({ ok: true, stand: stand(3, '2027-03-07T09:07:00Z') } as const);
+      }
+      return new Promise<{ ok: true; stand: LiveStand }>((ok) => {
+        alteAntwort = () => ok({ ok: true, stand: stand(3, '2027-03-07T09:07:00Z') });
+      });
+    });
+    render(
+      <LiveAnsicht
+        titel="Gottesdienst"
+        tag="2027-03-07"
+        beginn="10:00"
+        terminId={T}
+        agendaId={126}
+        items={ITEMS}
+        zeilen={ZEILEN}
+        infoGruppen={[]}
+        zeitzone="Europe/Berlin"
+        onSchliessen={() => {}}
+        steuern
+        lesen={lesen}
+        schreiben={() =>
+          Promise.resolve({
+            ok: true,
+            stand: stand(5, new Date(Date.now()).toISOString()),
+          } as const)
+        }
+        ablaufLesen={() => Promise.resolve({ id: 126, items: ITEMS })}
+      />,
+    );
+    await fertig();
+    await spulen(TAKT_MS); // zweite Abfrage läuft jetzt (hängt)
+    await klick('Zum nächsten Punkt');
+    expect(within(jetztBereich()).getByRole('heading').textContent).toBe('Ansagen');
+    await act(async () => alteAntwort?.());
+    expect(within(jetztBereich()).getByRole('heading').textContent).toBe('Ansagen');
+  });
+});

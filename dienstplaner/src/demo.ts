@@ -265,7 +265,8 @@ function daten(fall: string): Record<string, unknown> {
       data: [
         // Predigt (Programm): der Demo-Planer darf sie nur ansehen – zeigt „nur ansehen“ (16.10.2026).
         { id: 1, name: 'Predigt', serviceGroupId: 1, groupIds: [] },
-        { id: 6, name: 'Ton', serviceGroupId: 3, groupIds: [7] },
+        // Ton darf die Live-Agenda steuern (E6b-2 L3) – Alwin ist an 101 als Ton eingeteilt.
+        { id: 6, name: 'Ton', serviceGroupId: 3, groupIds: [7], allowControlLiveAgenda: true },
         { id: 7, name: 'Licht', serviceGroupId: 3, groupIds: [7] },
         { id: 9, name: 'Gesang', serviceGroupId: 4, groupIds: [9] },
       ],

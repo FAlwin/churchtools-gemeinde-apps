@@ -397,3 +397,40 @@
     width: auto;
   }
 }
+
+// Steuern (L3): wie die Live-Agenda von ChurchTools unter dem Kreis – ‹ › und − +, „Weiter“ blau (Entwurf Variante A).
+// Die Knöpfe sind `KopfKnopf` (gemeinsamer Baustein, Höhe `--knopf-hoehe`); hier nur das Raster.
+.steuern {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 220px;
+}
+
+// Vor dem Start nur „Starten“ – über die ganze Breite.
+.einzeln {
+  grid-template-columns: 1fr;
+}
+
+.steuerFehler {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--red);
+  font-size: 13px;
+}
+
+@media (max-width: 759px) {
+  .rechts {
+    flex-wrap: wrap;
+  }
+
+  .steuern {
+    order: 1;
+    grid-template-columns: repeat(4, 1fr);
+    width: 100%;
+  }
+
+  .einzeln {
+    grid-template-columns: 1fr;
+  }
+}

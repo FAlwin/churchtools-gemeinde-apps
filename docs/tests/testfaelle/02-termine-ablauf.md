@@ -352,3 +352,32 @@ Dann, Restzeit, Abweichung – und folgt jedem Weiterschalten nach spätestens 2
 - **Historie:** E6b-2 L2 (02.11.2026, Entwurf `e6b-2-live.html` Variante A)
 
 </details>
+
+### TF-ABLAUF-15 · „Live“ steuern
+
+**Das brauchst du:** Einen Test-Termin mit Ablauf, an dem du in einem Dienst mit „Live-Agenda steuern“ (Stammdaten →
+Dienste) eingeteilt bist; daneben die „Live-Agenda“ von ChurchTools desselben Termins. Eine zweite Person ohne dieses
+Recht.
+
+**Das muss passieren:** Wer steuern darf, schaltet im Dienstplaner – ChurchTools und alle anderen folgen. Wer nicht
+darf, sieht keine Knöpfe.
+
+1. Dienstplaner → Termin → **„Live“**. Noch nicht gestartet: nur **„Starten“**. Antippen → der erste Punkt steht sofort
+   unter „Jetzt“; die Live-Agenda von ChurchTools zeigt ihn nach spätestens 2,5 s.
+2. **Weiter** → nächster Punkt; Lieder ohne Dauer und weggelassene Punkte werden übersprungen. **Zurück** → voriger.
+3. **+ 1 Min** / **− 1 Min** → die Restzeit ändert sich um eine Minute, der Punkt bleibt.
+4. In ChurchTools **›** → der Dienstplaner folgt. Beide Seiten können abwechselnd schalten.
+5. Nach dem letzten Punkt: „Ablauf vorbei“, **Weiter** gesperrt, **Zurück** geht.
+6. Ablauf in ChurchTools wieder öffnen, einen Punkt **vor** dem aktuellen löschen, dann im Dienstplaner **+ 1 Min** →
+   derselbe Punkt bleibt „Jetzt“ (die Stelle wird nachgezogen).
+7. Mit der zweiten Person: „Live“ zeigt keine Knöpfe.
+8. Am Handy: vier Symbolknöpfe ‹ › − + unter dem Kreis.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `dienstplaner/src/LiveAnsicht.tsx`, `dienstplaner/src/useLive.ts`, `dienstplaner/src/TerminAblauf.tsx`, `shared/dienstplan/plan.ts`, `shared/ct/liveAgenda.ts`
+- **Automatisiert:** ja – `dienstplaner/src/LiveAnsicht.test.tsx` (Starten, Weiter/Zurück, ±1, Ende, Nachziehen, Fehler, Sperren, alte Abfrage verworfen), `dienstplaner/src/TerminAnsicht.test.tsx` (Recht kommt an), `shared/dienstplan/plan.test.ts` (Recht je Termin); von Hand bleibt das Schalten gegen die echte Live-Agenda
+- **Historie:** E6b-2 L3 (02.11.2026)
+
+</details>

@@ -154,6 +154,7 @@ describe('planAus', () => {
         admin: false,
         beginn: '2026-10-18T08:00:00Z',
         ablaufTermin: { kalenderId: null, terminAdminIds: [] },
+        liveSteuern: false,
       },
       {
         id: 11,
@@ -166,7 +167,30 @@ describe('planAus', () => {
         admin: false,
         beginn: '2026-10-25T09:00:00Z',
         ablaufTermin: { kalenderId: null, terminAdminIds: [] },
+        liveSteuern: false,
       },
+    ]);
+  });
+
+  it('Live-Agenda steuern (E6b-2 L3): nur wo ich in einem Dienst mit dem Recht eingeteilt bin – Regel `darfLiveSteuern`', () => {
+    const mitRecht = diensteAus([
+      { id: 6, name: 'Ton', serviceGroupId: 3, allowControlLiveAgenda: true },
+      { id: 7, name: 'Licht', serviceGroupId: 3 },
+      { id: 9, name: 'Gesang', serviceGroupId: 4 },
+      { id: 1, name: 'Predigt', serviceGroupId: 1 },
+    ]);
+    const p = planAus(roh, {
+      ichId: ICH,
+      dienste: mitRecht,
+      dienstgruppen: GRUPPEN,
+      zeitzone: 'Europe/Berlin',
+      planbar: () => true,
+      ganzSichtbar: () => true,
+    });
+    // An 10 bin ich „Ton“ (Recht), an 11 ist „Ton“ Anna – dort nicht.
+    expect(p.spalten.map((s) => [s.id, s.liveSteuern])).toEqual([
+      [10, true],
+      [11, false],
     ]);
   });
 

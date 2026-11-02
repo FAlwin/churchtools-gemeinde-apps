@@ -240,10 +240,10 @@ describe('Leiste „Rückgängig“', () => {
 
 /** Fenster wie ChurchTools (E6-O F4): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
 describe('Verwalten und Archiv im ChurchTools-Aufbau', () => {
-  it('Auswahl: nur zum Wählen – unten nur „Abbrechen“', () => {
+  it('Auswahl: nur zum Wählen – nur das X (seit 02.11.2026 ohne „Abbrechen“ unten)', () => {
     verwalten({ admin: true });
     expect(fensterKnoepfe()[0]).toBe('Fenster schließen');
-    expect(fensterKnoepfe().at(-1)).toBe('Abbrechen');
+    expect(fensterKnoepfe()).not.toContain('Abbrechen');
   });
 
   it('Umbenennen, Freigabe zurücknehmen, Löschen: der Hauptknopf unten rechts', () => {
@@ -260,7 +260,7 @@ describe('Verwalten und Archiv im ChurchTools-Aufbau', () => {
     }
   });
 
-  it('Verschieben: mit Ziel „Abbrechen · Zu … verschieben“; ohne anderes Team nur „Schließen“', () => {
+  it('Verschieben: mit Ziel „Abbrechen · Zu … verschieben“; ohne anderes Team nur das X', () => {
     verwalten({ admin: true });
     fireEvent.click(screen.getByRole('button', { name: /^In ein anderes Team/ }));
     expect(fensterKnoepfe().slice(-2)).toEqual(['Abbrechen', 'Zu „Technik“ verschieben']);
@@ -279,7 +279,7 @@ describe('Verwalten und Archiv im ChurchTools-Aufbau', () => {
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: /^In ein anderes Team/ }));
-    expect(fensterKnoepfe().slice(1)).toEqual(['Schließen']);
+    expect(fensterKnoepfe().slice(1)).toEqual([]);
   });
 
   it('während des Speicherns: X und „Abbrechen“ gesperrt', () => {

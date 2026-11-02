@@ -71,7 +71,7 @@ describe('AlteEntwuerfeFach (#582)', () => {
     expect(screen.getByText('verworfen')).toBeTruthy();
     expect(screen.getByText('Inzwischen geändert – nicht verworfen.')).toBeTruthy();
     expect(screen.getByText(/antwortet gerade nicht/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(p.onClose).toHaveBeenCalledWith(true);
   });
 
@@ -83,14 +83,14 @@ describe('AlteEntwuerfeFach (#582)', () => {
       .mockResolvedValue({ ok: false, grund: 'kein-recht' });
     const p = zeige(verwerfen);
     fireEvent.click(screen.getByRole('button', { name: 'Alle 3 verwerfen' }));
-    // Gesperrt wie im ConfirmDialog (E6-O F2, #720): X und Abbrechen tun nichts, solange es läuft.
+    // Gesperrt wie im ConfirmDialog (E6-O F2, #720): Das X tut nichts, solange es läuft (ein „Abbrechen“ unten gibt es dabei seit 02.11.2026 nicht mehr).
     expect(screen.getByRole('button', { name: 'Abbrechen' })).toHaveProperty('disabled', true);
     fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
     fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(p.onClose).not.toHaveBeenCalled();
     await act(async () => fertig({ ok: false, grund: 'kein-recht' }));
     expect(await screen.findByText('0 von 3 verworfen')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(p.onClose).toHaveBeenCalledWith(false);
   });
 });

@@ -64,7 +64,6 @@ export function FestePunkteRahmen({
         <Sheet
           title={`${offen.titel} · ${tagPunkt(tagAusIso(offen.beginn, zeitzone))}`}
           onClose={() => setOffen(null)}
-          cancelLabel="Schließen"
           knoepfe={null}
           breit
         >

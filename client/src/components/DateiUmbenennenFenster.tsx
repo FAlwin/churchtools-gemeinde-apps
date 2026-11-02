@@ -12,7 +12,7 @@ import { useState } from 'react';
 import type { ArrangementFileEntry } from '@shared/types/index';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
-import { umbenennPruefung, umbenennVorlage } from '../utils/dateiVerwaltung';
+import { umbenennPruefung, umbenennVorlage, versionsDateiname } from '../utils/dateiVerwaltung';
 import feld from './SongFields.module.scss';
 import styles from './NewSongSheet.module.scss';
 import eigen from './DateiUmbenennenFenster.module.scss';
@@ -24,10 +24,20 @@ interface Props {
   /** Was ChurchTools (oder der Kern) abgelehnt hat. */
   fehler: string | null;
   onUmbenennen: (eingabe: string) => void;
+  /** X: schließt alles – das Umbenennen UND die Dateien darunter (02.11.2026). */
   onClose: () => void;
+  /** „‹“ und „Abbrechen“: zurück zu den Dateien. */
+  onZurueck: () => void;
 }
 
-export function DateiUmbenennenFenster({ datei, benennt, fehler, onUmbenennen, onClose }: Props) {
+export function DateiUmbenennenFenster({
+  datei,
+  benennt,
+  fehler,
+  onUmbenennen,
+  onClose,
+  onZurueck,
+}: Props) {
   const vorlage = umbenennVorlage(datei);
   const istVersion = vorlage.versionKey !== null;
   const [eingabe, setEingabe] = useState(vorlage.basis);
@@ -35,11 +45,14 @@ export function DateiUmbenennenFenster({ datei, benennt, fehler, onUmbenennen, o
   const bereit = !benennt && pruefung.fehler === null && !pruefung.gleich;
   // Den Prüf-Fehler erst zeigen, wenn man etwas getippt hat – ein Fenster, das beim Öffnen schon schimpft, wäre falsch.
   const hinweis = fehler ?? (pruefung.gleich ? null : pruefung.fehler);
+  const dateiname = versionsDateiname(datei, eingabe);
 
   return (
     <Sheet
       title={istVersion ? 'Version umbenennen' : 'Datei umbenennen'}
       onClose={onClose}
+      zurueck={onZurueck}
+      onAbbrechen={onZurueck}
       beschaeftigt={benennt}
       knoepfe={
         <FensterKnopf disabled={!bereit} onClick={() => onUmbenennen(eingabe)}>
@@ -75,9 +88,14 @@ export function DateiUmbenennenFenster({ datei, benennt, fehler, onUmbenennen, o
           {vorlage.endung && <span className={eigen.endung}>{vorlage.endung}</span>}
         </div>
       </form>
+      {dateiname && (
+        <p className={eigen.dateiname}>
+          Datei in ChurchTools: <span>{dateiname}</span>
+        </p>
+      )}
       <p className={eigen.erklaerung}>
         {istVersion
-          ? 'Die Version bekommt den neuen Namen – Tonart, Aussehen und deine Anmerkungen gehen mit.'
+          ? 'Die Version bekommt den neuen Namen – Tonart, Aussehen und deine Anmerkungen gehen mit. Liedtitel, „(App)“ und die Endung setzt die App selbst.'
           : 'Die Endung bleibt. Der neue Name gilt für alle – in der App und in ChurchTools.'}
       </p>
     </Sheet>

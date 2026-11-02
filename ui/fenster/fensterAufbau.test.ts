@@ -55,6 +55,23 @@ describe('Fenster im ChurchTools-Aufbau (E6-O)', () => {
     expect([...alteFenster().values()].flat()).toEqual([]);
   });
 
+  it('kein Fenster nur zum Ansehen reicht noch eine Knopf-Beschriftung (02.11.2026)', () => {
+    // Mit `knoepfe={null}` hat ein Fenster keine Fußzeile mehr – ein `cancelLabel` daneben wäre ein toter Rest, der so
+    // aussieht, als stünde unten doch ein „Schließen“.
+    const funde: string[] = [];
+    for (const ordner of ORDNER) {
+      for (const datei of dateien(ordner, /\.tsx$/)) {
+        const rel = relative(WURZEL, datei);
+        if (/\.test\.tsx$/.test(rel)) continue;
+        for (const { zeile, tag } of sheetTags(readFileSync(datei, 'utf8'))) {
+          if (/\bknoepfe=\{null\}/.test(tag) && /\bcancelLabel=/.test(tag))
+            funde.push(`${rel}:${zeile}`);
+        }
+      }
+    }
+    expect(funde).toEqual([]);
+  });
+
   it('prüft alle Apps und `ui/` (sonst wäre der Test oben billig grün)', () => {
     expect(ORDNER).toEqual(
       expect.arrayContaining([

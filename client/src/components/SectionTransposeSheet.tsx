@@ -9,6 +9,8 @@ interface SectionTransposeSheetProps {
   onChange: (index: number, semitones: number) => void;
   onReset: () => void;
   onClose: () => void;
+  /** „‹“ – zurück ins Lied-Menü, aus dem das Fenster aufging (02.11.2026). */
+  zurueck?: () => void;
 }
 
 const MIN = -11;
@@ -24,6 +26,7 @@ export function SectionTransposeSheet({
   onChange,
   onReset,
   onClose,
+  zurueck,
 }: SectionTransposeSheetProps) {
   const anyShift = Object.values(value).some((v) => v !== 0);
 
@@ -32,7 +35,7 @@ export function SectionTransposeSheet({
   }
 
   return (
-    <Sheet title="Abschnitte transponieren" onClose={onClose} cancelLabel="Fertig" knoepfe={null}>
+    <Sheet title="Abschnitte transponieren" onClose={onClose} knoepfe={null} zurueck={zurueck}>
       <div className={styles.hint}>
         Verschiebt einzelne Abschnitte zusätzlich zur Lied-Tonart (z. B. letzter Chorus +1).
       </div>

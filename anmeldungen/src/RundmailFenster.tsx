@@ -248,7 +248,7 @@ export function RundmailFenster({
   const adressen = new Set(an.map((x) => x.email.toLowerCase())).size;
   if (schritt === 'fertig' && ergebnis)
     return (
-      <Sheet title="Rundmail verschickt" onClose={onClose} cancelLabel="Schließen" knoepfe={null}>
+      <Sheet title="Rundmail verschickt" onClose={onClose} knoepfe={null}>
         <p className={a.hinweisBlau}>
           {ergebnis.bestaetigt === null
             ? `${an.length} ${an.length === 1 ? 'Mail' : 'Mails'} an ChurchTools übergeben. Das Protokoll von ChurchTools kann ich mit deinen Rechten nicht lesen – nachgeprüft ist es deshalb nicht.`

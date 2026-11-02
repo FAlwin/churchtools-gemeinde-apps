@@ -39,7 +39,8 @@ test('Termin ohne Ablauf: aus der Vorlage anlegen', async ({ page, browser }) =>
   await page.getByLabel('Suchwort im Terminnamen').fill('Gottesdienst');
   const speichern = page.getByRole('button', { name: 'Speichern' });
   if (await speichern.isVisible()) await speichern.click();
-  else await page.getByRole('button', { name: 'Abbrechen' }).click();
+  // Ohne Änderung hat das Fenster keine Knöpfe unten (02.11.2026) – dann schließt das X.
+  else await page.getByRole('button', { name: 'Fenster schließen' }).click();
   await expect(page.getByRole('button', { name: /Termine ohne Ablauf.*1 Kalender/ })).toBeVisible();
 
   // Terminliste: der Gottesdienst ohne Ablauf ja, der Gebetsabend im selben Kalender nicht.

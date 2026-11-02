@@ -19,6 +19,8 @@ import { MAX_FILE_BYTES, MAX_FILE_TEXT } from '@shared/dateien/index';
 import {
   nameTeilen,
   neuerDateiname,
+  versionFileName,
+  versionLiedTitel,
   versionNameOf,
   versionSlug,
 } from '@shared/ct/arrangementFiles';
@@ -123,4 +125,18 @@ export function umbenennPruefung(
   }
   const neu = neuerDateiname(datei.name, eingabe);
   return { fehler: neu.fehler, gleich: neu.name === datei.name };
+}
+
+/**
+ * Wie die Datei einer Version nach dem Umbenennen in ChurchTools heißen wird – mit derselben Funktion, die die App
+ * beim Schreiben benutzt (`versionFileName`). Alwin, 02.11.2026: „Warum sehe ich bei einer Datei die Endung und bei der
+ * anderen nicht?“ – bei einer Version setzt die App Liedtitel, „(App)“ und Endung selbst; der Hinweis zeigt es.
+ *
+ * `null` bei einer Datei, die keine Version ist, bei leerer Eingabe und bei alten Dateinamen ohne „ — “ (dort lässt
+ * sich der Liedtitel nicht sicher ablesen – lieber kein Hinweis als ein falscher).
+ */
+export function versionsDateiname(datei: ArrangementFileEntry, eingabe: string): string | null {
+  if (datei.kind !== 'chordpro-version' || !eingabe.trim()) return null;
+  const titel = versionLiedTitel(datei.name);
+  return titel === null ? null : versionFileName(titel, eingabe.trim());
 }

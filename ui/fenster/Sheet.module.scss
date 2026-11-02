@@ -113,6 +113,12 @@
   padding: 6px 20px 4px;
 }
 
+// Ohne eigene Knöpfe hat ein Fenster keine Fußzeile (02.11.2026) – dann trägt der Inhalt den unteren Rand selbst, so
+// viel wie sonst die Fußzeile. Ohne das klebte der letzte Eintrag 4 px über der Kante.
+.inhalt:last-child {
+  padding-bottom: 18px;
+}
+
 .fuss {
   @include m.fensterKnopfZeile;
   padding: 12px 20px 18px;

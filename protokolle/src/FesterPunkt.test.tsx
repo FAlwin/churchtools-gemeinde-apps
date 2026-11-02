@@ -161,7 +161,7 @@ describe('Fester Punkt „Letztes Protokoll“', () => {
     // Im alten Protokoll: dessen eigenes „Letztes Protokoll“ (September) – aber kein Fenster im Fenster.
     expect(within(fenster).getByText(/vom 09\.09\.2026/)).toBeTruthy();
     expect(within(fenster).queryByRole('button', { name: 'Öffnen' })).toBeNull();
-    fireEvent.click(within(fenster).getAllByRole('button', { name: 'Schließen' })[0]);
+    fireEvent.click(within(fenster).getAllByRole('button', { name: 'Fenster schließen' })[0]);
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 

@@ -9,12 +9,21 @@ interface CapoPickerProps {
   soundingKey: string;
   onPick: (capo: number) => void;
   onClose: () => void;
+  /** „‹“ – zurück ins Lied-Menü, aus dem das Fenster aufging (02.11.2026). */
+  zurueck?: () => void;
 }
 
 /** Bottom-Sheet zur Kapo-Auswahl mit „Griff klingt wie"-Hinweis. */
-export function CapoPicker({ capo, shapeKey, soundingKey, onPick, onClose }: CapoPickerProps) {
+export function CapoPicker({
+  capo,
+  shapeKey,
+  soundingKey,
+  onPick,
+  onClose,
+  zurueck,
+}: CapoPickerProps) {
   return (
-    <Sheet title="Kapo" onClose={onClose} knoepfe={null}>
+    <Sheet title="Kapo" onClose={onClose} knoepfe={null} zurueck={zurueck}>
       <div className={styles.capoHint}>
         {capo > 0 ? (
           <>

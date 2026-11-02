@@ -178,6 +178,11 @@ export function AllSongs({
             onOpenSong(song.songId, song.arrangementId);
           }}
           onClose={() => setFormular(null)}
+          // Aus der Suche „Neues Lied“ gekommen: „‹“ führt dorthin zurück (02.11.2026).
+          zurueck={() => {
+            setFormular(null);
+            setSucheOffen(true);
+          }}
         />
       )}
     </>

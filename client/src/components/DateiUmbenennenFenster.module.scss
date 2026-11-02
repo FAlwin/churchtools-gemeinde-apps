@@ -30,3 +30,18 @@
   font-size: 13px;
   line-height: 1.45;
 }
+
+// Bei einer Version: wie die Datei in ChurchTools heißen wird (02.11.2026). Der Name selbst kräftiger – er ist das,
+// wonach man in ChurchTools sucht.
+.dateiname {
+  margin: 10px 0 0;
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+
+  span {
+    color: var(--text);
+    font-weight: 700;
+  }
+}

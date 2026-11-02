@@ -55,7 +55,7 @@ describe('PlaetzeFach (E4-5-3)', () => {
     fireEvent.click(knopf('Licht: ein Platz weniger'));
     await waitFor(() => expect(p.aendern).toHaveBeenLastCalledWith(LICHT, 2, 1));
     expect(p.onGespeichert).toHaveBeenLastCalledWith('Licht: jetzt 1 Platz.');
-    fireEvent.click(knopf('Schließen'));
+    fireEvent.click(knopf('Fenster schließen'));
     expect(p.onClose).toHaveBeenCalledWith(true);
   });
 
@@ -66,9 +66,9 @@ describe('PlaetzeFach (E4-5-3)', () => {
     expect(knopf('Ton: ein Platz mehr')).toHaveProperty('disabled', true);
     expect(zahl('Licht')).toBe('…');
     // Sichtbar gesperrt wie im ConfirmDialog (E6-O F2, #720), nicht nur wirkungslos.
-    expect(knopf('Schließen')).toHaveProperty('disabled', true);
     expect(knopf('Fenster schließen')).toHaveProperty('disabled', true);
-    fireEvent.click(knopf('Schließen'));
+    expect(knopf('Fenster schließen')).toHaveProperty('disabled', true);
+    fireEvent.click(knopf('Fenster schließen'));
     expect(p.onClose).not.toHaveBeenCalled();
     await act(async () => fertig({ ok: true, anzahl: 2 }));
     expect(knopf('Ton: ein Platz mehr')).toHaveProperty('disabled', false);
@@ -95,7 +95,7 @@ describe('PlaetzeFach (E4-5-3)', () => {
     fireEvent.click(knopf('Licht: ein Platz mehr'));
     expect((await screen.findByRole('alert')).textContent).toMatch(/erlaubt dir nicht/);
     expect(zahl('Licht')).toBe('1');
-    fireEvent.click(knopf('Schließen'));
+    fireEvent.click(knopf('Fenster schließen'));
     expect(p.onClose).toHaveBeenCalledWith(false);
   });
 });
@@ -117,10 +117,10 @@ describe('anzahlFehlerText', () => {
 });
 
 describe('PlaetzeFach im ChurchTools-Aufbau', () => {
-  it('nur ansehen: X oben, unten nur Schließen', () => {
+  it('nur ansehen: X oben, unten kein „Schließen“ mehr (02.11.2026)', () => {
     zeige();
     expect(screen.getByRole('dialog')).toBeTruthy();
     expect(knopfFolge()[0]).toBe('Fenster schließen');
-    expect(knopfFolge().at(-1)).toBe('Schließen');
+    expect(knopfFolge()).not.toContain('Schließen');
   });
 });

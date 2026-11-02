@@ -52,6 +52,8 @@ interface ArrangementFilesSheetProps {
   onRename: (file: ArrangementFileEntry) => void;
   onSongSelect: () => void;
   onClose: () => void;
+  /** „‹“ – zurück ins Lied-Menü, aus dem „Dateien verwalten“ aufging (02.11.2026). */
+  zurueck?: () => void;
 }
 
 export function ArrangementFilesSheet({
@@ -68,6 +70,7 @@ export function ArrangementFilesSheet({
   onRename,
   onSongSelect,
   onClose,
+  zurueck,
 }: ArrangementFilesSheetProps) {
   const dateiFeld = useRef<HTMLInputElement>(null);
   /** Die Liste ist erst dann echt, wenn nichts dazwischenkommt – sonst hätte „hinzufügen" kein Ziel. */
@@ -90,8 +93,8 @@ export function ArrangementFilesSheet({
     <Sheet
       title={arrangementName ? `Dateien – ${arrangementName}` : 'Dateien'}
       onClose={onClose}
-      cancelLabel="Schließen"
       knoepfe={null}
+      zurueck={zurueck}
     >
       {laedt && !angehalten && <p className={styles.pickHint}>Dateien werden geladen …</p>}
 

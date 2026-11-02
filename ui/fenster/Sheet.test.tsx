@@ -52,16 +52,17 @@ describe('Sheet', () => {
     expect(knopfTexte()).toEqual(['Fenster schließen', 'Fertig']);
   });
 
-  it('`knoepfe={null}` (nur ansehen, E6-O F2 #720): ChurchTools-Aufbau, unten nur Schließen – X heißt anders', () => {
+  it('`knoepfe={null}` (nur ansehen oder wählen): keine Fußzeile, nur das X schließt (02.11.2026)', () => {
+    // Bis zum 02.11.2026 stand unten „Schließen“ – dasselbe wie das X, von Alwin als doppelt gemeldet.
     const onClose = vi.fn();
     render(
-      <Sheet title="T" onClose={onClose} cancelLabel="Schließen" knoepfe={null}>
+      <Sheet title="T" onClose={onClose} knoepfe={null}>
         <p>Inhalt</p>
       </Sheet>,
     );
     expect(screen.getByRole('dialog', { name: 'T' })).toBeTruthy();
-    expect(knopfTexte()).toEqual(['Fenster schließen', 'Schließen']);
-    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    expect(knopfTexte()).toEqual(['Fenster schließen']);
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -95,20 +96,34 @@ describe('Sheet', () => {
     const onClose = vi.fn();
     const zurueck = vi.fn();
     render(
+      <Sheet title="Lied" onClose={onClose} knoepfe={null} zurueck={zurueck}>
+        <p>Inhalt</p>
+      </Sheet>,
+    );
+    expect(knopfTexte()).toEqual(['Zurück', 'Fenster schließen']);
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+    expect(zurueck).toHaveBeenCalledOnce();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('`onAbbrechen`: „Abbrechen“ tut etwas anderes als das X (Fenster über einem Fenster, 02.11.2026)', () => {
+    const onClose = vi.fn();
+    const onAbbrechen = vi.fn();
+    render(
       <Sheet
-        title="Lied"
+        title="T"
         onClose={onClose}
-        knoepfe={null}
-        cancelLabel="Schließen"
-        zurueck={zurueck}
+        onAbbrechen={onAbbrechen}
+        knoepfe={<FensterKnopf>Speichern</FensterKnopf>}
       >
         <p>Inhalt</p>
       </Sheet>,
     );
-    expect(knopfTexte()).toEqual(['Zurück', 'Fenster schließen', 'Schließen']);
-    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
-    expect(zurueck).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    expect(onAbbrechen).toHaveBeenCalledOnce();
     expect(onClose).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
+    expect(onClose).toHaveBeenCalledOnce();
   });
 
   it('ohne `zurueck` kein „‹“', () => {

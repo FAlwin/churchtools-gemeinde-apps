@@ -1064,12 +1064,12 @@ describe('Fenster der Veranstaltung im ChurchTools-Aufbau', () => {
     }
   });
 
-  it('Termin: „Aus dem Kalender“ wählt per Tipp – unten nur „Abbrechen“; „Neu anlegen“ mit Hauptknopf', async () => {
+  it('Termin: „Aus dem Kalender“ wählt per Tipp – nur das X; „Neu anlegen“ mit Hauptknopf', async () => {
     stelle(true);
     await oeffne('Termin');
     // Erst wenn der Kalender geladen ist, gäbe es überhaupt einen Hauptknopf – davor prüfen hieße nichts prüfen.
     await screen.findByRole('textbox', { name: 'Link zur Anmeldung' });
-    expect(fensterKnoepfe().at(-1)).toBe('Abbrechen');
+    expect(fensterKnoepfe()).not.toContain('Abbrechen');
     fireEvent.click(await screen.findByRole('button', { name: 'Neu anlegen' }));
     expect(fensterKnoepfe().slice(-2)).toEqual(['Abbrechen', 'Termin anlegen und übernehmen']);
   });

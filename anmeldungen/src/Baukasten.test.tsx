@@ -758,11 +758,11 @@ describe('Baukasten (Feinheiten): Leiste, Fragetyp, Design', () => {
 
 /** Fenster wie ChurchTools (E6-O F4): die Blätter am Handy – X oben rechts, unten nur „Fertig“. */
 describe('Baukasten-Blätter im ChurchTools-Aufbau', () => {
-  it('„Baustein“ und „Design“ öffnen ein Fenster zum Wählen mit „Fertig“', () => {
+  it('„Baustein“ und „Design“ öffnen ein Fenster zum Wählen – nur mit X (seit 02.11.2026 ohne „Fertig“)', () => {
     zeigen();
     fireEvent.click(screen.getByRole('button', { name: 'Baustein' }));
     expect(screen.getByRole('dialog')).toBeTruthy();
     expect(fensterKnoepfe()[0]).toBe('Fenster schließen');
-    expect(fensterKnoepfe().at(-1)).toBe('Fertig');
+    expect(fensterKnoepfe()).not.toContain('Fertig');
   });
 });

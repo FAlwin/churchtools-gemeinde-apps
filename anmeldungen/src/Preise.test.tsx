@@ -332,10 +332,10 @@ describe('Preis-Fenster im ChurchTools-Aufbau', () => {
     expect(folge.indexOf('Baustein entfernen')).toBe(folge.length - 3);
   });
 
-  it('Baustein hinzufügen: nur zum Wählen – unten nur „Abbrechen“', () => {
+  it('Baustein hinzufügen: nur zum Wählen – nur das X (seit 02.11.2026 ohne „Abbrechen“ unten)', () => {
     fenster({ art: 'neu' });
     expect(knopfFolge()[0]).toBe('Fenster schließen');
-    expect(knopfFolge().at(-1)).toBe('Abbrechen');
-    expect(knopfFolge().at(-2)).toMatch(/^Extra zum Ankreuzen/);
+    expect(knopfFolge()).not.toContain('Abbrechen');
+    expect(knopfFolge().at(-1)).toMatch(/^Extra zum Ankreuzen/);
   });
 });

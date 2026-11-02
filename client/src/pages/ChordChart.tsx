@@ -943,6 +943,7 @@ export function ChordChart({
               onBack();
             }}
             onClose={() => setOverlay(null)}
+            zurueck={() => setOverlay('menu')}
           />
         )}
 
@@ -976,6 +977,7 @@ export function ChordChart({
             onRename={datei.setUmbenennDatei}
             onSongSelect={() => setSongSelectFrage(true)}
             onClose={() => setOverlay(null)}
+            zurueck={() => setOverlay('menu')}
           />
         )}
 
@@ -1014,7 +1016,12 @@ export function ChordChart({
             benennt={datei.benennt}
             fehler={datei.umbenennFehler}
             onUmbenennen={(eingabe) => void datei.umbenennen(eingabe)}
-            onClose={() => datei.setUmbenennDatei(null)}
+            onZurueck={() => datei.setUmbenennDatei(null)}
+            // Das X schließt alles – auch die Dateien darunter (02.11.2026).
+            onClose={() => {
+              datei.setUmbenennDatei(null);
+              setOverlay(null);
+            }}
           />
         )}
 

@@ -110,13 +110,19 @@ ChurchTools-Weboberfläche):
   Scrollfläche des Fensters). Umgezogen wurde App für App (Dienstplaner F2, Musik-App F3, Anmeldungen F4,
   Organigramm und Protokolle F5); seit F5 hat **jedes** Fenster `knoepfe`. Der Test `ui/fenster/fensterAufbau.test.ts`
   prüft alle Apps – ein neues Fenster ohne `knoepfe` fällt dort auf. Der Hauptknopf zieht dabei aus dem Inhalt in `knoepfe` (statt `m.hauptKnopfBreit`). Fenster nur
-  zum Ansehen oder Wählen reichen `knoepfe={null}` – unten steht dann nur der Knopf aus `cancelLabel` („Abbrechen“,
-  zum Ansehen „Schließen“). Aktionen, die zum Inhalt gehören (in einer
+  zum Ansehen oder Wählen reichen `knoepfe={null}` – sie haben **keine Fußzeile**, geschlossen wird mit dem X (Alwin,
+  02.11.2026: „Schließen und X ist doppelt“). Das gilt auch, wenn ein Fenster nur gerade keinen eigenen Knopf hat
+  (Ergebnis nach dem Senden, Laden). `fensterAufbau.test.ts` meldet ein `cancelLabel` neben `knoepfe={null}`. Aktionen, die zum Inhalt gehören (in einer
   Liste, „Andere Person wählen“ am Entwurf), bleiben im Inhalt; ein Nebenweg wie „Neu vorschlagen“ steht als Link
   (`m.textKnopf`) am Ergebnis, nicht unten. **Zwei gleichwertige Wege** (PDF: Herunterladen / Teilen; Zeitraum:
   löschen / anpassen) stehen beide unten: zweiter Weg `hell` oder `gefahr`, Hauptweg zuletzt (Alwin, F3 #726).
   Fenster mit Formular und weiteren Bereichen („Lied bearbeiten“, „Arrangement“) haben „Speichern“ unten; seltene,
   folgenreiche Wege („Zum Standard machen“, „Löschen …“, „Baustein entfernen“) bleiben getrennt im Inhalt.
+- **Zurück-Pfeil „‹“** (Alwin, 02.11.2026: „Wechselt ein Screen im Fenster, soll es einen Zurück-Pfeil geben“;
+  Entwurf `musik-planung/entwurf/fenster-zurueck-v1/`): Geht ein Fenster aus einem anderen auf oder wechselt es seine
+  Seite, steht vor dem Titel „‹“ (`Sheet zurueck`) – ein Schritt zurück zum Vorgänger; das X schließt alles. Liegt
+  das Fenster **über** einem anderen (Umbenennen über den Dateien, Arrangement über den Stammdaten), führen „‹“ und
+  „Abbrechen“ zurück (`onAbbrechen`), das X schließt beide. Ein „Zurück“-Knopf unten gehört nicht mehr dorthin.
 - **Feldliste „Beschriftung | Feld“** (Punkt-Fenster, E6-O O3, Variante B): in einer umrandeten Fläche, eine feine
   Linie je Zeile; alle Felder auf einmal bearbeitbar, unten einmal „Speichern“. Werte, die eine eigene Auswahl
   brauchen (Lied, Zuständig), sind **Zeilen mit Pfeil**, die IM Fenster öffnen; leer steht „+ Hinzufügen“. Ja/Nein als

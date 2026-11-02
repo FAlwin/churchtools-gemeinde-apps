@@ -198,9 +198,12 @@ describe('SendenFach (E4-4-2)', () => {
     expect(screen.getByLabelText('wartet')).toBeTruthy();
     act(() => melde(0, { art: 'gesendet' }));
     expect(screen.getByText('Wird gesendet … 1 von 2')).toBeTruthy();
-    // Gesperrt wie im ConfirmDialog (E6-O F2, #720): X und Abbrechen tun nichts, solange es läuft.
-    expect(screen.getByRole('button', { name: 'Abbrechen' })).toHaveProperty('disabled', true);
-    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    // Gesperrt wie im ConfirmDialog (E6-O F2, #720): Das X tut nichts, solange es läuft. (Einen Knopf „Abbrechen“ gibt
+    // es dabei seit 02.11.2026 nicht mehr – das Fenster hat gerade keine eigenen Knöpfe, also keine Fußzeile.)
+    expect(screen.getByRole('button', { name: 'Fenster schließen' })).toHaveProperty(
+      'disabled',
+      true,
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(onClose).not.toHaveBeenCalled();
     await act(async () => {
@@ -208,7 +211,7 @@ describe('SendenFach (E4-4-2)', () => {
       fertig([{ art: 'gesendet' }, { art: 'gesendet' }]);
       await Promise.resolve();
     });
-    fireEvent.click(knopf('Schließen'));
+    fireEvent.click(knopf('Fenster schließen'));
     expect(onClose).toHaveBeenCalledWith(true);
   });
 
@@ -242,7 +245,7 @@ describe('SendenFach (E4-4-2)', () => {
     fireEvent.click(knopf('Jetzt senden (1)'));
     await screen.findByText('0 gesendet, 1 nicht');
     expect(screen.queryByRole('button', { name: /Erneut senden/ })).toBeNull();
-    fireEvent.click(knopf('Schließen'));
+    fireEvent.click(knopf('Fenster schließen'));
     expect(a.onClose).toHaveBeenLastCalledWith(false);
   });
 
@@ -258,7 +261,7 @@ describe('SendenFach (E4-4-2)', () => {
     const a = zeige({ zeilen: [ANNA], senden: s.senden });
     fireEvent.click(await screen.findByRole('button', { name: 'Jetzt senden (1)' }));
     await screen.findByText('0 gesendet, 1 nicht');
-    fireEvent.click(knopf('Schließen'));
+    fireEvent.click(knopf('Fenster schließen'));
     expect(a.onClose).toHaveBeenLastCalledWith(true);
   });
 });

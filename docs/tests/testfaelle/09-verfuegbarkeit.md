@@ -146,7 +146,7 @@ unter **Einträge → Früher**, nur zum Ansehen.
    „Kein Termin in diesem Zeitraum.“ Ein Zeitraum weit über ein Jahr hinaus lädt kurz nach und zeigt dann seine
    Termine.
 4. **Einträge → Früher (n):** Der vergangene Eintrag steht dort, blass. Antippen → Fenster
-   „Vergangene Abwesenheit", Felder gesperrt, kein Speichern, kein Löschen, Knopf „Schließen".
+   „Vergangene Abwesenheit", Felder gesperrt, kein Speichern, kein Löschen; geschlossen wird mit dem X.
 5. **Anstehend** zeigt ihn nicht; unter „Termine" gibt es nichts aus der Vergangenheit.
 
 <details><summary>Technisches</summary>

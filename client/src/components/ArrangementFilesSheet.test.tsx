@@ -184,6 +184,15 @@ describe('ArrangementFilesSheet – Hochladen und Löschen (#321, Schritt 4)', (
     expect(h.onDownload).not.toHaveBeenCalled();
   });
 
+  it('aus dem Lied-Menü geöffnet: „‹“ führt dorthin zurück, unten kein „Schließen“ mehr (02.11.2026)', () => {
+    const zurueck = vi.fn();
+    const h = setup({ zurueck });
+    screen.getByRole('button', { name: 'Zurück' }).click();
+    expect(zurueck).toHaveBeenCalledOnce();
+    expect(h.onClose).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Schließen' })).toBeNull();
+  });
+
   it('jede Datei hat einen Stift – auch Versionen und das Original', () => {
     // Versionen gehen dahinter einen anderen Weg (`useArrangementDateien`), aber angeboten wird es überall.
     setup();

@@ -171,7 +171,7 @@ describe('ZauberstabFach (E5-2)', () => {
     expect(screen.getByText('als Entwurf eingetragen')).toBeTruthy();
     expect(screen.getByText('Jemand anderes hat diesen Platz eben geändert.')).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(onClose).toHaveBeenCalledWith(1);
   });
 
@@ -187,7 +187,7 @@ describe('ZauberstabFach (E5-2)', () => {
     laden.mockReturnValue(new Promise<never>(() => {}));
     const { onClose, uebernehmen } = zeige();
     expect(screen.getByText(/Vorschläge werden berechnet/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(onClose).toHaveBeenCalledWith(0);
     expect(uebernehmen).not.toHaveBeenCalled();
   });
@@ -196,9 +196,11 @@ describe('ZauberstabFach (E5-2)', () => {
     laden.mockResolvedValue([ANNA]);
     const { onClose } = zeige({ zeilen: [NEUN], uebernehmen: () => new Promise<never>(() => {}) });
     fireEvent.click(await screen.findByRole('button', { name: '1 als Entwurf übernehmen' }));
-    // Gesperrt wie im ConfirmDialog (E6-O F2, #720): X und Abbrechen tun nichts, solange es läuft.
-    expect(screen.getByRole('button', { name: 'Abbrechen' })).toHaveProperty('disabled', true);
-    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    // Gesperrt wie im ConfirmDialog (E6-O F2, #720): Das X tut nichts, solange es läuft (ein „Abbrechen“ unten gibt es dabei seit 02.11.2026 nicht mehr).
+    expect(screen.getByRole('button', { name: 'Fenster schließen' })).toHaveProperty(
+      'disabled',
+      true,
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(onClose).not.toHaveBeenCalled();
   });
@@ -209,7 +211,7 @@ describe('ZauberstabFach (E5-2)', () => {
     const zeilen = [1, 2, 3, 4, 5, 6].map((t) => zeile(t, `0${t}:00`));
     const { onClose } = zeige({ zeilen });
     await waitFor(() => expect(laden).toHaveBeenCalledTimes(4));
-    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(onClose).toHaveBeenCalledWith(0);
     offen.forEach((r) => r([ANNA]));
     await new Promise((r) => setTimeout(r, 0));

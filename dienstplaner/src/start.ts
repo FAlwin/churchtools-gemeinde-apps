@@ -20,6 +20,7 @@ import { dienstgruppenAus, type Dienstgruppe } from '@shared/ct/dienstgruppen';
 import { diensteAus, type Dienst } from '@shared/ct/dienste';
 import { kuerzelAusBasis } from '@ui/erweiterung/kuerzel';
 import { darfAblaufBearbeiten, type AblaufTermin } from '@shared/ct/ablaufRecht';
+import { darfTerminAendern } from '@shared/ct/terminInfos';
 
 /** Das Kürzel des Dienstplaners in ChurchTools – aus der Bau-Adresse (`/ccm/dienstplaner/`). */
 export const MODUL_KUERZEL = kuerzelAusBasis(import.meta.env.BASE_URL) ?? 'dienstplaner';
@@ -79,6 +80,19 @@ export function planbar(start: Start, dienst: Dienst, terminAdmin = false): bool
 export function ablaufBearbeitbar(start: Start, termin: AblaufTermin): boolean {
   return darfAblaufBearbeiten(
     { isAdmin: false, ablaufKalender: start.rechte.ablaufKalender },
+    termin,
+    start.ichId,
+  );
+}
+
+/**
+ * Darf ich die Infos (und Dateien) dieses Termins ändern? Admin, `edit events` für den Kalender des Termins oder Admin
+ * des Termins (`darfTerminAendern`, gemessen 02.11.2026). Wie beim Ablauf wertet der Dienstplaner kein eigenes
+ * Admin-Recht aus – ein Admin hat `edit events` für alle Kalender.
+ */
+export function terminAenderbar(start: Start, termin: AblaufTermin): boolean {
+  return darfTerminAendern(
+    { isAdmin: false, terminKalender: start.rechte.terminKalender },
     termin,
     start.ichId,
   );

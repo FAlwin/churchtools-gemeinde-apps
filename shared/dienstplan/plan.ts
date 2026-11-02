@@ -13,6 +13,7 @@ import type { Dienst } from '../ct/dienste';
 import type { Dienstgruppe } from '../ct/dienstgruppen';
 import { ablaufTerminVon, type AblaufTermin } from '../ct/ablaufRecht';
 import { darfLiveSteuern } from '../ct/liveAgenda';
+import { infosAus } from '../ct/terminInfos';
 import { ortszeitAus } from '../ct/zeit';
 import { belegungAus, type Belegung } from './einteilen';
 import {
@@ -63,6 +64,8 @@ export interface PlanSpalte {
   ablaufTermin: AblaufTermin;
   /** Darf ich die Live-Agenda dieses Termins steuern (`darfLiveSteuern`, E6b-2 L3)? */
   liveSteuern: boolean;
+  /** „Weitere Infos“ am Termin (`infosAus`), leer ohne. */
+  infos: string;
 }
 
 export interface PlanZeile {
@@ -168,6 +171,7 @@ export function planAus(
       beginn: t.startDate,
       ablaufTermin: ablaufTerminVon(t),
       liveSteuern: darfLiveSteuern(t, o.dienste, o.ichId),
+      infos: infosAus(t),
     };
   });
 

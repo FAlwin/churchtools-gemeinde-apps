@@ -27,6 +27,7 @@ export function startFuer(extra: Partial<Start> = {}): Start {
       planbareDienstgruppen: [3, 4],
       sichtbareDienstgruppen: [],
       ablaufKalender: [],
+      terminKalender: [],
       abwesenheitenAller: false,
     },
     ...extra,

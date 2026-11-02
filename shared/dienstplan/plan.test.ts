@@ -155,6 +155,7 @@ describe('planAus', () => {
         beginn: '2026-10-18T08:00:00Z',
         ablaufTermin: { kalenderId: null, terminAdminIds: [] },
         liveSteuern: false,
+        infos: '',
       },
       {
         id: 11,
@@ -168,6 +169,7 @@ describe('planAus', () => {
         beginn: '2026-10-25T09:00:00Z',
         ablaufTermin: { kalenderId: null, terminAdminIds: [] },
         liveSteuern: false,
+        infos: '',
       },
     ]);
   });
@@ -192,6 +194,11 @@ describe('planAus', () => {
       [10, true],
       [11, false],
     ]);
+  });
+
+  it('„Weitere Infos“ (T1) stehen an der Spalte – Regel `infosAus`', () => {
+    const p = plan([termin(12, '2026-11-08T09:00:00Z', [], { description: 'Abendmahl\nGäste' })]);
+    expect(p.spalten[0].infos).toBe('Abendmahl\nGäste');
   });
 
   it('Gruppen und Dienste in der Reihenfolge der Gemeinde; nur Dienste, die vorkommen', () => {

@@ -98,6 +98,7 @@ describe('ladeStart (Dienstplaner)', () => {
         planbareDienstgruppen: [3],
         sichtbareDienstgruppen: [],
         ablaufKalender: [],
+        terminKalender: [],
         abwesenheitenAller: false,
       },
     });
@@ -141,6 +142,7 @@ describe('Wer plant was (E3-4): global, als Leitung, Termin-Admin in der Matrix'
         planbareDienstgruppen: [],
         sichtbareDienstgruppen: [],
         ablaufKalender: [],
+        terminKalender: [],
         abwesenheitenAller: false,
       },
       gruppen: [{ id: 7, name: 'Technik', leitung: true }],
@@ -156,6 +158,7 @@ describe('Wer plant was (E3-4): global, als Leitung, Termin-Admin in der Matrix'
         planbareDienstgruppen: [],
         sichtbareDienstgruppen: [],
         ablaufKalender: [],
+        terminKalender: [],
         abwesenheitenAller: false,
       },
       gruppen: [{ id: 7, name: 'Technik', leitung: false }],
@@ -170,6 +173,7 @@ describe('ganzSichtbar: was die Matrix zeigen darf (Prüfung mit drei Rollen, 13
     planbareDienstgruppen: [],
     sichtbareDienstgruppen: [],
     ablaufKalender: [],
+    terminKalender: [],
     abwesenheitenAller: false,
   };
 

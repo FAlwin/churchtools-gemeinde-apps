@@ -51,6 +51,7 @@ it('nach dem Senden: dieselben Wochen neu, leise – das Bisherige bleibt stehen
       planbareDienstgruppen: [3],
       sichtbareDienstgruppen: [],
       ablaufKalender: [],
+      terminKalender: [],
       abwesenheitenAller: false,
     },
   });

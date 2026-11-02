@@ -1,0 +1,79 @@
+// „Weitere Infos“ (T1): Fenster hinter dem ⓘ in der Termin-Ansicht – Felder wie im Punkt-Fenster (`m.eingabefeld`).
+@use '@ui/design/mixins' as m;
+
+.fuer {
+  margin: 0 0 10px;
+  color: var(--text2);
+  font-size: 13px;
+}
+
+.text {
+  margin: 0;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.leer {
+  margin: 0;
+  color: var(--text3);
+  font-size: 14px;
+}
+
+.feld {
+  display: grid;
+  gap: 4px;
+
+  span {
+    color: var(--text2);
+    font-size: 13px;
+    font-weight: 700;
+  }
+}
+
+.textarea {
+  @include m.eingabefeld;
+  width: 100%;
+  min-width: 0;
+  padding: 9px 11px;
+  font-size: 15px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.zaehler {
+  margin: 4px 0 0;
+  color: var(--text3);
+  font-size: 12.5px;
+  text-align: right;
+}
+
+.zuLang {
+  color: var(--red);
+}
+
+.hinweis {
+  margin: 6px 0 0;
+  color: var(--text3);
+  font-size: 12.5px;
+}
+
+.konflikt {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface3);
+  color: var(--text2);
+  font-size: 13.5px;
+}
+
+.fehler {
+  margin: 10px 0 0;
+  color: var(--red);
+  font-size: 13.5px;
+}

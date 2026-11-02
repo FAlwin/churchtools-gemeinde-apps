@@ -9,13 +9,17 @@ interface SheetProps {
   title: string;
   onClose: () => void;
   children: ReactNode;
-  /** Beschriftung des Abbrechen-Buttons (Standard: „Abbrechen"); `null` nur mit `knoepfe`: kein Abbrechen. */
+  /** Beschriftung des Abbrechen-Buttons (Standard: „Abbrechen"); `null`: kein Abbrechen. Nur mit eigenen `knoepfe`. */
   cancelLabel?: string | null;
   /**
    * Die Knöpfe für die Fußzeile (`FensterKnopf`), rechts neben „Abbrechen“. Wer sie reicht, bekommt den Aufbau der
    * ChurchTools-Fenster (E6-O F1, #716): Kopf mit Titel und X, unten rechts die Knöpfe. Ohne bleibt der alte Aufbau –
-   * so zogen die Fenster App für App um; seit F5 nutzt ihn keins mehr (`fensterAufbau.test.ts`). Ein Fenster nur zum Ansehen oder Wählen reicht `null` – dann steht unten nur
-   * der Knopf aus `cancelLabel` („Abbrechen“; zum Ansehen „Schließen“, im Baukasten „Fertig“).
+   * so zogen die Fenster App für App um; seit F5 nutzt ihn keins mehr (`fensterAufbau.test.ts`).
+   *
+   * **Ein Fenster nur zum Ansehen oder Wählen reicht `null` – dann hat es KEINE Fußzeile**, geschlossen wird mit dem X
+   * (Alwin, 02.11.2026: „Schließen und X ist doppelt in dem Fenster“; Entwurf „Fenster mit Zurück“). Bis dahin stand
+   * unten ein „Schließen“, „Fertig“ oder „Abbrechen“, das genau dasselbe tat wie das X. Fenster zum Bearbeiten behalten
+   * „Abbrechen“ neben ihren Knöpfen – wie in ChurchTools.
    */
   knoepfe?: ReactNode;
   /**
@@ -45,9 +49,16 @@ interface SheetProps {
   einblenden?: boolean;
   /**
    * Nur mit `knoepfe`: „‹“ links neben dem Titel – zurück zur vorigen Seite desselben Fensters (Unterseiten im
-   * Lied-Menü, 29.10.2026). Ohne Angabe kein Pfeil.
+   * Lied-Menü, 29.10.2026) oder zu dem Fenster, aus dem dieses aufging (Lied-Menü → Dateien, 02.11.2026: „Wechselt ein
+   * Screen im Fenster, soll es einen Zurück-Pfeil geben“). Ohne Angabe kein Pfeil.
    */
   zurueck?: () => void;
+  /**
+   * Was „Abbrechen“ unten tut – ohne Angabe dasselbe wie das X. Ein Fenster, das über einem anderen aufgeht (Umbenennen
+   * über den Dateien), reicht hier den Schritt zurück: Das X schließt alles, „Abbrechen“ nur dieses Fenster
+   * (entschieden 02.11.2026).
+   */
+  onAbbrechen?: () => void;
 }
 
 /**
@@ -68,6 +79,7 @@ export function Sheet({
   onHintergrund = onClose,
   einblenden = true,
   zurueck,
+  onAbbrechen = onClose,
 }: SheetProps) {
   // Hält den Dialog über der iOS-Tastatur frei und verhindert, dass die Seite verrutscht (#207).
   const overlayRef = useOverlayKeyboardInset();
@@ -113,19 +125,21 @@ export function Sheet({
             </button>
           </div>
           <div className={styles.inhalt}>{children}</div>
-          <div
-            ref={knopfZeile.ref}
-            className={styles.fuss}
-            data-stapel={knopfZeile.stapel || undefined}
-          >
-            {links}
-            {cancelLabel !== null && (
-              <FensterKnopf art="zweit" onClick={onClose} disabled={beschaeftigt}>
-                {cancelLabel}
-              </FensterKnopf>
-            )}
-            {knoepfe}
-          </div>
+          {knoepfe !== null && (
+            <div
+              ref={knopfZeile.ref}
+              className={styles.fuss}
+              data-stapel={knopfZeile.stapel || undefined}
+            >
+              {links}
+              {cancelLabel !== null && (
+                <FensterKnopf art="zweit" onClick={onAbbrechen} disabled={beschaeftigt}>
+                  {cancelLabel}
+                </FensterKnopf>
+              )}
+              {knoepfe}
+            </div>
+          )}
         </div>
       </div>
     );

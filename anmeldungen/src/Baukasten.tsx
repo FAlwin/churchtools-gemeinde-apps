@@ -1092,7 +1092,6 @@ export function Baukasten({
         <Sheet
           title={blatt === 'bausteine' ? 'Baustein hinzufügen' : 'Design'}
           onClose={() => setBlatt(null)}
-          cancelLabel="Fertig"
           knoepfe={null}
         >
           {blatt === 'bausteine' ? tafelBausteine : tafelDesign}

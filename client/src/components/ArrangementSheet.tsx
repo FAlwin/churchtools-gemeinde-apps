@@ -51,6 +51,12 @@ interface ArrangementSheetProps {
   /** Fehlt beim letzten Arrangement und beim Standard: Der Server lehnt beides ab. */
   onLoeschen?: () => void;
   onClose: () => void;
+  /**
+   * Geht das Fenster über den Stammdaten auf (02.11.2026): „‹“ und „Abbrechen“ führen dorthin zurück, das X (`onClose`)
+   * schließt beide.
+   */
+  zurueck?: () => void;
+  onAbbrechen?: () => void;
 }
 
 export function ArrangementSheet({
@@ -62,6 +68,8 @@ export function ArrangementSheet({
   onStandard,
   onLoeschen,
   onClose,
+  zurueck,
+  onAbbrechen,
 }: ArrangementSheetProps) {
   const [formular, setFormular] = useState<ArrangementFormular>(() =>
     arrangement ? formularAusArrangement(arrangement) : LEERES_ARRANGEMENT,
@@ -81,6 +89,8 @@ export function ArrangementSheet({
     <Sheet
       title={arrangement ? arrangement.name : 'Weiteres Arrangement'}
       onClose={onClose}
+      zurueck={zurueck}
+      onAbbrechen={onAbbrechen}
       cancelLabel="Abbrechen"
       knoepfe={
         <FensterKnopf disabled={!bereit} onClick={() => onSave(auftragAus(formular, arrangement))}>

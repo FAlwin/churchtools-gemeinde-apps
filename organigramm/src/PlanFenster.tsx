@@ -179,7 +179,7 @@ export function PlanFenster({
   };
 
   return (
-    <Sheet title={g.name} onClose={onSchliessen} cancelLabel="Schließen" knoepfe={null}>
+    <Sheet title={g.name} onClose={onSchliessen} knoepfe={null}>
       <p className={styles.meta}>
         {(g.typId !== null && start.typNamen.get(g.typId)) || 'Gruppe'}
         {g.neu && ' · neu im Plan – gibt es in ChurchTools noch nicht'}

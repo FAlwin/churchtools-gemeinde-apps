@@ -89,6 +89,8 @@ interface EditSongSheetProps {
   /** Wird nach erfolgreichem Speichern aufgerufen – ebenfalls mit der fertigen Meldung. */
   onSaved?: (meldung: string) => void;
   onClose: () => void;
+  /** „‹“ – zurück ins Lied-Menü, wenn die Stammdaten von dort aufgingen (02.11.2026). */
+  zurueck?: () => void;
 }
 
 export function EditSongSheet({
@@ -99,6 +101,7 @@ export function EditSongSheet({
   onDeleted,
   onSaved,
   onClose,
+  zurueck,
 }: EditSongSheetProps) {
   const stammdaten = useSongStammdaten(songId);
   const kategorien = useSongCategories(true);
@@ -274,6 +277,7 @@ export function EditSongSheet({
       <Sheet
         title={ist?.name ?? songName ?? 'Lied ändern'}
         onClose={onClose}
+        zurueck={zurueck}
         cancelLabel="Schließen"
         knoepfe={
           // Speichern nur, wo das Formular steht – also nicht beim Laden, Fehler oder ohne Kategorie (F3, #726).
@@ -398,7 +402,13 @@ export function EditSongSheet({
               ? () => setArrLoeschFrage(arrOffen)
               : undefined
           }
-          onClose={() => setArrOffen(null)}
+          // Über den Stammdaten (02.11.2026): „‹“ und „Abbrechen“ zurück zu ihnen, das X schließt beide.
+          zurueck={() => setArrOffen(null)}
+          onAbbrechen={() => setArrOffen(null)}
+          onClose={() => {
+            setArrOffen(null);
+            onClose();
+          }}
         />
       )}
 

@@ -469,13 +469,7 @@ export function GruppenFenster({
     );
 
   return (
-    <Sheet
-      title={g.name}
-      onClose={onSchliessen}
-      beschaeftigt={arbeitet}
-      cancelLabel="Schließen"
-      knoepfe={null}
-    >
+    <Sheet title={g.name} onClose={onSchliessen} beschaeftigt={arbeitet} knoepfe={null}>
       <div className={styles.kopf}>
         <GruppenKachel name={g.name} farbe={gruppenFarbe(g, start.typFarben)} groesse={40} />
         <p className={styles.meta}>

@@ -30,6 +30,7 @@ function setup(
 ) {
   const onUmbenennen = vi.fn();
   const onClose = vi.fn();
+  const onZurueck = vi.fn();
   render(
     <DateiUmbenennenFenster
       datei={datei}
@@ -37,13 +38,14 @@ function setup(
       fehler={over.fehler ?? null}
       onUmbenennen={onUmbenennen}
       onClose={onClose}
+      onZurueck={onZurueck}
     />,
   );
   const feld = screen.getByLabelText<HTMLInputElement>('Name');
   const knopf = screen.getByRole<HTMLButtonElement>('button', {
     name: /^(Umbenennen|Wird umbenannt …)$/,
   });
-  return { onUmbenennen, onClose, feld, knopf };
+  return { onUmbenennen, onClose, onZurueck, feld, knopf };
 }
 
 afterEach(cleanup);
@@ -97,5 +99,34 @@ describe('DateiUmbenennenFenster', () => {
       screen.getByRole<HTMLButtonElement>('button', { name: 'Wird umbenannt …' }).disabled,
     ).toBe(true);
     expect(screen.getByLabelText<HTMLInputElement>('Name').disabled).toBe(true);
+  });
+});
+
+describe('DateiUmbenennenFenster – zurück und schließen (02.11.2026)', () => {
+  it('„‹“ und „Abbrechen“ führen zu den Dateien zurück, das X schließt alles', () => {
+    const { onClose, onZurueck } = setup(PDF);
+    screen.getByRole('button', { name: 'Zurück' }).click();
+    screen.getByRole('button', { name: 'Abbrechen' }).click();
+    expect(onZurueck).toHaveBeenCalledTimes(2);
+    expect(onClose).not.toHaveBeenCalled();
+    screen.getByRole('button', { name: 'Fenster schließen' }).click();
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onZurueck).toHaveBeenCalledTimes(2);
+  });
+
+  it('bei einer Version steht unter dem Feld, wie die Datei in ChurchTools heißen wird – und es folgt der Eingabe', () => {
+    const { feld } = setup(VERSION);
+    expect(screen.getByText(/Datei in ChurchTools:/).textContent).toBe(
+      `Datei in ChurchTools: ${versionFileName('Treu', 'Akustik')}`,
+    );
+    fireEvent.change(feld, { target: { value: 'Live' } });
+    expect(screen.getByText(/Datei in ChurchTools:/).textContent).toBe(
+      `Datei in ChurchTools: ${versionFileName('Treu', 'Live')}`,
+    );
+  });
+
+  it('bei einer gewöhnlichen Datei kein solcher Hinweis – dort steht die Endung am Feld', () => {
+    setup(PDF);
+    expect(screen.queryByText(/Datei in ChurchTools:/)).toBeNull();
   });
 });

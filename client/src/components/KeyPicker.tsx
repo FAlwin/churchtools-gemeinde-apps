@@ -11,6 +11,8 @@ interface KeyPickerProps {
   onPick: (key: string) => void;
   onReset: () => void;
   onClose: () => void;
+  /** „‹“ – zurück ins Lied-Menü, aus dem das Fenster aufging (02.11.2026). */
+  zurueck?: () => void;
 }
 
 /** Bottom-Sheet zur Tonart-Auswahl (Dur/Moll). */
@@ -21,9 +23,10 @@ export function KeyPicker({
   onPick,
   onReset,
   onClose,
+  zurueck,
 }: KeyPickerProps) {
   return (
-    <Sheet title="Tonart wählen" onClose={onClose} knoepfe={null}>
+    <Sheet title="Tonart wählen" onClose={onClose} knoepfe={null} zurueck={zurueck}>
       <div className={styles.secLbl}>Dur</div>
       <div className={styles.grid}>
         {ALL_KEYS_MAJOR.map((k) => (

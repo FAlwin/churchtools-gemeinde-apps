@@ -97,10 +97,10 @@ describe('BelegtFach (E4-5-2)', () => {
 });
 
 describe('BelegtFach im ChurchTools-Aufbau', () => {
-  it('nur ansehen: X oben, unten nur Schließen', () => {
+  it('nur ansehen: X oben, unten kein „Schließen“ mehr (02.11.2026)', () => {
     zeige();
     expect(screen.getByRole('dialog')).toBeTruthy();
     expect(knopfFolge()[0]).toBe('Fenster schließen');
-    expect(knopfFolge().at(-1)).toBe('Schließen');
+    expect(knopfFolge()).not.toContain('Schließen');
   });
 });

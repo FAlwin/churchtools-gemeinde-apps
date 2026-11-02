@@ -48,6 +48,13 @@ export function versionSlug(name: string): string {
 }
 
 /**
+ * Liedtitel und Versionsname im Dateinamen, wie `versionFileName` ihn schreibt. Der Trenner ist „ — " – und zwar der
+ * LETZTE vor dem Kürzel. Bis zum 07.10.2026 galt der ERSTE Strich, auch ein Bindestrich im Liedtitel: Aus
+ * „Testlied 3b-2 — Akustik (App).chordpro" wurde die Version „2 — Akustik" (Durchklick 3b-2).
+ */
+const VERSION_GETRENNT = /^(.*)\s—\s(.+?)\s*\((?:App|ECG)\)\.chordpro$/i;
+
+/**
  * Erkennt am Namen, ob eine Datei eine von uns verwaltete Version ist, und liefert deren Namen.
  *
  * Das `(App)`-Kürzel erkennt unsere Dateien zuverlässig – ein Originalname, der zufällig einen
@@ -59,12 +66,17 @@ export function versionSlug(name: string): string {
  *  - „— Bearbeitet.chordpro" / „— ECG.chordpro" (ganz alte namenlose Varianten → Name „Bearbeitet").
  */
 export function versionNameOf(f: CtArrangementFile): string | null {
-  // Der Trenner, den `versionFileName` schreibt, ist „ — " – und zwar der LETZTE vor dem Kürzel.
-  // Bis zum 07.10.2026 galt der ERSTE Strich, auch ein Bindestrich im Liedtitel: Aus
-  // „Testlied 3b-2 — Akustik (App).chordpro" wurde die Version „2 — Akustik" (Durchklick 3b-2).
-  const getrennt = /^.*\s—\s(.+?)\s*\((?:App|ECG)\)\.chordpro$/i.exec(f.name);
-  if (getrennt) return getrennt[1].trim();
+  const getrennt = VERSION_GETRENNT.exec(f.name);
+  if (getrennt) return getrennt[2].trim();
   return versionNameBisher(f);
+}
+
+/**
+ * Der Liedtitel vorn im Dateinamen einer Version – `null` bei alten Namen ohne „ — " (dort ist er nicht sicher
+ * abzulesen). Für den Hinweis „Datei in ChurchTools: …“ beim Umbenennen (02.11.2026).
+ */
+export function versionLiedTitel(name: string): string | null {
+  return VERSION_GETRENNT.exec(name)?.[1] ?? null;
 }
 
 /**

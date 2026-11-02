@@ -10,6 +10,7 @@ import {
   pruefeUpload,
   umbenennPruefung,
   umbenennVorlage,
+  versionsDateiname,
 } from './dateiVerwaltung';
 
 /**
@@ -224,5 +225,21 @@ describe('umbenennVorlage / umbenennPruefung – was das Fenster zeigt', () => {
     expect(
       umbenennPruefung(datei('Treu.chordpro', 'chordpro-original'), 'Treu — Live (App)').fehler,
     ).toMatch(/Versionen aus dem Editor/);
+  });
+});
+
+describe('versionsDateiname – wie die Version in ChurchTools heißen wird (02.11.2026)', () => {
+  const version = (name: string) => datei(name, 'chordpro-version');
+
+  it('setzt Liedtitel, „(App)“ und Endung wie der Erzeuger', () => {
+    expect(versionsDateiname(version(versionFileName('Treu 3b-2', 'Akustik')), 'Live')).toBe(
+      versionFileName('Treu 3b-2', 'Live'),
+    );
+  });
+
+  it('nur für Versionen, nur mit Eingabe, nicht bei alten Namen ohne „ — “', () => {
+    expect(versionsDateiname(datei('Treu.chordpro', 'chordpro-original'), 'Live')).toBeNull();
+    expect(versionsDateiname(version(versionFileName('Treu', 'Akustik')), '  ')).toBeNull();
+    expect(versionsDateiname(version('Treu - Akustik (ECG).chordpro'), 'Live')).toBeNull();
   });
 });

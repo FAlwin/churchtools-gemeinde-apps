@@ -81,6 +81,11 @@ export function ChartOverlays({
   ohneSpalten = false,
 }: ChartOverlaysProps) {
   const schliessen = () => onOverlay(null);
+  /**
+   * „‹“ der Fenster, die aus dem Lied-Menü aufgehen (Alwin, 02.11.2026). Tonart, Kapo und Abschnitte öffnen NUR dort –
+   * der Pfeil führt deshalb immer dorthin zurück, ohne dass sich jemand merken müsste, woher man kam.
+   */
+  const zumMenue = () => onOverlay('menu');
 
   if (overlay === 'appearance') {
     return (
@@ -141,6 +146,7 @@ export function ChartOverlays({
           schliessen();
         }}
         onClose={schliessen}
+        zurueck={zumMenue}
       />
     );
   }
@@ -156,6 +162,7 @@ export function ChartOverlays({
           schliessen();
         }}
         onClose={schliessen}
+        zurueck={zumMenue}
       />
     );
   }
@@ -176,6 +183,7 @@ export function ChartOverlays({
         }}
         onReset={() => onSetting({ secShift: {} })}
         onClose={schliessen}
+        zurueck={zumMenue}
       />
     );
   }

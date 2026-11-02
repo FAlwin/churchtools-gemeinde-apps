@@ -95,6 +95,8 @@ interface NewSongSheetProps {
    */
   onVorhandenes?: (song: SongLibraryEntry) => void;
   onClose: () => void;
+  /** „‹“ – zurück zur Suche, aus der das Formular aufging (Liederheft › „Neues Lied“, 02.11.2026). */
+  zurueck?: () => void;
 }
 
 export function NewSongSheet({
@@ -104,6 +106,7 @@ export function NewSongSheet({
   onVerknuepfen,
   onVorhandenes,
   onClose,
+  zurueck,
 }: NewSongSheetProps) {
   const caps = useCapabilities(true);
   const canUseCcli = caps.data?.canUseCcli ?? false;
@@ -305,6 +308,7 @@ export function NewSongSheet({
     <Sheet
       title="Neues Lied"
       onClose={onClose}
+      zurueck={zurueck}
       knoepfe={
         // „Lied anlegen“ nur, wo das Formular steht – nicht beim Laden, Fehler oder ohne Kategorie (F3, #726).
         !kategorien.isError && !kategorien.isLoading && kategorieListe.length > 0 ? (

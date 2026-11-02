@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import type {
   ArrangementAnsicht,
   LiedStammdatenAnsicht,
@@ -364,6 +364,35 @@ describe('EditSongSheet – Arrangements (#396)', () => {
     fireEvent.change(screen.getByPlaceholderText('z. B. Akustik'), { target: { value: 'Chor' } });
     fireEvent.click(screen.getAllByRole('button', { name: 'Speichern' })[1]);
     await waitFor(() => expect(arrAnlegenFn).toHaveBeenCalledWith({ name: 'Chor' }));
+  });
+
+  it('über den Stammdaten: „‹“ und „Abbrechen“ zurück zu ihnen, das X schließt beide (02.11.2026)', () => {
+    const onClose = vi.fn();
+    zeige({ onClose });
+    const arrFenster = () => screen.queryByRole('dialog', { name: 'Akustik' });
+
+    fireEvent.click(zeile('Akustik'));
+    fireEvent.click(within(arrFenster()!).getByRole('button', { name: 'Zurück' }));
+    expect(arrFenster()).toBeNull();
+
+    fireEvent.click(zeile('Akustik'));
+    fireEvent.click(within(arrFenster()!).getByRole('button', { name: 'Abbrechen' }));
+    expect(arrFenster()).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.click(zeile('Akustik'));
+    fireEvent.click(within(arrFenster()!).getByRole('button', { name: 'Fenster schließen' }));
+    expect(arrFenster()).toBeNull();
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('aus dem Lied-Menü geöffnet: „‹“ führt dorthin zurück (02.11.2026)', () => {
+    const zurueck = vi.fn();
+    const onClose = vi.fn();
+    zeige({ zurueck, onClose });
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+    expect(zurueck).toHaveBeenCalledOnce();
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it('zeigt die Meldung des Servers und lässt das Fenster offen', async () => {

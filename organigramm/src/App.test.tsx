@@ -525,9 +525,9 @@ describe('O3: offene Plätze, Personen, Hinweise', () => {
     expect(screen.getByRole('region', { name: 'Gruppen' }).textContent).toContain(
       'Technik · Leiter',
     );
-    // Fenster wie ChurchTools (E6-O F5): nur zum Ansehen – X oben, unten nur „Schließen“.
+    // Fenster wie ChurchTools (E6-O F5): nur zum Ansehen – nur das X (seit 02.11.2026 ohne „Schließen“ unten).
     expect(fensterKnoepfe()[0]).toBe('Fenster schließen');
-    expect(fensterKnoepfe().at(-1)).toBe('Schließen');
+    expect(fensterKnoepfe()).not.toContain('Schließen');
   });
 
   it('Hinweise: ohne Leitung, fast jede Woche, ohne Einsatz, offene Anfrage', async () => {
@@ -546,7 +546,7 @@ describe('O3: offene Plätze, Personen, Hinweise', () => {
         { name: 'Infos' },
       ),
     );
-    expect(screen.getByRole('button', { name: 'Schließen' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Fenster schließen' })).toBeTruthy();
   });
 
   it('Einsätze gerade nicht ladbar → Personen sagen es, „Erneut versuchen“ lädt nur die Einsätze', async () => {
@@ -884,9 +884,9 @@ describe('O5: Gruppen umhängen und anlegen', () => {
     expect(knopf('Lösen')).toBeTruthy();
     expect(knopf('＋ Weitere Obergruppe')).toBeTruthy();
     expect(knopf('＋ Untergruppe anlegen')).toBeTruthy();
-    // Fenster wie ChurchTools (E6-O F5): die Gruppe nur zum Ansehen – unten nur „Schließen“.
+    // Fenster wie ChurchTools (E6-O F5): die Gruppe nur zum Ansehen – nur das X (seit 02.11.2026 ohne „Schließen“ unten).
     expect(fensterKnoepfe()[0]).toBe('Fenster schließen');
-    expect(fensterKnoepfe().at(-1)).toBe('Schließen');
+    expect(fensterKnoepfe()).not.toContain('Schließen');
   });
 
   it('ein Schritt ersetzt den Inhalt; „Zurück“ führt zur Gruppe, ganz zu nur über das X (E6-O F5)', async () => {
@@ -897,7 +897,7 @@ describe('O5: Gruppen umhängen und anlegen', () => {
     expect(fensterKnoepfe()).not.toContain('Schließen');
     fireEvent.click(knopf('Zurück'));
     expect(knopf('＋ Untergruppe anlegen')).toBeTruthy();
-    expect(fensterKnoepfe().at(-1)).toBe('Schließen');
+    expect(fensterKnoepfe()).not.toContain('Schließen');
   });
 
   it('ohne Recht (z. B. nur Leitung): keine Knöpfe zum Ändern', async () => {

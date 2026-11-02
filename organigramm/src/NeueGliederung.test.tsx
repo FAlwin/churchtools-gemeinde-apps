@@ -165,7 +165,7 @@ describe('Reiter „Neue Gliederung“ (O7-2)', () => {
     expect(ziele).toEqual(['Eigener Bereich', 'CCafé']);
 
     // ein Bereich ist schon „eigener Bereich“ – das steht nicht noch einmal zur Wahl
-    fireEvent.click(fenster().getAllByRole('button', { name: 'Schließen' })[0]);
+    fireEvent.click(fenster().getAllByRole('button', { name: 'Fenster schließen' })[0]);
     fireEvent.click(zeile('Café'));
     fireEvent.click(fenster().getByRole('button', { name: 'Woanders einhängen' }));
     expect(fenster().queryByRole('button', { name: 'Eigener Bereich' })).toBeNull();

@@ -459,7 +459,7 @@ function Fenster({
   children: ReactNode;
 }) {
   return (
-    <Sheet title={titel} onClose={onClose} knoepfe={null} cancelLabel="Schließen" zurueck={zurueck}>
+    <Sheet title={titel} onClose={onClose} knoepfe={null} zurueck={zurueck}>
       <div className={styles.liste}>{children}</div>
     </Sheet>
   );

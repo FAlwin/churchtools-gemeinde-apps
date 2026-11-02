@@ -24,7 +24,7 @@ describe('AblaufAnlegenManager im ChurchTools-Aufbau', () => {
     render(<AblaufAnlegenManager site={DEFAULT_SITE_CONFIG} onClose={vi.fn()} />);
     expect(screen.getByRole('dialog', { name: 'Termine ohne Ablauf' })).toBeTruthy();
     expect(knopfFolge()[0]).toBe('Fenster schließen');
-    expect(knopfFolge().at(-1)).toBe('Abbrechen');
+    expect(knopfFolge()).not.toContain('Abbrechen');
     fireEvent.click(screen.getByRole('checkbox', { name: 'Gottesdienste' }));
     expect(knopfFolge().slice(-2)).toEqual(['Abbrechen', 'Speichern']);
   });

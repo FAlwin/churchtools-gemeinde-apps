@@ -475,7 +475,7 @@ describe('Planen – freien Platz antippen → „Wer kann?“ (E4-2)', () => {
         .map((li) => li.textContent),
     ).toEqual(['Ben Testfrei0× im November']);
     expect(laden).toHaveBeenCalledWith(20, 7);
-    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(screen.queryByRole('list', { name: 'Wer kann?' })).toBeNull();
   });
 
@@ -525,7 +525,7 @@ describe('Planen – freien Platz antippen → „Wer kann?“ (E4-2)', () => {
       within(zeileVon('Licht')).getByRole('button', { name: 'frei – Wer kann? (Platz 2 von 2)' }),
     );
     expect(await screen.findByRole('button', { name: 'Vorlieben von Ben Test' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     // Predigt an Termin 22: nur als Admin des Termins planbar → „Wer kann?“ ja, Stift nein.
     const predigt = zeileVon('Predigt').querySelectorAll('td');
     fireEvent.click(within(predigt[1] as HTMLElement).getByRole('button', { name: /Wer kann\?/ }));
@@ -1087,7 +1087,7 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     fireEvent.click(await screen.findByRole('button', { name: /^Entwurf von Alwin/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Andere Person wählen' }));
     await screen.findByRole('button', { name: /^Finn Test/ });
-    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     fireEvent.click(
       await within(zeileVon('Ton')).findByRole('button', { name: /frei – Wer kann/ }),
     );
@@ -1192,7 +1192,7 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     expect(onAktualisieren).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Ansehen und senden' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Jetzt senden (1)' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Schließen' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Fenster schließen' }));
     await waitFor(() => expect(laden).toHaveBeenCalledTimes(2));
     expect(onAktualisieren).toHaveBeenCalledTimes(1);
   });
@@ -1215,7 +1215,7 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     await waitFor(() => expect(offenTexte()).toMatch(/^1 Entwurf/));
     fireEvent.click(screen.getByRole('button', { name: 'Ansehen und senden' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Jetzt senden (1)' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Schließen' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Fenster schließen' }));
     await waitFor(() => expect(ladeZeitraum).toHaveBeenCalledTimes(2));
     expect(ladeZeitraum).toHaveBeenLastCalledWith('2026-11-01', '2026-11-30');
     expect(onAktualisieren).not.toHaveBeenCalled();
@@ -1433,7 +1433,7 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     await waitFor(() => expect(anzahl).toHaveBeenCalledWith(20, 6, 1, 2));
     expect(await screen.findByText('Ton: jetzt 2 Plätze.')).toBeTruthy();
     expect(onAktualisieren).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(onAktualisieren).toHaveBeenCalledTimes(1);
   });
 
@@ -1523,7 +1523,7 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     // Am Handy dieselbe Regel (eigene Stelle im Code); Öffnen und ohne Änderung schließen lädt nichts neu.
     const neu = anzeigen(planAus(roh(false), opt(true)), true);
     fireEvent.click(await screen.findByRole('button', { name: /^Plätze Technik am .* ändern$/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(neu).not.toHaveBeenCalled();
   });
 
@@ -1640,7 +1640,7 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
       { eventId: 21, serviceId: 6, index: null },
       1,
     ]);
-    fireEvent.click(await screen.findByRole('button', { name: 'Schließen' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Fenster schließen' }));
     await waitFor(() => expect(laden).toHaveBeenCalledTimes(2));
   });
 
@@ -1698,7 +1698,7 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     await waitFor(() => expect(offenTexte()).toMatch(/^1 Entwurf/));
     fireEvent.click(screen.getByRole('button', { name: 'Ansehen und senden' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Jetzt senden (1)' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Schließen' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Fenster schließen' }));
     await waitFor(() => expect(laden).toHaveBeenCalledTimes(2));
     expect(onAktualisieren).toHaveBeenCalledTimes(1);
   });
@@ -1893,7 +1893,7 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     );
     fireEvent.click(await screen.findByRole('button', { name: '1 als Entwurf übernehmen' }));
     await screen.findByText(/0 eingetragen/);
-    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     await waitFor(() =>
       expect(entwuerfeInMatrix()).toEqual([
         'Entwurf von Spike – noch nicht gesendet: MaxGastSpike',

@@ -74,7 +74,6 @@ export function PlaetzeFach({
     <Sheet
       title={titel}
       onClose={() => laeuft === null && onClose(geaendert)}
-      cancelLabel="Schließen"
       knoepfe={null}
       beschaeftigt={laeuft !== null}
     >

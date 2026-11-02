@@ -91,7 +91,7 @@ describe('WerKann', () => {
     laden.mockResolvedValue([]);
     const onClose = vi.fn();
     render(<WerKann platz={PLATZ} onClose={onClose} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 });
@@ -278,12 +278,12 @@ describe('WerKann – Eintragen', () => {
 });
 
 describe('WerKann im ChurchTools-Aufbau', () => {
-  it('nur auswählen: X oben, unten nur Schließen', async () => {
+  it('nur auswählen: X oben, unten kein „Schließen“ mehr (02.11.2026)', async () => {
     laden.mockResolvedValue([k(1, 'Anna')]);
     render(<WerKann platz={PLATZ} onClose={() => {}} />);
     await screen.findByRole('list', { name: 'Wer kann?' });
     expect(screen.getByRole('dialog', { name: 'Ton · So 08.11.' })).toBeTruthy();
     expect(knopfFolge()[0]).toBe('Fenster schließen');
-    expect(knopfFolge().at(-1)).toBe('Schließen');
+    expect(knopfFolge()).not.toContain('Schließen');
   });
 });

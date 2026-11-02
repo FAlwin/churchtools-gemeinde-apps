@@ -652,16 +652,23 @@ Gruppen **Tonart** (Transponieren · „Kapo · Abschnitte ›“), **Anzeige** 
 6. **Im Editor öffnen** → der Editor öffnet; rechts daneben stand beim Original „als neue Version“, bei einer
    benannten Version ihr Name.
 7. **Ohne** Bearbeitungsrecht: keine Gruppe **Bearbeiten**, „Als PDF teilen“ bleibt.
-8. Daneben tippen, X und „Schließen“ schließen, ohne etwas zu ändern.
+8. Daneben tippen und X schließen, ohne etwas zu ändern. Unten steht kein „Schließen“ (seit 02.11.2026).
+9. Aus dem Lied-Menü **Transponieren**, **Kapo**, **Abschnitte**, **Dateien verwalten** und **Stammdaten …** öffnen:
+   Jedes Fenster hat „‹“ vor dem Titel → zurück ins Lied-Menü; das X schließt ganz. In „Stammdaten“ ein Arrangement
+   öffnen → „‹“ und „Abbrechen“ führen zurück zu den Stammdaten, das X schließt beide. In „Dateien verwalten“ beim
+   Stift einer Version steht unter dem Feld „Datei in ChurchTools: …“ mit dem künftigen Dateinamen.
+10. Liederheft › **Neues Lied** → „Selbst eintippen“ → im Formular führt „‹“ zurück zur Suche.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `client/src/components/SongMenu.tsx`, `client/src/components/SongMenu.module.scss`, `ui/fenster/Sheet.tsx`, `client/src/components/ChartOverlays.tsx`
+- **Betrifft:** `client/src/components/SongMenu.tsx`, `client/src/components/SongMenu.module.scss`, `ui/fenster/Sheet.tsx`, `client/src/components/ChartOverlays.tsx`, `client/src/components/EditSongSheet.tsx`, `client/src/components/ArrangementSheet.tsx`, `client/src/components/DateiUmbenennenFenster.tsx`, `client/src/pages/ChordChart.tsx`, `client/src/pages/AllSongs.tsx`
 - **Automatisiert:** weitgehend – `SongMenu.test.tsx` (Gruppen der Übersicht, „Im Editor öffnen“ samt Wert,
   Unterseite hin und zurück ohne Schließen, Unterseite mit einem Punkt entfällt, Dokument-Wert, jede Auswahl schließt, Arrangement/Version/Dateien auf ihren
   Unterseiten), `SongMenu.order.test.tsx` (erst schließen, dann handeln), `ui/fenster/Sheet.test.tsx` („‹“),
-  `e2e/chart-arrangement-wechsel.spec.ts` (Arrangement über Version ›). **Von Hand bleibt** der Blick am echten Gerät.
+  `e2e/chart-arrangement-wechsel.spec.ts` (Arrangement über Version ›), `ChartOverlays.zurueck.test.tsx`,
+  `EditSongSheet.test.tsx`, `DateiUmbenennenFenster.test.tsx` und `e2e/fenster-zurueck.spec.ts` (Punkte 8–10). **Von
+  Hand bleibt** der Blick am echten Gerät.
 - **Historie:** Alwin am iPhone 29.10.2026 („an verschiedenen Positionen runterklappt … Untermenüs“); entschieden
   Variante 1 (Fenster) mit der Aufteilung aus Variante 2; Gruppe „Bearbeiten“ nach dem ersten Blick am iPhone (Editor
   unter „Lied ›“ nicht gefunden), das Wort „Version“ bleibt

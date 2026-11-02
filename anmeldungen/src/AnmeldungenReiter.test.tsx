@@ -147,11 +147,11 @@ describe('Reiter Anmeldungen', () => {
     expect(screen.getByText('Jonas Beispiel, 9')).toBeTruthy();
     expect(screen.getByText('Nüsse')).toBeTruthy();
     expect(screen.getAllByText('Warteliste 1').length).toBeGreaterThan(0);
-    // Fenster wie ChurchTools (E6-O F4): X oben, unten nur „Schließen“ – nichts zum Abbrechen.
+    // Fenster wie ChurchTools (E6-O F4): nur das X (seit 02.11.2026 ohne „Schließen“ unten) – nichts zum Abbrechen.
     expect(fensterKnoepfe()[0]).toBe('Fenster schließen');
-    expect(fensterKnoepfe().at(-1)).toBe('Schließen');
+    expect(fensterKnoepfe()).not.toContain('Schließen');
     expect(fensterKnoepfe()).not.toContain('Abbrechen');
-    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(screen.queryByText(/Für die ganze Anmeldung/)).toBeNull();
   });
 
@@ -295,7 +295,7 @@ describe('Je Person (U2-2)', () => {
     jePerson();
     fireEvent.click(screen.getByRole('button', { name: 'Lena' }));
     expect(screen.getByText('Für die ganze Anmeldung · gilt für Jonas, Lena')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     fireEvent.click(screen.getByRole('button', { name: /^Warteliste/ }));
     expect(screen.getByRole('columnheader', { name: 'Warteplatz' })).toBeTruthy();
     expect(personen()).toEqual([expect.stringMatching(/^LenaBeispiel1Warteliste 1/)]);
@@ -358,7 +358,7 @@ describe('Zahlung im Fenster (A7-2)', () => {
     });
     expect(z.onGespeichert).toHaveBeenCalledTimes(2);
     // Fenster zu und wieder auf → keine alte Änderung mehr.
-    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     oeffnen();
     expect(screen.queryByRole('status')).toBeNull();
   });
@@ -468,7 +468,7 @@ describe('Nachrücken und Absagen (A7-3)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Text kopieren' }));
     expect(await screen.findByText('Kopiert.')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
-    expect(fensterKnoepfe().at(-1)).toBe('Schließen');
+    expect(fensterKnoepfe()).not.toContain('Schließen');
     // „Kopiert.“ gehört zu dieser einen Mail – wer sie noch einmal öffnet, sieht es nicht mehr.
     fireEvent.click(
       within(screen.getByRole('status')).getByRole('button', { name: 'Mail schreiben' }),
@@ -603,8 +603,8 @@ describe('Anmeldung von Hand (A7-4a)', () => {
     hm.vonHandAnmelden.mockResolvedValue({ personId: 50, warteplatz: null, rueckgaengig: zurueck });
     const z = zeigen(fertig());
     fireEvent.click(screen.getByRole('button', { name: '＋ Von Hand' }));
-    // Fenster wie ChurchTools (E6-O F4): erst suchen – unten nur „Abbrechen“.
-    expect(fensterKnoepfe().at(-1)).toBe('Abbrechen');
+    // Fenster wie ChurchTools (E6-O F4): erst suchen – nur das X (seit 02.11.2026 ohne „Abbrechen“ unten).
+    expect(fensterKnoepfe()).not.toContain('Abbrechen');
     fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), {
       target: { value: 'Probe' },
     });
@@ -720,7 +720,7 @@ describe('Person dazu (A7-4b)', () => {
     fireEvent.click(screen.getByRole('button', { name: '＋ Person dazu' }));
     expect(screen.getByText('Person zur Anmeldung dazu')).toBeTruthy();
     // Abbrechen → zurück in die Anmeldung.
-    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(screen.getByRole('button', { name: '＋ Person dazu' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '＋ Person dazu' }));
 
@@ -963,7 +963,7 @@ describe('Rundmail (A7-5)', () => {
     expect(fensterKnoepfe()).toEqual(['Fenster schließen', 'Zurück', 'Ja, 1 Mail senden']);
     fireEvent.click(screen.getByRole('button', { name: 'Ja, 1 Mail senden' }));
     await screen.findByText(/laut Protokoll von ChurchTools übernommen/);
-    expect(fensterKnoepfe()).toEqual(['Fenster schließen', 'Schließen']);
+    expect(fensterKnoepfe()).toEqual(['Fenster schließen']);
     const [gruppe, an, betreff, html] = rm.rundmailSenden.mock.calls[0];
     expect([gruppe, an, betreff]).toEqual([
       165,

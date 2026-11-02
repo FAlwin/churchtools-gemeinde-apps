@@ -221,9 +221,11 @@ describe('Board (S7-3)', () => {
     merke({ sortierung: 'alpha' });
     vi.mocked(L.ladeUebersicht).mockResolvedValue(
       // Fälligkeiten gegen das Alphabet: nach Dringlichkeit stünde Zebra oben – nur die Sortierung macht „apfel“ zuerst.
+      // Weit in der Zukunft: Mit „2026-11-01“ wurde Zebra am 02.11.2026 überfällig und rutschte aus „Offen“ – der Test
+      // fiel an einem Datum, nicht an einem Fehler.
       uebersicht([
-        { ...ZEBRA, bis: '2026-11-01' },
-        a('apfel', { wer: [1], bis: '2026-12-01' }),
+        { ...ZEBRA, bis: '2099-11-01' },
+        a('apfel', { wer: [1], bis: '2099-12-01' }),
         BEAMER,
       ]),
     );

@@ -112,7 +112,7 @@ export function VerwaltungFenster({ site, isAdmin, v }: VerwaltungFensterProps) 
       )}
 
       {v.offen.notes && (
-        <Sheet title="Anmerkungen" onClose={v.closeNotes} cancelLabel="Schließen" knoepfe={null}>
+        <Sheet title="Anmerkungen" onClose={v.closeNotes} knoepfe={null}>
           <p className={styles.sheetHint}>
             Team-Anmerkungen sind für alle Musiker sichtbar. Lege zuerst die{' '}
             <strong>Gruppen</strong> fest, deren Mitglieder infrage kommen, und danach je Gruppe die{' '}

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { ablaufZeileAus, type AblaufZeile } from '@shared/ct/ablaufZeile';
 import type { CtAgendaItem } from '@shared/ct/typen';
 import { AblaufListe } from './AblaufListe';
@@ -129,7 +129,7 @@ describe('wie die ChurchTools-App (E6-O1)', () => {
     expect(screen.queryByText(/Lied – /)).toBeNull();
   });
 
-  it('Kreise rechts: Foto, sonst Kürzel; ab drei Personen „+N“; offene Dienste nicht im Kreis, aber rot in der Zeile', () => {
+  it('Kreise rechts: Foto (nur mit `fotos`), sonst Kürzel; ab drei Personen „+N“; offene Dienste nicht im Kreis, aber rot in der Zeile', () => {
     const zeile = z({
       id: 9,
       title: 'Musik',
@@ -145,14 +145,65 @@ describe('wie die ChurchTools-App (E6-O1)', () => {
         ],
       },
     });
-    const { container } = render(<AblaufListe zeilen={[zeile]} />);
+    // Ohne `fotos` (Musik-App auf dem eigenen Server): nur Kürzel (Alwin, 02.11.2026).
+    const ohne = render(<AblaufListe zeilen={[zeile]} />);
+    expect(ohne.container.querySelector('img')).toBeNull();
+    expect(screen.getByText('AF')).toBeTruthy();
+    ohne.unmount();
+    const { container } = render(<AblaufListe zeilen={[zeile]} fotos />);
     const bild = container.querySelector('img')!;
     expect(bild.getAttribute('src')).toBe('https://ct.test/bild.jpg');
+    // Lädt das Foto nicht, steht das Kürzel da – kein leerer Kreis.
+    fireEvent.error(bild);
+    expect(container.querySelector('img')).toBeNull();
+    expect(screen.getByText('AF')).toBeTruthy();
     expect(screen.getByText('LF')).toBeTruthy();
     // Ida Roth hat kein Kürzel von ChurchTools – gebildet wird es trotzdem, steht aber hinter „+1“.
     expect(screen.getByText('+1')).toBeTruthy();
     expect(screen.getByText(/Gesang \?/)).toBeTruthy();
     expect(container.textContent).toContain('Anna Feld');
+  });
+
+  it('die Kreise öffnen die Zuständigen mit ihrem Dienst; offene Dienste stehen darin als „offen“ (02.11.2026)', () => {
+    const zeile = z({
+      id: 9,
+      title: 'Musik',
+      responsible: {
+        persons: [
+          { service: '[Musik]', person: { title: 'Anna Feld', initials: 'AF' } },
+          { service: '[Ton]', person: { title: 'Lea Fromm', initials: 'LF' } },
+          { service: '[Gesang]' },
+        ],
+      },
+    });
+    render(<AblaufListe zeilen={[zeile]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Zuständige für „Musik“ zeigen' }));
+    const fenster = screen.getByRole('dialog', { name: 'Zuständig · Musik' });
+    const zeilen = within(fenster)
+      .getAllByRole('listitem')
+      .map((li) => li.textContent);
+    expect(zeilen).toEqual(['Anna FeldMusik', 'Lea FrommTon', 'Gesangoffen']);
+    fireEvent.click(within(fenster).getByRole('button', { name: 'Fenster schließen' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('ein Lied: der Punkt öffnet die Charts, die Kreise das Fenster – zwei getrennte Knöpfe', () => {
+    const onLied = vi.fn();
+    const lied = z({
+      id: 4,
+      title: 'Lied',
+      song: { title: 'Treu', songId: 1, arrangementId: 2 } as never,
+      responsible: {
+        persons: [{ service: '[Musik]', person: { title: 'Anna Feld', initials: 'AF' } }],
+      },
+    });
+    render(<AblaufListe zeilen={[lied]} onLied={onLied} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Zuständige für „Lied“ zeigen' }));
+    expect(onLied).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
+    fireEvent.click(screen.getByText('Treu'));
+    expect(onLied).toHaveBeenCalledOnce();
   });
 
   it('heißt der Punkt wie sein Lied: Name nur einmal – die Karte nennt dann nur Tonart · Tempo, ohne sie fehlt sie', () => {

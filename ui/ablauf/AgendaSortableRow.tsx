@@ -6,6 +6,7 @@
  * jeder Tipp auf die Zeile ein Ziehen einleiten und das Menü ließe sich kaum öffnen. Aufbau seit E6-O1 wie die
  * Ansicht (`ZeitSpalte`, `ZeilenInhalt` aus `AblaufListe`) – eine Stelle für beide.
  */
+import type { InfoGruppe } from '@shared/types/index';
 import { useEffect, useRef, useState } from 'react';
 import { itemLabel, type AblaufZeile } from '@shared/ct/ablaufZeile';
 import { useSortable } from '@dnd-kit/sortable';
@@ -103,8 +104,11 @@ export function SortableRow<T extends AblaufZeile>({
   schmal = false,
   ziehId,
   daten,
+  infoZeilen,
 }: {
   item: T;
+  /** Die Infos der als Spalten gewählten Gruppen – als Zeile unter dem Punkt (02.11.2026). */
+  infoZeilen?: readonly InfoGruppe[];
   onOpenActions: (item: T) => void;
   /** Plus und Papierkorb beim Drüberfahren – ohne: keine. */
   aktionen?: ZeilenAktionen;
@@ -180,7 +184,7 @@ export function SortableRow<T extends AblaufZeile>({
       </button>
       <ZeitSpalte item={item} />
       <button className={styles.editBody} data-tour="edit-item" onClick={() => onOpenActions(item)}>
-        <ZeilenInhalt item={item} schmal={schmal} />
+        <ZeilenInhalt item={item} schmal={schmal} infoZeilen={infoZeilen} />
       </button>
       {aktionen && <ZeilenKnoepfe label={itemLabel(item)} aktionen={aktionen} />}
       <button

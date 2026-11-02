@@ -24,6 +24,7 @@ import {
 import { AblaufHinweis } from './AblaufHinweis';
 import { useKurzerHinweis } from '../hooks/useKurzerHinweis';
 import { AblaufListe } from '@ui/ablauf/AblaufListe';
+import { istExtension } from '../services/ctRuntime';
 
 export function AgendaFullView({
   items,
@@ -91,6 +92,8 @@ export function AgendaFullView({
       schild={schild}
       kopf={sichtbar && <AblaufHinweis aenderungen={zusammenfassung} />}
       infoSpalten={infoSpalten}
+      // Fotos nur in ChurchTools selbst – auf dem eigenen Server Kürzel (Alwin, 02.11.2026).
+      fotos={istExtension}
     />
   );
 }

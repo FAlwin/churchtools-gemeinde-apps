@@ -203,6 +203,7 @@ export function TerminAblauf({
 
   const liste = useAblaufBearbeiten({
     aktiv,
+    infoSpalten: spalten.gewaehlt,
     bereit: ablauf !== null,
     items: zeilen,
     // Dieselbe Uhrzeit wie der Balken „Beginn“ in der Ansicht.
@@ -365,6 +366,8 @@ export function TerminAblauf({
           // Matrix: wo der Ablauf aufhört (Alwin, 29.10.2026, Entwurf `e6-6-trennung.html` C).
           mitEnde={schmal}
           infoSpalten={spalten.gewaehlt}
+          // Eine Erweiterung in ChurchTools: Fotos laden dort direkt.
+          fotos
         />
       </div>
     );

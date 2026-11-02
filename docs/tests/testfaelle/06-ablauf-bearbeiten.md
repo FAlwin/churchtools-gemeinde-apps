@@ -364,19 +364,24 @@ für diesen Termin, wenn man das wählt.
 Punkt-Fenster ändern, ohne andere Gruppen anzufassen.
 
 1. Ablauf öffnen → oben **„Spalten“** → die Liste nennt nur Gruppen, die man in ChurchTools sieht, mit „N Punkte“.
-2. **Technik** anhaken → rechts eine Spalte „Technik“ mit der Info; leere Zellen zeigen „–“. Seite neu laden → die
-   Spalte ist noch da (auf diesem Gerät gemerkt).
-3. Am Handy: dieselbe Info steht als Zeile „Technik: …“ unter dem Punkt.
-4. **Bearbeiten** → Punkt antippen → Abschnitt **„Infos je Gruppe“** → Technik ändern, bei Musik etwas eintragen →
+2. **Technik** anhaken → rechts eine Spalte „Technik“ mit der Info; leere Zellen zeigen „–“, der Kopf „Technik · 1“.
+   Seite neu laden → die Spalte ist noch da (auf diesem Gerät gemerkt).
+3. **Alle Gruppen anhaken** (seit 02.11.2026): Die Spalten fluchten in allen Zeilen; eine lange Info macht ihre Spalte
+   breiter (bis etwa 280 px) statt die Zeile riesig hoch. Am iPad hochkant scrollt alles rechts vom Punkt waagerecht,
+   der Punkt bleibt stehen, rechts steht „›“. Steht in einer verdeckten Spalte etwas, zeigt der Punkt „Technik ›“ –
+   antippen scrollt dorthin.
+4. Am Handy: dieselbe Info steht als Zeile „Technik: …“ unter dem Punkt.
+5. **Bearbeiten**: Die Infos der gewählten Spalten stehen als Zeile „Technik: …“ unter dem Punkt (seit 02.11.2026).
+6. **Bearbeiten** → Punkt antippen → Abschnitt **„Infos je Gruppe“** → Technik ändern, bei Musik etwas eintragen →
    **Speichern** → beide Infos stehen in der App und in ChurchTools.
-5. Musik leeren → **Speichern** → in ChurchTools ist die Musik-Info weg, Technik bleibt.
-6. Dienstplaner: In der Planen-Matrix stehen **keine** Infos.
+7. Musik leeren → **Speichern** → in ChurchTools ist die Musik-Info weg, Technik bleibt.
+8. Dienstplaner: In der Planen-Matrix stehen **keine** Infos.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
 - **Betrifft:** `shared/ct/ablaufZeile.ts`, `shared/ct/agendaItemChanges.ts`, `shared/ct/schreibKern.ts`, `shared/ct/dienstRechte.ts`, `ui/ablauf/InfoSpalten.tsx`, `ui/ablauf/infoSpaltenWahl.ts`, `ui/ablauf/AblaufListe.tsx`, `ui/ablauf/PunktFenster.tsx`, `client/src/pages/Setlist.tsx`, `client/src/services/ctLesen.ts`, `server/src/services/ctCapabilities.ts`, `server/src/controllers/setlistController.ts`, `dienstplaner/src/TerminAblauf.tsx`
-- **Automatisiert:** ja – `shared/ct/gruppenInfos.test.ts` (Schreiben je Gruppe gegen eine Attrappe wie gemessen), `ui/ablauf/InfoSpalten.test.tsx`, `dienstplaner/src/TerminAnsicht.test.tsx`, `client/src/pages/Setlist.abschluss.test.tsx`, `shared/ct/dienstRechte.test.ts`, `server/src/services/churchtools.capabilities.test.ts`, `client/src/services/ctTeilen.test.ts`, `server/src/controllers/setlistController.gesehen.test.ts`; von Hand bleibt der Blick gegen echtes ChurchTools
+- **Automatisiert:** ja – `shared/ct/gruppenInfos.test.ts` (Schreiben je Gruppe gegen eine Attrappe wie gemessen), `ui/ablauf/InfoSpalten.test.tsx` (ein Raster, Kopf-Zahl, verdeckte Spalten und „›“ mit nachgestellten Maßen), `ui/ablauf/useAblaufBearbeiten.test.tsx` (Infos beim Bearbeiten), `dienstplaner/src/TerminAnsicht.test.tsx`, `client/src/pages/Setlist.abschluss.test.tsx`, `shared/ct/dienstRechte.test.ts`, `server/src/services/churchtools.capabilities.test.ts`, `client/src/services/ctTeilen.test.ts`, `server/src/controllers/setlistController.gesehen.test.ts`; von Hand bleibt der Blick gegen echtes ChurchTools
 - **Historie:** E6-4 (30.10.2026, gemessen E6-4-0, Entwurf `e6-infos-spalten.html` abgenommen)
 
 </details>

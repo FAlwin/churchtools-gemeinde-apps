@@ -1,0 +1,30 @@
+// Die Zuständigen eines Punkts (02.11.2026) – eine Zeile je Person, der Dienst grau dahinter, offene Dienste rot.
+.liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.zeile {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 15px;
+
+  & + & {
+    border-top: 1px solid var(--hair);
+  }
+}
+.name {
+  color: var(--text);
+}
+.offen {
+  color: var(--red);
+  font-weight: 600;
+}
+.dienst {
+  color: var(--text2);
+  font-size: 13px;
+  text-align: right;
+}

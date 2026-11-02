@@ -107,6 +107,11 @@ export interface AblaufBearbeitenOptionen<T extends AblaufZeile> {
    * Liste und im Punkt-Fenster.
    */
   gruppenVerborgen?: boolean;
+  /**
+   * Die als Spalten gewählten Gruppen (Knopf „Spalten“): Beim Bearbeiten stehen ihre Infos als Zeile unter dem Punkt
+   * (Alwin, 02.11.2026: „sonst sieht man ja gar nicht, was schon eingetragen wurde“; Entwurf Bild 3).
+   */
+  infoSpalten?: readonly InfoGruppe[];
   /** Die Dienstgruppen, deren Infos man sieht – je eine Zeile im Punkt-Fenster (E6-4). */
   infoGruppen?: readonly InfoGruppe[];
   /** Zusätzlich bei jedem Schreibfehler – z. B. bei 423 (inzwischen abgeschlossen) die Termine neu holen. */
@@ -398,6 +403,7 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
             <SortableRow
               schmal={o.schmal}
               item={item}
+              infoZeilen={o.infoSpalten}
               aktionen={zeilenAktionen(item, i)}
               {...(spalte !== undefined
                 ? { ziehId: ziehId(spalte, item.id), daten: punktDaten(spalte, item.id) }

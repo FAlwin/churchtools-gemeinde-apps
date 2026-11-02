@@ -20,8 +20,15 @@ describe('responsibleEntries – Kürzel und Foto (E6-O1)', () => {
         },
       }),
     ).toEqual([
-      { label: 'Anna Feld', open: false, kuerzel: 'AF', bild: 'https://ct.test/a.jpg' },
-      { label: 'Lea Fromm', open: false, kuerzel: 'LF' },
+      // Mit dem Dienst, über den die Person eingetragen ist – fürs Fenster hinter den Kreisen (02.11.2026).
+      {
+        label: 'Anna Feld',
+        open: false,
+        kuerzel: 'AF',
+        bild: 'https://ct.test/a.jpg',
+        dienst: 'Musik',
+      },
+      { label: 'Lea Fromm', open: false, kuerzel: 'LF', dienst: 'Musik' },
       { label: 'Gesang', open: true },
     ]);
   });

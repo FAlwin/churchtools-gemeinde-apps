@@ -31,6 +31,7 @@ function Harness({
   liedWahl,
   schmal,
   plusName,
+  infoSpalten,
 }: {
   aktionen: AblaufAktionen;
   items?: AblaufZeile[];
@@ -41,8 +42,10 @@ function Harness({
   liedWahl?: (args: LiedWahlArgs) => ReactNode;
   schmal?: boolean;
   plusName?: string;
+  infoSpalten?: { id: number; name: string }[];
 }) {
   const b = useAblaufBearbeiten({
+    infoSpalten,
     plusName,
     gruppenVerborgen,
     neuAufsetzen,
@@ -76,6 +79,40 @@ const aktionen = (over: Partial<AblaufAktionen> = {}): AblaufAktionen => ({
   setWeggelassen: vi.fn(() => Promise.resolve()),
   add: vi.fn(() => Promise.resolve()),
   ...over,
+});
+
+describe('useAblaufBearbeiten – Infos der gewählten Spalten (02.11.2026)', () => {
+  const mitInfo = [
+    ablaufZeileAus(
+      {
+        id: 5,
+        title: 'Rückblickvideo',
+        type: 'normal',
+        serviceGroupNotes: [{ serviceGroupId: 3, note: 'Video abspielen' }],
+      },
+      7,
+      'Europe/Berlin',
+    ),
+  ];
+
+  it('stehen beim Bearbeiten als Zeile unter dem Punkt – sonst sähe man nicht, was schon drinsteht', () => {
+    render(
+      <Harness aktionen={aktionen()} items={mitInfo} infoSpalten={[{ id: 3, name: 'Technik' }]} />,
+    );
+    expect(screen.getByTestId('liste').textContent).toContain('Technik: Video abspielen');
+  });
+
+  it('nicht in der schmalen Form (Matrix)', () => {
+    render(
+      <Harness
+        aktionen={aktionen()}
+        items={mitInfo}
+        infoSpalten={[{ id: 3, name: 'Technik' }]}
+        schmal
+      />,
+    );
+    expect(screen.getByTestId('liste').textContent).not.toContain('Video abspielen');
+  });
 });
 
 describe('useAblaufBearbeiten – schmal (Matrix, E6-6a)', () => {

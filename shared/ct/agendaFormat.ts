@@ -59,9 +59,11 @@ export function responsibleEntries(item: {
     }
     // Kürzel und Foto für den Kreis rechts in der Zeile (E6-O1) – beides kommt mit dem Ablauf (gemessen E6-O0).
     const bild = p.person?.imageUrl?.trim();
+    const dienst = cleanServiceName(p.service);
     push(name, false, {
       kuerzel: p.person?.initials?.trim() || kuerzelAus(name),
       ...(bild ? { bild } : {}),
+      ...(dienst ? { dienst } : {}),
     });
   }
   for (const part of (item.responsible?.text ?? '').split(',')) {

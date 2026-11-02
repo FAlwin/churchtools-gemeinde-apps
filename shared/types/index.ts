@@ -648,6 +648,8 @@ export interface ResponsibleEntry {
   kuerzel?: string;
   /** Foto der Person, wo ChurchTools eins hat (`imageUrl`; lädt ohne Anmeldung, ~4 KB – gemessen E6-O0). */
   bild?: string;
+  /** Der Dienst, über den die Person eingetragen ist („Ton“) – fürs Fenster hinter den Kreisen (02.11.2026). */
+  dienst?: string;
 }
 
 /** Ein ChurchTools-Dienst (z.B. „Musik", „Predigt") – als Chip im Verantwortlich-Editor. */

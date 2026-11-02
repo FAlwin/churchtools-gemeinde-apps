@@ -2,7 +2,8 @@
  * **Die Dienste der Gemeinde** (`GET /services`, Dienstplaner E3). Gemessen an der Test-Instanz
  * (13.10.2026): je Dienst `id`, `name`, `nameTranslated`, `sortKey`, `serviceGroupId` (Dienstgruppe),
  * `groupIds` (die ChurchTools-Gruppen, aus denen besetzt wird – deren Leitung darf einteilen, E0) und
- * `hidePersonName` („Namen verbergen“). Weitere Felder (u. a. `sendServiceRequestEmails`) braucht E4.
+ * `hidePersonName` („Namen verbergen“). Weitere Felder (u. a. `sendServiceRequestEmails`) braucht E4;
+ * `allowControlLiveAgenda` („Live-Agenda steuern“) E6b-2.
  */
 import { ctId } from './ctId';
 
@@ -15,6 +16,11 @@ export interface Dienst {
   gruppenIds: number[];
   /** Reihenfolge in der Gemeinde (`sortKey`); ohne Angabe ans Ende. */
   sortKey: number;
+  /**
+   * „Live-Agenda steuern“ (`allowControlLiveAgenda`): Wer an einem Termin in diesem Dienst eingeteilt ist, darf dort die
+   * Live-Agenda weiterschalten (E6b-2, `darfLiveSteuern`).
+   */
+  liveSteuern: boolean;
 }
 
 interface RohDienst {
@@ -24,6 +30,7 @@ interface RohDienst {
   sortKey?: unknown;
   serviceGroupId?: unknown;
   groupIds?: unknown;
+  allowControlLiveAgenda?: unknown;
 }
 
 /**
@@ -46,6 +53,7 @@ export function diensteAus(roh: RohDienst[] | null | undefined): Map<number, Die
       dienstgruppeId: ctId(r.serviceGroupId),
       gruppenIds,
       sortKey: typeof r.sortKey === 'number' ? r.sortKey : Number.MAX_SAFE_INTEGER,
+      liveSteuern: r.allowControlLiveAgenda === true,
     });
   }
   liste.sort((a, b) => a.sortKey - b.sortKey || a.name.localeCompare(b.name, 'de'));

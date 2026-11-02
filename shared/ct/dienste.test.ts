@@ -20,6 +20,7 @@ describe('diensteAus', () => {
       dienstgruppeId: 3,
       gruppenIds: [7],
       sortKey: 0,
+      liveSteuern: false,
     });
     expect(d.get(3)?.gruppenIds).toEqual([]);
   });

@@ -46,10 +46,18 @@ export function ablaufUhrzeit(
   eventId: number,
   zeitzone: string,
 ): string | null {
+  const iso = ablaufBeginn(item, eventId);
+  return iso === null ? null : ortszeitAus(iso, zeitzone).slice(11, 16);
+}
+
+/**
+ * Der Beginn eines Punkts an diesem Termin als Zeitpunkt (ISO, UTC) – dieselbe Regel wie `ablaufUhrzeit`, für alles,
+ * was sekundengenau rechnet (Live-Agenda E6b-2). `null` ohne Zeit oder wenn der Punkt weggelassen ist.
+ */
+export function ablaufBeginn(item: CtAgendaItem, eventId: number): string | null {
   const eintrag = item.startTimes ? item.startTimes[String(eventId)] : undefined;
   const iso = eintrag === undefined ? item.start : eintrag;
-  if (!iso || Number.isNaN(Date.parse(iso))) return null;
-  return ortszeitAus(iso, zeitzone).slice(11, 16);
+  return !iso || Number.isNaN(Date.parse(iso)) ? null : iso;
 }
 
 /**

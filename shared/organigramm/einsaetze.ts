@@ -8,7 +8,7 @@
  *
  * Gezählt wird jede Einteilung (zugesagt oder angefragt). „Vergangen“ = Beginn vor `jetzt`.
  */
-import { istFrei, VERBORGENE_PERSON, type RohPlatz, type RohTermin } from '../dienstplan/termine';
+import { istFrei, VERBORGENE_PERSON, type RohTermin } from '../dienstplan/termine';
 import { ctId } from '../ct/ctId';
 import type { Dienst } from '../ct/dienste';
 
@@ -27,8 +27,6 @@ export interface Einsaetze {
   offenJeDienst: Map<number, number>;
 }
 
-type Platz = RohPlatz & { isValid?: unknown };
-
 export function einsaetzeAus(termine: readonly RohTermin[], jetzt: Date): Einsaetze {
   const jePerson = new Map<number, PersonEinsatz>();
   const offenJeDienst = new Map<number, number>();
@@ -39,7 +37,7 @@ export function einsaetzeAus(termine: readonly RohTermin[], jetzt: Date): Einsae
     const zeit = beginn ? Date.parse(beginn) : NaN;
     if (Number.isNaN(zeit)) continue;
     const vorbei = zeit < grenze;
-    for (const p of (t.eventServices ?? []) as Platz[]) {
+    for (const p of t.eventServices ?? []) {
       if (p.isValid === false) continue;
       const dienst = ctId(p.serviceId);
       if (dienst === null) continue;

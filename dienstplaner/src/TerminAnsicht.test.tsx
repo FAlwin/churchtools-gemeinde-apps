@@ -1066,3 +1066,85 @@ describe('Infos je Dienstgruppe in der Termin-Ansicht (E6-4, Entwurf `e6-infos-s
     expect(screen.queryByRole('button', { name: 'Ablauf im Vollbild zeigen' })).toBeNull();
   });
 });
+
+describe('„Live“ (E6b-2 L2)', () => {
+  const MIT_ID = { ...ABLAUF, id: 31 };
+
+  /** ChurchTools mit Live-Agenda: `stelle` wie `pos_id` (gemessen: Zeichenkette oder `null`). */
+  function ctLive(stelle: string | null) {
+    const live: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      const url = String(input);
+      if (url.endsWith('/api/csrftoken')) return Promise.resolve(json(200, { data: 'c' }));
+      if (url.includes('churchservice/ajax')) {
+        live.push(String(init?.body));
+        return Promise.resolve(
+          json(200, {
+            status: 'success',
+            data: {
+              pos_id: stelle,
+              switchdate: stelle === null ? null : '2026-10-18T08:06:00Z',
+              addseconds: '0',
+              category_id: '2',
+              currentTime: Date.now(),
+            },
+          }),
+        );
+      }
+      if (url.includes('/agenda')) return Promise.resolve(json(200, { data: MIT_ID }));
+      if (url.includes('/events/')) return Promise.resolve(json(200, { data: TERMIN }));
+      return Promise.resolve(json(200, { data: [] }));
+    });
+    return live;
+  }
+
+  /** Nur die Uhr anhalten – Zeitgeber laufen echt (die Termin-Ansicht lädt über sie). */
+  function heute(iso: string) {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(Date.parse(iso));
+  }
+  afterEach(() => vi.useRealTimers());
+
+  it('am Tag des Termins und gestartet: roter Punkt; der Knopf öffnet „Live“, „Schließen“ führt zurück', async () => {
+    heute('2026-10-18T08:10:00Z');
+    const live = ctLive('2');
+    zeige();
+    const knopf = await screen.findByRole('button', { name: 'Live – läuft gerade in ChurchTools' });
+    expect(within(knopf).getByTestId('live-punkt')).toBeTruthy();
+    expect(live[0]).toBe('func=loadAgendaLivePosition&event_id=7&agenda_id=31');
+    fireEvent.click(knopf);
+    const ansicht = screen.getByRole('dialog', { name: 'Live: Gottesdienst' });
+    const jetzt = within(ansicht).getByRole('region', { name: 'Jetzt' });
+    expect((await within(jetzt).findByRole('heading')).textContent).toBe('Lied – Du großer Gott');
+    fireEvent.click(within(ansicht).getByRole('button', { name: 'Schließen' }));
+    expect(screen.queryByRole('dialog', { name: 'Live: Gottesdienst' })).toBeNull();
+  });
+
+  it('am Tag, aber nicht gestartet: Knopf ohne Punkt', async () => {
+    heute('2026-10-18T07:00:00Z');
+    const live = ctLive(null);
+    zeige();
+    await waitFor(() => expect(live).toHaveLength(1));
+    expect(screen.getByRole('button', { name: 'Live-Agenda von ChurchTools folgen' })).toBeTruthy();
+    expect(screen.queryByTestId('live-punkt')).toBeNull();
+  });
+
+  it('an einem anderen Tag: Knopf (zum Vorbereiten) ohne Punkt – und ohne Abfrage', async () => {
+    heute('2026-10-17T08:10:00Z');
+    const live = ctLive('2');
+    zeige();
+    expect(
+      await screen.findByRole('button', { name: 'Live-Agenda von ChurchTools folgen' }),
+    ).toBeTruthy();
+    expect(screen.queryByTestId('live-punkt')).toBeNull();
+    expect(live).toHaveLength(0);
+  });
+
+  it('am Tag, aber schon am Ende: kein Punkt', async () => {
+    heute('2026-10-18T09:30:00Z');
+    const live = ctLive('3');
+    zeige();
+    await waitFor(() => expect(live).toHaveLength(1));
+    expect(screen.queryByTestId('live-punkt')).toBeNull();
+  });
+});

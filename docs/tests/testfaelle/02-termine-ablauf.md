@@ -318,3 +318,35 @@ den Infos der unter „Spalten“ gewählten Gruppen. Nichts lässt sich verstel
 - **Historie:** E6b-1 (30.10.2026, Entwurf `e6b-anzeige.html` abgenommen)
 
 </details>
+
+### TF-ABLAUF-14 · „Live“ folgt der Live-Agenda von ChurchTools
+
+**Das brauchst du:** Einen Test-Termin **heute** mit abgeschlossenem Ablauf (ein Punkt mit Info für Technik, ein Punkt
+weggelassen), daneben in ChurchTools die „Live-Agenda“ desselben Termins (Ablaufpläne → „Live-Agenda ansehen“) mit
+einer Person, die dort steuern darf.
+
+**Das muss passieren:** „Live“ im Dienstplaner zeigt immer denselben Stand wie die Live-Agenda von ChurchTools – Jetzt,
+Dann, Restzeit, Abweichung – und folgt jedem Weiterschalten nach spätestens 2,5 Sekunden.
+
+1. Dienstplaner → Termin öffnen → oben **„Live“** (Uhr-Symbol). Noch nicht gestartet: „Jetzt · nach Plan“ zeigt den
+   Punkt, der laut Uhr dran ist, mit „Noch nicht gestartet – „Jetzt“ folgt der Uhr.“
+2. In ChurchTools **›** → nach spätestens 2,5 s steht derselbe Punkt unter „Jetzt“, der Kreis zählt die Restzeit herunter,
+   in der Liste ist er hervorgehoben, die Punkte davor haben einen Haken. Im Kopf leuchtet „Live“ rot.
+3. Die Notiz des Punkts steht unter „Jetzt“ wie in ChurchTools. Unter „Spalten“ Technik angehakt → „Technik: …“.
+   Am Handy steht „Musik-App“ im Kopf des Ablaufs nur als Symbol.
+4. In ChurchTools **+** → die Restzeit springt eine Minute höher; **−** eine niedriger.
+5. Zeit ablaufen lassen → der Kreis wird rot, „+0:…“ und „über der Zeit“.
+6. „Gesamt“ zeigt die Abweichung wie ChurchTools, aber in Worten („2 Min. später“ statt „−2 Minuten“). Ausnahme: Steht
+   vor dem Punkt ein weggelassener, rechnet ChurchTools dessen Dauer mit – der Dienstplaner nimmt die Zeit aus dem Ablauf.
+7. Der weggelassene Punkt steht durchgestrichen in der Liste.
+8. **Schließen** → zurück im Termin: der Knopf „Live“ hat jetzt einen roten Punkt. Ein anderer Tag: Knopf ohne Punkt.
+9. WLAN kurz aus → „Keine Verbindung – Stand von … Uhr. Wird wieder versucht.“, Jetzt bleibt stehen; WLAN an → weiter.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `dienstplaner/src/LiveAnsicht.tsx`, `dienstplaner/src/useLive.ts`, `dienstplaner/src/TerminAblauf.tsx`, `dienstplaner/src/TerminAnsicht.tsx`, `shared/ct/liveAgenda.ts`
+- **Automatisiert:** ja – `dienstplaner/src/LiveAnsicht.test.tsx` (Lage, Takt, Uhrabgleich, Fehler, Sichtbarkeit, mit Fake-Timern), `dienstplaner/src/TerminAnsicht.test.tsx` (Knopf, roter Punkt nur am Tag), `shared/ct/liveAgenda.test.ts` (Kern); von Hand bleibt der Vergleich mit der echten Live-Agenda
+- **Historie:** E6b-2 L2 (02.11.2026, Entwurf `e6b-2-live.html` Variante A)
+
+</details>

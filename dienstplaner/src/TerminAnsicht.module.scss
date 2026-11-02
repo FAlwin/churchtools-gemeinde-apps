@@ -115,6 +115,24 @@
   text-decoration: none;
 }
 
+// Am Handy nur das Symbol, im selben Kasten wie die Knöpfe daneben (Alwin, 02.11.2026: „sieht sonst so komisch aus“) –
+// Maße wie `KopfKnopf` am Handy; das Symbol bleibt blau, es führt in eine andere App.
+@media (max-width: 759px) {
+  .leise {
+    @include m.aktionKnopf;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--r-ctrl);
+    color: var(--blue);
+  }
+
+  .leiseText {
+    display: none;
+  }
+}
+
 .hinweis {
   @include t.hinweis;
 }

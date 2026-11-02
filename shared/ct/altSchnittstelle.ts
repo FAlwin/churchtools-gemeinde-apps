@@ -33,6 +33,16 @@ export interface AltPort {
   fehler(status: number, meldung: string): Error;
 }
 
+/**
+ * Der schlanke Anschluss, mit dem Regeln in `shared/` die alte Schnittstelle rufen (Vorlieben E5-3, Live-Agenda E6b-2):
+ * ein Aufruf, und der HTTP-Status eines Fehlers (`null` = Netz). Die Meldungen setzt der Aufrufer im Browser
+ * (`ctAltAnfrage`), die Regeln brauchen nur den Status, um „abgemeldet“, „kein Recht“ und „vorübergehend“ zu trennen.
+ */
+export interface AltAnfragePort {
+  anfrage(func: string, felder: Record<string, string>): Promise<unknown>;
+  status(e: unknown): number | null;
+}
+
 /** Die Meldungen mit ihren Vorgaben. */
 export function ajaxMeldungen(m: AjaxMeldungen = {}): Required<AjaxMeldungen> {
   return {

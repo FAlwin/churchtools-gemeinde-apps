@@ -69,7 +69,7 @@ describe('einsaetzeAus', () => {
         termin('2026-10-11T08:00:00Z', [
           { serviceId: 6, personId: -2, name: 'Echter Name' },
           { serviceId: 6, personId: null, name: 'Gastprediger' },
-          { serviceId: 6, personId: 3, name: 'Cara', isValid: false } as never,
+          { serviceId: 6, personId: 3, name: 'Cara', isValid: false },
         ]),
       ],
       JETZT,

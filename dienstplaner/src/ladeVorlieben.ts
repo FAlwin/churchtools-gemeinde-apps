@@ -1,23 +1,11 @@
 /**
- * **Vorlieben (Stift) im Browser** (Bauplan E5-3): der Anschluss an die alte Schnittstelle über `ctAltAnfrage` (mit
+ * **Vorlieben (Stift) im Browser** (Bauplan E5-3): der Anschluss an die alte Schnittstelle über `altPort` (`ctAltAnfrage` mit
  * Sitzung und CSRF-Token, wie Lied-Kategorien und SongSelect). Die Regeln stehen in `shared/dienstplan/vorlieben.ts`.
  */
-import { ctAltAnfrage } from '@ui/ct/verbindung';
-import { ApiError } from '@ui/ct/fehler';
-import {
-  vorliebeLesen,
-  vorliebeSpeichern,
-  type Vorliebe,
-  type VorliebenPort,
-} from '@shared/dienstplan/vorlieben';
+import { vorliebeLesen, vorliebeSpeichern, type Vorliebe } from '@shared/dienstplan/vorlieben';
+import { altPort } from './altPort';
 
-const port: VorliebenPort = {
-  anfrage: (func, felder) =>
-    ctAltAnfrage(func, felder, {
-      verweigert: 'ChurchTools erlaubt dir nicht, die Vorlieben dieser Dienstgruppe zu ändern.',
-    }),
-  status: (e) => (e instanceof ApiError ? e.status : null),
-};
+const port = altPort('ChurchTools erlaubt dir nicht, die Vorlieben dieser Dienstgruppe zu ändern.');
 
 export const ladeVorliebe = (gruppeId: number, personId: number) =>
   vorliebeLesen(port, gruppeId, personId);

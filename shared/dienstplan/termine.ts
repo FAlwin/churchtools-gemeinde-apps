@@ -23,6 +23,8 @@ export interface RohPlatz {
   personId?: unknown;
   name?: unknown;
   isAccepted?: unknown;
+  /** `false` = ungültiger Platz (z. B. Dienst nicht mehr am Termin) – zählt nirgends (Organigramm, Live-Agenda). */
+  isValid?: unknown;
 }
 
 export interface RohTermin extends CtEvent {

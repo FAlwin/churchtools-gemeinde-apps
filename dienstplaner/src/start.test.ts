@@ -82,7 +82,17 @@ describe('ladeStart (Dienstplaner)', () => {
         { id: 3, name: 'Technik', fuerAlle: false },
       ],
       dienste: new Map([
-        [6, { id: 6, name: 'Ton', dienstgruppeId: 3, gruppenIds: [7], sortKey: 0 }],
+        [
+          6,
+          {
+            id: 6,
+            name: 'Ton',
+            dienstgruppeId: 3,
+            gruppenIds: [7],
+            sortKey: 0,
+            liveSteuern: false,
+          },
+        ],
       ]),
       rechte: {
         planbareDienstgruppen: [3],

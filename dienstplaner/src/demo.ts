@@ -663,6 +663,28 @@ function vorliebenDemo(f: URLSearchParams): unknown {
   return Object.keys(zeilen).length ? zeilen : [];
 }
 
+/**
+ * Live-Agenda der Demo (E6b-2): je Termin der Stand, wie ChurchTools ihn führt (gemessen 02.11.2026) – Zeichenketten,
+ * `switchdate` nur bei neuer Stelle, `addseconds` als Gesamtwert.
+ */
+const liveDemoSpeicher = new Map<
+  string,
+  { pos_id: string | null; switchdate: string | null; addseconds: string | null }
+>();
+function liveDemo(f: URLSearchParams): unknown {
+  const termin = f.get('event_id') ?? '';
+  const s = liveDemoSpeicher.get(termin) ?? { pos_id: null, switchdate: null, addseconds: null };
+  if (f.get('func') === 'saveAgendaLivePosition') {
+    const pos = f.get('pos_id');
+    if (pos !== s.pos_id) s.switchdate = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+    s.pos_id = pos;
+    s.addseconds = f.get('addseconds');
+    liveDemoSpeicher.set(termin, s);
+    return { switchdate: s.switchdate };
+  }
+  return { ...s, category_id: '2', currentTime: Date.now() };
+}
+
 export function demoStarten(fall: string): void {
   // ChurchTools gibt der Erweiterung einen Behälter mit fester Höhe (gemessen 07.10.2026); auf der nackten
   // Entwicklerseite übernimmt das `body`, sonst hätte die App die Höhe 0.
@@ -694,12 +716,17 @@ export function demoStarten(fall: string): void {
         }),
       );
     }
-    // Alte Schnittstelle (E5-3, Stift): Vorlieben je Gruppe – wie gemessen, alles Zeichenketten.
+    // Alte Schnittstelle: Vorlieben je Gruppe (E5-3, Stift) und Live-Agenda (E6b-2) – wie gemessen, alles Zeichenketten.
     if (url.pathname === '/index.php' && init?.body instanceof URLSearchParams) {
+      const live = /AgendaLivePosition$/.test(init.body.get('func') ?? '');
       return Promise.resolve(
-        new Response(JSON.stringify({ status: 'success', data: vorliebenDemo(init.body) }), {
-          status: 200,
-        }),
+        new Response(
+          JSON.stringify({
+            status: 'success',
+            data: live ? liveDemo(init.body) : vorliebenDemo(init.body),
+          }),
+          { status: 200 },
+        ),
       );
     }
     if (url.pathname === '/api/csrftoken') {

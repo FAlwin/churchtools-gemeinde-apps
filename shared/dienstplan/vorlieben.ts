@@ -9,6 +9,8 @@
  * Nachlesen genau die neuen Werte zeigt. Werte kommen als Zeichenketten.
  */
 
+import type { AltAnfragePort } from '../ct/altSchnittstelle';
+
 /** `max_per_month`: 0 = nie … 4 = viermal (Vorgabe). */
 export type Hoechstens = 0 | 1 | 2 | 3 | 4;
 /** `relation_weight`: 0 egal, 1 bevorzugt zusammen, 2 immer getrennt (wirkt nur bei Ehepaar, E0 §4). */
@@ -41,11 +43,8 @@ export const TAGESZEIT_TEXTE = [
   'nur abends',
 ] as const;
 
-/** Der Anschluss an die alte Schnittstelle: ein Aufruf und der HTTP-Status eines Fehlers (`null` = Netz). */
-export interface VorliebenPort {
-  anfrage(func: string, felder: Record<string, string>): Promise<unknown>;
-  status(e: unknown): number | null;
-}
+/** Der Anschluss an die alte Schnittstelle – derselbe wie für die Live-Agenda (`AltAnfragePort`). */
+export type VorliebenPort = AltAnfragePort;
 
 export type VorliebenGrund =
   /** Niemand mehr angemeldet (401 – fehlendes Recht kommt im Browser als 403, `fehlerAus`). Nichts ist passiert. */

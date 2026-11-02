@@ -33,7 +33,10 @@ export function InfosFenster({
   /** Nur für Tests. */
   speichern?: typeof speichereInfos;
 }) {
-  const [bearbeiten, setBearbeiten] = useState(false);
+  // Noch keine Infos und man darf schreiben: gleich das Textfeld – die leere Ansicht davor wäre nur ein Schritt mehr
+  // (Test-Instanz, 02.11.2026: „+ Infos“ in der Matrix zeigte erst „Noch keine Infos“ und dann „Bearbeiten“).
+  const direkt = darf && text === '';
+  const [bearbeiten, setBearbeiten] = useState(direkt);
   // Was das Textfeld beim Öffnen zeigte – damit erkennt der Kern, ob jemand dazwischen gespeichert hat.
   const [gesehen, setGesehen] = useState(text);
   const [entwurf, setEntwurf] = useState(text);
@@ -102,8 +105,9 @@ export function InfosFenster({
     <Sheet
       title="Weitere Infos"
       onClose={onClose}
-      onAbbrechen={() => setBearbeiten(false)}
-      zurueck={() => setBearbeiten(false)}
+      // Direkt geöffnet gibt es keine Ansicht davor – dann schließen „Abbrechen“ und „‹“ das Fenster.
+      onAbbrechen={() => (direkt ? onClose() : setBearbeiten(false))}
+      zurueck={direkt ? undefined : () => setBearbeiten(false)}
       beschaeftigt={laeuft}
       // Ein Tipp daneben soll keinen Text verwerfen.
       onHintergrund={geaendert ? () => {} : undefined}

@@ -31,8 +31,9 @@ describe('Im Gerät merken (@ui/bedienung/geraet)', () => {
         unteransicht: 'personen',
         ausgeblendeteGruppen: [3, 'ohne'],
         zeitraum: { art: 'eigen', von: '2026-02-30', bis: '2026-03-10' },
-        // Nur `true` klappt den Ablauf zu (E6-6a) – Text zählt nicht.
+        // Nur `true` klappt den Ablauf zu (E6-6a) – Text zählt nicht. Dasselbe für „Infos & Dateien“ (T1b).
         ablaufZu: 'ja',
+        infosZu: 1,
       }),
     );
     expect(leseAnsicht()).toEqual({
@@ -42,6 +43,7 @@ describe('Im Gerät merken (@ui/bedienung/geraet)', () => {
       ausgeblendeteArten: [],
       zeitraum: { art: 'abHeute' },
       ablaufZu: false,
+      infosZu: false,
     });
   });
 

@@ -1234,7 +1234,7 @@ describe('„Weitere Infos“ (T1)', () => {
     expect(screen.getByRole('dialog', { name: 'Weitere Infos' })).toBeTruthy();
   });
 
-  it('ohne Infos und ohne Recht kein ⓘ; mit Recht ⓘ und „Noch keine Infos“', async () => {
+  it('ohne Infos und ohne Recht kein ⓘ; mit Recht öffnet ⓘ gleich das Textfeld, „Abbrechen“ schließt', async () => {
     ctInfos({ description: null });
     zeige();
     await screen.findByRole('heading', { name: 'Gottesdienst' });
@@ -1244,7 +1244,11 @@ describe('„Weitere Infos“ (T1)', () => {
     ctInfos({ description: null });
     zeige({ start: darf() });
     fireEvent.click(await screen.findByRole('button', { name: 'Weitere Infos zum Termin' }));
-    expect(screen.getByText('Noch keine Infos zu diesem Termin.')).toBeTruthy();
+    // Leer und mit Recht: kein Zwischenschritt „Noch keine Infos“ → „Bearbeiten“ (Test-Instanz, 02.11.2026).
+    expect(screen.getByRole('textbox', { name: 'Für alle, die den Termin sehen' })).toBeTruthy();
+    expect(screen.queryByText('Noch keine Infos zu diesem Termin.')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    expect(screen.queryByRole('dialog', { name: 'Weitere Infos' })).toBeNull();
   });
 
   it('bearbeiten und speichern: description und frisches isCanceled gehen mit, die Zeile zeigt den neuen Text', async () => {
@@ -1281,7 +1285,6 @@ describe('„Weitere Infos“ (T1)', () => {
     ctInfos({ description: '' });
     zeige({ start: darf() });
     fireEvent.click(await screen.findByRole('button', { name: 'Weitere Infos zum Termin' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Bearbeiten' }));
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'x'.repeat(4001) } });
     expect(screen.getByText(/4001 \/ 4000/).textContent).toMatch(/zu lang/);
     expect(screen.getByRole('button', { name: 'Speichern' }).hasAttribute('disabled')).toBe(true);

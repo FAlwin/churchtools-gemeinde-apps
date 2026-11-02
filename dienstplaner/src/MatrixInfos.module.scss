@@ -1,0 +1,75 @@
+// „Infos & Dateien“ in der Matrix (T1b, Entwurf `matrix-infos.html` Variante 2): je Termin die ersten zwei Zeilen der
+// Infos, antippen öffnet das Fenster; „+ Infos“ für wen ändern darf. Fläche wie die Ablauf-Zeile darunter.
+.zeile {
+  th {
+    background: var(--surface2);
+  }
+}
+
+.zelle {
+  padding: 0 !important;
+  background: var(--surface2);
+  vertical-align: top;
+}
+
+.text {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover {
+      background: var(--blue-soft);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: -2px;
+  }
+}
+
+.zweiZeilen {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.plus {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 6px 8px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  background: none;
+  color: var(--blue);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover {
+      background: var(--blue-soft);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+  }
+}

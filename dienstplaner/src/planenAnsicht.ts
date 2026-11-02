@@ -17,6 +17,8 @@ export interface PlanenAnsicht {
   zeitraum: Zeitraum;
   /** Die Gruppe „Ablauf“ zugeklappt (E6-6a, Alwin 28.10.2026: auf dem Gerät merken – lange Abläufe schieben die Dienste weit nach unten). */
   ablaufZu: boolean;
+  /** Die Gruppe „Infos & Dateien“ zugeklappt (T1b) – gemerkt wie „Ablauf“. */
+  infosZu: boolean;
 }
 
 const SCHLUESSEL = 'dienstplaner.planen.ansicht';
@@ -28,6 +30,7 @@ export const VORGABE_ANSICHT: PlanenAnsicht = {
   ausgeblendeteArten: [],
   zeitraum: AB_HEUTE,
   ablaufZu: false,
+  infosZu: false,
 };
 
 export function leseAnsicht(): PlanenAnsicht {
@@ -42,6 +45,7 @@ export function leseAnsicht(): PlanenAnsicht {
       ausgeblendeteArten: texte(a.ausgeblendeteArten),
       zeitraum: zeitraumAus(a.zeitraum),
       ablaufZu: a.ablaufZu === true,
+      infosZu: a.infosZu === true,
     };
   });
 }

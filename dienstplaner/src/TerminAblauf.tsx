@@ -15,6 +15,8 @@ import type { AblaufTermin } from '@shared/ct/ablaufRecht';
 import { ablaufAnlegen } from '@shared/ct/ablaufAnlegen';
 import { ablaufBestandLesen, ablaufNeuAufsetzen, type AblaufStand } from '@shared/ct/ablaufNeu';
 import { vorlagenFuer } from '@shared/ct/ablaufVorschlaege';
+import { liveListe } from '@shared/ct/liveAgenda';
+import { ortszeitAus } from '@shared/ct/zeit';
 import type { CtAgenda, CtSong } from '@shared/ct/typen';
 import type { AblaufQuelle, AblaufVorlage } from '@shared/types/index';
 import { autorVon, ladeAblauf, ladeLiedDaten } from './ladeBeiwerk';
@@ -23,6 +25,8 @@ import { ladeKopieVorschlaege, ladeVorlagen, WOCHEN_ZURUECK } from './ladeAnlege
 import { ablaufBearbeitbar, type Start } from './start';
 import { LiedAnsicht } from './LiedAnsicht';
 import { AblaufAnzeige } from './AblaufAnzeige';
+import { LiveAnsicht } from './LiveAnsicht';
+import { ladeLive } from './ladeLive';
 import styles from './TerminAblauf.module.scss';
 
 const NEU_LADEN_FEHLT =
@@ -66,6 +70,12 @@ export interface AblaufTeile {
    * in der Matrix. Die Live-Steuerung bekommt später einen eigenen Knopf.
    */
   zeigenKnopf: ReactNode;
+  /**
+   * „Live“ (E6b-2 L2): der Live-Stand von ChurchTools zum Folgen – an jedem Termin mit Ablauf (zum Vorbereiten), wie
+   * „Ablauf zeigen“ nur in der Termin-Ansicht. Am Tag des Termins mit rotem Punkt, solange ChurchTools ihn als gestartet
+   * führt (Alwin, 02.11.2026).
+   */
+  liveKnopf: ReactNode;
   /**
    * Wann der Ablauf endet („10:48“, `ablaufEnde`) – für den Kopf der Termin-Ansicht und die Anzeige. Kein „ca.“ und nicht
    * das Ende des Termins aus ChurchTools: Das Ende ist, wann der letzte Punkt vorbei ist (Alwin, 30.10.2026). `null` ohne
@@ -125,6 +135,11 @@ export function TerminAblauf({
   const [liedOffen, setLiedOffen] = useState<AblaufZeile | null>(null);
   // „Ablauf zeigen“ (E6b-1): die Anzeige im Vollbild.
   const [zeigen, setZeigen] = useState(false);
+  // „Live“ (E6b-2 L2): offen? Und läuft der Termin heute gerade in ChurchTools (roter Punkt am Knopf)?
+  const [live, setLive] = useState(false);
+  const [liveLaeuft, setLiveLaeuft] = useState(false);
+  const agendaId = ablauf?.id;
+  const items = ablauf?.items;
   // Die Lieder des Ablaufs aus ChurchTools: Autor für die Lied-Karte (E6-O1), alles Weitere für die Lied-Ansicht (O4).
   const [lieder, setLieder] = useState<Map<number, CtSong>>(new Map());
   // „Ablauf anlegen“ (E6-5a) und „Neu aufsetzen“ (E6-5b, `neu`): Fenster und was es braucht – erst beim Öffnen geladen.
@@ -387,6 +402,20 @@ export function TerminAblauf({
           onSchliessen={() => setZeigen(false)}
         />
       )}
+      {live && agendaId !== undefined && (
+        <LiveAnsicht
+          titel={termin.name}
+          tag={termin.tag}
+          beginn={termin.uhrzeit}
+          terminId={terminId}
+          agendaId={agendaId}
+          items={items ?? []}
+          zeilen={zeilen}
+          infoGruppen={spalten.gewaehlt}
+          zeitzone={zeitzone}
+          onSchliessen={() => setLive(false)}
+        />
+      )}
       {anlegen && !anlegen.neu && (
         <AblaufAnlegenFenster
           fuer={fuer}
@@ -411,6 +440,26 @@ export function TerminAblauf({
       )}
     </>
   );
+
+  // Der rote Punkt: nur am Tag des Termins einmal nachsehen (Alwin, 02.11.2026) – beim Öffnen und nach dem Schließen
+  // von „Live“, nie in der Matrix. Scheitert es, fehlt nur der Punkt.
+  useEffect(() => {
+    setLiveLaeuft(false);
+    if (schmal || live || agendaId === undefined || !items) return;
+    if (termin.tag !== ortszeitAus(new Date().toISOString(), zeitzone).slice(0, 10)) return;
+    let aktuell = true;
+    const punkte = liveListe(items, terminId).length;
+    ladeLive(terminId, agendaId).then(
+      (r) => {
+        const s = r.ok ? r.stand.stelle : null;
+        if (aktuell) setLiveLaeuft(s !== null && s > 0 && s <= punkte);
+      },
+      () => {},
+    );
+    return () => {
+      aktuell = false;
+    };
+  }, [schmal, live, agendaId, items, terminId, termin.tag, zeitzone]);
 
   const ende = ablauf !== null ? ablaufEnde(zeilen) : null;
   // „Spalten“ und „Ablauf zeigen“ gehören zur Ansicht: nicht in der Matrix, nicht beim Bearbeiten, nicht ohne Punkte.
@@ -439,5 +488,22 @@ export function TerminAblauf({
         symbol={<Icon name="vollbild" size={16} stroke={2.2} />}
       />
     ) : null,
+    liveKnopf:
+      ansichtKnoepfe && agendaId !== undefined ? (
+        <KopfKnopf
+          onClick={() => setLive(true)}
+          label="Live"
+          title={
+            liveLaeuft ? 'Live – läuft gerade in ChurchTools' : 'Live-Agenda von ChurchTools folgen'
+          }
+          symbol={
+            liveLaeuft ? (
+              <span className={styles.livePunkt} data-testid="live-punkt" />
+            ) : (
+              <Icon name="clock" size={16} stroke={2.2} />
+            )
+          }
+        />
+      ) : null,
   });
 }

@@ -1,0 +1,399 @@
+// „Live“ zum Folgen (E6b-2 L2, Entwurf `e6b-2-live.html` Variante A): Aufbau der Live-Agenda von ChurchTools im Look der
+// App – Farben aus dem App-Thema (hell/dunkel wie ChurchTools), über der Leiste von ChurchTools wie „Ablauf zeigen“.
+.live {
+  position: fixed;
+  inset: 0;
+  z-index: var(--ebene-vollflaeche);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ui);
+  font-variant-numeric: tabular-nums;
+  outline: none;
+}
+
+.leiste {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: max(12px, var(--inhalt-pad-top)) 20px 12px;
+  border-bottom: 1px solid var(--hair);
+  background: var(--surface2);
+}
+
+.was {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+
+  b {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.wann {
+  color: var(--text2);
+  white-space: nowrap;
+}
+
+// „Live“ – mit rotem Punkt, solange ChurchTools den Termin als gestartet führt.
+.marke {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  color: var(--text3);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.laeuft {
+  color: var(--red);
+
+  &::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .laeuft::before {
+    animation: puls 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes puls {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.knoepfe {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+
+.uhr {
+  margin-right: 4px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.fehler {
+  flex: none;
+  margin: 12px 20px 0;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface3);
+  color: var(--text2);
+  font-size: 14px;
+}
+
+.rumpf {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 28px;
+  width: 100%;
+  max-width: 1200px;
+  min-height: 0;
+  margin: 0 auto;
+  padding: 22px 26px max(16px, var(--unten-strich));
+}
+
+.links {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+}
+
+.etikett {
+  display: inline-block;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface3);
+  color: var(--text2);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.jetzt {
+  h2 {
+    margin: 8px 0 4px;
+    font-size: clamp(30px, 6vh, 48px);
+    font-weight: 700;
+    line-height: 1.08;
+    text-wrap: balance;
+  }
+}
+
+.notiz {
+  margin: 2px 0 0;
+  font-size: 17px;
+  white-space: pre-wrap;
+}
+
+.unter,
+.wer,
+.info,
+.hinweis {
+  margin: 2px 0 0;
+  color: var(--text2);
+  font-size: 16px;
+}
+
+.info {
+  font-size: 14px;
+  white-space: pre-wrap;
+
+  i {
+    color: var(--text3);
+    font-style: normal;
+    font-weight: 700;
+  }
+}
+
+.hinweis {
+  margin-top: 8px;
+  color: var(--text3);
+  font-size: 13.5px;
+}
+
+.dann {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+
+  b {
+    font-size: clamp(20px, 3.4vh, 26px);
+  }
+}
+
+.spaeter {
+  color: var(--red);
+}
+
+.frueher {
+  color: var(--blue-ink, var(--blue));
+}
+
+.liste {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 8px 0 0;
+  overflow-y: auto;
+  border-top: 1px solid var(--hair);
+  list-style: none;
+}
+
+.punkt {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: baseline;
+  padding: 6px 10px;
+  border-radius: var(--r-ctrl);
+  font-size: 15px;
+}
+
+.zeit {
+  color: var(--text3);
+  font-weight: 700;
+}
+
+.titel {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.werKlein {
+  color: var(--text3);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.erledigt {
+  color: var(--text3);
+}
+
+.haken {
+  flex: none;
+  align-self: center;
+  color: var(--green);
+}
+
+// Weggelassen (Auge): findet nicht statt – „Weiter“ springt darüber (Alwin, 02.11.2026).
+.weggelassen {
+  color: var(--text3);
+
+  .titel {
+    text-decoration: line-through;
+  }
+}
+
+.aktuell {
+  background: var(--blue-soft);
+  font-weight: 700;
+
+  .zeit {
+    color: var(--blue-ink, var(--blue));
+  }
+}
+
+.rechts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.ring {
+  position: relative;
+  width: 220px;
+  height: 220px;
+
+  svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  circle {
+    fill: none;
+    stroke-width: 8;
+  }
+}
+
+.spur {
+  stroke: var(--surface3);
+}
+
+.fortschritt {
+  stroke: var(--blue);
+  stroke-linecap: round;
+}
+
+.zahl {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+
+  b {
+    font-size: 54px;
+    font-weight: 300;
+    line-height: 1;
+  }
+
+  span {
+    margin-top: 4px;
+    color: var(--text2);
+    font-size: 13px;
+  }
+}
+
+// Die Zeit ist um: rot, die Zahl läuft weiter („+0:45“), bis jemand weiterschaltet.
+.ueber {
+  .spur {
+    stroke: var(--red);
+  }
+
+  .zahl b {
+    color: var(--red);
+  }
+}
+
+.gesamt {
+  width: 220px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 14px;
+  text-align: center;
+
+  b {
+    display: block;
+    color: var(--text);
+    font-size: 17px;
+  }
+
+  .spaeter {
+    color: var(--red);
+  }
+
+  .frueher {
+    color: var(--blue-ink, var(--blue));
+  }
+}
+
+// Handy hochkant: Restzeit klein neben „Jetzt“, die Liste darunter.
+@media (max-width: 759px) {
+  .leiste {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .wann {
+    display: none;
+  }
+
+  .rumpf {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 14px;
+    padding: 14px 16px max(12px, var(--unten-strich));
+  }
+
+  .rechts {
+    flex-direction: row;
+    order: -1;
+    justify-content: flex-start;
+  }
+
+  .ring {
+    width: 110px;
+    height: 110px;
+  }
+
+  .zahl b {
+    font-size: 28px;
+  }
+
+  .zahl span {
+    font-size: 11px;
+  }
+
+  // Im kleinen Kreis nur „noch“ – „von 30 Min“ passte nicht hinein (Demo, 02.11.2026).
+  .vonDauer {
+    display: none;
+  }
+
+  .gesamt {
+    width: auto;
+  }
+}

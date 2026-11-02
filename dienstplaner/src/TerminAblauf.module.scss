@@ -69,3 +69,13 @@
   padding: 10px 8px;
   font-size: 12.5px;
 }
+
+// „Live“ (E6b-2 L2): roter Punkt am Knopf, solange ChurchTools den Termin heute als gestartet führt.
+.livePunkt {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin: 0 3px;
+  border-radius: 50%;
+  background: var(--red);
+}

@@ -406,6 +406,8 @@ function ablaufDemo(
       t += (p.duration ?? 0) * 1000;
     }
     return {
+      // ChurchTools nennt den Ablauf immer mit ID (gemessen 02.11.2026: 31, 37, 126) – die Live-Agenda braucht sie.
+      id: 900 + termin,
       calendarId: 1,
       eventStartPosition: beginnPos,
       isLocked: false,

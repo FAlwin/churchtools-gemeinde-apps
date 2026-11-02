@@ -173,14 +173,18 @@ export function TerminAnsicht({
               <span className={styles.kopfKnoepfe}>
                 {teile.kopfKnopf}
                 {teile.zeigenKnopf}
+                {teile.liveKnopf}
                 {teile.spaltenKnopf}
                 {/* Öffnet den Ablauf DIESES Termins, nicht nur die App (E6-Abschluss, Alwin 30.10.2026). */}
                 {musikApp && !bearbeiten && (
                   <a
                     className={styles.leise}
                     href={musikAppDirektLink(musikApp, s.id, null, s.tag)}
+                    aria-label="Musik-App"
+                    title="Musik-App"
                   >
-                    <Icon name="music" size={16} /> Musik-App
+                    <Icon name="music" size={16} />
+                    <span className={styles.leiseText}>Musik-App</span>
                   </a>
                 )}
                 {/* Auch bei einem leeren Ablauf – sonst ließe er sich nicht füllen (wie in der Musik-App). */}

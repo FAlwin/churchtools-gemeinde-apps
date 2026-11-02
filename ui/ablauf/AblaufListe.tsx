@@ -5,7 +5,7 @@
  * Überschriften und „Beginn“ als graue Balken, Lieder mit blauem Streifen. Die Musik-App macht Lieder antippbar
  * (→ Charts) und setzt Schildchen „neu/geändert“. Die Regeln einer Zeile stehen in `@shared/ct/ablaufZeile`.
  */
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ablaufEnde, beginnStelle, itemTitleParts, type AblaufZeile } from '@shared/ct/ablaufZeile';
 import type { InfoGruppe } from '@shared/types/index';
 import { HANDY_BREITE, useMedienAbfrage } from '../bedienung/useMedienAbfrage';
@@ -19,6 +19,7 @@ import {
   WeggelassenHinweis,
   ZeitText,
 } from './AblaufTeile';
+import { ZustaendigeFenster } from './ZustaendigeFenster';
 import styles from './AblaufListe.module.scss';
 
 /** Uhrzeit fett, Dauer klein darunter (Variante 1) – eine Stelle für Ansicht und Bearbeiten-Liste. */
@@ -99,6 +100,7 @@ export function AblaufListe({
   schmal = false,
   mitEnde = false,
   infoSpalten = [],
+  fotos = false,
 }: {
   zeilen: readonly AblaufZeile[];
   /** Uhrzeit des Veranstaltungsbeginns („10:00“) für den Balken nach dem Vorlauf (#423). */
@@ -121,6 +123,11 @@ export function AblaufListe({
    * am Handy eine Zeile unter dem Punkt. Nicht in der schmalen Form (Matrix: keine Infos, Entwurf Bild 4 A).
    */
   infoSpalten?: readonly InfoGruppe[];
+  /**
+   * Fotos in den Kreisen – nur in ChurchTools selbst (Erweiterungen). Die Musik-App auf dem eigenen Server zeigt
+   * Kürzel (Alwin, 02.11.2026: „in der eigenen App nur Initialen“; dort blockt ohnehin die Sicherheitsregel fremde Bilder).
+   */
+  fotos?: boolean;
 }) {
   const handy = useMedienAbfrage(HANDY_BREITE);
   const infos = schmal ? [] : infoSpalten;
@@ -129,6 +136,9 @@ export function AblaufListe({
   const ende = mitEnde ? ablaufEnde(sichtbar) : null;
   // Der Balken „Beginn“ vor dem ersten Punkt nach dem Vorlauf (#423) – nur, wenn es Vorlauf gibt.
   const stelle = beginnStelle(sichtbar);
+  /** Der Punkt, dessen Zuständige gerade im Fenster stehen (Kreise antippen, 02.11.2026). */
+  const [zustaendig, setZustaendig] = useState<AblaufZeile | null>(null);
+  const sicht = useSpaltenSicht(alsSpalten ? infos.length : 0);
   let liedIndex = -1;
 
   const zeile = (item: AblaufZeile) => {
@@ -146,7 +156,7 @@ export function AblaufListe({
         </div>
       );
     }
-    const inhalt = (
+    const punkt = (
       <>
         <ZeitSpalte item={item} />
         <div className={styles.flowBody}>
@@ -157,63 +167,88 @@ export function AblaufListe({
             infoZeilen={alsSpalten ? [] : infos}
           />
         </div>
-        {!schmal && <Kuerzel entries={item.responsible} />}
-        {/* Die Zellen als EIN Block ohne Abstand – sonst schöbe der Abstand der Zeile (`gap`) jede weitere Zelle gegen
-            ihren Kopf (Alwin, 30.10.2026: bei drei Spalten verrutscht). */}
-        {alsSpalten && (
-          <div className={styles.infoZellen}>
-            {infos.map((g) => {
-              const text = infoText(item, g.id);
-              return (
-                <div
-                  key={g.id}
-                  className={`${styles.infoZelle}${text ? '' : ` ${styles.infoLeer}`}`}
-                >
-                  {text || '–'}
-                </div>
-              );
-            })}
-          </div>
-        )}
       </>
     );
+    let punktTeil: ReactNode;
     if (item.song && onLied) {
       liedIndex += 1;
       const idx = liedIndex;
-      return (
+      // Nur der Punkt ist der Knopf zu den Charts – die Kreise daneben sind ein eigener Knopf (kein Knopf im Knopf).
+      punktTeil = (
         <button
-          key={item.id}
-          className={`${styles.flowRow} ${styles.flowRowBtn} ${styles.songRow}${vl}`}
+          type="button"
+          className={styles.punktKnopf}
           data-tour={idx === 0 ? 'setlist-song' : undefined}
           onClick={() => onLied(idx, item)}
         >
-          {inhalt}
+          {punkt}
         </button>
       );
+    } else {
+      punktTeil = <div className={styles.punktInhalt}>{punkt}</div>;
     }
+    // In einer Spalte, die gerade nicht zu sehen ist, steht etwas zu diesem Punkt → ein Schildchen, das dorthin scrollt.
+    const verdeckt = alsSpalten
+      ? infos.filter((g) => infoText(item, g.id) && sicht.verdeckt(g.id))
+      : [];
     return (
       <div
         key={item.id}
         className={`${styles.flowRow}${item.song ? ` ${styles.songRow}` : ''}${vl}`}
       >
-        {inhalt}
+        <div className={styles.punktZelle}>
+          {punktTeil}
+          {!schmal && (
+            <Kuerzel
+              entries={item.responsible}
+              fotos={fotos}
+              titel={item.title}
+              onOeffnen={() => setZustaendig(item)}
+            />
+          )}
+          {verdeckt.length > 0 && (
+            <div className={styles.verdeckt}>
+              {verdeckt.map((g) => (
+                <button
+                  key={g.id}
+                  type="button"
+                  className={styles.verdecktKnopf}
+                  onClick={() => sicht.zeige(g.id)}
+                >
+                  {g.name} ›
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        {alsSpalten &&
+          infos.map((g) => {
+            const text = infoText(item, g.id);
+            return (
+              <div key={g.id} className={`${styles.infoZelle}${text ? '' : ` ${styles.infoLeer}`}`}>
+                {text || '–'}
+              </div>
+            );
+          })}
       </div>
     );
   };
 
-  return (
-    <div className={`${styles.flowList}${schmal ? ` ${styles.schmal}` : ''}`}>
+  const reihen = (
+    <>
       {kopf}
       {alsSpalten && (
-        <div className={styles.infoKopf} aria-hidden="true">
-          <span className={styles.infoKopfPunkt}>Punkt</span>
-          <span className={styles.infoZellen}>
-            {infos.map((g) => (
-              <span key={g.id} className={styles.infoKopfZelle}>
+        <div className={styles.infoKopf}>
+          <span className={`${styles.infoKopfPunkt} ${styles.punktZelle}`}>Punkt</span>
+          {infos.map((g, i) => {
+            const n = sichtbar.filter((z) => infoText(z, g.id)).length;
+            return (
+              <span key={g.id} ref={sicht.kopfRef(i, g.id)} className={styles.infoKopfZelle}>
                 {g.name}
+                {n > 0 && <span className={styles.infoKopfZahl}> · {n}</span>}
               </span>
-            ))}
-          </span>
+            );
+          })}
         </div>
       )}
       {sichtbar.map((item, i) => (
@@ -224,6 +259,129 @@ export function AblaufListe({
       ))}
       {stelle === sichtbar.length && <BeginnLinie zeit={beginn} />}
       {ende && <EndeLinie zeit={ende} />}
+    </>
+  );
+
+  const fenster = zustaendig && (
+    <ZustaendigeFenster punkt={zustaendig} onClose={() => setZustaendig(null)} />
+  );
+
+  if (!alsSpalten) {
+    return (
+      <div className={`${styles.flowList}${schmal ? ` ${styles.schmal}` : ''}`}>
+        {reihen}
+        {fenster}
+      </div>
+    );
+  }
+
+  /**
+   * **Die Spalten als Tabelle** (Alwin, 02.11.2026, Entwurf „Ablauf mit Info-Spalten“ Bild 1+2): ein Raster für alle
+   * Zeilen – jede Zeile übernimmt es (`subgrid`), damit die Spalten fluchten. Eine Spalte ist so breit wie ihr Inhalt,
+   * höchstens `SPALTE_MAX`; der Punkt behält mindestens `PUNKT_MIN`. Reicht der Platz nicht, scrollt alles rechts vom
+   * Punkt waagerecht, der Punkt bleibt stehen. Vorher hatte jede Spalte fest 150 px – bei sechs Spalten brach der Punkt
+   * Wort für Wort um, und Zeilen mit schmalerem Punkt verrutschten.
+   */
+  const mindestBreite =
+    PUNKT_MIN +
+    infos.reduce(
+      (summe, g) => summe + (sichtbar.some((z) => infoText(z, g.id)) ? SPALTE_MIN : LEER_MIN),
+      0,
+    );
+  return (
+    <div className={styles.tabelleRahmen}>
+      <div className={styles.tabelleScroll} ref={sicht.rahmenRef} onScroll={sicht.messen}>
+        <div
+          className={`${styles.flowList} ${styles.tabelle}`}
+          style={{
+            gridTemplateColumns: `minmax(${PUNKT_MIN}px, 1fr) repeat(${infos.length}, fit-content(${SPALTE_MAX}px))`,
+            minWidth: mindestBreite,
+          }}
+        >
+          {reihen}
+        </div>
+      </div>
+      {sicht.rechtsMehr && (
+        <span className={styles.weiterRechts} aria-hidden="true">
+          ›
+        </span>
+      )}
+      {fenster}
     </div>
   );
+}
+
+/**
+ * Der Punkt behält mindestens so viel Breite (px) – Zeit, Titel, Namen, Kreise und Lied bleiben lesbar. Mit 300 px
+ * brachen am iPad hochkant die Namen einzeln um und die Lied-Karte wurde abgeschnitten (Durchklick 02.11.2026).
+ */
+const PUNKT_MIN = 380;
+/** Breiter wird eine Info-Spalte nicht; längerer Text bricht um. */
+const SPALTE_MAX = 280;
+/** So viel Platz plant die Tabelle für eine Spalte mit Text ein, bevor sie waagerecht scrollt … */
+const SPALTE_MIN = 160;
+/** … und so viel für eine leere (nur ihr Name im Kopf). */
+const LEER_MIN = 90;
+
+/**
+ * Was beim waagerechten Scrollen zu sehen ist: Spalten, die rechts (oder links unter dem stehenden Punkt) verdeckt sind,
+ * und ob rechts noch etwas kommt. Gemessen an den Spaltenköpfen; ohne Maße (Tests, erster Lauf) gilt alles als sichtbar.
+ */
+function useSpaltenSicht(anzahl: number) {
+  const rahmen = useRef<HTMLDivElement | null>(null);
+  const koepfe = useRef(new Map<number, HTMLElement>());
+  const [stand, setStand] = useState<{ verdeckt: ReadonlySet<number>; rechtsMehr: boolean }>({
+    verdeckt: new Set(),
+    rechtsMehr: false,
+  });
+
+  const messen = useCallback(() => {
+    const r = rahmen.current;
+    if (!r) return;
+    const punktBreite = r.querySelector<HTMLElement>(`.${styles.infoKopfPunkt}`)?.offsetWidth ?? 0;
+    const links = r.scrollLeft + punktBreite;
+    const rechts = r.scrollLeft + r.clientWidth;
+    const verdeckt = new Set<number>();
+    for (const [id, el] of koepfe.current) {
+      if (el.offsetLeft + el.offsetWidth > rechts + 1 || el.offsetLeft < links - 1)
+        verdeckt.add(id);
+    }
+    const rechtsMehr = r.scrollWidth - r.clientWidth - r.scrollLeft > 1;
+    setStand((alt) =>
+      alt.rechtsMehr === rechtsMehr &&
+      alt.verdeckt.size === verdeckt.size &&
+      [...verdeckt].every((id) => alt.verdeckt.has(id))
+        ? alt
+        : { verdeckt, rechtsMehr },
+    );
+  }, []);
+
+  useEffect(() => {
+    if (anzahl === 0) return;
+    messen();
+    window.addEventListener('resize', messen);
+    return () => {
+      window.removeEventListener('resize', messen);
+    };
+  }, [anzahl, messen]);
+
+  return {
+    rahmenRef: rahmen,
+    messen,
+    rechtsMehr: stand.rechtsMehr,
+    verdeckt: (id: number) => stand.verdeckt.has(id),
+    kopfRef: (_i: number, id: number) => (el: HTMLElement | null) => {
+      if (el) koepfe.current.set(id, el);
+      else koepfe.current.delete(id);
+    },
+    /** Die Spalte ins Bild holen – rechts neben den stehenden Punkt. */
+    zeige: (id: number) => {
+      const r = rahmen.current;
+      const el = koepfe.current.get(id);
+      if (!r || !el) return;
+      const punktBreite =
+        r.querySelector<HTMLElement>(`.${styles.infoKopfPunkt}`)?.offsetWidth ?? 0;
+      r.scrollTo?.({ left: Math.max(0, el.offsetLeft - punktBreite), behavior: 'smooth' });
+    },
+  };
 }

@@ -189,6 +189,9 @@ describe('Infos je Dienstgruppe in der Musik-App (E6-4, beide Apps)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Infos je Gruppe zeigen' }));
     fireEvent.click(screen.getByRole('checkbox', { name: /Technik/ }));
     expect(screen.getByText('Mikro 1')).toBeTruthy();
+    // Beim Bearbeiten steht sie als Zeile unter dem Punkt (Alwin, 02.11.2026: sonst sieht man nicht, was drinsteht).
+    fireEvent.click(screen.getByRole('button', { name: 'Ablauf bearbeiten' }));
+    expect(screen.getByText(/Mikro 1/).textContent).toBe('Technik: Mikro 1');
   });
 
   it('im Punkt-Fenster ein Feld je sichtbarer Gruppe', async () => {

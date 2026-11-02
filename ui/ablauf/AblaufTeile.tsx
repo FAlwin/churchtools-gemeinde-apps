@@ -6,7 +6,9 @@
  * Zuständigen und deren Zeile. Sie werden von der Ablauf-Ansicht UND von der sortierbaren Zeile
  * im Bearbeiten-Modus verwendet – deshalb gemeinsam und außerhalb beider.
  */
+import { useState } from 'react';
 import type { AblaufZeile } from '@shared/ct/ablaufZeile';
+import type { ResponsibleEntry } from '@shared/types/index';
 import { itemTitleParts } from '@shared/ct/ablaufZeile';
 import { Icon } from '../icons/icons';
 import styles from './AblaufTeile.module.scss';
@@ -68,23 +70,69 @@ export function LiedKarte({
 const KREISE = 2;
 
 /**
- * Die Zuständigen als runde Kreise rechts in der Zeile (E6-O1): Foto, wo ChurchTools eins hat, sonst das Kürzel; ab
- * drei Personen „+N“. Offene Dienste stehen nicht darin – die nennt die Namenszeile rot. Die Namen stehen ohnehin unter
- * dem Titel, die Kreise sind deshalb nur Schmuck (`aria-hidden`).
+ * Ein Kreis: das Foto – oder das Kürzel, wenn es keins gibt, Fotos aus sind oder das Foto nicht lädt. Ein leerer Kreis
+ * (geblocktes Foto) stand vorher in der Musik-App auf dem eigenen Server (02.11.2026).
  */
-export function Kuerzel({ entries }: { entries: AblaufZeile['responsible'] }) {
+function Kreis({ person, fotos }: { person: ResponsibleEntry; fotos: boolean }) {
+  const [kaputt, setKaputt] = useState(false);
+  return (
+    <span className={styles.kreis}>
+      {fotos && person.bild && !kaputt ? (
+        <img src={person.bild} alt="" loading="lazy" onError={() => setKaputt(true)} />
+      ) : (
+        person.kuerzel
+      )}
+    </span>
+  );
+}
+
+/**
+ * Die Zuständigen als runde Kreise rechts in der Zeile (E6-O1): Kürzel, ab drei Personen „+N“. Offene Dienste stehen
+ * nicht darin – die nennt die Namenszeile rot.
+ *
+ * **Antippbar** (Alwin, 02.11.2026, Entwurf „Ablauf mit Info-Spalten“ Bild 5 C): Mit `onOeffnen` sind die Kreise ein
+ * Knopf, der alle Zuständigen mit ihrem Dienst zeigt – vorher war „+3“ nur Schmuck. **Fotos** nur mit `fotos` (in
+ * ChurchTools selbst); die Musik-App auf dem eigenen Server zeigt Kürzel („in der eigenen App nur Initialen“).
+ */
+export function Kuerzel({
+  entries,
+  fotos = false,
+  onOeffnen,
+  titel,
+}: {
+  entries: AblaufZeile['responsible'];
+  fotos?: boolean;
+  onOeffnen?: () => void;
+  /** Der Punkt – für die Beschriftung des Knopfs. */
+  titel?: string;
+}) {
   const personen = entries.filter((e) => !e.open && e.kuerzel);
   if (personen.length === 0) return null;
   const mehr = personen.length - KREISE;
-  return (
-    <span className={styles.kreise} aria-hidden="true">
+  const kreise = (
+    <>
       {personen.slice(0, KREISE).map((p, i) => (
-        <span key={i} className={styles.kreis}>
-          {p.bild ? <img src={p.bild} alt="" loading="lazy" /> : p.kuerzel}
-        </span>
+        <Kreis key={i} person={p} fotos={fotos} />
       ))}
       {mehr > 0 && <span className={styles.kreis}>+{mehr}</span>}
-    </span>
+    </>
+  );
+  if (!onOeffnen) {
+    return (
+      <span className={styles.kreise} aria-hidden="true">
+        {kreise}
+      </span>
+    );
+  }
+  return (
+    <button
+      type="button"
+      className={`${styles.kreise} ${styles.kreiseKnopf}`}
+      onClick={onOeffnen}
+      aria-label={titel ? `Zuständige für „${titel}“ zeigen` : 'Zuständige zeigen'}
+    >
+      {kreise}
+    </button>
   );
 }
 

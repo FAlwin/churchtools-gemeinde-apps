@@ -982,6 +982,18 @@ describe('Infos je Dienstgruppe in der Termin-Ansicht (E6-4, Entwurf `e6-infos-s
                   start: '2026-10-18T08:00:00Z',
                   duration: 300,
                   serviceGroupNotes: notes,
+                  responsible: {
+                    persons: [
+                      {
+                        service: '[Technik]',
+                        person: {
+                          title: 'Anna Feld',
+                          initials: 'AF',
+                          imageUrl: 'https://ct.test/anna.jpg',
+                        },
+                      },
+                    ],
+                  },
                 },
               ],
             },
@@ -1011,9 +1023,14 @@ describe('Infos je Dienstgruppe in der Termin-Ansicht (E6-4, Entwurf `e6-infos-s
     fireEvent.click(within(menue).getByRole('checkbox', { name: /Technik/ }));
     const ablauf = screen.getByRole('region', { name: 'Ablauf' });
     expect(within(ablauf).getByText('Mikro 1')).toBeTruthy();
-    // Beim Bearbeiten kein „Spalten“ – dort gilt das Punkt-Fenster.
+    // In ChurchTools selbst: das Foto im Kreis (die Musik-App auf dem eigenen Server zeigt nur Kürzel).
+    expect(ablauf.querySelector('img')?.getAttribute('src')).toBe('https://ct.test/anna.jpg');
+    // Beim Bearbeiten kein „Spalten“ – dort gilt das Punkt-Fenster; die gewählte Info steht unter dem Punkt (02.11.2026).
     fireEvent.click(screen.getByRole('button', { name: 'Ablauf bearbeiten' }));
     expect(screen.queryByRole('button', { name: 'Infos je Gruppe zeigen' })).toBeNull();
+    expect(
+      within(screen.getByRole('region', { name: 'Ablauf' })).getByText(/Mikro 1/).textContent,
+    ).toBe('Technik: Mikro 1');
   });
 
   it('im Punkt-Fenster geändert: schreibt NUR diese Gruppe, der Punkt selbst bleibt', async () => {

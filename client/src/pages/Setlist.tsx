@@ -116,6 +116,7 @@ export function Setlist({
   // abgeschlossen (423 vom Schreib-Kern), den Termin neu holen: Dann erscheint gleich der Hinweis mit „Ablauf öffnen".
   const bearbeiten = useAblaufBearbeiten({
     aktiv: editMode,
+    infoSpalten: spalten.gewaehlt,
     bereit: !isLoading && !isError,
     items,
     beginn: service.time,

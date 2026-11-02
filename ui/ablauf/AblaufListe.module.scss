@@ -30,12 +30,29 @@
   background: var(--surface2);
   border-bottom: 1px solid var(--hair);
 }
-// Anklickbare Lied-Zeile (führt zu den Charts) – wie flowRow, aber als Button.
-.flowRowBtn {
+// Die Zelle des Punkts: Zeit + Inhalt (als Knopf bei Liedern), rechts die Kreise, darunter ggf. Schildchen für
+// verdeckte Spalten (02.11.2026). Vorher war bei Liedern die ganze Zeile ein Knopf – die Kreise konnten dann keiner sein.
+.punktZelle {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 12px;
+}
+.punktInhalt,
+.punktKnopf {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+// Anklickbares Lied (führt zu den Charts).
+.punktKnopf {
   width: 100%;
-  border-top: none;
-  border-left: none;
-  border-right: none;
+  padding: 0;
+  border: none;
+  background: none;
   cursor: pointer;
   text-align: left;
   font: inherit;
@@ -44,6 +61,10 @@
 
   &:active {
     background: var(--surface3);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
   }
 }
 // Lied-Zeile: blauer Streifen links (wie in der App) – schnell auffindbar.
@@ -92,8 +113,51 @@
 }
 
 // ── Infos je Dienstgruppe (E6-4, Entwurf `e6-infos-spalten.html`) ──
-// Am Rechner je gewählter Gruppe eine Spalte rechts wie im ChurchTools-Ablaufplan, darüber ihr Name; am Handy eine Zeile
-// unter dem Punkt.
+// Am Handy eine Zeile unter dem Punkt; am Rechner Spalten in einer Tabelle (02.11.2026, Entwurf „Ablauf mit
+// Info-Spalten“): EIN Raster, jede Zeile übernimmt es (`subgrid`), die Breiten setzt `AblaufListe` (Punkt mindestens
+// 300 px, Spalten nach Inhalt bis 280 px). Reicht der Platz nicht, scrollt alles waagerecht – der Punkt bleibt stehen.
+.tabelleRahmen {
+  position: relative;
+}
+.tabelleScroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+.tabelle {
+  display: grid;
+
+  // Bänder (Überschrift, Beginn, Hinweise) über alle Spalten; Zeilen übernehmen das Raster.
+  > * {
+    grid-column: 1 / -1;
+  }
+  .flowRow,
+  .infoKopf {
+    display: grid;
+    grid-template-columns: subgrid;
+    // Jede Zelle über die ganze Zeilenhöhe – sonst endeten die Spaltenlinien mitten in der Zeile.
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
+  }
+  .punktZelle {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    padding: 10px 14px;
+    background: var(--surface2);
+    // Die Kante des stehenden Punkts – beim Scrollen gleiten die Spalten darunter durch.
+    box-shadow: 1px 0 0 var(--hair);
+  }
+  .songRow {
+    box-shadow: none;
+
+    .punktZelle {
+      box-shadow:
+        inset 4px 0 0 var(--blue),
+        1px 0 0 var(--hair);
+    }
+  }
+}
 .infoKopf {
   display: flex;
   align-items: center;
@@ -103,38 +167,68 @@
   font-size: 12px;
   font-weight: 700;
 }
-.infoKopfPunkt {
-  flex: 1;
+.tabelle .infoKopf .infoKopfPunkt {
   padding: 6px 14px;
-}
-.infoKopfZelle,
-.infoZelle {
-  flex: none;
-  width: 150px;
-  border-left: 1px solid var(--hair);
-  overflow-wrap: anywhere;
+  background: var(--section);
 }
 .infoKopfZelle {
   padding: 6px 10px;
+  white-space: nowrap;
 }
-// Die Zellen einer Zeile (und die Köpfe) als ein Block ohne Abstand, rechts bündig – Kopf und Zeile fluchten.
-.infoZellen {
-  display: flex;
-  flex: none;
-  align-self: stretch;
-}
-.flowRow .infoZellen {
-  // Über die Innenabstände der Zeile hinweg bis an ihre Ränder: Die Linien laufen durch.
-  margin: -10px -14px -10px 0;
+.infoKopfZahl {
+  color: var(--blue-ink);
 }
 .infoZelle {
   padding: 10px;
   font-size: 12.5px;
   color: var(--text);
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.infoKopfZelle,
+.infoZelle {
+  border-left: 1px solid var(--hair);
 }
 .infoLeer {
   color: var(--text3);
+}
+// Rechts geht es weiter: ein „›“ über einem Verlauf am Rand (Entwurf Bild 2).
+.weiterRechts {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 6px;
+  background: linear-gradient(to right, transparent, var(--surface2));
+  color: var(--blue);
+  font-size: 20px;
+  font-weight: 900;
+  pointer-events: none;
+  z-index: 2;
+}
+// Steht etwas in einer gerade verdeckten Spalte: Schildchen unter dem Punkt, ein Tipp scrollt dorthin.
+.verdeckt {
+  grid-column: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+  padding-left: 58px;
+}
+.verdecktKnopf {
+  padding: 1px 8px;
+  border: none;
+  border-radius: 999px;
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
 }
 .infoZeile {
   margin-top: 3px;

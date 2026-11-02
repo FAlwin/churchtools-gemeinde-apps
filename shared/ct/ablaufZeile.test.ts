@@ -151,7 +151,7 @@ describe('ablaufZeileAus (E6-1a)', () => {
       title: 'Lied',
       type: 'song',
       isHeader: false,
-      responsible: [{ label: 'Ella', open: false, kuerzel: 'E' }],
+      responsible: [{ label: 'Ella', open: false, kuerzel: 'E', dienst: 'Musik' }],
       responsibleText: '[Musik]',
       // Tonart und Tempo für die Lied-Karte (E6-O1); den Autor liefert der Ablauf nicht. Lied und Arrangement für die
       // Lied-Ansicht im Dienstplaner (E6-O O4).

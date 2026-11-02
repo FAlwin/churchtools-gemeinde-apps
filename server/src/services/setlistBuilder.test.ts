@@ -261,7 +261,7 @@ describe('responsibleEntries (Zuständige, dedupliziert)', () => {
           persons: [{ service: '[Moderation]', person: { title: 'Willi' } }],
         },
       }),
-    ).toEqual([{ label: 'Willi', open: false, kuerzel: 'W' }]);
+    ).toEqual([{ label: 'Willi', open: false, kuerzel: 'W', dienst: 'Moderation' }]);
   });
   it('Mischung aus Dienst und Freitext', () => {
     expect(

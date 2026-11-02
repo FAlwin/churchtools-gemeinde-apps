@@ -74,15 +74,56 @@ describe('Ablaufliste mit Infos (Bild 1 + 2)', () => {
     expect(within(predigt as HTMLElement).getAllByText('–')).toHaveLength(2);
   });
 
-  it('Köpfe und Zellen stehen je in EINEM Block – sonst schöbe der Abstand der Zeile die Zellen gegen ihre Köpfe (30.10.2026)', () => {
+  it('EIN Raster für Kopf und alle Zeilen – die Spalten fluchten (02.11.2026; vorher verrutschten Zeilen)', () => {
+    // Vorher baute jede Zeile ihre Zellen selbst (Flex); war ein Punkt schmaler, rückten seine Spalten nach links
+    // (Alwin, 02.11.2026). Jetzt legt die Tabelle die Spalten fest, Kopf und Zeilen übernehmen sie (`subgrid`).
     render(<AblaufListe zeilen={ZEILEN} infoSpalten={GRUPPEN} />);
-    const kopfBlock = screen.getByText('Programm').parentElement!;
-    expect(kopfBlock.className).toMatch(/infoZellen/);
-    expect(kopfBlock.children).toHaveLength(3);
+    const kopf = screen.getByText('Programm').parentElement!;
     const zeile = screen.getByText('Treu').closest('div[class*="flowRow"]')!;
-    const zellen = within(zeile as HTMLElement).getByText('Intro leise').parentElement!;
-    expect(zellen.className).toBe(kopfBlock.className);
-    expect(zellen.children).toHaveLength(3);
+    const tabelle = kopf.parentElement!;
+    expect(zeile.parentElement).toBe(tabelle);
+    // Punkt + je Gruppe eine Spalte – im Kopf wie in der Zeile.
+    expect(kopf.children).toHaveLength(1 + GRUPPEN.length);
+    expect(zeile.children).toHaveLength(1 + GRUPPEN.length);
+    expect(tabelle.style.gridTemplateColumns).toBe(
+      `minmax(380px, 1fr) repeat(${GRUPPEN.length}, fit-content(280px))`,
+    );
+  });
+
+  it('waagerecht verdeckt: „›“ am Rand und am Punkt ein Schildchen, das zur Spalte scrollt (02.11.2026)', () => {
+    const { container } = render(<AblaufListe zeilen={ZEILEN} infoSpalten={GRUPPEN} />);
+    const rahmen = container.querySelector<HTMLElement>('[class*="tabelleScroll"]')!;
+    // Die Testumgebung hat keine Darstellung – die Maße stellen wir nach: sichtbar 500 px, Punkt 300 px breit, Technik
+    // 300–450 (sichtbar), Musik 450–600 (rechts verdeckt), Programm dahinter. Die Zahlen sind nur Messwerte.
+    const masse = (el: Element, links: number, breite: number) => {
+      Object.defineProperty(el, 'offsetLeft', { value: links, configurable: true });
+      Object.defineProperty(el, 'offsetWidth', { value: breite, configurable: true });
+    };
+    Object.defineProperty(rahmen, 'clientWidth', { value: 500, configurable: true });
+    Object.defineProperty(rahmen, 'scrollWidth', { value: 750, configurable: true });
+    masse(screen.getByText('Punkt'), 0, 300);
+    masse(screen.getByText('Technik'), 300, 150);
+    masse(screen.getByText('Musik'), 450, 150);
+    masse(screen.getByText('Programm'), 600, 150);
+    const scrollTo = vi.fn();
+    rahmen.scrollTo = scrollTo;
+    fireEvent.scroll(rahmen);
+
+    expect(container.querySelector('[class*="weiterRechts"]')).toBeTruthy();
+    // „Treu“ hat eine Info bei Musik – die steht gerade nicht im Bild.
+    const zeile = screen.getByText('Treu').closest('div[class*="flowRow"]') as HTMLElement;
+    const schild = within(zeile).getByRole('button', { name: 'Musik ›' });
+    expect(within(zeile).queryByRole('button', { name: 'Technik ›' })).toBeNull();
+    fireEvent.click(schild);
+    expect(scrollTo).toHaveBeenCalledWith({ left: 150, behavior: 'smooth' });
+  });
+
+  it('der Kopf nennt, in wie vielen Punkten etwas steht', () => {
+    render(<AblaufListe zeilen={ZEILEN} infoSpalten={GRUPPEN} />);
+    // Gegen die Daten gezählt, nicht gegen eine Zahl von Hand.
+    const n = ZEILEN.filter((z) => z.infos?.some((i) => i.gruppeId === 3 && i.text)).length;
+    expect(n).toBeGreaterThan(0);
+    expect(screen.getByText('Technik').textContent).toBe(`Technik · ${n}`);
   });
 
   it('am Handy: eine Zeile „Gruppe: Text“ unter dem Punkt, keine Spalten', () => {

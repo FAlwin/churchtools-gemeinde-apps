@@ -39,6 +39,26 @@ function songItem(id: number, title: string): AgendaItem {
 afterEach(cleanup);
 
 describe('AgendaFullView – Zeilen', () => {
+  it('auf dem eigenen Server nur Kürzel, kein Foto (Alwin, 02.11.2026)', () => {
+    const { container } = render(
+      <AgendaFullView
+        items={[
+          item({
+            id: 1,
+            title: 'Begrüßung',
+            responsible: [
+              { label: 'Anna Feld', open: false, kuerzel: 'AF', bild: 'https://ct.test/anna.jpg' },
+            ],
+          }),
+        ]}
+        eventId={1}
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(container.querySelector('img')).toBeNull();
+    expect(screen.getByText('AF')).toBeTruthy();
+  });
+
   it('zeigt Überschriften als eigenes Band', () => {
     render(
       <AgendaFullView

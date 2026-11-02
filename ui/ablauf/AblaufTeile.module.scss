@@ -152,6 +152,28 @@
     object-fit: cover;
   }
 }
+// Die Kreise als Knopf (02.11.2026): öffnen die Zuständigen mit Dienst. Tippfläche mindestens so hoch wie die Zeile
+// es zulässt; der Rand zeigt beim Drüberfahren, dass hier etwas passiert.
+.kreiseKnopf {
+  min-height: 36px;
+  padding: 2px 4px 2px 9px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover {
+      border-color: var(--border);
+      background: var(--surface3);
+    }
+  }
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 1px;
+  }
+}
 
 // Hinweis an einer an diesem Termin weggelassenen Zeile (E6-3b).
 .weggelassenTag {

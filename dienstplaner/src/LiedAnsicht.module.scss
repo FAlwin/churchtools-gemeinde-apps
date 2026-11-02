@@ -54,38 +54,6 @@
   }
 }
 
-.datei {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 0;
-  color: var(--text);
-  text-decoration: none;
-
-  @media (hover: hover) {
-    &:hover .dateiText {
-      color: var(--blue-ink);
-    }
-  }
-}
-
-.dateiText {
-  flex: 1;
-  min-width: 0;
-  font-size: 14px;
-
-  small {
-    display: block;
-    color: var(--text2);
-    font-size: 12px;
-  }
-}
-
-.pfeil {
-  flex: none;
-  color: var(--text2);
-}
-
 .leise {
   margin: 10px 0 0;
   color: var(--text2);

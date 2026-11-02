@@ -1,7 +1,7 @@
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf, FensterLink } from '@ui/fenster/FensterKnopf';
-import { Icon } from '@ui/icons/icons';
 import { DATEI_SYMBOL, dateiZeilen } from '@ui/lied/dateiAnzeige';
+import { DateiZeile } from '@ui/dateien/DateiZeile';
 import type { AblaufZeile } from '@shared/ct/ablaufZeile';
 import type { CtSong } from '@shared/ct/typen';
 import { arrangementFileEntries, fileIdFromUrl } from '@shared/ct/arrangementFiles';
@@ -96,19 +96,12 @@ export function LiedAnsicht({ terminId, tag, punkt, lied, musikApp, onClose, zur
                 const z = dateiZeilen(d);
                 return (
                   <li key={d.fileId}>
-                    <a
-                      className={styles.datei}
+                    <DateiZeile
                       href={d.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <Icon name={DATEI_SYMBOL[d.kind]} size={18} />
-                      <span className={styles.dateiText}>
-                        {z.titel}
-                        <small>{z.unter}</small>
-                      </span>
-                      <Icon name="chev-right" size={16} className={styles.pfeil} />
-                    </a>
+                      symbol={DATEI_SYMBOL[d.kind]}
+                      titel={z.titel}
+                      unter={z.unter}
+                    />
                   </li>
                 );
               })}

@@ -1321,3 +1321,123 @@ describe('„Weitere Infos“ (T1)', () => {
     expect(ct.schreiben).toHaveLength(0);
   });
 });
+
+describe('Dateien am Termin (T2a)', () => {
+  const download = (id: number) =>
+    `${window.location.origin}/?q=public/filedownload&id=${id}&filename=abc`;
+  /** `eventFiles` wie in der Terminliste gemessen (02.11.2026) – ohne Größe. */
+  const EVENT_FILES = [
+    { title: 'Folien.pdf', domainType: 'file', domainIdentifier: '21', frontendUrl: download(21) },
+    {
+      title: 'Liedtexte',
+      domainType: 'link',
+      domainIdentifier: '22',
+      frontendUrl: 'https://example.org/x',
+    },
+  ];
+  /** Die ausführliche Liste (`/files/service/7`) – mit Größe; `frisch` ersetzt sie (z. B. inzwischen eine mehr). */
+  function ctDateien(o: { eventFiles?: unknown[]; frisch?: unknown[] | 'fehler' } = {}) {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/agenda')) return Promise.resolve(json(200, { data: ABLAUF }));
+      if (url.includes('/files/service/7')) {
+        if (o.frisch === 'fehler') return Promise.resolve(json(503, {}));
+        return Promise.resolve(
+          json(200, {
+            data: o.frisch ?? [
+              { id: 21, name: 'Folien.pdf', type: 'file', fileUrl: download(21), size: 2516582 },
+              {
+                id: 22,
+                name: 'Liedtexte',
+                type: 'link',
+                fileUrl: 'https://example.org/x',
+                size: null,
+              },
+            ],
+          }),
+        );
+      }
+      if (url.includes('/events/')) {
+        return Promise.resolve(
+          json(200, { data: { ...TERMIN, eventFiles: o.eventFiles ?? EVENT_FILES } }),
+        );
+      }
+      return Promise.resolve(json(200, { data: [] }));
+    });
+  }
+  const knopf = (n: number) => screen.findByRole('button', { name: `Dateien zum Termin (${n})` });
+
+  it('Büroklammer mit Zahl im Kopf; das Fenster zeigt die Dateien mit Größe und öffnet sie aus ChurchTools', async () => {
+    ctDateien();
+    zeige();
+    fireEvent.click(await knopf(2));
+    const f = screen.getByRole('dialog', { name: 'Dateien' });
+    expect(within(f).getByText('Gottesdienst · So, 18.10.2026')).toBeTruthy();
+    expect(await within(f).findByText('PDF · 2,4 MB')).toBeTruthy();
+    const pdf = within(f).getByRole('link', { name: /Folien\.pdf/ });
+    expect(pdf.getAttribute('href')).toBe(download(21));
+    expect(pdf.getAttribute('target')).toBe('_blank');
+    expect(
+      within(f)
+        .getByRole('link', { name: /Liedtexte/ })
+        .getAttribute('href'),
+    ).toBe('https://example.org/x');
+    expect(within(f).getByText('Link · example.org')).toBeTruthy();
+  });
+
+  it('ohne Dateien keine Büroklammer', async () => {
+    ctDateien({ eventFiles: [] });
+    zeige();
+    await screen.findByRole('heading', { name: 'Gottesdienst' });
+    expect(screen.queryByRole('button', { name: /^Dateien zum Termin/ })).toBeNull();
+  });
+
+  it('die frische Liste zählt: inzwischen eine Datei mehr → die Zahl im Kopf folgt', async () => {
+    ctDateien({
+      frisch: [
+        { id: 21, name: 'Folien.pdf', type: 'file', fileUrl: download(21), size: 1 },
+        { id: 22, name: 'Liedtexte', type: 'link', fileUrl: 'https://example.org/x', size: null },
+        { id: 23, name: 'Plakat.png', type: 'file', fileUrl: download(23), size: 2 },
+      ],
+    });
+    zeige();
+    fireEvent.click(await knopf(2));
+    expect(await screen.findByRole('link', { name: /Plakat\.png/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
+    expect(await knopf(3)).toBeTruthy();
+  });
+
+  it('frische Liste nicht ladbar: die bekannten Dateien bleiben stehen, mit Hinweis', async () => {
+    ctDateien({ frisch: 'fehler' });
+    zeige();
+    fireEvent.click(await knopf(2));
+    const f = screen.getByRole('dialog', { name: 'Dateien' });
+    expect((await within(f).findByRole('status')).textContent).toMatch(/zuletzt bekannte Stand/);
+    expect(within(f).getByRole('link', { name: /Folien\.pdf/ })).toBeTruthy();
+    expect(within(f).getByRole('link', { name: /Liedtexte/ })).toBeTruthy();
+    // Und die Zahl im Kopf bleibt.
+    fireEvent.click(within(f).getByRole('button', { name: 'Fenster schließen' }));
+    expect(await knopf(2)).toBeTruthy();
+  });
+
+  it('eine Datei auf fremdem Host und ein Link ohne http(s) führen nirgendwohin', async () => {
+    ctDateien({
+      frisch: [
+        {
+          id: 21,
+          name: 'Fremd.pdf',
+          type: 'file',
+          fileUrl: 'https://boese.example/?q=public/filedownload&id=21',
+          size: 1,
+        },
+        { id: 22, name: 'Skript', type: 'link', fileUrl: 'javascript:alert(1)', size: null },
+      ],
+    });
+    zeige();
+    fireEvent.click(await knopf(2));
+    const f = screen.getByRole('dialog', { name: 'Dateien' });
+    expect(await within(f).findByText('Fremd.pdf')).toBeTruthy();
+    expect(within(f).queryByRole('link')).toBeNull();
+    expect(within(f).getByText('Skript')).toBeTruthy();
+  });
+});

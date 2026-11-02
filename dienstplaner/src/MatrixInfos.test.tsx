@@ -57,6 +57,29 @@ const PLAN = planAus(ROH, {
   ganzSichtbar: () => true,
 });
 
+const download = (id: number) =>
+  `${window.location.origin}/?q=public/filedownload&id=${id}&filename=abc`;
+/** `eventFiles` wie in der Terminliste gemessen (02.11.2026) – ohne Größe. */
+const eventFile = (id: number, title: string) => ({
+  title,
+  domainType: 'file',
+  domainIdentifier: String(id),
+  frontendUrl: download(id),
+});
+/** Die ausführliche Liste (`/files/service/{id}`) – aus den `eventFiles` des Termins, mit Größe. */
+const ausDenEventFiles = (eventId: number): unknown[] =>
+  (
+    (ROH_DATEIEN.find((t) => t.id === eventId)?.eventFiles ?? []) as ReturnType<typeof eventFile>[]
+  ).map((e) => ({
+    id: Number(e.domainIdentifier),
+    name: e.title,
+    type: 'file',
+    fileUrl: e.frontendUrl,
+    size: 1024,
+  }));
+let frischeDateien = ausDenEventFiles;
+let ROH_DATEIEN: RohTermin[] = [];
+
 /** ChurchTools: kein Termin hat einen Ablauf; Infos lassen sich speichern (PUT wie gemessen). */
 function ct() {
   const termine = new Map(ROH.map((t) => [t.id, { ...t, isCanceled: false }]));
@@ -65,6 +88,8 @@ function ct() {
     const url = new URL(String(input));
     if (url.pathname.endsWith('/csrftoken')) return Promise.resolve(json(200, { data: 't' }));
     if (url.pathname.endsWith('/agenda')) return Promise.resolve(json(404, {}));
+    const f = /\/api\/files\/service\/(\d+)$/.exec(url.pathname);
+    if (f) return Promise.resolve(json(200, { data: frischeDateien(Number(f[1])) }));
     const m = /\/api\/events\/(\d+)$/.exec(url.pathname);
     if (m) {
       const t = termine.get(Number(m[1]))!;
@@ -251,5 +276,105 @@ describe('„Infos & Dateien“ in der Matrix (T1b)', () => {
     expect(
       screen.getByRole('button', { name: /^Weitere Infos Gottesdienst, So, 18\.10\.2026/ }),
     ).toBeTruthy();
+  });
+});
+
+describe('Dateien in der Matrix (T2a)', () => {
+  // Termin 10 mit Infos und vier Dateien, Termin 11 ohne Infos und ohne Recht, aber mit einer Datei.
+  const roh = (): RohTermin[] =>
+    ROH.map((t) =>
+      t.id === 10
+        ? {
+            ...t,
+            eventFiles: [
+              eventFile(21, 'Folien.pdf'),
+              eventFile(22, 'Video.mp4'),
+              eventFile(23, 'Plakat.png'),
+              eventFile(24, 'Ablauf.docx'),
+            ],
+          }
+        : t.id === 11
+          ? { ...t, eventFiles: [eventFile(31, 'Gebetsliste.pdf')] }
+          : t,
+    );
+  const planMit = (r: RohTermin[]) =>
+    planAus(r, {
+      ichId: 1,
+      dienste: START.dienste,
+      dienstgruppen: START.dienstgruppen,
+      zeitzone: 'Europe/Berlin',
+      planbar: () => true,
+      ganzSichtbar: () => true,
+    });
+  const ansicht = (plan: typeof PLAN) => (
+    <Planen
+      zustand={{ art: 'fertig', zeilen: [], plan, wochen: 8 }}
+      handy={false}
+      onNochmal={() => {}}
+      onMehr={() => {}}
+      mehrMoeglich={false}
+      ladeZeitraum={() => new Promise<never>(() => {})}
+      heute="2026-10-14"
+      ablauf={{ start: START, zeitzone: 'Europe/Berlin' }}
+    />
+  );
+  beforeEach(() => {
+    ROH_DATEIEN = roh();
+    frischeDateien = ausDenEventFiles;
+  });
+
+  it('unter den Infos je Datei eine Zeile, höchstens drei, dann „+ N weitere“; ohne Infos und Recht nur die Dateien', () => {
+    ct();
+    render(ansicht(planMit(ROH_DATEIEN)));
+    const [t10, t11] = zellen();
+    const z10 = within(t10 as HTMLElement);
+    expect(z10.getByRole('button', { name: /^Weitere Infos Gottesdienst/ })).toBeTruthy();
+    expect(
+      z10.getAllByRole('button', { name: /^Dateien Gottesdienst/ }).map((b) => b.textContent),
+    ).toEqual(['Folien.pdf', 'Video.mp4', 'Plakat.png']);
+    expect(
+      z10.getByRole('button', { name: 'Alle 4 Dateien Gottesdienst, So, 18.10.2026' }).textContent,
+    ).toBe('+ 1 weitere');
+    // Kein Strich, wenn es Dateien gibt.
+    expect(t11.textContent).toBe('Gebetsliste.pdf');
+  });
+
+  it('eine Datei-Zeile öffnet das Dateien-Fenster; die frische Liste ersetzt die Zeilen, bis der Plan Neues bringt', async () => {
+    ct();
+    const { rerender } = render(ansicht(planMit(ROH_DATEIEN)));
+    // ChurchTools kennt inzwischen nur noch eine Datei an Termin 11 – unter anderem Namen.
+    frischeDateien = (id) =>
+      id === 11
+        ? [{ id: 31, name: 'Gebetsliste neu.pdf', type: 'file', fileUrl: download(31), size: 2048 }]
+        : [];
+    fireEvent.click(within(zellen()[1] as HTMLElement).getByRole('button'));
+    const f = screen.getByRole('dialog', { name: 'Dateien' });
+    expect(within(f).getByText('Gebetsabend · Mi, 21.10.2026')).toBeTruthy();
+    expect(await within(f).findByText('PDF · 2 KB')).toBeTruthy();
+    fireEvent.click(within(f).getByRole('button', { name: 'Fenster schließen' }));
+    expect(zellen()[1].textContent).toBe('Gebetsliste neu.pdf');
+    // Der Plan bringt noch den alten Stand → die frische Liste bleibt.
+    rerender(ansicht(planMit(roh())));
+    expect(zellen()[1].textContent).toBe('Gebetsliste neu.pdf');
+    // Der Plan liest neu und bringt etwas anderes → der Plan gilt.
+    rerender(
+      ansicht(
+        planMit(
+          roh().map((t) => (t.id === 11 ? { ...t, eventFiles: [eventFile(32, 'Andere.pdf')] } : t)),
+        ),
+      ),
+    );
+    expect(zellen()[1].textContent).toBe('Andere.pdf');
+  });
+
+  it('„+ N weitere“ öffnet dasselbe Fenster mit allen Dateien', async () => {
+    ct();
+    render(ansicht(planMit(ROH_DATEIEN)));
+    fireEvent.click(
+      within(zellen()[0] as HTMLElement).getByRole('button', { name: /^Alle 4 Dateien/ }),
+    );
+    const f = screen.getByRole('dialog', { name: 'Dateien' });
+    expect(await within(f).findByRole('link', { name: /Ablauf\.docx/ })).toBeTruthy();
+    expect(within(f).getAllByRole('link')).toHaveLength(4);
   });
 });

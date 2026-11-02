@@ -38,6 +38,11 @@ interface KopfKnopfProps {
   dataTour?: string;
   /** Das Symbol hinter der Beschriftung („Weiter ›“ in der Fußleiste des Liedblatts, Scheibe B3). */
   symbolHinten?: boolean;
+  /**
+   * Eine Zahl neben dem Symbol, **auch am Handy** – wie die Büroklammer mit der Zahl der Dateien in ChurchTools (T2a,
+   * 02.11.2026). Der Knopf wird dafür so breit wie nötig.
+   */
+  zahl?: number;
 }
 
 /**
@@ -62,6 +67,7 @@ export function KopfKnopf({
   kurz,
   dataTour,
   symbolHinten,
+  zahl,
 }: KopfKnopfProps) {
   return (
     <button
@@ -76,7 +82,9 @@ export function KopfKnopf({
               : offen
                 ? ' ' + styles.offen
                 : ''
-      }${nurSymbol ? ' ' + styles.nurSymbol : ''}${klein ? ' ' + styles.klein : ''}${raster ? ' ' + styles.raster : ''}`}
+      }${nurSymbol ? ' ' + styles.nurSymbol : ''}${klein ? ' ' + styles.klein : ''}${raster ? ' ' + styles.raster : ''}${
+        zahl !== undefined ? ' ' + styles.mitZahl : ''
+      }`}
       onClick={onClick}
       title={title ?? label}
       aria-label={title ?? label}
@@ -87,6 +95,11 @@ export function KopfKnopf({
       data-tour={dataTour}
     >
       {!symbolHinten && symbol}
+      {zahl !== undefined && (
+        <span className={styles.zahl} aria-hidden>
+          {zahl}
+        </span>
+      )}
       {!nurSymbol && !klein && (
         <span className={styles.text}>{raster ? (kurz ?? label) : label}</span>
       )}

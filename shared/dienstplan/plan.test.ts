@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { diensteAus } from '../ct/dienste';
+import { dateienAus } from '../ct/terminDateien';
 import { planAus, platzAus } from './plan';
 import type { RohTermin } from './termine';
 
@@ -156,6 +157,7 @@ describe('planAus', () => {
         ablaufTermin: { kalenderId: null, terminAdminIds: [] },
         liveSteuern: false,
         infos: '',
+        dateien: [],
       },
       {
         id: 11,
@@ -170,6 +172,7 @@ describe('planAus', () => {
         ablaufTermin: { kalenderId: null, terminAdminIds: [] },
         liveSteuern: false,
         infos: '',
+        dateien: [],
       },
     ]);
   });
@@ -199,6 +202,20 @@ describe('planAus', () => {
   it('„Weitere Infos“ (T1) stehen an der Spalte – Regel `infosAus`', () => {
     const p = plan([termin(12, '2026-11-08T09:00:00Z', [], { description: 'Abendmahl\nGäste' })]);
     expect(p.spalten[0].infos).toBe('Abendmahl\nGäste');
+  });
+
+  it('die Dateien (T2a) stehen an der Spalte – Regel `dateienAus`', () => {
+    const eventFiles = [
+      {
+        title: 'Folien.pdf',
+        domainType: 'file',
+        domainIdentifier: '1554',
+        frontendUrl: 'https://x.church.tools/?q=public/filedownload&id=1554',
+      },
+    ];
+    const p = plan([termin(12, '2026-11-08T09:00:00Z', [], { eventFiles })]);
+    expect(p.spalten[0].dateien).toEqual(dateienAus({ eventFiles }));
+    expect(p.spalten[0].dateien).toHaveLength(1);
   });
 
   it('Gruppen und Dienste in der Reihenfolge der Gemeinde; nur Dienste, die vorkommen', () => {

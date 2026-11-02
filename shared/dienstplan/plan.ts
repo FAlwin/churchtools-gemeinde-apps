@@ -14,6 +14,7 @@ import type { Dienstgruppe } from '../ct/dienstgruppen';
 import { ablaufTerminVon, type AblaufTermin } from '../ct/ablaufRecht';
 import { darfLiveSteuern } from '../ct/liveAgenda';
 import { infosAus } from '../ct/terminInfos';
+import { dateienAus, type TerminDatei } from '../ct/terminDateien';
 import { ortszeitAus } from '../ct/zeit';
 import { belegungAus, type Belegung } from './einteilen';
 import {
@@ -66,6 +67,8 @@ export interface PlanSpalte {
   liveSteuern: boolean;
   /** „Weitere Infos“ am Termin (`infosAus`), leer ohne. */
   infos: string;
+  /** Die Dateien am Termin (`dateienAus`, T2a) – ohne Größe, die steht erst im Dateien-Fenster. */
+  dateien: TerminDatei[];
 }
 
 export interface PlanZeile {
@@ -172,6 +175,7 @@ export function planAus(
       ablaufTermin: ablaufTerminVon(t),
       liveSteuern: darfLiveSteuern(t, o.dienste, o.ichId),
       infos: infosAus(t),
+      dateien: dateienAus(t),
     };
   });
 

@@ -434,3 +434,28 @@ Zeilen der Infos. Wer darf, schreibt sie direkt dort.
 - **Historie:** T1b (02.11.2026, Entwurf `matrix-infos.html` Variante 2)
 
 </details>
+
+### TF-ABLAUF-18 · Dateien am Termin ansehen
+
+**Das brauchst du:** Einen Test-Termin, an dem in ChurchTools über die Büroklammer eine PDF-Datei und ein Link hängen,
+und einen Termin ohne Dateien.
+
+**Das muss passieren:** Wer den Termin sieht, sieht seine Dateien wie in ChurchTools – mit Zahl an der Büroklammer, in
+der Matrix unter den Infos – und öffnet sie mit einem Tipp.
+
+1. Dienstplaner → Termin mit Dateien → oben neben dem ⓘ die **Büroklammer mit „2“**. Beim Termin ohne Dateien keine.
+2. Büroklammer → Fenster **„Dateien“**: die PDF mit „PDF · Größe“, der Link mit „Link · Adresse“. Antippen öffnet sie in
+   einem neuen Tab (die PDF aus ChurchTools, ohne neue Anmeldung).
+3. Planen → Matrix → Gruppe „Infos & Dateien“: unter den Infos je Datei eine Zeile mit Büroklammer (höchstens drei, dann
+   „+ N weitere“). Eine Zeile antippen → dasselbe Fenster.
+4. In ChurchTools eine dritte Datei anhängen, im Dienstplaner das Fenster noch einmal öffnen → sie steht da, und nach dem
+   Schließen zeigt die Büroklammer „3“ bzw. die Matrix drei Zeilen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/ct/terminDateien.ts`, `dienstplaner/src/DateienFenster.tsx`, `dienstplaner/src/TerminAnsicht.tsx`, `dienstplaner/src/MatrixInfos.tsx`, `dienstplaner/src/useMatrixInfos.ts`, `ui/dateien/DateiZeile.tsx`, `ui/bedienung/KopfKnopf.tsx`
+- **Automatisiert:** ja – `shared/ct/terminDateien.test.ts` (gemessene Antworten, sichere Adressen), `dienstplaner/src/TerminAnsicht.test.tsx` (Büroklammer, Fenster, frische Liste, Fehler, fremde Adressen), `dienstplaner/src/MatrixInfos.test.tsx` (Zeilen, „+ N weitere“, frische Liste bis der Plan Neues bringt); von Hand bleibt das Öffnen aus ChurchTools
+- **Historie:** T2a (02.11.2026, Entwurf `termin-einstellungen.html` Variante B, Matrix `matrix-infos.html` Variante 2)
+
+</details>

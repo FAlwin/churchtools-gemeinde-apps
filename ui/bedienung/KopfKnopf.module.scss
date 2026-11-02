@@ -28,6 +28,19 @@
   padding: 0;
 }
 
+// Symbol mit Zahl (Büroklammer, T2a) – so breit wie nötig, auch als `nurSymbol` und am Handy.
+.knopf.mitZahl {
+  gap: 4px;
+  width: auto;
+  padding: 0 10px;
+}
+
+.zahl {
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
 // Klein in einer Tabellenzeile (das grüne Plus der Matrix, 29.10.2026): so groß wie Zauberstab und Regler.
 .klein {
   width: 26px;
@@ -50,6 +63,10 @@
   }
   .zurueck {
     height: 40px;
+  }
+  .knopf.mitZahl {
+    width: auto;
+    padding: 0 10px;
   }
 }
 

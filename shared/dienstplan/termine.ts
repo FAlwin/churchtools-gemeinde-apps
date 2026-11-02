@@ -31,6 +31,8 @@ export interface RohTermin extends CtEvent {
   isCanceled?: boolean;
   /** „Weitere Infos“ am Termin (das „i“ in ChurchTools, `infosAus`). */
   description?: unknown;
+  /** Die Dateien am Termin (die Büroklammer, `dateienAus`) – liefert die Terminliste mit (gemessen 02.11.2026). */
+  eventFiles?: unknown;
   eventServices?: RohPlatz[] | null;
   // `adminIds`/`eventAdminIds` (Admins des Termins, dürfen dort einteilen – E0 §2) kommen aus `CtEvent`.
 }

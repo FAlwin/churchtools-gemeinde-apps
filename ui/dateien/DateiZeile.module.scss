@@ -1,0 +1,48 @@
+// Eine Datei in einer Liste (`DateiZeile`) – bis T2a in `dienstplaner/src/LiedAnsicht.module.scss`.
+.zeile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  color: var(--text);
+  text-decoration: none;
+
+  @media (hover: hover) {
+    &:hover .text {
+      color: var(--blue-ink);
+    }
+  }
+}
+
+a.zeile:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.tot {
+  color: var(--text2);
+
+  @media (hover: hover) {
+    &:hover .text {
+      color: inherit;
+    }
+  }
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+
+  small {
+    display: block;
+    color: var(--text2);
+    font-size: 12px;
+  }
+}
+
+.pfeil {
+  flex: none;
+  color: var(--text2);
+}

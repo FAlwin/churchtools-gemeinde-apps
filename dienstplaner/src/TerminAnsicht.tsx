@@ -7,12 +7,14 @@ import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { datumText, kachel } from '@shared/ct/datum';
 import { musikAppDirektLink } from '@shared/ct/musikAppLink';
 import type { CtAgenda } from '@shared/ct/typen';
+import type { TerminDatei } from '@shared/ct/terminDateien';
 import { gruppenName } from '@shared/dienstplan/plan';
 import { ladeTermin, type TerminDaten } from './ladeTermine';
 import { ladeAblauf, ladeMusikApp } from './ladeBeiwerk';
 import { Plaetze } from './Planen';
 import { terminAenderbar, type Start } from './start';
 import { InfosFenster } from './InfosFenster';
+import { DateienFenster } from './DateienFenster';
 import { TerminAblauf } from './TerminAblauf';
 import styles from './TerminAnsicht.module.scss';
 
@@ -64,12 +66,17 @@ export function TerminAnsicht({
   // „Weitere Infos“ (T1): das Fenster und ein frisch gespeicherter Text (bis der Termin neu geladen wird).
   const [infosOffen, setInfosOffen] = useState(false);
   const [infosNeu, setInfosNeu] = useState<string | null>(null);
+  // Die Dateien (T2a): das Fenster und die frische Liste daraus (bis der Termin neu geladen wird).
+  const [dateienOffen, setDateienOffen] = useState(false);
+  const [dateienNeu, setDateienNeu] = useState<TerminDatei[] | null>(null);
 
   useEffect(() => {
     let aktuell = true;
     setBearbeiten(false);
     setInfosOffen(false);
     setInfosNeu(null);
+    setDateienOffen(false);
+    setDateienNeu(null);
     setZustand({ art: 'laedt' });
     Promise.all([ladeTermin(start, terminId, zeitzone), ladeAblauf(terminId)]).then(
       ([daten, ablauf]) => aktuell && setZustand({ art: 'fertig', daten, ablauf }),
@@ -154,6 +161,18 @@ export function TerminAnsicht({
       nurSymbol
     />
   );
+  // Die Büroklammer mit der Zahl der Dateien wie in ChurchTools – in T2a nur, wo es Dateien gibt (Hochladen folgt in T2b).
+  const dateien = dateienNeu ?? s.dateien;
+  const dateiKnopf = dateien.length > 0 && (
+    <KopfKnopf
+      onClick={() => setDateienOffen(true)}
+      label="Dateien"
+      title={`Dateien zum Termin (${dateien.length})`}
+      symbol={<Icon name="anhang" size={16} stroke={2.2} />}
+      zahl={dateien.length}
+      nurSymbol
+    />
+  );
 
   return (
     <TerminAblauf
@@ -193,6 +212,7 @@ export function TerminAnsicht({
               </div>
             </div>
             {infoKnopf}
+            {dateiKnopf}
             {blaettern}
           </div>
 
@@ -267,6 +287,15 @@ export function TerminAnsicht({
               darf={infosDarf}
               onGespeichert={setInfosNeu}
               onClose={() => setInfosOffen(false)}
+            />
+          )}
+          {dateienOffen && (
+            <DateienFenster
+              fuer={`${s.name} · ${datumText(s.tag)}`}
+              terminId={s.id}
+              dateien={dateien}
+              onAktuell={setDateienNeu}
+              onClose={() => setDateienOffen(false)}
             />
           )}
         </div>

@@ -73,3 +73,47 @@
     outline-offset: 2px;
   }
 }
+
+// Die Dateien unter den Infos (T2a): je eine Zeile mit Büroklammer, antippen öffnet das Dateien-Fenster.
+.dateien {
+  margin: 0 0 4px;
+  padding: 0;
+  list-style: none;
+}
+
+.datei {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 2px 10px;
+  border: 0;
+  background: none;
+  color: var(--blue-ink);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+
+  svg {
+    flex: none;
+  }
+
+  span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  @media (hover: hover) {
+    &:hover {
+      background: var(--blue-soft);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: -2px;
+  }
+}

@@ -42,6 +42,22 @@ describe('KopfKnopf', () => {
     expect(knopf.className).toMatch(/neu/);
   });
 
+  it('`zahl` (Büroklammer, T2a): neben dem Symbol, auch als `nurSymbol`; der Name kommt aus dem Titel', () => {
+    render(
+      <KopfKnopf
+        onClick={vi.fn()}
+        label="Dateien"
+        title="Dateien zum Termin (3)"
+        nurSymbol
+        zahl={3}
+        symbol={<b>📎</b>}
+      />,
+    );
+    const knopf = screen.getByRole('button', { name: 'Dateien zum Termin (3)' });
+    expect(knopf.textContent).toBe('📎3');
+    expect(knopf.className).toMatch(/mitZahl/);
+  });
+
   it('nur Symbol (Vollbild): keine sichtbare Beschriftung, Name bleibt', () => {
     render(<KopfKnopf onClick={vi.fn()} label="Vollbild" nurSymbol symbol={<b>V</b>} />);
     expect(screen.getByRole('button', { name: 'Vollbild' }).textContent).toBe('V');

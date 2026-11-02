@@ -1,4 +1,5 @@
-// „Weitere Infos“ (T1): Fenster hinter dem ⓘ in der Termin-Ansicht – Felder wie im Punkt-Fenster (`m.eingabefeld`).
+// „Weitere Infos“ (T1) und „Dateien“ (T2a): die Fenster hinter ⓘ und Büroklammer – Felder wie im Punkt-Fenster
+// (`m.eingabefeld`). Ein Satz Stile für beide, damit „für wen“, „leer“ und Hinweise gleich aussehen.
 @use '@ui/design/mixins' as m;
 
 .fuer {
@@ -76,4 +77,14 @@
   margin: 10px 0 0;
   color: var(--red);
   font-size: 13.5px;
+}
+
+.dateiListe {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li + li {
+    border-top: 1px solid var(--border);
+  }
 }

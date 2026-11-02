@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { uhrVersatz, type LiveGrund, type LiveStand } from '@shared/ct/liveAgenda';
 import { ladeLive } from './ladeLive';
 
@@ -21,6 +21,11 @@ export interface LiveZustand {
   fehler: LiveGrund | null;
   /** Jetzt, in der Uhr des Geräts – springt jede Sekunde. */
   jetzt: number;
+  /**
+   * Einen frisch geschriebenen und nachgelesenen Stand sofort zeigen (Steuern, L3) – nicht erst bei der nächsten
+   * Abfrage. `empfangen` = wann die Antwort kam (Uhr des Geräts).
+   */
+  uebernehmen: (stand: LiveStand, empfangen: number) => void;
 }
 
 /**
@@ -34,13 +39,15 @@ export function useLive(
   agendaId: number,
   lesen: typeof ladeLive = ladeLive,
 ): LiveZustand {
-  const [zustand, setZustand] = useState<Omit<LiveZustand, 'jetzt'>>({
+  const [zustand, setZustand] = useState<Omit<LiveZustand, 'jetzt' | 'uebernehmen'>>({
     stand: null,
     versatz: 0,
     gelesenUm: null,
     fehler: null,
   });
   const [jetzt, setJetzt] = useState(() => Date.now());
+  // Zählt jedes `uebernehmen`: Eine Abfrage, die davor losging, bringt einen älteren Stand – sie wird verworfen.
+  const uebernommen = useRef(0);
 
   useEffect(() => {
     const id = window.setInterval(() => setJetzt(Date.now()), UHR_MS);
@@ -63,9 +70,14 @@ export function useLive(
     async function holen(): Promise<void> {
       if (aus || beendet || laeuft || document.visibilityState === 'hidden') return;
       laeuft = true;
+      const nr = uebernommen.current;
       const r = await lesen(eventId, agendaId);
       laeuft = false;
       if (aus) return;
+      if (nr !== uebernommen.current) {
+        planen();
+        return;
+      }
       const um = Date.now();
       if (r.ok) {
         setZustand({
@@ -95,5 +107,16 @@ export function useLive(
     };
   }, [eventId, agendaId, lesen]);
 
-  return { ...zustand, jetzt };
+  const uebernehmen = useCallback((stand: LiveStand, empfangen: number) => {
+    uebernommen.current++;
+    setZustand({
+      stand,
+      versatz: uhrVersatz(stand, empfangen),
+      gelesenUm: empfangen,
+      fehler: null,
+    });
+    setJetzt(empfangen);
+  }, []);
+
+  return { ...zustand, jetzt, uebernehmen };
 }

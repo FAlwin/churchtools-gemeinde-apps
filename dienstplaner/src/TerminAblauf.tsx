@@ -43,6 +43,8 @@ export interface AblaufFuerTermin {
   beginn: string;
   /** Kalender und Admins für die Bearbeiten-Regel (`ablaufBearbeitbar`). */
   ablaufTermin: AblaufTermin;
+  /** Darf ich die Live-Agenda dieses Termins steuern (`darfLiveSteuern`, aus `planAus`)? */
+  liveSteuern?: boolean;
 }
 
 /** Was `TerminAblauf` an seinen Aufrufer gibt – der stellt die Teile an ihre Orte. */
@@ -414,6 +416,8 @@ export function TerminAblauf({
           infoGruppen={spalten.gewaehlt}
           zeitzone={zeitzone}
           onSchliessen={() => setLive(false)}
+          steuern={termin.liveSteuern === true}
+          onAblauf={onAblauf}
         />
       )}
       {anlegen && !anlegen.neu && (

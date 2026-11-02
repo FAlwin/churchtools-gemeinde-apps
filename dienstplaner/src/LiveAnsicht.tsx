@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { BodyPortal } from '@ui/fenster/BodyPortal';
 import { Icon } from '@ui/icons/icons';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
@@ -11,13 +11,20 @@ import {
   liveLage,
   liveListe,
   restText,
+  stelleNachziehen,
+  weiterZiel,
+  zurueckZiel,
+  zusatzZiel,
   type LiveGrund,
   type LivePunkt,
+  type LiveStand,
+  type LiveZiel,
 } from '@shared/ct/liveAgenda';
 import { ortszeitAus } from '@shared/ct/zeit';
-import type { CtAgendaItem } from '@shared/ct/typen';
+import type { CtAgenda, CtAgendaItem } from '@shared/ct/typen';
 import type { InfoGruppe } from '@shared/types/index';
-import { ladeLive } from './ladeLive';
+import { ladeAblauf } from './ladeBeiwerk';
+import { ladeLive, schreibeLive } from './ladeLive';
 import { useLive } from './useLive';
 import styles from './LiveAnsicht.module.scss';
 
@@ -42,13 +49,37 @@ function fehlerText(grund: LiveGrund, standVon: string | null): string {
   }
 }
 
+/** Was neben den Steuerknöpfen steht, wenn das Schalten nicht geklappt hat. */
+function steuerFehlerText(grund: LiveGrund): string {
+  switch (grund) {
+    case 'nicht-angekommen':
+      return 'Nicht übernommen – vermutlich hat gerade jemand anderes geschaltet. Der aktuelle Stand wird geladen.';
+    case 'voruebergehend':
+      return 'Nicht gespeichert – ChurchTools antwortet gerade nicht. Bitte noch einmal tippen.';
+    case 'abgemeldet':
+      return 'Du bist bei ChurchTools abgemeldet. Bitte neu anmelden und „Live“ wieder öffnen.';
+    case 'kein-recht':
+      return 'ChurchTools hat das Schalten abgelehnt.';
+    case 'unlesbar':
+      return 'ChurchTools antwortet anders als erwartet – Schalten geht gerade nicht.';
+  }
+}
+
+type Schalten = 'weiter' | 'zurueck' | 'plus' | 'minus';
+
 /**
  * **„Live“ zum Folgen** (Bauplan E6b-2 L2, Entwurf `e6b-2-live.html` Variante A, Alwin 02.11.2026): der Live-Stand von
  * ChurchTools – derselbe wie in dessen „Live-Agenda“ – im Aufbau der Live-Agenda, aber im Look der App: **Jetzt** mit
  * Zuständigen und den Infos der unter „Spalten“ gewählten Gruppen, **Dann**, der Kreis mit der Restzeit, die
  * Abweichung in Worten und darunter der ganze Ablauf mit erledigten Punkten. Nachgefragt wird alle 2,5 s
  * (`useLive`); die Regeln stehen in `shared/ct/liveAgenda.ts`. Solange niemand gestartet hat, folgt „Jetzt“ der Uhr.
- * Steuern kommt mit L3. Bildschirm bleibt an; Vollbild, wo der Browser es kann.
+ * Bildschirm bleibt an; Vollbild, wo der Browser es kann.
+ *
+ * **Steuern** (L3, Alwin 02.11.2026: „genau wie ChurchTools“): Wer an diesem Termin in einem Dienst mit „Live-Agenda
+ * steuern“ eingeteilt ist (`steuern`), bekommt ‹ Zurück, Weiter ›, −1/+1 Min bzw. „Starten“ – ChurchTools selbst prüft
+ * beim Speichern nichts. Vor jedem Schalten wird der Ablauf frisch gelesen: Hat er sich geändert, wird die Stelle
+ * erst nachgezogen (`stelleNachziehen`), sonst schaltete man vom falschen Punkt aus weiter. Geschrieben wird über den
+ * Kern (nachlesen inklusive); der neue Stand steht sofort da.
  */
 export function LiveAnsicht({
   titel,
@@ -61,7 +92,11 @@ export function LiveAnsicht({
   infoGruppen,
   zeitzone,
   onSchliessen,
+  steuern = false,
+  onAblauf,
   lesen = ladeLive,
+  schreiben = schreibeLive,
+  ablaufLesen = ladeAblauf,
 }: {
   titel: string;
   /** Tag des Termins (`JJJJ-MM-TT`, Gemeinde-Zeit). */
@@ -78,8 +113,14 @@ export function LiveAnsicht({
   infoGruppen: readonly InfoGruppe[];
   zeitzone: string;
   onSchliessen: () => void;
-  /** Nur für Tests: woher der Stand kommt. */
+  /** Darf ich die Live-Agenda dieses Termins steuern (`darfLiveSteuern`)? */
+  steuern?: boolean;
+  /** Ein frisch gelesener, geänderter Ablauf (vor dem Schalten) – damit Liste und Termin-Ansicht ihn zeigen. */
+  onAblauf?: (neu: CtAgenda) => void;
+  /** Nur für Tests: woher der Stand kommt, wohin geschrieben wird, woher der Ablauf kommt. */
   lesen?: typeof ladeLive;
+  schreiben?: typeof schreibeLive;
+  ablaufLesen?: (terminId: number) => Promise<CtAgenda | null>;
 }) {
   const wurzel = useRef<HTMLDivElement>(null);
   const aktuell = useRef<HTMLLIElement>(null);
@@ -89,10 +130,49 @@ export function LiveAnsicht({
   const live = useLive(terminId, agendaId, lesen);
 
   const liste = useMemo(() => liveListe(items, terminId), [items, terminId]);
+  const [beschaeftigt, setBeschaeftigt] = useState(false);
+  const [steuerFehler, setSteuerFehler] = useState<LiveGrund | null>(null);
   const zeileVon = useMemo(() => new Map(zeilen.map((z) => [z.id, z])), [zeilen]);
   // Gerechnet wird in der Uhr von ChurchTools, damit Restzeit und Abweichung auf allen Geräten gleich sind.
   const jetzt = live.jetzt - live.versatz;
   const lage = liveLage(liste, live.stand, jetzt);
+
+  /**
+   * Schalten: Ablauf frisch lesen und die Stelle nachziehen, wenn er sich geändert hat; dann schreiben. Scheitert das
+   * Lesen des Ablaufs, wird mit dem gezeigten weitergemacht – ein Aussetzer soll das Steuern nicht blockieren.
+   */
+  async function schalten(art: Schalten): Promise<void> {
+    // Gegen doppeltes Tippen sperren die Knöpfe selbst (`disabled`) – eine Abfrage hier sähe noch den alten Zustand.
+    setBeschaeftigt(true);
+    setSteuerFehler(null);
+    try {
+      let punkte = liste;
+      let stand: LiveStand | null = live.stand;
+      const frisch = await ablaufLesen(terminId).catch(() => null);
+      if (frisch) {
+        const neu = liveListe(frisch.items, terminId);
+        if (neu.map((p) => p.id).join() !== liste.map((p) => p.id).join()) {
+          if (stand?.stelle)
+            stand = { ...stand, stelle: stelleNachziehen(liste, neu, stand.stelle) };
+          punkte = neu;
+          onAblauf?.(frisch);
+        }
+      }
+      const ziel: LiveZiel =
+        art === 'weiter'
+          ? weiterZiel(punkte, stand)
+          : art === 'zurueck'
+            ? zurueckZiel(punkte, stand)
+            : stand
+              ? zusatzZiel(stand, art === 'plus' ? 1 : -1)
+              : { stelle: 0, zusatzSek: 0 };
+      const r = await schreiben(terminId, agendaId, ziel);
+      if (r.ok) live.uebernehmen(r.stand, Date.now());
+      else setSteuerFehler(r.grund);
+    } finally {
+      setBeschaeftigt(false);
+    }
+  }
 
   function schliessen(): void {
     vollbild.beenden();
@@ -330,6 +410,66 @@ export function LiveAnsicht({
                     )}
                   </span>
                 </div>
+              </div>
+            )}
+            {steuern && (
+              <div
+                className={`${styles.steuern}${lage.art === 'nach-plan' ? ` ${styles.einzeln}` : ''}`}
+                role="group"
+                aria-label="Live-Agenda steuern"
+              >
+                {lage.art === 'nach-plan' ? (
+                  <KopfKnopf
+                    onClick={() => void schalten('weiter')}
+                    label="Starten"
+                    title="Live-Agenda starten"
+                    symbol={<Icon name="play" size={16} />}
+                    haupt
+                    disabled={beschaeftigt}
+                  />
+                ) : (
+                  <>
+                    <KopfKnopf
+                      onClick={() => void schalten('zurueck')}
+                      label="Zurück"
+                      title="Zum vorigen Punkt"
+                      symbol={<Icon name="chev-left" size={16} />}
+                      disabled={beschaeftigt}
+                    />
+                    <KopfKnopf
+                      onClick={() => void schalten('weiter')}
+                      label="Weiter"
+                      title="Zum nächsten Punkt"
+                      symbol={<Icon name="chev-right" size={16} />}
+                      symbolHinten
+                      haupt
+                      disabled={beschaeftigt || lage.art === 'ende'}
+                    />
+                    {lage.art === 'laeuft' && (
+                      <>
+                        <KopfKnopf
+                          onClick={() => void schalten('minus')}
+                          label="1 Min"
+                          title="Eine Minute weniger"
+                          symbol={<Icon name="minus" size={16} />}
+                          disabled={beschaeftigt}
+                        />
+                        <KopfKnopf
+                          onClick={() => void schalten('plus')}
+                          label="1 Min"
+                          title="Eine Minute mehr"
+                          symbol={<Icon name="plus" size={16} />}
+                          disabled={beschaeftigt}
+                        />
+                      </>
+                    )}
+                  </>
+                )}
+                {steuerFehler && (
+                  <p className={styles.steuerFehler} role="alert">
+                    {steuerFehlerText(steuerFehler)}
+                  </p>
+                )}
               </div>
             )}
             {verspaetung !== null && (

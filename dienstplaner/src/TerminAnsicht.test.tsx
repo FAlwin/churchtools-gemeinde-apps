@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
+import { diensteAus } from '@shared/ct/dienste';
 import { startFuer } from './start.testutil';
 import { fensterKnoepfe } from '@ui/fenster/fenster.testutil';
 import { TerminAnsicht } from './TerminAnsicht';
@@ -1118,6 +1119,30 @@ describe('„Live“ (E6b-2 L2)', () => {
     expect((await within(jetzt).findByRole('heading')).textContent).toBe('Lied – Du großer Gott');
     fireEvent.click(within(ansicht).getByRole('button', { name: 'Schließen' }));
     expect(screen.queryByRole('dialog', { name: 'Live: Gottesdienst' })).toBeNull();
+  });
+
+  it('Steuern (L3): mit „Live-Agenda steuern“ am eigenen Dienst Knöpfe, sonst nicht – Regel aus `planAus`', async () => {
+    heute('2026-10-18T07:00:00Z');
+    ctLive(null);
+    const mitRecht = startFuer({
+      dienste: diensteAus([
+        { id: 6, name: 'Ton', serviceGroupId: 3, groupIds: [7], allowControlLiveAgenda: true },
+        { id: 7, name: 'Licht', serviceGroupId: 3, groupIds: [7] },
+      ]),
+    });
+    zeige({ start: mitRecht });
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Live-Agenda von ChurchTools folgen' }),
+    );
+    const ansicht = screen.getByRole('dialog', { name: 'Live: Gottesdienst' });
+    expect(within(ansicht).getByRole('group', { name: 'Live-Agenda steuern' })).toBeTruthy();
+    fireEvent.click(within(ansicht).getByRole('button', { name: 'Schließen' }));
+    cleanup();
+    zeige();
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Live-Agenda von ChurchTools folgen' }),
+    );
+    expect(screen.queryByRole('group', { name: 'Live-Agenda steuern' })).toBeNull();
   });
 
   it('am Tag, aber nicht gestartet: Knopf ohne Punkt', async () => {

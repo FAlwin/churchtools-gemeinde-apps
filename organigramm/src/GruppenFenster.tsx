@@ -52,6 +52,8 @@ interface Props {
   onGruppe: (id: number) => void;
   onNachladen: () => void;
   onSchliessen: () => void;
+  /** „‹“ in der Ansicht der Gruppe: zurück zum Fenster davor (Person oder andere Gruppe, 02.11.2026). */
+  zurueck?: () => void;
   /**
    * „Im Organigramm hier anfangen“ (O7b-2): diese Gruppe als Spitze des Baums. Fehlt, wenn es nichts darunter gibt
    * oder die Gruppe im Baum gerade nicht zu sehen ist (Typ ausgeblendet).
@@ -92,6 +94,7 @@ export function GruppenFenster({
   onGruppe,
   onNachladen,
   onSchliessen,
+  zurueck,
   onHierAnfangen,
   onStruktur,
   onMitgliederNeu,
@@ -248,26 +251,36 @@ export function GruppenFenster({
   const typ = g.typId !== null ? start.typNamen.get(g.typId) : undefined;
   const rollen = rollenFuerTyp(start.rollen, g.typId);
 
-  // Ein Schritt ersetzt den Inhalt des Fensters; seine Knöpfe stehen unten – „Zurück“ führt zur Gruppe, ganz zu nur
-  // über das X (Alwin, 26.10.2026, E6-O F5 – wie „Absagen?“ in den Anmeldungen).
+  /**
+   * Ein Schritt ersetzt den Inhalt des Fensters. **„‹“ oben** führt einen Schritt zurück (seit 02.11.2026; vorher ein
+   * „Zurück“ unten, Alwin 26.10.2026), ganz zu nur über das X. Unten wie in ChurchTools „Abbrechen · …“ (Entwurf
+   * „Fenster mit Zurück“): „Abbrechen“ bricht den Schritt ab und führt zur Gruppe – bei einer Rückfrage dorthin, wo man
+   * herkam (z. B. zurück zur Wahl des Ziels).
+   */
   const zurGruppe = () => setModus({ art: 'ansehen' });
-  const zurueckKnopf = (onClick: () => void = zurGruppe) => (
-    <FensterKnopf art="zweit" disabled={arbeitet} onClick={onClick}>
-      Zurück
-    </FensterKnopf>
-  );
-  const frage = (frage: string, folgen: string, knopf: string, onJa: () => void) => ({
+  const frage = (
+    frage: string,
+    folgen: string,
+    knopf: string,
+    onJa: () => void,
+    zurueck: () => void = zurGruppe,
+  ) => ({
     inhalt: <Bestaetigen frage={frage} folgen={folgen} />,
+    zurueck,
+    // Eine Rückfrage: „Abbrechen“ führt wie in ChurchTools dorthin zurück, wo man herkam.
+    abbrechen: zurueck,
     knoepfe: (
-      <>
-        {zurueckKnopf()}
-        <FensterKnopf disabled={arbeitet} onClick={onJa}>
-          {arbeitet ? 'Wird gespeichert …' : knopf}
-        </FensterKnopf>
-      </>
+      <FensterKnopf disabled={arbeitet} onClick={onJa}>
+        {arbeitet ? 'Wird gespeichert …' : knopf}
+      </FensterKnopf>
     ),
   });
-  const schritt = ((): { inhalt: ReactNode; knoepfe: ReactNode } | null => {
+  const schritt = ((): {
+    inhalt: ReactNode;
+    knoepfe: ReactNode;
+    zurueck: () => void;
+    abbrechen?: () => void;
+  } | null => {
     switch (modus.art) {
       case 'ansehen':
         return null;
@@ -286,26 +299,23 @@ export function GruppenFenster({
               onRolle={(id) => setModus({ ...modus, rolleId: id })}
             />
           ),
-          knoepfe: (
-            <>
-              {zurueckKnopf(gewaehlt ? () => setModus({ ...modus, gewaehlt: null }) : zurGruppe)}
-              {gewaehlt && (
-                <FensterKnopf
-                  disabled={arbeitet || !rolle}
-                  onClick={() =>
-                    rolle &&
-                    personAufnehmen(
-                      gewaehlt.personId,
-                      `${gewaehlt.vor} ${gewaehlt.nach}`.trim(),
-                      rolle.id,
-                    )
-                  }
-                >
-                  {arbeitet ? 'Wird gespeichert …' : 'Aufnehmen'}
-                </FensterKnopf>
-              )}
-            </>
-          ),
+          zurueck: gewaehlt ? () => setModus({ ...modus, gewaehlt: null }) : zurGruppe,
+          // Ohne gewählte Person gibt es noch nichts zu tun – dann keine Fußzeile (nicht eine leere).
+          knoepfe: gewaehlt ? (
+            <FensterKnopf
+              disabled={arbeitet || !rolle}
+              onClick={() =>
+                rolle &&
+                personAufnehmen(
+                  gewaehlt.personId,
+                  `${gewaehlt.vor} ${gewaehlt.nach}`.trim(),
+                  rolle.id,
+                )
+              }
+            >
+              {arbeitet ? 'Wird gespeichert …' : 'Aufnehmen'}
+            </FensterKnopf>
+          ) : null,
         };
       }
       case 'rolle': {
@@ -323,16 +333,14 @@ export function GruppenFenster({
               onRolle={(id) => setModus({ ...modus, rolleId: id })}
             />
           ),
+          zurueck: zurGruppe,
           knoepfe: (
-            <>
-              {zurueckKnopf()}
-              <FensterKnopf
-                disabled={arbeitet || !rolle || rolleId === jetzt}
-                onClick={() => rolle && rolleSetzen(personId, jetzt, rolle.id)}
-              >
-                {arbeitet ? 'Wird gespeichert …' : 'Ändern'}
-              </FensterKnopf>
-            </>
+            <FensterKnopf
+              disabled={arbeitet || !rolle || rolleId === jetzt}
+              onClick={() => rolle && rolleSetzen(personId, jetzt, rolle.id)}
+            >
+              {arbeitet ? 'Wird gespeichert …' : 'Ändern'}
+            </FensterKnopf>
           ),
         };
       }
@@ -368,7 +376,8 @@ export function GruppenFenster({
               }
             />
           ),
-          knoepfe: zurueckKnopf(),
+          zurueck: zurGruppe,
+          knoepfe: null,
         };
       }
       case 'aendern': {
@@ -390,6 +399,8 @@ export function GruppenFenster({
               `„${g.name}“ hängt jetzt unter „${neu.name}“.`,
               () => obergruppeAendern(z, g.id, neu.id, alt.id),
             ),
+          // Einen Schritt zurück heißt hier: noch einmal das Ziel wählen.
+          () => setModus({ art: 'waehlen', zweck: 'aendern', alt }),
         );
       }
       case 'dazu': {
@@ -408,6 +419,7 @@ export function GruppenFenster({
                 : `„${g.name}“ hängt jetzt auch unter „${neu.name}“.`,
               () => obergruppeLoesen(z, g.id, neu.id),
             ),
+          () => setModus({ art: 'waehlen', zweck: 'dazu' }),
         );
       }
       case 'loesen': {
@@ -443,13 +455,11 @@ export function GruppenFenster({
               onAnlegen={(name, typId) => void anlegen(name, typId)}
             />
           ),
+          zurueck: zurGruppe,
           knoepfe: (
-            <>
-              {zurueckKnopf()}
-              <FensterKnopf type="submit" form={anlegenFormular} disabled={arbeitet}>
-                {arbeitet ? 'Wird angelegt …' : 'Anlegen'}
-              </FensterKnopf>
-            </>
+            <FensterKnopf type="submit" form={anlegenFormular} disabled={arbeitet}>
+              {arbeitet ? 'Wird angelegt …' : 'Anlegen'}
+            </FensterKnopf>
           ),
         };
     }
@@ -460,8 +470,9 @@ export function GruppenFenster({
       <Sheet
         title={g.name}
         onClose={onSchliessen}
+        zurueck={schritt.zurueck}
+        onAbbrechen={schritt.abbrechen ?? zurGruppe}
         beschaeftigt={arbeitet}
-        cancelLabel={null}
         knoepfe={schritt.knoepfe}
       >
         {schritt.inhalt}
@@ -469,7 +480,13 @@ export function GruppenFenster({
     );
 
   return (
-    <Sheet title={g.name} onClose={onSchliessen} beschaeftigt={arbeitet} knoepfe={null}>
+    <Sheet
+      title={g.name}
+      onClose={onSchliessen}
+      zurueck={zurueck}
+      beschaeftigt={arbeitet}
+      knoepfe={null}
+    >
       <div className={styles.kopf}>
         <GruppenKachel name={g.name} farbe={gruppenFarbe(g, start.typFarben)} groesse={40} />
         <p className={styles.meta}>

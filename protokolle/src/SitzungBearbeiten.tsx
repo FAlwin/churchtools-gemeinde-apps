@@ -310,17 +310,14 @@ export function SitzungBearbeiten({
       <Sheet
         title="Sitzung absagen"
         onClose={onClose}
-        cancelLabel={null}
+        // Rückfrage: „‹“ und „Abbrechen“ zurück zur Sitzung, das X schließt (02.11.2026; vorher „Zurück“ unten).
+        zurueck={() => setAbsagen(false)}
+        onAbbrechen={() => setAbsagen(false)}
         beschaeftigt={laeuft}
         knoepfe={
-          <>
-            <FensterKnopf art="zweit" disabled={laeuft} onClick={() => setAbsagen(false)}>
-              Zurück
-            </FensterKnopf>
-            <FensterKnopf art="gefahr" disabled={laeuft} onClick={absagenJetzt}>
-              {laeuft ? 'Wird abgesagt …' : 'Sitzung absagen'}
-            </FensterKnopf>
-          </>
+          <FensterKnopf art="gefahr" disabled={laeuft} onClick={absagenJetzt}>
+            {laeuft ? 'Wird abgesagt …' : 'Sitzung absagen'}
+          </FensterKnopf>
         }
       >
         <p className={felder.unter}>

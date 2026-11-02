@@ -26,6 +26,8 @@ interface Props {
   einsaetze: EinsaetzeStand;
   onGruppe: (id: number) => void;
   onSchliessen: () => void;
+  /** „‹“: zurück zum Fenster davor (eine Gruppe, aus der die Person geöffnet wurde, 02.11.2026). */
+  zurueck?: () => void;
 }
 
 /**
@@ -39,6 +41,7 @@ export function PersonFenster({
   einsaetze,
   onGruppe,
   onSchliessen,
+  zurueck,
 }: Props) {
   const p = mitglieder?.personen.get(person.personId);
   const name = p?.name ?? `Person ${person.personId}`;
@@ -49,7 +52,7 @@ export function PersonFenster({
   const jeDienst = [...(e?.jeDienst ?? new Map<number, number>())].sort((a, b) => b[1] - a[1]);
 
   return (
-    <Sheet title={name} onClose={onSchliessen} knoepfe={null}>
+    <Sheet title={name} onClose={onSchliessen} knoepfe={null} zurueck={zurueck}>
       <div className={styles.kopf}>
         {p && <PersonBild name={p.name} bild={p.bild} initialen={p.initialen} groesse={40} />}
         <p className={styles.meta}>

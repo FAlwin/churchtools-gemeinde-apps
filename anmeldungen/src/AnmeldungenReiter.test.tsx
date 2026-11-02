@@ -444,7 +444,12 @@ describe('Nachrücken und Absagen (A7-3)', () => {
     // Ohne eingerichtete Mails: wie gemessen nur „war erfolgreich“.
     expect(screen.getByText(/nur „Deine Anmeldung war erfolgreich“/)).toBeTruthy();
     // Fenster wie ChurchTools (E6-O F4): die Rückfrage hat ihre Knöpfe unten; ganz zu nur über das X.
-    expect(fensterKnoepfe()).toEqual(['Fenster schließen', 'Abbrechen', 'Nachrücken lassen']);
+    expect(fensterKnoepfe()).toEqual([
+      'Zurück',
+      'Fenster schließen',
+      'Abbrechen',
+      'Nachrücken lassen',
+    ]);
     fireEvent.click(screen.getByRole('button', { name: 'Nachrücken lassen' }));
     await waitFor(() => expect(z.onGespeichert).toHaveBeenCalled());
     expect(bm.nachrueckenLassen).toHaveBeenCalledWith(
@@ -463,7 +468,7 @@ describe('Nachrücken und Absagen (A7-3)', () => {
     expect(
       screen.getByRole('link', { name: 'Im Mailprogramm öffnen' }).getAttribute('href'),
     ).toMatch(/^mailto:maria%40beispiel\.test\?subject=/);
-    expect(fensterKnoepfe()).toEqual(['Fenster schließen', 'Zurück', 'Text kopieren']);
+    expect(fensterKnoepfe()).toEqual(['Zurück', 'Fenster schließen', 'Text kopieren']);
     Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
     fireEvent.click(screen.getByRole('button', { name: 'Text kopieren' }));
     expect(await screen.findByText('Kopiert.')).toBeTruthy();
@@ -501,7 +506,7 @@ describe('Nachrücken und Absagen (A7-3)', () => {
     expect(screen.getByText('Zahlung der Anmeldung').nextSibling?.textContent).toBe(
       '12,00 € 6,00 €',
     );
-    expect(fensterKnoepfe()).toEqual(['Fenster schließen', 'Abbrechen', 'Ja, absagen']);
+    expect(fensterKnoepfe()).toEqual(['Zurück', 'Fenster schließen', 'Abbrechen', 'Ja, absagen']);
     fireEvent.click(screen.getByRole('button', { name: 'Ja, absagen' }));
     await waitFor(() => expect(z.onGespeichert).toHaveBeenCalled());
     const zeile = screen.getByRole('status');
@@ -567,7 +572,12 @@ describe('Nachrücken und Absagen (A7-3)', () => {
     oeffnen();
     fireEvent.click(within(karte('Lena Beispiel, 7')).getByRole('button', { name: 'Absagen' }));
     fireEvent.click(screen.getByRole('button', { name: 'Ja, absagen' }));
-    expect(fensterKnoepfe()).toEqual(['Fenster schließen', 'Abbrechen', 'Einen Moment …']);
+    expect(fensterKnoepfe()).toEqual([
+      'Zurück',
+      'Fenster schließen',
+      'Abbrechen',
+      'Einen Moment …',
+    ]);
     for (const name of ['Fenster schließen', 'Abbrechen'])
       expect(screen.getByRole('button', { name })).toHaveProperty('disabled', true);
   });
@@ -619,8 +629,9 @@ describe('Anmeldung von Hand (A7-4a)', () => {
     expect(screen.getByText('Paul Probe anmelden')).toBeTruthy();
     // Ohne eingerichtete Mails (A9-1): ChurchTools schickt nichts.
     expect(screen.getByText(/keine Mail – danach gibt es „Mail schreiben“/)).toBeTruthy();
-    expect(fensterKnoepfe().slice(-2)).toEqual(['Zurück', 'Anmelden']);
-    expect(fensterKnoepfe()).not.toContain('Abbrechen');
+    expect(fensterKnoepfe().slice(-2)).toEqual(['Abbrechen', 'Anmelden']);
+    // Seit 02.11.2026: „‹“ oben einen Schritt zurück, unten „Abbrechen · …“ (Entwurf „Fenster mit Zurück“).
+    expect(fensterKnoepfe()[0]).toBe('Zurück');
     // Name aus ChurchTools – gesperrt; Unterschrift gibt es nur als Schalter.
     expect(feld('af-personen.0.pname-vor').disabled).toBe(true);
     expect(screen.getByRole('button', { name: 'Unterschrift liegt auf Papier vor' })).toBeTruthy();
@@ -689,13 +700,15 @@ describe('Anmeldung von Hand (A7-4a)', () => {
         (x) => (x as HTMLInputElement).value,
       ),
     ).toEqual(['Nina', 'Neu']);
-    expect(fensterKnoepfe().slice(-2)).toEqual(['Zurück', 'Weiter']);
-    expect(fensterKnoepfe()).not.toContain('Abbrechen');
+    expect(fensterKnoepfe().slice(-2)).toEqual(['Abbrechen', 'Weiter']);
+    // Seit 02.11.2026: „‹“ oben einen Schritt zurück, unten „Abbrechen · …“ (Entwurf „Fenster mit Zurück“).
+    expect(fensterKnoepfe()[0]).toBe('Zurück');
     fireEvent.change(screen.getByLabelText('Geburtsdatum'), { target: { value: '2017-01-02' } });
     fireEvent.click(screen.getByRole('button', { name: 'Weiter' }));
     expect(await screen.findByText(/In ChurchTools gibt es schon Nina Neu\./)).toBeTruthy();
     expect(screen.getByRole('button', { name: /Nina Neu.*Diese nehmen/ })).toBeTruthy();
-    expect(fensterKnoepfe().slice(-2)).toEqual(['Zurück', 'Trotzdem neu anlegen']);
+    expect(fensterKnoepfe().slice(-2)).toEqual(['Abbrechen', 'Trotzdem neu anlegen']);
+    expect(fensterKnoepfe()[0]).toBe('Zurück');
     fireEvent.click(screen.getByRole('button', { name: 'Trotzdem neu anlegen' }));
     expect(screen.getByText('Nina Neu anmelden')).toBeTruthy();
   });
@@ -719,9 +732,13 @@ describe('Person dazu (A7-4b)', () => {
     fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));
     fireEvent.click(screen.getByRole('button', { name: '＋ Person dazu' }));
     expect(screen.getByText('Person zur Anmeldung dazu')).toBeTruthy();
-    // Abbrechen → zurück in die Anmeldung.
-    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
+    // „‹“ → zurück in die Anmeldung (02.11.2026; das X schließt seitdem alles).
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
     expect(screen.getByRole('button', { name: '＋ Person dazu' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '＋ Person dazu' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));
     fireEvent.click(screen.getByRole('button', { name: '＋ Person dazu' }));
 
     fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), {
@@ -773,6 +790,32 @@ describe('Zurückholen (A7-4c)', () => {
       [dazu(10, '2026-10-17'), dazu(11, '2026-10-17'), absage(lena, '2026-10-19', 1)],
     );
   };
+
+  it('aus dem Fenster der Anmeldung: „‹“ und „Abbrechen“ führen dorthin zurück, das X schließt (02.11.2026)', () => {
+    zeigen(mitAbsage());
+    const oeffnen = () => {
+      fireEvent.click(screen.getByRole('button', { name: /Maria Beispiel/ }));
+      fireEvent.click(screen.getByRole('button', { name: 'Zurückholen' }));
+      expect(screen.getByText('Lena Beispiel zurückholen?')).toBeTruthy();
+    };
+    oeffnen();
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+    expect(screen.queryByText('Lena Beispiel zurückholen?')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Zurückholen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    expect(screen.getByRole('button', { name: 'Zurückholen' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
+    oeffnen();
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('aus der Liste: kein „‹“ – es gibt keinen Vorgänger', () => {
+    zeigen(mitAbsage());
+    fireEvent.click(screen.getByRole('button', { name: /Abgesagt/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Lena Beispiel' }));
+    expect(screen.queryByRole('button', { name: 'Zurück' })).toBeNull();
+  });
 
   it('Filter „Abgesagt“: Zeile anklicken → Rückfrage mit Platz und eigener Zahlung → zurück mit den alten Antworten', async () => {
     const z = zeigen(mitAbsage());
@@ -901,7 +944,7 @@ describe('Mail schreiben', () => {
     render(
       <>
         <MailAnsicht mail={m} kopiert={null} />
-        <MailKnoepfe mail={m} onZurueck={() => {}} onKopiert={() => {}} />
+        <MailKnoepfe mail={m} onKopiert={() => {}} />
       </>,
     );
 
@@ -920,7 +963,7 @@ describe('Mail schreiben', () => {
   it('Kopieren: das Ergebnis meldet die Ansicht – gelungen oder mit Hinweis zum Markieren', async () => {
     const kopiert = vi.fn();
     Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
-    render(<MailKnoepfe mail={mail} onZurueck={() => {}} onKopiert={kopiert} />);
+    render(<MailKnoepfe mail={mail} onKopiert={kopiert} />);
     fireEvent.click(screen.getByRole('button', { name: 'Text kopieren' }));
     await waitFor(() => expect(kopiert).toHaveBeenCalledWith('ja'));
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
@@ -943,6 +986,25 @@ describe('Rundmail (A7-5)', () => {
     rm.rundmailSenden.mockResolvedValue({ bestaetigt: 1 });
   });
 
+  it('Rückfrage „jetzt senden?“: „Abbrechen“ führt zum Schreiben zurück – der Text bleibt (02.11.2026)', async () => {
+    zeigen(fertig());
+    fireEvent.click(screen.getByRole('button', { name: /Zahlung offen/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Rundmail' }));
+    fireEvent.change(screen.getByLabelText('Betreff'), {
+      target: { value: 'Mein eigener Betreff' },
+    });
+    const senden = screen.getByRole<HTMLButtonElement>('button', { name: 'Senden …' });
+    await waitFor(() => expect(senden.disabled).toBe(false));
+    fireEvent.click(senden);
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    expect(screen.queryByText('1 Mail jetzt senden?')).toBeNull();
+    expect(screen.getByLabelText<HTMLInputElement>('Betreff').value).toBe('Mein eigener Betreff');
+    fireEvent.click(screen.getByRole('button', { name: 'Senden …' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+    expect(screen.getByLabelText<HTMLInputElement>('Betreff').value).toBe('Mein eigener Betreff');
+    expect(rm.rundmailSenden).not.toHaveBeenCalled();
+  });
+
   it('Zahlungserinnerung an „Zahlung offen“: je Anmeldung eine Mail, Platzhalter für ChurchTools, Rückfrage, verschickt', async () => {
     zeigen(fertig());
     fireEvent.click(screen.getByRole('button', { name: /Zahlung offen/ }));
@@ -960,7 +1022,12 @@ describe('Rundmail (A7-5)', () => {
     expect(fensterKnoepfe().slice(-3)).toEqual(['Abbrechen', 'Vorschau', 'Senden …']);
     fireEvent.click(senden);
     expect(screen.getByText('1 Mail jetzt senden?')).toBeTruthy();
-    expect(fensterKnoepfe()).toEqual(['Fenster schließen', 'Zurück', 'Ja, 1 Mail senden']);
+    expect(fensterKnoepfe()).toEqual([
+      'Zurück',
+      'Fenster schließen',
+      'Abbrechen',
+      'Ja, 1 Mail senden',
+    ]);
     fireEvent.click(screen.getByRole('button', { name: 'Ja, 1 Mail senden' }));
     await screen.findByText(/laut Protokoll von ChurchTools übernommen/);
     expect(fensterKnoepfe()).toEqual(['Fenster schließen']);
@@ -993,7 +1060,7 @@ describe('Rundmail (A7-5)', () => {
     );
   });
 
-  it('Vorschau (E6-O F4): unten „Zurück · Senden …“, ganz zu nur über das X', async () => {
+  it('Vorschau (E6-O F4): „‹“ oben zurück, unten „Abbrechen · Senden …“ (02.11.2026)', async () => {
     rm.vorschauLaden.mockResolvedValue({ betreff: 'Kinderfreizeit', html: '<p>Hallo</p>' });
     zeigen(fertig());
     fireEvent.click(screen.getByRole('button', { name: /Zahlung offen/ }));
@@ -1002,8 +1069,9 @@ describe('Rundmail (A7-5)', () => {
     await waitFor(() => expect(vorschau.disabled).toBe(false));
     fireEvent.click(vorschau);
     await screen.findByTitle('Vorschau der Mail');
-    expect(fensterKnoepfe().slice(-2)).toEqual(['Zurück', 'Senden …']);
-    expect(fensterKnoepfe()).not.toContain('Abbrechen');
+    expect(fensterKnoepfe().slice(-2)).toEqual(['Abbrechen', 'Senden …']);
+    // Seit 02.11.2026: „‹“ oben einen Schritt zurück, unten „Abbrechen · …“ (Entwurf „Fenster mit Zurück“).
+    expect(fensterKnoepfe()[0]).toBe('Zurück');
     fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
     expect(screen.getByLabelText('Betreff')).toBeTruthy();
   });

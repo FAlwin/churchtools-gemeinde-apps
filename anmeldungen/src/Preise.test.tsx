@@ -246,11 +246,23 @@ describe('Preis-Fenster (A4)', () => {
     ]);
   });
 
+  it('aus „Baustein hinzufügen“ geöffnet: „‹“ und „Abbrechen“ führen dorthin zurück; aus der Karte kein Pfeil (02.11.2026)', () => {
+    const { wechsel } = fenster({ art: 'extra', index: null, ausNeu: true });
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+    expect(wechsel).toHaveBeenLastCalledWith({ art: 'neu' });
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    expect(wechsel).toHaveBeenCalledTimes(2);
+    cleanup();
+    fenster({ art: 'extra', index: null });
+    expect(screen.queryByRole('button', { name: 'Zurück' })).toBeNull();
+  });
+
   it('Baustein hinzufügen: „Nach Alter“ gibt es schon → gesperrt; Rabatt öffnet das Rabatt-Fenster', () => {
     const { wechsel } = fenster({ art: 'neu' });
     expect(screen.getByRole('button', { name: /Nach Alter/ })).toHaveProperty('disabled', true);
     fireEvent.click(screen.getByRole('button', { name: /Rabatt oder Zuschlag/ }));
-    expect(wechsel).toHaveBeenCalledWith({ art: 'anpassung', index: null });
+    // `ausNeu`: von hier geöffnet – dort führt „‹“ zurück zu dieser Auswahl (02.11.2026).
+    expect(wechsel).toHaveBeenCalledWith({ art: 'anpassung', index: null, ausNeu: true });
   });
 });
 

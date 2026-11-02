@@ -468,6 +468,8 @@ describe('Planen – freien Platz antippen → „Wer kann?“ (E4-2)', () => {
     );
     expect(screen.getByText('Licht · So, 08.11.')).toBeTruthy();
     expect(screen.getByText('Gottesdienst um 10:00 Uhr · Platz 2 von 2')).toBeTruthy();
+    // Vom freien Platz aus gibt es keinen Vorgänger – also kein „‹“ (02.11.2026).
+    expect(screen.queryByRole('button', { name: 'Zurück' })).toBeNull();
     const liste = await screen.findByRole('list', { name: 'Wer kann?' });
     expect(
       within(liste)
@@ -1282,6 +1284,49 @@ describe('Planen – Entwürfe (E4-3-2)', () => {
     expect(
       screen.getByRole('button', { name: 'Entwurf von Alwin: Ben Test statt Anna Test' }),
     ).toBeTruthy();
+  });
+
+  it('„Wer kann?“ vom belegten Platz: „‹“ führt dorthin zurück, das X schließt (02.11.2026)', async () => {
+    laden.mockResolvedValue([{ person: { domainIdentifier: '46', title: 'Ben Test' }, score: 0 }]);
+    zeige4({ speichern: gespeichert() });
+    fireEvent.click(await screen.findByRole('button', { name: ANNA_KNOPF }));
+    fireEvent.click(screen.getByRole('button', { name: 'Andere Person wählen' }));
+    expect(await screen.findByText(/· statt Anna Test/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+    expect(screen.queryByText(/· statt Anna Test/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Zurückziehen' })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Andere Person wählen' }));
+    await screen.findByText(/· statt Anna Test/);
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('nach dem Eintragen ist die Herkunft vergessen: „Wer kann?“ am freien Platz hat kein „‹“', async () => {
+    laden.mockResolvedValue([{ person: { domainIdentifier: '46', title: 'Ben Test' }, score: 0 }]);
+    const speichern = gespeichert();
+    zeige4({ speichern });
+    fireEvent.click(await screen.findByRole('button', { name: ANNA_KNOPF }));
+    fireEvent.click(screen.getByRole('button', { name: 'Andere Person wählen' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Ben Test/ }));
+    await waitFor(() => expect(speichern).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    fireEvent.click(
+      within(zeileVon('Licht')).getByRole('button', { name: 'frei – Wer kann? (Platz 2 von 2)' }),
+    );
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Zurück' })).toBeNull();
+  });
+
+  it('„Wer kann?“ aus dem Entwurf: „‹“ öffnet den Entwurf wieder (02.11.2026)', async () => {
+    laden.mockResolvedValue([{ person: { domainIdentifier: '47', title: 'Finn Test' }, score: 0 }]);
+    zeige4({ laden: () => Promise.resolve(daten([entwurf({ modus: 'direkt', version: 7 })])) });
+    fireEvent.click(await screen.findByRole('button', { name: /^Entwurf von Alwin/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Andere Person wählen' }));
+    await screen.findByRole('button', { name: /^Finn Test/ });
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+    expect(screen.queryByRole('button', { name: /^Finn Test/ })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Andere Person wählen' })).toBeTruthy();
   });
 
   it('liegt dort ein veralteter Entwurf, ist der Platz kein Knopf – erst den Entwurf verwerfen (Schild)', async () => {

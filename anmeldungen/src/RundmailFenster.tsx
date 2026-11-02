@@ -150,12 +150,11 @@ export function RundmailFenster({
       <Sheet
         title="Vorschau"
         onClose={onClose}
-        cancelLabel={null}
+        zurueck={() => setSchritt('schreiben')}
+        // Rückfrage/Unterseite: „Abbrechen“ führt wie „‹“ einen Schritt zurück – nichts Geschriebenes geht verloren.
+        onAbbrechen={() => setSchritt('schreiben')}
         knoepfe={
           <>
-            <FensterKnopf art="zweit" onClick={() => setSchritt('schreiben')}>
-              Zurück
-            </FensterKnopf>
             <FensterKnopf onClick={() => setSchritt('frage')}>Senden …</FensterKnopf>
           </>
         }
@@ -203,12 +202,11 @@ export function RundmailFenster({
         title={`${an.length} ${an.length === 1 ? 'Mail' : 'Mails'} jetzt senden?`}
         onClose={onClose}
         beschaeftigt={arbeitet}
-        cancelLabel={null}
+        zurueck={() => setSchritt('schreiben')}
+        // Rückfrage/Unterseite: „Abbrechen“ führt wie „‹“ einen Schritt zurück – nichts Geschriebenes geht verloren.
+        onAbbrechen={() => setSchritt('schreiben')}
         knoepfe={
           <>
-            <FensterKnopf art="zweit" disabled={arbeitet} onClick={() => setSchritt('schreiben')}>
-              Zurück
-            </FensterKnopf>
             <FensterKnopf
               // Unklar, ob verschickt: nicht noch einmal – das gäbe doppelte Mails.
               disabled={arbeitet || unklar}

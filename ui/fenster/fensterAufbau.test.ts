@@ -72,6 +72,26 @@ describe('Fenster im ChurchTools-Aufbau (E6-O)', () => {
     expect(funde).toEqual([]);
   });
 
+  it('kein „Zurück“-Knopf unten – zurück geht es mit „‹“ oben (02.11.2026)', () => {
+    // Entwurf „Fenster mit Zurück“: Wechselt ein Fenster seine Seite, führt „‹“ vor dem Titel zurück (`Sheet zurueck`).
+    // Ein „Zurück“ unten stand an der Stelle von „Abbrechen“ und sah in jeder App anders aus.
+    const funde: string[] = [];
+    for (const ordner of ORDNER) {
+      for (const datei of dateien(ordner, /\.tsx$/)) {
+        const rel = relative(WURZEL, datei);
+        if (/\.test\.tsx$/.test(rel)) continue;
+        const quelltext = readFileSync(datei, 'utf8');
+        // Die Attribute dürfen `{…}` mit `>` darin enthalten (`onClick={() => …}`) – sonst fände das Muster fast nichts.
+        for (const m of quelltext.matchAll(
+          /<FensterKnopf\b(?:[^>{]|\{(?:[^{}]|\{[^{}]*\})*\})*>\s*Zurück\s*<\/FensterKnopf>/g,
+        )) {
+          funde.push(`${rel}:${quelltext.slice(0, m.index).split('\n').length}`);
+        }
+      }
+    }
+    expect(funde).toEqual([]);
+  });
+
   it('prüft alle Apps und `ui/` (sonst wäre der Test oben billig grün)', () => {
     expect(ORDNER).toEqual(
       expect.arrayContaining([

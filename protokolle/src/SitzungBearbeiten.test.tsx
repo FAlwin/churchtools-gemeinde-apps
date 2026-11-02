@@ -290,6 +290,18 @@ describe('SitzungBearbeiten', () => {
     });
   });
 
+  it('absagen: „‹“ und „Abbrechen“ führen zur Sitzung zurück, ohne abzusagen (02.11.2026)', async () => {
+    zeige();
+    await bereit();
+    fireEvent.click(screen.getByRole('button', { name: 'Sitzung absagen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+    expect(screen.queryByText('Die geplante Sitzung verschwindet')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Sitzung absagen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    expect(screen.queryByText('Die geplante Sitzung verschwindet')).toBeNull();
+    expect(absagen).not.toHaveBeenCalled();
+  });
+
   it('absagen eines begonnenen Protokolls: es bleibt', async () => {
     zeige({ ...SITZUNG, kopf: { ...SITZUNG.kopf!, status: 'entwurf' } });
     await bereit();

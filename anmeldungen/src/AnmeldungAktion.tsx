@@ -198,14 +198,15 @@ export function MailAnsicht({ mail, kopiert }: { mail: Mail; kopiert: Kopiert })
   );
 }
 
-/** Unten in der Mail-Ansicht: zurück zur Anmeldung, Text kopieren, im Mailprogramm öffnen (nur mit Adresse). */
+/**
+ * Unten in der Mail-Ansicht: Text kopieren, im Mailprogramm öffnen (nur mit Adresse). Zurück zur Anmeldung geht seit
+ * 02.11.2026 über „‹“ oben im Fenster.
+ */
 export function MailKnoepfe({
   mail,
-  onZurueck,
   onKopiert,
 }: {
   mail: Mail;
-  onZurueck: () => void;
   onKopiert: (k: Exclude<Kopiert, null>) => void;
 }) {
   const kopieren = () =>
@@ -215,9 +216,6 @@ export function MailKnoepfe({
     );
   return (
     <>
-      <FensterKnopf art="zweit" onClick={onZurueck}>
-        Zurück
-      </FensterKnopf>
       <FensterKnopf art={mail.an ? 'hell' : 'haupt'} onClick={() => void kopieren()}>
         Text kopieren
       </FensterKnopf>

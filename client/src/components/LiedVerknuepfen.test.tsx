@@ -75,6 +75,7 @@ vi.mock('./NewSongSheet', () => ({
     onVerknuepfen?: (arrangementId: number, name: string) => void;
     onVorhandenes?: (song: SongLibraryEntry) => void;
     onClose: () => void;
+    zurueck?: () => void;
   }) => (
     <div data-testid="newsong">
       <div data-testid="newsong-eventId">{String(p.eventId)}</div>
@@ -82,7 +83,8 @@ vi.mock('./NewSongSheet', () => ({
       <div data-testid="newsong-treffer">{p.startTreffer?.title ?? ''}</div>
       <button onClick={() => p.onVerknuepfen?.(770, 'Neu angelegt')}>Blatt: verknüpfen</button>
       <button onClick={() => p.onVorhandenes?.(SCHON_DA)}>Blatt: vorhandenes</button>
-      <button onClick={p.onClose}>Blatt: abbrechen</button>
+      <button onClick={p.zurueck}>Blatt: abbrechen</button>
+      <button onClick={p.onClose}>Blatt: X</button>
     </div>
   ),
 }));
@@ -188,6 +190,19 @@ describe('ItemActionSheet – „Neues Lied" beim Verknüpfen (#391)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     await vi.waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
     expect(onUpdate.mock.calls[0][0]).toMatchObject({ arrangementId: 770 });
+  });
+
+  it('„Lied verknüpfen“: „‹“ zurück zum Eintrag; im Blatt „Neues Lied“ schließt das X alles (02.11.2026)', () => {
+    const onClose = vi.fn();
+    zeige({ onClose });
+    verknuepfenOeffnen();
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+    expect(screen.getByRole('button', { name: 'Lied verknüpfen' })).toBeTruthy();
+    expect(onClose).not.toHaveBeenCalled();
+    verknuepfenOeffnen();
+    fireEvent.click(screen.getByRole('button', { name: 'Neues Lied' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Blatt: X' }));
+    expect(onClose).toHaveBeenCalledOnce();
   });
 
   it('ein Abbruch im Blatt merkt nichts vor und führt zurück in die Suche', () => {

@@ -31,6 +31,7 @@ export function ZurueckFenster({
   b,
   liste,
   onClose,
+  zurueck,
   onFertig,
   mitBestaetigung = false,
 }: {
@@ -41,7 +42,13 @@ export function ZurueckFenster({
   lage: HandLage;
   b: Absage;
   liste: ListenAnmeldung[];
+  /** X: schließt alles (02.11.2026). */
   onClose: () => void;
+  /**
+   * „‹“ und „Abbrechen“: zurück zum Fenster, aus dem das Zurückholen aufging (die Anmeldung oder „Anmeldung von Hand“).
+   * Ohne Angabe kein Pfeil, und „Abbrechen“ schließt wie das X.
+   */
+  zurueck?: () => void;
   onFertig: (x: VonHandFertig) => void;
   /** Bestätigungsmails eingerichtet (A9-1). */
   mitBestaetigung?: boolean;
@@ -113,6 +120,8 @@ export function ZurueckFenster({
     <Sheet
       title={`${b.name} zurückholen?`}
       onClose={onClose}
+      zurueck={zurueck}
+      onAbbrechen={zurueck ?? onClose}
       beschaeftigt={arbeitet}
       knoepfe={
         <FensterKnopf disabled={arbeitet || !plan} onClick={() => void zurueckholen()}>

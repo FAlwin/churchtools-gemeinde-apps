@@ -82,11 +82,17 @@ const SUCHE_AB = 7;
 export function WerKann({
   platz,
   onClose,
+  zurueck,
   eintragen,
   stift,
 }: {
   platz: FreierPlatz;
   onClose: () => void;
+  /**
+   * „‹“ – zurück zum Fenster, aus dem „Wer kann?“ aufging (Entwurf oder belegter Platz, Alwin 02.11.2026). Vom freien
+   * Platz aus gibt es keinen Vorgänger, also keinen Pfeil.
+   */
+  zurueck?: () => void;
   eintragen?: Eintragen;
   /** Der Stift (E5-3): Vorlieben der Kandidaten für diese Dienstgruppe ändern. Ohne Angabe kein Stift. */
   stift?: { vorlieben: EntwurfAnschluss['vorlieben']; gruppe: { id: number; name: string } };
@@ -135,7 +141,12 @@ export function WerKann({
 
   const q = suche.trim().toLowerCase();
   return (
-    <Sheet title={`${platz.dienst} · ${platz.tag}`} onClose={onClose} knoepfe={null}>
+    <Sheet
+      title={`${platz.dienst} · ${platz.tag}`}
+      onClose={onClose}
+      knoepfe={null}
+      zurueck={zurueck}
+    >
       <p className={styles.unter}>
         {platz.termin} um {platz.uhrzeit} Uhr · Platz {platz.nr} von {platz.von}
         {platz.bisher && <> · statt {platz.bisher.name}</>}

@@ -58,12 +58,20 @@ export function VerwaltenFenster({
       ? ` Die ${anmeldungen === 1 ? 'eine Anmeldung bleibt' : `${anmeldungen} Anmeldungen bleiben`} erhalten.`
       : '';
 
+  /**
+   * Jede Unterseite führt mit „‹“ und „Abbrechen“ zurück zur Auswahl, das X schließt (Alwin, 02.11.2026). Bis dahin
+   * gab es keinen Rückweg – „Abbrechen“ schloss das ganze Fenster.
+   */
+  const zurAuswahl = () => setAnsicht('auswahl');
+
   if (ansicht === 'name') {
     const sauber = neuerName.trim();
     return (
       <Sheet
         title="Umbenennen"
         onClose={onClose}
+        zurueck={zurAuswahl}
+        onAbbrechen={zurAuswahl}
         beschaeftigt={arbeitet}
         knoepfe={
           <FensterKnopf
@@ -102,6 +110,8 @@ export function VerwaltenFenster({
       <Sheet
         title="Freigabe zurücknehmen?"
         onClose={onClose}
+        zurueck={zurAuswahl}
+        onAbbrechen={zurAuswahl}
         beschaeftigt={arbeitet}
         knoepfe={
           <FensterKnopf
@@ -133,8 +143,9 @@ export function VerwaltenFenster({
       <Sheet
         title="In ein anderes Team"
         onClose={onClose}
+        zurueck={zurAuswahl}
+        onAbbrechen={zurAuswahl}
         beschaeftigt={arbeitet}
-        cancelLabel={moeglich ? 'Abbrechen' : 'Schließen'}
         knoepfe={
           moeglich ? (
             <FensterKnopf
@@ -185,6 +196,8 @@ export function VerwaltenFenster({
       <Sheet
         title="Löschen?"
         onClose={onClose}
+        zurueck={zurAuswahl}
+        onAbbrechen={zurAuswahl}
         beschaeftigt={arbeitet}
         knoepfe={
           <FensterKnopf

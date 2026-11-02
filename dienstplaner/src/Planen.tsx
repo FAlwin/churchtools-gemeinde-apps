@@ -233,6 +233,15 @@ export function Planen({
     inChurchTools: string | null;
   } | null>(null);
   const [ersetzt, setErsetzt] = useState<number | null>(null);
+  /**
+   * Aus welchem Fenster „Wer kann?“ aufging (Alwin, 02.11.2026: „Wechselt ein Screen im Fenster, soll es einen
+   * Zurück-Pfeil geben“) – „‹“ öffnet genau dieses wieder. `null`: vom freien Platz aus, dann gibt es keinen Pfeil.
+   */
+  const [werKannVon, setWerKannVon] = useState<
+    | { art: 'entwurf'; fach: NonNullable<typeof fach> }
+    | { art: 'belegt'; platz: FreierPlatz }
+    | null
+  >(null);
   // Das offene Senden-Fach mit seiner Liste (beim Öffnen festgehalten).
   const [sendenListe, setSendenListe] = useState<SendeZeile[] | null>(null);
   const [rahmen, platz] = useBreite();
@@ -870,6 +879,7 @@ export function Planen({
         if (r.ok) {
           setFrei(null);
           setErsetzt(null);
+          setWerKannVon(null);
           showToast(
             f.bisher
               ? `${ziel.name} statt ${f.bisher.name} eingetragen – noch nicht gesendet.`
@@ -983,6 +993,7 @@ export function Planen({
             // „Wer kann?“ für denselben Platz – es ersetzt den Entwurf (mit seiner Version).
             setErsetzt(fach.entwurf.version);
             setFrei(fach.platz);
+            setWerKannVon({ art: 'entwurf', fach });
             setFach(null);
           }}
         />
@@ -993,7 +1004,19 @@ export function Planen({
           onClose={() => {
             setFrei(null);
             setErsetzt(null);
+            setWerKannVon(null);
           }}
+          zurueck={
+            werKannVon
+              ? () => {
+                  setFrei(null);
+                  setErsetzt(null);
+                  setWerKannVon(null);
+                  if (werKannVon.art === 'entwurf') setFach(werKannVon.fach);
+                  else setBelegt(werKannVon.platz);
+                }
+              : undefined
+          }
           eintragen={eintragenFuer(frei)}
           stift={stiftFuer(frei)}
         />
@@ -1006,6 +1029,7 @@ export function Planen({
           onAnderePerson={() => {
             // „Wer kann?“ für denselben Platz – die Wahl ersetzt die Person, die dort steht.
             setFrei(belegt);
+            setWerKannVon({ art: 'belegt', platz: belegt });
             setBelegt(null);
           }}
           onZurueckziehen={async () => {

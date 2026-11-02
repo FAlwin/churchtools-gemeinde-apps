@@ -164,7 +164,7 @@ describe('wie die ChurchTools-App (E6-O1)', () => {
     expect(container.textContent).toContain('Anna Feld');
   });
 
-  it('die Kreise öffnen die Zuständigen mit ihrem Dienst; offene Dienste stehen darin als „offen“ (02.11.2026)', () => {
+  it('die Kreise klappen die Zuständigen mit ihrem Dienst auf – am Knopf, an `body`; offene Dienste als „offen“ (02.11.2026)', () => {
     const zeile = z({
       id: 9,
       title: 'Musik',
@@ -176,18 +176,52 @@ describe('wie die ChurchTools-App (E6-O1)', () => {
         ],
       },
     });
-    render(<AblaufListe zeilen={[zeile]} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Zuständige für „Musik“ zeigen' }));
-    const fenster = screen.getByRole('dialog', { name: 'Zuständig · Musik' });
-    const zeilen = within(fenster)
+    const { container } = render(<AblaufListe zeilen={[zeile]} />);
+    const knopf = screen.getByRole('button', { name: 'Zuständige für „Musik“ zeigen' });
+    // Unten ist Platz (Testfenster 768 hoch, Knopf oben) → unter dem Knopf, rechtsbündig an ihm.
+    knopf.getBoundingClientRect = () => ({ top: 100, bottom: 136, right: 900 }) as DOMRect;
+    fireEvent.click(knopf);
+    const liste = screen.getByRole('dialog', { name: 'Zuständig · Musik' });
+    // An `body`, nicht in der Liste – sonst schnitte die Tabelle sie ab.
+    expect(container.contains(liste)).toBe(false);
+    expect(liste.style.top).toBe('140px');
+    expect(knopf.getAttribute('aria-expanded')).toBe('true');
+    const zeilen = within(liste)
       .getAllByRole('listitem')
       .map((li) => li.textContent);
     expect(zeilen).toEqual(['Anna FeldMusik', 'Lea FrommTon', 'Gesangoffen']);
-    fireEvent.click(within(fenster).getByRole('button', { name: 'Fenster schließen' }));
+    // Escape schließt; ebenso Scrollen.
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    fireEvent.click(knopf);
+    fireEvent.scroll(window);
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('ein Lied: der Punkt öffnet die Charts, die Kreise das Fenster – zwei getrennte Knöpfe', () => {
+  it('unten zu wenig Platz: die Liste klappt nach oben auf', () => {
+    render(
+      <AblaufListe
+        zeilen={[
+          z({
+            id: 9,
+            title: 'Musik',
+            responsible: {
+              persons: [{ service: '[Musik]', person: { title: 'Anna Feld', initials: 'AF' } }],
+            },
+          }),
+        ]}
+      />,
+    );
+    const knopf = screen.getByRole('button', { name: 'Zuständige für „Musik“ zeigen' });
+    knopf.getBoundingClientRect = () =>
+      ({ top: window.innerHeight - 60, bottom: window.innerHeight - 24, right: 900 }) as DOMRect;
+    fireEvent.click(knopf);
+    const liste = screen.getByRole('dialog', { name: 'Zuständig · Musik' });
+    expect(liste.style.top).toBe('');
+    expect(liste.style.bottom).toBe('64px');
+  });
+
+  it('ein Lied: der Punkt öffnet die Charts, die Kreise die Zuständigen – zwei getrennte Knöpfe', () => {
     const onLied = vi.fn();
     const lied = z({
       id: 4,
@@ -201,7 +235,7 @@ describe('wie die ChurchTools-App (E6-O1)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Zuständige für „Lied“ zeigen' }));
     expect(onLied).not.toHaveBeenCalled();
     expect(screen.getByRole('dialog')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
+    fireEvent.keyDown(document, { key: 'Escape' });
     fireEvent.click(screen.getByText('Treu'));
     expect(onLied).toHaveBeenCalledOnce();
   });

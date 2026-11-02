@@ -10,8 +10,8 @@
     („Technik ›“), das dorthin scrollt.
 - **Beim Bearbeiten stehen die Infos der gewählten Spalten unter dem Punkt** („Technik: …“) – vorher sah man dort
   nicht, was schon eingetragen war.
-- **Die Kreise der Zuständigen sind antippbar** (Variante C): Ein Fenster nennt alle Personen mit ihrem Dienst, offene
-  Dienste rot. Die Namen unter dem Titel bleiben. Bei Liedern öffnet der Punkt weiter das Blatt, die Kreise das
+- **Die Kreise der Zuständigen sind antippbar** (Variante C): Direkt am Knopf klappt eine Liste mit allen Personen und
+  ihrem Dienst auf, offene Dienste rot. Die Namen unter dem Titel bleiben. Bei Liedern öffnet der Punkt weiter das Blatt, die Kreise das
   Fenster.
 - **Musik-App: nur Kürzel in den Kreisen** („in der eigenen App nur Initialen“). Auf dem eigenen Server blockte die
   Sicherheitsregel die Fotos aus ChurchTools – es blieb ein leerer Kreis. Im Dienstplaner (in ChurchTools) bleiben
@@ -20,7 +20,7 @@
 ### Intern (Musik-App + Dienstplaner)
 
 - `AblaufListe`: Punkt-Zelle (bei Liedern nur sie als Knopf, damit die Kreise ein eigener Knopf sein können), Spalten
-  per `subgrid`, `useSpaltenSicht` misst verdeckte Spalten an den Köpfen; neu `ZustaendigeFenster`, `fotos`,
+  per `subgrid`, `useSpaltenSicht` misst verdeckte Spalten an den Köpfen; neu `ZustaendigeListe` (am Knopf, an `body`), `fotos`,
   `ResponsibleEntry.dienst`, `useAblaufBearbeiten({ infoSpalten })`. Gegenprobe: 20 Teile einzeln zurückgenommen,
   jeder macht Tests rot (die Matrix-Sonderregel für Infos war überflüssig – die schmale Form zeigt ohnehin nur den
   Titel – und ist entfernt). TF-ABLAUF-12, TF-EDIT-14.

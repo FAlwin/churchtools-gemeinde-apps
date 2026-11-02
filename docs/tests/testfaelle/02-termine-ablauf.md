@@ -271,12 +271,14 @@ steht der Termin danach als normaler Termin – nur einmal.
 **Das muss passieren:** Musik-App und Dienstplaner zeigen den Ablauf gleich: eine Liste mit feinen Linien (keine
 Karten), links die Uhrzeit fett und die Dauer klein darunter, der Titel fett, die Zuständigen grau darunter (offene
 Dienste rot mit „?“), rechts runde Kreise – im Dienstplaner Foto oder Kürzel, in der Musik-App nur Kürzel (seit
-02.11.2026), ab drei Personen „+N“. Die Kreise antippen → Fenster „Zuständig · …“ mit allen Personen und ihrem Dienst,
+02.11.2026), ab drei Personen „+N“. Die Kreise antippen → direkt am Knopf klappt „Zuständig · …“ auf, mit allen Personen und ihrem Dienst,
 offene Dienste rot „offen“. Überschriften und „Beginn“ stehen
 als graue Balken, das Lied mit blauem Streifen und einer Lied-Karte (Liedname, Tonart · Tempo · Autor).
 
 1. Termin in der Musik-App öffnen: Ansicht wie beschrieben; das Lied antippen öffnet das Blatt, die Kreise daneben
-   öffnen das Fenster der Zuständigen (nicht das Blatt). Kein leerer Kreis, auch bei Personen mit Foto.
+   klappen die Zuständigen am Knopf auf (nicht das Blatt) – unten am Bildschirm nach oben; Scrollen, Escape oder ein
+   Tipp daneben schließen. Beim Drüberfahren färben sich nur die Kreise blau. Kein leerer Kreis, auch bei Personen mit
+   Foto.
 2. Denselben Termin im Dienstplaner öffnen: dieselbe Liste; die Lied-Karte nennt auch den Autor.
 3. **Bearbeiten**: Griff links, Uhrzeit und Dauer wie in der Ansicht, rechts nur der Stift (keine Kreise); ein
    weggelassener Punkt bleibt blass.
@@ -285,8 +287,8 @@ als graue Balken, das Lied mit blauem Streifen und einer Lied-Karte (Liedname, T
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `ui/ablauf/AblaufListe.tsx`, `ui/ablauf/AblaufTeile.tsx`, `ui/ablauf/ZustaendigeFenster.tsx`, `ui/ablauf/AgendaSortableRow.tsx`, `shared/ct/agendaFormat.ts`, `shared/ct/ablaufZeile.ts`, `dienstplaner/src/TerminAnsicht.tsx`, `dienstplaner/src/ladeBeiwerk.ts`, `client/src/components/AgendaFullView.tsx`
-- **Automatisiert:** ja – `ui/ablauf/AblaufListe.test.tsx` (Dauer, Lied-Karte, Kreise, Foto nur mit `fotos`, Ersatz bei kaputtem Foto, Fenster der Zuständigen, Lied und Kreise getrennt, Balken), `ui/ablauf/useAblaufBearbeiten.test.tsx` (blass im Bearbeiten), `shared/ct/agendaFormat.test.ts` (Kürzel, Foto, Dienst), `dienstplaner/src/TerminAnsicht.test.tsx` (Autor per Sammelabfrage, Fehlschlag, Foto in ChurchTools), `client/src/components/AgendaFullView.test.tsx` (nur Kürzel auf dem eigenen Server); von Hand bleibt der Blick auf echte Fotos
+- **Betrifft:** `ui/ablauf/AblaufListe.tsx`, `ui/ablauf/AblaufTeile.tsx`, `ui/ablauf/ZustaendigeListe.tsx`, `ui/ablauf/AgendaSortableRow.tsx`, `shared/ct/agendaFormat.ts`, `shared/ct/ablaufZeile.ts`, `dienstplaner/src/TerminAnsicht.tsx`, `dienstplaner/src/ladeBeiwerk.ts`, `client/src/components/AgendaFullView.tsx`
+- **Automatisiert:** ja – `ui/ablauf/AblaufListe.test.tsx` (Dauer, Lied-Karte, Kreise, Foto nur mit `fotos`, Ersatz bei kaputtem Foto, Zuständige am Knopf an `body` samt Aufklappen nach oben und Schließen beim Scrollen, Lied und Kreise getrennt, Balken), `ui/ablauf/useAblaufBearbeiten.test.tsx` (blass im Bearbeiten), `shared/ct/agendaFormat.test.ts` (Kürzel, Foto, Dienst), `dienstplaner/src/TerminAnsicht.test.tsx` (Autor per Sammelabfrage, Fehlschlag, Foto in ChurchTools), `client/src/components/AgendaFullView.test.tsx` (nur Kürzel auf dem eigenen Server); von Hand bleibt der Blick auf echte Fotos
 - **Historie:** #710 (23.10.2026, Entwurf `e6-optik-entwurf.html`, gemessen E6-O0)
 
 </details>

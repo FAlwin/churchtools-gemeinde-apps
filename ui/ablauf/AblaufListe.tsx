@@ -19,7 +19,6 @@ import {
   WeggelassenHinweis,
   ZeitText,
 } from './AblaufTeile';
-import { ZustaendigeFenster } from './ZustaendigeFenster';
 import styles from './AblaufListe.module.scss';
 
 /** Uhrzeit fett, Dauer klein darunter (Variante 1) – eine Stelle für Ansicht und Bearbeiten-Liste. */
@@ -136,8 +135,6 @@ export function AblaufListe({
   const ende = mitEnde ? ablaufEnde(sichtbar) : null;
   // Der Balken „Beginn“ vor dem ersten Punkt nach dem Vorlauf (#423) – nur, wenn es Vorlauf gibt.
   const stelle = beginnStelle(sichtbar);
-  /** Der Punkt, dessen Zuständige gerade im Fenster stehen (Kreise antippen, 02.11.2026). */
-  const [zustaendig, setZustaendig] = useState<AblaufZeile | null>(null);
   const sicht = useSpaltenSicht(alsSpalten ? infos.length : 0);
   let liedIndex = -1;
 
@@ -199,12 +196,7 @@ export function AblaufListe({
         <div className={styles.punktZelle}>
           {punktTeil}
           {!schmal && (
-            <Kuerzel
-              entries={item.responsible}
-              fotos={fotos}
-              titel={item.title}
-              onOeffnen={() => setZustaendig(item)}
-            />
+            <Kuerzel entries={item.responsible} fotos={fotos} titel={item.title} aufklappbar />
           )}
           {verdeckt.length > 0 && (
             <div className={styles.verdeckt}>
@@ -262,17 +254,8 @@ export function AblaufListe({
     </>
   );
 
-  const fenster = zustaendig && (
-    <ZustaendigeFenster punkt={zustaendig} onClose={() => setZustaendig(null)} />
-  );
-
   if (!alsSpalten) {
-    return (
-      <div className={`${styles.flowList}${schmal ? ` ${styles.schmal}` : ''}`}>
-        {reihen}
-        {fenster}
-      </div>
-    );
+    return <div className={`${styles.flowList}${schmal ? ` ${styles.schmal}` : ''}`}>{reihen}</div>;
   }
 
   /**
@@ -306,7 +289,6 @@ export function AblaufListe({
           ›
         </span>
       )}
-      {fenster}
     </div>
   );
 }

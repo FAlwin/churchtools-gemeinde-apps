@@ -1,4 +1,11 @@
-// Die Zuständigen eines Punkts (02.11.2026) – eine Zeile je Person, der Dienst grau dahinter, offene Dienste rot.
+// Die Zuständigen eines Punkts (02.11.2026) – klappt am Knopf der Kreise auf: eine Zeile je Person, der Dienst grau
+// dahinter, offene Dienste rot.
+.titel {
+  display: block;
+  padding: 2px 0 6px;
+  font-size: 13px;
+  color: var(--text2);
+}
 .liste {
   list-style: none;
   margin: 0;
@@ -8,9 +15,9 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 0;
-  font-size: 15px;
+  gap: 16px;
+  padding: 7px 0;
+  font-size: 14px;
 
   & + & {
     border-top: 1px solid var(--hair);
@@ -25,6 +32,6 @@
 }
 .dienst {
   color: var(--text2);
-  font-size: 13px;
+  font-size: 12.5px;
   text-align: right;
 }

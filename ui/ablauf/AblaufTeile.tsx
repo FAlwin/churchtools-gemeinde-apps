@@ -6,11 +6,14 @@
  * Zuständigen und deren Zeile. Sie werden von der Ablauf-Ansicht UND von der sortierbaren Zeile
  * im Bearbeiten-Modus verwendet – deshalb gemeinsam und außerhalb beider.
  */
-import { useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { AblaufZeile } from '@shared/ct/ablaufZeile';
 import type { ResponsibleEntry } from '@shared/types/index';
 import { itemTitleParts } from '@shared/ct/ablaufZeile';
 import { Icon } from '../icons/icons';
+import { BodyPortal } from '../fenster/BodyPortal';
+import { useAufklapp } from '../bedienung/useAufklapp';
+import { ZustaendigeListe } from './ZustaendigeListe';
 import styles from './AblaufTeile.module.scss';
 
 /**
@@ -90,22 +93,40 @@ function Kreis({ person, fotos }: { person: ResponsibleEntry; fotos: boolean }) 
  * Die Zuständigen als runde Kreise rechts in der Zeile (E6-O1): Kürzel, ab drei Personen „+N“. Offene Dienste stehen
  * nicht darin – die nennt die Namenszeile rot.
  *
- * **Antippbar** (Alwin, 02.11.2026, Entwurf „Ablauf mit Info-Spalten“ Bild 5 C): Mit `onOeffnen` sind die Kreise ein
- * Knopf, der alle Zuständigen mit ihrem Dienst zeigt – vorher war „+3“ nur Schmuck. **Fotos** nur mit `fotos` (in
- * ChurchTools selbst); die Musik-App auf dem eigenen Server zeigt Kürzel („in der eigenen App nur Initialen“).
+ * **Antippbar** (Alwin, 02.11.2026, Entwurf „Ablauf mit Info-Spalten“ Bild 5 C): Mit `aufklappbar` sind die Kreise ein
+ * Knopf; die Zuständigen samt Dienst klappen **direkt am Knopf** auf – vorher war „+3“ nur Schmuck, und ein Fenster in
+ * der Mitte stand an der falschen Stelle der Seite. Wie das Menü am Plus einer Zeile hängt die Liste an `body` (sonst
+ * schnitte die Tabelle sie ab), steht fest am Knopf – darunter, oder darüber, wenn unten der Platz fehlt – und schließt
+ * beim Scrollen, bei Escape und beim Tipp daneben. **Fotos** nur mit `fotos` (in ChurchTools selbst); die Musik-App auf
+ * dem eigenen Server zeigt Kürzel („in der eigenen App nur Initialen“).
  */
 export function Kuerzel({
   entries,
   fotos = false,
-  onOeffnen,
-  titel,
+  aufklappbar = false,
+  titel = '',
 }: {
   entries: AblaufZeile['responsible'];
   fotos?: boolean;
-  onOeffnen?: () => void;
-  /** Der Punkt – für die Beschriftung des Knopfs. */
+  aufklappbar?: boolean;
+  /** Der Punkt – für Knopf und Liste. */
   titel?: string;
 }) {
+  const { offen, setOffen, rahmen, menue } = useAufklapp();
+  const knopf = useRef<HTMLButtonElement>(null);
+  const [stelle, setStelle] = useState<CSSProperties>({});
+
+  useEffect(() => {
+    if (!offen) return;
+    const zu = () => setOffen(false);
+    window.addEventListener('scroll', zu, true);
+    window.addEventListener('resize', zu);
+    return () => {
+      window.removeEventListener('scroll', zu, true);
+      window.removeEventListener('resize', zu);
+    };
+  }, [offen, setOffen]);
+
   const personen = entries.filter((e) => !e.open && e.kuerzel);
   if (personen.length === 0) return null;
   const mehr = personen.length - KREISE;
@@ -117,24 +138,60 @@ export function Kuerzel({
       {mehr > 0 && <span className={styles.kreis}>+{mehr}</span>}
     </>
   );
-  if (!onOeffnen) {
+  if (!aufklappbar) {
     return (
       <span className={styles.kreise} aria-hidden="true">
         {kreise}
       </span>
     );
   }
+
+  function umschalten(): void {
+    const r = knopf.current?.getBoundingClientRect();
+    if (r) {
+      const rechts = window.innerWidth - r.right;
+      // Unten zu wenig Platz → nach oben aufklappen (die Liste ist höchstens LISTE_HOEHE hoch).
+      setStelle(
+        window.innerHeight - r.bottom < LISTE_HOEHE
+          ? { bottom: window.innerHeight - r.top + 4, right: rechts }
+          : { top: r.bottom + 4, right: rechts },
+      );
+    }
+    setOffen((o) => !o);
+  }
+
   return (
-    <button
-      type="button"
-      className={`${styles.kreise} ${styles.kreiseKnopf}`}
-      onClick={onOeffnen}
-      aria-label={titel ? `Zuständige für „${titel}“ zeigen` : 'Zuständige zeigen'}
-    >
-      {kreise}
-    </button>
+    <span ref={rahmen} className={styles.kreiseRahmen}>
+      <button
+        ref={knopf}
+        type="button"
+        className={`${styles.kreise} ${styles.kreiseKnopf}`}
+        onClick={umschalten}
+        aria-label={titel ? `Zuständige für „${titel}“ zeigen` : 'Zuständige zeigen'}
+        aria-haspopup="dialog"
+        aria-expanded={offen}
+      >
+        {kreise}
+      </button>
+      {offen && (
+        <BodyPortal>
+          <div
+            ref={menue}
+            role="dialog"
+            aria-label={`Zuständig · ${titel}`}
+            className={styles.zustaendigAufklapp}
+            style={stelle}
+          >
+            <ZustaendigeListe punkt={{ title: titel, responsible: entries }} />
+          </div>
+        </BodyPortal>
+      )}
+    </span>
   );
 }
+
+/** So hoch wird die aufgeklappte Liste höchstens (px) – reicht der Platz unter dem Knopf nicht, klappt sie nach oben. */
+const LISTE_HOEHE = 320;
 
 /**
  * Die Uhrzeit einer Zeile – an diesem Termin weggelassen (Auge, E6-3b) „—“, sonst die Zeit (oder nichts). Eine Stelle

@@ -152,27 +152,50 @@
     object-fit: cover;
   }
 }
-// Die Kreise als Knopf (02.11.2026): öffnen die Zuständigen mit Dienst. Tippfläche mindestens so hoch wie die Zeile
-// es zulässt; der Rand zeigt beim Drüberfahren, dass hier etwas passiert.
+// Die Kreise als Knopf (02.11.2026): klappen die Zuständigen mit Dienst auf. Beim Drüberfahren und solange offen färben
+// sich nur die Kreise blau – kein Rahmen drumherum (Alwin: „wird nicht schön beim Hover angezeigt“).
+.kreiseRahmen {
+  display: inline-flex;
+  flex: none;
+  align-self: center;
+}
 .kreiseKnopf {
   min-height: 36px;
-  padding: 2px 4px 2px 9px;
-  border: 1px solid transparent;
-  border-radius: 999px;
+  padding: 2px 2px 2px 9px;
+  border: none;
   background: none;
   font: inherit;
   cursor: pointer;
 
   @media (hover: hover) {
-    &:hover {
-      border-color: var(--border);
-      background: var(--surface3);
+    &:hover .kreis {
+      background: var(--blue-soft);
+      color: var(--blue-ink);
     }
+  }
+  &[aria-expanded='true'] .kreis {
+    background: var(--blue-soft);
+    color: var(--blue-ink);
   }
   &:focus-visible {
     outline: 2px solid var(--blue);
-    outline-offset: 1px;
+    outline-offset: 2px;
+    border-radius: 999px;
   }
+}
+// Die aufgeklappte Liste – fest am Knopf (`Kuerzel` setzt top/bottom und right), über der Tabelle.
+.zustaendigAufklapp {
+  position: fixed;
+  z-index: 50;
+  min-width: 220px;
+  max-width: min(320px, calc(100vw - 24px));
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 10px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  box-shadow: 0 10px 30px rgba(15, 23, 43, 0.18); // wie die anderen Aufklapp-Menüs (`OptionWaehlen`)
 }
 
 // Hinweis an einer an diesem Termin weggelassenen Zeile (E6-3b).

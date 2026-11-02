@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { anmeldungenAus, antwortText, listenZahlen, mitgliederstandAus } from './liste';
+import {
+  anmeldungenAus,
+  antwortText,
+  listenZahlen,
+  mehrfachAntworten,
+  mitgliederstandAus,
+} from './liste';
 import { FELDER, PERSONEN, STICHTAG, e, mitglieder } from './liste.testdaten';
 import { druckWahlFuer, fragen, teilnehmerSpalten, teilnehmerZelle } from './druckliste';
 import {
@@ -13,7 +19,6 @@ import {
   frageSumme,
   gezeigteSpalten,
   mitSpaltenWahl,
-  mehrfachAntworten,
   passtZurSuche,
   obenZuerst,
   personSchluessel,
@@ -171,6 +176,14 @@ describe('Summen', () => {
       'Fr 2 · Sa, abends 1 · So 1 · Do 1',
     );
     expect(frageSumme(feld('select', ['A']), ['A', 'Alt'])?.text).toBe('A 1 · Alt 1');
+  });
+  it('Mehrfachauswahl: die Summe zählt, was `antwortText` zeigt („Fr · Sa, abends“), wie zuvor den Text aus ChurchTools', () => {
+    const f = feld('multi', ['Fr', 'Sa, abends', 'So'], ['Do']);
+    const gezeigt = ['Fr, Sa, abends', 'Do, So', 'Fr'].map((w) =>
+      antwortText(f, { 7: w }, { f1: 7 }),
+    );
+    expect(gezeigt).toEqual(['Fr · Sa, abends', 'So · Do', 'Fr']);
+    expect(frageSumme(f, gezeigt)?.text).toBe('Fr 2 · Sa, abends 1 · So 1 · Do 1');
   });
 });
 

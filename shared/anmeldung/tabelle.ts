@@ -16,7 +16,7 @@ import {
   teilnehmerSpalten,
   teilnehmerZelle,
 } from './druckliste';
-import { listenZahlen, type ListenAnmeldung, type ListenPerson } from './liste';
+import { listenZahlen, mehrfachAntworten, type ListenAnmeldung, type ListenPerson } from './liste';
 import { altersregel, euroText, kannEtwasKosten } from './preis';
 
 export interface TabellenSpalte {
@@ -66,17 +66,6 @@ function zahlAus(text: string | null): number | null {
   if (text === null || text.trim() === '') return null;
   const n = Number(text.trim().replace(',', '.'));
   return Number.isFinite(n) ? n : null;
-}
-
-/**
- * **Die gewählten Antworten einer Mehrfachauswahl** – ChurchTools speichert sie als Text „Fr, Sa“ (A0). Gesucht wird
- * jede bekannte Antwort als ganzes Stück, damit „Sa, So“ nicht in „Sa“ und „So“ zerfällt, wenn eine Antwort selbst ein
- * Komma enthält.
- */
-export function mehrfachAntworten(f: Feld, text: string | null): string[] {
-  if (!text) return [];
-  const rein = `, ${text}, `;
-  return [...f.antworten, ...(f.verborgen ?? [])].filter((a) => rein.includes(`, ${a}, `));
 }
 
 /** Was in der Zelle steht – nur Text; Personen, Bezahlt und Name zeichnet die Erweiterung selbst. */

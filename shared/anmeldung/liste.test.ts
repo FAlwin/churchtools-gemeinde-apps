@@ -259,19 +259,30 @@ describe('Sonderfälle', () => {
 });
 
 describe('Antwort als Text (Fenster und Druckliste, A8)', () => {
-  const feld = (typ: 'check' | 'text' | 'info') => ({
+  const feld = (typ: 'check' | 'text' | 'info' | 'multi', antworten: string[] = []) => ({
     id: 'q',
     art: 'eigen' as const,
     typ,
     frage: 'Frage',
     hilfe: '',
     zustand: 'freiwillig' as const,
-    antworten: [],
+    antworten,
   });
   it('angekreuzt → „ja“, Text bleibt, ohne Antwort oder ohne eigene Spalte → nichts', () => {
     expect(antwortText(feld('check'), { 7: '1' }, { q: 7 })).toBe('ja');
     expect(antwortText(feld('text'), { 7: 'Hallo' }, { q: 7 })).toBe('Hallo');
     expect(antwortText(feld('text'), {}, { q: 7 })).toBeNull();
     expect(antwortText(feld('info'), { 7: 'x' }, { q: 7 })).toBeNull();
+  });
+  it('Mehrfachauswahl mit „ · “ getrennt – ist eine Antwort unbekannt, bleibt der Text aus ChurchTools', () => {
+    const f = feld('multi', ['Fr, 14.05.', 'Sa, 15.05.', 'So, 16.05.']);
+    expect(antwortText(f, { 7: 'Fr, 14.05., So, 16.05.' }, { q: 7 })).toBe(
+      'Fr, 14.05. · So, 16.05.',
+    );
+    expect(antwortText(f, { 7: 'Sa, 15.05.' }, { q: 7 })).toBe('Sa, 15.05.');
+    // „Do, 13.05.“ gibt es im Formular nicht mehr – lieber schwer lesbar als still verschwunden.
+    expect(antwortText(f, { 7: 'Do, 13.05., Fr, 14.05.' }, { q: 7 })).toBe(
+      'Do, 13.05., Fr, 14.05.',
+    );
   });
 });

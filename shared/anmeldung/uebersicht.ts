@@ -17,6 +17,7 @@ import {
   type TerminAngabe,
 } from './formular';
 import { anmeldungenAus, listenZahlen, mitgliederstandAus, type MitgliedRoh } from './liste';
+import { wartenTrotzPlatz } from './nachpruefung';
 import { preisKurz } from './preis';
 
 /** Was ChurchTools über die Untergruppe liefert (`GET /groups/{id}/children`, gemessen 12.10.2026). */
@@ -228,7 +229,8 @@ export function einteilen(liste: Veranstaltung[]): Einteilung {
 export type Hinweis =
   | { art: 'kaputt'; id: number; name: string; gruppeId: number }
   | { art: 'freigabe'; v: Veranstaltung; darfFreigeben: boolean }
-  | { art: 'nachruecken'; v: Veranstaltung; frei: number; wartend: number }
+  /** `frei`: `null` ohne Platzgrenze. `wartend` zählt Personen, nicht Anmeldungen. */
+  | { art: 'nachruecken'; v: Veranstaltung; frei: number | null; wartend: number }
   | { art: 'zahlungen'; v: Veranstaltung; offen: number };
 
 /**
@@ -252,8 +254,10 @@ export function aufmerksamkeit(
     }
     if (v.phase !== 'anstehend' || !v.belegung) continue;
     const { aktiv, wartend, unbezahlt } = v.belegung;
-    if (wartend > 0 && v.maxPlaetze !== null && aktiv < v.maxPlaetze) {
-      out.push({ art: 'nachruecken', v, frei: v.maxPlaetze - aktiv, wartend });
+    // Dieselbe Regel wie Kachel und Warteliste – ohne Platzgrenze ist immer Platz frei.
+    if (wartenTrotzPlatz({ belegt: aktiv, wartend, max: v.maxPlaetze })) {
+      const frei = v.maxPlaetze === null ? null : v.maxPlaetze - aktiv;
+      out.push({ art: 'nachruecken', v, frei, wartend });
     }
     if (unbezahlt && leitungIn.has(v.gruppeId)) out.push({ art: 'zahlungen', v, offen: unbezahlt });
   }

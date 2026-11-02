@@ -39,7 +39,7 @@ function beschreibung(beginn: string, betragCent = 0, bezahlt?: number): string 
 function v(
   roh: Omit<VeranstaltungRoh, 'beschreibung'> & { beginn: string; betragCent?: number },
   belegung: Belegung | null,
-  max = 20,
+  max: number | null = 20,
 ): Veranstaltung {
   const x = veranstaltungAus(
     { ...roh, beschreibung: beschreibung(roh.beginn, roh.betragCent, 73) },
@@ -140,6 +140,34 @@ describe('Startseite (A2, #480)', () => {
       'Freizeit: 3 Zahlungen offen',
       'Workshop wartet auf Freigabe',
     ]);
+  });
+
+  it('nachrücken ohne Platzgrenze: „Plätze frei“ ohne Zahl; gezählt werden wartende Personen', () => {
+    const liste = [
+      v(
+        { id: 61, name: 'Gemeindeabend', gruppeId: 9, statusId: 1, beginn: '2026-11-08T19:00' },
+        { aktiv: 40, wartend: 1, unbezahlt: null },
+        null,
+      ),
+      v(
+        { id: 40, name: 'Lobpreisabend', gruppeId: 9, statusId: 1, beginn: '2026-11-01T19:00' },
+        { aktiv: 5, wartend: 2, unbezahlt: null },
+        6,
+      ),
+    ];
+    zeigen({
+      einteilung: einteilen(liste),
+      hinweise: aufmerksamkeit(liste, [], new Set([9])),
+      offen: new Map([[9, 0]]),
+      verborgen: new Map([[9, 0]]),
+    });
+    const bereich = within(abschnitt('Braucht deine Aufmerksamkeit'));
+    expect(bereich.getAllByText(/frei$/).map((e) => e.textContent)).toEqual([
+      'Lobpreisabend: 1 Platz frei',
+      'Gemeindeabend: Plätze frei',
+    ]);
+    expect(bereich.getByText('1 Person wartet auf der Warteliste. Wer rückt nach?')).toBeTruthy();
+    expect(bereich.getByText('2 Personen warten auf der Warteliste. Wer rückt nach?')).toBeTruthy();
   });
 
   it('Anstehend mit Monatsüberschriften; Zähler an den Reitern; Entwürfe und Vorbei auf Klick', () => {

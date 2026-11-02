@@ -109,8 +109,11 @@ function HinweisZeile({
         }
       : h.art === 'nachruecken'
         ? {
-            titel: `${v.name}: ${anzahlText(h.frei, 'Platz', 'Plätze')} frei`,
-            zeile: `${anzahlText(h.wartend, 'Anmeldung wartet', 'Anmeldungen warten')} auf der Warteliste. Wer rückt nach?`,
+            titel:
+              h.frei === null
+                ? `${v.name}: Plätze frei`
+                : `${v.name}: ${anzahlText(h.frei, 'Platz', 'Plätze')} frei`,
+            zeile: `${anzahlText(h.wartend, 'Person wartet', 'Personen warten')} auf der Warteliste. Wer rückt nach?`,
           }
         : {
             titel: `${v.name}: ${anzahlText(h.offen, 'Zahlung', 'Zahlungen')} offen`,

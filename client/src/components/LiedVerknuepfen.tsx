@@ -20,6 +20,7 @@ export function LiedVerknuepfen({
   onHintergrund,
   onSchliessen,
   einblenden,
+  zurueck,
   fehler,
   busy,
 }: LiedWahlArgs) {
@@ -37,7 +38,9 @@ export function LiedVerknuepfen({
       <NewSongSheet
         startTreffer={neuesLied.treffer}
         startName={neuesLied.name}
-        onClose={() => setNeuesLied(null)}
+        // „‹“ zurück zur Suche, das X schließt alles (02.11.2026).
+        onClose={onSchliessen}
+        zurueck={() => setNeuesLied(null)}
         onVerknuepfen={onGewaehlt}
         /* Gibt es das Lied schon (gleiche CCLI-Nummer), wird es vorgemerkt wie eine Auswahl aus der
            Suche – geschrieben wird auch hier erst mit „Speichern" (#395). */
@@ -52,6 +55,7 @@ export function LiedVerknuepfen({
     <Sheet
       title="Lied verknüpfen"
       onClose={onSchliessen}
+      zurueck={zurueck}
       onHintergrund={onHintergrund}
       mittel
       einblenden={einblenden}

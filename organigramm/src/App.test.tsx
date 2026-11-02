@@ -413,6 +413,26 @@ describe('App des Organigramms (O2)', () => {
     ).toBeTruthy();
   });
 
+  it('Fenster für Fenster zurück: Gruppe → Untergruppe → „‹“ → Gruppe; das X schließt und vergisst (02.11.2026)', async () => {
+    render(<App />);
+    await screen.findByText('3 Personen · Leitung: Alwin Friesen, Dora Dorn');
+    fireEvent.click(zeile('Technik'));
+    // Aus dem Baum geöffnet: kein Vorgänger, kein Pfeil.
+    expect(screen.queryByRole('button', { name: 'Zurück' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Stream' }));
+    expect(screen.getByRole('dialog', { name: 'Stream' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+    expect(screen.getByRole('dialog', { name: 'Technik' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Zurück' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Stream' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    // Neu aus dem Baum geöffnet: der alte Verlauf ist vergessen.
+    fireEvent.click(zeile('Technik'));
+    expect(screen.queryByRole('button', { name: 'Zurück' })).toBeNull();
+  });
+
   it('solange Mitglieder laden, steht der Baum schon', async () => {
     mitgliederLaden.mockReturnValue(new Promise(() => {}));
     render(<App />);
@@ -893,7 +913,7 @@ describe('O5: Gruppen umhängen und anlegen', () => {
     await technikOeffnen();
     fireEvent.click(knopf('Ändern'));
     expect(screen.queryByRole('button', { name: '＋ Untergruppe anlegen' })).toBeNull();
-    expect(fensterKnoepfe().at(-1)).toBe('Zurück');
+    expect(fensterKnoepfe()[0]).toBe('Zurück');
     expect(fensterKnoepfe()).not.toContain('Schließen');
     fireEvent.click(knopf('Zurück'));
     expect(knopf('＋ Untergruppe anlegen')).toBeTruthy();
@@ -913,6 +933,21 @@ describe('O5: Gruppen umhängen und anlegen', () => {
     expect(screen.queryByRole('button', { name: /Weitere Obergruppe/ })).toBeNull();
   });
 
+  it('Rückfrage „Umhängen?“: „‹“ und „Abbrechen“ führen zur Wahl des Ziels zurück, nichts geschrieben (02.11.2026)', async () => {
+    await technikOeffnen();
+    fireEvent.click(knopf('Ändern'));
+    fireEvent.click(ziel('Café'));
+    fireEvent.click(knopf('Zurück'));
+    expect(screen.getByRole('region', { name: /unter …$/ })).toBeTruthy();
+    fireEvent.click(ziel('Café'));
+    fireEvent.click(knopf('Abbrechen'));
+    expect(screen.getByRole('region', { name: /unter …$/ })).toBeTruthy();
+    // Von der Wahl zurück zur Gruppe.
+    fireEvent.click(knopf('Zurück'));
+    expect(knopf('Ändern')).toBeTruthy();
+    expect(ct.log).toEqual([]);
+  });
+
   it('Umhängen: Ziel ohne Kreis, Bestätigung mit Rechte-Folgen, erst neu dann alt – und Rückgängig im Fenster', async () => {
     await technikOeffnen();
     const vorher = laden.mock.calls.length;
@@ -926,7 +961,7 @@ describe('O5: Gruppen umhängen und anlegen', () => {
     expect(
       screen.getByText('„Technik“ unter „Café“ hängen statt unter „Gottesdienst“?'),
     ).toBeTruthy();
-    expect(fensterKnoepfe()).toEqual(['Fenster schließen', 'Zurück', 'Umhängen']);
+    expect(fensterKnoepfe()).toEqual(['Zurück', 'Fenster schließen', 'Abbrechen', 'Umhängen']);
     expect(
       screen.getByText(/Wer in „Café“ ist, sieht danach auch „Technik“ samt Untergruppen/),
     ).toBeTruthy();
@@ -947,7 +982,7 @@ describe('O5: Gruppen umhängen und anlegen', () => {
     fireEvent.click(knopf('Lösen'));
     expect(screen.getByText(/„Technik“ ist danach ein eigener Bereich/)).toBeTruthy();
     // Fenster wie ChurchTools (E6-O F5): Der Schritt ersetzt den Inhalt, unten nur „Zurück · Lösen“.
-    expect(fensterKnoepfe()).toEqual(['Fenster schließen', 'Zurück', 'Lösen']);
+    expect(fensterKnoepfe()).toEqual(['Zurück', 'Fenster schließen', 'Abbrechen', 'Lösen']);
     fireEvent.click(knopf('Lösen'));
     expect(
       await screen.findByText('„Technik“ hängt nicht mehr unter „Gottesdienst“.'),
@@ -968,7 +1003,7 @@ describe('O5: Gruppen umhängen und anlegen', () => {
       target: { value: 'caf' },
     });
     fireEvent.click(ziel('Café'));
-    expect(fensterKnoepfe()).toEqual(['Fenster schließen', 'Zurück', 'Hinzufügen']);
+    expect(fensterKnoepfe()).toEqual(['Zurück', 'Fenster schließen', 'Abbrechen', 'Hinzufügen']);
     fireEvent.click(knopf('Hinzufügen'));
     expect(await screen.findByText('„Technik“ hängt jetzt auch unter „Café“.')).toBeTruthy();
     expect(ct.eltern.get(7)).toEqual([10, 47]);
@@ -980,7 +1015,7 @@ describe('O5: Gruppen umhängen und anlegen', () => {
   it('Untergruppe anlegen: Name nötig; Typ der Obergruppe, Status „aktiv“; Rückgängig löscht sie wieder', async () => {
     await technikOeffnen();
     fireEvent.click(knopf('＋ Untergruppe anlegen'));
-    expect(fensterKnoepfe().slice(-2)).toEqual(['Zurück', 'Anlegen']);
+    expect(fensterKnoepfe().slice(-2)).toEqual(['Abbrechen', 'Anlegen']);
     fireEvent.click(knopf('Anlegen'));
     expect(screen.getByText('Bitte einen Namen eingeben.')).toBeTruthy();
     expect(ct.log).toEqual([]);
@@ -1136,8 +1171,8 @@ describe('O6: Leitung und Mitglieder', () => {
     ]);
     await technikOeffnen();
     fireEvent.click(knopf('＋ Person aufnehmen'));
-    // Erst suchen: unten nur „Zurück“; „Aufnehmen“ kommt mit der gewählten Person (E6-O F5).
-    expect(fensterKnoepfe().at(-1)).toBe('Zurück');
+    // Erst suchen: nur „‹“ oben (02.11.2026); „Aufnehmen“ kommt mit der gewählten Person (E6-O F5).
+    expect(fensterKnoepfe()[0]).toBe('Zurück');
     fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), { target: { value: 'Em' } });
     fireEvent.click(knopf('Suchen'));
     const gefunden = await screen.findByRole('list', { name: 'Gefunden' });
@@ -1146,7 +1181,7 @@ describe('O6: Leitung und Mitglieder', () => {
     expect(alwin.textContent).toContain('schon dabei');
     fireEvent.click(within(gefunden).getByRole('button', { name: /Emil Ernst/ }));
     expect(screen.getByRole<HTMLSelectElement>('combobox', { name: 'Rolle' }).value).toBe('15');
-    expect(fensterKnoepfe().slice(-2)).toEqual(['Zurück', 'Aufnehmen']);
+    expect(fensterKnoepfe().slice(-2)).toEqual(['Abbrechen', 'Aufnehmen']);
     // „Zurück“ führt erst zur Suche (mit den Treffern), nicht gleich aus dem Schritt.
     fireEvent.click(knopf('Zurück'));
     expect(screen.getByRole('list', { name: 'Gefunden' })).toBeTruthy();
@@ -1174,7 +1209,7 @@ describe('O6: Leitung und Mitglieder', () => {
     const wahl = screen.getByRole<HTMLSelectElement>('combobox', { name: 'Rolle' });
     expect(wahl.value).toBe('15');
     // Unverändert lässt sich nichts ändern (E6-O F5: „Ändern“ steht unten in der Fußzeile).
-    expect(fensterKnoepfe().slice(-2)).toEqual(['Zurück', 'Ändern']);
+    expect(fensterKnoepfe().slice(-2)).toEqual(['Abbrechen', 'Ändern']);
     expect(knopf('Ändern')).toHaveProperty('disabled', true);
     fireEvent.change(wahl, { target: { value: '16' } });
     expect(knopf('Ändern')).toHaveProperty('disabled', false);
@@ -1202,7 +1237,7 @@ describe('O6: Leitung und Mitglieder', () => {
     await technikOeffnen();
     fireEvent.click(knopf('Carl Clau austragen'));
     expect(screen.getByText(/bleibt sie in der Historie stehen/)).toBeTruthy();
-    expect(fensterKnoepfe()).toEqual(['Fenster schließen', 'Zurück', 'Austragen']);
+    expect(fensterKnoepfe()).toEqual(['Zurück', 'Fenster schließen', 'Abbrechen', 'Austragen']);
     fireEvent.click(knopf('Austragen'));
     expect(await screen.findByText(/„Carl Clau“ ist ausgetragen/)).toBeTruthy();
     expect(cm.m.get(3)?.ende).toBe(heuteImKalender());

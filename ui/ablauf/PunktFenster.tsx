@@ -43,6 +43,11 @@ export interface LiedWahlArgs {
   onSchliessen: () => void;
   /** Blendet die Liedwahl ein? Nur, wenn das Fenster mit ihr anfängt – sonst ersetzt sie das Punkt-Fenster. */
   einblenden: boolean;
+  /**
+   * „‹“ zurück ins Punkt-Fenster (02.11.2026) – nur, wenn die Liedwahl es ersetzt. Fängt das Fenster mit ihr an, gibt
+   * es keinen Vorgänger und keinen Pfeil.
+   */
+  zurueck?: () => void;
 }
 
 interface Gemeinsam {
@@ -341,6 +346,13 @@ export function PunktFenster(props: PunktFensterProps) {
       einblenden: liedZuerst && !warInLiedwahl,
       onHintergrund: onOverlayClick,
       onSchliessen: onClose,
+      zurueck:
+        liedZuerst && linkState.kind !== 'link'
+          ? undefined
+          : () => {
+              setWarInLiedwahl(true);
+              setSongMode(false);
+            },
       fehler: err,
       busy,
     });
@@ -363,12 +375,9 @@ export function PunktFenster(props: PunktFensterProps) {
         onHintergrund={onOverlayClick}
         einblenden={einblenden}
         mittel
-        cancelLabel={null}
-        knoepfe={
-          <FensterKnopf art="zweit" onClick={() => setStelleWahl(false)}>
-            Zurück
-          </FensterKnopf>
-        }
+        // Eine Unterseite zum Wählen: „‹“ oben zurück zum Punkt, unten nichts (02.11.2026).
+        zurueck={() => setStelleWahl(false)}
+        knoepfe={null}
       >
         <section className={styles.schritt} aria-label="Einfügen nach">
           <h3>Einfügen nach</h3>
@@ -416,12 +425,11 @@ export function PunktFenster(props: PunktFensterProps) {
         onHintergrund={onOverlayClick}
         einblenden={einblenden}
         mittel
-        cancelLabel={null}
+        zurueck={() => setZustEntwurf(null)}
+        // Rückfrage/Unterseite: „Abbrechen“ führt wie „‹“ einen Schritt zurück – nichts Geschriebenes geht verloren.
+        onAbbrechen={() => setZustEntwurf(null)}
         knoepfe={
           <>
-            <FensterKnopf art="zweit" onClick={() => setZustEntwurf(null)}>
-              Zurück
-            </FensterKnopf>
             <FensterKnopf
               onClick={() => {
                 setResponsible(zustEntwurf);

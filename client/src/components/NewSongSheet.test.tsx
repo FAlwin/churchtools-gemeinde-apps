@@ -142,6 +142,28 @@ function zeige(props: Partial<Parameters<typeof NewSongSheet>[0]> = {}) {
   return render(<NewSongSheet onClose={vi.fn()} {...props} />);
 }
 
+describe('NewSongSheet – zurück zur Suche (02.11.2026)', () => {
+  it('mit Vorgänger: „‹“ und „Abbrechen“ führen zurück, das X schließt', () => {
+    const zurueck = vi.fn();
+    const onClose = vi.fn();
+    zeige({ zurueck, onClose });
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    expect(zurueck).toHaveBeenCalledTimes(2);
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('ohne Vorgänger: kein „‹“, „Abbrechen“ schließt', () => {
+    const onClose = vi.fn();
+    zeige({ onClose });
+    expect(screen.queryByRole('button', { name: 'Zurück' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+});
+
 describe('NewSongSheet – Kategorie ist Pflicht', () => {
   it('keine Kategorie ist vorbelegt, und der Knopf bleibt gesperrt', () => {
     zeige();

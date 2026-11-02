@@ -827,12 +827,11 @@ export function LoeschfristFenster({
         title="Sofort löschen?"
         onClose={onClose}
         beschaeftigt={arbeitet}
-        cancelLabel={null}
+        zurueck={() => setFrage(false)}
+        // Rückfrage/Unterseite: „Abbrechen“ führt wie „‹“ einen Schritt zurück – nichts Geschriebenes geht verloren.
+        onAbbrechen={() => setFrage(false)}
         knoepfe={
           <>
-            <FensterKnopf art="zweit" disabled={arbeitet} onClick={() => setFrage(false)}>
-              Zurück
-            </FensterKnopf>
             <FensterKnopf art="gefahr" disabled={arbeitet} onClick={sichern}>
               {arbeitet
                 ? 'Wird gelöscht …'

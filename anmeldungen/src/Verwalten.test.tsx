@@ -240,6 +240,33 @@ describe('Leiste „Rückgängig“', () => {
 
 /** Fenster wie ChurchTools (E6-O F4): X oben rechts, die Knöpfe unten rechts – der Hauptknopf zuletzt. */
 describe('Verwalten und Archiv im ChurchTools-Aufbau', () => {
+  it('jede Unterseite: „‹“ und „Abbrechen“ zurück zur Auswahl, das X schließt (02.11.2026)', () => {
+    const onClose = vi.fn();
+    render(
+      <VerwaltenFenster
+        id={91}
+        name="Kinderfreizeit"
+        statusId={E.STATUS.freigegeben}
+        team={{ id: 9, name: 'Lobpreisteam' }}
+        teams={TEAMS}
+        admin
+        anmeldungen={0}
+        onClose={onClose}
+        onGeaendert={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^Umbenennen/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+    expect(screen.getByRole('dialog', { name: 'Veranstaltung verwalten' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /^Umbenennen/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    expect(screen.getByRole('dialog', { name: 'Veranstaltung verwalten' })).toBeTruthy();
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /^Umbenennen/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   it('Auswahl: nur zum Wählen – nur das X (seit 02.11.2026 ohne „Abbrechen“ unten)', () => {
     verwalten({ admin: true });
     expect(fensterKnoepfe()[0]).toBe('Fenster schließen');
@@ -254,7 +281,8 @@ describe('Verwalten und Archiv im ChurchTools-Aufbau', () => {
     ] as const) {
       verwalten({ statusId: E.STATUS.freigegeben });
       fireEvent.click(screen.getByRole('button', { name: wahl }));
-      expect(fensterKnoepfe()[0]).toBe('Fenster schließen');
+      // „‹“ zurück zur Auswahl (02.11.2026), dann das X.
+      expect(fensterKnoepfe().slice(0, 2)).toEqual(['Zurück', 'Fenster schließen']);
       expect(fensterKnoepfe().slice(-2)).toEqual(['Abbrechen', haupt]);
       cleanup();
     }
@@ -279,7 +307,7 @@ describe('Verwalten und Archiv im ChurchTools-Aufbau', () => {
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: /^In ein anderes Team/ }));
-    expect(fensterKnoepfe().slice(1)).toEqual([]);
+    expect(fensterKnoepfe().slice(2)).toEqual([]);
   });
 
   it('während des Speicherns: X und „Abbrechen“ gesperrt', () => {

@@ -110,6 +110,8 @@ export function VonHandFenster({
   dazu = null,
   onZurueckholen,
   onClose,
+  zurueck,
+  onAbbrechen = onClose,
   onFertig,
   mitBestaetigung = false,
 }: {
@@ -131,7 +133,12 @@ export function VonHandFenster({
   dazu?: ListenAnmeldung | null;
   /** Wer abgesagt hat, wird zurückgeholt (A7-4c) – mit den Antworten von damals statt einer neuen Anmeldung. */
   onZurueckholen?: (personId: number) => void;
+  /** X: schließt alles (02.11.2026). */
   onClose: () => void;
+  /** „‹“ im ersten Schritt – zurück zur Anmeldung, aus der „Person dazu“ aufging. Sonst kein Pfeil. */
+  zurueck?: () => void;
+  /** „Abbrechen“ unten – ohne Angabe wie das X; bei „Person dazu“ zurück in die Anmeldung. */
+  onAbbrechen?: () => void;
   onFertig: (x: VonHandFertig) => void;
   /** Bestätigungsmails eingerichtet (A9-1). */
   mitBestaetigung?: boolean;
@@ -349,6 +356,7 @@ export function VonHandFenster({
       <Sheet
         title={dazu ? 'Person zur Anmeldung dazu' : 'Anmeldung von Hand'}
         onClose={onClose}
+        zurueck={zurueck}
         knoepfe={null}
       >
         <p className={a.unterTitel}>
@@ -437,17 +445,14 @@ export function VonHandFenster({
       <Sheet
         title="Neue Person anlegen"
         onClose={onClose}
+        // Schritte: „‹“ oben einen Schritt zurück, unten „Abbrechen · Weiter“ (Entwurf „Fenster mit Zurück“, 02.11.2026).
+        zurueck={() => setSchritt('suchen')}
+        onAbbrechen={onAbbrechen}
         beschaeftigt={arbeitet}
-        cancelLabel={null}
         knoepfe={
-          <>
-            <FensterKnopf art="zweit" disabled={arbeitet} onClick={() => setSchritt('suchen')}>
-              Zurück
-            </FensterKnopf>
-            <FensterKnopf disabled={arbeitet} onClick={neuWeiter}>
-              {arbeitet ? 'Einen Moment …' : 'Weiter'}
-            </FensterKnopf>
-          </>
+          <FensterKnopf disabled={arbeitet} onClick={neuWeiter}>
+            {arbeitet ? 'Einen Moment …' : 'Weiter'}
+          </FensterKnopf>
         }
       >
         <p className={a.unterTitel}>Anmeldung von Hand · wird in ChurchTools angelegt</p>
@@ -515,12 +520,10 @@ export function VonHandFenster({
       <Sheet
         title="Neue Person anlegen"
         onClose={onClose}
-        cancelLabel={null}
+        zurueck={() => setSchritt('neu')}
+        onAbbrechen={onAbbrechen}
         knoepfe={
           <>
-            <FensterKnopf art="zweit" onClick={() => setSchritt('neu')}>
-              Zurück
-            </FensterKnopf>
             {/* Der sichere Weg ist „Diese nehmen“ – „trotzdem“ legt ein Doppel an, deshalb nur hellblau. */}
             <FensterKnopf art="hell" onClick={() => waehlen({ art: 'neu', neu, trotzdem: true })}>
               Trotzdem neu anlegen
@@ -573,21 +576,13 @@ export function VonHandFenster({
     <Sheet
       title={`${person ? ganz(person) : ''} anmelden`}
       onClose={onClose}
+      zurueck={() => setSchritt(wahl?.art === 'neu' ? 'neu' : 'suchen')}
+      onAbbrechen={onAbbrechen}
       beschaeftigt={arbeitet}
-      cancelLabel={null}
       knoepfe={
-        <>
-          <FensterKnopf
-            art="zweit"
-            disabled={arbeitet}
-            onClick={() => setSchritt(wahl?.art === 'neu' ? 'neu' : 'suchen')}
-          >
-            Zurück
-          </FensterKnopf>
-          <FensterKnopf disabled={arbeitet} onClick={anmelden}>
-            {arbeitet ? 'Einen Moment …' : 'Anmelden'}
-          </FensterKnopf>
-        </>
+        <FensterKnopf disabled={arbeitet} onClick={anmelden}>
+          {arbeitet ? 'Einen Moment …' : 'Anmelden'}
+        </FensterKnopf>
       }
     >
       <p className={a.unterTitel}>

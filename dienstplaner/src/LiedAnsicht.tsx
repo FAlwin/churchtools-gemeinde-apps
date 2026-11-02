@@ -57,14 +57,11 @@ export function LiedAnsicht({ terminId, tag, punkt, lied, musikApp, onClose, zur
       title={lied?.name ?? song.title}
       onClose={onClose}
       einblenden={!zurueck}
-      cancelLabel={zurueck ? null : 'Schließen'}
+      // „‹“ oben statt „Zurück“ unten, und kein „Schließen“ neben dem X (Alwin, 02.11.2026: doppelt).
+      zurueck={zurueck}
+      cancelLabel={null}
       knoepfe={
         <>
-          {zurueck && (
-            <FensterKnopf art="zweit" onClick={zurueck}>
-              Zurück
-            </FensterKnopf>
-          )}
           {musikApp ? (
             <FensterLink href={musikAppDirektLink(musikApp, terminId, punkt.id, tag)}>
               In der Musik-App öffnen

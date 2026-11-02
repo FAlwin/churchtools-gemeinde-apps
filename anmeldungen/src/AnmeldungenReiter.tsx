@@ -292,7 +292,8 @@ function AnmeldungAnsehen({
     setModus(null);
   };
 
-  // Eine Rückfrage oder die Mail ersetzt den Inhalt – mit ihren Knöpfen unten (E6-O F4); sonst nur „Schließen“.
+  // Eine Rückfrage oder die Mail ersetzt den Inhalt – mit ihren Knöpfen unten (E6-O F4) und „‹“ oben zurück zur
+  // Anmeldung (02.11.2026); sonst nur das X.
   const inhalt = nachPlan ? (
     <NachrueckenFrage
       plan={nachPlan}
@@ -328,15 +329,16 @@ function AnmeldungAnsehen({
       onAbbrechen={zurAnmeldung}
     />
   ) : modus?.art === 'mail' ? (
-    <MailKnoepfe mail={modus.mail} onZurueck={zurAnmeldung} onKopiert={setKopiert} />
+    <MailKnoepfe mail={modus.mail} onKopiert={setKopiert} />
   ) : null;
 
   return (
     <Sheet
       title={titel}
       onClose={onClose}
+      zurueck={inhalt ? zurAnmeldung : undefined}
       beschaeftigt={arbeitet}
-      cancelLabel={inhalt ? null : 'Schließen'}
+      cancelLabel={null}
       knoepfe={knoepfe}
     >
       {inhalt ?? (
@@ -578,14 +580,24 @@ export function AnmeldungenReiter({
   // „Von Hand“ (A7-4a) – mit `dazu` zu einer bestehenden Anmeldung (A7-4b). Das Fenster der Anmeldung ist so lange zu
   // (kein Fenster im Fenster).
   const [vonHand, setVonHand] = useState<{ dazu: ListenAnmeldung | null } | null>(null);
-  // Zurückholen (A7-4c) – `von`: die Anmeldung, in die „Abbrechen“ zurückführt.
-  const [zurueck, setZurueck] = useState<{ b: Absage; von: string | null } | null>(null);
+  // Zurückholen (A7-4c) – `von`: die Anmeldung, in die „‹“ und „Abbrechen“ zurückführen; `vonHand`: dorthin, wenn es
+  // aus „Anmeldung von Hand“ aufging (02.11.2026).
+  const [zurueck, setZurueck] = useState<{
+    b: Absage;
+    von: string | null;
+    vonHand?: { dazu: ListenAnmeldung | null };
+  } | null>(null);
   const [rundmail, setRundmail] = useState(false);
   const [druck, setDruck] = useState(false);
   const oeffnen = (k: string | null, modus: FensterModus = null) => {
     setOffen(k);
     setStartModus(modus);
     setMeldung(null);
+  };
+  /** Aus „Person dazu“ zurück in die Anmeldung (oder, ohne sie, einfach zu). */
+  const zurDazuAnmeldung = (dazu: ListenAnmeldung | null) => {
+    if (dazu) oeffnen(dazu.schluessel);
+    setVonHand(null);
   };
   // Hat die letzte Person einer Anmeldung abgesagt, ist sie aus der Liste weg – das Fenster bleibt für „Rückgängig“.
   const zuletztOffen = useRef<ListenAnmeldung | null>(null);
@@ -1044,14 +1056,14 @@ export function AnmeldungenReiter({
           onZurueckholen={(personId) => {
             const b = stand!.absagen.find((y) => y.personId === personId);
             if (!b) return;
-            setVonHand(null);
-            setZurueck({ b, von: null });
-          }}
-          onClose={() => {
-            // Abbrechen bei „Person dazu“ führt zurück in die Anmeldung.
-            if (vonHand.dazu) oeffnen(vonHand.dazu.schluessel);
+            setZurueck({ b, von: null, vonHand: { dazu: vonHand.dazu } });
             setVonHand(null);
           }}
+          // X schließt alles; „‹“ (im ersten Schritt) und „Abbrechen“ führen bei „Person dazu“ zurück in die Anmeldung
+          // (02.11.2026).
+          onClose={() => setVonHand(null)}
+          zurueck={vonHand.dazu ? () => zurDazuAnmeldung(vonHand.dazu) : undefined}
+          onAbbrechen={() => zurDazuAnmeldung(vonHand.dazu)}
           onFertig={(x) => {
             setVonHand(null);
             fertig(x);
@@ -1105,10 +1117,16 @@ export function AnmeldungenReiter({
           lage={{ belegt: z.belegt, max: maxPlaetze, wartende: z.wartend, warteliste }}
           b={zurueck.b}
           liste={liste}
-          onClose={() => {
-            if (zurueck.von) oeffnen(zurueck.von);
-            setZurueck(null);
-          }}
+          onClose={() => setZurueck(null)}
+          zurueck={
+            zurueck.von !== null || zurueck.vonHand
+              ? () => {
+                  if (zurueck.von !== null) oeffnen(zurueck.von);
+                  else if (zurueck.vonHand) setVonHand(zurueck.vonHand);
+                  setZurueck(null);
+                }
+              : undefined
+          }
           onFertig={(x) => {
             setZurueck(null);
             fertig(x);

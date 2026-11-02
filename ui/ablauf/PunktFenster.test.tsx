@@ -242,7 +242,7 @@ describe('Punkt-Fenster im ChurchTools-Aufbau (Variante B)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Zuständig: Predigt – ändern' }));
     // Der Schritt ersetzt die Feldliste; unten nur „Zurück · Übernehmen“.
     expect(screen.queryByPlaceholderText('Titel')).toBeNull();
-    expect(fensterKnoepfe().slice(1)).toEqual(['Zurück', 'Übernehmen']);
+    expect(fensterKnoepfe()).toEqual(['Zurück', 'Fenster schließen', 'Abbrechen', 'Übernehmen']);
     fireEvent.change(screen.getByPlaceholderText('z.B. [Musik] oder Name'), {
       target: { value: '[Predigt], [Musik]' },
     });
@@ -352,6 +352,14 @@ describe('Neuer Eintrag – Einfügen nach, Weitere Einstellungen (30.10.2026)',
     expect(screen.getByRole('button', { name: /Einfügen nach: Am Ende/ })).toBeTruthy();
     hinzufuegen();
     await waitFor(() => expect(onAdd).toHaveBeenCalledWith({ type: 'text', title: 'Gebet' }));
+  });
+
+  it('„Einfügen nach“: Unterseite zum Wählen mit „‹“ zurück, unten nichts (02.11.2026)', () => {
+    neu();
+    fireEvent.click(screen.getByRole('button', { name: /Einfügen nach: Am Ende/ }));
+    expect(fensterKnoepfe()).toEqual(['Zurück', 'Fenster schließen']);
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
+    expect(screen.getByRole('button', { name: /Einfügen nach: Am Ende/ })).toBeTruthy();
   });
 
   it('„Einfügen nach“ wählen: hinter einen Vorlauf-Punkt → Vorlauf, der Schalter zeigt es', async () => {

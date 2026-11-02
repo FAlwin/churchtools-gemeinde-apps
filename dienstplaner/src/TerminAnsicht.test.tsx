@@ -866,7 +866,8 @@ describe('TerminAnsicht – Lied-Ansicht (E6-O O4)', () => {
     expect(link.getAttribute('href')).toBe(
       `${window.location.origin}/ccm/musik-app/#/termin/7/punkt/3?am=2026-10-18`,
     );
-    expect(fensterKnoepfe().slice(-1)).toEqual(['Schließen']);
+    // Kein „Schließen“ neben dem X (02.11.2026) – nur der Link in die Musik-App steht unten.
+    expect(fensterKnoepfe()).toEqual(['Fenster schließen']);
   });
 
   it('„Musik-App“ über dem Ablauf öffnet den Ablauf DIESES Termins, nicht nur die App (30.10.2026)', async () => {
@@ -924,9 +925,9 @@ describe('TerminAnsicht – Lied-Ansicht (E6-O O4)', () => {
     fireEvent.change(screen.getByPlaceholderText('z. B. Lied'), { target: { value: 'Lobpreis' } });
     fireEvent.click(await screen.findByRole('button', { name: 'Lied: Treu – ansehen' }));
     expect(await screen.findByText('Uwe Peters · Beispiel-Verlag · CCLI 1234567')).toBeTruthy();
-    // An der Stelle des Punkt-Fensters, nicht darüber: unten „Zurück“ statt „Schließen“ – und ohne neues Einblenden.
+    // An der Stelle des Punkt-Fensters, nicht darüber: „‹“ oben zurück (seit 02.11.2026) – und ohne neues Einblenden.
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
-    expect(fensterKnoepfe().slice(1)).toEqual(['Zurück']);
+    expect(fensterKnoepfe()).toEqual(['Zurück', 'Fenster schließen']);
     expect(screen.getByRole('dialog').parentElement!.className).toMatch(/still/);
     fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
     expect(screen.getByPlaceholderText<HTMLInputElement>('z. B. Lied').value).toBe('Lobpreis');

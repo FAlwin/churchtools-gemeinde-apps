@@ -40,12 +40,15 @@ import f from './Formular.module.scss';
  * Geprüft wird mit `pruefeRegeln`, im Fenster (sofort sichtbar) und beim Speichern (`aenderePreise`).
  */
 
-/** Welches Preis-Fenster offen ist. `index: null` = neuer Baustein. */
+/**
+ * Welches Preis-Fenster offen ist. `index: null` = neuer Baustein. `ausNeu`: aus „Baustein hinzufügen“ geöffnet – dann
+ * führt „‹“ dorthin zurück (02.11.2026).
+ */
 export type PreisFenster =
   | { art: 'grund' }
-  | { art: 'alter' }
-  | { art: 'anpassung'; index: number | null }
-  | { art: 'extra'; index: number | null }
+  | { art: 'alter'; ausNeu?: true }
+  | { art: 'anpassung'; index: number | null; ausNeu?: true }
+  | { art: 'extra'; index: number | null; ausNeu?: true }
   | { art: 'neu' };
 
 function Baustein({
@@ -176,6 +179,8 @@ interface FensterProps {
   anmeldungen: number | null;
   onClose: () => void;
   onGespeichert: () => void;
+  /** „‹“ und „Abbrechen“: zurück zu „Baustein hinzufügen“, wenn das Fenster von dort kam. */
+  zurueck?: () => void;
 }
 
 /** Alwin, 13.10.2026: Preise dürfen sich ändern – wer schon angemeldet ist, behält seinen Betrag. */
@@ -556,6 +561,8 @@ function AlterFenster(props: FensterProps) {
     <Sheet
       title="Preis nach Alter"
       onClose={props.onClose}
+      zurueck={props.zurueck}
+      onAbbrechen={props.zurueck ?? props.onClose}
       beschaeftigt={sp.arbeitet}
       knoepfe={<SpeichernKnopf {...sp} />}
     >
@@ -682,6 +689,8 @@ function AnpassungFenster(props: FensterProps & { index: number | null }) {
     <Sheet
       title={titel}
       onClose={props.onClose}
+      zurueck={props.zurueck}
+      onAbbrechen={props.zurueck ?? props.onClose}
       beschaeftigt={sp.arbeitet}
       knoepfe={<SpeichernKnopf {...sp} />}
     >
@@ -810,6 +819,8 @@ function ExtraFenster(props: FensterProps & { index: number | null }) {
     <Sheet
       title="Extra zum Ankreuzen"
       onClose={props.onClose}
+      zurueck={props.zurueck}
+      onAbbrechen={props.zurueck ?? props.onClose}
       beschaeftigt={sp.arbeitet}
       knoepfe={<SpeichernKnopf {...sp} />}
     >
@@ -898,11 +909,22 @@ export function PreisFensterZeigen(
   props: FensterProps & { fenster: PreisFenster; onWechsel: (w: PreisFenster) => void },
 ) {
   const w = props.fenster;
+  const zurueck =
+    w.art !== 'neu' && w.art !== 'grund' && w.ausNeu
+      ? () => props.onWechsel({ art: 'neu' })
+      : undefined;
   if (w.art === 'grund') return <GrundpreisFenster {...props} />;
-  if (w.art === 'alter') return <AlterFenster {...props} />;
-  if (w.art === 'anpassung') return <AnpassungFenster {...props} index={w.index} />;
-  if (w.art === 'extra') return <ExtraFenster {...props} index={w.index} />;
-  return <NeuerBaustein preis={props.preis} onClose={props.onClose} onWahl={props.onWechsel} />;
+  if (w.art === 'alter') return <AlterFenster {...props} zurueck={zurueck} />;
+  if (w.art === 'anpassung')
+    return <AnpassungFenster {...props} index={w.index} zurueck={zurueck} />;
+  if (w.art === 'extra') return <ExtraFenster {...props} index={w.index} zurueck={zurueck} />;
+  return (
+    <NeuerBaustein
+      preis={props.preis}
+      onClose={props.onClose}
+      onWahl={(neu) => props.onWechsel({ ...neu, ausNeu: true } as PreisFenster)}
+    />
+  );
 }
 
 // ── Probe rechnen ───────────────────────────────────────────────────────────────────────────────

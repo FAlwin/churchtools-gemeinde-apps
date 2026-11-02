@@ -129,10 +129,14 @@ ChurchTools-Weboberfläche):
   Schalter in der Zeile. Mit `mittel` (560 px); „Eintrag löschen“ als `links` mit `FensterKnopf art="loeschen"`. Hat
   das Fenster ungespeicherte Änderungen, reicht es `onHintergrund`, damit ein Tipp daneben nichts verwirft;
   ‹ › zum Nachbarn sind dann gesperrt (Alwin, 28.10.2026), und beim Blättern gilt `einblenden={false}`.
-- **Mehrstufige Fenster** (Assistent, Rückfrage im Fenster, Vorschau) haben unten nur **„Zurück“ und den
-  Hauptknopf** – `cancelLabel={null}` und „Zurück“ als `zweit`; ganz zu geht es über das X (Alwin, F4 #734). Ersetzt
-  eine Rückfrage den Inhalt eines Fensters („Absagen?“ im Fenster einer Anmeldung), heißt ihr Weg zurück „Abbrechen“
-  und führt zur Ansicht davor, nicht aus dem Fenster. Ein Schritt **ersetzt** den Inhalt, statt unter ihm zu hängen –
+- **Mehrstufige Fenster** (Assistent, Rückfrage im Fenster, Vorschau): **„‹“ oben** führt einen Schritt zurück, unten
+  „Abbrechen“ und der Hauptknopf (seit 02.11.2026, Entwurf „Fenster mit Zurück“; vorher „Zurück“ unten, F4 #734 –
+  `fensterAufbau.test.ts` meldet einen „Zurück“-Knopf unten). „Abbrechen“ bricht einen **vorwärts gerichteten** Schritt
+  ganz ab (wie das X; bei „Person dazu“ zurück in die Anmeldung). Bei einer **Rückfrage oder Unterseite** („1 Mail jetzt
+  senden?“, „Sitzung absagen“, „Umhängen?“, „Zuständig“) führt „Abbrechen“ wie in ChurchTools dorthin zurück, wo man
+  herkam (`onAbbrechen`) – nie geht dabei Geschriebenes verloren. Ersetzt eine Rückfrage den Inhalt eines Fensters
+  („Absagen?“ im Fenster einer Anmeldung), heißt ihr Weg zurück „Abbrechen“ und führt zur Ansicht davor, nicht aus dem
+  Fenster. Ein Schritt **ersetzt** den Inhalt, statt unter ihm zu hängen –
   sonst stünde „Austragen“ unten sichtbar, während die Frage weggescrollt ist (Alwin, F5: Gruppenfenster im
   Organigramm). Hängt der Hauptknopf am Zustand des Schritts (gewählte Rolle), hält das Fenster diesen Zustand; ein
   Formular im Schritt schickt der Fußknopf mit `type="submit" form={id}` ab. Öffnet ein Knopf etwas (`mailto:`), ist er

@@ -309,6 +309,8 @@ export function NewSongSheet({
       title="Neues Lied"
       onClose={onClose}
       zurueck={zurueck}
+      // Mit Vorgänger (Suche) führt auch „Abbrechen“ dorthin zurück; das X schließt alles (02.11.2026).
+      onAbbrechen={zurueck ?? onClose}
       knoepfe={
         // „Lied anlegen“ nur, wo das Formular steht – nicht beim Laden, Fehler oder ohne Kategorie (F3, #726).
         !kategorien.isError && !kategorien.isLoading && kategorieListe.length > 0 ? (

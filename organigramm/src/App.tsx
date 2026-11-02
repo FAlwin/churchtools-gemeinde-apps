@@ -78,6 +78,9 @@ type ZentralStand =
   | { art: 'da'; stand: Versioniert<Sichtbarkeit> | null }
   | { art: 'fehler' };
 
+/** Ein offenes Fenster des Organigramms – Gruppe oder Person (für den Verlauf von „‹“). */
+type OffenesFenster = { art: 'gruppe' | 'person'; id: number };
+
 /**
  * Das Organigramm in ChurchTools (Bauplan O2/O3): erst Gruppen und Baum (schnell), dann – nebeneinander – die
  * Mitglieder aller Gruppen (gedrosselt) und die Termine mit den Einsätzen. Der Baum steht schon, während beides lädt.
@@ -94,6 +97,8 @@ export function App() {
   const [einsaetze, setEinsaetze] = useState<EinsaetzeStand>({ art: 'laedt' });
   const [offeneGruppe, setOffeneGruppe] = useState<number | null>(null);
   const [offenePerson, setOffenePerson] = useState<number | null>(null);
+  /** Die Fenster davor, für „‹“ (02.11.2026, siehe `ausFensterGruppe`). */
+  const [verlauf, setVerlauf] = useState<OffenesFenster[]>([]);
   // Was das Organigramm für alle zeigt (O7b-7) – von Gruppen-Admins eingestellt, im Speicher der Erweiterung.
   const [zentral, setZentral] = useState<ZentralStand>({ art: 'laedt' });
   const [einstellungenOffen, setEinstellungenOffen] = useState(false);
@@ -380,14 +385,44 @@ export function App() {
       : undefined;
   // Personen gibt es nur im eigenen Bereich – eine Person außerhalb öffnet kein Fenster.
   const offenePersonImBereich = offenePerson === null ? undefined : personen.get(offenePerson);
+  /**
+   * **Ein Verlauf der Fenster** (Alwin, 02.11.2026: „Wechselt ein Screen im Fenster, soll es einen Zurück-Pfeil
+   * geben“): Aus einer Person geht es in eine Gruppe, von dort in die Obergruppe, eine Untergruppe … „‹“ führt jeweils
+   * einen Schritt zurück, das X schließt. Wer ein Fenster aus der Seite heraus öffnet (Baum, Liste, Hinweise), fängt
+   * neu an.
+   */
+  const zeigen = (o: OffenesFenster | null) => {
+    setOffeneGruppe(o?.art === 'gruppe' ? o.id : null);
+    setOffenePerson(o?.art === 'person' ? o.id : null);
+  };
+  const jetzt: OffenesFenster | null =
+    offeneGruppe !== null
+      ? { art: 'gruppe', id: offeneGruppe }
+      : offenePerson !== null
+        ? { art: 'person', id: offenePerson }
+        : null;
   const gruppeOeffnen = (id: number) => {
-    setOffenePerson(null);
-    setOffeneGruppe(id);
+    setVerlauf([]);
+    zeigen({ art: 'gruppe', id });
   };
   const personOeffnen = (id: number) => {
-    setOffeneGruppe(null);
-    setOffenePerson(id);
+    setVerlauf([]);
+    zeigen({ art: 'person', id });
   };
+  /** Aus einem offenen Fenster heraus: Das jetzige kommt in den Verlauf. */
+  const ausFensterGruppe = (id: number) => {
+    if (jetzt) setVerlauf((v) => [...v, jetzt]);
+    zeigen({ art: 'gruppe', id });
+  };
+  const fensterZurueck =
+    verlauf.length > 0
+      ? () => {
+          zeigen(verlauf[verlauf.length - 1]);
+          setVerlauf(verlauf.slice(0, -1));
+        }
+      : undefined;
+  // Den Verlauf muss das X nicht leeren: Ein neues Fenster aus der Seite fängt ohnehin neu an.
+  const fensterZu = () => zeigen(null);
 
   return (
     <ErweiterungsSeite
@@ -479,9 +514,10 @@ export function App() {
           start={start}
           knoten={offenerKnoten}
           mitglieder={mitglieder}
-          onGruppe={gruppeOeffnen}
+          onGruppe={ausFensterGruppe}
           onNachladen={nachladen}
-          onSchliessen={() => setOffeneGruppe(null)}
+          onSchliessen={fensterZu}
+          zurueck={fensterZurueck}
           onHierAnfangen={hierAnfangen}
           onStruktur={strukturNeu}
           onMitgliederNeu={() => mitgliederNeu(offenerKnoten.gruppe.id)}
@@ -493,8 +529,9 @@ export function App() {
           person={offenePersonImBereich}
           mitglieder={mitglieder}
           einsaetze={einsaetze}
-          onGruppe={gruppeOeffnen}
-          onSchliessen={() => setOffenePerson(null)}
+          onGruppe={ausFensterGruppe}
+          onSchliessen={fensterZu}
+          zurueck={fensterZurueck}
         />
       )}
       {start && einstellungenOffen && (

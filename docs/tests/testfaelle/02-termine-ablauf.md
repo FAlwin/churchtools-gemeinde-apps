@@ -399,7 +399,8 @@ zeigt danach denselben Text, und eine Absage bleibt bestehen.
    „Die Infos wurden eben woanders geändert“ mit dem Text aus ChurchTools; **Ihre übernehmen** bzw. **Meine
    speichern** tun, was sie sagen.
 6. Mehr als 4000 Zeichen → Zähler rot, „Speichern“ gesperrt. Alles leeren und speichern → in ChurchTools leer.
-7. Ein Termin ohne Infos, Person ohne Recht: kein ⓘ, keine Zeile.
+7. Ein Termin ohne Infos, Person ohne Recht: kein ⓘ, keine Zeile. Mit Recht: ⓘ öffnet gleich das Textfeld, „Abbrechen“
+   schließt das Fenster.
 
 <details><summary>Technisches</summary>
 
@@ -407,5 +408,29 @@ zeigt danach denselben Text, und eine Absage bleibt bestehen.
 - **Betrifft:** `dienstplaner/src/InfosFenster.tsx`, `dienstplaner/src/TerminAnsicht.tsx`, `dienstplaner/src/ladeTerminInfos.ts`, `shared/ct/terminInfos.ts`, `shared/ct/dienstRechte.ts`, `shared/dienstplan/plan.ts`
 - **Automatisiert:** ja – `shared/ct/terminInfos.test.ts` (Speichern mit `isCanceled`, leer, 4000, Konflikt, nachlesen, Recht), `dienstplaner/src/TerminAnsicht.test.tsx` (Zeile, ⓘ, Bearbeiten, Konflikt, „nicht übernommen“), `shared/ct/dienstRechte.test.ts`; von Hand bleibt der Vergleich mit ChurchTools
 - **Historie:** T1 (02.11.2026, Entwurf `termin-einstellungen.html` Variante B; gemessen `messung-termin-einstellungen.md`)
+
+</details>
+
+### TF-ABLAUF-17 · „Infos & Dateien“ in der Matrix
+
+**Das brauchst du:** Zwei Test-Termine im gezeigten Zeitraum, einer mit Infos (das „i“ in ChurchTools), einer ohne; eine
+Person, die die Termine ändern darf, und eine ohne.
+
+**Das muss passieren:** In „Planen“ steht über dem Ablauf die Gruppe „Infos & Dateien“ – je Termin die ersten zwei
+Zeilen der Infos. Wer darf, schreibt sie direkt dort.
+
+1. Planen → Matrix → oben die Gruppe **„Infos & Dateien“**, darunter „Ablauf“. Beim Termin mit Infos stehen die ersten
+   zwei Zeilen, beim anderen **„+ Infos“** (nur mit Recht; ohne Recht „–“).
+2. Infos antippen → dasselbe Fenster wie in der Termin-Ansicht. **„+ Infos“** → gleich das Textfeld → schreiben → Speichern → die
+   Zelle zeigt den Text sofort; in ChurchTools steht er auch; ein abgesagter Termin bleibt abgesagt.
+3. Gruppe zuklappen, Seite neu laden → bleibt zugeklappt.
+4. Am Handy: beim gewählten Termin die Gruppe „Infos & Dateien“ über dem Ablauf.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `dienstplaner/src/MatrixInfos.tsx`, `dienstplaner/src/useMatrixInfos.ts`, `dienstplaner/src/Planen.tsx`, `dienstplaner/src/planenAnsicht.ts`, `dienstplaner/src/InfosFenster.tsx`
+- **Automatisiert:** ja – `dienstplaner/src/MatrixInfos.test.tsx` (Zellen, Recht, Speichern, Plan geht vor, Zuklappen gemerkt, Handy), `dienstplaner/src/MatrixAblauf.test.tsx` (Reihenfolge); von Hand bleibt der Blick in ChurchTools
+- **Historie:** T1b (02.11.2026, Entwurf `matrix-infos.html` Variante 2)
 
 </details>

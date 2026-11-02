@@ -64,6 +64,8 @@ import { grundText, type EntwuerfeDaten, type EntwurfAnschluss } from './ladeEnt
 import { ALLE_REITER } from './reiter';
 import { AblaufBearbeitenKnopf, AblaufZeilen, HandyAblauf } from './MatrixAblauf';
 import { useMatrixAblauf, type MatrixAblauf } from './useMatrixAblauf';
+import { HandyInfos, InfosZeilen } from './MatrixInfos';
+import { useMatrixInfos, type MatrixInfos } from './useMatrixInfos';
 import type { Start } from './start';
 import styles from './Planen.module.scss';
 
@@ -140,6 +142,8 @@ interface Sicht {
   onTermin?: (id: number) => void;
   /** Der Ablauf oben in der Matrix (E6-6a); `null` ohne Anschluss. */
   ablauf: MatrixAblauf | null;
+  /** „Infos & Dateien“ über dem Ablauf (T1b); `null` ohne Anschluss. */
+  infos: MatrixInfos | null;
 }
 
 /** Darf man an diesem Termin diesen Dienst planen – über Recht, Leitung oder als Admin des Termins? */
@@ -206,6 +210,9 @@ export function Planen({
   };
   const matrixAblauf = useMatrixAblauf(ablauf, ansicht.ablaufZu, (ablaufZu) =>
     setAnsicht({ ...ansicht, ablaufZu }),
+  );
+  const matrixInfos = useMatrixInfos(ablauf, ansicht.infosZu, (infosZu) =>
+    setAnsicht({ ...ansicht, infosZu }),
   );
   const [fenster, setFenster] = useState<Fenster>({ start: 0, anzahl: null });
   const [zu, setZu] = useState<Set<string> | null>(null);
@@ -677,6 +684,7 @@ export function Planen({
       ichId: entwuerfe?.ich.personId ?? null,
       onTermin,
       ablauf: matrixAblauf,
+      infos: matrixInfos,
     };
     inhalt =
       d.gefiltert.length === 0 || gruppen.length === 0 ? (
@@ -1379,6 +1387,10 @@ function TabellenPlan({ sicht, breite }: { sicht: Sicht; breite: Breite }) {
           {/* Der Ablauf steht oben, über den Dienstgruppen (Entwurf E6-6, Alwin 23.10. und 28.10.2026). Darunter ein
               Streifen in der Seitenfarbe und die Überschrift „Dienste“ – sonst sah man nicht, wo der Ablauf endet
               (Alwin, 29.10.2026, Entwurf `e6-6-trennung.html` C; dazu „Ende“ in jeder Spalte). */}
+          {/* „Infos & Dateien“ über dem Ablauf (T1b, Entwurf `matrix-infos.html` Variante 2, Alwin 02.11.2026). */}
+          {sicht.infos && (
+            <InfosZeilen mi={sicht.infos} plan={plan} spalten={spalten} zelleKlasse={zelleKlasse} />
+          )}
           {sicht.ablauf && (
             <>
               <AblaufZeilen
@@ -1556,6 +1568,7 @@ function HandyPlan({ sicht, amEnde }: { sicht: Sicht; amEnde?: () => void }) {
             </button>
           )}
         </div>
+        {sicht.infos && <HandyInfos mi={sicht.infos} s={s} />}
         {sicht.ablauf && <HandyAblauf ma={sicht.ablauf} s={s} />}
         {gruppen.map((g) => {
           const dienste = g.zeilen.filter((z) => z.zellen[i] !== null);

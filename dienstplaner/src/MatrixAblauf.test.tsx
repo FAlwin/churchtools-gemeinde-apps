@@ -205,9 +205,10 @@ describe('Matrix – Ablauf (E6-6a)', () => {
         'kein Ablauf',
       ]),
     );
-    // Die erste Zeile im Rumpf ist der Ablauf – vor den Dienstgruppen.
+    // Oben im Rumpf „Infos & Dateien“ (T1b, Alwin 02.11.2026), direkt darunter der Ablauf – vor den Dienstgruppen.
     const zeilen = screen.getAllByRole('rowheader').map((r) => r.textContent);
-    expect(zeilen[0]).toBe('Ablauf');
+    expect(zeilen[0]).toBe('Infos & Dateien');
+    expect(zeilen.indexOf('Ablauf')).toBeGreaterThan(0);
     expect(zeilen.indexOf('Ablauf')).toBeLessThan(zeilen.findIndex((t) => t?.includes('Technik')));
     expect(screen.getByRole('button', { name: /^Ablauf$/ }).getAttribute('aria-expanded')).toBe(
       'true',

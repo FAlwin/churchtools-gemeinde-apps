@@ -29,6 +29,8 @@ export interface RohPlatz {
 
 export interface RohTermin extends CtEvent {
   isCanceled?: boolean;
+  /** „Weitere Infos“ am Termin (das „i“ in ChurchTools, `infosAus`). */
+  description?: unknown;
   eventServices?: RohPlatz[] | null;
   // `adminIds`/`eventAdminIds` (Admins des Termins, dürfen dort einteilen – E0 §2) kommen aus `CtEvent`.
 }

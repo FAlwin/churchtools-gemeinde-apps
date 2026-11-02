@@ -381,3 +381,31 @@ darf, sieht keine Knöpfe.
 - **Historie:** E6b-2 L3 (02.11.2026)
 
 </details>
+
+### TF-ABLAUF-16 · „Weitere Infos“ am Termin
+
+**Das brauchst du:** Einen Test-Termin, an dem in ChurchTools unter „i“ (Weitere Infos) zwei Zeilen stehen; eine
+Person, die den Termin ändern darf („Events bearbeiten“ für den Kalender oder Admin des Termins), und eine ohne.
+
+**Das muss passieren:** Alle sehen die Infos wie in ChurchTools; wer darf, ändert sie im Dienstplaner – ChurchTools
+zeigt danach denselben Text, und eine Absage bleibt bestehen.
+
+1. Dienstplaner → Termin öffnen → unter Datum und Uhrzeit steht der Anfang der Infos in einer Zeile; oben ein ⓘ.
+2. ⓘ (oder die Zeile) → Fenster „Weitere Infos“ mit dem ganzen Text samt Zeilen. Ohne Recht: kein „Bearbeiten“.
+3. Mit Recht: **Bearbeiten** → Textfeld mit Zähler „… / 4000“; ändern → **Speichern** → das Fenster zeigt den neuen Text,
+   die Zeile auch. In ChurchTools (Dienstplan → „i“) steht derselbe Text.
+4. Einen **abgesagten** Termin: Infos ändern und speichern → in ChurchTools ist er weiterhin abgesagt.
+5. In ChurchTools die Infos ändern, während das Fenster im Dienstplaner im Bearbeiten offen ist → **Speichern** →
+   „Die Infos wurden eben woanders geändert“ mit dem Text aus ChurchTools; **Ihre übernehmen** bzw. **Meine
+   speichern** tun, was sie sagen.
+6. Mehr als 4000 Zeichen → Zähler rot, „Speichern“ gesperrt. Alles leeren und speichern → in ChurchTools leer.
+7. Ein Termin ohne Infos, Person ohne Recht: kein ⓘ, keine Zeile.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `dienstplaner/src/InfosFenster.tsx`, `dienstplaner/src/TerminAnsicht.tsx`, `dienstplaner/src/ladeTerminInfos.ts`, `shared/ct/terminInfos.ts`, `shared/ct/dienstRechte.ts`, `shared/dienstplan/plan.ts`
+- **Automatisiert:** ja – `shared/ct/terminInfos.test.ts` (Speichern mit `isCanceled`, leer, 4000, Konflikt, nachlesen, Recht), `dienstplaner/src/TerminAnsicht.test.tsx` (Zeile, ⓘ, Bearbeiten, Konflikt, „nicht übernommen“), `shared/ct/dienstRechte.test.ts`; von Hand bleibt der Vergleich mit ChurchTools
+- **Historie:** T1 (02.11.2026, Entwurf `termin-einstellungen.html` Variante B; gemessen `messung-termin-einstellungen.md`)
+
+</details>

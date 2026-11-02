@@ -1173,3 +1173,148 @@ describe('„Live“ (E6b-2 L2)', () => {
     expect(screen.queryByTestId('live-punkt')).toBeNull();
   });
 });
+
+describe('„Weitere Infos“ (T1)', () => {
+  /** ChurchTools mit einem Termin, dessen Infos sich speichern lassen – PUT wie gemessen (`isCanceled` fehlt → false). */
+  function ctInfos(start: { description: string | null; isCanceled?: boolean }) {
+    const termin = {
+      ...TERMIN,
+      description: start.description,
+      isCanceled: start.isCanceled ?? false,
+    };
+    const schreiben: unknown[] = [];
+    let stumm = false;
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      const url = String(input);
+      if (url.endsWith('/api/csrftoken')) return Promise.resolve(json(200, { data: 'c' }));
+      if (url.includes('/agenda')) return Promise.resolve(json(200, { data: ABLAUF }));
+      if (url.includes('/events/7') && init?.method === 'PUT') {
+        const b = JSON.parse(String(init.body)) as {
+          description: string | null;
+          isCanceled?: boolean;
+        };
+        schreiben.push(b);
+        if (stumm) return Promise.resolve(json(200, { data: termin }));
+        termin.description = b.description;
+        termin.isCanceled = b.isCanceled === true;
+        return Promise.resolve(json(200, { data: termin }));
+      }
+      if (url.includes('/events/')) {
+        return Promise.resolve(json(200, { data: { ...termin } }));
+      }
+      return Promise.resolve(json(200, { data: [] }));
+    });
+    return {
+      schreiben,
+      termin,
+      /** Beim nächsten Lesen hat jemand anderes schon gespeichert. */
+      fremdGespeichert: (text: string) => {
+        termin.description = text;
+      },
+      /** ChurchTools meldet Erfolg, übernimmt aber nichts. */
+      stumm: () => (stumm = true),
+    };
+  }
+  const darf = () => startFuer({ rechte: { ...startFuer().rechte, terminKalender: [2] } });
+
+  it('der Anfang in einer Zeile unter dem Datum; ⓘ öffnet sie ganz – ohne Recht ohne „Bearbeiten“', async () => {
+    ctInfos({ description: 'Abendmahl – Becher vorbereiten.\nGäste aus Siegburg.' });
+    zeige();
+    const zeile = await screen.findByRole('button', {
+      name: 'Abendmahl – Becher vorbereiten. Gäste aus Siegburg.',
+    });
+    fireEvent.click(zeile);
+    const f = screen.getByRole('dialog', { name: 'Weitere Infos' });
+    expect(within(f).getByText(/Gäste aus Siegburg/).textContent).toBe(
+      'Abendmahl – Becher vorbereiten.\nGäste aus Siegburg.',
+    );
+    expect(within(f).queryByRole('button', { name: 'Bearbeiten' })).toBeNull();
+    fireEvent.click(within(f).getByRole('button', { name: 'Fenster schließen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Weitere Infos zum Termin' }));
+    expect(screen.getByRole('dialog', { name: 'Weitere Infos' })).toBeTruthy();
+  });
+
+  it('ohne Infos und ohne Recht kein ⓘ; mit Recht ⓘ und „Noch keine Infos“', async () => {
+    ctInfos({ description: null });
+    zeige();
+    await screen.findByRole('heading', { name: 'Gottesdienst' });
+    expect(screen.queryByRole('button', { name: 'Weitere Infos zum Termin' })).toBeNull();
+    cleanup();
+    vi.restoreAllMocks();
+    ctInfos({ description: null });
+    zeige({ start: darf() });
+    fireEvent.click(await screen.findByRole('button', { name: 'Weitere Infos zum Termin' }));
+    expect(screen.getByText('Noch keine Infos zu diesem Termin.')).toBeTruthy();
+  });
+
+  it('bearbeiten und speichern: description und frisches isCanceled gehen mit, die Zeile zeigt den neuen Text', async () => {
+    const ct = ctInfos({ description: 'alt', isCanceled: true });
+    zeige({ start: darf() });
+    fireEvent.click(await screen.findByRole('button', { name: 'Weitere Infos zum Termin' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Bearbeiten' }));
+    const feld = screen.getByRole('textbox', { name: 'Für alle, die den Termin sehen' });
+    expect(screen.getByText('3 / 4000')).toBeTruthy();
+    fireEvent.change(feld, { target: { value: 'neu\nmit Zeile' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(ct.schreiben).toHaveLength(1));
+    expect(ct.schreiben[0]).toEqual({ description: 'neu\nmit Zeile', isCanceled: true });
+    expect(await screen.findByRole('button', { name: 'neu mit Zeile' })).toBeTruthy();
+    expect(
+      within(screen.getByRole('dialog', { name: 'Weitere Infos' })).getByText(/mit Zeile/),
+    ).toBeTruthy();
+  });
+
+  it('gemeldet, aber nicht übernommen: eigene Meldung statt „antwortet gerade nicht“', async () => {
+    const ct = ctInfos({ description: 'alt' });
+    ct.stumm();
+    zeige({ start: darf() });
+    fireEvent.click(await screen.findByRole('button', { name: 'Weitere Infos zum Termin' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Bearbeiten' }));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'neu' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      'ChurchTools hat die Infos nicht übernommen. Bitte noch einmal versuchen.',
+    );
+  });
+
+  it('zu lang: Zähler rot, Speichern gesperrt', async () => {
+    ctInfos({ description: '' });
+    zeige({ start: darf() });
+    fireEvent.click(await screen.findByRole('button', { name: 'Weitere Infos zum Termin' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Bearbeiten' }));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'x'.repeat(4001) } });
+    expect(screen.getByText(/4001 \/ 4000/).textContent).toMatch(/zu lang/);
+    expect(screen.getByRole('button', { name: 'Speichern' }).hasAttribute('disabled')).toBe(true);
+  });
+
+  it('inzwischen woanders gespeichert: nachfragen statt überschreiben – „Ihre übernehmen“ oder „Meine speichern“', async () => {
+    const ct = ctInfos({ description: 'alt' });
+    zeige({ start: darf() });
+    fireEvent.click(await screen.findByRole('button', { name: 'Weitere Infos zum Termin' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Bearbeiten' }));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'meins' } });
+    ct.fremdGespeichert('von David');
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    expect((await screen.findByRole('alert')).textContent).toMatch(
+      /eben woanders geändert.*von David/s,
+    );
+    expect(ct.schreiben).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Meine speichern' }));
+    await waitFor(() => expect(ct.schreiben).toHaveLength(1));
+    expect(ct.termin.description).toBe('meins');
+  });
+
+  it('„Ihre übernehmen“: der Text aus ChurchTools ins Feld und in die Zeile, nichts geschrieben', async () => {
+    const ct = ctInfos({ description: 'alt' });
+    zeige({ start: darf() });
+    fireEvent.click(await screen.findByRole('button', { name: 'Weitere Infos zum Termin' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Bearbeiten' }));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'meins' } });
+    ct.fremdGespeichert('von David');
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Ihre übernehmen' }));
+    expect(screen.getByRole('textbox')).toHaveProperty('value', 'von David');
+    expect(screen.getByRole('button', { name: 'von David' })).toBeTruthy();
+    expect(ct.schreiben).toHaveLength(0);
+  });
+});

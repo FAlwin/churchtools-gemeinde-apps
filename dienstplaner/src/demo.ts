@@ -9,6 +9,7 @@ const PLANER = {
   'view servicegroup': [1, 3, 4],
   'edit servicegroup': [3, 4],
   'edit agenda': [1, 2, 3, 4, 5],
+  'edit events': [1, 2, 3, 4, 5],
   'manage absent': true,
 };
 const MITGLIED = {
@@ -16,6 +17,7 @@ const MITGLIED = {
   'view servicegroup': [],
   'edit servicegroup': [],
   'edit agenda': [],
+  'edit events': [],
   'manage absent': false,
 };
 
@@ -48,6 +50,9 @@ const TERMINE = [
     name: 'Gottesdienst',
     startDate: zeit(4, '08:00'),
     endDate: zeit(4, '10:00'),
+    // „Weitere Infos“ (T1): das „i“ in ChurchTools.
+    description:
+      'Abendmahl – bitte Becher vorbereiten (Küche).\nGäste aus Siegburg, Begrüßung durch David.',
     eventServices: [
       platz(1, 19, 'Spike', true),
       platz(6, 1, 'Alwin', true),
@@ -132,6 +137,15 @@ function einteilenDemo(methode: string, pfad: string, rumpf: unknown): unknown {
         ? { id: 90, name: 'Gottesdienst', startDate: zeit(-10, '08:00'), eventServices: [] }
         : undefined);
     return t ? { data: t } : undefined;
+  }
+  // „Weitere Infos“ (T1) wie gemessen: `PUT` übernimmt `description` (`null` leert) und setzt `isCanceled` – fehlt es,
+  // auf false.
+  if (termin && methode === 'PUT') {
+    const t = TERMINE.find((x) => x.id === Number(termin[1]));
+    if (!t) return undefined;
+    const r = rumpf as { description?: string | null; isCanceled?: boolean };
+    Object.assign(t, { description: r.description ?? null, isCanceled: r.isCanceled === true });
+    return { data: t };
   }
   // Anzahl der Plätze (E4-5-3), wie gemessen: mehr → neue freie Plätze, weniger → leere zuerst weg.
   const anzahl = /^\/api\/events\/(\d+)\/eventservices$/.exec(pfad);

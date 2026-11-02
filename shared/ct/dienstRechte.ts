@@ -24,6 +24,8 @@ export interface DienstRechte {
   sichtbareDienstgruppen: number[] | null;
   /** Kalender, in denen man Abläufe bearbeiten darf (`edit agenda`); `null` = alle. */
   ablaufKalender: number[] | null;
+  /** Kalender, in denen man Termine ändern darf – Infos und Dateien (`edit events`, gemessen 02.11.2026); `null` = alle. */
+  terminKalender: number[] | null;
   /** Abwesenheiten aller sehen und pflegen (`manage absent`). */
   abwesenheitenAller: boolean;
 }
@@ -38,6 +40,7 @@ export function dienstRechteAus(
     planbareDienstgruppen: idsAusRecht(cs['edit servicegroup']),
     sichtbareDienstgruppen: idsAusRecht(cs['view servicegroup']),
     ablaufKalender: idsAusRecht(cs['edit agenda']),
+    terminKalender: idsAusRecht(cs['edit events']),
     abwesenheitenAller: cs['manage absent'] === true,
   };
 }

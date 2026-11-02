@@ -47,6 +47,7 @@ function start(planbar: number[] | null, gruppen: Start['gruppen'] = []): Start 
       planbareDienstgruppen: planbar,
       sichtbareDienstgruppen: [],
       ablaufKalender: [],
+      terminKalender: [],
       abwesenheitenAller: false,
     },
   });

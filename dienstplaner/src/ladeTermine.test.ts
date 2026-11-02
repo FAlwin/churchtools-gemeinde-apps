@@ -18,6 +18,7 @@ const START: Start = startFuer({
     planbareDienstgruppen: [3],
     sichtbareDienstgruppen: [],
     ablaufKalender: [],
+    terminKalender: [],
     abwesenheitenAller: false,
   },
 });
@@ -91,6 +92,7 @@ describe('ladeTermine', () => {
         planbareDienstgruppen: [],
         sichtbareDienstgruppen: [],
         ablaufKalender: [],
+        terminKalender: [],
         abwesenheitenAller: false,
       },
     });

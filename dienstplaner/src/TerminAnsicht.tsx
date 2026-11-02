@@ -11,7 +11,8 @@ import { gruppenName } from '@shared/dienstplan/plan';
 import { ladeTermin, type TerminDaten } from './ladeTermine';
 import { ladeAblauf, ladeMusikApp } from './ladeBeiwerk';
 import { Plaetze } from './Planen';
-import type { Start } from './start';
+import { terminAenderbar, type Start } from './start';
+import { InfosFenster } from './InfosFenster';
 import { TerminAblauf } from './TerminAblauf';
 import styles from './TerminAnsicht.module.scss';
 
@@ -60,10 +61,15 @@ export function TerminAnsicht({
   // Adresse der Musik-App: `undefined` = noch unbekannt, `null` = nicht installiert (die Lied-Ansicht sagt es dann).
   const [musikApp, setMusikApp] = useState<string | null | undefined>(undefined);
   const [bearbeiten, setBearbeiten] = useState(false);
+  // „Weitere Infos“ (T1): das Fenster und ein frisch gespeicherter Text (bis der Termin neu geladen wird).
+  const [infosOffen, setInfosOffen] = useState(false);
+  const [infosNeu, setInfosNeu] = useState<string | null>(null);
 
   useEffect(() => {
     let aktuell = true;
     setBearbeiten(false);
+    setInfosOffen(false);
+    setInfosNeu(null);
     setZustand({ art: 'laedt' });
     Promise.all([ladeTermin(start, terminId, zeitzone), ladeAblauf(terminId)]).then(
       ([daten, ablauf]) => aktuell && setZustand({ art: 'fertig', daten, ablauf }),
@@ -136,6 +142,18 @@ export function TerminAnsicht({
   // Nur Dienste, die es an diesem Termin gibt: `planAus` lässt die übrigen schon weg (ein Termin = eine Spalte).
   const gruppen = plan.gruppen;
   const { ablauf } = zustand;
+  const infos = infosNeu ?? s.infos;
+  const infosDarf = terminAenderbar(start, s.ablaufTermin);
+  // Das ⓘ wie in ChurchTools (Entwurf T, Variante B): wo es Infos gibt oder man welche schreiben darf.
+  const infoKnopf = (infos !== '' || infosDarf) && (
+    <KopfKnopf
+      onClick={() => setInfosOffen(true)}
+      label="Infos"
+      title="Weitere Infos zum Termin"
+      symbol={<Icon name="info" size={16} stroke={2.2} />}
+      nurSymbol
+    />
+  );
 
   return (
     <TerminAblauf
@@ -162,8 +180,19 @@ export function TerminAnsicht({
                   {teile.ende && ` · Ende ${teile.ende} Uhr`}
                   {s.abgesagt && <b className={styles.abgesagt}> · abgesagt</b>}
                 </p>
+                {/* Der Anfang der Infos in einer Zeile – antippen öffnet sie ganz. */}
+                {infos !== '' && (
+                  <button
+                    type="button"
+                    className={styles.infoZeile}
+                    onClick={() => setInfosOffen(true)}
+                  >
+                    {infos.replace(/\s+/g, ' ')}
+                  </button>
+                )}
               </div>
             </div>
+            {infoKnopf}
             {blaettern}
           </div>
 
@@ -230,6 +259,16 @@ export function TerminAnsicht({
             )}
           </section>
           {teile.ueberlagerung}
+          {infosOffen && (
+            <InfosFenster
+              fuer={`${s.name} · ${datumText(s.tag)}`}
+              terminId={s.id}
+              text={infos}
+              darf={infosDarf}
+              onGespeichert={setInfosNeu}
+              onClose={() => setInfosOffen(false)}
+            />
+          )}
         </div>
       )}
     </TerminAblauf>

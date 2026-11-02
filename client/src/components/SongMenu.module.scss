@@ -34,6 +34,7 @@
 }
 
 .zeile {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -51,8 +52,17 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 
-  & + & {
-    box-shadow: inset 0 1px 0 var(--hair);
+  // Die Trennlinie als eigene, gerade Linie über die volle Breite (02.11.2026). Bis dahin ein `box-shadow` an der
+  // Zeile – der folgt deren runden Ecken (für die Hervorhebung), und die Linie bog sich an beiden Enden nach unten
+  // (Alwin: „Warum sind die Linien rechts und links so abgerundet?“). Wächter: `ui/design/trennlinien.test.ts`.
+  & + &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--hair);
   }
   &:active {
     background: var(--surface3);

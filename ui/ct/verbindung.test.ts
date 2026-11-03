@@ -1,12 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  ChurchToolsBremst,
   ctAlleSeiten,
   ctAltAnfrage,
   ctAnfrage,
+  ctHochladen,
   fehlerAus,
+  KeinSpeicherRecht,
   verbindungEinrichten,
+  _bremseLoesen,
   _vergissCsrf,
 } from './verbindung';
+import { FakeXhr } from './xhr.testutil';
 
 /**
  * Die Verbindung ohne die Musik-App (#474) – so, wie eine neue Erweiterung sie vorfindet. Die
@@ -178,5 +183,116 @@ describe('ctAltAnfrage mit Modul und JSON (A7-5)', () => {
     ).rejects.toMatchObject({
       art: 'unlesbar',
     });
+  });
+});
+
+describe('ctHochladen – mit Fortschritt (Dienstplaner T2b)', () => {
+  const form = () => {
+    const f = new FormData();
+    f.append('files[]', new Blob(['x']), 'a.txt');
+    return f;
+  };
+  beforeEach(() => {
+    FakeXhr.zuruecksetzen();
+    _bremseLoesen();
+    vi.stubGlobal('XMLHttpRequest', FakeXhr);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) =>
+      String(url).endsWith('/api/csrftoken') ? json(200, { data: 'TOK' }) : json(200, {}),
+    );
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+  /** Bis `send` gelaufen ist (vorher wird das CSRF-Token geholt). */
+  const gesendet = async () => {
+    await vi.waitFor(() => expect(FakeXhr.letzte?.rumpf).toBeTruthy());
+    return FakeXhr.letzte!;
+  };
+
+  it('POST an die API mit Sitzung und CSRF-Token; meldet den Fortschritt; liefert den Rumpf', async () => {
+    const anteile: number[] = [];
+    const p = ctHochladen('/files/service/160', form(), { fortschritt: (a) => anteile.push(a) });
+    const x = await gesendet();
+    expect([x.methode, x.url, x.withCredentials, x.kopf['CSRF-Token']]).toEqual([
+      'POST',
+      'https://ct.test/api/files/service/160',
+      true,
+      'TOK',
+    ]);
+    x.fortschritt(25, 100);
+    x.fortschritt(100, 100);
+    x.gesendet();
+    x.antworte(200, { data: [{ id: 5 }] });
+    expect(await p).toEqual({ data: [{ id: 5 }] });
+    expect(anteile).toEqual([0.25, 1, 1]);
+  });
+
+  it('Zeitgrenze für STILLSTAND: Fortschritt hält sie offen, 60 s ohne alles → 504 und abgebrochen', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const p = ctHochladen('/files/service/160', form());
+    const x = await gesendet();
+    // Läuft insgesamt über 60 s, aber es geht voran – kein Abbruch.
+    await vi.advanceTimersByTimeAsync(50_000);
+    x.fortschritt(10, 100);
+    await vi.advanceTimersByTimeAsync(50_000);
+    x.fortschritt(60, 100);
+    await vi.advanceTimersByTimeAsync(50_000);
+    expect(x.abgebrochen).toBe(false);
+    const fehler = p.catch((e: unknown) => e);
+    await vi.advanceTimersByTimeAsync(10_001);
+    expect(await fehler).toMatchObject({ status: 504 });
+    expect(x.abgebrochen).toBe(true);
+  });
+
+  it('nach dem Senden wartet die Wache auf die Antwort – auch sie darf nicht ewig ausbleiben', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const p = ctHochladen('/files/service/160', form());
+    const x = await gesendet();
+    await vi.advanceTimersByTimeAsync(50_000);
+    x.gesendet();
+    // Ab „gesendet“ hat ChurchTools wieder volle 60 s – nicht nur den Rest.
+    await vi.advanceTimersByTimeAsync(59_000);
+    expect(x.abgebrochen).toBe(false);
+    const fehler = p.catch((e: unknown) => e);
+    await vi.advanceTimersByTimeAsync(1_001);
+    expect(await fehler).toMatchObject({ status: 504 });
+  });
+
+  it('kein Recht (403 von ChurchTools) → KeinSpeicherRecht mit der Meldung des Aufrufs', async () => {
+    const p = ctHochladen('/files/service/160', form(), { verweigert: 'Darfst du nicht.' });
+    (await gesendet()).antworte(403, VERBOT);
+    await expect(p).rejects.toBeInstanceOf(KeinSpeicherRecht);
+    await expect(p).rejects.toMatchObject({ message: 'Darfst du nicht.' });
+  });
+
+  it('413 vom Webserver (HTML statt JSON) → Fehler mit Status 413', async () => {
+    const p = ctHochladen('/files/service/160', form());
+    (await gesendet()).antworte(413, '<html>Request Entity Too Large</html>', {
+      'content-type': 'text/html',
+    });
+    await expect(p).rejects.toMatchObject({ status: 413 });
+  });
+
+  it('204 ohne Rumpf → null', async () => {
+    const p = ctHochladen('/files/service/160', form());
+    (await gesendet()).antworte(204, null);
+    expect(await p).toBeNull();
+  });
+
+  it('Netzfehler → wie fetch ein TypeError', async () => {
+    const p = ctHochladen('/files/service/160', form());
+    (await gesendet()).netzfehler();
+    await expect(p).rejects.toBeInstanceOf(TypeError);
+  });
+
+  it('429 → gebremst, danach geht gerätweit nichts raus', async () => {
+    const p = ctHochladen('/files/service/160', form());
+    (await gesendet()).antworte(429, {}, { 'retry-after': '30' });
+    await expect(p).rejects.toBeInstanceOf(ChurchToolsBremst);
+    await expect(ctHochladen('/files/service/160', form())).rejects.toBeInstanceOf(
+      ChurchToolsBremst,
+    );
+    expect(FakeXhr.alle).toHaveLength(1);
   });
 });

@@ -7,15 +7,18 @@ import styles from './DateiZeile.module.scss';
  * genauso aus und sollen sie nicht nachbauen.
  *
  * `href: null` = die Adresse ist nicht sicher zu öffnen (`dateiAdresse`) – dann steht die Zeile da, führt aber nirgends
- * hin, statt die Sitzung an einen fremden Host zu schicken.
+ * hin, statt die Sitzung an einen fremden Host zu schicken. Mit `onClick` statt `href` ist die Zeile ein Knopf (T2b: wer
+ * ändern darf, bekommt erst das kleine Fenster mit Öffnen, Umbenennen, Löschen – wie in ChurchTools).
  */
 export function DateiZeile({
   href,
+  onClick,
   symbol,
   titel,
   unter,
 }: {
-  href: string | null;
+  href?: string | null;
+  onClick?: () => void;
   symbol: IconName;
   titel: string;
   unter: string;
@@ -29,7 +32,15 @@ export function DateiZeile({
       </span>
     </>
   );
-  if (href === null) {
+  if (onClick) {
+    return (
+      <button type="button" className={`${styles.zeile} ${styles.knopf}`} onClick={onClick}>
+        {inhalt}
+        <Icon name="chev-right" size={16} className={styles.pfeil} />
+      </button>
+    );
+  }
+  if (!href) {
     return (
       <span className={`${styles.zeile} ${styles.tot}`} title="Lässt sich hier nicht öffnen">
         {inhalt}

@@ -28,6 +28,20 @@ describe('CtSymbol (E5-2)', () => {
     expect(container.querySelector('svg')).toBeNull();
   });
 
+  it('„i“ und Büroklammer wie in der Dienstplan-Liste (T2b): `fas fa-info`, `fas fa-paperclip`', () => {
+    schriften(['"Font Awesome Pro"']);
+    const { container } = render(
+      <>
+        <CtSymbol name="info" size={14} />
+        <CtSymbol name="paperclip" size={14} />
+      </>,
+    );
+    expect([...container.querySelectorAll('i')].map((i) => i.className)).toEqual([
+      'fas fa-info',
+      'fas fa-paperclip',
+    ]);
+  });
+
   it('ohne `document.fonts` (Demo im Test): Ersatzsymbol', () => {
     expect(hatChurchToolsSymbole()).toBe(false);
   });

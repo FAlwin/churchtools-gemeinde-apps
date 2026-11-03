@@ -7,10 +7,18 @@ import { hatChurchToolsSymbole } from './ctSchrift';
  * in der ChurchTools-Seite, und dort ist die Schrift schon geladen (gemessen 16.10.: `fas fa-magic` und `fas fa-pen`
  * erscheinen in der Erweiterung wie im ChurchTools-Dienstplan). Wo sie fehlt (Demo, später die NAS-App), steht
  * das Ersatzsymbol aus unserem Satz.
+ *
+ * `info` und `paperclip` (T2b, Alwin 03.11.2026: „die Icons von ChurchTools direkt nehmen“) sind das „i“ und die
+ * Büroklammer der Dienstplan-Liste (gemessen: `fas fa-info fa-fw`, `fas fa-paperclip fa-fw`, 14 px, Gewicht 900).
  */
-export type CtSymbolName = 'magic' | 'pen';
+export type CtSymbolName = 'magic' | 'pen' | 'info' | 'paperclip';
 
-const ERSATZ: Record<CtSymbolName, IconName> = { magic: 'zauberstab', pen: 'pencil' };
+const ERSATZ: Record<CtSymbolName, IconName> = {
+  magic: 'zauberstab',
+  pen: 'pencil',
+  info: 'info',
+  paperclip: 'anhang',
+};
 
 export function CtSymbol({ name, size }: { name: CtSymbolName; size: number }) {
   if (hatChurchToolsSymbole()) {

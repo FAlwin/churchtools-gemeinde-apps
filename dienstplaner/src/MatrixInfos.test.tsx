@@ -127,6 +127,10 @@ function zeige(o: { handy?: boolean } = {}) {
 const gruppenKnopf = () => screen.getByRole('button', { name: /^Infos & Dateien$/ });
 /** Die Zellen der Infos-Zeile (ohne die Kopfzelle). */
 const zellen = () => gruppenKnopf().closest('tr')!.nextElementSibling!.querySelectorAll('td');
+/** Der Infotext einer Zelle – im grauen Kasten, nur zum Lesen (T2b, Variante D1). */
+const infosText = (i: number) => zellen()[i].querySelector('p')?.textContent ?? null;
+/** Die Namen der Anhänge einer Zelle. */
+const anhaenge = (i: number) => [...zellen()[i].querySelectorAll('li')].map((l) => l.textContent);
 
 beforeEach(() => {
   _vergissCsrf();
@@ -139,30 +143,42 @@ afterEach(() => {
 });
 
 describe('„Infos & Dateien“ in der Matrix (T1b)', () => {
-  it('eigene Gruppe über dem Ablauf; je Termin die Infos, „+ Infos“ wo man darf, sonst –', () => {
+  it('eigene Gruppe über dem Ablauf; oben ⓘ und Büroklammer wo man darf, der Text nur zum Lesen, sonst –', () => {
     ct();
     zeige();
     const knoepfe = screen.getAllByRole('button', { expanded: true }).map((b) => b.textContent);
     expect(knoepfe.indexOf('Infos & Dateien')).toBeLessThan(knoepfe.indexOf('Ablauf'));
     const [t10, t11, t13] = zellen();
+    const z10 = within(t10 as HTMLElement);
+    // Mit Infos: das ⓘ hellblau hinterlegt; der Text steht im Kasten und ist selbst kein Knopf (T2b, 03.11.2026).
     expect(
-      within(t10 as HTMLElement).getByRole('button', {
-        name: 'Weitere Infos Gottesdienst, So, 18.10.2026: Abendmahl – Becher vorbereiten.\nGäste aus Siegburg.',
-      }),
+      z10.getByRole('button', { name: 'Weitere Infos Gottesdienst, So, 18.10.2026' }).className,
+    ).toMatch(/offen/);
+    expect(infosText(0)).toBe('Abendmahl – Becher vorbereiten.\nGäste aus Siegburg.');
+    expect(z10.getByText(/Becher vorbereiten/).closest('button')).toBeNull();
+    expect(
+      z10.getByRole('button', { name: 'Datei an Gottesdienst, So, 18.10.2026 anhängen' }),
     ).toBeTruthy();
     expect(within(t11 as HTMLElement).queryByRole('button')).toBeNull();
     expect(t11.textContent).toBe('–');
+    // Ohne Infos, aber mit Recht: ⓘ (nicht hinterlegt) und Büroklammer.
+    const i13 = within(t13 as HTMLElement).getByRole('button', {
+      name: 'Weitere Infos Gottesdienst, So, 25.10.2026',
+    });
+    expect(i13.className).not.toMatch(/offen/);
     expect(
       within(t13 as HTMLElement).getByRole('button', {
-        name: 'Infos für Gottesdienst, So, 25.10.2026 schreiben',
+        name: 'Datei an Gottesdienst, So, 25.10.2026 anhängen',
       }),
     ).toBeTruthy();
   });
 
-  it('antippen öffnet das Fenster; „+ Infos“ → schreiben → speichern, die Zelle zeigt den Text sofort', async () => {
+  it('ⓘ öffnet das Fenster; leer → gleich schreiben → speichern, die Zelle zeigt den Text sofort', async () => {
     const { schreiben } = ct();
     zeige();
-    fireEvent.click(within(zellen()[2] as HTMLElement).getByRole('button'));
+    fireEvent.click(
+      within(zellen()[2] as HTMLElement).getByRole('button', { name: /^Weitere Infos/ }),
+    );
     const f = screen.getByRole('dialog', { name: 'Weitere Infos' });
     expect(within(f).getByText('Gottesdienst · So, 25.10.2026')).toBeTruthy();
     // Leer und mit Recht: gleich das Textfeld, ohne „Bearbeiten“.
@@ -176,11 +192,10 @@ describe('„Infos & Dateien“ in der Matrix (T1b)', () => {
       pfad: '/api/events/13',
       rumpf: { description: 'Taufe – Becken füllen.', isCanceled: false },
     });
+    await waitFor(() => expect(infosText(2)).toBe('Taufe – Becken füllen.'));
     expect(
-      await within(zellen()[2] as HTMLElement).findByRole('button', {
-        name: 'Weitere Infos Gottesdienst, So, 25.10.2026: Taufe – Becken füllen.',
-      }),
-    ).toBeTruthy();
+      within(zellen()[2] as HTMLElement).getByRole('button', { name: /^Weitere Infos/ }).className,
+    ).toMatch(/offen/);
   });
 
   it('nach dem Speichern zählt der Plan wieder, sobald er einen anderen Text bringt', async () => {
@@ -210,23 +225,27 @@ describe('„Infos & Dateien“ in der Matrix (T1b)', () => {
       />
     );
     const { rerender } = render(ansicht(planMit(undefined)));
-    fireEvent.click(within(zellen()[2] as HTMLElement).getByRole('button'));
+    fireEvent.click(
+      within(zellen()[2] as HTMLElement).getByRole('button', { name: /^Weitere Infos/ }),
+    );
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'meins' } });
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     await waitFor(() => expect(schreiben).toHaveLength(1));
     fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     // Der Plan bringt noch den alten Stand (leer) → der gespeicherte Text bleibt stehen.
     rerender(ansicht(planMit(undefined)));
-    expect(zellen()[2].textContent).toBe('meins');
+    expect(infosText(2)).toBe('meins');
     // Inzwischen hat jemand anderes geändert, der Plan liest neu → sein Text gilt.
     rerender(ansicht(planMit('Von David')));
-    expect(zellen()[2].textContent).toBe('Von David');
+    expect(infosText(2)).toBe('Von David');
   });
 
   it('ohne Recht: Fenster nur zum Lesen', () => {
     ct();
     zeige();
-    fireEvent.click(within(zellen()[0] as HTMLElement).getByRole('button'));
+    fireEvent.click(
+      within(zellen()[0] as HTMLElement).getByRole('button', { name: /^Weitere Infos/ }),
+    );
     expect(
       within(screen.getByRole('dialog', { name: 'Weitere Infos' })).getByRole('button', {
         name: 'Bearbeiten',
@@ -247,14 +266,39 @@ describe('„Infos & Dateien“ in der Matrix (T1b)', () => {
         ablauf={{ start: startFuer(), zeitzone: 'Europe/Berlin' }}
       />,
     );
-    fireEvent.click(within(zellen()[0] as HTMLElement).getByRole('button'));
+    fireEvent.click(
+      within(zellen()[0] as HTMLElement).getByRole('button', { name: /^Weitere Infos/ }),
+    );
     expect(
       within(screen.getByRole('dialog', { name: 'Weitere Infos' })).queryByRole('button', {
         name: 'Bearbeiten',
       }),
     ).toBeNull();
-    // Ohne Recht auch kein „+ Infos“.
+    // Ohne Recht und ohne Infos: weder ⓘ noch Büroklammer, nur der Strich.
     expect(within(zellen()[2] as HTMLElement).queryByRole('button')).toBeNull();
+    expect(zellen()[2].textContent).toBe('–');
+  });
+
+  it('in ChurchTools: ⓘ und Büroklammer sind die Zeichen der Dienstplan-Liste (`fas fa-info`, `fas fa-paperclip`)', () => {
+    Object.defineProperty(document, 'fonts', {
+      configurable: true,
+      value: {
+        forEach: (fn: (f: { family: string }) => void) => fn({ family: 'Font Awesome Pro' }),
+      },
+    });
+    try {
+      ct();
+      zeige();
+      const z = within(zellen()[0] as HTMLElement);
+      expect(z.getByRole('button', { name: /^Weitere Infos/ }).querySelector('i')?.className).toBe(
+        'fas fa-info',
+      );
+      expect(z.getByRole('button', { name: /anhängen$/ }).querySelector('i')?.className).toBe(
+        'fas fa-paperclip',
+      );
+    } finally {
+      delete (document as { fonts?: unknown }).fonts;
+    }
   });
 
   it('zuklappbar, auf dem Gerät gemerkt wie „Ablauf“', () => {
@@ -323,48 +367,92 @@ describe('Dateien in der Matrix (T2a)', () => {
     frischeDateien = ausDenEventFiles;
   });
 
-  it('unter den Infos je Datei eine Zeile, höchstens drei, dann „+ N weitere“; ohne Infos und Recht nur die Dateien', () => {
+  it('„Anhänge:“ unter den Infos, höchstens drei, dann „+ N weitere“; ohne Recht öffnet ein Tipp die Datei direkt', () => {
     ct();
     render(ansicht(planMit(ROH_DATEIEN)));
     const [t10, t11] = zellen();
     const z10 = within(t10 as HTMLElement);
-    expect(z10.getByRole('button', { name: /^Weitere Infos Gottesdienst/ })).toBeTruthy();
+    expect(z10.getByText('Anhänge:')).toBeTruthy();
     expect(
-      z10.getAllByRole('button', { name: /^Dateien Gottesdienst/ }).map((b) => b.textContent),
+      z10
+        .getAllByRole('button', { name: / – Gottesdienst, So, 18\.10\.2026$/ })
+        .map((b) => b.textContent),
     ).toEqual(['Folien.pdf', 'Video.mp4', 'Plakat.png']);
     expect(
       z10.getByRole('button', { name: 'Alle 4 Dateien Gottesdienst, So, 18.10.2026' }).textContent,
     ).toBe('+ 1 weitere');
-    // Kein Strich, wenn es Dateien gibt.
-    expect(t11.textContent).toBe('Gebetsliste.pdf');
+    // Ohne Recht (Termin 11): kein Strich, sondern die Datei als Link – sie öffnet sich direkt aus ChurchTools.
+    expect(anhaenge(1)).toEqual(['Gebetsliste.pdf']);
+    const link = within(t11 as HTMLElement).getByRole('link', { name: 'Gebetsliste.pdf' });
+    expect([link.getAttribute('href'), link.getAttribute('target')]).toEqual([
+      download(31),
+      '_blank',
+    ]);
+    expect(within(t11 as HTMLElement).queryByRole('button')).toBeNull();
   });
 
-  it('eine Datei-Zeile öffnet das Dateien-Fenster; die frische Liste ersetzt die Zeilen, bis der Plan Neues bringt', async () => {
+  it('mit Recht öffnet ein Tipp auf eine Datei ihr kleines Fenster; „‹“ führt zu allen Dateien', async () => {
+    ct();
+    render(ansicht(planMit(ROH_DATEIEN)));
+    fireEvent.click(
+      within(zellen()[0] as HTMLElement).getByRole('button', {
+        name: 'Video.mp4 – Gottesdienst, So, 18.10.2026',
+      }),
+    );
+    const f = screen.getByRole('dialog', { name: 'Video.mp4' });
+    expect(within(f).getByRole('link', { name: 'Öffnen' }).getAttribute('href')).toBe(download(22));
+    fireEvent.click(within(f).getByRole('button', { name: 'Zurück' }));
+    expect(await screen.findByRole('button', { name: /Ablauf\.docx/ })).toBeTruthy();
+  });
+
+  it('das Fenster lädt frisch; die frische Liste ersetzt die Zeilen, bis der Plan Neues bringt', async () => {
     ct();
     const { rerender } = render(ansicht(planMit(ROH_DATEIEN)));
-    // ChurchTools kennt inzwischen nur noch eine Datei an Termin 11 – unter anderem Namen.
+    // ChurchTools kennt inzwischen nur noch eine Datei an Termin 10 – unter anderem Namen.
     frischeDateien = (id) =>
-      id === 11
-        ? [{ id: 31, name: 'Gebetsliste neu.pdf', type: 'file', fileUrl: download(31), size: 2048 }]
+      id === 10
+        ? [{ id: 21, name: 'Folien neu.pdf', type: 'file', fileUrl: download(21), size: 2048 }]
         : [];
-    fireEvent.click(within(zellen()[1] as HTMLElement).getByRole('button'));
+    fireEvent.click(
+      within(zellen()[0] as HTMLElement).getByRole('button', { name: /^Alle 4 Dateien/ }),
+    );
     const f = screen.getByRole('dialog', { name: 'Dateien' });
-    expect(within(f).getByText('Gebetsabend · Mi, 21.10.2026')).toBeTruthy();
+    expect(within(f).getByText('Gottesdienst · So, 18.10.2026')).toBeTruthy();
     expect(await within(f).findByText('PDF · 2 KB')).toBeTruthy();
     fireEvent.click(within(f).getByRole('button', { name: 'Fenster schließen' }));
-    expect(zellen()[1].textContent).toBe('Gebetsliste neu.pdf');
+    expect(anhaenge(0)).toEqual(['Folien neu.pdf']);
     // Der Plan bringt noch den alten Stand → die frische Liste bleibt.
     rerender(ansicht(planMit(roh())));
-    expect(zellen()[1].textContent).toBe('Gebetsliste neu.pdf');
+    expect(anhaenge(0)).toEqual(['Folien neu.pdf']);
     // Der Plan liest neu und bringt etwas anderes → der Plan gilt.
     rerender(
       ansicht(
         planMit(
-          roh().map((t) => (t.id === 11 ? { ...t, eventFiles: [eventFile(32, 'Andere.pdf')] } : t)),
+          roh().map((t) => (t.id === 10 ? { ...t, eventFiles: [eventFile(32, 'Andere.pdf')] } : t)),
         ),
       ),
     );
-    expect(zellen()[1].textContent).toBe('Andere.pdf');
+    expect(anhaenge(0)).toEqual(['Andere.pdf']);
+  });
+
+  it('die Büroklammer (T2b) nur mit Recht; öffnet gleich „Anhang hinzufügen“, „‹“ führt zu den Dateien', async () => {
+    ct();
+    render(ansicht(planMit(ROH_DATEIEN)));
+    const [t10, t11, t13] = zellen();
+    expect(within(t11 as HTMLElement).queryByRole('button', { name: /anhängen$/ })).toBeNull();
+    expect(
+      within(t13 as HTMLElement).getByRole('button', {
+        name: 'Datei an Gottesdienst, So, 25.10.2026 anhängen',
+      }),
+    ).toBeTruthy();
+    fireEvent.click(
+      within(t10 as HTMLElement).getByRole('button', {
+        name: 'Datei an Gottesdienst, So, 18.10.2026 anhängen',
+      }),
+    );
+    const f = screen.getByRole('dialog', { name: 'Anhang hinzufügen' });
+    fireEvent.click(within(f).getByRole('button', { name: 'Zurück' }));
+    expect(await screen.findByRole('button', { name: /Ablauf\.docx/ })).toBeTruthy();
   });
 
   it('„+ N weitere“ öffnet dasselbe Fenster mit allen Dateien', async () => {
@@ -374,7 +462,7 @@ describe('Dateien in der Matrix (T2a)', () => {
       within(zellen()[0] as HTMLElement).getByRole('button', { name: /^Alle 4 Dateien/ }),
     );
     const f = screen.getByRole('dialog', { name: 'Dateien' });
-    expect(await within(f).findByRole('link', { name: /Ablauf\.docx/ })).toBeTruthy();
-    expect(within(f).getAllByRole('link')).toHaveLength(4);
+    expect(await within(f).findByRole('button', { name: /Ablauf\.docx/ })).toBeTruthy();
+    expect(within(f).getAllByRole('button', { name: /\.(pdf|mp4|png|docx)/ })).toHaveLength(4);
   });
 });

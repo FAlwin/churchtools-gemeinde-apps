@@ -246,6 +246,15 @@ export async function ctAnfrage<T = unknown>(
     // Datei-Uploads dürfen länger dauern als ein API-Aufruf – wie im Server (`CT_FILE_TIMEOUT_MS`).
     init.body instanceof FormData ? ZEIT_DATEI_MS : ZEIT_API_MS,
   );
+  return (await antwortAuswerten(res, method, init.verweigert)) as T;
+}
+
+/** Was nach jeder Antwort gilt – für `ctAnfrage` und `ctHochladen` dieselbe Regel (erreichbar, Bremse, Fehler). */
+async function antwortAuswerten(
+  res: Response,
+  method: string,
+  verweigert: string | undefined,
+): Promise<unknown> {
   meldeErreichbar(![502, 503, 504].includes(res.status));
   if (res.status === 429) throw bremsen(res);
   const text = await res.text();
@@ -259,9 +268,73 @@ export async function ctAnfrage<T = unknown>(
   }
   if (!res.ok) {
     if (method !== 'GET') csrfVerwerfenBeiAblehnung(res.status);
-    throw await fehlerAus(res, body, init.verweigert);
+    throw await fehlerAus(res, body, verweigert);
   }
-  return body as T;
+  return body;
+}
+
+/**
+ * **Eine Datei hochladen – mit Fortschritt** (Dienstplaner T2b, Alwin 02.11.2026: „Fortschritt in %“). `fetch` meldet
+ * beim Senden keinen Fortschritt, deshalb hier `XMLHttpRequest` – mit denselben Regeln wie `ctAnfrage` (Bremse,
+ * CSRF-Token, Sitzung, `antwortAuswerten`).
+ *
+ * **Die Zeitgrenze gilt für Stillstand, nicht für die ganze Dauer:** 128 MB brauchen über DSL leicht mehrere Minuten –
+ * eine feste Grenze von 60 s bräche jede große Datei ab. Abgebrochen wird erst, wenn `ZEIT_DATEI_MS` lang nichts
+ * vorangeht (kein Fortschritt, keine Antwort) → 504 wie bei `ctAnfrage`. Ein Netzfehler meldet „nicht erreichbar“.
+ */
+export async function ctHochladen(
+  pfad: string,
+  form: FormData,
+  o: { verweigert?: string; fortschritt?: (anteil: number) => void } = {},
+): Promise<unknown> {
+  pruefeBremse();
+  const csrf = await holeCsrf();
+  const res = await new Promise<Response>((fertig, fehler) => {
+    const xhr = new XMLHttpRequest();
+    let wache: ReturnType<typeof setTimeout> | undefined;
+    const stillstand = (): void => {
+      clearTimeout(wache);
+      wache = setTimeout(() => {
+        xhr.abort();
+        fehler(new ApiError(504, 'ChurchTools antwortet nicht (Zeitüberschreitung).'));
+      }, ZEIT_DATEI_MS);
+    };
+    xhr.open('POST', `${ctBasis()}/api${pfad}`);
+    xhr.withCredentials = true;
+    xhr.setRequestHeader('Accept', 'application/json');
+    if (csrf) xhr.setRequestHeader('CSRF-Token', csrf);
+    xhr.upload.onprogress = (e) => {
+      stillstand();
+      if (e.lengthComputable && e.total > 0) o.fortschritt?.(e.loaded / e.total);
+    };
+    // Gesendet – jetzt arbeitet ChurchTools; die Wache läuft weiter, bis die Antwort da ist.
+    xhr.upload.onload = () => {
+      o.fortschritt?.(1);
+      stillstand();
+    };
+    xhr.onload = () => {
+      clearTimeout(wache);
+      const kopf = new Headers();
+      for (const zeile of xhr
+        .getAllResponseHeaders()
+        .trim()
+        .split(/[\r\n]+/)) {
+        const i = zeile.indexOf(':');
+        if (i > 0) kopf.append(zeile.slice(0, i).trim(), zeile.slice(i + 1).trim());
+      }
+      // 204 & Co. dürfen keinen Rumpf haben – `Response` würfe sonst.
+      const leer = xhr.status === 204 || xhr.status === 205 || xhr.responseText === '';
+      fertig(new Response(leer ? null : xhr.responseText, { status: xhr.status, headers: kopf }));
+    };
+    xhr.onerror = () => {
+      clearTimeout(wache);
+      meldeErreichbar(false);
+      fehler(new TypeError('Failed to fetch'));
+    };
+    stillstand();
+    xhr.send(form);
+  });
+  return antwortAuswerten(res, 'POST', o.verweigert);
 }
 
 /**

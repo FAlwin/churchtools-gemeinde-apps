@@ -416,12 +416,14 @@ zeigt danach denselben Text, und eine Absage bleibt bestehen.
 **Das brauchst du:** Zwei Test-Termine im gezeigten Zeitraum, einer mit Infos (das „i“ in ChurchTools), einer ohne; eine
 Person, die die Termine ändern darf, und eine ohne.
 
-**Das muss passieren:** In „Planen“ steht über dem Ablauf die Gruppe „Infos & Dateien“ – je Termin die ersten zwei
-Zeilen der Infos. Wer darf, schreibt sie direkt dort.
+**Das muss passieren:** In „Planen“ steht über dem Ablauf die Gruppe „Infos & Dateien“ – je Termin oben die Knöpfe ⓘ
+und Büroklammer wie in ChurchTools, darunter die ersten zwei Zeilen der Infos zum Lesen. Wer darf, schreibt sie über das
+ⓘ direkt dort.
 
-1. Planen → Matrix → oben die Gruppe **„Infos & Dateien“**, darunter „Ablauf“. Beim Termin mit Infos stehen die ersten
-   zwei Zeilen, beim anderen **„+ Infos“** (nur mit Recht; ohne Recht „–“).
-2. Infos antippen → dasselbe Fenster wie in der Termin-Ansicht. **„+ Infos“** → gleich das Textfeld → schreiben → Speichern → die
+1. Planen → Matrix → oben die Gruppe **„Infos & Dateien“**, darunter „Ablauf“. Beim Termin mit Infos: ⓘ hellblau
+   hinterlegt, darunter die ersten zwei Zeilen grau hinterlegt (nur zum Lesen, kein Knopf). Beim anderen nur ⓘ und
+   Büroklammer (nur mit Recht; ohne Recht „–“).
+2. **ⓘ** → dasselbe Fenster wie in der Termin-Ansicht; ohne Infos gleich das Textfeld → schreiben → Speichern → die
    Zelle zeigt den Text sofort; in ChurchTools steht er auch; ein abgesagter Termin bleibt abgesagt.
 3. Gruppe zuklappen, Seite neu laden → bleibt zugeklappt.
 4. Am Handy: beim gewählten Termin die Gruppe „Infos & Dateien“ über dem Ablauf.
@@ -446,8 +448,8 @@ der Matrix unter den Infos – und öffnet sie mit einem Tipp.
 1. Dienstplaner → Termin mit Dateien → oben neben dem ⓘ die **Büroklammer mit „2“**. Beim Termin ohne Dateien keine.
 2. Büroklammer → Fenster **„Dateien“**: die PDF mit „PDF · Größe“, der Link mit „Link · Adresse“. Antippen öffnet sie in
    einem neuen Tab (die PDF aus ChurchTools, ohne neue Anmeldung).
-3. Planen → Matrix → Gruppe „Infos & Dateien“: unter den Infos je Datei eine Zeile mit Büroklammer (höchstens drei, dann
-   „+ N weitere“). Eine Zeile antippen → dasselbe Fenster.
+3. Planen → Matrix → Gruppe „Infos & Dateien“: unter den Infos **„Anhänge:“** mit je einer Zeile je Datei (höchstens drei,
+   dann „+ N weitere“). Ohne Recht öffnet ein Tipp die Datei direkt; „+ N weitere“ öffnet das Fenster mit allen.
 4. In ChurchTools eine dritte Datei anhängen, im Dienstplaner das Fenster noch einmal öffnen → sie steht da, und nach dem
    Schließen zeigt die Büroklammer „3“ bzw. die Matrix drei Zeilen.
 
@@ -457,5 +459,43 @@ der Matrix unter den Infos – und öffnet sie mit einem Tipp.
 - **Betrifft:** `shared/ct/terminDateien.ts`, `dienstplaner/src/DateienFenster.tsx`, `dienstplaner/src/TerminAnsicht.tsx`, `dienstplaner/src/MatrixInfos.tsx`, `dienstplaner/src/useMatrixInfos.ts`, `ui/dateien/DateiZeile.tsx`, `ui/bedienung/KopfKnopf.tsx`
 - **Automatisiert:** ja – `shared/ct/terminDateien.test.ts` (gemessene Antworten, sichere Adressen), `dienstplaner/src/TerminAnsicht.test.tsx` (Büroklammer, Fenster, frische Liste, Fehler, fremde Adressen), `dienstplaner/src/MatrixInfos.test.tsx` (Zeilen, „+ N weitere“, frische Liste bis der Plan Neues bringt); von Hand bleibt das Öffnen aus ChurchTools
 - **Historie:** T2a (02.11.2026, Entwurf `termin-einstellungen.html` Variante B, Matrix `matrix-infos.html` Variante 2)
+
+</details>
+
+### TF-ABLAUF-19 · Dateien am Termin hochladen, verlinken, umbenennen, löschen
+
+**Das brauchst du:** Einen Test-Termin, den du ändern darfst („Events bearbeiten“ für den Kalender oder Admin des
+Termins), eine PDF, eine Datei über 128 MB (z. B. ein Video) und eine größere Datei (20–100 MB) für den Fortschritt;
+eine Person ohne dieses Recht.
+
+**Das muss passieren:** Wer den Termin ändern darf, hängt Dateien und Links an, benennt sie um und löscht sie – wie mit
+der Büroklammer in ChurchTools. ChurchTools zeigt danach dasselbe. Zu große Dateien gehen gar nicht erst hoch.
+
+1. Termin ohne Dateien → oben die **Büroklammer ohne Zahl** → gleich **„Anhang hinzufügen“**. Ohne Recht: keine Büroklammer.
+2. **Dateien hochladen:** die PDF und die über 128 MB wählen (oder hineinziehen) → die große steht rot da („zu groß …
+   wird nicht hochgeladen“), der Knopf sagt „1 Datei hochladen“. Hochladen → die PDF erscheint in der Liste, die große
+   bleibt rot stehen; ✕ nimmt sie weg.
+3. Die 20–100-MB-Datei hochladen → ein **Balken mit %** läuft bis 100, danach steht sie mit Größe in der Liste.
+4. **Link anhängen:** Name und Adresse ohne `https://` → Hinweis, Knopf grau; mit `https://…` → der Link steht in der
+   Liste und öffnet sich in einem neuen Tab.
+5. Die PDF in der Liste antippen → ihr **kleines Fenster** (wie in ChurchTools): „PDF · Größe“, „Angehängt am … von …“,
+   **Öffnen** (neuer Tab), **Umbenennen**, **Löschen**. Umbenennen → die Endung „.pdf“ steht fest daneben; neuer Name →
+   Umbenennen → die Liste zeigt ihn. „‹“ im Umbenennen führt zurück zum kleinen Fenster.
+6. Den Link antippen → **Löschen** → Rückfrage „… löschen? Das lässt sich nicht rückgängig machen – nur durch erneutes
+   Anhängen“ → Löschen → weg.
+7. In ChurchTools (Dienstplan → Büroklammer bzw. Termin → Dateien) stehen dieselben Dateien mit denselben Namen; es ging
+   **keine Mail** raus.
+8. Matrix → „Infos & Dateien“: die **Büroklammer** oben in der Zelle (nur mit Recht) öffnet gleich „Anhang hinzufügen“;
+   „‹“ führt zu den Dateien. Eine Datei unter „Anhänge:“ antippen → ihr kleines Fenster; „‹“ führt zu allen Dateien.
+9. Aus der Matrix einen Termin öffnen, dort eine Datei anhängen oder die Infos ändern, mit **„‹ Planen“** zurück → die
+   Matrix zeigt sofort den neuen Stand (ohne die Seite neu zu laden).
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/ct/terminDateien.ts`, `shared/dateien/index.ts`, `ui/ct/verbindung.ts`, `dienstplaner/src/ladeTerminDateien.ts`, `dienstplaner/src/DateienFenster.tsx`, `dienstplaner/src/AnhangHinzufuegen.tsx`, `dienstplaner/src/TerminAnsicht.tsx`, `dienstplaner/src/MatrixInfos.tsx`, `dienstplaner/src/App.tsx`
+- **Automatisiert:** ja – `shared/ct/terminDateien.test.ts` (Kern: 128 MiB, nachlesen, Zeitüberschreitung mit angekommener Datei, 404 beim Löschen), `ui/ct/verbindung.test.ts` (Hochladen mit Fortschritt, Stillstand-Zeitgrenze mit Fake-Timern, 403/413/429/Netz), `dienstplaner/src/DateienFenster.test.tsx` (ganze Kette bis ChurchTools), `TerminAnsicht.test.tsx`, `MatrixInfos.test.tsx`, `App.termin.test.tsx` (leise neu nach Änderungen); von Hand bleiben echte große Dateien, Ziehen & Ablegen und der Blick in ChurchTools
+- **Historie:** T2b (02.11.2026, Alwin: Fortschritt in %; 03.11.2026 nach der Test-Instanz: Zelle und Datei-Fenster wie in
+  ChurchTools, Entwurf `matrix-infos-bearbeiten.html` Variante D1 – statt Stift und Papierkorb)
 
 </details>

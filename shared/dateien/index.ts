@@ -19,6 +19,38 @@ export const MAX_FILE_BYTES = 50 * 1024 * 1024;
 export const MAX_FILE_TEXT = '50 MB';
 
 /**
+ * Prüft eine ausgewählte Datei, BEVOR sie durchs Netz geht – `null` heißt „in Ordnung". **Eine Regel für alle Apps**
+ * (seit T2b, 02.11.2026: vorher nur in der Musik-App, `pruefeUpload`); die Grenze gibt die App mit – die Musik-App
+ * ihre 50 MB, der Dienstplaner die 128 MiB von ChurchTools.
+ *
+ * **Die Größe zuerst:** eine Datei erst zu übertragen und dann abgelehnt zu bekommen ist der schlechteste Moment für
+ * eine Fehlermeldung, besonders über Mobilfunk. **Ein vorhandener gleicher Name ist eine Warnung, kein Verbot:**
+ * ChurchTools ersetzt nicht, die Datei läge danach zweimal da – was davon die richtige ist, weiß nur der Nutzer.
+ */
+export function pruefeHochladen(
+  datei: { name: string; size: number },
+  vorhandeneNamen: readonly string[],
+  grenze: { bytes: number; text: string },
+): { art: 'fehler' | 'warnung'; text: string } | null {
+  if (datei.size === 0) {
+    return { art: 'fehler', text: `„${datei.name}" ist leer und wurde nicht hochgeladen.` };
+  }
+  if (datei.size > grenze.bytes) {
+    return {
+      art: 'fehler',
+      text: `„${datei.name}" ist zu groß. Erlaubt sind bis zu ${grenze.text}.`,
+    };
+  }
+  if (vorhandeneNamen.includes(datei.name)) {
+    return {
+      art: 'warnung',
+      text: `Es gibt hier schon eine Datei „${datei.name}". Sie wird NICHT ersetzt – beide liegen danach in ChurchTools. Trotzdem hochladen?`,
+    };
+  }
+  return null;
+}
+
+/**
  * Nur diese MIME-Typen werden 1:1 (inline) ausgeliefert. Alles andere reicht der Proxy als
  * `application/octet-stream` mit `Content-Disposition: attachment` durch. Hintergrund (#138):
  * Die Bytes kommen aus ChurchTools, wo jeder mit Upload-Recht (Musiker) eine Datei an ein

@@ -44,6 +44,38 @@ const platz = (
   isAccepted,
 });
 
+/**
+ * Dateien am Termin (T2a/T2b) wie gemessen: ausführlich unter `/files/service/{id}` (mit Größe und `meta`), kurz als
+ * `eventFiles` am Termin. Hochladen geht in der Demo nicht (das läuft über `XMLHttpRequest`, die Demo ersetzt `fetch`).
+ */
+const DEMO_DATEIEN = new Map<number, Record<string, unknown>[]>();
+let naechsteDateiId = 900;
+function demoDatei(eventId: number, name: string, typ: 'file' | 'link', size: number | null) {
+  const id = naechsteDateiId++;
+  const fileUrl =
+    typ === 'link'
+      ? 'https://example.org/liedtexte'
+      : `${location.origin}/?q=public/filedownload&id=${id}`;
+  const liste = DEMO_DATEIEN.get(eventId) ?? [];
+  liste.push({
+    id,
+    name,
+    type: typ,
+    fileUrl,
+    size,
+    meta: { createdDate: zeit(-1, '10:05'), createdPerson: { title: 'Alwin Friesen' } },
+  });
+  DEMO_DATEIEN.set(eventId, liste);
+}
+/** Die kurze Form am Termin, wie die Terminliste sie liefert. */
+const eventFiles = (eventId: number) =>
+  (DEMO_DATEIEN.get(eventId) ?? []).map((f) => ({
+    title: f.name,
+    domainType: f.type === 'link' ? 'link' : 'file',
+    domainIdentifier: String(f.id),
+    frontendUrl: f.fileUrl,
+  }));
+
 const TERMINE = [
   {
     id: 101,
@@ -128,6 +160,30 @@ const NAMEN: Record<number, string> = {
  * Anna, Ben, … – die Demo verschickt natürlich nichts.
  */
 function einteilenDemo(methode: string, pfad: string, rumpf: unknown): unknown {
+  const dateien = /^\/api\/files\/service\/(\d+)(\/link)?$/.exec(pfad);
+  if (dateien && methode === 'GET') return { data: DEMO_DATEIEN.get(Number(dateien[1])) ?? [] };
+  if (dateien && dateien[2] && methode === 'POST') {
+    const r = rumpf as { name: string; url: string };
+    demoDatei(Number(dateien[1]), r.name, 'link', null);
+    const neu = DEMO_DATEIEN.get(Number(dateien[1]))!.at(-1)!;
+    neu.fileUrl = r.url;
+    return { data: neu };
+  }
+  const datei = /^\/api\/files\/(\d+)$/.exec(pfad);
+  if (datei && (methode === 'PATCH' || methode === 'DELETE')) {
+    for (const [eventId, liste] of DEMO_DATEIEN) {
+      const f = liste.find((x) => x.id === Number(datei[1]));
+      if (!f) continue;
+      if (methode === 'PATCH') f.name = (rumpf as { name: string }).name;
+      else
+        DEMO_DATEIEN.set(
+          eventId,
+          liste.filter((x) => x !== f),
+        );
+      return { data: null };
+    }
+    return undefined;
+  }
   const termin = /^\/api\/events\/(\d+)$/.exec(pfad);
   if (termin && methode === 'GET') {
     // 90: ein vergangener Termin (nicht in der Liste „ab heute“); 91 gibt es nicht → 404 (gemessen).
@@ -136,7 +192,7 @@ function einteilenDemo(methode: string, pfad: string, rumpf: unknown): unknown {
       (Number(termin[1]) === 90
         ? { id: 90, name: 'Gottesdienst', startDate: zeit(-10, '08:00'), eventServices: [] }
         : undefined);
-    return t ? { data: t } : undefined;
+    return t ? { data: { ...t, eventFiles: eventFiles(t.id) } } : undefined;
   }
   // „Weitere Infos“ (T1) wie gemessen: `PUT` übernimmt `description` (`null` leert) und setzt `isCanceled` – fehlt es,
   // auf false.
@@ -314,15 +370,22 @@ const VORLAGEN = [
 /** Ein einzelner Termin (E6-5b: Name des verbundenen Termins in der Nachfrage). */
 function einTermin(id: number): { data: unknown } | undefined {
   const t = TERMINE.find((x) => x.id === id);
-  return t && { data: t };
+  return t && { data: { ...t, eventFiles: eventFiles(t.id) } };
 }
 
 /** Wie ChurchTools: nur Termine ab `from` (Tag) und vor `to` (Tag, ausgeschlossen) – sonst stimmt „Oktober“ nicht. */
 function termineVonBis(von: string | null, bis: string | null) {
   return TERMINE.filter(
     (t) => (!von || t.startDate.slice(0, 10) >= von) && (!bis || t.startDate.slice(0, 10) < bis),
-  );
+  ).map((t) => ({ ...t, eventFiles: eventFiles(t.id) }));
 }
+
+// Dateien wie in der Test-Instanz (T2b): am ersten Gottesdienst drei Dateien und ein Link, am Gebetsabend ein Link.
+demoDatei(101, 'Predigt-Folien.pdf', 'file', 2_516_582);
+demoDatei(101, 'Rückblick-Video.mp4', 'file', 98_566_144);
+demoDatei(101, 'Liedtexte', 'link', null);
+demoDatei(101, 'Ablauf-Notizen.txt', 'file', 1_200);
+demoDatei(102, 'website', 'link', null);
 
 type DemoPunkt = { id: number; duration?: number; ausgeblendet?: boolean } & Record<
   string,

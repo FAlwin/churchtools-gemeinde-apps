@@ -1,23 +1,35 @@
 import { useState } from 'react';
 import { Icon } from '@ui/icons/icons';
+import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
+import { ctBasis } from '@ui/ct/verbindung';
+import { dateiAdresse } from '@shared/ct/terminDateien';
 import { datumText } from '@shared/ct/datum';
 import type { Plan, PlanSpalte } from '@shared/dienstplan/plan';
 import { InfosFenster } from './InfosFenster';
+import { CtSymbol } from './CtSymbol';
 import { DateienFenster } from './DateienFenster';
 import type { MatrixInfos } from './useMatrixInfos';
 import planStyles from './Planen.module.scss';
 import ablaufStyles from './MatrixAblauf.module.scss';
 import styles from './MatrixInfos.module.scss';
 
-/** Welches Fenster gerade offen ist. */
-type Offen = 'infos' | 'dateien' | null;
+/** Welches Fenster: die Infos, die Dateien, gleich „Anhang hinzufügen“ (Büroklammer) oder eine Datei (T2b). */
+type Was =
+  | { art: 'infos' }
+  | { art: 'dateien' }
+  | { art: 'neueDatei' }
+  | { art: 'datei'; id: number };
 
 /** So viele Dateien stehen in einer Zelle, der Rest als „+ N weitere“ (die Zelle soll nicht endlos wachsen). */
 const DATEIEN_SICHTBAR = 3;
 
 /**
- * Eine Zelle: oben die ersten zwei Zeilen der Infos (antippen öffnet alles), „+ Infos“ für wen darf; darunter die
- * Dateien (T2a, Alwin 02.11.2026: eine Datei-Zeile öffnet das Dateien-Fenster). Ohne beides ein Strich.
+ * **Eine Zelle wie in der Dienstplan-Liste von ChurchTools** (T2b, Alwin 03.11.2026, Entwurf
+ * `matrix-infos-bearbeiten.html` Variante D1 – vorher war ein vorhandener Text nicht als bearbeitbar zu erkennen): oben
+ * die Knöpfe **ⓘ** (Weitere Infos – hellblau, wenn es welche gibt) und **Büroklammer** (Anhang hinzufügen, nur wer
+ * ändern darf); darunter der Infotext zum Lesen in einem grauen Kasten (wie „Testinfo“ in ChurchTools) und „Anhänge:“.
+ * Wer ändern darf, bekommt beim Tipp auf eine Datei deren kleines Fenster (Öffnen, Umbenennen, Löschen); alle anderen
+ * öffnen sie direkt. Ohne alles ein Strich.
  */
 function InfosZelle({
   mi,
@@ -26,71 +38,104 @@ function InfosZelle({
 }: {
   mi: MatrixInfos;
   s: PlanSpalte;
-  onOeffnen: (was: 'infos' | 'dateien') => void;
+  onOeffnen: (was: Was) => void;
 }) {
   const text = mi.text(s);
   const dateien = mi.dateien(s);
-  const infos = text ? (
-    <button
-      type="button"
-      className={styles.text}
-      title={text}
-      aria-label={`Weitere Infos ${s.name}, ${datumText(s.tag)}: ${text}`}
-      onClick={() => onOeffnen('infos')}
-    >
-      {/* Abgeschnitten wird innen – am Knopf selbst ragte die dritte Zeile in den Innenabstand (Demo, 02.11.2026). */}
-      <span className={styles.zweiZeilen}>{text}</span>
-    </button>
-  ) : mi.darf(s) ? (
-    <button
-      type="button"
-      className={styles.plus}
-      aria-label={`Infos für ${s.name}, ${datumText(s.tag)} schreiben`}
-      onClick={() => onOeffnen('infos')}
-    >
-      <Icon name="plus" size={14} /> Infos
-    </button>
-  ) : null;
-  if (!infos && dateien.length === 0) {
+  const darf = mi.darf(s);
+  const fuer = `${s.name}, ${datumText(s.tag)}`;
+  if (!darf && !text && dateien.length === 0) {
     return (
       <span className={planStyles.na} aria-label="keine Infos">
         –
       </span>
     );
   }
+  const basis = ctBasis();
   const rest = dateien.length - DATEIEN_SICHTBAR;
   return (
     <>
-      {infos}
+      <span className={styles.knoepfe}>
+        {(text || darf) && (
+          <KopfKnopf
+            onClick={() => onOeffnen({ art: 'infos' })}
+            label={`Weitere Infos ${fuer}`}
+            symbol={<CtSymbol name="info" size={14} />}
+            offen={text !== ''}
+            klein
+          />
+        )}
+        {darf && (
+          <KopfKnopf
+            onClick={() => onOeffnen({ art: 'neueDatei' })}
+            label={`Datei an ${fuer} anhängen`}
+            symbol={<CtSymbol name="paperclip" size={14} />}
+            klein
+          />
+        )}
+      </span>
+      {text && (
+        // Nur zum Lesen – bearbeitet wird über das ⓘ. Abgeschnitten wird innen (dritte Zeile ragte sonst in den Rand).
+        <p className={styles.kasten} title={text}>
+          <span className={styles.zweiZeilen}>{text}</span>
+        </p>
+      )}
       {dateien.length > 0 && (
-        <ul className={styles.dateien}>
-          {dateien.slice(0, DATEIEN_SICHTBAR).map((d) => (
-            <li key={d.id}>
-              <button
-                type="button"
-                className={styles.datei}
-                title={d.name}
-                aria-label={`Dateien ${s.name}, ${datumText(s.tag)}: ${d.name}`}
-                onClick={() => onOeffnen('dateien')}
-              >
-                <Icon name="anhang" size={12} />
-                <span>{d.name}</span>
-              </button>
-            </li>
-          ))}
-          {rest > 0 && (
-            <li>
-              <button
-                type="button"
-                className={styles.datei}
-                aria-label={`Alle ${dateien.length} Dateien ${s.name}, ${datumText(s.tag)}`}
-                onClick={() => onOeffnen('dateien')}
-              >
-                <span>+ {rest} weitere</span>
-              </button>
-            </li>
-          )}
-        </ul>
+        <>
+          <span className={styles.anhaenge}>Anhänge:</span>
+          <ul className={styles.dateien}>
+            {dateien.slice(0, DATEIEN_SICHTBAR).map((d) => {
+              const inhalt = (
+                <>
+                  <Icon name={d.art === 'link' ? 'link' : 'anhang'} size={12} />
+                  <span>{d.name}</span>
+                </>
+              );
+              const href = dateiAdresse(d, basis);
+              return (
+                <li key={d.id}>
+                  {darf ? (
+                    <button
+                      type="button"
+                      className={styles.datei}
+                      title={d.name}
+                      aria-label={`${d.name} – ${fuer}`}
+                      onClick={() => onOeffnen({ art: 'datei', id: d.id })}
+                    >
+                      {inhalt}
+                    </button>
+                  ) : href ? (
+                    <a
+                      className={styles.datei}
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={d.name}
+                    >
+                      {inhalt}
+                    </a>
+                  ) : (
+                    <span className={styles.datei} title="Lässt sich hier nicht öffnen">
+                      {inhalt}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+            {rest > 0 && (
+              <li>
+                <button
+                  type="button"
+                  className={styles.datei}
+                  aria-label={`Alle ${dateien.length} Dateien ${fuer}`}
+                  onClick={() => onOeffnen({ art: 'dateien' })}
+                >
+                  <span>+ {rest} weitere</span>
+                </button>
+              </li>
+            )}
+          </ul>
+        </>
       )}
     </>
   );
@@ -105,16 +150,19 @@ function Fenster({
 }: {
   mi: MatrixInfos;
   s: PlanSpalte;
-  was: 'infos' | 'dateien';
+  was: Was;
   onClose: () => void;
 }) {
   const fuer = `${s.name} · ${datumText(s.tag)}`;
-  if (was === 'dateien') {
+  if (was.art !== 'infos') {
     return (
       <DateienFenster
         fuer={fuer}
         terminId={s.id}
         dateien={mi.dateien(s)}
+        darf={mi.darf(s)}
+        neu={was.art === 'neueDatei'}
+        datei={was.art === 'datei' ? was.id : undefined}
         onAktuell={(d) => mi.dateienAktuell(s, d)}
         onClose={onClose}
       />
@@ -161,7 +209,7 @@ export function InfosZeilen({
   spalten: number[];
   zelleKlasse: (s: PlanSpalte) => string;
 }) {
-  const [offen, setOffen] = useState<{ s: PlanSpalte; was: 'infos' | 'dateien' } | null>(null);
+  const [offen, setOffen] = useState<{ s: PlanSpalte; was: Was } | null>(null);
   return (
     <>
       <tr className={planStyles.gruppe}>
@@ -196,7 +244,7 @@ export function InfosZeilen({
 
 /** Die Gruppe am Handy – für den gewählten Termin. */
 export function HandyInfos({ mi, s }: { mi: MatrixInfos; s: PlanSpalte }) {
-  const [offen, setOffen] = useState<Offen>(null);
+  const [offen, setOffen] = useState<Was | null>(null);
   return (
     <div className={planStyles.handyGruppe}>
       <div className={planStyles.handyGruppenKopf}>

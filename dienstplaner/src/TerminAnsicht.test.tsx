@@ -68,6 +68,7 @@ function zeige(
 ) {
   const onTermin = vi.fn();
   const onZurueck = vi.fn();
+  const onGeaendert = vi.fn();
   const ansicht = (terminId: number) => (
     <TerminAnsicht
       start={p.start ?? startFuer()}
@@ -78,12 +79,13 @@ function zeige(
       zurueck="Termine"
       onTermin={onTermin}
       onZurueck={onZurueck}
+      onGeaendert={onGeaendert}
     />
   );
   const { rerender } = render(ansicht(7));
   /** Wie ‹ ›: dieselbe Ansicht mit einem anderen Termin. */
   const wechsel = (terminId: number) => rerender(ansicht(terminId));
-  return { onTermin, onZurueck, wechsel };
+  return { onTermin, onZurueck, wechsel, onGeaendert };
 }
 
 beforeEach(() => {
@@ -1253,7 +1255,7 @@ describe('„Weitere Infos“ (T1)', () => {
 
   it('bearbeiten und speichern: description und frisches isCanceled gehen mit, die Zeile zeigt den neuen Text', async () => {
     const ct = ctInfos({ description: 'alt', isCanceled: true });
-    zeige({ start: darf() });
+    const { onGeaendert } = zeige({ start: darf() });
     fireEvent.click(await screen.findByRole('button', { name: 'Weitere Infos zum Termin' }));
     fireEvent.click(screen.getByRole('button', { name: 'Bearbeiten' }));
     const feld = screen.getByRole('textbox', { name: 'Für alle, die den Termin sehen' });
@@ -1262,6 +1264,8 @@ describe('„Weitere Infos“ (T1)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     await waitFor(() => expect(ct.schreiben).toHaveLength(1));
     expect(ct.schreiben[0]).toEqual({ description: 'neu\nmit Zeile', isCanceled: true });
+    // Die Termine anderswo (Matrix) sind damit veraltet – die App lädt sie leise neu (03.11.2026).
+    expect(onGeaendert).toHaveBeenCalledOnce();
     expect(await screen.findByRole('button', { name: 'neu mit Zeile' })).toBeTruthy();
     expect(
       within(screen.getByRole('dialog', { name: 'Weitere Infos' })).getByText(/mit Zeile/),
@@ -1369,7 +1373,7 @@ describe('Dateien am Termin (T2a)', () => {
 
   it('Büroklammer mit Zahl im Kopf; das Fenster zeigt die Dateien mit Größe und öffnet sie aus ChurchTools', async () => {
     ctDateien();
-    zeige();
+    const { onGeaendert } = zeige();
     fireEvent.click(await knopf(2));
     const f = screen.getByRole('dialog', { name: 'Dateien' });
     expect(within(f).getByText('Gottesdienst · So, 18.10.2026')).toBeTruthy();
@@ -1383,13 +1387,58 @@ describe('Dateien am Termin (T2a)', () => {
         .getAttribute('href'),
     ).toBe('https://example.org/x');
     expect(within(f).getByText('Link · example.org')).toBeTruthy();
+    // Dieselben Dateien wie im Plan: nichts veraltet, nichts neu zu laden.
+    expect(onGeaendert).not.toHaveBeenCalled();
   });
 
-  it('ohne Dateien keine Büroklammer', async () => {
+  it('in ChurchTools: ⓘ und Büroklammer im Kopf sind die Zeichen der Dienstplan-Liste', async () => {
+    Object.defineProperty(document, 'fonts', {
+      configurable: true,
+      value: {
+        forEach: (fn: (f: { family: string }) => void) => fn({ family: 'Font Awesome Pro' }),
+      },
+    });
+    try {
+      ctDateien({ eventFiles: [], frisch: [] });
+      zeige({ start: startFuer({ rechte: { ...startFuer().rechte, terminKalender: [2] } }) });
+      const klammer = await screen.findByRole('button', { name: 'Datei an den Termin anhängen' });
+      expect(klammer.querySelector('i')?.className).toBe('fas fa-paperclip');
+      expect(
+        screen.getByRole('button', { name: 'Weitere Infos zum Termin' }).querySelector('i')
+          ?.className,
+      ).toBe('fas fa-info');
+    } finally {
+      delete (document as { fonts?: unknown }).fonts;
+    }
+  });
+
+  it('ohne Dateien und ohne Recht keine Büroklammer', async () => {
     ctDateien({ eventFiles: [] });
     zeige();
     await screen.findByRole('heading', { name: 'Gottesdienst' });
-    expect(screen.queryByRole('button', { name: /^Dateien zum Termin/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Dateien zum Termin|anhängen/ })).toBeNull();
+  });
+
+  it('ohne Dateien, aber mit Recht (T2b): Büroklammer ohne Zahl, öffnet gleich „Anhang hinzufügen“', async () => {
+    ctDateien({ eventFiles: [], frisch: [] });
+    zeige({ start: startFuer({ rechte: { ...startFuer().rechte, terminKalender: [2] } }) });
+    const knopf = await screen.findByRole('button', { name: 'Datei an den Termin anhängen' });
+    expect(knopf.textContent).toBe('');
+    fireEvent.click(knopf);
+    expect(screen.getByRole('dialog', { name: 'Anhang hinzufügen' })).toBeTruthy();
+  });
+
+  it('mit Recht (T2b): ein Tipp auf eine Datei zeigt ihr kleines Fenster, unten „Anhang hinzufügen“', async () => {
+    ctDateien();
+    zeige({ start: startFuer({ rechte: { ...startFuer().rechte, terminKalender: [2] } }) });
+    fireEvent.click(await knopf(2));
+    const f = screen.getByRole('dialog', { name: 'Dateien' });
+    expect(within(f).getByRole('button', { name: 'Anhang hinzufügen' })).toBeTruthy();
+    // Kein Link mehr in der Liste – erst das kleine Fenster (Öffnen, Umbenennen, Löschen; Entwurf D1, 03.11.2026).
+    expect(within(f).queryByRole('link')).toBeNull();
+    fireEvent.click(within(f).getByRole('button', { name: /Folien\.pdf/ }));
+    const d = screen.getByRole('dialog', { name: 'Folien.pdf' });
+    expect(within(d).getByRole('link', { name: 'Öffnen' }).getAttribute('href')).toBe(download(21));
   });
 
   it('die frische Liste zählt: inzwischen eine Datei mehr → die Zahl im Kopf folgt', async () => {
@@ -1400,9 +1449,11 @@ describe('Dateien am Termin (T2a)', () => {
         { id: 23, name: 'Plakat.png', type: 'file', fileUrl: download(23), size: 2 },
       ],
     });
-    zeige();
+    const { onGeaendert } = zeige();
     fireEvent.click(await knopf(2));
     expect(await screen.findByRole('link', { name: /Plakat\.png/ })).toBeTruthy();
+    // Inzwischen eine mehr: Der Plan der Matrix ist veraltet.
+    expect(onGeaendert).toHaveBeenCalledOnce();
     fireEvent.click(screen.getByRole('button', { name: 'Fenster schließen' }));
     expect(await knopf(3)).toBeTruthy();
   });

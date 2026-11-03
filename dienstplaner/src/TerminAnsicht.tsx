@@ -7,13 +7,14 @@ import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { datumText, kachel } from '@shared/ct/datum';
 import { musikAppDirektLink } from '@shared/ct/musikAppLink';
 import type { CtAgenda } from '@shared/ct/typen';
-import type { TerminDatei } from '@shared/ct/terminDateien';
+import { dateienSchluessel, type TerminDatei } from '@shared/ct/terminDateien';
 import { gruppenName } from '@shared/dienstplan/plan';
 import { ladeTermin, type TerminDaten } from './ladeTermine';
 import { ladeAblauf, ladeMusikApp } from './ladeBeiwerk';
 import { Plaetze } from './Planen';
 import { terminAenderbar, type Start } from './start';
 import { InfosFenster } from './InfosFenster';
+import { CtSymbol } from './CtSymbol';
 import { DateienFenster } from './DateienFenster';
 import { TerminAblauf } from './TerminAblauf';
 import styles from './TerminAnsicht.module.scss';
@@ -46,6 +47,7 @@ export function TerminAnsicht({
   zurueck,
   onTermin,
   onZurueck,
+  onGeaendert,
 }: {
   start: Start;
   terminId: number;
@@ -57,6 +59,8 @@ export function TerminAnsicht({
   zurueck: string;
   onTermin: (id: number) => void;
   onZurueck: () => void;
+  /** Infos oder Dateien haben sich geändert – die Termine anderswo (Matrix, Liste) sind damit veraltet. */
+  onGeaendert?: () => void;
 }) {
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
   const [versuch, setVersuch] = useState(0);
@@ -150,26 +154,32 @@ export function TerminAnsicht({
   const gruppen = plan.gruppen;
   const { ablauf } = zustand;
   const infos = infosNeu ?? s.infos;
-  const infosDarf = terminAenderbar(start, s.ablaufTermin);
+  // Infos und Dateien ändern darf, wer den Termin ändern darf – dieselbe Regel (gemessen 02.11.2026).
+  const darf = terminAenderbar(start, s.ablaufTermin);
   // Das ⓘ wie in ChurchTools (Entwurf T, Variante B): wo es Infos gibt oder man welche schreiben darf.
-  const infoKnopf = (infos !== '' || infosDarf) && (
+  const infoKnopf = (infos !== '' || darf) && (
     <KopfKnopf
       onClick={() => setInfosOffen(true)}
       label="Infos"
       title="Weitere Infos zum Termin"
-      symbol={<Icon name="info" size={16} stroke={2.2} />}
+      symbol={<CtSymbol name="info" size={16} />}
       nurSymbol
     />
   );
-  // Die Büroklammer mit der Zahl der Dateien wie in ChurchTools – in T2a nur, wo es Dateien gibt (Hochladen folgt in T2b).
+  // Die Büroklammer mit der Zahl der Dateien wie in ChurchTools – wo es Dateien gibt oder man welche anhängen darf
+  // (dann ohne Zahl, Alwin 02.11.2026).
   const dateien = dateienNeu ?? s.dateien;
-  const dateiKnopf = dateien.length > 0 && (
+  const dateiKnopf = (dateien.length > 0 || darf) && (
     <KopfKnopf
       onClick={() => setDateienOffen(true)}
       label="Dateien"
-      title={`Dateien zum Termin (${dateien.length})`}
-      symbol={<Icon name="anhang" size={16} stroke={2.2} />}
-      zahl={dateien.length}
+      title={
+        dateien.length > 0
+          ? `Dateien zum Termin (${dateien.length})`
+          : 'Datei an den Termin anhängen'
+      }
+      symbol={<CtSymbol name="paperclip" size={16} />}
+      zahl={dateien.length > 0 ? dateien.length : undefined}
       nurSymbol
     />
   );
@@ -284,8 +294,11 @@ export function TerminAnsicht({
               fuer={`${s.name} · ${datumText(s.tag)}`}
               terminId={s.id}
               text={infos}
-              darf={infosDarf}
-              onGespeichert={setInfosNeu}
+              darf={darf}
+              onGespeichert={(t) => {
+                setInfosNeu(t);
+                onGeaendert?.();
+              }}
               onClose={() => setInfosOffen(false)}
             />
           )}
@@ -294,7 +307,12 @@ export function TerminAnsicht({
               fuer={`${s.name} · ${datumText(s.tag)}`}
               terminId={s.id}
               dateien={dateien}
-              onAktuell={setDateienNeu}
+              darf={darf}
+              onAktuell={(d) => {
+                setDateienNeu(d);
+                // Auch wenn jemand anderes inzwischen geändert hat: Dann ist der Plan ebenso veraltet.
+                if (dateienSchluessel(d) !== dateienSchluessel(s.dateien)) onGeaendert?.();
+              }}
               onClose={() => setDateienOffen(false)}
             />
           )}

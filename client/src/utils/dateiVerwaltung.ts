@@ -15,7 +15,7 @@ import type { ArrangementFileEntry, ArrangementFileKind } from '@shared/types/in
 // Symbol, Art und Anzeige einer Datei liegen seit E6-O O4 in `ui/lied/dateiAnzeige` – der Dienstplaner zeigt
 // dieselben Dateien (Lied-Ansicht) und soll sie nicht nachbauen.
 export { DATEI_ART, DATEI_SYMBOL, dateiZeilen } from '@ui/lied/dateiAnzeige';
-import { MAX_FILE_BYTES, MAX_FILE_TEXT } from '@shared/dateien/index';
+import { MAX_FILE_BYTES, MAX_FILE_TEXT, pruefeHochladen } from '@shared/dateien/index';
 import {
   nameTeilen,
   neuerDateiname,
@@ -56,36 +56,19 @@ export function loeschFrage(datei: ArrangementFileEntry): string {
 }
 
 /**
- * Prüft eine ausgewählte Datei, BEVOR sie durchs Netz geht – `null` heißt „in Ordnung".
- *
- * **Die Größe zuerst:** 50 MB erst zu übertragen und dann abgelehnt zu bekommen ist der schlechteste
- * Moment für eine Fehlermeldung, besonders über Mobilfunk. Die Grenze kommt aus `@shared/dateien` und
- * ist damit dieselbe, die der Server durchsetzt.
- *
- * **Ein vorhandener gleicher Name ist eine Warnung, kein Verbot:** ChurchTools ersetzt nicht, die
- * Datei läge danach zweimal da. Was davon die richtige ist, weiß nur der Nutzer – deshalb bekommt er
- * die Auskunft und entscheidet selbst.
+ * Prüft eine ausgewählte Datei, BEVOR sie durchs Netz geht – `null` heißt „in Ordnung". Die Regel steht seit T2b in
+ * `@shared/dateien` (`pruefeHochladen`), der Dienstplaner benutzt sie mit; hier mit der Grenze der Musik-App, die
+ * auch der Server durchsetzt.
  */
 export function pruefeUpload(
   datei: { name: string; size: number },
   vorhandene: ArrangementFileEntry[],
 ): { art: 'fehler' | 'warnung'; text: string } | null {
-  if (datei.size === 0) {
-    return { art: 'fehler', text: `„${datei.name}" ist leer und wurde nicht hochgeladen.` };
-  }
-  if (datei.size > MAX_FILE_BYTES) {
-    return {
-      art: 'fehler',
-      text: `„${datei.name}" ist zu groß. Erlaubt sind bis zu ${MAX_FILE_TEXT}.`,
-    };
-  }
-  if (vorhandene.some((v) => v.name === datei.name)) {
-    return {
-      art: 'warnung',
-      text: `Es gibt hier schon eine Datei „${datei.name}". Sie wird NICHT ersetzt – beide liegen danach in ChurchTools. Trotzdem hochladen?`,
-    };
-  }
-  return null;
+  return pruefeHochladen(
+    datei,
+    vorhandene.map((v) => v.name),
+    { bytes: MAX_FILE_BYTES, text: MAX_FILE_TEXT },
+  );
 }
 
 /**

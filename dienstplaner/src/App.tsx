@@ -159,6 +159,9 @@ export function App() {
           zurueck={ALLE_REITER.find((r) => r.id === aktiv)?.label ?? 'Start'}
           onTermin={terminZeigen}
           onZurueck={() => wechseln(aktiv)}
+          // Infos oder Dateien geändert: Start, Termine und Planen zeigen dieselben Termine – leise neu, sonst stünde
+          // in der Matrix bis zum Neuladen der Seite noch der alte Stand (Test-Instanz T2b, 03.11.2026).
+          onGeaendert={() => termineLaden(start, geladen, true)}
         />
       )}
       {start && terminId === null && aktiv === 'start' && (

@@ -1,0 +1,150 @@
+// Dateien am Termin (T2a/T2b): „Anhang hinzufügen“ mit Ablage, Auswahl und Fortschritt, Umbenennen mit fester
+// Endung. Farben nur über die Tokens (`ui/design`).
+@use '@ui/design/mixins' as m;
+
+.ablage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 18px 12px;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--r-ctrl);
+  color: var(--blue-ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+
+  @media (hover: hover) {
+    &:hover {
+      background: var(--blue-soft);
+    }
+  }
+
+  &:focus-within {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+  }
+}
+
+.ziehen {
+  border-color: var(--blue);
+  background: var(--blue-soft);
+}
+
+.auswahl {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    padding: 8px 0;
+  }
+
+  li + li {
+    border-top: 1px solid var(--hair);
+  }
+}
+
+.auswahlKopf {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.auswahlName {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.auswahlGroesse {
+  flex: none;
+  color: var(--text2);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.weg {
+  display: inline-flex;
+  flex: none;
+  padding: 4px;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  background: none;
+  color: var(--text2);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+  }
+}
+
+.balken {
+  position: relative;
+  height: 18px;
+  margin-top: 6px;
+  overflow: hidden;
+  border-radius: var(--r-ctrl);
+  background: var(--surface3);
+
+  i {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: var(--blue-soft);
+    border-right: 2px solid var(--blue);
+    transition: width 0.2s;
+  }
+
+  span {
+    position: relative;
+    display: block;
+    color: var(--text2);
+    font-size: 12px;
+    line-height: 18px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.zuGross {
+  margin: 4px 0 0;
+  color: var(--red);
+  font-size: 12.5px;
+}
+
+.warnung {
+  margin: 4px 0 0;
+  color: var(--text2);
+  font-size: 12.5px;
+}
+
+.linkFelder {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.eingabe {
+  @include m.eingabefeld;
+  width: 100%;
+  min-width: 0;
+  height: var(--knopf-hoehe);
+  padding: 0 11px;
+  font-size: 15px;
+}
+
+.nameZeile {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.endung {
+  flex: none;
+  color: var(--text2);
+  font-size: 15px;
+}

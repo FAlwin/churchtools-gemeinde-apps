@@ -56,7 +56,7 @@ describe('platzEinteilen – Erfolg erst, wenn das Ziel am Platz steht', () => {
   it('Anfrage: frisch gelesene ID, richtiger Rumpf, neue ID zurück', async () => {
     const { ct, port } = nachbau([frei(712)]);
     const r = await platzEinteilen(port, TON, { art: 'frei' }, { art: 'anfrage', personId: 46 });
-    expect(r).toEqual({ ok: true, platzId: 900 });
+    expect(r).toEqual({ ok: true, platzId: 900, geschriebenAuf: 712 });
     expect(ct.geschrieben).toEqual([
       {
         pfad: '/events/7/servicerequests/712',
@@ -92,7 +92,7 @@ describe('platzEinteilen – Erfolg erst, wenn das Ziel am Platz steht', () => {
   it('Zurückziehen geht über decline (Leeren per PUT lehnt ChurchTools ab, E4-0)', async () => {
     const { ct, port } = nachbau([anna(724)]);
     const r = await platzEinteilen(port, TON, { art: 'anfrage', personId: 46 }, { art: 'frei' });
-    expect(r).toEqual({ ok: true, platzId: 900 });
+    expect(r).toEqual({ ok: true, platzId: 900, geschriebenAuf: 724 });
     expect(ct.geschrieben).toEqual([
       { pfad: '/events/7/servicerequests/724/decline', method: 'POST', json: { comment: null } },
     ]);
@@ -236,7 +236,7 @@ describe('platzEinteilen – jeder Fehlerzweig einzeln', () => {
     ct.schreibenFehler = null; // Zeitüberschreitung: keine Antwort …
     ct.trotzdemSchreiben = true; // … aber ChurchTools hat geschrieben
     const r = await platzEinteilen(port, TON, { art: 'frei' }, { art: 'anfrage', personId: 46 });
-    expect(r).toEqual({ ok: true, platzId: 900 });
+    expect(r).toEqual({ ok: true, platzId: 900, geschriebenAuf: 5 });
     expect(ct.geschrieben).toHaveLength(1);
   });
 

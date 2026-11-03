@@ -3,18 +3,21 @@
  * Terminliste wie der Reiter „Termine“ (`termine.ts`), ohne eigene Abfrage:
  *
  * - **Als Nächstes**: der nächste Termin, der noch nicht vorbei und nicht abgesagt ist,
- * - **Für dich offen**: deine Anfragen (angefragt, noch nicht zugesagt),
+ * - **Für dich offen**: deine Anfragen (angefragt, noch nicht zugesagt) – und zehn Minuten lang, was du eben beantwortet
+ *   hast (mit „Rückgängig“, E7-1),
  * - **Deine nächsten Dienste**: zugesagt, ohne den Termin oben, höchstens vier,
  * - **Planen**: freie Plätze je Dienstgruppe, die du planst, in den nächsten sechs Wochen.
  */
 import type { Dienstgruppe } from '../ct/dienstgruppen';
 import { tageBis } from '../ct/datum';
-import type { TerminZeile } from './termine';
+import type { MeinDienst, TerminZeile } from './termine';
 
 /** Ein eigener Dienst an einem Termin. */
 export interface DienstAmTermin {
   termin: TerminZeile;
   dienst: string;
+  /** Der eigene Platz – für Zusagen und Absagen (E7). */
+  mein: MeinDienst;
 }
 
 export interface StartUebersicht {
@@ -46,7 +49,8 @@ export function startUebersicht(
   const zugesagt: DienstAmTermin[] = [];
   for (const termin of kommend) {
     for (const d of termin.meine) {
-      (d.zugesagt ? zugesagt : offen).push({ termin, dienst: d.dienst });
+      // Eben beantwortet bleibt unter „offen“ stehen, bis „Rückgängig“ vorbei ist (E7-1).
+      (d.zugesagt && !d.antwort ? zugesagt : offen).push({ termin, dienst: d.dienst, mein: d });
     }
   }
   const sechsWochen = kommend.filter((z) => tageBis(o.heute, z.tag) < PLANEN_TAGE);

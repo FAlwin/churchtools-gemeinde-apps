@@ -105,7 +105,8 @@ const TERMINE = [
     name: 'Gottesdienst',
     startDate: zeit(11, '08:00'),
     endDate: zeit(11, '10:00'),
-    eventServices: [platz(6, null, null), platz(7, null, null), platz(9, 19, 'Spike')],
+    // Zweite offene Anfrage an Alwin (Licht) – damit „Alle zusagen“ (E7-1) in der Demo erscheint.
+    eventServices: [platz(6, null, null), platz(7, 1, 'Alwin'), platz(9, 19, 'Spike')],
   },
   {
     id: 104,
@@ -153,6 +154,9 @@ const NAMEN: Record<number, string> = {
   52: 'Clara Dyck',
   55: 'David Penner',
 };
+
+/** Abgesagte Plätze, wie sie vorher waren – für `undo` (E7-1). */
+const DEMO_ABGESAGT = new Map<number, (typeof TERMINE)[number]['eventServices'][number]>();
 
 /**
  * Einteilen (E4-4) wie gemessen: `PUT …/servicerequests/{platz}` mit Person bzw. Name, `POST …/decline` leert;
@@ -221,11 +225,28 @@ function einteilenDemo(methode: string, pfad: string, rumpf: unknown): unknown {
     }
     return { data: null };
   }
+  // Eigene Antworten (E7-1) wie gemessen: `accept` sagt zu (neue ID), `undo` setzt auf „angefragt“ zurück – nach einer
+  // Zusage mit deren ID, nach einer Absage mit der ursprünglichen.
+  const antwort = /^\/api\/events\/(\d+)\/servicerequests\/(\d+)\/(accept|undo)$/.exec(pfad);
+  if (antwort) {
+    const t = TERMINE.find((x) => x.id === Number(antwort[1]));
+    const id = Number(antwort[2]);
+    const p = t?.eventServices.find((q) => q.id === id);
+    if (antwort[3] === 'accept' && p) Object.assign(p, { id: naechstePlatzId++, isAccepted: true });
+    if (antwort[3] === 'undo') {
+      if (p) Object.assign(p, { isAccepted: false });
+      const alt = DEMO_ABGESAGT.get(id);
+      const frei = t?.eventServices.find((q) => q.serviceId === alt?.serviceId && !q.name);
+      if (alt && frei) Object.assign(frei, { ...alt, isAccepted: false });
+    }
+    return { data: null };
+  }
   const m = /^\/api\/events\/(\d+)\/servicerequests\/(\d+)(\/decline)?$/.exec(pfad);
   if (!m) return undefined;
   const p = TERMINE.find((x) => x.id === Number(m[1]))?.eventServices.find(
     (q) => q.id === Number(m[2]),
   );
+  if (p && m[3]) DEMO_ABGESAGT.set(p.id, { ...p });
   if (p) {
     const r = (m[3] ? { personId: null, name: null, isAccepted: false } : rumpf) as {
       personId: number | null;

@@ -21,8 +21,18 @@ describe('diensteAus', () => {
       gruppenIds: [7],
       sortKey: 0,
       liveSteuern: false,
+      absagen: true,
     });
     expect(d.get(3)?.gruppenIds).toEqual([]);
+  });
+
+  it('„Absagen erlaubt“ (E7, `allowDecline`): nur ausdrücklich `false` heißt nein', () => {
+    const d = diensteAus([
+      { id: 1, name: 'A', allowDecline: true },
+      { id: 2, name: 'B', allowDecline: false },
+      { id: 3, name: 'C' },
+    ]);
+    expect([1, 2, 3].map((id) => d.get(id)?.absagen)).toEqual([true, false, true]);
   });
 
   it('Reihenfolge der Gemeinde: sortKey, dann Name; ohne sortKey ans Ende', () => {

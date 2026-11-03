@@ -68,9 +68,10 @@ describe('termineAus', () => {
       tag: '2026-10-18',
       uhrzeit: '10:00',
       abgesagt: false,
+      // In der Reihenfolge der Gemeinde (hier ohne sortKey: nach Namen), nicht nach ChurchTools (E7-1).
       meine: [
-        { dienst: 'Ton', zugesagt: true },
-        { dienst: 'Gesang', zugesagt: false },
+        { dienst: 'Gesang', zugesagt: false, ort: { serviceId: 9, index: null }, absagen: true },
+        { dienst: 'Ton', zugesagt: true, ort: { serviceId: 6, index: null }, absagen: true },
       ],
       geplant: 2,
       frei: 1,
@@ -193,5 +194,38 @@ describe('Termin-Admin (E3-4)', () => {
     expect(zeilen([roh({ adminIds: [ICH] })])[0].frei).toBe(1);
     expect(zeilen([roh({ eventAdminIds: [ICH] })])[0].frei).toBe(1);
     expect(zeilen([roh({ adminIds: [99], eventAdminIds: [] })])[0].frei).toBe(0);
+  });
+});
+
+describe('termineAus – eigene Dienste (E7-1)', () => {
+  it('in der Reihenfolge der Gemeinde, nicht nach der ID von ChurchTools – die ändert sich mit jeder Antwort', () => {
+    const dienste = diensteAus([
+      { id: 7, name: 'Licht', sortKey: 0 },
+      { id: 8, name: 'Video', sortKey: 0 },
+      { id: 9, name: 'Gesang', sortKey: 5 },
+    ]);
+    const [z] = termineAus(
+      [
+        {
+          id: 163,
+          name: 'Gottesdienst',
+          startDate: '2026-11-15T09:00:00Z',
+          endDate: '2026-11-15T10:30:00Z',
+          eventServices: [
+            { id: 963, serviceId: 8, personId: 1, name: 'Alwin', isAccepted: false },
+            { id: 970, serviceId: 9, index: 2, personId: 1, name: 'Alwin', isAccepted: false },
+            { id: 966, serviceId: 7, personId: 1, name: 'Alwin', isAccepted: true },
+            { id: 960, serviceId: 9, index: 1, personId: 1, name: 'Alwin', isAccepted: false },
+          ],
+        },
+      ],
+      { ichId: 1, dienste, planbar: () => false, zeitzone: 'Europe/Berlin' },
+    );
+    expect(z.meine.map((d) => [d.dienst, d.ort?.index])).toEqual([
+      ['Licht', null],
+      ['Video', null],
+      ['Gesang', 1],
+      ['Gesang', 2],
+    ]);
   });
 });

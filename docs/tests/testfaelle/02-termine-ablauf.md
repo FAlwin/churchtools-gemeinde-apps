@@ -499,3 +499,34 @@ der Büroklammer in ChurchTools. ChurchTools zeigt danach dasselbe. Zu große Da
   ChurchTools, Entwurf `matrix-infos-bearbeiten.html` Variante D1 – statt Stift und Papierkorb)
 
 </details>
+
+### TF-ABLAUF-20 · Anfragen zusagen und absagen
+
+**Das brauchst du:** Ein Konto **ohne** Admin-Recht mit zwei offenen Anfragen in der Test-Instanz (z. B. Spike,
+angefragt über die Matrix); einen Dienst, bei dem in ChurchTools „Absagen erlaubt“ aus ist; die ChurchTools-App oder
+die Dienstplan-Liste von ChurchTools zum Gegenprüfen.
+
+**Das muss passieren:** Wer angefragt ist, sagt im Dienstplaner zu oder ab – ChurchTools zeigt danach dasselbe wie nach
+einer Antwort in der App, und für zehn Minuten lässt sich die Antwort zurücknehmen.
+
+1. Start → „Für dich offen“: an jeder Anfrage **Zusagen** und **Absagen**, oben **„Alle zusagen“** (ab zwei offenen).
+2. **Zusagen** → die Zeile zeigt „zugesagt“ mit **Rückgängig**; die Plakette oben (Als Nächstes) sagt „zugesagt“. In
+   ChurchTools ist der Dienst zugesagt. **Rückgängig** → wieder offen.
+3. **Absagen** → Fenster „Anfrage absagen“ mit „Grund (optional)“ → Grund eintragen → Absagen → „abgesagt“ mit
+   Rückgängig – **keine** Meldung „Den Termin oder Platz gibt es nicht mehr.“ In ChurchTools (als Planer) ist der
+   Platz frei, der Grund steht daran. **Rückgängig** → wieder offen.
+4. Beim Dienst ohne „Absagen erlaubt“: statt „Absagen“ der Hinweis „Absagen geht hier nicht – bitte sprich mit dem
+   Planer.“
+5. Dienste → Meine: am Termin „**Gesang zusagen**“ / „Absagen“; derselbe Stand wie auf der Startseite.
+6. Nach zehn Minuten ist „Rückgängig“ weg; eine Zusage steht dann unter „Deine nächsten Dienste“ bzw. „Als Nächstes“.
+7. Ein Planer zieht eine Anfrage zurück, bevor du antwortest → Antworten zeigt unten „Die Anfrage hat sich
+   inzwischen geändert …“, nichts wird geschrieben, die Anfrage verschwindet aus der Liste.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/dienstplan/antworten.ts`, `shared/dienstplan/einteilen.ts`, `shared/dienstplan/start.ts`, `shared/dienstplan/termine.ts`, `shared/ct/dienste.ts`, `dienstplaner/src/useAntworten.ts`, `dienstplaner/src/AntwortKnoepfe.tsx`, `dienstplaner/src/Startseite.tsx`, `dienstplaner/src/Termine.tsx`, `dienstplaner/src/App.tsx`
+- **Automatisiert:** ja – `shared/dienstplan/antworten.test.ts` (Kern gegen den Nachbau wie gemessen: neue IDs, Grund, undo mit der richtigen ID, zu spät, Konflikt, ohne Recht auf den Dienst – der freie Platz ist dann unsichtbar), `dienstplaner/src/Antworten.test.tsx` (ganze Kette bis ChurchTools, zehn Minuten mit Fake-Timern), `shared/dienstplan/start.test.ts`; von Hand bleiben die Mitteilungen und der Blick in ChurchTools
+- **Historie:** E7-1 (03.11.2026, Entwurf `e7-anfragen.html` Variante A)
+
+</details>

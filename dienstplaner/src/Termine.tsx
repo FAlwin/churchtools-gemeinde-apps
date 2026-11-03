@@ -16,6 +16,10 @@ import {
 import type { Plan } from '@shared/dienstplan/plan';
 import { leseAuswahl, merkeAuswahl } from './auswahl';
 import { Plakette } from './Plakette';
+import { plaketteArt } from './plaketteArt';
+import { AntwortKnoepfe } from './AntwortKnoepfe';
+import { Toast } from '@ui/fenster/Toast';
+import type { Antworten } from './useAntworten';
 import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
 import styles from './Termine.module.scss';
 
@@ -40,14 +44,17 @@ interface Props {
   onMehr: () => void;
   /** Eine Zeile antippen → Termin-Ansicht (E6-1b). */
   onTermin?: (id: number) => void;
+  /** Anfragen beantworten (E7-1) – ohne: nur ansehen. */
+  antworten?: Antworten;
 }
 
 /**
  * **Termine** (Bauplan E3-2, Entwurf v17): eine Liste nach Monaten, „Meine | Alle“ (Vorgabe Meine),
  * Filter nach Veranstaltung, Plaketten mit den eigenen Diensten; Planer sehen „N frei“ ihrer
- * Dienstgruppen. Nur lesen; eine Zeile öffnet die Termin-Ansicht (E6-1b).
+ * Dienstgruppen. Eine Zeile öffnet die Termin-Ansicht (E6-1b); offene Anfragen lassen sich darunter zusagen oder absagen
+ * (E7-1, `AntwortKnoepfe`).
  */
-export function Termine({ zustand, planer, onNochmal, onMehr, onTermin }: Props) {
+export function Termine({ zustand, planer, onNochmal, onMehr, onTermin, antworten }: Props) {
   // Weitere Wochen laden im Hintergrund (das Bisherige bleibt stehen) – bis die Antwort da ist, sagt der
   // Knopf es. „Läuft“, solange noch der Stand vom Klick dasteht: Mit der Antwort (oder dem Fehler) ist es schon in
   // diesem Bild vorbei. Vorher räumte ein Effekt das ein Bild zu spät weg – dann stand „wird geladen …“ neben
@@ -120,7 +127,13 @@ export function Termine({ zustand, planer, onNochmal, onMehr, onTermin }: Props)
             <h3 className={styles.monat}>{monatTitel(`${m.monat}-01`)}</h3>
             <ul className={styles.liste}>
               {m.zeilen.map((z) => (
-                <TerminReihe key={z.id} z={z} planer={planer} onTermin={onTermin} />
+                <TerminReihe
+                  key={z.id}
+                  z={z}
+                  planer={planer}
+                  onTermin={onTermin}
+                  antworten={antworten}
+                />
               ))}
             </ul>
           </div>
@@ -139,6 +152,7 @@ export function Termine({ zustand, planer, onNochmal, onMehr, onTermin }: Props)
           </div>
         )}
       </section>
+      <Toast message={antworten?.meldung ?? null} />
       <p className={styles.fussnote}>
         Welche Termine du unter „Alle“ siehst, entscheidet ChurchTools (Kalender-Rechte). Termine,
         in denen du eingeteilt bist, siehst du immer.
@@ -151,10 +165,12 @@ function TerminReihe({
   z,
   planer,
   onTermin,
+  antworten,
 }: {
   z: TerminZeile;
   planer: boolean;
   onTermin?: (id: number) => void;
+  antworten?: Antworten;
 }) {
   const k = kachel(z.tag);
   const inhalt = (
@@ -169,8 +185,8 @@ function TerminReihe({
           <span className={styles.tags}>
             {z.abgesagt && <Plakette art="abgesagt">abgesagt</Plakette>}
             {z.meine.map((d, i) => (
-              <Plakette key={i} art={d.zugesagt ? 'zugesagt' : 'angefragt'}>
-                {d.zugesagt ? d.dienst : `${d.dienst} · angefragt`}
+              <Plakette key={i} art={plaketteArt(d)}>
+                {d.zugesagt ? d.dienst : `${d.dienst} · ${plaketteArt(d)}`}
               </Plakette>
             ))}
           </span>
@@ -188,8 +204,25 @@ function TerminReihe({
         ))}
     </>
   );
+  // Offene oder eben beantwortete Anfragen: Zusagen/Absagen unter der Zeile (E7-1) – nicht im Knopf der Zeile, ein Knopf
+  // in einem Knopf geht nicht.
+  const offen = antworten ? z.meine.filter((d) => d.ort && (!d.zugesagt || d.antwort)) : [];
+  const knoepfe = offen.length > 0 && antworten && (
+    <div className={styles.antworten}>
+      {offen.map((d, i) => (
+        <AntwortKnoepfe key={i} termin={z} d={d} antworten={antworten} mitDienst />
+      ))}
+    </div>
+  );
   // Antippen öffnet die Termin-Ansicht mit Ablauf und Diensten (E6-1b).
-  if (!onTermin) return <li className={styles.zeile}>{inhalt}</li>;
+  if (!onTermin) {
+    return (
+      <li className={styles.zeileLi}>
+        <div className={styles.zeile}>{inhalt}</div>
+        {knoepfe}
+      </li>
+    );
+  }
   return (
     <li className={styles.zeileLi}>
       <button
@@ -202,6 +235,7 @@ function TerminReihe({
           <Icon name="chev-right" size={16} />
         </span>
       </button>
+      {knoepfe}
     </li>
   );
 }

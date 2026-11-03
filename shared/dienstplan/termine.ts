@@ -13,6 +13,7 @@ import type { CtEvent } from '../ct/typen';
 import type { Dienst } from '../ct/dienste';
 import { ortszeitAus } from '../ct/zeit';
 import { terminAdminIds } from '../ct/ablaufRecht';
+import type { Antwort } from './antworten';
 
 export interface RohPlatz {
   /** Die Platz-ID – **ändert sich bei jedem Schreiben** (E0, Fallstrick 1). */
@@ -25,6 +26,8 @@ export interface RohPlatz {
   isAccepted?: unknown;
   /** `false` = ungültiger Platz (z. B. Dienst nicht mehr am Termin) – zählt nirgends (Organigramm, Live-Agenda). */
   isValid?: unknown;
+  /** Kommentar – nach einer Absage steht dort der Grund, am neuen leeren Platz (E4-0, E7 gemessen). */
+  comment?: unknown;
 }
 
 export interface RohTermin extends CtEvent {
@@ -46,6 +49,12 @@ export function istTerminAdmin(t: RohTermin, ichId: number): boolean {
 export interface MeinDienst {
   dienst: string;
   zugesagt: boolean;
+  /** Der Platz ohne die flüchtige ID (E7: zusagen, absagen) – `null`, wenn ChurchTools keinen Dienst nennt. */
+  ort: { serviceId: number; index: number | null } | null;
+  /** Darf man absagen (`Dienst.absagen`)? Ohne bekannten Dienst ja – ChurchTools entscheidet selbst. */
+  absagen: boolean;
+  /** Eben hier beantwortet (E7-1, `mitAntworten`) – zehn Minuten lang mit „Rückgängig“. */
+  antwort?: Antwort;
 }
 
 /** Ein besetzter Platz anderer – fürs Team „Mit dir“ auf der Startseite. */
@@ -98,6 +107,10 @@ export function termineAus(
     zeitzone: string;
   },
 ): TerminZeile[] {
+  // Platz eines Dienstes in der Reihenfolge der Gemeinde (`o.dienste` iteriert so); unbekannte ans Ende.
+  const reihenfolge = new Map([...o.dienste.keys()].map((id, i) => [id, i]));
+  const rang = (d: MeinDienst) =>
+    (d.ort && reihenfolge.get(d.ort.serviceId)) ?? Number.MAX_SAFE_INTEGER;
   return roh
     .map((t) => {
       const lokal = ortszeitAus(t.startDate, o.zeitzone);
@@ -111,7 +124,15 @@ export function termineAus(
         const dienst = typeof p.serviceId === 'number' ? o.dienste.get(p.serviceId) : undefined;
         const dienstName = dienst?.name ?? 'Dienst';
         if (p.personId === o.ichId && !istFrei(p)) {
-          meine.push({ dienst: dienstName, zugesagt: p.isAccepted === true });
+          meine.push({
+            dienst: dienstName,
+            zugesagt: p.isAccepted === true,
+            ort:
+              typeof p.serviceId === 'number'
+                ? { serviceId: p.serviceId, index: typeof p.index === 'number' ? p.index : null }
+                : null,
+            absagen: dienst?.absagen ?? true,
+          });
         } else if (!istFrei(p) && p.personId !== VERBORGENE_PERSON) {
           team.push({
             dienst: dienstName,
@@ -128,6 +149,9 @@ export function termineAus(
           }
         }
       }
+      // Die eigenen Dienste in der Reihenfolge der Gemeinde (wie die Zeilen der Matrix), nicht in der von ChurchTools:
+      // Die liefert nach ID, und eine Antwort vergibt eine neue – sonst spränge die Zeile nach dem Zusagen (E7-1, 03.11.).
+      meine.sort((x, y) => rang(x) - rang(y) || (x.ort?.index ?? 0) - (y.ort?.index ?? 0));
       // Als Zeitpunkte vergleichen, nicht als Text (Lehre aus `decktTermin`, shared/absences).
       const ende =
         t.endDate && Date.parse(t.endDate) > Date.parse(t.startDate) ? t.endDate : t.startDate;

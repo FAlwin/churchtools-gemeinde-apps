@@ -91,6 +91,7 @@ describe('ladeStart (Dienstplaner)', () => {
             gruppenIds: [7],
             sortKey: 0,
             liveSteuern: false,
+            absagen: true,
           },
         ],
       ]),

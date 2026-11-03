@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { LEERER_PLAN, zeile } from '@shared/dienstplan/zeile.testutil';
+import { LEERER_PLAN, zeile, mein } from '@shared/dienstplan/zeile.testutil';
 import type { TerminZeile } from '@shared/dienstplan/termine';
 import { Startseite } from './Startseite';
 import type { Start } from './start';
@@ -30,12 +30,12 @@ const TEAM = ['Anna', 'Ben', 'Clara', 'David', 'Ella', 'Finn', 'Greta'].map((nam
 
 const ZEILEN: TerminZeile[] = [
   zeile(1, 'Gottesdienst', tag(5), {
-    meine: [{ dienst: 'Ton', zugesagt: true }],
+    meine: [mein('Ton', true)],
     team: TEAM,
     freiNachGruppe: { 3: 2 },
   }),
-  zeile(2, 'Gebetsabend', tag(8), { meine: [{ dienst: 'Gesang', zugesagt: false }] }),
-  zeile(3, 'Gottesdienst', tag(12), { meine: [{ dienst: 'Licht', zugesagt: true }] }),
+  zeile(2, 'Gebetsabend', tag(8), { meine: [mein('Gesang', false)] }),
+  zeile(3, 'Gottesdienst', tag(12), { meine: [mein('Licht', true)] }),
 ];
 
 function zeige(

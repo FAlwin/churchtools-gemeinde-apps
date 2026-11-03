@@ -1,4 +1,4 @@
-import type { TerminZeile } from './termine';
+import type { MeinDienst, TerminZeile } from './termine';
 import type { Plan } from './plan';
 
 /**
@@ -26,6 +26,15 @@ export function zeile(
     team: [],
     ...extra,
   };
+}
+
+/** Ein eigener Dienst für Tests – Platz ohne Ort, Absagen erlaubt; `extra` überschreibt (E7). */
+export function mein(
+  dienst: string,
+  zugesagt: boolean,
+  extra: Partial<MeinDienst> = {},
+): MeinDienst {
+  return { dienst, zugesagt, ort: null, absagen: true, ...extra };
 }
 
 /** Ein leerer Plan – für Tests, die nur die Liste brauchen. */

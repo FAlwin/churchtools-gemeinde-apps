@@ -46,6 +46,11 @@
 }
 
 // Antippbare Zeile (E6-1b): die ganze Zeile ist ein Knopf zur Termin-Ansicht; die Trennlinie hängt dann am <li>.
+// Zusagen/Absagen unter der Zeile (E7-1) – eingerückt wie der Text neben der Datumskachel.
+.antworten {
+  padding: 0 14px 12px 66px;
+}
+
 .zeileLi + .zeileLi {
   box-shadow: inset 0 1px 0 var(--hair);
 }
